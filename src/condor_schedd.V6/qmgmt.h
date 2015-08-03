@@ -82,17 +82,18 @@ class QmgmtPeer {
 };
 
 
-#define USE_JOB_QUEUE_JOB 1
+#define USE_JOB_QUEUE_JOB 1 // contents of the JobQueue is a class *derived* from ClassAd, (new for 8.3)
 
 // used to store a ClassAd + runtime information in a condor hashtable.
 class JobQueueJob : public ClassAd {
 public:
 	JOB_ID_KEY jid;
-	char entry_type;    // one of entry_type_xxx enum codes, 0 is unknown
+protected:
+	char entry_type;    // Job queue entry type: header, cluster or job (i.e. one of entry_type_xxx enum codes, 0 is unknown)
 	char universe;
+	char has_noop_attr; // 1 if job has ATTR_JOB_NOOP
 	char future_status; // FUTURE: keep this in sync with job status
-	bool unused2;       // spare to align to 4 byte boundary
-
+public:
 	int autocluster_id;
 protected:
 	JobQueueJob * link; // FUTURE: jobs are linked to clusters.
@@ -103,6 +104,7 @@ public:
 		: jid(0,0)
 		, entry_type(_etype)
 		, universe(0)
+		, has_noop_attr(2) // value of 2 forces PopulateFromAd() to check if it exists.
 		, future_status(0) // JOB_STATUS_MIN
 		, autocluster_id(0)
 		, future_num_procs_or_hosts(0)
@@ -119,6 +121,9 @@ public:
 	bool IsJob() { return IsType(entry_type_job); }
 	bool IsHeader() { return IsType(entry_type_cluster); }
 	bool IsCluster() { return IsType(entry_type_header); }
+	int  Universe() { return universe; }
+	void SetUniverse(int uni) { universe = uni; }
+	bool IsNoopJob();
 	// FUTURE:
 	int NumProcs() { if (entry_type == entry_type_cluster) return future_num_procs_or_hosts; return 0; }
 	int IncrementNumProcs() { if (entry_type == entry_type_cluster) return ++future_num_procs_or_hosts; return 0; }
@@ -220,7 +225,6 @@ public:
 	JOB_ID_KEY_BUF(const JOB_ID_KEY& rhs)     : JOB_ID_KEY(rhs.cluster, rhs.proc) { job_id_str[0] = 0; }
 };
 
-#ifdef USE_JOB_QUEUE_JOB
 
 // specialize the helper class for create/destroy of hashtable entries for the ClassAdLog class
 template <>
@@ -244,7 +248,10 @@ public:
 		ad=Ad;
 		return iret >= 0;
 	}
-	virtual bool remove(const char * key) { JOB_ID_KEY k(key); return table.remove(k) >= 0; }
+	virtual bool remove(const char * key) {
+		JOB_ID_KEY k(key);
+		return table.remove(k) >= 0;
+	}
 	virtual bool insert(const char * key, ClassAd * ad) {
 		JOB_ID_KEY k(key);
 		JobQueueJob* Ad = new JobQueueJob();  // TODO: find out of we can count on ad already being a JobQueueJob*
@@ -277,15 +284,6 @@ typedef JOB_ID_KEY JobQueueKey;
 typedef JobQueueJob* JobQueuePayload;
 typedef ClassAdLog<JOB_ID_KEY, const char*,JobQueueJob*> JobQueueLogType;
 
-#else // ! USE_JOB_QUEUE_JOB
-
- // the 8.2 JobQueue types
- typedef HashKey JobQueueKey;
- typedef ClassAd* JobQueuePayload;
- typedef ClassAdLog<HashKey, const char*, ClassAd*> JobQueueLogType;
-
-#endif // ! USE_JOB_QUEUE_JOB
-
 JobQueueLogType::filter_iterator GetJobQueueIterator(const classad::ExprTree &requirements, int timeslice_ms);
 JobQueueLogType::filter_iterator GetJobQueueIteratorEnd();
 
@@ -316,6 +314,7 @@ int get_myproxy_password_handler(Service *, int, Stream *sock);
 
 QmgmtPeer* getQmgmtConnectionInfo();
 bool OwnerCheck(int,int);
+
 
 // priority records
 extern prio_rec *PrioRec;

@@ -135,10 +135,6 @@ ClassAdLog<K,AltK,AD>::filter_iterator::operator++(int)
 // force instantiation of the template types needed by the JobQueue
 typedef GenericClassAdCollection<JobQueueKey, const char*,JobQueuePayload> JobQueueType;
 template class ClassAdLog<JobQueueKey,const char*,JobQueuePayload>;
-#if 0 //def USE_JOB_QUEUE_JOB
-template class ClassAdLog<JOB_ID_KEY,const char*,JobQueuePayload>;
-template class GenericClassAdCollection<JOB_ID_KEY,const char*,JobQueuePayload>;
-#endif
 
 #include "file_sql.h"
 extern FILESQL *FILEObj;
@@ -261,7 +257,6 @@ DeadIdToStr(int cluster, int proc, char *buf)
 	ProcIdToStr(cluster,proc,buf);
 }
 
-#ifdef USE_JOB_QUEUE_JOB
 static inline JobQueueKey& IdToKey(int cluster, int proc, JobQueueKey& key)
 {
 	key.cluster = cluster;
@@ -285,43 +280,13 @@ static inline const JobQueueKey& StrToKey(const char * job_id_str, JobQueueKey& 
 	return key;
 }
 */
-#else
-typedef char JobQueueKeyBuf[PROC_ID_STR_BUFLEN];
-const char * IdToKey(int cluster, int proc, JobQueueKeyBuf& buf)
-{
-	ProcIdToStr(cluster,proc,buf);
-	return buf;
-}
-typedef char JobQueueKeyStrBuf;
-static inline const char * KeyToStr(const JobQueueKey& key, JobQueueKeyStrBuf& buf) {
-	return key;
-}
-
-static inline
-void
-StrToId(const char *str,int & cluster,int & proc)
-{
-	const char * pend = str;
-	if( !StrToProcId(str,cluster,proc) ) {
-		EXCEPT("Qmgmt: Malformed key - '%s'",str);
-	}
-}
-
-#endif
 
 static
 void
 KeyToId(JobQueueKey &key,int & cluster,int & proc)
 {
-#ifdef USE_JOB_QUEUE_JOB
 	cluster = key.cluster;
 	proc = key.proc;
-#else
-	const char * str = key.value();
-	if( !StrToProcId(str,cluster,proc) ) {
-		EXCEPT("Qmgmt: Malformed key - '%s'",str);
-	}
-#endif
 }
 
 // This is where we can clean up any data structures that refer to the job object
@@ -1007,6 +972,15 @@ SpoolHierarchyChangePass2(char const *spool,std::list< PROC_ID > &spool_rename_l
 	}
 }
 
+bool JobQueueJob::IsNoopJob()
+{
+	if ( ! has_noop_attr) return false;
+	int noop = 0;
+	if ( ! this->LookupBool(ATTR_JOB_NOOP, noop)) { has_noop_attr = false; }
+	else { has_noop_attr = true; }
+	return has_noop_attr && noop;
+}
+
 // After the job queue is loaded from disk, or a new job is submitted
 // the fields in the job object have to be initialized to match the ad
 //
@@ -1186,7 +1160,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 				// Update fields in the newly created JobObject
 			ad->autocluster_id = -1;
 			ad->Delete(ATTR_AUTO_CLUSTER_ID);
-			ad->universe = universe;
+			ad->SetUniverse(universe);
 			JobQueueJob *clusterad = NULL;
 			if (JobQueue->Lookup(JOB_ID_KEY(key.cluster,-1), clusterad)) {
 				ad->SetCluster(clusterad);
@@ -1264,6 +1238,10 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 			}
 
 			ConvertOldJobAdAttrs( ad, true );
+
+				// Add the job to various runtime indexes for quick lookups
+				//
+			scheduler.indexAJob(ad, true);
 
 				// If input files are going to be spooled, rewrite
 				// the paths in the job ad to point at our spool area.
@@ -2251,6 +2229,9 @@ int DestroyProc(int cluster_id, int proc_id)
 
 		CommitTransaction(NONDURABLE);
 	}
+
+		// remove jobid from any indexes
+	scheduler.removeJobFromIndexes(key);
 
 		// remove any match (startd) ad stored w/ this job
 	RemoveMatchedAd(cluster_id,proc_id);
@@ -3326,15 +3307,18 @@ CommitTransaction(SetAttributeFlags_t flags /* = 0 */)
 				 JobQueue->Lookup(job_id, procad))
 			{
 				dprintf(D_FULLDEBUG,"New job: %s\n",job_id.c_str());
-#ifdef USE_OWNERDATA_MAP
+
+					// increment the 'recently added' job count for this owner
 				scheduler.incrementRecentlyAdded( Q_SOCK->getOwner() );
-#endif
 
 					// chain proc ads to cluster ad
 				procad->ChainToAd(clusterad);
 
 					// convert any old attributes for backwards compatbility
 				ConvertOldJobAdAttrs(procad, false);
+
+					// Add the job to various runtime indexes for quick lookups
+				scheduler.indexAJob(procad, false);
 
 					// make sure the job objd and cluster object are populated
 				clusterad->jid = cluster_key;
@@ -3367,7 +3351,7 @@ CommitTransaction(SetAttributeFlags_t flags /* = 0 */)
 					// they are responsible for writing the submit event
 					// to the user log.
 					if ( vers.built_since_version( 7, 5, 4 ) ) {
-						scheduler.WriteSubmitToUserLog( job_id, doFsync );
+						scheduler.WriteSubmitToUserLog( procad, doFsync );
 					}
 				}
 				
@@ -3430,6 +3414,7 @@ AbortTransactionAndRecomputeClusters()
 			use brute force and blow the whole thing away and recompute it. 
 			-Todd 2/2000
 		*/
+		//TODO: move cluster count from hashtable into the cluster's JobQueueJob object.
 		ClusterSizeHashTable->clear();
 		ClassAd *ad;
 		JobQueueKey key;
@@ -3437,15 +3422,9 @@ AbortTransactionAndRecomputeClusters()
 		int cluster_num;
 		JobQueue->StartIterateAllClassAds();
 		while (JobQueue->IterateAllClassAds(ad,key)) {
-		#ifdef USE_JOB_QUEUE_JOB
 			cluster_num = key.cluster;
 			if ( ! cluster_num) continue;  // skip cluster & header ads
 			else {
-		#else
-			const char *tmp = key.value();
-			if ( *tmp == '0' ) continue;	// skip cluster & header ads
-			if ( (cluster_num = atoi(tmp)) ) {
-		#endif
 				// count up number of procs in cluster, update ClusterSizeHashTable
 				if ( ClusterSizeHashTable->lookup(cluster_num,numOfProcs) == -1 ) {
 					// First proc we've seen in this cluster; set size to 1
@@ -4594,11 +4573,7 @@ GetJobByConstraint(const char *constraint)
 
 	JobQueue->StartIterateAllClassAds();
 	while(JobQueue->Iterate(key,ad)) {
-	#ifdef USE_JOB_QUEUE_JOB
 		if ( key.cluster > 0 && key.proc >= 0 && // avoid cluster and header ads
-	#else
-		if ( *(key.value()) != '0' &&	// avoid cluster and header ads
-	#endif
 			EvalBool(ad, constraint)) {
 				return ad;
 		}
@@ -4629,11 +4604,7 @@ GetNextJobByConstraint(const char *constraint, int initScan)
 	}
 
 	while(JobQueue->Iterate(key,ad)) {
-	#ifdef USE_JOB_QUEUE_JOB
 		if ( key.cluster > 0 && key.proc >= 0 && // avoid cluster and header ads
-	#else
-		if ( *(key.value()) != '0' &&	// avoid cluster and header ads
-	#endif
 			(!constraint || !constraint[0] || EvalBool(ad, constraint))) {
 			return ad;
 		}
@@ -4679,27 +4650,14 @@ GetNextJobByCluster(int c, int initScan)
 		return NULL;
 	}
 
-#ifdef USE_JOB_QUEUE_JOB
 	JobQueueJob	*ad;
-#else
-	ClassAd	*ad;
-	char cluster[25];
-	snprintf(cluster,25,"%d.",c);
-	cluster[COUNTOF(cluster)-1] = 0; // force null term.
-	int len = strlen(cluster);
-#endif
 
 	if (initScan) {
 		JobQueue->StartIterateAllClassAds();
 	}
 
-	#ifdef USE_JOB_QUEUE_JOB
 	while(JobQueue->Iterate(key,ad)) {
 		if ( c == key.cluster ) {
-	#else
-	while(JobQueue->IterateAllClassAds(ad,key)) {
-		if ( strncmp(cluster,key.value(),len) == 0 ) {
-	#endif
 			return ad;
 		}
 	}
@@ -4951,7 +4909,6 @@ int get_job_prio(JobQueueJob *job, const JOB_ID_KEY & jid, void *)
 	SCGetAutoClusterType = last_autocluster_type;
 	GetAutoCluster_cchit_runtime += last_autocluster_classad_cache_hit;
 
-	//job->autocluster_id = auto_id;
 	GetAutoCluster_runtime += last_autocluster_runtime;
 	if (last_autocluster_make_sig) { GetAutoCluster_signature_runtime += last_autocluster_runtime; }
 	else { GetAutoCluster_hit_runtime += last_autocluster_runtime; }
@@ -4959,7 +4916,7 @@ int get_job_prio(JobQueueJob *job, const JOB_ID_KEY & jid, void *)
 	GetAutoCluster_cchit_runtime += last_autocluster_classad_cache_hit;
 
 	job->LookupInteger(ATTR_JOB_UNIVERSE, universe);
-	ASSERT(universe == job->universe);
+	ASSERT(universe == job->Universe());
 
 	job->LookupInteger(ATTR_JOB_STATUS, job_status);
     if (job->LookupInteger(ATTR_CURRENT_HOSTS, cur_hosts) == 0) {
@@ -5017,11 +4974,6 @@ int get_job_prio(JobQueueJob *job, const JOB_ID_KEY & jid, void *)
 		job->LookupString(ATTR_OWNER, powner, cremain);
 	}
 
-    // No longer judge whether or not a job can run by looking at its status.
-    // Rather look at if it has all the hosts that it wanted.
-    if (cur_hosts>=max_hosts || job_status==HELD)
-        return cur_hosts;
-
     PrioRec[N_PrioRecs].id             = jid;
     PrioRec[N_PrioRecs].job_prio       = job_prio;
     PrioRec[N_PrioRecs].pre_job_prio1  = pre_job_prio1;
@@ -5077,23 +5029,14 @@ jobLeaseIsValid( ClassAd* job, int cluster, int proc )
 
 extern void mark_job_stopped(PROC_ID* job_id);
 
-int mark_idle(ClassAd *job, void*)
+int mark_idle(JobQueueJob *job, const JobQueueKey& /*key*/, void* pvArg)
 {
-    int     status, cluster, proc, hosts, universe;
-	PROC_ID	job_id;
-	static time_t bDay = 0;
-
 		// Update ATTR_SCHEDD_BIRTHDATE in job ad at startup
-	if (bDay == 0) {
-		bDay = time(NULL);
-	}
-	job->Assign(ATTR_SCHEDD_BIRTHDATE,(int)bDay);
+		// pointer to birthday is passed as an argument...
+	time_t * pbDay = (time_t*)pvArg;
+	job->Assign(ATTR_SCHEDD_BIRTHDATE, *pbDay);
 
-	if (job->LookupInteger(ATTR_JOB_UNIVERSE, universe) < 0) {
-		universe = CONDOR_UNIVERSE_STANDARD;
-	}
-
-	MyString managed_status;
+	std::string managed_status;
 	job->LookupString(ATTR_JOB_MANAGED, managed_status);
 	if ( managed_status == MANAGED_EXTERNAL ) {
 		// if a job is externally managed, don't touch a damn
@@ -5103,13 +5046,14 @@ int mark_idle(ClassAd *job, void*)
 		return 1;
 	}
 
-	job->LookupInteger(ATTR_CLUSTER_ID, cluster);
-	job->LookupInteger(ATTR_PROC_ID, proc);
-    job->LookupInteger(ATTR_JOB_STATUS, status);
-	job->LookupInteger(ATTR_CURRENT_HOSTS, hosts);
+	int universe = job->Universe();
+	int cluster = job->jid.cluster;
+	int proc = job->jid.proc;
+	PROC_ID job_id = job->jid;
 
-	job_id.cluster = cluster;
-	job_id.proc = proc;
+	int status, hosts;
+	job->LookupInteger(ATTR_JOB_STATUS, status);
+	job->LookupInteger(ATTR_CURRENT_HOSTS, hosts);
 
 	if ( status == COMPLETED ) {
 		DestroyProc(cluster,proc);
@@ -5230,7 +5174,6 @@ WalkJobQueue3(queue_classad_scan_func func, void* pv, schedd_runtime_probe & ftm
 }
 
 
-#ifdef USE_JOB_QUEUE_JOB
 // this function for use only inside the schedd, external clients will use the one above...
 void
 WalkJobQueue3(queue_job_scan_func func, void* pv, schedd_runtime_probe & ftm)
@@ -5262,7 +5205,7 @@ WalkJobQueue3(queue_job_scan_func func, void* pv, schedd_runtime_probe & ftm)
 
 	in_walk_job_queue--;
 }
-#endif
+
 
 int dump_job_q_stats(int cat)
 {
@@ -5320,7 +5263,8 @@ int dump_job_q_stats(int cat)
 */
 void mark_jobs_idle()
 {
-    WalkJobQueue(mark_idle);
+	time_t bDay = time(NULL);
+	WalkJobQueue2(mark_idle, &bDay);
 
 	// mark_idle() may have made a lot of commits in non-durable mode in 
 	// order to speed up recovery after a crash, so recovery does not incur

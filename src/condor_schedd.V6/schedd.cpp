@@ -158,7 +158,7 @@ void send_vacate(match_rec*, int);
 void mark_job_stopped(PROC_ID*);
 void mark_job_running(PROC_ID*);
 void mark_serial_job_running( PROC_ID *job_id );
-int fixAttrUser( ClassAd *job, void* );
+int fixAttrUser(JobQueueJob *job, const JOB_ID_KEY & /*jid*/, void *);
 shadow_rec * find_shadow_rec(PROC_ID*);
 bool service_this_universe(int, ClassAd*);
 bool jobIsSandboxed( ClassAd* ad );
@@ -788,17 +788,7 @@ Scheduler::~Scheduler()
 		daemonCore->Cancel_Timer(checkContactQueue_tid);
 	}
 
-#ifdef USE_OWNERDATA_MAP
 	Owners.clear();
-#else
-	PRAGMA_REMIND("tj: clean up owner objects here.")
-	for(int ii = 0; ii < NumOwners; ii++) {
-		if( Owners[ii].Name ) { 
-			free( Owners[ii].Name );
-			Owners[ii].Name = NULL;
-		}
-	}
-#endif
 
 	if (_gridlogic) {
 		delete _gridlogic;
@@ -829,16 +819,13 @@ Scheduler::~Scheduler()
 // If a job has been spooling for 12 hours,
 // It may well be that the remote condor_submit died
 // So we kill this job
-int check_for_spool_zombies(ClassAd *ad, void*)
+int check_for_spool_zombies(JobQueueJob *job, const JOB_ID_KEY & /*jid*/, void *)
 {
-	int cluster;
-	if( !ad->LookupInteger( ATTR_CLUSTER_ID, cluster) ) {
-		return 0;
-	}
-	int proc;
-	if( !ad->LookupInteger( ATTR_PROC_ID, proc) ) {
-		return 0;
-	}
+	int cluster = job->jid.cluster;
+	int proc = job->jid.proc;
+
+	//PRAGMA_REMIND("tj asks: is it really ok that this function will look inside an uncommitted transaction to get the job status?")
+
 	int hold_status;
 	if( GetAttributeInt(cluster,proc,ATTR_JOB_STATUS,&hold_status) >= 0 ) {
 		if(hold_status == HELD) {
@@ -1187,20 +1174,12 @@ Scheduler::count_jobs()
 	scheduler.OtherPoolStats.ResetJobsRunning();
 
 	time_t current_time = time(0);
-	#ifdef USE_OWNERDATA_MAP
+
 	for (OwnerDataMap::iterator it = Owners.begin(); it != Owners.end(); ++it) {
 		OwnerData & Owner = it->second;
-		Owner.num.clear_job_counters();	// clear the jobs counters
+		Owner.num.clear_job_counters();	// clear the jobs counters (including recently added)
 		Owner.PrioSet.clear();
 	}
-	#else
-	// Reset owner job counters in preparation for calling WalkJobQueue(count_a_job)
-	for (int ii = 0; ii < NumOwners; ii++) {
-		OwnerData & Owner = Owners[ii];
-		Owner.num.clear();
-		Owner.PrioSet.clear();
-	}
-	#endif
 
 	GridJobOwners.clear();
 
@@ -1259,7 +1238,6 @@ Scheduler::count_jobs()
 		}
 	}
 
-#ifdef USE_OWNERDATA_MAP
 	// count the owners that have non-zero Hits count.  These are the owners that
 	// currently have jobs in the queue.
 	NumOwners = 0;
@@ -1267,18 +1245,13 @@ Scheduler::count_jobs()
 		const OwnerData & Owner = it->second;
 		if (Owner.num.Hits > 0) ++NumOwners;
 	}
-#endif
 
 	// set FlockLevel for owners
 	if (MaxFlockLevel) {
 		int flock_increment = param_integer("FLOCK_INCREMENT",1,1);
-#ifdef USE_OWNERDATA_MAP
+
 		for (OwnerDataMap::iterator it = Owners.begin(); it != Owners.end(); ++it) {
 			OwnerData & Owner = it->second;
-#else
-		for (int ii=0; ii < NumOwners; ii++) {
-			OwnerData & Owner = Owners[ii];
-#endif
 
 			// set negotiation timestamp to current time for owners that have no idle jobs.
 			if ( ! Owner.num.JobsIdle) {
@@ -1454,17 +1427,10 @@ Scheduler::count_jobs()
 	pAd.ChainToAd(m_adBase);
 	pAd.Assign(ATTR_SUBMITTER_TAG,HOME_POOL_SUBMITTER_TAG);
 
-#ifdef USE_OWNERDATA_MAP
 	for (OwnerDataMap::iterator it = Owners.begin(); it != Owners.end(); ++it) {
 		OwnerData & Owner = it->second;
 		const char * owner_name = Owner.Name();
 		if ( !fill_submitter_ad(pAd, Owner, -1, D_FULLDEBUG) ) continue;
-#else
-	for (int ii=0; ii < NumOwners; ii++) {
-	  OwnerData & Owner = Owners[ii];
-	  const char * owner_name = Owner.Name();
-	  if ( !fill_submitter_ad(pAd, Owner, -1, D_FULLDEBUG) ) continue;
-#endif
 
 	  dprintf( D_ALWAYS, "Sent ad to central manager for %s@%s\n", 
 			   owner_name, UidDomain );
@@ -1501,16 +1467,10 @@ Scheduler::count_jobs()
 			// and (JobsRunning + JobsFlocked) - JobsFlockedHere as JobsFlocked
 			// i.e. the JobsFlocked count for flocked pools is a count of
 			// 'jobs running elsewhere' including jobs running in the schedd's local pool.
-			#ifdef USE_OWNERDATA_MAP
 			for (OwnerDataMap::iterator it = Owners.begin(); it != Owners.end(); ++it) {
 				OwnerData & Owner = it->second;
 				Owner.num.JobsFlockedHere = 0;
 			}
-			#else
-			for (int ii=0; ii < NumOwners; ii++) {
-				Owners[ii].num.JobsFlockedHere = 0;
-			}
-			#endif
 			matches->startIterations();
 			match_rec *mRec;
 			while(matches->iterate(mRec) == 1) {
@@ -1525,13 +1485,8 @@ Scheduler::count_jobs()
 			}
 
 			// update submitter ad in this pool for each owner
-			#ifdef USE_OWNERDATA_MAP
 			for (OwnerDataMap::iterator it = Owners.begin(); it != Owners.end(); ++it) {
 				OwnerData & Owner = it->second;
-			#else
-			for (int ii=0; ii < NumOwners; ii++) {
-				OwnerData & Owner = Owners[ii];
-			#endif
 				if ( !fill_submitter_ad(pAd,Owner,flock_level,D_NEVER) ) {
 					// if we're no longer flocking with this pool and
 					// we're not running jobs in the pool, then don't send
@@ -1550,15 +1505,9 @@ Scheduler::count_jobs()
 
 	pAd.Delete(ATTR_SUBMITTER_TAG);
 
-	#ifdef USE_OWNERDATA_MAP
 	for (OwnerDataMap::iterator it = Owners.begin(); it != Owners.end(); ++it) {
 		it->second.OldFlockLevel = it->second.FlockLevel;
 	}
-	#else
-	for (int ii=0; ii < NumOwners; ii++) {
-		Owners[ii].OldFlockLevel = Owners[ii].FlockLevel;
-	}
-	#endif
 
 	 // Tell our GridUniverseLogic class what we've seen in terms
 	 // of Globus Jobs per owner.
@@ -1599,13 +1548,8 @@ Scheduler::count_jobs()
 	// This is done by looking at the Hits counter that was set above.
 	// that are not in the current list (the current list has only owners w/ idle jobs)
 	MyString submitter_name;
-	#ifdef USE_OWNERDATA_MAP
 	for (OwnerDataMap::iterator it = Owners.begin(); it != Owners.end(); ++it) {
 		OwnerData & Owner = it->second;
-	#else
-	for (int ii=0; ii < NumOwners; ii++) {
-		OwnerData & Owner = Owners[ii];
-	#endif
 		// If this Owner has any jobs in the queue or match records,
 		// we don't want to send the, so we continue to the next
 		if (Owner.num.Hits > 0) continue;
@@ -1613,7 +1557,6 @@ Scheduler::count_jobs()
 		submitter_name.formatstr("%s@%s", Owner.Name(), UidDomain);
 		int old_flock_level = Owner.OldFlockLevel;
 
-	#ifdef USE_OWNERDATA_MAP
 		// expire and mark for removal Owners that have not had any hits (i.e jobs in the queue)
 		// for more than UnusedSubmitterLifetime. 
 		if ( ! Owner.LastHitTime) {
@@ -1625,12 +1568,6 @@ Scheduler::count_jobs()
 			// free it.  this marks the entry as unused
 			Owner.name.clear();
 		}
-	#else
-		if ( Owner.Name ) {
-			free(Owner.Name);
-			Owner.Name = NULL;
-		}
-	#endif
 
 		pAd.Assign(ATTR_NAME, submitter_name.Value());
 		dprintf (D_FULLDEBUG, "Changed attribute: %s = %s\n", ATTR_NAME, submitter_name.Value());
@@ -1760,14 +1697,9 @@ int Scheduler::make_ad_list(
    // submitter ad, note that chained ad's dont delete the 
    // chain parent when they are deleted, so it's safe to 
    // put these ads into the list. 
-   #ifdef USE_OWNERDATA_MAP
    for (OwnerDataMap::iterator it = Owners.begin(); it != Owners.end(); ++it) {
       const OwnerData & Owner = it->second;
       if (Owner.empty()) continue;
-   #else
-   for (int ii = 0; ii < NumOwners; ++ii) {
-      const OwnerData & Owner = Owners[ii];
-   #endif
       cad = new ClassAd();
       cad->ChainToAd(m_adBase);
       if ( ! fill_submitter_ad(*cad, Owner, -1, D_NEVER)) {
@@ -2746,7 +2678,6 @@ service_this_universe(int universe, ClassAd* job)
 	}
 }
 
-#ifdef USE_OWNERDATA_MAP
 void
 Scheduler::incrementRecentlyAdded(const char * owner)
 {
@@ -2790,60 +2721,6 @@ Scheduler::remove_unused_owners()
 	}
 }
 
-#else
-
-const OwnerData *
-Scheduler::find_owner_const(const char * owner)
-{
-	return find_owner(owner);
-}
-
-OwnerData *
-Scheduler::find_owner(const char * owner, int * pnum)
-{
-	int i = 0;
-	for ( ; i < NumOwners; i++ ) {
-		if( strcmp(Owners[i].Name,owner) == 0 ) {
-			if (pnum) *pnum = i;
-			return &Owners[i];
-		}
-	}
-	if (pnum) *pnum = i;
-	return NULL;
-}
-
-OwnerData *
-Scheduler::insert_owner(const char * owner, int * pnum)
-{
-	int i;
-	OwnerData * pown = find_owner(owner, &i);
-	if (pnum) *pnum = i;
-	if (pown) return pown;
-
-	Owners[i].Name = strdup( owner );
-
-	NumOwners +=1;
-	return &Owners[i];
-}
-
-void
-Scheduler::remove_unused_owners()
-{
-	// compact the owner array, squeezing out the entries that don't have names.
-	int NumEntries = NumOwners;
-	NumOwners = 0; 
-	for (int ii = 0; ii < NumEntries; ++ii) {
-		if (Owners[ii].Name) {
-			// keep this one, if we have a gap between the current index
-			// and the number of owners, then we have to copy the entry down.
-			if (ii > NumOwners) {
-				Owners[NumOwners] = Owners[ii];
-			}
-			++NumOwners;
-		}
-	}
-}
-#endif
 
 
 static bool IsSchedulerUniverse( shadow_rec* srec );
@@ -3181,29 +3058,27 @@ any other universe when the job is idle or held.
 */
 
 static int
-ResponsibleForPeriodicExprs( ClassAd *jobad )
+ResponsibleForPeriodicExprs( JobQueueJob *jobad, int & status )
 {
-	int status=-1, univ=-1;
-	PROC_ID jobid;
-
-	jobad->LookupInteger(ATTR_JOB_STATUS,status);
-	jobad->LookupInteger(ATTR_JOB_UNIVERSE,univ);
+	int univ = jobad->Universe();
 	bool managed = jobExternallyManaged(jobad);
-
 	if ( managed ) {
 		return 0;
 	}
 
-		// temporary for 7.2 only: avoid evaluating periodic
+	// don't fetch status if the caller already fetched it.
+	if (status < 0) {
+		jobad->LookupInteger(ATTR_JOB_STATUS,status);
+	}
+
+		// Avoid evaluating periodic
 		// expressions when the job is on hold for spooling
 	if( status == HELD ) {
 		int hold_reason_code = -1;
 		jobad->LookupInteger(ATTR_HOLD_REASON_CODE,hold_reason_code);
 		if( hold_reason_code == CONDOR_HOLD_CODE_SpoolingInput ) {
-			int cluster = -1, proc = -1;
-			jobad->LookupInteger(ATTR_CLUSTER_ID, cluster);
-			jobad->LookupInteger(ATTR_PROC_ID, proc);
-			dprintf(D_FULLDEBUG,"Skipping periodic expressions for job %d.%d, because hold reason code is '%d'\n",cluster,proc,hold_reason_code);
+			dprintf(D_FULLDEBUG,"Skipping periodic expressions for job %d.%d, because hold reason code is '%d'\n",
+				jobad->jid.cluster, jobad->jid.proc, hold_reason_code);
 			return 0;
 		}
 	}
@@ -3219,12 +3094,8 @@ ResponsibleForPeriodicExprs( ClassAd *jobad )
 			case COMPLETED:
 				return 1;
 			case REMOVED:
-				jobid.cluster = -1;
-				jobid.proc = -1;
-				jobad->LookupInteger(ATTR_CLUSTER_ID,jobid.cluster);
-				jobad->LookupInteger(ATTR_PROC_ID,jobid.proc);
-				if ( jobid.cluster > 0 && jobid.proc > -1 && 
-					 scheduler.FindSrecByProcID(jobid) )
+				if ( jobad->jid.cluster > 0 && jobad->jid.proc > -1 && 
+					 scheduler.FindSrecByProcID(jobad->jid) )
 				{
 						// job removed, but shadow still exists
 					return 0;
@@ -3244,22 +3115,25 @@ and abort, hold, or release the job as necessary.
 */
 
 static int
-PeriodicExprEval( ClassAd *jobad, void* )
+PeriodicExprEval(JobQueueJob *jobad, const JOB_ID_KEY & /*jid*/, void *)
 {
-	int cluster=-1, proc=-1, status=-1, action=-1;
+	int status=-1;
+	if(!ResponsibleForPeriodicExprs(jobad, status)) return 1;
 
-	if(!ResponsibleForPeriodicExprs(jobad)) return 1;
+	int cluster = jobad->jid.cluster;
+	int proc = jobad->jid.proc;
+	if(cluster<0 || proc<0) return 1;
 
-	jobad->LookupInteger(ATTR_CLUSTER_ID,cluster);
-	jobad->LookupInteger(ATTR_PROC_ID,proc);
-	jobad->LookupInteger(ATTR_JOB_STATUS,status);
-
-	if(cluster<0 || proc<0 || status<0) return 1;
+	// fetch status if the Responsible didn't, if no status, don't evaluate policy.
+	if (status < 0) {
+		jobad->LookupInteger(ATTR_JOB_STATUS,status);
+		if(status<0) return 1;
+	}
 
 	UserPolicy policy;
 	policy.Init(jobad);
 
-	action = policy.AnalyzePolicy(PERIODIC_ONLY);
+	int action = policy.AnalyzePolicy(PERIODIC_ONLY);
 
 	// Build a "reason" string for logging
 	MyString reason;
@@ -3791,43 +3665,41 @@ Scheduler::InitializeUserLog( PROC_ID job_id )
 }
 
 bool
-Scheduler::WriteSubmitToUserLog( PROC_ID job_id, bool do_fsync )
+Scheduler::WriteSubmitToUserLog( JobQueueJob* job, bool do_fsync )
 {
 	std::string submitUserNotes, submitEventNotes;
 
 		// Skip writing submit events for procid != 0 for parallel jobs
-	int universe = -1;
-	GetAttributeInt( job_id.cluster, job_id.proc, ATTR_JOB_UNIVERSE, &universe );
+	int universe = job->Universe();
 	if ( universe == CONDOR_UNIVERSE_PARALLEL ) {
-		if ( job_id.proc > 0) {
+		if ( job->jid.proc > 0) {
 			return true;;
 		}
 	}
 
-	WriteUserLog* ULog = this->InitializeUserLog( job_id );
+	WriteUserLog* ULog = this->InitializeUserLog( job->jid );
 	if( ! ULog ) {
 			// User didn't want log
 		return true;
 	}
 	SubmitEvent event;
-	ClassAd *job_ad = GetJobAd(job_id.cluster,job_id.proc);
 
 	event.setSubmitHost( daemonCore->privateNetworkIpAddr() );
-	if ( job_ad->LookupString(ATTR_SUBMIT_EVENT_NOTES, submitEventNotes) ) {
+	if ( job->LookupString(ATTR_SUBMIT_EVENT_NOTES, submitEventNotes) ) {
 		event.submitEventLogNotes = strnewp(submitEventNotes.c_str());
 	}
-	if ( job_ad->LookupString(ATTR_SUBMIT_EVENT_USER_NOTES, submitUserNotes) ) {
+	if ( job->LookupString(ATTR_SUBMIT_EVENT_USER_NOTES, submitUserNotes) ) {
 		event.submitEventUserNotes = strnewp(submitUserNotes.c_str());
 	}
 
 	ULog->setEnableFsync(do_fsync);
-	bool status = ULog->writeEvent(&event, job_ad);
+	bool status = ULog->writeEvent(&event, job);
 	delete ULog;
 
 	if (!status) {
 		dprintf( D_ALWAYS,
 				 "Unable to log ULOG_SUBMIT event for job %d.%d\n",
-				 job_id.cluster, job_id.proc );
+				 job->jid.cluster, job->jid.proc );
 		return false;
 	}
 	return true;
@@ -7200,24 +7072,13 @@ PostInitJobQueue()
 
 
 int
-find_idle_local_jobs( ClassAd *job, void* )
+find_idle_local_jobs( JobQueueJob *job, const JOB_ID_KEY&, void* )
 {
-	int	status;
-	int	cur_hosts;
-	int	max_hosts;
-	int	univ;
-	PROC_ID id;
-
-	int noop = 0;
-	job->LookupBool(ATTR_JOB_NOOP, noop);
-	if (noop) {
-		return 0;
-	}
-
-	if (job->LookupInteger(ATTR_JOB_UNIVERSE, univ) != 1) {
-		univ = CONDOR_UNIVERSE_STANDARD;
-	}
-
+	// Since this function may be used while walking the whole queue
+	// It's important to reject jobs that we aren't going to start very quickly.
+	// so we get universe and Noop flag out of the job object rather than
+	// doing an attribute lookup here - it's at least an order of magnitude faster.
+	int univ = job->Universe();
 	if( univ != CONDOR_UNIVERSE_LOCAL && univ != CONDOR_UNIVERSE_SCHEDULER ) {
 		return 0;
 	}
@@ -7226,8 +7087,15 @@ find_idle_local_jobs( ClassAd *job, void* )
 		return 0;
 	}
 
-	job->LookupInteger(ATTR_CLUSTER_ID, id.cluster);
-	job->LookupInteger(ATTR_PROC_ID, id.proc);
+	if (job->IsNoopJob()) {
+		return 0;
+	}
+
+	PROC_ID id = job->jid;
+	int	status;
+	int	cur_hosts;
+	int	max_hosts;
+
 	job->LookupInteger(ATTR_JOB_STATUS, status);
 
 	if (job->LookupInteger(ATTR_CURRENT_HOSTS, cur_hosts) != 1) {
@@ -7694,7 +7562,29 @@ Scheduler::StartLocalJobs()
 	if ( ExitWhenDone ) {
 		return;
 	}
+#if 0 // enable this code to walk the table of LocalJobIds instead of the whole queue
+	  // note that this code is only about 20% faster than walking the whole job queue
+	  // when 0.1% of jobs are schedular universe. it's probably even slower if a larger
+	  // percentage of the jobs are scheduler universe.
+	double begin = _condor_debug_get_time_double();
+	// Instead of walking the job queue. walk the set of local/scheduler jobs
+	for (JOB_ID_SET::iterator it = LocalJobIds.begin(); it != LocalJobIds.end(); /*++it not here*/) {
+		JOB_ID_SET::iterator curr = it++; // save and advance the iterator, in case we want to erase the item
+		JobQueueJob *job = GetJobAd(*curr);
+		if ( ! job) { // this id no longer refers to a job. so remove it from the list.
+			//TODO: should we warn when this happens??
+			LocalJobIds.erase(curr);
+			continue;
+		}
+		// call the old queue walk function.
+		find_idle_local_jobs(job, *curr, NULL);
+	}
+	double runtime = _condor_debug_get_time_double() - begin;
+	WalkJobQ_find_idle_local_jobs_runtime += runtime;
+	//WalkJobQ_runtime += runtime;
+#else
 	WalkJobQueue(find_idle_local_jobs);
+#endif
 }
 
 shadow_rec*
@@ -12952,13 +12842,8 @@ Scheduler::invalidate_ads()
 	cad->Assign( ATTR_SCHEDD_NAME, Name );
 	cad->Assign( ATTR_MY_ADDRESS, daemonCore->publicNetworkIpAddr() );
 
-#ifdef USE_OWNERDATA_MAP
 	for (OwnerDataMap::iterator it = Owners.begin(); it != Owners.end(); ++it) {
 		const OwnerData & Owner = it->second;
-#else
-	for (int ii = 0; ii < NumOwners; ii++ ) {
-		const OwnerData & Owner = Owners[ii];
-#endif
 		daemonCore->sendUpdates(INVALIDATE_SUBMITTOR_ADS, cad, NULL, false);
 		MyString submitter;
 		submitter.formatstr("%s@%s", Owner.Name(), UidDomain);
@@ -14029,7 +13914,7 @@ Scheduler::dumpState(int, Stream* s) {
 }
 
 int
-fixAttrUser( ClassAd *job, void* )
+fixAttrUser(JobQueueJob *job, const JOB_ID_KEY & /*jid*/, void *)
 {
 	int nice_user = 0;
 	MyString owner;
@@ -14762,7 +14647,7 @@ Scheduler::adlist_publish( ClassAd *resAd )
 bool jobExternallyManaged(ClassAd * ad)
 {
 	ASSERT(ad);
-	MyString job_managed;
+	std::string job_managed;
 	if( ! ad->LookupString(ATTR_JOB_MANAGED, job_managed) ) {
 		return false;
 	}
@@ -14922,6 +14807,36 @@ Scheduler::claimLocalStartd()
 }
 
 /**
+ * Adds a job to various job indexes, called on startup and when new jobs are committed to the queue.
+ * 
+ * @param jobAd - the new job to be added to the cronTabs table
+ * @param loading_job_queue - true if this function is called when reloading the job queue
+ **/
+void
+Scheduler::indexAJob( JobQueueJob * /*jobAd*/, bool /*loading_job_queue*/ )
+{
+#if 0 // enable this code to keep an index of LocalJobIds
+	int univ = jobAd->Universe();
+	if (univ == CONDOR_UNIVERSE_LOCAL || univ == CONDOR_UNIVERSE_SCHEDULER) {
+		LocalJobIds.insert(jobAd->jid);
+	}
+#endif
+}
+
+/**
+ * Removes a job from various job indexes, called when the job object is deleted
+ * 
+ * @param jobAd - the new job to be added to the cronTabs table
+ **/
+void
+Scheduler::removeJobFromIndexes( const JOB_ID_KEY& /*job_id*/ )
+{
+#if 0 // enable this code to keep an index of LocalJobIds
+	LocalJobIds.erase(job_id);
+#endif
+}
+
+/**
  * Adds a job to our list of CronTab jobs
  * We will check to see if the job has already been added and
  * whether it defines a valid CronTab schedule before adding it
@@ -14930,13 +14845,11 @@ Scheduler::claimLocalStartd()
  * @param jobAd - the new job to be added to the cronTabs table
  **/
 void
-Scheduler::addCronTabClassAd( ClassAd *jobAd )
+Scheduler::addCronTabClassAd( JobQueueJob *jobAd )
 {
 	if ( NULL == m_adSchedd ) return;
 	CronTab *cronTab = NULL;
-	PROC_ID id;
-	jobAd->LookupInteger( ATTR_CLUSTER_ID, id.cluster );
-	jobAd->LookupInteger( ATTR_PROC_ID, id.proc );
+	PROC_ID id = jobAd->jid;
 	if ( this->cronTabs->lookup( id, cronTab ) < 0 &&
 		 CronTab::needsCronTab( jobAd ) ) {
 		this->cronTabs->insert( id, NULL );

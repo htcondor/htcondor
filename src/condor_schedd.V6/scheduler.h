@@ -85,6 +85,8 @@ void AuditLogNewConnection( int cmd, Sock &sock, bool failure );
 class JobQueueJob;
 extern int updateSchedDInterval( JobQueueJob*, const JOB_ID_KEY&, void* );
 
+typedef std::set<JOB_ID_KEY> JOB_ID_SET;
+
 class match_rec;
 
 struct shadow_rec
@@ -144,15 +146,9 @@ struct OwnerCounters {
 #define USE_OWNERDATA_MAP 1
 
 struct OwnerData {
-#ifdef USE_OWNERDATA_MAP
   std::string name;
   const char * Name() const { return name.empty() ? "" : name.c_str(); }
   bool empty() const { return name.empty(); }
-#else
-  char* Name;
-  const char * Name() const { return const_cast<const char*>(Name); }
-  bool empty() const { return Name==NULL; }
-#endif
   OwnerCounters num;
   time_t LastHitTime; // records the last time we incremented num.Hit, use to expire Owners
   // Time of most recent change in flocking level or
@@ -162,16 +158,10 @@ struct OwnerData {
   int OldFlockLevel;
   time_t NegotiationTimestamp;
   std::set<int> PrioSet; // Set of job priorities, used for JobPrioArray attr
-#ifdef USE_OWNERDATA_MAP
   OwnerData() : LastHitTime(0), FlockLevel(0), OldFlockLevel(0), NegotiationTimestamp(0) { }
-#else
-  OwnerData() : Name(NULL), LastHitTime(0), FlockLevel(0), OldFlockLevel(0), NegotiationTimestamp(0) { }
-#endif
 };
 
-#ifdef USE_OWNERDATA_MAP
 typedef std::map<std::string, OwnerData> OwnerDataMap;
-#endif
 
 class match_rec: public ClaimIdParser
 {
@@ -384,7 +374,7 @@ class Scheduler : public Service
 	friend	int		NewProc(int cluster_id);
 	friend	int		count_a_job(JobQueueJob*, const JOB_ID_KEY&, void* );
 //	friend	void	job_prio(ClassAd *);
-	friend  int		find_idle_local_jobs(ClassAd *, void*);
+	friend  int		find_idle_local_jobs(JobQueueJob *, const JOB_ID_KEY&, void*);
 	friend	int		updateSchedDInterval(JobQueueJob*, const JOB_ID_KEY&, void* );
     friend  void    add_shadow_birthdate(int cluster, int proc, bool is_reconnect);
 	void			display_shadow_recs();
@@ -400,8 +390,10 @@ class Scheduler : public Service
 	int				spoolJobFilesReaper(int,int);	
 	int				transferJobFilesReaper(int,int);
 	void			PeriodicExprHandler( void );
-	void			addCronTabClassAd( ClassAd* );
+	void			addCronTabClassAd( JobQueueJob* );
 	void			addCronTabClusterId( int );
+	void			indexAJob(JobQueueJob* job, bool loading_job_queue=false);
+	void			removeJobFromIndexes(const JOB_ID_KEY& job_id);
 	int				RecycleShadow(int cmd, Stream *stream);
 	void			finishRecycleShadow(shadow_rec *srec);
 
@@ -443,7 +435,7 @@ class Scheduler : public Service
 						TransferDaemon *&td_ref ); 
 	bool			startTransferd( int cluster, int proc ); 
 	WriteUserLog*	InitializeUserLog( PROC_ID job_id );
-	bool			WriteSubmitToUserLog( PROC_ID job_id, bool do_fsync );
+	bool			WriteSubmitToUserLog( JobQueueJob* job, bool do_fsync );
 	bool			WriteAbortToUserLog( PROC_ID job_id );
 	bool			WriteHoldToUserLog( PROC_ID job_id );
 	bool			WriteReleaseToUserLog( PROC_ID job_id );
@@ -595,10 +587,8 @@ class Scheduler : public Service
 	ScheddStatistics stats;
 	ScheddOtherStatsMgr OtherPoolStats;
 
-#ifdef USE_OWNERDATA_MAP
 	const OwnerData * insert_owner_const(const char*);
 	void incrementRecentlyAdded(const char *);
-#endif
 
 private:
 
@@ -668,11 +658,8 @@ private:
 	char*			LocalUnivExecuteDir;
 	int				BadCluster;
 	int				BadProc;
-#ifdef USE_OWNERDATA_MAP
 	OwnerDataMap    Owners;
-#else
-	ExtArray<OwnerData> Owners; // May be tracking AccountingGroup instead of owner username/domain
-#endif
+	//JOB_ID_SET      LocalJobIds;  // set of jobid's of local and scheduler universe jobs.
 	HashTable<UserIdentity, GridJobCounts> GridJobOwners;
 	int				NumOwners;
 	time_t			NegotiationRequestTime;
@@ -755,13 +742,8 @@ private:
 	int			command_query_job_ads(int, Stream* stream);
 	int			command_query_job_aggregates(ClassAd & query, Stream* stream);
 	void   			check_claim_request_timeouts( void );
-#ifdef USE_OWNERDATA_MAP
 	OwnerData * insert_owner(const char*);
 	OwnerData * find_owner(const char*);
-#else
-	OwnerData * insert_owner(const char*, int * pnum=NULL);
-	OwnerData * find_owner(const char*, int * pnum=NULL);
-#endif
 	void		remove_unused_owners();
 	void			child_exit(int, int);
 	void			scheduler_univ_job_exit(int pid, int status, shadow_rec * srec);
@@ -919,7 +901,6 @@ private:
 // Other prototypes
 class JobQueueJob;
 struct JOB_ID_KEY;
-int get_job_prio(JobQueueJob *ad, const JOB_ID_KEY& key, void* user);
 extern void set_job_status(int cluster, int proc, int status);
 extern bool claimStartd( match_rec* mrec );
 extern bool claimStartdConnected( Sock *sock, match_rec* mrec, ClassAd *job_ad);

@@ -717,9 +717,11 @@ if (LINUX
     # I've seen a reference to '-z bind_now', but all the
     # versions I can find actually use just '-z now':
     set(cxx_full_relro_arg "-Wl,-z,now")
-    # compiling everything with -fPIC is important for PIE
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
 endif()
+
+# compiling everything with -fPIC is needed to dynamically load libraries
+# linked against libstdc++
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
 
 
 #####################################
