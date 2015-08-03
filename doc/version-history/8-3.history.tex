@@ -47,6 +47,11 @@ which the file system check program may need when recovering files.
 Now it never removes that directory.
 \Ticket{4577}
 
+\item Removing a running docker universe container would sometimes
+leave the container running and the job in the X state for 10 minutes.
+Containers are now removed correctly and quickly.
+\Ticket{5191}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
