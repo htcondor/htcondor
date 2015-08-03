@@ -81,11 +81,7 @@ bool VanillaToGrid::vanillaToGrid(classad::ClassAd * ad, int target_universe, co
 	ad->Delete( ATTR_STAGE_IN_FINISH );
 	ad->Delete( ATTR_STAGE_IN_START );
 
-	if( is_sandboxed ) {
-		char attr_name[100];
-		snprintf(attr_name,100,"SUBMIT_%s",ATTR_JOB_IWD);
-		ad->Delete(attr_name);  // the presence of this would prevent schedd from rewriting spooled iwd
-	}
+	ad->Delete("SUBMIT_" ATTR_JOB_IWD); // the presence of this would prevent schedd from rewriting spooled iwd
 
 	// Stuff to reset
 	ad->InsertAttr(ATTR_JOB_STATUS, 1); // Idle
