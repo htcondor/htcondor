@@ -6,6 +6,7 @@
 #include "condor_config.h"
 #include "condor_classad.h"
 #include "condor_daemon_core.h"
+#include "file_lock.h"
 
 #include "docker-api.h"
 #include <algorithm>
@@ -14,7 +15,7 @@ static bool add_env_to_args_for_docker(ArgList &runArgs, const Env &env);
 static bool add_docker_arg(ArgList &runArgs);
 static int run_simple_docker_command(	const std::string &command,
 					const std::string &container,
-					CondorError &e);
+					CondorError &e, bool ignore_output=false);
 static int gc_image(const std::string &image);
 
 //
@@ -200,7 +201,51 @@ int DockerAPI::rm( const std::string & containerID, CondorError & /* err */ ) {
 
 int
 DockerAPI::rmi(const std::string &image, CondorError &err) {
-	return run_simple_docker_command("rmi", image, err);
+		// First, try to remove the named image
+	run_simple_docker_command("rmi", image, err, true);
+		
+		// That may have succeed or failed.  It could have
+		// failed if the image doesn't exist (anymore), or
+		// if someone else deleted it outside of condor.
+		// Check to see if the image still exists.  If it
+		// has been removed, return 0.
+
+	ArgList args;
+	if ( ! add_docker_arg(args))
+		return -1;
+	args.AppendArg( "images" );
+	args.AppendArg( "-q" );
+	args.AppendArg( image );
+
+	MyString displayString;
+	args.GetArgsStringForLogging( & displayString );
+	dprintf( D_FULLDEBUG, "Attempting to run: '%s'.\n", displayString.c_str() );
+
+	FILE * dockerResults = my_popen( args, "r", 1 , 0, false);
+	if( dockerResults == NULL ) {
+		dprintf( D_ALWAYS | D_FAILURE, "Failed to run '%s'.\n", displayString.c_str() );
+		return -2;
+	}
+
+	char buffer[1024];
+	std::vector< std::string > output;
+	while( fgets( buffer, 1024, dockerResults ) != NULL ) {
+		unsigned end = strlen(buffer) - 1;
+		if( buffer[end] == '\n' ) { buffer[end] = '\0'; }
+		output.push_back( buffer );
+	}
+
+	int exitCode = my_pclose( dockerResults );
+	if( exitCode != 0 ) {
+		dprintf( D_ALWAYS, "'%s' did not exit successfully (code %d); the first line of output was '%s'.\n", displayString.c_str(), exitCode, output[0].c_str() );
+		return -3;
+	}
+
+	if (output.size() == 0) {
+		return 0;
+	} else {
+		return 1;
+	}
 }
 
 
@@ -459,54 +504,130 @@ bool add_env_to_args_for_docker(ArgList &runArgs, const Env &env)
 }
 
 int
-run_simple_docker_command(const std::string &command, const std::string &container,
-			CondorError &)
+run_simple_docker_command(const std::string &command, const std::string &container, CondorError &, bool ignore_output)
 {
-	ArgList args;
-	if ( ! add_docker_arg(args))
-		return -1;
-	args.AppendArg( command );
-	args.AppendArg( container.c_str() );
+  ArgList args;
+  if ( ! add_docker_arg(args))
+    return -1;
+  args.AppendArg( command );
+  args.AppendArg( container.c_str() );
 
-	MyString displayString;
-	args.GetArgsStringForLogging( & displayString );
-	dprintf( D_FULLDEBUG, "Attempting to run: %s\n", displayString.c_str() );
+  MyString displayString;
+  args.GetArgsStringForLogging( & displayString );
+  dprintf( D_FULLDEBUG, "Attempting to run: %s\n", displayString.c_str() );
 
-	// Read from Docker's combined output and error streams.
-	FILE * dockerResults = my_popen( args, "r", 1 , 0, false);
-	if( dockerResults == NULL ) {
-		dprintf( D_ALWAYS | D_FAILURE, "Failed to run '%s'.\n", displayString.c_str() );
-		return -2;
-	}
+  // Read from Docker's combined output and error streams.
+  FILE * dockerResults = my_popen( args, "r", 1 , 0, false);
+  if( dockerResults == NULL ) {
+    dprintf( D_ALWAYS | D_FAILURE, "Failed to run '%s'.\n", displayString.c_str() );
+    return -2;
+  }
 
-	// On a success, Docker writes the containerID back out.
-	char buffer[1024];
-	if( NULL == fgets( buffer, 1024, dockerResults ) ) {
-		if( errno ) {
-			dprintf( D_ALWAYS | D_FAILURE, "Failed to read results from '%s': '%s' (%d)\n", displayString.c_str(), strerror( errno ), errno );
-		} else {
-			dprintf( D_ALWAYS | D_FAILURE, "'%s' returned nothing.\n", displayString.c_str() );
-		}
-		my_pclose( dockerResults );
-		return -3;
-	}
+  // On a success, Docker writes the containerID back out.
+  char buffer[1024];
+  if( NULL == fgets( buffer, 1024, dockerResults ) ) {
+    if( errno ) {
+      dprintf( D_ALWAYS | D_FAILURE, "Failed to read results from '%s': '%s' (%d)\n", displayString.c_str(), strerror( errno ), errno );
+    } else {
+      dprintf( D_ALWAYS | D_FAILURE, "'%s' returned nothing.\n", displayString.c_str() );
+    }
+    my_pclose( dockerResults );
+    return -3;
+  }
 
-	int length = strlen( buffer );
-	if( length < 1 || strncmp( buffer, container.c_str(), length - 1 ) != 0 ) {
-		dprintf( D_ALWAYS | D_FAILURE, "Docker %s failed, printing first few lines of output.\n", command.c_str() );
-		dprintf( D_ALWAYS | D_FAILURE, "%s", buffer );
-		while( NULL != fgets( buffer, 1024, dockerResults ) ) {
-			dprintf( D_ALWAYS | D_FAILURE, "%s", buffer );
-		}
-		my_pclose( dockerResults );
-		return -4;
-	}
+  int length = strlen( buffer );
+  if (!ignore_output) {
+    if( length < 1 || strncmp( buffer, container.c_str(), length - 1 ) != 0 ) {
+      dprintf( D_ALWAYS | D_FAILURE, "Docker %s failed, printing first few lines of output.\n", command.c_str() );
+      dprintf( D_ALWAYS | D_FAILURE, "%s", buffer );
+      while( NULL != fgets( buffer, 1024, dockerResults ) ) {
+	dprintf( D_ALWAYS | D_FAILURE, "%s", buffer );
+      }
+      my_pclose( dockerResults );
+      return -4;
+    }
+  }
 
-	my_pclose( dockerResults );
-	return 0;
+  my_pclose( dockerResults );
+  return 0;
 }
 
 static int 
-gc_image(const std::string & /*image*/) {
+gc_image(const std::string & image) {
+
+  std::list<std::string> images;
+  std::string imageFilename;
+  
+  int cache_size = param_integer("DOCKER_IMAGE_CACHE_SIZE", 20);
+  cache_size--;
+  if (cache_size < 0) cache_size = 0;
+
+  if( ! param( imageFilename, "LOG" ) ) {
+    dprintf(D_ALWAYS, "LOG not defined in param table, giving up\n");
+    ASSERT(false);
+  }
+
+  
+  TemporaryPrivSentry sentry(PRIV_ROOT);
+  imageFilename += "/.startd_docker_images";
+
+  FileLock lock(imageFilename.c_str());
+  lock.obtain(WRITE_LOCK); // blocking
+
+  FILE *f = safe_fopen_wrapper_follow(imageFilename.c_str(), "r");
+
+  if (f) {
+    char existingImage[1024];
+    while ( fgets(existingImage, 1024, f)) {
+
+      if (strlen(existingImage) > 1) {
+	existingImage[strlen(existingImage) - 1] = '\0'; // remove newline
+      }
+      std::string tmp(existingImage);
+      //
+      // If we're reusing an image, we'll shuffle it to the end
+      if (tmp != image) {
+	images.push_back(tmp);
+      }
+    }
+    fclose(f);
+  }
+
+  dprintf(D_ALWAYS, "Found %lu entries in docker image cache.\n", images.size());
+
+   std::list<std::string>::iterator iter;
+   int remove_count = images.size() - cache_size;
+   if (remove_count < 0) remove_count = 0;
+
+   for (iter = images.begin(); iter != images.end(); iter++) {
+    if (remove_count <= 0) break;
+    std::string toRemove = *iter;
+
+    CondorError err;
+    int result = DockerAPI::rmi(toRemove, err);
+
+    if (result == 0) {
+      images.erase(iter);
+      remove_count--;
+    }
+  }
+
+  images.push_back(image); // our current image is the most recent one
+
+  f = safe_fopen_wrapper_follow(imageFilename.c_str(), "w");
+  if (f) {
+    std::list<std::string>::iterator it;
+    for (it = images.begin(); it != images.end(); it++) {
+      fputs((*it).c_str(), f);
+      fputs("\n", f);
+    }
+    fclose(f);
+  } else {
+    dprintf(D_ALWAYS, "Can't write to docker images file: %s\n", imageFilename.c_str());
+    ASSERT(false);
+  }
+
+  lock.release();
+
   return 0;
 }
