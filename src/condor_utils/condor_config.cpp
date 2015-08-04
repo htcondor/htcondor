@@ -2293,7 +2293,6 @@ bool string_is_double_param(
 		// simple literal.  Since that didn't work, now try parsing it
 		// as an expression.
 		ClassAd rhs;
-		float float_result = 0.0;
 		if( me ) {
 			rhs = *me;
 		}
@@ -2301,7 +2300,7 @@ bool string_is_double_param(
 		if ( ! rhs.AssignExpr( name, string )) {
 			if (err_reason) *err_reason = PARAM_PARSE_ERR_REASON_ASSIGN;
 		}
-		else if ( ! rhs.EvalFloat(name,target,float_result) ) {
+		else if ( ! rhs.EvalFloat(name,target,result) ) {
 			if (err_reason) *err_reason = PARAM_PARSE_ERR_REASON_EVAL;
 		} else {
 			valid = true;
