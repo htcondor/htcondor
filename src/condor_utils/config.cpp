@@ -2522,7 +2522,11 @@ expand_macro(const char *value,
 					//   list_name must be the macro name of a comma separated list of items.
 				case SPECIAL_MACRO_ID_CHOICE:
 				{
+				#if 1 // use the version of stringlist that doesn't eat empty fields or extra delimiters.
+					StringList entries(name, ',', true);
+				#else
 					StringList entries(name, ",");
+				#endif
 					entries.rewind();
 
 					const char * index_name = entries.next();

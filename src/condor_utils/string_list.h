@@ -31,9 +31,11 @@
 class StringList {
 public:
 	StringList(const char *s = NULL, const char *delim = " ," );
+	StringList(const char *s, char delim_char, bool keep_empty_fields );
 	StringList( const StringList &other );
 	virtual ~StringList();
 	void initializeFromString (const char *);
+	void initializeFromString (const char *, char delim_char);
 
 	/** Note: the contains* methods have side affects -- they
 		change "current" to point at the location of the match */
