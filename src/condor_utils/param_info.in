@@ -7209,6 +7209,14 @@ friendly_name=
 review=?
 tags=c++_util,schedd
 
+[RUN_FILETRANSFER_PLUGINS_WITH_ROOT]
+default=false
+type=bool
+reconfig=true
+customization=seldom
+friendly_name=Whether to invoke file transfer plugins as user or as root
+review=?
+
 [COLLECTOR_MAX_FILE_DESCRIPTORS]
 default=10240
 range=0,
@@ -7982,6 +7990,8 @@ default=(TARGET.ImageSize <  (15 * 1024))
 default=($(CPUBusy) && ($(KeyboardBusy) == False))
 [MachineBusy]
 default=($(CPUBusy) || $(KeyboardBusy))
+[IS_OWNER]
+default=(START =?= False)
 
 # define UWCS_xxx desktop preemption policy that can be referenced in START, PREEMPT, etc
 [UWCS_WANT_SUSPEND]
@@ -8138,6 +8148,7 @@ default : @end
 	SUSPEND=($(KeyboardBusy) || ( (CpuBusyTime > 120) && $(ActivationTimer) > 90))
 	CONTINUE=($(CPUIdle) && ($(ActivityTimer) > 10) && (KeyboardIdle > $(ContinueIdleTime)))
 	PREEMPT=(((Activity == "Suspended") && ($(ActivityTimer) > $(MaxSuspendTime))) || (SUSPEND && (WANT_SUSPEND == False)))
+	START=((KeyboardIdle > $(StartIdleTime)) && ( $(CPUIdle) || (State != "Unclaimed" && State != "Owner")) )
 	KILL=False
 	MaxJobRetirementTime=0
 	CLAIM_WORKLIFE=
@@ -8170,6 +8181,7 @@ default : @end
 	SUSPEND=$(UWCS_SUSPEND)
 	CONTINUE=$(UWCS_CONTINUE)
 	PREEMPT=$(UWCS_PREEMPT)
+	START=$(UWCS_START)
 	KILL=$(UWCS_KILL)
 	PERIODIC_CHECKPOINT=$(UWCS_PERIODIC_CHECKPOINT)
 	PREEMPTION_REQUIREMENTS=$(UWCS_PREEMPTION_REQUIREMENTS)
