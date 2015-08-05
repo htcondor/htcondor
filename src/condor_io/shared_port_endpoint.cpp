@@ -158,7 +158,8 @@ SharedPortEndpoint::InitAndReconfig()
 		m_socket_dir = socket_dir;
 		StartListener();
 	}
-	m_max_accepts = param_boolean("SHARED_ENDPOINT_MAX_ACCEPTS_PER_CYCLE", param_boolean("MAX_ACCEPTS_PER_CYCLE", 8));
+	m_max_accepts = param_integer("SHARED_ENDPOINT_MAX_ACCEPTS_PER_CYCLE",
+						param_integer("MAX_ACCEPTS_PER_CYCLE", 8));
 }
 
 void
