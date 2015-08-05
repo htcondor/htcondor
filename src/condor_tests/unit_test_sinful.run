@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use CondorTest;
+use CondorUtils;
 use NetworkTestConfigs;
 
 #
@@ -26,7 +27,15 @@ if( $rv == 0 ) {
 sub countBrokenConversions {
 	my( @ads ) = @_;
 
-	my $rv = 0;
+	# Is this really the best way to get the LIBEXEC dir?
+	my $libexecDir = `condor_config_val LIBEXEC`;
+	CondorUtils::fullchomp( $libexecDir );
+	if( ! -d $libexecDir ) {
+		print( "LIBEXEC '$libexecDir' is not a directory, failing test.\n" );
+		return -1;
+	}
+
+	my $failures = 0;
 	foreach my $ad (@ads) {
 		my $sinful = $ad->{ 'MyAddress' };
 		my $v1String = $ad->{ 'AddressV1' };
@@ -34,44 +43,60 @@ sub countBrokenConversions {
 		print( "Checking " . $ad->{ 'MyType' } . " ($sinful <-> $v1String)...\n" );
 
 		# Check forward conversion.
-		my $converted = `condor_sinful v1 '${sinful}'`;
-		chomp( $converted );
+		my $rv = runCommandCarefully( {emit_output => 0}, "${libexecDir}/condor_sinful", "v1", $sinful );
+		my $converted = $rv->{ stdout }->[0];
+		CondorUtils::fullchomp( $converted );
+
 		if( $converted ne $v1String ) {
 			print( "Forward conversion failure.\n" );
 			print( "FAILURE: ${sinful} => ${converted} != ${v1String}\n" );
-			++$rv;
+			++$failures;
+			print( "standard out\n" . join( "\n", @{$rv->{ stdout }} ) . "\n" ) ;
+			print( "standard error\n" . join( "\n", @{$rv->{ stderr }} ) . "\n" );
 		}
 
 		# Check reverse conversion.
-		my $reverse = `condor_sinful sinful '${v1String}'`;
-		chomp( $reverse );
+		$rv = runCommandCarefully( {emit_output => 0}, "${libexecDir}/condor_sinful", "sinful", $v1String );
+		my $reverse = $rv->{ stdout }->[0];
+		CondorUtils::fullchomp( $reverse );
+
 		if( $reverse ne $sinful ) {
 			print( "Reverse conversion failure.\n" );
 			print( "FAILURE: ${v1String} => ${reverse} != ${sinful}\n" );
-			++$rv;
+			++$failures;
+			print( "standard out\n" . join( "\n", @{$rv->{ stdout }} ) . "\n" ) ;
+			print( "standard error\n" . join( "\n", @{$rv->{ stderr }} ) . "\n" );
 		}
 
 		# And check round-trip conversion.
-		$reverse = `condor_sinful sinful '${converted}'`;
-		chomp( $reverse );
+		$rv = runCommandCarefully( {emit_output => 0}, "${libexecDir}/condor_sinful", "sinful", $converted );
+		$reverse = $rv->{ stdout }->[0];
+		CondorUtils::fullchomp( $reverse );
+
 		if( $reverse ne $sinful ) {
 			print( "Round-trip (from sinful) failure.\n" );
 			print( "FAILURE: ${sinful} => ${converted} => ${reverse} != ${sinful}\n" );
-			++$rv;
+			++$failures;
+			print( "standard out\n" . join( "\n", @{$rv->{ stdout }} ) . "\n" ) ;
+			print( "standard error\n" . join( "\n", @{$rv->{ stderr }} ) . "\n" );
 		}
 
-		$converted = `condor_sinful sinful '${v1String}'`;
-		chomp( $converted );
-		$reverse = `condor_sinful v1 '${converted}'`;
-		chomp( $reverse );
+		$rv = runCommandCarefully( {emit_output => 0}, "${libexecDir}/condor_sinful", "sinful", $v1String );
+		$converted = $rv->{ stdout }->[0];
+		CondorUtils::fullchomp( $converted );
+
+		$rv = runCommandCarefully( {emit_output => 0}, "${libexecDir}/condor_sinful", "v1", $converted );
+		$reverse = $rv->{ stdout }->[0];
+		CondorUtils::fullchomp( $reverse );
+
 		if( $reverse ne $v1String ) {
 			print( "Round-trip (from v1string) failure.\n" );
 			print( "FAILURE: ${v1String} => ${converted} => ${reverse} != ${v1String}\n" );
-			++$rv;
+			++$failures;
 		}
 	}
 
-	return $rv;
+	return $failures;
 }
 
 sub checkConversionsWithConfig {
@@ -111,6 +136,7 @@ sub checkConversionsWithConfig {
 			runCondorTool( "condor_reconfig", undef, 1, { emit_output => 0 } );
 
 			# Give the shared port daemon some time to do its write.
+			# FIXME: check the actual address file.
 			print( "Waiting for shared port daemon to write its new address file...\n" );
 			while(! CondorTest::SearchCondorLog( "shared_port", "About to update statistics in shared_port daemon ad file" ) ) {
 				sleep( 1 );
@@ -129,10 +155,26 @@ sub checkConversionsWithConfig {
 		);
 	}
 
+	# Is this really the best way to get the LIBEXEC dir?
+	my $libexecDir = `condor_config_val LIBEXEC`;
+	CondorUtils::fullchomp( $libexecDir );
+	if( ! -d $libexecDir ) {
+		print( "LIBEXEC '$libexecDir' is not a directory, failing test.\n" );
+		RegisterResult( 0, "test_name" => $tn );
+		rmdir( $daemonSocketDir );
+		return;
+	}
+
 	# Check the testingd's public and private addresses.
 	my @ads;
 	my @lines;
-	runCondorTool( "condor_testingd -f", \@lines, 1, { emit_output => 0 } );
+	runCondorTool( "${libexecDir}/condor_testingd -f", \@lines, 1, { emit_output => 0 } );
+	if(! (scalar(@lines) >= 4) ) {
+		print( "Not enough output from condor_testingd, failing test.\n" );
+		RegisterResult( 0, "test_name" => $tn );
+		rmdir( $daemonSocketDir );
+		return;
+	}
 
 	my $address = $lines[0]; CondorUtils::fullchomp( $address );
 	my $addressV1 = $lines[1]; CondorUtils::fullchomp( $addressV1 );

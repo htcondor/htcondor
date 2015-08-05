@@ -14,12 +14,42 @@ int printOrFail( char const * in ) {
 }
 
 int main( int argc, char * argv[] ) {
+#if defined(WINDOWS)
+	if( argc < 3 ) {
+		fprintf( stderr, "Usage: %s <command> <sinful>\n", argv[0] );
+		return 2;
+	}
+
+	// Windows doesn't have argument arrays, so anything with spaces in
+	// it will get broken up.  Bypass everything.  Cargo culted from TJ.
+
+	MyString cmdline;
+	cmdline.formatstr( "%S", GetCommandLineW() );
+	const char * sinful = cmdline.c_str();
+	int numSpaces = 0;
+	for( int i = 0; i < cmdline.length() && numSpaces < 2; ++i ) {
+		if( cmdline[i] == ' ' ) {
+			sinful = &cmdline[i];
+			numSpaces += 1;
+		}
+	}
+	if( numSpaces != 2 || sinful[1] == '\0' ) {
+		fprintf( stderr, "Usage: %s <command> <sinful>\n", argv[0] );
+		return 2;
+	}
+	sinful = &sinful[1];
+	sinful = strdup( sinful );
+	cmdline.clear();
+#else
 	if( argc != 3 ) {
 		fprintf( stderr, "Usage: %s <command> <sinful>\n", argv[0] );
 		return 2;
 	}
 
-	Sinful s( argv[2] );
+	char * sinful = argv[2];
+#endif
+
+	Sinful s( sinful );
 	if( strcmp( argv[1], "valid" ) == 0 ) {
 		fprintf( stdout, "%s\n", s.valid() ? "valid" : "invalid" );
 		return s.valid() ? 0 : 1;
@@ -27,7 +57,7 @@ int main( int argc, char * argv[] ) {
 
 
 	if( ! s.valid() ) {
-		fprintf( stderr, "String '%s' is not a valid Sinful.\n", argv[2] );
+		fprintf( stderr, "The string '%s' is not a valid Sinful.\n", sinful );
 		return 2;
 	}
 
