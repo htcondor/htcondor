@@ -4998,7 +4998,7 @@ int get_job_prio(JobQueueJob *job, const JOB_ID_KEY & jid, void *)
 	return cur_hosts;
 }
 
-static bool
+bool
 jobLeaseIsValid( ClassAd* job, int cluster, int proc )
 {
 	int last_renewal, duration;

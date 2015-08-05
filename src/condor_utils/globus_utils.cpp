@@ -354,7 +354,7 @@ activate_globus_gsi( void )
 	globus_gsi_cred_handle_destroy_ptr = globus_gsi_cred_handle_destroy;
 	globus_gsi_cred_handle_init_ptr = globus_gsi_cred_handle_init;
 	globus_gsi_cred_read_proxy_ptr = globus_gsi_cred_read_proxy;
-	globus_gsi_cred_write_proxy_ptr = globus_gsi_cred_write_proxy;
+	globus_gsi_cred_write_proxy_ptr = reinterpret_cast<globus_result_t (*)(globus_l_gsi_cred_handle_s*, char*)>(globus_gsi_cred_write_proxy);
 	globus_gsi_proxy_assemble_cred_ptr = globus_gsi_proxy_assemble_cred;
 	globus_gsi_proxy_create_req_ptr = globus_gsi_proxy_create_req;
 	globus_gsi_proxy_handle_attrs_destroy_ptr = globus_gsi_proxy_handle_attrs_destroy;

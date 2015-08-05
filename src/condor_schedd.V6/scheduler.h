@@ -87,6 +87,8 @@ extern int updateSchedDInterval( JobQueueJob*, const JOB_ID_KEY&, void* );
 
 typedef std::set<JOB_ID_KEY> JOB_ID_SET;
 
+bool jobLeaseIsValid( ClassAd* job, int cluster, int proc );
+
 class match_rec;
 
 struct shadow_rec

@@ -56,6 +56,19 @@ StringList::StringList(const char *s, const char *delim )
 	}
 }
 
+StringList::StringList(const char *s, char delim_char, bool keep_empty_fields )
+{
+	char delims[2] = { delim_char, 0 };
+	m_delimiters = strnewp( delims );
+	if ( s ) {
+		if (keep_empty_fields) {
+			initializeFromString(s, delim_char);
+		} else {
+			initializeFromString(s);
+		}
+	}
+}
+
 StringList::StringList( const StringList &other )
 		: m_delimiters( NULL )
 {
@@ -119,6 +132,47 @@ StringList::initializeFromString (const char *s)
 		
 		// put the string into the StringList
 		m_strings.Append (tmp_string);
+	}
+}
+
+// This version allows for a single delimiter character,
+// it will trim leading and trailing whitespace from items, but
+// it will not skip empty items or extra delimiters.
+void
+StringList::initializeFromString (const char *s, char delim_char)
+{
+	if(!s)
+	{
+		EXCEPT("StringList::initializeFromString passed a null pointer");
+	}
+
+	const char * p = s;
+	while (*p) {
+
+		// skip leading whitespace but not leading separators.
+		while (isspace(*p)) ++p;
+
+		// scan for end of string or for a delimiter char
+		const char * e = p;
+		while (*e && *e != delim_char) ++e;
+
+		size_t len = e-p;
+
+		// rewind back over trailing whitespace
+		while (len && isspace(p[len-1])) --len;
+
+		char *tmp_string = (char*)malloc(1 + len);
+		ASSERT(tmp_string);
+		strncpy(tmp_string, p, len);
+		tmp_string[len] = 0;
+
+		// put the string into the StringList
+		m_strings.Append (tmp_string);
+
+		p = e;
+
+		// if we ended at a delimiter, skip over it.
+		if (*p == delim_char) ++p;
 	}
 }
 

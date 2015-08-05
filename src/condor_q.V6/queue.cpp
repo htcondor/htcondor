@@ -2265,8 +2265,8 @@ bufferJobShort( ClassAd *ad ) {
 	sprintf( return_buff,
 			 widescreen ? description.empty() ? "%4d.%-3d %-14s %-11s %-12s %-2c %-3d %-4.1f %s\n"
 			                                   : "%4d.%-3d %-14s %-11s %-12s %-2c %-3d %-4.1f (%s)\n"
-			            : description.empty() ? "%4d.%-3d %-14s %-11s %-12s %-2c %-3d %-4.1f %-18.18s\n"
-				                           : "%4d.%-3d %-14s %-11s %-12s %-2c %-3d %-4.1f (%-17.17s)\n",
+			            : description.empty() ? "%4d.%-3d %-14s %-11s %-12s %-2c %-3d %-4.1f %.18s\n"
+				                           : "%4d.%-3d %-14s %-11s %-12s %-2c %-3d %-4.1f (%.17s)\n",
 			 cluster,
 			 proc,
 			 format_owner( owner, ad ),
