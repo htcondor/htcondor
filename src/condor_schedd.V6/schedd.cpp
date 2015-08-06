@@ -3115,7 +3115,11 @@ and abort, hold, or release the job as necessary.
 */
 
 static int
+#ifdef USE_NON_MUTATING_USERPOLICY
+PeriodicExprEval(JobQueueJob *jobad, const JOB_ID_KEY & /*jid*/, void * pvUser)
+#else
 PeriodicExprEval(JobQueueJob *jobad, const JOB_ID_KEY & /*jid*/, void *)
+#endif
 {
 	int status=-1;
 	if(!ResponsibleForPeriodicExprs(jobad, status)) return 1;
@@ -3130,10 +3134,17 @@ PeriodicExprEval(JobQueueJob *jobad, const JOB_ID_KEY & /*jid*/, void *)
 		if(status<0) return 1;
 	}
 
+#ifdef USE_NON_MUTATING_USERPOLICY
+	UserPolicy & policy = *(UserPolicy*)pvUser;
+
+	policy.ResetTriggers();
+	int action = policy.AnalyzePolicy(*jobad, PERIODIC_ONLY);
+#else
 	UserPolicy policy;
 	policy.Init(jobad);
 
 	int action = policy.AnalyzePolicy(PERIODIC_ONLY);
+#endif
 
 	// Build a "reason" string for logging
 	MyString reason;
@@ -3191,7 +3202,11 @@ Scheduler::PeriodicExprHandler( void )
 {
 	PeriodicExprInterval.setStartTimeNow();
 
-	WalkJobQueue(PeriodicExprEval);
+	UserPolicy policy;
+#ifdef USE_NON_MUTATING_USERPOLICY
+	policy.Init();
+#endif
+	WalkJobQueue2(PeriodicExprEval, &policy);
 
 	PeriodicExprInterval.setFinishTimeNow();
 
@@ -11211,8 +11226,13 @@ Scheduler::scheduler_univ_job_exit(int pid, int status, shadow_rec * srec)
 	ASSERT( job_ad ); // No job ad?
 	{
 		UserPolicy policy;
+#ifdef USE_NON_MUTATING_USERPOLICY
+		policy.Init();
+		action = policy.AnalyzePolicy(*job_ad, PERIODIC_THEN_EXIT);
+#else
 		policy.Init(job_ad);
 		action = policy.AnalyzePolicy(PERIODIC_THEN_EXIT);
+#endif
 		policy.FiringReason(reason,reason_code,reason_subcode);
 		if ( reason == "" ) {
 			reason = "Unknown user policy expression";
@@ -11234,7 +11254,7 @@ Scheduler::scheduler_univ_job_exit(int pid, int status, shadow_rec * srec)
 				// delete_shadow_rec will do that later
 			holdJob(job_id.cluster, job_id.proc, reason.Value(),
 					reason_code, reason_subcode,
-				true,false,false,false,false);
+					true,false,false,false,false);
 			break;
 
 		case RELEASE_FROM_HOLD:

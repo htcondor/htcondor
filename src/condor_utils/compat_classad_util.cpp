@@ -22,6 +22,7 @@
 #include "classad_oldnew.h"
 #include "string_list.h"
 #include "condor_adtypes.h"
+#include "classad/classadCache.h" // for CachedExprEnvelope
 
 /* TODO This function needs to be tested.
  */
@@ -109,6 +110,58 @@ const char * ClassAdValueToString ( const classad::Value & value )
 	buffer = "";
 	return ClassAdValueToString(value, buffer);
 }
+
+bool ExprTreeIsLiteral(classad::ExprTree * expr, classad::Value & value)
+{
+	if ( ! expr) return false;
+
+	classad::ExprTree::NodeKind kind = expr->GetKind();
+	if (kind == classad::ExprTree::EXPR_ENVELOPE) {
+		expr = ((classad::CachedExprEnvelope*)expr)->get();
+		if ( ! expr) return false;
+		kind = expr->GetKind();
+	}
+
+	// dive into parens
+	while (kind == classad::ExprTree::OP_NODE) {
+		classad::ExprTree *e2, *e3;
+		classad::Operation::OpKind op;
+		((classad::Operation*)expr)->GetComponents(op, expr, e2, e3);
+		if ( ! expr || op != classad::Operation::PARENTHESES_OP) return false;
+
+		kind = expr->GetKind();
+	}
+
+	if (kind == classad::ExprTree::LITERAL_NODE) {
+		classad::Value::NumberFactor factor;
+		((classad::Literal*)expr)->GetComponents(value, factor);
+		return true;
+	}
+
+	return false;
+}
+
+bool ExprTreeIsLiteralNumber(classad::ExprTree * expr, long long & ival)
+{
+	classad::Value val;
+	if ( ! ExprTreeIsLiteral(expr, val)) return false;
+	return val.IsNumber(ival);
+}
+
+bool ExprTreeIsLiteralNumber(classad::ExprTree * expr, double & rval)
+{
+	classad::Value val;
+	if ( ! ExprTreeIsLiteral(expr, val)) return false;
+	return val.IsNumber(rval);
+}
+
+bool ExprTreeIsLiteralString(classad::ExprTree * expr, std::string & sval)
+{
+	classad::Value val;
+	if ( ! ExprTreeIsLiteral(expr, val)) return false;
+	return val.IsStringValue(sval);
+}
+
 
 #define IS_DOUBLE_TRUE(val) (bool)(int)((val)*100000)
 
