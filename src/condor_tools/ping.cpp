@@ -243,14 +243,14 @@ void print_info(bool rv, const char * addr, Sock* s, MyString name, int cmd, Cla
 	
 	if(rv) {
 		// IMPORTANT: this hashtable returns 0 on success!
-		ret = (SecMan::command_map)->lookup(cmd_map_ent, session_id);
+		ret = (SecMan::command_map).lookup(cmd_map_ent, session_id);
 		if (ret) {
 			printf("no cmd map!\n");
 			return;
 		}
 
 		// IMPORTANT: this hashtable returns 1 on success!
-		ret = (SecMan::session_cache)->lookup(session_id.Value(), k);
+		ret = (SecMan::session_cache).lookup(session_id.Value(), k);
 		if (!ret) {
 			printf("no session!\n");
 			return;
