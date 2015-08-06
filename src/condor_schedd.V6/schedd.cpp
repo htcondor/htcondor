@@ -1326,6 +1326,9 @@ Scheduler::count_jobs()
 
 	cad->Assign(ATTR_SCHEDD_SWAP_EXHAUSTED, (bool)SwapSpaceExhausted);
 
+	cad->Assign(ATTR_NUM_JOB_STARTS_DELAYED, RunnableJobQueue.Length());
+	cad->Assign(ATTR_NUM_PENDING_CLAIMS, startdContactQueue.Length() + num_pending_startd_contacts);
+
 	m_xfer_queue_mgr.publish(cad);
 
 	// one last check for any newly-queued jobs
