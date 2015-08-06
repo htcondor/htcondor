@@ -28,6 +28,8 @@
 #include "condor_daemon_core.h"
 #include "dc_collector.h"
 
+#include <algorithm>
+
 std::map< std::string, Timeslice > DCCollector::blacklist;
 
 // Instantiate things
@@ -46,7 +48,6 @@ DCCollector::init( bool needs_reconfig )
 {
 	static long bootTime = 0;
 
-	pending_update_list = NULL;
 	update_rsock = NULL;
 	use_tcp = true;
 	use_nonblocking_update = true;
@@ -320,61 +321,52 @@ DCCollector::finishUpdate( DCCollector *self, Sock* sock, ClassAd* ad1, ClassAd*
 }
 
 class UpdateData {
+
+private:
+	int cmd;
+	Stream::stream_type sock_type;
 public:
 	ClassAd *ad1;
 	ClassAd *ad2;
 	DCCollector *dc_collector;
-	UpdateData *next_in_list;
 
-	UpdateData(ClassAd *cad1, ClassAd *cad2, DCCollector *dc_collect) {
-		this->ad1 = NULL;
-		this->ad2 = NULL;
-		this->dc_collector = dc_collect;
+	UpdateData(int ad_cmd, Stream::stream_type stype, ClassAd *cad1, ClassAd *cad2, DCCollector *dc_collect)
+	  : cmd(ad_cmd),
+	    sock_type(stype),
+	    ad1(cad1 ? new ClassAd(*cad1) : NULL),
+	    ad2(cad2 ? new ClassAd(*cad2) : NULL),
+	    dc_collector(dc_collect)
+	{
 			// In case the collector object gets destructed before this
 			// update is finished, we need to register ourselves with
 			// the dc_collector object so that it can null out our
 			// pointer to it.  This is done using a linked-list of
 			// UpdateData objects.
 
-		next_in_list = dc_collect->pending_update_list;
-		dc_collect->pending_update_list = this;
-
-		if(cad1) {
-			this->ad1 = new ClassAd(*cad1);
-		}
-		if(cad2) {
-			this->ad2 = new ClassAd(*cad2);
-		}
+		dc_collect->pending_update_list.push_back(this);
 	}
+
 	~UpdateData() {
-		if(ad1) {
-			delete ad1;
-		}
-		if(ad2) {
-			delete ad2;
-		}
+		delete ad1;
+		delete ad2;
 			// Remove ourselves from the dc_collector's list.
 		if(dc_collector) {
-			UpdateData **ud = &dc_collector->pending_update_list;
-			while(*ud) {
-				if(*ud == this) {
-					*ud = next_in_list;
-					break;
-				}
-				ud = &(*ud)->next_in_list;
+			std::deque<UpdateData *>::iterator iter = std::find(dc_collector->pending_update_list.begin(), dc_collector->pending_update_list.end(), this);
+			if (iter != dc_collector->pending_update_list.end())
+			{
+				dc_collector->pending_update_list.erase(iter);
 			}
 		}
 	}
+
 	void DCCollectorGoingAway() {
 			// The DCCollector object is being deleted.  We don't
 			// need it in order to finish the update.  We only keep
 			// a reference to it in order to do non-essential things.
 
 		dc_collector = NULL;
-		if(next_in_list) {
-			next_in_list->DCCollectorGoingAway();
-		}
 	}
+
 	static void startUpdateCallback(bool success,Sock *sock,CondorError * /* errstack */,void *misc_data) {
 		UpdateData *ud = (UpdateData *)misc_data;
 
@@ -388,6 +380,7 @@ public:
 			// modifies dc_collector (such as saving the TCP sock for
 			// future use).
 
+		DCCollector *dc_collector = ud->dc_collector;
 		if(!success) {
 			char const *who = "unknown";
 			if(sock) who = sock->get_sinful_peer();
@@ -409,6 +402,35 @@ public:
 			delete sock;
 		}
 		delete ud;
+		if (dc_collector && dc_collector->pending_update_list.size())
+		{
+			while (dc_collector->update_rsock && dc_collector->pending_update_list.size())
+			{
+				UpdateData *ud = dc_collector->pending_update_list.front();
+				dc_collector->update_rsock->encode();
+					// NOTE: If there's a valid TCP socket available, we always
+					// push our updates over that (even if the update requested UDP).
+					// I don't think mixing TCP/UDP to the same collector is supported, so
+					// I believe this shortcut acceptable.
+				if (!dc_collector->update_rsock->put( ud->cmd ) ||
+					!DCCollector::finishUpdate(ud->dc_collector,dc_collector->update_rsock,ud->ad1,ud->ad2))
+				{
+					char const *who = "unknown";
+					if(sock) who = sock->get_sinful_peer();
+					dprintf(D_ALWAYS,"Failed to send update to %s.\n",who);
+					delete dc_collector->update_rsock;
+					dc_collector->update_rsock = NULL;
+					// Notice we remove the element from the list of pending updates even on failure.
+				}
+				delete ud;
+			}
+				// Start the next update without a cached socket
+			if (dc_collector->pending_update_list.size())
+			{
+				UpdateData *ud = dc_collector->pending_update_list.front();
+				dc_collector->startCommand_nonblocking(ud->cmd, ud->sock_type, 20, NULL, UpdateData::startUpdateCallback, ud );
+			}
+		}
 	}
 };
 
@@ -433,8 +455,11 @@ DCCollector::sendUDPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblockin
 	}
 
 	if(nonblocking) {
-		UpdateData *ud = new UpdateData(ad1,ad2,this);
-		startCommand_nonblocking(cmd, Sock::safe_sock, 20, NULL, UpdateData::startUpdateCallback, ud, NULL, raw_protocol );
+		UpdateData *ud = new UpdateData(cmd, Sock::safe_sock, ad1, ad2, this);
+		if (this->pending_update_list.size() == 1)
+		{
+			startCommand_nonblocking(cmd, Sock::safe_sock, 20, NULL, UpdateData::startUpdateCallback, ud, NULL, raw_protocol );
+		}
 		return true;
 	}
 
@@ -482,8 +507,7 @@ DCCollector::sendTCPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblockin
 		// int, and since we do *NOT* want to use startCommand() again
 		// on a cached TCP socket, just code the int ourselves...
 	update_rsock->encode();
-	update_rsock->put( cmd );
-	if( finishUpdate(this, update_rsock, ad1, ad2) ) {
+	if (update_rsock->put(cmd) && finishUpdate(this, update_rsock, ad1, ad2)) {
 		return true;
 	}
 	dprintf( D_FULLDEBUG, 
@@ -504,8 +528,12 @@ DCCollector::initiateTCPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblo
 		update_rsock = NULL;
 	}
 	if(nonblocking) {
-		UpdateData *ud = new UpdateData(ad1,ad2,this);
-		startCommand_nonblocking(cmd, Sock::reli_sock, 20, NULL, UpdateData::startUpdateCallback, ud );
+		UpdateData *ud = new UpdateData(cmd, Sock::reli_sock, ad1, ad2, this);
+			// Note that UpdateData automatically adds itself to the pending_update_list.
+		if (this->pending_update_list.size() == 1)
+		{
+			startCommand_nonblocking(cmd, Sock::reli_sock, 20, NULL, UpdateData::startUpdateCallback, ud );
+		}
 		return true;
 	}
 	Sock *sock = startCommand(cmd, Sock::reli_sock, 20);
@@ -795,8 +823,12 @@ DCCollector::~DCCollector( void )
 
 		// In case there are any nonblocking updates in progress,
 		// let them know this DCCollector object is going away.
-	if(pending_update_list) {
-		pending_update_list->DCCollectorGoingAway();
+	for (std::deque<UpdateData*>::const_iterator it = pending_update_list.begin();
+			it != pending_update_list.end();
+			it++) {
+		if (*it) {
+			(*it)->DCCollectorGoingAway();
+		}
 	}
 }
 
