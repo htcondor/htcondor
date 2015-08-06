@@ -89,7 +89,15 @@ static References &getSpecialAttrNames()
 	return specialAttrNames;
 }
 
-static FunctionCall *CurrentTime_expr = NULL;
+static FunctionCall *getCurrentTimeExpr()
+{
+	static classad_shared_ptr<FunctionCall> curr_time_expr;
+	if ( !curr_time_expr ) {
+		vector<ExprTree*> args;
+		curr_time_expr.reset( FunctionCall::MakeFunctionCall( "time", args ) );
+	}
+	return curr_time_expr.get();
+}
 
 void SetOldClassAdSemantics(bool enable)
 {
@@ -97,10 +105,6 @@ void SetOldClassAdSemantics(bool enable)
 	if ( enable ) {
 		getSpecialAttrNames().insert( ATTR_MY );
 		getSpecialAttrNames().insert( ATTR_CURRENT_TIME );
-		if ( CurrentTime_expr == NULL ) {
-			vector<ExprTree*> args;
-			CurrentTime_expr = FunctionCall::MakeFunctionCall( "time", args );
-		}
 	} else {
 		getSpecialAttrNames().erase( ATTR_MY );
 		getSpecialAttrNames().erase( ATTR_CURRENT_TIME );
@@ -701,7 +705,7 @@ LookupInScope(const string &name, ExprTree*& expr, EvalState &state) const
 			return( expr ? EVAL_OK : EVAL_UNDEF );
 		} else if( strcasecmp( name.c_str( ), ATTR_CURRENT_TIME ) == 0 ) {
 			// an alias for time() from old ClassAds
-			expr = CurrentTime_expr;
+			expr = getCurrentTimeExpr();
 			return ( expr ? EVAL_OK : EVAL_UNDEF );
 		}
 
