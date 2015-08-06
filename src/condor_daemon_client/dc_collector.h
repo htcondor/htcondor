@@ -29,6 +29,7 @@
 #include "daemon_list.h"
 #include "condor_timeslice.h"
 
+#include <deque>
 
 /** Class to manage the sequence nubmers of individual ClassAds
  * published by the application
@@ -141,7 +142,7 @@ private:
 	bool use_nonblocking_update;
 	UpdateType up_type;
 
-	class UpdateData *pending_update_list;
+	std::deque<class UpdateData*> pending_update_list;
 	friend class UpdateData;
 
 	bool sendTCPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblocking );
