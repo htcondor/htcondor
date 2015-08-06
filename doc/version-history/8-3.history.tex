@@ -33,6 +33,13 @@ The details of each version are described below.
 \item The python bindings now work with python's \texttt{pickle} module.
 \Ticket{5099}
 
+\item The performance of the \Condor{schedd} handling of the RESCHEDULE
+command has improved by removing unnecessary work.
+This increases the peak rate at which jobs can be submitted,
+as well as the rate at which jobs can be removed from the queue
+when the submission rate is high.
+\Ticket{5183}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -52,10 +59,11 @@ leave the container running and the job in the X state for 10 minutes.
 Containers are now removed correctly and quickly.
 \Ticket{5191}
 
-\item Fixed bug whereby tuning configuration variable 
-\Macro{MAX\_ACCEPTS\_PER\_CYCLE} is ignored when \Condor{shared\_port} is used,
+\item Fixed a bug in which the tuning configuration variable 
+\Macro{MAX\_ACCEPTS\_PER\_CYCLE} was ignored when 
+the \Condor{shared\_port} is used,
 potentially causing significant delays when issuing new commands to 
-heavily loaded HTCondor schedds.
+heavily loaded \Condor{schedd} daemons.
 \Ticket{5146}
 
 \end{itemize}
