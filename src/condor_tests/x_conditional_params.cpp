@@ -124,25 +124,28 @@ static const char * const aBoolFalse[] = {
 	"0", "0.0", ".0", "0.", "0e1", "0.0e10", " false ", " 0 ",
 };
 
-#define CONDOR_SERIES_VERSION "8.3"
-#define CONDOR_NEXT_VERSION "8.4"
+//#define CONDOR_SERIES_VERSION "%D.%S" // Decade.Series
+//#define CONDOR_NEXT_SERIES "%D.%T"   // Decade.Series+1
+//#define CONDOR_NEXT_VERSION "%D.%S.%N" // Decade.Series.Minor+1
 static const char * const aVerTrue[] = {
-	"version > 6.0", "!version >" CONDOR_SERIES_VERSION, "version > 8.1.1",
+	"version > 6.0", "!version >%D.%S", "version > 8.1.1",
 	"version > 8.1.4", "version > 7.24.29",
-	"version >= " CONDOR_VERSION, "version == " CONDOR_SERIES_VERSION, "version != 8.0",
-	"version == " CONDOR_VERSION, "version <= " CONDOR_SERIES_VERSION ".12",
-	"version <= " CONDOR_SERIES_VERSION, "version < " CONDOR_SERIES_VERSION ".12", "version < " CONDOR_SERIES_VERSION ".16",
-	"version < " CONDOR_SERIES_VERSION ".99", "version < " CONDOR_NEXT_VERSION, "version < 9.0",
+	"version >= " CONDOR_VERSION, "version == %D.%S", "version != 8.0",
+	"version == " CONDOR_VERSION, "version <= %D.%S.%N", "version <= %D.%S.12", "version >= %D.%S.%L",
+	"version <= %D.%S", "version < %D.%S.12", "version < %D.%S.16",
+	"version > %D.%S.%L", "version > %D.%R.%M", "version > %D.%R",
+	"version < %D.%S.99", "version < %D.%T", "version < %E.0",
 	"version < 10.0", " VERSION < 10.0 ", " Version < 10.0"
 };
 
 static const char * const aVerFalse[] = {
-	"version < 6.0", "version < " CONDOR_SERIES_VERSION, "version < " CONDOR_VERSION,
+	"version < 6.0", "version < %D.%S", "version < " CONDOR_VERSION,
 	"version < 8.1.4", " version < 8.1.4", "version < 8.1.4 ",
 	"  version  <  8.1.4  ", "version < 7.24.29", " ! version <= " CONDOR_VERSION,
 	"version == 8.0", "version == 8.0.6", "version <= 8.0.5",
-	"!version >= " CONDOR_SERIES_VERSION, "version > " CONDOR_VERSION, "version > " CONDOR_SERIES_VERSION ".16",
-	"version > " CONDOR_SERIES_VERSION ".99", "version > " CONDOR_SERIES_VERSION, "version > 9.0",
+	"!version >= %D.%S", "version > " CONDOR_VERSION, "version > %D.%S.16",
+	"version < %D.%S.%L", "version < %D.%R.%M", "version < %D.%R",
+	"version > %D.%S.99", "version > %D.%S", "version > %E.0",
 	"version > 10.0",
 };
 
@@ -211,16 +214,59 @@ static const struct _test_set {
 	{ "complex", false, false, TEST_TABLE(aUnsupError) },
 };
 
+
+// copy the incoming condition, changing %x to to one of the fields of condor version
+// where x is D, S or M for first second and third digit of the version
+// and x may be the next or previous letter to indicate ver-1 or ver+1
+// For instance, if the condor_version is 8.3.5  then %D.%T.%L translates as 8.4.4
+// 
+const char* fixup_version(const char * cond, char* buf, int cbBuf)
+{
+	static char vers[] = CONDOR_VERSION;
+	static long vD=0, vS=0, vM=0;
+
+	char * p;
+	if ( ! vD) {
+		vD = strtol(vers, &p, 10);
+		vS = strtol(++p, &p, 10);
+		vM = strtol(++p, &p, 10);
+	}
+
+	p = buf;
+	for (int ix = 0; cond[ix]; ++ix) {
+		*p = cond[ix];
+		if (*p == '%') {
+			long v = 0;
+			int ch = cond[ix+1];
+			if (ch >= 'D'-2 && ch <= 'D'+2) { v = vD + ch - 'D'; }		// BC D EF
+			else if (ch >= 'S'-2 && ch <= 'S'+2) { v = vS + ch - 'S'; } // QR S TU
+			else if (ch >= 'M'-3 && ch <= 'M'+3) { v = vM + ch - 'M'; } // JKL M NOP
+			if (v) {
+				++ix;
+				sprintf(p, "%d", (int)v);
+				p += strlen(p);
+			}
+		} else {
+			++p;
+		}
+		ASSERT((int)(p-buf) < cbBuf);
+	}
+	*p = 0;
+	return buf;
+}
+
 int do_iftest(int &cTests)
 {
 	int fail_count = 0;
 	cTests = 0;
 
 	std::string err_reason;
+	char buffer[256];
 	bool bb = false;
 
 	for (int ixSet = 0; ixSet < (int)COUNTOF(aTestSets); ++ixSet) {
 		const struct _test_set & tset = aTestSets[ixSet];
+		bool needs_fixup = ! strcmp("version", tset.label);
 
 		if (dash_verbose) {
 			fprintf(stdout, "--- %s - expecting %s %s\n", 
@@ -231,6 +277,9 @@ int do_iftest(int &cTests)
 			++cTests;
 			err_reason = "bogus";
 			const char * cond = aTestSets[ixSet].aTbl[ix];
+			if (needs_fixup) {
+				cond = fixup_version(cond, buffer, sizeof(buffer));
+			}
 			bool valid = config_test_if_expression(cond, bb, err_reason);
 			if ((valid != tset.valid) || (valid && (bb != tset.result))) {
 				++fail_count;
