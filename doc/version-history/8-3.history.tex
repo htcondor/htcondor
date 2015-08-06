@@ -33,6 +33,13 @@ The details of each version are described below.
 \item The python bindings now work with python's \texttt{pickle} module.
 \Ticket{5099}
 
+\item The performance of the \Condor{schedd} handling of the RESCHEDULE
+command has improved by removing unnecessary work.
+This increases the peak rate at which jobs can be submitted,
+as well as the rate at which jobs can be removed from the queue
+when the submission rate is high.
+\Ticket{5183}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
