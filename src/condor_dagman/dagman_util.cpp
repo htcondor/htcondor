@@ -75,8 +75,9 @@ int util_create_lock_file(const char *lockFileName, bool abortDuplicates) {
 	ProcessId *procId = NULL;
 	if ( result == 0 && abortDuplicates ) {
 		int status;
+		int precision_range = 1;
 		if ( ProcAPI::createProcessId( daemonCore->getpid(), procId,
-					status ) != PROCAPI_SUCCESS ) {
+					status, &precision_range ) != PROCAPI_SUCCESS ) {
 			debug_printf( DEBUG_QUIET, "ERROR: ProcAPI::createProcessId() "
 						"failed; %d\n", status );
 			result = -1;

@@ -236,12 +236,13 @@ const char* fixup_version(const char * cond, char* buf, int cbBuf)
 	for (int ix = 0; cond[ix]; ++ix) {
 		*p = cond[ix];
 		if (*p == '%') {
-			long v = 0;
+			long v = -99;
 			int ch = cond[ix+1];
 			if (ch >= 'D'-2 && ch <= 'D'+2) { v = vD + ch - 'D'; }		// BC D EF
 			else if (ch >= 'S'-2 && ch <= 'S'+2) { v = vS + ch - 'S'; } // QR S TU
 			else if (ch >= 'M'-3 && ch <= 'M'+3) { v = vM + ch - 'M'; } // JKL M NOP
-			if (v) {
+			if (v > -10) {
+				if (v < 0) return NULL; // version cannot be fixed up!
 				++ix;
 				sprintf(p, "%d", (int)v);
 				p += strlen(p);
@@ -279,6 +280,13 @@ int do_iftest(int &cTests)
 			const char * cond = aTestSets[ixSet].aTbl[ix];
 			if (needs_fixup) {
 				cond = fixup_version(cond, buffer, sizeof(buffer));
+				if ( ! cond) { // version cannot be fixed up!
+					if (dash_verbose) {
+						fprintf(stdout, "# %s: \"%s\" %s\n",
+							"skipped", aTestSets[ixSet].aTbl[ix], bb ? "\ntrue" : "\nfalse");
+					}
+					continue;
+				}
 			}
 			bool valid = config_test_if_expression(cond, bb, err_reason);
 			if ((valid != tset.valid) || (valid && (bb != tset.result))) {
