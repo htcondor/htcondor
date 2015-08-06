@@ -171,19 +171,21 @@ void KeyCacheEntry::delete_storage() {
 }
 
 
-KeyCache::KeyCache(int nbuckets) {
-	key_table = new HashTable<MyString, KeyCacheEntry*>(nbuckets, MyStringHash, rejectDuplicateKeys);
+KeyCache::KeyCache() {
+	key_table = new HashTable<MyString, KeyCacheEntry*>(209, MyStringHash, rejectDuplicateKeys);
 	m_index = new KeyCacheIndex(MyStringHash);
 	dprintf ( D_SECURITY, "KEYCACHE: created: %p\n", key_table );
 }
 
 KeyCache::KeyCache(const KeyCache& k) {
+	key_table = new HashTable<MyString, KeyCacheEntry*>(209, MyStringHash, rejectDuplicateKeys);
 	m_index = new KeyCacheIndex(MyStringHash);
 	copy_storage(k);
 }
 
 KeyCache::~KeyCache() {
 	delete_storage();
+	delete key_table;
 	delete m_index;
 }
 	    
@@ -197,20 +199,14 @@ const KeyCache& KeyCache::operator=(const KeyCache& k) {
 
 
 void KeyCache::copy_storage(const KeyCache &copy) {
-	if (copy.key_table) {
-		m_index = new KeyCacheIndex(MyStringHash);
-		key_table = new HashTable<MyString, KeyCacheEntry*>(copy.key_table->getTableSize(), MyStringHash, rejectDuplicateKeys);
-		dprintf ( D_SECURITY, "KEYCACHE: created: %p\n", key_table );
+	dprintf ( D_SECURITY, "KEYCACHE: created: %p\n", key_table );
 
-		// manually iterate all entries from the hash.  they are
-		// pointers, and we need to copy that object.
-		KeyCacheEntry* key_entry;
-		copy.key_table->startIterations();
-		while (copy.key_table->iterate(key_entry)) {
-			insert(*key_entry);
-		}
-	} else {
-		key_table = NULL;
+	// manually iterate all entries from the hash.  they are
+	// pointers, and we need to copy that object.
+	KeyCacheEntry* key_entry;
+	copy.key_table->startIterations();
+	while (copy.key_table->iterate(key_entry)) {
+		insert(*key_entry);
 	}
 }
 
@@ -218,7 +214,7 @@ void KeyCache::copy_storage(const KeyCache &copy) {
 void KeyCache::delete_storage()
 {
 	if( key_table ) {
-			// Delete all entries from the hash, and the table itself
+			// Delete all entries from the hash
 		KeyCacheEntry* key_entry;
 		key_table->startIterations();
 		while( key_table->iterate(key_entry) ) {
@@ -230,11 +226,10 @@ void KeyCache::delete_storage()
 				delete key_entry;
 			}
 		}
+		key_table->clear();
 		if( IsDebugVerbose(D_SECURITY) ) {
 			dprintf( D_SECURITY, "KEYCACHE: deleted: %p\n", key_table );
 		}
-		delete key_table;
-		key_table = NULL;
 	}
 	if( m_index ) {
 		MyString index;
@@ -248,6 +243,11 @@ void KeyCache::delete_storage()
 	}
 }
 
+
+void KeyCache::clear()
+{
+	delete_storage();
+}
 
 bool KeyCache::insert(KeyCacheEntry &e) {
 

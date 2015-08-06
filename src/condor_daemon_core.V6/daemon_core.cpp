@@ -518,16 +518,7 @@ DaemonCore::~DaemonCore()
 		delete sockTable;
 	}
 
-	if (sec_man) {
-		// the reference counting in sec_man is currently disabled,
-		// so we need to clean up after it quite explicitly.  ZKM.
-		KeyCache * tmp_kt = sec_man->session_cache;
-		HashTable<MyString,MyString>* tmp_cm = sec_man->command_map;
-
-		delete sec_man;
-		delete tmp_kt;
-		delete tmp_cm;
-	}
+	delete sec_man;
 
 	// Since we created these, we need to clean them up.
 	delete super_dc_rsock;
@@ -9422,7 +9413,7 @@ int DaemonCore::HandleProcessExit(pid_t pid, int exit_status)
 	}
 	//Delete the session information.
 	if(pidentry->child_session_id)
-		getSecMan()->session_cache->remove(pidentry->child_session_id);
+		getSecMan()->session_cache.remove(pidentry->child_session_id);
 	// Now remove this pid from our tables ----
 		// remove from hash table
 	pidTable->remove(pid);
@@ -10482,7 +10473,7 @@ DaemonCore::InitSettableAttrsList( const char* /* subsys */, int i )
 
 KeyCache*
 DaemonCore::getKeyCache() {
-	return sec_man->session_cache;
+	return &sec_man->session_cache;
 }
 
 SecMan* DaemonCore :: getSecMan()

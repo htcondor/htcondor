@@ -116,12 +116,12 @@ public:
         ClassAd *policy = NULL;
 
         // IMPORTANT: this hashtable returns 0 on success!
-        if ((SecMan::command_map)->lookup(cmd_map_ent, session_id))
+        if ((SecMan::command_map).lookup(cmd_map_ent, session_id))
         {
             THROW_EX(RuntimeError, "No valid entry in command map hash table!");
         }
         // IMPORTANT: this hashtable returns 1 on success!
-        if (!(SecMan::session_cache)->lookup(session_id.Value(), k))
+        if (!(SecMan::session_cache).lookup(session_id.Value(), k))
         {
             THROW_EX(RuntimeError, "No valid entry in session map hash table!");
         }
