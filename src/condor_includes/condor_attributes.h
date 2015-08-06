@@ -556,6 +556,8 @@
 #define ATTR_RUN_BENCHMARKS  "RunBenchmarks"
 #define ATTR_SHADOW_IP_ADDR  "ShadowIpAddr"
 #define ATTR_MY_ADDRESS  "MyAddress"
+#define ATTR_NUM_JOB_STARTS_DELAYED  "NumJobStartsDelayed"
+#define ATTR_NUM_PENDING_CLAIMS  "NumPendingClaims"
 #define ATTR_SCHEDD_SWAP_EXHAUSTED  "ScheddSwapExhausted"
 #define ATTR_SCHEDD_INTERVAL  "ScheddInterval"
 #define ATTR_SCHEDD_IP_ADDR  "ScheddIpAddr"
