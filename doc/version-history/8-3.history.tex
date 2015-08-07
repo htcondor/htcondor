@@ -25,6 +25,7 @@ The details of each version are described below.
 
 \end{itemize}
 
+%TEMPTEMP -- add DAGMan sleep change in here...
 
 \noindent New Features:
 
@@ -65,6 +66,10 @@ the \Condor{shared\_port} is used,
 potentially causing significant delays when issuing new commands to 
 heavily loaded \Condor{schedd} daemons.
 \Ticket{5146}
+
+\item The sleep that \Condor{dagman} does at startup has been reduced
+from 12 to 3 seconds.
+\Ticket{5206}
 
 \end{itemize}
 
