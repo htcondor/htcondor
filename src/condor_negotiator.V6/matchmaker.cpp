@@ -4332,7 +4332,11 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 			bool is_dslot = false;
 			candidate->LookupBool( ATTR_SLOT_DYNAMIC, is_dslot );
 			if ( is_dslot ) {
-				continue;
+				bool rollup = false;
+				candidate->LookupBool( ATTR_PSLOT_ROLLUP_INFORMATION, rollup );
+				if ( rollup ) {
+					continue;
+				}
 			}
 		}
 
