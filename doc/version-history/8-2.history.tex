@@ -137,6 +137,12 @@ would cause the \Condor{userprio} command to fail.
 it kills an unresponsive \Condor{shadow} process.
 \Ticket{5151}
 
+\item When a daemon or tool wants to avoid all available collectors due
+to previous failures, it will now try to talk to one.
+Previously, it would return failure without any attempt to contact a
+collector.
+\Ticket{4895}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
