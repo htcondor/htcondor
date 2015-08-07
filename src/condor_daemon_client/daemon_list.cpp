@@ -306,7 +306,7 @@ CollectorList::query(CondorQuery & cQuery, ClassAdList & adList, CondorError *er
 						 "Can't resolve nameless collector; skipping\n" );
 			}
 			problems_resolving = true;
-		} else if ( daemon->isBlacklisted() ) {
+		} else if ( daemon->isBlacklisted() && vCollectors.size() > 1 ) {
 			dprintf( D_ALWAYS,"Collector %s blacklisted; skipping\n",
 					 daemon->name() );
 		} else {
