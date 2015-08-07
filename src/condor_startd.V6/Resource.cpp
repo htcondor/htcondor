@@ -2209,6 +2209,9 @@ Resource::publish( ClassAd* cap, amask_t mask )
 			cap->AssignExpr(ATTR_SLOT_DYNAMIC, "TRUE");
             cap->Assign(ATTR_SLOT_TYPE, "Dynamic");
 			cap->Assign(ATTR_PARENT_SLOT_ID, r_id);
+			if ( param_boolean("ADVERTISE_PSLOT_ROLLUP_INFORMATION", true) ) {
+				cap->Assign(ATTR_PSLOT_ROLLUP_INFORMATION, true);
+			}
 			break;
 		default:
             cap->Assign(ATTR_SLOT_TYPE, "Static");
@@ -3505,6 +3508,8 @@ Resource::publishDynamicChildSummaries(ClassAd *cap) {
 	if (param_boolean("ADVERTISE_PSLOT_ROLLUP_INFORMATION", true) == false) {
 		return;
 	}
+
+	cap->Assign(ATTR_PSLOT_ROLLUP_INFORMATION, true);
 
 	//cap->AssignExpr(ATTR_CHILD_CLAIM_IDS, makeChildClaimIds().c_str());
 
