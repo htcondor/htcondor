@@ -1,0 +1,93 @@
+#!/bin/sh
+
+##
+## This script tunes Linux kernel parameters useful for scaling HTCondor.
+## Some values may be inappropriate for machines not dedicated to HTCondor.
+## This script must be run as root, and we assume that (and support only)
+## HTCondor is running as root for large installations.
+##
+## The next '##' sections marks the beginning of the implementation section
+## of this script, and you should not need to change anything past that mark.
+##
+
+#
+# Increase the global number of file descriptors.  For example, each
+# dynamically-linked shadow uses approximately 13 just to open its
+# libraries.
+#
+# We don't set the per-process maximum, because HTCondor will do that
+# appropriately for each different subsystem (daemon) when run as root.
+# If necessary, you can change those values using the configuration variables
+# MAX_FILE_DESCRIPTORS and <SUBSYS>_MAX_FILE_DESCRIPTORS.
+#
+GLOBAL_MAX_FDS=32768
+
+#
+# Increase the maximum process ID.  By default, Linux process IDs wrap at
+# 32768, which isn't a lot of processes when you have one per running job.
+#
+GLOBAL_MAX_PROCESSES=4194303
+
+#
+# Unless otherwise specified, an outbound connection uses a port within
+# this range.  On some systems, this default to 1024-4999, which may not
+# be enough.  You can also force HTCondor to specify a particular
+# outbound port by setting the configuration variables OUT_LOWPORT and
+# OUT_HIGHPORT appropriately, but this will be slower under load, as
+# HTCondor has to search for an open port.
+#
+LOCAL_PORT_RANGE="1024 65535"
+
+#
+# Increase the length of the TCP listen queue.  This allows more connections
+# to pile up while HTCondor is otherwise busy.
+#
+TCP_LISTEN_QUEUE=1024
+
+#
+# Likewise, the central manager (collector) needs have large UDP buffers.
+# Increase the maximum allowed size of networks receive buffers.
+#
+MAX_RECEIVE_BUFFER=10383360
+
+
+##
+## Implementation.  You shouldn't need to change anything below here.
+##
+increaseKernelParameter() {
+	PARAMETER=$1
+	FILE=$2
+	NEW=$3
+
+	if [ -n "${NEW}" ]; then
+		OLD=`cat ${FILE}`
+		if [ ${NEW} -gt ${OLD} ]; then
+			echo "Changing ${PARAMETER} from ${OLD} to ${NEW}"
+			echo ${NEW} > ${FILE}
+		else
+			echo "Not changing ${PARAMETER}: new value (${NEW}) <= old value (${OLD})."
+		fi
+	fi
+}
+
+setKernelParameter() {
+	PARAMETER=$1
+	FILE=$2
+	NEW=$3
+
+	if [ -n "${NEW}" ]; then
+		OLD=`cat ${FILE}`
+		echo "Changing ${PARAMETER} from ${OLD} to ${NEW}"
+		echo ${NEW} > ${FILE}
+	fi
+}
+
+increaseKernelParameter "GLOBAL_MAX_FDS" "/proc/sys/fs/file-max" ${GLOBAL_MAX_FDS}
+increaseKernelParameter "GLOBAL_MAX_PROCESSES" "/proc/sys/kernel/pid_max" ${GLOBAL_MAX_PROCESSES}
+setKernelParameter "LOCAL_PORT_RANGE" "/proc/sys/net/ipv4/ip_local_port_range" "${LOCAL_PORT_RANGE}"
+increaseKernelParameter "TCP_LISTEN_QUEUE" "/proc/sys/net/core/somaxconn" ${TCP_LISTEN_QUEUE}
+
+# FIXME: Only on the collector.
+increaseKernelParameter "MAX_RECEIVE_BUFFER" "/proc/sys/net/core/rmem_max" ${MAX_RECEIVE_BUFFER}
+
+exit 0

@@ -410,7 +410,8 @@ JICLocalSchedd::notifyJobExit( int, int reason,
 		}
 
 			// Now that we've logged the event, we can update the job queue
-		if ( !this->job_updater->updateJob( up_type ) ) { 
+			// If we're doing a fast shutdown, don't retry on failure.
+		if ( !this->job_updater->updateJob( up_type ) && !fast_exit ) {
 			dprintf( D_ALWAYS,
 			         "Failed to update job queue - attempting to retry.\n" );
 			retryJobCleanup();

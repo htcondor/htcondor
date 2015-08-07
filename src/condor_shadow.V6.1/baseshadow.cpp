@@ -73,6 +73,7 @@ BaseShadow::BaseShadow() {
 	m_cleanup_retry_delay = 30;
 	m_RunAsNobody = false;
 	attemptingReconnectAtStartup = false;
+	m_force_fast_starter_shutdown = false;
 }
 
 BaseShadow::~BaseShadow() {
@@ -434,6 +435,7 @@ BaseShadow::holdJob( const char* reason, int hold_reason_code, int hold_reason_s
 void
 BaseShadow::holdJobAndExit( const char* reason, int hold_reason_code, int hold_reason_subcode )
 {
+	m_force_fast_starter_shutdown = true;
 	holdJob(reason,hold_reason_code,hold_reason_subcode);
 
 	// finally, exit and tell the schedd what to do
@@ -1549,6 +1551,9 @@ BaseShadow::handleUpdateJobAd( int sig )
 bool
 BaseShadow::jobWantsGracefulRemoval()
 {
+	if ( m_force_fast_starter_shutdown ) {
+		return false;
+	}
 	bool job_wants_graceful_removal = param_boolean("GRACEFULLY_REMOVE_JOBS", true);
 	bool job_request;
 	ClassAd *thejobAd = getJobAd();

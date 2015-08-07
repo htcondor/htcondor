@@ -515,6 +515,7 @@
 #define ATTR_PREV_RECV_ESTIMATE  "PrevRecvEstimate"
 #define ATTR_PRIO  "Prio"
 #define ATTR_PROC_ID  "ProcId"
+#define ATTR_PSLOT_ROLLUP_INFORMATION "PslotRollupInformation"
 #define ATTR_SUB_PROC_ID  "SubProcId"
 #define ATTR_PRIVATE_NETWORK_NAME  "PrivateNetworkName"
 #define ATTR_Q_DATE  "QDate"
