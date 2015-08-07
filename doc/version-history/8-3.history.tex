@@ -41,6 +41,13 @@ as well as the rate at which jobs can be removed from the queue
 when the submission rate is high.
 \Ticket{5183}
 
+\item The new configuration variable
+\MacroNI{NEGOTIATOR\_MAX\_TIMES\_PER\_SCHEDD} limits how much time the
+\Condor{negotiator} will spend talking to each \Condor{schedd} during a
+negotiation cycle.
+The value is in seconds and defaults to one year.
+\Ticket{5156}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
