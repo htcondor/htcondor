@@ -481,6 +481,9 @@ class BaseShadow : public Service
 		/// How long to delay between attempts to retry job cleanup.
 	int m_cleanup_retry_delay;
 
+		// Insist on a fast shutdown of the starter?
+	bool m_force_fast_starter_shutdown;
+
 		// This makes this class un-copy-able:
 	BaseShadow( const BaseShadow& );
 	BaseShadow& operator = ( const BaseShadow& );
