@@ -78,6 +78,11 @@ heavily loaded \Condor{schedd} daemons.
 from 12 to 3 seconds.
 \Ticket{5206}
 
+\item When the \Condor{schedd} is reconnecting to running jobs after
+a restart, it no longer starts a \Condor{shadow} process if the job
+lease has expired.
+\Ticket{5157}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
