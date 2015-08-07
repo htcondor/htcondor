@@ -761,7 +761,11 @@ JICShadow::notifyJobExit( int exit_status, int reason, UserProc*
 			if (job_universe != CONDOR_UNIVERSE_PARALLEL)
 			{
 				job_cleanup_disconnected = true;
-				return false;
+					// If we're doing a fast shutdown, ignore any failures
+					// in talking to the shadow.
+				if ( !fast_exit ) {
+					return false;
+				}
 			}
 		}
 	}
