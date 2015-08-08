@@ -318,6 +318,30 @@ class TestPythonBindings(WithDaemons):
             time.sleep(1)
         self.assertEquals(open(output_file).read(), "hello world\n");
 
+    def testScheddQueryPoll(self):
+        self.launch_daemons(["SCHEDD", "COLLECTOR", "STARTD", "NEGOTIATOR"])
+        output_file = os.path.join(testdir, "test.out")
+        if os.path.exists(output_file):
+            os.unlink(output_file)
+        schedd = htcondor.Schedd()
+        ad = classad.parseOne(open("tests/submit.ad"))
+        ads = []
+        cluster = schedd.submit(ad, 10, False, ads)
+        for i in range(60):
+            ads_iter = schedd.xquery("ClusterId == %d" % cluster, ["JobStatus"], name="query1")
+            ads_iter2 = schedd.xquery("ClusterId == %d" % cluster, ["JobStatus"], name="query2")
+            ads = []
+            for query in htcondor.poll([ads_iter, ads_iter2]):
+                self.assertTrue(query.tag() in ["query1", "query2"])
+                ads += query.nextAdsNonBlocking()
+            #print ads
+            if len(ads) == 0:
+                break
+            if i % 2 == 0:
+                schedd.reschedule()
+            time.sleep(1)
+        self.assertEquals(open(output_file).read(), "hello world\n");
+
     def testScheddNonblockingQuery(self):
         self.launch_daemons(["SCHEDD", "COLLECTOR", "STARTD", "NEGOTIATOR"])
         output_file = os.path.join(testdir, "test.out")

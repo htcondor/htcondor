@@ -329,7 +329,14 @@ QueryIterator::next(BlockingMode mode)
 
         // Everything checks out!
         m_count = -1;
-        THROW_EX(StopIteration, "All ads processed");
+        if (mode == Blocking)
+        {
+            THROW_EX(StopIteration, "All ads processed");
+        }
+        else
+        {
+            return boost::python::object();
+        }
     }
     m_count++;
     boost::python::object result(ad);

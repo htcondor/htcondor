@@ -81,7 +81,7 @@ public:
             QueryPtr ptr = boost::python::extract<QueryPtr>(next_obj);
             if (!ptr.get()) {continue;}
             int fd = ptr->watch();
-            m_fd_to_iterators.push_back(std::make_pair(fd, ptr));
+            m_fd_to_iterators.push_back(std::make_pair(fd, next_obj));
             m_selector.add_fd(fd, Selector::IO_READ);
             m_count++;
         }
@@ -103,15 +103,19 @@ public:
 
         for (FDMap::iterator it=m_fd_to_iterators.begin();
             it!=m_fd_to_iterators.end();
-            it++)
+            )
         {
             QueryPtr ptr = boost::python::extract<QueryPtr>(it->second);
             if (ptr->done())
             {
                 m_selector.delete_fd(it->first, Selector::IO_READ);
-                m_fd_to_iterators.erase(it);
+                it = m_fd_to_iterators.erase(it);
                 m_count--;
                 if (m_fd_to_iterators.empty()) {break;}
+            }
+            else
+            {
+                it++;
             }
         }
         if (!m_count) {THROW_EX(StopIteration, "All ads are processed");}
@@ -133,10 +137,11 @@ public:
         boost::python::object queryit;
         for (FDMap::iterator it=m_fd_to_iterators.begin();
             it!=m_fd_to_iterators.end();
-            it++)
+            )
         {
             if (!m_selector.fd_ready(it->first, Selector::IO_READ))
             {
+                it++;
                 continue;
             }
             queryit = it->second;
@@ -144,7 +149,7 @@ public:
             if (ptr->done())
             {
                 m_selector.delete_fd(it->first, Selector::IO_READ);
-                m_fd_to_iterators.erase(it);
+                it = m_fd_to_iterators.erase(it);
                 m_count--;
                 continue;
             }
