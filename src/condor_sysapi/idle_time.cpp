@@ -205,15 +205,24 @@ calc_idle_time_cpp( time_t & m_idle, time_t & m_console_idle )
 	return;
 }
 
+#if !defined(CONDOR_UTMPX)
 #include <utmp.h>
 #define UTMP_KIND utmp
+#endif
 
 #if defined(LINUX)
 static const char *UtmpName = "/var/run/utmp";
 static const char *AltUtmpName = "/var/adm/utmp";
-#elif defined(CONDOR_FREEBSD)
+// FreeBSD 9 made a clean break from utmp to utmpx
+#elif defined(CONDOR_FREEBSD) && !defined(CONDOR_UTMPX)
 static char *UtmpName = "/var/run/utmp";
 static char *AltUtmpName = "";
+#elif defined(CONDOR_FREEBSD) && defined(CONDOR_UTMPX)
+#include <utmpx.h>
+#define ut_name ut_user
+static char *UtmpName = "/var/run/utx.active";
+static char *AltUtmpName = "";
+#define UTMP_KIND utmpx
 #elif defined(Solaris28) || defined(Solaris29) || defined(Solaris10) || defined(Solaris11)
 #include <utmpx.h>
 static char *UtmpName = "/etc/utmpx";
