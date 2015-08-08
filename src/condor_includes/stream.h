@@ -441,6 +441,7 @@ public:
 		// prepare_crypto_for_secret() before and
 		// restore_crypto_after_secret() after.
 	int put_secret(char const *);
+	int put_secret(const std::string & secret) {return put_secret(secret.c_str());}
 
 		// Checks configuration parameter ENCRYPT_SECRETS and forces
 		// encryption on if necessary (and if possible).  After

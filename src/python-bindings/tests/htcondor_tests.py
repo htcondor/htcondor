@@ -300,7 +300,7 @@ class TestPythonBindings(WithDaemons):
         if os.path.exists(output_file):
             os.unlink(output_file)
         schedd = htcondor.Schedd()
-        ad = classad.parse(open("tests/submit.ad"))
+        ad = classad.parseOne(open("tests/submit.ad"))
         ads = []
         cluster = schedd.submitMany(ad, [({'foo': 1}, 5), ({'foo': 2}, 5)], False, ads)
         #print ads[0]
@@ -339,6 +339,55 @@ class TestPythonBindings(WithDaemons):
                 break
             if i % 2 == 0:
                 schedd.reschedule()
+
+    def testNegotiate(self):
+        #htcondor.param['TOOL_DEBUG'] = 'D_FULLDEBUG'
+        #os.environ['_condor_SCHEDD_DEBUG'] = 'D_FULLDEBUG, D_NETWORK'
+        #htcondor.enable_debug()
+
+        self.launch_daemons(["SCHEDD", "COLLECTOR", "STARTD"])
+        output_file = os.path.join(testdir, "test.out")
+        if os.path.exists(output_file):
+            os.unlink(output_file)
+        schedd = htcondor.Schedd()
+
+        schedd.act(htcondor.JobAction.Remove, 'true')
+        ad = classad.parse(open("tests/submit.ad"))
+        ads = []
+        cluster = schedd.submit(ad, 1, False, ads)
+
+        # Get claim for startd
+        claim_ads = []
+        for i in range(10):
+            startd_ads = htcondor.Collector().locateAll(htcondor.DaemonTypes.Startd)
+            private_ads = htcondor.Collector().query(htcondor.AdTypes.StartdPrivate)
+            if (len(startd_ads) != htcondor.param['NUM_CPUS']) or (len(private_ads) != htcondor.param['NUM_CPUS']):
+                time.sleep(1)
+                continue
+            break
+        self.assertEquals(len(startd_ads), len(private_ads))
+        self.assertEquals(len(startd_ads), htcondor.param['NUM_CPUS'])
+        for ad in htcondor.Collector().locateAll(htcondor.DaemonTypes.Startd):
+            for pvt_ad in private_ads:
+                if pvt_ad.get('Name') == ad['Name']:
+                    ad['ClaimId'] = pvt_ad['Capability']
+                    claim_ads.append(ad)
+        self.assertEquals(len(claim_ads), len(startd_ads))
+        claim = claim_ads[0]
+
+        me = "%s@%s" % (pwd.getpwuid(os.geteuid()).pw_name, htcondor.param['UID_DOMAIN'])
+        with schedd.negotiate(me) as session:
+            requests = list(session)
+            self.assertEquals(len(requests), 1)
+            request = requests[0]
+            self.assertTrue(request.symmetricMatch(claim))
+            session.sendClaim(claim['ClaimId'], claim, request)
+
+        for i in range(60):
+            ads = schedd.xquery("ClusterId == %d" % cluster, ["JobStatus"])
+            ads = list(ads)
+            if len(ads) == 0:
+                break
             time.sleep(1)
         self.assertEquals(open(output_file).read(), "hello world\n");
 
