@@ -86,6 +86,7 @@ class WithDaemons(unittest.TestCase):
         os.environ["_condor_NEGOTIATOR_INTERVAL"] = "1"
         os.environ["_condor_SCHEDD_INTERVAL"] = "1"
         os.environ["_condor_SCHEDD_MIN_INTERVAL"] = "1"
+        os.environ["_condor_CONDOR_FSYNC"] = "FALSE"
         # Various required attributes for the startd
         os.environ["_condor_START"] = "TRUE"
         os.environ["_condor_SUSPEND"] = "FALSE"
@@ -286,6 +287,30 @@ class TestPythonBindings(WithDaemons):
             ads = schedd.xquery("ClusterId == %d" % cluster, ["JobStatus"])
             ads = list(ads)
             #print ads
+            if len(ads) == 0:
+                break
+            if i % 2 == 0:
+                schedd.reschedule()
+            time.sleep(1)
+        self.assertEquals(open(output_file).read(), "hello world\n");
+
+    def testScheddSubmitMany2(self):
+        self.launch_daemons(["SCHEDD", "COLLECTOR", "STARTD", "NEGOTIATOR"])
+        output_file = os.path.join(testdir, "test.out")
+        if os.path.exists(output_file):
+            os.unlink(output_file)
+        schedd = htcondor.Schedd()
+        ad = classad.parse(open("tests/submit.ad"))
+        ads = []
+        cluster = schedd.submitMany(ad, [({'foo': 1}, 5), ({'foo': 2}, 5)], False, ads)
+        #print ads[0]
+        for i in range(60):
+            ads = schedd.xquery("ClusterId == %d" % cluster, ["JobStatus", 'ProcId', 'foo'])
+            ads = list(ads)
+            #print ads
+            for ad in ads:
+                if ad['ProcId'] < 5: self.assertEquals(ad['foo'], 1)
+                else: self.assertEquals(ad['foo'], 2)
             if len(ads) == 0:
                 break
             if i % 2 == 0:
