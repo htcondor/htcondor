@@ -361,8 +361,24 @@ A value of -1 specifies to use the value of configuration variable
 Note that, depending on the lifetime
 of the proxy in \texttt{filename}, the resulting lifetime may be shorter
 than the desired lifetime.
-\\ \hline
 
+\\ \hline
+\texttt{negotiate( (str)accounting\_name )}
+
+Begin a negotiation cycle with the remote schedd.  The \texttt{accounting\_name}
+parameter determines which user we will start negotiating with.
+
+The returned object, of type \texttt{ScheddNegotiate} is iterable; its iterator
+will yield resource request ClassAds from the schedd.  Each resource request represents
+a set of jobs that are next in queue for the schedd for this user.
+
+The \texttt{ScheddNegotiate} additionally serves as a context manager, automatically
+destroying the negotiation session when the context is left.
+
+Finally, \texttt{ScheddNegotiate} has a \texttt{sendClaim} method for sending claims
+back to the remote schedd based on a given resource request.
+
+\\ \hline
 \end{tabular}
 \end{flushleft}
 
