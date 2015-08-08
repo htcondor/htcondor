@@ -2,6 +2,7 @@
 
 import os
 import re
+import pwd
 import sys
 import time
 import errno
@@ -396,7 +397,45 @@ class TestPythonBindings(WithDaemons):
         schedd.act(htcondor.JobAction.Remove, ["%d.0" % cluster])
         ads = schedd.query("ClusterId == %d" % cluster, ["JobStatus"])
         self.assertEquals(len(ads), 0)
-        self.assertEquals(open(output_file).read(), "hello world\n");
+        self.assertEquals(open(output_file).read(), "hello world\n")
+
+    def testClaim(self):
+        os.environ['_condor_VALID_COD_USERS'] = pwd.getpwuid(os.geteuid()).pw_name
+        self.launch_daemons(["COLLECTOR", "STARTD"])
+        output_file = os.path.abspath(os.path.join(testdir, "test.out"))
+        if os.path.exists(output_file):
+            os.unlink(output_file)
+        coll = htcondor.Collector()
+        for i in range(10):
+            ads = coll.locateAll(htcondor.DaemonTypes.Startd)
+            if len(ads) > 0: break
+            time.sleep(1)
+        job_common = { \
+            'Cmd': '/bin/sh', 
+            'JobUniverse': 5,
+            'Iwd': os.path.abspath(testdir),
+            'Out': 'testclaim.out',
+            'Err': 'testclaim.err',
+            'StarterUserLog': 'testclaim.log',
+        }
+        claim = htcondor.Claim(ads[0])
+        claim.requestCOD()
+        hello_world_job = dict(job_common)
+        hello_world_job['Arguments'] = "-c 'echo hello world > %s'" % output_file
+        claim.activate(hello_world_job)
+        for i in range(10):
+            if os.path.exists(output_file): break
+            time.sleep(1)
+        self.assertEquals(open(output_file).read(), "hello world\n")
+        sleep_job = dict(job_common)
+        sleep_job['Args'] = "-c 'sleep 5m'"
+        claim.activate(sleep_job)
+        claim.suspend()
+        claim.renew()
+        #claim.delegateGSIProxy()
+        claim.resume()
+        claim.deactivate(htcondor.VacateTypes.Fast)
+        claim.release()
 
     def testPing(self):
         self.launch_daemons(["COLLECTOR"])
