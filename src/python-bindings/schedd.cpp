@@ -622,23 +622,24 @@ struct Schedd {
 
     int submitMany(const ClassAdWrapper &wrapper, boost::python::object proc_ads, bool spool, boost::python::object ad_results=object())
     {
+        PyObject *py_iter = PyObject_GetIter(proc_ads.ptr());
+        if (!py_iter)
+        {
+            THROW_EX(ValueError, "Proc ads must be iterator of 2-tuples.");
+        }
+
         ConnectionSentry sentry(*this); // Automatically connects / disconnects.
 
         classad::ClassAd cluster_ad;
         cluster_ad.CopyFrom(wrapper);
         int cluster = submit_cluster_internal(cluster_ad, spool);
 
-        PyObject *py_iter = PyObject_GetIter(proc_ads.ptr());
-        if (!py_iter)
-        {
-            THROW_EX(ValueError, "Proc ads must be iterator of 2-tuples.");
-        }
         boost::python::object iter = boost::python::object(boost::python::handle<>(py_iter));
         PyObject *obj;
         while ((obj = PyIter_Next(iter.ptr())))
         {
             boost::python::object boost_obj = boost::python::object(boost::python::handle<>(obj));
-            ClassAdWrapper &proc_ad = boost::python::extract<ClassAdWrapper &>(boost_obj[0]);
+            ClassAdWrapper proc_ad = boost::python::extract<ClassAdWrapper>(boost_obj[0]);
             int count = boost::python::extract<int>(boost_obj[1]);
             try
             {
@@ -679,8 +680,7 @@ struct Schedd {
         }
         if (cluster < 0)
         {
-            PyErr_SetString(PyExc_RuntimeError, "Failed to create new cluster.");
-            throw_error_already_set();
+            THROW_EX(RuntimeError, "Failed to create new cluster.");
         }
 
         ClassAd cluster_ad;
@@ -787,7 +787,7 @@ struct Schedd {
                 throw_error_already_set();
             }
             proc_ad.InsertAttr(ATTR_CLUSTER_ID, cluster);
-            proc_ad.InsertAttr(ATTR_CLUSTER_ID, procid);
+            proc_ad.InsertAttr(ATTR_PROC_ID, procid);
 
             classad::ClassAdUnParser unparser;
             unparser.SetOldClassAd( true );
@@ -1176,6 +1176,7 @@ ConnectionSentry::abort()
         }
         if (result)
         {
+            if (PyErr_Occurred()) {return;}
             THROW_EX(RuntimeError, "Failed to abort transaction.");
         }
         if (m_connected)
@@ -1242,6 +1243,7 @@ ConnectionSentry::disconnect()
         }
         if (result)
         {
+            if (PyErr_Occurred()) {return;}
             std::string errmsg = "Failed to commmit and disconnect from queue.";
             std::string esMsg = errstack.getFullText();
             if( ! esMsg.empty() ) { errmsg += " " + esMsg; }
@@ -1250,6 +1252,7 @@ ConnectionSentry::disconnect()
     }
     if (throw_commit_error)
     {
+        if (PyErr_Occurred()) {return;}
         std::string errmsg = "Failed to commit ongoing transaction.";
         std::string esMsg = errstack.getFullText();
         if( ! esMsg.empty() ) { errmsg += " " + esMsg; }
@@ -1260,6 +1263,7 @@ ConnectionSentry::disconnect()
 
 ConnectionSentry::~ConnectionSentry()
 {
+    if (PyErr_Occurred()) {abort();}
     disconnect();
 }
 
@@ -1333,6 +1337,16 @@ void export_schedd()
 #else
             ":return: Newly created cluster ID.", (boost::python::arg("self"), "ad", boost::python::arg("count")=1, boost::python::arg("spool")=false, boost::python::arg("ad_results")=boost::python::list())))
 #endif
+        .def("submitMany", &Schedd::submitMany, "Submit one or more jobs to the HTCondor schedd.\n"
+             ":param cluster_ad: ClassAd describing the job cluster.  All jobs inherit from this base ad.\n"
+             ":param proc_ads: A list of 2-tuples.  The tuples have the format (proc_ad, count).  This will result in 'count' jobs being submitted, inheriting from the proc_ad and cluster_ad.\n"
+             ":param spool: Set to true to spool files separately.\n"
+             ":param ad_results: A list object; the resulting job ads will be appended to this list.\n"
+             ":return: Newly created cluster ID.", (
+#if BOOST_VERSION >= 103400
+             boost::python::arg("self"),
+#endif
+             boost::python::arg("cluster_ad"), boost::python::arg("proc_ads"), boost::python::arg("spool")=false, boost::python::arg("ad_results")=boost::python::list()))
         .def("spool", &Schedd::spool, "Spool a list of given ads to the remote HTCondor schedd.\n"
             ":param ads: A python list containing one or more ads to spool.\n")
         .def("transaction", &Schedd::transaction, transaction_overloads("Start a transaction with the schedd.\n"
