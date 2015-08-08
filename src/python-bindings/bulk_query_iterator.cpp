@@ -1,21 +1,13 @@
 
-#ifdef WIN32
-        #include "python_bindings_common.h"
-        #undef _XOPEN_SOURCE
-        #undef _POSIX_C_SOURCE
-        #include "condor_common.h"
-        #include "globus_utils.h"
-#else
-        #include "condor_common.h"
-        #include "globus_utils.h"
-        #undef _XOPEN_SOURCE
-        #undef _POSIX_C_SOURCE
-        #include "python_bindings_common.h"
-#endif
+#include "python_bindings_common.h"
 
-#include "selector.h"
+#if !defined(__APPLE__)
+#include "condor_common.h"
+# endif
 
 #include <boost/python.hpp>
+
+#include "selector.h"
 
 #include "old_boost.h"
 #include "query_iterator.h"
