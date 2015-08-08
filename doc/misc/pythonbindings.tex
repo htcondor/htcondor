@@ -282,6 +282,29 @@ Parameter \texttt{ad\_results}, if set to a list,
 will contain the job ClassAds resulting from the job submission.
 These are useful for interacting with the job spool at a later time.
 \\ \hline
+
+\texttt{submitMany( cluster\_ad, proc\_ads, spool = false, ad\_results = None )}
+
+Submit multiple jobs to the \Condor{schedd} daemon, possibly including several
+distinct processes.
+Returns the newly created cluster ID.
+
+This method requires the invoker to provide a ClassAd, \texttt{cluster\_ad} for the new job cluster;
+this is the same format as in the \texttt{submit()} method.
+
+The \texttt{proc\_ads} parameter is a list of 2-tuples; each tuple has the format
+of \texttt{(proc\_ad, count)}.  For each list entry, this will result in \texttt{count} jobs being submitted
+inheriting from both \texttt{cluster\_ad} and \texttt{proc\_ad}.
+
+Parameter \texttt{spool} inserts the necessary attributes into the job for it
+to have the input files spooled to a remote \Condor{schedd} daemon.
+This parameter is necessary for jobs submitted to a remote \Condor{schedd}.
+
+Parameter \texttt{ad\_results}, if set to a list,
+will contain the job ClassAds resulting from the job submission.
+These are useful for interacting with the job spool at a later time.
+
+\\ \hline
 \texttt{spool( ad\_list )}
 
 Spools the files specified in a list of job ClassAds to the \Condor{schedd}.
