@@ -1435,6 +1435,7 @@ void export_schedd()
             ":param projection: The attributes to return; an empty list signifies all attributes.\n"
             ":param limit: A limit on the number of matches to return.\n"
             ":param opts: Any one of the QueryOpts enum.\n"
+            ":param name: A name to identify the query (defaults to the schedd name).\n"
             ":return: An iterator for the matching job ads",
 #if BOOST_VERSION < 103400
             (boost::python::arg("requirements") = "true", boost::python::arg("projection")=boost::python::list(), boost::python::arg("limit")=-1, boost::python::arg("opts")=CondorQ::fetch_Default, boost::python::arg("name")=boost::python::object())
