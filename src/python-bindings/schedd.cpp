@@ -806,7 +806,7 @@ struct Schedd {
             if (keep_results)
             {
                 boost::shared_ptr<ClassAdWrapper> results_ad(new ClassAdWrapper());
-                results_ad->CopyFrom(proc_ad);
+                results_ad->CopyFromChain(proc_ad);
                 ad_results.attr("append")(results_ad);
             }
         }
