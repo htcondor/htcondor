@@ -691,6 +691,73 @@ configuration of the daemon.
 \end{tabular}
 \end{flushleft}
 
+The \texttt{Claim} class provides access to HTCondor's
+Compute-On-Demand facilities.
+
+\textbf{The \texttt{Claim} class:}
+\begin{flushleft}
+\begin{tabular}{|p{16cm}|} \hline
+
+\texttt{\_\_init\_\_( classad )}
+
+Create a Claim object.  The \texttt{classad} argument provides
+a ClassAd describing the startd to claim.
+
+\\ \hline
+
+\texttt{requestCOD( constraint, lease\_duration )}
+
+Request a claim from the \Condor{startd} represented by this object.
+
+The \texttt{constraint} specifies which slot in the startd to claim
+(defaults to 'true', which will result in the first slot becoming claimed).
+
+The \texttt{lease\_duration} indicates how long the claim should be valid for.
+
+On success, the \texttt{Claim} object will represent a valid claim on the
+remote startd.
+
+\\ \hline
+\texttt{release( (VacateTypes)vacate\_type )}
+
+Release a \Condor{startd} from this claim and shut down any running job.
+
+The \texttt{vacate\_type} argument indicates the type of vacate to perform
+(Fast or Graceful); must be from VacateTypes enum.
+
+\\ \hline
+\texttt{activate( (ClassAd)ad )}
+
+Activate a claim using a given job ad.
+
+The \texttt{ad} must describe a job to run.
+
+\\ \hline
+\texttt{suspend()}
+
+Suspend an activated claim.
+
+\\ \hline
+\texttt{renew()}
+
+Renew the lease on an existing claim.
+
+\\ \hline
+\texttt{resume()}
+
+Resume a temporarily suspended claim.
+
+\\ \hline
+\texttt{deactivate()}
+Deactivate a claim; shuts down the currently-running job, but holds onto the
+claim for future use.
+
+\\ \hline
+\texttt{delegateGSIProxy()}
+Send an x509 proxy credential to an activated claim.
+
+\end{tabular}
+\end{flushleft}
 
 \textbf{Module enums:}
 \begin{flushleft}
