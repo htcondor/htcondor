@@ -267,6 +267,38 @@ private:
 };
 
 
+struct RequestIterator;
+
+struct ScheddNegotiate
+{
+
+friend class Schedd;
+
+public:
+
+    static boost::shared_ptr<ScheddNegotiate> enter(boost::shared_ptr<ScheddNegotiate> obj) {return obj;}
+    static bool exit(boost::shared_ptr<ScheddNegotiate> mgr, boost::python::object obj1, boost::python::object /*obj2*/, boost::python::object /*obj3*/);
+
+    bool negotiating() {return m_negotiating;}
+
+    void disconnect();
+
+    void sendClaim(boost::python::object claim, boost::python::object offer_obj, boost::python::object request_obj);
+
+    boost::shared_ptr<RequestIterator> getRequests();
+
+    ~ScheddNegotiate();
+
+private:
+
+    ScheddNegotiate(const std::string & addr, const std::string & owner, const classad::ClassAd &ad);
+
+    bool m_negotiating;
+    boost::shared_ptr<Sock> m_sock;
+    boost::shared_ptr<RequestIterator> m_request_iter;
+};
+
+
 struct RequestIterator
 {
     friend class ScheddNegotiate;
@@ -275,6 +307,8 @@ struct RequestIterator
 
     void getNextRequest()
     {
+         if (!m_parent->negotiating()) {THROW_EX(RuntimeError, "Tried to continue negotiation after disconnect.");}
+
         condor::ModuleLock ml;
 
         m_sock->encode();
@@ -301,6 +335,7 @@ struct RequestIterator
             }
             else if (reply != JOB_INFO) {THROW_EX(RuntimeError, "Unexpected response from schedd.");}
 
+            m_got_job_info = true;
             boost::shared_ptr<ClassAdWrapper> request_ad(new ClassAdWrapper());
             if (!getClassAdWithoutGIL(*m_sock.get(), *request_ad.get()) || !m_sock->end_of_message()) THROW_EX(RuntimeError, "Failed to receive remote ad.");
             m_requests.push_back(request_ad);
@@ -326,11 +361,13 @@ struct RequestIterator
 
 private:
 
-    RequestIterator(boost::shared_ptr<Sock> sock)
+    RequestIterator(boost::shared_ptr<Sock> sock, ScheddNegotiate *parent)
         :
           m_done(false)
         , m_use_rrc(false)
+        , m_got_job_info(false)
         , m_num_to_fetch(1)
+        , m_parent(parent)
         , m_sock(sock)
     {
         CondorVersionInfo vinfo;
@@ -341,9 +378,17 @@ private:
         if (m_use_rrc) {m_num_to_fetch = param_integer("NEGOTIATOR_RESOURCE_REQUEST_LIST_SIZE");}
     }
 
+    bool needs_end_negotiate()
+    {
+        if (!m_done) {return true;}
+        return m_use_rrc ? m_got_job_info : false;
+    }
+
     bool m_done;
     bool m_use_rrc;
+    bool m_got_job_info;
     unsigned m_num_to_fetch;
+    ScheddNegotiate *m_parent;
     boost::shared_ptr<Sock> m_sock;
     std::deque<boost::shared_ptr<ClassAdWrapper> > m_requests;
 };
@@ -372,110 +417,108 @@ private:
 };
 
 
-struct ScheddNegotiate
+bool
+ScheddNegotiate::exit(boost::shared_ptr<ScheddNegotiate> mgr, boost::python::object obj1, boost::python::object /*obj2*/, boost::python::object /*obj3*/)
 {
+    mgr->disconnect();
+    return (obj1.ptr() == Py_None);
+}
 
-friend class Schedd;
 
-public:
-
-    static boost::shared_ptr<ScheddNegotiate> enter(boost::shared_ptr<ScheddNegotiate> obj) {return obj;}
-    static bool exit(boost::shared_ptr<ScheddNegotiate> mgr, boost::python::object obj1, boost::python::object /*obj2*/, boost::python::object /*obj3*/)
+void
+ScheddNegotiate::disconnect()
+{
+    if (!m_negotiating) {return;}
+    m_negotiating = false;
+    /* No way to tell the remote schedd that this was a failure or a success.  Just finish the negotiation */
+    bool needs_end_negotiate = m_request_iter.get() ? m_request_iter->needs_end_negotiate() : true;
+    m_sock->encode();
+    if (needs_end_negotiate && (!m_sock->put(END_NEGOTIATE) || !m_sock->end_of_message()))
     {
-        mgr->disconnect();
-        return (obj1.ptr() == Py_None);
-    }
-
-    void
-    disconnect()
-    {
-        if (!m_negotiating) {return;}
-        /* No way to tell the remote schedd that this was a failure or a success.  Just finish the negotiation */
-        m_sock->encode();
-        if (!m_sock->put(END_NEGOTIATE) || !m_sock->end_of_message())
+        if (!PyErr_Occurred())
         {
             THROW_EX(RuntimeError, "Could not send END_NEGOTIATE to remote schedd.");
         }
-        m_negotiating = false;
     }
+}
 
-    void
-    sendClaim(boost::python::object claim, boost::python::object offer_obj, boost::python::object request_obj)
+
+void
+ScheddNegotiate::sendClaim(boost::python::object claim, boost::python::object offer_obj, boost::python::object request_obj)
+{
+    if (!m_negotiating) {THROW_EX(RuntimeError, "Not currently negotiating with schedd");}
+    if (!m_sock.get()) {THROW_EX(RuntimeError, "Unable to connect to schedd for negotiation");}
+
+    std::string claim_id = boost::python::extract<std::string>(claim);
+    ClassAdWrapper offer_ad = boost::python::extract<ClassAdWrapper>(offer_obj);
+    ClassAdWrapper request_ad = boost::python::extract<ClassAdWrapper>(request_obj);
+
+    compat_classad::ClassAd::CopyAttribute(ATTR_REMOTE_GROUP, offer_ad, ATTR_SUBMITTER_GROUP, request_ad);
+    compat_classad::ClassAd::CopyAttribute(ATTR_REMOTE_NEGOTIATING_GROUP, offer_ad, ATTR_SUBMITTER_NEGOTIATING_GROUP, request_ad);
+    compat_classad::ClassAd::CopyAttribute(ATTR_REMOTE_AUTOREGROUP, offer_ad, ATTR_SUBMITTER_AUTOREGROUP, request_ad);
+    compat_classad::ClassAd::CopyAttribute(ATTR_RESOURCE_REQUEST_CLUSTER, offer_ad, ATTR_CLUSTER_ID, request_ad);
+    compat_classad::ClassAd::CopyAttribute(ATTR_RESOURCE_REQUEST_PROC, offer_ad, ATTR_PROC_ID, request_ad);
+
+    m_sock->encode();
+    m_sock->put(PERMISSION_AND_AD);
+    m_sock->put_secret(claim_id);
+    putClassAd(m_sock.get(), offer_ad);
+    m_sock->end_of_message();
+}
+
+
+boost::shared_ptr<RequestIterator>
+ScheddNegotiate::getRequests()
+{
+    if (!m_negotiating) {THROW_EX(RuntimeError, "Not currently negotiating with schedd");}
+    if (m_request_iter.get()) {THROW_EX(RuntimeError, "Already started negotiation for this session.");}
+
+    boost::shared_ptr<RequestIterator> requests(new RequestIterator(m_sock, this));
+    m_request_iter = requests;
+    return requests;
+}
+
+
+ScheddNegotiate::~ScheddNegotiate()
+{
+    try
     {
-        if (!m_negotiating) {THROW_EX(RuntimeError, "Not currently negotiating with schedd");}
-        if (!m_sock.get()) {THROW_EX(RuntimeError, "Unable to connect to schedd for negotiation");}
-
-        std::string claim_id = boost::python::extract<std::string>(claim);
-        ClassAdWrapper offer_ad = boost::python::extract<ClassAdWrapper>(offer_obj);
-        ClassAdWrapper request_ad = boost::python::extract<ClassAdWrapper>(request_obj);
-
-        compat_classad::ClassAd::CopyAttribute(ATTR_REMOTE_GROUP, offer_ad, ATTR_SUBMITTER_GROUP, request_ad);
-        compat_classad::ClassAd::CopyAttribute(ATTR_REMOTE_NEGOTIATING_GROUP, offer_ad, ATTR_SUBMITTER_NEGOTIATING_GROUP, request_ad);
-        compat_classad::ClassAd::CopyAttribute(ATTR_REMOTE_AUTOREGROUP, offer_ad, ATTR_SUBMITTER_AUTOREGROUP, request_ad);
-        compat_classad::ClassAd::CopyAttribute(ATTR_RESOURCE_REQUEST_CLUSTER, offer_ad, ATTR_CLUSTER_ID, request_ad);
-        compat_classad::ClassAd::CopyAttribute(ATTR_RESOURCE_REQUEST_PROC, offer_ad, ATTR_PROC_ID, request_ad);
-
-        m_sock->encode();
-        m_sock->put(PERMISSION_AND_AD);
-        m_sock->put_secret(claim_id);
-        putClassAd(m_sock.get(), offer_ad);
-        m_sock->end_of_message();
+        disconnect();
     }
+    catch (boost::python::error_already_set) {}
+}
 
-    boost::shared_ptr<RequestIterator> getRequests()
-    {
-        if (!m_negotiating) {THROW_EX(RuntimeError, "Not currently negotiating with schedd");}
-
-        boost::shared_ptr<RequestIterator> requests(new RequestIterator(m_sock));
-        return requests;
-    }
-
-    ~ScheddNegotiate()
-    {
-        try
-        {
-            disconnect();
-        }
-        catch (boost::python::error_already_set) {}
-    }
-
-private:
-
-    ScheddNegotiate(const std::string & addr, const std::string & owner, const classad::ClassAd &ad)
+ScheddNegotiate::ScheddNegotiate(const std::string & addr, const std::string & owner, const classad::ClassAd &ad)
         : m_negotiating(false)
+{
+    int timeout = param_integer("NEGOTIATOR_TIMEOUT",30);
+    DCSchedd schedd(addr.c_str());
+    m_sock.reset(schedd.reliSock(timeout));
+    if (!m_sock.get()) {THROW_EX(RuntimeError, "Failed to create socket to remote schedd.");}
+    bool result;
     {
-        int timeout = param_integer("NEGOTIATOR_TIMEOUT",30);
-        DCSchedd schedd(addr.c_str());
-        m_sock.reset(schedd.reliSock(timeout));
-        if (!m_sock.get()) {THROW_EX(RuntimeError, "Failed to create socket to remote schedd.");}
-        bool result;
-        {
-            condor::ModuleLock ml;
-            result = schedd.startCommand(NEGOTIATE, m_sock.get(), timeout);
-        }
-        if (!result) {THROW_EX(RuntimeError, "Failed to start negotiation with remote schedd.");}
-
-        classad::ClassAd neg_ad;
-        neg_ad.Update(ad);
-        neg_ad.InsertAttr(ATTR_OWNER, owner);
-        if (neg_ad.find(ATTR_SUBMITTER_TAG) == neg_ad.end())
-        {
-            neg_ad.InsertAttr(ATTR_SUBMITTER_TAG, "");
-        }
-        if (neg_ad.find(ATTR_AUTO_CLUSTER_ATTRS) == neg_ad.end())
-        {
-            neg_ad.InsertAttr(ATTR_AUTO_CLUSTER_ATTRS, "");
-        }
-        if (!putClassAdAndEOM(*m_sock.get(), neg_ad))
-        {
-            THROW_EX(RuntimeError, "Failed to send negotiation header to remote schedd.");
-        }
-        m_negotiating = true;
+        condor::ModuleLock ml;
+        result = schedd.startCommand(NEGOTIATE, m_sock.get(), timeout);
     }
+    if (!result) {THROW_EX(RuntimeError, "Failed to start negotiation with remote schedd.");}
 
-    boost::shared_ptr<Sock> m_sock;
-    bool m_negotiating;
-};
+    classad::ClassAd neg_ad;
+    neg_ad.Update(ad);
+    neg_ad.InsertAttr(ATTR_OWNER, owner);
+    if (neg_ad.find(ATTR_SUBMITTER_TAG) == neg_ad.end())
+    {
+        neg_ad.InsertAttr(ATTR_SUBMITTER_TAG, "");
+    }
+    if (neg_ad.find(ATTR_AUTO_CLUSTER_ATTRS) == neg_ad.end())
+    {
+        neg_ad.InsertAttr(ATTR_AUTO_CLUSTER_ATTRS, "");
+    }
+    if (!putClassAdAndEOM(*m_sock.get(), neg_ad))
+    {
+        THROW_EX(RuntimeError, "Failed to send negotiation header to remote schedd.");
+    }
+    m_negotiating = true;
+}
 
 
 struct QueryIterator
