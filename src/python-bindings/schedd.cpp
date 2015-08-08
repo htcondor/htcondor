@@ -42,6 +42,7 @@
 #include "classad_wrapper.h"
 #include "exprtree_wrapper.h"
 #include "module_lock.h"
+#include "query_iterator.h"
 
 using namespace boost::python;
 
@@ -87,6 +88,7 @@ using namespace boost::python;
         ss << "TARGET." #parm " == \"" << new_param << "\""; \
         ADD_REQUIREMENT(parm, ss.str()) \
     }
+
 
 void
 make_spool_remap(classad::ClassAd& ad, const std::string &attr, const std::string &stream_attr, const std::string &working_name)
@@ -288,45 +290,84 @@ private:
     Schedd& m_schedd;
 };
 
-struct QueryIterator
+
+QueryIterator::QueryIterator(boost::shared_ptr<Sock> sock, const std::string &tag)
+  : m_count(0), m_sock(sock), m_tag(tag)
+{}
+
+
+boost::python::object
+QueryIterator::next(BlockingMode mode)
 {
-    QueryIterator(boost::shared_ptr<Sock> sock)
-      : m_count(0), m_sock(sock)
-    {}
+    if (m_count < 0) THROW_EX(StopIteration, "All ads processed");
 
-    inline static boost::python::object pass_through(boost::python::object const& o) { return o; };
-
-    boost::shared_ptr<ClassAdWrapper> next()
+    boost::shared_ptr<ClassAdWrapper> ad(new ClassAdWrapper());
+    if (mode == Blocking)
     {
-        if (m_count < 0) THROW_EX(StopIteration, "All ads processed");
-
-        boost::shared_ptr<ClassAdWrapper> ad(new ClassAdWrapper());
         if (!getClassAdWithoutGIL(*m_sock.get(), *ad.get())) THROW_EX(RuntimeError, "Failed to receive remote ad.");
-        if (!m_sock->end_of_message()) THROW_EX(RuntimeError, "Failed to get EOM after ad.");
-        long long intVal;
-        if (ad->EvaluateAttrInt(ATTR_OWNER, intVal) && (intVal == 0))
-        { // Last ad.
-            m_sock->close();
-            std::string errorMsg;
-            if (ad->EvaluateAttrInt(ATTR_ERROR_CODE, intVal) && intVal && ad->EvaluateAttrString(ATTR_ERROR_STRING, errorMsg))
-            {
-                THROW_EX(RuntimeError, errorMsg.c_str());
-            }
-            if (ad->EvaluateAttrInt("MalformedAds", intVal) && intVal) THROW_EX(ValueError, "Remote side had parse errors on history file")
-            //if (!ad->EvaluateAttrInt(ATTR_LIMIT_RESULTS, intVal) || (intVal != m_count)) THROW_EX(ValueError, "Incorrect number of ads returned");
-
-            // Everything checks out!
-            m_count = -1;
-            THROW_EX(StopIteration, "All ads processed");
-        }
-        m_count++;
-        return ad;
     }
+    else if (m_sock->msgReady())
+    {
+        if (!getClassAd(m_sock.get(), *ad)) {THROW_EX(RuntimeError, "Failed to receive remote ad.");}
+    }
+    else
+    {
+        return boost::python::object();
+    }
+    if (!m_sock->end_of_message()) THROW_EX(RuntimeError, "Failed to get EOM after ad.");
+    long long intVal;
+    if (ad->EvaluateAttrInt(ATTR_OWNER, intVal) && (intVal == 0))
+    { // Last ad.
+        m_sock->close();
+        std::string errorMsg;
+        if (ad->EvaluateAttrInt(ATTR_ERROR_CODE, intVal) && intVal && ad->EvaluateAttrString(ATTR_ERROR_STRING, errorMsg))
+        {
+            THROW_EX(RuntimeError, errorMsg.c_str());
+        }
+        if (ad->EvaluateAttrInt("MalformedAds", intVal) && intVal) THROW_EX(ValueError, "Remote side had parse errors on history file")
+        //if (!ad->EvaluateAttrInt(ATTR_LIMIT_RESULTS, intVal) || (intVal != m_count)) THROW_EX(ValueError, "Incorrect number of ads returned");
 
-private:
-    int m_count;
-    boost::shared_ptr<Sock> m_sock;
-};
+        // Everything checks out!
+        m_count = -1;
+        THROW_EX(StopIteration, "All ads processed");
+    }
+    m_count++;
+    boost::python::object result(ad);
+    return result;
+}
+
+
+boost::python::list
+QueryIterator::nextAds()
+{
+    boost::python::list results;
+    while (true)
+    {
+        try
+        {
+            boost::python::object nextobj = next(NonBlocking);
+            if (nextobj == boost::python::object())
+            {
+                break;
+            }
+            results.append(nextobj);
+        }
+        catch (boost::python::error_already_set)
+        {
+            if (PyErr_ExceptionMatches(PyExc_StopIteration)) {break;}
+            throw;
+        }
+    }
+    return results;
+}
+
+
+int
+QueryIterator::watch()
+{
+    return m_sock->get_file_desc();
+}
+
 
 struct query_process_helper
 {
@@ -1052,9 +1093,11 @@ struct Schedd {
         return sentry_ptr;
     }
 
-    boost::shared_ptr<QueryIterator> xquery(boost::python::object requirement=boost::python::object(), boost::python::list projection=boost::python::list(), int limit=-1, CondorQ::QueryFetchOpts fetch_opts=CondorQ::fetch_Default)
+    boost::shared_ptr<QueryIterator> xquery(boost::python::object requirement=boost::python::object(), boost::python::list projection=boost::python::list(), int limit=-1, CondorQ::QueryFetchOpts fetch_opts=CondorQ::fetch_Default, boost::python::object tag=boost::python::object())
     {
         std::string val_str;
+
+        std::string tag_str = (tag == boost::python::object()) ? m_name : boost::python::extract<std::string>(tag);
 
         extract<ExprTreeHolder &> exprtree_extract(requirement);
         extract<std::string> string_extract(requirement);
@@ -1123,7 +1166,7 @@ struct Schedd {
 
         if (!putClassAdAndEOM(*sock, ad)) THROW_EX(RuntimeError, "Unable to send request classad to schedd");
 
-        boost::shared_ptr<QueryIterator> iter(new QueryIterator(sock_sentry));
+        boost::shared_ptr<QueryIterator> iter(new QueryIterator(sock_sentry, tag_str));
         return iter;
     }
 
@@ -1273,7 +1316,6 @@ ConnectionSentry::~ConnectionSentry()
 }
 
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(query_overloads, query, 0, 5);
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(xquery_overloads, xquery, 0, 4);
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(submit_overloads, submit, 1, 4);
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(transaction_overloads, transaction, 0, 2);
 
@@ -1300,6 +1342,11 @@ void export_schedd()
     enum_<CondorQ::QueryFetchOpts>("QueryOpts")
         .value("Default", CondorQ::fetch_Default)
         .value("AutoCluster", CondorQ::fetch_DefaultAutoCluster)
+        ;
+
+    enum_<BlockingMode>("BlockingMode")
+        .value("Blocking", Blocking)
+        .value("NonBlocking", NonBlocking)
         ;
 
     class_<ConnectionSentry>("Transaction", "An ongoing transaction in the HTCondor schedd", no_init)
@@ -1383,18 +1430,18 @@ void export_schedd()
             " NOTE: depending on the lifetime of the proxy in `filename`, the resulting lifetime may be shorter"
             " than the desired lifetime.\n"
             ":return: Lifetime of the resulting job proxy in seconds.")
-        .def("xquery", &Schedd::xquery, xquery_overloads("Query HTCondor schedd, returning an iterator.\n"
+        .def("xquery", &Schedd::xquery, "Query HTCondor schedd, returning an iterator.\n"
             ":param requirements: Either a ExprTree or a string that can be parsed as an expression; requirements all returned jobs should match.\n"
             ":param projection: The attributes to return; an empty list signifies all attributes.\n"
             ":param limit: A limit on the number of matches to return.\n"
             ":param opts: Any one of the QueryOpts enum.\n"
             ":return: An iterator for the matching job ads",
 #if BOOST_VERSION < 103400
-            (boost::python::arg("requirements") = "true", boost::python::arg("projection")=boost::python::list(), boost::python::arg("limit")=-1, boost::python::arg("opts")=CondorQ::fetch_Default)
+            (boost::python::arg("requirements") = "true", boost::python::arg("projection")=boost::python::list(), boost::python::arg("limit")=-1, boost::python::arg("opts")=CondorQ::fetch_Default, boost::python::arg("name")=boost::python::object())
 #else
-            (boost::python::arg("self"), boost::python::arg("requirements") = "true", boost::python::arg("projection")=boost::python::list(), boost::python::arg("limit")=-1, boost::python::arg("opts")=CondorQ::fetch_Default)
+            (boost::python::arg("self"), boost::python::arg("requirements") = "true", boost::python::arg("projection")=boost::python::list(), boost::python::arg("limit")=-1, boost::python::arg("opts")=CondorQ::fetch_Default, boost::python::arg("name")=boost::python::object())
 #endif
-            ))
+            )
         ;
 
     class_<HistoryIterator>("HistoryIterator", no_init)
@@ -1403,7 +1450,23 @@ void export_schedd()
         ;
 
     class_<QueryIterator>("QueryIterator", no_init)
-        .def("next", &QueryIterator::next)
+        .def("next", &QueryIterator::next, "Return the next ad from the query results.\n"
+            ":param mode: One of the BlockingMode enum; Blocking or NonBlocking.\n"
+            ":return: The next ad in the query results.  If NonBlocking mode is used, returns None if no ad is available..\n"
+            "Throws a StopIterator exception if no results are available..\n",
+#if BOOST_VERSION < 103400
+            (boost::python::arg("mode") = Blocking)
+#else
+            (boost::python::arg("self"), boost::python::arg("mode") = Blocking)
+#endif
+            )
+        .def("nextAdsNonBlocking", &QueryIterator::nextAds, "Return any available ads.\n"
+            ":return: A list of ads.  If no ads are available, returns an empty list.\n"
+            "Does not throw an exception if no ads are available or the iterator is finished.\n"
+            )
+        .def("tag", &QueryIterator::tag, "Return the query's tag.")
+        .def("done", &QueryIterator::done, "Returns True if the iterator is finished; False otherwise.")
+        .def("watch", &QueryIterator::watch, "Returns a file descriptor associated with this query.")
         .def("__iter__", &QueryIterator::pass_through)
         ;
 

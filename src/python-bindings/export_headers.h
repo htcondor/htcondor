@@ -11,4 +11,5 @@ void export_log_reader();
 void enable_classad_extensions();
 void enable_deprecation_warnings();
 void export_claim();
+void export_query_iterator();
 
