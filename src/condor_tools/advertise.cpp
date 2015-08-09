@@ -188,7 +188,7 @@ int main( int argc, char *argv[] )
 
 		dprintf(D_FULLDEBUG,"locating collector %s...\n", collector->name());
 
-		if(!collector->locate()) {
+		if(!collector->locate(Daemon::LOCATE_FAST)) {
 			fprintf(stderr,"couldn't locate collector: %s\n",collector->error());
 			had_error = true;
 			continue;
