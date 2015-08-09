@@ -948,7 +948,7 @@ Daemon::sendCACmd( ClassAd* req, ClassAd* reply, ReliSock* cmd_sock,
 //////////////////////////////////////////////////////////////////////
 
 bool
-Daemon::locate( void )
+Daemon::locate( Daemon::LocateType method )
 {
 	bool rval=false;
 
@@ -975,23 +975,23 @@ Daemon::locate( void )
 		rval = true;
 		break;
 	case DT_GENERIC:
-		rval = getDaemonInfo( GENERIC_AD );
+		rval = getDaemonInfo( GENERIC_AD, true, method );
 		break;
 	case DT_CLUSTER:
 		setSubsystem( "CLUSTER" );
-		rval = getDaemonInfo( CLUSTER_AD );
+		rval = getDaemonInfo( CLUSTER_AD, true, method );
 		break;
 	case DT_SCHEDD:
 		setSubsystem( "SCHEDD" );
-		rval = getDaemonInfo( SCHEDD_AD );
+		rval = getDaemonInfo( SCHEDD_AD, true, method );
 		break;
 	case DT_STARTD:
 		setSubsystem( "STARTD" );
-		rval = getDaemonInfo( STARTD_AD );
+		rval = getDaemonInfo( STARTD_AD, true, method );
 		break;
 	case DT_MASTER:
 		setSubsystem( "MASTER" );
-		rval = getDaemonInfo( MASTER_AD );
+		rval = getDaemonInfo( MASTER_AD, true, method );
 		break;
 	case DT_COLLECTOR:
 		do {
@@ -1000,15 +1000,15 @@ Daemon::locate( void )
 		break;
 	case DT_NEGOTIATOR:
 	  	setSubsystem( "NEGOTIATOR" );
-		rval = getDaemonInfo ( NEGOTIATOR_AD );
+		rval = getDaemonInfo ( NEGOTIATOR_AD, true, method );
 		break;
 	case DT_CREDD:
 	  setSubsystem( "CREDD" );
-	  rval = getDaemonInfo( CREDD_AD );
+	  rval = getDaemonInfo( CREDD_AD, true, method );
 	  break;
 	case DT_STORK:
 	  setSubsystem( "STORK" );
-	  rval = getDaemonInfo( ANY_AD, false );
+	  rval = getDaemonInfo( ANY_AD, false, method );
 	  break;
 	case DT_VIEW_COLLECTOR:
 		if( (rval = getCmInfo("CONDOR_VIEW")) ) {
@@ -1023,23 +1023,23 @@ Daemon::locate( void )
 		break;
 	case DT_QUILL:
 		setSubsystem( "QUILL" );
-		rval = getDaemonInfo( SCHEDD_AD );
+		rval = getDaemonInfo( SCHEDD_AD, true, method );
 		break;
 	case DT_TRANSFERD:
 		setSubsystem( "TRANSFERD" );
-		rval = getDaemonInfo( ANY_AD );
+		rval = getDaemonInfo( ANY_AD, true, method );
 		break;
 	case DT_LEASE_MANAGER:
 		setSubsystem( "LEASEMANAGER" );
-		rval = getDaemonInfo( LEASE_MANAGER_AD, true );
+		rval = getDaemonInfo( LEASE_MANAGER_AD, true, method );
 		break;
 	case DT_HAD:
 		setSubsystem( "HAD" );
-		rval = getDaemonInfo( HAD_AD );
+		rval = getDaemonInfo( HAD_AD, true, method );
 		break;
 	case DT_KBDD:
 		setSubsystem( "KBDD" );
-		rval = getDaemonInfo( NO_AD );
+		rval = getDaemonInfo( NO_AD, true, method );
 		break;
 	default:
 		EXCEPT( "Unknown daemon type (%d) in Daemon::locate", (int)_type );
@@ -1087,7 +1087,7 @@ Daemon::setSubsystem( const char* subsys )
 
 
 bool
-Daemon::getDaemonInfo( AdTypes adtype, bool query_collector )
+Daemon::getDaemonInfo( AdTypes adtype, bool query_collector, LocateType method )
 {
 	std::string			buf;
 	char				*tmp, *my_name;
@@ -1295,6 +1295,10 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector )
 		} else if ( _name ) {
 			formatstr( buf, "%s == \"%s\"", ATTR_NAME, _name ); 
 			query.addANDConstraint( buf.c_str() );
+			if (method == LOCATE_FAST)
+			{
+				query.setLocationLookup(_name);
+			}
 		} else {
 			if ( ( _type != DT_NEGOTIATOR ) && ( _type != DT_LEASE_MANAGER) ) {
 					// If we're not querying for negotiator
@@ -1304,6 +1308,7 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector )
 					// result to pick??
 				return false;
 			}
+			query.setLocationLookup("");
 		}
 
 			// We need to query the collector

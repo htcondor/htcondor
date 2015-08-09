@@ -1887,7 +1887,7 @@ doSquawkReconnect( char *addr ) {
 	if( real_dt == DT_GENERIC ) {
 		d.setSubsystem( subsys );
 	}
-	if( ! d.locate() ) {
+	if( ! d.locate(Daemon::LOCATE_FAST) ) {
 		printf ( "Failed to contact daemon.\n" );
 		delete [] hostname;
 		return FALSE;
