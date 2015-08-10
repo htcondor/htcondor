@@ -41,6 +41,13 @@ as well as the rate at which jobs can be removed from the queue
 when the submission rate is high.
 \Ticket{5183}
 
+\item The new configuration variable
+\MacroNI{NEGOTIATOR\_MAX\_TIMES\_PER\_SCHEDD} limits how much time the
+\Condor{negotiator} will spend talking to each \Condor{schedd} during a
+negotiation cycle.
+The value is in seconds and defaults to one year.
+\Ticket{5156}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -70,6 +77,16 @@ heavily loaded \Condor{schedd} daemons.
 \item The sleep that \Condor{dagman} does at startup has been reduced
 from 12 to 3 seconds.
 \Ticket{5206}
+
+\item When the \Condor{schedd} is reconnecting to running jobs after
+a restart, it no longer starts a \Condor{shadow} process if the job
+lease has expired.
+\Ticket{5157}
+
+\item The negotiator will now use the old mechanism for directly
+preempting dslots when \MacroNI{ALLOW\_PSLOT\_PREEMPTION} is enabled
+but the \Condor{startd} doesn't support pslot preemption.
+\Ticket{5207}
 
 \end{itemize}
 
