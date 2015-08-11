@@ -54,6 +54,11 @@ The value is in seconds and it defaults to the number of seconds in one year.
 
 \begin{itemize}
 
+\item Docker universe jobs had a bug where it would insert
+carriage returns and newlines at the end of every line in
+stdout and stderr.  This has been fixed.
+\Ticket{5212}
+
 \item When the \Condor{startd} starts up and shuts down, 
 it removes any left over files and directories in the execute directory.  
 Previous versions of HTCondor would remove all sub-directories, 
