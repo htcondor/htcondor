@@ -83,9 +83,9 @@ a restart, it no longer starts a \Condor{shadow} process if the job
 lease has expired.
 \Ticket{5157}
 
-\item The negotiator will now use the old mechanism for directly
-preempting dslots when \MacroNI{ALLOW\_PSLOT\_PREEMPTION} is enabled
-but the \Condor{startd} doesn't support pslot preemption.
+\item The \Condor{negotiator} will now use its older mechanism for directly
+preempting dynamic slots when \MacroNI{ALLOW\_PSLOT\_PREEMPTION} is enabled,
+but the \Condor{startd} does not support pslot preemption.
 \Ticket{5207}
 
 \end{itemize}
