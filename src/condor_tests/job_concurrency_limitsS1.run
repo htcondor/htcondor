@@ -80,6 +80,12 @@ my $on_match = sub {
 sub on_submit {
 };
 
+sub SetIdleTolerance {
+	my $tolerance = shift;
+	$allow_too_few_idle_once = $tolerance;
+	print "Tolerance of no idle set:$allow_too_few_idle_once\n";
+};
+
 sub on_imageupdated {
 };
 
