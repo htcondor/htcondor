@@ -52,24 +52,24 @@ error  = ' . $testname . '.err
 #
 # for X86_64 shadows
 my %memory_data64 = (
-	"debian6"  => "660",
-	"debian7"  => "684",
-	"debian8"  => "696",
-	"fedora20" => "660",
-	"fedora21" => "678",
-	"redhat5"  => "440",
-	"redhat6"  => "484",
+	"debian6"  => "652",
+	"debian7"  => "688",
+	"debian8"  => "692",
+	"fedora20" => "668",
+	"fedora21" => "668",
+	"redhat5"  => "444",
+	"redhat6"  => "492",
 	"redhat7"  => "648",
-	"sl6"      => "488",
-	"sl7"      => "652",
-	"ubuntu12" => "676",
-	"ubuntu14" => "668",
+	"sl6"      => "496",
+	"sl7"      => "656",
+	"ubuntu12" => "684",
+	"ubuntu14" => "664",
 );
 # for X86 shadows
 my %memory_data32 = (
-	"redhat5" => "352",
-	"redhat6" => "372",
-	"sl5"     => "348",
+	"redhat5" => "348",
+	"redhat6" => "368",
+	"sl6"     => "348",
 );
 
 
