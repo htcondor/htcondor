@@ -21,7 +21,7 @@ use CondorTest;
 use CondorUtils;
 use base 'Exporter';
 
-our @EXPORT = qw(WaitForIt InitGlobals CheckStatus CountIdle ExaminsSlots ExamineQueue QueueMore Jobs DelayOnNegotiator CountRunning);
+our @EXPORT = qw(WaitForIt InitGlobals CheckStatus CountIdle ExaminsSlots ExamineQueue QueueMore Jobs DelayOnNegotiator CountRunning InitLimits);
 
 package ConcurrencyTools;
 
@@ -42,6 +42,13 @@ my $expect_idle = 0;
 my $expect_run = 0;
 my $expect_checks = 0;
 my $total_checks = 8;
+
+sub InitLimits {
+	print "InitLimits: start real test right away\n";
+	# we used to start a regular non-concurrency personal and do
+	# two set of jobs before testing concurrenct. No More. Just start
+	# real test.
+};
 
 sub InitGlobals{
 	$running_now = shift;

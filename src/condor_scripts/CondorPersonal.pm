@@ -673,9 +673,9 @@ sub CondorConfigVal
     #my $result = `condor_config_val $param_name`;
 
 	if (defined $returnarrayref) {
-		my $res = CondorTest::runCondorTool("condor_config_val $param_name",$returnarrayref,2,{emit_output=>0,expect_result=>\&ANY});
+		my $res = CondorTest::runCondorTool("condor_config_val $param_name",$returnarrayref,2,{emit_output=>1,expect_result=>\&ANY});
 	} else {
-		my $res = CondorTest::runCondorTool("condor_config_val $param_name",\@otherarray,2,{emit_output=>0});
+		my $res = CondorTest::runCondorTool("condor_config_val $param_name",\@otherarray,2,{emit_output=>1});
 		my $firstline = $otherarray[0];
     	fullchomp $firstline;
 		$result = $firstline;
@@ -744,7 +744,7 @@ sub InstallPersonalCondor
 
 		my @config = ();
 		debug("InstallPersonalCondor getting ccv -config\n",$debuglevel);
-		CondorTest::runCondorTool("condor_config_val -config",\@config,2,{emit_output=>0});
+		CondorTest::runCondorTool("condor_config_val -config",\@config,2,{emit_output=>1});
 		debug("InstallPersonalCondor BACK FROM ccv -config\n",$debuglevel);
 		open(CONFIG,"condor_config_val -config | ") || die "Can not find config file: $!\n";
 		while(<CONFIG>)
@@ -1292,7 +1292,7 @@ debug( "HMMMMMMMMMMM personal local is $personal_local , mytoppath is $mytoppath
 
 	}
 
-	#lets always overrule existing A__DEBUG with one that adds to it D_CMD
+	#lets always overrul existing A__DEBUG with one that adds to it D_CMD
 	print NEW "ALL_DEBUG = \$(ALL_DEBUG) D_CMD:1\n";
 	# we are testing. dramatically reduce MaxVacateTime
 	print NEW "JOB_MAX_VACATE_TIME = 15\n";
@@ -1316,6 +1316,8 @@ sub PostTunePersonalCondor
 {
     my $config_file = shift;
 	my $outputarrayref = shift;
+	print "PostTunePersonalCondor trying to process daemon_list\n";
+	print "config file is $config_file\n";
 
     # If this is a quill test, then quill is within
     # $personal_daemons AND $topleveldir/../pgpass wants to  be

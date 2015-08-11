@@ -37,8 +37,9 @@ my %taskmorejobs = (
 	"checklarge" => 2,
 );
 
-my $negotiatorcycle = 5;
-my $nextappend_condor_config = '
+ConcurrencyTools::InitLimits();
+
+my $append_condor_config = '
 	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
 	ALL_DEBUG = 
 	XSW_LIMIT = 1
@@ -48,6 +49,14 @@ my $nextappend_condor_config = '
 	NEGOTIATOR_INTERVAL = 5
 	NUM_CPUS = 12
 ';
+
+# OK turn it on with concurrency limits
+CondorTest::StartCondorWithParams(
+    append_condor_config => $append_condor_config,
+	local_fresh => "TRUE",
+);
+
+my $negotiatorcycle = 5;
 
 sub multi_timeout_callback
 {
@@ -86,16 +95,6 @@ if($haveslots < $neededslots) {
 	system("condor_config_val -v NUM_CPUS");
 	die "We need <$neededslots> but only have <$haveslots>\n";
 }
-
-my $append_submit_commands = '
-concurrency_limits = XSW
-';
-
-# OK turn it on with concurrency limits
-CondorTest::StartCondorWithParams(
-    append_condor_config => $nextappend_condor_config,
-	local_fresh => "TRUE",
-);
 
 $append_submit_commands = '
 concurrency_limits = XSW
