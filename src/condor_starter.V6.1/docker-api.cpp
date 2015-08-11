@@ -45,7 +45,6 @@ int DockerAPI::run(
 	if ( ! add_docker_arg(runArgs))
 		return -1;
 	runArgs.AppendArg( "run" );
-	runArgs.AppendArg( "--tty" );
 
 	// Write out a file with the container ID.
 	// FIXME: The startd can check this to clean up after us.
