@@ -477,7 +477,8 @@ Sinful::Sinful( char const * sinful ) {
 			}
 
 			// Otherwise, it may be an unbracketed original Sinful from
-			// an old implementation of CCB.
+			// an old implementation of CCB... or from the command line,
+			// or from a config setting.
 			formatstr( m_sinfulString, "<%s>", sinful );
 			parseSinfulString();
 		} break;

@@ -475,19 +475,64 @@ IpVerify::PrintAuthTable(int dprintf_level) {
 	}
 }
 
-// If host is a valid hostname, add its IP addresses to the list.
-// Always add host itself to the list.
 static void
-ExpandHostAddresses(char const *host,StringList *list)
+ExpandHostAddresses( char const * entry, StringList * list )
 {
-	list->append(host);
-	condor_netaddr netaddr;
+	//
+	// What we're actually passed are entries in a security list.  An entry
+	// may be: an IP literal, a network literal or wildcard, a hostname
+	// literal or wildcard, a fully-qualified HTCondor user name (as resulting
+	// from the unified map file and including a '/'), or a (semi-)sinful
+	// string.
+	//
+	// Nothing aside from a sinful allows '?', but we do have to check for
+	// <host|ip>:<port> semi-sinful strings.
+	//
+	// It's not all clear that it's wise to include entries that we don't
+	// recognize in the StringList, but for backwards-compatibility, we'll
+	// try it.
+	//
+	list->append( entry );
 
-	if (strchr(host,'*') || strchr(host,'/') || netaddr.from_net_string(host)) {
-		return; // not a valid hostname, so don't bother trying to look it up
+	//
+	// Because we allow hostnames in sinfuls, and allow unbracketed sinfuls,
+	// the sinful parser is considerably more lax than I would like.  Detect
+	// wildcards and FQUNs first; if the entry is wildcarded or a FQUN,
+	// we're done.  (Determining if the entry is valid must be done later.)
+	//
+	// As far as I know, valid original and v1 Sinfuls don't use either of
+	// these characters in their serialization.  This is something of a gotcha
+	// waiting to happen, but doing things in the other order would require
+	// doing DNS lookups during Sinful parsing, which is probably a Bad Idea.
+	//
+	if( strchr( entry, '*' ) || strchr( entry, '/' ) ) {
+		return;
 	}
 
-	std::vector<condor_sockaddr> addrs = resolve_hostname(host);
+	//
+	// If it's a valid network specifier, we're done.  This includes IPv4
+	// and IPv6 literals (which makes the ':' in the next test safe).
+	//
+	condor_netaddr netaddr;
+	if( netaddr.from_net_string( entry ) ) {
+		return;
+	}
+
+	//
+	// If it's a Sinful string, we're done.
+	//
+	if(	   strchr( entry, '<' ) || strchr( entry, '>' )
+		|| strchr( entry, '?' ) || strchr( entry, ':' ) ) {
+		dprintf( D_ALWAYS, "WARNING: Not attempting to resolve '%s' from the "
+			"security list: it looks like a Sinful string.  A Sinful string "
+			"specifies how to contact a daemon, but not which address it "
+			"uses when contacting others.  Use the bare hostname of the "
+			"trusted machine, or an IP address (if known and unique).\n",
+			entry );
+		return;
+	}
+
+	std::vector<condor_sockaddr> addrs = resolve_hostname(entry);
 	for (std::vector<condor_sockaddr>::iterator iter = addrs.begin();
 		 iter != addrs.end();
 		 ++iter) {
