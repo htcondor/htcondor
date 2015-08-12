@@ -119,14 +119,10 @@ my $pretestsetuponly = 0; # only get the personal condor in place
 $SIG{ALRM} = sub { die "!batch_test:test timed out!\n" };
 
 my @compilers;
-my @successful_tests;
-my @failed_tests;
 
 # setup
 STDOUT->autoflush();   # disable command buffering of stdout
 STDERR->autoflush();   # disable command buffering of stderr
-my $num_success = 0;
-my $num_failed = 0;
 my $isXML = 0;  # are we running tests with XML output
 
 # remove . from path
@@ -472,40 +468,6 @@ if ($isXML){
 }
 
 
-if( $hush == 0 ) {
-	print "$num_success successful, $num_failed failed\n";
-}
-
-if($num_failed > 0) {
-	debug_flush();
-}
-
-open( SUMOUTF, ">>successful_tests_summary" )
-	|| die "error opening \"successful_tests_summary\": $!\n";
-open( OUTF, ">successful_tests" )
-	|| die "error opening \"successful_tests\": $!\n";
-foreach my $test_name (@successful_tests)
-{
-	print OUTF "$test_name 0\n";
-	print SUMOUTF "$test_name 0\n";
-	#print "$test_name passed\n";
-}
-close OUTF;
-close SUMOUTF;
-
-open( SUMOUTF, ">>failed_tests_summary$$" )
-	|| die "error opening \"failed_tests_summary\": $!\n";
-open( OUTF, ">failed_tests" )
-	|| die "error opening \"failed_tests\": $!\n";
-foreach my $test_name (@failed_tests)
-{
-	print OUTF "$test_name 1\n";
-	print SUMOUTF "$test_name 1\n";
-	print "$test_name failed\n";
-}
-close OUTF;
-close SUMOUTF;
-
 
 
 {
@@ -598,8 +560,6 @@ sub CompleteTestOutput
 			#print "Not Xml: group size <$groupsize> test <$test_name>\n";
 			print "$test_name; succeeded!\n";
 		}
-		$num_success++;
-		@successful_tests = (@successful_tests, "$compiler/$test_name");
 	} else {
 		#my $testname = "$test{$child}";
 		#$testname = $testname . ".out";
@@ -608,10 +568,7 @@ sub CompleteTestOutput
 		#CondorUtils::fullchomp($failure);
 		#$failure = "$test_name: failed" if $failure =~ /^\s*$/;
 		
-		print "$test_name ***** FAILED *****\n";
-		$num_failed++;
-		@failed_tests = (@failed_tests, "$compiler/$test_name");
-	}
+	} 
 
 	if ($isXML){
 		print "Copying to $ResultDir/$compiler ...\n";

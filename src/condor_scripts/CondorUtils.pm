@@ -1,5 +1,5 @@
 #! /usr/bin/env perl
-use strict;
+#use strict;
 use warnings;
 use Cwd;
 use IPC::Open3;

@@ -2380,16 +2380,20 @@ CopyAttribute( char const *target_attr, char const *source_attr,
 {
 	ASSERT( target_attr );
 	ASSERT( source_attr );
-	if( !source_ad ) {
-		source_ad = this;
-	}
+        if (!source_ad) {source_ad = this;}
+        
+	CopyAttribute(target_attr, *this, source_attr, *source_ad);
+}
 
-	classad::ExprTree *e = source_ad->Lookup( source_attr );
+void ClassAd::
+CopyAttribute(const char *target_attr, classad::ClassAd &target_ad, const char *source_attr, const classad::ClassAd &source_ad)
+{
+	classad::ExprTree *e = source_ad.Lookup( source_attr );
 	if ( e ) {
 		e = e->Copy();
-		Insert( target_attr, e, false );
+		target_ad.Insert( target_attr, e, false );
 	} else {
-		Delete( target_attr );
+		target_ad.Delete( target_attr );
 	}
 }
 

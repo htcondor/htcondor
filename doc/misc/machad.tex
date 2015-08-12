@@ -1218,6 +1218,15 @@ attribute for each dynamic slot of the partitionable slot.
 \item[\AdAttr{ChildState}:] 
 A ClassAd list containing the values of the \Attr{State} 
 attribute for each dynamic slot of the partitionable slot.
+
+\index{ClassAd machine attribute (for pslot preemption)!PslotRollupInformation}
+\item[\AdAttr{PslotRollupInformation}:] 
+A boolean value set to \Expr{True} in both the partitionable and dynamic slots,
+when configuration variable \MacroNI{ADVERTISE\_PSLOT\_ROLLUP\_INFORMATION}
+is \Expr{True},
+such that the \Condor{negotiator} knows when partitionable slot preemption 
+is possible and can directly preempt a dynamic slot when appropriate.
+
 \end{description}
 
 

@@ -30,7 +30,19 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item The python bindings have a new Claim API, allowing Computing-On-Demand (COD) to be
+invoked via python.
+\Ticket{5130}
+
+\item The python bindings can now submit multiple distinct processes using the \texttt{submitMany}
+method, similar to a \Condor{submit} file with multiple \texttt{queue} statements.
+\Ticket{4916}
+
+\item The python bindings now provide improved support for managing multiple concurrent queries.
+\Ticket{5187}
+
+\item As an experimental feature, the python bindings implement the HTCondor negotiation protocol.
+\Ticket{5125}
 
 \end{itemize}
 

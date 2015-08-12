@@ -158,9 +158,9 @@ Recognized metric attribute names and their use:
     \verb|"uint32"|, \verb|"int16"|, \verb|"uint16"|,
     \verb|"int8"|, \verb|"uint8"|, and \verb|"string"|.
     The default is \verb|"string"| for string values,
-    The default is \verb|"int32"| for integer values,
-    The default is \verb|"float"| for real values,
-    The default is \verb|"int8"| for boolean values.
+    the default is \verb|"int32"| for integer values,
+    the default is \verb|"float"| for real values,
+    and the default is \verb|"int8"| for boolean values.
     Integer values can be coerced to \verb|"float"| or \verb|"double"|.
     This is especially important for values stored internally as 64-bit
     values.
@@ -197,18 +197,19 @@ Recognized metric attribute names and their use:
     feature works like GROUP BY in SQL.  The aggregation function
     produces one result per value of \Attr{AggregateGroup}.  A single
     aggregate group would therefore be appropriate for a pool-wide
-    metric.  Example use of aggregate grouping: if one wished to
-    publish the sum of an attribute across different types of slot
-    ClassAds, one could make the metric name an expression that is unique
+    metric.  
+    As an example, 
+    to publish the sum of an attribute across different types of slot
+    ClassAds, make the metric name an expression that is unique
     to each type.  The default \Attr{AggregateGroup} would be set
     accordingly.  Note that the assumption is still that the result
     is a pool-wide metric, so by default it is associated with the
     \Condor{collector} daemon's host.
     To group by machine and publish the result into
-    the Ganglia page associated with each machine, one should make
-    the \Attr{AggregateGroup} contain the machine name and override
+    the Ganglia page associated with each machine, 
+    make the \Attr{AggregateGroup} contain the machine name and override
     the default \Attr{Machine} attribute to be the daemon's machine
-    name, rather than the \Condor{collector} daemon's.
+    name, rather than the \Condor{collector} daemon's machine name.
 
   \item[Machine] The name of the host associated with this metric.  
     If configuration variable

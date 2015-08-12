@@ -138,6 +138,19 @@ Parameter \texttt{msg} is a String message to log.
 
 \\ \hline
 
+\texttt{poll( active\_queries )}
+
+Wait on the results of multiple query iteratories.  Param \texttt{active\_queries}
+is a list of query iterators as returned by \texttt{xquery()}.
+
+This function returns an iterator which yields the next ready query iterator.  The
+returned iterator stops when all results have been consumed for all iterators.
+
+The iterator returned by \texttt{xquery} has a method named \texttt{nextAdsNonBlocking}
+which returns a list of all ads available without blocking.
+
+\\ \hline
+
 \end{tabular}
 \end{flushleft}
 
@@ -221,7 +234,7 @@ Parameter \texttt{attr\_list} is a list of attributes for the \Condor{schedd}
 daemon to project along.  
 It defaults to having the \Condor{schedd} daemon return all attributes.
 \\ \hline
-\texttt{xquery( constraint = true, attr\_list = [] )}
+\texttt{xquery( constraint = true, attr\_list = [], limit, opts, name )}
 
 Query the \Condor{schedd} daemon for jobs.
 Returns an iterator of ClassAds representing the matching jobs
@@ -234,6 +247,18 @@ It defaults to \texttt{True}.
 Parameter \texttt{attr\_list} is a list of attributes for the \Condor{schedd}
 daemon to project along.
 It defaults to having the \Condor{schedd} daemon return all attributes.
+
+Parameter \texttt{limit} is the maximum number of results this query will return.
+
+Parameter \texttt{opts} specifies any additional query options.  Currently, the
+only non-default option is \texttt{QueryOpts.AutoCluster}, which returns
+autoclusters in the schedd, not jobs.
+
+Parameter \texttt{name} provides a \textit{tag} name for the returned query iterator.
+This string will always be returned from the \texttt{tag()} method of the returned
+iterator.  The default value is the \Condor{schedd}'s name.  This tag is useful to identify
+different queries when using the \texttt{poll()} module function.
+
 \\ \hline
 
 \texttt{history( (object) requirements, (list) projection, (int) match )}
@@ -282,6 +307,29 @@ Parameter \texttt{ad\_results}, if set to a list,
 will contain the job ClassAds resulting from the job submission.
 These are useful for interacting with the job spool at a later time.
 \\ \hline
+
+\texttt{submitMany( cluster\_ad, proc\_ads, spool = false, ad\_results = None )}
+
+Submit multiple jobs to the \Condor{schedd} daemon, possibly including several
+distinct processes.
+Returns the newly created cluster ID.
+
+This method requires the invoker to provide a ClassAd, \texttt{cluster\_ad} for the new job cluster;
+this is the same format as in the \texttt{submit()} method.
+
+The \texttt{proc\_ads} parameter is a list of 2-tuples; each tuple has the format
+of \texttt{(proc\_ad, count)}.  For each list entry, this will result in \texttt{count} jobs being submitted
+inheriting from both \texttt{cluster\_ad} and \texttt{proc\_ad}.
+
+Parameter \texttt{spool} inserts the necessary attributes into the job for it
+to have the input files spooled to a remote \Condor{schedd} daemon.
+This parameter is necessary for jobs submitted to a remote \Condor{schedd}.
+
+Parameter \texttt{ad\_results}, if set to a list,
+will contain the job ClassAds resulting from the job submission.
+These are useful for interacting with the job spool at a later time.
+
+\\ \hline
 \texttt{spool( ad\_list )}
 
 Spools the files specified in a list of job ClassAds to the \Condor{schedd}.
@@ -313,8 +361,24 @@ A value of -1 specifies to use the value of configuration variable
 Note that, depending on the lifetime
 of the proxy in \texttt{filename}, the resulting lifetime may be shorter
 than the desired lifetime.
-\\ \hline
 
+\\ \hline
+\texttt{negotiate( (str)accounting\_name )}
+
+Begin a negotiation cycle with the remote schedd.  The \texttt{accounting\_name}
+parameter determines which user we will start negotiating with.
+
+The returned object, of type \texttt{ScheddNegotiate} is iterable; its iterator
+will yield resource request ClassAds from the schedd.  Each resource request represents
+a set of jobs that are next in queue for the schedd for this user.
+
+The \texttt{ScheddNegotiate} additionally serves as a context manager, automatically
+destroying the negotiation session when the context is left.
+
+Finally, \texttt{ScheddNegotiate} has a \texttt{sendClaim} method for sending claims
+back to the remote schedd based on a given resource request.
+
+\\ \hline
 \end{tabular}
 \end{flushleft}
 
@@ -691,6 +755,73 @@ configuration of the daemon.
 \end{tabular}
 \end{flushleft}
 
+The \texttt{Claim} class provides access to HTCondor's
+Compute-On-Demand facilities.
+
+\textbf{The \texttt{Claim} class:}
+\begin{flushleft}
+\begin{tabular}{|p{16cm}|} \hline
+
+\texttt{\_\_init\_\_( classad )}
+
+Create a Claim object.  The \texttt{classad} argument provides
+a ClassAd describing the startd to claim.
+
+\\ \hline
+
+\texttt{requestCOD( constraint, lease\_duration )}
+
+Request a claim from the \Condor{startd} represented by this object.
+
+The \texttt{constraint} specifies which slot in the startd to claim
+(defaults to 'true', which will result in the first slot becoming claimed).
+
+The \texttt{lease\_duration} indicates how long the claim should be valid for.
+
+On success, the \texttt{Claim} object will represent a valid claim on the
+remote startd.
+
+\\ \hline
+\texttt{release( (VacateTypes)vacate\_type )}
+
+Release a \Condor{startd} from this claim and shut down any running job.
+
+The \texttt{vacate\_type} argument indicates the type of vacate to perform
+(Fast or Graceful); must be from VacateTypes enum.
+
+\\ \hline
+\texttt{activate( (ClassAd)ad )}
+
+Activate a claim using a given job ad.
+
+The \texttt{ad} must describe a job to run.
+
+\\ \hline
+\texttt{suspend()}
+
+Suspend an activated claim.
+
+\\ \hline
+\texttt{renew()}
+
+Renew the lease on an existing claim.
+
+\\ \hline
+\texttt{resume()}
+
+Resume a temporarily suspended claim.
+
+\\ \hline
+\texttt{deactivate()}
+Deactivate a claim; shuts down the currently-running job, but holds onto the
+claim for future use.
+
+\\ \hline
+\texttt{delegateGSIProxy()}
+Send an x509 proxy credential to an activated claim.
+
+\end{tabular}
+\end{flushleft}
 
 \textbf{Module enums:}
 \begin{flushleft}

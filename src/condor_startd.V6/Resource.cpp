@@ -349,7 +349,7 @@ Resource::Resource( CpuAttributes* cap, int rid, bool multiple_slots, Resource* 
 	r_suspended_for_cod = false;
 	r_hack_load_for_cod = false;
 	r_cod_load_hack_tid = -1;
-	r_pre_cod_total_load = 0.0;
+	r_pre_cod_total_load = -1.0;
 	r_pre_cod_condor_load = 0.0;
 	m_bUserSuspended = false;
 
@@ -2209,6 +2209,9 @@ Resource::publish( ClassAd* cap, amask_t mask )
 			cap->AssignExpr(ATTR_SLOT_DYNAMIC, "TRUE");
             cap->Assign(ATTR_SLOT_TYPE, "Dynamic");
 			cap->Assign(ATTR_PARENT_SLOT_ID, r_id);
+			if ( param_boolean("ADVERTISE_PSLOT_ROLLUP_INFORMATION", true) ) {
+				cap->Assign(ATTR_PSLOT_ROLLUP_INFORMATION, true);
+			}
 			break;
 		default:
             cap->Assign(ATTR_SLOT_TYPE, "Static");
@@ -2747,7 +2750,7 @@ Resource::beginCODLoadHack( void )
 		// only if we've been free of COD for over a minute (and
 		// therefore, we're completely out of COD-load hack), do we
 		// want to record the real system load as the "pre-COD" load.
-	if( r_pre_cod_total_load > 0.0 ) {
+	if( r_pre_cod_total_load < 0.0 ) {
 		r_pre_cod_total_load = r_attr->total_load();
 		r_pre_cod_condor_load = r_attr->condor_load();
 	} else {
@@ -2787,7 +2790,7 @@ Resource::endCODLoadHack( void )
 
 		// now, reset all the COD-load hack state
 	r_hack_load_for_cod = false;
-	r_pre_cod_total_load = 0.0;
+	r_pre_cod_total_load = -1.0;
 	r_pre_cod_condor_load = 0.0;
 }
 
@@ -3505,6 +3508,8 @@ Resource::publishDynamicChildSummaries(ClassAd *cap) {
 	if (param_boolean("ADVERTISE_PSLOT_ROLLUP_INFORMATION", true) == false) {
 		return;
 	}
+
+	cap->Assign(ATTR_PSLOT_ROLLUP_INFORMATION, true);
 
 	//cap->AssignExpr(ATTR_CHILD_CLAIM_IDS, makeChildClaimIds().c_str());
 

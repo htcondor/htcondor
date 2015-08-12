@@ -25,6 +25,7 @@ The details of each version are described below.
 
 \end{itemize}
 
+%TEMPTEMP -- add DAGMan sleep change in here...
 
 \noindent New Features:
 
@@ -40,11 +41,23 @@ as well as the rate at which jobs can be removed from the queue
 when the submission rate is high.
 \Ticket{5183}
 
+\item The new configuration variable
+\Macro{NEGOTIATOR\_MAX\_TIME\_PER\_SCHEDD} limits how much time the
+\Condor{negotiator} will spend talking to each \Condor{schedd} during a
+negotiation cycle.
+The value is in seconds and it defaults to the number of seconds in one year.
+\Ticket{5156}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item Docker universe jobs had a bug where it would insert
+carriage returns and newlines at the end of every line in
+stdout and stderr.  This has been fixed.
+\Ticket{5212}
 
 \item When the \Condor{startd} starts up and shuts down, 
 it removes any left over files and directories in the execute directory.  
@@ -65,6 +78,20 @@ the \Condor{shared\_port} is used,
 potentially causing significant delays when issuing new commands to 
 heavily loaded \Condor{schedd} daemons.
 \Ticket{5146}
+
+\item The 12 second delay in the start up of \Condor{dagman} 
+has been reduced to 3 seconds.
+\Ticket{5206}
+
+\item When the \Condor{schedd} is reconnecting to running jobs after
+a restart, it no longer starts a \Condor{shadow} process if the job
+lease has expired.
+\Ticket{5157}
+
+\item The \Condor{negotiator} will now use its older mechanism for directly
+preempting dynamic slots when \MacroNI{ALLOW\_PSLOT\_PREEMPTION} is enabled,
+but the \Condor{startd} does not support pslot preemption.
+\Ticket{5207}
 
 \end{itemize}
 

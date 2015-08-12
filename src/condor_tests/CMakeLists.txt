@@ -179,11 +179,11 @@ if (BUILD_TESTING)
 
 	# negative matches. test on everything but this
 	if(NOT SOLARIS AND NOT WINDOWS)
+		condor_pl_test(unit_test_sinful "unit: Sinful" "core;quick;full;quicknolink")
 		condor_pl_test(job_core_killsignal_sched "Scheduler: Verify the specified input file is used" "core;quick;full;quicknolink")
 		condor_pl_test(job_core_rmkillsig_sched "Scheduler: Verify the  remove_kill_sig" "core;quick;full;quicknolink")
 	endif()
 
-	condor_pl_test(unit_test_sinful "unit: Sinful" "core;quick;full;quicknolink")
 
 	condor_pl_test(cmd_condor_off-master "vanilla: condor_on condor_off test" "core;quick;full;quicknolink")
 	condor_pl_test(job_test_scheddrotation "Scheduler: basic log rotation test" "core;quick;full;quicknolink")
@@ -205,6 +205,7 @@ if (BUILD_TESTING)
 	condor_pl_test (cmd_condor_submit_dashspool "Test condor_submit -spool" "core;quick;full;quicknolink")
 	condor_pl_test (cmd_submit_coverage "Test condor_submit file entries" "core;quick;full;quicknolink")
 	condor_pl_test (cmd_submit_massive "Test condor_submit file massive" "core;quick;full;quicknolink")
+	condor_pl_test (job_test_urlfetch "Test condor_urlfetch" "core;quick;full;quicknolink")
 	condor_pl_test (lib_meta_knob  "Test meta knobs" "core;quick;full;quicknolink")
 	condor_pl_test (lib_include_cmd_config  "Test meta knobs" "core;quick;full;quicknolink")
 

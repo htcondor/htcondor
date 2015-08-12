@@ -37,10 +37,12 @@ use CondorUtils;
 use CondorPersonal;
 
 my %AllowedEvents = ();
+my $WindowsWebServerPid = "";
+my $WindowsProcessObj = 0;
 
 use base 'Exporter';
 
-our @EXPORT = qw(PrintTimeStamp timestamp runCondorTool runCondorToolCarefully runToolNTimes RegisterResult EndTest GetLogDir);
+our @EXPORT = qw(PrintTimeStamp timestamp runCondorTool runCondorToolCarefully runToolNTimes RegisterResult EndTest GetLogDir FindWebServerPort IsWebserverMine CleanUpChildren StartWebServer);
 
 my %securityoptions =
 (
@@ -103,6 +105,11 @@ my $test_success_count = 0;
 
 BEGIN
 {
+	if ($^O =~ /MSWin32/) {
+		require Win32::Process;
+		require Win32;
+	}
+
     # disable command buffering so output is flushed immediately
     STDOUT->autoflush();
     STDERR->autoflush();
@@ -1779,7 +1786,6 @@ sub runCondorTool
 	$count = 0;
 	my $hashref;
 	while( $count < $attempts) {
-		# print "runCondorTool: Attempt: <$count>\n";
 
 		# Add a message to runcmd output
 		${$options}{emit_string} = "runCondorTool: Cmd: $cmd Attempt: $count";
@@ -3342,7 +3348,9 @@ sub StartCondorWithParams
 
     #my $new_condor = CreateAndStoreCondorInstance( $condor_name, $condor_config, 0, 0 );
 
+	print "Calling CondorPersonal::StartCondorWithParam\n";
     my $condor_info = CondorPersonal::StartCondorWithParams( %condor_params );
+	print "Back From Calling CondorPersonal::StartCondorWithParam\n";
 
 	if(exists $condor_params{do_not_start}) {
 		#print "CondorTest::StartCondorWithParams: bailing after config\n";
@@ -4200,4 +4208,320 @@ sub GetLogDir {
 		return($logreturn);
 	}
 }
+
+sub FindKidPids {
+	my $iswindows = shift;
+	#my $parent = "";
+	my $parent = shift;
+	my $webport = shift;
+	#my $mainpid = "";
+	my $mainpid = $$;
+	my $kidlist = "$parent";
+	print "Looking for parent:$parent iswindows:$iswindows initial pid:$mainpid webport:$webport\n";
+	if($iswindows) {
+		my $ret = LookForWindowsWebServer($mainpid,$parent,$webport);
+		if($ret eq "good") {
+			$kidlist = $kidlist . " $parent";
+		} else {
+			print "LookForWindowsWebServer says$ret\n"
+		}
+	} else {
+		my @psdata = `ps -ef`;
+		foreach my $possible (@psdata) {
+			# prior to windows task considerations bsd/macos had a user id
+			# in the first field where linux has their username
+			if($possible =~ /.*?\s+(\d+)\s+(\d+)\s.*/) {
+				if($2 eq $parent) {
+					$kidlist = "$kidlist" . " $1";
+					print "$2 has kid $1\n";
+				}
+			} else {
+				#print "Parse error:$possible\n";
+			}
+		}
+	}
+	return($kidlist);
+}
+
+sub FindWebServerPort {
+	my $pid = shift;
+	my $iswindows = shift;
+	my $startport = 8000;
+	print "FindWebServerPort: pid:$pid iswindows:$iswindows\n";
+	my $pidmodulo = ($pid % 100);
+	print "my pid offset to $startport is:$pidmodulo\n";
+	my $range = 100;
+	my $currentchoice = $startport + $pidmodulo;
+	print "starting port request:$currentchoice\n";
+	my $chosenport = "";
+	my @netdetails = ();
+	my %portsused = ();
+	if($iswindows) {
+		print "Looking for a web server port for windows\n";
+		@netdetails = `netstat -ao`;
+		# map ports in use
+		foreach my $usageline (@netdetails) {
+			fullchomp($usageline);
+			if($usageline =~ /\s*TCP\s+\d+\.\d+\.\d+\.\d+:(\d+).*/) {
+				#print "TCP Port $1 in use\n";
+				$portsused{$1} = 1;
+			} elsif($usageline =~ /\s*TCP\s+\[.*?\]:(\d+).*/) {
+					#print "Multiple interface port:$1\n";
+			} else {
+					#print "Parse error:$usageline\n";
+			}
+		}
+	} else {
+		@netdetails = `lsof -nPi`;
+		# map ports in use
+		foreach my $usageline (@netdetails) {
+			fullchomp($usageline);
+			if($usageline =~ /.*?\s+TCP\s+.*?:(\d+).*/) {
+				#print "TCP Port $1 in use\n";
+				$portsused{$1} = 1;
+			}
+		}
+	}
+	# look for one 8000 + modulo 100 of pid and above not currently in use
+	while($currentchoice <= ($currentchoice + $range)) {
+		if(exists $portsused{$currentchoice}) {
+			#print "TCP port $currentchoice in use\n";
+			$currentchoice += 1;
+		} else {
+			print "Returning free port:$currentchoice)\n";
+			return($currentchoice);
+		}
+	}
+	print "Failed to find a valid port for web server\n";
+	return(-1);
+}
+
+# we care about a listen owned by one of our pids related
+# to the fork of the python web server
+# It may not be running yet or it may have failed to start
+# Give it up to a few sleeps to be running and ours.
+#
+# After that restart the process of finding a port to use
+# and seeing if it is running.
+#
+sub IsWebserverMine {
+	my $hashofpidsref = shift;
+	my @netdetails = `lsof -nPi`;
+	print "Looking if I have a webserver\n";
+	#system("ps -ef | grep bt");
+	foreach my $usageline (@netdetails) {
+		fullchomp($usageline);
+		#print "Considering lsof line:$usageline\n";
+		if($usageline =~ /.*?(\d+).*\s+TCP\s+.*?:(\d+).*/) {
+			#print "TCP Port $2 in use pid:$1\n";
+			if(exists ${$hashofpidsref}{$1}) {
+				print "YESYESYES my webserver\n";
+				return($1);
+			}
+		}
+	}
+	return(0);
+}
+
+sub CleanUpChildren {
+	my $iswindows = shift;
+	my $kidhashref = shift;
+	my $exitcode = 0;
+	print "Interesting pids are:in hash reference\n";
+	foreach my $key (keys %{$kidhashref}) {
+		print "Trying to kill pid:$key\n";
+		if($iswindows) {
+			#system("taskkill /PID $child");
+			if($key eq $WindowsWebServerPid) {
+				print "Kill process which is python webserver\n";
+				$$WindowsProcessObj->Kill($exitcode);
+				print "Web server ExitCode:$exitcode\n";
+			} else {
+			system("taskkill /PID $key");
+			}
+		} else {
+			#system("kill -9 $childlist");
+				print "Shutting down a regular windows pid:$key\n";
+			system("kill -9 $key");
+		}
+		my $returnedzoombie = 0;
+		print "waiting on pid $key\n";
+		while(($returnedzoombie = waitpid($key,0)) != -1) {
+		}
+	}
+}
+
+sub StartWebServer {
+	my $testname = shift;
+	my $iswindows = shift;
+	my $piddir = shift;
+	my $webport = shift;
+	my $childpidref = shift;
+	my @children = ();
+	my %childrenpids= ();
+	my $childlist = "";
+	my $count = 0;
+	my $child = 0;
+	my $webserverhunt = 0;
+	my $havewebserver = 0;
+	my $limit = 5;
+	my $kidarraysize = 0;
+	my $proc;
+	my $spawnedpid = 0;
+
+	while(($webserverhunt < $limit) &&($havewebserver == 0)) {
+		$kidarraysize = 0;
+		$childlist = "";
+		if($iswindows) {
+			my @mypython = `where python`;
+			my $pythonbinary = $mypython[0];
+			fullchomp($pythonbinary);
+			$_ = $pythonbinary;
+			s/\\/\\\\/g;
+			$pythonbinary = $_;
+			print "Binary for Process::Create:$pythonbinary\n";
+			Win32::Process::Create($proc,
+						"$pythonbinary",
+						"python -m SimpleHTTPServer $webport",
+						0,
+						Win32::Process::NORMAL_PRIORITY_CLASS(),
+						".") || die ErrorReport($testname);
+			print "Process Create Back\n";
+			# lets try getting pid
+			$spawnedpid = $proc->GetProcessID();
+			print "Windows chauld actually:$spawnedpid\n";
+			$child = $spawnedpid; 
+			# we'll need to know tis later to kill the web server
+			$WindowsProcessObj = $proc;
+			$WindowsWebServerPid = $spawnedpid;
+			print "Created Python simple web server\n";
+			CondorTest::RegisterResult(1,"test_name","$testname");
+
+		} else {
+			$child = fork();
+			if($child == 0) {
+				#child
+				chdir("$piddir");
+				#system("pwd");
+				system("python -m SimpleHTTPServer $webport");
+				exit(0);
+			}
+		}
+		$count = 0;
+		print "Parent has python webserver pid: Child Now $child\n";
+		#Try for a limited time to get the web server going
+		while($count < $limit) {
+			sleep(1);
+			$count += 1;
+			$childlist = FindKidPids($iswindows,$child,$webport);
+			# different child, differnet pids
+			%childrenpids = ();
+			
+			@children = ();
+			@children = split /\s/, $childlist;
+			foreach my $kid (@children) {
+				print "adding pid:$kid to pid hash\n";
+				$childrenpids{$kid} = 1;
+				${$childpidref}{$kid} = 1;
+			}
+			$kidarraysize = @children;
+			if($kidarraysize != 2) {
+				print "No child web server yet\n";
+				CleanUpChildren($iswindows,\%childrenpids);
+				next;
+			} else {
+				print "Have a child, hopefully/probably our web server\n";
+				last;
+			}
+		}
+		print "Parent moving on maybe with condor_urlfetch\n Mini web server pid:$child\n";
+
+		if($iswindows) {
+			print "for windows we triple checked and it is our web server.....\n";
+			$havewebserver = 1;
+		} else {
+			$havewebserver = IsWebserverMine(\%childrenpids);
+		}
+
+		if($havewebserver != 0) {
+			print "OK have a web server\n";
+			CondorTest::RegisterResult(1, "test_name", $testname);
+			last; # happy
+			return(1);
+		}
+		if($count == $limit) {
+			print "BAD Failed to get a webserver\nTry again\n";
+			$webserverhunt += 1;
+			next;
+		}
+	}
+
+	if(($webserverhunt == $limit)&&($havewebserver == 0)) {
+		CleanUpChildren($iswindows,\%childrenpids);
+		print "Failed to get web server in $webserverhunt tries\n";
+		CondorTest::RegisterResult(0,"test_name","$testname");
+		#EndTest();
+		return(0);
+	}
+
+
+}
+
+#LookForWindowsWebServer($mainpid,$parent,$webport);
+sub LookForWindowsWebServer {
+	my $master = shift;
+	my $forkpid = shift;
+	my $webport = shift;
+	my $masterpid = "";
+	$masterpid = $master;
+
+	my $listenowner = "";
+	my $listenport = "";
+	my $pythonpid = "";
+	print "LookForWindowsWebServer mainpid:$masterpid fork child:$forkpid web port:$webport\n";
+	print "Looking for a web server port for windows\n";
+	my @netdetails = `netstat -ao | grep $webport`;
+	my $serverline = $netdetails[0];
+	fullchomp($serverline);
+	print "Harvest this for owning process and listen port:$serverline\n";
+	if($serverline =~ /^\s*TCP\s+.*?\s+.*?\s+.*?\s+(\d+).*/) {
+		print "Listen owned by pid:$1\n";
+		$listenowner = $1;
+	} else {
+		print "Parse failed:$serverline\n";
+	}
+	if($serverline =~ /\s*TCP\s+\d+\.\d+\.\d+\.\d+:(\d+).*/) {
+		print "listen port discovered:$1\n";
+		$listenport = $1;
+	} else {
+		print "Parse failed:$serverline\n";
+	}
+	@netdetails = ();
+	@netdetails = `tasklist | grep python`;
+	foreach my $python (@netdetails) {
+		fullchomp($python);
+		print "Possible forked HTTP server:$python\n";
+		if($python =~ /^.*?\s+(\d+).*/) {
+			print "One possible web server process has pid:$1\n";
+			if($listenowner eq $1) {
+				$pythonpid = $1;
+				last;
+			}
+		}
+	}
+	if(($pythonpid eq $forkpid) && ($pythonpid eq $forkpid)) {
+		print "we confirmed our web server pid returning good\n";
+		return("good");
+	} else {
+		print "we DID NOT confirm our web server pid returning bad\n";
+		return("bad");
+	}
+}
+
+sub ErrorReport {
+	my $testname = shift;
+	print Win32::FormatMessage( Win32::GetLastError() );
+	CondorTest::RegisterResult(0,"test_name","$testname");
+}
+
 1;

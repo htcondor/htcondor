@@ -4618,6 +4618,7 @@ WANT_HOLD_REASON = \
   \item \Attr{ChildRemoteUser}
   \item \Attr{ChildRetirementTimeRemaining}
   \item \Attr{ChildState}
+  \item \Attr{PslotRollupInformation}
   \end{itemize}
 
 \label{param:IsValidCheckpointPlatform}
@@ -8786,7 +8787,16 @@ These macros affect the \Condor{negotiator}.
   negotiation cycle.  Once this time limit has been reached, the
   \Condor{negotiator} will skip
   over requests from this submitter until the next negotiation cycle.
-  It defaults to one year.
+  It defaults to the number of seconds in one year.
+
+\label{param:NegotiatorMaxTimePerSchedd}
+\item[\Macro{NEGOTIATOR\_MAX\_TIME\_PER\_SCHEDD}]
+  The maximum number of seconds the \Condor{negotiator}
+  will spend with each individual \Condor{schedd} during one
+  negotiation cycle.  Once this time limit has been reached, the
+  \Condor{negotiator} will skip
+  over requests from this \Condor{schedd} until the next negotiation cycle.
+  It defaults to the number of seconds in one year.
 
 \label{param:NegotiatorMaxTimePerCycle}
 \item[\Macro{NEGOTIATOR\_MAX\_TIME\_PER\_CYCLE}]
@@ -8795,7 +8805,7 @@ These macros affect the \Condor{negotiator}.
   negotiation cycle.  Once this time limit has been reached, the
   \Condor{negotiator} will skip
   over requests from all submitters until the next negotiation cycle.
-  It defaults to one year.
+  It defaults to the number of seconds in one year.
 
 \label{param:NegotiatorMaxTimePerPieSpin}
 \item[\Macro{NEGOTIATOR\_MAX\_TIME\_PER\_PIESPIN}]
@@ -8812,6 +8822,7 @@ These macros affect the \Condor{negotiator}.
   machines or some machines not being allocated at all.
   See section~\ref{sec:PieSlice} on page~\pageref{sec:PieSlice}
   for a description of a pie slice.
+  It defaults to the number of seconds in one year.
 
 \label{param:UseResourceRequestCounts}
 \item[\Macro{USE\_RESOURCE\_REQUEST\_COUNTS}]
