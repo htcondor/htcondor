@@ -7840,6 +7840,7 @@ default : @end
 	KILL=False
 	MaxJobRetirementTime=0
 	CLAIM_WORKLIFE=
+	SLOTS_CONNECTED_TO_KEYBOARD=$(NUM_CPUS)
 @end
 review=?
 
@@ -7878,6 +7879,7 @@ default : @end
 	NEGOTIATOR_POST_JOB_RANK=$(UWCS_NEGOTIATOR_POST_JOB_RANK)
 	MaxJobRetirementTime=$(UWCS_MaxJobRetirementTime)
 	CLAIM_WORKLIFE=$(UWCS_CLAIM_WORKLIFE)
+	SLOTS_CONNECTED_TO_KEYBOARD=$(NUM_CPUS)
 @end
 review=?
 
