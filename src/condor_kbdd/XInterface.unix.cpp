@@ -176,6 +176,11 @@ XInterface::XInterface(int id)
 	logged_on_users = 0;
 	_display_name = NULL;
 
+	// disable bump check by setting move delta to 0
+	_small_move_delta = 0;
+	_bump_check_after_idle_time_sec = 15*60;
+
+
 	// We may need access to other user's home directories, so we must run
 	// as root.
 	
@@ -362,18 +367,20 @@ XInterface::CheckActivity()
 		}
 	}
 	
-	if(ProcessEvents())
+	bool cursor_active = false;
+	bool input_active = ProcessEvents();
+	if ( ! input_active)
 	{
-		return true;
+		// TJ: the old code didn't check for pointer movement when there were events -- but I'm not sure that's the right thing to do.
+		cursor_active = QueryPointer();
 	}
-	else if(QueryPointer())
-	{
-		return true;
+
+	if (input_active || cursor_active) {
+		dprintf(D_FULLDEBUG,"saw %s\n", input_active ? (cursor_active ? "input and cursor active" : "input active") : (cursor_active ? "cursor active" : "Idle"));
+	} else {
+		dprintf(D_FULLDEBUG,"saw Idle for %.3f sec\n", (double)time(NULL) - _last_event);
 	}
-	else
-	{
-		return false;
-	}
+	return input_active || cursor_active;
 }
 
 
@@ -451,6 +458,14 @@ XInterface::SelectEvents(Window win)
 	}
 }
 
+void
+XInterface::SetBumpCheck(int delta_move, int delta_time)
+{
+	_small_move_delta = delta_move;
+	_bump_check_after_idle_time_sec = delta_time;
+}
+
+
 bool
 XInterface::QueryPointer()
 {
@@ -491,13 +506,45 @@ XInterface::QueryPointer()
 	}
 	else
 	{
-		// Pointer has indeed moved.
+		int cx = root_x - _pointer_prev_x, cy = root_y - _pointer_prev_y;
+		bool small_move = (cx < _small_move_delta && cx > -_small_move_delta) && (cy < _small_move_delta && cy > -_small_move_delta);
+
 		time(&now);
-		_last_event = now;
+		time_t sec_since_last_event = now - _last_event;
+
+		bool mouse_active = false;
+
+		// if we have been idle,
+		bool bump_check =  small_move && (sec_since_last_event > (_bump_check_after_idle_time_sec));
+
+		dprintf(D_FULLDEBUG,"mouse moved to %d,%d,%x delta is %d,%d %.3f sec%s\n",
+				root_x, root_y, mask, cx, cy, (double)sec_since_last_event,
+				bump_check ? " performing bump check" : "");
+
+		if (bump_check) {
+			sleep(1);
+			// check for further mouse movement
+			int x = root_x, y = root_y;
+			if ( ! XQueryPointer(_display, _pointer_root, &_pointer_root, &dummy_win,  &x, &y, &dummy, &dummy, &mask) ||
+				root_x != x || root_y != y) {
+				dprintf(D_FULLDEBUG,"not a bump - mouse moved to %d,%d,%x delta is %d,%d\n", x, y, mask, x-root_x, y-root_y);
+				mouse_active = true;
+				root_x = x; root_y = y;
+			} else {
+				mouse_active = false;
+			}
+		} else {
+			mouse_active = true;
+		}
+
 		_pointer_prev_x = root_x;
 		_pointer_prev_y = root_y;
 		_pointer_prev_mask = mask;
-		return true;
+		if (mouse_active) {
+			// Pointer has indeed moved.
+			_last_event = now;
+		}
+		return mouse_active;
 	}
 }
 
