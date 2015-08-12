@@ -274,7 +274,8 @@ utmp_pty_idle_time( time_t now )
 		}
 	}
 
-	while (fread((char *)&utmp_info, sizeof(struct UTMP_KIND), 1, fp) == sizeof(struct UTMP_KIND)) {
+		// fread returns number of items read, not bytes
+	while (fread((char *)&utmp_info, sizeof(struct UTMP_KIND), 1, fp) == 1) {
 #if defined(AIX) || defined(LINUX)
 		if (utmp_info.ut_type != USER_PROCESS)
 #else
