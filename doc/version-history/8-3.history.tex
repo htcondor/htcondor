@@ -54,8 +54,8 @@ The value is in seconds and it defaults to the number of seconds in one year.
 
 \begin{itemize}
 
-\item Fixed a bug where Condor would not correctly set the KeyboardIdle
-attribute on keyboards connected to psuedo terminals.
+\item Fixed a bug in which HTCondor did not correctly set the 
+\Attr{KeyboardIdle} attribute on keyboards connected to pseudo terminals.
 \Ticket{5217}
 
 \item Docker universe jobs had a bug where it would insert
@@ -88,8 +88,9 @@ has been reduced to 3 seconds.
 \Ticket{5206}
 
 \item When the \Condor{schedd} is reconnecting to running jobs after
-a restart, it no longer starts a \Condor{shadow} process if the job
-lease has expired.
+a restart, 
+it no longer starts a \Condor{shadow} process if the job lease has expired.
+This improves the performance of a busy \Condor{schedd}.
 \Ticket{5157}
 
 \item The \Condor{negotiator} will now use its older mechanism for directly
