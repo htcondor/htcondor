@@ -550,7 +550,7 @@ bool splitArb_func( const char * /*name*/,
 		return true;
 	}
 
-	classad::ExprList *lst = new classad::ExprList();
+	classad_shared_ptr<classad::ExprList> lst( new classad::ExprList() );
 	ASSERT(lst);
 
 	// walk the input string, splitting at each instance of a separator
