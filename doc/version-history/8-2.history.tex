@@ -51,6 +51,10 @@ any child processes that the job left behind.
 
 \begin{itemize}
 
+\item Improved the performance of the \Condor{c-gahp} by using lightweight
+polling.
+\Ticket{5190}
+
 \item Fixed a bug that caused \Condor{status} \Opt{-submitters}
 \Opt{-wide} to truncate the submitter names within the second part of
 the output.
