@@ -402,8 +402,19 @@ public:
 			delete sock;
 		}
 		delete ud;
+
+			// Now that we finished sending the update, we can start sequentially sending
+			// the pending updates.  We send these updates synchronously in sequence
+			// because if we did it all asynchronously, we may end up with many TCP
+			// connections to the collector.  Instead we send the updates one at a time
+			// via a single connection.
+
 		if (dc_collector && dc_collector->pending_update_list.size())
 		{
+
+			// Here we handle pending updates by sending them over a stashed
+			// TCP socket to the collector.
+			//
 			while (dc_collector->update_rsock && dc_collector->pending_update_list.size())
 			{
 				UpdateData *ud = dc_collector->pending_update_list.front();
@@ -416,15 +427,26 @@ public:
 					!DCCollector::finishUpdate(ud->dc_collector,dc_collector->update_rsock,ud->ad1,ud->ad2))
 				{
 					char const *who = "unknown";
-					if(sock) who = sock->get_sinful_peer();
+					if(dc_collector->update_rsock) {
+						who = dc_collector->update_rsock->get_sinful_peer();
+					}
 					dprintf(D_ALWAYS,"Failed to send update to %s.\n",who);
 					delete dc_collector->update_rsock;
 					dc_collector->update_rsock = NULL;
-					// Notice we remove the element from the list of pending updates even on failure.
+					// Notice we remove the element from the list of pending updates
+					// even on failure.
 				}
 				delete ud;
 			}
-				// Start the next update without a cached socket
+
+			// Here we handle pending updates in the event that we do not have
+			// a stashed TCP socket to the collector.  This could occur if
+			// our TCP socket to the collector was closed for some reason
+			// (e.g. the collector was restarted), or it may occur in the
+			// case of UDP.  Note that we just start handling the next pending
+			// update here, then go back to daemonCore with a callback registered
+			// to ensure we do not block in the event we need to re-establish
+			// a new TCP socket.
 			if (dc_collector->pending_update_list.size())
 			{
 				UpdateData *ud = dc_collector->pending_update_list.front();
