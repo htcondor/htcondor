@@ -99,6 +99,28 @@ sub countBrokenConversions {
 	return $failures;
 }
 
+sub readSharedPortAddressFromAdFile {
+	my $adFile = `condor_config_val SHARED_PORT_DAEMON_AD_FILE`;
+	fullchomp( $adFile );
+	if( ! -e $adFile ) {
+		return ( 1, "Ad file '$adFile' does not exist" );
+	}
+	my( $fd, $address );
+	if(! open( $fd, '<', $adFile )) {
+		return ( 2, "Failed to open ad file '$adFile': $!\n" );
+	}
+	while( my $line = <$fd> ) {
+		if( $line =~ /^MyAddress = "/ ) {
+			$line =~ s/^MyAddress = "//;
+			$line =~ s/"$//;
+			$address = $line;
+			last;
+		}
+	}
+	close( $fd );
+	return ( 0, $address );
+}
+
 sub checkConversionsWithConfig {
 	my( $tn, $config, $customStart ) = @_;
 
@@ -124,27 +146,55 @@ sub checkConversionsWithConfig {
 				condorlocalsrc			=> $cf,
 			);
 
-			# Wait for the shared port daemon to register itself.  This
-			# should occur about sixty seconds after it starts up.
-			print( "Waiting for shared port daemon to register with CCB...\n" );
-			while(! CondorTest::SearchCondorLog( "shared_port", "CCBListener: registered with CCB server" )) {
-				sleep( 10 );
+			my( $rv, $oldAddress ) = readSharedPortAddressFromAdFile();
+			if( $rv != 0 ) {
+				print( "Failed to read shared port address: ${oldAddress}\n" );
+				RegisterResult( 0, "test_name" => $tn );
+				rmdir( $daemonSocketDir );
+				return;
 			}
-			print( "... done.\n" );
+			# This is a bad hack.  Should call the condor_sinful tool instead.
+			if( $oldAddress =~ m/CCBID=/ ) {
+				print( "Found CCB ID in existing address.\n" );
+			} else {
+				# Wait for the shared port daemon to register itself.  This
+				# should occur about sixty seconds after it starts up.
+				print( "Waiting for shared port daemon to register with CCB...\n" );
+				while(! CondorTest::SearchCondorLog( "shared_port", "CCBListener: registered with CCB server" )) {
+					sleep( 10 );
+				}
+				print( "... done.\n" );
 
-			# Force the CCB address to disk.
-			runCondorTool( "condor_reconfig", undef, 1, { emit_output => 0 } );
+				# Force the CCB address to disk.
+				runCondorTool( "condor_reconfig", undef, 1, { emit_output => 0 } );
 
-			# Give the shared port daemon some time to do its write.
-			# FIXME: check the actual address file.
-			print( "Waiting for shared port daemon to write its new address file...\n" );
-			while(! CondorTest::SearchCondorLog( "shared_port", "About to update statistics in shared_port daemon ad file" ) ) {
-				sleep( 1 );
+				# Give the shared port daemon some time to do its write.
+				print( "Waiting for shared port daemon to write its new address file...\n" );
+				while(! CondorTest::SearchCondorLog( "shared_port", "About to update statistics in shared_port daemon ad file" ) ) {
+					sleep( 1 );
+				}
+
+				# Wait until it has actually done so.
+				print( "Looking for new address in file...\n" );
+				while( 1 ) {
+					my( $rv, $newAddress ) = readSharedPortAddressFromAdFile();
+					if( $rv != 0 ) {
+						print( "Failed to read shared port address: ${oldAddress}\n" );
+						RegisterResult( 0, "test_name" => $tn );
+						rmdir( $daemonSocketDir );
+						return;
+					} elsif( $newAddress ne $oldAddress ) {
+						last;
+					}
+					sleep( 1 );
+				}
+
+				print( "... done.\n" );
 			}
-			print( "... done.\n" );
 		} else {
 			print( "Unknown custom start argument ${customStart}!\n" );
 			RegisterResult( 0, "test_name" => $tn );
+			return;
 		}
 	} else {
 		CondorTest::StartCondorWithParams(

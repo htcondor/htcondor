@@ -17,6 +17,36 @@ The details of each version are described below.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-8-2-10}Version 8.2.10}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item HTCondor version 8.2.10 not yet released.
+%\item HTCondor version 8.2.10 released on Month Date, 2015.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-8-2-9}Version 8.2.9}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -147,12 +177,15 @@ Previously, it would return failure without any attempt to contact a
 period of time when the transfer of output files fails.
 \Ticket{5121}
 
-\item Added configuration values to the desktop policy metaknobs so that
-\Macro{START} and \Macro{SLOTS\_CONNECTED\_TO\_KEYBOARD} are now set.
+\item Configuration variables
+\Macro{START} and \Macro{SLOTS\_CONNECTED\_TO\_KEYBOARD} are now 
+included in the setting of the desktop policy metaknobs.
 \Ticket{5196}
 
-\item Fixed a bug in the Windows installer where it did not set the configuration
-correctly when the user requested that jobs only run when the keyboard is idle.
+\item Fixed a bug in the Windows installer.
+It did not correctly set the configuration
+for the case in which the user requested that 
+jobs only run when the keyboard is idle.
 \Ticket{5197}
 
 \end{itemize}
