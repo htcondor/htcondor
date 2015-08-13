@@ -513,6 +513,8 @@ our %submit_info = (
 	'x86_64_fedora_20'				=> 'x86_64_Fedora',
 	'x86_64_fedora_21'				=> 'x86_64_Fedora',
 	'x86_64_fedora_22'				=> 'x86_64_Fedora',
+	'x86_64_fedora_23'				=> 'x86_64_Fedora',
+	'x86_64_fedora_24'				=> 'x86_64_Fedora',
 
 	##########################################################################
 	# Platform Solaris 11 on x86_64
