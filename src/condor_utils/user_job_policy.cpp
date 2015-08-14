@@ -958,7 +958,7 @@ bool UserPolicy::FiringReason(MyString &reason,int &reason_code,int &reason_subc
 				reason_code = CONDOR_HOLD_CODE_JobPolicyUndefined;
 			} else {
 				reason_code = CONDOR_HOLD_CODE_JobPolicy;
-				reason_code = m_fire_subcode;
+				reason_subcode = m_fire_subcode;
 				reason = m_fire_reason;
 			}
 #else

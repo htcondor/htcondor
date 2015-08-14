@@ -49,68 +49,14 @@ if($webport == -1) {
 my %childrenpids = ();
 my $havewebserver = 0;
 
-
-#my $limit = 5;
-#my %childrenpids = ();
-#my @children = ();
-#my $childlist = "";
-#my $count = 0;
-#my $child = 0;
-#my $webserverhunt = 0;
-#while(($webserverhunt < $limit) &&($havewebserver == 0)) {
-#	$child = fork();
-#	$childlist = "";
-#	if($child == 0) {
-#		#child
-#		chdir("$piddir");
-#		system("pwd");
-#		system("python -m SimpleHTTPServer $webport");
-#		exit(0);
-#	} else {
-#		$count = 0;
-#		print "Parent waking up after fork: Child Now $child\n";
-#		my $count = 0;
-#		#Try for a limited time to get the web server going
-#		while($count < $limit) {
-#			sleep(1);
-#			$count += 1;
-#			$childlist = FindKidPids($child);
-#			# different child, differnet pids
-#			%childrenpids = ();
-#			my $kidarraysize = 0;
-#	
-#			@children = ();
-#			@children = split /\s/, $childlist;
-#			foreach my $kid (@children) {
-#				print "adding pid:$kid to pid hash\n";
-#				$childrenpids{$kid} = 1;
-#			}
-#			$kidarraysize = @children;
-#			if($kidarraysize != 2) {
-#				print "No child web server yet\n";
-#				CleanUpChildren($iswindows,\%childrenpids);
-#				next;
-#			} else {
-#				print "Have a child, hopefully/probably our web server\n";
-#				last;
-#			}
-#		}
-#		print "Parent moving on maybe with condor_urlfetch\n Mini web server pid:$child\n";
-#	}
-
-#	$havewebserver = IsWebserverMine(\%childrenpids);
-
-#	if($havewebserver != 0) {
-#		print "OK have a web server\n";
-#		RegisterResult(1, "test_name", $testname);
-#		last; # happy
-#	}
-#	if($count == $limit) {
-#		print "BAD Failed to get a webserver\nTry again\n";
-#		$webserverhunt += 1;
-#		next;
-#	}
-#}
+# validating our web server and being able to remove it at the proper time
+# is important.  However this is the first instance were I get back a fake pid
+# on windows. So many of these tools for this test are in CondorTest.pm avoiding
+# circular use between CondorTest.pm amd CondorUtils.pm. Most simple functions
+# created to work one way for lunix etc and other variants. For windows we have 
+# started win32::Create::Process which gets us control and access to the real pid.
+# The real pid of the python web server lets us validate our web server is running
+# where expected and owned by our pyhon launch.
 
 $havewebserver = StartWebServer($testname,$iswindows,$piddir,$webport,\%childrenpids);
 

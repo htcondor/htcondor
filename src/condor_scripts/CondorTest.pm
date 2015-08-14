@@ -39,6 +39,7 @@ use CondorPersonal;
 my %AllowedEvents = ();
 my $WindowsWebServerPid = "";
 my $WindowsProcessObj = 0;
+my $porttool = "";
 
 use base 'Exporter';
 
@@ -220,11 +221,11 @@ sub EndTest
 			print "This condor:$name failed to come all the way down\n";
 			print "Adding a FAILED instance to make test fail\n\n";
 			# this one not down add negative result, BROADCAST and check rest
-			RegisterResult(0,"test_name","Shutting down Personal Condor '$name'");
+			RegisterResult(0,"test_name","$handle");
 		} else {
 			print "OK\n";
 			print "Adding a PASSED event for this HTCondor personal stopping\n";
-			RegisterResult(1,"test_name","Shutting down Personal Codor '$name'");
+			RegisterResult(1,"test_name","$handle");
 		}
 	}
 	
@@ -235,10 +236,10 @@ sub EndTest
     if($failed_coreERROR ne "") {
 		$exit_status = 1;
 		$extra_notes = "$extra_notes\n  Log Directory Check results: $failed_coreERROR\n";
-		RegisterResult(0,"test_name","CoreCheck");
+		RegisterResult(0,"test_name","$handle");
     } else {
-		# print "Passed Core Check\n";
-		RegisterResult(1,"test_name","CoreCheck");
+		print "Passed Core Check\n";
+		RegisterResult(1,"test_name","$handle");
 	}
 
     if( $test_failure_count > 0 ) {
@@ -1786,6 +1787,7 @@ sub runCondorTool
 	$count = 0;
 	my $hashref;
 	while( $count < $attempts) {
+		#print "runCondorTool: Attempt: <$count>\n";
 
 		# Add a message to runcmd output
 		${$options}{emit_string} = "runCondorTool: Cmd: $cmd Attempt: $count";
@@ -2219,7 +2221,7 @@ sub SearchCondorLog
 	my $logdir = $fetchlog[0];
 	CondorUtils::fullchomp($logdir);
 	my $logloc = $logdir;
-	# print "SearchCondorLog for daemon:$daemon yielded:$logloc\n";
+	print "SearchCondorLog for daemon:$daemon yielded:$logloc\n";
 
 	my $count = 0;
 
@@ -3321,12 +3323,12 @@ sub StartCondorWithParams
     my %condor_params = @_;
     my $condor_name = $condor_params{condor_name} || "";
     if( $condor_name eq "" ) {
-		#print "CondorTest::StartCondorWithParams:condor_name unset in CondorTest::StartCondorWithParams\n";
+		print "CondorTest::StartCondorWithParams:condor_name unset in CondorTest::StartCondorWithParams\n";
 		$condor_name = GenUniqueCondorName();
 		$condor_params{condor_name} = $condor_name;
-		#print "CondorTest::StartCondorWithParams:Using:$condor_name\n";
+		print "CondorTest::StartCondorWithParams:Using:$condor_name\n";
     } else {
-		#print "CondorTest::StartCondorWithParams:Using requested name:$condor_name\n";
+		print "CondorTest::StartCondorWithParams:Using requested name:$condor_name\n";
 	}
 
     if( exists $personal_condors{$condor_name} ) {
@@ -3340,7 +3342,7 @@ sub StartCondorWithParams
     }
 
 	foreach my $key (sort keys %condor_params) {
-		#print "$key:$condor_params{$key}\n";
+		print "$key:$condor_params{$key}\n";
 	}
 
 	# We need to have the condor instance we are bringing up as early as possible
@@ -3353,10 +3355,10 @@ sub StartCondorWithParams
 	print "Back From Calling CondorPersonal::StartCondorWithParam\n";
 
 	if(exists $condor_params{do_not_start}) {
-		#print "CondorTest::StartCondorWithParams: bailing after config\n";
+		print "CondorTest::StartCondorWithParams: bailing after config\n";
 		return(0);
 	} else {
-		#print "CondorTest::StartCondorWithParams: Full config and run\n";
+		print "CondorTest::StartCondorWithParams: Full config and run\n";
 	}
 
     my @condor_info = split /\+/, $condor_info;
@@ -3423,6 +3425,7 @@ sub KillPersonal
 		$logdir = $1 . "/log";
 	} else {
 		TestDebug("KillPersonal passed this config: $personal_config\n",2);
+		e ie "Can not extract log directory\n";
 	}
 	# mark the direction we are going is down/off
 	my $condor = GetPersonalCondorWithConfig($personal_config);
@@ -4092,7 +4095,7 @@ sub CreateLocalConfig
 	my $extratext = shift;
     $name = "$name$$";
     open(FI,">$name") or die "Failed to create local config starter file: $name:$!\n";
-    #print "Created: $name\n";
+    print "Created: $name\n";
     print FI "$text";
 	if(defined $extratext) {
     	print FI "$extratext";
@@ -4243,9 +4246,67 @@ sub FindKidPids {
 	return($kidlist);
 }
 
+sub FindPortTool {
+	my $iswindows = shift;
+	my $windowsporttool = "netstat -ao | grep TCP";
+	my $haslsof = "";
+	my $hasss = "";
+	my $resorttonetstat = "netstat -a";
+	my @testforlsof = ();
+	my @testforss = ();
+	if($porttool ne "") {
+		return($porttool);
+	}
+	if($iswindows != 0) {
+		return($windowsporttool);
+	}
+
+	# we will give a preference for "lsof" first
+	print "see what -whereis lsof- gives us\n";
+	system("whereis lsof");
+	print "see what -whereis ss- gives us\n";
+	@testforss = `whereis ss`;
+	if((defined $testforss[0]) && ( $testforss[0] =~ /^ss:\s*(\/.*?)\s+.*$/)) {
+		print "Found ss here:$1\n";
+		$porttool = $1;
+		#$porttool = $porttool . " -A inet | grep tcp";
+		$porttool = $porttool . " -A inet";
+		return($porttool);
+	}
+	if((defined $testforss[0]) && ( $testforss[0] =~ /^\s*(\/.*?)$/)) {
+		print "Found ss here:$1\n";
+		$porttool = $1;
+		#$porttool = $porttool . " -A inet | grep tcp";
+		$porttool = $porttool . " -A inet";
+		return($porttool);
+	}
+	system("whereis ss");
+	@testforlsof = `whereis lsof`;
+	if($testforlsof[0] =~ /^lsof:\s*(\/.*?)\s+.*$/) {
+		print "Found lsof here:$1\n";
+		$porttool = $1;
+		$porttool = $porttool . " -nPi";
+		return($porttool);
+	}
+	# if we are still here use basic netstat -a
+	# unles we are solaris
+	my @unixtype = `uname -a`;
+	my $variant = $unixtype[0];
+	fullchomp($variant);
+	if($variant =~ /SunOs/) {
+		print "Finding ports on SunOS\n";
+		$porttool = "netstat -an -f inet -P tcp";
+	} else {
+		$porttool = "netstat -a | grep tcp"; 
+	}
+	return($porttool);
+}
+
 sub FindWebServerPort {
 	my $pid = shift;
 	my $iswindows = shift;
+	my $portgathermethod = FindPortTool($iswindows);
+	print "FindPortTool returned:$portgathermethod\n";
 	my $startport = 8000;
 	print "FindWebServerPort: pid:$pid iswindows:$iswindows\n";
 	my $pidmodulo = ($pid % 100);
@@ -4256,36 +4317,78 @@ sub FindWebServerPort {
 	my $chosenport = "";
 	my @netdetails = ();
 	my %portsused = ();
+	@netdetails = `$portgathermethod`;
+	print "FindWebServerPort: gathered data for this platform with:$portgathermethod\n";
+	foreach my $name (@netdetails) {
+		fullchomp($name);
+		print "FWSP:$name\n";
+	}
 	if($iswindows) {
 		print "Looking for a web server port for windows\n";
 		@netdetails = `netstat -ao`;
 		# map ports in use
+		print "For windows FindPortTool should have returned(netstat -ao:$portgathermethod\n";
 		foreach my $usageline (@netdetails) {
 			fullchomp($usageline);
 			if($usageline =~ /\s*TCP\s+\d+\.\d+\.\d+\.\d+:(\d+).*/) {
-				#print "TCP Port $1 in use\n";
+				print "TCP Port $1 in use\n";
 				$portsused{$1} = 1;
 			} elsif($usageline =~ /\s*TCP\s+\[.*?\]:(\d+).*/) {
-					#print "Multiple interface port:$1\n";
+					print "Multiple interface port:$1\n";
 			} else {
-					#print "Parse error:$usageline\n";
+					print "Parse error:$usageline\n";
 			}
 		}
 	} else {
-		@netdetails = `lsof -nPi`;
-		# map ports in use
+#		print "Checking availability of lsof\n";
+#		#system("whereis lsof");
+#		print "Checking availability of ss\n";
+#		#system("whereis ss");
+#		#print "Looking for used ports with lsof\n";
+#		#@netdetails = `lsof -nPi`;
+#		@netdetails = `netstat -a | grep -i tcp`;
+#		print "NETSTAT port checking with raw data\n";
+#		foreach my $usageline (@netdetails) {
+#			fullchomp($usageline);
+#			print "$usageline\n";
+#		}
+#		# map ports in use
+#		foreach my $usageline (@netdetails) {
+#			fullchomp($usageline);
+#			if($usageline =~ /.*?\s+TCP\s+.*?:(\d+).*/) {
+#				print "TCP Port $1 in use\n";
+#				$portsused{$1} = 1;
+#			} elsif($usageline =~ /.*?\s+tcp\s+.*?:(\d+).*/) {
+#				print "TCP Port $1 in use\n";
+#				$portsused{$1} = 1;
+#			}
+#		}
+		print "Parsing with:$portgathermethod\n";
 		foreach my $usageline (@netdetails) {
 			fullchomp($usageline);
-			if($usageline =~ /.*?\s+TCP\s+.*?:(\d+).*/) {
-				#print "TCP Port $1 in use\n";
-				$portsused{$1} = 1;
+			if($portgathermethod =~ /lsof/) {
+				#if($usageline =~ /.*?tcp\s+.*?\s+\d+\s+\d+\s+\d+\.\d+\.\d+\.\d+:(\d+).*$/) {
+					#$portsused{$1} = 1;
+				#} else {
+					#print "ss scan failed:$usageline\n";
+				#}
+			} elsif($portgathermethod =~ /ss/) {
+				if($usageline =~ /.*?tcp\s+.*?\s+\d+\s+\d+\s+\d+\.\d+\.\d+\.\d+:(\d+).*$/) {
+					$portsused{$1} = 1;
+				} else {
+					print "ss scan failed:$usageline\n";
+				}
+			} elsif($portgathermethod =~ /netstat/) {
+				;
+			} else {
+				die "Horrible. We have no idea how to get port usage data:$portgathermethod\n";
 			}
 		}
 	}
 	# look for one 8000 + modulo 100 of pid and above not currently in use
 	while($currentchoice <= ($currentchoice + $range)) {
 		if(exists $portsused{$currentchoice}) {
-			#print "TCP port $currentchoice in use\n";
+			print "TCP port $currentchoice in use\n";
 			$currentchoice += 1;
 		} else {
 			print "Returning free port:$currentchoice)\n";
@@ -4306,17 +4409,20 @@ sub FindWebServerPort {
 #
 sub IsWebserverMine {
 	my $hashofpidsref = shift;
-	my @netdetails = `lsof -nPi`;
+	my $iswindows = shift;
 	print "Looking if I have a webserver\n";
-	#system("ps -ef | grep bt");
-	foreach my $usageline (@netdetails) {
-		fullchomp($usageline);
-		#print "Considering lsof line:$usageline\n";
-		if($usageline =~ /.*?(\d+).*\s+TCP\s+.*?:(\d+).*/) {
-			#print "TCP Port $2 in use pid:$1\n";
-			if(exists ${$hashofpidsref}{$1}) {
-				print "YESYESYES my webserver\n";
-				return($1);
+	if($iswindows == 0) {
+		my @netdetails = `lsof -nPi`;
+		#system("ps -ef | grep bt");
+		foreach my $usageline (@netdetails) {
+			fullchomp($usageline);
+			#print "Considering lsof line:$usageline\n";
+			if($usageline =~ /.*?(\d+).*\s+TCP\s+.*?:(\d+).*/) {
+				#print "TCP Port $2 in use pid:$1\n";
+				if(exists ${$hashofpidsref}{$1}) {
+					print "YESYESYES my webserver\n";
+					return($1);
+				}
 			}
 		}
 	}
@@ -4379,7 +4485,10 @@ sub StartWebServer {
 			$_ = $pythonbinary;
 			s/\\/\\\\/g;
 			$pythonbinary = $_;
+			chdir("$piddir");
 			print "Binary for Process::Create:$pythonbinary\n";
+			print " we want to be starting webserver where config files are:\n";
+			DirLs();
 			Win32::Process::Create($proc,
 						"$pythonbinary",
 						"python -m SimpleHTTPServer $webport",
@@ -4387,6 +4496,9 @@ sub StartWebServer {
 						Win32::Process::NORMAL_PRIORITY_CLASS(),
 						".") || die ErrorReport($testname);
 			print "Process Create Back\n";
+			chdir("..");
+			print "Trying wget from new server\n";
+			system("wget http://127.0.01:$webport\\new_config.local");
 			# lets try getting pid
 			$spawnedpid = $proc->GetProcessID();
 			print "Windows chauld actually:$spawnedpid\n";
@@ -4440,7 +4552,7 @@ sub StartWebServer {
 			print "for windows we triple checked and it is our web server.....\n";
 			$havewebserver = 1;
 		} else {
-			$havewebserver = IsWebserverMine(\%childrenpids);
+			$havewebserver = IsWebserverMine(\%childrenpids,$iswindows);
 		}
 
 		if($havewebserver != 0) {
