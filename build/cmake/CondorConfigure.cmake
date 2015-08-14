@@ -719,9 +719,11 @@ if (LINUX
     set(cxx_full_relro_arg "-Wl,-z,now")
 endif()
 
-# compiling everything with -fPIC is needed to dynamically load libraries
-# linked against libstdc++
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
+if (NOT WINDOWS)
+    # compiling everything with -fPIC is needed to dynamically load libraries
+    # linked against libstdc++
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
+endif()
 
 
 #####################################
