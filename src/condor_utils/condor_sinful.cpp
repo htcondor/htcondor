@@ -701,6 +701,16 @@ bool Sinful::getSourceRoutes( std::vector< SourceRoute > & v, std::string * host
 		v.push_back( sr );
 	}
 
+	// Make sure we looked at least on source route.
+	if( remainder == m_v1String.c_str() ) {
+		return false;
+	}
+
+	// Make sure at least one source route was valid.
+	if( v.size() == 0 ) {
+		return false;
+	}
+
 	// Make sure the list is properly terminated.
 	const char * closingBrace = strchr( remainder, '}' );
 	if( closingBrace == NULL ) {
@@ -1084,8 +1094,6 @@ Sinful::regenerateV1String() {
 		m_v1String += v[i].serialize();
 	}
 	m_v1String += "}";
-
-	// A unit test will verify that we did this correctly. (TODO)
 }
 
 std::string
