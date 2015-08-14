@@ -58,9 +58,9 @@ The value is in seconds and it defaults to the number of seconds in one year.
 \Attr{KeyboardIdle} attribute on keyboards connected to pseudo terminals.
 \Ticket{5217}
 
-\item Docker universe jobs had a bug where it would insert
-carriage returns and newlines at the end of every line in
-stdout and stderr.  This has been fixed.
+\item Fixed an issue in which docker universe jobs had DOS-style line
+endings in \File{stdout} and \File{stderr}.
+Both a carriage return and newline were at the end of every line.
 \Ticket{5212}
 
 \item When the \Condor{startd} starts up and shuts down, 
