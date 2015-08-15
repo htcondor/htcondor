@@ -3462,7 +3462,7 @@ tags=classad
 
 [ENABLE_CLASSAD_CACHING]
 default=true
-win32_default=false
+win32_default=true
 type=bool
 reconfig=true
 customization=seldom
