@@ -1,7 +1,7 @@
 
 // Note - pyconfig.h must be included before condor_common to avoid
 // re-definition warnings.
-# include <pyconfig.h>
+#include "python_bindings_common.h"
 #include <Python.h>
 #include <datetime.h>
 
@@ -340,7 +340,7 @@ ExprTreeHolder::__nonzero__()
     return result;
 }
 
-std::string ExprTreeHolder::toRepr()
+std::string ExprTreeHolder::toRepr() const
 {
     if (!m_expr)
     {
@@ -354,7 +354,7 @@ std::string ExprTreeHolder::toRepr()
 }
 
 
-std::string ExprTreeHolder::toString()
+std::string ExprTreeHolder::toString() const
 {
     if (!m_expr)
     {
@@ -846,7 +846,7 @@ void ClassAdWrapper::InsertAttrObject( const std::string &attr, boost::python::o
     return;
 }
 
-std::string ClassAdWrapper::toRepr()
+std::string ClassAdWrapper::toRepr() const
 {
     classad::ClassAdUnParser up;
     std::string ad_str;
@@ -855,7 +855,7 @@ std::string ClassAdWrapper::toRepr()
 }
 
 
-std::string ClassAdWrapper::toString()
+std::string ClassAdWrapper::toString() const
 {
     classad::PrettyPrint pp;
     std::string ad_str;
@@ -863,7 +863,7 @@ std::string ClassAdWrapper::toString()
     return ad_str;
 }
 
-std::string ClassAdWrapper::toOldString()
+std::string ClassAdWrapper::toOldString() const
 {
     classad::ClassAdUnParser pp;
     std::string ad_str;

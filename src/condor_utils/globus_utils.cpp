@@ -354,7 +354,7 @@ activate_globus_gsi( void )
 	globus_gsi_cred_handle_destroy_ptr = globus_gsi_cred_handle_destroy;
 	globus_gsi_cred_handle_init_ptr = globus_gsi_cred_handle_init;
 	globus_gsi_cred_read_proxy_ptr = globus_gsi_cred_read_proxy;
-	globus_gsi_cred_write_proxy_ptr = globus_gsi_cred_write_proxy;
+	globus_gsi_cred_write_proxy_ptr = reinterpret_cast<globus_result_t (*)(globus_l_gsi_cred_handle_s*, char*)>(globus_gsi_cred_write_proxy);
 	globus_gsi_proxy_assemble_cred_ptr = globus_gsi_proxy_assemble_cred;
 	globus_gsi_proxy_create_req_ptr = globus_gsi_proxy_create_req;
 	globus_gsi_proxy_handle_attrs_destroy_ptr = globus_gsi_proxy_handle_attrs_destroy;
@@ -397,11 +397,9 @@ activate_globus_gsi( void )
 #endif /* defined(HAVE_EXT_VOMS) */
 #endif
 
-	if ( (*globus_thread_set_model_ptr)( GLOBUS_THREAD_MODEL_NONE ) != GLOBUS_SUCCESS ) {
-		set_error_string( "couldn't set globus thread model" );
-		activation_failed = true;
-		return -1;
-	}
+	// If this fails, it means something already configured a threaded
+	// model. That won't harm us, so ignore it.
+	(*globus_thread_set_model_ptr)( GLOBUS_THREAD_MODEL_NONE );
 
 	if ( (*globus_module_activate_ptr)(globus_i_gsi_gss_assist_module_ptr) ) {
 		set_error_string( "couldn't activate globus gsi gss assist module" );

@@ -232,7 +232,7 @@ void print_useful_info_10(bool rv, MyString name, Sock*, ClassAd *ad, ClassAd *a
 }
 
 
-void print_info(bool rv, char * addr, Sock* s, MyString name, int cmd, ClassAd *authz_ad, CondorError *errstack, int output_mode) {
+void print_info(bool rv, const char * addr, Sock* s, MyString name, int cmd, ClassAd *authz_ad, CondorError *errstack, int output_mode) {
 	MyString cmd_map_ent;
 	cmd_map_ent.formatstr ("{%s,<%i>}", addr, cmd); 
 
@@ -243,14 +243,14 @@ void print_info(bool rv, char * addr, Sock* s, MyString name, int cmd, ClassAd *
 	
 	if(rv) {
 		// IMPORTANT: this hashtable returns 0 on success!
-		ret = (SecMan::command_map)->lookup(cmd_map_ent, session_id);
+		ret = (SecMan::command_map).lookup(cmd_map_ent, session_id);
 		if (ret) {
 			printf("no cmd map!\n");
 			return;
 		}
 
 		// IMPORTANT: this hashtable returns 1 on success!
-		ret = (SecMan::session_cache)->lookup(session_id.Value(), k);
+		ret = (SecMan::session_cache).lookup(session_id.Value(), k);
 		if (!ret) {
 			printf("no session!\n");
 			return;
@@ -324,9 +324,12 @@ bool do_item(Daemon* d, MyString name, int num, int output_mode) {
 				fn_success = true;
 			}
 		}
+		print_info(fn_success, sock->get_connect_addr(), sock, name, num, &authz_ad, &errstack, output_mode);
+	} else {
+		// we know that d->addr() is not null because we checked before
+		// calling do_item.  but i'll be paranoid and check again.
+		fprintf(stderr, "ERROR: failed to make connection to %s\n", d->addr()?d->addr():"(null)");
 	}
-
-	print_info(fn_success, d->addr(), sock, name, num, &authz_ad, &errstack, output_mode);
 
 	return fn_success;
 
@@ -533,6 +536,14 @@ int main( int argc, char *argv[] )
 		if(output_mode) {
 			fprintf(stderr, "ERROR: couldn't locate %s!\n", address?address:name);
 		}
+		delete daemon;
+		exit(1);
+	}
+
+	// add a check for address being null even though locate() succeeded.
+	// this happens if the address doesn't parse.
+	if(!daemon->addr()) {
+		fprintf(stderr, "ERROR: unable to parse sinful string: %s\n", address);
 		delete daemon;
 		exit(1);
 	}

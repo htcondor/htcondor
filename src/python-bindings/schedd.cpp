@@ -4,7 +4,7 @@
 // redefines _XOPEN_SOURCE and _POSIX_C_SOURCE.  (Since pyconfig's definition
 // won before this change, this has no semantic effect.)
 #ifdef WIN32
-	#include <pyconfig.h> //must be before condor_common to avoid redefinitions
+	#include "python_bindings_common.h"
 	#undef _XOPEN_SOURCE
 	#undef _POSIX_C_SOURCE
 	#include "condor_common.h"
@@ -14,7 +14,7 @@
 	#include "globus_utils.h"
 	#undef _XOPEN_SOURCE
 	#undef _POSIX_C_SOURCE
-	#include <pyconfig.h>
+	#include "python_bindings_common.h"
 #endif
 
 #include "condor_attributes.h"
@@ -42,6 +42,7 @@
 #include "classad_wrapper.h"
 #include "exprtree_wrapper.h"
 #include "module_lock.h"
+#include "query_iterator.h"
 
 using namespace boost::python;
 
@@ -88,8 +89,9 @@ using namespace boost::python;
         ADD_REQUIREMENT(parm, ss.str()) \
     }
 
+
 void
-make_spool_remap(compat_classad::ClassAd& ad, const std::string &attr, const std::string &stream_attr, const std::string &working_name)
+make_spool_remap(classad::ClassAd& ad, const std::string &attr, const std::string &stream_attr, const std::string &working_name)
 {
     bool stream_stdout = false;
     ad.EvaluateAttrBool(stream_attr, stream_stdout);
@@ -115,7 +117,7 @@ make_spool_remap(compat_classad::ClassAd& ad, const std::string &attr, const std
 }
 
 void
-make_spool(compat_classad::ClassAd& ad)
+make_spool(classad::ClassAd& ad)
 {
     if (!ad.InsertAttr(ATTR_JOB_STATUS, HELD))
         THROW_EX(RuntimeError, "Unable to set job to hold.");
@@ -266,6 +268,134 @@ private:
     boost::shared_ptr<Sock> m_sock;
 };
 
+
+struct RequestIterator;
+
+struct ScheddNegotiate
+{
+
+friend class Schedd;
+
+public:
+
+    static boost::shared_ptr<ScheddNegotiate> enter(boost::shared_ptr<ScheddNegotiate> obj) {return obj;}
+    static bool exit(boost::shared_ptr<ScheddNegotiate> mgr, boost::python::object obj1, boost::python::object /*obj2*/, boost::python::object /*obj3*/);
+
+    bool negotiating() {return m_negotiating;}
+
+    void disconnect();
+
+    void sendClaim(boost::python::object claim, boost::python::object offer_obj, boost::python::object request_obj);
+
+    boost::shared_ptr<RequestIterator> getRequests();
+
+    ~ScheddNegotiate();
+
+private:
+
+    ScheddNegotiate(const std::string & addr, const std::string & owner, const classad::ClassAd &ad);
+
+    bool m_negotiating;
+    boost::shared_ptr<Sock> m_sock;
+    boost::shared_ptr<RequestIterator> m_request_iter;
+};
+
+
+struct RequestIterator
+{
+    friend class ScheddNegotiate;
+
+    inline static boost::python::object pass_through(boost::python::object const& o) { return o; };
+
+    void getNextRequest()
+    {
+         if (!m_parent->negotiating()) {THROW_EX(RuntimeError, "Tried to continue negotiation after disconnect.");}
+
+        condor::ModuleLock ml;
+
+        m_sock->encode();
+        if (m_use_rrc)
+        {
+            if (!m_sock->put(SEND_RESOURCE_REQUEST_LIST) || !m_sock->put(m_num_to_fetch) || !m_sock->end_of_message()) {THROW_EX(RuntimeError, "Failed to request resource requests from remote schedd.");}
+        }
+        else
+        {
+            if (!m_sock->put(SEND_JOB_INFO) || !m_sock->end_of_message()) {THROW_EX(RuntimeError, "Failed to request job information from remote schedd.");}
+        }
+
+        m_sock->decode();
+
+        for (unsigned idx=0; idx<m_num_to_fetch; idx++)
+        {
+            int reply;
+            if (!m_sock->get(reply)) {THROW_EX(RuntimeError, "Failed to get reply from schedd.");}
+            if (reply == NO_MORE_JOBS)
+            {
+                if (!m_sock->end_of_message()) {THROW_EX(RuntimeError, "Failed to get EOM from schedd.");}
+                m_done = true;
+                return;
+            }
+            else if (reply != JOB_INFO) {THROW_EX(RuntimeError, "Unexpected response from schedd.");}
+
+            m_got_job_info = true;
+            boost::shared_ptr<ClassAdWrapper> request_ad(new ClassAdWrapper());
+            if (!getClassAdWithoutGIL(*m_sock.get(), *request_ad.get()) || !m_sock->end_of_message()) THROW_EX(RuntimeError, "Failed to receive remote ad.");
+            m_requests.push_back(request_ad);
+        }
+    }
+
+    boost::shared_ptr<ClassAdWrapper> next()
+    {
+        if (m_requests.empty())
+        {
+                if (m_done) {THROW_EX(StopIteration, "All requests processed");}
+
+                getNextRequest();
+                if (m_requests.empty())
+                {
+                    THROW_EX(StopIteration, "All requests processed");
+                }
+        }
+        boost::shared_ptr<ClassAdWrapper> result = m_requests.front();
+        m_requests.pop_front();
+        return result;
+    }
+
+private:
+
+    RequestIterator(boost::shared_ptr<Sock> sock, ScheddNegotiate *parent)
+        :
+          m_done(false)
+        , m_use_rrc(false)
+        , m_got_job_info(false)
+        , m_num_to_fetch(1)
+        , m_parent(parent)
+        , m_sock(sock)
+    {
+        CondorVersionInfo vinfo;
+        if (m_sock.get() && m_sock->get_peer_version())
+        {
+            m_use_rrc = m_sock->get_peer_version()->built_since_version(8,3,0);
+        }
+        if (m_use_rrc) {m_num_to_fetch = param_integer("NEGOTIATOR_RESOURCE_REQUEST_LIST_SIZE");}
+    }
+
+    bool needs_end_negotiate()
+    {
+        if (!m_done) {return true;}
+        return m_use_rrc ? m_got_job_info : false;
+    }
+
+    bool m_done;
+    bool m_use_rrc;
+    bool m_got_job_info;
+    unsigned m_num_to_fetch;
+    ScheddNegotiate *m_parent;
+    boost::shared_ptr<Sock> m_sock;
+    std::deque<boost::shared_ptr<ClassAdWrapper> > m_requests;
+};
+
+
 struct Schedd;
 struct ConnectionSentry
 {
@@ -288,45 +418,196 @@ private:
     Schedd& m_schedd;
 };
 
-struct QueryIterator
+
+bool
+ScheddNegotiate::exit(boost::shared_ptr<ScheddNegotiate> mgr, boost::python::object obj1, boost::python::object /*obj2*/, boost::python::object /*obj3*/)
 {
-    QueryIterator(boost::shared_ptr<Sock> sock)
-      : m_count(0), m_sock(sock)
-    {}
+    mgr->disconnect();
+    return (obj1.ptr() == Py_None);
+}
 
-    inline static boost::python::object pass_through(boost::python::object const& o) { return o; };
 
-    boost::shared_ptr<ClassAdWrapper> next()
+void
+ScheddNegotiate::disconnect()
+{
+    if (!m_negotiating) {return;}
+    m_negotiating = false;
+    /* No way to tell the remote schedd that this was a failure or a success.  Just finish the negotiation */
+    bool needs_end_negotiate = m_request_iter.get() ? m_request_iter->needs_end_negotiate() : true;
+    m_sock->encode();
+    if (needs_end_negotiate && (!m_sock->put(END_NEGOTIATE) || !m_sock->end_of_message()))
     {
-        if (m_count < 0) THROW_EX(StopIteration, "All ads processed");
+        if (!PyErr_Occurred())
+        {
+            THROW_EX(RuntimeError, "Could not send END_NEGOTIATE to remote schedd.");
+        }
+    }
+}
 
-        boost::shared_ptr<ClassAdWrapper> ad(new ClassAdWrapper());
+
+void
+ScheddNegotiate::sendClaim(boost::python::object claim, boost::python::object offer_obj, boost::python::object request_obj)
+{
+    if (!m_negotiating) {THROW_EX(RuntimeError, "Not currently negotiating with schedd");}
+    if (!m_sock.get()) {THROW_EX(RuntimeError, "Unable to connect to schedd for negotiation");}
+
+    std::string claim_id = boost::python::extract<std::string>(claim);
+    ClassAdWrapper offer_ad = boost::python::extract<ClassAdWrapper>(offer_obj);
+    ClassAdWrapper request_ad = boost::python::extract<ClassAdWrapper>(request_obj);
+
+    compat_classad::ClassAd::CopyAttribute(ATTR_REMOTE_GROUP, offer_ad, ATTR_SUBMITTER_GROUP, request_ad);
+    compat_classad::ClassAd::CopyAttribute(ATTR_REMOTE_NEGOTIATING_GROUP, offer_ad, ATTR_SUBMITTER_NEGOTIATING_GROUP, request_ad);
+    compat_classad::ClassAd::CopyAttribute(ATTR_REMOTE_AUTOREGROUP, offer_ad, ATTR_SUBMITTER_AUTOREGROUP, request_ad);
+    compat_classad::ClassAd::CopyAttribute(ATTR_RESOURCE_REQUEST_CLUSTER, offer_ad, ATTR_CLUSTER_ID, request_ad);
+    compat_classad::ClassAd::CopyAttribute(ATTR_RESOURCE_REQUEST_PROC, offer_ad, ATTR_PROC_ID, request_ad);
+
+    m_sock->encode();
+    m_sock->put(PERMISSION_AND_AD);
+    m_sock->put_secret(claim_id);
+    putClassAd(m_sock.get(), offer_ad);
+    m_sock->end_of_message();
+}
+
+
+boost::shared_ptr<RequestIterator>
+ScheddNegotiate::getRequests()
+{
+    if (!m_negotiating) {THROW_EX(RuntimeError, "Not currently negotiating with schedd");}
+    if (m_request_iter.get()) {THROW_EX(RuntimeError, "Already started negotiation for this session.");}
+
+    boost::shared_ptr<RequestIterator> requests(new RequestIterator(m_sock, this));
+    m_request_iter = requests;
+    return requests;
+}
+
+
+ScheddNegotiate::~ScheddNegotiate()
+{
+    try
+    {
+        disconnect();
+    }
+    catch (boost::python::error_already_set) {}
+}
+
+
+ScheddNegotiate::ScheddNegotiate(const std::string & addr, const std::string & owner, const classad::ClassAd &ad)
+        : m_negotiating(false)
+{
+    int timeout = param_integer("NEGOTIATOR_TIMEOUT",30);
+    DCSchedd schedd(addr.c_str());
+    m_sock.reset(schedd.reliSock(timeout));
+    if (!m_sock.get()) {THROW_EX(RuntimeError, "Failed to create socket to remote schedd.");}
+    bool result;
+    {
+        condor::ModuleLock ml;
+        result = schedd.startCommand(NEGOTIATE, m_sock.get(), timeout);
+    }
+    if (!result) {THROW_EX(RuntimeError, "Failed to start negotiation with remote schedd.");}
+
+    classad::ClassAd neg_ad;
+    neg_ad.Update(ad);
+    neg_ad.InsertAttr(ATTR_OWNER, owner);
+    if (neg_ad.find(ATTR_SUBMITTER_TAG) == neg_ad.end())
+    {
+        neg_ad.InsertAttr(ATTR_SUBMITTER_TAG, "");
+    }
+    if (neg_ad.find(ATTR_AUTO_CLUSTER_ATTRS) == neg_ad.end())
+    {
+        neg_ad.InsertAttr(ATTR_AUTO_CLUSTER_ATTRS, "");
+    }
+    if (!putClassAdAndEOM(*m_sock.get(), neg_ad))
+    {
+        THROW_EX(RuntimeError, "Failed to send negotiation header to remote schedd.");
+    }
+    m_negotiating = true;
+}
+
+
+QueryIterator::QueryIterator(boost::shared_ptr<Sock> sock, const std::string &tag)
+  : m_count(0), m_sock(sock), m_tag(tag)
+{}
+
+
+boost::python::object
+QueryIterator::next(BlockingMode mode)
+{
+    if (m_count < 0) THROW_EX(StopIteration, "All ads processed");
+
+    boost::shared_ptr<ClassAdWrapper> ad(new ClassAdWrapper());
+    if (mode == Blocking)
+    {
         if (!getClassAdWithoutGIL(*m_sock.get(), *ad.get())) THROW_EX(RuntimeError, "Failed to receive remote ad.");
-        if (!m_sock->end_of_message()) THROW_EX(RuntimeError, "Failed to get EOM after ad.");
-        long long intVal;
-        if (ad->EvaluateAttrInt(ATTR_OWNER, intVal) && (intVal == 0))
-        { // Last ad.
-            m_sock->close();
-            std::string errorMsg;
-            if (ad->EvaluateAttrInt(ATTR_ERROR_CODE, intVal) && intVal && ad->EvaluateAttrString(ATTR_ERROR_STRING, errorMsg))
-            {
-                THROW_EX(RuntimeError, errorMsg.c_str());
-            }
-            if (ad->EvaluateAttrInt("MalformedAds", intVal) && intVal) THROW_EX(ValueError, "Remote side had parse errors on history file")
-            //if (!ad->EvaluateAttrInt(ATTR_LIMIT_RESULTS, intVal) || (intVal != m_count)) THROW_EX(ValueError, "Incorrect number of ads returned");
+    }
+    else if (m_sock->msgReady())
+    {
+        if (!getClassAd(m_sock.get(), *ad)) {THROW_EX(RuntimeError, "Failed to receive remote ad.");}
+    }
+    else
+    {
+        return boost::python::object();
+    }
+    if (!m_sock->end_of_message()) THROW_EX(RuntimeError, "Failed to get EOM after ad.");
+    long long intVal;
+    if (ad->EvaluateAttrInt(ATTR_OWNER, intVal) && (intVal == 0))
+    { // Last ad.
+        m_sock->close();
+        std::string errorMsg;
+        if (ad->EvaluateAttrInt(ATTR_ERROR_CODE, intVal) && intVal && ad->EvaluateAttrString(ATTR_ERROR_STRING, errorMsg))
+        {
+            THROW_EX(RuntimeError, errorMsg.c_str());
+        }
+        if (ad->EvaluateAttrInt("MalformedAds", intVal) && intVal) THROW_EX(ValueError, "Remote side had parse errors on history file")
+        //if (!ad->EvaluateAttrInt(ATTR_LIMIT_RESULTS, intVal) || (intVal != m_count)) THROW_EX(ValueError, "Incorrect number of ads returned");
 
-            // Everything checks out!
-            m_count = -1;
+        // Everything checks out!
+        m_count = -1;
+        if (mode == Blocking)
+        {
             THROW_EX(StopIteration, "All ads processed");
         }
-        m_count++;
-        return ad;
+        else
+        {
+            return boost::python::object();
+        }
     }
+    m_count++;
+    boost::python::object result(ad);
+    return result;
+}
 
-private:
-    int m_count;
-    boost::shared_ptr<Sock> m_sock;
-};
+
+boost::python::list
+QueryIterator::nextAds()
+{
+    boost::python::list results;
+    while (true)
+    {
+        try
+        {
+            boost::python::object nextobj = next(NonBlocking);
+            if (nextobj == boost::python::object())
+            {
+                break;
+            }
+            results.append(nextobj);
+        }
+        catch (boost::python::error_already_set)
+        {
+            if (PyErr_ExceptionMatches(PyExc_StopIteration)) {break;}
+            throw;
+        }
+    }
+    return results;
+}
+
+
+int
+QueryIterator::watch()
+{
+    return m_sock->get_file_desc();
+}
+
 
 struct query_process_helper
 {
@@ -335,21 +616,21 @@ struct query_process_helper
     condor::ModuleLock *ml;
 };
 
-void
-query_process_callback(void * data, classad_shared_ptr<ClassAd> ad)
+bool
+query_process_callback(void * data, ClassAd* ad)
 {
     query_process_helper *helper = static_cast<query_process_helper *>(data);
     helper->ml->release();
     if (PyErr_Occurred())
     {
         helper->ml->acquire();
-        return;
+        return true;
     }
 
     try
     {
         boost::shared_ptr<ClassAdWrapper> wrapper(new ClassAdWrapper());
-        wrapper->CopyFrom(*ad.get());
+        wrapper->CopyFrom(*ad);
         object wrapper_obj = object(wrapper);
         object result = (helper->callable == object()) ? wrapper_obj : helper->callable(wrapper);
         if (result != object())
@@ -362,7 +643,12 @@ query_process_callback(void * data, classad_shared_ptr<ClassAd> ad)
         // Suppress the C++ exception.  HTCondor sure can't deal with it.
         // However, PyErr_Occurred will be set and we will no longer invoke the callback.
     }
+    catch (...)
+    {
+        PyErr_SetString(PyExc_RuntimeError, "Uncaught C++ exception encountered.");
+    }
     helper->ml->acquire();
+    return true;
 }
 
 struct Schedd {
@@ -410,6 +696,13 @@ struct Schedd {
     ~Schedd()
     {
         if (m_connection) { m_connection->abort(); }
+    }
+
+    boost::shared_ptr<ScheddNegotiate> negotiate(const std::string &owner, boost::python::object ad_obj)
+    {
+        ClassAdWrapper ad = boost::python::extract<ClassAdWrapper>(ad_obj);
+        boost::shared_ptr<ScheddNegotiate> negotiator(new ScheddNegotiate(m_addr, owner, ad));
+        return negotiator;
     }
 
     object query(boost::python::object constraint_obj=boost::python::object(""), list attrs=list(), object callback=object(), int match_limit=-1, CondorQ::QueryFetchOpts fetch_opts=CondorQ::fetch_Default)
@@ -620,63 +913,154 @@ struct Schedd {
         return actOnJobs(action, job_spec, object("Python-initiated action."));
     }
 
-    int submit(const ClassAdWrapper &wrapper, int count=1, bool spool=false, object ad_results=object())
+    int submitMany(const ClassAdWrapper &wrapper, boost::python::object proc_ads, bool spool, boost::python::object ad_results=object())
     {
+        PyObject *py_iter = PyObject_GetIter(proc_ads.ptr());
+        if (!py_iter)
+        {
+            THROW_EX(ValueError, "Proc ads must be iterator of 2-tuples.");
+        }
+
         ConnectionSentry sentry(*this); // Automatically connects / disconnects.
 
+        classad::ClassAd cluster_ad;
+        cluster_ad.CopyFrom(wrapper);
+        int cluster = submit_cluster_internal(cluster_ad, spool);
+
+        boost::python::object iter = boost::python::object(boost::python::handle<>(py_iter));
+        PyObject *obj;
+        while ((obj = PyIter_Next(iter.ptr())))
+        {
+            boost::python::object boost_obj = boost::python::object(boost::python::handle<>(obj));
+            ClassAdWrapper proc_ad = boost::python::extract<ClassAdWrapper>(boost_obj[0]);
+            int count = boost::python::extract<int>(boost_obj[1]);
+            try
+            {
+                proc_ad.ChainToAd(const_cast<classad::ClassAd*>(&cluster_ad));
+                submit_proc_internal(cluster, proc_ad, count, spool, ad_results);
+            }
+            catch (...)
+            {
+                proc_ad.ChainToAd(NULL);
+                throw;
+            }
+        }
+
+        if (param_boolean("SUBMIT_SEND_RESCHEDULE",true))
+        {
+            reschedule();
+        }
+        return cluster;
+    }
+
+    int submit(const ClassAdWrapper &wrapper, int count=1, bool spool=false, object ad_results=object())
+    {
+        boost::python::list proc_entry;
+        boost::shared_ptr<ClassAdWrapper> proc_ad(new ClassAdWrapper());
+        proc_entry.append(proc_ad);
+        proc_entry.append(count);
+        boost::python::list proc_ads;
+        proc_ads.append(proc_entry);
+        return submitMany(wrapper, proc_ads, spool, ad_results);
+    }
+
+    int submit_cluster_internal(classad::ClassAd &orig_cluster_ad, bool spool)
+    {
         int cluster;
         {
-        condor::ModuleLock ml;
-        cluster = NewCluster();
+            condor::ModuleLock ml;
+            cluster = NewCluster();
         }
         if (cluster < 0)
         {
-            PyErr_SetString(PyExc_RuntimeError, "Failed to create new cluster.");
-            throw_error_already_set();
+            THROW_EX(RuntimeError, "Failed to create new cluster.");
         }
 
-        ClassAd ad;
+        ClassAd cluster_ad;
         // Create a blank ad for job submission.
         ClassAd *tmpad = CreateJobAd(NULL, CONDOR_UNIVERSE_VANILLA, "/bin/echo");
         if (tmpad)
         {
-            ad.CopyFrom(*tmpad);
+            cluster_ad.CopyFrom(*tmpad);
             delete tmpad;
         }
         else
         {
-            PyErr_SetString(PyExc_RuntimeError, "Failed to create a new job ad.");
-            throw_error_already_set();
+            THROW_EX(RuntimeError, "Failed to create a new job ad.");
         }
         char path[4096];
         if (getcwd(path, 4095))
         {
-            ad.InsertAttr(ATTR_JOB_IWD, path);
+            cluster_ad.InsertAttr(ATTR_JOB_IWD, path);
         }
 
         // Copy the attributes specified by the invoker.
-        ad.Update(wrapper);
+        cluster_ad.Update(orig_cluster_ad);
 
         ShouldTransferFiles_t should = STF_IF_NEEDED;
         std::string should_str;
-        if (ad.EvaluateAttrString(ATTR_SHOULD_TRANSFER_FILES, should_str))
+        if (cluster_ad.EvaluateAttrString(ATTR_SHOULD_TRANSFER_FILES, should_str))
         {
-            if (should_str == "YES")
-                should = STF_YES;
-            else if (should_str == "NO")
-                should = STF_NO;
+            if (should_str == "YES") {should = STF_YES;}
+            else if (should_str == "NO") {should = STF_NO;}
         }
 
-        ExprTree *old_reqs = ad.Lookup(ATTR_REQUIREMENTS);
+        ExprTree *old_reqs = cluster_ad.Lookup(ATTR_REQUIREMENTS);
         ExprTree *new_reqs = make_requirements(old_reqs, should).release();
-        ad.Insert(ATTR_REQUIREMENTS, new_reqs);
+        cluster_ad.Insert(ATTR_REQUIREMENTS, new_reqs);
 
         if (spool)
         {
-            make_spool(ad);
+            make_spool(cluster_ad);
         }
 
-	bool keep_results = false;
+        // Set all the cluster attributes
+        classad::ClassAdUnParser unparser;
+        unparser.SetOldClassAd(true);
+
+        for (classad::ClassAd::const_iterator it = cluster_ad.begin(); it != cluster_ad.end(); it++)
+        {
+            std::string rhs;
+            unparser.Unparse(rhs, it->second);
+                // Note I don't release the GIL here - as we are in NoAck mode, assume this is just
+                // buffering up data into the socket.
+            if (-1 == SetAttribute(cluster, -1, it->first.c_str(), rhs.c_str(), SetAttribute_NoAck))
+            {
+                THROW_EX(ValueError, it->first.c_str());
+            }
+        }
+
+        orig_cluster_ad = cluster_ad;
+        return cluster;
+    }
+
+
+    void submit_proc_internal(int cluster, const classad::ClassAd &orig_proc_ad, int count, bool spool, boost::python::object ad_results)
+    {
+        classad::ClassAd proc_ad;
+        proc_ad.CopyFrom(orig_proc_ad);
+
+        ExprTree *old_reqs = proc_ad.Lookup(ATTR_REQUIREMENTS);
+        if (old_reqs)
+        {   // Only update the requirements here; the cluster ad got reasonable ones inserted by default.
+            ShouldTransferFiles_t should = STF_IF_NEEDED;
+            std::string should_str;
+            if (proc_ad.EvaluateAttrString(ATTR_SHOULD_TRANSFER_FILES, should_str))
+            {
+                if (should_str == "YES") {should = STF_YES;}
+                else if (should_str == "NO") {should = STF_NO;}
+            }
+
+            ExprTree *new_reqs = make_requirements(old_reqs, should).release();
+            proc_ad.Insert(ATTR_REQUIREMENTS, new_reqs);
+        }
+
+        if (spool)
+        {
+            make_spool(proc_ad);
+        }
+
+        bool keep_results = false;
         extract<list> try_ad_results(ad_results);
         if (try_ad_results.check())
         {
@@ -695,12 +1079,12 @@ struct Schedd {
                 PyErr_SetString(PyExc_RuntimeError, "Failed to create new proc id.");
                 throw_error_already_set();
             }
-            ad.InsertAttr(ATTR_CLUSTER_ID, cluster);
-            ad.InsertAttr(ATTR_PROC_ID, procid);
+            proc_ad.InsertAttr(ATTR_CLUSTER_ID, cluster);
+            proc_ad.InsertAttr(ATTR_PROC_ID, procid);
 
             classad::ClassAdUnParser unparser;
             unparser.SetOldClassAd( true );
-            for (classad::ClassAd::const_iterator it = ad.begin(); it != ad.end(); it++)
+            for (classad::ClassAd::const_iterator it = proc_ad.begin(); it != proc_ad.end(); it++)
             {
                 std::string rhs;
                 unparser.Unparse(rhs, it->second);
@@ -714,17 +1098,11 @@ struct Schedd {
             }
             if (keep_results)
             {
-                boost::shared_ptr<ClassAdWrapper> wrapper(new ClassAdWrapper());
-                wrapper->CopyFrom(ad);
-                ad_results.attr("append")(wrapper);
+                boost::shared_ptr<ClassAdWrapper> results_ad(new ClassAdWrapper());
+                results_ad->CopyFromChain(proc_ad);
+                ad_results.attr("append")(results_ad);
             }
         }
-
-        if (param_boolean("SUBMIT_SEND_RESCHEDULE",true))
-        {
-            reschedule();
-        }
-        return cluster;
     }
 
     void spool(object jobs)
@@ -891,6 +1269,7 @@ struct Schedd {
         }
     }
 
+
     boost::shared_ptr<HistoryIterator> history(boost::python::object requirement, boost::python::list projection=boost::python::list(), int match=-1)
     {
         std::string val_str;
@@ -962,9 +1341,11 @@ struct Schedd {
         return sentry_ptr;
     }
 
-    boost::shared_ptr<QueryIterator> xquery(boost::python::object requirement=boost::python::object(), boost::python::list projection=boost::python::list(), int limit=-1, CondorQ::QueryFetchOpts fetch_opts=CondorQ::fetch_Default)
+    boost::shared_ptr<QueryIterator> xquery(boost::python::object requirement=boost::python::object(), boost::python::list projection=boost::python::list(), int limit=-1, CondorQ::QueryFetchOpts fetch_opts=CondorQ::fetch_Default, boost::python::object tag=boost::python::object())
     {
         std::string val_str;
+
+        std::string tag_str = (tag == boost::python::object()) ? m_name : boost::python::extract<std::string>(tag);
 
         extract<ExprTreeHolder &> exprtree_extract(requirement);
         extract<std::string> string_extract(requirement);
@@ -976,7 +1357,7 @@ struct Schedd {
             parser.ParseExpression("true", expr);
             expr_ref.reset(expr);
         }
-        if (string_extract.check())
+        else if (string_extract.check())
         {
             classad::ClassAdParser parser;
             std::string val_str = string_extract();
@@ -994,8 +1375,8 @@ struct Schedd {
         {
             THROW_EX(ValueError, "Unable to parse requirements expression");
         }
-        classad::ExprTree *expr_copy = expr->Copy();
-        if (!expr_copy) THROW_EX(ValueError, "Unable to create copy of requirements expression");
+        classad::ExprTree *expr_copy = expr ? expr->Copy() : NULL;
+        if (!expr_copy) {THROW_EX(ValueError, "Unable to create copy of requirements expression");}
 
         classad::ExprList *projList(new classad::ExprList());
         unsigned len_attrs = py_len(projection);
@@ -1003,7 +1384,7 @@ struct Schedd {
         {
                 classad::Value value; value.SetStringValue(boost::python::extract<std::string>(projection[idx]));
                 classad::ExprTree *entry = classad::Literal::MakeLiteral(value);
-                if (!entry) THROW_EX(ValueError, "Unable to create copy of list entry.")
+                if (!entry) {THROW_EX(ValueError, "Unable to create copy of list entry.")}
                 projList->push_back(entry);
         }
 
@@ -1033,7 +1414,7 @@ struct Schedd {
 
         if (!putClassAdAndEOM(*sock, ad)) THROW_EX(RuntimeError, "Unable to send request classad to schedd");
 
-        boost::shared_ptr<QueryIterator> iter(new QueryIterator(sock_sentry));
+        boost::shared_ptr<QueryIterator> iter(new QueryIterator(sock_sentry, tag_str));
         return iter;
     }
 
@@ -1091,6 +1472,7 @@ ConnectionSentry::abort()
         }
         if (result)
         {
+            if (PyErr_Occurred()) {return;}
             THROW_EX(RuntimeError, "Failed to abort transaction.");
         }
         if (m_connected)
@@ -1157,6 +1539,7 @@ ConnectionSentry::disconnect()
         }
         if (result)
         {
+            if (PyErr_Occurred()) {return;}
             std::string errmsg = "Failed to commmit and disconnect from queue.";
             std::string esMsg = errstack.getFullText();
             if( ! esMsg.empty() ) { errmsg += " " + esMsg; }
@@ -1165,6 +1548,7 @@ ConnectionSentry::disconnect()
     }
     if (throw_commit_error)
     {
+        if (PyErr_Occurred()) {return;}
         std::string errmsg = "Failed to commit ongoing transaction.";
         std::string esMsg = errstack.getFullText();
         if( ! esMsg.empty() ) { errmsg += " " + esMsg; }
@@ -1175,11 +1559,11 @@ ConnectionSentry::disconnect()
 
 ConnectionSentry::~ConnectionSentry()
 {
+    if (PyErr_Occurred()) {abort();}
     disconnect();
 }
 
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(query_overloads, query, 0, 5);
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(xquery_overloads, xquery, 0, 4);
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(submit_overloads, submit, 1, 4);
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(transaction_overloads, transaction, 0, 2);
 
@@ -1206,6 +1590,11 @@ void export_schedd()
     enum_<CondorQ::QueryFetchOpts>("QueryOpts")
         .value("Default", CondorQ::fetch_Default)
         .value("AutoCluster", CondorQ::fetch_DefaultAutoCluster)
+        ;
+
+    enum_<BlockingMode>("BlockingMode")
+        .value("Blocking", Blocking)
+        .value("NonBlocking", NonBlocking)
         ;
 
     class_<ConnectionSentry>("Transaction", "An ongoing transaction in the HTCondor schedd", no_init)
@@ -1248,6 +1637,16 @@ void export_schedd()
 #else
             ":return: Newly created cluster ID.", (boost::python::arg("self"), "ad", boost::python::arg("count")=1, boost::python::arg("spool")=false, boost::python::arg("ad_results")=boost::python::list())))
 #endif
+        .def("submitMany", &Schedd::submitMany, "Submit one or more jobs to the HTCondor schedd.\n"
+             ":param cluster_ad: ClassAd describing the job cluster.  All jobs inherit from this base ad.\n"
+             ":param proc_ads: A list of 2-tuples.  The tuples have the format (proc_ad, count).  This will result in 'count' jobs being submitted, inheriting from the proc_ad and cluster_ad.\n"
+             ":param spool: Set to true to spool files separately.\n"
+             ":param ad_results: A list object; the resulting job ads will be appended to this list.\n"
+             ":return: Newly created cluster ID.", (
+#if BOOST_VERSION >= 103400
+             boost::python::arg("self"),
+#endif
+             boost::python::arg("cluster_ad"), boost::python::arg("proc_ads"), boost::python::arg("spool")=false, boost::python::arg("ad_results")=boost::python::list()))
         .def("spool", &Schedd::spool, "Spool a list of given ads to the remote HTCondor schedd.\n"
             ":param ads: A python list containing one or more ads to spool.\n")
         .def("transaction", &Schedd::transaction, transaction_overloads("Start a transaction with the schedd.\n"
@@ -1279,18 +1678,51 @@ void export_schedd()
             " NOTE: depending on the lifetime of the proxy in `filename`, the resulting lifetime may be shorter"
             " than the desired lifetime.\n"
             ":return: Lifetime of the resulting job proxy in seconds.")
-        .def("xquery", &Schedd::xquery, xquery_overloads("Query HTCondor schedd, returning an iterator.\n"
+        .def("xquery", &Schedd::xquery, "Query HTCondor schedd, returning an iterator.\n"
             ":param requirements: Either a ExprTree or a string that can be parsed as an expression; requirements all returned jobs should match.\n"
             ":param projection: The attributes to return; an empty list signifies all attributes.\n"
             ":param limit: A limit on the number of matches to return.\n"
             ":param opts: Any one of the QueryOpts enum.\n"
+            ":param name: A name to identify the query (defaults to the schedd name).\n"
             ":return: An iterator for the matching job ads",
 #if BOOST_VERSION < 103400
-            (boost::python::arg("requirements") = "true", boost::python::arg("projection")=boost::python::list(), boost::python::arg("limit")=-1, boost::python::arg("opts")=CondorQ::fetch_Default)
+            (boost::python::arg("requirements") = "true", boost::python::arg("projection")=boost::python::list(), boost::python::arg("limit")=-1, boost::python::arg("opts")=CondorQ::fetch_Default, boost::python::arg("name")=boost::python::object())
 #else
-            (boost::python::arg("self"), boost::python::arg("requirements") = "true", boost::python::arg("projection")=boost::python::list(), boost::python::arg("limit")=-1, boost::python::arg("opts")=CondorQ::fetch_Default)
+            (boost::python::arg("self"), boost::python::arg("requirements") = "true", boost::python::arg("projection")=boost::python::list(), boost::python::arg("limit")=-1, boost::python::arg("opts")=CondorQ::fetch_Default, boost::python::arg("name")=boost::python::object())
 #endif
-            ))
+            )
+        .def("negotiate", &Schedd::negotiate, boost::python::with_custodian_and_ward_postcall<1, 0>(),
+            "Start negotiation session with a remote schedd.\n"
+            ":param owner: The owner of the resource requests.\n"
+            ":param ad: Additional information for the negotiation ad.\n"
+            ":return: An iterator for the resource requests",
+#if BOOST_VERSION < 103400
+            (boost::python::arg("owner"), boost::python::arg("ad")=boost::python::object)
+#else
+            (boost::python::arg("self"), boost::python::arg("owner"), boost::python::arg("ad")=boost::python::dict())
+#endif
+            )
+        ;
+
+    class_<ScheddNegotiate>("ScheddNegotiate", no_init)
+        .def("__iter__", &ScheddNegotiate::getRequests, "Get resource requests from schedd.", boost::python::with_custodian_and_ward_postcall<1, 0>())
+        .def("sendClaim", &ScheddNegotiate::sendClaim, "Send a claim to the schedd.\n"
+          ":param claim: A string containing the claim ID.\n"
+          ":param offer: A ClassAd object containing a description of the resource claimed (the machine's ClassAd).\n"
+          ":param request: A ClassAd object corresponding to the schedd resource request (optional).",
+#if BOOST_VERSION < 103400
+          (boost::python::arg("claim"), boost::python::arg("offer"), boost::python::arg("request")=boost::python::dict())
+#else
+          (boost::python::arg("self"), boost::python::arg("claim"), boost::python::arg("offer"), boost::python::arg("request")=boost::python::dict())
+#endif
+          )
+        .def("__enter__", &ScheddNegotiate::enter)
+        .def("__exit__", &ScheddNegotiate::exit)
+        .def("disconnect", &ScheddNegotiate::disconnect, "Disconnect from negotiation session.");
+        ;
+
+    class_<RequestIterator>("ResourceRequestIterator", no_init)
+        .def("next", &RequestIterator::next, "Get next resource request.")
         ;
 
     class_<HistoryIterator>("HistoryIterator", no_init)
@@ -1299,10 +1731,28 @@ void export_schedd()
         ;
 
     class_<QueryIterator>("QueryIterator", no_init)
-        .def("next", &QueryIterator::next)
+        .def("next", &QueryIterator::next, "Return the next ad from the query results.\n"
+            ":param mode: One of the BlockingMode enum; Blocking or NonBlocking.\n"
+            ":return: The next ad in the query results.  If NonBlocking mode is used, returns None if no ad is available..\n"
+            "Throws a StopIterator exception if no results are available..\n",
+#if BOOST_VERSION < 103400
+            (boost::python::arg("mode") = Blocking)
+#else
+            (boost::python::arg("self"), boost::python::arg("mode") = Blocking)
+#endif
+            )
+        .def("nextAdsNonBlocking", &QueryIterator::nextAds, "Return any available ads.\n"
+            ":return: A list of ads.  If no ads are available, returns an empty list.\n"
+            "Does not throw an exception if no ads are available or the iterator is finished.\n"
+            )
+        .def("tag", &QueryIterator::tag, "Return the query's tag.")
+        .def("done", &QueryIterator::done, "Returns True if the iterator is finished; False otherwise.")
+        .def("watch", &QueryIterator::watch, "Returns a file descriptor associated with this query.")
         .def("__iter__", &QueryIterator::pass_through)
         ;
 
+    register_ptr_to_python< boost::shared_ptr<ScheddNegotiate> >();
+    register_ptr_to_python< boost::shared_ptr<RequestIterator> >();
     register_ptr_to_python< boost::shared_ptr<HistoryIterator> >();
     register_ptr_to_python< boost::shared_ptr<QueryIterator> >();
 

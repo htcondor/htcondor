@@ -463,7 +463,7 @@ ResMgr::init_resources( void )
 		// string lists for each type definition.  This only happens
 		// once!  If you change the type definitions, you must restart
 		// the startd, or else too much weirdness is possible.
-	SlotType::init_types(max_types);
+	SlotType::init_types(max_types, true);
 	initTypes( max_types, type_strings, 1 );
 
 		// First, see how many slots of each type are specified.
@@ -552,6 +552,8 @@ ResMgr::reconfig_resources( void )
 
 		// See if any new types were defined.  Don't except if there's
 		// any errors, just dprintf().
+	ASSERT(max_types > 0);
+	SlotType::init_types(max_types, false);
 	initTypes( max_types, type_strings, 0 );
 
 		// First, see how many slots of each type are specified.
@@ -586,6 +588,7 @@ ResMgr::reconfig_resources( void )
 	ASSERT( sorted_resources != NULL );
 	for( i=0; i<max_types; i++ ) {
 		sorted_resources[i] = new Resource* [max_num];
+		ASSERT(sorted_resources[i] != NULL);
 		memset( sorted_resources[i], 0, (max_num*sizeof(Resource*)) );
 	}
 
@@ -1300,7 +1303,7 @@ ResMgr::updateExtrasClassAd( ClassAd * cap ) {
 		std::string reasonName = universeName + "OfflineReason";
 
 		int universeOnline = 0;
-		assert( cap->LookupBool( attr, universeOnline ) );
+		ASSERT( cap->LookupBool( attr, universeOnline ) );
 		if( ! universeOnline ) {
 			offlineUniverses.insert( universeName ).second;
 			extras_classad->Assign( reasonTime.c_str(), time( NULL ) );
@@ -1599,6 +1602,7 @@ ResMgr::addResource( Resource *rip )
 }
 
 
+//PRAGMA_REMIND("tj: re-write this silly function so that it doesn't allocate a new resources array just to remove a resource...")
 bool
 ResMgr::removeResource( Resource* rip )
 {
@@ -1611,6 +1615,7 @@ ResMgr::removeResource( Resource* rip )
 			// deleted, so we'll need to make a new resources array
 			// without this resource.
 		new_resources = new Resource* [ nresources - 1 ];
+		ASSERT(new_resources != NULL);
 		j = 0;
 		for( i = 0; i < nresources; i++ ) {
 			if( resources[i] != rip ) {

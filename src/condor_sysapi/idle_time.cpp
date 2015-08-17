@@ -205,15 +205,24 @@ calc_idle_time_cpp( time_t & m_idle, time_t & m_console_idle )
 	return;
 }
 
+#if !defined(CONDOR_UTMPX)
 #include <utmp.h>
 #define UTMP_KIND utmp
+#endif
 
 #if defined(LINUX)
 static const char *UtmpName = "/var/run/utmp";
 static const char *AltUtmpName = "/var/adm/utmp";
-#elif defined(CONDOR_FREEBSD)
+// FreeBSD 9 made a clean break from utmp to utmpx
+#elif defined(CONDOR_FREEBSD) && !defined(CONDOR_UTMPX)
 static char *UtmpName = "/var/run/utmp";
 static char *AltUtmpName = "";
+#elif defined(CONDOR_FREEBSD) && defined(CONDOR_UTMPX)
+#include <utmpx.h>
+#define ut_name ut_user
+static char *UtmpName = "/var/run/utx.active";
+static char *AltUtmpName = "";
+#define UTMP_KIND utmpx
 #elif defined(Solaris28) || defined(Solaris29) || defined(Solaris10) || defined(Solaris11)
 #include <utmpx.h>
 static char *UtmpName = "/etc/utmpx";
@@ -265,7 +274,8 @@ utmp_pty_idle_time( time_t now )
 		}
 	}
 
-	while (fread((char *)&utmp_info, sizeof(struct UTMP_KIND), 1, fp)) {
+		// fread returns number of items read, not bytes
+	while (fread((char *)&utmp_info, sizeof(struct UTMP_KIND), 1, fp) == 1) {
 #if defined(AIX) || defined(LINUX)
 		if (utmp_info.ut_type != USER_PROCESS)
 #else

@@ -1,11 +1,27 @@
 
-// Note - pyconfig.h must be included before condor_common to avoid
+// Note - python_bindings_common.h must be included before condor_common to avoid
 // re-definition warnings.
-# include <pyconfig.h>
+#include "python_bindings_common.h"
+
 # if defined(__APPLE__)
 # undef HAVE_SSIZE_T
 # include <pyport.h>
 # endif
+
+/* 
+ * #include <Python.h> solves a ctype function overload issue, but causes
+ * a dprintf() conflict.  Redefining dprintf and getline disables them in
+ * in stdio.h, #included by Python.h, so they don't collide with the condor
+ * versions.
+ */
+
+#ifdef __FreeBSD__
+#define dprintf _hide_dprintf
+#define getline _hide_getline
+#include <Python.h>
+#undef getline
+#undef dprintf
+#endif
 
 #include "condor_common.h"
 
@@ -115,12 +131,12 @@ public:
         ClassAd *policy = NULL;
 
         // IMPORTANT: this hashtable returns 0 on success!
-        if ((SecMan::command_map)->lookup(cmd_map_ent, session_id))
+        if ((SecMan::command_map).lookup(cmd_map_ent, session_id))
         {
             THROW_EX(RuntimeError, "No valid entry in command map hash table!");
         }
         // IMPORTANT: this hashtable returns 1 on success!
-        if (!(SecMan::session_cache)->lookup(session_id.Value(), k))
+        if (!(SecMan::session_cache).lookup(session_id.Value(), k))
         {
             THROW_EX(RuntimeError, "No valid entry in session map hash table!");
         }

@@ -441,6 +441,7 @@ public:
 		// prepare_crypto_for_secret() before and
 		// restore_crypto_after_secret() after.
 	int put_secret(char const *);
+	int put_secret(const std::string & secret) {return put_secret(secret.c_str());}
 
 		// Checks configuration parameter ENCRYPT_SECRETS and forces
 		// encryption on if necessary (and if possible).  After
@@ -597,11 +598,11 @@ public:
         // RETURNS: true -- on, false -- off
         //------------------------------------------
 
-	void set_crypto_mode(bool enable);
+	bool set_crypto_mode(bool enable);
         //------------------------------------------
         // PURPOSE: enable or disable encryption
         // REQUIRE: bool, true -- on; false -- off
-        // RETURNS:
+        // RETURNS: bool, true if value was succesfully changed, false on error
         //------------------------------------------
 
 	/** Returns true if this stream can turn on encryption. */

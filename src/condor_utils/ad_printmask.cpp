@@ -519,7 +519,8 @@ display (std::string & out, AttrList *al, AttrList *target /* = NULL */)
 		}
 
 		// now do the actual formatting.
-		//
+		//									   			classad::Value value;
+
 		int  col_start;
 		switch( fmt->fmtKind )
 		{
@@ -921,4 +922,115 @@ static char *new_strdup (const char *str)
     strcpy (x, str);
     return x;
 }
+
+int parse_autoformat_args (
+	int /*argc*/,
+	char* argv[],
+	int ixArg,
+	const char *popts,
+	AttrListPrintMask & print_mask,
+	bool diagnostic)
+{
+	bool flabel = false;
+	bool fCapV  = false;
+	bool fRaw = false;
+	bool fheadings = false;
+	const char * prowpre = NULL;
+	const char * pcolpre = " ";
+	const char * pcolsux = NULL;
+	if (popts) {
+		while (*popts) {
+			switch (*popts)
+			{
+				case ',': pcolsux = ","; break;
+				case 'n': pcolsux = "\n"; break;
+				case 'g': pcolpre = NULL; prowpre = "\n"; break;
+				case 't': pcolpre = "\t"; break;
+				case 'l': flabel = true; break;
+				case 'V': fCapV = true; break;
+				case 'r': case 'o': fRaw = true; break;
+				case 'h': fheadings = true; break;
+			}
+			++popts;
+		}
+	}
+	print_mask.SetAutoSep(prowpre, pcolpre, pcolsux, "\n");
+
+	while (argv[ixArg] && *(argv[ixArg]) != '-') {
+
+		const char * parg = argv[ixArg];
+		const char * pattr = parg;
+		CustomFormatFn cust_fmt;
+
+		// If the attribute/expression begins with # treat it as a magic
+		// identifier for one of the derived fields that we normally display.
+		if (*parg == '#') {
+			/* -- need to re-write this to be more generic...
+			++parg;
+			if (MATCH == strcasecmp(parg, "SLOT") || MATCH == strcasecmp(parg, "SlotID")) {
+				cust_fmt = format_slot_id;
+				pattr = ATTR_SLOT_ID;
+				App.projection.AppendArg(pattr);
+				App.projection.AppendArg(ATTR_SLOT_DYNAMIC);
+				App.projection.AppendArg(ATTR_NAME);
+			} else if (MATCH == strcasecmp(parg, "PID")) {
+				cust_fmt = format_jobid_pid;
+				pattr = ATTR_JOB_ID;
+				App.projection.AppendArg(pattr);
+			} else if (MATCH == strcasecmp(parg, "PROGRAM")) {
+				cust_fmt = format_jobid_program;
+				pattr = ATTR_JOB_ID;
+				App.projection.AppendArg(pattr);
+			} else if (MATCH == strcasecmp(parg, "RUNTIME")) {
+				cust_fmt = format_int_runtime;
+				pattr = ATTR_TOTAL_JOB_RUN_TIME;
+				App.projection.AppendArg(pattr);
+			} else {
+				parg = argv[ixArg];
+			}
+			*/
+		}
+
+		/*
+		if ( ! cust_fmt) {
+			ClassAd ad;
+			StringList attributes;
+			if(!ad.GetExprReferences(parg, NULL, &attributes)) {
+				fprintf( stderr, "Error:  Parse error of: %s\n", parg);
+				exit(1);
+			}
+
+			attributes.rewind();
+			while (const char *str = attributes.next()) {
+				App.projection.AppendArg(str);
+			}
+		}
+		*/
+
+		MyString lbl = "";
+		int wid = 0;
+		int opts = FormatOptionNoTruncate;
+		if (fheadings || print_mask.has_headings()) {
+			const char * hd = fheadings ? parg : "(expr)";
+			wid = 0 - (int)strlen(hd);
+			opts = FormatOptionAutoWidth | FormatOptionNoTruncate;
+			print_mask.set_heading(hd);
+		}
+		else if (flabel) { lbl.formatstr("%s = ", parg); wid = 0; opts = 0; }
+
+		lbl += fRaw ? "%r" : (fCapV ? "%V" : "%v");
+		if (diagnostic) {
+			printf ("Arg %d --- register format [%s] width=%d, opt=0x%x for %llx[%s]\n",
+				ixArg, lbl.Value(), wid, opts, (long long)(StringCustomFormat)cust_fmt, pattr);
+		}
+		if (cust_fmt) {
+			print_mask.registerFormat(NULL, wid, opts, cust_fmt, pattr);
+		} else {
+			print_mask.registerFormat(lbl.Value(), wid, opts, pattr);
+		}
+		++ixArg;
+	}
+	return ixArg;
+}
+
 

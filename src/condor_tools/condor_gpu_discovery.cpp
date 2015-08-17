@@ -419,6 +419,7 @@ clReturn oclGetInfo(cl_platform_id plid, cl_e_platform_info eInfo, std::string &
 		if (g_buffer) free (g_buffer);
 		if (cb < 120) cb = 120;
 		g_buffer = (char*)malloc(cb*2);
+		if ( ! g_buffer) { fprintf(stderr, "ERROR: failed to allocate %d bytes\n", (int)(cb*2)); exit(-1); }
 		g_cBuffer = cb*2;
 		clr = ocl.GetPlatformInfo(plid, eInfo, g_cBuffer, g_buffer, &cb);
 	}
@@ -438,6 +439,7 @@ clReturn oclGetInfo(cl_device_id did, cl_e_device_info eInfo, std::string & val)
 		if (g_buffer) free (g_buffer);
 		if (cb < 120) cb = 120;
 		g_buffer = (char*)malloc(cb*2);
+		if ( ! g_buffer) { fprintf(stderr, "ERROR: failed to allocate %d bytes\n", (int)(cb*2)); exit(-1); }
 		g_cBuffer = cb*2;
 		clr = ocl.GetDeviceInfo(did, eInfo, g_cBuffer, g_buffer, &cb);
 	}
@@ -595,6 +597,7 @@ main( int argc, const char** argv)
 	int opt_dev = -1;   // -1 means all devs, otherwise print info only for this dev
 	int opt_nvcuda = 0; // use nvcuda rather than cudarl
 	int opt_opencl = 0; // prefer opencl detection
+	int opt_cuda_only = 0; // require cuda detection
 	const char * opt_tag = "GPUs";
 	const char * opt_pre = "CUDA";
 	const char * opt_pre_arg = NULL;
@@ -623,6 +626,9 @@ main( int argc, const char** argv)
 		}
 		else if (is_dash_arg_prefix(argv[i], "opencl", -1)) {
 			opt_opencl = 1;
+		}
+		else if (is_dash_arg_prefix(argv[i], "cuda", -1)) {
+			opt_cuda_only = 1;
 		}
 		else if (is_dash_arg_prefix(argv[i], "verbose", 4)) {
 			g_verbose = 1;
@@ -736,10 +742,12 @@ main( int argc, const char** argv)
 	} else {
 
 	#ifdef WIN32
-		const char * opencl_library = "OpenCL.dll";
-		ocl_handle = LoadLibrary(opencl_library);
-		if ( ! ocl_handle && opt_opencl) {
-			fprintf(stderr, "Error %d: Cant open library: %s\r\n", GetLastError(), opencl_library);
+		if ( ! opt_cuda_only) {
+			const char * opencl_library = "OpenCL.dll";
+			ocl_handle = LoadLibrary(opencl_library);
+			if ( ! ocl_handle && opt_opencl) {
+				fprintf(stderr, "Error %d: Cant open library: %s\r\n", GetLastError(), opencl_library);
+			}
 		}
 
 		const char * cudart_library = "cudart.dll"; // "cudart32_55.dll"
@@ -767,12 +775,15 @@ main( int argc, const char** argv)
 			}
 		}
 	#else
-		const char * opencl_library = "libOpenCL.so";
-		ocl_handle = dlopen(opencl_library, RTLD_LAZY);
-		if ( ! ocl_handle && opt_opencl) {
-			fprintf(stderr, "Error %s: Cant open library: %s\n", dlerror(), opencl_library);
+		if ( ! opt_cuda_only) {
+			const char * opencl_library = "libOpenCL.so";
+			ocl_handle = dlopen(opencl_library, RTLD_LAZY);
+			if ( ! ocl_handle && opt_opencl) {
+				fprintf(stderr, "Error %s: Cant open library: %s\n", dlerror(), opencl_library);
+			}
+			dlerror(); //Reset error
 		}
-		dlerror(); //Reset error
+
 		const char * cudart_library = "libcudart.so";
 		cuda_handle = dlopen(cudart_library, RTLD_LAZY);
 		if ( ! cuda_handle) {
@@ -918,6 +929,9 @@ main( int argc, const char** argv)
 		detected_gpus += prefix;
 	}
 	fprintf(stdout, opt_config ? "Detected%s=%s\n" : "Detected%s=\"%s\"\n", opt_tag, detected_gpus.c_str());
+	if (opt_config) {
+		fprintf(stdout, "NUM_DETECTED_%s=%d\n", opt_tag, deviceCount);
+	}
 
 	// print out static and/or dynamic info about detected GPU resources
 	for (dev = 0; dev < deviceCount; dev++) {
@@ -1155,12 +1169,13 @@ void usage(FILE* out, const char * argv0)
 		"    -device <N>       Include properties only for GPU device N\n"
 		"    -tag <string>     use <string> as resource tag, default is GPUs\n"
 		"    -prefix <string>  use <string> as property prefix, default is CUDA or OCL\n"
+		"    -cuda             Detection via CUDA only, ignore OpenCL devices\n"
 		"    -opencl           Prefer detection via OpenCL rather than CUDA\n"
 		//"    -nvcuda           Use nvcuda rather than cudarl for detection\n"
 		"    -simulate[:D[,N]] Simulate detection of N devices of type D\n"
 		"           where D is 0 - GeForce GT 330, default N=1\n"
 		"                      1 - GeForce GTX 480, default N=2\n"
-		//"    -config           Output in HTCondor config syntax\n"
+		"    -config           Output in HTCondor config syntax\n"
 		"    -help             Show this screen and exit\n"
 		"    -verbose          Show detection progress\n"
 		//"    -diagnostic       Show detection diagnostic information\n"

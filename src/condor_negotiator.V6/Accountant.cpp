@@ -1641,17 +1641,17 @@ void Accountant::LoadLimits(ClassAdListDoesNotDeleteAds &resourceList)
 		// Record all the limits that are actually in use in the pool
 	resourceList.Open();
 	while (NULL != (resourceAd = resourceList.Next())) {
-		char *limits = NULL;
+		std::string limits;
 
-		if (resourceAd->LookupString(ATTR_CONCURRENCY_LIMITS, &limits)) {
+		if (resourceAd->LookupString(ATTR_CONCURRENCY_LIMITS, limits)) {
+			std::transform(limits.begin(), limits.end(), limits.begin(), ::tolower);
 			IncrementLimits(limits);
-			free(limits); limits = NULL;
 		}
 
 		if (resourceAd->LookupString(ATTR_PREEMPTING_CONCURRENCY_LIMITS,
-									  &limits)) {
+									  limits)) {
+			std::transform(limits.begin(), limits.end(), limits.begin(), ::tolower);
 			IncrementLimits(limits);
-			free(limits); limits = NULL;
 		}
 
 			// If the resource is just in the Matched state it will
@@ -1745,9 +1745,14 @@ void Accountant::IncrementLimit(const MyString& _limit)
 
 	dprintf(D_ACCOUNTANT, "IncrementLimit(%s)\n", limit);
 
-	ParseConcurrencyLimit(limit, increment);
+	if ( ParseConcurrencyLimit(limit, increment) ) {
 
-	concurrencyLimits.insert(limit, GetLimit(limit) + increment);
+		concurrencyLimits.insert(limit, GetLimit(limit) + increment);
+
+	} else {
+		dprintf( D_FULLDEBUG, "Ignoring invalid concurrency limit '%s'\n",
+				 limit );
+	}
 
 	free(limit);
 }
@@ -1759,9 +1764,14 @@ void Accountant::DecrementLimit(const MyString& _limit)
 
 	dprintf(D_ACCOUNTANT, "DecrementLimit(%s)\n", limit);
 
-	ParseConcurrencyLimit(limit, increment);
+	if ( ParseConcurrencyLimit(limit, increment) ) {
 
-	concurrencyLimits.insert(limit, GetLimit(limit) - increment);
+		concurrencyLimits.insert(limit, GetLimit(limit) - increment);
+
+	} else {
+		dprintf( D_FULLDEBUG, "Ignoring invalid concurrency limit '%s'\n",
+				 limit );
+	}
 
 	free(limit);
 }

@@ -29,6 +29,7 @@
 #include "daemon_list.h"
 #include "condor_timeslice.h"
 
+#include <deque>
 
 /** Class to manage the sequence nubmers of individual ClassAds
  * published by the application
@@ -84,7 +85,7 @@ class DCCollectorAdSeqMan {
 */
 class DCCollector : public Daemon {
 public:
-	enum UpdateType { UDP, TCP, CONFIG };
+	enum UpdateType { UDP, TCP, CONFIG, CONFIG_VIEW };
 
 		/** Constructor
 			@param name The name (or sinful string) of the collector, 
@@ -137,14 +138,11 @@ private:
 
 	ReliSock* update_rsock;
 
-	char* tcp_collector_host;
-	char* tcp_collector_addr;
-	int tcp_collector_port;
 	bool use_tcp;
 	bool use_nonblocking_update;
 	UpdateType up_type;
 
-	class UpdateData *pending_update_list;
+	std::deque<class UpdateData*> pending_update_list;
 	friend class UpdateData;
 
 	bool sendTCPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblocking );
@@ -157,8 +155,7 @@ private:
 
 	bool initiateTCPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblocking );
 
-	char* tcp_update_destination;
-	char* udp_update_destination;
+	char* update_destination;
 
 	UtcTime m_blacklist_monitor_query_started;
 	static std::map< std::string, Timeslice > blacklist;

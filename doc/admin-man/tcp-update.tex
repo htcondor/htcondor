@@ -17,27 +17,38 @@ network overhead involved in sending and receiving messages.
 UDP sockets are datagrams, and are not reliable.
 There is very little overhead in establishing or using a UDP socket,
 but there is also no guarantee that the data will be delivered.
-Typically, the lack of guaranteed delivery for UDP does not cause
-problems for HTCondor.
+The lack of guaranteed delivery of UDP will negatively affect some pools,
+particularly ones comprised of machines across a wide area network (WAN)
+or highly-congested network links, 
+where UDP packets are frequently dropped.
 
-HTCondor can be configured to use TCP
-sockets to send updates to the \Condor{collector} instead of
-UDP datagrams.
-This feature is intended for sites where UDP updates are
-lost because of the underlying network.
-An example where this may happen is if the pool is comprised of
-machines across a wide area network (WAN) where UDP packets are
-observed to be frequently dropped.
-
-To enable the use of TCP sockets, the following configuration
-setting is used:
+By default, HTCondor daemons will use TCP to send updates to the
+\Condor{collector}, 
+with the exception of the \Condor{collector} forwarding
+updates to any \Condor{collector} daemons
+specified in \MacroNI{CONDOR\_VIEW\_HOST},
+where UDP is used.
+These configuration variables control the protocol used:
 
 \begin{description}
 
 \item[\Macro{UPDATE\_COLLECTOR\_WITH\_TCP}]
-  When set to \Expr{True}, the HTCondor daemons to use TCP to
-  update the \Condor{collector}, instead of the default UDP.
+  When set to \Expr{False}, the HTCondor daemons will use UDP to
+  update the \Condor{collector}, instead of the default TCP.
+  Defaults to \Expr{True}.
+
+\item[\Macro{UPDATE\_VIEW\_COLLECTOR\_WITH\_TCP}]
+  When set to \Expr{True}, the HTCondor collector will use TCP to
+  forward updates to \Condor{collector} daemons specified 
+  by \MacroNI{CONDOR\_VIEW\_HOST},
+  instead of the default UDP.
   Defaults to \Expr{False}.
+
+\item[\Macro{TCP\_UPDATE\_COLLECTORS}]
+  A list of \Condor{collector} daemons which will be updated with TCP 
+  instead of UDP,
+  when \MacroNI{UPDATE\_COLLECTOR\_WITH\_TCP} or
+  \MacroNI{UPDATE\_VIEW\_COLLECTOR\_WITH\_TCP} is set to \Expr{False}.
 
 \end{description}
 
@@ -45,26 +56,26 @@ When there are sufficient file descriptors, the \Condor{collector} leaves
 established TCP sockets open, facilitating better performance.
 Subsequent updates can reuse an already open socket.
 
-Each HTCondor daemon will have 1 socket open to the \Condor{collector}.
+Each HTCondor daemon that sends updates to the \Condor{collector} will have
+1 socket open to it.
 So, in a pool with N machines, each of them running a \Condor{master},
 \Condor{schedd}, and \Condor{startd}, the \Condor{collector} would
 need at least 3*N file descriptors.  If the \Condor{collector} is also
 acting as a CCB server, it will require an additional file descriptor for
-each registered daemon.  In typical Unix installations,
-the default number of file descriptors available to the \Condor{collector}
- is only 1024.
-  This can be modified with a configuration setting such as the following:
+each registered daemon.
+In the default configuration,
+the number of file descriptors available to the \Condor{collector}
+is 10240.
+For very large pools,  the number of descriptor can be modified with 
+the configuration:
 
 \begin{verbatim}
-COLLECTOR_MAX_FILE_DESCRIPTORS = 1600
+  COLLECTOR_MAX_FILE_DESCRIPTORS = 40960
 \end{verbatim}
 
-If there are not sufficient file descriptors for all of the daemons
-sending updates to the \Condor{collector}, a warning will be printed in the
-\Condor{collector} log file.  Look for the string
-\Expr{file descriptor safety level exceeded}.
-
-\Note At this time, \MacroNI{UPDATE\_COLLECTOR\_WITH\_TCP} only
-affects the main \Condor{collector} for the site, not any sites that
-a \Condor{schedd} might flock to.
+If there are insufficient file descriptors for all of the daemons
+sending updates to the \Condor{collector}, 
+a warning will be printed in the \Condor{collector} log file.  
+The string
+\AdStr{file descriptor safety level exceeded} identifies this warning.
 

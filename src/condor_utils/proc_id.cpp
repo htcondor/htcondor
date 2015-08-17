@@ -28,7 +28,9 @@ PROC_ID
 getProcByString( const char* str )
 {
 	PROC_ID rval;
-	StrToProcId(str,rval);
+	if ( ! StrIsProcId(str, rval.cluster, rval.proc, NULL)) {
+		rval.cluster = rval.proc = -1;
+	}
 	return rval;
 }
 
@@ -49,6 +51,7 @@ ProcIdToStr( int cluster, int proc, char *buf ) {
 	}
 }
 
+/*
 bool StrToProcId(char const *str, PROC_ID &id) {
 	return StrToProcId(str,id.cluster,id.proc);
 }
@@ -71,6 +74,52 @@ bool StrToProcId(char const *str, int &cluster, int &proc) {
 	proc = atoi(tmp);
 	return true;
 }
+*/
+
+// parse a string of the form X.Y as a PROC_ID.
+// return true if the input string was a valid proc id and it ended with \0 or comma or whitespace.
+// a pointer to the first unparsed character is optionally returned.
+// input may be X  or X.  or X.Y  if no Y is specified then proc will be set to -1
+bool StrIsProcId(const char *str, int &cluster, int &proc, const char ** pend)
+{
+	bool valid = false;
+	char * pe = const_cast<char*>(str);
+
+	const char * p = str;
+	cluster = strtol(p, &pe, 10);
+	if ((pe > p) && (*pe == 0 || isspace(*pe) || *pe == ',')) {
+		// if ate at least one character and ended on , space or \0, then the procid is a simple number
+		// it's valid as long as it's positive.
+		proc = -1;
+		valid = cluster >= 0;
+	} else if (*pe == '.') {
+		// if we end on a . then cluster must be followed by a proc
+		p = ++pe;
+		proc = -1;
+		if (*p == 0 || isspace(*p) || *pe == ',') {
+			// ok, if the cluster is followed by a dot and nothing more
+			// this parsed the same as if the dot were not there.
+			valid = cluster >= 0;
+		} else {
+			// if we get to here, we must have a valid proc
+			// but the proc is allowed to be negative - it just can't have any spaces in it.
+			bool negative = false;
+			if (*p == '-') { negative = true; ++p; }
+			if (*p < '0' || *p > '9') {
+				// if the next character isn't a digit. then this is NOT a valid procid.
+				valid = false;
+			} else {
+				proc = strtol(p, &pe, 10);
+				valid = (pe > p && (*pe == 0 || isspace(*pe)));
+				if (negative) proc = -proc;
+			}
+		}
+	}
+
+	if (pend) *pend = pe;
+	return valid;
+}
+
 
 void JOB_ID_KEY::sprint(MyString &s) const 
 {

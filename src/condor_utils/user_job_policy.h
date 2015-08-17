@@ -24,6 +24,8 @@
 #include "condor_classad.h"
 #include "condor_attributes.h"
 
+#define USE_NON_MUTATING_USERPOLICY 1 // don't mutate the ad while evaluating policy
+
 /*
  * The user_job_policy() function is deprecated and NOT to be used for
  * new code. Pete Keller said so. :-)
@@ -185,22 +187,34 @@ enum { PERIODIC_ONLY = 0, PERIODIC_THEN_EXIT };
 	FiringExpressionValue will be 0.
 */
 
+
 class UserPolicy
 {
 	public: /* functions */
 		UserPolicy();
 		~UserPolicy();
 
+	#ifdef USE_NON_MUTATING_USERPOLICY
+		/* configure and reset triggers */
+		void Init();
+		/* clear the 'policy has fired' variables */
+		void ResetTriggers();
+	#else
 		/* This class NEVER owns this memory, it just has a reference to it.
 			It also makes sure the default policy expressions are set in the
 			classad if they were undefined. This must be called FIRST when you
 			initially set up one of these classes. */
 		void Init(ClassAd *ad);
+	#endif
 
 		/* mode is PERIODIC_ONLY or PERIODIC_THEN_EXIT */
 		/* returns STAYS_IN_QUEUE, REMOVE_FROM_QUEUE, HOLD_IN_QUEUE, 
 			UNDEFINED_EVAL, or RELEASE_FROM_HOLD */
+	#ifdef USE_NON_MUTATING_USERPOLICY
+		int AnalyzePolicy(ClassAd &ad, int mode);
+	#else
 		int AnalyzePolicy(int mode);
+	#endif
 
 		/* This explains what expression caused the above action, if no 
 			firing expression occurred, then return NULL. The user does NOT
@@ -222,7 +236,13 @@ class UserPolicy
 		/* This function inserts the five of the six (all but TimerRemove) user
 			job policy expressions with default values into the classad if they
 			are not already present. */
+	#ifdef USE_NON_MUTATING_USERPOLICY
+		// nuttin'
+		void Config(void);
+		void ClearConfig(void);
+	#else
 		void SetDefaults(void);
+	#endif
 
 		/* I can't be copied */
 		UserPolicy(const UserPolicy&);
@@ -248,11 +268,26 @@ class UserPolicy
 		that AnalyzePolicy should return.  If this function is false, retval is
 		undefined.
 		*/
-		bool AnalyzeSinglePeriodicPolicy(const char * attrname, const char * macroname, int on_true_return, int & retval);
+	#ifdef USE_NON_MUTATING_USERPOLICY
+		enum SysPolicyId { SYS_POLICY_NONE=0, SYS_POLICY_PERIODIC_HOLD, SYS_POLICY_PERIODIC_RELEASE, SYS_POLICY_PERIODIC_REMOVE };
+		bool AnalyzeSinglePeriodicPolicy(ClassAd & ad, const char * attrname, SysPolicyId sys_policy, int on_true_return, int & retval);
+		bool AnalyzeSinglePeriodicPolicy(ClassAd & ad, ExprTree * expr, int on_true_return, int & retval);
+	#else
+		bool AnalyzeSinglePeriodicPolicy(ClassAd & ad, const char * attrname, const char * macroname, int on_true_return, int & retval);
+	#endif
 
 	private: /* variables */
+	#ifdef USE_NON_MUTATING_USERPOLICY
+		ExprTree * m_sys_periodic_hold;
+		ExprTree * m_sys_periodic_release;
+		ExprTree * m_sys_periodic_remove;
+		int m_fire_subcode;
+		std::string m_fire_reason;
+		std::string m_fire_unparsed_expr;
+	#else
 		ClassAd *m_ad;
-	    int m_fire_expr_val;
+	#endif
+		int m_fire_expr_val;
 		enum FireSource { FS_NotYet, FS_JobAttribute, FS_SystemMacro };
 		FireSource m_fire_source;
 		const char *m_fire_expr;

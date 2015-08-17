@@ -2178,7 +2178,7 @@ static char * get_daemon_param(const char * addr, const char * param_name)
 {
 	char * value = NULL;
 	// sock.code needs write access to the string for some reason...
-	char * tmp_param_name = strdup(param_name);
+	auto_free_ptr tmp_param_name(strdup(param_name));
 	ASSERT(tmp_param_name);
 
 	Daemon dae(DT_ANY, addr, addr);
@@ -2187,12 +2187,17 @@ static char * get_daemon_param(const char * addr, const char * param_name)
 	sock.timeout(20);   // years of research... :)
 	sock.connect(addr);
 
-	dae.startCommand(CONFIG_VAL, &sock, 2);
+	if ( ! dae.startCommand(CONFIG_VAL, &sock, 2)) {
+		if (App.diagnostic > 1) { fprintf(stderr, "Can't startCommand CONFIG_VAL for %s to %s\n", param_name, addr); }
+		sock.close();
+		return value;
+	}
 
 	sock.encode();
 	//if (App.diagnostic) { printf("Querying %s for $(%s) param\n", addr, param_name); }
 
-	if ( ! sock.code(tmp_param_name)) {
+	char * name_copy = tmp_param_name.ptr();
+	if ( ! sock.code(name_copy)) {
 		if (App.diagnostic > 1) { fprintf(stderr, "Can't send CONFIG_VAL for %s to %s\n", param_name, addr); }
 	} else if ( ! sock.end_of_message()) {
 		if (App.diagnostic > 1) { fprintf(stderr, "Can't send end of message to %s\n", addr); }
@@ -2206,7 +2211,6 @@ static char * get_daemon_param(const char * addr, const char * param_name)
 			printf("DC_CONFIG_VAL %s, %s = %s\n", addr, param_name, value);
 		}
 	}
-	free(tmp_param_name);
 	sock.close();
 	return value;
 }

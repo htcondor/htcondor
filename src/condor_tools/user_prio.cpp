@@ -34,8 +34,11 @@
 #include "condor_distribution.h"
 #include "condor_attributes.h"
 #include "match_prefix.h"
+#include "ad_printmask.h"
+#include "generic_query.h"
 // for std::sort
 #include <algorithm> 
+#include <vector>
 
 //-----------------------------------------------------------------
 
@@ -240,6 +243,103 @@ struct LineRecLT {
     }
 };
 
+void ConvertLegacyUserprioAdToAdList(AttrList &ad, std::vector<AttrList> & prios)
+{
+	std::string attr;
+	int id;
+
+	for (AttrList::iterator next = ad.begin(); next != ad.end(); /*++next*/) {
+		AttrList::iterator it = next++; // advance iterator now, in case we want to remove it
+		const char * pattr = it->first.c_str();
+		const char * p = pattr;
+
+		// parse attribute nameNNN, looking for trailing NNN
+		// and set attr to name, and id to NNN.  
+		id = -1;
+		attr.clear();
+		while (*p) {
+			if (isdigit(*p)) {
+				const char * q = p;
+				while (isdigit(*q)) ++q;
+				if ( ! *q || isspace(*q)) {
+					// if the first thing after the digits is the end
+					// of the attribute name, then we found an id.
+					// so set attr and id appropriately
+					attr.assign(pattr, p-pattr);
+					id = atoi(p);
+					break;
+				}
+				p = q;
+			}
+			++p;
+		}
+
+		// the attribute was not of the form nameNNN, so ignore it.
+		if (id <= 0 || attr.empty()) {
+			continue;
+		}
+
+		if ((int)prios.size() <= id) {
+			prios.resize(id);
+		}
+
+		// move the right hand side from the input ad into the vector of ads.
+		prios[id-1].Insert(attr, it->second); ad.Remove(it->first);
+		prios[id-1].Assign("SubmittorId", id);
+	}
+}
+
+static void PrintModularAds(
+	FILE *    out,
+	AttrList* ad,
+	bool      customFormat,
+	AttrListPrintMask & print_mask,
+	GenericQuery constraint)
+{
+	std::vector<AttrList> prioAds;
+	ConvertLegacyUserprioAdToAdList(*ad, prioAds);
+
+	MyString my_constraint;
+	constraint.makeQuery(my_constraint);
+	// if (diagnostic) { fprintf(stderr, "Using effective constraint: %s\n", my_constraint.c_str()); }
+
+	ExprTree *constraintExpr=NULL;
+	if ( ! my_constraint.empty() && ParseClassAdRvalExpr( my_constraint.c_str(), constraintExpr ) ) {
+		fprintf( stderr, "Error:  could not parse constraint %s\n", my_constraint.c_str() );
+		exit( 1 );
+	}
+
+	if (customFormat) {
+		if (print_mask.has_headings()) print_mask.display_Headings(out);
+		if ( ! constraintExpr || EvalBool(ad, constraintExpr)) {
+			print_mask.display(out, ad);
+		}
+
+		// now print the userprio records
+		for (int id = 0; id < (int)prioAds.size(); ++id) {
+			if (constraintExpr && ! EvalBool(&prioAds[id], constraintExpr))
+				continue;
+			print_mask.display(out, &prioAds[id]);
+		}
+	} else {
+		// first print what remains in the userprio ad
+		if ( ! constraintExpr || EvalBool(ad, constraintExpr)) {
+			fPrintAd(out, *ad);
+		}
+
+		// now print the userprio records
+		for (int id = 0; id < (int)prioAds.size(); ++id) {
+			if (constraintExpr && ! EvalBool(&prioAds[id], constraintExpr))
+				continue;
+			fprintf(out, "\n");
+			fPrintAd(out, prioAds[id]);
+		}
+	}
+
+	if (constraintExpr) delete constraintExpr;
+}
+
+
 // map local IsArg functions to the condor_utils is_dash_arg functions
 #define IsArg is_dash_arg_prefix
 #define IsArgColon is_dash_arg_colon_prefix
@@ -248,6 +348,7 @@ int
 main(int argc, char* argv[])
 {
   bool LongFlag=false;
+  int LegacyAdFormat = 1; // bit 1 = default to legacy, bit 2 = insist on legacy
   bool HierFlag=true;
   int ResetUsage=0;
   int DeleteUser=0;
@@ -260,6 +361,9 @@ main(int argc, char* argv[])
   int GetResList=0;
   int UserPrioFile=0;
   std::string pool;
+  AttrListPrintMask print_mask;
+  GenericQuery constraint; // used to build a complex constraint.
+  bool customFormat = false;
   bool GroupRollup = false;
   const char * pcolon = NULL; // used to parse -arg:opt arguments
 
@@ -309,6 +413,37 @@ main(int argc, char* argv[])
     }
     else if (IsArg(argv[i],"long",1)) {
       LongFlag=true;
+      //PRAGMA_REMIND("tj: make -modular the default in 8.5")
+      //LegacyAdFormat &= ~1; // clear the low bit only, so that -legacy ends up winning.
+    }
+    else if (IsArg(argv[i],"constraint",1)) {
+        // make sure we have at least one more argument
+        if (argc <= i+1) {
+            fprintf( stderr, "Error: Argument %s requires another parameter\n", argv[i]);
+            usage(argv[0]);
+        }
+        i++;
+        constraint.addCustomAND(argv[i]);
+    }
+    else if (IsArg(argv[i],"legacy",3)) {
+      LegacyAdFormat = 2 | 1;
+    }
+    else if (IsArg(argv[i],"modular",3)) {
+      LegacyAdFormat = 0;
+    }
+    else if (IsArgColon(argv[i],"af", &pcolon, 2) ||
+             IsArgColon(argv[i],"autoformat", &pcolon, 5)) {
+        // make sure we have at least one argument to autoformat
+        if (argc <= i+1 || *(argv[i+1]) == '-') {
+            fprintf (stderr, "Error: Argument %s requires at last one attribute parameter\n", argv[i]);
+            fprintf(stderr, "\t\te.g. condor_history %s ClusterId\n", argv[i]);
+            usage(argv[0]);
+        }
+        if (pcolon) ++pcolon; // if there are options, skip over the colon to the options.
+        int ixNext = parse_autoformat_args(argc, argv, i+1, pcolon, print_mask, false);
+        if (ixNext > i)
+            i = ixNext-1;
+        customFormat = true;
     }
     else if (IsArgColon(argv[i],"debug",&pcolon,1)) {
       if (pcolon && pcolon[1]) {
@@ -723,7 +858,13 @@ main(int argc, char* argv[])
        HideGroups = !HierFlag;
     }
 
-    if (LongFlag) fPrintAd(stdout, *ad);
+    if (LongFlag || customFormat) {
+       if ( ! LegacyAdFormat || customFormat) {
+          PrintModularAds(stdout, ad, customFormat, print_mask, constraint);
+       } else {
+          fPrintAd(stdout, *ad);
+       }
+    }
     else ProcessInfo(ad,GroupRollup,HierFlag);
 
   }
@@ -761,8 +902,13 @@ main(int argc, char* argv[])
        HideGroups = !HierFlag;
     }
 
-    if (LongFlag) fPrintAd(stdout, *ad);
-    else ProcessInfo(ad,GroupRollup,HierFlag);
+    if (LongFlag || customFormat) {
+       if ( ! LegacyAdFormat || customFormat) {
+          PrintModularAds(stdout, ad, customFormat, print_mask, constraint);
+       } else {
+          fPrintAd(stdout, *ad);
+       }
+    } else ProcessInfo(ad,GroupRollup,HierFlag);
   }
 
   exit(0);
@@ -1228,6 +1374,7 @@ static void PrintInfo(AttrList* ad, LineRec* LR, int NumElem, bool HierFlag)
    if (max_name < min_name) max_name = min_name;
    if (HierFlag) max_name += 2;
    char * Line  = (char*)malloc(max_name*2+cols_max_width+4);
+   ASSERT(Line);
 
    // print first row of headings
    CopyAndPadToWidth(Line,HierFlag ? "Group" : NULL,max_name+1,' ');
@@ -1463,35 +1610,52 @@ static void PrintInfo(AttrList* ad, LineRec* LR, int NumElem, bool HierFlag)
 
 static void usage(char* name) {
   fprintf( stderr, "usage: %s [options] [edit-option | display-options]\n"
-     "\twhere [options] are\n"
-     "\t\t-pool <host>\t\tUse host as the central manager to query\n"
-     "\t\t-inputfile <file>\tDisplay priorities from <file>\n"
-     "\t\t-help\t\t\tThis Screen\n"
-     "\t\t-debug[:<opts>]\t\tSend debug output to stderr, <opts> overrides TOOL_DEBUG\n"
-     "\twhere [edit-option] is one of\n"
-     "\t\t-resetusage <user>\tReset usage data for <user>\n"
-     "\t\t-resetall\t\tReset all useage data\n"
-     "\t\t-delete <user>\t\tRemove a user record from the accountant\n"
-     "\t\t-setprio <user> <val>\tSet priority for <user>\n"
-     "\t\t-setfactor <user> <val>\tSet priority factor for <user>\n"
-     "\t\t-setaccum <user> <val>\tSet Accumulated usage for <user>\n"
-     "\t\t-setbegin <user> <val>\tset last first date for <user>\n"
-     "\t\t-setlast <user> <val>\tset last active date for <user>\n"
-     "\twhere [display-options] are\n"
-     "\t\t-getreslist <user>\tDisplay list of resources for <user>\n"
-     "\tor one or more of\n"
-     "\t\t-allusers\t\tDisplay data for all users\n"
-     "\t\t-activefrom <month> <day> <year> Display data for users active since this date\n"
-     "\t\t-priority\t\tDisplay user priority fields\n"
-     "\t\t-usage\t\t\tDisplay user/group usage fields\n"
-     "\t\t-quotas\t\t\tDisplay group quota fields\n"
-     "\t\t-most\t\t\tDisplay most useful prio and usage fields\n"
-     "\t\t-all\t\t\tDisplay all fields\n"
-     "\t\t-flat\t\t\tDo not display users under their groups\n"
-     "\t\t-hierarchical\t\tDisplay users under their groups\n"
-     "\t\t-grouporder\t\tDisplay groups first, then users\n"
-     "\t\t-grouprollup\t\tGroup value are the sum of user values\n"
-     "\t\t-long\t\t\tVerbose output (entire classads)\n"
+     "    where [options] are\n"
+     "\t-pool <host>\t\tUse host as the central manager to query\n"
+     "\t-inputfile <file>\tDisplay priorities from <file>\n"
+     "\t-help\t\t\tThis Screen\n"
+     "\t-debug[:<opts>]\t\tSend debug output to stderr, <opts> overrides TOOL_DEBUG\n"
+     "    where [edit-option] is one of\n"
+     "\t-resetusage <user>\tReset usage data for <user>\n"
+     "\t-resetall\t\tReset all useage data\n"
+     "\t-delete <user>\t\tRemove a user record from the accountant\n"
+     "\t-setprio <user> <val>\tSet priority for <user>\n"
+     "\t-setfactor <user> <val>\tSet priority factor for <user>\n"
+     "\t-setaccum <user> <val>\tSet Accumulated usage for <user>\n"
+     "\t-setbegin <user> <val>\tset last first date for <user>\n"
+     "\t-setlast <user> <val>\tset last active date for <user>\n"
+     "    where [display-options] are\n"
+     "\t-getreslist <user>\tDisplay list of resources for <user>\n"
+     "    or one or more of\n"
+     "\t-allusers\t\tDisplay data for all users\n"
+     "\t-activefrom <month> <day> <year> Display data for users active since this date\n"
+     "\t-priority\t\tDisplay user priority fields\n"
+     "\t-usage\t\t\tDisplay user/group usage fields\n"
+     "\t-quotas\t\t\tDisplay group quota fields\n"
+     "\t-most\t\t\tDisplay most useful prio and usage fields\n"
+     "\t-all\t\t\tDisplay all fields\n"
+     "\t-flat\t\t\tDo not display users under their groups\n"
+     "\t-hierarchical\t\tDisplay users under their groups\n"
+     "\t-grouporder\t\tDisplay groups first, then users\n"
+     "\t-grouprollup\t\tGroup value are the sum of user values\n"
+     "\t-long\t\t\tVerbose output (entire classads)\n"
+     "\t  -legacy\t\tCauses -long to show a single classad\n"
+     "\t  -modular\t\tCauses -long to show a classad per userprio record\n"
+     "\t-constraint <expr>\tDisplay users/groups that match <expr>\n"
+     "\t\t\t\twhen used with -long -modular or -autoformat\n"
+     "\t-autoformat[:lhVr,tng] <attr> [<attr2 ...]   Display attr(s) with automatic\n"
+     "\t      formatting. (Use attribute names consistent with -modular output)\n"
+     "\t-af[:lhVr,tng] <attr> [<attr2 ...]\t    Same as -autoformat above\n"
+     "\t    where the [lhVr,tng] options influence the automatic formatting:\n"
+     "\t    l\tattribute labels\n"
+     "\t    h\tattribute column headings\n"
+     "\t    V\t%%V formatting (string values are quoted)\n"
+     "\t    r\t%%r formatting (raw/unparsed values)\n"
+     "\t    t\ttab before each value (default is space)\n"
+     "\t    g\tnewline between ClassAds, no space before values\n"
+     "\t    ,\tcomma after each value\n"
+     "\t    n\tnewline after each value\n"
+     "\t    use -af:h to get tabular values with headings\n"
      , name );
   exit(1);
 }

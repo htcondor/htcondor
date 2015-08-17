@@ -1,3 +1,22 @@
+/***************************************************************
+ *
+ * Copyright (C) 2014-2015, Condor Team, Computer Sciences Department,
+ * University of Wisconsin-Madison, WI.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License"); you
+ * may not use this file except in compliance with the License.  You may
+ * obtain a copy of the License at
+ * 
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ ***************************************************************/
+
 #define CURL_STATICLIB
 #include <stdio.h>
 #include <stdlib.h>
@@ -5,6 +24,7 @@
 #include <fstream>
 #include <curl/curl.h>
 #include <string.h>
+
 /*condor_urlfetch
  *This program downloads the url specified as the first argument into the 
  *file specified in the second argument, as well as stdout.
@@ -20,11 +40,11 @@
 
 using namespace std;
 
-
-size_t write_data(void *ptr, size_t size, size_t nmemb, FILE *stream);
+size_t write_data(void *ptr, size_t size, size_t nmemb, void *userp); 
 int write_prevfile(const char *prev);
-bool isEmpty(FILE *file);
+//bool isEmpty(FILE *file);
 
+std::string readBuffer;
 
 /*********************************************************************
     main()
@@ -37,9 +57,9 @@ int main(int argc, const char *argv[])
         perror("usage: condor_urlfetch  (-daemon)  http://my.site/condor_config  last_config.url");
         return 1;
     }
-//Determines whether the -daemon flag is present, and set argv offets accordingly
-//If the -daemon flag is there and is not master, the program will not download
-//a new page.
+  //Determines whether the -daemon flag is present, and set argv offets accordingly
+  //If the -daemon flag is there and is not master, the program will not download
+  //a new page. If no flag was specified, it always downloads
     int lastLoc = 2;
     bool toPull = true;
 
@@ -49,8 +69,8 @@ int main(int argc, const char *argv[])
         lastLoc++;
         if(strncmp(argv[1], "-MASTER", 10) != 0)
         {
-            // if -MASTER was not passed, we only want to pull
-            // if the cached file is missing or cannot be read.
+          // if -MASTER was not passed, we only want to pull
+          // if the cached file is missing or cannot be read.
             FILE *fp = fopen(argv[lastLoc], "r");
             if(fp)
             {
@@ -67,16 +87,12 @@ int main(int argc, const char *argv[])
     curl = curl_easy_init();
     if ((curl) && (toPull)) 
     {
-        const char* tempName = tmpnam(NULL);
-        FILE *tempFile = fopen(tempName, "wb"); 
-        if(tempFile == NULL)
-        {
-            perror("Error creating a temporary file");  
-            return(5); 
-        }
+        std::string readBuffer;
+
+      //Setting up curl
         curl_easy_setopt(curl, CURLOPT_URL, url);
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_data);
-        curl_easy_setopt(curl, CURLOPT_WRITEDATA, tempFile);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &readBuffer);
         res = curl_easy_perform(curl);
 
         if(res != CURLE_OK)
@@ -86,28 +102,19 @@ int main(int argc, const char *argv[])
             return(4);
         }
         curl_easy_cleanup(curl);
-        fclose(tempFile);
 
-        tempFile = fopen(tempName, "rb"); 
-        if(tempFile == NULL)
+
+      //If something has been written to the buffer, copy this to our output file.
+        if(!readBuffer.empty())
         {
-            perror("Error opening a temporary file");  
-            return(5); 
+            ofstream out(argv[lastLoc]);
+
+            out.write(readBuffer.c_str(), readBuffer.length());
+            out.close();
         }
-
-    //If something has been written to tempfile, copy this to our output file.
-        if(!isEmpty(tempFile))
-        {
-
-            std::ifstream  src(tempName, std::ios::binary);
-            std::ofstream  dst(argv[lastLoc], std::ios::binary);
-
-            dst << src.rdbuf();
-        }
-
-        remove(tempName);
     }
 
+  // open the cache file and write it to stdout.
     if(write_prevfile(argv[lastLoc]) != 0)
     {
         perror("Error opening file as read only");
@@ -116,9 +123,19 @@ int main(int argc, const char *argv[])
     return 0;
 }
 
-size_t write_data(void *ptr, size_t size, size_t nmemb, FILE *stream) 
+
+
+size_t write_data(void *ptr, size_t size, size_t nmemb, void *userp) 
 {
-    size_t written = 0;
+
+    ((std::string*)userp)->append((char*)ptr, size * nmemb);
+    return size * nmemb;
+ // Alternate write_data to be used to write to a file rather than buffer
+ /*   size_t realsize = size * nmemb;
+    readBuffer.append(ptr, realsize);
+    return realsize;*/
+
+   /* size_t written = 0;
     if((size != 0) && (nmemb != 0))
     {
         written = fwrite(ptr, size, nmemb, stream);
@@ -129,7 +146,7 @@ size_t write_data(void *ptr, size_t size, size_t nmemb, FILE *stream)
         }
     }
 
-    return written;
+    return written;*/
 }
 
 int write_prevfile(const char *prev)
@@ -152,6 +169,8 @@ int write_prevfile(const char *prev)
     return 0;
 }
 
+/*
+// check if our cache file is empty.
 bool isEmpty(FILE *ptrFile)
 {
     long offset = ftell(ptrFile);
@@ -165,3 +184,4 @@ bool isEmpty(FILE *ptrFile)
     fseek(ptrFile, offset, SEEK_SET);
     return false;
 }
+*/

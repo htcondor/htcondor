@@ -54,6 +54,25 @@ class DockerAPI {
 		static int rm( const std::string & container, CondorError & err );
 
 		/**
+		 * Releases the named image
+		 *
+		 * @param image		The Docker image name or GUUID.
+		 * @param error			....
+		 * @return				0 on success, negative otherwise.
+		 */
+		static int rmi( const std::string & image, CondorError & err );
+
+		/**
+		 * Sends a signal to the first process in the named container
+		 *
+		 * @param image		The Docker image name or GUUID.
+		 * @param error			....
+		 * @return				0 on success, negative otherwise.
+		 */
+
+		static int kill( const std::string & image, CondorError & err );
+
+		/**
 		 * Sends the given signal to the specified container's primary process.
 		 *
 		 * @param container		The Docker GUID, or the name passed to run().

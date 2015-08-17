@@ -873,6 +873,18 @@ update_report_result:
 				"Number of submitted jobs would exceed MAX_JOBS_SUBMITTED\n";
 			dprintf( D_ALWAYS, "%s\n", error_msg.c_str() );
 		}
+		if( ProcId == -3 ) {
+			error = TRUE;
+			error_msg =
+				"Number of submitted jobs would exceed MAX_JOBS_PER_OWNER\n";
+			dprintf( D_ALWAYS, "%s\n", error_msg.c_str() );
+		}
+		if( ProcId == -4 ) {
+			error = TRUE;
+			error_msg =
+				"Number of submitted jobs would exceed MAX_JOBS_PER_SUBMISSION\n";
+			dprintf( D_ALWAYS, "%s\n", error_msg.c_str() );
+		}
 
 
 		// Adjust the argument/environment syntax based on the version
@@ -1031,6 +1043,18 @@ submit_report_result:
 		
 	// STATUS_CONSTRAINED
 	command_queue.Rewind();
+	if (qmgr_connection != NULL)
+	{
+		DisconnectQ(qmgr_connection, FALSE);
+		if ((qmgr_connection = ConnectQ(dc_schedd.addr(), QMGMT_TIMEOUT, true, &errstack, NULL, dc_schedd.version() )) == NULL)
+		{
+			formatstr(error_msg, "Error connecting to schedd %s for read-only commands: %s", ScheddAddr, errstack.getFullText().c_str());
+			dprintf(D_ALWAYS, "%s\n", error_msg.c_str());
+			failure_line_num = __LINE__;
+			failure_errno = errno;
+			goto contact_schedd_disconnect;
+		}
+	}
 	while (command_queue.Next(current_command)) {
 
 		if (current_command->status != SchedDRequest::SDCS_NEW)
@@ -1047,8 +1071,6 @@ submit_report_result:
 		if (qmgr_connection != NULL) {
 			SimpleList <std::string *> matching_ads;
 
-			error = FALSE;
-			
 			ClassAd *next_ad;
 			ClassAdList adlist;
 				// Only use GetAllJobsByConstraint if remote schedd is
@@ -1091,6 +1113,7 @@ submit_report_result:
 
 			// now output this list of classads into a result
 			const char ** result  = new const char* [matching_ads.Length() + 3];
+			ASSERT(result);
 
 			std::string _ad_count;
 			formatstr( _ad_count, "%d", matching_ads.Length() );

@@ -3,49 +3,39 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{IPv6|(}
 
-HTCondor supports running on IPv6 networks, and it has limited support for
-running on mixed-mode networks.
+By default, HTCondor uses only IPv4 networks.  To enable IPv6 networking,
+set configuration variable \Macro{ENABLE\_IPV6} to \Expr{True}.
+Do \emph{not} enable IP6 unless
+the machine on which the daemon is running has an IPv6 address that the
+other machines within the pool can reach.  
+Otherwise, as HTCondor prefers to use IPv6 networks,
+enabling IPv6 can cause connectivity problems.
+In particular, it is unlikely IPv6 should be enabled if the IPv6 addresses
+are loopback (::1) or link-local (fe80::).
 
-To enable IPv6 networking, set \Macro{ENABLE\_IPV6} to \Expr{True}.  To
-prevent HTCondor from using IPv4 networking, set \Macro{ENABLE\_IPV4} to
-\Expr{False}.  HTCondor uses only IPv4 by default.
+To disable IPv4 networking, set configuration variable \Macro{ENABLE\_IPV4} 
+to \Expr{False}.
+HTCondor operates normally using only IPv6 addresses.
 
-With both IPv4 and IPv6 networking enabled, 
-HTCondor runs in mixed mode.  
-In mixed mode, HTCondor determines which protocol to use in a
-variety of ways. 
-Which mode to use depends on how a daemon's address is acquired.
-Generally speaking, HTCondor will obtain a daemon's
-address in one of three ways:
+If both IPv4 and IPv6 networking are enabled, HTCondor runs in mixed mode.
+In mixed mode, HTCondor daemons have at least two addresses that include
+an IPv4 address and an IPv6 address.  
+Generally, other daemons and the HTCondor client
+tools will choose between these addresses based on which protocols are enabled
+for them, preferring IPv6 when given the choice.
 
+There are two important cases in which the preference will not be for an IPv6 address:
 \begin{itemize}
-\item{on the command line or in configuration}
-\item{from a daemon to which it is connected}
-\item{from the \Condor{collector}, which is contacted when a daemon
-name is specified on a command line}
-\end{itemize}
-
-HTCondor determines the protocol using these rules.
-
-\begin{itemize}
-\item{If given an address literal, a daemon will use the same protocol as
-that address.
-If given a name and DNS is used to resolve an address, 
-the first address returned determines the protocol.
-Resolution occurs differently when \Macro{NO\_DNS} is enabled.  }
-\item{When a daemon sends its address to some other daemon, such as
-the \Condor{collector}, the address sent is of the protocol used to
-contact that other daemon.  Therefore, when a tool or daemon queries
-the \Condor{collector} for the address of a particular daemon, the
-\Condor{collector} replies with an address of the protocol used by
-that particular daemon when that particular daemon previously
-contacted the \Condor{collector}.}
+\item{When given a literal IP address, HTCondor will use that IP address.  }
+\item{When looking up a host name using DNS,
+HTCondor will use the first address whose
+protocol is enabled for the tool or daemon doing the look up.  }
 \end{itemize}
 
 In practice, this means that both an HTCondor pool's central manager
 and any submit machines within a mixed mode pool must have both IPv4 and IPv6
-addresses for both IPv4-only and IPv6-only execute nodes 
-(\Condor{startd} daemons) to function properly.
+addresses for both IPv4-only and IPv6-only \Condor{startd} daemons 
+to function properly.
 
 \subsubsection{IPv6 and Host-Based Security}
 

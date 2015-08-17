@@ -102,6 +102,23 @@ Listed here are details of the logs, to aid in identification.
   \item [\Macro{MAX\_NUM\_SCHEDD\_AUDIT\_LOG}] 
   \end{description}
 
+\item[\Condor{shared\_port} audit log]
+  The optional \Condor{shared\_port} audit log records connections made
+  through the \Macro{DAEMON\_SOCKET\_DIR}.  Each record includes the source
+  address, the socket file name, and the target process's PID, UID, GID,
+  executable path, and command line.
+
+  This log exists to help administrators track the activities of pool users.
+
+  The file name is set by configuration variable 
+  \Macro{SHARED\_PORT\_AUDIT\_LOG}.
+
+  Configuration variables that affect the audit log are
+  \begin{description}
+  \item [\Macro{MAX\_SHARED\_PORT\_AUDIT\_LOG}]
+  \item [\Macro{MAX\_NUM\_SHARED\_PORT\_AUDIT\_LOG}]
+  \end{description}
+
 \item[event log]
   The event log is an optional, chronological list of events that occur
   for all jobs and all users.

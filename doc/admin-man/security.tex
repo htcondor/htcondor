@@ -180,6 +180,8 @@ a \DCPerm{READ} or both a
    change user priorities with the command \Condor{userprio},
    as well as the ability to turn HTCondor on and off
    (as with the commands \Condor{on} and \Condor{off}).
+   The \Condor{fetchlog} tool also requires an \DCPerm{ADMINISTRATOR} 
+   access level.
    The \DCPerm{ADMINISTRATOR} level of access implies both
    \DCPerm{READ} and \DCPerm{WRITE} access.
 
@@ -2681,8 +2683,13 @@ ensure no
 one can use the power to change configuration attributes to compromise 
 the security of your HTCondor pool.
 
+\MacroIndex{SETTABLE\_ATTRS\_<PERMISSION-LEVEL>}
+\MacroIndex{SETTABLE\_ATTRS\_CONFIG}
+\MacroIndex{SETTABLE\_ATTRS\_WRITE}
+\MacroIndex{SETTABLE\_ATTRS\_OWNER}
+\MacroIndex{SETTABLE\_ATTRS\_ADMINISTRATOR}
 The control lists are defined by configuration settings that contain 
-\Macro{SETTABLE\_ATTRS} in their name.
+\MacroNI{SETTABLE\_ATTRS} in their name.
 The name of the control lists have the following form: 
 
 \footnotesize

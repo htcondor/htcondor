@@ -981,6 +981,36 @@ void INFNBatchJob::doEvaluateState()
 #endif
 			}
 
+#if !defined(WIN32)
+			// Check whether the blahp left behind a limited proxy.
+			// If a job has a proxy, the blahp creates a limited
+			// proxy from it with the same name plus ".lmt".
+			// It often doesn't remove this file.
+			// If there's a .lmt file and it's in the spool directory,
+			// then remove it. If it's somewhere else,
+			// then it might be shared by multiple jobs, so we
+			// need to leave it alone.
+			// The code above may delete this same file through the
+			// symlink under ~/.blah_jobproxy_dir/.
+			// We need this additional check in case the symlink is
+			// deleted but the .lmt file is left behind, and for
+			// a remote blahp, when file transfer may send back the
+			// .lmt file.
+			if ( jobProxy ) {
+				std::string proxy;
+				formatstr( proxy, "%s.lmt", jobProxy->proxy_filename );
+				struct stat statbuf;
+				int rc = lstat( jobProxy->proxy_filename, &statbuf );
+				if ( rc == 0 ) {
+					char *spooldir = param("SPOOL");
+					if ( !strncmp( spooldir, jobProxy->proxy_filename, strlen( spooldir ) ) ) {
+						unlink( jobProxy->proxy_filename );
+					}
+					free( spooldir );
+				}
+			}
+#endif
+
 			SetRemoteIds( NULL, NULL );
 			if ( condorState == COMPLETED || condorState == REMOVED ) {
 				gmState = GM_DELETE;

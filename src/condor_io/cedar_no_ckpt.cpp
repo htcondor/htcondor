@@ -781,6 +781,9 @@ int relisock_gsi_get(void *arg, void **bufp, size_t *sizep)
     
     //read size of data to read
     stat = sock->code( *((int *)sizep) );
+	if ( stat == FALSE ) {
+		*sizep = 0;
+	}
 
 	if( *((int *)sizep) == 0 ) {
 			// We avoid calling malloc(0) here, because the zero-length
@@ -948,6 +951,13 @@ int
 ReliSock::do_reverse_connect(char const *ccb_contact,bool nonblocking)
 {
 	ASSERT( !m_ccb_client.get() ); // only one reverse connect at a time!
+
+	//
+	// Since we can't change the CCB server without also changing the CCB
+	// client (that is, without breaking backwards compatibility), we have
+	// to determine if the server sent us ... a string we can't use.  Joy.
+	//
+
 	m_ccb_client =
 		new CCBClient( ccb_contact, (ReliSock *)this );
 

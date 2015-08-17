@@ -521,7 +521,23 @@ std::vector<condor_sockaddr> resolve_hostname(const MyString& hostname)
 }
 
 std::vector<condor_sockaddr> resolve_hostname_raw(const MyString& hostname) {
+	//
+	// For now, we can just document that you need the Punycoded DSN name.
+	// If somebody complains about that, we can revisit this.  (If we
+	// assume/require UTF-8 (int the config file), we can still readily
+	// distinguish Sinfuls, since ':' and '?' won't be used by the UTF-8
+	// IDNs.)
+	//
 	std::vector<condor_sockaddr> ret;
+	for( int i = 0; i < hostname.length(); ++i ) {
+		if( isalnum( hostname[i] ) || hostname[i] == '-' ) { continue; }
+		if( hostname[i] == '.' && i + 1 < hostname.length()
+			&& hostname[i+1] != '.' ) { continue; }
+
+		dprintf( D_HOSTNAME, "resolve_hostname_raw(): argument '%s' is not a valid DNS name, returning no addresses.\n", hostname.c_str() );
+		return ret;
+	}
+
 	addrinfo_iterator ai;
 	int res  = ipv6_getaddrinfo(hostname.Value(), NULL, ai);
 	if (res) {
@@ -529,9 +545,9 @@ std::vector<condor_sockaddr> resolve_hostname_raw(const MyString& hostname) {
 			hostname.Value(), gai_strerror(res), res);
 		return ret;
 	}
-	
-		// To eliminate duplicate address, here we use std::set.
-		// we also want to maintain the order given by getaddrinfo.
+
+	// To eliminate duplicate address, here we use std::set.
+	// we also want to maintain the order given by getaddrinfo.
 	std::set<condor_sockaddr> s;
 	while (addrinfo* info = ai.next()) {
 		condor_sockaddr addr(info->ai_addr);

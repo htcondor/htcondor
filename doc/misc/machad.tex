@@ -409,8 +409,9 @@ Currently supported operating systems have the following string
 definitions:
 	\begin{description}
 	\item[\AdStr{LINUX}:] for LINUX 2.0.x, LINUX 2.2.x,
-	LINUX 2.4.x, LINUX 2.6.x, or LINUX 3.10.0 kernel systems, as well as Scientific Linux 
-        and Ubuntu versions 12.04 and 14.04
+	LINUX 2.4.x, LINUX 2.6.x, or LINUX 3.10.0 kernel systems, as well as Scientific Linux, 
+        Ubuntu versions 12.04 and 14.04, 
+        and Debian 7.0 (wheezy) and 8.0 (jessie)
 	\item[\AdStr{OSX}:] for Darwin
 	\item[\AdStr{FREEBSD7}:] for FreeBSD 7
 	\item[\AdStr{FREEBSD8}:] for FreeBSD 8
@@ -435,8 +436,10 @@ concatenated with the string version of the \Attr{OpSysMajorVersion} attribute:
 	\item[\AdStr{RedHat6}:] for RedHat Linux version 6
 	\item[\AdStr{RedHat7}:] for RedHat Linux version 7
 	\item[\AdStr{Fedora16}:] for Fedora Linux version 16
-	\item[\AdStr{Debian5}:] for Debian Linux version 5
+	%\item[\AdStr{Debian5}:] for Debian Linux version 5
 	\item[\AdStr{Debian6}:] for Debian Linux version 6
+	\item[\AdStr{Debian7}:] for Debian Linux version 7
+	\item[\AdStr{Debian8}:] for Debian Linux version 8
 	\item[\AdStr{Ubuntu12}:] for Ubuntu 12.04
 	\item[\AdStr{Ubuntu14}:] for Ubuntu 14.04
 	\item[\AdStr{SL5}:] for Scientific Linux version 5
@@ -479,8 +482,11 @@ concatenated with the string version of the \Attr{OpSysMajorVersion} attribute:
 Currently supported operating systems have the following string
 definitions:
 	\begin{description}
-	\item[\AdStr{LINUX}:] for LINUX 2.0.x, LINUX 2.2.x, LINUX 2.4.x, LINUX 2.6.x, or LINUX 3.10.0 kernel systems, as well as Scientific Linux and  Ubuntu 
-versions 12.04 and 14.04
+	\item[\AdStr{LINUX}:] for LINUX 2.0.x, LINUX 2.2.x, LINUX 2.4.x, 
+        LINUX 2.6.x, or LINUX 3.10.0 kernel systems, 
+        as well as Scientific Linux, 
+        Ubuntu versions 12.04 and 14.04, 
+        and Debian 7 and 8
 	\item[\AdStr{OSX}:] for Darwin
 	\item[\AdStr{FREEBSD7}:] for FreeBSD version 7
 	\item[\AdStr{FREEBSD8}:] for FreeBSD version 8
@@ -500,6 +506,8 @@ with extra characters stripped off Debian versions.
 	\item[\AdStr{Red Hat Enterprise Linux Server release 7.0 (Maipo)}:] for RedHat Linux version 7.0
 	\item[\AdStr{Ubuntu 12.04.3 LTS}:] for Ubuntu 12.04 point release 3 
 	\item[\AdStr{Ubuntu 14.04.1 LTS}:] for Ubuntu 14.04 point release 1 
+	\item[\AdStr{Debian GNU/Linux 7}:] for Debian 7.0 (wheezy)
+	\item[\AdStr{Debian GNU/Linux 8}:] for Debian 8.0 (jessie)
 	\item[\AdStr{Fedora release 16 (Verne)}:] for Fedora Linux version 16
 	\item[\AdStr{MacOSX 6.5}:] for MacOS version 10.6.5 (Snow Leopard)
 	\item[\AdStr{MacOSX 7.3}:] for MacOS version 10.7.3 (Lion)
@@ -520,6 +528,8 @@ and derived platforms such as Scientific Linux
 	\item[\Expr{7}:] for RedHat Linux version 7
 	\item[\Expr{12}:] for Ubuntu 12.04
 	\item[\Expr{14}:] for Ubuntu 14.04
+	\item[\Expr{7}:] for Debian 7 
+	\item[\Expr{8}:] for Debian 8 
 	\item[\Expr{16}:] for Fedora Linux version 16
 	\item[\Expr{6}:] for MacOS version 10.6.5 (Snow Leopard)
 	\item[\Expr{7}:] for MacOS version 10.7.3 (Lion)
@@ -537,6 +547,7 @@ and derived platforms such as Scientific Linux
 	\item[\AdStr{RedHat}:] for RedHat Linux version 6 and 7
 	\item[\AdStr{Fedora}:] for Fedora Linux version 16
 	\item[\AdStr{Ubuntu}:] for Ubuntu versions 12.04 and 14.04
+	\item[\AdStr{Debian}:] for Debian versions 7 and 8
 	\item[\AdStr{SnowLeopard}:] for MacOS version 10.6.5 (Snow Leopard)
 	\item[\AdStr{Lion}:] for MacOS version 10.7.3 (Lion)
 	\item[\AdStr{FREEBSD}:] for FreeBSD version 7 or 8
@@ -556,7 +567,8 @@ the operating system.
 	\begin{description}
 	\item[\AdStr{RedHat}:] for RedHat Linux version 5, 6 or 7
 	\item[\AdStr{Fedora}:] for Fedora Linux version 16
-	\item[\AdStr{Debian}:] for Debian Linux version 5 or 6
+	\item[\AdStr{Debian}:] for Debian Linux version 6 or 7 or 8
+	%\item[\AdStr{Debian}:] for Debian Linux version 5 or 6 or 7 or 8
 	\item[\AdStr{Ubuntu}:] for Ubuntu versions 12.04 and 14.04
 	\item[\AdStr{MacOSX}:] for MacOS version 10.6.5 (Snow Leopard) or 
 for MacOS version 10.7.3 (Lion)
@@ -580,6 +592,8 @@ version number.
 	\item[\Expr{1600}:] for Fedora Linux version 16.0
 	\item[\Expr{1204}:] for Ubuntu 12.04
 	\item[\Expr{1404}:] for Ubuntu 14.04
+	\item[\Expr{700}:] for Debian 7.0
+	\item[\Expr{800}:] for Debian 8.0
 	\item[\Expr{704}:] for FreeBSD version 7.4
 	\item[\Expr{802}:] for FreeBSD version 8.2
 	\item[\Expr{605}:] for MacOS version 10.6.5 (Snow Leopard)
@@ -590,6 +604,11 @@ version number.
 	\item[\Expr{600}:] for Windows Vista or Windows Server 2008
 	\item[\Expr{601}:] for Windows 7 or Windows Server 2008
 	\end{description}
+%
+\index{ClassAd machine attribute!PartitionableSlot}
+\label{PartitionableSlot-machine-attribute} 
+\item[\AdAttr{PartitionableSlot}:] For SMP machines,
+a boolean value identifying that this slot may be partitioned.
 %
 \index{ClassAd machine attribute!RecentJobPreemptions}
 \item[\AdAttr{RecentJobPreemptions}:] The total number of jobs which
@@ -625,11 +644,6 @@ job.  This may be less than the amount offered by the machine's
 \AdAttr{MaxJobRetirementTime} expression, because the job may
 ask for less.
 %
-\index{ClassAd machine attribute!PartitionableSlot}
-\label{PartitionableSlot-machine-attribute} 
-\item[\AdAttr{PartitionableSlot}:] For SMP machines,
-a boolean value identifying that this slot may be partitioned.
-%
 \index{ClassAd machine attribute!SlotID}
 \item[\AdAttr{SlotID}:] For SMP machines, the integer
 that identifies the slot.
@@ -640,6 +654,12 @@ name="slotX@full.hostname"
 For non-SMP machines with one slot, the value will be 1.
 \Note This attribute was added in HTCondor version 6.9.3.
 For older versions of HTCondor, see \AdAttr{VirtualMachineID} below.
+%
+\index{ClassAd machine attribute!SlotType}
+\label{SlotType-machine-attribute} 
+\item[\AdAttr{SlotType}:] For SMP machines with partitionable slots,
+the partitionable slot will have this attribute set to \AdStr{Partitionable},
+and all dynamic slots will have this attribute set to \AdStr{Dynamic}.
 %
 \index{ClassAd machine attribute!SlotWeight}
 \item[\AdAttr{SlotWeight}:]
@@ -1138,8 +1158,77 @@ a string representing the manufacturer's version number.
 \index{ClassAd machine attribute (for GPU resources)!<name>RuntimeVersion}
 \item[\AdAttr{<name>RuntimeVersion}:] For CUDA devices,
 a string representing the manufacturer's version number.
+\end{description}
+
+The following attributes are advertised for a machine in which
+partitionable slot preemption is enabled.
+
+\begin{description}
+\index{ClassAd machine attribute (for pslot preemption)!ChildAccountingGroup}
+\item[\AdAttr{ChildAccountingGroup}:] 
+A ClassAd list containing the values of the \Attr{AccountingGroup}
+attribute for each dynamic slot of the partitionable slot.
+
+\index{ClassAd machine attribute (for pslot preemption)!ChildActivity}
+\item[\AdAttr{ChildActivity}:] 
+A ClassAd list containing the values of the \Attr{Activity} 
+attribute for each dynamic slot of the partitionable slot.
+
+\index{ClassAd machine attribute (for pslot preemption)!ChildCpus}
+\item[\AdAttr{ChildCpus}:]
+A ClassAd list containing the values of the \Attr{Cpus} 
+attribute for each dynamic slot of the partitionable slot.
+
+\index{ClassAd machine attribute (for pslot preemption)!ChildCurrentRank}
+\item[\AdAttr{ChildCurrentRank}:] 
+A ClassAd list containing the values of the \Attr{CurrentRank} 
+attribute for each dynamic slot of the partitionable slot.
+
+\index{ClassAd machine attribute (for pslot preemption)!ChildEnteredCurrentState}
+\item[\AdAttr{ChildEnteredCurrentState}:] 
+A ClassAd list containing the values of the \Attr{EnteredCurrentState} 
+attribute for each dynamic slot of the partitionable slot.
+
+\index{ClassAd machine attribute (for pslot preemption)!ChildMemory}
+\item[\AdAttr{ChildMemory}:] 
+A ClassAd list containing the values of the \Attr{Memory} 
+attribute for each dynamic slot of the partitionable slot.
+
+\index{ClassAd machine attribute (for pslot preemption)!ChildName}
+\item[\AdAttr{ChildName}:] 
+A ClassAd list containing the values of the \Attr{Name} 
+attribute for each dynamic slot of the partitionable slot.
+
+\index{ClassAd machine attribute (for pslot preemption)!ChildRemoteOwner}
+\item[\AdAttr{ChildRemoteOwner}:] 
+A ClassAd list containing the values of the \Attr{RemoteOwner} 
+attribute for each dynamic slot of the partitionable slot.
+
+\index{ClassAd machine attribute (for pslot preemption)!ChildRemoteUser}
+\item[\AdAttr{ChildRemoteUser}:] 
+A ClassAd list containing the values of the \Attr{RemoteUser} 
+attribute for each dynamic slot of the partitionable slot.
+
+\index{ClassAd machine attribute (for pslot preemption)!ChildRetirementTimeRemaining}
+\item[\AdAttr{ChildRetirementTimeRemaining}:] 
+A ClassAd list containing the values of the \Attr{RetirementTimeRemaining} 
+attribute for each dynamic slot of the partitionable slot.
+
+\index{ClassAd machine attribute (for pslot preemption)!ChildState}
+\item[\AdAttr{ChildState}:] 
+A ClassAd list containing the values of the \Attr{State} 
+attribute for each dynamic slot of the partitionable slot.
+
+\index{ClassAd machine attribute (for pslot preemption)!PslotRollupInformation}
+\item[\AdAttr{PslotRollupInformation}:] 
+A boolean value set to \Expr{True} in both the partitionable and dynamic slots,
+when configuration variable \MacroNI{ADVERTISE\_PSLOT\_ROLLUP\_INFORMATION}
+is \Expr{True},
+such that the \Condor{negotiator} knows when partitionable slot preemption 
+is possible and can directly preempt a dynamic slot when appropriate.
 
 \end{description}
+
 
 Finally, the single attribute, 
 \Attr{CurrentTime}, is defined by the ClassAd

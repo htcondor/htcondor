@@ -13,11 +13,11 @@ Vars B nodename = "$(JOB)"
 Job C job_dagman_abort-B-node-fail.cmd
 Vars C nodename = "$(JOB)"
 Script Post C job_dagman_abort-B-script.pl
+Abort-dag-on C 5 return 1
+Retry C 3
 
 Job D job_dagman_abort-B-node-fail.cmd
 Vars D nodename = "$(JOB)"
-
-Abort-dag-on C 5 return 1
 
 PARENT A CHILD B
 PARENT B CHILD C D

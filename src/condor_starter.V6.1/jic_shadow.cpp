@@ -775,7 +775,11 @@ JICShadow::notifyJobExit( int exit_status, int reason, UserProc*
 			if (job_universe != CONDOR_UNIVERSE_PARALLEL)
 			{
 				job_cleanup_disconnected = true;
-				return false;
+					// If we're doing a fast shutdown, ignore any failures
+					// in talking to the shadow.
+				if ( !fast_exit ) {
+					return false;
+				}
 			}
 		}
 	}
@@ -1890,12 +1894,12 @@ JICShadow::recordDelayedUpdate( const std::string &name, const classad::ExprTree
 			m_delayed_update_attrs.end(), name);
 		if (it == m_delayed_update_attrs.end())
 		{
+			if (m_delayed_update_attrs.size() >= 50)
+			{
+				dprintf(D_ALWAYS, "Ignoring update for %s because 50 attributes have already been set.\n", name.c_str());
+				return false;
+			}
 			m_delayed_update_attrs.push_back(name);
-		}
-		if (m_delayed_update_attrs.size() > 50)
-		{
-			dprintf(D_ALWAYS, "Ignoring update for %s because 50 attributes have already been set.\n", name.c_str());
-			return false;
 		}
 		// Note that the ClassAd takes ownership of the copy.
 		dprintf(D_FULLDEBUG, "Got a delayed update for attribute %s.\n", name.c_str());
@@ -2035,8 +2039,10 @@ bool
 JICShadow::periodicJobUpdate( ClassAd* update_ad, bool insure_update )
 {
 	bool r1, r2;
-	r1 = JobInfoCommunicator::periodicJobUpdate(update_ad, insure_update);
-	r2 = updateShadow(update_ad, insure_update);
+	// call updateShadow first, because this may have the side effect of clearing
+	// the m_delayed_update_attrs and we want to make sure that the shadow gets to see them.
+	r1 = updateShadow(update_ad, insure_update);
+	r2 = JobInfoCommunicator::periodicJobUpdate(update_ad, insure_update);
 	return (r1 && r2);
 }
 
@@ -2210,9 +2216,17 @@ JICShadow::syscall_sock_handler(Stream *)
 	// the shadow - should that fail, updateShadow() will do
 	// all the right stuff like invoking syscall_sock_disconnect() etc.
 	dprintf(D_ALWAYS,
-		"Connection to shadow may be lost, will test by sending an update\n");
-	updateShadow(NULL);
-	return TRUE;
+		"Connection to shadow may be lost, will test by sending whoami request.\n");
+	char buff[32];
+	if ( REMOTE_CONDOR_whoami( sizeof(buff), buff ) <= 0 ) {
+		// Failed to send whoami request to the shadow.  Since the shadow
+		// never returns failure for this pseudo call (if our buffer is
+		// large enough), we assume
+		// we failed to communicate with the shadow.  Close up the
+		// socket and wait for a reconnect.
+		syscall_sock_disconnect();
+	}
+	return KEEP_STREAM;
 }
 
 
@@ -2223,6 +2237,8 @@ JICShadow::job_lease_expired()
 	  This method is invoked by a daemoncore timer, which is set
 	  to fire ATTR_JOB_LEASE_DURATION seconds after the syscall_sock disappears.
 	*/
+
+	dprintf( D_ALWAYS, "No reconnect from shadow for %d seconds, aborting job execution!\n", (int)(time(NULL) - syscall_sock_lost_time) );
 
 	// A few sanity checks...
 	ASSERT(syscall_sock_lost_time > 0);

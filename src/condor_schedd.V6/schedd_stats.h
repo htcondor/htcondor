@@ -119,7 +119,7 @@ typedef struct ScheddStatistics : public ScheddJobCounters {
    stats_entry_abs<int> JobsRestartReconnectsAttempting;
    // How many reconnect attempts ended with the shadow exiting without
    // telling the schedd whether the reconnect succeeded.
-   stats_entry_abs<int> JobsRestartReconnectsUnknown;
+   stats_entry_abs<int> JobsRestartReconnectsInterrupted;
    // How much cumulative job runtime was lost due to failure to
    // reconnect to running jobs.
    stats_histogram<time_t> JobsRestartReconnectsBadput;
@@ -191,6 +191,8 @@ public:
 
    // add an entry in the pools hash (by pre), if by==true, also add an entry in the by hash
    bool Enable(const char * pre, const char * trig, bool stats_by_trig_value=false, time_t lifetime=0);
+   bool Contains(const char * pre) { return pools.exists(pre) == 0; }
+   ScheddOtherStats * Lookup(const char * pre) { ScheddOtherStats * po = NULL; pools.lookup(pre, po); return po; }
    bool DisableAll();
    bool RemoveDisabled();
    bool AnyEnabled();

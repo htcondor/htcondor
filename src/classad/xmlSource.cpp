@@ -336,17 +336,29 @@ ParseNumberOrString(XMLLexer::TagID tag_id)
 		Value value;
 		if (tag_id == XMLLexer::tagID_Integer) {
 			long long number;
-			sscanf(token.text.c_str(), "%lld", &number);
-			value.SetIntegerValue(number);
+			char * pend;
+			const char * pnum = token.text.c_str();
+			number = strtoll(pnum, &pend, 10);
+			if ( ! number && (pend == pnum)) {
+				value.SetErrorValue();
+			} else {
+				value.SetIntegerValue(number);
+			}
 		}
 		else if (tag_id == XMLLexer::tagID_Real) {
 			double real;
-            real = strtod(token.text.c_str(), NULL);
-            value.SetRealValue(real);
-        }
+			char * pend;
+			const char * pnum = token.text.c_str();
+			real = strtod(pnum, &pend);
+			if (pend == pnum) {
+				value.SetErrorValue();
+			} else {
+				value.SetRealValue(real);
+			}
+		}
 		else {        // its a string
 			bool validStr = true;
-			token.text += " ";
+			//token.text.push_back('\0'); // force an explicit null terminator (because that's that the normal lexer does.)
 			convert_escapes(token.text, validStr );
 			if(!validStr) {  // invalid string because it had /0 escape sequence
 				return NULL;

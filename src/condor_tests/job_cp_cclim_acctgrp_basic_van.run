@@ -223,7 +223,6 @@ CondorTest::RegisterExited($testname, \&exit_callback);
 CondorTest::RegisterExitedSuccess($testname, \&exit_callback);
 CondorTest::RegisterAbort($testname, \&exit_callback);
 
-CondorTest::EndTest();
 
 if (CondorTest::RunTest($testname, $submit_filename, 0)) {
     CondorTest::debug("$testname: SUCCESS\n",1);
@@ -231,3 +230,6 @@ if (CondorTest::RunTest($testname, $submit_filename, 0)) {
 } else {
     die "$testname: CondorTest::RunTest() failed\n";
 }
+
+
+

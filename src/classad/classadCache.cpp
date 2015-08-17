@@ -46,17 +46,19 @@ protected:
 	unsigned long m_MissCount;	///< Miss Counter
 	unsigned long m_MissCheck;	///< Miss Counter
 	unsigned long m_RemovalCount;	///< Useful to see churn
+	bool          m_destroyed;
 	
 public:
 	ClassAdCache()
+	: m_HitCount(0)
+	, m_MissCount(0)
+	, m_MissCheck(0)
+	, m_RemovalCount(0)
+	, m_destroyed(false)
 	{ 
-	  m_HitCount = 0; 
-	  m_MissCount = 0;
-	  m_MissCheck = 0;
-	  m_RemovalCount = 0;
 	};
 	
-	virtual ~ClassAdCache(){;};
+	virtual ~ClassAdCache(){ m_destroyed = true; };
 
 	///< cache's a local attribute->ExpTree
 #ifndef WIN32
@@ -125,6 +127,10 @@ public:
 	///< clears a cache key
 	bool flush(const std::string & szName, const std::string & szValue)
 	{
+		// this can get called after the cache has been destroyed, and that will cause an abort in MSVC11
+		// and possibly other places as well.
+		if (m_destroyed) return false;
+
 	  cache_iterator itr = m_Cache.find(szName);
 
       if (itr != m_Cache.end())

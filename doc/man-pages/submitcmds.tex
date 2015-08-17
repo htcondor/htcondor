@@ -499,6 +499,7 @@ one submit description file.
 \label{man-condor-submit-universe}
 \item[universe = $<$vanilla \Bar\ standard \Bar\ scheduler
 \Bar\ local \Bar\ grid \Bar\ java \Bar\ vm \Bar\ docker$>$]
+%%\Bar\ local \Bar\ grid \Bar\ java \Bar\ vm$>$]
 Specifies which HTCondor universe to use when running this job.  The HTCondor
 universe specifies an HTCondor execution environment.
 
@@ -532,7 +533,7 @@ The \SubmitCmdNI{java} universe is for programs written to the Java Virtual Mach
 The \SubmitCmdNI{vm} universe facilitates the execution of a virtual
 machine.
 
-The \SubmitCmdNI{docker} universe \Dots.
+The \SubmitCmdNI{docker} universe runs a docker container as an HTCondor job.
 
 \end{description} 
 
@@ -2913,13 +2914,12 @@ submission.
 
 %%%%%%%%%%%%%%%%%%%
 %% docker_image
-%%%%%%%%%%%%%%%%%%%
+% %%%%%%%%%%%%%%%%%%%
 
 \index{submit commands!docker\_image}
 \label{condor-submit-docker-image}
 \item[docker\_image = $<$ image-name $>$] Defines the name of the Docker
-image that is the basis for the container within which the HTCondor job
-will run.
+image that is the basis for the docker container.
 
 \end{description} 
 
@@ -2967,11 +2967,27 @@ The resources are presumed to have concurrency limits placed upon them,
 thereby limiting the number of concurrent jobs in execution which
 need the named resource.
 Commas and space characters delimit the items in the list.
-Each item in the list may specify a numerical value identifying the integer
-number of resources required for the job.
+Each item in the list is a string that identifies the limit,
+or it is a ClassAd expression that evaluates to a string, 
+and it is evaluated in the context of machine ClassAd 
+being considered as a match.
+Each item in the list also may specify a numerical value identifying the 
+integer number of resources required for the job.
 The syntax follows the resource name by a colon character (\verb@:@)
 and the numerical value.
 Details on concurrency limits are in the HTCondor Administrator's manual.
+
+%%%%%%%%%%%%%%%%%%%
+%% concurrency_limits_expr
+%%%%%%%%%%%%%%%%%%%
+\index{submit commands!concurrency\_limits\_expr}
+\label{condor-submit-concurrency-limits}
+\item[concurrency\_limits\_expr = $<$ClassAd String Expression$>$] 
+A ClassAd expression that represents the list of resources that this job needs
+after evaluation.
+The ClassAd expression may specify machine ClassAd attributes that
+are evaluated against a matched machine.
+After evaluation, the list sets \SubmitCmdNI{concurrency\_limits}.
 
 %%%%%%%%%%%%%%%%%%%
 %% copy_to_spool 
@@ -3718,13 +3734,13 @@ Macros can be defined by lines in the form of
 \end{verbatim} 
 Two pre-defined macros are supplied by the submit description file parser.
 The
-\MacroU{Cluster} macro supplies the value of the
+\MacroUNI{Cluster}  or \MacroUNI{ClusterId} macro supplies the value of the
 \index{ClassAd job attribute!ClusterId}
 \index{ClusterId!job ClassAd attribute}
 \index{job ID!cluster identifier}
 \Attr{ClusterId} job
 ClassAd attribute, and the
-\MacroU{Process} macro supplies the value of the
+\MacroUNI{Process}  or \MacroUNI{ProcId} macro supplies the value of the
 \Attr{ProcId} job
 ClassAd attribute.
 These macros are
@@ -3733,7 +3749,7 @@ etc., for clusters with lots of jobs, and/or could be used to supply an
 HTCondor process with its own cluster and process numbers on the command
 line.
 
-The \MacroU{Node} macro is defined for parallel universe jobs,
+The \MacroUNI{Node} macro is defined for parallel universe jobs,
 and is especially relevant for MPI applications.
 It is a unique value assigned for the duration of the job
 that essentially identifies the machine (slot) on which a program is

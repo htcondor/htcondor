@@ -694,7 +694,7 @@ void writeSubmitFile(/* const */ SubmitDagDeepOptions &deepOpts,
 	const char *defaultRemoveExpr = "( ExitSignal =?= 11 || "
 				"(ExitCode =!= UNDEFINED && ExitCode >=0 && ExitCode <= 2))";
 	MyString removeExpr(defaultRemoveExpr);
-	char *tmpRemoveExpr = param("DAGMAN_ON_EXIT_REMOVE");
+	char *tmpRemoveExpr = param( "DAGMAN_ON_EXIT_REMOVE" );
 	if ( tmpRemoveExpr ) {
 		removeExpr = tmpRemoveExpr;
 		free(tmpRemoveExpr);
@@ -723,6 +723,9 @@ void writeSubmitFile(/* const */ SubmitDagDeepOptions &deepOpts,
 		args.AppendArg(deepOpts.strDagmanPath.Value());
 	}
 
+		// -p 0 causes DAGMan to run w/o a command socket (see gittrac #4987).
+	args.AppendArg("-p");
+	args.AppendArg("0");
 	args.AppendArg("-f");
 	args.AppendArg("-l");
 	args.AppendArg(".");

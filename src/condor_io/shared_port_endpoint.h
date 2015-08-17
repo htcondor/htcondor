@@ -144,6 +144,7 @@ class SharedPortEndpoint: Service {
 	std::vector<Sinful> m_remote_addrs;
 	MyString m_local_addr;
 	int m_retry_remote_addr_timer;
+	int m_max_accepts;
 #ifdef WIN32
 	//Lock for accessing the queue that holds onto the received data structures.
 	CRITICAL_SECTION received_lock;

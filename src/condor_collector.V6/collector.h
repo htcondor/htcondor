@@ -161,8 +161,10 @@ protected:
 	static TrackTotals* normalTotals;
 	static int submittorRunningJobs;
 	static int submittorIdleJobs;
+	static int submittorNumAds;
 
 	static int machinesTotal,machinesUnclaimed,machinesClaimed,machinesOwner;
+	static int startdNumAds;
 
 	static CollectorUniverseStats ustatsAccum;
 	static CollectorUniverseStats ustatsMonthly;

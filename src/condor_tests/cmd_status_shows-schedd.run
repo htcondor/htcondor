@@ -29,7 +29,7 @@ sub IDLE{1};
 sub HELD{5};
 sub RUNNING{2};
 
-my $testname = "cmd_status_shows-mmaster";
+my $testname = "cmd_status_shows-schedd";
 my $debuglevel = 2;
 
 print scalar localtime() . "\n";
@@ -42,7 +42,7 @@ if($mypid == 0) {
 
 CondorTest::debug("Master PID is $mypid\n",$debuglevel);
 
-my $outsource = CondorCmdStatusWorker2::SetUp("cmd_status_shows-mmaster");
+my $outsource = CondorCmdStatusWorker2::SetUp("cmd_status_shows-schedd");
 CondorUtils::fullchomp($outsource);
 
 if($outsource eq "") {

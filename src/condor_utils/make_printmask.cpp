@@ -255,7 +255,8 @@ int SetAttrListPrintMaskFromStream (
 	SimpleInputStream & stream, // in: fetch lines from this stream until nextline() returns NULL
 	const CustomFormatFnTable & FnTable, // in: table of custom output functions for SELECT
 	AttrListPrintMask & mask, // out: columns and headers set in SELECT
-	printmask_headerfooter_t & headfoot, // out, header and footer flags set in SELECT or SUMMARY
+	printmask_headerfooter_t & headfoot, // out: header and footer flags set in SELECT or SUMMARY
+	printmask_aggregation_t & aggregate, // out: aggregation mode in SELECT
 	std::vector<GroupByKeyInfo> & group_by, // out: ordered set of attributes/expressions in GROUP BY
 	std::string & where_expression, // out: classad expression from WHERE
 	StringList & attrs, // out ClassAd attributes referenced in mask or group_by outputs
@@ -274,6 +275,7 @@ int SetAttrListPrintMaskFromStream (
 	mask.SetAutoSep(prowpre, pcolpre, pcolsux, prowsux);
 
 	error_message.clear();
+	aggregate = PR_NO_AGGREGATION;
 
 	printmask_headerfooter_t usingHeadFoot = (printmask_headerfooter_t)(HF_CUSTOM | HF_NOSUMMARY);
 	section_t sect = SELECT;
@@ -286,7 +288,18 @@ int SetAttrListPrintMaskFromStream (
 
 		if (toke.matches("SELECT"))	{
 			while (toke.next()) {
-				if (toke.matches("BARE")) {
+				if (toke.matches("FROM")) {
+					if (toke.next()) {
+						if (toke.matches("AUTOCLUSTER")) {
+							aggregate = PR_FROM_AUTOCLUSTER;
+						} else {
+							std::string aa; toke.copy_token(aa);
+							formatstr_cat(error_message, "Warning: Unknown header argument %s for SELECT FROM\n", aa.c_str());
+						}
+					}
+				} else if (toke.matches("UNIQUE")) {
+					aggregate = PR_COUNT_UNIQUE;
+				} else if (toke.matches("BARE")) {
 					usingHeadFoot = HF_BARE;
 				} else if (toke.matches("NOTITLE")) {
 					usingHeadFoot = (printmask_headerfooter_t)(usingHeadFoot | HF_NOTITLE);
@@ -324,7 +337,7 @@ int SetAttrListPrintMaskFromStream (
 			usingHeadFoot = (printmask_headerfooter_t)(usingHeadFoot & ~HF_NOSUMMARY);
 			while (toke.next()) {
 				if (toke.matches("STANDARD")) {
-					attrs.insert(ATTR_JOB_STATUS);
+					// attrs.insert(ATTR_JOB_STATUS);
 				} else if (toke.matches("NONE")) {
 					usingHeadFoot = (printmask_headerfooter_t)(usingHeadFoot | HF_NOSUMMARY);
 				} else {

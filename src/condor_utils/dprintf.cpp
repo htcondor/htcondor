@@ -514,7 +514,7 @@ _dprintf_global_func(int cat_and_flags, int hdr_flags, DebugHeaderInfo & info, c
 							for (PCHAR p = pszFile; *p; ++p) {
 								if (*p == '/' || *p == '\\') {
 									pszFile = p+1;
-									if ((p[1] == 's') && (p[2] == 'r') && (p[3]=='c') && (p[4]='\\' || p[4] == '/')){
+									if ((p[1] == 's') && (p[2] == 'r') && (p[3]=='c') && (p[4]=='\\' || p[4] == '/')){
 										pszFile = p+5; break;
 									}
 								}
@@ -689,8 +689,10 @@ static time_t _condor_dprintf_gettime(DebugHeaderInfo &info, unsigned int hdr_fl
 		static void (WINAPI*get_precise_time)(unsigned long long * ft) = NULL;
 		static BOOLEAN (WINAPI* time_to_1970)(unsigned long long * ft, unsigned long * epoch_time);
 		if ( ! check_for_precise) {
-			*(FARPROC*)&get_precise_time = GetProcAddress(GetModuleHandle("Kernel32.dll"), "GetSystemTimePreciseAsFileTime");
-			*(FARPROC*)&time_to_1970 = GetProcAddress(GetModuleHandle("ntdll.dll"), "RtlTimeToSecondsSince1970");
+			HMODULE hmod = GetModuleHandle("Kernel32.dll");
+			if (hmod) { *(FARPROC*)&get_precise_time = GetProcAddress(hmod, "GetSystemTimePreciseAsFileTime"); }
+			hmod = GetModuleHandle("ntdll.dll");
+			if (hmod) { *(FARPROC*)&time_to_1970 = GetProcAddress(hmod, "RtlTimeToSecondsSince1970"); }
 			check_for_precise = true;
 		}
 		unsigned long long nanos = 0;
@@ -846,6 +848,7 @@ _condor_dprintf_va( int cat_and_flags, DPF_IDENT ident, const char* fmt, va_list
 		_condor_dprintf_critsec = 
 			(CRITICAL_SECTION *)malloc(sizeof(CRITICAL_SECTION));
 		ASSERT( _condor_dprintf_critsec );
+		MSC_SUPPRESS_WARNING(28125) // suppress warning: InitCritSec should be called inside a try/except block.
 		InitializeCriticalSection(_condor_dprintf_critsec);
 	}
 	EnterCriticalSection(_condor_dprintf_critsec);
@@ -2063,10 +2066,6 @@ static int
 lock_or_mutex_file(int fd, LOCK_TYPE type, int do_block)
 {
 	int result = -1;
-	//char * filename = NULL;
-	int filename_len;
-	char *ptr = NULL;
-	char mutex_name[MAX_PATH];
 
 		// If we're trying to lock NUL, just return success early
 	if (strcasecmp(DebugLock, "NUL") == 0) {
@@ -2089,6 +2088,36 @@ lock_or_mutex_file(int fd, LOCK_TYPE type, int do_block)
 
 		// first, open a handle to the mutex if we haven't already
 	if ( debug_win32_mutex == NULL && DebugLock ) {
+#if 1
+		char mutex_name[MAX_PATH];
+
+		// start the mutex name with Global\ so that it works properly on systems running Terminal Services
+		strcpy(mutex_name, "Global\\");
+		size_t ix = strlen(mutex_name);
+
+		// Create the mutex name based upon the lock file
+		// specified in the config file.
+		const char * ptr = DebugLock;
+
+		// Note: Win32 will not allow backslashes in the name,
+		// so get convert them to / as we copy. Also
+		// The mutex name is case-sensitive, but the NTFS filesystem
+		// is not.  So to avoid user confusion, we lowercase it
+		while (*ptr) {
+			char ch = *ptr++;
+			if (ch == '\\') ch = '/';
+			else if (isupper(ch)) ch = _tolower(ch);
+			mutex_name[ix++] = ch;
+			if (ix+1 >= COUNTOF(mutex_name))
+				break;
+		}
+		mutex_name[ix] = 0;
+#else
+		//char * filename = NULL;
+		int filename_len;
+		char *ptr = NULL;
+		char mutex_name[MAX_PATH];
+
 			// Create the mutex name based upon the lock file
 			// specified in the config file.  				
 		char * filename = strdup(DebugLock);
@@ -2108,6 +2137,7 @@ lock_or_mutex_file(int fd, LOCK_TYPE type, int do_block)
 		snprintf(mutex_name,MAX_PATH,"Global\\%s",filename);
 		free(filename);
 		filename = NULL;
+#endif
 			// Call CreateMutex - this will create the mutex if it does
 			// not exist, or just open it if it already does.  Note that
 			// the handle to the mutex is automatically closed by the

@@ -35,6 +35,7 @@ sub RUNNING{2};
 my $firstappend_condor_config = '
 	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
 	NUM_CPUS = 2
+	MachineMaxVacateTime = 10
 	NEGOTIATOR_INTERVAL = 5
 ';
 

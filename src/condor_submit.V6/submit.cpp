@@ -76,6 +76,7 @@
 #include "condor_holdcodes.h"
 #include "condor_url.h"
 #include "condor_version.h"
+#include "ConcurrencyLimitUtils.h"
 #include "submit_internal.h"
 
 #include "list.h"
@@ -100,8 +101,13 @@ static unsigned int hashFunction( const MyString& );
 HashTable<MyString,int> CheckFilesRead( 577, hashFunction ); 
 HashTable<MyString,int> CheckFilesWrite( 577, hashFunction ); 
 
+#ifdef PLUS_ATTRIBS_IN_CLUSTER_AD
+#else
 StringList NoClusterCheckAttrs;
+#endif
 ClassAd *ClusterAd = NULL;
+
+time_t submit_time = 0;
 
 // Explicit template instantiation
 
@@ -140,6 +146,9 @@ bool	SubmitFromStdin = false;
 int		WarnOnUnusedMacros = 1;
 int		DisableFileChecks = 0;
 int		DashDryRun = 0;
+int		DashMaxJobs = 0;	 // maximum number of jobs to create before generating an error
+int		DashMaxClusters = 0; // maximum number of clusters to create before generating an error.
+const char * DashDryRunOutName = NULL;
 int		DumpSubmitHash = 0;
 int		JobDisableFileChecks = 0;
 bool	RequestMemoryIsZero = false;
@@ -150,10 +159,11 @@ bool	already_warned_requirements_disk = false;
 int		MaxProcsPerCluster;
 int	  ClusterId = -1;
 int	  ProcId = -1;
-int	  JobUniverse;
+int	  JobUniverse = CONDOR_UNIVERSE_MIN;
 char *JobGridType = NULL;
 int		Remote=0;
-int		ClusterCreated = FALSE;
+int		ClustersCreated = 0;
+int		JobsCreated = 0;
 int		ActiveQueueConnection = FALSE;
 bool    nice_user_setting = false;
 bool	NewExecutable = false;
@@ -194,6 +204,15 @@ bool VMHardwareVT = false;
 bool vm_need_fsdomain = false;
 bool xen_has_file_to_be_transferred = false;
 
+time_t get_submit_time()
+{
+	if ( ! submit_time) {
+		submit_time = time(0);
+	}
+	return submit_time;
+}
+
+#define time(a) poison_time(a)
 
 //
 // The default polling interval for the schedd
@@ -280,6 +299,7 @@ static MACRO_DEF_ITEM SubmitMacroDefaults[] = {
 	{ "$STRICT.TRUE", &StrictTrueMetaDef },
 	{ "ARCH",      &ArchMacroDef },
 	{ "Cluster",   &ClusterMacroDef },
+	{ "ClusterId", &ClusterMacroDef },
 	{ "IsLinux",   &IsLinuxMacroDef },
 	{ "IsWindows", &IsWinMacroDef },
 	{ "ItemIndex", &RowMacroDef },
@@ -289,6 +309,7 @@ static MACRO_DEF_ITEM SubmitMacroDefaults[] = {
 	{ "OPSYSMAJORVER",   &OpsysMajorVerMacroDef },
 	{ "OPSYSVER",        &OpsysVerMacroDef },
 	{ "Process",   &ProcessMacroDef },
+	{ "ProcId",    &ProcessMacroDef },
 	{ "Row",       &RowMacroDef },
 	{ "SPOOL",     &SpoolMacroDef },
 	{ "Step",      &StepMacroDef },
@@ -308,6 +329,7 @@ static MACRO_SET SubmitMacroSet = {
 
 // these are used to keep track of the source of various macros in the table.
 const MACRO_SOURCE DefaultMacro = { true, false, 1, -2, -1, -2 }; // for macros set by default
+const MACRO_SOURCE ArgumentMacro = { true, false, 2, -2, -1, -2 }; // for macros set by command line
 const MACRO_SOURCE LiveMacro = { true, false, 3, -2, -1, -2 };    // for macros use as queue loop variables
 MACRO_SOURCE FileMacroSource = { false, false, 0, 0, -1, -2 };
 
@@ -316,7 +338,7 @@ MACRO_SOURCE FileMacroSource = { false, false, 0, 0, -1, -2 };
 //
 // Dump ClassAd to file junk
 //
-MyString	DumpFileName;
+const char * DumpFileName = NULL;
 bool		DumpClassAdToFile = false;
 FILE		*DumpFile = NULL;
 bool		DumpFileIsStdout = 0;
@@ -492,6 +514,7 @@ const char	*LoadProfile = "load_profile";
 
 // Concurrency Limit parameters
 const char    *ConcurrencyLimits = "concurrency_limits";
+const char    *ConcurrencyLimitsExpr = "concurrency_limits_expr";
 
 // Accounting Group parameters
 const char* AcctGroup = "accounting_group";
@@ -655,7 +678,11 @@ void InsertJobExpr (const char *expr);
 void InsertJobExpr (const MyString &expr);
 void InsertJobExprInt(const char * name, int val);
 void InsertJobExprString(const char * name, const char * val);
+#ifdef PLUS_ATTRIBS_IN_CLUSTER_AD
+bool IsNoClusterAttr(const char * name);
+#else
 void SetNoClusterAttr(const char * name);
+#endif
 void	check_umask();
 void setupAuthentication();
 void	SetPeriodicHoldCheck(void);
@@ -696,6 +723,7 @@ extern "C" {
 int SetSyscalls( int foo );
 int DoCleanup(int,int,const char*);
 }
+
 
 // global struct that we use to keep track of where we are so we
 // can give useful error messages.
@@ -974,7 +1002,8 @@ init_job_ad()
 		SetTargetTypeName (*job, STARTD_ADTYPE);
 	}
 
-	buffer.formatstr( "%s = %d", ATTR_Q_DATE, (int)time ((time_t *) 0));
+	// all jobs should end up with the same qdate, so we only query time once.
+	buffer.formatstr( "%s = %d", ATTR_Q_DATE, (int)get_submit_time());
 	InsertJobExpr (buffer);
 
 	buffer.formatstr( "%s = 0", ATTR_COMPLETION_DATE);
@@ -1161,11 +1190,30 @@ main( int argc, const char *argv[] )
 				dprintf_set_tool_debug("TOOL", 0);
 			} else if (is_dash_arg_colon_prefix(ptr[0], "dry-run", &pcolon, 3)) {
 				DashDryRun = 1;
+				bool needs_file_arg = true;
 				if (pcolon) { 
+					needs_file_arg = false;
 					int opt = atoi(pcolon+1);
 					if (opt > 1) DashDryRun =  opt;
-					else if (MATCH == strcmp(pcolon+1, "hash")) DumpSubmitHash = 1;
+					else if (MATCH == strcmp(pcolon+1, "hash")) {
+						DumpSubmitHash = 1;
+						needs_file_arg = true;
+					}
 				}
+				if (needs_file_arg) {
+					if (DumpClassAdToFile) {
+						fprintf(stderr, "%s: -dry-run <file> and -dump <file> cannot be used together\n", MyName);
+						exit(1);
+					}
+					const char * pfilearg = ptr[1];
+					if ( ! pfilearg || (*pfilearg == '-' && (MATCH != strcmp(pfilearg,"-"))) ) {
+						fprintf( stderr, "%s: -dry-run requires another argument\n", MyName );
+						exit(1);
+					}
+					DashDryRunOutName = pfilearg;
+					--argc; ++ptr;
+				}
+
 			} else if (is_dash_arg_prefix(ptr[0], "spool", 1)) {
 				Remote++;
 				DisableFileChecks = 1;
@@ -1259,6 +1307,26 @@ main( int argc, const char *argv[] )
 					}
 					break;
 				}
+			} else if (is_dash_arg_prefix (ptr[0], "maxjobs", 3)) {
+				if( !(--argc) || !(*(++ptr)) ) {
+					fprintf( stderr, "%s: -maxjobs requires another argument\n",
+							 MyName );
+					exit(1);
+				}
+				// read the next argument to set DashMaxJobs as an integer and
+				// set it to the job limit.
+				char *endptr;
+				DashMaxJobs = strtol(*ptr, &endptr, 10);
+				if (*endptr != '\0') {
+					fprintf(stderr, "Error: Unable to convert argument (%s) to a number for -maxjobs.\n", *ptr);
+					exit(1);
+				}
+				if (DashMaxJobs < -1) {
+					fprintf(stderr, "Error: %d is not a valid for -maxjobs.\n", DashMaxJobs);
+					exit(1);
+				}
+			} else if (is_dash_arg_prefix (ptr[0], "single-cluster", 3)) {
+				DashMaxClusters = 1;
 			} else if (is_dash_arg_prefix( ptr[0], "password", 1)) {
 				if( !(--argc) || !(*(++ptr)) ) {
 					fprintf( stderr, "%s: -password requires another argument\n",
@@ -1293,6 +1361,10 @@ main( int argc, const char *argv[] )
 				// -- why not? if you set it to warn on unused macros in the 
 				// config file, there should be a way to turn it off
 			} else if (is_dash_arg_prefix(ptr[0], "dump", 2)) {
+				if (DashDryRunOutName) {
+					fprintf(stderr, "%s: -dump <file> and -dry-run <file> cannot be used together\n", MyName);
+					exit(1);
+				}
 				if( !(--argc) || !(*(++ptr)) ) {
 					fprintf( stderr, "%s: -dump requires another argument\n",
 						MyName );
@@ -1300,8 +1372,7 @@ main( int argc, const char *argv[] )
 				}
 				DumpFileName = *ptr;
 				DumpClassAdToFile = true;
-				if (DumpFileName == "-") 
-					DumpFileIsStdout = true;
+				DumpFileIsStdout = (MATCH == strcmp(DumpFileName,"-"));
 				// if we are dumping to a file, we never want to check file permissions
 				// as this would initiate some schedd communication
 				DisableFileChecks = 1;
@@ -1323,6 +1394,23 @@ main( int argc, const char *argv[] )
 				usage();
 				exit( 1 );
 			}
+		} else if (strchr(ptr[0],'=')) {
+			// loose arguments that contain '=' are attrib=value pairs.
+			// so we split on the = into name and value and insert into the submit hashtable
+			// we do this BEFORE parsing the submit file so that they can be referred to by submit.
+			std::string name(ptr[0]);
+			size_t ix = name.find('=');
+			std::string value(name.substr(ix+1));
+			name = name.substr(0,ix);
+			trim(name); trim(value);
+			if ( ! name.empty() && name[1] == '+') {
+				name = "MY." + name.substr(1);
+			}
+			if (name.empty() || ! is_valid_param_name(name.c_str())) {
+				fprintf( stderr, "%s: invalid attribute name '%s' for attrib=value assigment\n", MyName, name.c_str() );
+				exit(1);
+			}
+			insert(name.c_str(), value.c_str(), SubmitMacroSet, ArgumentMacro);
 		} else {
 			cmd_file = *ptr;
 		}
@@ -1448,6 +1536,18 @@ main( int argc, const char *argv[] )
 		}
 	}
 
+	if ( ! cmd_file && (DashDryRunOutName || DumpFileName)) {
+		const char * dump_name = DumpFileName ? DumpFileName : DashDryRunOutName;
+		fprintf( stderr,
+			"\nERROR: No submit filename was provided, and '%s'\n"
+			"  was given as the output filename for -dump or -dry-run. Was this intended?\n"
+			"  To to avoid confusing the output file with the submit file when using these\n"
+			"  commands, an explicit submit filename argument must be given. You can use -\n"
+			"  as the submit filename argument to read from stdin.\n",
+			dump_name);
+		exit(1);
+	}
+
 	// open submit file
 	if ( ! cmd_file || SubmitFromStdin) {
 		// no file specified, read from stdin
@@ -1467,16 +1567,16 @@ main( int argc, const char *argv[] )
 	_EXCEPT_Cleanup = DoCleanup;
 
 	IsFirstExecutable = true;
-	init_job_ad();	
+	init_job_ad();
 
 	if ( !DumpClassAdToFile ) {
 		if ( ! SubmitFromStdin && ! terse) {
-			fprintf(stdout, "Submitting job(s)");
+			fprintf(stdout, DashDryRun ? "Dry-Run job(s)" : "Submitting job(s)");
 		}
 	} else if ( ! DumpFileIsStdout ) {
 		// get the file we are to dump the ClassAds to...
 		if ( ! terse) { fprintf(stdout, "Storing job ClassAd(s)"); }
-		if( (DumpFile = safe_fopen_wrapper_follow(DumpFileName.Value(),"w")) == NULL ) {
+		if( (DumpFile = safe_fopen_wrapper_follow(DumpFileName,"w")) == NULL ) {
 			fprintf( stderr, "\nERROR: Failed to open file to dump ClassAds into (%s)\n",
 				strerror(errno));
 			exit(1);
@@ -1547,7 +1647,7 @@ main( int argc, const char *argv[] )
 			for (i=0; i <= CurrentSubmitInfo; i++) {
 				if (SubmitInfo[i].cluster != this_cluster) {
 					if (this_cluster != -1) {
-						fprintf(stdout, "%d job(s) submitted to cluster %d.\n", job_count, this_cluster);
+						fprintf(stdout, "%d job(s) %s to cluster %d.\n", job_count, DashDryRun ? "dry-run" : "submitted", this_cluster);
 						job_count = 0;
 					}
 					this_cluster = SubmitInfo[i].cluster;
@@ -1555,7 +1655,7 @@ main( int argc, const char *argv[] )
 				job_count += SubmitInfo[i].lastjob - SubmitInfo[i].firstjob + 1;
 			}
 			if (this_cluster != -1) {
-				fprintf(stdout, "%d job(s) submitted to cluster %d.\n", job_count, this_cluster);
+				fprintf(stdout, "%d job(s) %s to cluster %d.\n", job_count, DashDryRun ? "dry-run" : "submitted", this_cluster);
 			}
 		}
 	}
@@ -1660,6 +1760,9 @@ main( int argc, const char *argv[] )
 	for (i=0;i<JobAdsArrayLen;i++) {
 		delete JobAdsArray[i];
 	}
+	delete job;
+	delete ClusterAd;
+	delete MySchedd;
 
 	/*	print all of the parameters that were not actually expanded/used 
 		in the submit file. but not if we never queued any jobs. since
@@ -2166,7 +2269,7 @@ SetExecutable()
 	// $$(arch).$$(opsys) are specified  (note that if we are simply
 	// dumping the class-ad to a file, we won't actually transfer
 	// or do anything [nothing that follows will affect the ad])
-	if ( !strstr(ename,"$$") && transfer_it && !DumpClassAdToFile ) {
+	if ( transfer_it && !DumpClassAdToFile && !strstr(ename,"$$") ) {
 
 		StatInfo si(ename);
 		if ( SINoFile == si.Error () ) {
@@ -2253,8 +2356,9 @@ SetExecutable()
 
 	}
 
-	free(ename);
+	if (ename) free(ename);
 	free(copySpool);
+	free( IckptName );
 }
 
 void
@@ -3027,7 +3131,13 @@ SetTransferFiles()
 	macro_value = condor_param( TransferInputFiles, "TransferInputFiles" ) ;
 	TransferInputSizeKb = 0;
 	if( macro_value ) {
-		input_file_list.initializeFromString( macro_value );
+		// as a special case transferinputfiles="" will produce an empty list of input files, not a syntax error
+		// PRAGMA_REMIND("replace this special case with code that correctly parses any input wrapped in double quotes")
+		if (macro_value[0] == '"' && macro_value[1] == '"' && macro_value[2] == 0) {
+			input_file_list.clearAll();
+		} else {
+			input_file_list.initializeFromString( macro_value );
+		}
 	}
 
 
@@ -3079,7 +3189,14 @@ SetTransferFiles()
 								"TransferOutputFiles" ); 
 	if( macro_value ) 
 	{
-		output_file_list.initializeFromString(macro_value);
+		// as a special case transferoutputfiles="" will produce an empty list of output files, not a syntax error
+		// PRAGMA_REMIND("replace this special case with code that correctly parses any input wrapped in double quotes")
+		if (macro_value[0] == '"' && macro_value[1] == '"' && macro_value[2] == 0) {
+			output_file_list.clearAll();
+			output_files = ATTR_TRANSFER_OUTPUT_FILES " = \"\"";
+		} else {
+			output_file_list.initializeFromString(macro_value);
+		}
 		output_file_list.rewind();
 		count = 0;
 		while ( (tmp_ptr=output_file_list.next()) ) {
@@ -3891,9 +4008,12 @@ SetJobStatus()
 	char *hold = condor_param( Hold, NULL );
 	MyString buffer;
 
+#ifdef PLUS_ATTRIBS_IN_CLUSTER_AD
+#else
 	// we will be inserting "JobStatus = <something>" into the jobad, but we DON'T
 	// want that to be written into the cluster ad, it must always go into the proc ad.
 	SetNoClusterAttr(ATTR_JOB_STATUS);
+#endif
 
 	if( hold && (hold[0] == 'T' || hold[0] == 't') ) {
 		if ( Remote ) {
@@ -3930,7 +4050,7 @@ SetJobStatus()
 	}
 
 	buffer.formatstr( "%s = %d", ATTR_ENTERED_CURRENT_STATUS,
-					(int)time(0) );
+					(int)get_submit_time() );
 	InsertJobExpr( buffer );
 
 	if( hold ) {
@@ -4474,6 +4594,7 @@ SetLogNotes()
 	LogNotesVal = condor_param( LogNotesCommand, ATTR_SUBMIT_EVENT_NOTES );
 	if ( LogNotesVal ) {
 		InsertJobExprString( ATTR_SUBMIT_EVENT_NOTES, LogNotesVal );
+		free( LogNotesVal );
 	}
 }
 
@@ -4483,6 +4604,7 @@ SetUserNotes()
 	UserNotesVal = condor_param( UserNotesCommand, ATTR_SUBMIT_EVENT_USER_NOTES );
 	if ( UserNotesVal ) {
 		InsertJobExprString( ATTR_SUBMIT_EVENT_USER_NOTES, UserNotesVal );
+		free( UserNotesVal );
 	}
 }
 
@@ -4494,6 +4616,7 @@ SetStackSize()
 	if( StackSizeVal ) {
 		(void) buffer.formatstr( "%s = %s", ATTR_STACK_SIZE, StackSizeVal);
 		InsertJobExpr(buffer);
+		free( StackSizeVal );
 	}
 }
 
@@ -5420,7 +5543,7 @@ SetUserLog()
 			const char* ulog_pcc = full_path(current_userlog.c_str());
 			if(ulog_pcc) {
 				std::string ulog(ulog_pcc);
-				if ( !DumpClassAdToFile ) {
+				if ( !DumpClassAdToFile && !DashDryRun ) {
 					// check that the log is a valid path
 					if ( !DisableFileChecks ) {
 						FILE* test = safe_fopen_wrapper_follow(ulog.c_str(), "a+", 0664);
@@ -5541,7 +5664,7 @@ SetJobLease( void )
 				  reconnectable jobs can survive schedd crashes and
 				  the like...
 				*/
-			lease_duration = 20 * 60;
+			lease_duration = 40 * 60;
 		} else {
 				// not defined and can't reconnect, we're done.
 			return;
@@ -5997,7 +6120,7 @@ SetGridParams()
 		free( tmp );
 	}
 
-	if( (tmp = condor_param( EC2IamProfileName, ATTR_EC2_IAM_PROFILE_ARN )) ) {
+	if( (tmp = condor_param( EC2IamProfileName, ATTR_EC2_IAM_PROFILE_NAME )) ) {
 		if( bIamProfilePresent ) {
 			fprintf( stderr, "\nWARNING: EC2 job(s) contain both %s and %s; ignoring %s.\n", EC2IamProfileArn, EC2IamProfileName, EC2IamProfileName );
 		} else {
@@ -6817,33 +6940,8 @@ int parse_queue_args (
 
 	char *p = pqargs;    // pointer to current char while scanning
 	char *ptok = NULL;   // pointer to start of current token in pqargs when scanning for keyword
-#if 1
 	static const struct _qtoken foreach_tokens[] = { {"in", foreach_in }, {"from", foreach_from}, {"matching", foreach_matching} };
 	p = queue_token_scan(p, foreach_tokens, COUNTOF(foreach_tokens), &ptok, foreach_mode, true);
-#else
-	char tokenbuf[sizeof("matching")+1] = ""; // temporary buffer to hold a potential keyword while scanning
-	int  maxtok = (int)sizeof(tokenbuf)-1;
-	int  cchtok = 0;
-
-	// scan for a keyword from, in, or matching. the keywords must be surrounded by whitespace
-	while (*p) {
-		int ch = *p;
-		if (isspace(ch) || ch == '(') {
-			if (cchtok >= 2 && cchtok <= maxtok) {
-				tokenbuf[cchtok] = 0;
-				if (MATCH == strcasecmp(tokenbuf, "in")) { foreach_mode = foreach_in; break; }
-				else if (MATCH == strcasecmp(tokenbuf, "from")) { foreach_mode = foreach_from; break; }
-				else if (MATCH == strcasecmp(tokenbuf, "matching")) { foreach_mode = foreach_matching; break; }
-			}
-			cchtok = 0;
-		} else {
-			if ( ! cchtok) { ptok = p; }
-			if (cchtok < maxtok) { tokenbuf[cchtok] = ch; }
-			++cchtok;
-		}
-		++p;
-	}
-#endif
 
 	// for now assume that p points to the end of the queue count expression.
 	char * pnum_end = p;
@@ -6915,6 +7013,7 @@ int parse_queue_args (
 			// find on the current line, and then set the filename to "<" to tell the caller to read
 			// the remainder from the submit file.
 			++plist;
+			while (isspace(*plist)) ++plist;
 			if (*plist) {
 				if (foreach_mode == foreach_from) {
 					items.append(plist);
@@ -6924,12 +7023,15 @@ int parse_queue_args (
 			}
 			items_filename = "<";
 		} else if (foreach_mode == foreach_from) {
+			while (isspace(*plist)) ++plist;
 			if (one_line_list) {
 				items.append(plist);
 			} else {
 				items_filename = plist;
+				items_filename.trim();
 			}
 		} else {
+			while (isspace(*plist)) ++plist;
 			items.initializeFromString(plist);
 		}
 
@@ -6986,6 +7088,7 @@ int parse_queue_args (
 	return 0;
 }
 
+
 // Check to see if this is a queue statement, if it is, return a pointer to the queue arguments.
 // 
 const char * is_queue_statement(const char * line)
@@ -7015,10 +7118,18 @@ int SpecialSubmitParse(void* pv, MACRO_SOURCE& source, MACRO_SET& macro_set, cha
 
 	// Check to see if this is a queue statement.
 	//
-	char * pqargs = const_cast<char*>(is_queue_statement(line));
-	if (pqargs) {
+	char * queue_args = const_cast<char*>(is_queue_statement(line));
+	if (queue_args) {
 
 		GotQueueCommand = true;
+
+		auto_free_ptr expanded_queue_args(expand_macro(queue_args, SubmitMacroSet));
+		char * pqargs = expanded_queue_args.ptr();
+		ASSERT(pqargs);
+
+		if (DashDryRun && DumpSubmitHash) {
+			fprintf(stdout, "\n----- Queue arguments -----\nSpecified: %s\nExpanded : %s", queue_args, pqargs);
+		}
 
 		if ( ! queueCommandLine.empty() && fp_submit != NULL) {
 			errmsg = "-queue argument conflicts with queue statement in submit file";
@@ -7213,7 +7324,7 @@ int SpecialSubmitParse(void* pv, MACRO_SOURCE& source, MACRO_SET& macro_set, cha
 					return rval;
 			}
 
-			rval = queue_begin(vars, NewExecutable); // called before iterating items
+			rval = queue_begin(vars, NewExecutable || (ClusterId < 0)); // called before iterating items
 			if (rval < 0)
 				return rval;
 
@@ -7347,6 +7458,33 @@ set_condor_param( const char *name, const char *value )
 	insert(name, value, SubmitMacroSet, DefaultMacro);
 }
 
+#ifdef PLUS_ATTRIBS_IN_CLUSTER_AD
+  // To facilitate processing of job status from the
+  // job_queue.log, the ATTR_JOB_STATUS attribute should not
+  // be stored within the cluster ad. Instead, it should be
+  // directly part of each job ad. This change represents an
+  // increase in size for the job_queue.log initially, but
+  // the ATTR_JOB_STATUS is guaranteed to be specialized for
+  // each job so the two approaches converge. -mattf 1 June 09
+  // tj 2015 - it also wastes space in the schedd, so we should probably stop doign this. 
+static const char * no_cluster_attrs[] = {
+	ATTR_JOB_STATUS,
+};
+bool IsNoClusterAttr(const char * name) {
+	for (size_t ii = 0; ii < COUNTOF(no_cluster_attrs); ++ii) {
+		if (MATCH == strcasecmp(name, no_cluster_attrs[ii]))
+			return true;
+	}
+	return false;
+}
+#else
+void SetNoClusterAttr(const char * name)
+{
+	NoClusterCheckAttrs.append( name );
+}
+#endif
+
+
 // stuff a live value into submit's hashtable.
 // IT IS UP TO THE CALLER TO INSURE THAT live_value IS VALID FOR THE LIFE OF THE HASHTABLE
 // this function is intended for use during queue iteration to stuff
@@ -7426,7 +7564,19 @@ int queue_connect()
 			if (DumpFileIsStdout) {
 				SimQ->Connect(stdout, false);
 			} else if (DashDryRun) {
-				SimQ->Connect(stderr, false);
+				FILE* dryfile = NULL;
+				bool  free_it = false;
+				if (MATCH == strcmp(DashDryRunOutName, "-")) {
+					dryfile = stdout; free_it = false;
+				} else {
+					dryfile = safe_fopen_wrapper_follow(DashDryRunOutName,"w");
+					if ( ! dryfile) {
+						fprintf( stderr, "\nERROR: Failed to open file -dry-run output file (%s)\n", strerror(errno));
+						exit(1);
+					}
+					free_it = true;
+				}
+				SimQ->Connect(dryfile, free_it);
 			} else {
 				SimQ->Connect(DumpFile, true);
 				DumpFile = NULL;
@@ -7451,8 +7601,7 @@ int queue_begin(StringList & vars, bool new_cluster)
 	// unconditionally, the others we must set only when not already set by the user.
 	set_live_submit_variable(Cluster, ClusterString);
 	set_live_submit_variable(Process, ProcessString);
-	//if ( ! find_macro_item("Step", SubmitMacroSet)) { set_live_submit_variable("Step", StepString); }
-
+	
 	vars.rewind();
 	char * var;
 	while ((var = vars.next())) { set_live_submit_variable(var, EmptyItemString, false); }
@@ -7463,6 +7612,12 @@ int queue_begin(StringList & vars, bool new_cluster)
 	}
 
 	if (new_cluster) {
+		// if we have already created the maximum number of clusters, error out now.
+		if (DashMaxClusters > 0 && ClustersCreated >= DashMaxClusters) {
+			fprintf(stderr, "\nERROR: Number of submitted clusters would exceed %d and -single-cluster was specified\n", DashMaxClusters);
+			exit(1);
+		}
+
 		if ((ClusterId = MyQ->get_NewCluster()) < 0) {
 			fprintf(stderr, "\nERROR: Failed to create cluster\n");
 			if ( ClusterId == -2 ) {
@@ -7471,6 +7626,8 @@ int queue_begin(StringList & vars, bool new_cluster)
 			}
 			exit(1);
 		}
+
+		++ClustersCreated;
 
 		// We only need to call init_job_ad the second time we see
 		// a new Executable, because we call init_job_ad() in main()
@@ -7481,7 +7638,7 @@ int queue_begin(StringList & vars, bool new_cluster)
 	}
 
 	if (DashDryRun && DumpSubmitHash) {
-		fprintf(stdout, "\n-------------- submit hash at queue_begin -----------\n");
+		fprintf(stdout, "\n----- submit hash at queue begin -----\n");
 		int flags = (DumpSubmitHash & 8) ? HASHITER_SHOW_DUPS : 0;
 		HASHITER it = hash_iter_begin(SubmitMacroSet, flags);
 		for ( ; ! hash_iter_done(it); hash_iter_next(it)) {
@@ -7489,10 +7646,10 @@ int queue_begin(StringList & vars, bool new_cluster)
 			if (key && key[0] == '$') continue; // dont dump meta params.
 			const char * val = hash_iter_value(it);
 			//fprintf(stdout, "%s%s = %s\n", it.is_def ? "d " : "  ", key, val ? val : "NULL");
-			fprintf(stdout, "%s = %s\n", key, val ? val : "NULL");
+			fprintf(stdout, "  %s = %s\n", key, val ? val : "NULL");
 		}
 		hash_iter_delete(&it);
-		fprintf(stdout, "\n");
+		fprintf(stdout, "-----\n");
 	}
 
 	return 0;
@@ -7509,7 +7666,7 @@ int queue_item(int num, StringList & vars, char * item, int item_index, int opti
 		return -1;
 
 	int rval = 0; // default to success (if num == 0 we will return this)
-	bool check_empty = options && (QUEUE_OPT_WARN_EMPTY_FIELDS|QUEUE_OPT_FAIL_EMPTY_FIELDS);
+	bool check_empty = options & (QUEUE_OPT_WARN_EMPTY_FIELDS|QUEUE_OPT_FAIL_EMPTY_FIELDS);
 	bool fail_empty = options & QUEUE_OPT_FAIL_EMPTY_FIELDS;
 
 	// UseStrict = condor_param_bool("Submit.IsStrict", "Submit_IsStrict", UseStrict);
@@ -7563,9 +7720,23 @@ int queue_item(int num, StringList & vars, char * item, int item_index, int opti
 		}
 	}
 
+	if (DashDryRun && DumpSubmitHash) {
+		fprintf(stdout, "----- submit hash changes for ItemIndex = %d -----\n", item_index);
+		char * var;
+		vars.rewind();
+		while ((var = vars.next())) {
+			MACRO_ITEM* pitem = find_macro_item(var, SubmitMacroSet);
+			fprintf (stdout, "  %s = %s\n", var, pitem ? pitem->raw_value : "");
+		}
+		fprintf(stdout, "-----\n");
+	}
+
 	/* queue num jobs */
 	for (int ii = 0; ii < num; ++ii) {
+	#ifdef PLUS_ATTRIBS_IN_CLUSTER_AD
+	#else
 		NoClusterCheckAttrs.clearAll();
+	#endif
 		ErrContext.step = ii;
 
 		if ( ClusterId == -1 ) {
@@ -7573,6 +7744,14 @@ int queue_item(int num, StringList & vars, char * item, int item_index, int opti
 						"specifying an executable\n" );
 			exit(1);
 		}
+
+		// if we have already created the maximum number of jobs, error out now.
+		if (DashMaxJobs > 0 && JobsCreated >= DashMaxJobs) {
+			fprintf(stderr, "\nERROR: Number of submitted jobs would exceed -maxjobs (%d)\n", DashMaxJobs);
+			DoCleanup(0,0,NULL);
+			exit(1);
+		}
+
 		ProcId = MyQ->get_NewProc (ClusterId);
 
 		if ( ProcId < 0 ) {
@@ -7580,6 +7759,12 @@ int queue_item(int num, StringList & vars, char * item, int item_index, int opti
 			if ( ProcId == -2 ) {
 				fprintf(stderr,
 				"Number of submitted jobs would exceed MAX_JOBS_SUBMITTED\n");
+			} else if( ProcId == -3 ) {
+				fprintf(stderr,
+				"Number of submitted jobs would exceed MAX_JOBS_PER_OWNER\n");
+			} else if( ProcId == -4 ) {
+				fprintf(stderr,
+				"Number of submitted jobs would exceed MAX_JOBS_PER_SUBMISSION\n");
 			}
 			DoCleanup(0,0,NULL);
 			exit(1);
@@ -7606,11 +7791,12 @@ int queue_item(int num, StringList & vars, char * item, int item_index, int opti
 #endif
 		SetIWD();		// must be called very early
 
-		if (NewExecutable) {
-			NewExecutable = false;
+		if (NewExecutable || (JobUniverse == CONDOR_UNIVERSE_MIN)) {
 			SetUniverse();
-			SetExecutable();
 		}
+		SetExecutable();
+		NewExecutable = false;
+
 		SetDescription();
 		SetMachineCount();
 
@@ -7728,12 +7914,12 @@ int queue_item(int num, StringList & vars, char * item, int item_index, int opti
 			exit(1);
 		}
 
-		ClusterCreated = TRUE;
+		++JobsCreated;
 	
 		if (verbose && ! DumpFileIsStdout) {
 			fprintf(stdout, "\n** Proc %d.%d:\n", ClusterId, ProcId);
 			fPrintAd (stdout, *job);
-		} else if ( ! terse && ! DumpFileIsStdout) {
+		} else if ( ! terse && ! DumpFileIsStdout && ! DumpSubmitHash) {
 			fprintf(stdout, ".");
 		}
 
@@ -7759,11 +7945,17 @@ int queue_item(int num, StringList & vars, char * item, int item_index, int opti
 
 			// Remove attributes that were forced into the proc 0 ad
 			// from our copy of the cluster ad.
+		#ifdef PLUS_ATTRIBS_IN_CLUSTER_AD
+			for (size_t ii = 0; ii < COUNTOF(no_cluster_attrs); ++ii) {
+				ClusterAd->Delete(no_cluster_attrs[ii]);
+			}
+		#else
 			const char *attr;
 			NoClusterCheckAttrs.rewind();
 			while ( (attr = NoClusterCheckAttrs.next()) ) {
 				ClusterAd->Delete( attr );
 			}
+		#endif
 		}
 
 		if ( job_ad_saved == false ) {
@@ -8321,9 +8513,7 @@ check_directory( const char* pathname, int /*flags*/, int err )
 void
 check_open( const char *name, int flags )
 {
-	int		fd;
 	MyString strPathname;
-	char *temp;
 	StringList *list;
 
 		/* The user can disable file checks on a per job basis, in such a
@@ -8358,17 +8548,27 @@ check_open( const char *name, int flags )
 
 	/* If this file as marked as append-only, do not truncate it here */
 
-	temp = condor_param( AppendFiles, ATTR_APPEND_FILES );
-	if(temp) {
-		list = new StringList(temp, ",");
+	auto_free_ptr append_files(condor_param( AppendFiles, ATTR_APPEND_FILES ));
+	if (append_files.ptr()) {
+		list = new StringList(append_files.ptr(), ",");
 		if(list->contains_withwildcard(name)) {
 			flags = flags & ~O_TRUNC;
 		}
 		delete list;
 	}
 
+	bool dryrun_create = DashDryRun && ((flags & (O_CREAT|O_TRUNC)) != 0);
+	if (DashDryRun) {
+		flags = flags & ~(O_CREAT|O_TRUNC);
+	}
+
 	if ( !DisableFileChecks ) {
-		if( (fd=safe_open_wrapper_follow(strPathname.Value(),flags | O_LARGEFILE,0664)) < 0 ) {
+		int fd = safe_open_wrapper_follow(strPathname.Value(),flags | O_LARGEFILE,0664);
+		if ((fd < 0) && (errno == ENOENT) && dryrun_create) {
+			// we are doing dry-run, and the input flags were to create/truncate a file
+			// we stripped the create/truncate flags, now we treate a 'file does not exist' error
+			// as success since O_CREAT would have made it (probably).
+		} else if ( fd < 0 ) {
 			// note: Windows does not set errno to EISDIR for directories, instead you get back EACCESS (or ENOENT?)
 			if( (trailing_slash || errno == EISDIR || errno == EACCES) &&
 	                   check_directory( strPathname.Value(), flags, errno ) ) {
@@ -8384,8 +8584,9 @@ check_open( const char *name, int flags )
 					 strPathname.Value(), flags, strerror( errno ) );
 			DoCleanup(0,0,NULL);
 			exit( 1 );
+		} else {
+			(void)close( fd );
 		}
-		(void)close( fd );
 	}
 
 	// Queue files for testing access if not already queued
@@ -8410,7 +8611,7 @@ check_open( const char *name, int flags )
 void
 usage()
 {
-	fprintf( stderr, "Usage: %s [options] [- | <submit-file>]\n", MyName );
+	fprintf( stderr, "Usage: %s [options] [<attrib>=<value>] [- | <submit-file>]\n", MyName );
 	fprintf( stderr, "    [options] are\n" );
 	fprintf( stderr, "\t-terse  \t\tDisplay terse output, jobid ranges only\n" );
 	fprintf( stderr, "\t-verbose\t\tDisplay verbose output, jobid and full job ClassAd\n" );
@@ -8420,8 +8621,10 @@ usage()
 	fprintf( stderr, "\t-queue <queue-opts>\tappend Queue statement to submit file before processing\n"
 					 "\t                   \t(submit file must not already have a Queue statement)\n" );
 	fprintf( stderr, "\t-disable\t\tdisable file permission checks\n" );
-	fprintf( stderr, "\t-dry-run\t\tprocess submit file and write ClassAd attributes to stderr\n"
+	fprintf( stderr, "\t-dry-run <filename>\tprocess submit file and write ClassAd attributes to <filename>\n"
 					 "\t        \t\tbut do not actually submit the job(s) to the SCHEDD\n" );
+	fprintf( stderr, "\t-maxjobs <maxjobs>\tDo not submit if number of jobs would exceed <maxjobs>.\n" );
+	fprintf( stderr, "\t-single-cluster\t\tDo not submit if more than one ClusterId is needed.\n" );
 	fprintf( stderr, "\t-unused\t\t\ttoggles unused or unexpanded macro warnings\n"
 					 "\t       \t\t\t(overrides config file; multiple -u flags ok)\n" );
 	//fprintf( stderr, "\t-force-mpi-universe\tAllow submission of obsolete MPI universe\n );
@@ -8441,7 +8644,9 @@ usage()
 	fprintf( stderr, "\t             \t\t<methods> is one of: stm_use_schedd_only\n" );
 	fprintf( stderr, "\t             \t\t                     stm_use_transferd\n" );
 
-	fprintf( stderr, "    If <submit-file> is omitted or is -, input is read from stdin.\n"
+	fprintf( stderr, "\t<attrib>=<value>\tSet <attrib>=<value> before reading the submit file.\n" );
+
+	fprintf( stderr, "\n    If <submit-file> is omitted or is -, input is read from stdin.\n"
 					 "    Use of - implies verbose output unless -terse is specified\n");
 }
 
@@ -8450,11 +8655,11 @@ extern "C" {
 int
 DoCleanup(int,int,const char*)
 {
-	if( ClusterCreated ) 
+	if( JobsCreated ) 
 	{
 		// TerminateCluster() may call EXCEPT() which in turn calls 
 		// DoCleanup().  This lead to infinite recursion which is bad.
-		ClusterCreated = 0;
+		JobsCreated = 0;
 		if ( ! ActiveQueueConnection) {
 			if (DumpClassAdToFile) {
 			} else {
@@ -8643,8 +8848,24 @@ SaveClassAd ()
 			retval = -1;
 		} else {
 			int tmpProcId = myprocid;
-			// Check each attribute against the version in the cluster ad.
-			// If the values match, don't add the attribute to the proc ad.
+			// IsNoClusterAttr tells us that an attribute should always be in the proc ad
+		#ifdef PLUS_ATTRIBS_IN_CLUSTER_AD
+			bool force_proc = IsNoClusterAttr(lhstr);
+			if ( ProcId > 0 ) {
+				// For all but the first proc, check each attribute against the value in the cluster ad.
+				// If the values match, don't add the attribute to this proc ad
+				if ( ! force_proc) {
+					ExprTree *cluster_tree = ClusterAd->LookupExpr( lhstr );
+					if ( cluster_tree && *tree == *cluster_tree ) {
+						continue;
+					}
+				}
+			} else {
+				if (force_proc) {
+					myprocid = ProcId;
+				}
+			}
+		#else
 			// NoClusterCheckAttrs is a list of attributes that should
 			// always go into the proc ad. For proc 0, this means
 			// inserting the attribute into the proc ad instead of the
@@ -8661,6 +8882,7 @@ SaveClassAd ()
 					myprocid = ProcId;
 				}
 			}
+		#endif
 
 			if( MyQ->set_Attribute(ClusterId, myprocid, lhstr, rhstr, setattrflags) == -1 ) {
 				if( setattrflags & SetAttribute_NoAck ) {
@@ -8750,10 +8972,6 @@ InsertJobExpr (const char *expr)
 	}
 }
 
-void SetNoClusterAttr(const char * name)
-{
-	NoClusterCheckAttrs.append( name );
-}
 
 void 
 InsertJobExprInt(const char * name, int val)
@@ -9176,13 +9394,35 @@ void
 SetConcurrencyLimits()
 {
 	MyString tmp = condor_param_mystring(ConcurrencyLimits, NULL);
+	MyString tmp2 = condor_param_mystring(ConcurrencyLimitsExpr, NULL);
 
 	if (!tmp.IsEmpty()) {
+		if (!tmp2.IsEmpty()) {
+			fprintf( stderr, "ERROR: %s and %s can't be used together\n",
+					 ConcurrencyLimits, ConcurrencyLimitsExpr );
+			exit( 1 );
+		}
 		char *str;
 
 		tmp.lower_case();
 
 		StringList list(tmp.Value());
+
+		char *limit;
+		list.rewind();
+		while ( (limit = list.next()) ) {
+			double increment;
+			char *limit_cpy = strdup( limit );
+
+			if ( !ParseConcurrencyLimit(limit_cpy, increment) ) {
+				fprintf( stderr,
+						 "\nERROR: Invalid concurrency limit '%s'\n",
+						 limit );
+				DoCleanup(0,0,NULL);
+				exit( 1 );
+			}
+			free( limit_cpy );
+		}
 
 		list.qsort();
 
@@ -9193,6 +9433,10 @@ SetConcurrencyLimits()
 
 			free(str);
 		}
+	} else if (!tmp2.IsEmpty()) {
+		std::string expr;
+		formatstr( expr, "%s = %s", ATTR_CONCURRENCY_LIMITS, tmp2.Value() );
+		InsertJobExpr( expr.c_str() );
 	}
 }
 

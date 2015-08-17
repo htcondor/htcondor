@@ -1,4 +1,6 @@
 
+#include "python_bindings_common.h"
+
 #include <boost/python.hpp>
 
 #include "old_boost.h"
@@ -27,6 +29,8 @@ BOOST_PYTHON_MODULE(htcondor)
     export_event_reader();
     export_log_reader();
 #endif
+    export_claim();
+    export_query_iterator();
 
     def("enable_classad_extensions", enable_classad_extensions, "Register the HTCondor-specific extensions to the ClassAd library.");
 }

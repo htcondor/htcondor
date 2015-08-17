@@ -670,6 +670,82 @@ SharedPortState::HandleFD(Stream *&s)
 
 	msg.msg_controllen = cmsg->cmsg_len;
 
+#if USE_ABSTRACT_DOMAIN_SOCKET
+	struct sockaddr_un addr;
+	socklen_t addrlen = sizeof(struct sockaddr_un);
+	if( -1 == getpeername( sock->get_file_desc(), (struct sockaddr *) & addr, & addrlen ) ) {
+		dprintf( D_AUDIT, *sock, "Failure while auditing connection from %s: unable to obtain domain socket peer address: %s\n",
+			m_sock->peer_addr().to_ip_and_port_string().c_str(),
+			strerror( errno ) );
+	} else if( addrlen <= sizeof( sa_family_t ) ) {
+		dprintf( D_AUDIT, *sock, "Failure while auditing connection from %s: unable to obtain domain socket peer address because domain socket peer is unnamed.\n",
+			m_sock->peer_addr().to_ip_and_port_string().c_str() );
+	} else if( addr.sun_path[0] != '\0' ) {
+		struct ucred cred;
+		socklen_t len = sizeof(struct ucred);
+		int rc = getsockopt( sock->get_file_desc(), SOL_SOCKET, SO_PEERCRED, & cred, & len );
+		if( rc == -1 ) {
+		dprintf( D_AUDIT, *sock, "Failure while auditing connection via %s from %s: unable to obtain domain socket's peer credentials: %s.\n",
+			addr.sun_path,
+			m_sock->peer_addr().to_ip_and_port_string().c_str(),
+			strerror( errno ) );
+		} else {
+			std::string procPath;
+			formatstr( procPath, "/proc/%d", cred.pid );
+
+			// Needs security review.
+			char procExe[1025];
+			std::string procExePath = procPath + "/exe";
+			ssize_t procExeLength = readlink( procExePath.c_str(), procExe, 1024 );
+			if( procExeLength == -1 ) {
+				strcpy( procExe, "(readlink failed)" );
+			} else if( 0 <= procExeLength && procExeLength <= 1024 ) {
+				procExe[procExeLength] = '\0';
+			} else {
+				procExe[1024] = '\0';
+				procExe[1023] = '.';
+				procExe[1022] = '.';
+				procExe[1021] = '.';
+			}
+
+			// Needs security review.
+			char procCmdLine[1025];
+			std::string procCmdLinePath = procPath + "/cmdline";
+			// No _follow, since the kernel doesn't create symlinks for this.
+			int pclFD = safe_open_no_create( procCmdLinePath.c_str(), O_RDONLY );
+			ssize_t procCmdLineLength = _condor_full_read( pclFD, & procCmdLine, 1024 );
+			if( procCmdLineLength == -1 ) {
+				strcpy( procCmdLine, "(unable to read cmdline)" );
+			} else if( 0 <= procCmdLineLength && procCmdLineLength <= 1024 ) {
+				procCmdLine[procCmdLineLength] = '\0';
+			} else {
+				procCmdLineLength = 1024;
+				procCmdLine[1024] = '\0';
+				procCmdLine[1023] = '.';
+				procCmdLine[1022] = '.';
+				procCmdLine[1021] = '.';
+			}
+			for( unsigned i = 0; i < procCmdLineLength; ++i ) {
+				if( procCmdLine[i] == '\0' ) {
+					if( procCmdLine[i+1] == '\0' ) { break; }
+					procCmdLine[i] = ' ';
+				}
+			}
+
+			// We can't use m_requested_by because it was supplied by the
+			// remote process (and therefore can't be trusted).
+			dprintf( D_AUDIT, *sock,
+				"Forwarding connection to PID = %d, UID = %d, GID = %d [executable '%s'; command line '%s'] via %s from %s.\n",
+				cred.pid, cred.uid, cred.gid,
+				procExe,
+				procCmdLine,
+				addr.sun_path,
+				m_sock->peer_addr().to_ip_and_port_string().c_str()
+			);
+		}
+	}
+#endif
+
 	if( sendmsg(sock->get_file_desc(),&msg,0) != 1 ) {
 		dprintf(D_ALWAYS,"SharedPortClient: failed to pass socket to %s%s: %s\n",
 			m_sock_name.c_str(),

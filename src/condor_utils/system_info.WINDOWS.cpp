@@ -515,6 +515,7 @@ BOOL SystemHandleInformation::Refresh()
 				pSysHandleInformation->Handles[i].HandleType = (WORD)(pSysHandleInformation->Handles[i].HandleType % 256);
 				
 				SYSTEM_HANDLE* ptmp = (SYSTEM_HANDLE*)VirtualAlloc ( NULL, sizeof ( SYSTEM_HANDLE ), MEM_COMMIT, PAGE_READWRITE );
+				ASSERT(ptmp);
 				memcpy ( ptmp, &pSysHandleInformation->Handles[i], sizeof ( SYSTEM_HANDLE ) );
 				m_HandleInfos.Append ( ptmp );
 

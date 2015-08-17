@@ -359,19 +359,14 @@ ScheddNegotiate::sendJobInfo(Sock *sock, bool just_sig_attrs)
 		return false;
 	}
 
-		// If schedd wants pslot preemption, advertise here
-	m_current_job_ad.Assign(ATTR_WANT_PSLOT_PREEMPTION,
-		param_boolean("ALLOW_PSLOT_PREEMPTION", false));
+		// Tell the negotiator that we understand pslot preemption
+	m_current_job_ad.Assign(ATTR_WANT_PSLOT_PREEMPTION, true);
 		
 		// request match diagnostics
 		// 0 = no match diagnostics
 		// 1 = match diagnostics string
 		// 2 = match diagnostics string decorated w/ autocluster + jobid
 	m_current_job_ad.Assign(ATTR_WANT_MATCH_DIAGNOSTICS, (int) 2);
-
-	m_current_job_ad.Assign(ATTR_WANT_PSLOT_PREEMPTION,
-		param_boolean("ALLOW_PSLOT_PREEMPTION", false));
-
 
 		// Send the ad to the negotiator
 	int putad_result = 0;
@@ -454,7 +449,7 @@ ScheddNegotiate::messageReceived( DCMessenger *messenger, Sock *sock )
 			if (ac && jobid) {
 				int rr_cluster, rr_proc;
 				m_current_auto_cluster_id = atoi(ac);
-				StrToProcId(jobid,rr_cluster,rr_proc);
+				StrIsProcId(jobid,rr_cluster,rr_proc,NULL);
 				if (rr_cluster != m_current_job_id.cluster || rr_proc != m_current_job_id.proc) {
 					m_current_resources_delivered = 0;
 				}

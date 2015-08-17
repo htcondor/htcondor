@@ -80,9 +80,11 @@ network_interface_to_ip(char const *interface_param_name,char const *interface_p
 	if (addr.from_ip_string(interface_pattern)) {
 		if(addr.is_ipv4()) {
 			ipv4 = interface_pattern;
+			ipbest = ipv4;
 		} else {
 			ASSERT(addr.is_ipv6());
 			ipv6 = interface_pattern;
+			ipbest = ipv6;
 		}
 		if( network_interface_ips ) {
 			network_interface_ips->insert( interface_pattern );
@@ -91,7 +93,8 @@ network_interface_to_ip(char const *interface_param_name,char const *interface_p
 		dprintf(D_HOSTNAME,"%s=%s, so choosing IP %s\n",
 				interface_param_name,
 				interface_pattern,
-				addr.to_ip_string().Value());
+				ipbest.c_str());
+				// addr.to_ip_string().Value());
 
 		return true;
 	}
@@ -186,8 +189,7 @@ network_interface_to_ip(char const *interface_param_name,char const *interface_p
 
 	if( best_overall < 0 ) {
 		dprintf(D_ALWAYS,"Failed to convert %s=%s to an IP address.\n",
-				interface_param_name ? interface_param_name : "",
-				interface_pattern);
+				interface_param_name, interface_pattern);
 		return false;
 	}
 
@@ -475,8 +477,8 @@ void ConvertDefaultIPToSocketIP(char const * attr_name, std::string & expr_strin
 		return;
 	}
 
-	std::string adSinfulString = expr_string.substr( string_start_pos, string_len) ;
-	std::string commandPortSinfulString = daemonCore->InfoCommandSinfulString();;
+	std::string adSinfulString = expr_string.substr( string_start_pos, string_len);
+	std::string commandPortSinfulString = daemonCore->InfoCommandSinfulString();
 
 	Sinful adSinful( adSinfulString.c_str() );
 	condor_sockaddr adSA;
@@ -485,10 +487,14 @@ void ConvertDefaultIPToSocketIP(char const * attr_name, std::string & expr_strin
 	bool rewrite_port = true;
 	if (commandPortSinfulString == adSinfulString)
 	{
-		// Fall through.
+		dprintf( D_NETWORK | D_VERBOSE, "Address rewriting: refused for attribute %s (%s): clients now choose addresses.\n", attr_name, expr_string.c_str() );
+		return;
 	}
 	else if (param_boolean("SHARED_PORT_ADDRESS_REWRITING", false))
 	{
+		//
+		// Wait a minute -- isn't this only supposed to happen in the collector?
+		//
 		const std::vector<Sinful> &commandSinfuls = daemonCore->InfoCommandSinfulStringsMyself();
 		dprintf(D_NETWORK|D_VERBOSE, "Address rewriting: considering %ld command socket sinfuls.\n", commandSinfuls.size());
 

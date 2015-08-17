@@ -100,42 +100,26 @@ float
 sysapi_load_avg_raw(void)
 {
     FILE	*proc;
-	struct utsname buf;
-	int		major, minor, patch;
 	float	short_avg, medium_avg, long_avg;
 
 	sysapi_internal_reconfig();
 
-	// Obtain the kernel version so that we know what /proc looks like..
-	if( uname(&buf) < 0 )  return -1;
-	sscanf(buf.release, "%d.%d.%d", &major, &minor, &patch);
-
 	// /proc/loadavg looks like:
 
+	
 	// Kernel Version 2.0.0:
 	// 0.03 0.03 0.09 2/42 15582
+	// 
+	// Update 6/1/2015:  Looks exactly the same in kernel 4.x
 
     proc=safe_fopen_wrapper_follow("/proc/loadavg","r",0644);
     if(!proc)
-	return -1;
+		return -1;
 
-	switch(major) {
-		case 1:
-		case 2:
-		case 3:
-    		if (fscanf(proc, "%f %f %f", &short_avg, &medium_avg, &long_avg) != 3) {
-				dprintf(D_ALWAYS, "Failed to fscanf 3 floats from /proc/loadavg\n");
-				fclose(proc);
-				return -1;
-			}
-			break;
-
-		default:
-			dprintf(D_ALWAYS, "/proc format unknown for kernel version %d.%d.%d\n",
-				major, minor, patch);
-    		fclose(proc);
-			return -1;
-			break;
+    if (fscanf(proc, "%f %f %f", &short_avg, &medium_avg, &long_avg) != 3) {
+		dprintf(D_ALWAYS, "Failed to fscanf 3 floats from /proc/loadavg\n");
+		fclose(proc);
+		return -1;
 	}
 
     fclose(proc);

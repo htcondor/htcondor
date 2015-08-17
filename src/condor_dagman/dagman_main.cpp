@@ -101,8 +101,8 @@ Dagman::Dagman() :
 	dag (NULL),
 	maxIdle (1000),
 	maxJobs (0),
-	maxPreScripts (0),
-	maxPostScripts (0),
+	maxPreScripts (20),
+	maxPostScripts (20),
 	paused (false),
 	condorSubmitExe (NULL),
 	condorRmExe (NULL),
@@ -233,8 +233,8 @@ Dagman::Config()
 	debug_printf( DEBUG_NORMAL, "DAGMAN_USER_LOG_SCAN_INTERVAL setting: %d\n",
 				m_user_log_scan_interval );
 
-	_defaultPriority = param_integer("DAGMAN_DEFAULT_PRIORITY", 0, INT_MIN,
-		INT_MAX, false);
+	_defaultPriority = param_integer( "DAGMAN_DEFAULT_PRIORITY",
+				_defaultPriority, INT_MIN, INT_MAX, false );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_DEFAULT_PRIORITY setting: %d\n",
 				_defaultPriority );
 
@@ -286,7 +286,7 @@ Dagman::Config()
 		// all of the previous stuff.
 	allow_events = param_integer("DAGMAN_ALLOW_EVENTS", allow_events);
 	debug_printf( DEBUG_NORMAL, "allow_events ("
-				"DAGMAN_IGNORE_DUPLICATE_JOB_EXECUTION, DAGMAN_ALLOW_EVENTS"
+				"DAGMAN_ALLOW_EVENTS"
 				") setting: %d\n", allow_events );
 
 		// ...end of event checking setup.
@@ -405,7 +405,7 @@ Dagman::Config()
 	debug_printf( DEBUG_NORMAL, "DAGMAN_WRITE_PARTIAL_RESCUE setting: %s\n",
 				_writePartialRescueDag ? "True" : "False" );
 
-	_defaultNodeLog = param( "DAGMAN_DEFAULT_NODE_LOG" );
+	param( _defaultNodeLog, "DAGMAN_DEFAULT_NODE_LOG" );
 	if ( _defaultNodeLog == "" ) {
 		_defaultNodeLog = "@(DAG_DIR)/@(DAG_FILE).nodes.log";
 	}
@@ -420,10 +420,13 @@ Dagman::Config()
 
 	_maxJobHolds = param_integer( "DAGMAN_MAX_JOB_HOLDS", _maxJobHolds,
 				0, 1000000 );
-	debug_printf( DEBUG_NORMAL, "DAGMAN_MAX_JOB_HOLDS setting: %d\n", _maxJobHolds );
+	debug_printf( DEBUG_NORMAL, "DAGMAN_MAX_JOB_HOLDS setting: %d\n",
+				_maxJobHolds );
 
-	_claim_hold_time = param_integer( "DAGMAN_HOLD_CLAIM_TIME", _claim_hold_time, 0, 3600);
-	debug_printf( DEBUG_NORMAL, "DAGMAN_HOLD_CLAIM_TIME setting: %d\n", _claim_hold_time );
+	_claim_hold_time = param_integer( "DAGMAN_HOLD_CLAIM_TIME",
+				_claim_hold_time, 0, 3600);
+	debug_printf( DEBUG_NORMAL, "DAGMAN_HOLD_CLAIM_TIME setting: %d\n",
+				_claim_hold_time );
 
 	char *debugSetting = param( "ALL_DEBUG" );
 	debug_printf( DEBUG_NORMAL, "ALL_DEBUG setting: %s\n",
@@ -523,11 +526,14 @@ void main_shutdown_rescue( int exitVal, Dag::dag_status dagStatus,
 
 		debug_printf( DEBUG_DEBUG_1, "We have %d running jobs to remove\n",
 					dagman.dag->NumJobsSubmitted() );
-		if( dagman.dag->NumJobsSubmitted() > 0 ) {
-			debug_printf( DEBUG_NORMAL, "Removing submitted jobs...\n" );
-			dagman.dag->RemoveRunningJobs( dagman.DAGManJobId,
-						removeCondorJobs, false );
-		}
+			// We just go ahead and do a condor_rm here even if we don't
+			// think we have any jobs running, because if we're aborting
+			// because of DAGMAN_PROHIBIT_MULTI_JOBS getting triggered,
+			// we may have jobs in the queue even if we think we don't.
+			// (See gittrac #4960.) wenger 2015-04-22
+		debug_printf( DEBUG_NORMAL, "Removing submitted jobs...\n" );
+		dagman.dag->RemoveRunningJobs( dagman.DAGManJobId,
+					removeCondorJobs, false );
 		if ( dagman.dag->NumScriptsRunning() > 0 ) {
 			debug_printf( DEBUG_NORMAL, "Removing running scripts...\n" );
 			dagman.dag->RemoveRunningScripts();
@@ -936,7 +942,6 @@ void main_init (int argc, char ** const argv) {
 	//
 	// ...done checking arguments.
 	//
-
     debug_printf( DEBUG_VERBOSE, "DAG Lockfile will be written to %s\n",
                    lockFileName );
 	if ( dagman.dagFiles.number() == 1 ) {
@@ -1351,7 +1356,7 @@ Dagman::ResolveDefaultLog()
 
 	bool nfsLogIsError = param_boolean( "DAGMAN_LOG_ON_NFS_IS_ERROR", true );
 	if ( nfsLogIsError ) {
-		bool userlog_locking = param_boolean( "ENABLE_USERLOG_LOCKING", true );
+		bool userlog_locking = param_boolean( "ENABLE_USERLOG_LOCKING", false );
 		if ( userlog_locking ) {
 			bool locks_on_local = param_boolean( "CREATE_LOCKS_ON_LOCAL_DISK", true);
 			if ( locks_on_local ) {
@@ -1510,6 +1515,9 @@ void condor_event_timer () {
 	// DAG has failed -- dump rescue DAG.
 	//
     if( dagman.dag->DoneFailed( true ) ) {
+		debug_printf( DEBUG_QUIET,
+				  "ERROR: the following job(s) failed:\n" );
+		dagman.dag->PrintJobList( Job::STATUS_ERROR );
 		main_shutdown_rescue( EXIT_ERROR, dagman.dag->_dagStatus );
 		return;
 	}
@@ -1535,6 +1543,9 @@ void condor_event_timer () {
 			// if there is one.
 		debug_printf ( DEBUG_QUIET, "Exiting because DAG is halted "
 					"and no jobs or scripts are running\n" );
+		debug_printf( DEBUG_QUIET,
+				  "ERROR: the following job(s) failed:\n" );
+		dagman.dag->PrintJobList( Job::STATUS_ERROR );
 		main_shutdown_rescue( EXIT_ERROR, Dag::DAG_STATUS_HALTED );
 		return;
 	}

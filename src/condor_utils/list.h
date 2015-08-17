@@ -30,6 +30,7 @@
 	  IsEmpty		- return true if list is empty and false otherwise
 	  Number		- return the number of elements in the list
 	Scans
+	  First			- set scan pointer before beginning first obj in list, then advance scan pointer one obj & return ref or ptr to it
 	  Rewind		- set scan pointer before beginning first obj in list
 	  Next			- advance scan pointer one obj & return ref or ptr to it
 	  Current		- return ref or ptr to current object
@@ -61,6 +62,8 @@
 		Rewind - The scan pointer is moved to a position before the first
 			element in the list.
 		List - The list constructor places the scan in the "rewound" condition.
+		First - The First operator moves the scan pointer to the first element 
+			in the list and returns a pointer to that element.
 		Next - The next operator moves the scan pointer one element forward
 			and returns a pointer to or copy of the element at the new
 			location.
@@ -142,6 +145,7 @@ public:
 	ObjType *   Next ();
     bool        Next (ObjType   & obj);
     inline bool Next (ObjType * & obj) { return (obj = Next()) != NULL; }
+	inline ObjType* First() { Rewind(); return Next(); }
 
 	ObjType *   Head ( void );
     bool        Head (ObjType   & obj);

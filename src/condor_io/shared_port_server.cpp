@@ -133,7 +133,7 @@ SharedPortServer::PublishAddress()
 	}
 	char *adAddresses = commandAddressesSL.print_to_string();
 	if (adAddresses) {ad.InsertAttr(ATTR_SHARED_PORT_COMMAND_SINFULS, adAddresses);}
-	delete adAddresses;
+	free( adAddresses );
 
 	// Place some operational metrics into the daemon ad
 	ad.Assign("RequestsPendingCurrent",m_shared_port_client.get_currentPendingPassSocketCalls());

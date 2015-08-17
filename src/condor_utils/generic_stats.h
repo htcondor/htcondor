@@ -294,6 +294,8 @@ public:
          // if there is an existing buffer copy items from it to the new buffer
          int cCopy = 0;
          if (pbuf) {
+            MSC_SUPPRESS_WARNING_FOREVER(6385) // Read overrun. ms analyze claims p can have readable range of 0 here, which isn't possible.
+            MSC_SUPPRESS_WARNING_FOREVER(6386) // Write overrun. ms analyze claims p can have writable range of 0 here, which isn't possible.
             cCopy = MIN(cItems,cSize);
             for (int ix = 0; ix > 0 - cCopy; --ix)
                p[(ix+cCopy)%cSize] = (*this)[ix];
@@ -825,6 +827,7 @@ public:
 
    static const int PubValue = 1;
    static const int PubRecent = 2;
+   static const int PubDetailMask = 0x7C; // control visibility of internal structure, use when T is Probe
    static const int PubDebug = 0x80;
    static const int PubDecorateAttr = 0x100;
    static const int PubValueAndRecent = PubValue | PubRecent | PubDecorateAttr;
@@ -1123,7 +1126,7 @@ class Probe {
 public:
    Probe(int=0) 
       : Count(0)
-      , Max(std::numeric_limits<double>::min())
+      , Max(-std::numeric_limits<double>::max())
       , Min(std::numeric_limits<double>::max())
       , Sum(0.0)
       , SumSq(0.0) 
@@ -1164,6 +1167,11 @@ public:
 template <> void stats_entry_recent<Probe>::Publish(ClassAd& ad, const char * pattr, int flags) const;
 template <> void stats_entry_recent<Probe>::Unpublish(ClassAd& ad, const char * pattr) const;
 int ClassAdAssign(ClassAd & ad, const char * pattr, const Probe& probe);
+// detail mode must fit inside the stats_entry_recent<Probe>::PubDetailMask which is 0x7C, so we shift up by 2 bits
+const int ProbeDetailMode_Normal  = (0<<2); // show all 6 fields Count, Sum, Avg, Min, Max, Std
+const int ProbeDetailMode_Tot     = (1<<2); // show Sum as integer value without tag
+const int ProbeDetailMode_Brief   = (2<<2); // show Avg without tag, Min, Max
+const int ProbeDetailMode_RT_SUM  = (3<<2); // show runtime fields, Sum=Runtime, Count published without tag
 
 // --------------------------------------------------------------------
 //  statistcs probe for histogram data.

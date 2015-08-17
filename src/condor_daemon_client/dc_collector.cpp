@@ -28,6 +28,8 @@
 #include "condor_daemon_core.h"
 #include "dc_collector.h"
 
+#include <algorithm>
+
 std::map< std::string, Timeslice > DCCollector::blacklist;
 
 // Instantiate things
@@ -46,15 +48,10 @@ DCCollector::init( bool needs_reconfig )
 {
 	static long bootTime = 0;
 
-	pending_update_list = NULL;
 	update_rsock = NULL;
-	tcp_collector_host = NULL;
-	tcp_collector_addr = NULL;
-	tcp_collector_port = 0;
-	use_tcp = false;
+	use_tcp = true;
 	use_nonblocking_update = true;
-	udp_update_destination = NULL;
-	tcp_update_destination = NULL;
+	update_destination = NULL;
 
 	if (bootTime == 0) {
 		bootTime = time( NULL );
@@ -108,34 +105,15 @@ DCCollector::deepCopy( const DCCollector& copy )
 		  update_rsock works and TCP updates are still happy...
 		*/
 
-	if( tcp_collector_host ) {
-		delete [] tcp_collector_host;
-	}
-	tcp_collector_host = strnewp( copy.tcp_collector_host );
-
-	if( tcp_collector_addr ) {
-		delete [] tcp_collector_addr;
-	}
-	tcp_collector_addr = strnewp( copy.tcp_collector_addr );
-
-	tcp_collector_port = copy.tcp_collector_port;
-
 	use_tcp = copy.use_tcp;
 	use_nonblocking_update = copy.use_nonblocking_update;
 
 	up_type = copy.up_type;
 
-	if( udp_update_destination ) {
-        delete [] udp_update_destination;
+	if( update_destination ) {
+        delete [] update_destination;
     }
-	udp_update_destination = strnewp( copy.udp_update_destination );
-
-    if( tcp_update_destination ) {
-        delete [] tcp_update_destination;
-	}
-
-    tcp_update_destination = strnewp( copy.tcp_update_destination );
-    
+	update_destination = strnewp( copy.update_destination );
 
 	startTime = copy.startTime;
 
@@ -154,27 +132,6 @@ DCCollector::deepCopy( const DCCollector& copy )
 void
 DCCollector::reconfig( void )
 {
-	char* tmp;
-	tmp = param( "TCP_COLLECTOR_HOST" );
-	if( tmp ) {
-		use_tcp = true;
-		if( tcp_collector_host ) {
-			if( strcmp(tcp_collector_host, tmp) ) { 
-					// the TCP_COLLECTOR_HOST has changed...
-				if( update_rsock ) {
-					delete( update_rsock );
-					update_rsock = NULL;
-				}
-				delete [] tcp_collector_host;
-				tcp_collector_host = strnewp( tmp );
-			}
-		} else {
-				// nothing set yet, so store it now
-			tcp_collector_host = strnewp( tmp );
-		}
-		free( tmp );
-	}
-
 	use_nonblocking_update = param_boolean("NONBLOCKING_COLLECTOR_UPDATE",true);
 
 	if( ! _addr ) {
@@ -203,6 +160,7 @@ DCCollector::parseTCPInfo( void )
 		use_tcp = false;
 		break;
 	case CONFIG:
+	case CONFIG_VIEW:
 		use_tcp = false;
 		char *tmp = param( "TCP_UPDATE_COLLECTORS" );
 		if( tmp ) {
@@ -217,52 +175,15 @@ DCCollector::parseTCPInfo( void )
 				break;
 			}
 		}
-		use_tcp = param_boolean( "UPDATE_COLLECTOR_WITH_TCP", use_tcp );
+		if ( up_type == CONFIG_VIEW ) {
+			use_tcp = param_boolean( "UPDATE_VIEW_COLLECTOR_WITH_TCP", false );
+		} else {
+			use_tcp = param_boolean( "UPDATE_COLLECTOR_WITH_TCP", true );
+		}
 		if( !hasUDPCommandPort() ) {
 			use_tcp = true;
 		}
 		break;
-	}
-
-	if( tcp_collector_addr ) {
-		delete [] tcp_collector_addr;
-		tcp_collector_addr = NULL;
-	}
-
-	if( ! tcp_collector_host ) {
-			// there's no specific TCP host to use.  if needed, use
-			// the default collector...
-		tcp_collector_port = _port;
-		tcp_collector_addr = strnewp( _addr );
-	} else {
-			// they gave us a specific string.  parse it so we know
-			// where to send the TCP updates.  this is in case they
-			// want to setup a tree of collectors, etc.
-		if( is_valid_sinful(tcp_collector_host) ) {
-			tcp_collector_addr = strnewp( tcp_collector_host );
-			tcp_collector_port = string_to_port( tcp_collector_host );
-			return;
-		} 
-
-			// if we're still here, they didn't give us a valid
-			// "sinful string", so see if they specified a port... 
-		char* host = strnewp( tcp_collector_host );
-		char* colon = NULL;
-		if( !(colon = strchr(host, ':')) ) {
-				// no colon, use the default port, and treat the given
-				// string as the address.
-			int default_port = param_integer("COLLECTOR_PORT", COLLECTOR_PORT);
-			tcp_collector_port = default_port;
-			tcp_collector_addr = strnewp( tcp_collector_host );
-		} else { 
-				// there's a colon, so grab what's after it for the
-				// port, and what's before it for the address.
-			*colon = '\0';
-			tcp_collector_addr = strnewp( host );
-			colon++;
-			tcp_collector_port = atoi( colon );
-		}
-		delete [] host;
 	}
 }
 
@@ -304,6 +225,7 @@ DCCollector::sendUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblocking )
 		ad2->CopyAttribute(ATTR_MY_ADDRESS,ad1);
 	}
 
+#if 0 // don't want this in all ads, moving to self_monitor code so it shows up only in daemon ads
     // My initial plan was to publish these for schedd, however they will provide
     // potentially useful context for performance/health assessment of any daemon 
     if (ad1) {
@@ -314,6 +236,7 @@ DCCollector::sendUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblocking )
         ad2->Assign(ATTR_DETECTED_CPUS, param_integer("DETECTED_CORES", 0));
         ad2->Assign(ATTR_DETECTED_MEMORY, param_integer("DETECTED_MEMORY", 0));
     }
+#endif
 
 		// We never want to try sending an update to port 0.  If we're
 		// about to try that, and we're trying to talk to a local
@@ -324,11 +247,6 @@ DCCollector::sendUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblocking )
 				 "attempting to re-read address file\n" );
 		if( readAddressFile(_subsys) ) {
 			_port = string_to_port( _addr );
-			tcp_collector_port = _port;
-			if( tcp_collector_addr ) {
-				delete [] tcp_collector_addr;
-			}
-			tcp_collector_addr = strnewp( _addr );
 			parseTCPInfo(); // update use_tcp
 			dprintf( D_HOSTNAME, "Using port %d based on address \"%s\"\n",
 					 _port, _addr );
@@ -403,61 +321,52 @@ DCCollector::finishUpdate( DCCollector *self, Sock* sock, ClassAd* ad1, ClassAd*
 }
 
 class UpdateData {
+
+private:
+	int cmd;
+	Stream::stream_type sock_type;
 public:
 	ClassAd *ad1;
 	ClassAd *ad2;
 	DCCollector *dc_collector;
-	UpdateData *next_in_list;
 
-	UpdateData(ClassAd *cad1, ClassAd *cad2, DCCollector *dc_collect) {
-		this->ad1 = NULL;
-		this->ad2 = NULL;
-		this->dc_collector = dc_collect;
+	UpdateData(int ad_cmd, Stream::stream_type stype, ClassAd *cad1, ClassAd *cad2, DCCollector *dc_collect)
+	  : cmd(ad_cmd),
+	    sock_type(stype),
+	    ad1(cad1 ? new ClassAd(*cad1) : NULL),
+	    ad2(cad2 ? new ClassAd(*cad2) : NULL),
+	    dc_collector(dc_collect)
+	{
 			// In case the collector object gets destructed before this
 			// update is finished, we need to register ourselves with
 			// the dc_collector object so that it can null out our
 			// pointer to it.  This is done using a linked-list of
 			// UpdateData objects.
 
-		next_in_list = dc_collect->pending_update_list;
-		dc_collect->pending_update_list = this;
-
-		if(cad1) {
-			this->ad1 = new ClassAd(*cad1);
-		}
-		if(cad2) {
-			this->ad2 = new ClassAd(*cad2);
-		}
+		dc_collect->pending_update_list.push_back(this);
 	}
+
 	~UpdateData() {
-		if(ad1) {
-			delete ad1;
-		}
-		if(ad2) {
-			delete ad2;
-		}
+		delete ad1;
+		delete ad2;
 			// Remove ourselves from the dc_collector's list.
 		if(dc_collector) {
-			UpdateData **ud = &dc_collector->pending_update_list;
-			while(*ud) {
-				if(*ud == this) {
-					*ud = next_in_list;
-					break;
-				}
-				ud = &(*ud)->next_in_list;
+			std::deque<UpdateData *>::iterator iter = std::find(dc_collector->pending_update_list.begin(), dc_collector->pending_update_list.end(), this);
+			if (iter != dc_collector->pending_update_list.end())
+			{
+				dc_collector->pending_update_list.erase(iter);
 			}
 		}
 	}
+
 	void DCCollectorGoingAway() {
 			// The DCCollector object is being deleted.  We don't
 			// need it in order to finish the update.  We only keep
 			// a reference to it in order to do non-essential things.
 
 		dc_collector = NULL;
-		if(next_in_list) {
-			next_in_list->DCCollectorGoingAway();
-		}
 	}
+
 	static void startUpdateCallback(bool success,Sock *sock,CondorError * /* errstack */,void *misc_data) {
 		UpdateData *ud = (UpdateData *)misc_data;
 
@@ -471,6 +380,7 @@ public:
 			// modifies dc_collector (such as saving the TCP sock for
 			// future use).
 
+		DCCollector *dc_collector = ud->dc_collector;
 		if(!success) {
 			char const *who = "unknown";
 			if(sock) who = sock->get_sinful_peer();
@@ -492,6 +402,57 @@ public:
 			delete sock;
 		}
 		delete ud;
+
+			// Now that we finished sending the update, we can start sequentially sending
+			// the pending updates.  We send these updates synchronously in sequence
+			// because if we did it all asynchronously, we may end up with many TCP
+			// connections to the collector.  Instead we send the updates one at a time
+			// via a single connection.
+
+		if (dc_collector && dc_collector->pending_update_list.size())
+		{
+
+			// Here we handle pending updates by sending them over a stashed
+			// TCP socket to the collector.
+			//
+			while (dc_collector->update_rsock && dc_collector->pending_update_list.size())
+			{
+				UpdateData *ud = dc_collector->pending_update_list.front();
+				dc_collector->update_rsock->encode();
+					// NOTE: If there's a valid TCP socket available, we always
+					// push our updates over that (even if the update requested UDP).
+					// I don't think mixing TCP/UDP to the same collector is supported, so
+					// I believe this shortcut acceptable.
+				if (!dc_collector->update_rsock->put( ud->cmd ) ||
+					!DCCollector::finishUpdate(ud->dc_collector,dc_collector->update_rsock,ud->ad1,ud->ad2))
+				{
+					char const *who = "unknown";
+					if(dc_collector->update_rsock) {
+						who = dc_collector->update_rsock->get_sinful_peer();
+					}
+					dprintf(D_ALWAYS,"Failed to send update to %s.\n",who);
+					delete dc_collector->update_rsock;
+					dc_collector->update_rsock = NULL;
+					// Notice we remove the element from the list of pending updates
+					// even on failure.
+				}
+				delete ud;
+			}
+
+			// Here we handle pending updates in the event that we do not have
+			// a stashed TCP socket to the collector.  This could occur if
+			// our TCP socket to the collector was closed for some reason
+			// (e.g. the collector was restarted), or it may occur in the
+			// case of UDP.  Note that we just start handling the next pending
+			// update here, then go back to daemonCore with a callback registered
+			// to ensure we do not block in the event we need to re-establish
+			// a new TCP socket.
+			if (dc_collector->pending_update_list.size())
+			{
+				UpdateData *ud = dc_collector->pending_update_list.front();
+				dc_collector->startCommand_nonblocking(ud->cmd, ud->sock_type, 20, NULL, UpdateData::startUpdateCallback, ud );
+			}
+		}
 	}
 };
 
@@ -506,7 +467,7 @@ DCCollector::sendUDPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblockin
 
 	dprintf( D_FULLDEBUG,
 			 "Attempting to send update via UDP to collector %s\n",
-			 udp_update_destination );
+			 update_destination );
 
 	bool raw_protocol = false;
 	if( cmd == UPDATE_COLLECTOR_AD || cmd == INVALIDATE_COLLECTOR_ADS ) {
@@ -516,8 +477,11 @@ DCCollector::sendUDPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblockin
 	}
 
 	if(nonblocking) {
-		UpdateData *ud = new UpdateData(ad1,ad2,this);
-		startCommand_nonblocking(cmd, Sock::safe_sock, 20, NULL, UpdateData::startUpdateCallback, ud, NULL, raw_protocol );
+		UpdateData *ud = new UpdateData(cmd, Sock::safe_sock, ad1, ad2, this);
+		if (this->pending_update_list.size() == 1)
+		{
+			startCommand_nonblocking(cmd, Sock::safe_sock, 20, NULL, UpdateData::startUpdateCallback, ud, NULL, raw_protocol );
+		}
 		return true;
 	}
 
@@ -540,7 +504,7 @@ DCCollector::sendTCPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblockin
 {
 	dprintf( D_FULLDEBUG,
 			 "Attempting to send update via TCP to collector %s\n",
-			 tcp_update_destination );
+			 update_destination );
 
 	if( ! update_rsock ) {
 			// we don't have a TCP sock for sending an update.  we've
@@ -565,8 +529,7 @@ DCCollector::sendTCPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblockin
 		// int, and since we do *NOT* want to use startCommand() again
 		// on a cached TCP socket, just code the int ourselves...
 	update_rsock->encode();
-	update_rsock->put( cmd );
-	if( finishUpdate(this, update_rsock, ad1, ad2) ) {
+	if (update_rsock->put(cmd) && finishUpdate(this, update_rsock, ad1, ad2)) {
 		return true;
 	}
 	dprintf( D_FULLDEBUG, 
@@ -587,8 +550,12 @@ DCCollector::initiateTCPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblo
 		update_rsock = NULL;
 	}
 	if(nonblocking) {
-		UpdateData *ud = new UpdateData(ad1,ad2,this);
-		startCommand_nonblocking(cmd, Sock::reli_sock, 20, NULL, UpdateData::startUpdateCallback, ud );
+		UpdateData *ud = new UpdateData(cmd, Sock::reli_sock, ad1, ad2, this);
+			// Note that UpdateData automatically adds itself to the pending_update_list.
+		if (this->pending_update_list.size() == 1)
+		{
+			startCommand_nonblocking(cmd, Sock::reli_sock, 20, NULL, UpdateData::startUpdateCallback, ud );
+		}
 		return true;
 	}
 	Sock *sock = startCommand(cmd, Sock::reli_sock, 20);
@@ -616,28 +583,21 @@ DCCollector::displayResults( void )
 const char*
 DCCollector::updateDestination( void )
 {
-	if( use_tcp ) { 
-		return tcp_update_destination;
-	}
-	return udp_update_destination;
+	return update_destination;
 }
 
 
 void
 DCCollector::initDestinationStrings( void )
 {
-	if( udp_update_destination ) {
-		delete [] udp_update_destination;
-		udp_update_destination = NULL;
-	}
-	if( tcp_update_destination ) {
-		delete [] tcp_update_destination;
-		tcp_update_destination = NULL;
+	if( update_destination ) {
+		delete [] update_destination;
+		update_destination = NULL;
 	}
 
 	std::string dest;
 
-		// UDP updates will always be sent to whatever info we've got
+		// Updates will always be sent to whatever info we've got
 		// in the Daemon object.  So, there's nothing hard to do for
 		// this... just see what useful info we have and use it. 
 	if( _full_hostname ) {
@@ -649,32 +609,7 @@ DCCollector::initDestinationStrings( void )
 	} else {
 		if (_addr) dest = _addr;
 	}
-	udp_update_destination = strnewp( dest.c_str() );
-
-		// TCP updates, if they happen at all, might go to a different
-		// place.  So, we've got to do a little more work to figure
-		// out what we should use...
-
-	if( ! tcp_collector_host ) { 
-			// they didn't supply anything, so we should use the info
-			// in the Daemon part of ourself, which we've already got
-			// in the udp_update_destination.  so we just use that.
-		tcp_update_destination = strnewp( udp_update_destination );
-
-	} else if( is_valid_sinful(tcp_collector_host) ) { 
-			// they gave us a specific host, but it's already in
-			// sinful-string form, so that's all we can do...
-		tcp_update_destination = strnewp( tcp_collector_host );
-
-	} else {
-			// they gave us either an IP or a hostname, either
-			// way... use what they gave us, and tack on the port
-			// we're using (which either came from them, or is the
-			// default COLLECTOR_PORT if unspecified).
-
-		formatstr(dest, "%s (port: %d)", tcp_collector_addr ? tcp_collector_addr : "", tcp_collector_port);
-		tcp_update_destination = strnewp( dest.c_str() );
-	}
+	update_destination = strnewp( dest.c_str() );
 }
 
 
@@ -904,23 +839,18 @@ DCCollector::~DCCollector( void )
 	if( adSeqMan ) {
 		delete( adSeqMan );
 	}
-	if( tcp_collector_addr ) {
-		delete [] tcp_collector_addr;
-	}
-	if( tcp_collector_host ) {
-		delete [] tcp_collector_host;
-	}
-	if( udp_update_destination ) {
-		delete [] udp_update_destination;
-	}
-	if( tcp_update_destination ) {
-		delete [] tcp_update_destination;
+	if( update_destination ) {
+		delete [] update_destination;
 	}
 
 		// In case there are any nonblocking updates in progress,
 		// let them know this DCCollector object is going away.
-	if(pending_update_list) {
-		pending_update_list->DCCollectorGoingAway();
+	for (std::deque<UpdateData*>::const_iterator it = pending_update_list.begin();
+			it != pending_update_list.end();
+			it++) {
+		if (*it) {
+			(*it)->DCCollectorGoingAway();
+		}
 	}
 }
 

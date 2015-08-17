@@ -1105,6 +1105,85 @@ bool Sock::guess_address_string(char const* host, int port, condor_sockaddr& add
 	return true;
 }
 
+bool Sock::chooseAddrFromAddrs( char const * host, std::string & addr ) {
+	//
+	// If host is a Sinful string and contains an addrs parameter,
+	// choose one of the listed addresses and rewrite host to match.
+	// Otherwise, execute the old code.
+	//
+	// Note that private networks are handled in Daemon::New_addr(),
+	// which, if it finds a match, will completely rewrite the sinful,
+	// discarding everything except the match as the primary.  If the
+	// network names match, but there's no private address, it instead
+	// removes the CCB information.  In that case, the sinful string
+	// will still have an addrs attribute.  Arguably, it should also
+	// remove addrs, since there's by definition only one private
+	// (and networks are protocol-separated); in practice, that probably
+	// won't matter much.
+	//
+	// The Sinful s must not go out of scope until /after/ the call to
+	// special_connect(), since the new value of host may point into it.
+	//
+	Sinful s( host );
+	if(! (s.valid() && s.hasAddrs()) ) { return false; }
+
+	condor_sockaddr candidate;
+	std::vector< condor_sockaddr > * v = s.getAddrs();
+
+	// In practice, all C++03 implementations are stable with respect
+	// to insertion order; the  C++11 standard requires that they are.
+	// We have a unit test for the former.
+	std::multimap< int, condor_sockaddr > sortedByDesire;
+
+	// If we don't multiply by -1 and instead use rbegin()/rend(),
+	// then addresses of the same desirability will be checked in
+	// the reverse order.
+	dprintf( D_HOSTNAME, "Found address %lu candidates:\n", v->size() );
+	for( unsigned i = 0; i < v->size(); ++i ) {
+		condor_sockaddr c = (*v)[i];
+		int d = -1 * c.desirability();
+		sortedByDesire.insert(std::make_pair( d, c ));
+		dprintf( D_HOSTNAME, "\t%d\t%s\n", d, c.to_ip_and_port_string().c_str() );
+	}
+
+	bool foundAddress = false;
+	std::multimap< int, condor_sockaddr >::const_iterator iter;
+	for( iter = sortedByDesire.begin(); iter != sortedByDesire.end(); ++iter ) {
+		candidate = (* iter).second;
+
+		// Assume that we "have" any protocol that's enabled.  It turns
+		// out that anything else (including considering the desirability
+		// of our interfaces) gets really complicated.  Instead, we
+		// document that ENABLE_IPV6 should be false unless you have a
+		// public IPv6 address (or one which everyone in your pool can
+		// otherwise reach).
+		dprintf( D_HOSTNAME, "Considering address candidate %s.\n", candidate.to_ip_and_port_string().c_str() );
+		if(( candidate.is_ipv4() && param_boolean( "ENABLE_IPV4", true ) ) ||
+			( candidate.is_ipv6() && param_boolean( "ENABLE_IPV6", false ) )) {
+			dprintf( D_HOSTNAME, "Found compatible candidate %s.\n", candidate.to_ip_and_port_string().c_str() );
+			foundAddress = true;
+			break;
+		}
+	}
+	delete v;
+
+	if(! foundAddress) {
+		dprintf( D_ALWAYS, "Sock::do_connect() unable to locate address of a compatible protocol in Sinful string '%s'.\n", host );
+		return FALSE;
+	}
+
+	// Change the "primary" address.
+	s.setHost( candidate.to_ip_string().c_str() );
+	s.setPort( candidate.get_port() );
+	addr = s.getSinful();
+
+	set_connect_addr( addr.c_str() );
+	_who = candidate;
+	addr_changed();
+
+	return true;
+}
+
 int Sock::do_connect(
 	char const	*host,
 	int		port,
@@ -1113,20 +1192,25 @@ int Sock::do_connect(
 {
 	if (!host || port < 0) return FALSE;
 
-	_who.clear();
-	if (!guess_address_string(host, port, _who)) {
-		return FALSE;
-	}
+	std::string addr;
+	if( chooseAddrFromAddrs( host, addr ) ) {
+		host = addr.c_str();
+	} else {
+		_who.clear();
+		if (!guess_address_string(host, port, _who)) {
+			return FALSE;
+		}
 
 		// current code handles sinful string and just hostname differently.
 		// however, why don't we just use sinful string at all?
-	if (host[0] == '<') {
-		set_connect_addr(host);
-	}
-	else { // otherwise, just use ip string.
-		set_connect_addr(_who.to_ip_string().Value());
-	}
-    addr_changed();
+		if (host[0] == '<') {
+			set_connect_addr(host);
+		}
+		else { // otherwise, just use ip string.
+			set_connect_addr(_who.to_ip_string().Value());
+		}
+    	addr_changed();
+    }
 
 	// now that we have set _who (useful for getting informative
 	// peer_description), see if we should do a reverse connect

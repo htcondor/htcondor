@@ -85,6 +85,10 @@ void AuditLogNewConnection( int cmd, Sock &sock, bool failure );
 class JobQueueJob;
 extern int updateSchedDInterval( JobQueueJob*, const JOB_ID_KEY&, void* );
 
+typedef std::set<JOB_ID_KEY> JOB_ID_SET;
+
+bool jobLeaseIsValid( ClassAd* job, int cluster, int proc );
+
 class match_rec;
 
 struct shadow_rec
@@ -114,24 +118,52 @@ struct shadow_rec
 	~shadow_rec();
 }; 
 
-struct OwnerData {
-  char* Name;
+// counters within the OwnerData struct that are cleared and re-computed by count_jobs.
+struct OwnerCounters {
   int JobsRunning;
   int JobsIdle;
   int WeightedJobsRunning;
   int WeightedJobsIdle;
   int JobsHeld;
   int JobsFlocked;
+  int JobsFlockedHere; // volatile field use to hold the JobsRunning calculation when sending submitter adds to flock collectors
+  int Hits;  // used in the mark/sweep algorithm of count_jobs to detect Owners that no longer have any jobs in the queue.
+  int JobsCounted; // smaller than Hits by the number of match recs for this Owner.
+  int JobsRecentlyAdded; // zeroed on each sweep, incremented on submission.
+  void clear_job_counters() { memset(this, 0, sizeof(*this)); }
+  OwnerCounters()
+	: JobsRunning(0)
+	, JobsIdle(0)
+	, WeightedJobsRunning(0)
+	, WeightedJobsIdle(0)
+	, JobsHeld(0)
+	, JobsFlocked(0)
+	, JobsFlockedHere(0)
+	, Hits(0)
+	, JobsCounted(0)
+	, JobsRecentlyAdded(0)
+  {}
+};
+
+#define USE_OWNERDATA_MAP 1
+
+struct OwnerData {
+  std::string name;
+  const char * Name() const { return name.empty() ? "" : name.c_str(); }
+  bool empty() const { return name.empty(); }
+  OwnerCounters num;
+  time_t LastHitTime; // records the last time we incremented num.Hit, use to expire Owners
+  // Time of most recent change in flocking level or
+  // successful negotiation at highest current flocking
+  // level.
   int FlockLevel;
   int OldFlockLevel;
-		// Time of most recent change in flocking level or
-		// successful negotiation at highest current flocking
-		// level.
   time_t NegotiationTimestamp;
   std::set<int> PrioSet; // Set of job priorities, used for JobPrioArray attr
-  OwnerData() { Name=NULL;
-  NegotiationTimestamp=WeightedJobsRunning=WeightedJobsIdle=JobsRunning=JobsIdle=JobsHeld=JobsFlocked=FlockLevel=OldFlockLevel=0; }
+  OwnerData() : LastHitTime(0), FlockLevel(0), OldFlockLevel(0), NegotiationTimestamp(0) { }
 };
+
+typedef std::map<std::string, OwnerData> OwnerDataMap;
 
 class match_rec: public ClaimIdParser
 {
@@ -344,7 +376,7 @@ class Scheduler : public Service
 	friend	int		NewProc(int cluster_id);
 	friend	int		count_a_job(JobQueueJob*, const JOB_ID_KEY&, void* );
 //	friend	void	job_prio(ClassAd *);
-	friend  int		find_idle_local_jobs(ClassAd *, void*);
+	friend  int		find_idle_local_jobs(JobQueueJob *, const JOB_ID_KEY&, void*);
 	friend	int		updateSchedDInterval(JobQueueJob*, const JOB_ID_KEY&, void* );
     friend  void    add_shadow_birthdate(int cluster, int proc, bool is_reconnect);
 	void			display_shadow_recs();
@@ -360,8 +392,10 @@ class Scheduler : public Service
 	int				spoolJobFilesReaper(int,int);	
 	int				transferJobFilesReaper(int,int);
 	void			PeriodicExprHandler( void );
-	void			addCronTabClassAd( ClassAd* );
+	void			addCronTabClassAd( JobQueueJob* );
 	void			addCronTabClusterId( int );
+	void			indexAJob(JobQueueJob* job, bool loading_job_queue=false);
+	void			removeJobFromIndexes(const JOB_ID_KEY& job_id);
 	int				RecycleShadow(int cmd, Stream *stream);
 	void			finishRecycleShadow(shadow_rec *srec);
 
@@ -403,7 +437,7 @@ class Scheduler : public Service
 						TransferDaemon *&td_ref ); 
 	bool			startTransferd( int cluster, int proc ); 
 	WriteUserLog*	InitializeUserLog( PROC_ID job_id );
-	bool			WriteSubmitToUserLog( PROC_ID job_id, bool do_fsync );
+	bool			WriteSubmitToUserLog( JobQueueJob* job, bool do_fsync );
 	bool			WriteAbortToUserLog( PROC_ID job_id );
 	bool			WriteHoldToUserLog( PROC_ID job_id );
 	bool			WriteReleaseToUserLog( PROC_ID job_id );
@@ -467,6 +501,8 @@ class Scheduler : public Service
 	char*			uidDomain( void ) { return UidDomain; };
 	int				getJobsTotalAds() { return JobsTotalAds; };
 	int				getMaxJobsSubmitted() { return MaxJobsSubmitted; };
+	int				getMaxJobsPerOwner() { return MaxJobsPerOwner; }
+	int				getMaxJobsPerSubmission() { return MaxJobsPerSubmission; }
 
 		// Used by the UserIdentity class and some others
 	const ExprTree*	getGridParsedSelectionExpr() const 
@@ -553,6 +589,8 @@ class Scheduler : public Service
 	ScheddStatistics stats;
 	ScheddOtherStatsMgr OtherPoolStats;
 
+	const OwnerData * insert_owner_const(const char*);
+	void incrementRecentlyAdded(const char *);
 
 private:
 
@@ -598,6 +636,8 @@ private:
 	char*			StartLocalUniverse; // expression for local jobs
 	char*			StartSchedulerUniverse; // expression for scheduler jobs
 	int				MaxJobsSubmitted;
+	int				MaxJobsPerOwner;
+	int				MaxJobsPerSubmission;
 	bool			NegotiateAllJobsInCluster;
 	int				JobsStarted; // # of jobs started last negotiating session
 	int				SwapSpace;	 // available at beginning of last session
@@ -620,9 +660,10 @@ private:
 	char*			LocalUnivExecuteDir;
 	int				BadCluster;
 	int				BadProc;
-	ExtArray<OwnerData> Owners; // May be tracking AccountingGroup instead of owner username/domain
+	OwnerDataMap    Owners;
+	//JOB_ID_SET      LocalJobIds;  // set of jobid's of local and scheduler universe jobs.
 	HashTable<UserIdentity, GridJobCounts> GridJobOwners;
-	int				N_Owners;
+	int				NumOwners;
 	time_t			NegotiationRequestTime;
 	int				ExitWhenDone;  // Flag set for graceful shutdown
 	Queue<shadow_rec*> RunnableJobQueue;
@@ -693,17 +734,19 @@ private:
 	bool			m_use_slot_weights;
 
 	// utility functions
-	int				count_jobs();
-	bool			fill_submitter_ad(ClassAd & pAd, int owner_num, int flock_level=-1); 
-    int             make_ad_list(ClassAdList & ads, ClassAd * pQueryAd=NULL);
-    int             command_query_ads(int, Stream* stream);
+	int			count_jobs();
+	bool		fill_submitter_ad(ClassAd & pAd, const OwnerData & Owner, int flock_level, int debug_level);
+    int			make_ad_list(ClassAdList & ads, ClassAd * pQueryAd=NULL);
+    int			command_query_ads(int, Stream* stream);
 	int			command_history(int, Stream* stream);
 	int			history_helper_launcher(const HistoryHelperState &state);
 	int			history_helper_reaper(int, int);
 	int			command_query_job_ads(int, Stream* stream);
 	int			command_query_job_aggregates(ClassAd & query, Stream* stream);
 	void   			check_claim_request_timeouts( void );
-	int				insert_owner(char const*);
+	OwnerData * insert_owner(const char*);
+	OwnerData * find_owner(const char*);
+	void		remove_unused_owners();
 	void			child_exit(int, int);
 	void			scheduler_univ_job_exit(int pid, int status, shadow_rec * srec);
 	void			scheduler_univ_job_leave_queue(PROC_ID job_id, int status, ClassAd *ad);
@@ -860,7 +903,6 @@ private:
 // Other prototypes
 class JobQueueJob;
 struct JOB_ID_KEY;
-int get_job_prio(JobQueueJob *ad, const JOB_ID_KEY& key, void* user);
 extern void set_job_status(int cluster, int proc, int status);
 extern bool claimStartd( match_rec* mrec );
 extern bool claimStartdConnected( Sock *sock, match_rec* mrec, ClassAd *job_ad);

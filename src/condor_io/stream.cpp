@@ -2026,17 +2026,28 @@ Stream::allow_one_empty_message()
 	allow_empty_message_flag = TRUE;
 }
 
-void 
+bool
 Stream::set_crypto_mode(bool enabled)
 {
-	if (canEncrypt() && enabled) {
-		crypto_mode_ = true;
-	} else {
-		if (enabled) {
-			dprintf ( D_SECURITY, "NOT enabling crypto - there was no key exchanged.\n");
+	if (enabled) {
+		if (canEncrypt()) {
+			crypto_mode_ = true;
+			// succesfully enabled, return true
+			return true;
+		} else {
+			dprintf ( D_ALWAYS, "NOT enabling crypto - there was no key exchanged.\n");
+
+			// we FAILED to enable crypto when requested, return false
+			return false;
 		}
-		crypto_mode_ = false;
 	}
+
+	// turn off crypto
+	crypto_mode_ = false;
+
+	// the return code is whether or not we succesfully changed the mode
+	// (not the current value)
+	return true;
 }
 
 bool 

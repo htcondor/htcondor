@@ -20,6 +20,7 @@
 #ifndef CONDOR_VER_INFO_H
 #define CONDOR_VER_INFO_H
 
+#include <string>
 
 /** Class to interpret the Condor Version string. 
 Every Condor binary contains a version string embedded into it at
@@ -69,11 +70,11 @@ public:
 		{ return myversion.MajorVer > 5 ? myversion.SubMinorVer : -1; }
 
  
- 	/** Return the Arch this version is built for. */
- 	char *getArchVer() const
- 		{ return myversion.Arch; }	
- 	char *getOpSysVer() const
- 		{ return myversion.OpSys; }	
+	/** Return the Arch this version is built for. */
+	const char *getArchVer() const
+		{ return myversion.Arch.c_str(); }
+	const char *getOpSysVer() const
+		{ return myversion.OpSys.c_str(); }
 	
 	/** Report if this version id represents a stable or developer series 
 		release.
@@ -102,9 +103,9 @@ public:
 		int MinorVer;
 		int SubMinorVer;
 		int Scalar;
-		char *Rest;
-		char *Arch;
-		char *OpSys;
+		std::string Rest;
+		std::string Arch;
+		std::string OpSys;
 	} VersionData_t;
 
 

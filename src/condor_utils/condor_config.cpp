@@ -231,6 +231,7 @@ char * _allocation_pool::consume(int cb, int cbAlign)
 	if ( ! cb) return NULL;
 	cbAlign = MAX(cbAlign, this->alignment());
 	int cbConsume = (cb + cbAlign-1) & ~(cbAlign-1);
+	if (cbConsume <= 0) return NULL;
 
 	// if this is a virgin pool, give it a default reserve of 4 Kb
 	if ( ! this->cMaxHunks || ! this->phunks) {
@@ -283,6 +284,7 @@ char * _allocation_pool::consume(int cb, int cbAlign)
 			int cbAlloc = (this->nHunk > 0) ? (this->phunks[this->nHunk-1].cbAlloc * 2) : (16 * 1024);
 			cbAlloc = MAX(cbAlloc, cbConsume);
 			ph->reserve(cbAlloc);
+			SAL_assume(ph->pb != NULL);
 		}
 
 		//PRAGMA_REMIND("TJ: fix to account for extra size needed to align start ptr")
@@ -914,7 +916,7 @@ real_config(const char* host, int wantsQuiet, int config_options)
 		fprintf(stderr,"\nNeither the environment variable %s_CONFIG,\n",
 				myDistro->GetUc() );
 #	  if defined UNIX
-		fprintf(stderr,"/etc/%s/, nor ~%s/ contain a %s_config source.\n",
+		fprintf(stderr,"/etc/%s/, /usr/local/etc/, nor ~%s/ contain a %s_config source.\n",
 				myDistro->Get(), myDistro->Get(), myDistro->Get() );
 #	  elif defined WIN32
 		fprintf(stderr,"nor the registry contains a %s_config source.\n", myDistro->Get() );
@@ -924,7 +926,7 @@ real_config(const char* host, int wantsQuiet, int config_options)
 		fprintf( stderr,"Either set %s_CONFIG to point to a valid config "
 				"source,\n", myDistro->GetUc() );
 #	  if defined UNIX
-		fprintf( stderr,"or put a \"%s_config\" file in /etc/%s or ~%s/\n",
+		fprintf( stderr,"or put a \"%s_config\" file in /etc/%s/ /usr/local/etc/ or ~%s/\n",
 				 myDistro->Get(), myDistro->Get(), myDistro->Get() );
 #	  elif defined WIN32
 		fprintf( stderr,"or put a \"%s_config\" source in the registry at:\n"
@@ -1046,7 +1048,7 @@ real_config(const char* host, int wantsQuiet, int config_options)
 			insert(macro_name, varvalue, ConfigMacroSet, EnvMacro);
 		}
 
-		free( varname );
+		free( varname ); varname = NULL;
 	}
 
 		// Insert the special macros.  We don't want the user to
@@ -1317,11 +1319,9 @@ init_tilde()
 # else
 	// On Windows, we'll just look in the registry for TILDE.
 	HKEY	handle;
-	char regKey[1024];
+	std::string regKey("Software\\"); regKey += myDistro->GetCap();
 
-	snprintf( regKey, 1024, "Software\\%s", myDistro->GetCap() );
-
-	if ( RegOpenKeyEx(HKEY_LOCAL_MACHINE, regKey,
+	if ( RegOpenKeyEx(HKEY_LOCAL_MACHINE, regKey.c_str(),
 		0, KEY_READ, &handle) == ERROR_SUCCESS ) {
 
 		// got the reg key open; now we just need to see if
@@ -1508,10 +1508,9 @@ find_file(const char *env_name, const char *file_name, int config_options)
 # elif defined WIN32	// ifdef UNIX
 	// Only look in the registry on WinNT.
 	HKEY	handle;
-	char	regKey[256];
+	std::string regKey("Software\\"); regKey += myDistro->GetCap();
 
-	snprintf( regKey, 256, "Software\\%s", myDistro->GetCap() );
-	if ( !config_source && RegOpenKeyEx(HKEY_LOCAL_MACHINE, regKey,
+	if ( !config_source && RegOpenKeyEx(HKEY_LOCAL_MACHINE, regKey.c_str(),
 		0, KEY_READ, &handle) == ERROR_SUCCESS ) {
 		// We have found a registry key for Condor, which
 		// means this user has a pulse and has actually run the
@@ -1549,6 +1548,7 @@ find_file(const char *env_name, const char *file_name, int config_options)
 
 						if ( GetLastError() == ERROR_INVALID_PASSWORD ) {
 							// try again with an empty password
+							#pragma warning(suppress: 6031) // yeah. we aren't checking the return value...
 							WNetAddConnection2(
 										&nr,   /* NetResource */
 										"",    /* password (none) */
@@ -2279,7 +2279,6 @@ bool string_is_double_param(
 		// simple literal.  Since that didn't work, now try parsing it
 		// as an expression.
 		ClassAd rhs;
-		float float_result = 0.0;
 		if( me ) {
 			rhs = *me;
 		}
@@ -2287,7 +2286,7 @@ bool string_is_double_param(
 		if ( ! rhs.AssignExpr( name, string )) {
 			if (err_reason) *err_reason = PARAM_PARSE_ERR_REASON_ASSIGN;
 		}
-		else if ( ! rhs.EvalFloat(name,target,float_result) ) {
+		else if ( ! rhs.EvalFloat(name,target,result) ) {
 			if (err_reason) *err_reason = PARAM_PARSE_ERR_REASON_EVAL;
 		} else {
 			valid = true;

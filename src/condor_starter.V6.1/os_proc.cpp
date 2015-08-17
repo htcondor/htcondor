@@ -450,6 +450,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 		} else {
 			dprintf(D_ALWAYS, "Can't parse STARTER_RLIMIT_AS expression: %s\n", rlimit_expr);
 		}
+		free( rlimit_expr );
 	}
 
 	int *affinity_mask = makeCpuAffinityMask(Starter->getMySlotNumber());
@@ -504,7 +505,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 			username = get_user_loginname();
 		}
 		if( !username ) {
-			username = "(null)";
+			username = "same uid as parent: personal condor";
 		}
 		dprintf(D_ALWAYS,"Running job %sas user %s\n",how,username);
 	}
@@ -569,6 +570,8 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
         errbuf.formatstr("(errno=%d: '%s')", create_process_errno, strerror(create_process_errno));
         create_process_err_msg += errbuf;
     }
+
+	free( affinity_mask );
 
 	// now close the descriptors in fds array.  our child has inherited
 	// them already, so we should close them so we do not leak descriptors.

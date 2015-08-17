@@ -1456,14 +1456,14 @@ Daemon::findCmDaemon( const char* cm_name )
 	std::string buf;
 	condor_sockaddr saddr;
 
-	dprintf( D_HOSTNAME, "Using name \"%s\" to find daemon\n", cm_name ); 
+	dprintf( D_HOSTNAME, "Using name \"%s\" to find daemon\n", cm_name );
 
 	Sinful sinful( cm_name );
 
 	if( !sinful.valid() || !sinful.getHost() ) {
 		dprintf( D_ALWAYS, "Invalid address: %s\n", cm_name );
 		formatstr( buf, "%s address or hostname not specified in config file",
-				 _subsys ); 
+				 _subsys );
 		newError( CA_LOCATE_FAILED, buf.c_str() );
 		_is_configured = false;
 		return false;
@@ -2040,9 +2040,6 @@ Daemon::New_addr( char* str )
 						// replace address with private address
 						std::string buf;
 						if( *priv_addr != '<' ) {
-								// [TODO]
-								// if priv address is an IPv6 address,
-								// it should be <[%s]> form
 							formatstr(buf,"<%s>",priv_addr);
 							priv_addr = buf.c_str();
 						}

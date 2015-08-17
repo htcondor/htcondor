@@ -1,3 +1,4 @@
+#include "python_bindings_common.h"
 
 #include <condor_adtypes.h>
 #include <daemon_types.h>
@@ -24,6 +25,7 @@ void export_daemon_and_ad_types()
         .value("Any", ANY_AD)
         .value("Generic", GENERIC_AD)
         .value("Startd", STARTD_AD)
+        .value("StartdPrivate", STARTD_PVT_AD)
         .value("Schedd", SCHEDD_AD)
         .value("Master", MASTER_AD)
         .value("Collector", COLLECTOR_AD)

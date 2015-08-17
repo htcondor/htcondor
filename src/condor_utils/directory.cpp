@@ -285,6 +285,18 @@ Directory::do_remove_dir( const char* path )
 
 		// First, try it as whatever priv state we've been requested
 		// to use...
+
+
+		// skip lost+found directories, the file system needs these
+		// to be around for fsck emergencies.
+	const char *slash = strrchr(path, '/');
+	if (slash) {
+		if (strcmp(slash, "/lost+found") == 0) {
+			dprintf(D_FULLDEBUG, "Skipping removal of lost+found directory\n");
+			return true;
+		}
+	}
+
 	rmdirAttempt( path, desired_priv_state );
 	StatInfo si1( path );
 	if( si1.Error() == SINoFile ) {

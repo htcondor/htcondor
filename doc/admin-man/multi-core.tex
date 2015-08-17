@@ -212,22 +212,23 @@ requirements that it could not implement.
 In addition to the standard resources of CPUs, memory, disk, and swap,
 the administrator may also define custom resources on 
 a localized per-machine basis.
-To implement this, 
-a list of names of the local machine resources are defined using configuration 
-variable \Macro{MACHINE\_RESOURCE\_NAMES}.
-This example defines two resources,
-a GPU and an actuator:
-\begin{verbatim}
-MACHINE_RESOURCE_NAMES = gpu, actuator
-\end{verbatim}
 
-The quantities of available resources are defined using configuration
-variables of the form \Macro{MACHINE\_RESOURCE\_<name>},
-where \Expr{<name>} is as defined by variable 
-\MacroNI{MACHINE\_RESOURCE\_NAMES}, as shown in this example:
+The resource names and quantities of available resources are defined using 
+configuration variables of the form \Macro{MACHINE\_RESOURCE\_<name>}, 
+as shown in this example:
 \begin{verbatim}
 MACHINE_RESOURCE_gpu = 16
 MACHINE_RESOURCE_actuator = 8
+\end{verbatim}
+
+If the configuration uses the optional configuration variable 
+\Macro{MACHINE\_RESOURCE\_NAMES} to enable and disable local machine resources,
+also add the resource names to this variable.
+For example:
+\begin{verbatim}
+if defined MACHINE_RESOURCE_NAMES
+  MACHINE_RESOURCE_NAMES = $(MACHINE_RESOURCE_NAMES) gpu actuator
+endif
 \end{verbatim}
 
 Local machine resource names defined in this way may now be used in conjunction 
@@ -661,7 +662,8 @@ until the entire set of
 Slot1's available resources have been consumed by jobs.
 
 To enable dynamic provisioning, 
-define a slot type with machine resources.
+define a slot type. 
+and declare at least one slot of that type.
 Then,
 identify that slot type as partitionable by setting
 configuration variable 
@@ -675,10 +677,10 @@ be configured for one slot, managing all the resources on the machine.
 To do so, set the following configuration variables:
 
 \begin{verbatim}
-NUM_SLOTS=1
-NUM_SLOTS_TYPE_1=1
-SLOT_TYPE_1=100%
-SLOT_TYPE_1_PARTITIONABLE=true
+NUM_SLOTS = 1
+NUM_SLOTS_TYPE_1 = 1
+SLOT_TYPE_1 = 100%
+SLOT_TYPE_1_PARTITIONABLE = TRUE
 \end{verbatim}
 
 In a pool using dynamic provisioning, 
@@ -703,13 +705,15 @@ queue
 \end{verbatim}
 
 Each partitionable slot will have
-the ClassAd attribute
+the ClassAd attributes
 \begin{verbatim}
   PartitionableSlot = True
+  SlotType = "Partitionable"
 \end{verbatim}
-Each dynamic slot will have the ClassAd attribute 
+Each dynamic slot will have the ClassAd attributes 
 \begin{verbatim}
   DynamicSlot = True
+  SlotType = "Dynamic"
 \end{verbatim}
 These attributes may be used in a \MacroNI{START} expression for 
 the purposes of creating detailed policies.
@@ -732,6 +736,58 @@ In this instance a job requiring 2GB of memory will be starved
 and unable to run.  A partial solution to this problem is provided
 by defragmentation accomplished by the \Condor{defrag} daemon,
 as discussed in section~\ref{sec:SMP-defrag}.
+
+\index{partitionable slot preemption}
+\index{pslot preemption}
+Another partial solution is a new matchmaking algorithm in the
+negotiator, referred to as \Term{partitionable slot preemption},
+or \Term{pslot preemption}.
+Without pslot preemption, when the negotiator searches for a match for a job,
+it looks at each slot ClassAd individually.
+With pslot preemption, the negotiator looks at a partitionable slot and
+all of its dynamic slots as a group.
+If the partitionable slot does not have sufficient resources 
+(memory, cpu, and disk) 
+to be matched with the candidate job, 
+then the negotiator
+looks at all of the related dynamic slots that the candidate job might
+preempt (following the normal preemption rules described elsewhere).
+The resources of each dynamic slot are added to those
+of the partitionable slot, one dynamic slot at a time.
+Once this partial sum of resources is sufficient to enable a match, 
+the negotiator sends the match information to the \Condor{schedd}.
+When the \Condor{schedd} claims the partitionable slot, 
+the dynamic slots are preempted,
+such that their resources are returned to the partitionable slot
+for use by the new job.
+
+To enable pslot preemption,
+the following configuration variable must be set for the \Condor{negotiator}:
+\begin{verbatim}
+  ALLOW_PSLOT_PREEMPTION = True
+\end{verbatim}
+
+When the negotiator examines the resources of dynamic slots,
+it sorts the slots by their \Attr{CurrentRank} attribute, 
+such that slots with lower values are considered first.
+The negotiator only examines the cpu, memory and disk
+resources of the dynamic slots; custom resources are ignored.
+
+Dynamic slots that have retirement time remaining are not considered
+eligible for preemption, regardless of how configuration variable
+\MacroNI{NEGOTIATOR\_CONSIDER\_EARLY\_PREEMPTION} is set.
+
+When pslot preemption is enabled, the negotiator will not preempt
+dynamic slots directly. 
+It will preempt them only as part of a match to a partitionable slot.
+
+When multiple partitionable slots match a candidate job and the various
+job rank expressions are evaluated to sort the matching slots, 
+the ClassAd of the partitionable slot is used for evaluation.
+This may cause unexpected results for some expressions, as attributes
+such as \Attr{RemoteOwner} will not be present in a partitionable slot that
+matches with preemption of some of its dynamic slots.
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:SMP-resource-defaults}

@@ -63,7 +63,7 @@ if (BUILD_TESTING)
 	condor_exe_test(x_complete_params.exe "x_complete_params.cpp" "" )
 	condor_exe_test(x_conditional_params.exe "x_conditional_params.cpp" "${CONDOR_TOOL_LIBS};${CONDOR_WIN_LIBS}" )
 	condor_exe_test(validate_job_queue.exe "validate_job_queue.cpp" "${CONDOR_TOOL_LIBS};${CONDOR_WIN_LIBS}" )
-	
+
 	# Not all of our gccs support -Wno-div-by-zero.
 	#if (UNIX)
 	#	set_source_files_properties(x_dumpcore.cpp PROPERTIES COMPILE_FLAGS -Wno-div-by-zero)
@@ -76,9 +76,9 @@ if (BUILD_TESTING)
 	if (NOT WINDOWS)
 	  condor_exe_test(x_trapsig.exe "x_trapsig.cpp" "" )
 	endif(NOT WINDOWS)
-	
+
 	if (STD_UNIVERSE)
-		
+
 		# disable any optimizations + compile with specific fla
 		set( CMAKE_BUILD_TYPE Debug )
 		add_library( stdulib STATIC EXCLUDE_FROM_ALL "x_waste_second.c" )
@@ -102,7 +102,7 @@ if (BUILD_TESTING)
 		condor_std_exe_test(job_ckpt_constructor_std "${CMAKE_CXX_COMPILER}" "job_ckpt_constructor_std.cpp" "${STDU_LDD_FLAGS}")
 		condor_std_exe_test(job_ckpt_env_std "${CMAKE_CXX_COMPILER}" "job_ckpt_env_std.cpp" "${STDU_LDD_FLAGS}")
 		condor_std_exe_test(job_ckpt_memory-file_std "${CMAKE_CXX_COMPILER}" "job_ckpt_memory-file_std.cpp" "${STDU_LDD_FLAGS}")
-		
+
 		condor_std_exe_test(job_core-cpp_exception_std "${CMAKE_CXX_COMPILER}" "job_core-cpp_exception_std.cpp" "${STDU_LDD_FLAGS}")
 		condor_std_exe_test(job_core-cpp_mem-alloc_std "${CMAKE_CXX_COMPILER}" "job_core-cpp_mem-alloc_std.cpp" "${STDU_LDD_FLAGS}")
 		condor_std_exe_test(job_rsc_fstream_std "${CMAKE_CXX_COMPILER}" "job_rsc_fstream_std.cpp" "${STDU_LDD_FLAGS}")
@@ -179,7 +179,9 @@ if (BUILD_TESTING)
 
 	# negative matches. test on everything but this
 	if(NOT SOLARIS AND NOT WINDOWS)
+		condor_pl_test(unit_test_sinful "unit: Sinful" "core;quick;full;quicknolink")
 		condor_pl_test(job_core_killsignal_sched "Scheduler: Verify the specified input file is used" "core;quick;full;quicknolink")
+		condor_pl_test(unit_test_sinful "unit: Sinful" "core;quick;full;quicknolink")
 		condor_pl_test(job_core_rmkillsig_sched "Scheduler: Verify the  remove_kill_sig" "core;quick;full;quicknolink")
 	endif()
 
@@ -204,6 +206,7 @@ if (BUILD_TESTING)
 	condor_pl_test (cmd_condor_submit_dashspool "Test condor_submit -spool" "core;quick;full;quicknolink")
 	condor_pl_test (cmd_submit_coverage "Test condor_submit file entries" "core;quick;full;quicknolink")
 	condor_pl_test (cmd_submit_massive "Test condor_submit file massive" "core;quick;full;quicknolink")
+	#condor_pl_test (job_test_urlfetch "Test condor_urlfetch" "core;quick;full;quicknolink")
 	condor_pl_test (lib_meta_knob  "Test meta knobs" "core;quick;full;quicknolink")
 	condor_pl_test (lib_include_cmd_config  "Test meta knobs" "core;quick;full;quicknolink")
 
@@ -330,6 +333,25 @@ if (BUILD_TESTING)
 	condor_pl_test(job_dagman_final-H "Simple Dagman Final Node H" "core;dagman;quick;full;quicknolink")
 	condor_pl_test(job_dagman_final-I "Simple Dagman Final Node I" "core;dagman;quick;full;quicknolink")
 	condor_pl_test(job_dagman_nonexistent_subdag "Test for nonexistent subdag" "core;dagman;quick;full;quicknolink")
+	##### submit foreach variant tests
+	condor_pl_test(job_foreach_submit-filepartmacros "submit file usage file part macros" "core;quick;full;quicknolink")
+	condor_pl_test(job_foreach_submit-filepartmacros-run "submit file usage file part macros- run submit file" "core;quick;full;quicknolink")
+	condor_pl_test(job_foreach_submit-queueitemfrom-1Line "submit file usage queue ITEM from - run submit file" "core;quick;full;quicknolink")
+	condor_pl_test(job_foreach_submit-queueitemfrom-1Line-run "submit file usage queue ITEM from - run submit file" "core;quick;full;quicknolink")
+	condor_pl_test(job_foreach_submit-queueitemfrom-File "submit file usage queue ITEM from - run submit file" "core;quick;full;quicknolink")
+	condor_pl_test(job_foreach_submit-queueitemfrom-File-run "submit file usage queue ITEM from - run submit file" "core;quick;full;quicknolink")
+	condor_pl_test(job_foreach_submit-queueitemfrom-MLine "submit file usage queue ITEM from - run submit file" "core;quick;full;quicknolink")
+	condor_pl_test(job_foreach_submit-queueitemfrom-MLine-run "submit file usage queue ITEM from - run submit file" "core;quick;full;quicknolink")
+	condor_pl_test(job_foreach_submit-queueitemfrom-Stdin "submit file usage queue ITEM from - run submit file" "core;quick;full;quicknolink")
+	condor_pl_test(job_foreach_submit-queueitemfrom-Stdin-run "submit file usage queue ITEM from - run submit file" "core;quick;full;quicknolink")
+	condor_pl_test(job_foreach_submit-queueitemin-commalist "submit file usage queue ITEM in " "core;quick;full;quicknolink")
+	condor_pl_test(job_foreach_submit-queueitemin-commalist-run "submit file usage queue ITEM in - run submit file" "core;quick;full;quicknolink")
+	condor_pl_test(job_foreach_submit-queueitemin "submit file usage queue ITEM in " "core;quick;full;quicknolink")
+	condor_pl_test(job_foreach_submit-queueitemin-run "submit file usage queue ITEM in - run submit file" "core;quick;full;quicknolink")
+	condor_pl_test(job_foreach_submit-queueitemMLineIn "submit file usage queue ITEM in " "core;quick;full;quicknolink")
+	condor_pl_test(job_foreach_submit-queueitemMLineIn-run "submit file usage queue ITEM in - run submit file" "core;quick;full;quicknolink")
+	condor_pl_test(job_foreach_submit-simple-glob "submit file usage match" "core;quick;full;quicknolink")
+	condor_pl_test(job_foreach_submit-simple-glob-run "submit file usage match - run submit file" "core;quick;full;quicknolink")
 	##### generic lib tests
 	# TSTCLAIR: I can not move the "condor_unit_tests" into the actual unit_test b/c it depends 
 	# on condor_config ++ deps. 
@@ -421,6 +443,9 @@ if (BUILD_TESTING)
 	condor_pl_test(cmd_ccv_set_rset "condor_config_val set/rset" "core;quick;full")
 
 	if(NOT SOLARIS AND NOT DARWIN)
+	# globbiing only firs not supported on these platforms
+	condor_pl_test(job_foreach_submit-initialdir "submit file usage InitialDir" "core;quick;full;quicknolink")
+	condor_pl_test(job_foreach_submit-initialdir-run "submit file usage InitialDir - run submit file" "core;quick;full;quicknolink")
 	condor_pl_test(cmd_gpu_discovery "gpu discovery file" "core;quick;full")
 	endif ()
 
@@ -453,7 +478,7 @@ if (BUILD_TESTING)
 	#condor_pl_test(lib_python_bindings "check python bindings" "core;quick;full")
 	condor_pl_test(lib_param_completeness "minimal knobs" "core;quick;full")
 	condor_pl_test(lib_param_conditionals "config conditionals" "core;quick;full")
-	condor_pl_test(cmd_condor_ping_basic "Basic default test of condor_ping" "core;quick;full")
+	#condor_pl_test(cmd_condor_ping_basic "Basic default test of condor_ping" "core;quick;full")
 	condor_pl_test(job_aggressive_flocking "Test aggressive flocking" "core;quick;full")
 	##### job tests
 	#condor_pl_test(job_had_basic "Basic High Availability Daemon Test" "core;quick;full;quicknolink")
@@ -607,7 +632,8 @@ if (BUILD_TESTING)
 	condor_pl_test(job_dagman_lazy_submit_file "Test lazy submit file creation in DAGMan" "dagman;quick;full;quicknolink")
 	condor_pl_test(job_dagman_retry-B "Test node retries in DAGMan" "dagman;quick;full;quicknolink")
 	condor_pl_test(job_dagman_propogate_priorities "Test propogation of priorities" "dagman;quick;full;quicknolink")
-	condor_pl_test(job_dagman_use_hold_claim "Test holding of claims for DAGman" "dagman;quick;full;quicknolink")
+	# turned off for now ticket #5076
+	#condor_pl_test(job_dagman_use_hold_claim "Test holding of claims for DAGman" "dagman;quick;full;quicknolink")
 	# turned off for now ticket #4386
 	#condor_pl_test(job_dagman_halt-A "Test DAG halting" "dagman;quick;full;quicknolink")
 	condor_pl_test(job_dagman_loglink "Test node job user logs as symlinks" "dagman;quick;full;quicknolink")
@@ -627,6 +653,8 @@ if (BUILD_TESTING)
 	condor_pl_test(job_dagman_cycle-A "Test DAG status file with cycle" "dagman;quick;full;quicknolink")
 	condor_pl_test(job_dagman_rm "Test correct functionality of condor_rm of DAGMan job" "dagman;quick;full;quicknolink")
 	condor_pl_test(job_dagman_script_defer "Test DAG pre/post script deferral feature" "dagman;quick;full;quicknolink")
+	condor_pl_test(job_dagman_submit_glob-A "Test DAG with node jobs using new submit globbing feature" "dagman;quick;full;quicknolink")
+	condor_pl_test(job_dagman_submit_glob-B "Test DAG with node jobs using feature, in combination with DAGMAN_PROHIBIT_MULTI_JOBS" "dagman;quick;full;quicknolink")
 	#condor_pl_test(perf_jobs_sue_10_10_30_van "Generated jobs performance test" "performance;long")
 	#condor_pl_test(perf_xfer_deb_10_10_30_van "Generated transfer performance test" "performance;long")
 	condor_pl_test(job_filexfer_sandbox-empty_van "Are job sandboxes with bad permissions cleaned up?" "framework;quick;full;quicknolink")
@@ -649,5 +677,6 @@ if (BUILD_TESTING)
 	if ( NOT WITHOUT_SOAP_TEST AND HAVE_EXT_GSOAP )
 		#condor_pl_test(soap_job_tests "Soap: currently 10 different interface tests" "core;quick;full;quicknolink")
 	endif()
+
 
 endif(BUILD_TESTING)

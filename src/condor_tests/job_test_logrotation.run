@@ -353,13 +353,15 @@ if($result == 1) {
 
 
 CondorTest::EndTest();
-RestoreLocalConfig(); # retore original condor_config.local file
+
+exit(0);
+#RestoreLocalConfig(); # retore original condor_config.local file
 
 
 #my $localconfig = "condor_config.local";
 #my $localconfigsave = "condor_config.local.save";
 #my $configlocation = "";
-# $localconfig = SaveLocalConfig();
+#$localconfig = SaveLocalConfig();
 
 sub SaveLocalConfig
 {
@@ -371,9 +373,11 @@ sub SaveLocalConfig
 
 	if($locfigloc =~ /^\s*(.*?)condor_config\.local$/) {
 		$configlocation = $1;
+		print "Setting configlocation:$configlocation \n";
 	} else {
 		print "Mismatch on $locfigloc\n";
 	}
+	print "SET config location:$configlocation\n";
 	chdir("$configlocation");
 	runcmd("cp $localconfig $localconfigsave",{emit_output=>0});
 	#runcmd("ls",{emit_output=>0});
@@ -387,9 +391,9 @@ sub AppendLocalConfig
 {
 	my $newtext = shift;
 	my $tmpconfig = "condor_config.local.new";
-	#print "entering AppendLocalConfig configlocation: $configlocation\n";
+	print "entering AppendLocalConfig configlocation: $configlocation\n";
 	chdir("$configlocation");
-	#print "AppendLocalConfig src:$localconfig dest:$tmpconfig\n";
+	print "AppendLocalConfig src:$localconfig dest:$tmpconfig\n";
 	open(CF, "<$localconfig") or leave( "Append Failed to $localconfig:$!\n");
 	open(CFN, ">$tmpconfig") or leave("Append Failed to $tmpconfig:$!\n");
 	# copy contents of current config file
@@ -405,7 +409,7 @@ sub AppendLocalConfig
 
 sub RestoreLocalConfig
 {
-	#print "entering RestoreLocalConfig configlocation: $configlocation\n";
+	print "entering RestoreLocalConfig configlocation: $configlocation\n";
 	chdir("$configlocation");
 	runcmd("cp $localconfig condor_config.test",{emit_output=>0});
 	runcmd("cp $localconfigsave $localconfig",{emit_output=>0});

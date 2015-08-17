@@ -19,6 +19,13 @@ resources to be limited in the negotiator's configuration file.
 The job submitter must declare in the submit description file which 
 resources the job consumes.
 
+The administrator chooses a name for the limit.
+Concurrency limit names are case-insensitive.
+The names are formed from  the alphabet letters 'A' to 'Z' and 'a' to 'z', 
+the numerical digits 0 to 9, 
+the underscore character  '\_' , and at most one period character.
+The names cannot start with a numerical digit.
+
 For example, assume that there are 3 licenses for the X software,
 so HTCondor should constrain the number of running jobs which need the
 X software to 3.  
@@ -105,10 +112,69 @@ A concurrency limit named
 \Expr{OTHER.LICENSE} will receive the default limit of 5, as
 there is no set named \Expr{OTHER}.
 
-Note that it is possible, in unusual circumstances, for more jobs to
+A concurrency limit may be evaluated against the attributes of a 
+matched machine.
+This allows a job to vary what concurrency limits it requires based on
+the machine to which it is matched.
+To implement this, the job uses submit command 
+\SubmitCmd{concurrency\_limits\_expr} instead of
+\SubmitCmd{concurrency\_limits}.
+Consider an example in which execute machines are located on
+one of two local networks.
+The administrator sets a concurrency limit to limit the number
+of network intensive jobs on each network to 10.
+Configuration of each execute machine advertises which
+local network it is on. 
+A machine on \AdStr{NETWORK\_A} configures
+\begin{verbatim}
+NETWORK = "NETWORK_A"
+STARTD_ATTRS = $(STARTD_ATTRS) NETWORK
+\end{verbatim}
+and a machine on \AdStr{NETWORK\_B} configures
+\begin{verbatim}
+NETWORK = "NETWORK_B"
+STARTD_ATTRS = $(STARTD_ATTRS) NETWORK
+\end{verbatim}
+
+The configuration for the negotiator sets the concurrency limits:
+\begin{verbatim}
+NETWORK_A_LIMIT = 10
+NETWORK_B_LIMIT = 10
+\end{verbatim}
+
+Each network intensive job identifies itself by specifying the limit
+within the submit description file:
+\begin{verbatim}
+concurrency_limits_expr = TARGET.NETWORK
+\end{verbatim}
+
+The concurrency limit is applied based on the network
+of the matched machine.
+
+An extension of this example applies two concurrency limits.
+One limit is the same as in the example, 
+such that it is based on an attribute of the matched machine.
+The other limit is of a specialized application
+called \AdStr{SWX} in this example.
+The negotiator configuration is extended to also include
+\begin{verbatim}
+SWX_LIMIT = 15
+\end{verbatim}
+
+The network intensive job that also uses two units of the \Expr{SWX} 
+application identifies the needed resources in the single submit command:
+\begin{verbatim}
+concurrency_limits_expr = strcat("SWX:2 ", TARGET.NETWORK)
+\end{verbatim}
+
+Submit command \SubmitCmdNI{concurrency\_limits\_expr} may not be used 
+together with submit command \SubmitCmdNI{concurrency\_limits}.
+
+Note that it is possible, under unusual circumstances, for more jobs to
 be started than should be allowed by the concurrency limits feature.
 In the presence of preemption and dropped updates from the
-\Condor{startd} daemon to the \Condor{collector} daemon, it is
-possible for the limit to be exceeded. If the limits are exceeded,
+\Condor{startd} daemon to the \Condor{collector} daemon, 
+it is possible for the limit to be exceeded. 
+If the limits are exceeded,
 HTCondor will not kill any job to reduce the number of running jobs to
 meet the limit.

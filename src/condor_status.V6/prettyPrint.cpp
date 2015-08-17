@@ -79,10 +79,52 @@ static const char *formatRealDate( int , AttrList * , Formatter &);
 static const char *formatLoadAvg (double, AttrList *, Formatter &);
 static const char *formatOfflineUniverses( const classad::Value &, AttrList *, struct Formatter & );
 
+#ifdef WIN32
+int getConsoleWindowSize(int * pHeight = NULL) {
+	CONSOLE_SCREEN_BUFFER_INFO ws;
+	if (GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &ws)) {
+		if (pHeight)
+			*pHeight = (int)(ws.srWindow.Bottom - ws.srWindow.Top)+1;
+		return (int)ws.dwSize.X;
+	}
+	return 80;
+}
+#else
+#include <sys/ioctl.h> 
+int getConsoleWindowSize(int * pHeight = NULL) {
+    struct winsize ws; 
+	if (0 == ioctl(0, TIOCGWINSZ, &ws)) {
+		//printf ("lines %d\n", ws.ws_row); 
+		//printf ("columns %d\n", ws.ws_col); 
+		if (pHeight)
+			*pHeight = (int)ws.ws_row;
+		return (int) ws.ws_col;
+	}
+	return 80;
+}
+#endif
+
+int  forced_display_width = 0;
+int getDisplayWidth() {
+	if (forced_display_width <= 0) {
+		int width = getConsoleWindowSize();
+		if (width <= 0)
+			return wide_display ? 1024 : 80;
+	}
+	return forced_display_width;
+}
+
+void setPPwidth () { 
+	if (wide_display || forced_display_width) {
+		pm.SetOverallWidth(getDisplayWidth()-1);
+	}
+}
+
 static void ppInit()
 {
 	pm.SetAutoSep(NULL, " ", NULL, "\n");
 	//pm.SetAutoSep(NULL, " (", ")", "\n"); // for debugging, delimit the field data explicitly
+	setPPwidth();
 }
 
 enum ivfield {
@@ -340,7 +382,7 @@ prettyPrint (ClassAdList &adList, TrackTotals *totals)
 	}
 
 	// if totals are required, display totals
-	if (adList.MyLength() > 0 && totals) totals->displayTotals(stdout, 20);
+	if (adList.MyLength() > 0 && totals) totals->displayTotals(stdout, wide_display ? -1 : 20);
 }
 
 
@@ -821,6 +863,7 @@ printCustom (ClassAd *ad)
 {
 	(void) pm.display (stdout, ad, targetAd);
 }
+
 
 static const char *
 formatLoadAvg (double fl, AttrList *, Formatter &)

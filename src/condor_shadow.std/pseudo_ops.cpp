@@ -399,12 +399,12 @@ pseudo_send_a_file( const char *path, mode_t mode )
 	(void)umask(omask);
 
 	syscall_sock->encode();
-	assert( syscall_sock->code(fd) );
-	assert( syscall_sock->end_of_message() );
+	CONDOR_ASSERT( syscall_sock->code(fd) );
+	CONDOR_ASSERT( syscall_sock->end_of_message() );
 
 		/* Get the file length */
 	syscall_sock->decode();
-	assert( syscall_sock->code(file_len) );
+	CONDOR_ASSERT( syscall_sock->code(file_len) );
 	dprintf(D_SYSCALLS, "\tFile size is %d\n", file_len );
 		
 		/* Transfer all the data */
@@ -428,8 +428,8 @@ pseudo_send_a_file( const char *path, mode_t mode )
 	(void)close( fd );
 
 		/* Get a repeat of the file length as a check */
-	assert( syscall_sock->code(checksum) );
-	assert( syscall_sock->end_of_message() );
+	CONDOR_ASSERT( syscall_sock->code(checksum) );
+	CONDOR_ASSERT( syscall_sock->end_of_message() );
 	dprintf(D_SYSCALLS, "\tchecksum is %d\n", checksum );
 	assert( checksum == file_len );
 
@@ -457,7 +457,7 @@ pseudo_get_file( const char *name )
 
 		/* Send the status from safe_open_wrapper_follow() so client knows we are going ahead */
 	syscall_sock->encode();
-	assert( syscall_sock->code(fd) );
+	CONDOR_ASSERT( syscall_sock->code(fd) );
 
 		/* Send the size of the file */
 	file_size = lseek( fd, 0, 2 );
@@ -466,7 +466,7 @@ pseudo_get_file( const char *name )
 	if( file_size < 0 ) {
 		return -1;
 	}
-	assert( syscall_sock->code(file_size) );
+	CONDOR_ASSERT( syscall_sock->code(file_size) );
 
 		/* Transfer the data */
 	for( bytes_to_go = file_size; bytes_to_go; bytes_to_go -= len ) {
@@ -475,13 +475,13 @@ pseudo_get_file( const char *name )
 			dprintf( D_ALWAYS, "Can't read from \"%s\"\n", name );
 			read_status = -1;
 		}
-		assert( syscall_sock->code_bytes(buf,len) );
+		CONDOR_ASSERT( syscall_sock->code_bytes(buf,len) );
 	}
 	(void)close( fd );
 
 		/* Send the size of the file again as a check */
-	assert( syscall_sock->code(file_size) );
-	assert( syscall_sock->end_of_message() );
+	CONDOR_ASSERT( syscall_sock->code(file_size) );
+	CONDOR_ASSERT( syscall_sock->end_of_message() );
 	dprintf(D_SYSCALLS, "\tSent file size %d\n", file_size );
 
 		/* Send final status */

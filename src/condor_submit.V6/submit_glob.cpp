@@ -345,7 +345,7 @@ int glob(const char * pattern, int flags, int (*errfunc) (const char* epath, int
 	ZeroMemory(&wfd, sizeof(wfd));
 
 	if (has_directory_pattern(pattern)) {
-		PRAGMA_REMIND("add support for directory globbing.")
+		//PRAGMA_REMIND("add support for directory globbing.")
 		return GLOB_NOTIMPL;
 	}
 

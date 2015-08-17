@@ -66,6 +66,38 @@ XML-formatted.
 
 \\ \hline
 
+\texttt{send\_alive( ad, pid, timeout )}
+
+Send a keep alive message to an HTCondor daemon.
+
+Parameter \texttt{ad} is a ClassAd specifying the location of the daemon.
+This ClassAd is typically found by using \texttt{Collector.locate(...)}.
+
+Parameter \texttt{pid} is the process identifier for the keep alive.
+The default value of \texttt{None} uses the value from \texttt{os.getpid()}.
+
+Parameter \texttt{timeout} is the number of seconds that this 
+keep alive is valid.
+If a new keep alive is not received by the \Condor{master} in time,
+then the process will be terminated.
+The default value is controlled by configuration variable
+\MacroNI{NOT\_RESPONDING\_TIMEOUT}.
+
+\\ \hline
+
+\texttt{set\_subsystem( name, type = Auto )}
+
+Set the subsystem name for the object.
+
+Parameter \texttt{name} is the subsystem name.
+
+Parameter \texttt{type} is the HTCondor daemon type,
+taken from the \texttt{SubsystemType} enum.
+The default value of \texttt{Auto} infers the type from the
+\texttt{name} parameter.
+
+\\ \hline
+
 \texttt{lock( file\_obj, lock\_type )}
 
 Take a lock on a file object using the HTCondor locking protocol,
@@ -93,6 +125,30 @@ The logging level is controlled by \MacroNI{TOOL\_DEBUG}.
 Enable debugging output from HTCondor, where output is sent to a file.
 The log level is controlled by \MacroNI{TOOL\_DEBUG},
 and the file used is controlled by \MacroNI{TOOL\_LOG}.
+
+\\ \hline
+\texttt{log( level, msg )}
+Log a message to the HTCondor logging subsystem.
+
+Parameter \texttt{level} is the Log category and formatting indicator.
+Use the \texttt{LogLevel} enum to get list of attributes that may be
+OR'd together.
+
+Parameter \texttt{msg} is a String message to log.
+
+\\ \hline
+
+\texttt{poll( active\_queries )}
+
+Wait on the results of multiple query iteratories.  Param \texttt{active\_queries}
+is a list of query iterators as returned by \texttt{xquery()}.
+
+This function returns an iterator which yields the next ready query iterator.  The
+returned iterator stops when all results have been consumed for all iterators.
+
+The iterator returned by \texttt{xquery} has a method named \texttt{nextAdsNonBlocking}
+which returns a list of all ads available without blocking.
+
 \\ \hline
 
 \end{tabular}
@@ -178,7 +234,7 @@ Parameter \texttt{attr\_list} is a list of attributes for the \Condor{schedd}
 daemon to project along.  
 It defaults to having the \Condor{schedd} daemon return all attributes.
 \\ \hline
-\texttt{xquery( constraint = true, attr\_list = [] )}
+\texttt{xquery( constraint = true, attr\_list = [], limit, opts, name )}
 
 Query the \Condor{schedd} daemon for jobs.
 Returns an iterator of ClassAds representing the matching jobs
@@ -191,6 +247,18 @@ It defaults to \texttt{True}.
 Parameter \texttt{attr\_list} is a list of attributes for the \Condor{schedd}
 daemon to project along.
 It defaults to having the \Condor{schedd} daemon return all attributes.
+
+Parameter \texttt{limit} is the maximum number of results this query will return.
+
+Parameter \texttt{opts} specifies any additional query options.  Currently, the
+only non-default option is \texttt{QueryOpts.AutoCluster}, which returns
+autoclusters in the schedd, not jobs.
+
+Parameter \texttt{name} provides a \textit{tag} name for the returned query iterator.
+This string will always be returned from the \texttt{tag()} method of the returned
+iterator.  The default value is the \Condor{schedd}'s name.  This tag is useful to identify
+different queries when using the \texttt{poll()} module function.
+
 \\ \hline
 
 \texttt{history( (object) requirements, (list) projection, (int) match )}
@@ -239,6 +307,29 @@ Parameter \texttt{ad\_results}, if set to a list,
 will contain the job ClassAds resulting from the job submission.
 These are useful for interacting with the job spool at a later time.
 \\ \hline
+
+\texttt{submitMany( cluster\_ad, proc\_ads, spool = false, ad\_results = None )}
+
+Submit multiple jobs to the \Condor{schedd} daemon, possibly including several
+distinct processes.
+Returns the newly created cluster ID.
+
+This method requires the invoker to provide a ClassAd, \texttt{cluster\_ad} for the new job cluster;
+this is the same format as in the \texttt{submit()} method.
+
+The \texttt{proc\_ads} parameter is a list of 2-tuples; each tuple has the format
+of \texttt{(proc\_ad, count)}.  For each list entry, this will result in \texttt{count} jobs being submitted
+inheriting from both \texttt{cluster\_ad} and \texttt{proc\_ad}.
+
+Parameter \texttt{spool} inserts the necessary attributes into the job for it
+to have the input files spooled to a remote \Condor{schedd} daemon.
+This parameter is necessary for jobs submitted to a remote \Condor{schedd}.
+
+Parameter \texttt{ad\_results}, if set to a list,
+will contain the job ClassAds resulting from the job submission.
+These are useful for interacting with the job spool at a later time.
+
+\\ \hline
 \texttt{spool( ad\_list )}
 
 Spools the files specified in a list of job ClassAds to the \Condor{schedd}.
@@ -270,8 +361,24 @@ A value of -1 specifies to use the value of configuration variable
 Note that, depending on the lifetime
 of the proxy in \texttt{filename}, the resulting lifetime may be shorter
 than the desired lifetime.
-\\ \hline
 
+\\ \hline
+\texttt{negotiate( (str)accounting\_name )}
+
+Begin a negotiation cycle with the remote schedd.  The \texttt{accounting\_name}
+parameter determines which user we will start negotiating with.
+
+The returned object, of type \texttt{ScheddNegotiate} is iterable; its iterator
+will yield resource request ClassAds from the schedd.  Each resource request represents
+a set of jobs that are next in queue for the schedd for this user.
+
+The \texttt{ScheddNegotiate} additionally serves as a context manager, automatically
+destroying the negotiation session when the context is left.
+
+Finally, \texttt{ScheddNegotiate} has a \texttt{sendClaim} method for sending claims
+back to the remote schedd based on a given resource request.
+
+\\ \hline
 \end{tabular}
 \end{flushleft}
 
@@ -308,7 +415,7 @@ Parameter \texttt{daemon\_type} is the type of daemon;
 must be of the enum \texttt{DaemonTypes}. 
 
 \\ \hline
-\texttt{query( (AdTypes)ad\_type, constraint=True, attrs=[] )}
+\texttt{query( (AdTypes)ad\_type, constraint=True, attrs=[], (str)statistics = '' )}
 
 Query the contents of a \Condor{collector} daemon.
 Returns a list of ClassAds that match the \texttt{constraint} parameter.
@@ -322,6 +429,9 @@ It defaults to \texttt{True}.
 
 Optional parameter \texttt{attrs} is a list of attributes.
 If specified, the returned ClassAds will be projected along these attributes.
+
+Optional parameter \texttt{statistics} is a list of statistics attributes
+to include, if they exist for the specified daemon.
 \\ \hline
 \texttt{advertise( ad\_list, command=UPDATE\_AD\_GENERIC, use\_tcp = True )}
 
@@ -336,6 +446,28 @@ may require reduced authorization levels.
 
 Optional parameter \texttt{use\_tcp} causes updates to be sent via TCP.
 Defaults to \texttt{True}.
+\\ \hline
+\texttt{directQuery( (Collector)arg1, (DaemonTypes)daemon\_type, (str)name = '', (list)projection = [], (str)statistics = '' )}
+
+Query the specified daemon directly, instead of using the ClassAd from
+the \Condor{collector} daemon.
+Returns the ClassAd of the specified daemon, after obtaining it from the
+daemon.
+
+Parameter \texttt{arg1} is the \Condor{collector} that will identify where
+to find the specified daemon.
+
+Parameter \texttt{daemon\_type} specified a daemon with an enum from 
+\texttt{DaemonTypes}.
+
+Optional parameter \texttt{name} specifies the daemon's name.
+If not specified, the local daemon is used.
+
+Optional parameter \texttt{projection} is a list of attributes requested,
+to obtain only a subset of the attributes from the ClassAd.
+
+Optional parameter \texttt{statistics} is a list of statistics attributes
+to include, if they exist for the specified daemon.
 \\ \hline
 
 \end{tabular}
@@ -623,6 +755,73 @@ configuration of the daemon.
 \end{tabular}
 \end{flushleft}
 
+The \texttt{Claim} class provides access to HTCondor's
+Compute-On-Demand facilities.
+
+\textbf{The \texttt{Claim} class:}
+\begin{flushleft}
+\begin{tabular}{|p{16cm}|} \hline
+
+\texttt{\_\_init\_\_( classad )}
+
+Create a Claim object.  The \texttt{classad} argument provides
+a ClassAd describing the startd to claim.
+
+\\ \hline
+
+\texttt{requestCOD( constraint, lease\_duration )}
+
+Request a claim from the \Condor{startd} represented by this object.
+
+The \texttt{constraint} specifies which slot in the startd to claim
+(defaults to 'true', which will result in the first slot becoming claimed).
+
+The \texttt{lease\_duration} indicates how long the claim should be valid for.
+
+On success, the \texttt{Claim} object will represent a valid claim on the
+remote startd.
+
+\\ \hline
+\texttt{release( (VacateTypes)vacate\_type )}
+
+Release a \Condor{startd} from this claim and shut down any running job.
+
+The \texttt{vacate\_type} argument indicates the type of vacate to perform
+(Fast or Graceful); must be from VacateTypes enum.
+
+\\ \hline
+\texttt{activate( (ClassAd)ad )}
+
+Activate a claim using a given job ad.
+
+The \texttt{ad} must describe a job to run.
+
+\\ \hline
+\texttt{suspend()}
+
+Suspend an activated claim.
+
+\\ \hline
+\texttt{renew()}
+
+Renew the lease on an existing claim.
+
+\\ \hline
+\texttt{resume()}
+
+Resume a temporarily suspended claim.
+
+\\ \hline
+\texttt{deactivate()}
+Deactivate a claim; shuts down the currently-running job, but holds onto the
+claim for future use.
+
+\\ \hline
+\texttt{delegateGSIProxy()}
+Send an x509 proxy credential to an activated claim.
+
+\end{tabular}
+\end{flushleft}
 
 \textbf{Module enums:}
 \begin{flushleft}
@@ -645,6 +844,51 @@ A list of types of known HTCondor daemons.
 \texttt{JobAction}
 
 A list of actions that can be performed on a job in a \Condor{schedd}.
+\\ \hline
+\texttt{SubsystemType}
+
+Distinguishes subsystems within HTCondor.
+Values may be
+\texttt{Master},
+\texttt{Collector},
+\texttt{Negotiator},
+\texttt{Schedd},
+\texttt{Shadow},
+\texttt{Startd},
+\texttt{Starter},
+\texttt{GAHP},
+\texttt{Dagman},
+\texttt{SharedPort},
+\texttt{Daemon},
+\texttt{Tool},
+\texttt{Submit},
+or \texttt{Job}.
+
+\\ \hline
+\texttt{LogLevel}
+
+The level at which events are logged.
+Values may be
+\texttt{Always},
+\texttt{Error},
+\texttt{Status},
+\texttt{Job},
+\texttt{Machine},
+\texttt{Config},
+\texttt{Protocol},
+\texttt{Priv},
+\texttt{DaemonCore},
+\texttt{Security},
+\texttt{Network},
+\texttt{Hostname},
+\texttt{Audit},
+\texttt{Terse},
+\texttt{Verbose},
+\texttt{FullDebug},
+\texttt{SubSecond},
+\texttt{Timestamp},
+\texttt{PID}, or
+\texttt{NoHeader}.
 \\ \hline
 
 \end{tabular}
@@ -753,17 +997,44 @@ and the object can take lists, dictionaries, and ClassAds as values.
 \textbf{\texttt{classad} module functions:}
 \begin{flushleft}
 \begin{tabular}{|p{16cm}|} \hline
+\texttt{parseOne( input, parser=Auto )}
+
+Parse the entire \texttt{input} into a single ClassAd.
+In the presence of multiple ClassAds or blank lines, 
+continue to merge ClassAds together until the entire string is consumed.
+Returns a \texttt{classad} object.
+
+Parameter \texttt{input} is a string-like object or a file pointer.
+
+Parameter \texttt{parser} specifies which ClassAd parser to use.
+\\ \hline
+
+\texttt{parseNext( input, parser=Auto )}
+
+Parse the next ClassAd in the input string.
+Advances the \texttt{input} object to point after the consumed ClassAd.
+Returns a \texttt{classad} object.
+
+Parameter \texttt{input} is a file-like object.
+
+Parameter \texttt{parser} specifies which ClassAd parser to use.
+\\ \hline
 \texttt{parse( input )}
 
-Parse input into a ClassAd.  
+\textit{This method is no longer used.}
+Parse input into a ClassAd.
 Returns a ClassAd object.
 
 Parameter \texttt{input} is a string-like object or a file pointer.
 \\ \hline
 
-\texttt{parseOld( )}
+\texttt{parseOld( input )}
 
+\textit{This method is no longer used.}
 Parse old ClassAd format input into a ClassAd.
+Returns a ClassAd object.
+
+Parameter \texttt{input} is a string-like object or a file pointer.
 \\ \hline
 \texttt{version( )}
 
@@ -940,27 +1211,28 @@ Returns a string.
 \\ \hline
 \texttt{quote( str )}
 
-Converts the Python string, \Code{str}, into a ClassAd string literal.
+Converts the Python string, \texttt{str}, into a ClassAd string literal.
 
 Returns the string literal.
 \\ \hline
 \texttt{unquote( str )}
 
-Converts the Python string, \Code{str}, escaped as a ClassAd string back to a
+Converts the Python string, \texttt{str}, escaped as a ClassAd string back to a
 Python string.
 
 Returns the Python string.
 \\ \hline
-\texttt{parseAds( input )}
+\texttt{parseAds( input, parser=Auto )}
 
-Given \Code{input} of a string or file, return an iterator of
-ClassAds where the ClassAds are in the New ClassAd format.
+Given \texttt{input} of a string or file, return an iterator of ClassAds.
+Parameter \texttt{parser} tells which ClassAd parser to use.
 
 Returns an iterator.
 \\ \hline
 \texttt{parseOldAds( input )}
 
-Given \Code{input} of a string or file, return an iterator of
+\textit{This method is no longer used.}
+Given \texttt{input} of a string or file, return an iterator of
 ClassAds where the ClassAds are in the Old ClassAd format.
 
 Returns an iterator.
@@ -978,7 +1250,7 @@ Returns a new \texttt{ExprTree} object.
 \texttt{matches( ad )}
 
 Given \texttt{ClassAd} object \texttt{ad}, 
-check to see if this object matches the \Code{Requirements} attribute 
+check to see if this object matches the \texttt{Requirements} attribute
 of \texttt{ad}.
 Returns \texttt{true} if it does.
 
@@ -986,7 +1258,7 @@ Returns \texttt{true} if it does.
 \texttt{symmetricMatch( ad )}
 
 Returns \texttt{true} if the given \texttt{ad} matches this and this matches
-\Code{ad}.  Equivalent to \texttt{self.matches(ad) and ad.matches(self)}.
+\texttt{ad}.  Equivalent to \texttt{self.matches(ad) and ad.matches(self)}.
 
 \\ \hline
 \texttt{externalRefs( expr )}
@@ -1014,8 +1286,8 @@ represents an expression in the ClassAd language.  The python operators
 for \texttt{ExprTree} have been overloaded so, if \texttt{e1} and \texttt{e2}
 are \texttt{ExprTree} objects, then \texttt{e1 + e2} is also a \texttt{ExprTree}
 object.  Lazy-evaluation is used, so an expression \texttt{"foo" + 1} does not
-produce an error until it is evaluated with a call to \Code{bool()} or the
-\Code{.eval()} class member.
+produce an error until it is evaluated with a call to \texttt{bool()} or the
+\texttt{.eval()} class member.
 
 \textbf{\texttt{ExprTree} class methods:}
 \begin{flushleft}
@@ -1033,6 +1305,23 @@ Represent and return the ClassAd expression as a string.
 Evaluate the expression and return as a ClassAd value, 
 typically a Python object.
 \\ \hline
+\end{tabular}
+\end{flushleft}
+
+\textbf{Module enums:}
+\begin{flushleft}
+\begin{tabular}{|p{16cm}|} \hline
+
+\texttt{Parser}
+
+Tells which ClassAd parser to use.
+Values may be
+\texttt{Auto},
+\texttt{Old},
+or \texttt{New}.
+
+\\ \hline
+
 \end{tabular}
 \end{flushleft}
 
@@ -1065,7 +1354,7 @@ Type "help", "copyright", "credits" or "license" for more information.
         foo = 2 + 2; 
         baz = time() + 4
     ]
->>> ad2=classad.parse(open("test_ad", "r"));
+>>> ad2=classad.parseOne(open("test_ad", "r"));
 >>> ad2["error"] = classad.Value.Error
 >>> ad2["undefined"] = classad.Value.Undefined
 >>> print ad2
@@ -1149,13 +1438,13 @@ KeyError: 'foo'
 \normalsize
 
 Here is an example that illustrates the use of the iterator
-\texttt{parseOldAds} method on a history log.
+\texttt{parseAds} method on a history log.
 \footnotesize
 \begin{verbatim}
 >>> import classad
 >>> import os
 >>> fd = os.popen("condor_history -l -match 4")
->>> ads = classad.parseOldAds(fd)
+>>> ads = classad.parseAds(fd)
 >>> print [ad["ClusterId"] for ad in ads]
 [23389L, 23388L, 23386L, 23387L]
 >>>

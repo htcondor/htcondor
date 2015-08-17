@@ -77,12 +77,17 @@
 #include <io.h>
 #define fsync _commit
 #define strcasecmp _stricmp
+#define strtoll _strtoi64
 #ifndef rint
 #define rint(num) floor(num + .5)
 #endif
 #define isnan _isnan
 	// isinf() defined in util.h
 
+// anotations that help the MSVC code analyzer
+#define PREFAST_NORETURN __declspec(noreturn)
+#define SAL_Ret_notnull _Ret_notnull_
+#define SAL_assume(expr) __analysis_assume(expr);
 
 #define snprintf _snprintf
 
@@ -94,6 +99,10 @@
 	// Disable warnings about truncated debug identifiers
 #pragma warning( disable : 4786 )
 
+#else
+#define PREFAST_NORETURN
+#define SAL_Ret_notnull
+#define SAL_assume(expr)
 #endif // WIN32
 
 

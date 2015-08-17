@@ -131,7 +131,7 @@ main(int argc, char **argv)
 					printf("Failed to get entire test pattern: readcnt is %d tstmsglen is %d\n", readcnt, tstmsglen);
 					exit(1);
 				}
-				if( strncmp(tstmessage, chktstmessage, tstmsglen) != 0)
+				if( memcmp(tstmessage, chktstmessage, tstmsglen) != 0)
 				{
 					printf("Test pattern at end of file missing\n");
 					exit(1);

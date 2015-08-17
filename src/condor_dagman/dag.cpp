@@ -869,7 +869,7 @@ Dag::ProcessJobProcEnd(Job *job, bool recovery, bool failed) {
 	//
 
 	if ( failed && job->_scriptPost == NULL ) {
-		if( job->GetRetries() < job->GetRetryMax() ) {
+		if ( job->DoRetry() ) {
 			RestartNode( job, recovery );
 		} else {
 				// no more retries -- job failed
@@ -983,7 +983,7 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Job *job,
 				//
 				// Deal with retries.
 				//
-			if( job->GetRetries() < job->GetRetryMax() ) {
+			if ( job->DoRetry() ) {
 				RestartNode( job, recovery );
 			} else {
 					// no more retries -- node failed
@@ -1366,7 +1366,9 @@ Dag::PrintDagFiles( /* const */ StringList &dagFiles )
 bool
 Dag::StartNode( Job *node, bool isRetry )
 {
+	ASSERT( !_finalNodeRun );
     ASSERT( node != NULL );
+
 	if ( !node->CanSubmit() ) {
 		EXCEPT( "Node %s not ready to submit!", node->GetJobName() );
 	}
@@ -1653,7 +1655,7 @@ Dag::PreScriptReaper( Job *job, int status )
 		}
 
 			// Check for retries.
-		else if( job->GetRetries() < job->GetRetryMax() ) {
+		else if ( job->DoRetry() ) {
 			job->TerminateFailure();
 			// Note: don't update count in metrics here because we're
 			// retrying!
@@ -2389,13 +2391,18 @@ void
 Dag::RestartNode( Job *node, bool recovery )
 {
     ASSERT( node != NULL );
+
 	if ( node->GetStatus() != Job::STATUS_ERROR ) {
 		EXCEPT( "Node %s is not in ERROR state", node->GetJobName() );
 	}
-    if( node->have_retry_abort_val && node->retval == node->retry_abort_val ) {
+
+    if ( _finalNodeRun || ( node->have_retry_abort_val &&
+				node->retval == node->retry_abort_val ) ) {
+		const char *finalRun = _finalNodeRun ?
+					"because final node is running " : "";
         debug_printf( DEBUG_NORMAL, "Aborting further retries of node %s "
-                      "(last attempt returned %d)\n",
-                      node->GetJobName(), node->retval);
+                      "%s(last attempt returned %d)\n",
+                      node->GetJobName(), finalRun, node->retval);
         _numNodesFailed++;
 		_metrics->NodeFinished( node->GetDagFile() != NULL, false );
 		if ( _dagStatus == DAG_STATUS_OK ) {
@@ -2519,11 +2526,11 @@ Dag::isCycle ()
 bool
 Dag::CheckForDagAbort(Job *job, const char *type)
 {
-	if ( job->have_abort_dag_val &&
-				job->retval == job->abort_dag_val ) {
+	if ( job->DoAbort() ) {
 		debug_printf( DEBUG_QUIET, "Aborting DAG because we got "
 				"the ABORT exit value from a %s\n", type);
 		_dagIsAborted = true;
+
 		if ( job->have_abort_dag_return_val ) {
 			main_shutdown_rescue( job->abort_dag_return_val,
 						job->abort_dag_return_val != 0 ? DAG_STATUS_ABORT :
@@ -3949,7 +3956,6 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 					node->GetJobName(), parents,
 					node->varsFromDag, node->GetRetries(),
 					node->GetDirectory(), _defaultNodeLog,
-					ProhibitMultiJobs(),
 					node->NumChildren() > 0 && dm._claim_hold_time > 0 );
 	}
 
@@ -4011,6 +4017,10 @@ Dag::ProcessFailedSubmit( Job *node, int max_submit_attempts )
 	int thisSubmitDelay = _nextSubmitDelay;
 	_nextSubmitTime = time(NULL) + thisSubmitDelay;
 	_nextSubmitDelay *= 2;
+
+	if ( _dagStatus == Dag::DAG_STATUS_RM && node->GetFinal() ) {
+		max_submit_attempts = min( max_submit_attempts, 2 );
+	}
 
 	if ( node->_submitTries >= max_submit_attempts ) {
 			// We're out of submit attempts, treat this as a submit failure.

@@ -20,6 +20,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#ifdef WIN32
+#pragma warning(disable: 6011) // deref of null pointer warning.
+#endif
+
 int main( int , char ** /*argv*/ )
 {
 	char *null = NULL;

@@ -28,6 +28,7 @@
 #include "XInterface.unix.h"
 #endif
 
+#include "condor_config.h"
 #include "condor_query.h"
 #include "daemon.h"
 #include "subsystem_info.h"
@@ -51,83 +52,168 @@ MSC_DISABLE_WARNING(6262) // warning: Function uses 60K of stack
 bool
 update_startd()
 {
-    SafeSock ssock;
-	Daemon startd( DT_STARTD );
+	static Daemon startd( DT_STARTD );
+	static ReliSock * rsock = NULL;
 
-	if( ! startd.locate() ) {
-		dprintf( D_ALWAYS, "Can't locate startd, aborting (%s)\n",
-			startd.error() );
-		return false;
-	}
-	if( !ssock.connect(startd.addr(), 0) ) {
-		dprintf( D_ALWAYS, "Can't connect to startd at: %s, "
-			"aborting\n", startd.addr() );
-		return false;
+	if( rsock == NULL ) {
+		// We can't continue to use the original Daemon object, if the
+		// reason we lost our connection is because the startd's address
+		// changed (e.g., was restarted).  We need to reconstruct on every
+		// reconnection attempt, because the address may not have been
+		// updated since the connection was lost (e.g., the startd just died).
+		startd = Daemon( DT_STARTD );
+		rsock = new ReliSock();
+
+		if( ! startd.locate() ) {
+			dprintf( D_ALWAYS, "Can't locate startd, aborting (%s)\n",
+				startd.error() );
+			return false;
+		}
+
+		if(! rsock->connect( startd.addr(), 0  )) {
+			dprintf( D_ALWAYS, "Can't connect to startd at: %s, "
+				"aborting\n", startd.addr() );
+			return false;
+		}
 	}
 
-	if( !startd.sendCommand(X_EVENT_NOTIFICATION, &ssock, 3) ) {
+	if( !startd.sendCommand(X_EVENT_NOTIFICATION, rsock, 3) ) {
 		dprintf( D_ALWAYS, "Can't send X_EVENT_NOTIFICATION command "
 				 "to startd at: %s, aborting\n", startd.addr() );
+		rsock->close();
+		delete rsock;
+		rsock = NULL;
 		return false;
 	}
 	dprintf( D_FULLDEBUG, "Sent update to startd at: %s\n", startd.addr() );
-	return true;		
+
+	return true;
 }
 MSC_RESTORE_WARNING(6262) // warning: Function uses 60K of stack
 
+static int  small_move_delta = 16;
+static int  bump_check_after_idle_time_sec = 15*60;
 
-void 
-PollActivity()
-{
 #ifdef WIN32
-	LASTINPUTINFO lii;
-	static POINT previous_pos = { 0, 0 }; 
-	static DWORD previous_input_tick = 0;
 
+// determine the elapsed time between two calls to GetTickCount()
+// taking into account that it can roll over every 49 days
+// the return value will be the delta time, but it will never exceed MAXDWORD
+DWORD TickCountDelta(DWORD later, DWORD earlier, bool * prollever)
+{
+	DWORD ret;
+	bool rollover = (later < earlier) && (earlier > 0x80000000);
+	if (rollover) {
+		long long later64 = later + 0x100000000i64;
+		long long diff = later - (long long)earlier;
+		if (diff > MAXDWORD) { ret = MAXDWORD; }
+		else { ret = (DWORD)diff; }
+	} else {
+		ret = later - earlier;
+	}
+	return ret;
+}
+
+bool CheckActivity()
+{
+	static POINT previous_pos = { 0, 0 };
+	static DWORD previous_input_tick = 0;
+	static DWORD previous_cursor_tick = 0;
+
+	bool input_active = false;  // GetLastInputInfo is both keyboard and mouse
+	bool cursor_active = false; // true if only the cursor has moved..
+
+	LASTINPUTINFO lii;
 	lii.cbSize = sizeof(LASTINPUTINFO);
 	lii.dwTime = 0;
 
 	if ( !GetLastInputInfo(&lii) ) {
-		dprintf(D_ALWAYS, "PollActivity: GetLastInputInfo()"
-			" failed with err=%d\n", GetLastError());
+		dprintf(D_ALWAYS, "PollActivity: GetLastInputInfo() failed with err=%d\n", GetLastError());
 	}
 	else
 	{
-
-		//Check if there has been new keyboard input since the last check.
-		if(lii.dwTime > previous_input_tick)
+		// Check if there has been input (keyboard or mouse) since the last check.
+		if(lii.dwTime != previous_input_tick)
 		{
 			previous_input_tick = lii.dwTime;
-			update_startd();
+			input_active = true;
 		}
-
-		return;
 	}
 
-	//If no change to keyboard input, check if mouse has been moved.
-	CURSORINFO cursor_inf;
-	cursor_inf.cbSize = sizeof(CURSORINFO);
-	if (!GetCursorInfo(&cursor_inf))
+	// try and determine if the input is ONLY mouse movement.
+	CURSORINFO ci;
+	ci.cbSize = sizeof(CURSORINFO);
+	if (!GetCursorInfo(&ci))
 	{
-		dprintf(D_ALWAYS,"GetCursorInfo() failed (err=%li)\n",
-		GetLastError());
+		dprintf(D_ALWAYS,"GetCursorInfo() failed (err=%li)\n", GetLastError());
 	}
 	else
 	{
-		if ((cursor_inf.ptScreenPos.x != previous_pos.x) || 
-			(cursor_inf.ptScreenPos.y != previous_pos.y))
+		if ((ci.ptScreenPos.x != previous_pos.x) ||
+			(ci.ptScreenPos.y != previous_pos.y))
 		{
+			int cx = ci.ptScreenPos.x - previous_pos.x, cy = ci.ptScreenPos.y - previous_pos.y;
+			bool small_move = (cx < small_move_delta && cx > -small_move_delta) && (cy < small_move_delta && cy > -small_move_delta);
+			DWORD now = input_active ? lii.dwTime : GetTickCount();
+
+			// figure out the time since last mousemove. because GetTickCount() can rolloever ever 49 days
+			// we need to reset the previous_mouse_tick to 0 when we detect the rollover and it has
+			// gone sufficiently far over so that even after the reset the delta will still be large.
+			bool rollover = false;
+			DWORD ms_since_last_move = TickCountDelta(now, previous_cursor_tick, &rollover);
+			if (rollover && (now > 0x10000000)) { previous_cursor_tick = 0; }
+
 			// the mouse has moved!
 			// stash new position
-			previous_pos.x = cursor_inf.ptScreenPos.x; 
-			previous_pos.y = cursor_inf.ptScreenPos.y;
-			previous_input_tick = GetTickCount();
-			update_startd();
+			previous_pos = ci.ptScreenPos;
+
+			// if there was no keyboard activity, and the mouse was previously idle for at least 15 minutes
+			// do a bump check - i.e. don't report mouse activity unless we see more activity soon.
+			bool bump_check =  small_move && (ms_since_last_move > ((DWORD)bump_check_after_idle_time_sec*1000));
+
+			dprintf(D_FULLDEBUG,"mouse moved to %d,%d delta is %d,%d %.3f sec%s\n",
+				ci.ptScreenPos.x, ci.ptScreenPos.y, cx, cy, ms_since_last_move/1000.0,
+				bump_check ? " performing bump check" : "");
+
+			if (bump_check) {
+				Sleep(1000);
+				GetCursorInfo(&ci);
+				if (ci.ptScreenPos.x != previous_pos.x || ci.ptScreenPos.y != previous_pos.y) {
+					// cursor moved again, this is real.
+					cursor_active = true;
+				} else if (input_active) {
+					// check input info again.  if it hasn't changed, assume that the cursor movement we saw is
+					// the reason for the input info change we saw above.
+					GetLastInputInfo(&lii);
+					if (lii.dwTime == now) {
+						input_active = false;
+					}
+				}
+			} else {
+				// we are reporting active anyway because of keyboard or because of recent mouse activity
+				// so we don't care if this is 'real' cursor movement or accidental
+				cursor_active = cx || cy;
+			}
 		}
 	}
 
-	return;
+	if (input_active || cursor_active) {
+		previous_cursor_tick = previous_input_tick;
+		dprintf(D_FULLDEBUG,"saw %s\n", input_active ? (cursor_active ? "input and cursor active" : "input active") : (cursor_active ? "cursor active" : "Idle"));
+	} else {
+		dprintf(D_FULLDEBUG,"saw Idle for %.3f sec\n", (GetTickCount() - lii.dwTime) / 1000.0);
+	}
+	return input_active || cursor_active;
+}
+#endif
 
+void
+PollActivity()
+{
+#ifdef WIN32
+	if (CheckActivity()) {
+		update_startd();
+	}
 #else
     if(xinter != NULL)
     {
@@ -165,10 +251,15 @@ main_init(int, char *[])
 #ifndef WIN32
 	xinter = NULL;
 #endif
+
+	small_move_delta = param_integer("KBDD_BUMP_CHECK_SIZE", small_move_delta);
+	bump_check_after_idle_time_sec = param_integer("KBDD_BUMP_CHECK_AFTER_IDLE_TIME", bump_check_after_idle_time_sec);
+
     //Poll for X activity every second.
     int id = daemonCore->Register_Timer(5, 5, PollActivity, "PollActivity");
 #ifndef WIN32
 	xinter = new XInterface(id);
+	if (xinter) { xinter->SetBumpCheck(small_move_delta, bump_check_after_idle_time_sec); }
 #endif
 }
 
@@ -192,7 +283,7 @@ daemon_main( int argc, char **argv )
 }
 
 #ifdef WIN32
-int WINAPI WinMain( __in HINSTANCE hInstance, __in_opt HINSTANCE hPrevInstance, __in_opt LPSTR lpCmdLine, __in int nShowCmd )
+int WINAPI WinMain( __in HINSTANCE hInstance, __in_opt HINSTANCE hPrevInstance, __in LPSTR lpCmdLine, __in int nShowCmd )
 {
 	// t1031 - tell dprintf not to exit if it can't write to the log
 	// we have to do this before dprintf_config is called

@@ -1,3 +1,18 @@
+[ENABLE_KERNEL_TUNING]
+default=true
+type=bool
+review=?
+
+[KERNEL_TUNING_LOG]
+default=$(LOG)/KernelTuning.log
+type=path
+review=?
+
+[LINUX_KERNEL_TUNING_SCRIPT]
+default=$(LIBEXEC)/linux_kernel_tuning
+type=path
+review=?
+
 [COLLECTOR_ENVIRONMENT]
 # XXX follows pattern of %s_ENVIRONMENT
 default=
@@ -645,7 +660,7 @@ review=?
 tags=starter,starter_common
 
 [STARTER_DEBUG]
-default=D_NODATE D_PID
+default=D_PID
 type=string
 reconfig=true
 customization=seldom
@@ -781,7 +796,7 @@ tags=eventd,scheduled_event
 [DAGMAN_LOG_ON_NFS_IS_ERROR]
 default=true
 type=bool
-reconfig=true
+reconfig=false
 customization=seldom
 friendly_name=Dagman Log On Nfs Is Error
 review=?
@@ -790,7 +805,7 @@ tags=dagman,dagman_multi_dag
 [DAGMAN_RESET_RETRIES_UPON_RESCUE]
 default=true
 type=bool
-reconfig=true
+reconfig=false
 customization=seldom
 friendly_name=Dagman Reset Retries Upon Rescue
 review=?
@@ -798,35 +813,26 @@ tags=dagman,dag
 
 [DAGMAN_INSERT_SUB_FILE]
 default=
-type=string
-reconfig=true
+type=path
+reconfig=false
 customization=seldom
 friendly_name=Dagman Insert Sub File
-review=?
-tags=dagman,condor_submit_dag
-
-[DAGMAN_OLD_RESCUE]
-default=false
-type=bool
-reconfig=true
-customization=seldom
-friendly_name=Dagman Old Rescue
 review=?
 tags=dagman,condor_submit_dag
 
 [DAGMAN_AUTO_RESCUE]
 default=true
 type=bool
-reconfig=true
+reconfig=false
 customization=seldom
 friendly_name=Dagman Auto Rescue
 review=?
 tags=dagman,condor_submit_dag
 
 [DAGMAN_ON_EXIT_REMOVE]
-default=
+default=(ExitSignal =?= 11 || (ExitCode =!= UNDEFINED && ExitCode >=0 && ExitCode <= 2))
 type=string
-reconfig=true
+reconfig=false
 customization=seldom
 friendly_name=Dagman On Exit Remove
 review=?
@@ -834,17 +840,17 @@ tags=dagman,condor_submit_dag
 
 [DAGMAN_CONFIG_FILE]
 default=
-type=string
-reconfig=true
+type=path
+reconfig=false
 customization=seldom
 friendly_name=Dagman Config File
 review=?
-tags=dagman,dagman_main
+tags=dagman,dagman_main,condor_submit_dag
 
 [DAGMAN_DEBUG_CACHE_ENABLE]
 default=false
 type=bool
-reconfig=true
+reconfig=false
 customization=seldom
 friendly_name=Dagman Debug Cache Enable
 review=?
@@ -853,18 +859,9 @@ tags=dagman,dagman_main
 [DAGMAN_STARTUP_CYCLE_DETECT]
 default=false
 type=bool
-reconfig=true
+reconfig=false
 customization=seldom
 friendly_name=Dagman Startup Cycle Detect
-review=?
-tags=dagman,dagman_main
-
-[DAGMAN_IGNORE_DUPLICATE_JOB_EXECUTION]
-default=false
-type=bool
-reconfig=true
-customization=seldom
-friendly_name=Dagman Ignore Duplicate Job Execution
 review=?
 tags=dagman,dagman_main
 
@@ -872,8 +869,8 @@ tags=dagman,dagman_main
 # XXX 114 is really CheckEvents::ALLOW_TERM_ABORT | CheckEvents::ALLOW_EXEC_BEFORE_SUBMIT | CheckEvents::ALLOW_DOUBLE_TERMINATE | CheckEvents::ALLOW_DUPLICATE_EVENTS
 default=114
 type=int
-reconfig=true
-customization=seldom
+reconfig=false
+customization=expert
 friendly_name=Dagman Allow Events
 review=?
 tags=dagman,dagman_main
@@ -881,7 +878,7 @@ tags=dagman,dagman_main
 [DAGMAN_RETRY_SUBMIT_FIRST]
 default=true
 type=bool
-reconfig=true
+reconfig=false
 customization=seldom
 friendly_name=Dagman Retry Submit First
 review=?
@@ -890,7 +887,7 @@ tags=dagman,dagman_main
 [DAGMAN_RETRY_NODE_FIRST]
 default=false
 type=bool
-reconfig=true
+reconfig=false
 customization=seldom
 friendly_name=Dagman Retry Node First
 review=?
@@ -899,25 +896,16 @@ tags=dagman,dagman_main
 [DAGMAN_MUNGE_NODE_NAMES]
 default=true
 type=bool
-reconfig=true
-customization=seldom
+reconfig=false
+customization=expert
 friendly_name=Dagman Munge Node Names
-review=?
-tags=dagman,dagman_main
-
-[DAGMAN_DELETE_OLD_LOGS]
-default=true
-type=bool
-reconfig=true
-customization=seldom
-friendly_name=Dagman Delete Old Logs
 review=?
 tags=dagman,dagman_main
 
 [DAGMAN_PROHIBIT_MULTI_JOBS]
 default=false
 type=bool
-reconfig=true
+reconfig=false
 customization=seldom
 friendly_name=Dagman Prohibit Multi Jobs
 review=?
@@ -926,53 +914,37 @@ tags=dagman,dagman_main
 [DAGMAN_SUBMIT_DEPTH_FIRST]
 default=false
 type=bool
-reconfig=true
-customization=seldom
+reconfig=false
+customization=normal
 friendly_name=Dagman Submit Depth First
 review=?
 tags=dagman,dagman_main
 
 [DAGMAN_CONDOR_SUBMIT_EXE]
-default=
-type=string
-reconfig=true
-customization=seldom
+default=$(BIN)/condor_submit
+win32_default=$(BIN)\condor_submit.exe
+type=path
+reconfig=false
+customization=expert
 friendly_name=Dagman Condor Submit Exe
 review=?
 tags=dagman,dagman_main
 
 [DAGMAN_CONDOR_RM_EXE]
-default=
-type=string
-reconfig=true
-customization=seldom
+default=$(BIN)/condor_rm
+win32_default=$(BIN)\condor_rm.exe
+type=path
+reconfig=false
+customization=expert
 friendly_name=Dagman Condor Rm Exe
-review=?
-tags=dagman,dagman_main
-
-[DAGMAN_STORK_SUBMIT_EXE]
-default=
-type=string
-reconfig=true
-customization=seldom
-friendly_name=Dagman Stork Submit Exe
-review=?
-tags=dagman,dagman_main
-
-[DAGMAN_STORK_RM_EXE]
-default=
-type=string
-reconfig=true
-customization=seldom
-friendly_name=Dagman Stork Rm Exe
 review=?
 tags=dagman,dagman_main
 
 [DAGMAN_ABORT_DUPLICATES]
 default=true
 type=bool
-reconfig=true
-customization=seldom
+reconfig=false
+customization=expert
 friendly_name=Dagman Abort Duplicates
 review=?
 tags=dagman,dagman_main
@@ -980,8 +952,8 @@ tags=dagman,dagman_main
 [DAGMAN_ABORT_ON_SCARY_SUBMIT]
 default=true
 type=bool
-reconfig=true
-customization=seldom
+reconfig=false
+customization=expert
 friendly_name=Dagman Abort On Scary Submit
 review=?
 tags=dagman,dagman_main
@@ -989,18 +961,235 @@ tags=dagman,dagman_main
 [DAGMAN_PENDING_REPORT_INTERVAL]
 default=600
 type=int
-reconfig=true
+reconfig=false
 customization=seldom
 friendly_name=Dagman Pending Report Interval
+review=?
+tags=dagman,dagman_main
+
+[DAGMAN_ALLOW_LOG_ERROR]
+default=false
+type=bool
+reconfig=false
+customization=seldom
+friendly_name=Dagman Allow Log Error
+review=?
+tags=dagman,dagman_main
+
+[DAGMAN_ALWAYS_RUN_POST]
+default=true
+type=bool
+reconfig=false
+customization=seldom
+friendly_name=Dagman Always Run Post
+review=?
+tags=dagman,dagman_main
+
+[DAGMAN_COPY_TO_SPOOL]
+default=false
+type=bool
+reconfig=false
+customization=expert
+friendly_name=Dagman Copy To Spool
+review=?
+tags=dagman,dagman_main
+
+[DAGMAN_DEBUG]
+default=
+type=string
+reconfig=false
+customization=normal
+friendly_name=Dagman Debug
+review=?
+tags=dagman,dagman_main
+
+[DAGMAN_DEBUG_CACHE_SIZE]
+default=5*1024*1024
+type=int
+reconfig=false
+customization=seldom
+friendly_name=Dagman Debug Cache Size
+review=?
+tags=dagman,dagman_main
+
+[DAGMAN_DEFAULT_NODE_LOG]
+default=@(DAG_DIR)/@(DAG_FILE).nodes.log
+type=path
+reconfig=false
+customization=expert
+friendly_name=Dagman Default Node Log
+review=?
+tags=dagman,dagman_main
+
+[DAGMAN_DEFAULT_PRIORITY]
+default=0
+type=int
+reconfig=false
+customization=normal
+friendly_name=Dagman Default Priority
+review=?
+tags=dagman,dagman_main
+
+[DAGMAN_GENERATE_SUBDAG_SUBMITS]
+default=true
+type=bool
+reconfig=false
+customization=seldom
+friendly_name=Dagman Generate SubDAG Submits
+review=?
+tags=dagman,dagman_main
+
+[DAGMAN_HOLD_CLAIM_TIME]
+default=20
+type=int
+reconfig=false
+customization=normal
+friendly_name=Dagman Claim Hold Time
+review=?
+tags=dagman,dagman_main
+
+[DAGMAN_MAX_JOB_HOLDS]
+default=100
+type=int
+reconfig=false
+customization=seldom
+friendly_name=Dagman Max Job Holds
 review=?
 tags=dagman,dagman_main
 
 [DAGMAN_MAX_JOBS_IDLE]
 default=1000
 type=int
-reconfig=true
+reconfig=false
 customization=normal
 friendly_name=Dagman Max Jobs Idle
+review=?
+tags=dagman,dagman_main
+
+[DAGMAN_MAX_JOBS_SUBMITTED]
+default=0
+type=int
+reconfig=false
+customization=normal
+friendly_name=Dagman Max Jobs Submitted
+review=?
+tags=dagman,dagman_main
+
+[DAGMAN_MAX_POST_SCRIPTS]
+default=20
+type=int
+reconfig=false
+customization=normal
+friendly_name=Dagman Max Post Scripts
+review=?
+tags=dagman,dagman_main
+
+[DAGMAN_MAX_PRE_SCRIPTS]
+default=20
+type=int
+reconfig=false
+customization=normal
+friendly_name=Dagman Max Pre Scripts
+review=?
+tags=dagman,dagman_main
+
+[DAGMAN_MAX_RESCUE_NUM]
+default=100
+type=int
+reconfig=false
+customization=seldom
+friendly_name=Dagman Max Rescue Num
+review=?
+tags=dagman,dagman_main
+
+[DAGMAN_MAX_SUBMIT_ATTEMPTS]
+default=6
+type=int
+reconfig=false
+customization=seldom
+friendly_name=Dagman Max Submit Attempts
+review=?
+tags=dagman,dagman_main
+
+[DAGMAN_MAX_SUBMITS_PER_INTERVAL]
+default=5
+type=int
+reconfig=false
+customization=seldom
+friendly_name=Dagman Max Submits Per Interval
+review=?
+tags=dagman,dagman_main
+
+[DAGMAN_PEGASUS_REPORT_METRICS]
+default=$(LIBEXEC)/condor_dagman_metrics_reporter
+win32_default=$(BIN)\condor_dagman_metrics_reporter.exe
+type=path
+reconfig=false
+customization=expert
+friendly_name=Dagman Pegasus Report Metrics
+review=?
+tags=dagman,dagman_main
+
+[DAGMAN_PEGASUS_REPORT_TIMEOUT]
+default=100
+type=int
+reconfig=false
+customization=seldom
+friendly_name=Dagman Pegasus Report Timeout
+review=?
+tags=dagman,dagman_main
+
+[DAGMAN_SUBMIT_DELAY]
+default=0
+type=int
+reconfig=false
+customization=seldom
+friendly_name=Dagman Submit Delay
+review=?
+tags=dagman,dagman_main
+
+[DAGMAN_SUPPRESS_NOTIFICATION]
+default=true
+type=bool
+reconfig=false
+customization=normal
+friendly_name=Dagman Suppress Notification
+review=?
+tags=dagman,dagman_main
+
+[DAGMAN_USER_LOG_SCAN_INTERVAL]
+default=5
+type=int
+reconfig=false
+customization=seldom
+friendly_name=Dagman User Log Scan Interval
+review=?
+tags=dagman,dagman_main
+
+[DAGMAN_USE_STRICT]
+default=1
+type=int
+reconfig=false
+customization=normal
+friendly_name=Dagman Use Strict
+review=?
+tags=dagman,dagman_main
+
+[DAGMAN_VERBOSITY]
+default=3
+type=int
+reconfig=false
+customization=normal
+friendly_name=Dagman Verbosity
+review=?
+tags=dagman,dagman_main
+
+[DAGMAN_WRITE_PARTIAL_RESCUE]
+default=true
+type=bool
+reconfig=false
+customization=expert
+friendly_name=Dagman Write Partial Rescue
 review=?
 tags=dagman,dagman_main
 
@@ -1304,7 +1493,7 @@ review=?
 tags=shadow,remoteresource
 
 [SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION]
-default=false
+default=true
 type=bool
 reconfig=true
 customization=seldom
@@ -1916,6 +2105,14 @@ friendly_name=Sec Debug Print Keys
 review=?
 tags=daemon_core,daemon_core
 
+[SEC_DEFAULT_AUTHENTICATION_TIMEOUT]
+default=20
+type=int
+reconfig=true
+customization=seldom
+friendly_name=Default timeout for all authentication methods
+tags=daemon_core,security
+
 [WANT_UDP_COMMAND_SOCKET]
 default=true
 type=bool
@@ -1953,7 +2150,7 @@ review=?
 tags=daemon_core,daemon_core
 
 [PRIVATE_NETWORK_NAME]
-default=
+default=$(FULL_HOSTNAME)
 type=string
 reconfig=true
 customization=seldom
@@ -3265,7 +3462,7 @@ tags=classad
 
 [ENABLE_CLASSAD_CACHING]
 default=true
-win32_default=false
+win32_default=true
 type=bool
 reconfig=true
 customization=seldom
@@ -3529,7 +3726,7 @@ review=?
 tags=c++_util,jobqueuesnapshot
 
 [WINDOWS_FIREWALL_FAILURE_RETRY]
-default=60
+default=2
 type=int
 reconfig=true
 customization=seldom
@@ -3850,7 +4047,7 @@ review=?
 tags=c++_util,sshd_wrapper
 
 [ENABLE_USERLOG_LOCKING]
-default=true
+default=false
 type=bool
 reconfig=true
 customization=seldom
@@ -3885,6 +4082,15 @@ friendly_name=Event Log Use Xml
 review=?
 tags=c++_util,user_log
 
+[EVENT_LOG_LOCKING]
+default=false
+type=bool
+reconfig=true
+customization=seldom
+friendly_name=Event Log Locking
+review=?
+tags=c++_util,user_log
+
 [EVENT_LOG_ROTATION_LOCK]
 default=$(LOCK)/EventLogLock
 type=string
@@ -3900,6 +4106,33 @@ type=long
 reconfig=true
 customization=seldom
 friendly_name=Maximum size of the event log in bytes
+review=?
+tags=c++_util,user_log
+
+[EVENT_LOG_MAX_ROTATIONS]
+default=1
+type=long
+reconfig=true
+customization=seldom
+friendly_name=Number of rotated event log files to keep
+review=?
+tags=c++_util,user_log
+
+[EVENT_LOG_FSYNC]
+default=false
+type=bool
+reconfig=true
+customization=seldom
+friendly_name=Event Log Fsync
+review=?
+tags=c++_util,user_log
+
+[EVENT_LOG_COUNT_EVENTS]
+default=false
+type=bool
+reconfig=true
+customization=seldom
+friendly_name=Event Log Count Events
 review=?
 tags=c++_util,user_log
 
@@ -4120,13 +4353,22 @@ review=?
 tags=starter,job_info_communicator
 
 [ENCRYPT_EXECUTE_DIRECTORY]
-default=
-type=string
+default=false
+type=bool
 reconfig=true
 customization=seldom
 friendly_name=Encrypt Execute Directory
 review=?
-tags=starter,starter
+tags=startd,starter
+
+[ENCRYPT_EXECUTE_DIRECTORY_FILENAMES]
+default=false
+type=bool
+reconfig=true
+customization=seldom
+friendly_name=Encrypt Filenames Inside Execute Directory
+review=?
+tags=startd,starter
 
 [STARTER_JOB_ENVIRONMENT]
 default=
@@ -4310,6 +4552,15 @@ friendly_name=Negotiator Max Time Per Submitter
 review=?
 tags=negotiator,matchmaker
 
+[NEGOTIATOR_MAX_TIME_PER_SCHEDD]
+default=31536000
+type=int
+reconfig=true
+customization=seldom
+friendly_name=Negotiator Max Time Per Schedd
+review=?
+tags=negotiator,matchmaker
+
 [NEGOTIATOR_MAX_TIME_PER_PIESPIN]
 default=31536000
 type=int
@@ -4383,7 +4634,7 @@ review=?
 tags=negotiator,matchmaker
 
 [NEGOTIATOR_INFORM_STARTD]
-default=true
+default=false
 type=bool
 reconfig=true
 customization=seldom
@@ -4503,14 +4754,14 @@ friendly_name=Negotiator Ignore User Priorities
 review=?
 tags=negotiator,matchmaker
 
-[TCP_COLLECTOR_HOST]
-default=
-type=string
+[RECEIVE_MSGS_DURATION]
+default=250
+type=int
 reconfig=true
-customization=seldom
-friendly_name=Tcp Collector Host
-review=?
-tags=daemon_client,dc_collector
+customization=devel
+friendly_name=DaemonCore Receive Messages Duration
+usage=how long to keep processing callback messages before returing to the pump. For the SCHEDD, how long to keep processing matches from the negotiator before checking for other work.
+tags=daemon_core,schedd
 
 [NONBLOCKING_COLLECTOR_UPDATE]
 default=true
@@ -4531,20 +4782,20 @@ review=?
 tags=daemon_client,dc_collector
 
 [UPDATE_COLLECTOR_WITH_TCP]
-default=
-type=string
+default=true
+type=bool
 reconfig=true
 customization=seldom
 friendly_name=Update Collector With Tcp
 review=?
 tags=daemon_client,dc_collector
 
-[UPDATE_COLLECTORS_WITH_TCP]
-default=
-type=string
+[UPDATE_VIEW_COLLECTOR_WITH_TCP]
+default=false
+type=bool
 reconfig=true
 customization=seldom
-friendly_name=Update Collectors With Tcp
+friendly_name=Update View Collector With Tcp
 review=?
 tags=daemon_client,dc_collector
 
@@ -5011,7 +5262,7 @@ review=?
 tags=schedd,schedd
 
 [SCHEDD_SEND_VACATE_VIA_TCP]
-default=false
+default=true
 type=bool
 reconfig=true
 customization=seldom
@@ -5065,8 +5316,8 @@ review=?
 tags=schedd,schedd
 
 [MAX_JOBS_RUNNING]
-default=ifThenElse( $(DETECTED_MEMORY) < 10000, $(DETECTED_MEMORY), 10000 )
-win32_default=200
+default=MIN({$(DETECTED_MEMORY), 10000})
+win32_default=MIN({($(DETECTED_MEMORY)-200)/10, 2000})
 type=int
 reconfig=true
 customization=seldom
@@ -5107,6 +5358,24 @@ reconfig=true
 customization=seldom
 friendly_name=Max Jobs Submitted
 review=?
+tags=schedd,schedd
+
+[MAX_JOBS_PER_OWNER]
+default=100000
+type=int
+reconfig=true
+customization=normal
+friendly_name=Max jobs in the SCHEDD's queue from a single owner.
+usage=Ensure that a single user does not fill the SCHEDD
+tags=schedd,schedd
+
+[MAX_JOBS_PER_SUBMISSION]
+default=20000
+type=int
+reconfig=true
+customization=normal
+friendly_name=Max jobs in a single submit
+usage=Circuit breaker to prevent an excessive number of a jobs in a single submission. Use to reject one form of mistake
 tags=schedd,schedd
 
 [NEGOTIATE_ALL_JOBS_IN_CLUSTER]
@@ -6171,6 +6440,42 @@ friendly_name=
 review=?
 tags=schedd
 
+[SCHEDD_ROUND_ATTR_ExecutableSize]
+default=25%
+type=string
+reconfig=false
+customization=seldom
+friendly_name=
+review=?
+tags=schedd
+
+[SCHEDD_ROUND_ATTR_ImageSize]
+default=25%
+type=string
+reconfig=false
+customization=seldom
+friendly_name=
+review=?
+tags=schedd
+
+[SCHEDD_ROUND_ATTR_DiskUsage]
+default=25%
+type=string
+reconfig=false
+customization=seldom
+friendly_name=
+review=?
+tags=schedd
+
+[SCHEDD_ROUND_ATTR_NumCkpts]
+default=4
+type=string
+reconfig=false
+customization=seldom
+friendly_name=
+review=?
+tags=schedd
+
 [ENABLE_VERSIONED_OPSYS]
 default=true
 win32_default=false
@@ -6184,7 +6489,7 @@ tags=schedd
 [WANT_SUSPEND]
 default=False
 [WANT_VACATE]
-default=False
+default=True
 [SUSPEND]
 default=False
 [CONTINUE]
@@ -6867,6 +7172,16 @@ friendly_name=Name of ecryptfs tool to add a passphrase
 review=toddt
 tags=ecryptfs
 
+[ECRYPTFS_KEY_TIMEOUT]
+default=3600
+range=600,86400
+type=int
+reconfig=true
+customization=expert
+friendly_name=Duration in seconds for key timeout
+review=toddt
+tags=ecryptfs
+
 [FILE_TRANSFER_DISK_LOAD_THROTTLE]
 default=
 type=string
@@ -6902,6 +7217,14 @@ customization=seldom
 friendly_name=
 review=?
 tags=c++_util,schedd
+
+[RUN_FILETRANSFER_PLUGINS_WITH_ROOT]
+default=false
+type=bool
+reconfig=true
+customization=seldom
+friendly_name=Whether to invoke file transfer plugins as user or as root
+review=?
 
 [COLLECTOR_MAX_FILE_DESCRIPTORS]
 default=10240
@@ -7613,7 +7936,7 @@ default=(TARGET.JobUniverse == $(VM))
 [TESTINGMODE_WANT_SUSPEND]
 default=False
 [TESTINGMODE_WANT_VACATE]
-default=False
+default=True
 [TESTINGMODE_START]
 default=True
 [TESTINGMODE_SUSPEND]
@@ -7676,6 +7999,8 @@ default=(TARGET.ImageSize <  (15 * 1024))
 default=($(CPUBusy) && ($(KeyboardBusy) == False))
 [MachineBusy]
 default=($(CPUBusy) || $(KeyboardBusy))
+[IS_OWNER]
+default=(START =?= False)
 
 # define UWCS_xxx desktop preemption policy that can be referenced in START, PREEMPT, etc
 [UWCS_WANT_SUSPEND]
@@ -7832,9 +8157,11 @@ default : @end
 	SUSPEND=($(KeyboardBusy) || ( (CpuBusyTime > 120) && $(ActivationTimer) > 90))
 	CONTINUE=($(CPUIdle) && ($(ActivityTimer) > 10) && (KeyboardIdle > $(ContinueIdleTime)))
 	PREEMPT=(((Activity == "Suspended") && ($(ActivityTimer) > $(MaxSuspendTime))) || (SUSPEND && (WANT_SUSPEND == False)))
+	START=((KeyboardIdle > $(StartIdleTime)) && ( $(CPUIdle) || (State != "Unclaimed" && State != "Owner")) )
 	KILL=False
 	MaxJobRetirementTime=0
 	CLAIM_WORKLIFE=
+	SLOTS_CONNECTED_TO_KEYBOARD=$(NUM_CPUS)
 @end
 review=?
 
@@ -7843,7 +8170,7 @@ review=?
 friendly_name=Use a no-preemption policy
 default : @end
 	WANT_SUSPEND=False
-	WANT_VACATE=False
+	WANT_VACATE=True
 	SUSPEND=False
 	CONTINUE=True
 	PREEMPT=False
@@ -7864,6 +8191,7 @@ default : @end
 	SUSPEND=$(UWCS_SUSPEND)
 	CONTINUE=$(UWCS_CONTINUE)
 	PREEMPT=$(UWCS_PREEMPT)
+	START=$(UWCS_START)
 	KILL=$(UWCS_KILL)
 	PERIODIC_CHECKPOINT=$(UWCS_PERIODIC_CHECKPOINT)
 	PREEMPTION_REQUIREMENTS=$(UWCS_PREEMPTION_REQUIREMENTS)
@@ -7872,6 +8200,7 @@ default : @end
 	NEGOTIATOR_POST_JOB_RANK=$(UWCS_NEGOTIATOR_POST_JOB_RANK)
 	MaxJobRetirementTime=$(UWCS_MaxJobRetirementTime)
 	CLAIM_WORKLIFE=$(UWCS_CLAIM_WORKLIFE)
+	SLOTS_CONNECTED_TO_KEYBOARD=$(NUM_CPUS)
 @end
 review=?
 
@@ -7923,7 +8252,7 @@ default : @end
 	ALLOW_READ=*
 	ALLOW_WRITE=$(FULL_HOSTNAME) $(IP_ADDRESS)
 	ALLOW_NEGOTIATOR=$(CONDOR_HOST)
-	ALLOW_NEGOTIATOR_SCHEDD=$(CONDOR_HOST) $(FLOCK_NEGOTIATOR_HOSTS)
+	ALLOW_NEGOTIATOR_SCHEDD=$(ALLOW_NEGOTIATOR) $(FLOCK_NEGOTIATOR_HOSTS)
 	ALLOW_WRITE_COLLECTOR=$(ALLOW_WRITE) $(FLOCK_FROM)
 	ALLOW_WRITE_STARTD=$(ALLOW_WRITE) $(FLOCK_FROM)
 	ALLOW_READ_COLLECTOR=$(ALLOW_READ) $(FLOCK_FROM)
@@ -8034,3 +8363,4 @@ default: @end
 	STARTD_SLOT_ATTRS = $(STARTD_SLOT_ATTRS) State Activity EnteredCurrentActivity JobId GlobalJobId
 @end
 
+# ^^^^ TJ SEZ: do NOT insert new param knobs here. insert meta knobs just above this banner, and regular knobs near to related knobs way up there ^^^^

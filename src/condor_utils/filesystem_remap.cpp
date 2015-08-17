@@ -93,9 +93,10 @@ void FilesystemRemap::EcryptfsRefreshKeyExpiration()
 	int key1,key2;
 
 	if (EcryptfsGetKeys(key1,key2)) {
+		int key_timeout = param_integer("ECRYPTFS_KEY_TIMEOUT");
 		TemporaryPrivSentry sentry(PRIV_ROOT);  // root privs to search root keyring
-		syscall(__NR_keyctl, KEYCTL_SET_TIMEOUT, key1, 60 * 20);
-		syscall(__NR_keyctl, KEYCTL_SET_TIMEOUT, key2, 60 * 20);
+		syscall(__NR_keyctl, KEYCTL_SET_TIMEOUT, key1, key_timeout);
+		syscall(__NR_keyctl, KEYCTL_SET_TIMEOUT, key2, key_timeout);
 	} else {
 		// If the keys disappeared and jobs are trying to run in an encrypted
 		// directory, the jobs will get all sorts of I/O failures.
@@ -343,7 +344,7 @@ int FilesystemRemap::AddEncryptedMapping(std::string mountpoint, std::string pas
 		// Stash the signatures into our static member variables
 		m_sig1 = sig1;
 		m_sig2 = sig2;
-		// Set an expiration timeout of 20 minutes on the keys
+		// Set an expiration timeout of 60 minutes (by default) on the keys
 		EcryptfsRefreshKeyExpiration();
 	} // end of PRIV_ROOT here (sentry out of scope)
 
@@ -358,8 +359,13 @@ int FilesystemRemap::AddEncryptedMapping(std::string mountpoint, std::string pas
 	// create mount options line
 	std::string mountopts;
 	formatstr(mountopts,
-			"ecryptfs_sig=%s,ecryptfs_fnek_sig=%s,ecryptfs_cipher=aes,ecryptfs_key_bytes=16",
-			m_sig1.c_str(),m_sig2.c_str());
+			"ecryptfs_sig=%s,ecryptfs_cipher=aes,ecryptfs_key_bytes=16",
+			m_sig1.c_str());
+
+	// optionally encrypt the filenames themselves
+	if(param_boolean("ENCRYPT_EXECUTE_DIRECTORY_FILENAMES",false)) {
+		mountopts += ",ecryptfs_fnek_sig=" + m_sig2;
+	}
 
 	// stash mount info for PerformMappings() to access.  we do this in advance as
 	// we don't want PerformMappings doing heap memory allocation/destructions.

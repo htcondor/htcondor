@@ -66,10 +66,10 @@ VacateType vacate_type = VACATE_GRACEFUL;
 
 // protoypes of interest
 PREFAST_NORETURN void usage( const char*, int iExitCode=1 );
-void version( void );
-void invalid( const char* opt );
-void ambiguous( const char* opt );
-void another( const char* opt );
+PREFAST_NORETURN void version( void );
+PREFAST_NORETURN void invalid( const char* opt );
+PREFAST_NORETURN void ambiguous( const char* opt );
+PREFAST_NORETURN void another( const char* opt );
 void parseCOpt( char* opt, char* arg );
 void parsePOpt( char* opt, char* arg );
 void parseArgv( int argc, char* argv[] );

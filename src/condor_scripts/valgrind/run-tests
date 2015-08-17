@@ -1,0 +1,128 @@
+#! /usr/bin/perl -w
+
+#***************************************************************
+#*
+#* Copyright (C) 2015, HTCondor Team, Computer Sciences Department,
+#* University of Wisconsin-Madison, WI.
+#*
+#* Licensed under the Apache License, Version 2.0 (the "License"); you
+#* may not use this file except in compliance with the License.  You may
+#* obtain a copy of the License at
+#*
+#*    http://www.apache.org/licenses/LICENSE-2.0
+#*
+#* Unless required by applicable law or agreed to in writing, software
+#* distributed under the License is distributed on an "AS IS" BASIS,
+#* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#* See the License for the specific language governing permissions and
+#* limitations under the License.
+#*
+#***************************************************************/
+
+
+use strict;
+use File::Temp;
+use File::Copy;
+
+if(@ARGV == 0 or $ARGV[0] =~ /^--?h/i) {
+	die "Usage: $0 [list of tests (.run) to run under Valgrind]\n";
+}
+
+
+my $master = `condor_config_val master`;
+chomp $master;
+if(-s $master < 200000) {
+	die "Aborting: $master is missing or suspiciously small.\n";
+}
+rename $master, "$master.orig"
+	or die "Unable to rename($master, $master.org): $!";
+
+# Smoke test the master
+my $ret = system("condor_master", "-version");
+if ($? == -1) { die "Fatal: Unable to execute condor_master: $!\n"; }
+elsif ($? & 127) { die sprintf("Fatal: condor_master died with signal %d, %s coredump\n", ($? & 127),  ($? & 128) ? 'with' : 'without'); }
+elsif ($? >> 8) { die sprintf("Fatal: condor_master exited with %d; wanted 0\n", $? >> 8)  }
+
+
+my $tempdir = File::Temp->newdir();
+my $dir = $tempdir->dirname;
+
+open my $out, '>', $master
+	or die "Unable to open(>$master): $!";
+# We need --child-silent-after-fork=yes, otherwise unexpected stuff ends up in the file after </valgrindoutput> (and possibly inside, corrupting it)
+print $out <<END;
+#! /bin/sh
+exec valgrind --verbose --trace-children=yes --child-silent-after-fork=yes --trace-children-skip=/usr/bin/*,/bin/* --time-stamp=yes --log-file=$dir/log-%p --xml=yes --xml-file=$dir/xml-%p $master.orig "\$@"
+END
+close $out;
+chmod 0755, $master or die "Unable to chmod(0755, $master): $!";
+
+my $outroot ="valgrind-results";
+mkdir $outroot;
+
+# Causes C++'s standard library to use new/delete instead of a custom
+# allocator. The custom allocator is more efficient, but generates
+# spurious leak reports.
+$ENV{GLIBCXX_FORCE_NEW} = 1;
+
+foreach my $test (@ARGV) {
+	$test =~ s/\.run$//; 
+	if(not -s "$test.run") { die "$test.run doesn't exist."; }
+
+
+	my $timeout = 60*3;
+	eval {
+		local $SIG{ALRM} = sub { die "alarm\n" }; # NB: \n required
+		alarm $timeout;
+		system("./batch_test.pl", "-d", ".", "-t", $test);
+		alarm 0;
+	};
+	if ($@) {
+		die unless $@ eq "alarm\n";   # propagate unexpected errors
+		print "Test ran longer than $timeout seconds and was killed\n";
+	}
+
+	mkdir "$outroot/$test";
+
+	opendir(my $output, $dir) or die "Unable to opendir($dir): %!";
+	while(my $file = readdir($output)) {
+		next unless $file =~ /^xml-\d+$/;
+		my $name = get_exe_from_xml("$dir/$file");
+		my($pid) = ($file =~ /(\d+)/);
+		copy("$dir/xml-$pid", "$outroot/$test/$name-$pid.xml")
+			or die "Unable to copy($dir/xml-$pid, $outroot/$test/$name-$pid.xml): $!";
+		copy("$dir/log-$pid", "$outroot/$test/$name-$pid.log")
+			or die "Unable to copy($dir/log-$pid, $outroot/$test/$name-$pid.log): $!";
+	}
+	closedir($output);
+
+	# We do this in two passes because the first pass assumes the log-* file
+	# won't be deleted before the xml-* file.
+	opendir($output, $dir) or die "Unable to opendir($dir): %!";
+	while(my $file = readdir($output)) {
+		next if $file eq '.' or $file eq '..';
+		unlink("$dir/$file") or die "Unable to unlink($dir/$file): $!";
+	}
+	closedir($output);
+}
+
+END {
+	if(defined $master) {
+		rename "$master.orig", $master
+			or die "Unable to rename($master.orig, $master): $!";
+	}
+}
+
+sub get_exe_from_xml {
+	my($filename) = @_;
+	local $/;
+	open my $in, '<', $filename or die "Unable to open(<$filename): $!";
+	my $body = <$in>;
+	close $in;
+	my(@exes) = $body =~ /<exe>(.*?)<\/exe>/g;
+	if(@exes < 2) { die "$filename is missing the program name"; }
+
+	my $exe = $exes[1];
+	my($basename) = ($exe =~ /.*\/([^\/]+)$/);
+	return $basename;
+}

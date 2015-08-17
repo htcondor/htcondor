@@ -53,6 +53,7 @@ SharedPortEndpoint::SharedPortEndpoint(char const *sock_name):
 	m_listening(false),
 	m_registered_listener(false),
 	m_retry_remote_addr_timer(-1),
+	m_max_accepts(8),
 	m_socket_check_timer(-1)
 {
 
@@ -157,6 +158,8 @@ SharedPortEndpoint::InitAndReconfig()
 		m_socket_dir = socket_dir;
 		StartListener();
 	}
+	m_max_accepts = param_integer("SHARED_ENDPOINT_MAX_ACCEPTS_PER_CYCLE",
+						param_integer("MAX_ACCEPTS_PER_CYCLE", 8));
 }
 
 void
@@ -889,7 +892,19 @@ SharedPortEndpoint::HandleListenerAccept( Stream * stream )
 #ifndef WIN32
 	ASSERT( stream == &m_listener_sock );
 #endif
-	DoListenerAccept(NULL);
+	Selector selector;
+	selector.set_timeout( 0, 0 );
+	selector.add_fd( static_cast<Sock*>(stream)->get_file_desc(), Selector::IO_READ );
+
+	for (int idx=0; (idx<m_max_accepts) || (m_max_accepts <= 0); idx++)
+	{
+		DoListenerAccept(NULL);
+		selector.execute();
+		if (!selector.has_ready())
+		{
+			break;
+		}
+	}
 	return KEEP_STREAM;
 }
 

@@ -42,14 +42,16 @@ use Check::CondorLog;
 my $expectedrunning = 0;
 my $pid = $$;
 my $testname = "condor_status_dash_ads";
-my $AdSaveLoc = "$testname" . ".saveme/$pid"; 
+my $AdSaveLoc = "$testname" . ".saveme/pdir$pid"; 
+my $SaveName = "$testname" . ".saveme";
 
 my @thisconfig;
 my $variance = "";
 
-
-CreateDir("-p $testname.saveme");
-CreateDir("-p $AdSaveLoc");
+my $createdircmd = "-p $SaveName";
+CreateDir("$createdircmd");
+$createdircmd = "-p $AdSaveLoc";
+CreateDir("$createdircmd");
 
 my $AdSaveLocDir = "$AdSaveLoc/CurrentSavedAd";
 my $VarianceStash = "StatusAds";
@@ -160,6 +162,7 @@ foreach my $subfile (readdir SC)
 			duration => 0,
 			test_name => $testname,
     		on_execute => $on_execute,
+			timeout => 450,
     		on_success => $on_success,
     		on_submit => $on_submit,
     		on_abort => $on_abort,
@@ -176,6 +179,8 @@ foreach my $subfile (readdir SC)
 			RegisterResult(0,"test_name","$testname");
 		}
 	}
+	Condor::EventReset();
+	SimpleJob::CallbackReset();
 	#last;
 }
 close(SC);

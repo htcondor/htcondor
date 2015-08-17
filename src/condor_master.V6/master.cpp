@@ -237,6 +237,139 @@ DoCleanup(int,int,const char*)
 	}
 }
 
+#if defined( LINUX )
+void do_linux_kernel_tuning() {
+	std::string kernelTuningScript;
+	if(! param( kernelTuningScript, "LINUX_KERNEL_TUNING_SCRIPT" )) {
+		dprintf( D_FULLDEBUG, "Not tuning kernel parameters: LINUX_KERNEL_TUNING_SCRIPT not defined.\n" );
+		return;
+	}
+
+	std::string kernelTuningLogFile;
+	param( kernelTuningLogFile, "KERNEL_TUNING_LOG" );
+	if( kernelTuningLogFile.empty() ) {
+		kernelTuningLogFile = "/dev/null";
+	}
+
+	if(! can_switch_ids() ) {
+		dprintf( D_FULLDEBUG, "Not tuning kernel parameters: can't switch IDs.\n" );
+		return;
+	}
+
+	priv_state prev = set_root_priv();
+	int fd = safe_open_no_create( kernelTuningScript.c_str(), O_RDONLY );
+	set_priv( prev );
+	if( -1 == fd ) {
+		dprintf( D_FULLDEBUG, "Not tuning kernel parameters: can't open file '%s'\n", kernelTuningScript.c_str() );
+		return;
+	}
+
+	struct stat stats;
+	int rv = fstat( fd, & stats );
+	if( rv != 0 ) {
+		dprintf( D_FULLDEBUG, "Not tuning kernel parameters: can't stat file '%s'\n", kernelTuningScript.c_str() );
+		close( fd );
+		return;
+	}
+	if( stats.st_uid != 0 ) {
+		dprintf( D_FULLDEBUG, "Not tuning kernel parameters: file '%s' must be owned by root.\n", kernelTuningScript.c_str() );
+		close( fd );
+		return;
+	}
+	if( (stats.st_mode & S_IWGRP) || (stats.st_mode & S_IWOTH) ) {
+		dprintf( D_FULLDEBUG, "Not tuning kernel parameters: file '%s' is group or world -writeable\n", kernelTuningScript.c_str() );
+		close( fd );
+		return;
+	}
+	if(! (stats.st_mode & S_IXUSR)) {
+		dprintf( D_FULLDEBUG, "Not tuning kernel parameters: file '%s' is not executable.\n", kernelTuningScript.c_str() );
+		close( fd );
+		return;
+	}
+	close( fd );
+
+	// Redirect the script's output into the log directory, in case anybody
+	// else cares about it.  This simplifies our code, since we don't.
+	// Do NOT block waiting for the script to exit -- shoot it in the head
+	// after twenty seconds and report an error.  Otherwise, use its exit
+	// code appropriately (may report an error).
+	pid_t childPID = fork();
+	if( childPID == 0 ) {
+		daemonCore->Forked_Child_Wants_Fast_Exit( true );
+		dprintf_init_fork_child();
+
+		priv_state prev = set_root_priv();
+
+		int fd = open( "/dev/null", O_RDONLY );
+		if( fd == -1 ) {
+			dprintf( D_FULLDEBUG, "Not tuning kernel parameters: child failed to open /dev/null: %d.\n", errno );
+			exit( 1 );
+		}
+		if( dup2( fd, 0 ) == -1 ) {
+			dprintf( D_FULLDEBUG, "Not tuning kernel parameters: child failed to dup /dev/null: %d.\n", errno );
+			exit( 1 );
+		}
+		fd = open( kernelTuningLogFile.c_str(), O_WRONLY | O_APPEND, 0644 );
+		if ((fd < 0) && (errno == ENOENT)) {
+			fd = open( kernelTuningLogFile.c_str(), O_WRONLY | O_APPEND | O_CREAT, 0644 );
+		}
+		if( fd == -1 ) {
+			dprintf( D_FULLDEBUG, "Not tuning kernel parameters: child failed to open '%s': %d.\n", kernelTuningLogFile.c_str(), errno );
+			exit( 1 );
+		}
+		if( dup2( fd, 1 ) == -1 ) {
+			dprintf( D_FULLDEBUG, "Not tuning kernel parameters: child failed to dup log file '%s' to stdout: %d.\n", kernelTuningLogFile.c_str(), errno );
+			exit( 1 );
+		}
+		if( dup2( fd, 2 ) == -1 ) {
+			dprintf( D_FULLDEBUG, "Not tuning kernel parameters: child failed to dup log file '%s' to stderr: %d.\n", kernelTuningLogFile.c_str(), errno );
+			exit( 1 );
+		}
+
+		execl( kernelTuningScript.c_str(), kernelTuningScript.c_str(), (char *) NULL );
+
+		set_priv( prev );
+		dprintf( D_ALWAYS, "Did not tune kernel paramters: execl() failed: %d.\n", errno );
+		exit( 1 );
+	} else {
+		int status = 0;
+		pid_t wait = 0;
+		unsigned timer = 20;
+
+		while( true ) {
+			wait = waitpid( childPID, & status, WNOHANG );
+			if( wait == childPID ) {
+				if( WIFEXITED(status) && WEXITSTATUS(status) == 0 ) {
+					dprintf( D_FULLDEBUG, "Kernel parameters tuned.\n" );
+					return;
+				} else {
+					dprintf( D_FULLDEBUG, "Failed to tune kernel parameters, status code %d.\n", status );
+					return;
+				}
+			} else if( wait == 0 ) {
+				if( --timer > 0 ) {
+					dprintf( D_FULLDEBUG, "Sleeping one second for kernel parameter tuning (pid %d).\n", childPID );
+					sleep( 1 );
+				} else {
+					dprintf( D_FULLDEBUG, "Waited too long for kernel parameters to be tuned, hard-killing script.\n" );
+					kill( childPID, SIGKILL );
+					// Collect the zombie.
+					wait = waitpid( childPID, &status, WNOHANG );
+					ASSERT( wait != childPID );
+					return;
+				}
+			} else {
+				dprintf( D_FULLDEBUG, "waitpid() failed while waiting for kernel tuning (%d).  Killing child %d.\n", errno, childPID );
+				kill( childPID, SIGKILL );
+				// Try again to collect the zombie?
+				waitpid( childPID, & status, WNOHANG );
+				return;
+			}
+		}
+	}
+
+}
+#endif
 
 void
 main_init( int argc, char* argv[] )
@@ -519,38 +652,31 @@ agent_starter( ReliSock * s )
 int
 handle_agent_fetch_log (ReliSock* stream) {
 
-	char *daemon_name = NULL;
-	char *daemon_paramname = NULL;
-	char *daemon_filename = NULL;
+	MyString daemon;
 	int  res = FALSE;
 
-	if( ! stream->code(daemon_name) ||
+	if( ! stream->code(daemon) ||
 		! stream->end_of_message()) {
 		dprintf( D_ALWAYS, "ERROR: fetch_log can't read daemon name\n" );
-		free( daemon_name );
 		return FALSE;
 	}
 
-	dprintf( D_ALWAYS, "INFO: daemon_name: %s\n", daemon_name );
+	dprintf( D_ALWAYS, "INFO: daemon_name: %s\n", daemon.c_str() );
 
-	daemon_paramname = (char*)malloc (strlen(daemon_name) + 5);
-	strcpy (daemon_paramname, daemon_name);
-	strcat (daemon_paramname, "_LOG");
+	// append _LOG to get the param name of the daemon log file
+	daemon += "_LOG";
 
-	dprintf( D_ALWAYS, "INFO: daemon_paramname: %s\n", daemon_paramname );
+	dprintf( D_ALWAYS, "INFO: daemon_paramname: %s\n", daemon.c_str() );
 
-	if( (daemon_filename = param(daemon_paramname)) ) {
+	auto_free_ptr daemon_filename(param(daemon.c_str()));
+	if ( daemon_filename ) {
 		filesize_t	size;
-		dprintf( D_ALWAYS, "INFO: daemon_filename: %s\n", daemon_filename );
+		dprintf( D_ALWAYS, "INFO: daemon_filename: %s\n", daemon_filename.ptr() );
 		stream->encode();
-		res = (stream->put_file(&size, daemon_filename) < 0);
-		free (daemon_filename);
+		res = (stream->put_file(&size, daemon_filename.ptr()) < 0);
 	} else {
-		dprintf( D_ALWAYS, "ERROR: fetch_log can't param for log name\n" );
+		dprintf( D_ALWAYS, "ERROR: fetch_log can't param for %s\n", daemon.c_str() );
 	}
-
-	free (daemon_paramname);
-	free (daemon_name);
 
 	return res;
 }
@@ -1323,6 +1449,14 @@ main_pre_command_sock_init()
 	lock_or_except( lock_file.Value() );
 	dprintf (D_FULLDEBUG, "Obtained lock on %s.\n", lock_file.Value() );
 #endif
+
+	// Do any kernel tuning we've been configured to do.
+	if( param_boolean( "ENABLE_KERNEL_TUNING", false ) ) {
+#ifdef LINUX
+		do_linux_kernel_tuning();
+#endif
+	}
+
 	MyString daemon_list;
 	if( param(daemon_list,"DAEMON_LIST") ) {
 		StringList sl(daemon_list.Value());
@@ -1417,7 +1551,7 @@ void init_firewall_exceptions() {
 
 	WindowsFirewallHelper wfh;
 	
-	add_exception = param_boolean("ADD_WINDOWS_FIREWALL_EXCEPTION", true);
+	add_exception = param_boolean("ADD_WINDOWS_FIREWALL_EXCEPTION", NT_ServiceFlag);
 
 	if ( add_exception == false ) {
 		dprintf(D_FULLDEBUG, "ADD_WINDOWS_FIREWALL_EXCEPTION is false, skipping\n");
@@ -1467,6 +1601,7 @@ void init_firewall_exceptions() {
 	// We also want to add exceptions for the DAGMan we ship
 	// with Condor:
 
+	dagman_image_path = NULL; // make sure it's initialized.
 	bin_path = param ( "BIN" );
 	if ( bin_path ) {
 		dagman_image_path = (char*) malloc (

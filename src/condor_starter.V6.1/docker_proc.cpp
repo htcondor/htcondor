@@ -22,6 +22,7 @@
 #include "condor_config.h"
 #include "docker_proc.h"
 #include "starter.h"
+#include "condor_holdcodes.h"
 #include "docker-api.h"
 
 extern CStarter *Starter;
@@ -146,6 +147,7 @@ int DockerProc::StartJob() {
 
 
 bool DockerProc::JobReaper( int pid, int status ) {
+	TemporaryPrivSentry sentry(PRIV_ROOT);
 	dprintf( D_ALWAYS, "DockerProc::JobReaper()\n" );
 
 	//
@@ -154,8 +156,6 @@ bool DockerProc::JobReaper( int pid, int status ) {
 	if( pid == JobPid ) {
 		//
 		// Even running Docker in attached mode, we have a race condition
-		// where this inspect (or rm) will report that the container is
-		// still running.  I'm guessing that the attached docker process
 		// is exiting when the container exits, not when the docker daemon
 		// notices that the container has exited.
 		//
@@ -192,6 +192,16 @@ bool DockerProc::JobReaper( int pid, int status ) {
 
 		if( rv < 0 ) {
 			dprintf( D_ALWAYS | D_FAILURE, "Failed to inspect (for removal) container '%s'.\n", containerName.c_str() );
+			std::string imageName;
+			if( ! JobAd->LookupString( ATTR_DOCKER_IMAGE, imageName ) ) {
+				dprintf( D_ALWAYS | D_FAILURE, "%s not defined in job ad.\n", ATTR_DOCKER_IMAGE );
+				imageName = "Unknown"; // shouldn't ever happen
+			}
+
+			std::string message;
+			formatstr(message, "Cannot start container: invalid image name: %s", imageName.c_str());
+
+			Starter->jic->holdJob(message.c_str(), CONDOR_HOLD_CODE_InvalidDockerImage, 0);
 			return VanillaProc::JobReaper( pid, status );
 		}
 
@@ -209,6 +219,57 @@ bool DockerProc::JobReaper( int pid, int status ) {
 		// attributes blows.
 
 		// TODO: Set status appropriately (as if it were from waitpid()).
+		std::string oomkilled;
+		if (! dockerAd.LookupString( "OOMKilled", oomkilled)) {
+			dprintf( D_ALWAYS | D_FAILURE, "Inspection of container '%s' failed to reveal whether it was OOM killed. Assuming it was not.\n", containerName.c_str() );
+		}
+		
+		if (oomkilled.find("true") == 0) {
+			ClassAd *machineAd = Starter->jic->machClassAd();
+			int memory;
+			machineAd->LookupInteger(ATTR_MEMORY, memory);
+			std::string message;
+			formatstr(message, "Docker job exhaused %d Mb memory", memory);
+			dprintf(D_ALWAYS, "%s, going on hold\n", message.c_str());
+
+			
+			Starter->jic->holdJob(message.c_str(), CONDOR_HOLD_CODE_JobOutOfResources, 0);
+			DockerAPI::rm( containerName, error );
+
+			if ( Starter->Hold( ) ) {
+				Starter->allJobsDone();
+				this->JobExit();
+			}
+
+			Starter->ShutdownFast();
+			return 0;
+		}
+
+			// See if docker could not run the job
+			// most likely invalid executable
+		std::string dockerError;
+		if (! dockerAd.LookupString( "DockerError", dockerError)) {
+			dprintf( D_ALWAYS | D_FAILURE, "Inspection of container '%s' failed to reveal whether there was an internal docker error.\n", containerName.c_str() );
+		}
+
+		if (dockerError.length() > 0) {
+			std::string message;
+			formatstr(message, "Error running docker job: %s", dockerError.c_str());
+			dprintf(D_ALWAYS, "%s, going on hold\n", message.c_str());
+
+			
+			Starter->jic->holdJob(message.c_str(), CONDOR_HOLD_CODE_FailedToCreateProcess, 0);
+			DockerAPI::rm( containerName, error );
+
+			if ( Starter->Hold( ) ) {
+				Starter->allJobsDone();
+				this->JobExit();
+			}
+
+			Starter->ShutdownFast();
+			return 0;
+		} 
+		
 		int dockerStatus;
 		if( ! dockerAd.LookupInteger( "ExitCode", dockerStatus ) ) {
 			dprintf( D_ALWAYS | D_FAILURE, "Inspection of container '%s' failed to reveal its exit code.\n", containerName.c_str() );
@@ -234,6 +295,8 @@ bool DockerProc::JobReaper( int pid, int status ) {
 bool DockerProc::JobExit() {
 	dprintf( D_ALWAYS, "DockerProc::JobExit()\n" );
 
+	{
+	TemporaryPrivSentry sentry(PRIV_ROOT);
 	ClassAd dockerAd;
 	CondorError error;
 	int rv = DockerAPI::inspect( containerName, & dockerAd, error );
@@ -256,14 +319,24 @@ bool DockerProc::JobExit() {
 	if( rv < 0 ) {
 		dprintf( D_ALWAYS | D_FAILURE, "Failed to remove container '%s'.\n", containerName.c_str() );
 	}
+	}
 
 	return VanillaProc::JobExit();
 }
 
 void DockerProc::Suspend() {
 	dprintf( D_ALWAYS, "DockerProc::Suspend()\n" );
+	int rv = 0;
 
-	// TODO: docker pause ${containerName} only exists in Docker 1.1+.
+	{
+		TemporaryPrivSentry sentry(PRIV_ROOT);
+		CondorError error;
+		rv = DockerAPI::pause( containerName, error );
+	}
+	TemporaryPrivSentry sentry(PRIV_ROOT);
+	if( rv < 0 ) {
+		dprintf( D_ALWAYS | D_FAILURE, "Failed to suspend container '%s'.\n", containerName.c_str() );
+	}
 
 	is_suspended = true;
 }
@@ -271,9 +344,18 @@ void DockerProc::Suspend() {
 
 void DockerProc::Continue() {
 	dprintf( D_ALWAYS, "DockerProc::Continue()\n" );
+	int rv = 0;	
 
 	if( is_suspended ) {
-		// TODO: docker unpause ${containerName} only exists in Docker 1.1+.
+		{
+			TemporaryPrivSentry sentry(PRIV_ROOT);
+			CondorError error;
+			rv = DockerAPI::unpause( containerName, error );
+		}
+		if( rv < 0 ) {
+			dprintf( D_ALWAYS | D_FAILURE, "Failed to unpause container '%s'.\n", containerName.c_str() );
+		}
+
 
 		is_suspended = false;
 	}
@@ -290,7 +372,9 @@ bool DockerProc::Remove() {
 	if( is_suspended ) { Continue(); }
 	requested_exit = true;
 
-	// TODO: docker kill --signal=${rm_kill_sig} ${containerName}
+	CondorError err;
+	TemporaryPrivSentry sentry(PRIV_ROOT);
+	DockerAPI::kill( containerName, err);
 
 	// Do NOT send any signals to the waiting process.  It should only
 	// react when the container does.
@@ -307,7 +391,9 @@ bool DockerProc::Hold() {
 	if( is_suspended ) { Continue(); }
 	requested_exit = true;
 
-	// TODO: docker kill --signal=${hold_kill_sig} ${containerName}
+	CondorError err;
+	TemporaryPrivSentry sentry(PRIV_ROOT);
+	DockerAPI::kill( containerName, err );
 
 	// Do NOT send any signals to the waiting process.  It should only
 	// react when the container does.
@@ -331,11 +417,9 @@ bool DockerProc::ShutdownGraceful() {
 	if( is_suspended ) { Continue(); }
 	requested_exit = true;
 
-	// TODO: rm_kill_sig defaults to soft_kill_sig
-	// TODO: docker kill --signal=${rm_kill_sig} ${containerName}
-
-	// Do NOT send any signals to the waiting process.  It should only
-	// react when the container does.
+	CondorError err;
+	TemporaryPrivSentry sentry(PRIV_ROOT);
+	DockerAPI::kill( containerName, err );
 
 	// If rm_kill_sig is not SIGKILL, the process may linger.  Returning
 	// false indicates that shutdown is pending.
@@ -358,10 +442,9 @@ bool DockerProc::ShutdownFast() {
 	// so don't bother to Continue() the process if it's been suspended.
 	requested_exit = true;
 
-	// TODO: docker kill --signal=SIGKILL ${containerName}
-
-	// Do NOT send any signals to the waiting process.  It should only
-	// react when the container does.
+	CondorError err;
+	TemporaryPrivSentry sentry(PRIV_ROOT);
+	DockerAPI::kill( containerName, err );
 
 	// Based on the other comments, you'd expect this to return true.
 	// It could, but it's simpler to just to let the usual routines

@@ -1,5 +1,6 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{\label{sec:vm-install}Setting Up the VM and Docker Universes}
+%\section{\label{sec:vm-install}Setting Up the VM Universe}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -265,9 +266,8 @@ examples and details.
 \index{installation!for the docker universe}
 \index{universe!docker}
 \index{universe!set up for the docker universe}
-The execution of a job within the docker universe causes the
+The execution of a docker universe job causes the
 instantiation of a Docker container on an execute host.
-The job is run within that container. 
 
 The docker universe job is mapped to a vanilla universe job,
 and the submit description file must specify 
@@ -288,7 +288,7 @@ When a docker universe job is matched with a Docker-capable
 execute machine,
 HTCondor invokes the Docker CLI to instantiate the image-specific container.
 The job's scratch directory tree is mounted as a Docker volume.
-When the job completes or is evicted, the container is removed.
+When the job completes, is put on hold, or is evicted, the container is removed.
 
 In addition to installing the Docker service, 
 the single configuration variable \Macro{DOCKER} must be set.
@@ -297,3 +297,45 @@ the \Condor{starter} daemon has been given a password-less sudo
 permission to start the container as root.
 Details of the \MacroNI{DOCKER} configuration variable are in
 section~\ref{param:Docker}.
+
+Docker may be installed as \Login{root} on a RedHat Linux machine these
+ordered steps.
+\begin{enumerate}
+\item
+Acquire and install the docker software:
+\begin{verbatim}
+  yum install docker-io
+\end{verbatim}
+Note that the \Prog{docker} package,
+which manages the window manager's dock,
+ may need to be uninstalled,
+if it conflicts with this \Prog{docker-io} package.
+\item
+Set up the groups:
+\begin{verbatim}
+  useradd -G docker condor
+\end{verbatim}
+\item
+Invoke the docker software:
+\begin{verbatim}
+  service docker start
+\end{verbatim}
+\item
+Reconfigure the execute machine, such that it can set the machine ClassAd
+attribute \Attr{HasDocker}:
+\begin{verbatim}
+  condor_reconfig
+\end{verbatim}
+\item
+Check that the execute machine properly advertises that it is docker-capable
+with:
+\begin{verbatim}
+  condor_status -l | grep -i docker
+\end{verbatim}
+The output of this command line for a correctly-installed and 
+docker-capable execute host will be similar to
+\begin{verbatim}
+  HasDocker = true
+  DockerVersion = "Docker Version 1.6.0, build xxxxx/1.6.0"
+\end{verbatim}
+\end{enumerate}

@@ -234,6 +234,7 @@ BuildRequires: /usr/include/expat.h
 BuildRequires: openldap-devel
 BuildRequires: python-devel
 BuildRequires: boost-devel
+BuildRequires: redhat-rpm-config
 
 %if %uw_build || %std_univ
 BuildRequires: cmake >= 2.8
@@ -342,7 +343,7 @@ BuildRequires: systemd-units
 BuildRequires: transfig
 BuildRequires: latex2html
 
-Requires: mailx
+Requires: /usr/sbin/sendmail
 Requires: condor-classads = %{version}-%{release}
 Requires: condor-procd = %{version}-%{release}
 
@@ -513,8 +514,8 @@ resources exposed by the deltacloud API.
 %package classads
 Summary: HTCondor's classified advertisement language
 Group: Development/Libraries
-Obsoletes: classads <= 1.0.8
-Obsoletes: classads-static <= 1.0.8
+Obsoletes: classads <= 1.0.10
+Obsoletes: classads-static <= 1.0.10
 Provides: classads = %version-%release
 
 %description classads
@@ -543,12 +544,22 @@ Summary: Headers for HTCondor's classified advertisement language
 Group: Development/System
 Requires: %name-classads = %version-%release
 Requires: pcre-devel
-Obsoletes: classads-devel <= 1.0.8
+Obsoletes: classads-devel <= 1.0.10
 Provides: classads-devel = %version-%release
 
 %description classads-devel
 Header files for HTCondor's ClassAd Library, a powerful and flexible,
 semi-structured representation of data.
+
+#######################
+%package test
+Summary: HTCondor Self Tests
+Group: Applications/System
+Requires: %name = %version-%release
+Requires: %name-classads = %{version}-%{release}
+
+%description test
+A collection of tests to verify that HTCondor is operating properly.
 
 #######################
 %if %cream
@@ -623,7 +634,6 @@ Includes all the files necessary to support running standard universe jobs.
 %package static-shadow
 Summary: Statically linked condow_shadow and condor_master binaries
 Group: Applications/System
-Requires: %name = %version-%release
 
 %description static-shadow
 Provides condor_shadow_s and condor_master_s, which have all the globus
@@ -639,7 +649,38 @@ Requires: %name = %version-%release
 %description externals
 Includes the external packages built when UW_BUILD is enabled
 
+%package external-libs
+Summary: Libraries for external packages built into HTCondor
+Group: Applications/System
+
+%description external-libs
+Includes the libraries for external packages built when UW_BUILD is enabled
+
 %endif
+
+%package all
+Summary: All condor packages in a typical installation
+Group: Applications/System
+Requires: %name = %version-%release
+Requires: %name-procd = %version-%release
+Requires: %name-kbdd = %version-%release
+Requires: %name-vm-gahp = %version-%release
+Requires: %name-classads = %version-%release
+%if %cream
+Requires: %name-cream-gahp = %version-%release
+%endif
+Requires: %name-python = %version-%release
+Requires: %name-bosco = %version-%release
+%if %std_univ
+Requires: %name-std-universe = %version-%release
+%endif
+%if %uw_build
+Requires: %name-externals = %version-%release
+Requires: %name-external-libs = %version-%release
+%endif
+
+%description all
+Include dependencies for all condor packages in a typical installation
 
 %pre
 getent group condor >/dev/null || groupadd -r condor
@@ -678,8 +719,10 @@ export CMAKE_PREFIX_PATH=/usr
 # causes build issues with EL5, don't even bother building the tests.
 
 %if %uw_build
+%define condor_build_id UW_development
+
 %cmake \
-       -DBUILDID:STRING=UW_development \
+       -DBUILDID:STRING=%condor_build_id \
        -DUW_BUILD:BOOL=TRUE \
 %if ! %std_univ
        -DCLIPPED:BOOL=TRUE \
@@ -697,8 +740,7 @@ export CMAKE_PREFIX_PATH=/usr
 
 %else
 
-%cmake -DNO_PHONE_HOME:BOOL=TRUE \
-       -DBUILD_TESTING:BOOL=FALSE \
+%cmake -DBUILD_TESTING:BOOL=FALSE \
 %if %std_univ
        -DCLIPPED:BOOL=FALSE \
 %endif
@@ -838,7 +880,6 @@ sed -e "s:^LIB\s*=.*:LIB = \$(RELEASE_DIR)/$LIB/condor:" \
 # Install the basic configuration, a Personal HTCondor config. Allows for
 # yum install condor + service condor start and go.
 mkdir -m0755 %{buildroot}/%{_sysconfdir}/condor/config.d
-# cp %{buildroot}/etc/examples/condor_config.local %{buildroot}/%{_sysconfdir}/condor/config.d/00personal_condor.config
 %if %parallel_setup
 cp %{SOURCE5} %{buildroot}/%{_sysconfdir}/condor/config.d/20dedicated_scheduler_condor.config
 %endif
@@ -877,15 +918,6 @@ mkdir -p -m1777 %{buildroot}/%{_var}/lock/condor/local
 # Note we use %{_var}/lib instead of %{_sharedstatedir} for RHEL5 compatibility
 mkdir -p -m0755 %{buildroot}/%{_var}/lib/condor/spool
 mkdir -p -m1777 %{buildroot}/%{_var}/lib/condor/execute
-
-cat >> %{buildroot}/%_sysconfdir/condor/condor_config << EOF
-CONDOR_HOST = \$(FULL_HOSTNAME)
-DAEMON_LIST = COLLECTOR, MASTER, NEGOTIATOR, SCHEDD, STARTD
-EOF
-
-# no master shutdown program for now
-rm -f %{buildroot}/%{_sbindir}/condor_set_shutdown
-rm -f %{buildroot}/%{_mandir}/man1/condor_set_shutdown.1
 
 # not packaging deployment tools
 rm -f %{buildroot}/%{_mandir}/man1/condor_config_bind.1
@@ -953,13 +985,11 @@ rm -rf %{buildroot}%{_sbindir}/condor_cold_start
 rm -rf %{buildroot}%{_sbindir}/condor_cold_stop
 rm -rf %{buildroot}%{_sbindir}/condor_config_bind
 rm -rf %{buildroot}%{_sbindir}/condor_configure
-rm -rf %{buildroot}%{_sbindir}/condor_credd
 rm -rf %{buildroot}%{_sbindir}/condor_install
 rm -rf %{buildroot}%{_sbindir}/condor_install_local
 rm -rf %{buildroot}%{_sbindir}/condor_local_start
 rm -rf %{buildroot}%{_sbindir}/condor_local_stop
 rm -rf %{buildroot}%{_sbindir}/condor_startd_factory
-rm -rf %{buildroot}%{_sbindir}/condor_vm-gahp-vmware
 rm -rf %{buildroot}%{_sbindir}/condor_vm_vmware.pl
 rm -rf %{buildroot}%{_sbindir}/filelock_midwife
 rm -rf %{buildroot}%{_sbindir}/filelock_undertaker
@@ -1016,7 +1046,6 @@ rm -rf %{buildroot}%{_mandir}/man1/condor_compile.1*
 rm -rf %{buildroot}%{_mandir}/man1/condor_config_bind.1*
 rm -rf %{buildroot}%{_mandir}/man1/condor_configure.1*
 rm -rf %{buildroot}%{_mandir}/man1/condor_load_history.1*
-rm -rf %{buildroot}%{_mandir}/man1/condor_set_shutdown.1*
 rm -rf %{buildroot}%{_mandir}/man1/filelock_midwife.1*
 rm -rf %{buildroot}%{_mandir}/man1/filelock_undertaker.1*
 rm -rf %{buildroot}%{_mandir}/man1/install_release.1*
@@ -1030,8 +1059,10 @@ rm -rf %{buildroot}%{_datadir}/condor/{libpyclassad*,htcondor,classad}.so
 mkdir -p %{buildroot}%{python_sitelib}
 mv %{buildroot}%{_libexecdir}/condor/campus_factory/python-lib/GlideinWMS %{buildroot}%{python_sitelib}
 mv %{buildroot}%{_libexecdir}/condor/campus_factory/python-lib/campus_factory %{buildroot}%{python_sitelib}
+%if 0%{?osg} || 0%{?hcc}
 mv %{buildroot}%{_libexecdir}/condor/campus_factory/share/condor/condor_config.factory %{buildroot}%{_sysconfdir}/condor/config.d/60-campus_factory.config
 mv %{buildroot}%{_libexecdir}/condor/campus_factory/etc/campus_factory.conf %{buildroot}%{_sysconfdir}/condor/
+%endif
 mv %{buildroot}%{_libexecdir}/condor/campus_factory/share %{buildroot}%{_datadir}/condor/campus_factory
 
 %if %blahp && ! %uw_build
@@ -1082,6 +1113,8 @@ rm -rf %{buildroot}
 #make check-seralized
 
 #################
+%files all
+#################
 %files
 %defattr(-,root,root,-)
 %doc LICENSE-2.0.txt examples
@@ -1105,7 +1138,6 @@ rm -rf %{buildroot}
 %_datadir/condor/CondorTest.pm
 %_datadir/condor/CondorUtils.pm
 %dir %_sysconfdir/condor/config.d/
-#%_sysconfdir/condor/config.d/00personal_condor.config
 %_sysconfdir/condor/condor_ssh_to_job_sshd_config_template
 %if %gsoap || %uw_build
 %dir %_datadir/condor/webservice/
@@ -1116,6 +1148,7 @@ rm -rf %{buildroot}
 %_libdir/libcondor_utils_%{version_}.so
 %_libdir/libcondorapi.so
 %dir %_libexecdir/condor/
+%_libexecdir/condor/linux_kernel_tuning
 %_libexecdir/condor/accountant_log_fixer
 %_libexecdir/condor/condor_chirp
 %_libexecdir/condor/condor_ssh
@@ -1163,6 +1196,8 @@ rm -rf %{buildroot}
 %_libexecdir/condor/interactive.sub
 %_libexecdir/condor/condor_dagman_metrics_reporter
 %_libexecdir/condor/condor_gangliad
+%_libexecdir/condor/panda-plugin.so
+%_libexecdir/condor/pandad
 %_mandir/man1/condor_advertise.1.gz
 %_mandir/man1/condor_check_userlogs.1.gz
 %_mandir/man1/condor_chirp.1.gz
@@ -1191,6 +1226,7 @@ rm -rf %{buildroot}
 %_mandir/man1/condor_restart.1.gz
 %_mandir/man1/condor_rm.1.gz
 %_mandir/man1/condor_run.1.gz
+%_mandir/man1/condor_set_shutdown.1.gz
 %_mandir/man1/condor_sos.1.gz
 %_mandir/man1/condor_stats.1.gz
 %_mandir/man1/condor_status.1.gz
@@ -1272,6 +1308,7 @@ rm -rf %{buildroot}
 %_sbindir/condor_c-gahp
 %_sbindir/condor_c-gahp_worker_thread
 %_sbindir/condor_collector
+%_sbindir/condor_credd
 %_sbindir/condor_fetchlog
 %_sbindir/condor_had
 %_sbindir/condor_init
@@ -1285,6 +1322,7 @@ rm -rf %{buildroot}
 %_sbindir/condor_restart
 %attr(6755, root, root) %_sbindir/condor_root_switchboard
 %_sbindir/condor_schedd
+%_sbindir/condor_set_shutdown
 %_sbindir/condor_shadow
 %_sbindir/condor_sos
 %_sbindir/condor_startd
@@ -1303,9 +1341,11 @@ rm -rf %{buildroot}
 %_sbindir/nordugrid_gahp
 %_sbindir/gce_gahp
 %if %uw_build
+%_sbindir/condor_master_s
 %_sbindir/boinc_gahp
 %endif
 %_libexecdir/condor/condor_gpu_discovery
+%_sbindir/condor_vm-gahp-vmware
 %_sbindir/condor_vm_vmware
 %config(noreplace) %_sysconfdir/condor/ganglia.d/00_default_metrics
 %defattr(-,condor,condor,-)
@@ -1525,6 +1565,12 @@ rm -rf %{buildroot}
 %_includedir/classad/xmlSink.h
 %_includedir/classad/xmlSource.h
 
+#################
+%files test
+%defattr(-,root,root,-)
+%_libexecdir/condor/condor_sinful
+%_libexecdir/condor/condor_testingd
+
 %if %cream
 %files cream-gahp
 %defattr(-,root,root,-)
@@ -1547,8 +1593,10 @@ rm -rf %{buildroot}
 
 %files bosco
 %defattr(-,root,root,-)
+%if 0%{?osg} || 0%{?hcc}
 %config(noreplace) %_sysconfdir/condor/campus_factory.conf
 %config(noreplace) %_sysconfdir/condor/config.d/60-campus_factory.config
+%endif
 %_libexecdir/condor/shellselector
 %_libexecdir/condor/campus_factory
 %_sbindir/bosco_install
@@ -1606,16 +1654,17 @@ rm -rf %{buildroot}
 
 %if %uw_build
 %files static-shadow
-%{_sbindir}/condor_master_s
 %{_sbindir}/condor_shadow_s
 
-%files externals
+%files external-libs
 %dir %_libdir/condor
 %_libdir/condor/libcondordrmaa.a
 %_libdir/condor/libdrmaa.so
 %_libdir/condor/libglobus*.so*
 %_libdir/condor/libvomsapi*.so*
 %_libdir/condor/ugahp.jar
+
+%files externals
 %_sbindir/deltacloud_gahp
 %_sbindir/unicore_gahp
 %if %blahp

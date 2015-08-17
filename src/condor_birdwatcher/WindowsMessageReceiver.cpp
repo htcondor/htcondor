@@ -71,7 +71,9 @@ void WindowsMessageReceiver::createHwnd()
 	static bool bFirstTime = true;
 	static TCHAR pszClassNameBuf[] = TEXT("WindowsMessageReceiver");
 
-	srand(GetTickCount());
+	LARGE_INTEGER li;
+	QueryPerformanceCounter(&li);
+	srand(li.LowPart);
 
 	HINSTANCE hinst = hInst;
 

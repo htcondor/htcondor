@@ -515,6 +515,7 @@
 #define ATTR_PREV_RECV_ESTIMATE  "PrevRecvEstimate"
 #define ATTR_PRIO  "Prio"
 #define ATTR_PROC_ID  "ProcId"
+#define ATTR_PSLOT_ROLLUP_INFORMATION "PslotRollupInformation"
 #define ATTR_SUB_PROC_ID  "SubProcId"
 #define ATTR_PRIVATE_NETWORK_NAME  "PrivateNetworkName"
 #define ATTR_Q_DATE  "QDate"
@@ -556,6 +557,8 @@
 #define ATTR_RUN_BENCHMARKS  "RunBenchmarks"
 #define ATTR_SHADOW_IP_ADDR  "ShadowIpAddr"
 #define ATTR_MY_ADDRESS  "MyAddress"
+#define ATTR_NUM_JOB_STARTS_DELAYED  "NumJobStartsDelayed"
+#define ATTR_NUM_PENDING_CLAIMS  "NumPendingClaims"
 #define ATTR_SCHEDD_SWAP_EXHAUSTED  "ScheddSwapExhausted"
 #define ATTR_SCHEDD_INTERVAL  "ScheddInterval"
 #define ATTR_SCHEDD_IP_ADDR  "ScheddIpAddr"
@@ -826,6 +829,7 @@
 extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_SEC_TRIED_AUTHENTICATION  "TriedAuthentication"
 #define ATTR_SEC_AUTHORIZATION_SUCCEEDED  "AuthorizationSucceeded"
+#define ATTR_SEC_RETURN_CODE  "ReturnCode"
 
 #define ATTR_MULTIPLE_TASKS_PER_PVMD  "MultipleTasksPerPvmd"
 

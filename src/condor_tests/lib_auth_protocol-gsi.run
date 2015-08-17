@@ -169,7 +169,9 @@ while(<CONFIGTPLATE>)
 close(CONFIG);
 close(CONFIGTPLATE);
 
-my $configsec = CondorTest::StartPersonal( "lib_auth_protocol-gsi", $myparamname ,"protocol", $mypid, "donotwait");
+#my $configsec = CondorTest::StartPersonal( "lib_auth_protocol-gsi", $myparamname ,"protocol", $mypid, "donotwait");
+# let the daemons all come up before preceeding
+my $configsec = CondorTest::StartPersonal( "lib_auth_protocol-gsi", $myparamname ,"protocol", $mypid);
 my @securitypool = split /\+/, $configsec;
 my $secconfig = shift @securitypool;
 my $secport = shift @securitypool;

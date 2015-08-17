@@ -137,7 +137,8 @@ bool user_policy_ad_checker(ClassAd* ad,
 							bool periodic_remove,
 							bool periodic_release,
 							bool hold_check,
-							bool remove_check);
+							bool remove_check,
+							int absent_mask = 0);
 
 /*
  Checks if the ClassAd has the following attributes with the given values
@@ -154,7 +155,8 @@ bool user_policy_ad_checker(ClassAd* ad,
 							bool periodic_remove,
 							bool periodic_release,
 							bool hold_check,
-							bool remove_check);
+							bool remove_check,
+							int absent_mask = 0);
 
 /*
  Inserts the given attribute and value into the ClassAd

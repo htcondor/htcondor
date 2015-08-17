@@ -199,7 +199,7 @@ void ScheddStatistics::InitMain()
    SCHEDD_STATS_ADD_VAL(Pool, JobsRestartReconnectsLeaseExpired, IF_BASICPUB);
    SCHEDD_STATS_ADD_VAL(Pool, JobsRestartReconnectsSucceeded, IF_BASICPUB);
    SCHEDD_STATS_ADD_VAL(Pool, JobsRestartReconnectsAttempting, IF_BASICPUB);
-   SCHEDD_STATS_ADD_VAL(Pool, JobsRestartReconnectsUnknown, IF_BASICPUB);
+   SCHEDD_STATS_ADD_VAL(Pool, JobsRestartReconnectsInterrupted, IF_BASICPUB);
    SCHEDD_STATS_ADD_VAL(Pool, JobsRestartReconnectsBadput, IF_BASICPUB);
 
    // SCHEDD runtime stats for various expensive processes
@@ -619,11 +619,13 @@ bool ScheddOtherStatsMgr::RemoveDisabled()
 		} else if ( ! po->sets.empty()) {
 			for (std::map<std::string, ScheddOtherStats*>::iterator it = po->sets.begin();
 				 it != po->sets.end();
-				 ++it) {
+				 ) {
 				if ( ! po->enabled) {
 					delete it->second;
 					it->second = NULL;
 					po->sets.erase(it++);
+				} else {
+					it++;
 				}
 			}
 		}

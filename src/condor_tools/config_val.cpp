@@ -288,7 +288,7 @@ bool add_ref_callback(void* /*pv*/, HASHITER & it)
 		int ix = pmeta->param_id;
 
 		// save use/ref count for this item
-		macro_defaults::META tmp;
+		macro_defaults::META tmp = {0,0};
 		if (it.is_def) {
 			if (it.set.defaults && it.set.defaults->metat && ix < it.set.defaults->size) {
 				tmp = it.set.defaults->metat[ix];
@@ -495,13 +495,13 @@ main( int argc, const char* argv[] )
 					++i; // skip "use"
 					// save off the parameter name, prefixed with $ so that the code below we know it's a metaknob name.
 					std::string meta("$"); meta += argv[i];
-					params.append(strdup(meta.c_str()));
+					params.append(meta.c_str());
 				} else {
 					fprintf(stderr, "use should be followed by a category or category:option argument\n");
-					params.append(strdup("$"));
+					params.append("$");
 				}
 			} else {
-				params.append(strdup(argv[i]));
+				params.append(argv[i]);
 			}
 			continue;
 		}
@@ -780,7 +780,7 @@ main( int argc, const char* argv[] )
 			// later can look nice. The param() subsystem inherently assumes
 			// case insensitivity, so this is perfectly fine to do here.
 			str.upper_case();
-			params.append( strdup( str.Value() ) ) ;
+			params.append( str.Value() ) ;
 		}
 #endif
 	}
@@ -912,7 +912,7 @@ main( int argc, const char* argv[] )
 				foreach_param(opts, dump_both_callback, (void*)&last);
 				fprintf(stdout, "%d items\n", dump_both_count);
 			} else {
-				params.append(strdup(""));
+				params.append("");
 				params.rewind();
 			}
 		}
@@ -1010,7 +1010,7 @@ main( int argc, const char* argv[] )
 	params.rewind();
 	if( ! params.number() && !print_config_sources) {
 		if (dump_all_variables || dump_stats) {
-			params.append(strdup(""));
+			params.append("");
 			params.rewind();
 			//if (diagnostic) fprintf(stderr, "querying all\n");
 		} else if (write_config) {

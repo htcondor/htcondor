@@ -344,7 +344,7 @@ universes for user jobs:
 	\item local
  	\item parallel
  	\item vm
- 	\item docker
+  	\item docker
 \end{itemize}
 
 The \SubmitCmd{universe} under which a job runs
@@ -384,8 +384,7 @@ See section~\ref{sec:Parallel} for more about the Parallel universe.
 The vm universe allows users to run jobs where the job is
 no longer a simple executable, but a disk image, facilitating
 the execution of a virtual machine.
-The docker universe instantiates a Docker container within which
-the HTCondor job runs.
+The docker universe runs a Docker container as an HTCondor job.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:standard-universe}Standard Universe}
@@ -594,10 +593,8 @@ Please see section~\ref{sec:vmuniverse} for details.
 %%%%%%%%%%%%
 \index{universe!docker}
 \index{docker universe}
-The docker universe causes an instantiation of a container
-on an execute host,
-and the job is run within that container.  
-
+The docker universe runs a docker container on an execute host
+as a job.  
 Please see section~\ref{sec:dockeruniverse} for details.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -830,7 +827,6 @@ will be written into the single file \File{foo.log}.
 %%%%%%%%%%%%%%%%%
 \subsection{\label{sec:user-man-queue}Using the Power and Flexibility of the Queue Command}
 %%%%%%%%%%%%%%%%%
-\MoreTodo
 
 A wide variety of job submissions can be specified
 with extra information to the \SubmitCmd{queue} submit command.
@@ -960,6 +956,252 @@ For this example the \SubmitCmdNI{queue} command expands to
   arguments = -c -d 92
   queue 
 \end{verbatim}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:user-man-submit-variables}Variables in the Submit Description File}
+%%%%%%%%%%%%%%%%%
+\index{submit description file!automatic variables}
+\index{automatic variables!in submit description file}
+There are automatic variables for use within the submit description file.
+
+\begin{description}
+
+\item [\Expr{\$(Cluster)} or \Expr{\$(ClusterId)}]
+  Each set of queued jobs from a specific user, 
+  submitted from a single submit host, sharing an executable
+  have the same value of \Expr{\$(Cluster)} or \Expr{\$(ClusterId)}.
+  The first cluster of jobs are assigned to cluster 0, 
+  and the value is incremented by one for each new cluster of jobs.
+  \Expr{\$(Cluster)} or \Expr{\$(ClusterId)} will have the same value as the job ClassAd attribute
+  \Attr{ClusterId}.
+\item [\Expr{\$(Process)} or \Expr{\$(ProcId)}]
+  Within a cluster of jobs, each takes on its own unique \Expr{\$(Process)} 
+  or \Expr{\$(ProcId)} value.
+  The first job has value 0.
+  \Expr{\$(Process)} or \Expr{\$(ProcId)} will have the same value as the 
+  job ClassAd attribute \Attr{ProcId}.
+\item [\Expr{\$(Item)}]
+  The default name of the variable when no \Expr{<varname>} is provided
+  in a \SubmitCmdNI{queue} command.
+\item [\Expr{\$(ItemIndex)}]
+  Represents an index within a list of items.  
+  When no slice is specified, the first \Expr{\$(ItemIndex)} is 0.
+  When a slice is specified, \Expr{\$(ItemIndex)} is the index of the
+  item within the original list.
+\item [\Expr{\$(Step)}]
+  For the \Expr{<int expr>} specified,
+  \Expr{\$(Step)} counts, starting at 0.
+\item [\Expr{\$(Row)}]
+  When a list of items is specified by placing each item on its own line
+  in the submit description file,
+  \Expr{\$(Row)} identifies which line the item is on.
+  The first item (first line of the list) is \Expr{\$(Row)} 0.
+  The second item (second line of the list) is \Expr{\$(Row)} 1.
+  When a list of items are specified with all items on the same line,
+  \Expr{\$(Row)} is the same as \Expr{\$(ItemIndex)}.
+
+\end{description}
+
+Here is an example of a \SubmitCmdNI{queue} command
+for which the values of these automatic variables are identified.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{description}
+\item[Example 1]
+\end{description}
+This example queues six jobs.
+\begin{verbatim}
+  queue 3 in (A, B)
+\end{verbatim}
+\begin{itemize}
+  \item \Expr{\$(Process)} takes on the six values 0, 1, 2, 3, 4, and 5.
+  \item Because there is no specification for the \Expr{<varname>}
+within this \SubmitCmdNI{queue} command, 
+variable \Expr{\$(Item)} is defined.
+It has the value \Expr{A} for the first three jobs queued,
+and it has the value \Expr{B} for the second three jobs queued.
+  \item \Expr{\$(Step)} takes on the three values 0, 1, and 2
+for the three jobs with \Expr{\$(Item)=A},
+and it takes on the same three values 0, 1, and 2
+for the three jobs with \Expr{\$(Item)=B}.
+  \item \Expr{\$(ItemIndex)} is 0 for all three jobs with \Expr{\$(Item)=A},
+and it is 1 for all three jobs with \Expr{\$(Item)=B}.
+  \item \Expr{\$(Row)} has the same value as \Expr{\$(ItemIndex)}
+for this example.
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:user-man-include}Including Submit Commands Defined Elsewhere}
+%%%%%%%%%%%%%%%%%
+\index{submit description file!including commands from elsewhere}
+
+Externally defined submit commands can be incorporated into 
+the submit description file using the syntax
+\begin{verbatim}
+  include : <what-to-include>
+\end{verbatim}
+
+The \verb@<what-to-include>@ specification may specify a single file,
+where the contents of the file will be incorporated
+into the submit description file at the point within the file
+where the \SubmitCmdNI{include} is.
+Or, \verb@<what-to-include>@  may cause a program to be executed,
+where the output of the program is incorporated
+into the submit description file.
+The specification of \verb@<what-to-include>@ has the bar character
+(\Expr{|}) following the name of the program to be executed.
+
+The \SubmitCmdNI{include} key word is case insensitive.
+There are \emph{no} requirements for white space characters surrounding
+the colon character.
+
+Included submit commands may contain further nested \SubmitCmdNI{include} 
+specifications, 
+which are also parsed, evaluated, and incorporated.
+Levels of nesting on included files are limited,
+such that infinite nesting is discovered and thwarted,
+while still permitting nesting.
+
+Consider the example
+\begin{verbatim}
+  include : list-infiles.sh |
+\end{verbatim}
+In this example, the bar character at the end of the line 
+causes the script \File{list-infiles.sh} to be invoked,
+and the output of the script is parsed and incorporated into
+the submit description file.
+If this bash script contains
+\footnotesize
+\begin{verbatim}
+  echo "transfer_input_files = `ls -m infiles/*.dat`"
+\end{verbatim}
+\normalsize
+then the output of this script has specified the set of
+input files to transfer to the execute host. 
+For example,
+if directory \File{infiles} contains the three files
+\File{A.dat},
+\File{B.dat}, and
+\File{C.dat},
+then the submit command
+\footnotesize
+\begin{verbatim}
+  transfer_input_files = infiles/A.dat, infiles/B.dat, infiles/C.dat
+\end{verbatim}
+\normalsize
+is incorporated into the submit description file.
+
+%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:user-man-ifelse}Using Conditionals in the Submit Description File}
+%%%%%%%%%%%%%%%%%
+\index{submit commands!IF/ELSE syntax}
+\index{IF/ELSE submit commands syntax}
+\input{admin-man/if-else.tex}
+
+Here is an example use of a conditional in the submit description file.
+A portion of the \File{sample.sub} submit description file uses
+the if/else syntax to define command line arguments in one of two ways:
+\begin{verbatim}
+  if defined X
+    arguments = -n $(X)
+  else
+    arguments = -n 1 -debug
+  endif
+\end{verbatim}
+
+Submit variable \Expr{X} is defined on the \Condor{submit} command line with
+\begin{verbatim}
+  condor_submit  X=3  sample.sub
+\end{verbatim}
+This command line incorporates the submit command \Expr{X = 3}
+into the submission before parsing the submit description file.
+For this submission, the command line arguments of the submitted
+job become
+\begin{verbatim}
+    -n 3
+\end{verbatim}
+
+If the job were instead submitted with the command line
+\begin{verbatim}
+  condor_submit  sample.sub
+\end{verbatim}
+then the command line arguments of the submitted job become
+\begin{verbatim}
+    -n 1 -debug
+\end{verbatim}
+
+
+%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:user-man-macros}Function Macros in the Submit Description File}
+%%%%%%%%%%%%%%%%%
+\index{submit description file!function macros}
+\input{admin-man/function-macros.tex}
+
+Here are example uses of the function macros in a submit description file.
+Note that these are not complete submit description files,
+but only the portions that promote understanding of
+use cases of the function macros.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{description}
+\item[Example 1]
+\end{description}
+Generate a range of numerical values for a set of jobs,
+where values other than those given by \verb@$(Process)@ are desired.
+\begin{verbatim}
+  MyIndex     = $(Process) + 1
+  initial_dir = run-$INT(MyIndex, %04d)
+\end{verbatim}
+Assuming that there are three jobs queued,
+such that \verb@$(Process)@ becomes 0, 1, and 2,
+\Expr{initial\_dir} will evaluate to the directories
+\Expr{run-0001}, \Expr{run-0002}, and \Expr{run-0003}.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{description}
+\item[Example 2]
+\end{description}
+This variation on Example 1 generates a file name extension 
+which is a 3-digit integer value.
+\begin{verbatim}
+  Values     = $(Process) * 10
+  Extension  = $INT(Values, %03d)
+  input      = X.$(Extension)
+\end{verbatim}
+Assuming that there are four jobs queued,
+such that \verb@$(Process)@ becomes 0, 1, 2, and 3,
+\Expr{Extension} will evaluate to 000, 010, 020, and 030,
+leading to files defined for \SubmitCmdNI{input} of
+\Expr{X.000}, \Expr{X.010}, \Expr{X.020}, and \Expr{X.030}.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{description}
+\item[Example 3]
+\end{description}
+This example uses both the file globbing of the \SubmitCmd{queue}
+command and a macro function to specify a job input file that is
+within a subdirectory on the submit host,
+but will be placed into a single, flat directory on the execute host.
+\begin{verbatim}
+  arguments            = $Fnx(FILE)
+  transfer_input_files = $(FILE)
+  queue  FILE  MATCHING (
+       samplerun/*.dat
+       )
+\end{verbatim}
+Assume that two files that end in \Expr{.dat}, \File{A.dat} and \File{B.dat},
+are within the directory \File{samplerun}.
+Macro \Expr{FILE} expands to \File{samplerun/A.dat} and \File{samplerun/B.dat}
+for the two jobs queued.
+The input files transferred are 
+\File{samplerun/A.dat} and \File{samplerun/B.dat}
+on the submit host.
+The \Expr{\$Fnx()} function macro expands to the complete file name
+with any leading directory specification stripped,
+such that the command line argument for one of the
+jobs will be \File{A.dat} and the command line argument for the
+other job will be \File{B.dat}.
 
 %%%%%%%%%%%%%%%%%
 \subsection{\label{sec:user-man-req-and-rank}About Requirements and Rank}
@@ -1979,7 +2221,7 @@ kills off the \Condor{starter} daemon and user job.
 
 \index{ClassAd job attribute!JobLeaseDuration}
 \index{JobLeaseDuration!job ClassAd attribute}
-A default value equal to 20 minutes exists for a job's
+A default value equal to 40 minutes exists for a job's
 ClassAd attribute \Attr{JobLeaseDuration}, 
 or this attribute may be set in the submit description file,
 using \SubmitCmd{job\_lease\_duration},
