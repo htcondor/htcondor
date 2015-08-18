@@ -1794,6 +1794,22 @@ review=?
 usage="/dev/" portion of the pathname.
 tags=sysapi,reconfig
 
+[SLOTS_CONNECTED_TO_CONSOLE]
+default=$(NUM_CPUS)
+type=string
+reconfig=false
+customization=seldom
+friendly_name=slots above this number do not have ConsoleIdle updated
+tags=startd
+
+[SLOTS_CONNECTED_TO_KEYBOARD]
+default=$(NUM_CPUS)
+type=string
+reconfig=false
+customization=seldom
+friendly_name=slots above this number do not have KeyboardIdle updated
+tags=startd
+
 [STARTD_HAS_BAD_UTMP]
 # XXX This should be a bool
 default=0
