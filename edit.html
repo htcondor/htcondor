@@ -1,0 +1,218 @@
+<!doctype html>
+<html>
+<head>
+  <style>
+  iframe {
+    width: 95%;
+    min-height: 450px;
+    margin-left: auto;
+    margin-right: auto;
+    margin-bottom: 2em;
+  }
+  input, textarea {
+    display: block;
+    width: 95%;
+  }
+  textarea {
+    height: 8em;
+  }
+  </style>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js"></script>
+  <script src="render.js"></script>
+</head>
+
+<body>
+
+<form>
+<textarea id='editor' wrap='off' oninput='updateUrl();'></textarea>
+</form>
+
+<div id='viewurl'><a href=''>foo</a></div>
+
+<iframe id='result' seamless></iframe>
+
+<script>
+function argsToForm(args) {
+  var t = '';
+  for (var argi in args.all) {
+    var arg = args.all[argi];
+    var key = arg[0], value = arg[1];
+    if (key) {
+      t += key + '=' + value + '\n';
+    }
+  }
+  $('#editor').text(t);
+}
+
+
+function niceEncode(s) {
+  // we could use encodeURIComponent() here, but it's too fancy.  Let's
+  // *only* encode & characters so the resulting URL looks as nice as
+  // possible.
+  return s.replace(/&/g, '%26');
+}
+
+
+function formToUrl() {
+  //var urlbase = window.location.protocol + '//' + window.location.host;
+  var urlbase1 = window.location.protocol + '//' + window.location.host + window.location.pathname;
+  var urlbase = urlbase1.replace("edit.html","render.html");
+  var out = [];
+  var parts = $('#editor').attr('value').trim().split('\n');
+  for (var parti in parts) {
+    var part = parts[parti];
+    if (part) {
+      var bits = afterquery.internal.trySplitOne(part, '=');
+      if (bits) {
+        out.push(niceEncode(bits[0]) + '=' + niceEncode(bits[1]));
+      } else {
+        out.push(niceEncode(part));
+      }
+    }
+  }
+  return urlbase + '?' + out.join('&');
+}
+
+
+function updateUrl() {
+  var url = formToUrl();
+  $('#viewurl a').attr('href', url).text(url);
+  if (tmo) {
+    clearTimeout(tmo);
+  }
+  tmo = setTimeout(function() {
+    if (lastloaded != url) {
+      $('iframe#result').attr('src', url + '&editlink=0&trace=1');
+      lastloaded = url;
+    }
+  }, 1000);
+}
+
+tmo = null;
+lastloaded = null;
+var exampleurl = (window.location.protocol + '//' + window.location.host +
+                  '/example1.json');
+args = afterquery.parseArgs(window.location.search || ('?url=' + exampleurl));
+argsToForm(args);
+updateUrl();
+</script>
+
+<h2>Help</h2>
+<p>(The default with no transforms is to just show the data in
+a handy table view without any changes.)</p>
+
+<p>Available transforms:</p>
+
+<ul>
+<li><p><b>&amp;limit=<u>n</u></b> <br />
+Discard all data after <u>n</u> rows.</p></li>
+<li><p><b>&amp;filter=<u>key</u>>=<u>value1</u>,<u>value2</u>,...</b> <br />
+Show only rows where the column named <u>key</u> has a
+value >= <u>value1</u> or <u>value2</u> etc.  The
+operator (>= in this example) can be one
+of =, &lt;, >, &lt;=, >=, &lt;>, or !=.  If you specify more
+than one value, they
+are combined in an OR configuration (ie. a row matches
+if any of the values match).  If you provide
+more than one &amp;filter= clause, they are combined
+successively in an AND configuration (ie. a row matches
+only if all the filters are true).</p></li>
+<li><p><b>&amp;q=<u>value1</u>,<u>value2</u>,...</b> <br />
+Show only rows where any of the columns contain the
+substring <u>value1</u> or <u>value2</u> etc.  If more
+than one value is specified, they are combined in an OR
+configuration.  If you provide more than one &amp;q= clause,
+they are combined successively in an AND configuration.</p></li>
+<li><p><b>&amp;order=<u>[-]key1</u>,<u>[-]key2</u></b> <br />
+Sort the table in order of <u>key1</u> and then (if key1
+is the same) by <u>key2</u> etc.  If a key starts with
+'-' that means to sort that key in descending order
+(largest to smallest).</p></li>
+<li><p><b>&amp;extract_regexp=<u>key</u>=<u>regexp(match)regexp</u></b> <br />
+Search for the given regular expression in each row in
+the column named <u>key</u>.  If it's found, replace the
+column with the substring in the <u>(match)</u> part of
+the regexp.  For example,
+<code>&amp;extract_regexp=ver=version-(.*)</code> would replace a
+string <code>version-25.4</code> in column <code>ver</code> with the string <code>25.4</code>.</p></li>
+<li><p><b>&amp;group=<u>key1</u>,<u>key2</u>,...;<u>val1</u>,<u>val2</u>,...</b> <br />
+Summarize the table data by summing and counting.  This
+operation works like a simplified version of SQL's
+"group by" clause.  In the resulting output, the order
+of the columns will be
+<u>key1</u>,<u>key2</u>,...,<u>val1</u>,<u>val2</u>... 
+and there will only be at most one row with any
+particular combination of <u>key1</u>,<u>key2</u>,... 
+fields.  The <u>val</u> columns will be summed (if they
+were already numerical) or counted (if they were
+non-numeric).</p>
+
+<p>A clause like <code>&amp;group=a,b;x,y</code> (if x is a string and y
+is a number) would be equivalent to this in SQL: <code>select
+a, b, count(x) x, sum(y) y from MyTable group by a, b</code></p>
+
+<p>If you apply multiple <b>&amp;group=</b> clauses, it works like
+using multiple nested subqueries in SQL.  (That is, the
+output of one <b>&amp;group=</b> clause becomes the MyTable
+of the next one.)</p>
+
+<p>If you leave out the ';' and the <u>val</u> column
+names, the default is to automatically include all
+columns other than the <u>key</u> columns.</p>
+
+<p>If you include the ';' but leave out the <u>val</u>
+column names, that means you don't want any value
+columns (so only the key fields will be included, and
+nothing will be summed or counted at that step).  So
+<code>&amp;group=a,b;</code> (with a trailing semicolon) is equivalent
+to this in SQL: <code>select a, b from MyTable group by a,
+b</code>.</p></li>
+<li><p><b>&amp;treegroup=<u>key1</u>,<u>key2</u>,...;[<u>val1</u>,[<u>val2</u>]]</b> <br />
+Like <b>&amp;group=</b>, but produces an output table arranged hierarchically
+by each <u>key1</u>..<u>keyn</u>, so you can drill down.  There can be
+zero, one, or two <u>val</u> columns; the first value is the size of
+each box in the tree view (if omitted, they are all the same size), and
+the second value is the colour of each box (if omitted, the colour varies
+with the size).  <b>&amp;treegroup=</b> isn't really useful unless you also
+use <b>&amp;chart=tree</b>.</p></li>
+<li><p><b>&amp;pivot=<u>rowkeys...</u>;<u>colkeys...</u>;<u>valkeys...</u></b> <br />
+A <b>&amp;pivot=</b> clause works like a <b>&amp;group=</b>
+clause, but creates a
+<a href="http://en.wikipedia.org/wiki/Pivot_table">pivot table</a>. 
+Pivot tables are a bit complicated; the easiest way to
+learn about them is to play with an example.
+</p>
+
+<p>The simplest way to think of a pivot table is like this:
+the values originally in the columns named by <u>rowkeys</u>
+end up down the left of the output table.  The values
+originally in the columns named by <u>colkeys</u> end up
+as headings across the top of the output table.  The values
+originally in the columns named by <u>valkeys</u> end up
+as values in the body section of the output table.  A
+pivot table is very handy when you have raw data in
+SQL-like format and you want to rearrange it to be
+suitable for charting (where each line in a line chart,
+say, is usually one column of the table).</p>
+
+<p>If the <u>rowkeys</u> section is empty, the output will
+have exactly one row (with all the value fields counted
+or summed into that one row).  If the <u>colkeys</u>
+section is empty, the <b>&amp;pivot=</b> operation is
+essentially equivalent to a
+<b>&amp;group=<u>rowkeys...</u>;<u>valkeys...</u></b> operation. 
+If the <u>valkeys</u> section is empty, there are no
+values used to calculate the table body, so it is
+equivalent to an <b>&amp;group=<u>rowkeys...</u>;</b>
+operation.</p></li>
+<li><p><b>&amp;chart=<u>charttype</u></b> <br />
+Instead of showing a table of values, show a chart.  The
+available <u>charttypes</u> are currently: stacked (a
+stacked area chart), line, spark, column, bar, pie,
+tree (see <b>treegroup</b>), candle, timeline, dygraph, dygraph+errors.</p></li>
+<li><p><b>&amp;title=<u>title</u></b> <br />
+Add a title to the chart.</p></li>
+</ul>
+
+</body>
+</html>

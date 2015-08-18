@@ -1,0 +1,74 @@
+<html>
+<head>
+<style>
+body {
+  margin-left: auto;
+  margin-right: auto;
+  max-width: 9in;
+  font-family: verdana, sans-serif;
+}
+code {
+  font-family: andale mono, courier new, courier, monospace;
+}
+p {
+  line-height: 150%;
+}
+iframe {
+    width: 95%;
+	min-height: 450px;
+	margin-left: auto;
+	margin-right: auto;
+	margin-bottom: 2em;
+	border: 0;
+}
+u {
+  color: red;
+}
+</style>
+<script src="//ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.js"></script>
+<script type="text/javascript">
+function loadIframe(iframeName, url) {
+    var $iframe = $('#' + iframeName);
+    if ( $iframe.length ) {
+        $iframe.attr('src',url);   
+        return false;
+    }
+    return true;
+}
+</script>
+</head>
+
+<body>
+</p>
+
+<h1>HTCondorView Demo r2</h1>
+
+
+<p>Given a json file that looks <a href="foo.json">like this</a> we have:
+</p>
+
+<iframe id="iftable" 
+src="http://pages.cs.wisc.edu/~tannenba/view/render.html?url=foo.cgi&order=State&pivot=Date;State;Cpus&chart=stacked"
+> </iframe>
+
+<p>
+<a href="http://pages.cs.wisc.edu/~tannenba/view/render.html?url=foo.cgi&order=State&pivot=Date;State;Cpus&chart=stacked" onclick="return loadIframe('iftable',this.href);"> [State view] </a>
+<a href="http://pages.cs.wisc.edu/~tannenba/view/render.html?url=foo.cgi&order=State&pivot=Date;State,Activity;Cpus&chart=stacked" onclick="return loadIframe('iftable',this.href);"> [State+Activity view] </a>
+<a href="http://pages.cs.wisc.edu/~tannenba/view/render.html?url=foo.cgi&filter=User!=unknown&order=Cpus&pivot=Date;User;Cpus&chart=stacked" onclick="return loadIframe('iftable',this.href);"> [User view] </a>
+
+<h3>Top Users</h3>
+
+
+<a href="http://pages.cs.wisc.edu/~tannenba/view/render.html?url=foo.cgi&filter=User=bbee@bmrb.wisc.edu&pivot=Date;User;Cpus&chart=stacked" onclick="return loadIframe('iftable',this.href);">User view</a>
+
+<p>
+
+<iframe height=100% width=100%
+src="http://pages.cs.wisc.edu/~tannenba/view/render.html?url=foo.cgi&filter=Activity=Busy&group=User;min(Cpus),max(Cpus),avg(Cpus)&order=-avgCpus"
+> </iframe>
+
+
+<div style='padding-bottom: 0.5in;'></div>
+
+</body>
+</html>

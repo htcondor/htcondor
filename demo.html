@@ -1,0 +1,69 @@
+<p><style>
+body {
+  margin-left: auto;
+  margin-right: auto;
+  max-width: 8in;
+  font-family: verdana, sans-serif;
+}
+code {
+  font-family: andale mono, courier new, courier, monospace;
+}
+p {
+  line-height: 150%;
+}
+iframe {
+  width: 85%;
+  margin-left: auto;
+  margin-right: auto;
+  border: 0;
+}
+.gallery iframe {
+  width: 40%;
+  height: 200px;
+  margin: 1em;
+  border: 0;
+}
+.gallery iframe.spark {
+  display: block;
+  width: 100px;
+  height: 40px;
+  margin-top: 0;
+  margin-bottom: 0;
+  margin-left: auto;
+  margin-right: auto;
+}
+u {
+  color: red;
+}
+</style></p>
+
+<h1>HTCondorView Demo</h1>
+
+
+<p>Given a json file that looks <a href="sample.json.txt">like this</a> we have:
+</p>
+
+<iframe height=400px width=45%
+src="http://pages.cs.wisc.edu/~tannenba/view/render.html?url=pool.json&group=State;Cpus&order=-Cpus&chart=pie&title=Cpu Utilization"
+> </iframe>
+
+<iframe height=400px width=45%
+src="http://pages.cs.wisc.edu/~tannenba/view/render.html?url=pool.json&group=State;Memory&order=-Memory&chart=pie&title=Memory Utilization"
+> </iframe>
+
+<iframe height=400px width=45%
+src="http://pages.cs.wisc.edu/~tannenba/view/render.html?url=pool.json&group=RemoteUser;Cpus&order=-Cpus&filter=RemoteUser!=nobody&title=Cpu%20Usage%20by%20User&chart=pie"
+> </iframe>
+
+<h3>Top 5 Users</h3>
+<iframe
+src="http://pages.cs.wisc.edu/~tannenba/view/render.html?url=pool.json&group=RemoteUser;Cpus,Memory&order=-Cpus&filter=RemoteUser!=nobody&title=Cpu%20Usage%20by%20User&limit=5"
+> </iframe>
+
+<h3>Multicore Users</h3>
+<iframe
+src="http://pages.cs.wisc.edu/~tannenba/view/render.html?url=pool.json&order=Cpus&filter=Cpus%3E1&filter=RemoteUser!=nobody&pivot=RemoteUser;Cpus;Name"
+> </iframe>
+
+
+<div style='padding-bottom: 5in;'></div>
