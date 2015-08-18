@@ -65,7 +65,7 @@ int tcp_accept_timeout( int, struct sockaddr*, int*, int );
 
 /* Ensure the checkpoint's filename I'm about to read or write stays in
 	the checkpointing directory. */
-int ValidateNoPathComponents(char *path);
+int ValidateNoPathComponents(const char *path);
 
 /* Attempt a write.  If the write fails, exit with READWRITE_ERROR.
 This code might in the future retry, especially on EAGAIN or EINTR, but
@@ -1356,7 +1356,7 @@ void Server::SendStatus(int data_conn_sd)
 	be reading or writing isn't trying to do anything funny. This
 	means the filename can't be "." ".." or have a path separator
 	in it. */
-int ValidateNoPathComponents(char *path)
+int ValidateNoPathComponents(const char *path)
 {
 	if (path == NULL) {
 		return FALSE;
@@ -1691,7 +1691,7 @@ void Server::ReceiveCheckpointFile(int         data_conn_sd,
 void Server::ProcessRestoreReq(int             req_id,
 							   FDContext      *fdc,
 							   struct in_addr  shadow_IP,
-							   restore_req_pkt restore_req)
+							   const restore_req_pkt &restore_req)
 {
 	struct stat        chkpt_file_status;
 	condor_sockaddr    server_sa;
