@@ -621,8 +621,8 @@ int putClassAd (Stream *sock, classad::ClassAd& ad, int options, const classad::
 
 	bool expand_whitelist = ! (options & PUT_CLASSAD_NO_EXPAND_WHITELIST);
 	if (whitelist && expand_whitelist) {
-		//PRAGMA_REMIND("need a version of GetInternalReferences that understands that MY is an alias for SELF")
-		ad.InsertAttr("MY","SELF");
+		// Jaime made changes to the core classad lib that make this unneeded...
+		//ad.InsertAttr("MY","SELF");
 		for (classad::References::const_iterator attr = whitelist->begin(); attr != whitelist->end(); ++attr) {
 			ExprTree * tree = ad.Lookup(*attr);
 			if (tree) {
@@ -632,9 +632,9 @@ int putClassAd (Stream *sock, classad::ClassAd& ad, int options, const classad::
 				}
 			}
 		}
-		ad.Delete("MY");
-		classad::References::iterator my = expanded_whitelist.find("MY");
-		if (my != expanded_whitelist.end()) { expanded_whitelist.erase(my); }
+		//ad.Delete("MY");
+		//classad::References::iterator my = expanded_whitelist.find("MY");
+		//if (my != expanded_whitelist.end()) { expanded_whitelist.erase(my); }
 		whitelist = &expanded_whitelist;
 	}
 
