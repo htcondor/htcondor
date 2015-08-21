@@ -1100,6 +1100,8 @@ class DaemonCore : public Service
     */
     int Continue_Process(pid_t pid);
 
+    bool setChildSharedPortID( pid_t pid, const char * sock );
+
     /** Create a process.  Works for NT and Unix.  On Unix, a
         fork and exec are done.  Read the source for ugly 
         details - it takes care of most everything.

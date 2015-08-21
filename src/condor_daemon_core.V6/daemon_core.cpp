@@ -595,6 +595,23 @@ DaemonCore::~DaemonCore()
 	}
 }
 
+bool DaemonCore::setChildSharedPortID( pid_t pid, const char * sock ) {
+	PidEntry * pidinfo = NULL;
+	if( daemonCore->pidTable->lookup( pid, pidinfo ) < 0 ) {
+		return false;
+	}
+
+	if( pidinfo->sinful_string[0] == '\0' ) {
+		return false;
+	}
+
+	Sinful s( pidinfo->sinful_string.c_str() );
+	s.setSharedPortID( sock );
+	pidinfo->sinful_string = s.getSinful();
+
+	return true;
+}
+
 void DaemonCore::Set_Default_Reaper( int reaper_id )
 {
 	defaultReaper = reaper_id;
@@ -4779,6 +4796,8 @@ void DaemonCore::Send_Signal(classy_counted_ptr<DCSignalMsg> msg, bool nonblocki
 					// temporary TCP connection to establish a session
 					// key.)
 
+				// NB: Setting this to false instead lets you test the
+				// Windows "signal" mechanism on Linux.
 				use_kill = true;
 			}
 
