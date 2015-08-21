@@ -394,6 +394,9 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 	if ( (IsServer() || (IsClient() && simple_init)) && 
 		 (Ad->LookupString(ATTR_JOB_CMD, buf, sizeof(buf)) == 1) ) 
 	{
+		// TODO: If desired_priv_state isn't PRIV_UNKNOWN, shouldn't
+		//   we switch priv state for these file checks?
+
 		// stash the executable name for comparison later, so
 		// we know that this file should be called condor_exec on the
 		// client machine.  if an executable for this cluster exists
