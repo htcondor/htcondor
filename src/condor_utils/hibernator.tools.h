@@ -27,7 +27,7 @@
 #include "condor_common.h"
 #include "condor_arglist.h"
 #include "MyString.h"
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include <condor_daemon_core.h>
 #include "hibernator.h"
 
 /***************************************************************

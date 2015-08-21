@@ -28,7 +28,7 @@
 #include "write_user_log.h"
 #include "exit.h"
 #include "internet.h"
-#include "../condor_schedd.V6/qmgr_job_updater.h"
+#include <qmgr_job_updater.h>
 #include "condor_update_style.h"
 #include "file_transfer.h"
 

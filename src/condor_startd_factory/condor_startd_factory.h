@@ -21,7 +21,7 @@
 #define CONDOR_STARTD_FACTORY_H
 
 #include "condor_common.h"
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include <condor_daemon_core.h>
 #include "extArray.h"
 #include "MyString.h"
 #include "condor_partition.h"

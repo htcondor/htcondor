@@ -23,9 +23,9 @@
 
 // condor includes
 #include "condor_qmgr.h"
-#include "../condor_schedd.V6/ScheddPlugin.h"
+#include <ScheddPlugin.h>
 #include "ClassAdLogPlugin.h"
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include <condor_daemon_core.h>
 
 // local includes
 #include "SchedulerObject.h"

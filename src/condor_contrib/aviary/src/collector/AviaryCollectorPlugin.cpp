@@ -17,9 +17,9 @@
 // condor includes
 #include "condor_common.h"
 #include "condor_config.h"
-#include "../condor_collector.V6/CollectorPlugin.h"
-#include "../condor_collector.V6/collector.h"
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include <CollectorPlugin.h>
+#include <collector.h>
+#include <condor_daemon_core.h>
 
 // local includes
 #include "AviaryUtils.h"

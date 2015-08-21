@@ -19,7 +19,7 @@
 
 #include "condor_common.h"
 #include "condor_config.h"
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include <condor_daemon_core.h>
 #include "directory.h"
 #include "dc_collector.h"
 #include "counted_ptr.h"

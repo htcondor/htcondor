@@ -24,7 +24,7 @@
 #include "hashkey.h"
 #include "stl_string_utils.h"
 #include "hashkey.h"
-#include "../condor_collector.V6/collector.h"
+#include <collector.h>
 #include "condor_sinful.h"
 
 // C++ includes

@@ -31,7 +31,7 @@
 
 #include "condor_config.h"
 
-#include "../condor_negotiator.V6/matchmaker.h"
+#include <matchmaker.h>
 
 #include "PoolUtils.h"
 #include "Utils.h"
