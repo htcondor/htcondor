@@ -928,7 +928,16 @@ int daemon::RealStart( )
 		daemons.UpdateCollector();
 	}
 
-	return pid;	
+	// If we just started the shared port daemon, update its entry in
+	// in the pid table so that when we shut it down, it doesn't forward
+	// the shutdown signal on to the collector.
+	if( strcmp( name_in_config_file, "SHARED_PORT" ) == 0 ) {
+		if(! daemonCore->setChildSharedPortID( pid, "self" ) ) {
+			EXCEPT( "Unable to update shared port daemon's Sinful string, won't be able to kill it.\n" );
+		}
+	}
+
+	return pid;
 }
 
 bool

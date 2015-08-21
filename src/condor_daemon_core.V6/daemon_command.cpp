@@ -47,11 +47,12 @@ static int ZZZ_always_increase() {
 
 const std::string DaemonCommandProtocol::WaitForSocketDataString = "DaemonCommandProtocol::WaitForSocketData";
 
-DaemonCommandProtocol::DaemonCommandProtocol(Stream *sock,bool is_command_sock):
+DaemonCommandProtocol::DaemonCommandProtocol( Stream * sock, bool is_command_sock, bool isSharedPortLoopback ) :
 #ifdef HAVE_EXT_GSOAP
 	m_is_http_post(false),
 	m_is_http_get(false),
 #endif
+	m_isSharedPortLoopback( isSharedPortLoopback ),
 	m_nonblocking(!is_command_sock), // cannot re-register command sockets for non-blocking read
 	m_delete_sock(!is_command_sock), // must not delete registered command sockets
 	m_sock_had_no_deadline(false),
@@ -595,7 +596,10 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadHeader()
 
 			// Lookup the command integer in our command table to see if it is unregistered
 		int tmp_cmd_index;
-		if (!daemonCore->CommandNumToTableIndex(tmp_req, &tmp_cmd_index) && (daemonCore->HandleUnregisteredDCAuth() || (tmp_req != DC_AUTHENTICATE))) {
+		if(	   (!m_isSharedPortLoopback)
+			&& (! daemonCore->CommandNumToTableIndex( tmp_req, &tmp_cmd_index ))
+			&& ( daemonCore->HandleUnregisteredDCAuth()
+				|| (tmp_req != DC_AUTHENTICATE) ) ) {
 			ScopedEnableParallel(false);
 
 			if( m_sock_had_no_deadline ) {
