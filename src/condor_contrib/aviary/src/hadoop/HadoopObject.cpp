@@ -20,7 +20,7 @@
 #include "condor_attributes.h"
 #include "condor_debug.h"
 #include "condor_qmgr.h"
-#include "../condor_schedd.V6/scheduler.h"
+#include <scheduler.h>
 #include "stl_string_utils.h"
 
 // local includes

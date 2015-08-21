@@ -22,7 +22,7 @@
 #define EC2RESOURCE_H
     
 #include "condor_common.h"
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "condor_daemon_core.h"
 
 #include "ec2job.h"
 #include "baseresource.h"

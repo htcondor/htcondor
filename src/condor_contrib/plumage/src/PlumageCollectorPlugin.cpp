@@ -27,10 +27,10 @@
 // seems boost meddles with assert defs
 #include "assert.h"
 #include "condor_config.h"
-#include "../condor_collector.V6/CollectorPlugin.h"
+#include <CollectorPlugin.h>
 #include "hashkey.h"
-#include "../condor_collector.V6/collector.h"
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include <collector.h>
+#include <condor_daemon_core.h>
 
 using namespace std;
 using namespace mongo;

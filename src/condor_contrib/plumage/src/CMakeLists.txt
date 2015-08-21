@@ -16,6 +16,8 @@
  # 
  ###############################################################
 
+include_directories(${CONDOR_COLLECTOR_SRC_DIR})
+
 find_multiple( "mongoclient" MONGODB_FOUND )
 find_multiple( "boost_system" BOOSTDEP_FOUND )
 

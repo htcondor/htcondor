@@ -16,13 +16,13 @@
 
 #include "condor_common.h"
 
-#include "../condor_collector.V6/CollectorPlugin.h"
+#include <CollectorPlugin.h>
 
 #include "hashkey.h"
 
-#include "../condor_collector.V6/collector.h"
+#include <collector.h>
 
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include <condor_daemon_core.h>
 
 #include "condor_config.h"
 

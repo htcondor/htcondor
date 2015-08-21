@@ -22,7 +22,7 @@
 
 #include "condor_common.h"
 #include "enum_utils.h"
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "condor_daemon_core.h"
 
 class HookClient : public Service
 {
