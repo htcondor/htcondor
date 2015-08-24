@@ -361,6 +361,15 @@ number, the release date, and the build identification number.
   ``slot1@vulture.cs.wisc.edu'', which signifies slot number 1 from
   vulture.cs.wisc.edu.
 
+\index{ClassAd Scheduler attribute!NumJobStartsDelayed}
+\item[\AdAttr{NumJobStartsDelayed}:] The number times a job requiring a
+shadow could have been started but was not because of the configuration options
+\Macro{JOB\_START\_COUNT} and \Macro{JOB\_START\_DELAY}.
+
+\index{ClassAd Scheduler attribute!NumPendingClaims}
+\item[\AdAttr{NumPendingClaims}:] The number of startds matched to this schedd,
+which this schedd knows about, but has not yet managed to claim.
+
 \index{ClassAd Scheduler attribute!NumUsers}
 \item[\AdAttr{NumUsers}:] The integer number of distinct users with jobs in
   this \Condor{schedd}'s queue.
