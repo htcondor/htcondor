@@ -54,6 +54,10 @@ The value is in seconds and it defaults to the number of seconds in one year.
 
 \begin{itemize}
 
+\item Fixed a bug that could cause HTCondor to crash on certain malformed
+inputs.
+\Ticket{5220}
+
 \item The fix for the \Condor{collector} pausing 30 seconds on start up
 has been fixed to work when the configuration has
 \Expr{USE\_SHARED\_PORT = True}.
