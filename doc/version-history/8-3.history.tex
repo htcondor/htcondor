@@ -31,6 +31,13 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item The \Condor{shared\_port} daemon may be directly addressed by setting
+the shared port ID to `self'.  For example, a shared port daemon listening
+on 1.2.3.4 port 9618 could be addressed as
+``<1.2.3.4:9618?noUDP=true\&sock=self>''.  This may be useful for certain
+tools, e.g., \Condor{config\_val}.
+\Ticket{5209}
+
 \item The \Condor{schedd} now advertises \Attr{NumJobStartsDelayed} and
 \Attr{NumPendingClaims}.
 \Ticket{5158}
@@ -57,6 +64,9 @@ The value is in seconds and it defaults to the number of seconds in one year.
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item Fixed a bug causing slow shut-downs on Windows.
+\Ticket{5209}
 
 \item Fixed a bug that could cause HTCondor to crash on certain malformed
 inputs.
