@@ -7291,14 +7291,6 @@ type=string
 review=tlmiller
 reconfig=true
 
-[RUN_FILETRANSFER_PLUGINS_WITH_ROOT]
-default=false
-type=bool
-reconfig=true
-customization=seldom
-friendly_name=Whether to invoke file transfer plugins as user or as root
-review=?
-
 [DISCARD_SESSION_KEYRING_ON_STARTUP]
 default=true
 type=bool
@@ -7900,8 +7892,6 @@ default=(TARGET.ImageSize <  (15 * 1024))
 default=($(CPUBusy) && ($(KeyboardBusy) == False))
 [MachineBusy]
 default=($(CPUBusy) || $(KeyboardBusy))
-[IS_OWNER]
-default=(START =?= False)
 
 # define UWCS_xxx desktop preemption policy that can be referenced in START, PREEMPT, etc
 [UWCS_WANT_SUSPEND]
