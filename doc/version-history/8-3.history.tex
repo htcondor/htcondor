@@ -54,6 +54,9 @@ The value is in seconds and it defaults to the number of seconds in one year.
 
 \begin{itemize}
 
+\item Fixed a bug that would cause the \Condor{schedd} to crash when using the parallel universe, partitionable slots and dollar dollar expansion.
+\Ticket{5201}
+
 \item Fixed a bug in which HTCondor did not correctly set the 
 \Attr{KeyboardIdle} attribute on keyboards connected to pseudo terminals.
 \Ticket{5217}
