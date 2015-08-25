@@ -31,6 +31,17 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item The configuration variable \Macro{SLOTS\_CONNECTED\_TO\_KEYBOARD} will now
+default to NUM_CPUS rather than to 1.  Because of this change, when keyboard
+activity is detected all slots will have their \Attr{KeyboardIdle}
+attribute updated.
+\Ticket{5225}
+
+\item Caching of ClassAds to save memory will now be enabled by default on
+Windows as it was on other platforms in earlier versions of HTCondor.  This
+can be expected to reduce memory useage of the \Condor{collector} and \Condor{schedd}.
+\Ticket{5222}
+
 \item The \Condor{shared\_port} daemon may be directly addressed by setting
 the shared port ID to \AdStr{self}.
 For example, a daemon using \Condor{shared\_port} and listening
@@ -88,6 +99,10 @@ automatically treated as irrelevant to matchmaking.
 works with \Macro{JOB\_IS\_FINISHED\_INTERVAL} to control how many jobs
 can leave the queue at a time. The default value is 1.
 \Ticket{5168}
+
+\item Fixed a bug in \Condor{who} that sometimes prevented it from producing any output unless the
+\Opt{-allpids} argument was passed.  This bug was introduced in HTCondor 8.3.6.
+\Ticket{5227}
 
 \end{itemize}
 

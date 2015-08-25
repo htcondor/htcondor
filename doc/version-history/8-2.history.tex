@@ -45,6 +45,12 @@ The details of each version are described below.
 \item Fixed a memory leak when the ClassAd function split() is used.
 \Ticket{5219}
 
+\item \Condor{vacate} will now fail with an error message when the \Opt{-constraint}
+argument is used more than once or used with other arguments that cannot be handled
+while processing the constraint.  Earlier versions would just quietly ignore all but
+the last constraint.
+\Ticket{5234}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
