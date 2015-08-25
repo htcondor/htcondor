@@ -84,6 +84,10 @@ automatically treated as irrelevant to matchmaking.
 \item HTCondor Python bindings are now supported on all Windows platforms when 32-bit Python 2.7 is installed.
 \Ticket{4836}
 
+\item The new configuration variable \MacroNI{JOB\_IS\_FINISHED\_COUNT}
+works with \Macro{JOB\_IS\_FINISHED\_INTERVAL} to control how many jobs
+can leave the queue at a time. The default value is 1.
+\Ticket{5168}
 
 \end{itemize}
 
