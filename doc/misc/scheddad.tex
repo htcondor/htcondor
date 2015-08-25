@@ -363,12 +363,14 @@ number, the release date, and the build identification number.
 
 \index{ClassAd Scheduler attribute!NumJobStartsDelayed}
 \item[\AdAttr{NumJobStartsDelayed}:] The number times a job requiring a
-shadow could have been started but was not because of the configuration options
+\Condor{shadow} daemon could have been started,
+but was not started because of the values of configuration variables
 \Macro{JOB\_START\_COUNT} and \Macro{JOB\_START\_DELAY}.
 
 \index{ClassAd Scheduler attribute!NumPendingClaims}
-\item[\AdAttr{NumPendingClaims}:] The number of startds matched to this schedd,
-which this schedd knows about, but has not yet managed to claim.
+\item[\AdAttr{NumPendingClaims}:] The number of machines 
+(\Condor{startd} daemons) matched to this \Condor{schedd} daemon,
+which this \Condor{schedd} knows about, but has not yet managed to claim.
 
 \index{ClassAd Scheduler attribute!NumUsers}
 \item[\AdAttr{NumUsers}:] The integer number of distinct users with jobs in
