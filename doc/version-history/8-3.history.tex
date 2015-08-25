@@ -31,6 +31,18 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item The \Condor{shared\_port} daemon may be directly addressed by setting
+the shared port ID to \AdStr{self}.
+For example, a daemon using \Condor{shared\_port} and listening
+on IP address 1.2.3.4, port 9618,
+can now be addressed as \AdStr{<1.2.3.4:9618?noUDP=true\&sock=self>}.
+This may be useful for certain tools such as \Condor{config\_val}.
+\Ticket{5209}
+
+\item The \Condor{schedd} now advertises ClassAd attributes
+\Attr{NumJobStartsDelayed} and \Attr{NumPendingClaims}.
+\Ticket{5158}
+
 \item The python bindings now work with python's \texttt{pickle} module.
 \Ticket{5099}
 
@@ -54,7 +66,22 @@ The value is in seconds and it defaults to the number of seconds in one year.
 
 \begin{itemize}
 
-\item Fixed a bug that would cause the \Condor{schedd} to crash when using the parallel universe, partitionable slots and dollar dollar expansion.
+\item Fixed a bug that caused slow shut down on Windows platforms
+when using \Condor{shared\_port}.
+\Ticket{5209}
+
+\item Fixed a bug that could cause HTCondor to crash on certain malformed
+inputs.
+\Ticket{5220}
+
+\item The fix for the \Condor{collector} pausing 30 seconds on start up
+has been fixed to work when the configuration has
+\Expr{USE\_SHARED\_PORT = True}.
+\Ticket{5185}
+
+\item Fixed a bug that caused the \Condor{schedd} daemon to crash 
+when using the parallel universe, 
+partitionable slots, and dollar dollar expansion.
 \Ticket{5201}
 
 \item Fixed a bug in which HTCondor did not correctly set the 
