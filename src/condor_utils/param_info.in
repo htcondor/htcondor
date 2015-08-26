@@ -1480,7 +1480,7 @@ reconfig=true
 customization=seldom
 friendly_name=Preemption Requirements
 review=?
-usage=(e.g. if a job is in the pre-empting stage for too long)
+usage=Restrict when slots can be preempted for user priority
 tags=q,queue
 
 [GLEXEC_STARTER]
