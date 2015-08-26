@@ -80,8 +80,10 @@ negotiation cycle.
 The value is in seconds and it defaults to the number of seconds in one year.
 \Ticket{5156}
 
-\item In submit files, setting \Macro{TRANSFER\_INPUT\_FILES} to "" will indicate
-that no input files should be transferred rather than producing a syntax error.
+\item Within a submit description file, 
+setting \SubmitCmd{transfer\_output\_files} to the empty string (\verb@""@)
+will indicate that no output files should be transferred,
+rather than producing a syntax error.
 \Ticket{5159}
 
 \item The \Condor{kbdd} will now ignore small mouse movements that occur after a long
@@ -184,9 +186,12 @@ preempting dynamic slots when \MacroNI{ALLOW\_PSLOT\_PREEMPTION} is enabled,
 but the \Condor{startd} does not support pslot preemption.
 \Ticket{5207}
 
-\item Fixed problems with the handling of \Macro{SLOT\_TYPE\_n\_STARTD\_ATTRS}
-(where n is a slot type number). Also when a \Macro{SLOT\_TYPE\_n\_value} is explictly set
-to nothing, this now overrides \Macro{value} for that slot type rather than being ignored.
+\item Fixed problems with the handling of 
+\MacroNI{SLOT\_TYPE\_<N>\_STARTD\_ATTRS},
+where \Expr{<N>} is a slot type number. 
+Also when a configuration variable name that begins with 
+\MacroNI{SLOT\_TYPE\_<N>} is explicitly set to nothing, 
+this now overrides the value for that slot type rather than being ignored.
 \Ticket{5132}
 
 \item Fixed a bug that caused the ClassAd attributes \Attr{DetectedCpus} and \Attr{DetectedMemory}
@@ -201,9 +206,10 @@ that prevented them from correctly processing their arguments.
 \Ticket{5188}
 \Ticket{5189}
 
-\item Compiled all HTCondor programs with -fPIC (Position Independent Code)
-on Linux platforms to prevent crashes when using \Macro{CLASS\_AD\_USER\_LIBS}
-or \Macro{CLASSAD\_USER\_PYTHON\_MODULES} to load ClassAd plug-in functions.
+\item All Linux platform HTCondor programs have been compiled with 
+-fPIC (Position Independent Code)
+to prevent crashes when using \MacroNI{CLASSAD\_USER\_LIBS}
+or \MacroNI{CLASSAD\_USER\_PYTHON\_MODULES} to load ClassAd plug-in functions.
 \Ticket{5184}
 
 \end{itemize}
