@@ -42,6 +42,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug that caused HTCondor daemons to crash 
+on RHEL 7 when using more than 1024 file descriptors.
+\Ticket{5240}
+
 \item Fixed a memory leak when the ClassAd function split() is used.
 \Ticket{5219}
 
