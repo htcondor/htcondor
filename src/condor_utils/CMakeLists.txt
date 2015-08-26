@@ -44,7 +44,8 @@ add_custom_target (utils_genparams ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/param
 
 if(UNIX)
 	set_source_files_properties(param_info.cpp PROPERTIES COMPILE_FLAGS -Wno-unused-parameter)
-	set_source_files_properties(selector.cpp PROPERTIES COMPILE_FLAGS -D_FORTIFY_SOURCE=0)
+	# Fortify doesn't like our select magic on rhel7, and causes assertion failures.  Disable for now
+	set_source_files_properties(selector.cpp PROPERTIES COMPILE_FLAGS -U_FORTIFY_SOURCE)
 endif(UNIX)
 
 ############ end generate params
