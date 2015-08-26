@@ -51,6 +51,11 @@ while processing the constraint.  Earlier versions would just quietly ignore all
 the last constraint.
 \Ticket{5234}
 
+\item Fixed a bug that prevented the \Condor{negotiator} from preempting
+jobs based on user priority when \Macro{ALLOW\_PSLOT\_PREEMPTION} was set
+to \Expr{True}.
+\Ticket{5236}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
