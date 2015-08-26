@@ -90,9 +90,12 @@ configuration variable \Macro{KBDD\_BUMP\_CHECK\_SIZE}, and the period of inacti
 that triggers this behavior is defined by \Macro{KBDD\_BUMP\_CHECK\_AFTER\_IDLE}.
 \Ticket{5210}
 
-\item The \Condor{user\_prio} tool has been enhanced.  It now has two forms of \Opt{-long} output -
-The traditional form, enabled by the \Opt{-legacy} option, and a new form that has a separate
-ClassAd for each user and group.  This new form allows \Condor{user\_prio} to support
+\item The \Condor{userprio} tool has been enhanced
+with two new forms of \Opt{-long} output.
+The \Opt{-legacy} option specifies the traditional output form.
+The \Opt{-modular} option is a new form that has a separate
+ClassAd for each user and group.  
+This new form allows \Condor{userprio} to support
 additional new arguments: \Opt{-constraint} and \Opt{-autoformat}.
 \Ticket{5127}
 
