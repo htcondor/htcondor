@@ -184,9 +184,12 @@ preempting dynamic slots when \MacroNI{ALLOW\_PSLOT\_PREEMPTION} is enabled,
 but the \Condor{startd} does not support pslot preemption.
 \Ticket{5207}
 
-\item Fixed problems with the handling of \Macro{SLOT\_TYPE\_n\_STARTD\_ATTRS}
-(where n is a slot type number). Also when a \Macro{SLOT\_TYPE\_n\_value} is explictly set
-to nothing, this now overrides \Macro{value} for that slot type rather than being ignored.
+\item Fixed problems with the handling of 
+\MacroNI{SLOT\_TYPE\_<N>\_STARTD\_ATTRS},
+where \Expr{<N>} is a slot type number. 
+Also when a configuration variable name that begins with 
+\MacroNI{SLOT\_TYPE\_<N>} is explicitly set to nothing, 
+this now overrides the value for that slot type rather than being ignored.
 \Ticket{5132}
 
 \item Fixed a bug that caused the ClassAd attributes \Attr{DetectedCpus} and \Attr{DetectedMemory}
