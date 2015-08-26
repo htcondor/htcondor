@@ -206,9 +206,10 @@ that prevented them from correctly processing their arguments.
 \Ticket{5188}
 \Ticket{5189}
 
-\item Compiled all HTCondor programs with -fPIC (Position Independent Code)
-on Linux platforms to prevent crashes when using \Macro{CLASS\_AD\_USER\_LIBS}
-or \Macro{CLASSAD\_USER\_PYTHON\_MODULES} to load ClassAd plug-in functions.
+\item All Linux platform HTCondor programs have been compiled with 
+-fPIC (Position Independent Code)
+to prevent crashes when using \MacroNI{CLASSAD\_USER\_LIBS}
+or \MacroNI{CLASSAD\_USER\_PYTHON\_MODULES} to load ClassAd plug-in functions.
 \Ticket{5184}
 
 \end{itemize}
