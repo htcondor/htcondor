@@ -6760,6 +6760,16 @@ friendly_name=Enable strict parse checking of classad RHS expressions in classad
 review=?
 tags=classad_log
 
+[CLASSAD_ENABLE_USER_HOME]
+default=true
+version=8.3.7
+type=bool
+reconfig=true
+customization=seldom
+friendly_name=Enable the user_home function that looks up a user's home directory
+review=?
+tags=classad
+
 [STARTER_RLIMIT_AS]
 default=0
 version=7.8.1
