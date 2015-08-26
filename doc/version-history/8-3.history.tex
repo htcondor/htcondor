@@ -31,6 +31,12 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item On Linux platforms, the \Condor{master} daemon now runs a script when it
+starts up.  This script tunes several Linux kernel parameters to the values
+we suggest for improved scalability.  See \Macro{ENABLE\_KERNEL\_TUNING},
+\Macro{KERNEL\_TUNING\_LOG}, and \Macro{LINUX\_KERNEL\_TUNING\_SCRIPT}.
+\Ticket{5126}
+
 \item The \Condor{shared\_port} daemon may be directly addressed by setting
 the shared port ID to `self'.  For example, a shared port daemon listening
 on 1.2.3.4 port 9618 could be addressed as
