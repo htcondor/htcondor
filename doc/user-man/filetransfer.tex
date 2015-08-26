@@ -292,6 +292,8 @@ Delimit the list of file names, directory names, or paths with commas.
 When this list is defined, and any of the files or directories
 do not exist as the job exits,
 HTCondor considers this an error, and places the job on hold.
+Setting \SubmitCmd{transfer\_output\_files} to the empty string (\verb@""@)
+means no files are to be transferred.
 When this list is defined, automatic detection of output files created by
 the job is disabled.
 Paths specified in this list refer to locations on the execute

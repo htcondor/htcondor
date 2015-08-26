@@ -80,8 +80,10 @@ negotiation cycle.
 The value is in seconds and it defaults to the number of seconds in one year.
 \Ticket{5156}
 
-\item In submit files, setting \Macro{TRANSFER\_INPUT\_FILES} to "" will indicate
-that no input files should be transferred rather than producing a syntax error.
+\item Within a submit description file, 
+setting \SubmitCmd{transfer\_output\_files} to the empty string (\verb@""@)
+will indicate that no output files should be transferred,
+rather than producing a syntax error.
 \Ticket{5159}
 
 \item The \Condor{kbdd} will now ignore small mouse movements that occur after a long
