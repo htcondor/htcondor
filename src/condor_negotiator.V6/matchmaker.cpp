@@ -589,6 +589,9 @@ reinitialize ()
 		dprintf (D_ALWAYS,"PREEMPTION_REQUIREMENTS_PSLOT = %s\n", tmp);
 		free( tmp );
 		tmp = NULL;
+	} else if ( PreemptionReq ) {
+		PreemptionReqPslot = PreemptionReq->Copy();
+		dprintf( D_ALWAYS, "PREEMPTION_REQUIREMENTS_PSLOT = <PREEMPTION_REQUIREMENTS>\n" );
 	} else {
 		dprintf (D_ALWAYS,"PREEMPTION_REQUIREMENTS_PSLOT = None\n");
 	}
@@ -6169,7 +6172,7 @@ Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, double preemptPrio) 
 		// need to add custom resources here
 
 		// In rank order, see if by preempting one more dslot would cause pslot to match
-	for (unsigned int slot = 0; slot < ranks.size() && ranks[slot].second < newRank; slot++) {
+	for (unsigned int slot = 0; slot < ranks.size() && ranks[slot].second <= newRank; slot++) {
 		int dSlot = ranks[slot].first; // dslot index in childXXX list
 
 			// if ranks are the same, consider preemption just based on user prio iff
