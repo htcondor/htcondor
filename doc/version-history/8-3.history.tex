@@ -32,9 +32,12 @@ The details of each version are described below.
 \begin{itemize}
 
 \item On Linux platforms, the \Condor{master} daemon now runs a script when it
-starts up.  This script tunes several Linux kernel parameters to the values
-we suggest for improved scalability.  See \Macro{ENABLE\_KERNEL\_TUNING},
-\Macro{KERNEL\_TUNING\_LOG}, and \Macro{LINUX\_KERNEL\_TUNING\_SCRIPT}.
+starts up.
+This script tunes several Linux kernel parameters to the values
+we suggest for better scalability.  
+New configuration variables \Macro{ENABLE\_KERNEL\_TUNING},
+\Macro{KERNEL\_TUNING\_LOG}, and \Macro{LINUX\_KERNEL\_TUNING\_SCRIPT}
+enable the use of the script and specify file locations.
 \Ticket{5126}
 
 \item The configuration variable \Macro{SLOTS\_CONNECTED\_TO\_KEYBOARD} will now
