@@ -330,6 +330,7 @@ main( int argc, char *argv[] )
 	char *cmd_str, **tmp;
 	int size;
 	int rc;
+	int got_name_or_addr = 0;
 
 #ifndef WIN32
 	// Ignore SIGPIPE so if we cannot connect to a daemon we do not
@@ -417,6 +418,7 @@ main( int argc, char *argv[] )
 	for( tmp++; *tmp; tmp++ ) {
 		if( (*tmp)[0] != '-' ) {
 				// If it doesn't start with '-', skip it
+			++got_name_or_addr;
 			continue;
 		}
 		switch( (*tmp)[1] ) {
@@ -590,6 +592,7 @@ main( int argc, char *argv[] )
 								 "ERROR: -addr requires another argument\n" ); 
 						usage( NULL );
 					}
+					++got_name_or_addr;
 					break;
 				case 'l':
 						// We got a "-all", remember that
@@ -672,40 +675,44 @@ main( int argc, char *argv[] )
 					}
 					break;
 				case 'o':
-				  if( (*tmp)[3] ) {
-				    switch( (*tmp)[3] ) {
-				    case 'n': 
-				      // We got a "-constraint", make sure we've got 
-				      // something else after it
-				      tmp++;
-				      if( tmp && *tmp ) {
-					constraint = *tmp;
-				      } else {
-					fprintf( stderr, "ERROR: -constraint requires another argument\n" );
-					usage( NULL );
-				      }
+					if( (*tmp)[3] ) {
+						switch( (*tmp)[3] ) {
+						case 'n':
+							// We got a "-constraint", make sure we've got
+							// something else after it
+							tmp++;
+							if (constraint) {
+								fprintf(stderr, "ERROR: only one -constraint argument is allowed\n");
+								exit (1);
+							}
+							if( tmp && *tmp ) {
+								constraint = *tmp;
+							} else {
+								fprintf( stderr, "ERROR: -constraint requires another argument\n" );
+								usage( NULL );
+							}
+							break;
 
-				      break;
-				    case 'l':
-					subsys_check( MyName );
-					dt = DT_COLLECTOR;
+						case 'l':
+							subsys_check( MyName );
+							dt = DT_COLLECTOR;
+							break;
+						default:
+							fprintf( stderr,
+								"ERROR: unknown parameter: \"%s\"\n",
+								*tmp );
+							usage( NULL );
+							break;
+						}
+					} else {
+						fprintf( stderr,
+							"ERROR: ambigous parameter: \"%s\"\n",
+							*tmp );
+						fprintf( stderr,
+							"Please specify \"-collector\" or \"-constraint\"\n" );
+						usage( NULL );
+					}
 					break;
-				    default:
-				      fprintf( stderr, 
-					       "ERROR: unknown parameter: \"%s\"\n",
-					       *tmp );  
-				      usage( NULL );
-				      break;
-				    }
-				  } else {
-				    fprintf( stderr, 
-					     "ERROR: ambigous parameter: \"%s\"\n",
-					     *tmp );  
-				    fprintf( stderr, 
-					     "Please specify \"-collector\" or \"-constraint\"\n" );
-				    usage( NULL );
-				  }
-				  break;
 				default:
 					fprintf( stderr, 
 							 "ERROR: unknown parameter: \"%s\"\n",
@@ -747,7 +754,7 @@ main( int argc, char *argv[] )
 						}
 					} else {
 						fprintf( stderr, 
-							 "ERROR: -daemon requires another argument\n" ); 
+							 "ERROR: -subsystem requires another argument\n" );
 						usage( NULL );
 						exit( 1 );
 					}
@@ -764,7 +771,7 @@ main( int argc, char *argv[] )
 						 "ERROR: ambiguous argument \"%s\"\n",
 						 *tmp );
 				fprintf( stderr, 
-				"Please specify \"-daemon\", \"-startd\" or \"-schedd\"\n" );
+				"Please specify \"-subsystem\", \"-startd\" or \"-schedd\"\n" );
 				usage( NULL );
 			}
 			break;
@@ -773,6 +780,15 @@ main( int argc, char *argv[] )
 					 *tmp );
 			usage( MyName );
 		}
+	}
+
+	if (constraint && got_name_or_addr) {
+		fprintf (stderr,
+			"ERROR: use of constraint conflicts with other arguments containing names or addresses.\n"
+			"You can change the constraint to select daemons by name by adding\n"
+			"  (NAME == \"daemon-name\" || MACHINE == \"daemon-name\")\n"
+			"to your constraint.\n");
+		usage(NULL);
 	}
 
 		// it's not always obvious what daemon we want to talk to and

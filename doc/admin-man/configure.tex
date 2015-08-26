@@ -5282,7 +5282,7 @@ page~\pageref{sec:Configuring-SMP} for details.
   An integer which indicates how many of the machine slots
   the \Condor{startd} is representing should be "connected" to the
   keyboard (for remote tty activity, as well as console activity).
-  Defaults to 1.
+  This defaults to all slots (N in a machine with N CPUs).
 
 \label{param:DisconnectedKeyboardIdleBoost}
 \item[\Macro{DISCONNECTED\_KEYBOARD\_IDLE\_BOOST}]
@@ -6463,6 +6463,13 @@ MAX_JOBS_RUNNING	= \
   between requesting each \Condor{shadow} daemon to gracefully shut down.  
   The default value is 0, which means jobs will be stopped as fast as possible.
   This variable is ignored for grid and scheduler universe jobs.
+
+\label{param:JobIsFinishedCount}
+\item[\Macro{JOB\_IS\_FINISHED\_COUNT}]
+  An integer value representing the number of jobs the the \Condor{schedd}
+  will let permanently leave the job queue each time that it examines the
+  jobs that are ready to do so.
+  The default value is 1.
 
 \label{param:JobIsFinishedInterval}
 \item[\Macro{JOB\_IS\_FINISHED\_INTERVAL}]

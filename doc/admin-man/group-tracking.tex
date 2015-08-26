@@ -75,7 +75,22 @@ Another good reference is
 \URL{http://docs.redhat.com/docs/en-US/Red\_Hat\_Enterprise\_Linux/6/html/Resource\_Management\_Guide/index.html}
 Even if cgroup support is built into the kernel, 
 many distributions do not install the cgroup tools by default.
-In order to use cgroups, the tools must be installed.  
+
+The interface between the kernel cgroup functionality is via a (virtual) filesystem.  
+If this filesystem isn't mounted, HTCondor can not use cgroups, and a warning
+will be printed to the StartLog. Unfortunately, there's no standard way to mount 
+the filesystem (or standard place to mount it) across Linux distributions.  
+
+If your Linux distribution uses systemd, it will mount the cgroup filesystem, and
+there's nothing more you need to, other than tell HTCondor to use cgroups with
+the \Macro{BASE\_CGROUP} parameter described below.
+
+Otherwise, you can mount all of the cgroup filesystems, one per controller "by hand" 
+with the mount command, but that won't survive a reboot.  The minimal set of
+cgroup controllers that must be mounted are blkio, freezer, memory, cpuacct,cpu.
+
+RHEL6 and related distributions support cgconfig service will mount themn at boot time.
+
 On RPM-based systems, these can be installed with the command
 
 \begin{verbatim}
