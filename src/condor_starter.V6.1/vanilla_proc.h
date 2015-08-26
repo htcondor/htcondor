@@ -132,11 +132,11 @@ private:
 	int outOfMemoryEvent(int fd);
 	int setupOOMEvent(const std::string & cgroup_string);
 
-	std::string m_pid_ns_init_filename;
+	std::string m_pid_ns_status_filename;
 
 	// Internal helper functions.
 	int pidNameSpaceReaper( int status );
-	void recordFinalUsageStats();
+	void recordFinalUsage();
 	void killFamilyIfWarranted();
 	void notifySuccessfulEvictionCheckpoint();
 	void notifySuccessfulPeriodicCheckpoint();
