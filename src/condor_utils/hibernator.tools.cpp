@@ -26,7 +26,7 @@
 #include "condor_uid.h"
 #include "hibernator.tools.h"
 #include "path_utils.h"
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include <condor_daemon_core.h>
 
 /***************************************************************
  * UserDefinedToolsHibernator class

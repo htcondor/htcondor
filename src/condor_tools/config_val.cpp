@@ -1778,11 +1778,11 @@ SetRemoteParam( Daemon* target, char* param_value, ModeType mt )
 	}
 	if (set) {
 		fprintf( stdout, "Successfully set configuration \"%s\" on %s %s "
-				 "%s.\n",
+				 "%s. The change will take effect on the next condor_reconfig.\n",
 				 param_value, daemonString(dt), name, addr );
 	} else {
 		fprintf( stdout, "Successfully unset configuration \"%s\" on %s %s "
-				 "%s.\n",
+				 "%s. The change will take effect on the next condor_reconfig.\n",
 				 param_value, daemonString(dt), name, addr );
 	}
 

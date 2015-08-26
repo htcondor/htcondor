@@ -16,6 +16,7 @@
  # 
  ############################################################### 
 
+include_directories(${CONDOR_SCHEDD_SRC_DIR})
 
 ## Create targets
 file( GLOB shadowRmvElements Example* *.t.* )

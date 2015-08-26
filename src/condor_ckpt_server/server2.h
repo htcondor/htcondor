@@ -90,7 +90,7 @@ class Server
     void ProcessRestoreReq(int             req_id,
 				FDContext *fdc,
 				struct in_addr  shadow_IP,
-				restore_req_pkt restore_req);
+				const restore_req_pkt &restore_req);
     void ReceiveCheckpointFile(int         data_conn_sd,
 			       const char* pathname,
 			       int         file_size);

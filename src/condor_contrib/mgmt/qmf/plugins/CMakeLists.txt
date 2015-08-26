@@ -16,6 +16,12 @@
  # 
  ###############################################################
 
+include_directories(${CONDOR_MASTER_SRC_DIR})
+include_directories(${CONDOR_COLLECTOR_SRC_DIR})
+include_directories(${CONDOR_NEGOTITATOR_SRC_DIR})
+include_directories(${CONDOR_SCHEDD_SRC_DIR})
+include_directories(${CONDOR_STARTD_SRC_DIR})
+
 set( QMF_GEN_SRCS Slot.h;
     Scheduler.h;
     Submitter.h;

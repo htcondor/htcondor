@@ -17,6 +17,7 @@
  ############################################################### 
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../common)
+include_directories(${CONDOR_SCHEDD_SRC_DIR})
 
 file( GLOB HADOOP_GEN_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/../../codegen/hadoop/src/*.cpp )
 file( GLOB HADOOP_SRCS ${CMAKE_CURRENT_SOURCE_DIR} AviaryHadoopService*.cpp )

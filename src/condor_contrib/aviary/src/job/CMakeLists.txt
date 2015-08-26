@@ -17,6 +17,7 @@
  ###############################################################
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../common)
+include_directories(${CONDOR_SCHEDD_SRC_DIR})
 
 ############################
 # file target references.

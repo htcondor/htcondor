@@ -19,7 +19,7 @@
 
 #include "condor_common.h"
 #include "condor_config.h"
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "condor_daemon_core.h"
 #include "subsystem_info.h"
 #include "shared_port_client.h"
 #include "shared_port_endpoint.h"

@@ -909,6 +909,12 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR}/src/safefile)
 if (WANT_CONTRIB)
     include_directories(${CONDOR_SOURCE_DIR}/src/condor_contrib)
 endif(WANT_CONTRIB)
+# set these so contrib modules can add to their include path without being reliant on specific directory names.
+set (CONDOR_MASTER_SRC_DIR ${CONDOR_SOURCE_DIR}/src/condor_master.V6)
+set (CONDOR_COLLECTOR_SRC_DIR ${CONDOR_SOURCE_DIR}/src/condor_collector.V6)
+set (CONDOR_NEGOTIATOR_SRC_DIR ${CONDOR_SOURCE_DIR}/src/condor_negotiator.V6)
+set (CONDOR_SCHEDD_SRC_DIR ${CONDOR_SOURCE_DIR}/src/condor_schedd.V6)
+set (CONDOR_STARTD_SRC_DIR ${CONDOR_SOURCE_DIR}/src/condor_startd.V6)
 ###########################################
 
 ###########################################
@@ -944,7 +950,7 @@ set (CONDOR_LIBS_STATIC "condor_utils_s;classads;${SECURITY_LIBS_STATIC};${RT_FO
 set (CONDOR_LIBS "condor_utils;${RT_FOUND};${CLASSADS_FOUND};${SECURITY_LIBS};${PCRE_FOUND};${COREDUMPER_FOUND}")
 set (CONDOR_TOOL_LIBS "condor_utils;${RT_FOUND};${CLASSADS_FOUND};${SECURITY_LIBS};${PCRE_FOUND};${COREDUMPER_FOUND}")
 set (CONDOR_SCRIPT_PERMS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
-if (LINUX)
+if (LINUX AND NOT PROPER)
   set (CONDOR_LIBS_FOR_SHADOW "condor_utils_s;classads;${SECURITY_LIBS};${RT_FOUND};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${POSTGRESQL_FOUND};${COREDUMPER_FOUND};${IOKIT_FOUND};${COREFOUNDATION_FOUND}")
 else ()
   set (CONDOR_LIBS_FOR_SHADOW "${CONDOR_LIBS}")

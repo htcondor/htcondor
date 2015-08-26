@@ -27,7 +27,7 @@
 #include "my_popen.h"
 #include "MyString.h"
 #include "setenv.h"
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include <condor_daemon_core.h>
 #include "fdpass.h"
 
 // data that needs to be preserved between calls to glexec_starter_prepare()

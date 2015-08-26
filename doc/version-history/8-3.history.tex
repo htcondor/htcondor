@@ -31,6 +31,35 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item On Linux platforms, the \Condor{master} daemon now runs a script when it
+starts up.  This script tunes several Linux kernel parameters to the values
+we suggest for improved scalability.  See \Macro{ENABLE\_KERNEL\_TUNING},
+\Macro{KERNEL\_TUNING\_LOG}, and \Macro{LINUX\_KERNEL\_TUNING\_SCRIPT}.
+\Ticket{5126}
+
+\item The configuration variable \Macro{SLOTS\_CONNECTED\_TO\_KEYBOARD} will now
+default to NUM\_CPUS rather than to 1.  Because of this change, when keyboard
+activity is detected all slots will have their \Attr{KeyboardIdle}
+attribute updated.
+\Ticket{5225}
+
+\item Caching of ClassAds to save memory will now be enabled by default on
+Windows as it was on other platforms in earlier versions of HTCondor.  This
+can be expected to reduce memory useage of the \Condor{collector} and \Condor{schedd}.
+\Ticket{5222}
+
+\item The \Condor{shared\_port} daemon may be directly addressed by setting
+the shared port ID to \AdStr{self}.
+For example, a daemon using \Condor{shared\_port} and listening
+on IP address 1.2.3.4, port 9618,
+can now be addressed as \AdStr{<1.2.3.4:9618?noUDP=true\&sock=self>}.
+This may be useful for certain tools such as \Condor{config\_val}.
+\Ticket{5209}
+
+\item The \Condor{schedd} now advertises ClassAd attributes
+\Attr{NumJobStartsDelayed} and \Attr{NumPendingClaims}.
+\Ticket{5158}
+
 \item The python bindings now work with python's \texttt{pickle} module.
 \Ticket{5099}
 
@@ -48,11 +77,62 @@ negotiation cycle.
 The value is in seconds and it defaults to the number of seconds in one year.
 \Ticket{5156}
 
+\item In submit files, setting \Macro{TRANSFER\_INPUT\_FILES} to "" will indicate
+that no input files should be transferred rather than producing a syntax error.
+\Ticket{5159}
+
+\item The \Condor{kbdd} will now ignore small mouse movements that occur after a long
+period of inactivity on both keyboard and mouse.  The value of small is defined by the new
+configuration variable \Macro{KBDD\_BUMP\_CHECK\_SIZE}, and the period of inactivity
+that triggers this behavior is defined by \Macro{KBDD\_BUMP\_CHECK\_AFTER\_IDLE}.
+\Ticket{5210}
+
+\item The \Condor{user\_prio} tool has been enhanced.  It now has two forms of \Opt{-long} output -
+The traditional form, enabled by the \Opt{-legacy} option, and a new form that has a separate
+ClassAd for each user and group.  This new form allows \Condor{user\_prio} to support
+additional new arguments: \Opt{-constraint} and \Opt{-autoformat}.
+\Ticket{5127}
+
+\item \Condor{q} \Opt{-better-analyze} has been enhanced to understand that sub-expressions referring
+to CurrentTime may evaluate differently at different times. These sub-expressions are no longer
+automatically treated as irrelevant to matchmaking.
+\Ticket{5155}
+
+\item HTCondor Python bindings are now supported on all Windows platforms when 32-bit Python 2.7 is installed.
+\Ticket{4836}
+
+\item The new configuration variable \MacroNI{JOB\_IS\_FINISHED\_COUNT}
+works with \Macro{JOB\_IS\_FINISHED\_INTERVAL} to control how many jobs
+can leave the queue at a time. The default value is 1.
+\Ticket{5168}
+
+\item Fixed a bug in \Condor{who} that sometimes prevented it from producing any output unless the
+\Opt{-allpids} argument was passed.  This bug was introduced in HTCondor 8.3.6.
+\Ticket{5227}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item Fixed a bug that caused slow shut down on Windows platforms
+when using \Condor{shared\_port}.
+\Ticket{5209}
+
+\item Fixed a bug that could cause HTCondor to crash on certain malformed
+inputs.
+\Ticket{5220}
+
+\item The fix for the \Condor{collector} pausing 30 seconds on start up
+has been fixed to work when the configuration has
+\Expr{USE\_SHARED\_PORT = True}.
+\Ticket{5185}
+
+\item Fixed a bug that caused the \Condor{schedd} daemon to crash 
+when using the parallel universe, 
+partitionable slots, and dollar dollar expansion.
+\Ticket{5201}
 
 \item Fixed a bug in which HTCondor did not correctly set the 
 \Attr{KeyboardIdle} attribute on keyboards connected to pseudo terminals.
@@ -97,6 +177,23 @@ This improves the performance of a busy \Condor{schedd}.
 preempting dynamic slots when \MacroNI{ALLOW\_PSLOT\_PREEMPTION} is enabled,
 but the \Condor{startd} does not support pslot preemption.
 \Ticket{5207}
+
+\item Fixed problems with the handling of \Macro{SLOT\_TYPE\_n\_STARTD\_ATTRS}
+(where n is a slot type number). Also when a \Macro{SLOT\_TYPE\_n\_value} is explictly set
+to nothing, this now overrides \Macro{value} for that slot type rather than being ignored.
+\Ticket{5132}
+
+\item Fixed a bug that caused the ClassAd attributes \Attr{DetectedCpus} and \Attr{DetectedMemory}
+to be inserted into all ClassAds.  These attributes are now inserted only into daemon ClassAds.
+\Ticket{5171}
+
+\item Fixed a bug that caused \Condor{q} to interpret a username that starts with a number as a job id.
+\Ticket{5172}
+
+\item Fixed bugs in the \Macro{REAL()} and \Macro{CHOICE()} configuration functions
+that prevented them from correctly processing their arguments.
+\Ticket{5188}
+\Ticket{5189}
 
 \end{itemize}
 

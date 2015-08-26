@@ -27,7 +27,7 @@ class DaemonCommandProtocol: Service, public ClassyCountedPtr {
 	friend class DaemonCore;
 
 public:
-	DaemonCommandProtocol(Stream* sock,bool is_command_sock);
+	DaemonCommandProtocol( Stream * sock, bool is_command_sock, bool isSharedPortLoopback = false );
 	~DaemonCommandProtocol();
 
 	int doProtocol();
@@ -60,6 +60,7 @@ private:
 	bool m_is_http_get;
 #endif
 
+	bool m_isSharedPortLoopback;
 	bool m_nonblocking;
 	bool m_delete_sock;
 	bool m_sock_had_no_deadline;

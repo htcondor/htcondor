@@ -1636,96 +1636,6 @@ friendly_name=Quill Should Reindex
 review=?
 tags=quill,jobqueuedbmanager
 
-[RECONNECT_BACKOFF_CEILING]
-default=300
-type=int
-reconfig=true
-customization=seldom
-friendly_name=Reconnect Backoff Ceiling
-review=?
-tags=shadow,baseshadow
-
-[SHADOW_MAX_JOB_CLEANUP_RETRIES]
-default=5
-type=int
-reconfig=true
-customization=seldom
-friendly_name=Shadow Max Job Cleanup Retries
-review=?
-tags=shadow,baseshadow
-
-[SHADOW_JOB_CLEANUP_RETRY_DELAY]
-default=30
-type=int
-reconfig=true
-customization=seldom
-friendly_name=Shadow Job Cleanup Retry Delay
-review=?
-tags=shadow,baseshadow
-
-[SHADOW_LAZY_QUEUE_UPDATE]
-default=true
-type=bool
-reconfig=true
-customization=seldom
-friendly_name=Shadow Lazy Queue Update
-review=?
-tags=shadow,baseshadow
-
-[RESERVED_SWAP]
-default=0
-type=int
-reconfig=true
-customization=seldom
-friendly_name=Reserved Swap
-review=?
-tags=shadow,baseshadow
-
-[QUILL_MANAGE_VACUUM]
-default=false
-type=bool
-reconfig=true
-customization=devel
-friendly_name=Quill Manage Vacuum
-review=?
-tags=quill,jobqueuedbmanager
-
-[QUILL_POLLING_PERIOD]
-default=10
-type=int
-reconfig=true
-customization=devel
-friendly_name=Quill Polling Period
-review=?
-tags=quill,jobqueuedbmanager
-
-[QUILL_HISTORY_DURATION]
-default=180
-type=int
-reconfig=true
-customization=devel
-friendly_name=Quill History Duration
-review=?
-tags=quill,jobqueuedbmanager
-
-[QUILL_HISTORY_CLEANING_INTERVAL]
-default=24
-type=int
-reconfig=true
-customization=devel
-friendly_name=Quill History Cleaning Interval
-review=?
-tags=quill,jobqueuedbmanager
-
-[QUILL_SHOULD_REINDEX]
-default=true
-type=bool
-reconfig=true
-customization=devel
-friendly_name=Quill Should Reindex
-review=?
-tags=quill,jobqueuedbmanager
-
 [SCHEDD_NAME]
 default=
 type=string
@@ -1794,6 +1704,22 @@ review=?
 usage="/dev/" portion of the pathname.
 tags=sysapi,reconfig
 
+[SLOTS_CONNECTED_TO_CONSOLE]
+default=$(NUM_CPUS)
+type=string
+reconfig=false
+customization=seldom
+friendly_name=slots above this number do not have ConsoleIdle updated
+tags=startd
+
+[SLOTS_CONNECTED_TO_KEYBOARD]
+default=$(NUM_CPUS)
+type=string
+reconfig=false
+customization=seldom
+friendly_name=slots above this number do not have KeyboardIdle updated
+tags=startd
+
 [STARTD_HAS_BAD_UTMP]
 # XXX This should be a bool
 default=0
@@ -1833,6 +1759,7 @@ tags=sysapi,reconfig
 
 [CKPT_PROBE]
 default=$(LIBEXEC)/condor_ckpt_probe
+win32_default=$(LIBEXEC)\condor_ckpt_probe.exe
 type=path
 reconfig=true
 customization=seldom
@@ -2449,11 +2376,11 @@ review=?
 tags=collector,collector
 
 [CONDOR_ADMIN]
-default=
+default=root@$(FULL_HOSTNAME)
 type=string
 reconfig=true
-customization=seldom
-friendly_name=Condor Admin
+customization=normal
+friendly_name=HTCondor sends email to this address on pool failure
 review=?
 tags=collector,collector
 
@@ -2835,7 +2762,7 @@ review=?
 tags=gridmanager,condorjob
 
 [CREAM_GAHP]
-default=
+default=$(SBIN)/cream_gahp
 type=string
 reconfig=true
 customization=seldom
@@ -2844,8 +2771,8 @@ review=?
 tags=gridmanager,creamjob
 
 [DELTACLOUD_GAHP]
-default=
-type=string
+default=$(SBIN)/deltacloud_gahp
+type=path
 reconfig=true
 customization=seldom
 friendly_name=Deltacloud Gahp
@@ -6500,7 +6427,7 @@ default=False
 default=False
 
 [MachineMaxVacateTime]
-default=600
+default=$(MaxVacateTime)
 type=int
 reconfig=true
 customization=seldom
@@ -7364,14 +7291,6 @@ type=string
 review=tlmiller
 reconfig=true
 
-[RUN_FILETRANSFER_PLUGINS_WITH_ROOT]
-default=false
-type=bool
-reconfig=true
-customization=seldom
-friendly_name=Whether to invoke file transfer plugins as user or as root
-review=?
-
 [DISCARD_SESSION_KEYRING_ON_STARTUP]
 default=true
 type=bool
@@ -7410,12 +7329,6 @@ win32_default=$(LIBEXEC)\curl_plugin.exe, $(LIBEXEC)\data_plugin.exe
 customization=seldom
 friendly_name=List of installed file transfer plugins
 tags=startd
-review=?
-
-[CONDOR_ADMIN]
-default=root@$(FULL_HOSTNAME)
-customization=normal
-friendly_name=HTCondor sends email to this address on pool failure
 review=?
 
 # daemons that run as user can't write to $(LOG) and there is no /tmp on windows
@@ -7466,11 +7379,6 @@ default=$(SBIN)/condor_ckpt_server
 win32_default=$(SBIN)\condor_ckpt_server.exe
 friendly_name=Location of Checkpoint server binary
 type=path
-review=?
-
-[CKPT_PROBE]
-default=$(LIBEXEC)/condor_ckpt_probe
-win32_default=$(LIBEXEC)\condor_ckpt_probe.exe
 review=?
 
 [JOB_ROUTER]
@@ -7710,21 +7618,6 @@ review=?
 
 [GT2_GAHP]
 default=$(SBIN)/gahp_server
-review=?
-[GRID_MONITOR]
-default=$(SBIN)/grid_monitor
-review=?
-[UNICORE_GAHP]
-default=$(SBIN)/unicore_gahp
-review=?
-[NORDUGRID_GAHP]
-default=$(SBIN)/nordugrid_gahp
-review=?
-[CREAM_GAHP]
-default=$(SBIN)/cream_gahp
-review=?
-[DELTACLOUD_GAHP]
-default=$(SBIN)/deltacloud_gahp
 review=?
 [EC2_GAHP]
 default=$(SBIN)/ec2_gahp
@@ -7999,8 +7892,6 @@ default=(TARGET.ImageSize <  (15 * 1024))
 default=($(CPUBusy) && ($(KeyboardBusy) == False))
 [MachineBusy]
 default=($(CPUBusy) || $(KeyboardBusy))
-[IS_OWNER]
-default=(START =?= False)
 
 # define UWCS_xxx desktop preemption policy that can be referenced in START, PREEMPT, etc
 [UWCS_WANT_SUSPEND]
@@ -8017,8 +7908,6 @@ default=( $(CPUIdle) && ($(ActivityTimer) > 10) && (KeyboardIdle > $(ContinueIdl
 default=( ((Activity == "Suspended") && ($(ActivityTimer) > $(MaxSuspendTime))) || (SUSPEND && (WANT_SUSPEND == False)) )
 [UWCS_MaxJobRetirementTime]
 default=0
-[MachineMaxVacateTime]
-default=$(MaxVacateTime)
 [UWCS_KILL]
 default=false
 [UWCS_PERIODIC_CHECKPOINT]

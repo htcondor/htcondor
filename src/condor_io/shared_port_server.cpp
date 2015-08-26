@@ -19,8 +19,10 @@
 
 #include "condor_common.h"
 #include "condor_config.h"
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "condor_daemon_core.h"
 #include "shared_port_server.h"
+
+#include "daemon_command.h"
 
 SharedPortServer::SharedPortServer():
 	m_registered_handlers(false),
@@ -225,6 +227,13 @@ SharedPortServer::HandleConnectRequest(int,Stream *sock)
 			sock->peer_description(), shared_port_id, deadline_desc.Value(),
 			m_shared_port_client.get_currentPendingPassSocketCalls(),
 			m_shared_port_client.get_maxPendingPassSocketCalls() );
+
+	if( strcmp( shared_port_id, "self" ) == 0 ) {
+		// The last 'true' flags this protocol as being "loopback," so
+		// we won't ever end up back here and pass off the request.
+		classy_counted_ptr< DaemonCommandProtocol > r = new DaemonCommandProtocol( sock, true, true );
+		return r->doProtocol();
+	}
 
 	return PassRequest(static_cast<Sock*>(sock), shared_port_id);
 }
