@@ -4475,19 +4475,21 @@ will not want to change them for any reason.
   these keys cannot be unintentionally obtained by user jobs. 
 
 \item[\Macro{ENABLE\_KERNEL\_TUNING}]
-  A boolean value that defaults to \Expr{True}.  When \Expr{True},
-  but only on Linux,
-  the \Condor{Master} daemon will run the kernel tuning script once
-  (as root) when it starts up.
+  Relevant only to Linux platforms, a boolean value that defaults 
+  to \Expr{True}.
+  When \Expr{True},
+  the \Condor{master} daemon invokes the kernel tuning script 
+  specified by configuration variable \MacroNI{LINUX\_KERNEL\_TUNING\_SCRIPT}
+  once as root when the \Condor{master} daemon starts up.
 
 \item[\Macro{KERNEL\_TUNING\_LOG}]
-  A string value that defaults to \Expr{$(LOG)/KernelTuningLog}.  If
-  the kernel tuning script runs, its output will be logged to this file.
+  A string value that defaults to \File{\$(LOG)/KernelTuningLog}.  
+  If the kernel tuning script runs, its output will be logged to this file.
 
 \item[\Macro{LINUX\_KERNEL\_TUNING\_SCRIPT}]
-  A string value that defaults to \Expr{$(LIBEXEC)/linux_kernel_tuning}.
-  This is the script that the \Condor{master} will run to tune the
-  kernel.
+  A string value that defaults to \File{\$(LIBEXEC)/linux\_kernel\_tuning}.
+  This is the script that the \Condor{master} runs to tune the
+  kernel when \MacroNI{ENABLE\_KERNEL\_TUNING} is \Expr{True}.
 
 \end{description}
 

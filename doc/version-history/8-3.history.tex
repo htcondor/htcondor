@@ -32,9 +32,12 @@ The details of each version are described below.
 \begin{itemize}
 
 \item On Linux platforms, the \Condor{master} daemon now runs a script when it
-starts up.  This script tunes several Linux kernel parameters to the values
-we suggest for improved scalability.  See \Macro{ENABLE\_KERNEL\_TUNING},
-\Macro{KERNEL\_TUNING\_LOG}, and \Macro{LINUX\_KERNEL\_TUNING\_SCRIPT}.
+starts up.
+This script tunes several Linux kernel parameters to the values
+we suggest for better scalability.  
+New configuration variables \Macro{ENABLE\_KERNEL\_TUNING},
+\Macro{KERNEL\_TUNING\_LOG}, and \Macro{LINUX\_KERNEL\_TUNING\_SCRIPT}
+enable the use of the script and specify file locations.
 \Ticket{5126}
 
 \item The configuration variable \Macro{SLOTS\_CONNECTED\_TO\_KEYBOARD} will now
@@ -194,6 +197,11 @@ to be inserted into all ClassAds.  These attributes are now inserted only into d
 that prevented them from correctly processing their arguments.
 \Ticket{5188}
 \Ticket{5189}
+
+\item Compiled all HTCondor programs with -fPIC (Position Independent Code)
+on Linux platforms to prevent crashes when using \Macro{CLASS\_AD\_USER\_LIBS}
+or \Macro{CLASSAD\_USER\_PYTHON\_MODULES} to load ClassAd plug-in functions.
+\Ticket{5184}
 
 \end{itemize}
 
