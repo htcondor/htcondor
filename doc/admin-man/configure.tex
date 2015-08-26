@@ -4474,6 +4474,21 @@ will not want to change them for any reason.
   By replacing the keyring on start up, the \Condor{master} ensures
   these keys cannot be unintentionally obtained by user jobs. 
 
+\item[\Macro{ENABLE\_KERNEL\_TUNING}]
+  A boolean value that defaults to \Expr{True}.  When \Expr{True},
+  but only on Linux,
+  the \Condor{Master} daemon will run the kernel tuning script once
+  (as root) when it starts up.
+
+\item[\Macro{KERNEL\_TUNING\_LOG}]
+  A string value that defaults to \Expr{$(LOG)/KernelTuningLog}.  If
+  the kernel tuning script runs, its output will be logged to this file.
+
+\item[\Macro{LINUX\_KERNEL\_TUNING\_SCRIPT}]
+  A string value that defaults to \Expr{$(LIBEXEC)/linux_kernel_tuning}.
+  This is the script that the \Condor{master} will run to tune the
+  kernel.
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -5267,7 +5282,7 @@ page~\pageref{sec:Configuring-SMP} for details.
   An integer which indicates how many of the machine slots
   the \Condor{startd} is representing should be "connected" to the
   keyboard (for remote tty activity, as well as console activity).
-  Defaults to 1.
+  This defaults to all slots (N in a machine with N CPUs).
 
 \label{param:DisconnectedKeyboardIdleBoost}
 \item[\Macro{DISCONNECTED\_KEYBOARD\_IDLE\_BOOST}]
