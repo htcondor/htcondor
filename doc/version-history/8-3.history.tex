@@ -40,9 +40,11 @@ New configuration variables \Macro{ENABLE\_KERNEL\_TUNING},
 enable the use of the script and specify file locations.
 \Ticket{5126}
 
-\item The configuration variable \Macro{SLOTS\_CONNECTED\_TO\_KEYBOARD} will now
-default to NUM\_CPUS rather than to 1.  Because of this change, when keyboard
-activity is detected all slots will have their \Attr{KeyboardIdle}
+\item The default value of configuration variable 
+\Macro{SLOTS\_CONNECTED\_TO\_KEYBOARD} has changed from 1 to
+the value of \MacroNI{NUM\_CPUS}.  
+With this change, 
+detected keyboard activity causes all slots to have their \Attr{KeyboardIdle}
 attribute updated.
 \Ticket{5225}
 

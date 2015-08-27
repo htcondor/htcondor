@@ -5291,8 +5291,10 @@ page~\pageref{sec:Configuring-SMP} for details.
 \item[\Macro{SLOTS\_CONNECTED\_TO\_CONSOLE}] 
   An integer which indicates how many of the machine slots
   the \Condor{startd} is representing should be "connected" to the
-  console (in other words, notice when there's console activity).
-  This defaults to all slots (N in a machine with N CPUs).
+  console.
+  This allows the \Condor{startd} to notice console activity.
+  Defaults to the number of slots in the machine,
+  which is \MacroUNI{NUM\_CPUS}.
 
 \label{param:SlotsConnectedToKeyboard}
 \item[\Macro{SLOTS\_CONNECTED\_TO\_KEYBOARD}]
