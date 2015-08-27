@@ -217,11 +217,13 @@ Also when a configuration variable name that begins with
 this now overrides the value for that slot type rather than being ignored.
 \Ticket{5132}
 
-\item Fixed a bug that caused the ClassAd attributes \Attr{DetectedCpus} and \Attr{DetectedMemory}
-to be inserted into all ClassAds.  These attributes are now inserted only into daemon ClassAds.
+\item Fixed a bug that caused the ClassAd attributes \Attr{DetectedCpus} and 
+\Attr{DetectedMemory} to be inserted into all ClassAds.
+These attributes are now inserted only into daemon ClassAds.
 \Ticket{5171}
 
-\item Fixed a bug that caused \Condor{q} to interpret a username that starts with a number as a job id.
+\item Fixed a bug that caused \Condor{q} to interpret a user name that 
+started with a number as a job ID.
 \Ticket{5172}
 
 \item Fixed bugs in the \Expr{\$REAL()} and \Expr{\$CHOICE()} 
