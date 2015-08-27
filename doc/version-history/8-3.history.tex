@@ -46,9 +46,11 @@ activity is detected all slots will have their \Attr{KeyboardIdle}
 attribute updated.
 \Ticket{5225}
 
-\item Caching of ClassAds to save memory will now be enabled by default on
-Windows as it was on other platforms in earlier versions of HTCondor.  This
-can be expected to reduce memory useage of the \Condor{collector} and \Condor{schedd}.
+\item The caching of ClassAds to save memory will now be enabled by default on
+Windows.
+It was enabled on other platforms in earlier versions of HTCondor.
+This can be expected to reduce the memory usage of 
+the \Condor{collector} and \Condor{schedd} daemons.
 \Ticket{5222}
 
 \item The \Condor{shared\_port} daemon may be directly addressed by setting
@@ -117,6 +119,10 @@ can leave the queue at a time. The default value is 1.
 \item Fixed a bug in \Condor{who} that sometimes prevented it from producing any output unless the
 \Opt{-allpids} argument was passed.  This bug was introduced in HTCondor 8.3.6.
 \Ticket{5227}
+
+\item The new configuration variable \Macro{DOCKER\_IMAGE\_CACHE\_SIZE}
+controls the number of Docker images kept on the local machine.
+\Ticket{5195}
 
 \end{itemize}
 
@@ -201,8 +207,9 @@ to be inserted into all ClassAds.  These attributes are now inserted only into d
 \item Fixed a bug that caused \Condor{q} to interpret a username that starts with a number as a job id.
 \Ticket{5172}
 
-\item Fixed bugs in the \Macro{REAL()} and \Macro{CHOICE()} configuration functions
-that prevented them from correctly processing their arguments.
+\item Fixed bugs in the \Expr{\$REAL()} and \Expr{\$CHOICE()} 
+configuration functions
+that prevented them from correctly processing their parameters.
 \Ticket{5188}
 \Ticket{5189}
 
