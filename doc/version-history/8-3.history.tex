@@ -107,8 +107,11 @@ This new form allows \Condor{userprio} to support
 additional new arguments: \Opt{-constraint} and \Opt{-autoformat}.
 \Ticket{5127}
 
-\item \Condor{q} \Opt{-better-analyze} has been enhanced to understand that sub-expressions referring
-to CurrentTime may evaluate differently at different times. These sub-expressions are no longer
+\item The \Opt{-better-analyze} option to \Condor{q}
+has been enhanced to understand that subexpressions referring
+to the ClassAd attribute \Attr{CurrentTime} may evaluate differently 
+at different times. 
+These subexpressions are no longer
 automatically treated as irrelevant to matchmaking.
 \Ticket{5155}
 
