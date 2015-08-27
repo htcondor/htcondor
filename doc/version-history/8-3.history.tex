@@ -238,6 +238,24 @@ to prevent crashes when using \MacroNI{CLASSAD\_USER\_LIBS}
 or \MacroNI{CLASSAD\_USER\_PYTHON\_MODULES} to load ClassAd plug-in functions.
 \Ticket{5184}
 
+\item Fixed a memory leak caused by the ClassAd function \Procedure{split}.
+\Ticket{5219}
+
+\item \Condor{vacate} will now fail with an error message when the 
+\Opt{-constraint} argument is used more than once,
+or when it is used with other arguments that cannot be handled
+while processing the constraint.
+Previous HTCondor versions would quietly ignore all but the last constraint.
+\Ticket{5234}
+
+\item Fixed a bug that prevented the \Condor{negotiator} from preempting
+jobs based on user priority when configuration variable
+\Macro{ALLOW\_PSLOT\_PREEMPTION} was set to \Expr{True}.
+\Ticket{5236}
+
+\item Fixed a bug that caused HTCondor daemons to crash 
+on RHEL 7 when using more than 1024 file descriptors.
+\Ticket{5240}
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
