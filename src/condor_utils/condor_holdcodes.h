@@ -136,4 +136,6 @@ const int CONDOR_HOLD_CODE_JobOutOfResources = 34;
 
 const int CONDOR_HOLD_CODE_InvalidDockerImage = 35;
 
+const int CONDOR_HOLD_CODE_FailedToCheckpoint = 36;
+
 #endif

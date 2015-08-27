@@ -891,22 +891,25 @@ VanillaProc::JobReaper(int pid, int status)
 			// anything, it will be reported as if the error code or signal
 			// had happened naturally (and the job will usually exit the
 			// queue).  This could confuse the users.
-
-			// For now, we'll just force the job to requeue.
-
-			// The easiest way to do that is to pretend that this was an
-			// exit requested by HTCondor.  That's not untrue, but this
-			// variable is normally only used to flag external requests
-			// which have leases.
-
-			// This makes it show up as 'evicted', which is true but
-			// deceptive.  Fixing that may require adding a new starter
-			// exit code (JOB_FAILED_CHECKPOINT) and a new user log
-			// event ID (ULOG_JOB_FAILED_CHECKPOINT).
-			requested_exit = true;
-
+			//
+			// Instead, we'll put the job on hold, figuring that if the job
+			// requested that we (periodically) send it a signal, and we
+			// did, that it's not our fault that the job failed.  This has
+			// the convenient side-effect of not overwriting the job's
+			// previous checkpoint(s), if any (since file transfer doesn't
+			// occur when the job goes on hold).
 			killFamilyIfWarranted();
 			recordFinalUsage();
+
+			std::string holdMessage;
+			formatstr( holdMessage, "Job did not exit as promised when sent its checkpoint signal.  "
+				"Promised exit was %s %u, actual exit status was %s %u.",
+				checkpointExitBySignal ? "on signal" : "with exit code",
+				checkpointExitBySignal ? checkpointExitSignal : checkpointExitCode,
+				WIFSIGNALED( exit_status ) ? "on signal" : "with exit code",
+				WIFSIGNALED( exit_status ) ? WTERMSIG( exit_status ) : WEXITSTATUS( exit_status ) );
+			Starter->jic->holdJob( holdMessage.c_str(), CONDOR_HOLD_CODE_FailedToCheckpoint, exit_status );
+			Starter->Hold();
 			return true;
 		}
 	} else if( wantsFileTransferOnCheckpointExit && exit_status == successfulCheckpointStatus ) {
