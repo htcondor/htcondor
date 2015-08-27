@@ -80,10 +80,10 @@ submit_try( ArgList &args, CondorID &condorID, bool prohibitMultiJobs )
   }
   
   //----------------------------------------------------------------------
-  // Parse submit command output for a Condor job ID.  This
-  // desperately needs to be replaced by Condor submit APIs.
+  // Parse submit command output for a HTCondor job ID.  This
+  // desperately needs to be replaced by HTCondor submit APIs.
   //
-  // Typical condor_submit output for Condor v6 looks like:
+  // Typical condor_submit output for HTCondor v6 looks like:
   //
   //   Submitting job(s).
   //   Logging submit event(s).
@@ -112,7 +112,7 @@ submit_try( ArgList &args, CondorID &condorID, bool prohibitMultiJobs )
   
   // Take all of the output (both stdout and stderr) from condor_submit,
   // and echo it to the dagman.out file.  Look for
-  // the line (if any) containing the word "cluster" (Condor).
+  // the line (if any) containing the word "cluster" (HTCondor).
   // If we don't find such a line, something
   // went wrong with the submit, so we return false.  The caller of this
   // function can retry the submit by repeatedly calling this function.
@@ -407,7 +407,7 @@ fake_condor_submit( CondorID& condorID, Job* job, const char* DAGNodeName,
 	}
 
 	_subprocID++;
-		// Special CondorID for NOOP jobs -- actually indexed by
+		// Special HTCondorID for NOOP jobs -- actually indexed by
 		// otherwise-unused subprocID.
 	condorID._cluster = 0;
 	condorID._proc = Job::NOOP_NODE_PROCID;
@@ -472,7 +472,7 @@ bool writePreSkipEvent( CondorID& condorID, Job* job, const char* DAGNodeName,
 		return false;
 	}
 
-		// Special CondorID for NOOP jobs -- actually indexed by
+		// Special HTCondorID for NOOP jobs -- actually indexed by
 		// otherwise-unused subprocID.
 	condorID._cluster = 0;
 	condorID._proc = Job::NOOP_NODE_PROCID;
