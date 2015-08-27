@@ -88,10 +88,12 @@ will indicate that no output files should be transferred,
 rather than producing a syntax error.
 \Ticket{5159}
 
-\item The \Condor{kbdd} will now ignore small mouse movements that occur after a long
-period of inactivity on both keyboard and mouse.  The value of small is defined by the new
-configuration variable \Macro{KBDD\_BUMP\_CHECK\_SIZE}, and the period of inactivity
-that triggers this behavior is defined by \Macro{KBDD\_BUMP\_CHECK\_AFTER\_IDLE}.
+\item The \Condor{kbdd} will now ignore small mouse movements that occur 
+after a long period of inactivity on both keyboard and mouse.
+The value of small is defined by the new
+configuration variable \Macro{KBDD\_BUMP\_CHECK\_SIZE}, 
+and the period of inactivity that triggers this behavior is defined 
+by \Macro{KBDD\_BUMP\_CHECK\_AFTER\_IDLE\_TIME}.
 \Ticket{5210}
 
 \item The \Condor{userprio} tool has been enhanced
