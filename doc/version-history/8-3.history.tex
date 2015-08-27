@@ -46,9 +46,11 @@ activity is detected all slots will have their \Attr{KeyboardIdle}
 attribute updated.
 \Ticket{5225}
 
-\item Caching of ClassAds to save memory will now be enabled by default on
-Windows as it was on other platforms in earlier versions of HTCondor.  This
-can be expected to reduce memory useage of the \Condor{collector} and \Condor{schedd}.
+\item The caching of ClassAds to save memory will now be enabled by default on
+Windows.
+It was enabled on other platforms in earlier versions of HTCondor.
+This can be expected to reduce the memory usage of 
+the \Condor{collector} and \Condor{schedd} daemons.
 \Ticket{5222}
 
 \item The \Condor{shared\_port} daemon may be directly addressed by setting
