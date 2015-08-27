@@ -124,6 +124,15 @@ can leave the queue at a time. The default value is 1.
 controls the number of Docker images kept on the local machine.
 \Ticket{5195}
 
+\item The use of tools such as \Prog{valgrind} and \Prog{coverity}, 
+as well as other static analysis tools, 
+permitted a clean up of code.
+Several minor memory leaks were fixed, unused code was removed,
+uninitialized variables are now correctly initialized, 
+previously ignored error codes are now checked upon return, 
+and several compiler warnings were fixed.
+\Ticket{5137}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
