@@ -103,7 +103,7 @@ $failure = sub
 					CondorTest::debug("$name: $line\n",1);
 					if ($count == 0) { $count++; }
 				}
-				if ($line =~ /^.*Removing any\/all submitted Condor jobs\.\.\./) {
+				if ($line =~ /^.*Removing any\/all submitted HTCondor jobs\.\.\./) {
 					CondorTest::debug("$name: $line\n",1);
 					if ($count == 1) { $count++; }
 				}
