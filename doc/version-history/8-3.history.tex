@@ -28,6 +28,7 @@ The details of each version are described below.
 
 \begin{itemize}
 
+%% 1
 \item On Linux platforms, the \Condor{master} daemon now runs a script when it
 starts up.
 This script tunes several Linux kernel parameters to the values
@@ -37,13 +38,24 @@ New configuration variables \Macro{ENABLE\_KERNEL\_TUNING},
 enable the use of the script and specify file locations.
 \Ticket{5126}
 
-\item The default value of configuration variable 
-\Macro{SLOTS\_CONNECTED\_TO\_KEYBOARD} has changed from 1 to
-the value of \MacroNI{NUM\_CPUS}.  
-With this change, 
-detected keyboard activity causes all slots to have their \Attr{KeyboardIdle}
-attribute updated.
-\Ticket{5225}
+%% 2
+\item HTCondor Python bindings are now supported on all Windows platforms when 32-bit Python 2.7 is installed.
+\Ticket{4836}
+
+%% 3
+\item The new configuration variable \Macro{DOCKER\_IMAGE\_CACHE\_SIZE}
+controls the number of Docker images kept on the local machine.
+\Ticket{5195}
+
+%% 4
+\item The use of tools such as \Prog{valgrind} and \Prog{coverity}, 
+as well as other static analysis tools, 
+permitted a clean up of code.
+Several minor memory leaks were fixed, unused code was removed,
+uninitialized variables are now correctly initialized, 
+previously ignored error codes are now checked upon return, 
+and several compiler warnings were fixed.
+\Ticket{5137}
 
 \item The caching of ClassAds to save memory will now be enabled by default on
 Windows.
@@ -112,32 +124,36 @@ These subexpressions are no longer
 automatically treated as irrelevant to matchmaking.
 \Ticket{5155}
 
-\item HTCondor Python bindings are now supported on all Windows platforms when 32-bit Python 2.7 is installed.
-\Ticket{4836}
-
 \item The new configuration variable \MacroNI{JOB\_IS\_FINISHED\_COUNT}
 works with \Macro{JOB\_IS\_FINISHED\_INTERVAL} to control how many jobs
 can leave the queue at a time. The default value is 1.
 \Ticket{5168}
-
-\item The new configuration variable \Macro{DOCKER\_IMAGE\_CACHE\_SIZE}
-controls the number of Docker images kept on the local machine.
-\Ticket{5195}
-
-\item The use of tools such as \Prog{valgrind} and \Prog{coverity}, 
-as well as other static analysis tools, 
-permitted a clean up of code.
-Several minor memory leaks were fixed, unused code was removed,
-uninitialized variables are now correctly initialized, 
-previously ignored error codes are now checked upon return, 
-and several compiler warnings were fixed.
-\Ticket{5137}
 
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+%% 1
+\item Fixed a bug that prevented the \Condor{negotiator} from preempting
+jobs based on user priority when configuration variable
+\Macro{ALLOW\_PSLOT\_PREEMPTION} was set to \Expr{True}.
+\Ticket{5236}
+
+%% 2
+\item Fixed a bug that caused HTCondor daemons to crash 
+on RHEL 7 when using more than 1024 file descriptors.
+\Ticket{5240}
+
+%% 3
+\item The default value of configuration variable 
+\Macro{SLOTS\_CONNECTED\_TO\_KEYBOARD} has changed from 1 to
+the value of \MacroNI{NUM\_CPUS}.  
+With this change, 
+detected keyboard activity causes all slots to have their \Attr{KeyboardIdle}
+attribute updated.
+\Ticket{5225}
 
 \item Fixed a bug in \Condor{who} that sometimes prevented it from 
 producing any output unless the \Opt{-allpids} option was set.
@@ -245,14 +261,6 @@ while processing the constraint.
 Previous HTCondor versions would quietly ignore all but the last constraint.
 \Ticket{5234}
 
-\item Fixed a bug that prevented the \Condor{negotiator} from preempting
-jobs based on user priority when configuration variable
-\Macro{ALLOW\_PSLOT\_PREEMPTION} was set to \Expr{True}.
-\Ticket{5236}
-
-\item Fixed a bug that caused HTCondor daemons to crash 
-on RHEL 7 when using more than 1024 file descriptors.
-\Ticket{5240}
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
