@@ -43,7 +43,7 @@ my $porttool = "";
 
 use base 'Exporter';
 
-our @EXPORT = qw(PrintTimeStamp timestamp runCondorTool runCondorToolCarefully runToolNTimes RegisterResult EndTest GetLogDir FindWebServerPort IsWebserverMine CleanUpChildren StartWebServer);
+our @EXPORT = qw(PrintTimeStamp timestamp runCondorTool runCondorToolCarefully runToolNTimes RegisterResult EndTest GetLogDir FindHttpPort CleanUpChildren StartWebServer);
 
 my %securityoptions =
 (
@@ -4212,193 +4212,6 @@ sub GetLogDir {
 	}
 }
 
-sub FindKidPids {
-	my $iswindows = shift;
-	#my $parent = "";
-	my $parent = shift;
-	my $webport = shift;
-	#my $mainpid = "";
-	my $mainpid = $$;
-	my $kidlist = "$parent";
-	print "Looking for parent:$parent iswindows:$iswindows initial pid:$mainpid webport:$webport\n";
-	if($iswindows) {
-		my $ret = LookForWindowsWebServer($mainpid,$parent,$webport);
-		if($ret eq "good") {
-			$kidlist = $kidlist . " $parent";
-		} else {
-			print "LookForWindowsWebServer says$ret\n"
-		}
-	} else {
-		my @psdata = `ps -ef`;
-		foreach my $possible (@psdata) {
-			# prior to windows task considerations bsd/macos had a user id
-			# in the first field where linux has their username
-			if($possible =~ /.*?\s+(\d+)\s+(\d+)\s.*/) {
-				if($2 eq $parent) {
-					$kidlist = "$kidlist" . " $1";
-					print "$2 has kid $1\n";
-				}
-			} else {
-				#print "Parse error:$possible\n";
-			}
-		}
-	}
-	return($kidlist);
-}
-
-sub FindPortTool {
-	my $iswindows = shift;
-	my $windowsporttool = "netstat -ao | grep TCP";
-	my $haslsof = "";
-	my $hasss = "";
-	my $resorttonetstat = "netstat -a";
-	my @testforlsof = ();
-	my @testforss = ();
-	if($porttool ne "") {
-		return($porttool);
-	}
-	if($iswindows != 0) {
-		return($windowsporttool);
-	}
-
-	# we will give a preference for "lsof" first
-	print "see what -whereis lsof- gives us\n";
-	system("whereis lsof");
-	print "see what -whereis ss- gives us\n";
-	@testforss = `whereis ss`;
-	if((defined $testforss[0]) && ( $testforss[0] =~ /^ss:\s*(\/.*?)\s+.*$/)) {
-		print "Found ss here:$1\n";
-		$porttool = $1;
-		#$porttool = $porttool . " -A inet | grep tcp";
-		$porttool = $porttool . " -A inet";
-		return($porttool);
-	}
-	if((defined $testforss[0]) && ( $testforss[0] =~ /^\s*(\/.*?)$/)) {
-		print "Found ss here:$1\n";
-		$porttool = $1;
-		#$porttool = $porttool . " -A inet | grep tcp";
-		$porttool = $porttool . " -A inet";
-		return($porttool);
-	}
-	system("whereis ss");
-	@testforlsof = `whereis lsof`;
-	if($testforlsof[0] =~ /^lsof:\s*(\/.*?)\s+.*$/) {
-		print "Found lsof here:$1\n";
-		$porttool = $1;
-		$porttool = $porttool . " -nPi";
-		return($porttool);
-	}
-	# if we are still here use basic netstat -a
-	# unles we are solaris
-	my @unixtype = `uname -a`;
-	my $variant = $unixtype[0];
-	fullchomp($variant);
-	if($variant =~ /SunOs/) {
-		print "Finding ports on SunOS\n";
-		$porttool = "netstat -an -f inet -P tcp";
-	} else {
-		$porttool = "netstat -a | grep tcp"; 
-	}
-	return($porttool);
-}
-
-sub FindWebServerPort {
-	my $pid = shift;
-	my $iswindows = shift;
-	my $portgathermethod = FindPortTool($iswindows);
-	print "FindPortTool returned:$portgathermethod\n";
-	my $startport = 8000;
-	print "FindWebServerPort: pid:$pid iswindows:$iswindows\n";
-	my $pidmodulo = ($pid % 100);
-	print "my pid offset to $startport is:$pidmodulo\n";
-	my $range = 100;
-	my $currentchoice = $startport + $pidmodulo;
-	print "starting port request:$currentchoice\n";
-	my $chosenport = "";
-	my @netdetails = ();
-	my %portsused = ();
-	@netdetails = `$portgathermethod`;
-	print "FindWebServerPort: gathered data for this platform with:$portgathermethod\n";
-	foreach my $name (@netdetails) {
-		fullchomp($name);
-		print "FWSP:$name\n";
-	}
-	if($iswindows) {
-		print "Looking for a web server port for windows\n";
-		@netdetails = `netstat -ao`;
-		# map ports in use
-		print "For windows FindPortTool should have returned(netstat -ao:$portgathermethod\n";
-		foreach my $usageline (@netdetails) {
-			fullchomp($usageline);
-			if($usageline =~ /\s*TCP\s+\d+\.\d+\.\d+\.\d+:(\d+).*/) {
-				print "TCP Port $1 in use\n";
-				$portsused{$1} = 1;
-			} elsif($usageline =~ /\s*TCP\s+\[.*?\]:(\d+).*/) {
-					print "Multiple interface port:$1\n";
-			} else {
-					print "Parse error:$usageline\n";
-			}
-		}
-	} else {
-#		print "Checking availability of lsof\n";
-#		#system("whereis lsof");
-#		print "Checking availability of ss\n";
-#		#system("whereis ss");
-#		#print "Looking for used ports with lsof\n";
-#		#@netdetails = `lsof -nPi`;
-#		@netdetails = `netstat -a | grep -i tcp`;
-#		print "NETSTAT port checking with raw data\n";
-#		foreach my $usageline (@netdetails) {
-#			fullchomp($usageline);
-#			print "$usageline\n";
-#		}
-#		# map ports in use
-#		foreach my $usageline (@netdetails) {
-#			fullchomp($usageline);
-#			if($usageline =~ /.*?\s+TCP\s+.*?:(\d+).*/) {
-#				print "TCP Port $1 in use\n";
-#				$portsused{$1} = 1;
-#			} elsif($usageline =~ /.*?\s+tcp\s+.*?:(\d+).*/) {
-#				print "TCP Port $1 in use\n";
-#				$portsused{$1} = 1;
-#			}
-#		}
-		print "Parsing with:$portgathermethod\n";
-		foreach my $usageline (@netdetails) {
-			fullchomp($usageline);
-			if($portgathermethod =~ /lsof/) {
-				#if($usageline =~ /.*?tcp\s+.*?\s+\d+\s+\d+\s+\d+\.\d+\.\d+\.\d+:(\d+).*$/) {
-					#$portsused{$1} = 1;
-				#} else {
-					#print "ss scan failed:$usageline\n";
-				#}
-			} elsif($portgathermethod =~ /ss/) {
-				if($usageline =~ /.*?tcp\s+.*?\s+\d+\s+\d+\s+\d+\.\d+\.\d+\.\d+:(\d+).*$/) {
-					$portsused{$1} = 1;
-				} else {
-					print "ss scan failed:$usageline\n";
-				}
-			} elsif($portgathermethod =~ /netstat/) {
-				;
-			} else {
-				die "Horrible. We have no idea how to get port usage data:$portgathermethod\n";
-			}
-		}
-	}
-	# look for one 8000 + modulo 100 of pid and above not currently in use
-	while($currentchoice <= ($currentchoice + $range)) {
-		if(exists $portsused{$currentchoice}) {
-			print "TCP port $currentchoice in use\n";
-			$currentchoice += 1;
-		} else {
-			print "Returning free port:$currentchoice)\n";
-			return($currentchoice);
-		}
-	}
-	print "Failed to find a valid port for web server\n";
-	return(-1);
-}
-
 # we care about a listen owned by one of our pids related
 # to the fork of the python web server
 # It may not be running yet or it may have failed to start
@@ -4407,27 +4220,6 @@ sub FindWebServerPort {
 # After that restart the process of finding a port to use
 # and seeing if it is running.
 #
-sub IsWebserverMine {
-	my $hashofpidsref = shift;
-	my $iswindows = shift;
-	print "Looking if I have a webserver\n";
-	if($iswindows == 0) {
-		my @netdetails = `lsof -nPi`;
-		#system("ps -ef | grep bt");
-		foreach my $usageline (@netdetails) {
-			fullchomp($usageline);
-			#print "Considering lsof line:$usageline\n";
-			if($usageline =~ /.*?(\d+).*\s+TCP\s+.*?:(\d+).*/) {
-				#print "TCP Port $2 in use pid:$1\n";
-				if(exists ${$hashofpidsref}{$1}) {
-					print "YESYESYES my webserver\n";
-					return($1);
-				}
-			}
-		}
-	}
-	return(0);
-}
 
 sub CleanUpChildren {
 	my $iswindows = shift;
@@ -4448,7 +4240,7 @@ sub CleanUpChildren {
 		} else {
 			#system("kill -9 $childlist");
 				print "Shutting down a regular windows pid:$key\n";
-			system("kill -9 $key");
+			system("kill -0 $key");
 		}
 		my $returnedzoombie = 0;
 		print "waiting on pid $key\n";
@@ -4457,11 +4249,31 @@ sub CleanUpChildren {
 	}
 }
 
+sub FindHttpPort {
+	my $parent = shift;
+	print "FindHttpPort passed parentpid:$parent\n";
+	my $portfile = "portsavefile." . "$parent";
+	while(!(-f $portfile)) {
+		sleep(1);
+	}
+	open(PSF,"< $portfile") or die "Failed to open ephemeral:$portfile:$!\n";
+	my $port = <PSF>;
+	fullchomp($port);
+	print "Web server port file:$portfile contains port $port\n";
+	if($port > 0) {
+		print "Positive port in FindHttpPort:$port\n";
+		return($port);
+	} else {
+		print "Bad port in FindHttpPort:$port\n";
+		return($port);
+	}
+}
+
 sub StartWebServer {
 	my $testname = shift;
 	my $iswindows = shift;
 	my $piddir = shift;
-	my $webport = shift;
+	my $parentpid = shift;
 	my $childpidref = shift;
 	my @children = ();
 	my %childrenpids= ();
@@ -4470,10 +4282,14 @@ sub StartWebServer {
 	my $child = 0;
 	my $webserverhunt = 0;
 	my $havewebserver = 0;
+	my $webport = 0;
 	my $limit = 5;
 	my $kidarraysize = 0;
 	my $proc;
 	my $spawnedpid = 0;
+	my $ephem = 0;
+
+	print "StartWebServer passsed parentpid:$parentpid\n";
 
 	while(($webserverhunt < $limit) &&($havewebserver == 0)) {
 		$kidarraysize = 0;
@@ -4491,17 +4307,18 @@ sub StartWebServer {
 			DirLs();
 			Win32::Process::Create($proc,
 						"$pythonbinary",
-						"python -m SimpleHTTPServer $webport",
+						"python ../simplehttpwrapper.py $parentpid",
 						0,
 						Win32::Process::NORMAL_PRIORITY_CLASS(),
 						".") || die ErrorReport($testname);
 			print "Process Create Back\n";
 			chdir("..");
+			$ephem = FindHttpPort($parentpid);
 			print "Trying wget from new server\n";
-			system("wget http://127.0.01:$webport\\new_config.local");
+			system("wget http://127.0.01:$ephem/new_config.local");
 			# lets try getting pid
 			$spawnedpid = $proc->GetProcessID();
-			print "Windows chauld actually:$spawnedpid\n";
+			print "Windows child actually:$spawnedpid\n";
 			$child = $spawnedpid; 
 			# we'll need to know tis later to kill the web server
 			$WindowsProcessObj = $proc;
@@ -4515,44 +4332,46 @@ sub StartWebServer {
 				#child
 				chdir("$piddir");
 				#system("pwd");
-				system("python -m SimpleHTTPServer $webport");
+				system("python ../simplehttpwrapper.py $parentpid");
 				exit(0);
 			}
 		}
 		$count = 0;
 		print "Parent has python webserver pid: Child Now $child\n";
+		$ephem = FindHttpPort($parentpid);
+		$childlist =  "$child";
+		%childrenpids = ();
+		@children = ();
+		@children = split /\s/, $childlist;
 		#Try for a limited time to get the web server going
-		while($count < $limit) {
-			sleep(1);
-			$count += 1;
-			$childlist = FindKidPids($iswindows,$child,$webport);
+		#while($count < $limit) {
+			#sleep(1);
+			#$count += 1;
+			##$childlist =  "$child";
 			# different child, differnet pids
-			%childrenpids = ();
+			#%childrenpids = ();
 			
-			@children = ();
-			@children = split /\s/, $childlist;
-			foreach my $kid (@children) {
-				print "adding pid:$kid to pid hash\n";
-				$childrenpids{$kid} = 1;
-				${$childpidref}{$kid} = 1;
-			}
-			$kidarraysize = @children;
-			if($kidarraysize != 2) {
-				print "No child web server yet\n";
-				CleanUpChildren($iswindows,\%childrenpids);
-				next;
-			} else {
-				print "Have a child, hopefully/probably our web server\n";
-				last;
-			}
-		}
+			#@children = ();
+			#@children = split /\s/, $childlist;
+			#foreach my $kid (@children) {
+				#print "adding pid:$kid to pid hash\n";
+				#$childrenpids{$kid} = 1;
+				#${$childpidref}{$kid} = 1;
+			#}
+			#$kidarraysize = @children;
+			#if($kidarraysize != 2) {
+				#print "No child web server yet\n";
+				#CleanUpChildren($iswindows,\%childrenpids);
+				#next;
+			#} else {
+				#print "Have a child, hopefully/probably our web server\n";
+				#last;
+			#}
+		#}
 		print "Parent moving on maybe with condor_urlfetch\n Mini web server pid:$child\n";
 
-		if($iswindows) {
-			print "for windows we triple checked and it is our web server.....\n";
+		if($ephem > 0) {
 			$havewebserver = 1;
-		} else {
-			$havewebserver = IsWebserverMine(\%childrenpids,$iswindows);
 		}
 
 		if($havewebserver != 0) {
@@ -4577,57 +4396,6 @@ sub StartWebServer {
 	}
 
 
-}
-
-#LookForWindowsWebServer($mainpid,$parent,$webport);
-sub LookForWindowsWebServer {
-	my $master = shift;
-	my $forkpid = shift;
-	my $webport = shift;
-	my $masterpid = "";
-	$masterpid = $master;
-
-	my $listenowner = "";
-	my $listenport = "";
-	my $pythonpid = "";
-	print "LookForWindowsWebServer mainpid:$masterpid fork child:$forkpid web port:$webport\n";
-	print "Looking for a web server port for windows\n";
-	my @netdetails = `netstat -ao | grep $webport`;
-	my $serverline = $netdetails[0];
-	fullchomp($serverline);
-	print "Harvest this for owning process and listen port:$serverline\n";
-	if($serverline =~ /^\s*TCP\s+.*?\s+.*?\s+.*?\s+(\d+).*/) {
-		print "Listen owned by pid:$1\n";
-		$listenowner = $1;
-	} else {
-		print "Parse failed:$serverline\n";
-	}
-	if($serverline =~ /\s*TCP\s+\d+\.\d+\.\d+\.\d+:(\d+).*/) {
-		print "listen port discovered:$1\n";
-		$listenport = $1;
-	} else {
-		print "Parse failed:$serverline\n";
-	}
-	@netdetails = ();
-	@netdetails = `tasklist | grep python`;
-	foreach my $python (@netdetails) {
-		fullchomp($python);
-		print "Possible forked HTTP server:$python\n";
-		if($python =~ /^.*?\s+(\d+).*/) {
-			print "One possible web server process has pid:$1\n";
-			if($listenowner eq $1) {
-				$pythonpid = $1;
-				last;
-			}
-		}
-	}
-	if(($pythonpid eq $forkpid) && ($pythonpid eq $forkpid)) {
-		print "we confirmed our web server pid returning good\n";
-		return("good");
-	} else {
-		print "we DID NOT confirm our web server pid returning bad\n";
-		return("bad");
-	}
 }
 
 sub ErrorReport {
