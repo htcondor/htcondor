@@ -4916,6 +4916,21 @@ WANT_HOLD_REASON = \
   determine when the console is in use. Instead, use the \Condor{kbdd} daemon,
   which gets this information by connecting to the X server.
   
+\label{param:KbddBumpCheckSize}
+\item[\Macro{KBDD\_BUMP\_CHECK\_SIZE}]
+  The number of pixels that the mouse can move in the X and/or Y direction,
+  while still being considered a bump, and not keyboard activity. 
+  If the movement is greater than this bump size then the move is 
+  not a transient one, and it will register as activity. 
+  The default is 16, and units are pixels. 
+  Setting the value to 0 effectively disables bump testing.
+
+\label{param:KbddBumpCheckAfterIdleTime}
+\item[\Macro{KBDD\_BUMP\_CHECK\_AFTER\_IDLE\_TIME}]
+  The number of seconds of keyboard idle time that will pass 
+  before bump testing begins. 
+  The default is 15 minutes. 
+
 \label{param:StartdJobExprs}
 \item[\Macro{STARTD\_JOB\_EXPRS}]
   When the machine is claimed by a remote user,
@@ -5276,8 +5291,10 @@ page~\pageref{sec:Configuring-SMP} for details.
 \item[\Macro{SLOTS\_CONNECTED\_TO\_CONSOLE}] 
   An integer which indicates how many of the machine slots
   the \Condor{startd} is representing should be "connected" to the
-  console (in other words, notice when there's console activity).
-  This defaults to all slots (N in a machine with N CPUs).
+  console.
+  This allows the \Condor{startd} to notice console activity.
+  Defaults to the number of slots in the machine,
+  which is \MacroUNI{NUM\_CPUS}.
 
 \label{param:SlotsConnectedToKeyboard}
 \item[\Macro{SLOTS\_CONNECTED\_TO\_KEYBOARD}]
