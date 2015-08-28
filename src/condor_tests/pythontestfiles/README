@@ -1,0 +1,5 @@
+This folder has a collection of files. One set validates that we can run python as our test.
+The files pythontest.cmd, cmd_run_python.run and pythontest.py are that proof of concept.
+simplehttpwrapper.py is the initial version of a piece of python which sets up a simple web server
+on an ephemeral port in a sub directory and wite a parent pid based savefile with the
+port number it is listeniing on. This will be used for the new condor_urlfetch test.
