@@ -345,6 +345,10 @@ sub StartCondorWithParams
 {
 	%personal_condor_params = @_;
 
+	if(is_windows()) {
+		$ENV{LOCAL_DIR} = undef;
+	}
+
 	Initialize(@_);
 	# Make sure at the least we have an initial Config folder to seed future
 	# personal condors. Test via environment variable CONDOR_CONFIG.
@@ -483,6 +487,10 @@ sub StartCondorWithParamsStart
 {
 	my $winpath = "";
 	my $config_and_port = "";
+	if(is_windows()) {
+		$ENV{LOCAL_DIR} = undef;
+	}
+
 	$collector_port = CondorPersonal::StartPersonalCondor();
 
 	debug( "collector port is $collector_port\n",$debuglevel);
@@ -1123,6 +1131,16 @@ debug( "HMMMMMMMMMMM personal local is $personal_local , mytoppath is $mytoppath
 	open(TEMPLATE,"<$personal_template")  || die "Can not open template: $personal_template: $!\n";
 	debug( "want to open new config file as $topleveldir/$personal_config\n",$debuglevel);
 	open(NEW,">$topleveldir/$personal_config") || die "Can not open new config file: $topleveldir/$personal_config: $!\n";
+
+	# There is an interesting side effect of reading and changing the condor_config
+	# template and then at the end, add the new LOCAL_DIR entree. That is when the constructed 
+	# file is inspected it looks like the LOCAL_DIR came from the environment. 
+	# So we are going to parse for a comment only line and only drop it out if it is NOT
+	# the one followed by "# from <Environment>". When that is the line that follows, we will drop
+	# out the new LOCAL_DIR, then a blank line and THEN those two saved lines.
+
+	my $lastline = "";
+	my $thisline = "";
 	while(<TEMPLATE>)
 	{
 		CondorUtils::fullchomp($_);
@@ -1148,6 +1166,20 @@ debug( "HMMMMMMMMMMM personal local is $personal_local , mytoppath is $mytoppath
 				$personal_config_changes{"LOCAL_CONFIG_FILE"} = "LOCAL_CONFIG_FILE = $mytoppath/$personal_local\n";
 				print NEW "LOCAL_CONFIG_FILE = $mytoppath/$personal_local\n";
 			}
+		} elsif( $line =~ /^#\s*$/ ) {
+			print "save $line could be comment before environment label\n";
+			$lastline = $line;
+		} elsif( $line =~ /^#.*?Environment.*$/ ) {
+			$thisline = $line;
+			print "TunePersonalCondor ************************** forcing LOCAL_DIR to :  $mytoppath\n"; 
+			print NEW "LOCAL_DIR = $mytoppath\n";
+			print NEW "\n";
+			print NEW "$lastline\n";
+			print NEW "$thisline\n";
+		} elsif( $line =~ /^#.*$/ ) {
+			print "Not environment label, drop both lines\n";
+			print NEW "$lastline\n";
+			print NEW "$thisline\n";
 		} elsif( $line =~ /^LOCAL_CONFIG_DIR\s*=.*/ ) {
 			# eat this entry
 		} else {
@@ -1155,7 +1187,6 @@ debug( "HMMMMMMMMMMM personal local is $personal_local , mytoppath is $mytoppath
 		}
 	}
 	close(TEMPLATE);
-	print NEW "LOCAL_DIR = $mytoppath\n";
 	close(NEW);
 
 	open(NEW,">$topleveldir/$personal_local")  || die "Can not open template: $!\n";
