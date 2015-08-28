@@ -149,12 +149,12 @@ if($iswindows) {
 	$masterlocalconfigfile = "\$(LIBEXEC)\\condor_urlfetch -MASTER http://127.0.0.1:$webport/new_config.local \$(LOCAL_DIR)\\config.cache |";
 	$masterlocalconfigpart1 = "condor_urlfetch -MASTER http://127.0.0.1:$webport\\new_config.local";
 	$masterlocalconfigpart2 = "\\config.cache |";
-	$schedlocalconfigfile = "\$(LIBEXEC)/condor_urlfetch -schedd http://127.0.0.1:$webport/new_config.local \$(LOCAL_DIR)\\config.cache";
+	$schedlocalconfigfile = "\$(LIBEXEC)/condor_urlfetch -schedd http://127.0.0.1:$webport/new_config.local \$(LOCAL_DIR)\\config.cache |";
 } else {
 	$masterlocalconfigfile = "\$(LIBEXEC)/condor_urlfetch -MASTER http://127.0.0.1:$webport/new_config.local \$(LOCAL_DIR)/config.cache |";
 	$masterlocalconfigpart1 = "condor_urlfetch -MASTER http://127.0.0.1:$webport/new_config.local";
 	$masterlocalconfigpart2 = "/config.cache |";
-	$schedlocalconfigfile = "\$(LIBEXEC)/condor_urlfetch -schedd http://127.0.0.1:$webport/new_config.local \$(LOCAL_DIR)/config.cache";
+	$schedlocalconfigfile = "\$(LIBEXEC)/condor_urlfetch -schedd http://127.0.0.1:$webport/new_config.local \$(LOCAL_DIR)/config.cache |";
 }
 
 # this one is normal and establishes the config cache
@@ -191,7 +191,7 @@ while (<CF>) {
 	$line = $_;
 	fullchomp($line);
 	if($line =~ /^LOCAL_CONFIG_FILE\s*=\s*.*$/) {
-		print NCF "LOCAL_CONFIG_FILE = \"$masterlocalconfigfile\"\n";
+		print NCF "LOCAL_CONFIG_FILE = $masterlocalconfigfile\n";
 	} else {
 		print NCF "$line\n";
 	}
