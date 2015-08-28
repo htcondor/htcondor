@@ -109,7 +109,7 @@ $success = sub
 			$passed3 = 1;
 			next;
 		}
-		if(/Submitting Condor Node E_A job/){
+		if(/Submitting HTCondor Node E_A job/){
 			CondorTest::debug("Condor Node E_A job submitted eventually, as expected.\n");
 			$passed4 = 1;
 			next;

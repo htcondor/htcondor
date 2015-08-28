@@ -42,7 +42,7 @@ static const char *RECOVERY_FINISHED_NAME = "RECOVERY_FINISHED";
 static const char *RECOVERY_FAILURE_NAME = "RECOVERY_FAILURE";
 static const char *SUBMIT_FAILURE_NAME = "SUBMIT_FAILURE";
 
-	// Default Condor ID to use to check for invalid IDs.
+	// Default HTCondor ID to use to check for invalid IDs.
 static const CondorID DEFAULT_CONDOR_ID;
 
 //---------------------------------------------------------------------------
@@ -485,7 +485,7 @@ JobstateLog::Write( const time_t *eventTimeP, const MyString &info )
 void
 JobstateLog::CondorID2Str( int cluster, int proc, MyString &idStr )
 {
-		// Make sure Condor ID is valid.
+		// Make sure HTCondor ID is valid.
 	if ( cluster != DEFAULT_CONDOR_ID._cluster ) {
 		idStr.formatstr( "%d.%d", cluster, proc );
 	} else {

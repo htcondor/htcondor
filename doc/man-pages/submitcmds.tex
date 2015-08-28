@@ -1068,6 +1068,8 @@ to be transferred
 back from the temporary working directory on the execute machine to
 the submit machine.
 If there are multiple files, they must be delimited with commas.
+Setting \SubmitCmd{transfer\_output\_files} to the empty string (\verb@""@)
+means that no files are to be transferred.
 
 For HTCondor-C jobs and all other non-grid universe jobs,
 if \SubmitCmdNI{transfer\_output\_files} is not specified,

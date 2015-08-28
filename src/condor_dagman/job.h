@@ -46,7 +46,7 @@ class DagmanMetrics;
 
 typedef int JobID_t;
 
-/**  The job class represents a job in the DAG and its state in the Condor
+/**  The job class represents a job in the DAG and its state in the HTCondor
      system.  A job is given a name, a CondorID, and three queues.  The
      parents queue is a list of parent jobs that this one depends on.  That
      queue never changes once set.  The waiting queue is the same as the
@@ -55,11 +55,11 @@ typedef int JobID_t;
      Once set, this queue never changes.<p>
 
      From DAGMan's point of view, a job has six basic states in the
-     Condor system (refer to the Job::status_t enumeration).  It
+     HTCondor system (refer to the Job::status_t enumeration).  It
      starts out as READY, meaning that it has not yet been submitted.
      If the job has a PRE script defined it changes to PRERUN while
      that script executes.  The job's state changes to SUBMITTED once
-     in the Condor system.  If it completes successfully and the job
+     in the HTCondor system.  If it completes successfully and the job
      has a POST script defined it changes to POSTRUN while that script
      executes, otherwise if it completes successfully it is DONE, or
      is in the ERROR state if it completes abnormally.  Note that final
@@ -168,7 +168,7 @@ class Job {
 	inline int GetRetries() const { return retries; }
 	const char* GetPreScriptName() const;
 	const char* GetPostScriptName() const;
-	static const char* JobTypeString() { return "Condor"; }
+	static const char* JobTypeString() { return "HTCondor"; }
 
 	bool AddScript( bool post, const char *cmd, int defer_status,
 				time_t defer_time, MyString &whynot );
@@ -560,7 +560,7 @@ private:
 	ThrottleByCategory::ThrottleInfo *_throttleInfo;
 
 		// Whether this is a noop job (shouldn't actually be submitted
-		// to Condor).
+		// to HTCondor).
 	bool _noop;
 
 		// The job tag for this node ("-" if nothing is specified;

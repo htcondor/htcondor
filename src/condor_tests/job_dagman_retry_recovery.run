@@ -121,7 +121,7 @@ $success = sub
 								"wrong sequence\n");
 				}
 
-			} elsif( $line =~ /Event: ULOG_SUBMIT for Condor Node A/ ) {
+			} elsif( $line =~ /Event: ULOG_SUBMIT for HTCondor Node A/ ) {
 				CondorTest::debug("$name: $line\n",1);
 				if( $cache_state == 0 ) {
 					# Pre-recovery -- okay.
@@ -132,7 +132,7 @@ $success = sub
 								"wrong sequence\n");
 				}
 
-			} elsif( $line =~ /Event: ULOG_JOB_TERMINATED for Condor Node C/ ) {
+			} elsif( $line =~ /Event: ULOG_JOB_TERMINATED for HTCondor Node C/ ) {
 				CondorTest::debug("$name: $line\n",1);
 				if( $cache_state == 2 or $cache_state == 3 ) {
 					$cache_state++;

@@ -72,7 +72,7 @@ int main(int argc, char *argv[])
 {
 	printf("\n");
 
-		// Set up the dprintf stuff to write to stderr, so that Condor
+		// Set up the dprintf stuff to write to stderr, so that HTCondor
 		// libraries which use it will write to the right place...
 	dprintf_set_tool_debug("TOOL", 0);
 	set_debug_flags(NULL, D_ALWAYS | D_NOHEADER);
@@ -366,13 +366,13 @@ int
 submitDag( SubmitDagShallowOptions &shallowOpts )
 {
 	printf("-----------------------------------------------------------------------\n");
-	printf("File for submitting this DAG to Condor           : %s\n", 
+	printf("File for submitting this DAG to HTCondor           : %s\n", 
 			shallowOpts.strSubFile.Value());
 	printf("Log of DAGMan debugging messages                 : %s\n",
 		   	shallowOpts.strDebugLog.Value());
-	printf("Log of Condor library output                     : %s\n", 
+	printf("Log of HTCondor library output                     : %s\n", 
 			shallowOpts.strLibOut.Value());
-	printf("Log of Condor library error messages             : %s\n", 
+	printf("Log of HTCondor library error messages             : %s\n", 
 			shallowOpts.strLibErr.Value());
 	printf("Log of the life of condor_dagman itself          : %s\n",
 		   	shallowOpts.strSchedLog.Value());
@@ -416,7 +416,7 @@ submitDag( SubmitDagShallowOptions &shallowOpts )
 	}
 	else
 	{
-		printf("-no_submit given, not submitting DAG to Condor.  "
+		printf("-no_submit given, not submitting DAG to HTCondor.  "
 					"You can do this with:\n");
 		printf("\"condor_submit %s\"\n", shallowOpts.strSubFile.Value());
 	}
@@ -520,7 +520,7 @@ void ensureOutputFilesExist(const SubmitDagDeepOptions &deepOpts,
 				 shallowOpts.strRescueFile.Value() );
 	    fprintf( stderr, "  You may want to resubmit your DAG using that "
 				 "file, instead of \"%s\"\n", shallowOpts.primaryDagFile.Value());
-	    fprintf( stderr, "  Look at the Condor manual for details about DAG "
+	    fprintf( stderr, "  Look at the HTCondor manual for details about DAG "
 				 "rescue files.\n" );
 	    fprintf( stderr, "  Please investigate and either remove \"%s\",\n",
 				 shallowOpts.strRescueFile.Value() );
@@ -1264,7 +1264,7 @@ int printUsage(int iExitCode)
 	printf("    -help               (print usage info and exit)\n");
 	printf("    -version            (print version and exit)\n");
 	printf("    -dagman <path>      (Full path to an alternate condor_dagman executable)\n");
-    printf("    -no_submit          (DAG is not submitted to Condor)\n");
+    printf("    -no_submit          (DAG is not submitted to HTCondor)\n");
     printf("    -verbose            (Verbose error messages from condor_submit_dag)\n");
     printf("    -force              (Overwrite files condor_submit_dag uses if they exist)\n");
     printf("    -r <schedd_name>    (Submit to the specified remote schedd)\n");
@@ -1274,7 +1274,7 @@ int printUsage(int iExitCode)
     printf("    -maxjobs <number>   (Maximum number of jobs ever submitted at once)\n");
     printf("    -MaxPre <number>    (Maximum number of PRE scripts to run at once)\n");
     printf("    -MaxPost <number>   (Maximum number of POST scripts to run at once)\n");
-    printf("    -notification <value> (Determines how much email you get from Condor.\n");
+    printf("    -notification <value> (Determines how much email you get from HTCondor.\n");
     printf("        See the condor_submit man page for values.)\n");
     printf("    -NoEventChecks      (Now ignored -- use DAGMAN_ALLOW_EVENTS)\n"); 
     printf("    -DontAlwaysRunPost  (Don't run POST script if PRE script fails)\n");

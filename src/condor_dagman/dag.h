@@ -92,7 +92,7 @@ class Dag {
   
     /** Create a DAG
 		@param dagFile the DAG file name
-        @param maxJobsSubmitted the maximum number of jobs to submit to Condor
+        @param maxJobsSubmitted the maximum number of jobs to submit to HTCondor
                at one time
         @param maxPreScripts the maximum number of PRE scripts to spawn at
 		       one time
@@ -108,8 +108,8 @@ class Dag {
 		       job, to put the node at the head of the ready queue
 		@param retryNodeFirst whether, when a node fails and has retries,
 			   to put the node at the head of the ready queue
-		@param condorRmExe executable to remove Condor jobs
-		@param DAGManJobId Condor ID of this DAGMan process
+		@param condorRmExe executable to remove HTCondor jobs
+		@param DAGManJobId HTCondor ID of this DAGMan process
 		@param prohibitMultiJobs whether submit files queueing multiple
 			   job procs are prohibited
 		@param submitDepthFirst whether ready nodes should be submitted
@@ -182,7 +182,7 @@ class Dag {
 	*/
 	void RunWaitingScripts();
   
-    /** Blocks until the Condor Log file grows.
+    /** Blocks until the HTCondor Log file grows.
         @return true: log file grew, false: timeout or shrinkage
     */
     bool DetectCondorLogGrowth();
@@ -291,7 +291,7 @@ class Dag {
     Job * FindNodeByName (const char * jobName) const;
 
     /** Get pointer to job with condor ID condorID
-        @param condorID the CondorID of the job in the DAG
+        @param condorID the HTCondorID of the job in the DAG
         @return address of Job object, or NULL if not found
     */
     Job * FindNodeByEventID ( const CondorID condorID ) const;
@@ -447,14 +447,14 @@ class Dag {
     /** Remove all jobs (using condor_rm) that are currently running.
         All jobs currently marked Job::STATUS_SUBMITTED will be fed
         as arguments to condor_rm via popen.  This function is called
-        when the Dagman Condor job itself is removed by the user via
+        when the Dagman HTCondor job itself is removed by the user via
         condor_rm.  This function <b>is not</b> called when the schedd
         kills Dagman.
-		@param dmJobId: the Condor ID of this DAGMan job.
-		@param removeCondorJobs: iff true we, remove our Condor node jobs.
+		@param dmJobId: the HTCondor ID of this DAGMan job.
+		@param removeCondorJobs: iff true we, remove our HTCondor node jobs.
 			This is set to false when DAGMan itself is condor_rm'ed,
 			because in that case the schedd removes the node jobs.
-		@param bForce: iff true, we run the command to remove Condor
+		@param bForce: iff true, we run the command to remove HTCondor
 			node jobs even if we don't think we have any -- I think this
 			is in case we have a failure in recovery mode before we've
 			read the logs.  Setting bForce to true automatically
@@ -465,7 +465,7 @@ class Dag {
 
     /** Remove all pre- and post-scripts that are currently running.
 	All currently running scripts will be killed via daemoncore.
-	This function is called when the Dagman Condor job itself is
+	This function is called when the Dagman HTCondor job itself is
 	removed by the user via condor_rm.  This function <b>is not</b>
 	called when the schedd kills Dagman.
     */
@@ -640,17 +640,17 @@ class Dag {
 
 	StringList& DagFiles(void) { return _dagFiles; }
 
-	/** Determine whether a job is a NOOP job based on the Condor ID.
-		@param the Condor ID of the job
+	/** Determine whether a job is a NOOP job based on the HTCondor ID.
+		@param the HTCondor ID of the job
 		@return true iff the job is a NOOP
 	*/
 	static bool JobIsNoop( const CondorID &id ) {
 		return (id._cluster == 0) && (id._proc == Job::NOOP_NODE_PROCID);
 	}
 
-	/** Get the part of the CondorID that we're indexing by (cluster ID
+	/** Get the part of the HTCondorID that we're indexing by (cluster ID
 		for "normal" jobs, subproc ID for NOOP jobs).
-		@param the Condor ID of the job
+		@param the HTCondor ID of the job
 		@return the part of the ID to index by
 	*/
 	static int GetIndexID( const CondorID &id ) {
@@ -817,24 +817,24 @@ class Dag {
 		SUBMIT_RESULT_NO_SUBMIT,
 	} submit_result_t;
 
-	/** Submit the Condor job for a node, including doing
+	/** Submit the HTCondor job for a node, including doing
 		some higher-level work such as sleeping before the actual submit
 		if necessary.
 		@param the appropriate Dagman object
 		@param the node for which to submit a job
-		@param reference to hold the Condor ID the job is assigned
+		@param reference to hold the HTCondor ID the job is assigned
 		@return submit_result_t (see above)
 	*/
 	submit_result_t SubmitNodeJob( const Dagman &dm, Job *node,
 				CondorID &condorID );
 
-	/** Do the post-processing of a successful submit of a Condor job.
+	/** Do the post-processing of a successful submit of a HTCondor job.
 		@param the node for which the job was just submitted
-		@param the Condor ID of the associated job
+		@param the HTCondor ID of the associated job
 	*/	
 	void ProcessSuccessfulSubmit( Job *node, const CondorID &condorID );
 
-	/** Do the post-processing of a failed submit of a Condor job.
+	/** Do the post-processing of a failed submit of a HTCondor job.
 		@param the node for which the job was just submitted
 		@param the maximum number of submit attempts allowed for a job.
 	*/
@@ -978,7 +978,7 @@ private:
 
 	HashTable<JobID_t, Job *>		_nodeIDHash;
 
-	// Hash by CondorID (really just by the cluster ID because all
+	// Hash by HTCondorID (really just by the cluster ID because all
 	// procs in the same cluster map to the same node).
 	HashTable<int, Job *>			_condorIDHash;
 
@@ -1025,17 +1025,17 @@ private:
 		// queue.  (Default is false.)
 	bool		m_retryNodeFirst;
 
-		// Executable to remove Condor jobs.
+		// Executable to remove HTCondor jobs.
 	const char *	_condorRmExe;
 
-		// Condor ID of this DAGMan process.
+		// HTCondor ID of this DAGMan process.
 	const CondorID *	_DAGManJobId;
 
-	// queue of jobs ready to be submitted to Condor
+	// queue of jobs ready to be submitted to HTCondor
 	PrioritySimpleList<Job*>* _readyQ;
 
 	// queue of submitted jobs not yet matched with submit events in
-	// the Condor job log
+	// the HTCondor job log
     Queue<Job*>* _submitQ;
 
 	ScriptQ* _preScriptQ;
@@ -1136,7 +1136,7 @@ private:
 		// The last time we printed a pending node report.
 	time_t		_lastPendingNodePrintTime;
 
-		// Default Condor ID to use in reseting a node's Condor ID on
+		// Default HTCondor ID to use in reseting a node's HTCondor ID on
 		// retry.
 	static const CondorID	_defaultCondorId;
 

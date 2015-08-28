@@ -95,7 +95,7 @@ $success = sub
 			chomp();
 			$line = $_;
 
-			if( $line =~ /Event: ULOG_SUBMIT for Condor Node A/ ) {
+			if( $line =~ /Event: ULOG_SUBMIT for HTCondor Node A/ ) {
 				CondorTest::debug("$name: $line\n",1);
 				if( $dag_state == 0 or $dag_state == 2) {
 					$dag_state++;
@@ -112,7 +112,7 @@ $success = sub
 				}
 
 #TEMP -- add a check for the "...Looking for retry of node A..." line?
-			} elsif( $line =~ /Event: ULOG_JOB_TERMINATED for Condor Node A/ ) {
+			} elsif( $line =~ /Event: ULOG_JOB_TERMINATED for HTCondor Node A/ ) {
 				CondorTest::debug("$name: $line\n",1);
 				if( $dag_state == 3) {
 					$dag_state++;

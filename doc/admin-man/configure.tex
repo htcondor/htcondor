@@ -4475,19 +4475,21 @@ will not want to change them for any reason.
   these keys cannot be unintentionally obtained by user jobs. 
 
 \item[\Macro{ENABLE\_KERNEL\_TUNING}]
-  A boolean value that defaults to \Expr{True}.  When \Expr{True},
-  but only on Linux,
-  the \Condor{Master} daemon will run the kernel tuning script once
-  (as root) when it starts up.
+  Relevant only to Linux platforms, a boolean value that defaults 
+  to \Expr{True}.
+  When \Expr{True},
+  the \Condor{master} daemon invokes the kernel tuning script 
+  specified by configuration variable \MacroNI{LINUX\_KERNEL\_TUNING\_SCRIPT}
+  once as root when the \Condor{master} daemon starts up.
 
 \item[\Macro{KERNEL\_TUNING\_LOG}]
-  A string value that defaults to \Expr{$(LOG)/KernelTuningLog}.  If
-  the kernel tuning script runs, its output will be logged to this file.
+  A string value that defaults to \File{\$(LOG)/KernelTuningLog}.  
+  If the kernel tuning script runs, its output will be logged to this file.
 
 \item[\Macro{LINUX\_KERNEL\_TUNING\_SCRIPT}]
-  A string value that defaults to \Expr{$(LIBEXEC)/linux_kernel_tuning}.
-  This is the script that the \Condor{master} will run to tune the
-  kernel.
+  A string value that defaults to \File{\$(LIBEXEC)/linux\_kernel\_tuning}.
+  This is the script that the \Condor{master} runs to tune the
+  kernel when \MacroNI{ENABLE\_KERNEL\_TUNING} is \Expr{True}.
 
 \end{description}
 
@@ -4914,6 +4916,21 @@ WANT_HOLD_REASON = \
   determine when the console is in use. Instead, use the \Condor{kbdd} daemon,
   which gets this information by connecting to the X server.
   
+\label{param:KbddBumpCheckSize}
+\item[\Macro{KBDD\_BUMP\_CHECK\_SIZE}]
+  The number of pixels that the mouse can move in the X and/or Y direction,
+  while still being considered a bump, and not keyboard activity. 
+  If the movement is greater than this bump size then the move is 
+  not a transient one, and it will register as activity. 
+  The default is 16, and units are pixels. 
+  Setting the value to 0 effectively disables bump testing.
+
+\label{param:KbddBumpCheckAfterIdleTime}
+\item[\Macro{KBDD\_BUMP\_CHECK\_AFTER\_IDLE\_TIME}]
+  The number of seconds of keyboard idle time that will pass 
+  before bump testing begins. 
+  The default is 15 minutes. 
+
 \label{param:StartdJobExprs}
 \item[\Macro{STARTD\_JOB\_EXPRS}]
   When the machine is claimed by a remote user,
@@ -5274,8 +5291,10 @@ page~\pageref{sec:Configuring-SMP} for details.
 \item[\Macro{SLOTS\_CONNECTED\_TO\_CONSOLE}] 
   An integer which indicates how many of the machine slots
   the \Condor{startd} is representing should be "connected" to the
-  console (in other words, notice when there's console activity).
-  This defaults to all slots (N in a machine with N CPUs).
+  console.
+  This allows the \Condor{startd} to notice console activity.
+  Defaults to the number of slots in the machine,
+  which is \MacroUNI{NUM\_CPUS}.
 
 \label{param:SlotsConnectedToKeyboard}
 \item[\Macro{SLOTS\_CONNECTED\_TO\_KEYBOARD}]
@@ -5965,6 +5984,12 @@ availability statistics in the \Condor{startd}.
   DOCKER = sudo /usr/bin/docker
 \end{verbatim}
 
+\label{param:DockerImageCacheSize}
+\item[\Macro{DOCKER\_IMAGE\_CACHE\_SIZE}]
+  The number of most recently used Docker images that will be kept on the
+  local machine.
+  The default value is 20.
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -6466,7 +6491,7 @@ MAX_JOBS_RUNNING	= \
 
 \label{param:JobIsFinishedCount}
 \item[\Macro{JOB\_IS\_FINISHED\_COUNT}]
-  An integer value representing the number of jobs the the \Condor{schedd}
+  An integer value representing the number of jobs that the \Condor{schedd}
   will let permanently leave the job queue each time that it examines the
   jobs that are ready to do so.
   The default value is 1.
@@ -6474,10 +6499,11 @@ MAX_JOBS_RUNNING	= \
 \label{param:JobIsFinishedInterval}
 \item[\Macro{JOB\_IS\_FINISHED\_INTERVAL}]
   The \Condor{schedd} maintains a list of jobs that are ready to permanently
-  leave the job queue, e.g. they have completed or been removed.  This
-  integer-valued macro specifies a delay in seconds to place between the
-  taking jobs permanently out of the queue.  The default value is 0, which
-  tells the \Condor{schedd} to not impose any delay.  
+  leave the job queue, for example, when they have completed or been removed.
+  This integer-valued macro specifies a delay in seconds between instances
+  of taking jobs permanently out of the queue.  
+  The default value is 0, 
+  which tells the \Condor{schedd} to not impose any delay.  
   
 \label{param:AliveInterval}
 \item[\Macro{ALIVE\_INTERVAL}]

@@ -864,7 +864,7 @@ void main_init (int argc, char ** const argv) {
 
 		// Just generate this message fragment in one place.
 	MyString versionMsg;
-	versionMsg.formatstr("the version (%s) of this DAG's Condor submit "
+	versionMsg.formatstr("the version (%s) of this DAG's HTCondor submit "
 				"file (created by condor_submit_dag)", csdVersion );
 
 		// Make sure version in submit file is valid.
