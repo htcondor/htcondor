@@ -119,7 +119,7 @@ int main(int argc, const char *argv[])
         {
             if ( ! argv[lastLoc])
             {
-                size_t cb = fwrite(readBuffer.c_str(), 1, readBuffer.length(), stdout);
+                fwrite(readBuffer.c_str(), 1, readBuffer.length(), stdout);
                 return 0;
             }
             else
