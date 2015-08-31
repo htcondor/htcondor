@@ -35,17 +35,14 @@
 #include "error_utils.h"
 #include "condor_distribution.h"
 #include "condor_version.h"
+#include "natural_cmp.h"
 
 #include <vector>
 #include <sstream>
 #include <iostream>
 
-// use strverscmp for numerical sorting of hosts/slots if available
-#if defined(GLIBC)
-# define STRVCMP (naturalSort ? strverscmp : strcmp)
-#else
-# define STRVCMP strcmp
-#endif
+// if enabled, use natural_cmp for numerical sorting of hosts/slots
+#define STRVCMP (naturalSort ? natural_cmp : strcmp)
 
 using std::vector;
 using std::string;
@@ -114,9 +111,7 @@ char		buffer[1024];
 char		*myName;
 vector<SortSpec> sortSpecs;
 bool            noSort = false; // set to true to disable sorting entirely
-#if defined(GLIBC)
 bool            naturalSort = false;
-#endif
 bool            javaMode = false;
 bool			vmMode = false;
 bool			absentMode = false;
@@ -762,9 +757,7 @@ usage ()
 		"\n    and [display-opts] are one or more of\n"
 		"\t-long\t\t\tDisplay entire classads\n"
 		"\t-sort <expr>\t\tSort entries by expressions. 'no' disables sorting\n"
-#if defined(GLIBC)
 		"\t-natural\t\t\tUse natural sort order in default output\n"
-#endif
 		"\t-total\t\t\tDisplay totals only\n"
 //		"\t-verbose\t\tSame as -long\n"
 		"\t-expert\t\t\tDisplay shorter error messages\n"
@@ -1136,11 +1129,9 @@ firstPass (int argc, char *argv[])
 				// the silent constraint TARGET.%s =!= UNDEFINED is added
 				// as a customAND constraint on the second pass
 		} else
-#if defined(GLIBC)
 		if (matchPrefix (argv[i], "-natural", 4)) {
 			naturalSort = true;
 		} else
-#endif
 		if (matchPrefix (argv[i], "-submitters", 5)) {
 			setMode (MODE_SCHEDD_SUBMITTORS, i, argv[i]);
 		} else
