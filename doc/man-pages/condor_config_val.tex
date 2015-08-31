@@ -48,7 +48,7 @@ Persistent settings remain when the daemon is restarted.
 Configuration variables for a specific daemon on a given machine
 may be set or unset for the time period that the daemon continues to run
 using a \Arg{-rset} or \Arg{-runset} \Opt{edit option}.
-These runtime settings are lost when the daemon is restarted.  
+These runtime settings will override persistent settings until the daemon is restarted.
 Any changes made will not take effect until \Condor{reconfig} is invoked.
 
 In general, modifying a host's configuration with
