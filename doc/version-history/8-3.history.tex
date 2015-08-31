@@ -129,6 +129,13 @@ works with \Macro{JOB\_IS\_FINISHED\_INTERVAL} to control how many jobs
 can leave the queue at a time. The default value is 1.
 \Ticket{5168}
 
+\item Performance of sending updates to the Collector over TCP has been 
+	improved.  Previously, sending multiple ads concurrently to the
+	Collector could result in creating and authenticating multiple
+	TCP connections; now concurrent collector updates are serialized
+	over one TCP connection.
+\Ticket{5161}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
