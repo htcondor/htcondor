@@ -48,23 +48,23 @@ function loadIframe(iframeName, url) {
 </p>
 
 <iframe id="iftable" 
-src="http://pages.cs.wisc.edu/~tannenba/view/render.html?url=foo.cgi&order=State&pivot=Date;State;Cpus&chart=stacked"
+src="render.html?url=foo.json&order=State&pivot=Date;State;Cpus&chart=stacked"
 > </iframe>
 
 <p>
-<a href="http://pages.cs.wisc.edu/~tannenba/view/render.html?url=foo.cgi&order=State&pivot=Date;State;Cpus&chart=stacked" onclick="return loadIframe('iftable',this.href);"> [State view] </a>
-<a href="http://pages.cs.wisc.edu/~tannenba/view/render.html?url=foo.cgi&order=State&pivot=Date;State,Activity;Cpus&chart=stacked" onclick="return loadIframe('iftable',this.href);"> [State+Activity view] </a>
-<a href="http://pages.cs.wisc.edu/~tannenba/view/render.html?url=foo.cgi&filter=User!=unknown&order=Cpus&pivot=Date;User;Cpus&chart=stacked" onclick="return loadIframe('iftable',this.href);"> [User view] </a>
+<a href="render.html?url=foo.json&order=State&pivot=Date;State;Cpus&chart=stacked" onclick="return loadIframe('iftable',this.href);"> [State view] </a>
+<a href="render.html?url=foo.json&order=State&pivot=Date;State,Activity;Cpus&chart=stacked" onclick="return loadIframe('iftable',this.href);"> [State+Activity view] </a>
+<a href="render.html?url=foo.json&filter=User!=unknown&order=Cpus&pivot=Date;User;Cpus&chart=stacked" onclick="return loadIframe('iftable',this.href);"> [User view] </a>
 
 <h3>Top Users</h3>
 
 
-<a href="http://pages.cs.wisc.edu/~tannenba/view/render.html?url=foo.cgi&filter=User=bbee@bmrb.wisc.edu&pivot=Date;User;Cpus&chart=stacked" onclick="return loadIframe('iftable',this.href);">User view</a>
+<a href="render.html?url=foo.json&filter=User=bbee@bmrb.wisc.edu&pivot=Date;User;Cpus&chart=stacked" onclick="return loadIframe('iftable',this.href);">User view</a>
 
 <p>
 
 <iframe height=100% width=100%
-src="http://pages.cs.wisc.edu/~tannenba/view/render.html?url=foo.cgi&filter=Activity=Busy&group=User;min(Cpus),max(Cpus),avg(Cpus)&order=-avgCpus"
+src="render.html?url=foo.json&filter=Activity=Busy&group=User;min(Cpus),max(Cpus),avg(Cpus)&order=-avgCpus"
 > </iframe>
 
 

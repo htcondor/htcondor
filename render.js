@@ -2098,7 +2098,9 @@ var afterquery = (function() {
     var start = data.indexOf('jsonp(');
     if (start >= 0) {
       data = data.substr(start + 6, data.length - start - 6 - 2);
-    }
+    } else if (start == -1) {
+		data = "[" + data + "]";
+	}
     console.debug('in extractJsonFromJsonp start: ', start);
     data = JSON.parse(data);
     success_func(data);
@@ -2232,10 +2234,8 @@ var afterquery = (function() {
     getUrlData_xhr(url, success_func, onError);
   }
 
-
-  function addUrlGetters(queue, args, startdata) {
+  function addUrlGettersDirect(queue, url, startdata) {
     if (!startdata) {
-      var url = args.get('url');
       console.debug('original data url:', url);
       if (!url) throw new Error('Missing url= in query parameter');
       if (url.indexOf('//') == 0) url = window.location.protocol + url;
@@ -2257,6 +2257,10 @@ var afterquery = (function() {
       console.debug('grid:', outgrid);
       done(outgrid);
     });
+  }
+
+  function addUrlGetters(queue, args, startdata) {
+    addUrlGettersDirect(queue, args.get('url'), startdata);
   }
 
 
