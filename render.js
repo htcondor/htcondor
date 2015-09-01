@@ -48,6 +48,13 @@ var afterquery = (function() {
     };
   }
 
+  function debug_log() {
+      if(0) {
+          var args = ["render.js:"]; 
+          for(var i = 0; i < arguments.length; i++) { args.push(arguments[i]); }
+          console.log.apply(console, args);
+      }
+  }
 
   function err(s) {
     $('#vizlog').append('\n' + s);
@@ -58,7 +65,7 @@ var afterquery = (function() {
     $('#statustext').html(s);
     $('#statussub').text(s2 || '');
     if (s || s2) {
-      console.debug('status message:', s, s2);
+      debug_log('status message:', s, s2);
       $('#vizstatus').show();
     } else {
       $('#vizstatus').hide();
@@ -87,8 +94,8 @@ var afterquery = (function() {
       out[key] = value;
       outlist.push([key, value]);
     }
-    console.debug('query args:', out);
-    console.debug('query arglist:', outlist);
+    debug_log('query args:', out);
+    debug_log('query arglist:', outlist);
     return {
       get: function(key) { return out[key]; },
       all: outlist
@@ -194,7 +201,7 @@ var afterquery = (function() {
             mn = minval;
             mx = maxval;
           } else if (options.intensify == 'y') {
-            console.debug(colmin, colmax);
+            debug_log(colmin, colmax);
             mn = colmin[coli];
             mx = colmax[coli];
           } else if (options.intensify == 'x') {
@@ -203,7 +210,7 @@ var afterquery = (function() {
             throw new Error("unknown intensify= mode '" +
                             options.intensify + "'");
           }
-          console.debug('coli=' + coli + ' mn=' + mn + ' mx=' + mx);
+          debug_log('coli=' + coli + ' mn=' + mn + ' mx=' + mx);
           formatter.addGradientRange(mn - 1, 0, null, '#f88', '#fff');
           formatter.addGradientRange(0, mx + 1, null, '#fff', '#88f');
           formatter.format(datatable, parseInt(coli));
@@ -248,7 +255,7 @@ var afterquery = (function() {
               cell == 'True' || cell == 'False')) impossible[coli] |= CANT_BOOL;
       }
     }
-    console.debug('guessTypes impossibility list:', impossible);
+    debug_log('guessTypes impossibility list:', impossible);
     var types = [];
     for (var coli in impossible) {
       var imp = impossible[coli];
@@ -589,11 +596,11 @@ var afterquery = (function() {
         }
         valuecols.push(colnum);
         valuefuncs.push(func);
-		if (g) {
-        	outgrid.headers.push(field == '*' ? '_count' : g[1] + ingrid.headers[colnum]);
-		} else {
-        	outgrid.headers.push(field == '*' ? '_count' : ingrid.headers[colnum]);
-		}
+        if (g) {
+          outgrid.headers.push(field == '*' ? '_count' : g[1] + ingrid.headers[colnum]);
+        } else {
+          outgrid.headers.push(field == '*' ? '_count' : ingrid.headers[colnum]);
+        }
         outgrid.types.push(func.return_type || ingrid.types[colnum]);
       }
     };
@@ -661,8 +668,8 @@ var afterquery = (function() {
           }
         }
       }
-      console.debug('pivot colkey_outcols', colkey_outcols);
-      console.debug('pivot valuecols:', valuecols);
+      debug_log('pivot colkey_outcols', colkey_outcols);
+      debug_log('pivot valuecols:', valuecols);
     };
 
     // by the time pivotBy is called, we're guaranteed that there's only one
@@ -855,7 +862,7 @@ var afterquery = (function() {
 
 
   function doGroupBy(grid, argval) {
-    console.debug('groupBy:', argval);
+    debug_log('groupBy:', argval);
     var parts = argval.split(';', 2);
     var keys = splitNoEmpty(parts[0], ',');
     var values;
@@ -877,15 +884,15 @@ var afterquery = (function() {
       // remaining non-key columns as values.
       values = keysOtherThan(grid, keys);
     }
-    console.debug('grouping by', keys, values);
+    debug_log('grouping by', keys, values);
     grid = groupBy(grid, keys, values);
-    console.debug('grid:', grid);
+    debug_log('grid:', grid);
     return grid;
   }
 
 
   function doTreeGroupBy(grid, argval) {
-    console.debug('treeGroupBy:', argval);
+    debug_log('treeGroupBy:', argval);
     var parts = argval.split(';', 2);
     var keys = splitNoEmpty(parts[0], ',');
     var values;
@@ -898,46 +905,46 @@ var afterquery = (function() {
       // remaining non-key columns as values.
       values = keysOtherThan(grid, keys);
     }
-    console.debug('treegrouping by', keys, values);
+    debug_log('treegrouping by', keys, values);
     grid = groupBy(grid, keys, values);
     grid = treeJoinKeys(grid, keys.length);
-    console.debug('grid:', grid);
+    debug_log('grid:', grid);
     return grid;
   }
 
 
   function doFinishTree(grid, argval) {
-    console.debug('finishTree:', argval);
+    debug_log('finishTree:', argval);
     var keys = splitNoEmpty(argval, ',');
-    console.debug('finishtree with keys', keys);
+    debug_log('finishtree with keys', keys);
     grid = finishTree(grid, keys);
-    console.debug('grid:', grid);
+    debug_log('grid:', grid);
     return grid;
   }
 
 
   function doInvertTree(grid, argval) {
-    console.debug('invertTree:', argval);
+    debug_log('invertTree:', argval);
     var keys = splitNoEmpty(argval, ',');
-    console.debug('invertTree with key', keys[0]);
+    debug_log('invertTree with key', keys[0]);
     grid = invertTree(grid, keys[0]);
-    console.debug('grid:', grid);
+    debug_log('grid:', grid);
     return grid;
   }
 
 
   function doCrackTree(grid, argval) {
-    console.debug('crackTree:', argval);
+    debug_log('crackTree:', argval);
     var keys = splitNoEmpty(argval, ',');
-    console.debug('cracktree with key', keys[0]);
+    debug_log('cracktree with key', keys[0]);
     grid = crackTree(grid, keys[0]);
-    console.debug('grid:', grid);
+    debug_log('grid:', grid);
     return grid;
   }
 
 
   function doPivotBy(grid, argval) {
-    console.debug('pivotBy:', argval);
+    debug_log('pivotBy:', argval);
 
     // the parts are rowkeys;colkeys;values
     var parts = argval.split(';', 3);
@@ -957,7 +964,7 @@ var afterquery = (function() {
     // first group by the rowkeys+colkeys, so there is only one row for each
     // unique rowkeys+colkeys combination.
     grid = groupBy(grid, rowkeys.concat(colkeys), values);
-    console.debug('tmpgrid:', grid);
+    debug_log('tmpgrid:', grid);
 
     // now actually do the pivot.
     grid = pivotBy(grid, rowkeys, colkeys, values);
@@ -1030,16 +1037,16 @@ var afterquery = (function() {
 
 
   function doFilterBy(grid, argval) {
-    console.debug('filterBy:', argval);
+    debug_log('filterBy:', argval);
     var ops = ['>=', '<=', '==', '!=', '<>', '>', '<', '='];
     var parts;
     for (var opi in ops) {
       var op = ops[opi];
       if ((parts = trySplitOne(argval, op))) {
         var matches = parts[1].split(',');
-        console.debug('filterBy parsed:', parts[0], op, matches);
+        debug_log('filterBy parsed:', parts[0], op, matches);
         grid = filterBy(grid, parts[0], op, matches);
-        console.debug('grid:', grid);
+        debug_log('grid:', grid);
         return grid;
       }
     }
@@ -1081,9 +1088,9 @@ var afterquery = (function() {
 
 
   function doQueryBy(grid, argval) {
-    console.debug('queryBy:', argval);
+    debug_log('queryBy:', argval);
     grid = queryBy(grid, argval.split(','));
-    console.debug('grid:', grid);
+    debug_log('grid:', grid);
     return grid;
   }
 
@@ -1132,9 +1139,9 @@ var afterquery = (function() {
 
 
   function doDeltaBy(grid, argval) {
-    console.debug('deltaBy:', argval);
+    debug_log('deltaBy:', argval);
     grid = deltaBy(grid, argval.split(','));
-    console.debug('grid:', grid);
+    debug_log('grid:', grid);
     return grid;
   }
 
@@ -1170,9 +1177,9 @@ var afterquery = (function() {
 
 
   function doUnselectBy(grid, argval) {
-    console.debug('unselectBy:', argval);
+    debug_log('unselectBy:', argval);
     grid = unselectBy(grid, argval.split(','));
-    console.debug('grid:', grid);
+    debug_log('grid:', grid);
     return grid;
   }
 
@@ -1188,7 +1195,7 @@ var afterquery = (function() {
       }
       keycols.push([keyToColNum(grid, key), invert]);
     }
-    console.debug('sort keycols', keycols);
+    debug_log('sort keycols', keycols);
     var comparator = function(a, b) {
       for (var keyi in keycols) {
         var keycol = keycols[keyi][0], invert = keycols[keyi][1];
@@ -1214,9 +1221,9 @@ var afterquery = (function() {
 
 
   function doOrderBy(grid, argval) {
-    console.debug('orderBy:', argval);
+    debug_log('orderBy:', argval);
     grid = orderBy(grid, argval.split(','));
-    console.debug('grid:', grid);
+    debug_log('grid:', grid);
     return grid;
   }
 
@@ -1240,14 +1247,14 @@ var afterquery = (function() {
 
 
   function doExtractRegexp(grid, argval) {
-    console.debug('extractRegexp:', argval);
+    debug_log('extractRegexp:', argval);
     var parts = trySplitOne(argval, '=');
     var colname = parts[0], regexp = parts[1];
     if (regexp.indexOf('(') < 0) {
       throw new Error('extract_regexp should have at least one (regex group)');
     }
     grid = extractRegexp(grid, colname, regexp);
-    console.debug('grid:', grid);
+    debug_log('grid:', grid);
     return grid;
   }
 
@@ -1293,11 +1300,11 @@ var afterquery = (function() {
 
 
   function doQuantize(grid, argval) {
-    console.debug('quantize:', argval);
+    debug_log('quantize:', argval);
     var parts = trySplitOne(argval, '=');
     var colname = parts[0], quants = parts[1].split(',');
     grid = quantize(grid, colname, quants);
-    console.debug('grid:', grid);
+    debug_log('grid:', grid);
     return grid;
   }
 
@@ -1323,12 +1330,12 @@ var afterquery = (function() {
 
 
   function doYSpread(grid, argval) {
-    console.debug('yspread:', argval);
+    debug_log('yspread:', argval);
     if (argval) {
       throw new Error('yspread: no argument expected');
     }
     grid = yspread(grid);
-    console.debug('grid:', grid);
+    debug_log('grid:', grid);
     return grid;
   }
 
@@ -1376,7 +1383,7 @@ var afterquery = (function() {
         }
       }
     }
-    console.debug('fillNullsWithZero filled:', fcount);
+    debug_log('fillNullsWithZero filled:', fcount);
     return grid;
   }
 
@@ -1963,8 +1970,8 @@ var afterquery = (function() {
       // Add params for GViz API into options object.
       addGVizChartOption(options, key, allArgs[i][1]);
     }
-    console.debug('Options sent to GViz');
-    console.debug(options);
+    debug_log('Options sent to GViz');
+    debug_log(options);
   }
 
   function addGVizChartOption(options, key, value) {
@@ -2101,7 +2108,7 @@ var afterquery = (function() {
     } else if (start == -1) {
 		data = "[" + data + "]";
 	}
-    console.debug('in extractJsonFromJsonp start: ', start);
+    debug_log('in extractJsonFromJsonp start: ', start);
     data = JSON.parse(data);
     success_func(data);
   }
@@ -2126,7 +2133,7 @@ var afterquery = (function() {
     iframe.onload = function() {
       var successfunc_called;
       var real_success_func = function(data) {
-        console.debug('calling success_func');
+        debug_log('calling success_func');
         success_func(data);
         successfunc_called = true;
       };
@@ -2159,14 +2166,14 @@ var afterquery = (function() {
           } else {
             want_url = oauth2_url + '?' + plus;
           }
-          console.debug('oauth2 redirect:', want_url);
+          debug_log('oauth2 redirect:', want_url);
           checkUrlSafety(want_url);
           document.write('Click here to ' +
                          '<a target="_top" ' +
                          '  href="' + want_url +
                          '">authorize the data source</a>.');
         } else {
-          console.debug('no oauth2 service known for host', hostpart);
+          debug_log('no oauth2 service known for host', hostpart);
           document.write("Data source requires authorization, but I don't " +
                          'know how to oauth2 authorize urls from <b>' +
                          encodeURI(hostpart) +
@@ -2192,7 +2199,7 @@ var afterquery = (function() {
 
       iframe.contentWindow.onpostscript = function() {
         if (successfunc_called) {
-          console.debug('json load was successful.');
+          debug_log('json load was successful.');
         } else {
           err('Error loading data; check javascript console for details.');
           err('<a href="' + encodeURI(url) + '">' + encodeURI(url) + '</a>');
@@ -2225,10 +2232,10 @@ var afterquery = (function() {
 
 
   function getUrlData(url, success_func, error_func) {
-    console.debug('fetching data url:', url);
+    debug_log('fetching data url:', url);
     var onError = function(xhr, msg) {
-      console.debug('xhr returned error:', msg);
-      console.debug('(trying jsonp instead)');
+      debug_log('xhr returned error:', msg);
+      debug_log('(trying jsonp instead)');
       getUrlData_jsonp(url, success_func, error_func);
     };
     getUrlData_xhr(url, success_func, onError);
@@ -2236,7 +2243,7 @@ var afterquery = (function() {
 
   function addUrlGettersDirect(queue, url, startdata) {
     if (!startdata) {
-      console.debug('original data url:', url);
+      debug_log('original data url:', url);
       if (!url) throw new Error('Missing url= in query parameter');
       if (url.indexOf('//') == 0) url = window.location.protocol + url;
       url = extendDataUrl(url);
@@ -2252,9 +2259,9 @@ var afterquery = (function() {
     }
 
     enqueue(queue, 'parse', function(rawdata, done) {
-      console.debug('rawdata:', rawdata);
+      debug_log('rawdata:', rawdata);
       var outgrid = gridFromData(rawdata);
-      console.debug('grid:', outgrid);
+      debug_log('grid:', outgrid);
       done(outgrid);
     });
   }
