@@ -1,4 +1,3 @@
-#include <string.h>
 #include <ctype.h>
 
 // "natural" string compare -- a replacement for strcmp(3)
@@ -20,9 +19,9 @@ int natural_cmp(const char *s1, const char *s2)
 	for (n1_beg = s1; n1_beg > s1_beg && isdigit(n1_beg[-1]); --n1_beg) {}
 	n2_beg = s2 - (s1 - n1_beg);
 
-	// do strcmp unless mismatch touches a digit in both strings
+	// just compare mismatch unless it touches a digit in both strings
 	if (n1_beg == s1 && (!isdigit(*s1) || !isdigit(*s2))) {
-		return strcmp(s1,s2);
+		return *s1 - *s2;
 	}
 
 	// find leading zeros
@@ -42,9 +41,9 @@ int natural_cmp(const char *s1, const char *s2)
 		return (z2_end - n2_beg) - (z1_end - n1_beg);
 	}
 
-	// for an equal positive number of leading zeros, strcmp the rest
+	// for an equal positive number of leading zeros, compare mismatch
 	if (z1_end > n1_beg) {
-		return strcmp(z1_end, z2_end);
+		return *s1 - *s2;
 	}
 
 	// no leading zeros, the rest is an arbitrary length numeric compare
@@ -54,7 +53,7 @@ int natural_cmp(const char *s1, const char *s2)
 	if (n1_end - n1_beg != n2_end - n2_beg) {
 		return (n1_end - n1_beg) - (n2_end - n2_beg);
 	} else {
-		return strcmp(s1,s2);
+		return *s1 - *s2;
 	}
 }
 
