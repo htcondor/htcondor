@@ -49,7 +49,7 @@ var afterquery = (function() {
   }
 
   function debug_log() {
-      if(0) {
+      if(1) {
           var args = ["render.js:"]; 
           for(var i = 0; i < arguments.length; i++) { args.push(arguments[i]); }
           console.log.apply(console, args);
