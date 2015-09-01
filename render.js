@@ -1,3 +1,24 @@
+/*
+ * Copyright 2012 Google Inc. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+/*
+ * 2015 Changes by Todd Tannenbaum and Alan De Smet, 
+ *      Center for High Throughput Computing,
+ *      University of Wisconsin - Madison,
+ *      as part of integration with HTCondor.
+ */
 'use strict';
 
 var afterquery = (function() {
@@ -1804,9 +1825,10 @@ var afterquery = (function() {
           grid = fillNullsWithZero(grid);
         }
         grid = limitDecimalPrecision(grid);
-        if (args.get('title')) {
-          options.title = args.get('title');
-        }
+
+        // Scan and add all args not for afterquery to GViz options.
+        scanGVizChartOptions(args, options);
+
         if (charttype == 'stackedarea' || charttype == 'stacked') {
           t = new google.visualization.AreaChart(el);
           options.isStacked = true;
@@ -1917,6 +1939,46 @@ var afterquery = (function() {
     });
   }
 
+  function scanGVizChartOptions(args, options) {
+    // Parse args to be sent to GViz.
+    var allArgs = args['all'];
+    for (var i in allArgs) {
+      var key = allArgs[i][0];
+      // Ignore params sent for afterquery.
+      if (key == 'trace'
+          || key == 'url'
+          || key == 'chart'
+          || key == 'editlink'
+          || key == 'intensify'
+          || key == 'order'
+          || key == 'group'
+          || key == 'limit'
+          || key == 'filter'
+          || key == 'q'
+          || key == 'pivot'
+          || key == 'treegroup'
+          || key == 'extract_regexp') {
+        continue;
+      }
+      // Add params for GViz API into options object.
+      addGVizChartOption(options, key, allArgs[i][1]);
+    }
+    console.debug('Options sent to GViz');
+    console.debug(options);
+  }
+
+  function addGVizChartOption(options, key, value) {
+    if (key.indexOf('.') > -1) {
+      var subObjects = key.split('.');
+      if (!options[subObjects[0]]) {
+        options[subObjects[0]] = {};
+      }
+      addGVizChartOption(options[subObjects[0]],
+        key.substring(key.indexOf('.') + 1), value);
+    } else {
+      options[key] = value;
+    }
+  }
 
   function finishQueue(queue, args, done) {
     var trace = args.get('trace');
