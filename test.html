@@ -23,7 +23,7 @@
   div#editmenu a:hover {
     background: #aaa;
   }
-  #vizchart {
+  /*#vizchart {
     position: relative;
     overflow: hidden;
     top: 0;
@@ -31,10 +31,15 @@
     left: 0;
     right: 0;
   }
+*/
+	.vizchart {
+	width: 100%;
+	height: 400px;
+	}
   #vizlog {
     white-space: pre;
   }
-  #vizstatus {
+  .vizstatus {
     position: absolute;
     z-index: 4;
     width: 100%;
@@ -94,37 +99,62 @@
 </head>
 <body>
 
-<button id="reload">Reload</button>
-<button id="rerender">Re-render</button>
+<button id="reload1">Reload 1</button>
+<button id="rerender1">Re-render 1</button>
+<button id="reload2">Reload 2</button>
+<button id="rerender2">Re-render 2</button>
 
+<h2>Graph 1</h2>
 <div id='editmenu'><a id='editlink' href='' target='_top'>edit</a></div>
-<div id='vizstatus'>
-  <div id='statustext'></div>
-  <div id='statussub'></div>
+<div id='graph1'>
+<div class='vizstatus'>
+  <div class='statustext'></div>
+  <div class='statussub'></div>
 </div>
-<div id='vizraw'></div>
-<div id='vizchart'></div>
+<div class='vizraw'></div>
+<div class='vizchart'></div>
+</div>
+
+<h2>Graph 2</h2>
+<div id='graph2'>
+<div class='vizstatus'>
+  <div class='statustext'></div>
+  <div class='statussub'></div>
+</div>
+<div class='vizraw'></div>
+<div class='vizchart'></div>
+</div>
+
+<h2>Log</h2>
   <div id='vizlog'></div>
 
 <script>
 $('#editlink').attr('href', 'edit.html' + window.location.search);
 
 var data;
-function load_and_render() {
+function load_and_render(myid) {
 	data = afterquery.load(window.location.search,null,
 		function(){
 		setTimeout(function() {
-			afterquery.render(window.location.search, data.value);
+			afterquery.render(window.location.search, data.value, null,
+myid);
 			},0)
-		}
+		},
+		myid
 		);
 }
 //load_and_render();
 //afterquery.render(window.location.search);
-$('#reload').click(load_and_render);
-$('#rerender').click(function() { afterquery.render(window.location.search,
-data.value); });
+$('#reload1').click(function() { load_and_render('graph1'); });
+$('#rerender1').click(function() { afterquery.render(window.location.search,
+data.value,null,'graph1'); });
+$('#reload2').click(function() { load_and_render('graph2'); });
+$('#rerender2').click(function() { afterquery.render(window.location.search,
+data.value,null,'graph2'); });
 //afterquery.render(window.location.search, data);
+
+$('#graph2.statustext').text('statustext');
+$('#graph2.statussub').text('statustext');
 
 </script>
 

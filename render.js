@@ -19,6 +19,8 @@
  *      University of Wisconsin - Madison,
  *      as part of integration with HTCondor.
  */
+
+// TODO: gotError calls need a myid
 'use strict';
 
 var afterquery = (function() {
@@ -61,14 +63,15 @@ var afterquery = (function() {
   }
 
 
-  function showstatus(s, s2) {
-    $('#statustext').html(s);
-    $('#statussub').text(s2 || '');
+  function showstatus(s, s2, myid) {
+    console.log("showstatus(",s,", ", s2, ", ", myid, ")");
+    $('#'+myid+' .statustext').html(s);
+    $('#'+myid+' .statussub').text(s2 || '');
     if (s || s2) {
       debug_log('status message:', s, s2);
-      $('#vizstatus').show();
+      $('#'+myid+' .vizstatus').show();
     } else {
-      $('#vizstatus').hide();
+      $('#'+myid+' .vizstatus').hide();
     }
   }
 
@@ -1599,7 +1602,7 @@ var afterquery = (function() {
   }
 
 
-  function runqueue(queue, ingrid, done, showstatus, wrap_each, after_each) {
+  function runqueue(queue, ingrid, done, showstatus, wrap_each, after_each, myid) {
     var step = function(i) {
       if (i < queue.length) {
         var el = queue[i];
@@ -1607,7 +1610,7 @@ var afterquery = (function() {
         if (showstatus) {
           showstatus('Running step ' + (+i + 1) + ' of ' +
                      queue.length + '...',
-                     text);
+                     text, myid);
         }
         setTimeout(function() {
           var start = Date.now();
@@ -1623,7 +1626,7 @@ var afterquery = (function() {
         }, 0);
       } else {
         if (showstatus) {
-          showstatus('');
+          showstatus('',null,myid);
         }
         if (done) {
           done(ingrid);
@@ -1815,7 +1818,7 @@ var afterquery = (function() {
   }
 
 
-  function addRenderers(queue, args) {
+  function addRenderers(queue, args, myid) {
     var trace = args.get('trace');
     var chartops = args.get('chart');
     var t, datatable, resizeTimer;
@@ -1827,7 +1830,7 @@ var afterquery = (function() {
     var gridoptions = {
       intensify: intensify
     };
-    var el = document.getElementById('vizchart');
+    var el = $('#'+myid+" .vizchart").get(0);
 
     enqueue(queue, 'gentable', function(grid, done) {
       grid = fillNullsWithZero(grid);
@@ -1998,7 +2001,7 @@ var afterquery = (function() {
     }
   }
 
-  function finishQueue(queue, args, done) {
+  function finishQueue(queue, args, done, myid) {
     var trace = args.get('trace');
     if (trace) {
       if(typeof finishQueue.counter == 'undefined') { 
@@ -2032,15 +2035,15 @@ var afterquery = (function() {
           $('.vizstep').show();
         }
       };
-      runqueue(queue, null, done, showstatus, wrap, after_each);
+      runqueue(queue, null, done, showstatus, wrap, after_each, myid);
     } else {
-      runqueue(queue, null, done, showstatus, wrap);
+      runqueue(queue, null, done, showstatus, wrap, null, myid);
     }
   }
 
 
-  function gotError(url, jqxhr, status) {
-    showstatus('');
+  function gotError(url, jqxhr, status, myid) {
+    showstatus('', null, myid);
     $('#vizraw').html('<a href="' + encodeURI(url) + '">' +
                       encodeURI(url) +
                       '</a>');
@@ -2257,13 +2260,13 @@ var afterquery = (function() {
     getUrlData_xhr(url, success_func, onError);
   }
 
-  function addUrlGettersDirect(queue, url, startdata) {
+  function addUrlGettersDirect(queue, url, startdata, myid) {
     if (!startdata) {
       debug_log('original data url:', url);
       if (!url) throw new Error('Missing url= in query parameter');
       if (url.indexOf('//') == 0) url = window.location.protocol + url;
       url = extendDataUrl(url);
-      showstatus('Loading <a href="' + encodeURI(url) + '">data</a>...');
+      showstatus('Loading <a href="' + encodeURI(url) + '">data</a>...', null,myid);
 
       enqueue(queue, 'get data', function(_, done) {
         getUrlData(url, wrap(done), wrap(gotError, url));
@@ -2282,11 +2285,11 @@ var afterquery = (function() {
     });
   }
 
-  function addUrlGetters(queue, args, startdata) {
-    addUrlGettersDirect(queue, args.get('url'), startdata);
+  function addUrlGetters(queue, args, startdata, myid) {
+    addUrlGettersDirect(queue, args.get('url'), startdata, myid);
   }
 
-  function addKeepData(queue, args) {
+  function addKeepData(queue, args, myid) {
     var box = Object();
     enqueue(queue, 'keep',
       function(grid, done) {
@@ -2298,16 +2301,16 @@ var afterquery = (function() {
   }
 
 
-  function exec(query, startdata, done) {
+  function exec(query, startdata, done, myid) {
     var args = parseArgs(query);
     var queue = [];
     addUrlGetters(queue, args, startdata);
     addTransforms(queue, args);
-    runqueue(queue, startdata, done);
+    runqueue(queue, startdata, done, null, null, null, myid);
   }
 
 
-  function render(query, startdata, done) {
+  function render(query, startdata, done, myid) {
     var args = parseArgs(query);
     var editlink = args.get('editlink');
     if (editlink == 0) {
@@ -2315,13 +2318,13 @@ var afterquery = (function() {
     }
 
     var queue = [];
-    addUrlGetters(queue, args, startdata);
-    addTransforms(queue, args);
-    addRenderers(queue, args);
-    finishQueue(queue, args, done);
+    addUrlGetters(queue, args, startdata, myid);
+    addTransforms(queue, args, myid);
+    addRenderers(queue, args, myid);
+    finishQueue(queue, args, done, myid);
   }
 
-  function load(query, startdata, done) {
+  function load(query, startdata, done, myid) {
     var args = parseArgs(query);
     var editlink = args.get('editlink');
     if (editlink == 0) {
@@ -2329,9 +2332,9 @@ var afterquery = (function() {
     }
 
     var queue = [];
-    addUrlGetters(queue, args, startdata);
-    var results = addKeepData(queue, args);
-    finishQueue(queue, args, done);
+    addUrlGetters(queue, args, startdata, myid);
+    var results = addKeepData(queue, args, myid);
+    finishQueue(queue, args, done, myid);
     return results;
   }
 
