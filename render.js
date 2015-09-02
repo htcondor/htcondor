@@ -2004,6 +2004,7 @@ var afterquery = (function() {
       if(typeof finishQueue.counter == 'undefined') { 
         finishQueue.counter = 0;
       }
+        $('#vizlog').append('<hr>');
       var prevdata;
       var after_each = function(grid, stepi, nsteps, text, msec_time) {
         finishQueue.counter++;
