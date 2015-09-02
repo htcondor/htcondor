@@ -2001,13 +2001,17 @@ var afterquery = (function() {
   function finishQueue(queue, args, done) {
     var trace = args.get('trace');
     if (trace) {
+      if(typeof finishQueue.counter == 'undefined') { 
+        finishQueue.counter = 0;
+      }
       var prevdata;
       var after_each = function(grid, stepi, nsteps, text, msec_time) {
-        $('#vizlog').append('<div class="vizstep" id="step' + stepi + '">' +
+        finishQueue.counter++;
+        $('#vizlog').append('<div class="vizstep" id="step' + finishQueue.counter + '">' +
                             '  <div class="text"></div>' +
                             '  <div class="grid"></div>' +
                             '</div>');
-        $('#step' + stepi + ' .text').text('Step ' + stepi +
+        $('#step' + finishQueue.counter + ' .text').text('Step ' + stepi +
                                            ' (' + msec_time + 'ms):  ' +
                                            text);
         var viewel = $('#step' + stepi + ' .grid');
