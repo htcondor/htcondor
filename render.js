@@ -1942,10 +1942,9 @@ var afterquery = (function() {
             function(grid, done) {
       if (grid.data.length) {
         var doRender = function() {
-          var wantwidth = trace ? window.innerWidth - 40 : window.innerWidth;
+          var wantwidth = trace ? $(el).innerWidth - 40 : $(el).innerWidth;
           $(el).width(wantwidth);
-          $(el).height(window.innerHeight);
-          options.height = window.innerHeight;
+          options.height = $(el).height();
           t.draw(datatable, options);
         };
         doRender();
