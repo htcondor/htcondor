@@ -1503,8 +1503,14 @@ var afterquery = (function() {
   function gridFromData(rawdata) {
     if (rawdata && rawdata.headers && rawdata.data && rawdata.types) {
       // already in grid format
+      debug_log("gridFromData: no work needed");
       return rawdata;
     }
+    debug_log("gridFromData: no work needed");
+    debug_log("rawdata: ", rawdata);
+    debug_log("rawdata.headers: ", rawdata.headers);
+    debug_log("rawdata.data: ",  rawdata.data);
+    debug_log("rawdata.types: ", rawdata.types);
 
     var headers, data, types;
 
@@ -1585,6 +1591,11 @@ var afterquery = (function() {
 
   function enqueue(queue, stepname, func) {
     queue.push([stepname, func]);
+    var msg = "Queue: ";
+    for(var i = 0; i < queue.length; i++) {
+      msg += i + "." + queue[i][0] + "; ";
+    }
+    debug_log(msg);
   }
 
 
@@ -2270,6 +2281,17 @@ var afterquery = (function() {
     addUrlGettersDirect(queue, args.get('url'), startdata);
   }
 
+  function addKeepData(queue, args) {
+    var box = Object();
+    enqueue(queue, 'keep',
+      function(grid, done) {
+        box.value = grid;
+        done(grid);
+      }
+      );
+    return box;
+  }
+
 
   function exec(query, startdata, done) {
     var args = parseArgs(query);
@@ -2294,6 +2316,20 @@ var afterquery = (function() {
     finishQueue(queue, args, done);
   }
 
+  function load(query, startdata, done) {
+    var args = parseArgs(query);
+    var editlink = args.get('editlink');
+    if (editlink == 0) {
+      $('#editmenu').hide();
+    }
+
+    var queue = [];
+    addUrlGetters(queue, args, startdata);
+    var results = addKeepData(queue, args);
+    finishQueue(queue, args, done);
+    return results;
+  }
+
 
   return {
     internal: {
@@ -2316,7 +2352,7 @@ var afterquery = (function() {
       argsToArray: argsToArray,
       enqueue: enqueue,
       runqueue: runqueue,
-      gridFromData: gridFromData
+      gridFromData: gridFromData,
     },
     T_NUM: T_NUM,
     T_DATE: T_DATE,
@@ -2325,6 +2361,7 @@ var afterquery = (function() {
     T_STRING: T_STRING,
     parseArgs: parseArgs,
     exec: exec,
-    render: wrap(render)
+    render: wrap(render),
+    load: wrap(load)
   };
 })();

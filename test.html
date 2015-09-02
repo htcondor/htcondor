@@ -47,7 +47,7 @@
   }
   .vizstep {
     margin-top: 2em;
-    display: none;
+    //display: none;
   }
   .vizstep .text {
     font-family: mono;
@@ -94,18 +94,37 @@
 </head>
 <body>
 
+<button id="reload">Reload</button>
+<button id="rerender">Re-render</button>
+
 <div id='editmenu'><a id='editlink' href='' target='_top'>edit</a></div>
 <div id='vizstatus'>
   <div id='statustext'></div>
   <div id='statussub'></div>
-  <div id='vizlog'></div>
 </div>
 <div id='vizraw'></div>
 <div id='vizchart'></div>
+  <div id='vizlog'></div>
 
 <script>
 $('#editlink').attr('href', 'edit.html' + window.location.search);
-afterquery.render(window.location.search);
+
+var data;
+function load_and_render() {
+	data = afterquery.load(window.location.search,null,
+		function(){
+		setTimeout(function() {
+			afterquery.render(window.location.search, data.box);
+			},0)
+		}
+		);
+}
+//load_and_render();
+//afterquery.render(window.location.search);
+$('#reload').click(load_and_render);
+$('#rerender').click(function() { afterquery.render(window.location.search,
+data.box); });
+//afterquery.render(window.location.search, data);
 
 </script>
 
