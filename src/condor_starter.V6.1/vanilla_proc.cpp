@@ -323,7 +323,7 @@ VanillaProc::StartJob()
 	// This way, the job will be heavily preferred to be killed over a normal process.
 	// OOM score is currently exponential - a score of 4 is a factor-16 increase in
 	// the OOM score.
-	setupOOMScore(4);
+	setupOOMScore(4,800);
 #endif
 
 #if defined(HAVE_EXT_LIBCGROUP)
@@ -677,7 +677,7 @@ VanillaProc::StartJob()
 	// is killed instead of the job itself.
 	if (retval)
 	{
-		setupOOMScore(-4);
+		setupOOMScore(0,0);
 	}
 
 #endif
@@ -1031,16 +1031,19 @@ VanillaProc::outOfMemoryEvent(int /* fd */)
 }
 
 int
-VanillaProc::setupOOMScore(int new_score)
+VanillaProc::setupOOMScore(int oom_adj, int oom_score_adj)
 {
 
 #if !(defined(HAVE_EVENTFD))
-	if (new_score) // Done to suppress compiler warnings.
+	if (oom_adj + oom_score_adj) // Done to suppress compiler warnings.
 		return 0;
 	return 0;
 #else 
 	TemporaryPrivSentry sentry(PRIV_ROOT);
 	// oom_adj is deprecated on modern kernels and causes a deprecation warning when used.
+
+	int oom_score = oom_adj; // assume the old way
+
 	int oom_score_fd = open("/proc/self/oom_score_adj", O_WRONLY | O_CLOEXEC);
 	if (oom_score_fd == -1) {
 		if (errno != ENOENT) {
@@ -1058,15 +1061,12 @@ VanillaProc::setupOOMScore(int new_score)
 			}
 		}
 	} else {
-		// oom_score_adj is linear; oom_adj was exponential.
-		if (new_score > 0)
-			new_score = 1 << new_score;
-		else
-			new_score = -(1 << -new_score);
+		// oops, we've got the new kind.  Use that.
+		oom_score = oom_score_adj;
 	}
 
 	std::stringstream ss;
-	ss << new_score;
+	ss << oom_score;
 	std::string new_score_str = ss.str();
         ssize_t nwritten = full_write(oom_score_fd, new_score_str.c_str(), new_score_str.length());
 	if (nwritten < 0) {

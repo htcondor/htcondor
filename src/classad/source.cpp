@@ -1129,6 +1129,12 @@ parseArgumentList( vector<ExprTree*>& argList )
 			lexer.ConsumeToken();
 		else
 		if( tt != Lexer::LEX_CLOSE_PAREN ) {
+			vector<ExprTree*>::iterator itr = argList.begin( );
+			while(itr != argList.end()) {
+				delete *itr;
+				itr++;
+			}
+			argList.clear( );
 			CondorErrno = ERR_PARSE_ERROR;
 			CondorErrMsg = "expected LEX_COMMA or LEX_CLOSE_PAREN but got " + 
 				string( Lexer::strLexToken( tt ) );
@@ -1249,7 +1255,18 @@ parseExprList( ExprList *&list , bool full )
 	while( tt != Lexer::LEX_CLOSE_BRACE ) {
 		// parse the expression
 		parseExpression( tree );
-		if( tree == NULL ) return false;
+		if( tree == NULL ) {
+			CondorErrno = ERR_PARSE_ERROR;
+			CondorErrMsg = "while parsing expression list:  expected "
+				"LEX_CLOSE_BRACE or LEX_COMMA but got "+
+				string(Lexer::strLexToken(tt));
+			vector<ExprTree*>::iterator i = loe.begin( );
+			while(i != loe.end()) {
+				delete *i;
+				i++;
+			}
+			return false;
+		}
 
 		// insert the expression into the list
 		loe.push_back( tree );

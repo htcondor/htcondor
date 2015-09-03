@@ -195,7 +195,11 @@ PeekToken (TokenValue *lvalp)
 				do {
 					oldCh = ch;
 					wind( );
-				} while( oldCh != '*' || ch != '/' );
+				} while( (oldCh != '*' || ch != '/') && (ch > 0));
+				if (ch == EOF) {
+					tokenType = LEX_TOKEN_ERROR;
+					return( tokenType );
+				}
 				wind( );
 			} else {
 				// just a division operator
