@@ -5414,6 +5414,15 @@ friendly_name=Schedd Backup Spool
 review=?
 tags=schedd,schedd_main
 
+[CHOWN_JOB_SPOOL_FILES]
+default=False
+type=bool
+reconfig=true
+customization=seldom
+friendly_name=Chown Job Spool Files
+review=?
+tags=schedd,schedd_main
+
 [SCHEDD_QUERY_WORKERS]
 default=8
 type=int

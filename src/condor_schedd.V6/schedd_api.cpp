@@ -633,6 +633,7 @@ ScheddTransaction::commit()
 	Job *job;
 	ClassAd *job_ad;
 	int universe;
+	bool chown_job_spool_files = param_boolean( "CHOWN_JOB_SPOOL_FILES", false ) ;
 	jobs.startIterations();
 	while (jobs.iterate(currentKey, job)) {
 		job_ad = GetJobAd_as_ClassAd( currentKey.cluster, currentKey.proc );
@@ -640,6 +641,8 @@ ScheddTransaction::commit()
 			 universe == CONDOR_UNIVERSE_GRID ) {
 
 			aboutToSpawnJobHandler( currentKey.cluster, currentKey.proc, NULL );
+		} else if ( chown_job_spool_files == false ) {
+			SpooledJobFiles::createJobSpoolDirectory( job_ad, PRIV_USER );
 		}
 	}
 

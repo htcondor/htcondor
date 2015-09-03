@@ -4165,6 +4165,13 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 	 */
 	old_timeout = s->timeout(60 * 60 * 8);  
 
+	priv_state xfer_priv = PRIV_UNKNOWN;
+#if !defined(WIN32)
+	if ( param_boolean( "CHOWN_JOB_SPOOL_FILES", false ) == false ) {
+		xfer_priv = PRIV_USER;
+	}
+#endif
+
 	JobAdsArrayLen = jobs->getlast() + 1;
 //	dprintf(D_FULLDEBUG,"TODD spoolJobFilesWorkerThread: JobAdsArrayLen=%d\n",JobAdsArrayLen);
 	if ( mode == TRANSFER_DATA || mode == TRANSFER_DATA_WITH_PERMS ) {
@@ -4206,7 +4213,7 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 			// If we're receiving files, don't create a file catalog in
 			// the FileTransfer object. The submitter's IWD is probably not
 			// valid on this machine and we won't use the catalog anyway.
-		result = ftrans.SimpleInit(ad, true, true, rsock, PRIV_UNKNOWN,
+		result = ftrans.SimpleInit(ad, true, true, rsock, xfer_priv,
 								   (mode == TRANSFER_DATA ||
 									mode == TRANSFER_DATA_WITH_PERMS));
 		if ( !result ) {
@@ -4221,6 +4228,30 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 		if ( peer_version != NULL ) {
 			ftrans.setPeerVersion( peer_version );
 		}
+
+#if !defined(WIN32)
+		if ( xfer_priv == PRIV_USER ) {
+			// If sending the output sandbox, first ensure that it's owned
+			// by the user, in case we were using the old chowning behavior
+			// when the job completed.
+			if ( (mode == TRANSFER_DATA || mode == TRANSFER_DATA_WITH_PERMS) &&
+				 SpooledJobFiles::jobRequiresSpoolDirectory( ad ) )
+			{
+				SpooledJobFiles::createJobSpoolDirectory( ad, PRIV_USER );
+			}
+			string owner;
+			ad->LookupString( ATTR_OWNER, owner );
+			if ( !init_user_ids( owner.c_str(), NULL ) ) {
+				dprintf( D_AUDIT | D_FAILURE, *rsock, "generalJobFilesWorkerThread(): "
+						 "failed to initialize user id for job %d.%d\n",
+						 cluster, proc );
+				s->timeout( 10 ); // avoid hanging due to huge timeout
+				refuse(s);
+				s->timeout(old_timeout);
+				return FALSE;
+			}
+		}
+#endif
 
 			// Send or receive files as needed
 		if ( mode == SPOOL_JOB_FILES || mode == SPOOL_JOB_FILES_WITH_PERMS ) {
@@ -4245,6 +4276,12 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 				result = ftrans.UploadFiles();
 			}
 		}
+
+#if !defined(WIN32)
+		if ( xfer_priv == PRIV_USER ) {
+			uninit_user_ids();
+		}
+#endif
 
 		if ( !result ) {
 			dprintf( D_AUDIT | D_FAILURE, *rsock, "generalJobFilesWorkerThread(): "

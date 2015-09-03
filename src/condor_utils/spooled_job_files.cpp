@@ -217,6 +217,10 @@ SpooledJobFiles::createJobSwapSpoolDirectory(classad::ClassAd const *job_ad,priv
 {
 	int cluster=-1,proc=-1;
 
+	if ( param_boolean( "CHOWN_JOB_SPOOL_FILES", false ) == false ) {
+		desired_priv_state = PRIV_USER;
+	}
+
 	job_ad->EvaluateAttrInt(ATTR_CLUSTER_ID,cluster);
 	job_ad->EvaluateAttrInt(ATTR_PROC_ID,proc);
 
@@ -240,6 +244,10 @@ SpooledJobFiles::createJobSpoolDirectory(classad::ClassAd const *job_ad,priv_sta
 	job_ad->EvaluateAttrInt(ATTR_JOB_UNIVERSE,universe);
 	if( universe == CONDOR_UNIVERSE_STANDARD ) {
 		return createParentSpoolDirectories(job_ad);
+	}
+
+	if ( param_boolean( "CHOWN_JOB_SPOOL_FILES", false ) == false ) {
+		desired_priv_state = PRIV_USER;
 	}
 
 	int cluster=-1,proc=-1;
@@ -323,7 +331,7 @@ remove_spool_directory(const char * dir)
 {
 	if ( ! IsDirectory(dir) ) { return true; }
 
-	Directory spool_dir(dir);
+	Directory spool_dir(dir, PRIV_ROOT);
 	if( ! spool_dir.Remove_Entire_Directory() )
 	{
 		dprintf(D_ALWAYS,"Failed to remove %s\n", dir);
@@ -447,6 +455,10 @@ SpooledJobFiles::chownSpoolDirectoryToCondor(classad::ClassAd const *job_ad)
 	bool result = true;
 
 #ifndef WIN32
+	if ( param_boolean( "CHOWN_JOB_SPOOL_FILES", false ) == false ) {
+		return true;
+	}
+
 	std::string sandbox;
 	int cluster=-1,proc=-1;
 

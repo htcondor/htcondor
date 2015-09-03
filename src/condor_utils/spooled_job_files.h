@@ -36,6 +36,8 @@ public:
 		   not per-job directories, because standard universe does not
 		   need per-job directories (it has checkpoint files of the same
 		   name and path as the per-job directories).
+		   If CHOWN_JOB_SPOOL_FILES=False, desired_priv_state is forced
+		   to PRIV_USER.
 		 */
 	static bool createJobSpoolDirectory(classad::ClassAd const *job_ad,priv_state desired_priv_state );
 
@@ -73,6 +75,7 @@ public:
 
 		/* Restore ownership of spool directory to condor after job ran.
 		   Returns true on success.
+		   If CHOWN_JOB_SPOOL_FILES=False, this function does nothing.
 		 */
 	static bool chownSpoolDirectoryToCondor(classad::ClassAd const *job_ad);
 
