@@ -4209,26 +4209,6 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 		dprintf(D_ALWAYS, "The submitting job ad as the FileTransferObject sees it\n");
 		dPrintAd(D_ALWAYS, *ad);
 
-			// Create a file transfer object, with schedd as the server.
-			// If we're receiving files, don't create a file catalog in
-			// the FileTransfer object. The submitter's IWD is probably not
-			// valid on this machine and we won't use the catalog anyway.
-		result = ftrans.SimpleInit(ad, true, true, rsock, xfer_priv,
-								   (mode == TRANSFER_DATA ||
-									mode == TRANSFER_DATA_WITH_PERMS));
-		if ( !result ) {
-			dprintf( D_AUDIT | D_FAILURE, *rsock, "generalJobFilesWorkerThread(): "
-					 "failed to init filetransfer for job %d.%d \n",
-					 cluster,proc );
-			s->timeout( 10 ); // avoid hanging due to huge timeout
-			refuse(s);
-			s->timeout(old_timeout);
-			return FALSE;
-		}
-		if ( peer_version != NULL ) {
-			ftrans.setPeerVersion( peer_version );
-		}
-
 #if !defined(WIN32)
 		if ( xfer_priv == PRIV_USER ) {
 			// If sending the output sandbox, first ensure that it's owned
@@ -4252,6 +4232,26 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 			}
 		}
 #endif
+
+			// Create a file transfer object, with schedd as the server.
+			// If we're receiving files, don't create a file catalog in
+			// the FileTransfer object. The submitter's IWD is probably not
+			// valid on this machine and we won't use the catalog anyway.
+		result = ftrans.SimpleInit(ad, true, true, rsock, xfer_priv,
+								   (mode == TRANSFER_DATA ||
+									mode == TRANSFER_DATA_WITH_PERMS));
+		if ( !result ) {
+			dprintf( D_AUDIT | D_FAILURE, *rsock, "generalJobFilesWorkerThread(): "
+					 "failed to init filetransfer for job %d.%d \n",
+					 cluster,proc );
+			s->timeout( 10 ); // avoid hanging due to huge timeout
+			refuse(s);
+			s->timeout(old_timeout);
+			return FALSE;
+		}
+		if ( peer_version != NULL ) {
+			ftrans.setPeerVersion( peer_version );
+		}
 
 			// Send or receive files as needed
 		if ( mode == SPOOL_JOB_FILES || mode == SPOOL_JOB_FILES_WITH_PERMS ) {
