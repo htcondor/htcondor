@@ -34,4 +34,7 @@
 //
 priv_state set_user_priv_from_ad(classad::ClassAd const &ad);
 
+// Lookup user info in ad and call init_user_ids()
+bool init_user_ids_from_ad( const classad::ClassAd &ad );
+
 #endif

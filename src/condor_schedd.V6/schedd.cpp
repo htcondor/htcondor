@@ -15290,6 +15290,7 @@ WriteCompletionVisa(ClassAd* ad)
 	                   iwd.Value(),
 	                   NULL);
 	set_priv(prev_priv_state);
+	uninit_user_ids();
 }
 
 int
