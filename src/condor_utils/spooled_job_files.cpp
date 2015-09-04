@@ -141,7 +141,22 @@ createJobSpoolDirectory(classad::ClassAd const *job_ad,priv_state desired_priv_s
 
 	StatInfo si( spool_path );
 	if( si.Error() == SINoFile ) {
-		if(!mkdir_and_parents_if_needed(spool_path,0755,PRIV_CONDOR) )
+		// Parameter JOB_SPOOL_PERMISSIONS can be user / group / world and
+		// defines permissions on job spool directory (subject to umask)
+		int dir_perms = 0700;
+		char *who = param( "JOB_SPOOL_PERMISSIONS" );
+		if ( who != NULL)	{
+			if ( !strcasecmp( who, "user" ) ) {
+				dir_perms = 0700;
+			} else if ( !strcasecmp( who, "group" ) ) {
+				dir_perms = 0750;
+			} else if( !strcasecmp( who, "world" ) ) {
+				dir_perms = 0755;
+			}
+			free( who );
+		}
+
+		if(!mkdir_and_parents_if_needed(spool_path,dir_perms,0755,PRIV_CONDOR) )
 		{
 			dprintf( D_ALWAYS,
 					 "Failed to create spool directory for job %d.%d: "

@@ -7278,6 +7278,14 @@ friendly_name=Permissions on the job's execute directory
 review=?
 tags=starter
 
+[JOB_SPOOL_PERMISSIONS]
+default=user
+type=string
+reconfig=true
+customization=seldom
+friendly_name=Permissions on the job's spool directory
+review=?
+
 [PANDAD]
 default=$(LIBEXEC)/condor_pandad
 win32_default=

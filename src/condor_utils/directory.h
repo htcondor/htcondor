@@ -332,6 +332,7 @@ bool recursive_chown( const char *path,
 	will be set to EEXIST in that case.
  */
 bool mkdir_and_parents_if_needed( const char *path, mode_t mode, priv_state priv = PRIV_UNKNOWN );
+bool mkdir_and_parents_if_needed( const char *path, mode_t mode, mode_t parent_mode, priv_state priv = PRIV_UNKNOWN );
 
 /** Create parent directories of a path if they do not exist.
     If the parent directory already exists, it is left as is
