@@ -161,10 +161,10 @@ myid);
 //load_and_render();
 //afterquery.render(window.location.search);
 $('#reload1').click(function() { load_and_render('graph1'); });
-$('#rerender1').click(function() { afterquery.render(window.location.search,
+$('#rerender1').click(function() { afterquery.render(read_arguments(),
 data.value,null,'graph1'); });
 $('#reload2').click(function() { load_and_render('graph2'); });
-$('#rerender2').click(function() { afterquery.render(window.location.search,
+$('#rerender2').click(function() { afterquery.render(read_arguments(),
 data.value,null,'graph2'); });
 //afterquery.render(window.location.search, data);
 
