@@ -86,6 +86,14 @@
   <script src="render.js"></script>
 </head>
 <body>
+<form>
+<textarea id='editor' wrap='off'>
+url=foo.json
+order=State
+pivot=Date;State;Cpus
+chart=stacked
+</textarea>
+</form>
 
 <button id="reload1">Reload 1</button>
 <button id="rerender1">Re-render 1</button>
@@ -119,12 +127,31 @@
 <script>
 $('#editlink').attr('href', 'edit.html' + window.location.search);
 
+
+function read_arguments() {
+  var out = [];
+  var parts = $('#editor').attr('value').trim().split('\n');
+  for (var parti in parts) {
+    var part = parts[parti];
+    if (part) {
+      var bits = afterquery.internal.trySplitOne(part, '=');
+      if (bits) {
+        out.push(encodeURIComponent(bits[0]) + '=' + encodeURIComponent(bits[1]));
+      } else {
+        out.push(encodeURIComponent(part));
+      }
+    }
+  }
+  return  '?' + out.join('&');
+}
+
 var data;
 function load_and_render(myid) {
-	data = afterquery.load(window.location.search,null,
+    var args = read_arguments();
+	data = afterquery.load(args,null,
 		function(){
 		setTimeout(function() {
-			afterquery.render(window.location.search, data.value, null,
+			afterquery.render(args, data.value, null,
 myid);
 			},0)
 		},
