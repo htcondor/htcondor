@@ -12293,7 +12293,7 @@ Scheduler::Init()
 		delete slotWeightMapAd;
 		slotWeightMapAd = 0;
 	}
-	m_use_slot_weights = param_boolean("SCHEDD_USE_SLOT_WEIGHT", false);
+	m_use_slot_weights = param_boolean("SCHEDD_USE_SLOT_WEIGHT", true);
 
 	std::string sswma = "Memory = RequestMemory \n Disk = RequestDisk \n Cpus = RequestCpus";
 	slotWeightMapAd = new ClassAd;

@@ -231,6 +231,7 @@ JobRouterHookMgr::hookTranslateJob(RoutedJob* r_job, std::string &route_info)
 		return -1;
 	}
 
+	TemporaryPrivSentry sentry(true);
 	if (init_user_ids_from_ad(r_job->src_ad) == false) {
 		delete translate_client;
 		return -1;
@@ -241,10 +242,8 @@ JobRouterHookMgr::hookTranslateJob(RoutedJob* r_job, std::string &route_info)
 				"ERROR in JobRouterHookMgr::hookTranslateJob: "
 				"failed to spawn HOOK_TRANSLATE_JOB (%s)\n", hook_translate);
 		delete translate_client;
-		uninit_user_ids();
 		return -1;
 	}
-	uninit_user_ids();
 	
 	// Add our info to the list of hooks currently running for this job.
 	if (false == JobRouterHookMgr::addKnownHook(key.c_str(), HOOK_TRANSLATE_JOB))
@@ -302,6 +301,7 @@ JobRouterHookMgr::hookUpdateJobInfo(RoutedJob* r_job)
 		return -1;
 	}
 
+	TemporaryPrivSentry sentry(true);
 	if (init_user_ids_from_ad(r_job->src_ad) == false) {
 		delete status_client;
 		return -1;
@@ -312,11 +312,9 @@ JobRouterHookMgr::hookUpdateJobInfo(RoutedJob* r_job)
 				"ERROR in JobRouterHookMgr::hookUpdateJobInfo: "
 				"failed to spawn HOOK_UPDATE_JOB_INFO (%s)\n", hook_update_job_info);
 		delete status_client;
-		uninit_user_ids();
 		return -1;
 
 	}
-	uninit_user_ids();
 
 	// Add our info to the list of hooks currently running for this job.
 	if (false == JobRouterHookMgr::addKnownHook(key.c_str(), HOOK_UPDATE_JOB_INFO))
@@ -377,6 +375,7 @@ JobRouterHookMgr::hookJobExit(RoutedJob* r_job)
 		return -1;
 	}
 
+	TemporaryPrivSentry sentry(true);
 	if (init_user_ids_from_ad(r_job->src_ad) == false) {
 		delete exit_client;
 		return -1;
@@ -387,11 +386,9 @@ JobRouterHookMgr::hookJobExit(RoutedJob* r_job)
 				"ERROR in JobRouterHookMgr::hookJobExit: "
 				"failed to spawn HOOK_JOB_EXIT (%s)\n", hook_job_exit);
 		delete exit_client;
-		uninit_user_ids();
 		return -1;
 
 	}
-	uninit_user_ids();
 	
 	// Add our info to the list of hooks currently running for this job.
 	if (false == JobRouterHookMgr::addKnownHook(key.c_str(), HOOK_JOB_EXIT))
@@ -453,6 +450,7 @@ JobRouterHookMgr::hookJobCleanup(RoutedJob* r_job)
 		return -1;
 	}
 
+	TemporaryPrivSentry sentry(true);
 	if (init_user_ids_from_ad(r_job->src_ad) == false) {
 		delete cleanup_client;
 		return -1;
@@ -463,11 +461,9 @@ JobRouterHookMgr::hookJobCleanup(RoutedJob* r_job)
 				"ERROR in JobRouterHookMgr::JobCleanup: "
 				"failed to spawn HOOK_JOB_CLEANUP (%s)\n", hook_cleanup);
 		delete cleanup_client;
-		uninit_user_ids();
 		return -1;
 
 	}
-	uninit_user_ids();
 
 	// Add our info to the list of hooks currently running for this job.
 	if (false == JobRouterHookMgr::addKnownHook(key.c_str(), HOOK_JOB_CLEANUP))
