@@ -24,7 +24,10 @@
 
 \begin{itemize}
 
-\item None.
+\item The \Condor{starter} lowers the OOM (out of memory) score of jobs
+so the OOM killer is more likely to chose an HTCondor job rather than
+an HTCondor daemon or other user process.
+\Ticket{5249}
 
 \end{itemize}
 
