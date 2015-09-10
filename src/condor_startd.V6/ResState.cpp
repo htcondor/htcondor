@@ -251,6 +251,8 @@ ResState::eval( void )
 					// change to the preempting state.
 				if( rip->isDraining() ) {
 					rip->setBadputCausedByDraining();
+				} else {
+					rip->setBadputCausedByPreemption();
 				}
 				dprintf( D_ALWAYS, "State change: claim retirement ended/expired\n" );
 				// STATE TRANSITION #18
@@ -275,6 +277,7 @@ ResState::eval( void )
 				// irreversible retirement
 				// STATE TRANSITION #12 or #16
 				rip->preemptIsTrue();
+				rip->setBadputCausedByPreemption();
 				return rip->retire_claim();
 			}
 		}
@@ -287,6 +290,7 @@ ResState::eval( void )
 			}
 			if( rip->retirementExpired() ) {
 				dprintf( D_ALWAYS, "State change: retirement ended/expired\n" );
+				rip->setBadputCausedByPreemption();
 				change( preempting_state );
 				return TRUE; // XXX: change TRUE
 			}
@@ -371,6 +375,7 @@ ResState::eval( void )
 			if( 1 == rip->eval_kill() ) {
 				dprintf( D_ALWAYS, "State change: KILL is TRUE\n" );
 					// STATE TRANSITION #19
+				rip->setBadputCausedByPreemption();
 				change( killing_act );
 				return TRUE; // XXX: change TRUE
 			}

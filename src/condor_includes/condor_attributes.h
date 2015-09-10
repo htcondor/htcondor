@@ -56,6 +56,8 @@
 #define ATTR_AVAIL_SINCE  "AvailSince"
 #define ATTR_AVAIL_TIME  "AvailTime"
 #define ATTR_AVAIL_TIME_ESTIMATE  "AvailTimeEstimate"
+#define ATTR_BADPUT_CAUSED_BY_DRAINING  "BadputCausedByDraining"
+#define ATTR_BADPUT_CAUSED_BY_PREEMPTION  "BadputCausedByPreemption"
 #define ATTR_BANDWIDTH_TO_SUBMIT_MACHINE  "BandwidthToSubmitMachine"
 #define ATTR_BANDWIDTH_TO_LAST_CKPT_SERVER  "BandwidthToLastCkptServer"
 #define ATTR_BANDWIDTH_TO_CKPT_SERVER  "BandwidthToCkptServer"

@@ -111,8 +111,14 @@ public:
 	void	releaseAllClaims( void );
 	void	releaseAllClaimsReversibly( void );
 	void	killAllClaims( void );
-	void    setBadputCausedByDraining();
 
+        void	setBadputCausedByDraining();
+        bool	getBadputCausedByDraining() { return r_cur->getBadputCausedByDraining();}
+
+        void	setBadputCausedByPreemption() { if( r_cur ) r_cur->setBadputCausedByPreemption();}
+        bool	getBadputCausedByPreemption() { return r_cur->getBadputCausedByPreemption();}
+        
+	
         // Enable/Disable claims for hibernation
     void    disable ();
     void    enable ();

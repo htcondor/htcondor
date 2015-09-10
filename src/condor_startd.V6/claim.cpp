@@ -90,6 +90,7 @@ Claim::Claim( Resource* res_ip, ClaimType claim_type, int lease_duration )
 	c_retire_peacefully = false;
 	c_preempt_was_true = false;
 	c_badput_caused_by_draining = false;
+	c_badput_caused_by_preemption = false;
 	c_schedd_closed_claim = false;
 
 	c_last_state = CLAIM_UNCLAIMED;

@@ -237,6 +237,9 @@ public:
 	void setRetirePeacefully(bool value) {c_retire_peacefully=value;}
 	void preemptIsTrue() {c_preempt_was_true=true;}
 	void setBadputCausedByDraining() {c_badput_caused_by_draining=true;}
+	bool getBadputCausedByDraining() const {return c_badput_caused_by_draining;}
+	void setBadputCausedByPreemption() {c_badput_caused_by_preemption=true;}
+	bool getBadputCausedByPreemption() const {return c_badput_caused_by_preemption;}
 	int activationCount() {return c_activation_count;}
 
 		// starter-related functions
@@ -348,6 +351,7 @@ private:
 	bool        c_retire_peacefully;
 	bool        c_preempt_was_true; //was PREEMPT ever true for this claim?
 	bool        c_badput_caused_by_draining; // was job preempted due to draining?
+	bool        c_badput_caused_by_preemption; // was job preempted due policy, PREEMPT, RANK, user prio
 	bool        c_schedd_closed_claim;
 	int         c_pledged_machine_max_vacate_time; // evaluated at activation time
 
