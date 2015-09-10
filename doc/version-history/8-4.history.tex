@@ -29,5 +29,10 @@ so the OOM killer is more likely to chose an HTCondor job rather than
 an HTCondor daemon or other user process.
 \Ticket{5249}
 
+\item Job submission fails if X.509 certificates are advertised with EC2 
+grid universe jobs.
+Therefore EC2 grid universe jobs no longer advertise their access keys.
+\Ticket{5252}
+
 \end{itemize}
 
