@@ -1468,9 +1468,11 @@ main_pre_command_sock_init()
 		}
 	}
 
-	if ( param_boolean( "USE_SHARED_PORT", false ) ) {
-		SharedPortEndpoint::InitializeDaemonSocketDir();
-	}
+	// The master and its daemons may disagree on if they're using shared
+	// port, so make sure everything's ready, just in case.
+	//
+	// FIXME: condor_preen doesn't look to know about "auto" directories.
+	SharedPortEndpoint::InitializeDaemonSocketDir();
 }
 
 #ifdef WIN32
