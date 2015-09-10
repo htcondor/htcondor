@@ -7183,6 +7183,16 @@ friendly_name=Schedd Max File Descriptors
 usage=Set the limit on file descriptor usage for the scheduler.
 review=?
 
+[SCHEDD_USE_SLOT_WEIGHT]
+default=true
+rant=
+type=bool
+reconfig=true
+constomization=seldom
+friendly_name=Should Schedd obey SLOT_WEIGHT
+usage=
+review=?
+
 [SHARED_PORT_MAX_FILE_DESCRIPTORS]
 default=4096
 range=0,
