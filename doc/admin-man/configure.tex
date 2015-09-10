@@ -5657,9 +5657,10 @@ CONSUMPTION_DISK = quantize(target.RequestDisk,{1024})
 %\end{verbatim}
   In the case of slots with consumption policies, the cost of each match is
   is assessed as the difference in the slot weight expression before and after
-  the resources consumed by the match are deducted from the slot.
-  Any definition of the form \MacroNI{SLOT\_TYPE\_<N>\_SLOT\_WEIGHT}
-  overrides this global definition for the given slot type.
+  the resources consumed by the match are deducted from the slot.  Only
+  Memory, Cpus and Disk are valid attributes for this parameter.
+  %Any definition of the form \MacroNI{SLOT\_TYPE\_<N>\_SLOT\_WEIGHT}
+  %overrides this global definition for the given slot type.
 
 \label{param:NumClaims}
 \item[\Macro{NUM\_CLAIMS}]

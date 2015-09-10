@@ -897,7 +897,11 @@ and that it is partitionable.
 Enable use of the \Condor{negotiator}-side resource consumption
 policy, allocating the job-requested number of cores to the
 dynamic slot, and use \Macro{SLOT\_WEIGHT} to assess the user usage that 
-will affect user priority by the number of cores allocated.
+will affect user priority by the number of cores allocated.  Note
+that the only attributes valid within the \Macro{SLOT\_WEIGHT} expression
+are Cpus, Memory, and disk.  This must the set to the same value
+on all machines in the pool.
+
 \begin{verbatim}
   SLOT_TYPE_1_CONSUMPTION_POLICY = True
   SLOT_TYPE_1_CONSUMPTION_CPUS = TARGET.RequestCpus
