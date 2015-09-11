@@ -1,0 +1,38 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-8-4-0}Version 8.4.0}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+%\item HTCondor version 8.4.0 not yet released.
+\item HTCondor version 8.4.0 released on September 10, 2015.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item The \Condor{starter} lowers the OOM (out of memory) score of jobs
+so the OOM killer is more likely to chose an HTCondor job rather than
+an HTCondor daemon or other user process.
+\Ticket{5249}
+
+\item Job submission fails if X.509 certificates are advertised with EC2 
+grid universe jobs.
+Therefore EC2 grid universe jobs no longer advertise their access keys.
+\Ticket{5252}
+
+\end{itemize}
+
