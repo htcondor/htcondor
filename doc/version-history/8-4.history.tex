@@ -45,7 +45,7 @@ and partitionable slots.
 \begin{itemize}
 
 %\item HTCondor version 8.4.0 not yet released.
-\item HTCondor version 8.4.0 released on September 10, 2015.
+\item HTCondor version 8.4.0 released on September 14, 2015.
 
 \end{itemize}
 
@@ -61,6 +61,12 @@ and partitionable slots.
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item Fixed a bug introduced in HTCondor version 8.3.7 that caused the
+\Condor{shared\_port} daemon to leak file descriptors.
+Also made HTCondor work better when some HTCondor daemons
+are using shared port, but the \Condor{master} is not.
+\Ticket{5259}
 
 \item The \Condor{starter} lowers the OOM (out of memory) score of jobs
 so the OOM killer is more likely to chose an HTCondor job rather than

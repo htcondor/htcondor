@@ -138,7 +138,7 @@ void
 SharedPortEndpoint::InitAndReconfig()
 {
 	std::string socket_dir;
-#if USE_ABSTRACT_DOMAIN_SOCKET
+#ifdef USE_ABSTRACT_DOMAIN_SOCKET
 	m_is_file_socket = false;
 #endif
 	if (!GetDaemonSocketDir(socket_dir)) {
