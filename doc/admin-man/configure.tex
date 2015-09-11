@@ -4726,6 +4726,11 @@ WANT_HOLD_REASON = \
   It will be rotated in the same way,
   and the same parameters that apply to the \MacroNI{HISTORY} file
   rotation apply to the \Condor{startd} daemon history as well.
+  This can be read with the \Condor{history} command by passing the
+  name of the file to the -file option of \Condor{history}.
+\begin{verbatim}
+	condor_history -file `condor_config_val LOG`/startd_history
+\end{verbatim}
 
 \end{description}
 
