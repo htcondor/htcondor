@@ -4753,6 +4753,14 @@ friendly_name=History
 review=?
 tags=tools,preen
 
+[STARTD_HISTORY]
+default=$(LOG)/startd_history
+type=string
+reconfig=true
+customization=seldom
+friendly_name=Startd History
+review=?
+
 [PREEN_ADMIN]
 default=
 type=string
