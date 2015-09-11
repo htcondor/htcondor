@@ -188,6 +188,7 @@ log = $testname.log
 output = $testname.out
 error = $testname.err
 notification = never
+request_memory = 25
 arguments = 0
 #
 # jobs charged against group "a" (quota is 1)
