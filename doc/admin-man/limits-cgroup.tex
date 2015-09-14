@@ -68,14 +68,42 @@ The memory size used in both cases is the machine ClassAd attribute
 \Attr{Memory}.
 Note that \Attr{Memory} is 
 a static amount when using static slots, but it is dynamic when partitionable 
-slots are used.
+slots are used.  That is, the limit is whatever the "Mem" column of
+condor\_status reports for that slot.  If the job exceeds both the physical 
+memory and swap space, the job will be killed by the Linux Out-of-Memory 
+killer, and HTCondor will put the job on hold with an appropriate message.
+
+If \MacroNI{CGROUP\_MEMORY\_LIMIT\_POLICY} is set, HTCondor will also also
+use cgroups to limit the amount of swap space used by each job.  By default, 
+the maximum amount of swap space used by each slot is the total amount of 
+Virtual Memory in the slot, minus the amount of physical memory.  
+Note that HTCondor measures virtual memory in kbytes, and physical 
+memory in megabytes.  To prevent jobs with high
+memory usage from thrashing and excessive paging, and force HTCondor to
+put them on hold instead, you can set a lower limit on the amount of
+swap space they are allowed to use.  With partitionable slots, this is
+done in the per slot definition, and must be a percentage of the total
+swap space on the system. For example,
+
+\begin{verbatim}
+NUM_SLOTS_TYPE_1 = 1
+SLOT_TYPE_1_PARTITIONABLE = true
+SLOT_TYPE_1 = cpus=100%,swap=10%
+\end{verbatim}
+
+Optionally, if the administrator sets the config file setting
+\Macro{PROPORTIONAL\_SWAP\_ASSSIGNMENT} = true, the maximum amount 
+of swap space per slot will be set to the same proportion of the total
+swap as as the proportion of physical memory.  That is, if a slot
+(static or dyanmic) has half of the physical memory of the machine,
+it will be given half of the swap space.
 
 In addition to memory, the \Condor{starter} can also control 
 the total amount of CPU used by all processes within a job.
 To do this, it writes a value
 to the cpu.shares attribute of the cgroup cpu controller.  
 The value it writes is copied from the \Attr{Cpus} attribute 
-of the machine slot ClassAd.
+of the machine slot ClassAd multiplied by 100.
 Again, like the \Attr{Memory} attribute, this value is fixed for static slots,
 but dynamic under partitionable slots.  
 This tells the operating system
@@ -89,5 +117,5 @@ in the one slot could consume all eight cpus concurrently with this limit
 in play, if it is the only thing running.  
 If, however, all eight slots where running jobs, 
 with each configured for one cpu, the cpu usage would be assigned
-equally to each job, regardless of the number of processes in each job.
+equally to each job, regardless of the number of processes or threads in each job.
 
