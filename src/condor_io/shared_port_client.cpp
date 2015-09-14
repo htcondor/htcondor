@@ -466,7 +466,7 @@ SharedPortState::HandleUnbound(Stream *&s)
 	alt_named_sock_addr.sun_family = AF_UNIX;
 	unsigned named_sock_addr_len, alt_named_sock_addr_len = 0;
 	bool is_no_good;
-#if USE_ABSTRACT_DOMAIN_SOCKET
+#ifdef USE_ABSTRACT_DOMAIN_SOCKET
 	strncpy(named_sock_addr.sun_path+1, sock_name.c_str(), sizeof(named_sock_addr.sun_path)-2);
 	named_sock_addr_len = sizeof(named_sock_addr) - sizeof(named_sock_addr.sun_path) + 1 + strlen(named_sock_addr.sun_path+1);
 	is_no_good = strcmp(named_sock_addr.sun_path+1, sock_name.c_str());
@@ -670,7 +670,21 @@ SharedPortState::HandleFD(Stream *&s)
 
 	msg.msg_controllen = cmsg->cmsg_len;
 
-#if USE_ABSTRACT_DOMAIN_SOCKET
+#ifdef USE_ABSTRACT_DOMAIN_SOCKET
+	//
+	// Even if we /can/ use abstract domain sockets, that doesn't meant that
+	// we are.  Check the socket's address; if the first byte of its "path"
+	// is \0, it's an abstract socket, and we just pass the FD to it.
+	// (See 'man 7 unix').
+	//
+	// Otherwise, it's a socket on-disk; since those are potentially
+	// less-secure (depending on filesystem permissions, which need to be lax
+	// to permit HTCondor tools like ssh_to_job to work with daemons using
+	// CCB), write an audit log entry about where the socket is going.
+	//
+	// In this construction, the non-error state is in the last if statement,
+	// rather than the inner-most.
+	//
 	struct sockaddr_un addr;
 	socklen_t addrlen = sizeof(struct sockaddr_un);
 	if( -1 == getpeername( sock->get_file_desc(), (struct sockaddr *) & addr, & addrlen ) ) {
@@ -714,6 +728,7 @@ SharedPortState::HandleFD(Stream *&s)
 			// No _follow, since the kernel doesn't create symlinks for this.
 			int pclFD = safe_open_no_create( procCmdLinePath.c_str(), O_RDONLY );
 			ssize_t procCmdLineLength = _condor_full_read( pclFD, & procCmdLine, 1024 );
+			close( pclFD );
 			if( procCmdLineLength == -1 ) {
 				strcpy( procCmdLine, "(unable to read cmdline)" );
 			} else if( 0 <= procCmdLineLength && procCmdLineLength <= 1024 ) {
