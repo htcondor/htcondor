@@ -2,6 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8">
+  <title>Graph Testing</title>
   <style>
   div#editmenu {
     position: absolute;
@@ -127,6 +128,29 @@ chart=stacked
 <script>
 $('#editlink').attr('href', 'edit.html' + window.location.search);
 
+function load_arguments_to_form() {
+	var default_args = '?url=foo.json&order=State&pivot=Date;State;Cpus&chart=stacked';
+	var args = afterquery.parseArgs(window.location.search || default_args);
+	var text = "";
+	for(var argi in args.all) {
+		var arg = args.all[argi];
+		var key = arg[0];
+		var val = arg[1];
+		text += key + "=" + val + "\n";	
+	}
+	$('#editor').text(text);
+	
+}
+
+function save_arguments_to_url(args) {
+	before = window.location.href;
+	console.log("Before: " + before);
+	base = before.replace(/\?.*/,'');
+	console.log("Base: " + base);
+	newuri = base + args;
+	console.log("New: " + newuri);
+	history.pushState(null, null, newuri);
+}
 
 function read_arguments() {
   var out = [];
@@ -160,7 +184,13 @@ myid);
 }
 //load_and_render();
 //afterquery.render(window.location.search);
-$('#reload1').click(function() { load_and_render('graph1'); });
+$('#reload1').click(function() {
+	console.log("Reload 1");
+	load_and_render('graph1');
+	console.log("Reload 2");
+	save_arguments_to_url(read_arguments());
+	console.log("Reload 3");
+	});
 $('#rerender1').click(function() { afterquery.render(read_arguments(),
 data.value,null,'graph1'); });
 $('#reload2').click(function() { load_and_render('graph2'); });
@@ -170,6 +200,8 @@ data.value,null,'graph2'); });
 
 $('#graph2.statustext').text('statustext');
 $('#graph2.statussub').text('statustext');
+
+load_arguments_to_form();
 
 </script>
 
