@@ -3321,7 +3321,9 @@ CommitTransaction(SetAttributeFlags_t flags /* = 0 */)
 				dprintf(D_FULLDEBUG,"New job: %s\n",job_id.c_str());
 
 					// increment the 'recently added' job count for this owner
-				scheduler.incrementRecentlyAdded( Q_SOCK->getOwner() );
+				if( Q_SOCK->getOwner() ) {
+					scheduler.incrementRecentlyAdded( Q_SOCK->getOwner() );
+				}
 
 					// chain proc ads to cluster ad
 				procad->ChainToAd(clusterad);
