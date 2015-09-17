@@ -2030,22 +2030,34 @@ NewProc(int cluster_id)
 	// agree on who the owner is (or until we change the schedd so that /it/
 	// sets the Owner string), it's safe to do this rather than complicate
 	// things by using the owner attribute from the job ad we don't have yet.
+	//
+	// The queue super-user(s) can pretend to be someone, in which case it's
+	// valid and sensible to apply that someone's quota; or they could change
+	// the owner attribute after the submission.  The latter would allow them
+	// to bypass the job quota, but that's not necessarily a bad thing.
 	if (Q_SOCK) {
 		const char * owner = Q_SOCK->getOwner();
-		ASSERT( owner != NULL );
-		const OwnerData * ownerData = scheduler.insert_owner_const( owner );
-		ASSERT( ownerData != NULL );
-		int ownerJobCount = ownerData->num.JobsCounted
-							+ ownerData->num.JobsRecentlyAdded
-							+ jobs_added_this_transaction;
+		if( owner == NULL ) {
+			// This should only happen for job submission via SOAP, but
+			// it's unclear how we can verify that.  Regardless, if we
+			// don't know who the owner of the job is, we can't enfore
+			// MAX_JOBS_PER_OWNER.
+			dprintf( D_FULLDEBUG, "Not enforcing MAX_JOBS_PER_OWNER for submit without owner of cluster %d.\n", cluster_id );
+		} else {
+			const OwnerData * ownerData = scheduler.insert_owner_const( owner );
+			ASSERT( ownerData != NULL );
+			int ownerJobCount = ownerData->num.JobsCounted
+								+ ownerData->num.JobsRecentlyAdded
+								+ jobs_added_this_transaction;
 
-		int maxJobsPerOwner = scheduler.getMaxJobsPerOwner();
-		if( ownerJobCount >= maxJobsPerOwner ) {
-			dprintf( D_ALWAYS,
-				"NewProc(): MAX_JOBS_PER_OWNER exceeded, submit failed.  "
-				"Current total is %d.  Limit is %d.\n",
-				ownerJobCount, maxJobsPerOwner );
-			return -3;
+			int maxJobsPerOwner = scheduler.getMaxJobsPerOwner();
+			if( ownerJobCount >= maxJobsPerOwner ) {
+				dprintf( D_ALWAYS,
+					"NewProc(): MAX_JOBS_PER_OWNER exceeded, submit failed.  "
+					"Current total is %d.  Limit is %d.\n",
+					ownerJobCount, maxJobsPerOwner );
+				return -3;
+			}
 		}
 	}
 
