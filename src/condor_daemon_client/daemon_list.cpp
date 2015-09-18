@@ -156,17 +156,19 @@ DaemonList::DeleteCurrent() {
 }
 
 
-CollectorList::CollectorList() {
+CollectorList::CollectorList(DCCollectorAdSequences * adseq /*=NULL*/)
+	: adSeq(adseq) {
 }
 
 CollectorList::~CollectorList() {
+	if (adSeq) { delete adSeq; adSeq = NULL; }
 }
 
 
 CollectorList *
-CollectorList::create( const char * pool )
+CollectorList::create(const char * pool, DCCollectorAdSequences * adseq)
 {
-	CollectorList * result = new CollectorList();
+	CollectorList * result = new CollectorList(adseq);
 	DCCollector * collector = NULL;
 
 		// Read the new names from config file or use the given parameter
@@ -250,10 +252,26 @@ CollectorList::resortLocal( const char *preferred_collector )
 	return 0;
 }
 
+// return a ref to the collection of ad sequence counters, creating it if necessary
+DCCollectorAdSequences & CollectorList::getAdSeq()
+{
+	if ( ! adSeq) adSeq = new DCCollectorAdSequences();
+	return *adSeq;
+}
 
 int
 CollectorList::sendUpdates (int cmd, ClassAd * ad1, ClassAd* ad2, bool nonblocking) {
 	int success_count = 0;
+
+	if ( ! adSeq) {
+		adSeq = new DCCollectorAdSequences();
+	}
+
+	// advance the sequence numbers for these ads
+	//
+	time_t now = time(NULL);
+	DCCollectorAdSeq * seqgen = adSeq->getAdSeq(*ad1);
+	if (seqgen) { seqgen->advance(now); }
 
 	this->rewind();
 	DCCollector * daemon;
@@ -261,7 +279,7 @@ CollectorList::sendUpdates (int cmd, ClassAd * ad1, ClassAd* ad2, bool nonblocki
 		dprintf( D_FULLDEBUG, 
 				 "Trying to update collector %s\n", 
 				 daemon->addr() );
-		if( daemon->sendUpdate(cmd, ad1, ad2, nonblocking) ) {
+		if( daemon->sendUpdate(cmd, ad1, *adSeq, ad2, nonblocking) ) {
 			success_count++;
 		} 
 	}
