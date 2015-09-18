@@ -32,6 +32,7 @@
 
 std::map< std::string, Timeslice > DCCollector::blacklist;
 
+
 // Instantiate things
 
 DCCollector::DCCollector( const char* dcName, UpdateType uType ) 
@@ -39,9 +40,11 @@ DCCollector::DCCollector( const char* dcName, UpdateType uType )
 {
 	up_type = uType;
 	init( true );
+#ifdef LONG_LIVED_UPDATE_SEQUENCE_NUMS
+#else
 	adSeqMan = new DCCollectorAdSeqMan();
+#endif
 }
-
 
 void
 DCCollector::init( bool needs_reconfig )
@@ -58,7 +61,10 @@ DCCollector::init( bool needs_reconfig )
 	} 
 	startTime = bootTime;
 
+#ifdef LONG_LIVED_UPDATE_SEQUENCE_NUMS
+#else
 	adSeqMan = NULL;
+#endif
 
 	if( needs_reconfig ) {
 		reconfig();
@@ -117,6 +123,8 @@ DCCollector::deepCopy( const DCCollector& copy )
 
 	startTime = copy.startTime;
 
+#ifdef LONG_LIVED_UPDATE_SEQUENCE_NUMS
+#else
 	if( adSeqMan ) {
 		delete adSeqMan;
 		adSeqMan = NULL;
@@ -126,6 +134,7 @@ DCCollector::deepCopy( const DCCollector& copy )
 	} else {
 		adSeqMan = new DCCollectorAdSeqMan();
 	}
+#endif
 }
 
 
@@ -189,7 +198,7 @@ DCCollector::parseTCPInfo( void )
 
 
 bool
-DCCollector::sendUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblocking ) 
+DCCollector::sendUpdate( int cmd, ClassAd* ad1, DCCollectorAdSequences& adSeq, ClassAd* ad2, bool nonblocking ) 
 {
 	if( ! _is_configured ) {
 			// nothing to do, treat it as success...
@@ -210,6 +219,17 @@ DCCollector::sendUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblocking )
 	if ( ad2 ) {
 		ad2->Assign(ATTR_DAEMON_START_TIME,(long)startTime);
 	}
+
+	#ifdef LONG_LIVED_UPDATE_SEQUENCE_NUMS
+	if ( ad1 ) {
+		DCCollectorAdSeq* seqgen = adSeq.getAdSeq(*ad1);
+		if (seqgen) {
+			long long seq = seqgen->getSequence();
+			ad1->Assign(ATTR_UPDATE_SEQUENCE_NUMBER, seq);
+			if (ad2) { ad2->Assign(ATTR_UPDATE_SEQUENCE_NUMBER, seq); }
+		}
+	}
+	#else
 	if ( ad1 ) {
 		unsigned seq = adSeqMan->getSequence( ad1 );
 		ad1->Assign(ATTR_UPDATE_SEQUENCE_NUMBER,seq);
@@ -218,25 +238,13 @@ DCCollector::sendUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblocking )
 		unsigned seq = adSeqMan->getSequence( ad2 );
 		ad2->Assign(ATTR_UPDATE_SEQUENCE_NUMBER,seq);
 	}
+	#endif
 
 		// Prior to 7.2.0, the negotiator depended on the startd
 		// supplying matching MyAddress in public and private ads.
 	if ( ad1 && ad2 ) {
 		ad2->CopyAttribute(ATTR_MY_ADDRESS,ad1);
 	}
-
-#if 0 // don't want this in all ads, moving to self_monitor code so it shows up only in daemon ads
-    // My initial plan was to publish these for schedd, however they will provide
-    // potentially useful context for performance/health assessment of any daemon 
-    if (ad1) {
-        ad1->Assign(ATTR_DETECTED_CPUS, param_integer("DETECTED_CORES", 0));
-        ad1->Assign(ATTR_DETECTED_MEMORY, param_integer("DETECTED_MEMORY", 0));
-    }
-    if (ad2) {
-        ad2->Assign(ATTR_DETECTED_CPUS, param_integer("DETECTED_CORES", 0));
-        ad2->Assign(ATTR_DETECTED_MEMORY, param_integer("DETECTED_MEMORY", 0));
-    }
-#endif
 
 		// We never want to try sending an update to port 0.  If we're
 		// about to try that, and we're trying to talk to a local
@@ -616,6 +624,28 @@ DCCollector::initDestinationStrings( void )
 //
 // Ad Sequence Number class methods
 //
+#ifdef LONG_LIVED_UPDATE_SEQUENCE_NUMS
+DCCollectorAdSeq* DCCollectorAdSequences::getAdSeq(const ClassAd & ad)
+{
+	std::string name, attr;
+	ad.LookupString( ATTR_NAME, name );
+	ad.LookupString( ATTR_MY_TYPE, attr );
+	name += "\n"; name += attr;
+	ad.LookupString( ATTR_MACHINE, attr );
+	name += "\n"; name += attr;
+
+	DCCollectorAdSeqMap::iterator it = seqs.find(name);
+	if (it != seqs.end()) {
+		return &(it->second);
+	}
+	return &(seqs[name]);
+}
+
+void DCCollectorAdSequences::garbageCollect()
+{
+	PRAGMA_REMIND("tj: do we need this?")
+}
+#else
 
 // Constructor for the Ad Sequence Number
 DCCollectorAdSeq::DCCollectorAdSeq( const char *inName,
@@ -830,15 +860,19 @@ DCCollectorAdSeqMan::getSequence( const ClassAd *ad )
 	// Finally, return the sequence
 	return adSeq->getSequenceAndIncrement( );
 }
+#endif
 
 DCCollector::~DCCollector( void )
 {
 	if( update_rsock ) {
 		delete( update_rsock );
 	}
+#ifdef LONG_LIVED_UPDATE_SEQUENCE_NUMS
+#else
 	if( adSeqMan ) {
 		delete( adSeqMan );
 	}
+#endif
 	if( update_destination ) {
 		delete [] update_destination;
 	}

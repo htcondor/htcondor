@@ -10825,10 +10825,12 @@ DaemonCore::publish(ClassAd *ad) {
 
 void
 DaemonCore::initCollectorList() {
+	DCCollectorAdSequences * adSeq = NULL;
 	if (m_collector_list) {
+		adSeq = m_collector_list->detachAdSequences();
 		delete m_collector_list;
 	}
-	m_collector_list = CollectorList::create();
+	m_collector_list = CollectorList::create(NULL, adSeq);
 }
 
 

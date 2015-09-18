@@ -1484,6 +1484,8 @@ class DaemonCore : public Service
 	int sendUpdates(int cmd, ClassAd* ad1, ClassAd* ad2 = NULL,
 					bool nonblock = false);
 
+	DCCollectorAdSequences & getUpdateAdSeq() { return m_collector_list->getAdSeq(); }
+
 		/**
 		   Indicates if this daemon wants to be restarted by its
 		   parent or not.  Usually true, unless one of the

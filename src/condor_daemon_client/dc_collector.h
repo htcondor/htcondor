@@ -30,7 +30,38 @@
 #include "condor_timeslice.h"
 
 #include <deque>
+#include <map>
 
+#define LONG_LIVED_UPDATE_SEQUENCE_NUMS 1
+
+#ifdef LONG_LIVED_UPDATE_SEQUENCE_NUMS
+
+class DCCollectorAdSeq {
+public:
+	DCCollectorAdSeq() : sequence(0), last_advance(0) {}
+	long long getSequence() { return sequence; }
+	time_t    lastAdvance() { return last_advance; }
+	long long advance(time_t now) {
+		if ( ! now) now = time(NULL);
+		last_advance = now;
+		++sequence;
+		return sequence;
+	}
+protected:
+	long long sequence;     // current sequence number
+	time_t    last_advance; // last time advance was called.
+};
+
+typedef std::map<std::string, DCCollectorAdSeq> DCCollectorAdSeqMap;
+class DCCollectorAdSequences {
+public:
+	DCCollectorAdSeq* getAdSeq(const ClassAd & ad);
+	void garbageCollect();
+private:
+	DCCollectorAdSeqMap seqs;
+};
+
+#else
 /** Class to manage the sequence nubmers of individual ClassAds
  * published by the application
  **/
@@ -77,6 +108,7 @@ class DCCollectorAdSeqMan {
 	ExtArray<DCCollectorAdSeq *> adSeqInfo;
 	int		numAds;
 };
+#endif
 
 /** This is the Collector-specific class derived from Daemon.  It
 	implements some of the collectors's daemonCore command interface.  
@@ -112,7 +144,7 @@ public:
 			@param ad ClassAd you want to use for the update
 			file)
 		*/
-	bool sendUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblocking );
+	bool sendUpdate( int cmd, ClassAd* ad1, DCCollectorAdSequences& seq, ClassAd* ad2, bool nonblocking );
 
 	void reconfig( void );
 
@@ -126,8 +158,11 @@ public:
 
   protected:
 		// Get the ad sequence manager (for copy constructor)
+#ifdef LONG_LIVED_UPDATE_SEQUENCE_NUMS
+#else
 	const DCCollectorAdSeqMan &getAdSeqMan( void ) const
 		{ return *adSeqMan; };
+#endif
 
 
 private:
@@ -166,7 +201,10 @@ private:
 
 	// Items to manage the sequence numbers
 	time_t startTime;
+#ifdef LONG_LIVED_UPDATE_SEQUENCE_NUMS
+#else
 	DCCollectorAdSeqMan *adSeqMan;
+#endif
 };
 
 
