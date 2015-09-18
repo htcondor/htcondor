@@ -41,8 +41,10 @@ class XInterface
     void SelectEvents(Window win);
     bool QueryPointer();
     bool Connect();
-    int NextEntry();
-    void TryUser(const char *user);
+    bool TryUser(const char *user);
+
+	void ReadUtmp();
+	void FinishConnection();
 
     Display     *_display;
     char*       _display_name;
