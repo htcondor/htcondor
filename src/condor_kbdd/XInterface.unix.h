@@ -41,6 +41,7 @@ class XInterface
     bool ProcessEvents();
     void SelectEvents(Window win);
     bool QueryPointer();
+	bool QuerySSExtension();
     bool Connect();
     bool TryUser(const char *user);
 
@@ -62,9 +63,9 @@ class XInterface
     int          _small_move_delta;
     int          _bump_check_after_idle_time_sec;
 
-    bool        _tried_root;
-    bool        _tried_utmp;
     int         _daemon_core_timer;
+    bool 	needsCheck;
+    bool 	hasXss; 
 
     StringList  *_xauth_users;
 
