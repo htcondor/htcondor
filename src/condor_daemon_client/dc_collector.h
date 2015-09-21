@@ -32,83 +32,32 @@
 #include <deque>
 #include <map>
 
-#define LONG_LIVED_UPDATE_SEQUENCE_NUMS 1
-
-#ifdef LONG_LIVED_UPDATE_SEQUENCE_NUMS
-
+// This holds a single update ad sequence number
+//
 class DCCollectorAdSeq {
 public:
 	DCCollectorAdSeq() : sequence(0), last_advance(0) {}
 	long long getSequence() { return sequence; }
 	time_t    lastAdvance() { return last_advance; }
 	long long advance(time_t now) {
-		if ( ! now) now = time(NULL);
+		//if ( ! now) now = time(NULL);
 		last_advance = now;
 		++sequence;
 		return sequence;
 	}
 protected:
 	long long sequence;     // current sequence number
-	time_t    last_advance; // last time advance was called.
+	time_t    last_advance; // last time advance was called (for garbage collection if we ever want to do that)
 };
 
 typedef std::map<std::string, DCCollectorAdSeq> DCCollectorAdSeqMap;
 class DCCollectorAdSequences {
 public:
 	DCCollectorAdSeq* getAdSeq(const ClassAd & ad);
-	void garbageCollect();
 private:
 	DCCollectorAdSeqMap seqs;
 };
 
-#else
-/** Class to manage the sequence nubmers of individual ClassAds
- * published by the application
- **/
-class DCCollectorAdSeq {
-  public:
-	DCCollectorAdSeq( const char *, const char *, const char * );
-	DCCollectorAdSeq( const DCCollectorAdSeq & );
-	~DCCollectorAdSeq( void );
-
-	bool Match( const char *, const char *, const char * ) const;
-	unsigned getSequenceAndIncrement( void );
-	unsigned getSequence( void ) const { return sequence; };
-
-	const char *getName( void ) const { return Name; };
-	const char *getMyType( void ) const { return MyType; };
-	const char *getMachine( void ) const { return Machine; };
-
-  private:
-	char		*Name;			// "Name" in the ClassAd
-	char		*MyType;		// "MyType" in the ClassAd
-	char		*Machine;		// "Machine" in ClassAd
-	unsigned	sequence;		// The sequence number for it.
-};
-
-/** Class to manage the sequence nubmers of all ClassAds published by
- * the application
- **/
-class DCCollectorAdSeqMan {
-  public:
-	DCCollectorAdSeqMan( void );
-	DCCollectorAdSeqMan( const DCCollectorAdSeqMan &copy,
-						 bool copy_array = true );
-	~DCCollectorAdSeqMan( void );
-
-	unsigned getSequence( const ClassAd *ad );
-	int getNumAds( void ) const { return numAds; };
-
-	// Used for the copy constructor
-  protected:
-	const ExtArray<DCCollectorAdSeq *> & getSeqInfo( void ) const
-		{ return adSeqInfo; };
-
-  private:
-	ExtArray<DCCollectorAdSeq *> adSeqInfo;
-	int		numAds;
-};
-#endif
 
 /** This is the Collector-specific class derived from Daemon.  It
 	implements some of the collectors's daemonCore command interface.  
@@ -156,14 +105,6 @@ public:
 
 	bool useTCPForUpdates() { return use_tcp; }
 
-  protected:
-		// Get the ad sequence manager (for copy constructor)
-#ifdef LONG_LIVED_UPDATE_SEQUENCE_NUMS
-#else
-	const DCCollectorAdSeqMan &getAdSeqMan( void ) const
-		{ return *adSeqMan; };
-#endif
-
 
 private:
 
@@ -201,10 +142,6 @@ private:
 
 	// Items to manage the sequence numbers
 	time_t startTime;
-#ifdef LONG_LIVED_UPDATE_SEQUENCE_NUMS
-#else
-	DCCollectorAdSeqMan *adSeqMan;
-#endif
 };
 
 
