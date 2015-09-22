@@ -2,10 +2,8 @@
 <html>
 <head>
   <meta charset="utf-8">
+  <title>Graph Testing</title>
   <style>
-  body {
-    margin: 0px;
-  }
   div#editmenu {
     position: absolute;
     right: 0;
@@ -23,18 +21,14 @@
   div#editmenu a:hover {
     background: #aaa;
   }
-  #vizchart {
-    position: relative;
-    overflow: hidden;
-    top: 0;
-    bottom: 0;
-    left: 0;
-    right: 0;
-  }
+  .vizchart {
+	width: 100%;
+	height: 400px;
+	}
   #vizlog {
     white-space: pre;
   }
-  #vizstatus {
+  .vizstatus {
     position: absolute;
     z-index: 4;
     width: 100%;
@@ -47,7 +41,7 @@
   }
   .vizstep {
     margin-top: 2em;
-    display: none;
+    //display: none;
   }
   .vizstep .text {
     font-family: mono;
@@ -81,8 +75,8 @@
     left: 0;
   }
   </style>
-  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.js"></script>
-  <script src="//cdnjs.cloudflare.com/ajax/libs/dygraph/1.1.0/dygraph-combined.js"></script>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/dygraph/1.1.0/dygraph-combined.js"></script>
   <script src="https://www.google.com/jsapi"></script>
   <script>
   google.load('visualization', '1.0', {
@@ -92,21 +86,143 @@
   <script src="heatgrid.js"></script>
   <script src="render.js"></script>
 </head>
-
 <body>
+<form>
+<textarea id='editor' wrap='off'>
+title=Machine State
+url=foo.json
+order=State
+pivot=Date;State;Cpus
+chart=stacked
+</textarea>
+</form>
+
+<button id="reload1">Reload</button>
+<button id="rerender1">Re-render</button>
 
 <div id='editmenu'><a id='editlink' href='' target='_top'>edit</a></div>
-<div id='vizstatus'>
-  <div id='statustext'></div>
-  <div id='statussub'></div>
-  <div id='vizlog'></div>
+<div id='graph1'>
+<div class='vizstatus'>
+  <div class='statustext'></div>
+  <div class='statussub'></div>
 </div>
-<div id='vizraw'></div>
-<div id='vizchart'></div>
+<div class='vizraw'></div>
+<div class='vizchart'></div>
+</div>
+
+<div id='table'>
+<div class='vizstatus'>
+  <div class='statustext'></div>
+  <div class='statussub'></div>
+</div>
+<div class='vizraw'></div>
+<div class='vizchart'></div>
+</div>
+
+
+<h2>Log</h2>
+  <div id='vizlog'></div>
 
 <script>
-$('#editlink').attr('href', 'edit' + window.location.search);
-afterquery.render(window.location.search);
+$('#editlink').attr('href', 'edit.html' + window.location.search);
+
+function load_arguments_to_form() {
+	var default_args = '?url=foo.json&order=State&pivot=Date;State;Cpus&chart=stacked';
+	var args = afterquery.parseArgs(window.location.search || default_args);
+	var text = "";
+	for(var argi in args.all) {
+		var arg = args.all[argi];
+		var key = arg[0];
+		var val = arg[1];
+		text += key + "=" + val + "\n";	
+	}
+	$('#editor').text(text);
+	
+}
+
+function save_arguments_to_url(args) {
+	before = window.location.href;
+	console.log("Before: " + before);
+	base = before.replace(/\?.*/,'');
+	console.log("Base: " + base);
+	newuri = base + args;
+	console.log("New: " + newuri);
+	history.pushState(null, null, newuri);
+}
+
+function read_arguments() {
+  var out = [];
+  var parts = $('#editor').attr('value').trim().split('\n');
+  for (var parti in parts) {
+    var part = parts[parti];
+    if (part) {
+      var bits = afterquery.internal.trySplitOne(part, '=');
+      if (bits) {
+        out.push(encodeURIComponent(bits[0]) + '=' + encodeURIComponent(bits[1]));
+      } else {
+        out.push(encodeURIComponent(part));
+      }
+    }
+  }
+  return  '?' + out.join('&');
+}
+
+////////////////////////////////////////////////////////////////////////////////
+function TaskQueue() {
+	this.active = 0;
+	this.queue = [];
+};
+
+TaskQueue.prototype.run_next = function() {
+	var task = this.queue.shift();
+	task();
+	if(this.queue.length == 0) {
+		this.active = 0;
+		return;
+	}
+	var myself = this;
+	setTimeout(function(){myself.run_next()}, 0);
+};
+TaskQueue.prototype.push = function(func) {
+	this.queue.push(func);
+	if(this.active) { return; }
+	var myself = this;
+	setTimeout(function(){myself.run_next()}, 0);
+	this.active = 1;
+};
+////////////////////////////////////////////////////////////////////////////////
+var task_queue = new TaskQueue();
+
+var data;
+function load_and_render(graphid) {
+    var args = read_arguments();
+
+	task_queue.push(function() { data = afterquery.load(args,null, null, graphid); });
+	task_queue.push(function() { afterquery.render(args, data.value, null, graphid); });
+/*
+	var callback_render_graph = function(){
+		setTimeout(function() {
+			afterquery.render(args, data.value, null, graphid);
+			},0)
+		};
+	data = afterquery.load(args,null, callback_render_graph, graphid);
+*/
+}
+
+//load_and_render();
+//afterquery.render(window.location.search);
+$('#reload1').click(function() {
+	load_and_render('graph1');
+	save_arguments_to_url(read_arguments());
+	});
+$('#rerender1').click(function() { afterquery.render(read_arguments(),
+data.value,null,'graph1'); });
+
+$(document).ready( function() {
+	load_arguments_to_form();
+	load_and_render('graph1');
+}) ;
+
 </script>
 
 </body>
