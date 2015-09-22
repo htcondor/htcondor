@@ -110,7 +110,7 @@ chart=stacked
 <div class='vizchart'></div>
 </div>
 
-<div id='table'>
+<div id='table1'>
 <div class='vizstatus'>
   <div class='statustext'></div>
   <div class='statussub'></div>
@@ -167,6 +167,19 @@ function read_arguments() {
   return  '?' + out.join('&');
 }
 
+function strip_chart(arguments) {
+	var args = afterquery.parseArgs(arguments);
+	var text = "?";
+	for(var argi in args.all) {
+		var arg = args.all[argi];
+		var key = arg[0];
+		if(key == "chart") { continue; }
+		var val = arg[1];
+		text += key + "=" + val + "&";	
+	}
+	return text;
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 function TaskQueue() {
 	this.active = 0;
@@ -194,25 +207,39 @@ TaskQueue.prototype.push = function(func) {
 var task_queue = new TaskQueue();
 
 var data;
-function load_and_render(graphid) {
+function load_and_render(graphid,tableid) {
     var args = read_arguments();
 
+/*
 	task_queue.push(function() { data = afterquery.load(args,null, null, graphid); });
 	task_queue.push(function() { afterquery.render(args, data.value, null, graphid); });
-/*
+	if(tableid) {
+		task_queue.push(function() { afterquery.render(args_nc, data.value, null, tableid); });
+	}
+*/
+
+	var callback_render_table = null;
+	if(tableid) {
+		var args_nc = strip_chart(args);
+		callback_render_table = function() {
+			setTimeout(function() {
+		 		afterquery.render(args_nc, data.value, null, tableid);
+			}, 0);
+		 };
+	}
+
 	var callback_render_graph = function(){
 		setTimeout(function() {
-			afterquery.render(args, data.value, null, graphid);
+			afterquery.render(args, data.value, callback_render_table, graphid);
 			},0)
 		};
 	data = afterquery.load(args,null, callback_render_graph, graphid);
-*/
 }
 
 //load_and_render();
 //afterquery.render(window.location.search);
 $('#reload1').click(function() {
-	load_and_render('graph1');
+	load_and_render('graph1', 'table1');
 	save_arguments_to_url(read_arguments());
 	});
 $('#rerender1').click(function() { afterquery.render(read_arguments(),
@@ -220,7 +247,7 @@ data.value,null,'graph1'); });
 
 $(document).ready( function() {
 	load_arguments_to_form();
-	load_and_render('graph1');
+	load_and_render('graph1', 'table1');
 }) ;
 
 </script>
