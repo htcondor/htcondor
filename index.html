@@ -25,6 +25,10 @@
 	width: 100%;
 	height: 400px;
 	}
+  #table1 .vizchart {
+    text-align: center;
+    height: auto;
+  }
   #vizlog {
     white-space: pre;
   }
@@ -180,31 +184,6 @@ function strip_chart(arguments) {
 	return text;
 }
 
-////////////////////////////////////////////////////////////////////////////////
-function TaskQueue() {
-	this.active = 0;
-	this.queue = [];
-};
-
-TaskQueue.prototype.run_next = function() {
-	var task = this.queue.shift();
-	task();
-	if(this.queue.length == 0) {
-		this.active = 0;
-		return;
-	}
-	var myself = this;
-	setTimeout(function(){myself.run_next()}, 0);
-};
-TaskQueue.prototype.push = function(func) {
-	this.queue.push(func);
-	if(this.active) { return; }
-	var myself = this;
-	setTimeout(function(){myself.run_next()}, 0);
-	this.active = 1;
-};
-////////////////////////////////////////////////////////////////////////////////
-var task_queue = new TaskQueue();
 
 var data;
 function load_and_render(graphid,tableid) {
