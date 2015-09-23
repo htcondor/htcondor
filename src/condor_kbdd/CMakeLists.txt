@@ -20,8 +20,11 @@ if (HAVE_KBDD)
 
 	condor_glob(kbdHdrs kbdSrcs "")
 
-	condor_exe( condor_kbdd "${kbdHdrs};${kbdSrcs}" ${C_SBIN} "${CONDOR_LIBS};${HAVE_X11}" ON )
+if (HAVE_XSS)
+	condor_exe( condor_kbdd "${kbdHdrs};${kbdSrcs}" ${C_SBIN} "${CONDOR_LIBS};${HAVE_X11};${HAVE_XEXT};${HAVE_XSS}" ON )
 else()
+	condor_exe( condor_kbdd "${kbdHdrs};${kbdSrcs}" ${C_SBIN} "${CONDOR_LIBS};${HAVE_X11}" ON )
+endif()
 
     message(STATUS "NOTE: *condor_kbdd* will not be built, HAVE_KBDD doesn't exist")
 
