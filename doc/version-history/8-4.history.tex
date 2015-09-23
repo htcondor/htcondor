@@ -41,6 +41,14 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug where the \Condor{kbdd} could not accurately measure
+the keyboard idle time.  This daemon now works correctly on Linux systems
+whose X server support the MIT screen saver extension.
+\Ticket{5265}
+
+\item Fixed a bug which prevented SOAP submissions.
+\Ticket{5260}
+
 \item The parameter \Macro{STARTD\_HISTORY} is now set to record
 the job histories per startd, in the log directory of the
 execute machine. These can be read with the \Condor{history} command.
