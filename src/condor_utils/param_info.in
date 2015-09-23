@@ -8129,6 +8129,84 @@ default : @end
 @end
 review=?
 
+[$POLICY.PREEMPT_IF_CPUS_EXCEEDED]
+friendly_name=Preempt jobs that use more cpu cores than in slot
+default : @end
+  #
+  # Publish the number of CPU cores being used by the job into
+  # to slot ad as attribute "CpusUsage". This value will
+  # be the average number of cores used by the job over the
+  # past minute, sampling every 5 seconds, and rounded to two digits.
+  #
+  CpusUsage = ifthenelse( \
+     TotalLoadAvg > 0.0 && Activity!="Idle", \
+     int(CondorLoadAvg / TotalLoadAvg * \
+        ifthenelse(TotalLoadAvg < $(DETECTED_CORES), TotalLoadAvg, $(DETECTED_CORES)) \
+        * 100) / 100.0, \
+     0)
+  STARTD_EXPRS = $(STARTD_EXPRS) CpusUsage
+  #
+  # If the startd sees the number of CPU cores used by the job exceed the
+  # number of cores in the slot by more than 0.8, preempt the job
+  # immediately ignoring any retirement time.
+  #
+  CPU_EXCEEDED = (CpusUsage > Cpus + 0.8)
+  PREEMPT = ($(PREEMPT:False)) || $(CPU_EXCEEDED)
+  MAXJOBRETIREMENTTIME = ifthenelse($(CPU_EXCEEDED),0,$(MAXJOBRETIREMENTTIME:0))
+  WANT_SUSPEND = ($(WANT_SUSPEND:False)) && $(CPU_EXCEEDED) =!= TRUE
+@end
+review=?
+
+[$POLICY.HOLD_IF_CPUS_EXCEEDED]
+friendly_name=Hold jobs that use more cpu cores than in slot
+default : @end
+  use policy: preempt_if_cpus_exceeded
+  #
+  # If the startd preempted a job because CPU usage exceeded the number
+  # of cores in the slot, put the job on hold.
+  #
+  WANT_HOLD = ($(WANT_HOLD:False)) || $(CPU_EXCEEDED)
+  WANT_HOLD_REASON = ifThenElse($(CPU_EXCEEDED), \
+     $(HOLD_REASON_CPU_EXCEEDED:"cpu usage exceeded request_cpus"), \
+     $(WANT_HOLD_REASON:UNDEFINED))
+  WANT_HOLD_SUBCODE = ifThenElse($(CPU_EXCEEDED), \
+     $(HOLD_SUBCODE_CPU_EXCEEDED:101), \
+     $(WANT_HOLD_SUBCODE:UNDEFINED))
+@end
+review=?
+
+[$POLICY.PREEMPT_IF_MEMORY_EXCEEDED]
+friendly_name=Preempt jobs that use more memory than in slot
+default : @end
+  #
+  # If the startd sees the memory usage of the job exceed the
+  # memory in the slot, preempt the job immediately ignoring any retirement time.
+  #
+  MEMORY_EXCEEDED = (MemoryUsage =!= UNDEFINED && MemoryUsage > Memory)
+  PREEMPT = ($(PREEMPT:False)) || $(MEMORY_EXCEEDED)
+  MAXJOBRETIREMENTTIME = ifthenelse($(MEMORY_EXCEEDED),0,$(MAXJOBRETIREMENTTIME:0))
+  WANT_SUSPEND = ($(WANT_SUSPEND:False)) && $(MEMORY_EXCEEDED) =!= TRUE
+@end
+review=?
+
+[$POLICY.HOLD_IF_MEMORY_EXCEEDED]
+friendly_name=Hold jobs that use more memory than in slot
+default : @end
+  use policy: preempt_if_memory_exceeded
+  #
+  # If the startd preempted a job because memory usage exceeded the amount
+  # of memory in the slot, put the job on hold.
+  #
+  WANT_HOLD = ($(WANT_HOLD:False)) || $(MEMORY_EXCEEDED)
+  WANT_HOLD_REASON = ifThenElse($(MEMORY_EXCEEDED), \
+     $(HOLD_REASON_MEMORY_EXCEEDED:"memory usage exceeded request_memory"), \
+     $(WANT_HOLD_REASON:UNDEFINED))
+  WANT_HOLD_SUBCODE = ifThenElse($(MEMORY_EXCEEDED), \
+     $(HOLD_SUBCODE_MEMORY_EXCEEDED:102), \
+     $(WANT_HOLD_SUBCODE:UNDEFINED))
+@end
+review=?
+
 [$ROLE.Personal]
 friendly_name=Settings for Personal HTCondor (i.e. the whole pool is on a single machine)
 default : @end
