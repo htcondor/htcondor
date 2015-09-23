@@ -30,6 +30,9 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item The \Condor{startd} history file contains two new attributes: BadputCausedByDraining and BadputCausedByPreemption, two boolean-valued attributes which are true if the job was evicted not by a user request.
+\Ticket{5255}
+
 \item The python bindings have a new Claim API, allowing Computing-On-Demand (COD) to be
 invoked via python.
 \Ticket{5130}
