@@ -6808,6 +6808,22 @@ public:
 		return ix >= is && ix < ie && ( !(flags&8) || (0 == ((ix-is) % step)) );
 	}
 
+	int to_string(char * buf, int cch) {
+		char sz[16*3];
+		if ( ! (flags&1)) return 0;
+		char * p = sz;
+		*p++  = '[';
+		if (flags&2) { p += sprintf(p,"%d", start); }
+		*p++ = ':';
+		if (flags&4) { p += sprintf(p,"%d", end); }
+		*p++ = ':';
+		if (flags&8) { p += sprintf(p,"%d", step); }
+		*p++ = ']';
+		*p = 0;
+		strncpy(buf, sz, cch); buf[cch-1] = 0;
+		return (int)(p - sz);
+	}
+
 private:
 	int flags; // 1==initialized, 2==start set, 4==length set, 8==step set
 	int start;
@@ -6840,8 +6856,8 @@ char * queue_token_scan(char * ptr, const struct _qtoken tokens[], int ctokens, 
 						break;
 				}
 				if (ix < ctokens) { token_id = tokens[ix].id; *pptoken = ptok; break; }
-				if ( ! scan_until_match) { *pptoken = ptok; break; }
 			}
+			if ( ! scan_until_match) { *pptoken = ptok; break; }
 			cchtok = 0;
 		} else {
 			if ( ! cchtok) { ptok = p; }
@@ -9942,6 +9958,13 @@ int DoUnitTests(int options)
 		{0,  "arg from [:1] args.lst",     1, foreach_from,   1,  0},
 		{0,  "arg from [::] args.lst",     1, foreach_from,   1,  0},
 
+		{0,  "arg from [100::] args.lst",     1, foreach_from,   1,  0},
+		{0,  "arg from [:100:] args.lst",     1, foreach_from,   1,  0},
+		{0,  "arg from [::100] args.lst",     1, foreach_from,   1,  0},
+
+		{0,  "arg from [100:10:5] args.lst",     1, foreach_from,   1,  0},
+		{0,  "arg from [10:100:5] args.lst",     1, foreach_from,   1,  0},
+
 		{0,  "",             1, 0, 0, 0},
 		{0,  "2",            2, 0, 0, 0},
 		{0,  "9 - 2",        7, 0, 0, 0},
@@ -9979,6 +10002,7 @@ int DoUnitTests(int options)
 		fprintf(stderr, "%s num:   %d/%d  mode:  %d/%d  vars:  %d/%d {%s} ", ok ? " " : "!",
 				queue_num, trials[ii].num, foreach_mode, trials[ii].mode, cvars, trials[ii].cvars, vars_list);
 		fprintf(stderr, "  items: %d/%d {%s}", citems, trials[ii].citems, items_list);
+		if (slice.initialized()) { char sz[16*3]; slice.to_string(sz, sizeof(sz)); fprintf(stderr, " slice: %s", sz); }
 		if ( ! items_filename.empty()) { fprintf(stderr, " file:'%s'\n", items_filename.Value()); }
 		fprintf(stderr, "\tqargs: '%s' -> '%s'\trval: %d/%d\n", trials[ii].args, pqargs, rval, trials[ii].rval);
 
