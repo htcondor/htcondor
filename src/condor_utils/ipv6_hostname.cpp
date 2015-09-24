@@ -214,7 +214,7 @@ void reset_local_hostname() {
 		dprintf( D_ALWAYS, "Something went wrong identifying my hostname and IP address.\n" );
 		hostname_initialized = false;
 	} else {
-		dprintf( D_ALWAYS, "I am: hostname: %s, fully qualified doman name: %s, IP: %s, IPv4: %s, IPv6: %s\n", local_hostname.Value(), local_fqdn.Value(), local_ipaddr.to_ip_string().Value(), local_ipv4addr.to_ip_string().Value(), local_ipv6addr.to_ip_string().Value() );
+		dprintf( D_HOSTNAME, "I am: hostname: %s, fully qualified doman name: %s, IP: %s, IPv4: %s, IPv6: %s\n", local_hostname.Value(), local_fqdn.Value(), local_ipaddr.to_ip_string().Value(), local_ipv4addr.to_ip_string().Value(), local_ipv6addr.to_ip_string().Value() );
 		hostname_initialized = true;
 	}
 }

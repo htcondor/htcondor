@@ -33,7 +33,12 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Added four policy metaknobs to simplify configuring a policy
+	to either preempt or hold jobs that use more memory
+	or CPU cores than provisioned in the slot. See the \MacroNI{POLICY}
+	category of metaknobs in section~\ref{usecategory:POLICY} for
+	additional information.
+\Ticket{5250}
 
 \end{itemize}
 
@@ -59,6 +64,11 @@ Previously the default was not to record these.
 true, so that SLOT\_WEIGHT can be used with hierarchical group quotas
 and partitionable slots.
 \Ticket{5256}
+
+\item Fixed bug whereby occasionally the command-line tools would
+	emit debug messages to stderr with text ``I am: hostname: \ldots''.
+\Ticket{5276}
+
 
 \end{itemize}
 
