@@ -97,6 +97,7 @@ $success = sub
 			CondorTest::debug("Can not open logfile<$name>:$!\n",1);
 			$diditpass = 0;
 		}
+		#TEMPTEMP -- check nodeE output...
 		while(<OUT>) {
 			chomp();
 			$line = $_;
