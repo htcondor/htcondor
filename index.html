@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Graph Testing</title>
+  <title>HTCondor Pool Monitoring</title>
   <style>
   div#editmenu {
     position: absolute;
@@ -91,8 +91,11 @@
   <script src="render.js"></script>
 </head>
 <body>
+
+<h1>HTCondor</h1>
+
 <form>
-<textarea id='editor' wrap='off'>
+<textarea id='editor' cols="40" rows="10" wrap='off'>
 title=Machine State
 url=foo.json
 order=State
@@ -100,6 +103,7 @@ pivot=Date;State;Cpus
 chart=stacked
 </textarea>
 </form>
+
 
 <button id="reload1">Reload</button>
 <button id="rerender1">Re-render</button>
@@ -130,9 +134,8 @@ chart=stacked
 <script>
 $('#editlink').attr('href', 'edit.html' + window.location.search);
 
-function load_arguments_to_form() {
-	var default_args = '?url=foo.json&order=State&pivot=Date;State;Cpus&chart=stacked';
-	var args = afterquery.parseArgs(window.location.search || default_args);
+function load_arguments_to_form(argstring) {
+	var args = afterquery.parseArgs(argstring);
 	var text = "";
 	for(var argi in args.all) {
 		var arg = args.all[argi];
@@ -225,7 +228,12 @@ $('#rerender1').click(function() { afterquery.render(read_arguments(),
 data.value,null,'graph1'); });
 
 $(document).ready( function() {
-	load_arguments_to_form();
+	if(!window.location.search) {
+		var default_args = '?url=foo.json&order=State&pivot=Date;State;Cpus&chart=stacked';
+		save_arguments_to_url(default_args);
+	}
+	var args = window.location.search;
+	load_arguments_to_form(args);
 	load_and_render('graph1', 'table1');
 }) ;
 
