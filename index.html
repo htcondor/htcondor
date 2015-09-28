@@ -78,6 +78,16 @@
     width: 100%;
     left: 0;
   }
+  #editlink {
+	background: none;
+	border: none;
+	padding: 0;
+	text-decoration: underline;
+	color: blue;
+	cursor: pointer;
+
+
+  }
   </style>
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/dygraph/1.1.0/dygraph-combined.js"></script>
@@ -94,7 +104,7 @@
 
 <h1>HTCondor</h1>
 
-<form>
+<div id="graph1editor" style="display:none;">
 <textarea id='editor' cols="40" rows="10" wrap='off'>
 title=Machine State
 url=foo.json
@@ -102,13 +112,16 @@ order=State
 pivot=Date;State;Cpus
 chart=stacked
 </textarea>
-</form>
+<div>
+<button id="rerender1">Update Graph</button>
+<button id="reload1">Reload Data</button>
+<button id="closeedit1">X</button>
+</div>
+</div>
 
 
-<button id="reload1">Reload</button>
-<button id="rerender1">Re-render</button>
 
-<div id='editmenu'><a id='editlink' href='' target='_top'>edit</a></div>
+<div id='editmenu'><button id='editlink'>edit</button></div>
 <div id='graph1'>
 <div class='vizstatus'>
   <div class='statustext'></div>
@@ -132,7 +145,14 @@ chart=stacked
   <div id='vizlog'></div>
 
 <script>
-$('#editlink').attr('href', 'edit.html' + window.location.search);
+
+function toggle_edit(e) {
+	$('#graph1editor').toggle();
+	return false;
+}
+
+$('#editlink').click(toggle_edit);
+$('#closeedit1').click(toggle_edit);
 
 function load_arguments_to_form(argstring) {
 	var args = afterquery.parseArgs(argstring);
