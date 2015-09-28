@@ -123,7 +123,7 @@
 </div>
 
 <div id="table1editor" style="display:none;">
-<textarea id='editor' cols="40" rows="10" wrap='off'>
+<textarea id='table1editor' cols="40" rows="10" wrap='off'>
 </textarea>
 <div>
 <button id="rerendertable1">Update Table</button>
@@ -155,7 +155,7 @@ $('#closeedit1').click(function() { $('#graph1editor').toggle(); });
 $('#editlinktable1').click(function() { $('#table1editor').toggle(); });
 $('#closeedittable1').click(function() { $('#table1editor').toggle(); });
 
-function load_arguments_to_form(argstring) {
+function load_arguments_to_form(argstring,form) {
 	var args = afterquery.parseArgs(argstring);
 	var text = "";
 	for(var argi in args.all) {
@@ -164,7 +164,7 @@ function load_arguments_to_form(argstring) {
 		var val = arg[1];
 		text += key + "=" + val + "\n";	
 	}
-	$('#editor').text(text);
+	$(form).text(text);
 	
 }
 
@@ -178,9 +178,9 @@ function save_arguments_to_url(args) {
 	history.pushState(null, null, newuri);
 }
 
-function read_arguments() {
+function read_arguments(source) {
   var out = [];
-  var parts = $('#editor').attr('value').trim().split('\n');
+  var parts = $(source).attr('value').trim().split('\n');
   for (var parti in parts) {
     var part = parts[parti];
     if (part) {
@@ -211,7 +211,7 @@ function strip_chart(arguments) {
 
 var data;
 function load_and_render(graphid,tableid) {
-    var args = read_arguments();
+    var args = read_arguments('#editor');
 
 /*
 	task_queue.push(function() { data = afterquery.load(args,null, null, graphid); });
@@ -243,10 +243,12 @@ function load_and_render(graphid,tableid) {
 //afterquery.render(window.location.search);
 $('#reload1').click(function() {
 	load_and_render('graph1', 'table1');
-	save_arguments_to_url(read_arguments());
+	save_arguments_to_url(read_arguments('#editor'));
 	});
-$('#rerender1').click(function() { afterquery.render(read_arguments(),
-data.value,null,'graph1'); });
+$('#rerender1').click(function() {
+	afterquery.render(read_arguments('#editor'), data.value,null,'graph1'); 
+	save_arguments_to_url(read_arguments('#editor'));
+	});
 
 $(document).ready( function() {
 	if(!window.location.search) {
@@ -254,7 +256,7 @@ $(document).ready( function() {
 		save_arguments_to_url(default_args);
 	}
 	var args = window.location.search;
-	load_arguments_to_form(args);
+	load_arguments_to_form(args, '#editor');
 	//load_and_render('graph1', 'table1');
 }) ;
 
