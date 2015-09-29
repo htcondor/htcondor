@@ -79,6 +79,7 @@
     left: 0;
   }
   .editlink {
+	float: right;
 	background: none;
 	border: none;
 	padding: 0;
@@ -102,17 +103,17 @@
 
 <h1>HTCondor</h1>
 
+<div id='editmenu'><button class="editlink" id='editlinkgraph1'>edit</button>
 <div id="graph1editor" style="display:none;">
 <textarea id='editor' cols="40" rows="10" wrap='off'>
 </textarea>
 <div>
 <button id="rerendergraph1">Update Graph</button>
 <button id="reloadgraph1">Reload Data</button>
-<button id="closeeditgraph1">❌</button>
+</div>
 </div>
 </div>
 
-<div id='editmenu'><button class="editlink" id='editlinkgraph1'>edit</button></div>
 <div id='graph1'>
 <div class='vizstatus'>
   <div class='statustext'></div>
@@ -148,9 +149,16 @@
 
 <script>
 
+function toggle_edit(btn, controls) {
+	$(controls).toggle();
+	if($(controls).is(":visible")) {
+		$(btn).text("❌")
+	} else {
+		$(btn).text("edit")
+	}
+}
 
-$('#editlinkgraph1').click(function() { $('#graph1editor').toggle(); });
-$('#closeeditgraph1').click(function() { $('#graph1editor').toggle(); });
+$('#editlinkgraph1').click(function() { toggle_edit('#editlinkgraph1', '#graph1editor'); });
 
 $('#editlinktable1').click(function() { $('#table1editor').toggle(); });
 $('#closeedittable1').click(function() { $('#table1editor').toggle(); });
