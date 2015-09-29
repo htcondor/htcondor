@@ -251,20 +251,23 @@ function table_select_handler(evnt,table,data) {
 			"order=State\n" +
 			"pivot=Date;State;Cpus\n" +
 			"chart=stacked\n";
-		$('#graph1text').val(new_graph_args);
-		afterquery.render(read_arguments('#graph1text'), data.value,null,'graph1'); 
-		save_arguments_to_url();
+		render_new_graph(new_graph_args);
 	}
+}
+
+function render_new_graph(args) {
+	if(args && args.length) {
+		$('#graph1text').val(args);
+	}
+	afterquery.render(read_arguments('#graph1text'), data.value,null,'graph1'); 
+	save_arguments_to_url();
 }
 
 $('#reloadgraph1').click(function() {
 	load_and_render();
 	save_arguments_to_url();
 	});
-$('#rerendergraph1').click(function() {
-	afterquery.render(read_arguments('#graph1text'), data.value,null,'graph1'); 
-	save_arguments_to_url();
-	});
+$('#rerendergraph1').click(render_new_graph);
 
 $('#reloadtable1').click(function() {
 	load_and_render();
