@@ -197,7 +197,7 @@ function replace_search_arg(oldurl, newkey, newval) {
 	for(var argi in args.all) {
 		var arg = args.all[argi];
 		var key = arg[0];
-		if(key != newkey) {
+		if(key.length && key != newkey) {
 			var val = arg[1];
 			newsearch += encodeURIComponent(key) + "=" + encodeURIComponent(val) + "&";	
 		}
