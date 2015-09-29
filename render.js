@@ -51,7 +51,7 @@ var afterquery = (function() {
   }
 
   function debug_log() {
-      if(1) {
+      if(0) {
           var args = ["render.js:"]; 
           for(var i = 0; i < arguments.length; i++) { args.push(arguments[i]); }
           console.log.apply(console, args);
@@ -64,7 +64,7 @@ var afterquery = (function() {
 
 
   function showstatus(s, s2, myid) {
-    console.log("showstatus(",s,", ", s2, ", ", myid, ")");
+    debug_log("showstatus(",s,", ", s2, ", ", myid, ")");
     $('#'+myid+' .statustext').html(s);
     $('#'+myid+' .statussub').text(s2 || '');
     if (s || s2) {
