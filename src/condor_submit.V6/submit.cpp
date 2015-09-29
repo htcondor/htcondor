@@ -38,10 +38,8 @@
 #if !defined(WIN32)
 #include <pwd.h>
 #include <sys/stat.h>
-#else
-// WINDOWS only
-#include "store_cred.h"
 #endif
+#include "store_cred.h"
 #include "internet.h"
 #include "my_hostname.h"
 #include "domain_tools.h"
@@ -83,6 +81,7 @@
 #include "condor_vm_universe_types.h"
 #include "vm_univ_utils.h"
 #include "condor_md.h"
+#include "my_popen.h"
 
 #include <algorithm>
 #include <string>
@@ -1512,7 +1511,54 @@ main( int argc, const char *argv[] )
 			exit(1);
 		}
 	}
+#else
+	char *producer = param("SEC_CREDENTIAL_PRODUCER");
+	if(producer) {
+		dprintf(D_ALWAYS, "CERN: invoking %s\n", producer);
+		ArgList args;
+		args.AppendArg(producer);
+		FILE* uber_file = my_popen(args, "r", false);
+		char *uber_ticket = NULL;
+		if (!uber_file) {
+			dprintf(D_ALWAYS, "CERN: ERROR (%i) invoking %s\n", errno, producer);
+			exit(1);
+		} else {
+			uber_ticket = (char*)malloc(65536);
+			int bytes_read = fread(uber_ticket, 1, 65536, uber_file);
+			// what constitutes failure?
+			my_pclose(uber_file);
+
+			char preview[16];
+			strncpy(preview,uber_ticket, 15);
+			preview[15]=0;
+
+			dprintf(D_ALWAYS, "CERN: read %i bytes {%s}\n", bytes_read, preview);
+
+			// setup the username to query
+			char userdom[256];
+			char* the_username = my_username();
+			char* the_domainname = my_domainname();
+			sprintf(userdom, "%s@%s", the_username, the_domainname);
+			free(the_username);
+			free(the_domainname);
+
+			dprintf(D_ALWAYS, "CERN: storing cred for user %s\n", userdom);
+			Daemon my_credd(DT_CREDD);
+			int store_cred_result;
+			if (my_credd.locate()) {
+				store_cred_result = store_cred(userdom, uber_ticket, ADD_MODE, &my_credd);
+				if ( store_cred_result != SUCCESS ) {
+					fprintf( stderr, "\nERROR: store_cred failed!\n");
+					exit(1);
+				}
+			} else {
+				fprintf( stderr, "\nERROR: locate(credd) failed!\n");
+				exit(1);
+			}
+		}
+	}
 #endif
+	dprintf(D_ALWAYS, "RETURNING TO NORMAL SUBMIT OPERATION\n");
 
 	// if this is an interactive job, and no cmd_file was specified on the
 	// command line, use a default cmd file as specified in the config table.
