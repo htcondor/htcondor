@@ -183,9 +183,9 @@ $('#editlinkgraph1').click(function() { toggle_edit('#editlinkgraph1', '#graph1e
 $('#editlinktable1').click(function() { toggle_edit('#editlinktable1', '#table1editor'); });
 
 function load_arguments_to_form(key,form) {
-	var args = afterquery.parseArgs(window.location.href);
+	var args = afterquery.parseArgs(window.location.search);
 	var val = args.get(key);
-	$(form).text(val);
+	$(form).val(val);
 }
 
 var urlTool = document.createElement('a');
@@ -223,7 +223,7 @@ function save_arguments_to_url() {
 
 function read_arguments(source) {
   var out = [];
-  var parts = $(source).attr('value').trim().split('\n');
+  var parts = $(source).val().trim().split('\n');
   for (var parti in parts) {
     var part = parts[parti];
     if (part) {
@@ -293,6 +293,14 @@ function default_table_args() {
 return "url=foo.json\n" +
 	"order=Date,User\n" +
 	"pivot=User;State;last(Cpus)";
+}
+
+window.onpopstate = function() {
+	setTimeout(function(){
+		load_arguments_to_form('graph1', '#graph1text');
+		load_arguments_to_form('table1', '#table1text');
+		load_and_render();
+		},1);
 }
 
 $('#reloadgraph1').click(function() {
