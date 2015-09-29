@@ -129,7 +129,6 @@
 <div>
 <button id="rerendertable1">Update Table</button>
 <button id="reloadtable1">Reload Data</button>
-<button id="closeedittable1">❌</button>
 </div>
 </div>
 
@@ -188,10 +187,14 @@ function replace_search_arg(oldurl, newkey, newval) {
 	return urlTool.href;
 }
 
-function save_arguments_to_url(key, editor) {
+function save_arguments_to_url(key, editor, key2, editor2) {
 	var value = $(editor).val().trim();
 	var oldurl = window.location.href;
 	var newurl = replace_search_arg(oldurl, key, value);
+	if(key2) {
+		var value = $(editor2).val().trim();
+		newurl = replace_search_arg(newurl, key2, value);
+	}
 	history.pushState(null, null, newurl);
 }
 
@@ -212,44 +215,26 @@ function read_arguments(source) {
   return  '?' + out.join('&');
 }
 
-function strip_chart(arguments) {
-	var args = afterquery.parseArgs(arguments);
-	var text = "?";
-	for(var argi in args.all) {
-		var arg = args.all[argi];
-		var key = arg[0];
-		if(key == "chart") { continue; }
-		var val = arg[1];
-		text += key + "=" + val + "&";	
-	}
-	return text;
-}
-
 
 var data;
-function load_and_render(graphid,tableid) {
-    var args = read_arguments('#graph1text');
-
-	var callback_render_table = null;
-	if(tableid) {
-		var args_nc = strip_chart(args);
-		callback_render_table = function() {
-			setTimeout(function() {
-		 		afterquery.render(args_nc, data.value, null, tableid);
-			}, 0);
-		 };
-	}
+function load_and_render() {
+	var callback_render_table = function() {
+		setTimeout(function() {
+			afterquery.render(read_arguments('#table1text'), data.value, null, 'table1');
+		}, 0);
+	 };
 
 	var callback_render_graph = function(){
 		setTimeout(function() {
-			afterquery.render(args, data.value, callback_render_table, graphid);
+			afterquery.render(read_arguments('#graph1text'), data.value, callback_render_table, 'graph1');
 			},0)
 		};
-	data = afterquery.load(args,null, callback_render_graph, graphid);
+	var args = read_arguments('#graph1text');
+	data = afterquery.load(args, null, callback_render_graph, 'graph1');
 }
 
 $('#reloadgraph1').click(function() {
-	load_and_render('graph1', 'table1');
+	load_and_render();
 	save_arguments_to_url('graph1', '#graph1text');
 	});
 $('#rerendergraph1').click(function() {
@@ -257,18 +242,34 @@ $('#rerendergraph1').click(function() {
 	save_arguments_to_url('graph1', '#graph1text');
 	});
 
+$('#reloadtable1').click(function() {
+	load_and_render();
+	save_arguments_to_url('table1', '#table1text');
+	});
+$('#rerendertable1').click(function() {
+	afterquery.render(read_arguments('#table1text'), data.value,null,'table1'); 
+	save_arguments_to_url('table1', '#table1text');
+	});
+
 $(document).ready( function() {
 	if(!window.location.search) {
-		var default_args = "title=Machine State\n" +
+		var default_args_graph = "title=Machine State\n" +
 			"url=foo.json\n" +
 			"order=State\n" +
 			"pivot=Date;State;Cpus\n" +
 			"chart=stacked";
-		$('#graph1text').val(default_args);
-		save_arguments_to_url('graph1', '#graph1text');
+		var default_args_table = 
+			"url=foo.json\n" +
+			"order=User\n" +
+			"pivot=User;State;Cpus";
+
+		$('#graph1text').val(default_args_graph);
+		$('#table1text').val(default_args_table);
+		save_arguments_to_url('graph1', '#graph1text', 'table1', '#table1text');
 	}
 	load_arguments_to_form('graph1', '#graph1text');
-	load_and_render('graph1', 'table1');
+	load_arguments_to_form('table1', '#table1text');
+	load_and_render();
 }) ;
 
 </script>
