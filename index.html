@@ -189,15 +189,18 @@ function replace_search_arg(oldurl, newkey, newval) {
 	return urlTool.href;
 }
 
-function save_arguments_to_url(key, editor, key2, editor2) {
-	var value = $(editor).val().trim();
+function save_arguments_to_url() {
 	var oldurl = window.location.href;
-	var newurl = replace_search_arg(oldurl, key, value);
-	if(key2) {
-		var value = $(editor2).val().trim();
-		newurl = replace_search_arg(newurl, key2, value);
+
+	var value = $('#graph1text').val().trim();
+	var newurl = replace_search_arg(oldurl, 'graph1', value);
+
+	value = $('#table1text').val().trim();
+	newurl = replace_search_arg(newurl, 'table1', value);
+
+	if(newurl != oldurl) {
+		history.pushState(null, null, newurl);
 	}
-	history.pushState(null, null, newurl);
 }
 
 function read_arguments(source) {
@@ -250,26 +253,26 @@ function table_select_handler(evnt,table,data) {
 			"chart=stacked\n";
 		$('#graph1text').val(new_graph_args);
 		afterquery.render(read_arguments('#graph1text'), data.value,null,'graph1'); 
-		save_arguments_to_url('graph1', '#graph1text');
+		save_arguments_to_url();
 	}
 }
 
 $('#reloadgraph1').click(function() {
 	load_and_render();
-	save_arguments_to_url('graph1', '#graph1text');
+	save_arguments_to_url();
 	});
 $('#rerendergraph1').click(function() {
 	afterquery.render(read_arguments('#graph1text'), data.value,null,'graph1'); 
-	save_arguments_to_url('graph1', '#graph1text');
+	save_arguments_to_url();
 	});
 
 $('#reloadtable1').click(function() {
 	load_and_render();
-	save_arguments_to_url('table1', '#table1text');
+	save_arguments_to_url();
 	});
 $('#rerendertable1').click(function() {
 	afterquery.render(read_arguments('#table1text'), data.value,null,'table1', table_select_handler); 
-	save_arguments_to_url('table1', '#table1text');
+	save_arguments_to_url();
 	});
 
 $(document).ready( function() {
@@ -286,7 +289,7 @@ $(document).ready( function() {
 
 		$('#graph1text').val(default_args_graph);
 		$('#table1text').val(default_args_table);
-		save_arguments_to_url('graph1', '#graph1text', 'table1', '#table1text');
+		save_arguments_to_url();
 	}
 	load_arguments_to_form('graph1', '#graph1text');
 	load_arguments_to_form('table1', '#table1text');
