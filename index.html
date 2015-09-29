@@ -105,7 +105,7 @@
 
 <div id='editmenu'><button class="editlink" id='editlinkgraph1'>edit</button>
 <div id="graph1editor" style="display:none;">
-<textarea id='editor' cols="40" rows="10" wrap='off'>
+<textarea id='graph1text' cols="40" rows="10" wrap='off'>
 </textarea>
 <div>
 <button id="rerendergraph1">Update Graph</button>
@@ -124,7 +124,7 @@
 </div>
 
 <div id="table1editor" style="display:none;">
-<textarea id='table1editor' cols="40" rows="10" wrap='off'>
+<textarea id='table1text' cols="40" rows="10" wrap='off'>
 </textarea>
 <div>
 <button id="rerendertable1">Update Table</button>
@@ -188,21 +188,11 @@ function replace_search_arg(oldurl, newkey, newval) {
 	return urlTool.href;
 }
 
-function save_arguments_to_url2(key, editor) {
+function save_arguments_to_url(key, editor) {
 	var value = $(editor).val().trim();
 	var oldurl = window.location.href;
 	var newurl = replace_search_arg(oldurl, key, value);
 	history.pushState(null, null, newurl);
-}
-
-function save_arguments_to_url(args) {
-	before = window.location.href;
-	console.log("Save: Before: " + before);
-	base = before.replace(/\?.*/,'');
-	console.log("Save: Base: " + base);
-	newuri = base + args;
-	console.log("Save: New: " + newuri);
-	history.pushState(null, null, newuri);
 }
 
 function read_arguments(source) {
@@ -238,15 +228,7 @@ function strip_chart(arguments) {
 
 var data;
 function load_and_render(graphid,tableid) {
-    var args = read_arguments('#editor');
-
-/*
-	task_queue.push(function() { data = afterquery.load(args,null, null, graphid); });
-	task_queue.push(function() { afterquery.render(args, data.value, null, graphid); });
-	if(tableid) {
-		task_queue.push(function() { afterquery.render(args_nc, data.value, null, tableid); });
-	}
-*/
+    var args = read_arguments('#graph1text');
 
 	var callback_render_table = null;
 	if(tableid) {
@@ -268,11 +250,11 @@ function load_and_render(graphid,tableid) {
 
 $('#reloadgraph1').click(function() {
 	load_and_render('graph1', 'table1');
-	save_arguments_to_url2('graph1', '#editor');
+	save_arguments_to_url('graph1', '#graph1text');
 	});
 $('#rerendergraph1').click(function() {
-	afterquery.render(read_arguments('#editor'), data.value,null,'graph1'); 
-	save_arguments_to_url2('graph1', '#editor');
+	afterquery.render(read_arguments('#graph1text'), data.value,null,'graph1'); 
+	save_arguments_to_url('graph1', '#graph1text');
 	});
 
 $(document).ready( function() {
@@ -282,11 +264,10 @@ $(document).ready( function() {
 			"order=State\n" +
 			"pivot=Date;State;Cpus\n" +
 			"chart=stacked";
-		$(editor).val(default_args);
-		save_arguments_to_url2('graph1', '#editor');
+		$('#graph1text').val(default_args);
+		save_arguments_to_url('graph1', '#graph1text');
 	}
-	var args = window.location.search;
-	load_arguments_to_form('graph1', '#editor');
+	load_arguments_to_form('graph1', '#graph1text');
 	load_and_render('graph1', 'table1');
 }) ;
 
