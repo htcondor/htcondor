@@ -1818,7 +1818,7 @@ var afterquery = (function() {
   }
 
 
-  function addRenderers(queue, args, myid) {
+  function addRenderers(queue, args, myid, select_handler) {
     var trace = args.get('trace');
     var chartops = args.get('chart');
     var t, datatable, resizeTimer;
@@ -1946,6 +1946,9 @@ var afterquery = (function() {
           $(el).width(wantwidth);
           options.height = $(el).height();
           t.draw(datatable, options);
+		  if(select_handler) {
+			  google.visualization.events.addListener(t, 'select', function(e) { select_handler(e,t, datatable); });
+		  }
         };
         doRender();
         $(window).resize(function() {
@@ -2309,7 +2312,7 @@ var afterquery = (function() {
   }
 
 
-  function render(query, startdata, done, myid) {
+  function render(query, startdata, done, myid, select_handler) {
     var args = parseArgs(query);
     var editlink = args.get('editlink');
     if (editlink == 0) {
@@ -2319,7 +2322,7 @@ var afterquery = (function() {
     var queue = [];
     addUrlGetters(queue, args, startdata, myid);
     addTransforms(queue, args, myid);
-    addRenderers(queue, args, myid);
+    addRenderers(queue, args, myid, select_handler);
     finishQueue(queue, args, done, myid);
   }
 
