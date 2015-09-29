@@ -259,8 +259,8 @@ $(document).ready( function() {
 			"chart=stacked";
 		var default_args_table = 
 			"url=foo.json\n" +
-			"order=User\n" +
-			"pivot=User;State;Cpus";
+			"order=Date,User\n" +
+			"pivot=User;State;last(Cpus)";
 
 		$('#graph1text').val(default_args_graph);
 		$('#table1text').val(default_args_table);
