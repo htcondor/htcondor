@@ -106,13 +106,13 @@
 <textarea id='editor' cols="40" rows="10" wrap='off'>
 </textarea>
 <div>
-<button id="rerender1">Update Graph</button>
-<button id="reload1">Reload Data</button>
-<button id="closeedit1">X</button>
+<button id="rerendergraph1">Update Graph</button>
+<button id="reloadgraph1">Reload Data</button>
+<button id="closeeditgraph1">❌</button>
 </div>
 </div>
 
-<div id='editmenu'><button class="editlink" id='editlink'>edit</button></div>
+<div id='editmenu'><button class="editlink" id='editlinkgraph1'>edit</button></div>
 <div id='graph1'>
 <div class='vizstatus'>
   <div class='statustext'></div>
@@ -128,7 +128,7 @@
 <div>
 <button id="rerendertable1">Update Table</button>
 <button id="reloadtable1">Reload Data</button>
-<button id="closeedittable1">X</button>
+<button id="closeedittable1">❌</button>
 </div>
 </div>
 
@@ -149,8 +149,8 @@
 <script>
 
 
-$('#editlink').click(function() { $('#graph1editor').toggle(); });
-$('#closeedit1').click(function() { $('#graph1editor').toggle(); });
+$('#editlinkgraph1').click(function() { $('#graph1editor').toggle(); });
+$('#closeeditgraph1').click(function() { $('#graph1editor').toggle(); });
 
 $('#editlinktable1').click(function() { $('#table1editor').toggle(); });
 $('#closeedittable1').click(function() { $('#table1editor').toggle(); });
@@ -258,11 +258,11 @@ function load_and_render(graphid,tableid) {
 	data = afterquery.load(args,null, callback_render_graph, graphid);
 }
 
-$('#reload1').click(function() {
+$('#reloadgraph1').click(function() {
 	load_and_render('graph1', 'table1');
 	save_arguments_to_url2('graph1', '#editor');
 	});
-$('#rerender1').click(function() {
+$('#rerendergraph1').click(function() {
 	afterquery.render(read_arguments('#editor'), data.value,null,'graph1'); 
 	save_arguments_to_url2('graph1', '#editor');
 	});
