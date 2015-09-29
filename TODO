@@ -1,0 +1,25 @@
+- CSV, maybe XLSX downloads. Probably data URI, set window.location to it to for download. Use download="filename.csv" in the href tag. http://cwestblog.com/2014/10/21/javascript-creating-a-downloadable-file-in-the-browser/
+
+- Properly implement history for back/forward work. Probably just trigger a redraw?  Detect different URL and reload?
+
+- Don't specify URL in table; always use same as graph?
+
+- Don't specify URL in graph, hard coded URL. Why would user mess with? Or maybe make it its own field somewhere?
+
+- Zoom on the graph is wonky.
+
+- Zome data just wonky on the graph. Try "undefined" as a user. Violations of time and space.
+
+- Need a button to return to all users.
+
+- Buttons/tabs for window
+	- Day/Week/Month
+	- Now (different data. Pie charts?
+
+-  Pool view
+	Load averages
+	memory usage
+	cpu usage
+	Idle CPUs? Claimed CPUs?
+
+- Canned views no edit; tab for custom
