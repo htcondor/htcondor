@@ -651,6 +651,8 @@ Starter::exited(int status)
 	if (WIFSIGNALED(status)) {
 		jobStatus = REMOVED;
 	}
+
+	jobAd->Assign(ATTR_STARTER_EXIT_STATUS, status);
 	jobAd->Assign(ATTR_JOB_STATUS, jobStatus);
 
 	if (s_claim) {

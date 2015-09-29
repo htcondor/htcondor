@@ -60,6 +60,7 @@ OsProc::OsProc( ClassAd* ad )
 	is_checkpointed = false;
 	num_pids = 0;
 	dumped_core = false;
+	job_not_started = false;
 	m_using_priv_sep = false;
 	UserProc::initialize();
 }
@@ -80,6 +81,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 
 	if ( !JobAd ) {
 		dprintf ( D_ALWAYS, "No JobAd in OsProc::StartJob()!\n" );
+		job_not_started = true;
 		return 0;
 	}
 
@@ -87,6 +89,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 	if ( JobAd->LookupString( ATTR_JOB_CMD, JobName ) != 1 ) {
 		dprintf( D_ALWAYS, "%s not found in JobAd.  Aborting StartJob.\n", 
 				 ATTR_JOB_CMD );
+		job_not_started = true;
 		return 0;
 	}
 
@@ -177,6 +180,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 					 "Cannot find/execute USER_JOB_WRAPPER file %s\n",
 					 wrapper );
 			free( wrapper );
+			job_not_started = true;
 			return 0;
 		}
 		has_wrapper = true;
@@ -199,6 +203,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 				dprintf( D_ALWAYS, "Unable to use parrot(Cannot find/execute "
 					"at %s(%s)).\n", parrot, strerror(errno) );
 				free( parrot );
+				job_not_started = true;
 				return 0;
 			} else {
 				args.AppendArg(JobName.Value());
@@ -208,6 +213,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 		} else {
 			dprintf( D_ALWAYS, "Unable to use parrot(Undefined path in config"
 			" file)" );
+			job_not_started = true;
 			return 0;
 		}
 	}
@@ -218,6 +224,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 	if(!args.AppendArgsFromClassAd(JobAd,&args_error)) {
 		dprintf(D_ALWAYS, "Failed to read job arguments from JobAd.  "
 				"Aborting OsProc::StartJob: %s\n",args_error.Value());
+		job_not_started = true;
 		return 0;
 	}
 
@@ -233,6 +240,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 	if( !Starter->GetJobEnv(JobAd,&job_env,&env_errors) ) {
 		dprintf( D_ALWAYS, "Aborting OSProc::StartJob: %s\n",
 				 env_errors.Value());
+		job_not_started = true;
 		return 0;
 	}
 
@@ -311,6 +319,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 		dprintf(D_ALWAYS, "Failed to open some/all of the std files...\n");
 		dprintf(D_ALWAYS, "Aborting OsProc::StartJob.\n");
 		set_priv(priv); /* go back to original priv state before leaving */
+		job_not_started = true;
 		return 0;
 	}
 
@@ -334,6 +343,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 			dprintf( D_ALWAYS, "ERROR: failed to insert JOB_RENICE_INCREMENT "
 				"into job ad, Aborting OsProc::StartJob...\n" );
 			free( ptmp );
+			job_not_started = true;
 			return 0;
 		}
 			// evaluate
@@ -621,6 +631,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 
 		dprintf(D_ALWAYS,"Create_Process(%s,%s, ...) failed: %s\n",
 			JobName.Value(), args_string.Value(), create_process_err_msg.Value());
+		job_not_started = true;
 		return 0;
 	}
 
@@ -668,6 +679,8 @@ OsProc::JobExit( void )
 		}
 	} else if( dumped_core ) {
 		reason = JOB_COREDUMPED;
+	} else if( job_not_started ) {
+		reason = JOB_NOT_STARTED;
 	} else {
 		reason = JOB_EXITED;
 	}
