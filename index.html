@@ -155,17 +155,10 @@ $('#closeedit1').click(function() { $('#graph1editor').toggle(); });
 $('#editlinktable1').click(function() { $('#table1editor').toggle(); });
 $('#closeedittable1').click(function() { $('#table1editor').toggle(); });
 
-function load_arguments_to_form(argstring,form) {
-	var args = afterquery.parseArgs(argstring);
-	var text = "";
-	for(var argi in args.all) {
-		var arg = args.all[argi];
-		var key = arg[0];
-		var val = arg[1];
-		text += key + "=" + val + "\n";	
-	}
-	$(form).text(text);
-	
+function load_arguments_to_form(key,form) {
+	var args = afterquery.parseArgs(window.location.href);
+	var val = args.get(key);
+	$(form).text(val);
 }
 
 var urlTool = document.createElement('a');
@@ -285,7 +278,7 @@ $(document).ready( function() {
 		save_arguments_to_url2('graph1', '#editor');
 	}
 	var args = window.location.search;
-	load_arguments_to_form(args, '#editor');
+	load_arguments_to_form('graph1', '#editor');
 	load_and_render('graph1', 'table1');
 }) ;
 
