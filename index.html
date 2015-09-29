@@ -4,21 +4,21 @@
   <meta charset="utf-8">
   <title>HTCondor Pool Monitoring</title>
   <style>
-  div#editmenu {
+  div.editmenu {
     position: absolute;
     right: 0;
-    z-index: 5;
+    z-index: 20;
     background: #eee;
     visibility: hidden;
   }
-  body:hover div#editmenu {
+  body:hover div.editmenu {
     visibility: visible;
   }
-  div#editmenu a {
+  div.editmenu a {
     text-decoration: none;
     padding: 2px;
   }
-  div#editmenu a:hover {
+  div.editmenu a:hover {
     background: #aaa;
   }
   .vizchart {
@@ -103,7 +103,7 @@
 
 <h1>HTCondor</h1>
 
-<div id='editmenu'><button class="editlink" id='editlinkgraph1'>edit</button>
+<div class='editmenu'><button class="editlink" id='editlinkgraph1'>edit</button>
 <div id="graph1editor" style="display:none;">
 <textarea id='graph1text' cols="40" rows="10" wrap='off'>
 </textarea>
@@ -123,6 +123,8 @@
 <div class='vizchart'></div>
 </div>
 
+
+<div class='editmenu'><button class="editlink" id='editlinktable1'>edit</button>
 <div id="table1editor" style="display:none;">
 <textarea id='table1text' cols="40" rows="10" wrap='off'>
 </textarea>
@@ -131,8 +133,7 @@
 <button id="reloadtable1">Reload Data</button>
 </div>
 </div>
-
-<div id='editmenu'><button class="editlink" id='editlinktable1'>edit</button></div>
+</div>
 <div id='table1'>
 <div class='vizstatus'>
   <div class='statustext'></div>
@@ -158,9 +159,7 @@ function toggle_edit(btn, controls) {
 }
 
 $('#editlinkgraph1').click(function() { toggle_edit('#editlinkgraph1', '#graph1editor'); });
-
-$('#editlinktable1').click(function() { $('#table1editor').toggle(); });
-$('#closeedittable1').click(function() { $('#table1editor').toggle(); });
+$('#editlinktable1').click(function() { toggle_edit('#editlinktable1', '#table1editor'); });
 
 function load_arguments_to_form(key,form) {
 	var args = afterquery.parseArgs(window.location.href);
