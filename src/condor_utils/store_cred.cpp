@@ -93,6 +93,13 @@ int write_password_file(const char* path, const char* password)
 		return SUCCESS;
 }
 
+int ZKM_UNIX_STORE_CRED(const char *user, const int len, const char *pw, int mode) {
+	dprintf(D_ALWAYS, "ZKM: store cred user %s len %i mode %i contents: {%s}\n", user, len, mode, pw);
+
+	dprintf(D_ALWAYS, "ZKM: SIGHUP to credmon pid %i\n", get_credmon_pid());
+	return SUCCESS;
+}
+
 char* getStoredCredential(const char *username, const char *domain)
 {
 	// TODO: add support for multiple domains
@@ -181,9 +188,13 @@ int store_cred_service(const char *user, const char *pw, int mode)
 	if (( (size_t)(at - user) != strlen(POOL_PASSWORD_USERNAME)) ||
 	    (memcmp(user, POOL_PASSWORD_USERNAME, at - user) != 0))
 	{
-		dprintf(D_ALWAYS, "store_cred: only pool password is supported on UNIX\n");
-		return FAILURE;
+		dprintf(D_ALWAYS, "ZKM: GOT UNIX STORE CRED\n");
+		return ZKM_UNIX_STORE_CRED(user, 666, pw, mode);
 	}
+
+	//
+	// THIS CODE BELOW ALL DEALS EXCLUSIVELY WITH POOL PASSWORD
+	//
 
 	char *filename;
 	if (mode != QUERY_MODE) {
@@ -249,6 +260,7 @@ int store_cred_service(const char *user, const char *pw, int mode)
 
 	return answer;
 }
+
 
 #else
 	// **** WIN32 CODE ****
@@ -413,68 +425,6 @@ int store_cred_service(const char *user, const char *pw, int mode)
 }	
 
 
-void store_cred_handler(void *, int i, Stream *s) 
-{
-	char *user = NULL;
-	char *pw = NULL;
-	int mode;
-	int result;
-	int answer = FAILURE;
-	lsa_mgr lsa_man;
-	
-	s->decode();
-	
-	result = code_store_cred(s, user, pw, mode);
-	
-	if( result == FALSE ) {
-		dprintf(D_ALWAYS, "store_cred: code_store_cred failed.\n");
-		return;
-	} 
-
-	if ( user ) {
-			// ensure that the username has an '@' delimteter
-		char const *tmp = strchr(user, '@');
-		if ((tmp == NULL) || (tmp == user)) {
-			dprintf(D_ALWAYS, "store_cred_handler: user not in user@domain format\n");
-			answer = FAILURE;
-		}
-		else {
-				// we don't allow updates to the pool password through this interface
-			if ((mode != QUERY_MODE) &&
-			    (tmp - user == strlen(POOL_PASSWORD_USERNAME)) &&
-			    (memcmp(user, POOL_PASSWORD_USERNAME, tmp - user) == 0))
-			{
-				dprintf(D_ALWAYS, "ERROR: attempt to set pool password via STORE_CRED! (must use STORE_POOL_CRED)\n");
-				answer = FAILURE;
-			} else {
-				answer = store_cred_service(user,pw,mode);
-			}
-		}
-	}
-	
-	if (pw) {
-		SecureZeroMemory(pw, strlen(pw));
-		free(pw);
-	}
-	if (user) {
-		free(user);
-	}
-
-	s->encode();
-	if( ! s->code(answer) ) {
-		dprintf( D_ALWAYS,
-			"store_cred: Failed to send result.\n" );
-		return;
-	}
-	
-	if( ! s->end_of_message() ) {
-		dprintf( D_ALWAYS,
-			"store_cred: Failed to send end of message.\n");
-	}	
-
-	return;
-}	
-
 // takes user@domain format for user argument
 bool
 isValidCredential( const char *input_user, const char* input_pw ) {
@@ -551,6 +501,69 @@ isValidCredential( const char *input_user, const char* input_pw ) {
 }
 
 #endif // WIN32
+
+
+/* NOW WORKS ON BOTH WINDOWS AND UNIX */
+void store_cred_handler(void *, int i, Stream *s)
+{
+	char *user = NULL;
+	char *pw = NULL;
+	int mode;
+	int result;
+	int answer = FAILURE;
+
+	s->decode();
+
+	result = code_store_cred(s, user, pw, mode);
+
+	if( result == FALSE ) {
+		dprintf(D_ALWAYS, "store_cred: code_store_cred failed.\n");
+		return;
+	}
+
+	if ( user ) {
+			// ensure that the username has an '@' delimteter
+		char const *tmp = strchr(user, '@');
+		if ((tmp == NULL) || (tmp == user)) {
+			dprintf(D_ALWAYS, "store_cred_handler: user not in user@domain format\n");
+			answer = FAILURE;
+		}
+		else {
+				// we don't allow updates to the pool password through this interface
+			if ((mode != QUERY_MODE) &&
+			    (tmp - user == strlen(POOL_PASSWORD_USERNAME)) &&
+			    (memcmp(user, POOL_PASSWORD_USERNAME, tmp - user) == 0))
+			{
+				dprintf(D_ALWAYS, "ERROR: attempt to set pool password via STORE_CRED! (must use STORE_POOL_CRED)\n");
+				answer = FAILURE;
+			} else {
+				answer = store_cred_service(user,pw,mode);
+			}
+		}
+	}
+
+	if (pw) {
+		SecureZeroMemory(pw, strlen(pw));
+		free(pw);
+	}
+	if (user) {
+		free(user);
+	}
+
+	s->encode();
+	if( ! s->code(answer) ) {
+		dprintf( D_ALWAYS,
+			"store_cred: Failed to send result.\n" );
+		return;
+	}
+
+	if( ! s->end_of_message() ) {
+		dprintf( D_ALWAYS,
+			"store_cred: Failed to send end of message.\n");
+	}
+
+	return;
+}
 
 static int code_store_cred(Stream *socket, char* &user, char* &pw, int &mode) {
 	
@@ -954,3 +967,16 @@ get_password() {
 	
 	return buf;
 }
+
+static int zkm_credmon_pid = -1;
+
+int get_credmon_pid() {
+	if(zkm_credmon_pid == -1) {
+		// get pid of credmon
+		FILE* credmon_pidfile = fopen("/scratch/zmiller/CRED_DIR/pid", "r");
+		fscanf(credmon_pidfile, "%i", &zkm_credmon_pid);
+		fclose(credmon_pidfile);
+	}
+	return zkm_credmon_pid;
+}
+

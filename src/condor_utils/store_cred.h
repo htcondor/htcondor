@@ -64,6 +64,7 @@ class Daemon;
 void store_pool_cred_handler(void *, int i, Stream *s);
 int store_cred(const char *user, const char* pw, int mode, Daemon *d = NULL, bool force = false);
 int store_cred_service(const char *user, const char *pw, int mode);
+void store_cred_handler(void *, int i, Stream *s);
 bool read_from_keyboard(char* buf, int maxlength, bool echo = true);
 char* get_password(void);	// get password from user w/o echo on the screen
 int addCredential(const char* user, const char* pw, Daemon *d = NULL);
@@ -75,7 +76,6 @@ int write_password_file(const char* path, const char* password);
 #endif
 
 #if defined(WIN32)
-void store_cred_handler(void *, int i, Stream *s);
 bool isValidCredential( const char *user, const char* pw );
 #endif
 
@@ -87,8 +87,7 @@ bool isValidCredential( const char *user, const char* pw );
 */
 char* getStoredCredential(const char *user, const char *domain);
 
+int get_credmon_pid();
+
 #endif // STORE_CRED_H
 
-
-
-	
