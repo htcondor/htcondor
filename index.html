@@ -168,13 +168,39 @@ function load_arguments_to_form(argstring,form) {
 	
 }
 
+var urlTool = document.createElement('a');
+function replace_search_arg(oldurl, newkey, newval) {
+	urlTool.href = oldurl;
+	var oldsearch = urlTool.search;
+	var args = afterquery.parseArgs(oldsearch);
+	var newsearch = "?";
+	for(var argi in args.all) {
+		var arg = args.all[argi];
+		var key = arg[0];
+		if(key != newkey) {
+			var val = arg[1];
+			newsearch += encodeURIComponent(key) + "=" + encodeURIComponent(val) + "&";	
+		}
+	}
+	newsearch += encodeURIComponent(newkey) + "=" + encodeURIComponent(newval);	
+	urlTool.search = newsearch;
+	return urlTool.href;
+}
+
+function save_arguments_to_url2(key, editor) {
+	var value = $(editor).val().trim();
+	var oldurl = window.location.href;
+	var newurl = replace_search_arg(oldurl, key, value);
+	history.pushState(null, null, newurl);
+}
+
 function save_arguments_to_url(args) {
 	before = window.location.href;
-	console.log("Before: " + before);
+	console.log("Save: Before: " + before);
 	base = before.replace(/\?.*/,'');
-	console.log("Base: " + base);
+	console.log("Save: Base: " + base);
 	newuri = base + args;
-	console.log("New: " + newuri);
+	console.log("Save: New: " + newuri);
 	history.pushState(null, null, newuri);
 }
 
@@ -239,25 +265,28 @@ function load_and_render(graphid,tableid) {
 	data = afterquery.load(args,null, callback_render_graph, graphid);
 }
 
-//load_and_render();
-//afterquery.render(window.location.search);
 $('#reload1').click(function() {
 	load_and_render('graph1', 'table1');
-	save_arguments_to_url(read_arguments('#editor'));
+	save_arguments_to_url2('graph1', '#editor');
 	});
 $('#rerender1').click(function() {
 	afterquery.render(read_arguments('#editor'), data.value,null,'graph1'); 
-	save_arguments_to_url(read_arguments('#editor'));
+	save_arguments_to_url2('graph1', '#editor');
 	});
 
 $(document).ready( function() {
 	if(!window.location.search) {
-		var default_args = '?title=Machine State&url=foo.json&order=State&pivot=Date;State;Cpus&chart=stacked';
-		save_arguments_to_url(default_args);
+		var default_args = "title=Machine State\n" +
+			"url=foo.json\n" +
+			"order=State\n" +
+			"pivot=Date;State;Cpus\n" +
+			"chart=stacked";
+		$(editor).val(default_args);
+		save_arguments_to_url2('graph1', '#editor');
 	}
 	var args = window.location.search;
 	load_arguments_to_form(args, '#editor');
-	//load_and_render('graph1', 'table1');
+	load_and_render('graph1', 'table1');
 }) ;
 
 </script>
