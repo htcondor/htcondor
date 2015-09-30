@@ -23,3 +23,13 @@
 	Idle CPUs? Claimed CPUs?
 
 - Canned views no edit; tab for custom
+
+
+CondorView
+- User/Job
+	- Graph: Per user (or "Total"): JobsIdle, JobsRunning
+	- Table: User, Total Allocation Time, JobsRunning Average, JobsIdle Average, JobsRunning Peak, JobsIdle Peak.
+		- Includes "Total" as an option
+- Pool/Machine
+	- Graph: Per Arch/OpSys or Total: Drained, Backfill, Condor, Idle, Owner
+	- Table: Arch/OpSys, Owner Average, Condor Average, Idle Average, Backfill Average, Drained Average, Owner Peak, Condor Peak.
