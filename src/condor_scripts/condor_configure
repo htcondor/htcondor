@@ -476,10 +476,10 @@ elsif ($opt_make_personal_condor ||
     $comment_hash{"use ROLE : Personal"}="\n##  Configure a personal HTCondor pool.";
     $append_config{COLLECTOR_NAME}='Personal Condor at $(CONDOR_HOST)';
 
-    if ($fullhost =~ /^localhost/) {
+    if ($opt_make_personal_condor || $fullhost =~ /^localhost/) {
 	# dont want to configure CONDOR_HOST=localhost because the personal role
 	# already does something more clever than that, so don't call set_central_manager()
-	$cm=$fullhost;
+	$cm='localhost';
 	$append_config{NETWORK_INTERFACE}='$(CONDOR_HOST)';
     } else {
 	$cm=set_central_manager($fullhost);

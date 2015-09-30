@@ -29,7 +29,7 @@ CgroupLimits::set_memsw_limit_bytes(uint64_t mem_bytes)
 	struct cgroup_controller * mem_controller;
 	const char * limit = "memory.memsw.limit_in_bytes";
 
-	dprintf(D_ALWAYS, "Limitting memsw usage to %ld bytes\n", mem_bytes);
+	dprintf(D_ALWAYS, "Limiting memsw usage to %ld bytes\n", mem_bytes);
 	struct cgroup *memcg = &m_cgroup.getCgroup();
 	if ((mem_controller = cgroup_get_controller(memcg, MEMORY_CONTROLLER_STR)) == NULL) {
 		dprintf(D_ALWAYS,
@@ -66,7 +66,7 @@ int CgroupLimits::set_memory_limit_bytes(uint64_t mem_bytes, bool soft)
 	struct cgroup_controller * mem_controller;
 	const char * limit = soft ? mem_soft_limit : mem_hard_limit;
 
-	dprintf(D_ALWAYS, "Limitting memory usage to %ld bytes\n", mem_bytes);
+	dprintf(D_ALWAYS, "Limiting (%s) memory usage to %ld bytes\n", soft ? "soft" : "hard", mem_bytes);
 	struct cgroup *memcg = &m_cgroup.getCgroup();
 	if ((mem_controller = cgroup_get_controller(memcg, MEMORY_CONTROLLER_STR)) == NULL) {
 		dprintf(D_ALWAYS,
