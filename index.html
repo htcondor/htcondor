@@ -262,13 +262,7 @@ function table_select_handler(evnt,table,data) {
 	if(selection) {
 		var row = selection[0].row;
 		var user = data.getValue(row, 0);
-		var new_graph_args =
-			"title=Machine State for " + user + "\n" +
-			"filter=User==" + user + "\n" +
-			"url=foo.json\n" +
-			"order=State\n" +
-			"pivot=Date;State;Cpus\n" +
-			"chart=stacked\n";
+		var new_graph_args = user_graph_args(user);
 		render_new_graph('#graph1text', 'graph1', new_graph_args);
 	}
 }
@@ -281,16 +275,27 @@ function render_new_graph(editid, graphid, args) {
 	save_arguments_to_url();
 }
 
+function user_data_source() { return "user.json"; }
+
+function user_graph_args(user) {
+return "title=Machine State for " + user + "\n" +
+	"filter=User==" + user + "\n" +
+	"url=" + user_data_source() + "\n" +
+	"order=State\n" +
+	"pivot=Date;State;Cpus\n" +
+	"chart=stacked\n";
+}
+
 function default_graph_args() { 
 return "title=Machine State\n" +
-	"url=foo.json\n" +
+	"url=" + user_data_source() + "\n" +
 	"order=State\n" +
 	"pivot=Date;State;Cpus\n" +
 	"chart=stacked";
 }
 
 function default_table_args() {
-return "url=foo.json\n" +
+return "url=" + user_data_source() + "\n" +
 	"order=Date,User\n" +
 	"pivot=User;State;last(Cpus)";
 }
