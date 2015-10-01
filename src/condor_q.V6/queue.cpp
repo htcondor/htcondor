@@ -2947,7 +2947,7 @@ usage (const char *myName, int other)
 	printf ("Usage: %s [general-opts] [restriction-list] [output-opts | analyze-opts]\n", myName);
 	printf ("\n    [general-opts] are\n"
 		"\t-global\t\t\tQuery all Schedulers in this pool\n"
-		"\t-schedd-constraint\t\tQuery all Schedulers matching this constraint\n"
+		"\t-schedd-constraint\tQuery all Schedulers matching this constraint\n"
 		"\t-submitter <submitter>\tGet queue of specific submitter\n"
 		"\t-name <name>\t\tName of Scheduler\n"
 		"\t-pool <host>\t\tUse host as the central manager to query\n"
