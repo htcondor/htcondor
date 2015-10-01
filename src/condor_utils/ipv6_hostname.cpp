@@ -47,7 +47,6 @@ bool init_local_hostname_impl()
 		dprintf(D_HOSTNAME, "NETWORK_HOSTNAME says we are %s\n", local_hostname.Value());
 	}
 
-	MyString test_hostname;
 	if( ! local_hostname_initialized ) {
 		// [TODO:IPV6] condor_gethostname is not IPv6 safe. Reimplement it.
 		char hostname[MAXHOSTNAMELEN];
@@ -57,9 +56,10 @@ bool init_local_hostname_impl()
 					"local hostname, ip address, FQDN.\n");
 			return false;
 		}
-		test_hostname = hostname;
-		local_hostname = test_hostname;
+		local_hostname = hostname;
 	}
+
+	MyString test_hostname = local_hostname;
 
 	bool local_ipaddr_initialized = false;
 	bool local_ipv4addr_initialized = false;
