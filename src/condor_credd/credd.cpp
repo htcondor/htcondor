@@ -19,7 +19,7 @@
 
 
 #include "condor_common.h"
-#include "credd.windows.h"
+#include "credd.h"
 #include "condor_config.h"
 #include "condor_daemon_core.h"
 #include "condor_debug.h"

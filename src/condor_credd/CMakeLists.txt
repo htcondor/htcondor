@@ -17,7 +17,7 @@
  ############################################################### 
 
 condor_exe( condor_credd
-			"credd.windows.cpp;credd.windows.h"
+			"credd.cpp;credd.h"
 			${C_SBIN}
 			"${CONDOR_LIBS}"
 			ON )
