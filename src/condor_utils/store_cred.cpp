@@ -504,7 +504,7 @@ isValidCredential( const char *input_user, const char* input_pw ) {
 
 
 /* NOW WORKS ON BOTH WINDOWS AND UNIX */
-void store_cred_handler(void *, int i, Stream *s)
+void store_cred_handler(void *, int /*i*/, Stream *s)
 {
 	char *user = NULL;
 	char *pw = NULL;
@@ -974,8 +974,11 @@ int get_credmon_pid() {
 	if(zkm_credmon_pid == -1) {
 		// get pid of credmon
 		FILE* credmon_pidfile = fopen("/scratch/zmiller/CRED_DIR/pid", "r");
-		fscanf(credmon_pidfile, "%i", &zkm_credmon_pid);
+		int num_items = fscanf(credmon_pidfile, "%i", &zkm_credmon_pid);
 		fclose(credmon_pidfile);
+		if (num_items != 1) {
+			zkm_credmon_pid = -1;
+		}
 	}
 	return zkm_credmon_pid;
 }
