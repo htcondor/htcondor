@@ -19,7 +19,7 @@
 
 
 #include "condor_common.h"
-#include "credd.windows.h"
+#include "credd.h"
 #include "condor_config.h"
 #include "condor_daemon_core.h"
 #include "condor_debug.h"
@@ -152,7 +152,7 @@ CredDaemon::invalidate_ad()
 }
 
 void
-CredDaemon::get_passwd_handler(int i, Stream *s)
+CredDaemon::get_passwd_handler(int /*i*/, Stream *s)
 {
 	char *client_user = NULL;
 	char *client_domain = NULL;
@@ -268,7 +268,7 @@ CredDaemon::nop_handler(int, Stream*)
 //-------------------------------------------------------------
 
 void
-main_init(int argc, char *argv[])
+main_init(int /*argc*/, char */*argv*/[])
 {
 	dprintf(D_ALWAYS, "main_init() called\n");
 
