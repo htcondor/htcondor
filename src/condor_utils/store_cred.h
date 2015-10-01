@@ -73,6 +73,7 @@ int queryCredential(const char* user, Daemon *d = NULL);  // just tell me if I h
 
 #if !defined(WIN32)
 int write_password_file(const char* path, const char* password);
+int secure_write_file(const char* path, const char* data, size_t len);
 #endif
 
 #if defined(WIN32)

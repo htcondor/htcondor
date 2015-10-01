@@ -56,12 +56,25 @@ void simple_scramble(char* scrambled,  const char* orig, int len)
 //
 int write_password_file(const char* path, const char* password)
 {
+	size_t password_len = strlen(password);
+	char scrambled_password[MAX_PASSWORD_LENGTH + 1];
+	memset(scrambled_password, 0, MAX_PASSWORD_LENGTH + 1);
+	simple_scramble(scrambled_password, password, password_len);
+	return secure_write_file(path, scrambled_password, MAX_PASSWORD_LENGTH + 1);
+}
+
+
+// writes data of length len securely to file specified in path
+// returns SUCCESS or FAILURE
+//
+int secure_write_file(const char* path, const char* data, size_t len)
+{
 		int fd = safe_open_wrapper_follow(path,
 		                           O_WRONLY | O_CREAT | O_TRUNC,
 		                           0600);
 		if (fd == -1) {
 			dprintf(D_ALWAYS,
-			        "store_cred_service: open failed on %s: %s (%d)\n",
+			        "secure_write_file: open failed on %s: %s (%d)\n",
 			        path,
 			        strerror(errno),
 					errno);
@@ -70,22 +83,18 @@ int write_password_file(const char* path, const char* password)
 		FILE *fp = fdopen(fd, "w");
 		if (fp == NULL) {
 			dprintf(D_ALWAYS,
-			        "store_cred_service: fdopen failed: %s (%d)\n",
+			        "secure_write_file: fdopen failed: %s (%d)\n",
 			        strerror(errno),
 			        errno);
 			return FAILURE;
 		}
-		size_t password_len = strlen(password);
-		char scrambled_password[MAX_PASSWORD_LENGTH + 1];
-		memset(scrambled_password, 0, MAX_PASSWORD_LENGTH + 1);
-		simple_scramble(scrambled_password, password, password_len);
-		size_t sz = fwrite(scrambled_password, 1, MAX_PASSWORD_LENGTH + 1, fp);
+		size_t sz = fwrite(data, 1, len, fp);
 		int save_errno = errno;
 		fclose(fp);
-		if (sz != MAX_PASSWORD_LENGTH + 1) {
+		if (sz != len) {
 			dprintf(D_ALWAYS,
-			        "store_cred_service: "
-			            "error writing to password file: %s (%d)\n",
+			        "secure_write_file: "
+			            "error writing to file: %s (%d)\n",
 					strerror(save_errno),
 			        save_errno);
 			return FAILURE;
