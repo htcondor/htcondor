@@ -105,7 +105,96 @@ int secure_write_file(const char* path, const char* data, size_t len)
 int ZKM_UNIX_STORE_CRED(const char *user, const int len, const char *pw, int mode) {
 	dprintf(D_ALWAYS, "ZKM: store cred user %s len %i mode %i contents: {%s}\n", user, len, mode, pw);
 
-	dprintf(D_ALWAYS, "ZKM: SIGHUP to credmon pid %i\n", get_credmon_pid());
+	char* cred_dir = param("SEC_CREDENTIAL_DIRECTORY");
+	if(!cred_dir) {
+		dprintf(D_ALWAYS, "ERROR: got STORE_CRED but SEC_CREDENTIAL_DIRECTORY not defined!\n");
+		return FAILURE;
+	}
+
+	// get username
+	char username[256];
+	const char *at = strchr(user, '@');
+	strncpy(username, user, (at-user));
+	username[at-user] = 0;
+
+	// check to see if .cc already exists
+	char ccfilename[PATH_MAX];
+	sprintf(ccfilename, "%s%c%s.cc", cred_dir, DIR_DELIM_CHAR, username);
+	struct stat junk_buf;
+	int rc = stat(ccfilename, &junk_buf);
+	if (rc==0) {
+		// if the credential cache already exists, we don't even need
+		// to write the file.  just return success as quickly as
+		// possible.
+		return SUCCESS;
+	}
+
+	// create filenames
+	char tmpfilename[PATH_MAX];
+	char filename[PATH_MAX];
+	sprintf(tmpfilename, "%s%c%s.cred.tmp", cred_dir, DIR_DELIM_CHAR, username);
+	sprintf(filename, "%s%c%s.cred", cred_dir, DIR_DELIM_CHAR, username);
+	dprintf(D_ALWAYS, "ZKM: writing data to %s\n", tmpfilename);
+
+	// ultimately, decode base64 encode pw
+	int pwlen = strlen(pw);
+
+	// write temp file
+	priv_state priv = set_root_priv();
+	rc = secure_write_file(tmpfilename, pw, pwlen);
+	set_priv(priv);
+
+	if (rc != SUCCESS) {
+		dprintf(D_ALWAYS, "ZKM: failed to write secure temp file %s\n", tmpfilename);
+		return FAILURE;
+	}
+
+	// now move into place
+	dprintf(D_ALWAYS, "ZKM: renaming %s to %s\n", tmpfilename, filename);
+
+	priv = set_root_priv();
+	rc = rename(tmpfilename, filename);
+	set_priv(priv);
+
+	if (rc == -1) {
+		dprintf(D_ALWAYS, "ZKM: failed to rename %s to %s\n", tmpfilename, filename);
+
+		// should we rm tmpfilename ?
+		return FAILURE;
+	}
+
+	// now signal the credmon
+	pid_t credmon_pid = get_credmon_pid();
+	if (credmon_pid == -1) {
+		dprintf(D_ALWAYS, "ZKM: failed to get pid of credmon.\n");
+		return FAILURE;
+	}
+
+	dprintf(D_ALWAYS, "ZKM: sending SIGHUP to credmon pid %i\n", credmon_pid);
+	rc = kill(credmon_pid, SIGHUP);
+	if (rc == -1) {
+		dprintf(D_ALWAYS, "ZKM: failed to signal credmon: %i\n", errno);
+		return FAILURE;
+	}
+
+	// now poll for existence of .cc file
+	int retries = 20;
+	while (retries > 0) {
+		rc = stat(ccfilename, &junk_buf);
+		if (rc==-1) {
+			dprintf(D_ALWAYS, "ZKM: errno %i, waiting for %s to appear (%i seconds left)\n", errno, ccfilename, retries);
+			sleep(1);
+			retries--;
+		} else {
+			break;
+		}
+	}
+	if (retries == 0) {
+		dprintf(D_ALWAYS, "ZKM: FAILURE: credmon never created %s after 20 seconds!\n", ccfilename);
+		return FAILURE;
+	}
+
+	dprintf(D_ALWAYS, "ZKM: SUCCESS: file %s found after %i seconds\n", ccfilename, 20-retries);
 	return SUCCESS;
 }
 
