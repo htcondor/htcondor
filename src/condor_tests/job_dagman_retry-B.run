@@ -92,6 +92,8 @@ $success = sub
 		$retryB2 = 0;
 		$retryC1 = 0;
 		$retryD1 = 0;
+		$retryE1 = 0;
+		$retryF1 = 0;
 		$canopen = open(OUT,"<$name");
 		if( ! (defined $canopen)) {
 			CondorTest::debug("Can not open logfile<$name>:$!\n",1);
@@ -128,6 +130,14 @@ $success = sub
 				$retryD1 = 1;
 				CondorTest::debug("$name: $line\n",1);
 			}
+			if( $line =~ /^.*Retrying node NodeE \(retry #1 of 1\).*$/ ) {
+				$retryE1 = 1;
+				CondorTest::debug("$name: $line\n",1);
+			}
+			if( $line =~ /^.*Retrying node NodeF \(retry #1 of 1\).*$/ ) {
+				$retryF1 = 1;
+				CondorTest::debug("$name: $line\n",1);
+			}
 			if( $line =~ /^.*EXITING WITH STATUS 0.*$/ ) {
 				$passed = 1;
 				CondorTest::debug("$name: $line\n",1);
@@ -160,6 +170,14 @@ $success = sub
 		}
 		if($retryD1 != 1 ) {
 			CondorTest::debug("Missing NodeD retry 1\n",1);
+			$diditpass = 0;
+		}
+		if($retryE1 != 1 ) {
+			CondorTest::debug("Missing NodeE retry 1\n",1);
+			$diditpass = 0;
+		}
+		if($retryF1 != 1 ) {
+			CondorTest::debug("Missing NodeF retry 1\n",1);
 			$diditpass = 0;
 		}
 		if($passed != 1 ) {
