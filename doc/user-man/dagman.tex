@@ -2902,12 +2902,13 @@ is first run.
 In recovery mode, the \File{.nodes.log} is used to identify
 nodes that have completed and should not be re-submitted.
 
-DAGMan can be told to work in recovery mode by including the
-\Opt{-DoRecovery} option on the command line, as in the example
-\begin{verbatim}
-    condor_submit_dag diamond.dag -DoRecovery
-\end{verbatim}
-where \File{diamond.dag} is the name of the DAG input file.
+% Fix gittrac #5291: DoRecovery option wrongly appears in manual for 8.2.8.
+% DAGMan can be told to work in recovery mode by including the
+% \Opt{-DoRecovery} option on the command line, as in the example
+% \begin{verbatim}
+%    condor_submit_dag diamond.dag -DoRecovery
+% \end{verbatim}
+% where \File{diamond.dag} is the name of the DAG input file.
 
 When debugging a DAG in which something has gone wrong,
 a first determination is whether a resubmission will
