@@ -16,36 +16,36 @@
   <script src="render.js"></script>
 
 <style>
-ul.tabs {
-	margin: 0; 
-	padding: 0;
-	list-style: none;
-	border-bottom: 1px solid black;
-}
-ul.tabs li {
-	margin: 0;
-	background: #ededed;
-	display: inline-block;
-	padding: .3em .8em;
-	cursor: pointer;
-	color: black;
-	border-top: 1px solid black;
-	border-right: 1px solid black;
-	border-left: 1px solid black;
-	border-radius: 0.4em 0.4em 0 0;
-	border-bottom: 1px solid black;
-	margin-bottom: -1px;
-}
-ul.tabs li.current {
-	background: white;
-	cursor: auto;
-	border-bottom: 1px solid white;
-}
 .tab-content {
 	display: none;
 }
 .tab-content.current {
 	display: inherit;
+}
+
+ul.radio-tabs {
+	display: inline;
+	margin: 0;
+	padding: 0;
+}
+
+ul.radio-tabs li {
+	display: inline-block;
+}
+ul.radio-tabs li input[type="radio"] {
+	display: none;
+}
+ul.radio-tabs li label {
+	display: block;
+	border: 1px solid black;
+	background: #ededed;
+	padding: .2em .8em;
+	border-radius: 0.4em;
+	cursor: pointer;
+}
+ul.radio-tabs li input[type="radio"]:checked + label {
+	background: white;
+	cursor: inherit;
 }
 </style>
 </head>
@@ -53,11 +53,20 @@ ul.tabs li.current {
 
 <h1><img src="HTCondor_logo.png" style="display: inline-block;  height: 1.3em;" alt="HTCondor"> View</h1>
 
-<ul class="tabs">
-<li class="tab-link current" data-tab="tab-user">Users
-<li class="tab-link" data-tab="tab-machine">Computers
-<li class="tab-link" data-tab="tab-custom">Custom
+<div style="text-align: center">
+<ul class="radio-tabs" id="data-source">
+<li><input type="radio" name="data-source" id="data-source-user"
+value="user"> <label for="data-source-user" checked>Users</label>
+<li><input type="radio" name="data-source" id="data-source-machine" value="machine"> <label for="data-source-machine">Pool</label>
 </ul>
+<ul class="radio-tabs" id="data-duration">
+<li><input type="radio" name="data-duration" id="data-duration-now" value="now"> <label for="data-duration-now">Now</label>
+<li><input type="radio" name="data-duration" id="data-duration-day" value="day"> <label for="data-duration-day">Day</label>
+<li><input type="radio" name="data-duration" id="data-duration-week" value="week"> <label for="data-duration-week">Week</label>
+<li><input type="radio" name="data-duration" id="data-duration-month" value="month"> <label for="data-duration-month" checked>Month</label>
+</ul>
+</div>
+
 
 <div id="tab-user" class="tab-content current">
 
@@ -223,6 +232,12 @@ function render_new_graph(editid, graphid, args) {
 	save_arguments_to_url();
 }
 
+function change_view() {
+	var duration = $('#data-duration input[type="radio"]:checked').val()
+	var source = $('#data-source input[type="radio"]:checked').val()
+	console.log(source,duration);
+}
+
 function user_data_source() { return "user.json"; }
 
 function user_graph_args(user) {
@@ -246,6 +261,16 @@ function default_table_args() {
 return "url=" + user_data_source() + "\n" +
 	"order=Date,Date,User\n" +
 	"pivot=User;State;last(Cpus)";
+}
+
+function machine_data_source() { return "pool.json"; }
+
+function default_machine_graph_args() {
+	return "title=Machine State\n" +
+		"url=" + user_data_source() + "\n" +
+		"order=Date,State\n" +
+		"pivot=Date;State;Cpus\n" +
+		"chart=stacked";
 }
 
 window.onpopstate = function() {
@@ -282,6 +307,7 @@ $(document).ready( function() {
 		$("#"+tab_id).addClass('current');
 	});
 
+	$('ul.radio-tabs input').change(change_view);
 
 	// Initialize graph
 	if(!window.location.search) {
