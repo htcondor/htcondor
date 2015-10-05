@@ -27,11 +27,6 @@
 - history.pushState with relative URLs for simplicty?
 	- Chrome hates pushState on file: URLs. Maybe relatiev will fix?
 
-
-Serious graphing mess up
-file:///home/adesmet/src/view/index.html?graph1=title%3DMachine%20State%20for%20dschultz%40icecube.wisc.edu%0Afilter%3DUser%3D%3Ddschultz%40icecube.wisc.edu%0Aurl%3Duser.json%0Aorder%3D-State%0Apivot%3DDate%3BState%3BCpus%0Achart%3Dstacked&table1=url%3Duser.json%0Aorder%3DDate%2CUser%0Apivot%3DUser%3BState%3Blast%28Cpus%29
-	- Cause: Need to sort on Date; not implicit in graph!
-
 CondorView
 - User/Job
 	- Graph: Per user (or "Total"): JobsIdle, JobsRunning
