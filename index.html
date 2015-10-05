@@ -14,10 +14,43 @@
   </script>
   <script src="heatgrid.js"></script>
   <script src="render.js"></script>
+
+<style>
+ul.tabs {
+	margin: 0; 
+	padding: 0;
+	list-style: none;
+}
+ul.tabs li {
+	background: none;
+	display: inline-block;
+	padding: .5em .8em;
+	cursor: pointer;
+	color: black;
+}
+ul.tabs li.current {
+	background: #ededed;
+	cursor: auto;
+}
+.tab-content {
+	display: none;
+}
+.tab-content.current {
+	display: inherit;
+}
+</style>
 </head>
 <body>
 
 <h1><img src="HTCondor_logo.png" style="display: inline-block;  height: 1.3em;" alt="HTCondor"> View</h1>
+
+<ul class="tabs">
+<li class="tab-link current" data-tab="tab-user">Users</li>
+<li class="tab-link" data-tab="tab-machine">Computers</li>
+<li class="tab-link" data-tab="tab-custom">Custom</li>
+</ul>
+
+<div id="tab-user" class="tab-content current">
 
 <div class='editmenu'><button class="editlink" id='editlinkgraph1'>edit</button>
 <div id="graph1editor" style="display:none;">
@@ -61,6 +94,15 @@
 <div class='vizchart'></div>
 </div>
 
+</div> <!-- #tab-user .tab-content -->
+
+<div id="tab-machine" class="tab-content">
+TODO Machine
+</div>
+
+<div id="tab-custom" class="tab-content">
+TODO Custom
+</div>
 
 <h2>Log</h2>
   <div id='vizlog'></div>
@@ -220,6 +262,19 @@ $('#rerendertable1').click(function() { render_new_graph('#table1text', 'table1'
 $('#reset_table1').click(function(){ render_new_graph('#table1text', 'table1', default_table_args()); });
 
 $(document).ready( function() {
+	// Initialize tabs
+	$('ul.tabs li').click(function(){
+		var tab_id = $(this).attr('data-tab');
+
+		$('ul.tabs li').removeClass('current');
+		$('.tab-content').removeClass('current');
+
+		$(this).addClass('current');
+		$("#"+tab_id).addClass('current');
+	});
+
+
+	// Initialize graph
 	if(!window.location.search) {
 
 		$('#graph1text').val(default_graph_args());
