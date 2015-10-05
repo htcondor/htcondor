@@ -20,17 +20,26 @@ ul.tabs {
 	margin: 0; 
 	padding: 0;
 	list-style: none;
+	border-bottom: 1px solid black;
 }
 ul.tabs li {
-	background: none;
+	margin: 0;
+	background: #ededed;
 	display: inline-block;
-	padding: .5em .8em;
+	padding: .3em .8em;
 	cursor: pointer;
 	color: black;
+	border-top: 1px solid black;
+	border-right: 1px solid black;
+	border-left: 1px solid black;
+	border-radius: 0.4em 0.4em 0 0;
+	border-bottom: 1px solid black;
+	margin-bottom: -1px;
 }
 ul.tabs li.current {
-	background: #ededed;
+	background: white;
 	cursor: auto;
+	border-bottom: 1px solid white;
 }
 .tab-content {
 	display: none;
@@ -45,9 +54,9 @@ ul.tabs li.current {
 <h1><img src="HTCondor_logo.png" style="display: inline-block;  height: 1.3em;" alt="HTCondor"> View</h1>
 
 <ul class="tabs">
-<li class="tab-link current" data-tab="tab-user">Users</li>
-<li class="tab-link" data-tab="tab-machine">Computers</li>
-<li class="tab-link" data-tab="tab-custom">Custom</li>
+<li class="tab-link current" data-tab="tab-user">Users
+<li class="tab-link" data-tab="tab-machine">Computers
+<li class="tab-link" data-tab="tab-custom">Custom
 </ul>
 
 <div id="tab-user" class="tab-content current">
