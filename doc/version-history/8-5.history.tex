@@ -61,6 +61,14 @@ Other valid values are \Expr{group} (permissions \Expr{0750}) and
 Previously, all job spool directories had access permissions of \Expr{0755}.
 \Ticket{4896}
 
+\item The \Condor{schedd} no longer changes the ownership of spooled job
+files that it manages.
+Now, the files are always owned by the submitting user.
+The previous behavior of changing ownership to/from the \Expr{condor}
+account can be restored by setting the new configuration parameter
+\Macro{CHOWN\_JOB\_SPOOL\_FILES} to \Expr{True}.
+\Ticket{5226}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
