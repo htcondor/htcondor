@@ -42,14 +42,29 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug that prevented the \Condor{negotiator} from preempting
+jobs based on user priority when \Macro{ALLOW\_PSLOT\_PREEMPTION} was set
+to \Expr{True}.
+\Ticket{5236}
+
+\item Added post install rules to the Enterprise Linux 7 RPM to configure
+SELinux for HTCondor operation.
+\Ticket{5012}
+
+\item Fixed bugs that prevented the \Condor{kbdd} from authenticating
+to the X server, and thus from correctly reporting when the keyboard
+or mouse were in use.
+\Ticket{5264}
+
 \item The \Condor{kbdd} now works with shared port enabled.
-\Ticket{#5239}
+\Ticket{5239}
 
 \item Fixed a bug that caused HTCondor daemons to crash 
-on RHEL 7 when using more than 1024 file descriptors.
+when using more than 1024 file descriptors
+on Enterprise Linux 7 systems.
 \Ticket{5240}
 
-\item Fixed a memory leak when the ClassAd function split() is used.
+\item Fixed a memory leak when the ClassAd function \Procedure{split} is used.
 \Ticket{5219}
 
 \item \Condor{vacate} will now fail with an error message when the \Opt{-constraint}
@@ -57,11 +72,6 @@ argument is used more than once or used with other arguments that cannot be hand
 while processing the constraint.  Earlier versions would just quietly ignore all but
 the last constraint.
 \Ticket{5234}
-
-\item Fixed a bug that prevented the \Condor{negotiator} from preempting
-jobs based on user priority when \Macro{ALLOW\_PSLOT\_PREEMPTION} was set
-to \Expr{True}.
-\Ticket{5236}
 
 \end{itemize}
 

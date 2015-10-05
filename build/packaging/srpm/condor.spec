@@ -1688,7 +1688,7 @@ rm -rf %{buildroot}
 %if %systemd
 
 %post
-%if 0%{?fedora}
+%if 0%{?fedora} || 0%{?rhel} >= 7
 test -x /usr/sbin/selinuxenabled && /usr/sbin/selinuxenabled
 if [ $? = 0 ]; then
    restorecon -R -v /var/lock/condor
