@@ -51,6 +51,16 @@ method, similar to a \Condor{submit} file with multiple \texttt{queue} statement
 output (mainly in the \File{dagman}.out file).
 \Ticket{5144}
 
+\item The new configuration parameter \MacroNI{JOB\_SPOOL\_PERMISSIONS}
+controls the permissions on a job's spool directory managed by the
+\Condor{schedd} on unix.
+It defaults to the value \Expr{user}, which results in a permissions
+value of \Expr{0700}.
+Other valid values are \Expr{group} (permissions \Expr{0750}) and
+\Expr{world} (permissions \Expr{0755}).
+Previously, all job spool directories had access permissions of \Expr{0755}.
+\Ticket{4896}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
