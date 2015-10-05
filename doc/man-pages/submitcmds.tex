@@ -475,9 +475,9 @@ not these jobs will run ahead of another user's jobs.
 \index{submit commands!queue}
 \label{man-condor-submit-queue}
 \item[queue \oOptnm{<int expr>}] Places zero or more copies of the job into the HTCondor queue.
-\item[queue} \oOpt{<int expr>} \oOpt{<varname>} \Opt{in} \oOpt{slice} \Opt{<list of items>}] Places zero or more copies of the job in the queue based on items in a \Opt{<list of items>}
-\item[queue} \oOpt{<int expr>} \oOpt{<varname>} \Opt{matching} \oOpt{files | dirs} \oOpt{slice} \Opt{<list of items with file globbing>}] Places zero or more copies of the job in the queue based on files that match a \Opt{<list of items with file globbing>}
-\item[queue} \oOpt{<int expr>} \oOpt{<list of varnames>} \Opt{from} \oOpt{slice} \Opt{<file name> | <list of items>}] Places zero or more copies of the job in the queue based on lines from the submit file or from \Opt{<file name>}
+\item[queue] \oOpt{<int expr>} \oOpt{<varname>} \Opt{in} \oOpt{slice} \Opt{<list of items>} Places zero or more copies of the job in the queue based on items in a \Opt{<list of items>}
+\item[queue] \oOpt{<int expr>} \oOpt{<varname>} \Opt{matching} \oOpt{files | dirs} \oOpt{slice} \Opt{<list of items with file globbing>}] Places zero or more copies of the job in the queue based on files that match a \Opt{<list of items with file globbing>}
+\item[queue] \oOpt{<int expr>} \oOpt{<list of varnames>} \Opt{from} \oOpt{slice} \Opt{<file name> | <list of items>}] Places zero or more copies of the job in the queue based on lines from the submit file or from \Opt{<file name>}
 
 The optional
 argument \Arg{<int expr>} specifies how many times to repeat the job submission for a given set of arguments.
