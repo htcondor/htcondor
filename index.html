@@ -178,7 +178,7 @@ function user_graph_args(user) {
 return "title=Machine State for " + user + "\n" +
 	"filter=User==" + user + "\n" +
 	"url=" + user_data_source() + "\n" +
-	"order=State\n" +
+	"order=Date,State\n" +
 	"pivot=Date;State;Cpus\n" +
 	"chart=stacked\n";
 }
@@ -186,14 +186,14 @@ return "title=Machine State for " + user + "\n" +
 function default_graph_args() { 
 return "title=Machine State\n" +
 	"url=" + user_data_source() + "\n" +
-	"order=State\n" +
+	"order=Date,State\n" +
 	"pivot=Date;State;Cpus\n" +
 	"chart=stacked";
 }
 
 function default_table_args() {
 return "url=" + user_data_source() + "\n" +
-	"order=Date,User\n" +
+	"order=Date,Date,User\n" +
 	"pivot=User;State;last(Cpus)";
 }
 
