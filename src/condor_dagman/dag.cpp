@@ -1546,7 +1546,9 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 			_catThrottleDeferredCount++;
 		} else {
 
-    		CondorID condorID(0,0,0);
+				// Note:  I'm not sure why we don't just use the default
+				// constructor here.  wenger 2015-09-25
+    		CondorID condorID( 0, 0, 0 );
 			submit_result_t submit_result = SubmitNodeJob( dm, job, condorID );
 	
 				// Note: if instead of switch here so we can use break
@@ -3902,7 +3904,8 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 
 		// Resetting the HTCondor ID here fixes PR 799.  wenger 2007-01-24.
 	if ( node->GetCluster() != _defaultCondorId._cluster ) {
-		ASSERT( JobIsNoop( condorID ) == node->GetNoop() );
+			// Remove the "previous" HTCondor ID for this node from
+			// the ID->node hash table.
 		int id = GetIndexID( node->GetID() );
 		int removeResult = GetEventIDHash( node->GetNoop() )->remove( id );
 		ASSERT( removeResult == 0 );
