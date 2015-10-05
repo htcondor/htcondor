@@ -1330,11 +1330,13 @@ void CollectorDaemon::Config()
 		UpdateTimerId = -1;
 	}
 
+	DCCollectorAdSequences * adSeq = NULL;
 	if( collectorsToUpdate ) {
+		adSeq = collectorsToUpdate->detachAdSequences();
 		delete collectorsToUpdate;
 		collectorsToUpdate = NULL;
 	}
-	collectorsToUpdate = CollectorList::create( NULL );
+	collectorsToUpdate = CollectorList::create(NULL, adSeq);
 
 	//
 	// If we don't use the network to update ourselves, we could allow
@@ -1648,7 +1650,7 @@ void CollectorDaemon::sendCollectorAd()
 		char update_addr_default [] = "(null)";
 		char *update_addr = worldCollector->addr();
 		if (!update_addr) update_addr = update_addr_default;
-		if( ! worldCollector->sendUpdate(UPDATE_COLLECTOR_AD, ad, NULL, false) ) {
+		if( ! worldCollector->sendUpdate(UPDATE_COLLECTOR_AD, ad, collectorsToUpdate->getAdSeq(), NULL, false) ) {
 			dprintf( D_ALWAYS, "Can't send UPDATE_COLLECTOR_AD to collector "
 					 "(%s): %s\n", update_addr,
 					 worldCollector->error() );

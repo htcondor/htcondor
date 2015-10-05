@@ -582,6 +582,7 @@
 #define ATTR_STARTD_IP_ADDR  "StartdIpAddr"
 #define ATTR_STARTD_PRINCIPAL  "StartdPrincipal"
 #define ATTR_STARTD_SENDS_ALIVES  "StartdSendsAlives"
+#define ATTR_STARTER_EXIT_STATUS "StarterExitStatus"
 #define ATTR_STARTER_HANDLES_ALIVES "_condor_StartdHandlesAlives"
 #define ATTR_STATE  "State"
 #define ATTR_STARTER_IP_ADDR  "StarterIpAddr"

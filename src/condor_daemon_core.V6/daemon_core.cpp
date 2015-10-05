@@ -3168,7 +3168,7 @@ DaemonCore::Wake_up_select()
 	if (CondorThreads::get_tid() <= 1) {
 #ifdef WIN32
 		if (GetCurrentThreadId() != dcmainThreadId) {
-			dprintf (D_ALWAYS, "DaemonCore::Wake_up_select called from an unknown thread. windows tid = %d", 
+			dprintf (D_ALWAYS, "DaemonCore::Wake_up_select called from an unknown thread. windows tid = %d\n",
 				GetCurrentThreadId());
 		}
 #endif
@@ -10782,10 +10782,12 @@ DaemonCore::publish(ClassAd *ad) {
 
 void
 DaemonCore::initCollectorList() {
+	DCCollectorAdSequences * adSeq = NULL;
 	if (m_collector_list) {
+		adSeq = m_collector_list->detachAdSequences();
 		delete m_collector_list;
 	}
-	m_collector_list = CollectorList::create();
+	m_collector_list = CollectorList::create(NULL, adSeq);
 }
 
 

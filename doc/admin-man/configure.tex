@@ -678,6 +678,34 @@ the set of configuration it incorporates.
     If this policy is used together with the \texttt{Always\_Run\_Jobs} policy,
     order the specification by placing this \texttt{Limit\_Job\_Runtimes} 
     policy second. 
+	\item \texttt{Preempt\_If\_Cpus\_Exceeded}
+	If the startd observes the number of CPU cores used by the job exceed
+	the number of cores in the slot by more than 0.8 on average over the past
+	minute, preempt the job immediately
+	ignoring any job retirement time.
+	\item \texttt{Hold\_If\_Cpus\_Exceeded}
+	If the startd observes the number of CPU cores used by the job exceed
+	the number of cores in the slot by more than 0.8 on average over the past
+	minute, immediately place the job on hold
+	ignoring any job retirement time.  The job will go on hold with a reasonable
+	hold reason in job attribute \Attr{HoldReason} and a value of 101 in job
+	attribute \Attr{HoldReasonCode}.  The hold reason and code can be customized by
+	specifying \MacroNI{HOLD\_REASON\_CPU\_EXCEEDED} and
+	\MacroNI{HOLD\_SUBCODE\_CPU\_EXCEEDED} respectively.
+	\item \texttt{Preempt\_If\_Memory\_Exceeded}
+	If the startd observes the memory usage of the job exceed
+	the memory provisioned in the slot, preempt the job immediately
+	ignoring any job retirement time.
+	\item \texttt{Hold\_If\_Memory\_Exceeded}
+	If the startd observes the memory usage of the job exceed
+	the memory provisioned in the slot,
+	immediately place the job on hold
+	ignoring any job retirement time.
+	The job will go on hold with a reasonable
+	hold reason in job attribute \Attr{HoldReason} and a value of 102 in job
+	attribute \Attr{HoldReasonCode}.  The hold reason and code can be customized by
+	specifying \MacroNI{HOLD\_REASON\_MEMORY\_EXCEEDED} and
+	\MacroNI{HOLD\_SUBCODE\_MEMORY\_EXCEEDED} respectively.
   \end{itemize}
 
 \label{usecategory:SECURITY}

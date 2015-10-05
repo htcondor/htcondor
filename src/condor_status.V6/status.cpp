@@ -111,7 +111,7 @@ char		buffer[1024];
 char		*myName;
 vector<SortSpec> sortSpecs;
 bool            noSort = false; // set to true to disable sorting entirely
-bool            naturalSort = false;
+bool            naturalSort = true;
 bool            javaMode = false;
 bool			vmMode = false;
 bool			absentMode = false;
@@ -757,7 +757,7 @@ usage ()
 		"\n    and [display-opts] are one or more of\n"
 		"\t-long\t\t\tDisplay entire classads\n"
 		"\t-sort <expr>\t\tSort entries by expressions. 'no' disables sorting\n"
-		"\t-natural\t\t\tUse natural sort order in default output\n"
+		"\t-natural[:off]\t\tUse natural sort order in default output (default=on)\n"
 		"\t-total\t\t\tDisplay totals only\n"
 //		"\t-verbose\t\tSame as -long\n"
 		"\t-expert\t\t\tDisplay shorter error messages\n"
@@ -898,6 +898,14 @@ firstPass (int argc, char *argv[])
 				setPPwidth();
 			}
 			//invalid_fields_empty = true;
+		} else
+		if (is_dash_arg_colon_prefix (argv[i], "natural", &pcolon, 3)) {
+			naturalSort = true;
+			if (pcolon) {
+				if (MATCH == strcmp(++pcolon,"off")) {
+					naturalSort = false;
+				}
+			}
 		} else
 		if (matchPrefix (argv[i], "-target", 5)) {
 			if( !argv[i+1] ) {
@@ -1128,9 +1136,6 @@ firstPass (int argc, char *argv[])
             sortSpecs.push_back(ss);
 				// the silent constraint TARGET.%s =!= UNDEFINED is added
 				// as a customAND constraint on the second pass
-		} else
-		if (matchPrefix (argv[i], "-natural", 4)) {
-			naturalSort = true;
 		} else
 		if (matchPrefix (argv[i], "-submitters", 5)) {
 			setMode (MODE_SCHEDD_SUBMITTORS, i, argv[i]);

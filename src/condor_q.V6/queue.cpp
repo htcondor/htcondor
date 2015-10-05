@@ -339,6 +339,7 @@ static	bool		querySubmittors = false;
 static	char		constraint[4096];
 static  const char *user_job_constraint = NULL; // just the constraint given by the user
 static  const char *user_slot_constraint = NULL; // just the machine constraint given by the user
+static  const char *global_schedd_constraint = NULL; // argument from -schedd-constraint
 static  bool        single_machine = false;
 static	DCCollector* pool = NULL; 
 static	char		*scheddAddr;	// used by format_remote_host()
@@ -874,7 +875,7 @@ int main (int argc, char **argv)
 			ATTR_TOTAL_JOB_ADS );
 		result = scheddQuery.addANDConstraint( constraint );
 		if( result != Q_OK ) {
-			fprintf( stderr, "Error: Couldn't add constraint %s\n", constraint);
+			fprintf( stderr, "Error: Couldn't add schedd-constraint %s\n", constraint);
 			freeConnectionStrings();
 			exit( 1 );
 		}
@@ -1169,7 +1170,7 @@ static void
 processCommandLineArguments (int argc, char *argv[])
 {
 	int i;
-	char *arg, *at, *daemonname;
+	char *at, *daemonname;
 	const char * pcolon;
 
 	bool custom_attributes = false;
@@ -1180,38 +1181,30 @@ processCommandLineArguments (int argc, char *argv[])
 
 	for (i = 1; i < argc; i++)
 	{
+		// no dash means this arg is a cluster/proc, proc, or owner
 		if( *argv[i] != '-' ) {
 			int cluster, proc;
-			// no dash means this arg is a cluster/proc, proc, or owner
-		#if 1
 			const char * pend;
 			if (StrIsProcId(argv[i], cluster, proc, &pend) && *pend == 0) {
 				constrID.push_back(CondorID(cluster,proc,-1));
 			}
-		#else
-			if( sscanf( argv[i], "%d.%d", &cluster, &proc ) == 2 ) {
-				constrID.push_back(CondorID(cluster,proc,-1));
-			} 
-			else if( sscanf ( argv[i], "%d", &cluster ) == 1 ) {
-				constrID.push_back(CondorID(cluster,-1,-1));
-			} 
-		#endif
 			else {
 				++cOwnersOnCmdline;
 				if( Q.add( CQ_OWNER, argv[i] ) != Q_OK ) {
 					// this error doesn't seem very helpful... can't we say more?
-					fprintf( stderr, "Error: Argument %d (%s)\n", i, argv[i] );
+					fprintf( stderr, "Error: Argument %d (%s) must be a jobid or user\n", i, argv[i] );
 					exit( 1 );
 				}
 			}
+
 			continue;
 		}
 
 		// the argument began with a '-', so use only the part after
 		// the '-' for prefix matches
-		arg = argv[i]+1;
+		const char* dash_arg = argv[i];
 
-		if (is_arg_colon_prefix (arg, "wide", &pcolon, 1)) {
+		if (is_dash_arg_colon_prefix (dash_arg, "wide", &pcolon, 1)) {
 			widescreen = true;
 			if (pcolon) {
 				testing_width = atoi(++pcolon);
@@ -1220,28 +1213,28 @@ processCommandLineArguments (int argc, char *argv[])
 			}
 			continue;
 		}
-		if (is_arg_prefix (arg, "long", 1)) {
+		if (is_dash_arg_prefix (dash_arg, "long", 1)) {
 			dash_long = 1;
 			summarize = 0;
 		} 
 		else
-		if (is_arg_prefix (arg, "xml", 3)) {
+		if (is_dash_arg_prefix (dash_arg, "xml", 3)) {
 			use_xml = 1;
 			dash_long = 1;
 			summarize = 0;
 			customHeadFoot = HF_BARE;
 		}
 		else
-		if (is_arg_prefix (arg, "limit", 3)) {
+		if (is_dash_arg_prefix (dash_arg, "limit", 3)) {
 			if (++i >= argc) {
-				fprintf(stderr, "Error: Argument -limit requires the max number of results as an argument.\n");
+				fprintf(stderr, "Error: -limit requires the max number of results as an argument.\n");
 				exit(1);
 			}
 			char *endptr;
 			g_match_limit = strtol(argv[i], &endptr, 10);
 			if (*endptr != '\0')
 			{
-				fprintf(stderr, "Error: Unable to convert argument (%s) to a number for -limit.\n", argv[i]);
+				fprintf(stderr, "Error: Unable to convert (%s) to a number for -limit.\n", argv[i]);
 				exit(1);
 			}
 			if (g_match_limit <= 0)
@@ -1251,13 +1244,13 @@ processCommandLineArguments (int argc, char *argv[])
 			}
 		}
 		else
-		if (is_arg_prefix (arg, "pool", 1)) {
+		if (is_dash_arg_prefix (dash_arg, "pool", 1)) {
 			if( pool ) {
 				delete pool;
 			}
 			if( ++i >= argc ) {
 				fprintf( stderr,
-						 "Error: Argument -pool requires a hostname as an argument.\n" );
+						 "Error: -pool requires a hostname as an argument.\n" );
 				if (!expert) {
 					printf("\n");
 					print_wrapped_text("Extra Info: The hostname should be the central "
@@ -1287,15 +1280,15 @@ processCommandLineArguments (int argc, char *argv[])
 			Collectors->append ( new DCCollector( *pool ) );
 		} 
 		else
-		if (is_arg_prefix (arg, "D", 1)) {
+		if (is_arg_prefix (dash_arg+1, "D", 1)) {
 			if( ++i >= argc ) {
 				fprintf( stderr, 
-						 "Error: Argument -%s requires a list of flags as an argument.\n", arg );
+						 "Error: %s requires a list of flags as an argument.\n", dash_arg );
 				if (!expert) {
 					printf("\n");
 					print_wrapped_text("Extra Info: You need to specify debug flags "
 									   "as a quoted string. Common flags are D_ALL, and "
-									   "D_ALWAYS.",
+									   "D_FULLDEBUG.",
 									   stderr);
 				}
 				exit( 1 );
@@ -1303,7 +1296,7 @@ processCommandLineArguments (int argc, char *argv[])
 			set_debug_flags( argv[i], 0 );
 		} 
 		else
-		if (is_arg_prefix (arg, "name", 1)) {
+		if (is_dash_arg_prefix (dash_arg, "name", 1)) {
 
 			if (querySubmittors) {
 				// cannot query both schedd's and submittors
@@ -1323,7 +1316,7 @@ processCommandLineArguments (int argc, char *argv[])
 			// make sure we have at least one more argument
 			if (argc <= i+1) {
 				fprintf( stderr, 
-						 "Error: Argument -name requires the name of a schedd as a parameter.\n" );
+						 "Error: -name requires the name of a schedd as an argument.\n" );
 				exit(1);
 			}
 
@@ -1356,11 +1349,11 @@ processCommandLineArguments (int argc, char *argv[])
 			querySchedds = true;
 		} 
 		else
-		if (is_arg_prefix (arg, "direct", 1)) {
+		if (is_dash_arg_prefix (dash_arg, "direct", 1)) {
 			/* check for one more argument */
 			if (argc <= i+1) {
 				fprintf( stderr, 
-					"Error: Argument -direct requires ["
+					"Error: -direct requires ["
 					#ifdef HAVE_EXT_POSTGRESQL
 						"rdbms | quilld | "
 					#endif
@@ -1371,7 +1364,7 @@ processCommandLineArguments (int argc, char *argv[])
 			i++;
 		}
 		else
-		if (is_arg_prefix (arg, "submitter", 1)) {
+		if (is_dash_arg_prefix (dash_arg, "submitter", 1)) {
 
 			if (querySchedds) {
 				// cannot query both schedd's and submittors
@@ -1390,8 +1383,7 @@ processCommandLineArguments (int argc, char *argv[])
 			
 			// make sure we have at least one more argument
 			if (argc <= i+1) {
-				fprintf( stderr, "Error: Argument -submitter requires the name of a "
-						 "user.\n");
+				fprintf( stderr, "Error: -submitter requires the name of a user.\n");
 				exit(1);
 			}
 				
@@ -1448,40 +1440,39 @@ processCommandLineArguments (int argc, char *argv[])
 			querySubmittors = true;
 		}
 		else
-		if (is_arg_prefix (arg, "constraint", 1)) {
+		if (is_dash_arg_prefix (dash_arg, "constraint", 1)) {
 			// make sure we have at least one more argument
 			if (argc <= i+1) {
-				fprintf( stderr, "Error: Argument -constraint requires "
-							"another parameter\n");
+				fprintf( stderr, "Error: -constraint requires another parameter\n");
 				exit(1);
 			}
 			user_job_constraint = argv[++i];
 
 			if (Q.addAND (user_job_constraint) != Q_OK) {
-				fprintf (stderr, "Error: Argument %d (%s)\n", i, user_job_constraint);
+				fprintf (stderr, "Error: Argument %d (%s) is not a valid constraint\n", i, user_job_constraint);
 				exit (1);
 			}
 		} 
 		else
-		if (is_arg_prefix(arg, "slotconstraint", 5) || is_arg_prefix(arg, "mconstraint", 2)) {
+		if (is_dash_arg_prefix (dash_arg, "slotconstraint", 5) || is_dash_arg_prefix (dash_arg, "mconstraint", 2)) {
 			// make sure we have at least one more argument
 			if (argc <= i+1) {
-				fprintf( stderr, "Error: Argument -%s requires another parameter\n", arg);
+				fprintf( stderr, "Error: %s requires another parameter\n", dash_arg);
 				exit(1);
 			}
 			user_slot_constraint = argv[++i];
 		}
 		else
-		if (is_arg_prefix(arg, "machine", 2)) {
+		if (is_dash_arg_prefix (dash_arg, "machine", 2)) {
 			// make sure we have at least one more argument
 			if (argc <= i+1) {
-				fprintf( stderr, "Error: Argument -%s requires another parameter\n", arg);
+				fprintf( stderr, "Error: %s requires another parameter\n", dash_arg);
 				exit(1);
 			}
 			user_slot_constraint = argv[++i];
 		}
 		else
-		if (is_arg_prefix(arg, "address", 1)) {
+		if (is_dash_arg_prefix (dash_arg, "address", 1)) {
 
 			if (querySubmittors) {
 				// cannot query both schedd's and submittors
@@ -1492,8 +1483,7 @@ processCommandLineArguments (int argc, char *argv[])
 			// make sure we have at least one more argument
 			if (argc <= i+1) {
 				fprintf( stderr,
-						 "Error: Argument -address requires another "
-						 "parameter\n" );
+						 "Error: -address requires another parameter\n" );
 				exit(1);
 			}
 			if( ! is_valid_sinful(argv[i+1]) ) {
@@ -1507,18 +1497,17 @@ processCommandLineArguments (int argc, char *argv[])
 			querySchedds = true;
 		} 
 		else
-		if (is_arg_colon_prefix (arg, "autocluster", &pcolon, 2)) {
+		if (is_dash_arg_colon_prefix (dash_arg, "autocluster", &pcolon, 2)) {
 			dash_autocluster = CondorQ::fetch_DefaultAutoCluster;
 		}
 		else
-		if (is_arg_colon_prefix (arg, "group-by", &pcolon, 2)) {
+		if (is_dash_arg_colon_prefix (dash_arg, "group-by", &pcolon, 2)) {
 			dash_autocluster = CondorQ::fetch_GroupBy;
 		}
 		else
-		if (is_arg_prefix(arg, "attributes", 2)) {
+		if (is_dash_arg_prefix (dash_arg, "attributes", 2)) {
 			if( argc <= i+1 ) {
-				fprintf( stderr, "Error: Argument -attributes requires "
-						 "a list of attributes to show\n" );
+				fprintf( stderr, "Error: -attributes requires a list of attributes to show\n" );
 				exit( 1 );
 			}
 			if( !custom_attributes ) {
@@ -1534,11 +1523,10 @@ processCommandLineArguments (int argc, char *argv[])
 			i++;
 		}
 		else
-		if (is_arg_prefix(arg, "format", 1)) {
+		if (is_dash_arg_prefix (dash_arg, "format", 1)) {
 				// make sure we have at least two more arguments
 			if( argc <= i+2 ) {
-				fprintf( stderr, "Error: Argument -format requires "
-						 "format and attribute parameters\n" );
+				fprintf( stderr, "Error: -format requires format and attribute parameters\n" );
 				exit( 1 );
 			}
 			if( !custom_attributes ) {
@@ -1556,12 +1544,11 @@ processCommandLineArguments (int argc, char *argv[])
 			i+=2;
 		}
 		else
-		if (is_arg_colon_prefix(arg, "autoformat", &pcolon, 5) ||
-			is_arg_colon_prefix(arg, "af", &pcolon, 2)) {
+		if (is_dash_arg_colon_prefix(dash_arg, "autoformat", &pcolon, 5) ||
+			is_dash_arg_colon_prefix(dash_arg, "af", &pcolon, 2)) {
 				// make sure we have at least one more argument
 			if ( (i+1 >= argc)  || *(argv[i+1]) == '-') {
-				fprintf( stderr, "Error: Argument -autoformat requires "
-						 "at last one attribute parameter\n" );
+				fprintf( stderr, "Error: -autoformat requires at last one attribute parameter\n" );
 				exit( 1 );
 			}
 			if( !custom_attributes ) {
@@ -1638,7 +1625,7 @@ processCommandLineArguments (int argc, char *argv[])
 		else
 		if (is_dash_arg_colon_prefix(argv[i], "print-format", &pcolon, 2)) {
 			if ( (i+1 >= argc)  || (*(argv[i+1]) == '-' && (argv[i+1])[1] != 0)) {
-				fprintf( stderr, "Error: Argument -print-format requires a filename argument\n");
+				fprintf( stderr, "Error: -print-format requires a filename argument\n");
 				exit( 1 );
 			}
 			// hack allow -pr ! to disable use of user-default print format files.
@@ -1659,9 +1646,24 @@ processCommandLineArguments (int argc, char *argv[])
 			}
 		}
 		else
-		if (is_arg_prefix (arg, "global", 1)) {
+		if (is_dash_arg_prefix (dash_arg, "global", 1)) {
 			global = 1;
 		} 
+		else
+		if (is_dash_arg_prefix (dash_arg, "schedd-constraint", 5)) {
+			// make sure we have at least one more argument
+			if (argc <= i+1) {
+				fprintf( stderr, "Error: -schedd-constraint requires a constraint argument\n");
+				exit(1);
+			}
+			global_schedd_constraint = argv[++i];
+
+			if (scheddQuery.addANDConstraint (global_schedd_constraint) != Q_OK) {
+				fprintf (stderr, "Error: Invalid constraint (%s)\n", global_schedd_constraint);
+				exit (1);
+			}
+			global = 1;
+		}
 		else
 		if (is_dash_arg_prefix (argv[i], "help", 1)) {
 			int other = 0;
@@ -1679,13 +1681,13 @@ processCommandLineArguments (int argc, char *argv[])
 			exit(0);
 		}
 		else
-		if (is_arg_colon_prefix(arg, "better-analyze", &pcolon, 2)
-			|| is_arg_colon_prefix(arg, "better-analyse", &pcolon, 2)
-			|| is_arg_colon_prefix(arg, "analyze", &pcolon, 2)
-			|| is_arg_colon_prefix(arg, "analyse", &pcolon, 2)
+		if (is_dash_arg_colon_prefix(dash_arg, "better-analyze", &pcolon, 2)
+			|| is_dash_arg_colon_prefix(dash_arg, "better-analyse", &pcolon, 2)
+			|| is_dash_arg_colon_prefix(dash_arg, "analyze", &pcolon, 2)
+			|| is_dash_arg_colon_prefix(dash_arg, "analyse", &pcolon, 2)
 			) {
 			better_analyze = true;
-			if (arg[0] == 'b') { // if better, default to higher verbosity output.
+			if (dash_arg[1] == 'b' || dash_arg[2] == 'b') { // if better, default to higher verbosity output.
 				analyze_detail_level |= detail_better | detail_analyze_each_sub_expr | detail_always_analyze_req;
 			}
 			if (pcolon) { 
@@ -1719,14 +1721,14 @@ processCommandLineArguments (int argc, char *argv[])
 			attrs.clearAll();
 		}
 		else
-		if (is_arg_colon_prefix(arg, "reverse", &pcolon, 3)) {
+		if (is_dash_arg_colon_prefix(dash_arg, "reverse", &pcolon, 3)) {
 			reverse_analyze = true; // modify analyze to be reverse analysis
 			if (pcolon) { 
 				analyze_detail_level |= parse_analyze_detail(++pcolon, analyze_detail_level);
 			}
 		}
 		else
-		if (is_arg_colon_prefix(arg, "reverse-analyze", &pcolon, 10)) {
+		if (is_dash_arg_colon_prefix(dash_arg, "reverse-analyze", &pcolon, 10)) {
 			reverse_analyze = true; // modify analyze to be reverse analysis
 			better_analyze = true;	// enable analysis
 			analyze_with_userprio = false;
@@ -1736,13 +1738,13 @@ processCommandLineArguments (int argc, char *argv[])
 			attrs.clearAll();
 		}
 		else
-		if (is_arg_prefix(arg, "verbose", 4)) {
+		if (is_dash_arg_prefix(dash_arg, "verbose", 4)) {
 			// chatty output, mostly for for -analyze
 			// this is not the same as -long. 
 			verbose = true;
 		}
 		else
-		if (is_arg_prefix(arg, "run", 1)) {
+		if (is_dash_arg_prefix(dash_arg, "run", 1)) {
 			std::string expr;
 			formatstr( expr, "%s == %d || %s == %d || %s == %d", ATTR_JOB_STATUS, RUNNING,
 					 ATTR_JOB_STATUS, TRANSFERRING_OUTPUT, ATTR_JOB_STATUS, SUSPENDED );
@@ -1755,7 +1757,7 @@ processCommandLineArguments (int argc, char *argv[])
 			}
 		}
 		else
-		if (is_arg_prefix(arg, "hold", 2) || is_arg_prefix( arg, "held", 2)) {
+		if (is_dash_arg_prefix(dash_arg, "hold", 2) || is_dash_arg_prefix(dash_arg, "held", 2)) {
 			Q.add (CQ_STATUS, HELD);		
 			show_held = true;
 			widescreen = true;
@@ -1763,7 +1765,7 @@ processCommandLineArguments (int argc, char *argv[])
 			attrs.append( ATTR_HOLD_REASON );
 		}
 		else
-		if (is_arg_prefix(arg, "goodput", 2)) {
+		if (is_dash_arg_prefix(dash_arg, "goodput", 2)) {
 			// goodput and show_io require the same column
 			// real-estate, so they're mutually exclusive
 			dash_goodput = true;
@@ -1774,17 +1776,17 @@ processCommandLineArguments (int argc, char *argv[])
 			attrs.append( ATTR_JOB_REMOTE_WALL_CLOCK );
 		}
 		else
-		if (is_arg_prefix(arg, "cputime", 2)) {
+		if (is_dash_arg_prefix(dash_arg, "cputime", 2)) {
 			cputime = true;
 			JOB_TIME = "CPU_TIME";
 		 	attrs.append( ATTR_JOB_REMOTE_USER_CPU );
 		}
 		else
-		if (is_arg_prefix(arg, "currentrun", 2)) {
+		if (is_dash_arg_prefix(dash_arg, "currentrun", 2)) {
 			current_run = true;
 		}
 		else
-		if (is_arg_prefix(arg, "grid", 2 )) {
+		if (is_dash_arg_prefix(dash_arg, "grid", 2 )) {
 			// grid is a superset of globus, so we can't do grid if globus has been specifed
 			if ( ! dash_globus) {
 				dash_grid = true;
@@ -1797,7 +1799,7 @@ processCommandLineArguments (int argc, char *argv[])
 			}
 		}
 		else
-		if (is_arg_prefix(arg, "globus", 5 )) {
+		if (is_dash_arg_prefix(dash_arg, "globus", 5 )) {
 			Q.addAND( "GlobusStatus =!= UNDEFINED" );
 			dash_globus = true;
 			if (dash_grid) {
@@ -1810,7 +1812,7 @@ processCommandLineArguments (int argc, char *argv[])
 			}
 		}
 		else
-		if (is_arg_colon_prefix(arg, "debug", &pcolon, 3)) {
+		if (is_dash_arg_colon_prefix(dash_arg, "debug", &pcolon, 3)) {
 			// dprintf to console
 			dprintf_set_tool_debug("TOOL", 0);
 			if (pcolon && pcolon[1]) {
@@ -1818,7 +1820,7 @@ processCommandLineArguments (int argc, char *argv[])
 			}
 		}
 		else
-		if (is_arg_prefix(arg, "io", 2)) {
+		if (is_dash_arg_prefix(dash_arg, "io", 2)) {
 			// goodput and show_io require the same column
 			// real-estate, so they're mutually exclusive
 			show_io = true;
@@ -1837,7 +1839,7 @@ processCommandLineArguments (int argc, char *argv[])
 			attrs.append(ATTR_TRANSFERRING_OUTPUT);
 			attrs.append(ATTR_TRANSFER_QUEUED);
 		}
-		else if (is_arg_prefix(arg, "dag", 2)) {
+		else if (is_dash_arg_prefix(dash_arg, "dag", 2)) {
 			dash_dag = true;
 			attrs.clearAll();
 			if( g_stream_results  ) {
@@ -1846,7 +1848,7 @@ processCommandLineArguments (int argc, char *argv[])
 				exit( 1 );
 			}
 		}
-		else if (is_arg_prefix(arg, "totals", 3)) {
+		else if (is_dash_arg_prefix(dash_arg, "totals", 3)) {
 			if( !custom_attributes ) {
 				custom_attributes = true;
 				attrs.clearAll();
@@ -1856,22 +1858,22 @@ processCommandLineArguments (int argc, char *argv[])
 				exit (1);
 			}
 		}
-		else if (is_arg_prefix(arg, "expert", 1)) {
+		else if (is_dash_arg_prefix(dash_arg, "expert", 1)) {
 			expert = true;
 			attrs.clearAll();
 		}
-		else if (is_arg_prefix(arg, "jobads", 1)) {
+		else if (is_dash_arg_prefix(dash_arg, "jobads", 1)) {
 			if (argc <= i+1) {
-				fprintf( stderr, "Error: Argument -jobads requires a filename\n");
+				fprintf( stderr, "Error: -jobads requires a filename\n");
 				exit(1);
 			} else {
 				i++;
 				jobads_file = strdup(argv[i]);
 			}
 		}
-		else if (is_arg_prefix(arg, "userlog", 1)) {
+		else if (is_dash_arg_prefix(dash_arg, "userlog", 1)) {
 			if (argc <= i+1) {
-				fprintf( stderr, "Error: Argument -userlog requires a filename\n");
+				fprintf( stderr, "Error: -userlog requires a filename\n");
 				exit(1);
 			} else {
 				i++;
@@ -1881,9 +1883,9 @@ processCommandLineArguments (int argc, char *argv[])
 				userlog_file = strdup(argv[i]);
 			}
 		}
-		else if (is_arg_prefix(arg, "slotads", 1)) {
+		else if (is_dash_arg_prefix(dash_arg, "slotads", 1)) {
 			if (argc <= i+1) {
-				fprintf( stderr, "Error: Argument -slotads requires a filename\n");
+				fprintf( stderr, "Error: -slotads requires a filename\n");
 				exit(1);
 			} else {
 				i++;
@@ -1893,9 +1895,9 @@ processCommandLineArguments (int argc, char *argv[])
 				machineads_file = strdup(argv[i]);
 			}
 		}
-		else if (is_arg_colon_prefix(arg, "userprios", &pcolon, 5)) {
+		else if (is_dash_arg_colon_prefix(dash_arg, "userprios", &pcolon, 5)) {
 			if (argc <= i+1) {
-				fprintf( stderr, "Error: Argument -userprios requires a filename\n");
+				fprintf( stderr, "Error: -userprios requires a filename argument\n");
 				exit(1);
 			} else {
 				i++;
@@ -1906,21 +1908,21 @@ processCommandLineArguments (int argc, char *argv[])
 				analyze_with_userprio = true;
 			}
 		}
-		else if (is_arg_colon_prefix(arg, "nouserprios", &pcolon, 7)) {
+		else if (is_dash_arg_colon_prefix(dash_arg, "nouserprios", &pcolon, 7)) {
 			analyze_with_userprio = false;
 		}
 #ifdef HAVE_EXT_POSTGRESQL
-		else if (match_prefix(arg, "avgqueuetime")) {
+		else if (is_dash_arg_prefix(dash_arg, "avgqueuetime", 4)) {
 				/* if user want average wait time, we will perform direct DB query */
 			avgqueuetime = true;
 			directDBquery =  true;
 		}
 #endif /* HAVE_EXT_POSTGRESQL */
-        else if (is_arg_prefix(arg, "version", 1)) {
+        else if (is_dash_arg_prefix(dash_arg, "version", 1)) {
 			printf( "%s\n%s\n", CondorVersion(), CondorPlatform() );
 			exit(0);
         }
-		else if (is_arg_colon_prefix(arg, "profile", &pcolon, 4)) {
+		else if (is_dash_arg_colon_prefix(dash_arg, "profile", &pcolon, 4)) {
 			dash_profile = true;
 			if (pcolon) {
 				StringList opts(++pcolon, ",:");
@@ -1935,7 +1937,7 @@ processCommandLineArguments (int argc, char *argv[])
 			}
 		}
 		else
-		if (is_arg_prefix (arg, "stream-results", 2)) {
+		if (is_dash_arg_prefix (dash_arg, "stream-results", 2)) {
 			g_stream_results = true;
 			if( dash_dag ) {
 				fprintf( stderr, "-stream-results and -dag are incompatible\n" );
@@ -1944,7 +1946,7 @@ processCommandLineArguments (int argc, char *argv[])
 			}
 		}
 		else {
-			fprintf( stderr, "Error: unrecognized argument -%s\n", arg );
+			fprintf( stderr, "Error: unrecognized argument %s\n", dash_arg );
 			usage(argv[0]);
 			exit( 1 );
 		}
@@ -2052,12 +2054,11 @@ unsigned int process_direct_argument(char *arg)
 
 #ifdef HAVE_EXT_POSTGRESQL
 	fprintf( stderr, 
-		"Error: Argument -direct requires [rdbms | quilld | schedd]\n" ); 
-/*		"Error: Argument -direct requires [rdbms | schedd]\n" ); */
+		"Error: -direct requires [rdbms | quilld | schedd]\n" );
 #else
 	fprintf( stderr, 
 		"Error: Quill feature set is not available.\n"
-		"Error: Argument -direct may only take 'schedd' as an option.\n" );
+		"-direct may only take 'schedd' as an option.\n" );
 #endif
 
 	exit(EXIT_FAILURE);
@@ -2946,6 +2947,7 @@ usage (const char *myName, int other)
 	printf ("Usage: %s [general-opts] [restriction-list] [output-opts | analyze-opts]\n", myName);
 	printf ("\n    [general-opts] are\n"
 		"\t-global\t\t\tQuery all Schedulers in this pool\n"
+		"\t-schedd-constraint\tQuery all Schedulers matching this constraint\n"
 		"\t-submitter <submitter>\tGet queue of specific submitter\n"
 		"\t-name <name>\t\tName of Scheduler\n"
 		"\t-pool <host>\t\tUse host as the central manager to query\n"

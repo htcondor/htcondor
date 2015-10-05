@@ -19,39 +19,51 @@
 ##
 ##**************************************************************
 
-use File::Temp;
+#use File::Temp;
 
 # Simple perl script to find the arch/opsys of the local system, and
 # create a symlink to the file given as an argument which contains
 # them.  
 # 6/15/00 - Written by Derek Wright <wright@cs.wisc.edu>
+#
+# 9/8/15 - can't use condor_config_val from condor_tools anymore because of shared libraries
 
 $target = shift || die "Must specify a target name\n";
 
 # Try to make sure we can find condor_config_val
-$ENV{PATH} = "$ENV{PATH}:./condor_tools";
-$ENV{PATH} = "$ENV{PATH}:../condor_tools";
-$ENV{PATH} = "$ENV{PATH}:../../condor_tools";
-$ENV{PATH} = "$ENV{PATH}:../../../condor_tools";
+#$ENV{PATH} = "$ENV{PATH}:./condor_tools";
+#$ENV{PATH} = "$ENV{PATH}:../condor_tools";
+#$ENV{PATH} = "$ENV{PATH}:../../condor_tools";
+#$ENV{PATH} = "$ENV{PATH}:../../../condor_tools";
 
 # Since arch and opsys are generated values, we neither need nor
 # want a condor_config file.  Generate an empty temporary file
 # (because /dev/null doesn't exist everywhere) and use that.
 
-my( $fh, $fname ) = File::Temp::tempfile();
-close( $fh );
-$ENV{CONDOR_CONFIG} = $fname;
+#my( $fh, $fname ) = File::Temp::tempfile();
+#close( $fh );
+#$ENV{CONDOR_CONFIG} = $fname;
 
-$arch = `condor_config_val arch`;
-$opsys = `condor_config_val opsys`;
+#$arch = `condor_config_val arch`;
+#$opsys = `condor_config_val opsys`;
+#chomp($arch);
+#chomp($opsys);
+#
+#unlink( $fname );
+#
+#$arch || die "Can't find arch\n";
+#$opsys || die "Can't find opsys\n";
 
-unlink( $fname );
+$arch = "INTEL";
+$opsys = uc $^O;
+if ($opsys eq "LINUX") {
+   my $x64 = uc `uname -m`;
+   chomp($x64);
+   if ($x64 eq "X86_64") {
+      $arch = $x64;
+   }
+}
 
-chomp($arch);
-chomp($opsys);
-
-$arch || die "Can't find arch\n";
-$opsys || die "Can't find opsys\n";
 
 $name = "$target.$opsys.$arch";
 

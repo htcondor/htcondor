@@ -110,6 +110,7 @@ protected:
 	int num_pids;
 
 	bool dumped_core;
+	bool job_not_started;
 
 private:
 

@@ -33,13 +33,26 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Added four policy metaknobs to simplify configuring a policy
+	to either preempt or hold jobs that use more memory
+	or CPU cores than provisioned in the slot. See the \MacroNI{POLICY}
+	category of metaknobs in section~\ref{usecategory:POLICY} for
+	additional information.
+\Ticket{5250}
 
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item Fixed a bug where the \Condor{kbdd} could not accurately measure
+the keyboard idle time.  This daemon now works correctly on Linux systems
+whose X server support the MIT screen saver extension.
+\Ticket{5265}
+
+\item Fixed a bug which prevented SOAP submissions.
+\Ticket{5260}
 
 \item The parameter \Macro{STARTD\_HISTORY} is now set to record
 the job histories per startd, in the log directory of the
@@ -51,6 +64,15 @@ Previously the default was not to record these.
 true, so that SLOT\_WEIGHT can be used with hierarchical group quotas
 and partitionable slots.
 \Ticket{5256}
+
+\item Fixed bug whereby occasionally the command-line tools would
+	emit debug messages to stderr with text ``I am: hostname: \ldots''.
+\Ticket{5276}
+
+\item Fixed a bug that prevented node retries from working on DAG
+nodes that are DAG-level NOOP nodes.  (This bug has existed at least since
+the 8.2 series.)
+\Ticket{5277}
 
 \end{itemize}
 
