@@ -243,10 +243,12 @@ function render_new_graph(editid, graphid, args) {
 	if(args && args.length) {
 		$(editid).val(args);
 	}
+	save_arguments_to_url();
 	/*afterquery.render(read_arguments(editid), data.value,null,graphid);*/
+	var to_prune = "#" + graphid + ' .vizchart';
+	$(to_prune).empty();
 	/* TODO: use cached data if posible */
 	load_and_render();
-	save_arguments_to_url();
 }
 
 function change_view() {
