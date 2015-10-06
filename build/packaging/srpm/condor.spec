@@ -171,6 +171,8 @@ Source5: condor_config.local.dedicated.resource
 Source6: 10-batch_gahp_blahp.config
 Source7: 00-restart_peaceful.config
 
+Source8: htcondor.pp
+
 %if %bundle_uw_externals
 Source101: blahp-1.16.5.1.tar.gz
 Source102: boost_1_49_0.tar.gz
@@ -254,6 +256,7 @@ BuildRequires: expat-devel
 BuildRequires: perl-Archive-Tar
 BuildRequires: perl-XML-Parser
 BuildRequires: python-devel
+BuildRequires: libcurl-devel
 %endif
 
 # Globus GSI build requirements
@@ -933,6 +936,10 @@ install -Dp -m0755 %{buildroot}/etc/examples/condor.init %{buildroot}%{_initrddi
 install -Dp -m 0644 %{SOURCE4} %buildroot/usr/share/osg/sysconfig/condor
 mkdir %{buildroot}%{_sysconfdir}/sysconfig/
 install -Dp -m 0644 %{buildroot}/etc/examples/condor.sysconfig %{buildroot}%{_sysconfdir}/sysconfig/condor
+%endif
+
+%if 0%{?rhel} >= 7
+cp %{SOURCE8} %{buildroot}%{_datadir}/condor/
 %endif
 
 # Install perl modules
@@ -1688,13 +1695,20 @@ rm -rf %{buildroot}
 %if %systemd
 
 %post
-%if 0%{?fedora} || 0%{?rhel} >= 7
+%if 0%{?fedora}
 test -x /usr/sbin/selinuxenabled && /usr/sbin/selinuxenabled
 if [ $? = 0 ]; then
    restorecon -R -v /var/lock/condor
    setsebool -P condor_domain_can_network_connect 1
    semanage port -a -t condor_port_t -p tcp 12345
    # the number of extraneous SELinux warnings on f17 is very high
+fi
+%endif
+%if 0%{?rhel} >= 7
+test -x /usr/sbin/selinuxenabled && /usr/sbin/selinuxenabled
+if [ $? = 0 ]; then
+   /usr/sbin/setsebool -P condor_domain_can_network_connect 1
+   /usr/sbin/semodule -i /usr/share/condor/htcondor.pp
 fi
 %endif
 if [ $1 -eq 1 ] ; then
