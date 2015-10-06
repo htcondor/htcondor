@@ -31,6 +31,13 @@
 - history.pushState with relative URLs for simplicty?
 	- Chrome hates pushState on file: URLs. Maybe relatiev will fix?
 
+- Rename colums for human friendlyness
+
+- Stub in columns after a pivot (if we pivot on State and there are no Preempting, but we want one anyway, just fill it with zeros)
+
+- Limit precision on avg.
+
+
 CondorView
 - User/Job
 	- Graph: Per user (or "Total"): JobsIdle, JobsRunning
