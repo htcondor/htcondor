@@ -472,19 +472,37 @@ not these jobs will run ahead of another user's jobs.
 %% queue
 %%%%%%%%%%%%%%%%%%%
 
-% these do not put the right bracket on the same line
-% \item[queue \Lbr number-of-procs \Rbr] Places one or more
-% \item[queue $[$number-of-procs$]$] Places one or more
-% this also doesn't work, but Karen doesn't know what else to try,
-% and it isn't worth the time.
 \index{submit commands!queue}
 \label{man-condor-submit-queue}
-\item[queue \oOptnm{number-of-procs}] Places one or more
-copies of the job into the HTCondor queue.
+\item[queue \oOptnm{<int expr>}] Places zero or more copies of the job into the HTCondor queue.
+\item[queue] \oOpt{<int expr>} \oOpt{<varname>} \Opt{in} \oOpt{slice} \Opt{<list of items>} Places zero or more copies of the job in the queue based on items in a \Opt{<list of items>}
+\item[queue] \oOpt{<int expr>} \oOpt{<varname>} \Opt{matching} \oOpt{files | dirs} \oOpt{slice} \Opt{<list of items with file globbing>}] Places zero or more copies of the job in the queue based on files that match a \Opt{<list of items with file globbing>}
+\item[queue] \oOpt{<int expr>} \oOpt{<list of varnames>} \Opt{from} \oOpt{slice} \Opt{<file name> | <list of items>}] Places zero or more copies of the job in the queue based on lines from the submit file or from \Opt{<file name>}
+
 The optional
-argument \Arg{number-of-procs} specifies how many times to submit the
-job to the queue, and it defaults to 1.
-If desired, any commands may be placed
+argument \Arg{<int expr>} specifies how many times to repeat the job submission for a given set of arguments.
+It may be an integer or an expression that evaluates to an integer, and it defaults to 1.
+All but the first form of this command are various ways of specifying a list of items.  When these forms are used
+\Arg{<int expr>} jobs will be queued for each item in the list.  The \Arg{in}, \Arg{matching} and \Arg{from} keyword
+indicates how the list will be specified.
+\begin{itemize}
+\item \Arg{in} The list of items is an explicit comma and/or space separated \Opt{<list of items>}. If the \Opt{<list of items>} begins with an open paren, and the close paren is not on the same line as the open, then the list continues until a line that begins with a close paren is read from the submit file.
+\item \Arg{matching} Each item in the \Opt{<list of items with file globbing>} will be matched against the names of files and directories relative to the current directory, the set of matching names is the resulting list of items.
+\begin {itemize}
+\item \Arg{files} Only filenames will matched.
+\item \Arg{dirs} Only directory names will be matched.
+\end{itemize}
+\item \Arg{from} \Opt{<file name> | <list of items>} Each line from \Opt{<file name>} or \Opt{<list of items>} is a single item, this allows for multiple variables to be set for each item.
+  Lines from \Opt{<file name>} or \Opt{<list of items>} will be split on comma and/or space until there are values for each of the variables specified in \Opt{<list of varnames>}.
+  The last variable will contain the remainder of the line.  When the \Opt{<list of items>} form is used, the list continues until the first line that begins with a close paren,
+  and lines beginning with pound sign ('\#') will be skipped.  When using the \Opt{<file name>} form, if the \Opt{<file name>} ends with |, then it will be executed as a script
+  whatever the script writes to \File{stdout} will be the list of items.
+\end{itemize}
+The optional argument \Arg{<varname>} or \Arg{<list of varnames>} is the name or names of of variables that will be
+set to the value of the current item when queuing the job.  If no \Arg{<varname>} is specified the variable ITEM will be used. Leading and trailing whitespace be trimmed.
+The optional argument \Arg{<slice>} is a python style slice selecting only some of the items in the list of items. Negative step values are not supported.
+
+A submit file may contain more than one \SubmitCmd{queue} statement, and if desired, any commands may be placed
 between subsequent \SubmitCmd{queue} commands, such as new \SubmitCmd{input},
 \SubmitCmd{output}, \SubmitCmd{error}, \SubmitCmd{initialdir},
 or \SubmitCmd{arguments} commands.
@@ -556,7 +574,7 @@ expression. Essentially, rank expresses preference.  A higher numeric value
 equals better rank. HTCondor will give the job the machine with the
 highest rank.  For example,
 \begin{verbatim}
-        requirements = Memory > 60
+        request_memory = max({60, Target.TotalSlotMemory})
         rank = Memory
 \end{verbatim}
 asks HTCondor to find all available machines with more than 60 megabytes of memory
