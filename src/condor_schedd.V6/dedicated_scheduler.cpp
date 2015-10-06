@@ -736,6 +736,12 @@ DedicatedScheddNegotiate::scheduler_handleJobRejected(PROC_ID job_id,char const 
 	dprintf(D_FULLDEBUG, "Job %d.%d rejected: %s\n",
 			job_id.cluster, job_id.proc, reason);
 
+	if ( job_id.cluster < 0 || job_id.proc < 0 ) {
+		// If we asked the negotiator for matches for jobs that can no
+		// longer use them, the negotiation code uses a job id of -1.-1.
+		return;
+	}
+
 	SetAttributeString(
 		job_id.cluster, job_id.proc,
 		ATTR_LAST_REJ_MATCH_REASON,	reason, NONDURABLE);

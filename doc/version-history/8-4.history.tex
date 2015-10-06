@@ -74,6 +74,11 @@ nodes that are DAG-level NOOP nodes.  (This bug has existed at least since
 the 8.2 series.)
 \Ticket{5277}
 
+\item Fixed a problem when the HTCondor executables were not compiled
+with \Env{RPATH} enabled on Enterprise Linux 6 platforms. \Env{RPATH} is used
+to load Globus and other libraries from the condor-externals RPM.
+\Ticket{5294}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

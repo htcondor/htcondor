@@ -7337,6 +7337,25 @@ SYSTEM_PERIODIC_REMOVE = \
   The default value is \File{\$(LOG)/ScheddRestartReport}.
   If a blank value is set, then no report is written or emailed.
 
+\label{param:JobSpoolPermissions}
+\item[\Macro{JOB\_SPOOL\_PERMISSIONS}]
+  Control the permissions on the job's spool directory. Defaults to
+  \Expr{user} which sets permissions to \emph{0700}. Possible values are
+  \Expr{user}, \Expr{group}, and \Expr{world}.
+  If set to \Expr{group}, then the directory is group-accessible,
+  with permissions set to \emph{0750}.
+  If set to \Expr{world},
+  then the directory is created with permissions set to \emph{0755}.
+
+\label{param:ChownJobSpoolFiles}
+\item[\Macro{CHOWN\_JOB\_SPOOL\_FILES}]
+  Prior to HTCondor 8.5.0 on unix, the \condor{schedd} would chown job
+  files in the SPOOL directory between the condor account and the
+  account of the job sbumitter.
+  Now, these job files are always owned by the job submitter by default.
+  To restore the older behavior, set this parameter to \Expr{True}.
+  The default value is \Expr{False}.
+
 \end{description}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Shadow-Config-File-Entries}\condor{shadow}
