@@ -1513,7 +1513,7 @@ SuperUserAllowedToSetOwnerTo(const MyString &user) {
 		if( queue_super_user_may_impersonate_regex->match(user.Value()) ) {
 			return true;
 		}
-		dprintf(D_FULLDEBUG,"Queue super user not allowed to set owner to %s, because this does not match the ALLOW_QUEUE_SUPER_USER_TO_IMPERSONATE regular expression.\n",user.Value());
+		dprintf(D_FULLDEBUG,"Queue super user not allowed to set owner to %s, because this does not match the QUEUE_SUPER_USER_MAY_IMPERSONATE regular expression.\n",user.Value());
 		return false;
 	}
 

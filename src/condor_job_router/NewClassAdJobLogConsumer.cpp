@@ -122,7 +122,9 @@ NewClassAdJobLogConsumer::SetAttribute(const char *key,
 		dprintf(D_ALWAYS,
 				"error reading %s: no such ad in collection: %s\n",
 				m_reader ? m_reader->GetClassAdLogFileName() : "(null)", key);
-		return false;
+		// The schedd has been known to set attributes for bogus job ids.
+		// Ignore them and continue processing the log.
+		return true;
 	}
 	classad::ExprTree *expr;
 	ParseClassAdRvalExpr(value, expr, NULL);
@@ -130,8 +132,9 @@ NewClassAdJobLogConsumer::SetAttribute(const char *key,
 		dprintf(D_ALWAYS,
 				"error reading %s: failed to parse expression: %s\n",
 				m_reader ? m_reader->GetClassAdLogFileName() : "(null)", value);
-		ASSERT(expr);
-		return false;
+		// If the schedd writes a bad attribute value, ignore it and keep
+		// processing the log.
+		return true;
 	}
 	ad->Insert(name,expr);
 
@@ -147,7 +150,9 @@ NewClassAdJobLogConsumer::DeleteAttribute(const char *key,
 		dprintf(D_ALWAYS,
 				"error reading %s: no such ad in collection: %s\n",
 				m_reader ? m_reader->GetClassAdLogFileName() : "(null)", key);
-		return false;
+		// The schedd has been known to write log entries for bogus job ids.
+		// Ignore them and continue processing the log.
+		return true;
 	}
 	ad->Delete(name);
 
