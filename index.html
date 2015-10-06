@@ -65,6 +65,7 @@ ul.radio-tabs li input[type="radio"]:checked + label {
 <li><input type="radio" name="data-source" id="data-source-user"
 value="user" checked> <label for="data-source-user">Users</label>
 <li><input type="radio" name="data-source" id="data-source-machine" value="machine"> <label for="data-source-machine">Pool</label>
+<li><input type="radio" name="data-source" id="data-source-custom" value="machine"> <label for="data-source-custom">Custom</label>
 </ul>
 <ul class="radio-tabs" id="data-duration">
 <li><input type="radio" name="data-duration" id="data-duration-now" value="now"> <label for="data-duration-now">Now</label>
@@ -224,7 +225,7 @@ function table_select_handler(evnt,table,data) {
 	if(selection) {
 		var row = selection[0].row;
 		var user = data.getValue(row, 0);
-		var new_graph_args = user_graph_args(user);
+		var new_graph_args = submitter_graph_args(user);
 		render_new_graph('#graph1text', 'graph1', new_graph_args);
 	}
 }
@@ -269,6 +270,21 @@ function default_submitters_graph_args() {
 		"order=Date\n" +
 		"group=Date;RunningJobs,IdleJobs\n" +
 		"chart=stacked\n";
+}
+
+function submitter_graph_args(user) {
+	return "title=Jobs for " + user + "\n" +
+		"filter=Name==" + user + "\n" +
+		"url=" + submitters_data_source() + "\n" +
+		"order=Date\n" +
+		"group=Date;RunningJobs,IdleJobs\n" +
+		"chart=stacked\n";
+return "title=Machine State for " + user + "\n" +
+	"filter=User==" + user + "\n" +
+	"url=" + user_data_source() + "\n" +
+	"order=Date,State\n" +
+	"pivot=Date;State;Cpus\n" +
+	"chart=stacked\n";
 }
 
 function default_submitters_table_args() {
