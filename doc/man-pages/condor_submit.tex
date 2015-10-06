@@ -171,10 +171,12 @@ files for completed jobs need to be retrieved with \Condor{transfer\_data}.}
   The job ClassAd attribute \Attr{InteractiveJob} is set to \Expr{True}
   to identify interactive jobs for \Condor{startd} policy usage.  }
 
-\OptItem{\Opt{-dry-run}}{Parse the submit description file,
-  sending the job ClassAd to \File{stderr}, but do not submit the job(s).
+\OptItem{\Opt{-dry-run}{<file>}}{Parse the submit description file,
+  sending the job ClassAd to the file given by \Opt{<file>}, but do not submit the job(s).
   This permits an observation of job specification, 
-  and it facilitates debugging the submit description file contents.  }
+  and it facilitates debugging the submit description file contents.
+  if \Opt{<file>} is -, the output is written to \File{stdout}.
+   }
 
 \OptItem{\OptArg{-maxjobs}{<number-of-jobs>}}{If the total number
   of jobs specified by the submit description file is more than
@@ -248,22 +250,50 @@ appear in \File{foo.error}.
       ####################                                                   
                                                                          
       Executable     = foo                                                   
-      Universe       = standard
+      Universe       = vanilla
                                                                          
       Arguments      = 15 2000                                               
+      Output  = foo.out0                                                     
+      Error   = foo.err0
+      Queue                                                                  
+                                                                         
+      Arguments      = 30 2000                                               
       Output  = foo.out1                                                     
       Error   = foo.err1
       Queue                                                                  
                                                                          
-      Arguments      = 30 2000                                               
+      Arguments      = 45 6000                                               
       Output  = foo.out2                                                     
       Error   = foo.err2
-      Queue                                                                  
-                                                                         
-      Arguments      = 45 6000                                               
-      Output  = foo.out3                                                     
-      Error   = foo.err3
       Queue                   
+\end{verbatim}
+\normalsize
+
+Or you can get the same results as the above submit file by using a list of arguments with the Queue statement
+
+\footnotesize
+\begin{verbatim}
+      ####################
+      #
+      # submit description file
+      # Example 1b: queuing multiple jobs with differing
+      # command line arguments and output files, alternate syntax
+      #                                                                      
+      ####################                                                   
+
+      Executable     = foo
+      Universe       = vanilla
+
+      # generate different output and error filenames for each process
+      Output  = foo.out$(Process)
+      Error   = foo.err$(Process)
+
+      Queue Arguments From (
+        15 2000
+        30 2000
+        45 6000
+      )
+
 \end{verbatim}
 \normalsize
 
