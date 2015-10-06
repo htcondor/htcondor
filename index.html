@@ -63,12 +63,12 @@ ul.radio-tabs li input[type="radio"]:checked + label {
 <div style="text-align: center">
 <ul class="radio-tabs" id="data-source">
 <li><input type="radio" name="data-source" id="data-source-user"
-value="user"> <label for="data-source-user" checked>Users</label>
+value="user" checked> <label for="data-source-user">Users</label>
 <li><input type="radio" name="data-source" id="data-source-machine" value="machine"> <label for="data-source-machine">Pool</label>
 </ul>
 <ul class="radio-tabs" id="data-duration">
 <li><input type="radio" name="data-duration" id="data-duration-now" value="now"> <label for="data-duration-now">Now</label>
-<li><input type="radio" name="data-duration" id="data-duration-day" value="day"> <label for="data-duration-day">Day</label>
+<li><input type="radio" name="data-duration" id="data-duration-day" value="day" checked> <label for="data-duration-day">Day</label>
 <li><input type="radio" name="data-duration" id="data-duration-week" value="week"> <label for="data-duration-week">Week</label>
 <li><input type="radio" name="data-duration" id="data-duration-month" value="month"> <label for="data-duration-month" checked>Month</label>
 </ul>
@@ -256,6 +256,23 @@ return "title=Machine State for " + user + "\n" +
 	"chart=stacked\n";
 }
 
+function submitters_data_source() { return "submitters.json"; }
+
+function default_submitters_graph_args() {
+	return "title=Total Jobs\n" +
+		"url=" + submitters_data_source() + "\n" +
+		"order=Date\n" +
+		"group=Date;RunningJobs,IdleJobs\n" +
+		"chart=stacked\n";
+}
+
+function default_submitters_table_args() {
+	return "url=" + submitters_data_source() + "\n" +
+		"order=Name\n" +
+		"group=Name;avg(RunningJobs),avg(IdleJobs),max(RunningJobs),max(IdleJobs)\n";
+}
+
+
 function default_graph_args() { 
 return "title=Machine State\n" +
 	"url=" + user_data_source() + "\n" +
@@ -319,8 +336,8 @@ $(document).ready( function() {
 	// Initialize graph
 	if(!window.location.search) {
 
-		$('#graph1text').val(default_graph_args());
-		$('#table1text').val(default_table_args());
+		$('#graph1text').val(default_submitters_graph_args());
+		$('#table1text').val(default_submitters_table_args());
 		save_arguments_to_url();
 	}
 	load_arguments_to_form('graph1', '#graph1text');
