@@ -223,10 +223,19 @@ function load_and_render() {
 function table_select_handler(evnt,table,data) {
 	var selection = table.getSelection();
 	if(selection) {
-		var row = selection[0].row;
-		var user = data.getValue(row, 0);
-		var new_graph_args = submitter_graph_args(user);
-		render_new_graph('#graph1text', 'graph1', new_graph_args);
+		var source = $('#data-source input[type="radio"]:checked').val()
+		if(source == "machine") {
+			var row = selection[0].row;
+			var arch = data.getValue(row, 0);
+			var opsys = data.getValue(row, 1);
+			var new_graph_args = machines_graph_args(arch,opsys);
+			render_new_graph('#graph1text', 'graph1', new_graph_args);
+		} else if(source =="user") {
+			var row = selection[0].row;
+			var user = data.getValue(row, 0);
+			var new_graph_args = submitter_graph_args(user);
+			render_new_graph('#graph1text', 'graph1', new_graph_args);
+		}
 	}
 }
 
@@ -243,10 +252,10 @@ function render_new_graph(editid, graphid, args) {
 function change_view() {
 	var duration = $('#data-duration input[type="radio"]:checked').val()
 	var source = $('#data-source input[type="radio"]:checked').val()
-	if(source == 'machine') {
+	if(source == "machine") {
 		render_new_graph('#graph1text', 'graph1', default_machines_graph_args());
 		render_new_graph('#table1text', 'table1', default_machines_table_args());
-	} else if (source == 'user') {
+	} else if (source == "user") {
 		render_new_graph('#graph1text', 'graph1', default_submitters_graph_args());
 		render_new_graph('#table1text', 'table1', default_submitters_table_args());
 	}
@@ -299,6 +308,15 @@ function default_machines_table_args() {
 		"group=Arch,OpSys;avg(Unclaimed),avg(Claimed),max(Unclaimed),max(Claimed)";
 }
 
+function machines_graph_args(arch,opsys) {
+	return "title=Machine State for " + arch + "/" + opsys + "\n" +
+		"url=" + machines_data_source() + "\n" +
+		"filter=Arch==" + arch + "\n" +
+		"filter=OpSys==" + opsys + "\n" +
+		"order=Date\n" +
+		"pivot=Date;State;Cpus\n" +
+		"chart=stacked\n";
+}
 
 window.onpopstate = function() {
 	setTimeout(function(){
