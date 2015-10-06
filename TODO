@@ -24,6 +24,10 @@
 
 - Canned views no edit; tab for custom
 
+- Button to autoupdate
+
+- How to do cumulative user time?
+
 - history.pushState with relative URLs for simplicty?
 	- Chrome hates pushState on file: URLs. Maybe relatiev will fix?
 
