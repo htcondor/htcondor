@@ -84,7 +84,6 @@ value="user" checked> <label for="data-source-user">Users</label>
 <div>
 <button id="rerendergraph1">Update Graph</button>
 <button id="reloadgraph1">Reload Data</button>
-<button id="reset_graph1">Reset</button>
 </div>
 </div>
 </div>
@@ -106,7 +105,6 @@ value="user" checked> <label for="data-source-user">Users</label>
 <div>
 <button id="rerendertable1">Update Table</button>
 <button id="reloadtable1">Reload Data</button>
-<button id="reset_table1">Reset</button>
 </div>
 </div>
 </div>
@@ -235,13 +233,20 @@ function render_new_graph(editid, graphid, args) {
 	if(args && args.length) {
 		$(editid).val(args);
 	}
-	afterquery.render(read_arguments(editid), data.value,null,graphid);
+	/*afterquery.render(read_arguments(editid), data.value,null,graphid);*/
+	/* TODO: use cached data if posible */
+	load_and_render();
 	save_arguments_to_url();
 }
 
 function change_view() {
 	var duration = $('#data-duration input[type="radio"]:checked').val()
 	var source = $('#data-source input[type="radio"]:checked').val()
+	if(source == 'machine') {
+	} else if (source == 'user') {
+		render_new_graph('#graph1text', 'graph1', default_submitters_graph_args());
+		render_new_table('#table1text', 'table1', default_submitters_table_args());
+	}
 	console.log(source,duration);
 }
 
@@ -310,14 +315,14 @@ $('#reloadgraph1').click(function() {
 	save_arguments_to_url();
 	});
 $('#rerendergraph1').click(function() { render_new_graph('#graph1text', 'graph1'); });
-$('#reset_graph1').click(function(){ render_new_graph('#graph1text', 'graph1', default_graph_args()); });
+/*$('#reset_graph1').click(function(){ render_new_graph('#graph1text', * 'graph1', default_graph_args()); });*/
 
 $('#reloadtable1').click(function() {
 	load_and_render();
 	save_arguments_to_url();
 	});
 $('#rerendertable1').click(function() { render_new_graph('#table1text', 'table1'); });
-$('#reset_table1').click(function(){ render_new_graph('#table1text', 'table1', default_table_args()); });
+/* $('#reset_table1').click(function(){ render_new_graph('#table1text', * 'table1', default_table_args()); }); */
 
 $(document).ready( function() {
 	// Initialize tabs
