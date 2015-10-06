@@ -73,6 +73,12 @@ while processing the constraint.  Earlier versions would just quietly ignore all
 the last constraint.
 \Ticket{5234}
 
+\item Fixed a bug that could cause the Job Router to not see the current
+job queue state when it restarts.
+This could result in routed jobs experiencing file permissions errors
+and the submission of two routed jobs for a single source job.
+\Ticket{5270}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
