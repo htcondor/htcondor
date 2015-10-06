@@ -65,7 +65,7 @@ ul.radio-tabs li input[type="radio"]:checked + label {
 <li><input type="radio" name="data-source" id="data-source-user"
 value="user" checked> <label for="data-source-user">Users</label>
 <li><input type="radio" name="data-source" id="data-source-machine" value="machine"> <label for="data-source-machine">Pool</label>
-<li><input type="radio" name="data-source" id="data-source-custom" value="machine"> <label for="data-source-custom">Custom</label>
+<li><input type="radio" name="data-source" id="data-source-custom" value="custom"> <label for="data-source-custom">Custom</label>
 </ul>
 <ul class="radio-tabs" id="data-duration">
 <li><input type="radio" name="data-duration" id="data-duration-now" value="now"> <label for="data-duration-now">Now</label>
@@ -260,6 +260,9 @@ function change_view() {
 	} else if (source == "user") {
 		render_new_graph('#graph1text', 'graph1', default_submitters_graph_args());
 		render_new_graph('#table1text', 'table1', default_submitters_table_args());
+	} else if(source=="custom") {
+		$("#graph1 .vizchart").html("<h2>Not yet implemented</h2>");
+		$("#table1 .vizchart").html("<h2>Not yet implemented</h2>");
 	}
 	console.log(source,duration);
 }
