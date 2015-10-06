@@ -16,6 +16,10 @@
   <script src="render.js"></script>
 
 <style>
+.download-link {
+font-size:80%;
+text-align: center;
+}
 .tab-content {
 	display: none;
 }
@@ -99,6 +103,7 @@ value="user" checked> <label for="data-source-user">Users</label>
 </div>
 
 
+<div class="download-link"> <a onclick="alert('Not yet implemented');" href="#not-yet-implemented">Download this table</a> </div>
 <div class='editmenu'><button class="editlink" id='editlinktable1'>edit</button>
 <div id="table1editor" style="display:none;">
 <textarea id='table1text' cols="40" rows="10" wrap='off'>
@@ -128,8 +133,7 @@ TODO Machine
 TODO Custom
 </div>
 
-<h2>Log</h2>
-  <div id='vizlog'></div>
+<div id='vizlog'></div>
 
 <script>
 
