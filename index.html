@@ -244,23 +244,16 @@ function change_view() {
 	var duration = $('#data-duration input[type="radio"]:checked').val()
 	var source = $('#data-source input[type="radio"]:checked').val()
 	if(source == 'machine') {
+		render_new_graph('#graph1text', 'graph1', default_machines_graph_args());
+		render_new_graph('#table1text', 'table1', default_machines_table_args());
 	} else if (source == 'user') {
 		render_new_graph('#graph1text', 'graph1', default_submitters_graph_args());
-		render_new_table('#table1text', 'table1', default_submitters_table_args());
+		render_new_graph('#table1text', 'table1', default_submitters_table_args());
 	}
 	console.log(source,duration);
 }
 
 function user_data_source() { return "user.json"; }
-
-function user_graph_args(user) {
-return "title=Machine State for " + user + "\n" +
-	"filter=User==" + user + "\n" +
-	"url=" + user_data_source() + "\n" +
-	"order=Date,State\n" +
-	"pivot=Date;State;Cpus\n" +
-	"chart=stacked\n";
-}
 
 function submitters_data_source() { return "submitters.json"; }
 
@@ -279,12 +272,6 @@ function submitter_graph_args(user) {
 		"order=Date\n" +
 		"group=Date;RunningJobs,IdleJobs\n" +
 		"chart=stacked\n";
-return "title=Machine State for " + user + "\n" +
-	"filter=User==" + user + "\n" +
-	"url=" + user_data_source() + "\n" +
-	"order=Date,State\n" +
-	"pivot=Date;State;Cpus\n" +
-	"chart=stacked\n";
 }
 
 function default_submitters_table_args() {
@@ -293,30 +280,25 @@ function default_submitters_table_args() {
 		"group=Name;avg(RunningJobs),avg(IdleJobs),max(RunningJobs),max(IdleJobs)\n";
 }
 
+function machines_data_source() { return "machines.json"; }
 
-function default_graph_args() { 
-return "title=Machine State\n" +
-	"url=" + user_data_source() + "\n" +
-	"order=Date,State\n" +
-	"pivot=Date;State;Cpus\n" +
-	"chart=stacked";
-}
-
-function default_table_args() {
-return "url=" + user_data_source() + "\n" +
-	"order=Date,Date,User\n" +
-	"pivot=User;State;last(Cpus)";
-}
-
-function machine_data_source() { return "pool.json"; }
-
-function default_machine_graph_args() {
+function default_machines_graph_args() {
 	return "title=Machine State\n" +
-		"url=" + user_data_source() + "\n" +
-		"order=Date,State\n" +
+		"url=" + machines_data_source() + "\n" +
+		"order=Date\n" +
 		"pivot=Date;State;Cpus\n" +
-		"chart=stacked";
+		"chart=stacked\n";
 }
+
+
+function default_machines_table_args() {
+	return "title=Machine State\n" +
+		"url=" + machines_data_source() + "\n" +
+		"order=Date\n" +
+		"pivot=Date,Arch,OpSys;State;Cpus\n" +
+		"group=Arch,OpSys;avg(Unclaimed),avg(Claimed),max(Unclaimed),max(Claimed)";
+}
+
 
 window.onpopstate = function() {
 	setTimeout(function(){
