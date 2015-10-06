@@ -7337,6 +7337,16 @@ SYSTEM_PERIODIC_REMOVE = \
   The default value is \File{\$(LOG)/ScheddRestartReport}.
   If a blank value is set, then no report is written or emailed.
 
+\label{param:JobSpoolPermissions}
+\item[\Macro{JOB\_SPOOL\_PERMISSIONS}]
+  Control the permissions on the job's spool directory. Defaults to
+  \Expr{user} which sets permissions to \emph{0700}. Possible values are
+  \Expr{user}, \Expr{group}, and \Expr{world}.
+  If set to \Expr{group}, then the directory is group-accessible,
+  with permissions set to \emph{0750}.
+  If set to \Expr{world},
+  then the directory is created with permissions set to \emph{0755}.
+
 \end{description}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Shadow-Config-File-Entries}\condor{shadow}
