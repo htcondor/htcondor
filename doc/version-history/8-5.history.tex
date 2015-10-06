@@ -81,6 +81,24 @@ method, similar to a \Condor{submit} file with multiple \texttt{queue} statement
 output (mainly in the \File{dagman}.out file).
 \Ticket{5144}
 
+\item The new configuration parameter \MacroNI{JOB\_SPOOL\_PERMISSIONS}
+controls the permissions on a job's spool directory managed by the
+\Condor{schedd} on unix.
+It defaults to the value \Expr{user}, which results in a permissions
+value of \Expr{0700}.
+Other valid values are \Expr{group} (permissions \Expr{0750}) and
+\Expr{world} (permissions \Expr{0755}).
+Previously, all job spool directories had access permissions of \Expr{0755}.
+\Ticket{4896}
+
+\item The \Condor{schedd} no longer changes the ownership of spooled job
+files that it manages.
+Now, the files are always owned by the submitting user.
+The previous behavior of changing ownership to/from the \Expr{condor}
+account can be restored by setting the new configuration parameter
+\Macro{CHOWN\_JOB\_SPOOL\_FILES} to \Expr{True}.
+\Ticket{5226}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
