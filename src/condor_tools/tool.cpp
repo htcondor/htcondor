@@ -820,6 +820,20 @@ main( int argc, char *argv[] )
 	}
 
 
+	if (takes_subsys) {
+		// for these commands, double check that the current configuration files
+		// can be parsed by daemons running as 'condor' before running the command
+		// note that check_config_file_access does nothing if can_switch_ids() is false.
+		StringList errFiles;
+		if ( ! check_config_file_access("condor", errFiles)) {
+			fprintf(stderr, "ERROR: the following configuration files cannot be read by user 'condor'. Aborting command\n");
+			for (const char * file = errFiles.first(); file != NULL; file = errFiles.next()) {
+				fprintf(stderr, "\t%s\n", file);
+			}
+			exit(1);
+		}
+	}
+
 	// If we are sending peaceful daemon shutdown/restart commands to
 	// the master (i.e. we want no timeouts resulting in killing),
 	// then we have to deal here with the fact that the master only
