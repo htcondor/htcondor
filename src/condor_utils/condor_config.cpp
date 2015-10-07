@@ -396,6 +396,7 @@ extern bool condor_fsync_on;
 
 MyString global_config_source;
 StringList local_config_sources;
+MyString user_config_source; // which if the files in local_config_sources is the user file
 
 param_functions config_p_funcs;
 
@@ -994,14 +995,14 @@ real_config(const char* host, int wantsQuiet, int config_options)
 	if(newdirlist) { free(newdirlist); newdirlist = NULL; }
 
 		// Now, insert overrides from the user config file (if any)
+	user_config_source.clear();
 	std::string user_config_name;
 	param(user_config_name, "USER_CONFIG_FILE");
 	if (!user_config_name.empty()) {
-		MyString user_config;
-		if (find_user_file(user_config, user_config_name.c_str(), true)) {
-			dprintf(D_FULLDEBUG|D_CONFIG, "Reading condor user-specific configuration from '%s'\n", user_config.c_str());
-			process_config_source(user_config.c_str(), 1, "user_config source", host, false);
-			local_config_sources.append(user_config.c_str());
+		if (find_user_file(user_config_source, user_config_name.c_str(), true)) {
+			dprintf(D_FULLDEBUG|D_CONFIG, "Reading condor user-specific configuration from '%s'\n", user_config_source.c_str());
+			process_config_source(user_config_source.c_str(), 1, "user_config source", host, false);
+			local_config_sources.append(user_config_source.c_str());
 		}
 	}
 
@@ -1241,6 +1242,55 @@ get_exclude_regex(Regex &excludeFilesRegex)
 	}
 	free(excludeRegex);
 }
+
+/* Call this after loading the config files as root to see if we can still access the config once we drop priv
+	Used when running as root to verfiy that the config files will still be accessible after we switch
+	to the condor user. returns true on success, false if access check fails
+	when false is returned, the errmsg will indicate the names of files that cannot be accessed.
+*/
+bool check_config_file_access(
+	const char * username,
+	StringList &errfiles)
+{
+	if ( ! can_switch_ids())
+		return true;
+
+	priv_state priv_to_check = PRIV_UNKNOWN;
+	if (MATCH == strcasecmp(username, "root") || MATCH == strcasecmp(username, "SYSTEM")) {
+		// no need to check access again for root. 
+		return true;
+	} else if (MATCH == strcasecmp(username, "condor")) {
+		priv_to_check = PRIV_CONDOR;
+	} else {
+		priv_to_check = PRIV_USER;
+	}
+
+	// set desired priv state for access check.
+	priv_state current_priv = set_priv(priv_to_check);
+
+	bool any_failed = false;
+	if (0 != access(global_config_source.c_str(), R_OK)) {
+		any_failed = true; 
+		errfiles.append(global_config_source.c_str());
+	}
+	local_config_sources.rewind();
+	
+	for (const char * file = local_config_sources.first(); file != NULL; file = local_config_sources.next()) {
+		// If we switch users, then we wont even see the current user config file, so dont' check it's access.
+		if ( ! user_config_source.empty() && (MATCH == strcmp(file, user_config_source.c_str())))
+			continue;
+		if (0 != access(file, R_OK)) {
+			any_failed = true;
+			errfiles.append(file);
+		}
+	}
+
+	// restore priv state
+	set_priv(current_priv);
+
+	return ! any_failed;
+}
+
 
 bool
 get_config_dir_file_list( char const *dirpath, StringList &files )
