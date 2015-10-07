@@ -1395,10 +1395,10 @@ EOF
     # print $fh " --externals-only" if defined($opt_externals_only);
     # print $fh " --release-only" if defined($opt_release_only);
     # print $fh "\n";
-    print $fh "remote_declare = nmi_tools/glue/build/remote_declare\n";
-    print $fh "remote_pre = nmi_tools/glue/build/remote_pre\n";
-    print $fh "remote_task = nmi_tools/glue/build/remote_task\n";
-    print $fh "remote_post = nmi_tools/glue/build/remote_post\n";
+    print $fh "remote_declare = nmi_tools/glue/build/remote_declare.pl\n";
+    print $fh "remote_pre = nmi_tools/glue/build/remote_pre.pl\n";
+    print $fh "remote_task = nmi_tools/glue/build/remote_task.pl\n";
+    print $fh "remote_post = nmi_tools/glue/build/remote_post.pl\n";
     print $fh "platform_post = nmi_tools/glue/build/platform_post\n";
 
 	print $fh "post_all = nmi_tools/glue/build/post_all\n";
@@ -1518,12 +1518,12 @@ EOF
         print CMDFILE "pre_all_args = --src=$opt_test_src\n";
     }
     print $fh "platform_pre = nmi_tools/glue/test/platform_pre\n";
-    print $fh "remote_pre_declare = nmi_tools/glue/test/remote_pre_declare\n";
-    print $fh "remote_declare = nmi_tools/glue/test/remote_declare\n";
-    print $fh "remote_pre = nmi_tools/glue/test/remote_pre\n";
-    print $fh "remote_task = nmi_tools/glue/test/remote_task\n";
+    print $fh "remote_pre_declare = nmi_tools/glue/test/remote_pre_declare.pl\n";
+    print $fh "remote_declare = nmi_tools/glue/test/remote_declare.pl\n";
+    print $fh "remote_pre = nmi_tools/glue/test/remote_pre.pl\n";
+    print $fh "remote_task = nmi_tools/glue/test/remote_task.pl\n";
     print $fh "remote_task_timeout = $test_timeout\n";
-    print $fh "remote_post = nmi_tools/glue/test/remote_post\n";
+    print $fh "remote_post = nmi_tools/glue/test/remote_post.pl\n";
     print $fh "platform_post = nmi_tools/glue/test/platform_post\n";
     print $fh "post_all = nmi_tools/glue/test/post_all\n";
 	# turn on testing concurrency
