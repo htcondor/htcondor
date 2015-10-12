@@ -34,7 +34,9 @@
 
 - Stub in columns after a pivot (if we pivot on State and there are no Preempting, but we want one anyway, just fill it with zeros)
 
-- Limit precision on avg.
+- Limit precision on avg.  New function/operation? Javascript probably just mynumber.toFixed(X) where X is number of places.  Although round may work faster. http://stackoverflow.com/questions/11832914/round-to-at-most-2-decimal-places-in-javascript
+
+- Sort Name using locale or something; currently ASCII/Unicode, so capital before lower.
 
 
 CondorView
