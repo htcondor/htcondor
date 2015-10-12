@@ -574,7 +574,8 @@ Scheduler::Scheduler() :
 	slotWeightMapAd(0),
 	m_use_slot_weights(false),
 	m_local_startd_pid(-1),
-	m_history_helper_count(0)
+	m_history_helper_count(0),
+	m_matchPasswordEnabled(false)
 {
 	MyShadowSockName = NULL;
 	shadowCommandrsock = NULL;
@@ -12355,6 +12356,17 @@ Scheduler::Init()
 				dprintf( D_ALWAYS, "Submit requirement %s not defined, ignoring.\n", srName );
 			}
 		}
+	}
+
+	bool new_match_password = param_boolean( "SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION", true );
+	if ( new_match_password != m_matchPasswordEnabled ) {
+		IpVerify* ipv = daemonCore->getIpVerify();
+		if ( new_match_password ) {
+			ipv->PunchHole( CLIENT_PERM, EXECUTE_SIDE_MATCHSESSION_FQU );
+		} else {
+			ipv->FillHole( CLIENT_PERM, EXECUTE_SIDE_MATCHSESSION_FQU );
+		}
+		m_matchPasswordEnabled = new_match_password;
 	}
 
 	first_time_in_init = false;

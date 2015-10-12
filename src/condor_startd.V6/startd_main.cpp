@@ -479,7 +479,7 @@ int
 init_params( int /* first_time */)
 {
 	char *tmp;
-
+	static bool match_password_enabled = false;
 
 	resmgr->init_config_classad();
 
@@ -611,6 +611,19 @@ init_params( int /* first_time */)
 	}
 
 	InitJobHistoryFile( "STARTD_HISTORY" , "STARTD_PER_JOB_HISTORY_DIR");
+
+	bool new_match_password = param_boolean( "SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION", true );
+	if ( new_match_password != match_password_enabled ) {
+		IpVerify* ipv = daemonCore->getIpVerify();
+		if ( new_match_password ) {
+			ipv->PunchHole( DAEMON, SUBMIT_SIDE_MATCHSESSION_FQU );
+			ipv->PunchHole( CLIENT_PERM, SUBMIT_SIDE_MATCHSESSION_FQU );
+		} else {
+			ipv->FillHole( DAEMON, SUBMIT_SIDE_MATCHSESSION_FQU );
+			ipv->FillHole( CLIENT_PERM, SUBMIT_SIDE_MATCHSESSION_FQU );
+		}
+		match_password_enabled = new_match_password;
+	}
 
 	return TRUE;
 }

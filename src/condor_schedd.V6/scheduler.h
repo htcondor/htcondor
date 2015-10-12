@@ -897,6 +897,8 @@ private:
 	unsigned m_history_helper_max;
 	unsigned m_history_helper_count;
 	int m_history_helper_rid;
+
+	bool m_matchPasswordEnabled;
 };
 
 
