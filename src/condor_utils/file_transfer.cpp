@@ -1435,6 +1435,14 @@ FileTransfer::Reaper(Service *, int pid, int exit_status)
 	daemonCore->Close_Pipe(transobject->TransferPipe[0]);
 	transobject->TransferPipe[0] = -1;
 
+	if ( transobject->Info.success ) {
+		if ( transobject->Info.type == DownloadFilesType ) {
+			transobject->downloadEndTime = time(NULL);
+		} else if ( transobject->Info.type == UploadFilesType ) {
+			transobject->uploadEndTime = time(NULL);
+		}
+	}
+
 	// If Download was successful (it returns 1 on success) and
 	// upload_changed_files is true, then we must record the current
 	// time in last_download_time so in UploadFiles we have a timestamp
@@ -1689,6 +1697,7 @@ FileTransfer::Download(ReliSock *s, bool blocking)
 		// daemonCore will free(info) when the thread exits
 		TransThreadTable->insert(ActiveTransferTid, this);
 
+		downloadStartTime = time(NULL);
 	}
 	
 	return 1;
@@ -2661,6 +2670,8 @@ FileTransfer::Upload(ReliSock *s, bool blocking)
 				ActiveTransferTid);
 		// daemonCore will free(info) when the thread exits
 		TransThreadTable->insert(ActiveTransferTid, this);
+
+		uploadStartTime = time(NULL);
 	}
 		
 	return 1;
