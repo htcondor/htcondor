@@ -426,6 +426,7 @@
 #define ATTR_LAST_REMOTE_HOST  "LastRemoteHost"
 #define ATTR_LAST_REMOTE_POOL  "LastRemotePool"
 #define ATTR_LAST_REMOTE_STATUS_UPDATE  "LastRemoteStatusUpdate"
+#define ATTR_LAST_SLOT_NAME  "LastSlotName"
 #define ATTR_LAST_UPDATE  "LastUpdate"
 #define ATTR_LOCAL_CREDD  "LocalCredd"
 #define ATTR_LOCAL_FILES  "LocalFiles"

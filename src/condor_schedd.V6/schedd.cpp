@@ -6695,6 +6695,14 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 			msg_ad->LookupInteger(ATTR_CLUSTER_ID, jobid.cluster);
 			msg_ad->LookupInteger(ATTR_PROC_ID, jobid.proc);
 		}
+	
+		std::string last_slot_name;
+		msg->leftover_startd_ad()->LookupString(ATTR_LAST_SLOT_NAME, last_slot_name);
+
+		if (last_slot_name.length() > 0) {
+			match->my_match_ad->Assign(ATTR_NAME, last_slot_name);
+		}
+
 			// Need to pass handleMatch a slot name; grab from leftover slot ad
 		std::string slot_name_buf;
 		msg->leftover_startd_ad()->LookupString(ATTR_NAME,slot_name_buf);
