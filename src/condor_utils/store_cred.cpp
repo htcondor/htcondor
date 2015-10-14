@@ -1134,12 +1134,17 @@ static int zkm_credmon_pid = -1;
 int get_credmon_pid() {
 	if(zkm_credmon_pid == -1) {
 		// get pid of credmon
-		FILE* credmon_pidfile = fopen("/scratch/zmiller/CRED_DIR/pid", "r");
+		MyString cred_dir;
+		param(cred_dir, "SEC_CREDENTIAL_DIRECTORY");
+		MyString pid_path;
+		pid_path.formatstr("%s/pid", cred_dir.c_str());
+		FILE* credmon_pidfile = fopen(pid_path.c_str(), "r");
 		int num_items = fscanf(credmon_pidfile, "%i", &zkm_credmon_pid);
 		fclose(credmon_pidfile);
 		if (num_items != 1) {
 			zkm_credmon_pid = -1;
 		}
+		dprintf(D_ALWAYS, "CERN: get_credmon_pid %s == %i\n", pid_path.c_str(), zkm_credmon_pid);
 	}
 	return zkm_credmon_pid;
 }
