@@ -76,7 +76,7 @@ public:
 			@param credential The result of fetching the credential
 			@return true on success, false on failure
 		*/
-	bool getUserCredential( char* user, char* domain, MyString& credential);
+	bool getUserCredential( const char* user, const char* domain, MyString& credential);
 
  private:
 	bool is_initialized;

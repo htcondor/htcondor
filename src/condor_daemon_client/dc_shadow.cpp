@@ -173,7 +173,7 @@ DCShadow::updateJobInfo( ClassAd* ad, bool insure_update )
 }
 
 bool
-DCShadow::getUserCredential( char* user, char* domain, MyString& credential)
+DCShadow::getUserCredential( const char* user, const char* domain, MyString& credential)
 {
 	credential = "STARTER SIDE UBERTICKET";
 	return true;

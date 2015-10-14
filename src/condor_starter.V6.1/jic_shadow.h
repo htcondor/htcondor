@@ -407,6 +407,9 @@ private:
 		// for file transfer and reconnect, do it.
 	void initMatchSecuritySession();
 
+		/// If the job ad says so, acquire user credentials
+	void initUserCredentials();
+
 		/** Compare our own UIDDomain vs. where the job came from.  We
 			check in the job ClassAd for ATTR_UID_DOMAIN and compare
 			it to info we have about the shadow and the local machine.

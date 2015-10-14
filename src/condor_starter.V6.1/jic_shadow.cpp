@@ -239,6 +239,11 @@ JICShadow::init( void )
 		// requested it
 	writeExecutionVisa(orig_ad);
 
+		// If the job requests a user credential (SendCredential is
+		// true) then grab it from the shadow and get everything
+		// prepared.
+	initUserCredentials();
+
 	return true;
 }
 
@@ -2480,6 +2485,42 @@ JICShadow::initIOProxy( void )
 	}
 	return false;
 }
+
+
+void
+JICShadow::initUserCredentials() {
+	bool send_credential = false;
+	if( ! job_ad->EvaluateAttrBool( ATTR_JOB_SEND_CREDENTIAL, send_credential ) ) {
+		send_credential = false;
+		dprintf( D_FULLDEBUG, "JICShadow::initUserCredentials(): "
+				 "Job does not define %s; setting to false\n",
+				 ATTR_JOB_SEND_CREDENTIAL);
+	} else {
+		dprintf( D_ALWAYS, "Job has %s=%s\n", ATTR_JOB_SEND_CREDENTIAL,
+				 send_credential ? "true" : "false" );
+	}
+
+	// no credntials?  no problem!  we're done here.
+	if(!send_credential) {
+		return;
+	}
+
+	MyString user = get_user_loginname();
+	MyString domain = "DOMAIN";
+	dprintf(D_ALWAYS, "CERN: getting credentials for user %s domain %s from shadow %s\n",
+		 user.c_str(), domain.c_str(), shadow->addr() );
+
+	MyString credential;
+	shadow->getUserCredential(user.c_str(), domain.c_str(), credential);
+
+	dprintf(D_ALWAYS, "CERN: get cred %s\n", credential.c_str());
+
+	// securely write it to file in SEC_CREDENTIAL_DIRECTORY
+	// SIGHUP
+	// WAIT 20s
+	// SUCCESS continue, FAIL abort
+}
+
 
 void
 JICShadow::initMatchSecuritySession()
