@@ -115,6 +115,8 @@ class UniShadow : public BaseShadow
 	int updateFromStarter(int command, Stream *s);
 	int updateFromStarterClassAd(ClassAd* update_ad);
 
+	int getUserCredential(int command, Stream *s);
+
 	struct rusage getRUsage( void );
 
 	int64_t getImageSize( int64_t & mem_usage, int64_t & rss, int64_t & pss );
