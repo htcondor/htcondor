@@ -42,6 +42,7 @@
 #include "authentication.h"
 #include "condor_mkstemp.h"
 #include "globus_utils.h"
+#include "store_cred.h"
 
 #include <algorithm>
 
@@ -242,7 +243,9 @@ JICShadow::init( void )
 		// If the job requests a user credential (SendCredential is
 		// true) then grab it from the shadow and get everything
 		// prepared.
-	initUserCredentials();
+	if (! initUserCredentials() ) {
+		return false;
+	}
 
 	return true;
 }
@@ -2487,7 +2490,7 @@ JICShadow::initIOProxy( void )
 }
 
 
-void
+bool
 JICShadow::initUserCredentials() {
 	bool send_credential = false;
 	if( ! job_ad->EvaluateAttrBool( ATTR_JOB_SEND_CREDENTIAL, send_credential ) ) {
@@ -2500,25 +2503,111 @@ JICShadow::initUserCredentials() {
 				 send_credential ? "true" : "false" );
 	}
 
-	// no credntials?  no problem!  we're done here.
+	// no credentials needed?  no problem!  we're done here.
 	if(!send_credential) {
-		return;
+		return true;
 	}
 
+	char* cred_dir = param("SEC_CREDENTIAL_DIRECTORY");
+	if(!cred_dir) {
+		dprintf(D_ALWAYS, "ERROR: got STORE_CRED but SEC_CREDENTIAL_DIRECTORY not defined!\n");
+		return false;
+	}
+
+
+	// get username
 	MyString user = get_user_loginname();
 	MyString domain = "DOMAIN";
 	dprintf(D_ALWAYS, "CERN: getting credentials for user %s domain %s from shadow %s\n",
 		 user.c_str(), domain.c_str(), shadow->addr() );
 
+	// check to see if .cc already exists
+	char ccfilename[PATH_MAX];
+	sprintf(ccfilename, "%s%c%s.cc", cred_dir, DIR_DELIM_CHAR, user.c_str());
+	struct stat junk_buf;
+	int rc = stat(ccfilename, &junk_buf);
+	if (rc==0) {
+		// if the credential cache already exists, we don't even need
+		// to talk to the shadow.  just return success as quickly as
+		// possible.
+		return true;
+	}
+
+	// get credential from shadow
 	MyString credential;
 	shadow->getUserCredential(user.c_str(), domain.c_str(), credential);
-
 	dprintf(D_ALWAYS, "CERN: get cred %s\n", credential.c_str());
 
-	// securely write it to file in SEC_CREDENTIAL_DIRECTORY
-	// SIGHUP
-	// WAIT 20s
-	// SUCCESS continue, FAIL abort
+
+	dprintf(D_ALWAYS, "ZKM: store cred user %s contents: {%s}\n", user.c_str(), credential.c_str());
+
+	// create filenames
+	char tmpfilename[PATH_MAX];
+	char filename[PATH_MAX];
+	sprintf(tmpfilename, "%s%c%s.cred.tmp", cred_dir, DIR_DELIM_CHAR, user.c_str());
+	sprintf(filename, "%s%c%s.cred", cred_dir, DIR_DELIM_CHAR, user.c_str());
+	dprintf(D_ALWAYS, "ZKM: writing data to %s\n", tmpfilename);
+
+	// ultimately, decode base64 encoded credential
+	int pwlen = strlen(credential.c_str());
+
+	// write temp file
+	priv_state priv = set_root_priv();
+	rc = secure_write_file(tmpfilename, credential.c_str(), pwlen);
+	set_priv(priv);
+
+	if (rc != SUCCESS) {
+		dprintf(D_ALWAYS, "ZKM: failed to write secure temp file %s\n", tmpfilename);
+		return false;
+	}
+
+	// now move into place
+	dprintf(D_ALWAYS, "ZKM: renaming %s to %s\n", tmpfilename, filename);
+
+	priv = set_root_priv();
+	rc = rename(tmpfilename, filename);
+	set_priv(priv);
+
+	if (rc == -1) {
+		dprintf(D_ALWAYS, "ZKM: failed to rename %s to %s\n", tmpfilename, filename);
+
+		// should we rm tmpfilename ?
+		return false;
+	}
+
+	// now signal the credmon
+	pid_t credmon_pid = get_credmon_pid();
+	if (credmon_pid == -1) {
+		dprintf(D_ALWAYS, "ZKM: failed to get pid of credmon.\n");
+		return false;
+	}
+
+	dprintf(D_ALWAYS, "ZKM: sending SIGHUP to credmon pid %i\n", credmon_pid);
+	rc = kill(credmon_pid, SIGHUP);
+	if (rc == -1) {
+		dprintf(D_ALWAYS, "ZKM: failed to signal credmon: %i\n", errno);
+		return false;
+	}
+
+	// now poll for existence of .cc file
+	int retries = 20;
+	while (retries > 0) {
+		rc = stat(ccfilename, &junk_buf);
+		if (rc==-1) {
+			dprintf(D_ALWAYS, "ZKM: errno %i, waiting for %s to appear (%i seconds left)\n", errno, ccfilename, retries);
+			sleep(1);
+			retries--;
+		} else {
+			break;
+		}
+	}
+	if (retries == 0) {
+		dprintf(D_ALWAYS, "ZKM: FAILURE: credmon never created %s after 20 seconds!\n", ccfilename);
+		return false;
+	}
+
+	dprintf(D_ALWAYS, "ZKM: SUCCESS: file %s found after %i seconds\n", ccfilename, 20-retries);
+	return true;
 }
 
 
