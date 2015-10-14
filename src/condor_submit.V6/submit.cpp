@@ -409,6 +409,8 @@ const char	*KeystorePassphraseFile = "keystore_passphrase_file";
 const char  *CreamAttributes = "cream_attributes";
 const char  *BatchQueue = "batch_queue";
 
+const char	*SendCredential	= "send_credential";
+
 const char	*FileRemaps = "file_remaps";
 const char	*BufferFiles = "buffer_files";
 const char	*BufferSize = "buffer_size";
@@ -1511,54 +1513,7 @@ main( int argc, const char *argv[] )
 			exit(1);
 		}
 	}
-#else
-	char *producer = param("SEC_CREDENTIAL_PRODUCER");
-	if(producer) {
-		dprintf(D_ALWAYS, "CERN: invoking %s\n", producer);
-		ArgList args;
-		args.AppendArg(producer);
-		FILE* uber_file = my_popen(args, "r", false);
-		char *uber_ticket = NULL;
-		if (!uber_file) {
-			dprintf(D_ALWAYS, "CERN: ERROR (%i) invoking %s\n", errno, producer);
-			exit(1);
-		} else {
-			uber_ticket = (char*)malloc(65536);
-			int bytes_read = fread(uber_ticket, 1, 65536, uber_file);
-			// what constitutes failure?
-			my_pclose(uber_file);
-
-			char preview[16];
-			strncpy(preview,uber_ticket, 15);
-			preview[15]=0;
-
-			dprintf(D_ALWAYS, "CERN: read %i bytes {%s}\n", bytes_read, preview);
-
-			// setup the username to query
-			char userdom[256];
-			char* the_username = my_username();
-			char* the_domainname = my_domainname();
-			sprintf(userdom, "%s@%s", the_username, the_domainname);
-			free(the_username);
-			free(the_domainname);
-
-			dprintf(D_ALWAYS, "CERN: storing cred for user %s\n", userdom);
-			Daemon my_credd(DT_CREDD);
-			int store_cred_result;
-			if (my_credd.locate()) {
-				store_cred_result = store_cred(userdom, uber_ticket, ADD_MODE, &my_credd);
-				if ( store_cred_result != SUCCESS ) {
-					fprintf( stderr, "\nERROR: store_cred failed!\n");
-					exit(1);
-				}
-			} else {
-				fprintf( stderr, "\nERROR: locate(credd) failed!\n");
-				exit(1);
-			}
-		}
-	}
 #endif
-	dprintf(D_ALWAYS, "RETURNING TO NORMAL SUBMIT OPERATION\n");
 
 	// if this is an interactive job, and no cmd_file was specified on the
 	// command line, use a default cmd file as specified in the config table.
@@ -6705,6 +6660,71 @@ SetGSICredentials()
 }
 
 #if !defined(WIN32)
+void
+SetSendCredential()
+{
+	bool send_credential = condor_param_bool( SendCredential, true );
+
+	if (!send_credential) {
+		return;
+	}
+
+	// add it to the job ad (starter needs to know this value)
+	MyString buffer;
+	(void) buffer.formatstr( "%s = True", ATTR_JOB_SEND_CREDENTIAL);
+	InsertJobExpr(buffer);
+
+	// store credential with the credd
+	MyString producer;
+	if(param(producer, "SEC_CREDENTIAL_PRODUCER")) {
+		dprintf(D_ALWAYS, "CERN: invoking %s\n", producer.c_str());
+		ArgList args;
+		args.AppendArg(producer);
+		FILE* uber_file = my_popen(args, "r", false);
+		char *uber_ticket = NULL;
+		if (!uber_file) {
+			dprintf(D_ALWAYS, "CERN: ERROR (%i) invoking %s\n", errno, producer.c_str());
+			exit(1);
+		} else {
+			uber_ticket = (char*)malloc(65536);
+			int bytes_read = fread(uber_ticket, 1, 65536, uber_file);
+			// what constitutes failure?
+			my_pclose(uber_file);
+
+			char preview[16];
+			strncpy(preview,uber_ticket, 15);
+			preview[15]=0;
+
+			dprintf(D_ALWAYS, "CERN: read %i bytes {%s}\n", bytes_read, preview);
+
+			// setup the username to query
+			char userdom[256];
+			char* the_username = my_username();
+			char* the_domainname = my_domainname();
+			sprintf(userdom, "%s@%s", the_username, the_domainname);
+			free(the_username);
+			free(the_domainname);
+
+			dprintf(D_ALWAYS, "CERN: storing cred for user %s\n", userdom);
+			Daemon my_credd(DT_CREDD);
+			int store_cred_result;
+			if (my_credd.locate()) {
+				store_cred_result = store_cred(userdom, uber_ticket, ADD_MODE, &my_credd);
+				if ( store_cred_result != SUCCESS ) {
+					fprintf( stderr, "\nERROR: store_cred failed!\n");
+					exit(1);
+				}
+			} else {
+				fprintf( stderr, "\nERROR: locate(credd) failed!\n");
+				exit(1);
+			}
+		}
+	} else {
+		fprintf( stderr, "\nERROR: Job requested SendCredential but SEC_CREDENTIAL_PRODUCER not defined!\n");
+		exit(1);
+	}
+}
+
 
 // this allocates memory, free() it when you're done.
 char*
@@ -7928,6 +7948,7 @@ int queue_item(int num, StringList & vars, char * item, int item_index, int opti
 		SetArguments();
 		SetGridParams();
 		SetGSICredentials();
+		SetSendCredential();
 		SetMatchListLen();
 		SetDAGNodeName();
 		SetDAGManJobId();
