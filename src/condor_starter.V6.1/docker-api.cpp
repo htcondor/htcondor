@@ -96,9 +96,9 @@ int DockerAPI::run(
 	runArgs.AppendArg( sandboxPath + ":" + sandboxPath );
 
 	// Now any extra volumes
-	for (auto it: extraVolumes) {
+	for (std::list<std::string>::const_iterator it = extraVolumes.begin(); it != extraVolumes.end(); it++) {
 		runArgs.AppendArg("--volume");
-		std::string volume = it;
+		std::string volume = *it;
 		runArgs.AppendArg(volume);
 	}
 	
