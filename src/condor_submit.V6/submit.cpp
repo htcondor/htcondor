@@ -6663,7 +6663,7 @@ SetGSICredentials()
 void
 SetSendCredential()
 {
-	bool send_credential = condor_param_bool( SendCredential, true );
+	bool send_credential = condor_param_bool( "SendCredential", SendCredential, false );
 
 	if (!send_credential) {
 		return;
