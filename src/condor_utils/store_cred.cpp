@@ -198,6 +198,69 @@ int ZKM_UNIX_STORE_CRED(const char *user, const int len, const char *pw, int mod
 	return SUCCESS;
 }
 
+char*
+ZKM_UNIX_GET_CRED(const char *user, const char *domain)
+{
+	dprintf(D_ALWAYS, "ZKM: get cred user %s domain %s\n", user, domain);
+
+	char* cred_dir = param("SEC_CREDENTIAL_DIRECTORY");
+	if(!cred_dir) {
+		dprintf(D_ALWAYS, "ERROR: got GET_CRED but SEC_CREDENTIAL_DIRECTORY not defined!\n");
+		return NULL;
+	}
+
+	// create filenames
+	char filename[PATH_MAX];
+	sprintf(filename, "%s%c%s.cred", cred_dir, DIR_DELIM_CHAR, user);
+	dprintf(D_ALWAYS, "CERN: reading data from %s\n", filename);
+
+	// open the pool password file with root priv
+	priv_state priv = set_root_priv();
+	FILE* fp = safe_fopen_wrapper_follow(filename, "r");
+	int save_errno = errno;
+	set_priv(priv);
+	if (fp == NULL) {
+		dprintf(D_FULLDEBUG,
+		        "error opening user credential (%s), %s (errno: %d)\n",
+		        filename,
+		        strerror(save_errno),
+		        save_errno);
+		return NULL;
+	}
+
+	// make sure the file owner matches our real uid
+	struct stat st;
+	if (fstat(fileno(fp), &st) == -1) {
+		dprintf(D_ALWAYS,
+		        "fstat failed on user credential (%s), %s (errno: %d)\n",
+		        filename,
+		        strerror(errno),
+		        errno);
+		fclose(fp);
+		return NULL;
+	}
+	if (st.st_uid != get_my_uid()) {
+		dprintf(D_ALWAYS,
+		        "error: user credential must be owned "
+		            "by Condor's real uid\n");
+		fclose(fp);
+		return NULL;
+	}
+
+	char pw[MAX_PASSWORD_LENGTH + 1];
+	size_t sz = fread(pw, 1, MAX_PASSWORD_LENGTH, fp);
+	fclose(fp);
+
+	if (sz == 0) {
+		dprintf(D_ALWAYS, "error reading user credential (file may be empty)\n");
+		return NULL;
+	}
+	pw[sz] = '\0';  // ensure the last char is nil
+
+	return strdup(pw);
+}
+
+
 char* getStoredCredential(const char *username, const char *domain)
 {
 	// TODO: add support for multiple domains
@@ -207,11 +270,11 @@ char* getStoredCredential(const char *username, const char *domain)
 	}
 
 	if (strcmp(username, POOL_PASSWORD_USERNAME) != 0) {
-		dprintf(D_ALWAYS,
-		        "getStoredCredential: "
-		            "only pool password is supported on UNIX\n");
-		return NULL;
+		dprintf(D_ALWAYS, "ZKM: GOT UNIX GET CRED\n");
+		return ZKM_UNIX_GET_CRED(username, domain);
 	} 
+
+	// EVERYTHING BELOW HERE IS FOR POOL PASSWORD ONLY
 
 	char *filename = param("SEC_PASSWORD_FILE");
 	if (filename == NULL) {

@@ -25,6 +25,7 @@
 #include "condor_attributes.h"   // for ATTR_ ClassAd stuff
 #include "condor_email.h"        // for email.
 #include "metric_units.h"
+#include "store_cred.h"
 
 extern "C" char* d_format_time(double);
 
@@ -100,17 +101,6 @@ UniShadow::updateFromStarterClassAd(ClassAd* update_ad) {
 }
 
 
-
-// this should be refactored so that it is combined with the code in the credd
-// and uses a common function.  only difference will be unix/windows implementations
-// of getStoredCredential().
-//
-char* ZKM_getStoredCredential(char* user, char* domain) {
-	user;
-	domain;
-	return strdup("UBER TICKET CONTENTS GO HERE.\n");
-}
-
 int
 UniShadow::getUserCredential(int /*i*/, Stream *s)
 {
@@ -181,7 +171,7 @@ UniShadow::getUserCredential(int /*i*/, Stream *s)
 
 		// Now fetch the password from the secure store --
 		// If not LocalSystem, this step will fail.
-	password = ZKM_getStoredCredential(user,domain);
+	password = getStoredCredential(user,domain);
 
 	if (!password) {
 		dprintf(D_ALWAYS,
