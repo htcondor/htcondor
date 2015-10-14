@@ -1016,6 +1016,20 @@ MachAttributes::publish( ClassAd* cp, amask_t how_much)
 	if ( m_named_chroot.size() > 0 ) {
 		cp->Assign( "NamedChroot", m_named_chroot.c_str() );
 	}
+	
+	// Advertise Docker Volumes
+	char *dockerVolumes = param("DOCKER_VOLUMES");
+	if (dockerVolumes) {
+		StringList vl(dockerVolumes);
+		vl.rewind();
+		char *volume = 0;
+		while ((volume = vl.next())) {
+			std::string attrName = "HasDockerVolume";
+			attrName += volume;
+			cp->Assign(attrName.c_str(), true);
+		}
+		free(dockerVolumes);
+	}
 
 #ifdef WIN32
 // window's strtok_s is the 'safe' version of strtok, it's not identical to linx's strtok_r, but it's close enough.
