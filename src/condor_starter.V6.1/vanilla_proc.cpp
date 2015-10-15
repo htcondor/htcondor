@@ -644,6 +644,13 @@ VanillaProc::StartJob()
 					uint64_t VMemMb_big = MemMb;
 
 					if (MemMb > 0) {
+						// we're not allowed to set memsw limit <
+						// the hard memory limit.  If we haven't set the hard
+						// memory limit, the default may be infinity.
+						// So, if we've set soft, set hard to (memsw - 4096)
+						if (mem_is_soft) {
+							climits.set_memory_limit_bytes(1024*VMemMb_big - 4096, false);
+						}
 						climits.set_memsw_limit_bytes(1024*VMemMb_big);
 					}
 				} else {
