@@ -437,6 +437,8 @@ private:
 		// The proxy is about to expire, do something!
 	void proxyExpiring();
 
+	bool refreshSandboxCredentials();
+
 		// // // // // // // //
 		// Private Data Members
 		// // // // // // // //
@@ -445,6 +447,10 @@ private:
 
 		/** The version of the shadow if known; otherwise NULL */
 	CondorVersionInfo* shadow_version;
+
+		/// timer id of the credential checking timer
+	int m_refresh_sandbox_creds_tid;
+	time_t m_sandbox_creds_last_update;
 
 		/// timer id of the proxy expiration timer
 	int m_proxy_expiration_tid;

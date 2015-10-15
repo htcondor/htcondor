@@ -110,6 +110,8 @@ JICShadow::JICShadow( const char* shadow_name ) : JobInfoCommunicator(),
 	socks++;
 
 	m_proxy_expiration_tid = -1;
+	m_refresh_sandbox_creds_tid = -1;
+	bzero(&m_sandbox_creds_last_update, sizeof(m_sandbox_creds_last_update));
 
 		/* Set a timeout on remote system calls.  This is needed in
 		   case the user job exits in the middle of a remote system
@@ -122,6 +124,9 @@ JICShadow::JICShadow( const char* shadow_name ) : JobInfoCommunicator(),
 
 JICShadow::~JICShadow()
 {
+	if( m_refresh_sandbox_creds_tid != -1 ){
+		daemonCore->Cancel_Timer(m_refresh_sandbox_creds_tid);
+	}
 	if( m_proxy_expiration_tid != -1 ){
 		daemonCore->Cancel_Timer(m_proxy_expiration_tid);
 	}
@@ -2518,8 +2523,6 @@ JICShadow::initUserCredentials() {
 	// get username
 	MyString user = get_user_loginname();
 	MyString domain = "DOMAIN";
-	dprintf(D_ALWAYS, "CERN: getting credentials for user %s domain %s from shadow %s\n",
-		 user.c_str(), domain.c_str(), shadow->addr() );
 
 	// check to see if .cc already exists
 	char ccfilename[PATH_MAX];
@@ -2527,19 +2530,24 @@ JICShadow::initUserCredentials() {
 	struct stat junk_buf;
 	int rc = stat(ccfilename, &junk_buf);
 	if (rc==0) {
+		dprintf(D_ALWAYS, "CERN: credentials for user %s domain %s already exist in %s\n",
+			user.c_str(), domain.c_str(), ccfilename );
 		// if the credential cache already exists, we don't even need
 		// to talk to the shadow.  just return success as quickly as
 		// possible.
-		return true;
+		//
+		// before we do, copy the creds to the sandbox and initialize
+		// the timer to monitor them.  propagate any errors.
+		rc = refreshSandboxCredentials();
+		return rc;
 	}
+	dprintf(D_ALWAYS, "CERN: obtaining credentials for user %s domain %s from shadow %s\n",
+		 user.c_str(), domain.c_str(), shadow->addr() );
 
 	// get credential from shadow
 	MyString credential;
 	shadow->getUserCredential(user.c_str(), domain.c_str(), credential);
-	dprintf(D_ALWAYS, "CERN: get cred %s\n", credential.c_str());
-
-
-	dprintf(D_ALWAYS, "ZKM: store cred user %s contents: {%s}\n", user.c_str(), credential.c_str());
+	dprintf(D_ALWAYS, "CERN: got cred %s\n", credential.c_str());
 
 	// create filenames
 	char tmpfilename[PATH_MAX];
@@ -2606,10 +2614,146 @@ JICShadow::initUserCredentials() {
 		return false;
 	}
 
-	dprintf(D_ALWAYS, "ZKM: SUCCESS: file %s found after %i seconds\n", ccfilename, 20-retries);
-	return true;
+	dprintf(D_ALWAYS, "ZKM: file %s found after %i seconds\n", ccfilename, 20-retries);
+
+	// this will set up the credentials in the sandbox and set a timer to
+	// do it periodically.  propagate any errors.
+	rc = refreshSandboxCredentials();
+
+	return rc;
 }
 
+bool
+JICShadow::refreshSandboxCredentials()
+{
+	/*
+	  This method is invoked whenever we should check
+	  the user credential in SEC_CREDENTIAL_DIRECTORY and
+	  then, if needed, copy them to the job sandbox.
+	*/
+
+	dprintf(D_ALWAYS, "CERN: in refreshSandboxCredentials()\n");
+
+
+	// construct filename to stat
+	char* cred_dir = param("SEC_CREDENTIAL_DIRECTORY");
+	if(!cred_dir) {
+		dprintf(D_ALWAYS, "ERROR: in refreshSandboxCredentials() but SEC_CREDENTIAL_DIRECTORY not defined!\n");
+		return false;
+	}
+
+	// get username
+	MyString user = get_user_loginname();
+
+	// stat the file
+	char ccfilename[PATH_MAX];
+	sprintf(ccfilename, "%s%c%s.cc", cred_dir, DIR_DELIM_CHAR, user.c_str());
+	struct stat syscred;
+	int rc = stat(ccfilename, &syscred);
+	if (rc!=0) {
+		dprintf(D_ALWAYS, "ERROR: in refreshSandboxCredentials() but %s is gone!\n", ccfilename );
+		return false;
+	}
+
+	// has it been updated?
+	if (memcmp(&m_sandbox_creds_last_update, &syscred.st_mtime, sizeof(time_t)) != 0) {
+		// secure copy to sandbox
+		char sandboxccfilename[PATH_MAX];
+		char sandboxcctmpfilename[PATH_MAX];
+		sprintf(sandboxccfilename, "%s%c%s.cc", Starter->GetWorkingDir(), DIR_DELIM_CHAR, user.c_str());
+		sprintf(sandboxcctmpfilename, "%s%c%s.cc.tmp", Starter->GetWorkingDir(), DIR_DELIM_CHAR, user.c_str());
+
+		dprintf(D_ALWAYS, "CERN: copying %s as root to %s as user %s\n",
+			ccfilename, sandboxcctmpfilename, user.c_str());
+
+		// open the credential cache as root
+		priv_state priv = set_root_priv();
+		FILE* fp = safe_fopen_wrapper_follow(ccfilename, "r");
+		int save_errno = errno;
+		set_priv(priv);
+		if (fp == NULL) {
+			dprintf(D_FULLDEBUG,
+				"error opening user credential (%s), %s (errno: %d)\n",
+				ccfilename,
+				strerror(save_errno),
+				save_errno);
+			return false;
+		}
+
+		// since we just called stat we know the size, although there's
+		// a super-tiny race.  to avoid it, we malloc and read up to a
+		// little more than double.  these things are typically very
+		// small, on the order of 1k.
+		size_t cclen = 2048 + 2 * syscred.st_size;
+		char *ccbuf = (char*)malloc(cclen);
+
+		// now, read the original credential (and update the size if it changed)
+		cclen = fread(ccbuf, 1, cclen, fp);
+		if (cclen==0) {
+			dprintf(D_ALWAYS, "ERROR: in refreshSandboxCredentials(), got short fread()!\n");
+			free(ccbuf);
+			return false;
+		}
+		rc = fclose(fp);
+		if (rc!=0) {
+			dprintf(D_ALWAYS, "ERROR: in refreshSandboxCredentials(), fclose() failed!\n");
+			free(ccbuf);
+			return false;
+		}
+
+		// as user, write tmp file securely
+		rc = secure_write_file(sandboxcctmpfilename, ccbuf, cclen);
+		if (rc!=SUCCESS) {
+			dprintf(D_ALWAYS, "ERROR: secure_write_file(%s,ccbuf,%lu) failed with %i\n", sandboxcctmpfilename,cclen,rc);
+			free(ccbuf);
+			return false;
+		}
+
+		// no longer need this
+		free(ccbuf);
+
+		// as user, atomically move tmp file into correct location
+		rc = rename(sandboxcctmpfilename, sandboxccfilename);
+		if (rc!=0) {
+			dprintf(D_ALWAYS, "ERROR: rename(%s,%s) failed with %i\n", sandboxcctmpfilename,sandboxccfilename,rc);
+			return false;
+		}
+		dprintf(D_ALWAYS, "CERN: renamed %s to %s\n", sandboxcctmpfilename, sandboxccfilename);
+
+		// aklog now if we decide to go that route
+		// my_popen_env("aklog", KRB5CCNAME=sandbox copy of .cc)
+
+		// store the mtime of the current copy
+		memcpy(&m_sandbox_creds_last_update, &syscred.st_mtime, sizeof(time_t));
+
+		// only need to do this once
+		if(getKRB5CCNAME() == NULL) {
+			dprintf(D_ALWAYS, "CERN: configuring job to use KRB5CCNAME %s\n", sandboxccfilename);
+			setKRB5CCNAME(sandboxccfilename);
+		}
+	}
+
+	// set/reset timer
+	int sec_cred_refresh = param_integer("SEC_CREDENTIAL_REFRESH", 300);
+	if (sec_cred_refresh > 0) {
+		if (m_refresh_sandbox_creds_tid == -1) {
+			m_refresh_sandbox_creds_tid = daemonCore->Register_Timer(
+				sec_cred_refresh,
+				(TimerHandlercpp)&JICShadow::refreshSandboxCredentials,
+				"refreshSandboxCredentials",
+				this );
+		} else {
+			daemonCore->Reset_Timer(m_refresh_sandbox_creds_tid, sec_cred_refresh);
+		}
+		dprintf(D_ALWAYS,
+			"CERN: will check credential again in %i seconds\n", sec_cred_refresh);
+	} else {
+		dprintf(D_ALWAYS, "CERN: cred refresh is DISABLED.\n");
+	}
+
+	// return success!
+	return true;
+}
 
 void
 JICShadow::initMatchSecuritySession()
