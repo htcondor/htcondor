@@ -5,6 +5,7 @@ require {
 	type fs_t;
 	type user_home_dir_t;
 	type user_home_t;
+	type user_tmp_t;
 	type condor_schedd_t;
 	class process { setrlimit };
 	class dir { search getattr };
@@ -18,4 +19,5 @@ allow condor_schedd_t self:process setrlimit;
 allow condor_schedd_t user_home_dir_t:dir { search getattr };
 allow condor_schedd_t user_home_t:dir { search getattr };
 allow condor_schedd_t user_home_t:file { write read ioctl open };
+allow condor_schedd_t user_tmp_t:dir getattr;
 
