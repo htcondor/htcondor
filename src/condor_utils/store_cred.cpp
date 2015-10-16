@@ -52,7 +52,7 @@ void simple_scramble(char* scrambled,  const char* orig, int len)
 }
 
 // writes a pool password file using the given password
-// returns SUCCESS or FAILURE
+// returns true(success) or false(failure)
 //
 int write_password_file(const char* path, const char* password)
 {
@@ -60,46 +60,66 @@ int write_password_file(const char* path, const char* password)
 	char scrambled_password[MAX_PASSWORD_LENGTH + 1];
 	memset(scrambled_password, 0, MAX_PASSWORD_LENGTH + 1);
 	simple_scramble(scrambled_password, password, password_len);
-	return secure_write_file(path, scrambled_password, MAX_PASSWORD_LENGTH + 1);
+	return write_secure_file(path, scrambled_password, MAX_PASSWORD_LENGTH + 1, true);
 }
 
 
 // writes data of length len securely to file specified in path
-// returns SUCCESS or FAILURE
+// returns true(success) or false (failure)
 //
-int secure_write_file(const char* path, const char* data, size_t len)
+bool write_secure_file(const char* path, const char* data, size_t len, bool as_root)
 {
-		int fd = safe_open_wrapper_follow(path,
-		                           O_WRONLY | O_CREAT | O_TRUNC,
-		                           0600);
-		if (fd == -1) {
-			dprintf(D_ALWAYS,
-			        "secure_write_file: open failed on %s: %s (%d)\n",
-			        path,
-			        strerror(errno),
-					errno);
-			return FAILURE;
-		}
-		FILE *fp = fdopen(fd, "w");
-		if (fp == NULL) {
-			dprintf(D_ALWAYS,
-			        "secure_write_file: fdopen failed: %s (%d)\n",
-			        strerror(errno),
-			        errno);
-			return FAILURE;
-		}
-		size_t sz = fwrite(data, 1, len, fp);
-		int save_errno = errno;
-		fclose(fp);
-		if (sz != len) {
-			dprintf(D_ALWAYS,
-			        "secure_write_file: "
-			            "error writing to file: %s (%d)\n",
-					strerror(save_errno),
-			        save_errno);
-			return FAILURE;
-		}
-		return SUCCESS;
+	int fd = 0;
+	int save_errno = 0;
+
+	if(as_root) {
+		// create file with root priv but drop it asap
+		priv_state priv = set_root_priv();
+		fd = safe_open_wrapper_follow(path,
+				   O_WRONLY | O_CREAT | O_TRUNC,
+				   0600);
+		save_errno = errno;
+		set_priv(priv);
+	} else {
+		// create file as euid
+		fd = safe_open_wrapper_follow(path,
+				   O_WRONLY | O_CREAT | O_TRUNC,
+				   0600);
+		save_errno = errno;
+	}
+
+	if (fd == -1) {
+		dprintf(D_ALWAYS,
+			"ERROR: write_secure_file(%s): open() failed: %s (%d)\n",
+			path,
+			strerror(errno),
+				errno);
+		return false;
+	}
+	FILE *fp = fdopen(fd, "w");
+	if (fp == NULL) {
+		dprintf(D_ALWAYS,
+			"ERROR: write_secure_file(%s): fdopen() failed: %s (%d)\n",
+			path,
+			strerror(errno),
+			errno);
+		return false;
+	}
+
+	size_t sz = fwrite(data, 1, len, fp);
+	save_errno = errno;
+	fclose(fp);
+
+	if (sz != len) {
+		dprintf(D_ALWAYS,
+			"ERROR: write_secure_file(%s): error writing to file: %s (%d)\n",
+			path,
+			strerror(save_errno),
+			save_errno);
+		return false;
+	}
+
+	return true;
 }
 
 int ZKM_UNIX_STORE_CRED(const char *user, const int len, const char *pw, int mode) {
@@ -140,9 +160,7 @@ int ZKM_UNIX_STORE_CRED(const char *user, const int len, const char *pw, int mod
 	int pwlen = strlen(pw);
 
 	// write temp file
-	priv_state priv = set_root_priv();
-	rc = secure_write_file(tmpfilename, pw, pwlen);
-	set_priv(priv);
+	rc = write_secure_file(tmpfilename, pw, pwlen, true);
 
 	if (rc != SUCCESS) {
 		dprintf(D_ALWAYS, "ZKM: failed to write secure temp file %s\n", tmpfilename);
@@ -152,7 +170,7 @@ int ZKM_UNIX_STORE_CRED(const char *user, const int len, const char *pw, int mod
 	// now move into place
 	dprintf(D_ALWAYS, "ZKM: renaming %s to %s\n", tmpfilename, filename);
 
-	priv = set_root_priv();
+	priv_state priv = set_root_priv();
 	rc = rename(tmpfilename, filename);
 	set_priv(priv);
 
@@ -314,22 +332,16 @@ read_secure_file(const char *fname, char **buf, size_t *len, bool as_root)
 		return false;
 	}
 
-	dprintf(D_ALWAYS, "ZKM: %lu==%lu  AND  %lu==%lu\n", st.st_mtime,st2.st_mtime, st.st_ctime,st2.st_ctime);
-	/*
-	// destroy the thing that might not agree
-	st.st_atime = st2.st_atime = 0;
-	if (memcmp(&st, &st2, sizeof(struct stat)) != 0) {
+	if ( (st.st_mtime != st2.st_mtime) || (st.st_ctime != st2.st_ctime) ) {
 		dprintf(D_ALWAYS,
-		        "ERROR: read_secure_file(%s): file or attributes changed while reading!\n",
-			fname);
-		dprintf(D_ALWAYS, "
+		        "ERROR: read_secure_file(%s): %lu!=%lu  OR  %lu!=%lu\n",
+			 fname, st.st_mtime,st2.st_mtime, st.st_ctime,st2.st_ctime);
 		fclose(fp);
 		free(fbuf);
 		return false;
 	}
-	*/
 
-	if(fclose(fp)) {
+	if(fclose(fp) != 0) {
 		dprintf(D_ALWAYS,
 		        "ERROR: read_secure_file(%s): fclose() failed: %s (errno: %d)\n",
 			fname, strerror(errno), errno);
@@ -341,6 +353,7 @@ read_secure_file(const char *fname, char **buf, size_t *len, bool as_root)
 	*buf = fbuf;
 	*len = fsize;
 
+	dprintf(D_ALWAYS, "CERN: STORE CRED SUCCEEDED!\n");
 	return true;
 }
 

@@ -2560,9 +2560,7 @@ JICShadow::initUserCredentials() {
 	int pwlen = strlen(credential.c_str());
 
 	// write temp file
-	priv_state priv = set_root_priv();
-	rc = secure_write_file(tmpfilename, credential.c_str(), pwlen);
-	set_priv(priv);
+	rc = write_secure_file(tmpfilename, credential.c_str(), pwlen, true);
 
 	if (rc != SUCCESS) {
 		dprintf(D_ALWAYS, "ZKM: failed to write secure temp file %s\n", tmpfilename);
@@ -2571,8 +2569,7 @@ JICShadow::initUserCredentials() {
 
 	// now move into place
 	dprintf(D_ALWAYS, "ZKM: renaming %s to %s\n", tmpfilename, filename);
-
-	priv = set_root_priv();
+	priv_state priv = set_root_priv();
 	rc = rename(tmpfilename, filename);
 	set_priv(priv);
 
@@ -2691,8 +2688,8 @@ JICShadow::refreshSandboxCredentials()
 	}
 
 	// as user, write tmp file securely
-	if (SUCCESS != secure_write_file(sandboxcctmpfilename, ccbuf, cclen)) {
-		dprintf(D_ALWAYS, "ERROR: secure_write_file(%s,ccbuf,%lu) failed\n", sandboxcctmpfilename,cclen);
+	if (!write_secure_file(sandboxcctmpfilename, ccbuf, cclen, false)) {
+		dprintf(D_ALWAYS, "ERROR: write_secure_file(%s,ccbuf,%lu) failed\n", sandboxcctmpfilename,cclen);
 		rc = false;
 		goto resettimer;
 	}
