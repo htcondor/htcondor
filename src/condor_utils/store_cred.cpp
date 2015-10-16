@@ -198,6 +198,153 @@ int ZKM_UNIX_STORE_CRED(const char *user, const int len, const char *pw, int mod
 	return SUCCESS;
 }
 
+// read a "secure" file.
+//
+// this means we do a few extra checks:
+// 1) we use the safe_open wrapper
+// 2) we verify the file is owned by us
+// 3) we verify the permissions are set such that no one else could read or write the file
+// 4) we do our best to ensure the file did not change while we were reading it.
+//
+// *buf and *len will not be modified unless the call is succesful.  on
+// success, they receive a pointer to a newly-malloc()ed buffer and the length.
+//
+bool
+read_secure_file(const char *fname, char **buf, size_t *len, bool as_root)
+{
+	FILE* fp = 0;
+	int save_errno = 0;
+
+	if(as_root) {
+		// open the file with root priv but drop it asap
+		priv_state priv = set_root_priv();
+		fp = safe_fopen_wrapper_follow(fname, "r");
+		save_errno = errno;
+		set_priv(priv);
+	} else {
+		fp = safe_fopen_wrapper_follow(fname, "r");
+		save_errno = errno;
+	}
+
+	if (fp == NULL) {
+		dprintf(D_FULLDEBUG,
+		        "ERROR: read_secure_file(%s): open() failed: %s (errno: %d)\n",
+		        fname,
+		        strerror(save_errno),
+		        save_errno);
+		return false;
+	}
+
+	struct stat st;
+	if (fstat(fileno(fp), &st) == -1) {
+		dprintf(D_ALWAYS,
+		        "ERROR: read_secure_file(%s): fstat() failed, %s (errno: %d)\n",
+		        fname,
+		        strerror(errno),
+		        errno);
+		fclose(fp);
+		return false;
+	}
+
+	// make sure the file owner matches expected owner
+	uid_t fowner;
+	if(as_root) {
+		fowner = getuid();
+	} else {
+		fowner = geteuid();
+	}
+	if (st.st_uid != fowner) {
+		dprintf(D_ALWAYS,
+			"ERROR: read_secure_file(%s): file must be owned "
+			    "by uid %i, was uid %i\n", fname, fowner, st.st_uid);
+		fclose(fp);
+		return false;
+	}
+
+	// make sure no one else can read the file
+	if (st.st_mode & 077) {
+		dprintf(D_ALWAYS,
+			"ERROR: read_secure_file(%s): file must not be readable "
+			    "by others, had perms %o\n", fname, st.st_mode);
+		fclose(fp);
+		return false;
+	}
+
+	// now read the entire file.
+	size_t fsize = st.st_size;
+	char *fbuf = (char*)malloc(fsize);
+	if(fbuf == NULL) {
+		dprintf(D_ALWAYS,
+			"ERROR: read_secure_file(%s): malloc(%lu) failed!\n", fname, fsize);
+		fclose(fp);
+		return false;
+	}
+
+	// actually read the data
+	size_t readsize = fread(fbuf, 1, fsize, fp);
+
+	// this if block is debatable, as far as "security" goes.  it's
+	// perfectly legal to have a short read.  if the file was indeed
+	// modified then that will be reflected in the second fstat below.
+	//
+	// however, since i haven't implemented a retry loop here, i'm going to
+	// report failure on a short read for now.
+	//
+	if(readsize != fsize) {
+		dprintf(D_ALWAYS,
+			"ERROR: read_secure_file(%s): failed due to short read: %lu != %lu!\n",
+			fname, readsize, fsize);
+		fclose(fp);
+		free(fbuf);
+		return false;
+	}
+
+	// now, let's try to ensure the file or its attributes did not change
+	// during this function.  stat it again and fail if anything was
+	// modified.
+	struct stat st2;
+	if (fstat(fileno(fp), &st2) == -1) {
+		dprintf(D_ALWAYS,
+		        "ERROR: read_secure_file(%s): second fstat() failed, %s (errno: %d)\n",
+		        fname,
+		        strerror(errno),
+		        errno);
+		fclose(fp);
+		free(fbuf);
+		return false;
+	}
+
+	dprintf(D_ALWAYS, "ZKM: %lu==%lu  AND  %lu==%lu\n", st.st_mtime,st2.st_mtime, st.st_ctime,st2.st_ctime);
+	/*
+	// destroy the thing that might not agree
+	st.st_atime = st2.st_atime = 0;
+	if (memcmp(&st, &st2, sizeof(struct stat)) != 0) {
+		dprintf(D_ALWAYS,
+		        "ERROR: read_secure_file(%s): file or attributes changed while reading!\n",
+			fname);
+		dprintf(D_ALWAYS, "
+		fclose(fp);
+		free(fbuf);
+		return false;
+	}
+	*/
+
+	if(fclose(fp)) {
+		dprintf(D_ALWAYS,
+		        "ERROR: read_secure_file(%s): fclose() failed: %s (errno: %d)\n",
+			fname, strerror(errno), errno);
+		free(fbuf);
+		return false;
+	}
+
+	// give malloc()ed buffer and length to caller.  do not free.
+	*buf = fbuf;
+	*len = fsize;
+
+	return true;
+}
+
+
 char*
 ZKM_UNIX_GET_CRED(const char *user, const char *domain)
 {
@@ -210,54 +357,28 @@ ZKM_UNIX_GET_CRED(const char *user, const char *domain)
 	}
 
 	// create filenames
-	char filename[PATH_MAX];
-	sprintf(filename, "%s%c%s.cred", cred_dir, DIR_DELIM_CHAR, user);
-	dprintf(D_ALWAYS, "CERN: reading data from %s\n", filename);
+	MyString filename;
+	filename.formatstr("%s%c%s.cred", cred_dir, DIR_DELIM_CHAR, user);
+	dprintf(D_ALWAYS, "CERN: reading data from %s\n", filename.c_str());
 
-	// open the pool password file with root priv
-	priv_state priv = set_root_priv();
-	FILE* fp = safe_fopen_wrapper_follow(filename, "r");
-	int save_errno = errno;
-	set_priv(priv);
-	if (fp == NULL) {
-		dprintf(D_FULLDEBUG,
-		        "error opening user credential (%s), %s (errno: %d)\n",
-		        filename,
-		        strerror(save_errno),
-		        save_errno);
-		return NULL;
+	// read the file (fourth argument "true" means as_root)
+	char  *buf = 0;
+	size_t len = 0;
+	bool rc = read_secure_file(filename.c_str(), &buf, &len, true);
+
+	// HACK: asserting for now that the contents are TEXT, and contain NO
+	// NULL so that we can return a null-terminated string.  it's possible
+	// we'll convert to base64 right here and return that, so it might
+	// actually be true.
+	if(rc) {
+		char* textpw = (char*)malloc(len+1);
+		strncpy(textpw, buf, len);
+		textpw[len] = 0;
+		free(buf);
+		return textpw;
 	}
 
-	// make sure the file owner matches our real uid
-	struct stat st;
-	if (fstat(fileno(fp), &st) == -1) {
-		dprintf(D_ALWAYS,
-		        "fstat failed on user credential (%s), %s (errno: %d)\n",
-		        filename,
-		        strerror(errno),
-		        errno);
-		fclose(fp);
-		return NULL;
-	}
-	if (st.st_uid != get_my_uid()) {
-		dprintf(D_ALWAYS,
-		        "error: user credential must be owned "
-		            "by Condor's real uid\n");
-		fclose(fp);
-		return NULL;
-	}
-
-	char pw[MAX_PASSWORD_LENGTH + 1];
-	size_t sz = fread(pw, 1, MAX_PASSWORD_LENGTH, fp);
-	fclose(fp);
-
-	if (sz == 0) {
-		dprintf(D_ALWAYS, "error reading user credential (file may be empty)\n");
-		return NULL;
-	}
-	pw[sz] = '\0';  // ensure the last char is nil
-
-	return strdup(pw);
+	return NULL;
 }
 
 
