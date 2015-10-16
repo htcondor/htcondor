@@ -22,6 +22,7 @@
 #include "condor_config.h"
 
 #include "openstackCommands.h"
+#include "openstackgahp_common.h"
 #include "thread_control.h"
 #include <curl/curl.h>
 
@@ -37,6 +38,12 @@ using std::string;
 
 #define NULLSTRING "NULL"
 pthread_mutex_t globalCurlMutex = PTHREAD_MUTEX_INITIALIZER;
+
+// For authentication.
+string currentURL;
+string currentUsername;
+string currentPassword;
+string currentProject;
 
 // Utility functions. ---------------------------------------------------------
 
@@ -80,18 +87,23 @@ class KeystoneToken {
 		// may block, but must be called with the global_big_mutex locked,
 		// since it will unlock in order to block on the renew condition.
 		// This will happen without any special work in normal GAHP code.
-		static KeystoneToken * get(	const string & url, string & username,
-									const string & password,
-									const string & project );
-		bool isValid();
+		static const KeystoneToken & get(	const string & url,
+											const string & username,
+											const string & password,
+											const string & project );
+
+		bool isValid() const;
+		const string & getAuthToken() const { return token; }
+		const string & getErrorCode() const { return errorCode; }
+		const string & getErrorMessage() const { return errorMessage; }
 
 		~KeystoneToken() { pthread_cond_destroy( & condition ); }
 
 	private:
-		KeystoneToken() : isRenewing( false ), expiration( 0 ) {
+		KeystoneToken() : isRenewing( false ), expiration( 0 ), lastAttempt( 0 ) {
 			pthread_cond_init( & condition, NULL );
 		}
-		bool getToken(	const string & url, string & username,
+		bool getToken(	const string & url, const string & username,
 						const string & password, const string & project );
 
 		string token;
@@ -117,31 +129,32 @@ class KeystoneToken {
 };
 KeystoneToken::Cache KeystoneToken::cache;
 
-bool KeystoneToken::isValid() {
+bool KeystoneToken::isValid() const {
 	return time(NULL) < expiration;
 }
 
-KeystoneToken * KeystoneToken::get(	const string & url,	string & username,
-									const string & password,
-									const string & project ) {
+const KeystoneToken & KeystoneToken::get(	const string & url,
+											const string & username,
+											const string & password,
+											const string & project ) {
 	string hashKey = url + username + password + project;
-
-	KeystoneToken * kt = new KeystoneToken();
 	CacheIterator ci = KeystoneToken::cache.find( hashKey );
 	if( ci != KeystoneToken::cache.end() ) {
 		dprintf( D_FULLDEBUG, "Found cached token for ( %s, %s, %s, %s )\n", url.c_str(), username.c_str(), password.c_str(), project.c_str() );
-		* kt = ci->second;
-	} else {
-		dprintf( D_FULLDEBUG, "Created new token for ( %s, %s, %s, %s )\n", url.c_str(), username.c_str(), password.c_str(), project.c_str() );
-		KeystoneToken::cache.insert( make_pair( hashKey, * kt ) );
+		KeystoneToken & kt = ci->second;
+
+		if( (! kt.isValid()) || (kt.expiration - time(NULL) < (5 * 60)) ) {
+			dprintf( D_FULLDEBUG, "Token was either invalid or about to expire, renewing.\n" );
+			kt.getToken( url, username, password, project );
+		}
+
+		return kt;
 	}
 
-	if( (! kt->isValid()) || (kt->expiration - time(NULL) < (5 * 60)) ) {
-		dprintf( D_FULLDEBUG, "Token was either invalid or about to expire, renewing.\n" );
-		kt->getToken( url, username, password, project );
-	}
-
-	return kt;
+	dprintf( D_FULLDEBUG, "Creating token for ( %s, %s, %s, %s )\n", url.c_str(), username.c_str(), password.c_str(), project.c_str() );
+	KeystoneToken kt;
+	KeystoneToken::cache.insert( make_pair( hashKey, kt ) );
+	return KeystoneToken::get( url, username, password, project );
 }
 
 // JSON string constants.  Should be marginally easier to read.
@@ -160,7 +173,7 @@ KeystoneToken * KeystoneToken::get(	const string & url,	string & username,
 
 #define JSON_STRING	"\"#\""
 
-bool KeystoneToken::getToken(	const string & url, string & username,
+bool KeystoneToken::getToken(	const string & url, const string & username,
 								const string & password,
 								const string & project ) {
 	dprintf( D_FULLDEBUG, "Attempting getToken( %s, %s, %s, %s )\n", url.c_str(), username.c_str(), password.c_str(), project.c_str() );
@@ -172,10 +185,14 @@ bool KeystoneToken::getToken(	const string & url, string & username,
 	}
 
 	if( this->isValid() ) {
+		dprintf( D_FULLDEBUG, "Not getting token (%s, %s, %s, %s): somebody else already renewed it.\n",
+			url.c_str(), username.c_str(), password.c_str(), project.c_str() );
 		return true;
 	}
 
 	if( time( NULL ) - this->lastAttempt < (5 * 60) ) {
+		dprintf( D_FULLDEBUG, "Not getting token (%s, %s, %s, %s): tried too recently.\n",
+			url.c_str(), username.c_str(), password.c_str(), project.c_str() );
 		return false;
 	}
 
@@ -183,7 +200,7 @@ bool KeystoneToken::getToken(	const string & url, string & username,
 
 	NovaRequest tokenRequest;
 	tokenRequest.includeResponseHeader = true;
-	tokenRequest.serviceURL = url + "/v3/auth/tokens";
+	tokenRequest.serviceURL = url + "/v3/auth/tokens?nocatalog";
 	tokenRequest.requestMethod = "POST";
 
 	if( project.empty() ) {
@@ -313,9 +330,9 @@ bool KeystoneToken::getToken(	const string & url, string & username,
 		if( d.HasParseError() ) {
 			this->token = "";
 			this->expiration = 0;
-			this->errorCode = "E_BODY_NOT_JSON";
-			formatstr( this->errorMessage,
-						"Failed to parse response body ('%s').\n",
+			this->errorCode = "E_NOT_JSON";
+			formatstr(	this->errorMessage,
+						"Failed to parse response body ('%s').",
 						body.c_str() );
 
 			dprintf( D_FULLDEBUG, "Failed getToken( %s, %s, %s, %s ): '%s' (%s).\n",
@@ -329,9 +346,9 @@ bool KeystoneToken::getToken(	const string & url, string & username,
 		if( j == d.MemberEnd() ) {
 			this->token = "";
 			this->expiration = 0;
-			this->errorCode = "E_NO_TOKEN_MEMBER";
-			formatstr( this->errorMessage,
-						"Failed to find token in body ('%s').\n",
+			this->errorCode = "E_NO_MEMBER";
+			formatstr(	this->errorMessage,
+						"Failed to find token in body ('%s').",
 						body.c_str() );
 
 			dprintf( D_FULLDEBUG, "Failed getToken( %s, %s, %s, %s ): '%s' (%s).\n",
@@ -344,9 +361,9 @@ bool KeystoneToken::getToken(	const string & url, string & username,
 		if(! j->value.IsObject()) {
 			this->token = "";
 			this->expiration = 0;
-			this->errorCode = "E_TOKEN_NOT_OBJECT";
+			this->errorCode = "E_NOT_OBJECT";
 			formatstr( this->errorMessage,
-						"Token attribute not a JSON object in body ('%s').\n",
+						"Token attribute not a JSON object in body ('%s').",
 						body.c_str() );
 
 			dprintf( D_FULLDEBUG, "Failed getToken( %s, %s, %s, %s ): '%s' (%s).\n",
@@ -362,7 +379,7 @@ bool KeystoneToken::getToken(	const string & url, string & username,
 			this->expiration = 0;
 			this->errorCode = "E_NO_EXPIRES_AT_MEMBER";
 			formatstr( this->errorMessage,
-						"Failed to find expires_at in body ('%s').\n",
+						"Failed to find expires_at in body ('%s').",
 						body.c_str() );
 
 			dprintf( D_FULLDEBUG, "Failed getToken( %s, %s, %s, %s ): '%s' (%s).\n",
@@ -377,7 +394,7 @@ bool KeystoneToken::getToken(	const string & url, string & username,
 			this->expiration = 0;
 			this->errorCode = "E_EXPIRES_AT_NOT_STRING";
 			formatstr( this->errorMessage,
-						"Attribute expires_at not string in body ('%s').\n",
+						"Attribute expires_at not string in body ('%s').",
 						body.c_str() );
 
 			dprintf( D_FULLDEBUG, "Failed getToken( %s, %s, %s, %s ): '%s' (%s).\n",
@@ -400,7 +417,7 @@ bool KeystoneToken::getToken(	const string & url, string & username,
 			this->expiration = 0;
 			this->errorCode = "E_EXPIRES_AT_NOT_VALID";
 			formatstr( this->errorMessage,
-						"Attribute expires_at not valid ('%s').\n",
+						"Attribute expires_at not valid ('%s').",
 						expirationString.c_str() );
 
 			dprintf( D_FULLDEBUG, "Failed getToken( %s, %s, %s, %s ): '%s' (%s).\n",
@@ -411,6 +428,13 @@ bool KeystoneToken::getToken(	const string & url, string & username,
 		}
 		// We could parse the microseconds, but why bother?
 		this->expiration = timegm( & expiration );
+
+		// At this point, we could also look for the service catalog, which
+		// "specifies all the services available to/for the token."  Each
+		// service may include its endpoints, each of which may specify a
+		// region and a URL.  However, since even the catalog itself is
+		// optional, it seems like we might as well just query for a region's
+		// Nova endpoint directly when necessary (caching the result).
 
 		this->errorCode = "";
 		this->errorMessage = "";
@@ -435,6 +459,135 @@ NovaRequest::NovaRequest() :
 	contentType( "application/json" ),
 	includeResponseHeader( false ) { }
 NovaRequest::~NovaRequest() { }
+
+std::map< string, string > NovaRegionEndpointCache;
+bool NovaRequest::getNovaEndpointForRegion( const string & requestedRegion ) {
+	// This forces the cache to refresh when the auth token does.
+	string hashKey = this->authToken + requestedRegion;
+	string & endpoint = NovaRegionEndpointCache[ hashKey ];
+	if(! endpoint.empty()) {
+		this->serviceURL = endpoint;
+		return true;
+	}
+
+	// We need to look up the Nova endpoint URL for this region.
+	NovaRequest regionRequest;
+	regionRequest.serviceURL = currentURL + "/v3/auth/catalog";
+	regionRequest.requestMethod = "GET";
+	regionRequest.authToken = this->authToken;
+	regionRequest.requestBody = "";
+
+	if(! regionRequest.sendRequest()) {
+		this->errorCode = regionRequest.errorCode;
+		this->errorMessage = regionRequest.errorMessage;
+		return false;
+	}
+
+	if( regionRequest.responseCode != 200 ) {
+		formatstr( this->errorCode, "E_HTTP_RESPONSE_NOT_200 (%lu)", regionRequest.responseCode );
+		this->errorMessage = regionRequest.responseString;
+		if( this->errorMessage.empty() ){
+			formatstr( this->errorMessage, "HTTP response was %lu, not 201, and no error message was returned.", regionRequest.responseCode );
+		}
+		return false;
+	}
+
+	this->serviceURL = "";
+
+#if defined(USE_RAPIDJSON)
+
+	rapidjson::Document d;
+	string & body = regionRequest.responseString;
+	d.Parse( body.c_str() );
+	if( d.HasParseError() ) {
+		this->errorCode = "E_NOT_JSON";
+		formatstr(	this->errorMessage,
+					"Failed to parse response body ('%s').",
+					body.c_str() );
+		return false;
+	}
+
+	rapidjson::Value::MemberIterator j = d.FindMember( "catalog" );
+	if( j == d.MemberEnd() ) {
+		this->errorCode = "E_NO_MEMBER";
+		formatstr(	this->errorMessage,
+					"Failed to find catalog in body ('%s').",
+					body.c_str() );
+		return false;
+	}
+
+	if(! j->value.IsArray()) {
+		this->errorCode = "E_NOT_ARRAY";
+		formatstr(	this->errorMessage,
+					"Catalog attribute not a JSON array in body ('%s').",
+					body.c_str() );
+	}
+
+	// If we ever care, we can replace the continues with warnings.
+	for( rapidjson::SizeType i = 0; i < j->value.Size(); ++i ) {
+		const rapidjson::Value & service = j->value[i];
+
+		// assert( service.type == "compute" )
+		rapidjson::Value::ConstMemberIterator serviceType = service.FindMember( "type" );
+		if( serviceType == service.MemberEnd() ) { continue; }
+		if( ! serviceType->value.IsString() ) { continue; }
+		if( 0 != strcasecmp( "compute", serviceType->value.GetString() ) ) { continue; }
+
+		// Look for the service's public endpoint.
+		rapidjson::Value::ConstMemberIterator endpoints = service.FindMember( "endpoints" );
+		if( endpoints == service.MemberEnd() ) { continue; }
+		if( ! endpoints->value.IsArray() ) { continue; }
+
+		for( rapidjson::SizeType endpointIndex = 0; endpointIndex < endpoints->value.Size(); ++endpointIndex ) {
+			const rapidjson::Value & endpoint = endpoints->value[ endpointIndex ];
+
+			// asssert( endpoint.interface == "public" )
+			rapidjson::Value::ConstMemberIterator interface = endpoint.FindMember( "interface" );
+			if( interface == endpoint.MemberEnd() ) { continue; }
+			if( ! interface->value.IsString() ) { continue; }
+			if( 0 != strcasecmp( "public", interface->value.GetString() ) ) { continue; }
+
+			// assert( endpoint.region == requestedRegion )
+			rapidjson::Value::ConstMemberIterator region = endpoint.FindMember( "region" );
+			if( region == endpoint.MemberEnd() ) { continue; }
+			if( ! region->value.IsString() ) { continue; }
+			if( 0 != strcasecmp( requestedRegion.c_str(), region->value.GetString() ) ) { continue; }
+
+			rapidjson::Value::ConstMemberIterator url = endpoint.FindMember( "url" );
+			if( url == endpoint.MemberEnd() ) { continue; }
+			if( ! url->value.IsString() ) { continue; }
+
+			this->serviceURL = url->value.GetString();
+			dprintf(	D_FULLDEBUG, "Using url '%s' for nova service in region '%s'.\n",
+						this->serviceURL.c_str(), requestedRegion.c_str() );
+		}
+	}
+
+#endif /* defined(USE_RAPIDJSON) */
+
+	if( serviceURL.empty() ) {
+		this->errorCode = "E_NOT_FOUND";
+		formatstr(	this->errorMessage,
+					"Failed to find a public endpoint for nova service in region '%s'.",
+					requestedRegion.c_str() );
+		dprintf( D_FULLDEBUG, "%s\n", body.c_str() );
+		return false;
+	}
+
+	return true;
+}
+
+bool NovaRequest::getAuthToken() {
+	const KeystoneToken & kt = KeystoneToken::get( currentURL, currentUsername, currentPassword, currentProject );
+	if(! kt.isValid()) {
+		this->errorCode = kt.getErrorCode();
+		this->errorMessage = kt.getErrorMessage();
+		return false;
+	}
+
+	this->authToken = kt.getAuthToken();
+	return true;
+}
 
 bool NovaRequest::sendRequest() {
 	// gcc really hates it when you cross the initialization of variables,
@@ -531,7 +684,16 @@ bool NovaRequest::sendRequest() {
 		}
 	}
 
-	// FIXME: use the auth token
+	if( ! this->authToken.empty() ) {
+		buf = "X-Auth-Token: " + this->authToken;
+		curl_headers = curl_slist_append( curl_headers, buf.c_str() );
+		if ( curl_headers == NULL ) {
+			this->errorCode = "E_CURL_LIB";
+			this->errorMessage = "curl_slist_append() failed.";
+			dprintf( D_ALWAYS, "curl_slist_append() failed, failing.\n" );
+			goto error_return;
+		}
+	}
 
 	buf = "Content-Type: " + this->contentType;
 	curl_headers = curl_slist_append( curl_headers, buf.c_str() );
@@ -699,34 +861,62 @@ error_return:
 KeystoneService::KeystoneService() { }
 KeystoneService::~KeystoneService() { }
 
+// KEYSTONE_SERVICE <url> <username> <password> <project>
 bool KeystoneService::workerFunction( char ** argv, int argc, string & resultLine ) {
-	assert( argc == 5 );
 	assert( strcasecmp( argv[0], "KEYSTONE_SERVICE" ) == 0 );
 
-	string url = argv[1];
-	string username = argv[2];
-	string password = argv[3];
-	string project = emptyIfNullString( argv[4] );
-
-	// begin DEBUG DEBUG DEBUG begin
-	KeystoneToken * kt = KeystoneToken::get( url, username, password, project );
-	if( kt == NULL ) {
-		dprintf( D_ALWAYS, "Failed to getToken( %s, %s, %s, %s ).\n", url.c_str(), username.c_str(), password.c_str(), project.c_str() );
+	if( ! verify_number_args( argc, 5 ) ) {
+		dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n", argc, 5, argv[0] );
+		return false;
 	}
-	// end DEBUG DEBUG DEBUG end
+
+	// NB: Since only one thread can be running at a time, we don't need to
+	// do anything special to make these assignments atomic.  However, we'd
+	// have to do something rather exotic if the worker threads could wake
+	// up out of order.
+	currentURL = argv[1];
+	currentUsername = argv[2];
+	currentPassword = argv[3];
+	currentProject = emptyIfNullString( argv[4] );
 
 	// KEYSTONE_SERVICE is defined to have no result line.
-	resultLine = "\n";
+	resultLine = "";
 	return true;
 }
 
 // ----------------------------------------------------------------------------
 
+NovaPing::NovaPing() { }
+NovaPing::~NovaPing() { }
+
 // NOVA_PING <request-id> <region>
 bool NovaPing::workerFunction( char ** argv, int argc, string & resultLine ) {
-	if( argc ) { resultLine = argv[0]; }
-	else { 	resultLine = ""; }
-	return false;
+	assert( strcasecmp( argv[0], "NOVA_PING" ) == 0 );
+
+	int requestID;
+	get_int( argv[1], & requestID );
+
+	if( ! verify_number_args( argc, 3 ) ) {
+		dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n", argc, 3, argv[0] );
+		return false;
+	}
+
+	NovaPing np;
+	if(! np.getAuthToken()) {
+		resultLine = create_failure_result( requestID, "Unable to obtain valid authorization token." );
+		return false;
+	}
+
+	// Look for the requested region's endpoint.
+	if(! np.getNovaEndpointForRegion( argv[2] )) {
+		resultLine = create_failure_result( requestID, "Unable to locate Nova endpoint for requested region." );
+		return false;
+	}
+
+	// FIXME: poke the endpoint
+
+	resultLine = create_success_result( requestID, NULL );
+	return true;
 }
 
 // ----------------------------------------------------------------------------

@@ -54,7 +54,10 @@ class NovaRequest {
 	//
 	// This could, of course, be replaced by a reference-counted pointer
 	// should memory usage become a concern.
-	bool getAuthToken( /* ... */ );
+	bool getAuthToken();
+
+	// We also need to know (and cache) region endpoint URL lookups.
+	bool getNovaEndpointForRegion( const std::string & region );
 
 	std::string serviceURL;
 	std::string contentType;
@@ -68,6 +71,9 @@ class NovaRequest {
 	std::string errorMessage;
 
 	bool includeResponseHeader;
+
+	protected:
+		std::string authToken;
 };
 
 // Nova commands
