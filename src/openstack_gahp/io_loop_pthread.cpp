@@ -819,10 +819,15 @@ static void *worker_function( void *ptr )
 		if(!handle_gahp_command(new_request) ) {
 			dprintf(D_ALWAYS, "ERROR (io_loop) processing %s\n",
 					new_request->m_raw_cmd.c_str());
-		}else {
-			dprintf(D_FULLDEBUG, "CMD(\"%s\") is done with result %s",
-					new_request->m_raw_cmd.c_str(),
-					new_request->m_result.c_str());
+		} else {
+			if(! new_request->m_result.empty()) {
+				dprintf(D_FULLDEBUG, "CMD(\"%s\") is done with result %s",
+						new_request->m_raw_cmd.c_str(),
+						new_request->m_result.c_str());
+			} else {
+				dprintf(D_FULLDEBUG, "CMD(\"%s\") is done with no result\n",
+						new_request->m_raw_cmd.c_str());
+			}
 		}
 
 		// Now we processed one request
