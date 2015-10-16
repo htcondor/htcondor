@@ -2634,104 +2634,101 @@ JICShadow::refreshSandboxCredentials()
 
 	dprintf(D_ALWAYS, "CERN: in refreshSandboxCredentials()\n");
 
+	// poor, abuse return code.  used for booleans and syscalls, with
+	// opposite meanings.  assume failure.
+	int rc = false;
+
+	// the buffer
+	char  *ccbuf = 0;
+	size_t cclen = 0;
+
+	// get username
+	MyString user = get_user_loginname();
 
 	// construct filename to stat
 	char* cred_dir = param("SEC_CREDENTIAL_DIRECTORY");
 	if(!cred_dir) {
 		dprintf(D_ALWAYS, "ERROR: in refreshSandboxCredentials() but SEC_CREDENTIAL_DIRECTORY not defined!\n");
-		return false;
+		rc = false;
+		goto resettimer;
 	}
-
-	// get username
-	MyString user = get_user_loginname();
 
 	// stat the file
 	char ccfilename[PATH_MAX];
 	sprintf(ccfilename, "%s%c%s.cc", cred_dir, DIR_DELIM_CHAR, user.c_str());
 	struct stat syscred;
-	int rc = stat(ccfilename, &syscred);
+	rc = stat(ccfilename, &syscred);
 	if (rc!=0) {
 		dprintf(D_ALWAYS, "ERROR: in refreshSandboxCredentials() but %s is gone!\n", ccfilename );
-		return false;
+		rc = false;
+		goto resettimer;
 	}
 
 	// has it been updated?
-	if (memcmp(&m_sandbox_creds_last_update, &syscred.st_mtime, sizeof(time_t)) != 0) {
-		// secure copy to sandbox
-		char sandboxccfilename[PATH_MAX];
-		char sandboxcctmpfilename[PATH_MAX];
-		sprintf(sandboxccfilename, "%s%c%s.cc", Starter->GetWorkingDir(), DIR_DELIM_CHAR, user.c_str());
-		sprintf(sandboxcctmpfilename, "%s%c%s.cc.tmp", Starter->GetWorkingDir(), DIR_DELIM_CHAR, user.c_str());
-
-		dprintf(D_ALWAYS, "CERN: copying %s as root to %s as user %s\n",
-			ccfilename, sandboxcctmpfilename, user.c_str());
-
-		// open the credential cache as root
-		priv_state priv = set_root_priv();
-		FILE* fp = safe_fopen_wrapper_follow(ccfilename, "r");
-		int save_errno = errno;
-		set_priv(priv);
-		if (fp == NULL) {
-			dprintf(D_FULLDEBUG,
-				"error opening user credential (%s), %s (errno: %d)\n",
-				ccfilename,
-				strerror(save_errno),
-				save_errno);
-			return false;
-		}
-
-		// since we just called stat we know the size, although there's
-		// a super-tiny race.  to avoid it, we malloc and read up to a
-		// little more than double.  these things are typically very
-		// small, on the order of 1k.
-		size_t cclen = 2048 + 2 * syscred.st_size;
-		char *ccbuf = (char*)malloc(cclen);
-
-		// now, read the original credential (and update the size if it changed)
-		cclen = fread(ccbuf, 1, cclen, fp);
-		if (cclen==0) {
-			dprintf(D_ALWAYS, "ERROR: in refreshSandboxCredentials(), got short fread()!\n");
-			free(ccbuf);
-			return false;
-		}
-		rc = fclose(fp);
-		if (rc!=0) {
-			dprintf(D_ALWAYS, "ERROR: in refreshSandboxCredentials(), fclose() failed!\n");
-			free(ccbuf);
-			return false;
-		}
-
-		// as user, write tmp file securely
-		rc = secure_write_file(sandboxcctmpfilename, ccbuf, cclen);
-		if (rc!=SUCCESS) {
-			dprintf(D_ALWAYS, "ERROR: secure_write_file(%s,ccbuf,%lu) failed with %i\n", sandboxcctmpfilename,cclen,rc);
-			free(ccbuf);
-			return false;
-		}
-
-		// no longer need this
-		free(ccbuf);
-
-		// as user, atomically move tmp file into correct location
-		rc = rename(sandboxcctmpfilename, sandboxccfilename);
-		if (rc!=0) {
-			dprintf(D_ALWAYS, "ERROR: rename(%s,%s) failed with %i\n", sandboxcctmpfilename,sandboxccfilename,rc);
-			return false;
-		}
-		dprintf(D_ALWAYS, "CERN: renamed %s to %s\n", sandboxcctmpfilename, sandboxccfilename);
-
-		// aklog now if we decide to go that route
-		// my_popen_env("aklog", KRB5CCNAME=sandbox copy of .cc)
-
-		// store the mtime of the current copy
-		memcpy(&m_sandbox_creds_last_update, &syscred.st_mtime, sizeof(time_t));
-
-		// only need to do this once
-		if(getKRB5CCNAME() == NULL) {
-			dprintf(D_ALWAYS, "CERN: configuring job to use KRB5CCNAME %s\n", sandboxccfilename);
-			setKRB5CCNAME(sandboxccfilename);
-		}
+	if (memcmp(&m_sandbox_creds_last_update, &syscred.st_mtime, sizeof(time_t)) == 0) {
+		// no update?  no problem, we'll check again later
+		rc = true;
+		goto resettimer;
 	}
+
+	// if it has been updated, we need to deal with it.
+	//
+	// securely copy the cc to sandbox.
+	//
+	char sandboxccfilename[PATH_MAX];
+	char sandboxcctmpfilename[PATH_MAX];
+	sprintf(sandboxccfilename, "%s%c%s.cc", Starter->GetWorkingDir(), DIR_DELIM_CHAR, user.c_str());
+	sprintf(sandboxcctmpfilename, "%s%c%s.cc.tmp", Starter->GetWorkingDir(), DIR_DELIM_CHAR, user.c_str());
+
+	dprintf(D_ALWAYS, "CERN: copying %s as root to %s as user %s\n",
+		ccfilename, sandboxcctmpfilename, user.c_str());
+
+	// read entire ccfilename as root into ccbuf
+	if (!read_secure_file(ccfilename, &ccbuf, &cclen, true)) {
+		dprintf(D_ALWAYS, "ERROR: read_secure_file(%s,ccbuf,%lu) failed\n", sandboxcctmpfilename,cclen);
+		rc = false;
+		goto resettimer;
+	}
+
+	// as user, write tmp file securely
+	if (SUCCESS != secure_write_file(sandboxcctmpfilename, ccbuf, cclen)) {
+		dprintf(D_ALWAYS, "ERROR: secure_write_file(%s,ccbuf,%lu) failed\n", sandboxcctmpfilename,cclen);
+		rc = false;
+		goto resettimer;
+	}
+
+	// as user, atomically move tmp file into correct location
+	rc = rename(sandboxcctmpfilename, sandboxccfilename);
+	if (rc!=0) {
+		dprintf(D_ALWAYS, "ERROR: rename(%s,%s) failed with %i\n", sandboxcctmpfilename,sandboxccfilename,errno);
+		rc = false;
+		goto resettimer;
+	}
+
+	dprintf(D_ALWAYS, "CERN: renamed %s to %s\n", sandboxcctmpfilename, sandboxccfilename);
+
+	// aklog now if we decide to go that route
+	// my_popen_env("aklog", KRB5CCNAME=sandbox copy of .cc)
+
+	// store the mtime of the current copy
+	memcpy(&m_sandbox_creds_last_update, &syscred.st_mtime, sizeof(time_t));
+
+	// only need to do this once
+	if(getKRB5CCNAME() == NULL) {
+		dprintf(D_ALWAYS, "CERN: configuring job to use KRB5CCNAME %s\n", sandboxccfilename);
+		setKRB5CCNAME(sandboxccfilename);
+	}
+
+	// if we made it here, we succeeded!
+	rc = true;
+
+resettimer:
+	if(ccbuf) {
+		free(ccbuf);
+		ccbuf = NULL;
+	}
+
+	// rc at this point should be: true==SUCCESS, or false==FAILURE
 
 	// set/reset timer
 	int sec_cred_refresh = param_integer("SEC_CREDENTIAL_REFRESH", 300);
@@ -2751,8 +2748,8 @@ JICShadow::refreshSandboxCredentials()
 		dprintf(D_ALWAYS, "CERN: cred refresh is DISABLED.\n");
 	}
 
-	// return success!
-	return true;
+	// return boolean value true on success
+	return (rc);
 }
 
 void
