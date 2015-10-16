@@ -122,7 +122,7 @@ bool write_secure_file(const char* path, const char* data, size_t len, bool as_r
 	return true;
 }
 
-int ZKM_UNIX_STORE_CRED(const char *user, const int len, const char *pw, int mode) {
+int ZKM_UNIX_STORE_CRED(const char *user, const char *pw, const int len, int mode) {
 	dprintf(D_ALWAYS, "ZKM: store cred user %s len %i mode %i contents: {%s}\n", user, len, mode, pw);
 
 	char* cred_dir = param("SEC_CREDENTIAL_DIRECTORY");
@@ -473,7 +473,7 @@ char* getStoredCredential(const char *username, const char *domain)
 	return pw;
 }
 
-int store_cred_service(const char *user, const char *pw, int mode)
+int store_cred_service(const char *user, const char *cred, const size_t credlen, int mode)
 {
 	const char *at = strchr(user, '@');
 	if ((at == NULL) || (at == user)) {
@@ -484,7 +484,7 @@ int store_cred_service(const char *user, const char *pw, int mode)
 	    (memcmp(user, POOL_PASSWORD_USERNAME, at - user) != 0))
 	{
 		dprintf(D_ALWAYS, "ZKM: GOT UNIX STORE CRED\n");
-		return ZKM_UNIX_STORE_CRED(user, 666, pw, mode);
+		return ZKM_UNIX_STORE_CRED(user, cred, credlen, mode);
 	}
 
 	//
@@ -504,18 +504,18 @@ int store_cred_service(const char *user, const char *pw, int mode)
 	switch (mode) {
 	case ADD_MODE: {
 		answer = FAILURE;
-		size_t pw_sz = strlen(pw);
-		if (!pw_sz) {
+		size_t cred_sz = strlen(cred);
+		if (!cred_sz) {
 			dprintf(D_ALWAYS,
 			        "store_cred_service: empty password not allowed\n");
 			break;
 		}
-		if (pw_sz > MAX_PASSWORD_LENGTH) {
+		if (cred_sz > MAX_PASSWORD_LENGTH) {
 			dprintf(D_ALWAYS, "store_cred_service: password too large\n");
 			break;
 		}
 		priv_state priv = set_root_priv();
-		answer = write_password_file(filename, pw);
+		answer = write_password_file(filename, cred);
 		set_priv(priv);
 		break;
 	}
@@ -832,7 +832,7 @@ void store_cred_handler(void *, int /*i*/, Stream *s)
 				dprintf(D_ALWAYS, "ERROR: attempt to set pool password via STORE_CRED! (must use STORE_POOL_CRED)\n");
 				answer = FAILURE;
 			} else {
-				answer = store_cred_service(user,pw,mode);
+				answer = store_cred_service(user,pw,strlen(pw)+1,mode);
 			}
 		}
 	}
@@ -947,11 +947,11 @@ void store_pool_cred_handler(void *, int  /*i*/, Stream *s)
 
 	// do the real work
 	if (pw) {
-		result = store_cred_service(username.Value(), pw, ADD_MODE);
+		result = store_cred_service(username.Value(), pw, strlen(pw)+1, ADD_MODE);
 		SecureZeroMemory(pw, strlen(pw));
 	}
 	else {
-		result = store_cred_service(username.Value(), NULL, DELETE_MODE);
+		result = store_cred_service(username.Value(), NULL, 0, DELETE_MODE);
 	}
 
 	s->encode();
@@ -995,7 +995,7 @@ store_cred(const char* user, const char* pw, int mode, Daemon* d, bool force) {
 
 	if ( is_root() && d == NULL ) {
 			// do the work directly onto the local registry
-		return_val = store_cred_service(user,pw,mode);
+		return_val = store_cred_service(user,pw,strlen(pw)+1,mode);
 	} else {
 			// send out the request remotely.
 
