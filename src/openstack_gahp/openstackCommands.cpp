@@ -903,17 +903,52 @@ bool NovaPing::workerFunction( char ** argv, int argc, string & resultLine ) {
 
 	NovaPing np;
 	if(! np.getAuthToken()) {
-		resultLine = create_failure_result( requestID, "Unable to obtain valid authorization token." );
+		string error;
+		formatstr( error, "Unable to obtain valid authorization token: '%s' (%s).",
+			np.errorMessage.c_str(), np.errorCode.c_str() );
+		resultLine = create_failure_result( requestID, error.c_str() );
 		return false;
 	}
 
 	// Look for the requested region's endpoint.
 	if(! np.getNovaEndpointForRegion( argv[2] )) {
-		resultLine = create_failure_result( requestID, "Unable to locate Nova endpoint for requested region." );
+		string error;
+		formatstr( error, "Unable to locate Nova endpoint for requested region: '%s' (%s).",
+			np.errorMessage.c_str(), np.errorCode.c_str() );
+		resultLine = create_failure_result( requestID, error.c_str() );
 		return false;
 	}
 
-	// FIXME: poke the endpoint
+	// We could grab the version numbers, but the URLs we're getting back
+	// include both the version number and the tenant ID already, so let's
+	// not be clever.  Instead, just grab the image list.
+	np.serviceURL += "/images";
+	np.requestMethod = "GET";
+	np.requestBody = "";
+	if(! np.sendRequest()) {
+		string error;
+		formatstr( error, "Unable to send ping: '%s' (%s).",
+			np.errorMessage.c_str(), np.errorCode.c_str() );
+		resultLine = create_failure_result( requestID, error.c_str() );
+		return false;
+	}
+
+	if( np.responseCode != 200 && np.responseCode != 203 ) {
+		formatstr( np.errorCode, "E_HTTP_RESPONSE_NEITHER_200_NOR_203 (%lu)", np.responseCode );
+		np.errorMessage = np.responseString;
+		if( np.errorMessage.empty() ){
+			formatstr( np.errorMessage,
+				"HTTP response was %lu, not 200 nor 203, and no error message was returned.",
+				np.responseCode );
+		}
+
+		string error;
+		formatstr( error, "Ping failed: '%s' (%s).",
+			np.errorMessage.c_str(), np.errorCode.c_str() );
+		dprintf( D_FULLDEBUG, "%s\n", error.c_str() );
+		resultLine = create_failure_result( requestID, error.c_str() );
+		return false;
+	}
 
 	resultLine = create_success_result( requestID, NULL );
 	return true;
