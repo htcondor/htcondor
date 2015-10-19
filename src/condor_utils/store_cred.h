@@ -89,7 +89,5 @@ bool isValidCredential( const char *user, const char* pw );
 */
 char* getStoredCredential(const char *user, const char *domain);
 
-int get_credmon_pid();
-
 #endif // STORE_CRED_H
 

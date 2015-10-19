@@ -28,6 +28,7 @@
 #include "store_cred.h"
 #include "condor_config.h"
 #include "ipv6_hostname.h"
+#include "credmon_interface.h"
 
 static int code_store_cred(Stream *socket, char* &user, char* &pw, int &mode);
 
@@ -181,40 +182,10 @@ int ZKM_UNIX_STORE_CRED(const char *user, const char *pw, const int len, int mod
 		return FAILURE;
 	}
 
-	// now signal the credmon
-	pid_t credmon_pid = get_credmon_pid();
-	if (credmon_pid == -1) {
-		dprintf(D_ALWAYS, "ZKM: failed to get pid of credmon.\n");
-		return FAILURE;
-	}
-
-	dprintf(D_ALWAYS, "ZKM: sending SIGHUP to credmon pid %i\n", credmon_pid);
-	rc = kill(credmon_pid, SIGHUP);
-	if (rc == -1) {
-		dprintf(D_ALWAYS, "ZKM: failed to signal credmon: %i\n", errno);
-		return FAILURE;
-	}
-
-	// now poll for existence of .cc file
-	int retries = 20;
-	while (retries > 0) {
-		rc = stat(ccfilename, &junk_buf);
-		if (rc==-1) {
-			dprintf(D_ALWAYS, "ZKM: errno %i, waiting for %s to appear (%i seconds left)\n", errno, ccfilename, retries);
-			sleep(1);
-			retries--;
-		} else {
-			break;
-		}
-	}
-	if (retries == 0) {
-		dprintf(D_ALWAYS, "ZKM: FAILURE: credmon never created %s after 20 seconds!\n", ccfilename);
-		return FAILURE;
-	}
-
-	dprintf(D_ALWAYS, "ZKM: SUCCESS: file %s found after %i seconds\n", ccfilename, 20-retries);
+	// credential succesfully stored
 	return SUCCESS;
 }
+
 
 // read a "secure" file.
 //
@@ -833,6 +804,10 @@ void store_cred_handler(void *, int /*i*/, Stream *s)
 				answer = FAILURE;
 			} else {
 				answer = store_cred_service(user,pw,strlen(pw)+1,mode);
+				if(answer == SUCCESS) {
+					// THIS WILL BLOCK
+					answer = credmon_signal_and_poll(user);
+				}
 			}
 		}
 	}
@@ -1263,23 +1238,4 @@ get_password() {
 	return buf;
 }
 
-static int zkm_credmon_pid = -1;
-
-int get_credmon_pid() {
-	if(zkm_credmon_pid == -1) {
-		// get pid of credmon
-		MyString cred_dir;
-		param(cred_dir, "SEC_CREDENTIAL_DIRECTORY");
-		MyString pid_path;
-		pid_path.formatstr("%s/pid", cred_dir.c_str());
-		FILE* credmon_pidfile = fopen(pid_path.c_str(), "r");
-		int num_items = fscanf(credmon_pidfile, "%i", &zkm_credmon_pid);
-		fclose(credmon_pidfile);
-		if (num_items != 1) {
-			zkm_credmon_pid = -1;
-		}
-		dprintf(D_ALWAYS, "CERN: get_credmon_pid %s == %i\n", pid_path.c_str(), zkm_credmon_pid);
-	}
-	return zkm_credmon_pid;
-}
 

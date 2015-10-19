@@ -43,6 +43,7 @@
 #include "condor_mkstemp.h"
 #include "globus_utils.h"
 #include "store_cred.h"
+#include "credmon_interface.h"
 
 #include <algorithm>
 
@@ -2581,37 +2582,11 @@ JICShadow::initUserCredentials() {
 	}
 
 	// now signal the credmon
-	pid_t credmon_pid = get_credmon_pid();
-	if (credmon_pid == -1) {
-		dprintf(D_ALWAYS, "ZKM: failed to get pid of credmon.\n");
+	rc = credmon_signal_and_poll(user.c_str());
+	if(!rc) {
+		dprintf(D_ALWAYS, "ZKM: credmon failed to produce .cc file!");
 		return false;
 	}
-
-	dprintf(D_ALWAYS, "ZKM: sending SIGHUP to credmon pid %i\n", credmon_pid);
-	rc = kill(credmon_pid, SIGHUP);
-	if (rc == -1) {
-		dprintf(D_ALWAYS, "ZKM: failed to signal credmon: %i\n", errno);
-		return false;
-	}
-
-	// now poll for existence of .cc file
-	int retries = 20;
-	while (retries > 0) {
-		rc = stat(ccfilename, &junk_buf);
-		if (rc==-1) {
-			dprintf(D_ALWAYS, "ZKM: errno %i, waiting for %s to appear (%i seconds left)\n", errno, ccfilename, retries);
-			sleep(1);
-			retries--;
-		} else {
-			break;
-		}
-	}
-	if (retries == 0) {
-		dprintf(D_ALWAYS, "ZKM: FAILURE: credmon never created %s after 20 seconds!\n", ccfilename);
-		return false;
-	}
-
-	dprintf(D_ALWAYS, "ZKM: file %s found after %i seconds\n", ccfilename, 20-retries);
 
 	// this will set up the credentials in the sandbox and set a timer to
 	// do it periodically.  propagate any errors.
