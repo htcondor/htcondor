@@ -325,6 +325,13 @@ See
 section~\ref{sec:HA-Config-File-Entries},
 for definitions of these configuration variables.
 
+The \Condor{had} and \Condor{replication} daemons cannot use the
+\Condor{shared\_port} daemon.
+They require their own separate ports, specified in the configuration
+file (see example below).
+Other daemons on the machine, including the \Condor{negotiator}, can
+use \Condor{shared\_port} when the high availability daemons are in use.
+
 The stabilization period is the time it takes for the 
 \Condor{had} daemons
 to detect a change in the pool state such as
