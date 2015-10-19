@@ -461,6 +461,7 @@ Job::get_file(const MyString &name,
               unsigned char *&data,
 			  CondorError &errstack)
 {
+	memset(data, 0, length);
 	int file = safe_open_wrapper_follow((spoolDirectory + DIR_DELIM_STRING + name).Value(),
 					O_RDONLY | _O_BINARY,
 					0);
