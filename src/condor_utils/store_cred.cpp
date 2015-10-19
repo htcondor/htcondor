@@ -169,59 +169,20 @@ char* getStoredCredential(const char *username, const char *domain)
 		return NULL;
 	}
 
-	// open the pool password file with root priv
-	priv_state priv = set_root_priv();
-	FILE* fp = safe_fopen_wrapper_follow(filename, "r");
-	int save_errno = errno;
-	set_priv(priv);
-	if (fp == NULL) {
-		dprintf(D_FULLDEBUG,
-		        "error opening SEC_PASSWORD_FILE (%s), %s (errno: %d)\n",
-		        filename,
-		        strerror(save_errno),
-		        save_errno);
-		free(filename);
-		return NULL;
+	char  *buffer;
+	size_t len;
+	bool rc = read_secure_file(filename, &buffer, &len, true);
+	if(rc) {
+		// undo the trivial scramble
+		char *pw = (char *)malloc(len + 1);
+		simple_scramble(pw, buffer, len);
+		pw[len] = '\0';
+		free(buffer);
+		return pw;
 	}
 
-	// make sure the file owner matches our real uid
-	struct stat st;
-	if (fstat(fileno(fp), &st) == -1) {
-		dprintf(D_ALWAYS,
-		        "fstat failed on SEC_PASSWORD_FILE (%s), %s (errno: %d)\n",
-		        filename,
-		        strerror(errno),
-		        errno);
-		fclose(fp);
-		free(filename);
-		return NULL;
-	}
-	free(filename);
-	if (st.st_uid != get_my_uid()) {
-		dprintf(D_ALWAYS,
-		        "error: SEC_PASSWORD_FILE must be owned "
-		            "by Condor's real uid\n");
-		fclose(fp);
-		return NULL;
-	}
-
-	char scrambled_pw[MAX_PASSWORD_LENGTH + 1];
-	size_t sz = fread(scrambled_pw, 1, MAX_PASSWORD_LENGTH, fp);
-	fclose(fp);
-
-	if (sz == 0) {
-		dprintf(D_ALWAYS, "error reading pool password (file may be empty)\n");
-		return NULL;
-	}
-	scrambled_pw[sz] = '\0';  // ensure the last char is nil
-
-	// undo the trivial scramble
-	int len = strlen(scrambled_pw);
-	char *pw = (char *)malloc(len + 1);
-	simple_scramble(pw, scrambled_pw, len);
-	pw[len] = '\0';
-
-	return pw;
+	dprintf(D_ALWAYS, "getStoredCredential(): read_secure_file(%s) failed!\n", filename);
+	return NULL;
 }
 
 int store_cred_service(const char *user, const char *cred, const size_t credlen, int mode)
