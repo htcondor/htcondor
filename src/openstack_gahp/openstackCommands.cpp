@@ -521,6 +521,7 @@ bool NovaRequest::getNovaEndpointForRegion( const string & requestedRegion ) {
 		formatstr(	this->errorMessage,
 					"Catalog attribute not a JSON array in body ('%s').",
 					body.c_str() );
+		return false;
 	}
 
 	// If we ever care, we can replace the continues with warnings.
@@ -974,11 +975,126 @@ bool NovaServerDelete::workerFunction( char ** argv, int argc, string & resultLi
 
 // ----------------------------------------------------------------------------
 
+NovaServerList::NovaServerList() { }
+NovaServerList::~NovaServerList() { }
+
 // NOVA_SERVER_LIST <request-id> <region> <filter>
 bool NovaServerList::workerFunction( char ** argv, int argc, string & resultLine ) {
-	if( argc ) { resultLine = argv[0]; }
-	else { 	resultLine = ""; }
-	return false;
+	assert( strcasecmp( argv[0], "NOVA_SERVER_LIST" ) == 0 );
+
+	int requestID;
+	get_int( argv[1], & requestID );
+
+	if( ! verify_number_args( argc, 4 ) ) {
+		dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n", argc, 4, argv[0] );
+		return false;
+	}
+
+	NovaServerList nsl;
+	if(! nsl.getAuthToken()) {
+		string error;
+		formatstr( error, "Unable to obtain valid authorization token: '%s' (%s).",
+			nsl.errorMessage.c_str(), nsl.errorCode.c_str() );
+		resultLine = create_failure_result( requestID, error.c_str() );
+		return false;
+	}
+
+	// Look for the requested region's endpoint.
+	if(! nsl.getNovaEndpointForRegion( argv[2] )) {
+		string error;
+		formatstr( error, "Unable to locate Nova endpoint for requested region: '%s' (%s).",
+			nsl.errorMessage.c_str(), nsl.errorCode.c_str() );
+		resultLine = create_failure_result( requestID, error.c_str() );
+		return false;
+	}
+
+	nsl.serviceURL += "/servers";
+	nsl.requestMethod = "GET";
+	nsl.requestBody = "";
+
+	// FIXME: wait a minute, what filter?
+
+	if(! nsl.sendRequest()) {
+		string error;
+		formatstr( error, "Failed to request server list: '%s' (%s).",
+			nsl.errorMessage.c_str(), nsl.errorCode.c_str() );
+		resultLine = create_failure_result( requestID, error.c_str() );
+		return false;
+	}
+
+	if( nsl.responseCode != 200 && nsl.responseCode != 203 ) {
+		formatstr( nsl.errorCode, "E_HTTP_RESPONSE_NEITHER_200_NOR_203 (%lu)", nsl.responseCode );
+		nsl.errorMessage = nsl.responseString;
+		if( nsl.errorMessage.empty() ){
+			formatstr( nsl.errorMessage,
+				"HTTP response was %lu, not 200 nor 203, and no error message was returned.",
+				nsl.responseCode );
+		}
+
+		string error;
+		formatstr( error, "Server list failed: '%s' (%s).",
+			nsl.errorMessage.c_str(), nsl.errorCode.c_str() );
+		dprintf( D_FULLDEBUG, "%s\n", error.c_str() );
+		resultLine = create_failure_result( requestID, error.c_str() );
+		return false;
+	}
+
+	rapidjson::Document d;
+	string & body = nsl.responseString;
+	d.Parse( body.c_str() );
+	if( d.HasParseError() ) {
+		nsl.errorCode = "E_NOT_JSON";
+		formatstr(	nsl.errorMessage,
+					"Failed to parse response body ('%s').",
+					body.c_str() );
+		resultLine = create_failure_result( requestID, nsl.errorMessage.c_str(), nsl.errorCode.c_str() );
+		return false;
+	}
+
+	rapidjson::Value::MemberIterator serverList = d.FindMember( "servers" );
+	if( serverList == d.MemberEnd() ) {
+		nsl.errorCode = "E_NO_MEMBER";
+		formatstr(	nsl.errorMessage,
+					"Failed to find server list in body ('%s').",
+					body.c_str() );
+		resultLine = create_failure_result( requestID, nsl.errorMessage.c_str(), nsl.errorCode.c_str() );
+		return false;
+	}
+
+	if(! serverList->value.IsArray()) {
+		nsl.errorCode = "E_NOT_ARRAY";
+		formatstr(	nsl.errorMessage,
+					"Servers attribute not a JSON array in body ('%s').",
+					body.c_str() );
+		resultLine = create_failure_result( requestID, nsl.errorMessage.c_str(), nsl.errorCode.c_str() );
+		return false;
+	}
+
+	StringList reply;
+	// If we ever care, we can replace the continues with warnings.
+	for( rapidjson::SizeType i = 0; i < serverList->value.Size(); ++i ) {
+		const rapidjson::Value & server = serverList->value[i];
+
+		rapidjson::Value::ConstMemberIterator serverID = server.FindMember( "id" );
+		if( serverID == server.MemberEnd() ) { continue; }
+		if( ! serverID->value.IsString() ) { continue; }
+
+		rapidjson::Value::ConstMemberIterator serverName = server.FindMember( "name" );
+		if( serverName == server.MemberEnd() ) { continue; }
+		if( ! serverName->value.IsString() ) { continue; }
+
+		// Only create a reply-list entry if we've got both halves.
+		reply.append( serverID->value.GetString() );
+		reply.append( serverName->value.GetString() );
+	}
+
+	string count;
+	formatstr( count, "%d", reply.number() / 2 );
+	reply.rewind();
+	reply.insert( count.c_str() );
+
+	resultLine = create_success_result( requestID, & reply );
+	return true;
 }
 
 // ----------------------------------------------------------------------------
