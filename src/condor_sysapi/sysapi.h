@@ -158,8 +158,17 @@ const char* sysapi_ckptpltfrm_raw( void );
 const char* sysapi_ckptpltfrm( void );
 
 /* determine the instruction set extensions on x86 machines */
-const char* sysapi_processor_flags_raw( void );
-const char* sysapi_processor_flags( void );
+/* Would like to just use a classad here, but were in a 
+ * classad-free layer */
+struct sysapi_cpuinfo {
+	const char *processor_flags;
+	int model_no;
+	int family;
+	int cache;
+};
+
+const struct sysapi_cpuinfo *sysapi_processor_flags_raw( void );
+const struct sysapi_cpuinfo *sysapi_processor_flags( void );
 
 /* determine the syscall gate address on machines where that makes sense */
 const char * sysapi_vsyscall_gate_addr_raw( void );

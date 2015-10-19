@@ -1037,7 +1037,7 @@ MachAttributes::publish( ClassAd* cp, amask_t how_much)
 #endif
 
 	// Advertise processor flags.
-	const char * pflags = sysapi_processor_flags();
+	const char * pflags = sysapi_processor_flags()->processor_flags;
 	if (pflags) {
 		char * savePointer = NULL;
 		char * processor_flags = strdup( pflags );
@@ -1049,6 +1049,18 @@ MachAttributes::publish( ClassAd* cp, amask_t how_much)
 			flag = strtok_r( NULL, " ", & savePointer );
 		}
 		free( processor_flags );
+	}
+	int modelNo = -1;
+	if ((modelNo = sysapi_processor_flags()->model_no) > 0) {
+		cp->Assign(ATTR_CPU_MODEL_NUMBER, modelNo);
+	}
+	int family = -1;
+	if ((family = sysapi_processor_flags()->family) > 0) {
+		cp->Assign(ATTR_CPU_FAMILY, family);
+	}
+	int cache = -1;
+	if ((cache = sysapi_processor_flags()->cache) > 0) {
+		cp->Assign(ATTR_CPU_CACHE_SIZE, cache);
 	}
 }
 
