@@ -101,118 +101,6 @@ UniShadow::updateFromStarterClassAd(ClassAd* update_ad) {
 }
 
 
-int
-UniShadow::getUserCredential(int /*i*/, Stream *s)
-{
-	char *client_user = NULL;
-	char *client_domain = NULL;
-	char *client_ipaddr = NULL;
-	int result;
-	char * user = NULL;
-	char * domain = NULL;
-	char * password = NULL;
-
-	/* Check our connection.  We must be very picky since we are talking
-	   about sending out passwords.  We want to make certain
-	     a) the Stream is a ReliSock (tcp)
-		 b) it is authenticated (and thus authorized by daemoncore)
-		 c) it is encrypted
-	*/
-
-	if ( s->type() != Stream::reli_sock ) {
-		dprintf(D_ALWAYS,
-			"WARNING - password fetch attempt via UDP from %s\n",
-				((Sock*)s)->peer_addr().to_sinful().Value());
-		// WHAT DOES RETURN VALUE MEAN?
-		return TRUE;
-	}
-
-	ReliSock* sock = (ReliSock*)s;
-
-	if ( !sock->triedAuthentication() ) {
-		dprintf(D_ALWAYS,
-			"WARNING - password fetch attempt without authentication from %s\n",
-				sock->peer_addr().to_sinful().Value());
-		goto bail_out;
-	}
-
-	if ( !sock->get_encryption() ) {
-		dprintf(D_ALWAYS,
-			"WARNING - password fetch attempt without encryption from %s\n",
-				sock->peer_addr().to_sinful().Value());
-		goto bail_out;
-	}
-
-		// Get the username and domain from the wire
-
-	sock->decode();
-
-	result = sock->code(user);
-	if( !result ) {
-		dprintf(D_ALWAYS, "get_passwd_handler: Failed to recv user.\n");
-		goto bail_out;
-	}
-
-	result = sock->code(domain);
-	if( !result ) {
-		dprintf(D_ALWAYS, "get_passwd_handler: Failed to recv domain.\n");
-		goto bail_out;
-	}
-
-	result = sock->end_of_message();
-	if( !result ) {
-		dprintf(D_ALWAYS, "get_passwd_handler: Failed to recv eom.\n");
-		goto bail_out;
-	}
-
-	client_user = strdup(sock->getOwner());
-	client_domain = strdup(sock->getDomain());
-	client_ipaddr = strdup(sock->peer_addr().to_sinful().Value());
-
-		// Now fetch the password from the secure store --
-		// If not LocalSystem, this step will fail.
-	password = getStoredCredential(user,domain);
-
-	if (!password) {
-		dprintf(D_ALWAYS,
-			"Failed to fetch password for %s@%s requested by %s@%s at %s\n",
-			user,domain,
-			client_user,client_domain,client_ipaddr);
-		goto bail_out;
-	}
-
-		// Got the password, send it
-	sock->encode();
-	result = sock->code(password);
-	if( !result ) {
-		dprintf(D_ALWAYS, "get_passwd_handler: Failed to send password.\n");
-		goto bail_out;
-	}
-
-	result = sock->end_of_message();
-	if( !result ) {
-		dprintf(D_ALWAYS, "get_passwd_handler: Failed to send eom.\n");
-		goto bail_out;
-	}
-
-		// Now that we sent the password, immediately zero it out from ram
-	//SecureZeroMemory(password,strlen(password));
-	bzero(password,strlen(password));
-
-	dprintf(D_ALWAYS,
-			"Fetched user %s@%s password requested by %s@%s at %s\n",
-			user,domain,client_user,client_domain,client_ipaddr);
-
-bail_out:
-	if (client_user) free(client_user);
-	if (client_domain) free(client_domain);
-	if (client_ipaddr) free(client_ipaddr);
-	if (user) free(user);
-	if (domain) free(domain);
-	if (password) free(password);
-	return TRUE;
-}
-
 void
 UniShadow::init( ClassAd* job_ad, const char* schedd_addr, const char *xfer_queue_contact_info )
 {
@@ -245,8 +133,8 @@ UniShadow::init( ClassAd* job_ad, const char* schedd_addr, const char *xfer_queu
 		// credential if it needs to.
 	daemonCore->
 		Register_Command( CREDD_GET_PASSWD, "CREDD_GET_PASSWD",
-						  (CommandHandlercpp)&UniShadow::getUserCredential,
-						  "UniShadow::getUserCredential", this, DAEMON );
+						  (CommandHandler)&get_cred_handler,
+						  "get_cred_handler", NULL, DAEMON );
 }
 
 void

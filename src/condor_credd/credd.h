@@ -34,7 +34,6 @@ public:
 
 private:
 
-	void get_passwd_handler(int, Stream*);
 	void nop_handler(int, Stream*);
 	void initialize_classad();
 	void update_collector();
