@@ -27,7 +27,7 @@
  * complain to the log if the processor flag strings aren't all the same.
  */
 
-static struct sysapi_cpuinfo theInfo {0, -1, -1, -1};
+static struct sysapi_cpuinfo theInfo;
 
 const struct sysapi_cpuinfo *sysapi_processor_flags_raw( void ) {
     sysapi_internal_reconfig();
