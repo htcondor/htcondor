@@ -15,6 +15,35 @@ New features will be added in the 8.5.x development series.
 
 The details of each version are described below.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-8-4-2}Version 8.4.2}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item HTCondor version 8.4.2 not yet released.
+%\item HTCondor version 8.4.2 released on Month Date, 2015.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-8-4-1}Version 8.4.1}
@@ -32,6 +61,11 @@ The details of each version are described below.
 \noindent New Features:
 
 \begin{itemize}
+
+\item Added support to allow an admin to always volume mount
+	certain directories into docker universe containers running
+	on a host.
+\Ticket{5308}
 
 \item Added four policy metaknobs to simplify configuring a policy
 	to either preempt or hold jobs that use more memory
@@ -94,7 +128,7 @@ invoking a transformation hook.
 \item Fixed several memory leaks in the \Prog{nordugrid\_gahp}.
 \Ticket{5322}
 
-\item Improved the \Prob{batch\_gahp} to better handle batch systems
+\item Improved the \Prog{batch\_gahp} to better handle batch systems
 that reuse job IDs.
 \Ticket{5062}
 

@@ -51,7 +51,7 @@ my $COVERITY_ANALYSIS     = "remote_task.coverity_analysis";
 
 my $taskname = "";
 my $execstr = "";
-my $VCVER = "VC9";
+my $VCVER = "VC11";
 
 # autoflush our STDOUT
 $| = 1;
@@ -97,10 +97,10 @@ if ($ENV{NMI_PLATFORM} =~ /_fedora(_)?[12][0-9]/i) {
 }
 
 # enable use of VisualStudio 2012 (vs11) on the Windows8 platform
-my $enable_vs11 = 1;
-if ($ENV{NMI_PLATFORM} =~ /Windows7/i) { $enable_vs11 = 0; }
-if ($enable_vs11 && $ENV{VS110COMNTOOLS} =~ /common7/i) {
-	$VCVER = "VC11";
+my $enable_vs9 = 0;
+#uncomment to use vs9 on Win7 platform# if ($ENV{NMI_PLATFORM} =~ /Windows7/i) { $enable_vs9 = 1; }
+if ($enable_vs9 && $ENV{VS90COMNTOOLS} =~ /common7/i) {
+	$VCVER = "VC9";
 }
 
 # Checking task type
