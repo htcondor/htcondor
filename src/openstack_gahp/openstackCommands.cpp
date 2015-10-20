@@ -30,6 +30,8 @@
 
 #if defined( USE_RAPIDJSON )
 	#include "rapidjson/document.h"
+	#include "rapidjson/stringbuffer.h"
+	#include "rapidjson/writer.h"
 #endif
 
 using std::string;
@@ -885,6 +887,11 @@ bool KeystoneService::workerFunction( char ** argv, int argc, string & resultLin
 	return true;
 }
 
+//
+// There's a lot of boilerplate in the workerFunction()s that we should
+// probably factor out.
+//
+
 // ----------------------------------------------------------------------------
 
 NovaPing::NovaPing() { }
@@ -957,20 +964,182 @@ bool NovaPing::workerFunction( char ** argv, int argc, string & resultLine ) {
 
 // ----------------------------------------------------------------------------
 
+NovaServerCreate::NovaServerCreate() { }
+NovaServerCreate::~NovaServerCreate() { }
+
 // NOVA_SERVER_CREATE <request-id> <region> <desc>
 bool NovaServerCreate::workerFunction( char ** argv, int argc, string & resultLine ) {
-	if( argc ) { resultLine = argv[0]; }
-	else { 	resultLine = ""; }
-	return false;
+	assert( strcasecmp( argv[0], "NOVA_PING" ) == 0 );
+
+	int requestID;
+	get_int( argv[1], & requestID );
+
+	if( ! verify_number_args( argc, 3 ) ) {
+		dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n", argc, 3, argv[0] );
+		return false;
+	}
+
+	NovaServerCreate nsc;
+	if(! nsc.getAuthToken()) {
+		string error;
+		formatstr( error, "Unable to obtain valid authorization token: '%s' (%s).",
+			nsc.errorMessage.c_str(), nsc.errorCode.c_str() );
+		resultLine = create_failure_result( requestID, error.c_str() );
+		return false;
+	}
+
+	// Look for the requested region's endpoint.
+	if(! nsc.getNovaEndpointForRegion( argv[2] )) {
+		string error;
+		formatstr( error, "Unable to locate Nova endpoint for requested region: '%s' (%s).",
+			nsc.errorMessage.c_str(), nsc.errorCode.c_str() );
+		resultLine = create_failure_result( requestID, error.c_str() );
+		return false;
+	}
+
+	nsc.serviceURL += "/servers";
+	nsc.requestMethod = "POST";
+	nsc.requestBody = argv[3];
+
+	if(! nsc.sendRequest()) {
+		string error;
+		formatstr( error, "Failed to request server creation: '%s' (%s).",
+			nsc.errorMessage.c_str(), nsc.errorCode.c_str() );
+		resultLine = create_failure_result( requestID, error.c_str() );
+		return false;
+	}
+
+	if( nsc.responseCode != 202 ) {
+		formatstr( nsc.errorCode, "E_HTTP_RESPONSE_NOT_202 (%lu)", nsc.responseCode );
+		nsc.errorMessage = nsc.responseString;
+		if( nsc.errorMessage.empty() ){
+			formatstr( nsc.errorMessage,
+				"HTTP response was %lu, not 202, and no error message was returned.",
+				nsc.responseCode );
+		}
+
+		string error;
+		formatstr( error, "Server creation request failed: '%s' (%s).",
+			nsc.errorMessage.c_str(), nsc.errorCode.c_str() );
+		dprintf( D_FULLDEBUG, "%s\n", error.c_str() );
+		resultLine = create_failure_result( requestID, error.c_str() );
+		return false;
+	}
+
+	rapidjson::Document d;
+	string & body = nsc.responseString;
+	d.Parse( body.c_str() );
+	if( d.HasParseError() ) {
+		nsc.errorCode = "E_NOT_JSON";
+		formatstr(	nsc.errorMessage,
+					"Failed to parse response body ('%s').",
+					body.c_str() );
+		resultLine = create_failure_result( requestID, nsc.errorMessage.c_str(), nsc.errorCode.c_str() );
+		return false;
+	}
+
+	rapidjson::Value::MemberIterator server = d.FindMember( "server" );
+	if( server == d.MemberEnd() ) {
+		nsc.errorCode = "E_NO_MEMBER";
+		formatstr(	nsc.errorMessage,
+					"Failed to find server in body ('%s').",
+					body.c_str() );
+		resultLine = create_failure_result( requestID, nsc.errorMessage.c_str(), nsc.errorCode.c_str() );
+		return false;
+	}
+
+	if(! server->value.IsObject() ) {
+		nsc.errorCode = "E_NOT_OBJECT";
+		formatstr(	nsc.errorMessage,
+					"Server attribute is not a JSON object in body ('%s').",
+					body.c_str() );
+		resultLine = create_failure_result( requestID, nsc.errorMessage.c_str(), nsc.errorCode.c_str() );
+		return false;
+	}
+
+	rapidjson::Value::MemberIterator serverID = d.FindMember( "id" );
+	if(! serverID->value.IsString() ) {
+		nsc.errorCode = "E_NOT_STRING";
+		formatstr(	nsc.errorMessage,
+					"Server object's ID attribute is not a JSON string in body ('%s').",
+					body.c_str() );
+		resultLine = create_failure_result( requestID, nsc.errorMessage.c_str(), nsc.errorCode.c_str() );
+		return false;
+	}
+
+	StringList resultList;
+	resultList.append( serverID->value.GetString() );
+	resultLine = create_success_result( requestID, & resultList );
+	return true;
 }
 
 // ----------------------------------------------------------------------------
 
+NovaServerDelete::NovaServerDelete() { }
+NovaServerDelete::~NovaServerDelete() { }
+
 // NOVA_SERVER_DELETE <request-id> <region> <server-id>
 bool NovaServerDelete::workerFunction( char ** argv, int argc, string & resultLine ) {
-	if( argc ) { resultLine = argv[0]; }
-	else { 	resultLine = ""; }
-	return false;
+	assert( strcasecmp( argv[0], "NOVA_SERVER_DELETE" ) == 0 );
+
+	int requestID;
+	get_int( argv[1], & requestID );
+
+	if( ! verify_number_args( argc, 4 ) ) {
+		dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n", argc, 4, argv[0] );
+		return false;
+	}
+
+	NovaServerDelete nsd;
+	if(! nsd.getAuthToken()) {
+		string error;
+		formatstr( error, "Unable to obtain valid authorization token: '%s' (%s).",
+			nsd.errorMessage.c_str(), nsd.errorCode.c_str() );
+		resultLine = create_failure_result( requestID, error.c_str() );
+		return false;
+	}
+
+	// Look for the requested region's endpoint.
+	if(! nsd.getNovaEndpointForRegion( argv[2] )) {
+		string error;
+		formatstr( error, "Unable to locate Nova endpoint for requested region: '%s' (%s).",
+			nsd.errorMessage.c_str(), nsd.errorCode.c_str() );
+		resultLine = create_failure_result( requestID, error.c_str() );
+		return false;
+	}
+
+	string serverID = argv[3];
+	nsd.serviceURL += "/servers/" + serverID;
+	nsd.requestMethod = "DELETE";
+	nsd.requestBody = "";
+
+	if(! nsd.sendRequest()) {
+		string error;
+		formatstr( error, "Failed to request server deletion: '%s' (%s).",
+			nsd.errorMessage.c_str(), nsd.errorCode.c_str() );
+		resultLine = create_failure_result( requestID, error.c_str() );
+		return false;
+	}
+
+	if( nsd.responseCode != 204 ) {
+		formatstr( nsd.errorCode, "E_HTTP_RESPONSE_NOT_204 (%lu)", nsd.responseCode );
+		nsd.errorMessage = nsd.responseString;
+		if( nsd.errorMessage.empty() ){
+			formatstr( nsd.errorMessage,
+				"HTTP response was %lu, not 204, and no error message was returned.",
+				nsd.responseCode );
+		}
+
+		string error;
+		formatstr( error, "Server list failed: '%s' (%s).",
+			nsd.errorMessage.c_str(), nsd.errorCode.c_str() );
+		dprintf( D_FULLDEBUG, "%s\n", error.c_str() );
+		resultLine = create_failure_result( requestID, error.c_str() );
+		return false;
+	}
+
+	resultLine = create_success_result( requestID, NULL );
+	return true;
 }
 
 // ----------------------------------------------------------------------------
@@ -1012,7 +1181,10 @@ bool NovaServerList::workerFunction( char ** argv, int argc, string & resultLine
 	nsl.requestMethod = "GET";
 	nsl.requestBody = "";
 
-	// FIXME: wait a minute, what filter?
+	string filter = emptyIfNullString( argv[3] );
+	if(! filter.empty() ) {
+		nsl.serviceURL += "?" + filter;
+	}
 
 	if(! nsl.sendRequest()) {
 		string error;
@@ -1064,7 +1236,7 @@ bool NovaServerList::workerFunction( char ** argv, int argc, string & resultLine
 	if(! serverList->value.IsArray()) {
 		nsl.errorCode = "E_NOT_ARRAY";
 		formatstr(	nsl.errorMessage,
-					"Servers attribute not a JSON array in body ('%s').",
+					"Servers attribute is not a JSON array in body ('%s').",
 					body.c_str() );
 		resultLine = create_failure_result( requestID, nsl.errorMessage.c_str(), nsl.errorCode.c_str() );
 		return false;
@@ -1099,9 +1271,147 @@ bool NovaServerList::workerFunction( char ** argv, int argc, string & resultLine
 
 // ----------------------------------------------------------------------------
 
+NovaServerListDetail::NovaServerListDetail() { }
+NovaServerListDetail::~NovaServerListDetail() { }
+
 // NOVA_SERVER_LIST_DETAIL <request-id> <region> <filter>
 bool NovaServerListDetail::workerFunction( char ** argv, int argc, string & resultLine ) {
-	if( argc ) { resultLine = argv[0]; }
-	else { 	resultLine = ""; }
-	return false;
+	assert( strcasecmp( argv[0], "NOVA_SERVER_LIST_DETAIL" ) == 0 );
+
+	int requestID;
+	get_int( argv[1], & requestID );
+
+	if( ! verify_number_args( argc, 4 ) ) {
+		dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n", argc, 4, argv[0] );
+		return false;
+	}
+
+	NovaServerListDetail nsld;
+	if(! nsld.getAuthToken()) {
+		string error;
+		formatstr( error, "Unable to obtain valid authorization token: '%s' (%s).",
+			nsld.errorMessage.c_str(), nsld.errorCode.c_str() );
+		resultLine = create_failure_result( requestID, error.c_str() );
+		return false;
+	}
+
+	// Look for the requested region's endpoint.
+	if(! nsld.getNovaEndpointForRegion( argv[2] )) {
+		string error;
+		formatstr( error, "Unable to locate Nova endpoint for requested region: '%s' (%s).",
+			nsld.errorMessage.c_str(), nsld.errorCode.c_str() );
+		resultLine = create_failure_result( requestID, error.c_str() );
+		return false;
+	}
+
+	nsld.serviceURL += "/servers/detail";
+	nsld.requestMethod = "GET";
+	nsld.requestBody = "";
+
+	string filter = emptyIfNullString( argv[3] );
+	if(! filter.empty() ) {
+		nsld.serviceURL += "?" + filter;
+	}
+
+	if(! nsld.sendRequest()) {
+		string error;
+		formatstr( error, "Failed to request server list: '%s' (%s).",
+			nsld.errorMessage.c_str(), nsld.errorCode.c_str() );
+		resultLine = create_failure_result( requestID, error.c_str() );
+		return false;
+	}
+
+	if( nsld.responseCode != 200 && nsld.responseCode != 203 ) {
+		formatstr( nsld.errorCode, "E_HTTP_RESPONSE_NEITHER_200_NOR_203 (%lu)", nsld.responseCode );
+		nsld.errorMessage = nsld.responseString;
+		if( nsld.errorMessage.empty() ){
+			formatstr( nsld.errorMessage,
+				"HTTP response was %lu, not 200 nor 203, and no error message was returned.",
+				nsld.responseCode );
+		}
+
+		string error;
+		formatstr( error, "Server list failed: '%s' (%s).",
+			nsld.errorMessage.c_str(), nsld.errorCode.c_str() );
+		dprintf( D_FULLDEBUG, "%s\n", error.c_str() );
+		resultLine = create_failure_result( requestID, error.c_str() );
+		return false;
+	}
+
+	rapidjson::Document d;
+	string & body = nsld.responseString;
+	d.Parse( body.c_str() );
+	if( d.HasParseError() ) {
+		nsld.errorCode = "E_NOT_JSON";
+		formatstr(	nsld.errorMessage,
+					"Failed to parse response body ('%s').",
+					body.c_str() );
+		resultLine = create_failure_result( requestID, nsld.errorMessage.c_str(), nsld.errorCode.c_str() );
+		return false;
+	}
+
+	rapidjson::Value::MemberIterator serverList = d.FindMember( "servers" );
+	if( serverList == d.MemberEnd() ) {
+		nsld.errorCode = "E_NO_MEMBER";
+		formatstr(	nsld.errorMessage,
+					"Failed to find server list in body ('%s').",
+					body.c_str() );
+		resultLine = create_failure_result( requestID, nsld.errorMessage.c_str(), nsld.errorCode.c_str() );
+		return false;
+	}
+
+	if(! serverList->value.IsArray()) {
+		nsld.errorCode = "E_NOT_ARRAY";
+		formatstr(	nsld.errorMessage,
+					"Servers attribute not a JSON array in body ('%s').",
+					body.c_str() );
+		resultLine = create_failure_result( requestID, nsld.errorMessage.c_str(), nsld.errorCode.c_str() );
+		return false;
+	}
+
+	StringList reply;
+	// If we ever care, we can replace the continues with warnings.
+	for( rapidjson::SizeType i = 0; i < serverList->value.Size(); ++i ) {
+		const rapidjson::Value & server = serverList->value[i];
+
+		rapidjson::Value::ConstMemberIterator serverID = server.FindMember( "id" );
+		if( serverID == server.MemberEnd() ) { continue; }
+		if( ! serverID->value.IsString() ) { continue; }
+
+		rapidjson::Value::ConstMemberIterator serverName = server.FindMember( "name" );
+		if( serverName == server.MemberEnd() ) { continue; }
+		if( ! serverName->value.IsString() ) { continue; }
+
+		rapidjson::Value::ConstMemberIterator serverStatus = server.FindMember( "status" );
+		if( serverStatus == server.MemberEnd() ) { continue; }
+		if( ! serverStatus->value.IsString() ) { continue; }
+
+		// The document gives an example with "accessIPv4" and "accessIPv6"
+		// set to empty values, and "addresses" an object with one attribute,
+		// "private", which is a list of objects; the sole entry has the "addr"
+		// and "version" properties.  Our goal is to update the job ad with
+		// an IP address for use with SSH.  For now, until we get more data,
+		// just send the grid manager the JSON string for the addresses object.
+		rapidjson::Value::ConstMemberIterator serverAddresses = server.FindMember( "addresses" );
+		if( serverAddresses == server.MemberEnd() ) { continue; }
+		if( ! serverAddresses->value.IsObject() ) { continue; }
+
+		rapidjson::StringBuffer sb;
+		rapidjson::Writer< rapidjson::StringBuffer > w( sb );
+		serverAddresses->value.Accept( w );
+
+		// Only create a reply-list entry if we've got every value.
+		reply.append( serverID->value.GetString() );
+		reply.append( serverName->value.GetString() );
+		reply.append( serverStatus->value.GetString() );
+		reply.append( sb.GetString() );
+	}
+
+	string count;
+	formatstr( count, "%d", reply.number() / 2 );
+	reply.rewind();
+	reply.insert( count.c_str() );
+
+	resultLine = create_success_result( requestID, & reply );
+	return true;
 }
