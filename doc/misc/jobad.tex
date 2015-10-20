@@ -1713,6 +1713,14 @@ It will be \Expr{True} if the resource was claimed via negotiation
 when the configuration variable \Macro{GROUP\_AUTOREGROUP} was \Expr{True}.
 It will be \Expr{False} otherwise.
 
+%%% ClassAd attribute: SubmitterGlobalJobId
+\index{ClassAd job attribute!SubmitterGlobalJobId}
+\index{SubmitterGlobalJobId!job ClassAd attribute}
+\item[\AdAttr{SubmitterGlobalJobId}:]
+When HTCondor-C submits a job to a remote \Condor{schedd}, it sets this
+attribute in the remote job ad to match the \AdAttr{GlobalJobId} attribute
+of the original, local job.
+
 %%% ClassAd attribute: SubmitterGroup 
 \index{ClassAd job attribute!SubmitterGroup}
 \index{SubmitterGroup!job ClassAd attribute}

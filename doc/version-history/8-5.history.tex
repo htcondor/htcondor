@@ -30,6 +30,12 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item When an HTCondor-C job is submitted to a remote \Condor{schedd},
+the remote job ad now includes the attribute \AdAttr{SubmitterGlobalJobId},
+whose value is the same as the attribute \AdAttr{GlobalJobId} in the
+original HTCondor-C job.
+\Ticket{3472}
+
 \item The \Condor{schedd} now sets environment variables for scheduler
 universe jobs so that the jobs can more easily find the \Condor{schedd}'s
 contact information.
