@@ -30,7 +30,13 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item The \Condor{schedd} now sets environment variables for scheduler
+universe jobs so that the jobs can more easily find the \Condor{schedd}'s
+contact information.
+On machines where there are multiple \Condor{schedd}s running, this helps
+DAGMan and similar applications contact the \Condor{schedd} that started
+them.
+\Ticket{5166}
 
 \end{itemize}
 
