@@ -172,6 +172,7 @@
 #define ATTR_DISK  "Disk"
 #define ATTR_DISK_USAGE  "DiskUsage"
 #define ATTR_DOCKER_IMAGE "DockerImage"
+#define ATTR_DOCKER_VOLUMES "DockerVolumes"
 #define ATTR_DOCKER_VERSION  "DockerVersion"
 #define ATTR_EMAIL_ATTRIBUTES  "EmailAttributes"
 #define ATTR_ENTERED_CURRENT_ACTIVITY  "EnteredCurrentActivity"
