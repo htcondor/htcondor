@@ -161,8 +161,10 @@ const char* sysapi_ckptpltfrm( void );
 /* Would like to just use a classad here, but were in a 
  * classad-free layer */
 struct sysapi_cpuinfo {
+#ifdef _cplusplus
 	sysapi_cpuinfo() :
 		processor_flags(0), model_no(-1), family(-1), cache(-1) {}
+#endif
 	const char *processor_flags;
 	int model_no;
 	int family;
