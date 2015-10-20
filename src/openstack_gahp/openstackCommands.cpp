@@ -961,7 +961,7 @@ NovaServerCreate::~NovaServerCreate() { }
 
 // NOVA_SERVER_CREATE <request-id> <region> <desc>
 bool NovaServerCreate::workerFunction( char ** argv, int argc, string & resultLine ) {
-	assert( strcasecmp( argv[0], "NOVA_PING" ) == 0 );
+	assert( strcasecmp( argv[0], "NOVA_SERVER_CREATE" ) == 0 );
 
 	int requestID;
 	get_int( argv[1], & requestID );
@@ -1254,7 +1254,7 @@ bool NovaServerList::workerFunction( char ** argv, int argc, string & resultLine
 
 	string count;
 	formatstr( count, "%d", reply.number() / 2 );
-	reply.rewind();
+	reply.first();
 	reply.insert( count.c_str() );
 
 	resultLine = create_success_result( requestID, & reply );
@@ -1400,8 +1400,8 @@ bool NovaServerListDetail::workerFunction( char ** argv, int argc, string & resu
 	}
 
 	string count;
-	formatstr( count, "%d", reply.number() / 2 );
-	reply.rewind();
+	formatstr( count, "%d", reply.number() / 4 );
+	reply.first();
 	reply.insert( count.c_str() );
 
 	resultLine = create_success_result( requestID, & reply );
