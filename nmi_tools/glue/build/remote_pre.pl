@@ -55,14 +55,14 @@ my %defines = (
 $| = 1;
 
 if ($ENV{NMI_PLATFORM} =~ /_win/i) {
-	my $enable_vs11 = 1;
-	if ($ENV{NMI_PLATFORM} =~ /Windows7/i) { $enable_vs11 = 0; }
-	if ($enable_vs11 && $ENV{VS110COMNTOOLS} =~ /common7/i) {
-		$defines{visualstudio} = '-G "Visual Studio 11"';
-		$ENV{PATH} = "$ENV{VS110COMNTOOLS}..\\IDE;$ENV{VS110COMNTOOLS}..\\..\\VC\\BIN;$ENV{PATH}";
-	} else {
+	my $enable_vs9 = 0;
+	#uncomment to use vs9 on Win7 platform# if ($ENV{NMI_PLATFORM} =~ /Windows7/i) { $enable_vs9 = 1; }
+	if ($enable_vs9 && $ENV{VS90COMNTOOLS} =~ /common7/i) {
 		$defines{visualstudio} = '-G "Visual Studio 9 2008"';
 		$ENV{PATH} = "$ENV{VS90COMNTOOLS}..\\IDE;$ENV{VS90COMNTOOLS}..\\..\\VC\\BIN;$ENV{PATH}";
+	} else {
+		$defines{visualstudio} = '-G "Visual Studio 11"';
+		$ENV{PATH} = "$ENV{VS110COMNTOOLS}..\\IDE;$ENV{VS110COMNTOOLS}..\\..\\VC\\BIN;$ENV{PATH}";
 	}
     $externals_loc   = "c:/temp/condor";
 	$ENV{PATH} = "C:\\Program Files\\CMake 2.8\\bin;$ENV{PATH}";
