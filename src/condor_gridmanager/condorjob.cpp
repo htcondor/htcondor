@@ -1547,6 +1547,10 @@ ClassAd *CondorJob::buildSubmitAd()
 
 	submit_ad->Assign( ATTR_SUBMITTER_ID, submitterId );
 
+	expr.clear();
+	jobAd->LookupString( ATTR_GLOBAL_JOB_ID, expr );
+	submit_ad->Assign( ATTR_SUBMITTER_GLOBAL_JOB_ID, expr );
+
 		// If JOB_PROXY_OVERRIDE_FILE is set in the config file, then
 		// these attributes aren't set in the local job ad, so we need
 		// to set them explicitly.
