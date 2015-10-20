@@ -105,7 +105,7 @@ ReplicatorStateMachine::finalizeDelta( )
 
     SetMyTypeName( invalidate_ad, QUERY_ADTYPE );
     SetTargetTypeName( invalidate_ad, "Replication" );
-    line.formatstr( "TARGET.%s == \"%s\"", ATTR_NAME, m_name.Value( ) );
+    line.formatstr( "%s == \"%s\"", ATTR_NAME, m_name.Value( ) );
     invalidate_ad.AssignExpr( ATTR_REQUIREMENTS, line.Value( ) );
 	invalidate_ad.Assign( ATTR_NAME, m_name.Value() );
     daemonCore->sendUpdates( INVALIDATE_ADS_GENERIC, &invalidate_ad, NULL, false );

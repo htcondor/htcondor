@@ -1189,9 +1189,13 @@ SharedPortEndpoint::UseSharedPort(MyString *why_not,bool already_open)
 		// to decide whether to create a shared port for our child.
 		// In the latter case, other methods are used to determine
 		// that a shared port should not be used.
+		// The HAD and REPLICATION daemons can't properly handle a
+		// shared port address for themselves or their peers.
 
 	bool never_use_shared_port =
-		get_mySubSystem()->isType(SUBSYSTEM_TYPE_SHARED_PORT);
+		get_mySubSystem()->isType(SUBSYSTEM_TYPE_SHARED_PORT) ||
+		get_mySubSystem()->nameMatch("HAD") ||
+		get_mySubSystem()->nameMatch("REPLICATION");
 
 	if( never_use_shared_port ) {
 		if( why_not ) {

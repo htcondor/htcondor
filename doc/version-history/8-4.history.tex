@@ -79,6 +79,25 @@ with \Env{RPATH} enabled on Enterprise Linux 6 platforms. \Env{RPATH} is used
 to load Globus and other libraries from the condor-externals RPM.
 \Ticket{5294}
 
+\item The job attribute \Attr{JobCurrentStartTransferOutputDate} is now
+properly reported in the job ad.
+\Ticket{5298}
+
+\item Fixed configuration parameter \MacroNI{NETWORK\_HOSTNAME}, which was
+broken starting with version 8.3.2.
+\Ticket{5288}
+
+\item Fixed a bug that could cause the Job Router to crash when
+invoking a transformation hook.
+\Ticket{5224}
+
+\item Fixed several memory leaks in the \Prog{nordugrid\_gahp}.
+\Ticket{5322}
+
+\item Improved the \Prob{batch\_gahp} to better handle batch systems
+that reuse job IDs.
+\Ticket{5062}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

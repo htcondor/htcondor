@@ -462,6 +462,8 @@ Job::get_file(const MyString &name,
               unsigned char *&data,
 			  CondorError &errstack)
 {
+	memset(data, 0, length);
+
 #if !defined(WIN32)
 	TemporaryPrivSentry sentry( true );
 	if ( param_boolean( "CHOWN_JOB_SPOOL_FILES", false ) == false ) {
@@ -483,6 +485,7 @@ Job::get_file(const MyString &name,
 		set_user_priv();
 	}
 #endif
+
 	int file = safe_open_wrapper_follow((spoolDirectory + DIR_DELIM_STRING + name).Value(),
 					O_RDONLY | _O_BINARY,
 					0);

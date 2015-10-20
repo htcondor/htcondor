@@ -161,7 +161,7 @@ protected:
     void my_debug_print_buffers(void);
 
 	// usage of replication, controlled by configuration parameter 
-	// USE_REPLICATION
+	// HAD_USE_REPLICATION
 	bool m_useReplication;
 
 	bool sendReplicationCommand( int );
