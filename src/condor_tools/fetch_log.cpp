@@ -152,7 +152,7 @@ int main( int argc, char *argv[] )
 
 	dprintf(D_FULLDEBUG,"Daemon %s is %s\n",daemon->hostname(),daemon->addr());
 	
-	sock = (ReliSock*)daemon->startCommand( DC_FETCH_LOG, Sock::reli_sock);
+	sock = (ReliSock*)daemon->startCommand( DC_FETCH_LOG, Sock::reli_sock, 1200);
 
 	if(!sock) {
 		fprintf(stderr,"couldn't connect to daemon %s at %s\n",daemon->hostname(),daemon->addr());
