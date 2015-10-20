@@ -9209,6 +9209,16 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 		dprintf( D_ALWAYS, "Failed to set _CONDOR_JOB_AD environment variable\n");
 	}
 
+	if (param_boolean("USE_LOCAL_SCHEDD_FOR_SCHEDULER_UNIVERSE", true))
+	{
+		std::string ad_file;
+		if (!param(ad_file, "SCHEDD_DAEMON_AD_FILE") || !envobject.SetEnv("_condor_SCHEDD_DAEMON_AD_FILE", ad_file)) {
+			dprintf(D_ALWAYS, "Failed to set _condor_SCHEDD_DAEMON_AD_FILE environment variable\n");
+		}
+		if (!param(ad_file, "SCHEDD_ADDRESS_FILE") || !envobject.SetEnv("_condor_SCHEDD_ADDRESS_FILE", ad_file)) {
+			dprintf(D_ALWAYS, "Failed to set _condor_SCHEDD_DAEMON_AD_FILE environment variable\n");
+		}
+	}
 
 		// Scheduler universe jobs should not be told about the shadow
 		// command socket in the inherit buffer.
