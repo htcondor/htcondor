@@ -26,13 +26,9 @@
 #include "thread_control.h"
 #include <curl/curl.h>
 
-#define USE_RAPIDJSON
-
-#if defined( USE_RAPIDJSON )
-	#include "rapidjson/document.h"
-	#include "rapidjson/stringbuffer.h"
-	#include "rapidjson/writer.h"
-#endif
+#include "rapidjson/document.h"
+#include "rapidjson/stringbuffer.h"
+#include "rapidjson/writer.h"
 
 using std::string;
 
@@ -325,7 +321,6 @@ bool KeystoneToken::getToken(	const string & url, const string & username,
 		}
 		this->token = header.substr( idx + 19, (end - (idx + 19)) );
 
-#if defined( USE_RAPIDJSON )
 		// the "expires_at" JSON attribute of the body.
 		rapidjson::Document d;
 		d.Parse( body.c_str() );
@@ -406,9 +401,6 @@ bool KeystoneToken::getToken(	const string & url, const string & username,
 			goto done;
 		}
 		string expirationString = i->value.GetString();
-#else
-		string expirationString = "2013-02-27T18:30:59.999999Z";
-#endif /* defined( USE_RAPIDJSON ) */
 
 		// Convert the ISO 8601 extended format date time (with microseconds)
 		// string into a time_t.
@@ -468,9 +460,12 @@ bool NovaRequest::getNovaEndpointForRegion( const string & requestedRegion ) {
 	string hashKey = this->authToken + requestedRegion;
 	string & endpoint = NovaRegionEndpointCache[ hashKey ];
 	if(! endpoint.empty()) {
+		dprintf( D_FULLDEBUG, "Found cached endpoint '%s' for region '%s' (using auth token '%s').\n", endpoint.c_str(), requestedRegion.c_str(), this->authToken.c_str() );
 		this->serviceURL = endpoint;
 		return true;
 	}
+
+	dprintf( D_FULLDEBUG, "Looking up endpoint for region '%s' (using auth token '%s'.\n", requestedRegion.c_str(), this->authToken.c_str() );
 
 	// We need to look up the Nova endpoint URL for this region.
 	NovaRequest regionRequest;
@@ -495,8 +490,6 @@ bool NovaRequest::getNovaEndpointForRegion( const string & requestedRegion ) {
 	}
 
 	this->serviceURL = "";
-
-#if defined(USE_RAPIDJSON)
 
 	rapidjson::Document d;
 	string & body = regionRequest.responseString;
@@ -566,8 +559,6 @@ bool NovaRequest::getNovaEndpointForRegion( const string & requestedRegion ) {
 		}
 	}
 
-#endif /* defined(USE_RAPIDJSON) */
-
 	if( serviceURL.empty() ) {
 		this->errorCode = "E_NOT_FOUND";
 		formatstr(	this->errorMessage,
@@ -577,6 +568,7 @@ bool NovaRequest::getNovaEndpointForRegion( const string & requestedRegion ) {
 		return false;
 	}
 
+	endpoint = serviceURL;
 	return true;
 }
 
