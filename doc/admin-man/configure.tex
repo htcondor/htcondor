@@ -11451,31 +11451,9 @@ COLLECTOR.SEC_DEFAULT_SESSION_DURATION = 50000
   \verb|submit-side@matchsession| when they talk to the \Condor{startd} and
   \Condor{starter}.  The \Condor{startd} and \Condor{starter} will be authenticated as
   \verb|execute-side@matchsession| when they talk to the \Condor{schedd} and
-  \Condor{shadow}.  On the submit side, authorization of the execute side happens
-  automatically when the execute side is initiating the connection.
-  On the execute side, it is necessary to explicitly
-  authorize the submit side.  Example:
-
-\begin{verbatim}
-  ALLOW_DAEMON = submit-side@matchsession/192.168.123.*
-\end{verbatim}
-
-  On either side, if \MacroNI{ALLOW\_CLIENT} is set to restrict which
-  remote daemons the local tools and daemons may act as a client to, then
-  matchsession entries must be added to the \MacroNI{ALLOW\_CLIENT} value.
-  Execute side example:
-
-\begin{verbatim}
-  ALLOW_CLIENT = $(ALLOW_CLIENT) submit-side@matchsession/192.168.123.*
-\end{verbatim}
-
-  Submit side example:
-
-\begin{verbatim}
-  ALLOW_CLIENT = $(ALLOW_CLIENT) execute-side@matchsession/192.168.123.*
-\end{verbatim}
-
-  Replace the example netmasks with something suitable for your situation.
+  \Condor{shadow}.
+  These identities is automatically added to the DAEMON, READ, and CLIENT
+  authorization levels in these daemons when needed.
 
 \label{param:KerberosServerKeytab}
 \item[\Macro{KERBEROS\_SERVER\_KEYTAB}]

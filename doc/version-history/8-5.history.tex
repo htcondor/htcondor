@@ -44,6 +44,14 @@ DAGMan and similar applications contact the \Condor{schedd} that started
 them.
 \Ticket{5166}
 
+\item When \MacroNI{SEC\_ENABLE\_MATCH\_PASSWORD\_AUTHENTICATION} is set
+to \Expr{True}, the related authorizations are now automatically enabled.
+Previously, \Expr{submit-side@matchsession} and
+\Expr{execute-side@matchsession} entries had to be added to the
+\MacroNI{ALLOW\_DAEMON} and \MacroNI{ALLOW\_CLIENT} (if set)
+authorization parameters in order for this feature to work.
+\Ticket{5304}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
