@@ -24,8 +24,7 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item HTCondor version 8.2.10 not yet released.
-%\item HTCondor version 8.2.10 released on Month Date, 2015.
+\item HTCondor version 8.2.10 released on October 22, 2015.
 
 \end{itemize}
 
@@ -49,6 +48,8 @@ to \Expr{True}.
 
 \item Added post install rules to the Enterprise Linux 7 RPM to configure
 SELinux for HTCondor operation.
+HTCondor works with SELinux in a default HTCondor configuration.
+Advanced HTCondor configurations using cgroups do not yet work with SELinux.
 \Ticket{5012}
 
 \item Fixed bugs that prevented the \Condor{kbdd} from authenticating
@@ -82,6 +83,10 @@ and the submission of two routed jobs for a single source job.
 \item Fixed a bug that could cause spurious data to be sent in a SOAP file
 transfer.
 \Ticket{5320}
+
+\item Fixed a bug that caused \Condor{history} to return jobs out of order when
+there were more than 2 history files.
+\Ticket{5305}
 
 \end{itemize}
 

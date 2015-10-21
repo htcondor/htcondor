@@ -150,8 +150,8 @@ static int compareHistoryFilenames(const void *item1, const void *item2)
 {
     time_t time1, time2;
 
-    isHistoryBackup((const char *) item1, &time1);
-    isHistoryBackup((const char *) item2, &time2);
+    isHistoryBackup(*(const char * const *) item1, &time1);
+    isHistoryBackup(*(const char * const *) item2, &time2);
     return time1 - time2;
 }
 
