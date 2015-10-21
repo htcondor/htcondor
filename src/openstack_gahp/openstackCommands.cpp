@@ -966,8 +966,8 @@ bool NovaServerCreate::workerFunction( char ** argv, int argc, string & resultLi
 	int requestID;
 	get_int( argv[1], & requestID );
 
-	if( ! verify_number_args( argc, 3 ) ) {
-		dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n", argc, 3, argv[0] );
+	if( ! verify_number_args( argc, 4 ) ) {
+		dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n", argc, 4, argv[0] );
 		return false;
 	}
 
@@ -1027,6 +1027,7 @@ bool NovaServerCreate::workerFunction( char ** argv, int argc, string & resultLi
 					"Failed to parse response body ('%s').",
 					body.c_str() );
 		resultLine = create_failure_result( requestID, nsc.errorMessage.c_str(), nsc.errorCode.c_str() );
+		dprintf( D_FULLDEBUG, "%s\n", nsc.errorMessage.c_str() );
 		return false;
 	}
 
@@ -1037,6 +1038,7 @@ bool NovaServerCreate::workerFunction( char ** argv, int argc, string & resultLi
 					"Failed to find server in body ('%s').",
 					body.c_str() );
 		resultLine = create_failure_result( requestID, nsc.errorMessage.c_str(), nsc.errorCode.c_str() );
+		dprintf( D_FULLDEBUG, "%s\n", nsc.errorMessage.c_str() );
 		return false;
 	}
 
@@ -1046,16 +1048,28 @@ bool NovaServerCreate::workerFunction( char ** argv, int argc, string & resultLi
 					"Server attribute is not a JSON object in body ('%s').",
 					body.c_str() );
 		resultLine = create_failure_result( requestID, nsc.errorMessage.c_str(), nsc.errorCode.c_str() );
+		dprintf( D_FULLDEBUG, "%s\n", nsc.errorMessage.c_str() );
 		return false;
 	}
 
-	rapidjson::Value::MemberIterator serverID = d.FindMember( "id" );
+	rapidjson::Value::MemberIterator serverID = server->value.FindMember( "id" );
+	if( serverID == server->value.MemberEnd() ) {
+		nsc.errorCode = "E_NO_MEMBER";
+		formatstr(	nsc.errorMessage,
+					"Failed to find id in server object in body ('%s').",
+					body.c_str() );
+		resultLine = create_failure_result( requestID, nsc.errorMessage.c_str(), nsc.errorCode.c_str() );
+		dprintf( D_FULLDEBUG, "%s\n", nsc.errorMessage.c_str() );
+		return false;
+	}
+
 	if(! serverID->value.IsString() ) {
 		nsc.errorCode = "E_NOT_STRING";
 		formatstr(	nsc.errorMessage,
 					"Server object's ID attribute is not a JSON string in body ('%s').",
 					body.c_str() );
 		resultLine = create_failure_result( requestID, nsc.errorMessage.c_str(), nsc.errorCode.c_str() );
+		dprintf( D_FULLDEBUG, "%s\n", nsc.errorMessage.c_str() );
 		return false;
 	}
 
