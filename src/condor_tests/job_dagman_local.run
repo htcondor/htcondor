@@ -34,7 +34,6 @@ sub RUNNING{2};
 
 $abnormal = sub 
 {
-
 	die "Want to see only submit, execute and successful completion\n";
 };
 
