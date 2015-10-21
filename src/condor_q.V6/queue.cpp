@@ -59,9 +59,8 @@
 #include "expr_analyze.h"
 #include "classad/classadCache.h" // for CachedExprEnvelope stats
 
-// pass the exit code through dprintf_SetExitCode so that it knows
-// whether to print out the on-error buffer or not.
-#define exit(n) (exit)(dprintf_SetExitCode(n))
+static int cleanup_globals(int exit_code); // called on exit to do necessary cleanup
+#define exit(n) (exit)(cleanup_globals(n))
 
 #ifdef HAVE_EXT_POSTGRESQL
 #include "sqlquery.h"
@@ -159,6 +158,17 @@ static int read_userprio_file(const char *filename, ExtArray<PrioEntry> & prios)
 unsigned int process_direct_argument(char *arg);
 
 #ifdef HAVE_EXT_POSTGRESQL
+static void quillCleanupOnExit(int n);
+static void freeConnectionStrings();
+
+// use std::strings to hold these strings so that we don't have to worry about freeing them on exit.
+static std::string squillName, squeryPassword, sdbIpAddr, sdbName, squillMachine, quillAddr;
+const char *quillName = NULL;
+const char *dbIpAddr = NULL;
+const char *dbName = NULL;
+const char *queryPassword = NULL;
+const char *quillMachine = NULL;
+
 /* execute a database query directly */ 
 static void exec_db_query(const char *quill_name, const char *db_ipAddr, const char *db_name,const char *query_password);
 
@@ -166,7 +176,7 @@ static void exec_db_query(const char *quill_name, const char *db_ipAddr, const c
 static char * getDBConnStr(char const *&, char const *&, char const *&, char const *&);
 
 /* get the quill address for the quill_name specified */
-static QueryResult getQuillAddrFromCollector(char *quill_name, char *&quill_addr);
+static QueryResult getQuillAddrFromCollector(const char *quill_name, std::string &quill_addr);
 
 /* avgqueuetime is used to indicate a request to query average wait time for uncompleted jobs in queue */
 static  bool avgqueuetime = false;
@@ -193,16 +203,16 @@ static  int g_match_limit = -1;
 
 static 	int malformed, running, idle, held, suspended, completed, removed;
 
-static  char *jobads_file = NULL;
-static  char *machineads_file = NULL;
-static  char *userprios_file = NULL;
+static  const char *jobads_file = NULL; // NULL, or points to jobads filename from argv
+static  const char *machineads_file = NULL; // NULL, or points to machineads filename from argv
+static  const char *userprios_file = NULL; // NULL, or points to userprios filename from argv
+static  const char *userlog_file = NULL; // NULL, or points to userlog filename from argv
 static  bool analyze_with_userprio = false;
 static  const char * analyze_memory_usage = NULL;
 static  bool dash_profile = false;
 //static  bool analyze_dslots = false;
 static  bool disable_user_print_files = false;
 
-static  char *userlog_file = NULL;
 
 // Constraint on JobIDs for faster filtering
 // a list and not set since we expect a very shallow depth
@@ -378,47 +388,10 @@ const int SHORT_BUFFER_SIZE = 8192;
 const int LONG_BUFFER_SIZE = 16384;	
 char return_buff[LONG_BUFFER_SIZE * 100];
 
-char *quillName = NULL;
-char *quillAddr = NULL;
-char *quillMachine = NULL;
-char *dbIpAddr = NULL;
-char *dbName = NULL;
-char *queryPassword = NULL;
-
 StringList attrs(NULL, "\n");; // The list of attrs we want, "" for all
 
 bool g_stream_results = false;
 
-static void freeConnectionStrings(bool for_exit=true) {
-	if(quillName) {
-		free(quillName);
-		quillName = NULL;
-	}
-	if(quillAddr) {
-		free(quillAddr);
-		quillAddr = NULL;
-	}
-	if(quillMachine) {
-		free(quillMachine);
-		quillMachine = NULL;
-	}
-	if(dbIpAddr) {
-		free(dbIpAddr);
-		dbIpAddr = NULL;
-	}
-	if(dbName) {
-		free(dbName);
-		dbName = NULL;
-	}
-	if(queryPassword) {
-		free(queryPassword);
-		queryPassword = NULL;
-	}
-	if (for_exit) {
-		startdAds.Clear();
-		scheddList.Clear();
-	}
-}
 
 static int longest_slot_machine_name = 0;
 static int longest_slot_name = 0;
@@ -645,7 +618,6 @@ int main (int argc, char **argv)
 	// if fetching jobads from a file or userlog, we don't need to init any daemon or database communication
 	if ((jobads_file != NULL || userlog_file != NULL)) {
 		retval = show_file_queue(jobads_file, userlog_file);
-		freeConnectionStrings();
 		exit(retval?EXIT_SUCCESS:EXIT_FAILURE);
 	}
 
@@ -688,7 +660,6 @@ int main (int argc, char **argv)
 				}
 
 				exec_db_query(NULL, NULL, NULL, NULL);
-				freeConnectionStrings();
 				exit(EXIT_SUCCESS);
 			} 
 #endif /* HAVE_EXT_POSTGRESQL */
@@ -719,7 +690,6 @@ int main (int argc, char **argv)
 						if (retval)
 						{
 							/* if the queue was retrieved, then I am done */
-							freeConnectionStrings();
 							exit(retval?EXIT_SUCCESS:EXIT_FAILURE);
 						}
 						
@@ -769,7 +739,6 @@ int main (int argc, char **argv)
 							)
 						{
 							/* if the queue was retrieved, then I am done */
-							freeConnectionStrings();
 							exit(retval?EXIT_SUCCESS:EXIT_FAILURE);
 						}
 
@@ -811,7 +780,6 @@ int main (int argc, char **argv)
 					retval = show_schedd_queue(scheddAddr, scheddName, scheddMachine, useFastScheddQuery);
 			
 					/* Hopefully I got the queue from the schedd... */
-					freeConnectionStrings();
 					exit(retval?EXIT_SUCCESS:EXIT_FAILURE);
 					break;
 
@@ -862,7 +830,6 @@ int main (int argc, char **argv)
 							   "SCHEDD_ADDRESS_FILE.",  stderr );
 		}
 
-		freeConnectionStrings();
 		exit( EXIT_FAILURE );
 	}
 	
@@ -876,7 +843,6 @@ int main (int argc, char **argv)
 		result = scheddQuery.addANDConstraint( constraint );
 		if( result != Q_OK ) {
 			fprintf( stderr, "Error: Couldn't add schedd-constraint %s\n", constraint);
-			freeConnectionStrings();
 			exit( 1 );
 		}
 	}
@@ -895,18 +861,15 @@ int main (int argc, char **argv)
 			// if we're not an expert, we want verbose output
 		printNoCollectorContact( stderr, pool ? pool->name() : NULL,
 								 !expert ); 
-		freeConnectionStrings();
 		exit( 1 );
 	case Q_NO_COLLECTOR_HOST:
 		ASSERT( pool );
 		fprintf( stderr, "Error: Can't contact condor_collector: "
 				 "invalid hostname: %s\n", pool->name() );
-		freeConnectionStrings();
 		exit( 1 );
 	default:
 		fprintf( stderr, "Error fetching ads: %s\n", 
 				 getStrQueryResult(result) );
-		freeConnectionStrings();
 		exit( 1 );
 	}
 
@@ -922,9 +885,8 @@ int main (int argc, char **argv)
 		/* default to true for remotely queryable */
 #ifdef HAVE_EXT_POSTGRESQL
 		int flag=1;
+		freeConnectionStrings();
 #endif
-
-		freeConnectionStrings(false);
 		useDB = FALSE;
 		if ( ! (ad->LookupString(ATTR_SCHEDD_IP_ADDR, &scheddAddr)  &&
 				ad->LookupString(ATTR_NAME, &scheddName) &&
@@ -937,24 +899,30 @@ int main (int argc, char **argv)
 		}
 
 #ifdef HAVE_EXT_POSTGRESQL
-		char		daemonAdName[128];
+		std::string daemonAdName;
 			// get the address of the database
-		if (ad->LookupString(ATTR_QUILL_DB_IP_ADDR, &dbIpAddr) &&
-			ad->LookupString(ATTR_QUILL_NAME, &quillName) &&
-			ad->LookupString(ATTR_QUILL_DB_NAME, &dbName) && 
-			ad->LookupString(ATTR_QUILL_DB_QUERY_PASSWORD, &queryPassword) &&
+		if (ad->LookupString(ATTR_QUILL_DB_IP_ADDR, sdbIpAddr) &&
+			ad->LookupString(ATTR_QUILL_NAME, squillName) &&
+			ad->LookupString(ATTR_QUILL_DB_NAME, sdbName) && 
+			ad->LookupString(ATTR_QUILL_DB_QUERY_PASSWORD, squeryPassword) &&
 			(!ad->LookupBool(ATTR_QUILL_IS_REMOTELY_QUERYABLE,flag) || flag)) {
+
+			dbIpAddr = sdbIpAddr.c_str();
+			quillName = squillName.c_str();
+			dbName = sdbName.c_str();
+			queryPassword = squeryPassword.c_str();
 
 			/* If the quill information is available, try to use it first */
 			useDB = TRUE;
 	    	if (ad->LookupString(ATTR_SCHEDD_NAME, daemonAdName)) {
-				Q.addSchedd(daemonAdName);
+				Q.addSchedd(daemonAdName.c_str());
 			} else {
 				Q.addSchedd(scheddName);
 			}
 
 				/* get the quill info for fail-over processing */
-			ASSERT(ad->LookupString(ATTR_MACHINE, &quillMachine));
+			ASSERT(ad->LookupString(ATTR_MACHINE, squillMachine));
+			quillMachine = squillMachine.c_str();
 		}
 #endif 
 
@@ -1037,8 +1005,8 @@ int main (int argc, char **argv)
 						schedd's ad had a quill name in it, the collector
 						didn't have a quill ad by that name. */
 
-					if((result2 == Q_OK) && quillAddr &&
-					   (retval = show_schedd_queue(quillAddr, quillName, quillMachine, 0))
+					if((result2 == Q_OK) && !quillAddr.empty() &&
+					   (retval = show_schedd_queue(quillAddr.c_str(), quillName, quillMachine, 0))
 					   )
 					{
 						/* processed correctly, so do the next ad */
@@ -1055,10 +1023,10 @@ int main (int argc, char **argv)
 						"-- Quill daemon %s(%s)\n"
 						"\tassociated with schedd %s(%s)\n"
 						"\tis not reachable or can't talk to rdbms.\n",
-						quillName, quillAddr!=NULL?quillAddr:"<\?\?\?>", 
+						quillName, quillAddr.empty()?"<\?\?\?>":quillAddr.c_str(),
 						scheddName, scheddAddr);
 
-					if (quillAddr == NULL) {
+					if (quillAddr.empty()) {
 						fprintf(stderr,
 							"\t- Possible misconfiguration of quill\n"
 							"\tassociated with this schedd since associated\n"
@@ -1128,13 +1096,29 @@ int main (int argc, char **argv)
 			fprintf(stderr,"Error: Collector has no record of "
 							"schedd/submitter\n");
 
-			freeConnectionStrings();
 			exit(1);
 		}
 	}
 
-	freeConnectionStrings();
 	exit(retval?EXIT_SUCCESS:EXIT_FAILURE);
+}
+
+// when exit is called, this is called also
+static int cleanup_globals(int exit_code)
+{
+	// pass the exit code through dprintf_SetExitCode so that it knows
+	// whether to print out the on-error buffer or not.
+	dprintf_SetExitCode(exit_code);
+
+#ifdef HAVE_EXT_POSTGRESQL
+	quillCleanupOnExit(exit_code);
+#endif
+
+	// do this to make Valgrind happy.
+	startdAds.Clear();
+	scheddList.Clear();
+
+	return exit_code;
 }
 
 // append all variable references made by expression to references list
@@ -1868,7 +1852,7 @@ processCommandLineArguments (int argc, char *argv[])
 				exit(1);
 			} else {
 				i++;
-				jobads_file = strdup(argv[i]);
+				jobads_file = argv[i];
 			}
 		}
 		else if (is_dash_arg_prefix(dash_arg, "userlog", 1)) {
@@ -1877,10 +1861,7 @@ processCommandLineArguments (int argc, char *argv[])
 				exit(1);
 			} else {
 				i++;
-				if (userlog_file) {
-					free(userlog_file);
-				}
-				userlog_file = strdup(argv[i]);
+				userlog_file = argv[i];
 			}
 		}
 		else if (is_dash_arg_prefix(dash_arg, "slotads", 1)) {
@@ -1889,10 +1870,7 @@ processCommandLineArguments (int argc, char *argv[])
 				exit(1);
 			} else {
 				i++;
-				if (machineads_file) {
-					free(machineads_file);
-				}
-				machineads_file = strdup(argv[i]);
+				machineads_file = argv[i];
 			}
 		}
 		else if (is_dash_arg_colon_prefix(dash_arg, "userprios", &pcolon, 5)) {
@@ -1901,10 +1879,7 @@ processCommandLineArguments (int argc, char *argv[])
 				exit(1);
 			} else {
 				i++;
-				if (userprios_file) {
-					free(userprios_file);
-				}
-				userprios_file = strdup(argv[i]);
+				userprios_file = argv[i];
 				analyze_with_userprio = true;
 			}
 		}
@@ -3670,8 +3645,8 @@ show_db_queue( const char* quill_name, const char* db_ipAddr, const char* db_nam
 		}
 #else
 		if (query_password) {} /* Done to suppress set-but-not-used warnings */
-		if (pfnProcess || pvProcess) {}
 #endif /* HAVE_EXT_POSTGRESQL */
+	if (pfnProcess || pvProcess) {}
 
 	// if we streamed, then the results have already been printed out.
 	// we just need to write the footer/summary
@@ -3681,8 +3656,7 @@ show_db_queue( const char* quill_name, const char* db_ipAddr, const char* db_nam
 	}
 
 	if (better_analyze) {
-		print_full_header(source_label.c_str());
-		return print_jobs_analysis(jobs, NULL);
+		return print_jobs_analysis(jobs, source_label.c_str(), NULL);
 	}
 
 	// at this point we either have a populated jobs list, or a populated dag_map
@@ -3691,7 +3665,7 @@ show_db_queue( const char* quill_name, const char* db_ipAddr, const char* db_nam
 
 	// if outputing dag format, we want to build the parent child links in the dag map
 	// and then edit the text for jobs that are dag nodes.
-	if (dag && (dag_map.size() > 0)) {
+	if (dash_dag && (dag_map.size() > 0)) {
 		linkup_dag_nodes_in_dag_map(/*dag_map, dag_cluster_map*/);
 		rewrite_output_for_dag_nodes_in_dag_map(/*dag_map*/);
 	}
@@ -5370,7 +5344,7 @@ static bool read_classad_file(const char *filename, ClassAdList &classads, Class
 #ifdef HAVE_EXT_POSTGRESQL
 
 /* get the quill address for the quillName specified */
-static QueryResult getQuillAddrFromCollector(char *quill_name, char *&quill_addr) {
+static QueryResult getQuillAddrFromCollector(const char *quill_name, std::string & quill_addr) {
 	QueryResult query_result = Q_OK;
 	char		query_constraint[1024];
 	CondorQuery	quillQuery(QUILL_AD);
@@ -5384,7 +5358,7 @@ static QueryResult getQuillAddrFromCollector(char *quill_name, char *&quill_addr
 
 	quillList.Open();	
 	while ((ad = quillList.Next())) {
-		ad->LookupString(ATTR_MY_ADDRESS, &quill_addr);
+		ad->LookupString(ATTR_MY_ADDRESS, quill_addr);
 	}
 	quillList.Close();
 	return query_result;
@@ -5490,6 +5464,25 @@ static void exec_db_query(const char *quill_name, const char *db_ipAddr, const c
 		free(dbconn);
 	}
 
+}
+
+static void freeConnectionStrings() {
+	squillName.clear();
+	quillName = NULL;
+	squillMachine.clear();
+	quillMachine = NULL;
+	sdbIpAddr.clear();
+	dbIpAddr = NULL;
+	sdbName.clear();
+	dbName = NULL;
+	squeryPassword.clear();
+	queryPassword = NULL;
+	quillAddr.clear();
+}
+
+static void quillCleanupOnExit(int n)
+{
+	freeConnectionStrings();
 }
 
 #endif /* HAVE_EXT_POSTGRESQL */
