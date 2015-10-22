@@ -184,6 +184,7 @@ char* tdp_input = NULL;
 #if defined(WIN32)
 char* RunAsOwnerCredD = NULL;
 #endif
+bool sent_credential_to_credd = false;
 
 
 // For mpi universe testing
@@ -6665,6 +6666,8 @@ SetGSICredentials()
 void
 SetSendCredential()
 {
+	// in theory, each queued job may have a different value for this, so first we
+	// process this attribute
 	bool send_credential = condor_param_bool( "SendCredential", SendCredential, false );
 
 	if (!send_credential) {
@@ -6675,6 +6678,11 @@ SetSendCredential()
 	MyString buffer;
 	(void) buffer.formatstr( "%s = True", ATTR_JOB_SEND_CREDENTIAL);
 	InsertJobExpr(buffer);
+
+	// however, if we do need to send it for any job, we only need to do that once.
+	if (sent_credential_to_credd) {
+		return;
+	}
 
 	// store credential with the credd
 	MyString producer;
@@ -6742,6 +6750,10 @@ SetSendCredential()
 		fprintf( stderr, "\nERROR: Job requested SendCredential but SEC_CREDENTIAL_PRODUCER not defined!\n");
 		exit(1);
 	}
+
+	// this will prevent us from sending it a second time if multiple jobs
+	// are queued
+	sent_credential_to_credd = true;
 }
 
 
