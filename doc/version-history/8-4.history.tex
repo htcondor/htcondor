@@ -134,6 +134,11 @@ invoking a transformation hook.
 that reuse job IDs.
 \Ticket{5062}
 
+\item When the \Prog{batch\_gahp} rejects a request because it is
+overloaded, the \Condor{gridmanager} now reduces the rate of requests
+and retries the rejected request later.
+\Ticket{5253}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
