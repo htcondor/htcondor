@@ -575,19 +575,21 @@ XInterface::QuerySSExtension()
 		dprintf(D_ALWAYS, "X server %s have the screen saver extension\n", hasXss ? "does" : "does not");
 	}
 
-	if (!xssi) {
-		xssi = XScreenSaverAllocInfo();
-	}
+	if (hasXss) {
+		if (!xssi) {
+			xssi = XScreenSaverAllocInfo();
+		}
 
-	XScreenSaverQueryInfo(_display,DefaultRootWindow(_display), xssi);
+		XScreenSaverQueryInfo(_display,DefaultRootWindow(_display), xssi);
 
-	dprintf(D_FULLDEBUG, "Screen Saver extension claims idle time is %ld ms\n", xssi->idle);
+		dprintf(D_FULLDEBUG, "Screen Saver extension claims idle time is %ld ms\n", xssi->idle);
 
-	if (xssi->idle < 20000l) {
-		return true;
-	}
+		if (xssi->idle < 20000l) {
+			return true;
+		}
 	
-	return false;
+	}
+		return false;
 
 #else
 return false;
