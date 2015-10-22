@@ -30,7 +30,7 @@
 #include "proxymanager.h"
 #include "condor_arglist.h"
 #include <map>
-#include <queue>
+#include <deque>
 #include <list>
 #include <vector>
 #include <string>
@@ -169,9 +169,9 @@ class GahpServer : public Service {
 
 	unsigned int m_reference_count;
 	HashTable<int,GahpClient*> *requestTable;
-	std::queue<int> waitingHighPrio;
-	std::queue<int> waitingMediumPrio;
-	std::queue<int> waitingLowPrio;
+	std::deque<int> waitingHighPrio;
+	std::deque<int> waitingMediumPrio;
+	std::deque<int> waitingLowPrio;
 
 	int m_gahp_pid;
 	int m_gahp_readfd;

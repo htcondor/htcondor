@@ -81,6 +81,17 @@ void GahpReconfig()
 	}
 }
 
+bool GahpOverloadError( const Gahp_Args &return_line )
+{
+		// The blahp will return this error if a new request will cause it
+		// to exceed its limit on the number of threads it has. The limit
+		// is set in the blahp's config file.
+	if ( return_line.argc > 1 && !strcmp( return_line.argv[1], "Threads limit reached" ) ) {
+		return true;
+	}
+	return false;
+}
+
 void GahpClient::setErrorString( const std::string & newErrorString ) {
     error_string = newErrorString;
 }
@@ -2534,13 +2545,13 @@ GahpClient::now_pending(const char *command,const char *buf,
 			// this request for later.
 		switch ( prio_level ) {
 		case high_prio:
-			server->waitingHighPrio.push( pending_reqid );
+			server->waitingHighPrio.push_back( pending_reqid );
 			break;
 		case medium_prio:
-			server->waitingMediumPrio.push( pending_reqid );
+			server->waitingMediumPrio.push_back( pending_reqid );
 			break;
 		case low_prio:
-			server->waitingLowPrio.push( pending_reqid );
+			server->waitingLowPrio.push_back( pending_reqid );
 			break;
 		}
 		return;
@@ -2565,6 +2576,19 @@ GahpClient::now_pending(const char *command,const char *buf,
 	Gahp_Args return_line;
 	server->read_argv(return_line);
 	if ( return_line.argc == 0 || return_line.argv[0][0] != 'S' ) {
+			// If the gahp server says it's overloaded, lower our limit on
+			// pending requests and make this request the next one to be
+			// issued when more results come back.
+		if ( GahpOverloadError( return_line ) && server->num_pending_requests > 0 ) {
+			if ( server->max_pending_requests > server->num_pending_requests ) {
+				dprintf( D_ALWAYS, "GAHP server %d overloaded, lowering pending limit to %d\n", server->m_gahp_pid, server->num_pending_requests );
+				server->max_pending_requests = server->num_pending_requests;
+			} else {
+				dprintf( D_ALWAYS, "GAHP server %d overloaded, will retry request\n", server->m_gahp_pid );
+			}
+			server->waitingHighPrio.push_front( pending_reqid );
+			return;
+		}
 		// Badness !
 		EXCEPT("Bad %s Request: %s",pending_command, return_line.argc?return_line.argv[0]:"Empty response");
 	}
@@ -2751,13 +2775,13 @@ GahpServer::poll()
 	{
 		if ( waitingHighPrio.size() > 0 ) {
 			waiting_reqid = waitingHighPrio.front();
-			waitingHighPrio.pop();
+			waitingHighPrio.pop_front();
 		} else if ( waitingMediumPrio.size() > 0 ) {
 			waiting_reqid = waitingMediumPrio.front();
-			waitingMediumPrio.pop();
+			waitingMediumPrio.pop_front();
 		} else if ( waitingLowPrio.size() > 0 ) {
 			waiting_reqid = waitingLowPrio.front();
-			waitingLowPrio.pop();
+			waitingLowPrio.pop_front();
 		} else {
 			break;
 		}
