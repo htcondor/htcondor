@@ -25,8 +25,8 @@
 
 void simple_scramble(char* scrambled,  const char* orig, int len);
 int write_password_file(const char* path, const char* password);
-bool write_secure_file(const char* path, const char* data, size_t len, bool as_root);
-bool read_secure_file(const char *fname, char **buf, size_t *len, bool as_root);
+bool write_secure_file(const char* path, const void* data, size_t len, bool as_root);
+bool read_secure_file(const char *fname, void **buf, size_t *len, bool as_root);
 
 #endif // SECURE_FILE_H
 

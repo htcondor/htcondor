@@ -82,6 +82,8 @@
 #include "vm_univ_utils.h"
 #include "condor_md.h"
 #include "my_popen.h"
+#include "condor_base64.h"
+#include "zkm_base64.h"
 
 #include <algorithm>
 #include <string>
@@ -6681,21 +6683,38 @@ SetSendCredential()
 		ArgList args;
 		args.AppendArg(producer);
 		FILE* uber_file = my_popen(args, "r", false);
-		char *uber_ticket = NULL;
+		unsigned char *uber_ticket = NULL;
 		if (!uber_file) {
 			dprintf(D_ALWAYS, "CERN: ERROR (%i) invoking %s\n", errno, producer.c_str());
 			exit(1);
 		} else {
-			uber_ticket = (char*)malloc(65536);
+			uber_ticket = (unsigned char*)malloc(65536);
 			int bytes_read = fread(uber_ticket, 1, 65536, uber_file);
 			// what constitutes failure?
 			my_pclose(uber_file);
 
-			char preview[16];
-			strncpy(preview,uber_ticket, 15);
-			preview[15]=0;
+			if(bytes_read == 0) {
+				fprintf(stderr, "\nERROR: failed to read any data from %s!\n", producer.c_str());
+				exit(1);
+			}
 
-			dprintf(D_ALWAYS, "CERN: read %i bytes {%s}\n", bytes_read, preview);
+			// immediately convert to base64
+			char* ut64 = condor_base64_encode(uber_ticket, bytes_read);
+
+			// sanity check:  convert it back.
+			//unsigned char *zkmbuf = 0;
+			int zkmlen = -1;
+			unsigned char* zkmbuf = NULL;
+			zkm_base64_decode(ut64, &zkmbuf, &zkmlen);
+
+			dprintf(D_ALWAYS, "ZKM: b64: %i %i\n", bytes_read, zkmlen);
+			dprintf(D_ALWAYS, "ZKM: b64: %s %s\n", (char*)uber_ticket, (char*)zkmbuf);
+
+			char preview[64];
+			strncpy(preview,ut64, 63);
+			preview[63]=0;
+
+			dprintf(D_ALWAYS, "CERN: read %i bytes {%s...}\n", bytes_read, preview);
 
 			// setup the username to query
 			char userdom[256];
@@ -6709,7 +6728,7 @@ SetSendCredential()
 			Daemon my_credd(DT_CREDD);
 			int store_cred_result;
 			if (my_credd.locate()) {
-				store_cred_result = store_cred(userdom, uber_ticket, ADD_MODE, &my_credd);
+				store_cred_result = store_cred(userdom, ut64, ADD_MODE, &my_credd);
 				if ( store_cred_result != SUCCESS ) {
 					fprintf( stderr, "\nERROR: store_cred failed!\n");
 					exit(1);

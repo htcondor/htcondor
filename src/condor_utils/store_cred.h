@@ -72,12 +72,6 @@ int addCredential(const char* user, const char* pw, Daemon *d = NULL);
 int deleteCredential(const char* user, const char* pw, Daemon *d = NULL);
 int queryCredential(const char* user, Daemon *d = NULL);  // just tell me if I have one stashed
 
-#if !defined(WIN32)
-int write_password_file(const char* path, const char* password);
-bool write_secure_file(const char* path, const char* data, size_t len, bool as_root);
-bool read_secure_file(const char *fname, char **buf, size_t *len, bool as_root);
-#endif
-
 #if defined(WIN32)
 bool isValidCredential( const char *user, const char* pw );
 #endif

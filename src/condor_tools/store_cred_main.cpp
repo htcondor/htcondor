@@ -29,6 +29,7 @@
 #include "dynuser.h"
 #include "get_daemon_name.h"
 #include "condor_string.h"
+#include "secure_file.h"
 
 #if defined(WIN32)
 #include "lsa_mgr.h"  // for CONFIG_MODE

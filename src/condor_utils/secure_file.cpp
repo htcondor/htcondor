@@ -52,7 +52,7 @@ int write_password_file(const char* path, const char* password)
 // writes data of length len securely to file specified in path
 // returns true(success) or false (failure)
 //
-bool write_secure_file(const char* path, const char* data, size_t len, bool as_root)
+bool write_secure_file(const char* path, const void* data, size_t len, bool as_root)
 {
 	int fd = 0;
 	int save_errno = 0;
@@ -121,7 +121,7 @@ bool write_secure_file(const char* path, const char* data, size_t len, bool as_r
 // success, they receive a pointer to a newly-malloc()ed buffer and the length.
 //
 bool
-read_secure_file(const char *fname, char **buf, size_t *len, bool as_root)
+read_secure_file(const char *fname, void **buf, size_t *len, bool as_root)
 {
 	FILE* fp = 0;
 	int save_errno = 0;

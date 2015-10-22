@@ -30,6 +30,8 @@
 #include "ipv6_hostname.h"
 #include "credmon_interface.h"
 #include "secure_file.h"
+#include "condor_base64.h"
+#include "zkm_base64.h"
 
 static int code_store_cred(Stream *socket, char* &user, char* &pw, int &mode);
 
@@ -79,11 +81,22 @@ ZKM_UNIX_STORE_CRED(const char *user, const char *pw, const int len, int mode)
 	sprintf(filename, "%s%c%s.cred", cred_dir, DIR_DELIM_CHAR, username);
 	dprintf(D_ALWAYS, "ZKM: writing data to %s\n", tmpfilename);
 
-	// ultimately, decode base64 encode pw
-	int pwlen = strlen(pw);
+	// contents of pw are base64 encoded.  decode now just before they go
+	// into the file.
+	int rawlen = -1;
+	unsigned char* rawbuf = NULL;
+	zkm_base64_decode(pw, &rawbuf, &rawlen);
+
+	if (rawlen <= 0) {
+		dprintf(D_ALWAYS, "ZKM: failed to decode credential!\n");
+		return false;
+	}
 
 	// write temp file
-	rc = write_secure_file(tmpfilename, pw, pwlen, true);
+	rc = write_secure_file(tmpfilename, rawbuf, rawlen, true);
+
+	// caller of condor_base64_decode is responsible for freeing buffer
+	free(rawbuf);
 
 	if (rc != SUCCESS) {
 		dprintf(D_ALWAYS, "ZKM: failed to write secure temp file %s\n", tmpfilename);
@@ -92,7 +105,6 @@ ZKM_UNIX_STORE_CRED(const char *user, const char *pw, const int len, int mode)
 
 	// now move into place
 	dprintf(D_ALWAYS, "ZKM: renaming %s to %s\n", tmpfilename, filename);
-
 	priv_state priv = set_root_priv();
 	rc = rename(tmpfilename, filename);
 	set_priv(priv);
@@ -126,18 +138,13 @@ ZKM_UNIX_GET_CRED(const char *user, const char *domain)
 	dprintf(D_ALWAYS, "CERN: reading data from %s\n", filename.c_str());
 
 	// read the file (fourth argument "true" means as_root)
-	char  *buf = 0;
+	unsigned char *buf = 0;
 	size_t len = 0;
-	bool rc = read_secure_file(filename.c_str(), &buf, &len, true);
+	bool rc = read_secure_file(filename.c_str(), (void**)(&buf), &len, true);
 
-	// HACK: asserting for now that the contents are TEXT, and contain NO
-	// NULL so that we can return a null-terminated string.  it's possible
-	// we'll convert to base64 right here and return that, so it might
-	// actually be true.
 	if(rc) {
-		char* textpw = (char*)malloc(len+1);
-		strncpy(textpw, buf, len);
-		textpw[len] = 0;
+		// immediately convert to base64
+		char* textpw = condor_base64_encode(buf, len);
 		free(buf);
 		return textpw;
 	}
@@ -171,7 +178,7 @@ char* getStoredCredential(const char *username, const char *domain)
 
 	char  *buffer;
 	size_t len;
-	bool rc = read_secure_file(filename, &buffer, &len, true);
+	bool rc = read_secure_file(filename, (void**)(&buffer), &len, true);
 	if(rc) {
 		// undo the trivial scramble
 		char *pw = (char *)malloc(len + 1);

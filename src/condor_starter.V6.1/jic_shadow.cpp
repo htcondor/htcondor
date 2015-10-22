@@ -43,7 +43,10 @@
 #include "condor_mkstemp.h"
 #include "globus_utils.h"
 #include "store_cred.h"
+#include "secure_file.h"
 #include "credmon_interface.h"
+#include "condor_base64.h"
+#include "zkm_base64.h"
 
 #include <algorithm>
 
@@ -2550,6 +2553,11 @@ JICShadow::initUserCredentials() {
 	shadow->getUserCredential(user.c_str(), domain.c_str(), credential);
 	dprintf(D_ALWAYS, "CERN: got cred %s\n", credential.c_str());
 
+	//
+	// We should refactor the below code and that of ZKM_UNIX_STORE_CRED as
+	// they are essentially identical.
+	//
+
 	// create filenames
 	char tmpfilename[PATH_MAX];
 	char filename[PATH_MAX];
@@ -2557,11 +2565,28 @@ JICShadow::initUserCredentials() {
 	sprintf(filename, "%s%c%s.cred", cred_dir, DIR_DELIM_CHAR, user.c_str());
 	dprintf(D_ALWAYS, "ZKM: writing data to %s\n", tmpfilename);
 
-	// ultimately, decode base64 encoded credential
-	int pwlen = strlen(credential.c_str());
+/*
+	// contents of credential are base64 encoded.  decode now just before
+	// they go into the file.
+	int rawlen = -1;
+	std::string tmp_in(credential.c_str());
+	std::vector<BYTE> rawbuf = Base64::zkm_base64_decode(tmp_in);
+	rawlen = rawbuf.size();
+*/
+	int rawlen = -1;
+	unsigned char* rawbuf = NULL;
+	zkm_base64_decode(credential.c_str(), &rawbuf, &rawlen);
+
+	if (rawlen <= 0) {
+		dprintf(D_ALWAYS, "ZKM: failed to decode credential!\n");
+		return false;
+	}
 
 	// write temp file
-	rc = write_secure_file(tmpfilename, credential.c_str(), pwlen, true);
+	rc = write_secure_file(tmpfilename, rawbuf, rawlen, true);
+
+	// caller of condor_base64_decode is responsible for freeing buffer
+	free(rawbuf);
 
 	if (rc != SUCCESS) {
 		dprintf(D_ALWAYS, "ZKM: failed to write secure temp file %s\n", tmpfilename);
@@ -2656,7 +2681,7 @@ JICShadow::refreshSandboxCredentials()
 		ccfilename, sandboxcctmpfilename, user.c_str());
 
 	// read entire ccfilename as root into ccbuf
-	if (!read_secure_file(ccfilename, &ccbuf, &cclen, true)) {
+	if (!read_secure_file(ccfilename, (void**)(&ccbuf), &cclen, true)) {
 		dprintf(D_ALWAYS, "ERROR: read_secure_file(%s,ccbuf,%lu) failed\n", sandboxcctmpfilename,cclen);
 		rc = false;
 		goto resettimer;
