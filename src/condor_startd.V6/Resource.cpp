@@ -2145,7 +2145,8 @@ Resource::publish( ClassAd* cap, amask_t mask )
 		tmp.set(param(param_name.c_str()));
 		if ( ! tmp.empty()) { slot_attrs.initializeFromString(tmp); }
 
-		// check for obsolete STARTD_EXPRS and generate a warning if set
+		// check for obsolete STARTD_EXPRS and generate a warning if both STARTD_ATTRS and STARTD_EXPRS is set.
+		if ( ! slot_attrs.isEmpty())
 		{
 			MyString tname(slot_name); tname += "_STARTD_EXPRS";
 			auto_free_ptr tmp2(param(tname.c_str()));
@@ -2157,6 +2158,10 @@ Resource::publish( ClassAd* cap, amask_t mask )
 				dprintf(D_ALWAYS, "WARNING: config contains obsolete STARTD_EXPRS or SLOT_TYPE_n_STARTD_EXPRS which will be (partially) ignored! use STARTD_ATTRS instead.\n");
 			}
 		}
+
+		// now append any attrs needed by HTCondor itself
+		tmp.set(param("SYSTEM_STARTD_ATTRS"));
+		if ( ! tmp.empty()) { slot_attrs.initializeFromString(tmp); }
 
 		slot_attrs.rewind();
 		for (char* attr = slot_attrs.first(); attr != NULL; attr = slot_attrs.next()) {
@@ -2228,9 +2233,9 @@ Resource::publish( ClassAd* cap, amask_t mask )
 			// ClassAd, so be careful about that, too.
 		s = this->state();
 		if( s == claimed_state || s == preempting_state ) {
-			if( startd_job_exprs && r_cur && r_cur->ad() ) {
-				startd_job_exprs->rewind();
-				while( (ptr = startd_job_exprs->next()) ) {
+			if( startd_job_attrs && r_cur && r_cur->ad() ) {
+				startd_job_attrs->rewind();
+				while( (ptr = startd_job_attrs->next()) ) {
 					caInsert( cap, r_cur->ad(), ptr );
 				}
 			}

@@ -124,5 +124,6 @@ CONDOR_SSH_KEYGEN = /usr/bin/ssh-keygen
 ##  This setting puts the DedicatedScheduler attribute, defined above,
 ##  into your machine's classad.  This way, the dedicated scheduler
 ##  (and you) can identify which machines are configured as dedicated
-##  resources.  
-STARTD_EXPRS = $(STARTD_EXPRS), DedicatedScheduler
+##  resources.
+##  Note: as of 8.4.1 this setting is automatic
+#STARTD_EXPRS = $(STARTD_EXPRS), DedicatedScheduler

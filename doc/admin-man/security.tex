@@ -3094,11 +3094,11 @@ and \Expr{False} on Windows platforms.
 \item The job's ClassAd must have attribute \Attr{RunAsOwner}
 set to \Expr{True}.
 This can be set up for all users by adding an attribute to
-configuration variable \Macro{SUBMIT\_EXPRS}.
+configuration variable \Macro{SUBMIT\_ATTRS}.
 If this were the only attribute to be added to all job ClassAds,
 it would be set up with
 \begin{verbatim}
-  SUBMIT_EXPRS = RunAsOwner
+  SUBMIT_ATTRS = RunAsOwner
   RunAsOwner = True
 \end{verbatim}
 \item The value of configuration variable \MacroNI{UID\_DOMAIN} must be

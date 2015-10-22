@@ -602,7 +602,7 @@ ResState::leave_action( State cur_s, Activity cur_a, State new_s,
 
 				// In fact, we should just delete the whole ClassAd
 				// and rebuild it, since we might be leaving around
-				// attributes from STARTD_JOB_EXPRS, etc.
+				// attributes from STARTD_JOB_ATTRS, etc.
 			rip->init_classad();
 		}
 		break;
