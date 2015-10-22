@@ -1127,7 +1127,7 @@ void Scheduler::userlog_file_cache_erase(const int& cluster, const int& proc) {
     // possible userlog file names associated with this job
     if (getPathToUserLog(ad, userlog_name)) log_names.push_back(userlog_name.Value());
     if (getPathToUserLog(ad, dagman_log_name, ATTR_DAGMAN_WORKFLOW_LOG)) log_names.push_back(dagman_log_name.Value());
-    
+
     for (std::vector<char const*>::iterator j(log_names.begin());  j != log_names.end();  ++j) {
 
         // look for file name in the cache
@@ -3601,6 +3601,7 @@ namespace {
 // events and must be deleted when you're done.  This returns NULL if
 // the user didn't want a WriteUserLog, so you must check for NULL before
 // using the pointer you get back.
+//TEMPTEMP -- return value here may be problematic...  (if user log and workflow log are specified, which one do we return?)
 WriteUserLog*
 Scheduler::InitializeUserLog( PROC_ID job_id ) 
 {

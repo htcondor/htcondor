@@ -392,6 +392,7 @@ const char	*EmailAttributes = "email_attributes";
 const char	*ExitRequirements = "exit_requirements";
 const char	*UserLogFile	= "log";
 const char	*UseLogUseXML	= "log_xml";
+//TEMPTEMP -- this should probably be a #define somewhere...
 const char	*DagmanLogFile	= "dagman_log";
 const char	*CoreSize		= "coresize";
 const char	*NiceUser		= "nice_user";
