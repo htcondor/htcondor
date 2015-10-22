@@ -7398,7 +7398,6 @@ condor_param( const char* name)
 
 void param_and_insert_unique_items(const char * param_name, classad::References & attrs)
 {
-	int num_inserts = 0;
 	auto_free_ptr value(param(param_name));
 	if (value) {
 		StringTokenIterator it(value);
