@@ -640,17 +640,17 @@ VanillaProc::StartJob()
 				// Note that ATTR_VIRTUAL_MEMORY on Linux
 				// is sum of memory and swap, in Kilobytes
 
-				if (MachineAd->LookupInteger(ATTR_VIRTUAL_MEMORY, MemMb)) {
-					uint64_t VMemkb_big = MemMb;
+				int VMemKb;
+				if (MachineAd->LookupInteger(ATTR_VIRTUAL_MEMORY, VMemKb)) {
 
-					uint64_t memsw_limit = 1024 * VMemkb_big;
-					if (MemMb > 0) {
+					uint64_t memsw_limit = 1024 * VMemKb;
+					if (VMemKb > 0) {
 						// we're not allowed to set memsw limit <
 						// the hard memory limit.  If we haven't set the hard
 						// memory limit, the default may be infinity.
-						// So, if we've set soft, set hard limit to memsw
+						// So, if we've set soft, set hard limit to memsw - one page
 						if (mem_is_soft) {
-							uint64_t hard_limit = 1024 * VMemkb_big;
+							uint64_t hard_limit = memsw_limit - 4096;
 							climits.set_memory_limit_bytes(hard_limit, false);
 						}
 						climits.set_memsw_limit_bytes(memsw_limit);
