@@ -71,6 +71,12 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item If cgroups are enabled, and a job goes over the memory limit, the
+cgroup OOM killer fires, and the job is put on hold.  HTCondor now
+updates the job's memory usage statistics with the most up to date
+usage, instead of relying on the previous snapshop.
+\Ticket{5341}
+
 \item Fixed a bug where the \Condor{kbdd} could not accurately measure
 the keyboard idle time.  This daemon now works correctly on Linux systems
 whose X server support the MIT screen saver extension.
