@@ -106,9 +106,8 @@ if ($newarraysize != $seenargsize) {
 
 CondorTest::EndTest();
 print scalar localtime() . "\n";
-my $result = 0;
 
-if( $result != 0 )
+if( $return != 0 )
 {
 	exit(1);
 }
