@@ -25,6 +25,3 @@ x86_64_Fedora22
 x86_64_SL6
 x86_64_SL7
 
-# These are NMI requested platforms.
-x86_64_Solaris11
-
