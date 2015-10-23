@@ -96,11 +96,20 @@ will not hang forever waiting for a unresponsive daemon.
     forgets to give the condor user read access to that file.
 \Ticket{4506}
 
+\item The \Opt{-natural} sort option of \Condor{status} is now the default.
+\Ticket{5131}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item If cgroups are enabled, and a job goes over the memory limit, the
+cgroup OOM killer fires, and the job is put on hold.  HTCondor now
+updates the job's memory usage statistics with the most up to date
+usage, instead of relying on the previous snapshop.
+\Ticket{5341}
 
 \item Fixed a bug where the \Condor{kbdd} could not accurately measure
 the keyboard idle time.  This daemon now works correctly on Linux systems
@@ -158,6 +167,26 @@ that reuse job IDs.
 overloaded, the \Condor{gridmanager} now reduces the rate of requests
 and retries the rejected request later.
 \Ticket{5253}
+
+\item Fixed a bug that could cause a daemon to be in the wrong
+privilege state when attempting to act as the user.
+\Ticket{4522}
+
+\item The \Condor{had} and \Condor{replication} daemons now work properly
+when Shared Port is enabled. They still require their own dedicated ports.
+\Ticket{5301}
+
+\item Fixed a bug that cause \Condor{mips} to report numbers about 40 percent lower than it should
+on Linux platforms.
+\Ticket{5261}
+
+\item Fixed a bug in \Condor{install} that would cause it to configure HTCondor to advertise the public
+IP addresses to the collector even when using localhost or 127.0.0.1 for a personal HTCondor.
+\Ticket{5286}
+
+\item Fixed a bug in \Condor{q} that caused slices in the Queue statement to be treated as part of the
+arguments filename when the slice was longer than 8 characters.
+\Ticket{5273}
 
 \end{itemize}
 
