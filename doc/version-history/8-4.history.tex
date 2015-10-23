@@ -58,6 +58,13 @@ The details of each version are described below.
     the use all three of these at the same time is not supported.
 \Ticket{5326}
 
+\item When \Condor{reconfig} and \Condor{restart} are run as root
+    they will check to see if the condor user has read access to all of the
+    configuration files before sending the command. This is done to prevent aborting the daemons
+    accidently by sending reconfig after the admin creates a new config file and
+    forgets to give the condor user read access to that file.
+\Ticket{4506}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
