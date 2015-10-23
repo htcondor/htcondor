@@ -33,7 +33,7 @@ my $common_condor_config = '
   MachineMaxVacateTime = 10
 
   DrainRank = 1
-  STARTD_EXPRS = DrainRank
+  STARTD_ATTRS = DrainRank
   STARTD_NAME = startd$(DrainRank)@$(FULL_HOSTNAME)
 
   DEFRAG_INTERVAL = 10

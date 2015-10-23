@@ -448,15 +448,37 @@ void config_dump_string_pool(FILE * fh, const char * sep)
 	}
 }
 
+/* 
+  A convenience function that calls param() then inserts items from the value
+  into the given StringList if they are not already there
+*/
+bool param_and_insert_unique_items(const char * param_name, StringList & items, bool case_sensitive /*=false*/)
+{
+	int num_inserts = 0;
+	auto_free_ptr value(param(param_name));
+	if (value) {
+		StringTokenIterator it(value);
+		for (const char * item = it.first(); item; item = it.next()) {
+			if (case_sensitive) {
+				if (items.contains(item)) continue;
+			} else {
+				if (items.contains_anycase(item)) continue;
+			}
+			items.insert(item);
+			++num_inserts;
+		}
+	}
+	return num_inserts > 0;
+}
+
 // Function implementations
 
 void
 config_fill_ad( ClassAd* ad, const char *prefix )
 {
-	char 		*tmp;
-	char		*expr;
-	StringList	reqdExprs;
-	MyString 	buffer;
+	const char * subsys = get_mySubSystem()->getName();
+	StringList reqdAttrs;
+	MyString param_name;
 
 	if( !ad ) return;
 
@@ -464,59 +486,49 @@ config_fill_ad( ClassAd* ad, const char *prefix )
 		prefix = get_mySubSystem()->getLocalName();
 	}
 
-	buffer.formatstr( "%s_EXPRS", get_mySubSystem()->getName() );
-	tmp = param( buffer.Value() );
-	if( tmp ) {
-		reqdExprs.initializeFromString (tmp);	
-		free (tmp);
+	// <SUBSYS>_ATTRS is the proper form, set the string list from entries in the config value
+	param_name = subsys; param_name += "_ATTRS";
+	param_and_insert_unique_items(param_name.Value(), reqdAttrs);
+
+	// <SUBSYS>_EXPRS is deprecated, but still supported for now, we merge merge it into the existing list.
+	param_name = subsys; param_name += "_EXPRS";
+	param_and_insert_unique_items(param_name.Value(), reqdAttrs);
+
+	// SYSTEM_<SUBSYS>_ATTRS is the set of attrs that are required by HTCondor, this is a non-public config knob.
+	param_name.formatstr("SYSTEM_%s_ATTRS", subsys);
+	param_and_insert_unique_items(param_name.Value(), reqdAttrs);
+
+	if (prefix) {
+		// <PREFIX>_<SUBSYS>_ATTRS is additional attributes needed
+		param_name.formatstr("%s_%s_ATTRS", prefix, subsys);
+		param_and_insert_unique_items(param_name.Value(), reqdAttrs);
+
+		// <PREFIX>_<SUBSYS>_EXPRS is deprecated, but still supported for now.
+		param_name.formatstr("%s_%s_EXPRS", prefix, subsys);
+		param_and_insert_unique_items(param_name.Value(), reqdAttrs);
 	}
 
-	buffer.formatstr( "%s_ATTRS", get_mySubSystem()->getName() );
-	tmp = param( buffer.Value() );
-	if( tmp ) {
-		reqdExprs.initializeFromString (tmp);	
-		free (tmp);
-	}
+	if ( ! reqdAttrs.isEmpty()) {
+		MyString buffer;
 
-	if(prefix) {
-		buffer.formatstr( "%s_%s_EXPRS", prefix, get_mySubSystem()->getName() );
-		tmp = param( buffer.Value() );
-		if( tmp ) {
-			reqdExprs.initializeFromString (tmp);	
-			free (tmp);
-		}
-
-		buffer.formatstr( "%s_%s_ATTRS", prefix, get_mySubSystem()->getName() );
-		tmp = param( buffer.Value() );
-		if( tmp ) {
-			reqdExprs.initializeFromString (tmp);	
-			free (tmp);
-		}
-
-	}
-
-	if( !reqdExprs.isEmpty() ) {
-		reqdExprs.rewind();
-		while ((tmp = reqdExprs.next())) {
-			expr = NULL;
-			if(prefix) {
-				buffer.formatstr("%s_%s", prefix, tmp);	
-				expr = param(buffer.Value());
+		for (const char * attr = reqdAttrs.first(); attr; attr = reqdAttrs.next()) {
+			auto_free_ptr expr(NULL);
+			if (prefix) {
+				param_name.formatstr("%s_%s", prefix, attr);
+				expr.set(param(param_name.Value()));
 			}
-			if(!expr) {
-				expr = param(tmp);
+			if ( ! expr) {
+				expr.set(param(attr));
 			}
-			if(expr == NULL) continue;
-			buffer.formatstr( "%s = %s", tmp, expr );
+			if ( ! expr) continue;
+			buffer.formatstr("%s = %s", attr, expr.ptr());
 
-			if( !ad->Insert( buffer.Value() ) ) {
+			if ( ! ad->Insert(buffer.Value())) {
 				dprintf(D_ALWAYS,
 						"CONFIGURATION PROBLEM: Failed to insert ClassAd attribute %s.  The most common reason for this is that you forgot to quote a string value in the list of attributes being added to the %s ad.\n",
-						buffer.Value(), get_mySubSystem()->getName() );
+						buffer.Value(), subsys);
 			}
-
-			free( expr );
-		}	
+		}
 	}
 	
 	/* Insert the version into the ClassAd */
@@ -1279,7 +1291,10 @@ bool check_config_file_access(
 		// If we switch users, then we wont even see the current user config file, so dont' check it's access.
 		if ( ! user_config_source.empty() && (MATCH == strcmp(file, user_config_source.c_str())))
 			continue;
-		if (0 != access(file, R_OK)) {
+		if (is_piped_command(file)) continue;
+		// check for access, other failures we ignore here since if the file or directory doesn't exist
+		// that will most likely not be an error once we reconfig
+		if (0 != access(file, R_OK) && errno == EACCES) {
 			any_failed = true;
 			errfiles.append(file);
 		}

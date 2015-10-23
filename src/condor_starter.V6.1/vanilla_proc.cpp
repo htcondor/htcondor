@@ -641,17 +641,19 @@ VanillaProc::StartJob()
 				// is sum of memory and swap, in Kilobytes
 
 				if (MachineAd->LookupInteger(ATTR_VIRTUAL_MEMORY, MemMb)) {
-					uint64_t VMemMb_big = MemMb;
+					uint64_t VMemkb_big = MemMb;
 
+					uint64_t memsw_limit = 1024 * VMemkb_big;
 					if (MemMb > 0) {
 						// we're not allowed to set memsw limit <
 						// the hard memory limit.  If we haven't set the hard
 						// memory limit, the default may be infinity.
-						// So, if we've set soft, set hard to (memsw - 4096)
+						// So, if we've set soft, set hard limit to memsw
 						if (mem_is_soft) {
-							climits.set_memory_limit_bytes(1024*VMemMb_big - 4096, false);
+							uint64_t hard_limit = 1024 * VMemkb_big;
+							climits.set_memory_limit_bytes(hard_limit, false);
 						}
-						climits.set_memsw_limit_bytes(1024*VMemMb_big);
+						climits.set_memsw_limit_bytes(memsw_limit);
 					}
 				} else {
 					dprintf(D_ALWAYS, "Not setting virtual memory limit in cgroup because "
@@ -1012,6 +1014,14 @@ VanillaProc::outOfMemoryEvent(int /* fd */)
 		return 0;
 	}
 
+	// The OOM killer has fired, and the process is frozen.  However,
+	// the cgroup still has accurate memory usage.  Let's grab that
+	// and make a final update, so the user can see exactly how much
+	// memory they used.
+	ClassAd updateAd;
+	PublishUpdateAd( &updateAd );
+	Starter->jic->periodicJobUpdate( &updateAd, true );
+
 	std::stringstream ss;
 	if (m_memory_limit >= 0) {
 		ss << "Job has gone over memory limit of " << m_memory_limit << " megabytes.";
@@ -1021,18 +1031,19 @@ VanillaProc::outOfMemoryEvent(int /* fd */)
 	if( isCheckpointing ) {
 		ss << "  This occurred while the job was checkpointing.";
 	}
-	Starter->jic->holdJob(ss.str().c_str(), CONDOR_HOLD_CODE_JobOutOfResources, 0);
 
 	// this will actually clean up the job
-	if ( Starter->Hold( ) ) {
-		dprintf( D_ALWAYS, "Job was held due to OOM event: %s\n", ss.str().c_str());
-		Starter->allJobsDone();
-	}
+	Starter->Hold( );
+	dprintf( D_ALWAYS, "Job was held due to OOM event: %s\n", ss.str().c_str());
+	Starter->allJobsDone();
 
 	dprintf(D_FULLDEBUG, "Closing event FD pipe %d.\n", m_oom_efd);
 	cleanupOOM();
 
 	Starter->ShutdownFast();
+
+	// This ulogs the hold event and KILLS the shadow
+	Starter->jic->holdJob(ss.str().c_str(), CONDOR_HOLD_CODE_JobOutOfResources, 0);
 
 	return 0;
 }

@@ -1104,16 +1104,32 @@ compute_significant_attrs(ClassAdListDoesNotDeleteAds & startdAds)
 	if (!sample_startd_ad) {	// if no startd ads, just return.
 		return NULL;	// if no startd ads, there are no sig attrs
 	}
-	char *startd_job_exprs = param("STARTD_JOB_EXPRS");
-	if ( startd_job_exprs ) {	// add in startd_job_exprs
-		StringList exprs(startd_job_exprs);
-		exprs.rewind();
-		char *v = NULL;
-		while ( (v=exprs.next()) ) {
-			sample_startd_ad->Assign(v,true);
+	//bool has_startd_job_attrs = false;
+	auto_free_ptr startd_job_attrs(param("STARTD_JOB_ATTRS"));
+	if ( ! startd_job_attrs.empty()) { // add in startd_job_attrs
+		StringTokenIterator attrs(startd_job_attrs);
+		for (const char * attr = attrs.first(); attr; attr = attrs.next()) {
+			sample_startd_ad->Assign(attr, true);
+			//has_startd_job_attrs = true;
 		}
-		free(startd_job_exprs);
 	}
+	startd_job_attrs.set(param("STARTD_JOB_EXPRS"));
+	if ( ! startd_job_attrs.empty()) { // add in (obsolete) startd_job_exprs
+		StringTokenIterator attrs(startd_job_attrs);
+		for (const char * attr = attrs.first(); attr; attr = attrs.next()) {
+			sample_startd_ad->Assign(attr, true);
+		}
+		//if (has_startd_job_attrs) { dprintf(D_FULLDEBUG, "Warning: both STARTD_JOB_ATTRS and STARTD_JOB_EXPRS specified, for now these will be merged, but you should use only STARTD_JOB_ATTRS\n"); }
+	}
+	// Now add in the job attrs required by HTCondor.
+	startd_job_attrs.set(param("SYSTEM_STARTD_JOB_ATTRS"));
+	if ( ! startd_job_attrs.empty()) { // add in startd_job_attrs
+		StringTokenIterator attrs(startd_job_attrs);
+		for (const char * attr = attrs.first(); attr; attr = attrs.next()) {
+			sample_startd_ad->Assign(attr, true);
+		}
+	}
+
 	char *tmp=param("PREEMPTION_REQUIREMENTS");
 	if ( tmp && PreemptionReq ) {	// add references from preemption_requirements
 		const char* preempt_req_name = "preempt_req__";	// any name will do

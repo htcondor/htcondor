@@ -76,6 +76,26 @@ will not hang forever waiting for a unresponsive daemon.
 	additional information.
 \Ticket{5250}
 
+\item Added configuration variables and documentation so that we uniformly prefer
+    \Macro{<var>\_ATTRS} over \Macro{<var>\_EXPRS} but support both. This includes
+    \Macro{STARTD\_ATTRS}, \Macro{STARTD\_JOB\_ATTRS} and \Macro{SUBMIT\_ATTRS}
+    which are often used by HTCondor sites which customize the configuration. These
+    configuration variables are now exclusively for use by HTCondor administrators;
+    The former default values for these variables have been moved into other configuration
+    which is reserved for use by HTCondor developers.  This is done to prevent administrators
+    from accidently removing the necessary defaults.
+    A warning about use of \Macro{STARTD\_EXPRS} has been disabled unless
+    \Macro{STARTD\_ATTRS} or\Macro{SLOT\_TYPE\_<n>\_STARTD\_ATTRS} is also used, since
+    the use all three of these at the same time is not supported.
+\Ticket{5326}
+
+\item When \Condor{reconfig} and \Condor{restart} are run as root
+    they will check to see if the condor user has read access to all of the
+    configuration files before sending the command. This is done to prevent aborting the daemons
+    accidently by sending reconfig after the admin creates a new config file and
+    forgets to give the condor user read access to that file.
+\Ticket{4506}
+
 \end{itemize}
 
 \noindent Bugs Fixed:

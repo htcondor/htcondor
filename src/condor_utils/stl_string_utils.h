@@ -125,6 +125,7 @@ public:
 
 	void rewind() { ixNext = 0; }
 	const char * next() { const std::string * s = next_string(); return s ? s->c_str() : NULL; }
+	const char * first() { ixNext = 0; return next(); }
 	bool next(MyString & tok);
 
 	const std::string * next_string(); // return NULL or a pointer to current token

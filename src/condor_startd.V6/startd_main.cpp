@@ -58,7 +58,7 @@ int	update_interval = 0;	// Interval to update CM
 int	update_offset = 0;		// Interval offset to update CM
 
 // String Lists
-StringList *startd_job_exprs = NULL;
+StringList *startd_job_attrs = NULL;
 StringList *startd_slot_attrs = NULL;
 static StringList *valid_cod_users = NULL; 
 
@@ -478,9 +478,6 @@ finish_main_config( void )
 int
 init_params( int /* first_time */)
 {
-	char *tmp;
-
-
 	resmgr->init_config_classad();
 
 	polling_interval = param_integer( "POLLING_INTERVAL", 5 );
@@ -501,38 +498,41 @@ init_params( int /* first_time */)
 
 	sysapi_reconfig();
 
-	if( startd_job_exprs ) {
-		delete( startd_job_exprs );
-		startd_job_exprs = NULL;
-	}
-	tmp = param( "STARTD_JOB_EXPRS" );
-	if( tmp ) {
-		startd_job_exprs = new StringList();
-		startd_job_exprs->initializeFromString( tmp );
-		free( tmp );
+	// Fill in *_JOB_ATTRS
+	//
+	if (startd_job_attrs) {
+		startd_job_attrs->clearAll();
 	} else {
-		startd_job_exprs = new StringList();
-		startd_job_exprs->initializeFromString( ATTR_JOB_UNIVERSE );
+		startd_job_attrs = new StringList();
+	}
+	param_and_insert_unique_items("STARTD_JOB_ATTRS", *startd_job_attrs);
+	// merge in the deprecated _EXPRS config
+	param_and_insert_unique_items("STARTD_JOB_EXPRS", *startd_job_attrs);
+	// Now merge in the attrs required by HTCondor - this knob is a secret from users
+	param_and_insert_unique_items("SYSTEM_STARTD_JOB_ATTRS", *startd_job_attrs);
+	if (startd_job_attrs->isEmpty()) {
+		delete startd_job_attrs;
+		startd_job_attrs = NULL;
 	}
 
-	if( startd_slot_attrs ) {
-		delete( startd_slot_attrs );
-		startd_slot_attrs = NULL;
-	}
-	tmp = param( "STARTD_SLOT_ATTRS" );
-	if (!tmp) {
-		tmp = param( "STARTD_SLOT_EXPRS" );
-	}
-	if (param_boolean("ALLOW_VM_CRUFT", false) && !tmp) {
-		tmp = param( "STARTD_VM_ATTRS" );
-		if (!tmp) {
-			tmp = param( "STARTD_VM_EXPRS" );
-		}
-	}
-	if( tmp ) {
+	// Fill in *_SLOT_ATTRS
+	//
+	if (startd_slot_attrs) {
+		startd_slot_attrs->clearAll();
+	} else {
 		startd_slot_attrs = new StringList();
-		startd_slot_attrs->initializeFromString( tmp );
-		free( tmp );
+	}
+	param_and_insert_unique_items("STARTD_SLOT_ATTRS", *startd_slot_attrs);
+	param_and_insert_unique_items("STARTD_SLOT_EXPRS", *startd_slot_attrs);
+	if (startd_slot_attrs->isEmpty() && param_boolean("ALLOW_VM_CRUFT", false)) {
+		param_and_insert_unique_items("STARTD_VM_ATTRS", *startd_slot_attrs);
+		param_and_insert_unique_items("STARTD_VM_EXPRS", *startd_slot_attrs);
+	}
+	// now insert attributes needed by HTCondor
+	param_and_insert_unique_items("SYSTEM_STARTD_SLOT_ATTRS", *startd_slot_attrs);
+	if (startd_slot_attrs->isEmpty()) {
+		delete  startd_slot_attrs;
+		startd_slot_attrs = NULL;
 	}
 
 	console_slots = param_integer( "SLOTS_CONNECTED_TO_CONSOLE", -12345);
@@ -561,14 +561,13 @@ init_params( int /* first_time */)
 	compute_avail_stats = false;
 	compute_avail_stats = param_boolean( "STARTD_COMPUTE_AVAIL_STATS", false );
 
-	tmp = param( "STARTD_NAME" );
-	if( tmp ) {
+	auto_free_ptr tmp(param("STARTD_NAME"));
+	if (tmp) {
 		if( Name ) {
 			delete [] Name;
 		}
-		Name = build_valid_daemon_name( tmp );
+		Name = build_valid_daemon_name(tmp);
 		dprintf( D_FULLDEBUG, "Using %s for name\n", Name );
-		free( tmp );
 	}
 
 	pid_snapshot_interval = param_integer( "PID_SNAPSHOT_INTERVAL", DEFAULT_PID_SNAPSHOT_INTERVAL );
@@ -577,37 +576,34 @@ init_params( int /* first_time */)
 		delete( valid_cod_users );
 		valid_cod_users = NULL;
 	}
-	tmp = param( "VALID_COD_USERS" );
-	if( tmp ) {
+	tmp.set(param("VALID_COD_USERS"));
+	if (tmp) {
 		valid_cod_users = new StringList();
 		valid_cod_users->initializeFromString( tmp );
-		free( tmp );
 	}
 
 	if( vmapi_is_virtual_machine() == TRUE ) {
 		vmapi_destroy_vmregister();
 	}
-	tmp = param( "VMP_HOST_MACHINE" );
-	if( tmp ) {
-		if( vmapi_is_my_machine(tmp) ) {
+	tmp.set(param("VMP_HOST_MACHINE"));
+	if (tmp) {
+		if (vmapi_is_my_machine(tmp.ptr())) {
 			dprintf( D_ALWAYS, "WARNING: VMP_HOST_MACHINE should be the hostname of host machine. In host machine, it doesn't need to be defined\n");
 		} else {
-			vmapi_create_vmregister(tmp);
+			vmapi_create_vmregister(tmp.ptr());
 		}
-		free(tmp);
 	}
 
 	if( vmapi_is_host_machine() == TRUE ) {
 		vmapi_destroy_vmmanager();
 	}
-	tmp = param( "VMP_VM_LIST" );
-	if( tmp ) {
+	tmp.set(param("VMP_VM_LIST"));
+	if (tmp) {
 		if( vmapi_is_virtual_machine() == TRUE ) {
 			dprintf( D_ALWAYS, "WARNING: both VMP_HOST_MACHINE and VMP_VM_LIST are defined. Assuming this machine is a virtual machine\n");
 		}else {
-			vmapi_create_vmmanager(tmp);
+			vmapi_create_vmmanager(tmp.ptr());
 		}
-		free(tmp);
 	}
 
 	InitJobHistoryFile( "STARTD_HISTORY" , "STARTD_PER_JOB_HISTORY_DIR");
