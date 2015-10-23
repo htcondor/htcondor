@@ -65,6 +65,9 @@ The details of each version are described below.
     forgets to give the condor user read access to that file.
 \Ticket{4506}
 
+\item The \Opt{-natural} sort option of \Condor{status} is now the default.
+\Ticket{5131}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -135,6 +138,18 @@ privilege state when attempting to act as the user.
 \item The \Condor{had} and \Condor{replication} daemons now work properly
 when Shared Port is enabled. They still require their own dedicated ports.
 \Ticket{5301}
+
+\item Fixed a bug that cause \Condor{mips} to report numbers about 40 percent lower than it should
+on Linux platforms.
+\Ticket{5261}
+
+\item Fixed a bug in \Condor{install} that would cause it to configure HTCondor to advertise the public
+IP addresses to the collector even when using localhost or 127.0.0.1 for a personal HTCondor.
+\Ticket{5286}
+
+\item Fixed a bug in \Condor{q} that caused slices in the Queue statement to be treated as part of the
+arguments filename when the slice was longer than 8 characters.
+\Ticket{5273}
 
 \end{itemize}
 
