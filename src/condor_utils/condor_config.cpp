@@ -1291,7 +1291,10 @@ bool check_config_file_access(
 		// If we switch users, then we wont even see the current user config file, so dont' check it's access.
 		if ( ! user_config_source.empty() && (MATCH == strcmp(file, user_config_source.c_str())))
 			continue;
-		if (0 != access(file, R_OK)) {
+		if (is_piped_command(file)) continue;
+		// check for access, other failures we ignore here since if the file or directory doesn't exist
+		// that will most likely not be an error once we reconfig
+		if (0 != access(file, R_OK) && errno == EACCES) {
 			any_failed = true;
 			errfiles.append(file);
 		}
