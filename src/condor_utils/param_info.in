@@ -1795,8 +1795,8 @@ review=?
 tags=privsep,privsep_client.UNIX
 
 [HAD_USE_PRIMARY]
-default=
-type=string
+default=false
+type=bool
 reconfig=true
 customization=seldom
 friendly_name=Had Use Primary
@@ -1831,8 +1831,8 @@ review=?
 tags=had,StateMachine
 
 [HAD_USE_REPLICATION]
-default=
-type=string
+default=false
+type=bool
 reconfig=true
 customization=seldom
 friendly_name=Had Use Replication
@@ -6037,7 +6037,7 @@ friendly_name=Shared Port Daemon Ad File
 review=?
 
 [USE_SHARED_PORT]
-default=false
+default=true
 version=7.5.0
 type=bool
 reconfig=true
@@ -7444,6 +7444,20 @@ review=?
 default=$(LIBEXEC)/condor_shared_port
 win32_default=$(LIBEXEC)\condor_shared_port.exe
 friendly_name=Location of the Shared Port daemon
+type=path
+review=?
+
+[HAD]
+default=$(SBIN)/condor_had
+win32_default=$(SBIN)\condor_had.exe
+friendly_name=Location of the High-Availability daemon
+type=path
+review=?
+
+[REPLICATION]
+default=$(SBIN)/condor_replication
+win32_default=$(SBIN)\condor_replication.exe
+friendly_name=Location of the Replication daemon
 type=path
 review=?
 

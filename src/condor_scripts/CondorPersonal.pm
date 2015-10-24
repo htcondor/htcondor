@@ -1225,7 +1225,6 @@ debug( "HMMMMMMMMMMM personal local is $personal_local , mytoppath is $mytoppath
 	    			print NEW "SCHEDD_ADDRESS_FILE = \$(LOG)/.schedd_address\n";
 				}
 
-				print NEW "UPDATE_COLLECTOR_WITH_TCP = FALSE\n";
 				print NEW "SCHEDD_INTERVAL = 5\n";
 				print NEW "UPDATE_INTERVAL = 5\n";
 				print NEW "NEGOTIATOR_INTERVAL = 5\n";

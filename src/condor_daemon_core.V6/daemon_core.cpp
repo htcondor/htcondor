@@ -3168,7 +3168,7 @@ DaemonCore::Wake_up_select()
 	if (CondorThreads::get_tid() <= 1) {
 #ifdef WIN32
 		if (GetCurrentThreadId() != dcmainThreadId) {
-			dprintf (D_ALWAYS, "DaemonCore::Wake_up_select called from an unknown thread. windows tid = %d", 
+			dprintf (D_ALWAYS, "DaemonCore::Wake_up_select called from an unknown thread. windows tid = %d\n",
 				GetCurrentThreadId());
 		}
 #endif

@@ -3,26 +3,9 @@
 # that DO NOT run the condor_had daemon.                                 #
 ##########################################################################
 
-#unset these variables 
-NEGOTIATOR_HOST =
-CONDOR_HOST =
-
 ## For simplicity define a variable for each potential central manager
 ## in the pool. 
 CENTRAL_MANAGER1 = cm1.domain.name
 CENTRAL_MANAGER2 = cm2.domain.name
 ## List of all potential central managers in the pool
-COLLECTOR_HOST = $(CENTRAL_MANAGER1),$(CENTRAL_MANAGER2)
-
-##--------------------------------------------------------------------
-##  Host/IP access levels
-##--------------------------------------------------------------------
-
-##  Negotiator access.  Machines listed here are trusted central
-##  managers.  You should normally not need to change this.
-ALLOW_NEGOTIATOR = $(COLLECTOR_HOST)
-
-##  Now, with flocking (and HA) we need to let the SCHEDD trust the other 
-##  negotiators we are flocking with as well.  You should normally 
-##  not need to change this.
-ALLOW_NEGOTIATOR_SCHEDD = $(COLLECTOR_HOST)
+CONDOR_HOST = $(CENTRAL_MANAGER1),$(CENTRAL_MANAGER2)

@@ -81,6 +81,18 @@ It is 1 for a single CPU slot, 2 for a dual CPU slot, etc.
 For a partitionable slot, it is the remaining number of CPUs
 in the partitionable slot. 
 %
+\index{ClassAd machine attribute!CpuFamily}
+\item[\AdAttr{CpuFamily}:]  On Linux machines, the 
+Cpu family, as defined in the /proc/cpuinfo file.
+%
+\index{ClassAd machine attribute!CpuModel}
+\item[\AdAttr{CpuModel}:]  On Linux machines, the 
+Cpu model number, as defined in the /proc/cpuinfo file.
+%
+\index{ClassAd machine attribute!CpuCacheSize}
+\item[\AdAttr{CpuCacheSize}:]  On Linux machines, the 
+size of the L3 cache, in kbytes, as defined in the /proc/cpuinfo file.
+%
 \index{ClassAd machine attribute!CurrentRank}
 \item[\AdAttr{CurrentRank}:] A float which represents this machine
 owner's affinity
@@ -213,6 +225,11 @@ the SSE 4.2 instructions, and \Expr{Undefined} otherwise.
 \item[\AdAttr{has\_ssse3}:] A boolean value set to \Expr{True}
 if the machine being advertised supports
 the SSSE 3 instructions, and \Expr{Undefined} otherwise.
+%
+\index{ClassAd machine attribute!has\_avx}
+\item[\AdAttr{has\_avx}:] A boolean value set to \Expr{True}
+if the machine being advertised supports
+the avx instructions, and \Expr{Undefined} otherwise.
 %
 \index{ClassAd machine attribute!HasVM}
 \item[\AdAttr{HasVM}:] If the configuration triggers the detection of

@@ -15,6 +15,37 @@ New features will be added in the 8.5.x development series.
 
 The details of each version are described below.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-8-4-2}Version 8.4.2}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item HTCondor version 8.4.2 not yet released.
+%\item HTCondor version 8.4.2 released on Month Date, 2015.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item Added a timeout to the \Condor{fetchlog} command so that it
+will not hang forever waiting for a unresponsive daemon.
+\Ticket{5325}
+
+\end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-8-4-1}Version 8.4.1}
@@ -32,6 +63,11 @@ The details of each version are described below.
 \noindent New Features:
 
 \begin{itemize}
+
+\item Added support to allow an admin to always volume mount
+	certain directories into docker universe containers running
+	on a host.
+\Ticket{5308}
 
 \item Added four policy metaknobs to simplify configuring a policy
 	to either preempt or hold jobs that use more memory
@@ -69,6 +105,39 @@ and partitionable slots.
 	emit debug messages to stderr with text ``I am: hostname: \ldots''.
 \Ticket{5276}
 
+\item Fixed a bug that prevented node retries from working on DAG
+nodes that are DAG-level NOOP nodes.  (This bug has existed at least since
+the 8.2 series.)
+\Ticket{5277}
+
+\item Fixed a problem when the HTCondor executables were not compiled
+with \Env{RPATH} enabled on Enterprise Linux 6 platforms. \Env{RPATH} is used
+to load Globus and other libraries from the condor-externals RPM.
+\Ticket{5294}
+
+\item The job attribute \Attr{JobCurrentStartTransferOutputDate} is now
+properly reported in the job ad.
+\Ticket{5298}
+
+\item Fixed configuration parameter \MacroNI{NETWORK\_HOSTNAME}, which was
+broken starting with version 8.3.2.
+\Ticket{5288}
+
+\item Fixed a bug that could cause the Job Router to crash when
+invoking a transformation hook.
+\Ticket{5224}
+
+\item Fixed several memory leaks in the \Prog{nordugrid\_gahp}.
+\Ticket{5322}
+
+\item Improved the \Prog{batch\_gahp} to better handle batch systems
+that reuse job IDs.
+\Ticket{5062}
+
+\item When the \Prog{batch\_gahp} rejects a request because it is
+overloaded, the \Condor{gridmanager} now reduces the rate of requests
+and retries the rejected request later.
+\Ticket{5253}
 
 \end{itemize}
 

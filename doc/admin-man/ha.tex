@@ -325,6 +325,13 @@ See
 section~\ref{sec:HA-Config-File-Entries},
 for definitions of these configuration variables.
 
+The \Condor{had} and \Condor{replication} daemons cannot use the
+\Condor{shared\_port} daemon.
+They require their own separate ports, specified in the configuration
+file (see example below).
+Other daemons on the machine, including the \Condor{negotiator}, can
+use \Condor{shared\_port} when the high availability daemons are in use.
+
 The stabilization period is the time it takes for the 
 \Condor{had} daemons
 to detect a change in the pool state such as
@@ -412,9 +419,6 @@ This is for the potential central manager machines.
 # the high availability  mechanism.                                      #
 ##########################################################################
 
-# unset this macro 
-CONDOR_HOST=
-
 #########################################################################
 ## THE FOLLOWING MUST BE IDENTICAL ON ALL POTENTIAL CENTRAL MANAGERS.   # 
 #########################################################################
@@ -424,7 +428,7 @@ CONDOR_HOST=
 CENTRAL_MANAGER1 = cm1.domain.name
 CENTRAL_MANAGER2 = cm2.domain.name
 ## A list of all potential central managers in the pool.
-COLLECTOR_HOST = $(CENTRAL_MANAGER1),$(CENTRAL_MANAGER2)
+CONDOR_HOST = $(CENTRAL_MANAGER1),$(CENTRAL_MANAGER2)
 
 ## Define the port number on which the condor_had daemon will
 ## listen.  The port must match the port number used
@@ -451,7 +455,7 @@ REPLICATION_LIST = \
 	$(CENTRAL_MANAGER2):$(REPLICATION_PORT)
 
 ## The following list must contain the same addresses in the same order 
-## as COLLECTOR_HOST. In addition, for each hostname, it should specify 
+## as CONDOR_HOST. In addition, for each hostname, it should specify 
 ## the port number of condor_had daemon running on that host.
 ## The first machine in the list will be the PRIMARY central manager
 ## machine, in case HAD_USE_PRIMARY is set to true.
@@ -459,10 +463,15 @@ HAD_LIST = \
 	$(CENTRAL_MANAGER1):$(HAD_PORT), \
 	$(CENTRAL_MANAGER2):$(HAD_PORT)
 
+## The following is the name of the daemon that the HAD controls.
+## This must match the name of a daemon in the master's DAEMON_LIST.
+## The default is NEGOTIATOR, but can be any daemon that the master
+## controls.
+HAD_CONTROLLEE		= NEGOTIATOR
 
 ## HAD connection time.
 ## Recommended value is 2 if the central managers are on the same subnet.
-## Recommended value is 5 if HTCondor security is enabled.
+## Recommended value is 5 if Condor security is enabled.
 ## Recommended value is 10 if the network is very slow, or
 ## to reduce the sensitivity of HA daemons to network failures.
 HAD_CONNECTION_TIMEOUT = 2
@@ -471,41 +480,20 @@ HAD_CONNECTION_TIMEOUT = 2
 HAD_USE_PRIMARY = true
 
 
-##--------------------------------------------------------------------
-##  Host/IP access levels
-##--------------------------------------------------------------------
-
-##  What machines have administrative rights for your pool?  This
-##  defaults to your central manager.  You should set it to the
-##  machine(s) where whoever is the HTCondor administrator(s) works
-##  (assuming you trust all the users who log into that/those
-##  machine(s), since this is machine-wide access you're granting).
-HOSTALLOW_ADMINISTRATOR = $(COLLECTOR_HOST) 
-
-
-##  Negotiator access.  Machines listed here are trusted central
-##  managers.  You should normally not have to change this.
-HOSTALLOW_NEGOTIATOR = $(COLLECTOR_HOST)
-
 ###################################################################
 ## THE PARAMETERS BELOW ARE ALLOWED TO BE DIFFERENT ON EACH       #
-## CENTRAL MANAGERS                                               #
+## CENTRAL MANAGER                                                #
 ## THESE ARE MASTER SPECIFIC PARAMETERS
 ###################################################################
 
-## The location of executable files
-HAD         = $(SBIN)/condor_had
-REPLICATION = $(SBIN)/condor_replication
-TRANSFERER  = $(SBIN)/condor_transferer
 
-## the master should start at least these five daemons
+## the master should start at least these four daemons
 DAEMON_LIST = MASTER, COLLECTOR, NEGOTIATOR, HAD, REPLICATION
-## DC_Daemon list should contain at least these five
-DC_DAEMON_LIST = +HAD, REPLICATION
+
 
 ## Enables/disables the replication feature of HAD daemon
-## Default: no
-HAD_USE_REPLICATION = true
+## Default: false
+HAD_USE_REPLICATION    = true
 
 ## Name of the file from the SPOOL directory that will be replicated
 ## Default: $(SPOOL)/Accountantnew.log
@@ -513,14 +501,15 @@ STATE_FILE = $(SPOOL)/Accountantnew.log
 
 ## Period of time between two successive awakenings of the replication daemon
 ## Default: 300
-REPLICATION_INTERVAL = 300
+REPLICATION_INTERVAL                 = 300
 
-# Period of time, in which transferer daemons have to accomplish the 
+## Period of time, in which transferer daemons have to accomplish the 
 ## downloading/uploading process
 ## Default: 300
-MAX_TRANSFERER_LIFETIME = 300
+MAX_TRANSFER_LIFETIME                = 300
 
-## Period of time between two successive sends of ClassAds to the collector by HAD
+
+## Period of time between two successive sends of classads to the collector by HAD
 ## Default: 300
 HAD_UPDATE_INTERVAL = 300
 
@@ -529,28 +518,6 @@ HAD_UPDATE_INTERVAL = 300
 ## backoff constant
 MASTER_NEGOTIATOR_CONTROLLER	= HAD
 MASTER_HAD_BACKOFF_CONSTANT	= 360
-
-## The size of the log file
-MAX_HAD_LOG = 640000
-## debug level 
-HAD_DEBUG = D_COMMAND
-## location of the condor_had log file
-HAD_LOG = $(LOG)/HADLog
-
-## The size of replication log file
-MAX_REPLICATION_LOG = 640000
-## Replication debug level 
-REPLICATION_DEBUG = D_COMMAND
-## Replication log file
-REPLICATION_LOG = $(LOG)/ReplicationLog
-
-## The size of transferer log file
-MAX_TRANSFERER_LOG = 640000
-## Replication debug level 
-TRANSFERER_DEBUG = D_COMMAND
-## Replication log file
-TRANSFERER_LOG = $(LOG)/TransferLog
-
 \end{verbatim}
 \normalsize
 
@@ -566,28 +533,12 @@ high availability for machines that will \emph{not} be central managers.
 # that DO NOT run the condor_had daemon.                                 #
 ##########################################################################
 
-#unset this variable
-CONDOR_HOST =
-
 ## For simplicity define a variable for each potential central manager
 ## in the pool. 
-CENTRAL_MANAGER1 = cm1.cs.technion.ac.il
-CENTRAL_MANAGER2 = cm2.cs.technion.ac.il
+CENTRAL_MANAGER1 = cm1.domain.name
+CENTRAL_MANAGER2 = cm2.domain.name
 ## List of all potential central managers in the pool
-COLLECTOR_HOST = $(CENTRAL_MANAGER1),$(CENTRAL_MANAGER2)
-
-##--------------------------------------------------------------------
-##  Host/IP access levels
-##--------------------------------------------------------------------
-
-##  Negotiator access.  Machines listed here are trusted central
-##  managers.  You should normally not need to change this.
-HOSTALLOW_NEGOTIATOR = $(COLLECTOR_HOST)
-
-##  Now, with flocking (and HA) we need to let the SCHEDD trust the other 
-##  negotiators we are flocking with as well.  You should normally 
-##  not need to change this.
-HOSTALLOW_NEGOTIATOR_SCHEDD = $(COLLECTOR_HOST) 
+CONDOR_HOST = $(CENTRAL_MANAGER1),$(CENTRAL_MANAGER2)
 \end{verbatim}
 \normalsize
 

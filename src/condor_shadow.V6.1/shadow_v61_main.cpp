@@ -271,7 +271,8 @@ void startShadow( ClassAd *ad )
 	MyString auth_hole_id;
 	if (ad->LookupString(ATTR_STARTD_PRINCIPAL, auth_hole_id)) {
 		IpVerify* ipv = daemonCore->getIpVerify();
-		if (!ipv->PunchHole(DAEMON, auth_hole_id)) {
+		if (!ipv->PunchHole(DAEMON, auth_hole_id) ||
+			!ipv->PunchHole(CLIENT_PERM, auth_hole_id)) {
 			dprintf(D_ALWAYS,
 			        "WARNING: IpVerify::PunchHole error for %s: "
 			            "job may fail to execute\n",

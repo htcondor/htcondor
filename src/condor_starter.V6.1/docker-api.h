@@ -39,6 +39,7 @@ class DockerAPI {
 						const ArgList & arguments,
 						const Env & environment,
 						const std::string & directory,
+						const std::list<std::string> extraVolumes,
 						int & pid,
 						int * childFDs,
 						CondorError & error );

@@ -2836,6 +2836,10 @@ JICShadow::initMatchSecuritySession()
 		}
 	}
 
+	IpVerify* ipv = daemonCore->getIpVerify();
+	ipv->PunchHole( DAEMON, SUBMIT_SIDE_MATCHSESSION_FQU );
+	ipv->PunchHole( CLIENT_PERM, SUBMIT_SIDE_MATCHSESSION_FQU );
+
 	if( m_filetrans_sec_session ) {
 			// Already have one (must be reconnecting with shadow).
 			// Destroy it and create a new one in its place, since

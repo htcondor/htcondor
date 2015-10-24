@@ -346,3 +346,23 @@ variable \Macro{DOCKER\_IMAGE\_CACHE\_SIZE},
 to increase or decrease the number
 of images, and the corresponding disk space, used by Docker.
 
+An administrator of a machine can optionally make additional directories
+on the host machine readable and writable by a running container.
+To do this, the admin must first give an HTCondor name to each directory
+with the DOCKER\_VOLUMES parameter.  Then, each volume must be configured
+with the path on the host OS with the DOCKER\_VOLUME\_DIR\_XXX parameter.
+Finally, the parameter DOCKER\_MOUNT\_VOLUMES tells HTCondor which of
+these directories to always mount onto containers running on this machine.
+
+For example,
+\begin{verbatim}
+DOCKER_VOLUMES = SOME_DIR, ANOTHER_DIR
+DOCKER_VOLUME_DIR_SOME_DIR = /path1
+DOCKER_VOLUME_DIR_ANOTHER_DIR = /path/to/no2
+DOCKER_MOUNT_VOLUMES = SOME_DIR, ANOTHER_DIR
+\end{verbatim}
+
+The \Condor{startd} will advertise which docker volumes it has available 
+for mounting with the machine attributes HasDockerVolumeSOME\_NAME = true
+so that jobs can match to machines with volumes they need.
+

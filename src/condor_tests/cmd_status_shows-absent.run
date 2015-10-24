@@ -134,19 +134,15 @@ if(-f $adfile) {
 }
 
 my @adresults = ();
-my $res = runCondorTool("condor_advertise -multiple UPDATE_STARTD_AD $adfile",\@adresults,2,{emit_output=>1});
-
-if($res != 0) {
-	print "Problem error return from condor_advertise:$res\n";
-}
+runCondorTool("condor_advertise -debug -multiple UPDATE_STARTD_AD $adfile",\@adresults,2,{emit_output=>1});
 
 #
-# Verify that we added the ads succesfully. 
+# Verify that we added the ads succesfully.
 #
 my %verifiedAdNames;
 
 my @statusres = ();
-$res = runCondorTool("condor_status -af Name -const \"(TRUE || Absent)\"",\@statusres,2,{emit_output=>1});
+runCondorTool("condor_status -af Name -const \"(TRUE || Absent)\"",\@statusres,2,{emit_output=>1});
 print "verifying ads were advertised\n";
 foreach my $line (@statusres ) {
     $line =~ s/[\012\015]+$//;
@@ -183,7 +179,7 @@ foreach my $ad (@absentnames) {
 
 @statusres = (); # clear for reuse
 my %absentAdNames;
-$res = runCondorTool("condor_status -absent -af Name",\@statusres,2,{emit_output=>1});
+runCondorTool("condor_status -absent -af Name",\@statusres,2,{emit_output=>1});
 foreach my $line (@statusres) {
     $line =~ s/[\012\015]+$//;
 	print "Absent:$line:\n";

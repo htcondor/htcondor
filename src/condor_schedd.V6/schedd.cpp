@@ -574,7 +574,8 @@ Scheduler::Scheduler() :
 	slotWeightMapAd(0),
 	m_use_slot_weights(false),
 	m_local_startd_pid(-1),
-	m_history_helper_count(0)
+	m_history_helper_count(0),
+	m_matchPasswordEnabled(false)
 {
 	MyShadowSockName = NULL;
 	shadowCommandrsock = NULL;
@@ -5965,6 +5966,12 @@ MainScheddNegotiate::scheduler_handleJobRejected(PROC_ID job_id,char const *reas
 	dprintf(D_FULLDEBUG, "Job %d.%d (delivered=%d) rejected: %s\n",
 			job_id.cluster, job_id.proc, m_current_resources_delivered, reason);
 
+	if ( job_id.cluster < 0 || job_id.proc < 0 ) {
+		// If we asked the negotiator for matches for jobs that can no
+		// longer use them, the negotiation code uses a job id of -1.-1.
+		return;
+	}
+
 	SetAttributeString(
 		job_id.cluster, job_id.proc,
 		ATTR_LAST_REJ_MATCH_REASON,	reason, NONDURABLE);
@@ -6688,6 +6695,14 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 			msg_ad->LookupInteger(ATTR_CLUSTER_ID, jobid.cluster);
 			msg_ad->LookupInteger(ATTR_PROC_ID, jobid.proc);
 		}
+	
+		std::string last_slot_name;
+		msg->leftover_startd_ad()->LookupString(ATTR_LAST_SLOT_NAME, last_slot_name);
+
+		if (last_slot_name.length() > 0) {
+			match->my_match_ad->Assign(ATTR_NAME, last_slot_name);
+		}
+
 			// Need to pass handleMatch a slot name; grab from leftover slot ad
 		std::string slot_name_buf;
 		msg->leftover_startd_ad()->LookupString(ATTR_NAME,slot_name_buf);
@@ -9194,6 +9209,16 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 		dprintf( D_ALWAYS, "Failed to set _CONDOR_JOB_AD environment variable\n");
 	}
 
+	if (param_boolean("USE_LOCAL_SCHEDD_FOR_SCHEDULER_UNIVERSE", true))
+	{
+		std::string ad_file;
+		if (!param(ad_file, "SCHEDD_DAEMON_AD_FILE") || !envobject.SetEnv("_condor_SCHEDD_DAEMON_AD_FILE", ad_file)) {
+			dprintf(D_ALWAYS, "Failed to set _condor_SCHEDD_DAEMON_AD_FILE environment variable\n");
+		}
+		if (!param(ad_file, "SCHEDD_ADDRESS_FILE") || !envobject.SetEnv("_condor_SCHEDD_ADDRESS_FILE", ad_file)) {
+			dprintf(D_ALWAYS, "Failed to set _condor_SCHEDD_DAEMON_AD_FILE environment variable\n");
+		}
+	}
 
 		// Scheduler universe jobs should not be told about the shadow
 		// command socket in the inherit buffer.
@@ -12349,6 +12374,17 @@ Scheduler::Init()
 				dprintf( D_ALWAYS, "Submit requirement %s not defined, ignoring.\n", srName );
 			}
 		}
+	}
+
+	bool new_match_password = param_boolean( "SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION", true );
+	if ( new_match_password != m_matchPasswordEnabled ) {
+		IpVerify* ipv = daemonCore->getIpVerify();
+		if ( new_match_password ) {
+			ipv->PunchHole( CLIENT_PERM, EXECUTE_SIDE_MATCHSESSION_FQU );
+		} else {
+			ipv->FillHole( CLIENT_PERM, EXECUTE_SIDE_MATCHSESSION_FQU );
+		}
+		m_matchPasswordEnabled = new_match_password;
 	}
 
 	first_time_in_init = false;

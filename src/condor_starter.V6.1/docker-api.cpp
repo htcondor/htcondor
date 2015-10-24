@@ -31,6 +31,7 @@ int DockerAPI::run(
 	const ArgList & args,
 	const Env & env,
 	const std::string & sandboxPath,
+	const std::list<std::string> extraVolumes,
 	int & pid,
 	int * childFDs,
 	CondorError & /* err */ )
@@ -94,6 +95,13 @@ int DockerAPI::run(
 	runArgs.AppendArg( "--volume" );
 	runArgs.AppendArg( sandboxPath + ":" + sandboxPath );
 
+	// Now any extra volumes
+	for (std::list<std::string>::const_iterator it = extraVolumes.begin(); it != extraVolumes.end(); it++) {
+		runArgs.AppendArg("--volume");
+		std::string volume = *it;
+		runArgs.AppendArg(volume);
+	}
+	
 	// Start in the sandbox.
 	runArgs.AppendArg( "--workdir" );
 	runArgs.AppendArg( sandboxPath );

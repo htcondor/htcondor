@@ -27,11 +27,13 @@
  * complain to the log if the processor flag strings aren't all the same.
  */
 
-const char * sysapi_processor_flags_raw( void ) {
+static struct sysapi_cpuinfo theInfo;
+
+const struct sysapi_cpuinfo *sysapi_processor_flags_raw( void ) {
     sysapi_internal_reconfig();
     
     if( _sysapi_processor_flags_raw != NULL ) {
-        return _sysapi_processor_flags_raw;
+        return &theInfo;
     }
 
     /* Set the default to the empty string so that if something goes wrong
@@ -104,7 +106,13 @@ const char * sysapi_processor_flags_raw( void ) {
                     }
                     
                     foundProcessorFlags += 1;
-                }
+                } else if (strcmp(attribute, "model") == 0) {
+			sscanf(value, "%d", &theInfo.model_no); 
+		} else if (strcmp(attribute,"cpu family") == 0) {
+			sscanf(value, "%d", &theInfo.family); 
+		} else if (strcmp(attribute,"cache size") == 0) {
+			sscanf(value, "%d", &theInfo.cache); 
+		}
             }
         }
         
@@ -112,14 +120,15 @@ const char * sysapi_processor_flags_raw( void ) {
         fclose( fp );
     }
     
-    return _sysapi_processor_flags_raw;
+    theInfo.processor_flags = _sysapi_processor_flags;
+    return &theInfo;
 }
 
-const char * sysapi_processor_flags( void ) {
+const struct sysapi_cpuinfo *sysapi_processor_flags( void ) {
     sysapi_internal_reconfig();
     
     if( _sysapi_processor_flags != NULL ) {
-        return _sysapi_processor_flags;
+        return &theInfo;
     }
     
     if( _sysapi_processor_flags_raw == NULL ) {
@@ -128,7 +137,7 @@ const char * sysapi_processor_flags( void ) {
     }
 
     /* Which flags do we care about?  You MUST terminate this list with NULL. */
-    static const char * const flagNames[] = { "ssse3", "sse4_1", "sse4_2", NULL };
+    static const char * const flagNames[] = { "avx", "avx512", "ssse3", "sse4_1", "sse4_2", NULL };
 
     /* Do some memory-allocation math. */
     int numFlags = 0;
@@ -214,7 +223,8 @@ const char * sysapi_processor_flags( void ) {
     }
     
     free( flags );
-    return _sysapi_processor_flags;
+    theInfo.processor_flags = _sysapi_processor_flags;
+    return &theInfo;
 }
 
 // ----------------------------------------------------------------------------

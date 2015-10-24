@@ -48,7 +48,7 @@ sysapi_ckptpltfrm_raw(void)
 #ifndef WIN32
 	vsyscall_page = sysapi_vsyscall_gate_addr();
 #endif
-	processor_flags = sysapi_processor_flags();
+	processor_flags = sysapi_processor_flags()->processor_flags;
 
 /* Currently, windows doesn't support condor_ckpt_probe, so don't put in
 	the vsyscall page information. */
