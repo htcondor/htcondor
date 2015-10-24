@@ -62,11 +62,29 @@ ZKM_UNIX_STORE_CRED(const char *user, const char *pw, const int len, int mode)
 	strncpy(username, user, (at-user));
 	username[at-user] = 0;
 
+	// unlink the "mark" file every time.
+	char markfilename[PATH_MAX];
+	sprintf(markfilename, "%s%c%s.mark", cred_dir, DIR_DELIM_CHAR, username);
+
+	priv_state priv = set_root_priv();
+	int rc = unlink(markfilename);
+	set_priv(priv);
+
+	if(rc) {
+		// ENOENT is common and not worth reporting
+		if(rc != ENOENT) {
+			dprintf(D_ALWAYS, "CERN: WARNING! unlink(%s) got error %i (%s)\n",
+				markfilename, errno, strerror(errno));
+		}
+	} else {
+		dprintf(D_ALWAYS, "CERN: cleared mark file %s\n", markfilename);
+	}
+
 	// check to see if .cc already exists
 	char ccfilename[PATH_MAX];
 	sprintf(ccfilename, "%s%c%s.cc", cred_dir, DIR_DELIM_CHAR, username);
 	struct stat junk_buf;
-	int rc = stat(ccfilename, &junk_buf);
+	rc = stat(ccfilename, &junk_buf);
 	if (rc==0) {
 		// if the credential cache already exists, we don't even need
 		// to write the file.  just return success as quickly as
@@ -105,7 +123,7 @@ ZKM_UNIX_STORE_CRED(const char *user, const char *pw, const int len, int mode)
 
 	// now move into place
 	dprintf(D_ALWAYS, "ZKM: renaming %s to %s\n", tmpfilename, filename);
-	priv_state priv = set_root_priv();
+	priv = set_root_priv();
 	rc = rename(tmpfilename, filename);
 	set_priv(priv);
 
