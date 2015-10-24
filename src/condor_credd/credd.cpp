@@ -27,6 +27,7 @@
 #include "internet.h"
 #include "get_daemon_name.h"
 #include "subsystem_info.h"
+#include "credmon_interface.h"
 
 //-------------------------------------------------------------
 
@@ -58,6 +59,18 @@ CredDaemon::CredDaemon() : m_name(NULL), m_update_collector_tid(-1)
 		// set timer to periodically advertise ourself to the collector
 	daemonCore->Register_Timer(0, m_update_collector_interval,
 		(TimerHandlercpp)&CredDaemon::update_collector, "update_collector", this);
+
+	// only sweep if we have a cred dir
+	char* p = param("SEC_CREDENTIAL_DIRECTORY");
+	if(p) {
+		// didn't need the value, just to see if it's defined.
+		free(p);
+		dprintf(D_ALWAYS, "ZKM: setting sweep_timer_handler\n");
+		int sec_cred_sweep_interval = param_integer("SEC_CREDENTIAL_SWEEP_INTERVAL", 30);
+		m_cred_sweep_tid = daemonCore->Register_Timer( sec_cred_sweep_interval, sec_cred_sweep_interval,
+								(TimerHandlercpp)&CredDaemon::sweep_timer_handler,
+								"sweep_timer_handler", this );
+	}
 }
 
 CredDaemon::~CredDaemon()
@@ -107,6 +120,16 @@ CredDaemon::reconfig()
 		daemonCore->Reset_Timer(m_update_collector_tid, 0, m_update_collector_interval);
 	}
 }
+
+void
+CredDaemon::sweep_timer_handler( void )
+{
+	dprintf(D_ALWAYS, "ZKM: sweep_timer_handler()\n");
+	credmon_sweep_creds();
+	int sec_cred_sweep_interval = param_integer("SEC_CREDENTIAL_SWEEP_INTERVAL", 30);
+	daemonCore->Reset_Timer (m_cred_sweep_tid, sec_cred_sweep_interval, sec_cred_sweep_interval);
+}
+
 
 void
 CredDaemon::initialize_classad()

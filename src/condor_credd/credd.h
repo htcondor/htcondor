@@ -39,10 +39,13 @@ private:
 	void update_collector();
 	void invalidate_ad();
 
+	void sweep_timer_handler( void );
+
 	char* m_name;
 
 	int m_update_collector_tid;
 	int m_update_collector_interval;
+	int m_cred_sweep_tid;
 
 	ClassAd m_classad;
 };
