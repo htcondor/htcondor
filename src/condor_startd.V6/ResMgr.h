@@ -184,6 +184,7 @@ public:
 
 	// Methods to control various timers
 	void	check_polling( void );	// See if we need to poll frequently
+	int		start_sweep_timer(void); // Timer for sweeping SEC_CREDENTIAL_DIRECTORY
 	int		start_update_timer(void); // Timer for updating the CM(s)
 	int		start_poll_timer( void ); // Timer for polling the resources
 	void	cancel_poll_timer( void );
@@ -317,6 +318,7 @@ private:
 	int		num_updates;
 	int		up_tid;		// DaemonCore timer id for update timer
 	int		poll_tid;	// DaemonCore timer id for polling timer
+	int		m_cred_sweep_tid;	// DaemonCore timer id for polling timer
 	time_t	startTime;		// Time that we started
 	time_t	cur_time;		// current time
 
@@ -348,6 +350,8 @@ private:
 		   STARTD_NOCLAIM_SHUTDOWN parameter).
 		*/
 	void check_use( void );
+
+	void sweep_timer_handler( void );
 
 #if HAVE_BACKFILL
 	bool backfillConfig( void );

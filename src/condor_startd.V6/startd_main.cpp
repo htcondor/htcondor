@@ -388,7 +388,6 @@ main_init( int, char* argv[] )
 								  (CommandHandler)command_cancel_drain_jobs,
 								  "command_cancel_drain_jobs", 0, ADMINISTRATOR);
 
-
 		//////////////////////////////////////////////////
 		// Reapers 
 		//////////////////////////////////////////////////
@@ -407,6 +406,7 @@ main_init( int, char* argv[] )
 	command_x_event( 0, 0, 0 );
 #endif
 
+	resmgr->start_sweep_timer();
 	resmgr->start_update_timer();
 
 #if HAVE_HIBERNATION

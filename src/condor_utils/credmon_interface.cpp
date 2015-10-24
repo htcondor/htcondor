@@ -22,6 +22,9 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_config.h"
+#include "condor_uid.h"
+#include <fnmatch.h>
+
 
 
 static int _static_credmon_pid = -1;
@@ -103,5 +106,92 @@ bool credmon_signal_and_poll(const char* user) {
 
 	dprintf(D_ALWAYS, "ZKM: SUCCESS: file %s found after %i seconds\n", ccfilename, 20-retries);
 	return true;
+}
+
+bool credmon_mark_creds_for_sweeping(const char* user) {
+
+	// construct filename to create
+	char* cred_dir = param("SEC_CREDENTIAL_DIRECTORY");
+	if(!cred_dir) {
+		dprintf(D_ALWAYS, "ERROR: got mark_creds_for_sweeping but SEC_CREDENTIAL_DIRECTORY not defined!\n");
+		return false;
+	}
+
+	// get username (up to '@' if present, else whole thing)
+	char username[256];
+	const char *at = strchr(user, '@');
+	if(at) {
+		strncpy(username, user, (at-user));
+		username[at-user] = 0;
+	} else {
+		strncpy(username, user, 255);
+		username[255] = 0;
+	}
+
+	// check to see if .cc already exists
+	char markfilename[PATH_MAX];
+	sprintf(markfilename, "%s%c%s.mark", cred_dir, DIR_DELIM_CHAR, username);
+
+	priv_state priv = set_root_priv();
+	FILE* f = safe_fcreate_replace_if_exists(markfilename, "w", 0600);
+	set_priv(priv);
+	if (f == NULL) {
+		dprintf(D_ALWAYS, "ERROR: safe_fcreate_replace_if_exists(%s) failed!\n", markfilename);
+		return false;
+	}
+
+	fclose(f);
+	return true;
+}
+
+int markfilter(const dirent*d) {
+  bool match = !fnmatch("*.mark", d->d_name, FNM_PATHNAME);
+  // printf("d: %s, %i\n", d->d_name, match);
+  return match;
+}
+
+void process_cred_file(const char *src) {
+   //char * src = fname;
+   char * trg = strdup(src);
+   strcpy((trg + strlen(src) - 5), ".cred");
+   dprintf(D_ALWAYS, "%li: FOUND %s UNLINK %s\n", time(0), src, trg);
+   unlink(trg);
+   strcpy((trg + strlen(src) - 5), ".cc");
+   dprintf(D_ALWAYS, "%li: FOUND %s UNLINK %s\n", time(0), src, trg);
+   unlink(trg);
+   strcpy((trg + strlen(src) - 5), ".mark");
+   dprintf(D_ALWAYS, "%li: FOUND %s UNLINK %s\n", time(0), src, trg);
+   unlink(trg);
+
+   free(trg);
+}
+
+void credmon_sweep_creds() {
+	struct dirent **namelist;
+	int n;
+
+	// construct filename to poll for
+	char* cred_dir = param("SEC_CREDENTIAL_DIRECTORY");
+	if(!cred_dir) {
+		dprintf(D_ALWAYS, "ZKM: skipping sweep, SEC_CREDENTIAL_DIRECTORY not defined!\n");
+		return;
+	}
+
+	MyString fullpathname;
+	dprintf(D_ALWAYS, "ZKM: scandir(%s)\n", cred_dir);
+	n = scandir(cred_dir, &namelist, &markfilter, alphasort);
+	if (n >= 0) {
+		while (n--) {
+			fullpathname.formatstr("%s%c%s", cred_dir, DIR_DELIM_CHAR, namelist[n]->d_name);
+			priv_state priv = set_root_priv();
+			process_cred_file(fullpathname.c_str());
+			set_priv(priv);
+			free(namelist[n]);
+		}
+		free(namelist);
+	} else {
+		dprintf(D_ALWAYS, "ZKM: skipping sweep, scandir(%s) not defined!\n", cred_dir);
+	}
+	free(cred_dir);
 }
 

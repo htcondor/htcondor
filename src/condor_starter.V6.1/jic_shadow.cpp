@@ -2528,11 +2528,29 @@ JICShadow::initUserCredentials() {
 	MyString user = get_user_loginname();
 	MyString domain = "DOMAIN";
 
+	// unlink the "mark" file every time.
+	char markfilename[PATH_MAX];
+	sprintf(markfilename, "%s%c%s.mark", cred_dir, DIR_DELIM_CHAR, user.c_str());
+
+	priv_state priv = set_root_priv();
+	int rc = unlink(markfilename);
+	set_priv(priv);
+
+	if(rc) {
+		// ENOENT is common and not worth reporting
+		if(rc != ENOENT) {
+			dprintf(D_ALWAYS, "CERN: WARNING! unlink(%s) got error %i (%s)\n",
+				markfilename, errno, strerror(errno));
+		}
+	} else {
+		dprintf(D_ALWAYS, "CERN: cleared mark file %s\n", markfilename);
+	}
+
 	// check to see if .cc already exists
 	char ccfilename[PATH_MAX];
 	sprintf(ccfilename, "%s%c%s.cc", cred_dir, DIR_DELIM_CHAR, user.c_str());
 	struct stat junk_buf;
-	int rc = stat(ccfilename, &junk_buf);
+	rc = stat(ccfilename, &junk_buf);
 	if (rc==0) {
 		dprintf(D_ALWAYS, "CERN: credentials for user %s domain %s already exist in %s\n",
 			user.c_str(), domain.c_str(), ccfilename );
@@ -2595,7 +2613,7 @@ JICShadow::initUserCredentials() {
 
 	// now move into place
 	dprintf(D_ALWAYS, "ZKM: renaming %s to %s\n", tmpfilename, filename);
-	priv_state priv = set_root_priv();
+	priv = set_root_priv();
 	rc = rename(tmpfilename, filename);
 	set_priv(priv);
 
