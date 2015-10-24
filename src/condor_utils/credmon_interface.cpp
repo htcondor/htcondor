@@ -195,3 +195,43 @@ void credmon_sweep_creds() {
 	free(cred_dir);
 }
 
+
+bool credmon_clear_mark(const char* user) {
+	char* cred_dir = param("SEC_CREDENTIAL_DIRECTORY");
+	if(!cred_dir) {
+		dprintf(D_ALWAYS, "ERROR: got STORE_CRED but SEC_CREDENTIAL_DIRECTORY not defined!\n");
+		return false;
+	}
+
+	// get username (up to '@' if present, else whole thing)
+	char username[256];
+	const char *at = strchr(user, '@');
+	if(at) {
+		strncpy(username, user, (at-user));
+		username[at-user] = 0;
+	} else {
+		strncpy(username, user, 255);
+		username[255] = 0;
+	}
+
+	// unlink the "mark" file on every update
+	char markfilename[PATH_MAX];
+	sprintf(markfilename, "%s%c%s.mark", cred_dir, DIR_DELIM_CHAR, username);
+
+	priv_state priv = set_root_priv();
+	int rc = unlink(markfilename);
+	set_priv(priv);
+
+	if(rc) {
+		// ENOENT is common and not worth reporting
+		if(errno != ENOENT) {
+			dprintf(D_ALWAYS, "CERN: WARNING! unlink(%s) got error %i (%s)\n",
+				markfilename, errno, strerror(errno));
+		}
+	} else {
+		dprintf(D_ALWAYS, "ZKM: cleared mark file %s\n", markfilename);
+	}
+
+	return true;
+}
+

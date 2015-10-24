@@ -25,6 +25,7 @@ int get_credmon_pid();
 bool credmon_signal_and_poll(const char* user);
 bool credmon_mark_creds_for_sweeping(const char* user);
 void credmon_sweep_creds();
+bool credmon_clear_mark(const char* user);
 
 #endif // CREDMON_INTERFACE_H
 
