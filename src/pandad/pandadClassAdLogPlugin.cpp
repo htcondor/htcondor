@@ -115,7 +115,7 @@ void PandadClassAdLogPlugin::newClassAd( const char * key ) {
 	//		(3) adds MyType, TargetType, and CurrentTime to it (22.0)
 	//		(4) adds GlobalJobId to it (22.0)
 	//		(5) starts populating the cluster ad (22.-1)
-	//		(6) adds SUBMIT_EXPRS to the job ad (22.0)
+	//		(6) adds SUBMIT_ATTRS to the job ad (22.0)
 	//		(7) mostly populates the cluster ad (22.-1)
 	//		(8) sets LastJobStatus and JobStatus for the job ad (22.0)
 	//		(9) finishes populating the cluster ad (22.-1)

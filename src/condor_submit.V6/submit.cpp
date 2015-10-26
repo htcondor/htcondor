@@ -4975,7 +4975,7 @@ SetEnvironment()
 		envobject.Import( );
 	}
 
-	//There may already be environment info in the ClassAd from SUBMIT_EXPRS.
+	//There may already be environment info in the ClassAd from SUBMIT_ATTRS.
 	//Check for that now.
 
 	bool ad_contains_env1 = job->LookupExpr(ATTR_JOB_ENVIRONMENT1);
@@ -4991,7 +4991,7 @@ SetEnvironment()
 
 	if(!env1 && !env2 && envobject.Count() == 0 && \
 	   (ad_contains_env1 || ad_contains_env2)) {
-			// User did not specify any environment, but SUBMIT_EXPRS did.
+			// User did not specify any environment, but SUBMIT_ATTRS did.
 			// Do not do anything (i.e. avoid overwriting with empty env).
 		insert_env1 = insert_env2 = false;
 	}
@@ -7396,6 +7396,18 @@ condor_param( const char* name)
 	return condor_param(name, NULL);
 }
 
+void param_and_insert_unique_items(const char * param_name, classad::References & attrs)
+{
+	auto_free_ptr value(param(param_name));
+	if (value) {
+		StringTokenIterator it(value);
+		const std::string * item;
+		while ((item = it.next_string())) {
+			attrs.insert(*item);
+		}
+	}
+}
+
 char *
 condor_param( const char* name, const char* alt_name )
 {
@@ -7404,15 +7416,13 @@ condor_param( const char* name, const char* alt_name )
 	char * pval_expanded = NULL;
 
 	// TODO: change this to use the defaults table from SubmitMacroSet
-	static StringList* submit_exprs = NULL;
-	static bool submit_exprs_initialized = false;
-	if( ! submit_exprs_initialized ) {
-		char* tmp = param( "SUBMIT_EXPRS" );
-		if( tmp ) {
-			submit_exprs = new StringList( tmp );
-			free( tmp ); 
-		}
-		submit_exprs_initialized = true;
+	static classad::References submit_attrs;
+	static bool submit_attrs_initialized = false;
+	if ( ! submit_attrs_initialized) {
+		param_and_insert_unique_items("SUBMIT_ATTRS", submit_attrs);
+		param_and_insert_unique_items("SUBMIT_EXPRS", submit_attrs);
+		param_and_insert_unique_items("SYSTEM_SUBMIT_ATTRS", submit_attrs);
+		submit_attrs_initialized = true;
 	}
 
 	if( ! pval && alt_name ) {
@@ -7423,15 +7433,15 @@ condor_param( const char* name, const char* alt_name )
 	if( ! pval ) {
 			// if the value isn't in the submit file, check in the
 			// submit_exprs list and use that as a default.  
-		if( submit_exprs ) {
-			if( submit_exprs->contains_anycase(name) ) {
-				return( param(name) );
+		if ( ! submit_attrs.empty()) {
+			if (submit_attrs.find(name) != submit_attrs.end()) {
+				return param(name);
 			}
-			if( alt_name && submit_exprs->contains_anycase(alt_name) ) {
-				return( param(alt_name) );
+			if (submit_attrs.find(name) != submit_attrs.end()) {
+				return param(alt_name);
 			}
-		}			
-		return( NULL );
+		}
+		return NULL;
 	}
 
 	ErrContext.macro_name = used_alt ? alt_name : name;

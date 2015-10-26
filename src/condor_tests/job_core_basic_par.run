@@ -55,7 +55,7 @@ my $firstappend_condor_config = "
 	# set up dedicated scheduler
 	# Adding Dedicated Scheduler parrallel Universe;
 	DedicatedScheduler = \"DedicatedScheduler\@schedd$mypid$version\@$currenthost\"
-	STARTD_EXPRS = \$(STARTD_EXPRS), DedicatedScheduler
+	STARTD_ATTRS = \$(STARTD_ATTRS), DedicatedScheduler
 	SCHEDD_DEBUG = D_FULLDEBUG
 	SCHEDD_NAME = schedd$mypid$version
 	NUM_CPUS = 8

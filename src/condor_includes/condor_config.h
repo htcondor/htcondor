@@ -191,6 +191,9 @@ typedef struct macro_set {
 	/* A convenience function that calls param() with a std::string buffer. */
 	bool param(std::string &buf,char const *param_name,char const *default_value=NULL);
 
+	/* A convenience function that calls param() then inserts items from the value into the given StringList if they are not already there */
+	bool param_and_insert_unique_items(const char * param_name, StringList & items, bool case_sensitive=false);
+
 	/* Call this after loading the config files to see if the given user has access to all of the files
 	   Used when running as root to verfiy that the config files will still be accessible after we switch
 	   to the condor user. returns true on success, false if access check fails
