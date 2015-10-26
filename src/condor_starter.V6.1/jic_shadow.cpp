@@ -2610,7 +2610,7 @@ JICShadow::initUserCredentials() {
 	}
 
 	// now signal the credmon
-	rc = credmon_signal_and_poll(user.c_str());
+	rc = credmon_poll(user.c_str(), false, true);
 	if(!rc) {
 		dprintf(D_ALWAYS, "ZKM: credmon failed to produce .cc file!");
 		return false;

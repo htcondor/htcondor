@@ -199,7 +199,7 @@ CredDaemon::refresh_all_handler( int, Stream* s)
 	// forward/backward compatibility.
 
 	// refresh ALL credentials
-	if(credmon_signal_and_poll( NULL )) {
+	if(credmon_poll( NULL, true, true )) {
 		ad.Assign("result", "success");
 	} else {
 		ad.Assign("result", "failure");

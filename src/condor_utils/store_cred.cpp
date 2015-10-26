@@ -668,7 +668,7 @@ void store_cred_handler(void *, int /*i*/, Stream *s)
 				answer = store_cred_service(user,pw,strlen(pw)+1,mode);
 				if(answer == SUCCESS) {
 					// THIS WILL BLOCK
-					answer = credmon_signal_and_poll(user);
+					answer = credmon_poll(user, false, true);
 				}
 			}
 		}

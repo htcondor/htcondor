@@ -48,13 +48,16 @@ int get_credmon_pid() {
 }
 
 
-// takes either a username, or NULL to refresh ALL credentials
-bool credmon_signal_and_poll(const char* user) {
+// takes a username, or NULL to refresh ALL credentials
+// if force_fresh, we delete the file we are polling first
+// if send_signal we SIGUP the credmon
+// (we allow it, but you probably shouldn't force_fresh and not send_signal)
+bool credmon_poll(const char* user, bool force_fresh, bool send_signal) {
 
 	// construct filename to poll for
 	char* cred_dir = param("SEC_CREDENTIAL_DIRECTORY");
 	if(!cred_dir) {
-		dprintf(D_ALWAYS, "ERROR: got credmon_signal_and_poll() but SEC_CREDENTIAL_DIRECTORY not defined!\n");
+		dprintf(D_ALWAYS, "ERROR: got credmon_poll() but SEC_CREDENTIAL_DIRECTORY not defined!\n");
 		return false;
 	}
 
@@ -67,11 +70,6 @@ bool credmon_signal_and_poll(const char* user) {
 	if (user == NULL) {
 		// we will watch for the file that signifies ALL creds were processed
 		sprintf(watchfilename, "%s%cCREDMON_COMPLETE", cred_dir, DIR_DELIM_CHAR);
-
-		// unlink it first so we know we got a fresh copy
-		priv_state priv = set_root_priv();
-		unlink(watchfilename);
-		set_priv(priv);
 	} else {
 		// get username (up to '@' if present, else whole thing)
 		char username[256];
@@ -86,25 +84,34 @@ bool credmon_signal_and_poll(const char* user) {
 		sprintf(watchfilename, "%s%c%s.cc", cred_dir, DIR_DELIM_CHAR, username);
 	}
 
-	// now signal the credmon
-	pid_t credmon_pid = get_credmon_pid();
-	if (credmon_pid == -1) {
-		dprintf(D_ALWAYS, "ZKM: failed to get pid of credmon.\n");
-		return false;
+	if(force_fresh) {
+		// unlink it first so we know we got a fresh copy
+		priv_state priv = set_root_priv();
+		unlink(watchfilename);
+		set_priv(priv);
 	}
 
-	dprintf(D_ALWAYS, "ZKM: sending SIGHUP to credmon pid %i\n", credmon_pid);
-	int rc = kill(credmon_pid, SIGHUP);
-	if (rc == -1) {
-		dprintf(D_ALWAYS, "ZKM: failed to signal credmon: %i\n", errno);
-		return false;
+	if(send_signal) {
+		// now signal the credmon
+		pid_t credmon_pid = get_credmon_pid();
+		if (credmon_pid == -1) {
+			dprintf(D_ALWAYS, "ZKM: failed to get pid of credmon.\n");
+			return false;
+		}
+
+		dprintf(D_ALWAYS, "ZKM: sending SIGHUP to credmon pid %i\n", credmon_pid);
+		int rc = kill(credmon_pid, SIGHUP);
+		if (rc == -1) {
+			dprintf(D_ALWAYS, "ZKM: failed to signal credmon: %i\n", errno);
+			return false;
+		}
 	}
 
 	// now poll for existence of watch file
 	int retries = 20;
 	struct stat junk_buf;
 	while (retries > 0) {
-		rc = stat(watchfilename, &junk_buf);
+		int rc = stat(watchfilename, &junk_buf);
 		if (rc==-1) {
 			dprintf(D_ALWAYS, "ZKM: errno %i, waiting for %s to appear (%i seconds left)\n", errno, watchfilename, retries);
 			sleep(1);
