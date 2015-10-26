@@ -41,6 +41,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed \MacroNI{TCP\_FORWARDING\_HOST}.  (It now changes how HTCondor
+version 8.3.6 and higher contact the daemon configured with it.)
+\Ticket{5339}
+
 \item Added a default request\_memory for \Condor{submit} -interactive
 of 512 megabytes.  Formerly, the default was one, which is
 insufficient in environments that strictly enforce memory
@@ -61,8 +65,7 @@ will not hang forever waiting for a unresponsive daemon.
 
 \begin{itemize}
 
-\item HTCondor version 8.4.1 not yet released.
-%\item HTCondor version 8.4.1 released on Month Date, 2015.
+\item HTCondor version 8.4.1 released on October 27, 2015.
 
 \end{itemize}
 
@@ -102,7 +105,8 @@ will not hang forever waiting for a unresponsive daemon.
     forgets to give the condor user read access to that file.
 \Ticket{4506}
 
-\item The \Opt{-natural} sort option of \Condor{status} is now the default.
+\item Added the \Opt{-natural} sort option to \Condor{status} to sort the slots
+    in numerical order rather than alphabetical order.
 \Ticket{5131}
 
 \end{itemize}
@@ -199,7 +203,18 @@ IP addresses to the collector even when using localhost or 127.0.0.1 for a perso
 arguments filename when the slice was longer than 8 characters.
 \Ticket{5273}
 
+\item Added SELinux type enforcment rules to allow the \Condor{schedd} to be
+able to access user files in NFS mounted file systems.
+\Ticket{5343}
 \end{itemize}
+
+\noindent Known Issue:
+\begin{itemize}
+\item \MacroNI{TCP\_FORWARDING\_HOST} is disregarded by HTCondor clients
+starting in version 8.3.6.  This bug will be fixed in version 8.4.2 and 8.5.1.
+\Ticket{5339}
+\end{itemize}
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-8-4-0}Version 8.4.0}

@@ -1140,11 +1140,13 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 		Sock * sock = (Sock *)(*sockTable)[initialCommandSock].iosock;
 		condor_sockaddr sa = sock->my_addr();
 
-		// FIXME: get_sinful_public() will always return the
-		// TCP_FORWARDING_HOST, which means that it will end up in the
-		// daemon's address file, which will cause problems on machines
-		// where the TCP_FORWARDING_HOST isn't routed (or has a different
-		// firewall configuration).
+		// FIXME: get_sinful_public() will return the TCP_FORWARDING_HOST.
+		// We need to check where else it can end up and if it will cause
+		// problems there.  It's safe to do here, unless you're running
+		// an older version of HTCondor on the same node (because the
+		// Sinful in the address file will have TCP_FORWARDING_HOST as its
+		// primary address, and older versions of HTCondor don't ignore
+		// the primary address).
 		char const * addr = sock->get_sinful_public();
 		if(! sa.is_ipv4()) {
 			for( int i = initialCommandSock; i < nSock; ++i ) {
@@ -1292,7 +1294,16 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 		condor_sockaddr fa;
 		forwarding = param( "TCP_FORWARDING_HOST" );
 		if( forwarding ) {
-			fa.from_ip_string( forwarding );
+			if(! fa.from_ip_string( forwarding )) {
+				// This duplicates the logic from get_sinful_public().  It's
+				// not the best logic, but at least it's consistent.
+				std::vector< condor_sockaddr > addrs = resolve_hostname( forwarding );
+				if( addrs.empty() ) {
+					dprintf( D_ALWAYS, "Failed to resolve address of TCP_FORWARDING_HOST=%s\n", forwarding );
+				} else {
+					fa = addrs.front();
+				}
+			}
 			free( forwarding );
 		}
 
