@@ -27,4 +27,6 @@ transfer_executable = false
 copy_to_spool = false
 notification = never
 priority = 1000
+
+request_memory = 512m
 queue
