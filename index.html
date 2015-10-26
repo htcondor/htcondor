@@ -208,7 +208,7 @@ function read_arguments(source) {
 }
 
 
-
+var data_url;
 var data;
 function load_and_render() {
 	var callback_render_table = function() {
@@ -223,7 +223,13 @@ function load_and_render() {
 			},0)
 		};
 	var args = read_arguments('#graph1text');
-	data = afterquery.load(args, null, callback_render_graph, 'graph1');
+	var newurl = afterquery.parseArgs(args).get('url');
+	if(newurl == data_url) {
+		callback_render_graph();
+	} else {
+		data_url = newurl;
+		data = afterquery.load(args, null, callback_render_graph, 'graph1');
+	}
 }
 
 function table_select_handler(evnt,table,data) {
