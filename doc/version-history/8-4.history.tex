@@ -45,6 +45,12 @@ The details of each version are described below.
 version 8.3.6 and higher contact the daemon configured with it.)
 \Ticket{5339}
 
+\item Added a default request\_memory for \Condor{submit} -interactive
+of 512 megabytes.  Formerly, the default was one, which is
+insufficient in environments that strictly enforce memory
+usage.
+\Ticket{5344}
+
 \item Added a timeout to the \Condor{fetchlog} command so that it
 will not hang forever waiting for a unresponsive daemon.
 \Ticket{5325}
