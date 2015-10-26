@@ -105,6 +105,11 @@ will not hang forever waiting for a unresponsive daemon.
 
 \begin{itemize}
 
+\item When cgroups are enabled, and CGROUP\_MEMORY\_POLICY is soft, 
+HTCondor now also sets the hard limit to the virtual memory limit
+of the job, if there is one.
+\Ticket{5280}
+
 \item If cgroups are enabled, and a job goes over the memory limit, the
 cgroup OOM killer fires, and the job is put on hold.  HTCondor now
 updates the job's memory usage statistics with the most up to date
