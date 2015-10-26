@@ -316,8 +316,10 @@ function default_submitters_graph_now_args() {
 	return "title=Total Jobs\n" +
 		"url=" + submitters_data_source() + "\n" +
 		"order=Date\n" +
-		"group=;last(RunningJobs),last(IdleJobs)\n" +
+		"group=Date,JobStatus;Count\n" +
+		"group=JobStatus;last(Count)\n" +
 		"chart=pie\n";
+
 }
 
 function machines_data_source() { return "machines.json"; }
