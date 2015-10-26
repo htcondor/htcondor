@@ -199,10 +199,13 @@ CredDaemon::refresh_all_handler( int, Stream* s)
 	// forward/backward compatibility.
 
 	// refresh ALL credentials
-	credmon_signal_and_poll( NULL );
+	if(credmon_signal_and_poll( NULL )) {
+		ad.Assign("result", "success");
+	} else {
+		ad.Assign("result", "failure");
+	}
 
 	r->encode();
-	ad.Assign("result", "success");
 	dprintf(D_ALWAYS, "ZKM: sending ad:\n");
 	dPrintAd(D_ALWAYS, ad);
 	putClassAd(r, ad);
