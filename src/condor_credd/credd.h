@@ -39,6 +39,7 @@ private:
 	void update_collector();
 	void invalidate_ad();
 
+	void refresh_all_handler( int, Stream*);
 	void sweep_timer_handler( void );
 
 	char* m_name;

@@ -56,6 +56,12 @@ CredDaemon::CredDaemon() : m_name(NULL), m_update_collector_tid(-1)
 								"nop_handler", this, DAEMON,
 								D_FULLDEBUG );
 
+		// NOP command for testing authentication
+	daemonCore->Register_Command( CREDD_REFRESH_ALL, "CREDD_REFRESH_ALL",
+								(CommandHandlercpp)&CredDaemon::refresh_all_handler,
+								"refresh_all_handler", this, DAEMON,
+								D_FULLDEBUG );
+
 		// set timer to periodically advertise ourself to the collector
 	daemonCore->Register_Timer(0, m_update_collector_interval,
 		(TimerHandlercpp)&CredDaemon::update_collector, "update_collector", this);
@@ -178,6 +184,30 @@ void
 CredDaemon::nop_handler(int, Stream*)
 {
 	return;
+}
+
+void
+CredDaemon::refresh_all_handler( int, Stream* s)
+{
+	ReliSock* r = (ReliSock*)s;
+	r->decode();
+	ClassAd ad;
+	getClassAd(r, ad);
+	r->end_of_message();
+
+	// don't actually care (at the moment) what's in the ad, it's for
+	// forward/backward compatibility.
+
+	// refresh ALL credentials
+	credmon_signal_and_poll( NULL );
+
+	r->encode();
+	ad.Assign("result", "success");
+	dprintf(D_ALWAYS, "ZKM: sending ad:\n");
+	dPrintAd(D_ALWAYS, ad);
+	putClassAd(r, ad);
+	r->end_of_message();
+	dprintf(D_ALWAYS, "ZKM: done!\n");
 }
 
 //-------------------------------------------------------------

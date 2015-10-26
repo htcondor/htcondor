@@ -48,29 +48,43 @@ int get_credmon_pid() {
 }
 
 
+// takes either a username, or NULL to refresh ALL credentials
 bool credmon_signal_and_poll(const char* user) {
 
 	// construct filename to poll for
 	char* cred_dir = param("SEC_CREDENTIAL_DIRECTORY");
 	if(!cred_dir) {
-		dprintf(D_ALWAYS, "ERROR: got STORE_CRED but SEC_CREDENTIAL_DIRECTORY not defined!\n");
+		dprintf(D_ALWAYS, "ERROR: got credmon_signal_and_poll() but SEC_CREDENTIAL_DIRECTORY not defined!\n");
 		return false;
 	}
 
-	// get username (up to '@' if present, else whole thing)
-	char username[256];
-	const char *at = strchr(user, '@');
-	if(at) {
-		strncpy(username, user, (at-user));
-		username[at-user] = 0;
-	} else {
-		strncpy(username, user, 255);
-		username[255] = 0;
-	}
+	// this will be the filename we poll for
+	char watchfilename[PATH_MAX];
 
-	// check to see if .cc already exists
-	char ccfilename[PATH_MAX];
-	sprintf(ccfilename, "%s%c%s.cc", cred_dir, DIR_DELIM_CHAR, username);
+	// if user == NULL this is a special case.  we want the credd to
+	// refresh ALL credentials, which we know it has done when it writes
+	// the file CREDMON_COMPLETE in the cred_dir
+	if (user == NULL) {
+		// we will watch for the file that signifies ALL creds were processed
+		sprintf(watchfilename, "%s%cCREDMON_COMPLETE", cred_dir, DIR_DELIM_CHAR);
+
+		// unlink it first so we know we got a fresh copy
+		priv_state priv = set_root_priv();
+		unlink(watchfilename);
+		set_priv(priv);
+	} else {
+		// get username (up to '@' if present, else whole thing)
+		char username[256];
+		const char *at = strchr(user, '@');
+		if(at) {
+			strncpy(username, user, (at-user));
+			username[at-user] = 0;
+		} else {
+			strncpy(username, user, 255);
+			username[255] = 0;
+		}
+		sprintf(watchfilename, "%s%c%s.cc", cred_dir, DIR_DELIM_CHAR, username);
+	}
 
 	// now signal the credmon
 	pid_t credmon_pid = get_credmon_pid();
@@ -86,13 +100,13 @@ bool credmon_signal_and_poll(const char* user) {
 		return false;
 	}
 
-	// now poll for existence of .cc file
+	// now poll for existence of watch file
 	int retries = 20;
 	struct stat junk_buf;
 	while (retries > 0) {
-		rc = stat(ccfilename, &junk_buf);
+		rc = stat(watchfilename, &junk_buf);
 		if (rc==-1) {
-			dprintf(D_ALWAYS, "ZKM: errno %i, waiting for %s to appear (%i seconds left)\n", errno, ccfilename, retries);
+			dprintf(D_ALWAYS, "ZKM: errno %i, waiting for %s to appear (%i seconds left)\n", errno, watchfilename, retries);
 			sleep(1);
 			retries--;
 		} else {
@@ -100,11 +114,11 @@ bool credmon_signal_and_poll(const char* user) {
 		}
 	}
 	if (retries == 0) {
-		dprintf(D_ALWAYS, "ZKM: FAILURE: credmon never created %s after 20 seconds!\n", ccfilename);
+		dprintf(D_ALWAYS, "ZKM: FAILURE: credmon never created %s after 20 seconds!\n", watchfilename);
 		return false;
 	}
 
-	dprintf(D_ALWAYS, "ZKM: SUCCESS: file %s found after %i seconds\n", ccfilename, 20-retries);
+	dprintf(D_ALWAYS, "ZKM: SUCCESS: file %s found after %i seconds\n", watchfilename, 20-retries);
 	return true;
 }
 
@@ -199,7 +213,7 @@ void credmon_sweep_creds() {
 bool credmon_clear_mark(const char* user) {
 	char* cred_dir = param("SEC_CREDENTIAL_DIRECTORY");
 	if(!cred_dir) {
-		dprintf(D_ALWAYS, "ERROR: got STORE_CRED but SEC_CREDENTIAL_DIRECTORY not defined!\n");
+		dprintf(D_ALWAYS, "ERROR: got credmon_clear_mark() but SEC_CREDENTIAL_DIRECTORY not defined!\n");
 		return false;
 	}
 
