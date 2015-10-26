@@ -110,6 +110,80 @@ main_init(int argc, char* argv[])
 	ClassAdLogPluginManager::EarlyInitialize();
 #endif
 
+	// ZKM HACK TO MAKE SURE SCHEDD HAS USER CREDENTIALS
+	//
+	// if we are using the credd and credmon, we need to init them before
+	// doing anything!
+	char* p = param("SEC_CREDENTIAL_DIRECTORY");
+	if(p) {
+		free(p);
+		dprintf(D_ALWAYS, "ZKM: INITIALIZING USER CREDS\n");
+		Daemon *my_credd;
+
+		// we will abort if we can't locate the credd, so let's try a
+		// few times. locate() caches the result so we have to destroy
+		// the object and make a new one each time.
+		int retries = 20;
+		bool success = false;
+		do {
+			// allocate a credd
+			my_credd = new Daemon(DT_CREDD);
+			if(my_credd) {
+				// call locate
+				bool loc_rc = my_credd->locate();
+				if(loc_rc) {
+					// get a connected relisock
+					CondorError errstack;
+					ReliSock* r = (ReliSock*)my_credd->startCommand(
+						CREDD_REFRESH_ALL, Stream::reli_sock, 20, &errstack);
+					if ( r ) {
+						// ask the credd to get us some fresh user creds
+						ClassAd ad;
+						putClassAd(r, ad);
+						r->end_of_message();
+						r->decode();
+						getClassAd(r, ad);
+						r->end_of_message();
+						dprintf(D_ALWAYS, "ZKM: received ad:\n");
+						dPrintAd(D_ALWAYS, ad);
+						MyString result;
+						ad.LookupString("Result", result);
+						if(result == "success") {
+							success = true;
+						} else {
+							dprintf(D_ALWAYS, "ZKM: warning, creddmon returned failure.\n");
+						}
+
+						// clean up.
+						delete r;
+					} else {
+						dprintf(D_ALWAYS, "ZKM: warning, startCommand failed, %s\n", errstack.getFullText(true).c_str());
+					}
+				} else {
+					dprintf(D_ALWAYS, "ZKM: warning, locate failed.\n");
+				}
+
+				// clean up.
+				delete my_credd;
+			} else {
+				dprintf(D_ALWAYS, "ZKM: warning, new Daemon(DT_CREDD) failed.\n");
+			}
+
+			// if something went wrong, sleep and retry (finit number of times)
+			if(!success) {
+				dprintf(D_ALWAYS, "ZKM: sleeping and trying again %i times.\n", retries);
+				sleep(1);
+				retries--;
+			}
+		} while ((retries > 0) && (success == false));
+
+		// except if fail
+		if (!success) {
+			EXCEPT("FAILED TO INITIALIZE USER CREDS (locate failed)");
+		}
+	}
+	// END ZKM HACK
+
 		// Initialize all the modules
 	scheduler.Init();
 	scheduler.Register();
