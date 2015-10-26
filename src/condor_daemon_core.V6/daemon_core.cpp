@@ -1132,9 +1132,6 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 		free( sinful_public );
 		sinful_public = NULL;
 
-		// In mixed mode, this will probably be an IPv6 address, which is
-		// suboptimal for backwards-compatibility.
-		// char const *addr = ((Sock*)(*sockTable)[initial_command_sock()].iosock)->get_sinful_public();
 		int initialCommandSock = initial_command_sock();
 		if( initialCommandSock == -1 ) {
 			EXCEPT( "Unable to find initial command socket!" );
@@ -1143,6 +1140,11 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 		Sock * sock = (Sock *)(*sockTable)[initialCommandSock].iosock;
 		condor_sockaddr sa = sock->my_addr();
 
+		// FIXME: get_sinful_public() will always return the
+		// TCP_FORWARDING_HOST, which means that it will end up in the
+		// daemon's address file, which will cause problems on machines
+		// where the TCP_FORWARDING_HOST isn't routed (or has a different
+		// firewall configuration).
 		char const * addr = sock->get_sinful_public();
 		if(! sa.is_ipv4()) {
 			for( int i = initialCommandSock; i < nSock; ++i ) {
@@ -1274,16 +1276,46 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 			}
 		}
 
+		// TCP_FORWARDING_HOST is defined in 8.4 to be the singlular
+		// advertised public address of the daemon.  The client sorts
+		// addrs by desirability and then uses the first address of a
+		// protocol that it has enabled.  Since we don't know that
+		// TCP_FORWARDING_HOST is more desirable (although it should be),
+		// replace the public address of the corresponding protocol
+		// with TCP_FORWARDING_HOST.
+		//
+		// Note that sPublic, despite its name, is used to generate the
+		// private address, and therefore shouldn't be changed, since it
+		// is (for instance) written to the address file (and the
+		// TCP_FORWARDING_HOST may only forward TCP connections in one
+		// direction).
+		condor_sockaddr fa;
+		forwarding = param( "TCP_FORWARDING_HOST" );
+		if( forwarding ) {
+			fa.from_ip_string( forwarding );
+			free( forwarding );
+		}
+
 		ASSERT( sa6.is_valid() || sa4.is_valid() );
 		Sinful sPublic( sinful_public );
 		Sinful sPrivate( sinful_private != NULL ? sinful_private : "" );
 		if( sa6.is_valid() ) {
-			m_sinful.addAddrToAddrs( sa6 );
+			if( fa.is_valid() && fa.is_ipv6() ) {
+				fa.set_port( sa6.get_port() );
+				m_sinful.addAddrToAddrs( fa );
+			} else {
+				m_sinful.addAddrToAddrs( sa6 );
+			}
 			sPublic.addAddrToAddrs( sa6 );
 			sPrivate.addAddrToAddrs( sa6 );
 		}
 		if( sa4.is_valid() ) {
-			m_sinful.addAddrToAddrs( sa4 );
+			if( fa.is_valid() && fa.is_ipv4() ) {
+				fa.set_port( sa4.get_port() );
+				m_sinful.addAddrToAddrs( fa );
+			} else {
+				m_sinful.addAddrToAddrs( sa4 );
+			}
 			sPublic.addAddrToAddrs( sa4 );
 			sPrivate.addAddrToAddrs( sa4 );
 		}
