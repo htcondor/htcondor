@@ -352,6 +352,7 @@ if (BUILD_TESTING)
 	condor_pl_test(job_foreach_submit-queueitemMLineIn-run "submit file usage queue ITEM in - run submit file" "core;quick;full;quicknolink")
 	condor_pl_test(job_foreach_submit-simple-glob "submit file usage match" "core;quick;full;quicknolink")
 	condor_pl_test(job_foreach_submit-simple-glob-run "submit file usage match - run submit file" "core;quick;full;quicknolink")
+    condor_pl_test(job_foreach_submit-queuesliceditemin-commalist "submit file slice test" "core;quick;full;quicknolink")
 	##### generic lib tests
 	# TSTCLAIR: I can not move the "condor_unit_tests" into the actual unit_test b/c it depends 
 	# on condor_config ++ deps. 

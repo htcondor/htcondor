@@ -33,6 +33,7 @@ job_foreach_submit-queueitemMLineIn-run: personal
 job_foreach_submit-simple-glob: personal
 job_foreach_submit-simple-glob-run: personal
 job_cp_cclim_acctgrp_basic_van: personal
+job_foreach_submit-queuesliceditemin-commalist: personal
 gangliad: personal
 job_ligo_x86-64-chkpttst: IPv4
 job_ckpt_combo-sanity_std: personal, IPv4

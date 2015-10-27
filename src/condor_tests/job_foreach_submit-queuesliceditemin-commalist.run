@@ -1,0 +1,116 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 2015, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+##
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+##
+##    http://www.apache.org/licenses/LICENSE-2.0
+##
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+use CondorUtils;
+use CondorTest;
+use Cwd;
+use POSIX;
+use Check::SimpleJob;
+
+print scalar localtime() . "\n";
+
+$testname = "job_basic_submit-queuespliceditemin-commalist";
+$mypid = $$;
+
+my $counter = 0;
+my $datafilename = "";
+my $targetname = "";
+my @results = ();
+my @extraction = ();
+my $extractionsize = 0;
+
+my @array = (1 .. 100);
+my $start = 0;
+my $end = @array;
+my $step = 1;
+my $arraysize = @array;
+
+for (my $i = $start, $j = 0; $i < $end; $j++, $i += $step) {
+    $newarray[$j] = $array[$i];
+}
+
+my $arglist = join(' ', @array);
+my $newarglist = join(' ', @newarray);
+my @allargs = split(' ', $newarglist);
+
+my $submitfile = "
+	executable = x_print-args.pl
+	should_transfer_files = yes
+	when_to_transfer_output = ON_EXIT
+	log = $testname$mypid.log
+	Arguments = \$(ITEM)
+	queue ITEM in [$start:$end:$sep] (
+        $arglist
+    )
+";
+
+my $submitfilename = "$testname$mypid.cmd";
+open(SF,">$submitfilename") or die "failed to open submit file:$submitfilename:$!\n";
+print SF "$submitfile";
+close(SF);
+
+my $datafilename = CondorTest::TempFileName("$testname");
+my $cmdtorun = "condor_submit -dry-run - $submitfilename";
+runCondorTool($cmdtorun, \@results, \$return, {emit_output=>1, expect_result=>1});
+
+DryExtract(\@results, \@extraction, "Args");
+
+$extractionsize = @extraction;
+
+print "Size of argument list:$extractionsize\n";
+
+my %seenargs = ();
+
+foreach my $arg (@extraction){
+	if($arg =~ /Args=\"(.*?)\"/) {
+		print "Captured:$1:\n";
+		$seenargs{$1} = 1;
+	}
+}
+
+foreach my $findit (@allargs) {
+	print "Validate:$findit:\n";
+	if(exists $seenargs{$findit}) {
+		print "Expected $findit and got it - Good\n";
+		RegisterResult(1,"test_name","$testname");
+	} else {
+		print "Expected $findit and DID NOT GET it - Bad\n";
+		RegisterResult(0,"test_name","$testname");
+	}
+}
+
+my $newarraysize = scalar @newarray;
+my $seenargsize = keys %seenargs;
+
+if ($newarraysize != $seenargsize) {
+		print "Expected no. of args $newarraysize, received args $seenargsize - Bad\n";
+		RegisterResult(0,"test_name","$testname");
+}
+
+CondorTest::EndTest();
+print scalar localtime() . "\n";
+
+if( $return != 0 )
+{
+	exit(1);
+}
+
+CondorTest::debug("$testname SUCCESS\n",1);
+exit(0);
