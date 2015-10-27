@@ -323,12 +323,16 @@ function graph_args(is_chart, source, duration, submitter_or_machine) {
 				filter = "filter=Name==" + submitter_or_machine + "\n";
 			}
 			if(duration == 'now') {
-				if(is_chart) { charttype = 'chart=pie'; }
-				return "title=Total Jobs\n" +
+				var grouping = 'pivot=Name;JobStatus;Count';
+				if(is_chart) {
+					charttype = 'chart=pie';
+					grouping = "group=JobStatus;Count";
+				}
+				return "title=" + title + "\n" +
 					"url=" + submitters_now_data_source() + "\n" +
 					filter +
 					"order=JobStatus\n" +
-					"group=JobStatus;Count\n" +
+					grouping + "\n" +
 					charttype + "\n";
 			} else {
 				var pivot = "Name;JobStatus;avg(Count)";
@@ -351,7 +355,6 @@ function default_submitters_graph_args() {
 	return graph_args(true, 'submitters', 'day');
 }
 
-
 function submitter_graph_args(user) {
 	return graph_args(true, 'submitters', 'day', user);
 }
@@ -370,9 +373,7 @@ function default_submitters_now_graph_args() {
 
 
 function default_submitters_now_table_args() {
-	return "url=" + submitters_now_data_source() + "\n" +
-		"order=Name\n" +
-		"pivot=Name;JobStatus;Count\n";
+	return graph_args(false, 'submitters', 'now');
 }
 
 function machines_data_source() { return "machines.json"; }
