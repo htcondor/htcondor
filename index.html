@@ -242,6 +242,7 @@ function table_select_handler(evnt,table,data) {
 	var selection = table.getSelection();
 	if(selection) {
 		var source = $('#data-source input[type="radio"]:checked').val()
+		var duration = $('#data-duration input[type="radio"]:checked').val()
 		if(source == "machine") {
 			var row = selection[0].row;
 			var arch = data.getValue(row, 0);
@@ -249,10 +250,17 @@ function table_select_handler(evnt,table,data) {
 			var new_graph_args = machines_graph_args(arch,opsys);
 			render_new_graph('#graph1text', 'graph1', new_graph_args);
 		} else if(source =="user") {
-			var row = selection[0].row;
-			var user = data.getValue(row, 0);
-			var new_graph_args = submitter_graph_args(user);
-			render_new_graph('#graph1text', 'graph1', new_graph_args);
+			if(duration == 'now') {
+				var row = selection[0].row;
+				var user = data.getValue(row, 0);
+				var new_graph_args = submitter_now_graph_args(user);
+				render_new_graph('#graph1text', 'graph1', new_graph_args);
+			} else {
+				var row = selection[0].row;
+				var user = data.getValue(row, 0);
+				var new_graph_args = submitter_graph_args(user);
+				render_new_graph('#graph1text', 'graph1', new_graph_args);
+			}
 		}
 	}
 }
@@ -311,6 +319,15 @@ function submitter_graph_args(user) {
 		"order=Date\n" +
 		"pivot=Date;JobStatus;Count\n" +
 		"chart=stacked\n";
+}
+
+function submitter_now_graph_args(user) {
+	return "title=Jobs for " + user + "\n" +
+		"url=" + submitters_now_data_source() + "\n" +
+		"filter=Name==" + user + "\n" +
+		"order=JobStatus\n" +
+		"group=JobStatus;Count\n" +
+		"chart=pie\n";
 }
 
 function default_submitters_table_args() {
