@@ -213,7 +213,12 @@ var data;
 function load_and_render() {
 	var callback_render_table = function() {
 		setTimeout(function() {
-			afterquery.render(read_arguments('#table1text'), data.value, null, 'table1', table_select_handler);
+			var options = {
+				select_handler: table_select_handler,
+				num_pattern: '#,##0.0'
+			};
+
+			afterquery.render(read_arguments('#table1text'), data.value, null, 'table1', options);
 		}, 0);
 	 };
 

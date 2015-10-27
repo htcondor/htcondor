@@ -1818,7 +1818,19 @@ var afterquery = (function() {
   }
 
 
-  function addRenderers(queue, args, myid, select_handler) {
+  function NaNToZeroFormatter(dt, col) {
+	  for(var row = 0; row<dt.getNumberOfRows(); row++) {
+		  if(isNaN(dt.getValue(row, col))) {
+			  dt.setValue(row, col, 0);
+			  dt.setFormattedValue(row, col, '');
+		  }
+	  }
+  }
+
+  function addRenderers(queue, args, myid, more_options_in) {
+	var has_more_opts = more_options_in !== undefined;
+	var more_options = more_options_in;
+
     var trace = args.get('trace');
     var chartops = args.get('chart');
     var t, datatable, resizeTimer;
@@ -1932,6 +1944,16 @@ var afterquery = (function() {
             dateformat.format(datatable, coli);
           } else if (grid.types[coli] === T_DATETIME) {
             datetimeformat.format(datatable, coli);
+          } else if (grid.types[coli] === T_NUM) {
+			if(has_more_opts &&
+				more_options.num_pattern !== undefined) {
+				var numformat = new google.visualization.NumberFormat({
+					pattern: more_options.num_pattern
+				});
+				numformat.format(datatable, coli);
+  				NaNToZeroFormatter(datatable, coli);
+			}
+
           }
         }
       }
@@ -1946,8 +1968,8 @@ var afterquery = (function() {
           $(el).width(wantwidth);
           options.height = $(el).height();
           t.draw(datatable, options);
-		  if(select_handler) {
-			  google.visualization.events.addListener(t, 'select', function(e) { select_handler(e,t, datatable); });
+		  if(has_more_opts && more_options.select_handler !== undefined) {
+			  google.visualization.events.addListener(t, 'select', function(e) { more_options.select_handler(e,t, datatable); });
 		  }
         };
         doRender();
