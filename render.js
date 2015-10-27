@@ -1966,7 +1966,9 @@ var afterquery = (function() {
         var doRender = function() {
           var wantwidth = trace ? $(el).innerWidth - 40 : $(el).innerWidth;
           $(el).width(wantwidth);
-          options.height = $(el).height();
+		  if(has_more_opts && ! more_options.disable_height) {
+          	options.height = $(el).height();
+		  }
           t.draw(datatable, options);
 		  if(has_more_opts && more_options.select_handler !== undefined) {
 			  google.visualization.events.addListener(t, 'select', function(e) { more_options.select_handler(e,t, datatable); });

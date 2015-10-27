@@ -215,7 +215,8 @@ function load_and_render() {
 		setTimeout(function() {
 			var options = {
 				select_handler: table_select_handler,
-				num_pattern: '#,##0.0'
+				num_pattern: '#,##0.0',
+				disable_height: true
 			};
 
 			afterquery.render(read_arguments('#table1text'), data.value, null, 'table1', options);
