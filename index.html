@@ -303,22 +303,57 @@ function user_data_source() { return "user.json"; }
 function submitters_data_source() { return "submitters.json"; }
 function submitters_now_data_source() { return "submitters.now.json"; }
 
+/*
+is_chart - true it's a chart (pie/stacked), false it's a table.
+source - submitters or machines
+duration - now, day, week, or month
+submitter_or_machine - optional. If present, limits results to this
+                       submitter or machine
+*/
+function graph_args(is_chart, source, duration, submitter_or_machine) {
+	switch(source) {
+		case 'submitters':
+			switch(duration) {
+				case 'now':
+					break;
+				case 'day':
+				case 'week':
+				case 'month':
+				{
+					var url = submitters_data_source();
+					var title = "Total Jobs";
+					var filter = '';
+					var charttype = 'table';
+					var pivot = "Date;JobStatus;Count";
+					if(submitter_or_machine !== undefined) {
+						title = "Jobs for " + submitter_or_machine;
+						filter = "filter=Name==" + submitter_or_machine + "\n";
+					}
+					if(is_chart) {
+						charttype = 'stacked';
+					var pivot = "Date;JobStatus;avg(Count)";
+					}
+					return "url=" + url + "\n" +
+						"title=" + title + "\n" +
+						filter +
+						"order=Date\n" +
+						"pivot=" + pivot + "\n" +
+						"chart=" + charttype + "\n";
+				}
+			}
+			break;
+		case 'machines':
+			break;
+	}
+}
+
 function default_submitters_graph_args() {
-	return "title=Total Jobs\n" +
-		"url=" + submitters_data_source() + "\n" +
-		"order=Date\n" +
-		"pivot=Date;JobStatus;Count\n" +
-		"chart=stacked\n";
+	return graph_args(true, 'submitters', 'day');
 }
 
 
 function submitter_graph_args(user) {
-	return "title=Jobs for " + user + "\n" +
-		"url=" + submitters_data_source() + "\n" +
-		"filter=Name==" + user + "\n" +
-		"order=Date\n" +
-		"pivot=Date;JobStatus;Count\n" +
-		"chart=stacked\n";
+	return graph_args(true, 'submitters', 'day', user);
 }
 
 function submitter_now_graph_args(user) {
@@ -331,9 +366,7 @@ function submitter_now_graph_args(user) {
 }
 
 function default_submitters_table_args() {
-	return "url=" + submitters_data_source() + "\n" +
-		"order=Name\n" +
-		"pivot=Name;JobStatus;avg(Count)\n";
+	return graph_args(false, 'submitters', 'day');
 }
 
 function default_submitters_now_graph_args() {
