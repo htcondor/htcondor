@@ -307,10 +307,10 @@ function submitters_now_data_source() { return "submitters.now.json"; }
 is_chart - true it's a chart (pie/stacked), false it's a table.
 source - submitters or machines
 duration - now, day, week, or month
-submitter_or_machine - optional. If present, limits results to this
-                       submitter or machine
+submitter_or_archopsys - optional. If present, limits results to this
+                       submitter or [arch, opsys]
 */
-function graph_args(is_chart, source, duration, submitter_or_machine) {
+function graph_args(is_chart, source, duration, submitter_or_archopsys) {
 	switch(source) {
 		case 'submitters':
 		{
@@ -318,9 +318,9 @@ function graph_args(is_chart, source, duration, submitter_or_machine) {
 			if(is_chart) { charttype = 'chart=stacked'; }
 			var title = 'Total Jobs';
 			var filter = '';
-			if(submitter_or_machine !== undefined) {
-				title = "Jobs for " + submitter_or_machine;
-				filter = "filter=Name==" + submitter_or_machine + "\n";
+			if(submitter_or_archopsys !== undefined) {
+				title = "Jobs for " + submitter_or_archopsys;
+				filter = "filter=Name==" + submitter_or_archopsys + "\n";
 			}
 			if(duration == 'now') {
 				var grouping = 'pivot=Name;JobStatus;Count';
@@ -334,6 +334,7 @@ function graph_args(is_chart, source, duration, submitter_or_machine) {
 					"order=JobStatus\n" +
 					grouping + "\n" +
 					charttype + "\n";
+
 			} else {
 				var pivot = "Name;JobStatus;avg(Count)";
 				if(is_chart) { pivot = "Date;JobStatus;Count"; }
@@ -347,7 +348,34 @@ function graph_args(is_chart, source, duration, submitter_or_machine) {
 			break;
 		}
 		case 'machines':
-			break;
+		{
+			if(duration == 'now') {
+			
+			} else {
+				if(is_chart) {
+					var filter = '';
+					var title = 'Machine State';
+					if(submitter_or_archopsys !== undefined) {
+						var arch = submitter_or_archopsys[0];
+						var opsys = submitter_or_archopsys[1];
+						title = 'Machine State for '+arch+"/"+opsys;
+						filter = "filter=Arch==" + arch + "\n" +
+						"filter=OpSys==" + opsys + "\n";
+					}
+					return "title=" + title + "\n" +
+						"url=" + machines_data_source() + "\n" +
+						filter +
+						"order=Date\n" +
+						"pivot=Date;State;Cpus\n" +
+						"chart=stacked\n";
+				} else {
+					return "url=" + machines_data_source() + "\n" +
+						"order=Date\n" +
+						"pivot=Date,Arch,OpSys;State;Cpus\n" +
+						"group=Arch,OpSys;avg(Unclaimed),avg(Claimed),max(Unclaimed),max(Claimed)";
+				}
+			}
+		}
 	}
 }
 
@@ -379,30 +407,16 @@ function default_submitters_now_table_args() {
 function machines_data_source() { return "machines.json"; }
 
 function default_machines_graph_args() {
-	return "title=Machine State\n" +
-		"url=" + machines_data_source() + "\n" +
-		"order=Date\n" +
-		"pivot=Date;State;Cpus\n" +
-		"chart=stacked\n";
+	return graph_args(true, 'machines', 'day');
 }
 
 
 function default_machines_table_args() {
-	return "title=Machine State\n" +
-		"url=" + machines_data_source() + "\n" +
-		"order=Date\n" +
-		"pivot=Date,Arch,OpSys;State;Cpus\n" +
-		"group=Arch,OpSys;avg(Unclaimed),avg(Claimed),max(Unclaimed),max(Claimed)";
+	return graph_args(false, 'machines', 'day');
 }
 
 function machines_graph_args(arch,opsys) {
-	return "title=Machine State for " + arch + "/" + opsys + "\n" +
-		"url=" + machines_data_source() + "\n" +
-		"filter=Arch==" + arch + "\n" +
-		"filter=OpSys==" + opsys + "\n" +
-		"order=Date\n" +
-		"pivot=Date;State;Cpus\n" +
-		"chart=stacked\n";
+	return graph_args(true, 'machines', 'day', [arch, opsys]);
 }
 
 window.onpopstate = function() {
