@@ -245,20 +245,13 @@ function table_select_handler(evnt,table,data) {
 			var row = selection[0].row;
 			var arch = data.getValue(row, 0);
 			var opsys = data.getValue(row, 1);
-			var new_graph_args = machines_graph_args(arch,opsys);
+			var new_graph_args = graph_args(true, source, duration, {Arch: arch, OpSys: opsys}, "Machine State for "+arch+"/"+opsys);
 			render_new_graph('#graph1text', 'graph1', new_graph_args);
 		} else if(source =="submitters") {
-			if(duration == 'now') {
-				var row = selection[0].row;
-				var user = data.getValue(row, 0);
-				var new_graph_args = submitter_now_graph_args(user);
-				render_new_graph('#graph1text', 'graph1', new_graph_args);
-			} else {
-				var row = selection[0].row;
-				var user = data.getValue(row, 0);
-				var new_graph_args = submitter_graph_args(user);
-				render_new_graph('#graph1text', 'graph1', new_graph_args);
-			}
+			var row = selection[0].row;
+			var user = data.getValue(row, 0);
+			var new_graph_args = graph_args(true, source, duration, {Name:user}, "Jobs for "+user);
+			render_new_graph('#graph1text', 'graph1', new_graph_args);
 		}
 	}
 }
@@ -378,19 +371,8 @@ function graph_args(is_chart, source, duration, filters, title) {
 	}
 }
 
-function submitter_graph_args(user) {
-	return graph_args(true, 'submitters', 'day', {Name:user}, "Jobs for "+user);
-}
-
-function submitter_now_graph_args(user) {
-	return graph_args(true, 'submitters', 'now', {Name:user}, "Jobs for "+user);
-}
 
 
-
-function machines_graph_args(arch,opsys) {
-	return graph_args(true, 'machines', 'day', {Arch: arch, OpSys: opsys}, "Machine State for "+arch+"/"+opsys);
-}
 
 window.onpopstate = function() {
 	setTimeout(function(){
@@ -405,14 +387,12 @@ $('#reloadgraph1').click(function() {
 	save_arguments_to_url();
 	});
 $('#rerendergraph1').click(function() { render_new_graph('#graph1text', 'graph1'); });
-/*$('#reset_graph1').click(function(){ render_new_graph('#graph1text', * 'graph1', default_graph_args()); });*/
 
 $('#reloadtable1').click(function() {
 	load_and_render();
 	save_arguments_to_url();
 	});
 $('#rerendertable1').click(function() { render_new_graph('#table1text', 'table1'); });
-/* $('#reset_table1').click(function(){ render_new_graph('#table1text', * 'table1', default_table_args()); }); */
 
 $(document).ready( function() {
 	// Initialize tabs
