@@ -295,7 +295,6 @@ function change_view() {
 		$("#graph1 .vizchart").html("<h2>Not yet implemented</h2>");
 		$("#table1 .vizchart").html("<h2>Not yet implemented</h2>");
 	}
-	console.log(source,duration);
 }
 
 function user_data_source() { return "user.json"; }
@@ -313,14 +312,12 @@ title - optional title for chart.
 */
 function graph_args(is_chart, source, duration, filters, title) {
 	var filter = '';
-	console.log(filters);
 	if(filters !== undefined) {
 		var key;
 		for(key in filters) {
 			filter += "filter=" + key + "=" + filters[key] + "\n";
 		}
 	}
-	console.log(filter);
 	switch(source) {
 		case 'submitters':
 		{
