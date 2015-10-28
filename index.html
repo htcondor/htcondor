@@ -307,21 +307,26 @@ function submitters_now_data_source() { return "submitters.now.json"; }
 is_chart - true it's a chart (pie/stacked), false it's a table.
 source - submitters or machines
 duration - now, day, week, or month
-submitter_or_archopsys - optional. If present, limits results to this
-                       submitter or [arch, opsys]
+filters - optional. Hash of fields to filter on
+   mapped to values to filter by.
+title - optional title for chart.
 */
-function graph_args(is_chart, source, duration, submitter_or_archopsys) {
+function graph_args(is_chart, source, duration, filters, title) {
+	var filter = '';
+	console.log(filters);
+	if(filters !== undefined) {
+		var key;
+		for(key in filters) {
+			filter += "filter=" + key + "=" + filters[key] + "\n";
+		}
+	}
+	console.log(filter);
 	switch(source) {
 		case 'submitters':
 		{
 			var charttype = '';
 			if(is_chart) { charttype = 'chart=stacked'; }
-			var title = 'Total Jobs';
-			var filter = '';
-			if(submitter_or_archopsys !== undefined) {
-				title = "Jobs for " + submitter_or_archopsys;
-				filter = "filter=Name==" + submitter_or_archopsys + "\n";
-			}
+			if(title === undefined) { title = 'Total Jobs'; }
 			if(duration == 'now') {
 				var grouping = 'pivot=Name;JobStatus;Count';
 				if(is_chart) {
@@ -353,15 +358,7 @@ function graph_args(is_chart, source, duration, submitter_or_archopsys) {
 			
 			} else {
 				if(is_chart) {
-					var filter = '';
-					var title = 'Machine State';
-					if(submitter_or_archopsys !== undefined) {
-						var arch = submitter_or_archopsys[0];
-						var opsys = submitter_or_archopsys[1];
-						title = 'Machine State for '+arch+"/"+opsys;
-						filter = "filter=Arch==" + arch + "\n" +
-						"filter=OpSys==" + opsys + "\n";
-					}
+					if(title === undefined) { title = 'Machine State'; }
 					return "title=" + title + "\n" +
 						"url=" + machines_data_source() + "\n" +
 						filter +
@@ -384,11 +381,11 @@ function default_submitters_graph_args() {
 }
 
 function submitter_graph_args(user) {
-	return graph_args(true, 'submitters', 'day', user);
+	return graph_args(true, 'submitters', 'day', {Name:user}, "Jobs for "+user);
 }
 
 function submitter_now_graph_args(user) {
-	return graph_args(true, 'submitters', 'now', user);
+	return graph_args(true, 'submitters', 'now', {User:user}, "Jobs for "+user);
 }
 
 function default_submitters_table_args() {
@@ -416,7 +413,7 @@ function default_machines_table_args() {
 }
 
 function machines_graph_args(arch,opsys) {
-	return graph_args(true, 'machines', 'day', [arch, opsys]);
+	return graph_args(true, 'machines', 'day', {Arch: arch, OpSys: opsys}, "Machine State for "+arch+"/"+opsys);
 }
 
 window.onpopstate = function() {
