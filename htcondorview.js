@@ -278,29 +278,109 @@ function graph_args(is_chart, source, duration, filters, title) {
 	}
 }
 
-
-
-
-window.onpopstate = function() {
-	setTimeout(function(){
-		load_arguments_to_form();
-		load_and_render();
-		},1);
+function starting_html() {
+	return "" +
+	"<div style=\"text-align: center\">\n" +
+	"<ul class=\"radio-tabs\" id=\"data-source\">\n" +
+	"<li><input type=\"radio\" name=\"data-source\" id=\"data-source-user\" value=\"submitters\"> <label for=\"data-source-user\">Users</label>\n" +
+	"<li><input type=\"radio\" name=\"data-source\" id=\"data-source-machine\" value=\"machines\"> <label for=\"data-source-machine\">Pool</label>\n" +
+	"<li><input type=\"radio\" name=\"data-source\" id=\"data-source-custom\" value=\"custom\"> <label for=\"data-source-custom\">Custom</label>\n" +
+	"</ul>\n" +
+	"<ul class=\"radio-tabs\" id=\"data-duration\">\n" +
+	"<li><input type=\"radio\" name=\"data-duration\" id=\"data-duration-now\" value=\"now\"> <label for=\"data-duration-now\">Now</label>\n" +
+	"<li><input type=\"radio\" name=\"data-duration\" id=\"data-duration-day\" value=\"day\"> <label for=\"data-duration-day\">Day</label>\n" +
+	"<li><input type=\"radio\" name=\"data-duration\" id=\"data-duration-week\" value=\"week\"> <label for=\"data-duration-week\">Week</label>\n" +
+	"<li><input type=\"radio\" name=\"data-duration\" id=\"data-duration-month\" value=\"month\"> <label for=\"data-duration-month\">Month</label>\n" +
+	"</ul>\n" +
+	"</div>\n" +
+	"\n" +
+	"<div id=\"tab-user\" class=\"tab-content current\">\n" +
+	"\n" +
+	"<div class='editmenu'><button class=\"editlink\" id='editlinkgraph1'>edit</button>\n" +
+	"<div id=\"graph1editor\" style=\"display:none;\">\n" +
+	"<textarea id='graph1text' cols=\"40\" rows=\"10\" wrap='off'>\n" +
+	"</textarea>\n" +
+	"<div>\n" +
+	"<button id=\"rerendergraph1\">Update Graph</button>\n" +
+	"<button id=\"reloadgraph1\">Reload Data</button>\n" +
+	"</div>\n" +
+	"</div>\n" +
+	"<br><button onclick=\"alert('Not yet implemented')\" class=\"editlink\">full screen</button>\n" +
+	"</div>\n" +
+	"\n" +
+	"<div id='graph1'>\n" +
+	"<div class='vizstatus'>\n" +
+	"  <div class='statustext'></div>\n" +
+	"  <div class='statussub'></div>\n" +
+	"</div>\n" +
+	"<div class='vizraw'></div>\n" +
+	"<div class='vizchart'></div>\n" +
+	"</div>\n" +
+	"\n" +
+	"<div class=\"download-link\"> <a onclick=\"alert('Not yet implemented');\" href=\"#not-yet-implemented\">Download this table</a> </div>\n" +
+	"<div class='editmenu'><button class=\"editlink\" id='editlinktable1'>edit</button>\n" +
+	"<div id=\"table1editor\" style=\"display:none;\">\n" +
+	"<textarea id='table1text' cols=\"40\" rows=\"10\" wrap='off'>\n" +
+	"</textarea>\n" +
+	"<div>\n" +
+	"<button id=\"rerendertable1\">Update Table</button>\n" +
+	"<button id=\"reloadtable1\">Reload Data</button>\n" +
+	"</div>\n" +
+	"</div>\n" +
+	"</div>\n" +
+	"\n" +
+	"<div id='table1'>\n" +
+	"<div class='vizstatus'>\n" +
+	"  <div class='statustext'></div>\n" +
+	"  <div class='statussub'></div>\n" +
+	"</div>\n" +
+	"<div class='vizraw'></div>\n" +
+	"<div class='vizchart'></div>\n" +
+	"</div>\n" +
+	"\n" +
+	"</div> <!-- #tab-user .tab-content -->\n" +
+	"\n" +
+	"<div id=\"tab-machine\" class=\"tab-content\">\n" +
+	"</div>\n" +
+	"\n" +
+	"<div id=\"tab-custom\" class=\"tab-content\">\n" +
+	"TODO Custom\n" +
+	"</div>\n" +
+	"\n" +
+	"<div id='vizlog'></div>\n" +
+	"";
 }
 
-$('#reloadgraph1').click(function() {
-	load_and_render();
-	save_arguments_to_url();
-	});
-$('#rerendergraph1').click(function() { render_new_graph('#graph1text', 'graph1'); });
 
-$('#reloadtable1').click(function() {
-	load_and_render();
-	save_arguments_to_url();
-	});
-$('#rerendertable1').click(function() { render_new_graph('#table1text', 'table1'); });
 
-$(document).ready( function() {
+
+function initialize_htcondor_view(id) {
+	var container = $('#'+id);
+	if(container.length == 0) {
+		console.log('HTCondor View is not able to intialize. There is no element with an ID of "'+id+'".');
+		return false;
+	}
+	container.html(starting_html());
+
+	window.onpopstate = function() {
+		setTimeout(function(){
+			load_arguments_to_form();
+			load_and_render();
+			},1);
+	}
+
+	$('#reloadgraph1').click(function() {
+		load_and_render();
+		save_arguments_to_url();
+		});
+	$('#rerendergraph1').click(function() { render_new_graph('#graph1text', 'graph1'); });
+
+	$('#reloadtable1').click(function() {
+		load_and_render();
+		save_arguments_to_url();
+		});
+	$('#rerendertable1').click(function() { render_new_graph('#table1text', 'table1'); });
+
 	// Initialize tabs
 	$('ul.tabs li').click(function(){
 		var tab_id = $(this).attr('data-tab');
@@ -321,4 +401,8 @@ $(document).ready( function() {
 	load_arguments_to_form();
 	change_view()
 	load_and_render();
-}) ;
+
+	return true;
+}
+
+

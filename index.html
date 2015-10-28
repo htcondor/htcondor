@@ -27,81 +27,12 @@ body {
 
 <h1><img src="HTCondor_logo.png" style="display: inline-block;  height: 1.3em;" alt="HTCondor"> View</h1>
 
-<div class="htcondorview">
+<div id="htcondorview" class="htcondorview"></div>
 
-<div style="text-align: center">
-<ul class="radio-tabs" id="data-source">
-<li><input type="radio" name="data-source" id="data-source-user" value="submitters"> <label for="data-source-user">Users</label>
-<li><input type="radio" name="data-source" id="data-source-machine" value="machines"> <label for="data-source-machine">Pool</label>
-<li><input type="radio" name="data-source" id="data-source-custom" value="custom"> <label for="data-source-custom">Custom</label>
-</ul>
-<ul class="radio-tabs" id="data-duration">
-<li><input type="radio" name="data-duration" id="data-duration-now" value="now"> <label for="data-duration-now">Now</label>
-<li><input type="radio" name="data-duration" id="data-duration-day" value="day"> <label for="data-duration-day">Day</label>
-<li><input type="radio" name="data-duration" id="data-duration-week" value="week"> <label for="data-duration-week">Week</label>
-<li><input type="radio" name="data-duration" id="data-duration-month" value="month"> <label for="data-duration-month">Month</label>
-</ul>
-</div>
-
-
-<div id="tab-user" class="tab-content current">
-
-<div class='editmenu'><button class="editlink" id='editlinkgraph1'>edit</button>
-<div id="graph1editor" style="display:none;">
-<textarea id='graph1text' cols="40" rows="10" wrap='off'>
-</textarea>
-<div>
-<button id="rerendergraph1">Update Graph</button>
-<button id="reloadgraph1">Reload Data</button>
-</div>
-</div>
-<br><button onclick="alert('Not yet implemented')" class="editlink">full screen</button>
-</div>
-
-<div id='graph1'>
-<div class='vizstatus'>
-  <div class='statustext'></div>
-  <div class='statussub'></div>
-</div>
-<div class='vizraw'></div>
-<div class='vizchart'></div>
-</div>
-
-
-<div class="download-link"> <a onclick="alert('Not yet implemented');" href="#not-yet-implemented">Download this table</a> </div>
-<div class='editmenu'><button class="editlink" id='editlinktable1'>edit</button>
-<div id="table1editor" style="display:none;">
-<textarea id='table1text' cols="40" rows="10" wrap='off'>
-</textarea>
-<div>
-<button id="rerendertable1">Update Table</button>
-<button id="reloadtable1">Reload Data</button>
-</div>
-</div>
-</div>
-
-<div id='table1'>
-<div class='vizstatus'>
-  <div class='statustext'></div>
-  <div class='statussub'></div>
-</div>
-<div class='vizraw'></div>
-<div class='vizchart'></div>
-</div>
-
-</div> <!-- #tab-user .tab-content -->
-
-<div id="tab-machine" class="tab-content">
-</div>
-
-<div id="tab-custom" class="tab-content">
-TODO Custom
-</div>
-
-<div id='vizlog'></div>
-
-</div>
-
+<script>
+$(document).ready( function() { initialize_htcondor_view('htcondorview');
+});
+</script>
 
 </body>
 </html>
