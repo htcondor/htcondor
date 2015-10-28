@@ -355,6 +355,8 @@ function graph_args(is_chart, source, duration, filters, title) {
 				if(is_chart) {
 					charttype = 'chart=pie';
 					grouping = "group=JobStatus;Count";
+				} else {
+					filter = '';
 				}
 				return "title=" + title + "\n" +
 					"url=" + submitters_now_data_source() + "\n" +
@@ -365,7 +367,11 @@ function graph_args(is_chart, source, duration, filters, title) {
 
 			} else {
 				var pivot = "Name;JobStatus;avg(Count)";
-				if(is_chart) { pivot = "Date;JobStatus;Count"; }
+				if(is_chart) {
+					pivot = "Date;JobStatus;Count";
+				} else {
+					filter = '';
+				}
 				return "url=" + submitters_data_source() + "\n" +
 					"title=" + title + "\n" +
 					filter +
