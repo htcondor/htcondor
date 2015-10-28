@@ -378,20 +378,12 @@ function graph_args(is_chart, source, duration, filters, title) {
 	}
 }
 
-function default_submitters_graph_args() {
-	return graph_args(true, 'submitters', 'day');
-}
-
 function submitter_graph_args(user) {
 	return graph_args(true, 'submitters', 'day', {Name:user}, "Jobs for "+user);
 }
 
 function submitter_now_graph_args(user) {
 	return graph_args(true, 'submitters', 'now', {Name:user}, "Jobs for "+user);
-}
-
-function default_submitters_table_args() {
-	return graph_args(false, 'submitters', 'day');
 }
 
 
@@ -438,10 +430,7 @@ $(document).ready( function() {
 
 	// Initialize graph
 	if(!window.location.search) {
-
-		$('#graph1text').val(default_submitters_graph_args());
-		$('#table1text').val(default_submitters_table_args());
-		save_arguments_to_url();
+		change_view()
 	}
 	load_arguments_to_form('graph1', '#graph1text');
 	load_arguments_to_form('table1', '#table1text');
