@@ -66,9 +66,8 @@ ul.radio-tabs li input[type="radio"]:checked + label {
 
 <div style="text-align: center">
 <ul class="radio-tabs" id="data-source">
-<li><input type="radio" name="data-source" id="data-source-user"
-value="user" checked> <label for="data-source-user">Users</label>
-<li><input type="radio" name="data-source" id="data-source-machine" value="machine"> <label for="data-source-machine">Pool</label>
+<li><input type="radio" name="data-source" id="data-source-user" value="submitters" checked> <label for="data-source-user">Users</label>
+<li><input type="radio" name="data-source" id="data-source-machine" value="machines"> <label for="data-source-machine">Pool</label>
 <li><input type="radio" name="data-source" id="data-source-custom" value="custom"> <label for="data-source-custom">Custom</label>
 </ul>
 <ul class="radio-tabs" id="data-duration">
@@ -128,7 +127,6 @@ value="user" checked> <label for="data-source-user">Users</label>
 </div> <!-- #tab-user .tab-content -->
 
 <div id="tab-machine" class="tab-content">
-TODO Machine
 </div>
 
 <div id="tab-custom" class="tab-content">
@@ -243,13 +241,13 @@ function table_select_handler(evnt,table,data) {
 	if(selection) {
 		var source = $('#data-source input[type="radio"]:checked').val()
 		var duration = $('#data-duration input[type="radio"]:checked').val()
-		if(source == "machine") {
+		if(source == "machines") {
 			var row = selection[0].row;
 			var arch = data.getValue(row, 0);
 			var opsys = data.getValue(row, 1);
 			var new_graph_args = machines_graph_args(arch,opsys);
 			render_new_graph('#graph1text', 'graph1', new_graph_args);
-		} else if(source =="user") {
+		} else if(source =="submitters") {
 			if(duration == 'now') {
 				var row = selection[0].row;
 				var user = data.getValue(row, 0);
@@ -280,13 +278,13 @@ function render_new_graph(editid, graphid, args) {
 function change_view() {
 	var duration = $('#data-duration input[type="radio"]:checked').val()
 	var source = $('#data-source input[type="radio"]:checked').val()
-	if(source == "machine") {
-		render_new_graph('#graph1text', 'graph1', graph_args(true, 'machines', duration));
-		render_new_graph('#table1text', 'table1', graph_args(false, 'machines', duration));
-	} else if (source == "user") {
+	if(source == "machines") {
+		render_new_graph('#graph1text', 'graph1', graph_args(true, source, duration));
+		render_new_graph('#table1text', 'table1', graph_args(false, source, duration));
+	} else if (source == "submitters") {
 		if(duration == "now") {
-			render_new_graph('#graph1text', 'graph1', graph_args(true, 'submitters', 'now'));
-			render_new_graph('#table1text', 'table1', graph_args(false, 'submitters', 'now'));
+			render_new_graph('#graph1text', 'graph1', graph_args(true, source, 'now'));
+			render_new_graph('#table1text', 'table1', graph_args(false, source, 'now'));
 		} else {
 			render_new_graph('#graph1text', 'graph1', default_submitters_graph_args());
 			render_new_graph('#table1text', 'table1', default_submitters_table_args());
