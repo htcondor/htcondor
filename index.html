@@ -215,7 +215,6 @@ function save_arguments_to_url() {
 		filter = '';
 		for(key in active_filter) {
 			filter = filter + key + "=" + active_filter[key] + ";";
-			console.log(key,active_filter[key]);
 		}
 		filter = encodeURI(filter);
 	}
