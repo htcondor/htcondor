@@ -315,10 +315,7 @@ function render_new_graph(editid, graphid, args) {
 function change_view() {
 	var duration = $('#data-duration input[type="radio"]:checked').val()
 	var source = $('#data-source input[type="radio"]:checked').val()
-	if(source == "machines") {
-		render_new_graph('#graph1text', 'graph1', graph_args(true, source, duration, active_filter, alt_title));
-		render_new_graph('#table1text', 'table1', graph_args(false, source, duration, active_filter, alt_title));
-	} else if (source == "submitters") {
+	if(source == "machines" || source == "submitters") {
 		render_new_graph('#graph1text', 'graph1', graph_args(true, source, duration, active_filter, alt_title));
 		render_new_graph('#table1text', 'table1', graph_args(false, source, duration, active_filter, alt_title));
 	} else if(source=="custom") {
