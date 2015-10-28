@@ -66,15 +66,15 @@ ul.radio-tabs li input[type="radio"]:checked + label {
 
 <div style="text-align: center">
 <ul class="radio-tabs" id="data-source">
-<li><input type="radio" name="data-source" id="data-source-user" value="submitters" checked> <label for="data-source-user">Users</label>
+<li><input type="radio" name="data-source" id="data-source-user" value="submitters"> <label for="data-source-user">Users</label>
 <li><input type="radio" name="data-source" id="data-source-machine" value="machines"> <label for="data-source-machine">Pool</label>
 <li><input type="radio" name="data-source" id="data-source-custom" value="custom"> <label for="data-source-custom">Custom</label>
 </ul>
 <ul class="radio-tabs" id="data-duration">
 <li><input type="radio" name="data-duration" id="data-duration-now" value="now"> <label for="data-duration-now">Now</label>
-<li><input type="radio" name="data-duration" id="data-duration-day" value="day" checked> <label for="data-duration-day">Day</label>
+<li><input type="radio" name="data-duration" id="data-duration-day" value="day"> <label for="data-duration-day">Day</label>
 <li><input type="radio" name="data-duration" id="data-duration-week" value="week"> <label for="data-duration-week">Week</label>
-<li><input type="radio" name="data-duration" id="data-duration-month" value="month"> <label for="data-duration-month" checked>Month</label>
+<li><input type="radio" name="data-duration" id="data-duration-month" value="month"> <label for="data-duration-month">Month</label>
 </ul>
 </div>
 
@@ -137,6 +137,9 @@ TODO Custom
 
 <script>
 
+var active_filter;
+var alt_title;
+
 function toggle_edit(btn, controls) {
 	$(controls).toggle();
 	if($(controls).is(":visible")) {
@@ -149,10 +152,32 @@ function toggle_edit(btn, controls) {
 $('#editlinkgraph1').click(function() { toggle_edit('#editlinkgraph1', '#graph1editor'); });
 $('#editlinktable1').click(function() { toggle_edit('#editlinktable1', '#table1editor'); });
 
-function load_arguments_to_form(key,form) {
+function load_arguments_to_form() {
 	var args = afterquery.parseArgs(window.location.search);
-	var val = args.get(key);
-	$(form).val(val);
+
+	var source = args.get('source');
+	if(source === undefined) { source = 'submitters'; }
+	$('#data-source input[type="radio"][value="'+source+'"]').prop('checked', true);
+
+	var duration = args.get('duration');
+	if(duration === undefined) { duration = 'day'; }
+	$('#data-duration input[type="radio"][value="'+duration+'"]').prop('checked', true);
+
+	var filterstr = args.get('filter');
+	if(filterstr !== undefined) {
+		var filterlist = filterstr.split(';');
+		active_filter = {};
+		for(var i = 0; i < filterlist.length; i++) {
+			if(filterlist[i].length == 0) { continue; }
+			var pair = filterlist[i].split('=');
+			active_filter[pair[0]] = pair[1];
+		}
+	} else {
+		active_filter = undefined;
+	}
+
+	var title = args.get('title');
+	if(title !== undefined) { alt_title = title; }
 }
 
 var urlTool = document.createElement('a');
@@ -169,22 +194,37 @@ function replace_search_arg(oldurl, newkey, newval) {
 			newsearch += encodeURIComponent(key) + "=" + encodeURIComponent(val) + "&";	
 		}
 	}
-	newsearch += encodeURIComponent(newkey) + "=" + encodeURIComponent(newval);	
+	if(newval !== undefined) {
+		newsearch += encodeURIComponent(newkey) + "=" + encodeURIComponent(newval);	
+	}
 	urlTool.search = newsearch;
 	return urlTool.href;
 }
 
 function save_arguments_to_url() {
-	var oldurl = window.location.href;
+	var url = window.location.href;
 
-	var value = $('#graph1text').val().trim();
-	var newurl = replace_search_arg(oldurl, 'graph1', value);
+	var source = $('#data-source input[type="radio"]:checked').val()
+	var duration = $('#data-duration input[type="radio"]:checked').val()
 
-	value = $('#table1text').val().trim();
-	newurl = replace_search_arg(newurl, 'table1', value);
+	url = replace_search_arg(url, 'source', source);
+	url = replace_search_arg(url, 'duration', duration);
 
-	if(newurl != oldurl) {
-		history.pushState(null, null, newurl);
+	var filter;
+	if(active_filter !== undefined) {
+		filter = '';
+		for(key in active_filter) {
+			filter = filter + key + "=" + active_filter[key] + ";";
+			console.log(key,active_filter[key]);
+		}
+		filter = encodeURI(filter);
+	}
+	url = replace_search_arg(url, 'filter', filter);
+
+	url = replace_search_arg(url, 'title', alt_title);
+
+	if(url != window.location.href) {
+		history.pushState(null, null, url);
 	}
 }
 
@@ -245,12 +285,16 @@ function table_select_handler(evnt,table,data) {
 			var row = selection[0].row;
 			var arch = data.getValue(row, 0);
 			var opsys = data.getValue(row, 1);
-			var new_graph_args = graph_args(true, source, duration, {Arch: arch, OpSys: opsys}, "Machine State for "+arch+"/"+opsys);
+			active_filter = {Arch: arch, OpSys: opsys};
+			alt_title = "Machine State for "+arch+"/"+opsys;
+			var new_graph_args = graph_args(true, source, duration, active_filter, alt_title);
 			render_new_graph('#graph1text', 'graph1', new_graph_args);
 		} else if(source =="submitters") {
 			var row = selection[0].row;
 			var user = data.getValue(row, 0);
-			var new_graph_args = graph_args(true, source, duration, {Name:user}, "Jobs for "+user);
+			active_filter = {Name:user};
+			alt_title = "Jobs for "+user;
+			var new_graph_args = graph_args(true, source, duration, active_filter, alt_title);
 			render_new_graph('#graph1text', 'graph1', new_graph_args);
 		}
 	}
@@ -272,11 +316,11 @@ function change_view() {
 	var duration = $('#data-duration input[type="radio"]:checked').val()
 	var source = $('#data-source input[type="radio"]:checked').val()
 	if(source == "machines") {
-		render_new_graph('#graph1text', 'graph1', graph_args(true, source, duration));
-		render_new_graph('#table1text', 'table1', graph_args(false, source, duration));
+		render_new_graph('#graph1text', 'graph1', graph_args(true, source, duration, active_filter, alt_title));
+		render_new_graph('#table1text', 'table1', graph_args(false, source, duration, active_filter, alt_title));
 	} else if (source == "submitters") {
-		render_new_graph('#graph1text', 'graph1', graph_args(true, source, duration));
-		render_new_graph('#table1text', 'table1', graph_args(false, source, duration));
+		render_new_graph('#graph1text', 'graph1', graph_args(true, source, duration, active_filter, alt_title));
+		render_new_graph('#table1text', 'table1', graph_args(false, source, duration, active_filter, alt_title));
 	} else if(source=="custom") {
 		$("#graph1 .vizchart").html("<h2>Not yet implemented</h2>");
 		$("#table1 .vizchart").html("<h2>Not yet implemented</h2>");
@@ -376,8 +420,7 @@ function graph_args(is_chart, source, duration, filters, title) {
 
 window.onpopstate = function() {
 	setTimeout(function(){
-		load_arguments_to_form('graph1', '#graph1text');
-		load_arguments_to_form('table1', '#table1text');
+		load_arguments_to_form();
 		load_and_render();
 		},1);
 }
@@ -406,14 +449,14 @@ $(document).ready( function() {
 		$("#"+tab_id).addClass('current');
 	});
 
-	$('ul.radio-tabs input').change(change_view);
+	$('ul.radio-tabs input').change(function() {
+		active_filter = undefined;
+		alt_title = undefined;
+		change_view();
+		});
 
-	// Initialize graph
-	if(!window.location.search) {
-		change_view()
-	}
-	load_arguments_to_form('graph1', '#graph1text');
-	load_arguments_to_form('table1', '#table1text');
+	load_arguments_to_form();
+	change_view()
 	load_and_render();
 }) ;
 
