@@ -68,6 +68,7 @@ ul.radio-tabs li input[type="radio"]:checked + label {
 <ul class="radio-tabs" id="data-source">
 <li><input type="radio" name="data-source" id="data-source-user" value="submitters"> <label for="data-source-user">Users</label>
 <li><input type="radio" name="data-source" id="data-source-machine" value="machines"> <label for="data-source-machine">Pool</label>
+<li><input type="radio" name="data-source" id="data-source-custom" value="custom"> <label for="data-source-custom">Custom</label>
 </ul>
 <ul class="radio-tabs" id="data-duration">
 <li><input type="radio" name="data-duration" id="data-duration-now" value="now"> <label for="data-duration-now">Now</label>
@@ -89,6 +90,7 @@ ul.radio-tabs li input[type="radio"]:checked + label {
 <button id="reloadgraph1">Reload Data</button>
 </div>
 </div>
+<br><button onclick="alert('Not yet implemented')" class="editlink">full screen</button>
 </div>
 
 <div id='graph1'>
@@ -101,6 +103,7 @@ ul.radio-tabs li input[type="radio"]:checked + label {
 </div>
 
 
+<div class="download-link"> <a onclick="alert('Not yet implemented');" href="#not-yet-implemented">Download this table</a> </div>
 <div class='editmenu'><button class="editlink" id='editlinktable1'>edit</button>
 <div id="table1editor" style="display:none;">
 <textarea id='table1text' cols="40" rows="10" wrap='off'>
@@ -126,6 +129,9 @@ ul.radio-tabs li input[type="radio"]:checked + label {
 <div id="tab-machine" class="tab-content">
 </div>
 
+<div id="tab-custom" class="tab-content">
+TODO Custom
+</div>
 
 <div id='vizlog'></div>
 
