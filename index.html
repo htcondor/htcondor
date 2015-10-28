@@ -281,12 +281,12 @@ function change_view() {
 	var duration = $('#data-duration input[type="radio"]:checked').val()
 	var source = $('#data-source input[type="radio"]:checked').val()
 	if(source == "machine") {
-		render_new_graph('#graph1text', 'graph1', default_machines_graph_args());
-		render_new_graph('#table1text', 'table1', default_machines_table_args());
+		render_new_graph('#graph1text', 'graph1', graph_args(true, 'machines', 'day'));
+		render_new_graph('#table1text', 'table1', graph_args(false, 'machines', 'day'));
 	} else if (source == "user") {
 		if(duration == "now") {
-			render_new_graph('#graph1text', 'graph1', default_submitters_now_graph_args());
-			render_new_graph('#table1text', 'table1', default_submitters_now_table_args());
+			render_new_graph('#graph1text', 'graph1', graph_args(true, 'submitters', 'now'));
+			render_new_graph('#table1text', 'table1', graph_args(false, 'submitters', 'now'));
 		} else {
 			render_new_graph('#graph1text', 'graph1', default_submitters_graph_args());
 			render_new_graph('#table1text', 'table1', default_submitters_table_args());
@@ -382,32 +382,15 @@ function submitter_graph_args(user) {
 }
 
 function submitter_now_graph_args(user) {
-	return graph_args(true, 'submitters', 'now', {User:user}, "Jobs for "+user);
+	return graph_args(true, 'submitters', 'now', {Name:user}, "Jobs for "+user);
 }
 
 function default_submitters_table_args() {
 	return graph_args(false, 'submitters', 'day');
 }
 
-function default_submitters_now_graph_args() {
-	return graph_args(true, 'submitters', 'now');
-}
-
-
-function default_submitters_now_table_args() {
-	return graph_args(false, 'submitters', 'now');
-}
 
 function machines_data_source() { return "machines.json"; }
-
-function default_machines_graph_args() {
-	return graph_args(true, 'machines', 'day');
-}
-
-
-function default_machines_table_args() {
-	return graph_args(false, 'machines', 'day');
-}
 
 function machines_graph_args(arch,opsys) {
 	return graph_args(true, 'machines', 'day', {Arch: arch, OpSys: opsys}, "Machine State for "+arch+"/"+opsys);
