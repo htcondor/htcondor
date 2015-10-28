@@ -282,13 +282,8 @@ function change_view() {
 		render_new_graph('#graph1text', 'graph1', graph_args(true, source, duration));
 		render_new_graph('#table1text', 'table1', graph_args(false, source, duration));
 	} else if (source == "submitters") {
-		if(duration == "now") {
-			render_new_graph('#graph1text', 'graph1', graph_args(true, source, 'now'));
-			render_new_graph('#table1text', 'table1', graph_args(false, source, 'now'));
-		} else {
-			render_new_graph('#graph1text', 'graph1', default_submitters_graph_args());
-			render_new_graph('#table1text', 'table1', default_submitters_table_args());
-		}
+		render_new_graph('#graph1text', 'graph1', graph_args(true, source, duration));
+		render_new_graph('#table1text', 'table1', graph_args(false, source, duration));
 	} else if(source=="custom") {
 		$("#graph1 .vizchart").html("<h2>Not yet implemented</h2>");
 		$("#table1 .vizchart").html("<h2>Not yet implemented</h2>");
