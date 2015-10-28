@@ -281,8 +281,8 @@ function change_view() {
 	var duration = $('#data-duration input[type="radio"]:checked').val()
 	var source = $('#data-source input[type="radio"]:checked').val()
 	if(source == "machine") {
-		render_new_graph('#graph1text', 'graph1', graph_args(true, 'machines', 'day'));
-		render_new_graph('#table1text', 'table1', graph_args(false, 'machines', 'day'));
+		render_new_graph('#graph1text', 'graph1', graph_args(true, 'machines', duration));
+		render_new_graph('#table1text', 'table1', graph_args(false, 'machines', duration));
 	} else if (source == "user") {
 		if(duration == "now") {
 			render_new_graph('#graph1text', 'graph1', graph_args(true, 'submitters', 'now'));
@@ -297,10 +297,10 @@ function change_view() {
 	}
 }
 
-function user_data_source() { return "user.json"; }
-
 function submitters_data_source() { return "submitters.json"; }
 function submitters_now_data_source() { return "submitters.now.json"; }
+function machines_data_source() { return "machines.json"; }
+function machines_now_data_source() { return "machines.now.json"; }
 
 /*
 is_chart - true it's a chart (pie/stacked), false it's a table.
@@ -321,9 +321,9 @@ function graph_args(is_chart, source, duration, filters, title) {
 	switch(source) {
 		case 'submitters':
 		{
+			if(title === undefined) { title = 'Total Jobs'; }
 			var charttype = '';
 			if(is_chart) { charttype = 'chart=stacked'; }
-			if(title === undefined) { title = 'Total Jobs'; }
 			if(duration == 'now') {
 				var grouping = 'pivot=Name;JobStatus;Count';
 				if(is_chart) {
@@ -351,11 +351,23 @@ function graph_args(is_chart, source, duration, filters, title) {
 		}
 		case 'machines':
 		{
+			if(title === undefined) { title = 'Machine State'; }
 			if(duration == 'now') {
+				if(is_chart) {
+					return "title="+title+"\n"+
+						"url=machines.now.json\n"+
+						"order=State\n"+
+						"group=State;Cpus\n"+
+						"chart=pie";
+				} else {
+					return "title="+title+"\n"+
+						"url=machines.now.json\n"+
+						"order=Arch,OpSys\n"+
+						"group=Arch,OpSys;State;Cpus";
+				}
 			
 			} else {
 				if(is_chart) {
-					if(title === undefined) { title = 'Machine State'; }
 					return "title=" + title + "\n" +
 						"url=" + machines_data_source() + "\n" +
 						filter +
@@ -390,7 +402,6 @@ function default_submitters_table_args() {
 }
 
 
-function machines_data_source() { return "machines.json"; }
 
 function machines_graph_args(arch,opsys) {
 	return graph_args(true, 'machines', 'day', {Arch: arch, OpSys: opsys}, "Machine State for "+arch+"/"+opsys);
