@@ -540,7 +540,7 @@ main(int argc, char* argv[])
 
 	  // Get info on our negotiator
   Daemon negotiator(DT_NEGOTIATOR, NULL, (pool != "") ? pool.c_str() : NULL);
-  if (!negotiator.locate(Daemon::LOCATE_FAST)) {
+  if (!negotiator.locate(Daemon::LOCATE_FOR_LOOKUP)) {
 	  fprintf(stderr, "%s: Can't locate negotiator in %s\n", 
               argv[0], (pool != "") ? pool.c_str() : "local pool");
 	  exit(1);

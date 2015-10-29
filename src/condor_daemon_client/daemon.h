@@ -127,8 +127,8 @@ public:
 		  what went wrong.
 		  @return Success or failure of getting all the info.
 		*/
-	enum LocateType {LOCATE_FULL, LOCATE_FAST};
-	bool locate( LocateType method=LOCATE_FULL );
+	enum LocateType {LOCATE_FULL, LOCATE_FOR_LOOKUP};
+	virtual bool locate( LocateType method=LOCATE_FULL );
 
 		/** Return the error string.  If there's ever a problem
 		  enountered in the Daemon object, this will start returning a

@@ -1295,7 +1295,7 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector, LocateType method )
 		} else if ( _name ) {
 			formatstr( buf, "%s == \"%s\"", ATTR_NAME, _name ); 
 			query.addANDConstraint( buf.c_str() );
-			if (method == LOCATE_FAST)
+			if (method == LOCATE_FOR_LOOKUP)
 			{
 				query.setLocationLookup(_name);
 			}
