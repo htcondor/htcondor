@@ -516,7 +516,7 @@ bool SSHToJob::execute_ssh()
 
 	DCSchedd schedd(m_schedd_name.IsEmpty() ? NULL : m_schedd_name.Value(),
 					m_pool_name.IsEmpty() ? NULL   : m_pool_name.Value());
-	if( schedd.locate(Daemon::LOCATE_FAST) == false ) {
+	if( schedd.locate(Daemon::LOCATE_FOR_LOOKUP) == false ) {
 		if( m_schedd_name.IsEmpty() ) {
 			logError("ERROR: Can't find address of local schedd\n");
 			return false;
