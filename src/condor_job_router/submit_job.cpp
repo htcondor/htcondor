@@ -509,23 +509,29 @@ static bool submit_job_with_current_priv( ClassAd & src, const char * schedd_nam
 	return true;
 }
 
-bool submit_job( ClassAd & src, const char * schedd_name, const char * pool_name, bool is_sandboxed, int * cluster_out /*= 0*/, int * proc_out /*= 0 */)
+bool submit_job(const std::string & owner, const std::string &domain, ClassAd & src, const char * schedd_name, const char * pool_name, bool is_sandboxed, int * cluster_out /*= 0*/, int * proc_out /*= 0 */)
 {
 	bool success;
-	priv_state priv = set_user_priv_from_ad(src);
+
+	if (!init_user_ids(owner.c_str(), domain.c_str()))
+	{
+		EXCEPT("Failed in init_user_ids(%s,%s)",
+			owner.c_str(),
+			domain.c_str());
+	}
+	TemporaryPrivSentry sentry(PRIV_USER);
 
 	success = submit_job_with_current_priv(src,schedd_name,pool_name,is_sandboxed,cluster_out,proc_out);
 
-	set_priv(priv);
 	uninit_user_ids();
 
 	return success;
 }
 
-bool submit_job( classad::ClassAd & src, const char * schedd_name, const char * pool_name, bool is_sandboxed, int * cluster_out /*= 0*/, int * proc_out /*= 0 */)
+bool submit_job(const std::string & owner, const std::string &domain, classad::ClassAd & src, const char * schedd_name, const char * pool_name, bool is_sandboxed, int * cluster_out /*= 0*/, int * proc_out /*= 0 */)
 {
 	ClassAd src2 = src;
-	return submit_job(src2, schedd_name, pool_name, is_sandboxed, cluster_out, proc_out);
+	return submit_job(owner, domain, src2, schedd_name, pool_name, is_sandboxed, cluster_out, proc_out);
 }
 
 /*

@@ -112,8 +112,15 @@ int vanilla2grid(int argc, char **argv)
 			break;
 	}
 
+	std::string owner, domain;
+	if (!jobad.EvaluateAttrString(ATTR_OWNER,  owner)) {
+		dPrintAd(D_ALWAYS, ad);
+		EXCEPT("Failed to find %s in job ad.", ATTR_OWNER);
+	}
+	jobad.EvaluateAttrString(ATTR_NT_DOMAIN, domain);
+
 	int cluster,proc;
-	if( ! submit_job( jobad, 0, 0, &cluster, &proc ) ) {
+	if( ! submit_job( owner, domain, jobad, 0, 0, &cluster, &proc ) ) {
 		fprintf(stderr, "Failed to submit job\n");
 	}
 	printf("Successfully submitted %d.%d\n",cluster,proc);
