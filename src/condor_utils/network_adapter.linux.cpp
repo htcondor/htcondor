@@ -274,6 +274,8 @@ LinuxNetworkAdapter::detectWOL ( void )
 	struct ethtool_wolinfo	wolinfo;
 	struct ifreq			ifr;
 
+	memset(&ifr, '\0', sizeof(struct ifreq));
+
 	// Open control socket.
 	int sock = socket(AF_INET, SOCK_DGRAM, 0);
 	if (sock < 0) {
