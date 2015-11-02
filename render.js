@@ -64,6 +64,7 @@ var afterquery = (function() {
 
 
   function showstatus(s, s2, myid) {
+	if(myid === undefined) { return; }
     debug_log("showstatus(",s,", ", s2, ", ", myid, ")");
     $('#'+myid+' .statustext').html(s);
     $('#'+myid+' .statussub').text(s2 || '');
@@ -2316,7 +2317,7 @@ var afterquery = (function() {
   }
 
   function addKeepData(queue, args, myid) {
-    var box = Object();
+    var box = {};
     enqueue(queue, 'keep',
       function(grid, done) {
         box.value = grid;
@@ -2350,6 +2351,8 @@ var afterquery = (function() {
     finishQueue(queue, args, done, myid);
   }
 
+  /* Runs get getter (url=X), then returns it. Useful for
+     caching. */
   function load(query, startdata, done, myid) {
     var args = parseArgs(query);
     var editlink = args.get('editlink');
@@ -2359,6 +2362,23 @@ var afterquery = (function() {
 
     var queue = [];
     addUrlGetters(queue, args, startdata, myid);
+    var results = addKeepData(queue, args, myid);
+    finishQueue(queue, args, done, myid);
+    return results;
+  }
+
+  /* Runs all of the data transforms, then returns it. Useful
+     for creating a version to had to some other system. */
+  function load_post_transform(query, startdata, done, myid) {
+    var args = parseArgs(query);
+    var editlink = args.get('editlink');
+    if (editlink == 0) {
+      $('#editmenu').hide();
+    }
+
+    var queue = [];
+    addUrlGetters(queue, args, startdata, myid);
+    addTransforms(queue, args, myid);
     var results = addKeepData(queue, args, myid);
     finishQueue(queue, args, done, myid);
     return results;
@@ -2396,6 +2416,7 @@ var afterquery = (function() {
     parseArgs: parseArgs,
     exec: exec,
     render: wrap(render),
-    load: wrap(load)
+    load: wrap(load),
+    load_post_transform: wrap(load_post_transform)
   };
 })();
