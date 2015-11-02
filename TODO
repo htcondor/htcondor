@@ -1,5 +1,3 @@
-- CSV, maybe XLSX downloads. Probably data URI, set window.location to it to for download. Use download="filename.csv" in the href tag. http://cwestblog.com/2014/10/21/javascript-creating-a-downloadable-file-in-the-browser/
-
 - Properly implement history for back/forward work. Probably just trigger a redraw?  Detect different URL and reload?
 
 - Don't specify URL in table; always use same as graph?
@@ -37,6 +35,8 @@
 - Limit precision on avg.  New function/operation? Javascript probably just mynumber.toFixed(X) where X is number of places.  Although round may work faster. http://stackoverflow.com/questions/11832914/round-to-at-most-2-decimal-places-in-javascript
 
 - Sort Name using locale or something; currently ASCII/Unicode, so capital before lower.
+
+- "Download this table" displays table directly on Safari. Internet suggests no current workaround.  _Might_ be able to use application/octet-stream as the type to force download, but still won't have a filename.
 
 
 CondorView
