@@ -317,7 +317,7 @@ function starting_html() {
 	"<div class='vizchart'></div>\n" +
 	"</div>\n" +
 	"\n" +
-	"<div class=\"download-link\"> <a onclick=\"alert('Not yet implemented');\" href=\"#not-yet-implemented\">Download this table</a> </div>\n" +
+	"<div class=\"download-link\"> <a href=\"#\">Download this table</a> </div>\n" +
 	"<div class='editmenu'><button class=\"editlink\" id='editlinktable1'>edit</button>\n" +
 	"<div id=\"table1editor\" style=\"display:none;\">\n" +
 	"<textarea id='table1text' cols=\"40\" rows=\"10\" wrap='off'>\n" +
@@ -352,6 +352,62 @@ function starting_html() {
 }
 
 
+function afterquerydata_to_csv(dt) {
+	function csv_escape(instr) {
+		instr = "" + instr;
+		if((instr.indexOf('"') == -1) &&
+			(instr.indexOf(',') == -1) &&
+			(instr.charAt[0] != ' ') &&
+			(instr.charAt[0] != "\t") &&
+			(instr.charAt[instr.length-1] != " ") &&
+			(instr.charAt[instr.length-1] != "\t"))
+		{
+			// No escaping necessary
+			return instr;
+		}
+		instr = instr.replace(/"/g, '""');
+		return '"' + instr + '"';
+	}
+	ret = '';
+	var columns = dt.headers.length;
+	var rows = dt.data.length;
+
+	for(var col = 0; col < columns; col++) {
+		if(col > 0) { ret += ","; }
+		ret += csv_escape(dt.headers[col]);
+	}
+	ret += "\n";
+
+	for(var row = 0; row < rows; row++) {
+		for(var col = 0; col < columns; col++) {
+			if(col > 0) { ret += ","; }
+			ret += csv_escape(dt.data[row][col]);
+		}
+		ret += "\n";
+	}
+
+	return ret;
+}
+
+function download_data(filename, type, data) {
+	var link = document.createElement('a');
+	link.download = filename;
+	link.href = "data:"+type+";charset=utf-8,"+encodeURIComponent(data);
+	document.body.appendChild(link);
+	link.click();
+	document.body.removeChild(link);
+}
+
+var csv_source_data;
+function download_csv(data) {
+	function handle_csv() {
+		var csv = afterquerydata_to_csv(csv_source_data.value);
+		csv_source_data = undefined;
+		download_data("HTCondor-View-Data.csv", "text/csv", csv);
+	}
+	var args = read_arguments('#table1text');
+	csv_source_data = afterquery.load_post_transform(args, data, handle_csv, null);
+}
 
 
 function initialize_htcondor_view(id) {
@@ -380,6 +436,8 @@ function initialize_htcondor_view(id) {
 		save_arguments_to_url();
 		});
 	$('#rerendertable1').click(function() { render_new_graph('#table1text', 'table1'); });
+
+	$('.download-link').click(function(ev) { download_csv(data.value); ev.preventDefault();});
 
 	// Initialize tabs
 	$('ul.tabs li').click(function(){
