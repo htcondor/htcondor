@@ -40,6 +40,7 @@
 #include "condor_netdb.h"
 #include "subsystem_info.h"
 #include "ipv6_hostname.h"
+#include "credmon_interface.h"
 
 #if defined(HAVE_DLOPEN)
 #include "ScheddPlugin.h"
@@ -109,6 +110,9 @@ main_init(int argc, char* argv[])
 	ScheddPluginManager::EarlyInitialize();
 	ClassAdLogPluginManager::EarlyInitialize();
 #endif
+
+/* schedd doesn't care about other daemons.  only that it has the ability
+ * to run jobs.  so the following code is for now not needed.
 
 	// ZKM HACK TO MAKE SURE SCHEDD HAS USER CREDENTIALS
 	//
@@ -183,6 +187,34 @@ main_init(int argc, char* argv[])
 		}
 	}
 	// END ZKM HACK
+*/
+
+	// if using the SEC_CREDENTIAL_DIRECTORY, confirm we are "up-to-date".
+	// at the moment, we take an "all-or-nothing" approach.  ultimately, this
+	// should be per-user, and the SchedD should start normally and run jobs
+	// for users who DO have valid credentials, and simply holding on to jobs
+	// in idle state for users who do NOT have valid credentials.
+	//
+	char* p = param("SEC_CREDENTIAL_DIRECTORY");
+	if(p) {
+		free(p);
+		bool success = false;
+		int retries = 60;
+		do {
+			// look for existence of file that says everything is up-to-date.
+			success = credmon_poll(NULL, false, false);
+			if(!success) {
+				dprintf(D_ALWAYS, "ZKM: User credentials not up-to-date.  Start-up delayed.  Waiting 10 seconds and trying %i more times.\n", retries);
+				sleep(30);
+			}
+		} while ((!success) && (retries > 0));
+
+		// we tried, we give up.
+		if(!success) {
+			EXCEPT("User credentials unavailable after 10 minutes");
+		}
+	}
+	// User creds good to go, let's start this thing up!
 
 		// Initialize all the modules
 	scheduler.Init();
