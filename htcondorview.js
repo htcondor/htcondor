@@ -1,4 +1,5 @@
 function HTCondorView(id) {
+	"use strict";
 	this.urlTool = document.createElement('a');
 	var mythis = this;
 
@@ -56,6 +57,7 @@ function HTCondorView(id) {
 }
 
 HTCondorView.prototype.toggle_edit = function(btn, controls) {
+	"use strict";
 	$(controls).toggle();
 	if($(controls).is(":visible")) {
 		$(btn).text("❌")
@@ -65,6 +67,7 @@ HTCondorView.prototype.toggle_edit = function(btn, controls) {
 }
 
 HTCondorView.prototype.load_arguments_to_form = function() {
+	"use strict";
 	var args = afterquery.parseArgs(window.location.search);
 
 	var source = args.get('source');
@@ -93,6 +96,7 @@ HTCondorView.prototype.load_arguments_to_form = function() {
 }
 
 HTCondorView.prototype.replace_search_arg = function(oldurl, newkey, newval) {
+	"use strict";
 	this.urlTool.href = oldurl;
 	var oldsearch = this.urlTool.search;
 	var args = afterquery.parseArgs(oldsearch);
@@ -113,6 +117,7 @@ HTCondorView.prototype.replace_search_arg = function(oldurl, newkey, newval) {
 }
 
 HTCondorView.prototype.save_arguments_to_url = function() {
+	"use strict";
 	var url = window.location.href;
 
 	var source = $('#data-source input[type="radio"]:checked').val()
@@ -124,7 +129,7 @@ HTCondorView.prototype.save_arguments_to_url = function() {
 	var filter;
 	if(this.active_filter !== undefined) {
 		filter = '';
-		for(key in this.active_filter) {
+		for(var key in this.active_filter) {
 			filter = filter + key + "=" + this.active_filter[key] + ";";
 		}
 		filter = encodeURI(filter);
@@ -139,6 +144,7 @@ HTCondorView.prototype.save_arguments_to_url = function() {
 }
 
 HTCondorView.prototype.read_arguments = function(source) {
+	"use strict";
   var out = [];
   var parts = $(source).val().trim().split('\n');
   for (var parti in parts) {
@@ -156,6 +162,7 @@ HTCondorView.prototype.read_arguments = function(source) {
 }
 
 HTCondorView.prototype.load_and_render = function() {
+	"use strict";
 	var mythis = this;
 	var callback_render_table = function() {
 		setTimeout(function() {
@@ -185,6 +192,7 @@ HTCondorView.prototype.load_and_render = function() {
 }
 
 HTCondorView.prototype.table_select_handler = function(evnt,table,data) {
+	"use strict";
 	var selection = table.getSelection();
 	if(selection) {
 		var source = $('#data-source input[type="radio"]:checked').val()
@@ -209,6 +217,7 @@ HTCondorView.prototype.table_select_handler = function(evnt,table,data) {
 }
 
 HTCondorView.prototype.render_new_graph = function(editid, graphid, args) {
+	"use strict";
 	if(args && args.length) {
 		$(editid).val(args);
 	}
@@ -221,6 +230,7 @@ HTCondorView.prototype.render_new_graph = function(editid, graphid, args) {
 }
 
 HTCondorView.prototype.change_view = function() {
+	"use strict";
 	var duration = $('#data-duration input[type="radio"]:checked').val()
 	var source = $('#data-source input[type="radio"]:checked').val()
 	if(source == "machines" || source == "submitters") {
@@ -232,10 +242,10 @@ HTCondorView.prototype.change_view = function() {
 	}
 }
 
-HTCondorView.prototype.submitters_data_source = function() { return "submitters.json"; }
-HTCondorView.prototype.submitters_now_data_source = function() { return "submitters.now.json"; }
-HTCondorView.prototype.machines_data_source = function() { return "machines.json"; }
-HTCondorView.prototype.machines_now_data_source = function() { return "machines.now.json"; }
+HTCondorView.prototype.submitters_data_source = function() { "use strict"; return "submitters.json"; }
+HTCondorView.prototype.submitters_now_data_source = function() { "use strict"; return "submitters.now.json"; }
+HTCondorView.prototype.machines_data_source = function() { "use strict"; return "machines.json"; }
+HTCondorView.prototype.machines_now_data_source = function() { "use strict"; return "machines.now.json"; }
 
 /*
 is_chart - true it's a chart (pie/stacked), false it's a table.
@@ -246,6 +256,7 @@ filters - optional. Hash of fields to filter on
 title - optional title for chart.
 */
 HTCondorView.prototype.graph_args = function(is_chart, source, duration, filters, title) {
+	"use strict";
 	var filter = '';
 	if(filters !== undefined) {
 		var key;
@@ -327,6 +338,7 @@ HTCondorView.prototype.graph_args = function(is_chart, source, duration, filters
 }
 
 HTCondorView.prototype.starting_html = function() {
+	"use strict";
 	return "" +
 	"<div style=\"text-align: center\">\n" +
 	"<ul class=\"radio-tabs\" id=\"data-source\">\n" +
@@ -401,6 +413,7 @@ HTCondorView.prototype.starting_html = function() {
 
 
 HTCondorView.prototype.afterquerydata_to_csv = function(dt) {
+	"use strict";
 	function csv_escape(instr) {
 		instr = "" + instr;
 		if((instr.indexOf('"') == -1) &&
@@ -416,7 +429,7 @@ HTCondorView.prototype.afterquerydata_to_csv = function(dt) {
 		instr = instr.replace(/"/g, '""');
 		return '"' + instr + '"';
 	}
-	ret = '';
+	var ret = '';
 	var columns = dt.headers.length;
 	var rows = dt.data.length;
 
@@ -438,6 +451,7 @@ HTCondorView.prototype.afterquerydata_to_csv = function(dt) {
 }
 
 HTCondorView.prototype.download_data = function(filename, type, data) {
+	"use strict";
 	var link = document.createElement('a');
 	link.download = filename;
 	link.href = "data:"+type+";charset=utf-8,"+encodeURIComponent(data);
@@ -447,6 +461,7 @@ HTCondorView.prototype.download_data = function(filename, type, data) {
 }
 
 HTCondorView.prototype.download_csv = function(data) {
+	"use strict";
 	var mythis = this;
 	var handle_csv = function() {
 		var csv = mythis.afterquerydata_to_csv(mythis.csv_source_data.value);
