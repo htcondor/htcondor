@@ -1,7 +1,61 @@
-var active_filter;
-var alt_title;
+function HTCondorView(id) {
+	this.urlTool = document.createElement('a');
+	var mythis = this;
 
-function toggle_edit(btn, controls) {
+	$('#editlinkgraph1').click(function() { mythis.toggle_edit('#editlinkgraph1', '#graph1editor'); });
+	$('#editlinktable1').click(function() { mythis.toggle_edit('#editlinktable1', '#table1editor'); });
+
+	var container = $('#'+id);
+	if(container.length == 0) {
+		console.log('HTCondor View is not able to intialize. There is no element with an ID of "'+id+'".');
+		return false;
+	}
+	container.html(this.starting_html());
+
+	window.onpopstate = function() {
+		setTimeout(function(){
+			mythis.load_arguments_to_form();
+			mythis.load_and_render();
+			},1);
+	}
+
+	$('#reloadgraph1').click(function() {
+		mythis.load_and_render();
+		mythis.save_arguments_to_url();
+		});
+	$('#rerendergraph1').click(function() { mythis.render_new_graph('#graph1text', 'graph1'); });
+
+	$('#reloadtable1').click(function() {
+		mythis.load_and_render();
+		mythis.save_arguments_to_url();
+		});
+	$('#rerendertable1').click(function() { mythis.render_new_graph('#table1text', 'table1'); });
+
+	$('.download-link').click(function(ev) { mythis.download_csv(mythis.data.value); ev.preventDefault();});
+
+	// Initialize tabs
+	$('ul.tabs li').click(function(){
+		var tab_id = $(this).attr('data-tab');
+
+		$('ul.tabs li').removeClass('current');
+		$('.tab-content').removeClass('current');
+
+		$(this).addClass('current');
+		$("#"+tab_id).addClass('current');
+	});
+
+	$('ul.radio-tabs input').change(function() {
+		mythis.active_filter = undefined;
+		mythis.alt_title = undefined;
+		mythis.change_view();
+		});
+
+	this.load_arguments_to_form();
+	this.change_view()
+	this.load_and_render();
+}
+
+HTCondorView.prototype.toggle_edit = function(btn, controls) {
 	$(controls).toggle();
 	if($(controls).is(":visible")) {
 		$(btn).text("❌")
@@ -10,10 +64,7 @@ function toggle_edit(btn, controls) {
 	}
 }
 
-$('#editlinkgraph1').click(function() { toggle_edit('#editlinkgraph1', '#graph1editor'); });
-$('#editlinktable1').click(function() { toggle_edit('#editlinktable1', '#table1editor'); });
-
-function load_arguments_to_form() {
+HTCondorView.prototype.load_arguments_to_form = function() {
 	var args = afterquery.parseArgs(window.location.search);
 
 	var source = args.get('source');
@@ -27,24 +78,23 @@ function load_arguments_to_form() {
 	var filterstr = args.get('filter');
 	if(filterstr !== undefined) {
 		var filterlist = filterstr.split(';');
-		active_filter = {};
+		this.active_filter = {};
 		for(var i = 0; i < filterlist.length; i++) {
 			if(filterlist[i].length == 0) { continue; }
 			var pair = filterlist[i].split('=');
-			active_filter[pair[0]] = pair[1];
+			this.active_filter[pair[0]] = pair[1];
 		}
 	} else {
-		active_filter = undefined;
+		this.active_filter = undefined;
 	}
 
 	var title = args.get('title');
-	if(title !== undefined) { alt_title = title; }
+	if(title !== undefined) { this.alt_title = title; }
 }
 
-var urlTool = document.createElement('a');
-function replace_search_arg(oldurl, newkey, newval) {
-	urlTool.href = oldurl;
-	var oldsearch = urlTool.search;
+HTCondorView.prototype.replace_search_arg = function(oldurl, newkey, newval) {
+	this.urlTool.href = oldurl;
+	var oldsearch = this.urlTool.search;
 	var args = afterquery.parseArgs(oldsearch);
 	var newsearch = "?";
 	for(var argi in args.all) {
@@ -58,37 +108,37 @@ function replace_search_arg(oldurl, newkey, newval) {
 	if(newval !== undefined) {
 		newsearch += encodeURIComponent(newkey) + "=" + encodeURIComponent(newval);	
 	}
-	urlTool.search = newsearch;
-	return urlTool.href;
+	this.urlTool.search = newsearch;
+	return this.urlTool.href;
 }
 
-function save_arguments_to_url() {
+HTCondorView.prototype.save_arguments_to_url = function() {
 	var url = window.location.href;
 
 	var source = $('#data-source input[type="radio"]:checked').val()
 	var duration = $('#data-duration input[type="radio"]:checked').val()
 
-	url = replace_search_arg(url, 'source', source);
-	url = replace_search_arg(url, 'duration', duration);
+	url = this.replace_search_arg(url, 'source', source);
+	url = this.replace_search_arg(url, 'duration', duration);
 
 	var filter;
-	if(active_filter !== undefined) {
+	if(this.active_filter !== undefined) {
 		filter = '';
-		for(key in active_filter) {
-			filter = filter + key + "=" + active_filter[key] + ";";
+		for(key in this.active_filter) {
+			filter = filter + key + "=" + this.active_filter[key] + ";";
 		}
 		filter = encodeURI(filter);
 	}
-	url = replace_search_arg(url, 'filter', filter);
+	url = this.replace_search_arg(url, 'filter', filter);
 
-	url = replace_search_arg(url, 'title', alt_title);
+	url = this.replace_search_arg(url, 'title', this.alt_title);
 
 	if(url != window.location.href) {
 		history.pushState(null, null, url);
 	}
 }
 
-function read_arguments(source) {
+HTCondorView.prototype.read_arguments = function(source) {
   var out = [];
   var parts = $(source).val().trim().split('\n');
   for (var parti in parts) {
@@ -105,38 +155,36 @@ function read_arguments(source) {
   return  '?' + out.join('&');
 }
 
-
-var data_url;
-var data;
-function load_and_render() {
+HTCondorView.prototype.load_and_render = function() {
+	var mythis = this;
 	var callback_render_table = function() {
 		setTimeout(function() {
 			var options = {
-				select_handler: table_select_handler,
+				select_handler: function(e,t,d){ mythis.table_select_handler(e,t,d); },
 				num_pattern: '#,##0.0',
 				disable_height: true
 			};
 
-			afterquery.render(read_arguments('#table1text'), data.value, null, 'table1', options);
+			afterquery.render(mythis.read_arguments('#table1text'), mythis.data.value, null, 'table1', options);
 		}, 0);
 	 };
 
 	var callback_render_graph = function(){
 		setTimeout(function() {
-			afterquery.render(read_arguments('#graph1text'), data.value, callback_render_table, 'graph1');
+			afterquery.render(mythis.read_arguments('#graph1text'), mythis.data.value, callback_render_table, 'graph1');
 			},0)
 		};
-	var args = read_arguments('#graph1text');
+	var args = this.read_arguments('#graph1text');
 	var newurl = afterquery.parseArgs(args).get('url');
-	if(newurl == data_url) {
+	if(newurl == this.data_url) {
 		callback_render_graph();
 	} else {
-		data_url = newurl;
-		data = afterquery.load(args, null, callback_render_graph, 'graph1');
+		this.data_url = newurl;
+		this.data = afterquery.load(args, null, function(){callback_render_graph();}, 'graph1');
 	}
 }
 
-function table_select_handler(evnt,table,data) {
+HTCondorView.prototype.table_select_handler = function(evnt,table,data) {
 	var selection = table.getSelection();
 	if(selection) {
 		var source = $('#data-source input[type="radio"]:checked').val()
@@ -145,49 +193,49 @@ function table_select_handler(evnt,table,data) {
 			var row = selection[0].row;
 			var arch = data.getValue(row, 0);
 			var opsys = data.getValue(row, 1);
-			active_filter = {Arch: arch, OpSys: opsys};
-			alt_title = "Machine State for "+arch+"/"+opsys;
-			var new_graph_args = graph_args(true, source, duration, active_filter, alt_title);
-			render_new_graph('#graph1text', 'graph1', new_graph_args);
+			this.active_filter = {Arch: arch, OpSys: opsys};
+			this.alt_title = "Machine State for "+arch+"/"+opsys;
+			var new_graph_args = this.graph_args(true, source, duration, this.active_filter, this.alt_title);
+			this.render_new_graph('#graph1text', 'graph1', new_graph_args);
 		} else if(source =="submitters") {
 			var row = selection[0].row;
 			var user = data.getValue(row, 0);
-			active_filter = {Name:user};
-			alt_title = "Jobs for "+user;
-			var new_graph_args = graph_args(true, source, duration, active_filter, alt_title);
-			render_new_graph('#graph1text', 'graph1', new_graph_args);
+			this.active_filter = {Name:user};
+			this.alt_title = "Jobs for "+user;
+			var new_graph_args = this.graph_args(true, source, duration, this.active_filter, this.alt_title);
+			this.render_new_graph('#graph1text', 'graph1', new_graph_args);
 		}
 	}
 }
 
-function render_new_graph(editid, graphid, args) {
+HTCondorView.prototype.render_new_graph = function(editid, graphid, args) {
 	if(args && args.length) {
 		$(editid).val(args);
 	}
-	save_arguments_to_url();
-	/*afterquery.render(read_arguments(editid), data.value,null,graphid);*/
+	this.save_arguments_to_url();
+	/*afterquery.render(this.read_arguments(editid), data.value,null,graphid);*/
 	var to_prune = "#" + graphid + ' .vizchart';
 	$(to_prune).empty();
 	/* TODO: use cached data if posible */
-	load_and_render();
+	this.load_and_render();
 }
 
-function change_view() {
+HTCondorView.prototype.change_view = function() {
 	var duration = $('#data-duration input[type="radio"]:checked').val()
 	var source = $('#data-source input[type="radio"]:checked').val()
 	if(source == "machines" || source == "submitters") {
-		render_new_graph('#graph1text', 'graph1', graph_args(true, source, duration, active_filter, alt_title));
-		render_new_graph('#table1text', 'table1', graph_args(false, source, duration, active_filter, alt_title));
+		this.render_new_graph('#graph1text', 'graph1', this.graph_args(true, source, duration, this.active_filter, this.alt_title));
+		this.render_new_graph('#table1text', 'table1', this.graph_args(false, source, duration, this.active_filter, this.alt_title));
 	} else if(source=="custom") {
 		$("#graph1 .vizchart").html("<h2>Not yet implemented</h2>");
 		$("#table1 .vizchart").html("<h2>Not yet implemented</h2>");
 	}
 }
 
-function submitters_data_source() { return "submitters.json"; }
-function submitters_now_data_source() { return "submitters.now.json"; }
-function machines_data_source() { return "machines.json"; }
-function machines_now_data_source() { return "machines.now.json"; }
+HTCondorView.prototype.submitters_data_source = function() { return "submitters.json"; }
+HTCondorView.prototype.submitters_now_data_source = function() { return "submitters.now.json"; }
+HTCondorView.prototype.machines_data_source = function() { return "machines.json"; }
+HTCondorView.prototype.machines_now_data_source = function() { return "machines.now.json"; }
 
 /*
 is_chart - true it's a chart (pie/stacked), false it's a table.
@@ -197,7 +245,7 @@ filters - optional. Hash of fields to filter on
    mapped to values to filter by.
 title - optional title for chart.
 */
-function graph_args(is_chart, source, duration, filters, title) {
+HTCondorView.prototype.graph_args = function(is_chart, source, duration, filters, title) {
 	var filter = '';
 	if(filters !== undefined) {
 		var key;
@@ -220,7 +268,7 @@ function graph_args(is_chart, source, duration, filters, title) {
 					filter = '';
 				}
 				return "title=" + title + "\n" +
-					"url=" + submitters_now_data_source() + "\n" +
+					"url=" + this.submitters_now_data_source() + "\n" +
 					filter +
 					"order=JobStatus\n" +
 					grouping + "\n" +
@@ -233,7 +281,7 @@ function graph_args(is_chart, source, duration, filters, title) {
 				} else {
 					filter = '';
 				}
-				return "url=" + submitters_data_source() + "\n" +
+				return "url=" + this.submitters_data_source() + "\n" +
 					"title=" + title + "\n" +
 					filter +
 					"order=Date\n" +
@@ -262,13 +310,13 @@ function graph_args(is_chart, source, duration, filters, title) {
 			} else {
 				if(is_chart) {
 					return "title=" + title + "\n" +
-						"url=" + machines_data_source() + "\n" +
+						"url=" + this.machines_data_source() + "\n" +
 						filter +
 						"order=Date\n" +
 						"pivot=Date;State;Cpus\n" +
 						"chart=stacked\n";
 				} else {
-					return "url=" + machines_data_source() + "\n" +
+					return "url=" + this.machines_data_source() + "\n" +
 						"order=Date\n" +
 						"pivot=Date,Arch,OpSys;State;Cpus\n" +
 						"group=Arch,OpSys;avg(Unclaimed),avg(Claimed),max(Unclaimed),max(Claimed)";
@@ -278,7 +326,7 @@ function graph_args(is_chart, source, duration, filters, title) {
 	}
 }
 
-function starting_html() {
+HTCondorView.prototype.starting_html = function() {
 	return "" +
 	"<div style=\"text-align: center\">\n" +
 	"<ul class=\"radio-tabs\" id=\"data-source\">\n" +
@@ -352,7 +400,7 @@ function starting_html() {
 }
 
 
-function afterquerydata_to_csv(dt) {
+HTCondorView.prototype.afterquerydata_to_csv = function(dt) {
 	function csv_escape(instr) {
 		instr = "" + instr;
 		if((instr.indexOf('"') == -1) &&
@@ -389,7 +437,7 @@ function afterquerydata_to_csv(dt) {
 	return ret;
 }
 
-function download_data(filename, type, data) {
+HTCondorView.prototype.download_data = function(filename, type, data) {
 	var link = document.createElement('a');
 	link.download = filename;
 	link.href = "data:"+type+";charset=utf-8,"+encodeURIComponent(data);
@@ -398,69 +446,16 @@ function download_data(filename, type, data) {
 	document.body.removeChild(link);
 }
 
-var csv_source_data;
-function download_csv(data) {
-	function handle_csv() {
-		var csv = afterquerydata_to_csv(csv_source_data.value);
-		csv_source_data = undefined;
-		download_data("HTCondor-View-Data.csv", "text/csv", csv);
+HTCondorView.prototype.download_csv = function(data) {
+	var mythis = this;
+	var handle_csv = function() {
+		var csv = mythis.afterquerydata_to_csv(mythis.csv_source_data.value);
+		mythis.csv_source_data = undefined;
+		mythis.download_data("HTCondor-View-Data.csv", "text/csv", csv);
 	}
-	var args = read_arguments('#table1text');
-	csv_source_data = afterquery.load_post_transform(args, data, handle_csv, null);
+	var args = this.read_arguments('#table1text');
+	this.csv_source_data = afterquery.load_post_transform(args, data, handle_csv, null);
 }
 
-
-function initialize_htcondor_view(id) {
-	var container = $('#'+id);
-	if(container.length == 0) {
-		console.log('HTCondor View is not able to intialize. There is no element with an ID of "'+id+'".');
-		return false;
-	}
-	container.html(starting_html());
-
-	window.onpopstate = function() {
-		setTimeout(function(){
-			load_arguments_to_form();
-			load_and_render();
-			},1);
-	}
-
-	$('#reloadgraph1').click(function() {
-		load_and_render();
-		save_arguments_to_url();
-		});
-	$('#rerendergraph1').click(function() { render_new_graph('#graph1text', 'graph1'); });
-
-	$('#reloadtable1').click(function() {
-		load_and_render();
-		save_arguments_to_url();
-		});
-	$('#rerendertable1').click(function() { render_new_graph('#table1text', 'table1'); });
-
-	$('.download-link').click(function(ev) { download_csv(data.value); ev.preventDefault();});
-
-	// Initialize tabs
-	$('ul.tabs li').click(function(){
-		var tab_id = $(this).attr('data-tab');
-
-		$('ul.tabs li').removeClass('current');
-		$('.tab-content').removeClass('current');
-
-		$(this).addClass('current');
-		$("#"+tab_id).addClass('current');
-	});
-
-	$('ul.radio-tabs input').change(function() {
-		active_filter = undefined;
-		alt_title = undefined;
-		change_view();
-		});
-
-	load_arguments_to_form();
-	change_view()
-	load_and_render();
-
-	return true;
-}
 
 

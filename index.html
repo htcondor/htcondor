@@ -30,8 +30,8 @@ body {
 <div id="htcondorview" class="htcondorview"></div>
 
 <script>
-$(document).ready( function() { initialize_htcondor_view('htcondorview');
-});
+var htcondor_view;
+$(document).ready( function() { htcondor_view = new HTCondorView('htcondorview'); });
 </script>
 
 </body>
