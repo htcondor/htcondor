@@ -1,0 +1,335 @@
+#!/usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+######################################################################
+###### WARNING!!!  The return value of this script has special  ######
+###### meaning, so you can NOT just call die().  you MUST       ######
+###### use the special c_die() method so we return 3!!!!        ######
+######################################################################
+######################################################################
+# Perform a given build task, and return the status of that task
+# 0 = success
+# 1 = build failed
+# 3 = internal fatal error (a.k.a. die)
+######################################################################
+
+use strict;
+use warnings;
+use Cwd;
+use File::Basename;
+my $BaseDir = getcwd();
+
+my $EXTERNALS_TASK        = "remote_task.externals";
+my $BUILD_TASK            = "remote_task.build";
+my $TAR_TASK              = "remote_task.create_tar";
+my $CHECK_TAR_TASK        = "remote_task.check_tar";
+my $UNSTRIPPED_TASK       = "remote_task.create_unstripped_tar";
+my $CHECK_UNSTRIPPED_TASK = "remote_task.check_unstripped_tar";
+my $NATIVE_DEBUG_TASK     = "remote_task.create_native_unstripped";
+my $NATIVE_TASK           = "remote_task.create_native";
+my $CHECK_NATIVE_TASK     = "remote_task.check_native";
+my $BUILD_TESTS_TASK      = "remote_task.build_tests";
+my $RUN_UNIT_TESTS        = "remote_task.run_unit_tests";
+my $COVERITY_ANALYSIS     = "remote_task.coverity_analysis";
+
+my $taskname = "";
+my $execstr = "";
+my $VCVER = "VC11";
+
+# autoflush our STDOUT
+$| = 1;
+
+if( defined $ENV{_NMI_STEP_FAILED} ) { 
+    my $exit_status = 1;
+    my $nmi_task_failure = "$ENV{_NMI_STEP_FAILED}";
+    print "A previous step failed.  _NMI_STEP_FAILED is: '$ENV{_NMI_STEP_FAILED}'\n";
+    print "Exiting now with exit status $exit_status.\n";
+    exit $exit_status;
+}
+else {
+    print "The _NMI_STEP_FAILED variable is not set\n";
+}
+
+
+## TSTCLAIR->THAWAN et.al ok below is the conundrum as it relates to packaging
+## The remote declare needs to be created/updated for (N) different packages
+## b/c of the issues with multiple PATHS on install targets.  As a result
+## cmake will need to be called again with the same args, which you may want
+## to store in a file during the remote pre phase.
+
+if( ! defined $ENV{_NMI_TASKNAME} ) {
+    print "NMI_TASKNAME not defined, building tar.gz package as default";
+    $taskname = $TAR_TASK;
+}
+else {
+    $taskname = $ENV{_NMI_TASKNAME};
+}
+
+chomp(my $hostname = `hostname -f`);
+print "Executing task '$taskname' on host '$hostname'\n";
+
+if ($ENV{NMI_PLATFORM} =~ /macos/i) {
+    # Build binaries that will work on Mac OS X 10.7 and later.
+    $ENV{MACOSX_DEPLOYMENT_TARGET} = "10.7";
+}
+
+# Build with warnings == errors on Fedora
+my $werror="";
+if ($ENV{NMI_PLATFORM} =~ /_fedora(_)?[12][0-9]/i) {
+    $werror = "-DCONDOR_C_FLAGS:STRING=-Werror";
+}
+
+# enable use of VisualStudio 2012 (vs11) on the Windows8 platform
+my $enable_vs9 = 0;
+#uncomment to use vs9 on Win7 platform# if ($ENV{NMI_PLATFORM} =~ /Windows7/i) { $enable_vs9 = 1; }
+if ($enable_vs9 && $ENV{VS90COMNTOOLS} =~ /common7/i) {
+	$VCVER = "VC9";
+}
+
+# Checking task type
+if( $taskname eq $EXTERNALS_TASK ) {
+    # Since we do not declare the externals task on Windows, we don't have
+    # to handle invoking the Windows build tools in this step.
+    $execstr = "make VERBOSE=1 externals";
+}
+elsif( $taskname eq $BUILD_TASK ) {
+    # Since we do not declare the externals task on Windows, we don't have
+    # to handle invoking the Windows build tools in this step.
+    $execstr = get_cmake_args();
+    $execstr = $execstr . " ${werror} -DCONDOR_PACKAGE_BUILD:BOOL=OFF -DCONDOR_STRIP_PACKAGES:BOOL=OFF && make VERBOSE=1 install";
+}
+elsif( $taskname eq $BUILD_TESTS_TASK ) {
+    $execstr = "make VERBOSE=1 tests";
+}
+elsif ($taskname eq $UNSTRIPPED_TASK) {
+    #$execstr = get_cmake_args();
+    #Append extra argument
+    #$execstr = $execstr . " ${werror} -DCONDOR_PACKAGE_BUILD:BOOL=OFF -DCONDOR_STRIP_PACKAGES:BOOL=OFF && make VERBOSE=1 targz";
+    $execstr = "make VERBOSE=1 targz";
+}
+elsif ($taskname eq $CHECK_UNSTRIPPED_TASK) {
+    my $tarball_check_script = get_tarball_check_script();
+    my $tarball = get_tarball_name();
+    $execstr = "$tarball_check_script $tarball";
+}
+elsif ($taskname eq $TAR_TASK) { 
+    #Normal build -> create tar.gz package (The only reason install is done is for the std:u:tests) 
+    #Reconfigure cmake variables for stripped tarball build
+    $execstr = get_cmake_args();
+    $execstr = $execstr . " ${werror} -DCONDOR_PACKAGE_BUILD:BOOL=OFF -DCONDOR_STRIP_PACKAGES:BOOL=ON && make VERBOSE=1 install/strip tests && make VERBOSE=1 targz";
+}
+elsif ($taskname eq $CHECK_TAR_TASK) {
+    my $tarball_check_script = get_tarball_check_script();
+    my $tarball = get_tarball_name();
+    $execstr = "$tarball_check_script $tarball";
+}
+elsif ($taskname eq $NATIVE_TASK || $taskname eq $NATIVE_DEBUG_TASK) {
+    my $is_debug = ($taskname eq $NATIVE_DEBUG_TASK);
+    # Create native packages on Red Hat and Debian
+    print "Create native package.  NMI_PLATFORM = $ENV{NMI_PLATFORM}\n";
+    if ($ENV{NMI_PLATFORM} =~ /(deb|ubuntu)/i) {
+        print "Detected OS is Debian or Ubuntu.  Creating Deb package.\n";
+        $execstr = create_deb($is_debug);
+    }
+    elsif ($ENV{NMI_PLATFORM} =~ /ubuntu/i) {
+        print "Detected OS is Ubuntu.  Creating Deb package.\n";
+        $execstr = create_deb($is_debug);
+    }
+    elsif ($ENV{NMI_PLATFORM} =~ /(rha|redhat|fedora)/i) {
+        print "Detected OS is Red Hat.  Creating RPM package.\n";
+        $execstr = create_rpm($is_debug);
+    }
+    elsif ($ENV{NMI_PLATFORM} =~ /opensuse/i) {
+        print "Detected OS is OpenSuSE.  Creating RPM package.\n";
+        $execstr = create_rpm($is_debug);
+    }
+    elsif ($ENV{NMI_PLATFORM} =~ /_win/i) {
+        $execstr= "nmi_tools\\glue\\build\\build.win.bat NATIVE $VCVER";
+    }
+    else {
+        print "We do not generate a native package for this platform.\n";
+        exit 0;
+    }
+}
+elsif ($taskname eq $CHECK_NATIVE_TASK) {
+    # Validate the native packages
+    print "Validating native package.  NMI_PLATFORM = $ENV{NMI_PLATFORM}\n";
+    if ($ENV{NMI_PLATFORM} =~ /(deb|ubuntu)/i) {
+        print "Detected OS is Debian.  Validating Deb package.\n";
+        $execstr = check_deb();
+    }
+    elsif ($ENV{NMI_PLATFORM} =~ /(rha|redhat)/i) {
+        print "Detected OS is Red Hat.  Validating RPM package.\n";
+        $execstr = check_rpm();
+    }
+    elsif ($ENV{NMI_PLATFORM} =~ /opensuse/i) {
+        print "Detected OS is OpenSuSE.  Validating RPM package.\n";
+        $execstr = check_rpm();
+    }
+    else {
+        print "We do not generate a native package for this platform.\n";
+        exit 0;
+    }
+} elsif ($taskname eq $RUN_UNIT_TESTS) {
+    if ($ENV{NMI_PLATFORM} =~ /_win/i) {
+    } else {
+        $execstr = "ctest -v --output-on-failure";
+    }
+} elsif ($taskname eq $COVERITY_ANALYSIS) {
+	print "Running Coverity analysis\n";
+	$ENV{PATH} = "$ENV{PATH}:/home/condorauto/cov-analysis-linux64-7.6.0/bin";
+	$execstr = "cd src && make clean && mkdir -p ../public/cov-data && cov-build --dir ../public/cov-data make -k ; cov-analyze --enable-constraint-fpp --dir ../public/cov-data && cov-commit-defects --dir ../public/cov-data --stream htcondor --host submit-3.batlab.org --user admin --password `cat /home/condorauto/coverity/.p`";
+}
+
+
+
+if ($ENV{NMI_PLATFORM} =~ /_win/i) {
+    # change exestr for Windows tasks.
+    # build.win.bat uses BASE_DIR to setup some things.
+    $ENV{BASE_DIR} = "$BaseDir";
+
+    # get the build id out of the cmake args, we have to
+    # pass it to the ZIP and MSI building steps
+    #
+    my $cmake_args = get_cmake_args();
+    print "   cmake_args = $cmake_args\n";
+    my $buildid = "";
+    if ($cmake_args =~ /-DBUILDID:STRING=([0-9]+)/) { $buildid = $1; }
+    if ($cmake_args =~ /-G[ ]*"Visual Studio ([0-9]+)/i) {
+        print "cmake was invoked with a Visual Studio $1 generator\n";
+        $VCVER = "VC$1"; 
+    }
+    if ($taskname eq $EXTERNALS_TASK) {
+        $execstr= "nmi_tools\\glue\\build\\build.win.bat EXTERNALS $VCVER";
+    } elsif ($taskname eq $BUILD_TASK) { # formerly $UNSTRIPPED_TASK
+        $execstr= "nmi_tools\\glue\\build\\build.win.bat BUILD $VCVER";
+    } elsif ($taskname eq $BUILD_TESTS_TASK) {
+        $execstr= "nmi_tools\\glue\\build\\build.win.bat BLD_TESTS $VCVER";
+    } elsif ($taskname eq $NATIVE_TASK) {
+        print "Windows NATIVE (MSI) task\n";
+        $execstr= "nmi_tools\\glue\\build\\build.win.bat NATIVE $VCVER $buildid";
+    } elsif ($taskname eq $TAR_TASK) {
+        print "Windows CREATE_TAR (ZIP) task\n";
+        $execstr= "nmi_tools\\glue\\build\\build.win.bat ZIP $VCVER $buildid";
+    }
+}
+else {
+    $ENV{PATH} ="$ENV{PATH}:/opt/local/bin:/sw/bin:/sw/sbin:/usr/kerberos/bin:/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/opt/local/bin:/usr/local/sbin:/usr/bin/X11:/usr/X11R6/bin:/usr/local/condor/bin:/usr/local/condor/sbin:/usr/local/bin:/bin:/usr/bin:/usr/X11R6/bin:/usr/ccs/bin:/usr/lib/java/bin";
+    $ENV{LD_LIBRARY_PATH} ="$BaseDir/release_dir/lib:$BaseDir/release_dir/lib/condor";
+    $ENV{DYLD_LIBRARY_PATH} ="$BaseDir/release_dir/lib:$BaseDir/release_dir/lib/condor";
+}
+
+######################################################################
+# build
+######################################################################
+
+# Redirecting our STDERR to STDOUT means that we get them interspersed in the
+# build output.  Metronome usually splits STDOUT and STDERR into separate
+# files and putting them together makes it easier to correlate messages between
+# the two.  We are redirecting this after dumping the environment to STDERR
+# since it is nice to have that available, but it is annoying to have it at
+# the top of every step.
+open STDERR,">&STDOUT";
+
+print "------------------------- ENV DUMP ------------------------\n";
+foreach my $key ( sort {uc($a) cmp uc($b)} (keys %ENV) ) {
+    print "$key=".$ENV{$key}."\n";
+}
+print "------------------------- ENV DUMP ------------------------\n";
+
+print "Executing the following command:\n$execstr\n";
+my $buildstatus = system("$execstr");
+
+# now check the build status and return appropriately
+if( $buildstatus == 0 ) {
+    print "Completed task $taskname: SUCCESS\n";
+    exit 0;
+}
+
+print "Completed task $taskname: FAILURE (Exit status: '$buildstatus')\n";
+exit 1;
+
+
+
+sub get_cmake_args {
+    #Read back configuration from remote_pre stage
+    my $cmake_cmd;
+
+    # A comment above says never to use die() and that we must always return '3' on error.  But the
+    # original code used die() when I took it over.  So I'm not sure which to follow.  I'll just
+    # leave the die() in here for now... -scot 2011/03
+    open(CMAKECONFIG, '<', "cmake_args.txt") or die "Cannot open cmake_args.txt: $!";
+    while(<CMAKECONFIG>) {
+        $cmake_cmd = $_;
+        last;
+    }
+    close (CMAKECONFIG);
+    return $cmake_cmd;
+}
+
+sub get_tarball_check_script {
+    return dirname($0) . "/check-tarball.pl";
+}
+
+sub get_tarball_name {
+    if($taskname eq $CHECK_UNSTRIPPED_TASK) {
+	return <*-unstripped.tar.gz>;
+    }
+    elsif($taskname eq $CHECK_TAR_TASK) {
+	return <*-stripped.tar.gz>;
+    }
+    print "ERROR: get_tarball_task() called from a task that does not have an associated tarball.\n";
+    exit 3;
+}
+
+sub create_rpm {
+    my $is_debug = $_[0];
+    if ($ENV{NMI_PLATFORM} =~ /(x86_RedHat6|x86_64_RedHat6|x86_64_RedHat7)/) {
+        # Use native packaging tool
+        return "build/packaging/srpm/nmibuilduwrpm.sh";
+    } else {
+        # Reconfigure cmake variables for native package build   
+        my $command = get_cmake_args();
+        my $strip = "ON"; if ($is_debug) { $strip = "OFF"; }
+        return "$command -DCONDOR_PACKAGE_BUILD:BOOL=ON -DCONDOR_STRIP_PACKAGES:BOOL=${strip} && make package";
+    }
+}
+
+sub check_rpm {
+    # List files in the package
+    return "find . -name '*rpmbuild*' -print -exec cat {} \\;; rpm -qlp *.rpm";
+}
+
+sub create_deb {    
+    my $is_debug = $_[0];
+    #Reconfigure cmake variables for native package build   
+    my $command = get_cmake_args();
+    my $strip = "ON"; if ($is_debug) { $strip = "OFF"; }
+    return "$command -DCONDOR_PACKAGE_BUILD:BOOL=ON -DCONDOR_STRIP_PACKAGES:BOOL=${strip} && make VERBOSE=1 package";
+}
+
+sub check_deb {
+    # Print package summary
+    # We would like to run lintian, but it is not available on all NMI machine
+    my $debs;
+    for (glob "*.deb") { if ($_ !~ /[+]sym/) { $debs .= $_ . " "; } }
+    if ( ! defined $debs) { $debs = "*.deb"; }
+    return "dpkg-deb -I $debs";
+}

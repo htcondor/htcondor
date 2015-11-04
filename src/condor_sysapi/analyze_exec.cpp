@@ -89,7 +89,7 @@ sysapi_symbol_main_check( char *executable )
     }
 
 	dprintf( D_ALWAYS,  "Executable '%s' is linked with \"%s\" on a \"%s\"\n",
-		executable, version, platform?platform:"(NULL)");
+		executable, version, platform);
 
 	free(version);
 	free(platform);

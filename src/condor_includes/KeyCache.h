@@ -78,11 +78,12 @@ class KeyCacheEntry {
 class KeyCache {
     friend class SecMan;
 public:
-	KeyCache(int nbuckets);
+	KeyCache();
 	KeyCache(const KeyCache&);
 	~KeyCache();
 	const KeyCache& operator=(const KeyCache&);
 
+	void clear();
 	bool insert(KeyCacheEntry&);
 	bool lookup(const char *key_id, KeyCacheEntry*&);
 	bool remove(const char *key_id);

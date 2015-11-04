@@ -16,6 +16,7 @@
  # 
  ############################################################### 
 
+include_directories(${CONDOR_SCHEDD_SRC_DIR})
 
 file( GLOB starterRmvElements condor_pid_ns_init.cpp condor_rsh.cpp glexec_job_wrapper* )
 

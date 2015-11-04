@@ -552,14 +552,23 @@ cat > /dev/null
 echo 'Cmd = "/usr/java/java5/bin/java"'
 \end{verbatim}
 
+If some machines in your pool have this hook and others do not,
+this fact should be advertised.
+Add to the configuration of every execute machine that has the hook:
+
+\begin{verbatim}
+HasJava5PrepareHook = True
+STARTD_ATTRS = HasJava5PrepareHook $(STARTD_ATTRS)
+\end{verbatim}
+
 The submit description file for this example job may be
 \footnotesize
 \begin{verbatim}
 universe = vanilla
 executable = /usr/bin/java
 arguments = Hello
-# match with a machine that advertises the JAVA5 hook
-requirements = (JAVA5_HOOK_PREPARE_JOB =!= UNDEFINED)
+# match with a machine that has the hook
+requirements = HasJava5PrepareHook
 
 should_transfer_files = always
 when_to_transfer_output = on_exit

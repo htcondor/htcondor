@@ -242,6 +242,7 @@ FileTransfer::~FileTransfer()
 	if (perm_obj) delete perm_obj;
 #endif
 	free(m_sec_session_id);
+	delete plugin_table;
 }
 
 int
@@ -393,6 +394,9 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 	if ( (IsServer() || (IsClient() && simple_init)) && 
 		 (Ad->LookupString(ATTR_JOB_CMD, buf, sizeof(buf)) == 1) ) 
 	{
+		// TODO: If desired_priv_state isn't PRIV_UNKNOWN, shouldn't
+		//   we switch priv state for these file checks?
+
 		// stash the executable name for comparison later, so
 		// we know that this file should be called condor_exec on the
 		// client machine.  if an executable for this cluster exists
@@ -857,6 +861,11 @@ FileTransfer::DownloadFiles(bool blocking)
 
 		sock.timeout(clientSockTimeout);
 
+		if (IsDebugLevel(D_COMMAND)) {
+			dprintf (D_COMMAND, "FileTransfer::DownloadFiles(%s,...) making connection to %s\n",
+				getCommandStringSafe(FILETRANS_UPLOAD), TransSock ? TransSock : "NULL");
+		}
+
 		Daemon d( DT_ANY, TransSock );
 
 		if ( !d.connectSock(&sock,0) ) {
@@ -1219,6 +1228,11 @@ FileTransfer::UploadFiles(bool blocking, bool final_transfer)
 
 		sock.timeout(clientSockTimeout);
 
+		if (IsDebugLevel(D_COMMAND)) {
+			dprintf (D_COMMAND, "FileTransfer::UploadFiles(%s,...) making connection to %s\n",
+				getCommandStringSafe(FILETRANS_DOWNLOAD), TransSock ? TransSock : "NULL");
+		}
+
 		Daemon d( DT_ANY, TransSock );
 
 		if ( !d.connectSock(&sock,0) ) {
@@ -1423,6 +1437,14 @@ FileTransfer::Reaper(Service *, int pid, int exit_status)
 
 	daemonCore->Close_Pipe(transobject->TransferPipe[0]);
 	transobject->TransferPipe[0] = -1;
+
+	if ( transobject->Info.success ) {
+		if ( transobject->Info.type == DownloadFilesType ) {
+			transobject->downloadEndTime = time(NULL);
+		} else if ( transobject->Info.type == UploadFilesType ) {
+			transobject->uploadEndTime = time(NULL);
+		}
+	}
 
 	// If Download was successful (it returns 1 on success) and
 	// upload_changed_files is true, then we must record the current
@@ -1678,6 +1700,7 @@ FileTransfer::Download(ReliSock *s, bool blocking)
 		// daemonCore will free(info) when the thread exits
 		TransThreadTable->insert(ActiveTransferTid, this);
 
+		downloadStartTime = time(NULL);
 	}
 	
 	return 1;
@@ -1818,12 +1841,21 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 			break;
 		}
 		if (reply == 2) {
-			s->set_crypto_mode(true);
+			bool cryp_ret = s->set_crypto_mode(true);
+			if(!cryp_ret) {
+				dprintf(D_ALWAYS,"DoDownload: failed to enable crypto on incoming file, exiting at %d\n",__LINE__);
+				return_and_resetpriv( -1 );
+			}
 		} else if (reply == 3) {
 			s->set_crypto_mode(false);
 		}
 		else {
-			s->set_crypto_mode(socket_default_crypto);
+			bool cryp_ret = s->set_crypto_mode(socket_default_crypto);
+			if(!cryp_ret) {
+				dprintf(D_ALWAYS,"DoDownload: failed to change crypto to %i on incoming file, "
+					"exiting at %d\n", socket_default_crypto, __LINE__);
+				return_and_resetpriv( -1 );
+			}
 		}
 
 		// code() allocates memory for the string if the pointer is NULL.
@@ -2017,7 +2049,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 			// examine subcommand
 			//
 			int      subcommand = 0;
-			if(!file_info.LookupInteger("Result",subcommand)) {
+			if(!file_info.LookupInteger("SubCommand",subcommand)) {
 				subcommand = -1;
 			}
 
@@ -2641,6 +2673,8 @@ FileTransfer::Upload(ReliSock *s, bool blocking)
 				ActiveTransferTid);
 		// daemonCore will free(info) when the thread exits
 		TransThreadTable->insert(ActiveTransferTid, this);
+
+		uploadStartTime = time(NULL);
 	}
 		
 	return 1;
@@ -4384,7 +4418,7 @@ FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir
 #endif
 
 	size_t srclen = file_xfer_item.src_name.length();
-	bool trailing_slash = srclen > 0 && src_path[srclen-1] == DIR_DELIM_CHAR;
+	bool trailing_slash = srclen > 0 && IS_ANY_DIR_DELIM_CHAR(src_path[srclen-1]);
 
 	file_xfer_item.is_symlink = st.IsSymlink();
 	file_xfer_item.is_directory = st.IsDirectory();

@@ -34,15 +34,19 @@ class XInterface
     XInterface(int id);
     ~XInterface();
 
-    
+    void SetBumpCheck(int delta_move, int delta_time);
+
     bool CheckActivity();
   private:
     bool ProcessEvents();
     void SelectEvents(Window win);
     bool QueryPointer();
+	bool QuerySSExtension();
     bool Connect();
-    int NextEntry();
-    void TryUser(const char *user);
+    bool TryUser(const char *user);
+
+	void ReadUtmp();
+	void FinishConnection();
 
     Display     *_display;
     char*       _display_name;
@@ -56,9 +60,12 @@ class XInterface
     int          _pointer_prev_x;
     int          _pointer_prev_y;
 
-    bool        _tried_root;
-    bool        _tried_utmp;
+    int          _small_move_delta;
+    int          _bump_check_after_idle_time_sec;
+
     int         _daemon_core_timer;
+    bool 	needsCheck;
+    bool 	hasXss; 
 
     StringList  *_xauth_users;
 

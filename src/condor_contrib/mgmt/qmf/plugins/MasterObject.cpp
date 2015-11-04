@@ -20,11 +20,11 @@
 
 #include "MasterObject.h"
 
-#include "../condor_master.V6/master.h"
+#include <master.h>
 
 #include "condor_classad.h"
 
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include <condor_daemon_core.h>
 
 #include <qpid/management/Manageable.h>
 #include <qpid/management/ManagementObject.h>

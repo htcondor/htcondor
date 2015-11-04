@@ -23,7 +23,7 @@
 #include "MgmtScheddPlugin.h"
 
 #include "set_user_priv_from_ad.h"
-#include "../condor_schedd.V6/scheduler.h"
+#include <scheduler.h>
 
 #ifndef WIN32
 	#include "stdint.h"

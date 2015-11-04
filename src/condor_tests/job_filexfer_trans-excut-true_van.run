@@ -19,29 +19,115 @@
 ##**************************************************************
 
 use CondorTest;
+use Check::SimpleJob;
 
-$testdesc =  'Jobs complaining cause No FT on when tansfer_executables = true - vanilla U';
 $testname = "job_filexfer_trans-excut-true_van";
+print "running a simple job before the test:$testname\n";
 
+SimpleJob::RunCheck();
 my $pid = $$;
-print "Calling ./x_sanitysubmit.p with PID = <$pid>\n";
-my $sanestatus = CondorTest::verbose_system("./x_sanitysubmit.pl $pid");
-my $teststatus = CondorTest::verbose_system("./job_filexfer_trans-excut-true_van.pl");
+#my $teststatus = CondorTest::verbose_system("./job_filexfer_trans-excut-true_van.pl");
+# truly const variables in perl
+sub IDLE{1};
+sub HELD{5};
+sub RUNNING{2};
 
-if($sanestatus != 0)
+my $alreadydone=0;
+
+$execute = sub {
+	my %args = @_;
+	my $cluster = $args{"cluster"};
+
+	CondorTest::debug("Running $cluster\n",1);
+
+};
+
+$abort = sub {
+	die "Job is gone now, cool.\n";
+};
+
+$hold = sub
 {
-        CondorTest::debug("job_filexfer_trans-excut-true_van failed sanity submittest\n",1);
+	my %args = @_;
+	my $cluster = $args{"cluster"};
+
+	CondorTest::debug("Good. Cluster $cluster is supposed to be held.....\n",1);
+};
+
+$release = sub
+{
+	my %args = @_;
+	my $cluster = $args{"cluster"};
+
+};
+
+$success = sub
+{
+	die "Base file transfer job!\n";
+};
+
+$wanterror = sub
+{
+	CondorTest::debug("Base file transfer job, submit supposed to fail...error 1 ..!\n",1);
+	my %args = @_;
+	my $errmsg = $args{"ErrorMessage"};
+
+    if($errmsg =~ /^.*died abnormally.*$/) {
+        CondorTest::debug("BAD. Submit died was to fail but with error 1\n",1);
+        CondorTest::debug("$testname: Failure\n",1);
+        return(1);
+    } elsif($errmsg =~ /^.*\(\s*returned\s*(\d+)\s*\).*$/) {
+        if($1 == 1) {
+            CondorTest::debug("Good. Job was not to submit with File Transfer off and input files requested\n",1);
+            CondorTest::debug("$testname: SUCCESS\n",1);
+            return(0);
+        } else {
+            CondorTest::debug("BAD. Submit was to fail but with error 1 not <<$1>>\n",1);
+            CondorTest::debug("$testname: Failure\n",1);
+            return(1);
+        }
+    } else {
+            CondorTest::debug("BAD. Submit failure mode unexpected....\n",1);
+            CondorTest::debug("$testname: Failure\n",1);
+            return(1);
+    }
+};
+
+$timed = sub
+{
+	die "Job should have ended by now. file transfer broken!\n";
+};
+
+my $transfercmds = '
+transfer_input = false
+transfer_error = false
+transfer_output = false
+transfer_executable = true
+should_transfer_files = NO
+when_to_transfer_output = NONE
+';
+
+SimpleJob::RunCheck(
+    runthis=>"x_job_filexfer_testjob.pl",
+    duration=>"--noextrainput",
+	append_submit_commands=>"$transfercmds",
+    on_execute=>$execute,
+	on_wanterror=>$wanterror,
+    on_abort=>$abort,
+	on_hold=>$hold,
+	on_release=>$release,
+    on_success=>$success,
+);
+
+CondorTest::EndTest();
+print scalar localtime() . "\n";
+
+my $result = 0;
+if( $result != 0 )
+{
+    exit(1);
 }
 
-if($teststatus != 0)
-{
-        CondorTest::debug("job_filexfer_trans-excut-true_van failed actual test\n",1);
-}
-
-if(($teststatus == 0) && ($sanestatus == 0))
-{
-        CondorTest::debug("Passed job_filexfer_trans-excut-true_van\n",1);
-} else {
-		die "Failed job_filexfer_trans-excut-true_van\n";
-}
+CondorTest::debug("$testname SUCCESS\n",1);
+exit(0);
 

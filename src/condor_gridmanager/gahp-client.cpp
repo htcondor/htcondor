@@ -81,6 +81,17 @@ void GahpReconfig()
 	}
 }
 
+bool GahpOverloadError( const Gahp_Args &return_line )
+{
+		// The blahp will return this error if a new request will cause it
+		// to exceed its limit on the number of threads it has. The limit
+		// is set in the blahp's config file.
+	if ( return_line.argc > 1 && !strcmp( return_line.argv[1], "Threads limit reached" ) ) {
+		return true;
+	}
+	return false;
+}
+
 void GahpClient::setErrorString( const std::string & newErrorString ) {
     error_string = newErrorString;
 }
@@ -329,7 +340,7 @@ GahpServer::Reaper(Service *,int pid,int status)
 
 	if ( dead_server ) {
 		if ( !dead_server->m_sec_session_id.empty() ) {
-			daemonCore->getSecMan()->session_cache->remove( dead_server->m_sec_session_id.c_str() );
+			daemonCore->getSecMan()->session_cache.remove( dead_server->m_sec_session_id.c_str() );
 		}
 		formatstr_cat( buf, " unexpectedly" );
 		if ( dead_server->m_gahp_startup_failed ) {
@@ -1050,7 +1061,7 @@ GahpServer::CreateSecuritySession()
 			reason = "Unspecified error";
 		}
 		dprintf( D_ALWAYS, "GAHP command '%s' failed: %s\n", command, reason );
-		daemonCore->getSecMan()->session_cache->remove( claimId.secSessionId() );
+		daemonCore->getSecMan()->session_cache.remove( claimId.secSessionId() );
 		return false;
 	}
 
@@ -2534,13 +2545,13 @@ GahpClient::now_pending(const char *command,const char *buf,
 			// this request for later.
 		switch ( prio_level ) {
 		case high_prio:
-			server->waitingHighPrio.push( pending_reqid );
+			server->waitingHighPrio.push_back( pending_reqid );
 			break;
 		case medium_prio:
-			server->waitingMediumPrio.push( pending_reqid );
+			server->waitingMediumPrio.push_back( pending_reqid );
 			break;
 		case low_prio:
-			server->waitingLowPrio.push( pending_reqid );
+			server->waitingLowPrio.push_back( pending_reqid );
 			break;
 		}
 		return;
@@ -2565,6 +2576,19 @@ GahpClient::now_pending(const char *command,const char *buf,
 	Gahp_Args return_line;
 	server->read_argv(return_line);
 	if ( return_line.argc == 0 || return_line.argv[0][0] != 'S' ) {
+			// If the gahp server says it's overloaded, lower our limit on
+			// pending requests and make this request the next one to be
+			// issued when more results come back.
+		if ( GahpOverloadError( return_line ) && server->num_pending_requests > 0 ) {
+			if ( server->max_pending_requests > server->num_pending_requests ) {
+				dprintf( D_ALWAYS, "GAHP server %d overloaded, lowering pending limit to %d\n", server->m_gahp_pid, server->num_pending_requests );
+				server->max_pending_requests = server->num_pending_requests;
+			} else {
+				dprintf( D_ALWAYS, "GAHP server %d overloaded, will retry request\n", server->m_gahp_pid );
+			}
+			server->waitingHighPrio.push_front( pending_reqid );
+			return;
+		}
 		// Badness !
 		EXCEPT("Bad %s Request: %s",pending_command, return_line.argc?return_line.argv[0]:"Empty response");
 	}
@@ -2751,13 +2775,13 @@ GahpServer::poll()
 	{
 		if ( waitingHighPrio.size() > 0 ) {
 			waiting_reqid = waitingHighPrio.front();
-			waitingHighPrio.pop();
+			waitingHighPrio.pop_front();
 		} else if ( waitingMediumPrio.size() > 0 ) {
 			waiting_reqid = waitingMediumPrio.front();
-			waitingMediumPrio.pop();
+			waitingMediumPrio.pop_front();
 		} else if ( waitingLowPrio.size() > 0 ) {
 			waiting_reqid = waitingLowPrio.front();
-			waitingLowPrio.pop();
+			waitingLowPrio.pop_front();
 		} else {
 			break;
 		}
@@ -6062,11 +6086,30 @@ GahpClient::cream_set_lease(const char *service, const char *lease_id, time_t &l
 	return GAHPCLIENT_COMMAND_PENDING;
 }
 
+void addStringListToRequestLine( StringList & sl, std::string & reqLine ) {
+	const char * text;
+	char * escapedText;
+
+	sl.rewind();
+	int count = 0;
+	if( sl.number() > 0 ) {
+		while( (text = sl.next()) ) {
+			escapedText = strdup( escapeGahpString( text ) );
+			formatstr_cat( reqLine, " %s", escapedText );
+			free( escapedText );
+			++count;
+		}
+	}
+	ASSERT( count == sl.number() );
+
+	formatstr_cat( reqLine, " %s", NULLSTRING );
+}
+
 //  Start VM
 int GahpClient::ec2_vm_start( std::string service_url,
 							  std::string publickeyfile,
 							  std::string privatekeyfile,
-							  std::string ami_id, 
+							  std::string ami_id,
 							  std::string keypair,
 							  std::string user_data,
 							  std::string user_data_file,
@@ -6075,7 +6118,12 @@ int GahpClient::ec2_vm_start( std::string service_url,
 							  std::string vpc_subnet,
 							  std::string vpc_ip,
 							  std::string client_token,
+							  std::string block_device_mapping,
+							  std::string iam_profile_arn,
+							  std::string iam_profile_name,
 							  StringList & groupnames,
+							  StringList & groupids,
+							  StringList & parametersAndValues,
 							  std::string &instance_id,
 							  std::string &error_code)
 {
@@ -6098,7 +6146,6 @@ int GahpClient::ec2_vm_start( std::string service_url,
 
 	// Generate request line
 
-	// keypair/user_data/user_data_file is a required field. when empty, need to be replaced by "NULL"
 	if ( keypair.empty() ) keypair = NULLSTRING;
 	if ( user_data.empty() ) user_data = NULLSTRING;
 	if ( user_data_file.empty() ) user_data_file = NULLSTRING;
@@ -6107,10 +6154,10 @@ int GahpClient::ec2_vm_start( std::string service_url,
 	if ( vpc_subnet.empty() ) vpc_subnet = NULLSTRING;
 	if ( vpc_ip.empty() ) vpc_ip = NULLSTRING;
 	if ( client_token.empty() ) client_token = NULLSTRING;
+	if ( block_device_mapping.empty() ) block_device_mapping = NULLSTRING;
+	if ( iam_profile_arn.empty() ) iam_profile_arn = NULLSTRING;
+	if ( iam_profile_name.empty() ) iam_profile_name = NULLSTRING;
 
-	// groupnames is optional, but since it is the last argument, don't need to set it as "NULL"
-	// XXX: You probably should specify a NULL for all "optional" parameters -matt
-						
 	std::string reqline;
 
 	char* esc1 = strdup( escapeGahpString(service_url) );
@@ -6120,18 +6167,16 @@ int GahpClient::ec2_vm_start( std::string service_url,
 	char* esc5 = strdup( escapeGahpString(keypair) );
 	char* esc6 = strdup( escapeGahpString(user_data) );
 	char* esc7 = strdup( escapeGahpString(user_data_file) );
-
-	// currently we support the following instance type:
-	// 1. m1.small
-	// 2. m1.large
-	// 3. m1.xlarge
 	char* esc8 = strdup( escapeGahpString(instance_type) );
 	char* esc9 = strdup( escapeGahpString(availability_zone) );
 	char* esc10 = strdup( escapeGahpString(vpc_subnet) );
 	char* esc11 = strdup( escapeGahpString(vpc_ip) );
 	char* esc12 = strdup( escapeGahpString(client_token) );
+	char* esc13 = strdup( escapeGahpString(block_device_mapping) );
+	char* esc14 = strdup( escapeGahpString(iam_profile_arn) );
+	char* esc15 = strdup( escapeGahpString(iam_profile_name) );
 
-	int x = formatstr(reqline, "%s %s %s %s %s %s %s %s %s %s %s %s", esc1, esc2, esc3, esc4, esc5, esc6, esc7, esc8, esc9, esc10, esc11, esc12 );
+	int x = formatstr(reqline, "%s %s %s %s %s %s %s %s %s %s %s %s %s %s %s", esc1, esc2, esc3, esc4, esc5, esc6, esc7, esc8, esc9, esc10, esc11, esc12, esc13, esc14, esc15 );
 
 	free( esc1 );
 	free( esc2 );
@@ -6145,23 +6190,15 @@ int GahpClient::ec2_vm_start( std::string service_url,
 	free( esc10 );
 	free( esc11 );
 	free( esc12 );
+	free( esc13 );
+	free( esc14 );
+	free( esc15 );
 	ASSERT( x > 0 );
 
-	const char * group_name;
-	int cnt = 0;
-	char * esc_groupname;
+	addStringListToRequestLine( groupnames, reqline );
+	addStringListToRequestLine( groupids, reqline );
+	addStringListToRequestLine( parametersAndValues, reqline );
 
-	// get multiple group names from string list
-	groupnames.rewind();
-	if ( groupnames.number() > 0 ) {
-		while ( (group_name = groupnames.next()) ) {
-			esc_groupname = strdup( escapeGahpString(group_name) );
-			formatstr_cat(reqline, " %s", esc_groupname);
-			cnt++;
-			free( esc_groupname );
-		}
-	}
-	ASSERT( cnt == groupnames.number() );
 	const char *buf = reqline.c_str();
 	// Check if this request is currently pending. If not, make it the pending request.
 	if ( !is_pending(command,buf) ) {

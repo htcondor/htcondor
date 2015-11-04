@@ -106,6 +106,7 @@ MsWindowsHibernator::initialize ( void )
 bool
 MsWindowsHibernator::tryShutdown ( bool force ) const
 {
+	#pragma warning(suppress: 28159) // suppress 're-architect to avoid reboot message'...
 	bool ok = ( TRUE == InitiateSystemShutdownEx (
 		NULL	/* local computer */,
 		NULL	/* no warning message */,

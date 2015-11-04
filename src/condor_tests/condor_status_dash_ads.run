@@ -1,0 +1,373 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+##
+## This test is looking for a variance in a set of saved condor_status
+## commands from known and interesting configurations looking from
+## These known configuations at a later time. We will always save a
+## current copy of the desired command so we can real them when we
+## want to change out our master comparison file. The masters are
+## kept in condor_tests/SavedAds. The curren saved location is
+## condor_status_dash_ads.saveme/$pid/CurrentSavedAds. This will
+## place them in the folder where all the personals are created.
+## Each variance will have both a predefined name and exceptions.
+##
+## We will check each vaiance when we hit the expected running 
+## point.
+##
+##**************************************************************
+
+
+use CondorTest;
+use CondorUtils;
+use Check::SimpleJob;
+use Check::CondorLog;
+
+my $expectedrunning = 0;
+my $pid = $$;
+my $testname = "condor_status_dash_ads";
+my $AdSaveLoc = "$testname" . ".saveme/pdir$pid"; 
+my $SaveName = "$testname" . ".saveme";
+
+my @thisconfig;
+my $variance = "";
+
+my $createdircmd = "-p $SaveName";
+CreateDir("$createdircmd");
+$createdircmd = "-p $AdSaveLoc";
+CreateDir("$createdircmd");
+
+my $AdSaveLocDir = "$AdSaveLoc/CurrentSavedAd";
+my $VarianceStash = "StatusAds";
+my $VarianceConfigs = "StatusConfigs";
+my $running = 0;
+
+my @thisvariance;
+my $makemyads = 1;
+my @condorstatusbefore = ();
+my @condorstatusafter = ();
+
+my $on_submit = sub {
+};
+
+my $on_success = sub {
+};
+
+my $on_execute = sub {
+	$running += 1;
+	my $mismatches = 0;
+	if($running == $expectedrunning) {
+		print "Checking Variance:$variance\n";
+		sleep(10);
+		runToolNTimes("condor_q",1,1,{emit_output=>0});
+		CollectVariance($variance);
+		SaveVariance($variance);
+		$mismatches = CompareVariance($variance);
+		if($mismatches == 0) {
+			RegisterResult(1,"test_name","$testname");
+		} else {
+			print "There were $mismatches differences between master ad file and what -ads file got us\n";
+			RegisterResult(0,"test_name","$testname");
+		}
+		runToolNTimes("condor_rm -all",1,1,{emit_output=>0});
+	} else {
+		print "Waiting for expected number of running jobs: Have:$running Need:$expectedrunning\n";
+	}
+};
+
+my $on_submit = sub {
+};
+
+my $on_abort = sub {
+};
+
+my $on_evictedwithoutcheckpoint = sub {
+};
+
+# Do once after we have the location where all the personals will be created
+if(!(-d $AdSaveLoc)) {
+	CondorTest::EndTest();
+	exit(1);
+} else {
+	CreateDir("-p  $AdSaveLocDir");
+}
+print "Checking directory structure in:$AdSaveLoc\n";
+List("$AdSaveLoc");
+
+my $generatedconfig = "";
+my $similarity = 0;
+opendir(SC, "$VarianceConfigs") or die "Can not open Variance Config Location:$VaraianceConfigs:$!\n";
+foreach my $subfile (readdir SC)
+{
+	@condorstatusbefore = ();
+	@condorstatusafter = ();
+	#$subfile = "small1slot";
+	next if $subfile =~ /^\.\.?$/;
+	print "DirEntry:$subfile\n";
+	if(-f "$VarianceConfigs/$subfile") {
+		print "found variance config file:$subfile\n";
+		$variance = "$subfile";
+		@thisconfig = ();
+		my $line = "";
+		open(VC,"<$VarianceConfigs/$subfile") or die "Failed to open:$VarianceConfigs/$subfile:$!\n";
+		while (<VC>) {
+			$line = "$_";
+			fullchomp($line);
+			if($line =~ /^queuesize\s+=\s+(\d+).*$/) {
+				$expectedrunning = $1;
+				print "Just set expectedrunning:$expectedrunning\n";
+			} else {
+				push @thisconfig, $line;
+			}
+		}
+		close(VC);
+		
+		print "Dropping new variance config\n";
+		foreach my $entry (@thisconfig) {
+			print "$entry\n";
+		}
+		$generatedconfig = CondorTest::CreateLocalConfigFromArrayRef(\@thisconfig,"$variance");
+		# First order up the config we want to save and reload later
+
+		CondorTest::StartCondorWithParams(
+			condor_name => "$variance",
+			fresh_local => "TRUE",
+			condorlocalsrc => "$generatedconfig",
+		);
+
+		$running = 0;
+
+		print "First test basic job\n";
+		my $result = SimpleJob::RunCheck(); # jobid 1
+
+		$result = SimpleJob::RunCheck(
+    		#append_submit_commands => $appended_submit_info,
+    		queue_sz =>  $expectedrunning,
+			duration => 0,
+			test_name => $testname,
+    		on_execute => $on_execute,
+			timeout => 450,
+    		on_success => $on_success,
+    		on_submit => $on_submit,
+    		on_abort => $on_abort,
+    		on_evictedwithoutcheckpoint => $on_evictedwithoutcheckpoint,
+		);
+	
+		#######################################
+		# see if basic status is similar
+		#######################################
+		$similarity = CheckSimilarity();
+		if($similarity == 0) {
+			RegisterResult(1,"test_name","$testname");
+		} else {
+			RegisterResult(0,"test_name","$testname");
+		}
+	}
+	Condor::EventReset();
+	SimpleJob::CallbackReset();
+	#last;
+}
+close(SC);
+
+#List("$AdSaveLoc");
+CondorTest::EndTest();
+
+exit(0);
+sub CheckSimilarity{
+	my $ret = 0;
+	my $before = "";
+	my $after = "";
+	#print "**************************************************************\n";
+	#print "condor_status before *****************************************\n";
+	#print "**************************************************************\n";
+	#foreach my $before (@condorstatusbefore) {
+		#fullchomp($before);
+		#print "before:$before\n";
+	#}
+	#print "**************************************************************\n";
+	#print "condor_status after *****************************************\n";
+	#print "**************************************************************\n";
+	#foreach my $after (@condorstatusafter) {
+		#fullchomp($after);
+		#print "after:$after\n";
+	#}
+
+	my $expression1 = "";
+	my $expression2 = "";
+	foreach my $before (@condorstatusbefore) {
+		$after = shift @condorstatusafter;
+		if($before =~ /^([\w\.\@\d\-]+\s+\w+\s+\w+\s+\w+\s+\w+\s+)\d+\.\d+.*$/) {
+			#print "slot:$1\n";
+			$expression1 = $1;
+			if($after =~ /^([\w\.\@\d\-]+\s+\w+\s+\w+\s+\w+\s+\w+\s+)\d+\.\d+.*$/) {
+				$expression2 = $1;
+				if($expression1 ne $expression2) {
+					print "$expression1 ne $expression2\n";
+					$ret = 1;
+				}
+			}
+		} else {
+			if($after ne $before) {
+				print "BAD:$before ne $after\n";
+				$ret = 1;
+			}
+		}
+	}
+	return($ret);
+}
+
+sub CollectVariance {
+	my $variance = shift;
+	print "Collecting Variance:$variance\n";
+	@thisvariance = ();
+	runCondorTool("condor_status -l",\@thisvariance,2,{emit_output=>0});
+} 
+
+sub SaveVariance {
+	my $variance = shift;
+	my $variancefile = "$AdSaveLocDir" . "/$variance";
+	my @sortedvariance;
+	print "Save location for:$variance is:$variancefile\n";
+	SortMyAds(\@thisvariance,\@sortedvariance);
+	open(VAR, ">$variancefile") or die "Failed to open:$variancefile because:$!\n";
+	foreach my $line (@sortedvariance) {
+			fullchomp($line);
+			print VAR "$line\n";
+	}
+	close(VAR);
+} 
+
+sub SortMyAds {
+	my $presortarrayref = shift;
+	my $sortedarrayref = shift;
+
+	#print "*********************************************************************\n";
+	#print "************************* SortMyAds Input *************************\n";
+	#print "*********************************************************************\n";
+	#foreach my $adin (@{$presortarrayref}) {
+		#print "$adin\n";
+	#}
+	my $res = 0;
+	my @partial = ();
+	my @sorted = ();
+	foreach my $key (@{$presortarrayref}) {
+		fullchomp($key);
+		if($key =~ /^\s*$/) {
+			SortMyArray(\@partial,\@sorted);
+			# add new line separator
+			push @sorted, "\n";
+			# write sorted ad to target array
+			foreach my $entry (@sorted) {
+				push @{$sortedarrayref}, $entry;
+			}
+			@partial = ();
+			@sorted = ();
+		} else {
+			push @partial, $key;
+			#print ".";
+		}
+	}
+	# catch what was left without a newline terminator
+	SortMyArray(\@partial,\@sorted);
+	# write sorted ad to target array
+	foreach my $entry (@sorted) {
+		push @{$sortedarrayref}, $entry;
+	}
+	#print "*********************************************************************\n";
+	#print "************************* SortMyAds Sorted *************************\n";
+	#print "*********************************************************************\n";
+	#foreach my $adout (@{$sortedarrayref}) {
+		#print "$adout\n";
+	#}
+	return($res);
+}
+
+sub SortMyArray {
+	my $arrayref = shift;
+	my $sortedarrayref = shift;
+
+	#print "*********************************************************************\n";
+	#print "************************* SortMyArray Input *************************\n";
+	#print "*********************************************************************\n";
+	#foreach my $adin (@{$arrayref}) {
+		#print "$adin\n";
+	#}
+	@{$sortedarrayref} = sort {lc $a cmp lc $b }  @{$arrayref};
+	#print "*********************************************************************\n";
+	#print "************************* SortMyArray Sorted *************************\n";
+	#print "*********************************************************************\n";
+	#foreach my $adout (@{$arrayref}) {
+		#print "$adout\n";
+	#}
+}
+
+sub CompareVariance {
+	my $variance = shift;
+	my $mismatch = 0;
+	my $sortres = 0;
+	my $mastervariance = "$VarianceStash/$variance";
+	my @sortedads = ();
+	if(!(-f "$mastervariance")) {
+		print "Have these variances and looking for:$variance\n";
+		List("$VarianceStash");
+		die "Have no master variance:$mastervariance\n";
+	} else {
+		# set collector ads from saved file
+		my @myads = ();
+		my $cmdbefore = "condor_status";
+		my $cmdafter = "condor_status";
+		my $cmd = "condor_status -l -ads $mastervariance";
+		print "dashad cmd:$cmd\n";
+		my $status = runCondorTool("$cmdbefore",\@condorstatusbefore,2,{emit_output=>0});
+		my $status = runCondorTool("$cmd",\@myads,2,{emit_output=>0});
+		my $status = runCondorTool("$cmdafter",\@condorstatusafter,2,{emit_output=>0});
+		my $adcount = @myads;
+		$sortres = SortMyAds(\@myads,\@sortedads);
+		print "condor_status -ads returned $adcount ads\n";
+
+		my $thisad = "";
+		my $line = "";
+
+		open(MA, "<$mastervariance") or die "Failed to open: myads:$!\n";
+		while (<MA>) {
+			#while($_ =~ /^\s*$/) {
+				# skip blank lines
+				#$_ = <MA>;
+			#}
+			fullchomp($_);
+			$line = $_;
+			$thisad = shift @sortedads;
+			#while($thisad =~ /^\s*$/) {
+				# skip blank lines
+				#$thisad = shift @myads;
+			#}
+			fullchomp($thisad);
+			if($thisad ne $line) {
+				print "Mismatch: AD:[$thisad] File:[$line] ---\n";
+				$mismatch += 1;
+			} else {
+				#print "Match: AD:$thisad\n";
+			}
+		}
+	}
+	print "Checking for master variance\n";
+	print "Returning from CompareVariance: mismatches:$mismatch\n";
+	return($mismatch);
+} 
+

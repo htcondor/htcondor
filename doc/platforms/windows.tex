@@ -500,11 +500,16 @@ At this point, if \SubmitCmd{when\_to\_transfer\_output} is set to
 \Expr{ON\_EXIT} (the default) in the job's submit description file,
 the job switches states, from Running to Idle,
 and no files are transferred back.
-If \SubmitCmdNI{when\_to\_transfer\_output} is set to \Expr{ON\_EXIT\_OR\_EVICT},
-then any files
+If \SubmitCmdNI{when\_to\_transfer\_output} is set to 
+\Expr{ON\_EXIT\_OR\_EVICT},
+then files
 in the job's temporary working directory which were changed or modified are
 first sent back to the submitting machine.
-But this time, the \Condor{shadow} places these
+If exactly which files to transfer is specified with
+\SubmitCmd{transfer\_output\_files},
+then this modifies the files transferred
+and can affect the state of the job if the specified files do not exist.
+On an eviction, the \Condor{shadow} places these
 intermediate files into a subdirectory created in the
 \MacroUNI{SPOOL} directory on the submitting machine.
 The job is then switched back to the Idle state until HTCondor finds

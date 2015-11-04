@@ -93,7 +93,7 @@ extern	int		update_offset;		// Interval offset to update CM
 
 // String Lists
 extern	StringList* console_devices;
-extern	StringList* startd_job_exprs;
+extern	StringList* startd_job_attrs;
 extern	StringList* startd_slot_attrs;
 
 // Hosts

@@ -28,7 +28,7 @@
 #include "write_user_log.h"
 #include "exit.h"
 #include "internet.h"
-#include "../condor_schedd.V6/qmgr_job_updater.h"
+#include <qmgr_job_updater.h>
 #include "condor_update_style.h"
 #include "file_transfer.h"
 
@@ -114,6 +114,7 @@ class BaseShadow : public Service
 			about it, and exit with a special status. 
 			@param reason Why we gave up (for UserLog, dprintf, etc)
 		*/
+	PREFAST_NORETURN
 	void reconnectFailed( const char* reason ); 
 
 	virtual bool shouldAttemptReconnect(RemoteResource *) { return true;};
@@ -360,7 +361,7 @@ class BaseShadow : public Service
 		/** Do whatever cleanup (like killing starter(s)) that's
 			required before the shadow can exit.
 		*/
-	virtual void cleanUp( void ) = 0;
+	virtual void cleanUp( bool graceful=false ) = 0;
 
 		/** Did this shadow's job exit by a signal or not?  This is
 			virtual since each kind of shadow will need to implement a
@@ -400,6 +401,12 @@ class BaseShadow : public Service
 	virtual void logDisconnectedEvent( const char* reason ) = 0;
 
 	char const *getTransferQueueContactInfo() {return m_xfer_queue_contact_info.Value();}
+
+		/** True if attemping a reconnect from startup, i.e. if
+			reconnecting based upon command-line flag -reconnect. 
+			Used to determine if shadow exits with RECONNECT_FAILED
+			or just with JOB_SHOULD_REQUEUE. */
+	bool attemptingReconnectAtStartup;
 
  protected:
 
@@ -480,6 +487,9 @@ class BaseShadow : public Service
 
 		/// How long to delay between attempts to retry job cleanup.
 	int m_cleanup_retry_delay;
+
+		// Insist on a fast shutdown of the starter?
+	bool m_force_fast_starter_shutdown;
 
 		// This makes this class un-copy-able:
 	BaseShadow( const BaseShadow& );

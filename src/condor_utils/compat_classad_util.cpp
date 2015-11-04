@@ -22,6 +22,7 @@
 #include "classad_oldnew.h"
 #include "string_list.h"
 #include "condor_adtypes.h"
+#include "classad/classadCache.h" // for CachedExprEnvelope
 
 /* TODO This function needs to be tested.
  */
@@ -76,19 +77,91 @@ int ParseClassAdRvalExpr(const char*s, classad::ExprTree*&tree, int*pos)
 	}
 }
 
-/* TODO This function needs to be tested.
+/*
  */
-const char *ExprTreeToString( classad::ExprTree *expr )
+const char *ExprTreeToString( const classad::ExprTree *expr, std::string & buffer )
 {
-	static std::string buffer;
 	classad::ClassAdUnParser unparser;
-
-	buffer = "";
 	unparser.SetOldClassAd( true, true );
 	unparser.Unparse( buffer, expr );
+	return buffer.c_str();
+}
+
+const char *ExprTreeToString( const classad::ExprTree *expr )
+{
+	static std::string buffer;
+	buffer = "";
+	return ExprTreeToString(expr, buffer);
+}
+
+const char * ClassAdValueToString ( const classad::Value & value, std::string & buffer )
+{
+	classad::ClassAdUnParser unparser;
+
+	unparser.SetOldClassAd( true, true );
+	unparser.Unparse( buffer, value );
 
 	return buffer.c_str();
 }
+
+const char * ClassAdValueToString ( const classad::Value & value )
+{
+	static std::string buffer;
+	buffer = "";
+	return ClassAdValueToString(value, buffer);
+}
+
+bool ExprTreeIsLiteral(classad::ExprTree * expr, classad::Value & value)
+{
+	if ( ! expr) return false;
+
+	classad::ExprTree::NodeKind kind = expr->GetKind();
+	if (kind == classad::ExprTree::EXPR_ENVELOPE) {
+		expr = ((classad::CachedExprEnvelope*)expr)->get();
+		if ( ! expr) return false;
+		kind = expr->GetKind();
+	}
+
+	// dive into parens
+	while (kind == classad::ExprTree::OP_NODE) {
+		classad::ExprTree *e2, *e3;
+		classad::Operation::OpKind op;
+		((classad::Operation*)expr)->GetComponents(op, expr, e2, e3);
+		if ( ! expr || op != classad::Operation::PARENTHESES_OP) return false;
+
+		kind = expr->GetKind();
+	}
+
+	if (kind == classad::ExprTree::LITERAL_NODE) {
+		classad::Value::NumberFactor factor;
+		((classad::Literal*)expr)->GetComponents(value, factor);
+		return true;
+	}
+
+	return false;
+}
+
+bool ExprTreeIsLiteralNumber(classad::ExprTree * expr, long long & ival)
+{
+	classad::Value val;
+	if ( ! ExprTreeIsLiteral(expr, val)) return false;
+	return val.IsNumber(ival);
+}
+
+bool ExprTreeIsLiteralNumber(classad::ExprTree * expr, double & rval)
+{
+	classad::Value val;
+	if ( ! ExprTreeIsLiteral(expr, val)) return false;
+	return val.IsNumber(rval);
+}
+
+bool ExprTreeIsLiteralString(classad::ExprTree * expr, std::string & sval)
+{
+	classad::Value val;
+	if ( ! ExprTreeIsLiteral(expr, val)) return false;
+	return val.IsStringValue(sval);
+}
+
 
 #define IS_DOUBLE_TRUE(val) (bool)(int)((val)*100000)
 
@@ -227,8 +300,6 @@ int EvalExprTree( classad::ExprTree *expr, compat_classad::ClassAd *source,
 	expr->SetParentScope( source );
 	if ( target && target != source ) {
 		mad = compat_classad::getTheMatchAd( source, target );
-	} else {
-		compat_classad::getTheMyRef( source );
 	}
 	if ( !source->EvaluateExpr( expr, result ) ) {
 		rc = FALSE;
@@ -236,8 +307,6 @@ int EvalExprTree( classad::ExprTree *expr, compat_classad::ClassAd *source,
 
 	if ( mad ) {
 		compat_classad::releaseTheMatchAd();
-	} else {
-		compat_classad::releaseTheMyRef( source );
 	}
 	expr->SetParentScope( old_scope );
 

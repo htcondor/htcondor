@@ -19,32 +19,117 @@
 ##**************************************************************
 
 use CondorTest;
+use Check::SimpleJob;
 
-$testdesc =  'Condor ON_EXIT_REMOVE policy test - vanilla U';
-$testname = "job_core_onexitrem_van";
 
-my $nostatus = CondorTest::verbose_system("./job_core_onexitrem-false_van.pl");
-my $willstatus = CondorTest::verbose_system("./job_core_onexitrem-true_van.pl");
+my $falsepolicy = '
+on_exit_remove = (time() - QDate) > (2 )
+';
+my $truepolicy = '
+on_exit_remove = (time() - QDate) > 4200
+';
 
-my %listoftests; 
-$listoftests{"corename"} = "job_core_onexitrem_van";
-$listoftests{"tests"} = [ "job_core_onexitrem-false_van", "job_core_onexitrem-true_van"];
-$listoftests{"extensions"} = [ ".cmd", ".cmd.out", ".err", ".out", ".log"];
-CondorTest::MergeOutputFiles(\%listoftests);
 
-if($nostatus != 0)
+$testname = "job_core_onexitrem_van_false";
+
+#my $nostatus = CondorTest::verbose_system("./job_core_onexitrem-false_van.pl");
+my $killedchosen = 0;
+
+# truly const variables in perl
+sub IDLE{1};
+sub HELD{5};
+sub RUNNING{2};
+
+my %testerrors;
+my %info;
+my $cluster;
+
+$executed = sub
 {
-	CondorTest::debug("ON_EXIT_REMOVE: failed no trigger test\n",1);
+	%info = @_;
+	$cluster = $info{"cluster"};
+
+	CondorTest::debug("Good. for on_exit_remove cluster $cluster must run first\n",1);
+};
+
+$success = sub
+{
+	my %info = @_;
+	my $cluster = $info{"cluster"};
+	my $job = $info{"job"};
+
+	CondorTest::debug("Good, good job - $job - should complete trivially\n",1);
+};
+
+$abnormal = sub {
+
+	CondorTest::debug("Want to see only submit and abort events for periodic remove test\n",1);
+	exit(1);
+};
+
+$aborted = sub {
+	CondorTest::debug("Abort event expected from expected condor_rm used to remove the requeueing job\n",1);
+	CondorTest::debug("Policy test worked.\n",1);
+};
+
+$held = sub {
+	die "We don't hit Hold state for job restarted for not running long enough!\n";
+	exit(1);
+};
+
+$evicted = sub
+{
+	my %args = @_;
+	my $cluster = $args{"cluster"};
+
+	CondorTest::debug("Good a requeue.....after eviction....\n",1);
+	my @adarray;
+	my $status = 1;
+	my $cmd = "condor_rm $cluster";
+	$status = CondorTest::runCondorTool($cmd,\@adarray,2,{emit_output=>0});
+	if(!$status)
+	{
+		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
+		exit(0)
+	}
+};
+
+print "\n\nOn Exit Remove false\n\n";
+
+SimpleJob::RunCheck(
+    runthis=>"x_time.pl",
+    on_execute=>$executed,
+    on_success=>$success,
+    duration=>3,
+    append_submit_commands=>$falsepolicy,
+);
+
+$testname = "job_core_onexitrem_van_true";
+
+print "\n\nOn Exit Remove true\n\n";
+
+SimpleJob::RunCheck(
+    runthis=>"x_time.pl",
+    on_evictedwithrequeue=>$evicted,
+    on_execute=>$executed,
+    on_exitedabnormal=>$abnormal,
+    on_hold=>$held,
+    duration=>3,
+    on_abort=>$aborted,
+    append_submit_commands=>$truepolicy,
+);
+
+CondorTest::EndTest();
+print scalar localtime() . "\n";
+
+if( $finalresult != 0 )
+{
+    exit(1);
 }
 
-if($willstatus != 0)
-{
-	CondorTest::debug("ON_EXIT_REMOVE: failed trigger test\n",1);
-}
+print "\n\nOn Exit Remove true\n\n";
+CondorTest::debug("$testname SUCCESS\n",1);
+exit(0);
 
-if(($willstatus != 0) || ($nostatus != 0))
-{
-	die "Failed one ON_EXIT_REMOVE test\n";
-}
 
 

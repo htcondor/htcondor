@@ -44,17 +44,15 @@ the \SubmitCmd{gce\_image} command.
 
 This grid type requires granting HTCondor permission to use your
 Google account. 
-The easiest way to do this is to use the \Prog{gcutil}
+The easiest way to do this is to use the \Prog{gcloud}
 command-line tool distributed by Google.
-Find \Prog{gcutil} and documentation for it at
-\URL{https://developers.google.com/compute/docs/gcutil}.
-After installation of \Prog{gcutil}, 
-run \Prog{gcutil auth} and follow its directions.
+Find \Prog{gcloud} and documentation for it at
+\URL{https://cloud.google.com/compute/docs/gcloud-compute/}.
+After installation of \Prog{gcloud}, 
+run \Prog{gcloud auth login} and follow its directions.
 Once done with that step,
 the tool will write authorization credentials to the
-file \File{.gcutil\_auth} in your HOME directory.
-The \Arg{--credentials\_file} command-line argument may be used to tell
-\Prog{gcutil} to use a different file.
+file \File{.config/gcloud/credentials} under your HOME directory.
 
 Given an authorization file, specify its location in
 the submit description file using the \SubmitCmd{gce\_auth\_file} command,

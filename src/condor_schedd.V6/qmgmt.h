@@ -27,6 +27,12 @@
 #include "condor_sockaddr.h"
 #include "classad_log.h"
 
+// this header declares functions internal to the schedd, it should not be included by code external to the schedd
+// and it should always be included before condor_qmgr.h so that it can disable external prototype declaraions in that file. 
+#define SCHEDD_INTERNAL_DECLARATIONS
+#ifdef SCHEDD_EXTERNAL_DECLARATIONS
+#error This header must be included before condor_qmgr.h for code internal to the SCHEDD, and not at all for external code
+#endif
 
 void PrintQ();
 class Service;
@@ -76,6 +82,64 @@ class QmgmtPeer {
 };
 
 
+#define USE_JOB_QUEUE_JOB 1 // contents of the JobQueue is a class *derived* from ClassAd, (new for 8.3)
+
+// used to store a ClassAd + runtime information in a condor hashtable.
+class JobQueueJob : public ClassAd {
+public:
+	JOB_ID_KEY jid;
+protected:
+	char entry_type;    // Job queue entry type: header, cluster or job (i.e. one of entry_type_xxx enum codes, 0 is unknown)
+	char universe;
+	char has_noop_attr; // 1 if job has ATTR_JOB_NOOP
+	char future_status; // FUTURE: keep this in sync with job status
+public:
+	int autocluster_id;
+protected:
+	JobQueueJob * link; // FUTURE: jobs are linked to clusters.
+	int future_num_procs_or_hosts; // FUTURE: num_procs if cluster, num hosts if job
+
+public:
+	JobQueueJob(int _etype=0)
+		: jid(0,0)
+		, entry_type(_etype)
+		, universe(0)
+		, has_noop_attr(2) // value of 2 forces PopulateFromAd() to check if it exists.
+		, future_status(0) // JOB_STATUS_MIN
+		, autocluster_id(0)
+		, future_num_procs_or_hosts(0)
+	{}
+	virtual ~JobQueueJob() {};
+
+	enum {
+		entry_type_unknown=0,
+		entry_type_header,
+		entry_type_cluster,
+		entry_type_job,
+	};
+	bool IsType(char _type) { if ( ! entry_type) this->PopulateFromAd(); return entry_type==_type; }
+	bool IsJob() { return IsType(entry_type_job); }
+	bool IsHeader() { return IsType(entry_type_cluster); }
+	bool IsCluster() { return IsType(entry_type_header); }
+	int  Universe() { return universe; }
+	void SetUniverse(int uni) { universe = uni; }
+	bool IsNoopJob();
+	// FUTURE:
+	int NumProcs() { if (entry_type == entry_type_cluster) return future_num_procs_or_hosts; return 0; }
+	int IncrementNumProcs() { if (entry_type == entry_type_cluster) return ++future_num_procs_or_hosts; return 0; }
+	int NumHosts() { if (entry_type == entry_type_job) return future_num_procs_or_hosts; return 0; }
+
+	//JobQueueJob( const ClassAd &ad );
+	//JobQueueJob( const classad::ClassAd &ad );
+
+	void PopulateFromAd(); // populate this structure from contained ClassAd state
+	// if this object is a job object, it can be linked to it's cluster object
+	JobQueueJob * Cluster() { if (entry_type == entry_type_job) return link; return NULL; }
+	void SetCluster(JobQueueJob* _link) {
+		if (entry_type == entry_type_unknown) entry_type = entry_type_job;
+		if (entry_type == entry_type_job) link = _link;
+	}
+};
 
 
 void CloseJobHistoryFile();
@@ -84,7 +148,7 @@ time_t GetOriginalJobQueueBirthdate();
 void DestroyJobQueue( void );
 int handle_q(Service *, int, Stream *sock);
 void dirtyJobQueue( void );
-bool SendDirtyJobAdNotification(char *job_id_str);
+bool SendDirtyJobAdNotification(const PROC_ID& job_id);
 
 bool isQueueSuperUser( const char* user );
 
@@ -102,16 +166,155 @@ bool BuildPrioRecArray(bool no_match_found=false);
 void DirtyPrioRecArray();
 extern ClassAd *dollarDollarExpand(int cid, int pid, ClassAd *job, ClassAd *res, bool persist_expansions);
 bool rewriteSpooledJobAd(ClassAd *job_ad, int cluster, int proc, bool modify_ad);
-ClassAd* GetJobAd(int cluster_id, int proc_id, bool expStartdAd, bool persist_expansions);
-ClassAd* GetNextJobByCluster( int, int );
 
-ClassAdLog::filter_iterator BeginIterator(const classad::ExprTree &requirements, int timeslice_ms);
-ClassAdLog::filter_iterator EndIterator();
+// The returned expanded ad is a copy of the job classad, and must be deleted
+ClassAd* GetExpandedJobAd(const PROC_ID& jid, bool persist_expansions);
+
+#ifdef SCHEDD_INTERNAL_DECLARATIONS
+JobQueueJob* GetJobAd(const PROC_ID& jid);
+JobQueueJob* GetJobAd(int cluster, int proc);
+ClassAd * GetJobAd_as_ClassAd(int cluster_id, int proc_id, bool expStardAttrs = false, bool persist_expansions = true );
+ClassAd *GetJobByConstraint_as_ClassAd(const char *constraint);
+ClassAd *GetNextJobByConstraint_as_ClassAd(const char *constraint, int initScan);
+#define FreeJobAd(ad) ad = NULL
+
+JobQueueJob* GetNextJob(int initScan);
+JobQueueJob* GetNextJobByCluster( int, int );
+JobQueueJob* GetNextJobByConstraint(const char *constraint, int initScan);
+JobQueueJob* GetNextDirtyJobByConstraint(const char *constraint, int initScan);
+#endif
+
+void * BeginJobAggregation(const char * projection, bool create_if_not, const char * constraint);
+ClassAd *GetNextJobAggregate(void * aggregation, bool first);
+void ReleaseAggregationAd(void *aggregation, ClassAd * ad);
+void ReleaseAggregation(void *aggregation);
+
+
+// this class combines a JOB_ID_KEY with a cached string representation of the key
+class JOB_ID_KEY_BUF : public JOB_ID_KEY {
+public:
+	char job_id_str[PROC_ID_STR_BUFLEN];
+	JOB_ID_KEY_BUF() { cluster = proc = 0; job_id_str[0] = 0; }
+	//operator const char*() { return this->c_str(); }
+	const char * c_str() {
+		if ( ! job_id_str[0])
+			ProcIdToStr(cluster, proc, job_id_str);
+		return job_id_str;
+	}
+	const PROC_ID& id() {
+		return *reinterpret_cast<PROC_ID*>(&(this->cluster));
+	}
+	void set(const char * jid) {
+		if ( ! jid || ! jid[0]) {
+			cluster =  proc = 0;
+			job_id_str[0] = 0;
+			return;
+		}
+		strncpy(job_id_str, jid, sizeof(job_id_str));
+		job_id_str[sizeof(job_id_str)-1] = 0;
+		StrIsProcId(job_id_str, cluster, proc, NULL);
+	}
+	void set(int c, int p) {
+		cluster = c; proc = p;
+		job_id_str[0] = 0; // this will force re-rendering of the string
+	}
+	void sprint(MyString & s) { s = this->c_str(); }
+	JOB_ID_KEY_BUF(const char * jid)          : JOB_ID_KEY(0,0) { set(jid); }
+	JOB_ID_KEY_BUF(int c, int p)              : JOB_ID_KEY(c,p) { job_id_str[0] = 0; }
+	JOB_ID_KEY_BUF(const JOB_ID_KEY_BUF& rhs) : JOB_ID_KEY(rhs.cluster, rhs.proc) { job_id_str[0] = 0; }
+	JOB_ID_KEY_BUF(const JOB_ID_KEY& rhs)     : JOB_ID_KEY(rhs.cluster, rhs.proc) { job_id_str[0] = 0; }
+};
+
+
+// specialize the helper class for create/destroy of hashtable entries for the ClassAdLog class
+template <>
+class ConstructClassAdLogTableEntry<JobQueueJob*> : public ConstructLogEntry
+{
+public:
+	virtual ClassAd* New() const { return new JobQueueJob(); }
+	virtual void Delete(ClassAd* &val) const;
+};
+
+// specialize the helper class for used by ClassAdLog transactional insert/remove functions
+template <>
+class ClassAdLogTable<JOB_ID_KEY,JobQueueJob*> : public LoggableClassAdTable {
+public:
+	ClassAdLogTable(HashTable<JOB_ID_KEY,JobQueueJob*> & _table) : table(_table) {}
+	virtual ~ClassAdLogTable() {};
+	virtual bool lookup(const char * key, ClassAd*& ad) {
+		JobQueueJob* Ad=NULL;
+		JOB_ID_KEY k(key);
+		int iret = table.lookup(k, Ad);
+		ad=Ad;
+		return iret >= 0;
+	}
+	virtual bool remove(const char * key) {
+		JOB_ID_KEY k(key);
+		return table.remove(k) >= 0;
+	}
+	virtual bool insert(const char * key, ClassAd * ad) {
+		JOB_ID_KEY k(key);
+		JobQueueJob* Ad = new JobQueueJob();  // TODO: find out of we can count on ad already being a JobQueueJob*
+		Ad->Update(*ad); delete ad; // TODO: transfer ownership of attributes from ad to Ad? I think this ad is always nearly empty.
+		int iret = table.insert(k, Ad);
+		return iret >= 0;
+	}
+	virtual void startIterations() { table.startIterations(); } // begin iterations
+	virtual bool nextIteration(const char*& key, ClassAd*&ad) {
+		JobQueueJob* Ad=NULL;
+		current_key.set(NULL); // make sure to clear out the string value for the current key
+		int iret = table.iterate(current_key, Ad);
+		if (iret != 1) {
+			key = NULL;
+			ad = NULL;
+			return false;
+		}
+		key = current_key.c_str();
+		ad = Ad;
+		return true;
+	}
+protected:
+	HashTable<JOB_ID_KEY,JobQueueJob*> & table;
+	JOB_ID_KEY_BUF current_key; // used during iteration, so we can return a const char *
+};
+
+// new for 8.3, use a non-string type as the key for the JobQueue
+// and a type derived from ClassAd for the payload.
+typedef JOB_ID_KEY JobQueueKey;
+typedef JobQueueJob* JobQueuePayload;
+typedef ClassAdLog<JOB_ID_KEY, const char*,JobQueueJob*> JobQueueLogType;
+
+JobQueueLogType::filter_iterator GetJobQueueIterator(const classad::ExprTree &requirements, int timeslice_ms);
+JobQueueLogType::filter_iterator GetJobQueueIteratorEnd();
+
+
+class schedd_runtime_probe;
+typedef int (*queue_classad_scan_func)(ClassAd *ad, void* user);
+void WalkJobQueue3(queue_classad_scan_func fn, void* pv, schedd_runtime_probe & ftm);
+typedef int (*queue_job_scan_func)(JobQueueJob *ad, const JobQueueKey& key, void* user);
+void WalkJobQueue3(queue_job_scan_func fn, void* pv, schedd_runtime_probe & ftm);
+#define WalkJobQueue(fn) WalkJobQueue3( (fn), NULL, WalkJobQ_ ## fn ## _runtime )
+#define WalkJobQueue2(fn,pv) WalkJobQueue3( (fn), (pv), WalkJobQ_ ## fn ## _runtime )
+
+bool InWalkJobQueue();
+
+void InitQmgmt();
+void InitJobQueue(const char *job_queue_name,int max_historical_logs);
+void PostInitJobQueue();
+void CleanJobQueue();
+bool setQSock( ReliSock* rsock );
+void unsetQSock();
+void MarkJobClean(PROC_ID job_id);
+void MarkJobClean(int cluster_id, int proc_id);
+void MarkJobClean(const char* job_id_str);
+
+bool Reschedule();
 
 int get_myproxy_password_handler(Service *, int, Stream *sock);
 
 QmgmtPeer* getQmgmtConnectionInfo();
 bool OwnerCheck(int,int);
+
 
 // priority records
 extern prio_rec *PrioRec;

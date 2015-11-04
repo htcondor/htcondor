@@ -56,6 +56,8 @@ class CondorResource : public BaseResource
 												 const char *pool_name,
 												 const Proxy *proxy );
 
+	static bool GahpErrorResourceDown( const char *errmsg );
+
 	StringList submitter_ids;
 	std::string submitter_constraint;
 	int scheddPollTid;

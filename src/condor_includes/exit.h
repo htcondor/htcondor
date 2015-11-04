@@ -99,6 +99,12 @@
    not accept any more jobs. */
 #define JOB_EXITED_AND_CLAIM_CLOSING (15 + EXIT_CODE_OFFSET)
 
+/* Shadow was started in reconnect mode, and yet failed to 
+   reconnect to the starter. The schedd looks for this
+   exit code to update some statistics (see gt #4783), and
+   then treats this just like JOB_SHOULD_REQUEUE. */
+#define JOB_RECONNECT_FAILED (16 + EXIT_CODE_OFFSET)
+
 /*
   WARNING: don't go above 27 with these, or we run out of bits in the
   exit status code
@@ -118,6 +124,15 @@
 /* The daemon exited and does not want to be restarted automatically. */
 #define DAEMON_NO_RESTART (EXIT_CODE_OFFSET - 1)
 
+/***********************************************************************
+  Exit codes for condor_starter to the condor_startd.
+  Yes they should be offset, but for now they are not.
+  Note that when the starter is running under the schedd (local universe)
+  it will use the shadow exit codes above.
+***********************************************************************/
+#define STARTER_EXIT_NORMAL 0 
+#define STARTER_EXIT_GENERAL_FAILURE 1
+#define STARTER_EXIT_LOST_SHADOW_CONNECTION 2
 
 BEGIN_C_DECLS
 int generate_exit_code( int input_code );

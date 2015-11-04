@@ -43,7 +43,7 @@
 
 #ifndef READ_ONLY_SCHEDULER_OBJECT
 // Global Scheduler object, used for needReschedule
-#include "../condor_schedd.V6/scheduler.h"
+#include <scheduler.h>
 extern Scheduler scheduler;
 extern char * Name;
 extern bool qmgmt_all_users_trusted;

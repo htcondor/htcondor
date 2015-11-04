@@ -705,6 +705,43 @@ ArgList::GetArgsStringForDisplay(MyString *result,int start_arg) const
 	GetArgsStringV2Raw(result,NULL,start_arg);
 }
 
+// Separate arguments with a space.  Replace whitespace in each argument
+// with their C-style escapes.
+void ArgList::GetArgsStringForLogging( MyString * result ) const {
+	ASSERT( result );
+
+	MyString * msArg = NULL;
+	SimpleListIterator<MyString> it( args_list );
+	while( it.Next( msArg ) ) {
+		const char * arg = msArg->c_str();
+
+		if( result->Length() != 0 ) { * result += " "; }
+		while( * arg ) {
+			switch( * arg ) {
+				case ' ':
+					* result += "\\ ";
+					break;
+				case '\t':
+					* result += "\\t";
+					break;
+				case '\v':
+					* result += "\\v";
+					break;
+				case '\n':
+					* result += "\\n";
+					break;
+				case '\r':
+					* result += "\\r";
+					break;
+				default:
+					* result += *arg;
+					break;
+			}
+			++arg;
+		}
+	}
+}
+
 
 bool
 ArgList::GetArgsStringV1or2Raw(MyString *result,MyString *error_msg) const

@@ -242,7 +242,12 @@ chirp_put_one_file(char *local, char *remote, int perm) {
 	
 		// Get size of file, allocate buffer
 	struct stat stat_buf;
-	stat(local, &stat_buf);
+	if (fstat(fileno(rfd), &stat_buf) == -1) {
+		fprintf(stderr, "Can't fstat local file %s\n", local);
+		fclose(rfd);
+		DISCONNECT_AND_RETURN(client, -1);
+	}
+
 	int size = stat_buf.st_size;
 	char* buf = (char*)malloc(size);
 	if ( ! buf) {
@@ -371,6 +376,7 @@ int chirp_get_job_attr(int argc, char **argv) {
 	char *p = 0;
 	int len = chirp_client_get_job_attr(client, argv[2], &p);
 	printf("%.*s\n", len, p);
+	free(p);
 	DISCONNECT_AND_RETURN(client, 0);
 }
 
@@ -390,6 +396,7 @@ int chirp_get_job_attr_delayed(int argc, char **argv) {
 	char *p = 0;
 	int len = chirp_client_get_job_attr_delayed(client, argv[2], &p);
 	printf("%.*s\n", len, p);
+	free(p);
 	DISCONNECT_AND_RETURN(client, 0);
 }
 
@@ -502,6 +509,11 @@ int chirp_read(int argc, char **argv) {
 
 	char *path = argv[fileOffset];
 	int length = strtol(argv[fileOffset + 1], NULL, 10);
+	void* buf = malloc(length+1);
+	if ( ! buf) {
+		printf("failed to allocate %d bytes\n", length);
+		return -1;
+	}
 	
 	struct chirp_client *client = 0;
 	CONNECT_STARTER(client);
@@ -510,7 +522,6 @@ int chirp_read(int argc, char **argv) {
 	if(fd < 0) {
 		DISCONNECT_AND_RETURN(client, fd);
 	}
-	void* buf = malloc(length+1);
 	
 	int ret_val = -1;
 	// Use read
@@ -1046,5 +1057,4 @@ main(int argc, char **argv) {
 		printf("\tError: %d (%s)\n", errno, strerror(errno));
 	}
 	return ret_val;
-	exit(-1);
 }

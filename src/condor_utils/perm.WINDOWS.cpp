@@ -206,6 +206,7 @@ int perm::userInLocalGroup( const char *account, const char *domain, const char 
 	NET_API_STATUS status;
 	wchar_t group_name_unicode[MAX_GROUP_LENGTH+1];
 	_snwprintf(group_name_unicode, MAX_GROUP_LENGTH+1, L"%S", group_name);
+	group_name_unicode[MAX_GROUP_LENGTH] = 0;
 	
 	
 	DWORD_PTR resume_handle = 0;
@@ -290,6 +291,8 @@ int perm::userInGlobalGroup( const char *account, const char *domain, const char
 	wchar_t group_name_unicode[MAX_GROUP_LENGTH+1];	// groups limited to 256 chars
 	_snwprintf(group_domain_unicode, MAX_DOMAIN_LENGTH+1, L"%S", group_domain);
 	_snwprintf(group_name_unicode, MAX_GROUP_LENGTH+1, L"%S", group_name);
+	group_domain_unicode[MAX_DOMAIN_LENGTH] = 0;
+	group_name_unicode[MAX_GROUP_LENGTH] = 0;
 	
 	GROUP_USERS_INFO_0 *group_members;
 	unsigned long entries_read, total_entries;
@@ -536,7 +539,8 @@ bool perm::init( const char *accountname, const char *domain )
 
 		// no domain specified, so just copy the accountname.
 		Domain_name = NULL;
-		strncpy(qualified_account, accountname, 1023);
+		strncpy(qualified_account, accountname, 1024);
+		qualified_account[1024-1] = 0;
 	}
 
 	domainBufferSize = COUNTOF(domainBuffer);

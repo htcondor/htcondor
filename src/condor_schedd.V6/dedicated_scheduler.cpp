@@ -38,7 +38,6 @@
 #include "scheduler.h"
 #include "condor_debug.h"
 #include "condor_config.h"
-#include "condor_qmgr.h"
 #include "condor_query.h"
 #include "condor_adtypes.h"
 #include "condor_state.h"
@@ -49,6 +48,7 @@
 #include "exit.h"
 #include "dc_startd.h"
 #include "qmgmt.h"
+#include "condor_qmgr.h"
 #include "schedd_negotiate.h"
 
 #include <vector>
@@ -325,6 +325,7 @@ ResList::sortByRank(ClassAd *rankAd) {
 	this->Rewind();
 
 	struct rankSortRec *array = new struct rankSortRec[this->Number()];
+	ASSERT(array);
 	int index = 0;
 	ClassAd *machine = NULL;
 
@@ -735,6 +736,12 @@ DedicatedScheddNegotiate::scheduler_handleJobRejected(PROC_ID job_id,char const 
 	dprintf(D_FULLDEBUG, "Job %d.%d rejected: %s\n",
 			job_id.cluster, job_id.proc, reason);
 
+	if ( job_id.cluster < 0 || job_id.proc < 0 ) {
+		// If we asked the negotiator for matches for jobs that can no
+		// longer use them, the negotiation code uses a job id of -1.-1.
+		return;
+	}
+
 	SetAttributeString(
 		job_id.cluster, job_id.proc,
 		ATTR_LAST_REJ_MATCH_REASON,	reason, NONDURABLE);
@@ -878,6 +885,7 @@ bool
 DedicatedScheduler::deactivateClaim( match_rec* m_rec )
 {
 	ReliSock sock;
+	ClassAd responseAd;
 
 	dprintf( D_FULLDEBUG, "DedicatedScheduler::deactivateClaim\n");
 
@@ -914,6 +922,13 @@ DedicatedScheduler::deactivateClaim( match_rec* m_rec )
 		return false;
 	}
 	
+	// Wait for response from the startd to avoid misleading errors.
+	sock.decode();
+	// Ignore decode/getClassAd errors - Failure to receive the response classad
+	// should "not be critical in any way" (see comment in startd/command.cpp 
+	//  - deactivate_claim()).
+	getClassAd(&sock, responseAd);
+
 		// Clear out this match rec, since it's no longer allocated to
 		// a given MPI job.
 	deallocMatchRec( m_rec );
@@ -927,6 +942,8 @@ DedicatedScheduler::sendAlives( void )
 {
 	match_rec	*mrec;
 	int		  	numsent=0;
+	int now = (int)time(0);
+	bool starter_handles_alives = param_boolean("STARTER_HANDLES_ALIVES",true);
 
 	BeginTransaction();
 
@@ -940,11 +957,19 @@ DedicatedScheduler::sendAlives( void )
 		}
 
 		if (mrec->m_startd_sends_alives && (mrec->status == M_ACTIVE)) {
-
 				// in receive_startd_update, we've updated the lease time only in the job ad
 				// actually write it to the job log here in one big transaction.
 			int renew_time = 0;
-			GetAttributeInt(mrec->cluster,mrec->proc, ATTR_LAST_JOB_LEASE_RENEWAL,&renew_time);
+			if ( starter_handles_alives && 
+				 mrec->shadowRec && mrec->shadowRec->pid > 0 ) 
+			{
+				// If we're trusting the existance of the shadow to 
+				// keep the claim alive (because of kernel sockopt keepalives),
+				// set ATTR_LAST_JOB_LEASE_RENEWAL to the current time.
+				renew_time = now;
+			} else {
+				GetAttributeInt(mrec->cluster,mrec->proc, ATTR_LAST_JOB_LEASE_RENEWAL,&renew_time);
+			}
 			SetAttributeInt( mrec->cluster, mrec->proc, ATTR_LAST_JOB_LEASE_RENEWAL, renew_time ); 
 		}
 	}
@@ -1228,7 +1253,12 @@ DedicatedScheduler::giveMatches( int, Stream* stream )
 				return FALSE;
 			}				
 			//job_ad = new ClassAd( *((*alloc->jobs)[p]) );
-			job_ad = dollarDollarExpand(0,0, (*alloc->jobs)[p], (*matches)[i]->my_match_ad, true);
+			job_ad = dollarDollarExpand(cluster,p, (*alloc->jobs)[p], (*matches)[i]->my_match_ad, true);
+			if( ! job_ad) {
+				dprintf( D_ALWAYS, "ERROR in giveMatches: "
+						 "dollarDollarExpand fails for proc %d\n", p );
+				return FALSE;
+			}
 			if( ! putClassAd(stream, *job_ad) ) {
 				dprintf( D_ALWAYS, "ERROR in giveMatches: "
 						 "can't send job classad for proc %d\n", p );
@@ -1614,10 +1644,10 @@ DedicatedScheduler::sortResources( void )
 
         // new dynamic slots may also show up here, which need to have their
         // match_rec moved from the pending table into the all_matches table
+        MyString resname;
+        res->LookupString(ATTR_NAME, resname);
         if (is_dynamic(res)) {
-            MyString resname;
             match_rec* dmrec = NULL;
-            res->LookupString(ATTR_NAME, resname);
             if (all_matches->lookup(HashKey(resname.Value()), dmrec) < 0) {
                 dprintf(D_FULLDEBUG, "New dynamic slot %s\n", resname.Value());
                 if (!(is_claimed(res) && is_idle(res))) {
@@ -1667,6 +1697,28 @@ DedicatedScheduler::sortResources( void )
 			// storing in the match_rec, since that's now got
 			// (probably) stale info, and we always want to use the
 			// most recent.
+
+		// Carry any negotiator match attrs over from the existing match ad. 
+		// Otherwise these will be lost and dollar-dollar expansion will fail.
+		mrec->my_match_ad->ResetName();
+		char const *c_name;
+		size_t len = strlen(ATTR_NEGOTIATOR_MATCH_EXPR);
+		while( (c_name=mrec->my_match_ad->NextNameOriginal()) ) {
+			if( !strncmp(c_name,ATTR_NEGOTIATOR_MATCH_EXPR,len) ) {
+				ExprTree *oexpr = mrec->my_match_ad->LookupExpr(c_name);
+				if( !oexpr ) {
+					continue;
+				}
+				ExprTree *nexpr = res->LookupExpr(c_name);
+				if (!nexpr) {
+					const char *oexprStr = ExprTreeToString(oexpr);
+					res->AssignExpr(c_name, oexprStr);
+
+					dprintf( D_FULLDEBUG, "%s: Negotiator match attribute %s==%s carried over from existing match record.\n", 
+						resname.Value(), c_name, oexprStr);
+				}
+			}
+		}
 		delete( mrec->my_match_ad );
 		mrec->my_match_ad = new ClassAd( *res );
 
@@ -1833,6 +1885,7 @@ DedicatedScheduler::spawnJobs( void )
 			// need to skip following line if it is a reconnect job already
 		if (! allocation->is_reconnect) {
 			addReconnectAttributes( allocation);
+			scheduler.stats.JobsRestartReconnectsAttempting += 1;
 		}
 
 			/*
@@ -2344,6 +2397,9 @@ DedicatedScheduler::computeSchedule( void )
 			preemption_rank = tmp_expr;
 #endif
 
+			if (nodes_per_proc) {
+				delete [] nodes_per_proc;
+			}
 			nodes_per_proc = new int[nprocs];
 			for (int ni = 0; ni < nprocs; ni++) {
 				nodes_per_proc[ni] = 0;
@@ -2573,6 +2629,7 @@ DedicatedScheduler::computeSchedule( void )
 			delete jobs;
 			if( nodes_per_proc ) {
 					delete [] nodes_per_proc;
+					nodes_per_proc = NULL;
 			}
 			return true;
 		} else {
@@ -2960,6 +3017,57 @@ DedicatedScheduler::shutdownMpiJob( shadow_rec* srec , bool kill /* = false */)
 	}
 }
 
+static void update_negotiator_attrs_for_partitionable_slots(ClassAd* match_ad)
+{
+	typedef std::map<std::string, std::string> negotiator_attr_cache_entry_t;
+	typedef std::map<std::string, negotiator_attr_cache_entry_t> negotiator_attr_cache_t;
+	static negotiator_attr_cache_t negotiator_attr_cache;
+
+	std::string partitionable_slot_name;
+	match_ad->LookupString(ATTR_NAME, partitionable_slot_name);
+	if (partitionable_slot_name.length() == 0) return; 
+	bool negotiator_attr_found = false;
+	negotiator_attr_cache_t::iterator cit = negotiator_attr_cache.find(partitionable_slot_name);
+
+	match_ad->ResetName();
+	char const *c_name;
+	size_t len = strlen(ATTR_NEGOTIATOR_MATCH_EXPR);
+	while( (c_name=match_ad->NextNameOriginal()) ) {
+		if( !strncmp(c_name,ATTR_NEGOTIATOR_MATCH_EXPR,len) ) {
+			ExprTree *expr = match_ad->LookupExpr(c_name);
+			if( !expr ) {
+				continue;
+			}
+			if (!negotiator_attr_found) {
+				// New set of attributes. Reset cache for this partitionable slot.
+				if (cit != negotiator_attr_cache.end()) cit->second.clear();
+				negotiator_attr_found = true;
+			}
+			std::string exprs(ExprTreeToString(expr));
+			if (cit != negotiator_attr_cache.end()) {
+				cit->second[std::string(c_name)] = exprs;
+			} else {
+				negotiator_attr_cache_entry_t nmap;
+				nmap.insert(negotiator_attr_cache_entry_t::value_type(std::string(c_name),exprs));
+				negotiator_attr_cache.insert(negotiator_attr_cache_t::value_type(partitionable_slot_name, nmap));
+			}
+		}
+	}
+	if (!negotiator_attr_found && (cit != negotiator_attr_cache.end())) {
+		// No negotiator attr found. Insert the cached ones, if any.
+		const negotiator_attr_cache_entry_t &atm=cit->second;
+		negotiator_attr_cache_entry_t::const_iterator mit;
+		negotiator_attr_cache_entry_t::const_iterator mend = atm.end();
+		for (mit = atm.begin(); mit!=mend; ++mit) {
+
+			match_ad->AssignExpr(mit->first.c_str(), mit->second.c_str());
+			dprintf( D_FULLDEBUG, "%s: Negotiator match attribute %s==%s carried over from previous partitionable slot match record.\n", 
+				partitionable_slot_name.c_str(),
+				mit->first.c_str(), mit->second.c_str());
+		}
+	}
+}
+
 match_rec *
 DedicatedScheduler::AddMrec(
 	char const* claim_id,
@@ -2999,7 +3107,18 @@ DedicatedScheduler::AddMrec(
 	// just in case the job is removed while the request is still pending.
 	pending_requests[claim_id]->ChainCollapse();
 
-    if (is_partitionable(match_ad)) {
+    // PartitionableSlot in match_ad can never be 'true' as match_ad was
+    // tweaked by ScheddNegotiate::fixupPartitionableSlot. If we want 
+    // not to store just one 'dynamic' slot per host into all_matches 
+    // and leave behind all extra created dynamic slots 
+    // we need to use/fill pending_matches. Try checking for
+    // SlotTypeID == PARTITIONABLE_SLOT, as this is left unchanged by
+    // ScheddNegotiate::fixupPartitionableSlot.
+    // if (is_partitionable(match_ad)) {
+    int slot_type_id = 0;
+    match_ad->LookupInteger(ATTR_SLOT_TYPE_ID, slot_type_id);
+    if (slot_type_id == 1) { // Cannot include Resource.h from here.
+        update_negotiator_attrs_for_partitionable_slots(mrec->my_match_ad);
         pending_matches[claim_id] = mrec;
         pending_claims[mrec->publicClaimId()] = claim_id;
     } else {
@@ -3844,7 +3963,7 @@ DedicatedScheduler::checkReconnectQueue( void ) {
 						"job %d.%d to %s, because claimid is missing: "
 						"(hosts=%s,claims=%s).\n",
 						id.cluster, id.proc,
-						host ? host : "(null host)",
+						host, 
 						remote_hosts ? remote_hosts : "(null)",
 						claims ? claims : "(null)");
 				dPrintAd(D_ALWAYS, *job);

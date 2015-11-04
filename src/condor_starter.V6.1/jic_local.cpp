@@ -174,7 +174,7 @@ JICLocal::allJobsGone( void )
 		// Since there's no shadow to tell us to go away, we have to
 		// exit ourselves.
 	dprintf( D_ALWAYS, "All jobs have exited... starter exiting\n" );
-	Starter->StarterExit( 0 );
+	Starter->StarterExit( STARTER_EXIT_NORMAL );
 }
 
 
@@ -187,6 +187,13 @@ JICLocal::reconnect( ReliSock* s, ClassAd* /*ad*/ )
 	return FALSE;
 }
 
+void 
+JICLocal::disconnect()
+{
+		// Someday this might mean something, for now it doesn't.
+	dprintf(D_ALWAYS, "Starter using JICLocal does not support disconnect");
+	return;
+}
 
 void
 JICLocal::notifyJobPreSpawn( void )

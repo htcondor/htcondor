@@ -1,0 +1,262 @@
+%%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
+%%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
+%%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
+%%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
+%%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{\label{sec:History-8-4}Stable Release Series 8.4}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+This is a stable release series of HTCondor.
+As usual, only bug fixes (and potentially, ports to new platforms)
+will be provided in future 8.4.x releases.
+New features will be added in the 8.5.x development series.
+
+The details of each version are described below.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-8-4-2}Version 8.4.2}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item HTCondor version 8.4.2 not yet released.
+%\item HTCondor version 8.4.2 released on Month Date, 2015.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item Fixed \MacroNI{TCP\_FORWARDING\_HOST}.  (It now changes how HTCondor
+version 8.3.6 and higher contact the daemon configured with it.)
+\Ticket{5339}
+
+\item Added a default request\_memory for \Condor{submit} -interactive
+of 512 megabytes.  Formerly, the default was one, which is
+insufficient in environments that strictly enforce memory
+usage.
+\Ticket{5344}
+
+\item Added a timeout to the \Condor{fetchlog} command so that it
+will not hang forever waiting for a unresponsive daemon.
+\Ticket{5325}
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-8-4-1}Version 8.4.1}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item HTCondor version 8.4.1 released on October 27, 2015.
+
+\end{itemize}
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item Added support to allow an admin to always volume mount
+	certain directories into docker universe containers running
+	on a host.
+\Ticket{5308}
+
+\item Added four policy metaknobs to simplify configuring a policy
+	to either preempt or hold jobs that use more memory
+	or CPU cores than provisioned in the slot. See the \MacroNI{POLICY}
+	category of metaknobs in section~\ref{usecategory:POLICY} for
+	additional information.
+\Ticket{5250}
+
+\item Added configuration variables and documentation so that we uniformly prefer
+    \Macro{<var>\_ATTRS} over \Macro{<var>\_EXPRS} but support both. This includes
+    \Macro{STARTD\_ATTRS}, \Macro{STARTD\_JOB\_ATTRS} and \Macro{SUBMIT\_ATTRS}
+    which are often used by HTCondor sites which customize the configuration. These
+    configuration variables are now exclusively for use by HTCondor administrators;
+    The former default values for these variables have been moved into other configuration
+    which is reserved for use by HTCondor developers.  This is done to prevent administrators
+    from accidently removing the necessary defaults.
+    A warning about use of \Macro{STARTD\_EXPRS} has been disabled unless
+    \Macro{STARTD\_ATTRS} or\Macro{SLOT\_TYPE\_<n>\_STARTD\_ATTRS} is also used, since
+    the use all three of these at the same time is not supported.
+\Ticket{5326}
+
+\item When \Condor{reconfig} and \Condor{restart} are run as root
+    they will check to see if the condor user has read access to all of the
+    configuration files before sending the command. This is done to prevent aborting the daemons
+    accidently by sending reconfig after the admin creates a new config file and
+    forgets to give the condor user read access to that file.
+\Ticket{4506}
+
+\item Added the \Opt{-natural} sort option to \Condor{status} to sort the slots
+    in numerical order rather than alphabetical order.
+\Ticket{5131}
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item When cgroups are enabled, and CGROUP\_MEMORY\_POLICY is soft, 
+HTCondor now also sets the hard limit to the virtual memory limit
+of the job, if there is one.
+\Ticket{5280}
+
+\item If cgroups are enabled, and a job goes over the memory limit, the
+cgroup OOM killer fires, and the job is put on hold.  HTCondor now
+updates the job's memory usage statistics with the most up to date
+usage, instead of relying on the previous snapshop.
+\Ticket{5341}
+
+\item Fixed a bug where the \Condor{kbdd} could not accurately measure
+the keyboard idle time.  This daemon now works correctly on Linux systems
+whose X server support the MIT screen saver extension.
+\Ticket{5265}
+
+\item Fixed a bug which prevented SOAP submissions.
+\Ticket{5260}
+
+\item The parameter \Macro{STARTD\_HISTORY} is now set to record
+the job histories per startd, in the log directory of the
+execute machine. These can be read with the \Condor{history} command.
+Previously the default was not to record these.
+\Ticket{5257}
+
+\item The parameter \Macro{SCHEDD\_USE\_SLOT\_WEIGHT} now defaults to
+true, so that SLOT\_WEIGHT can be used with hierarchical group quotas
+and partitionable slots.
+\Ticket{5256}
+
+\item Fixed bug whereby occasionally the command-line tools would
+	emit debug messages to stderr with text ``I am: hostname: \ldots''.
+\Ticket{5276}
+
+\item Fixed a bug that prevented node retries from working on DAG
+nodes that are DAG-level NOOP nodes.  (This bug has existed at least since
+the 8.2 series.)
+\Ticket{5277}
+
+\item Fixed a problem when the HTCondor executables were not compiled
+with \Env{RPATH} enabled on Enterprise Linux 6 platforms. \Env{RPATH} is used
+to load Globus and other libraries from the condor-externals RPM.
+\Ticket{5294}
+
+\item The job attribute \Attr{JobCurrentStartTransferOutputDate} is now
+properly reported in the job ad.
+\Ticket{5298}
+
+\item Fixed configuration parameter \MacroNI{NETWORK\_HOSTNAME}, which was
+broken starting with version 8.3.2.
+\Ticket{5288}
+
+\item Fixed a bug that could cause the Job Router to crash when
+invoking a transformation hook.
+\Ticket{5224}
+
+\item Fixed several memory leaks in the \Prog{nordugrid\_gahp}.
+\Ticket{5322}
+
+\item Improved the \Prog{batch\_gahp} to better handle batch systems
+that reuse job IDs.
+\Ticket{5062}
+
+\item When the \Prog{batch\_gahp} rejects a request because it is
+overloaded, the \Condor{gridmanager} now reduces the rate of requests
+and retries the rejected request later.
+\Ticket{5253}
+
+\item Fixed a bug that could cause a daemon to be in the wrong
+privilege state when attempting to act as the user.
+\Ticket{4522}
+
+\item The \Condor{had} and \Condor{replication} daemons now work properly
+when Shared Port is enabled. They still require their own dedicated ports.
+\Ticket{5301}
+
+\item Fixed a bug that cause \Condor{mips} to report numbers about 40 percent lower than it should
+on Linux platforms.
+\Ticket{5261}
+
+\item Fixed a bug in \Condor{install} that would cause it to configure HTCondor to advertise the public
+IP addresses to the collector even when using localhost or 127.0.0.1 for a personal HTCondor.
+\Ticket{5286}
+
+\item Fixed a bug in \Condor{q} that caused slices in the Queue statement to be treated as part of the
+arguments filename when the slice was longer than 8 characters.
+\Ticket{5273}
+
+\item Added SELinux type enforcment rules to allow the \Condor{schedd} to be
+able to access user files in NFS mounted file systems.
+\Ticket{5343}
+\end{itemize}
+
+\noindent Known Issue:
+\begin{itemize}
+\item \MacroNI{TCP\_FORWARDING\_HOST} is disregarded by HTCondor clients
+starting in version 8.3.6.  This bug will be fixed in version 8.4.2 and 8.5.1.
+\Ticket{5339}
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-8-4-0}Version 8.4.0}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+%\item HTCondor version 8.4.0 not yet released.
+\item HTCondor version 8.4.0 released on September 14, 2015.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item Fixed a bug introduced in HTCondor version 8.3.7 that caused the
+\Condor{shared\_port} daemon to leak file descriptors.
+Also made HTCondor work better when some HTCondor daemons
+are using shared port, but the \Condor{master} is not.
+\Ticket{5259}
+
+\item The \Condor{starter} lowers the OOM (out of memory) score of jobs
+so the OOM killer is more likely to chose an HTCondor job rather than
+an HTCondor daemon or other user process.
+\Ticket{5249}
+
+\item Job submission fails if X.509 certificates are advertised with EC2 
+grid universe jobs.
+Therefore EC2 grid universe jobs no longer advertise their access keys.
+\Ticket{5252}
+
+\end{itemize}
+

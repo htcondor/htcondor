@@ -1,0 +1,65 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+
+use CondorTest;
+
+#
+# We're looking to assure that the addrs parameter is always set correctly,
+# no matter how exotic the networking.  We assume that unit_test_sinful will
+# find any problems with the Sinful's structure, so we're just checking
+# content.  We'll use the 'sinful tool', rather than write our own half-assed
+# parsing code in Perl, to extract the ip-port tuples.
+#
+
+#
+# We begin by assuming that all machines have at least an IPv4 and an IPv6
+# loopback, and so will always have both protocols 'available.'
+#
+
+#
+# Start by checking the stupid stuff: if we enable IPv4 or IPv6 exclusively,
+# make sure that we get only addresses of the corresponding type in addrs.
+# Likewise for mixed mode.
+#
+
+#
+# We will accomplish this check by copying $ENV{CONDOR_CONFIG} and modifying
+# it appropriately; for these sub-tests, we don't actually want or need to
+# start a personal Condor.  For convenience, we'll use the testing daemon,
+# which prints its public and private Sinfuls to stdout and exits.
+#
+
+#
+# Naturally, we have to see what happens when we specify a NETWORK_INTERFACE,
+# whose behavior depends on BIND_ALL_INTERFACES.  If false, only address that
+# HTCondor will advertise is NETWORK_INTERFACE.  Is true, NETWORK_INTERFACE
+# must the public (and primary) address advertised, but others may be.
+#
+
+#
+# Now we get to the sub-tests that can't be done without spinning up a
+# personal Condor: shared-port and CCB.  We use the same basic technique as
+# above, except that we need a shared-port daemon and/or a broker to be
+# running in order to generate the appropriate kind of Sinful.  Strictly
+# speaking, we could repeat the above series of subtests for networking
+# involving shared port, CCB, and SP + CCB; but since this test only cares
+# about the correct forwarding addrs, we can just test with IPv4 and IPv6
+# turned on and default networking otherwise.  The CCB tests will be a little
+# involuted  -- either the broker needs to be up when the SP daemon starts, or
+# we need to wait 60 seconds and then condor_reconfig to force out a new
+# SP address file.  (The former can't be done with a single personal Condor,
+# since the broker needs the SPd to be up -- the master always starts the
+# SPd first.)
+#
+
+	# Success.
+	# RegisterResult( 1, "test_name" => $testname );
+
+	# Failure.
+	# RegisterResult( 0, "test_name" => $testname );
+
+# Make sure the test suite correctly notices our failure(s), if any.
+EndTest();
+exit( 1 );

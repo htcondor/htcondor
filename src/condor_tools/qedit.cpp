@@ -45,12 +45,12 @@ usage(char name[])
 bool
 ProtectedAttribute(char attr[])
 {
-	return (strcmp(attr, ATTR_OWNER) == 0) ||
-		(strcmp(attr, ATTR_CLUSTER_ID) == 0) ||
-		(strcmp(attr, ATTR_PROC_ID) == 0) ||
-		(strcmp(attr, ATTR_MY_TYPE) == 0) ||
-		(strcmp(attr, ATTR_TARGET_TYPE) == 0) ||
-		(strcmp(attr, ATTR_JOB_STATUS) == 0);
+	return (strcasecmp(attr, ATTR_OWNER) == 0) ||
+		(strcasecmp(attr, ATTR_CLUSTER_ID) == 0) ||
+		(strcasecmp(attr, ATTR_PROC_ID) == 0) ||
+		(strcasecmp(attr, ATTR_MY_TYPE) == 0) ||
+		(strcasecmp(attr, ATTR_TARGET_TYPE) == 0) ||
+		(strcasecmp(attr, ATTR_JOB_STATUS) == 0);
 }
 
 int
@@ -170,6 +170,10 @@ main(int argc, char *argv[])
 		constraint.formatstr("(%s == \"%s\")", ATTR_OWNER, argv[nextarg]);
 		nextarg++;
 		UseConstraint = true;
+	}
+
+	if (argc <= nextarg) {
+		usage(argv[0]);
 	}
 
 	while (match_prefix(argv[nextarg], "-constraint")) {

@@ -34,7 +34,12 @@ sub timed_callback {
     my $cluster = $args{"cluster"};
 	my @resarray = ();
 
-    my $stat = runCondorTool("condor_status -format \"%s\" \'ifThenElse(PartitionableSlot =?= TRUE, \"P\", ifThenElse(DynamicSlot =?= TRUE, \"D\", \"S\"))' -format \" %s\" State -format \" %s\" Activity -format \" %s\n\" Cpus",\@resarray,2);
+	my $stat;
+	if(is_windows()) {	
+    	$stat = runCondorTool('condor_status -af ifThenElse(PartitionableSlot=?=TRUE,\"P\",ifThenElse(DynamicSlot=?=TRUE,\"D\",\"S\")) -af State -af Activity -af Cpus',\@resarray,2);
+	} else {
+    	$stat = runCondorTool("condor_status -format \"%s\" \'ifThenElse(PartitionableSlot =?= TRUE, \"P\", ifThenElse(DynamicSlot =?= TRUE, \"D\", \"S\"))' -format \" %s\" State -format \" %s\" Activity -format \" %s\n\" Cpus",\@resarray,2);
+	}
 
     my $expected_pslots = 0;
     my $expected_dslots = 0;

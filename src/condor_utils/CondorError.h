@@ -37,7 +37,6 @@ class CondorError {
 		const char* subsys(int level = 0);
 		int   code(int level = 0);
 		const char* message(int level = 0);
-		CondorError* next(int level = 0);
 
 		bool  pop();
 		void  clear();

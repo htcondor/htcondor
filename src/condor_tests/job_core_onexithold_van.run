@@ -19,26 +19,149 @@
 ##**************************************************************
 
 use CondorTest;
+use Check::SimpleJob;
 
-$testdesc =  'Condor ON_EXIT_HOLD policy test - vanilla U';
-$testname = "job_core_onexithold_van";
+my $truepolicy = '
+on_exit_hold = (time() - QDate) > 1
+';
+my $falsepolicy = '
+on_exit_hold = (time() - QDate) < (2)
+';
 
-my $nostatus = CondorTest::verbose_system("./job_core_onexithold-false_van.pl");
-my $willstatus = CondorTest::verbose_system("./job_core_onexithold-true_van.pl");
+$testname = "job_core_onexithold_van_false";
 
-if($nostatus != 0)
+my $killedchosen = 0;
+
+# truly const variables in perl
+sub IDLE{1};
+sub HELD{5};
+sub RUNNING{2};
+
+my %info;
+my $cluster;
+
+$executed = sub
 {
-	CondorTest::debug("ON_EXIT_HOLD: failed no trigger test\n",1);
+	%info = @_;
+	$cluster = $info{"cluster"};
+
+	CondorTest::debug("Good. for on_exit_hold cluster $cluster must run first\n",1);
+};
+
+$success = sub
+{
+	my %info = @_;
+	my $cluster = $info{"cluster"};
+	my $job = $info{"job"};
+
+	if($testname eq "job_core_onexithold_van_false") {
+		CondorTest::debug("Good, good job - $job - should complete trivially\n",1);
+	} else {
+		die "Bad, job should be on hold and then cpondor_rm and not run to completion!!!\n";
+	}
+};
+
+$submitted = sub
+{
+	my %info = @_;
+	my $cluster = $info{"cluster"};
+	my $job = $info{"job"};
+
+	CondorTest::debug("submitted: \n",1);
+	{
+		CondorTest::debug("good job $job expected submitted.\n",1);
+	}
+};
+
+$aborted = sub {
+	my $done;
+	%info = @_;
+	$cluster = $info{"cluster"};
+	$job = $info{"job"};
+
+	CondorTest::debug("Good, job - $cluster $job - aborted after Hold state reached\n",1);
+};
+
+$held = sub {
+	my $done;
+	%info = @_;
+	$cluster = $info{"cluster"};
+	$job = $info{"job"};
+
+	my $fulljob = "$cluster"."."."$job";
+	CondorTest::debug("Good, good run of job - $fulljob - should be in queue on hold now\n",1);
+	CondorTest::debug("Removing $fulljob\n",1);
+	my @adarray;
+	my $status = 1;
+	my $cmd = "condor_rm $cluster";
+	$status = CondorTest::runCondorTool($cmd,\@adarray,2,{emit_output=>0});
+	if(!$status)
+	{
+		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
+		exit(1)
+	}
+	my @nadarray;
+	$status = 1;
+	$cmd = "condor_reschedule";
+	$status = CondorTest::runCondorTool($cmd,\@nadarray,2,{emit_output=>0});
+	if(!$status)
+	{
+		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
+		exit(1)
+	}
+};
+
+print "\n\nTesting ON_EXIT_HOLD being false\n\n";
+$killedchosen = 0;
+
+SimpleJob::RunCheck(
+	runthis=>"x_time.pl",
+	on_execute=>$executed,
+	on_submit=>$submitted,
+	on_success=>$success,
+	append_submit_commands=>$falsepolicy,
+	duration=>3,
+);
+
+$testname = "job_core_onexithold_van_true";
+print "\n\nTesting ON_EXIT_HOLD being true\n\n";
+
+SimpleJob::RunCheck(
+    runthis=>"x_time.pl",
+    on_execute=>$executed,
+    on_success=>$success,
+    on_abort=>$aborted,
+    on_hold=>$held,
+    on_submit=>$on_submit,
+    append_submit_commands=>$truepolicy,
+    duration=>5,
+);
+
+
+CondorTest::EndTest();
+print scalar localtime() . "\n";
+
+if( $result != 0 )
+{
+    exit(1);
 }
 
-if($willstatus != 0)
-{
-	CondorTest::debug("ON_EXIT_HOLD: failed trigger test\n",1);
-}
 
-if(($willstatus != 0) || ($nostatus != 0))
-{
-	die "Failed one ON_EXIT_HOLD test\n";
-}
+
+
+#if($nostatus != 0)
+#{
+	#CondorTest::debug("ON_EXIT_HOLD: failed no trigger test\n",1);
+#}
+#
+#if($willstatus != 0)
+#{
+	#CondorTest::debug("ON_EXIT_HOLD: failed trigger test\n",1);
+#}
+#
+#if(($willstatus != 0) || ($nostatus != 0))
+#{
+	#die "Failed one ON_EXIT_HOLD test\n";
+#}
 
 

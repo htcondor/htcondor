@@ -31,9 +31,11 @@
 class StringList {
 public:
 	StringList(const char *s = NULL, const char *delim = " ," );
+	StringList(const char *s, char delim_char, bool keep_empty_fields );
 	StringList( const StringList &other );
 	virtual ~StringList();
 	void initializeFromString (const char *);
+	void initializeFromString (const char *, char delim_char);
 
 	/** Note: the contains* methods have side affects -- they
 		change "current" to point at the location of the match */
@@ -59,6 +61,7 @@ public:
 	void clearAll();
 	void remove_anycase (const char* str);
 	char *next (void) { return m_strings.Next(); }
+	char *first (void) { m_strings.Rewind(); return m_strings.Next(); }
 	
 	/** This is invalid when "current" points to NULL as stated in list.h*/
 	void deleteCurrent();

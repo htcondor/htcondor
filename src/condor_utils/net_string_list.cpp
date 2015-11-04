@@ -30,19 +30,6 @@ NetStringList::NetStringList(const char *s, const char *delim )
 		// nothing else to do
 }
 
-
-// string_withnetmask() handles the following four forms:
-//
-// 192.168.*
-// 192.168.10.1
-// 192.168.0.0/24 
-// 192.168.0.0/255.255.255.0
-//
-// this only checks against strings which are in the above form.  so, just a
-// hostname will not match in this function.
-//
-// function returns a string pointer to the pattern it matched against.
-
 bool
 NetStringList::find_matches_withnetwork(const char *ip_address,StringList *matches)
 {

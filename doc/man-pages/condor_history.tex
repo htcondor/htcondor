@@ -15,8 +15,9 @@
 \oOptArg{-file}{filename}
 \oOptArg{-userlog}{filename}
 \oOptArg{-format}{formatString AttributeName}
+\oOptArg{-autoformat[:tn,lVh]}{attr1 [attr2 ...]}
 \oOpt{-l \Bar -long \Bar -xml} 
-\oOptArg{-match}{number}
+\oOptArg{-match \Bar -limit}{number}
 \oOpt{cluster \Bar cluster.process \Bar owner}
 
 \Description
@@ -77,9 +78,19 @@ file.
   \OptItem{\OptArg{-format}{formatString}{AttributeName}}{Display jobs
     with a custom format. See the \Condor{q} man page \Opt{-format} option
     for details.}
+  \OptItem{\OptArg{-autoformat[:tn,lVh]}{attr1 [attr2 ...]} 
+  or \OptArg{-af[:tn,lVh]}{attr1 [attr2 ...]}} {
+    Display attribute(s) or expression(s)
+    formatted in a default way according to attribute types.  
+    See the \Condor{q} man page \Opt{-autoformat} option
+    for details.}
   \OptItem{\Opt{-l} or \Opt{-long}}{Display job ClassAds in long format.}
-  \OptItem{\OptArg{-match}{number}}{Limit the number of jobs displayed
-    to \Arg{number}.}
+  \OptItem{\OptArg{-limit}{Number}}
+    {Limit the number of jobs displayed to \Arg{Number}.  Same option as
+    \Opt{-match}. }
+  \OptItem{\OptArg{-match}{Number}} 
+    {Limit the number of jobs displayed to \Arg{Number}. Same option as
+    \Opt{-limit}. } 
   \OptItem{\Opt{-xml}}{Display job ClassAds in XML format.
     The XML format is fully defined in the reference manual,
     obtained from the ClassAds web page, with a link at

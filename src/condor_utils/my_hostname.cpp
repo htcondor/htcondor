@@ -11,8 +11,7 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
  ***************************************************************/
@@ -27,37 +26,21 @@
 #include "condor_attributes.h"
 #include "condor_netdb.h"
 #include "ipv6_hostname.h"
+#include "condor_sinful.h"
 
-static bool enable_convert_default_IP_to_socket_IP = true;
+static bool enable_convert_default_IP_to_socket_IP = false;
 static std::set< std::string > configured_network_interface_ips;
 static bool network_interface_matches_all;
 
-//static void init_hostnames();
-
-// Return our hostname in a static data buffer.
-const char *
-my_hostname()
-{
-//	if( ! hostnames_initialized ) {
-//		init_hostnames();
-//	}
-//	return hostname;
-    static MyString __my_hostname;
-    __my_hostname = get_local_hostname();
-    return __my_hostname.Value();
-}
-
-
-// Return our full hostname (with domain) in a static data buffer.
-const char* my_full_hostname() {
-    static MyString __my_full_hostname;
-    __my_full_hostname = get_local_fqdn();
-    return __my_full_hostname.Value();
-}
 
 const char* my_ip_string() {
     static MyString __my_ip_string;
-    __my_ip_string = get_local_ipaddr().to_ip_string();
+	// TODO: Picking IPv4 arbitrarily. WARNING: This function
+	// gets called while the configuration file is being loaded,
+	// before we know if IPV4 and/or IPv6 is enabled.  It needs to
+	// return a stable answer, because having it change midway
+	// through parsing the file is a recipe for failure.
+    __my_ip_string = get_local_ipaddr(CP_IPV4).to_ip_string();
     return __my_ip_string.Value();
 }
 
@@ -82,7 +65,7 @@ const char* my_ip_string() {
 //}
 
 bool
-network_interface_to_ip(char const *interface_param_name,char const *interface_pattern,std::string &ip,std::set< std::string > *network_interface_ips)
+network_interface_to_ip(char const *interface_param_name,char const *interface_pattern,std::string & ipv4, std::string & ipv6, std::string & ipbest, std::set< std::string > *network_interface_ips)
 {
 	ASSERT( interface_pattern );
 	if( !interface_param_name ) {
@@ -95,15 +78,23 @@ network_interface_to_ip(char const *interface_param_name,char const *interface_p
 
 	condor_sockaddr addr;
 	if (addr.from_ip_string(interface_pattern)) {
-		ip = interface_pattern;
+		if(addr.is_ipv4()) {
+			ipv4 = interface_pattern;
+			ipbest = ipv4;
+		} else {
+			ASSERT(addr.is_ipv6());
+			ipv6 = interface_pattern;
+			ipbest = ipv6;
+		}
 		if( network_interface_ips ) {
-			network_interface_ips->insert( ip );
+			network_interface_ips->insert( interface_pattern );
 		}
 
 		dprintf(D_HOSTNAME,"%s=%s, so choosing IP %s\n",
 				interface_param_name,
 				interface_pattern,
-				ip.c_str());
+				ipbest.c_str());
+				// addr.to_ip_string().Value());
 
 		return true;
 	}
@@ -114,7 +105,9 @@ network_interface_to_ip(char const *interface_param_name,char const *interface_p
 	std::vector<NetworkDeviceInfo> dev_list;
 	std::vector<NetworkDeviceInfo>::iterator dev;
 
-	sysapi_get_network_device_info(dev_list);
+	bool want_v4 = param_boolean("ENABLE_IPV4", true);
+	bool want_v6 = param_boolean("ENABLE_IPV6", true);
+	sysapi_get_network_device_info(dev_list, want_v4, want_v6);
 
 		// Order of preference:
 		//   * non-private IP
@@ -122,7 +115,9 @@ network_interface_to_ip(char const *interface_param_name,char const *interface_p
 		//   * loopback
 		// In case of a tie, choose the first device in the list.
 
-	int best_so_far = -1;
+	int best_so_far_v4 = -1;
+	int best_so_far_v6 = -1;
+	int best_overall = -1;
 
 	for(dev = dev_list.begin();
 		dev != dev_list.end();
@@ -164,32 +159,37 @@ network_interface_to_ip(char const *interface_param_name,char const *interface_p
 			network_interface_ips->insert( dev->IP() );
 		}
 
-		int desireability;
-
-		if (this_addr.is_loopback()) {
-			desireability = 1;
-		}
-		else if (this_addr.is_private_network()) {
-			desireability = 2;
-		}
-		else {
-			desireability = 3;
-		}
-
+		int desireability = this_addr.desirability();
 		if(dev->is_up()) { desireability *= 10; }
+
+		int * best_so_far = 0;
+		std::string * ip = 0;
+		if(this_addr.is_ipv4()) {
+			best_so_far = & best_so_far_v4;
+			ip = & ipv4;
+		} else {
+			ASSERT(this_addr.is_ipv6());
+			best_so_far = & best_so_far_v6;
+			ip = & ipv6;
+		}
 
 		//dprintf(D_HOSTNAME, "Considering %s (Ranked at %d) as possible local hostname versus %s (%d)\n", addr.to_ip_string().Value(), desireability, ip.c_str(), desireability);
 
-		if( desireability > best_so_far ) {
-			best_so_far = desireability;
-			ip = dev->IP();
+		if( desireability > *best_so_far ) {
+			*best_so_far = desireability;
+			*ip = dev->IP();
 		}
+
+		if( desireability > best_overall ) {
+			best_overall = desireability;
+			ipbest = dev->IP();
+		}
+
 	}
 
-	if( best_so_far < 0 ) {
+	if( best_overall < 0 ) {
 		dprintf(D_ALWAYS,"Failed to convert %s=%s to an IP address.\n",
-				interface_param_name ? interface_param_name : "",
-				interface_pattern);
+				interface_param_name, interface_pattern);
 		return false;
 	}
 
@@ -197,7 +197,7 @@ network_interface_to_ip(char const *interface_param_name,char const *interface_p
 			interface_param_name,
 			interface_pattern,
 			matches_str.c_str(),
-			ip.c_str());
+			ipbest.c_str());
 
 	return true;
 }
@@ -219,12 +219,16 @@ init_network_interfaces( int config_done )
 
 	network_interface_matches_all = (network_interface == "*");
 
-	std::string network_interface_ip;
+	std::string network_interface_ipv4;
+	std::string network_interface_ipv6;
+	std::string network_interface_best;
 	bool ok;
 	ok = network_interface_to_ip(
 		"NETWORK_INTERFACE",
 		network_interface.c_str(),
-		network_interface_ip,
+		network_interface_ipv4,
+		network_interface_ipv6,
+		network_interface_best,
 		&configured_network_interface_ips);
 
 	if( !ok ) {
@@ -356,8 +360,8 @@ init_network_interfaces( int config_done )
 
 static bool is_sender_ip_attr(char const *attr_name)
 {
-    if(strcmp(attr_name,ATTR_MY_ADDRESS) == 0) return true;
-    if(strcmp(attr_name,ATTR_TRANSFER_SOCKET) == 0) return true;
+    if(strcasecmp(attr_name,ATTR_MY_ADDRESS) == 0) return true;
+    if(strcasecmp(attr_name,ATTR_TRANSFER_SOCKET) == 0) return true;
 	size_t attr_name_len = strlen(attr_name);
     if(attr_name_len >= 6 && strcasecmp(attr_name+attr_name_len-6,"IpAddr") == 0)
 	{
@@ -373,6 +377,7 @@ void ConfigConvertDefaultIPToSocketIP()
 //	if( ! ipaddr_initialized ) {
 //		init_ipaddr(0);
 //	}
+
 
 	enable_convert_default_IP_to_socket_IP = true;
 
@@ -399,97 +404,186 @@ void ConfigConvertDefaultIPToSocketIP()
 	}
 }
 
-static bool IPMatchesNetworkInterfaceSetting(char const *ip)
+// Only needed for these next two functions;
+// #include should be deleted when ConvertDefaultIPToSocketIP is.
+#include "condor_daemon_core.h"
+
+void ConvertDefaultIPToSocketIP(char const * attr_name, std::string & expr_string, Stream & s )
 {
-		// Just in case our mechanism for iterating through the interfaces
-		// is not perfect, treat NETWORK_INTERFACE=* specially here so we
-		// are guaranteed to return true.
-	return network_interface_matches_all ||
-		configured_network_interface_ips.count(ip) != 0;
-}
+	static bool loggedNullDCMessage = false;
+	static bool loggedConfigMessage = false;
 
-
-void ConvertDefaultIPToSocketIP(char const *attr_name,char const *old_expr_string,char **new_expr_string,Stream& s)
-{
-	*new_expr_string = NULL;
-
-	if( !enable_convert_default_IP_to_socket_IP ) {
+	// We can't practically do a conversion if daemonCore isn't present; this
+	// happens in standard universe.  We can't move this test into
+	// ConfigConvertDefaultIPToSocketIP because it gets called before
+	// daemonCore is created.
+	if( daemonCore == NULL ) {
+		if( ! loggedNullDCMessage ) {
+			dprintf( D_NETWORK | D_VERBOSE, "Address rewriting: disabled: no daemon core.\n" );
+			loggedNullDCMessage = true;
+		}
 		return;
 	}
 
-    if(!is_sender_ip_attr(attr_name)) {
+	if( ! enable_convert_default_IP_to_socket_IP ) {
+		if( ! loggedConfigMessage ) {
+			dprintf( D_NETWORK | D_VERBOSE, "Address rewriting: disabled: by configuration.\n" );
+			loggedConfigMessage = true;
+		}
 		return;
 	}
 
-	char const *my_default_ip = my_ip_string();
-	char const *my_sock_ip = s.my_ip_str();
-	if(!my_default_ip || !my_sock_ip) {
-		return;
-	}
-	if(strcmp(my_default_ip,my_sock_ip) == 0) {
-		return;
-	}
-	condor_sockaddr sock_addr;
-	if (sock_addr.from_ip_string(my_sock_ip) && sock_addr.is_loopback()) {
-            // We must be talking to another daemon on the same
-			// machine as us.  We don't want to replace the default IP
-			// with this one, since nobody outside of this machine
-			// will be able to contact us on that IP.
-		return;
-	}
-	if( !IPMatchesNetworkInterfaceSetting(my_sock_ip) ) {
+	if( ! is_sender_ip_attr( attr_name ) ) {
+		// Reduce log spam.  Since all of our subsequent messages include the
+		// attribute name, we don't have to print a message noting that we
+		// tried to rewrite it.
+		// dprintf( D_NETWORK | D_VERBOSE, "Address rewriting: '%s' is not an attribute which might contain the sender's IP address.\n", attr_name );
 		return;
 	}
 
-	char const *ref = strstr(old_expr_string,my_default_ip);
-	if(ref) {
-			// the match must not be followed by any trailing digits
-			// GOOD: <MMM.MMM.M.M:port?p>   (where M is a matching digit)
-			// BAD:  <MMM.MMM.M.MN:port?p>  (where N is a non-matching digit)
-		if( isdigit(ref[strlen(my_default_ip)]) ) {
-			ref = NULL;
+	// Skip if Stream doesn't have address associated with it
+	condor_sockaddr connectionSA;
+	if( ! connectionSA.from_ip_string( s.my_ip_str() ) ) {
+		dprintf( D_NETWORK | D_VERBOSE, "Address rewriting: failed for attribute '%s' (%s): failed to generate socket address from stream's IP string (%s).\n", attr_name, expr_string.c_str(), s.my_ip_str() );
+		return;
+	}
+
+	// Skip if it's not a string literal.
+	if( * ( expr_string.rbegin() ) != '"' ) {
+		dprintf( D_NETWORK | D_VERBOSE, "Address rewriting: failed for attribute '%s' (%s): failed to parse. Missing closing double quotation mark.\n", attr_name, expr_string.c_str() );
+		return;
+	}
+
+	const char * delimiter = " = \"";
+	size_t delimpos = expr_string.find( delimiter );
+	// Skip if doesn't look like a string
+	if( delimpos == std::string::npos ) {
+		dprintf( D_NETWORK | D_VERBOSE, "Address rewriting: failed for attribute '%s' (%s): failed to parse. Missing assignment.\n", attr_name, expr_string.c_str() );
+		return;
+	}
+
+	size_t string_start_pos = delimpos + strlen( delimiter );
+	// string_end_pos is one beyond last character of String literal.
+	size_t string_end_pos = expr_string.length() - 1;
+	size_t string_len = string_end_pos - string_start_pos;
+
+	// Skip if it doesn't look like a Sinful
+	if( expr_string[string_start_pos] != '<' ) {
+		dprintf( D_NETWORK | D_VERBOSE, "Address rewriting: failed for attribute '%s' (%s): failed to parse. Missing opening <.\n", attr_name, expr_string.c_str() );
+		return;
+	}
+	if( expr_string[string_end_pos - 1] != '>' ) {
+		dprintf( D_NETWORK | D_VERBOSE, "Address rewriting: failed for attribute '%s' (%s): failed to parse. Missing closing >.\n", attr_name, expr_string.c_str() );
+		return;
+	}
+
+	std::string adSinfulString = expr_string.substr( string_start_pos, string_len);
+	std::string commandPortSinfulString = daemonCore->InfoCommandSinfulString();
+
+	Sinful adSinful( adSinfulString.c_str() );
+	condor_sockaddr adSA;
+	adSA.from_sinful( adSinful.getSinful() );
+
+	bool rewrite_port = true;
+	if (commandPortSinfulString == adSinfulString)
+	{
+		dprintf( D_NETWORK | D_VERBOSE, "Address rewriting: refused for attribute %s (%s): clients now choose addresses.\n", attr_name, expr_string.c_str() );
+		return;
+	}
+	else if (param_boolean("SHARED_PORT_ADDRESS_REWRITING", false))
+	{
+		//
+		// Wait a minute -- isn't this only supposed to happen in the collector?
+		//
+		const std::vector<Sinful> &commandSinfuls = daemonCore->InfoCommandSinfulStringsMyself();
+		dprintf(D_NETWORK|D_VERBOSE, "Address rewriting: considering %ld command socket sinfuls.\n", commandSinfuls.size());
+
+		bool acceptableMatch = false;
+		std::vector<Sinful>::const_iterator it;
+		for (it = commandSinfuls.begin(); it!=commandSinfuls.end(); it++)
+		{
+			commandPortSinfulString = it->getSinful();
+			const Sinful &commandPortSinful = *it;
+			// We assume that any sinful on the same shared port server
+			// can also be rewritten.
+			if ((adSinful.getSharedPortID() != NULL) && (strcmp(commandPortSinful.getHost(), adSinful.getHost()) == 0) && (commandPortSinful.getPortNum() == adSinful.getPortNum()))
+			{
+				acceptableMatch = true;
+				break;
+			}
+			dprintf( D_NETWORK | D_VERBOSE, "Address rewriting: refused for attribute %s (%s): the address isn't my default address. (Command socket considered: %s, found in ad: %s)\n", attr_name, expr_string.c_str(), commandPortSinfulString.c_str(), adSinfulString.c_str());
+		}
+
+		if (!acceptableMatch)
+		{
+			return;
 		}
 	}
-	if(ref) {
-            // Replace the default IP address with the one I am actually using.
-
-		int pos = ref-old_expr_string; // position of the reference
-		int my_default_ip_len = strlen(my_default_ip);
-		int my_sock_ip_len = strlen(my_sock_ip);
-
-		*new_expr_string = (char *)malloc(strlen(old_expr_string) + my_sock_ip_len - my_default_ip_len + 1);
-		ASSERT(*new_expr_string);
-
-		strncpy(*new_expr_string, old_expr_string,pos);
-		strcpy(*new_expr_string+pos, my_sock_ip);
-		strcpy(*new_expr_string+pos+my_sock_ip_len, old_expr_string+pos+my_default_ip_len);
-
-		dprintf(D_NETWORK,"Replaced default IP %s with connection IP %s "
-				"in outgoing ClassAd attribute %s.\n",
-				my_default_ip,my_sock_ip,attr_name);
+	else
+	{
+		dprintf( D_NETWORK | D_VERBOSE, "Address rewriting: refused for attribute %s (%s): the address isn't my default address. (Default: %s, found in ad: %s)\n", attr_name, expr_string.c_str(), commandPortSinfulString.c_str(), adSinfulString.c_str());
+		return;
 	}
-}
 
-void ConvertDefaultIPToSocketIP(char const *attr_name,char **expr_string,Stream& s)
-{
-	char *new_expr_string = NULL;
-	ConvertDefaultIPToSocketIP(attr_name,*expr_string,&new_expr_string,s);
-	if(new_expr_string) {
-		//The expression was updated.  Replace the old expression with
-		//the new one.
-		free(*expr_string);
-		*expr_string = new_expr_string;
+	//
+	// Although it's never useful to rewrite from a non-loopback to a loop-
+	// back address, if there's more than one loopback address on a machine,
+	// (generally but not always because the machine supports more than one
+	// protocol), it's OK to rewrite from one to the other.
+	//
+	// Doing this is any other situation breaks, among other things,
+	// ssh-to-job.  (In a design hack, the starter sends its external
+	// address to the startd over the job-update socket, as part of every
+	// job update ClassAd.  This causes rewriting to happen, but as the
+	// the startd explicity binds the job-update socket to the loopback
+	// address -- presumambly to ensure that it always works -- we need
+	// to make sure we don't rewrite ATTR_STARTER_IP_ADDR when sending
+	// job updates.  *sigh*)
+	//
+	if( (! adSA.is_loopback()) && connectionSA.is_loopback() ) {
+		dprintf( D_NETWORK | D_VERBOSE, "Address rewriting: refused for attribute '%s' (%s): outbound interface is loopback but default interface is not.\n", attr_name, expr_string.c_str() );
+		return;
 	}
-}
 
-void ConvertDefaultIPToSocketIP(char const *attr_name,std::string &expr_string,Stream& s)
-{
-	char *new_expr_string = NULL;
-	ConvertDefaultIPToSocketIP(attr_name,expr_string.c_str(),&new_expr_string,s);
-	if(new_expr_string) {
-		//The expression was updated.  Replace the old expression with
-		//the new one.
-		expr_string = new_expr_string;
-		free(new_expr_string);
+	if( adSinful.getSharedPortID() != NULL ) {
+		// We're using shared port, so "our" port is actually the
+		// shared port daemon's. We shouldn't be messing with that.
+		// We'll rewrite the host on the bold assumption that shared
+		// port daemon and I both use the same IP addresses.
+		rewrite_port = false;
 	}
+
+	MyString my_sock_ip = connectionSA.to_ip_string( true );
+	adSinful.setHost( my_sock_ip.Value() );
+	if( rewrite_port ) {
+		// connectionSA's port is whatever we happen to be using at the moment;
+		// that will be meaningless if we established the connection.  What we
+		// want is the port someone could contact us on.  Go rummage for one.
+		int port = daemonCore->find_interface_command_port_do_not_use( connectionSA );
+
+		// If port is 0, there is no matching listen socket. There is nothing
+		// useful we can rewrite it do, so just give up and hope the default
+		// is useful to someone.
+		if( port == 0 ) {
+			dprintf( D_NETWORK | D_VERBOSE, "Address rewriting: failed for attribute '%s' (%s): unable to find command port for outbound interface '%s'.\n", attr_name, expr_string.c_str(), s.my_ip_str() );
+			return;
+		}
+
+		adSinful.setPort( port );
+	}
+
+	if( adSinful.getSinful() == adSinfulString ) {
+		dprintf( D_NETWORK | D_VERBOSE, "Address rewriting: refused for attribute '%s' (%s): socket is using same address as the default one; rewrite would do nothing.\n", attr_name, expr_string.c_str() );
+		return;
+	}
+
+	std::string new_expr = expr_string.substr( 0, string_start_pos );
+	new_expr.append( adSinful.getSinful() );
+	new_expr.append( expr_string.substr( string_end_pos ) );
+
+	expr_string = new_expr;
+
+	dprintf( D_NETWORK, "Address rewriting: Replaced default IP %s with "
+			"connection IP %s in outgoing ClassAd attribute %s.\n",
+			adSinfulString.c_str(), adSinful.getSinful(), attr_name );
 }

@@ -30,7 +30,9 @@
 
 #include "slot_builder.h"
 
-ResMgr::ResMgr()
+#include "strcasestr.h"
+
+ResMgr::ResMgr() : extras_classad( NULL )
 {
 	totals_classad = NULL;
 	config_classad = NULL;
@@ -113,19 +115,19 @@ void ResMgr::Stats::Init()
 
 double ResMgr::Stats::BeginRuntime(stats_recent_counter_timer &  /*probe*/)
 {
-   return UtcTime::getTimeDouble();
+   return _condor_debug_get_time_double();
 }
 
 double ResMgr::Stats::EndRuntime(stats_recent_counter_timer & probe, double before)
 {
-   double now = UtcTime::getTimeDouble();
+   double now = _condor_debug_get_time_double();
    probe.Add(now - before);
    return now;
 }
 
 double ResMgr::Stats::BeginWalk(VoidResourceMember  /*memberfunc*/)
 {
-   return UtcTime::getTimeDouble();
+   return _condor_debug_get_time_double();
 }
 
 double ResMgr::Stats::EndWalk(VoidResourceMember memberfunc, double before)
@@ -142,6 +144,7 @@ double ResMgr::Stats::EndWalk(VoidResourceMember memberfunc, double before)
 ResMgr::~ResMgr()
 {
 	int i;
+	if( extras_classad ) delete extras_classad;
 	if( config_classad ) delete config_classad;
 	if( totals_classad ) delete totals_classad;
 	if( id_disp ) delete id_disp;
@@ -245,10 +248,13 @@ ResMgr::init_config_classad( void )
 		config_classad->AssignExpr( ATTR_SLOT_WEIGHT, ATTR_CPUS );
 	}
 
-		// Next, try the IS_OWNER expression.  If it's not there, give
-		// them a resonable default, instead of leaving it undefined.
+		// First, try the IsOwner expression.  If it's not there, try
+		// what's defined in IS_OWNER (for backwards compatibility).
+		// If that's not there, give them a reasonable default.
 	if( ! configInsert(config_classad, ATTR_IS_OWNER, false) ) {
-		config_classad->AssignExpr( ATTR_IS_OWNER, "(START =?= False)" );
+		if( ! configInsert(config_classad, "IS_OWNER", ATTR_IS_OWNER, false) ) {
+			config_classad->AssignExpr( ATTR_IS_OWNER, "(START =?= False)" );
+		}
 	}
 		// Next, try the CpuBusy expression.  If it's not there, try
 		// what's defined in cpu_busy (for backwards compatibility).
@@ -457,7 +463,7 @@ ResMgr::init_resources( void )
 		// string lists for each type definition.  This only happens
 		// once!  If you change the type definitions, you must restart
 		// the startd, or else too much weirdness is possible.
-	SlotType::init_types(max_types);
+	SlotType::init_types(max_types, true);
 	initTypes( max_types, type_strings, 1 );
 
 		// First, see how many slots of each type are specified.
@@ -546,6 +552,8 @@ ResMgr::reconfig_resources( void )
 
 		// See if any new types were defined.  Don't except if there's
 		// any errors, just dprintf().
+	ASSERT(max_types > 0);
+	SlotType::init_types(max_types, false);
 	initTypes( max_types, type_strings, 0 );
 
 		// First, see how many slots of each type are specified.
@@ -580,6 +588,7 @@ ResMgr::reconfig_resources( void )
 	ASSERT( sorted_resources != NULL );
 	for( i=0; i<max_types; i++ ) {
 		sorted_resources[i] = new Resource* [max_num];
+		ASSERT(sorted_resources[i] != NULL);
 		memset( sorted_resources[i], 0, (max_num*sizeof(Resource*)) );
 	}
 
@@ -925,24 +934,13 @@ ResMgr::get_by_cur_id(const char* id )
 		if( resources[i]->r_cur->idMatches(id) ) {
 			return resources[i];
 		}
-        if (resources[i]->r_has_cp) {
-            for (Resource::claims_t::iterator j(resources[i]->r_claims.begin());  j != resources[i]->r_claims.end();  ++j) {
-                if ((*j)->idMatches(id)) {
-                    delete resources[i]->r_cur;
-                    resources[i]->r_cur = *j;
-                    resources[i]->r_claims.erase(*j);
-                    resources[i]->r_claims.insert(new Claim(resources[i]));
-                    return resources[i];
-                }
-            }
-        }
 	}
 	return NULL;
 }
 
 
 Resource*
-ResMgr::get_by_any_id(const char* id )
+ResMgr::get_by_any_id(const char* id, bool move_cp_claim )
 {
 	if( ! resources ) {
 		return NULL;
@@ -960,17 +958,19 @@ ResMgr::get_by_any_id(const char* id )
 			resources[i]->r_pre_pre->idMatches(id) ) {
 			return resources[i];
 		}
-        if (resources[i]->r_has_cp) {
-            for (Resource::claims_t::iterator j(resources[i]->r_claims.begin());  j != resources[i]->r_claims.end();  ++j) {
-                if ((*j)->idMatches(id)) {
-                    delete resources[i]->r_cur;
-                    resources[i]->r_cur = *j;
-                    resources[i]->r_claims.erase(*j);
-                    resources[i]->r_claims.insert(new Claim(resources[i]));
-                    return resources[i];
-                }
-            }
-        }
+		if (resources[i]->r_has_cp) {
+			for (Resource::claims_t::iterator j(resources[i]->r_claims.begin());  j != resources[i]->r_claims.end();  ++j) {
+				if ((*j)->idMatches(id)) {
+					if ( move_cp_claim ) {
+						delete resources[i]->r_cur;
+						resources[i]->r_cur = *j;
+						resources[i]->r_claims.erase(*j);
+						resources[i]->r_claims.insert(new Claim(resources[i]));
+					}
+					return resources[i];
+				}
+			}
+		}
 	}
 	return NULL;
 }
@@ -1252,8 +1252,93 @@ ResMgr::publish( ClassAd* cp, amask_t how_much )
     m_hibernation_manager->publish( *cp );
 #endif
 
+	if( extras_classad ) { cp->Update( * extras_classad ); }
 }
 
+
+void
+ResMgr::updateExtrasClassAd( ClassAd * cap ) {
+	// It turns out to be colossal pain to use the ClassAd for persistence.
+	static std::set< std::string > offlineUniverses;
+
+	if( ! cap ) { return; }
+	if( ! extras_classad ) { extras_classad = new ClassAd(); }
+
+	//
+	// The startd maintains the set offline universes, and the offline
+	// universe timestamps.
+	//
+	// We start with the current set of offline universes, and add or remove
+	// universes as directed by the update ad.  This obviates the need for
+	// the need for the starter to know anything about the state of the rest
+	// of the machine.
+	//
+
+	cap->ResetExpr();
+	ExprTree * expr = NULL;
+	const char * attr = NULL;
+	while( cap->NextExpr( attr, expr ) ) {
+		//
+		// Copy the whole ad over, excepting special or computed attributes.
+		//
+		if( strcasecmp( attr, "MyType" ) == 0 ) { continue; }
+		if( strcasecmp( attr, "TargetType" ) == 0 ) { continue; }
+		if( strcasecmp( attr, "OfflineUniverses" ) == 0 ) { continue; }
+		if( strcasestr( attr, "OfflineReason" ) != NULL ) { continue; }
+		if( strcasestr( attr, "OfflineTime" ) != NULL ) { continue; }
+
+		ExprTree * copy = expr->Copy();
+		extras_classad->Insert( attr, copy );
+
+		//
+		// Adjust OfflineUniverses based on the Has<Universe> attributes.
+		//
+		const char * uo = strcasestr( attr, "Has" );
+		if( uo != attr ) { continue; }
+
+		std::string universeName( attr + 3 );
+		if( CondorUniverseNumber( universeName.c_str() ) == 0 ) { continue; }
+
+		std::string reasonTime = universeName + "OfflineTime";
+		std::string reasonName = universeName + "OfflineReason";
+
+		int universeOnline = 0;
+		ASSERT( cap->LookupBool( attr, universeOnline ) );
+		if( ! universeOnline ) {
+			offlineUniverses.insert( universeName ).second;
+			extras_classad->Assign( reasonTime.c_str(), time( NULL ) );
+
+			std::string reason = "[unknown reason]";
+			cap->LookupString( reasonName.c_str(), reason );
+			extras_classad->Assign( reasonName.c_str(), reason.c_str() );
+		} else {
+			// The universe is online, so it can't have an offline reason
+			// or a time that it entered the offline state.
+			offlineUniverses.erase( universeName );
+			extras_classad->Assign( reasonTime.c_str(), "undefined" );
+			extras_classad->Assign( reasonName.c_str(), "undefined" );
+		}
+	}
+
+	//
+	// Construct the OfflineUniverses attribute and set it in extras_classad.
+	//
+	std::string ouListString;
+	if( offlineUniverses.empty() ) {
+		ouListString = "{}";
+	} else {
+		std::set< std::string >::const_iterator i = offlineUniverses.begin();
+		for( ; i != offlineUniverses.end(); ++i ) {
+			int offlineUniverseNumber = CondorUniverseNumber( i->c_str() );
+			formatstr( ouListString, "%s\"%s\", %d, ", ouListString.c_str(), i->c_str(), offlineUniverseNumber );
+		}
+		// Remove the trailing ", ".
+		ouListString.erase( ouListString.length() - 2 );
+		ouListString = "{ " + ouListString + " }";
+	}
+	dprintf( D_ALWAYS, "OfflineUniverses = %s\n", ouListString.c_str() );
+	extras_classad->AssignExpr( "OfflineUniverses", ouListString.c_str() );
+}
 
 void
 ResMgr::publishSlotAttrs( ClassAd* cap )
@@ -1517,6 +1602,7 @@ ResMgr::addResource( Resource *rip )
 }
 
 
+//PRAGMA_REMIND("tj: re-write this silly function so that it doesn't allocate a new resources array just to remove a resource...")
 bool
 ResMgr::removeResource( Resource* rip )
 {
@@ -1529,6 +1615,7 @@ ResMgr::removeResource( Resource* rip )
 			// deleted, so we'll need to make a new resources array
 			// without this resource.
 		new_resources = new Resource* [ nresources - 1 ];
+		ASSERT(new_resources != NULL);
 		j = 0;
 		for( i = 0; i < nresources; i++ ) {
 			if( resources[i] != rip ) {
@@ -1932,7 +2019,7 @@ ResMgr::disableResources( const MyString &state_str )
 		   machine so we don't allow new jobs to start while we are in
 		   the middle of hibernating.  We disable _after_ sending our
 		   update_with_ack(), because we want our machine to still be
-		   matchable while offline.  The negotiator knows to treat this
+		   matchable while broken.  The negotiator knows to treat this
 		   state specially. */
 		for ( i = 0; i < nresources; ++i ) {
 			resources[i]->disable();

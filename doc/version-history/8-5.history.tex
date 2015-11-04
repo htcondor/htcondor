@@ -1,0 +1,137 @@
+%%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
+%%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
+%%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
+%%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
+%%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{\label{sec:History-8-5}Development Release Series 8.5}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+This is the development release series of HTCondor.
+The details of each version are described below.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-8-5-1}Version 8.5.1}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item HTCondor version 8.5.1 not yet released.
+%\item HTCondor version 8.5.1 released on Month Date, 2015.
+
+\item Shared port is enabled by default.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item When an HTCondor-C job is submitted to a remote \Condor{schedd},
+the remote job ad now includes the attribute \AdAttr{SubmitterGlobalJobId},
+whose value is the same as the attribute \AdAttr{GlobalJobId} in the
+original HTCondor-C job.
+\Ticket{3472}
+
+\item The \Condor{schedd} now sets environment variables for scheduler
+universe jobs so that the jobs can more easily find the \Condor{schedd}'s
+contact information.
+On machines where there are multiple \Condor{schedd}s running, this helps
+DAGMan and similar applications contact the \Condor{schedd} that started
+them.
+\Ticket{5166}
+
+\item When \MacroNI{SEC\_ENABLE\_MATCH\_PASSWORD\_AUTHENTICATION} is set
+to \Expr{True}, the related authorizations are now automatically enabled.
+Previously, \Expr{submit-side@matchsession} and
+\Expr{execute-side@matchsession} entries had to be added to the
+\MacroNI{ALLOW\_DAEMON} and \MacroNI{ALLOW\_CLIENT} (if set)
+authorization parameters in order for this feature to work.
+\Ticket{5304}
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item 
+
+\Condor{history} \-run on a pool with partitionable slots now shows
+the correct dynamic slot.
+\Ticket{4261}
+
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-8-5-0}Version 8.5.0}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+%\item HTCondor version 8.5.0 not yet released.
+\item HTCondor version 8.5.0 released on October 12, 2015.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item The \Condor{startd} history file contains two new attributes: BadputCausedByDraining and BadputCausedByPreemption, two boolean-valued attributes which are true if the job was evicted not by a user request.
+\Ticket{5255}
+
+\item The python bindings have a new Claim API, allowing Computing-On-Demand (COD) to be
+invoked via python.
+\Ticket{5130}
+
+\item The python bindings can now submit multiple distinct processes using the \texttt{submitMany}
+method, similar to a \Condor{submit} file with multiple \texttt{queue} statements.
+\Ticket{4916}
+
+\item The python bindings now provide improved support for managing multiple concurrent queries.
+\Ticket{5187}
+
+\item As an experimental feature, the python bindings implement the HTCondor negotiation protocol.
+\Ticket{5125}
+
+\item Changed \AdStr{Condor} to \AdStr{HTCondor} in \Condor{dagman}
+output (mainly in the \File{dagman}.out file).
+\Ticket{5144}
+
+\item The new configuration parameter \MacroNI{JOB\_SPOOL\_PERMISSIONS}
+controls the permissions on a job's spool directory managed by the
+\Condor{schedd} on unix.
+It defaults to the value \Expr{user}, which results in a permissions
+value of \Expr{0700}.
+Other valid values are \Expr{group} (permissions \Expr{0750}) and
+\Expr{world} (permissions \Expr{0755}).
+Previously, all job spool directories had access permissions of \Expr{0755}.
+\Ticket{4896}
+
+\item The \Condor{schedd} no longer changes the ownership of spooled job
+files that it manages.
+Now, the files are always owned by the submitting user.
+The previous behavior of changing ownership to/from the \Expr{condor}
+account can be restored by setting the new configuration parameter
+\Macro{CHOWN\_JOB\_SPOOL\_FILES} to \Expr{True}.
+\Ticket{5226}
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}

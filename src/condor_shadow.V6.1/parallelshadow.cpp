@@ -329,6 +329,7 @@ ParallelShadow::getResources( void )
 			int jobAdNumInProc = 0;
 			if (!job_ad->LookupInteger(ATTR_MAX_HOSTS, jobAdNumInProc)) {
 				dprintf(D_ALWAYS, "ERROR: no attribute MaxHosts in parallel job\n");	
+				delete sock;
 				return false;
 			};
 			ASSERT( jobAdNumInProc == numInProc);
@@ -345,6 +346,7 @@ ParallelShadow::getResources( void )
 
     startMaster();
 
+    delete sock;
     return TRUE;
 }
 
@@ -407,14 +409,14 @@ ParallelShadow::spawnNode( MpiResource* rr )
 
 
 void 
-ParallelShadow::cleanUp( void )
+ParallelShadow::cleanUp( bool graceful )
 {
 	// kill all the starters
 	MpiResource *r;
 	int i;
     for( i=0 ; i<=ResourceList.getlast() ; i++ ) {
 		r = ResourceList[i];
-		r->killStarter();
+		r->killStarter(graceful);
 	}		
 }
 
@@ -999,7 +1001,11 @@ ParallelShadow::resourceBeganExecution( RemoteResource* rr )
 void
 ParallelShadow::resourceReconnected( RemoteResource*  /*rr*/ )
 {
-		//EXCEPT( "impossible: MPIShadow doesn't support reconnect" );
+		// Since our reconnect worked, clear attemptingReconnectAtStartup
+		// flag so if we disconnect again and fail, we will exit
+		// with JOB_SHOULD_REQUEUE instead of JOB_RECONNECT_FAILED.
+		// See gt #4783.
+	attemptingReconnectAtStartup = false;
 }
 
 

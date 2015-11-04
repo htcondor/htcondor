@@ -26,7 +26,6 @@
 #include "dedicated_scheduler.h"
 #include "scheduler.h"
 #include "condor_qmgr.h"
-#include "qmgmt.h"
 #include "MyString.h"
 
 
@@ -56,7 +55,7 @@ int
 SetAttributeString(int cl, int pr, const char *name, const char *val, SetAttributeFlags_t flags )
 {
 	MyString buf;
-	string escape_buf;
+	std::string escape_buf;
 	int rval;
 
 	val = EscapeAdStringValue(val,escape_buf);
@@ -96,7 +95,7 @@ SetAttributeStringByConstraint(const char *con, const char *name,
 							 SetAttributeFlags_t flags)
 {
 	MyString buf;
-	string escape_buf;
+	std::string escape_buf;
 	int rval;
 
 	val = EscapeAdStringValue(val,escape_buf);

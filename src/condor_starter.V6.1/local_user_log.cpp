@@ -83,10 +83,8 @@ LocalUserLog::initFromJobAd( ClassAd* ad, const char* path_attr,
 	int subproc = jic->jobSubproc();
 	std::vector<const char*> logfiles;
 	
-	dprintf( D_FULLDEBUG, "LocalUserLog::initFromJobAd: path_attr = %s\n",
-		path_attr?path_attr:"");
-	dprintf( D_FULLDEBUG, "LocalUserLog::initFromJobAd: xml_attr = %s\n",
-		xml_attr?xml_attr:"");
+	dprintf( D_FULLDEBUG, "LocalUserLog::initFromJobAd: path_attr = %s\n", path_attr);
+	dprintf( D_FULLDEBUG, "LocalUserLog::initFromJobAd: xml_attr = %s\n", xml_attr);
 	if( ! ad->LookupString(path_attr, tmp) ) {
 			// The fact that this attribute is not found in the ClassAd
 			// indicates we do not want logging.

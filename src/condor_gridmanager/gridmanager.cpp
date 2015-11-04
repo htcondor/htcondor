@@ -1238,7 +1238,7 @@ contact_schedd_next_add_job:
 	// For each job that had dirty attributes, re-evaluate the policy
 	dirty_job_ids.rewind();
 	while ( (job_id_str = dirty_job_ids.next()) != NULL ) {
-		StrToProcId(job_id_str, job_id);
+		StrToProcIdFixMe(job_id_str, job_id);
 		if ( BaseJob::JobsByProcId.lookup( job_id, curr_job ) == 0 ) {
 			curr_job->EvalPeriodicJobExpr();
 		}

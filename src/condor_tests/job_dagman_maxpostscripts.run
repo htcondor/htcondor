@@ -22,34 +22,46 @@ use CondorTest;
 use CondorUtils;
 use Cwd;
 
+my $iswindows = CondorUtils::is_windows();
+
 $cmd = 'job_dagman_maxpostscripts.dag';
 
-$flowlog = "job_dagman_maxpostscripts-srvr-log.log";
 
 $serversubFile = "job_dagman_maxpostscripts-srvr.cmd";
 
-my $pid = $$;
+my $pid = "pdir$$";
 runcmd("mkdir -p $pid");
 my $curcwd = getcwd();
 CondorTest::debug("current directory is $curcwd\n",1);
 
 my $socketname = "maxpostsock";
+my $appendfile =  "filetoappendto";
 my $newsocketname = $curcwd . "/" . $pid . "/maxpostsock";
+my $flowlog = $curcwd . "/" . $pid . "/job_dagman_maxpostscripts-srvr-log.log";
+if($iswindows) {
+	$_ = $flowlog;
+	s/\//\\\\/g;
+	$flowlog = $_;
+	print "Windows flowlog path:$flowlog\n";
+}
 CondorTest::debug("current directory is $newsocketname\n",1);
 
-# start a server for this test
+if(!($iswindows)) {
+	# windows will simply append to the flowlog location
+	# start a server for this test
 
-runcmd("rm -f $flowlog");
-defined(my $pid = fork) or die "Cannot fork: $!";
-unless ($pid)
-{
-    #child runs and ceases to exist
-    exec "./x_general_server.pl $newsocketname $flowlog";
-    die "can not exec dumpcore!\n";
+	runcmd("rm -f $flowlog");
+	defined(my $pid = fork) or die "Cannot fork: $!";
+	unless ($pid)
+	{
+    	#child runs and ceases to exist
+    	exec "./x_general_server.pl $newsocketname $flowlog";
+    	die "can not exec dumpcore!\n";
+	}
+	#main process continues here
+
+	CondorTest::LoadExemption("job_dagman_maxpostscripts,no,DC_AUTHENTICATE unable to receive auth_info!");
 }
-#main process continues here
-
-CondorTest::LoadExemption("job_dagman_maxpostscripts,no,DC_AUTHENTICATE unable to receive auth_info!");
 
 # information for creating logging client from template.
 my $checkintemplate = "job_dagman_maxpostscripts-checkin.template";
@@ -69,24 +81,39 @@ my $checkin = "job_dagman_maxpostscripts-checkin.pl";
 		CondorUtils::fullchomp($_);
 		$line = $_;
 		CondorTest::debug("Looking at:<<$line>>\n",1);
-		if( $line =~ /(^\s*.*)$socketname(.*$)/)
-		{
-			CondorTest::debug("Found ---$1$socketname$2---\n",1);
-			CondorTest::debug("replacing with $1$newsocketname$2\n",1);
-			print NEWFF "$1$newsocketname$2\n";
-		}
-		else
-		{
-			print NEWFF "$line\n";
-		}
+		if(!($iswindows)) {
+			if( $line =~ /(^\s*.*)$socketname(.*$)/)
+			{
+				CondorTest::debug("Found ---$1$socketname$2---\n",1);
+				CondorTest::debug("replacing with $1$newsocketname$2\n",1);
+				print NEWFF "$1$newsocketname$2\n";
+			}
+			else
+			{
+				print NEWFF "$line\n";
+			}
+		} else {
+			if( $line =~ /(^\s*.*)$appendfile(.*$)/)
+			{
+				CondorTest::debug("Found ---$1$appendfile$2---\n",1);
+				CondorTest::debug("replacing with $1$flowlog$2\n",1);
+				print NEWFF "$1$flowlog$2\n";
+			}
+			else
+			{
+				print NEWFF "$line\n";
+			}
+		}	
 	}
 	close(FF);
 	close(NEWFF);
 }
 
-foreach $name (@filestochmod)
-{
-	runcmd("chmod 755 $name");
+if(!($iswindows)) {
+	foreach $name (@filestochmod)
+	{
+		runcmd("chmod 755 $name");
+	}
 }
 
 $testdesc =  'Condor submit dag - throttle post scripts test - scheduler U';
@@ -143,12 +170,16 @@ $success = sub
 		if( $ret ne "0" )
 		{
 			# shutdown the server we started
-			runcmd("./x_general_client.pl $newsocketname quit");
+			if(!($iswindows)) {
+				runcmd("./x_general_client.pl $newsocketname quit");
+			}
 			die "MAXPOST of $maxjobs exceeded\n";
 		}
 	}
 	# shutdown the server we started
-	runcmd("./x_general_client.pl $newsocketname quit");
+	if(!($iswindows)) {
+		runcmd("./x_general_client.pl $newsocketname quit");
+	}
 };
 
 CondorTest::RegisterExitedSuccess( $testname, $success);
@@ -164,7 +195,9 @@ if( CondorTest::RunDagTest($testname, $cmd, 0, $dagman_args) ) {
 	exit(0);
 } else {
 	# shutdown the server we started
-	runcmd("./x_general_client.pl $newsocketname quit");
+	if(!($iswindows)) {
+		runcmd("./x_general_client.pl $newsocketname quit");
+	}
 	die "$testname: CondorTest::RunTest() failed\n";
 }
 

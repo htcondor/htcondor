@@ -25,7 +25,7 @@
 #include "condor_md.h"
 //#include <sys/mman.h>
 #include "basename.h"
-#include "my_hostname.h"
+#include "ipv6_hostname.h"
 #include "file_sql.h"
 #include "quill_enums.h"
 
@@ -115,7 +115,7 @@ void schedd_files_ins(
 		// get host machine name from classad
 	if (!procad->LookupString(ATTR_FILE_SYSTEM_DOMAIN, fs_domain)) {
 			// use my hostname for files if fs_domain not found
-		fs_domain = my_full_hostname();
+		fs_domain = get_local_fqdn();
 	}
 	
 		// get current working directory

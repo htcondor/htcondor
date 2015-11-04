@@ -4,8 +4,12 @@
 \index{condor\_userprio command}
 
 \Synopsis \SynProg{\Condor{userprio}}
+\Opt{-help}
+
+\SynProg{\Condor{userprio}}
 \oOptArg{-pool}{centralmanagerhostname[:portnumber]}
 \oOpt{Edit option} $|$ \oOpt{Display options}
+\oOptArg{-inputfile}{filename}
 
 \Description 
 \Condor{userprio} either modifies priority-related information
@@ -59,6 +63,9 @@ specifying an Edit Option requires the ADMINISTRATOR level of access.
 
 \begin{Options}
 
+\OptItem{\Opt{-help}}
+  {Display usage information and exit.}
+
 \OptItem{\OptArg{-pool}{centralmanagerhostname[:portnumber]}}
   {Contact the specified \Arg{centralmanagerhostname} with an
   optional port number, instead of the local central manager. 
@@ -68,6 +75,12 @@ specifying an Edit Option requires the ADMINISTRATOR level of access.
   This is slightly different than most HTCondor tools
   that support a \Opt{-pool} option,
   and instead expect the host name (and port) of the \Condor{collector}.}
+
+\OptItem{\OptArg{-inputfile}{filename}}
+  {Introduced for debugging purposes,
+   read priority information from \Arg{filename}.
+   The contents of \Arg{filename} are expected to be the same as captured
+   output from running a \texttt{condor\_userprio -long} command.}
 
 \OptItem{\OptArg{-delete}{username}}
   {(Edit option) Remove the specified \Arg{username} from HTCondor's accounting.}
@@ -103,12 +116,62 @@ specifying an Edit Option requires the ADMINISTRATOR level of access.
   {(Display option) Display information for users who have 
   some recorded accumulated usage since the specified date.  }
 
+\OptItem{\OptArg{-af[:rtgn,lVh]}{attr1 [attr2 ...]}} {
+  (Display option) The same as \Opt{-autoformat}. }
+
 \OptItem{\Opt{-all}}
   {(Display option) Display all available fields about each group or user.}
 
 \OptItem{\Opt{-allusers}}
   {(Display option) Display information for all the users 
   who have some recorded accumulated usage.}
+
+\OptItem{\OptArg{-autoformat[:rtgn,lVh]}{attr1 [attr2 ...]}} {
+  (Display option) Modifies the display of information when using the 
+  \Opt{-long} option. 
+  Implies use of the \Opt{-modular} option and displays ClassAd attribute 
+  values formatted in a default way according to their attribute types  
+  and with attribute names consistent with the \Opt{-modular} option.
+  This option takes an arbitrary number of attribute names as arguments,
+  and prints out their values.
+  It is assumed that no attribute names begin with a dash character,
+  so that the next word that begins with dash is the 
+  start of the next option.
+  Option \Opt{-autoformat:h} gives a tabular output with column headings.
+  The \Opt{-autoformat} option may be followed by a colon character
+  and formatting qualifiers:
+
+  \textbf{r} print unevaluated, or raw values,
+
+  \textbf{t} add a tab character before each field instead of 
+  the default space character,
+
+  \textbf{g} inject a newline between ClassAds,
+
+  \textbf{n} add a newline character after each field,
+
+  \textbf{,} add a comma character after each field,
+
+  \textbf{l} label each field,
+
+  \textbf{V} use \%V formatting, where string values are quoted,
+
+  \textbf{h} print headings before the first line of output.
+
+  The newline and comma characters may \emph{not} be used together.
+  }
+
+\OptItem{\OptArg{-constraint}{<expr>}}
+  {(Display option) To be used in conjunction with the \Opt{-long} 
+  \Opt{-modular} or the \Opt{-autoformat} options.
+  Displays users and groups that match the \Expr{<expr>}. }
+
+\OptItem{\Opt{-debug[:<opts>]}}
+  {(Display option) Without \Opt{:<opts>} specified, 
+  use configured debug level to send debugging output to \File{stderr}.
+  With \Opt{:<opts>} specified, these options are debug levels that
+  override any configured debug levels for this command's execution
+  to send debugging output to \File{stderr}.}
 
 \OptItem{\Opt{-flat}}
   {(Display option) Display information such that users within hierarchical
@@ -132,8 +195,16 @@ specifying an Edit Option requires the ADMINISTRATOR level of access.
   {(Display option) Display information such that users within hierarchical
   groups are listed with their group. }
 
+\OptItem{\Opt{-legacy}}
+  {(Display option) For use with the \Opt{-long} option,
+  displays attribute names and values as a single ClassAd. }
+
 \OptItem{\Opt{-long}}
   {(Display option) A verbose output which displays entire ClassAds.  }
+
+\OptItem{\Opt{-modular}}
+  {(Display option) Modifies the display when using the \Opt{-long} option,
+  such that attribute names and values are shown as distinct ClassAds. }
 
 \OptItem{\Opt{-most}}
   {(Display option) Display fields considered to be the most useful.

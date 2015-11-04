@@ -352,9 +352,13 @@ For example, HTCondor will place a log entry into this file
 when and where the job begins running,
 when the job produces a checkpoint, or moves (migrates) to another machine,
 and when the job completes.
-Most users find specifying a \SubmitCmd{log} file to be handy;
-its use is recommended. If no \SubmitCmd{log} entry is specified, 
+Most users find specifying a \SubmitCmdNI{log} file to be handy;
+its use is recommended. If no \SubmitCmdNI{log} entry is specified, 
 HTCondor does not create a log for this cluster.
+If a relative path is specified, it is relative to the 
+current working directory as the job is submitted or
+the directory specified by submit command \SubmitCmdNI{initialdir}
+on the submit machine.
 
 %%%%%%%%%%%%%%%%%%%
 %% log_xml
@@ -377,6 +381,8 @@ this option in the same way.
 %% notification
 %%%%%%%%%%%%%%%%%%%
 
+\index{email notification!submit command}
+\index{notification!e-mail related to a job}
 \index{submit commands!notification}
 \label{man-condor-submit-notification}
 \item[notification = $<$Always \Bar\ Complete \Bar\ Error \Bar\ Never$>$]
@@ -466,19 +472,37 @@ not these jobs will run ahead of another user's jobs.
 %% queue
 %%%%%%%%%%%%%%%%%%%
 
-% these do not put the right bracket on the same line
-% \item[queue \Lbr number-of-procs \Rbr] Places one or more
-% \item[queue $[$number-of-procs$]$] Places one or more
-% this also doesn't work, but Karen doesn't know what else to try,
-% and it isn't worth the time.
 \index{submit commands!queue}
 \label{man-condor-submit-queue}
-\item[queue \oOptnm{number-of-procs}] Places one or more
-copies of the job into the HTCondor queue.
+\item[queue \oOptnm{<int expr>}] Places zero or more copies of the job into the HTCondor queue.
+\item[queue] \oOpt{<int expr>} \oOpt{<varname>} \Opt{in} \oOpt{slice} \Opt{<list of items>} Places zero or more copies of the job in the queue based on items in a \Opt{<list of items>}
+\item[queue] \oOpt{<int expr>} \oOpt{<varname>} \Opt{matching} \oOpt{files | dirs} \oOpt{slice} \Opt{<list of items with file globbing>}] Places zero or more copies of the job in the queue based on files that match a \Opt{<list of items with file globbing>}
+\item[queue] \oOpt{<int expr>} \oOpt{<list of varnames>} \Opt{from} \oOpt{slice} \Opt{<file name> | <list of items>}] Places zero or more copies of the job in the queue based on lines from the submit file or from \Opt{<file name>}
+
 The optional
-argument \Arg{number-of-procs} specifies how many times to submit the
-job to the queue, and it defaults to 1.
-If desired, any commands may be placed
+argument \Arg{<int expr>} specifies how many times to repeat the job submission for a given set of arguments.
+It may be an integer or an expression that evaluates to an integer, and it defaults to 1.
+All but the first form of this command are various ways of specifying a list of items.  When these forms are used
+\Arg{<int expr>} jobs will be queued for each item in the list.  The \Arg{in}, \Arg{matching} and \Arg{from} keyword
+indicates how the list will be specified.
+\begin{itemize}
+\item \Arg{in} The list of items is an explicit comma and/or space separated \Opt{<list of items>}. If the \Opt{<list of items>} begins with an open paren, and the close paren is not on the same line as the open, then the list continues until a line that begins with a close paren is read from the submit file.
+\item \Arg{matching} Each item in the \Opt{<list of items with file globbing>} will be matched against the names of files and directories relative to the current directory, the set of matching names is the resulting list of items.
+\begin {itemize}
+\item \Arg{files} Only filenames will matched.
+\item \Arg{dirs} Only directory names will be matched.
+\end{itemize}
+\item \Arg{from} \Opt{<file name> | <list of items>} Each line from \Opt{<file name>} or \Opt{<list of items>} is a single item, this allows for multiple variables to be set for each item.
+  Lines from \Opt{<file name>} or \Opt{<list of items>} will be split on comma and/or space until there are values for each of the variables specified in \Opt{<list of varnames>}.
+  The last variable will contain the remainder of the line.  When the \Opt{<list of items>} form is used, the list continues until the first line that begins with a close paren,
+  and lines beginning with pound sign ('\#') will be skipped.  When using the \Opt{<file name>} form, if the \Opt{<file name>} ends with |, then it will be executed as a script
+  whatever the script writes to \File{stdout} will be the list of items.
+\end{itemize}
+The optional argument \Arg{<varname>} or \Arg{<list of varnames>} is the name or names of of variables that will be
+set to the value of the current item when queuing the job.  If no \Arg{<varname>} is specified the variable ITEM will be used. Leading and trailing whitespace be trimmed.
+The optional argument \Arg{<slice>} is a python style slice selecting only some of the items in the list of items. Negative step values are not supported.
+
+A submit file may contain more than one \SubmitCmd{queue} statement, and if desired, any commands may be placed
 between subsequent \SubmitCmd{queue} commands, such as new \SubmitCmd{input},
 \SubmitCmd{output}, \SubmitCmd{error}, \SubmitCmd{initialdir},
 or \SubmitCmd{arguments} commands.
@@ -492,7 +516,8 @@ one submit description file.
 \index{submit commands!universe}
 \label{man-condor-submit-universe}
 \item[universe = $<$vanilla \Bar\ standard \Bar\ scheduler
-\Bar\ local \Bar\ grid \Bar\ java \Bar\ vm$>$]
+\Bar\ local \Bar\ grid \Bar\ java \Bar\ vm \Bar\ docker$>$]
+%%\Bar\ local \Bar\ grid \Bar\ java \Bar\ vm$>$]
 Specifies which HTCondor universe to use when running this job.  The HTCondor
 universe specifies an HTCondor execution environment.
 
@@ -526,6 +551,8 @@ The \SubmitCmdNI{java} universe is for programs written to the Java Virtual Mach
 The \SubmitCmdNI{vm} universe facilitates the execution of a virtual
 machine.
 
+The \SubmitCmdNI{docker} universe runs a docker container as an HTCondor job.
+
 \end{description} 
 
 
@@ -547,7 +574,7 @@ expression. Essentially, rank expresses preference.  A higher numeric value
 equals better rank. HTCondor will give the job the machine with the
 highest rank.  For example,
 \begin{verbatim}
-        requirements = Memory > 60
+        request_memory = max({60, Target.TotalSlotMemory})
         rank = Memory
 \end{verbatim}
 asks HTCondor to find all available machines with more than 60 megabytes of memory
@@ -584,7 +611,7 @@ resulting in a dynamic slot being created with this many cores.
 \index{submit commands!request\_disk}
 \label{man-condor-submit-request-disk}
 \item[request\_disk = $<$quantity$>$] 
-The requested amount of disk space in Kbytes requested for this job.
+The requested amount of disk space in KiB requested for this job.
 If not specified, 
 it will be set to the job ClassAd attribute \Attr{DiskUsage}.
 The expression
@@ -598,10 +625,10 @@ dynamic \Condor{startd} provisioning,
 a dynamic slot will be created with at least this much disk space.
 
 Characters may be appended to a numerical value to indicate units. 
-\Expr{K} or \Expr{KB} indicates Kbytes.
-\Expr{M} or \Expr{MB} indicates Mbytes.
-\Expr{G} or \Expr{GB} indicates Gbytes.
-\Expr{T} or \Expr{TB} indicates Tbytes.
+\Expr{K} or \Expr{KB} indicates KiB, $2^{10}$ numbers of bytes.
+\Expr{M} or \Expr{MB} indicates MiB, $2^{20}$ numbers of bytes.
+\Expr{G} or \Expr{GB} indicates GiB, $2^{30}$ numbers of bytes.
+\Expr{T} or \Expr{TB} indicates TiB, $2^{40}$ numbers of bytes.
 
 %%%%%%%%%%%%%%%%%%%
 %% request_memory
@@ -610,7 +637,7 @@ Characters may be appended to a numerical value to indicate units.
 \index{submit commands!request\_memory}
 \label{man-condor-submit-request-memory}
 \item[request\_memory = $<$quantity$>$] 
-The required amount of memory in Mbytes that this job needs
+The required amount of memory in MiB that this job needs
 to avoid excessive swapping.
 If not specified and the submit command \SubmitCmd{vm\_memory} is specified, 
 then the value specified
@@ -632,10 +659,10 @@ The expression
 is appended to the \SubmitCmd{requirements} expression for the job.
 
 Characters may be appended to a numerical value to indicate units. 
-\Expr{K} or \Expr{KB} indicates Kbytes.
-\Expr{M} or \Expr{MB} indicates Mbytes.
-\Expr{G} or \Expr{GB} indicates Gbytes.
-\Expr{T} or \Expr{TB} indicates Tbytes.
+\Expr{K} or \Expr{KB} indicates KiB, $2^{10}$ numbers of bytes.
+\Expr{M} or \Expr{MB} indicates MiB, $2^{20}$ numbers of bytes.
+\Expr{G} or \Expr{GB} indicates GiB, $2^{30}$ numbers of bytes.
+\Expr{T} or \Expr{TB} indicates TiB, $2^{40}$ numbers of bytes.
 
 %%%%%%%%%%%%%%%%%%%
 %% request_<name>
@@ -730,7 +757,7 @@ that can be used in the ClassAd expression.
 \label{man-condor-submit-dont-encrypt-input-files}
 \item[dont\_encrypt\_input\_files = $<$ file1,file2,file... $>$] 
 A comma and/or space separated list of input files that are \emph{not} to be
-encrypted when transferred with the file transfer mechanism.
+network encrypted when transferred with the file transfer mechanism.
 Specification of files in this manner overrides configuration that would
 use encryption.
 Each input file must also be in the list given by
@@ -748,7 +775,7 @@ A single wild card character (\Expr{*}) may be used in each file name.
 \label{man-condor-submit-dont-encrypt-output-files}
 \item[dont\_encrypt\_output\_files = $<$ file1,file2,file... $>$] 
 A comma and/or space separated list of output files that are \emph{not} to be
-encrypted when transferred back with the file transfer mechanism.
+network encrypted when transferred back with the file transfer mechanism.
 Specification of files in this manner overrides configuration that would
 use encryption.
 The output file(s) must also either be in the list given by
@@ -759,6 +786,31 @@ this specifies the path to the file on the execute side.
 A single wild card character (\Expr{*}) may be used in each file name.
 
 %%%%%%%%%%%%%%%%%%%
+%% encrypt_execute_directory
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!encrypt\_execute\_directory}
+\label{man-condor-submit-encrypt-execute-directory}
+\item[encrypt\_execute\_directory = $<$True \Bar\ False$>$]
+Defaults to \Expr{False}. If set to \Expr{True}, 
+HTCondor will encrypt the contents of
+the remote scratch directory of the machine where the job is executed.
+This encryption is transparent to the job itself, but ensures that
+files left behind on the local disk of the execute machine,
+perhaps due to a system crash, 
+will remain private.
+In addition, \Condor{submit} will append to
+the job's \SubmitCmd{requirements} expression
+\begin{verbatim}
+  && (TARGET.HasEncryptExecuteDirectory)
+\end{verbatim}
+to ensure the job is matched to a machine that is capable of encrypting the
+contents of the execute directory.  
+This support is limited 
+to Windows platforms that use the NTFS file system and
+Linux platforms with the \Prog{ecryptfs-utils} package installed.
+
+%%%%%%%%%%%%%%%%%%%
 %% encrypt_input_files
 %%%%%%%%%%%%%%%%%%%
 
@@ -767,7 +819,7 @@ A single wild card character (\Expr{*}) may be used in each file name.
 \label{man-condor-submit-encrypt-input-files}
 \item[encrypt\_input\_files = $<$ file1,file2,file... $>$] 
 A comma and/or space separated list of input files that are to be
-encrypted when transferred with the file transfer mechanism.
+network encrypted when transferred with the file transfer mechanism.
 Specification of files in this manner overrides configuration that would
 \emph{not} use encryption.
 Each input file must also be in the list given by
@@ -777,7 +829,7 @@ this specifies the path to the file on the submit side.
 A single wild card character (\Expr{*}) may be used in each file name.
 The method of encryption utilized will be as agreed upon in security
 negotiation; if that negotiation failed, then the file transfer
-mechanism must also fail for files to be encrypted.
+mechanism must also fail for files to be network encrypted.
 
 %%%%%%%%%%%%%%%%%%%
 %% encrypt_output_files
@@ -788,7 +840,7 @@ mechanism must also fail for files to be encrypted.
 \label{man-condor-submit-encrypt-output-files}
 \item[encrypt\_output\_files = $<$ file1,file2,file... $>$] 
 A comma and/or space separated list of output files that are to be
-encrypted when transferred back with the file transfer mechanism.
+network encrypted when transferred back with the file transfer mechanism.
 Specification of files in this manner overrides configuration that would
 \emph{not} use encryption.
 The output file(s) must also either be in the list given by
@@ -799,7 +851,7 @@ this specifies the path to the file on the execute side.
 A single wild card character (\Expr{*}) may be used in each file name.
 The method of encryption utilized will be as agreed upon in security
 negotiation; if that negotiation failed, then the file transfer
-mechanism must also fail for files to be encrypted.
+mechanism must also fail for files to be network encrypted.
 
 %%%%%%%%%%%%%%%%%%%
 %% max_transfer_input_mb
@@ -809,7 +861,7 @@ mechanism must also fail for files to be encrypted.
 \label{man-condor-submit-max-transfer-input-mb}
 \item[max\_transfer\_input\_mb = $<$ClassAd Integer Expression$>$] 
 This integer expression specifies the maximum allowed total size in
-Mbytes of the input files that are transferred for a job.  This
+MiB of the input files that are transferred for a job.  This
 expression does \emph{not} apply to grid universe, standard universe, or
 files transferred via file transfer plug-ins.  The expression may refer
 to attributes of the job.  The special value -1 indicates no limit.
@@ -827,7 +879,7 @@ transfer is attempted.
 \label{man-condor-submit-max-transfer-output-mb}
 \item[max\_transfer\_output\_mb = $<$ClassAd Integer Expression$>$] 
 This integer expression specifies the maximum allowed total size in
-Mbytes of the output files that are transferred for a job.  This
+MiB of the output files that are transferred for a job.  This
 expression does \emph{not} apply to grid universe, standard universe, or
 files transferred via file transfer plug-ins.  The expression may refer
 to attributes of the job.  The special value -1 indicates no limit.
@@ -997,11 +1049,12 @@ and it is named using the base name of the original path.  For
 example, \File{/path/to/input\_file} becomes \File{input\_file} in the job's
 scratch directory.
 
-A directory may be specified using a trailing path separator.
-An example of a trailing path separator is the slash character on Unix
-platforms; a directory example using a trailing path separator
+A directory may be specified by appending the forward slash character (/)
+as a trailing path separator.
+This syntax is used for both Windows and Linux submit hosts.
+A directory example using a trailing path separator
 is \File{input\_data/}. 
-When a directory is specified with a trailing path separator,
+When a directory is specified with the trailing path separator,
 the contents of the directory are
 transferred,  but the directory itself is not transferred.
 It is as if each of the items
@@ -1033,6 +1086,8 @@ to be transferred
 back from the temporary working directory on the execute machine to
 the submit machine.
 If there are multiple files, they must be delimited with commas.
+Setting \SubmitCmd{transfer\_output\_files} to the empty string (\verb@""@)
+means that no files are to be transferred.
 
 For HTCondor-C jobs and all other non-grid universe jobs,
 if \SubmitCmdNI{transfer\_output\_files} is not specified,
@@ -1556,8 +1611,8 @@ The default settings should produce reasonable results for most programs.
 These options only apply to standard-universe jobs.
 
 If needed, you may set the buffer controls individually for each file using
-the buffer\_files option. For example, to set the buffer size to 1 Mbyte and
-the block size to 256 Kbytes for the file \File{input.data}, use this command:
+the buffer\_files option. For example, to set the buffer size to 1 MiB and
+the block size to 256 KiB for the file \File{input.data}, use this command:
 
 \begin{verbatim}
 buffer_files = "input.data=(1000000,256000)"
@@ -1580,8 +1635,8 @@ DEFAULT_IO_BUFFER_BLOCK_SIZE = 256000
 \end{verbatim}
 
 Finally, if no other settings are present, HTCondor will use
-a buffer of 512 Kbytes
-and a block size of 32 Kbytes.
+a buffer of 512 KiB
+and a block size of 32 KiB.
 
 %%%%%%%%%%%%%%%%%%%
 %% compress_files
@@ -1935,6 +1990,17 @@ This command is optional, unless \SubmitCmd{ec2\_ebs\_volumes} is set.
 As an example, one current zone is \Expr{us-east-1b}.
 
 %%%%%%%%%%%%%%%%%%%
+%% ec2_block_device_mapping
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!ec2\_block\_device\_mapping}
+\label{condor-submit-ec2-block-device-mapping}
+\item[ec2\_block\_device\_mapping = $<$block-device$>$:$<$kernel-device$>$,$<$block-device$>$:$<$kernel-device$>$, \Dots]
+For grid type \SubmitCmdNI{ec2} jobs,
+specifies the block device to kernel device mapping.
+This command is optional.
+
+%%%%%%%%%%%%%%%%%%%
 %% ec2_ebs_volumes
 %%%%%%%%%%%%%%%%%%%
 
@@ -1956,6 +2022,29 @@ should have in the instance.
 For grid type \SubmitCmdNI{ec2} jobs,
 and optional specification of an Elastic IP address 
 that should be assigned to this instance.
+
+%%%%%%%%%%%%%%%%%%%
+%% ec2_iam_arn
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!ec2\_iam\_profile\_arn}
+\label{condor-submit-ec2-iam-profile-arn}
+\item[ec2\_iam\_profile\_arn = $<$IAM profile ARN$>$]
+For grid type \SubmitCmdNI{ec2} jobs,
+an Amazon Resource Name (ARN)
+identifying which Identity and Access Management (IAM) (instance) profile to
+associate with the instance.
+
+%%%%%%%%%%%%%%%%%%%
+%% ec2_iam_name
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!ec2\_iam\_profile\_name}
+\label{condor-submit-ec2-iam-profile-name}
+\item[ec2\_iam\_profile\_name= $<$IAM profile name$>$]
+For grid type \SubmitCmdNI{ec2} jobs, a name
+identifying which Identity and Access Management (IAM) (instance) profile to
+associate with the instance.
 
 %%%%%%%%%%%%%%%%%%%
 %% ec2_instance_type
@@ -1995,6 +2084,30 @@ If \SubmitCmd{ec2\_keypair} is specified for a job,
 \SubmitCmd{ec2\_keypair\_file} is ignored.
 
 %%%%%%%%%%%%%%%%%%%
+%% ec2_parameter_names
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!ec2\_parameter\_names}
+\label{condor-submit-ec2-parameter-names}
+\item[ec2\_parameter\_names = ParameterName1, ParameterName2, ...]
+For grid type \SubmitCmdNI{ec2} jobs,
+a space or comma separated list of the names of additional parameters
+to pass when instantiating an instance.
+
+%%%%%%%%%%%%%%%%%%%
+%% ec2_parameter_*
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!ec2\_parameter\_$<$name$>$}
+\item[ec2\_parameter\_$<$name$>$ = $<$value$>$]
+For grid type \SubmitCmdNI{ec2} jobs,
+specifies the value for the correspondingly named (instance instantiation)
+parameter.  
+\Opt{<name>} is the parameter name specified in the
+submit command \SubmitCmd{ec2\_parameter\_names},
+but with any periods replaced by underscores.
+
+%%%%%%%%%%%%%%%%%%%
 %% ec2_secret_access_key
 %%%%%%%%%%%%%%%%%%%
 
@@ -2013,6 +2126,17 @@ specifies the path and file name containing the secret access key.
 \item[ec2\_security\_groups = group1, group2, ...]
 For grid type \SubmitCmdNI{ec2} jobs, 
 defines the list of EC2 security groups which
+should be associated with the job.
+
+%%%%%%%%%%%%%%%%%%%
+%% ec2_security_ids
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!ec2\_security\_ids}
+\label{condor-submit-ec2-security-ids}
+\item[ec2\_security\_ids = id1, id2, ...]
+For grid type \SubmitCmdNI{ec2} jobs,
+defines the list of EC2 security group IDs which
 should be associated with the job.
 
 %%%%%%%%%%%%%%%%%%%
@@ -2804,6 +2928,22 @@ submission.
 \end{description} 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\emph{COMMANDS FOR THE DOCKER UNIVERSE}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{description} 
+
+%%%%%%%%%%%%%%%%%%%
+%% docker_image
+% %%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!docker\_image}
+\label{condor-submit-docker-image}
+\item[docker\_image = $<$ image-name $>$] Defines the name of the Docker
+image that is the basis for the docker container.
+
+\end{description} 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \emph{ADVANCED COMMANDS}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{description} 
@@ -2847,11 +2987,27 @@ The resources are presumed to have concurrency limits placed upon them,
 thereby limiting the number of concurrent jobs in execution which
 need the named resource.
 Commas and space characters delimit the items in the list.
-Each item in the list may specify a numerical value identifying the integer
-number of resources required for the job.
+Each item in the list is a string that identifies the limit,
+or it is a ClassAd expression that evaluates to a string, 
+and it is evaluated in the context of machine ClassAd 
+being considered as a match.
+Each item in the list also may specify a numerical value identifying the 
+integer number of resources required for the job.
 The syntax follows the resource name by a colon character (\verb@:@)
 and the numerical value.
 Details on concurrency limits are in the HTCondor Administrator's manual.
+
+%%%%%%%%%%%%%%%%%%%
+%% concurrency_limits_expr
+%%%%%%%%%%%%%%%%%%%
+\index{submit commands!concurrency\_limits\_expr}
+\label{condor-submit-concurrency-limits}
+\item[concurrency\_limits\_expr = $<$ClassAd String Expression$>$] 
+A ClassAd expression that represents the list of resources that this job needs
+after evaluation.
+The ClassAd expression may specify machine ClassAd attributes that
+are evaluated against a matched machine.
+After evaluation, the list sets \SubmitCmdNI{concurrency\_limits}.
 
 %%%%%%%%%%%%%%%%%%%
 %% copy_to_spool 
@@ -3066,8 +3222,8 @@ the inability to acquire more address space;
 for example, if \Procedure{malloc} fails. 
 If the image size is overestimated,
 HTCondor may have difficulty finding machines which have the required resources.
-\Arg{size} is specified in Kbytes. 
-For example, for an image size of 8 Megabytes, \Arg{size} should be 8000.
+\Arg{size} is specified in KiB. 
+For example, for an image size of 8 MiB, \Arg{size} should be 8000.
 
 %%%%%%%%%%%%%%%%%%%
 %% initialdir
@@ -3598,13 +3754,13 @@ Macros can be defined by lines in the form of
 \end{verbatim} 
 Two pre-defined macros are supplied by the submit description file parser.
 The
-\MacroU{Cluster} macro supplies the value of the
+\MacroUNI{Cluster}  or \MacroUNI{ClusterId} macro supplies the value of the
 \index{ClassAd job attribute!ClusterId}
 \index{ClusterId!job ClassAd attribute}
 \index{job ID!cluster identifier}
 \Attr{ClusterId} job
 ClassAd attribute, and the
-\MacroU{Process} macro supplies the value of the
+\MacroUNI{Process}  or \MacroUNI{ProcId} macro supplies the value of the
 \Attr{ProcId} job
 ClassAd attribute.
 These macros are
@@ -3613,7 +3769,7 @@ etc., for clusters with lots of jobs, and/or could be used to supply an
 HTCondor process with its own cluster and process numbers on the command
 line.
 
-The \MacroU{Node} macro is defined for parallel universe jobs,
+The \MacroUNI{Node} macro is defined for parallel universe jobs,
 and is especially relevant for MPI applications.
 It is a unique value assigned for the duration of the job
 that essentially identifies the machine (slot) on which a program is

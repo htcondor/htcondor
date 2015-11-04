@@ -38,12 +38,6 @@
 #include "dagman_recursive_submit.h"
 #include "jobstate_log.h"
 
-// NOTE: must be kept in sync with Job::job_type_t
-enum Log_source{
-  CONDORLOG = Job::TYPE_CONDOR,
-  DAPLOG = Job::TYPE_STORK
-};
-
 // Which layer of splices do we want to lift?
 enum SpliceLayer {
 	SELF,
@@ -53,6 +47,7 @@ enum SpliceLayer {
 class Dagman;
 class MyString;
 class DagmanMetrics;
+class CondorID;
 
 // used for RelinquishNodeOwnership and AssumeOwnershipofNodes
 // This class owns the containers with which it was constructed, but
@@ -97,7 +92,7 @@ class Dag {
   
     /** Create a DAG
 		@param dagFile the DAG file name
-        @param maxJobsSubmitted the maximum number of jobs to submit to Condor
+        @param maxJobsSubmitted the maximum number of jobs to submit to HTCondor
                at one time
         @param maxPreScripts the maximum number of PRE scripts to spawn at
 		       one time
@@ -113,15 +108,13 @@ class Dag {
 		       job, to put the node at the head of the ready queue
 		@param retryNodeFirst whether, when a node fails and has retries,
 			   to put the node at the head of the ready queue
-		@param condorRmExe executable to remove Condor jobs
-		@param storkRmExe executable to remove Stork jobs
-		@param DAGManJobId Condor ID of this DAGMan process
+		@param condorRmExe executable to remove HTCondor jobs
+		@param DAGManJobId HTCondor ID of this DAGMan process
 		@param prohibitMultiJobs whether submit files queueing multiple
 			   job procs are prohibited
 		@param submitDepthFirst whether ready nodes should be submitted
 			   in depth-first (as opposed to breadth-first) order
-		@param The user log file to be used for nodes whose submit files do
-				not specify a log file.
+		@param defaultNodeLog The user log file to be used for node jobs.
 		@param isSplice is a boolean which lets the dag object know whether
 				of not it is a splicing dag, or the toplevel dag. We don't
 				wan't to allocate some regulated resources we won't need
@@ -138,7 +131,7 @@ class Dag {
 		 bool allowLogError,
 		 bool useDagDir, int maxIdleJobProcs, bool retrySubmitFirst,
 		 bool retryNodeFirst, const char *condorRmExe,
-		 const char *storkRmExe, const CondorID *DAGManJobId,
+		 const CondorID *DAGManJobId,
 		 bool prohibitMultiJobs, bool submitDepthFirst,
 		 const char *defaultNodeLog, bool generateSubdagSubmits,
 		 SubmitDagDeepOptions *submitDagDeepOpts,
@@ -183,28 +176,28 @@ class Dag {
         @return true: successful, false: failure
     */
     bool AddDependency (Job * parent, Job * child);
+
+	/** Run waiting/deferred scripts that are ready to run.  Note: scripts
+	    are also limited by halt status and maxpre/maxpost.
+	*/
+	void RunWaitingScripts();
   
-    /** Blocks until the Condor Log file grows.
+    /** Blocks until the HTCondor Log file grows.
         @return true: log file grew, false: timeout or shrinkage
     */
-
-    
     bool DetectCondorLogGrowth();
-    bool DetectDaPLogGrowth();            //<--DAP
 
     /** Force the Dag to process all new events in the condor log file.
         This may cause the state of some jobs to change.
 
-		@param logsource The type of log from which events should be read.
         @param recover Process Log in Recover Mode, from beginning to end
         @return true on success, false on failure
     */
-    bool ProcessLogEvents (int logsource, bool recovery = false); //<--DAP
+    bool ProcessLogEvents (bool recovery = false);
 
 	/** Process a single event.  Note that this is called every time
 			we attempt to read the user log, so we may or may not have
 			a valid event here.
-		@param The type of log which is the source of the event.
 		@param The outcome from the attempt to read the user log.
 	    @param The event.
 		@param Whether we're in recovery mode.
@@ -212,7 +205,7 @@ class Dag {
 			function).
 		@return True if the DAG should continue, false if we should abort.
 	*/
-	bool ProcessOneEvent (int logsource, ULogEventOutcome outcome, const ULogEvent *event,
+	bool ProcessOneEvent (ULogEventOutcome outcome, const ULogEvent *event,
 			bool recovery, bool &done);
 
 	/** Process an abort or executable error event.
@@ -297,12 +290,11 @@ class Dag {
     */
     Job * FindNodeByName (const char * jobName) const;
 
-    /** Get pointer to job with condor or stork ID condorID
-		@param logsource The type of log from which events should be read.
-        @param condorID the CondorID of the job in the DAG
+    /** Get pointer to job with condor ID condorID
+        @param condorID the HTCondorID of the job in the DAG
         @return address of Job object, or NULL if not found
     */
-    Job * FindNodeByEventID (int logsource, const CondorID condorID ) const;
+    Job * FindNodeByEventID ( const CondorID condorID ) const;
 
     /** Ask whether a node name exists in the DAG
         @param nodeName the name of the node in the DAG
@@ -455,15 +447,25 @@ class Dag {
     /** Remove all jobs (using condor_rm) that are currently running.
         All jobs currently marked Job::STATUS_SUBMITTED will be fed
         as arguments to condor_rm via popen.  This function is called
-        when the Dagman Condor job itself is removed by the user via
+        when the Dagman HTCondor job itself is removed by the user via
         condor_rm.  This function <b>is not</b> called when the schedd
         kills Dagman.
+		@param dmJobId: the HTCondor ID of this DAGMan job.
+		@param removeCondorJobs: iff true we, remove our HTCondor node jobs.
+			This is set to false when DAGMan itself is condor_rm'ed,
+			because in that case the schedd removes the node jobs.
+		@param bForce: iff true, we run the command to remove HTCondor
+			node jobs even if we don't think we have any -- I think this
+			is in case we have a failure in recovery mode before we've
+			read the logs.  Setting bForce to true automatically
+			implies removeCondorJobs.
     */
-    void RemoveRunningJobs ( const Dagman &, bool bForce=false) const;
+    void RemoveRunningJobs ( const CondorID &dmJobId, bool removeCondorJobs,
+				bool bForce ) const;
 
     /** Remove all pre- and post-scripts that are currently running.
 	All currently running scripts will be killed via daemoncore.
-	This function is called when the Dagman Condor job itself is
+	This function is called when the Dagman HTCondor job itself is
 	removed by the user via condor_rm.  This function <b>is not</b>
 	called when the schedd kills Dagman.
     */
@@ -500,9 +502,8 @@ class Dag {
 				const char * dagFile, bool parseFailed = false,
 				bool isPartial = false) /* const */;
 
-	int PreScriptReaper( const char* nodeName, int status );
-	int PostScriptReaper( const char* nodeName, int status );
-	int PostScriptSubReaper( Job *job, int status );
+	int PreScriptReaper( Job *job, int status );
+	int PostScriptReaper( Job *job, int status );
 
 	void PrintReadyQ( debug_level_t level ) const;
 
@@ -629,9 +630,6 @@ class Dag {
 	// do not free this pointer
 	const char* CondorRmExe(void) { return _condorRmExe; }
 
-	// do not free this pointer
-	const char* StorkRmExe(void) { return _storkRmExe; }
-
 	const CondorID* DAGManJobId(void) { return _DAGManJobId; }
 
 	bool SubmitDepthFirst(void) { return _submitDepthFirst; }
@@ -642,17 +640,17 @@ class Dag {
 
 	StringList& DagFiles(void) { return _dagFiles; }
 
-	/** Determine whether a job is a NOOP job based on the Condor ID.
-		@param the Condor ID of the job
+	/** Determine whether a job is a NOOP job based on the HTCondor ID.
+		@param the HTCondor ID of the job
 		@return true iff the job is a NOOP
 	*/
 	static bool JobIsNoop( const CondorID &id ) {
 		return (id._cluster == 0) && (id._proc == Job::NOOP_NODE_PROCID);
 	}
 
-	/** Get the part of the CondorID that we're indexing by (cluster ID
+	/** Get the part of the HTCondorID that we're indexing by (cluster ID
 		for "normal" jobs, subproc ID for NOOP jobs).
-		@param the Condor ID of the job
+		@param the HTCondor ID of the job
 		@return the part of the ID to index by
 	*/
 	static int GetIndexID( const CondorID &id ) {
@@ -763,7 +761,6 @@ class Dag {
 	*/
 	inline bool Recovery() const { return _recovery; }
 
-	inline void UseDefaultNodeLog(bool useit) { _use_default_node_log = useit; }
   private:
 
 	// If this DAG is a splice, then this is what the DIR was set to, it 
@@ -820,26 +817,24 @@ class Dag {
 		SUBMIT_RESULT_NO_SUBMIT,
 	} submit_result_t;
 
-	/** Submit the Condor or Stork job for a node, including doing
+	/** Submit the HTCondor job for a node, including doing
 		some higher-level work such as sleeping before the actual submit
 		if necessary.
 		@param the appropriate Dagman object
 		@param the node for which to submit a job
-		@param reference to hold the Condor ID the job is assigned
+		@param reference to hold the HTCondor ID the job is assigned
 		@return submit_result_t (see above)
 	*/
 	submit_result_t SubmitNodeJob( const Dagman &dm, Job *node,
 				CondorID &condorID );
 
-	/** Do the post-processing of a successful submit of a Condor or
-		Stork job.
+	/** Do the post-processing of a successful submit of a HTCondor job.
 		@param the node for which the job was just submitted
-		@param the Condor ID of the associated job
+		@param the HTCondor ID of the associated job
 	*/	
 	void ProcessSuccessfulSubmit( Job *node, const CondorID &condorID );
 
-	/** Do the post-processing of a failed submit of a Condor or
-		Stork job.
+	/** Do the post-processing of a failed submit of a HTCondor job.
 		@param the node for which the job was just submitted
 		@param the maximum number of submit attempts allowed for a job.
 	*/
@@ -889,12 +884,12 @@ class Dag {
 	bool CheckForDagAbort(Job *job, const char *type);
 
 		// takes a userlog event and returns the corresponding node
-	Job* LogEventNodeLookup( int logsource, const ULogEvent* event,
+	Job* LogEventNodeLookup( const ULogEvent* event,
 				bool &submitEventIsSane );
 
 		// check whether a userlog event is sane, or "impossible"
 
-	bool EventSanityCheck( int logsource, const ULogEvent* event,
+	bool EventSanityCheck( const ULogEvent* event,
 						const Job* node, bool* result );
 
 		// compares a submit event's job ID with the one that appeared
@@ -903,24 +898,17 @@ class Dag {
 
 	bool SanityCheckSubmitEvent( const CondorID condorID, const Job* node );
 
-		/** Get the appropriate hash table for event ID->node mapping,
-			according to whether this is a Condor or Stork node.
+		/** Get the appropriate hash table for event ID->node mapping.
 			@param whether the node is a NOOP node
-			@param the node type/logsource (Condor or Stork) (see
-				Log_source and Job::job_type_t)
 			@return a pointer to the appropriate hash table
 		*/
-	HashTable<int, Job *> *		GetEventIDHash(bool isNoop, int jobType);
+	HashTable<int, Job *> *		GetEventIDHash(bool isNoop);
 
-		/** Get the appropriate hash table for event ID->node mapping,
-			according to whether this is a Condor or Stork node.
+		/** Get the appropriate hash table for event ID->node mapping.
 			@param whether the node is a NOOP node
-			@param the node type/logsource (Condor or Stork) (see
-				Log_source and Job::job_type_t)
 			@return a pointer to the appropriate hash table
 		*/
-	const HashTable<int, Job *> *		GetEventIDHash(bool isNoop,
-				int jobType) const;
+	const HashTable<int, Job *> *		GetEventIDHash(bool isNoop) const;
 
 	// run DAGs in directories from DAG file paths if true
 	bool _useDagDir;
@@ -928,19 +916,13 @@ class Dag {
     // Documentation on ReadUserLog is present in condor_utils
 	ReadMultipleUserLogs _condorLogRdr;
 
-		// Object to read events from Stork logs.
-	ReadMultipleUserLogs	_storkLogRdr;
-
 		/** Get the total number of node job user log files we'll be
 			accessing.
 			@return The total number of log files.
 		*/
-	int TotalLogFileCount() { return CondorLogFileCount() +
-				StorkLogFileCount(); }
-
+	int TotalLogFileCount() { return CondorLogFileCount(); }
+				
 	int CondorLogFileCount() { return _condorLogRdr.totalLogFileCount(); }
-
-	int StorkLogFileCount() { return _storkLogRdr.totalLogFileCount(); }
 
 		/** Write information for the given node to a rescue DAG.
 			@param fp: file pointer to the rescue DAG file
@@ -953,6 +935,12 @@ class Dag {
 		*/
 	void WriteNodeToRescue( FILE *fp, Job *node,
 				bool reset_retries_upon_rescue, bool isPartial );
+
+		/** Write a script specification to a rescue DAG.
+			@param fp: file pointer to the rescue DAG file
+		    @param script: the script to write
+		*/
+	static void WriteScriptToRescue( FILE *fp, Script *script );
 
 		// True iff the final node is ready to be run, is running,
 		// or has been run (including PRE and POST scripts, if any).
@@ -967,6 +955,16 @@ class Dag {
 	*/
 	const char *EscapeClassadString( const char* strIn );
 
+	/** Monitor the workflow log file for this DAG.
+		@return:  true if successful, false otherwise
+	*/
+	bool MonitorLogFile();
+
+	/** Unmonitor the workflow log file for this DAG.
+		@return:  true if successful, false otherwise
+	*/
+	bool UnmonitorLogFile();
+
 protected:
     /// List of Job objects
     List<Job>     _jobs;
@@ -980,13 +978,9 @@ private:
 
 	HashTable<JobID_t, Job *>		_nodeIDHash;
 
-	// Hash by CondorID (really just by the cluster ID because all
+	// Hash by HTCondorID (really just by the cluster ID because all
 	// procs in the same cluster map to the same node).
 	HashTable<int, Job *>			_condorIDHash;
-
-	// Hash by StorkID (really just by the cluster ID because all
-	// procs in the same cluster map to the same node).
-	HashTable<int, Job *>			_storkIDHash;
 
 	// NOOP nodes are indexed by subprocID.
 	HashTable<int, Job *>			_noopIDHash;
@@ -1031,20 +1025,17 @@ private:
 		// queue.  (Default is false.)
 	bool		m_retryNodeFirst;
 
-		// Executable to remove Condor jobs.
+		// Executable to remove HTCondor jobs.
 	const char *	_condorRmExe;
 
-		// Executable to remove Stork jobs.
-	const char *	_storkRmExe;
-
-		// Condor ID of this DAGMan process.
+		// HTCondor ID of this DAGMan process.
 	const CondorID *	_DAGManJobId;
 
-	// queue of jobs ready to be submitted to Condor
+	// queue of jobs ready to be submitted to HTCondor
 	PrioritySimpleList<Job*>* _readyQ;
 
 	// queue of submitted jobs not yet matched with submit events in
-	// the Condor job log
+	// the HTCondor job log
     Queue<Job*>* _submitQ;
 
 	ScriptQ* _preScriptQ;
@@ -1090,10 +1081,7 @@ private:
 		// Last time the status file was written.
 	time_t _lastStatusUpdateTimestamp;
 
-		// Separate event checkers for Condor and Stork here because
-		// IDs could collide.
 	CheckEvents	_checkCondorEvents;
-	CheckEvents	_checkStorkEvents;
 
 		// Total count of jobs deferred because of MaxJobs limit (note
 		// that a single job getting deferred multiple times is counted
@@ -1148,16 +1136,11 @@ private:
 		// The last time we printed a pending node report.
 	time_t		_lastPendingNodePrintTime;
 
-		// Default Condor ID to use in reseting a node's Condor ID on
+		// Default HTCondor ID to use in reseting a node's HTCondor ID on
 		// retry.
 	static const CondorID	_defaultCondorId;
 
-		// Whether having node job log files on NFS is an error (vs.
-		// just a warning).
-	bool	_nfsLogIsError;
-
-		// The user log file to be used for nodes whose submit files do
-		// not specify a log file.
+		// The user log file to be used for nodes jobs.
 	const char *_defaultNodeLog;
 
 		// Whether to generate the .condor.sub files for sub-DAGs
@@ -1220,12 +1203,6 @@ private:
 		// The name of the halt file (we halt the DAG if that file exists).
 	MyString _haltFile;
 	
-		// Whether to use the default node log as *the* log
-		// for writing and reading events.  If false, use the user log
-		// This must be false if dagman is communicating with a pre-7.9.0
-		// schedd/shadow or submit.
-	bool _use_default_node_log;
-
 		// Object to deal with reporting DAGMan metrics (to Pegasus).
 	DagmanMetrics *_metrics;
 };

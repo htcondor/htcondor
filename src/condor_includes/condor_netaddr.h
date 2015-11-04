@@ -35,20 +35,33 @@ class condor_netaddr
 	condor_sockaddr base_;
 	unsigned int maskbit_;
 public:
-	condor_netaddr(const condor_sockaddr& base, unsigned int maskbit);
 	condor_netaddr();
+	condor_netaddr(const condor_sockaddr& base, unsigned int maskbit);
 	bool match(const condor_sockaddr& target) const;
 
-	// it accepts following variants
-	// [IPv4 form]
-	// 128.105.*
-	// 128.105.0.0/255.255.0.0
-	// 128.105.0.0/16
 	//
-	// [IPv6 form] only allows IPv6 Address/#Mask
-	// FE8F:1234::/60
+	// This function is (primarily?) used by the ipverify infrastructure.
+	// As such, it -- and this class -- must support IP literals.  An IP
+	// literal may be an IPv4 literal or an IPv6 literal.  An IPv4 network
+	// may be specified as an incompleted dotted quad with a single asterisk
+	// (*) in place of a the rightmost quad; as a dotted quad followed by a
+	// slash follwed by the dotted quad of the netmask; or as a dotted quad
+	// followed by a slash followed by an integer specifying the number of
+	// mask bits.  An IPv6 network may be specified as an IPv6 literal
+	// followed by a slash followed by an integer specifying the number of
+	// mask bits; or as an IPv6 literal with the second of its trailing
+	// colons replaced by a star.  Examples:
 	//
-	// please refer RFC 4291 for IPv6 network representation.
+	// 128.104.100.22
+	//
+	// 128.104.*
+	// 128.104.0.0/255.255.0.0
+	// 128.104.0.0/16
+	//
+	// 2607:f388:107c:501:1b:21ff:feca:51f0
+	// 2607:f388:107c:501::/60
+	// 2607:f388:107c:501:*
+	//
 	bool from_net_string(const char* net);
 };
 

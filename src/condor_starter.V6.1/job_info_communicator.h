@@ -248,7 +248,10 @@ public:
 		/** Someone is attempting to reconnect to this job.
 		 */
 	virtual int reconnect( ReliSock* s, ClassAd* ad ) = 0;
-	
+
+		/** Someone is attempting to disconnect from this job.
+		 */
+	virtual void disconnect() = 0;	
 
 		// // // // // // // // // // // //
 		// Notfication to our controller

@@ -47,11 +47,12 @@ static int ZZZ_always_increase() {
 
 const std::string DaemonCommandProtocol::WaitForSocketDataString = "DaemonCommandProtocol::WaitForSocketData";
 
-DaemonCommandProtocol::DaemonCommandProtocol(Stream *sock,bool is_command_sock):
+DaemonCommandProtocol::DaemonCommandProtocol( Stream * sock, bool is_command_sock, bool isSharedPortLoopback ) :
 #ifdef HAVE_EXT_GSOAP
 	m_is_http_post(false),
 	m_is_http_get(false),
 #endif
+	m_isSharedPortLoopback( isSharedPortLoopback ),
 	m_nonblocking(!is_command_sock), // cannot re-register command sockets for non-blocking read
 	m_delete_sock(!is_command_sock), // must not delete registered command sockets
 	m_sock_had_no_deadline(false),
@@ -60,6 +61,7 @@ DaemonCommandProtocol::DaemonCommandProtocol(Stream *sock,bool is_command_sock):
 	m_reqFound(FALSE),
 	m_result(FALSE),
 	m_perm(USER_AUTH_FAILURE),
+	m_allow_empty(false),
 	m_policy(NULL),
 	m_key(NULL),
 	m_sid(NULL),
@@ -162,8 +164,14 @@ int DaemonCommandProtocol::doProtocol()
 		case CommandProtocolAuthenticateContinue:
 			what_next = AuthenticateContinue();
 			break;
-		case CommandProtocolPostAuthenticate:
-			what_next = PostAuthenticate();
+		case CommandProtocolEnableCrypto:
+			what_next = EnableCrypto();
+			break;
+		case CommandProtocolVerifyCommand:
+			what_next = VerifyCommand();
+			break;
+		case CommandProtocolSendResponse:
+			what_next = SendResponse();
 			break;
 		case CommandProtocolExecCommand:
 			what_next = ExecCommand();
@@ -306,7 +314,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::AcceptUDPReq
 
 		if (sess_id) {
 			KeyCacheEntry *session = NULL;
-			bool found_sess = m_sec_man->session_cache->lookup(sess_id, session);
+			bool found_sess = m_sec_man->session_cache.lookup(sess_id, session);
 
 			if (!found_sess) {
 				dprintf ( D_ALWAYS, "DC_AUTHENTICATE: session %s NOT FOUND; this session was requested by %s with return address %s\n", sess_id, m_sock->peer_description(), return_address_ss ? return_address_ss : "(none)");
@@ -400,7 +408,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::AcceptUDPReq
 
 		if (sess_id) {
 			KeyCacheEntry *session = NULL;
-			bool found_sess = m_sec_man->session_cache->lookup(sess_id, session);
+			bool found_sess = m_sec_man->session_cache.lookup(sess_id, session);
 
 			if (!found_sess) {
 				dprintf ( D_ALWAYS, "DC_AUTHENTICATE: session %s NOT FOUND; this session was requested by %s with return address %s\n", sess_id, m_sock->peer_description(), return_address_ss ? return_address_ss : "(none)");
@@ -489,6 +497,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::AcceptUDPReq
 // Read the header.  Soap requests are handled here.
 // If this is not a soap request and is a registered command,
 // pass on to ReadCommand.
+// Soap requests are also handled here.
 DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadHeader()
 {
 	m_sock->decode();
@@ -587,7 +596,10 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadHeader()
 
 			// Lookup the command integer in our command table to see if it is unregistered
 		int tmp_cmd_index;
-		if (!daemonCore->CommandNumToTableIndex(tmp_req, &tmp_cmd_index) && (daemonCore->HandleUnregisteredDCAuth() || (tmp_req != DC_AUTHENTICATE))) {
+		if(	   (!m_isSharedPortLoopback)
+			&& (! daemonCore->CommandNumToTableIndex( tmp_req, &tmp_cmd_index ))
+			&& ( daemonCore->HandleUnregisteredDCAuth()
+				|| (tmp_req != DC_AUTHENTICATE) ) ) {
 			ScopedEnableParallel(false);
 
 			if( m_sock_had_no_deadline ) {
@@ -604,11 +616,13 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadHeader()
 	return CommandProtocolContinue;
 }
 
-// Read the command.  This function will either be followed by
-// Authenticate or ExecCommand(), depending on whether authentication
-// was requested.  Soap requests are also handled here.
+// Read the command.  This function will either be followed by VerifyCommand if
+// we aren't using DC_AUTHENTICATE, otherwise either Authenticate or EnableCrypto,
+// depending on whether or not authentication was requested.
 DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand()
 {
+	dprintf( D_FULLDEBUG, "DAEMONCORE: ReadCommand()\n");
+
 	m_sock->decode();
 
 	if (m_sock->type() == Stream::reli_sock) {
@@ -753,7 +767,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 				}
 
 				// lookup the suggested key
-				if (!m_sec_man->session_cache->lookup(m_sid, session)) {
+				if (!m_sec_man->session_cache.lookup(m_sid, session)) {
 
 					// the key id they sent was not in our cache.  this is a
 					// problem.
@@ -1048,18 +1062,24 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 					if (IsDebugVerbose(D_SECURITY)) {
 						dprintf (D_SECURITY, "DC_AUTHENTICATE: not authenticating.\n");
 					}
-					m_state = CommandProtocolPostAuthenticate;
+					m_state = CommandProtocolEnableCrypto;
 					return CommandProtocolContinue;
 				}
 			} // end is_tcp
 		} // end !using_cookie
 	} // end DC_AUTHENTICATE
-	m_state = CommandProtocolExecCommand;
+
+	// This path means they were using "old-school" commands.  No DC_AUTHENTICATE,
+	// just raw command numbers.  We still want to do IPVerify on these however, so
+	// skip all the Authentication and Crypto and go straight to that phase.
+	m_state = CommandProtocolVerifyCommand;
 	return CommandProtocolContinue;
 }
 
 DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::Authenticate()
 {
+	dprintf( D_FULLDEBUG, "DAEMONCORE: Authenticate()\n");
+
 	if (m_errstack) { delete m_errstack;}
 	m_errstack = new CondorError();
 
@@ -1101,6 +1121,8 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::Authenticate
 
 DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::AuthenticateContinue()
 {
+	dprintf( D_FULLDEBUG, "DAEMONCORE: AuthenticateContinue()\n");
+
 	char *method_used = NULL;
 	int auth_result = m_sock->authenticate_continue(m_errstack, true, &method_used);
 	if (auth_result == 2) {
@@ -1112,6 +1134,8 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::Authenticate
 
 DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::AuthenticateFinish(int auth_success, char * method_used)
 {
+	dprintf( D_FULLDEBUG, "DAEMONCORE: AuthenticateFinish(%i, %s)\n", auth_success, method_used?method_used:"(no authentication)");
+
 	if ( method_used ) {
 		m_policy->Assign(ATTR_SEC_AUTHENTICATION_METHODS, method_used);
 	}
@@ -1171,12 +1195,14 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::Authenticate
 		}
 	}
 
-	m_state = CommandProtocolPostAuthenticate;
+	m_state = CommandProtocolEnableCrypto;
 	return CommandProtocolContinue;
 }
 
-DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::PostAuthenticate()
+DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::EnableCrypto()
 {
+	dprintf( D_FULLDEBUG, "DAEMONCORE: EnableCrypto()\n");
+
 	if (m_will_enable_integrity == SecMan::SEC_FEAT_ACT_YES) {
 
 		if (!m_key) {
@@ -1219,144 +1245,24 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::PostAuthenti
 		m_sock->set_crypto_key(false, m_key);
 	}
 
-
-	if (m_new_session) {
-		// clear the buffer
-		m_sock->decode();
-		m_sock->end_of_message();
-
-		// ready a classad to send
-		ClassAd pa_ad;
-
-		// session user
-		const char *fully_qualified_user = m_sock->getFullyQualifiedUser();
-		if ( fully_qualified_user ) {
-			pa_ad.Assign(ATTR_SEC_USER,fully_qualified_user);
-		}
-
-		if (m_sock->triedAuthentication()) {
-				// Clients older than 7.1.2 behave differently when re-using a
-				// security session.  If they reach a point in the code where
-				// authentication is forced (e.g. to submit jobs), they will
-				// always re-authenticate at that point.  Therefore, we only
-				// set TriedAuthentication=True for newer clients which respect
-				// that setting.  When the setting is not there or false, the server
-				// and client will re-authenticate at such points because
-				// triedAuthentication() (or isAuthenticated() in the older code)
-				// will be false.
-			char * remote_version = NULL;
-			m_policy->LookupString(ATTR_SEC_REMOTE_VERSION, &remote_version);
-			CondorVersionInfo verinfo(remote_version);
-			free(remote_version);
-
-			if (verinfo.built_since_version(7,1,2)) {
-				pa_ad.Assign(ATTR_SEC_TRIED_AUTHENTICATION,m_sock->triedAuthentication());
-			}
-
-		}
-
-			// remember on the server side what we told the client
-		m_sec_man->sec_copy_attribute( *m_policy, pa_ad, ATTR_SEC_TRIED_AUTHENTICATION );
-
-		// session id
-		pa_ad.Assign(ATTR_SEC_SID, m_sid);
-
-		// other commands this session is good for
-		pa_ad.Assign(ATTR_SEC_VALID_COMMANDS, daemonCore->GetCommandsInAuthLevel(m_comTable[m_cmd_index].perm,m_sock->isMappedFQU()).Value());
-
-		// also put some attributes in the policy classad we are caching.
-		m_sec_man->sec_copy_attribute( *m_policy, m_auth_info, ATTR_SEC_SUBSYSTEM );
-		m_sec_man->sec_copy_attribute( *m_policy, m_auth_info, ATTR_SEC_SERVER_COMMAND_SOCK );
-		m_sec_man->sec_copy_attribute( *m_policy, m_auth_info, ATTR_SEC_PARENT_UNIQUE_ID );
-		m_sec_man->sec_copy_attribute( *m_policy, m_auth_info, ATTR_SEC_SERVER_PID );
-		// it matters if the version is empty, so we must explicitly delete it
-		m_policy->Delete( ATTR_SEC_REMOTE_VERSION );
-		m_sec_man->sec_copy_attribute( *m_policy, m_auth_info, ATTR_SEC_REMOTE_VERSION );
-		m_sec_man->sec_copy_attribute( *m_policy, pa_ad, ATTR_SEC_USER );
-		m_sec_man->sec_copy_attribute( *m_policy, pa_ad, ATTR_SEC_SID );
-		m_sec_man->sec_copy_attribute( *m_policy, pa_ad, ATTR_SEC_VALID_COMMANDS );
-
-		if (IsDebugVerbose(D_SECURITY)) {
-			dprintf (D_SECURITY, "DC_AUTHENTICATE: sending session ad:\n");
-			dPrintAd( D_SECURITY, pa_ad );
-		}
-
-		m_sock->encode();
-		if (! putClassAd(m_sock, pa_ad) ||
-			! m_sock->end_of_message() ) {
-			dprintf (D_ALWAYS, "DC_AUTHENTICATE: unable to send session %s info to %s!\n", m_sid, m_sock->peer_description());
-			m_result = FALSE;
-			return CommandProtocolFinished;
-		} else {
-			if (IsDebugVerbose(D_SECURITY)) {
-				dprintf (D_SECURITY, "DC_AUTHENTICATE: sent session %s info!\n", m_sid);
-			}
-		}
-
-		// extract the session duration
-		char *dur = NULL;
-		m_policy->LookupString(ATTR_SEC_SESSION_DURATION, &dur);
-
-		char *return_addr = NULL;
-		m_policy->LookupString(ATTR_SEC_SERVER_COMMAND_SOCK, &return_addr);
-
-		// we add 20 seconds for "slop".  the idea is that if the client were
-		// to start a session just as it was expiring, the server will allow a
-		// window of 20 seconds to receive the command before throwing out the
-		// cached session.
-		int slop = param_integer("SEC_SESSION_DURATION_SLOP", 20);
-		int durint = atoi(dur) + slop;
-		time_t now = time(0);
-		int expiration_time = now + durint;
-
-		// extract the session lease time (max unused time)
-		int session_lease = 0;
-		m_policy->LookupInteger(ATTR_SEC_SESSION_LEASE, session_lease);
-		if( session_lease ) {
-				// Add some slop on the server side to avoid
-				// expiration right before the client tries
-				// to renew the lease.
-			session_lease += slop;
-		}
-
-
-		// add the key to the cache
-
-		// This is a session for incoming connections, so
-		// do not pass in m_sock->peer_addr() as addr,
-		// because then this key would get confused for an
-		// outgoing session to a daemon with that IP and
-		// port as its command socket.
-		KeyCacheEntry tmp_key(m_sid, NULL, m_key, m_policy, expiration_time, session_lease );
-		m_sec_man->session_cache->insert(tmp_key);
-		dprintf (D_SECURITY, "DC_AUTHENTICATE: added incoming session id %s to cache for %i seconds (lease is %ds, return address is %s).\n", m_sid, durint, session_lease, return_addr ? return_addr : "unknown");
-		if (IsDebugVerbose(D_SECURITY)) {
-			dPrintAd(D_SECURITY, *m_policy);
-		}
-
-		free( dur );
-		dur = NULL;
-		free( return_addr );
-		return_addr = NULL;
-	}
-
-	m_state = CommandProtocolExecCommand;
+	m_state = CommandProtocolVerifyCommand;
 	return CommandProtocolContinue;
 }
 
-// Call the command handle for the requested command.
-// Authorization is first verified.
-DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ExecCommand()
+
+
+
+DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::VerifyCommand()
 {
+	dprintf( D_FULLDEBUG, "DAEMONCORE: VerifyCommand()\n");
+
 	CondorError errstack;
 
 	if (m_req == DC_AUTHENTICATE) {
 
+		// this is the opposite... we should assume false and set it true when
+		// it is appropriate.
 		m_result = TRUE;
-
-		if (m_real_cmd == DC_AUTHENTICATE) {
-			return CommandProtocolFinished;
-		}
 
 		if (m_real_cmd == DC_SEC_QUERY) {
 			// continue spoofing another command.  just before calling the command
@@ -1366,21 +1272,24 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ExecCommand(
 			m_req = m_real_cmd;
 		}
 
-		m_sock->decode();
-		if( m_comTable[m_cmd_index].wait_for_payload == 0 ) {
-
-				// This command _might_ be one with no further data.
-				// Because of the way DC_AUTHENTICATE was implemented,
-				// command handlers that call end_of_message() when
-				// nothing more was sent by the peer will get an
-				// error, because we have already consumed the end of
-				// message.  Therefore, we set a flag on the socket:
-
-			m_sock->allow_one_empty_message();
-		}
-
 		// fill in the command info
 		m_reqFound = TRUE;
+		// is that always true?  we didn't even check?!?
+
+
+		// I feel like we might need special cases for DC_AUTHENTICATE
+		// and DC_SEC_QUERY at this point.  However, we must, in both cases
+		// send the response ad first, which includes info on whether or not
+		// the command was authorized.
+
+
+		// This command _might_ be one with no further data.
+		// Because of the way DC_AUTHENTICATE was implemented,
+		// command handlers that call end_of_message() when
+		// nothing more was sent by the peer will get an
+		// error, because we have already consumed the end of
+		// message.  Therefore, we set a flag on the socket:
+		m_allow_empty = true;
 
 		dprintf (D_SECURITY, "DC_AUTHENTICATE: Success.\n");
 	} else {
@@ -1483,6 +1392,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ExecCommand(
 		MyString command_desc;
 		command_desc.formatstr("command %d (%s)",m_req,m_comTable[m_cmd_index].command_descrip);
 
+		// this is the final decision on m_perm.  this is what matters.
 		if( m_comTable[m_cmd_index].force_authentication &&
 			!m_sock->isMappedFQU() )
 		{
@@ -1501,83 +1411,16 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ExecCommand(
 						  m_user.Value() );
 		}
 
-		// special case for DC_SEC_QUERY.  we are not going to call a command
-		// handler, but we need to respond whether or not the authorization
-		// succeeded.
-		if ( m_real_cmd == DC_SEC_QUERY ) {
-
-			// send another classad saying what happened
-			ClassAd q_response;
-			q_response.Assign( ATTR_SEC_AUTHORIZATION_SUCCEEDED, (m_perm == USER_AUTH_SUCCESS) );
-
-			if (!putClassAd(m_sock, q_response) ||
-				!m_sock->end_of_message()) {
-				dprintf (D_ALWAYS, "SECMAN: Error sending DC_SEC_QUERY classad to %s!\n", m_sock->peer_description());
-				dPrintAd (D_ALWAYS, q_response);
-				m_result = FALSE;
-				return CommandProtocolFinished;
-			}
-
-			dprintf (D_ALWAYS, "SECMAN: Succesfully sent DC_SEC_QUERY classad to %s!\n", m_sock->peer_description());
-			dPrintAd (D_ALWAYS, q_response);
-
-			// now, having informed the client about the authorization status,
-			// successfully abort before actually calling any command handler.
-			m_result = TRUE;
-			return CommandProtocolFinished;
-		}
-
-		if( m_perm != USER_AUTH_SUCCESS )
-		{
-			// Permission check FAILED
-			m_reqFound = FALSE;	// so we do not call the handler function below
-			// make result != to KEEP_STREAM, so we blow away this socket below
-			m_result = 0;
-
-			// if UDP, consume the rest of this message to try to stay "in-sync"
-			if ( !m_is_tcp)
-				m_sock->end_of_message();
-
-		} else {
-			dprintf(m_comTable[m_cmd_index].dprintf_flag | D_COMMAND,
-					"Received %s command %d (%s) from %s %s, access level %s\n",
-					(m_is_tcp) ? "TCP" : "UDP",
-					m_req,
-					m_comTable[m_cmd_index].command_descrip,
-					m_user.Value(),
-					m_sock->peer_description(),
-					PermString(m_comTable[m_cmd_index].perm));
-		}
-
 	} else {
-			dprintf(D_ALWAYS,
-					"Received %s command %d (%s) from %s %s\n",
-					(m_is_tcp) ? "TCP" : "UDP",
-					m_req,
-					"UNREGISTERED COMMAND!",
-					m_user.Value(),
-					m_sock->peer_description());
-		// make result != to KEEP_STREAM, so we blow away this socket below
-		m_result = 0;
+		// don't abort yet, we can send back the fact that the command
+		// was unregistered in the post-auth classad.
+
+		// also, i really dislike the following code, that modifies the state of the
+		// socket in what should be a purely read-only operation of verification.
+
 		// if UDP, consume the rest of this message to try to stay "in-sync"
 		if ( !m_is_tcp)
 			m_sock->end_of_message();
-	}
-/*
-	// Send authorization message
-	if (m_is_tcp) {
-		m_sock->encode();
-		if (!m_sock->code(m_perm) || !m_sock->end_of_message()) {
-			dprintf(D_ALWAYS, "DaemonCore: Unable to send permission results\n");
-		}
-	}
-*/
-
-	if ( m_real_cmd == DC_SEC_QUERY ) {
-		// send another classad saying what happened
-		// abort before actually calling any command handler.
-		m_result = TRUE;
-		return CommandProtocolFinished;
 	}
 
 	// call the auditing callback to record the status of this connection
@@ -1585,13 +1428,230 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ExecCommand(
 		(*(daemonCore->audit_log_callback_fn))( m_req, (*m_sock), (m_perm != USER_AUTH_SUCCESS) );
 	}
 
+	m_state = CommandProtocolSendResponse;
+	return CommandProtocolContinue;
+}
+
+DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::SendResponse()
+{
+	dprintf( D_FULLDEBUG, "DAEMONCORE: SendResponse()\n");
+
+	if (m_new_session) {
+		dprintf( D_FULLDEBUG, "DAEMONCORE: SendResponse() : m_new_session\n");
+
+		// clear the buffer
+		m_sock->decode();
+		m_sock->end_of_message();
+
+		// ready a classad to send
+		ClassAd pa_ad;
+
+		// session user
+		const char *fully_qualified_user = m_sock->getFullyQualifiedUser();
+		if ( fully_qualified_user ) {
+			pa_ad.Assign(ATTR_SEC_USER,fully_qualified_user);
+		}
+
+		if (m_sock->triedAuthentication()) {
+				// Clients older than 7.1.2 behave differently when re-using a
+				// security session.  If they reach a point in the code where
+				// authentication is forced (e.g. to submit jobs), they will
+				// always re-authenticate at that point.  Therefore, we only
+				// set TriedAuthentication=True for newer clients which respect
+				// that setting.  When the setting is not there or false, the server
+				// and client will re-authenticate at such points because
+				// triedAuthentication() (or isAuthenticated() in the older code)
+				// will be false.
+			char * remote_version = NULL;
+			m_policy->LookupString(ATTR_SEC_REMOTE_VERSION, &remote_version);
+			CondorVersionInfo verinfo(remote_version);
+			free(remote_version);
+
+			if (verinfo.built_since_version(7,1,2)) {
+				pa_ad.Assign(ATTR_SEC_TRIED_AUTHENTICATION,m_sock->triedAuthentication());
+			}
+
+		}
+
+			// remember on the server side what we told the client
+		m_sec_man->sec_copy_attribute( *m_policy, pa_ad, ATTR_SEC_TRIED_AUTHENTICATION );
+
+		// session id
+		pa_ad.Assign(ATTR_SEC_SID, m_sid);
+
+		// other commands this session is good for
+		pa_ad.Assign(ATTR_SEC_VALID_COMMANDS, daemonCore->GetCommandsInAuthLevel(m_comTable[m_cmd_index].perm,m_sock->isMappedFQU()).Value());
+
+		// what happened with command authorization?
+		if(m_reqFound) {
+			if(m_perm == USER_AUTH_SUCCESS) {
+				pa_ad.Assign(ATTR_SEC_RETURN_CODE, "AUTHORIZED");
+			} else {
+				pa_ad.Assign(ATTR_SEC_RETURN_CODE, "DENIED");
+			}
+		} else {
+			pa_ad.Assign(ATTR_SEC_RETURN_CODE, "CMD_NOT_FOUND");
+		}
+
+		if (IsDebugVerbose(D_SECURITY)) {
+			dprintf (D_SECURITY, "DC_AUTHENTICATE: sending session ad:\n");
+			dPrintAd( D_SECURITY, pa_ad );
+		}
+
+		m_sock->encode();
+		if (! putClassAd(m_sock, pa_ad) ||
+			! m_sock->end_of_message() ) {
+			dprintf (D_ALWAYS, "DC_AUTHENTICATE: unable to send session %s info to %s!\n", m_sid, m_sock->peer_description());
+			m_result = FALSE;
+			return CommandProtocolFinished;
+		} else {
+			if (IsDebugVerbose(D_SECURITY)) {
+				dprintf (D_SECURITY, "DC_AUTHENTICATE: sent session %s info!\n", m_sid);
+			}
+		}
+
+
+		// at this point, we can finally bail if we are not planning on
+		// continuing (i.e. a succesful authorization).
+		if (!m_reqFound || !(m_perm == USER_AUTH_SUCCESS)) {
+			dprintf (D_ALWAYS, "DC_AUTHENTICATE: Command not authorized, done!\n");
+			m_result = FALSE;
+			return CommandProtocolFinished;
+		}
+
+
+		// also put some attributes in the policy classad we are caching.
+		m_sec_man->sec_copy_attribute( *m_policy, m_auth_info, ATTR_SEC_SUBSYSTEM );
+		m_sec_man->sec_copy_attribute( *m_policy, m_auth_info, ATTR_SEC_SERVER_COMMAND_SOCK );
+		m_sec_man->sec_copy_attribute( *m_policy, m_auth_info, ATTR_SEC_PARENT_UNIQUE_ID );
+		m_sec_man->sec_copy_attribute( *m_policy, m_auth_info, ATTR_SEC_SERVER_PID );
+		// it matters if the version is empty, so we must explicitly delete it
+		m_policy->Delete( ATTR_SEC_REMOTE_VERSION );
+		m_sec_man->sec_copy_attribute( *m_policy, m_auth_info, ATTR_SEC_REMOTE_VERSION );
+		m_sec_man->sec_copy_attribute( *m_policy, pa_ad, ATTR_SEC_USER );
+		m_sec_man->sec_copy_attribute( *m_policy, pa_ad, ATTR_SEC_SID );
+		m_sec_man->sec_copy_attribute( *m_policy, pa_ad, ATTR_SEC_VALID_COMMANDS );
+
+		// extract the session duration
+		char *dur = NULL;
+		m_policy->LookupString(ATTR_SEC_SESSION_DURATION, &dur);
+
+		char *return_addr = NULL;
+		m_policy->LookupString(ATTR_SEC_SERVER_COMMAND_SOCK, &return_addr);
+
+		// we add 20 seconds for "slop".  the idea is that if the client were
+		// to start a session just as it was expiring, the server will allow a
+		// window of 20 seconds to receive the command before throwing out the
+		// cached session.
+		int slop = param_integer("SEC_SESSION_DURATION_SLOP", 20);
+		int durint = atoi(dur) + slop;
+		time_t now = time(0);
+		int expiration_time = now + durint;
+
+		// extract the session lease time (max unused time)
+		int session_lease = 0;
+		m_policy->LookupInteger(ATTR_SEC_SESSION_LEASE, session_lease);
+		if( session_lease ) {
+				// Add some slop on the server side to avoid
+				// expiration right before the client tries
+				// to renew the lease.
+			session_lease += slop;
+		}
+
+
+		// add the key to the cache
+
+		// This is a session for incoming connections, so
+		// do not pass in m_sock->peer_addr() as addr,
+		// because then this key would get confused for an
+		// outgoing session to a daemon with that IP and
+		// port as its command socket.
+		KeyCacheEntry tmp_key(m_sid, NULL, m_key, m_policy, expiration_time, session_lease );
+		m_sec_man->session_cache.insert(tmp_key);
+		dprintf (D_SECURITY, "DC_AUTHENTICATE: added incoming session id %s to cache for %i seconds (lease is %ds, return address is %s).\n", m_sid, durint, session_lease, return_addr ? return_addr : "unknown");
+		if (IsDebugVerbose(D_SECURITY)) {
+			dPrintAd(D_SECURITY, *m_policy);
+		}
+
+		free( dur );
+		dur = NULL;
+		free( return_addr );
+		return_addr = NULL;
+	} else {
+		dprintf( D_FULLDEBUG, "DAEMONCORE: SendResponse() : NOT m_new_session\n");
+	}
+
+	// what about DC_QUERY?  we want to stay in encode()
+	if(m_allow_empty) {
+		m_sock->decode();
+		if( m_comTable[m_cmd_index].wait_for_payload == 0 ) {
+
+				// This command _might_ be one with no further data.
+				// Because of the way DC_AUTHENTICATE was implemented,
+				// command handlers that call end_of_message() when
+				// nothing more was sent by the peer will get an
+				// error, because we have already consumed the end of
+				// message.  Therefore, we set a flag on the socket:
+
+			m_sock->allow_one_empty_message();
+		}
+	}
+
+	m_state = CommandProtocolExecCommand;
+	return CommandProtocolContinue;
+}
+
+// Call the command handle for the requested command.
+// Authorization is first verified.
+DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ExecCommand()
+{
+	dprintf( D_FULLDEBUG, "DAEMONCORE: ExecCommand(m_req == %i, m_real_cmd == %i, m_auth_cmd == %i)\n",
+		 m_req, m_real_cmd, m_auth_cmd);
+
+	// There is no command handler for DC_AUTHENTICATE.
+	//
+	// Sending DC_AUTHENTICATE as the m_real_cmd means a NO-OP.  This will
+	// create a session without actually executing any commands.  This is
+	// used to create a session using TCP that UDP commands can then resume
+	// without any round-trips.
+	if (m_real_cmd == DC_AUTHENTICATE) {
+		dprintf( D_FULLDEBUG, "DAEMONCORE: ExecCommand : m_real_cmd was DC_AUTHENTICATE. NO-OP.\n");
+		m_result = TRUE;
+		return CommandProtocolFinished;
+	}
+
+	// DC_SEC_QUERY is also a special case.  We are not going to call a command
+	// handler, but we need to respond whether or not the authorization for that
+	// command would have succeeded.
+	if ( m_real_cmd == DC_SEC_QUERY ) {
+
+		// send another classad saying what happened
+		ClassAd q_response;
+		q_response.Assign( ATTR_SEC_AUTHORIZATION_SUCCEEDED, (m_perm == USER_AUTH_SUCCESS) );
+
+		if (!putClassAd(m_sock, q_response) ||
+			!m_sock->end_of_message()) {
+			dprintf (D_ALWAYS, "SECMAN: Error sending DC_SEC_QUERY classad to %s!\n", m_sock->peer_description());
+			dPrintAd (D_ALWAYS, q_response);
+			m_result = FALSE;
+			return CommandProtocolFinished;
+		}
+
+		dprintf (D_ALWAYS, "SECMAN: Succesfully sent DC_SEC_QUERY classad to %s!\n", m_sock->peer_description());
+		dPrintAd (D_ALWAYS, q_response);
+
+		// now, having informed the client about the authorization status,
+		// successfully abort before actually calling any command handler.
+		m_result = TRUE;
+		return CommandProtocolFinished;
+	}
+
 	if ( m_reqFound == TRUE ) {
 		// Handlers should start out w/ parallel mode disabled by default
 		ScopedEnableParallel(false);
 
-		UtcTime handler_start_time;
-		handler_start_time.getTime();
-		float sec_time = handler_start_time.difference(&m_handle_req_start_time);
+		UtcTime handler_start_time(true);
+		double sec_time = handler_start_time.difference(&m_handle_req_start_time);
 		sec_time -= m_async_waiting_time;
 
 		if( m_sock_had_no_deadline ) {
@@ -1599,11 +1659,13 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ExecCommand(
 			m_sock->set_deadline(0);
 		}
 
+		double begin_time = _condor_debug_get_time_double(); // dc_stats.AddRuntime uses this as a timebase, not UtcTime
+
 		m_result = daemonCore->CallCommandHandler(m_req,m_sock,false /*do not delete m_sock*/,true /*do check for payload*/,sec_time,0);
 
 		// update dc stats for number of commands handled, the time spent in this command handler
 		daemonCore->dc_stats.Commands += 1;
-		daemonCore->dc_stats.AddRuntime(getCommandStringSafe(m_req), handler_start_time.combined());
+		daemonCore->dc_stats.AddRuntime(getCommandStringSafe(m_req), begin_time);
 	}
 
 	return CommandProtocolFinished;

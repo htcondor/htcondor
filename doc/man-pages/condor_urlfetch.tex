@@ -5,7 +5,7 @@
 
 \Synopsis
 \SynProg{\Condor{urlfetch}}
-\oOpt{-daemon}
+\oOpt{-<daemon>}
 \Arg{url}
 \Arg{local-url-cache-file}
 
@@ -41,14 +41,14 @@ then the contents of this file is sent to standard output.
 
 Note that if the configuration kept at the URL site changes,
 and reconfiguration is requested,
-the \Opt{-daemon} argument needs to be \Expr{-MASTER}.
+the \Opt{-<daemon>} argument needs to be \Expr{-MASTER}.
 This is the only way to guarantee that there will be a query of the changed
 URL contents, such that they will make their way into the configuration.
 
 \begin{Options}
 
-  \OptItem{\Opt{-daemon}}{The name of the daemon issuing the request
-    for the configuration output.  
+  \OptItem{\Opt{-<daemon>}}{The upper case name of the daemon issuing 
+    the request for the configuration output.  
     If \Expr{-MASTER}, then the URL query always occurs.
     If a daemon other than \Expr{-MASTER}, 
     for example \Expr{STARTD} or \Expr{SCHEDD},

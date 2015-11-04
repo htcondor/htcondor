@@ -27,12 +27,14 @@
 #include "condor_version.h"
 #include "condor_attributes.h"
 #include "scheduler.h"
+#include "qmgmt.h"
 #include "condor_qmgr.h"
 #include "CondorError.h"
 #include "MyString.h"
 #include "internet.h"
 
 #include "spooled_job_files.h"
+#include "set_user_priv_from_ad.h"
 #include "condor_config.h"
 #include "condor_open.h"
 
@@ -460,6 +462,30 @@ Job::get_file(const MyString &name,
               unsigned char *&data,
 			  CondorError &errstack)
 {
+	memset(data, 0, length);
+
+#if !defined(WIN32)
+	TemporaryPrivSentry sentry( true );
+	if ( param_boolean( "CHOWN_JOB_SPOOL_FILES", false ) == false ) {
+		ClassAd *job_ad = GetJobAd_as_ClassAd( id.cluster, id.proc );
+		if ( job_ad == NULL ) {
+			errstack.pushf("SOAP",
+						   FAIL,
+						   "Failed to retrieve job ad for file '%s'",
+						   name.Value());
+			return 5;
+		}
+		if ( !init_user_ids_from_ad( *job_ad ) ) {
+			errstack.pushf("SOAP",
+						   FAIL,
+						   "Failed to init user ids for file '%s'",
+						   name.Value());
+			return 6;
+		}
+		set_user_priv();
+	}
+#endif
+
 	int file = safe_open_wrapper_follow((spoolDirectory + DIR_DELIM_STRING + name).Value(),
 					O_RDONLY | _O_BINARY,
 					0);
@@ -632,13 +658,16 @@ ScheddTransaction::commit()
 	Job *job;
 	ClassAd *job_ad;
 	int universe;
+	bool chown_job_spool_files = param_boolean( "CHOWN_JOB_SPOOL_FILES", false ) ;
 	jobs.startIterations();
 	while (jobs.iterate(currentKey, job)) {
-		job_ad = GetJobAd( currentKey.cluster, currentKey.proc );
+		job_ad = GetJobAd_as_ClassAd( currentKey.cluster, currentKey.proc );
 		if ( job_ad->LookupInteger( ATTR_JOB_UNIVERSE, universe ) &&
 			 universe == CONDOR_UNIVERSE_GRID ) {
 
 			aboutToSpawnJobHandler( currentKey.cluster, currentKey.proc, NULL );
+		} else if ( chown_job_spool_files == false ) {
+			SpooledJobFiles::createJobSpoolDirectory( job_ad, PRIV_USER );
 		}
 	}
 
@@ -713,10 +742,10 @@ int
 ScheddTransaction::queryJobAds(const char *constraint, List<ClassAd> &ads)
 {
 		// XXX: Do this in a transaction (for ACID reasons)
-	ClassAd *ad = GetNextJobByConstraint(constraint, 1);
+	ClassAd *ad = GetNextJobByConstraint_as_ClassAd(constraint, 1);
 	while (ad) {
 		ads.Append(ad);
-		ad = GetNextJobByConstraint(constraint, 0);
+		ad = GetNextJobByConstraint_as_ClassAd(constraint, 0);
 	}
 
 	return 0;
@@ -725,7 +754,7 @@ ScheddTransaction::queryJobAds(const char *constraint, List<ClassAd> &ads)
 int
 ScheddTransaction::queryJobAd(PROC_ID id, ClassAd *&ad)
 {
-	ad = GetJobAd(id.cluster, id.proc);
+	ad = GetJobAd_as_ClassAd(id.cluster, id.proc);
 
 	return 0;
 }

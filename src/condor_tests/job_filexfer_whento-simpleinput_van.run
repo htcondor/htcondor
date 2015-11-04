@@ -20,10 +20,10 @@
 
 use CondorTest;
 use CondorUtils;
+use Check::SimpleJob;
 
-$cmd      = 'job_filexfer_whento-simpleinput_van.cmd';
-$testdesc =  'Jobs properly run with FT on and input = filename - vanilla U';
 $testname = "job_filexfer_whento-simpleinput_van";
+my $result = 0;
 
 # truly const variables in perl
 sub IDLE{1};
@@ -81,60 +81,37 @@ my $inb = "$basefile"."b.txt";
 my $inc = "$basefile"."c.txt";
 my $inputdir = "job_"."$job"."_dir";
 
-runcmd("mkdir -p $inputdir");
-runcmd("touch $inputdir/$in");
-runcmd("touch $inputdir/$ina");
-runcmd("touch $inputdir/$inb");
-runcmd("touch $inputdir/$inc");
+CreateDir("-p $inputdir");
+CreateEmptyFile("$inputdir/$in");
+CreateEmptyFile("$inputdir/$ina");
+CreateEmptyFile("$inputdir/$inb");
+CreateEmptyFile("$inputdir/$inc");
 
 my $line = "";
 my $args = "--job=$job --noextrainput ";
 
-# pass pid for output file production
-# open submitfile and fix
-open(CMD,"<$cmd") || die "Can not open command file: $!\n";
-open(NEWCMD,">$cmd.new") || die "Can not open command file: $!\n";
-while(<CMD>)
+my $input = "job_$job" . "_dir/submit_filetrans_input$job.txt";
+
+SimpleJob::RunCheck(
+    runthis=>"x_job_filexfer_testjob.pl",
+    duration=>"$args",
+	input=>"$input",
+    should_transfer_files=>"YES",
+    when_to_transfer_output=>"ON_EXIT",
+    on_execute=>$execute,
+    on_abort=>$abort,
+    on_hold=>$hold,
+    on_release=>$release,
+    on_success=>$success,
+);
+
+CondorTest::EndTest();
+print scalar localtime() . "\n";
+
+if( $result != 0 )
 {
-	CondorUtils::fullchomp($_);
-	CondorTest::debug("$_\n",1);
-	$line = $_;
-	if( $line =~ /^\s*input\s*=\s*job_\d+_dir\/([a-zA-Z_]+)\d*\.txt\s*$/)
-	{
-		my $input = "$1"."$job".".txt";
-		CondorTest::debug("Input file was $1\n",1);
-		print NEWCMD "input = $inputdir/$input\n"
-	}
-	elsif( $line =~ /^\s*transfer_input_files\s*=\s*.*$/ )
-	{
-		print NEWCMD "transfer_input_files = $inputdir/$ina,$inputdir/$inb,$inputdir/$inc\n";
-	}
-	elsif( $line =~ /^\s*arguments\s*=\s*.*$/)
-	{
-		print NEWCMD "arguments = $args\n";
-	}
-	else
-	{
-		print NEWCMD "$line\n";
-	}
-
-}
-close(CMD);
-close(NEWCMD);
-runcmd("mv $cmd.new $cmd");
-
-
-CondorTest::RegisterExecute($testname, $execute);
-CondorTest::RegisterAbort($testname, $abort);
-CondorTest::RegisterHold($testname, $hold);
-CondorTest::RegisterRelease($testname, $release);
-CondorTest::RegisterExitedSuccess($testname, $success);
-#CondorTest::RegisterTimed($testname, $timed, 3600);
-
-if( CondorTest::RunTest($testname, $cmd, 0) ) {
-	CondorTest::debug("$testname: SUCCESS\n",1);
-	exit(0);
-} else {
-	die "$testname: CondorTest::RunTest() failed\n";
+    exit(1);
 }
 
+CondorTest::debug("$testname SUCCESS\n",1);
+exit(0);

@@ -73,7 +73,16 @@ private:
 	int WriteTail(FILE *fp);
 };
 
-LogRecord *ReadLogEntry(FILE* fp, unsigned long recnum, LogRecord* (*InstantiateLogEntry)(FILE *fp, unsigned long recnum, int type));
+namespace compat_classad { class ClassAd; }
+class ConstructLogEntry
+{
+public:
+	virtual compat_classad::ClassAd* New() const = 0;
+	virtual void Delete(compat_classad::ClassAd*& val) const = 0;
+	virtual ~ConstructLogEntry() {}; // declare (superfluous) virtual constructor to get rid of g++ warning.
+};
+
+LogRecord *ReadLogEntry(FILE* fp, unsigned long recnum, LogRecord* (*InstantiateLogEntry)(FILE *fp, unsigned long recnum, int type, const ConstructLogEntry & ctor), const ConstructLogEntry & ctor);
 
 bool valid_record_optype(int optype);
 

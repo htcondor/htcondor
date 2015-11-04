@@ -161,15 +161,17 @@ protected:
 	static TrackTotals* normalTotals;
 	static int submittorRunningJobs;
 	static int submittorIdleJobs;
+	static int submittorNumAds;
 
 	static int machinesTotal,machinesUnclaimed,machinesClaimed,machinesOwner;
+	static int startdNumAds;
 
 	static CollectorUniverseStats ustatsAccum;
 	static CollectorUniverseStats ustatsMonthly;
 
 	static ClassAd *ad;
-	static CollectorList* updateCollectors;
-	static DCCollector* updateRemoteCollector;
+	static CollectorList* collectorsToUpdate;
+	static DCCollector* worldCollector;
 	static int UpdateTimerId;
 
 	static ForkWork forkQuery;

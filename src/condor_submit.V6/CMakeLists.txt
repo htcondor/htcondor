@@ -16,5 +16,6 @@
  # 
  ############################################################### 
 
+include_directories(${CONDOR_SCHEDD_SRC_DIR})
 
-condor_exe( condor_submit "submit.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF )
+condor_exe( condor_submit "submit.cpp;submit_protocol.cpp;submit_glob.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF )

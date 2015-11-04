@@ -853,7 +853,7 @@
 ]
 [
   Name   = "ExpectedMachineGracefulDrainingCompletion";
-  Value  = ExpectedMachineGracefulDrainingCompletion - CurrentTime;
+  Value  = ExpectedMachineGracefulDrainingCompletion - time();
   Verbosity = 2;
   Desc   = "Time graceful draining could take to complete, assuming jobs take full retirement and vacate time and there is no suspension";
   Units  = "seconds";

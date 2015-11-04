@@ -23,40 +23,37 @@
 //--------------------------------------------------------------------------
 
 #include "condor_classad.h"
-//#include "Set.h"
 #include "HashTable.h"
 #include "MyString.h"
 #include "classad_log.h"
 
-#include "classad_collection_types.h"
+// these two definitions allow us to dereference a template type
+//template<typename> struct dereference;
+//template <typename T> struct dereference<T*> { typedef typename T type; };
+// for example:
+// if AD is type foo*, then
+//    AD cad = new typename dereference<AD>::type();
+// expands to
+//    foo * cad = new foo();
 
-//--------------------------------------------------------------------------
+// The GenericClassAdCollection is a thin wrapper around the ClassAdLog class
+// It provides helper functions and a layer of abstraction.
+// It does not provide (or rather, it *no longer* provides) any collection management
+// At present either K or AltK *must* be of type (const char *), or various things to not compile
 
-typedef HashTable<int,BaseCollection*> CollectionHashTable;
-
-//--------------------------------------------------------------------------
-
-//@author Adiel Yoaz
-//@include: classad_collection_types.h
-
-/** This is the repository main class. Using the methods of this class
-    the user can create and delete class-ads, change their attributes,
-    control transactions, create logical collections of class-ads, and
-    iterate through the class-ads and the collections. Note that only 
-    the operations relating to class-ads are logged. Collection operations
-    are not logged, therefore collections are not persistent.
-
-    @author Adiel Yoaz
-*/
-
-class ClassAdLogFilterIterator;
-
-class ClassAdCollection : private ClassAdLog {
+template <typename K, typename AltK, typename AD>
+class GenericClassAdCollection : private ClassAdLog<K, AltK, AD> {
 
 public:
 
-  friend ClassAdLogFilterIterator BeginIterator(const classad::ExprTree &requirements, int timeslice_ms);
-  friend ClassAdLogFilterIterator EndIterator();
+  typename ClassAdLog<K,AltK,AD>::filter_iterator GetFilteredIterator(const classad::ExprTree &requirements, int timeslice_ms) {
+    typename ClassAdLog<K,AltK,AD>::filter_iterator it(*this, &requirements, timeslice_ms);
+    return it;
+  }
+  typename ClassAdLog<K,AltK,AD>::filter_iterator GetIteratorEnd() {
+    typename ClassAdLog<K,AltK,AD>::filter_iterator it(*this, NULL, 0, true);
+    return it;
+  }
 
   //------------------------------------------------------------------------
   /**@name Constructor and Destructor
@@ -68,19 +65,25 @@ public:
       empty repository.
     @return nothing
   */
-  ClassAdCollection();
+  GenericClassAdCollection(const ConstructLogEntry * pctor)
+	: ClassAdLog<K,AltK,AD>(pctor)
+  {
+  }
 
   /** Constructor (initialization). It reads the log file and initializes
       the class-ads (that are read from the log file) in memory.
     @param filename the name of the log file.
     @return nothing
   */
-  ClassAdCollection(const char* filename,int max_historical_logs=0);
+  GenericClassAdCollection(const ConstructLogEntry * pctor,const char* filename,int max_historical_logs=0)
+	: ClassAdLog<K,AltK,AD>(filename,max_historical_logs,pctor)
+  {
+  }
 
   /** Destructor - frees the memory used by the collections
     @return nothing
   */
-  ~ClassAdCollection();
+  ~GenericClassAdCollection() {};
 
   //@}
   //------------------------------------------------------------------------
@@ -95,56 +98,56 @@ public:
   /** Begin a transaction
     @return nothing
   */
-  void BeginTransaction() { ClassAdLog::BeginTransaction(); }
+  void BeginTransaction() { ClassAdLog<K,AltK,AD>::BeginTransaction(); }
 
   /** Commit a transaction
     @return nothing
   */
-  void CommitTransaction() { ClassAdLog::CommitTransaction(); }
+  void CommitTransaction() { ClassAdLog<K,AltK,AD>::CommitTransaction(); }
 
   /** Commit a transaction without forcing a sync to disk
     @return nothing
   */
-  void CommitNondurableTransaction() { ClassAdLog::CommitNondurableTransaction(); }
+  void CommitNondurableTransaction() { ClassAdLog<K,AltK,AD>::CommitNondurableTransaction(); }
 
   /** Abort a transaction
     @return true if a transaction aborted, false if no transaction active
   */
-  bool AbortTransaction() { return ClassAdLog::AbortTransaction(); }
+  bool AbortTransaction() { return ClassAdLog<K,AltK,AD>::AbortTransaction(); }
 
-  bool InTransaction() { return ClassAdLog::InTransaction(); }
+  bool InTransaction() { return ClassAdLog<K,AltK,AD>::InTransaction(); }
 
   /** Get a list of all new keys created in this transaction
 	  @param new_keys List object to populate
    */
   void ListNewAdsInTransaction( std::list<std::string> &new_keys ) {
-	  return ClassAdLog::ListNewAdsInTransaction( new_keys );
+	  return ClassAdLog<K,AltK,AD>::ListNewAdsInTransaction( new_keys );
   }
 
 	  // increase non-durable commit level
 	  // if > 0, begin non-durable commits
 	  // return old level
-  int IncNondurableCommitLevel() { return ClassAdLog::IncNondurableCommitLevel(); }
+  int IncNondurableCommitLevel() { return ClassAdLog<K,AltK,AD>::IncNondurableCommitLevel(); }
 	  // decrease non-durable commit level and verify that it
 	  // matches old_level
 	  // if == 0, resume durable commits
-  void DecNondurableCommitLevel(int old_level ) { ClassAdLog::DecNondurableCommitLevel( old_level ); }
+  void DecNondurableCommitLevel(int old_level ) { ClassAdLog<K,AltK,AD>::DecNondurableCommitLevel( old_level ); }
 
 		// Flush the log output buffer (but do not fsync).
 		// This is useful if non-durable events have been recently logged.
 		// Flushing will allow other processes that read the log to see
 		// the events that might otherwise hang around in the output buffer
 		// for a long time.
-  void FlushLog() { ClassAdLog::FlushLog(); }
+  void FlushLog() { ClassAdLog<K,AltK,AD>::FlushLog(); }
 
   		// Force the log output buffer to non-volatile storage (disk).  
 		// This means doing both a flush and fsync.
-  void ForceLog() { ClassAdLog::ForceLog(); }
+  void ForceLog() { ClassAdLog<K,AltK,AD>::ForceLog(); }
 
   ///
-  Transaction* getActiveTransaction() { return ClassAdLog::getActiveTransaction(); }
+  Transaction* getActiveTransaction() { return ClassAdLog<K,AltK,AD>::getActiveTransaction(); }
   ///
-  bool setActiveTransaction(Transaction* & transaction) { return ClassAdLog::setActiveTransaction(transaction); }
+  bool setActiveTransaction(Transaction* & transaction) { return ClassAdLog<K,AltK,AD>::setActiveTransaction(transaction); }
 
 
   /** Lookup an attribute's value in the current transaction. 
@@ -153,18 +156,25 @@ public:
       @param val the value of the attrinute (output parameter).
       @return true on success, false otherwise.
   */
-  bool LookupInTransaction(const char *key, const char *name, char *&val) { return (ClassAdLog::LookupInTransaction(key,name,val)==1); }
+#if 0 //def COL_USE_NATIVE_KEYS
+  bool LookupInTransaction(const K& key, const char *name, char *&val) {
+	MyString str; key.sprint(str);
+	return 1 == ClassAdLog<K,AltK,AD>::LookupInTransaction(str.c_str(),name,val);
+  }
+#else
+  bool LookupInTransaction(AltK key, const char *name, char *&val) { return (ClassAdLog<K,AltK,AD>::LookupInTransaction(key,name,val)==1); }
+#endif
   
   /** Truncate the log file by creating a new "checkpoint" of the repository
     @return true on success; false if log could not be rotated (in which
 	case we are continuing to use the old log file)
   */
-  bool TruncLog() { return ClassAdLog::TruncLog(); }
+  bool TruncLog() { return ClassAdLog<K,AltK,AD>::TruncLog(); }
 
-  void SetMaxHistoricalLogs(int max) { ClassAdLog::SetMaxHistoricalLogs(max); }
-  int GetMaxHistoricalLogs() { return ClassAdLog::GetMaxHistoricalLogs(); }
+  void SetMaxHistoricalLogs(int max) { ClassAdLog<K,AltK,AD>::SetMaxHistoricalLogs(max); }
+  int GetMaxHistoricalLogs() { return ClassAdLog<K,AltK,AD>::GetMaxHistoricalLogs(); }
 
-  time_t GetOrigLogBirthdate() { return ClassAdLog::GetOrigLogBirthdate(); }
+  time_t GetOrigLogBirthdate() { return ClassAdLog<K,AltK,AD>::GetOrigLogBirthdate(); }
 
   //@}
   //------------------------------------------------------------------------
@@ -179,7 +189,19 @@ public:
       @param targettype The class-ad's TargetType attribute value.
       @return true on success, false otherwise.
   */
-  bool NewClassAd(const char* key, const char* mytype, const char* targettype);
+#if 0 ///def COL_USE_NATIVE_KEYS
+  bool NewClassAd(const K& key, const char* mytype, const char* targettype) {
+	MyString str; key.sprint(str);
+	this->AppendLog(new LogNewClassAd(str.c_str(),mytype,targettype, this->GetTableEntryMaker()));
+	return true;
+  }
+#else
+  bool NewClassAd(AltK key, const char* mytype, const char* targettype) {
+	this->AppendLog(new LogNewClassAd(key,mytype,targettype, this->GetTableEntryMaker()));
+	return true;
+  }
+#endif
+
 
   /** Insert a new class-ad with the specified key.
       The new class-ad will be a copy of the ad supplied.
@@ -187,13 +209,32 @@ public:
       @param ad The class-ad to copy into the repository.
       @return true on success, false otherwise.
   */
-  bool NewClassAd(const char* key, ClassAd* ad);
+  bool NewClassAd(AltK key, AD ad) {
+	LogRecord* log = new LogNewClassAd(key,GetMyTypeName(*ad),GetTargetTypeName(*ad), this->GetTableEntryMaker());
+	this->AppendLog(log);
+	const char *name;
+	ExprTree* expr;
+	ad->ResetExpr();
+	while (ad->NextExpr(name, expr)) {
+		log = new LogSetAttribute(key,name,ExprTreeToString(expr));
+		this->AppendLog(log);
+	}
+	return true;
+  }
 
   /** Destroy the class-ad with the specified key.
       @param key The class-ad's key.
       @return true on success, false otherwise.
   */
-  bool DestroyClassAd(const char* key);
+  bool DestroyClassAd(AltK key) {
+	this->AppendLog(new LogDestroyClassAd(key, this->GetTableEntryMaker()));
+	return true;
+  }
+  bool DestroyClassAd(const K & key) {
+	MyString str; key.sprint(str);
+	this->AppendLog(new LogDestroyClassAd(str.c_str(), this->GetTableEntryMaker()));
+	return true;
+  }
 
   /** Set an attribute in a class-ad.
       @param key The class-ad's key.
@@ -202,20 +243,50 @@ public:
       @param is_dirty the parameter should be marked dirty in the classad.
       @return true on success, false otherwise.
   */
-  bool SetAttribute(const char* key, const char* name, const char* value, const bool is_dirty=false);
+#if 0 //def COL_USE_NATIVE_KEYS
+  bool SetAttribute(const K& key, const char* name, const char* value, const bool is_dirty=false) {
+	MyString str; key.sprint(str);
+	this->AppendLog(new LogSetAttribute(str.c_str(),name,value,is_dirty));
+	return true;
+  }
+#else
+  bool SetAttribute(AltK key, const char* name, const char* value, const bool is_dirty=false) {
+	this->AppendLog(new LogSetAttribute(key,name,value,is_dirty));
+	return true;
+  }
+#endif
 
   /** Delete an attribute in a class-ad.
       @param key The class-ad's key.
       @param name the name of the attribute.
       @return true on success, false otherwise.
   */
-  bool DeleteAttribute(const char* key, const char* name);
+#if 0 // def COL_USE_NATIVE_KEYS
+  bool DeleteAttribute(const K& key, const char* name) {
+	MyString str; key.sprint(str);
+	this->AppendLog(new LogDeleteAttribute(str.c_str(),name));
+	return true;
+  }
+#else
+  bool DeleteAttribute(AltK key, const char* name) {
+	this->AppendLog(new LogDeleteAttribute(key,name));
+	return true;
+  }
+#endif
 
   /** Clear all parameter dirty bits in a class-ad.
       @param key The class-ad's key.
       @return true on success, false otherwise.
   */
-  bool ClearClassAdDirtyBits(const char* key);
+  bool ClearClassAdDirtyBits(const K& key) {
+	AD Ad;
+	if (this->table.lookup(key,Ad) < 0)
+		return false;
+	ClassAd* cad = Ad;
+	cad->ClearAllDirtyFlags();
+	return true;
+  }
+
 
   /** Get a class-ad from the repository.
       Note that the class-ad returned cannot be modified directly.
@@ -223,190 +294,56 @@ public:
       @param Ad A pointer to the class-ad (output parameter).
       @return true on success, false otherwise.
   */
-  bool LookupClassAd(const char* key, ClassAd*& Ad) { return (table.lookup(HashKey(key), Ad)==0); }
+  bool Lookup(const K & key, AD & Ad) { return this->table.lookup(key, Ad) >= 0; }
+  bool LookupClassAd(const K& key, ClassAd*& cad) {
+	AD Ad(0); // shouldn't have to init this here, but g++ can't figure out that it will never be used unless it's first initialized.
+	if (this->table.lookup(key, Ad) <0) {
+		return false;
+	}
+	cad = Ad;
+	return true;
+  }
 
-  bool AddAttrsFromTransaction(const char* key, ClassAd & ad) { return (ClassAdLog::AddAttrsFromTransaction(key,ad)); }
+  bool Iterate(AD & Ad)         { return this->table.iterate(Ad) == 1; }
+  bool Iterate(K& key, AD& Ad)  { return this->table.iterate(key,Ad) == 1; }
+
+  bool AddAttrsFromTransaction(AltK key, ClassAd & ad) { return ClassAdLog<K,AltK,AD>::AddAttrsFromTransaction(key,ad); }
   
-  //@}
-  //------------------------------------------------------------------------
-  /**@name Collection Operations
-  * Note: these operations are not persistent - not logged.
-  */
-  //@{
-
-  /*  NOT USED:
-      Create an explicit collection, as a child of another collection.
-      An explicit collection can include any subset of ads which are in its parent.
-      The user can actively include and exclude ads from this collection.
-      @param ParentCoID The ID of the parent collection.
-      @param Rank The rank expression. Determines how the ads will be ordered in the collection.
-      @param FullFlag The flag which indicates automatic insertion of class-ads from the parent.
-      @return the ID of the new collection, or -1 in case of failure.
-  */
-//  int CreateExplicitCollection(int ParentCoID, const MyString& Rank, bool FullFlag=false);
-
-  /*  NOT USED
-	  Create a constraint collection, as a child of another collection.
-      A constraint collection always contains the subset of ads from the parent, which
-      match the constraint.
-      @param ParentCoID The ID of the parent collection.
-      @param Rank The rank expression. Determines how the ads will be ordered in the collection.
-      @param Constraint sets the constraint expression for this collection.
-      @return the ID of the new collection, or -1 in case of failure.
-  */
-//  int CreateConstraintCollection(int ParentCoID, const MyString& Rank, const MyString& Constraint);
-
-
-  /*  NOT USED
-      Create a partition collection, as a child of another collection.
-      A partiton collection defines a partition based on a set of attributes. For
-      each distinct set of values (corresponding to these attributes), a new
-      child collection will be created, which will contain all the class-ads from the
-      parent collection that have these values. The partition collection itself doesn't
-      hold any class-ads, only its children do (the iteration methods for getting
-      child collections can be used to retrieve them).
-      @param ParentCoID The ID of the parent collection.
-      @param Rank The rank expression. Determines how the ads will be ordered in the child collections.
-      @param AttrList The set of attribute names used to define the partition.
-      @return the ID of the new collection, or -1 in case of failure.
-  */
-//  int CreatePartition(int ParentCoID, const MyString& Rank, StringSet& AttrList);
-
-  /** Deletes a collection and all of its descendants from the collection tree.
-      @param CoID The ID of the collection to be deleted.
-      @return true on success, false otherwise.
-  */
-  bool DeleteCollection(int CoID);
-
-  //@}
-  //------------------------------------------------------------------------
-  /**@name Iteration methods
-  */
-  //@{
-
-  /** Start iterations on all collections
-    @return nothing
-  */
-  void StartIterateAllCollections();
-
-  /** Get the next collection ID
-      @param CoID The ID of the next collection (output parameter).
-      @return true on success, false otherwise.
-  */
-  bool IterateAllCollections(int& CoID);
-
-  /** Start iterations on child collections of a specified collection.
-      @param ParentCoID The ID of the parent of the collections to be iterated on.
-      @return true on success, false otherwise.
-  */
-  bool StartIterateChildCollections(int ParentCoID);
-
-  /** Get the next child of the specified parent collection.
-      @param ParentCoID The ID of the parent of the collections to be iterated on.
-      @param CoID The ID of the next collection (output parameter).
-      @return true on success, false otherwise.
-  */
-  bool IterateChildCollections(int ParentCoID, int& CoID);
-
   /** Start iterations on all class-ads in the repository.
       @return nothing.
   */
-  void StartIterateAllClassAds() { table.startIterations(); }
+  void StartIterateAllClassAds() { this->table.startIterations(); }
 
   /** Get the next class-ad in the repository.
       @param Ad A pointer to next the class-ad (output parameter).
       @return true on success, false otherwise.
   */
-  bool IterateAllClassAds(ClassAd*& Ad) { return (table.iterate(Ad)==1); }
+  bool IterateAllClassAds(ClassAd*& cad) {
+	AD Ad(0);
+	if ( !  this->Iterate(Ad))
+		return false;
+	cad = Ad;
+	return true;
+  }
 
   /** Get the next class-ad in the repository and its key.
       @param Ad A pointer to next the class-ad (output parameter).
 	  @param KeyBuf A pointer to a buffer which will receive the key (output param).
       @return true on success, false otherwise.
   */
-  bool IterateAllClassAds(ClassAd*& Ad, HashKey& KeyBuf) 
-		{ return (table.iterate(KeyBuf,Ad)==1); }
+  bool IterateAllClassAds(ClassAd*& cad, K& KeyBuf) {
+	AD Ad(0);
+	if ( ! this->Iterate(KeyBuf, Ad))
+		return false;
+	cad = Ad;
+	return true;
+  }
 
-  //@}
-  //------------------------------------------------------------------------
-  /**@name Misc methods
-  */
-  //@{
-
-  /** Find out a collection's type (explicit, constraint, ...).
-      @return the type of the specified collection: 0=explicit, 1=constraint.
-  */
-  int GetCollectionType(int CoID);
-
-  /** Prints the whole repository (for debugging purposes).
-      @return nothing.
-  */
-  void Print();
-
-  /** Prints a single collection in the repository (for debugging purposes).
-      @return nothing.
-  */
-  void Print(int CoID);
-
-  /// A hash function used by the hash table objects (used internally).
-  static unsigned int HashFunc(const int& Key) { return (unsigned int)Key; }
-
-  //@}
-  //------------------------------------------------------------------------
-
-private:
-
-  /** Start iterations on class-ads in a collection.
-      Returns true on success, false otherwise.
-  */
-  bool StartIterateClassAds(int CoID);
-
-  /** Get the next class-ad and its numeric rank in the collection.
-      Returns true on success, false otherwise.
-  */
-  bool IterateClassAds(int CoID, RankedClassAd& OID);
-
-  //------------------------------------------------------------------------
-  // Data Members
-  //------------------------------------------------------------------------
-
-  /// The hash table that maps collection IDs to collection objects
-  CollectionHashTable Collections;
-
-  /// The last collection ID used
-  int LastCoID;
-
-  //------------------------------------------------------------------------
-  // Methods that are used internally
-  //------------------------------------------------------------------------
-
-  ///
-  bool AddClassAd(int CoID, const MyString& OID);
-
-  ///
-  bool AddClassAd(int CoID, const MyString& OID, ClassAd* ad);
-
-  ///
-  bool RemoveClassAd(int CoID, const MyString& OID);
-
-  ///
-  bool ChangeClassAd(const MyString& OID);
-
-  ///
-  bool RemoveCollection(int CoID, BaseCollection* Coll);
-
-  ///
-  bool TraverseTree(int CoID, bool (ClassAdCollection::*Func)(int,BaseCollection*));
-
-  ///
-  static float GetClassAdRank(ClassAd* Ad, const MyString& RankExpr);
-
-  ///
-  static bool EqualSets(StringSet& S1, StringSet& S2);
-
-  ///
-  bool CheckClassAd(BaseCollection* Coll, const MyString& OID, ClassAd* Ad);
-
+  // this is for DEBUG PURPOSES ONLY!!!
+  HashTable<K,AD>* Table() { return &this->table; }
 };
+
+// Declare the old (non-templated) ClassAdCollection as a specialization of this type
+typedef GenericClassAdCollection<HashKey, const char*, ClassAd*> ClassAdCollection;
 
 #endif

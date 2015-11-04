@@ -23,7 +23,6 @@
 
 #include "condor_common.h"
 #include "condor_classad.h"
-#include "write_user_log.h"
 #include "user_job_policy.h"
 #include "classad_hashtable.h"
 #include "baseresource.h"
@@ -128,7 +127,6 @@ class BaseJob : public Service
 	int jobLeaseReceivedExpiredTid;
 };
 
-WriteUserLog *InitializeUserLog( ClassAd *job_ad );
 bool WriteExecuteEventToUserLog( ClassAd *job_ad );
 bool WriteAbortEventToUserLog( ClassAd *job_ad );
 bool WriteTerminateEventToUserLog( ClassAd *job_ad );

@@ -244,7 +244,7 @@ ReadUserLogHeader::Read(
 
 // Write a header event
 int
-WriteUserLogHeader::Write( WriteUserLog &writer, FILE *fp )
+WriteUserLogHeader::Write( WriteUserLog &writer, int fd )
 {
 	GenericEvent	event;
 
@@ -254,7 +254,7 @@ WriteUserLogHeader::Write( WriteUserLog &writer, FILE *fp )
 	if ( !GenerateEvent( event ) ) {
 		return ULOG_UNK_ERROR;
 	}
-	return writer.writeGlobalEvent( event, fp, true );
+	return writer.writeGlobalEvent( event, fd, true );
 }
 
 // Generate a header event

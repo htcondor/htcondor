@@ -23,6 +23,7 @@
 #include "condor_attributes.h"
 #include "schedd_negotiate.h"
 
+
 ResourceRequestCluster::ResourceRequestCluster(int auto_cluster_id):
 	m_auto_cluster_id(auto_cluster_id)
 {
@@ -65,6 +66,7 @@ ScheddNegotiate::ScheddNegotiate
 	m_jobs(jobs),
 	m_current_resources_requested(1),
 	m_current_resources_delivered(0),
+	m_jobs_can_offer(-1),
 	m_owner(owner ? owner : ""),
 	m_remote_pool(remote_pool ? remote_pool : ""),
 	m_current_auto_cluster_id(-1),
@@ -130,7 +132,7 @@ ScheddNegotiate::nextJob()
 		return true;
 	}
 
-	while( !m_jobs->empty() ) {
+	while( !m_jobs->empty() && m_jobs_can_offer ) {
 		ResourceRequestCluster *cluster = m_jobs->front();
 		ASSERT( cluster );
 
@@ -162,7 +164,17 @@ ScheddNegotiate::nextJob()
 						// For now, do not use request counts with the dedicated scheduler
 						if ( universe != CONDOR_UNIVERSE_PARALLEL ) {
 							// add one to cluster size to cover the current popped job
-							m_current_job_ad.Assign(ATTR_RESOURCE_REQUEST_COUNT,1+cluster->size());
+							int resource_count = 1+cluster->size();
+							if (resource_count > m_jobs_can_offer && (m_jobs_can_offer > 0))
+							{
+								dprintf(D_FULLDEBUG, "Offering %d jobs instead of %d to the negotiator for this cluster; nearing internal limits (MAX_JOBS_RUNNING, etc).\n", m_jobs_can_offer, resource_count);
+								resource_count = m_jobs_can_offer;
+							}
+							m_jobs_can_offer -= resource_count;
+							m_current_job_ad.Assign(ATTR_RESOURCE_REQUEST_COUNT,resource_count);
+						}
+						else {
+							m_jobs_can_offer--;
 						}
 
 						// Copy attributes from chained parent ad into our copy 
@@ -177,6 +189,10 @@ ScheddNegotiate::nextJob()
 
 		m_jobs->pop_front();
 		delete cluster;
+	}
+	if (!m_jobs_can_offer)
+	{
+		dprintf(D_FULLDEBUG, "Not offering any more jobs to the negotiator because I am nearing the internal limits (MAX_JOBS_RUNNING, etc).\n");
 	}
 
 	m_current_auto_cluster_id = -1;
@@ -276,6 +292,8 @@ ScheddNegotiate::fixupPartitionableSlot(ClassAd *job_ad, ClassAd *match_ad)
 bool
 ScheddNegotiate::sendResourceRequestList(Sock *sock)
 {
+	m_jobs_can_offer = scheduler_maxJobsToOffer();
+
 	while (m_num_resource_reqs_to_send > 0) {
 
 		nextJob();
@@ -307,6 +325,9 @@ ScheddNegotiate::sendResourceRequestList(Sock *sock)
 
 		m_num_resource_reqs_sent++;
 		m_num_resource_reqs_to_send--;
+
+		extern void IncrementResourceRequestsSent();
+		IncrementResourceRequestsSent();
 	}
 
 	// Set m_num_resource_reqs_to_send to zero, as we are not sending
@@ -338,6 +359,9 @@ ScheddNegotiate::sendJobInfo(Sock *sock, bool just_sig_attrs)
 		return false;
 	}
 
+		// Tell the negotiator that we understand pslot preemption
+	m_current_job_ad.Assign(ATTR_WANT_PSLOT_PREEMPTION, true);
+		
 		// request match diagnostics
 		// 0 = no match diagnostics
 		// 1 = match diagnostics string
@@ -366,6 +390,7 @@ ScheddNegotiate::sendJobInfo(Sock *sock, bool just_sig_attrs)
 		sig_attrs.insert(ATTR_GLOBAL_JOB_ID);
 		sig_attrs.insert(ATTR_AUTO_CLUSTER_ID);
 		sig_attrs.insert(ATTR_WANT_MATCH_DIAGNOSTICS);
+		sig_attrs.insert(ATTR_WANT_PSLOT_PREEMPTION);
 		sig_attrs.insert(ATTR_WANT_CLAIMING);  // used for Condor-G matchmaking
 		// ship it!
 		putad_result = putClassAd(sock, m_current_job_ad, 0, &sig_attrs);
@@ -424,7 +449,7 @@ ScheddNegotiate::messageReceived( DCMessenger *messenger, Sock *sock )
 			if (ac && jobid) {
 				int rr_cluster, rr_proc;
 				m_current_auto_cluster_id = atoi(ac);
-				StrToProcId(jobid,rr_cluster,rr_proc);
+				StrIsProcId(jobid,rr_cluster,rr_proc,NULL);
 				if (rr_cluster != m_current_job_id.cluster || rr_proc != m_current_job_id.proc) {
 					m_current_resources_delivered = 0;
 				}

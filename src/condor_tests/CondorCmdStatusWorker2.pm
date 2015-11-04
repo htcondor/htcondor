@@ -24,6 +24,7 @@ use warnings;
 use Cwd;
 use CondorTest;
 use CondorUtils;
+use Check::SimpleJob;
 
 my $debuglevel = 2;
 
@@ -66,6 +67,15 @@ sub IDLE{1};
 sub HELD{5};
 sub RUNNING{2};
 
+my $on_abort = sub {
+	print "removal expected\n";
+};
+
+my $on_evictedwithoutcheckpoint = sub {
+};
+
+
+
 sub SetUp
 {
 	my $testname = shift;
@@ -73,6 +83,7 @@ sub SetUp
 	my $cmdstatus;
 	my @adarray;
 
+	print "CondorCmdStatusWorker2 setup in\n";
 	my $configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"statusworker1");
 
 	my $new_condor = CondorTest::StartCondorWithParams(
@@ -109,7 +120,7 @@ sub SetUp
 	#$ENV{CONDOR_CONFIG} = $saveconfig;
 	$ENV{CONDOR_CONFIG} = $pool1;
 
-	print "ok\n";
+	print "ok - first pool started\n";
 
 	my $done = 0;
 
@@ -120,6 +131,7 @@ sub SetUp
 		condorlocalsrc => "$configfile2",
 	);
 
+	print "ok - second pool started\n";
 	CondorTest::SetTestName($testname);
 
 	my $pool2 = $new_condor2->GetCondorConfig();
@@ -129,30 +141,38 @@ sub SetUp
 	#$ENV{CONDOR_CONFIG} = $pool2;
 
 	# start two jobs which run till killed
-	$cmd = "./x_cmdrunforever.pl A$unique";
-	$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
-	if(!$cmdstatus)
-	{
-		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",$debuglevel);
-		exit(1)
-	}
 
-	$cmd = "./x_cmdrunforever.pl B$unique";
-	$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
-	if(!$cmdstatus)
-	{
-		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",$debuglevel);
-		exit(1)
-	}
+	my $limit = 120;
+
+	SimpleJob::RunCheck(
+		no_wait => 1,
+		duration => 0,
+		on_abort => $on_abort,
+		on_evictedwithoutcheckpoint => $on_evictedwithoutcheckpoint,
+	);
+
+	SimpleJob::RunCheck(
+		no_wait => 1,
+		duration => 0,
+		on_abort => $on_abort,
+		on_evictedwithoutcheckpoint => $on_evictedwithoutcheckpoint,
+	);
 
 	print "Wait for jobs running on remote schedd.\n";
 	print "Wait for job 2.0 to be running\n";
 	my $qstat = CondorTest::getJobStatus(2.0);
 	CondorTest::debug("remote cluster 2.0 status is $qstat\n",$debuglevel);
+	my $counter = 0;
 	while($qstat != RUNNING)
 	{
 		CondorTest::debug("remote Job status 2.0 not RUNNING - wait a bit\n",$debuglevel);
+		if($counter >= $limit) {
+			die "local Job status 2.0 failed 2 minutes to running test\n";
+		} else {
+			$counter += 4;
+		}
 		sleep 4;
+
 		$qstat = CondorTest::getJobStatus(2.0);
 	}
 	print "job 2.0 running - ";
@@ -161,14 +181,22 @@ sub SetUp
 	print "Wait for job 1.0 to be running\n";
 	$qstat = CondorTest::getJobStatus(1.0);
 	CondorTest::debug("remote cluster 1.0 status is $qstat\n",$debuglevel);
+	$counter = 0;
 	while($qstat != RUNNING)
 	{
 		CondorTest::debug("remote Job status 1.0 not RUNNING - wait a bit\n",$debuglevel);
 		sleep 4;
 		$qstat = CondorTest::getJobStatus(1.0);
+		if($counter >= $limit) {
+			die "local Job status 1.0 failed 2 minutes to running test\n";
+		} else {
+			$counter += 4;
+		}
 	}
 	print "job 1.0 running - ";
 	print "ok\n\n";
+
+	print "CondorCmdStatusWorker2: remote pool steady and ready\n";
 
 	# submit into collector node schedd
 	print "In personal condor with collector\n";
@@ -179,39 +207,34 @@ sub SetUp
 	print "Lets look at status from first pool....\n";
 	system("condor_status;condor_q");
 
-	# start two jobs which run till killed
-	#$cmd = "condor_submit ./x_cmdrunforever.cmd2";
-	$cmd = "./x_cmdrunforever.pl C$unique";
-	$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
-	if(!$cmdstatus)
-	{
-		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",$debuglevel);
-		exit(1)
-	}
+	SimpleJob::RunCheck(
+		no_wait => 1,
+		duration => 0,
+		on_abort => $on_abort,
+		on_evictedwithoutcheckpoint => $on_evictedwithoutcheckpoint,
+	);
 
-	$cmd = "./x_cmdrunforever.pl D$unique";
-	$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
-	if(!$cmdstatus)
-	{
-		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",$debuglevel);
-		exit(1)
-	}
+	SimpleJob::RunCheck(
+		no_wait => 1,
+		duration => 0,
+		on_abort => $on_abort,
+		on_evictedwithoutcheckpoint => $on_evictedwithoutcheckpoint,
+	);
 
 	print "Wait for jobs running on local schedd.\n";
 	print "Wait for job 2.0 to be running\n";
 	$qstat = CondorTest::getJobStatus(2.0);
 	CondorTest::debug("local cluster 2.0 status is $qstat\n",$debuglevel);
-	my $limit = 360;
-	my $counter = 0;
+	$counter = 0;
 	while($qstat != RUNNING)
 	{
 		CondorTest::debug("local Job status 2.0 not RUNNING - wait a bit\n",$debuglevel);
-		sleep 1;
+		sleep 4;
 		$qstat = CondorTest::getJobStatus(2.0);
 		if($counter >= $limit) {
 			die "local Job status 2.0 failed 6 minutes to running test\n";
 		} else {
-			$counter += 1;
+			$counter += 4;
 		}
 	}
 	print "Job 2 running - ok\n";
@@ -223,12 +246,12 @@ sub SetUp
 	while($qstat != RUNNING)
 	{
 		CondorTest::debug("local Job status 1.0 not RUNNING - wait a bit\n",$debuglevel);
-		sleep 1;
+		sleep 4;
 		$qstat = CondorTest::getJobStatus(1.0);
 		if($counter >= $limit) {
 			die "local Job status 1.0 failed 6 minutes to running test\n";
 		} else {
-			$counter += 1;
+			$counter += 4;
 		}
 	}
 	print "job 1 running - ok\n\n";
@@ -238,9 +261,12 @@ sub SetUp
     my $nattempts = 8;
     my $count = 0;
 
+	print "CondorCmdStatusWorker2: local pool steady and ready\n";
+
 	print "Looking for expected number of startds(6) - ";
     CondorTest::debug("Looking at new pool<condor_status>\n",$debuglevel);
     while($count < $nattempts) {
+		print "startd check loop $count\n";
     my $masterlocal = 0;
     my $mastersched = 0;
         my $found1 = 0;
@@ -284,6 +310,8 @@ sub SetUp
     }
 
 	my $configreturn = $pool1 . "&" . $pool2;
+
+	print "CondorCmdStatusWorker2 setup done\n";
 
 	if($done != 1) {
 		return("");

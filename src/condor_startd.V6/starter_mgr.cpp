@@ -228,7 +228,14 @@ StarterMgr::makeStarter( const char* path )
 
 		// first, try to execute the given path with a "-classad"
 		// option, and grab the output as a ClassAd
-	fp = my_popenv( args, "r", FALSE );
+		// note we run the starter here as root if possible,
+		// since that is how the starter will be invoked for real,
+		// and the real uid of the starter may influence the
+		// list of capabilities the "-classad" option returns.
+	{
+		TemporaryPrivSentry sentry(PRIV_ROOT);
+		fp = my_popenv( args, "r", FALSE );
+	}
 
 	if( ! fp ) {
 		dprintf( D_ALWAYS, "Failed to execute %s, ignoring\n", path );

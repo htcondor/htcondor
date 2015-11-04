@@ -1,0 +1,9 @@
+# This DAG should succeed -- the three nodes test the three different
+# syntaxes for submit file globbing.
+job NodeA job_dagman_submit_glob-A-nodeA.cmd
+
+job NodeB job_dagman_submit_glob-A-nodeB.cmd
+parent NodeA child NodeB
+
+job NodeC job_dagman_submit_glob-A-nodeC.cmd
+parent NodeB child NodeC

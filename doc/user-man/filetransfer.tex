@@ -172,8 +172,11 @@ for the value \verb@ON_EXIT@ when the job exits on its own.
 However, if, and each time the job is evicted from a machine,
 \emph{files are transferred back at eviction time}.  The files that
 are transferred back at eviction time may include intermediate files
-that are not part of the final output of the job.  Before the job
-starts running again, all of the files that were stored when the job
+that are not part of the final output of the job.
+When \SubmitCmd{transfer\_output\_files} is specified,
+its list governs which are transferred back at eviction time.
+Before the job starts running again, 
+all of the files that were stored when the job
 was last evicted are copied to the job's new remote scratch
 directory.
 
@@ -289,6 +292,8 @@ Delimit the list of file names, directory names, or paths with commas.
 When this list is defined, and any of the files or directories
 do not exist as the job exits,
 HTCondor considers this an error, and places the job on hold.
+Setting \SubmitCmd{transfer\_output\_files} to the empty string (\verb@""@)
+means no files are to be transferred.
 When this list is defined, automatic detection of output files created by
 the job is disabled.
 Paths specified in this list refer to locations on the execute

@@ -19,8 +19,10 @@
 
 #include "condor_common.h"
 #include "condor_config.h"
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "condor_daemon_core.h"
 #include "shared_port_server.h"
+
+#include "daemon_command.h"
 
 SharedPortServer::SharedPortServer():
 	m_registered_handlers(false),
@@ -120,6 +122,21 @@ SharedPortServer::PublishAddress()
 	ClassAd ad;
 	ad.Assign(ATTR_MY_ADDRESS,daemonCore->publicNetworkIpAddr());
 
+	std::set<std::string> commandAddresses;
+	const std::vector<Sinful> &mySinfuls = daemonCore->InfoCommandSinfulStringsMyself();
+	for (std::vector<Sinful>::const_iterator it=mySinfuls.begin(); it!=mySinfuls.end(); it++)
+	{
+		commandAddresses.insert(it->getSinful());
+	}
+	StringList commandAddressesSL;
+	for (std::set<std::string>::const_iterator it=commandAddresses.begin(); it!=commandAddresses.end(); it++)
+	{
+		commandAddressesSL.insert(it->c_str());
+	}
+	char *adAddresses = commandAddressesSL.print_to_string();
+	if (adAddresses) {ad.InsertAttr(ATTR_SHARED_PORT_COMMAND_SINFULS, adAddresses);}
+	free( adAddresses );
+
 	// Place some operational metrics into the daemon ad
 	ad.Assign("RequestsPendingCurrent",m_shared_port_client.get_currentPendingPassSocketCalls());
 	ad.Assign("RequestsPendingPeak",m_shared_port_client.get_maxPendingPassSocketCalls());
@@ -210,6 +227,13 @@ SharedPortServer::HandleConnectRequest(int,Stream *sock)
 			sock->peer_description(), shared_port_id, deadline_desc.Value(),
 			m_shared_port_client.get_currentPendingPassSocketCalls(),
 			m_shared_port_client.get_maxPendingPassSocketCalls() );
+
+	if( strcmp( shared_port_id, "self" ) == 0 ) {
+		// The last 'true' flags this protocol as being "loopback," so
+		// we won't ever end up back here and pass off the request.
+		classy_counted_ptr< DaemonCommandProtocol > r = new DaemonCommandProtocol( sock, true, true );
+		return r->doProtocol();
+	}
 
 	return PassRequest(static_cast<Sock*>(sock), shared_port_id);
 }

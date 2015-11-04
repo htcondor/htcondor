@@ -168,12 +168,6 @@ CollectorBaseStats::updateStats ( bool sequenced, int dropped )
 	// Store this update
 	storeStats( sequenced, dropped );
 
-	// If this one is a "dropped", however, it means that we
-	// detected it with a "not dropped".  Insert this one.
-	if ( dropped ) {
-		storeStats( true, 0 );
-	}
-
 	// Done
 	return 0;
 }
@@ -182,17 +176,30 @@ CollectorBaseStats::updateStats ( bool sequenced, int dropped )
 int
 CollectorBaseStats::storeStats ( bool sequenced, int dropped )
 {
-	int		count = 1;
-	if ( sequenced ) {
-		if ( dropped ) {
-			updatesSequenced += dropped;
-			count = dropped;
-		} else {
-			updatesSequenced++;
-		}
-	}
-	updatesDropped += dropped;
+	// updatesTotal is the total number of updates we have received
+	// updatesSequenced is the number of ads we can DETECTED we should have received, it is effectively (Total+Dropped-Initial)
+	// updatesDropped is the number of updates DETECTED as dropped by examining sequence numbers.
+
+	// sequenced means that there was a previous ad in the pool
+	// if sequenced is false, dropped will always be 0 because we don't know how many updates may have been lost
+
 	updatesTotal++;
+	updatesSequenced += dropped + (sequenced ? 1 : 0);
+	updatesDropped += dropped;
+
+	// now update the history bitmap for this update.
+
+	// set 1 bits to indicate dropped updates
+	if (dropped) { setHistoryBits( true, dropped ); }
+	// write a single 0 bit to indicate a successful update
+	setHistoryBits ( false, 1 );
+
+	return 0;
+}
+
+int
+CollectorBaseStats::setHistoryBits ( bool dropped, int count )
+{
 
 	// Update the history buffer
 	if ( historyBuffer ) {
@@ -279,175 +286,179 @@ CollectorBaseStats::getHistoryString ( char *buf )
 	return buf;
 }
 
-// Get the history as a hex string
-char *
-CollectorBaseStats::getHistoryString ( void )
+void stats_entry_lost_updates::Publish(ClassAd & ad, const char * pattr, int flags) const
 {
+	if ( ! flags) flags = PubDefault;
+	if ((flags & IF_NONZERO) && stats_entry_is_zero(this->value)) return;
 
-	// If history is enabled, do it
-	if ( historyBuffer ) {
-		char		*buf = new char[ getHistoryStringLen() ];
-		return getHistoryString( buf );
+	MyString rattr("Recent"); rattr += pattr;
+
+	// for Loss, publish the Sum without a suffix, the Avg is called Ratio
+	// and Max is called max.
+	// this sort of probe is useful for counting lost updates
+	if (flags & PubValue) {
+		ad.Assign(rattr.c_str()+6, (long long)value.Sum);
+		ad.Assign(rattr.c_str(), (long long)recent.Sum);
+	}
+	if (flags & PubRatio) {
+		double avg = value.Avg();
+		if ( ! (flags & IF_NONZERO) || avg > 0.0 || avg < 0.0) {
+			rattr.formatstr("Recent%sRatio", pattr);
+			ad.Assign(rattr.c_str()+6, avg);
+			ad.Assign(rattr.c_str(), recent.Avg());
+		}
+	}
+	if (flags & PubMax) {
+		int val = MAX(0.0, (int)value.Max);
+		if ( ! (flags & IF_NONZERO) || val != 0) {
+			rattr.formatstr("Recent%sMax", pattr);
+			ad.Assign(rattr.c_str()+6, val);
+			val = MAX(0, (int)recent.Max);
+			ad.Assign(rattr.c_str(), val);
+		}
+	}
+}
+
+#define ADD_RECENT_PROBE(pool, probe, verb, suffix, recent_max) \
+	probe.Clear(); \
+	probe.SetRecentMax(recent_max); \
+	attr = #probe; \
+	if (suffix) { attr += "_"; attr += suffix; } \
+	(pool).AddProbe(attr.c_str(), &probe, NULL, verb | probe.PubDefault)
+
+// update counters that are tracked globally, and per Ad type into the given stats pool
+//
+void UpdatesCounters::RegisterCounters(StatisticsPool &Pool, const char * className, int recent_max)
+{
+	std::string attr; // used by the macros below.
+
+	ADD_RECENT_PROBE(Pool, UpdatesTotal, IF_BASICPUB, className, recent_max);
+	ADD_RECENT_PROBE(Pool, UpdatesInitial, IF_BASICPUB, className, recent_max);
+	if (className) {
+		ADD_RECENT_PROBE(Pool, UpdatesLost, IF_BASICPUB, className, recent_max);
 	} else {
-		return NULL;
-	}
-}
-
-
-// ************************************
-// Collector Statistics "class" class
-// ************************************
-
-// Constructor
-CollectorClassStats::CollectorClassStats ( const char *class_name,
-										   int history_size ) :
-		CollectorBaseStats( history_size )
-{
-	// Copy out the 
-	if ( class_name ) {
-		className = strdup( class_name );
-	} else {
-		className = NULL;
-	}
-}
-
-// Destructor
-CollectorClassStats::~CollectorClassStats ( void )
-{
-	if ( className ) {
-		free( const_cast<char *>(className) );
-		className = NULL;
-	}
-}
-
-// Determine if a "class name" matches ours
-bool
-CollectorClassStats::match ( const char *class_name )
-{
-	if ( className ) {
-		if ( ! class_name ) {
-			return false;
-		}
-		if ( strcmp( className, class_name ) ) {
-			return false;
-		}
-	} else if ( class_name ) {
-		return false;
+		// for overall UpdatesLost counter, publish loss ratio & max also
+		int pub_fields = stats_entry_lost_updates::PubRatio | stats_entry_lost_updates::PubMax;
+		ADD_RECENT_PROBE(Pool, UpdatesLost, IF_BASICPUB | pub_fields, className, recent_max);
 	}
 
-	return true;
+};
+
+void UpdatesCounters::UnregisterCounters(StatisticsPool &Pool)
+{
+	Pool.RemoveProbesByAddress(&UpdatesTotal, &UpdatesLost);
 }
 
-
-// **********************************************
-// List of Collector Statistics "class" class
-// **********************************************
-
-// Constructor
-CollectorClassStatsList::CollectorClassStatsList( int history_size )
+void UpdatesStats::Init()
 {
-	historySize = history_size;
+	Clear();
+	// default window size to 1 quantum, we may set it to something else later.
+	if ( ! this->RecentWindowQuantum) this->RecentWindowQuantum = 1;
+	this->RecentWindowMax = this->RecentWindowQuantum;
+
+	Any.RegisterCounters(Pool, NULL, 1);
+	Pool.AddProbe("MachineAds",   &MachineAds,    NULL, IF_BASICPUB | MachineAds.PubDefault);
+	Pool.AddProbe("SubmitterAds", &SubmitterAds, NULL, IF_BASICPUB | SubmitterAds.PubDefault);
 }
 
-// Destructor
-CollectorClassStatsList::~CollectorClassStatsList( void )
+void UpdatesStats::Clear()
 {
-	int		classNum;
-	int		last = classStats.getlast();
+	this->InitTime = time(NULL);
+	this->StatsLifetime = 0;
+	this->StatsLastUpdateTime = 0;
+	this->RecentStatsTickTime = 0;
+	this->RecentStatsLifetime = 0;
 
-	// Walk through them all & delete them
-	for ( classNum = 0;  classNum <= last;  classNum++ ) {
-		delete classStats[classNum];
+	Pool.Clear();
+	PerClass.clear();
+}
+
+time_t UpdatesStats::Tick(time_t now) // call this when time may have changed to update StatsUpdateTime, etc.
+{
+   if ( ! now) now = time(NULL);
+
+   int cAdvance = generic_stats_Tick(
+      now,
+      this->RecentWindowMax,   // RecentMaxTime
+      this->RecentWindowQuantum, // RecentQuantum
+      this->InitTime,
+      this->StatsLastUpdateTime,
+      this->RecentStatsTickTime,
+      this->StatsLifetime,
+      this->RecentStatsLifetime);
+
+   if (cAdvance)
+      Pool.Advance(cAdvance);
+
+   AdvanceAtLastTick = cAdvance;
+   return now;
+}
+
+void UpdatesStats::Reconfig()
+{
+	this->RecentWindowQuantum = param_integer("STATISTICS_WINDOW_QUANTUM", 4*60, 1, INT_MAX);
+	this->RecentWindowMax = param_integer("STATISTICS_WINDOW_SECONDS", 1200, this->RecentWindowQuantum, INT_MAX);
+
+	this->PublishFlags    = IF_BASICPUB | IF_RECENTPUB | IF_NONZERO;
+	auto_free_ptr tmp(param("STATISTICS_TO_PUBLISH"));
+	if (tmp) {
+		this->PublishFlags = generic_stats_ParseConfigString(tmp, "COLLECTOR", "COLLECTOR", this->PublishFlags);
 	}
-}
 
-// Update statistics
-int
-CollectorClassStatsList::updateStats( const char *class_name,
-									  bool sequenced,
-									  int dropped )
-{
-	int				classNum;
-	CollectorClassStats *classStat = NULL;
-
-	// Walk through the ads that we know of, find a match...
-	int		last = classStats.getlast();
-	for ( classNum = 0;  classNum <= last;  classNum++ ) {
-		if ( classStats[classNum]->match( class_name ) ) {
-			classStat = classStats[classNum];
-			break;
-		}
+	std::string strWhitelist;
+	if (param(strWhitelist, "STATISTICS_TO_PUBLISH_LIST")) {
+		this->Pool.SetVerbosities(strWhitelist.c_str(), this->PublishFlags, true);
 	}
 
-	// No matches; create a new one, add to the list
-	if ( ! classStat ) {
-		classStat = new CollectorClassStats ( class_name, historySize );
-		classStats[classStats.getlast() + 1] = classStat;
-	}
-
-	// Update the stats now
-	classStat->updateStats( sequenced, dropped );
-
-	return 0;
+	SetWindowSize(this->RecentWindowMax);
 }
 
-// Publish statistics into our ClassAd
-int 
-CollectorClassStatsList::publish( ClassAd *ad )
+void UpdatesStats::SetWindowSize(int window)
 {
-	int		classNum;
-	int		last = classStats.getlast();
-    char	line[1024];
+	Pool.SetRecentMax(window, this->RecentWindowQuantum);
+}
 
-	// Walk through them all & publish 'em
-	for ( classNum = 0;  classNum <= last;  classNum++ ) {
-		const char *name = classStats[classNum]->getName( );
-		snprintf( line, sizeof(line),
-				  "%s_%s = %d", ATTR_UPDATESTATS_TOTAL,
-				  name, classStats[classNum]->getTotal( ) );
-		line[sizeof(line)-1] = '\0';
-		ad->Insert(line);
-
-		snprintf( line, sizeof(line),
-				  "%s_%s = %d", ATTR_UPDATESTATS_SEQUENCED,
-				  name, classStats[classNum]->getSequenced( ) );
-		line[sizeof(line)-1] = '\0';
-		ad->Insert(line);
-
-		snprintf( line, sizeof(line),
-				  "%s_%s = %d", ATTR_UPDATESTATS_LOST,
-				  name, classStats[classNum]->getDropped( ) );
-		line[sizeof(line)-1] = '\0';
-		ad->Insert(line);
-
-		// Get the history string & insert it if it's valid
-		char	*tmp = classStats[classNum]->getHistoryString( );
-		if ( tmp ) {
-			snprintf( line, sizeof(line),
-					  "%s_%s = \"0x%s\"", ATTR_UPDATESTATS_HISTORY,
-					  name, tmp );
-			line[sizeof(line)-1] = '\0';
-			ad->Insert(line);
-			delete [] tmp;
+void UpdatesStats::Publish(ClassAd & ad, int flags) const
+{
+	ad.Assign("StatsLifetime", (int)StatsLifetime);
+	ad.Assign("StatsLastUpdateTime", (int)StatsLastUpdateTime);
+	if (flags & IF_RECENTPUB) {
+		ad.Assign("RecentStatsLifetime", (int)RecentStatsLifetime);
+		if (flags & IF_VERBOSEPUB) {
+			ad.Assign("RecentWindowMax", (int)RecentWindowMax);
+			ad.Assign("RecentStatsTickTime", (int)RecentStatsTickTime);
 		}
 	}
-	return 0;
+	Pool.Publish(ad, flags);
 }
 
-// Set the history size
-int 
-CollectorClassStatsList::setHistorySize( int new_size )
+void UpdatesStats::Publish(ClassAd & ad, const char * config) const
 {
-	int		classNum;
-	int		last = classStats.getlast();
+   int flags = this->PublishFlags;
+   if (config && config[0]) {
+      flags = generic_stats_ParseConfigString(config, "COLLECTOR", "COLLECTOR", IF_BASICPUB | IF_RECENTPUB);
+   }
+   this->Publish(ad, flags);
+}
 
-	// Walk through them all & publish 'em
-	for ( classNum = 0;  classNum <= last;  classNum++ ) {
-		classStats[classNum]->setHistorySize( new_size );
+// this is called when a new update arrives.
+int  UpdatesStats::updateStats( const char * className, bool sequenced, int dropped )
+{
+	Any.UpdatesTotal += 1;
+	Any.UpdatesLost += dropped;
+	if ( ! sequenced) Any.UpdatesInitial += 1;
+
+	if (className) {
+		std::map<std::string, UpdatesCounters>::iterator found = PerClass.find(className);
+		if (found == PerClass.end()) {
+			int cRecent = RecentWindowQuantum ? RecentWindowMax / RecentWindowQuantum : RecentWindowMax;
+			PerClass[className].RegisterCounters(Pool, className, cRecent);
+			found = PerClass.find(className);
+		}
+		found->second.UpdatesTotal += 1;
+		found->second.UpdatesLost += dropped;
+		if ( ! sequenced) found->second.UpdatesInitial += 1;
 	}
-
-	// Store it off for future reference
-	historySize = new_size;
 	return 0;
 }
 
@@ -523,48 +534,21 @@ CollectorDaemonStatsList::updateStats( const char *class_name,
 				 "stats: Inserting new hashent for %s\n", string.Value() );
 	}
 
-	// Compute the size of the string we need..
-	int		size = daemon->getHistoryStringLen( );
-	if ( size < 10 ) {
-		size = 10;
-	}
-	size += strlen( ATTR_UPDATESTATS_SEQUENCED );	// Longest one
-	size += 20;										// Some "buffer" space
-    char		*line = new char [size+1];
-
 	// Update the daemon object...
 	daemon->updateStats( sequenced, dropped );
 
-	snprintf( line, size,
-			  "%s = %d", ATTR_UPDATESTATS_TOTAL,
-			  daemon->getTotal( ) );
-	line[size] = '\0';
-	ad->Insert(line);
 
-	snprintf( line, size,
-			  "%s = %d", ATTR_UPDATESTATS_SEQUENCED,
-			  daemon->getSequenced( ) );
-	line[size] = '\0';
-	ad->Insert(line);
-
-	snprintf( line, size,
-			  "%s = %d", ATTR_UPDATESTATS_LOST,
-			 daemon->getDropped( ) );
-	line[size] = '\0';
-	ad->Insert(line);
+	ad->InsertAttr(ATTR_UPDATESTATS_TOTAL, daemon->getTotal());
+	ad->InsertAttr(ATTR_UPDATESTATS_SEQUENCED, daemon->getSequenced());
+	ad->InsertAttr(ATTR_UPDATESTATS_LOST, daemon->getDropped());
 
 	// Get the history string & insert it if it's valid
-	char	*tmp = daemon->getHistoryString( );
-	if ( tmp ) {
-		snprintf( line, size,
-				  "%s = \"0x%s\"", ATTR_UPDATESTATS_HISTORY, tmp );
-		line[size] = '\0';
-		ad->Insert(line);
-		delete [] tmp;
+	// Compute the size of the string we need..
+	char *hist = new char [daemon->getHistoryStringLen()];
+	if (daemon->getHistoryString(hist)) {
+		ad->InsertAttr(ATTR_UPDATESTATS_HISTORY, hist);
 	}
-
-	// Free up the line buffer
-	delete [] line;
+	delete [] hist;
 
 	return 0;
 }
@@ -608,6 +592,17 @@ CollectorDaemonStatsList::enable( bool nable )
 		hashTable = new StatsHashTable( STATS_TABLE_SIZE, &hashFunction );
 	} else if ( ( ! enabled ) && ( hashTable ) ) {
 		dprintf( D_ALWAYS, "enable: Destroying stats hash table\n" );
+
+		// iterate through hash table, delete all entries
+		CollectorBaseStats *ent;
+		StatsHashKey key;
+
+		hashTable->startIterations();
+		while ( hashTable->iterate(key, ent) ) {
+			delete ent;
+			hashTable->remove(key);
+		}
+
 		delete hashTable;
 		hashTable = NULL;
 	}
@@ -680,10 +675,10 @@ CollectorDaemonStatsList::hashKey (StatsHashKey &key,
 
 // Constructor
 CollectorStats::CollectorStats( bool enable_daemon_stats,
-								int class_history_size,
 								int daemon_history_size )
 {
-	classList = new CollectorClassStatsList( class_history_size );
+	global.Init();
+	global.Reconfig();
 	daemonList = new CollectorDaemonStatsList( enable_daemon_stats,
 											   daemon_history_size );
 	m_last_garbage_time = time(NULL);
@@ -693,17 +688,8 @@ CollectorStats::CollectorStats( bool enable_daemon_stats,
 // Destructor
 CollectorStats::~CollectorStats( void )
 {
-	delete classList;
+	global.Clear();
 	delete daemonList;
-}
-
-// Set the "class" history size
-int
-CollectorStats::setClassHistorySize( int new_size )
-{
-	classList->setHistorySize( new_size );
-	daemonList->setHistorySize( new_size );
-	return 0;
 }
 
 // Enable / disable per-daemon stats
@@ -723,15 +709,15 @@ CollectorStats::setDaemonHistorySize( int new_size )
 // Update statistics
 int
 CollectorStats::update( const char *className,
-						ClassAd *oldAd, ClassAd *newAd )
+						ClassAd *oldAd, ClassAd *newAd)
 {
-	considerCollectingGarbage();
+	time_t now = considerCollectingGarbage();
 
 	// No old ad is trivial; handle it & get out
 	if ( ! oldAd ) {
-		classList->updateStats( className, false, 0 );
+		global.Tick(now);
+		global.updateStats(className, false, 0 );
 		daemonList->updateStats( className, newAd, false, 0 );
-		global.updateStats( false, 0 );
 		return 0;
 	}
 
@@ -753,8 +739,8 @@ CollectorStats::update( const char *className,
 			dropped = ( new_seq < expected ) ? 1 : ( new_seq - expected );
 		}
 	}
-	global.updateStats( sequenced, dropped );
-	classList->updateStats( className, sequenced, dropped );
+	global.Tick(now);
+	global.updateStats( className, sequenced, dropped );
 	daemonList->updateStats( className, newAd, sequenced, dropped );
 
 	// Done
@@ -763,48 +749,31 @@ CollectorStats::update( const char *className,
 
 // Publish statistics into our ClassAd
 int 
-CollectorStats::publishGlobal( ClassAd *ad )
+CollectorStats::publishGlobal( ClassAd *ad, const char * config )
 {
-    char line[1024];
-
-    snprintf( line, sizeof(line),
-			  "%s = %d", ATTR_UPDATESTATS_TOTAL, global.getTotal() );
-	line[sizeof(line)-1] = '\0';
-    ad->Insert(line);
-
-    snprintf( line, sizeof(line),
-			  "%s = %d", ATTR_UPDATESTATS_SEQUENCED, global.getSequenced() );
-	line[sizeof(line)-1] = '\0';
-    ad->Insert(line);
-
-    snprintf( line, sizeof(line),
-			  "%s = %d", ATTR_UPDATESTATS_LOST, global.getDropped() );
-	line[sizeof(line)-1] = '\0';
-    ad->Insert(line);
-
-	classList->publish( ad );
-
+	global.Publish(*ad, config);
 	return 0;
 }
 
-void
+time_t
 CollectorStats::considerCollectingGarbage() {
 	time_t now = time(NULL);
 	if( m_garbage_interval <= 0 ) {
-		return; // garbage collection is disabled
+		return now; // garbage collection is disabled
 	}
 	if( now < m_last_garbage_time + m_garbage_interval ) {
 		if( now < m_last_garbage_time ) {
 				// last time is in the future -- clock must have been reset
 			m_last_garbage_time = now;
 		}
-		return;  // it is not time yet
+		return now;  // it is not time yet
 	}
 
 	m_last_garbage_time = now;
 	if( daemonList ) {
 		daemonList->collectGarbage();
 	}
+	return now;
 }
 
 void
@@ -845,3 +814,4 @@ CollectorDaemonStatsList::collectGarbage()
 			 records_kept,
 			 records_deleted );
 }
+

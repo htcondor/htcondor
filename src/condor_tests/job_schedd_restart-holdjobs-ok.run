@@ -116,9 +116,9 @@ $submitted = sub
 		my $afterstate;
 		my $beforestate;
 		foreach $before (@adarray) {
-			#print "Before:$before\n";
+			print "Before:$before\n";
 			$after = shift(@fdarray);
-			#print "After:$after\n";
+			print "After:$after\n";
 			#handle submitter line
 			if($after =~ /^(-- Submitter.*<\d+\.\d+\.\d+\.\d+:)(\d+)(> : .*)$/) {
 				$af = $1 . $3;
@@ -128,6 +128,8 @@ $submitted = sub
 					die "Submitter lines from before and after don't line up\n";
 				}
 				if($af ne $bf ) {
+					print "-$af-\n";
+					print "-$bf-\n";
 					die "Submitter lines from before and after don't match\n";
 				}
 			} 
@@ -152,9 +154,15 @@ $submitted = sub
 				# don't care
 			}
 		}
-		exit(0);
+		print " Happy and exiting\n";
+		my @rmarray = ();
+		runCondorTool("condor_rm -all",\@rmarray,2,{emit_output=>0});
 	}
 };
+
+$on_abort = sub {
+	print "abort from removing held job\n";
+} ;
 
 my $append_submit_commands = '
 hold  = true
@@ -170,7 +178,7 @@ $result = SimpleJob::RunCheck(
     #on_reconnected => $on_reconnected,
     #on_success => $on_success,
     on_submit => $submitted,
-	#on_abort => $on_abort,
+	on_abort => $on_abort,
 );
 
 CondorTest::EndTest();

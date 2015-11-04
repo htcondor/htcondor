@@ -218,7 +218,7 @@ Triggerd::init()
 
    trigger_log = dataDir;
    trigger_log += "/triggers.log";
-   triggerCollection = new ClassAdCollection(trigger_log.c_str());
+   triggerCollection = new ClassAdCollection(NULL, trigger_log.c_str());
    free(dataDir);
 
    settings.host = std::string(host);

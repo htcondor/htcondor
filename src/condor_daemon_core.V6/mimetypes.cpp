@@ -108,7 +108,7 @@ static unsigned char gperf_downcase[256] =
 #ifndef GPERF_CASE_STRCMP
 #define GPERF_CASE_STRCMP 1
 static int
-gperf_case_strcmp (register const char *s1, register const char *s2)
+gperf_case_strcmp (const char *s1, const char *s2)
 {
   for (;;)
     {
@@ -129,7 +129,7 @@ inline
 #endif
 #endif
 static unsigned int
-mime_hash (register const char *str, register unsigned int len)
+mime_hash (const char *str, unsigned int len)
 {
   static unsigned short asso_values[] =
     {
@@ -182,7 +182,7 @@ __attribute__ ((__gnu_inline__))
 #endif
 static
 struct mimetype *
-mime_lookup (register const char *str, register unsigned int len)
+mime_lookup (const char *str, unsigned int len)
 {
   static struct mimetype wordlist[] =
     {

@@ -44,6 +44,22 @@ extern "C" {
 const char* condor_basename( const char* path );
 
 /*
+  given a pointer to a file basename (see condor_basename) returns
+  a pointer to the file extension, if no extension returns a pointer
+  to the terminating null.
+  A file that contains only a single . at the beginning of the name is
+  considered to have no extension.
+*/
+const char* condor_basename_extension_ptr(const char* basename);
+
+/*
+  given a pointer to a full file pathname returns a pointer to the file extension
+  if no extension returns a pointer to the terminating null.
+*/
+#define condor_filename_extension_ptr(path) condor_basename_extension_ptr(condor_basename(path))
+
+
+/*
   A dirname() function that is happy on both Unix and NT.
   This allocates space for a new string that holds the path of the
   parent directory of the path it was given.  If the given path has no

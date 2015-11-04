@@ -29,7 +29,7 @@ set(PACKAGE "condor")
 #   Condor and other systems parse this number. Keep it simple:
 #   Number.Number.Number. Do nothing else.  If you need to add
 #   more information, PRE_RELEASE is usually the right location.
-set(VERSION "8.3.2")
+set(VERSION "8.5.2")
 
 # Set PRE_RELEASE to either a string (i.e. "PRE-RELEASE-UWCS") or OFF
 #   This shuld be "PRE-RELEASE-UWCS most of the time, and OFF when
@@ -67,6 +67,7 @@ include (CommandTarget)
 include (gSOAPGen)
 include (CloneInstall)
 include (FindMultiple)
+include (FindSoName)
 include (ExternalProject)
 include (CheckIncludeFiles)
 include (CheckFunctionExists)
@@ -88,6 +89,7 @@ include (CondorDaemon)
 include (CondorPrecompiledHeaders)
 include (CondorStaticLib)
 include (CondorPlugin)
+include (CheckCCompilerFlag)
 include (CheckCXXCompilerFlag)
 include (CheckCXXSourceCompiles)
 include (AddSubdirectories)

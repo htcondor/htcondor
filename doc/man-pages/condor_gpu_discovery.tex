@@ -104,14 +104,18 @@ attribute names.
     Without this option, CUDA detection software is invoked first,
     and no further Open CL software is invoked if CUDA devices are detected.
   }
+  \OptItem{\Opt{-cuda}} {
+    Do only CUDA detection.
+  }
   \OptItem{\Opt{-nvcuda}} {
     For Windows platforms only, use a CUDA driver rather than the
     CUDA run time.
   }
   \OptItem{\Opt{-config}} {
-    This option is not yet implemented.
-    Future versions of HTCondor will output in the syntax of 
+    Output in the syntax of 
     HTCondor configuration, instead of ClassAd language.
+    An additional attribute is produced \Attr{NUM\_DETECTED\_GPUs} which
+    is set to the number of GPUs detected.
   }
   \OptItem{\Opt{-verbose}} {
     For interactive use of the tool, output extra information to show 

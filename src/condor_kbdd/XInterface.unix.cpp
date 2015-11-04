@@ -38,6 +38,10 @@
 #	include <utmp.h>
 #endif
 
+#ifdef HAVE_XSS
+#include "X11/extensions/scrnsaver.h"
+#endif
+
 #include <setjmp.h>
 
 #if defined(LINUX)
@@ -83,59 +87,7 @@ CatchIOFalseAlarm(Display *display, XErrorEvent *err)
 	return 0;
 }
 
-// Get the next utmp entry and set our XAUTHORITY environment
-// variable to the .Xauthority file in the user's home directory.
-
-int
-XInterface::NextEntry()
-{
-	char *tmp;
-	static int slot = 0;
- 
-	if(!_tried_root)
-	{
-		TryUser("root");
-		_tried_root = true;
-	}
-	else if(!_tried_utmp)
-	{
-		if ( slot > logged_on_users->getlast() ) {
-			_tried_utmp = true;
-			slot = 0;	// In case we don't actually connect to the X
-						// server and we're going to be back.
-			dprintf(D_FULLDEBUG, "Tryed all utmp users, "
-				"now moving to XAUTHORITY_USERS param.\n");
-			return 0;  // Keep trying....
-		} 
-
-		TryUser((*logged_on_users)[slot]);
-		slot++;
-	}
-	else  // Try the others
-	{
-		if(_xauth_users == NULL)
-		{
-			dprintf(D_FULLDEBUG, "No XAUTHORITY_USERS specified.\n");
-			return -1; // No more entries...
-		}
-		else
-		{
-			if((tmp = _xauth_users->next()))
-			{
-				dprintf(D_FULLDEBUG, "Will try XAUTHORITY_USER '%s'\n", 
-					tmp);
-				TryUser(tmp);
-			}
-			else
-			{
-				return -1; // No more entries...
-			}
-		}
-	}
-	return 0; 
-}
-
-void
+bool
 XInterface::TryUser(const char *user)
 {
 	static char env[1024];
@@ -147,25 +99,30 @@ XInterface::TryUser(const char *user)
 		// We couldn't find the current user in the passwd file?
 		dprintf( D_FULLDEBUG, 
 		 	"Current user cannot be found in passwd file.\n" );
-		return;
+		return false;
 	} else {
-		fflush(stdout);
 		sprintf(env, "XAUTHORITY=%s/.Xauthority", passwd_entry->pw_dir);
 		if(putenv(env) != 0) {
 			EXCEPT("Putenv failed!.");
+		}
 	}
 
 	if ( need_uninit ) {
 		uninit_user_ids();
+		need_uninit = false;
+	} 
+
+		// passing "root" to init_user_ids is fatal
+	if (strcmp(user, "root") == 0) {
+		set_root_priv();
 	} else {
+		init_user_ids( user, NULL );
+		set_user_priv();
 		need_uninit = true;
 	}
 
-	init_user_ids( user, NULL );
-
-	dprintf( D_FULLDEBUG, "Using %s's .Xauthority: \n", 
-		 passwd_entry->pw_name );
-	}
+	dprintf( D_FULLDEBUG, "Using %s's .Xauthority: \n", passwd_entry->pw_name );
+	return true;
 }
 	
 
@@ -175,6 +132,11 @@ XInterface::XInterface(int id)
 	_daemon_core_timer = id;
 	logged_on_users = 0;
 	_display_name = NULL;
+
+	// disable bump check by setting move delta to 0
+	_small_move_delta = 0;
+	_bump_check_after_idle_time_sec = 15*60;
+
 
 	// We may need access to other user's home directories, so we must run
 	// as root.
@@ -227,13 +189,8 @@ XInterface::~XInterface()
 	}
 }
 
-bool
-XInterface::Connect()
-{
-	int rtn;
-	Window root;
-	int s;
-	
+void
+XInterface::ReadUtmp() {
 #if USES_UTMPX
 	struct utmpx utmp_entry;
 #else
@@ -250,7 +207,6 @@ XInterface::Connect()
 	logged_on_users = new ExtArray< char * >;
 
 
-	dprintf(D_FULLDEBUG, "XInterface::Connect\n");
 	// fopen the Utmp.  If we fail, bail...
 	if ((utmp_fp=safe_fopen_wrapper(UtmpName,"r")) == NULL) {
 		if ((utmp_fp=safe_fopen_wrapper(AltUtmpName,"r")) == NULL) {                      
@@ -289,38 +245,85 @@ XInterface::Connect()
 			UtmpName, AltUtmpName, errno);
 	}
 
+	return;
+}
 
+bool
+XInterface::Connect()
+{
+	dprintf(D_FULLDEBUG, "XInterface::Connect\n");
+
+
+	// First try as whatever user we entered as, with whatever
+	// X credentials we were born with.
+
+	dprintf(D_FULLDEBUG, "Trying to XOpenDisplay\n");
+	if ((_display = XOpenDisplay(_display_name))) {
+		FinishConnection();
+		return true;
+	}
+
+	// Ok, that didn't work, try as condor
+	set_condor_priv();
+
+	dprintf(D_FULLDEBUG, "Trying to XOpenDisplay as condor\n");
+	if ((_display = XOpenDisplay(_display_name))) {
+		FinishConnection();
+		return true;
+	}
+
+	// Time for the big guns, try as root
 	set_root_priv();
 
-	_tried_root = false;
-	_tried_utmp = false;
-	if(_xauth_users != NULL) {
-		_xauth_users->rewind();
+	dprintf(D_FULLDEBUG, "Trying to XOpenDisplay as root\n");
+	if ((_display = XOpenDisplay(_display_name))) {
+		FinishConnection();
+		return true;
 	}
 
+	set_condor_priv();
 
-	while(!(_display = XOpenDisplay(_display_name) ))
-	{
-		set_condor_priv();
 	
-		rtn = NextEntry();
+	// If we get here, let's try as each logged in user
+	// If this X server is using MIT-MAGIC_COOKIE, set
+	// XAUTHORITY to point within the user's home directory.
 
-		if(rtn == -1)
-		{
-			dprintf(D_FULLDEBUG, "Exausted all possible attempts to "
-				"connect to X server, will try again in 60 seconds.\n");
-			daemonCore->Reset_Timer( _daemon_core_timer, 60 ,60 );
-			dprintf(D_FULLDEBUG, "Reset timer: %d\n", _daemon_core_timer);
-	
-			g_connected = false;
-			set_condor_priv();
-			return false;
+	ReadUtmp();
+
+	int utmpIndex = 0;
+	while (utmpIndex <= logged_on_users->getlast()) {
+
+		const char *username = (*logged_on_users)[utmpIndex];
+
+		dprintf(D_FULLDEBUG, "Trying to XOpenDisplay as user %s\n", username);
+		bool switched = TryUser(username); // set_priv's and setenv's
+
+		if (switched) {
+			_display = XOpenDisplay(_display_name);		
+
+			if (_display) {
+				FinishConnection();
+				return true;
+			}
+
 		}
-
-		// By this point we've gotten are init_user_ids() call called.
-		set_user_priv();
+		set_condor_priv();
+		utmpIndex++;
 	}
 
+	dprintf(D_FULLDEBUG, "Exausted all possible attempts to "
+		"connect to X server, will try again in 60 seconds.\n");
+	daemonCore->Reset_Timer( _daemon_core_timer, 60 ,60 );
+	dprintf(D_FULLDEBUG, "Reset timer: %d\n", _daemon_core_timer);
+
+	g_connected = false;
+	return false;
+}
+
+void
+XInterface::FinishConnection() { // not to be confused with the FinnishConnection
+	Window root;
+	
 	dprintf(D_ALWAYS, "Connected to X server: %s\n", _display_name);
 	g_connected = true;
 
@@ -332,7 +335,7 @@ XInterface::Connect()
 	XSetIOErrorHandler((XIOErrorHandler) CatchIOFalseAlarm);
 
 	//Select the events on each root window of each screen
-	for(s = 0; s < ScreenCount(_display); s++)
+	for (int s = 0; s < ScreenCount(_display); s++)
 	{
 		root = RootWindowOfScreen(ScreenOfDisplay(_display, s));
 		SelectEvents(root);
@@ -345,8 +348,12 @@ XInterface::Connect()
 	_pointer_prev_y = -1;
 	_pointer_prev_mask = 0;
 
+	// Newly connected display needs to see if it has the extension
+	needsCheck = true;
+	hasXss = false; 
+	
+	// unset env needed here?
 	set_condor_priv();
-	return true;
 }
 
 bool
@@ -362,18 +369,31 @@ XInterface::CheckActivity()
 		}
 	}
 	
-	if(ProcessEvents())
+	bool cursor_active = false;
+	bool xss_active = false;
+
+	bool input_active = ProcessEvents();
+	if ( ! input_active)
 	{
-		return true;
+		// TJ: the old code didn't check for pointer movement when there were events -- but I'm not sure that's the right thing to do.
+		cursor_active = QueryPointer();
+		xss_active = QuerySSExtension();
 	}
-	else if(QueryPointer())
-	{
-		return true;
+
+	if (input_active || cursor_active || xss_active) {
+		if (input_active) {
+			dprintf(D_FULLDEBUG,"saw input_active\n");
+		}
+		if (cursor_active) {
+			dprintf(D_FULLDEBUG,"saw cursor active\n");
+		}
+		if (xss_active) {
+			dprintf(D_FULLDEBUG,"screensaver reported recent activity\n");
+		}
+	} else {
+		dprintf(D_FULLDEBUG,"saw Idle for %.3f sec\n", (double)time(NULL) - _last_event);
 	}
-	else
-	{
-		return false;
-	}
+	return input_active || cursor_active;
 }
 
 
@@ -451,6 +471,14 @@ XInterface::SelectEvents(Window win)
 	}
 }
 
+void
+XInterface::SetBumpCheck(int delta_move, int delta_time)
+{
+	_small_move_delta = delta_move;
+	_bump_check_after_idle_time_sec = delta_time;
+}
+
+
 bool
 XInterface::QueryPointer()
 {
@@ -491,13 +519,79 @@ XInterface::QueryPointer()
 	}
 	else
 	{
-		// Pointer has indeed moved.
+		int cx = root_x - _pointer_prev_x, cy = root_y - _pointer_prev_y;
+		bool small_move = (cx < _small_move_delta && cx > -_small_move_delta) && (cy < _small_move_delta && cy > -_small_move_delta);
+
 		time(&now);
-		_last_event = now;
+		time_t sec_since_last_event = now - _last_event;
+
+		bool mouse_active = false;
+
+		// if we have been idle,
+		bool bump_check =  small_move && (sec_since_last_event > (_bump_check_after_idle_time_sec));
+
+		dprintf(D_FULLDEBUG,"mouse moved to %d,%d,%x delta is %d,%d %.3f sec%s\n",
+				root_x, root_y, mask, cx, cy, (double)sec_since_last_event,
+				bump_check ? " performing bump check" : "");
+
+		if (bump_check) {
+			sleep(1);
+			// check for further mouse movement
+			int x = root_x, y = root_y;
+			if ( ! XQueryPointer(_display, _pointer_root, &_pointer_root, &dummy_win,  &x, &y, &dummy, &dummy, &mask) ||
+				root_x != x || root_y != y) {
+				dprintf(D_FULLDEBUG,"not a bump - mouse moved to %d,%d,%x delta is %d,%d\n", x, y, mask, x-root_x, y-root_y);
+				mouse_active = true;
+				root_x = x; root_y = y;
+			} else {
+				mouse_active = false;
+			}
+		} else {
+			mouse_active = true;
+		}
+
 		_pointer_prev_x = root_x;
 		_pointer_prev_y = root_y;
 		_pointer_prev_mask = mask;
-		return true;
+		if (mouse_active) {
+			// Pointer has indeed moved.
+			_last_event = now;
+		}
+		return mouse_active;
 	}
 }
 
+bool
+XInterface::QuerySSExtension()
+{
+#ifdef HAVE_XSS
+	static XScreenSaverInfo *xssi = 0;
+
+	if (needsCheck) {
+		needsCheck = false;
+
+		int notused = 0;
+		hasXss = XScreenSaverQueryExtension(_display, &notused, &notused);
+		dprintf(D_ALWAYS, "X server %s have the screen saver extension\n", hasXss ? "does" : "does not");
+	}
+
+	if (hasXss) {
+		if (!xssi) {
+			xssi = XScreenSaverAllocInfo();
+		}
+
+		XScreenSaverQueryInfo(_display,DefaultRootWindow(_display), xssi);
+
+		dprintf(D_FULLDEBUG, "Screen Saver extension claims idle time is %ld ms\n", xssi->idle);
+
+		if (xssi->idle < 20000l) {
+			return true;
+		}
+	
+	}
+		return false;
+
+#else
+return false;
+#endif
+}

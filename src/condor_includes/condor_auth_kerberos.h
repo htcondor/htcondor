@@ -27,12 +27,22 @@
 #include "MyString.h"
 #include "HashTable.h"
 
+#ifdef WIN32
+// kerb5.h in win-mac.h sets MAXHOSTNAMELEN differently than we do (incorrectly?)
+// so we want to push/pop our definition and undef it to prevent a pointless warning.
+#pragma push_macro("MAXHOSTNAMELEN")
+#undef MAXHOSTNAMELEN
+#endif
+
 extern "C" {
 #include "krb5.h"
 #if defined(Darwin)
 #include "com_err.h"
 #endif
 }
+#ifdef WIN32
+#pragma pop_macro("MAXHOSTNAMELEN")
+#endif
 
 class Condor_Auth_Kerberos : public Condor_Auth_Base {
  public:
@@ -45,6 +55,10 @@ class Condor_Auth_Kerberos : public Condor_Auth_Base {
     //------------------------------------------
     // Destructor
     //------------------------------------------
+
+    static bool Initialize();
+    // Perform one-time initialization, primarily dlopen()ing the
+    // kerberos libs on linux. Returns true on success, false on failure.
 
     int authenticate(const char * remoteHost, CondorError* errstack, bool non_blocking);
     //------------------------------------------
@@ -92,6 +106,9 @@ class Condor_Auth_Kerberos : public Condor_Auth_Base {
     // RETURNS: TRUE -- success, FALSE -- failure
     //------------------------------------------
  private:
+
+	static bool m_initTried;
+	static bool m_initSuccess;
 
     int init_user();
     //------------------------------------------

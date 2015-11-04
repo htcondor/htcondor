@@ -1,0 +1,101 @@
+Mon Jul 20 14:23:38 2015
+
+Incorporating the following into the local config file:
+
+
+	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+	NUM_CPUS = 2
+	NEGOTIATOR_INTERVAL = 5
+
+local config file:compressedtestname30477
+StartCondorWithParams:<compressedtestname> not in condor_personal hash yet
+Effective config now:derived_condor_config
+CreateAndStoreCondorInstance: version:<compressedtestname> config: /scratch/bt/outoftree/src/condor_tests/cmd_run_python.saveme/pdir30477/pdir30477compressedtestname/condor_config
+StoreCondorInstance: caller:CreateAndStoreCondorInstance name:compressedtestname assign instance:PersonalCondorInstance=HASH(0x26bc9a0)
+Condor instance returned:  PersonalCondorInstance=HASH(0x26bc9a0)
+Configuration source:
+Local configuration source:
+
+StateChange: up//scratch/bt/outoftree/src/condor_tests/cmd_run_python.saveme/pdir30477/pdir30477compressedtestname/condor_config time:120 MasterTime:30
+Waiting for condor to start. MASTER SCHEDD COLLECTOR NEGOTIATOR STARTD
+Who data with 4 fields:Daemon,PID,Exit,
+Not Master but Daemon
+Who data with 4 fields:,---,----,
+Not Master but 
+Who data with 4 fields:Collector,30488,no,
+Not Master but Collector
+Who data with 4 fields:Master,30486,no,
+Use of uninitialized value $desiredstate in string ne at CondorPersonal.pm line 1671.
+Who data with 4 fields:Negotiator,30504,no,
+Not Master but Negotiator
+Who data with 4 fields:Schedd,30503,no,
+Not Master but Schedd
+Who data with 4 fields:Startd,30505,no,
+Not Master but Startd
+Condor is running. (1 of 120 seconds)
+Running here:ingwe.cs.wisc.edu
+RunCheck finally calling RunTest
+No longer assuming one log file because of submit foreach
+Exploring logs in GatherUserLogs
+Dry-Run job(s)..........
+10 job(s) dry-run to cluster 1.
+Found 1 userlogs
+userlog:/scratch/bt/outoftree/src/condor_tests/cmd_run_python.user_log.30477
+There are  1 logs and 10 jobs
+transferring 1 UserLogs to CondorTest module
+Entering Monitor
+14:23:46 Test: Job submitted
+14:23:46 Test: Job submitted
+14:23:46 Test: Job submitted
+14:23:46 Test: Job submitted
+14:23:46 Test: Job submitted
+14:23:46 Test: Job submitted
+14:23:46 Test: Job submitted
+14:23:46 Test: Job submitted
+14:23:46 Test: Job submitted
+14:23:46 Test: Job submitted
+14:24:02 Test: Job completed
+14:24:02 Test: Job completed
+14:24:02 Test: Job completed
+14:24:02 Test: Job completed
+14:24:02 Test: Job completed
+14:24:02 Test: Job completed
+14:24:02 Test: Job completed
+14:24:02 Test: Job completed
+14:24:02 Test: Job completed
+14:24:04 Test: Job completed
+num_active_jobs = 0 -- monitor returning
+savename:cmd_run_python.saveme
+Not /Config/ based, saveme is cmd_run_python.saveme
+Logdir is /scratch/bt/outoftree/src/condor_tests/cmd_run_python.saveme/pdir30477/pdir30477compressedtestname/log
+
+PASSED check SimpleJob(runthis=pythontest.py,queue_sz=10) in test cmd_run_python
+
+StateChange: down//scratch/bt/outoftree/src/condor_tests/cmd_run_python.saveme/pdir30477/pdir30477compressedtestname/condor_config time:120 MasterTime:160
+Waiting for condor to stop. MASTER SCHEDD COLLECTOR NEGOTIATOR STARTD
+Who data with 7 fields:Collector,yes,30488,30486,no,128.105.121.64:55889?addrs=128.105.121.64-55889,/scratch/bt/outoftree/release_dir/sbin/condor_collector
+Who data with 7 fields:Master,yes,30486,1,no,128.105.121.64:55203?addrs=128.105.121.64-55203,/scratch/bt/outoftree/release_dir/sbin/condor_master
+Who data with 7 fields:Negotiator,no,30504,no,no,128.105.121.64:47626?addrs=128.105.121.64-47626,
+Who data with 7 fields:Schedd,no,30503,no,no,128.105.121.64:59751?addrs=128.105.121.64-59751,
+Who data with 7 fields:Startd,no,no,no,0,128.105.121.64:56944?addrs=128.105.121.64-56944,
+Who data with 7 fields:Collector,no,no,no,0,128.105.121.64:55889?addrs=128.105.121.64-55889,
+Who data with 7 fields:Master,no,no,no,0,128.105.121.64:55203?addrs=128.105.121.64-55203,
+Who data with 7 fields:Negotiator,no,no,no,0,128.105.121.64:47626?addrs=128.105.121.64-47626,
+Who data with 7 fields:Schedd,no,no,no,0,128.105.121.64:59751?addrs=128.105.121.64-59751,
+Who data with 7 fields:Startd,no,no,no,0,128.105.121.64:56944?addrs=128.105.121.64-56944,
+Condor is off. (3 of 120 seconds)
+Checking for cores and ERRORS for test:cmd_run_python: logdir:/scratch/bt/outoftree/src/condor_tests/cmd_run_python.saveme/pdir30477/pdir30477compressedtestname//log:
+EndTest:checking this named instance:compressedtestname for being down: OK
+Adding a PASSED event for this HTCondor personal stopping
+
+PASSED check CondorTest(test_name=cmd_run_python) in test cmd_run_python
+
+Passed Core Check
+
+PASSED check CondorTest(test_name=cmd_run_python) in test cmd_run_python
+
+14:24:07: TestGlue: 
+
+Final status for cmd_run_python: SUCCESS
+  3 check(s) passed
+  0 check(s) failed

@@ -32,7 +32,7 @@ namespace classad {
 
 extern int _except_line_number;
 extern const char *_except_file_name;
-void _classad_except(const char *format, ...);
+PREFAST_NORETURN void _classad_except(const char *format, ...);
 
 }
 

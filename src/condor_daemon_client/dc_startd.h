@@ -60,6 +60,7 @@ public:
 			@return true on success, false on invalid input (NULL)
 		*/
 	bool setClaimId( const char* id );
+	bool setClaimId( const std::string &id ) {return setClaimId(id.c_str());}
 
 		/** @return the ClaimId string for this startd, NULL if we
 			don't have a value yet.
@@ -203,6 +204,8 @@ public:
 		// returns: true/false on success/failure
 		// call error() to get a descriptive error message
 	bool cancelDrainJobs(char const *request_id);
+
+	bool updateMachineAd( const ClassAd * update, ClassAd * reply, int timeout = -1 );
 
  private:
 	char* claim_id;

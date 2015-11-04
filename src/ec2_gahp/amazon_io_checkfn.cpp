@@ -29,12 +29,17 @@
 #include "amazongahp_common.h"
 #include "amazonCommands.h"
 
-// Expecting:EC2_VM_START <req_id> <serviceurl> <accesskeyfile> <secretkeyfile> <ami-id> <keypair> <userdata> <userdatafile> <instancetype> <availability_zone> <vpc_subnet> <vpc_ip> <groupname> <groupname> ..
-// <groupname> are optional ones.
-// we support multiple groupnames
+// Expecting:
+// EC2_VM_START <req-id> <service-url> <accesskeyfile> <secretkeyfile>
+//              <ami-id> <keypair> <userdata> <userdatafile> <instance-type>
+//				<availability-zone> <vpc-subnet> <vpc-ip> <client-token>
+//				<block-device-mapping> <iam-profile-arn> <iam-profile-name>
+//              <security-group-name>* <NULLSTRING>
+//              <security-group-id>* <NULLSTRING>
+//				<parameters-and-values>* <NULLSTRING>
 bool AmazonVMStart::ioCheck(char **argv, int argc)
 {
-	return verify_min_number_args(argc, 14) &&
+	return verify_min_number_args(argc, 20) &&
 		verify_request_id(argv[1]) &&
 		verify_string_name(argv[2]) &&
 		verify_string_name(argv[3]) &&
@@ -43,11 +48,17 @@ bool AmazonVMStart::ioCheck(char **argv, int argc)
 		verify_string_name(argv[6]) &&
 		verify_string_name(argv[7]) &&
 		verify_string_name(argv[8]) &&
-		verify_string_name(argv[9]) && 
+		verify_string_name(argv[9]) &&
 		verify_string_name(argv[10]) &&
 		verify_string_name(argv[11]) &&
 		verify_string_name(argv[12]) &&
-		verify_string_name(argv[13]);
+		verify_string_name(argv[13]) &&
+		verify_string_name(argv[14]) &&
+		verify_string_name(argv[15]) &&
+		verify_string_name(argv[16]) &&
+		verify_string_name(argv[17]) &&
+		verify_string_name(argv[18]) &&
+		verify_string_name(argv[19]);
 }
 
 // Expecting:EC2_VM_START_SPOT <req_id> 

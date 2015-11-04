@@ -1,0 +1,451 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+use CondorUtils;
+use CondorTest;
+use Cwd;
+use POSIX;
+use warnings;
+use strict;
+use ConfigTools;
+
+my $topdir = getcwd();
+print scalar localtime() . "\n";
+my $iswindows = is_windows();
+
+my $testname = "job_test_urlfetch";
+my $corename = $testname;
+my $piddir = "pdir$$";
+CreateDir("-p $piddir");
+my $fetchfile = "new_config.local";
+my $fetchfile2 = "new_config.local";
+my $fetchfilewrite = "";
+my $fetchfilewrite2 = "";
+my $newconfig = "";
+if($iswindows) {
+$fetchfilewrite = "$piddir\\new_config.local";
+$fetchfilewrite2 = "$piddir\\new_config.local2";
+$newconfig = "$piddir" . "\\condor_config.local";
+} else {
+$fetchfilewrite = "$piddir/new_config.local";
+$fetchfilewrite2 = "$piddir/new_config.local2";
+$newconfig = "$piddir" . "/condor_config.local";
+}
+my $webport = 0;
+
+my %childrenpids = ();
+my $havewebserver = 0;
+
+# validating our web server and being able to remove it at the proper time
+# is important.  However this is the first instance were I get back a fake pid
+# on windows. So many of these tools for this test are in CondorTest.pm avoiding
+# circular use between CondorTest.pm amd CondorUtils.pm. Most simple functions
+# created to work one way for lunix etc and other variants. For windows we have 
+# started win32::Create::Process which gets us control and access to the real pid.
+# The real pid of the python web server lets us validate our web server is running
+# where expected and owned by our pyhon launch.
+
+$havewebserver = StartWebServer($testname,$iswindows,$piddir,$$,\%childrenpids);
+
+if($havewebserver != 0) {
+	print "Failed to secure web server.............return:$havewebserver\n";
+	CleanUpChildren($iswindows,\%childrenpids);
+	RegisterResult(0,"test_name","$testname");
+	EndTest();
+}
+
+# get web port from pid branded file 
+$webport = FindHttpPort($$);
+
+if($webport > 0) {
+	print "our web port:$webport\n";
+	RegisterResult(1,"test_name","$testname");
+} else {
+	print "our web port:$webport\n";
+	RegisterResult(0,"test_name","$testname");
+}
+
+my %firstuniqueconfig = (); # values we expect
+my %firstuniqueconfigdump = (); # values we expect
+my %firstuniqueaccessed = (); # when comparing what we got back from condor_config_val -dump unique
+							  # ensure we checked every intial variation(ie we lost none)
+
+my %seconduniqueconfig = (); # values we expect
+my %seconduniqueconfigdump = (); # values we expect
+my %seconduniqueaccessed = (); # when comparing what we got back from condor_config_val -dump unique
+							  # ensure we checked every intial variation(ie we lost none)
+
+# Do three main tests before trying test for correct config with only the config cache
+# and no web server to deliver the config.
+# 1. Do a base config with the condor_urlfetch -master to produce config.cache
+# 2. Validate config has the special generated values.
+# 3 change the config to bigger but move away from -master to -schedd to ensure
+#   cache is not changed nor is the configuration.
+# 4. finally down web server and see if config matches cache which must be used.
+
+my $line = "";
+print "Generate config\n";
+my @configloc = ();
+my @configloc2 = ();
+GenerateMassive(10,\@configloc);
+GenerateMassive(50,\@configloc2);
+
+
+# store key value pairs and set a lookup counter
+# such that if comparison hash has each and every key
+# the accessed keys should all be one.
+foreach my $line (@configloc) {
+	fullchomp($line);
+	#print "New Fig:$line:\n";
+	if($line =~ /^(unique\d+)\s=\s(.*)$/) {
+		# store key value pair for later comparison
+		$firstuniqueconfig{$1} = $2;
+		$firstuniqueaccessed{$1} = 0;
+	}
+}
+
+open(URLF,">$fetchfilewrite") or die "Write to $fetchfile failed:$!\n";
+print URLF "DAEMON_LIST = MASTER SCHEDD\n";
+foreach my $line (@configloc) { 
+	fullchomp($line);
+	print URLF "$line\n";
+}
+close(URLF);
+
+open(URLF2,">$fetchfilewrite2") or die "Write to $fetchfile2 failed:$!\n";
+print URLF2 "DAEMON_LIST = MASTER SCHEDD\n";
+foreach my $line (@configloc2) { 
+	fullchomp($line);
+	print URLF2 "$line\n";
+}
+close(URLF2);
+
+my $configsize = @configloc;
+print "Size of config returned is:$configsize:\n";
+
+my $masterlocalconfigfile = "";
+my $masterlocalconfigpart1 = "";
+my $masterlocalconfigpart2 = "";
+my $schedlocalconfigfile = "";
+
+if($iswindows) {
+	$masterlocalconfigfile = "\$(LIBEXEC)\\condor_urlfetch -MASTER http://127.0.0.1:$webport/new_config.local \$(LOCAL_DIR)\\config.cache |";
+	$masterlocalconfigpart1 = "condor_urlfetch -MASTER http://127.0.0.1:$webport\\new_config.local";
+	$masterlocalconfigpart2 = "\\config.cache |";
+	$schedlocalconfigfile = "\$(LIBEXEC)/condor_urlfetch -schedd http://127.0.0.1:$webport/new_config.local \$(LOCAL_DIR)\\config.cache |";
+} else {
+	$masterlocalconfigfile = "\$(LIBEXEC)/condor_urlfetch -MASTER http://127.0.0.1:$webport/new_config.local \$(LOCAL_DIR)/config.cache |";
+	$masterlocalconfigpart1 = "condor_urlfetch -MASTER http://127.0.0.1:$webport/new_config.local";
+	$masterlocalconfigpart2 = "/config.cache |";
+	$schedlocalconfigfile = "\$(LIBEXEC)/condor_urlfetch -schedd http://127.0.0.1:$webport/new_config.local \$(LOCAL_DIR)/config.cache |";
+}
+
+# this one is normal and establishes the config cache
+my $firstappend_condor_config = "";
+if($iswindows) {
+	$firstappend_condor_config = "DAEMON_LIST = MASTER,SCHEDD
+NUM_CPUS = 2
+NEGOTIATOR_INTERVAL = 5
+";
+} else {
+	$firstappend_condor_config = "DAEMON_LIST = MASTER,SCHEDD
+NUM_CPUS = 2
+NEGOTIATOR_INTERVAL = 5
+";
+}
+
+
+my $configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"jobtesturlfetch");
+print "local config file:$configfile\n";
+
+CondorTest::StartCondorWithParams(
+    condor_name => "jobtesturlfetch",
+    fresh_local => "TRUE",
+	do_not_start => "TRUE",
+    condorlocalsrc => "$configfile",
+);
+
+my $newconfigfile = "condor_config.new";
+print "After configuring personal, config file:$ENV{CONDOR_CONFIG}\n";
+$line = "";
+open(CF,"<$ENV{CONDOR_CONFIG}") or die "failed to open:$ENV{CONDOR_CONFIG}:$!\n";
+open(NCF,">$newconfigfile") or die "failed to open:$newconfigfile:$!\n";
+while (<CF>) {
+	$line = $_;
+	fullchomp($line);
+	if($line =~ /^LOCAL_CONFIG_FILE\s*=\s*.*$/) {
+		print NCF "LOCAL_CONFIG_FILE = $masterlocalconfigfile\n";
+	} else {
+		print NCF "$line\n";
+	}
+}
+close(CF);
+system("mv $ENV{CONDOR_CONFIG} $ENV{CONDOR_CONFIG}.old");
+system("mv condor_config.new $ENV{CONDOR_CONFIG}");
+
+print "********************* What values do we have for:condor_config_val -dump unique *********************\n";
+#system("condor_config_val -dump unique");
+my @dumpunique = `condor_config_val -dump unique`;
+
+# check stored result in $firstuniqueconfig hash and mark access in $firstuniqueaccessed hash
+foreach my $linefromdump (@dumpunique) {
+	fullchomp($linefromdump);
+    if($linefromdump =~ /^\#.*$/) {
+        next;
+    } elsif($linefromdump =~ /^(unique\d+)\s=\s(.*)$/) {
+        $firstuniqueconfigdump{$1} = $2;
+        # set them all to 1 if checked later to ensure we don;t loose some
+        $firstuniqueaccessed{$1}  += 1;
+    }
+}
+
+my $matchresult = CompareHashes(\%firstuniqueconfig,\%firstuniqueconfigdump, \%firstuniqueaccessed);
+
+print "Comparing configuration from local config file server by web server resut:$matchresult\n";
+if($matchresult eq "good") {
+	RegisterResult(1,"test_name","$testname");
+} else {
+	print "hashes of config and dump should be the same\n";
+	RegisterResult(0,"test_name","$testname");
+}
+
+print "********************* What values do we have for:condor_config_val -dump LOCAL_CONFIG_FILE *********************\n";
+my @dumplocalconfig = `condor_config_val -dump LOCAL_CONFIG_FILE`;
+foreach my $linefromdump (@dumplocalconfig) {
+	fullchomp($linefromdump);
+    if($linefromdump =~ /^\#.*$/) {
+        next;
+	} else {
+		#print "about to compare set:$masterlocalconfigfile vs what I got\n";
+		if($linefromdump =~ /^LOCAL_CONFIG_FILE\s=\s(.*)$/) {
+			if($masterlocalconfigfile eq $1) {
+				print "We expected $masterlocalconfigfile to equal $1\n";
+				RegisterResult(1,"test_name","$testname");
+			} else {
+				print "Why is $masterlocalconfigfile not equal to $1\n";
+				print ":$masterlocalconfigfile:\n";
+				print ":$1:\n";
+				RegisterResult(0,"test_name","$testname");
+			}
+		}
+	}
+}
+print "********************* What values do we have for:condor_config_val -config *********************\n";
+my @libexec = `condor_config_val libexec`;
+my $execdir = $libexec[0];
+fullchomp($execdir);
+
+my @localdir = `condor_config_val local_dir`;
+my $local = $localdir[0];
+fullchomp($local);
+
+my $lookfor = "$execdir" . "/$masterlocalconfigpart1" . " $local" . "$masterlocalconfigpart2";
+system("condor_config_val -config");
+
+print "Look for urlfetch config line:$lookfor:\n";
+
+my $found = 0;
+my @dashconfig = `condor_config_val -config`;
+foreach my $fig (@dashconfig) {
+	fullchomp($fig);
+	# perceeded by white space?
+	if($fig =~ /^\s*(.*)$/) {
+		$fig = $1;
+	}
+	if($fig eq $lookfor) {
+		print "Found:$lookfor\n";
+		$found += 1;
+	} else {
+		#print "no match\n";
+		#print "1:$lookfor:\n";
+		#print "f:$fig:\n";
+	}
+}
+if($found > 0) {
+	print "Found our urlfetch config line\n";
+	RegisterResult(1,"test_name","$testname");
+} else {
+	print "DID NOT find our urlfetch config line\n";
+	RegisterResult(0,"test_name","$testname");
+}
+
+# in our second configuration we will want to refer to a different local config file
+# we will want to point to our first cache
+
+my @firstcache = `condor_config_val local_dir`;
+my $maincache = $firstcache[0];
+fullchomp($maincache);
+
+# this one use the first configuration's cacheconfig cache
+my $secondappend_condor_config = "DAEMON_LIST = MASTER,SCHEDD
+NUM_CPUS = 2
+NEGOTIATOR_INTERVAL = 5
+";
+
+print "dollar libexec evaluates to:$execdir:\n";
+my @dashconfig2 = `condor_config_val -config`;
+
+my $configfile2 = CondorTest::CreateLocalConfig($secondappend_condor_config,"jobtesturlfetch2");
+print "local config file:$configfile\n";
+
+CondorTest::StartCondorWithParams(
+    condor_name => "jobtesturlfetch2",
+    fresh_local => "TRUE",
+	do_not_start => "TRUE",
+    condorlocalsrc => "$configfile2",
+);
+
+print "After configuring personal, config file:$ENV{CONDOR_CONFIG}\n";
+$line = "";
+open(CF,"<$ENV{CONDOR_CONFIG}") or die "failed to open:$ENV{CONDOR_CONFIG}:$!\n";
+open(NCF,">$newconfigfile") or die "failed to open:$newconfigfile:$!\n";
+while (<CF>) {
+	$line = $_;
+	fullchomp($line);
+	if($line =~ /^LOCAL_CONFIG_FILE\s*=\s*.*$/) {
+		print NCF "LOCAL_CONFIG_FILE = $schedlocalconfigfile\n";
+	} else {
+		print NCF "$line\n";
+	}
+}
+close(CF);
+system("mv $ENV{CONDOR_CONFIG} $ENV{CONDOR_CONFIG}.old");
+system("mv condor_config.new $ENV{CONDOR_CONFIG}");
+
+print "********************* What values do we have for:condor_config_val -dump unique *********************\n";
+print "********************* In second config which is not -MASTER  *********************\n";
+
+print "********************* What values do we have for:condor_config_val -dump unique *********************\n";
+#system("condor_config_val -dump unique");
+my @dumpunique2 = `condor_config_val -dump unique`;
+
+
+# check stored result in $seconduniqueconfig hash and mark access in $original access hash
+# so if all is good when we check the first confighash to this one access should now be all
+# twos with no extra values in second hash.
+
+foreach my $linefromdump (@dumpunique2) {
+	fullchomp($linefromdump);
+	#print "second config unique dump line:$linefromdump\n";
+    if($linefromdump =~ /^\#.*$/) {
+        next;
+    } elsif($linefromdump =~ /^(unique\d+)\s=\s(.*)$/) {
+        $seconduniqueconfigdump{$1} = $2;
+        # set them all to 1 if checked later to ensure we don;t loose some
+        $firstuniqueaccessed{$1}  += 1;
+    }
+}
+
+# we should have the same coverage in terms of access and membership since this second
+# configuration has a very different for the source file for url fetch BUT only dash master
+# refreshes th cache  AND this second configuration uses the first configuration's config cache.
+
+my $matchresult2 = CompareHashes(\%firstuniqueconfig,\%seconduniqueconfigdump, \%firstuniqueaccessed,2);
+
+print "Comparing configuration from original local config file server by web server with a second config which blindly useses original's cache result:$matchresult2\n";
+if($matchresult2 eq "good") {
+	RegisterResult(1,"test_name","$testname");
+} else {
+	print "BAD hashes of original config and dump of second configuration using first cache should be the same result:$matchresult2\n";
+	RegisterResult(0,"test_name","$testname");
+}
+
+# we want to take down python web server but our pid
+# is the parent of the web server - look for kids
+
+CleanUpChildren($iswindows,\%childrenpids);
+
+my @dumpunique3 = `condor_config_val -dump unique`;
+my %thirduniqueconfigdump = ();
+
+# check stored result in $thirduniqueconfig hash and mark access in $original access hash
+# so if all is good when we check the first confighash to this one access should now be all
+# trhees with no extra values in third hash.
+
+foreach my $linefromdump (@dumpunique3) {
+	fullchomp($linefromdump);
+	#print "third config unique dump line:$linefromdump\n";
+    if($linefromdump =~ /^\#.*$/) {
+        next;
+    } elsif($linefromdump =~ /^(unique\d+)\s=\s(.*)$/) {
+        $thirduniqueconfigdump{$1} = $2;
+        # set them all to 1 if checked later to ensure we don;t loose some
+        $firstuniqueaccessed{$1}  += 1;
+    }
+}
+
+# we should have the same coverage in terms of access and membership since this second
+# configuration has a very different for the source file for url fetch BUT only dash master
+# refreshes th cache  AND this second configuration uses the first configuration's config cache.
+
+my $matchresult3 = CompareHashes(\%firstuniqueconfig,\%thirduniqueconfigdump, \%firstuniqueaccessed,3);
+
+print "Checking that we get the original cache if the web server is down Result:$matchresult3\n";
+if($matchresult2 eq "good") {
+	RegisterResult(1,"test_name","$testname");
+} else {
+	print "BAD: With no web server we did not get the expected configuration from cache result:$matchresult3\n";
+	RegisterResult(0,"test_name","$testname");
+}
+
+
+# with no web server, the second config should use same cache so repeat last test.
+EndTest();
+# should never get back from EndTest......
+exit(0);
+
+sub CompareHashes {
+	my $hashref1 = shift;
+	my $hashref2 = shift;
+	my $accessedref = shift;
+	my $expectedvalue = 1;
+	my $passedexpected = shift;
+	if(defined $passedexpected) {
+		#print "Access count now expected to be not:$expectedvalue but:$passedexpected\n";
+		$expectedvalue = $passedexpected;
+	}
+
+	my $issues = 0;
+	foreach my $key (keys %{$hashref2}) {
+		#print "CompareHashes:Check key:$key\n";
+		#print "Original value = ${$hashref1}{$key}\n"; 
+		#print "Dump value = ${$hashref2}{$key}\n"; 
+		if(${$hashref2}{$key} ne ${$hashref1}{$key}) {
+			print "Values for $key are different:orig:${$hashref1}{$key} config:${$hashref2}{$key}\n";
+			$issues += 1;
+		} else {
+			#print "Good values for $key the same\n";
+		}
+	}
+	# now ensure every key was accessed exactly once!
+	foreach my $accesscount (values %{$accessedref}) {
+		if($accesscount != $expectedvalue) {
+			if($accesscount == 0) {
+				$issues += 1;
+				print "key value pair($accesscount) missing from dumped config\n";
+			}
+		}
+	}
+	if($issues == 0) {
+		return("good");
+	} else {
+		return("bad");
+	}
+}

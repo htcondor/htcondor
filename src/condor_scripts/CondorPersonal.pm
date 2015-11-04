@@ -119,7 +119,7 @@ sub deriveMasterConfig {
 		# start from there. There are all the possible config files
 		# plus changed vs default values.
 		#print "derived_condor_config exists NOT!\n";
-		my $res = CondorTest::runCondorTool("condor_config_val -writeconfig:file $derivedconfig",\@outres,2,{emit_output=>1,expect_result=>\&ANY});
+		my $res = CondorTest::runCondorTool("condor_config_val -writeconfig:file $derivedconfig",\@outres,2,{emit_output=>0,expect_result=>\&ANY});
 		if($res != 1) {
 			die "Error while getting the effective current configuration\n";
 		}
@@ -345,6 +345,10 @@ sub StartCondorWithParams
 {
 	%personal_condor_params = @_;
 
+	if(is_windows()) {
+		$ENV{LOCAL_DIR} = undef;
+	}
+
 	Initialize(@_);
 	# Make sure at the least we have an initial Config folder to seed future
 	# personal condors. Test via environment variable CONDOR_CONFIG.
@@ -360,6 +364,7 @@ sub StartCondorWithParams
 	$version = $personal_condor_params{"condor_name"} || die "Missing condor_name!\n";
 	#print "StartCondorWithParams: placed param condor_name to version:$version\n";
 	my $mpid = $personal_condor_params{"owner_pid"} || $pid;
+	$mpid = "pdir$mpid";
 	my $config_and_port = "";
 	my $winpath = "";
 
@@ -482,6 +487,10 @@ sub StartCondorWithParamsStart
 {
 	my $winpath = "";
 	my $config_and_port = "";
+	if(is_windows()) {
+		$ENV{LOCAL_DIR} = undef;
+	}
+
 	$collector_port = CondorPersonal::StartPersonalCondor();
 
 	debug( "collector port is $collector_port\n",$debuglevel);
@@ -672,9 +681,9 @@ sub CondorConfigVal
     #my $result = `condor_config_val $param_name`;
 
 	if (defined $returnarrayref) {
-		my $res = CondorTest::runCondorTool("condor_config_val $param_name",$returnarrayref,2,{emit_output=>0,expect_result=>\&ANY});
+		my $res = CondorTest::runCondorTool("condor_config_val $param_name",$returnarrayref,2,{emit_output=>1,expect_result=>\&ANY});
 	} else {
-		my $res = CondorTest::runCondorTool("condor_config_val $param_name",\@otherarray,2,{emit_output=>0});
+		my $res = CondorTest::runCondorTool("condor_config_val $param_name",\@otherarray,2,{emit_output=>1});
 		my $firstline = $otherarray[0];
     	fullchomp $firstline;
 		$result = $firstline;
@@ -743,7 +752,7 @@ sub InstallPersonalCondor
 
 		my @config = ();
 		debug("InstallPersonalCondor getting ccv -config\n",$debuglevel);
-		CondorTest::runCondorTool("condor_config_val -config",\@config,2,{emit_output=>0});
+		CondorTest::runCondorTool("condor_config_val -config",\@config,2,{emit_output=>1});
 		debug("InstallPersonalCondor BACK FROM ccv -config\n",$debuglevel);
 		open(CONFIG,"condor_config_val -config | ") || die "Can not find config file: $!\n";
 		while(<CONFIG>)
@@ -965,6 +974,7 @@ sub TunePersonalCondor
 
 	if(!(defined $mpid)) {
 		$mpid = $$;
+		$mpid = "pdir$mpid";
 	}
 
 my $socketdir = "";
@@ -1121,6 +1131,16 @@ debug( "HMMMMMMMMMMM personal local is $personal_local , mytoppath is $mytoppath
 	open(TEMPLATE,"<$personal_template")  || die "Can not open template: $personal_template: $!\n";
 	debug( "want to open new config file as $topleveldir/$personal_config\n",$debuglevel);
 	open(NEW,">$topleveldir/$personal_config") || die "Can not open new config file: $topleveldir/$personal_config: $!\n";
+
+	# There is an interesting side effect of reading and changing the condor_config
+	# template and then at the end, add the new LOCAL_DIR entree. That is when the constructed 
+	# file is inspected it looks like the LOCAL_DIR came from the environment. 
+	# So we are going to parse for a comment only line and only drop it out if it is NOT
+	# the one followed by "# from <Environment>". When that is the line that follows, we will drop
+	# out the new LOCAL_DIR, then a blank line and THEN those two saved lines.
+
+	my $lastline = "";
+	my $thisline = "";
 	while(<TEMPLATE>)
 	{
 		CondorUtils::fullchomp($_);
@@ -1146,6 +1166,20 @@ debug( "HMMMMMMMMMMM personal local is $personal_local , mytoppath is $mytoppath
 				$personal_config_changes{"LOCAL_CONFIG_FILE"} = "LOCAL_CONFIG_FILE = $mytoppath/$personal_local\n";
 				print NEW "LOCAL_CONFIG_FILE = $mytoppath/$personal_local\n";
 			}
+		} elsif( $line =~ /^#\s*$/ ) {
+			print "save $line could be comment before environment label\n";
+			$lastline = $line;
+		} elsif( $line =~ /^#.*?Environment.*$/ ) {
+			$thisline = $line;
+			print "TunePersonalCondor ************************** forcing LOCAL_DIR to :  $mytoppath\n"; 
+			print NEW "LOCAL_DIR = $mytoppath\n";
+			print NEW "\n";
+			print NEW "$lastline\n";
+			print NEW "$thisline\n";
+		} elsif( $line =~ /^#.*$/ ) {
+			print "Not environment label, drop both lines\n";
+			print NEW "$lastline\n";
+			print NEW "$thisline\n";
 		} elsif( $line =~ /^LOCAL_CONFIG_DIR\s*=.*/ ) {
 			# eat this entry
 		} else {
@@ -1153,8 +1187,6 @@ debug( "HMMMMMMMMMMM personal local is $personal_local , mytoppath is $mytoppath
 		}
 	}
 	close(TEMPLATE);
-	print NEW "LOCAL_DIR = $mytoppath\n";
-	print NEW "CONDOR_HOST = \$(FULL_HOSTNAME)\n";
 	close(NEW);
 
 	open(NEW,">$topleveldir/$personal_local")  || die "Can not open template: $!\n";
@@ -1193,15 +1225,14 @@ debug( "HMMMMMMMMMMM personal local is $personal_local , mytoppath is $mytoppath
 	    			print NEW "SCHEDD_ADDRESS_FILE = \$(LOG)/.schedd_address\n";
 				}
 
-				print NEW "UPDATE_COLLECTOR_WITH_TCP = FALSE\n";
 				print NEW "SCHEDD_INTERVAL = 5\n";
 				print NEW "UPDATE_INTERVAL = 5\n";
 				print NEW "NEGOTIATOR_INTERVAL = 5\n";
+				print NEW "CONDOR_ADMIN = \n";
 				print NEW "CONDOR_JOB_POLL_INTERVAL = 5\n";
 				print NEW "PERIODIC_EXPR_TIMESLICE = .99\n";
 				print NEW "JOB_START_DELAY = 0\n";
 				print NEW "LOCK = \$(LOG)\n";
-				print NEW "COLLECTOR_HOST = \$(CONDOR_HOST):0\n";
 				if($iswindows == 1) {
 				#print NEW "PROCD_LOG = \$(LOG)/ProcLog\n";
 					print NEW "# Adding procd pipe for windows\n";
@@ -1291,6 +1322,11 @@ debug( "HMMMMMMMMMMM personal local is $personal_local , mytoppath is $mytoppath
 
 	}
 
+	#lets always overrul existing A__DEBUG with one that adds to it D_CMD
+	print NEW "ALL_DEBUG = \$(ALL_DEBUG) D_CMD:1\n";
+	# we are testing. dramatically reduce MaxVacateTime
+	print NEW "JOB_MAX_VACATE_TIME = 15\n";
+
 	close(NEW);
 	if (defined $returnarrayref) {
 		PostTunePersonalCondor($personal_config_file,$returnarrayref);
@@ -1310,6 +1346,8 @@ sub PostTunePersonalCondor
 {
     my $config_file = shift;
 	my $outputarrayref = shift;
+	print "PostTunePersonalCondor trying to process daemon_list\n";
+	print "config file is $config_file\n";
 
     # If this is a quill test, then quill is within
     # $personal_daemons AND $topleveldir/../pgpass wants to  be
@@ -1347,7 +1385,7 @@ sub StartPersonalCondor
 	if( $> == 0 ) {
 		my $testName = $control{ 'test_name' };
 		system( "chown condor.condor $home/${testName}.saveme >& /dev/null" );
-		system( "chown -R condor.condor $home/${testName}.saveme/$pid >& /dev/null" );
+		system( "chown -R condor.condor $home/${testName}.saveme/pdir$pid >& /dev/null" );
 	}
 
 	my $configfile = $control{"condorconfig"};
@@ -1498,7 +1536,7 @@ sub StateChange
 	my $masterlimit = shift;
 	my $RunningTimeStamp = time;
 	my $finaltime = 0;
-	#print "StateChange: $desiredstate/$config\n";
+	print "StateChange: $desiredstate/$config time:$timelimit MasterTime:$masterlimit\n";
 	my $state = "";
 	my $now = 0;
 	#print "-$RunningTimeStamp-\n";
@@ -1531,12 +1569,13 @@ sub StateChange
 				return(0);
 			}
 		}
-		if(($now - $RunningTimeStamp) >= $timelimit) {
+		if((($now - $RunningTimeStamp) >= $timelimit) && ($timelimit >= $masterlimit)) {
 			print "Expended alloted time in StateChange: $timelimit\n";
 			$condor_instance->DisplayWhoDataInstances();
 			return(0);
 		}
 		#print "StateChange: again\n";
+		#CollectWhoData($desiredstate);
 		CollectWhoData();
 		$state = ProcessStateWanted($config);
 		#print "StateChange: now:$state\n";
@@ -1579,7 +1618,7 @@ sub NewIsDownYet {
 	} else {
 		#print "This config does not have a condor instance condor_name:$config\n";
 	}
-	my $res = StateChange("down", $config, 40, 40);
+	my $res = StateChange("down", $config, 120, 160);
 	return $res;
 }
 
@@ -1616,6 +1655,9 @@ sub NewIsDownYet {
 
 sub CollectWhoData
 {
+	my $desiredstate = shift;
+	# experient to vary by going up vs down OFF now
+	# and nothing is passed in
 	my @whoarray;
 	#print "CollectWhoData for this Condor:<$ENV{CONDOR_CONFIG}>\n";
 
@@ -1627,10 +1669,20 @@ sub CollectWhoData
 	#$condor->DisplayWhoDataInstances();
 	# condor_who -quick is best before master is alive
 	if($condor != 0) {
-		my $hasLive = $condor->HasLiveMaster();
-		#print "HasLiveMaster says:$hasLive\n";
-		if($condor->HasLiveMaster() == 1) {
-			$usequick = 0;
+		if(defined $desiredstate) {
+			if($desiredstate eq "down"){
+				print "going down and using quick mode\n";
+			} else {
+				if($condor->HasLiveMaster() == 1) {
+					$usequick = 0;
+				}
+			}
+		} else {
+			my $hasLive = $condor->HasLiveMaster();
+			#print "HasLiveMaster says:$hasLive\n";
+			if($condor->HasLiveMaster() == 1) {
+				$usequick = 0;
+			}
 		}
 	} else {
 		die "CollectWhoData with no condor instance yet\n";
@@ -1644,67 +1696,79 @@ sub CollectWhoData
 	if($usequick == 1) {
 		#print "Using -quick\n";
 		CondorTest::runCondorTool("condor_who -quick -daemon -log \"$logdir\"",\@whoarray,2,{emit_output=>0});
-	} else {
-		CondorTest::runCondorTool("condor_who -daemon -log \"$logdir\"",\@whoarray,2,{emit_output=>0});
-	}
-
-	foreach my $wholine (@whoarray) {
-		CondorUtils::fullchomp($wholine);
-		#print "$wholine\n";
-		if($wholine =~ /(.*?)\s+(.*?)\s+(.*?)\s+(.*?)\s+(.*?)\s+<(.*)>\s+(.*)/) {
-			#print "Who data with 7 fields:$1,$2,$3,$4,$5,$6,$7\n";
-			#print "Parse:$wholine\n";
-			#print "Before LoadWhoData: $1,$2,$3,$4,$5,$6,$7\n";
-			# this next call assumes we are interested in currently configed personal condor
-			# which means a lookup for condor instance for each daemon
-			CondorTest::LoadWhoData($1,$2,$3,$4,$5,$6,$7);
-		} elsif($wholine =~ /(\w*)\s+(.*?)\s+(.*?)\s+(.*?)/) {
-			#print "Who data with 4 fields:$1,$2,$3,$4\n";
-			#condor_who -quick fields. $1 daemon name $2 pid
-			#id this is the master is pid real?
-			my $savepid = $2;
-			my $processstring = "";
-			if($1 eq "Master") {
-				#print "Master found\n";
-				if(CondorUtils::is_windows() == 1) {
-			    	my @grift = `tasklist | grep $savepid`;
-					foreach my $process (@grift) {
-						#print "consider:$process saved pid: $savepid\n";
-						if($process =~ /(.*?)\s+(\d+)\s+(\w+).*/) {
-							$processstring = $1;
-							if($2 eq $savepid) {
-								#print "Pids equal:$processstring\n";
-								# does this process have master in binary
-								if($processstring =~ /condor_master/) {
-									#print "Is master, thus master alive\n";
+		foreach my $wholine (@whoarray) {
+			CondorUtils::fullchomp($wholine);
+			# print timestamp() .  ": raw whodataline: $wholine\n";
+			if($wholine =~ /(\w*)\s+(.*?)\s+(.*?)\s+(.*?)/) {
+				# print timestamp() .  ": Who data with 4 fields:$1,$2,$3,$4\n";
+				#print "condor_who -quick fields. $1 daemon name $2 pid\n";
+				#id this is the master is pid real?
+				my $savepid = $2;
+				my $processstring = "";
+				if($1 eq "Master") {
+					#print "Master found\n";
+					if(CondorUtils::is_windows() == 1) {
+				    	my @grift = `tasklist | grep $savepid`;
+						foreach my $process (@grift) {
+							#print "consider:$process saved pid: $savepid\n";
+							if($process =~ /(.*?)\s+(\d+)\s+(\w+).*/) {
+								$processstring = $1;
+								if($2 eq $savepid) {
+									#print "Pids equal:$processstring\n";
+									# does this process have master in binary
+									if($processstring =~ /condor_master/) {
+										#print "Is master, thus master alive\n";
+										CondorTest::LoadWhoData("Master","yes",$savepid,"","","","");
+									}
+								}
+							}
+						}
+					} else {
+						#print "Master record\n";
+						if($savepid ne "no") {
+							my @psdata = `ps $savepid`;
+							my $pssize = @psdata;
+							#print "ps data on $savepid: $psdata[1]\n";
+							if($pssize >= 2) {
+								if($psdata[1] =~ /condor_master/) {
+									#Mark master alive
+									#print "Marking Master Alive*************************************************************\n";
+									#print "Before LoadWhoData:\n";
 									CondorTest::LoadWhoData("Master","yes",$savepid,"","","","");
 								}
 							}
 						}
 					}
-				} else {
-					#print "Master record\n";
-					if($savepid ne "no") {
-						my @psdata = `ps $savepid`;
-						my $pssize = @psdata;
-						#print "ps data on $savepid: $psdata[1]\n";
-						if($pssize >= 2) {
-							if($psdata[1] =~ /condor_master/) {
-								#Mark master alive
-								#print "Marking Master Alive*************************************************************\n";
-								#print "Before LoadWhoData:\n";
-								CondorTest::LoadWhoData("Master","yes",$savepid,"","","","");
-							}
-						}
-					}
-				}
+				} #else {
+					#print "Not Master but $1\n";
+					#next if $wholine =~ /^Daemon.*$/; # skip column headings
+					#next if $wholine =~ /^\-\-\-\-\-\-.*$/; # skip dashes
+					#CondorTest::LoadWhoData($1,$2,"","","","","");
+				#}
 			}
-		} elsif($wholine =~ /(.*?)\s+(.*?)\s+(.*?)\s+(.*?)\s+(.*?).*/) {
-			#print "Who data with 5 fields:$1,$2,$3,$4,$5\n";
-			#print "Before LoadWhoData: $1,$2,$3,$4,$5\n";
-			CondorTest::LoadWhoData($1,$2,$3,$4,$5,"","");
-		} else {
-			#print "CollectWhoData: Parse Error: $wholine\n";
+		}
+	} else {
+		CondorTest::runCondorTool("condor_who -daemon -log \"$logdir\"",\@whoarray,2,{emit_output=>0});
+
+		foreach my $wholine (@whoarray) {
+			CondorUtils::fullchomp($wholine);
+			next if $wholine =~ /^Daemon.*$/; # skip column headings
+			next if $wholine =~ /^\-\-\-\-\-\-.*$/; # skip dashes
+			# print timestamp()  . ": rawhodataline: $wholine\n";
+			if($wholine =~ /(.*?)\s+(.*?)\s+(.*?)\s+(.*?)\s+(.*?)\s+<(.*)>\s+(.*)/) {
+				# print timestamp() . ": Who data with 7 fields:$1,$2,$3,$4,$5,$6,$7\n";
+				# print "Parse:$wholine\n";
+				# print "Before LoadWhoData: $1,$2,$3,$4,$5,$6,$7\n";
+				# this next call assumes we are interested in currently configed personal condor
+				# which means a lookup for condor instance for each daemon
+				CondorTest::LoadWhoData($1,$2,$3,$4,$5,$6,$7);
+			} elsif($wholine =~ /(.*?)\s+(.*?)\s+(.*?)\s+(.*?)\s+(.*?).*/) {
+				# print timestamp() . ": Who data with 5 fields:$1,$2,$3,$4,$5\n";
+				# print "Before LoadWhoData: $1,$2,$3,$4,$5\n";
+				CondorTest::LoadWhoData($1,$2,$3,$4,$5,"","");
+			} else {
+				#print "CollectWhoData: Parse Error: $wholine\n";
+			}
 		}
 	}
 	#print CondorUtils::TimeStr() . " CollectWhoData done\n";
@@ -1723,7 +1787,7 @@ sub KillDaemons
 		return(1);
 	}
 
-	CondorTest::runToolNTimes("condor_off -master",1,0,{expect_result=>\&ANY,emit_output=>0});
+	CondorTest::runToolNTimes("condor_off -master -fast",1,0,{expect_result=>\&ANY,emit_output=>0});
 
 	my $res = NewIsDownYet($desiredconfig, $condor_name);
 
@@ -1781,7 +1845,7 @@ sub FindCollectorAddress
 	while(<COLLECTORADDR>) {
 		CondorUtils::fullchomp($_);
 		$line = $_;
-		if( $line =~ /^\s*<([^>]+)>\s*$/ ) {
+		if( $line =~ /^\s*(<[^>]+>)\s*$/ ) {
 			debug( "Collector address is $1\n",$debuglevel);
 			return($1);
 		} else {
@@ -1825,6 +1889,7 @@ sub FindCollectorPort
 sub SaveMeSetup
 {
 	my $testname = shift;
+	print "Into SaveMeSetup for:$testname\n";
 	my $mypid = $$;
 	my $res = 1;
 	my $mysaveme = $testname . ".saveme";
@@ -1833,7 +1898,7 @@ sub SaveMeSetup
 		print "SaveMeSetup: Could not create \"saveme\" directory for test\n";
 		return(0);
 	}
-	my $mypiddir = $mysaveme . "/" . $mypid;
+	my $mypiddir = $mysaveme . "/pdir" . $mypid;
 	# there should be no matching directory here
 	# unless we are getting pid recycling. Start fresh.
 	$res = system("rm -rf $mypiddir");
@@ -1867,6 +1932,7 @@ sub PersonalSystem
 	my $args = shift @_;
 	my $dumpLogs = $ENV{DUMP_CONDOR_LOGS};
 	my $mypid = $$;
+	$mypid = "pdir$mypid";
 	
 	if(defined $dumpLogs) {
 		print "Dump Condor Logs if things go south\n";

@@ -220,8 +220,9 @@ rescue :
 				if( jobnum_matches( event, cluster, process, subproc ) ) {
 
 					if (echo_events) {
-						event->putEvent(stdout);
-						printf("...\n");
+						std::string event_str;
+						event->formatEvent( event_str );
+						printf( "%s...\n", event_str.c_str() );
 					}
 
 					if(event->eventNumber==ULOG_SUBMIT) {

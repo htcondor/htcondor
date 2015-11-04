@@ -26,6 +26,22 @@
 #include "firewall.WINDOWS.h"
 #include "basename.h"
 
+static const char * GetHRString(HRESULT hr)
+{
+	switch (hr) {
+	case S_OK: return "Ok";
+	case E_ACCESSDENIED: return "Access Denied";
+	case E_NOTIMPL: return "Not implemented";
+	case E_INVALIDARG: return "Invalid Argument";
+	case E_OUTOFMEMORY: return "Out of memory";
+	case E_NOINTERFACE: return "No such Interface";
+	case E_POINTER: return "Invalid pointer";
+	case E_HANDLE: return "Invalid handle";
+	case E_ABORT: return "Operation aborted";
+	}
+	return "";
+}
+
 
 WindowsFirewallHelper::WindowsFirewallHelper()
 	: fwProf(NULL)
@@ -79,7 +95,7 @@ WindowsFirewallHelper::init() {
     if (SUCCEEDED(hr) || RPC_E_CHANGED_MODE == hr) {
         hr = S_OK;
     } else {
-        dprintf(D_ALWAYS, "WinFirewall: CoInitializeEx failed: 0x%08lx\n", hr);
+        dprintf(D_ALWAYS, "WinFirewall: CoInitializeEx failed: 0x%08lx %s\n", hr, GetHRString(hr));
         result = false;
     }
 	
@@ -109,7 +125,7 @@ WindowsFirewallHelper::firewallIsOn() {
     hr = fwProf->get_FirewallEnabled(&fwEnabled);
     if (FAILED(hr))
     {
-        dprintf(D_ALWAYS, "WinFirewall: get_FirewallEnabled failed: 0x%08lx\n", hr);
+        dprintf(D_ALWAYS, "WinFirewall: get_FirewallEnabled failed: 0x%08lx %s\n", hr, GetHRString(hr));
         return false;
     }
 
@@ -167,7 +183,7 @@ WindowsFirewallHelper::addTrusted( const char *app_path ) {
 	if (FAILED(hr))
 	{
 		i_can_add = false;
-		dprintf(D_ERROR | D_FULLDEBUG, "WinFirewall: CoCreateInstance failed: 0x%08lx\n", hr);
+		dprintf(D_ERROR | D_FULLDEBUG, "WinFirewall: CoCreateInstance failed: 0x%08lx %s\n", hr, GetHRString(hr));
 		return hr;
 	}
 	
@@ -180,7 +196,7 @@ WindowsFirewallHelper::addTrusted( const char *app_path ) {
 			dprintf(D_ERROR, "WinFirewall Error: Could not find trusted app image %s\n",
 				app_path);
 		} else {
-			dprintf(D_ERROR, "put_ProcessImageFileName failed: 0x%08lx\n", hr);
+			dprintf(D_ERROR, "put_ProcessImageFileName failed: 0x%08lx %s\n", hr, GetHRString(hr));
 		}
 		goto error;
 	}
@@ -192,7 +208,7 @@ WindowsFirewallHelper::addTrusted( const char *app_path ) {
         hr = fwApp->put_Name(app_basename_bstr);
         if (FAILED(hr))
         {
-            dprintf(D_ERROR | D_FULLDEBUG, "WinFirewall: put_Name failed: 0x%08lx\n", hr);
+            dprintf(D_ERROR | D_FULLDEBUG, "WinFirewall: put_Name failed: 0x%08lx %s\n", hr, GetHRString(hr));
             goto error;
         }
 
@@ -200,7 +216,7 @@ WindowsFirewallHelper::addTrusted( const char *app_path ) {
         hr = fwApps->Add(fwApp);
         if (FAILED(hr))
         {
-           dprintf(D_ERROR, "WinFirewall: Add failed: 0x%08lx\n", hr);
+            dprintf(D_ERROR, "WinFirewall: Add failed: 0x%08lx %s\n", hr, GetHRString(hr));
             goto error;
         }
 
@@ -252,7 +268,7 @@ WindowsFirewallHelper::applicationIsTrusted(const char* app_path) {
         hr = fwApp->get_Enabled(&fwEnabled);
         if (FAILED(hr))
         {
-            dprintf(D_ALWAYS, "WinFirewall: get_Enabled failed: 0x%08lx\n", hr);
+            dprintf(D_ALWAYS, "WinFirewall: get_Enabled failed: 0x%08lx %s\n", hr, GetHRString(hr));
 			result = false;
         } else {
 			result = (fwEnabled == VARIANT_TRUE);
@@ -342,7 +358,7 @@ WindowsFirewallHelper::removeByBasename( const char *name ) {
 		// printf("Result is %lS\n", str);
 
 		len = wcslen(str);
-		tmp = (char*) malloc(len*2+1 * sizeof(char));
+		tmp = (char*) malloc((len*2+1) * sizeof(char));
 		ASSERT(tmp);
 		sprintf(tmp, "%S", str);
 
@@ -384,7 +400,7 @@ WindowsFirewallHelper::removeTrusted( const char *app_path) {
 	// Attempt to retrieve the authorized application.
 	HRESULT hr = fwApps->Remove(app_path_bstr);
 	if (FAILED(hr)) {
-		dprintf(D_ERROR, "WinFirewall: remove trusted app %s failed: 0x%08lx\n", app_path, hr);
+		dprintf(D_ERROR, "WinFirewall: remove trusted app %s failed: 0x%08lx %s\n", app_path, hr, GetHRString(hr));
 		if (hr == E_ACCESSDENIED) {
 			i_can_remove = false;
 		}
@@ -406,7 +422,7 @@ WindowsFirewallHelper::charToBstr(const char* str) {
 	the_bstr = SysAllocStringLen(NULL, cch); // SysAllocateString adds +1 to allocation size
 	if ( ! the_bstr) {
         hr = E_OUTOFMEMORY;
-        dprintf(D_ALWAYS, "WinFirewall: SysAllocString failed: 0x%08lx\n", hr);
+        dprintf(D_ERROR, "WinFirewall: SysAllocString failed\n");
         return NULL;
 	}
 	MultiByteToWideChar(CP_ACP, 0, str, -1, (WCHAR*)the_bstr, cch+1);
@@ -431,7 +447,7 @@ WindowsFirewallHelper::WindowsFirewallInitialize() {
     if (FAILED(hr))
     {
         dprintf(D_FULLDEBUG, 
-				"WinFirewall: CoCreateInstance failed: 0x%08lx\n", hr);
+				"WinFirewall: CoCreateInstance failed: 0x%08lx %s\n", hr, GetHRString(hr));
 		return false;
     }
 
@@ -439,7 +455,7 @@ WindowsFirewallHelper::WindowsFirewallInitialize() {
     hr = fwMgr->get_LocalPolicy(&fwPolicy);
     if (FAILED(hr))
     {
-        dprintf(D_ALWAYS, "WinFirewall: get_LocalPolicy failed: 0x%08lx\n", hr);
+        dprintf(D_ALWAYS, "WinFirewall: get_LocalPolicy failed: 0x%08lx %s\n", hr, GetHRString(hr));
 		return false;
     }
 
@@ -447,25 +463,29 @@ WindowsFirewallHelper::WindowsFirewallInitialize() {
     hr = fwPolicy->get_CurrentProfile(&fwProf);
     if (FAILED(hr))
     {
+		const char * err_string = "";
+
 		// Sometimes, this fails at boot time. So, we 
 		// retry a number of times before throwing in the towel.
 		// Note that if retry = 0, it retries forever.
-		int retry = param_integer("WINDOWS_FIREWALL_FAILURE_RETRY", 60);
+		int retry = param_integer("WINDOWS_FIREWALL_FAILURE_RETRY", 2);
 		int i;
 		for (i=0; (i<retry || (retry==0)); i++) {
     		hr = fwPolicy->get_CurrentProfile(&fwProf);
     		if (SUCCEEDED(hr)) {
 				break;
+			} else if (hr == E_ACCESSDENIED || hr == E_NOTIMPL || hr == E_INVALIDARG) {
+				// don't bother to retry.
 			} else {
 				dprintf(D_FULLDEBUG, "WinFirewall: get_CurrentProfile() "
 					   "failed.  Retry %d...\n", i);
-				sleep(10);
+				sleep(5); // 5 seconds
 			}
 		}
 
 		if ( FAILED(hr) ) {
 	        dprintf(D_ALWAYS, 
-					"WinFirewall: get_CurrentProfile failed: 0x%08lx\n", hr);
+					"WinFirewall: get_CurrentProfile failed: 0x%08lx %s\n", hr, GetHRString(hr));
 			return false;
 		}
     }
@@ -475,7 +495,7 @@ WindowsFirewallHelper::WindowsFirewallInitialize() {
     if (FAILED(hr))
     {
         dprintf(D_ALWAYS, 
-			"WinFirewall: get_AuthorizedApplications failed: 0x%08lx\n", hr);
+			"WinFirewall: get_AuthorizedApplications failed: 0x%08lx %s\n", hr, GetHRString(hr));
         return false;
     }
 

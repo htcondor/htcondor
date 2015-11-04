@@ -17,7 +17,20 @@
 ## limitations under the License.
 ##
 ##**************************************************************
+use CondorUtils;
 
 
-system("./x_general_client.pl maxpostsock open");
-system("./x_general_client.pl maxpostsock close");
+my $iswindows = CondorUtils::is_windows();
+if($iswindows) {
+	system("appendmsg -n -f filetoappendto open");
+	# Make scripts not finish immediately to better test throttling;
+	# specific sleep duration is not critical.
+	sleep(15);
+	system("appendmsg -n -f filetoappendto close");
+} else {
+	system("./x_general_client.pl maxpostsock open");
+	# Make scripts not finish immediately to better test throttling;
+	# specific sleep duration is not critical.
+	sleep(15);
+	system("./x_general_client.pl maxpostsock close");
+}

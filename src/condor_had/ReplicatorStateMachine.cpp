@@ -29,6 +29,8 @@
 //#include "ReplicationCommands.h"
 #include "FilesOperations.h"
 
+#include "ipv6_hostname.h"
+
 // multiplicative factor, determining how long the active HAD, that does not 
 // send the messages to the replication daemon, is considered alive
 #define HAD_ALIVE_TOLERANCE_FACTOR      (2)
@@ -103,7 +105,7 @@ ReplicatorStateMachine::finalizeDelta( )
 
     SetMyTypeName( invalidate_ad, QUERY_ADTYPE );
     SetTargetTypeName( invalidate_ad, "Replication" );
-    line.formatstr( "TARGET.%s == \"%s\"", ATTR_NAME, m_name.Value( ) );
+    line.formatstr( "%s == \"%s\"", ATTR_NAME, m_name.Value( ) );
     invalidate_ad.AssignExpr( ATTR_REQUIREMENTS, line.Value( ) );
 	invalidate_ad.Assign( ATTR_NAME, m_name.Value() );
     daemonCore->sendUpdates( INVALIDATE_ADS_GENERIC, &invalidate_ad, NULL, false );
@@ -222,7 +224,7 @@ ReplicatorStateMachine::initializeClassAd()
     SetMyTypeName(*m_classAd, "Replication");
     SetTargetTypeName(*m_classAd, "");
 
-    m_name.formatstr( "replication@%s -p %d", my_full_hostname( ),
+    m_name.formatstr( "replication@%s -p %d", get_local_fqdn().Value(),
 				  daemonCore->InfoCommandPort( ) );
     m_classAd->Assign( ATTR_NAME, m_name.Value( ) );
     m_classAd->Assign( ATTR_MY_ADDRESS,

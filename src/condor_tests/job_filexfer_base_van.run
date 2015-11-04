@@ -20,9 +20,8 @@
 
 use CondorTest;
 use CondorUtils;
+use Check::SimpleJob;
 
-$cmd      = 'job_filexfer_base_van.cmd';
-$testdesc =  'Base file transfer - vanilla U';
 $testname = "job_filexfer_base_van";
 
 # truly const variables in perl
@@ -69,23 +68,27 @@ $timed = sub
 	die "Job should have ended by now. file transfer broken!\n";
 };
 
-runcmd("mkdir -p ../ftjob");
-runcmd("cp x_job_filexfer_testjob.pl ../ftjob");
-runcmd("chmod 775 ../ftjob/x_job_filexfer_testjob.pl");
+SimpleJob::RunCheck(
+    runthis=>"x_job_filexfer_testjob.pl",
+    duration=>"--noinput",
+    should_transfer_files=>"YES",
+    when_to_transfer_output=>"ON_EXIT_OR_EVICT",
+    append_submit_commands=>$streamcommand,
+    on_success=>$success,
+    on_abort=>$abort,
+    on_execute=>$execute,
+    on_hold=>$hold,
+    on_release=>$release,
+);
 
-CondorTest::RegisterExecute($testname, $execute);
-CondorTest::RegisterAbort($testname, $abort);
-CondorTest::RegisterHold($testname, $hold);
-CondorTest::RegisterRelease($testname, $release);
-CondorTest::RegisterExitedSuccess($testname, $success);
-#CondorTest::RegisterTimed($testname, $timed, 3600);
+my $result = 0;
+CondorTest::EndTest();
+print scalar localtime() . "\n";
 
-if( CondorTest::RunTest($testname, $cmd, 0) ) {
-	CondorTest::debug("$testname: SUCCESS\n",1);
-	runcmd("rm -rf ../ftjob");
-	exit(0);
-} else {
-	runcmd("rm -rf ../ftjob");
-	die "$testname: CondorTest::RunTest() failed\n";
+if( $result != 0 )
+{
+    exit(1);
 }
 
+CondorTest::debug("$testname SUCCESS\n",1);
+exit(0);

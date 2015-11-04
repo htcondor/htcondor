@@ -58,7 +58,7 @@ int	update_interval = 0;	// Interval to update CM
 int	update_offset = 0;		// Interval offset to update CM
 
 // String Lists
-StringList *startd_job_exprs = NULL;
+StringList *startd_job_attrs = NULL;
 StringList *startd_slot_attrs = NULL;
 static StringList *valid_cod_users = NULL; 
 
@@ -150,6 +150,9 @@ main_init( int, char* argv[] )
 			if( !(ptr && *ptr) ) {
                 EXCEPT( "-n requires another arugment" );
             }
+			if (Name) {
+				free(Name);
+			}
             Name = build_valid_daemon_name( *ptr );
             dprintf( D_ALWAYS, "Using name: %s\n", Name );
             break;
@@ -278,7 +281,7 @@ main_init( int, char* argv[] )
 								  (CommandHandler)command_query_ads,
 								  "command_query_ads", 0, READ );
 
-		// WRITE permission commands
+		// DAEMON permission commands
 	daemonCore->Register_Command( ACTIVATE_CLAIM, "ACTIVATE_CLAIM",
 								  (CommandHandler)command_activate_claim,
 								  "command_activate_claim", 0, DAEMON );
@@ -475,8 +478,7 @@ finish_main_config( void )
 int
 init_params( int /* first_time */)
 {
-	char *tmp;
-
+	static bool match_password_enabled = false;
 
 	resmgr->init_config_classad();
 
@@ -498,50 +500,61 @@ init_params( int /* first_time */)
 
 	sysapi_reconfig();
 
-	if( startd_job_exprs ) {
-		delete( startd_job_exprs );
-		startd_job_exprs = NULL;
-	}
-	tmp = param( "STARTD_JOB_EXPRS" );
-	if( tmp ) {
-		startd_job_exprs = new StringList();
-		startd_job_exprs->initializeFromString( tmp );
-		free( tmp );
+	// Fill in *_JOB_ATTRS
+	//
+	if (startd_job_attrs) {
+		startd_job_attrs->clearAll();
 	} else {
-		startd_job_exprs = new StringList();
-		startd_job_exprs->initializeFromString( ATTR_JOB_UNIVERSE );
+		startd_job_attrs = new StringList();
+	}
+	param_and_insert_unique_items("STARTD_JOB_ATTRS", *startd_job_attrs);
+	// merge in the deprecated _EXPRS config
+	param_and_insert_unique_items("STARTD_JOB_EXPRS", *startd_job_attrs);
+	// Now merge in the attrs required by HTCondor - this knob is a secret from users
+	param_and_insert_unique_items("SYSTEM_STARTD_JOB_ATTRS", *startd_job_attrs);
+	if (startd_job_attrs->isEmpty()) {
+		delete startd_job_attrs;
+		startd_job_attrs = NULL;
 	}
 
-	if( startd_slot_attrs ) {
-		delete( startd_slot_attrs );
+	// Fill in *_SLOT_ATTRS
+	//
+	if (startd_slot_attrs) {
+		startd_slot_attrs->clearAll();
+	} else {
+		startd_slot_attrs = new StringList();
+	}
+	param_and_insert_unique_items("STARTD_SLOT_ATTRS", *startd_slot_attrs);
+	param_and_insert_unique_items("STARTD_SLOT_EXPRS", *startd_slot_attrs);
+	if (startd_slot_attrs->isEmpty() && param_boolean("ALLOW_VM_CRUFT", false)) {
+		param_and_insert_unique_items("STARTD_VM_ATTRS", *startd_slot_attrs);
+		param_and_insert_unique_items("STARTD_VM_EXPRS", *startd_slot_attrs);
+	}
+	// now insert attributes needed by HTCondor
+	param_and_insert_unique_items("SYSTEM_STARTD_SLOT_ATTRS", *startd_slot_attrs);
+	if (startd_slot_attrs->isEmpty()) {
+		delete  startd_slot_attrs;
 		startd_slot_attrs = NULL;
 	}
-	tmp = param( "STARTD_SLOT_ATTRS" );
-	if (!tmp) {
-		tmp = param( "STARTD_SLOT_EXPRS" );
-	}
-	if (param_boolean("ALLOW_VM_CRUFT", false) && !tmp) {
-		tmp = param( "STARTD_VM_ATTRS" );
-		if (!tmp) {
-			tmp = param( "STARTD_VM_EXPRS" );
-		}
-	}
-	if( tmp ) {
-		startd_slot_attrs = new StringList();
-		startd_slot_attrs->initializeFromString( tmp );
-		free( tmp );
+
+	console_slots = param_integer( "SLOTS_CONNECTED_TO_CONSOLE", -12345);
+	if (console_slots == -12345) {
+		// if no value set, try the old names...
+		console_slots = resmgr->m_attr->num_cpus();
+		console_slots = param_integer( "VIRTUAL_MACHINES_CONNECTED_TO_CONSOLE",
+		                param_integer( "CONSOLE_VMS",
+		                param_integer( "CONSOLE_CPUS",
+		                console_slots)));
 	}
 
-	console_slots = param_integer( "SLOTS_CONNECTED_TO_CONSOLE",
-                    param_integer( "VIRTUAL_MACHINES_CONNECTED_TO_CONSOLE",
-                    param_integer( "CONSOLE_VMS",
-                    param_integer( "CONSOLE_CPUS",
-                    resmgr->m_attr->num_cpus()))));
-
-	keyboard_slots = param_integer( "SLOTS_CONNECTED_TO_KEYBOARD",
-                     param_integer( "VIRTUAL_MACHINES_CONNECTED_TO_KEYBOARD",
-                     param_integer( "KEYBOARD_VMS",
-                     param_integer( "KEYBOARD_CPUS", 1))));
+	keyboard_slots = param_integer( "SLOTS_CONNECTED_TO_KEYBOARD", -12345);
+	if (keyboard_slots == -12345) {
+		// if no value set, try the old names...
+		keyboard_slots = resmgr->m_attr->num_cpus();
+		keyboard_slots = param_integer( "VIRTUAL_MACHINES_CONNECTED_TO_KEYBOARD",
+		                 param_integer( "KEYBOARD_VMS",
+		                 param_integer( "KEYBOARD_CPUS", 1)));
+	}
 
 	disconnected_keyboard_boost = param_integer( "DISCONNECTED_KEYBOARD_IDLE_BOOST", 1200 );
 
@@ -550,14 +563,13 @@ init_params( int /* first_time */)
 	compute_avail_stats = false;
 	compute_avail_stats = param_boolean( "STARTD_COMPUTE_AVAIL_STATS", false );
 
-	tmp = param( "STARTD_NAME" );
-	if( tmp ) {
+	auto_free_ptr tmp(param("STARTD_NAME"));
+	if (tmp) {
 		if( Name ) {
 			delete [] Name;
 		}
-		Name = build_valid_daemon_name( tmp );
+		Name = build_valid_daemon_name(tmp);
 		dprintf( D_FULLDEBUG, "Using %s for name\n", Name );
-		free( tmp );
 	}
 
 	pid_snapshot_interval = param_integer( "PID_SNAPSHOT_INTERVAL", DEFAULT_PID_SNAPSHOT_INTERVAL );
@@ -566,40 +578,50 @@ init_params( int /* first_time */)
 		delete( valid_cod_users );
 		valid_cod_users = NULL;
 	}
-	tmp = param( "VALID_COD_USERS" );
-	if( tmp ) {
+	tmp.set(param("VALID_COD_USERS"));
+	if (tmp) {
 		valid_cod_users = new StringList();
 		valid_cod_users->initializeFromString( tmp );
-		free( tmp );
 	}
 
 	if( vmapi_is_virtual_machine() == TRUE ) {
 		vmapi_destroy_vmregister();
 	}
-	tmp = param( "VMP_HOST_MACHINE" );
-	if( tmp ) {
-		if( vmapi_is_my_machine(tmp) ) {
+	tmp.set(param("VMP_HOST_MACHINE"));
+	if (tmp) {
+		if (vmapi_is_my_machine(tmp.ptr())) {
 			dprintf( D_ALWAYS, "WARNING: VMP_HOST_MACHINE should be the hostname of host machine. In host machine, it doesn't need to be defined\n");
 		} else {
-			vmapi_create_vmregister(tmp);
+			vmapi_create_vmregister(tmp.ptr());
 		}
-		free(tmp);
 	}
 
 	if( vmapi_is_host_machine() == TRUE ) {
 		vmapi_destroy_vmmanager();
 	}
-	tmp = param( "VMP_VM_LIST" );
-	if( tmp ) {
+	tmp.set(param("VMP_VM_LIST"));
+	if (tmp) {
 		if( vmapi_is_virtual_machine() == TRUE ) {
 			dprintf( D_ALWAYS, "WARNING: both VMP_HOST_MACHINE and VMP_VM_LIST are defined. Assuming this machine is a virtual machine\n");
 		}else {
-			vmapi_create_vmmanager(tmp);
+			vmapi_create_vmmanager(tmp.ptr());
 		}
-		free(tmp);
 	}
 
 	InitJobHistoryFile( "STARTD_HISTORY" , "STARTD_PER_JOB_HISTORY_DIR");
+
+	bool new_match_password = param_boolean( "SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION", true );
+	if ( new_match_password != match_password_enabled ) {
+		IpVerify* ipv = daemonCore->getIpVerify();
+		if ( new_match_password ) {
+			ipv->PunchHole( DAEMON, SUBMIT_SIDE_MATCHSESSION_FQU );
+			ipv->PunchHole( CLIENT_PERM, SUBMIT_SIDE_MATCHSESSION_FQU );
+		} else {
+			ipv->FillHole( DAEMON, SUBMIT_SIDE_MATCHSESSION_FQU );
+			ipv->FillHole( CLIENT_PERM, SUBMIT_SIDE_MATCHSESSION_FQU );
+		}
+		match_password_enabled = new_match_password;
+	}
 
 	return TRUE;
 }

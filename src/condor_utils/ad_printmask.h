@@ -83,11 +83,7 @@ struct Formatter
 	char       fmt_letter;   // actual letter in the % escape
 	char       fmt_type;     // one of the the printf_fmt_t enum values.
 	char       fmtKind;      // identifies type type of the union
-#ifdef AD_PRINTMASK_V2
 	char       altKind;      // identifies type of alt text to print when attribute cannot be fetched
-#else
-	const char * altText;      // print this when attribute data is unavailable
-#endif
 	const char * printfFmt;    // may be NULL if fmtKind != PRINTF_FMT
 	union {
 		StringCustomFormat	sf;
@@ -110,22 +106,10 @@ class AttrListPrintMask
 	void SetOverallWidth(int wid);
 
 	// register a format and an attribute
-#ifdef AD_PRINTMASK_V2
 	void registerFormat (const char *print, int wid, int opts, const char *attr);
 	void registerFormat (const char *print, int wid, int opts, const CustomFormatFn & fmt, const char *attr);
 	void registerFormat (const char *print, const char *attr)          { registerFormat(print, 0, 0, attr); }
 	void registerformat (const CustomFormatFn & fmt, const char *attr) { registerFormat(NULL, 0, 0, fmt, attr); }
-#else
-	void registerFormat (const char *fmt, int wid, int opts, const char *attr, const char*alt="");
-	void registerFormat (const char *print, int wid, int opts, const CustomFormatFn & fmt, const char *attr, const char *alt="");
-
-	void registerFormat (const char *fmt, const char *attr, const char*alt="") {
-		registerFormat(fmt, 0, 0, attr, alt);
-		}
-	void registerformat (const CustomFormatFn & fmt, const char *attr, const char*alt="") {
-		registerFormat(NULL, 0, 0, fmt, attr, alt);
-	}
-#endif
 
 	// clear all formats
 	void clearFormats (void);
@@ -134,7 +118,7 @@ class AttrListPrintMask
 	// display functions
 	int   display (FILE *, AttrList *, AttrList *target=NULL);		// output to FILE *
 	int   display (FILE *, AttrListList *, AttrList *target=NULL, List<const char> * pheadings=NULL); // output a list -> FILE *
-	char *display ( AttrList *, AttrList *target=NULL );			// return a string
+	int   display (std::string & out, AttrList *, AttrList *target=NULL ); // append to string out. return number of chars added
 	int   calc_widths(AttrList *, AttrList *target=NULL );          // set column widths
 	int   calc_widths(AttrListList *, AttrList *target=NULL);		
 	int   display_Headings(FILE *, List<const char> & headings);
@@ -167,13 +151,19 @@ class AttrListPrintMask
 
 	void PrintCol(MyString * pretval, Formatter & fmt, const char * value);
 	void commonRegisterFormat (int wid, int opts, const char *print, const CustomFormatFn & sf,
-#ifdef AD_PRINTMASK_V2
 							const char *attr
-#else
-							const char *attr, const char *alt
-#endif
 							);
 };
+
+// parse -af: options after the : and all of the included arguments up to the next -
+// returns the number of arguments consumed
+int parse_autoformat_args (
+	int /*argc*/,
+	char* argv[],
+	int ixArg,
+	const char *popts,
+	AttrListPrintMask & print_mask,
+	bool diagnostic);
 
 // functions & classes in make_printmask.cpp
 
@@ -214,6 +204,13 @@ enum printmask_headerfooter_t {
 	HF_NOSUMMARY=4,
 	HF_CUSTOM=8,
 	HF_BARE=15
+};
+
+// used to return what kind of printmask aggregation has been requested.
+enum printmask_aggregation_t {
+	PR_NO_AGGREGATION=0,
+	PR_COUNT_UNIQUE,
+	PR_FROM_AUTOCLUSTER, // For condor_q, select from autocluster set.
 };
 
 // interface for reading text one line at a time, used to abstract reading lines
@@ -283,6 +280,7 @@ int SetAttrListPrintMaskFromStream (
 	const CustomFormatFnTable & FnTable, // in: table of custom output functions for SELECT
 	AttrListPrintMask & mask, // out: columns and headers set in SELECT
 	printmask_headerfooter_t & headfoot, // out, header and footer flags set in SELECT or SUMMARY
+	printmask_aggregation_t & aggregate, // out: aggregation mode in SELECT
 	std::vector<GroupByKeyInfo> & group_by, // out: ordered set of attributes/expressions in GROUP BY
 	std::string & where_expression, // out: classad expression from WHERE
 	StringList & attrs, // out ClassAd attributes referenced in mask or group_by outputs

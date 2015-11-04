@@ -83,14 +83,14 @@ public:
 	static const char sec_feat_act_rev[][10];
 	static const char sec_req_rev[][10];
 
-	static KeyCache                      * session_cache;
-	static HashTable<MyString, MyString> * command_map;
+	static KeyCache                      session_cache;
+	static HashTable<MyString, MyString> command_map;
 	static int sec_man_ref_count;
 
 		// The following is indexed by session index name ( "addr,<cmd>" )
-	static HashTable<MyString, classy_counted_ptr<SecManStartCommand> > *tcp_auth_in_progress;
+	static HashTable<MyString, classy_counted_ptr<SecManStartCommand> > tcp_auth_in_progress;
 
-	SecMan(int numbuckets = 209);  // years of careful research... HA HA HA HA
+	SecMan();
 	SecMan(const SecMan &);
 	~SecMan();
 	const SecMan & operator=(const SecMan &);

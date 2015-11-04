@@ -27,13 +27,14 @@ struct ExprTreeHolder
 
     boost::python::object Evaluate(boost::python::object scope=boost::python::object()) const;
 
-    std::string toRepr();
+    std::string toRepr() const;
 
-    std::string toString();
+    std::string toString() const;
 
     classad::ExprTree *get() const;
 
     boost::python::object getItem(boost::python::object);
+    ExprTreeHolder subscript(boost::python::object);
 
     bool SameAs(ExprTreeHolder other) const { return m_expr->SameAs(other.m_expr); }
 

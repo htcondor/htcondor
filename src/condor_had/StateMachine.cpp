@@ -37,6 +37,7 @@
 #include "my_username.h"
 #include "StateMachine.h"
 #include "Utils.h"
+#include "ipv6_hostname.h"
 
 
 #define MESSAGES_PER_INTERVAL_FACTOR (2)
@@ -208,7 +209,7 @@ HADStateMachine::softReconfigure(void)
         // 'my_username' allocates dynamic string
         buffer = my_username();
         tmp = buffer ? buffer : "UNKNOWN";
-        m_name.formatstr( "%s@%s", tmp, my_full_hostname( ) );
+        m_name.formatstr( "%s@%s", tmp, get_local_fqdn().Value() );
 	if ( buffer ) {
 		free( buffer );
 	}
@@ -352,7 +353,7 @@ HADStateMachine::reinitialize(void)
 
 	// reconfiguring data members, on which the negotiator location inside the
 	// pool depends
-	m_usePrimary = param_boolean("HAD_USE_PRIMARY", m_usePrimary);
+	m_usePrimary = param_boolean("HAD_USE_PRIMARY", false);
 
     tmp = param( "HAD_LIST" );
     if ( tmp ) {

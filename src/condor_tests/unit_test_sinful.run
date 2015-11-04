@@ -1,0 +1,270 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+
+use CondorTest;
+use CondorUtils;
+use NetworkTestConfigs;
+
+#
+# The 'test_sinful' binary validates that Sinful's multiple-address abstraction
+# is functioning properly, and that std::multimap sorts stably.
+#
+my $rv = system( 'test_sinful' );
+
+my $testName = "test_sinful";
+if( $rv == 0 ) {
+	RegisterResult( 1, "test_name" => $testName );
+} else {
+	RegisterResult( 0, "test_name" => $testName );
+}
+
+#
+# These tests use the condor_sinful tool to verify that we can successfully
+# round trip between original Sinful strings (with addrs) and V1 strings.
+#
+sub countBrokenConversions {
+	my( @ads ) = @_;
+
+	# Is this really the best way to get the LIBEXEC dir?
+	my $libexecDir = `condor_config_val LIBEXEC`;
+	CondorUtils::fullchomp( $libexecDir );
+	if( ! -d $libexecDir ) {
+		print( "LIBEXEC '$libexecDir' is not a directory, failing test.\n" );
+		return -1;
+	}
+
+	my $failures = 0;
+	foreach my $ad (@ads) {
+		my $sinful = $ad->{ 'MyAddress' };
+		my $v1String = $ad->{ 'AddressV1' };
+
+		print( "Checking " . $ad->{ 'MyType' } . " ($sinful <-> $v1String)...\n" );
+
+		# Check forward conversion.
+		my $rv = runCommandCarefully( {emit_output => 0}, "${libexecDir}/condor_sinful", "v1", $sinful );
+		my $converted = $rv->{ stdout }->[0];
+		CondorUtils::fullchomp( $converted );
+
+		if( $converted ne $v1String ) {
+			print( "Forward conversion failure.\n" );
+			print( "FAILURE: ${sinful} => ${converted} != ${v1String}\n" );
+			++$failures;
+			print( "standard out\n" . join( "\n", @{$rv->{ stdout }} ) . "\n" ) ;
+			print( "standard error\n" . join( "\n", @{$rv->{ stderr }} ) . "\n" );
+		}
+
+		# Check reverse conversion.
+		$rv = runCommandCarefully( {emit_output => 0}, "${libexecDir}/condor_sinful", "sinful", $v1String );
+		my $reverse = $rv->{ stdout }->[0];
+		CondorUtils::fullchomp( $reverse );
+
+		if( $reverse ne $sinful ) {
+			print( "Reverse conversion failure.\n" );
+			print( "FAILURE: ${v1String} => ${reverse} != ${sinful}\n" );
+			++$failures;
+			print( "standard out\n" . join( "\n", @{$rv->{ stdout }} ) . "\n" ) ;
+			print( "standard error\n" . join( "\n", @{$rv->{ stderr }} ) . "\n" );
+		}
+
+		# And check round-trip conversion.
+		$rv = runCommandCarefully( {emit_output => 0}, "${libexecDir}/condor_sinful", "sinful", $converted );
+		$reverse = $rv->{ stdout }->[0];
+		CondorUtils::fullchomp( $reverse );
+
+		if( $reverse ne $sinful ) {
+			print( "Round-trip (from sinful) failure.\n" );
+			print( "FAILURE: ${sinful} => ${converted} => ${reverse} != ${sinful}\n" );
+			++$failures;
+			print( "standard out\n" . join( "\n", @{$rv->{ stdout }} ) . "\n" ) ;
+			print( "standard error\n" . join( "\n", @{$rv->{ stderr }} ) . "\n" );
+		}
+
+		$rv = runCommandCarefully( {emit_output => 0}, "${libexecDir}/condor_sinful", "sinful", $v1String );
+		$converted = $rv->{ stdout }->[0];
+		CondorUtils::fullchomp( $converted );
+
+		$rv = runCommandCarefully( {emit_output => 0}, "${libexecDir}/condor_sinful", "v1", $converted );
+		$reverse = $rv->{ stdout }->[0];
+		CondorUtils::fullchomp( $reverse );
+
+		if( $reverse ne $v1String ) {
+			print( "Round-trip (from v1string) failure.\n" );
+			print( "FAILURE: ${v1String} => ${converted} => ${reverse} != ${v1String}\n" );
+			++$failures;
+		}
+	}
+
+	return $failures;
+}
+
+sub readSharedPortAddressFromAdFile {
+	my $adFile = `condor_config_val SHARED_PORT_DAEMON_AD_FILE`;
+	fullchomp( $adFile );
+	if( ! -e $adFile ) {
+		return ( 1, "Ad file '$adFile' does not exist" );
+	}
+	my( $fd, $address );
+	if(! open( $fd, '<', $adFile )) {
+		return ( 2, "Failed to open ad file '$adFile': $!\n" );
+	}
+	while( my $line = <$fd> ) {
+		if( $line =~ /^MyAddress = "/ ) {
+			$line =~ s/^MyAddress = "//;
+			$line =~ s/"$//;
+			$address = $line;
+			last;
+		}
+	}
+	close( $fd );
+	return ( 0, $address );
+}
+
+sub checkConversionsWithConfig {
+	my( $tn, $config, $customStart ) = @_;
+
+	# The testing daemon isn't started by the master, so it doesn't know
+	# the secret cookie.  Windows apparently always ignores the value of
+	# DAEMON_SOCKET_DIR, so we don't have to be cross-platform here.
+	my $daemonSocketDir = "/tmp/daemon_socket_dir_" . $$ . $tn;
+	mkdir( $daemonSocketDir );
+	$config .= "	DAEMON_SOCKET_DIR = $daemonSocketDir\n";
+
+	my $cf = CondorTest::CreateLocalConfig( $config, $tn );
+	if( defined( $customStart ) ) {
+		if( $customStart eq "IMMEDIATE" ) {
+			CondorTest::StartCondorWithParams(
+				condor_name				=> $tn,
+				fresh_local				=> "TRUE",
+				condorlocalsrc			=> $cf,
+			);
+		} elsif( $customStart eq "DELAY" ) {
+			CondorTest::StartCondorWithParams(
+				condor_name				=> $tn,
+				fresh_local				=> "TRUE",
+				condorlocalsrc			=> $cf,
+			);
+
+			my( $rv, $oldAddress ) = readSharedPortAddressFromAdFile();
+			if( $rv != 0 ) {
+				print( "Failed to read shared port address: ${oldAddress}\n" );
+				RegisterResult( 0, "test_name" => $tn );
+				rmdir( $daemonSocketDir );
+				return;
+			}
+			# This is a bad hack.  Should call the condor_sinful tool instead.
+			if( $oldAddress =~ m/CCBID=/ ) {
+				print( "Found CCB ID in existing address.\n" );
+			} else {
+				# Wait for the shared port daemon to register itself.  This
+				# should occur about sixty seconds after it starts up.
+				print( "Waiting for shared port daemon to register with CCB...\n" );
+				while(! CondorTest::SearchCondorLog( "shared_port", "CCBListener: registered with CCB server" )) {
+					sleep( 10 );
+				}
+				print( "... done.\n" );
+
+				# Force the CCB address to disk.
+				runCondorTool( "condor_reconfig", undef, 1, { emit_output => 0 } );
+
+				# Give the shared port daemon some time to do its write.
+				print( "Waiting for shared port daemon to write its new address file...\n" );
+				while(! CondorTest::SearchCondorLog( "shared_port", "About to update statistics in shared_port daemon ad file" ) ) {
+					sleep( 1 );
+				}
+
+				# Wait until it has actually done so.
+				print( "Looking for new address in file...\n" );
+				while( 1 ) {
+					my( $rv, $newAddress ) = readSharedPortAddressFromAdFile();
+					if( $rv != 0 ) {
+						print( "Failed to read shared port address: ${oldAddress}\n" );
+						RegisterResult( 0, "test_name" => $tn );
+						rmdir( $daemonSocketDir );
+						return;
+					} elsif( $newAddress ne $oldAddress ) {
+						last;
+					}
+					sleep( 1 );
+				}
+
+				print( "... done.\n" );
+			}
+		} else {
+			print( "Unknown custom start argument ${customStart}!\n" );
+			RegisterResult( 0, "test_name" => $tn );
+			return;
+		}
+	} else {
+		CondorTest::StartCondorWithParams(
+			condor_name				=> $tn,
+			fresh_local				=> "TRUE",
+			condorlocalsrc			=> $cf,
+			do_not_start			=> "TRUE",
+		);
+	}
+
+	# Is this really the best way to get the LIBEXEC dir?
+	my $libexecDir = `condor_config_val LIBEXEC`;
+	CondorUtils::fullchomp( $libexecDir );
+	if( ! -d $libexecDir ) {
+		print( "LIBEXEC '$libexecDir' is not a directory, failing test.\n" );
+		RegisterResult( 0, "test_name" => $tn );
+		rmdir( $daemonSocketDir );
+		return;
+	}
+
+	# Check the testingd's public and private addresses.
+	my @ads;
+	my @lines;
+	runCondorTool( "${libexecDir}/condor_testingd -f", \@lines, 1, { emit_output => 0 } );
+	if(! (scalar(@lines) >= 4) ) {
+		print( "Not enough output from condor_testingd, failing test.\n" );
+		RegisterResult( 0, "test_name" => $tn );
+		rmdir( $daemonSocketDir );
+		return;
+	}
+
+	my $address = $lines[0]; CondorUtils::fullchomp( $address );
+	my $addressV1 = $lines[1]; CondorUtils::fullchomp( $addressV1 );
+	push( @ads, { "MyAddress" => $address, "AddressV1" => $addressV1, "MyType" => "Testing (public)" } );
+
+	$address = $lines[2]; CondorUtils::fullchomp( $address );
+	$addressV1 = $lines[3]; CondorUtils::fullchomp( $addressV1 );
+	push( @ads, { "MyAddress" => $address, "AddressV1" => $addressV1, "MyType" => "Testing (private)" } );
+
+	if( countBrokenConversions( @ads ) == 0 ) {
+		RegisterResult( 1, "test_name" => $tn );
+	} else {
+		RegisterResult( 0, "test_name" => $tn );
+	}
+
+	rmdir( $daemonSocketDir );
+}
+
+#
+# Check round-tripping a variety of different addresses.
+#
+
+checkConversionsWithConfig( "ipv4-only", $NetworkTestConfigs::ipV4Only );
+checkConversionsWithConfig( "ipv6-only", $NetworkTestConfigs::ipV6Only );
+checkConversionsWithConfig( "mixed-mode", $NetworkTestConfigs::mixedMode );
+
+checkConversionsWithConfig( "biaFalse", $NetworkTestConfigs::niOnly );
+checkConversionsWithConfig( "biaTrue", $NetworkTestConfigs::niGiven );
+
+checkConversionsWithConfig( "privateNetworkInterface", $NetworkTestConfigs::pni );
+checkConversionsWithConfig( "privateNetworkInterfaceAndName", $NetworkTestConfigs::pniAndName );
+
+# This works but produces screwy Sinfuls that won't route correctly.
+checkConversionsWithConfig( "tcpForwardingHost", $NetworkTestConfigs::tcpForwardingHost );
+
+# Neither shared port nor CCB will generate the corresponding Sinful without
+# a live daemon with which to register.
+checkConversionsWithConfig( "sp", $NetworkTestConfigs::sp, "IMMEDIATE" );
+checkConversionsWithConfig( "ccb", $NetworkTestConfigs::ccb, "IMMEDIATE" );
+checkConversionsWithConfig( "ccbAndSp", $NetworkTestConfigs::ccbAndSp, "DELAY" );
+
+EndTest();
+exit( 1 );

@@ -1,0 +1,211 @@
+<package>
+ <job id="set_config_options">
+  <runtime>
+   <description>Create a condor_config by invoking the MSI's config.vbs script and passing it arguments. condor_config is created in the current directory unless INSTALLDIR={dir} option is specified</description>
+   <named
+       name ="help"
+       helpstring ="Show available configuration options"
+       type ="simple"
+       required = "false"
+   />
+   <unnamed
+     name = "Options"
+     helpstring = "Configuration options specified as KEY=value pairs. use /help to see what keys are allowed."
+     type = "string"
+     required = "false"
+   />
+  </runtime>
+
+  <script language="VBscript">
+
+set nargs = Wscript.Arguments.Named
+show_help = nargs.Exists("help")
+
+If (Wscript.Arguments.Count < 1) Then
+    WScript.Arguments.ShowUsage()
+    show_help = true
+End If
+
+if (show_help) Then
+    If LCase( Right( WScript.FullName, 12 ) ) = "\cscript.exe" Then
+        Wscript.Echo ""
+        Wscript.Echo "  INSTALLDIR=<directory>    (parent of HTCondor's bin and etc directories)"
+        Wscript.Echo "  ETC=<directory>           (where HTCondor's etc directory is)"
+        Wscript.Echo ""
+        Wscript.Echo "Either INSTALLDIR or ETC must be specifed so the script knows how to find config.vbs and condor_config.generic"
+        Wscript.Echo "condor_config will be created the INSTALLDIR, or in the current dir if no INSTALLDIR"
+        Wscript.Echo ""
+        Wscript.Echo "These options must be specifed or HTCondor will not work."
+        Wscript.Echo ""
+        Wscript.Echo "  NEWPOOL=N|Y                  (if Y, this machine will be a central manager)"
+        Wscript.Echo "  POOLNAME=<text>              (name of HTCondor pool - only if NEWPOOL is Y)"
+        Wscript.Echo "  POOLHOSTNAME=<machine>|<ip>  (name or ip of central manager - only if NEWPOOL is N)"
+        Wscript.Echo ""
+        Wscript.Echo "  HOSTALLOWREAD=<access-list>           (list machines and/or ip's that can access HTCondor on this machine)"
+        Wscript.Echo "  HOSTALLOWWRITE=<access-list>          (list machines and/or ip's that can access HTCondor on this machine)"
+        Wscript.Echo "  HOSTALLOWADMINISTRATOR=<access-list>  (list machines and/or ip's that can access HTCondor on this machine)"
+        Wscript.Echo ""
+        Wscript.Echo "This options my be omitted if you want the default."
+        Wscript.Echo ""
+        Wscript.Echo "  SUBMITJOBS=N|Y   (if Y, this installation will be able to submit jobs)"
+        Wscript.Echo "  RUNJOBS=N|A|I|C  (if A, I or C, this installation will be able to run jobs)"
+        Wscript.Echo "  VACATEJOBS=N|Y   (jobs can be vacated by policy)"
+        Wscript.Echo ""
+        Wscript.Echo "  LOCALCONFIG=<path>|<url>  (path or url of local config file)"
+        Wscript.Echo "  ACCOUNTINGDOMAIN=<dns-name>  (if set, usually a dns suffix like cs.wisc.edu)"
+        Wscript.Echo "  CONDOREMAIL=<email-addr>     (email address to get administator alerts)"
+        Wscript.Echo "  SMTPSERVER=<machine>         (name of SMTP server for administator email alerts)"
+        Wscript.Echo ""
+        Wscript.Echo "  JVMLOCATION=<path>   (full path to JAVA)"
+        Wscript.Echo "  PERLLOCATION=<path>  (location of PERL)"
+        Wscript.Echo ""
+        Wscript.Echo "  USEVMUNIVERSE=N|Y     (this installation can run Vmware VM jobs)"
+        Wscript.Echo "  VMNETWORKING=A|B|C    (type of VM networking, A=nat, B=bridge, C=both)"
+        Wscript.Echo "  VMMAXNUMBER=<number>  (maximum number of VMs to run at the same time)"
+        Wscript.Echo "  VMMEMORY=<number>     (Amount of memory to allow for VMs)"
+        Wscript.Echo ""
+    End If
+
+    Wscript.Quit
+End If 
+
+If (Wscript.Arguments.Count < 1) Then
+    Wscript.Quit 2
+End If
+
+set fso = CreateObject("Scripting.FileSystemObject")
+cwd = fso.GetAbsolutePathName(".")
+
+' Create a dictionary called Session, this will simulate the MSI's session object
+Dim Session
+Set Session = CreateObject("Scripting.Dictionary")
+
+' Set defaults in the session object
+Session.Add "INSTALLDIR", cwd
+Session.Add "LOCALCONFIG", "$(RELEASE_DIR)\condor_config.local"
+
+Session.Add "SUBMITJOBS", "Y"
+Session.Add "RUNJOBS", "C"
+Session.Add "VACATEJOBS", "Y"
+Session.Add "USEVMUNIVERSE", "N"
+
+Session.Add "NEWPOOL", "Y"
+Session.Add "POOLNAME", "My HTCondor Pool"
+Session.Add "POOLHOSTNAME", "$(IP_ADDRESS)"
+
+Session.Add "ACCOUNTINGDOMAIN", ""
+Session.Add "CONDOREMAIL",  ""
+Session.Add "SMTPSERVER", ""
+Session.Add "HOSTALLOWREAD", "*"
+Session.Add "HOSTALLOWWRITE", "$(CONDOR_HOST), $(IP_ADDRESS)"
+Session.Add "HOSTALLOWADMINISTRATOR", "$(CONDOR_HOST), $(IP_ADDRESS)"
+Session.Add "JVMLOCATION", ""
+
+' Now insert command line arguments into the Session object
+For I = 0 to Wscript.Arguments.Count-1
+   arg = Wscript.Arguments(I)
+   ix = InStr(1, arg, "=")
+   If (ix > 0) Then
+      key = Mid(arg, 1, ix-1)
+      val = Mid(arg, ix+1)
+      ' WScript.Echo "Arg:'" & key & "' = '" & val & "'"
+      if Session.Exists(key) Then
+         Session.Item(key) = val
+      else
+         Session.Add key, val
+      End if
+   End If
+Next
+
+' WScript.Quit
+
+' find config.vbs script
+cfgpath = "config.vbs"
+if NOT fso.FileExists(cfgpath) Then
+   cfgpath = fso.BuildPath(Session.Item("ETC"), "wix\config.vbs")
+   if NOT fso.FileExists(cfgpath) Then
+      cfgpath = fso.BuildPath(cwd,"etc\wix\config.vbs")
+      if NOT fso.FileExists(cfgpath) Then
+         cfgpath = fso.BuildPath(Session.Item("INSTALLDIR"), "etc\wix\config.vbs")
+         if NOT fso.FileExists(cfgpath) Then
+            cfgpath = "config.vbs"
+            WScript.Echo "Can't find config.vbs"
+         End If
+      End if
+   End if
+end if
+
+' find condor_config.generic, we use this as a starting point for creating the new config file
+gcconfig = fso.BuildPath(Session.Item("INSTALLDIR"), "etc\condor_config.generic")
+fixup_gcconfig = false
+if NOT fso.FileExists(gcconfig) Then
+   fixup_gcconfig = true
+   gcconfig = fso.BuildPath(Session.Item("ETC"), "condor_config.generic")
+   if NOT fso.FileExists(gcconfig) Then
+      gcconfig = fso.BuildPath(cwd, "condor_config.generic")
+      if NOT fso.FileExists(gcconfig) Then
+         gcconfig = fso.BuildPath(cwd,"etc\condor_config.generic")
+         if NOT fso.FileExists(gcconfig) Then
+            fixup_gccconfig = false
+         End If
+      End if
+   End if
+end if
+
+' read in Config.vbs
+set scriptFile = fso.OpenTextFile(cfgpath,1)
+sText = scriptFile.ReadAll
+scriptFile.Close
+
+' Change the text of the config.vbs script a bit so it will run outside of the MSI
+Set re = new RegExp
+re.Global = true
+re.Multiline = true
+re.IgnoreCase = true
+' convert "Session.Property" to "Session.Item" so that our fake session object (above) will be queried.
+re.Pattern = "Session\.Property"
+tText = re.Replace (sText, "Session.Item")
+
+if fixup_gcconfig Then
+   re.Pattern = "^[ \t]*ccgpath[ \t]*=.+$"
+   tText = re.Replace(tText, "ccgpath = """ & gcconfig & """")
+End if
+
+' remove invocation of CreateConfig2 from the end of the script.
+re.Pattern = "^CreateConfig2"
+tText = re.Replace (tText, "")
+
+' Print out the modified script, and then compile it
+Wscript.Echo "---- compiling Config.vbs ----"
+Wscript.Echo tText
+ExecuteGlobal tText
+Wscript.Echo "---- compile done ----"
+
+' Wscript.Quit
+
+ccpath = fso.BuildPath(Session.Item("INSTALLDIR"), "condor_config")
+if (fso.FileExists(ccpath)) Then
+   Wscript.Echo " config file '" & ccpath & "' exists - deleting it."
+   fso.DeleteFile(ccpath)
+   'Wscript.Quit
+end if
+
+Wscript.Echo "---- using session properties ----"
+Wscript.Echo " INSTALLDIR=" & Session.Item("INSTALLDIR")
+Wscript.Echo " NEWPOOL=" & Session.Item("NEWPOOL") & " POOLNAME=" & Session.Item("POOLNAME") & " POOLHOSTNAME=" & Session.Item("POOLHOSTNAME")
+Wscript.Echo " SUBMIT=" & Session.Item("SUBMITJOBS") & " RUN=" & Session.Item("RUNJOBS") & " VACATE=" & Session.Item("VACATEJOBS")
+Wscript.Echo "---- executing Config.vbs ----"
+CreateConfig2
+Wscript.Echo "---- config is ----"
+
+Set Configfile = fso.OpenTextFile(ccpath, 1, True)
+configTxt = Configfile.ReadAll
+ConfigFile.Close
+Wscript.Echo configTxt
+
+Wscript.Quit
+
+
+  </script>
+ </job>
+</package>

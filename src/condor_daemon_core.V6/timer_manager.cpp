@@ -44,6 +44,15 @@ extern void **curr_regdataptr;
 // disable warning about memory leaks due to exception. all memory freed on exit anyway
 MSC_DISABLE_WARNING(6211)
 
+TimerManager &
+TimerManager::GetTimerManager()
+{
+	if (!_t)
+	{
+		_t = new TimerManager();
+	}
+	return *_t;
+}
 
 TimerManager::TimerManager()
 {

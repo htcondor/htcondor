@@ -4,6 +4,10 @@ Job A job_dagman_abort-final-A-node-succeed.cmd
 Vars A nodename = "$(JOB)"
 Job B job_dagman_abort-final-A-node-succeed.cmd
 Vars B nodename = "$(JOB)"
+# Note:  Job C2 must come before Job C in the DAG because it must
+# be submitted first.  Job C2 just sleeps for a really long time
+# to make sure that it correctly gets removed.
+Job C2 job_dagman_abort-final-A-node-sleep.cmd
 Job C job_dagman_abort-final-A-node-fail.cmd
 Vars C nodename = "$(JOB)"
 Job D job_dagman_abort-final-A-node-fail.cmd
@@ -11,9 +15,12 @@ Vars D nodename = "$(JOB)"
 
 # Final node will invert the overall DAG status (success->failure).
 Final E job_dagman_abort-final-A-nodeE.cmd
+# Note: $FAILED_COUNT here does *not* reflect node C2 getting
+# condor_rm'ed, and it probably should...
+Script Pre E job_dagman_abort-final-A-nodeE-pre.pl $FAILED_COUNT
 
 Abort-dag-on C 5 return 0
 
 PARENT A CHILD B
-PARENT B CHILD C
+PARENT B CHILD C C2
 PARENT C CHILD D

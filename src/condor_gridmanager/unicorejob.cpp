@@ -309,6 +309,7 @@ void UnicoreJob::doEvaluateState()
 		reevaluate_state = false;
 		old_gm_state = gmState;
 		old_unicore_state = unicoreState;
+		ASSERT ( gahp != NULL || gmState == GM_HOLD || gmState == GM_DELETE );
 
 		switch ( gmState ) {
 		case GM_INIT: {

@@ -743,6 +743,21 @@ MyString::randomlyGenerateHex(int len)
 }
 
 void
+MyString::randomlyGeneratePassword(int len)
+{
+	// Create a randome password of alphanumerics
+	// and safe-to-print punctuation.
+	//
+	randomlyGenerate(
+				"abcdefghijklmnopqrstuvwxyz"
+				"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+				"0123456789"
+				"!@#$%^&*()-_=+,<.>/?",
+				len
+				);
+}
+
+void
 MyString::init()
 {
     Data=NULL;

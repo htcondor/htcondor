@@ -218,16 +218,6 @@ void initTypes( int max_types, StringList **type_strings, int except )
 		type_strings[i] = new StringList();
 		type_strings[i]->initializeFromString( tmp );
 		free( tmp );
-#if 0
-		// check for pairings
-		buf += "PAIRED_WITH";
-		tmp = param(buf.Value());
-		if ( ! tmp)
-			continue;
-		PRAGMA_REMIND("tj: treating the slot that has PAIRED_WITH as subordinate! fix this!")
-		type_strings[i]->insert("minimal");
-		free (tmp);
-#endif
 	}
 }
 

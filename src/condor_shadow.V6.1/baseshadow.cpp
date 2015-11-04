@@ -72,6 +72,8 @@ BaseShadow::BaseShadow() {
 	m_cleanup_retry_tid = -1;
 	m_cleanup_retry_delay = 30;
 	m_RunAsNobody = false;
+	attemptingReconnectAtStartup = false;
+	m_force_fast_starter_shutdown = false;
 }
 
 BaseShadow::~BaseShadow() {
@@ -80,6 +82,7 @@ BaseShadow::~BaseShadow() {
 	if (scheddAddr) free(scheddAddr);
 	if( job_updater ) delete job_updater;
 	if (m_cleanup_retry_tid != -1) daemonCore->Cancel_Timer(m_cleanup_retry_tid);
+	free( core_file_name );
 }
 
 void
@@ -158,6 +161,9 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
 
 	// handle system calls with Owner's privilege
 // XXX this belong here?  We'll see...
+	// Calling init_user_ids() while in user priv causes badness.
+	// Make sure we're in another priv state.
+	set_condor_priv();
 	if ( !init_user_ids(owner.Value(), domain.Value())) {
 		dprintf(D_ALWAYS, "init_user_ids() failed as user %s\n",owner.Value() );
 		// uids.C will EXCEPT when we set_user_priv() now
@@ -377,8 +383,22 @@ BaseShadow::reconnectFailed( const char* reason )
 	
 	logReconnectFailedEvent( reason );
 
+		// if the shadow was born disconnected, exit with 
+		// JOB_RECONNECT_FAILED so the schedd can make 
+		// an accurate restart report.  otherwise just
+		// exist with JOB_SHOULD_REQUEUE.
+	if ( attemptingReconnectAtStartup ) {
+		dprintf(D_ALWAYS,"Exiting with JOB_RECONNECT_FAILED\n");
 		// does not return
-	DC_Exit( JOB_SHOULD_REQUEUE );
+		DC_Exit( JOB_RECONNECT_FAILED );
+	} else {
+		dprintf(D_ALWAYS,"Exiting with JOB_SHOULD_REQUEUE\n");
+		// does not return
+		DC_Exit( JOB_SHOULD_REQUEUE );
+	}
+
+	// Should never get here....
+	ASSERT(true);
 }
 
 
@@ -394,7 +414,7 @@ BaseShadow::holdJob( const char* reason, int hold_reason_code, int hold_reason_s
 	}
 
 		// cleanup this shadow (kill starters, etc)
-	cleanUp();
+	cleanUp( jobWantsGracefulRemoval() );
 
 		// Put the reason in our job ad.
 	jobAd->Assign( ATTR_HOLD_REASON, reason );
@@ -415,6 +435,7 @@ BaseShadow::holdJob( const char* reason, int hold_reason_code, int hold_reason_s
 void
 BaseShadow::holdJobAndExit( const char* reason, int hold_reason_code, int hold_reason_subcode )
 {
+	m_force_fast_starter_shutdown = true;
 	holdJob(reason,hold_reason_code,hold_reason_subcode);
 
 	// finally, exit and tell the schedd what to do
@@ -476,7 +497,7 @@ void BaseShadow::removeJobPre( const char* reason )
 			 getCluster(), getProc(), reason );
 
 	// cleanup this shadow (kill starters, etc)
-	cleanUp();
+	cleanUp( jobWantsGracefulRemoval() );
 
 	// Put the reason in our job ad.
 	int size = strlen( reason ) + strlen( ATTR_REMOVE_REASON ) + 4;
@@ -717,7 +738,7 @@ BaseShadow::evictJob( int reason )
 	}
 
 		// cleanup this shadow (kill starters, etc)
-	cleanUp();
+	cleanUp( jobWantsGracefulRemoval() );
 
 		// write stuff to user log:
 	logEvictEvent( reason );
@@ -896,7 +917,6 @@ static void set_usageAd (ClassAd* jobAd, ClassAd ** ppusageAd)
 	StringList reslist(resslist.c_str());
 	if (reslist.number() > 0) {
 		ClassAd * puAd = new ClassAd();
-		puAd->Clear(); // get rid of default "CurrentTime = time()" value.
 
 		reslist.rewind();
 		while (const char * resname = reslist.next()) {
@@ -1053,7 +1073,6 @@ BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
 	if (reslist.number() > 0) {
 		int64_t int64_value = 0;
 		ClassAd * puAd = new ClassAd();
-		puAd->Clear(); // get rid of default "CurrentTime = time()" value.
 
 		reslist.rewind();
 		char * resname = NULL;
@@ -1104,7 +1123,7 @@ BaseShadow::logEvictEvent( int exitReason )
 		break;
 	default:
 		dprintf( D_ALWAYS, 
-				 "logEvictEvent with unknown reason (%d), aborting\n",
+				 "logEvictEvent with unknown reason (%d), not logging.\n",
 				 exitReason ); 
 		return;
 	}
@@ -1532,6 +1551,9 @@ BaseShadow::handleUpdateJobAd( int sig )
 bool
 BaseShadow::jobWantsGracefulRemoval()
 {
+	if ( m_force_fast_starter_shutdown ) {
+		return false;
+	}
 	bool job_wants_graceful_removal = param_boolean("GRACEFULLY_REMOVE_JOBS", true);
 	bool job_request;
 	ClassAd *thejobAd = getJobAd();

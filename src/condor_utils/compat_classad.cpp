@@ -26,6 +26,12 @@
 #include "condor_config.h"
 #include "Regex.h"
 #include "classad/classadCache.h"
+#include "env.h"
+#include "condor_arglist.h"
+
+#if defined(HAVE_DLOPEN)
+#include <dlfcn.h>
+#endif
 
 using namespace std;
 
@@ -48,6 +54,9 @@ namespace compat_classad {
 
 static StringList ClassAdUserLibs;
 
+static void registerClassadFunctions();
+static void classad_debug_dprintf(const char *s);
+
 bool ClassAd::m_initConfig = false;
 bool ClassAd::m_strictEvaluation = false;
 
@@ -55,7 +64,7 @@ void ClassAd::
 Reconfig()
 {
 	m_strictEvaluation = param_boolean( "STRICT_CLASSAD_EVALUATION", false );
-	classad::_useOldClassAdSemantics = !m_strictEvaluation;
+	classad::SetOldClassAdSemantics( !m_strictEvaluation );
 
 	classad::ClassAdSetExpressionCaching( param_boolean( "ENABLE_CLASSAD_CACHING", false ) );
 
@@ -76,21 +85,42 @@ Reconfig()
 			}
 		}
 	}
-}
 
-void getTheMyRef( classad::ClassAd *ad )
-{
-	if ( !ClassAd::m_strictEvaluation ) {
-		ExprTree * pExpr=classad::AttributeReference::MakeAttributeReference( NULL, "self" );
-		ad->Insert( "my", pExpr );
+	char *user_python_char = param("CLASSAD_USER_PYTHON_MODULES");
+	if (user_python_char)
+	{
+		std::string user_python(user_python_char);
+		free(user_python_char); user_python_char = NULL;
+		char *loc_char = param("CLASSAD_USER_PYTHON_LIB");
+		if (loc_char && !ClassAdUserLibs.contains(loc_char))
+		{
+			std::string loc(loc_char);
+			if (classad::FunctionCall::RegisterSharedLibraryFunctions(loc.c_str()))
+			{
+				ClassAdUserLibs.append(loc.c_str());
+#if defined(HAVE_DLOPEN)
+				void *dl_hdl = dlopen(loc.c_str(), RTLD_LAZY);
+				if (dl_hdl) // Not warning on failure as the RegisterSharedLibraryFunctions should have done that.
+				{
+					void (*registerfn)(void) = (void (*)(void))dlsym(dl_hdl, "Register");
+					if (registerfn) {registerfn();}
+					dlclose(dl_hdl);
+				}
+#endif
+			}
+			else
+			{
+				dprintf(D_ALWAYS, "Failed to load ClassAd user python library %s: %s\n",
+					loc.c_str(), classad::CondorErrMsg.c_str());
+			}
+		}
+		if (loc_char) {free(loc_char);}
 	}
-}
-
-void releaseTheMyRef( classad::ClassAd *ad )
-{
-	if ( !ClassAd::m_strictEvaluation ) {
-		ad->Delete("my");
-		ad->MarkAttributeClean( "my" );
+	if (!m_initConfig)
+	{
+		registerClassadFunctions();
+		classad::ExprTree::set_user_debug_function(classad_debug_dprintf);
+		m_initConfig = true;
 	}
 }
 
@@ -520,7 +550,7 @@ bool splitArb_func( const char * /*name*/,
 		return true;
 	}
 
-	classad::ExprList *lst = new classad::ExprList();
+	classad_shared_ptr<classad::ExprList> lst( new classad::ExprList() );
 	ASSERT(lst);
 
 	// walk the input string, splitting at each instance of a separator
@@ -559,10 +589,452 @@ bool splitArb_func( const char * /*name*/,
 	return true;
 }
 
+
+static void
+problemExpression(const std::string &msg, classad::ExprTree *problem, classad::Value &result)
+{
+	result.SetErrorValue();
+	classad::ClassAdUnParser up;
+	std::string problem_str;
+	up.Unparse(problem_str, problem);
+	std::stringstream ss;
+	ss << msg << "  Problem expression: " << problem_str;
+	classad::CondorErrMsg = ss.str();
+}
+
+
+static bool
+ArgsToList( const char * name,
+	const classad::ArgumentList &arguments,
+	classad::EvalState &state,
+	classad::Value &result )
+{
+	if ((arguments.size() != 1) && (arguments.size() != 2))
+	{
+		std::stringstream ss;
+		result.SetErrorValue();
+		ss << "Invalid number of arguments passed to " << name << "; one string argument expected.";
+		classad::CondorErrMsg = ss.str();
+		return true;
+	}
+	int vers = 2;
+	if (arguments.size() == 2)
+	{
+		classad::Value val;
+		if (!arguments[1]->Evaluate(state, val))
+		{
+			problemExpression("Unable to evaluate second argument.", arguments[1], result);
+			return false;
+		}
+		if (!val.IsIntegerValue(vers))
+		{
+			problemExpression("Unable to evaluate second argument to integer.", arguments[1], result);
+			return true;
+		}
+		if ((vers != 1) && (vers != 2))
+		{
+			std::stringstream ss;
+			ss << "Valid values for version are 1 or 2.  Passed expression evaluates to " << vers << ".";
+			problemExpression(ss.str(), arguments[1], result);
+			return true;
+		}
+	}
+	classad::Value val;
+	if (!arguments[0]->Evaluate(state, val))
+	{
+		problemExpression("Unable to evaluate first argument.", arguments[0], result);
+		return false;
+	}
+	std::string args;
+	if (!val.IsStringValue(args))
+	{
+		problemExpression("Unable to evaluate first argument to string.", arguments[0], result);
+		return true;
+	}
+	ArgList arg_list;
+	MyString error_msg;
+	if ((vers == 1) && !arg_list.AppendArgsV1Raw(args.c_str(), &error_msg))
+	{
+		std::stringstream ss;
+		ss << "Error when parsing argument to arg V1: " << error_msg.Value();
+		problemExpression(ss.str(), arguments[0], result);
+		return true;
+	}
+	else if ((vers == 2) && !arg_list.AppendArgsV2Raw(args.c_str(), &error_msg))
+	{
+		std::stringstream ss;
+		ss << "Error when parsing argument to arg V2: " << error_msg.Value();
+		problemExpression(ss.str(), arguments[0], result);
+		return true;
+	}
+	std::vector<classad::ExprTree*> list_exprs;
+
+	for (int idx=0; idx<arg_list.Count(); idx++)
+	{
+		classad::Value string_val;
+		string_val.SetStringValue(arg_list.GetArg(idx));
+		classad::ExprTree *expr = classad::Literal::MakeLiteral(string_val);
+		if (!expr)
+		{
+			for (std::vector<classad::ExprTree*>::iterator it = list_exprs.begin(); it != list_exprs.end(); it++)
+			{
+				if (*it) {delete *it; *it=NULL;}
+			}
+			classad::CondorErrMsg = "Unable to create string expression.";
+			result.SetErrorValue();
+			return false;
+		}
+		list_exprs.push_back(expr);
+	}
+	classad_shared_ptr<classad::ExprList> result_list(classad::ExprList::MakeExprList(list_exprs));
+	if (!result_list.get())
+	{
+		for (std::vector<classad::ExprTree*>::iterator it = list_exprs.begin(); it != list_exprs.end(); it++)
+		{
+			if (*it) {delete *it; *it=NULL;}
+		}
+		classad::CondorErrMsg = "Unable to create expression list.";
+		result.SetErrorValue();
+		return false;
+	}
+	result.SetListValue(result_list);
+	return true;
+}
+
+
+static bool
+ListToArgs(const char * name,
+	const classad::ArgumentList &arguments,
+	classad::EvalState &state,
+	classad::Value &result)
+{
+	if ((arguments.size() != 1) && (arguments.size() != 2))
+	{
+		std::stringstream ss;
+		result.SetErrorValue();
+		ss << "Invalid number of arguments passed to " << name << "; one list argument expected.";
+		classad::CondorErrMsg = ss.str();
+		return true;
+	}
+	int vers = 2;
+	if (arguments.size() == 2)
+	{
+		classad::Value val;
+		if (!arguments[1]->Evaluate(state, val))
+		{
+			problemExpression("Unable to evaluate second argument.", arguments[1], result);
+			return false;
+		}
+		if (!val.IsIntegerValue(vers))
+		{
+			problemExpression("Unable to evaluate second argument to integer.", arguments[1], result);
+			return true;
+		}
+		if ((vers != 1) && (vers != 2))
+		{
+			std::stringstream ss;
+			ss << "Valid values for version are 1 or 2.  Passed expression evaluates to " << vers << ".";
+			problemExpression(ss.str(), arguments[1], result);
+			return true;
+		}
+	}
+	classad::Value val;
+	if (!arguments[0]->Evaluate(state, val))
+	{
+		problemExpression("Unable to evaluate first argument.", arguments[0], result);
+		return false;
+	}
+	classad_shared_ptr<classad::ExprList> args;
+	if (!val.IsSListValue(args))
+	{
+		problemExpression("Unable to evaluate first argument to list.", arguments[0], result);
+		return true;
+	}
+	ArgList arg_list;
+	size_t idx=0;
+	for (classad::ExprList::const_iterator it=args->begin(); it!=args->end(); it++, idx++)
+	{
+		classad::Value value;
+		if (!(*it)->Evaluate(state, value))
+		{
+			std::stringstream ss;
+			ss << "Unable to evaluate list entry " << idx << ".";
+			problemExpression(ss.str(), *it, result);
+			return false;
+		}
+		std::string tmp_str;
+		if (!value.IsStringValue(tmp_str))
+		{
+			std::stringstream ss;
+			ss << "Entry " << idx << " did not evaluate to a string.";
+			problemExpression(ss.str(), *it, result);
+			return true;
+		}
+		arg_list.AppendArg(tmp_str.c_str());
+	}
+	MyString error_msg, result_mystr;
+	if ((vers == 1) && !arg_list.GetArgsStringV1Raw(&result_mystr, &error_msg))
+	{
+		std::stringstream ss;
+		ss << "Error when parsing argument to arg V1: " << error_msg.Value();
+		problemExpression(ss.str(), arguments[0], result);
+		return true;
+	}
+	else if ((vers == 2) && !arg_list.GetArgsStringV2Raw(&result_mystr, &error_msg))
+	{
+		std::stringstream ss;
+		ss << "Error when parsing argument to arg V2: " << error_msg.Value();
+		problemExpression(ss.str(), arguments[0], result);
+		return true;
+	}
+	result.SetStringValue(result_mystr.Value());
+	return true;
+}
+
+
+static bool
+EnvironmentV1ToV2(const char * name,
+	const classad::ArgumentList &arguments,
+	classad::EvalState &state,
+	classad::Value &result)
+{
+	if (arguments.size() != 1)
+	{
+		std::stringstream ss;
+		result.SetErrorValue();
+		ss << "Invalid number of arguments passed to " << name << "; one string argument expected.";
+		classad::CondorErrMsg = ss.str();
+		return true;
+	}
+	classad::Value val;
+	if (!arguments[0]->Evaluate(state, val))
+	{
+		problemExpression("Unable to evaluate first argument.", arguments[0], result);
+		return false;
+	}
+		// By returning undefined if the input is undefined, the caller doesn't need an
+		// ifThenElse statement to see if the V1 environment is used in the first place.
+		// For example, we can do this:
+		//   mergeEnvironment(envV1toV2(Env), Environment, "FOO=BAR");
+		// without worrying about whether Env or Environment is already defined.
+	if (val.IsUndefinedValue())
+	{
+		result.SetUndefinedValue();
+		return true;
+	}
+	std::string args;
+	if (!val.IsStringValue(args))
+	{
+		problemExpression("Unable to evaluate first argument to string.", arguments[0], result);
+		return true;
+	}
+	Env env;
+	MyString error_msg;
+	if (!env.MergeFromV1Raw(args.c_str(), &error_msg))
+	{
+		std::stringstream ss;
+		ss << "Error when parsing argument to environment V1: " << error_msg.Value();
+		problemExpression(ss.str(), arguments[0], result);
+		return true;
+	}
+	MyString result_mystr;
+	env.getDelimitedStringV2Raw(&result_mystr, NULL);
+	result.SetStringValue(result_mystr.Value());
+	return true;
+}
+
+
+static bool
+MergeEnvironment(const char * /*name*/,
+	const classad::ArgumentList &arguments,
+	classad::EvalState &state,
+	classad::Value &result)
+{
+	Env env;
+	size_t idx = 0;
+	for (classad::ArgumentList::const_iterator it=arguments.begin(); it!=arguments.end(); it++, idx++)
+	{
+		classad::Value val;
+		if (!(*it)->Evaluate(state, val))
+		{
+			std::stringstream ss;
+			ss << "Unable to evaluate argument " << idx << ".";
+			problemExpression(ss.str(), *it, result);
+			return false;
+		}
+			// Skip over undefined values; this makes it more natural
+			// to merge environments for a condor classad where the
+			// user may or may not have specified an environment string.
+		if (val.IsUndefinedValue())
+		{
+			continue;
+		}
+		std::string env_str;
+		if (!val.IsStringValue(env_str))
+		{
+			std::stringstream ss;
+			ss << "Unable to evaluate argument " << idx << ".";
+			problemExpression(ss.str(), *it, result);
+			return true;
+		}
+		MyString error_msg;
+		if (!env.MergeFromV2Raw(env_str.c_str(), &error_msg))
+		{
+			std::stringstream ss;
+			ss << "Argument " << idx << " cannot be parsed as environment string.";
+			problemExpression(ss.str(), *it, result);
+			return true;
+		}
+	}
+	MyString result_mystr;
+	env.getDelimitedStringV2Raw(&result_mystr, NULL);
+	result.SetStringValue(result_mystr.Value());
+	return true;
+}
+
+
+static bool
+return_home_result(const std::string &default_home,
+	const std::string &error_msg,
+	classad::Value    &result,
+	bool isError)
+{
+	if (default_home.size())
+	{
+		result.SetStringValue(default_home);
+	}
+	else
+	{
+		if (isError) {result.SetErrorValue();} else {result.SetUndefinedValue();}
+		classad::CondorErrMsg = error_msg;
+	}
+	return true;
+}
+
+/**
+ * Implementation of the userHome function.
+ *
+ * This returns the home directory of a given username as configured on the system.
+ * The home directory is determined using the getpwdnam call.
+ *
+ * Arguments:
+ *   - name.  The username to lookup.
+ *   - default (optional).  The default value to return if no user home exists.
+ *
+ * Returns:
+ *   - ERROR on Windows platforms.
+ *   - ERROR if invoked with the incorrect number of arguments.
+ *   - otherwise, `default` if default is given AND the value of `default` evaluates to a non-empty string AND:
+ *     - the name cannot be evaluated to a string/UNDEFINED, OR
+ *     - the user does not exist on the system, OR
+ *     - the user does not have a home directory.
+ *   - otherwise, ERROR if the first argument cannot be evaluated or does not evaluate to a string or
+ *     UNDEFINED value (and default does not evaluate to a non-empty string).
+ *   - otherwise, UNDEFINED if the first argument evaluates to UNDEFINED
+ *   - otherwise, a string specifying the user's home directory.
+ */
+
+static bool
+userHome_func(const char *                 name,
+	const classad::ArgumentList &arguments,
+	classad::EvalState          &state,
+	classad::Value              &result)
+{
+	if ((arguments.size() != 1) && (arguments.size() != 2))
+	{
+		std::stringstream ss;
+		result.SetErrorValue();
+		ss << "Invalid number of arguments passed to " << name << "; " << arguments.size() << "given, 1 required and 1 optional.";
+		classad::CondorErrMsg = ss.str();
+		return false;
+	}
+
+#ifdef WIN32
+	result.SetErrorValue();
+	classad::CondorErrMsg = "UserHome is not available on Windows.";
+	return true;
+#endif
+
+	std::string default_home;
+	classad::Value default_home_value;
+	if (arguments.size() != 2 || !arguments[1]->Evaluate(state, default_home_value) || !default_home_value.IsStringValue(default_home))
+	{
+		default_home = "";
+	}
+
+	std::string owner_string;
+	classad::Value owner_value;
+	if (!arguments[0]->Evaluate(state, owner_value))
+	{
+		
+	}
+	if (owner_value.IsUndefinedValue() && !default_home.size())
+	{
+		result.SetUndefinedValue();
+		return true;
+	}
+	if (!owner_value.IsStringValue(owner_string))
+	{
+		std::string unp_string;
+		std::stringstream ss;
+		classad::ClassAdUnParser unp; unp.Unparse(unp_string, arguments[0]);
+		ss << "Could not evaluate the first argument of " << name << " to string.  Expression: " << unp_string << ".";
+		return return_home_result(default_home, ss.str(), result, true);
+	}
+
+	errno = 0;
+#ifndef WIN32
+		// The UserHome function has potential side-effects (such as hitting a LDAP server)
+		// that might have a noticable impact on the system.  Disable unless explicitly requested.
+		// (really, this only is useful in the very limited HTCondor-CE context.)
+	if (!param_boolean("CLASSAD_ENABLE_USER_HOME", false ))
+	{
+		return return_home_result(default_home, "UserHome is currently disabled; to enable set CLASSAD_ENABLE_USER_HOME=true in the HTCondor config.",
+			result, false);
+	}
+	struct passwd *info = getpwnam(owner_string.c_str());
+	if (!info)
+	{
+		std::stringstream ss;
+		ss << "Unable to find home directory for user " << owner_string;
+		if (errno) {
+			ss << ": " << strerror(errno) << "(errno=" << errno << ")";
+		} else {
+			ss << ": No such user.";
+		}
+		return return_home_result(default_home, ss.str(), result, false);
+	}
+
+	if (!info->pw_dir)
+	{
+		std::stringstream ss;
+		ss << "User " << owner_string << " has no home directory.";
+		return return_home_result(default_home, ss.str(), result, false);
+	}
+	std::string home_string = info->pw_dir;
+	result.SetStringValue(home_string);
+#endif
+
+	return true;
+}
+
+
 static
-void registerStrlistFunctions()
+void registerClassadFunctions()
 {
 	std::string name;
+	name = "envV1ToV2";
+	classad::FunctionCall::RegisterFunction(name, EnvironmentV1ToV2);
+
+	name = "mergeEnvironment";
+	classad::FunctionCall::RegisterFunction(name, MergeEnvironment);
+
+	name = "listToArgs";
+	classad::FunctionCall::RegisterFunction(name, ListToArgs);
+
+	name = "argsToList";
+	classad::FunctionCall::RegisterFunction(name, ArgsToList);
+
 	name = "stringListSize";
 	classad::FunctionCall::RegisterFunction( name,
 											 stringListSize_func );
@@ -588,6 +1060,9 @@ void registerStrlistFunctions()
 	classad::FunctionCall::RegisterFunction( name,
 											 stringListRegexpMember_func );
 
+	name = "userHome";
+	classad::FunctionCall::RegisterFunction(name, userHome_func);
+
 	// user@domain, slot@machine & sinful string crackers.
 	name = "splitusername";
 	classad::FunctionCall::RegisterFunction( name, splitAt_func );
@@ -608,17 +1083,7 @@ ClassAd::ClassAd()
 {
 	if ( !m_initConfig ) {
 		this->Reconfig();
-		registerStrlistFunctions();
-		classad::ExprTree::set_user_debug_function(classad_debug_dprintf);
 		m_initConfig = true;
-	}
-
-		// Compatibility ads are born with this to emulate the special
-		// CurrentTime in old ClassAds. We don't protect it afterwards,
-		// but that shouldn't be problem unless someone is deliberately
-		// trying to shoot themselves in the foot.
-	if ( !m_strictEvaluation ) {
-		AssignExpr( ATTR_CURRENT_TIME, "time()" );
 	}
 
 	ResetName();
@@ -631,19 +1096,10 @@ ClassAd::ClassAd( const ClassAd &ad ) : classad::ClassAd(ad)
 {
 	if ( !m_initConfig ) {
 		this->Reconfig();
-		registerStrlistFunctions();
 		m_initConfig = true;
 	}
 
 	CopyFrom( ad );
-
-		// Compatibility ads are born with this to emulate the special
-		// CurrentTime in old ClassAds. We don't protect it afterwards,
-		// but that shouldn't be problem unless someone is deliberately
-		// trying to shoot themselves in the foot.
-	if ( !m_strictEvaluation ) {
-		AssignExpr( ATTR_CURRENT_TIME, "time()" );
-	}
 
 	ResetName();
     ResetExpr();
@@ -654,19 +1110,10 @@ ClassAd::ClassAd( const classad::ClassAd &ad )
 {
 	if ( !m_initConfig ) {
 		this->Reconfig();
-		registerStrlistFunctions();
 		m_initConfig = true;
 	}
 
 	CopyFrom( ad );
-
-		// Compatibility ads are born with this to emulate the special
-		// CurrentTime in old ClassAds. We don't protect it afterwards,
-		// but that shouldn't be problem unless someone is deliberately
-		// trying to shoot themselves in the foot.
-	if ( !m_strictEvaluation ) {
-		AssignExpr( ATTR_CURRENT_TIME, "time()" );
-	}
 
 	ResetName();
     ResetExpr();
@@ -682,17 +1129,10 @@ ClassAd( FILE *file, const char *delimitor, int &isEOF, int&error, int &empty )
 {
 	if ( !m_initConfig ) {
 		this->Reconfig();
-		registerStrlistFunctions();
 		m_initConfig = true;
 	}
 
-		// Compatibility ads are born with this to emulate the special
-		// CurrentTime in old ClassAds. We don't protect it afterwards,
-		// but that shouldn't be problem unless someone is deliberately
-		// trying to shoot themselves in the foot.
-	if ( !m_strictEvaluation ) {
-		AssignExpr( ATTR_CURRENT_TIME, "time()" );
-	}
+	DisableDirtyTracking();
 
 	ResetName();
     ResetExpr();
@@ -1185,11 +1625,9 @@ EvalAttr( const char *name, classad::ClassAd *target, classad::Value & value)
 	int rc = 0;
 
 	if( target == this || target == NULL ) {
-		getTheMyRef( this );
 		if( EvaluateAttr( name, value ) ) {
 			rc = 1;
 		}
-		releaseTheMyRef( this );
 		return rc;
 	}
 
@@ -1214,12 +1652,10 @@ EvalString( const char *name, classad::ClassAd *target, char *value )
 	string strVal;
 
 	if( target == this || target == NULL ) {
-		getTheMyRef( this );
 		if( EvaluateAttrString( name, strVal ) ) {
 			strcpy( value, strVal.c_str( ) );
 			rc = 1;
 		}
-		releaseTheMyRef( this );
 		return rc;
 	}
 
@@ -1251,7 +1687,6 @@ EvalString (const char *name, classad::ClassAd *target, char **value)
 	int rc = 0;
 
 	if( target == this || target == NULL ) {
-		getTheMyRef( this );
 		if( EvaluateAttrString( name, strVal ) ) {
 
             *value = (char *)malloc(strlen(strVal.c_str()) + 1);
@@ -1262,7 +1697,6 @@ EvalString (const char *name, classad::ClassAd *target, char **value)
                 rc = 0;
             }
 		}
-		releaseTheMyRef( this );
 		return rc;
 	}
 
@@ -1323,11 +1757,9 @@ EvalInteger (const char *name, classad::ClassAd *target, long long &value)
 	classad::Value val;
 
 	if( target == this || target == NULL ) {
-		getTheMyRef( this );
 		if( EvaluateAttr( name, val ) ) { 
 			rc = 1;
 		}
-		releaseTheMyRef( this );
 	}
 	else 
 	{
@@ -1382,7 +1814,6 @@ EvalFloat (const char *name, classad::ClassAd *target, double &value)
 	bool boolVal;
 
 	if( target == this || target == NULL ) {
-		getTheMyRef( this );
 		if( EvaluateAttr( name, val ) ) {
 			if( val.IsRealValue( doubleVal ) ) {
 				value = doubleVal;
@@ -1397,7 +1828,6 @@ EvalFloat (const char *name, classad::ClassAd *target, double &value)
 				rc = 1;
 			}
 		}
-		releaseTheMyRef( this );
 		return rc;
 	}
 
@@ -1449,7 +1879,6 @@ EvalBool  (const char *name, classad::ClassAd *target, int &value)
 	bool boolVal;
 
 	if( target == this || target == NULL ) {
-		getTheMyRef( this );
 		if( EvaluateAttr( name, val ) ) {
 			if( val.IsBooleanValue( boolVal ) ) {
 				value = boolVal ? 1 : 0;
@@ -1462,7 +1891,6 @@ EvalBool  (const char *name, classad::ClassAd *target, int &value)
 				rc = 1;
 			}
 		}
-		releaseTheMyRef( this );
 		return rc;
 	}
 
@@ -1510,12 +1938,6 @@ initFromString( char const *str,MyString *err_msg )
 
 	// First, clear our ad so we start with a fresh ClassAd
 	Clear();
-
-		// Reinsert CurrentTime, emulating the special version in old
-		// ClassAds
-	if ( !m_strictEvaluation ) {
-		AssignExpr( ATTR_CURRENT_TIME, "time()" );
-	}
 
 	char *exprbuf = new char[strlen(str)+1];
 	ASSERT( exprbuf );
@@ -1565,13 +1987,15 @@ fPrintAd( FILE *file, const classad::ClassAd &ad, bool exclude_private, StringLi
 }
 
 void
-dPrintAd( int level, const classad::ClassAd &ad )
+dPrintAd( int level, const classad::ClassAd &ad, bool exclude_private )
 {
-	MyString buffer;
+	if ( IsDebugCatAndVerbosity( level ) ) {
+		MyString buffer;
 
-	sPrintAd( buffer, ad, true );
+		sPrintAd( buffer, ad, exclude_private );
 
-	dprintf( level|D_NOHEADER, "%s", buffer.Value() );
+		dprintf( level|D_NOHEADER, "%s", buffer.Value() );
+	}
 }
 
 int
@@ -1927,7 +2351,7 @@ SetDirtyFlag(const char *name, bool dirty)
 }
 
 void ClassAd::
-GetDirtyFlag(const char *name, bool *exists, bool *dirty)
+GetDirtyFlag(const char *name, bool *exists, bool *dirty) const
 {
 	if ( Lookup( name ) == NULL ) {
 		if ( exists ) {
@@ -1956,16 +2380,20 @@ CopyAttribute( char const *target_attr, char const *source_attr,
 {
 	ASSERT( target_attr );
 	ASSERT( source_attr );
-	if( !source_ad ) {
-		source_ad = this;
-	}
+        if (!source_ad) {source_ad = this;}
+        
+	CopyAttribute(target_attr, *this, source_attr, *source_ad);
+}
 
-	classad::ExprTree *e = source_ad->Lookup( source_attr );
+void ClassAd::
+CopyAttribute(const char *target_attr, classad::ClassAd &target_ad, const char *source_attr, const classad::ClassAd &source_ad)
+{
+	classad::ExprTree *e = source_ad.Lookup( source_attr );
 	if ( e ) {
 		e = e->Copy();
-		Insert( target_attr, e, false );
+		target_ad.Insert( target_attr, e, false );
 	} else {
-		Delete( target_attr );
+		target_ad.Delete( target_attr );
 	}
 }
 
@@ -2081,8 +2509,8 @@ void ClassAd::ChainCollapse()
 
 void ClassAd::
 GetReferences(const char* attr,
-                StringList &internal_refs,
-                StringList &external_refs)
+                StringList *internal_refs,
+                StringList *external_refs) const
 {
     ExprTree *tree;
 
@@ -2095,8 +2523,8 @@ GetReferences(const char* attr,
 
 bool ClassAd::
 GetExprReferences(const char* expr,
-				  StringList &internal_refs,
-				  StringList &external_refs)
+				  StringList *internal_refs,
+				  StringList *external_refs) const
 {
 	classad::ClassAdParser par;
 	classad::ExprTree *tree = NULL;
@@ -2141,8 +2569,8 @@ static void AppendReference( StringList &reflist, char const *name )
 
 void ClassAd::
 _GetReferences(classad::ExprTree *tree,
-			   StringList &internal_refs,
-			   StringList &external_refs)
+			   StringList *internal_refs,
+			   StringList *external_refs) const
 {
 	if ( tree == NULL ) {
 		return;
@@ -2153,10 +2581,10 @@ _GetReferences(classad::ExprTree *tree,
 	classad::References::iterator set_itr;
 
 	bool ok = true;
-	if( !GetExternalReferences(tree, ext_refs_set, true) ) {
+	if( external_refs && !GetExternalReferences(tree, ext_refs_set, true) ) {
 		ok = false;
 	}
-	if( !GetInternalReferences(tree, int_refs_set, true) ) {
+	if( internal_refs && !GetInternalReferences(tree, int_refs_set, true) ) {
 		ok = false;
 	}
 	if( !ok ) {
@@ -2171,33 +2599,34 @@ _GetReferences(classad::ExprTree *tree,
 		// StringLists.  This scales better than trying to remove
 		// duplicates while inserting into the StringList.
 
-	for ( set_itr = ext_refs_set.begin(); set_itr != ext_refs_set.end();
-		  set_itr++ ) {
-		const char *name = set_itr->c_str();
+	if ( external_refs ) {
+		for ( set_itr = ext_refs_set.begin(); set_itr != ext_refs_set.end();
+			  set_itr++ ) {
+			const char *name = set_itr->c_str();
 			// Check for references to things in the MatchClassAd
 			// and do the right thing.  This does not cover all
 			// possible ways of referencing things in the match ad,
 			// but it covers the ones users are expected to use
 			// and the ones expected from OptimizeAdForMatchmaking.
-		if ( strncasecmp( name, "target.", 7 ) == 0 ) {
-			AppendReference( external_refs, &set_itr->c_str()[7] );
-		} else if ( strncasecmp( name, "other.", 6 ) == 0 ) {
-			AppendReference( external_refs, &set_itr->c_str()[6] );
-		} else if ( strncasecmp( name, ".left.", 6 ) == 0 ) {
-			AppendReference( external_refs, &set_itr->c_str()[6] );
-		} else if ( strncasecmp( name, ".right.", 7 ) == 0 ) {
-			AppendReference( external_refs, &set_itr->c_str()[7] );
-		} else if ( strncasecmp( name, "my.", 3 ) == 0 ) {
-				// this one is actually in internal reference!
-			AppendReference( internal_refs, &set_itr->c_str()[3] );
-		} else {
-			AppendReference( external_refs, set_itr->c_str() );
+			if ( strncasecmp( name, "target.", 7 ) == 0 ) {
+				AppendReference( *external_refs, &set_itr->c_str()[7] );
+			} else if ( strncasecmp( name, "other.", 6 ) == 0 ) {
+				AppendReference( *external_refs, &set_itr->c_str()[6] );
+			} else if ( strncasecmp( name, ".left.", 6 ) == 0 ) {
+				AppendReference( *external_refs, &set_itr->c_str()[6] );
+			} else if ( strncasecmp( name, ".right.", 7 ) == 0 ) {
+				AppendReference( *external_refs, &set_itr->c_str()[7] );
+			} else {
+				AppendReference( *external_refs, set_itr->c_str() );
+			}
 		}
 	}
 
-	for ( set_itr = int_refs_set.begin(); set_itr != int_refs_set.end();
-		  set_itr++ ) {
-		AppendReference( internal_refs, set_itr->c_str() );
+	if ( internal_refs ) {
+		for ( set_itr = int_refs_set.begin(); set_itr != int_refs_set.end();
+			  set_itr++ ) {
+			AppendReference( *internal_refs, set_itr->c_str() );
+		}
 	}
 }
 
@@ -2334,555 +2763,12 @@ classad::ExprTree *RemoveExplicitTargetRefs( classad::ExprTree *tree )
 	}
 }	
 
-#if 0
-static ClassAd job_attrs_ad;
-static ClassAd machine_attrs_ad;
-static ClassAd schedd_attrs_ad;
-static StringList job_attrs_strlist;
-static StringList machine_attrs_strlist;
-
-static bool target_attrs_init = false;
-
-static const char *machine_attrs_list[] = {
-	ATTR_NAME,
-	ATTR_MACHINE,
-	ATTR_AVAIL_TIME,
-	ATTR_LAST_AVAIL_INTERVAL,
-	ATTR_AVAIL_SINCE,
-	ATTR_AVAIL_TIME_ESTIMATE,
-	ATTR_IS_VALID_CHECKPOINT_PLATFORM,
-	ATTR_WITHIN_RESOURCE_LIMITS,
-	ATTR_RUNNING_COD_JOB,
-	ATTR_ARCH,
-	ATTR_OPSYS,
-	ATTR_HAS_IO_PROXY,
-	ATTR_CHECKPOINT_PLATFORM,
-	ATTR_TOTAL_VIRTUAL_MEMORY,
-	ATTR_TOTAL_CPUS,
-	ATTR_TOTAL_MEMORY,
-	ATTR_KFLOPS,
-	ATTR_MIPS,
-	ATTR_LOCAL_CREDD,
-	ATTR_LAST_BENCHMARK,
-	ATTR_TOTAL_LOAD_AVG,
-	ATTR_TOTAL_CONDOR_LOAD_AVG,
-	ATTR_CLOCK_MIN,
-	ATTR_CLOCK_DAY,
-	ATTR_RUN_BENCHMARKS,
-	ATTR_VIRTUAL_MEMORY,
-	ATTR_TOTAL_DISK,
-	ATTR_DISK,
-	ATTR_CONDOR_LOAD_AVG,
-	ATTR_LOAD_AVG,
-	ATTR_KEYBOARD_IDLE,
-	ATTR_CONSOLE_IDLE,
-	ATTR_MEMORY,
-	ATTR_CPUS,
-	ATTR_MAX_JOB_RETIREMENT_TIME,
-	ATTR_FETCH_WORK_DELAY,
-	ATTR_UNHIBERNATE,
-	ATTR_MACHINE_LAST_MATCH_TIME,
-	ATTR_SLOT_WEIGHT,
-	ATTR_IS_OWNER,
-	ATTR_CPU_BUSY,
-	ATTR_TOTAL_SLOTS,
-	ATTR_TOTAL_VIRTUAL_MACHINES,
-	ATTR_STATE,
-	ATTR_LAST_HEARD_FROM,
-	ATTR_ENTERED_CURRENT_STATE,
-	ATTR_ACTIVITY,
-	ATTR_ENTERED_CURRENT_ACTIVITY,
-	ATTR_TOTAL_TIME_OWNER_IDLE,
-	ATTR_TOTAL_TIME_UNCLAIMED_IDLE,
-	ATTR_TOTAL_TIME_UNCLAIMED_BENCHMARKING,
-	ATTR_TOTAL_TIME_MATCHED_IDLE,
-	ATTR_TOTAL_TIME_CLAIMED_IDLE,
-	ATTR_TOTAL_TIME_CLAIMED_BUSY,
-	ATTR_TOTAL_TIME_CLAIMED_SUSPENDED,
-	ATTR_TOTAL_TIME_CLAIMED_RETIRING,
-	ATTR_TOTAL_TIME_PREEMPTING_VACATING,
-	ATTR_TOTAL_TIME_PREEMPTING_KILLING,
-	ATTR_TOTAL_TIME_BACKFILL_IDLE,
-	ATTR_TOTAL_TIME_BACKFILL_BUSY,
-	ATTR_TOTAL_TIME_BACKFILL_KILLING,
-	ATTR_CPU_IS_BUSY,
-	ATTR_CPU_BUSY_TIME,
-	ATTR_VIRTUAL_MACHINE_ID,
-	ATTR_SLOT_PARTITIONABLE,
-	ATTR_SLOT_DYNAMIC,
-	ATTR_LAST_FETCH_WORK_SPAWNED,
-	ATTR_LAST_FETCH_WORK_COMPLETED,
-	ATTR_NEXT_FETCH_WORK_DELAY,
-	ATTR_CURRENT_RANK,
-	ATTR_REMOTE_USER,
-	ATTR_REMOTE_OWNER,
-	ATTR_CLIENT_MACHINE,
-	ATTR_NUM_COD_CLAIMS,
-	ATTR_HIBERNATION_SUPPORTED_STATES,
-	ATTR_STARTER_ABILITY_LIST,
-	ATTR_HAS_VM,
-	ATTR_VM_GUEST_MAC,
-	ATTR_VM_GUEST_IP,
-	ATTR_VM_GUEST_MEM,
-	ATTR_VM_AVAIL_NUM,
-	ATTR_VM_MEMORY,
-	ATTR_VM_NETWORKING,
-	ATTR_VM_ALL_GUEST_IPS,
-	ATTR_VM_ALL_GUEST_MACS,
-	ATTR_VM_TYPE,
-	ATTR_VM_NETWORKING_TYPES,
-	ATTR_HAS_RECONNECT,
-	ATTR_HAS_FILE_TRANSFER,
-	ATTR_HAS_FILE_TRANSFER_PLUGIN_METHODS,
-	ATTR_HAS_PER_FILE_ENCRYPTION,
-	ATTR_HAS_MPI,
-	ATTR_HAS_TDP,
-	ATTR_HAS_JOB_DEFERRAL,
-	ATTR_HAS_JIC_LOCAL_CONFIG,
-	ATTR_HAS_JIC_LOCAL_STDIN,
-	ATTR_HAS_JAVA,
-	ATTR_HAS_WIN_RUN_AS_OWNER,
-	ATTR_JAVA_VENDOR,
-	ATTR_JAVA_VERSION,
-	"JavaSpecificationVersion",
-	ATTR_JAVA_MFLOPS,
-	ATTR_MATCHED_CONCURRENCY_LIMITS,
-	ATTR_REMOTE_USER_PRIO,
-	ATTR_REMOTE_USER_RESOURCES_IN_USE,
-	ATTR_REMOTE_GROUP_RESOURCES_IN_USE,
-	ATTR_REMOTE_GROUP_QUOTA,
-	NULL		// list must end with NULL
-};
-
-static const char *job_attrs_list[]  = {
-	ATTR_CLUSTER_ID,
-	ATTR_PROC_ID,
-	ATTR_Q_DATE,
-	ATTR_COMPLETION_DATE,
-	ATTR_OWNER,
-	ATTR_NT_DOMAIN,
-	ATTR_JOB_REMOTE_WALL_CLOCK,
-	ATTR_JOB_LOCAL_USER_CPU,
-	ATTR_JOB_LOCAL_SYS_CPU,
-	ATTR_JOB_REMOTE_USER_CPU,
-	ATTR_JOB_REMOTE_SYS_CPU,
-	ATTR_NUM_CKPTS,
-	ATTR_NUM_JOB_STARTS,
-	ATTR_NUM_RESTARTS,
-	ATTR_NUM_SYSTEM_HOLDS,
-	ATTR_JOB_COMMITTED_TIME,
-	ATTR_COMMITTED_SLOT_TIME,
-	ATTR_CUMULATIVE_SLOT_TIME,
-	ATTR_TOTAL_SUSPENSIONS,
-	ATTR_LAST_SUSPENSION_TIME,
-	ATTR_CUMULATIVE_SUSPENSION_TIME,
-	ATTR_COMMITTED_SUSPENSION_TIME,
-	ATTR_JOB_UNIVERSE,
-	ATTR_JOB_CMD,
-	ATTR_TRANSFER_EXECUTABLE,
-	ATTR_WANT_REMOTE_SYSCALLS,
-	ATTR_WANT_CHECKPOINT,
-	ATTR_JOB_CMD_MD5,
-	ATTR_JOB_CMD_HASH,
-	ATTR_GRID_RESOURCE,
-	ATTR_JOB_VM_TYPE,
-	ATTR_JOB_VM_CHECKPOINT,
-	ATTR_JOB_VM_NETWORKING,
-	ATTR_JOB_VM_NETWORKING_TYPE,
-	ATTR_JOB_VM_MEMORY,
-	ATTR_JOB_VM_VCPUS,
-	ATTR_JOB_VM_MACADDR,
-	ATTR_JOB_VM_HARDWARE_VT,
-	ATTR_WHEN_TO_TRANSFER_OUTPUT,
-	ATTR_SHOULD_TRANSFER_FILES,
-	ATTR_MIN_HOSTS,
-	ATTR_MAX_HOSTS,
-	ATTR_MACHINE_COUNT,
-	ATTR_REQUEST_CPUS,
-	ATTR_NEXT_JOB_START_DELAY,
-	ATTR_IMAGE_SIZE,
-	ATTR_EXECUTABLE_SIZE,
-	ATTR_DISK_USAGE,
-	ATTR_REQUEST_MEMORY,
-	ATTR_REQUEST_DISK,
-	ATTR_FILE_REMAPS,
-	ATTR_BUFFER_FILES,
-	ATTR_BUFFER_SIZE,
-	ATTR_BUFFER_BLOCK_SIZE,
-	ATTR_TRANSFER_INPUT_FILES,
-	ATTR_TRANSFER_OUTPUT_FILES,
-	ATTR_JAR_FILES,
-	ATTR_JOB_INPUT,
-	ATTR_JOB_OUTPUT,
-	ATTR_JOB_ERROR,
-	ATTR_TRANSFER_OUTPUT_REMAPS,
-	ATTR_ENCRYPT_INPUT_FILES,
-	ATTR_ENCRYPT_OUTPUT_FILES,
-	ATTR_DONT_ENCRYPT_INPUT_FILES,
-	ATTR_DONT_ENCRYPT_OUTPUT_FILES,
-	ATTR_FETCH_FILES,
-	ATTR_COMPRESS_FILES,
-	ATTR_APPEND_FILES,
-	ATTR_LOCAL_FILES,
-	ATTR_JOB_JAVA_VM_ARGS1,
-	ATTR_JOB_JAVA_VM_ARGS2,
-	ATTR_PARALLEL_SCRIPT_SHADOW,
-	ATTR_PARALLEL_SCRIPT_STARTER,
-	ATTR_TRANSFER_INPUT,
-	ATTR_STREAM_INPUT,
-	ATTR_TRANSFER_OUTPUT,
-	ATTR_STREAM_OUTPUT,
-	ATTR_TRANSFER_ERROR,
-	ATTR_STREAM_ERROR,
-	ATTR_JOB_STATUS,
-	ATTR_LAST_JOB_STATUS,
-	ATTR_HOLD_REASON,
-	ATTR_HOLD_REASON_CODE,
-	ATTR_HOLD_REASON_SUBCODE,	
-	ATTR_ENTERED_CURRENT_STATUS,
-	ATTR_JOB_PRIO,
-	ATTR_NICE_USER,
-	ATTR_PERIODIC_HOLD_CHECK,
-	ATTR_PERIODIC_RELEASE_CHECK,
-	ATTR_PERIODIC_REMOVE_CHECK,
-	ATTR_ON_EXIT_HOLD_CHECK,
-	ATTR_JOB_LEAVE_IN_QUEUE,
-	ATTR_ON_EXIT_REMOVE_CHECK,
-	ATTR_JOB_NOOP,
-	ATTR_JOB_NOOP_EXIT_SIGNAL,
-	ATTR_JOB_NOOP_EXIT_CODE,
-	ATTR_JOB_NOTIFICATION,
-	ATTR_NOTIFY_USER,
-	ATTR_EMAIL_ATTRIBUTES,
-	ATTR_LAST_MATCH_LIST_LENGTH,
-	ATTR_DAG_NODE_NAME,
-	ATTR_DAGMAN_JOB_ID,
-	ATTR_JOB_REMOTE_IWD,
-	ATTR_JOB_ARGUMENTS1,
-	ATTR_JOB_ARGUMENTS2,
-	ATTR_DEFERRAL_TIME,
-	ATTR_DEFERRAL_WINDOW,
-	ATTR_DEFERRAL_PREP_TIME,
-	ATTR_SCHEDD_INTERVAL,
-	ATTR_JOB_ENVIRONMENT1,
-	ATTR_JOB_ENVIRONMENT2,
-	ATTR_JOB_ENVIRONMENT1_DELIM,
-	ATTR_JOB_ROOT_DIR,
-	ATTR_TOOL_DAEMON_CMD,
-	ATTR_TOOL_DAEMON_INPUT,
-	ATTR_TOOL_DAEMON_OUTPUT,
-	ATTR_TOOL_DAEMON_ERROR,
-	ATTR_TOOL_DAEMON_ARGS1,
-	ATTR_TOOL_DAEMON_ARGS2,
-	ATTR_SUSPEND_JOB_AT_EXEC,
-	ATTR_JOB_RUNAS_OWNER,
-	ATTR_JOB_LOAD_PROFILE,
-	ATTR_JOB_IWD,
-	ATTR_ULOG_FILE,
-	ATTR_ULOG_USE_XML,
-	ATTR_CORE_SIZE,
-	ATTR_JOB_LEASE_DURATION,
-	ATTR_GRID_JOB_ID,
-	ATTR_JOB_MATCHED,
-	ATTR_CURRENT_HOSTS,
-	ATTR_GLOBUS_RESUBMIT_CHECK,
-	ATTR_USE_GRID_SHELL,
-	ATTR_REMATCH_CHECK,
-	ATTR_GLOBUS_RSL,
-	ATTR_NORDUGRID_RSL,
-	ATTR_KEYSTORE_ALIAS,
-	ATTR_KEYSTORE_PASSPHRASE_FILE,
-	ATTR_X509_USER_PROXY_SUBJECT,
-	ATTR_X509_USER_PROXY,
-	ATTR_X509_USER_PROXY_VONAME,
-	ATTR_X509_USER_PROXY_FIRST_FQAN,
-	ATTR_X509_USER_PROXY_FQAN,
-	ATTR_MYPROXY_HOST_NAME,
-	ATTR_MYPROXY_SERVER_DN,
-	ATTR_MYPROXY_PASSWORD,
-	ATTR_MYPROXY_CRED_NAME,
-	ATTR_MYPROXY_REFRESH_THRESHOLD,
-	ATTR_MYPROXY_NEW_PROXY_LIFETIME,
-	ATTR_MYPROXY_PASSWORD_EXISTS,
-	ATTR_KILL_SIG,
-	ATTR_REMOVE_KILL_SIG,
-	ATTR_HOLD_KILL_SIG,
-	ATTR_CONCURRENCY_LIMITS,
-	ATTR_REMOVE_REASON,
-	ATTR_USER,
-	ATTR_SHADOW_BIRTHDATE,
-	ATTR_JOB_FINISHED_HOOK_DONE,
-	ATTR_STAGE_OUT_FINISH,
-	ATTR_STAGE_IN_START,
-	ATTR_STAGE_OUT_START,
-	ATTR_JOB_STATUS_ON_RELEASE,
-	ATTR_LAST_REJ_MATCH_REASON,
-	ATTR_LAST_REJ_MATCH_TIME,
-	ATTR_LAST_MATCH_TIME,
-	ATTR_NUM_MATCHES,
-	ATTR_LAST_JOB_LEASE_RENEWAL,
-	ATTR_JOB_START_DATE,
-	ATTR_JOB_LAST_START_DATE,
-	ATTR_JOB_CURRENT_START_DATE,
-	ATTR_JOB_RUN_COUNT,
-	ATTR_NUM_SHADOW_STARTS,
-	ATTR_NUM_RESTARTS,
-	ATTR_REMOTE_HOST,
-	ATTR_REMOTE_SLOT_ID,
-	ATTR_REMOTE_POOL,
-	ATTR_STARTD_PRINCIPAL,
-	ATTR_JOB_WALL_CLOCK_CKPT,
-	ATTR_LAST_REMOTE_HOST,
-	ATTR_LAST_PUBLIC_CLAIM_ID,
-	ATTR_ORIG_MAX_HOSTS,
-	ATTR_NUM_SHADOW_EXCEPTIONS,
-	ATTR_JOB_EXIT_STATUS,
-	ATTR_ON_EXIT_CODE,
-	ATTR_ON_EXIT_BY_SIGNAL,
-	ATTR_ON_EXIT_SIGNAL,
-	ATTR_RELEASE_REASON,
-	ATTR_GRID_JOB_ID,
-	ATTR_WANT_MATCH_DIAGNOSTICS,
-	ATTR_AUTO_CLUSTER_ID,
-	ATTR_SUBMITTER_USER_PRIO,
-	ATTR_SUBMITTOR_PRIO,
-	ATTR_SUBMITTER_USER_RESOURCES_IN_USE,
-	ATTR_SUBMITTER_GROUP_RESOURCES_IN_USE,
-	ATTR_SUBMITTER_GROUP_QUOTA,
-	NULL		// list must end with NULL
-};
-
-static const char *schedd_attrs_list[]  = {
-	ATTR_SCHEDD_IP_ADDR,
-	"MyShadowSockname",
-	"QueueCleanInterval",
-	"JobStartDelay",
-	"JobStartCount",
-	"JobsThisBurst",
-	ATTR_MAX_JOBS_RUNNING,
-	"MaxJobsSubmitted",
-	"JobsStarted",
-	"SwapSpace",
-	"ShadowSizeEstimate",
-	"SwapSpaceExhausted",
-	"ReservedSwap",
-	"JobsIdle",
-	"JobsRunning",
-	"BadCluster",
-	"BadProc",
-	"N_Owners",
-	"NegotiationRequestTime",
-	"ExitWhenDone",
-	"StartJobTimer",
-	"CondorAdministrator",
-	"AccountantName",
-	"MaxFlockLevel",
-	"FlockLevel",
-	"MaxExceptions",
-	ATTR_ARCH,
-	ATTR_OPSYS,
-	ATTR_MEMORY,
-	ATTR_DISK,
-	ATTR_TOTAL_LOCAL_IDLE_JOBS,
-	ATTR_TOTAL_LOCAL_RUNNING_JOBS,
-	ATTR_START_LOCAL_UNIVERSE,
-	ATTR_TOTAL_SCHEDULER_IDLE_JOBS,
-	ATTR_TOTAL_SCHEDULER_RUNNING_JOBS,
-	ATTR_START_SCHEDULER_UNIVERSE,
-	NULL		// list must end with NULL
-};
-
-static void InitTargetAttrLists()
-{
-	const char **attr;
-	char *tmp;
-	MyString buff;
-	StringList tmp_strlist;
-
-	///////////////////////////////////
-	// Set up Machine attributes list
-	///////////////////////////////////
-	for ( attr = machine_attrs_list; *attr; attr++ ) {
-		machine_attrs_ad.AssignExpr( *attr, "True" );
-	}
-
-	machine_attrs_ad.Delete( ATTR_CURRENT_TIME );
-
-	tmp = param( "STARTD_EXPRS" );
-	if ( tmp ) {
-		tmp_strlist.initializeFromString( tmp );
-		free( tmp );
-		tmp_strlist.rewind();
-		while ( (tmp = tmp_strlist.next()) ) {
-			machine_attrs_ad.AssignExpr( tmp, "True" );
-		}
-		tmp_strlist.clearAll();
-	}
-
-	tmp = param( "STARTD_ATTRS" );
-	if ( tmp ) {
-		tmp_strlist.initializeFromString( tmp );
-		free( tmp );
-		tmp_strlist.rewind();
-		while ( (tmp = tmp_strlist.next()) ) {
-			machine_attrs_ad.AssignExpr( tmp, "True" );
-		}
-		tmp_strlist.clearAll();
-	}
-
-	tmp = param( "STARTD_RESOURCE_PREFIX" );
-	if ( tmp ) {
-		buff.formatstr( "%s*", tmp );
-		machine_attrs_strlist.append( buff.Value() );
-		free( tmp );
-	} else {
-		machine_attrs_strlist.append( "slot*" );
-	}
-
-	tmp = param( "TARGET_MACHINE_ATTRS" );
-	if ( tmp ) {
-		machine_attrs_strlist.initializeFromString( tmp );
-		free( tmp );
-	}
-
-	///////////////////////////////////
-	// Set up Job attributes list
-	///////////////////////////////////
-	for ( attr = job_attrs_list; *attr; attr++ ) {
-		job_attrs_ad.AssignExpr( *attr, "True" );
-	}
-
-	job_attrs_ad.Delete( ATTR_CURRENT_TIME );
-
-	tmp = param( "SUBMIT_EXPRS" );
-	if ( tmp ) {
-		tmp_strlist.initializeFromString( tmp );
-		free( tmp );
-		tmp_strlist.rewind();
-		while ( (tmp = tmp_strlist.next()) ) {
-			job_attrs_ad.AssignExpr( tmp, "True" );
-		}
-		tmp_strlist.clearAll();
-	}
-
-	buff.formatstr( "%s*", ATTR_LAST_MATCH_LIST_PREFIX );
-	job_attrs_strlist.append( buff.Value() );
-
-	buff.formatstr( "%s*", ATTR_NEGOTIATOR_MATCH_EXPR );
-	job_attrs_strlist.append( buff.Value() );
-
-	tmp = param( "TARGET_JOB_ATTRS" );
-	if ( tmp ) {
-		job_attrs_strlist.initializeFromString( tmp );
-		free( tmp );
-	}
-
-	///////////////////////////////////
-	// Set up Schedd attributes list
-	///////////////////////////////////
-	for ( attr = schedd_attrs_list; *attr; attr++ ) {
-		schedd_attrs_ad.AssignExpr( *attr, "True" );
-	}
-
-	schedd_attrs_ad.Delete( ATTR_CURRENT_TIME );
-
-	target_attrs_init = true;
-}
-#endif
 
 classad::ExprTree *AddTargetRefs( classad::ExprTree *tree, TargetAdType /*target_type*/ )
 {
 	// Disable AddTargetRefs for now
 	return tree->Copy();
 
-#if 0
-	if ( !target_attrs_init ) {
-		InitTargetAttrLists();
-	}
-
-	if( tree == NULL ) {
-		return NULL;
-	}
-	if ( target_type != TargetMachineAttrs && target_type != TargetJobAttrs &&
-		 target_type != TargetScheddAttrs ) {
-		return NULL;
-	}
-	classad::ExprTree::NodeKind nKind = tree->GetKind( );
-	switch( nKind ) {
-	case classad::ExprTree::ATTRREF_NODE: {
-		classad::ExprTree *expr = NULL;
-		string attr = "";
-		bool abs = false;
-		( ( classad::AttributeReference * )tree )->GetComponents(expr,attr,abs);
-		if( abs || expr != NULL ) {
-			return tree->Copy( );
-		}
-		else {
-			bool add_target = false;
-			if ( target_type == TargetMachineAttrs ) {
-				if ( machine_attrs_ad.Lookup( attr.c_str() ) ||
-					 machine_attrs_strlist.contains_anycase_withwildcard( attr.c_str() ) ) {
-					add_target = true;
-				}
-			} else if ( target_type == TargetJobAttrs ) {
-				if ( job_attrs_ad.Lookup( attr.c_str() ) ||
-					 job_attrs_strlist.contains_anycase_withwildcard( attr.c_str() ) ) {
-					add_target = true;
-				}
-			} else {
-				if ( schedd_attrs_ad.Lookup( attr.c_str() ) ) {
-					add_target = true;
-				}
-			}
-			if( add_target ) {
-					// attribute is in our list, so insert "target"
-				classad::AttributeReference *target = NULL;
-				target = classad::AttributeReference::MakeAttributeReference(NULL,
-																	"target");
-				return classad::AttributeReference::MakeAttributeReference(target,attr);
-			}
-			else {
-				return tree->Copy( );
-			}
-		}
-	}
-	case classad::ExprTree::OP_NODE: {
-		classad::Operation::OpKind oKind;
-		classad::ExprTree * expr1 = NULL;
-		classad::ExprTree * expr2 = NULL;
-		classad::ExprTree * expr3 = NULL;
-		classad::ExprTree * newExpr1 = NULL;
-		classad::ExprTree * newExpr2 = NULL;
-		classad::ExprTree * newExpr3 = NULL;
-		( ( classad::Operation * )tree )->GetComponents( oKind, expr1, expr2, expr3 );
-		if( expr1 != NULL ) {
-			newExpr1 = AddTargetRefs( expr1, target_type );
-		}
-		if( expr2 != NULL ) {
-			newExpr2 = AddTargetRefs( expr2, target_type );
-		}
-		if( expr3 != NULL ) {
-			newExpr3 = AddTargetRefs( expr3, target_type );
-		}
-		return classad::Operation::MakeOperation( oKind, newExpr1, newExpr2, newExpr3 );
-	}
-	case classad::ExprTree::FN_CALL_NODE: {
-		std::string fn_name;
-		classad::ArgumentList old_fn_args;
-		classad::ArgumentList new_fn_args;
-		( ( classad::FunctionCall * )tree )->GetComponents( fn_name, old_fn_args );
-		for ( classad::ArgumentList::iterator i = old_fn_args.begin(); i != old_fn_args.end(); i++ ) {
-			new_fn_args.push_back( AddTargetRefs( *i, target_type ) );
-		}
-		return classad::FunctionCall::MakeFunctionCall( fn_name, new_fn_args );
-	}
-	default: {
- 			// old ClassAds have no nested ClassAds or lists
-			// literals have no attrrefs in them
-		return tree->Copy( );
-	}
-	}
-#endif
 }
 
 const char *ConvertEscapingOldToNew( const char *str )

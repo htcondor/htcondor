@@ -52,12 +52,12 @@ static bool _useDagDir = false;
 static int _thisDagNum = -1;
 static bool _mungeNames = true;
 
-static bool parse_subdag( Dag *dag, Job::job_type_t nodeType,
+static bool parse_subdag( Dag *dag,
 						const char* nodeTypeKeyword,
 						const char* dagFile, int lineNum,
 						const char *directory);
 
-static bool parse_node( Dag *dag, Job::job_type_t nodeType,
+static bool parse_node( Dag *dag,
 						const char* nodeTypeKeyword,
 						const char* dagFile, int lineNum,
 						const char *directory, const char *inlineOrExt,
@@ -157,7 +157,7 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 		MyString	errMsg;
 		if ( !dagDir.Cd2TmpDir( tmpDirectory.Value(), errMsg ) ) {
 			debug_printf( DEBUG_QUIET,
-					"Could not change to DAG directory %s: %s\n",
+					"ERROR: Could not change to DAG directory %s: %s\n",
 					tmpDirectory.Value(), errMsg.Value() );
 			return false;
 		}
@@ -168,7 +168,7 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 	if(fp == NULL) {
 		MyString cwd;
 		condor_getcwd( cwd );
-		debug_printf( DEBUG_QUIET, "Could not open file %s for input "
+		debug_printf( DEBUG_QUIET, "ERROR: Could not open file %s for input "
 					"(cwd %s) (errno %d, %s)\n", tmpFilename,
 					cwd.Value(), errno, strerror(errno));
 		return false;
@@ -190,9 +190,8 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 	//
 	// This loop will read every line of the input file
 	//
-	while ( ((line=getline(fp)) != NULL) ) {
+	while ( ((line=getline_trim(fp, lineNumber)) != NULL) ) {
 		std::string varline(line);
-		lineNumber++;
 
 		//
 		// Find the terminating '\0'
@@ -221,7 +220,7 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 		//
 		if(strcasecmp(token, "JOB") == 0) {
 			parsed_line_successfully = parse_node( dag, 
-					   Job::TYPE_CONDOR, token,
+					   token,
 					   filename, lineNumber, tmpDirectory.Value(), "",
 					   "submitfile" );
 		}
@@ -230,41 +229,35 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 		// Example Syntax is:  DATA j1 j1.dapsubmit [DONE]
 		//
 		else if	(strcasecmp(token, "DAP") == 0) {	// DEPRECATED!
-			parsed_line_successfully = parse_node( dag,
-					   Job::TYPE_STORK, token,
-					   filename, lineNumber, tmpDirectory.Value(), "",
-					   "submitfile" );
 			debug_printf( DEBUG_QUIET, "%s (line %d): "
-				"Warning: the DAP token is deprecated and may be unsupported "
-				"in a future release.  Use the DATA token\n",
+				"ERROR: the DAP token is no longer supported\n",
 				filename, lineNumber );
-			check_warning_strictness( DAG_STRICT_2 );
+			parsed_line_successfully = false;
 		}
 
 		else if	(strcasecmp(token, "DATA") == 0) {
-			parsed_line_successfully = parse_node( dag,
-					   Job::TYPE_STORK, token,
-					   filename, lineNumber, tmpDirectory.Value(), "",
-					   "submitfile");
+			debug_printf( DEBUG_QUIET, "%s (line %d): "
+				"ERROR: the DATA token is no longer supported\n",
+				filename, lineNumber );
+			parsed_line_successfully = false;
 		}
 
 		// Handle a SUBDAG spec
 		else if	(strcasecmp(token, "SUBDAG") == 0) {
 			parsed_line_successfully = parse_subdag( dag, 
-						Job::TYPE_CONDOR,
 						token, filename, lineNumber, tmpDirectory.Value() );
 		}
 
 		// Handle a FINAL spec
 		else if(strcasecmp(token, "FINAL") == 0) {
 			parsed_line_successfully = parse_node( dag, 
-					   Job::TYPE_CONDOR, token,
+					   token,
 					   filename, lineNumber, tmpDirectory.Value(), "",
 					   "submitfile" );
 		}
 
 		// Handle a SCRIPT spec
-		// Example Syntax is:  SCRIPT (PRE|POST) JobName ScriptName Args ...
+		// Example Syntax is:  SCRIPT (PRE|POST) [DEFER status time] JobName ScriptName Args ...
 		else if ( strcasecmp(token, "SCRIPT") == 0 ) {
 			parsed_line_successfully = parse_script(endline, dag, 
 				filename, lineNumber);
@@ -373,7 +366,7 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 		// None of the above means that there was bad input.
 		else {
 			debug_printf( DEBUG_QUIET, "%s (line %d): "
-				"Expected JOB, DATA, SUBDAG, SCRIPT, PARENT, RETRY, "
+				"ERROR: expected JOB, DATA, SUBDAG, SCRIPT, PARENT, RETRY, "
 				"ABORT-DAG-ON, DOT, VARS, PRIORITY, CATEGORY, MAXJOBS, "
 				"CONFIG, SPLICE, FINAL, NODE_STATUS_FILE, or PRE_SKIP token\n",
 				filename, lineNumber );
@@ -413,7 +406,7 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 		MyString	errMsg;
 		if ( !dagDir.Cd2MainDir( errMsg ) ) {
 			debug_printf( DEBUG_QUIET,
-					"Could not change to original directory: %s\n",
+					"ERROR: Could not change to original directory: %s\n",
 					errMsg.Value() );
 			return false;
 		}
@@ -423,7 +416,7 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 }
 
 static bool 
-parse_subdag( Dag *dag, Job::job_type_t nodeType,
+parse_subdag( Dag *dag, 
 			const char* nodeTypeKeyword,
 			const char* dagFile, int lineNum, const char *directory )
 {
@@ -434,7 +427,7 @@ parse_subdag( Dag *dag, Job::job_type_t nodeType,
 		return false;
 	}
 	if ( !strcasecmp( inlineOrExt, "EXTERNAL" ) ) {
-		return parse_node( dag, nodeType, nodeTypeKeyword, dagFile,
+		return parse_node( dag, nodeTypeKeyword, dagFile,
 					lineNum, directory, " EXTERNAL", "dagfile" );
 	}
 
@@ -444,7 +437,7 @@ parse_subdag( Dag *dag, Job::job_type_t nodeType,
 }
 
 static bool 
-parse_node( Dag *dag, Job::job_type_t nodeType,
+parse_node( Dag *dag, 
 			const char* nodeTypeKeyword,
 			const char* dagFile, int lineNum, const char *directory,
 			const char *inlineOrExt, const char *submitOrDagFile)
@@ -550,7 +543,7 @@ parse_node( Dag *dag, Job::job_type_t nodeType,
 	// check to see if this node name is also a splice name for this dag.
 	if (dag->LookupSplice(MyString(nodeName), tmp) == 0) {
 		debug_printf( DEBUG_QUIET, 
-			  "%s (line %d): "
+			  "ERROR: %s (line %d): "
 			  "Node name '%s' must not also be a splice name.\n",
 			  dagFile, lineNum, nodeName );
 		return false;
@@ -583,8 +576,8 @@ parse_node( Dag *dag, Job::job_type_t nodeType,
 
 	// looks ok, so add it
 	bool isFinal = strcasecmp( nodeTypeKeyword, "FINAL" ) == MATCH;
-	if( !AddNode( dag, nodeType, nodeName, directory,
-				submitFile, NULL, NULL, noop, done, isFinal, whynot ) )
+	if( !AddNode( dag, nodeName, directory,
+				submitFile, noop, done, isFinal, whynot ) )
 	{
 		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): %s\n",
 					  dagFile, lineNum, whynot.Value() );
@@ -616,7 +609,7 @@ parse_node( Dag *dag, Job::job_type_t nodeType,
 //
 // Function: parse_script
 // Purpose:  Parse a line of the format:
-//             SCRIPT (PRE|POST) JobName ScriptName Args ...
+//             SCRIPT [DEFER status time] (PRE|POST) JobName ScriptName Args ...
 //
 //-----------------------------------------------------------------------------
 static bool 
@@ -626,34 +619,93 @@ parse_script(
 	const char *filename, 
 	int  lineNumber)
 {
-	const char * example = "SCRIPT (PRE|POST) JobName Script Args ...";
+	const char * example = "SCRIPT [DEFER status time] (PRE|POST) JobName Script Args ...";
 	Job * job = NULL;
 	MyString whynot;
 
 	//
-	// Second keyword is either PRE or POST
+	// Second keyword is either PRE, POST or DEFER
 	//
+	char * prepost = strtok( NULL, DELIMITERS );
+	if ( !prepost ) {
+		debug_printf( DEBUG_QUIET,
+					"ERROR: %s (line %d): Missing PRE, POST, or DEFER\n",
+					filename, lineNumber );
+		exampleSyntax( example );
+		return false;
+	}
+
+	int defer_status = SCRIPT_DEFER_STATUS_NONE;
+	int defer_time = 0;
+	if ( !strcasecmp( prepost, "DEFER" ) ) {
+			// Our script has a defer statement.
+		char *token = strtok( NULL, DELIMITERS );
+		if ( token == NULL ) {
+			debug_printf( DEBUG_QUIET,
+					"ERROR: %s (line %d): Missing DEFER status value\n",
+					filename, lineNumber );
+			exampleSyntax( example );
+			return false;
+		}
+		char *tmp;
+		defer_status = (int)strtol( token, &tmp, 10 );
+		if ( tmp == token || defer_status <= 0 ) {
+			debug_printf( DEBUG_QUIET,
+				"ERROR: %s (line %d): Invalid DEFER status value \"%s\"\n",
+				filename, lineNumber, token );
+			exampleSyntax( example );
+			return false;
+		}
+
+		token = strtok( NULL, DELIMITERS );
+		if ( token == NULL ) {
+			debug_printf( DEBUG_QUIET,
+				"ERROR: %s (line %d): Missing DEFER time value\n",
+				filename, lineNumber );
+			exampleSyntax( example );
+			return false;
+		}
+		defer_time = (int)strtol( token, &tmp, 10 );
+		if ( tmp == token || defer_time < 0 ) {
+			debug_printf( DEBUG_QUIET,
+				"ERROR: %s (line %d): Invalid DEFER time value \"%s\"\n",
+				filename, lineNumber, token );
+			exampleSyntax( example );
+			return false;
+		}
+
+			// The next token must be PRE or POST.
+		prepost = strtok( NULL, DELIMITERS );
+		if ( !prepost ) {
+			debug_printf( DEBUG_QUIET,
+						"ERROR: %s (line %d): Missing PRE or POST\n",
+						filename, lineNumber );
+			exampleSyntax( example );
+			return false;
+		}
+	}
+
 	bool   post;
-	char * prepost = strtok (NULL, DELIMITERS);
-	if ( prepost && !strcasecmp (prepost, "PRE" ) ) {
+	if ( !strcasecmp (prepost, "PRE" ) ) {
 		post = false;
-	} else if ( prepost && !strcasecmp (prepost, "POST") ) {
+	} else if ( !strcasecmp (prepost, "POST") ) {
 		post = true;
 	} else {
-		debug_printf( DEBUG_QUIET, "%s (line %d): "
+		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): "
 					  "After specifying \"SCRIPT\", you must "
-					  "indicate if you want \"PRE\" or \"POST\"\n",
+					  "indicate if you want \"PRE\" or \"POST\" "
+					  "(or DEFER)\n",
 					  filename, lineNumber );
 		exampleSyntax (example);
 		return false;
 	}
-	
+
 	//
-	// Third token is the JobName
+	// Next token is the JobName
 	//
 	const char *jobName = strtok( NULL, DELIMITERS );
 	if ( jobName == NULL ) {
-		debug_printf( DEBUG_QUIET, "%s (line %d): Missing job name\n",
+		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): Missing job name\n",
 					  filename, lineNumber );
 		exampleSyntax (example);
 		return false;
@@ -664,7 +716,7 @@ parse_script(
 
 	if ( isReservedWord( jobName ) ) {
 		debug_printf( DEBUG_QUIET,
-					  "%s (line %d): JobName cannot be a reserved word\n",
+					  "ERROR: %s (line %d): JobName cannot be a reserved word\n",
 					  filename, lineNumber );
 		exampleSyntax (example);
 		return false;
@@ -676,7 +728,7 @@ parse_script(
 		job = dag->FindNodeByName( jobName );
 		if (job == NULL) {
 			debug_printf( DEBUG_QUIET, 
-						  "%s (line %d): Unknown Job %s\n",
+						  "ERROR: %s (line %d): Unknown Job %s\n",
 						  filename, lineNumber, jobNameOrig );
 			return false;
 		}
@@ -698,7 +750,7 @@ parse_script(
 		// if we're already at the end of the line, they
 		// must not have given us any path to the script,
 		// arguments, etc.  
-		debug_printf( DEBUG_QUIET, "%s (line %d): "
+		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): "
 					  "You named a %s script for node %s but "
 					  "didn't provide a script filename\n",
 					  filename, lineNumber, post ? "POST" : "PRE", 
@@ -719,7 +771,7 @@ parse_script(
 		// script.  however, because of how getline()
 		// works and our comparison to endline above, we
 		// should never hit this case.
-		debug_printf( DEBUG_QUIET, "%s (line %d): "
+		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): "
 					  "You named a %s script for node %s but "
 					  "didn't provide a script filename\n",
 					  filename, lineNumber, post ? "POST" : "PRE", 
@@ -728,7 +780,7 @@ parse_script(
 		return false;
 	}
 	
-	if( !job->AddScript( post, rest, whynot ) ) {
+	if( !job->AddScript( post, rest, defer_status, defer_time, whynot ) ) {
 		debug_printf( DEBUG_SILENT, "ERROR: %s (line %d): "
 					  "failed to add %s script to node %s: %s\n",
 					  filename, lineNumber, post ? "POST" : "PRE",
@@ -792,7 +844,7 @@ parse_parent(
 			if (job == NULL) {
 				// oops, it was neither a splice nor a parent name, bail
 				debug_printf( DEBUG_QUIET, 
-						  "%s (line %d): Unknown Job %s\n",
+						  "ERROR: %s (line %d): Unknown Job %s\n",
 						  filename, lineNumber, jobNameOrig );
 				return false;
 			}
@@ -803,7 +855,7 @@ parse_parent(
 	// There must be one or more parent job names before
 	// the CHILD token
 	if (parents.Number() < 1) {
-		debug_printf( DEBUG_QUIET, "%s (line %d): "
+		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): "
 					  "Missing Parent Job names\n",
 					  filename, lineNumber );
 		exampleSyntax (example);
@@ -812,7 +864,7 @@ parse_parent(
 	
 	if (jobName == NULL) {
 		debug_printf( DEBUG_QUIET, 
-					  "%s (line %d): Expected CHILD token\n",
+					  "ERROR: %s (line %d): Expected CHILD token\n",
 					  filename, lineNumber );
 		exampleSyntax (example);
 		return false;
@@ -854,7 +906,7 @@ parse_parent(
 			if (job == NULL) {
 				// oops, it was neither a splice nor a child name, bail
 				debug_printf( DEBUG_QUIET, 
-						  "%s (line %d): Unknown Job %s\n",
+						  "ERROR: %s (line %d): Unknown Job %s\n",
 						  filename, lineNumber, jobNameOrig );
 				return false;
 			}
@@ -863,7 +915,7 @@ parse_parent(
 	}
 	
 	if (children.Number() < 1) {
-		debug_printf( DEBUG_QUIET, "%s (line %d): Missing Child Job names\n",
+		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): Missing Child Job names\n",
 					  filename, lineNumber );
 		exampleSyntax (example);
 		return false;
@@ -912,7 +964,7 @@ parse_retry(
 	const char *jobName = strtok( NULL, DELIMITERS );
 	if( jobName == NULL ) {
 		debug_printf( DEBUG_QUIET,
-					  "%s (line %d): Missing job name\n",
+					  "ERROR: %s (line %d): Missing job name\n",
 					  filename, lineNumber );
 		exampleSyntax( example );
 		return false;
@@ -925,7 +977,7 @@ parse_retry(
 	Job *job = dag->FindNodeByName( jobName );
 	if( job == NULL ) {
 		debug_printf( DEBUG_QUIET, 
-					  "%s (line %d): Unknown Job %s\n",
+					  "ERROR: %s (line %d): Unknown Job %s\n",
 					  filename, lineNumber, jobNameOrig );
 		return false;
 	}
@@ -940,7 +992,7 @@ parse_retry(
 	char *token = strtok( NULL, DELIMITERS );
 	if( token == NULL ) {
 		debug_printf( DEBUG_QUIET, 
-					  "%s (line %d): Missing Retry value\n",
+					  "ERROR: %s (line %d): Missing Retry value\n",
 					  filename, lineNumber );
 		exampleSyntax( example );
 		return false;
@@ -950,14 +1002,14 @@ parse_retry(
 	job->retry_max = (int)strtol( token, &tmp, 10 );
 	if( tmp == token ) {
 		debug_printf( DEBUG_QUIET,
-					  "%s (line %d): Invalid Retry value \"%s\"\n",
+					  "ERROR: %s (line %d): Invalid Retry value \"%s\"\n",
 					  filename, lineNumber, token );
 		exampleSyntax( example );
 		return false;
 	}
 	if ( job->retry_max < 0 ) {
 		debug_printf( DEBUG_QUIET,
-					  "%s (line %d): Invalid Retry value \"%d\" "
+					  "ERROR: %s (line %d): Invalid Retry value \"%d\" "
 					  "(cannot be negative)\n",
 					  filename, lineNumber, job->retry_max );
 		exampleSyntax( example );
@@ -968,7 +1020,7 @@ parse_retry(
     token = strtok( NULL, DELIMITERS );
     if ( token != NULL ) {
         if ( strcasecmp ( token, "UNLESS-EXIT" ) != 0 ) {
-            debug_printf( DEBUG_QUIET, "%s (line %d) Invalid retry option: %s\n", 
+            debug_printf( DEBUG_QUIET, "ERROR: %s (line %d) Invalid retry option: %s\n", 
                           filename, lineNumber, token );
             exampleSyntax( example );
             return false;
@@ -976,7 +1028,7 @@ parse_retry(
         else {
             token = strtok( NULL, DELIMITERS );
             if ( token == NULL ) {
-                debug_printf( DEBUG_QUIET, "%s (line %d) Missing parameter for UNLESS-EXIT\n",
+                debug_printf( DEBUG_QUIET, "ERROR: %s (line %d) Missing parameter for UNLESS-EXIT\n",
                               filename, lineNumber);
                 exampleSyntax( example );
                 return false;
@@ -984,7 +1036,7 @@ parse_retry(
             char *unless_exit_end;
             int unless_exit = strtol( token, &unless_exit_end, 10 );
             if (*unless_exit_end != 0) {
-                debug_printf( DEBUG_QUIET, "%s (line %d) Bad parameter for UNLESS-EXIT: %s\n",
+                debug_printf( DEBUG_QUIET, "ERROR: %s (line %d) Bad parameter for UNLESS-EXIT: %s\n",
                               filename, lineNumber, token );
                 exampleSyntax( example );
                 return false;
@@ -1018,7 +1070,7 @@ parse_abort(
 	const char *jobName = strtok( NULL, DELIMITERS );
 	if ( jobName == NULL ) {
 		debug_printf( DEBUG_QUIET,
-					  "%s (line %d): Missing job name\n",
+					  "ERROR: %s (line %d): Missing job name\n",
 					  filename, lineNumber );
 		exampleSyntax( example );
 		return false;
@@ -1031,7 +1083,7 @@ parse_abort(
 	Job *job = dag->FindNodeByName( jobName );
 	if( job == NULL ) {
 		debug_printf( DEBUG_QUIET, 
-					  "%s (line %d): Unknown Job %s\n",
+					  "ERROR: %s (line %d): Unknown Job %s\n",
 					  filename, lineNumber, jobNameOrig );
 		return false;
 	}
@@ -1047,7 +1099,7 @@ parse_abort(
 	char *abortValStr = strtok( NULL, DELIMITERS );
 	if ( abortValStr == NULL ) {
 		debug_printf( DEBUG_QUIET, 
-					  "%s (line %d): Missing ABORT-ON node value\n",
+					  "ERROR: %s (line %d): Missing ABORT-ON node value\n",
 					  filename, lineNumber );
 		exampleSyntax( example );
 		return false;
@@ -1058,7 +1110,7 @@ parse_abort(
 	abortVal = (int)strtol( abortValStr, &tmp, 10 );
 	if( tmp == abortValStr ) {
 		debug_printf( DEBUG_QUIET,
-					  "%s (line %d): Invalid ABORT-ON node value \"%s\"\n",
+					  "ERROR: %s (line %d): Invalid ABORT-ON node value \"%s\"\n",
 					  filename, lineNumber, abortValStr );
 		exampleSyntax( example );
 		return false;
@@ -1071,7 +1123,7 @@ parse_abort(
 	if ( nextWord != NULL ) {
 		if ( strcasecmp ( nextWord, "RETURN" ) != 0 ) {
 			debug_printf( DEBUG_QUIET,
-						"%s (line %d) Invalid ABORT-ON option: %s\n",
+						"ERROR: %s (line %d) Invalid ABORT-ON option: %s\n",
 						filename, lineNumber, nextWord);
 			exampleSyntax( example );
 			return false;
@@ -1082,7 +1134,7 @@ parse_abort(
 			nextWord = strtok( NULL, DELIMITERS );
 			if ( nextWord == NULL ) {
 				debug_printf( DEBUG_QUIET,
-							"%s (line %d) Missing parameter for ABORT-ON\n",
+							"ERROR: %s (line %d) Missing parameter for ABORT-ON\n",
 							filename, lineNumber);
 				exampleSyntax( example );
 				return false;
@@ -1091,13 +1143,13 @@ parse_abort(
 			returnVal = strtol(nextWord, &tmp, 10);
 			if ( tmp == nextWord ) {
 				debug_printf( DEBUG_QUIET,
-							"%s (line %d) Bad parameter for ABORT_ON: %s\n",
+							"ERROR: %s (line %d) Bad parameter for ABORT_ON: %s\n",
 							filename, lineNumber, nextWord);
 				exampleSyntax( example );
 				return false;
 			} else if ( (returnVal < 0) || (returnVal > 255) ) {
 				debug_printf( DEBUG_QUIET,
-							"%s (line %d) Bad return value for ABORT_ON "
+							"ERROR: %s (line %d) Bad return value for ABORT_ON "
 							"(must be between 0 and 255): %s\n",
 							filename, lineNumber, nextWord);
 				return false;
@@ -1133,7 +1185,7 @@ static bool parse_dot(Dag *dag, const char *filename, int lineNumber)
 	char *dot_file_name = strtok( NULL, DELIMITERS );
 	if ( dot_file_name == NULL ) {
 		debug_printf( DEBUG_QUIET,
-					  "%s (line %d): Missing dot file name,\n",
+					  "ERROR: %s (line %d): Missing dot file name,\n",
 					  filename, lineNumber );
 		exampleSyntax( example );
 		return false;
@@ -1152,7 +1204,7 @@ static bool parse_dot(Dag *dag, const char *filename, int lineNumber)
 		} else if (strcasecmp(token, "INCLUDE") == 0) {
 			token = strtok(NULL, DELIMITERS);
 			if (token == NULL) {
-				debug_printf(DEBUG_QUIET, "%s (line %d): Missing include"
+				debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Missing include"
 							 " file name.\n", filename, lineNumber);
 				exampleSyntax(example);
 				return false;
@@ -1180,7 +1232,7 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber, std::list
 	const char* example = "Vars JobName VarName1=\"value1\" VarName2=\"value2\"";
 	const char *jobName = strtok( NULL, DELIMITERS );
 	if ( jobName == NULL ) {
-		debug_printf(DEBUG_QUIET, "%s (line %d): Missing job name\n",
+		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Missing job name\n",
 					filename, lineNumber);
 		exampleSyntax(example);
 		return false;
@@ -1236,7 +1288,7 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber, std::list
 			if (*str == '+' ) {
 				if ( varnamestate != 0 ) {
 					debug_printf( DEBUG_QUIET,
-							"%s (line %d): '+' can only be first character of macroname (%s)\n",
+							"ERROR: %s (line %d): '+' can only be first character of macroname (%s)\n",
 							filename, lineNumber, varName.Value() );
 					return false;
 				}
@@ -1247,14 +1299,14 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber, std::list
 
 		if(varName.Length() == '\0') { // no alphanumeric symbols at all were written into name,
 		                      // just something weird, which we'll print
-			debug_printf(DEBUG_QUIET, "%s (line %d): Unexpected symbol: \"%c\"\n", filename,
+			debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Unexpected symbol: \"%c\"\n", filename,
 				lineNumber, *str);
 			return false;
 		}
 
 		if ( varName == "+" ) {
 			debug_printf(DEBUG_QUIET,
-				"%s (line %d): macroname (%s) must contain at least one alphanumeric character\n",
+				"ERROR: %s (line %d): macroname (%s) must contain at least one alphanumeric character\n",
 				filename, lineNumber, varName.Value() );
 			return false;
 		}
@@ -1263,7 +1315,7 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber, std::list
 		while(isspace(*str))
 			str++;
 		if(*str != '=') {
-			debug_printf( DEBUG_QUIET, "%s (line %d): Illegal character (%c) in or after macroname %s\n", filename, lineNumber, *str, varName.Value() );
+			debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): Illegal character (%c) in or after macroname %s\n", filename, lineNumber, *str, varName.Value() );
 			return false;
 		}
 		str++;
@@ -1271,7 +1323,7 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber, std::list
 			str++;
 		
 		if(*str != '"') {
-			debug_printf(DEBUG_QUIET, "%s (line %d): %s's value must be quoted\n", filename,
+			debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): %s's value must be quoted\n", filename,
 				lineNumber, varName.Value());
 			return false;
 		}
@@ -1284,7 +1336,7 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber, std::list
 			varValue += *(++str);
 			
 			if(*str == '\0') {
-				debug_printf(DEBUG_QUIET, "%s (line %d): Missing end quote\n", filename,
+				debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Missing end quote\n", filename,
 					lineNumber);
 				return false;
 			}
@@ -1299,16 +1351,10 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber, std::list
 					varValue.setChar( varValue.Length() - 1, '\0' );
 					escaped = true;
 					continue;
-				} else if(*str == '\'') { // these would mess the command line up 
-				                          // later on
-					debug_printf(DEBUG_QUIET,
-						"%s (line %d): single quotes are not allowed in values.\n",
-						filename, lineNumber);
-					return false;
 				}
 			} else {
 				if(*str != '\\' && *str != '"') {
-					debug_printf(DEBUG_QUIET, "%s (line %d): Unknown escape sequence "
+					debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Unknown escape sequence "
 						"\"\\%c\"\n", filename, lineNumber, *str);
 					return false;
 				}
@@ -1322,7 +1368,7 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber, std::list
 		MyString tmpName(varName);
 		tmpName.lower_case();
 		if ( tmpName.find( "queue" ) == 0 ) {
-			debug_printf(DEBUG_QUIET, "Illegal variable name: %s; variable "
+			debug_printf(DEBUG_QUIET, "ERROR: Illegal variable name: %s; variable "
 						"names cannot begin with \"queue\"\n", varName.Value() );
 			return false;
 		}
@@ -1354,7 +1400,7 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber, std::list
 	}
 
 	if(numPairs == 0) {
-		debug_printf(DEBUG_QUIET, "%s (line %d): No valid name-value pairs\n", filename, lineNumber);
+		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): No valid name-value pairs\n", filename, lineNumber);
 		return false;
 	}
 
@@ -1382,7 +1428,7 @@ parse_priority(
 	//
 	const char *jobName = strtok( NULL, DELIMITERS );
 	if ( jobName == NULL ) {
-		debug_printf( DEBUG_QUIET, "%s (line %d): Missing job name\n",
+		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): Missing job name\n",
 					  filename, lineNumber );
 		exampleSyntax (example);
 		return false;
@@ -1391,7 +1437,7 @@ parse_priority(
 	const char *jobNameOrig = jobName; // for error output
 	if ( isReservedWord( jobName ) ) {
 		debug_printf( DEBUG_QUIET,
-					  "%s (line %d): JobName cannot be a reserved word\n",
+					  "ERROR: %s (line %d): JobName cannot be a reserved word\n",
 					  filename, lineNumber );
 		exampleSyntax( example );
 		return false;
@@ -1403,7 +1449,7 @@ parse_priority(
 		job = dag->FindNodeByName( jobName );
 		if (job == NULL) {
 			debug_printf( DEBUG_QUIET, 
-						  "%s (line %d): Unknown Job %s\n",
+						  "ERROR: %s (line %d): Unknown Job %s\n",
 						  filename, lineNumber, jobNameOrig );
 			return false;
 		}
@@ -1422,7 +1468,7 @@ parse_priority(
 	const char *valueStr = strtok(NULL, DELIMITERS);
 	if ( valueStr == NULL ) {
 		debug_printf( DEBUG_QUIET, 
-					  "%s (line %d): Missing PRIORITY value\n",
+					  "ERROR: %s (line %d): Missing PRIORITY value\n",
 					  filename, lineNumber );
 		exampleSyntax( example );
 		return false;
@@ -1433,7 +1479,7 @@ parse_priority(
 	priorityVal = (int)strtol( valueStr, &tmp, 10 );
 	if( tmp == valueStr ) {
 		debug_printf( DEBUG_QUIET,
-					  "%s (line %d): Invalid PRIORITY value \"%s\"\n",
+					  "ERROR: %s (line %d): Invalid PRIORITY value \"%s\"\n",
 					  filename, lineNumber, valueStr );
 		exampleSyntax( example );
 		return false;
@@ -1445,7 +1491,7 @@ parse_priority(
 	valueStr = strtok(NULL, DELIMITERS);
 	if ( valueStr != NULL ) {
 		debug_printf( DEBUG_QUIET,
-					  "%s (line %d): Extra token (%s) on PRIORITY line\n",
+					  "ERROR: %s (line %d): Extra token (%s) on PRIORITY line\n",
 					  filename, lineNumber, valueStr );
 		exampleSyntax( example );
 		return false;
@@ -1485,7 +1531,7 @@ parse_category(
 	//
 	const char *jobName = strtok(NULL, DELIMITERS);
 	if ( jobName == NULL ) {
-		debug_printf( DEBUG_QUIET, "%s (line %d): Missing job name\n",
+		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): Missing job name\n",
 					  filename, lineNumber );
 		exampleSyntax (example);
 		return false;
@@ -1494,7 +1540,7 @@ parse_category(
 	const char *jobNameOrig = jobName; // for error output
 	if (isReservedWord(jobName)) {
 		debug_printf( DEBUG_QUIET,
-					  "%s (line %d): JobName cannot be a reserved word\n",
+					  "ERROR: %s (line %d): JobName cannot be a reserved word\n",
 					  filename, lineNumber );
 		exampleSyntax (example);
 		return false;
@@ -1506,7 +1552,7 @@ parse_category(
 		job = dag->FindNodeByName( jobName );
 		if (job == NULL) {
 			debug_printf( DEBUG_QUIET, 
-						  "%s (line %d): Unknown Job %s\n",
+						  "ERROR: %s (line %d): Unknown Job %s\n",
 						  filename, lineNumber, jobNameOrig );
 			return false;
 		}
@@ -1525,7 +1571,7 @@ parse_category(
 	const char *categoryName = strtok(NULL, DELIMITERS);
 	if ( categoryName == NULL ) {
 		debug_printf( DEBUG_QUIET, 
-					  "%s (line %d): Missing CATEGORY name\n",
+					  "ERROR: %s (line %d): Missing CATEGORY name\n",
 					  filename, lineNumber );
 		exampleSyntax( example );
 		return false;
@@ -1537,7 +1583,7 @@ parse_category(
 	const char *tmpStr = strtok(NULL, DELIMITERS);
 	if ( tmpStr != NULL ) {
 		debug_printf( DEBUG_QUIET,
-					  "%s (line %d): Extra token (%s) on CATEGORY line\n",
+					  "ERROR: %s (line %d): Extra token (%s) on CATEGORY line\n",
 					  filename, lineNumber, tmpStr );
 		exampleSyntax( example );
 		return false;
@@ -1572,7 +1618,7 @@ parse_splice(
 	// Note: this if is true if strtok() returns NULL. wenger 2014-10-07
 	if ( spliceName == "" ) {
 		debug_printf( DEBUG_QUIET, 
-					  "%s (line %d): Missing SPLICE name\n",
+					  "ERROR: %s (line %d): Missing SPLICE name\n",
 					  filename, lineNumber );
 		exampleSyntax( example );
 		return false;
@@ -1582,7 +1628,7 @@ parse_splice(
 	// splice.
 	if ( dag->NodeExists(spliceName.Value()) ) {
 		debug_printf( DEBUG_QUIET, 
-					  "%s (line %d): "
+					  "ERROR: %s (line %d): "
 					  " Splice name '%s' must not also be a node name.\n",
 					  filename, lineNumber, spliceName.Value() );
 		return false;
@@ -1601,7 +1647,7 @@ parse_splice(
 	// Note: this if is true if strtok() returns NULL. wenger 2014-10-07
 	if ( spliceFile == "" ) {
 		debug_printf( DEBUG_QUIET, 
-					  "%s (line %d): Missing SPLICE file name\n",
+					  "ERROR: %s (line %d): Missing SPLICE file name\n",
 					  filename, lineNumber );
 		exampleSyntax( example );
 		return false;
@@ -1614,6 +1660,7 @@ parse_splice(
 	MyString dirTok = strtok( NULL, DELIMITERS );
 	MyString directory = ".";
 
+	MyString dirTokOrig = dirTok;
 	dirTok.upper_case();
 	// Note: this if is okay even if strtok() returns NULL. wenger 2014-10-07
 	if ( dirTok == "DIR" ) {
@@ -1627,6 +1674,12 @@ parse_splice(
 			exampleSyntax( example );
 			return false;
 		}
+	} else if ( dirTok != "" ) {
+		debug_printf( DEBUG_QUIET,
+					"ERROR: %s (line %d): illegal token (%s) on SPLICE line\n",
+					filename, lineNumber, dirTokOrig.Value() );
+		exampleSyntax( example );
+		return false;
 	}
 
 	// 
@@ -1662,7 +1715,6 @@ parse_splice(
 							dag->RetrySubmitFirst(),
 							dag->RetryNodeFirst(),
 							dag->CondorRmExe(),
-							dag->StorkRmExe(),
 							dag->DAGManJobId(),
 							dag->ProhibitMultiJobs(),
 							dag->SubmitDepthFirst(),
@@ -1691,7 +1743,7 @@ parse_splice(
 
 	// parse the splice file into a separate dag.
 	if (!parse(splice_dag, spliceFile.Value(), _useDagDir)) {
-		debug_error(1, DEBUG_QUIET, "Failed to parse splice %s in file %s\n",
+		debug_error(1, DEBUG_QUIET, "ERROR: Failed to parse splice %s in file %s\n",
 			spliceName.Value(), spliceFile.Value());
 		return false;
 	}
@@ -1729,7 +1781,7 @@ parse_splice(
 	// associate the splice_dag with its name in _this_ dag, later I'll merge
 	// the nodes from this splice into _this_ dag.
 	if (dag->InsertSplice(spliceName, splice_dag) == -1) {
-		debug_printf( DEBUG_QUIET, "Splice name '%s' used for multiple "
+		debug_printf( DEBUG_QUIET, "ERROR: Splice name '%s' used for multiple "
 			"splices. Splice names must be unique per dag file.\n", 
 			spliceName.Value());
 		return false;
@@ -1766,7 +1818,7 @@ parse_maxjobs(
 	const char *categoryName = strtok(NULL, DELIMITERS);
 	if ( categoryName == NULL ) {
 		debug_printf( DEBUG_QUIET, 
-					  "%s (line %d): Missing MAXJOBS category name\n",
+					  "ERROR: %s (line %d): Missing MAXJOBS category name\n",
 					  filename, lineNumber );
 		exampleSyntax( example );
 		return false;
@@ -1778,7 +1830,7 @@ parse_maxjobs(
 	const char *valueStr = strtok(NULL, DELIMITERS);
 	if ( valueStr == NULL ) {
 		debug_printf( DEBUG_QUIET, 
-					  "%s (line %d): Missing MAXJOBS value\n",
+					  "ERROR: %s (line %d): Missing MAXJOBS value\n",
 					  filename, lineNumber );
 		exampleSyntax( example );
 		return false;
@@ -1789,14 +1841,14 @@ parse_maxjobs(
 	maxJobsVal = (int)strtol( valueStr, &tmp, 10 );
 	if( tmp == valueStr ) {
 		debug_printf( DEBUG_QUIET,
-					  "%s (line %d): Invalid MAXJOBS value \"%s\"\n",
+					  "ERROR: %s (line %d): Invalid MAXJOBS value \"%s\"\n",
 					  filename, lineNumber, valueStr );
 		exampleSyntax( example );
 		return false;
 	}
 	if ( maxJobsVal < 0 ) {
 		debug_printf( DEBUG_QUIET,
-					  "%s (line %d): MAXJOBS value must be non-negative\n",
+					  "ERROR: %s (line %d): MAXJOBS value must be non-negative\n",
 					  filename, lineNumber );
 		return false;
 	}
@@ -1807,7 +1859,7 @@ parse_maxjobs(
 	valueStr = strtok(NULL, DELIMITERS);
 	if ( valueStr != NULL ) {
 		debug_printf( DEBUG_QUIET,
-					  "%s (line %d): Extra token (%s) on MAXJOBS line\n",
+					  "ERROR: %s (line %d): Extra token (%s) on MAXJOBS line\n",
 					  filename, lineNumber, valueStr );
 		exampleSyntax( example );
 		return false;
@@ -1838,7 +1890,7 @@ parse_node_status_file(
 	char *statusFileName = strtok(NULL, DELIMITERS);
 	if (statusFileName == NULL) {
 		debug_printf( DEBUG_QUIET,
-					  "%s (line %d): Missing node status file name,\n",
+					  "ERROR: %s (line %d): Missing node status file name,\n",
 					  filename, lineNumber );
 		exampleSyntax( example );
 		return false;
@@ -1851,7 +1903,7 @@ parse_node_status_file(
 		minUpdateTime = (int)strtol( minUpdateStr, &tmp, 10 );
 		if ( tmp == minUpdateStr ) {
 			debug_printf( DEBUG_QUIET,
-					  	"%s (line %d): Invalid min update time value \"%s\"\n",
+					  	"ERROR: %s (line %d): Invalid min update time value \"%s\"\n",
 					  	filename, lineNumber, minUpdateStr );
 			exampleSyntax( example );
 			return false;
@@ -1878,7 +1930,7 @@ parse_node_status_file(
 	char *token = strtok( NULL, DELIMITERS );
 	if ( token != NULL ) {
 		debug_printf( DEBUG_QUIET,
-					  "%s (line %d): Extra token (%s) on NODE_STATUS_FILE line\n",
+					  "ERROR: %s (line %d): Extra token (%s) on NODE_STATUS_FILE line\n",
 					  filename, lineNumber, token );
 		exampleSyntax( example );
 		return false;
@@ -1905,7 +1957,7 @@ parse_reject(
 
 	char *token = strtok(NULL, DELIMITERS);
 	if ( token != NULL ) {
-		debug_printf( DEBUG_QUIET, "%s (line %d): REJECT should have "
+		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): REJECT should have "
 					"no additional tokens.\n",
 					filename, lineNumber );
 		exampleSyntax( example );
@@ -1940,7 +1992,7 @@ parse_jobstate_log(
 	char *logFileName = strtok(NULL, DELIMITERS);
 	if (logFileName == NULL) {
 		debug_printf( DEBUG_QUIET,
-					  "%s (line %d): Missing jobstate log file name,\n",
+					  "ERROR: %s (line %d): Missing jobstate log file name,\n",
 					  filename, lineNumber );
 		exampleSyntax( example );
 		return false;
@@ -1952,7 +2004,7 @@ parse_jobstate_log(
 	char *extraTok = strtok( NULL, DELIMITERS );
 	if ( extraTok != NULL ) {
 		debug_printf( DEBUG_QUIET,
-					  "%s (line %d): Extra token (%s) on JOBSTATE_LOG line\n",
+					  "ERROR: %s (line %d): Extra token (%s) on JOBSTATE_LOG line\n",
 					  filename, lineNumber, extraTok );
 		exampleSyntax( example );
 		return false;
@@ -1982,7 +2034,7 @@ parse_pre_skip( Dag  *dag,
 		//
 	const char *jobName = strtok( NULL, DELIMITERS );
 	if ( jobName == NULL ) {
-		debug_printf( DEBUG_QUIET, "%s (line %d): Missing job name\n",
+		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): Missing job name\n",
 				filename, lineNumber );
 		exampleSyntax( example );
 		return false;
@@ -1991,7 +2043,7 @@ parse_pre_skip( Dag  *dag,
 	const char *jobNameOrig = jobName; // for error output
 	if ( isReservedWord(jobName) ) {
 		debug_printf( DEBUG_QUIET,
-				"%s (line %d): JobName cannot be a reserved word\n",
+				"ERROR: %s (line %d): JobName cannot be a reserved word\n",
 				filename, lineNumber );
 		exampleSyntax( example );
 		return false;
@@ -2003,7 +2055,7 @@ parse_pre_skip( Dag  *dag,
 		job = dag->FindNodeByName( jobName );
 		if (job == NULL) {
 			debug_printf( DEBUG_QUIET, 
-					"%s (line %d): Unknown Job %s\n",
+					"ERROR: %s (line %d): Unknown Job %s\n",
 					filename, lineNumber, jobNameOrig );
 			return false;
 		}
@@ -2014,7 +2066,7 @@ parse_pre_skip( Dag  *dag,
 		//
 	const char *exitCodeStr = strtok( NULL, DELIMITERS );
 	if ( exitCodeStr == NULL ) {
-		debug_printf( DEBUG_QUIET, "%s (line %d): Missing exit code\n",
+		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): Missing exit code\n",
 				filename, lineNumber );
 		exampleSyntax( example );
 		return false;
@@ -2024,7 +2076,7 @@ parse_pre_skip( Dag  *dag,
 	int exitCode = (int)strtol( exitCodeStr, &tmp, 10 );
 	if ( tmp == exitCodeStr ) {
 		debug_printf( DEBUG_QUIET,
-				"%s (line %d): Invalid exit code \"%s\"\n",
+				"ERROR: %s (line %d): Invalid exit code \"%s\"\n",
 				filename, lineNumber, exitCodeStr );
 		exampleSyntax( example );
 		return false;
@@ -2068,7 +2120,7 @@ parse_done(
 	const char *jobName = strtok( NULL, DELIMITERS );
 	if ( jobName == NULL ) {
 		debug_printf( DEBUG_QUIET,
-					  "%s (line %d): Missing job name\n",
+					  "ERROR: %s (line %d): Missing job name\n",
 					  filename, lineNumber );
 		exampleSyntax( example );
 		return false;
@@ -2084,7 +2136,7 @@ parse_done(
 	char *extraTok = strtok( NULL, DELIMITERS );
 	if ( extraTok != NULL ) {
 		debug_printf( DEBUG_QUIET,
-					  "%s (line %d): Extra token (%s) on DONE line\n",
+					  "ERROR: %s (line %d): Extra token (%s) on DONE line\n",
 					  filename, lineNumber, extraTok );
 		exampleSyntax( example );
 		return false;

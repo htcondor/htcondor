@@ -1,0 +1,26 @@
+NODE_STATUS_FILE job_dagman_script_defer.status
+JOBSTATE_LOG job_dagman_script_defer.jobstate.log
+
+# Note:  temporarily(?) changed jobs to "real" jobs, because the
+# test framework doesn't like NOOP nodes in this test.
+
+job NodeA job_dagman_script_defer-node.cmd
+#delete counters
+script defer 3 30 pre NodeA ./job_dagman_script_defer_Apre.pl
+
+job NodeB job_dagman_script_defer-node.cmd
+# fail at least once
+script defer 4 20 pre NodeB ./job_dagman_script_defer_Bpre.pl
+parent NodeA child NodeB
+
+job NodeC job_dagman_script_defer-node.cmd
+# fail at least once
+script defer 5 25 post NodeC ./job_dagman_script_defer_Cpost.pl
+parent NodeB child NodeC
+
+# Note:  I think this node will cause a race condition in checking
+# the jobstate.log file, so I'm commenting it out for now.
+# wenger 2015-03-27
+# This node will hold and release the DAG.
+# job NodeD job_dagman_script_defer-nodeD.cmd
+# parent NodeC child NodeD

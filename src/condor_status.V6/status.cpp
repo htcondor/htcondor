@@ -35,10 +35,14 @@
 #include "error_utils.h"
 #include "condor_distribution.h"
 #include "condor_version.h"
+#include "natural_cmp.h"
 
 #include <vector>
 #include <sstream>
 #include <iostream>
+
+// if enabled, use natural_cmp for numerical sorting of hosts/slots
+#define STRVCMP (naturalSort ? natural_cmp : strcmp)
 
 using std::vector;
 using std::string;
@@ -107,13 +111,16 @@ char		buffer[1024];
 char		*myName;
 vector<SortSpec> sortSpecs;
 bool            noSort = false; // set to true to disable sorting entirely
+bool            naturalSort = true;
 bool            javaMode = false;
 bool			vmMode = false;
-bool        absentMode = false;
+bool			absentMode = false;
+bool			offlineMode = false;
 char 		*target = NULL;
 const char * ads_file = NULL; // read classads from this file instead of querying them from the collector
 ClassAd		*targetAd = NULL;
 ArgList projList;		// Attributes that we want the server to send us
+StringList dashAttributes; // Attributes specifically requested via the -attributes argument
 
 // instantiate templates
 
@@ -129,8 +136,10 @@ static bool read_classad_file(const char *filename, ClassAdList &classads, const
 
 extern "C" int SetSyscalls (int) {return 0;}
 extern	void setPPstyle (ppOption, int, const char *);
+extern  void setPPwidth ();
 extern	void setType    (const char *, int, const char *);
 extern	void setMode 	(Mode, int, const char *);
+extern  int  forced_display_width;
 
 int
 main (int argc, char *argv[])
@@ -300,7 +309,22 @@ main (int argc, char *argv[])
 		projList.AppendArg(ATTR_JAVA_VERSION);
 
 	}
-	
+
+	if(offlineMode) {
+		query->addANDConstraint( "size( OfflineUniverses ) != 0" );
+
+		projList.AppendArg( "OfflineUniverses" );
+
+		//
+		// Since we can't add a regex to a projection, explicitly list all
+		// the attributes we know about.
+		//
+
+		projList.AppendArg( "HasVM" );
+		projList.AppendArg( "VMOfflineReason" );
+		projList.AppendArg( "VMOfflineTime" );
+	}
+
 	if(absentMode) {
 	    sprintf( buffer, "%s == TRUE", ATTR_ABSENT );
 	    if (diagnose) {
@@ -367,6 +391,14 @@ main (int argc, char *argv[])
 	    // Remove everything from the projection list if we're displaying
 	    // the "long form" of the ads.
 	    projList.Clear();
+		// but if -attributes was supplied, show only those attributes
+		if ( ! dashAttributes.isEmpty()) {
+			const char * s;
+			dashAttributes.rewind();
+			while ((s = dashAttributes.next())) {
+				projList.AppendArg(s);
+			}
+		}
 	}
 
 	if( projList.Count() > 0 ) {
@@ -569,6 +601,7 @@ int set_status_print_mask_from_stream (
 	std::string where_expr;
 	std::string messages;
 	StringList attrs;
+	printmask_aggregation_t aggregation;
 
 	SimpleInputStream * pstream = NULL;
 	*pconstraint = NULL;
@@ -593,12 +626,18 @@ int set_status_print_mask_from_stream (
 					*getCondorStatusPrintFormats(),
 					pm,
 					pmHeadFoot,
+					aggregation,
 					group_by_keys,
 					where_expr,
 					attrs,
 					messages);
 	delete pstream; pstream = NULL;
 	if ( ! err) {
+		if (aggregation != PR_NO_AGGREGATION) {
+			fprintf(stderr, "print-format aggregation not supported\n");
+			return -1;
+		}
+
 		if ( ! where_expr.empty()) {
 			*pconstraint = pm.store(where_expr.c_str());
 			//if ( ! validate_constraint(*pconstraint)) {
@@ -667,13 +706,15 @@ static bool read_classad_file(const char *filename, ClassAdList &classads, const
 void
 usage ()
 {
-	fprintf (stderr,"Usage: %s [help-opt] [query-opt] [display-opt] "
-		"[custom-opts ...] [name ...]\n"
-		"    where [help-opt] is one of\n"
+	fprintf (stderr,"Usage: %s [help-opt] [query-opt] [custom-opts] [display-opts] [name ...]\n", myName);
+
+	fprintf (stderr,"    where [help-opt] is one of\n"
 		"\t-help\t\t\tPrint this screen and exit\n"
 		"\t-version\t\tPrint HTCondor version and exit\n"
 		"\t-diagnose\t\tPrint out query ad without performing query\n"
-		"    and [query-opt] is one of\n"
+		);
+
+	fprintf (stderr,"\n    and [query-opt] is one of\n"
 		"\t-absent\t\t\tPrint information about absent resources\n"
 		"\t-avail\t\t\tPrint information about available resources\n"
 		"\t-ckptsrvr\t\tDisplay checkpoint server attributes\n"
@@ -704,30 +745,45 @@ usage ()
 		"\t-any\t\t\tDisplay any resources\n"
 		"\t-state\t\t\tDisplay state of resources\n"
 		"\t-submitters\t\tDisplay information about request submitters\n"
-//      "\t-statistics <set>:<n>\tDisplay statistics for <set> at level <n>\n"
-//      "\t\t\t\tsee STATISTICS_TO_PUBLISH for valid <set> and level values\n"
 //		"\t-world\t\t\tDisplay all pools reporting to UW collector\n"
-		"    and [display-opt] is one of\n"
+		);
+
+	fprintf (stderr, "\n    and [custom-opts ...] are one or more of\n"
+		"\t-constraint <const>\tAdd constraint on classads\n"
+		"\t-statistics <set>:<n>\tDisplay statistics for <set> at level <n>\n"
+		"\t\t\t\tsee STATISTICS_TO_PUBLISH for valid <set> and level values\n"
+		"\t\t\t\tuse with -direct queries to STARTD and SCHEDD daemons\n"
+		"\t-target <file>\t\tUse target classad with -format or -af evaluation\n"
+		"\n    and [display-opts] are one or more of\n"
 		"\t-long\t\t\tDisplay entire classads\n"
 		"\t-sort <expr>\t\tSort entries by expressions. 'no' disables sorting\n"
+		"\t-natural[:off]\t\tUse natural sort order in default output (default=on)\n"
 		"\t-total\t\t\tDisplay totals only\n"
-		"\t-verbose\t\tSame as -long\n"
-		"\t-wide\t\t\tdon't truncate data to fit in 80 columns.\n"
+//		"\t-verbose\t\tSame as -long\n"
+		"\t-expert\t\t\tDisplay shorter error messages\n"
+		"\t-wide[:<width>]\t\tDon't truncate data to fit in 80 columns.\n"
+		"\t\t\t\tTruncates to console width or <width> argument if specified.\n"
 		"\t-xml\t\t\tDisplay entire classads, but in XML\n"
 		"\t-attributes X,Y,...\tAttributes to show in -xml or -long \n"
-		"\t-expert\t\t\tDisplay shorter error messages\n"
-		"    and [custom-opts ...] are one or more of\n"
-		"\t-constraint <const>\tAdd constraint on classads\n"
-		"\t-format <fmt> <attr>\tRegister display format and attribute\n"
-		"\t-autoformat:[V,ntlh] <attr> [attr2 [attr3 ...]]\t    Print attr(s) with automatic formatting\n"
-		"\t\tV\tUse %%V formatting\n"
-		"\t\t,\tComma separated (default is space separated)\n"
-		"\t\tt\tTab separated\n"
-		"\t\tn\tNewline after each attribute\n"
-		"\t\tl\tLabel each value\n"
-		"\t\th\tHeadings\n"
-		"\t-target filename\tIf -format or -af is used, the option target classad\n",
-		myName);
+		"\t-format <fmt> <attr>\tDisplay <attr> values with formatting\n"
+		"\t-autoformat[:lhVr,tng] <attr> [<attr2> [...]]\n"
+		"\t-af[:lhVr,tng] <attr> [attr2 [...]]\n"
+		"\t    Print attr(s) with automatic formatting\n"
+		"\t    the [lhVr,tng] options modify the formatting\n"
+		"\t        j   Display Job id\n"
+		"\t        l   attribute labels\n"
+		"\t        h   attribute column headings\n"
+		"\t        V   %%V formatting (string values are quoted)\n"
+		"\t        r   %%r formatting (raw/unparsed values)\n"
+		"\t        t   tab before each value (default is space)\n"
+		"\t        g   newline between ClassAds, no space before values\n"
+		"\t        ,   comma after each value\n"
+		"\t        n   newline after each value\n"
+		"\t    use -af:h to get tabular values with headings\n"
+		"\t    use -af:lrng to get -long equivalant format\n"
+		"\t-print-format <file>\tUse <file> to set display attributes and formatting\n"
+		"\t\t\t(experimental, see htcondor-wiki for more information)\n"
+		);
 }
 
 void
@@ -834,9 +890,22 @@ firstPass (int argc, char *argv[])
 			++i; // eat the next argument.
 			// we can't fully parse the print format argument until the second pass, so we are done for now.
 		} else
-		if (matchPrefix (argv[i], "-wide", 3)) {
+		if (is_dash_arg_colon_prefix (argv[i], "wide", &pcolon, 3)) {
 			wide_display = true; // when true, don't truncate field data
+			if (pcolon) {
+				forced_display_width = atoi(++pcolon);
+				if (forced_display_width <= 80) wide_display = false;
+				setPPwidth();
+			}
 			//invalid_fields_empty = true;
+		} else
+		if (is_dash_arg_colon_prefix (argv[i], "natural", &pcolon, 3)) {
+			naturalSort = true;
+			if (pcolon) {
+				if (MATCH == strcmp(++pcolon,"off")) {
+					naturalSort = false;
+				}
+			}
 		} else
 		if (matchPrefix (argv[i], "-target", 5)) {
 			if( !argv[i+1] ) {
@@ -891,6 +960,7 @@ firstPass (int argc, char *argv[])
 			exit (0);
 		} else
 		if (matchPrefix (argv[i], "-long", 2) || matchPrefix (argv[i],"-verbose", 3)) {
+			//PRAGMA_REMIND("tj: remove -verbose as a synonym for -long")
 			setPPstyle (PP_VERBOSE, i, argv[i]);
 		} else
 		if (matchPrefix (argv[i],"-xml", 2)){
@@ -916,6 +986,9 @@ firstPass (int argc, char *argv[])
 		} else
 		if (matchPrefix (argv[i], "-absent", 3)) {
 			/*explicit_mode =*/ absentMode = true;
+		} else
+		if (matchPrefix (argv[i], "-offline", 3)) {
+			/*explicit_mode =*/ offlineMode = true;
 		} else
 		if (matchPrefix (argv[i], "-vm", 3)) {
 			/*explicit_mode =*/ vmMode = true;
@@ -987,6 +1060,9 @@ firstPass (int argc, char *argv[])
 				fprintf( stderr, "Use \"%s -help\" for details\n", myName );
 				exit(1);
 			} else {
+				if (genericType) {
+					free(genericType);
+				}
 				genericType = strdup(argv[i]);
 				setMode (MODE_OTHER, i, argv[i]);
 			}
@@ -1131,7 +1207,7 @@ secondPass (int argc, char *argv[])
 
 			StringList attributes;
 			ClassAd ad;
-			if(!ad.GetExprReferences(argv[i+2],attributes,attributes)){
+			if(!ad.GetExprReferences(argv[i+2],NULL,&attributes)){
 				fprintf( stderr, "Error:  Parse error of: %s\n", argv[i+2]);
 				exit(1);
 			}
@@ -1162,7 +1238,9 @@ secondPass (int argc, char *argv[])
 
 			bool flabel = false;
 			bool fCapV  = false;
+			bool fRaw = false;
 			bool fheadings = false;
+			const char * prowpre = NULL;
 			const char * pcolpre = " ";
 			const char * pcolsux = NULL;
 			if (pcolon) {
@@ -1172,21 +1250,23 @@ secondPass (int argc, char *argv[])
 					{
 						case ',': pcolsux = ","; break;
 						case 'n': pcolsux = "\n"; break;
+						case 'g': pcolpre = NULL; prowpre = "\n"; break;
 						case 't': pcolpre = "\t"; break;
 						case 'l': flabel = true; break;
 						case 'V': fCapV = true; break;
+						case 'r': case 'o': fRaw = true; break;
 						case 'h': fheadings = true; break;
 					}
 					++pcolon;
 				}
 			}
-			pm.SetAutoSep(NULL, pcolpre, pcolsux, "\n");
+			pm.SetAutoSep(prowpre, pcolpre, pcolsux, "\n");
 
 			while (argv[i+1] && *(argv[i+1]) != '-') {
 				++i;
 				ClassAd ad;
 				StringList attributes;
-				if(!ad.GetExprReferences(argv[i],attributes,attributes)){
+				if(!ad.GetExprReferences(argv[i],NULL,&attributes)){
 					fprintf( stderr, "Error:  Parse error of: %s\n", argv[i]);
 					exit(1);
 				}
@@ -1207,7 +1287,7 @@ secondPass (int argc, char *argv[])
 					pm_head.Append(hd);
 				}
 				else if (flabel) { lbl.formatstr("%s = ", argv[i]); wid = 0; opts = 0; }
-				lbl += fCapV ? "%V" : "%v";
+				lbl += fRaw ? "%r" : (fCapV ? "%V" : "%v");
 				if (diagnose) {
 					printf ("Arg %d --- register format [%s] width=%d, opt=0x%x for [%s]\n",
 							i, lbl.Value(), wid, opts,  argv[i]);
@@ -1233,6 +1313,7 @@ secondPass (int argc, char *argv[])
 			}
 			ppTotalStyle = ppStyle;
 			setPPstyle (PP_CUSTOM, i, argv[i]);
+			setPPwidth();
 			++i; // skip to the next argument.
 			if (set_status_print_mask_from_stream(argv[i], true, &mode_constraint) < 0) {
 				fprintf(stderr, "Error: invalid select file %s\n", argv[i]);
@@ -1278,6 +1359,7 @@ secondPass (int argc, char *argv[])
 			more_attrs.rewind();
 			while( (s=more_attrs.next()) ) {
 				projList.AppendArg(s);
+				dashAttributes.append(s);
 			}
 			i++;
 			continue;
@@ -1408,7 +1490,7 @@ lessThanFunc(AttrList *ad1, AttrList *ad2, void *)
 		buf1 = "";
 		buf2 = "";
 	}
-	val = strcmp( buf1.Value(), buf2.Value() );
+	val = STRVCMP( buf1.Value(), buf2.Value() );
 	if( val ) {
 		return (val < 0);
 	}
@@ -1416,7 +1498,7 @@ lessThanFunc(AttrList *ad1, AttrList *ad2, void *)
 	if (!ad1->LookupString(ATTR_NAME, buf1) ||
 		!ad2->LookupString(ATTR_NAME, buf2))
 		return 0;
-	return ( strcmp( buf1.Value(), buf2.Value() ) < 0 );
+	return ( STRVCMP( buf1.Value(), buf2.Value() ) < 0 );
 }
 
 

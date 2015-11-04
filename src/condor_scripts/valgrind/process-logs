@@ -1,0 +1,368 @@
+#! /p/condor/workspaces/build/bin/perl -w
+use strict;
+use XML::Simple;
+use Data::Dumper;
+
+#***************************************************************
+#*
+#* Copyright (C) 2015, HTCondor Team, Computer Sciences Department,
+#* University of Wisconsin-Madison, WI.
+#*
+#* Licensed under the Apache License, Version 2.0 (the "License"); you
+#* may not use this file except in compliance with the License.  You may
+#* obtain a copy of the License at
+#*
+#*    http://www.apache.org/licenses/LICENSE-2.0
+#*
+#* Unless required by applicable law or agreed to in writing, software
+#* distributed under the License is distributed on an "AS IS" BASIS,
+#* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#* See the License for the specific language governing permissions and
+#* limitations under the License.
+#*
+#***************************************************************/
+
+if(@ARGV == 0 or $ARGV[0] =~ /^--?h/i) {
+	die "Usage: $0 [files and directories to real XML Valgrind output from]\n";
+}
+
+
+my @files;
+
+print STDERR "Looking for XML logs... ";
+foreach (@ARGV) {
+	push @files, add_item($_);
+}
+my $count = @files;
+print STDERR "Done. $count found.\n";
+
+my %problems;
+my %problems_by_stack;
+print STDERR "Reading XML logs... ";
+for(my $i = 0; $i < @files; $i++) {
+	print "$files[$i]\n";
+	process_file($files[$i]);
+	if(($i % 10) == 0) {
+		print STDERR "$i... ";
+	}
+}
+print STDERR "Done.\n";
+
+print STDERR "Writing HTML... ";
+mkdir("out");
+dump_html();
+dump_html_by_stack();
+print STDERR "Done.\n";
+
+sub add_files {
+	my($path) = @_;
+	my @files;
+	opendir my $D, $path or die "Unable to opendir($path): $!";
+	while(my $file = readdir $D) {
+		next if $file =~ /^\./;
+		push @files, add_item("$path/$file");	
+	}
+	closedir $D;
+	return @files;
+}
+
+sub add_item {
+	my($path) = @_;
+	if(-d $path) { return add_files($path); }
+	if(-f $path and $path =~ /\.xml$/i) { return $path; }
+	return;
+}
+
+
+sub process_file {
+	local($_) = @_;
+	local $/;
+	open my $in, "<", $_ or die "Unable to open(<$_): $!";
+	my $body = <$in>;
+
+	# XML::Simple isn't interested in helping...
+	$body =~ s/\s*$//; 
+	if($body !~ /<\/valgrindoutput>/) {
+		$body .= "</valgrindoutput>";
+	}
+
+	close $in;
+	my $xml = XMLin($body);
+
+	my $exe = $xml->{args}{argv}{exe};
+	if(exists $xml->{error}) {
+		my @errors;
+		if(ref($xml->{error}) eq "ARRAY") {
+			@errors = @{$xml->{error}};
+		} elsif(ref($xml->{error}) eq "HASH") {
+			@errors = $xml->{error};
+		} else {
+			die "error was of type ",ref($xml->{error}), " and I don't know what to do with that.";
+		}
+		foreach my $e (@errors) {
+			my $kind = $e->{kind};
+			my $msg = $e->{xwhat}{text} || $e->{what};
+
+			my $stackid = '';
+			my @frames;
+			if(exists $e->{stack}) {
+				if(ref($e->{stack}) eq "HASH") {
+					@frames = @{$e->{stack}{frame}};
+				} elsif(ref($e->{stack}) eq "ARRAY") {
+					foreach my $block (@{$e->{stack}}) {
+						push @frames, @{$block->{frame}};
+					}
+				} else {
+					die "Odd";
+				}
+				$stackid = Dumper(@frames);
+			}
+
+			if(not exists $problems{$exe}{$kind}{$stackid}) {
+				$problems{$exe}{$kind}{$stackid} = [];
+			}
+			my $stackid_short = stackid_short(2, @frames);
+			if(not exists $problems_by_stack{$stackid_short}) {
+				$problems_by_stack{$stackid_short}{$exe}{$stackid} = [];
+			}
+
+			my %problem;
+			$problem{kind} = $kind;
+			$problem{msg} = $msg;
+			$problem{logfile} = $_;
+			$problem{stack} = \@frames;
+			if(exists $e->{xwhat} and exists $e->{xwhat}{leakedbytes}) {
+				$problem{leakedbytes} = $e->{xwhat}{leakedbytes};
+			}
+			if(exists $e->{xwhat} and exists $e->{xwhat}{leakedblocks}) {
+				$problem{leakedblocks} = $e->{xwhat}{leakedblocks};
+			}
+
+			push @{$problems{$exe}{$kind}{$stackid}}, \%problem;
+
+			push @{$problems_by_stack{$stackid_short}{$exe}{$stackid}}, \%problem;
+
+		}
+	}
+}
+
+
+sub dump_tsv {
+	foreach my $exename (sort keys %problems) {
+		my $exe = $problems{$exename};
+		my($basename) = ($exename =~ /([^\/]+)$/);
+		foreach my $kind (sort keys %{$exe}) {
+			my $entries = $exe->{$kind};
+			foreach my $stackid (sort keys %{$entries}) {
+				my @problems = @{$exe->{$stackid}};
+				foreach my $problem (@problems) {
+					print "$basename\t$problem->{kind}\t$problem->{msg}\t$problem->{logfile}\t$exename";
+					foreach my $frame (@{$problem->{stack}}) {
+						my $fn = frame_displayname($frame);
+						print "\t$fn";
+					}
+					print "\n";
+				}
+			}
+		}
+	}
+}
+
+sub escape_html {
+	foreach (@_) {
+		s/&/&amp;/g;
+		s/</&lt;/g;
+		s/>/&gt;/g;
+	}
+	return @_;
+}
+
+sub html_header {
+	my($title)= escape_html($_[0]);
+	return <<END;
+<html><head>
+<title>$title</title>
+<style>
+table {
+	border-collapse: collapse;
+	margin-left: 2em;
+	border-left: 1px solid #777;
+	padding-left: 1em;
+	margin-top: 1em;
+}
+td,th {
+	padding-right: 0.1em;
+	white-space: nowrap;
+}
+p {
+	margin-left: 2em;
+}
+</style>
+</head>
+<body>
+<h1>$title</h1>
+END
+}
+sub html_footer {
+	return "</body></html>\n";
+}
+
+sub dump_html_by_stack {
+			#push @{$problems_by_stack{$stackid_short}{$exe}{$stackid}}, \%problem;
+	my $id = 0;
+	foreach my $stackid_short (sort keys %problems_by_stack) {
+		$id++;
+		my $file = sprintf("out/%08d.html", $id);
+		open my $OUT, '>', $file
+			or die "Unable to open(>$file)";
+		print $OUT html_header("Error #$id");
+		print $OUT html_footer();
+
+		my(%exes) = %{$problems_by_stack{$stackid_short}};
+
+		foreach my $exe (sort keys %exes) {
+			my($basename) = ($exe =~ /([^\/]+)$/);
+			print $OUT "<h2>$basename</h2>\n";
+
+			my(%stacks) = %{$exes{$exe}};
+			my $subid = 0;
+			foreach my $stack (sort keys %stacks) {
+				$subid++;
+				my @problems = @{$stacks{$stack}};
+				@problems = sort { $a->{msg} cmp $b->{msg} } @problems;
+				my $num_problems = @problems;
+				my $kind = '';
+				if(@problems){
+					$kind = $problems[0]{kind};
+				}
+				print $OUT "<h3>$kind, $num_problems instances</h3>\n";
+
+				{
+					my $last = '';
+					my $repeat = 0;
+					foreach my $problem (@problems) {
+						my $msg = $problem->{msg};
+						$msg =~ s/record \d+ of \d+//;
+						if($msg ne $last) {
+							if($repeat) {
+								print $OUT "<p>&nbsp;&nbsp; ^ Repeats $repeat times\n";
+								$repeat = 0;
+							}
+							print $OUT "<p>$problem->{kind}: $problem->{msg}\n";
+						} else {
+							$repeat++;
+						}
+						$last = $msg;
+					}
+					if($repeat) {
+						print $OUT "<p>&nbsp;&nbsp; ^ Repeats $repeat times\n";
+						$repeat = 0;
+					}
+				}
+
+				print $OUT "<p>Stack:\n<table>\n";
+				foreach my $frame (@{$problems[0]{stack}}) {
+					print $OUT html_frame_table($frame);
+				}
+				print $OUT "</table>\n";
+			}
+		}
+	}
+}
+
+sub dump_html {
+	foreach my $exename (sort keys %problems) {
+		my $exe = $problems{$exename};
+		my($basename) = ($exename =~ /([^\/]+)$/);
+		open my $OUT, '>', "out/$basename.html"
+			or die "Unable to open(>out/$basename.html)";
+		print $OUT html_header($basename);
+		print $OUT "<p>$exename\n";
+		foreach my $kind (sort keys %{$exe}) {
+			my $entries = $exe->{$kind};
+			foreach my $stackid (sort keys %{$entries}) {
+				my @problems = @{$entries->{$stackid}};
+				@problems = sort { $a->{msg} cmp $b->{msg} } @problems;
+				my $num_problems = @problems;
+				print $OUT "<h2>", escape_html($problems[0]{kind}), ": $num_problems instances";
+				if(exists $problems[0]{leakedbytes} and exists $problems[0]{leakedblocks}) {
+					print $OUT ", $problems[0]{leakedbytes} bytes leaked in $problems[0]{leakedblocks} allocations";
+
+				}
+				print $OUT "</h2>\n";
+				{
+					my $last = '';
+					my $repeat = 0;
+					foreach my $problem (@problems) {
+						my $msg = $problem->{msg};
+						$msg =~ s/record \d+ of \d+//;
+						if($msg ne $last) {
+							if($repeat) {
+								print $OUT "<p>&nbsp;&nbsp; ^ Repeats $repeat times\n";
+								$repeat = 0;
+							}
+							print $OUT "<p>$problem->{msg}\n";
+						} else {
+							$repeat++;
+						}
+						$last = $msg;
+					}
+					if($repeat) {
+						print $OUT "<p>&nbsp;&nbsp; ^ Repeats $repeat times\n";
+						$repeat = 0;
+					}
+				}
+				print $OUT "<p>Stack:\n<table>\n";
+				foreach my $frame (@{$problems[0]{stack}}) {
+					print $OUT html_frame_table($frame);
+				}
+				print $OUT "</table>\n";
+			}
+		}
+		print $OUT html_footer();
+	}
+}
+
+sub html_frame_table {
+	my($frame) = @_;
+	my $fn = $frame->{fn} || "";
+	my $dir = $frame->{dir} || "";
+	$dir .= "/" if length $dir;
+	my $file = $frame->{file} || "";
+	my $line = $frame->{line} || "";
+	my $obj = $frame->{obj} || "";
+	my $ip = $frame->{ip} || "";
+	return "<tr><td>$fn</td><td>$dir$file:$line</td><td>$obj</td><td>$ip</td></tr>\n";
+}
+
+sub stackid_short {
+	my($depth, @frames) = @_;
+	my $stackid = '';
+	while($depth > 0 and @frames) {
+		my $frame = shift @frames;
+		my(%frame) = %{$frame};
+		undef $frame{ip}; # Address randomize risk.
+		$stackid .= Dumper(\%frame);
+		if(exists $frame->{file} and $frame->{file} =~ /CONDOR_SRC/) {
+			$depth--;
+		}
+	}
+	return $stackid;
+}
+
+sub frame_displayname {
+	my($frame) = @_;
+	my %frame = %{$frame};
+	my $output = '';
+	$output .= "$frame{fn} " if exists $frame{fn};
+	if(exists $frame{file}) {
+		my $line = $frame{line} || "unknown";
+		$output .= "$frame{dir}/" if exists $frame{dir};
+		$output .= "$frame{file}:$frame{line}";
+	} else {
+		$output .= "$frame{obj} " if exists $frame{obj};
+		$output .= "$frame{ip} " if exists $frame{ip};
+	}
+	return $output;
+}
+

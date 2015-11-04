@@ -284,6 +284,7 @@ utilSafeGetFile( ReliSock& socket, const MyString& filePath )
 
 	char* buffer  = (char *) malloc( ( FILE_CHUNK_SIZE ) * sizeof( char ) );
 	char* localMd = (char *) malloc( ( MAC_SIZE ) * sizeof( char ) );
+	ASSERT(buffer && localMd && md);
 	
     MD5_CTX  md5Context;
 	// initializing MD5 structures

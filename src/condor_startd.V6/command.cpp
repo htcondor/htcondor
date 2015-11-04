@@ -290,23 +290,35 @@ command_pckpt_all( Service*, int, Stream* )
 int
 command_x_event( Service*, int, Stream* s ) 
 {
-	dprintf( D_FULLDEBUG, "command_x_event() called.\n" );
+	// Simple attempt to avoid D_ALWAYS warnings from registering twice.
+	static Stream * lastStashed = NULL;
 
 		// Only trust events over the network if the network message
 		// originated from our local machine.
 	if ( !s ||							// trust calls from within the startd
 		 (s && s->peer_is_local())		// trust only sockets from local machine
-	   ) 
+	   )
 	{
 		sysapi_last_xevent();
 	} else {
-		dprintf( D_ALWAYS, 
+		dprintf( D_ALWAYS,
 			"ERROR command_x_event received from %s is not local - discarded\n",
 			s->peer_ip_str() );
 	}
 
 	if( s ) {
 		s->end_of_message();
+
+		if( lastStashed != s ) {
+			int rc = daemonCore->Register_Command_Socket( s, "kbdd socket" );
+			if( rc < 0 ) {
+				dprintf( D_ALWAYS, "Failed to register kbdd socket for updates: error %d.\n", rc );
+				return FALSE;
+			}
+			lastStashed = s;
+		}
+
+		return KEEP_STREAM;
 	}
 	return TRUE;
 }
@@ -360,7 +372,7 @@ command_request_claim( Service*, int cmd, Stream* stream )
 		return FALSE;
 	}
 
-	rip = resmgr->get_by_any_id( id );
+	rip = resmgr->get_by_any_id( id, true );
 	if( !rip ) {
 		ClaimIdParser idp( id );
 		dprintf( D_ALWAYS, 
@@ -482,8 +494,10 @@ command_release_claim( Service*, int cmd, Stream* stream )
 		}
 	}
 
-	// This should never happen unless get_by_any_id() changes.
-	EXCEPT("Neither pre nor cur claim matches claim id: %s",id);
+	// This must be a consumption policy claim id, for which a release
+	// action isn't valid.
+	rip->log_ignore( cmd, s );
+	free( id );
 	return FALSE;
 }
 
@@ -502,7 +516,7 @@ int command_suspend_claim( Service*, int cmd, Stream* stream )
 		return FALSE;
 	}
 
-	rip = resmgr->get_by_any_id( id );
+	rip = resmgr->get_by_cur_id( id );
 	if( !rip ) {
 		ClaimIdParser idp( id );
 		dprintf( D_ALWAYS, "Error: can't find resource with ClaimId (%s) for %d (%s)\n", idp.publicClaimId(), cmd, getCommandString(cmd) );
@@ -540,7 +554,7 @@ int command_continue_claim( Service*, int cmd, Stream* stream )
 		return FALSE;
 	}
 
-	rip = resmgr->get_by_any_id( id );
+	rip = resmgr->get_by_cur_id( id );
 	if( !rip ) 
 	{
 		ClaimIdParser idp( id );
@@ -681,7 +695,7 @@ command_match_info( Service*, int cmd, Stream* stream )
 		// Check resource state.  Ignore if we're preempting or
 		// matched, otherwise process the command. 
 	State s = rip->state();
-	if( s == matched_state || s == preempting_state ) {
+	if( s == matched_state || s == preempting_state || rip->r_has_cp ) {
 		rip->log_ignore( MATCH_INFO, s );
 		rval = FALSE;
 	} else {
@@ -1219,30 +1233,40 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 			// The schedd is asking us to preempt these claims to make
 			// the pslot it is really claiming bigger.  New in 8.1.6
 		int num_preempting = 0;
-		if (stream->code(num_preempting)) {
+		if (stream->code(num_preempting) && num_preempting > 0) {
 			rip->dprintf(D_FULLDEBUG, "Schedd sending %d preempting claims.\n", num_preempting);
-			char **claims = (char **)malloc(sizeof(char *) * (num_preempting));
+			Resource **dslots = (Resource **)malloc(sizeof(Resource *) * num_preempting);
 			for (int i = 0; i < num_preempting; i++) {
-				claims[i] = NULL;
-				if (! stream->get_secret(claims[i])) {
+				char *claim_id = NULL;
+				if (! stream->get_secret(claim_id)) {
 					rip->dprintf( D_ALWAYS, "Can't receive preempting claim\n" );
-					for (int n = 0; n < i - 1; n++) {
-						free(claims[n]);
-					}
-					free(claims);
+					free(claim_id);
 					ABORT;
 				}
-				Resource *dslot = resmgr->get_by_any_id( claims[i] );
-				if( !dslot ) {
-					ClaimIdParser idp( claims[i] );
+				dslots[i] = resmgr->get_by_any_id( claim_id );
+				if( !dslots[i] ) {
+					ClaimIdParser idp( claim_id );
 					dprintf( D_ALWAYS, 
 							 "Error: can't find resource with ClaimId (%s)\n", idp.publicClaimId() );
-				} else {
-					dslot->kill_claim();
+					free( claim_id );
+					ABORT;
 				}
-				free(claims[i]);
+				free( claim_id );
+				if ( !dslots[i]->retirementExpired() ) {
+					dprintf( D_ALWAYS, "Error: slot %s still has retirement time, can't preempt immediately\n", dslots[i]->r_name );
+					ABORT;
+				}
 			}
-			free(claims);
+			for ( int i = 0; i < num_preempting; i++ ) {
+				// TODO Should we call retire_claim() to go through
+				//   vacating_act instead of straight to killing_act?
+				dslots[i]->kill_claim();
+				*(dslots[i]->get_parent()->r_attr) += *(dslots[i]->r_attr);
+				*(dslots[i]->r_attr) -= *(dslots[i]->r_attr);
+				// TODO Do we need to call refresh_classad() on either slot?
+			}
+			dslots[0]->get_parent()->refresh_classad( A_PUBLIC );
+			free( dslots );
 		}
 	} else {
 		rip->dprintf(D_FULLDEBUG, "Schedd using pre-v6.1.11 claim protocol\n");
@@ -1554,6 +1578,8 @@ accept_request_claim( Resource* rip, Claim* leftover_claim, bool and_pair )
 		// us to send back to the classad and the new claim id for
 		// leftovers in the parent partitionable slot.
 		dprintf(D_FULLDEBUG,"Will send partitionable slot leftovers to schedd\n");
+
+		leftover_claim->rip()->r_classad->Assign(ATTR_LAST_SLOT_NAME, rip->r_name);
 		MyString claimId(leftover_claim->id());
 		if ( !stream->put(claimId) ||
 			 !putClassAd(stream, *leftover_claim->rip()->r_classad) )
@@ -1847,21 +1873,41 @@ activate_claim( Resource* rip, Stream* stream )
 	} 
 #ifndef WIN32
 	else {
+		//
+		// This should be exclusively for the standard universe.
+		//
+		condor_sockaddr streamSA;
+		if(! streamSA.from_ip_string( stream->my_ip_str() )) {
+			EXCEPT( "Unable to extract socket address from stream.\n" );
+		}
 
-			// Set up the two starter ports and send them to the shadow
+		// We don't officially support IPv6 in standard universe...
+		if( streamSA.is_ipv6() ) {
+			dprintf( D_ALWAYS, "WARNING -- request to run standard-universe job via IPv6.  There may be problems.\n" );
+		}
+
 		stRec.version_num = VERSION_FOR_FLOCK;
-		sock_1 = create_port(&rsock_1);
-		sock_2 = create_port(&rsock_2);
+
+		// The shadow expects to be able to connect to the given port
+		// numbers at the address (and protocol) is used to contact the
+		// startd in the first place.
+		rsock_1.bind( streamSA.get_protocol(), false, 0, false );
+		rsock_1.listen();
+		sock_1 = rsock_1.get_file_desc();
 		stRec.ports.port1 = rsock_1.get_port();
+
+		rsock_2.bind( streamSA.get_protocol(), false, 0, false );
+		rsock_2.listen();
+		sock_2 = rsock_2.get_file_desc();
 		stRec.ports.port2 = rsock_2.get_port();
 
-		stRec.server_name = strdup( my_full_hostname() );
-	
-			// Send our local IP address, too.
-		
+		stRec.server_name = strdup( get_local_fqdn().Value() );
+
+		// Send our local IP address, too.
 		// stRec.ip_addr actually is never used.
 		// Just make sure that it does not have 0 value.
-		condor_sockaddr local_addr = get_local_ipaddr();
+		// // TODO: Arbitrarily picking IPv4 
+		condor_sockaddr local_addr = get_local_ipaddr(CP_IPV4);
 		struct in_addr local_in_addr = local_addr.to_sin().sin_addr;
 		memcpy( &stRec.ip_addr, &local_in_addr, sizeof(struct in_addr) );
 
@@ -1908,12 +1954,14 @@ activate_claim( Resource* rip, Stream* stream )
 				if( fd_2 == -2 ) {
 					rip->dprintf( D_ALWAYS, "accept timed out\n" );
 					delete tmp_starter;
+					close(fd_1);
 					ABORT;
 				} else {
 					rip->dprintf( D_ALWAYS, 
 								  "tcp_accept_timeout returns %d, errno=%d\n",
 								  fd_2, errno );
 					delete tmp_starter;
+					close(fd_1);
 					ABORT;
 				}
 			}
@@ -2293,6 +2341,33 @@ cleanup:
 
 
 int
+caUpdateMachineAd( Stream * s, char * c, ClassAd * ad ) {
+	//
+	// Update the machine ad (for the lifetime of this startd).
+	//
+	resmgr->updateExtrasClassAd( ad );
+
+	// Force an update to the collector right away.
+	resmgr->update_all();
+
+	if( false ) {
+		std::string errorMessage = "Unable to update machine ad.";
+		sendErrorReply( s, c, CA_FAILURE, errorMessage.c_str() );
+		return FALSE;
+	}
+
+	ClassAd reply;
+	reply.Assign( ATTR_RESULT, getCAResultString( CA_SUCCESS ) );
+	if( ! sendCAReply( s, c, & reply ) ) {
+		dprintf( D_ALWAYS | D_FAILURE, "Failed to send update machine ad reply.\n" );
+		return FALSE;
+	}
+
+	return TRUE;
+}
+
+
+int
 command_classad_handler( Service*, int dc_cmd, Stream* s )
 {
 	int rval=0;
@@ -2319,6 +2394,12 @@ command_classad_handler( Service*, int dc_cmd, Stream* s )
 	}
 
 	switch( cmd ) {
+	case CA_UPDATE_MACHINE_AD:
+		rval = caUpdateMachineAd( s, cmd_str, & ad );
+		free( cmd_str );
+		return rval;
+		break;
+
 	case CA_LOCATE_STARTER:
 			// special case, since it's not really about claims at
 			// all, but instead are worrying about trying to find a

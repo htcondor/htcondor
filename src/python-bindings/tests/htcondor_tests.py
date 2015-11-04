@@ -2,6 +2,7 @@
 
 import os
 import re
+import pwd
 import sys
 import time
 import errno
@@ -85,6 +86,7 @@ class WithDaemons(unittest.TestCase):
         os.environ["_condor_NEGOTIATOR_INTERVAL"] = "1"
         os.environ["_condor_SCHEDD_INTERVAL"] = "1"
         os.environ["_condor_SCHEDD_MIN_INTERVAL"] = "1"
+        os.environ["_condor_CONDOR_FSYNC"] = "FALSE"
         # Various required attributes for the startd
         os.environ["_condor_START"] = "TRUE"
         os.environ["_condor_SUSPEND"] = "FALSE"
@@ -166,6 +168,39 @@ class WithDaemons(unittest.TestCase):
 
 
 class TestPythonBindings(WithDaemons):
+
+    def testRemoteParam(self):
+        os.environ["_condor_FOO"] = "BAR"
+        self.launch_daemons(["COLLECTOR"])
+        coll = htcondor.Collector()
+        coll_ad = coll.locate(htcondor.DaemonTypes.Collector)
+        rparam = htcondor.RemoteParam(coll_ad)
+        self.assertTrue("FOO" in rparam)
+        self.assertEquals(rparam["FOO"], "BAR")
+        self.assertTrue(len(rparam.keys()) > 100)
+
+    def testRemoteSetParam(self):
+        os.environ["_condor_SETTABLE_ATTRS_READ"] = "FOO"
+        os.environ["_condor_ENABLE_RUNTIME_CONFIG"] = "TRUE"
+        self.launch_daemons(["COLLECTOR"])
+        del os.environ["_condor_SETTABLE_ATTRS_READ"]
+        #htcondor.param["TOOL_DEBUG"] = "D_NETWORK|D_SECURITY"
+        htcondor.enable_debug()
+        coll = htcondor.Collector()
+        coll_ad = coll.locate(htcondor.DaemonTypes.Collector)
+        rparam = htcondor.RemoteParam(coll_ad)
+        self.assertTrue("FOO" not in rparam)
+        rparam["FOO"] = "BAR"
+        htcondor.send_command(coll_ad, htcondor.DaemonCommands.Reconfig)
+        rparam2 = htcondor.RemoteParam(coll_ad)
+        self.assertTrue(rparam2.get("FOO"))
+        self.assertTrue("FOO" in rparam2)
+        self.assertEquals(rparam2["FOO"], "BAR")
+        del rparam["FOO"]
+        rparam2.refresh()
+        htcondor.send_command(coll_ad, htcondor.DaemonCommands.Reconfig)
+        self.assertTrue("FOO" not in rparam2)
+        self.assertTrue(("ENABLE_CHIRP_DELAYED", "true") in rparam2.items())
 
     def testDaemon(self):
         self.launch_daemons(["COLLECTOR"])
@@ -256,6 +291,103 @@ class TestPythonBindings(WithDaemons):
                 break
             if i % 2 == 0:
                 schedd.reschedule()
+            time.sleep(1)
+        self.assertEquals(open(output_file).read(), "hello world\n");
+
+    def testScheddSubmitMany2(self):
+        self.launch_daemons(["SCHEDD", "COLLECTOR", "STARTD", "NEGOTIATOR"])
+        output_file = os.path.join(testdir, "test.out")
+        if os.path.exists(output_file):
+            os.unlink(output_file)
+        schedd = htcondor.Schedd()
+        ad = classad.parseOne(open("tests/submit.ad"))
+        ads = []
+        cluster = schedd.submitMany(ad, [({'foo': 1}, 5), ({'foo': 2}, 5)], False, ads)
+        #print ads[0]
+        for i in range(60):
+            ads = schedd.xquery("ClusterId == %d" % cluster, ["JobStatus", 'ProcId', 'foo'])
+            ads = list(ads)
+            #print ads
+            for ad in ads:
+                if ad['ProcId'] < 5: self.assertEquals(ad['foo'], 1)
+                else: self.assertEquals(ad['foo'], 2)
+            if len(ads) == 0:
+                break
+            if i % 2 == 0:
+                schedd.reschedule()
+            time.sleep(1)
+        self.assertEquals(open(output_file).read(), "hello world\n");
+
+    def testScheddQueryPoll(self):
+        self.launch_daemons(["SCHEDD", "COLLECTOR", "STARTD", "NEGOTIATOR"])
+        output_file = os.path.join(testdir, "test.out")
+        if os.path.exists(output_file):
+            os.unlink(output_file)
+        schedd = htcondor.Schedd()
+        ad = classad.parseOne(open("tests/submit.ad"))
+        ads = []
+        cluster = schedd.submit(ad, 10, False, ads)
+        for i in range(60):
+            ads_iter = schedd.xquery("ClusterId == %d" % cluster, ["JobStatus"], name="query1")
+            ads_iter2 = schedd.xquery("ClusterId == %d" % cluster, ["JobStatus"], name="query2")
+            ads = []
+            for query in htcondor.poll([ads_iter, ads_iter2]):
+                self.assertTrue(query.tag() in ["query1", "query2"])
+                ads += query.nextAdsNonBlocking()
+            #print ads
+            if len(ads) == 0:
+                break
+            if i % 2 == 0:
+                schedd.reschedule()
+
+    def testNegotiate(self):
+        #htcondor.param['TOOL_DEBUG'] = 'D_FULLDEBUG'
+        #os.environ['_condor_SCHEDD_DEBUG'] = 'D_FULLDEBUG, D_NETWORK'
+        #htcondor.enable_debug()
+
+        self.launch_daemons(["SCHEDD", "COLLECTOR", "STARTD"])
+        output_file = os.path.join(testdir, "test.out")
+        if os.path.exists(output_file):
+            os.unlink(output_file)
+        schedd = htcondor.Schedd()
+
+        schedd.act(htcondor.JobAction.Remove, 'true')
+        ad = classad.parse(open("tests/submit.ad"))
+        ads = []
+        cluster = schedd.submit(ad, 1, False, ads)
+
+        # Get claim for startd
+        claim_ads = []
+        for i in range(10):
+            startd_ads = htcondor.Collector().locateAll(htcondor.DaemonTypes.Startd)
+            private_ads = htcondor.Collector().query(htcondor.AdTypes.StartdPrivate)
+            if (len(startd_ads) != htcondor.param['NUM_CPUS']) or (len(private_ads) != htcondor.param['NUM_CPUS']):
+                time.sleep(1)
+                continue
+            break
+        self.assertEquals(len(startd_ads), len(private_ads))
+        self.assertEquals(len(startd_ads), htcondor.param['NUM_CPUS'])
+        for ad in htcondor.Collector().locateAll(htcondor.DaemonTypes.Startd):
+            for pvt_ad in private_ads:
+                if pvt_ad.get('Name') == ad['Name']:
+                    ad['ClaimId'] = pvt_ad['Capability']
+                    claim_ads.append(ad)
+        self.assertEquals(len(claim_ads), len(startd_ads))
+        claim = claim_ads[0]
+
+        me = "%s@%s" % (pwd.getpwuid(os.geteuid()).pw_name, htcondor.param['UID_DOMAIN'])
+        with schedd.negotiate(me) as session:
+            requests = list(session)
+            self.assertEquals(len(requests), 1)
+            request = requests[0]
+            self.assertTrue(request.symmetricMatch(claim))
+            session.sendClaim(claim['ClaimId'], claim, request)
+
+        for i in range(60):
+            ads = schedd.xquery("ClusterId == %d" % cluster, ["JobStatus"])
+            ads = list(ads)
+            if len(ads) == 0:
+                break
             time.sleep(1)
         self.assertEquals(open(output_file).read(), "hello world\n");
 
@@ -363,7 +495,45 @@ class TestPythonBindings(WithDaemons):
         schedd.act(htcondor.JobAction.Remove, ["%d.0" % cluster])
         ads = schedd.query("ClusterId == %d" % cluster, ["JobStatus"])
         self.assertEquals(len(ads), 0)
-        self.assertEquals(open(output_file).read(), "hello world\n");
+        self.assertEquals(open(output_file).read(), "hello world\n")
+
+    def testClaim(self):
+        os.environ['_condor_VALID_COD_USERS'] = pwd.getpwuid(os.geteuid()).pw_name
+        self.launch_daemons(["COLLECTOR", "STARTD"])
+        output_file = os.path.abspath(os.path.join(testdir, "test.out"))
+        if os.path.exists(output_file):
+            os.unlink(output_file)
+        coll = htcondor.Collector()
+        for i in range(10):
+            ads = coll.locateAll(htcondor.DaemonTypes.Startd)
+            if len(ads) > 0: break
+            time.sleep(1)
+        job_common = { \
+            'Cmd': '/bin/sh', 
+            'JobUniverse': 5,
+            'Iwd': os.path.abspath(testdir),
+            'Out': 'testclaim.out',
+            'Err': 'testclaim.err',
+            'StarterUserLog': 'testclaim.log',
+        }
+        claim = htcondor.Claim(ads[0])
+        claim.requestCOD()
+        hello_world_job = dict(job_common)
+        hello_world_job['Arguments'] = "-c 'echo hello world > %s'" % output_file
+        claim.activate(hello_world_job)
+        for i in range(10):
+            if os.path.exists(output_file): break
+            time.sleep(1)
+        self.assertEquals(open(output_file).read(), "hello world\n")
+        sleep_job = dict(job_common)
+        sleep_job['Args'] = "-c 'sleep 5m'"
+        claim.activate(sleep_job)
+        claim.suspend()
+        claim.renew()
+        #claim.delegateGSIProxy()
+        claim.resume()
+        claim.deactivate(htcondor.VacateTypes.Fast)
+        claim.release()
 
     def testPing(self):
         self.launch_daemons(["COLLECTOR"])

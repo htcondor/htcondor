@@ -69,7 +69,12 @@ vanilla, parallel and java universes.
   \OptItem{\OptArg{set\_job\_attr\_delayed}{JobAttributeName AttributeValue}}
     {Sets the named job ClassAd attribute with the given attribute value, 
     but does not immediately synchronize the value with the submit side. 
-    This has much less overhead than the non delayed version.}
+    It can take 15 minutes before the synchronization occurs.
+    This has much less overhead than the non delayed version.
+    With this option, jobs do \emph{not} need ClassAd attribute
+    \Attr{WantIOProxy} set.
+    With this option, job attribute names are restricted to begin with the
+    case sensitive substring \Expr{Chirp}. }
   \OptItem{\OptArg{ulog}{Message}}
     {Appends \Arg{Message} to the job event log.}
   \OptItem{\Opt{read} \oOptArg{-offset}{offset} \oOptArg{-stride}{length skip} \Arg{RemoteFileName} \Arg{Length}}

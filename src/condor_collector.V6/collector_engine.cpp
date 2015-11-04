@@ -72,7 +72,8 @@ CollectorEngine::CollectorEngine (CollectorStats *stats ) :
 	HadAds        (LESSER_TABLE_SIZE , &adNameHashFunction),
 	LeaseManagerAds(LESSER_TABLE_SIZE , &adNameHashFunction),
 	GridAds       (LESSER_TABLE_SIZE , &adNameHashFunction),
-	GenericAds    (LESSER_TABLE_SIZE , &stringHashFunction)
+	GenericAds    (LESSER_TABLE_SIZE , &stringHashFunction),
+	__self_ad__(0)
 {
 	clientTimeout = 20;
 	machineUpdateInterval = 30;
@@ -965,8 +966,13 @@ remove (AdTypes adType, AdNameHashKey &hk)
 	}
 	return !table->remove(hk);
 }
-	
-				
+
+void CollectorEngine::
+identifySelfAd(ClassAd * ad)
+{
+	__self_ad__ = (void*)ad;
+}
+
 ClassAd * CollectorEngine::
 updateClassAd (CollectorHashTable &hashTable,
 			   const char *adType,
@@ -1031,6 +1037,8 @@ updateClassAd (CollectorHashTable &hashTable,
 		if (hashTable.insert(hk, new_ad) == -1) {
 			EXCEPT( "Error inserting ad" );
 		}
+
+		if (isSelfAd(old_ad)) { __self_ad__ = new_ad; }
 
 		delete old_ad;
 

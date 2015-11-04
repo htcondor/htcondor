@@ -1464,12 +1464,12 @@ STARTD_JOB_EXPRS = ImageSize, ExecutableSize, JobUniverse, NiceUser
 ##  console activity)?  This defaults to all slots (N in a
 ##  machine with N CPUs).  This must be an integer ("N" is not a valid
 ##  setting, that's just used to represent the default).
-#SLOTS_CONNECTED_TO_CONSOLE = N
+#SLOTS_CONNECTED_TO_CONSOLE = $(NUM_CPUS)
 
 ##  How many of the slots the startd is representing should
 ##  be "connected" to the keyboard (for remote tty activity, as well
-##  as console activity).  Defaults to 1.
-#SLOTS_CONNECTED_TO_KEYBOARD = 1
+##  as console activity).  Defaults to num_cpus
+#SLOTS_CONNECTED_TO_KEYBOARD = $(NUM_CPUS)
 
 ##  If there are slots that are not connected to the
 ##  keyboard or the console (see the above two settings), the
@@ -2305,7 +2305,7 @@ SSH_TO_JOB_SSHD_CONFIG_TEMPLATE = $(ETC)/condor_ssh_to_job_sshd_config_template
 ##--------------------------------------------------------------------
 ##  Green computing defaults
 ##--------------------------------------------------------------------
-UNHIBERNATE = CurrentTime - MachineLastMatchTime < 1200
+UNHIBERNATE = time() - MachineLastMatchTime < 1200
 
 ##
 ##--------------------------------------------------------------------

@@ -565,7 +565,6 @@ bool userlog_to_classads(const char *filename, ClassAdList &classads, CondorID* 
 	eventClassAd->Delete("Cluster");
 	eventClassAd->Delete("Proc");
 	eventClassAd->Delete("Subproc");
-	eventClassAd->Delete("CurrentTime");
 	eventClassAd->Delete("EventTypeNumber");
 	eventClassAd->Delete("TriggerEventTypeNumber");
 	eventClassAd->Delete("TriggerEventTypeName");

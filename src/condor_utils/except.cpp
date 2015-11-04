@@ -51,6 +51,7 @@ int		_EXCEPT_Errno;
 const char	*_EXCEPT_File;
 int		(*_EXCEPT_Cleanup)(int,int,const char*);
 int		SetSyscalls(int);
+void	(*_EXCEPT_Reporter)(const char * msg, int line, const char * file) = NULL;
 
 extern int		_condor_dprintf_works;
 
@@ -75,6 +76,9 @@ _EXCEPT_(const char *fmt, ...)
 
 	vsprintf( buf, fmt, pvar );
 
+	if (_EXCEPT_Reporter) {
+		_EXCEPT_Reporter(buf, _EXCEPT_Line, _EXCEPT_File);
+	} else
 	if( _condor_dprintf_works ) {
 		dprintf( D_ALWAYS|D_FAILURE, "ERROR \"%s\" at line %d in file %s\n",
 				 buf, _EXCEPT_Line, _EXCEPT_File );

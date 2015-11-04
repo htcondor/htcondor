@@ -42,7 +42,7 @@ static const char *RECOVERY_FINISHED_NAME = "RECOVERY_FINISHED";
 static const char *RECOVERY_FAILURE_NAME = "RECOVERY_FAILURE";
 static const char *SUBMIT_FAILURE_NAME = "SUBMIT_FAILURE";
 
-	// Default Condor ID to use to check for invalid IDs.
+	// Default HTCondor ID to use to check for invalid IDs.
 static const CondorID DEFAULT_CONDOR_ID;
 
 //---------------------------------------------------------------------------
@@ -485,7 +485,7 @@ JobstateLog::Write( const time_t *eventTimeP, const MyString &info )
 void
 JobstateLog::CondorID2Str( int cluster, int proc, MyString &idStr )
 {
-		// Make sure Condor ID is valid.
+		// Make sure HTCondor ID is valid.
 	if ( cluster != DEFAULT_CONDOR_ID._cluster ) {
 		idStr.formatstr( "%d.%d", cluster, proc );
 	} else {
@@ -517,8 +517,12 @@ JobstateLog::ParseLine( MyString &line, time_t &timestamp,
 		return false;
 	}
 
-	int items = sscanf( timestampTok, "%lu", &timestamp );
-	if ( items != 1 ) {
+		// fetch the number, and get a pointer to the first char after
+		// if the pointer did not advance, then there was no number to parse.
+	char *pend;
+	timestamp = (time_t)strtoll(timestampTok, &pend, 10);
+
+	if (pend == timestampTok) {
 		debug_printf( DEBUG_QUIET, "Warning: error reading "
 					"timestamp in jobstate.log file line <%s>\n",
 					line.Value() );
@@ -530,8 +534,8 @@ JobstateLog::ParseLine( MyString &line, time_t &timestamp,
 
 	seqNum = 0;
 	if ( seqNumTok ) {
-		items = sscanf( seqNumTok, "%d", &seqNum );
-		if ( items != 1 ) {
+		seqNum = (int)strtol(seqNumTok, &pend, 10);
+		if (pend == seqNumTok) {
 			debug_printf( DEBUG_QUIET, "Warning: error reading "
 						"sequence number in jobstate.log file line <%s>\n",
 						line.Value() );

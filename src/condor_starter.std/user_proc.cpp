@@ -274,7 +274,7 @@ UserProc::expand_exec_name( int &on_this_host )
 	}
 
 		// expand macros in the pathname part
-	tmp = macro_expand( path_part );
+	tmp = expand_param( path_part );
 	free( m_a_out );
 	m_a_out = strdup( tmp );
 	FREE( tmp );

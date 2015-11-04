@@ -26,7 +26,15 @@ int Parse(const char*str, MyString &name, classad::ExprTree*& tree, int*pos = NU
 
 int ParseClassAdRvalExpr(const char*s, classad::ExprTree*&tree, int*pos = NULL);
 
-const char * ExprTreeToString( classad::ExprTree *expr );
+const char * ExprTreeToString( const classad::ExprTree *expr, std::string & buffer );
+const char * ExprTreeToString( const classad::ExprTree *expr );
+const char * ClassAdValueToString ( const classad::Value & value, std::string & buffer );
+const char * ClassAdValueToString ( const classad::Value & value );
+
+bool ExprTreeIsLiteral(classad::ExprTree * expr, classad::Value & value);
+bool ExprTreeIsLiteralNumber(classad::ExprTree * expr, long long & ival);
+bool ExprTreeIsLiteralNumber(classad::ExprTree * expr, double & rval);
+bool ExprTreeIsLiteralString(classad::ExprTree * expr, std::string & sval);
 
 bool EvalBool(compat_classad::ClassAd *ad, const char *constraint);
 

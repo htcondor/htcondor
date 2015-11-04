@@ -1016,6 +1016,20 @@ MachAttributes::publish( ClassAd* cp, amask_t how_much)
 	if ( m_named_chroot.size() > 0 ) {
 		cp->Assign( "NamedChroot", m_named_chroot.c_str() );
 	}
+	
+	// Advertise Docker Volumes
+	char *dockerVolumes = param("DOCKER_VOLUMES");
+	if (dockerVolumes) {
+		StringList vl(dockerVolumes);
+		vl.rewind();
+		char *volume = 0;
+		while ((volume = vl.next())) {
+			std::string attrName = "HasDockerVolume";
+			attrName += volume;
+			cp->Assign(attrName.c_str(), true);
+		}
+		free(dockerVolumes);
+	}
 
 #ifdef WIN32
 // window's strtok_s is the 'safe' version of strtok, it's not identical to linx's strtok_r, but it's close enough.
@@ -1023,7 +1037,7 @@ MachAttributes::publish( ClassAd* cp, amask_t how_much)
 #endif
 
 	// Advertise processor flags.
-	const char * pflags = sysapi_processor_flags();
+	const char * pflags = sysapi_processor_flags()->processor_flags;
 	if (pflags) {
 		char * savePointer = NULL;
 		char * processor_flags = strdup( pflags );
@@ -1035,6 +1049,18 @@ MachAttributes::publish( ClassAd* cp, amask_t how_much)
 			flag = strtok_r( NULL, " ", & savePointer );
 		}
 		free( processor_flags );
+	}
+	int modelNo = -1;
+	if ((modelNo = sysapi_processor_flags()->model_no) > 0) {
+		cp->Assign(ATTR_CPU_MODEL_NUMBER, modelNo);
+	}
+	int family = -1;
+	if ((family = sysapi_processor_flags()->family) > 0) {
+		cp->Assign(ATTR_CPU_FAMILY, family);
+	}
+	int cache = -1;
+	if ((cache = sysapi_processor_flags()->cache) > 0) {
+		cp->Assign(ATTR_CPU_CACHE_SIZE, cache);
 	}
 }
 
@@ -1241,8 +1267,6 @@ CpuAttributes::publish( ClassAd* cp, amask_t how_much )
 {
 	if( IS_UPDATE(how_much) || IS_PUBLIC(how_much) ) {
 
-		cp->Assign( ATTR_VIRTUAL_MEMORY, c_virt_mem );
-
 		cp->Assign( ATTR_TOTAL_DISK, c_total_disk );
 
 		cp->Assign( ATTR_DISK, c_disk );
@@ -1278,6 +1302,8 @@ CpuAttributes::publish( ClassAd* cp, amask_t how_much )
 			cp->Assign( ATTR_TOTAL_SLOT_CPUS, (int)(c_num_slot_cpus + 0.1) );
 		}
 		
+		cp->Assign( ATTR_VIRTUAL_MEMORY, c_virt_mem );
+
 		// publish local resource quantities for this slot
 		for (slotres_map_t::iterator j(c_slotres_map.begin());  j != c_slotres_map.end();  ++j) {
 			cp->Assign(j->first.c_str(), int(j->second));
@@ -1309,7 +1335,7 @@ CpuAttributes::compute( amask_t how_much )
 			val *= c_virt_mem_fraction;
 		}
 		c_virt_mem = (unsigned long)floor( val );
-	}
+	} 
 
 	if( IS_TIMEOUT(how_much) && !IS_SHARED(how_much) ) {
 
@@ -1461,7 +1487,9 @@ CpuAttributes::operator+=( CpuAttributes& rhs )
 	if (!IS_AUTO_SHARE(rhs.c_virt_mem_fraction) &&
 		!IS_AUTO_SHARE(c_virt_mem_fraction)) {
 		c_virt_mem_fraction += rhs.c_virt_mem_fraction;
+		c_virt_mem = map->virt_mem() * c_virt_mem_fraction;
 	}
+
 	if (!IS_AUTO_SHARE(rhs.c_disk_fraction) &&
 		!IS_AUTO_SHARE(c_disk_fraction)) {
 		c_disk_fraction += rhs.c_disk_fraction;
@@ -1485,6 +1513,7 @@ CpuAttributes::operator-=( CpuAttributes& rhs )
 		!IS_AUTO_SHARE(c_virt_mem_fraction)) {
 		c_virt_mem_fraction -= rhs.c_virt_mem_fraction;
 	}
+
 	if (!IS_AUTO_SHARE(rhs.c_disk_fraction) &&
 		!IS_AUTO_SHARE(c_disk_fraction)) {
 		c_disk_fraction -= rhs.c_disk_fraction;

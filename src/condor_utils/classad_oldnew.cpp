@@ -17,7 +17,6 @@
  *
  ***************************************************************/
 
-#define _CONDOR_ALLOW_OPEN
 #include "condor_common.h"
 #include "stream.h"
 #include "reli_sock.h"
@@ -76,12 +75,6 @@ bool getClassAd( Stream *sock, classad::ClassAd& ad )
 	MyString				inputLine;
 
 	ad.Clear( );
-
-		// Reinsert CurrentTime, emulating the special version in old
-		// ClassAds
-	if ( !compat_classad::ClassAd::m_strictEvaluation ) {
-		ad.Insert( ATTR_CURRENT_TIME " = time()" );
-	}
 
 	sock->decode( );
 	if( !sock->code( numExprs ) ) {
@@ -172,12 +165,6 @@ getClassAdNoTypes( Stream *sock, classad::ClassAd& ad )
 
 
 	ad.Clear( );
-
-		// Reinsert CurrentTime, emulating the special version in old
-		// ClassAds
-	if ( !compat_classad::ClassAd::m_strictEvaluation ) {
-		ad.Insert( ATTR_CURRENT_TIME " = time()" );
-	}
 
 	sock->decode( );
 	if( !sock->code( numExprs ) ) {
@@ -298,6 +285,7 @@ int putClassAd ( Stream *sock, classad::ClassAd& ad )
 	return _putClassAd(sock, ad, options);
 }
 
+#if 0
 /*
  * Put the ClassAd onto the wire in a non-blocking manner.
  * Return codes:
@@ -349,6 +337,7 @@ putClassAdNoTypes ( Stream *sock, classad::ClassAd& ad )
 #endif
     return _putClassAd(sock, ad, PUT_CLASSAD_NO_TYPES);
 }
+#endif
 
 #ifdef ENABLE_V0_PUT_CLASSAD
 // these are here for timing comparison
@@ -632,8 +621,8 @@ int putClassAd (Stream *sock, classad::ClassAd& ad, int options, const classad::
 
 	bool expand_whitelist = ! (options & PUT_CLASSAD_NO_EXPAND_WHITELIST);
 	if (whitelist && expand_whitelist) {
-		//PRAGMA_REMIND("need a version of GetInternalReferences that understands that MY is an alias for SELF")
-		ad.InsertAttr("MY","SELF");
+		// Jaime made changes to the core classad lib that make this unneeded...
+		//ad.InsertAttr("MY","SELF");
 		for (classad::References::const_iterator attr = whitelist->begin(); attr != whitelist->end(); ++attr) {
 			ExprTree * tree = ad.Lookup(*attr);
 			if (tree) {
@@ -643,9 +632,9 @@ int putClassAd (Stream *sock, classad::ClassAd& ad, int options, const classad::
 				}
 			}
 		}
-		ad.Delete("MY");
-		classad::References::iterator my = expanded_whitelist.find("MY");
-		if (my != expanded_whitelist.end()) { expanded_whitelist.erase(my); }
+		//ad.Delete("MY");
+		//classad::References::iterator my = expanded_whitelist.find("MY");
+		//if (my != expanded_whitelist.end()) { expanded_whitelist.erase(my); }
 		whitelist = &expanded_whitelist;
 	}
 
@@ -653,7 +642,7 @@ int putClassAd (Stream *sock, classad::ClassAd& ad, int options, const classad::
 	ReliSock* rsock = static_cast<ReliSock*>(sock);
 	if (non_blocking && rsock)
 	{
-		BlockingModeGuard(rsock, true);
+		BlockingModeGuard guard(rsock, true);
 		if (whitelist) {
 			retval = _putClassAd(sock, ad, options, *whitelist);
 		} else {

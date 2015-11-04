@@ -32,7 +32,8 @@ enum exit_value {
 	EXIT_RESTART = 3,	// exit but indicate that we should be restarted
 };
 
-void main_shutdown_rescue( int exitVal, Dag::dag_status dagStatus );
+void main_shutdown_rescue( int exitVal, Dag::dag_status dagStatus,
+			bool removeCondorJobs = true );
 void main_shutdown_graceful( void );
 void print_status();
 
@@ -54,10 +55,6 @@ class Dagman {
 		// whether we should fall back to non-default log mode.
 	void CheckLogFileMode( const CondorVersionInfo &submitFileVersion );
 
-		// Disable use of the default node log (use the log files from
-		// the submit files instead).
-	void DisableDefaultLog();
-
 		// Resolve macro substitutions in _defaultNodeLog.  Also check
 		// for some errors/warnings.
 	void ResolveDefaultLog();
@@ -71,8 +68,6 @@ class Dagman {
 
 	char* condorSubmitExe;
 	char* condorRmExe;
-	char* storkSubmitExe;
-	char* storkRmExe;
 
 	// number of seconds to wait before consecutive calls to
 	// condor_submit (or dap_submit, etc.)
@@ -156,7 +151,7 @@ class Dagman {
 		// to breadth-first).
 	bool submitDepthFirst;
 
-		// Whether to abort on a "scary" submit event (Condor ID doesn't
+		// Whether to abort on a "scary" submit event (HTCondor ID doesn't
 		// match expected value).
 	bool abortOnScarySubmit;
 
@@ -164,7 +159,7 @@ class Dagman {
 		// are pending.
 	int pendingReportInterval;
 
-		// the Condor job id of the DAGMan job
+		// the HTCondor job id of the DAGMan job
 	CondorID DAGManJobId;
 
 		// The DAGMan configuration file (NULL if none is specified).

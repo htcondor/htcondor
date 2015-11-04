@@ -18,5 +18,12 @@
 ##
 ##**************************************************************
 
+use CondorUtils;
 
-system("./x_general_client.pl prepostsock postscript_ran");
+
+my $iswindows = CondorUtils::is_windows();
+if($iswindows) {
+	system("appendmsg -n -f filetoappendto postscriptran");
+} else {
+	system("./x_general_client.pl prepostsock postscript_ran");
+}

@@ -20,6 +20,7 @@
 
 use CondorTest;
 use CondorUtils;
+use Check::SimpleJob;
 use strict;
 use warnings;
 
@@ -92,7 +93,10 @@ my $bail = 0;
 my $line = "";
 
 print "Start a job which runs from remote schedd - ";
-my $forever = CondorTest::verbose_system("./x_cmdrunforever.pl $mypid\n",{emit_output=>0});
+my $forever = SimpleJob::RunCheck(
+	duration => 0,
+	no_wait => 1,
+);
 if($forever != 0) {
 	print "bad\n";
 	CondorTest::debug("Bailing because running job failed to submit\n",$debuglevel);
@@ -109,13 +113,17 @@ $ENV{CONDOR_CONFIG} = $localconfig;
 print "Start a job on hold from local schedd - ";
 my $holdone;
 if($bail != 1) {
-	my $holdone = CondorTest::verbose_system("./x_cmdstartonhold.pl $mypid",{emit_output=>0});
+my $holdone = SimpleJob::RunCheck(
+	hold => "True",
+	no_wait => 1,
+);
 	if($holdone != 0) {
 		print "bad\n";
 		CondorTest::debug("Bailing because running job failed to submit\n",$debuglevel);
 		$bail = 1;
 	}
 }
+print "after Start a job on hold from local schedd - ";
 print "ok\n";
 my $cmdstatus;
 my @adarray;
@@ -175,8 +183,27 @@ CondorTest::debug("Looking for sched1($sched1) and sched2($sched2)\n",$debugleve
 	}
 }
 
-#CondorTest::KillPersonal($locconfig);
-#CondorTest::KillPersonal($scheddoneconfig);
+my $rmcmd = "condor_rm -all";
+my @rmarray1 = ();
+my @rmarray2 = ();
+
+$cmdstatus = CondorTest::runCondorTool($rmcmd,\@rmarray1,2,{emit_output=>0});
+if(!$cmdstatus)
+{
+	CondorTest::debug("Test failure due to Condor Tool Failure<$rmcmd>\n",$debuglevel);
+	exit(1)
+}
+
+$ENV{CONDOR_CONFIG} = $scheddoneconfig;
+
+$cmdstatus = CondorTest::runCondorTool($rmcmd,\@rmarray2,2,{emit_output=>0});
+if(!$cmdstatus)
+{
+	CondorTest::debug("Test failure due to Condor Tool Failure<$rmcmd>\n",$debuglevel);
+	exit(1)
+}
+
+
 print scalar localtime() . "\n";
 
 if( $done == 0 )

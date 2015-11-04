@@ -128,4 +128,47 @@ sysapi_kernel_version(void)
 	}
 }
 
+/* Is the Linux kernel release number equal to or greater than
+ * a given version? Parameter version_num_to_check should be a
+ * null-terminated string that looks like "2.6.29".  Returns
+ * true if kernel is Linux with a kernel as recent or newer
+ * than version_num_to_check, false otherwise.
+ */
+bool
+sysapi_is_linux_version_atleast(const char *version_num_to_check)
+{
+#ifdef LINUX
+	struct utsname ubuf;
+	const char *kversion = "0.0.0-";
+	if( uname(&ubuf) == 0 ) {
+		// ubuf.release will look like "2.6.32-358.el6.x86_64"
+		kversion = ubuf.release;
+	}
+	char *ver = strdup(kversion);
+	char *p=strchr(ver,'-');
+	if (p) {
+		*p = '\0';
+	}
+	int inputscalar,kernelscalar,fld,MajorVer,MinorVer,SubMinorVer;
+	// set a scalar representing the kernel version
+	fld = sscanf(ver,"%d.%d.%d",&MajorVer,&MinorVer,&SubMinorVer);
+	free(ver);
+	kernelscalar=0;
+	if (fld==3) {
+		kernelscalar = MajorVer * 1000000 + MinorVer * 1000 + SubMinorVer;
+	}
+	// set a scalar prepresenting the input version
+	fld = sscanf(version_num_to_check,"%d.%d.%d",&MajorVer,&MinorVer,
+			&SubMinorVer);
+	inputscalar =0;
+	if (fld==3) {
+		inputscalar  = MajorVer * 1000000 + MinorVer * 1000 + SubMinorVer;
+	}
+	// compare
+	if ( kernelscalar >= inputscalar ) {
+		return true;
+	}
+#endif
 
+	return false;
+}

@@ -1,6 +1,6 @@
---- condor_config.generic	Wed May  7 16:28:43 2014
-+++ condor_config.patched	Wed May  7 17:44:57 2014
-@@ -19,16 +19,14 @@
+--- condor_config.generic	2014-09-30 09:57:58.000000003 -0500
++++ condor_config.patched	2014-11-07 15:42:20.000000003 -0600
+@@ -19,25 +19,23 @@
  ######################################################################
  
  ##  Where have you installed the bin, sbin and lib condor directories?   
@@ -20,7 +20,9 @@
  ##  If your configuration is on a shared file system, then this might be a better default
  #LOCAL_CONFIG_FILE = $(RELEASE_DIR)/etc/$(HOSTNAME).local
  ##  If the local config file is not present, is it an error? (WARNING: This is a potential security issue.)
-@@ -37,7 +35,7 @@
+-#REQUIRE_LOCAL_CONFIG_FILE = true
++REQUIRE_LOCAL_CONFIG_FILE = false
+ 
  ##  The normal way to do configuration with RPMs is to read all of the
  ##  files in a given directory that don't match a regex as configuration files.
  ##  Config files are read in lexicographic order.
@@ -29,7 +31,7 @@
  #LOCAL_CONFIG_DIR_EXCLUDE_REGEXP = ^((\..*)|(.*~)|(#.*)|(.*\.rpmsave)|(.*\.rpmnew))$
  
  ##  Use a host-based security policy. By default CONDOR_HOST and the local machine will be allowed
-@@ -50,5 +48,24 @@
+@@ -50,5 +48,33 @@
  #FLOCK_TO = condor.cs.wisc.edu, cm.example.edu
  
  ##--------------------------------------------------------------------
@@ -55,3 +57,12 @@
 +SHARE   = $(RELEASE_DIR)/share/condor
 +
 +PROCD_ADDRESS = $(RUN)/procd_pipe
++
++##  What machine is your central manager?
++
++CONDOR_HOST = $(FULL_HOSTNAME)
++
++##  This macro determines what daemons the condor_master will start and keep its watchful eyes on.
++##  The list is a comma or space separated list of subsystem names
++
++DAEMON_LIST = COLLECTOR, MASTER, NEGOTIATOR, SCHEDD, STARTD

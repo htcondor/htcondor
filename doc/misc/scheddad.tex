@@ -176,6 +176,48 @@ number, the release date, and the build identification number.
   \Expr{JOB\_NOT\_STARTED}
   in the time interval defined by attribute \AdAttr{StatsLifetime}.
 
+\index{ClassAd Scheduler attribute!JobsRestartReconnectsAttempting}
+\item[\AdAttr{JobsRestartReconnectsAttempting}:]
+  A Statistics attribute defining the number of \Condor{startd} daemons the
+  \Condor{schedd} is currently attempting to reconnect to, in order to
+  recover a job that was running when the \Condor{schedd} was restarted.
+
+\index{ClassAd Scheduler attribute!JobsRestartReconnectsBadput}
+\item[\AdAttr{JobsRestartReconnectsBadput}:]
+  A Statistics attribute defining a histogram count of \Condor{startd} daemons
+  that the \Condor{schedd} could not reconnect to in order to recover
+  a job that was running when the \Condor{schedd} was restarted,
+  as classified by the time the job spent running.
+  Counts within the histogram are separated by a comma and a space,
+  where the time interval classification is defined in the ClassAd attribute
+  \Attr{JobsRuntimesHistogramBuckets}.
+
+\index{ClassAd Scheduler attribute!JobsRestartReconnectsFailed}
+\item[\AdAttr{JobsRestartReconnectsFailed}:]
+  A Statistics attribute defining the number of \Condor{startd} daemons the
+  \Condor{schedd} tried and failed to reconnect to in order to
+  recover a job that was running when the \Condor{schedd} was restarted.
+
+\index{ClassAd Scheduler attribute!JobsRestartReconnectsInterrupted}
+\item[\AdAttr{JobsRestartReconnectsInterrupted}:]
+  A Statistics attribute defining the number of \Condor{startd} daemons the
+  \Condor{schedd} attempted to reconnect to, in order to
+  recover a job that was running when the \Condor{schedd} was restarted,
+  but the attempt was interrupted, for example, because the job was removed.
+
+\index{ClassAd Scheduler attribute!JobsRestartReconnectsLeaseExpired}
+\item[\AdAttr{JobsRestartReconnectsLeaseExpired}:]
+  A Statistics attribute defining the number of \Condor{startd} daemons the
+  \Condor{schedd} could not attempt to reconnect to, in order to
+  recover a job that was running when the \Condor{schedd} was restarted,
+  because the job lease had already expired.
+
+\index{ClassAd Scheduler attribute!JobsRestartReconnectsSucceeded}
+\item[\AdAttr{JobsRestartReconnectsSucceeded}:]
+  A Statistics attribute defining the number of \Condor{startd} daemons the
+  \Condor{schedd} has successfully reconnected to, in order to
+  recover a job that was running when the \Condor{schedd} was restarted.
+
 \index{ClassAd Scheduler attribute!JobsRunning}
 \item[\AdAttr{JobsRunning}:]  A Statistics attribute representing the number
   of jobs currently running.
@@ -247,6 +289,7 @@ number, the release date, and the build identification number.
           1Gb, 4Gb, 16Gb, 64Gb, 256Gb"
 \end{verbatim}
 \normalsize
+  Note that these values imply powers of two in numbers of bytes.
 
 \index{ClassAd Scheduler attribute!JobsStarted}
 \item[\AdAttr{JobsStarted}:] A Statistics attribute defining
@@ -299,7 +342,8 @@ number, the release date, and the build identification number.
   begin with the string \Attr{MonitorSelf}.
   
 \index{ClassAd Scheduler attribute!MyAddress}
-\item[\AdAttr{MyAddress}:] Description is not yet written.
+\item[\AdAttr{MyAddress}:] String with the IP and port address of the
+\Condor{schedd} daemon which is publishing this ClassAd.
 
 \index{ClassAd Scheduler attribute!MyCurrentTime}
 \item[\AdAttr{MyCurrentTime}:]  The time, represented as the number of 
@@ -316,6 +360,17 @@ number, the release date, and the build identification number.
   These names will be of the form ``slot\#@full.hostname'', for example,
   ``slot1@vulture.cs.wisc.edu'', which signifies slot number 1 from
   vulture.cs.wisc.edu.
+
+\index{ClassAd Scheduler attribute!NumJobStartsDelayed}
+\item[\AdAttr{NumJobStartsDelayed}:] The number times a job requiring a
+\Condor{shadow} daemon could have been started,
+but was not started because of the values of configuration variables
+\Macro{JOB\_START\_COUNT} and \Macro{JOB\_START\_DELAY}.
+
+\index{ClassAd Scheduler attribute!NumPendingClaims}
+\item[\AdAttr{NumPendingClaims}:] The number of machines 
+(\Condor{startd} daemons) matched to this \Condor{schedd} daemon,
+which this \Condor{schedd} knows about, but has not yet managed to claim.
 
 \index{ClassAd Scheduler attribute!NumUsers}
 \item[\AdAttr{NumUsers}:] The integer number of distinct users with jobs in

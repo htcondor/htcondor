@@ -154,6 +154,24 @@ ClaimStartdMsg::writeMsg( DCMessenger * /*messenger*/, Sock *sock ) {
 bool
 ClaimStartdMsg::putExtraClaims(Sock *sock) {
 
+	const CondorVersionInfo *cvi = sock->get_peer_version();
+
+		// Older versions of Condor don't know about extra claim ids.
+		// But with SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION=True,
+		// the schedd can't get the startd's version from the ReliSock.
+		// In that case, use the old protocol if there are no extra
+		// claim ids. Otherwise, assume the startd is new enough.
+		// If it isn't, the claim request will probably fail anyway,
+		// because the single claim won't have enough resources for
+		// the request.
+	if (!cvi && m_extra_claims.length() == 0) {
+		return true;
+	}
+
+	if (cvi && !cvi->built_since_version(8,2,3)) {
+		return true;
+	}
+
 	if (m_extra_claims.length() == 0) {
 		return sock->put(0);
 	}
@@ -311,6 +329,11 @@ DCStartd::deactivateClaim( bool graceful, bool *claim_is_closing )
 		// if this claim is associated with a security session
 	ClaimIdParser cidp(claim_id);
 	char const *sec_session = cidp.secSessionId();
+
+	if (IsDebugLevel(D_COMMAND)) {
+		int cmd = graceful ? DEACTIVATE_CLAIM : DEACTIVATE_CLAIM_FORCIBLY;
+		dprintf (D_COMMAND, "DCStartd::deactivateClaim(%s,...) making connection to %s\n", getCommandStringSafe(cmd), _addr ? _addr : "NULL");
+	}
 
 	bool  result;
 	ReliSock reli_sock;
@@ -593,6 +616,17 @@ DCStartd::requestClaim( ClaimType cType, const ClassAd* req_ad,
 	req.Insert( buf );
 
 	return sendCACmd( &req, reply, true, timeout );
+}
+
+
+bool
+DCStartd::updateMachineAd( const ClassAd * update, ClassAd * reply, int timeout ) {
+	setCmdStr( "updateMachineAd" );
+
+	ClassAd u( * update );
+	u.Assign( ATTR_COMMAND, getCommandString( CA_UPDATE_MACHINE_AD ) );
+
+	return sendCACmd( & u, reply, true, timeout );
 }
 
 
@@ -897,6 +931,11 @@ DCStartd::vacateClaim( const char* name_vacate )
 {
 	setCmdStr( "vacateClaim" );
 
+	if (IsDebugLevel(D_COMMAND)) {
+		int cmd = VACATE_CLAIM;
+		dprintf (D_COMMAND, "DCStartd::vacateClaim(%s,...) making connection to %s\n", getCommandStringSafe(cmd), _addr ? _addr : "NULL");
+	}
+
 	bool  result;
 	ReliSock reli_sock;
 	reli_sock.timeout(20);   // years of research... :)
@@ -948,6 +987,11 @@ DCStartd::_suspendClaim( )
 	ClaimIdParser cidp(claim_id);
 	char const *sec_session = cidp.secSessionId();
 	
+	if (IsDebugLevel(D_COMMAND)) {
+		int cmd = SUSPEND_CLAIM;
+		dprintf (D_COMMAND, "DCStartd::_suspendClaim(%s,...) making connection to %s\n", getCommandStringSafe(cmd), _addr ? _addr : "NULL");
+	}
+
 	bool  result;
 	ReliSock reli_sock;
 	reli_sock.timeout(20);   // years of research... :)
@@ -1001,6 +1045,11 @@ DCStartd::_continueClaim( )
 	ClaimIdParser cidp(claim_id);
 	char const *sec_session = cidp.secSessionId();
 	
+	if (IsDebugLevel(D_COMMAND)) {
+		int cmd = CONTINUE_CLAIM;
+		dprintf (D_COMMAND, "DCStartd::_continueClaim(%s,...) making connection to %s\n", getCommandStringSafe(cmd), _addr ? _addr : "NULL");
+	}
+
 	bool  result;
 	ReliSock reli_sock;
 	reli_sock.timeout(20);   // years of research... :)
@@ -1046,6 +1095,11 @@ DCStartd::checkpointJob( const char* name_ckpt )
 			 name_ckpt );
 
 	setCmdStr( "checkpointJob" );
+
+	if (IsDebugLevel(D_COMMAND)) {
+		int cmd = PCKPT_JOB;
+		dprintf (D_COMMAND, "DCStartd::checkpointJob(%s,...) making connection to %s\n", getCommandStringSafe(cmd), _addr ? _addr : "NULL");
+	}
 
 	bool  result;
 	ReliSock reli_sock;

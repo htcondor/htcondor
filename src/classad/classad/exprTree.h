@@ -43,11 +43,18 @@ class EvalState {
 
 		int depth_remaining; // max recursion depth - current depth
 
+		// Normally, rootAd will be the ClassAd at the root of the tree
+		// of ExprTrees in the current evaluation. That is, the parent
+		// scope whose parent scope is NULL.
+		// It can be set to a closer parent scope. Then that ClassAd is
+		// treated like it has no parent scope for LookupInScope() and
+		// Evaluate().
 		const ClassAd *rootAd;
 		const ClassAd *curAd;
 
 		bool		flattenAndInline;	// NAC
 		bool		debug;
+		bool		inAttrRefScope;
 
 		// Cache_to_free are the things in the cache that must be
 		// freed when this gets deleted. The problem is that we put
@@ -124,12 +131,14 @@ class ExprTree
 		
 		/**
 		 * Return a ptr to the raw exprtree below the interface
-		 */ 
+		 */
+		SAL_Ret_notnull
 		virtual const ExprTree* self() const;
 
 		/* This version is for shared-library compatibility.
 		 * Remove it the next time we have to bump the ClassAds SO version.
 		 */
+		SAL_Ret_notnull
 		virtual const ExprTree* self();
 
 		/// A debugging method; send expression to stdout
@@ -182,9 +191,7 @@ class ExprTree
 			EVAL_FAIL,
 			EVAL_OK,
 			EVAL_UNDEF,
-			PROP_UNDEF,
-			EVAL_ERROR,
-			PROP_ERROR
+			EVAL_ERROR
 		};
 
 

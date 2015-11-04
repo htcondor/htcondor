@@ -104,6 +104,25 @@ typedef struct ScheddStatistics : public ScheddJobCounters {
    time_t RecentStatsTickTime;   // last time Recent values Advanced
 
    stats_entry_recent<int> Autoclusters;   // number of active autoclusters
+   stats_entry_recent<int> ResourceRequestsSent;   // number of resource requests
+
+   // These track how successful the schedd was at reconnecting to
+   // running jobs after the last restart.
+   // How many reconnect attempts failed.
+   stats_entry_abs<int> JobsRestartReconnectsFailed;
+   // How many reconnects weren't attempted because the lease was
+   // already expired when the schedd started up.
+   stats_entry_abs<int> JobsRestartReconnectsLeaseExpired;
+   // How many reconnect attmepts succeeded.
+   stats_entry_abs<int> JobsRestartReconnectsSucceeded;
+   // How many reconnect attempts are currently in progress.
+   stats_entry_abs<int> JobsRestartReconnectsAttempting;
+   // How many reconnect attempts ended with the shadow exiting without
+   // telling the schedd whether the reconnect succeeded.
+   stats_entry_abs<int> JobsRestartReconnectsInterrupted;
+   // How much cumulative job runtime was lost due to failure to
+   // reconnect to running jobs.
+   stats_histogram<time_t> JobsRestartReconnectsBadput;
 
    // counts of shadow processes
    stats_entry_abs<int> ShadowsRunning;          // current number of running shadows, also tracks the peak value.
@@ -172,6 +191,8 @@ public:
 
    // add an entry in the pools hash (by pre), if by==true, also add an entry in the by hash
    bool Enable(const char * pre, const char * trig, bool stats_by_trig_value=false, time_t lifetime=0);
+   bool Contains(const char * pre) { return pools.exists(pre) == 0; }
+   ScheddOtherStats * Lookup(const char * pre) { ScheddOtherStats * po = NULL; pools.lookup(pre, po); return po; }
    bool DisableAll();
    bool RemoveDisabled();
    bool AnyEnabled();

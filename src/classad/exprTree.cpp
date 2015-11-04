@@ -75,7 +75,11 @@ void ExprTree::debug_format_value(Value &value, double time) const {
 				result += "NULL\n";
 				break;
 			case Value::ERROR_VALUE:
-				result += "ERROR\n";
+				if ((FN_CALL_NODE == GetKind()) && !static_cast<const FunctionCall*>(this)->FunctionIsDefined()) {
+					result += "ERROR (function is not defined)\n";
+				} else {
+					result += "ERROR\n";
+				}
 				break;
 			case Value::UNDEFINED_VALUE:
 				result += "UNDEFINED\n";
@@ -270,6 +274,7 @@ bool ExprTree::isClassad(ClassAd ** ptr)
 	return (bRet);
 }
 
+SAL_Ret_notnull
 const ExprTree* ExprTree::self() const
 {
 	const ExprTree * pRet=this;
@@ -279,6 +284,7 @@ const ExprTree* ExprTree::self() const
 /* This version is for shared-library compatibility.
  * Remove it the next time we have to bump the ClassAds SO version.
  */
+SAL_Ret_notnull
 const ExprTree* ExprTree::self()
 {
 	const ExprTree * pRet=this;
@@ -317,6 +323,7 @@ EvalState( )
 	depth_remaining = MAX_CLASSAD_RECURSION;
 	flattenAndInline = false;	// NAC
 	debug = false;
+	inAttrRefScope = false;
 }
 
 EvalState::
@@ -354,6 +361,7 @@ SetRootScope( )
         
         while( curScope ) {
             if( curScope == curAd ) {	// NAC - loop detection
+                rootAd = NULL;
                 return;					// NAC
             }							// NAC
             prevScope = curScope;

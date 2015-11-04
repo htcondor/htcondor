@@ -97,17 +97,28 @@ typedef struct macro_set {
 	MACRO_DEFAULTS * defaults; // optional reference to const defaults table
 } MACRO_SET;
 
-/*
-**  Types of macro expansion
-*/
-#define EXPAND_LAZY         1
-#define EXPAND_IMMEDIATE    2
-
 #if defined(__cplusplus)
 	extern MyString global_config_source;
 	extern MyString global_root_config_source;
 	extern StringList local_config_sources;
 	class Regex;
+
+	// class that can be used to hold a malloc'd pointer such as the one returned by param
+	// it will free the pointer when this object is destroyed.
+	class auto_free_ptr {
+	public:
+		auto_free_ptr(char* str=NULL) : p(str) {}
+		~auto_free_ptr() { clear(); }
+		void set(char*str) { clear(); p = str; }   // set a new pointer, freeing the old pointer (if any)
+		void clear() { if (p) free(p); p = NULL; } // free the pointer if any
+		bool empty() { return ! (p && p[0]); }     // return true if there is some data, NULL and "" are both empty
+		char * detach() { char * t = p; p = NULL; return t; } // get the pointer, and remove it from this class without freeing it
+		char * ptr() { return p; }                 // get the pointer, may return NULL if no pointer
+		operator const char *() const { return const_cast<const char*>(p); } // get this pointer as type const char*
+		operator bool() const { return p!=NULL; }  // eval to true if there is a pointer, false if not.
+	private:
+		char * p;
+	};
 
 	int param_names_matching(Regex & re, ExtArray<const char *>& names);
 	int param_names_matching(Regex& re, std::vector<std::string>& names);
@@ -137,33 +148,22 @@ typedef struct macro_set {
 						ClassAd *me=NULL, ClassAd *target=NULL,
 						bool use_param_table = true );
 
+	char* param_with_full_path(const char *name);
+
 	// helper function, parse and/or evaluate string and return true if it is a valid boolean
 	// if it is a valid boolean, the value is returned in 'result', otherwise result is unchanged.
 	bool string_is_boolean_param(const char * string, bool& result, ClassAd *me = NULL, ClassAd *target = NULL, const char * name=NULL);
 	bool string_is_double_param(const char * string, double& result, ClassAd *me = NULL, ClassAd *target = NULL, const char * name=NULL, int* err_reason=NULL);
 	bool string_is_long_param(const char * string, long long& result, ClassAd *me = NULL, ClassAd *target = NULL, const char * name=NULL, int* err_reason=NULL);
 
-#if 1
 	const char * param_get_location(const MACRO_META * pmet, MyString & value);
-#else
-	bool param_get_location(const char *parameter, MyString &filename,
-							int &line_number);
-#endif
 
 	const char * param_get_info(const char * name,
 								const char * subsys,
 								const char * local,
-#if 1
 								MyString &name_used,
 								const char ** pdef_value,
 								const MACRO_META **ppmet);
-#else
-								const char ** pdef_value,
-								MyString &name_used,
-								int &use_count,	int & ref_count,
-								MyString &filename,
-								int &line_number);
-#endif
 
 	
 	/** Look up a value by the name 'name' from the table 'table' which is table_size big.
@@ -175,7 +175,9 @@ typedef struct macro_set {
 	*/
 	MACRO_ITEM* find_macro_item (const char *name, MACRO_SET& set);
 	const char * lookup_macro (const char *name, const char *prefix, MACRO_SET& set, int use=3);
-	//const char * lookup_and_use_macro (const char *name, const char *prefix, MACRO_SET& set, int use);
+	// lookup macro in the MACRO_SET defaults table.
+	// if the defaults table is the param table, and prefix is not NULL, then this first looks up in param subsys tables.
+	const char * lookup_macro_def(const char * name, const char* prefix, MACRO_SET& set, int use=3);
 
 	/*This is a faster version of lookup_macro that assumes the param name
 	  has already been prefixed with "prefix." if needed.*/
@@ -189,8 +191,15 @@ typedef struct macro_set {
 	/* A convenience function that calls param() with a std::string buffer. */
 	bool param(std::string &buf,char const *param_name,char const *default_value=NULL);
 
-	/* A function to fill in a wrapper class for the param functions. */
-	param_functions * get_param_functions();
+	/* A convenience function that calls param() then inserts items from the value into the given StringList if they are not already there */
+	bool param_and_insert_unique_items(const char * param_name, StringList & items, bool case_sensitive=false);
+
+	/* Call this after loading the config files to see if the given user has access to all of the files
+	   Used when running as root to verfiy that the config files will still be accessible after we switch
+	   to the condor user. returns true on success, false if access check fails
+	   when false is returned, the errmsg will indicate the names of files that cannot be accessed.
+	*/
+	bool check_config_file_access(const char * username, class StringList &errfiles);
 
 	bool get_config_dir_file_list( char const *dirpath, class StringList &files );
 
@@ -206,6 +215,7 @@ extern "C" {
 	#define CONFIG_OPT_DEFAULTS_ARE_PARAM_INFO 0x80 // the defaults table is the table defined in param_info.in.
 	#define CONFIG_OPT_NO_EXIT 0x100 // If a config file is missing or the config is invalid, do not abort/exit the process.
 	#define CONFIG_OPT_WANT_QUIET 0x200 // Keep printing to stdout/err to a minimum
+	#define CONFIG_OPT_SUBMIT_SYNTAX 0x1000 // allow +Attr and -Attr syntax like submit files do.
 	bool config();
 	bool config_ex(int opt);
 	bool config_host(const char* host, int config_options);
@@ -276,6 +286,21 @@ bool param_find_item (const char * name, const char * subsys, const char * local
 void foreach_param(int options, bool (*fn)(void* user, HASHITER& it), void* user);
 void foreach_param_matching(Regex & re, int options, bool (*fn)(void* user, HASHITER& it), void* user);
 
+/*
+expand_param(), expand config variables $() against the current config table and return an strdup'd string with the result
+the char* return value should be freed using free()
+*/
+BEGIN_C_DECLS
+char * expand_param (const char *str); // same as below but defaults subsys and use flags
+END_C_DECLS
+char * expand_param (const char *str, const char *subsys, int use);
+inline bool expand_param (const char *str, std::string & expanded) {
+	char * p = expand_param(str);
+	if (!p) return false;
+	expanded = p;
+	return true;
+}
+
 // Write out a config file of values from the param table.
 // Returns 0 on success and -1 on failure.
 #define WRITE_MACRO_OPT_DEFAULT_VALUES  0x01 // include default values
@@ -320,9 +345,6 @@ extern "C" {
 	int find_config_macro( register char *value, register char **leftp,
 		register char **namep, register char **rightp,
 		const char *self=NULL, bool getdollardollar=false, int search_pos=0);
-	int find_special_config_macro( const char *prefix, bool only_id_chars,
-		register char *value, register char **leftp,
-		register char **namep, register char **rightp);
 
 	void init_config (int options);
 }
@@ -342,13 +364,14 @@ BEGIN_C_DECLS
 	insert keeps copies of the name and value.
 	*/
 #ifdef __cplusplus
-	typedef struct macro_source { int inside; short int id; short int line; short int meta_id; short int meta_off; } MACRO_SOURCE;
+	typedef struct macro_source { bool is_inside; bool is_command; short int id; int line; short int meta_id; short int meta_off; } MACRO_SOURCE;
 	void insert_source(const char * filename, MACRO_SET& macro_set, MACRO_SOURCE & source);
 	extern const MACRO_SOURCE EnvMacro;
 	extern const MACRO_SOURCE WireMacro;
 	extern const MACRO_SOURCE DetectedMacro;
 
 	void insert (const char *name, const char *value, MACRO_SET& macro_set, const MACRO_SOURCE & source);
+	inline const char * macro_source_filename(MACRO_SOURCE& source, MACRO_SET& set) { return set.sources[source.id]; }
 	
 	/** Sets the whether or not a macro has actually been used
 	*/
@@ -358,14 +381,54 @@ BEGIN_C_DECLS
 	int get_macro_ref_count (const char *name, MACRO_SET& macro_set);
 	bool config_test_if_expression(const char * expr, bool & result, std::string & err_reason);
 
+	// populate a MACRO_SET from either a config file or a submit file.
+	#define READ_MACROS_SUBMIT_SYNTAX           0x01
+	#define READ_MACROS_EXPAND_IMMEDIATE        0x02
+	//#define READ_MACROS_CHECK_RUNTIME_SECURITY  0x04
+
+	// read a file and populate the macro_set
+	// This function is used both for reading config file and for parsing the submit file.
+	//
+	// when parsing the submit file, supply a fnParse function, this function will handle
+	// lines that begin with + or - or any line that doesn't look like a valid key=value
+	// the parse function should return 0 to continue parsing, and non-zero to abort
+		/*
+	int Read_macros(
+		const char* source,
+		int depth, // a simple recursion detector
+		MACRO_SET& macro_set,
+		int options, // zero or more of READ_MACROS_* flags
+		const char * subsys,
+		std::string & errmsg,
+		int (*fnParse)(void* pv, MACRO_SOURCE& source, MACRO_SET& set, const char * line, std::string & errmsg),
+		void * pvParseData);
+		*/
+
+	int Parse_config_string(MACRO_SOURCE& source, int depth, const char * config, MACRO_SET& macro_set, const char * subsys);
+
+	int
+	Parse_macros(
+		FILE* conf_fp,
+		MACRO_SOURCE& FileMacro,
+		int depth, // a simple recursion detector
+		MACRO_SET& macro_set,
+		int options,
+		const char * subsys,
+		std::string& config_errmsg,
+		int (*fnSubmit)(void* pv, MACRO_SOURCE& source, MACRO_SET& set, char * line, std::string & errmsg),
+		void * pvSubmitData);
+
+	FILE* Open_macro_source (
+		MACRO_SOURCE& macro_source,
+		const char* source,
+		bool        source_is_command,
+		MACRO_SET& macro_set,
+		std::string & errmsg);
+
+	int Close_macro_source(FILE* conf_fp, MACRO_SOURCE& source, MACRO_SET& macro_set, int parsing_return_val);
+
 #endif // __cplusplus
 
-	/*
-	As expand_macro() (above), but assumes the table 'ConfigTab' which is
-	of size TABLESIZE.
-	*/
-	char * macro_expand ( const char *name );
-	char * expand_param (const char *str, const char *subsys, int use);
 
 	struct _macro_stats {
 		int cbStrings;
@@ -387,6 +450,7 @@ BEGIN_C_DECLS
 	
 	// Process an additional chunk of file
 	void process_config_source(const char* filename, int depth, const char* sourcename, const char* host, int required);
+
 
 /* This function initialize GSI (maybe other) authentication related
    stuff Daemons that should use the condor daemon credentials should

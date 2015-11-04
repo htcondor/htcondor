@@ -21,7 +21,7 @@
 #include "condor_config.h"
 #include "shared_port_endpoint.h"
 #include "subsystem_info.h"
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "condor_daemon_core.h"
 #include "counted_ptr.h"
 #include "basename.h"
 
@@ -45,7 +45,7 @@
 static char const *WINDOWS_DAEMON_SOCKET_DIR = "\\\\.\\pipe\\condor";
 #endif
 
-bool SharedPortEndpoint::m_should_initialize_socket_dir = false;
+bool SharedPortEndpoint::m_initialized_socket_dir = false;
 bool SharedPortEndpoint::m_created_shared_port_dir = false;
 
 SharedPortEndpoint::SharedPortEndpoint(char const *sock_name):
@@ -53,6 +53,7 @@ SharedPortEndpoint::SharedPortEndpoint(char const *sock_name):
 	m_listening(false),
 	m_registered_listener(false),
 	m_retry_remote_addr_timer(-1),
+	m_max_accepts(8),
 	m_socket_check_timer(-1)
 {
 
@@ -137,7 +138,7 @@ void
 SharedPortEndpoint::InitAndReconfig()
 {
 	std::string socket_dir;
-#if USE_ABSTRACT_DOMAIN_SOCKET
+#ifdef USE_ABSTRACT_DOMAIN_SOCKET
 	m_is_file_socket = false;
 #endif
 	if (!GetDaemonSocketDir(socket_dir)) {
@@ -157,6 +158,8 @@ SharedPortEndpoint::InitAndReconfig()
 		m_socket_dir = socket_dir;
 		StartListener();
 	}
+	m_max_accepts = param_integer("SHARED_ENDPOINT_MAX_ACCEPTS_PER_CYCLE",
+						param_integer("MAX_ACCEPTS_PER_CYCLE", 8));
 }
 
 void
@@ -287,7 +290,7 @@ SharedPortEndpoint::CreateListener()
 	}
 
 	m_listener_sock.close();
-	m_listener_sock.assign(sock_fd);
+	m_listener_sock.assignDomainSocket( sock_fd );
 
 	std::stringstream ss;
 	ss << m_socket_dir.Value() << DIR_DELIM_CHAR << m_local_id.Value();
@@ -718,6 +721,29 @@ SharedPortEndpoint::InitRemoteAddress()
 		sinful.setPrivateAddr( private_sinful.getSinful() );
 	}
 
+	// Next, look for alternate command strings
+	std::string commandStrings;
+	if (ad->EvaluateAttrString(ATTR_SHARED_PORT_COMMAND_SINFULS, commandStrings))
+	{
+		m_remote_addrs.clear();
+		StringList sl(commandStrings.c_str());
+		sl.rewind();
+		const char *commandSinfulStr;
+		while ((commandSinfulStr = sl.next()))
+		{
+			Sinful altsinful(commandSinfulStr);
+			altsinful.setSharedPortID(m_local_id.Value());
+			char const *private_addr = sinful.getPrivateAddr();
+			if (private_addr)
+			{
+				Sinful private_sinful(private_addr);
+				private_sinful.setSharedPortID(m_local_id.Value());
+				altsinful.setPrivateAddr(private_sinful.getSinful());
+			}
+			m_remote_addrs.push_back(altsinful);
+		}
+	}
+
 	m_remote_addr = sinful.getSinful();
 
 	return true;
@@ -805,6 +831,14 @@ SharedPortEndpoint::ReloadSharedPortServerAddr()
 	RetryInitRemoteAddress();
 }
 
+void
+SharedPortEndpoint::EnsureInitRemoteAddress()
+{
+	if( m_remote_addr.IsEmpty() && m_retry_remote_addr_timer==-1 ) {
+		RetryInitRemoteAddress();
+	}
+}
+
 char const *
 SharedPortEndpoint::GetMyRemoteAddress()
 {
@@ -812,14 +846,19 @@ SharedPortEndpoint::GetMyRemoteAddress()
 		return NULL;
 	}
 
-	if( m_remote_addr.IsEmpty() && m_retry_remote_addr_timer==-1 ) {
-		RetryInitRemoteAddress();
-	}
+	EnsureInitRemoteAddress();
 
 	if( m_remote_addr.IsEmpty() ) {
 		return NULL;
 	}
 	return m_remote_addr.Value();
+}
+
+const std::vector<Sinful> &
+SharedPortEndpoint::GetMyRemoteAddresses()
+{
+	EnsureInitRemoteAddress(); // Initializes the addresses if necessary.
+	return m_remote_addrs;
 }
 
 char const *
@@ -853,7 +892,19 @@ SharedPortEndpoint::HandleListenerAccept( Stream * stream )
 #ifndef WIN32
 	ASSERT( stream == &m_listener_sock );
 #endif
-	DoListenerAccept(NULL);
+	Selector selector;
+	selector.set_timeout( 0, 0 );
+	selector.add_fd( static_cast<Sock*>(stream)->get_file_desc(), Selector::IO_READ );
+
+	for (int idx=0; (idx<m_max_accepts) || (m_max_accepts <= 0); idx++)
+	{
+		DoListenerAccept(NULL);
+		selector.execute();
+		if (!selector.has_ready())
+		{
+			break;
+		}
+	}
 	return KEEP_STREAM;
 }
 
@@ -1021,7 +1072,7 @@ SharedPortEndpoint::ReceiveSocket( ReliSock *named_sock, ReliSock *return_remote
 	if( !remote_sock ) {
 		remote_sock = new ReliSock();
 	}
-	remote_sock->assign( passed_fd );
+	remote_sock->assignSocket( passed_fd );
 	remote_sock->enter_connected_state();
 	remote_sock->isClient(false);
 
@@ -1126,7 +1177,7 @@ SharedPortEndpoint::UseSharedPort(MyString *why_not,bool already_open)
 {
 #ifndef HAVE_SHARED_PORT
 	if( why_not ) {
-		why_not->sprintf("shared ports not supported on this platform");
+		*why_not = "shared ports not supported on this platform";
 	}
 	return false;
 #else
@@ -1138,9 +1189,13 @@ SharedPortEndpoint::UseSharedPort(MyString *why_not,bool already_open)
 		// to decide whether to create a shared port for our child.
 		// In the latter case, other methods are used to determine
 		// that a shared port should not be used.
+		// The HAD and REPLICATION daemons can't properly handle a
+		// shared port address for themselves or their peers.
 
 	bool never_use_shared_port =
-		get_mySubSystem()->isType(SUBSYSTEM_TYPE_SHARED_PORT);
+		get_mySubSystem()->isType(SUBSYSTEM_TYPE_SHARED_PORT) ||
+		get_mySubSystem()->nameMatch("HAD") ||
+		get_mySubSystem()->nameMatch("REPLICATION");
 
 	if( never_use_shared_port ) {
 		if( why_not ) {
@@ -1355,12 +1410,11 @@ SharedPortEndpoint::MakeDaemonSocketDir()
 void
 SharedPortEndpoint::InitializeDaemonSocketDir()
 {
-	m_should_initialize_socket_dir = true;
-}
+	if ( m_initialized_socket_dir ) {
+		return;
+	}
+	m_initialized_socket_dir = true;
 
-void
-SharedPortEndpoint::RealInitializeDaemonSocketDir()
-{
 	std::string result;
 #ifdef USE_ABSTRACT_DOMAIN_SOCKET
 		// Linux has some unique behavior.  We use a random cookie as a prefix to our
@@ -1383,7 +1437,7 @@ SharedPortEndpoint::RealInitializeDaemonSocketDir()
 	if (result == "auto") {
 		struct sockaddr_un named_sock_addr;
 		const unsigned max_len = sizeof(named_sock_addr.sun_path)-1;
-		const char * default_name = macro_expand("$(LOCK)/daemon_sock");
+		char * default_name = expand_param("$(LOCK)/daemon_sock");
 		if (strlen(default_name) + 18 > max_len) {
 			TemporaryPrivSentry tps(PRIV_CONDOR);
 				// NOTE we force the use of /tmp here - not using the HTCondor library routines;
@@ -1400,6 +1454,7 @@ SharedPortEndpoint::RealInitializeDaemonSocketDir()
 		} else {
 			result = default_name;
 		}
+		free( default_name );
 	}
 #endif
 #ifndef WIN32
@@ -1419,7 +1474,9 @@ SharedPortEndpoint::GetAltDaemonSocketDir(std::string &result)
 		// If set to "auto", we want to make sure that $(DAEMON_SOCKET_DIR)/collector or $(DAEMON_SOCKET_DIR)/15337_9022_123456 isn't more than 108 characters
 	std::string default_name;
 	if (result == "auto") {
-		default_name = macro_expand("$(LOCK)/daemon_sock");
+		char *tmp = expand_param("$(LOCK)/daemon_sock");
+		default_name = tmp;
+		free(tmp);
 	} else {
 		default_name = result;
 	}
@@ -1442,10 +1499,6 @@ SharedPortEndpoint::GetDaemonSocketDir(std::string &result)
 #ifdef WIN32
 	result = WINDOWS_DAEMON_SOCKET_DIR;
 #else
-	if (m_should_initialize_socket_dir) {
-		RealInitializeDaemonSocketDir();
-		m_should_initialize_socket_dir = false;
-	}
 	const char * known_dir = getenv("CONDOR_PRIVATE_SHARED_PORT_COOKIE");
 	if (known_dir == NULL) {
 		dprintf(D_FULLDEBUG, "No shared_port cookie available; will fall back to using on-disk $(DAEMON_SOCKET_DIR)\n");

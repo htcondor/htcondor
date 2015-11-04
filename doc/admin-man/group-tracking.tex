@@ -75,11 +75,36 @@ Another good reference is
 \URL{http://docs.redhat.com/docs/en-US/Red\_Hat\_Enterprise\_Linux/6/html/Resource\_Management\_Guide/index.html}
 Even if cgroup support is built into the kernel, 
 many distributions do not install the cgroup tools by default.
-In order to use cgroups, the tools must be installed.  
+
+The interface between the kernel cgroup functionality is via a (virtual) 
+file system.  
+If this file system is not mounted, 
+HTCondor can not use cgroups, 
+and a warning will be printed to the \File{StartLog}. 
+Unfortunately, there is no standard way to mount 
+the file system, nor is there a standard place to mount it,
+across Linux distributions.  
+
+If your Linux distribution uses \Prog{systemd}, 
+it will mount the cgroup file system, 
+and the only remaining item is to set configuration variable
+\Macro{BASE\_CGROUP}, as described below.
+
+If the Linux distribution does \emph{not} use \Prog{systemd}, 
+you can mount all of the cgroup file systems, 
+one per controller, "by hand,"
+with the \Prog{mount} command, 
+but that will not survive a reboot.
+The minimal set of cgroup controllers that must be mounted are 
+\File{blkio}, \File{freezer}, \File{memory}, \File{cpuacct}, and \File{cpu}.
+
+RHEL6 and related distributions that support the \Prog{cgconfig} service 
+will mount them at boot time.
+
 On RPM-based systems, these can be installed with the command
 
 \begin{verbatim}
-yum install libcgroup\*
+  yum install libcgroup\*
 \end{verbatim}
 
 After these tools are installed, the \Prog{cgconfig} service needs to be
@@ -135,6 +160,16 @@ added to it, add and start the \Prog{cgconfig} service by running
 chkconfig --add cgconfig
 service cgconfig start
 \end{verbatim}
+
+On some older Linux kernels, including those in the RHEL 6 series,
+there is a bug in the way that memory usage is charged to cgroups.
+If a process writes a lot of data to the file system quickly, 
+the kernel may decide that it is using too much memory, 
+and kill it with the Out of Memory killer.
+To work around this problem, the administrator
+can set the configurable parameter \Expr{/proc/sys/vm/dirty\_bytes}
+to a fixed value.
+100 MB for this value seems to provide good trade offs.
 
 When the \Prog{cgconfig} service is correctly running, 
 the virtual file system

@@ -1,9 +1,13 @@
 #!/usr/bin/python
 
 import re
+import types
+import pickle
 import classad
 import datetime
 import unittest
+import warnings
+import tempfile
 
 class TestClassad(unittest.TestCase):
 
@@ -13,11 +17,84 @@ class TestClassad(unittest.TestCase):
         self.assertEquals(ad['bar'], 2)
         self.assertRaises(KeyError, ad.__getitem__, 'baz')
 
+    def test_pickle(self):
+        ad = classad.ClassAd({"one": 1})
+        expr = classad.ExprTree("2+2")
+        pad = pickle.dumps(ad)
+        pexpr = pickle.dumps(expr)
+        ad2 = pickle.loads(pad)
+        expr2 = pickle.loads(pexpr)
+        self.assertEquals(ad2.__repr__(), "[ one = 1 ]")
+        self.assertEquals(expr2.__repr__(), "2 + 2")
+
     def test_load_classad_from_file(self):
-        ad = classad.parse(open("tests/test.ad"))
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            ad = classad.parse(open("tests/test.ad"))
         self.assertEqual(ad["foo"], "bar")
         self.assertEqual(ad["baz"], classad.Value.Undefined)
         self.assertRaises(KeyError, ad.__getitem__, "bar")
+
+    def test_load_classad_from_file_v2(self):
+        ad = classad.parseOne(open("tests/test.ad"))
+        self.assertEqual(ad["foo"], "bar")
+        self.assertEqual(ad["baz"], classad.Value.Undefined)
+        self.assertRaises(KeyError, ad.__getitem__, "bar")
+
+    def one_ad_verify(self, ad):
+        self.assertEqual(len(ad), 2)
+        self.assertEqual(ad["foo"], 1)
+        self.assertEqual(ad["bar"], 2)
+
+    def test_parse_one(self):
+        ad = classad.parseOne("foo = 1\nbar = 2")
+        self.one_ad_verify(ad)
+        ad = classad.parseOne("[foo = 1; bar = 2]")
+        self.one_ad_verify(ad)
+        ad = classad.parseOne("foo = 1", classad.Parser.New)
+        self.assertEqual(len(ad), 0)
+        self.one_ad_verify(classad.parseOne("foo = 1\nbar = 2\n"))
+        self.one_ad_verify(classad.parseOne("foo = 1\nbar = 1\n\nbar = 2\n"))
+        ad = classad.parseOne("[foo = 1]", classad.Parser.Old)
+        self.assertEqual(len(ad), 0)
+        self.one_ad_verify(classad.parseOne("[foo = 1; bar = 1;] [bar = 2]"))
+        self.one_ad_verify(classad.parseOne("-------\nfoo = 1\nbar = 2\n\n"))
+
+    def test_parse_iter(self):
+        tf = tempfile.TemporaryFile()
+        tf.write("[foo = 1] [bar = 2]")
+        tf.seek(0)
+        ad_iter = classad.parseAds(tf)
+        ad = ad_iter.next()
+        self.assertEqual(len(ad), 1)
+        self.assertEqual(ad["foo"], 1)
+        self.assertEquals(" [bar = 2]", tf.read())
+        tf = tempfile.TemporaryFile()
+        tf.write("-----\nfoo = 1\n\nbar = 2\n")
+        tf.seek(0)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            ad_iter = classad.parseOldAds(tf)
+        ad = ad_iter.next()
+        self.assertEqual(len(ad), 1)
+        self.assertEqual(ad["foo"], 1)
+        self.assertEquals("bar = 2\n", tf.read())
+
+    def test_parse_next(self):
+        tf = tempfile.TemporaryFile()
+        tf.write("[foo = 1] [bar = 2]")
+        tf.seek(0)
+        ad = classad.parseNext(tf)
+        self.assertEqual(len(ad), 1)
+        self.assertEqual(ad["foo"], 1)
+        self.assertEquals(" [bar = 2]", tf.read())
+        tf = tempfile.TemporaryFile()
+        tf.write("-----\nfoo = 1\n\nbar = 2\n")
+        tf.seek(0)
+        ad = classad.parseNext(tf)
+        self.assertEqual(len(ad), 1)
+        self.assertEqual(ad["foo"], 1)
+        self.assertEquals("bar = 2\n", tf.read())
 
     def new_ads_verify(self, ads):
         ads = list(ads)
@@ -44,11 +121,39 @@ class TestClassad(unittest.TestCase):
     def test_load_classads(self):
         self.new_ads_verify(classad.parseAds(open("tests/test_multiple.ad")))
         self.new_ads_verify(classad.parseAds(open("tests/test_multiple.ad").read()))
-        self.old_ads_verify(classad.parseOldAds(open("tests/test_multiple.old.ad")))
-        self.old_ads_verify(classad.parseOldAds(open("tests/test_multiple.old.ad").read()))
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            self.old_ads_verify(classad.parseOldAds(open("tests/test_multiple.old.ad")))
+            self.old_ads_verify(classad.parseOldAds(open("tests/test_multiple.old.ad").read()))
+        self.old_ads_verify(classad.parseAds(open("tests/test_multiple.old.ad")))
+        self.old_ads_verify(classad.parseAds(open("tests/test_multiple.old.ad").read()))
+
+    def test_warnings(self):
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            classad.parseOld("foo = 1\nbar = 2")
+            self.assertEqual(len(w), 1)
+            self.assertTrue(issubclass(w[-1].category, DeprecationWarning))
+            self.assertTrue("deprecated" in str(w[-1].message))
 
     def test_old_classad(self):
-        ad = classad.parseOld(open("tests/test.old.ad"))
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            ad = classad.parseOld(open("tests/test.old.ad"))
+        contents = open("tests/test.old.ad").read()
+        keys = []
+        for line in contents.splitlines():
+            info = line.split(" = ")
+            if len(info) != 2:
+                continue
+            self.assertTrue(info[0] in ad)
+            self.assertEqual(ad.lookup(info[0]).__repr__(), info[1])
+            keys.append(info[0])
+        for key in ad:
+            self.assertTrue(key in keys)
+
+    def test_old_classad_v2(self):
+        ad = classad.parseNext(open("tests/test.old.ad"))
         contents = open("tests/test.old.ad").read()
         keys = []
         for line in contents.splitlines():
@@ -72,6 +177,25 @@ class TestClassad(unittest.TestCase):
         ad = classad.ClassAd()
         ad["foo"] = classad.ExprTree('regexps("foo (bar)", "foo bar", "\\\\1")')
         self.assertEqual(ad.eval("foo"), "bar")
+
+    def test_list_conversion(self):
+        ad = dict(classad.ClassAd("[a = {1,2,3}]"))
+        self.assertTrue(isinstance(ad["a"], types.ListType))
+        self.assertTrue(isinstance(ad["a"][0], types.LongType))
+        def listAdd(a, b): return a+b
+        classad.register(listAdd)
+        self.assertEqual(classad.ExprTree("listAdd({1,2}, {3,4})")[0], 1)
+
+    def test_dict_conversion(self):
+        ad = classad.ClassAd({'a': [1,2, {}]})
+        dict_ad = dict(ad)
+        self.assertTrue(isinstance(dict_ad["a"][2], types.DictType))
+        self.assertEqual(classad.ClassAd(dict_ad).__repr__(), "[ a = { 1,2,[  ] } ]")
+        ad = classad.ClassAd("[a = [b = {1,2,3}]]")
+        inner_list = dict(ad)['a']['b']
+        self.assertTrue(isinstance(inner_list, types.ListType))
+        self.assertTrue(isinstance(inner_list[0], types.LongType))
+        self.assertTrue(isinstance(ad['a'], types.DictType))
 
     def test_ad_assignment(self):
         ad = classad.ClassAd()
@@ -161,11 +285,11 @@ class TestClassad(unittest.TestCase):
         self.assertEquals("baz", expr.eval())
 
     def test_abstime(self):
-        expr = classad.ExprTree('absTime("2013-09-12T07:50:23")')
+        expr = classad.ExprTree('absTime("2013-11-12T07:50:23")')
         dt = expr.eval()
         self.assertTrue(isinstance(dt, datetime.datetime))
         self.assertEquals(dt.year, 2013)
-        self.assertEquals(dt.month, 9)
+        self.assertEquals(dt.month, 11)
         self.assertEquals(dt.day, 12)
         self.assertEquals(dt.hour, 7)
         self.assertEquals(dt.minute, 50)
@@ -214,7 +338,7 @@ class TestClassad(unittest.TestCase):
 
     def test_subscript(self):
         ad = classad.ClassAd({'foo': [0,1,2,3]})
-        expr = classad.Attribute("foo")[2]
+        expr = classad.Attribute("foo")._get(2)
         self.assertTrue(isinstance(expr, classad.ExprTree))
         self.assertEquals(expr.eval(), classad.Value.Undefined)
         self.assertEquals(expr.eval(ad), 2)
@@ -272,6 +396,12 @@ class TestClassad(unittest.TestCase):
         self.assertEquals(classad.ExprTree('myFoo([foo = 1])').eval(), 1)
         self.assertEquals(classad.ExprTree('size(myIntersect({1, 2}, {2, 3}))').eval(), 1)
         self.assertEquals(classad.ExprTree('myIntersect({1, 2}, {2, 3})[0]').eval(), 2)
+
+    def test_refs(self):
+        ad = classad.ClassAd({"bar": 2})
+        expr = classad.ExprTree("foo =?= bar")
+        self.assertEquals(ad.externalRefs(expr), ["foo"])
+        self.assertEquals(ad.internalRefs(expr), ["bar"])
 
 if __name__ == '__main__':
     unittest.main()

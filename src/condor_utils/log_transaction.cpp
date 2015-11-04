@@ -374,7 +374,7 @@ Transaction::~Transaction()
 }
 
 void
-Transaction::Commit(FILE* fp, void *data_structure, bool nondurable)
+Transaction::Commit(FILE* fp, LoggableClassAdTable *data_structure, bool nondurable)
 {
 	LogRecord *log;
 	

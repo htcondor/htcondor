@@ -22,6 +22,7 @@ use CondorTest;
 use CondorUtils;
 use Cwd;
 
+use Check::SimpleJob;
 
 # whoami is in /usr/ucb on solaris
 $ENV{PATH}="$ENV{PATH}:/usr/ucb";
@@ -30,21 +31,12 @@ my $topleveldir = getcwd();
 my $name4test = `whoami`;
 CondorUtils::fullchomp($name4test);
 CondorTest::debug("Adjusting mapfile for <$name4test>\n",1);
+my $mapfileentry = "SSL \"/C=US/ST=Wisconsin/L=Madison/O=HTCondor/CN=Test Credential\" $name4test";
 
-$param_template = "x_param.protocol-ssl.template";
 $testdesc =  'lib_auth_protocol-ssl - Security Protocol SSL Authentication Test';
 $testname = "lib_auth_protocol-ssl";
 $corename = "lib_auth_protocol-ssl";
-$mycustomconfig = "x_secssl_configpostsrc";
-$mytestnegotiation = "x_secneg_clR_dmnR_secprepostsrc";
 $mytestnegotiation_result = "yes";
-$mycmdfile = "lib_auth_protocol-ssl.cmd";
-$mysslcerts = "x_lib_auth-ssl_keys.tgz";
-
-$mycafile = "ssl_keys/ca-cert.pem";
-$mycadir = "ssl_keys/cadir";
-$mycertfile = "ssl_keys/user.cert";
-$mykeyfile = "ssl_keys/user.key";
 
 # where am I running
 $currenthost = CondorTest::getFqdnHost();
@@ -65,156 +57,166 @@ my $saveme = $topleveldir . "/" . $mysaveme;
 runcmd("mkdir -p $saveme");
 my $lowerlevel = $saveme . "/" . $mypid;
 runcmd("mkdir -p $lowerlevel");
+my $keydir = $saveme . "/" . $mypid . "/ssl_keys";
+runcmd("mkdir -p $keydir");
 
 $pidleveldir = $topleveldir . "/" . $mysaveme . "/" . $mypid;
-print "changing to $pidleveldir\n";
-chdir("$pidleveldir");
+
+print "changing to $keydir\n";
+chdir("$keydir");
+my $cmd = ("openssl req -nodes -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365 -subj \"/C=US/ST=Wisconsin/L=Madison/O=HTCondor/CN=Test Credential\"");
+system($cmd);
 runcmd("pwd");
-runcmd("tar -zxvf ../../$mysslcerts");
-chdir("ssl_keys");
 
-$newmap = "condor_mapfile.new";
-$oldmap = "condor_mapfile";
+$newmap = "condor_mapfile";
 
-open(OLD,"<$oldmap") || die "Can't open mapfile:$!\n";
 open(NEW,">$newmap") || die "Can't open new mapfile:$!\n";
-$line = "";
-while(<OLD>) {
-	chomp;
-	$line = $_;
-	if($line =~ /^SSL\s+(.*)\s+USER$/ ) {
-		print NEW "SSL $1 $name4test";
-		CondorTest::debug("SSL $1 $name4test\n",1);
-	} else {
-		print NEW;
-	}
-}
-close(OLD);
+print NEW "$mapfileentry\n";
 close(NEW);
-runcmd("mv $oldmap $oldmap.old");
-runcmd("mv $newmap $oldmap");
 
 chdir("$topleveldir");
 
-#print "$line\n";
-$myparamname = $corename . $mypid . ".param";
-$mysubmitnm = $corename . $mypid . ".cmd";
-$mysubmitnmout = $corename . $mypid . ".cmd.out";
-$mysubmitnmlog = $corename . $mypid . ".log";
-$mysubmitnmout = $corename . $mypid . ".log";
-$mycorenm = $corename . ".cmd";
-$mycorenmout = $corename . ".cmd.out";
-$mycorenmlog = $corename . ".log";
+my $firstappend_condor_config = '
+    DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+    WANT_SUSPEND = FALSE
+    NEGOTIATION_INTERVAL = 5
+    ALL_DEBUG = D_ALWAYS
+	TOOL_DEBUG = D_ALL
+	ALL_DEBUG = D_ALL
+	SEC_DEBUG_PRINT_KEYS = TRUE
+	SEC_DEFAULT_CRYPTO_METHODS = 3DES,BLOWFISH
 
-CondorTest::debug("Master PID is $mypid\n",1);
-CondorTest::debug("Master PID submit file is $mysubmitnm\n",1);
+	SEC_DEFAULT_AUTHENTICATION = REQUIRED
+	SEC_CLIENT_AUTHENTICATION = REQUIRED
+	SEC_DEFAULT_AUTHENTICATION_METHODS = SSL
+';
 
-# Edit submit file to submit to scheduler at securitypool (side b) schedd.
-my $line;
-open(CSUB,">$myparamname") || die "Can't open new submit file $myparamname: $!\n";
-open(TPLATE,"<$param_template") || die "Can't open param template $param_template: $!\n";
-while(<TPLATE>)
+my $finalappend_condor_config = "
+	AUTH_SSL_SERVER_CAFILE =  $keydir/cert.pem
+	AUTH_SSL_SERVER_CERTFILE = $keydir/cert.pem
+	AUTH_SSL_SERVER_KEYFILE = $keydir/key.pem
+
+	AUTH_SSL_CLIENT_CAFILE =  $keydir/cert.pem
+	AUTH_SSL_CLIENT_CERTFILE = $keydir/cert.pem
+	AUTH_SSL_CLIENT_KEYFILE = $keydir/key.pem
+	
+	CERTIFICATE_MAPFILE = $keydir/condor_mapfile
+";
+
+$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"libauthprotocolssl",$finalappend_condor_config);
+
+my $testname = "lib_auth_protocol-ssl";
+
+# First order up the config but do not start it. If the condor_config_val fails
+# there is no reason to go on
+
+CondorTest::StartCondorWithParams(
+    condor_name => "libauthprotocolssl",
+    fresh_local => "TRUE",
+    condorlocalsrc => "$configfile",
+);
+
+$abnormal = sub {
+	my %info = @_;
+
+	die "Do not want to see abnormal event\n";
+};
+
+$aborted = sub {
+	my $done;
+	%info = @_;
+	$cluster = $info{"cluster"};
+	$job = $info{"job"};
+
+	die "Do not want to see aborted event\n";
+};
+
+$held = sub {
+	my $done;
+	%info = @_;
+	$cluster = $info{"cluster"};
+	$job = $info{"job"};
+
+	die "Do not want to see aborted event\n";
+};
+
+$executed = sub
 {
-	CondorUtils::fullchomp($_);
-	$line = $_;
-	if( $line =~ /^\s*secprepostsrc\s*=\s*.*$/ )
-	{
-		CondorTest::debug("Setting up for $mytestnegotiation\n",1);
-		print CSUB "secprepostsrc = $mytestnegotiation\n";
-	}
-	else
-	{
-		CondorTest::debug("template: $line\n",1);
-		print CSUB "$line\n";
-	}
-}
-close(TPLATE);
-close(CSUB);
-sleep 10;
+	%info = @_;
+	$cluster = $info{"cluster"};
 
-my $configtemplate = $mycustomconfig . ".template";
-open(CONFIG,">$mycustomconfig") || die "Can't open new postconfig file $mycustomconfig: $!\n";
-open(CONFIGTPLATE,"<$configtemplate") || die "Can't open postconfig template $configtemplate: $!\n";
-while(<CONFIGTPLATE>)
-{
-	$tmp = "";
-	CondorUtils::fullchomp($_);
-	$line = $_;
-	if($line =~ /^AUTH_SSL_SERVER_CAFILE\s*=\s*XXXXX(\/.*)$/) {
-		$tmp = $pidleveldir . $1;
-		print CONFIG "AUTH_SSL_SERVER_CAFILE = $tmp\n";
-	} elsif($line =~ /^AUTH_SSL_SERVER_CADIR\s*=\s*XXXXX(\/.*)$/) {
-		$tmp = $pidleveldir . $1;
-		print CONFIG "AUTH_SSL_SERVER_CADIR = $tmp\n";
-	} elsif($line =~ /^AUTH_SSL_SERVER_CERTFILE\s*=\s*XXXXX(\/.*)$/) {
-		$tmp = $pidleveldir . $1;
-		print CONFIG "AUTH_SSL_SERVER_CERTFILE = $tmp\n";
-	} elsif($line =~ /^AUTH_SSL_SERVER_KEYFILE\s*=\s*XXXXX(\/.*)$/) {
-		$tmp = $pidleveldir . $1;
-		print CONFIG "AUTH_SSL_SERVER_KEYFILE = $tmp\n";
-	} elsif($line =~ /^AUTH_SSL_CLIENT_CAFILE\s*=\s*XXXXX(\/.*)$/) {
-		$tmp = $pidleveldir . $1;
-		print CONFIG "AUTH_SSL_CLIENT_CAFILE = $tmp\n";
-	} elsif($line =~ /^AUTH_SSL_CLIENT_CADIR\s*=\s*XXXXX(\/.*)$/) {
-		$tmp = $pidleveldir . $1;
-		print CONFIG "AUTH_SSL_CLIENT_CADIR = $tmp\n";
-	} elsif($line =~ /^AUTH_SSL_CLIENT_CERTFILE\s*=\s*XXXXX(\/.*)$/) {
-		$tmp = $pidleveldir . $1;
-		print CONFIG "AUTH_SSL_CLIENT_CERTFILE = $tmp\n";
-	} elsif($line =~ /^AUTH_SSL_CLIENT_KEYFILE\s*=\s*XXXXX(\/.*)$/) {
-		$tmp = $pidleveldir . $1;
-		print CONFIG "AUTH_SSL_CLIENT_KEYFILE = $tmp\n";
-	} elsif($line =~ /^CERTIFICATE_MAPFILE\s*=\s*XXXXX(\/.*)$/) {
-		$tmp = $pidleveldir . $1;
-		print CONFIG "CERTIFICATE_MAPFILE = $tmp\n";
+	my @adarray;
+	my $status = 1;
+	my $cmd = "condor_q -debug";
+	#$status = CondorTest::runCondorTool($cmd,\@adarray,2,"Security");
+	$status = CondorTest::runCondorTool($cmd,\@adarray,2,{emit_output=>0});
+	if(!$status) {
+		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
+		exit(1);
 	} else {
-		print CONFIG "$line\n";
+		foreach $line (@adarray) {
+			if( $line =~ /.*Authentication was a Success.*/ ) {
+				CondorTest::debug("SWEET: client got Authentication as expected\n",1);
+				return(0);
+			}
+		}
+		CondorTest::debug("Bad: client did not get Authentication as expected\n",1);
+		exit(1)
+	}
+};
+
+$submitted = sub
+{
+	my %info = @_;
+	my $cluster = $info{"cluster"};
+
+	CondorTest::debug("submitted: \n",1);
+	{
+		CondorTest::debug("Check authenticated user....\n",1);
+	}
+	my @adarray;
+	my $status = 1;
+	my $cmd = "condor_q -l $cluster";
+	$status = CondorTest::runCondorTool($cmd,\@adarray,2,{emit_output=>0});
+	if(!$status) {
+		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
+		exit(1);
+	} else {
+		foreach $line (@adarray) {
+			if( $line =~ /^Owner\s*=\s*(.*)\s*.*/ ) {
+				CondorTest::debug("Owner is $1\n",1);
+			} elsif ( $line =~ /^User\s*=\s*(.*)\s*.*/ ) {
+				CondorTest::debug("User is $1\n",1);
+			}
+		}
+	}
+};
+
+$success = sub
+{
+	my %info = @_;
+	my $cluster = $info{"cluster"};
+
+	my $stat = CondorTest::SearchCondorLog( "SCHEDD", "Authentication was a Success" );
+	if( $stat == 1 ) {
+		CondorTest::debug("Good completion!!!\n",1);
+	} else {
+		die "Expected match for Authentication is a Success and could not find it in SchedLog\n";
 	}
 
-}
-close(CONFIG);
-close(CONFIGTPLATE);
+};
 
-my $configsec = CondorTest::StartPersonal( "lib_auth_protocol-ssl", $myparamname ,"protocol", $mypid);
-my @securitypool = split /\+/, $configsec;
-my $secconfig = shift @securitypool;
-my $secport = shift @securitypool;
+CondorTest::RegisterExitedAbnormal( $testname, $abnormal );
 
-CondorTest::debug("---security config is $secconfig and securitypool port is $secport---\n",1);
-	
+my $result = SimpleJob::RunCheck(
+	test_name => $testname,
+	on_hold => $held,
+	on_abort => $aborted,
+	on_execute => $executed,
+	on_submit => $submitted,
+	on_success => $success
+	);
 
-$ENV{CONDOR_CONFIG} = $secconfig;
-# submit into local schedd (side a)
+CondorTest::EndTest();
 
-my $result = system("./x_lib_auth_protocol.pl $mypid \"protocol\" $mytestnegotiation_result $mycmdfile \"ssl\"");
-CondorTest::debug("Result of crafted lib_auth_protocol job is  $result\n",1);
-
-#fails due to directory matching pattern
-runcmd("cp *$corename* $mysaveme", {expect_result=>\&ANY});
-	
-if( -e "$mysubmitnm" )
-{
-	runcmd("cp $mysubmitnm $mycorenm");
-}
-
-if( -e "$mysubmitnmout" )
-{
-	runcmd("cp $mysubmitnmout $mycorenmout");
-}
-
-if( -e "$mysubmitnmlog" )
-{
-	runcmd("cp $mysubmitnmlog $mycorenmlog");
-}
-
-CondorTest::KillPersonal($secconfig);
-print scalar localtime() . "\n";
-
-if($result != 0)
-{
-    # actuaal job failed but we allowed cleanup
-    exit(1);
-}
-
-CondorTest::debug("lib_auth_protocol-ssl SUCCESS\n",1);
 exit(0);

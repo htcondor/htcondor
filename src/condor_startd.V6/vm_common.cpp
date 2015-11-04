@@ -24,6 +24,7 @@
 #include "VMRegister.h"
 #include "VMMachine.h"
 #include "vm_common.h"
+#include "ipv6_hostname.h"
 
 extern VMManager *vmmanager;
 
@@ -156,7 +157,7 @@ vmapi_is_my_machine(char *h1)
 	if( !h1 )
 		return FALSE;
 
-	if( !strcmp(h1, my_full_hostname()) )
+	if( !strcmp(h1, get_local_fqdn().Value()) )
 		return TRUE;
 
 	if( !strcmp(h1, my_ip_string()) )

@@ -32,6 +32,8 @@ my $append_condor_config = '
   PRIVATE_NETWORK_NAME = MyPrivateNet
 
   COLLECTOR_DEBUG = $(COLLECTOR_DEBUG) D_FULLDEBUG
+
+  USE_SHARED_PORT = FALSE
 ';
 
 CondorTest::StartCondorWithParams(

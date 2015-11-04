@@ -29,6 +29,7 @@ typedef enum {
 	PFT_STRING,
 	PFT_POINTER,
 	PFT_VALUE,    // a ClassAd Value use %f %d or %s as appropriate
+	PFT_RAW,      // an unparsed unevaluated ClassAd value. i.e what -long would print.
 } printf_fmt_t;
 
 

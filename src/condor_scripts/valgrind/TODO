@@ -1,0 +1,29 @@
+- Come up with some sort of hash for the stack filenames so that it has some hope of being stable between runs. Maybe just hash the stackid_short?
+
+- Ability to note entries to ignore. Perhaps the hash from the previous item?
+
+- prefix filename with error type
+
+- create index page with summary of what is on sub pages.
+
+- Exclude Perl
+
+- Automatically instrument and start up a sharted HTCondor run. Some of the tests rely on a shared HTCondor.  Perhaps start and stop it for each test (ensure isolation), or just run throughout all tests.
+
+- Better handling of SIGTERM (Ctrl+C); kill off children and exit ASAP.
+
+- On exit, aggressively kill off children.
+
+- When anyone (tests or run-tests) starts an HTCondor, they should do it in -f (foreground) mode to simplify cleaning up children. Allowing it to background makes it hard to clean up.
+
+- If the stacks are completely identical, merge across binaries in output. So instead of
+  condor_foo
+   STACK
+  condor_bar
+   STACK
+
+  it would be
+  condor_foo and condor_bar
+    STACK
+
+  Looks like this will catch a lot of cases.

@@ -142,6 +142,7 @@ extern "C" {
 	bool param_default_ispath_by_id(int ix);
 	MACRO_DEF_ITEM *param_subsys_default_lookup(const char *subsys, const char *name);
 	MACRO_DEF_ITEM *param_default_lookup(const char *name);
+	int param_get_subsys_table(const void* pvdefaults, const char* subsys, MACRO_DEF_ITEM** ppTable);
 
 	MACRO_TABLE_PAIR * param_meta_table(const char * meta);
 	MACRO_DEF_ITEM * param_meta_table_lookup(MACRO_TABLE_PAIR *, const char * param);

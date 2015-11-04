@@ -58,6 +58,23 @@ of a DAG to HTCondor.
 Extensive documentation is in the HTCondor User Manual
 section on DAGMan.
 
+\index{email notification!in DAGs}
+\index{notification!e-mail in DAGs}
+Some options may be specified on the command line
+or in the configuration
+or in a node job's submit description file.
+Precedence is given to command line options or configuration
+over settings from a submit description file.
+An example is e-mail notifications.
+When configuration variable \Macro{DAGMAN\_SUPPRESS\_NOTIFICATION}
+is its default value of \Expr{True}, 
+and a node job's submit description file contains
+\begin{verbatim}
+  notification = Complete
+\end{verbatim}
+e-mail will \emph{not} be sent upon completion,
+as the value of \MacroNI{DAGMAN\_SUPPRESS\_NOTIFICATION} is enforced.
+
 \begin{Options}
   \OptItem{\Opt{-help}}{Display usage information and exit.}
   \OptItem{\Opt{-version}}{Display version information and exit.}
@@ -78,7 +95,10 @@ section on DAGMan.
      jobs allowed before \Condor{dagman} stops submitting more jobs.  Once
      idle jobs start to run, \Condor{dagman} will resume submitting jobs.
      \Arg{NumberOfJobs} is a positive integer. If the option is
-     omitted, the number of idle jobs is unlimited.   Note that for
+     omitted, the number of idle jobs is defined by 
+     configuration variable \Macro{DAGMAN\_MAX\_JOBS\_IDLE},
+     which defaults to 1000.
+     Note that for
      this argument, each individual process within a cluster counts as a 
      job, which is inconsistent with \OptArg{-maxjobs}. 
      Nothing special is done to the submit description file. 

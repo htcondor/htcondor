@@ -14,9 +14,12 @@ if (NOT WINDOWS)
 		endif()
     endif()
 
+
     add_custom_command(
         OUTPUT ${CPACK_PACKAGE_FILE_NAME}.tar.gz
         COMMAND mv ARGS ${CMAKE_INSTALL_PREFIX} ${CPACK_PACKAGE_FILE_NAME}
+        COMMAND ls ARGS -lR ${CPACK_PACKAGE_FILE_NAME}
+        COMMAND ps ARGS auwx
         COMMAND ${TAR_COMMAND} ARGS czf ${CPACK_PACKAGE_FILE_NAME}.tar.gz --owner=0 --group=0 --numeric-owner ${CPACK_PACKAGE_FILE_NAME}
         COMMAND mv ARGS ${CPACK_PACKAGE_FILE_NAME} ${CMAKE_INSTALL_PREFIX}
     )

@@ -159,7 +159,7 @@ QueryJobProxy( const char *proxy_file, time_t *expiration_time, char **identity,
 
 		}
 
-		if ( write( fds[1], reply.c_str(), reply.length() ) < reply.length() ) {
+		if ( write( fds[1], reply.c_str(), reply.length() ) < (ssize_t)reply.length() ) {
 			dprintf( D_ALWAYS, "QueryJobProxy(): Failed to write reply to parent!\n" );
 			_exit( 1 );
 		}
@@ -260,7 +260,7 @@ StartdDelegateX509Proxy( DCStartd *dc_startd, const char* proxy, time_t expirati
 		// Call delegation
 		int dReply = dc_startd->delegateX509Proxy (proxy, expiration_time, NULL );
 
-		if ( write( fds[1], &dReply, sizeof(int) ) < sizeof(int) ) {
+		if ( write( fds[1], &dReply, sizeof(int) ) < (ssize_t)sizeof(int) ) {
 			dprintf( D_ALWAYS, "StartdDelegateX509Proxy(): Failed to write reply to parent!\n" );
 			_exit( 1 );
 		}
@@ -331,8 +331,8 @@ StarterDelegateX509Proxy(DCStarter *dc_starter, const char * filename, time_t ex
 		// Call delegation
 		DCStarter::X509UpdateStatus dReply = dc_starter->delegateX509Proxy (filename, expiration_time, sec_session_id, result_expiration_time );
 
-		if ( write( fds[1], &dReply, sizeof(DCStarter::X509UpdateStatus) ) < sizeof(DCStarter::X509UpdateStatus) ||
-			 write( fds[1], result_expiration_time, sizeof(time_t) ) < sizeof(time_t) ) {
+		if ( write( fds[1], &dReply, sizeof(DCStarter::X509UpdateStatus) ) < (ssize_t)sizeof(DCStarter::X509UpdateStatus) ||
+			 write( fds[1], result_expiration_time, sizeof(time_t) ) < (ssize_t)sizeof(time_t) ) {
 			dprintf( D_ALWAYS, "StarerDelegateX509Proxy(): Failed to write reply to parent!\n" );
 			_exit( 1 );
 		}
@@ -1365,7 +1365,7 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 		remote_rusage.ru_stime.tv_sec = (time_t) real_value;
 		jobAd->Assign(ATTR_JOB_REMOTE_SYS_CPU, real_value);
 	}
-			
+
 	if( update_ad->LookupFloat(ATTR_JOB_REMOTE_USER_CPU, real_value) ) {
 		remote_rusage.ru_utime.tv_sec = (time_t) real_value;
 		jobAd->Assign(ATTR_JOB_REMOTE_USER_CPU, real_value);
@@ -1387,7 +1387,7 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 	if( update_ad->LookupFloat(ATTR_JOB_VM_CPU_UTILIZATION, real_value) ) {
 		  jobAd->Assign(ATTR_JOB_VM_CPU_UTILIZATION, real_value);
 	}
-	
+
 	if( update_ad->LookupInteger(ATTR_RESIDENT_SET_SIZE, int_value) ) {
 		int rss = remote_rusage.ru_maxrss;
 		if( !jobAd->LookupInteger(ATTR_RESIDENT_SET_SIZE,rss) || rss < int_value ) {
@@ -2381,6 +2381,7 @@ RemoteResource::requestReconnect( void )
 
 				// All the errors that can only be programmer
 				// mistakes: the starter should never return them...  
+		default:
 		case CA_FAILURE:
 		case CA_INVALID_STATE:
 		case CA_INVALID_REQUEST:

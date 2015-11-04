@@ -258,7 +258,7 @@ dc_soap_init(struct soap *&soap)
 			if (!sock) {
 				EXCEPT("DaemonCore: Failed to allocate SOAP SSL socket");
 			}
-			if (!sock->assign(sock_fd)) {
+			if (!sock->assignSocket(sock_fd)) {
 				EXCEPT("DaemonCore: Failed to use bound SOAP SSL socket");
 			}
 			int index;

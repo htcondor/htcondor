@@ -52,7 +52,10 @@ bool ClassAdGetExpressionCaching();
 // This flag is only meant for use in Condor, which is transitioning
 // from an older version of ClassAds with slightly different evaluation
 // semantics. It will be removed without warning in a future release.
+// The function SetOldClassAdSemantics() should be used instead of
+// directly setting _useOldClassAdSemantics.
 extern bool _useOldClassAdSemantics;
+void SetOldClassAdSemantics(bool enable);
 
 template <class T>
 void val_str(std::string & szOut, const T & tValue)
@@ -439,8 +442,7 @@ e		*/
 		*/
 		bool EvaluateAttrString( const std::string &attr, std::string &buf ) const;
 
-		/** Evaluates an attribute to a boolean.  A pointer to the string is 
-				returned.
+		/** Evaluates an attribute to a boolean.
 			@param attr The name of the attribute.
 			@param boolValue The value of the attribute.
 			@return true if attrName evaluated to a boolean value, false 
@@ -448,6 +450,15 @@ e		*/
 		*/
 		bool EvaluateAttrBool( const std::string &attr, bool& boolValue ) const;
 
+		/** Evaluates an attribute to a boolean. If old ClassAd semantics
+				are enabled, then numerical values will be converted to the
+				appropriate boolean value.
+			@param attr The name of the attribute.
+			@param boolValue The value of the attribute.
+			@return true if attrName evaluated to a boolean value, false 
+				otherwise.
+		*/
+		bool EvaluateAttrBoolEquiv( const std::string &attr, bool& boolValue ) const;
 		/** Evaluates an attribute to a ClassAd.  A pointer to the ClassAd is 
 				returned. You do not own the ClassAd--do not free it.
 			@param attr The name of the attribute.
@@ -600,7 +611,7 @@ e		*/
          *  @param fullNames true if you want full names (like other.foo)
          *  @return true on success, false on failure. 
          */
-		bool GetExternalReferences( const ExprTree *tree, References &refs, bool fullNames );
+		bool GetExternalReferences( const ExprTree *tree, References &refs, bool fullNames ) const;
 
         /** Return a list of attribute references in the expression that are not 
          *  contained within this ClassAd.
@@ -609,7 +620,7 @@ e		*/
          *  @param refs The list of references
          *  @return true on success, false on failure. 
          */
-		bool GetExternalReferences(const ExprTree *tree, PortReferences &refs);
+		bool GetExternalReferences(const ExprTree *tree, PortReferences &refs) const;
 		//@}
 
 
@@ -618,10 +629,10 @@ e		*/
          *  @param tree The ExprTree for the expression that has references 
          *      that you wish to know about. 
          *  @param refs The list of references
-         *  @param fullNames true if you want full names (like other.foo)
+         *  @param fullNames ignored
          *  @return true on success, false on failure. 
          */
-        bool GetInternalReferences( const ExprTree *tree, References &refs, bool fullNames);
+        bool GetInternalReferences( const ExprTree *tree, References &refs, bool fullNames) const;
 
 #if defined( EXPERIMENTAL )
 		bool AddRectangle( const ExprTree *tree, Rectangles &r, 
@@ -732,14 +743,14 @@ e		*/
 		friend 	class EvalState;
 		friend 	class ClassAdIterator;
 
-		bool _GetExternalReferences( const ExprTree *, ClassAd *, 
-					EvalState &, References&, bool fullNames );
+		bool _GetExternalReferences( const ExprTree *, const ClassAd *, 
+					EvalState &, References&, bool fullNames ) const;
 
-		bool _GetExternalReferences( const ExprTree *, ClassAd *, 
-					EvalState &, PortReferences& );
+		bool _GetExternalReferences( const ExprTree *, const ClassAd *, 
+					EvalState &, PortReferences& ) const;
 
-        bool _GetInternalReferences(const ExprTree *expr, ClassAd *ad,
-            EvalState &state, References& refs, bool fullNames);
+        bool _GetInternalReferences(const ExprTree *expr, const ClassAd *ad,
+            EvalState &state, References& refs, bool fullNames) const;
 #if defined( EXPERIMENTAL )
 		bool _MakeRectangles(const ExprTree*,const std::string&,Rectangles&, bool);
 		bool _CheckRef( ExprTree *, const std::string & );

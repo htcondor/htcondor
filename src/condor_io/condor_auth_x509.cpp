@@ -190,7 +190,11 @@ int Condor_Auth_X509 :: authenticate(const char * /* remoteHost */, CondorError*
 		if ( mySock_->isClient() ) {
 			status = authenticate_client_gss(errstack);
 		} else {
-			status = static_cast<int>(authenticate_server_gss(errstack, non_blocking));
+			CondorAuthX509Retval rc = authenticate_server_gss(errstack, non_blocking);
+			if ( rc == Continue ) {
+				rc = authenticate_server_gss_post( errstack, non_blocking );
+			}
+			status = static_cast<int>( rc );
 		}
 
 		if (gsi_auth_timeout>=0) {
@@ -1055,7 +1059,7 @@ Condor_Auth_X509::authenticate_server_pre(CondorError* errstack, bool non_blocki
 		return WouldBlock;
 	}
 	m_status = 1;
-	int reply;
+	int reply = 0;
 
 	mySock_->decode();
 	mySock_->code(reply);

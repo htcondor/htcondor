@@ -137,7 +137,7 @@ void make_big_string(
 	char **quoted_string) // OUT: the string in quotes
 {
 	*string = (char *) malloc(length + 1);
-	ASSERT( string );
+	ASSERT( *string );
 
 	for (int i = 0; i < length; i++) {
 		(*string)[i] = (rand() % 26) + 97;
@@ -249,21 +249,25 @@ bool user_policy_ad_checker(ClassAd* ad,
 							bool periodic_remove,
 							bool periodic_release,
 							bool hold_check,
-							bool remove_check) 
+							bool remove_check,
+							int absent_mask /*=0*/)
 {
 	int val1, val2, val3, val4, val5;
-	bool found = ad->EvalBool(ATTR_PERIODIC_HOLD_CHECK, NULL, val1) &&
-				 ad->EvalBool(ATTR_PERIODIC_REMOVE_CHECK, NULL, val2) &&
-				 ad->EvalBool(ATTR_PERIODIC_RELEASE_CHECK, NULL, val3) &&
-				 ad->EvalBool(ATTR_ON_EXIT_HOLD_CHECK, NULL, val4) &&
-				 ad->EvalBool(ATTR_ON_EXIT_REMOVE_CHECK, NULL, val5);
+	int mask = 0;
+	if ( ! ad->EvalBool(ATTR_PERIODIC_HOLD_CHECK, NULL, val1))    { mask |= 0x01; val1 = 0; }
+	if ( ! ad->EvalBool(ATTR_PERIODIC_REMOVE_CHECK, NULL, val2))  { mask |= 0x02; val2 = 0; }
+	if ( ! ad->EvalBool(ATTR_PERIODIC_RELEASE_CHECK, NULL, val3)) { mask |= 0x04; val3 = 0; }
+	if ( ! ad->EvalBool(ATTR_ON_EXIT_HOLD_CHECK, NULL, val4))     { mask |= 0x08; val4 = 0; }
+	if ( ! ad->EvalBool(ATTR_ON_EXIT_REMOVE_CHECK, NULL, val5))   { mask |= 0x10; val5 = 1; }
+
+	bool found = (mask == (absent_mask & 0x1F));
 	
-	return found && 
-           ((val1 != 0) == periodic_hold) && 
-           ((val2 != 0) == periodic_remove) && 
-		   ((val3 != 0) == periodic_release) && 
-           ((val4 != 0) == hold_check) && 
-		   ((val5 != 0) == remove_check);
+	return found &&
+			((val1 != 0) == periodic_hold) &&
+			((val2 != 0) == periodic_remove) &&
+			((val3 != 0) == periodic_release) &&
+			((val4 != 0) == hold_check) &&
+			((val5 != 0) == remove_check);
 }
 
 bool user_policy_ad_checker(ClassAd* ad,
@@ -272,10 +276,13 @@ bool user_policy_ad_checker(ClassAd* ad,
 							bool periodic_remove,
 							bool periodic_release,
 							bool hold_check,
-							bool remove_check) 
+							bool remove_check,
+							int absent_mask /*=0*/)
 {
-	int val;
-	bool found = ad->EvalBool(ATTR_TIMER_REMOVE_CHECK, NULL, val);
+	int val=0;
+	int mask = 0;
+	if ( ! ad->EvalBool(ATTR_TIMER_REMOVE_CHECK, NULL, val)) { mask |= 0x01; val = 0; }
+	bool found = mask == (absent_mask & 1);
 	
 	return found && ((val != 0) == timer_remove) &&
 		user_policy_ad_checker(ad, 
@@ -283,7 +290,8 @@ bool user_policy_ad_checker(ClassAd* ad,
 							   periodic_remove,
 							   periodic_release,
 							   hold_check,
-							   remove_check);
+							   remove_check,
+							   absent_mask >> 1);
 }
 
 void insert_into_ad(ClassAd* ad, const char* attribute, const char* value) {

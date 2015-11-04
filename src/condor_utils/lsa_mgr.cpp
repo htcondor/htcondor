@@ -138,6 +138,7 @@ lsa_mgr::add( const LPWSTR Login, const LPWSTR Passwd ) {
 		wcscpy(new_buffer, this->Data_string);
 	} else {
 		new_buffer = new wchar_t[new_buffer_len];	
+		ASSERT(new_buffer);
 		new_buffer[0] = CC_RECORD_DELIM; // init with empty record
 		new_buffer[1] = L'\0'; // 
 	}

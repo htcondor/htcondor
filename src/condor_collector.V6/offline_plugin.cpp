@@ -135,7 +135,7 @@ OfflineCollectorPlugin::configure ()
 			_ads = NULL;
 		}
 
-		_ads = new ClassAdCollection ( _persistent_store, 2 );
+		_ads = new ClassAdCollection (NULL, _persistent_store, 2 );
 		ASSERT ( _ads );
 
 	} else {

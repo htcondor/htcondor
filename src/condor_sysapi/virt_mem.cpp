@@ -34,10 +34,12 @@
 int
 sysapi_swap_space_raw()
 {
-	MEMORYSTATUS status;
+	MEMORYSTATUSEX status;
 	sysapi_internal_reconfig();
-	GlobalMemoryStatus(&status);
-	return (int) (status.dwAvailPageFile/1024L);
+	GlobalMemoryStatusEx(&status);
+	if (status.ullAvailPageFile / 1024 > INT_MAX)
+		return INT_MAX;
+	return (int) (status.ullAvailPageFile / 1024);
 		
 }
 
@@ -72,7 +74,7 @@ sysapi_swap_space_raw()
 	/* in KB */
 	free_swap /= 1024.0;
 
-	if ((int)free_swap > INT_MAX)
+	if (free_swap > INT_MAX)
 	{
 		return INT_MAX;
 	}

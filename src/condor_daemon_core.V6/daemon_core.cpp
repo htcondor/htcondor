@@ -107,7 +107,7 @@ CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
 #include "valgrind.h"
 #include "ipv6_hostname.h"
 #include "daemon_command.h"
-#include "condor_ipv6.h"
+#include "condor_sockfunc.h"
 
 #if defined ( HAVE_SCHED_SETAFFINITY ) && !defined ( WIN32 )
 #include <sched.h>
@@ -230,8 +230,6 @@ void **curr_regdataptr;
 
 extern void drop_addr_file( void );
 
-TimerManager DaemonCore::t;
-
 // Hash function for pid table.
 static unsigned int compute_pid_hash(const pid_t &key)
 {
@@ -242,7 +240,11 @@ static unsigned int compute_pid_hash(const pid_t &key)
 
 DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 				int SocSize,int ReapSize,int PipeSize)
-	: comTable(32), sigTable(10), reapTable(4)
+	: comTable(32),
+	sigTable(10),
+	reapTable(4),
+	t(TimerManager::GetTimerManager()),
+	m_dirty_command_sock_sinfuls(true)
 {
 
 	if(ComSize < 0 || SigSize < 0 || SocSize < 0 || PidSize < 0 || ReapSize < 0)
@@ -265,6 +267,7 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 	ppid = 0;
 #ifdef WIN32
 	// init the mutex
+	#pragma warning(suppress: 28125) // should InitCritSec inside a try/except block..
 	InitializeCriticalSection(&Big_fat_mutex);
 	EnterCriticalSection(&Big_fat_mutex);
 
@@ -484,6 +487,10 @@ DaemonCore::~DaemonCore()
 		free( comTable[i].command_descrip );
 		free( comTable[i].handler_descrip );
 	}
+	if ( m_unregisteredCommand.num ) {
+		free( m_unregisteredCommand.command_descrip );
+		free( m_unregisteredCommand.handler_descrip );
+	}
 
 	for (i=0;i<nSig;i++) {
 		free( sigTable[i].sig_descrip );
@@ -511,16 +518,7 @@ DaemonCore::~DaemonCore()
 		delete sockTable;
 	}
 
-	if (sec_man) {
-		// the reference counting in sec_man is currently disabled,
-		// so we need to clean up after it quite explicitly.  ZKM.
-		KeyCache * tmp_kt = sec_man->session_cache;
-		HashTable<MyString,MyString>* tmp_cm = sec_man->command_map;
-
-		delete sec_man;
-		delete tmp_kt;
-		delete tmp_cm;
-	}
+	delete sec_man;
 
 	// Since we created these, we need to clean them up.
 	delete super_dc_rsock;
@@ -539,6 +537,13 @@ DaemonCore::~DaemonCore()
 		if ( pid_entry ) delete pid_entry;
 	}
 	delete pidTable;
+
+	// Delete all time-skip watchers
+	m_TimeSkipWatchers.Rewind();
+	TimeSkipWatcher * p;
+	while( (p = m_TimeSkipWatchers.Next()) ) {
+		delete p;
+	}
 
 	if (m_proc_family != NULL) {
 		delete m_proc_family;
@@ -588,6 +593,23 @@ DaemonCore::~DaemonCore()
 		free(m_private_network_name);
 		m_private_network_name = NULL;
 	}
+}
+
+bool DaemonCore::setChildSharedPortID( pid_t pid, const char * sock ) {
+	PidEntry * pidinfo = NULL;
+	if( daemonCore->pidTable->lookup( pid, pidinfo ) < 0 ) {
+		return false;
+	}
+
+	if( pidinfo->sinful_string[0] == '\0' ) {
+		return false;
+	}
+
+	Sinful s( pidinfo->sinful_string.c_str() );
+	s.setSharedPortID( sock );
+	pidinfo->sinful_string = s.getSinful();
+
+	return true;
 }
 
 void DaemonCore::Set_Default_Reaper( int reaper_id )
@@ -876,6 +898,9 @@ int DaemonCore::Register_Timer (const Timeslice &timeslice,TimerHandlercpp handl
 
 int	DaemonCore::Cancel_Timer( int id )
 {
+	if ( this == NULL ) {
+		return 0;
+	}
 	return( t.CancelTimer(id) );
 }
 
@@ -992,6 +1017,9 @@ int DaemonCore::Register_Command(int command, const char* command_descrip,
 
 int DaemonCore::Cancel_Command( int command )
 {
+	if ( this == NULL ) {
+		return TRUE;
+	}
 
 	int i;
 	for(i = 0; i<nCommand; i++) {
@@ -1066,6 +1094,14 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 			// port.  Instead, we advertise SharedPortServer's port along
 			// with our local id so connections can be forwarded to us.
 		char const *addr = m_shared_port_endpoint->GetMyRemoteAddress();
+
+		if( addr ) {
+			// Remote addresses can be accessed from other machines, so
+			// they must have addrs.
+			Sinful s( addr );
+			ASSERT( s.hasAddrs() );
+		}
+
 		if( !addr && usePrivateAddress ) {
 				// If SharedPortServer is not running yet, and an address
 				// that is local to this machine is good enough, then just
@@ -1075,7 +1111,13 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 				// our named socket.
 			addr = m_shared_port_endpoint->GetMyLocalAddress();
 		}
+
 		if( addr ) {
+			// We don't verify here the addr has addrs because it could
+			// be a local address that could only work on the same machine.
+			// Since these addresses are constructed out of thin air, it's
+			// not worth fixing them for the benefit of an assertion that
+			// can't matter.
 			return addr;
 		}
 	}
@@ -1090,7 +1132,36 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 		free( sinful_public );
 		sinful_public = NULL;
 
-		char const *addr = ((Sock*)(*sockTable)[initial_command_sock()].iosock)->get_sinful_public();
+		int initialCommandSock = initial_command_sock();
+		if( initialCommandSock == -1 ) {
+			EXCEPT( "Unable to find initial command socket!" );
+		}
+
+		Sock * sock = (Sock *)(*sockTable)[initialCommandSock].iosock;
+		condor_sockaddr sa = sock->my_addr();
+
+		// FIXME: get_sinful_public() will return the TCP_FORWARDING_HOST.
+		// We need to check where else it can end up and if it will cause
+		// problems there.  It's safe to do here, unless you're running
+		// an older version of HTCondor on the same node (because the
+		// Sinful in the address file will have TCP_FORWARDING_HOST as its
+		// primary address, and older versions of HTCondor don't ignore
+		// the primary address).
+		char const * addr = sock->get_sinful_public();
+		if(! sa.is_ipv4()) {
+			for( int i = initialCommandSock; i < nSock; ++i ) {
+				if( (*sockTable)[i].iosock == NULL ) { continue; }
+				if(! (*sockTable)[i].is_command_sock) { continue; }
+
+				sock = (Sock *)(*sockTable)[i].iosock;
+				sa = sock->my_addr();
+				if(! sa.is_ipv4()) { continue; }
+
+				addr = sock->get_sinful_public();
+				break;
+			}
+		}
+
 		if( !addr ) {
 			EXCEPT("Failed to get public address of command socket!");
 		}
@@ -1106,8 +1177,10 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 		char* tmp;
 		if ((tmp = param("PRIVATE_NETWORK_INTERFACE"))) {
 			int port = ((Sock*)(*sockTable)[initial_command_sock()].iosock)->get_port();
+			std::string ipv4, ipv6;
 			std::string private_ip;
-			bool ok = network_interface_to_ip("PRIVATE_NETWORK_INTERFACE",tmp,private_ip);
+			bool ok = network_interface_to_ip("PRIVATE_NETWORK_INTERFACE",
+				tmp, ipv4, ipv6, private_ip);
 			if( !ok ) {
 				dprintf(D_ALWAYS,
 						"Failed to determine my private IP address using PRIVATE_NETWORK_INTERFACE=%s\n",
@@ -1150,13 +1223,13 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 			}
 		}
 
-			// if we don't hae a UDP port, advertise that fact
+			// if we don't have a UDP port, advertise that fact
 		char *forwarding = param("TCP_FORWARDING_HOST");
 		if( forwarding ) {
 			free( forwarding );
 			m_sinful.setNoUDP(true);
 		}
-		if( dc_socks.begin() == dc_socks.end() 
+		if( dc_socks.begin() == dc_socks.end()
 			|| !dc_socks.begin()->has_safesock() ) {
 			m_sinful.setNoUDP(true);
 		}
@@ -1173,17 +1246,114 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 		if( private_name && publish_private_name ) {
 			m_sinful.setPrivateNetworkName(private_name);
 		}
+
+		// Handle multi-protocol addressing.
+		m_sinful.clearAddrs();
+		condor_sockaddr sa4, sa6;
+		for( SockPairVec::iterator it = dc_socks.begin(); it != dc_socks.end(); ++it ) {
+			ASSERT( it->has_relisock() );
+			int fd = it->rsock()->get_file_desc();
+
+			// condor_getsockname_ex() returns the 'best' protocol-appropriate
+			// address for the local host if the socket is bound in[6]_any.
+			condor_sockaddr sa;
+			ASSERT( condor_getsockname_ex( fd, sa ) == 0 );
+
+			if( sa.is_ipv4() ) {
+				if( sa4.is_valid() ) {
+					if( sa.desirability() > sa4.desirability() ) {
+						sa4 = sa;
+					}
+				} else {
+					sa4 = sa;
+				}
+			} else if( sa.is_ipv6() ) {
+				if( sa6.is_valid() ) {
+					if( sa.desirability() > sa6.desirability() ) {
+						sa6 = sa;
+					}
+				} else {
+					sa6 = sa;
+				}
+			}
+		}
+
+		// TCP_FORWARDING_HOST is defined in 8.4 to be the singlular
+		// advertised public address of the daemon.  The client sorts
+		// addrs by desirability and then uses the first address of a
+		// protocol that it has enabled.  Since we don't know that
+		// TCP_FORWARDING_HOST is more desirable (although it should be),
+		// replace the public address of the corresponding protocol
+		// with TCP_FORWARDING_HOST.
+		//
+		// Note that sPublic, despite its name, is used to generate the
+		// private address, and therefore shouldn't be changed, since it
+		// is (for instance) written to the address file (and the
+		// TCP_FORWARDING_HOST may only forward TCP connections in one
+		// direction).
+		condor_sockaddr fa;
+		forwarding = param( "TCP_FORWARDING_HOST" );
+		if( forwarding ) {
+			if(! fa.from_ip_string( forwarding )) {
+				// This duplicates the logic from get_sinful_public().  It's
+				// not the best logic, but at least it's consistent.
+				std::vector< condor_sockaddr > addrs = resolve_hostname( forwarding );
+				if( addrs.empty() ) {
+					dprintf( D_ALWAYS, "Failed to resolve address of TCP_FORWARDING_HOST=%s\n", forwarding );
+				} else {
+					fa = addrs.front();
+				}
+			}
+			free( forwarding );
+		}
+
+		ASSERT( sa6.is_valid() || sa4.is_valid() );
+		Sinful sPublic( sinful_public );
+		Sinful sPrivate( sinful_private != NULL ? sinful_private : "" );
+		if( sa6.is_valid() ) {
+			if( fa.is_valid() && fa.is_ipv6() ) {
+				fa.set_port( sa6.get_port() );
+				m_sinful.addAddrToAddrs( fa );
+			} else {
+				m_sinful.addAddrToAddrs( sa6 );
+			}
+			sPublic.addAddrToAddrs( sa6 );
+			sPrivate.addAddrToAddrs( sa6 );
+		}
+		if( sa4.is_valid() ) {
+			if( fa.is_valid() && fa.is_ipv4() ) {
+				fa.set_port( sa4.get_port() );
+				m_sinful.addAddrToAddrs( fa );
+			} else {
+				m_sinful.addAddrToAddrs( sa4 );
+			}
+			sPublic.addAddrToAddrs( sa4 );
+			sPrivate.addAddrToAddrs( sa4 );
+		}
+
+		free( sinful_public );
+		sinful_public = strdup( sPublic.getSinful() );
+
+		if( sinful_private != NULL ) {
+			free( sinful_private );
+			sinful_private = strdup( sPrivate.getSinful() );
+		}
 	}
 
 	if( usePrivateAddress ) {
 		if( sinful_private ) {
+			Sinful s( sinful_private );
+			ASSERT( s.hasAddrs() );
 			return sinful_private;
 		}
 		else {
+			Sinful s( sinful_public );
+			ASSERT( s.hasAddrs() );
 			return sinful_public;
 		}
 	}
 
+	ASSERT( m_sinful.hasAddrs() );
 	return m_sinful.getSinful();
 }
 
@@ -1191,6 +1361,8 @@ void
 DaemonCore::daemonContactInfoChanged()
 {
 	m_dirty_sinful = true;
+	m_dirty_command_sock_sinfuls = true;
+	DaemonCore::InfoCommandSinfulStringsMyself();
 
 	drop_addr_file();
 }
@@ -1341,6 +1513,10 @@ int DaemonCore::Register_Signal(int sig, const char* sig_descrip,
 int DaemonCore::Cancel_Signal( int sig )
 {
 	int found = -1;
+
+	if ( this == NULL ) {
+		return TRUE;
+	}
 
 	// find this signal in our table
 	for ( int i = 0; i < nSig; i++ ) {
@@ -1580,6 +1756,10 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 int DaemonCore::Cancel_Socket( Stream* insock, void *prev_entry)
 {
 	int i,j;
+
+	if ( this == NULL ) {
+		return TRUE;
+	}
 
 	if (!insock) {
 		return FALSE;
@@ -1974,6 +2154,10 @@ int DaemonCore::Register_Pipe(int pipe_end, const char* pipe_descrip,
 
 int DaemonCore::Cancel_Pipe( int pipe_end )
 {
+	if ( this == NULL ) {
+		return TRUE;
+	}
+
 	int index = pipe_end - PIPE_INDEX_OFFSET;
 	if (index < 0) {
 		dprintf(D_ALWAYS, "Cancel_Pipe on invalid pipe end: %d\n", pipe_end);
@@ -2087,6 +2271,10 @@ unsigned __stdcall pipe_close_thread(void *arg)
 
 int DaemonCore::Close_Pipe( int pipe_end )
 {
+	if ( this == NULL ) {
+		return TRUE;
+	}
+
 	int index = pipe_end - PIPE_INDEX_OFFSET;
 	if (pipeHandleTableLookup(index) == FALSE) {
 		dprintf(D_ALWAYS, "Close_Pipe on invalid pipe end: %d\n", pipe_end);
@@ -2151,6 +2339,10 @@ int DaemonCore::Close_Pipe( int pipe_end )
 int
 DaemonCore::Cancel_And_Close_All_Pipes(void)
 {
+	if ( this == NULL ) {
+		return 0;
+	}
+
 	// This method will cancel *and delete* all registered pipes.
 	// It will return the number of pipes cancelled + closed.
 	int i = 0;
@@ -2226,6 +2418,9 @@ DaemonCore::Get_Pipe_FD(int pipe_end, int* fd)
 int
 DaemonCore::Close_FD(int fd)
 {
+	if ( this == NULL ) {
+		return 0;
+	}
 	int retval = -1;  
 	if ( fd >= PIPE_INDEX_OFFSET ) {  
 		retval = ( daemonCore->Close_Pipe ( fd ) ? 0 : -1 );
@@ -2274,6 +2469,9 @@ DaemonCore::Write_Stdin_Pipe(int pid, const void* buffer, int /* len */ ) {
 
 bool
 DaemonCore::Close_Stdin_Pipe(int pid) {
+	if ( this == NULL ) {
+		return true;
+	}
 	PidEntry *pidinfo = NULL;
 	int rval;
 
@@ -2388,6 +2586,10 @@ int DaemonCore::Lookup_Socket( Stream *insock )
 
 int DaemonCore::Cancel_Reaper( int rid )
 {
+	if ( this == NULL ) {
+		return TRUE;
+	}
+
 	int idx;
 
 	for ( idx = 0; idx < nReap; idx++ ) {
@@ -2600,6 +2802,7 @@ DaemonCore::refreshDNS() {
 #endif
 
 	getSecMan()->getIpVerify()->refreshDNS();
+	DaemonCore::InfoCommandSinfulStringsMyself();
 }
 
 class DCThreadState : public Service {
@@ -2686,6 +2889,8 @@ DaemonCore::reconfig(void) {
     // publication and window size of daemon core stats are controlled by params
     dc_stats.Reconfig();
 
+	m_dirty_command_sock_sinfuls = true;
+	DaemonCore::InfoCommandSinfulStringsMyself();
 	m_dirty_sinful = true; // refresh our address in case config changes it
 
 	SecMan *secman = getSecMan();
@@ -2728,8 +2933,8 @@ DaemonCore::reconfig(void) {
 		In the words of BOC, "Don't fear the reapers!"
 	*/
 	m_iMaxReapsPerCycle = param_integer("MAX_REAPS_PER_CYCLE",0,0);
-    if( m_iMaxReapsPerCycle != 1 ) {
-        dprintf(D_FULLDEBUG,"Setting maximum reaps per cycle %d.\n", m_iMaxAcceptsPerCycle);
+    if( m_iMaxReapsPerCycle != 0 ) {
+        dprintf(D_FULLDEBUG,"Setting maximum reaps per cycle %d.\n", m_iMaxReapsPerCycle);
     }
 		// Initialize the collector list for ClassAd updates
 	initCollectorList();
@@ -2977,7 +3182,6 @@ DaemonCore::Verify(char const *command_descrip,DCpermission perm, const condor_s
 		char ipstr[IP_STRING_BUF_SIZE];
 		strcpy(ipstr, "(unknown)");
 		addr.to_ip_string(ipstr, sizeof(ipstr));
-	//sin_to_ipstring(sin,ipstr,IP_STRING_BUF_SIZE);
 
 			// Note that although this says D_ALWAYS, when the result is
 			// ALLOW, we only get here if D_SECURITY is on.
@@ -3007,7 +3211,7 @@ DaemonCore::Wake_up_select()
 	if (CondorThreads::get_tid() <= 1) {
 #ifdef WIN32
 		if (GetCurrentThreadId() != dcmainThreadId) {
-			dprintf (D_ALWAYS, "DaemonCore::Wake_up_select called from an unknown thread. windows tid = %d", 
+			dprintf (D_ALWAYS, "DaemonCore::Wake_up_select called from an unknown thread. windows tid = %d\n",
 				GetCurrentThreadId());
 		}
 #endif
@@ -3110,7 +3314,7 @@ void DaemonCore::Driver()
 		dprintf( D_ALWAYS, "Done with stdout & stderr tests\n" );
 	}
 
-	double runtime = UtcTime::getTimeDouble();
+	double runtime = _condor_debug_get_time_double();
 	double group_runtime = runtime;
     double pump_cycle_begin_time = runtime;
 
@@ -3164,7 +3368,7 @@ void DaemonCore::Driver()
 #endif
 
         // accumulate signal runtime (including timers) as SignalRuntime
-        runtime = UtcTime::getTimeDouble();
+        runtime = _condor_debug_get_time_double();
         dc_stats.SignalRuntime += (runtime - group_runtime);
         group_runtime = runtime;
 
@@ -3194,7 +3398,7 @@ void DaemonCore::Driver()
 		}
 
         // accumulate signal runtime (including timers) as SignalRuntime
-        //runtime = UtcTime::getTimeDouble();
+        //runtime = _condor_debug_get_time_double();
         dc_stats.TimerRuntime += (runtime - group_runtime);
         group_runtime = runtime;
 
@@ -3332,10 +3536,10 @@ void DaemonCore::Driver()
 
 		selector.execute();
 
-        // update statistics on time spent waiting in select.
-        runtime = UtcTime::getTimeDouble();
-        dc_stats.SelectWaittime += (runtime - group_runtime);
-        //dc_stats.StatsLifetime = now - dc_stats.InitTime;
+		// update statistics on time spent waiting in select.
+		runtime = _condor_debug_get_time_double();
+		dc_stats.SelectWaittime += (runtime - group_runtime);
+		//dc_stats.StatsLifetime = now - dc_stats.InitTime;
 
 		tmpErrno = errno;
 
@@ -3406,7 +3610,7 @@ void DaemonCore::Driver()
 		// in the main loop.
 		CondorThreads::enable_parallel(false);
 
-        runtime = group_runtime = UtcTime::getTimeDouble();
+		runtime = group_runtime = _condor_debug_get_time_double();
 
 		if ( selector.has_ready() ||
 			 ( selector.timed_out() && 
@@ -3500,9 +3704,9 @@ void DaemonCore::Driver()
 				}	// end of if valid sock entry
 			}	// end of for loop through all sock entries
 
-            runtime = UtcTime::getTimeDouble();
-            dc_stats.SocketRuntime += (runtime - group_runtime);
-            group_runtime = runtime;
+			runtime = _condor_debug_get_time_double();
+			dc_stats.SocketRuntime += (runtime - group_runtime);
+			group_runtime = runtime;
 
 			// scan through the pipe table to find which ones select() set
 			for(i = 0; i < nPipe; i++) {
@@ -3534,7 +3738,7 @@ void DaemonCore::Driver()
 
 
 			// Now loop through all pipe entries, calling handlers if required.
-            runtime = UtcTime::getTimeDouble();
+			runtime = _condor_debug_get_time_double();
 			for(i = 0; i < nPipe; i++) {
 				if ( (*pipeTable)[i].index != -1 ) {	// if a valid entry...
 
@@ -3628,8 +3832,8 @@ void DaemonCore::Driver()
 						}
 #endif
 
-                        // update per-handler runtime statistics
-                        runtime = dc_stats.AddRuntime((*pipeTable)[i].handler_descrip, runtime);
+						// update per-handler runtime statistics
+						runtime = dc_stats.AddRuntime((*pipeTable)[i].handler_descrip, runtime);
 
 						if ( (*pipeTable)[i].call_handler == true ) {
 							// looks like the handler called Cancel_Pipe(),
@@ -3644,9 +3848,9 @@ void DaemonCore::Driver()
 			}	// for 0 thru nPipe checking if call_handler is true
 
 
-            runtime = UtcTime::getTimeDouble();
-            dc_stats.PipeRuntime += (runtime - group_runtime);
-            group_runtime = runtime;
+			runtime = _condor_debug_get_time_double();
+			dc_stats.PipeRuntime += (runtime - group_runtime);
+			group_runtime = runtime;
 
 			// Now loop through all sock entries, calling handlers if required.
 			for(i = 0; i < nSock; i++) {
@@ -3658,7 +3862,7 @@ void DaemonCore::Driver()
 
                         dc_stats.SockMessages += 1;
 
-						if ( recheck_status &&
+						if ( recheck_status && ((*sockTable)[i].handler_type == HANDLE_READ) &&
 							 ((*sockTable)[i].is_connect_pending == false) )
 						{
 							// we have already called at least one callback handler.  what
@@ -3700,22 +3904,22 @@ void DaemonCore::Driver()
 						recheck_status = true;
 						CallSocketHandler( i, true );
 
-                        // update per-handler runtime statistics
-                        runtime = dc_stats.AddRuntime((*sockTable)[i].handler_descrip, runtime);
+						// update per-handler runtime statistics
+						runtime = dc_stats.AddRuntime((*sockTable)[i].handler_descrip, runtime);
 
 					}	// if call_handler is True
 				}	// if valid entry in sockTable
 			}	// for 0 thru nSock checking if call_handler is true
 
-            runtime = UtcTime::getTimeDouble();
-            dc_stats.SocketRuntime += (runtime - group_runtime);
-            group_runtime = runtime;
+			runtime = _condor_debug_get_time_double();
+			dc_stats.SocketRuntime += (runtime - group_runtime);
+			group_runtime = runtime;
 
 
 		}	// if rv > 0
 
-        dc_stats.PumpCycle += (runtime - pump_cycle_begin_time);
-        pump_cycle_begin_time = runtime;
+		dc_stats.PumpCycle += (runtime - pump_cycle_begin_time);
+		pump_cycle_begin_time = runtime;
 
 	}	// end of infinite for loop
 }
@@ -3846,6 +4050,7 @@ void
 DaemonCore::CallSocketHandler_worker( int i, bool default_to_HandleCommand, Stream* asock )
 {
 	char *handlerName = NULL;
+	double handler_start_time=0;
 	int result=0;
 
 		// if the user provided a handler for this socket, then
@@ -3859,16 +4064,18 @@ DaemonCore::CallSocketHandler_worker( int i, bool default_to_HandleCommand, Stre
 
 		// log a message
 	if ( (*sockTable)[i].handler || (*sockTable)[i].handlercpp )
-		{
+	{
+		if (IsDebugLevel(D_DAEMONCORE)) {
 			dprintf(D_DAEMONCORE,
 					"Calling Handler <%s> for Socket <%s>\n",
 					(*sockTable)[i].handler_descrip,
 					(*sockTable)[i].iosock_descrip);
+		}
+		if (IsDebugLevel(D_COMMAND)) {
 			handlerName = strdup((*sockTable)[i].handler_descrip);
 			dprintf(D_COMMAND, "Calling Handler <%s> (%d)\n", handlerName,i);
-
-		UtcTime handler_start_time;
-		handler_start_time.getTime();
+			handler_start_time = _condor_debug_get_time_double();
+		}
 
 	if ( (*sockTable)[i].handler ) {
 			// a C handler
@@ -3878,12 +4085,11 @@ DaemonCore::CallSocketHandler_worker( int i, bool default_to_HandleCommand, Stre
 		result = ((*sockTable)[i].service->*( (*sockTable)[i].handlercpp))((*sockTable)[i].iosock);
 		}
 
-		UtcTime handler_stop_time;
-		handler_stop_time.getTime();
-		float handler_time = handler_stop_time.difference(&handler_start_time);
-
-		dprintf(D_COMMAND, "Return from Handler <%s> %.4fs\n", handlerName, handler_time);
-		free(handlerName);
+		if (IsDebugLevel(D_COMMAND)) {
+			double handler_time = _condor_debug_get_time_double() - handler_start_time;
+			dprintf(D_COMMAND, "Return from Handler <%s> %.6fs\n", handlerName, handler_time);
+			free(handlerName);
+		}
 	}
 	else if( default_to_HandleCommand ) {
 			// no handler registered, so this is a command
@@ -4009,6 +4215,7 @@ DaemonCore::HandleReqPayloadReady(Stream *stream)
 int
 DaemonCore::CallUnregisteredCommandHandler(int req, Stream *stream)
 {
+	double handler_start_time=0;
 	if (!m_unregisteredCommand.num) {
 		dprintf(D_ALWAYS,
 			"Received %s command (%d) (%s) from %s %s\n",
@@ -4025,8 +4232,7 @@ DaemonCore::CallUnregisteredCommandHandler(int req, Stream *stream)
 			req,
 			stream->peer_description());
 
-	UtcTime handler_start_time;
-	handler_start_time.getTime();
+	handler_start_time = _condor_debug_get_time_double();
 
 	// call the handler function; first curr_dataptr for GetDataPtr()
 	curr_dataptr = &(m_unregisteredCommand.data_ptr);
@@ -4037,9 +4243,7 @@ DaemonCore::CallUnregisteredCommandHandler(int req, Stream *stream)
 
 	curr_dataptr = NULL;
 
-	UtcTime handler_stop_time;
-	handler_stop_time.getTime();
-	float handler_time = handler_stop_time.difference(&handler_start_time);
+	double handler_time = _condor_debug_get_time_double() - handler_start_time;
 
 	dprintf(D_COMMAND, "Return from HandleUnregisteredReq <%s, %d> (handler: %.3fs)\n", m_unregisteredCommand.handler_descrip, req, handler_time);
 
@@ -4051,6 +4255,7 @@ DaemonCore::CallCommandHandler(int req,Stream *stream,bool delete_stream,bool ch
 {
 	int result = FALSE;
 	int index = 0;
+	double handler_start_time=0;
 	bool reqFound = CommandNumToTableIndex(req,&index);
 	char const *user = NULL;
 	Sock *sock = (Sock *)stream;
@@ -4089,22 +4294,20 @@ DaemonCore::CallCommandHandler(int req,Stream *stream,bool delete_stream,bool ch
 			}
 		}
 
-		MSC_SUPPRESS_WARNING(6011) // can't sure sure that sock is not NULL
 		user = sock->getFullyQualifiedUser();
 		if( !user ) {
 			user = "";
 		}
-		MSC_SUPPRESS_WARNING(6011) // can't sure sure that stream is not NULL
-		dprintf(D_COMMAND, "Calling HandleReq <%s> (%d) for command %d (%s) from %s %s\n",
-				comTable[index].handler_descrip,
-				inServiceCommandSocket_flag,
-				req,
-				comTable[index].command_descrip,
-				user,
-				stream->peer_description());
-
-		UtcTime handler_start_time;
-		handler_start_time.getTime();
+		if (IsDebugLevel(D_COMMAND)) {
+			dprintf(D_COMMAND, "Calling HandleReq <%s> (%d) for command %d (%s) from %s %s\n",
+					comTable[index].handler_descrip,
+					inServiceCommandSocket_flag,
+					req,
+					comTable[index].command_descrip,
+					user,
+					stream->peer_description());
+			handler_start_time = _condor_debug_get_time_double();
+		}
 
 		// call the handler function; first curr_dataptr for GetDataPtr()
 		curr_dataptr = &(comTable[index].data_ptr);
@@ -4122,11 +4325,11 @@ DaemonCore::CallCommandHandler(int req,Stream *stream,bool delete_stream,bool ch
 		// clear curr_dataptr
 		curr_dataptr = NULL;
 
-		UtcTime handler_stop_time;
-		handler_stop_time.getTime();
-		float handler_time = handler_stop_time.difference(&handler_start_time);
-
-		dprintf(D_COMMAND, "Return from HandleReq <%s> (handler: %.3fs, sec: %.3fs, payload: %.3fs)\n", comTable[index].handler_descrip, handler_time, time_spent_on_sec, time_spent_waiting_for_payload );
+		if (IsDebugLevel(D_COMMAND)) {
+			double handler_time = _condor_debug_get_time_double() - handler_start_time;
+			dprintf(D_COMMAND, "Return from HandleReq <%s> (handler: %.6fs, sec: %.3fs, payload: %.3fs)\n", 
+					comTable[index].handler_descrip, handler_time, time_spent_on_sec, time_spent_waiting_for_payload );
+		}
 
 	}
 
@@ -4524,7 +4727,7 @@ void DaemonCore::Send_Signal(classy_counted_ptr<DCSignalMsg> msg, bool nonblocki
 	int sig = msg->theSignal();
 	PidEntry * pidinfo = NULL;
 	int same_thread, is_local;
-	char const *destination;
+	char const *destination = NULL;
 	int target_has_dcpm = TRUE;		// is process pid a daemon core process?
 
 	// sanity check on the pid.  we don't want to do something silly like
@@ -4636,6 +4839,8 @@ void DaemonCore::Send_Signal(classy_counted_ptr<DCSignalMsg> msg, bool nonblocki
 					// temporary TCP connection to establish a session
 					// key.)
 
+				// NB: Setting this to false instead lets you test the
+				// Windows "signal" mechanism on Linux.
 				use_kill = true;
 			}
 
@@ -4755,6 +4960,29 @@ int DaemonCore::initial_command_sock() const {
 		}
 	}
 	return -1;
+}
+
+const std::vector<Sinful> & DaemonCore::InfoCommandSinfulStringsMyself()
+{
+	if (m_dirty_command_sock_sinfuls && m_shared_port_endpoint)
+	{ // See comments when we do the same for m_sinful in InfoCommandSinfulStringMyself.
+		m_command_sock_sinfuls = m_shared_port_endpoint->GetMyRemoteAddresses();
+			// If we got no command sockets at all, consider this still dirty - 
+			// we're probably waiting for the shared port to initialize.
+		m_dirty_command_sock_sinfuls = m_command_sock_sinfuls.empty();
+	}
+	else if (m_dirty_command_sock_sinfuls)
+	{
+		m_command_sock_sinfuls.clear();
+		for (int j=0; j<nSock; j++) {
+			const SockEnt &myEnt = (*sockTable)[j];
+			if ((myEnt.iosock != NULL) && myEnt.is_command_sock) {
+				m_command_sock_sinfuls.push_back(myEnt.iosock->get_sinful_public());
+			}
+		}
+		m_dirty_command_sock_sinfuls = false;
+	}
+	return m_command_sock_sinfuls;
 }
 
 int DaemonCore::Shutdown_Fast(pid_t pid, bool want_core )
@@ -5216,8 +5444,8 @@ DaemonCore::Register_Family(pid_t       child_pid,
 			    const char* cgroup,
                             const char* glexec_proxy)
 {
-    double begintime = UtcTime::getTimeDouble();
-   	double runtime = begintime;
+	double begintime = _condor_debug_get_time_double();
+	double runtime = begintime;
 
 	bool success = false;
 	bool family_registered = false;
@@ -5231,7 +5459,7 @@ DaemonCore::Register_Family(pid_t       child_pid,
 		goto REGISTER_FAMILY_DONE;
 	}
 	family_registered = true;
-    runtime = dc_stats.AddRuntimeSample("DCRregister_subfamily", IF_VERBOSEPUB, runtime);
+	runtime = dc_stats.AddRuntimeSample("DCRregister_subfamily", IF_VERBOSEPUB, runtime);
 	if (penvid != NULL) {
 		if (!m_proc_family->track_family_via_environment(child_pid, *penvid)) {
 			dprintf(D_ALWAYS,
@@ -5240,7 +5468,7 @@ DaemonCore::Register_Family(pid_t       child_pid,
 					child_pid);
 			goto REGISTER_FAMILY_DONE;
 		}
-       runtime = dc_stats.AddRuntimeSample("DCRtrack_family_via_env", IF_VERBOSEPUB, runtime);
+		runtime = dc_stats.AddRuntimeSample("DCRtrack_family_via_env", IF_VERBOSEPUB, runtime);
 	}
 	if (login != NULL) {
 		if (!m_proc_family->track_family_via_login(child_pid, login)) {
@@ -5251,7 +5479,7 @@ DaemonCore::Register_Family(pid_t       child_pid,
 			        login);
 			goto REGISTER_FAMILY_DONE;
 		}
-       runtime = dc_stats.AddRuntimeSample("DCRtrack_family_via_login", IF_VERBOSEPUB, runtime);
+		runtime = dc_stats.AddRuntimeSample("DCRtrack_family_via_login", IF_VERBOSEPUB, runtime);
 	}
 	if (group != NULL) {
 #if defined(LINUX)
@@ -5296,7 +5524,7 @@ DaemonCore::Register_Family(pid_t       child_pid,
 			        child_pid);
 			goto REGISTER_FAMILY_DONE;
 		}
-       runtime = dc_stats.AddRuntimeSample("DCRuse_glexec_for_family", IF_VERBOSEPUB, runtime);
+		runtime = dc_stats.AddRuntimeSample("DCRuse_glexec_for_family", IF_VERBOSEPUB, runtime);
 	}
 	success = true;
 REGISTER_FAMILY_DONE:
@@ -5307,10 +5535,10 @@ REGISTER_FAMILY_DONE:
 			            "with root %u\n",
 			        child_pid);
 		}
-        runtime = dc_stats.AddRuntimeSample("DCRunregister_family", IF_VERBOSEPUB, runtime);
+		runtime = dc_stats.AddRuntimeSample("DCRunregister_family", IF_VERBOSEPUB, runtime);
 	}
 
-    runtime = dc_stats.AddRuntimeSample("DCRegister_Family", IF_VERBOSEPUB, begintime);
+	runtime = dc_stats.AddRuntimeSample("DCRegister_Family", IF_VERBOSEPUB, begintime);
 
 	return success;
 }
@@ -5341,7 +5569,7 @@ public:
 		const char *the_executable_fullpath,
 		const int *the_std,
 		int the_numInheritFds,
-		const int (&the_inheritFds)[MAX_INHERIT_FDS],
+		const int (&the_inheritFds)[MAX_INHERIT_FDS + 1],
 		int the_nice_inc,
 		const priv_state &the_priv,
 		int the_want_command_port,
@@ -5412,7 +5640,7 @@ private:
 	const char *m_executable_fullpath;
 	const int *m_std;
 	const int m_numInheritFds;
-	const int (&m_inheritFds)[MAX_INHERIT_FDS];
+	const int (&m_inheritFds)[MAX_INHERIT_FDS + 1];
 	int m_nice_inc;
 	const priv_state &m_priv;
 	const int m_want_command_port;
@@ -5750,7 +5978,8 @@ void CreateProcessForkit::exec() {
 
 		// make sure we're not going to try to share the lock file
 		// with our parent (if it's been defined).
-	dprintf_init_fork_child();
+	bool cloned = daemonCore->UseCloneToCreateProcesses();
+	dprintf_init_fork_child( cloned );
 
 		// close the read end of our error pipe and set the
 		// close-on-exec flag on the write end
@@ -6158,7 +6387,7 @@ void CreateProcessForkit::exec() {
         if (rc) 
         {
             rc = errno;
-            if (write(m_errorpipe[1], &errno, sizeof(errno))){
+            if (full_write(m_errorpipe[1], &errno, sizeof(errno))!=sizeof(errno)){
                 dprintf(D_ALWAYS, "Failed in writing to m_errorpipe\n");
             }
             _exit(rc); // b/c errno could have been overridden by write
@@ -6172,7 +6401,7 @@ void CreateProcessForkit::exec() {
     if (m_fs_remap && !bOkToReMap) {
         dprintf(D_ALWAYS, "Can not remount filesystems because this system does can not have/allow unshare(2)\n");
         int rc = errno = ENOSYS;
-        if (write(m_errorpipe[1], &errno, sizeof(errno))) {
+        if (full_write(m_errorpipe[1], &errno, sizeof(errno))!=sizeof(errno)){
             dprintf(D_ALWAYS, "Failed in writing to m_errorpipe\n");
         }
         _exit(rc);
@@ -6182,7 +6411,7 @@ void CreateProcessForkit::exec() {
 	if (m_fs_remap && m_fs_remap->PerformMappings()) 
     {
         int rc = errno;
-        if (write(m_errorpipe[1], &errno, sizeof(errno))) {
+        if (full_write(m_errorpipe[1], &errno, sizeof(errno))!=sizeof(errno)){
             dprintf(D_ALWAYS, "Failed in writing to m_errorpipe\n");
         }
         _exit(rc);
@@ -6192,7 +6421,6 @@ void CreateProcessForkit::exec() {
 	if (bOkToReMap) {
         set_priv_no_memory_changes( m_priv_state );
     }
-
 
 		/* Re-nice ourself */
 	if( m_nice_inc > 0 ) {
@@ -6258,7 +6486,6 @@ void CreateProcessForkit::exec() {
 		limit(RLIMIT_AS, m_as_hard_limit, CONDOR_HARD_LIMIT, "max virtual adddress space");
 	}
 
-
 	dprintf ( D_DAEMONCORE, "About to exec \"%s\"\n", m_executable_fullpath );
 
 		// !! !! !! !! !! !! !! !! !! !! !! !!
@@ -6280,7 +6507,7 @@ void CreateProcessForkit::exec() {
 		// once again, make sure that if the dprintf code opened a
 		// lock file and has an fd, that we close it before we
 		// exec() so we don't leak it.
-	dprintf_wrapup_fork_child();
+	dprintf_wrapup_fork_child( cloned );
 
 	bool found;
 	for ( int j=3 ; j < openfds ; j++ ) {
@@ -6298,6 +6525,7 @@ void CreateProcessForkit::exec() {
 			close( j );
 		}
 	}
+
 
 		// now head into the proper priv state...
 	if ( m_priv != PRIV_UNKNOWN ) {
@@ -6407,7 +6635,7 @@ int DaemonCore::Create_Process(
 {
 	int i, j;
 	char *ptmp;
-	int inheritFds[MAX_INHERIT_FDS];
+	int inheritFds[MAX_INHERIT_FDS + 1];
 	int numInheritFds = 0;
 	MyString executable_buf;
 	priv_state current_priv = PRIV_UNKNOWN;
@@ -6473,7 +6701,7 @@ int DaemonCore::Create_Process(
 	bool want_udp = !HAS_DCJOBOPT_NO_UDP(job_opt_mask) && m_wants_dc_udp;
 	bool enabled_shared_endpoint = false;
 
-	double runtime = UtcTime::getTimeDouble();
+	double runtime = _condor_debug_get_time_double();
     double create_process_begin_time = runtime;
     double delta_runtime = 0;
 	dprintf(D_DAEMONCORE,"In DaemonCore::Create_Process(%s,...)\n",executable ? executable : "NULL");
@@ -6503,6 +6731,18 @@ int DaemonCore::Create_Process(
 		goto wrapup;
 	}
 
+	// if this is the first time Create_Process is being called with a
+	// non-NULL family_info argument, create the ProcFamilyInterface object
+	// that we'll use to interact with the procd for controlling process
+	// families.
+	// Note we must do this BEFORE we go further and start setting up sockets
+	// to inherit, else we risk the condor_procd inheriting sockets that we
+	// never intended (and thus keeping these sockets open forever).
+	if ((family_info != NULL) && (m_proc_family == NULL)) {
+		m_proc_family = ProcFamilyInterface::create(get_mySubSystem()->getName());
+		ASSERT(m_proc_family);
+	}
+
 	inheritbuf.formatstr("%lu ",(unsigned long)mypid);
 
 		// true = Give me a real local address, circumventing
@@ -6513,7 +6753,10 @@ int DaemonCore::Create_Process(
 		//   this child to use an alternate sinful to contact it.
 	if ( m_inherit_parent_sinful.empty() ) {
 		MyString mysin = InfoCommandSinfulStringMyself(true);
-		ASSERT(mysin.Length() > 0); // Empty entry means unparsable string.
+		// ASSERT(mysin.Length() > 0); // Empty entry means unparsable string.
+		if ( mysin.Length() < 1 ) {
+			dprintf( D_ALWAYS, "Warning: mysin has length 0 (ignore if produced by DAGMan; see gittrac #4987, #5031)\n" );
+		}
 		inheritbuf += mysin;
 	} else {
 		inheritbuf += m_inherit_parent_sinful;
@@ -6724,16 +6967,6 @@ int DaemonCore::Create_Process(
 		identify children/grandchildren/great-grandchildren/etc. */
 	create_id(&time_of_fork, &mii);
 
-	// if this is the first time Create_Process is being called with a
-	// non-NULL family_info argument, create the ProcFamilyInterface object
-	// that we'll use to interact with the procd for controlling process
-	// families
-	//
-	if ((family_info != NULL) && (m_proc_family == NULL)) {
-		m_proc_family = ProcFamilyInterface::create(get_mySubSystem()->getName());
-		ASSERT(m_proc_family);
-	}
-
 		// Before we get into the platform-specific stuff, see if any
 		// of the std fds are requesting a DC-managed pipe.  If so, we
 		// want to create those pipes now so they can be inherited.
@@ -6909,11 +7142,15 @@ int DaemonCore::Create_Process(
 			ixvar++;
 		}
 
-			// now, add in the inherit buf
-		job_environ.SetEnv( EnvGetName( ENV_INHERIT ), inheritbuf.Value() );
 
-		if( !privateinheritbuf.IsEmpty() )
-			job_environ.SetEnv( EnvGetName( ENV_PRIVATE ), privateinheritbuf.Value() );
+		if( HAS_DCJOBOPT_ENV_INHERIT(job_opt_mask) && HAS_DCJOBOPT_CONDOR_ENV_INHERIT(job_opt_mask) ) {
+			job_environ.SetEnv( EnvGetName( ENV_INHERIT ), inheritbuf.Value() );
+
+			if( !privateinheritbuf.IsEmpty() ) {
+				job_environ.SetEnv( EnvGetName( ENV_PRIVATE ), privateinheritbuf.Value() );
+			}
+		}
+
 
 			// and finally, get it all back as a NULL delimited string.
 			// remember to deallocate this with delete [] since it will
@@ -7185,13 +7422,13 @@ int DaemonCore::Create_Process(
 		cwdBackup = cwd;
 	}
 		
-    runtime = dc_stats.AddRuntimeSample("DCCreate_Process000", IF_VERBOSEPUB, runtime);
+	//runtime = dc_stats.AddRuntimeSample("DCCreate_Process000", IF_VERBOSEPUB, runtime);
 
    	if ( priv != PRIV_USER_FINAL || !can_switch_ids() ) {
 		cp_result = ::CreateProcess(bIs16Bit ? NULL : executable,(char*)strArgs.Value(),NULL,
 			NULL,inherit_handles, create_process_flags,newenv,cwdBackup,&si,&piProcess);
 
-        runtime = dc_stats.AddRuntimeSample("DCCreateProcessW32", IF_VERBOSEPUB, runtime);
+		//runtime = dc_stats.AddRuntimeSample("DCCreateProcessW32", IF_VERBOSEPUB, runtime);
 
 	} else {
 		// here we want to create a process as user for PRIV_USER_FINAL
@@ -7241,7 +7478,7 @@ int DaemonCore::Create_Process(
 			(char *)strArgs.Value(),NULL,NULL, inherit_handles,
 			create_process_flags, newenv,cwdBackup,&si,&piProcess);
 
-        runtime = dc_stats.AddRuntimeSample("DCCreateProcessAsUser", IF_VERBOSEPUB, runtime);
+		//runtime = dc_stats.AddRuntimeSample("DCCreateProcessAsUser", IF_VERBOSEPUB, runtime);
 
 		set_priv(s);
 	}
@@ -7427,12 +7664,16 @@ int DaemonCore::Create_Process(
 	}
 
 	if (remap) {
-		alt_executable_fullpath = remap->RemapFile(executable_fullpath);
-		alt_cwd = remap->RemapDir(cwd);
-		if (alt_executable_fullpath.compare(executable_fullpath))
-			dprintf(D_ALWAYS, "Remapped file: %s\n", alt_executable_fullpath.c_str());
-		if (alt_cwd.compare(cwd))
-			dprintf(D_ALWAYS, "Remapped cwd: %s\n", alt_cwd.c_str());
+		if (executable_fullpath) {
+			alt_executable_fullpath = remap->RemapFile(executable_fullpath);
+			if (alt_executable_fullpath.compare(executable_fullpath))
+				dprintf(D_ALWAYS, "Remapped file: %s\n", alt_executable_fullpath.c_str());
+		}
+		if (cwd) {
+			alt_cwd = remap->RemapDir(cwd);
+			if (alt_cwd.compare(cwd))
+				dprintf(D_ALWAYS, "Remapped cwd: %s\n", alt_cwd.c_str());
+		}
 	}
 
 	{
@@ -7616,6 +7857,42 @@ int DaemonCore::Create_Process(
 							 "errno = %d (%s)\n",
 							 cwd, remap_description.c_str(),
 							 return_errno, strerror(return_errno) );
+// ENOENT behavior doesn't seem to be defined by POSIX, but appears
+// to be Linux-specific.  Just in case we mislead folks, limit this logic.
+#if defined(LINUX)
+				}
+				else if (errno == ENOENT)
+				{
+					struct stat statbuf;
+					int script_fd = -1;
+					const static size_t buflen = 1024;
+					char script_buf[buflen + 1]; script_buf[buflen] = '\0';
+					ssize_t read_bytes = 0;
+					if ((stat(executable_fullpath, &statbuf) == 0) &&
+						(access(executable_fullpath, R_OK | X_OK) == 0) &&
+						((script_fd = open(executable_fullpath, O_RDONLY)) >= 0) &&
+						((read_bytes = full_read(script_fd, script_buf, buflen)) > 1) &&
+						(script_buf[0] == '#' && script_buf[1] == '!') )
+					{
+						script_buf[read_bytes] = '\0';
+						char *buf_begin_ptr = script_buf+2;
+						while (*buf_begin_ptr && isspace(*buf_begin_ptr)) buf_begin_ptr++;
+						char * buf_ptr = buf_begin_ptr;
+						while (*buf_ptr && !isspace(*buf_ptr)) buf_ptr++;
+						*buf_ptr = '\0';
+						dprintf( D_ALWAYS, "Create_Process(%s): child exec "
+							"failed due to bad interpreter (%s)\n",
+							executable,
+							buf_begin_ptr );
+						if (err_return_msg) err_return_msg->formatstr(
+							"invalid interpreter (%s) specified on first line of script", buf_begin_ptr);
+					}
+					if (script_fd >= 0)
+					{
+						close(script_fd);
+					}
+					errno = ENOENT;
+#endif
 				}
 				else {
 					dprintf( D_ALWAYS, "Create_Process(%s): child "
@@ -7699,7 +7976,7 @@ int DaemonCore::Create_Process(
 			pidtmp->shared_port_fname = shared_port_endpoint.GetSocketFileName();
 		}
 		else if ( want_command_port != FALSE ) {
-PRAGMA_REMIND("adesmet: Assuming the first address is the one to use.")
+//PRAGMA_REMIND("adesmet: Assuming the first address is the one to use. TODOIPV6")
 			if(socks.begin() != socks.end()) {
 				Sinful sinful(sock_to_string(socks.begin()->rsock()->_sock));
 				if( !want_udp ) {
@@ -7808,8 +8085,8 @@ PRAGMA_REMIND("adesmet: Assuming the first address is the one to use.")
 	}
 #endif
 
-    runtime = UtcTime::getTimeDouble();
-    delta_runtime = (runtime - create_process_begin_time);
+	runtime = _condor_debug_get_time_double();
+	delta_runtime = (runtime - create_process_begin_time);
 	dprintf(D_DAEMONCORE,
 		"Child Process: pid %lu at %s (%.2f sec)\n",
 		(unsigned long)newpid, 
@@ -7846,8 +8123,8 @@ PRAGMA_REMIND("adesmet: Assuming the first address is the one to use.")
 		}
 	}
 
-    runtime = dc_stats.AddRuntimeSample("DCCreate_Process001", IF_VERBOSEPUB, runtime);
-    runtime = dc_stats.AddRuntimeSample("DCCreate_ProcessTot", IF_VERBOSEPUB, create_process_begin_time);
+	//runtime = dc_stats.AddRuntimeSample("DCCreate_Process001", IF_VERBOSEPUB, runtime);
+	runtime = dc_stats.AddRuntimeSample("DCCreate_ProcessTot", IF_VERBOSEPUB, create_process_begin_time);
     if ((runtime - create_process_begin_time) > delta_runtime + 0.5) {
 	   dprintf(D_DAEMONCORE,
            "Warning: cleanup from Create_Process took %.3f sec, Create_Process took %.3f sec overall\n",
@@ -8562,11 +8839,21 @@ DaemonCore::InitDCCommandSocket( int command_port )
 
 		if( it->has_relisock() ) {
 			if ( it->rsock()->my_addr().is_loopback() ) {
-				dprintf( D_ALWAYS, "WARNING: Condor is running on the loopback address (127.0.0.1)\n" );
-				dprintf( D_ALWAYS, "         of this machine, and is not visible to other hosts!\n" );
+				dprintf( D_ALWAYS, "WARNING: Condor is running on a loopback address\n" );
+				dprintf( D_ALWAYS, "         of this machine, and may not visible to other hosts!\n" );
 			}
 		}
 
+		MyString proto = "";
+		if(it->has_relisock()) { proto = "TCP (ReliSock)"; }
+		if(it->has_safesock()) {
+			if(proto.length()) { proto += " and "; }
+			proto += "UDP (SafeSock)";
+		}
+		// TODO: That I need to twice override "fixing" wildcard addresses is terrible
+		// Something is wrong here and needs to be fixed.
+		dprintf(D_ALWAYS, "Daemoncore: Listening at %s on %s.\n",
+			it->rsock()->my_addr_wildcard_okay().to_sinful_wildcard_okay().Value(), proto.Value());
 	}
 
 	// TODO: This block should really be in the dc_socks loop above.
@@ -8974,6 +9261,7 @@ DaemonCore::WatchPid(PidEntry *pidentry)
 		if ( entry->nEntries == 0 ) {
 			// a watcher thread exits when nEntries drop to zero.
 			// thus, this thread no longer exists; remove it from our list
+			MSC_SUPPRESS_WARNING(26115) // suppress warning - lock not released.
 			::DeleteCriticalSection(&(entry->crit_section));
 			::CloseHandle(entry->event);
 			::CloseHandle(entry->hThread);
@@ -9003,6 +9291,7 @@ DaemonCore::WatchPid(PidEntry *pidentry)
 	// All watcher threads have their hands full (or there are no
 	// watcher threads!).  We need to create a new watcher thread.
 	entry = new PidWatcherEntry;
+	#pragma warning(suppress: 28125) // InitCritSec could be called inside a try/except block.
 	::InitializeCriticalSection(&(entry->crit_section));
 	entry->event = ::CreateEvent(NULL,FALSE,FALSE,NULL);	// auto-reset event
 	if ( entry->event == NULL ) {
@@ -9186,7 +9475,7 @@ int DaemonCore::HandleProcessExit(pid_t pid, int exit_status)
 	}
 	//Delete the session information.
 	if(pidentry->child_session_id)
-		getSecMan()->session_cache->remove(pidentry->child_session_id);
+		getSecMan()->session_cache.remove(pidentry->child_session_id);
 	// Now remove this pid from our tables ----
 		// remove from hash table
 	pidTable->remove(pid);
@@ -9659,7 +9948,7 @@ BindAnyCommandPort(ReliSock *rsock, SafeSock *ssock, condor_protocol proto)
 static bool assign_sock(condor_protocol proto, Sock * sock, bool fatal)
 {
 	ASSERT(sock);
-	if( sock->assign(proto) ) return true;
+	if( sock->assignInvalidSocket( proto ) ) return true;
 
 	const char * type;
 	switch(sock->type()) {
@@ -9682,182 +9971,282 @@ static bool assign_sock(condor_protocol proto, Sock * sock, bool fatal)
 	return false;
 }
 
-static bool 
-InitCommandSocket(condor_protocol proto, int port, int udp_port, DaemonCore::SockPair & sock_pair, bool want_udp, bool fatal)
+static bool
+InitCommandSocket( condor_protocol proto, int tcp_port, int udp_port, DaemonCore::SockPair & sock_pair, bool want_udp, bool fatal )
 {
-	// For historic reasons, port==0 is invalid, while port==-1 or port==1 means "any port." 
-	ASSERT(port != 0);
-	if ((port > 1) && (udp_port<= 1)) {
-		dprintf(D_ALWAYS | D_FAILURE, "If TCP port is well-known, then UDP port must also be well-known\n");
+	// Hysterical raisins.
+	ASSERT( tcp_port != 0 );
+
+	// For hysterical raisins, we refuse to dynamically bind a UDP port if
+	// we statically bound the TCP port.  Note that we never required that
+	// the port numbers are the same.
+	if( tcp_port > 1 && (want_udp && udp_port <= 1) ) {
+		dprintf( D_ALWAYS | D_FAILURE, "If TCP port is well-known, then UDP port must also be well-known.\n" );
 		return false;
 	}
-	sock_pair.has_relisock(true);
-	if(want_udp) {
-		sock_pair.has_safesock(true);
-	}
+
+
+	// We can't just do all the UDP work and then all the TCP work, because
+	// we want the TCP and UDP port numbers, if dynamically assigned,
+	// to match.
+	sock_pair.has_relisock( true );
 	ReliSock * rsock = sock_pair.rsock().get();
-	SafeSock * ssock = sock_pair.ssock().get();
 
-	if (port <= 1) {
-		bool well_known_udp = udp_port > 1;
-			// Choose any old port (dynamic port)
-		if( !BindAnyCommandPort(rsock, well_known_udp ? NULL : ssock, proto) ) {
-			MyString msg;
-			msg.formatstr("BindAnyCommandPort() failed. Does this computer have %s support?", condor_protocol_to_str(proto).Value());
-			if (fatal) {
-				EXCEPT("%s", msg.Value());
-			}
-			else {
-				dprintf(D_ALWAYS | D_FAILURE, "%s\n", msg.Value());
-				return false;
-			}
 
-		}
-		if (well_known_udp) {
-			if (ssock && !ssock->bind(proto, false, udp_port, false)) {
-				if (fatal) {
-					EXCEPT("Failed to bind(%d) on UDP command socket.", port);
-				}
-				else {
-					dprintf(D_ALWAYS | D_FAILURE,
-							"Failed to bind(%d) on UDP command socket.\n", port);
-					return false;
-				}
-			}
-		}
-		if( !rsock->listen() ) {
-			if (fatal) {
-				EXCEPT( "Failed to post listen on command ReliSock" );
-			}
-			else {
-				dprintf(D_ALWAYS | D_FAILURE,
-						"Failed to post listen on command ReliSock\n");
-				return false;
-			}
+	// Protect ourselves against people trying to be clever.
+	SafeSock * ssock = NULL;
+	SafeSock * dynamicUDPSocket = NULL;
+	if( want_udp ) {
+		sock_pair.has_safesock( true );
+		ssock = sock_pair.ssock().get();
+
+		if( udp_port <= 1 ) {
+			dynamicUDPSocket = ssock;
 		}
 	}
-	else {
-			// Use the well-known port specified in the arguments.
-		int on = 1;
-		int so_option = SO_REUSEADDR;
 
-		// Ensure we have a socket, setsockopt doesn't work otherwise.
-		if(rsock) {
-			if(!assign_sock(proto, rsock, fatal)) { return false; }
-		}
-		if(ssock) {
-			if(!assign_sock(proto, ssock, fatal)) { return false; }
-		}
 
-#if defined ( WIN32 )
-		/** To better match the *nix semantics of SO_REUSEADDR we
-			enable MSs SO_EXCLUSIVEADDRUSE option, which prohibits
-			multiple process/identities/etc. from binding to the
-			same address (which is just crazy behaviour!). 
-
-			For further details refer to ticket #288. */
-		so_option = SO_EXCLUSIVEADDRUSE;
+	//
+	// To better match the *nix semantics of SO_REUSEADDR we enable
+	// Microsoft's SO_EXCLUSIVEADDRUSE option, which prohibits multiple
+	// process/identities/etc. from binding to the same address (which
+	// is just crazy behaviour!).
+	//
+	// For further details refer to ticket #288.
+	//
+#if defined( WIN32 )
+	#define CONDOR_REUSEADDR SO_EXCLUSIVEADDRUSE
+#else
+	#define CONDOR_REUSEADDR SO_REUSEADDR
 #endif
 
-			// Set options on this socket, SO_REUSEADDR, so that
-			// if we are binding to a well known port, and we
-			// crash, we can be restarted and still bind ok back
-			// to this same port. -Todd T, 11/97
-		if( !rsock->setsockopt(SOL_SOCKET, so_option,
-							   (char*)&on, sizeof(on)) ) {
-			if (fatal) {
-				EXCEPT("setsockopt() SO_REUSEADDR failed on TCP command port");
-			}
-			else {
-				dprintf(D_ALWAYS | D_FAILURE,
-						"setsockopt() SO_REUSEADDR failed on TCP command port\n");
-				return false;
-			}
-		}
-		if( ssock &&
-			!ssock->setsockopt(SOL_SOCKET, so_option,
-							   (char*)&on, sizeof(on)) ) {
-			if (fatal) {
-				EXCEPT("setsockopt() SO_REUSEADDR failed on UDP command port");
-			}
-			else {
-				dprintf(D_ALWAYS | D_FAILURE,
-						"setsockopt() SO_REUSEADDR failed on UDP command port\n");
-				return false;
-			}
-		}
 
-			/* Set no delay to disable Nagle, since we buffer all our 
-			   relisock output and it degrades performance of our 
-			   various chatty protocols. -Todd T, 9/05
-			*/
-		if( !rsock->setsockopt(IPPROTO_TCP, TCP_NODELAY,
-							   (char*)&on, sizeof(on)) ) {
-			dprintf(D_ALWAYS, "Warning: setsockopt() TCP_NODELAY failed\n");
-		}
-
-		if (!rsock->listen(proto, port)) {
+	//
+	// Bind and listen() on the TCP port.
+	//
+	if( tcp_port == 1 || tcp_port == -1 ) {
+		// Bind (and listen on) a dynamic TCP port.  If we're also binding
+		// a dynamic UDP socket, do that now, so we can make the port
+		// numbers match.
+		if(! BindAnyCommandPort( rsock, dynamicUDPSocket, proto ) ) {
 			MyString msg;
-			msg.formatstr("Failed to listen(%d) on TCP/%s command socket. Does this computer have %s support?", 
-				port,
-				condor_protocol_to_str(proto).Value(),
-				condor_protocol_to_str(proto).Value()
-				);
-			if (fatal) {
-				EXCEPT("%s", msg.Value());
-			}
-			else {
+			msg.formatstr( "BindAnyCommandPort() failed. Does this computer have %s support?", condor_protocol_to_str( proto ).Value() );
+			if( fatal ) {
+				EXCEPT( "%s", msg.Value() );
+			} else {
 				dprintf(D_ALWAYS | D_FAILURE, "%s\n", msg.Value());
 				return false;
 			}
 		}
-			/* bind(FALSE,...) means this is an incoming connection */
-		if (ssock && !ssock->bind(proto, false, udp_port, false)) {
-			if (fatal) {
-				EXCEPT("Failed to bind(%d) on UDP command socket.", port);
+
+		if( ! rsock->listen() ) {
+			if( fatal ) {
+				EXCEPT( "Failed to listen() on command ReliSock." );
+			} else {
+				dprintf( D_ALWAYS | D_FAILURE, "Failed to listen() on command ReliSock.\n" );
+				return false;
 			}
-			else {
-				dprintf(D_ALWAYS | D_FAILURE,
-						"Failed to bind(%d) on UDP command socket.\n", port);
+		}
+	} else {
+		// Bind a specific TCP port.
+
+		// setsockopt() won't work without a socket.
+		if(! assign_sock( proto, rsock, fatal ) ) {
+			dprintf( D_ALWAYS | D_FAILURE, "Failed to assign_sock() on command ReliSock.\n" );
+			return false;
+		}
+
+		// Set socket options.  For hysterical raisins, we only set these on
+		// fixed ports.  (SO_REUSEADDR doesn't make much sense for a dynamic
+		// port, but if TCP_NODELAY makes sense, it would for both kinds
+		// of port.)
+		int on = 1;
+		// SO_REUSEADDR: If we crash, give us our port back right away.
+		if(! rsock->setsockopt( SOL_SOCKET, CONDOR_REUSEADDR, (char *) & on, sizeof(on) )) {
+			if( fatal ) {
+				EXCEPT( "Failed to setsockopt(SO_REUSEADDR) on TCP command port." );
+			} else {
+				dprintf( D_ALWAYS | D_FAILURE, "Failed to setsockopt(SO_REUSEADDR) on TCP command port.\n" );
+				return false;
+			}
+		}
+
+		// TCP_NODELAY: Disable Nagle; ReliSocks do their own buffering, and
+		// having both layers do it worse.
+		// Not sure why this is set for a listen socket.  Maybe
+		// it's inherited into the accept()ed sockets?
+		if(! rsock->setsockopt( IPPROTO_TCP, TCP_NODELAY, (char *) & on, sizeof( on ) )) {
+			dprintf( D_ALWAYS, "Warning: setsockopt(TCP_NODELAY) failed.\n" );
+		}
+
+		// This version of ReliSock::listen() calls bind() for us.
+		if(! rsock->listen( proto, tcp_port ) ) {
+			MyString msg;
+			msg.formatstr( "Failed to listen(%d) on TCP/%s command socket. Does this computer have %s support?",
+				tcp_port,
+				condor_protocol_to_str( proto ).Value(),
+				condor_protocol_to_str( proto ).Value() );
+			if( fatal ) {
+				EXCEPT( "%s", msg.Value() );
+			} else {
+				dprintf( D_ALWAYS | D_FAILURE, "%s\n", msg.Value() );
 				return false;
 			}
 		}
 	}
 
-	dprintf(D_NETWORK, "InitCommandSocket(%s, %d, %s, %s) created %s\n", 
-		condor_protocol_to_str(proto).Value(),
-		port,
+	//
+	// If the UDP port isn't already bound, bind it.
+	//
+	if( ssock != NULL && dynamicUDPSocket == NULL ) {
+		// setsockopt() won't work without a socket.
+		if(! assign_sock( proto, ssock, fatal ) ) {
+			dprintf( D_ALWAYS | D_FAILURE, "Failed to assign_sock() on command SafeSock.\n" );
+			return false;
+		}
+
+		int on = 1;
+		// SO_REUSEADDR: If we crash, give us our port back right away.
+		if(! ssock->setsockopt( SOL_SOCKET, CONDOR_REUSEADDR, (char *) & on, sizeof(on) )) {
+			if( fatal ) {
+				EXCEPT( "Failed to setsockopt(SO_REUSEADDR) on UDP command port." );
+			} else {
+				dprintf( D_ALWAYS | D_FAILURE, "Failed to setsockopt(SO_REUSEADDR) on UDP command port.\n" );
+				return false;
+			}
+		}
+
+		if(! ssock->bind( proto, false, udp_port, false )) {
+			if( fatal ) {
+				EXCEPT( "Failed to bind to UDP command port %d.", udp_port );
+			} else {
+				dprintf( D_ALWAYS | D_FAILURE, "Failed to bind to UDP command port %d.\n", udp_port );
+				return false;
+			}
+		}
+	}
+
+
+	dprintf (D_NETWORK, "InitCommandSocket(%s, %d, %s, %s) created %s.\n",
+		condor_protocol_to_str( proto ).Value(),
+		tcp_port,
 		want_udp ? "want UDP" : "no UDP",
 		fatal ? "fatal errors" : "non-fatal errors",
-		sock_to_string(rsock->get_file_desc()));
-
+		sock_to_string( rsock->get_file_desc() ) );
 	return true;
 }
 
 bool
-InitCommandSockets(int port, int udp_port, DaemonCore::SockPairVec & socks, bool want_udp, bool fatal)
+InitCommandSockets(int tcp_port, int udp_port, DaemonCore::SockPairVec & socks, bool want_udp, bool fatal)
 {
-	// For historic reasons, port==0 is invalid, while port==-1 or port==1 means "any port." 
-	ASSERT(port != 0);
+	// For historic reasons, tcp_port==0 is invalid, while tcp_port==-1 or tcp_port==1 means "any port." 
+	ASSERT(tcp_port != 0);
+
+	// Cases not enumerated below have no known use cases and are not 
+	// implemented.  Specifically we reject: 
+	//   - Fixed TCP port, any UDP port,
+	//   - Fixed TCP port, fixed UDP port, but they're different
+	// We're doing this for simplicity of implementation; we're relying
+	// on being able to close a UDP socket and immediately rebind to the
+	// same port number. TCP with possible connections in flight complicates
+	// things.
+	ASSERT(
+			// Any TCP port, any UDP port. A fixed UDP port is allowed as a special
+			// case for shared_port+collector
+		(tcp_port <= 1) ||
+
+			// Anything is valid if we don't want UDP.
+		(want_udp == false) ||
+
+			// Fixed port and they match
+		(tcp_port == udp_port)
+	);
 
 	DaemonCore::SockPairVec new_socks;
 
-	if(param_boolean("ENABLE_IPV4", true)) {
-		DaemonCore::SockPair sock_pair;
-		if( ! InitCommandSocket(CP_IPV4, port, udp_port, sock_pair, want_udp, fatal)) {
-			dprintf(D_ALWAYS | D_FAILURE, "Warning: Failed to create IPv4 command socket.\n");
-			return false;
-		}
-                new_socks.push_back(sock_pair);
-        }
+	// Arbitrary constant, borrowed from bindAnyCommandPort().
+	const int MAX_RETRIES = 1000;
+	int tries;
+	for(tries = 1; tries <= MAX_RETRIES; tries++) {
 
-	if(param_boolean("ENABLE_IPV6", true)) {
-		DaemonCore::SockPair sock_pair;
-		if( ! InitCommandSocket(CP_IPV6, port, udp_port, sock_pair, want_udp, fatal)) {
-			dprintf(D_ALWAYS | D_FAILURE, "Warning: Failed to create IPv6 command socket.\n");
-			return false;
+		if(param_boolean("ENABLE_IPV4", true)) {
+			DaemonCore::SockPair sock_pair;
+			if( ! InitCommandSocket(CP_IPV4, tcp_port, udp_port, sock_pair, want_udp, fatal)) {
+				dprintf(D_ALWAYS | D_FAILURE, "Warning: Failed to create IPv4 command socket for ports %d/%d%s.\n", tcp_port, udp_port, want_udp?"":"no UDP");
+				return false;
+			}
+			new_socks.push_back(sock_pair);
 		}
-		new_socks.push_back(sock_pair);
+
+		// If we're creating command sockets for both protocols, try to make
+		// the port numbers match.  Mixed-mode shared port has no chance of
+		// working, otherwise, until we switch an address representation that
+		// can include both protocols' address(es).
+		int targetTCPPort = tcp_port;
+		int targetUDPPort = udp_port;
+		if( param_boolean( "ENABLE_IPV4", true ) && param_boolean("ENABLE_IPV6", true ) ) {
+			// If tcp_port and udp_port are both static, we don't have to do anything.
+			if( tcp_port <= 1 || udp_port <= 1 ) {
+				// Determine which port IPv4 got, and try to get that port for IPv6.
+				DaemonCore::SockPair ipv4_socks = new_socks[0];
+				targetTCPPort = ipv4_socks.rsock()->get_port();
+				if(want_udp) {
+					targetUDPPort = ipv4_socks.ssock()->get_port();
+				}
+			}
+		}
+
+		if(param_boolean("ENABLE_IPV6", true)) {
+			DaemonCore::SockPair sock_pair;
+			// We emulate fatal, below, because it's only a fatal error
+			// to fail to match an IPv4 port number if it was static.
+			if( ! InitCommandSocket(CP_IPV6, targetTCPPort, targetUDPPort, sock_pair, want_udp, false)) {
+				// TODO: If we're asking for a dynamically chosen TCP port 
+				// (targetTCPPort <= 1) but a statically chosen UDP port
+				// (targetUDPPort > 1), and the reason InitCommandSocket
+				// fails is that it couldn't get the UDP port, then we
+				// should immediately give up. At the moment InitCommandSocket
+				// doesn't return enough information to make that decision.
+				// (Dynamic TCP/static UDP happens with shared_port+collector.
+				// Static TCP/dynamic UDP is not allowed.)
+
+				if( (tcp_port <= 1) && (targetTCPPort > 1) ) {
+					// If we wanted a dynamically chosen port, IPv4 picked it
+					// first, and we failed, then try again.
+					// (We get to ignore the possibility of wanting a dynamic
+					// UDP port but static TCP; an ASSERT above guarantees it.)
+					if(tries == 1) {
+						// Log first spin only, minimize log spam.
+						dprintf(D_FULLDEBUG, "Created IPv4 command socket on dynamically chosen port %d. Unable to acquire matching IPv6 port. Trying again up to %d times.\n", targetTCPPort, MAX_RETRIES);
+					}
+					new_socks.clear();
+					continue;
+				} else {
+					// Otherwise it's dynamic and we failed to get it,
+					// or its entirely fixed and we failed to get it.
+					// Either way we're doomed.
+
+					std::string message;
+					formatstr( message, "Warning: Failed to create IPv6 command socket for ports %d/%d%s", tcp_port, udp_port, want_udp ? "" : "no UDP" );
+					if( fatal ) { EXCEPT( message.c_str() ); }
+					dprintf(D_ALWAYS | D_FAILURE, "%s\n", message.c_str() );
+					return false;
+				}
+			}
+			new_socks.push_back(sock_pair);
+		}
+
+		// If we got here, nothing went wrong and we must be done.
+		break;
+	}
+
+	if( tries > MAX_RETRIES) {
+		dprintf(D_ALWAYS | D_FAILURE, "Failed to bind to the same port on IPv4 and IPv6 after %d tries.\n", MAX_RETRIES);
+		return false;
+	}
+
+	if( tries > 1 ) {
+		dprintf(D_FULLDEBUG, "Successfully created IPv4 and IPv6 command sockets on the same port after %d tries\n", tries);
 	}
 
 	// Delay inserting new socks until the end so that if we fail and
@@ -10146,7 +10535,7 @@ DaemonCore::InitSettableAttrsList( const char* /* subsys */, int i )
 
 KeyCache*
 DaemonCore::getKeyCache() {
-	return sec_man->session_cache;
+	return &sec_man->session_cache;
 }
 
 SecMan* DaemonCore :: getSecMan()
@@ -10280,6 +10669,9 @@ DaemonCore::RegisterTimeSkipCallback(TimeSkipFunc fnc, void * data)
 void 
 DaemonCore::UnregisterTimeSkipCallback(TimeSkipFunc fnc, void * data)
 {
+	if ( this == NULL ) {
+		return;
+	}
 	m_TimeSkipWatchers.Rewind();
 	TimeSkipWatcher * p;
 	while( (p = m_TimeSkipWatchers.Next()) ) {
@@ -10420,16 +10812,25 @@ DaemonCore::publish(ClassAd *ad) {
 	tmp = publicNetworkIpAddr();
 	if( tmp ) {
 		ad->Assign(ATTR_MY_ADDRESS, tmp);
+
+		// This is kind of horrible.  At some point, we should rewrite
+		// InfoCommandSinfulStringMyself() so that it calls
+		// InfoCommandSinfulMyself().serialize(), but until then...
+		Sinful s( tmp );
+		assert( s.valid() );
+		ad->Assign( "AddressV1", s.getV1String() );
 	}
 }
 
 
 void
 DaemonCore::initCollectorList() {
+	DCCollectorAdSequences * adSeq = NULL;
 	if (m_collector_list) {
+		adSeq = m_collector_list->detachAdSequences();
 		delete m_collector_list;
 	}
-	m_collector_list = CollectorList::create();
+	m_collector_list = CollectorList::create(NULL, adSeq);
 }
 
 
@@ -10699,4 +11100,34 @@ bool DaemonCore::SockPair::has_safesock(bool b) {
 		m_ssock = counted_ptr<SafeSock>(new SafeSock);
 	}
 	return true;
+}
+
+int DaemonCore::find_interface_command_port_do_not_use(const condor_sockaddr & addr) {
+
+	// Boldly assuming all entries in dc_socks have relisocks and
+	// that all listen sockets for a given protocol use the same port
+	// As of Sept 2014, I believe these are true.  This function should
+	// go away long before these are violated.
+	for(SockPairVec::iterator it = dc_socks.begin(); it != dc_socks.end(); it++) {
+		ASSERT(it->has_relisock());
+		condor_sockaddr listen_addr = it->rsock()->my_addr();
+		if(addr.get_protocol() == listen_addr.get_protocol()) {
+			return listen_addr.get_port();
+		}
+	}
+	// No matching listen socket.
+	return 0;
+}
+
+bool DaemonCore::is_command_port_do_not_use(const condor_sockaddr & addr) {
+	// Boldly assuming all entries in dc_socks have relisocks and
+	// that all listen sockets for a given protocol use the same port
+	// As of Sept 2014, I believe these are true.  This function should
+	// go away long before these are violated.
+	for(SockPairVec::iterator it = dc_socks.begin(); it != dc_socks.end(); it++) {
+		ASSERT(it->has_relisock());
+		condor_sockaddr listen_addr = it->rsock()->my_addr();
+		if(listen_addr == addr) { return true; }
+	}
+	return false;
 }

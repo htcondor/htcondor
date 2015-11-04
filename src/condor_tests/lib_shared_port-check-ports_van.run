@@ -19,50 +19,181 @@
 ##**************************************************************
 
 use CondorTest;
+use CondorUtils;
+use Check::SimpleJob;
 use Check::CondorLog;
 
-$execute = sub {
+
+########################################################
+#
+# Windows and linux differ in the MASTER is shown with
+#	shared port but on linux the shared port daemon owns it
+#  should also check number of listening sockets based
+#  on superuser port on or off. Collector only when superuser port 
+#  on and schedd normally one but two when super port open
+#
+########################################################
+my @listeningdaemons = ();
+my %expectedcounts = ();
+my %superexpectedcounts = ();
+my $mixedmode = 0;
+my $debugmode = 0;
+
+#my $firstappend_condor_config = '
+	#DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+	#NUM_CPUS = 2
+	#NEGOTIATOR_INTERVAL = 5
+	#ENABLE_IPV4 = True
+	#ENABLE_IPV6 = True
+#';
+
+#$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"compressedtestname");
+#print "local config file:$configfile\n";
+
+#CondorTest::StartCondorWithParams(
+    #condor_name => "compressedtestname",
+    #fresh_local => "TRUE",
+    #condorlocalsrc => "$configfile",
+#);
+
+system("condor_config_val -dump enable_ipv4 -v");
+system("condor_config_val -dump enable_ipv6 -v");
+
+my $ipv4 = `condor_config_val ENABLE_IPV4`;
+fullchomp($ipv4);
+print "IPV4=$ipv4\n";
+my $ipv6 = `condor_config_val ENABLE_IPV6`;
+fullchomp($ipv6);
+print "IPV6=$ipv6\n";
+
+if($ipv4 =~ /true/i) {
+	print "adding 1 to $mixedmode since ipv4 is enabled.\n";
+	$mixedmode += 1;
+}
+
+if($ipv6 =~ /true/i) {
+	print "adding 1 to $mixedmode since ipv6 is enabled.\n";
+	$mixedmode += 1;
+}
+
+print "Mixedmode:$mixedmode\n";
+	
+if(is_windows()) {
+	@listeningdaemons = (
+		"condor_schedd",
+		"condor_collector",
+		"MASTER",
+	);
+	%expectedcounts = (
+		MASTER=>1,
+		condor_schedd=>1,
+	);
+	%superexpectedcounts = (
+		MASTER=>1,
+		condor_schedd=>2,
+		condor_collector=>1,
+	);
+} else {
+	@listeningdaemons = (
+		"condor_schedd",
+		"condor_collector",
+		"condor_shared_port",
+	);
+	if($mixedmode == 2) {
+		print "Adjusting listeners for mixed mode, ie 2 shared port listeners\n";
+		%expectedcounts = (
+			condor_shared_port=>2,
+			condor_schedd=>1,
+		);
+		%superexpectedcounts = (
+			condor_shared_port=>2,
+			condor_schedd=>2,
+			condor_collector=>1,
+		);
+	} else {
+		%expectedcounts = (
+			condor_shared_port=>1,
+			condor_schedd=>1,
+		);
+		%superexpectedcounts = (
+			condor_shared_port=>1,
+			condor_schedd=>2,
+			condor_collector=>1,
+		);
+	}
+}
+
+my %piddaemonnames = ();
+my %piddaemonlistencount = ();
+my @netstat_result = ();
+my @alllines = ();
+my $phase = "non-super";
+
+$on_execute = sub {
 	# use netstat to find open ports
-	my $netstat_result = `netstat -tlpn | grep condor`;
+	if(is_windows()) {
+		$cmd = "netstat -ano"
+	} else {
+		$cmd = "netstat -tlpn";
+	}
+	my $status = runCondorTool($cmd,\@alllines,2,{emit_output=>0});
+	if(is_windows()) {
+		# process name not in windows netstat output
+		@netstat_result = @alllines;
+	} else {
+		foreach my $line (@alllines) {
+			fullchomp($line);
+			if($line =~ /condor/) {
+				push @netstat_result, $line;
+			}
+		}
+	}
+
+	my $netstatlength = @netstat_result;
+
+	print "Show netstat capture\n";
+	foreach my $line (@netstat_result) {
+		chomp($line);
+		print "nstat: $line\n"
+	}
+
+	system("ps -ef | grep condor");
+
+	CondorTest::CreatePidsFile();
 
 	# allow netstat to fail as some nmi platforms (macos_10.4) don't support it
-	if(length($netstat_result) == 0) {
-		CondorTest::debug("Warning: 'netstat -tlpn | grep condor' failed, skipping tcp port checks\n");
+	if($netstatlength == 0) {
+		CondorTest::debug("Warning: 'netstat -tlpn | grep condor' failed, skipping tcp port checks\n",1);
 		return;
+	} else {
+		#print "We have <$netstatlength> lines of netstat info\n";
 	}
-	CondorTest::debug("netstat -tlpn | grep condor\n$netstat_result\n", 1);
-	my @lines = split /\n/, $netstat_result;
 
 	# get the log directory for this test
 	my $logdir = `condor_config_val log`;
 	$logdir =~ s/\012+$//;
 	$logdir =~ s/\015+$//;
 
-	CondorTest::CreatePidsFile();
-
 	# get the pids associated with this personal condor
 	my $pid = $logdir . "/PIDS";
-	my @pids;
-	my $line = "";
+	my %familypids = ();
 	open(PID_FILE, "<$pid") || die "Can't open pid file $pid.";
 
-	#print "Opening Pidfile:$pid\n";
-	#system("ls -l $pid");
-	while (<PID_FILE>) {
-		$_ =~ s/\012+$//;
-		$_ =~ s/\015+$//;
-		$line = $_;
-		#print "process:$line\n";
-		my @temp = split(/[\ \n]/, $line);
-		push @pids, $temp[0];
-		#print "save pid:$temp[0]\n";
+	# get just the pid from each line in file
+	my @pid_file_contents = <PID_FILE>;
+	my @pids = ();
+	foreach(@pid_file_contents) {
+		chomp;
+		print "Processing PIDs <$_>\n";
+		#my @temp = split(/[\ \n]/, $_);
+		my @temp = split(/\s/, $_);
+		push(@pids, $temp[0]);
+		print "Adding <$temp[0]> to pid family\n";
+		# be able to test that a listener is part of this personal condor
+		$familypids{$temp[0]} = 1;
+		$piddaemonlistencount{$temp[0]} = 0;
+		$piddaemonnames{$temp[0]} = $temp[1];
 	}
-	close(PID_FILE);
-	print "PIDS we care about:";
-	foreach my $pid (@pids) {
-		print " $pid";
-	}
-	print "\n";
 
 	# get the pid for the shadow
     my $shadow_log_location = `condor_config_val SHADOW_log`;
@@ -76,47 +207,110 @@ $execute = sub {
 			my $r = rindex($_, " ");
 			my $shadow_pid = substr($_, $r+1);
 			push(@pids, $shadow_pid);
+			$familypids{$shadow_pid} = 1;
+			$piddaemonlistencount{$shadow_pid} = 0;
+			$piddaemonnames{$shadow_pid} = "condor_shadow";
+			print "added shadow pid <$shadow_pid>\n";
 			last;
 		}
 	}
+	close(SHADOW_LOG);
+
+	# get the pid for the shared_port daemon
+    my $shared_port_log_location = `condor_config_val shared_port_log`;
+	open(SHARED_PORT_LOG, "<$shared_port_log_location") || die "Can't open shared_port log ($shared_port_log_location).";
+
+	my @shared_port_log_contents = <SHARED_PORT_LOG>;
+	foreach(@shared_port_log_contents) {
+		chomp;
+		# get line with shared_port's pid
+		if(index($_, "PID = ", 0) != -1) {
+			my $r = rindex($_, " ");
+			my $shared_port_pid = substr($_, $r+1);
+			push(@pids, $shared_port_pid);
+			$familypids{$shared_port_pid} = 1;
+			$piddaemonlistencount{$shared_port_pid} = 0;
+			$piddaemonnames{$shared_port_pid} = "condor_shared_port";
+			print "added shared_port pid <$shared_port_pid>\n";
+			last;
+		}
+	}
+	close(SHARED_PORT_LOG);
+	print "look at contents of hash piddaemonnames\n";
+	foreach my $key (sort keys %piddaemonnames) {
+		print "Pid $key is $piddaemonnames{$key}\n";
+	}
 
 	CondorTest::debug("pids - @pids\n", 1);
+	print "pids - @pids\n";
 
+	foreach my $daemon (@listeningdaemons)
+	{
+		print "Good Daemon <$daemon>\n";
+	}
 	# check that only schedd, collector, shared_port have open listening tcp ports
-	my $match;
+	my $answer = "";
 	my $found_listening_daemon = 0;
 	my $unexpected_listening_daemon = 1;
-	foreach my $line (@lines) {
-		$match = 0;
-		my $foundpid = 0;
-		# find target pid
-		if($line =~ /^.*?LISTEN\s+(\d+)\/.*$/) {
-			$foundpid = $1;
-		}
-		#print "For line:$line\n";
-		# go through all the pids
-		for($i = 0; $i < @pids && $match == 0; $i++) {
-			# check if this is a daemon we care about
-			
-			#print "found pid: $foundpid this pid:@pids[$i], every equal?\n";
-			if("$foundpid" eq "@pids[$i]") {
-				print "Found an expected daemon\n";
-			#if(index($_, @pids[$i] . '/', 0) != -1) {
-				$match = 1;
-				if(index($line, "condor_sch", 0) == -1 &&
-					index($line, "condor_shar", 0) == -1 &&
-					index($line, "condor_coll", 0) == -1)
-				{
-					$unexpected_listening_daemon = 0;
-					CondorTest::debug("Error: unexpected daemon has open listening tcp port ($line)\n", 1);
-					print "Error: unexpected daemon has open listening tcp port ($line)\n";
-				}
-				else
-				{
-					$found_listening_daemon = 1;
-					#print "Listening ok: $line\n";
+	foreach my $candidate (@netstat_result) {
+		chomp($candidate);
+		print "considering <$candidate>\n";
+		if(is_windows()) {
+
+			if($candidate =~ /^.*LISTENING\s+(\d+)\s*$/) {
+				#print "Yes $1\n";
+				my $listeningpid =  $1;
+				#print "PID - $listeningpid\n";
+				if(exists $familypids{$listeningpid}) {
+					$piddaemonlistencount{$listeningpid} += 1;
+					#print "In my family <$listeningpid>\n";
+					$answer = IsValidListener($listeningpid);
+					if($answer eq "yes"){
+						print "ok listening pid member:$listeningpid/$piddaemonnames{$listeningpid}\n";
+						$found_listening_daemon = 1;
+					} else {
+						print "BAD listening pid member:$listeningpid/$piddaemonnames{$listeningpid}\n";
+						if(is_windows()) {
+							#if($piddaemonnames{$listeningpid} eq "MASTER") {
+							#} else {
+								$unexpected_listening_daemon = 0;
+							#}
+						} else {
+							$unexpected_listening_daemon = 0;
+						}
+					}
 				}
 			}
+		} elsif($candidate =~ /^.*LISTEN\s+(\d+\/\w+)\s*$/) {
+			#print "Yes $1\n";
+			my @pdpairing = split /\//, $1;
+			print "PID - $pdpairing[0]\n";
+			if(exists $familypids{$pdpairing[0]}) {
+				print "In my family <$pdpairing[1]>\n";
+				if(defined $pdpairing[0]) {
+					print "pdpairing[0]:$pdpairing[0]\n";
+				} else {
+					print "pdpairing[0] not defined\n";
+				}
+				if(defined $pdpairing[1]) {
+					print "pdpairing[1]:$pdpairing[1]\n";
+				} else {
+					print "pdpairing[1] not defined\n";
+				}
+				print "\n";
+				$piddaemonlistencount{$pdpairing[0]} += 1;
+				print "Listen count for $pdpairing[0] set to $piddaemonlistencount{$pdpairing[0]}\n";
+				$answer = IsValidListener($pdpairing[1]);
+				if($answer eq "yes"){
+					print "ok listening pid member <$pdpairing[1]>\n";
+					$found_listening_daemon = 1;
+				} else {
+					print "BAD listening pid member <$pdpairing[1]>\n";
+					$unexpected_listening_daemon = 0;
+				}
+			}
+		} else {
+			print "Regx failed <$candidate>\n";
 		}
 	}
 
@@ -128,7 +322,7 @@ $execute = sub {
 		test_name => "lib_shared_port-check-ports_van") );
 };
 
-$success = sub {
+$on_exitedsuccess = sub {
 	# verify connection requests made via shared port server for each daemon
 	CondorLog::RunCheck(
 		daemon => "SHARED_PORT",
@@ -147,10 +341,54 @@ $success = sub {
 		match_regexp => "SharedPortServer: request from STARTD"
 	);
 
-	CondorTest::EndTest();
 };
 
+# COLLECTOR_SUPER_ADDRESS_FILE = $(LOG)\.collector_address.super
+# SCHEDD_SUPER_ADDRESS_FILE = $(LOG)\.schedd_address.super
+# CREDD_SUPER_USERS=
+# QUEUE_SUPER_USERS = CONDOR, system
+
 my $append_condor_config = '
+  USE_SHARED_PORT = True
+  COLLECTOR_SUPER_ADDRESS_FILE = 
+  SCHEDD_SUPER_ADDRESS_FILE =
+  DAEMON_LIST = MASTER,SHARED_PORT,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+
+  SHARED_PORT_DEBUG = D_COMMAND D_FULLDEBUG
+
+  # named sockets cannot have very long paths (~100 chars), so put them
+  # in /tmp to avoid problems
+  DAEMON_SOCKET_DIR = /tmp/$(USERNAME)-condor-test-sock
+';
+
+CondorTest::StartCondorWithParams(
+    append_condor_config => $append_condor_config
+);
+
+my $testname = "lib_shared_port-check-ports_van";
+
+
+$result = SimpleJob::RunCheck(
+	test_name => $testname,
+    on_execute => $on_execute,
+	on_success => $on_exitedsuccess,
+    queue_sz => 1,
+    duration => 10,
+    timeout => 600,
+    append_submit_commands => $append_submit_commands
+);
+
+ValidateListenCounts();
+
+$phase = "super";
+%piddaemonnames = ();
+%piddaemonlistencount = ();
+@netstat_result = ();
+@alllines = ();
+
+my $append_condor_config = '
+  COLLECTOR_SUPER_ADDRESS_FILE = $(LOG)\.collector_address.super
+  SCHEDD_SUPER_ADDRESS_FILE = $(LOG)\.schedd_address.super
   USE_SHARED_PORT = True
   DAEMON_LIST = MASTER,SHARED_PORT,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
 
@@ -166,30 +404,91 @@ CondorTest::StartCondorWithParams(
 );
 
 my $testname = "lib_shared_port-check-ports_van";
-CondorTest::RegisterExecute($testname, $execute);
-CondorTest::RegisterExitedSuccess ($testname, $success);
 
-my $logfile = "$testname.log";
-unlink($logfile);
 
-# submit file
-my $submit_fname = CondorTest::TempFileName("$testname.submit");
-open( SUBMIT, ">$submit_fname" ) || die "error writing to $submit_fname: $!\n";
-print SUBMIT <<END;
-universe = vanilla
-executable = x_sleep.pl
-log = $logfile
-arguments = 10
-notification = never
-queue
-END
-close( SUBMIT );
+$result = SimpleJob::RunCheck(
+	test_name => $testname,
+    on_execute => $on_execute,
+	on_success => $on_exitedsuccess,
+    queue_sz => 1,
+    duration => 10,
+    timeout => 600,
+    append_submit_commands => $append_submit_commands
+);
 
-# run test
-if( CondorTest::RunTest($testname, $submit_fname, 0) ) {
-    CondorTest::debug("$testname: SUCCESS\n",1);
-    exit(0);
+print "shared port settings\n";
+if($result == 1) {
+    print "ok\n";
 } else {
-    die "$testname: CondorTest::RunTest() failed\n";
+    print "bad\n";
 }
 
+ValidateListenCounts();
+
+CondorTest::EndTest();
+exit(0);
+
+sub ValidateListenCounts {
+	my $valpid = $$;
+	print "Entering ValidateListenCounts !!!!!!!!!!!!!!!!-$valpid-\n";
+				foreach my $key (sort keys %piddaemonnames) {
+					print "Pid $key is $piddaemonnames{$key}\n";
+				}
+	my $listencount = 0;
+	my $expectedlistencount = 0;
+	foreach my $pid (sort keys %piddaemonnames) {
+		# find listen count with pid and 
+		# expected count with name
+		$listencount = $piddaemonlistencount{$pid};
+		if($phase ne "super") {
+			print "setting ports for non-super case using:$expectedcounts{$piddaemonnames{$pid}}\n";
+			if(exists $expectedcounts{$piddaemonnames{$pid}}) {
+				print "expected counts pid:$pid, name:$piddaemonnames{$pid} expected count:$expectedcounts{$piddaemonnames{$pid}}\n";
+				$expectedlistencount = $expectedcounts{$piddaemonnames{$pid}};
+				print "expectedlistencount set to:$expectedlistencount\n";
+			} else {
+				$expectedlistencount = 0;
+				print "expectedlistencount set to:$expectedlistencount\n";
+			}
+		} else {
+			print "setting ports for super case using:$superexpectedcounts{$piddaemonnames{$pid}}\n";
+			if(exists $superexpectedcounts{$piddaemonnames{$pid}}) {
+				print "expected counts pid:$pid, name:$piddaemonnames{$pid} expected count:$superexpectedcounts{$piddaemonnames{$pid}}\n";
+				$expectedlistencount = $superexpectedcounts{$piddaemonnames{$pid}};
+				print "expectedlistencount set to:$expectedlistencount\n";
+			} else {
+				$expectedlistencount = 0;
+				print "expectedlistencount set to:$expectedlistencount\n";
+			}
+		}
+		print "Daemon:$piddaemonnames{$pid} expected listens:$expectedlistencount actual listens:$listencount\n";
+		if($listencount != $expectedlistencount) {
+			print "Daemon:$piddaemonnames{$pid} expected listens:$expectedlistencount actual listens:$listencount\n";
+			RegisterResult(0,"test_name", "$testname");
+		} else {
+			RegisterResult(1,"test_name", "$testname");
+		}
+	}
+}
+
+sub IsValidListener
+{
+	my $partialdaemonname = shift;
+	my $savepid = $partialdaemonname;
+	if(is_windows()) {
+		#print "IsValidListener: savedpid is $savepid\n";
+		# in windows pid passed in and must be mapped to name
+		$partialdaemonname = $piddaemonnames{$savepid};
+		if(! exists $piddaemonnames{$savepid}) {
+			print "pid $savepid has no name\n";
+		}
+		print "PID:$savepid belongs to $partialdaemonname\n";
+	}
+	foreach my $gooddaemon (@listeningdaemons) {
+		if(index($gooddaemon,$partialdaemonname,0) != -1) {
+			#print "$partialdaemonname is $gooddaemon\n";
+			return("yes");
+		}
+	}
+	return("no");
+}

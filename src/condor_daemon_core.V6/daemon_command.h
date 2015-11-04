@@ -27,7 +27,7 @@ class DaemonCommandProtocol: Service, public ClassyCountedPtr {
 	friend class DaemonCore;
 
 public:
-	DaemonCommandProtocol(Stream* sock,bool is_command_sock);
+	DaemonCommandProtocol( Stream * sock, bool is_command_sock, bool isSharedPortLoopback = false );
 	~DaemonCommandProtocol();
 
 	int doProtocol();
@@ -41,7 +41,9 @@ private:
 		CommandProtocolReadCommand,
 		CommandProtocolAuthenticate,
 		CommandProtocolAuthenticateContinue,
-		CommandProtocolPostAuthenticate,
+		CommandProtocolEnableCrypto,
+		CommandProtocolVerifyCommand,
+		CommandProtocolSendResponse,
 		CommandProtocolExecCommand
 	} m_state;
 
@@ -58,6 +60,7 @@ private:
 	bool m_is_http_get;
 #endif
 
+	bool m_isSharedPortLoopback;
 	bool m_nonblocking;
 	bool m_delete_sock;
 	bool m_sock_had_no_deadline;
@@ -66,6 +69,7 @@ private:
 	int	m_reqFound;
 	int	m_result;
 	int m_perm;
+	int m_allow_empty;
 	MyString m_user;
 	ClassAd *m_policy;
 	ClassAd m_auth_info;
@@ -95,7 +99,9 @@ private:
 	CommandProtocolResult Authenticate();
 	CommandProtocolResult AuthenticateContinue();
 	CommandProtocolResult AuthenticateFinish(int auth_success, char *method_used);
-	CommandProtocolResult PostAuthenticate();
+	CommandProtocolResult EnableCrypto();
+	CommandProtocolResult VerifyCommand();
+	CommandProtocolResult SendResponse();
 	CommandProtocolResult ExecCommand();
 	CommandProtocolResult WaitForSocketData();
 	int SocketCallback( Stream *stream );

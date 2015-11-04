@@ -16,13 +16,13 @@
 
 #include "condor_common.h"
 
-//#include "../condor_collector.V6/CollectorPlugin.h"
+//#include <CollectorPlugin.h>
 
 #include "condor_commands.h"
 #include "command_strings.h"
 #include "hashkey.h"
 
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include <condor_daemon_core.h>
 
 #include "condor_attributes.h"
 
@@ -98,7 +98,7 @@ CollectorObject::advertise()
 	if( CollectorName ) {
 		ad.Assign( ATTR_NAME, CollectorName );
 	} else {
-		ad.Assign( ATTR_NAME, my_full_hostname() );
+		ad.Assign( ATTR_NAME, get_local_fqdn());
 	}
 
 	ad.Assign( ATTR_COLLECTOR_IP_ADDR, global_dc_sinful() );
@@ -106,7 +106,7 @@ CollectorObject::advertise()
 	daemonCore->publish(&ad);
 
 	mgmtObject->set_Pool(GetPoolName());
-	mgmtObject->set_System(my_full_hostname());
+	mgmtObject->set_System(get_local_fqdn().Value());
 
 	STRING(CondorPlatform);
 	STRING(CondorVersion);

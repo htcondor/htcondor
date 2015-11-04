@@ -780,6 +780,21 @@ int __wprintf_chk(int /* flag */, const wchar_t *format, ...)
 /* This forces malloc.o from libc.a to not be brought in, and allows stduniv
 	code to use the malloc-user.c API instead */
 REMAP_TWO( memalign, __libc_memalign, void*, size_t, size_t )
+
+/* As above, except that our allocator doesn't provide posix_memalign(). */
+int posix_memalign( void ** ptr, size_t alignment, size_t size ) {
+	if( size == 0 ) { return NULL; }
+	if( alignment % sizeof(void *) != 0 ) { return EINVAL; }
+	// Zero is not a power of two.  Iff alignment is a power of two, it has
+	// a single one bit in position p; all other bits are zero.  Subtracting
+	// 1 from alignment causes the bit in position p to become zero.  Thus,
+	// alignment & (alignment - 1) is 0 iff alignment is a power of two.
+	if( (alignment == 0) || (alignment & (alignment - 1)) ) { return EINVAL; }
+	* ptr = memalign( alignment, size );
+	if( * ptr == NULL ) { return ENOMEM; }
+	return 0;
+}
+
 #endif
 
 #endif /* REMOTE_SYSCALLS */

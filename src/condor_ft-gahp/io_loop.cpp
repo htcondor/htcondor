@@ -368,7 +368,7 @@ stdin_pipe_handler(Service*, int) {
 
 			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_DOWNLOAD_SANDBOX) == 0) {
 
-				int fds[2];
+				int fds[2] = {-1,-1};
 				if ( pipe( fds ) < 0 ) {
 					EXCEPT( "Failed to create pipe!" );
 				}
@@ -405,7 +405,7 @@ stdin_pipe_handler(Service*, int) {
 
 			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_UPLOAD_SANDBOX) == 0) {
 
-				int fds[2];
+				int fds[2] = {-1,-1};
 				if ( pipe( fds ) < 0 ) {
 					EXCEPT( "Failed to create pipe!" );
 				}
@@ -441,7 +441,7 @@ stdin_pipe_handler(Service*, int) {
 
 			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_DESTROY_SANDBOX) == 0) {
 
-				int fds[2];
+				int fds[2] = {-1,-1};
 				if ( pipe( fds ) < 0 ) {
 					EXCEPT( "Failed to create pipe!" );
 				}
@@ -1044,6 +1044,7 @@ int download_sandbox_reaper(Service*, int pid, int status) {
 		char *err_msg = NULL;
 		read_from_pipe( e.error_pipe, &err_msg );
 		if ( err_msg == NULL || err_msg[0] == '\0' ) {
+			free( err_msg );
 			err_msg = strdup( "Worker thread failed" );
 		}
 
@@ -1080,6 +1081,7 @@ int upload_sandbox_reaper(Service*, int pid, int status) {
 		char *err_msg = NULL;
 		read_from_pipe( e.error_pipe, &err_msg );
 		if ( err_msg == NULL || err_msg[0] == '\0' ) {
+			free( err_msg );
 			err_msg = strdup( "Worker thread failed" );
 		}
 
@@ -1116,6 +1118,7 @@ int destroy_sandbox_reaper(Service*, int pid, int status) {
 		char *err_msg = NULL;
 		read_from_pipe( e.error_pipe, &err_msg );
 		if ( err_msg == NULL || err_msg[0] == '\0' ) {
+			free( err_msg );
 			err_msg = strdup( "Worker thread failed" );
 		}
 

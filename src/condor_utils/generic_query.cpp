@@ -47,7 +47,21 @@ GenericQuery ()
 GenericQuery::
 GenericQuery (const GenericQuery &gq)
 {
-	copyQueryObject (const_cast<GenericQuery &>(gq));
+	// initialize category counts
+	integerThreshold = 0;
+	stringThreshold = 0;
+	floatThreshold = 0;
+
+	// initialize pointers
+	integerConstraints = 0;
+	floatConstraints = 0;
+	stringConstraints = 0;
+
+	floatKeywordList = NULL;
+	integerKeywordList = NULL;
+	stringKeywordList = NULL;
+
+	copyQueryObject(gq);
 }
 
 
@@ -419,21 +433,21 @@ clearFloatCategory (SimpleList<float> &float_category)
 
 // helper functions --- copy
 void GenericQuery::
-copyQueryObject (GenericQuery &from)
+copyQueryObject (const GenericQuery &from)
 {
 	int i;
 
 	// copy string constraints
-   	for (i = 0; i < stringThreshold; i++)
+   	for (i = 0; i < from.stringThreshold; i++)
 		copyStringCategory (stringConstraints[i], from.stringConstraints[i]);
 	
 	// copy integer constraints
-	for (i = 0; i < integerThreshold; i++)
+	for (i = 0; i < from.integerThreshold; i++)
 		copyIntegerCategory (integerConstraints[i],from.integerConstraints[i]);
 
 	// copy custom constraints
-	copyStringCategory (customANDConstraints, from.customANDConstraints);
-	copyStringCategory (customORConstraints, from.customORConstraints);
+	copyStringCategory (customANDConstraints, const_cast<List<char> &>(from.customANDConstraints));
+	copyStringCategory (customORConstraints, const_cast<List<char> &>(from.customORConstraints));
 
 	// copy misc fields
 	stringThreshold = from.stringThreshold;

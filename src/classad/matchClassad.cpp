@@ -279,10 +279,12 @@ OptimizeAdForMatchmaking( ClassAd *ad, bool is_right, std::string *error_msg )
 
 		// insert "my" into this ad so that references that use it
 		// can be flattened
-	Value me;
-	ExprTree * pLit;
-	me.SetClassAdValue( ad );
-	ad->Insert("my",(pLit=Literal::MakeLiteral(me)));
+	if ( !_useOldClassAdSemantics ) {
+		Value me;
+		ExprTree * pLit;
+		me.SetClassAdValue( ad );
+		ad->Insert("my",(pLit=Literal::MakeLiteral(me)));
+	}
 
 		// insert "target" and "other" into this ad so references can be
 		// _partially_ flattened to the more efficient .RIGHT or .LEFT
@@ -332,7 +334,9 @@ OptimizeAdForMatchmaking( ClassAd *ad, bool is_right, std::string *error_msg )
 		// After flatenning, no references should remain to MY or TARGET.
 		// Even if there are, those can be resolved by the context ads, so
 		// we don't need to leave these attributes in the ad.
-	ad->Delete("my");
+	if ( !_useOldClassAdSemantics ) {
+		ad->Delete("my");
+	}
 	ad->Delete("other"); 
 	ad->Delete("target");
 
@@ -361,7 +365,7 @@ EvalMatchExpr(ExprTree *match_expr)
 
 	if( EvaluateExpr( match_expr, val ) ) {
 		bool result = false;
-		if( val.IsBooleanValue( result ) ) {
+		if( val.IsBooleanValueEquiv( result ) ) {
 			return result;
 		}
 		long long int_result = 0;

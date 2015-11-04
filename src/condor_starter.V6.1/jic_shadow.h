@@ -149,6 +149,8 @@ public:
 		 */
 	int reconnect( ReliSock* s, ClassAd* ad );
 
+		/// Disconnect from the shadow - jic virtual method handler
+	void disconnect();
 
 		// // // // // // // // // // // //
 		// Notfication to the shadow
@@ -430,7 +432,7 @@ private:
 	void setX509ProxyExpirationTimer();
 
 		// The proxy is about to expire, do something!
-	int proxyExpiring();
+	void proxyExpiring();
 
 		// // // // // // // //
 		// Private Data Members
@@ -481,6 +483,24 @@ private:
 			job again...
 		*/
 	bool job_cleanup_disconnected;
+
+		/** A flag to keep track of if the syscall_sock is registered
+			with daemonCore for read.  We do this so we notice asap
+			when this socket is closed, ie due to failed TCP keep alives.
+		*/
+	bool syscall_sock_registered;
+		/** handler for read callbacks on syscall sock, to notice if it closes */
+	int syscall_sock_handler(Stream *s);
+		/** epoch time when the syscall_sock got closed (shadow disappeared) */
+	time_t syscall_sock_lost_time;
+		/** timer id of timer to invoke job_lease_expired() when syscall_sock closed */
+	int syscall_sock_lost_tid;
+		/** invoked when job lease expired - exits w/ well known status */
+	void job_lease_expired();
+		/** must be invoked whenever our syscall_sock is reconnected */
+	void syscall_sock_reconnect();
+		/** must be invoked whenever we notice our syscall_sock is borked */
+	void syscall_sock_disconnect();
 
 	Stream *m_job_startd_update_sock;
 

@@ -65,7 +65,7 @@ int tcp_accept_timeout( int, struct sockaddr*, int*, int );
 
 /* Ensure the checkpoint's filename I'm about to read or write stays in
 	the checkpointing directory. */
-int ValidateNoPathComponents(char *path);
+int ValidateNoPathComponents(const char *path);
 
 /* Attempt a write.  If the write fails, exit with READWRITE_ERROR.
 This code might in the future retry, especially on EAGAIN or EINTR, but
@@ -215,7 +215,7 @@ void Server::Init()
 	collection_log = param( "CKPT_SERVER_CLASSAD_FILE" );
 	if ( collection_log ) {
 		delete CkptClassAds;
-		CkptClassAds = new ClassAdCollection(collection_log);
+		CkptClassAds = new ClassAdCollection(NULL, collection_log);
 		free(collection_log);
 	} else {
 		delete CkptClassAds;
@@ -413,7 +413,6 @@ void Server::SetUpPeers()
 			addr.set_port(CKPT_SVR_REPLICATE_REQ_PORT);
 			peer_addr_list[num_peers++] = addr.to_sin();
 			//sprintf(peer_addr, "<%s:%d>", peer, CKPT_SVR_REPLICATE_REQ_PORT);
-			//string_to_sin(peer_addr, peer_addr_list+(num_peers++));
 		}
 	}
 	free( ckpt_host );
@@ -1350,13 +1349,14 @@ void Server::SendStatus(int data_conn_sd)
 				 sizeof(socket_bufsize));
   }
   imds.TransferFileInfo(xfer_sd);
+  close(xfer_sd);
 }
 
 /* check to make sure something being used as a filename that we will
 	be reading or writing isn't trying to do anything funny. This
 	means the filename can't be "." ".." or have a path separator
 	in it. */
-int ValidateNoPathComponents(char *path)
+int ValidateNoPathComponents(const char *path)
 {
 	if (path == NULL) {
 		return FALSE;
@@ -1691,7 +1691,7 @@ void Server::ReceiveCheckpointFile(int         data_conn_sd,
 void Server::ProcessRestoreReq(int             req_id,
 							   FDContext      *fdc,
 							   struct in_addr  shadow_IP,
-							   restore_req_pkt restore_req)
+							   const restore_req_pkt &restore_req)
 {
 	struct stat        chkpt_file_status;
 	condor_sockaddr    server_sa;
@@ -1752,6 +1752,7 @@ void Server::ProcessRestoreReq(int             req_id,
 	if (ValidateNoPathComponents(restore_req.owner) == FALSE) {
 		restore_reply.server_name.s_addr = 0;
 		restore_reply.port = 0;
+		restore_reply.file_size = 0;
 		restore_reply.req_status = BAD_REQ_PKT;
 
 		send_restore_reply_pkt(&restore_reply, fdc);

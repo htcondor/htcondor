@@ -395,8 +395,10 @@ HRESULT FNEXPORT HaryList_Create (
 		return E_OUTOFMEMORY;
 
     plst->fdwOptions = fdwOptions | ARYLIST_OPT_F_INITIALIZED;
-    if (fdwOptions & ARYLIST_OPT_F_SERIALIZE)
+    if (fdwOptions & ARYLIST_OPT_F_SERIALIZE) {
+        #pragma warning(suppress: 28125) // warning InitCritSec should be called in a try/except block
         InitializeCriticalSection(&plst->cs);
+    }
 
     const LONG cbAlign = NUMBYTES(DWORD);
     cbItem = ALIGN(cbItem, cbAlign);

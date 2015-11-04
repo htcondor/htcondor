@@ -3,68 +3,84 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{IPv6|(}
 
-HTCondor has limited support for running on IPv6 networks.
+By default, HTCondor uses only IPv4 networks.  To enable IPv6 networking,
+set configuration variable \Macro{ENABLE\_IPV6} to \Expr{True}.
+Do \emph{not} enable IP6 unless
+the machine on which the daemon is running has an IPv6 address that the
+other machines within the pool can reach.  
+Otherwise, as HTCondor prefers to use IPv6 networks,
+enabling IPv6 can cause connectivity problems.
+In particular, it is unlikely IPv6 should be enabled if the IPv6 addresses
+are loopback (::1) or link-local (fe80::).
 
-Current Limitations
+To disable IPv4 networking, set configuration variable \Macro{ENABLE\_IPV4} 
+to \Expr{False}.
+HTCondor operates normally using only IPv6 addresses.
 
+If both IPv4 and IPv6 networking are enabled, HTCondor runs in mixed mode.
+In mixed mode, HTCondor daemons have at least two addresses that include
+an IPv4 address and an IPv6 address.  
+Generally, other daemons and the HTCondor client
+tools will choose between these addresses based on which protocols are enabled
+for them, preferring IPv6 when given the choice.
+
+There are two important cases in which the preference will not be for an IPv6 address:
 \begin{itemize}
-    \item{Microsoft Windows platforms are \emph{not} supported.}
-    \item{Mixed IPv4/IPv6 pools are \emph{not} supported.}
-    \item{Security policies cannot use IP addresses, only host names.
-If using \Expr{NO\_DNS=TRUE}, the host names are reformatted IP addresses,
-and can be matched against those. }
-    \item{\MacroNI{NETWORK\_INTERFACE} \emph{must be set} to a 
-specific IPv6 address. 
-It is not possible to use multiple IPv6 interfaces on a single computer.}
-    \item{There must be valid IPv6 (AAAA) DNS and reverse DNS records for 
-the computers. 
-Setting the configuration \Expr{NO\_DNS=TRUE} removes this limitation.}
+\item{When given a literal IP address, HTCondor will use that IP address.  }
+\item{When looking up a host name using DNS,
+HTCondor will use the first address whose
+protocol is enabled for the tool or daemon doing the look up.  }
 \end{itemize}
 
-Enabling IPv6
+In practice, this means that both an HTCondor pool's central manager
+and any submit machines within a mixed mode pool must have both IPv4 and IPv6
+addresses for both IPv4-only and IPv6-only \Condor{startd} daemons 
+to function properly.
 
-\begin{itemize}
-    \item{In the configuration, set \Expr{ENABLE\_IPV6 = True} 
-    and \Expr{ENABLE\_IPV4 = False}.}
-    \item{Specify the IPv6 interface to use. 
-Do \emph{not} put square brackets ([]) around this address.
-As an example,
+\subsubsection{IPv6 and Host-Based Security}
+
+You may freely intermix IPv6 and IPv4 address literals.  You may also specify
+IPv6 netmasks as a legal IPv6 address followed by a slash followed by the
+number of bits in the mask; or as the prefix of a legal IPv6 address followed
+by two colons followed by an asterisk.  The latter is entirely equivalent to the
+former, except that it only allows you to (implicitly) specify mask bits
+in groups of sixteen.  For example, \texttt{fe8f:1234::/60} and
+\texttt{fe8f:1234::*} specify the same network mask.
+
+The HTCondor security subsystem resolves names in the ALLOW and DENY
+lists and uses all of the resulting IP addresses.  Thus, to allow or deny
+IPv6 addresses, the names must have IPv6 DNS entries (AAAA records), or
+\MacroNI{NO\_DNS} must be enabled.
+
+\subsubsection{IPv6 Address Literals}
+
+When you specify an IPv6 address and a port number simultaneously, you
+must separate the IPv6 address from the port number by placing square
+brackets around the address.  For instance:
+
 \begin{verbatim}
-NETWORK_INTERFACE = 2607:f388:1086:0:21b:24ff:fedf:b520
+COLLECTOR_HOST = [2607:f388:1086:0:21e:68ff:fe0f:6462]:5332
 \end{verbatim}
-}
-\end{itemize}
 
-Additional Notes
-
-Specification of  \MacroNI{CONDOR\_HOST} or \MacroNI{COLLECTOR\_HOST}
-as an IP address \emph{must} place the address, 
-but \emph{not} the port, in square brackets. 
-Host names may be specified. 
-For example:
+If you do not (or may not) specify a port, do not use the square brackets.
+For instance:
 
 \begin{verbatim}
-CONDOR_HOST =[2607:f388:1086:0:21e:68ff:fe0f]:6462
-# This configures the collector to listen on the non-standard port 5332.
-COLLECTOR_HOST =[2607:f388:1086:0:21e:68ff:fe0f:6462]:5332
+NETWORK_INTERFACE = 1234:5678::90ab
 \end{verbatim}
 
-Because IPv6 addresses are not currently supported in HTCondor's 
-security settings, 
-\MacroUNI{CONDOR\_HOST} or \MacroUNI{COLLECTOR\_HOST} will not
-be permitted in the security configuration, 
-to specify an IP address.
+\subsubsection{IPv6 without DNS}
 
-When using the configuration variable \MacroNI{NO\_DNS},
-IPv6 addresses are turned into host names by taking the IPv6 address, 
-changing colons to dashes, and appending \MacroUNI{DEFAULT\_DOMAIN\_NAME}. 
-So, 
+When using the configuration variable \Macro{NO\_DNS},
+IPv6 addresses are turned into host names by taking the IPv6 address,
+changing colons to dashes, and appending \MacroUNI{DEFAULT\_DOMAIN\_NAME}.
+So,
 \begin{verbatim}
 2607:f388:1086:0:21b:24ff:fedf:b520
 \end{verbatim}
-becomes 
+becomes
 \begin{verbatim}
-2607-f388-1086-0-21b-24ff-fedf-b520.example.com 
+2607-f388-1086-0-21b-24ff-fedf-b520.example.com
 \end{verbatim}
 assuming
 \begin{verbatim}

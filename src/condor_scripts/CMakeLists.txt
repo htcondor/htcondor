@@ -28,12 +28,18 @@ if (NOT WINDOWS)
         install ( FILES condor_configure DESTINATION ${C_SBIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
         install ( FILES condor_configure DESTINATION ${C_SBIN} RENAME condor_install PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
         install ( FILES condor_configure DESTINATION ${C_SBIN} RENAME bosco_install PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
-        install ( CODE "EXECUTE_PROCESS(COMMAND ${CMAKE_COMMAND} -E create_symlink ./sbin/bosco_install \${CMAKE_INSTALL_PREFIX}/bosco_install)" )
-        install ( CODE "EXECUTE_PROCESS(COMMAND ${CMAKE_COMMAND} -E create_symlink ./sbin/condor_install \${CMAKE_INSTALL_PREFIX}/condor_install)" )
-        install ( CODE "EXECUTE_PROCESS(COMMAND ${CMAKE_COMMAND} -E create_symlink ./sbin/condor_configure \${CMAKE_INSTALL_PREFIX}/condor_configure)" )
+        if (NOT CONDOR_PACKAGE_BUILD)
+            install ( CODE "EXECUTE_PROCESS(COMMAND \"${CMAKE_COMMAND}\" -E create_symlink ./sbin/bosco_install \${CMAKE_INSTALL_PREFIX}/bosco_install)" )
+            install ( CODE "EXECUTE_PROCESS(COMMAND \"${CMAKE_COMMAND}\" -E create_symlink ./sbin/condor_install \${CMAKE_INSTALL_PREFIX}/condor_install)" )
+            install ( CODE "EXECUTE_PROCESS(COMMAND \"${CMAKE_COMMAND}\" -E create_symlink ./sbin/condor_configure \${CMAKE_INSTALL_PREFIX}/condor_configure)" )
+        endif(NOT CONDOR_PACKAGE_BUILD)
     endif(WANT_FULL_DEPLOYMENT)
 
 	install ( FILES condor_ssh sshd.sh DESTINATION ${C_LIBEXEC} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
+
+    if (LINUX)
+        install ( FILES linux_kernel_tuning DESTINATION ${C_LIBEXEC} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
+    endif(LINUX)
 
     install ( FILES Condor.pm CondorUtils.pm CondorTest.pm CondorPersonal.pm DESTINATION ${C_LIB} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
 

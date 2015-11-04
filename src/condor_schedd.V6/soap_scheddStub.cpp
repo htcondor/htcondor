@@ -25,6 +25,7 @@
 #include "condor_version.h"
 #include "condor_attributes.h"
 #include "scheduler.h"
+#include "qmgmt.h"
 #include "condor_qmgr.h"
 #include "CondorError.h"
 #include "MyString.h"
@@ -47,7 +48,6 @@ using namespace soap_schedd;
 #include "../condor_utils/soap_helpers.cpp"
 #include "../condor_utils/dc_service.cpp"
 
-#include "qmgmt.h"
 
 static int current_trans_id = 0;
 static int trans_timer_id = -1;
@@ -86,7 +86,7 @@ verify(DCpermission perm,
 
 
 	if (daemonCore->Verify("SOAP",perm,
-				&soap->peer,
+				reinterpret_cast<const sockaddr *>(&soap->peer),
 				soap->user ? (char*)soap->user : NULL) != USER_AUTH_SUCCESS)
 	{
 		status.code = FAIL;
@@ -286,7 +286,7 @@ stub_prefix(const char* stub_name,   // IN
 			ASSERT(entry->qmgmt_state);
 				// tell qmgmt info about our client - addr and user
 			ASSERT(soap);
-			condor_sockaddr addr(&soap->peer);
+			condor_sockaddr addr(reinterpret_cast<const sockaddr *>(&soap->peer));
 			entry->qmgmt_state->set(addr, (const char*)soap->user);
 		}
 

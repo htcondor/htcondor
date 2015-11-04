@@ -30,17 +30,19 @@ $testname = "job_dagman_vars";
 $dagman_args = "-verbose";
 
 @logfiles = ("job_dagman_vars.dag.dagman.out");
-@outfiles = ("job_dagman_vars-NodeA.out", "job_dagman_vars-NodeB.out", 
-	"job_dagman_vars-NodeC.out", 
+@outfiles = ("job_dagman_vars-XNodeA.out", "job_dagman_vars-NodeBY.out", 
+	"job_dagman_vars-ZNodeCZ.out", 
 	"job_dagman_vars-NodeD.out",
 	"job_dagman_vars-NodeE.out",
-	"job_dagman_vars-NodeF.out");
-@outlines = ("<NodeA> <Alberto Contador> <Andy	Schleck> <Lance_Armstrong> <!@#\$%^&*()_-=+=[]{}?> ",
-	"<NodeB> <NodeA> <Greg\"_LeMond> <\\Laurent_Fignon> <Pedro_Delgado> <> ",
-	"<NodeC> <NodeA> <Andreas_Kloden> <Carlos_Sastre> ",
+	"job_dagman_vars-NodeF.out",
+	"job_dagman_vars-NodeG.out");
+@outlines = ("<XNodeA> <Alberto Contador> <Andy	Schleck> <Lance_Armstrong> <!@#\$%^&*()_-=+=[]{}?> ",
+	"<NodeBY> <NodeA> <Greg\"_LeMond> <\\Laurent_Fignon> <Pedro_Delgado> <> ",
+	"<ZNodeCZ> <NodeA> <Andreas_Kloden> <Carlos_Sastre> ",
 	"<NodeD> <NodeB,NodeC> <Lance_Armstrong> <Andreas\"_Kloden> <\\Ivan_Basso> <!@#\$%^&*()_-=+=[]{}?> ",
-	"<NodeE> <NodeD> <bob> <0> ",
-	"<NodeF> <3> <3> ");
+	"<NodeE> <NodeD> <bob> <X0> ",
+	"<NodeF> <3> <3> ",
+	"<Vincenzo 'The Shark' Nibali> <Bernard \"The Badger\" Hinault> ");
 
 # truly const variables in perl
 sub IDLE{1};

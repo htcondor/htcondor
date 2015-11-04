@@ -51,6 +51,22 @@ condor_basename(const char *path)
 	return name;
 }
 
+/*
+  given a pointer to a file basename (see condor_basename) returns
+  a pointer to the file extension, if no extension returns a pointer
+  to the terminating null.
+*/
+const char*
+condor_basename_extension_ptr(const char* filename) {
+	if ( ! filename) return filename;
+	const char *pend = filename + strlen(filename);
+	const char *p = pend;
+	while (p > filename) {
+		if (*p == '.') return p;
+		--p;
+	}
+	return pend;
+}
 
 /*
   A dirname() function that is happy on both Unix and NT.

@@ -61,7 +61,7 @@ int	fPrintAd(FILE *file, const classad::ClassAd &ad, bool exclude_private = fals
 	/** Print the ClassAd as an old ClasAd with dprintf
 		@param level The dprintf level.
 	*/
-void dPrintAd( int level, const classad::ClassAd &ad );
+void dPrintAd( int level, const classad::ClassAd &ad, bool exclude_private = true );
 
 	/** Format the ClassAd as an old ClassAd into the MyString.
 		@param output The MyString to write into
@@ -349,7 +349,7 @@ class ClassAd : public classad::ClassAd
 
 	// Set or clear the dirty flag for each expression.
 	void SetDirtyFlag(const char *name, bool dirty);
-	void GetDirtyFlag(const char *name, bool *exists, bool *dirty);
+	void GetDirtyFlag(const char *name, bool *exists, bool *dirty) const;
 
 	// Copy value of source_attr in source_ad to target_attr
 	// in this ad.  If source_ad is NULL, it defaults to this ad.
@@ -362,6 +362,11 @@ class ClassAd : public classad::ClassAd
 	// CopyAttribute(target_attr,target_attr,source_ad).
 	void CopyAttribute(char const *target_attr, classad::ClassAd *source_ad );
 
+        static void CopyAttribute(const char *target_attr, classad::ClassAd &target_ad, const char *source_attr, const classad::ClassAd &source_ad);
+        static void CopyAttribute(const std::string &target_attr, classad::ClassAd &target_ad, const std::string &source_attr, const classad::ClassAd &source_ad)
+        {CopyAttribute(target_attr.c_str(), target_ad, source_attr.c_str(), source_ad);}
+
+
     /** Takes the ad this is chained to, copies over all the 
      *  attributes from the parent ad that aren't in this classad
      *  (so attributes in both the parent ad and this ad retain the 
@@ -371,12 +376,12 @@ class ClassAd : public classad::ClassAd
     void ChainCollapse();
 
     void GetReferences(const char* attr,
-                StringList &internal_refs,
-                StringList &external_refs);
+                StringList *internal_refs,
+                StringList *external_refs) const;
 
     bool GetExprReferences(const char* expr,
-                StringList &internal_refs,
-                StringList &external_refs);
+                StringList *internal_refs,
+                StringList *external_refs) const;
 
 	static void Reconfig();
 	static bool m_initConfig;
@@ -401,8 +406,8 @@ class ClassAd : public classad::ClassAd
     bool m_dirtyItrInit;
 
 	void _GetReferences(classad::ExprTree *tree,
-						StringList &internal_refs,
-						StringList &external_refs);
+						StringList *internal_refs,
+						StringList *external_refs) const;
 
 	// poison Assign of ExprTree* type for public users
 	// otherwise the compiler will resolve against the bool overload 
@@ -508,9 +513,6 @@ void SetTargetTypeName(classad::ClassAd &ad, const char *);
 	/** Get the value of the TargetType attribtute */
 const char*	GetTargetTypeName(const classad::ClassAd& ad);
 
-
-void getTheMyRef( classad::ClassAd *ad );
-void releaseTheMyRef( classad::ClassAd *ad );
 
 classad::MatchClassAd *getTheMatchAd( classad::ClassAd *source,
 									  classad::ClassAd *target );

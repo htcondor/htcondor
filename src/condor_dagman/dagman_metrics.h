@@ -49,7 +49,7 @@ public:
 				int rescueDagNum );
 
 		/** Set the DAGMan ID and parent DAGMan ID for this run.
-			@param DAGManJobId The Condor ID of this DAGMan.
+			@param DAGManJobId The HTCondor ID of this DAGMan.
 			@param parentDagmanCluster The cluster ID of the parent of
 					this DAGMan (if this is not a sub-DAG,
 					parentDagmanCluster should be 0).

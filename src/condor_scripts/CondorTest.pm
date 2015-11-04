@@ -36,9 +36,14 @@ use Condor;
 use CondorUtils;
 use CondorPersonal;
 
+my %AllowedEvents = ();
+my $WindowsWebServerPid = "";
+my $WindowsProcessObj = 0;
+my $porttool = "";
+
 use base 'Exporter';
 
-our @EXPORT = qw(runCondorTool runToolNTimes RegisterResult EndTest);
+our @EXPORT = qw(PrintTimeStamp timestamp runCondorTool runCondorToolCarefully runToolNTimes RegisterResult EndTest GetLogDir FindHttpPort CleanUpChildren StartWebServer);
 
 my %securityoptions =
 (
@@ -101,6 +106,11 @@ my $test_success_count = 0;
 
 BEGIN
 {
+	if ($^O =~ /MSWin32/) {
+		require Win32::Process;
+		require Win32;
+	}
+
     # disable command buffering so output is flushed immediately
     STDOUT->autoflush();
     STDERR->autoflush();
@@ -166,9 +176,10 @@ sub Cleanup()
 	print "Results indicate: $failed_coreERROR\n";
 	print "Time, Log, message are stored in condor_tests/Cores/core_error_trace\n\n";
 	print "************************************\n";
-	system("head -15 Cores/core_error_trace");
+	MyHead("-15", "Cores/core_error_trace");
 	print "************************************\n";
 	print "\n\n";
+	RegisterResult(0,"test_name","$handle");
 	return 0;
     }
     return 1;
@@ -186,20 +197,58 @@ sub EndTest
 
     my $exit_status = 0;
     if( Cleanup() == 0 ) {
-	$exit_status = 1;
-    }
-    if($failed_coreERROR ne "") {
-	$exit_status = 1;
-	$extra_notes = "$extra_notes\n  Log Directory Check results: $failed_coreERROR\n";
+		print "0 return from cleanup means $failed_coreERROR was not empty\n";
+		$exit_status = 1;
     }
 
+	# at this point all the personals started should be stopped
+	# so we will validate this and if we can not, this adds a negative result.
+	
+	#print "EndTest: Testing Personal HTCondor(s) created for this test\n"; 
+	#print "Their names are\n";
+	#foreach my $name (sort keys %personal_condors) {
+		#print "	$name";
+	#}
+	#print "\n\n";
+	my $amidown = "";
+	foreach my $name (sort keys %personal_condors) {
+		$amidown = "";
+		print "EndTest:checking this named instance:$name for being down: ";
+        my $condor = $personal_condors{$name};
+		$amidown = CondorPersonal::ProcessStateWanted($condor->{condor_config});
+		if($amidown ne "down") {
+			print "BAD\n";
+			print "This condor:$name failed to come all the way down\n";
+			print "Adding a FAILED instance to make test fail\n\n";
+			# this one not down add negative result, BROADCAST and check rest
+			RegisterResult(0,"test_name","$handle");
+		} else {
+			print "OK\n";
+			print "Adding a PASSED event for this HTCondor personal stopping\n";
+			RegisterResult(1,"test_name","$handle");
+		}
+	}
+	
+	# Cleanup stops all personals in test which triggers a CoreCheck per personal
+	# not all tests call RegisterResult yet and I changed the ordering in remote_task
+	# so to insure the presence of at least one call to RegisterResult passing the
+	# CoreCheck result
+    if($failed_coreERROR ne "") {
+		$exit_status = 1;
+		$extra_notes = "$extra_notes\n  Log Directory Check results: $failed_coreERROR\n";
+		RegisterResult(0,"test_name","$handle");
+    } else {
+		print "Passed Core Check\n";
+		RegisterResult(1,"test_name","$handle");
+	}
+
     if( $test_failure_count > 0 ) {
-	$exit_status = 1;
+		$exit_status = 1;
     }
 
     if( $test_failure_count == 0 && $test_success_count == 0 ) {
-	$extra_notes = "$extra_notes\n  CondorTest::RegisterResult() was never called!";
-	$exit_status = 1;
+		$extra_notes = "$extra_notes\n  CondorTest::RegisterResult() was never called!";
+		$exit_status = 1;
     }
 
     my $result_str = $exit_status == 0 ? "SUCCESS" : "FAILURE";
@@ -213,6 +262,7 @@ sub EndTest
 	} else {
     	exit($exit_status);
 	}
+	#return($exit_status);
 }
 
 # This should be called in each check function to register the pass/fail result
@@ -245,7 +295,7 @@ sub GetDefaultTestName
 sub GetCheckName
 {
     my $filename = shift; # module file containing the check
-    my %args = @_;        # named arguments to the check function
+	my %args = @_;        # named arguments to the check function
 
     if( exists $args{check_name} ) {
 	return $args{check_name};
@@ -255,11 +305,15 @@ sub GetCheckName
 
     my $arg_str = "";
     for my $name ( keys %args ) {
-        my $value = $args{$name};
-		if( $arg_str ne "" ) {
-	    	$arg_str = $arg_str . ",";
+    	# when we add bulk submit lines in RunCheck we really dont
+		# want to see them
+		if($name ne "append_submit_commands") {
+        	my $value = $args{$name};
+			if( $arg_str ne "" ) {
+	    		$arg_str = $arg_str . ",";
+			}
+			$arg_str = $arg_str . "$name=$value";
 		}
-		$arg_str = $arg_str . "$name=$value";
     }
     if( $arg_str ne "" ) {
 	$check_name = $check_name . "($arg_str)";
@@ -285,8 +339,9 @@ sub TempFileName
 sub Reset
 {
     %machine_ads = ();
-	Condor::Reset();
+	Condor::NonEventReset();
 	$hoststring = "notset:000";
+	$failed_coreERROR = "";
 }
 
 sub SetExpected
@@ -483,6 +538,78 @@ sub RegisterULog
     my $function_ref = shift || croak "missing function reference argument";
 
     $test{$handle}{"RegisterULog"} = $function_ref;
+}
+
+sub IdentifyTimer {
+	my $timercalback = shift;
+	foreach my $key (keys %test) {
+		print "test:$key\n";
+		if($test{$key}{"RegisterTimed"} == $timercalback) {
+			print "timer identified as $key\n";
+			return($key);
+		}
+	}
+	return("");
+}
+
+# remove CondorLog::RunCheck timer
+#
+sub RegisterCLTimed
+{
+    my $handle = shift || croak "missing handle argument";
+    my $function_ref = shift || croak "missing function reference argument";
+	my $alarm = shift || croak "missing wait time argument";
+
+    $test{$handle}{"RegisterCLTimed"} = $function_ref;
+    $test{$handle}{"RegisterCLTimedWait"} = $alarm;
+
+	# relook at registration and re-register to allow a timer
+	# to be set after we are running. 
+	# Prior to this change timed callbacks were only regsitered
+	# when we call "runTest" and similar calls at the start.
+
+	CheckCLTimedRegistrations($handle);
+}
+
+# remove SimpleJob::RunCheck timer
+#
+sub RemoveCLTimed
+{
+    my $handle = shift || croak "missing handle argument";
+
+    $test{$handle}{"RegisterCLTimed"} = undef;
+    $test{$handle}{"RegisterCLTimedWait"} = undef;
+    TestDebug( "Remove timer.......\n",4);
+    Condor::RemoveCLTimed( );
+}
+
+sub RegisterSJTimed
+{
+    my $handle = shift || croak "missing handle argument";
+    my $function_ref = shift || croak "missing function reference argument";
+	my $alarm = shift || croak "missing wait time argument";
+
+    $test{$handle}{"RegisterSJTimed"} = $function_ref;
+    $test{$handle}{"RegisterSJTimedWait"} = $alarm;
+
+	# relook at registration and re-register to allow a timer
+	# to be set after we are running. 
+	# Prior to this change timed callbacks were only regsitered
+	# when we call "runTest" and similar calls at the start.
+
+	CheckSJTimedRegistrations($handle);
+}
+
+# remove SimpleJob::RunCheck timer
+#
+sub RemoveSJTimed
+{
+    my $handle = shift || croak "missing handle argument";
+
+    $test{$handle}{"RegisterSJTimed"} = undef;
+    $test{$handle}{"RegisterSJTimedWait"} = undef;
+    TestDebug( "Remove timer.......\n",4);
+    Condor::RemoveSJTimed( );
 }
 
 sub RegisterTimed
@@ -755,14 +882,15 @@ sub StartTest
 	#my $testname = $args{testname}; 
 	#print "DoTest:$testname\n";
 
+	#ensure test name does not have a newline
+	fullchomp($handle);
+
 	if($args{submit_file} eq "none") {
     	Condor::SetHandle($handle);
 		print "No submit file passed in. Only registering test\n";
 		return($retval);
 	}
 	
-	$failed_coreERROR = "";
-
 	TestDebug("RunTest says test: $handle\n",2);;
 	# moved the reset to preserve callback registrations which includes
 	# an error callback at submit time..... Had to change timing
@@ -856,7 +984,7 @@ sub StartTest
 # July 26, 2013
 #
 # Major architecture change as we used more callbacks for testing
-# I stumbled on value in the test which were to be changed by the callbacks were not being
+# I stumbled on values in the tests which were to be changed by the callbacks were not being
 # changed. What was happening in DoTest was that we would fork and the child was
 # running monitor and that callbacks were changing the variables in the child's copy.
 # The process that is the test calling DoTest was simply waiting for the child to die
@@ -864,11 +992,28 @@ sub StartTest
 # callbacks switch it back up to the test code for a bit. The monitor and the 
 # test had always been lock-steped anyways so getting rid of the child
 # has had little change except that call backs can be fully functional now.
+
+# bt 4/9/15 bt
+# Now we come to the need to handle multiple logs at the same time steming
+# from some of the variants of condor_submit foreach. In particular
+# queue [n] InitialDir (jobdir*/)
+#
+# The same callback issues exist so very limit callbacks make sense. We mostly
+# want to know that the test passed so we will probably set a ExitSuccess callback
+# our selves in the new MultiMonitor. The other place this can happen is in SimpleJob::RunCheck
+# when it is called with no_wait.
+
+		my @userlogs = ();
+		my $joblogcount = Condor::AccessUserLogs(\@userlogs);
 		
 		if(exists $args{no_monitor}) {
 			print "Skipping monitor\n";
 		} else {
-    		$monitorret = Condor::Monitor();
+			if($joblogcount > 1) {
+    			$monitorret = Condor::MultiMonitor();
+			} else {
+    			$monitorret = Condor::Monitor();
+			}
 		}
 		if(  $monitorret == 1 ) {
 			TestDebug( "Monitor happy to exit 0\n",4);
@@ -930,9 +1075,13 @@ sub StartTest
 	##############################################################
 	if(ShouldCheck_coreERROR() == 1){
 		TestDebug("Want to Check core and ERROR!!!!!!!!!!!!!!!!!!\n\n",2);
+		print "Calling CoreCheck in endof StartTest\n";
 		# running in Config
-		my $logdir = `condor_config_val log`;
-		CondorUtils::fullchomp($logdir);
+
+		my $logdir = GetLogDir();
+
+		CondorUtils::fullchomp($handle);
+		print "LOGDIR from condor_config_val log:$logdir Test:$handle\n";
 		$failed_coreERROR = CoreCheck($handle, $logdir, $teststrt, $teststop);
 	}
 	##############################################################
@@ -942,8 +1091,11 @@ sub StartTest
 	##############################################################
 
 	if(defined  $wrap_test) {
-		my $logdir = `condor_config_val log`;
-		CondorUtils::fullchomp($logdir);
+		print "Calling CoreCheck in endof StartTest if wrapped\n";
+
+		my $logdir = GetLogDir();
+
+		print "LOGDIR from condor_config_val log:$logdir Test:$handle\n";
 		$failed_coreERROR = CoreCheck($handle, $logdir, $teststrt, $teststop);
 		if($config ne "") {
 			#print "KillDaemonPids called on this config file: $config\n";
@@ -979,12 +1131,59 @@ sub StartTest
 			print "Results indicate: $failed_coreERROR\n";
 			print "Time, Log, message are stored in condor_tests/Cores/core_error_trace Sample follows:\n\n";
 			print "************************************\n";
-			system("head -15 Cores/core_error_trace");
+			MyHead("-15", "Cores/core_error_trace");
 			print "************************************\n";
 			print "\n\n";
     		return 0;
 		}
 	}
+}
+
+#############################################
+#
+# bt 5/4/15
+#
+#
+# We have had timer clashes where we loose callbacks
+# because someone else used it wiping out the first timer.
+# We feel this will get rid some of the periodic failures.
+# SimpleJob.pm will get ir's own timer. This will explain
+# almost identicle code but with SJ within it.
+#
+#
+
+sub CheckCLTimedRegistrations
+{
+	my $handle = shift;
+	# this one event should be possible from ANY state
+	# that the monitor reports to us. In this case which
+	# initiated the change I wished to start a timer from
+	# when the actual runtime was reached and not from
+	# when we started the test and submited it. This is the time 
+	# at all other regsitrations have to be registered by....
+
+    if( exists $test{$handle} and defined $test{$handle}{"RegisterCLTimed"} )
+    {
+		TestDebug( "Found a timer to register.......\n",4);
+		Condor::RegisterCLTimed( $test{$handle}{"RegisterCLTimed"} , $test{$handle}{"RegisterCLTimedWait"});
+    }
+}
+
+sub CheckSJTimedRegistrations
+{
+	my $handle = shift;
+	# this one event should be possible from ANY state
+	# that the monitor reports to us. In this case which
+	# initiated the change I wished to start a timer from
+	# when the actual runtime was reached and not from
+	# when we started the test and submited it. This is the time 
+	# at all other regsitrations have to be registered by....
+
+    if( exists $test{$handle} and defined $test{$handle}{"RegisterSJTimed"} )
+    {
+		TestDebug( "Found a timer to register.......\n",4);
+		Condor::RegisterSJTimed( $test{$handle}{"RegisterSJTimed"} , $test{$handle}{"RegisterSJTimedWait"});
+    }
 }
 
 sub CheckTimedRegistrations
@@ -1015,7 +1214,7 @@ sub CheckRegistrations
     else
     {
 	Condor::RegisterExitSuccess( sub {
-	    die "$handle: FAILURE (got unexpected successful termination)\n";
+		Condor::CheckAllowed("RegisterExitSuccess", $handle, "(got unexpected successful termination)");
 	} );
     }
 
@@ -1027,7 +1226,7 @@ sub CheckRegistrations
     {
 	Condor::RegisterExitFailure( sub {
 	    my %info = @_;
-	    die "$handle: FAILURE (returned $info{'retval'})\n";
+		Condor::CheckAllowed("RegisterExitFailure", "$handle", "(returned $info{'retval'})");
 	} );
     }
 
@@ -1039,7 +1238,7 @@ sub CheckRegistrations
     {
 	Condor::RegisterExitAbnormal( sub {
 	    my %info = @_;
-	    die "$handle: FAILURE (got signal $info{'signal'})\n";
+		Condor::CheckAllowed("RegisterExitAbnormal", "$handle", "(got signal $info{'signal'})");
 	} );
     }
 
@@ -1051,7 +1250,7 @@ sub CheckRegistrations
     {
 	Condor::RegisterShadow( sub {
 	    my %info = @_;
-	    die "$handle: FAILURE (got unexpected shadow exceptions)\n";
+		Condor::CheckAllowed("RegisterShadow", "$handle", "(got unexpected shadow exceptions)");
 	} );
     }
 
@@ -1073,7 +1272,7 @@ sub CheckRegistrations
     {
 	Condor::RegisterAbort( sub {
 	    my %info = @_;
-	    die "$handle: FAILURE (job aborted by user)\n";
+		Condor::CheckAllowed("RegisterAbort", "$handle", "(job aborted by user)");
 	} );
     }
 
@@ -1085,7 +1284,7 @@ sub CheckRegistrations
     {
 	Condor::RegisterHold( sub {
 	    my %info = @_;
-	    die "$handle: FAILURE (job held by user)\n";
+		Condor::CheckAllowed("RegisterHold", "$handle", "(job held by user)");
 	} );
     }
 
@@ -1114,7 +1313,7 @@ sub CheckRegistrations
     {
 	Condor::RegisterJobErr( sub {
 	    my %info = @_;
-	    die "$handle: FAILURE (job error -- see $info{'log'})\n";
+		Condor::CheckAllowed("RegisterJobErr", "$handle", "(job error -- see $info{'log'})");
 	} );
     }
 
@@ -1126,7 +1325,7 @@ sub CheckRegistrations
     {
 	Condor::RegisterULog( sub {
 	    my %info = @_;
-	    die "$handle: FAILURE (job ulog)\n";
+		Condor::CheckAllowed("RegisterULog", "$handle", "(job ulog)");
 	} );
     }
 
@@ -1138,7 +1337,7 @@ sub CheckRegistrations
     {
 	Condor::RegisterSuspended( sub {
 	    my %info = @_;
-	    die "$handle: FAILURE (Suspension not expected)\n";
+		Condor::CheckAllowed("RegisterSuspended", "$handle", "(Suspension not expected)");
 	} );
     }
 
@@ -1150,7 +1349,7 @@ sub CheckRegistrations
     {
 	Condor::RegisterUnsuspended( sub {
 	    my %info = @_;
-	    die "$handle: FAILURE (Unsuspension not expected)\n";
+		Condor::CheckAllowed("RegisterUnsuspended", "$handle", "(Unsuspension not expected)");
 	} );
     }
 
@@ -1162,7 +1361,7 @@ sub CheckRegistrations
     {
 	Condor::RegisterDisconnected( sub {
 	    my %info = @_;
-	    die "$handle: FAILURE (Disconnect not expected)\n";
+		Condor::CheckAllowed("RegisterDisconnected", "$handle", "(Disconnect not expected)");
 	} );
     }
 
@@ -1174,7 +1373,7 @@ sub CheckRegistrations
     {
 	Condor::RegisterReconnected( sub {
 	    my %info = @_;
-	    die "$handle: FAILURE (reconnect not expected)\n";
+		Condor::CheckAllowed("RegisterReconnected", "$handle", "(reconnect not expected)");
 	} );
     }
 
@@ -1186,7 +1385,7 @@ sub CheckRegistrations
     {
 	Condor::RegisterReconnectFailed( sub {
 	    my %info = @_;
-	    die "$handle: FAILURE (reconnect failed)\n";
+		Condor::CheckAllowed("RegisterReconnectFailed", "$handle", "(reconnect failed)");
 	} );
     }
 
@@ -1197,7 +1396,7 @@ sub CheckRegistrations
     } else { 
 		Condor::RegisterEvictedWithRequeue( sub {
 	    my %info = @_;
-	    die "$handle: FAILURE (Unexpected Eviction with requeue)\n";
+		Condor::CheckAllowed("RegisterEvictedWithRequeue", "$handle", "(Unexpected Eviction with requeue)");
 	} );
 	}
 
@@ -1208,7 +1407,7 @@ sub CheckRegistrations
     } else { 
 		Condor::RegisterEvictedWithCheckpoint( sub {
 	    my %info = @_;
-	    die "$handle: FAILURE (Unexpected Eviction with checkpoint)\n";
+		Condor::CheckAllowed("RegisterEvictedWithCheckpoint", "$handle", "(Unexpected Eviction with checkpoint)");
 	} );
 	}
 
@@ -1221,7 +1420,7 @@ sub CheckRegistrations
 		#print "******** NOT Registering EvictedWithoutCheckpoint handle:$handle ****************\n";
 		Condor::RegisterEvictedWithoutCheckpoint( sub {
 	    my %info = @_;
-	    die "$handle: FAILURE (Unexpected Eviction without checkpoint)\n";
+		Condor::CheckAllowed("RegisterEvictedWithoutCheckpoint", "$handle", "(Unexpected Eviction without checkpoint)");
 	} );
 	}
 
@@ -1242,12 +1441,7 @@ sub CheckRegistrations
 	#Condor::RegisterEvicted( $test{$handle}{"RegisterEvicted"} );
     #}
 
-    if( defined $test{$handle}{"RegisterTimed"} )
-    {
-		Condor::RegisterTimed( $test{$handle}{"RegisterTimed"} , $test{$handle}{"RegisterTimedWait"});
-    }
 }
-
 
 sub CompareText
 {
@@ -1481,9 +1675,15 @@ sub getJobStatus
 {
 	my @status;
 	my $qstatcluster = shift;
+	my $verbose = shift;
 	my $cmd = "condor_q $qstatcluster -format %d JobStatus";
+	my $qstat = 1;
 	# shhhhhhhh third arg 0 makes it hush its output
-	my $qstat = CondorTest::runCondorTool($cmd,\@status,0);
+	if(defined $verbose) {
+		$qstat = CondorTest::runCondorTool($cmd,\@status,0);
+	} else {
+		$qstat = CondorTest::runCondorTool($cmd,\@status,0,{emit_output=>0});
+	}
 	if(!$qstat)
 	{
 		die "Test failure due to Condor Tool Failure: $cmd\n";
@@ -1498,13 +1698,17 @@ sub getJobStatus
 		}
 		else
 		{
-			print "No job status????\n";
-			runcmd("condor_q");
+			if(defined $verbose) {
+				print "No job status????\n";
+				runcmd("condor_q");
+			}
 			return("0");
 		}
 	}
-	print "No job status????\n";
-	runcmd("condor_q");
+	if(defined $verbose) {
+		print "No job status????\n";
+		runcmd("condor_q");
+	}
 	return("0");
 }
 
@@ -1524,6 +1728,23 @@ sub PipeCheck {
 		print "*                                                     *\n";
 		print "*******************************************************\n";
 	}
+}
+
+
+sub runCondorToolCarefully {
+	my $array = shift( @_ );
+	my $quiet = shift( @_ );
+	my $options = shift( @_ );
+	my $retval = shift( @_ );
+	my @argv = @_;
+
+	my %altOptions;
+	if( ! defined( $options ) ) {
+		$options = \%altOptions;
+	}
+	${$options}{arguments} = \@argv;
+
+	return runCondorTool( $argv[0], $array, $quiet, $options, $retval );
 }
 
 
@@ -1940,13 +2161,15 @@ sub spawn_cmd
 		while(($child = waitpid($pid,0)) != -1) { 
 			$retval = $?;
 			TestDebug( "Child status: $retval\n",4);
-			if( WIFEXITED( $retval ) && WEXITSTATUS( $retval ) == 0 ) {
-				TestDebug( "Monitor done and status good!\n",4);
-				$retval = 0;
-			} else {
-				my $status = WEXITSTATUS( $retval );
-				TestDebug( "Monitor done and status bad: $status!\n",4);
+			if ($retval & 0x7f) {
+				# died with signal and maybe coredump.
+				# Ignore the fact a coredump happened for now.
+				TestDebug( "Monitor done and status bad: \n",4);
 				$retval = 1;
+			} else {
+				# Child returns valid exit code
+				my $rc = $retval >> 8;
+				$retval = $rc;
 			}
 			print RES "Exit $retval \n";
 			print LOG "Pid $child res was $retval\n";
@@ -1992,9 +2215,15 @@ sub SearchCondorLog
     my $regexp = shift;
 	my $arrayref = shift;
 
-    my $logloc = `condor_config_val ${daemon}_log`;
+	my $daemonlog = "$daemon" . "_log";
+	my @fetchlog = ();
+	@fetchlog = `condor_config_val $daemonlog`;
+	my $logdir = $fetchlog[0];
+	CondorUtils::fullchomp($logdir);
+	my $logloc = $logdir;
+	print "SearchCondorLog for daemon:$daemon yielded:$logloc\n";
+
 	my $count = 0;
-    CondorUtils::fullchomp($logloc);
 
     CondorTest::TestDebug("Search this log: $logloc for: $regexp\n",3);
     open(LOG,"<$logloc") || die "Can not open logfile: $logloc: $!\n";
@@ -2053,8 +2282,15 @@ sub SearchCondorLogMultiple
 	my $goal = 0;
 	my $retryregexp = "";
 
-    my $logloc = `condor_config_val ${daemon}_log`;
-    CondorUtils::fullchomp($logloc);
+    
+	my $daemonlog = "$daemon" . "_log";
+	my @fetchlog = ();
+	@fetchlog = `condor_config_val $daemonlog`;
+	my $logdir = $fetchlog[0];
+	CondorUtils::fullchomp($logdir);
+	my $logloc = $logdir;
+	print "SearchCondorLog for daemon:$daemon yielded:$logloc\n";
+
     CondorTest::TestDebug("Search this log: $logloc for: $regexp instances = $instances\n",2);
     CondorTest::TestDebug("Timeout = $timeout\n",2);
 
@@ -2202,8 +2438,10 @@ sub SearchCondorSpecialLog
     my $allmatch = shift;
 
     my $matches = 0;
-    my $logloc = `condor_config_val log`;
-    CondorUtils::fullchomp($logloc);
+
+	my $logdir = GetLogDir();
+	my $logloc = $logdir;
+
     $logloc = "$logloc/$logname";
 
     #print "SearchCondorSpecialLog: $logname/$regexp/$allmatch\n";
@@ -2243,8 +2481,7 @@ sub PersonalPolicySearchLog
     my $policyitem = shift;
     my $logname = shift;
 
-	my $logdir = `condor_config_val log`;
-	CondorUtils::fullchomp($logdir);
+	my $logdir = GetLogDir();
 
     #my $logloc = $pid . "/" . $pid . $personal . "/log/" . $logname;
     my $logloc = $logdir . "/" . $logname;
@@ -2272,8 +2509,9 @@ sub OuterPoolTest
 	my $locconfig = "";
     TestDebug( "Running this command: $cmd \n",2);
     # shhhhhhhh third arg 0 makes it hush its output
-	my $logdir = `condor_config_val log`;
-	CondorUtils::fullchomp($logdir);
+	
+	my $logdir = GetLogDir();
+
 	TestDebug( "log dir is: $logdir\n",2);
 	if($logdir =~ /^.*condor_tests.*$/){
 		print "Running within condor_tests\n";
@@ -2295,8 +2533,9 @@ sub PersonalCondorTest
 	my $locconfig = "";
     print "Running this command: $cmd \n";
     # shhhhhhhh third arg 0 makes it hush its output
-	my $logdir = `condor_config_val log`;
-	CondorUtils::fullchomp($logdir);
+
+	my $logdir = GetLogDir();
+
 	print "log dir is: $logdir\n";
 	if($logdir =~ /^.*condor_tests.*$/){
 		print "Running within condor_tests\n";
@@ -2366,6 +2605,11 @@ sub debug {
     }
 }
 
+sub PrintTimeStamp {
+	my $timing = timestamp();
+	print "now: $timing\n";
+}
+
 sub timestamp {
     return strftime("%H:%M:%S", localtime);
 }
@@ -2405,7 +2649,7 @@ sub slurp {
 # turning on, Unknown
 # turning on, Not Run Yet
 # turning on, Coming up
-# turning on, mater alive
+# turning on, master alive
 # turning on, collector alive
 # turning on, collector knows xxxxx
 # turning on, all daemons
@@ -2426,7 +2670,7 @@ sub slurp {
 # As noted above, the state of a personal condor is directional. It matters
 # if it is coming alive or shuting down.
 #
-# Note the vaiance of the fields from condor who.
+# Note the variance of the fields from condor who.
 #
 # Daemon       Alive  PID    PPID   Exit   Addr                     Executable
 # ------       -----  ---    ----   ----   ----                     ----------
@@ -2447,7 +2691,7 @@ sub slurp {
 #
 # We are switching from parsing this data with regular expressions to
 # collecting a daemons information into a hash with up to 7 entries.
-# These must be collected dynamically per daemon. We need a stoage 
+# These must be collected dynamically per daemon. We need a storage 
 # method for the collection of daemons which make up a personal condor
 # and a way to store the current state.
 #
@@ -2512,13 +2756,20 @@ sub slurp {
   {
       my $self = shift;
 	  my $onedaemon = "$self->{daemon}" . ",$self->{pid}";
+	  print "GetDaemonAndPid: returning $onedaemon\n";
 	  return($onedaemon);
   }
   sub DisplayWhoDataInstance
   {
-      my $self = shift;
-	  print "$self->{daemon},$self->{alive},$self->{pid},$self->{ppid},$self->{pidexit},$self->{address},$self->{binary}\n";
+	my $self = shift;
+	if(($self->{daemon} eq "Negotiator") ||($self->{daemon} eq "Collector")) {
+		print "$self->{daemon}\t$self->{alive}\t$self->{pid}\t$self->{ppid}\t$self->{pidexit}\t$self->{address}\n";
+	} else {
+		print "$self->{daemon}\t\t$self->{alive}\t$self->{pid}\t$self->{ppid}\t$self->{pidexit}\t$self->{address}\n";
+	}
   }
+
+
   sub GetDaemonName
   {
       my $self = shift;
@@ -2627,10 +2878,13 @@ sub LoadWhoData
   sub DisplayWhoDataInstances
   {
       my $self = shift;
+	  print "Daemon\t\tAlive\tPID\tPPID\tExit\tAddr\n";
+	  print "______\t\t_____\t___\t____\t____\t____\n";
 	  foreach my $daemonkey (keys %{$self->{personal_who_data}}) {
 	  	#print "$daemonkey: $self->{personal_who_data}->{$daemonkey}\n";
 		$self->{personal_who_data}->{$daemonkey}->DisplayWhoDataInstance();
 	  }
+	  print "\n";
   }
   sub WritePidsFile
   {
@@ -2642,17 +2896,18 @@ sub LoadWhoData
 		"Negotiator" => "condor_negotiator",
 		"Collector" => "condor_collector",
 		"Startd" => "condor_startd",
+		"SharedPort" => "condor_shared_port",
 		"Master" => "MASTER",
 	  );
 	  open(PF,">$file") or print "PIDS file create failed:$!\n";
 	  foreach my $daemonkey (keys %{$self->{personal_who_data}}) {
-	  	#print "$daemonkey: $self->{personal_who_data}->{$daemonkey}\n";
+	  	print "$daemonkey: $self->{personal_who_data}->{$daemonkey}\n";
 		$piddata = $self->{personal_who_data}->{$daemonkey}->GetDaemonAndPid();
-		#print "$piddata\n";
+		print "$piddata\n";
 		my @pidandname = split /,/, $piddata;
 		my $line = "$pidandname[1] $refer{$pidandname[0]}";
 		print PF "$line\n";
-		#print "$line\n";
+		print "$line\n";
 	  }
 	  close(PF);
   }
@@ -2672,8 +2927,8 @@ sub LoadWhoData
 			my @statarray = ();
 			CondorTest::runCondorTool("condor_status -schedd -autoformat MyAddress Name",\@statarray,0,{emit_output=>0});
 			foreach my $line (@statarray) {
-			#<128.105.109.64:49860 Look for beginning of sinful string
-				if( $line =~ /^<\d+\.\d+\.\d+\.\d+:\d+.*$/) {
+				if( $line =~ /^<\[[:0-9A-Za-z]+]:\d+.*$/ ||
+				    $line =~ /^<\d+\.\d+\.\d+\.\d+:\d+.*$/ ) {
 					#print "Got a sinful string for schedd:$line\n";
 					return("yes");
 				}
@@ -2793,8 +3048,12 @@ sub LoadWhoData
 	  if($self->{personal_daemon_list} ne "") {
 	  	  return $self->{personal_daemon_list};
 	  } else {
-	  	  my $dlist = `condor_config_val daemon_list`;
+
+		  my @fetchlog = ();
+		  @fetchlog = `condor_config_val daemon_list`;
+		  my $dlist = $fetchlog[0];
 		  CondorUtils::fullchomp($dlist);
+
 		  # have all daemon lists be space separated
 		  $_ = uc $dlist;
 		  s/\s*,\s/ /g;
@@ -2818,12 +3077,6 @@ sub LoadWhoData
   {
       my $self = shift;
       return $self->{collector_addr};
-  }
-  sub GetCollectorPort
-  {
-      my $self = shift;
-	  my @addrparts = split /:/, $self->{collector_addr};
-	  return $addrparts[1];
   }
 }
 
@@ -2876,7 +3129,7 @@ sub GetPersonalCondorWithConfig
 	my $condor_config = "";
     if(CondorUtils::is_windows() == 1) {
 		if(is_windows_native_perl()) {
-			print "GetPersonalCondorWithConfig: windows_native_perl\n";
+			#print "GetPersonalCondorWithConfig: windows_native_perl\n";
 			$_ = $tmp_config;
 			s/\//\\/g;
 			$condor_config = $_;
@@ -2926,12 +3179,16 @@ sub GetPersonalCondorWithConfig
 
 sub CreatePidsFile {
 	# use config to get acondor instance
-	my $logdir = `condor_config_val log`;
-	CondorUtils::fullchomp($logdir);
+	
+	my $logdir = GetLogDir();
+
+	print "CreatePidsFile: log:$logdir\n";
 	my $pidsfile = $logdir . "/PIDS";
+	print "File: PIDS:$pidsfile\n";
 	my $config = $ENV{CONDOR_CONFIG};
 	my $condor_instance = GetPersonalCondorWithConfig($config);
 	if($condor_instance != 0) {
+		print "Have condor instance to write PIDS file with\n";
 		$condor_instance->WritePidsFile($pidsfile);
 	} else {
 		die "Failed to fetch our condor_instance\n";
@@ -2988,9 +3245,11 @@ sub StartPersonal {
 	}
 
     $time = strftime("%Y/%m/%d %H:%M:%S", localtime);
-    #print "$time: Calling PersonalCondorInstance in CondorTest::StartPersonal\n";
+    print "$time: Calling PersonalCondorInstance in CondorTest::StartPersonal\n";
+	print "version:$version config:$condor_config\n";
     my $new_condor = new PersonalCondorInstance( $version, $condor_config, $collector_addr, 1 );
-    $personal_condors{$version} = $new_condor;
+	StoreCondorInstance("StartPersonal",$version,$new_condor);
+    #$personal_condors{$version} = $new_condor;
 	# assume we are creating so we may bring it up, thus direction up or down now up.
 	$new_condor->SetCondorDirection("up");
     $time = strftime("%Y/%m/%d %H:%M:%S", localtime);
@@ -2999,12 +3258,20 @@ sub StartPersonal {
     return($condor_info);
 }
 
+sub StoreCondorInstance {
+	my $caller = shift;
+	my $instancename = shift;
+	my $instance = shift;
+	print "StoreCondorInstance: caller:$caller name:$instancename assign instance:$instance\n";
+    $personal_condors{$instancename} = $instance;
+}
+
 sub CreateAndStoreCondorInstance
 {
 	my $version = shift;
 	my $condorconfig = shift;
 	my $collectoraddr = shift;
-#print "CreateAndStoreCondorInstance: version: $version config: $condorconfig\n";
+print "CreateAndStoreCondorInstance: version:<$version> config: $condorconfig\n";
 	my $amalive = shift;
 
 	if(CondorUtils::is_windows() == 1) {
@@ -3024,8 +3291,9 @@ sub CreateAndStoreCondorInstance
 
 	#print "\n\n\n\n***** NewPersonalInstance identified by:$condorconfig *****\n\n\n\n\n";
 	my $new_condor = new PersonalCondorInstance( $version, $condorconfig, $collectoraddr, $amalive );
-	$personal_condors{$version} = $new_condor;
-#print "Condor instance returned:  $new_condor\n";
+	StoreCondorInstance("CreateAndStoreCondorInstance",$version,$new_condor);
+	#$personal_condors{$version} = $new_condor;
+print "Condor instance returned:  $new_condor\n";
 	# assume we are creating so we may bring it up, thus direction up or down now up.
 	$new_condor->SetCondorDirection("up");
 	return($personal_condors{$version});
@@ -3055,24 +3323,26 @@ sub StartCondorWithParams
     my %condor_params = @_;
     my $condor_name = $condor_params{condor_name} || "";
     if( $condor_name eq "" ) {
-		#print "CondorTest::StartCondorWithParams:condor_name unset in CondorTest::StartCondorWithParams\n";
+		print "CondorTest::StartCondorWithParams:condor_name unset in CondorTest::StartCondorWithParams\n";
 		$condor_name = GenUniqueCondorName();
 		$condor_params{condor_name} = $condor_name;
-		#print "CondorTest::StartCondorWithParams:Using:$condor_name\n";
+		print "CondorTest::StartCondorWithParams:Using:$condor_name\n";
     } else {
-		#print "CondorTest::StartCondorWithParams:Using requested name:$condor_name\n";
+		print "CondorTest::StartCondorWithParams:Using requested name:$condor_name\n";
 	}
 
     if( exists $personal_condors{$condor_name} ) {
 		die "condor_name=$condor_name already exists!";
-    }
+    } else {
+		print "StartCondorWithParams:<$condor_name> not in condor_personal hash yet\n";
+	}
 
     if( ! exists $condor_params{test_name} ) {
 		$condor_params{test_name} = GetDefaultTestName();
     }
 
 	foreach my $key (sort keys %condor_params) {
-		#print "$key:$condor_params{$key}\n";
+		print "$key:$condor_params{$key}\n";
 	}
 
 	# We need to have the condor instance we are bringing up as early as possible
@@ -3080,13 +3350,15 @@ sub StartCondorWithParams
 
     #my $new_condor = CreateAndStoreCondorInstance( $condor_name, $condor_config, 0, 0 );
 
+	print "Calling CondorPersonal::StartCondorWithParam\n";
     my $condor_info = CondorPersonal::StartCondorWithParams( %condor_params );
+	print "Back From Calling CondorPersonal::StartCondorWithParam\n";
 
 	if(exists $condor_params{do_not_start}) {
-		#print "CondorTest::StartCondorWithParams: bailing after config\n";
+		print "CondorTest::StartCondorWithParams: bailing after config\n";
 		return(0);
 	} else {
-		#print "CondorTest::StartCondorWithParams: Full config and run\n";
+		print "CondorTest::StartCondorWithParams: Full config and run\n";
 	}
 
     my @condor_info = split /\+/, $condor_info;
@@ -3100,7 +3372,8 @@ sub StartCondorWithParams
 	$new_condor->SetCollectorAddress($collector_addr);
 	$new_condor->SetCondorAlive(1);
 
-    $personal_condors{$condor_name} = $new_condor;
+	#print "EndofStartCondorWithparams : index into personal_condors with name:<$condor_name> and assignong:$new_condor\n";
+    #$personal_condors{$condor_name} = $new_condor;
 
     return $new_condor;
 }
@@ -3135,7 +3408,9 @@ sub StartCondorWithParamsStart
 	#$new_condor->DisplayWhoDataInstances();
 	#$new_condor->{is_running} = 1;
 
-    $personal_condors{$condor_name} = $new_condor;
+	print "StartCondorWithParamsStart : index into personal_condors with name:<$condor_name> and assignong:$new_condor\n";
+	StoreCondorInstance("StartCondorWithParamsStart",$condor_name,$new_condor);
+    #$personal_condors{$condor_name} = $new_condor;
 
     return $new_condor;
 }
@@ -3144,6 +3419,7 @@ sub KillPersonal
 {
 	my $personal_config = shift;
 	my $logdir = "";
+	my $corecheckret = "";
 	if($personal_config =~ /^(.*[\\\/])(.*)$/) {
 		#TestDebug("LOG dir is $1/log\n",$debuglevel);
 		$logdir = $1 . "/log";
@@ -3151,12 +3427,14 @@ sub KillPersonal
 		TestDebug("KillPersonal passed this config: $personal_config\n",2);
 		e ie "Can not extract log directory\n";
 	}
-	TestDebug("Doing core ERROR check in  KillPersonal\n",2);
-	$failed_coreERROR = CoreCheck($handle, $logdir, $teststrt, $teststop);
 	# mark the direction we are going is down/off
 	my $condor = GetPersonalCondorWithConfig($personal_config);
 	$condor->SetCondorDirection("down");
 	CondorPersonal::KillDaemons($personal_config);
+	TestDebug("Doing core ERROR check in  KillPersonal\n",2);
+	#print "Doing core ERROR check in  KillPersonal\n";
+	$corecheckret = CoreCheck($handle, $logdir, $teststrt, $teststop);
+	$failed_coreERROR = "$failed_coreERROR" . "$corecheckret";
 
 	if ( $condor ) {
 	    $condor->{is_running} = 0;
@@ -3171,21 +3449,31 @@ sub KillPersonal
 
 sub ShouldCheck_coreERROR
 {
-	my $logdir = `condor_config_val log`;
-	CondorUtils::fullchomp($logdir);
+	my $logdir = GetLogDir();
+
 	my $testsrunning = CountRunningTests();
 	if(($logdir =~ /Config/) &&($testsrunning > 1)) {
 		# no because we are doing concurrent testing
 		return(0);
 	}
+	# wrapped tests by glue paths to logs will contain "remote_task.saveme"
+	# but glue shuts them off such that the same core checking code is called
+	#if($logdir =~ /remote_task.saveme/) {
+		#print "This test wrapped by glue, check this one ourselves\n";
+		#return(1);
+	#}
 	my $saveme = $handle . ".saveme";
+	print "savename:$saveme\n";
 	TestDebug("Not /Config/ based, saveme is $saveme\n",2);
 	TestDebug("Logdir is $logdir\n",2);
+	print "Not /Config/ based, saveme is $saveme\n";
+	print "Logdir is $logdir\n";
 	if($logdir =~ /$saveme/) {
 		# no because KillPersonal will do it
 		return(0);
 	}
 	TestDebug("Does not look like its in a personal condor\n",2);
+	print "Does not look like its in a personal condor\n";
 	return(1);
 }
 
@@ -3197,11 +3485,14 @@ sub CoreCheck {
 	my $count = 0;
 	my $scancount = 0;
 	my $fullpath = "";
+	my $iswindows = CondorUtils::is_windows();
 	
+	CondorUtils::fullchomp($logdir);
+	print "Checking for cores and ERRORS for test:$test: logdir:$logdir:\n";
 	if(CondorUtils::is_windows() == 1) {
 		my $windowslogdir = "";
 		if(is_windows_native_perl()) {
-			print "CoreCheck:windows_native_perl\n";
+			#print "CoreCheck:windows_native_perl\n";
 			$logdir =~ s/\//\\/g;
 		} else {
 			#print "CoreCheck for windows\n";
@@ -3217,19 +3508,47 @@ sub CoreCheck {
 	if(defined $test) {
 		TestDebug("Checking: $logdir for test: $test\n",2);
 	}
-	my @files = `ls $logdir`;
+	#my @files = `ls $logdir`;
+	my @files = ();
+	GetDirList(\@files, $logdir);
 	my $totalerrors = 0;
+	if($iswindows) {
+		foreach my $perp (@files) {
+			print "LogDirContent:$perp:\n";
+		}
+	}
 	foreach my $perp (@files) {
 		CondorUtils::fullchomp($perp);
-		$fullpath = $logdir . "/" . $perp;
+		# don't bother with address files
+		if($perp =~ /^\./) {
+			next;
+		}
+		if($iswindows) {
+			$fullpath = $logdir . "\\" . $perp;
+		} else {
+			$fullpath = $logdir . "/" . $perp;
+		}
+		CondorUtils::fullchomp($fullpath);
+		if(CondorUtils::is_windows() == 1) {
+			print "fullpath now :$fullpath:\n";
+		}
 		if(-f $fullpath) {
-			if($fullpath =~ /^.*\/(core.*)$/) {
+			if($perp =~ /core/) {
 				# returns printable string
 				TestDebug("Checking: $logdir for test: $test Found Core: $fullpath\n",2);
+				print "Checking: $logdir for test: $test Found Core: $fullpath\n";
 				my $filechange = GetFileTime($fullpath);
 				# running sequentially or wrapped core should always
 				# belong to the current test. Even if the test has ended
 				# assign blame and move file so we can investigate.
+				if(CondorUtils::is_windows() == 1) {
+					# windows core files are text, going into test output
+					open(CF,"<$fullpath") or die "Failed to open core file:$fullpath:$!\n";
+					while (<CF>) {
+						print "$_";
+					}
+					close(CF);
+				}
 				my $newname = MoveCoreFile($fullpath,$coredir);
 				FindStackDump($logdir);
 				print "\nFound core: $fullpath\n";
@@ -3244,6 +3563,9 @@ sub CoreCheck {
 				$scancount = ScanForERROR($fullpath,$test,$tstart,$tend);
 				$totalerrors += $scancount;
 				TestDebug("After ScanForERROR error count: $scancount\n",2);
+				if($scancount > 0) {
+					print "After ScanForERROR error count: $scancount\n";
+				}
 			}
 		} else {
 			TestDebug( "Not File: $fullpath\n",2);
@@ -3331,7 +3653,7 @@ sub CPlusPlusfilt
 	close(TF);
 	# am I windows? don't look to see if you have c++filt. Otherwise try before
 	# you do system call
-	if(ChtcUtils::is_windows()) {
+	if(CondorUtils::is_windows()) {
 		# will not use c++cfilt to demangle
 	} else {
 		my $filtprog = Which("c++filt");
@@ -3675,7 +3997,7 @@ sub FindControlFile
 		#TestDebug( "Running file test is: $runningfile\n",$debuglevel);
 		if(!(-d $runningfile)) {
 			TestDebug( "Creating control file directory: $runningfile\n",$debuglevel);
-			runcmd("mkdir -p $runningfile");
+			CreateDir("-p $runningfile");
 		}
 	} else {
 		die "Lost relative to where: $RunningFile is :-(\n";
@@ -3773,7 +4095,7 @@ sub CreateLocalConfig
 	my $extratext = shift;
     $name = "$name$$";
     open(FI,">$name") or die "Failed to create local config starter file: $name:$!\n";
-    #print "Created: $name\n";
+    print "Created: $name\n";
     print FI "$text";
 	if(defined $extratext) {
     	print FI "$extratext";
@@ -3787,6 +4109,33 @@ sub CreateLocalConfig
 	}
 	print "\n";
     return($name);
+}
+
+# we want to produce a temporary file to use as a fresh start
+# # through StartCondorWithParams. This is from an array reference
+sub CreateLocalConfigFromArrayRef
+{
+	my $arrayref = shift;
+	my $name = shift;
+	my $extratext = shift;
+	$name = "$name$$";
+	open(FI,">$name") or die "Failed to create local config starter file: $name:$!\n";
+	#print "Created: $name\n";
+	foreach my $line (@{$arrayref}) {
+		print FI "$line\n";
+	}
+	if(defined $extratext) {
+		print FI "$extratext";
+	}
+	close(FI);
+	my @configarray = ();
+	runCondorTool("cat $name",\@configarray,2,{emit_output=>0});
+	print "\nIncorporating the following into the local config file:\n\n";
+	foreach my $line (@configarray) {
+		print "$line";
+	}
+	print "\n";
+	return($name);
 }
 
 sub VerifyNoJobsInState
@@ -3847,6 +4196,212 @@ sub SetTestName
 {
 	my $testname = shift;
 	Condor::SetHandle($testname);
+}
+
+sub GetLogDir {
+	my $config = shift;
+	my $logreturn = "";
+	if(defined $config) {
+		print "GetLogDir: get from instance associated with this condfig:$config\n";	
+	} else {
+		my @canditate = `condor_config_val log`;
+		$logreturn = $canditate[0];
+		fullchomp($logreturn);
+		print "GetLogDir says:$logreturn\n";
+		return($logreturn);
+	}
+}
+
+# we care about a listen owned by one of our pids related
+# to the fork of the python web server
+# It may not be running yet or it may have failed to start
+# Give it up to a few sleeps to be running and ours.
+#
+# After that restart the process of finding a port to use
+# and seeing if it is running.
+#
+
+sub CleanUpChildren {
+	my $iswindows = shift;
+	my $kidhashref = shift;
+	my $exitcode = 0;
+	print "Interesting pids are:in hash reference\n";
+	foreach my $key (keys %{$kidhashref}) {
+		print "Trying to kill pid:$key\n";
+		if($iswindows) {
+			#system("taskkill /PID $child");
+			if($key eq $WindowsWebServerPid) {
+				print "Kill process which is python webserver\n";
+				$$WindowsProcessObj->Kill($exitcode);
+				print "Web server ExitCode:$exitcode\n";
+			} else {
+			system("taskkill /PID $key");
+			}
+		} else {
+			#system("kill -9 $childlist");
+				print "Shutting down a regular windows pid:$key\n";
+			system("kill -0 $key");
+		}
+		my $returnedzoombie = 0;
+		print "waiting on pid $key\n";
+		while(($returnedzoombie = waitpid($key,0)) != -1) {
+		}
+	}
+}
+
+sub FindHttpPort {
+	my $parent = shift;
+	print "FindHttpPort passed parentpid:$parent\n";
+	my $portfile = "portsavefile." . "$parent";
+	while(!(-f $portfile)) {
+		sleep(1);
+	}
+	open(PSF,"< $portfile") or die "Failed to open ephemeral:$portfile:$!\n";
+	my $port = <PSF>;
+	fullchomp($port);
+	print "Web server port file:$portfile contains port $port\n";
+	if($port > 0) {
+		print "Positive port in FindHttpPort:$port\n";
+		return($port);
+	} else {
+		print "Bad port in FindHttpPort:$port\n";
+		return($port);
+	}
+}
+
+sub StartWebServer {
+	my $testname = shift;
+	my $iswindows = shift;
+	my $piddir = shift;
+	my $parentpid = shift;
+	my $childpidref = shift;
+	my @children = ();
+	my %childrenpids= ();
+	my $childlist = "";
+	my $count = 0;
+	my $child = 0;
+	my $webserverhunt = 0;
+	my $havewebserver = 0;
+	my $webport = 0;
+	my $limit = 5;
+	my $kidarraysize = 0;
+	my $proc;
+	my $spawnedpid = 0;
+	my $ephem = 0;
+
+	print "StartWebServer passsed parentpid:$parentpid\n";
+
+	while(($webserverhunt < $limit) &&($havewebserver == 0)) {
+		$kidarraysize = 0;
+		$childlist = "";
+		if($iswindows) {
+			my @mypython = `where python`;
+			my $pythonbinary = $mypython[0];
+			fullchomp($pythonbinary);
+			$_ = $pythonbinary;
+			s/\\/\\\\/g;
+			$pythonbinary = $_;
+			chdir("$piddir");
+			print "Binary for Process::Create:$pythonbinary\n";
+			print " we want to be starting webserver where config files are:\n";
+			DirLs();
+			Win32::Process::Create($proc,
+						"$pythonbinary",
+						"python ../simplehttpwrapper.py $parentpid",
+						0,
+						Win32::Process::NORMAL_PRIORITY_CLASS(),
+						".") || die ErrorReport($testname);
+			print "Process Create Back\n";
+			chdir("..");
+			$ephem = FindHttpPort($parentpid);
+			print "Trying wget from new server\n";
+			system("wget http://127.0.01:$ephem/new_config.local");
+			# lets try getting pid
+			$spawnedpid = $proc->GetProcessID();
+			print "Windows child actually:$spawnedpid\n";
+			$child = $spawnedpid; 
+			# we'll need to know tis later to kill the web server
+			$WindowsProcessObj = $proc;
+			$WindowsWebServerPid = $spawnedpid;
+			print "Created Python simple web server\n";
+			CondorTest::RegisterResult(1,"test_name","$testname");
+
+		} else {
+			$child = fork();
+			if($child == 0) {
+				#child
+				chdir("$piddir");
+				#system("pwd");
+				system("python ../simplehttpwrapper.py $parentpid");
+				exit(0);
+			}
+		}
+		$count = 0;
+		print "Parent has python webserver pid: Child Now $child\n";
+		$ephem = FindHttpPort($parentpid);
+		$childlist =  "$child";
+		%childrenpids = ();
+		@children = ();
+		@children = split /\s/, $childlist;
+		#Try for a limited time to get the web server going
+		#while($count < $limit) {
+			#sleep(1);
+			#$count += 1;
+			##$childlist =  "$child";
+			# different child, differnet pids
+			#%childrenpids = ();
+			
+			#@children = ();
+			#@children = split /\s/, $childlist;
+			#foreach my $kid (@children) {
+				#print "adding pid:$kid to pid hash\n";
+				#$childrenpids{$kid} = 1;
+				#${$childpidref}{$kid} = 1;
+			#}
+			#$kidarraysize = @children;
+			#if($kidarraysize != 2) {
+				#print "No child web server yet\n";
+				#CleanUpChildren($iswindows,\%childrenpids);
+				#next;
+			#} else {
+				#print "Have a child, hopefully/probably our web server\n";
+				#last;
+			#}
+		#}
+		print "Parent moving on maybe with condor_urlfetch\n Mini web server pid:$child\n";
+
+		if($ephem > 0) {
+			$havewebserver = 1;
+		}
+
+		if($havewebserver != 0) {
+			print "OK have a web server\n";
+			CondorTest::RegisterResult(1, "test_name", $testname);
+			last; # happy
+			return(1);
+		}
+		if($count == $limit) {
+			print "BAD Failed to get a webserver\nTry again\n";
+			$webserverhunt += 1;
+			next;
+		}
+	}
+
+	if(($webserverhunt == $limit)&&($havewebserver == 0)) {
+		CleanUpChildren($iswindows,\%childrenpids);
+		print "Failed to get web server in $webserverhunt tries\n";
+		CondorTest::RegisterResult(0,"test_name","$testname");
+		#EndTest();
+		return(0);
+	}
+
+
+}
+
+sub ErrorReport {
+	my $testname = shift;
+	print Win32::FormatMessage( Win32::GetLastError() );
+	CondorTest::RegisterResult(0,"test_name","$testname");
 }
 
 1;

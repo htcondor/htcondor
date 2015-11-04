@@ -641,9 +641,18 @@ int daemon::RealStart( )
 					"Matching '%s:%d'\n", 
 					my_daemon->fullHostname (),
 					my_daemon->port () );
+				
+				MyString cm_sinful = my_daemon->addr();
+				condor_sockaddr cm_sockaddr;
+				cm_sockaddr.from_sinful(cm_sinful);
+				MyString cm_hostname;
+				if(my_daemon->fullHostname()) {
+					cm_hostname = my_daemon->fullHostname();
+				}
 
-				if (same_host (my_hostname, 
-							   my_daemon->fullHostname())) {
+				if( cm_sockaddr.is_loopback() ||
+					same_host (my_hostname, 
+							   cm_hostname.Value())) {
 					Sinful sinful( my_daemon->addr() );
 					if( sinful.getSharedPortID() ) {
 							// collector is using a shared port
@@ -679,6 +688,9 @@ int daemon::RealStart( )
 			int default_port = !strcmp(name_in_config_file, "SHARED_PORT") ? param_integer("SHARED_PORT_PORT", COLLECTOR_PORT) : param_integer("COLLECTOR_PORT", COLLECTOR_PORT);
 			command_port = default_port;
 			dprintf (D_ALWAYS, "Collector port not defined, will use default: %d\n", default_port);
+
+			// See comment above.
+			if( command_port == 0 ) { command_port = 1; }
 		}
 
 		if (collector_uses_shared_port && !strcmp(name_in_config_file,"COLLECTOR")) {
@@ -916,7 +928,16 @@ int daemon::RealStart( )
 		daemons.UpdateCollector();
 	}
 
-	return pid;	
+	// If we just started the shared port daemon, update its entry in
+	// in the pid table so that when we shut it down, it doesn't forward
+	// the shutdown signal on to the collector.
+	if( strcmp( name_in_config_file, "SHARED_PORT" ) == 0 ) {
+		if(! daemonCore->setChildSharedPortID( pid, "self" ) ) {
+			EXCEPT( "Unable to update shared port daemon's Sinful string, won't be able to kill it.\n" );
+		}
+	}
+
+	return pid;
 }
 
 bool

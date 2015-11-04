@@ -27,7 +27,7 @@
 
 #include "NTsenders.h"
 #include "syscall_numbers.h"
-#include "my_hostname.h"
+#include "ipv6_hostname.h"
 #include "internet.h"
 #include "basename.h"
 #include "condor_string.h"  // for strnewp
@@ -84,6 +84,9 @@ JICShadow::JICShadow( const char* shadow_name ) : JobInfoCommunicator(),
 	transfer_at_vacate = false;
 	wants_file_transfer = false;
 	job_cleanup_disconnected = false;
+	syscall_sock_registered  = false;
+	syscall_sock_lost_tid = -1;
+	syscall_sock_lost_time = 0;
 
 		// now we need to try to inherit the syscall sock from the startd
 	Stream **socks = daemonCore->GetInheritedSocks();
@@ -91,7 +94,7 @@ JICShadow::JICShadow( const char* shadow_name ) : JobInfoCommunicator(),
 		socks[0]->type() != Stream::reli_sock) 
 	{
 		dprintf(D_ALWAYS, "Failed to inherit job ClassAd startd update socket.\n");
-		Starter->StarterExit( 1 );
+		Starter->StarterExit( STARTER_EXIT_GENERAL_FAILURE );
 	}
 	m_job_startd_update_sock = socks[0];
 	socks++;
@@ -100,7 +103,7 @@ JICShadow::JICShadow( const char* shadow_name ) : JobInfoCommunicator(),
 		socks[0]->type() != Stream::reli_sock) 
 	{
 		dprintf(D_ALWAYS, "Failed to inherit remote system call socket.\n");
-		Starter->StarterExit( 1 );
+		Starter->StarterExit( STARTER_EXIT_GENERAL_FAILURE );
 	}
 	syscall_sock = (ReliSock *)socks[0];
 	socks++;
@@ -485,9 +488,8 @@ JICShadow::transferOutput( bool &transient_failure )
 				if (timesCalled < 5) {
 					dprintf(D_ALWAYS,"File transfer failed, forcing disconnect.\n");
 
-					if (syscall_sock != NULL) {
-						syscall_sock->close();
-					}
+						// force disconnect, start a timer to exit after lease gone
+					syscall_sock_disconnect();
 
 						// trigger retransfer on reconnect
 					job_cleanup_disconnected = true;
@@ -559,6 +561,11 @@ JICShadow::gotShutdownFast( void )
 	JobInfoCommunicator::gotShutdownFast();
 }
 
+void
+JICShadow::disconnect()
+{
+	syscall_sock_disconnect();
+}
 
 int
 JICShadow::reconnect( ReliSock* s, ClassAd* ad )
@@ -656,12 +663,19 @@ JICShadow::reconnect( ReliSock* s, ClassAd* ad )
 	dprintf( D_FULLDEBUG, "Closing old syscall sock %s\n",
 			generate_sinful(syscall_sock->peer_ip_str(),
 					syscall_sock->peer_port()).Value());
+		// make sure old syscall_sock is no longer registered before we blow it away
+	if (syscall_sock_registered) {
+		daemonCore->Cancel_Socket(syscall_sock);
+		syscall_sock_registered = false;
+	}
 	delete syscall_sock;
 	syscall_sock = s;
 	syscall_sock->timeout(param_integer( "STARTER_UPLOAD_TIMEOUT", 300));
 	dprintf( D_FULLDEBUG, "Using new syscall sock %s\n",
 			generate_sinful(syscall_sock->peer_ip_str(),
 					syscall_sock->peer_port()).Value());
+
+	syscall_sock_reconnect();  // cancels any disconnected timers etc
 
 	initMatchSecuritySession();
 
@@ -706,7 +720,7 @@ JICShadow::reconnect( ReliSock* s, ClassAd* ad )
 			*/
 		if( Starter->allJobsDone() ) {
 			dprintf(D_ALWAYS,"Job cleanup finished, now Starter is exiting\n");
-			Starter->StarterExit(0);
+			Starter->StarterExit(STARTER_EXIT_NORMAL);
 		}
 	}
 
@@ -761,7 +775,11 @@ JICShadow::notifyJobExit( int exit_status, int reason, UserProc*
 			if (job_universe != CONDOR_UNIVERSE_PARALLEL)
 			{
 				job_cleanup_disconnected = true;
-				return false;
+					// If we're doing a fast shutdown, ignore any failures
+					// in talking to the shadow.
+				if ( !fast_exit ) {
+					return false;
+				}
 			}
 		}
 	}
@@ -824,11 +842,31 @@ JICShadow::notifyStarterError( const char* err_msg, bool critical, int hold_reas
 {
 	u_log->logStarterError( err_msg, critical );
 
-	if( REMOTE_CONDOR_ulog_error(hold_reason_code, hold_reason_subcode, err_msg) < 0 ) {
-		dprintf( D_ALWAYS, 
-				 "Failed to send starter error string to Shadow.\n" );
-		return false;
+	if( critical ) {
+		if( REMOTE_CONDOR_ulog_error(hold_reason_code, hold_reason_subcode, err_msg) < 0 ) {
+			dprintf( D_ALWAYS, 
+					 "Failed to send starter error string to Shadow.\n" );
+			return false;
+		}
+	} else {
+		ClassAd * ad;
+		RemoteErrorEvent event;
+		event.setErrorText( err_msg );
+		event.setDaemonName( "starter" );
+		event.setCriticalError( false );
+		event.setHoldReasonCode( hold_reason_code );
+		event.setHoldReasonSubCode( hold_reason_subcode );
+		ad = event.toClassAd();
+		ASSERT( ad );
+		int rv = REMOTE_CONDOR_ulog( ad );
+		delete ad;
+		if( rv ) {
+			dprintf( D_ALWAYS,
+					 "Failed to send starter error string to Shadow.\n" );
+			return false;
+		}
 	}
+
 	return true;
 }
 
@@ -886,7 +924,7 @@ JICShadow::publishStarterInfo( ClassAd* ad )
 	line += slotName;
 	line += '@';
 	
-	line += my_full_hostname();
+	line += get_local_fqdn();
 	line += '"';
 	ad->Insert( line.Value() );
 
@@ -1730,7 +1768,7 @@ updateX509Proxy(int cmd, ReliSock * rsock, const char * path)
 	return reply;
 }
 
-int
+void
 JICShadow::proxyExpiring()
 {
 	// we log the return value, but even if it failed we still try to clean up
@@ -1751,7 +1789,7 @@ JICShadow::proxyExpiring()
 	bool sd = Starter->ShutdownFast();
 	dprintf(D_ALWAYS, "ZKM: STILL HERE, sd == %i\n", sd);
 
-	return 0;
+	return;
 }
 
 bool
@@ -1856,12 +1894,12 @@ JICShadow::recordDelayedUpdate( const std::string &name, const classad::ExprTree
 			m_delayed_update_attrs.end(), name);
 		if (it == m_delayed_update_attrs.end())
 		{
+			if (m_delayed_update_attrs.size() >= 50)
+			{
+				dprintf(D_ALWAYS, "Ignoring update for %s because 50 attributes have already been set.\n", name.c_str());
+				return false;
+			}
 			m_delayed_update_attrs.push_back(name);
-		}
-		if (m_delayed_update_attrs.size() > 50)
-		{
-			dprintf(D_ALWAYS, "Ignoring update for %s because 50 attributes have already been set.\n", name.c_str());
-			return false;
 		}
 		// Note that the ClassAd takes ownership of the copy.
 		dprintf(D_FULLDEBUG, "Got a delayed update for attribute %s.\n", name.c_str());
@@ -2001,8 +2039,10 @@ bool
 JICShadow::periodicJobUpdate( ClassAd* update_ad, bool insure_update )
 {
 	bool r1, r2;
-	r1 = JobInfoCommunicator::periodicJobUpdate(update_ad, insure_update);
-	r2 = updateShadow(update_ad, insure_update);
+	// call updateShadow first, because this may have the side effect of clearing
+	// the m_delayed_update_attrs and we want to make sure that the shadow gets to see them.
+	r1 = updateShadow(update_ad, insure_update);
+	r2 = JobInfoCommunicator::periodicJobUpdate(update_ad, insure_update);
 	return (r1 && r2);
 }
 
@@ -2051,6 +2091,21 @@ JICShadow::updateShadow( ClassAd* update_ad, bool insure_update )
 		rval = shadow->updateJobInfo(ad, insure_update);
 	}
 
+	if (syscall_sock && !rval) {
+		// Failed to send update to the shadow.  Since the shadow
+		// never returns failure for this pseudo call, we assume
+		// we failed to communicate with the shadow.  Close up the
+		// socket and wait for a reconnect.  
+		syscall_sock_disconnect();
+	}
+
+	if ( syscall_sock && syscall_sock->is_connected() ) {
+		ad->Delete("STARTER_DISCONNECTED_FROM_SUBMIT_NODE");
+		syscall_sock_reconnect();
+	} else {
+		ad->Assign("STARTER_DISCONNECTED_FROM_SUBMIT_NODE",true);
+	}
+
 	updateStartd(ad, false);
 
 	first_time = false;
@@ -2062,6 +2117,139 @@ JICShadow::updateShadow( ClassAd* update_ad, bool insure_update )
 	return false;
 }
 
+void
+JICShadow::syscall_sock_disconnect()
+{
+	/* 
+	  This method is invoked whenever we failed to 
+	  communicate on the syscall_sock.  Here we close up
+	  the socket and start a timer.
+	*/
+
+	if ( syscall_sock_lost_time > 0 ) {
+		// Already in disconnected state.  This
+		// method must have already been invoked, so 
+		// no work left to do.
+		return;
+	}
+
+	// Record time of disconnect
+	time_t now = time(NULL);
+	syscall_sock_lost_time = now;
+
+	// Set a timer to go off after we've been disconnected
+	// for the maximum lease time.
+	if ( syscall_sock_lost_tid != -1 ) {
+		daemonCore->Cancel_Timer(syscall_sock_lost_tid);
+		syscall_sock_lost_tid = -1;
+	}
+	int lease_duration = -1;
+	job_ad->LookupInteger(ATTR_JOB_LEASE_DURATION,lease_duration);
+	if (lease_duration > 0) {
+		syscall_sock_lost_tid = daemonCore->Register_Timer(
+				lease_duration,
+				(TimerHandlercpp)&JICShadow::job_lease_expired,
+				"job_lease_expired",
+				this );
+		dprintf(D_ALWAYS,
+			"Lost connection to shadow, waiting %d secs for reconnect\n",
+			lease_duration);
+	} else {
+		dprintf(D_ALWAYS,
+			"Lost connection to shadow, no job lease specified\n");
+	}
+
+	// Close up the syscall_socket and wait for a reconnect.  
+	if (syscall_sock) {
+		if (syscall_sock_registered) {
+			daemonCore->Cancel_Socket(syscall_sock);
+			syscall_sock_registered = false;
+		}
+		syscall_sock->close();
+	}
+}
+
+void 
+JICShadow::syscall_sock_reconnect()
+{
+	/* 
+	  This method is invoked when the syscall_sock is reconnected 
+	  and we can successfully communicate with the shadow.
+	*/
+	
+	if ( syscall_sock_lost_time > 0 ) {
+		dprintf(D_ALWAYS,
+			"Recovered connection to shadow after %d seconds\n",
+			(int)(time(NULL) - syscall_sock_lost_time) );
+	}
+
+	syscall_sock_lost_time = 0;
+
+	if ( syscall_sock_lost_tid != -1 ) {
+		daemonCore->Cancel_Timer(syscall_sock_lost_tid);
+		syscall_sock_lost_tid = -1;
+	}	
+
+	ASSERT(syscall_sock);
+	if (syscall_sock_registered == false) {
+		int reg_rc = daemonCore->
+			Register_Socket( syscall_sock, "syscall sock to shadow",
+			  (SocketHandlercpp)&JICShadow::syscall_sock_handler,
+			  "JICShadow::syscall_sock_handler", this, ALLOW );
+		if(reg_rc < 0) {
+			dprintf( D_ALWAYS,
+		         "Failed to register syscall socket to shadow\n" );
+		} else {
+			syscall_sock_registered = true;
+		}
+	}
+}
+
+
+int
+JICShadow::syscall_sock_handler(Stream *)
+{
+	// select() triggered on the syscall_sock.  this should never happen as
+	// there is no async I/O on the syscall_sock in the starter.  so what
+	// likely happened is the operating system closed the socket due to 
+	// sockopt keepalives failing.  so all we do here is try to update
+	// the shadow - should that fail, updateShadow() will do
+	// all the right stuff like invoking syscall_sock_disconnect() etc.
+	dprintf(D_ALWAYS,
+		"Connection to shadow may be lost, will test by sending whoami request.\n");
+	char buff[32];
+	if ( REMOTE_CONDOR_whoami( sizeof(buff), buff ) <= 0 ) {
+		// Failed to send whoami request to the shadow.  Since the shadow
+		// never returns failure for this pseudo call (if our buffer is
+		// large enough), we assume
+		// we failed to communicate with the shadow.  Close up the
+		// socket and wait for a reconnect.
+		syscall_sock_disconnect();
+	}
+	return KEEP_STREAM;
+}
+
+
+void
+JICShadow::job_lease_expired()
+{
+	/* 
+	  This method is invoked by a daemoncore timer, which is set
+	  to fire ATTR_JOB_LEASE_DURATION seconds after the syscall_sock disappears.
+	*/
+
+	dprintf( D_ALWAYS, "No reconnect from shadow for %d seconds, aborting job execution!\n", (int)(time(NULL) - syscall_sock_lost_time) );
+
+	// A few sanity checks...
+	ASSERT(syscall_sock_lost_time > 0);
+	if (syscall_sock) {
+		ASSERT( !syscall_sock->is_connected() );
+	}
+
+	// Exit telling the startd we lost the shadow, which
+	// will normally result in the This does not return.
+	Starter->StarterExit(STARTER_EXIT_LOST_SHADOW_CONNECTION);
+}
 
 bool
 JICShadow::beginFileTransfer( void )
@@ -2233,8 +2421,8 @@ JICShadow::initIOProxy( void )
 	if( ! job_ad->EvaluateAttrBool( ATTR_WANT_IO_PROXY, want_io_proxy ) ) {
 		want_io_proxy = false;
 		dprintf( D_FULLDEBUG, "JICShadow::initIOProxy(): "
-				 "Job does not define %s; setting to %s\n",
-				 ATTR_WANT_IO_PROXY, want_io_proxy ? "true" : "false" );
+				 "Job does not define %s; setting to false\n",
+				 ATTR_WANT_IO_PROXY);
 	} else {
 		dprintf( D_ALWAYS, "Job has %s=%s\n", ATTR_WANT_IO_PROXY,
 				 want_io_proxy ? "true" : "false" );
@@ -2361,6 +2549,10 @@ JICShadow::initMatchSecuritySession()
 			m_reconnect_sec_session = strdup(reconnect_session_id.Value());
 		}
 	}
+
+	IpVerify* ipv = daemonCore->getIpVerify();
+	ipv->PunchHole( DAEMON, SUBMIT_SIDE_MATCHSESSION_FQU );
+	ipv->PunchHole( CLIENT_PERM, SUBMIT_SIDE_MATCHSESSION_FQU );
 
 	if( m_filetrans_sec_session ) {
 			// Already have one (must be reconnecting with shadow).

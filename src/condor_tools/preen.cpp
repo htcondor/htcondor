@@ -210,7 +210,7 @@ produce_output()
 	FILE	*mailer;
 	MyString subject,szTmp;
 	subject.formatstr("condor_preen results %s: %d old file%s found", 
-		my_full_hostname(), BadFiles->number(), 
+		get_local_fqdn().Value(), BadFiles->number(), 
 		(BadFiles->number() > 1)?"s":"");
 
 	if( MailFlag ) {

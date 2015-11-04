@@ -10,7 +10,7 @@
 int decode_block(unsigned char *in, unsigned char *out) {
 	unsigned char *c = in;
 	int i = 0, j = 0;
-	char temp[4];
+	char temp[4] = { 0, 0, 0, 0};
 	
 		// convert char to corresponding base64 value(0-63)
 	while(i < 4 && c && *c) {
@@ -46,10 +46,34 @@ int decode_block(unsigned char *in, unsigned char *out) {
 	return j;	// Number of chars passed over
 }
 
+// decode ASCII hex characters
+int decode_hex(const char * p, int len, int * pvalid)
+{
+	int valid = 1;
+	int  value = 0;
+	int ii;
+	for (ii = 0; ii < len; ++ii) {
+		int ch = p[ii];
+		if (ch >= '0' && ch <= '9') {
+			ch -= '0'; // ch is now a hex digit between 0x00 and 0x09
+		} else {
+			ch &= ~20; // force uppercase if ascii
+			if (ch < 'A' || ch > 'F') {
+				// digit was not a valid hex digit...
+				valid = 0;
+				break;
+			}
+			ch = ch - 'A' + 0x0A; // ch is now a hex digit between 0x0A and 0x0F
+		}
+		value = (value << 4) + ch;
+	}
+	if (pvalid) *pvalid = valid;
+	return value;
+}
+
 int main(int argc, char **argv) {
 	char *c = NULL, *d = NULL, *data = NULL, *dest = NULL, *lastslash = NULL;
 	unsigned char out[4];
-	char hex[2];
 	FILE *file = NULL;
 	int base64 = 0, rval = -1;
 
@@ -106,10 +130,12 @@ int main(int argc, char **argv) {
 			// ASCII encoding
 
 			while(c && *c && *c != '/') {
-				if(*c == '%') {
+				if(*c == '%') { // %XX two hex digits must follow a %
+					int valid = 0, ch;
 					c++;
-					strncpy(hex, c, 2);
-					fputc(strtol(hex, NULL, 16), file);
+					ch = decode_hex(c, 2, &valid);
+					if ( ! valid) { rval = -1; break; }
+					fputc(ch, file);
 					c++;
 				} else {
 					fputc(*c, file);

@@ -86,9 +86,9 @@ const char SecMan::sec_req_rev[][10] = {
 	"REQUIRED"
 };
 
-KeyCache* SecMan::session_cache = NULL;
-HashTable<MyString,MyString>* SecMan::command_map = NULL;
-HashTable<MyString,classy_counted_ptr<SecManStartCommand> >* SecMan::tcp_auth_in_progress = NULL;
+KeyCache SecMan::session_cache;
+HashTable<MyString,MyString> SecMan::command_map(209, MyStringHash, updateDuplicateKeys);
+HashTable<MyString,classy_counted_ptr<SecManStartCommand> > SecMan::tcp_auth_in_progress(256, MyStringHash, rejectDuplicateKeys);
 int SecMan::sec_man_ref_count = 0;
 char* SecMan::_my_unique_id = 0;
 char* SecMan::_my_parent_unique_id = 0;
@@ -1237,7 +1237,7 @@ SecManStartCommand::startCommand_inner()
 bool
 SecMan::LookupNonExpiredSession(char const *session_id, KeyCacheEntry *&session_key)
 {
-	if(!session_cache->lookup(session_id,session_key)) {
+	if(!session_cache.lookup(session_id,session_key)) {
 		return false;
 	}
 
@@ -1245,7 +1245,7 @@ SecMan::LookupNonExpiredSession(char const *session_id, KeyCacheEntry *&session_
 	time_t cutoff_time = time(0);
 	time_t expiration = session_key->expiration();
 	if (expiration && expiration <= cutoff_time) {
-		session_cache->expire(session_key);
+		session_cache.expire(session_key);
 		session_key = NULL;
 		return false;
 	}
@@ -1274,7 +1274,7 @@ SecManStartCommand::sendAuthInfo_inner()
 	m_session_key.formatstr ("{%s,<%i>}", m_sock->get_connect_addr(), m_cmd);
 	bool found_map_ent = false;
 	if( !m_have_session && !m_raw_protocol && !m_use_tmp_sec_session ) {
-		found_map_ent = (m_sec_man.command_map->lookup(m_session_key, sid) == 0);
+		found_map_ent = (m_sec_man.command_map.lookup(m_session_key, sid) == 0);
 	}
 	if (found_map_ent) {
 		dprintf (D_SECURITY, "SECMAN: using session %s for %s.\n", sid.Value(), m_session_key.Value());
@@ -1285,7 +1285,7 @@ SecManStartCommand::sendAuthInfo_inner()
 			// the session is no longer in the cache... might as well
 			// delete this mapping to it.  (we could delete them all, but
 			// it requires iterating through the hash table)
-			if (m_sec_man.command_map->remove(m_session_key.Value()) == 0) {
+			if (m_sec_man.command_map.remove(m_session_key.Value()) == 0) {
 				dprintf (D_SECURITY, "SECMAN: session id %s not found, removed %s from map.\n", sid.Value(), m_session_key.Value());
 			} else {
 				dprintf (D_SECURITY, "SECMAN: session id %s not found and failed to removed %s from map!\n", sid.Value(), m_session_key.Value());
@@ -1835,7 +1835,7 @@ SecManStartCommand::authenticate_inner()
 			}
 
 			int auth_timeout = m_sec_man.getSecTimeout( CLIENT_PERM );
-			int auth_result = m_sock->authenticate(m_private_key, auth_methods, m_errstack, auth_timeout, true, NULL);
+			int auth_result = m_sock->authenticate(m_private_key, auth_methods, m_errstack, auth_timeout, m_nonblocking, NULL);
 
 			if (auth_methods) {
 				free(auth_methods);
@@ -1983,13 +1983,14 @@ SecManStartCommand::receivePostAuthInfo_inner()
 				return WaitForSocketCallback();
 			}
 
-			// receive a classAd containing info about new session
+			// receive a classAd containing info about new session.
 			ClassAd post_auth_info;
 			m_sock->decode();
 			if (!getClassAd(m_sock, post_auth_info) || !m_sock->end_of_message()) {
-				dprintf (D_ALWAYS, "SECMAN: could not receive session info, failing!\n");
-				m_errstack->push ("SECMAN", SECMAN_ERR_COMMUNICATIONS_ERROR,
-							"could not receive post_auth_info." );
+				MyString errmsg;
+				errmsg.formatstr("Failed to received post-auth ClassAd");
+				dprintf (D_ALWAYS, "SECMAN: FAILED: %s\n", errmsg.Value());
+				m_errstack->push ("SECMAN", SECMAN_ERR_COMMUNICATIONS_ERROR, errmsg.Value());
 				return StartCommandFailed;
 			} else {
 				if (IsDebugVerbose(D_SECURITY)) {
@@ -1997,6 +1998,37 @@ SecManStartCommand::receivePostAuthInfo_inner()
 					dPrintAd (D_SECURITY, post_auth_info);
 				}
 			}
+
+			// Starting in 8.3.6, there is a ReturnCode attribute which tells us if the
+			// other side authorized, denied, or was unaware of the command we sent.
+			//
+			// Inspect the return code in the reponse ad to see what we should do.
+			// If it is blank, we must assume success, since that was what 8.3.5 and
+			// earlier would send.
+			MyString response_rc;
+			post_auth_info.LookupString(ATTR_SEC_RETURN_CODE,response_rc);
+			if((response_rc != "") && (response_rc != "AUTHORIZED")) {
+				// gather some additional data for useful error reporting
+				MyString response_user;
+				MyString response_method = m_sock->getAuthenticationMethodUsed();
+				if (response_method == "") {
+					response_method = "(no authentication)";
+				}
+				post_auth_info.LookupString(ATTR_SEC_USER,response_user);
+
+				// push error message on the stack and print to the log
+				MyString errmsg;
+				errmsg.formatstr("Received \"%s\" from server for user %s using method %s.",
+					response_rc.Value(), response_user.Value(), response_method.Value());
+				dprintf (D_ALWAYS, "SECMAN: FAILED: %s\n", errmsg.Value());
+				m_errstack->push ("SECMAN", SECMAN_ERR_AUTHORIZATION_FAILED, errmsg.Value());
+				return StartCommandFailed;
+			}
+
+			// if we made it here, we're going to proceed as if the server authorized
+			// our command and we will cache this session for future use.  we know this
+			// for sure in 8.3.6 and beyond, but for 8.3.5 and earlier we must assume
+			// success because this information was not transmitted explicitly.
 
 			// bring in the session ID
 			m_sec_man.sec_copy_attribute( m_auth_info, post_auth_info, ATTR_SEC_SID );
@@ -2024,13 +2056,12 @@ SecManStartCommand::receivePostAuthInfo_inner()
 			if( m_sock->getAuthenticationMethodUsed() ) {
 				m_auth_info.Assign( ATTR_SEC_AUTHENTICATION_METHODS, m_sock->getAuthenticationMethodUsed() );
 			}
-			
+
 			// update the ad with the crypto method actually used
 			if( m_sock->getCryptoMethodUsed() ) {
 				m_auth_info.Assign( ATTR_SEC_CRYPTO_METHODS, m_sock->getCryptoMethodUsed() );
 			}
-			
-			
+
 			if (IsDebugVerbose(D_SECURITY)) {
 				dprintf (D_SECURITY, "SECMAN: policy to be cached:\n");
 				dPrintAd(D_SECURITY, m_auth_info);
@@ -2086,7 +2117,7 @@ SecManStartCommand::receivePostAuthInfo_inner()
             }
 
 			// stick the key in the cache
-			m_sec_man.session_cache->insert(tmp_key);
+			m_sec_man.session_cache.insert(tmp_key);
 
 
 			// now add entrys which map all the {<sinful_string>,<command>} pairs
@@ -2101,7 +2132,7 @@ SecManStartCommand::receivePostAuthInfo_inner()
 				keybuf.formatstr ("{%s,<%s>}", m_sock->get_connect_addr(), p);
 
 				// NOTE: HashTable returns ZERO on SUCCESS!!!
-				if (m_sec_man.command_map->insert(keybuf, sesid) == 0) {
+				if (m_sec_man.command_map.insert(keybuf, sesid) == 0) {
 					// success
 					if (IsDebugVerbose(D_SECURITY)) {
 						dprintf (D_SECURITY, "SECMAN: command %s mapped to session %s.\n", keybuf.Value(), sesid);
@@ -2153,7 +2184,7 @@ SecManStartCommand::DoTCPAuth_inner()
 
 			// Check if there is already a non-blocking TCP auth in progress
 		classy_counted_ptr<SecManStartCommand> sc;
-		if(m_sec_man.tcp_auth_in_progress->lookup(m_session_key,sc) == 0) {
+		if(m_sec_man.tcp_auth_in_progress.lookup(m_session_key,sc) == 0) {
 				// Rather than starting yet another TCP session for
 				// this session key, simply add ourselves to the list
 				// of things waiting for the pending session to be
@@ -2205,7 +2236,7 @@ SecManStartCommand::DoTCPAuth_inner()
 		// Make note that this operation to do the TCP
 		// auth operation is in progress, so others
 		// wanting the same session key can wait for it.
-	SecMan::tcp_auth_in_progress->insert(m_session_key,this);
+	SecMan::tcp_auth_in_progress.insert(m_session_key,this);
 
 	m_tcp_auth_command = new SecManStartCommand(
 		DC_AUTHENTICATE,
@@ -2286,10 +2317,10 @@ SecManStartCommand::TCPAuthCallback_inner( bool auth_succeeded, Sock *tcp_auth_s
 
 		// Remove ourselves from SecMan's list of pending TCP auth sessions.
 	classy_counted_ptr<SecManStartCommand> sc;
-	if( SecMan::tcp_auth_in_progress->lookup(m_session_key,sc) == 0 &&
+	if( SecMan::tcp_auth_in_progress.lookup(m_session_key,sc) == 0 &&
 	    sc.get() == this )
 	{
-		ASSERT(SecMan::tcp_auth_in_progress->remove(m_session_key) == 0);
+		ASSERT(SecMan::tcp_auth_in_progress.remove(m_session_key) == 0);
 	}
 
 		// Iterate through the list of objects waiting for our TCP auth session
@@ -2401,7 +2432,7 @@ SecManStartCommand::SocketCallback( Stream *stream )
 void
 SecMan::invalidateHost(const char * sin)
 {
-	StringList *keyids = session_cache->getKeysForPeerAddress(sin);
+	StringList *keyids = session_cache.getKeysForPeerAddress(sin);
 	if( !keyids ) {
 		return;
 	}
@@ -2419,7 +2450,7 @@ SecMan::invalidateHost(const char * sin)
 
 void
 SecMan::invalidateByParentAndPid(const char * parent, int pid) {
-	StringList *keyids = session_cache->getKeysForProcess(parent,pid);
+	StringList *keyids = session_cache.getKeysForProcess(parent,pid);
 	if( !keyids ) {
 		return;
 	}
@@ -2440,33 +2471,25 @@ bool SecMan :: invalidateKey(const char * key_id)
     bool removed = true;
     KeyCacheEntry * keyEntry = NULL;
 
-    // What if session_cache is NULL but command_cache is not?
-	if (session_cache) {
+	session_cache.lookup(key_id, keyEntry);
 
-        session_cache->lookup(key_id, keyEntry);
+	if ( keyEntry && keyEntry->expiration() <= time(NULL) ) {
+		dprintf( D_SECURITY,
+				 "DC_INVALIDATE_KEY: security session %s %s expired.\n",
+				 key_id, keyEntry->expirationType() );
+	}
 
-		if( keyEntry && keyEntry->expiration() <= time(NULL) ) {
-			dprintf( D_SECURITY,
-					 "DC_INVALIDATE_KEY: security session %s %s expired.\n",
-					 key_id, keyEntry->expirationType() );
-		}
+	remove_commands(keyEntry);
 
-        remove_commands(keyEntry);
-
-        // Now, remove session id
-		if (session_cache->remove(key_id)) {
-			dprintf ( D_SECURITY, 
-                      "DC_INVALIDATE_KEY: removed key id %s.\n", 
-                      key_id);
-		} else {
-			dprintf ( D_SECURITY, 
-                      "DC_INVALIDATE_KEY: ignoring request to invalidate non-existant key %s.\n", 
-                      key_id);
-		}
+	// Now, remove session id
+	if (session_cache.remove(key_id)) {
+		dprintf ( D_SECURITY, 
+				  "DC_INVALIDATE_KEY: removed key id %s.\n", 
+				  key_id);
 	} else {
-		dprintf ( D_ALWAYS, 
-                  "DC_INVALIDATE_KEY: did not remove %s, no KeyCache exists!\n", 
-                  key_id);
+		dprintf ( D_SECURITY, 
+				  "DC_INVALIDATE_KEY: ignoring request to invalidate non-existant key %s.\n", 
+				  key_id);
 	}
 
     return removed;
@@ -2487,14 +2510,12 @@ void SecMan :: remove_commands(KeyCacheEntry * keyEntry)
             StringList cmd_list(commands);
             free(commands);
         
-            if (command_map) {
-                cmd_list.rewind();
-                char * cmd = NULL;
-                while ( (cmd = cmd_list.next()) ) {
-                    memset(keybuf, 0, 128);
-                    sprintf (keybuf, "{%s,<%s>}", addr.Value(), cmd);
-                    command_map->remove(keybuf);
-                }
+            cmd_list.rewind();
+            char * cmd = NULL;
+            while ( (cmd = cmd_list.next()) ) {
+                memset(keybuf, 0, 128);
+                sprintf (keybuf, "{%s,<%s>}", addr.Value(), cmd);
+                command_map.remove(keybuf);
             }
         }
     }
@@ -2586,65 +2607,26 @@ SecMan::ReconcileMethodLists( char * cli_methods, char * srv_methods ) {
 }
 
 
-SecMan::SecMan(int nbuckets)
+SecMan::SecMan()
 {
 	if ( NULL == m_ipverify ) {
 		m_ipverify = new IpVerify( );
-	}
-	// session_cache is a static member... we only
-	// want to construct it ONCE.
-	if (session_cache == NULL) {
-		session_cache = new KeyCache(nbuckets);
-	}
-	if (command_map == NULL) {
-		command_map = new HashTable<MyString,MyString>(nbuckets, MyStringHash, updateDuplicateKeys);
-	}
-	if (tcp_auth_in_progress == NULL) {
-		tcp_auth_in_progress = new HashTable<MyString,classy_counted_ptr<SecManStartCommand> >(256, MyStringHash, rejectDuplicateKeys);
 	}
 	sec_man_ref_count++;
 }
 
 
 SecMan::SecMan(const SecMan & /* copy */) {
-	// session_cache is static.  if there's a copy, it
-	// should already have been constructed.
-	ASSERT (session_cache);
-	ASSERT (command_map);
-	ASSERT (tcp_auth_in_progress);
 	sec_man_ref_count++;
 }
 
 const SecMan & SecMan::operator=(const SecMan & /* copy */) {
-	// session_cache is static.  if there's a copy, it
-	// should already have been constructed.
-	ASSERT (session_cache);
-	ASSERT (command_map);
 	return *this;
 }
 
 
 SecMan::~SecMan() {
-	// session_cache is static.  if we are in a destructor,
-	// then these should already have been constructed.
-	ASSERT (session_cache);
-	ASSERT (command_map);
-
 	sec_man_ref_count--;
-
-	/*
-	// if that was the last one to go, we could delete the objects
-	if (sec_man_ref_count == 0) {
-		delete session_cache;
-		session_cache = NULL;
-
-		delete command_map;
-		command_map = NULL;
-
-		delete tcp_auth_in_progress;
-		tcp_aut_in_progress = NULL;
-	}
-	*/
 }
 
 void
@@ -2696,18 +2678,16 @@ SecMan::sec_copy_attribute( ClassAd &dest, const char *to_attr, ClassAd &source,
 
 void
 SecMan::invalidateAllCache() {
-	delete session_cache;
-	session_cache = new KeyCache(209);
+	session_cache.clear();
 
-	delete command_map;
-	command_map = new HashTable<MyString,MyString>(209, MyStringHash, updateDuplicateKeys);
+	command_map.clear();
 }
 
 void 
 SecMan :: invalidateExpiredCache()
 {
     // Go through all cache and invalide the ones that are expired
-    StringList * list = session_cache->getExpiredKeys();
+    StringList * list = session_cache.getExpiredKeys();
 
     // The current session cache, command map does not allow
     // easy random access based on host direcly. Therefore,
@@ -2904,7 +2884,7 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 	condor_sockaddr peer_addr;
 	if(peer_sinful && !peer_addr.from_sinful(peer_sinful)) {
 		dprintf(D_ALWAYS,"SECMAN: failed to create non-negotiated security session %s because"
-				"string_to_sin(%s) failed\n",sesid,peer_sinful);
+				"sock_sockaddr::from_sinful(%s) failed\n",sesid,peer_sinful);
 		return false;
 	}
 
@@ -2991,25 +2971,25 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 
 	KeyCacheEntry key(sesid,peer_sinful ? &peer_addr : NULL,keyinfo,&policy,expiration_time,0);
 
-	if( !session_cache->insert(key) ) {
+	if( !session_cache.insert(key) ) {
 		KeyCacheEntry *existing = NULL;
 		bool fixed = false;
-		if( !session_cache->lookup(sesid,existing) ) {
+		if( !session_cache.lookup(sesid,existing) ) {
 			existing = NULL;
 		}
 		if( existing ) {
 			if( !LookupNonExpiredSession(sesid,existing) ) {
 					// the existing session must have expired, so try again
 				existing = NULL;
-				if( session_cache->insert(key) ) {
+				if( session_cache.insert(key) ) {
 					fixed = true;
 				}
 			}
 			else if( existing && existing->getLingerFlag() ) {
 				dprintf(D_ALWAYS,"SECMAN: removing lingering non-negotiated security session %s because it conflicts with new request\n",sesid);
-				session_cache->expire(existing);
+				session_cache.expire(existing);
 				existing = NULL;
-				if( session_cache->insert(key) ) {
+				if( session_cache.insert(key) ) {
 					fixed = true;
 				}
 			}
@@ -3047,7 +3027,7 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 		keybuf.formatstr ("{%s,<%s>}", peer_sinful, p);
 
 		// NOTE: HashTable returns ZERO on SUCCESS!!!
-		if (command_map->insert(keybuf, sesid) == 0) {
+		if (command_map.insert(keybuf, sesid) == 0) {
 			// success
 			if (IsDebugVerbose(D_SECURITY)) {
 				dprintf (D_SECURITY, "SECMAN: command %s mapped to session %s.\n", keybuf.Value(), sesid);
@@ -3123,7 +3103,7 @@ SecMan::ExportSecSessionInfo(char const *session_id,MyString &session_info) {
 	ASSERT( session_id );
 
 	KeyCacheEntry *session_key = NULL;
-	if(!session_cache->lookup(session_id,session_key)) {
+	if(!session_cache.lookup(session_id,session_key)) {
 		dprintf(D_ALWAYS,"SECMAN: ExportSecSessionInfo failed to find "
 				"session %s\n",session_id);
 		return false;
@@ -3169,7 +3149,7 @@ SecMan::SetSessionExpiration(char const *session_id,time_t expiration_time) {
 	ASSERT( session_id );
 
 	KeyCacheEntry *session_key = NULL;
-	if(!session_cache->lookup(session_id,session_key)) {
+	if(!session_cache.lookup(session_id,session_key)) {
 		dprintf(D_ALWAYS,"SECMAN: SetSessionExpiration failed to find "
 				"session %s\n",session_id);
 		return false;
@@ -3186,7 +3166,7 @@ SecMan::SetSessionLingerFlag(char const *session_id) {
 	ASSERT( session_id );
 
 	KeyCacheEntry *session_key = NULL;
-	if(!session_cache->lookup(session_id,session_key)) {
+	if(!session_cache.lookup(session_id,session_key)) {
 		dprintf(D_ALWAYS,"SECMAN: SetSessionLingerFlag failed to find "
 				"session %s\n",session_id);
 		return false;

@@ -200,11 +200,12 @@ sub GetStartdSlotAttrs
 			CondorTest::RegisterResult(0,test_name,$testname);
 		}
 
-		#my @results = `condor_status -debug -l $slot | grep slot | sort`;
 		my @results = ();
-		$cmdstatus = runCondorTool("condor_status -debug -l $slot ",\@results, 2,{emit_output=>0});
+		# TODO: This used to have "-debug" and it would be nifty if it did again. However
+		# the IPv4/6 mixed-mode work seems to break that case. NEEDS TO BE INVESTIGATED.
+		$cmdstatus = runCondorTool("condor_status -l $slot ",\@results, 2,{emit_output=>0});
 			if(!$cmdstatus) {
-				print "This:condor_status -debug -l $slot | grep slot | sort should not have failed\n";
+				print "This:condor_status -l $slot should not have failed\n";
 			}
 		my $statusres = @results;
 		#print "condor_status for slot <$slot> returned <$statusres> lines\n";

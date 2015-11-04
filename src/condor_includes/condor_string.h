@@ -25,9 +25,18 @@
 
 BEGIN_C_DECLS
 
+MSC_DISABLE_WARNING(28251) // Disable inconsistent annotation warning.
 DLL_IMPORT_MAGIC char* strupr( char *str );
 DLL_IMPORT_MAGIC char* strlwr( char *str );
-char * getline ( FILE *fp );
+MSC_RESTORE_WARNING(28251)
+
+// Get an effective line, after removing line continuation characters and
+// trimming leading and trailing whitespace. More than 1 line may be read
+// from the file for each line returned here. if you need an accurate
+// linecount, use the c++ callable function below.
+// This function returns an internal buffer that my be safely edited by the caller
+// it will be invalidated on the next call to getline_trim.
+char * getline_trim ( FILE *fp );
 
 char * chomp( char *buffer );
 
@@ -37,6 +46,17 @@ END_C_DECLS
 #ifdef __cplusplus
 /* like strdup() but uses new[] */
 char *strnewp( const char * );
+
+// Get an effective line, after removing line continuation characters and
+// trimming leading and trailing whitespace. More than 1 line may be read
+// from the file for each line returned here. if you need an accurate
+// linecount, use the c++ callable function below.
+// This function returns an internal buffer that my be safely edited by the caller
+// it will be invalidated on the next call to getline_trim.
+// if mode==GETLINE_TRIM_SIMPLE_CONTINUATION, then line continuation characters
+// are interpreted without regard to comment lines that start with #
+#define GETLINE_TRIM_SIMPLE_CONTINUATION 1
+extern "C++" char * getline_trim ( FILE *fp, int & lineno, int mode=0 );
 
 #include "condor_arglist.h"
 #endif

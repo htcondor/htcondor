@@ -156,7 +156,8 @@ void setBaseName(const char *baseName) {
 		if (searchLogName)
 			free(searchLogName);
 		searchLogName = (char *)malloc(strlen(logBaseName)+3);
-		sprintf(searchLogName, "%s.*", (const char*)logBaseName); 		
+		ASSERT(searchLogName);
+		sprintf(searchLogName, "%s.*", (const char*)logBaseName);
 #endif
 		isInitialized = 1;
 	}
@@ -293,12 +294,16 @@ int file_select(const struct dirent *entry) {
 
 
 char *findOldest(char *dirName, int *count) {
-	struct dirent **files;
+	struct dirent **files = NULL;
 	int  len;
 	*count = scandirectory(dirName, &files, file_select, doalphasort);
 	// no matching files in the directory
-	if (*count <= 0)
+	if (*count <= 0) {
+		if (files) {
+			free(files);
+		}
 		return NULL;
+	}
 	char *oldFile = (char*)files[0]->d_name;
 	len = strlen(oldFile);
 	char *result = (char*)malloc(len+1 + strlen(dirName) + 1);

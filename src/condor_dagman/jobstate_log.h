@@ -82,7 +82,7 @@ public:
 	void InitializeRescue();
 
 	/** Write the DAGMAN_STARTED "event".
-		@param The Condor ID of the DAGMan job itself.
+		@param The HTCondor ID of the DAGMan job itself.
 	*/
 	void WriteDagmanStarted( const CondorID &DAGManJobId );
 
@@ -136,7 +136,7 @@ private:
 		@param The time at which this event occurred (or NULL)
 		@param The DAG node corresponding to the "event".
 		@param The event name.
-		@param The Condor ID string (or other data).
+		@param The HTCondor ID string (or other data).
 	*/
 	void Write( const time_t *eventTimeP, Job *node,
 				const char *eventName, const char *condorID );

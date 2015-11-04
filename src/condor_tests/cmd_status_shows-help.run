@@ -24,42 +24,55 @@ use strict;
 use warnings;
 
 my $corename = "cmd_status_shows-help";
-my $debuglevel = 2;
+my $debuglevel = 1;
 
 print scalar localtime() . "\n";
 
 my $mypid = $$;
 my $mysaveme = $corename . ".saveme";
-runcmd("mkdir -p $mysaveme");
+CreateDir("$mysaveme");
 
 if($mypid == 0) {
     die "Saveme setup for test failed\n";
 }
 
 my $found_usage = 0;
-my @adarray;
+my @adarray = ();
 
-print "Looking for Usage lines from condor_status -help - ";
+print "Looking for Usage lines from condor_status -help - \n";
 
-my $cmd = "condor_status -help";
-my $cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
-if(!$cmdstatus) {
-    CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n", $debuglevel);
-    exit(1)
+#my $cmd = "condor_status -help";
+my $helpfile = "statushelp$mypid";
+#my $cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2,{emit_output=>1});
+@adarray = `condor_status -help >$helpfile 2>&1`;
+my $line = "";
+open(HF,"<$helpfile") or die "Could not gather condor_status help messages:$!\n";
+while (<HF>) {
+	$line = $_;
+	fullchomp($line);
+	push @adarray, $line;
 }
+close(HF);
+my $outputsz = @adarray;
+
+
+print "Back from collecting help messages($outputsz)";
 
 CondorTest::debug("Looking at condor_status -help \n", $debuglevel);
 
 # looking for.....  <Usage: condor_status>
-foreach (@adarray) {
-    if(/^\s*Usage:\s+condor_status/) {
-        CondorTest::debug("found usage: $_\n", $debuglevel);
+foreach my $line (@adarray) {
+	fullchomp($line);
+    if($line =~ /^\s*Usage:\s+condor_status.*/) {
+        CondorTest::debug("found usage: $line\n", $debuglevel);
+	print "Found usage\n";
         $found_usage = 1;
         print "ok\n";
         last;
     }
     else {
-        CondorTest::debug("no match: $_\n", $debuglevel);
+        CondorTest::debug("no match: $line\n", $debuglevel);
+	print "no match: $line\n";
     }
 }
 

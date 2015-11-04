@@ -41,20 +41,6 @@
 class MultiLogFiles
 {
 public:
-		/** Gets values from a file, where the file contains lines of
-			the form
-				<keyword> <value>
-			with arbitrary whitespace between the two tokens.
-			@param fileName: the name of the file to parse
-			@param keyword: the keyword string
-			@param values: the list of values found
-			@param skipTokens: number of tokens to skip between keyword
-				and value
-			@return "" if okay, an error message otherwise
-		*/
-	static MyString getValuesFromFile(const MyString &fileName,
-			const MyString &keyword, StringList &values, int skipTokens = 0);
-
 		/** getValuesFromFileNew() performs exactly the same function as
 			getValuesFromFile(); the difference is that
 			getValuesFromFileNew() reads the given file line-by-line
@@ -66,19 +52,6 @@ public:
 		*/
 	static MyString getValuesFromFileNew(const MyString &fileName,
 			const MyString &keyword, StringList &values, int skipTokens = 0);
-
-	    /** Gets the log file from a Condor submit file.
-		    on success, the return value will be the log file name
-		    on failure, it will be ""
-			@param strSubFilename: the submit file name
-			@param directory: the directory of the submit file (can be blank)
-			@param isXml: reference to a binary variable that will be
-				set to true if log_xml is "true" in the submit file
-			@return the log file name from the submit file if successful,
-				or "" if unsuccessful
-		 */
-    static MyString loadLogFileNameFromSubFile(const MyString &strSubFilename,
-			const MyString &directory, bool &isXml, bool usingDefaultLog);
 
 		/** Gets the specified value from a submit file (looking for the
 			syntax <keyword> = <value>).
@@ -96,27 +69,6 @@ public:
 			@return true if successful, false if failed
 		 */
 	static bool makePathAbsolute(MyString &filename, CondorError &errstack);
-
-	    /** Gets the log files from a Stork submit file.
-		 * @param The submit file name.
-		 * @param The directory containing the submit file.
-		 * @param Output string list of log file names.
-		 * @return "" if okay, or else an error message.
-		 */
-    static MyString loadLogFileNamesFromStorkSubFile(
-		const MyString &strSubFilename,
-		const MyString &directory,
-		StringList &listLogFilenames);
-
-		/** Gets the number of job procs queued by a submit file
-			@param The submit file name
-			@param The submit file directory
-			@param A MyString to receive any error message
-			@return -1 if an error, otherwise the number of job procs
-				queued by the submit file
-		*/
-	static int getQueueCountFromSubmitFile(const MyString &strSubFilename,
-	            const MyString &directory, MyString &errorMsg);
 
 		/** Initializes the given file -- creates it if it doesn't exist,
 			possibly truncates it if it does.

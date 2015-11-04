@@ -23,6 +23,7 @@
 #include "condor_version.h"
 #include "reli_sock.h"
 #include "my_hostname.h"
+#include "ipv6_hostname.h"
 
 // local includes
 #include "EndpointPublisher.h"
@@ -62,14 +63,14 @@ EndpointPublisher::init(const std::string& uri_suffix, bool for_ssl)
 
 	// grab an ephemeral port
 	ReliSock probe_sock;
-	if (-1 == probe_sock.bind(true,0)) {
+	if (-1 == probe_sock.bind(CP_IPV4, true, 0, false)) {
 		dprintf(D_ALWAYS,"EndpointPublisher is unable to obtain ANY ephemeral port from configured range! " \
 			"Check configured values of LOWPORT,HIGHPORT.\n");
 		return false;
 	}
 	m_port = probe_sock.get_port();
 	aviUtilFmt(port,":%d/",m_port);
-	m_location = scheme + my_full_hostname() + port + uri_suffix;
+	m_location = scheme + get_local_fqdn().Value() + port + uri_suffix;
 
 	// populate the publish ad
 	m_ad = ClassAd();

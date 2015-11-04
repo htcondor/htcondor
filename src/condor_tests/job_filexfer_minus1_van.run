@@ -20,15 +20,33 @@
 
 use CondorTest;
 use CondorUtils;
+use Check::SimpleJob;
 
 $cmd      = 'job_filexfer_minus1_van.cmd';
 $testdesc =  'Base file transfer short one output file - vanilla U';
 $testname = "job_filexfer_minus1_van";
+my $sawshadow = "";
 
 # truly const variables in perl
 sub IDLE{1};
 sub HELD{5};
 sub RUNNING{2};
+
+my $firstappend_condor_config = '
+	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+	NUM_CPUS = 2
+	MachineMaxVacateTime = 10
+	NEGOTIATOR_INTERVAL = 5
+';
+
+$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"jobfilexferminus1");
+print "local config file:$configfile\n";
+
+CondorTest::StartCondorWithParams(
+    condor_name => "jobfilexferminus1",
+    fresh_local => "TRUE",
+    condorlocalsrc => "$configfile",
+);
 
 my $job = $$;
 my $baseoutfile = "submit_filetrans_output" . "$job";
@@ -60,14 +78,14 @@ $shadow = sub
 		my @adarray;
 		my $status = 1;
 		my $cmd = "condor_rm $cluster";
+		$sawshadow = "yes";
+		print "great, we saw a shadow exception from a mising output file\n";
 		$status = CondorTest::runCondorTool($cmd,\@adarray,2);
 		if(!$status)
 		{
 			CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 			exit(1);
 		}
-       CondorTest::debug("$testname: SUCCESS\n",1);
-       exit(0);
 };
 
 $success = sub
@@ -76,12 +94,18 @@ $success = sub
 };
 
 $abort = sub {
-	die "Job is gone now, cool.\n";
+	print "In abort handler: we removed the job which failed\n";
+	if($sawshadow eq "yes") {
+    	CondorTest::debug("$testname: SUCCESS\n",1);
+    	RegisterResult(1,"test_name","$testname");
+	} else {
+		print "ABORT without having seen a shadow exception\n";
+    	RegisterResult(0,"test_name","$testname");
+	}
 };
 
-$timed = sub
-{
-	die "Job should have ended by now. file transfer broken!\n";
+$held = sub {
+	print "Its is OK to seea hold now\n";
 };
 
 # make some needed files. All 0 sized and xxxxxx.txt for
@@ -97,63 +121,36 @@ my $inc = "$basefile"."c.txt";
 
 my $inputdir = "job_"."$job"."_dir";
 
-runcmd("mkdir -p $inputdir");
-runcmd("touch $inputdir/$in");
-runcmd("touch $inputdir/$ina");
-runcmd("touch $inputdir/$inb");
-runcmd("touch $inputdir/$inc");
+CreateDir("-p $inputdir");
+CreateEmptyFile("$inputdir/$in");
+CreateEmptyFile("$inputdir/$ina");
+CreateEmptyFile("$inputdir/$inb");
+CreateEmptyFile("$inputdir/$inc");
 
 my $line = "";
 my $args = "--job=$job --onesetout ";
 
-# pass pid for output file production
-# open submitfile and fix
-open(CMD,"<$cmd") || die "Can not open command file: $!\n";
-open(NEWCMD,">$cmd.new") || die "Can not open command file: $!\n";
-while(<CMD>)
+SimpleJob::RunCheck(
+    runthis=>"x_job_filexfer_testjob.pl",
+    duration=>"$args",
+    transfer_output_files=>"$outd,$oute,$outf,$outg",
+    should_transfer_files=>"YES",
+    when_to_transfer_output=>"ON_EXIT",
+    on_success=>$success,
+    on_execute=>$execute,
+    on_abort=>$abort,
+	on_hold=>$held,
+    on_shadow=>$shadow,
+);
+
+
+CondorTest::EndTest();
+print scalar localtime() . "\n";
+
+if( $result != 0 )
 {
-	CondorUtils::fullchomp($_);
-	CondorTest::debug("$_\n",1);
-	$line = $_;
-	if( $line =~ /^\s*input\s*=\s*job_\d+_dir\/([a-zA-Z_]+)\d*\.txt\s*$/)
-	{
-		my $input = "$1"."$job".".txt";
-		CondorTest::debug("Input file was $1\n",1);
-		print NEWCMD "input = $inputdir/$input\n"
-	}
-	elsif( $line =~ /^\s*transfer_input_files\s*=\s*.*$/ )
-	{
-		print NEWCMD "transfer_input_files = $inputdir/$ina,$inputdir/$inb,$inputdir/$inc\n";
-	}
-	elsif( $line =~ /^\s*transfer_output_files\s*=\s*.*$/ )
-	{
-		# this one rquests bogus output file d which is missing
-		print NEWCMD "transfer_output_files = $outd,$oute,$outf,$outg\n";
-	}
-	elsif( $line =~ /^\s*arguments\s*=\s*.*$/)
-	{
-		print NEWCMD "arguments = $args\n";
-	}
-	else
-	{
-		print NEWCMD "$line\n";
-	}
-
-}
-close(CMD);
-close(NEWCMD);
-runcmd("mv $cmd.new $cmd");
-
-CondorTest::RegisterExecute($testname, $execute);
-CondorTest::RegisterShadow($testname, $shadow);
-CondorTest::RegisterAbort($testname, $abort);
-CondorTest::RegisterExitedSuccess($testname, $success);
-#CondorTest::RegisterTimed($testname, $timed, 3600);
-
-if( CondorTest::RunTest($testname, $cmd, 0) ) {
-	CondorTest::debug("$testname: SUCCESS\n",1);
-	exit(0);
-} else {
-	die "$testname: CondorTest::RunTest() failed\n";
+    exit(1);
 }
 
+CondorTest::debug("$testname SUCCESS\n",1);
+exit(0);

@@ -1,17 +1,17 @@
 Job NodeA job_dagman_vars-node-newargs.cmd
-Vars NodeA nodename="$(JOB)"
+Vars NodeA nodename="X$(JOB)"
 Vars NodeA first="Alberto Contador" second="Andy	Schleck"
 Vars NodeA third="Lance_Armstrong"
 Vars NodeA misc="!@#$%^&*()_-=+=[]{}?"
 
 Job NodeB job_dagman_vars-node-newargs.cmd
-Vars NodeB nodename="$(JOB)"
+Vars NodeB nodename="$(JOB)Y"
 # Internal double-quote has to be escaped once for DAG parsing and
 # once for condor_submit -- we should probably change that...
 Vars NodeB third="Pedro_Delgado" first="Greg\"\"_LeMond" second="\\Laurent_Fignon"
 
 Job NodeC job_dagman_vars-node.cmd
-Vars NodeC nodename="$(JOB)"
+Vars NodeC nodename="Z$(JOB)Z"
 Vars NodeC second="Andreas_Kloden"
 Vars NodeC third="Carlos_Sastre"
 
@@ -27,14 +27,21 @@ Vars NodeD misc="!@#$%^&*()_-=+=[]{}?"
 Job NodeE job_dagman_vars-attribute.cmd
 Vars NodeE nodename="$(JOB)"
 Vars NodeE +A="\"bob\""
-Vars NodeE noderetry="$(RETRY)"
+Vars NodeE noderetry="X$(RETRY)"
 
 Job NodeF job_dagman_vars-retry.cmd
 Abort-dag-on NodeF 2
 Retry NodeF 3
 Vars NodeF nodename="$(JOB)"
 Vars NodeF noderetry="$(RETRY)"
+# Note:  For classad attributes, the $(RETRY) must be the *entire* string
+# (I'm not sure why). wenger 2015-01-15
 Vars NodeF +DagNodeRetry="$(RETRY)"
+
+Job NodeG job_dagman_vars-node-newargs2.cmd
+Vars NodeG nodename="$(JOB)"
+# Note: naming a variable "arguments" causes problems.
+Vars NodeG args="'Vincenzo ''The Shark'' Nibali' 'Bernard \"\"The Badger\"\" Hinault'"
 
 Parent NodeA Child NodeB NodeC
 Parent NodeB NodeC Child NodeD

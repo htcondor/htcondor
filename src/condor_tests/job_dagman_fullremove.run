@@ -19,6 +19,7 @@
 ##**************************************************************
 
 use CondorTest;
+use CondorUtils;
 
 $cmd = 'job_dagman_fullremove.dag';
 $testdesc =  'Condor submit dag - full cleanup of dag test - scheduler U';
@@ -50,9 +51,16 @@ $aborted = sub
 	CondorTest::debug("Abort event expected <$numaborted>\n",1);
 	print "Abort event expected <$numaborted>\n";
 
+	my $result = 0;
 	if($numsubmitted == $numaborted) {
 		while($tries > 0) {
-			my $result = system("/bin/sleep 5 && ./x_read_joblog.exe $joblog FULLREMOVE");
+			#my $result = system("/bin/sleep 5 && ./x_read_joblog.exe $joblog FULLREMOVE");
+			sleep(5);
+			if(is_windows()) {
+				$result = system("x_read_joblog.exe $joblog FULLREMOVE");
+			} else {
+				$result = system("/bin/sleep 5 && ./x_read_joblog.exe $joblog FULLREMOVE");
+			}
 			if( $result != 0)
 			{
 			} else {

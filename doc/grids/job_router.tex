@@ -464,7 +464,7 @@ The default value is \Expr{True}.
 
 \index{Job Router Routing Table ClassAd attribute!Set\_<ATTR>}
 \item[Set\_<ATTR>] Sets the value of \Attr{<ATTR>} in the routed
-job ClassAd to the specified value.  An example of
+copy's job ClassAd to the specified value.  An example of
 an attribute that might be set is \Attr{PeriodicRemove}.
 For example, if the routed job goes on hold or stays idle for too long,
 remove it and return the original copy of the job to a normal state.
@@ -473,6 +473,9 @@ remove it and return the original copy of the job to a normal state.
 \item[Eval\_Set\_<ATTR>] Defines an expression.
 The expression is evaluated, and the resulting value
 sets the value of the routed copy's job ClassAd attribute \Attr{<ATTR>}.
+Use this attribute to set a custom or local value,
+especially for modifying an attribute which may have been already 
+specified in a default routing table.
 
 \index{Job Router Routing Table ClassAd attribute!Copy\_<ATTR>}
 \item[Copy\_<ATTR>] Defined with the name of a routed copy ClassAd

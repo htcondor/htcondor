@@ -23,6 +23,7 @@ use warnings;
 
 use CondorTest;
 use CondorUtils;
+use Check::SimpleJob;
 
 my $cmd      = 'job_filexfer_output-withvacate_van.cmd';
 my $cmdnew   = $cmd . ".modified";
@@ -216,35 +217,32 @@ my $shadow = sub {
     CondorTest::debug("$testname: SUCCESS\n", 1);
 };
 
-
-# pass pid for output file production
-# open submitfile and fix
 my $args = "--job=$pid --forever ";
-print "Submit file contents:\n";
-open(CMD, '<', $cmd) || die "Can not open $cmd for reading: $!\n";
-open(NEWCMD, '>', $cmdnew) || die "Can not open $cmdnew for writing: $!\n";
-while(<CMD>) {
-    s/^\s*(transfer_output_files)\s*=\s*.*/$1 = $oute,$outf,$outg/;
-    s/^\s*(arguments)\s*=\s*.*/$1 = $args/;
-    print NEWCMD $_;
-    print "\t$_";
-}
-close(CMD);
-close(NEWCMD);
 
-CondorTest::RegisterHold($testname, $hold);
-CondorTest::RegisterExecute($testname, $execute);
-CondorTest::RegisterShadow($testname, $shadow);
-CondorTest::RegisterEvictedWithoutCheckpoint($testname, $evicted);
-CondorTest::RegisterAbort($testname, $aborted);
-CondorTest::RegisterExitedSuccess($testname, $success);
-#CondorTest::RegisterTimed($testname, $timed, 3600);
+SimpleJob::RunCheck(
+    runthis=>"x_job_filexfer_testjob.pl",
+    duration=>"$args",
+	requirements=>"isUndefined(My.NumShadowStarts) || (My.NumShadowStarts < 2)",
+    transfer_output_files=>"$oute,$outf,$outg",
+    should_transfer_files=>"YES",
+    when_to_transfer_output=>"ON_EXIT_OR_EVICT",
+    on_success=>$success,
+    on_execute=>$execute,
+    on_abort=>$aborted,
+    on_shadow=>$shadow,
+	on_hold=>$hold,
+	on_evictedwithoutcheckpoint=>$evicted,
+);
 
-if( CondorTest::RunTest($testname, $cmdnew, 0) ) {
-    CondorTest::debug("$testname: SUCCESS\n", 1);
-    exit(0);
-}
-else {
-    die "$testname: CondorTest::RunTest() failed\n";
+
+CondorTest::EndTest();
+print scalar localtime() . "\n";
+my $result = 0;
+
+if( $result != 0 )
+{
+    exit(1);
 }
 
+CondorTest::debug("$testname SUCCESS\n",1);
+exit(0)

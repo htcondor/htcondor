@@ -178,6 +178,8 @@ Source5: condor_config.local.dedicated.resource
 Source6: 10-batch_gahp_blahp.config
 Source7: 00-restart_peaceful.config
 
+Source8: htcondor.pp
+
 %if %bundle_uw_externals
 Source101: blahp-1.16.5.1.tar.gz
 Source102: boost_1_49_0.tar.gz
@@ -229,11 +231,13 @@ BuildRequires: bind-utils
 BuildRequires: m4
 #BuildRequires: autoconf
 BuildRequires: libX11-devel
+BuildRequires: libXScrnSaver-devel
 BuildRequires: /usr/include/curl/curl.h
 BuildRequires: /usr/include/expat.h
 BuildRequires: openldap-devel
 BuildRequires: python-devel
 BuildRequires: boost-devel
+BuildRequires: redhat-rpm-config
 
 %if %uw_build || %std_univ
 BuildRequires: cmake >= 2.8
@@ -260,6 +264,7 @@ BuildRequires: expat-devel
 BuildRequires: perl-Archive-Tar
 BuildRequires: perl-XML-Parser
 BuildRequires: python-devel
+BuildRequires: libcurl-devel
 %endif
 
 # Globus GSI build requirements
@@ -342,9 +347,14 @@ BuildRequires: systemd-units
 BuildRequires: transfig
 BuildRequires: latex2html
 
-Requires: mailx
+Requires: /usr/sbin/sendmail
 Requires: condor-classads = %{version}-%{release}
 Requires: condor-procd = %{version}-%{release}
+
+# ecryptfs was pulled from rhel 7
+%if (0%{?rhel} == 5 || 0%{?rhel} == 6)
+Requires: ecryptfs-utils
+%endif
 
 %if %blahp && ! %uw_build
 Requires: blahp >= 1.16.1
@@ -508,8 +518,8 @@ resources exposed by the deltacloud API.
 %package classads
 Summary: HTCondor's classified advertisement language
 Group: Development/Libraries
-Obsoletes: classads <= 1.0.8
-Obsoletes: classads-static <= 1.0.8
+Obsoletes: classads <= 1.0.10
+Obsoletes: classads-static <= 1.0.10
 Provides: classads = %version-%release
 
 %description classads
@@ -538,12 +548,22 @@ Summary: Headers for HTCondor's classified advertisement language
 Group: Development/System
 Requires: %name-classads = %version-%release
 Requires: pcre-devel
-Obsoletes: classads-devel <= 1.0.8
+Obsoletes: classads-devel <= 1.0.10
 Provides: classads-devel = %version-%release
 
 %description classads-devel
 Header files for HTCondor's ClassAd Library, a powerful and flexible,
 semi-structured representation of data.
+
+#######################
+%package test
+Summary: HTCondor Self Tests
+Group: Applications/System
+Requires: %name = %version-%release
+Requires: %name-classads = %{version}-%{release}
+
+%description test
+A collection of tests to verify that HTCondor is operating properly.
 
 #######################
 %if %cream
@@ -618,7 +638,6 @@ Includes all the files necessary to support running standard universe jobs.
 %package static-shadow
 Summary: Statically linked condow_shadow and condor_master binaries
 Group: Applications/System
-Requires: %name = %version-%release
 
 %description static-shadow
 Provides condor_shadow_s and condor_master_s, which have all the globus
@@ -634,7 +653,38 @@ Requires: %name = %version-%release
 %description externals
 Includes the external packages built when UW_BUILD is enabled
 
+%package external-libs
+Summary: Libraries for external packages built into HTCondor
+Group: Applications/System
+
+%description external-libs
+Includes the libraries for external packages built when UW_BUILD is enabled
+
 %endif
+
+%package all
+Summary: All condor packages in a typical installation
+Group: Applications/System
+Requires: %name = %version-%release
+Requires: %name-procd = %version-%release
+Requires: %name-kbdd = %version-%release
+Requires: %name-vm-gahp = %version-%release
+Requires: %name-classads = %version-%release
+%if %cream
+Requires: %name-cream-gahp = %version-%release
+%endif
+Requires: %name-python = %version-%release
+Requires: %name-bosco = %version-%release
+%if %std_univ
+Requires: %name-std-universe = %version-%release
+%endif
+%if %uw_build
+Requires: %name-externals = %version-%release
+Requires: %name-external-libs = %version-%release
+%endif
+
+%description all
+Include dependencies for all condor packages in a typical installation
 
 %pre
 getent group condor >/dev/null || groupadd -r condor
@@ -673,9 +723,12 @@ export CMAKE_PREFIX_PATH=/usr
 # causes build issues with EL5, don't even bother building the tests.
 
 %if %uw_build
+%define condor_build_id UW_development
+
 %cmake \
-       -DBUILDID:STRING=UW_development \
+       -DBUILDID:STRING=%condor_build_id \
        -DUW_BUILD:BOOL=TRUE \
+       -DCMAKE_SKIP_RPATH:BOOL=FALSE \
 %if ! %std_univ
        -DCLIPPED:BOOL=TRUE \
 %endif
@@ -692,8 +745,7 @@ export CMAKE_PREFIX_PATH=/usr
 
 %else
 
-%cmake -DNO_PHONE_HOME:BOOL=TRUE \
-       -DBUILD_TESTING:BOOL=FALSE \
+%cmake -DBUILD_TESTING:BOOL=FALSE \
 %if %std_univ
        -DCLIPPED:BOOL=FALSE \
 %endif
@@ -833,7 +885,6 @@ sed -e "s:^LIB\s*=.*:LIB = \$(RELEASE_DIR)/$LIB/condor:" \
 # Install the basic configuration, a Personal HTCondor config. Allows for
 # yum install condor + service condor start and go.
 mkdir -m0755 %{buildroot}/%{_sysconfdir}/condor/config.d
-# cp %{buildroot}/etc/examples/condor_config.local %{buildroot}/%{_sysconfdir}/condor/config.d/00personal_condor.config
 %if %parallel_setup
 cp %{SOURCE5} %{buildroot}/%{_sysconfdir}/condor/config.d/20dedicated_scheduler_condor.config
 %endif
@@ -872,25 +923,6 @@ mkdir -p -m1777 %{buildroot}/%{_var}/lock/condor/local
 # Note we use %{_var}/lib instead of %{_sharedstatedir} for RHEL5 compatibility
 mkdir -p -m0755 %{buildroot}/%{_var}/lib/condor/spool
 mkdir -p -m1777 %{buildroot}/%{_var}/lib/condor/execute
-
-cat >> %{buildroot}/%_sysconfdir/condor/condor_config.local << EOF
-CONDOR_DEVELOPERS = NONE
-CONDOR_HOST = \$(FULL_HOSTNAME)
-COLLECTOR_NAME = Personal Condor
-START = TRUE
-SUSPEND = FALSE
-PREEMPT = FALSE
-KILL = FALSE
-DAEMON_LIST = COLLECTOR, MASTER, NEGOTIATOR, SCHEDD, STARTD
-NEGOTIATOR_INTERVAL = 20
-EOF
-
-# this gets around a bug whose fix is not yet merged
-echo "TRUST_UID_DOMAIN = TRUE" >> %{buildroot}/%_sysconfdir/condor/condor_config.local
-
-# no master shutdown program for now
-rm -f %{buildroot}/%{_sbindir}/condor_set_shutdown
-rm -f %{buildroot}/%{_mandir}/man1/condor_set_shutdown.1
 
 # not packaging deployment tools
 rm -f %{buildroot}/%{_mandir}/man1/condor_config_bind.1
@@ -936,6 +968,10 @@ mkdir %{buildroot}%{_sysconfdir}/sysconfig/
 install -Dp -m 0644 %{buildroot}/etc/examples/condor.sysconfig %{buildroot}%{_sysconfdir}/sysconfig/condor
 %endif
 
+%if 0%{?rhel} >= 7
+cp %{SOURCE8} %{buildroot}%{_datadir}/condor/
+%endif
+
 # Install perl modules
 install -m 0755 src/condor_scripts/Condor.pm %{buildroot}%{_datadir}/condor/
 install -m 0755 src/condor_scripts/CondorPersonal.pm %{buildroot}%{_datadir}/condor/
@@ -958,13 +994,11 @@ rm -rf %{buildroot}%{_sbindir}/condor_cold_start
 rm -rf %{buildroot}%{_sbindir}/condor_cold_stop
 rm -rf %{buildroot}%{_sbindir}/condor_config_bind
 rm -rf %{buildroot}%{_sbindir}/condor_configure
-rm -rf %{buildroot}%{_sbindir}/condor_credd
 rm -rf %{buildroot}%{_sbindir}/condor_install
 rm -rf %{buildroot}%{_sbindir}/condor_install_local
 rm -rf %{buildroot}%{_sbindir}/condor_local_start
 rm -rf %{buildroot}%{_sbindir}/condor_local_stop
 rm -rf %{buildroot}%{_sbindir}/condor_startd_factory
-rm -rf %{buildroot}%{_sbindir}/condor_vm-gahp-vmware
 rm -rf %{buildroot}%{_sbindir}/condor_vm_vmware.pl
 rm -rf %{buildroot}%{_sbindir}/filelock_midwife
 rm -rf %{buildroot}%{_sbindir}/filelock_undertaker
@@ -1021,7 +1055,6 @@ rm -rf %{buildroot}%{_mandir}/man1/condor_compile.1*
 rm -rf %{buildroot}%{_mandir}/man1/condor_config_bind.1*
 rm -rf %{buildroot}%{_mandir}/man1/condor_configure.1*
 rm -rf %{buildroot}%{_mandir}/man1/condor_load_history.1*
-rm -rf %{buildroot}%{_mandir}/man1/condor_set_shutdown.1*
 rm -rf %{buildroot}%{_mandir}/man1/filelock_midwife.1*
 rm -rf %{buildroot}%{_mandir}/man1/filelock_undertaker.1*
 rm -rf %{buildroot}%{_mandir}/man1/install_release.1*
@@ -1035,8 +1068,10 @@ rm -rf %{buildroot}%{_datadir}/condor/{libpyclassad*,htcondor,classad}.so
 mkdir -p %{buildroot}%{python_sitelib}
 mv %{buildroot}%{_libexecdir}/condor/campus_factory/python-lib/GlideinWMS %{buildroot}%{python_sitelib}
 mv %{buildroot}%{_libexecdir}/condor/campus_factory/python-lib/campus_factory %{buildroot}%{python_sitelib}
+%if 0%{?osg} || 0%{?hcc}
 mv %{buildroot}%{_libexecdir}/condor/campus_factory/share/condor/condor_config.factory %{buildroot}%{_sysconfdir}/condor/config.d/60-campus_factory.config
 mv %{buildroot}%{_libexecdir}/condor/campus_factory/etc/campus_factory.conf %{buildroot}%{_sysconfdir}/condor/
+%endif
 mv %{buildroot}%{_libexecdir}/condor/campus_factory/share %{buildroot}%{_datadir}/condor/campus_factory
 
 %if %blahp && ! %uw_build
@@ -1087,7 +1122,10 @@ rm -rf %{buildroot}
 #make check-seralized
 
 #################
+%files all
+#################
 %files
+%exclude %_sbindir/openstack_gahp
 %defattr(-,root,root,-)
 %doc LICENSE-2.0.txt examples
 %dir %_sysconfdir/condor/
@@ -1109,8 +1147,10 @@ rm -rf %{buildroot}
 %_datadir/condor/CondorPersonal.pm
 %_datadir/condor/CondorTest.pm
 %_datadir/condor/CondorUtils.pm
+%if 0%{?rhel} >= 7
+%_datadir/condor/htcondor.pp
+%endif
 %dir %_sysconfdir/condor/config.d/
-#%_sysconfdir/condor/config.d/00personal_condor.config
 %_sysconfdir/condor/condor_ssh_to_job_sshd_config_template
 %if %gsoap || %uw_build
 %dir %_datadir/condor/webservice/
@@ -1121,6 +1161,7 @@ rm -rf %{buildroot}
 %_libdir/libcondor_utils_%{version_}.so
 %_libdir/libcondorapi.so
 %dir %_libexecdir/condor/
+%_libexecdir/condor/linux_kernel_tuning
 %_libexecdir/condor/accountant_log_fixer
 %_libexecdir/condor/condor_chirp
 %_libexecdir/condor/condor_ssh
@@ -1168,6 +1209,8 @@ rm -rf %{buildroot}
 %_libexecdir/condor/interactive.sub
 %_libexecdir/condor/condor_dagman_metrics_reporter
 %_libexecdir/condor/condor_gangliad
+%_libexecdir/condor/panda-plugin.so
+%_libexecdir/condor/pandad
 %_mandir/man1/condor_advertise.1.gz
 %_mandir/man1/condor_check_userlogs.1.gz
 %_mandir/man1/condor_chirp.1.gz
@@ -1180,6 +1223,7 @@ rm -rf %{buildroot}
 %_mandir/man1/condor_gpu_discovery.1.gz
 %_mandir/man1/condor_history.1.gz
 %_mandir/man1/condor_hold.1.gz
+%_mandir/man1/condor_job_router_info.1.gz
 %_mandir/man1/condor_master.1.gz
 %_mandir/man1/condor_off.1.gz
 %_mandir/man1/condor_on.1.gz
@@ -1195,6 +1239,7 @@ rm -rf %{buildroot}
 %_mandir/man1/condor_restart.1.gz
 %_mandir/man1/condor_rm.1.gz
 %_mandir/man1/condor_run.1.gz
+%_mandir/man1/condor_set_shutdown.1.gz
 %_mandir/man1/condor_sos.1.gz
 %_mandir/man1/condor_stats.1.gz
 %_mandir/man1/condor_status.1.gz
@@ -1202,6 +1247,7 @@ rm -rf %{buildroot}
 %_mandir/man1/condor_submit.1.gz
 %_mandir/man1/condor_submit_dag.1.gz
 %_mandir/man1/condor_transfer_data.1.gz
+%_mandir/man1/condor_update_machine_ad.1.gz
 %_mandir/man1/condor_updates_stats.1.gz
 %_mandir/man1/condor_urlfetch.1.gz
 %_mandir/man1/condor_userlog.1.gz
@@ -1267,13 +1313,15 @@ rm -rf %{buildroot}
 %_bindir/condor_tail
 %_bindir/condor_qsub
 %_bindir/condor_pool_job_report
-%_bindir/condor_job_router_tool
+%_bindir/condor_job_router_info
+%_bindir/condor_update_machine_ad
 # reconfig_schedd, restart
 # sbin/condor is a link for master_off, off, on, reconfig,
 %_sbindir/condor_advertise
 %_sbindir/condor_c-gahp
 %_sbindir/condor_c-gahp_worker_thread
 %_sbindir/condor_collector
+%_sbindir/condor_credd
 %_sbindir/condor_fetchlog
 %_sbindir/condor_had
 %_sbindir/condor_init
@@ -1287,6 +1335,7 @@ rm -rf %{buildroot}
 %_sbindir/condor_restart
 %attr(6755, root, root) %_sbindir/condor_root_switchboard
 %_sbindir/condor_schedd
+%_sbindir/condor_set_shutdown
 %_sbindir/condor_shadow
 %_sbindir/condor_sos
 %_sbindir/condor_startd
@@ -1305,11 +1354,12 @@ rm -rf %{buildroot}
 %_sbindir/nordugrid_gahp
 %_sbindir/gce_gahp
 %if %uw_build
+%_sbindir/condor_master_s
 %_sbindir/boinc_gahp
 %endif
 %_libexecdir/condor/condor_gpu_discovery
+%_sbindir/condor_vm-gahp-vmware
 %_sbindir/condor_vm_vmware
-%config(noreplace) %_sysconfdir/condor/condor_config.local
 %config(noreplace) %_sysconfdir/condor/ganglia.d/00_default_metrics
 %defattr(-,condor,condor,-)
 %dir %_var/lib/condor/
@@ -1528,6 +1578,12 @@ rm -rf %{buildroot}
 %_includedir/classad/xmlSink.h
 %_includedir/classad/xmlSource.h
 
+#################
+%files test
+%defattr(-,root,root,-)
+%_libexecdir/condor/condor_sinful
+%_libexecdir/condor/condor_testingd
+
 %if %cream
 %files cream-gahp
 %defattr(-,root,root,-)
@@ -1544,13 +1600,16 @@ rm -rf %{buildroot}
 %files python
 %defattr(-,root,root,-)
 %_libdir/libpyclassad*.so
+%_libexecdir/condor/libclassad_python_user.so
 %{python_sitearch}/classad.so
 %{python_sitearch}/htcondor.so
 
 %files bosco
 %defattr(-,root,root,-)
+%if 0%{?osg} || 0%{?hcc}
 %config(noreplace) %_sysconfdir/condor/campus_factory.conf
 %config(noreplace) %_sysconfdir/condor/config.d/60-campus_factory.config
+%endif
 %_libexecdir/condor/shellselector
 %_libexecdir/condor/campus_factory
 %_sbindir/bosco_install
@@ -1608,16 +1667,17 @@ rm -rf %{buildroot}
 
 %if %uw_build
 %files static-shadow
-%{_sbindir}/condor_master_s
 %{_sbindir}/condor_shadow_s
 
-%files externals
+%files external-libs
 %dir %_libdir/condor
 %_libdir/condor/libcondordrmaa.a
 %_libdir/condor/libdrmaa.so
 %_libdir/condor/libglobus*.so*
 %_libdir/condor/libvomsapi*.so*
 %_libdir/condor/ugahp.jar
+
+%files externals
 %_sbindir/deltacloud_gahp
 %_sbindir/unicore_gahp
 %if %blahp
@@ -1693,6 +1753,13 @@ if [ $? = 0 ]; then
    # the number of extraneous SELinux warnings on f17 is very high
 fi
 %endif
+%if 0%{?rhel} >= 7
+test -x /usr/sbin/selinuxenabled && /usr/sbin/selinuxenabled
+if [ $? = 0 ]; then
+   /usr/sbin/setsebool -P condor_domain_can_network_connect 1
+   /usr/sbin/semodule -i /usr/share/condor/htcondor.pp
+fi
+%endif
 if [ $1 -eq 1 ] ; then
     # Initial installation 
     /bin/systemctl daemon-reload >/dev/null 2>&1 || :
@@ -1723,6 +1790,46 @@ fi
 %post -n condor
 /sbin/chkconfig --add condor
 /sbin/ldconfig
+
+%posttrans -n condor
+# If there is a saved condor_config.local, recover it
+if [ -f /etc/condor/condor_config.local.rpmsave ]; then
+    if [ ! -f /etc/condor/condor_config.local ]; then
+        mv /etc/condor/condor_config.local.rpmsave \
+           /etc/condor/condor_config.local
+
+        # Drop a README file to tell what we have done
+        # Make sure that we don't overwrite a previous README
+        if [ ! -f /etc/condor/README.condor_config.local ]; then
+            file="/etc/condor/README.condor_config.local"
+        else
+            i="1"
+            while [ -f /etc/condor/README.condor_config.local.$i ]; do
+                i=$((i+1))
+            done
+            file="/etc/condor/README.condor_config.local.$i"
+        fi
+
+cat <<EOF > $file
+On `date`, while installing or upgrading to
+HTCondor %version, the /etc/condor directory contained a file named
+"condor_config.local.rpmsave" but did not contain one named
+"condor_config.local".  This situation may be the result of prior
+modifications to "condor_config.local" that were preserved after the
+HTCondor RPM stopped including that file.  In any case, the contents
+of the old "condor_config.local.rpmsave" file may still be useful.
+So after the install it was moved back into place and this README
+file was created.  Here is a directory listing for the restored file
+at that time:
+
+`ls -l /etc/condor/condor_config.local`
+
+See the "Configuration" section (3.3) of the HTCondor manual for more
+information on configuration files.
+EOF
+
+    fi
+fi
 
 %preun -n condor
 if [ $1 = 0 ]; then

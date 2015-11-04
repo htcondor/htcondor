@@ -28,7 +28,7 @@
 #include "condor_collector.h"
 #include "condor_attributes.h"
 #include "condor_version.h"
-#include "my_hostname.h"
+#include "ipv6_hostname.h"
 #include "internet.h"
 #include "condor_getcwd.h"
 
@@ -137,7 +137,7 @@ XferSummary::time_out(time_t now, char *hostaddr)
 	SetMyTypeName(info, "CkptServer");
 	SetTargetTypeName(info, "CkptFile");
 
-	sprintf(line, "%s = \"%s\"", ATTR_NAME, my_full_hostname() );
+	sprintf(line, "%s = \"%s\"", ATTR_NAME, get_local_fqdn().Value());
 	info.Insert(line);
     sprintf(line, "%s = \"%s\"", ATTR_MACHINE, hostaddr );
 	info.Insert(line);

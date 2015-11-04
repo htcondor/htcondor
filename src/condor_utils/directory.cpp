@@ -285,6 +285,18 @@ Directory::do_remove_dir( const char* path )
 
 		// First, try it as whatever priv state we've been requested
 		// to use...
+
+
+		// skip lost+found directories, the file system needs these
+		// to be around for fsck emergencies.
+	const char *slash = strrchr(path, '/');
+	if (slash) {
+		if (strcmp(slash, "/lost+found") == 0) {
+			dprintf(D_FULLDEBUG, "Skipping removal of lost+found directory\n");
+			return true;
+		}
+	}
+
 	rmdirAttempt( path, desired_priv_state );
 	StatInfo si1( path );
 	if( si1.Error() == SINoFile ) {
@@ -1250,7 +1262,7 @@ bool recursive_chown(const char * path,
 
 #endif /* ! defined(WIN32) */
 
-bool mkdir_and_parents_if_needed_cur_priv( const char *path, mode_t mode )
+bool mkdir_and_parents_if_needed_cur_priv( const char *path, mode_t mode, mode_t parent_mode )
 {
 	int tries = 0;
 
@@ -1284,7 +1296,7 @@ bool mkdir_and_parents_if_needed_cur_priv( const char *path, mode_t mode )
 
 		std::string parent,junk;
 		if( filename_split(path,parent,junk) ) {
-			if(!mkdir_and_parents_if_needed_cur_priv( parent.c_str(),mode)) {
+			if(!mkdir_and_parents_if_needed_cur_priv( parent.c_str(),parent_mode,parent_mode)) {
 				return false;
 			}
 		}
@@ -1297,6 +1309,11 @@ bool mkdir_and_parents_if_needed_cur_priv( const char *path, mode_t mode )
 
 bool mkdir_and_parents_if_needed( const char *path, mode_t mode, priv_state priv )
 {
+	return mkdir_and_parents_if_needed( path, mode, mode, priv );
+}
+
+bool mkdir_and_parents_if_needed( const char *path, mode_t mode, mode_t parent_mode, priv_state priv )
+{
 	bool retval;
 	priv_state saved_priv;
 
@@ -1304,7 +1321,7 @@ bool mkdir_and_parents_if_needed( const char *path, mode_t mode, priv_state priv
 		saved_priv = set_priv(priv);
 	}
 
-	retval = mkdir_and_parents_if_needed_cur_priv(path,mode);
+	retval = mkdir_and_parents_if_needed_cur_priv(path,mode,parent_mode);
 
 	if( priv != PRIV_UNKNOWN ) {
 		set_priv(saved_priv);

@@ -66,10 +66,10 @@ VacateType vacate_type = VACATE_GRACEFUL;
 
 // protoypes of interest
 PREFAST_NORETURN void usage( const char*, int iExitCode=1 );
-void version( void );
-void invalid( const char* opt );
-void ambiguous( const char* opt );
-void another( const char* opt );
+PREFAST_NORETURN void version( void );
+PREFAST_NORETURN void invalid( const char* opt );
+PREFAST_NORETURN void ambiguous( const char* opt );
+PREFAST_NORETURN void another( const char* opt );
 void parseCOpt( char* opt, char* arg );
 void parsePOpt( char* opt, char* arg );
 void parseArgv( int argc, char* argv[] );
@@ -671,6 +671,9 @@ parseArgv( int  /*argc*/, char* argv[] )
 						 my_name, *tmp );
 				exit( 1 );
 			}
+			if (addr) {
+				free(addr);
+			}
 			addr = strdup( *tmp ); 
 			break;
 
@@ -684,6 +687,9 @@ parseArgv( int  /*argc*/, char* argv[] )
 			tmp++;
 			if( ! (tmp && *tmp) ) {
 				another( "-name" );
+			}
+			if (name) {
+				free(name);
 			}
 			name = get_daemon_name( *tmp );
 			if( ! name ) {
@@ -722,6 +728,9 @@ parseArgv( int  /*argc*/, char* argv[] )
 			if( ! (tmp && *tmp) ) {
 				another( "-requirements" );
 			}
+			if (requirements) {
+				free(requirements);
+			}
 			requirements = strdup( *tmp );
 			break;
 
@@ -735,6 +744,9 @@ parseArgv( int  /*argc*/, char* argv[] )
 			tmp++;
 			if( ! (tmp && *tmp) ) {
 				another( "-id" );
+			}
+			if (claim_id) {
+				free(claim_id);
 			}
 			claim_id = strdup( *tmp );
 			break;
@@ -750,6 +762,9 @@ parseArgv( int  /*argc*/, char* argv[] )
 			if( ! (tmp && *tmp) ) {
 				another( "-jobad" );
 			}
+			if (jobad_path) {
+				free(jobad_path);
+			}
 			jobad_path = strdup( *tmp );
 			break;
 
@@ -763,6 +778,9 @@ parseArgv( int  /*argc*/, char* argv[] )
 			tmp++;
 			if( ! (tmp && *tmp) ) {
 				another( "-keyword" );
+			}
+			if (job_keyword) {
+				free(job_keyword);
 			}
 			job_keyword = strdup( *tmp );
 			break;

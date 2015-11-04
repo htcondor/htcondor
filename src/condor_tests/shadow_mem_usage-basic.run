@@ -43,26 +43,24 @@ CondorTest::StartCondorWithParams(
 #
 # for X86_64 shadows
 my %memory_data64 = (
-	"debian6"  => "920",
-	"debian7"  => "1004",
-	"fedora17" => "620",
-	"fedora18" => "868",
-	"fedora19" => "876",
-	"fedora20" => "876",
-	"redhat5"  => "680",
-	"redhat6"  => "752",
-	"redhat7"  => "1032",
-	"sl6"      => "728",
-	"sl7"      => "728",
-	"ubuntu10" => "740",
-	"ubuntu12" => "1032",
+	"debian6"  => "652",
+	"debian7"  => "688",
+	"debian8"  => "692",
+	"fedora20" => "660",
+	"fedora21" => "668",
+	"redhat5"  => "448",
+	"redhat6"  => "492",
+	"redhat7"  => "644",
+	"sl6"      => "488",
+	"sl7"      => "652",
+	"ubuntu12" => "684",
+	"ubuntu14" => "664",
 );
 # for X86 shadows
 my %memory_data32 = (
-	"debian6" => "512",
-	"redhat5" => "528",
-	"redhat6" => "588",
-	"sl5"     => "528",
+	"redhat5" => "344",
+	"redhat6" => "376",
+	"sl6"     => "348",
 );
 
 my $opsys;

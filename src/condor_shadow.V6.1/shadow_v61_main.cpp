@@ -271,7 +271,8 @@ void startShadow( ClassAd *ad )
 	MyString auth_hole_id;
 	if (ad->LookupString(ATTR_STARTD_PRINCIPAL, auth_hole_id)) {
 		IpVerify* ipv = daemonCore->getIpVerify();
-		if (!ipv->PunchHole(DAEMON, auth_hole_id)) {
+		if (!ipv->PunchHole(DAEMON, auth_hole_id) ||
+			!ipv->PunchHole(CLIENT_PERM, auth_hole_id)) {
 			dprintf(D_ALWAYS,
 			        "WARNING: IpVerify::PunchHole error for %s: "
 			            "job may fail to execute\n",
@@ -285,11 +286,12 @@ void startShadow( ClassAd *ad )
 	ad->LookupBool(ATTR_CLAIM_STARTD, wantClaiming);
 
 	if( is_reconnect ) {
+		Shadow->attemptingReconnectAtStartup = true;
 		Shadow->reconnect();
 	} else {
+		Shadow->attemptingReconnectAtStartup = false;
 			// if the shadow is going to claim the startd,
-			// we need to asynchrously claim it.
-			
+			// we need to asynchrously claim it.			
 			// Otherwise, in the usual case under the sched,
 			// call spawn here, which will activate the pre-claimed
 			// startd

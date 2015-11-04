@@ -500,8 +500,6 @@ void Defrag::poll_cancel(MachineSet &cancelled_machines)
 	ClassAd *startd_ad_ptr;
 	while ( (startd_ad_ptr=startdAds.Next()) )
 	{
-		if (!startd_ad_ptr) continue;
-
 		ClassAd &startd_ad = *startd_ad_ptr;
 		std::string machine;
 		std::string name;
@@ -599,7 +597,7 @@ void Defrag::poll()
 
 	dprintf_set("Set of current whole machines is ", &whole_machines);
 	dprintf_set("Set of current draining machine is ", &draining_machines);
-	dprintf_set("Newly Arrived new machines is ", &new_machines);
+	dprintf_set("Newly Arrived whole machines is ", &new_machines);
 	dprintf_set("Newly departed draining machines is ", &no_longer_whole_machines);
 
 	m_prev_draining_machines = draining_machines;
@@ -627,7 +625,7 @@ void Defrag::poll()
 		m_last_whole_machine_arrival = current;
 	}
 
-	dprintf(D_ALWAYS, "Lifetime new machines arrived: %d\n", m_whole_machines_arrived);
+	dprintf(D_ALWAYS, "Lifetime whole machines arrived: %d\n", m_whole_machines_arrived);
 	if (m_whole_machine_arrival_sum > 0) {
 		double lifetime_mean = m_whole_machines_arrived / m_whole_machine_arrival_sum;
 		dprintf(D_ALWAYS, "Lifetime mean arrival rate: %g machines / hour\n", 3600.0 * lifetime_mean);
@@ -721,7 +719,6 @@ void Defrag::poll()
 	MachineSet machines_done;
 	while( (startd_ad_ptr=startdAds.Next()) ) {
 
-		if (!startd_ad_ptr) continue;
 		ClassAd &startd_ad = *startd_ad_ptr;
 
 		std::string machine;
