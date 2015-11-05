@@ -840,18 +840,17 @@ class Dag {
 	*/
 	void ProcessFailedSubmit( Job *node, int max_submit_attempts );
 
-	//TEMPTEMP -- this is really *proc* counts
-	/** Decrement the job counts for this node.
+	/** Decrement the proc count for this node (and also the overall
+	    	job count if appropriate).
 		@param The node for which to decrement the job counts.
 	*/
-	void DecrementJobCounts( Job *node );
+	void DecrementProcCount( Job *node );
 
 	// Note: there's no IncrementJobCounts method because the code isn't
 	// exactly duplicated when incrementing.
 
-	//TEMPTEMP -- this is overall submitted job count, not just for this node...
-	//TEMPTEMP -- also node category counts
-	/** Update the job counts for the given node.
+	/** Update the overall submitted job count (and the appropriate
+			category count, if the node belongs to a category).
 		@param The amount by which to change the job counts.
 	*/
 	void UpdateJobCounts( Job *node, int change );

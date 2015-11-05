@@ -1,5 +1,6 @@
 # This is testing how maxidle works with multi-proc clusters.
 # A nodes are permanently idle; B nodes are on hold.
+Node_status_file job_dagman_maxidle-A.status
 Config job_dagman_maxidle-A.config
 Job A0 job_dagman_maxidle-A-nodeA.cmd
 Job B0 job_dagman_maxidle-A-nodeB.cmd

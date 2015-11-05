@@ -682,7 +682,7 @@ Dag::ProcessAbortEvent(const ULogEvent *event, Job *job,
   // same *job* (not job proc).
 
 	if ( job ) {
-		DecrementJobCounts( job );
+		DecrementProcCount( job );
 
 			// This code is here because if a held job is removed, we
 			// don't get a released event for that job.  This may not
@@ -722,7 +722,7 @@ Dag::ProcessTerminatedEvent(const ULogEvent *event, Job *job,
 		bool recovery) {
 	if( job ) {
 
-		DecrementJobCounts( job );
+		DecrementProcCount( job );
 
 		const JobTerminatedEvent * termEvent =
 					(const JobTerminatedEvent*) event;
@@ -1150,13 +1150,11 @@ Dag::ProcessSubmitEvent(Job *job, bool recovery, bool &submitEventIsSane) {
 //---------------------------------------------------------------------------
 void
 Dag::ProcessIsIdleEvent( Job *job, int proc ) {
-debug_printf( DEBUG_QUIET, "DIAG Dag::ProcessIsIdleEvent(%s, %d)\n", job->GetJobName(), proc );//TEMPTEMP
 
 	if ( !job ) {
 		return;
 	}
 
-debug_printf( DEBUG_QUIET, "DIAG 1009 job(%s)->GetProcIsIdle(): %d\n", job->GetJobName(), job->GetProcIsIdle( proc ) );//TEMPTEMP
 		// Note:  we need to make sure here that the job proc isn't already
 		// idle so we don't count it twice if, for example, we get a hold
 		// event for a job that's already idle.
@@ -1164,7 +1162,6 @@ debug_printf( DEBUG_QUIET, "DIAG 1009 job(%s)->GetProcIsIdle(): %d\n", job->GetJ
 				( job->GetStatus() == Job::STATUS_SUBMITTED ) ) {
 		job->SetProcIsIdle( proc, true );
 		_numIdleJobProcs++;
-debug_printf( DEBUG_QUIET, "DIAG 1010 _numIdleJobProcs: %d\n", _numIdleJobProcs );//TEMPTEMP
 	}
 
 	// Do some consistency checks here.
@@ -1181,23 +1178,18 @@ debug_printf( DEBUG_QUIET, "DIAG 1010 _numIdleJobProcs: %d\n", _numIdleJobProcs 
 }
 
 //---------------------------------------------------------------------------
-//TEMPTEMP -- idle count is not getting decremented properly when multi-proc jobs are removed
 void
 Dag::ProcessNotIdleEvent( Job *job, int proc ) {
-debug_printf( DEBUG_QUIET, "DIAG Dag::ProcessNotIdleEvent(%s, %d)\n", job->GetJobName(), proc );//TEMPTEMP
 
 	if ( !job ) {
 		return;
 	}
 
-	//TEMPTEMP -- STATUS_SUBMITTED here is causing problems.
-debug_printf( DEBUG_QUIET, "DIAG 1019: Job(%s)::GetStatus(): %d\n", job->GetJobName(), job->GetStatus() );//TEMPTEMP
 	if ( job->GetProcIsIdle( proc ) &&
 				( ( job->GetStatus() == Job::STATUS_SUBMITTED ) ||
 				( job->GetStatus() == Job::STATUS_ERROR ) ) ) {
 		job->SetProcIsIdle( proc, false );
 		_numIdleJobProcs--;
-debug_printf( DEBUG_QUIET, "DIAG 1020 _numIdleJobProcs: %d\n", _numIdleJobProcs );//TEMPTEMP
 	}
 
 		// Do some consistency checks here.
@@ -2905,7 +2897,7 @@ Dag::DumpNodeStatus( bool held, bool removed )
 	fprintf( outfile, "  NodesUnready = %d;\n",NumNodesUnready( true ) );
 	fprintf( outfile, "  NodesFailed = %d;\n", nodesFailed );
 	fprintf( outfile, "  JobProcsHeld = %d;\n", nodesHeld );
-	fprintf( outfile, "  JobProcsIdle = %d;\n", nodesIdle );
+	fprintf( outfile, "  JobProcsIdle = %d; /* includes held */\n", nodesIdle );
 	fprintf( outfile, "]\n" );
 
 		//
@@ -2937,8 +2929,10 @@ Dag::DumpNodeStatus( bool held, bool removed )
 				jobProcsQueued = 0;
 				jobProcsHeld = 0;
 			} else {
-				//TEMPTEMP -- what to do here if some procs are idle and some are running?
-				nodeNote = node->GetProcIsIdle( 0/*TEMPTEMP!!*/ ) ? "idle" : "not_idle";
+					// This isn't really the right thing to do for multi-
+					// proc nodes, but I want to get in a fix for
+					// gittrac #5333 today...  wenger 2015-11-05
+				nodeNote = node->GetProcIsIdle( 0 ) ? "idle" : "not_idle";
 				// Note: add info here about whether the job(s) are
 				// held, once that code is integrated.
 			}
@@ -4088,15 +4082,13 @@ Dag::ProcessFailedSubmit( Job *node, int max_submit_attempts )
 
 //---------------------------------------------------------------------------
 void
-Dag::DecrementJobCounts( Job *node )
+Dag::DecrementProcCount( Job *node )
 {
 	node->_queuedNodeJobProcs--;
 	ASSERT( node->_queuedNodeJobProcs >= 0 );
 
 	if( node->_queuedNodeJobProcs == 0 ) {
 		UpdateJobCounts( node, -1 );
-		//TEMPTEMP -- maybe call Cleanup here?
-		debug_printf( DEBUG_QUIET, "DIAG 6010\n" );//TEMPTEMP
 		node->Cleanup();
 	}
 }

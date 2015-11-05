@@ -1,5 +1,3 @@
-//TEMPTEMP -- is Cleanup getting called too soon????
-//TEMPTEMP -- yes, that is the case -- getting called from TerminateFailure.  So should Cleanup() not be called from TerminateFailure(), or should TerminateFailure() not get called until all procs are done?
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -309,19 +307,13 @@ Job::SetStatus( status_t newStatus )
 bool
 Job::GetProcIsIdle( int proc )
 {
-	debug_printf( DEBUG_QUIET, "DIAG 4010\n" );
-	PrintProcIsIdle();//TEMPTEMP
-
 	if ( GetNoop() ) {
 		proc = 0;
 	}
 
 	if ( proc >= static_cast<int>( _isIdle.size() ) ) {
 		_isIdle.resize( proc+1, false );
-		debug_printf( DEBUG_QUIET, "DIAG 4020\n" );
-		PrintProcIsIdle();//TEMPTEMP
 	}
-debug_printf( DEBUG_QUIET, "DIAG Job(%s)::GetProcIsIdle(%d): %d\n", GetJobName(), proc, _isIdle[proc] );//TEMPTEMP
 	return _isIdle[proc];
 }
 
@@ -329,22 +321,14 @@ debug_printf( DEBUG_QUIET, "DIAG Job(%s)::GetProcIsIdle(%d): %d\n", GetJobName()
 void
 Job::SetProcIsIdle( int proc, bool isIdle )
 {
-	debug_printf( DEBUG_QUIET, "DIAG 4110\n" );
-	PrintProcIsIdle();//TEMPTEMP
-
 	if ( GetNoop() ) {
 		proc = 0;
 	}
 
 	if ( proc >= static_cast<int>( _isIdle.size() ) ) {
 		_isIdle.resize( proc+1, false );
-		debug_printf( DEBUG_QUIET, "DIAG 4120\n" );
-		PrintProcIsIdle();//TEMPTEMP
 	}
 	_isIdle[proc] = isIdle;
-	debug_printf( DEBUG_QUIET, "DIAG 4130\n" );
-	PrintProcIsIdle();//TEMPTEMP
-debug_printf( DEBUG_QUIET, "DIAG Job(%s)::SetProcIsIdle(%d): %d\n", GetJobName(), proc, _isIdle[proc] );//TEMPTEMP
 }
 
 //---------------------------------------------------------------------------
@@ -495,7 +479,6 @@ Job::CanAddChild( Job* child, MyString &whynot )
 bool
 Job::TerminateSuccess()
 {
-debug_printf( DEBUG_NORMAL, "DIAG 5110\n" );//TEMPTEMP
 	SetStatus( STATUS_DONE );
 	return true;
 } 
@@ -503,7 +486,6 @@ debug_printf( DEBUG_NORMAL, "DIAG 5110\n" );//TEMPTEMP
 bool
 Job::TerminateFailure()
 {
-debug_printf( DEBUG_NORMAL, "DIAG 5210\n" );//TEMPTEMP
 	SetStatus( STATUS_ERROR );
 	return true;
 } 
@@ -964,7 +946,6 @@ Job::TermAbortMetrics( int proc, const struct tm &eventTime,
 void
 Job::Cleanup()
 {
-debug_printf( DEBUG_NORMAL, "DIAG 5010\n" );//TEMPTEMP
 	std::vector<unsigned char> s;
 	_onHold.swap(s); // Free memory in _onHold
 

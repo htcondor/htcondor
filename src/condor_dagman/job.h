@@ -241,8 +241,16 @@ class Job {
     */
 	bool SetStatus( status_t newStatus );
 
-	//TEMPTEMP -- document
+	/** Get whether the specified proc is idle.
+		@param proc The proc for which we're getting idle status
+		@return true iff the specified proc is idle; false otherwise
+	*/
 	bool GetProcIsIdle( int proc );
+
+	/** Set whether the specified proc is idle.
+		@param proc The proc for which we're setting idle status
+		@param isIdle True iff the specified proc is idle; false otherwise
+	*/
 	void SetProcIsIdle( int proc, bool isIdle );
 
 		/** Is the specified node a child of this node?
@@ -601,7 +609,9 @@ private:
 		// (in the queue but not running)
 	std::vector<unsigned char> _isIdle;	
 
-	//TEMPTEMP -- document
+	/** Print the list of which procs are idle/not idle for this node
+	 *  (for debugging).
+	*/
 	void PrintProcIsIdle();
 };
 
