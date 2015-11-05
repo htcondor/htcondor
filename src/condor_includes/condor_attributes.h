@@ -434,6 +434,7 @@
 #define ATTR_LAST_UPDATE  "LastUpdate"
 #define ATTR_LOCAL_CREDD  "LocalCredd"
 #define ATTR_LOCAL_FILES  "LocalFiles"
+#define ATTR_LOCATION_QUERY  "LocationQuery"
 #define ATTR_LOAD_AVG  "LoadAvg"
 #define ATTR_MACHINE  "Machine"
 #define ATTR_MACHINE_COUNT  "MachineCount"

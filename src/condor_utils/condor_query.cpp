@@ -389,10 +389,15 @@ addORConstraint (const char *value)
 }
 
 
+// If this query is a DNS style, "just give me the ad so I can
+// look up the address of the daemon", project out only those
+// attributes needed for lookup.  This speeds up lookups
+// for daemons like the schedd that may have thousands of
+// superflous statistics in the ad.
 bool
 CondorQuery::setLocationLookup(const std::string &location)
 {
-	extraAttrs.InsertAttr("LOCATION_NAME", location);
+	extraAttrs.InsertAttr(ATTR_LOCATION_QUERY, location);
 
 	std::vector<std::string> attrs; attrs.reserve(7);
 	attrs.push_back(ATTR_VERSION);

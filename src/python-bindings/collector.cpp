@@ -359,7 +359,7 @@ private:
         if (locationName.size())
         {
             std::string result = quote_classads_string(locationName);
-            result = "LOCATION_NAME = " + result;
+            result = "LocationQuery = " + result;
             query.addExtraAttribute(result.c_str());
         }
         std::vector<const char *> attrs_char;

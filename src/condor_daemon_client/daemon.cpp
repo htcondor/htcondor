@@ -1308,7 +1308,6 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector, LocateType method )
 					// result to pick??
 				return false;
 			}
-			query.setLocationLookup("");
 		}
 
 			// We need to query the collector
