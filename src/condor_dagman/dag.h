@@ -258,7 +258,7 @@ class Dag {
 		a different method.
 		@param The job corresponding to this event.
 	*/
-	void ProcessIsIdleEvent(Job *job);
+	void ProcessIsIdleEvent( Job *job, int proc );
 
 	/** Process an event that indicates that a job is NOT in an idle state.
 	    Note that this method only does processing relating to keeping
@@ -266,7 +266,7 @@ class Dag {
 		a different method.
 		@param The job corresponding to this event.
 	*/
-	void ProcessNotIdleEvent(Job *job);
+	void ProcessNotIdleEvent( Job *job, int proc );
 
 	/** Process a held event for a job.
 		@param The job corresponding to this event.
@@ -840,6 +840,7 @@ class Dag {
 	*/
 	void ProcessFailedSubmit( Job *node, int max_submit_attempts );
 
+	//TEMPTEMP -- this is really *proc* counts
 	/** Decrement the job counts for this node.
 		@param The node for which to decrement the job counts.
 	*/
@@ -848,6 +849,8 @@ class Dag {
 	// Note: there's no IncrementJobCounts method because the code isn't
 	// exactly duplicated when incrementing.
 
+	//TEMPTEMP -- this is overall submitted job count, not just for this node...
+	//TEMPTEMP -- also node category counts
 	/** Update the job counts for the given node.
 		@param The amount by which to change the job counts.
 	*/

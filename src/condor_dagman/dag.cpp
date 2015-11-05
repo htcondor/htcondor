@@ -584,7 +584,7 @@ bool Dag::ProcessOneEvent (ULogEventOutcome outcome,
 							_metrics );
 #endif
 					// Make sure we don't count finished jobs as idle.
-				ProcessNotIdleEvent(job);
+				ProcessNotIdleEvent( job, event->proc );
 				ProcessAbortEvent(event, job, recovery);
 				break;
               
@@ -594,7 +594,7 @@ bool Dag::ProcessOneEvent (ULogEventOutcome outcome,
 							_metrics );
 #endif
 					// Make sure we don't count finished jobs as idle.
-				ProcessNotIdleEvent(job);
+				ProcessNotIdleEvent( job, event->proc );
 				ProcessTerminatedEvent(event, job, recovery);
 				break;
 
@@ -604,23 +604,23 @@ bool Dag::ProcessOneEvent (ULogEventOutcome outcome,
 
 			case ULOG_SUBMIT:
 				ProcessSubmitEvent(job, recovery, submitEventIsSane);
-				ProcessIsIdleEvent(job);
+				ProcessIsIdleEvent( job, event->proc );
 				break;
 
 			case ULOG_JOB_RECONNECT_FAILED:
 			case ULOG_JOB_EVICTED:
 			case ULOG_JOB_SUSPENDED:
 			case ULOG_SHADOW_EXCEPTION:
-				ProcessIsIdleEvent(job);
+				ProcessIsIdleEvent( job, event->proc );
 				break;
 
 			case ULOG_JOB_HELD:
 				ProcessHeldEvent(job, event);
-				ProcessIsIdleEvent(job);
+				ProcessIsIdleEvent(job, event->proc);
 				break;
 
 			case ULOG_JOB_UNSUSPENDED:
-				ProcessNotIdleEvent(job);
+				ProcessNotIdleEvent( job, event->proc );
 				break;
 
 			case ULOG_EXECUTE:
@@ -628,7 +628,7 @@ bool Dag::ProcessOneEvent (ULogEventOutcome outcome,
 				job->ExecMetrics( event->proc, event->eventTime,
 							_metrics );
 #endif
-				ProcessNotIdleEvent(job);
+				ProcessNotIdleEvent( job, event->proc );
 				break;
 
 			case ULOG_JOB_RELEASED:
@@ -1149,16 +1149,22 @@ Dag::ProcessSubmitEvent(Job *job, bool recovery, bool &submitEventIsSane) {
 
 //---------------------------------------------------------------------------
 void
-Dag::ProcessIsIdleEvent(Job *job) {
+Dag::ProcessIsIdleEvent( Job *job, int proc ) {
+debug_printf( DEBUG_QUIET, "DIAG Dag::ProcessIsIdleEvent(%s, %d)\n", job->GetJobName(), proc );//TEMPTEMP
 
 	if ( !job ) {
 		return;
 	}
 
-	if ( !job->GetIsIdle() &&
+debug_printf( DEBUG_QUIET, "DIAG 1009 job(%s)->GetProcIsIdle(): %d\n", job->GetJobName(), job->GetProcIsIdle( proc ) );//TEMPTEMP
+		// Note:  we need to make sure here that the job proc isn't already
+		// idle so we don't count it twice if, for example, we get a hold
+		// event for a job that's already idle.
+	if ( !job->GetProcIsIdle( proc ) &&
 				( job->GetStatus() == Job::STATUS_SUBMITTED ) ) {
-		job->SetIsIdle(true);
+		job->SetProcIsIdle( proc, true );
 		_numIdleJobProcs++;
+debug_printf( DEBUG_QUIET, "DIAG 1010 _numIdleJobProcs: %d\n", _numIdleJobProcs );//TEMPTEMP
 	}
 
 	// Do some consistency checks here.
@@ -1175,17 +1181,23 @@ Dag::ProcessIsIdleEvent(Job *job) {
 }
 
 //---------------------------------------------------------------------------
+//TEMPTEMP -- idle count is not getting decremented properly when multi-proc jobs are removed
 void
-Dag::ProcessNotIdleEvent(Job *job) {
+Dag::ProcessNotIdleEvent( Job *job, int proc ) {
+debug_printf( DEBUG_QUIET, "DIAG Dag::ProcessNotIdleEvent(%s, %d)\n", job->GetJobName(), proc );//TEMPTEMP
 
 	if ( !job ) {
 		return;
 	}
 
-	if ( job->GetIsIdle() &&
-				( job->GetStatus() == Job::STATUS_SUBMITTED ) ) {
-		job->SetIsIdle(false);
+	//TEMPTEMP -- STATUS_SUBMITTED here is causing problems.
+debug_printf( DEBUG_QUIET, "DIAG 1019: Job(%s)::GetStatus(): %d\n", job->GetJobName(), job->GetStatus() );//TEMPTEMP
+	if ( job->GetProcIsIdle( proc ) &&
+				( ( job->GetStatus() == Job::STATUS_SUBMITTED ) ||
+				( job->GetStatus() == Job::STATUS_ERROR ) ) ) {
+		job->SetProcIsIdle( proc, false );
 		_numIdleJobProcs--;
+debug_printf( DEBUG_QUIET, "DIAG 1020 _numIdleJobProcs: %d\n", _numIdleJobProcs );//TEMPTEMP
 	}
 
 		// Do some consistency checks here.
@@ -2925,7 +2937,8 @@ Dag::DumpNodeStatus( bool held, bool removed )
 				jobProcsQueued = 0;
 				jobProcsHeld = 0;
 			} else {
-				nodeNote = node->GetIsIdle() ? "idle" : "not_idle";
+				//TEMPTEMP -- what to do here if some procs are idle and some are running?
+				nodeNote = node->GetProcIsIdle( 0/*TEMPTEMP!!*/ ) ? "idle" : "not_idle";
 				// Note: add info here about whether the job(s) are
 				// held, once that code is integrated.
 			}
@@ -4082,6 +4095,9 @@ Dag::DecrementJobCounts( Job *node )
 
 	if( node->_queuedNodeJobProcs == 0 ) {
 		UpdateJobCounts( node, -1 );
+		//TEMPTEMP -- maybe call Cleanup here?
+		debug_printf( DEBUG_QUIET, "DIAG 6010\n" );//TEMPTEMP
+		node->Cleanup();
 	}
 }
 

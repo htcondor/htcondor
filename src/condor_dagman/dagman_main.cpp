@@ -939,6 +939,17 @@ void main_init (int argc, char ** const argv) {
         Usage();
     }
 
+#if 1 //TEMPTEMP?
+//TEMPTEMP -- needs lots of changes here -- this is just for initial testing
+//TEMPTEMP -- not even sure if this is the right place to do this...
+//TEMPTEMP -- maybe do warning instead of resetting submits per cycle if it has been explicitly set?
+	if ( dagman.maxIdle < 100 ) {
+		dagman.max_submits_per_interval = 1;
+		dagman.m_user_log_scan_interval = 1;
+        debug_printf( DEBUG_NORMAL, "Max submits per interval and user log scan interval both set to 1 because of maxidle setting\n" );
+	}
+#endif //TEMPTEMP?
+
 	//
 	// ...done checking arguments.
 	//

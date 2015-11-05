@@ -1,3 +1,5 @@
+//TEMPTEMP -- is Cleanup getting called too soon????
+//TEMPTEMP -- yes, that is the case -- getting called from TerminateFailure.  So should Cleanup() not be called from TerminateFailure(), or should TerminateFailure() not get called until all procs are done?
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -96,7 +98,6 @@ Job::Job( const char* jobName,
 	_scriptPre = NULL;
 	_scriptPost = NULL;
 	_Status = STATUS_READY;
-	_isIdle = false;
 	countedAsDone = false;
 
 	_jobName = strnewp (jobName);
@@ -304,7 +305,60 @@ Job::SetStatus( status_t newStatus )
 	return true;
 }
 
+//---------------------------------------------------------------------------
+bool
+Job::GetProcIsIdle( int proc )
+{
+	debug_printf( DEBUG_QUIET, "DIAG 4010\n" );
+	PrintProcIsIdle();//TEMPTEMP
 
+	if ( GetNoop() ) {
+		proc = 0;
+	}
+
+	if ( proc >= static_cast<int>( _isIdle.size() ) ) {
+		_isIdle.resize( proc+1, false );
+		debug_printf( DEBUG_QUIET, "DIAG 4020\n" );
+		PrintProcIsIdle();//TEMPTEMP
+	}
+debug_printf( DEBUG_QUIET, "DIAG Job(%s)::GetProcIsIdle(%d): %d\n", GetJobName(), proc, _isIdle[proc] );//TEMPTEMP
+	return _isIdle[proc];
+}
+
+//---------------------------------------------------------------------------
+void
+Job::SetProcIsIdle( int proc, bool isIdle )
+{
+	debug_printf( DEBUG_QUIET, "DIAG 4110\n" );
+	PrintProcIsIdle();//TEMPTEMP
+
+	if ( GetNoop() ) {
+		proc = 0;
+	}
+
+	if ( proc >= static_cast<int>( _isIdle.size() ) ) {
+		_isIdle.resize( proc+1, false );
+		debug_printf( DEBUG_QUIET, "DIAG 4120\n" );
+		PrintProcIsIdle();//TEMPTEMP
+	}
+	_isIdle[proc] = isIdle;
+	debug_printf( DEBUG_QUIET, "DIAG 4130\n" );
+	PrintProcIsIdle();//TEMPTEMP
+debug_printf( DEBUG_QUIET, "DIAG Job(%s)::SetProcIsIdle(%d): %d\n", GetJobName(), proc, _isIdle[proc] );//TEMPTEMP
+}
+
+//---------------------------------------------------------------------------
+void
+Job::PrintProcIsIdle()
+{
+	for ( int proc = 0;
+				proc < static_cast<int>( _isIdle.size() ); ++proc ) {
+		debug_printf( DEBUG_QUIET, "  Job(%s)::_isIdle[%d]: %d\n",
+					GetJobName(), proc, _isIdle[proc] );
+	}
+}
+
+//---------------------------------------------------------------------------
 bool
 Job::AddParent( Job* parent )
 {
@@ -441,7 +495,7 @@ Job::CanAddChild( Job* child, MyString &whynot )
 bool
 Job::TerminateSuccess()
 {
-	Cleanup();
+debug_printf( DEBUG_NORMAL, "DIAG 5110\n" );//TEMPTEMP
 	SetStatus( STATUS_DONE );
 	return true;
 } 
@@ -449,7 +503,7 @@ Job::TerminateSuccess()
 bool
 Job::TerminateFailure()
 {
-	Cleanup();
+debug_printf( DEBUG_NORMAL, "DIAG 5210\n" );//TEMPTEMP
 	SetStatus( STATUS_ERROR );
 	return true;
 } 
@@ -903,9 +957,14 @@ Job::TermAbortMetrics( int proc, const struct tm &eventTime,
 }
 
 //---------------------------------------------------------------------------
+// Note:  For multi-proc jobs, if one proc failed this was getting called
+// immediately, which was not correct.  I changed how this was called, but
+// we should probably put in code to make sure it's not called too soon,
+// but is called...  wenger 2015-11-05
 void
 Job::Cleanup()
 {
+debug_printf( DEBUG_NORMAL, "DIAG 5010\n" );//TEMPTEMP
 	std::vector<unsigned char> s;
 	_onHold.swap(s); // Free memory in _onHold
 
@@ -921,4 +980,7 @@ Job::Cleanup()
 
 	std::vector<unsigned char> s2;
 	_gotEvents.swap(s2); // Free memory in _gotEvents
+	
+	std::vector<unsigned char> s3;
+	_isIdle.swap(s3); // Free memory in _isIdle
 }
