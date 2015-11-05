@@ -40,6 +40,9 @@ The details of each version are described below.
 \noindent Bugs Fixed:
 
 \begin{itemize}
+\item Fixed a bug introduced in 8.4.1 that could cause the \Condor{schedd} to exit.
+This affected remote submit, HTCondor-CE, and HTCondor-C.
+\Ticket{4522}
 
 \item Fixed a crash in the \Condor{schedd} that happened when the
 schedd was under load and being shutdown in the fast mode.
@@ -72,6 +75,19 @@ will not hang forever waiting for a unresponsive daemon.
 \item HTCondor version 8.4.1 released on October 27, 2015.
 
 \end{itemize}
+
+\noindent Known Issues:
+\begin{itemize}
+\item Remote submit to an 8.4.1 \Condor{schedd} is broken if file transfer is
+used.  This also means HTCondor-CE and HTCondor-C are broken.  This bug will
+be fixed in version 8.4.2.
+\Ticket{4522}
+
+\item \MacroNI{TCP\_FORWARDING\_HOST} is disregarded by HTCondor clients
+starting in version 8.3.6.  This bug will be fixed in version 8.4.2 and 8.5.1.
+\Ticket{5339}
+\end{itemize}
+
 
 \noindent New Features:
 
@@ -207,14 +223,6 @@ arguments filename when the slice was longer than 8 characters.
 able to access user files in NFS mounted file systems.
 \Ticket{5343}
 \end{itemize}
-
-\noindent Known Issue:
-\begin{itemize}
-\item \MacroNI{TCP\_FORWARDING\_HOST} is disregarded by HTCondor clients
-starting in version 8.3.6.  This bug will be fixed in version 8.4.2 and 8.5.1.
-\Ticket{5339}
-\end{itemize}
-
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-8-4-0}Version 8.4.0}
