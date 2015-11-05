@@ -1384,10 +1384,6 @@ _set_priv(priv_state s, const char *file, int line, int dologging)
 {
 	priv_state PrevPrivState = CurrentPrivState;
 	if (s == CurrentPrivState) return s;
-	if ((s == PRIV_USER || s == PRIV_USER_FINAL) && !UserIdsInited ) {
-		EXCEPT("Programmer Error: attempted switch to user privilege, "
-			   "but user ids are not initialized");
-	}
 	if (CurrentPrivState == PRIV_USER_FINAL) {
 		if ( dologging ) {
 			dprintf(D_ALWAYS,
