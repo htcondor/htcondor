@@ -657,18 +657,23 @@ Sock::bindWithin(condor_protocol proto, const int low_port, const int high_port,
 	bool bind_all = (bool)_condor_bind_all_interfaces();
 
 	// Use hash function with pid to get the starting point
-    struct timeval curTime;
+	// int pid = (int) getpid();
+
+	// lets use time as the starting point instead...
+	long randomish_val;
 #ifndef WIN32
-    (void) gettimeofday(&curTime, NULL);
+	struct timeval curTime;
+	(void) gettimeofday(&curTime, NULL);
+	randomish_val = curTime.tv_usec;
 #else
-	// Win32 does not have gettimeofday, sigh.
-	curTime.tv_usec = ::GetTickCount() % 1000000;
+	LARGE_INTEGER li;
+	::QueryPerformanceCounter(&li);
+	randomish_val = (int)li.LowPart;
 #endif
 
-	// int pid = (int) getpid();
 	int range = high_port - low_port + 1;
 	// this line must be changed to use the hash function of condor
-	int start_trial = low_port + (curTime.tv_usec * 73/*some prime number*/ % range);
+	int start_trial = low_port + (randomish_val * 73/*some prime number*/ % range);
 
 	int this_trial = start_trial;
 	do {
