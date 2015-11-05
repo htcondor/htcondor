@@ -41,6 +41,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a crash in the \Condor{schedd} that happened when the
+schedd was under load and being shutdown in the fast mode.
+\Ticket{5371}
+
 \item Fixed \MacroNI{TCP\_FORWARDING\_HOST}.  (It now changes how HTCondor
 version 8.3.6 and higher contact the daemon configured with it.)
 \Ticket{5339}
