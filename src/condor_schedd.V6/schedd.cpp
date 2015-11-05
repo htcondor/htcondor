@@ -12866,6 +12866,7 @@ Scheduler::shutdown_fast()
 		CronJobMgr->Shutdown( true );
 	}
 
+	DestroyJobQueue();
 		// Since this is just sending a bunch of UDP updates, we can
 		// still invalidate our classads, even on a fast shutdown.
 	invalidate_ads();
