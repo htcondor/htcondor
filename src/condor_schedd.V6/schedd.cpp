@@ -13039,6 +13039,7 @@ Scheduler::sendReschedule()
 
 	classy_counted_ptr<Daemon> negotiator = new Daemon(DT_NEGOTIATOR);
 	classy_counted_ptr<DCCommandOnlyMsg> msg = new DCCommandOnlyMsg(RESCHEDULE);
+	negotiator->locate(Daemon::LOCATE_FOR_LOOKUP);
 
 	Stream::stream_type st = negotiator->hasUDPCommandPort() ? Stream::safe_sock : Stream::reli_sock;
 	msg->setStreamType(st);

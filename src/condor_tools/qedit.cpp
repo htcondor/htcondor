@@ -116,7 +116,7 @@ main(int argc, char *argv[])
 
 	DCSchedd schedd((schedd_name.Length() == 0) ? NULL : schedd_name.Value(),
 					(pool_name.Length() == 0) ? NULL   : pool_name.Value());
-	if ( schedd.locate() == false ) {
+	if ( schedd.locate(Daemon::LOCATE_FOR_LOOKUP) == false ) {
 		if (schedd_name == "") {
 			fprintf( stderr, "%s: ERROR: Can't find address of local schedd\n",
 				argv[0] );
