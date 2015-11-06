@@ -69,6 +69,11 @@ usage.
 will not hang forever waiting for a unresponsive daemon.
 \Ticket{5325}
 
+\item Fixed bugs in the function of the DAGMan
+\Macro{DAGMAN\_MAX\_JOBS\_IDLE}/\Macro{-maxidle} throttle,
+especially for node jobs that create multiple procs.
+\Ticket{5333}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -119,7 +124,7 @@ starting in version 8.3.6.  This bug will be fixed in version 8.4.2 and 8.5.1.
     configuration variables are now exclusively for use by HTCondor administrators;
     The former default values for these variables have been moved into other configuration
     which is reserved for use by HTCondor developers.  This is done to prevent administrators
-    from accidently removing the necessary defaults.
+    from accidentally removing the necessary defaults.
     A warning about use of \Macro{STARTD\_EXPRS} has been disabled unless
     \Macro{STARTD\_ATTRS} or\Macro{SLOT\_TYPE\_<n>\_STARTD\_ATTRS} is also used, since
     the use all three of these at the same time is not supported.
@@ -128,7 +133,7 @@ starting in version 8.3.6.  This bug will be fixed in version 8.4.2 and 8.5.1.
 \item When \Condor{reconfig} and \Condor{restart} are run as root
     they will check to see if the condor user has read access to all of the
     configuration files before sending the command. This is done to prevent aborting the daemons
-    accidently by sending reconfig after the admin creates a new config file and
+    accidentally by sending reconfig after the admin creates a new config file and
     forgets to give the condor user read access to that file.
 \Ticket{4506}
 
@@ -150,7 +155,7 @@ of the job, if there is one.
 \item If cgroups are enabled, and a job goes over the memory limit, the
 cgroup OOM killer fires, and the job is put on hold.  HTCondor now
 updates the job's memory usage statistics with the most up to date
-usage, instead of relying on the previous snapshop.
+usage, instead of relying on the previous snapshot.
 \Ticket{5341}
 
 \item Fixed a bug where the \Condor{kbdd} could not accurately measure

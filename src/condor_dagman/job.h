@@ -159,6 +159,14 @@ class Job {
   
     ~Job();
 
+		/** Clean up memory that's no longer needed once a node has
+			finished.  (Note that this doesn't mean that the Job object
+			is not valid -- it just cleans up some temporary memory.)
+			Also check that we got a consistent set of events for the
+			metrics.
+		*/
+	void Cleanup();
+
 	void PrefixName(const MyString &prefix);
 	inline const char* GetJobName() const { return _jobName; }
 	inline const char* GetDirectory() const { return _directory; }
@@ -233,15 +241,17 @@ class Job {
     */
 	bool SetStatus( status_t newStatus );
 
-		/** Get whether this job is idle.
-		    @return true if job is idle, false otherwise.
-		*/
-	bool GetIsIdle() const { return _isIdle; }
+	/** Get whether the specified proc is idle.
+		@param proc The proc for which we're getting idle status
+		@return true iff the specified proc is idle; false otherwise
+	*/
+	bool GetProcIsIdle( int proc );
 
-		/** Set whether this job is idle.
-		    @param true if job is idle, false otherwise.
-		*/
-	void SetIsIdle(bool isIdle) { _isIdle = isIdle; }
+	/** Set whether the specified proc is idle.
+		@param proc The proc for which we're setting idle status
+		@param isIdle True iff the specified proc is idle; false otherwise
+	*/
+	void SetProcIsIdle( int proc, bool isIdle );
 
 		/** Is the specified node a child of this node?
 			@param child Pointer to the node to check for childhood.
@@ -492,14 +502,6 @@ public:
 	bool Release(int proc);
 
 private:
-		/** Clean up memory that's no longer needed once a node has
-			finished.  (Note that this doesn't mean that the Job object
-			is not valid -- it just cleans up some temporary memory.)
-			Also check that we got a consistent set of events for the
-			metrics.
-		*/
-	void Cleanup();
-
 		/** _onHold[proc] is nonzero if the condor job 
  			with ProcId == proc is on hold, and zero
 			otherwise
@@ -552,9 +554,6 @@ private:
     */
     static JobID_t _jobID_counter;
 
-		// True if the node job has been submitted and is idle.
-	bool _isIdle;
-
 		// This node's category; points to an object "owned" by the
 		// ThrottleByCategory object.
 	ThrottleByCategory::ThrottleInfo *_throttleInfo;
@@ -605,6 +604,15 @@ private:
 		// is true iff we've gotten an aborted or terminated event
 		// for proc.
 	std::vector<unsigned char> _gotEvents;	
+
+		// _isIdle[proc] is true iff proc is currently idle, held, etc.
+		// (in the queue but not running)
+	std::vector<unsigned char> _isIdle;	
+
+	/** Print the list of which procs are idle/not idle for this node
+	 *  (for debugging).
+	*/
+	void PrintProcIsIdle();
 };
 
 #if 0 // not used -- wenger 2015-02-17
