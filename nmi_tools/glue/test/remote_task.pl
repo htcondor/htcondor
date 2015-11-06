@@ -130,6 +130,19 @@ else {
 # run the test using batch_test.pl
 ######################################################################
 
+if (1) {
+    my @knobs;
+    foreach my $key (keys %ENV) {
+        if ( $key =~ m/^_CONDOR_/i ) {
+            push @knobs, $key;
+            delete($ENV{$key});
+        }
+    }
+    if (scalar @knobs > 0) {
+        out("Removing environment config overides : " . join(' ',@knobs));
+    }
+}
+
 # Some of the tests fail because the schedd fsync can take 30 seconds
 # or more on busy nmi filesystems, which causes the tools to timeout.
 # Up the tool timeout multipler to try to deal with this.
