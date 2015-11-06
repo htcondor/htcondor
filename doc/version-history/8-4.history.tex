@@ -40,6 +40,13 @@ The details of each version are described below.
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item HTCondor now applies the configuration settings
+\MacroNI{GRIDMANAGER\_GAHP\_CALL\_TIMEOUT} and
+\MacroNI{GRIDMANAGER\_CONNECT\_FAILURE\_RETRY\_COUNT}
+when running grid universe jobs for EC2 or Google Compute Engine.
+\Ticket{5300}
+
 \item Fixed a bug introduced in 8.4.1 that could cause the \Condor{schedd} to exit.
 This affected remote submit, HTCondor-CE, and HTCondor-C.
 \Ticket{4522}
