@@ -57,7 +57,6 @@ public:
 	static int gahpCallTimeout;
 	static int maxConnectFailures;
 	static int funcRetryInterval;
-	static int pendingWaitTime;
 	static int maxRetryTimes;
 	
 	static void setSubmitInterval( int new_interval )	{ submitInterval = new_interval; }
