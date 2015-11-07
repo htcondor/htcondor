@@ -113,8 +113,6 @@ BaseJob* DCloudJobCreate( ClassAd *jobad )
 int DCloudJob::gahpCallTimeout = 600;
 int DCloudJob::submitInterval = 300;
 int DCloudJob::maxConnectFailures = 3;
-int DCloudJob::funcRetryInterval = 15;
-int DCloudJob::pendingWaitTime = 15;
 int DCloudJob::maxRetryTimes = 3;
 
 DCloudJob::DCloudJob( ClassAd *classad )

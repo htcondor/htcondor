@@ -96,10 +96,13 @@ static void Usage() {
 
 //---------------------------------------------------------------------------
 
+#define MAX_IDLE_DEFAULT 1000
+#define MAX_SUBMITS_PER_INT_DEFAULT 5
+#define LOG_SCAN_INT_DEFAULT 5
 
 Dagman::Dagman() :
 	dag (NULL),
-	maxIdle (1000),
+	maxIdle (MAX_IDLE_DEFAULT),
 	maxJobs (0),
 	maxPreScripts (20),
 	maxPostScripts (20),
@@ -108,8 +111,8 @@ Dagman::Dagman() :
 	condorRmExe (NULL),
 	submit_delay (0),
 	max_submit_attempts (6),
-	max_submits_per_interval (5), // so Coverity is happy
-	m_user_log_scan_interval (5),
+	max_submits_per_interval (MAX_SUBMITS_PER_INT_DEFAULT), // so Coverity is happy
+	m_user_log_scan_interval (LOG_SCAN_INT_DEFAULT),
 	primaryDagFile (""),
 	multiDags (false),
 	startup_cycle_detect (false), // so Coverity is happy
@@ -938,6 +941,70 @@ void main_init (int argc, char ** const argv) {
         debug_printf( DEBUG_SILENT, "-DoRescueFrom must be non-negative\n" );
         Usage();
     }
+
+		// This is kind of a guess at adjusting
+		// DAGMAN_MAX_SUBMITS_PER_INTERVAL and DAGMAN_USER_LOG_SCAN_INTERVAL
+		// so that they don't goof up DAGMAN_MAX_JOBS_IDLE too much...
+		// wenger 2015-11-05
+	if ( dagman.maxIdle != MAX_IDLE_DEFAULT ) {
+    	debug_printf( DEBUG_QUIET,
+					"Note:  DAGMAN_MAX_JOBS_IDLE has been changed from "
+					"the default setting; if your submit files create "
+					"multiple procs, you should probably set "
+					"DAGMAN_MAX_SUBMITS_PER_INTERVAL to 1\n" );
+
+		int submitsLimit = MAX( 1, dagman.maxIdle / 10 );
+		if ( dagman.max_submits_per_interval > submitsLimit ) {
+			if ( dagman.max_submits_per_interval ==
+						MAX_SUBMITS_PER_INT_DEFAULT ) {
+					// The user hasn't changed DAGMAN_MAX_SUBMITS_PER_INTERVAL,
+					// so change it to our best guess at something that will
+					// work with DAGMAN_MAX_JOBS_IDLE.
+				dagman.max_submits_per_interval = submitsLimit;
+    			debug_printf( DEBUG_QUIET,
+							"Note:  DAGMAN_MAX_SUBMITS_PER_INTERVAL has been "
+							"changed to %d because of your "
+							"DAGMAN_MAX_JOBS_IDLE setting of %d\n",
+							dagman.max_submits_per_interval, dagman.maxIdle );
+			} else {
+					// If the user has changed this from the default, leave
+					// their setting alone.
+				debug_printf( DEBUG_QUIET,
+							"Warning: your DAGMAN_MAX_SUBMITS_PER_INTERVAL "
+							"setting of %d may interfere with your "
+							"DAGMAN_MAX_JOBS_IDLE setting of %d\n",
+							dagman.max_submits_per_interval, dagman.maxIdle );
+				check_warning_strictness( DAG_STRICT_2 );
+			}
+		}
+
+		if ( dagman.m_user_log_scan_interval >
+					dagman.max_submits_per_interval ) {
+			if ( dagman.m_user_log_scan_interval == LOG_SCAN_INT_DEFAULT ) {
+					// The user hasn't changed DAGMAN_USER_LOG_SCAN_INTERVAL,
+					// so change it to our best guess at something that will
+					// work with DAGMAN_MAX_SUBMITS_PER_INTERVAL.
+				dagman.m_user_log_scan_interval =
+							dagman.max_submits_per_interval;
+    			debug_printf( DEBUG_QUIET,
+							"Note:  DAGMAN_USER_LOG_SCAN_INTERVAL has been "
+							"changed to %d because of the "
+							"DAGMAN_MAX_SUBMITS_PER_INTERVAL setting of %d\n",
+							dagman.m_user_log_scan_interval,
+							dagman.max_submits_per_interval );
+			} else {
+					// If the user has changed this from the default, leave
+					// their setting alone.
+				debug_printf( DEBUG_QUIET,
+							"Warning: your DAGMAN_USER_LOG_SCAN_INTERVAL "
+							"setting of %d may interfere with the "
+							"DAGMAN_MAX_SUBMITS_PER_INTERVAL setting of %d\n",
+							dagman.m_user_log_scan_interval,
+							dagman.max_submits_per_interval );
+				check_warning_strictness( DAG_STRICT_2 );
+			}
+		}
+	}
 
 	//
 	// ...done checking arguments.

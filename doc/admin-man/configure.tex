@@ -10297,12 +10297,16 @@ in section~\ref{sec:DAG-configuration}.
 \label{param:DAGManUserLogScanInterval}
 \item[\Macro{DAGMAN\_USER\_LOG\_SCAN\_INTERVAL}]
   An integer value representing the number of seconds that 
-  \Condor{dagman} waits between checking job log files for status updates.
+  \Condor{dagman} waits between checking the workflow log file for
+  status updates.
   Setting this value lower than the default increases the CPU
   time \Condor{dagman} spends checking files, perhaps fruitlessly, but
   increases responsiveness to nodes completing or failing.
   The legal range of values is 1 to INT\_MAX.
   If not defined, it defaults to 5 seconds.
+  (As of version 8.4.2, the default may be automatically decreased if
+  \Macro{DAGMAN\_MAX\_JOBS\_IDLE} is set to a small value.  If so,
+  this will be noted in the \File{dagman.out} file.)
 
 \label{param:DAGManDebugCacheEnable}
 \item[\Macro{DAGMAN\_DEBUG\_CACHE\_ENABLE}]
@@ -10334,6 +10338,9 @@ in section~\ref{sec:DAG-configuration}.
   If defined with a value less than 1, the  value 1 will be used.
   If defined with a value greater than 1000, the value 1000 will be used.
   If not defined, it defaults to 5.
+  (As of version 8.4.2, the default may be automatically decreased if
+  \Macro{DAGMAN\_MAX\_JOBS\_IDLE} is set to a small value.  If so,
+  this will be noted in the \File{dagman.out} file.)
 
 \label{param:DAGManMaxSubmitAttempts}
 \item[\Macro{DAGMAN\_MAX\_SUBMIT\_ATTEMPTS}]

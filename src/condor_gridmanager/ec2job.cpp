@@ -106,6 +106,12 @@ void EC2JobInit()
 
 void EC2JobReconfig()
 {
+	int gct = param_integer( "GRIDMANAGER_GAHP_CALL_TIMEOUT", 10 * 60 );
+	EC2Job::setGahpCallTimeout( gct );
+
+	int cfrc = param_integer("GRIDMANAGER_CONNECT_FAILURE_RETRY_COUNT", 3);
+	EC2Job::setConnectFailureRetry( cfrc );
+
 	// Tell all the resource objects to deal with their new config values
 	EC2Resource *next_resource;
 
@@ -139,11 +145,10 @@ BaseJob* EC2JobCreate( ClassAd *jobad )
 	return (BaseJob *)new EC2Job( jobad );
 }
 
-int EC2Job::gahpCallTimeout = 600;
 int EC2Job::submitInterval = 300;
+int EC2Job::gahpCallTimeout = 600;
 int EC2Job::maxConnectFailures = 3;
 int EC2Job::funcRetryInterval = 15;
-int EC2Job::pendingWaitTime = 15;
 int EC2Job::maxRetryTimes = 3;
 
 MSC_DISABLE_WARNING(6262) // function uses more than 16k of stack
@@ -451,6 +456,7 @@ EC2Job::~EC2Job()
 void EC2Job::Reconfig()
 {
 	BaseJob::Reconfig();
+	gahp->setTimeout( gahpCallTimeout );
 }
 
 
