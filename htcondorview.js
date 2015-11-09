@@ -45,7 +45,8 @@ HTCondorView.next_graph_id = 0;
 
 HTCondorView.prototype.new_graph_id = function() {
 	HTCondorView.next_graph_id++;
-	return "htcondorview" + HTCondorView.next_graph_id;
+	var new_id = "htcondorview" + HTCondorView.next_graph_id;
+	return new_id;
 }
 
 HTCondorView.prototype.toggle_edit = function(btn, controls) {
@@ -162,7 +163,7 @@ HTCondorView.prototype.load_and_render = function() {
 
 	var mythis = this;
 	var callback_render_table = function() {
-		$('#table1.vizchart').empty();
+		$('#'+mythis.table_id+' .vizchart').empty();
 		setTimeout(function() {
 			var options = {
 				select_handler: function(e,t,d){ mythis.table_select_handler(e,t,d); },
@@ -170,14 +171,14 @@ HTCondorView.prototype.load_and_render = function() {
 				disable_height: true
 			};
 
-			afterquery.render(mythis.current_tableargs, mythis.data.value, null, 'table1', options);
+			afterquery.render(mythis.current_tableargs, mythis.data.value, null, mythis.table_id, options);
 		}, 0);
 	 };
 
 	var callback_render_graph = function(){
-		$('#graph1.vizchart').empty();
+		$('#'+mythis.graph_id+' .vizchart').empty();
 		setTimeout(function() {
-			afterquery.render(mythis.current_graphargs, mythis.data.value, callback_render_table, 'graph1');
+			afterquery.render(mythis.current_graphargs, mythis.data.value, callback_render_table, mythis.graph_id);
 			},0)
 		};
 	var args = this.current_graphargs;
@@ -188,7 +189,7 @@ HTCondorView.prototype.load_and_render = function() {
 		this.data_url = newurl;
 		this.data = afterquery.load(args, null, function(){
 			callback_render_graph();
-			}, 'graph1');
+			}, this.graph_id);
 	}
 }
 
@@ -226,8 +227,8 @@ HTCondorView.prototype.change_view = function() {
 		this.current_tableargs = this.graph_args(false, source, duration, this.active_filter, this.alt_title);
 		this.load_and_render();
 	} else if(source=="custom") {
-		$("#graph1 .vizchart").html("<h2>Not yet implemented</h2>");
-		$("#table1 .vizchart").html("<h2>Not yet implemented</h2>");
+		$("#"+this.graph_id+" .vizchart").html("<h2>Not yet implemented</h2>");
+		$("#"+this.table_id+" .vizchart").html("<h2>Not yet implemented</h2>");
 	}
 }
 
@@ -326,9 +327,9 @@ HTCondorView.prototype.graph_args = function(is_chart, source, duration, filters
 	}
 }
 
-HTCondorView.prototype.html_for_graph = function(id) {
+HTCondorView.prototype.html_for_graph = function(id, myclass) {
 	return "" +
-		"<div id='"+id+"'>\n" +
+		"<div id='"+id+"' class='"+myclass+"'>\n" +
 		"<div class='vizstatus'>\n" +
 		"  <div class='statustext'></div>\n" +
 		"  <div class='statussub'></div>\n" +
@@ -339,6 +340,8 @@ HTCondorView.prototype.html_for_graph = function(id) {
 }
 
 HTCondorView.prototype.starting_html = function() {
+	this.graph_id = this.new_graph_id();
+	this.table_id = this.new_graph_id();
 	"use strict";
 	return "" +
 	"<div style=\"text-align: center\">\n" +
@@ -360,10 +363,10 @@ HTCondorView.prototype.starting_html = function() {
 	"<div class='editmenu'>" +
 	"<button onclick=\"alert('Not yet implemented')\" class=\"editlink\">full screen</button>\n" +
 	"</div>\n" +
-	this.html_for_graph('graph1')+ "\n" +
+	this.html_for_graph(this.graph_id, "graph")+ "\n" +
 	"\n" +
 	"<div class=\"download-link\"> <a href=\"#\">Download this table</a> </div>\n" +
-	this.html_for_graph('table1')+ "\n" +
+	this.html_for_graph(this.table_id, "table")+ "\n" +
 	"\n" +
 	"</div> <!-- #tab-user .tab-content -->\n" +
 	"\n" +

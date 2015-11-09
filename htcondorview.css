@@ -19,7 +19,7 @@ body:hover .htcondorview div.editmenu {
 	width: 100%;
 	height: 400px;
 	}
-.htcondorview #table1 .vizchart {
+.htcondorview .table .vizchart {
 	text-align: center;
 	height: auto;
 }
