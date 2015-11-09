@@ -340,9 +340,9 @@ HTCondorView.prototype.html_for_graph = function(id, myclass) {
 }
 
 HTCondorView.prototype.starting_html = function() {
+	"use strict";
 	this.graph_id = this.new_graph_id();
 	this.table_id = this.new_graph_id();
-	"use strict";
 	return "" +
 	"<div style=\"text-align: center\">\n" +
 	"<ul class=\"radio-tabs\" id=\"data-source\">\n" +
