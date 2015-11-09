@@ -41,6 +41,13 @@ function HTCondorView(id) {
 	this.load_and_render();
 }
 
+HTCondorView.next_graph_id = 0;
+
+HTCondorView.prototype.new_graph_id = function() {
+	HTCondorView.next_graph_id++;
+	return "htcondorview" + HTCondorView.next_graph_id;
+}
+
 HTCondorView.prototype.toggle_edit = function(btn, controls) {
 	"use strict";
 	$(controls).toggle();
@@ -155,10 +162,8 @@ HTCondorView.prototype.load_and_render = function() {
 
 	var mythis = this;
 	var callback_render_table = function() {
-		console.log("callback_render_table");
 		$('#table1.vizchart').empty();
 		setTimeout(function() {
-			console.log("callback_render_table timeout");
 			var options = {
 				select_handler: function(e,t,d){ mythis.table_select_handler(e,t,d); },
 				num_pattern: '#,##0.0',
@@ -170,22 +175,18 @@ HTCondorView.prototype.load_and_render = function() {
 	 };
 
 	var callback_render_graph = function(){
-		console.log("callback_render_graph");
 		$('#graph1.vizchart').empty();
 		setTimeout(function() {
-			console.log("callback_render_graph timeout");
 			afterquery.render(mythis.current_graphargs, mythis.data.value, callback_render_table, 'graph1');
 			},0)
 		};
 	var args = this.current_graphargs;
 	var newurl = afterquery.parseArgs(args).get('url');
 	if(newurl == this.data_url) {
-		console.log("not loading");
 		callback_render_graph();
 	} else {
 		this.data_url = newurl;
 		this.data = afterquery.load(args, null, function(){
-			console.log("Inside load");
 			callback_render_graph();
 			}, 'graph1');
 	}
@@ -325,6 +326,18 @@ HTCondorView.prototype.graph_args = function(is_chart, source, duration, filters
 	}
 }
 
+HTCondorView.prototype.html_for_graph = function(id) {
+	return "" +
+		"<div id='"+id+"'>\n" +
+		"<div class='vizstatus'>\n" +
+		"  <div class='statustext'></div>\n" +
+		"  <div class='statussub'></div>\n" +
+		"</div>\n" +
+		"<div class='vizraw'></div>\n" +
+		"<div class='vizchart'></div>\n" +
+		"</div>\n";
+}
+
 HTCondorView.prototype.starting_html = function() {
 	"use strict";
 	return "" +
@@ -347,26 +360,10 @@ HTCondorView.prototype.starting_html = function() {
 	"<div class='editmenu'>" +
 	"<button onclick=\"alert('Not yet implemented')\" class=\"editlink\">full screen</button>\n" +
 	"</div>\n" +
-	"\n" +
-	"<div id='graph1'>\n" +
-	"<div class='vizstatus'>\n" +
-	"  <div class='statustext'></div>\n" +
-	"  <div class='statussub'></div>\n" +
-	"</div>\n" +
-	"<div class='vizraw'></div>\n" +
-	"<div class='vizchart'></div>\n" +
-	"</div>\n" +
+	this.html_for_graph('graph1')+ "\n" +
 	"\n" +
 	"<div class=\"download-link\"> <a href=\"#\">Download this table</a> </div>\n" +
-	"\n" +
-	"<div id='table1'>\n" +
-	"<div class='vizstatus'>\n" +
-	"  <div class='statustext'></div>\n" +
-	"  <div class='statussub'></div>\n" +
-	"</div>\n" +
-	"<div class='vizraw'></div>\n" +
-	"<div class='vizchart'></div>\n" +
-	"</div>\n" +
+	this.html_for_graph('table1')+ "\n" +
 	"\n" +
 	"</div> <!-- #tab-user .tab-content -->\n" +
 	"\n" +
