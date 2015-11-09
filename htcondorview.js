@@ -21,13 +21,8 @@ function HTCondorView(id) {
 
 	// Initialize tabs
 	$('ul.tabs li').click(function(){
-		var tab_id = $(this).attr('data-tab');
-
 		$('ul.tabs li').removeClass('current');
-		$('.tab-content').removeClass('current');
-
 		$(this).addClass('current');
-		$("#"+tab_id).addClass('current');
 	});
 
 	$('ul.radio-tabs input').change(function() {
@@ -358,8 +353,6 @@ HTCondorView.prototype.starting_html = function() {
 	"</ul>\n" +
 	"</div>\n" +
 	"\n" +
-	"<div id=\"tab-user\" class=\"tab-content current\">\n" +
-	"\n" +
 	"<div class='editmenu'>" +
 	"<button onclick=\"alert('Not yet implemented')\" class=\"editlink\">full screen</button>\n" +
 	"</div>\n" +
@@ -367,15 +360,6 @@ HTCondorView.prototype.starting_html = function() {
 	"\n" +
 	"<div class=\"download-link\"> <a href=\"#\">Download this table</a> </div>\n" +
 	this.html_for_graph(this.table_id, "table")+ "\n" +
-	"\n" +
-	"</div> <!-- #tab-user .tab-content -->\n" +
-	"\n" +
-	"<div id=\"tab-machine\" class=\"tab-content\">\n" +
-	"</div>\n" +
-	"\n" +
-	"<div id=\"tab-custom\" class=\"tab-content\">\n" +
-	"TODO Custom\n" +
-	"</div>\n" +
 	"\n" +
 	"<div id='vizlog'></div>\n" +
 	"";
