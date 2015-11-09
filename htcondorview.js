@@ -1,7 +1,8 @@
-function HTCondorView(id) {
+function HTCondorView(id, graph_args, table_args, select_tuple) {
 	"use strict";
 	this.urlTool = document.createElement('a');
 	var mythis = this;
+	var i;
 
 	var container = $('#'+id);
 	if(container.length == 0) {
@@ -21,20 +22,19 @@ function HTCondorView(id) {
 
 	$('.download-link').click(function(ev) { mythis.download_csv(mythis.data.value); ev.preventDefault();});
 
-	// Initialize tabs
-	$('ul.tabs li').click(function(){
-		$('ul.tabs li').removeClass('current');
-		$(this).addClass('current');
-	});
 
-	$('ul.radio-tabs input').change(function() {
-		mythis.active_filter = undefined;
-		mythis.alt_title = undefined;
-		mythis.change_view();
-		});
-
-	this.load_arguments_to_form();
-	this.change_view()
+	//this.load_arguments_to_form();
+	//this.change_view()
+	this.current_graphargs = graph_args;
+	this.current_tableargs = table_args;
+	if(select_tuple) {
+		this.select_tuple = {};
+		for(i = 0; i < select_tuple.length; i++) {
+			this.select_tuple[select_tuple[i]] = true;
+		}
+	}
+	console.log(select_tuple, this.select_tuple);
+	//console.log(id, graph_args, table_args, select_tuple);
 	this.load_and_render(this.current_graphargs, this.current_tableargs);
 }
 
@@ -56,6 +56,7 @@ HTCondorView.prototype.toggle_edit = function(btn, controls) {
 	}
 }
 
+/*
 HTCondorView.prototype.load_arguments_to_form = function() {
 	"use strict";
 	var args = afterquery.parseArgs(window.location.search);
@@ -84,6 +85,7 @@ HTCondorView.prototype.load_arguments_to_form = function() {
 	var title = args.get('title');
 	if(title !== undefined) { this.alt_title = title; }
 }
+*/
 
 HTCondorView.prototype.replace_search_arg = function(oldurl, newkey, newval) {
 	"use strict";
@@ -201,135 +203,26 @@ HTCondorView.prototype.load_and_render = function(graphargs, tableargs) {
 HTCondorView.prototype.table_select_handler = function(evnt,table,data) {
 	"use strict";
 	var selection = table.getSelection();
-	if(selection) {
-		var source = $('#data-source input[type="radio"]:checked').val()
-		var duration = $('#data-duration input[type="radio"]:checked').val()
-		if(source == "machines") {
-			var row = selection[0].row;
-			var arch = data.getValue(row, 0);
-			var opsys = data.getValue(row, 1);
-			this.active_filter = {Arch: arch, OpSys: opsys};
-			this.alt_title = "Machine State for "+arch+"/"+opsys;
-			this.current_graphargs = this.graph_args(true, source, duration, this.active_filter, this.alt_title);
-			this.load_and_render(this.current_graphargs, this.current_tableargs);
-		} else if(source =="submitters") {
-			var row = selection[0].row;
-			var user = data.getValue(row, 0);
-			this.active_filter = {Name:user};
-			this.alt_title = "Jobs for "+user;
-			this.current_graphargs = this.graph_args(true, source, duration, this.active_filter, this.alt_title);
-			this.load_and_render(this.current_graphargs, this.current_tableargs);
+	if(!selection) { return; }
+
+	var col;
+	var filter = "";
+
+	var row = selection[0].row;
+
+	for(col = 0; col < data.getNumberOfColumns(); col++) {
+		var label = data.getColumnLabel(col);
+		if(this.select_tuple[label]) {
+			var value = data.getValue(row, col);
+			filter += "filter=" + label + "=" + value + "&";
 		}
 	}
-}
 
-HTCondorView.prototype.change_view = function() {
-	"use strict";
-	var duration = $('#data-duration input[type="radio"]:checked').val()
-	var source = $('#data-source input[type="radio"]:checked').val()
-	if(source == "machines" || source == "submitters") {
-		this.current_graphargs = this.graph_args(true, source, duration, this.active_filter, this.alt_title);
-		this.current_tableargs = this.graph_args(false, source, duration, this.active_filter, this.alt_title);
-		this.load_and_render(this.current_graphargs, this.current_tableargs);
-	} else if(source=="custom") {
-		$("#"+this.graph_id+" .vizchart").html("<h2>Not yet implemented</h2>");
-		$("#"+this.table_id+" .vizchart").html("<h2>Not yet implemented</h2>");
-	}
-}
+	var graphargs = filter + this.current_graphargs;
+	// TODO: Rewrite the title for the active select_tuple.
 
-HTCondorView.prototype.submitters_data_source = function() { "use strict"; return "submitters.json"; }
-HTCondorView.prototype.submitters_now_data_source = function() { "use strict"; return "submitters.now.json"; }
-HTCondorView.prototype.machines_data_source = function() { "use strict"; return "machines.json"; }
-HTCondorView.prototype.machines_now_data_source = function() { "use strict"; return "machines.now.json"; }
 
-/*
-is_chart - true it's a chart (pie/stacked), false it's a table.
-source - submitters or machines
-duration - now, day, week, or month
-filters - optional. Hash of fields to filter on
-   mapped to values to filter by.
-title - optional title for chart.
-*/
-HTCondorView.prototype.graph_args = function(is_chart, source, duration, filters, title) {
-	"use strict";
-	var filter = '';
-	if(filters !== undefined) {
-		var key;
-		for(key in filters) {
-			filter += "filter=" + key + "=" + filters[key] + "&";
-		}
-	}
-	switch(source) {
-		case 'submitters':
-		{
-			if(title === undefined) { title = 'Total Jobs'; }
-			var charttype = '';
-			if(is_chart) { charttype = 'chart=stacked'; }
-			if(duration == 'now') {
-				var grouping = 'pivot=Name;JobStatus;Count';
-				if(is_chart) {
-					charttype = 'chart=pie';
-					grouping = "group=JobStatus;Count";
-				} else {
-					filter = '';
-				}
-				return "title=" + title + "&" +
-					"url=" + this.submitters_now_data_source() + "&" +
-					filter +
-					"order=JobStatus&" +
-					grouping + "&" +
-					charttype + "&";
-
-			} else {
-				var pivot = "Name;JobStatus;avg(Count)";
-				if(is_chart) {
-					pivot = "Date;JobStatus;Count";
-				} else {
-					filter = '';
-				}
-				return "url=" + this.submitters_data_source() + "&" +
-					"title=" + title + "&" +
-					filter +
-					"order=Date&" +
-					"pivot=" + pivot + "&" +
-					charttype + "&";
-			}
-			break;
-		}
-		case 'machines':
-		{
-			if(title === undefined) { title = 'Machine State'; }
-			if(duration == 'now') {
-				if(is_chart) {
-					return "title="+title+"&"+
-						"url=machines.now.json&"+
-						"order=State&"+
-						"group=State;Cpus&"+
-						"chart=pie";
-				} else {
-					return "title="+title+"&"+
-						"url=machines.now.json&"+
-						"order=Arch,OpSys&"+
-						"group=Arch,OpSys;State;Cpus";
-				}
-			
-			} else {
-				if(is_chart) {
-					return "title=" + title + "&" +
-						"url=" + this.machines_data_source() + "&" +
-						filter +
-						"order=Date&" +
-						"pivot=Date;State;Cpus&" +
-						"chart=stacked&";
-				} else {
-					return "url=" + this.machines_data_source() + "&" +
-						"order=Date&" +
-						"pivot=Date,Arch,OpSys;State;Cpus&" +
-						"group=Arch,OpSys;avg(Unclaimed),avg(Claimed),max(Unclaimed),max(Claimed)";
-				}
-			}
-		}
-	}
+	this.load_and_render(graphargs, this.current_tableargs);
 }
 
 HTCondorView.prototype.html_for_graph = function(id, myclass) {
