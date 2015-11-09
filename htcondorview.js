@@ -10,12 +10,14 @@ function HTCondorView(id) {
 	}
 	container.html(this.starting_html());
 
+/*
 	window.onpopstate = function() {
 		setTimeout(function(){
 			mythis.load_arguments_to_form();
 			mythis.load_and_render(mythis.current_graphargs, mythis.current_tablargs);
 			},1);
 	}
+	*/
 
 	$('.download-link').click(function(ev) { mythis.download_csv(mythis.data.value); ev.preventDefault();});
 
@@ -104,6 +106,7 @@ HTCondorView.prototype.replace_search_arg = function(oldurl, newkey, newval) {
 	return this.urlTool.href;
 }
 
+/*
 HTCondorView.prototype.save_arguments_to_url = function() {
 	"use strict";
 	var url = window.location.href;
@@ -130,6 +133,7 @@ HTCondorView.prototype.save_arguments_to_url = function() {
 		history.pushState(null, null, url);
 	}
 }
+*/
 
 /*
 HTCondorView.prototype.read_arguments = function(source) {
@@ -154,7 +158,9 @@ HTCondorView.prototype.read_arguments = function(source) {
 HTCondorView.prototype.load_and_render = function(graphargs, tableargs) {
 	"use strict";
 
+	/*
 	this.save_arguments_to_url();
+	*/
 
 	var mythis = this;
 	var callback_render_table = function() {
