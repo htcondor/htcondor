@@ -3,9 +3,6 @@ function HTCondorView(id) {
 	this.urlTool = document.createElement('a');
 	var mythis = this;
 
-	$('#editlinkgraph1').click(function() { mythis.toggle_edit('#editlinkgraph1', '#graph1editor'); });
-	$('#editlinktable1').click(function() { mythis.toggle_edit('#editlinktable1', '#table1editor'); });
-
 	var container = $('#'+id);
 	if(container.length == 0) {
 		console.log('HTCondor View is not able to intialize. There is no element with an ID of "'+id+'".');
@@ -19,18 +16,6 @@ function HTCondorView(id) {
 			mythis.load_and_render();
 			},1);
 	}
-
-	$('#reloadgraph1').click(function() {
-		mythis.load_and_render();
-		mythis.save_arguments_to_url();
-		});
-	$('#rerendergraph1').click(function() { mythis.render_new_graph('#graph1text', 'graph1'); });
-
-	$('#reloadtable1').click(function() {
-		mythis.load_and_render();
-		mythis.save_arguments_to_url();
-		});
-	$('#rerendertable1').click(function() { mythis.render_new_graph('#table1text', 'table1'); });
 
 	$('.download-link').click(function(ev) { mythis.download_csv(mythis.data.value); ev.preventDefault();});
 
@@ -143,6 +128,7 @@ HTCondorView.prototype.save_arguments_to_url = function() {
 	}
 }
 
+/*
 HTCondorView.prototype.read_arguments = function(source) {
 	"use strict";
   var out = [];
@@ -160,34 +146,48 @@ HTCondorView.prototype.read_arguments = function(source) {
   }
   return  '?' + out.join('&');
 }
+*/
 
 HTCondorView.prototype.load_and_render = function() {
 	"use strict";
+
+	this.save_arguments_to_url();
+
 	var mythis = this;
 	var callback_render_table = function() {
+		console.log("callback_render_table");
+		$('#table1.vizchart').empty();
 		setTimeout(function() {
+			console.log("callback_render_table timeout");
 			var options = {
 				select_handler: function(e,t,d){ mythis.table_select_handler(e,t,d); },
 				num_pattern: '#,##0.0',
 				disable_height: true
 			};
 
-			afterquery.render(mythis.read_arguments('#table1text'), mythis.data.value, null, 'table1', options);
+			afterquery.render(mythis.current_tableargs, mythis.data.value, null, 'table1', options);
 		}, 0);
 	 };
 
 	var callback_render_graph = function(){
+		console.log("callback_render_graph");
+		$('#graph1.vizchart').empty();
 		setTimeout(function() {
-			afterquery.render(mythis.read_arguments('#graph1text'), mythis.data.value, callback_render_table, 'graph1');
+			console.log("callback_render_graph timeout");
+			afterquery.render(mythis.current_graphargs, mythis.data.value, callback_render_table, 'graph1');
 			},0)
 		};
-	var args = this.read_arguments('#graph1text');
+	var args = this.current_graphargs;
 	var newurl = afterquery.parseArgs(args).get('url');
 	if(newurl == this.data_url) {
+		console.log("not loading");
 		callback_render_graph();
 	} else {
 		this.data_url = newurl;
-		this.data = afterquery.load(args, null, function(){callback_render_graph();}, 'graph1');
+		this.data = afterquery.load(args, null, function(){
+			console.log("Inside load");
+			callback_render_graph();
+			}, 'graph1');
 	}
 }
 
@@ -203,30 +203,17 @@ HTCondorView.prototype.table_select_handler = function(evnt,table,data) {
 			var opsys = data.getValue(row, 1);
 			this.active_filter = {Arch: arch, OpSys: opsys};
 			this.alt_title = "Machine State for "+arch+"/"+opsys;
-			var new_graph_args = this.graph_args(true, source, duration, this.active_filter, this.alt_title);
-			this.render_new_graph('#graph1text', 'graph1', new_graph_args);
+			this.current_graphargs = this.graph_args(true, source, duration, this.active_filter, this.alt_title);
+			this.load_and_render();
 		} else if(source =="submitters") {
 			var row = selection[0].row;
 			var user = data.getValue(row, 0);
 			this.active_filter = {Name:user};
 			this.alt_title = "Jobs for "+user;
-			var new_graph_args = this.graph_args(true, source, duration, this.active_filter, this.alt_title);
-			this.render_new_graph('#graph1text', 'graph1', new_graph_args);
+			this.current_graphargs = this.graph_args(true, source, duration, this.active_filter, this.alt_title);
+			this.load_and_render();
 		}
 	}
-}
-
-HTCondorView.prototype.render_new_graph = function(editid, graphid, args) {
-	"use strict";
-	if(args && args.length) {
-		$(editid).val(args);
-	}
-	this.save_arguments_to_url();
-	/*afterquery.render(this.read_arguments(editid), data.value,null,graphid);*/
-	var to_prune = "#" + graphid + ' .vizchart';
-	$(to_prune).empty();
-	/* TODO: use cached data if posible */
-	this.load_and_render();
 }
 
 HTCondorView.prototype.change_view = function() {
@@ -234,8 +221,9 @@ HTCondorView.prototype.change_view = function() {
 	var duration = $('#data-duration input[type="radio"]:checked').val()
 	var source = $('#data-source input[type="radio"]:checked').val()
 	if(source == "machines" || source == "submitters") {
-		this.render_new_graph('#graph1text', 'graph1', this.graph_args(true, source, duration, this.active_filter, this.alt_title));
-		this.render_new_graph('#table1text', 'table1', this.graph_args(false, source, duration, this.active_filter, this.alt_title));
+		this.current_graphargs = this.graph_args(true, source, duration, this.active_filter, this.alt_title);
+		this.current_tableargs = this.graph_args(false, source, duration, this.active_filter, this.alt_title);
+		this.load_and_render();
 	} else if(source=="custom") {
 		$("#graph1 .vizchart").html("<h2>Not yet implemented</h2>");
 		$("#table1 .vizchart").html("<h2>Not yet implemented</h2>");
@@ -261,7 +249,7 @@ HTCondorView.prototype.graph_args = function(is_chart, source, duration, filters
 	if(filters !== undefined) {
 		var key;
 		for(key in filters) {
-			filter += "filter=" + key + "=" + filters[key] + "\n";
+			filter += "filter=" + key + "=" + filters[key] + "&";
 		}
 	}
 	switch(source) {
@@ -278,12 +266,12 @@ HTCondorView.prototype.graph_args = function(is_chart, source, duration, filters
 				} else {
 					filter = '';
 				}
-				return "title=" + title + "\n" +
-					"url=" + this.submitters_now_data_source() + "\n" +
+				return "title=" + title + "&" +
+					"url=" + this.submitters_now_data_source() + "&" +
 					filter +
-					"order=JobStatus\n" +
-					grouping + "\n" +
-					charttype + "\n";
+					"order=JobStatus&" +
+					grouping + "&" +
+					charttype + "&";
 
 			} else {
 				var pivot = "Name;JobStatus;avg(Count)";
@@ -292,12 +280,12 @@ HTCondorView.prototype.graph_args = function(is_chart, source, duration, filters
 				} else {
 					filter = '';
 				}
-				return "url=" + this.submitters_data_source() + "\n" +
-					"title=" + title + "\n" +
+				return "url=" + this.submitters_data_source() + "&" +
+					"title=" + title + "&" +
 					filter +
-					"order=Date\n" +
-					"pivot=" + pivot + "\n" +
-					charttype + "\n";
+					"order=Date&" +
+					"pivot=" + pivot + "&" +
+					charttype + "&";
 			}
 			break;
 		}
@@ -306,30 +294,30 @@ HTCondorView.prototype.graph_args = function(is_chart, source, duration, filters
 			if(title === undefined) { title = 'Machine State'; }
 			if(duration == 'now') {
 				if(is_chart) {
-					return "title="+title+"\n"+
-						"url=machines.now.json\n"+
-						"order=State\n"+
-						"group=State;Cpus\n"+
+					return "title="+title+"&"+
+						"url=machines.now.json&"+
+						"order=State&"+
+						"group=State;Cpus&"+
 						"chart=pie";
 				} else {
-					return "title="+title+"\n"+
-						"url=machines.now.json\n"+
-						"order=Arch,OpSys\n"+
+					return "title="+title+"&"+
+						"url=machines.now.json&"+
+						"order=Arch,OpSys&"+
 						"group=Arch,OpSys;State;Cpus";
 				}
 			
 			} else {
 				if(is_chart) {
-					return "title=" + title + "\n" +
-						"url=" + this.machines_data_source() + "\n" +
+					return "title=" + title + "&" +
+						"url=" + this.machines_data_source() + "&" +
 						filter +
-						"order=Date\n" +
-						"pivot=Date;State;Cpus\n" +
-						"chart=stacked\n";
+						"order=Date&" +
+						"pivot=Date;State;Cpus&" +
+						"chart=stacked&";
 				} else {
-					return "url=" + this.machines_data_source() + "\n" +
-						"order=Date\n" +
-						"pivot=Date,Arch,OpSys;State;Cpus\n" +
+					return "url=" + this.machines_data_source() + "&" +
+						"order=Date&" +
+						"pivot=Date,Arch,OpSys;State;Cpus&" +
 						"group=Arch,OpSys;avg(Unclaimed),avg(Claimed),max(Unclaimed),max(Claimed)";
 				}
 			}
@@ -356,16 +344,8 @@ HTCondorView.prototype.starting_html = function() {
 	"\n" +
 	"<div id=\"tab-user\" class=\"tab-content current\">\n" +
 	"\n" +
-	"<div class='editmenu'><button class=\"editlink\" id='editlinkgraph1'>edit</button>\n" +
-	"<div id=\"graph1editor\" style=\"display:none;\">\n" +
-	"<textarea id='graph1text' cols=\"40\" rows=\"10\" wrap='off'>\n" +
-	"</textarea>\n" +
-	"<div>\n" +
-	"<button id=\"rerendergraph1\">Update Graph</button>\n" +
-	"<button id=\"reloadgraph1\">Reload Data</button>\n" +
-	"</div>\n" +
-	"</div>\n" +
-	"<br><button onclick=\"alert('Not yet implemented')\" class=\"editlink\">full screen</button>\n" +
+	"<div class='editmenu'>" +
+	"<button onclick=\"alert('Not yet implemented')\" class=\"editlink\">full screen</button>\n" +
 	"</div>\n" +
 	"\n" +
 	"<div id='graph1'>\n" +
@@ -378,16 +358,6 @@ HTCondorView.prototype.starting_html = function() {
 	"</div>\n" +
 	"\n" +
 	"<div class=\"download-link\"> <a href=\"#\">Download this table</a> </div>\n" +
-	"<div class='editmenu'><button class=\"editlink\" id='editlinktable1'>edit</button>\n" +
-	"<div id=\"table1editor\" style=\"display:none;\">\n" +
-	"<textarea id='table1text' cols=\"40\" rows=\"10\" wrap='off'>\n" +
-	"</textarea>\n" +
-	"<div>\n" +
-	"<button id=\"rerendertable1\">Update Table</button>\n" +
-	"<button id=\"reloadtable1\">Reload Data</button>\n" +
-	"</div>\n" +
-	"</div>\n" +
-	"</div>\n" +
 	"\n" +
 	"<div id='table1'>\n" +
 	"<div class='vizstatus'>\n" +
@@ -468,8 +438,7 @@ HTCondorView.prototype.download_csv = function(data) {
 		mythis.csv_source_data = undefined;
 		mythis.download_data("HTCondor-View-Data.csv", "text/csv", csv);
 	}
-	var args = this.read_arguments('#table1text');
-	this.csv_source_data = afterquery.load_post_transform(args, data, handle_csv, null);
+	this.csv_source_data = afterquery.load_post_transform(this.current_tableargs, data, handle_csv, null);
 }
 
 
