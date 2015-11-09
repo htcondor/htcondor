@@ -13,7 +13,7 @@ function HTCondorView(id) {
 	window.onpopstate = function() {
 		setTimeout(function(){
 			mythis.load_arguments_to_form();
-			mythis.load_and_render();
+			mythis.load_and_render(mythis.current_graphargs, mythis.current_tablargs);
 			},1);
 	}
 
@@ -33,7 +33,7 @@ function HTCondorView(id) {
 
 	this.load_arguments_to_form();
 	this.change_view()
-	this.load_and_render();
+	this.load_and_render(this.current_graphargs, this.current_tablargs);
 }
 
 HTCondorView.next_graph_id = 0;
@@ -151,7 +151,7 @@ HTCondorView.prototype.read_arguments = function(source) {
 }
 */
 
-HTCondorView.prototype.load_and_render = function() {
+HTCondorView.prototype.load_and_render = function(graphargs, tableargs) {
 	"use strict";
 
 	this.save_arguments_to_url();
@@ -166,17 +166,17 @@ HTCondorView.prototype.load_and_render = function() {
 				disable_height: true
 			};
 
-			afterquery.render(mythis.current_tableargs, mythis.data.value, null, mythis.table_id, options);
+			afterquery.render(tableargs, mythis.data.value, null, mythis.table_id, options);
 		}, 0);
 	 };
 
 	var callback_render_graph = function(){
 		$('#'+mythis.graph_id+' .vizchart').empty();
 		setTimeout(function() {
-			afterquery.render(mythis.current_graphargs, mythis.data.value, callback_render_table, mythis.graph_id);
+			afterquery.render(graphargs, mythis.data.value, callback_render_table, mythis.graph_id);
 			},0)
 		};
-	var args = this.current_graphargs;
+	var args = graphargs;
 	var newurl = afterquery.parseArgs(args).get('url');
 	if(newurl == this.data_url) {
 		callback_render_graph();
@@ -201,14 +201,14 @@ HTCondorView.prototype.table_select_handler = function(evnt,table,data) {
 			this.active_filter = {Arch: arch, OpSys: opsys};
 			this.alt_title = "Machine State for "+arch+"/"+opsys;
 			this.current_graphargs = this.graph_args(true, source, duration, this.active_filter, this.alt_title);
-			this.load_and_render();
+			this.load_and_render(this.current_graphargs, this.current_tablargs);
 		} else if(source =="submitters") {
 			var row = selection[0].row;
 			var user = data.getValue(row, 0);
 			this.active_filter = {Name:user};
 			this.alt_title = "Jobs for "+user;
 			this.current_graphargs = this.graph_args(true, source, duration, this.active_filter, this.alt_title);
-			this.load_and_render();
+			this.load_and_render(this.current_graphargs, this.current_tablargs);
 		}
 	}
 }
@@ -220,7 +220,7 @@ HTCondorView.prototype.change_view = function() {
 	if(source == "machines" || source == "submitters") {
 		this.current_graphargs = this.graph_args(true, source, duration, this.active_filter, this.alt_title);
 		this.current_tableargs = this.graph_args(false, source, duration, this.active_filter, this.alt_title);
-		this.load_and_render();
+		this.load_and_render(this.current_graphargs, this.current_tableargs);
 	} else if(source=="custom") {
 		$("#"+this.graph_id+" .vizchart").html("<h2>Not yet implemented</h2>");
 		$("#"+this.table_id+" .vizchart").html("<h2>Not yet implemented</h2>");
