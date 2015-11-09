@@ -102,12 +102,6 @@ body:hover .htcondorview div.editmenu {
 	font-size:80%;
 	text-align: center;
 }
-.htcondorview .tab-content {
-	display: none;
-}
-.htcondorview .tab-content.current {
-	display: inherit;
-}
 
 .htcondorview ul.radio-tabs {
 	display: inline;
