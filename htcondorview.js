@@ -339,20 +339,6 @@ HTCondorView.prototype.starting_html = function() {
 	this.graph_id = this.new_graph_id();
 	this.table_id = this.new_graph_id();
 	return "" +
-	"<div style=\"text-align: center\">\n" +
-	"<ul class=\"radio-tabs\" id=\"data-source\">\n" +
-	"<li><input type=\"radio\" name=\"data-source\" id=\"data-source-user\" value=\"submitters\"> <label for=\"data-source-user\">Users</label>\n" +
-	"<li><input type=\"radio\" name=\"data-source\" id=\"data-source-machine\" value=\"machines\"> <label for=\"data-source-machine\">Pool</label>\n" +
-	"<li><input type=\"radio\" name=\"data-source\" id=\"data-source-custom\" value=\"custom\"> <label for=\"data-source-custom\">Custom</label>\n" +
-	"</ul>\n" +
-	"<ul class=\"radio-tabs\" id=\"data-duration\">\n" +
-	"<li><input type=\"radio\" name=\"data-duration\" id=\"data-duration-now\" value=\"now\"> <label for=\"data-duration-now\">Now</label>\n" +
-	"<li><input type=\"radio\" name=\"data-duration\" id=\"data-duration-day\" value=\"day\"> <label for=\"data-duration-day\">Day</label>\n" +
-	"<li><input type=\"radio\" name=\"data-duration\" id=\"data-duration-week\" value=\"week\"> <label for=\"data-duration-week\">Week</label>\n" +
-	"<li><input type=\"radio\" name=\"data-duration\" id=\"data-duration-month\" value=\"month\"> <label for=\"data-duration-month\">Month</label>\n" +
-	"</ul>\n" +
-	"</div>\n" +
-	"\n" +
 	"<div class='editmenu'>" +
 	"<button onclick=\"alert('Not yet implemented')\" class=\"editlink\">full screen</button>\n" +
 	"</div>\n" +
