@@ -14,7 +14,7 @@ function HTCondorView(id) {
 	window.onpopstate = function() {
 		setTimeout(function(){
 			mythis.load_arguments_to_form();
-			mythis.load_and_render(mythis.current_graphargs, mythis.current_tablargs);
+			mythis.load_and_render(mythis.current_graphargs, mythis.current_tableargs);
 			},1);
 	}
 	*/
@@ -35,7 +35,7 @@ function HTCondorView(id) {
 
 	this.load_arguments_to_form();
 	this.change_view()
-	this.load_and_render(this.current_graphargs, this.current_tablargs);
+	this.load_and_render(this.current_graphargs, this.current_tableargs);
 }
 
 HTCondorView.next_graph_id = 0;
@@ -175,6 +175,10 @@ HTCondorView.prototype.load_and_render = function(graphargs, tableargs) {
 			afterquery.render(tableargs, mythis.data.value, null, mythis.table_id, options);
 		}, 0);
 	 };
+	if(tableargs === this.last_tableargs) {
+		callback_render_table = null;
+	}
+	this.last_tableargs = tableargs;
 
 	var callback_render_graph = function(){
 		$('#'+mythis.graph_id+' .vizchart').empty();
@@ -207,14 +211,14 @@ HTCondorView.prototype.table_select_handler = function(evnt,table,data) {
 			this.active_filter = {Arch: arch, OpSys: opsys};
 			this.alt_title = "Machine State for "+arch+"/"+opsys;
 			this.current_graphargs = this.graph_args(true, source, duration, this.active_filter, this.alt_title);
-			this.load_and_render(this.current_graphargs, this.current_tablargs);
+			this.load_and_render(this.current_graphargs, this.current_tableargs);
 		} else if(source =="submitters") {
 			var row = selection[0].row;
 			var user = data.getValue(row, 0);
 			this.active_filter = {Name:user};
 			this.alt_title = "Jobs for "+user;
 			this.current_graphargs = this.graph_args(true, source, duration, this.active_filter, this.alt_title);
-			this.load_and_render(this.current_graphargs, this.current_tablargs);
+			this.load_and_render(this.current_graphargs, this.current_tableargs);
 		}
 	}
 }
