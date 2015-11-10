@@ -122,7 +122,6 @@ HTCondorViewSimple.prototype.change_view = function() {
 
 	var duration = $("#"+this.rootid+' .data-duration input[type="radio"]:checked').val()
 	var source = $("#"+this.rootid+' .data-source input[type="radio"]:checked').val()
-	console.log(this.graph_id, duration, source);
 
 	var view_args = this.htcview_args(source, duration);
 

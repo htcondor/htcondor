@@ -1,19 +1,25 @@
 function HTCondorView(id, url, graph_args, table_args, select_tuple) {
 	"use strict";
+	var that = this;
+	$(document).ready(function() { that.initialize(id,url,graph_args,table_args,select_tuple); });
+}
+
+
+HTCondorView.prototype.initialize = function(id, url, graph_args, table_args, select_tuple) {
 	this.urlTool = document.createElement('a');
 	var mythis = this;
 	var i;
 
 	url = "url="+url+"&";
-	graph_args = url + graph_args;
-	table_args = url + table_args;
+	if(graph_args) { graph_args = url + graph_args; }
+	if(table_args) { table_args = url + table_args; }
 
 	var container = $('#'+id);
 	if(container.length == 0) {
 		console.log('HTCondor View is not able to intialize. There is no element with an ID of "'+id+'".');
 		return false;
 	}
-	container.html(this.starting_html());
+	container.html(this.starting_html(!!table_args));
 
 /*
 	window.onpopstate = function() {
@@ -37,8 +43,6 @@ function HTCondorView(id, url, graph_args, table_args, select_tuple) {
 			this.select_tuple[select_tuple[i]] = true;
 		}
 	}
-	console.log(select_tuple, this.select_tuple);
-	console.log(id, graph_args, table_args, select_tuple);
 	this.load_and_render(this.current_graphargs, this.current_tableargs);
 }
 
@@ -181,9 +185,8 @@ HTCondorView.prototype.load_and_render = function(graphargs, tableargs) {
 			afterquery.render(tableargs, mythis.data.value, null, mythis.table_id, options);
 		}, 0);
 	 };
-	if(tableargs === this.last_tableargs) {
-		callback_render_table = null;
-	}
+	if(tableargs === this.last_tableargs) { callback_render_table = null; }
+	if(!tableargs) { callback_render_table = null; }
 	this.last_tableargs = tableargs;
 
 	var callback_render_graph = function(){
@@ -192,6 +195,15 @@ HTCondorView.prototype.load_and_render = function(graphargs, tableargs) {
 			afterquery.render(graphargs, mythis.data.value, callback_render_table, mythis.graph_id);
 			},0)
 		};
+
+	if(!graphargs) {
+		if(callback_render_table) {
+			callback_render_graph = callback_render_table; 
+		} else {
+			return; // Nothing to do.
+		}
+	}
+
 	var args = graphargs;
 	var newurl = afterquery.parseArgs(args).get('url');
 	if(newurl == this.data_url) {
@@ -241,21 +253,23 @@ HTCondorView.prototype.html_for_graph = function(id, myclass) {
 		"</div>\n";
 }
 
-HTCondorView.prototype.starting_html = function() {
+HTCondorView.prototype.starting_html = function(has_table) {
 	"use strict";
 	this.graph_id = this.new_graph_id();
 	this.table_id = this.new_graph_id();
-	return "" +
+
+	var ret = "" +
 	"<div class='editmenu'>" +
 	"<button onclick=\"alert('Not yet implemented')\" class=\"editlink\">full screen</button>\n" +
 	"</div>\n" +
 	this.html_for_graph(this.graph_id, "graph")+ "\n" +
-	"\n" +
-	"<div class=\"download-link\"> <a href=\"#\">Download this table</a> </div>\n" +
-	this.html_for_graph(this.table_id, "table")+ "\n" +
-	"\n" +
-	"<div id='vizlog'></div>\n" +
-	"";
+	"\n";
+	if(has_table) {
+		ret += "<div class=\"download-link\"> <a href=\"#\">Download this table</a> </div>\n" +
+		this.html_for_graph(this.table_id, "table")+ "\n";
+	}
+
+	return ret;
 }
 
 
