@@ -125,7 +125,7 @@ HTCondorViewLinked.prototype.change_view = function() {
 	var view_args = this.htcview_args(source, duration);
 
 	this.htcondor_view = new HTCondorView(this.graph_id, view_args.url, view_args.graph,  {
-		table_args: view_args.table,
+		table_query: view_args.table,
 		select_tuple: view_args.select,
 		title: view_args.title
 	});

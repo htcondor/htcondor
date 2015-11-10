@@ -8,7 +8,7 @@ function HTCondorView(id, url, graph_args, options) {
 HTCondorView.prototype.initialize = function(id, url, graph_args, options) {
 	"use strict";
 	if(typeof(options) !== 'object') { options = {}; }
-	var table_args = options.table_args;
+	var table_args = options.table_query;
 	var select_tuple = options.select_tuple;
 	this.urlTool = document.createElement('a');
 	var mythis = this;

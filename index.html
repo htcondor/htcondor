@@ -91,6 +91,18 @@ new HTCondorView( "pie-submits", "submitters.now.json",
 </script>
 
 
+<div id="simple-paired"></div>
+<script>
+new HTCondorView( "simple-paired", "submitters.json",
+	"order=Date&pivot=Date;JobStatus;Count&chart=stacked",
+	{
+		table_query: "order=Date&pivot=Name;JobStatus;avg(Count)",
+		select_tuple: ["Name"],
+		title: "Total Jobs"
+	});
+</script>
+
+
 
 <div id="view-paired"></div>
 <script>
