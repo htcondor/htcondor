@@ -48,6 +48,7 @@ HTCondorViewLinked.prototype.initialize = function(rootid) {
 // graph - afterquery arguments
 // table - afterquery arguments
 // select - tuple for selecting rows in the table
+// title - title for the graph
 HTCondorViewLinked.prototype.htcview_args = function(source, duration) {
 	"use strict";
 
@@ -57,26 +58,26 @@ HTCondorViewLinked.prototype.htcview_args = function(source, duration) {
 		case "now":
 			return {
 				url: "submitters.now.json",
-				graph: "title=Total Jobs&"+
-					"order=JobStatus&"+
+				graph: "order=JobStatus&"+
 					"group=JobStatus;Count&"+
 					"chart=pie",
 				table: "order=JobStatus&"+
 					"pivot=Name;JobStatus;Count",
-				select: ["Name"]
+				select: ["Name"],
+				title: "Total Jobs"
 			};
 		case "day":
 		case "week":
 		case "month":
 			return {
 				url: "submitters.json",
-				graph: "title=Total Jobs&"+
-					"order=Date&"+
+				graph: "order=Date&"+
 					"pivot=Date;JobStatus;Count&"+
 					"chart=stacked",
 				table: "order=Date&"+
 					"pivot=Name;JobStatus;avg(Count)",
-				select: ["Name"]
+				select: ["Name"],
+				title: "Total Jobs"
 			};
 		}
 		break;
@@ -85,27 +86,27 @@ HTCondorViewLinked.prototype.htcview_args = function(source, duration) {
 		case "now":
 			return {
 				url: "machines.now.json",
-				graph: "title=Machine State&"+
-					"order=State&"+
+				graph: "order=State&"+
 					"group=State;Cpus&"+
 					"chart=pie",
 				table: "order=Arch,OpSys&"+
 					"group=Arch,OpSys;State;Cpus",
-				select: ["Arch", "OpSys"]
+				select: ["Arch", "OpSys"],
+				title: "Machine State"
 			};
 		case "day":
 		case "week":
 		case "month":
 			return {
 				url: "machines.json",
-				graph: "title=Machine State&"+
-					"order=Date&" +
+				graph: "order=Date&" +
 					"pivot=Date;State;Cpus&" +
 					"chart=stacked&",
 				table: "order=Date&" +
 					"pivot=Date,Arch,OpSys;State;Cpus&" +
 					"group=Arch,OpSys;avg(Unclaimed),avg(Claimed),max(Unclaimed),max(Claimed)",
-				select: ["Arch", "OpSys"]
+				select: ["Arch", "OpSys"],
+				title: "Machine State"
 			};
 		}
 		break;
@@ -125,7 +126,8 @@ HTCondorViewLinked.prototype.change_view = function() {
 
 	this.htcondor_view = new HTCondorView(this.graph_id, view_args.url, view_args.graph,  {
 		table_args: view_args.table,
-		select_tuple: view_args.select
+		select_tuple: view_args.select,
+		title: view_args.title
 	});
 };
 

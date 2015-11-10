@@ -14,7 +14,7 @@ HTCondorView.prototype.initialize = function(id, url, graph_args, options) {
 	var mythis = this;
 	var i;
 
-//	this.title = options.title;
+	this.title = options.title;
 	this.url = url;
 
 	var container = $('#'+id);
@@ -198,6 +198,9 @@ HTCondorView.prototype.load_and_render = function(graphargs, tableargs) {
 		$('#'+mythis.graph_id+' .vizchart').empty();
 		setTimeout(function() {
 			var query = "url="+mythis.url+"&"+graphargs;
+			if(mythis.title) {
+				query += "&title="+ encodeURIComponent(mythis.title);
+			}
 			afterquery.render(query, mythis.data.value, callback_render_table, mythis.graph_id);
 			},0);
 		};
