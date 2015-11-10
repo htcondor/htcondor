@@ -259,15 +259,17 @@ HTCondorView.prototype.starting_html = function(has_table) {
 	this.table_id = this.new_graph_id();
 
 	var ret = "" +
-	"<div class='editmenu'>" +
-	"<button onclick=\"alert('Not yet implemented')\" class=\"editlink\">full screen</button>\n" +
-	"</div>\n" +
-	this.html_for_graph(this.graph_id, "graph")+ "\n" +
+	'<div class="htcondorview">\n' +
+	  "<div class='editmenu'>\n" +
+	    "<button onclick=\"alert('Not yet implemented')\" class=\"editlink\">full screen</button>\n" +
+	  "</div>\n" +
+	  this.html_for_graph(this.graph_id, "graph")+ "\n" +
 	"\n";
 	if(has_table) {
 		ret += "<div class=\"download-link\"> <a href=\"#\">Download this table</a> </div>\n" +
 		this.html_for_graph(this.table_id, "table")+ "\n";
 	}
+	ret += "</div>\n";
 
 	return ret;
 }
