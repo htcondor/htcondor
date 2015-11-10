@@ -1178,10 +1178,10 @@ class JobImageSizeEvent : public ULogEvent
 	virtual void initFromClassAd(ClassAd* ad);
 
 	/// The new size of the image
-	int64_t image_size_kb;
-	int64_t resident_set_size_kb;
-	int64_t proportional_set_size_kb;
-	int64_t memory_usage_mb;
+	long long image_size_kb;
+	long long resident_set_size_kb;
+	long long proportional_set_size_kb;
+	long long memory_usage_mb;
 };
 
 //----------------------------------------------------------------------------
