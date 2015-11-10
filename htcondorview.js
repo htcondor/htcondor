@@ -54,18 +54,30 @@ HTCondorView.prototype.initialize_from_object = function(options) {
 	this.load_and_render(this.current_graphargs, this.current_tableargs);
 };
 
-HTCondorView.prototype.initialize = function(id, url, graph_args, options) {
+HTCondorView.prototype.initialize = function(id, query) {
 	"use strict";
 
 	if(typeof(id) === 'object') {
 		return this.initialize_from_object(id);
 	}
 
-	if(typeof(options) !== 'object') { options = {}; }
+	// This is a (hopefully) a raw afterquery query.
+	var args = afterquery.parseArgs(query);
+	var options = {
+		dst_id: id,
+		title: args.get("title"),
+		data_url: args.get("url"),
+		graph_query: "",
+	};
 
-	options.dst_id = id;
-	options.data_url = url;
-	options.graph_query = graph_args;
+	for(var argi in args.all) {
+		var arg = args.all[argi];
+		var key = arg[0];
+		if(key.length && key !== "title" && key !== "url") {
+			var val = arg[1];
+			options.graph_query += encodeURIComponent(key) + "=" + encodeURIComponent(val) + "&";	
+		}
+	}
 	return this.initialize_from_object(options);
 };
 

@@ -71,23 +71,17 @@ ul.radio-tabs li input[type="radio"]:checked + label {
 
 <div id="pie-users" class="dashboard-item"></div>
 <script>
-new HTCondorView( "pie-users", "submitters.now.json",
-	"order=JobStatus&group=JobStatus;Count&chart=pie",
-	{title: "Total Jobs"});
+new HTCondorView( "pie-users", "url=submitters.now.json&title=Total Jobs&order=JobStatus&group=JobStatus;Count&chart=pie");
 </script>
 
 <div id="pie-machines" class="dashboard-item"></div>
 <script>
-new HTCondorView( "pie-machines", "machines.now.json",
-"order=State&group=State;Cpus&chart=pie",
-	{title: "Machine State"});
+new HTCondorView( "pie-machines", "url=machines.now.json&title=Machine State&order=State&group=State;Cpus&chart=pie");
 </script>
 
 <div id="pie-submits" class="dashboard-item"></div>
 <script>
-new HTCondorView( "pie-submits", "submitters.now.json",
-	"order=Machine&group=Machine;Count&chart=pie",
-	{title: "Submit Points"});
+new HTCondorView( "pie-submits", "url=submitters.now.json&title=Submit Points&order=Machine&group=Machine;Count&chart=pie");
 </script>
 
 
