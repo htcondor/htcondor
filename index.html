@@ -67,12 +67,14 @@ ul.radio-tabs li input[type="radio"]:checked + label {
 #view-paired .graph .vizchart {
 	height: 400px;
 }
+
+h1 { text-align: center; margin: 0; }
+h1 img.logo { display: inline-block;  height: 2.0em; }
 </style>
 </head>
 <body>
 
-<h1><img src="HTCondor_logo.png" style="display: inline-block;  height: 1.3em;" alt="HTCondor"> View</h1>
-
+<h1><img class="logo" src="HTCondor-View.svg" alt="HTCondor View"></h1>
 <script>
 HTCondorView.simple("url=submitters.now.json&title=Total Jobs&order=JobStatus&group=JobStatus;Count&chart=pie");
 
