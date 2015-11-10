@@ -7,6 +7,14 @@ function HTCondorView(id, url, graph_args, options) {
 
 HTCondorView.prototype.initialize = function(id, url, graph_args, options) {
 	"use strict";
+
+	if(typeof(id) === 'object') {
+		options = id;
+		id = options.dst_id;
+		url = options.data_url;
+		graph_args = options.graph_query;
+	}
+
 	if(typeof(options) !== 'object') { options = {}; }
 	var table_args = options.table_query;
 	var select_tuple = options.select_tuple;
