@@ -310,7 +310,11 @@ HTCondorView.prototype.afterquerydata_to_csv = function(dt) {
 	for(var row = 0; row < rows; row++) {
 		for(col = 0; col < columns; col++) {
 			if(col > 0) { ret += ","; }
-			ret += csv_escape(dt.data[row][col]);
+			var val = dt.data[row][col];
+			if(typeof(val) === 'number' && isNaN(val)) {
+				val = '';
+			}
+			ret += csv_escape(val);
 		}
 		ret += "\n";
 	}
