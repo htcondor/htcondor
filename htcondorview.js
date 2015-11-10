@@ -14,6 +14,7 @@ HTCondorView.prototype.initialize = function(id, url, graph_args, options) {
 	var mythis = this;
 	var i;
 
+	this.original_title = options.title;
 	this.title = options.title;
 	this.url = url;
 
@@ -235,17 +236,21 @@ HTCondorView.prototype.table_select_handler = function(evnt,table,data) {
 
 	var row = selection[0].row;
 
+	this.title = this.original_title + " for ";
+	var first_tuple = true;
+
 	for(col = 0; col < data.getNumberOfColumns(); col++) {
 		var label = data.getColumnLabel(col);
 		if(this.select_tuple[label]) {
 			var value = data.getValue(row, col);
 			filter += "filter=" + label + "=" + value + "&";
+			if(!first_tuple) { this.title += "/"; }
+			first_tuple = false;
+			this.title += value;
 		}
 	}
 
 	var graphargs = filter + this.current_graphargs;
-	// TODO: Rewrite the title for the active select_tuple.
-
 
 	this.load_and_render(graphargs, this.current_tableargs);
 };
