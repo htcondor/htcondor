@@ -265,7 +265,7 @@ HTCondorView.prototype.starting_html = function(has_table) {
 		    "<div class='editmenu'>\n" +
 		      "<button onclick=\"alert('Not yet implemented')\" class=\"editlink\">full screen</button>\n" +
 		    "</div>\n" +
-	        this.html_for_graph() + "\n";
+	        this.html_for_graph() + "\n"+
 		  "</div>\n";
 	if(has_table) {
 		ret += "<div class=\"download-link\"> <a href=\"#\">Download this table</a> </div>\n" +
