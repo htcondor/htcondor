@@ -23,6 +23,10 @@ body:hover .htcondorview div.editmenu {
 	text-align: center;
 	height: auto;
 }
+.htcondorview .graph {
+	/* Allow the edit menu to be absolutely positioned inside */
+	position: relative;
+}
 .htcondorview #vizlog {
 	white-space: pre;
 }
