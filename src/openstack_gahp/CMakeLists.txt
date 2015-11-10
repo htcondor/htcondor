@@ -20,6 +20,7 @@
 if( HAVE_EXT_OPENSSL AND HAVE_EXT_CURL AND HAVE_PTHREADS )
 
 	include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+	include_directories("${CMAKE_CURRENT_SOURCE_DIR}/rapidjson.src/include")
 	include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 	condor_glob( HeaderFiles SourceFiles "" )
