@@ -14,9 +14,8 @@ HTCondorView.prototype.initialize = function(id, url, graph_args, options) {
 	var mythis = this;
 	var i;
 
-	url = "url="+url+"&";
-	if(graph_args) { graph_args = url + graph_args; }
-	if(table_args) { table_args = url + table_args; }
+//	this.title = options.title;
+	this.url = url;
 
 	var container = $('#'+id);
 	if(container.length === 0) {
@@ -187,7 +186,8 @@ HTCondorView.prototype.load_and_render = function(graphargs, tableargs) {
 				disable_height: true
 			};
 
-			afterquery.render(tableargs, mythis.data.value, null, mythis.table_id, options);
+			var query = "url="+mythis.url+"&"+tableargs;
+			afterquery.render(query, mythis.data.value, null, mythis.table_id, options);
 		}, 0);
 	 };
 	if(tableargs === this.last_tableargs) { callback_render_table = null; }
@@ -197,7 +197,8 @@ HTCondorView.prototype.load_and_render = function(graphargs, tableargs) {
 	var callback_render_graph = function(){
 		$('#'+mythis.graph_id+' .vizchart').empty();
 		setTimeout(function() {
-			afterquery.render(graphargs, mythis.data.value, callback_render_table, mythis.graph_id);
+			var query = "url="+mythis.url+"&"+graphargs;
+			afterquery.render(query, mythis.data.value, callback_render_table, mythis.graph_id);
 			},0);
 		};
 
@@ -209,7 +210,7 @@ HTCondorView.prototype.load_and_render = function(graphargs, tableargs) {
 		}
 	}
 
-	var args = graphargs;
+	var args = "url="+mythis.url+"&"+graphargs;
 	var newurl = afterquery.parseArgs(args).get('url');
 	if(newurl == this.data_url) {
 		callback_render_graph();
