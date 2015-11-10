@@ -4,18 +4,14 @@ function HTCondorView(id, url, graph_args, options) {
 	$(document).ready(function() { that.initialize(id,url,graph_args,options); });
 }
 
-
-HTCondorView.prototype.initialize = function(id, url, graph_args, options) {
+HTCondorView.prototype.initialize_from_object = function(options) {
 	"use strict";
 
-	if(typeof(id) === 'object') {
-		options = id;
-		id = options.dst_id;
-		url = options.data_url;
-		graph_args = options.graph_query;
-	}
-
 	if(typeof(options) !== 'object') { options = {}; }
+
+	var id = options.dst_id;
+	var url = options.data_url;
+	var graph_args = options.graph_query;
 	var table_args = options.table_query;
 	var select_tuple = options.select_tuple;
 	this.urlTool = document.createElement('a');
@@ -56,6 +52,21 @@ HTCondorView.prototype.initialize = function(id, url, graph_args, options) {
 		}
 	}
 	this.load_and_render(this.current_graphargs, this.current_tableargs);
+};
+
+HTCondorView.prototype.initialize = function(id, url, graph_args, options) {
+	"use strict";
+
+	if(typeof(id) === 'object') {
+		return this.initialize_from_object(id);
+	}
+
+	if(typeof(options) !== 'object') { options = {}; }
+
+	options.dst_id = id;
+	options.data_url = url;
+	options.graph_query = graph_args;
+	return this.initialize_from_object(options);
 };
 
 HTCondorView.next_graph_id = 0;
