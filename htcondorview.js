@@ -15,7 +15,7 @@ HTCondorView.prototype.initialize = function(id, url, graph_args, table_args, se
 	if(table_args) { table_args = url + table_args; }
 
 	var container = $('#'+id);
-	if(container.length == 0) {
+	if(container.length === 0) {
 		console.log('HTCondor View is not able to intialize. There is no element with an ID of "'+id+'".');
 		return false;
 	}
@@ -44,7 +44,7 @@ HTCondorView.prototype.initialize = function(id, url, graph_args, table_args, se
 		}
 	}
 	this.load_and_render(this.current_graphargs, this.current_tableargs);
-}
+};
 
 HTCondorView.next_graph_id = 0;
 
@@ -52,17 +52,17 @@ HTCondorView.prototype.new_graph_id = function() {
 	HTCondorView.next_graph_id++;
 	var new_id = "htcondorview-private-" + HTCondorView.next_graph_id;
 	return new_id;
-}
+};
 
 HTCondorView.prototype.toggle_edit = function(btn, controls) {
 	"use strict";
 	$(controls).toggle();
 	if($(controls).is(":visible")) {
-		$(btn).text("❌")
+		$(btn).text("❌");
 	} else {
-		$(btn).text("edit")
+		$(btn).text("edit");
 	}
-}
+};
 
 /*
 HTCondorView.prototype.load_arguments_to_form = function() {
@@ -114,7 +114,7 @@ HTCondorView.prototype.replace_search_arg = function(oldurl, newkey, newval) {
 	}
 	this.urlTool.search = newsearch;
 	return this.urlTool.href;
-}
+};
 
 /*
 HTCondorView.prototype.save_arguments_to_url = function() {
@@ -193,7 +193,7 @@ HTCondorView.prototype.load_and_render = function(graphargs, tableargs) {
 		$('#'+mythis.graph_id+' .vizchart').empty();
 		setTimeout(function() {
 			afterquery.render(graphargs, mythis.data.value, callback_render_table, mythis.graph_id);
-			},0)
+			},0);
 		};
 
 	if(!graphargs) {
@@ -214,7 +214,7 @@ HTCondorView.prototype.load_and_render = function(graphargs, tableargs) {
 			callback_render_graph();
 			}, this.graph_id);
 	}
-}
+};
 
 HTCondorView.prototype.table_select_handler = function(evnt,table,data) {
 	"use strict";
@@ -239,7 +239,7 @@ HTCondorView.prototype.table_select_handler = function(evnt,table,data) {
 
 
 	this.load_and_render(graphargs, this.current_tableargs);
-}
+};
 
 HTCondorView.prototype.html_for_graph = function(id, myclass) {
 	return "" +
@@ -251,7 +251,7 @@ HTCondorView.prototype.html_for_graph = function(id, myclass) {
 		"<div class='vizraw'></div>\n" +
 		"<div class='vizchart'></div>\n" +
 		"</div>\n";
-}
+};
 
 HTCondorView.prototype.starting_html = function(has_table) {
 	"use strict";
@@ -272,7 +272,7 @@ HTCondorView.prototype.starting_html = function(has_table) {
 	ret += "</div>\n";
 
 	return ret;
-}
+};
 
 
 HTCondorView.prototype.afterquerydata_to_csv = function(dt) {
@@ -296,14 +296,16 @@ HTCondorView.prototype.afterquerydata_to_csv = function(dt) {
 	var columns = dt.headers.length;
 	var rows = dt.data.length;
 
-	for(var col = 0; col < columns; col++) {
+	var col;
+
+	for(col = 0; col < columns; col++) {
 		if(col > 0) { ret += ","; }
 		ret += csv_escape(dt.headers[col]);
 	}
 	ret += "\n";
 
 	for(var row = 0; row < rows; row++) {
-		for(var col = 0; col < columns; col++) {
+		for(col = 0; col < columns; col++) {
 			if(col > 0) { ret += ","; }
 			ret += csv_escape(dt.data[row][col]);
 		}
@@ -311,7 +313,7 @@ HTCondorView.prototype.afterquerydata_to_csv = function(dt) {
 	}
 
 	return ret;
-}
+};
 
 HTCondorView.prototype.download_data = function(filename, type, data) {
 	"use strict";
@@ -321,7 +323,7 @@ HTCondorView.prototype.download_data = function(filename, type, data) {
 	document.body.appendChild(link);
 	link.click();
 	document.body.removeChild(link);
-}
+};
 
 HTCondorView.prototype.download_csv = function(data) {
 	"use strict";
@@ -330,9 +332,9 @@ HTCondorView.prototype.download_csv = function(data) {
 		var csv = mythis.afterquerydata_to_csv(mythis.csv_source_data.value);
 		mythis.csv_source_data = undefined;
 		mythis.download_data("HTCondor-View-Data.csv", "text/csv", csv);
-	}
+	};
 	this.csv_source_data = afterquery.load_post_transform(this.current_tableargs, data, handle_csv, null);
-}
+};
 
 
 
