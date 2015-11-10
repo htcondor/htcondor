@@ -1,12 +1,15 @@
-function HTCondorView(id, url, graph_args, table_args, select_tuple) {
+function HTCondorView(id, url, graph_args, options) {
 	"use strict";
 	var that = this;
-	$(document).ready(function() { that.initialize(id,url,graph_args,table_args,select_tuple); });
+	$(document).ready(function() { that.initialize(id,url,graph_args,options); });
 }
 
 
-HTCondorView.prototype.initialize = function(id, url, graph_args, table_args, select_tuple) {
+HTCondorView.prototype.initialize = function(id, url, graph_args, options) {
 	"use strict";
+	if(typeof(options) !== 'object') { options = {}; }
+	var table_args = options.table_args;
+	var select_tuple = options.select_tuple;
 	this.urlTool = document.createElement('a');
 	var mythis = this;
 	var i;
