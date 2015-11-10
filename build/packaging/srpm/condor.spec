@@ -727,10 +727,9 @@ export CMAKE_PREFIX_PATH=/usr
 %if %uw_build
 %define condor_build_id UW_development
 
-%cmake \
+cmake \
        -DBUILDID:STRING=%condor_build_id \
        -DUW_BUILD:BOOL=TRUE \
-       -DCMAKE_SKIP_RPATH:BOOL=FALSE \
 %if ! %std_univ
        -DCLIPPED:BOOL=TRUE \
 %endif
