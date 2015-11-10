@@ -1,18 +1,21 @@
 function HTCondorViewLinked(rootid) {
+	"use strict";
 	var that = this;
 	$(document).ready( function() { that.initialize(rootid); });
 }
 
 
 HTCondorViewLinked.prototype.new_graph_id = function() {
+	"use strict";
 	return HTCondorView.prototype.new_graph_id();
-}
+};
 
 HTCondorViewLinked.prototype.initialize = function(rootid) {
+	"use strict";
 	var that = this;
 	this.rootid = rootid;
 	var container = $('#'+rootid);
-	if(container.length == 0) {
+	if(container.length === 0) {
 		console.log('HTCondor View Simple is not able to intialize. There is no element with an ID of "'+id+'".');
 		return;
 	}
@@ -62,7 +65,6 @@ HTCondorViewLinked.prototype.htcview_args = function(source, duration) {
 					"pivot=Name;JobStatus;Count",
 				select: ["Name"]
 			};
-			break;
 		case "day":
 		case "week":
 		case "month":
@@ -108,8 +110,7 @@ HTCondorViewLinked.prototype.htcview_args = function(source, duration) {
 		}
 		break;
 	}
-
-}
+};
 
 
 HTCondorViewLinked.prototype.change_view = function() {
@@ -117,8 +118,8 @@ HTCondorViewLinked.prototype.change_view = function() {
 	//$("#"+this.graph_id).empty();
 	//this.htcondor_view = null;
 
-	var duration = $("#"+this.rootid+' .data-duration input[type="radio"]:checked').val()
-	var source = $("#"+this.rootid+' .data-source input[type="radio"]:checked').val()
+	var duration = $("#"+this.rootid+' .data-duration input[type="radio"]:checked').val();
+	var source = $("#"+this.rootid+' .data-source input[type="radio"]:checked').val();
 
 	var view_args = this.htcview_args(source, duration);
 
