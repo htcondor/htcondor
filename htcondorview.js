@@ -46,7 +46,7 @@ HTCondorView.next_graph_id = 0;
 
 HTCondorView.prototype.new_graph_id = function() {
 	HTCondorView.next_graph_id++;
-	var new_id = "htcondorview" + HTCondorView.next_graph_id;
+	var new_id = "htcondorview-private-" + HTCondorView.next_graph_id;
 	return new_id;
 }
 
