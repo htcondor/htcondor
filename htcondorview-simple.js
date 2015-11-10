@@ -43,25 +43,7 @@ HTCondorViewSimple.prototype.initialize = function(rootid) {
 };
 
 
-HTCondorViewSimple.prototype.submitters_data_source = function() { "use strict"; return "submitters.json"; }
-HTCondorViewSimple.prototype.submitters_now_data_source = function() { "use strict"; return "submitters.now.json"; }
-HTCondorViewSimple.prototype.machines_data_source = function() { "use strict"; return "machines.json"; }
-HTCondorViewSimple.prototype.machines_now_data_source = function() { "use strict"; return "machines.now.json"; }
 
-
-/*
-is_chart - true it's a chart (pie/stacked), false it's a table.
-source - submitters or machines
-duration - now, day, week, or month
-*/
-HTCondorViewSimple.prototype.graph_args = function(is_chart, source, duration) {
-	"use strict";
-	var args = this.htcview_args(source, duration);
-	if(is_chart) { ret = args[1]; }
-	else { ret = args[2]; }
-	var ret = "url="+args[0]+"&"+ret;
-	return ret;
-}
 
 // Return arguments for HTCondorView's constructor. Is an array of
 // 4 elements:
@@ -78,7 +60,7 @@ HTCondorViewSimple.prototype.htcview_args = function(source, duration) {
 		case "now":
 			return [
 				// URL
-				this.submitters_now_data_source(),
+				"submitters.now.json",
 				// Graph
 				"title=Total Jobs&"+
 				"order=JobStatus&"+
@@ -96,7 +78,7 @@ HTCondorViewSimple.prototype.htcview_args = function(source, duration) {
 		case "month":
 			return [
 				// URL
-				this.submitters_data_source(),
+				"submitters.json",
 				// Graph
 				"title=Total Jobs&"+
 					"order=Date&"+
@@ -115,7 +97,7 @@ HTCondorViewSimple.prototype.htcview_args = function(source, duration) {
 		case "now":
 			return [
 				// URL
-				this.machines_now_data_source(),
+				"machines.now.json",
 				// Graph
 				"title=Machine State&"+
 					"order=State&"+
@@ -132,7 +114,7 @@ HTCondorViewSimple.prototype.htcview_args = function(source, duration) {
 		case "month":
 			return [
 				// URL
-				this.machines_data_source(),
+				"machines.json",
 				// Graph
 				"title=Machine State&"+
 					"order=Date&" +
