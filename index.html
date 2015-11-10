@@ -22,7 +22,7 @@ body {
 	font-family: "Helvetica Neue", Helvetica, sans-serif;
 }
 
-.dashboard-item {
+.HTCondorViewSimple {
 	display: inline-block;
 	width: 300px;
 	height: 200px;
@@ -69,20 +69,14 @@ ul.radio-tabs li input[type="radio"]:checked + label {
 
 <h1><img src="HTCondor_logo.png" style="display: inline-block;  height: 1.3em;" alt="HTCondor"> View</h1>
 
-<div id="pie-users" class="dashboard-item"></div>
 <script>
-new HTCondorView( "pie-users", "url=submitters.now.json&title=Total Jobs&order=JobStatus&group=JobStatus;Count&chart=pie");
+HTCondorView.simple("url=submitters.now.json&title=Total Jobs&order=JobStatus&group=JobStatus;Count&chart=pie");
+
+HTCondorView.simple("url=machines.now.json&title=Machine State&order=State&group=State;Cpus&chart=pie");
+
+HTCondorView.simple("url=submitters.now.json&title=Submit Points&order=Machine&group=Machine;Count&chart=pie");
 </script>
 
-<div id="pie-machines" class="dashboard-item"></div>
-<script>
-new HTCondorView( "pie-machines", "url=machines.now.json&title=Machine State&order=State&group=State;Cpus&chart=pie");
-</script>
-
-<div id="pie-submits" class="dashboard-item"></div>
-<script>
-new HTCondorView( "pie-submits", "url=submitters.now.json&title=Submit Points&order=Machine&group=Machine;Count&chart=pie");
-</script>
 
 
 <div id="simple-paired"></div>

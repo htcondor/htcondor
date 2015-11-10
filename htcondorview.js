@@ -1,8 +1,64 @@
+/*
+
+HTCondorView
+
+SIMPLE USAGE:
+
+	<script>
+	HTCondorView.simple("url=submitters.now.json&title=Total Jobs&order=JobStatus&group=JobStatus;Count&chart=pie");
+	</script>
+
+This will insert a <div> whereever the script appears and place a chart inside, as described by the single argument which is an Afterquery query.  The <div> will have a class of "HTCondorViewSimple" and a unique, arbitrary ID.
+
+Returns an HTCondorView object, which is not currently useful.
+
+
+COMPLEX USAGE:
+
+	<div id="myexample"></div>
+
+	<script>
+	new HTCondorView({
+			dst_id: "myexample",
+			data_url: "submitters.json",
+			graph_query: "order=Date&pivot=Date;JobStatus;Count&chart=stacked",
+			title: "Total Jobs",
+			table_query: "order=Date&pivot=Name;JobStatus;avg(Count)",
+			select_tuple: ["Name"]
+		});
+	</script>
+
+dst_id - The chart will be placed inside the <div> or other element with this id.  Previous contents will be destroyed.
+
+data_url - URL, possibly relative, to the data to be loaded.
+
+graph_query - Afterquery query, but not including the title or url entries.  This is the chart to display.
+
+title - Optional. A title to display with the chart.
+
+table_query - Optional. Afterquery query, not including title or url entries.  This specifies a second chart to display.  Probably should be a simple table (that is, don't specify "chart").  If not present, no second chart is present.
+
+select_tuple - Optional. If table_query is present and is a table, when a user clicks on a row in the table, these fields will be extracts from the selected row and used to filter the graph specified in graph_query.
+
+
+*/
+
+
 function HTCondorView(id, url, graph_args, options) {
 	"use strict";
 	var that = this;
 	$(document).ready(function() { that.initialize(id,url,graph_args,options); });
 }
+
+HTCondorView.simple = function(query, thisclass) {
+	var newid = HTCondorView.prototype.new_graph_id();
+	if(thisclass === null || thisclass === undefined) { 
+		thisclass = "HTCondorViewSimple";
+	}
+	var tag = '<div id="'+newid+'" class="'+thisclass+'"></div>';
+	document.write(tag);
+	return new HTCondorView(newid, query);
+};
 
 HTCondorView.prototype.initialize_from_object = function(options) {
 	"use strict";
