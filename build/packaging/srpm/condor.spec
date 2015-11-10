@@ -702,7 +702,9 @@ exit 0
 %setup -q -n %{name}-%{tarball_version}
 %endif
 
+%if 0%{?osg} || 0%{?hcc}
 %patch8 -p1
+%endif
 
 %if 0%{?hcc}
 %patch15 -p0
@@ -963,7 +965,9 @@ cp %{SOURCE3} %{buildroot}%{_unitdir}/condor.service
 %else
 # install the lsb init script
 install -Dp -m0755 %{buildroot}/etc/examples/condor.init %{buildroot}%{_initrddir}/condor
+%if 0%{?osg} || 0%{?hcc}
 install -Dp -m 0644 %{SOURCE4} %buildroot/usr/share/osg/sysconfig/condor
+%endif
 mkdir %{buildroot}%{_sysconfdir}/sysconfig/
 install -Dp -m 0644 %{buildroot}/etc/examples/condor.sysconfig %{buildroot}%{_sysconfdir}/sysconfig/condor
 %endif
@@ -1134,7 +1138,9 @@ rm -rf %{buildroot}
 %{_unitdir}/condor.service
 %else
 %_initrddir/condor
+%if 0%{?osg} || 0%{?hcc}
 /usr/share/osg/sysconfig/condor
+%endif
 %config(noreplace) /etc/sysconfig/condor
 %endif
 %dir %_datadir/condor/
