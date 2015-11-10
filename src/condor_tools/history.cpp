@@ -1003,7 +1003,7 @@ static void readHistoryFromFiles(bool fileisuserlog, const char *JobHistoryFileN
         // The user didn't specify the name of the file to read, so we read
         // the history file, and any backups (rotated versions). 
         int numHistoryFiles;
-        char **historyFiles;
+        const char **historyFiles;
 
         historyFiles = findHistoryFiles("HISTORY", &numHistoryFiles);
 		if (!historyFiles) {
@@ -1021,16 +1021,14 @@ static void readHistoryFromFiles(bool fileisuserlog, const char *JobHistoryFileN
             if (backwards) { // Reverse reading of history files array
                 for(fileIndex = numHistoryFiles - 1; fileIndex >= 0; fileIndex--) {
                     readHistoryFromFileEx(historyFiles[fileIndex], constraint, constraintExpr, backwards);
-                    free(historyFiles[fileIndex]);
                 }
             }
             else {
                 for (fileIndex = 0; fileIndex < numHistoryFiles; fileIndex++) {
                     readHistoryFromFileEx(historyFiles[fileIndex], constraint, constraintExpr, backwards);
-                    free(historyFiles[fileIndex]);
                 }
             }
-            free(historyFiles);
+            freeHistoryFilesList(historyFiles);
         }
     }
     return;
