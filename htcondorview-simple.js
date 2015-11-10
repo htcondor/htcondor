@@ -160,31 +160,24 @@ HTCondorViewSimple.prototype.change_view = function() {
 	var duration = $('#data-duration input[type="radio"]:checked').val()
 	var source = $('#data-source input[type="radio"]:checked').val()
 
-	var graph_args = this.graph_args(true, source, duration);
-	var table_args = this.graph_args(false, source, duration);
+	var view_args = this.htcview_args(source, duration);
 
-	var select_tuple;
-	switch(source) {
-	case "machines": select_tuple = ["Arch", "OpSys"]; break;
-	case "submitters": select_tuple = ["Name"]; break;
-	}
-
-	this.htcondor_view = new HTCondorView(this.graph_id, graph_args, table_args, select_tuple);
+	this.htcondor_view = new HTCondorView(this.graph_id, view_args[0], view_args[1], view_args[2], view_args[3]);
 };
 
 
 HTCondorViewSimple.prototype.html_tabs = function() {
 	return "" +
-	"<div style=\"text-align: center\">\n" +
-	"<ul class=\"radio-tabs\" id=\"data-source\">\n" +
-	"<li><input type=\"radio\" name=\"data-source\" id=\"data-source-user\" value=\"submitters\" checked> <label for=\"data-source-user\">Users</label>\n" +
-	"<li><input type=\"radio\" name=\"data-source\" id=\"data-source-machine\" value=\"machines\"> <label for=\"data-source-machine\">Pool</label>\n" +
+	"<div style='text-align: center'>\n" +
+	"<ul class='radio-tabs' id='data-source'>\n" +
+	"<li><input type='radio' name='data-source' id='data-source-user' value='submitters' checked> <label for='data-source-user'>Users</label>\n" +
+	"<li><input type='radio' name='data-source' id='data-source-machine' value='machines'> <label for='data-source-machine'>Pool</label>\n" +
 	"</ul>\n" +
-	"<ul class=\"radio-tabs\" id=\"data-duration\">\n" +
-	"<li><input type=\"radio\" name=\"data-duration\" id=\"data-duration-now\" value=\"now\"> <label for=\"data-duration-now\">Now</label>\n" +
-	"<li><input type=\"radio\" name=\"data-duration\" id=\"data-duration-day\" value=\"day\" checked> <label for=\"data-duration-day\">Day</label>\n" +
-	"<li><input type=\"radio\" name=\"data-duration\" id=\"data-duration-week\" value=\"week\"> <label for=\"data-duration-week\">Week</label>\n" +
-	"<li><input type=\"radio\" name=\"data-duration\" id=\"data-duration-month\" value=\"month\"> <label for=\"data-duration-month\">Month</label>\n" +
+	"<ul class='radio-tabs' id='data-duration'>\n" +
+	"<li><input type='radio' name='data-duration' id='data-duration-now' value='now'> <label for='data-duration-now'>Now</label>\n" +
+	"<li><input type='radio' name='data-duration' id='data-duration-day' value='day' checked> <label for='data-duration-day'>Day</label>\n" +
+	"<li><input type='radio' name='data-duration' id='data-duration-week' value='week'> <label for='data-duration-week'>Week</label>\n" +
+	"<li><input type='radio' name='data-duration' id='data-duration-month' value='month'> <label for='data-duration-month'>Month</label>\n" +
 	"</ul>\n" +
 	"</div>\n";
 };

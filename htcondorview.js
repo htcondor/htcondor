@@ -1,8 +1,12 @@
-function HTCondorView(id, graph_args, table_args, select_tuple) {
+function HTCondorView(id, url, graph_args, table_args, select_tuple) {
 	"use strict";
 	this.urlTool = document.createElement('a');
 	var mythis = this;
 	var i;
+
+	url = "url="+url+"&";
+	graph_args = url + graph_args;
+	table_args = url + table_args;
 
 	var container = $('#'+id);
 	if(container.length == 0) {
