@@ -766,7 +766,7 @@ cmake \
        -DINCLUDE_INSTALL_DIR:PATH=/usr/include \
        -DSYSCONF_INSTALL_DIR:PATH=/etc \
        -DSHARE_INSTALL_PREFIX:PATH=/usr/share \
-%ifarch %{ix86} x86_64
+%ifarch x86_64
        -DCMAKE_INSTALL_LIBDIR:PATH=/usr/lib64 \
        -DLIB_INSTALL_DIR:PATH=/usr/lib64 \
        -DLIB_SUFFIX=64 \
