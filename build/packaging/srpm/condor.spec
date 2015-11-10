@@ -763,15 +763,18 @@ cmake \
        -DWANT_LEASE_MANAGER:BOOL=FALSE \
        -DCMAKE_VERBOSE_MAKEFILE=ON \
        -DCMAKE_INSTALL_PREFIX:PATH=/usr \
-       -DCMAKE_INSTALL_LIBDIR:PATH=/usr/lib64 \
        -DINCLUDE_INSTALL_DIR:PATH=/usr/include \
-       -DLIB_INSTALL_DIR:PATH=/usr/lib64 \
        -DSYSCONF_INSTALL_DIR:PATH=/etc \
        -DSHARE_INSTALL_PREFIX:PATH=/usr/share \
-%if "lib64" == "lib64" 
+%ifarch %{ix86} x86_64
+       -DCMAKE_INSTALL_LIBDIR:PATH=/usr/lib64 \
+       -DLIB_INSTALL_DIR:PATH=/usr/lib64 \
        -DLIB_SUFFIX=64 \
+%else
+       -DCMAKE_INSTALL_LIBDIR:PATH=/usr/lib \
+       -DLIB_INSTALL_DIR:PATH=/usr/lib \
 %endif 
-        -DBUILD_SHARED_LIBS:BOOL=ON
+       -DBUILD_SHARED_LIBS:BOOL=ON
 
 %else
 
