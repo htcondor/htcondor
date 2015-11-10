@@ -38,7 +38,7 @@ function HTCondorView(id, url, graph_args, table_args, select_tuple) {
 		}
 	}
 	console.log(select_tuple, this.select_tuple);
-	//console.log(id, graph_args, table_args, select_tuple);
+	console.log(id, graph_args, table_args, select_tuple);
 	this.load_and_render(this.current_graphargs, this.current_tableargs);
 }
 

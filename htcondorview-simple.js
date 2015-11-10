@@ -1,5 +1,3 @@
-// TODO: Assumes a single, global #data-duration #data-source. Should be classes referenced uner #this.rootid
-
 function HTCondorViewSimple(rootid) {
 	var that = this;
 	$(document).ready( function() { that.initialize(rootid); });
@@ -28,7 +26,7 @@ HTCondorViewSimple.prototype.initialize = function(rootid) {
 
 	// Initialize tabs
 	$('#'+this.rootid+' ul.tabs li').click(function(){
-		$('ul.tabs li').removeClass('current');
+		$('#'+this.rootid+' ul.tabs li').removeClass('current');
 		$(this).addClass('current');
 	});
 
@@ -119,11 +117,12 @@ HTCondorViewSimple.prototype.htcview_args = function(source, duration) {
 
 HTCondorViewSimple.prototype.change_view = function() {
 	// Purge everything.
-	$("#"+this.graph_id).empty();
-	this.htcondor_view = null;
+	//$("#"+this.graph_id).empty();
+	//this.htcondor_view = null;
 
-	var duration = $('.data-duration input[type="radio"]:checked').val()
-	var source = $('.data-source input[type="radio"]:checked').val()
+	var duration = $("#"+this.rootid+' .data-duration input[type="radio"]:checked').val()
+	var source = $("#"+this.rootid+' .data-source input[type="radio"]:checked').val()
+	console.log(this.graph_id, duration, source);
 
 	var view_args = this.htcview_args(source, duration);
 
