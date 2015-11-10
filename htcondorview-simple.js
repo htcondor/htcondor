@@ -3,12 +3,9 @@ function HTCondorViewSimple(rootid) {
 	$(document).ready( function() { that.initialize(rootid); });
 }
 
-HTCondorViewSimple.next_graph_id = 0;
 
 HTCondorViewSimple.prototype.new_graph_id = function() {
-	HTCondorViewSimple.next_graph_id++;
-	var new_id = "htcondorviewsimple" + HTCondorViewSimple.next_graph_id;
-	return new_id;
+	return HTCondorView.prototype.new_graph_id();
 }
 
 HTCondorViewSimple.prototype.initialize = function(rootid) {
@@ -139,15 +136,15 @@ HTCondorViewSimple.prototype.html_tabs = function() {
 	var id_dm = this.new_graph_id();
 	return "" +
 	"<div style='text-align: center'>\n" +
-	"<ul class='radio-tabs data-source'>\n" +
-	"<li><input type='radio' name='data-source' id='data-source-user"+id_su+"' value='submitters' checked> <label for='data-source-user"+id_su+"'>Users</label>\n" +
-	"<li><input type='radio' name='data-source' id='data-source-machine"+id_sm+"' value='machines'> <label for='data-source-machine"+id_sm+"'>Pool</label>\n" +
-	"</ul>\n" +
-	"<ul class='radio-tabs data-duration'>\n" +
-	"<li><input type='radio' name='data-duration' id='data-duration-now"+id_dn+"' value='now'> <label for='data-duration-now"+id_dn+"'>Now</label>\n" +
-	"<li><input type='radio' name='data-duration' id='data-duration-day"+id_dd+"' value='day' checked> <label for='data-duration-day"+id_dd+"'>Day</label>\n" +
-	"<li><input type='radio' name='data-duration' id='data-duration-week"+id_dw+"' value='week'> <label for='data-duration-week"+id_dw+"'>Week</label>\n" +
-	"<li><input type='radio' name='data-duration' id='data-duration-month"+id_dm+"' value='month'> <label for='data-duration-month"+id_dm+"'>Month</label>\n" +
-	"</ul>\n" +
+		"<ul class='radio-tabs data-source'>\n" +
+			"<li><input type='radio' name='data-source' id='data-source-user"+id_su+"' value='submitters' checked> <label for='data-source-user"+id_su+"'>Users</label>\n" +
+			"<li><input type='radio' name='data-source' id='data-source-machine"+id_sm+"' value='machines'> <label for='data-source-machine"+id_sm+"'>Pool</label>\n" +
+		"</ul>\n" +
+		"<ul class='radio-tabs data-duration'>\n" +
+			"<li><input type='radio' name='data-duration' id='data-duration-now"+id_dn+"' value='now'> <label for='data-duration-now"+id_dn+"'>Now</label>\n" +
+			"<li><input type='radio' name='data-duration' id='data-duration-day"+id_dd+"' value='day' checked> <label for='data-duration-day"+id_dd+"'>Day</label>\n" +
+			"<li><input type='radio' name='data-duration' id='data-duration-week"+id_dw+"' value='week'> <label for='data-duration-week"+id_dw+"'>Week</label>\n" +
+			"<li><input type='radio' name='data-duration' id='data-duration-month"+id_dm+"' value='month'> <label for='data-duration-month"+id_dm+"'>Month</label>\n" +
+		"</ul>\n" +
 	"</div>\n";
 };
