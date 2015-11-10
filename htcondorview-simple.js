@@ -56,24 +56,19 @@ duration - now, day, week, or month
 */
 HTCondorViewSimple.prototype.graph_args = function(is_chart, source, duration) {
 	"use strict";
-	var title;
-	switch(source) {
-		case 'submitters':
-			var machine_args = this.htcview_args(source, duration);
-			if(is_chart) { return machine_args[0]; }
-			return machine_args[1];
-		case 'machines':
-			var machine_args = this.htcview_args(source, duration);
-			if(is_chart) { return machine_args[0]; }
-			return machine_args[1];
-	}
+	var args = this.htcview_args(source, duration);
+	if(is_chart) { ret = args[1]; }
+	else { ret = args[2]; }
+	var ret = "url="+args[0]+"&"+ret;
+	return ret;
 }
 
 // Return arguments for HTCondorView's constructor. Is an array of
-// 3 elements:
-// 0. graph arguments
-// 1. table arguments
-// 2. select tuple (sub-array)
+// 4 elements:
+// 0. URL to the data
+// 1. graph arguments
+// 2. table arguments
+// 3. select tuple (sub-array)
 HTCondorViewSimple.prototype.htcview_args = function(source, duration) {
 	"use strict";
 
@@ -82,15 +77,14 @@ HTCondorViewSimple.prototype.htcview_args = function(source, duration) {
 		switch(duration) {
 		case "now":
 			return [
+				// URL
+				this.submitters_now_data_source(),
 				// Graph
-				"url=" + this.submitters_now_data_source() + "&" +
 				"title=Total Jobs&"+
 				"order=JobStatus&"+
 				"group=JobStatus;Count&"+
 				"chart=pie",
 				// Table
-				"url=" + this.submitters_now_data_source() + "&" +
-				"title=Total Jobs&"+
 				"order=JobStatus&"+
 				"pivot=Name;JobStatus;Count",
 				// Select
@@ -101,17 +95,16 @@ HTCondorViewSimple.prototype.htcview_args = function(source, duration) {
 		case "week":
 		case "month":
 			return [
+				// URL
+				this.submitters_data_source(),
 				// Graph
-				"url=" + this.submitters_data_source() + "&" +
 				"title=Total Jobs&"+
-				"order=Date&"+
-				"pivot=Date;JobStatus;Count&"+
-				"chart=stacked",
+					"order=Date&"+
+					"pivot=Date;JobStatus;Count&"+
+					"chart=stacked",
 				// Table
-				"url=" + this.submitters_data_source() + "&" +
-				"title=Total Jobs&"+
 				"order=Date&"+
-				"pivot=Name;JobStatus;avg(Count)",
+					"pivot=Name;JobStatus;avg(Count)",
 				// Select
 				["Name"]
 			];
@@ -121,15 +114,15 @@ HTCondorViewSimple.prototype.htcview_args = function(source, duration) {
 		switch(duration) {
 		case "now":
 			return [
+				// URL
+				this.machines_now_data_source(),
 				// Graph
 				"title=Machine State&"+
-					"url="+this.machines_now_data_source()+"&"+
 					"order=State&"+
 					"group=State;Cpus&"+
 					"chart=pie",
 				// Table
-				"url="+this.machines_now_data_source()+"&"+
-					"order=Arch,OpSys&"+
+				"order=Arch,OpSys&"+
 					"group=Arch,OpSys;State;Cpus",
 				// Select
 				["Arch", "OpSys"]
@@ -138,15 +131,15 @@ HTCondorViewSimple.prototype.htcview_args = function(source, duration) {
 		case "week":
 		case "month":
 			return [
+				// URL
+				this.machines_data_source(),
 				// Graph
 				"title=Machine State&"+
-					"url=" + this.machines_data_source() + "&" +
 					"order=Date&" +
 					"pivot=Date;State;Cpus&" +
 					"chart=stacked&",
 				// Table
-				"url=" + this.machines_data_source() + "&" +
-					"order=Date&" +
+				"order=Date&" +
 					"pivot=Date,Arch,OpSys;State;Cpus&" +
 					"group=Arch,OpSys;avg(Unclaimed),avg(Claimed),max(Unclaimed),max(Claimed)",
 				// Select
@@ -169,8 +162,6 @@ HTCondorViewSimple.prototype.change_view = function() {
 
 	var graph_args = this.graph_args(true, source, duration);
 	var table_args = this.graph_args(false, source, duration);
-	console.log(graph_args);
-	console.log(table_args);
 
 	var select_tuple;
 	switch(source) {
