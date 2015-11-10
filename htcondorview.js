@@ -6,6 +6,7 @@ function HTCondorView(id, url, graph_args, table_args, select_tuple) {
 
 
 HTCondorView.prototype.initialize = function(id, url, graph_args, table_args, select_tuple) {
+	"use strict";
 	this.urlTool = document.createElement('a');
 	var mythis = this;
 	var i;
@@ -49,6 +50,7 @@ HTCondorView.prototype.initialize = function(id, url, graph_args, table_args, se
 HTCondorView.next_graph_id = 0;
 
 HTCondorView.prototype.new_graph_id = function() {
+	"use strict";
 	HTCondorView.next_graph_id++;
 	var new_id = "htcondorview-private-" + HTCondorView.next_graph_id;
 	return new_id;
@@ -242,6 +244,7 @@ HTCondorView.prototype.table_select_handler = function(evnt,table,data) {
 };
 
 HTCondorView.prototype.html_for_graph = function(id, myclass) {
+	"use strict";
 	return "" +
 		"<div id='"+id+"' class='"+myclass+"'>\n" +
 		"<div class='vizstatus'>\n" +
