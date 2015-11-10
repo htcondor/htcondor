@@ -1,14 +1,14 @@
-function HTCondorViewSimple(rootid) {
+function HTCondorViewLinked(rootid) {
 	var that = this;
 	$(document).ready( function() { that.initialize(rootid); });
 }
 
 
-HTCondorViewSimple.prototype.new_graph_id = function() {
+HTCondorViewLinked.prototype.new_graph_id = function() {
 	return HTCondorView.prototype.new_graph_id();
 }
 
-HTCondorViewSimple.prototype.initialize = function(rootid) {
+HTCondorViewLinked.prototype.initialize = function(rootid) {
 	var that = this;
 	this.rootid = rootid;
 	var container = $('#'+rootid);
@@ -45,7 +45,7 @@ HTCondorViewSimple.prototype.initialize = function(rootid) {
 // graph - afterquery arguments
 // table - afterquery arguments
 // select - tuple for selecting rows in the table
-HTCondorViewSimple.prototype.htcview_args = function(source, duration) {
+HTCondorViewLinked.prototype.htcview_args = function(source, duration) {
 	"use strict";
 
 	switch(source) {
@@ -112,7 +112,7 @@ HTCondorViewSimple.prototype.htcview_args = function(source, duration) {
 }
 
 
-HTCondorViewSimple.prototype.change_view = function() {
+HTCondorViewLinked.prototype.change_view = function() {
 	// Purge everything.
 	//$("#"+this.graph_id).empty();
 	//this.htcondor_view = null;
@@ -126,7 +126,7 @@ HTCondorViewSimple.prototype.change_view = function() {
 };
 
 
-HTCondorViewSimple.prototype.html_tabs = function() {
+HTCondorViewLinked.prototype.html_tabs = function() {
 	// We need to ensure the IDs are all unique.
 	var id_su = this.new_graph_id();
 	var id_sm = this.new_graph_id();
