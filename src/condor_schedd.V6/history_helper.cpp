@@ -227,7 +227,7 @@ main_init(int argc, char *argv[])
 	// The user didn't specify the name of the file to read, so we read
 	// the history file, and any backups (rotated versions). 
 	int numHistoryFiles;
-	char **historyFiles;
+	const char **historyFiles;
 
 	historyFiles = findHistoryFiles("HISTORY", &numHistoryFiles);
 	if (!historyFiles) {
@@ -237,10 +237,9 @@ main_init(int argc, char *argv[])
 		int fileIndex;
 		for(fileIndex = numHistoryFiles - 1; fileIndex >= 0; fileIndex--) {
 			readHistoryFromFileEx(historyFiles[fileIndex], requirements);
-			free(historyFiles[fileIndex]);
 		}
-		free(historyFiles);
 	}
+	freeHistoryFilesList(historyFiles);
 
 	classad::ClassAd ad;
 	ad.InsertAttr(ATTR_OWNER, 0);
