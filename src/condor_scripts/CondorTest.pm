@@ -2756,8 +2756,14 @@ sub slurp {
   {
       my $self = shift;
 	  my $onedaemon = "$self->{daemon}" . ",$self->{pid}";
-	  print "GetDaemonAndPid: returning $onedaemon\n";
+	  #print "GetDaemonAndPid: returning $onedaemon\n";
 	  return($onedaemon);
+  }
+  sub GetPidIfAlive
+  {
+    my $self = shift;
+	if ($self->{alive}) { return $self->{pid}; }
+	return 0;
   }
   sub DisplayWhoDataInstance
   {
@@ -3026,6 +3032,16 @@ sub LoadWhoData
 		}
 	  }
 	  return(0);
+  }
+  sub GetMasterPid
+  {
+	my $self = shift;
+	foreach my $daemonkey (keys %{$self->{personal_who_data}}) {
+		if ($daemonkey eq "Master") {
+			return $self->{personal_who_data}->{$daemonkey}->GetPidIfAlive();
+		}
+	}
+	return 0;
   }
   sub GetCondorState
   {
@@ -4103,7 +4119,7 @@ sub CreateLocalConfig
     close(FI);
 	my @configarray = ();
     runCondorTool("cat $name",\@configarray,2,{emit_output=>0});
-	print "\nIncorporating the following into the local config file:\n\n";
+	print "\nIncorporating the following into the local config file for $name:\n\n";
 	foreach my $line (@configarray) {
 		print "$line";
 	}

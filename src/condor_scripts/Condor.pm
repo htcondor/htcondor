@@ -2731,8 +2731,8 @@ sub GatherUserLogs {
 	my $arrayref;
 	my $logcount = 0;
 	my @tmplogs = ();
-	print "No longer assuming one log file because of submit foreach\n";
-	print "Exploring logs in GatherUserLogs\n";
+	#print "No longer assuming one log file because of submit foreach\n";
+	#print "Exploring logs in GatherUserLogs\n";
 	$arrayref = GatherDryData($submitfile,$drydatafile);
 	# store dry data in expected locaton
 	foreach my $line (@{$arrayref}) {
