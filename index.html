@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8">
   <title>HTCondorView</title>
+  <link rel="stylesheet" href="htcondor.css" />
   <link rel="stylesheet" href="htcondorview.css" />
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/dygraph/1.1.0/dygraph-combined.js"></script>
@@ -18,9 +19,6 @@
   <script src="htcondorview-linked.js"></script>
 
 <style>
-body {
-	font-family: "Helvetica Neue", Helvetica, sans-serif;
-}
 
 .HTCondorViewSimple {
 	display: inline-block;
@@ -68,13 +66,11 @@ ul.radio-tabs li input[type="radio"]:checked + label {
 	height: 400px;
 }
 
-h1 { text-align: center; margin: 0; }
-h1 img.logo { display: inline-block;  height: 2.0em; }
 </style>
 </head>
 <body>
 
-<h1><img class="logo" src="HTCondor-View.svg" alt="HTCondor View"></h1>
+<h1 class="htcvlogo"><img src="HTCondor-View.svg" alt="HTCondor View"></h1>
 <script>
 HTCondorView.simple("url=submitters.now.json&title=Total Jobs&order=JobStatus&group=JobStatus;Count&chart=pie");
 

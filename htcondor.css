@@ -1,0 +1,28 @@
+body {
+	font-family: "Helvetica Neue", Helvetica, sans-serif;
+}
+
+
+/* 
+    logo: Centered title. Usage:
+*/
+h1.htcvlogo { text-align: center; margin: 0; }
+h1.htcvlogo img { display: inline-block;  height: 2.0em; }
+
+
+/*
+  bug: displayed at bottom right corner of window. Usage:
+
+  <h1 class="htcvbug"><img src="HTCondor-View.svg" alt="HTCondor View"></h1>
+*/
+h1.htcvbug {
+	position: fixed;
+	right: 0;
+	bottom: 0;
+	margin: 0;
+	padding: 0;
+	z-index: 1;
+}
+h1.htcvbug img {
+	height: 0.7em;
+}
