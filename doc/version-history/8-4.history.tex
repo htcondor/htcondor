@@ -33,6 +33,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item \Condor{history} no longer reports an error when run on a system that does not have a history file.
+This change was made because the history file is not created until after the first job runs, so users
+were always seeing an error message on a fresh installation of HTCondor.
+\Ticket{5374}
+
 \item None.
 
 \end{itemize}
@@ -73,6 +78,10 @@ will not hang forever waiting for a unresponsive daemon.
 \Macro{DAGMAN\_MAX\_JOBS\_IDLE}/\Macro{-maxidle} throttle,
 especially for node jobs that create multiple procs.
 \Ticket{5333}
+
+\item Fixed a problem that prevented HTCondor from building on some 64-bit Linux
+platforms such as Arm64.  Bug was reported by Debian mantainers as their Bug 804386.
+\Ticket{5380}
 
 \end{itemize}
 
