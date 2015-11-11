@@ -84,7 +84,10 @@ HTCondorView.prototype.initialize_from_object = function(options) {
 		return false;
 	}
 	container.empty();
-	container.append(this.starting_elements(!!table_args));
+	var starting_elements = this.starting_elements({
+		has_table: !!table_args
+	});
+	container.append(starting_elements);
 	this.fullscreen_link = $('#'+this.fullscreen_id);
 
 /*
@@ -369,8 +372,11 @@ HTCondorView.prototype.html_for_graph = function() {
 		"<div class='vizchart'></div>\n";
 };
 
-HTCondorView.prototype.starting_elements = function(has_table) {
+HTCondorView.prototype.starting_elements = function(options) {
 	"use strict";
+
+	var has_table = options.has_table;
+
 	this.graph_id = this.new_graph_id();
 	this.table_id = this.new_graph_id();
 	this.fullscreen_id= this.new_graph_id();
@@ -378,9 +384,9 @@ HTCondorView.prototype.starting_elements = function(has_table) {
 	var ret = "" +
 		'<div class="htcondorview">\n' +
 		  "<div id='"+this.graph_id+"' class='graph'>\n" +
-		    "<div class='editmenu'>\n" +
-		      "<a href='#' id='"+this.fullscreen_id+"' class=\"editlink\">full screen</a>\n" +
-		    "</div>\n" +
+		    "<div class='editmenu'>\n";
+	ret += "<a href='#' id='"+this.fullscreen_id+"' class=\"editlink\">full screen</a>\n";
+	ret += "</div>\n" +
 	        this.html_for_graph() + "\n"+
 		  "</div>\n";
 	if(has_table) {
