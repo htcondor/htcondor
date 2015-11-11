@@ -180,6 +180,14 @@ Source7: 00-restart_peaceful.config
 
 Source8: htcondor.pp
 
+# custom find-requires script for filtering stuff from condor-external-libs
+Source90: find-requires.sh
+
+%if %uw_build
+%define __find_requires %{SOURCE90}
+%define _use_internal_dependency_generator 0
+%endif
+
 %if %bundle_uw_externals
 Source101: blahp-1.16.5.1.tar.gz
 Source102: boost_1_49_0.tar.gz
@@ -362,6 +370,10 @@ Requires: blahp >= 1.16.1
 
 %if %gsoap
 Requires: gsoap >= 2.7.12
+%endif
+
+%if %uw_build
+Requires: %name-external-libs%{?_isa} = %version-%release
 %endif
 
 
@@ -572,6 +584,9 @@ Summary: HTCondor's CREAM Gahp
 Group: Applications/System
 Requires: %name = %version-%release
 Requires: %name-classads = %{version}-%{release}
+%if %uw_build
+Requires: %name-external-libs%{?_isa} = %version-%release
+%endif
 
 %description cream-gahp
 The condor-cream-gahp enables CREAM interoperability for HTCondor.
@@ -649,6 +664,7 @@ on a single machine at once when memory is the limiting factor.
 Summary: External packages built into HTCondor
 Group: Applications/System
 Requires: %name = %version-%release
+Requires: %name-external-libs%{?_isa} = %version-%release
 
 %description externals
 Includes the external packages built when UW_BUILD is enabled
@@ -656,6 +672,8 @@ Includes the external packages built when UW_BUILD is enabled
 %package external-libs
 Summary: Libraries for external packages built into HTCondor
 Group: Applications/System
+# disable automatic provides generation to prevent conflicts with system libs
+AutoProv: 0
 
 %description external-libs
 Includes the libraries for external packages built when UW_BUILD is enabled
@@ -702,7 +720,9 @@ exit 0
 %setup -q -n %{name}-%{tarball_version}
 %endif
 
+%if 0%{?osg} || 0%{?hcc}
 %patch8 -p1
+%endif
 
 %if 0%{?hcc}
 %patch15 -p0
@@ -725,10 +745,9 @@ export CMAKE_PREFIX_PATH=/usr
 %if %uw_build
 %define condor_build_id UW_development
 
-%cmake \
+cmake \
        -DBUILDID:STRING=%condor_build_id \
        -DUW_BUILD:BOOL=TRUE \
-       -DCMAKE_SKIP_RPATH:BOOL=FALSE \
 %if ! %std_univ
        -DCLIPPED:BOOL=TRUE \
 %endif
@@ -741,7 +760,22 @@ export CMAKE_PREFIX_PATH=/usr
        -DHAVE_BACKFILL:BOOL=FALSE \
        -DHAVE_BOINC:BOOL=FALSE \
        -DWITH_POSTGRESQL:BOOL=FALSE \
-       -DWANT_LEASE_MANAGER:BOOL=FALSE
+       -DWANT_LEASE_MANAGER:BOOL=FALSE \
+       -DPLATFORM:STRING=${NMI_PLATFORM:-unknown} \
+       -DCMAKE_VERBOSE_MAKEFILE=ON \
+       -DCMAKE_INSTALL_PREFIX:PATH=/usr \
+       -DINCLUDE_INSTALL_DIR:PATH=/usr/include \
+       -DSYSCONF_INSTALL_DIR:PATH=/etc \
+       -DSHARE_INSTALL_PREFIX:PATH=/usr/share \
+%ifarch x86_64
+       -DCMAKE_INSTALL_LIBDIR:PATH=/usr/lib64 \
+       -DLIB_INSTALL_DIR:PATH=/usr/lib64 \
+       -DLIB_SUFFIX=64 \
+%else
+       -DCMAKE_INSTALL_LIBDIR:PATH=/usr/lib \
+       -DLIB_INSTALL_DIR:PATH=/usr/lib \
+%endif 
+       -DBUILD_SHARED_LIBS:BOOL=ON
 
 %else
 
@@ -963,7 +997,9 @@ cp %{SOURCE3} %{buildroot}%{_unitdir}/condor.service
 %else
 # install the lsb init script
 install -Dp -m0755 %{buildroot}/etc/examples/condor.init %{buildroot}%{_initrddir}/condor
+%if 0%{?osg} || 0%{?hcc}
 install -Dp -m 0644 %{SOURCE4} %buildroot/usr/share/osg/sysconfig/condor
+%endif
 mkdir %{buildroot}%{_sysconfdir}/sysconfig/
 install -Dp -m 0644 %{buildroot}/etc/examples/condor.sysconfig %{buildroot}%{_sysconfdir}/sysconfig/condor
 %endif
@@ -1134,7 +1170,9 @@ rm -rf %{buildroot}
 %{_unitdir}/condor.service
 %else
 %_initrddir/condor
+%if 0%{?osg} || 0%{?hcc}
 /usr/share/osg/sysconfig/condor
+%endif
 %config(noreplace) /etc/sysconfig/condor
 %endif
 %dir %_datadir/condor/
