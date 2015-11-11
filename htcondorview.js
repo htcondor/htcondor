@@ -169,7 +169,7 @@ HTCondorView.prototype.set_graph_query = function(graph_query) {
 		new_link += "graph_query=" + encodeURIComponent(this.current_graphargs) + "&";	
 		this.fullscreen_link.attr('href', new_link);
 	}
-}
+};
 
 HTCondorView.prototype.toggle_edit = function(btn, controls) {
 	"use strict";
