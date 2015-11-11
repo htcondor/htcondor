@@ -1,0 +1,70 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>HTCondorView</title>
+  <link rel="stylesheet" href="htcondor.css" />
+  <link rel="stylesheet" href="htcondorview.css" />
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/dygraph/1.1.0/dygraph-combined.js"></script>
+  <script src="https://www.google.com/jsapi"></script>
+  <script>
+  google.load('visualization', '1.0', {
+    packages: ['table', 'corechart', 'treemap', 'annotatedtimeline']
+  });
+  </script>
+  <script src="heatgrid.js"></script>
+  <script src="render.js"></script>
+  <script src="htcondorview.js"></script>
+
+<style>
+#thechart, #thechart .htcondorview, #thechart .htcondorview .graph, #thechart .htcondorview .graph .vizchart {
+	width: 100%;
+}
+
+</style>
+</head>
+<body>
+<h1 class="htclogo"><img src="HTCondor-View.svg" alt="HTCondor View"></h1>
+<h1>Edit Graph</h1>
+
+
+<div id="thechart"></div>
+
+<div>
+Title: <input type="text" name="title" value="DATA"> (help link)<br>
+Data source: <input type="text" name="data_url" value="DATA"> (help link)<br>
+Query: <a href="help.html" target="_blank">syntax reference</a><br>
+<textarea rows="10" style="width: 90%;" name="graph_query">DATA</textarea>
+</div>
+
+<!-- vizlog is where errors will go. -->
+<div id="vizlog"></div>
+
+<script>
+$(document).ready(function(){
+
+	var args = afterquery.parseArgs(window.location.search);
+	var title = args.get('title');
+	var data_url = args.get('data_url');
+	var graph_query = args.get('graph_query');
+	if((!data_url) || !graph_query) {
+		$('#thechart').html("<h1>No graph requested</h1>\n" +
+				"<p>At the least a data_url and graph_query argument are required.\n");
+		return;
+	}
+
+new HTCondorView({
+	dst_id: "thechart",
+	title: title,
+	data_url: data_url,
+	graph_query: graph_query,
+	has_fullscreen_link: false
+});
+
+});
+
+</script>
+
+</body>
+</html>
