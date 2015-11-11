@@ -2,20 +2,38 @@ body {
 	font-family: "Helvetica Neue", Helvetica, sans-serif;
 }
 
+h1 {
+	font-family: "HelveticaNeue-Light", "HelveticaNeueLight", "Helvetica Neue Light", "Helvetica Neue", Helvetica, Arial, "Lucida Grande", sans-serif; 
+	font-weight: 300;
+	text-align: center;
+	font-size: 250%;
+}
+
+h1.htclogo + h1 {
+	margin-top: 0;
+}
+
 
 /* 
-    logo: Centered title. Usage:
+    htclogo: Centered title. Usage:
+  <h1 class="htclogo"><img src="HTCondor.svg" alt="HTCondor"></h1>
 */
-h1.htcvlogo { text-align: center; margin: 0; }
-h1.htcvlogo img { display: inline-block;  height: 2.0em; }
+h1.htclogo {
+	text-align: center;
+	margin: 0;
+}
+h1.htclogo img {
+	display: inline-block;
+	height: 1.5em;
+}
 
 
 /*
-  bug: displayed at bottom right corner of window. Usage:
+  htcbug: displayed at bottom right corner of window. Usage:
 
-  <h1 class="htcvbug"><img src="HTCondor-View.svg" alt="HTCondor View"></h1>
+  <h1 class="htcbug"><img src="HTCondor.svg" alt="HTCondor"></h1>
 */
-h1.htcvbug {
+h1.htcbug {
 	position: fixed;
 	right: 0;
 	bottom: 0;
@@ -23,6 +41,6 @@ h1.htcvbug {
 	padding: 0;
 	z-index: 1;
 }
-h1.htcvbug img {
+h1.htcbug img {
 	height: 0.7em;
 }
