@@ -78,15 +78,7 @@ body:hover .htcondorview div.editmenu {
 }
 .htcondorview .editlink {
 	float: right;
-	background: none;
-	border: none;
-	padding: 0;
-	text-decoration: underline;
-	color: blue;
-	cursor: pointer;
-	box-shadow: none;
-	border-radius: 0;
-	text-shadow: none;
+	font-size: 80%;
 }
 
 .htcondorview button {

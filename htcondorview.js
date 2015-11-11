@@ -83,7 +83,9 @@ HTCondorView.prototype.initialize_from_object = function(options) {
 		console.log('HTCondor View is not able to intialize. There is no element with an ID of "'+id+'".');
 		return false;
 	}
-	container.html(this.starting_html(!!table_args));
+	container.empty();
+	container.append(this.starting_elements(!!table_args));
+	this.fullscreen_link = $('#'+this.fullscreen_id);
 
 /*
 	window.onpopstate = function() {
@@ -99,7 +101,8 @@ HTCondorView.prototype.initialize_from_object = function(options) {
 
 	//this.load_arguments_to_form();
 	//this.change_view()
-	this.current_graphargs = graph_args;
+	this.starting_graphargs = graph_args;
+	this.set_graph_query(graph_args);
 	this.current_tableargs = table_args;
 	if(select_tuple) {
 		this.select_tuple = {};
@@ -145,6 +148,19 @@ HTCondorView.prototype.new_graph_id = function() {
 	var new_id = "htcondorview-private-" + HTCondorView.next_graph_id;
 	return new_id;
 };
+
+HTCondorView.prototype.set_graph_query = function(graph_query) {
+	this.current_graphargs = graph_query;
+	var new_link = "fullscreen.html?";
+	if(this.fullscreen_link) {
+		if(this.title) {
+			new_link += "title=" + encodeURIComponent(this.title) + "&";	
+		}
+		new_link += "data_url=" + encodeURIComponent(this.url) + "&";	
+		new_link += "graph_query=" + encodeURIComponent(this.current_graphargs) + "&";	
+		this.fullscreen_link.attr('href', new_link);
+	}
+}
 
 HTCondorView.prototype.toggle_edit = function(btn, controls) {
 	"use strict";
@@ -337,9 +353,9 @@ HTCondorView.prototype.table_select_handler = function(evnt,table,data) {
 		}
 	}
 
-	var graphargs = filter + this.current_graphargs;
+	this.set_graph_query(filter + this.starting_graphargs);
 
-	this.load_and_render(graphargs, this.current_tableargs);
+	this.load_and_render(this.current_graphargs, this.current_tableargs);
 };
 
 HTCondorView.prototype.html_for_graph = function() {
@@ -353,16 +369,17 @@ HTCondorView.prototype.html_for_graph = function() {
 		"<div class='vizchart'></div>\n";
 };
 
-HTCondorView.prototype.starting_html = function(has_table) {
+HTCondorView.prototype.starting_elements = function(has_table) {
 	"use strict";
 	this.graph_id = this.new_graph_id();
 	this.table_id = this.new_graph_id();
+	this.fullscreen_id= this.new_graph_id();
 
 	var ret = "" +
 		'<div class="htcondorview">\n' +
 		  "<div id='"+this.graph_id+"' class='graph'>\n" +
 		    "<div class='editmenu'>\n" +
-		      "<button onclick=\"alert('Not yet implemented')\" class=\"editlink\">full screen</button>\n" +
+		      "<a href='#' id='"+this.fullscreen_id+"' class=\"editlink\">full screen</a>\n" +
 		    "</div>\n" +
 	        this.html_for_graph() + "\n"+
 		  "</div>\n";
@@ -374,7 +391,9 @@ HTCondorView.prototype.starting_html = function(has_table) {
 	}
 	ret += "</div>\n";
 
-	return ret;
+	var element = $(ret);
+
+	return element;
 };
 
 
