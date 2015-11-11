@@ -33,6 +33,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item \Condor{history} no longer reports an error when run on a system that does not have a history file.
+This change was made because the history file is not created until after the first job runs, so users
+were always seeing an error message on a fresh installation of HTCondor.
+\Ticket{5374}
+
 \item None.
 
 \end{itemize}
