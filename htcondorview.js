@@ -24,7 +24,8 @@ COMPLEX USAGE:
 			graph_query: "order=Date&pivot=Date;JobStatus;Count&chart=stacked",
 			title: "Total Jobs",
 			table_query: "order=Date&pivot=Name;JobStatus;avg(Count)",
-			select_tuple: ["Name"]
+			select_tuple: ["Name"],
+			has_fullscreen_link: true
 		});
 	</script>
 
@@ -39,6 +40,8 @@ title - Optional. A title to display with the chart.
 table_query - Optional. Afterquery query, not including title or url entries.  This specifies a second chart to display.  Probably should be a simple table (that is, don't specify "chart").  If not present, no second chart is present.
 
 select_tuple - Optional. If table_query is present and is a table, when a user clicks on a row in the table, these fields will be extracts from the selected row and used to filter the graph specified in graph_query.
+
+has_fullscreen_link: true/false - Optional. Defaults to true. If false (and exactly false, not 0), the link to show the graph fullscreen will be suppressed.
 
 
 */
