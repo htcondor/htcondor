@@ -775,19 +775,19 @@ sub InstallPersonalCondor
 		}
 
 		debug("condor_q: $condorq\n",$debuglevel);
-        debug("topleveldir: $topleveldir",$debuglevel);
+		debug("topleveldir: $topleveldir\n",$debuglevel);
 
 
 		if($iswindows == 1) {
 			# maybe we have a dos path
 			if(is_windows_native_perl()) {
-				if($condorq =~ /[Cc]:/) {
+				if($condorq =~ /[A-Za-z]:/) {
 					$_ = $condorq;
 					s/\//\\/g;
 					$condorq = $_;
 					#print "condor_q now:$condorq\n";
-					if($condorq =~ /^([Cc]:\\.*?)\\bin\\(.*)$/) {
-						#print "setting binloc:$1 \n";
+					if($condorq =~ /^([A-Za-z]:\\.*?)\\bin\\(.*)$/) {
+						print "setting binloc:$1 \n";
 						$binloc = $1;
 						$sbinloc = $1;
 					}
@@ -797,8 +797,8 @@ sub InstallPersonalCondor
 				fullchomp($tmp);
 				#print "InstallPersonalCondor:condorq:$tmp\n";
 				$condorq = $tmp;
-				if($condorq =~ /[Cc]:/) {
-					if($condorq =~ /^([Cc]:\/.*?)\/bin\/(.*)$/) {
+				if($condorq =~ /[A-Za-z]:/) {
+					if($condorq =~ /^([A-Za-z]:\/.*?)\/bin\/(.*)$/) {
 						#print "setting binloc:$1 \n";
 						$binloc = $1;
 						$sbinloc = $1;
@@ -1167,7 +1167,7 @@ debug( "HMMMMMMMMMMM personal local is $personal_local , mytoppath is $mytoppath
 				print NEW "LOCAL_CONFIG_FILE = $mytoppath/$personal_local\n";
 			}
 		} elsif( $line =~ /^#\s*$/ ) {
-			print "save $line could be comment before environment label\n";
+			#print "save $line could be comment before environment label\n";
 			$lastline = $line;
 		} elsif( $line =~ /^#.*?Environment.*$/ ) {
 			$thisline = $line;
@@ -1177,7 +1177,7 @@ debug( "HMMMMMMMMMMM personal local is $personal_local , mytoppath is $mytoppath
 			print NEW "$lastline\n";
 			print NEW "$thisline\n";
 		} elsif( $line =~ /^#.*$/ ) {
-			print "Not environment label, drop both lines\n";
+			#print "Not environment label, drop both lines\n";
 			print NEW "$lastline\n";
 			print NEW "$thisline\n";
 		} elsif( $line =~ /^LOCAL_CONFIG_DIR\s*=.*/ ) {
