@@ -105,9 +105,6 @@ char* zkm_base64_encode(const unsigned char *input, int length) {
 
 // Caller needs to free *output if non-NULL
 void zkm_base64_decode(const char *input,unsigned char **output, int *output_length) {
-	unsigned char *buf = NULL;
-	int len = -1;
-
 	std::string tinput(input);
 	std::vector<BYTE> tvec =  Base64::zkm_base64_decode(tinput);
 	*output_length = tvec.size();
