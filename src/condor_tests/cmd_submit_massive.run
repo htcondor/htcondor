@@ -63,17 +63,17 @@ my $firstappend_condor_config = '
 	MACHINE_RESOURCE_Boats = 30
 ';
 
-$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"cmdsubmitcoverage");
+$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"cmdsubmitmassive");
 
 CondorTest::StartCondorWithParams(
-	condor_name => "basickill",
+	condor_name => "massive",
 	fresh_local => "TRUE",
 	condorlocalsrc => "$configfile",
 );
 
 my $executecount = 0;
 my $result = 1;
-my $testname = "cmd_submit_coverage";
+my $testname = "cmd_submit_massive";
 
 my $on_execute = sub {
 	print "********************************** OnExecute *****************************\n";
@@ -85,30 +85,22 @@ my $on_hold = sub {
 };
 
 my $on_evictedwithoutcheckpoint = sub {
-	print "Evicted Without Checkpoint\n";
+	print "Saw Evicted Without Checkpoint in userlog. This can happen\n";
 };
 
 my $submitted = sub {
-	print "Submit occured\n";
+	print "Saw Submit event in userlog. removing job $ClusterId\n";
 	runToolNTimes("condor_rm $ClusterId",1,0);
 };
 
 my $aborted = sub {
-	print "Abort expected\n";
+	print "Saw Abort event in userlog. this was expected\n";
 };
 
 my $GetClusterId = sub {
 	my $cid = shift;
 	$ClusterId = $cid;
-	print "Resquestd Cluster Got $ClusterId\n";
-	##########################
-	#
-	# Convoluted: This function is paased to RunCheck which uses it in RunTest in the fourth
-	# position which is always an undefined variable EXCEPT when it is a call back routine 
-	# to pass out the cluster Id.
-	#
-	##########################
-	#runcmd("condor_q",{emit_output => 1});
+	print "Requested Cluster Got $ClusterId\n";
 };
 
 sub GenerateMassive {
@@ -130,14 +122,15 @@ print "First test basic job\n";
 $result = SimpleJob::RunCheck(); # jobid 1
 Condor::EventReset();
 
-CondorTest::RegisterAbort( $testname, $aborted );
 CondorTest::RegisterSubmit( $testname, $submitted );
+CondorTest::RegisterAbort( $testname, $aborted );
+CondorTest::RegisterEvictedWithoutCheckpoint( $testname, $on_evictedwithoutcheckpoint );
 
 my $res = 0;
 foreach my $file (@submitfiles) {
 	print "Running test on file:$file:\n";
 	$res = CondorTest::RunTest($testname, $file, 0, $GetClusterId);
-	CondorTest::RegisterResult($res, "test_name", $testname);
+	CondorTest::RegisterResult($res, test_name=>$testname);
 	if($res == 1) {
 		CondorTest::debug("$testname: SUCCESS\n",1);
 	} else {

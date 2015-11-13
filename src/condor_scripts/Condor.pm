@@ -2587,7 +2587,7 @@ sub ParseSubmitFile
     my $line = 0;
 	my $variable;
 	my $value;
-	my $drydatafile = CondorTest::TempFileName("fetchdrydata");
+	#my $drydatafile = CondorTest::TempFileName("fetchdrydata");
 
     if( ! open( SUBMIT_FILE, $submit_file ) )
     {
@@ -2601,7 +2601,7 @@ sub ParseSubmitFile
 	#print "Seeing how many user logs there are\n";
 
 	# this could be a condor_submit foreach syntax expansion test
-	GatherUserLogs($submit_file,$drydatafile);
+	GatherUserLogs($submit_file,"-");
 
     while( <SUBMIT_FILE> )
     {
@@ -2665,7 +2665,7 @@ sub ParseSubmitFile
 sub AccessUserLogs {
 	my $arrayref = shift;
 	my $count = @userlogs;
-	print "transferring $count UserLogs to CondorTest module\n";
+	debug("transferring $count UserLogs to CondorTest module\n", 3);
 	foreach my $log (@userlogs) {
 		push @{$arrayref}, $log;
 	}
@@ -2727,13 +2727,12 @@ sub safe_WEXITSTATUS {
 #
 sub GatherUserLogs {
 	my $submitfile = shift;
-	my $drydatafile = shift;
+	#my $drydatafile = shift;
 	my $arrayref;
 	my $logcount = 0;
 	my @tmplogs = ();
-	#print "No longer assuming one log file because of submit foreach\n";
-	#print "Exploring logs in GatherUserLogs\n";
-	$arrayref = GatherDryData($submitfile,$drydatafile);
+
+	$arrayref = GatherDryData($submitfile,"-");
 	# store dry data in expected locaton
 	foreach my $line (@{$arrayref}) {
 		push @submitdrydata, $line;
@@ -2745,15 +2744,14 @@ sub GatherUserLogs {
 		}
 	}
 	$logcount = @userlogs;
-	print "Found $logcount userlogs\n";
 	foreach my $log (@userlogs) {
-		print "userlog:$log\n";
+		debug("GatherUserLogs: found userlog=$log\n", 4);
 	}
 	# how many jobs did this submit produce
 	@tmplogs = ();
 	DryExtract(\@submitdrydata,\@tmplogs,"ProcId");
 	$dryrun_jobcount = @tmplogs;
-	print "There are  $logcount logs and $dryrun_jobcount jobs\n";
+	debug ("GatherUserLogs: There are  $logcount logs and $dryrun_jobcount jobs\n", 3);
 }
 
 sub CheckAllowed {
@@ -2763,7 +2761,7 @@ sub CheckAllowed {
 	if(exists $AllowedEvents{$event}) {
 		#print "$event allowed for $test: $mesg\n";
 	} else {
-		die "$test: FAILURE $mesg\n";
+		die "$test: FAILED $mesg\n";
 	}
 }
 
