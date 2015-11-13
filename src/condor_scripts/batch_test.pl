@@ -256,8 +256,8 @@ if($pretestsetuponly == 1) {
 	exit(0);
 }
 
-$time = strftime("%H:%M:%S", localtime);
-print "batch_test $$: Ready for Testing at $time\n";
+#$time = strftime("%H:%M:%S", localtime);
+#print "batch_test $$: Ready for Testing at $time\n";
 
 # figure out what tests to try to run.  first, figure out what
 # compilers we're trying to test.  if that was given on the command
@@ -268,7 +268,7 @@ if($#compilers == -1 ) {
 }
 
 if($timestamp == 1) {
-	print scalar localtime() . "\n";
+	#print scalar localtime() . "\n";
 }
 
 # now we find the tests we care about.
@@ -431,9 +431,9 @@ foreach my $compiler (@compilers) {
 		StartTestOutput($compiler, $test_program); 
 		CompleteTestOutput($compiler, $test_program, $res);
 		if($res == 0) {
-			print "batch_test $$: $test_program Succeeded\n";
+			print "batch_test $$: $test_program PASSED\n";
 		} else {
-			print "batch_test $$: $test_program failed\n";
+			print "batch_test $$: $test_program FAILED\n";
 		}
 
 	} # end of foreach $test_program
@@ -470,6 +470,7 @@ if ($isXML){
 
 
 
+my $duration = "";
 {
 	my $endtime = time();
 	my $deltatime = $endtime - $starttime;
@@ -477,7 +478,7 @@ if ($isXML){
 	my $minutes = int(($deltatime - $hours*60*60) / 60);
 	my $seconds = $deltatime - $hours*60*60 - $minutes*60;
 
-	printf("Tests took %d:%02d:%02d (%d seconds)\n", $hours, $minutes, $seconds, $deltatime);
+	$duration = sprintf("%d:%02d:%02d (%d seconds)", $hours, $minutes, $seconds, $deltatime);
 }
 
 my @returns = CondorUtils::ProcessReturn($res);
@@ -489,7 +490,7 @@ my $signal = $returns[1];
 # thing looking at the status of batch_test is the batlag
 # test glue which runs only one test each call to batch_test
 # and this has no impact on workstation tests.
-print "Batch_test $$: exiting with status=$res signal=$signal\n";
+print "batch_test $$: exiting with status=$res signal=$signal after $duration\n";
 alarm(0); # revoke overall timeout
 exit $res;
 
@@ -524,6 +525,7 @@ sub CleanFromPath
 	}
 }
 
+# TODO_TJ: this does nothing unless xml output...
 # StartTestOutput($compiler,$test_program);
 sub StartTestOutput
 {
@@ -540,6 +542,7 @@ sub StartTestOutput
 	}
 }
 
+# TODO_TJ: this does nothing unless xml output...
 # CompleteTestOutput($compiler,$test_program,$status);
 sub CompleteTestOutput
 {
@@ -555,10 +558,10 @@ sub CompleteTestOutput
 	#if( WIFEXITED( $status ) && WEXITSTATUS( $status ) == 0 )
 	{
 		if($groupsize == 0) {
-			print "$test_name: succeeded!\n";
+			#print "$test_name: succeeded!\n";
 		} else {
 			#print "Not Xml: group size <$groupsize> test <$test_name>\n";
-			print "$test_name; succeeded!\n";
+			#print "$test_name; succeeded!\n";
 		}
 	} else {
 		#my $testname = "$test{$child}";
@@ -837,8 +840,7 @@ sub wait_for_test_children {
 		#print "Name from hash is <$tname>\n";
 		#print "Done waiting on test $test_name\n";
 
-		StartTestOutput($compiler, $test_name) 
-			unless $suppress_start_test_output;
+		StartTestOutput($compiler, $test_name) unless $suppress_start_test_output;
 
 		CompleteTestOutput($compiler, $test_name, $child, $status);
 		delete $test->{$child};
