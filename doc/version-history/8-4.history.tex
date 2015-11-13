@@ -80,8 +80,30 @@ especially for node jobs that create multiple procs.
 \Ticket{5333}
 
 \item Fixed a problem that prevented HTCondor from building on some 64-bit Linux
-platforms such as Arm64.  Bug was reported by Debian mantainers as their Bug 804386.
+platforms such as Arm64.  Bug was reported by Debian maintainers as their Bug 804386.
 \Ticket{5380}
+
+\end{itemize}
+
+\noindent Known Issues:
+
+\begin{itemize}
+
+\item The DAGMan workflow log file is not correctly written for local
+universe DAG node jobs that have no log file specified in the submit file,
+which causes DAGMan to wait forever, thinking the jobs have not completed.
+Note that this problem can be worked around by specifying \emph{any}
+log file for the job, even \Expr{log = /dev/null}.
+(This bug is a regression that was introduced some time since version
+8.2.4.)
+\Ticket{5299}
+
+\item DAG node retries do not work correctly with DAG node submit files
+that create more than one proc in the resulting cluster (such nodes
+cause DAGMan to hang if the retry is activated).
+We believe that this bug has existed since DAGMan first supported
+multi-proc node jobs.
+\Ticket{5350}
 
 \end{itemize}
 
@@ -135,7 +157,7 @@ starting in version 8.3.6.  This bug will be fixed in version 8.4.2 and 8.5.1.
     which is reserved for use by HTCondor developers.  This is done to prevent administrators
     from accidentally removing the necessary defaults.
     A warning about use of \Macro{STARTD\_EXPRS} has been disabled unless
-    \Macro{STARTD\_ATTRS} or\Macro{SLOT\_TYPE\_<n>\_STARTD\_ATTRS} is also used, since
+    \Macro{STARTD\_ATTRS} or \Macro{SLOT\_TYPE\_<n>\_STARTD\_ATTRS} is also used, since
     the use all three of these at the same time is not supported.
 \Ticket{5326}
 
@@ -240,7 +262,7 @@ IP addresses to the collector even when using localhost or 127.0.0.1 for a perso
 arguments filename when the slice was longer than 8 characters.
 \Ticket{5273}
 
-\item Added SELinux type enforcment rules to allow the \Condor{schedd} to be
+\item Added SELinux type enforcement rules to allow the \Condor{schedd} to be
 able to access user files in NFS mounted file systems.
 \Ticket{5343}
 \end{itemize}
