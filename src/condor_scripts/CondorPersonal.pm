@@ -72,22 +72,18 @@ sub Initialize
 	# not something created in the test glue.
 	my %control = @_;
 	my $intheglue = 0;
-	#print "CondorPersonal::Initialize called\n";
 	if( exists $control{test_glue}) {
 		$intheglue = 1;
 	}
 
 	my $newconfig = deriveMasterConfig();
 
-	print "Effective config now:$newconfig\n";
+	debug("Effective config now $newconfig\n", 2);
 
 	$currentlocation = getcwd();
-	#print "\n\n\n\n\n****** Initialize: intheglue=$intheglue currentlocation:$currentlocation ******\n\n\n\n\n\n\n";
 	if(CondorUtils::is_windows() == 1) {
 		if(is_windows_native_perl()) {
-			$_ = $currentlocation;
-			s/\//\\/g;
-			$currentlocation = $_;
+			$currentlocation =~ s/\//\\/g;
 			$masterconfig = "$currentlocation" . "\\$newconfig";
 		} else {
 			# never have cygwin till test runs, so glue would not be set
@@ -95,10 +91,8 @@ sub Initialize
 			my $tmp = `cygpath -m $currentlocation`;
 			fullchomp($tmp);
 			#print "tmp after cygpath:$tmp\n";
-			$_ = $tmp;
-			s/\//\\/g;
-			$currentlocation = $_;
-			#print "Windows currentlocation:$currentlocation\n";
+			$tmp =~ s/\//\\/g;
+			$currentlocation = $tmp;
 			$masterconfig = "$currentlocation" . "\\$newconfig";
 		}
 	} else {
@@ -112,18 +106,16 @@ sub deriveMasterConfig {
 	my @outres = ();
 	my $derivedconfig = "derived_condor_config";
 	if(-f "$derivedconfig") {
-		#print "derived_condor_config exists\n";
 		return($derivedconfig);
 	} else {
 		# we need gererate the effective current config and
 		# start from there. There are all the possible config files
 		# plus changed vs default values.
-		#print "derived_condor_config exists NOT!\n";
 		my $res = CondorTest::runCondorTool("condor_config_val -writeconfig:file $derivedconfig",\@outres,2,{emit_output=>0,expect_result=>\&ANY});
 		if($res != 1) {
 			die "Error while getting the effective current configuration\n";
 		}
-		open(DR,"<derived_condor_config") or die "Failed to create:derived_condor_config:$!\n";
+		open(DR,"<derived_condor_config") or die "Failed to create derived_condor_config: $!\n";
 		my $line = "";
 		while(<DR>) {
 			$line = $_;
@@ -234,7 +226,7 @@ my $condorlocaldir;
 my $pid = $$;
 my $version = ""; # remote, middle, ....... for naming schedd "schedd . pid . version"
 my $mastername = ""; # master_$verison
-my $DEBUGLEVEL = 2; # nothing higher shows up
+my $DEBUGLEVEL = 1; # nothing higher shows up
 my $debuglevel = 4; # take all the ones we don't want to see
 					# and allowed easy changing and remove hard
 					# coded value
@@ -362,7 +354,7 @@ sub StartCondorWithParams
 
 	my $testname = $personal_condor_params{"test_name"} || die "Missing test_name\n";
 	$version = $personal_condor_params{"condor_name"} || die "Missing condor_name!\n";
-	#print "StartCondorWithParams: placed param condor_name to version:$version\n";
+
 	my $mpid = $personal_condor_params{"owner_pid"} || $pid;
 	$mpid = "pdir$mpid";
 	my $config_and_port = "";
@@ -403,13 +395,10 @@ sub StartCondorWithParams
 	}
 
 	if(is_windows() && is_windows_native_perl()){
-		#print "making $topleveldir\\condor_config personal_config_file\n";
 		$personal_config_file = $topleveldir ."\\condor_config";
 	} elsif(is_windows() && is_cygwin_perl()){
-		#print "making $topleveldir\\condor_config personal_config_file\n";
 		$personal_config_file = $topleveldir ."/condor_config";
 	} else {
-		#print "making $topleveldir/condor_config personal_config_file\n";
 		$personal_config_file = $topleveldir ."/condor_config";
 	}
 
@@ -479,7 +468,6 @@ sub StartCondorWithParams
 	#CondorPersonal::Reset();
 	debug( "StartCondor config_and_port is --$config_and_port--\n",$debuglevel);
 	debug( "Personal Condor Started\n",$debuglevel);
-	#print "\n\n\n\n\n***************StartCondorWithParams returning:$config_and_port**********\n\n\n\n\n\n";
 	return( $config_and_port );
 }
 
@@ -518,14 +506,15 @@ sub StartCondorWithParamsStart
 sub debug {
     my $string = shift;
     my $level = shift;
-	my $time = CondorUtils::TimeStr();
-	push @debugcollection, "$time: CondorPersonal - $string";
-	if(!(defined $level) or ($level <= $DEBUGLEVEL)) {
-		if(defined $level) {
-			print( "", $time, ": CondorPersonal(L=$level) $string" );
-		} else {
-			print( "", $time, ": CondorPersonal(L=?) $string" );
-		}
+	my $time = timestamp();
+	if(!(defined $level)) { $level = 0; }
+	if ($level <= $DEBUGLEVEL) {
+		my $msg = "$time $string";
+		print $msg;
+		push @debugcollection, $msg;
+	} else {
+		my $msg = "$time (CP$level) $string";
+		push @debugcollection, $msg;
 	}
 }
 
@@ -533,8 +522,7 @@ sub debug_flush {
 	print "\nDEBUG_FLUSH:\n";
 	my $logdir = `condor_config_val log`;
 	fullchomp($logdir);
-#	$logdir =~ s/\\/\//g;
-	print "\nLog directory: $logdir and contains:\n";
+	print "\nLOG=$logdir and contains:\n";
 	List("ls -lh $logdir");
 
 	# what daemons does condor_who see running/exited?
@@ -545,7 +533,7 @@ sub debug_flush {
 	print "\ncondor_config_val -writeconfig:file says:\n";
 	system("condor_config_val -writeconfig:file -");
 
-	print "\nDebug collection starts now:\n";
+	print "\n------------Saved debug output is----------------\n";
 	foreach my $line (@debugcollection) {
 		print "$line";
 	}
@@ -752,11 +740,12 @@ sub InstallPersonalCondor
 
 		my @config = ();
 		debug("InstallPersonalCondor getting ccv -config\n",$debuglevel);
-		CondorTest::runCondorTool("condor_config_val -config",\@config,2,{emit_output=>1});
+		CondorTest::runCondorTool("condor_config_val -config",\@config,2,{emit_output=>0});
 		debug("InstallPersonalCondor BACK FROM ccv -config\n",$debuglevel);
-		open(CONFIG,"condor_config_val -config | ") || die "Can not find config file: $!\n";
+		open(CONFIG,"condor_config_val -config 2>&1 | ") || die "Can not find config file: $!\n";
 		while(<CONFIG>)
 		{
+			next if ($_ =~ /figuration source/);
 			CondorUtils::fullchomp($_);
 			$configline = $_;
 			push @configfiles, $configline;
@@ -1171,7 +1160,7 @@ debug( "HMMMMMMMMMMM personal local is $personal_local , mytoppath is $mytoppath
 			$lastline = $line;
 		} elsif( $line =~ /^#.*?Environment.*$/ ) {
 			$thisline = $line;
-			print "TunePersonalCondor: setting LOCAL_DIR=$mytoppath\n"; 
+			#print "TunePersonalCondor: setting LOCAL_DIR=$mytoppath\n"; 
 			print NEW "LOCAL_DIR = $mytoppath\n";
 			print NEW "\n";
 			print NEW "$lastline\n";
@@ -1546,7 +1535,7 @@ sub StateChange
 	my $node_name = $condor_instance->GetCondorName() || "Condor";
 	my $daemonlist = $condor_instance->GetDaemonList();
 
-	print "CondorPersonal Waiting $timelimit sec for <$node_name> to be $desiredstate. MasterTime:$masterlimit DAEMON_LIST=$daemonlist\n";
+	debug("CondorPersonal Waiting $timelimit sec for <$node_name> to be $desiredstate. MasterTime:$masterlimit\n\tDAEMON_LIST = $daemonlist\n", 1);
 	#print "\tCONDOR_CONFIG=$config\n";
 
 	while($state ne $desiredstate) {
@@ -1591,9 +1580,9 @@ sub StateChange
 	$now = time;
 	$finaltime = ($now - $RunningTimeStamp);
 	if($desiredstate eq "up") {
-		print "Condor is running. ($finaltime of $timelimit seconds)\n";
+		debug("Condor <$node_name> is running. ($finaltime of $timelimit seconds)\n", 1);
 	} elsif($desiredstate eq "down") {
-		print "Condor is off. ($finaltime of $timelimit seconds)\n";
+		debug("Condor <$node_name> is off. ($finaltime of $timelimit seconds)\n", 1);
 	}
 	return(1);
 }

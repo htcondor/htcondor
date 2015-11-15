@@ -43,7 +43,7 @@ my $porttool = "";
 
 use base 'Exporter';
 
-our @EXPORT = qw(PrintTimeStamp timestamp runCondorTool runCondorToolCarefully runToolNTimes RegisterResult EndTest GetLogDir FindHttpPort CleanUpChildren StartWebServer);
+our @EXPORT = qw(PrintTimeStamp SetTLOGLevel TLOG timestamp runCondorTool runCondorToolCarefully runToolNTimes RegisterResult EndTest GetLogDir FindHttpPort CleanUpChildren StartWebServer);
 
 my %securityoptions =
 (
@@ -59,6 +59,7 @@ my $teststrt = 0;
 my $teststop = 0;
 my $DEBUGLEVEL = 2;
 my $debuglevel = 3;
+my $TLOGLEVEL = 1;
 
 my $MAX_CHECKPOINTS = 2;
 my $MAX_VACATES = 3;
@@ -204,7 +205,7 @@ sub EndTest
 	# so we will validate this and if we can not, this adds a negative result.
 	
 	## TODO: print this message only if there were personal condor's started..
-	print "EndTest: Checking shutdown state of personal HTCondor(s) : \n";
+	debug("EndTest: Checking shutdown state of personal HTCondor(s) : \n");
 	my $amidown = "";
 	foreach my $name (sort keys %personal_condors) {
 		my $condor = $personal_condors{$name};
@@ -1043,17 +1044,17 @@ sub StartTest
 
 	if ($do_core_check || defined $wrap_test) {
 		my $core_check_reason = ""; if (defined $wrap_test) { $core_check_reason = $wrap_test; }
-		print "StartTest: Calling CoreCheck because $core_check_reason\n";
+		debug("StartTest: Calling CoreCheck because $core_check_reason\n", 3);
 		$failed_coreERROR = CoreCheck($logdir, $teststrt, $teststop);
 		
 		if (defined $wrap_test) {
 			if ($config ne "") {
-				print "StartTest: Calling KillDaemons for CONDOR_CONFIG=$config\n";
+				debug("StartTest: Calling KillDaemons for CONDOR_CONFIG=$config\n", 1);
 				my $condor = GetPersonalCondorWithConfig($config);
 				$condor->SetCondorDirection("down");
 				CondorPersonal::KillDaemons($config);
 			}
-			print "StartTest: reverting to CONDOR_CONFIG=$lastconfig\n";
+			debug("StartTest: reverting to CONDOR_CONFIG=$lastconfig\n", 2);
 			$ENV{CONDOR_CONFIG} = $lastconfig;
 		}
 	}
@@ -2537,14 +2538,28 @@ sub TestDebug {
     Condor::debug("TestGlue: $string", $level);
 }
 
+sub SetTLOGLevel {
+    my $level = shift;
+    if ( ! (defined $level)) { $level = 1; }
+    $TLOGLEVEL = $level;
+}
+
+sub TLOG {
+	my $msg = shift;
+	my $level = shift;
+	if ( ! (defined $level) || $level <= $TLOGLEVEL) {
+		print timestamp() . " $msg";
+	}
+}
+
 sub debug {
     my ($msg, $level) = @_;
     
     if(!(defined $level)) {
-    	print timestamp() . " Test: $msg";
+    	print timestamp() . " $msg";
     }
     elsif($level <= $DEBUGLEVEL) {
-    	print timestamp() . " Test: $msg";
+    	print timestamp() . " $msg";
     }
 }
 
@@ -3168,20 +3183,12 @@ sub CreatePidsFile {
 sub StartPersonal {
     my ($testname, $paramfile, $version, $mypid, $nowait) = @_;
 
-	if(defined $nowait) {
-		#print "StartPersonal no wait option\n";
-	}
+	TestDebug("CondorTest::StartPersonal called for test:$testname node:$version pid:$mypid nowait:$nowait paramfile:$paramfile\n", 4);
 
     $handle = $testname;
-    TestDebug("Starting Personal($$) for $testname/$paramfile/$version\n",2);
+    debug("Creating and starting condor node <$version> for $testname using params from $paramfile\n", 1);
 
-    my $time = strftime("%Y/%m/%d %H:%M:%S", localtime);
-    #print "$time: About to start a personal Condor in CondorTest::StartPersonal\n";
-	#print "Param file is <$paramfile> which contains:\n";
-	#system("cat $paramfile");
     my $condor_info = CondorPersonal::StartCondor( $testname, $paramfile ,$version, $nowait);
-    $time = strftime("%Y/%m/%d %H:%M:%S", localtime);
-    #print "$time: Finished starting personal Condor in CondorTest::StartPersonal\n";
 
     my @condor_info = split /\+/, $condor_info;
     my $condor_config = shift @condor_info;
@@ -3190,29 +3197,19 @@ sub StartPersonal {
 
 	if(CondorUtils::is_windows() == 1) {
 		if(is_windows_native_perl()) {
-			print "StartPersonal: native perl config:$condor_config\n";
-			$_ = $condor_config;
-			s/\//\\/g;
-			$condor_config = $_;
-			print "StartPersonal: native perl config after convert:$condor_config\n";
+			$condor_config =~ s/\//\\/g;
 		} else {
 			my $windowsconfig = `cygpath -m $condor_config`;
 			CondorUtils::fullchomp($windowsconfig);
-			print "New windows config <$windowsconfig>\n";
 			$condor_config = $windowsconfig;
 		}
 	}
 
-    $time = strftime("%Y/%m/%d %H:%M:%S", localtime);
-    print "$time: Calling PersonalCondorInstance in CondorTest::StartPersonal\n";
-	print "version:$version config:$condor_config\n";
-    my $new_condor = new PersonalCondorInstance( $version, $condor_config, $collector_addr, 1 );
+	my $new_condor = new PersonalCondorInstance( $version, $condor_config, $collector_addr, 1 );
 	StoreCondorInstance("StartPersonal",$version,$new_condor);
-    #$personal_condors{$version} = $new_condor;
-	# assume we are creating so we may bring it up, thus direction up or down now up.
+	TestDebug("Condor instance returned:  $new_condor\n", 4);
+
 	$new_condor->SetCondorDirection("up");
-    $time = strftime("%Y/%m/%d %H:%M:%S", localtime);
-    #print "$time: Finished calling PersonalCondorInstance in CondorTest::StartPersonal\n";
 
     return($condor_info);
 }
@@ -3221,7 +3218,7 @@ sub StoreCondorInstance {
 	my $caller = shift;
 	my $instancename = shift;
 	my $instance = shift;
-	print "StoreCondorInstance: caller:$caller name:$instancename assign instance:$instance\n";
+	TestDebug("StoreCondorInstance: caller:$caller name:$instancename assign instance:$instance\n", 4);
     $personal_condors{$instancename} = $instance;
 }
 
@@ -3230,29 +3227,24 @@ sub CreateAndStoreCondorInstance
 	my $version = shift;
 	my $condorconfig = shift;
 	my $collectoraddr = shift;
-print "CreateAndStoreCondorInstance: version:<$version> config: $condorconfig\n";
 	my $amalive = shift;
 
 	if(CondorUtils::is_windows() == 1) {
 		if(is_windows_native_perl()) {
-			#print "CreateAndStoreCondorInstance: native perl config:$condorconfig\n";
-			$_ = $condorconfig;
-			s/\//\\/g;
-			$condorconfig = $_;
-			print "StartPersonal: native perl config after convert:$condorconfig\n";
+			$condorconfig =~ s/\//\\/g;
 		} else {
 			my $windowsconfig = `cygpath -m $condorconfig`;
 			CondorUtils::fullchomp($windowsconfig);
-			print "New windows config <$windowsconfig>\n";
 			$condorconfig = $windowsconfig;
 		}
 	}
 
-	#print "\n\n\n\n***** NewPersonalInstance identified by:$condorconfig *****\n\n\n\n\n";
+	debug ("Creating a HTCondor node <$version> CONDOR_CONFIG=$condorconfig\n", 1);
+
 	my $new_condor = new PersonalCondorInstance( $version, $condorconfig, $collectoraddr, $amalive );
 	StoreCondorInstance("CreateAndStoreCondorInstance",$version,$new_condor);
-	#$personal_condors{$version} = $new_condor;
-print "Condor instance returned:  $new_condor\n";
+	TestDebug ("Condor instance returned:  $new_condor\n", 4);
+
 	# assume we are creating so we may bring it up, thus direction up or down now up.
 	$new_condor->SetCondorDirection("up");
 	return($personal_condors{$version});
@@ -3282,37 +3274,38 @@ sub StartCondorWithParams
     my %condor_params = @_;
     my $condor_name = $condor_params{condor_name} || "";
     if( $condor_name eq "" ) {
-		print "CondorTest::StartCondorWithParams:condor_name unset in CondorTest::StartCondorWithParams\n";
+		#print "CondorTest::StartCondorWithParams:condor_name unset in CondorTest::StartCondorWithParams\n";
 		$condor_name = GenUniqueCondorName();
 		$condor_params{condor_name} = $condor_name;
-		print "CondorTest::StartCondorWithParams:Using:$condor_name\n";
+		#print "CondorTest::StartCondorWithParams:Using:$condor_name\n";
     } else {
-		print "CondorTest::StartCondorWithParams:Using requested name:$condor_name\n";
+		#print "CondorTest::StartCondorWithParams:Using requested name:$condor_name\n";
 	}
 
     if( exists $personal_condors{$condor_name} ) {
 		die "condor_name=$condor_name already exists!";
     } else {
-		print "StartCondorWithParams:<$condor_name> not in condor_personal hash yet\n";
+		#print "StartCondorWithParams:<$condor_name> not in condor_personal hash yet\n";
 	}
 
     if( ! exists $condor_params{test_name} ) {
 		$condor_params{test_name} = GetDefaultTestName();
     }
 
-	foreach my $key (sort keys %condor_params) {
-		print "$key:$condor_params{$key}\n";
+	debug ("CondorTest::StartCondorWithParams added new node <$condor_name>\n", 1);
+	if ($DEBUGLEVEL <= 1) {
+		foreach my $key (sort keys %condor_params) { print "\t$key = $condor_params{$key}\n"; }
 	}
 
-	print "CondorTest: Calling CondorPersonal::StartCondorWithParam for '$condor_name'\n";
+	debug ("CondorTest: Calling CondorPersonal::StartCondorWithParam for node <$condor_name>\n", 2);
     my $condor_info = CondorPersonal::StartCondorWithParams( %condor_params );
-	print "CondorTest: Back From Calling CondorPersonal::StartCondorWithParam for '$condor_name'\n";
+	debug ("CondorTest: Back From Calling CondorPersonal::StartCondorWithParam for node <$condor_name>\n", 3);
 
 	if(exists $condor_params{do_not_start}) {
-		debug("CondorTest::StartCondorWithParams: bailing after config\n", 2);
+		debug("CondorTest::StartCondorWithParams: node <$condor_name> bailing after config\n", 2);
 		return(0);
 	} else {
-		debug("CondorTest::StartCondorWithParams: Full config and run\n", 2);
+		debug("CondorTest::StartCondorWithParams: node <$condor_name> Full config and run\n", 2);
 	}
 
     my @condor_info = split /\+/, $condor_info;
@@ -3412,8 +3405,7 @@ sub CoreCheck {
 		}
 	}
 
-	TestDebug("CondorTest: checking for cores and errors in LOG=$logdir\n",2);
-	print "CondorTest: checking for cores and errors in LOG=$logdir\n";
+	TestDebug("CondorTest: checking for cores and errors in LOG=$logdir\n", 2);
 
 	my @files = ();
 	GetDirList(\@files, $logdir);
@@ -3985,21 +3977,17 @@ sub CreateLocalConfig
     my $text = shift;
     my $name = shift;
 	my $extratext = shift;
+
     $name = "$name$$";
-    open(FI,">$name") or die "Failed to create local config starter file: $name:$!\n";
-    print "Created: $name\n";
+    open(FI,">$name") or die "Failed to create local config file: $name:$!\n";
+    if(defined $extratext) {
+        $text = "$text\n$extratext";
+    }
     print FI "$text";
-	if(defined $extratext) {
-    	print FI "$extratext";
-	}
     close(FI);
-	my @configarray = ();
-    runCondorTool("cat $name",\@configarray,2,{emit_output=>0});
-	print "\nIncorporating the following into the local config file for $name:\n\n";
-	foreach my $line (@configarray) {
-		print "$line";
-	}
-	print "\n";
+
+    debug ("CreateLocalConfig: Created $name for use as a local config file\n$text\n", 1);
+
     return($name);
 }
 
