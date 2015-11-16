@@ -1,0 +1,28 @@
+#! /usr/bin/perl -w
+use strict;
+
+my $records = 100;
+
+my(@colors) = qw(red green blue);
+my(@shapes) = qw(cube sphere pyramid);
+my(@sizes) = (1, 2, 3);
+
+print "[\n";
+for(my $i = 0; $i < $records; $i++) {
+	my $c = $colors[int rand @colors];
+	my $s = $shapes[int rand @shapes];
+	my $si = $sizes[int rand @sizes];
+	my $qty = 1+ int rand 5;
+	my $comma = '';
+	if(($i+1) < $records) { $comma = ','};
+	print <<END;
+{
+	"color": "$c",
+	"shape": "$s",
+	"size": $si,
+	"count": $qty
+}$comma
+END
+}
+
+print "]\n";
