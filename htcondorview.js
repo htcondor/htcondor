@@ -103,8 +103,9 @@ HTCondorView.prototype.initialize_from_object = function(options) {
 	this.table_fullscreen_link = $('#'+this.table_fullscreen_id);
 	this.table_edit_link = $('#'+this.table_edit_id);
 
-	$('.download-link').click(function(ev) { mythis.download_csv(mythis.data.value); ev.preventDefault();});
+	$('#'+this.table_download_id).click(function(ev) { mythis.download_csv(mythis.data.value, mythis.current_tableargs); ev.preventDefault();});
 
+	$('#'+this.graph_download_id).click(function(ev) { mythis.download_csv(mythis.data.value, mythis.current_graphargs); ev.preventDefault();});
 
 	//this.change_view()
 	this.starting_graphargs = graph_args;
@@ -328,16 +329,19 @@ HTCondorView.prototype.starting_elements = function(options) {
 	this.table_id = this.new_graph_id();
 	this.graph_fullscreen_id= this.new_graph_id();
 	this.graph_edit_id= this.new_graph_id();
+	this.graph_download_id= this.new_graph_id();
 
 	this.table_fullscreen_id= this.new_graph_id();
 	this.table_edit_id= this.new_graph_id();
+	this.table_download_id= this.new_graph_id();
 
-	function editmenu(fullscreen_id, edit_id) {
+	function editmenu(fullscreen_id, edit_id, download_id) {
 		var editmenu = "<div class='editmenu'>\n";
 		if(has_fullscreen_link) {
 			editmenu += "<a href='#' id='"+fullscreen_id+"' class=\"editlink\">full screen</a><br>\n";
 		}
-		editmenu += "<a href='#' id='"+edit_id+"' class=\"editlink\">edit</a>\n";
+		editmenu += "<a href='#' id='"+download_id+"' class=\"editlink\">download data</a><br>\n";
+		editmenu += "<a href='#' id='"+edit_id+"' class=\"editlink\">edit</a><br>\n";
 		editmenu += "</div>\n";
 		return editmenu;
 	}
@@ -346,13 +350,12 @@ HTCondorView.prototype.starting_elements = function(options) {
 	var ret = "" +
 		'<div class="htcondorview">\n' +
 		  "<div id='"+this.graph_id+"' class='graph'>\n" +
-			editmenu(this.graph_fullscreen_id, this.graph_edit_id) +
+			editmenu(this.graph_fullscreen_id, this.graph_edit_id, this.graph_download_id) +
 	        this.html_for_graph() + "\n"+
 		  "</div>\n";
 	if(has_table) {
-		ret += "<div class=\"download-link\"> <a href=\"#\">Download this table</a> </div>\n" +
-			"<div id='"+this.table_id+"' class='table'>\n" +
-			editmenu(this.table_fullscreen_id, this.table_edit_id) +
+		ret += "<div id='"+this.table_id+"' class='table'>\n" +
+			editmenu(this.table_fullscreen_id, this.table_edit_id, this.table_download_id) +
 			this.html_for_graph()+ "\n" +
 			"</div>\n";
 	}
@@ -418,7 +421,7 @@ HTCondorView.prototype.download_data = function(filename, type, data) {
 	document.body.removeChild(link);
 };
 
-HTCondorView.prototype.download_csv = function(data) {
+HTCondorView.prototype.download_csv = function(data, query) {
 	"use strict";
 	var mythis = this;
 	var handle_csv = function() {
@@ -426,7 +429,7 @@ HTCondorView.prototype.download_csv = function(data) {
 		mythis.csv_source_data = undefined;
 		mythis.download_data("HTCondor-View-Data.csv", "text/csv", csv);
 	};
-	this.csv_source_data = afterquery.load_post_transform(this.current_tableargs, data, handle_csv, null);
+	this.csv_source_data = afterquery.load_post_transform(query, data, handle_csv, null);
 };
 
 
