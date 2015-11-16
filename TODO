@@ -1,42 +1,11 @@
-- Properly implement history for back/forward work. Probably just trigger a redraw?  Detect different URL and reload?
-
-- Don't specify URL in table; always use same as graph?
-
-- Don't specify URL in graph, hard coded URL. Why would user mess with? Or maybe make it its own field somewhere?
-
-- Zoom on the graph is wonky.
-
 - Need a button to return to all users.
 	- Or better, a "Total" entry at the top of the chart.
-
-- Buttons/tabs for window
-	- Day/Week/Month
-	- Now (different data?) Pie charts?
-
--  Pool view
-	Load averages
-	memory usage
-	cpu usage
-	Idle CPUs? Claimed CPUs?
-
-- Canned views no edit; tab for custom
-
-- Button to autoupdate
-
-- How to do cumulative user time?
-
-- history.pushState with relative URLs for simplicty?
-	- Chrome hates pushState on file: URLs. Maybe relatiev will fix?
 
 - Rename colums for human friendlyness
 
 - Stub in columns after a pivot (if we pivot on State and there are no Preempting, but we want one anyway, just fill it with zeros)
 
-- Limit precision on avg.  New function/operation? Javascript probably just mynumber.toFixed(X) where X is number of places.  Although round may work faster. http://stackoverflow.com/questions/11832914/round-to-at-most-2-decimal-places-in-javascript
-
 - Sort Name using locale or something; currently ASCII/Unicode, so capital before lower.
-
-- "Download this table" displays table directly on Safari. Internet suggests no current workaround.  _Might_ be able to use application/octet-stream as the type to force download, but still won't have a filename.
 
 
 CondorView
