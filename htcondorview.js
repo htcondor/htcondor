@@ -100,13 +100,16 @@ HTCondorView.prototype.initialize_from_object = function(options) {
 	this.graph_fullscreen_link = $('#'+this.graph_fullscreen_id);
 	this.graph_edit_link = $('#'+this.graph_edit_id);
 
+	this.table_fullscreen_link = $('#'+this.table_fullscreen_id);
+	this.table_edit_link = $('#'+this.table_edit_id);
+
 	$('.download-link').click(function(ev) { mythis.download_csv(mythis.data.value); ev.preventDefault();});
 
 
 	//this.change_view()
 	this.starting_graphargs = graph_args;
 	this.set_graph_query(graph_args);
-	this.current_tableargs = table_args;
+	this.set_table_query(table_args);
 	if(select_tuple) {
 		this.select_tuple = {};
 		for(i = 0; i < select_tuple.length; i++) {
@@ -166,6 +169,23 @@ HTCondorView.prototype.set_graph_query = function(graph_query) {
 
 	if(this.graph_edit_link) {
 		this.graph_edit_link.attr('href', "edit.html" + search);
+	}
+};
+
+HTCondorView.prototype.set_table_query = function(table_query) {
+	this.current_tableargs = table_query;
+	var search = '?';
+		if(this.title) {
+			search += "title=" + encodeURIComponent(this.title) + "&";	
+		}
+		search += "data_url=" + encodeURIComponent(this.url) + "&";	
+		search += "graph_query=" + encodeURIComponent(this.current_tableargs) + "&";	
+	if(this.table_fullscreen_link) {
+		this.table_fullscreen_link.attr('href', "fullscreen.html" + search);
+	}
+
+	if(this.table_edit_link) {
+		this.table_edit_link.attr('href', "edit.html" + search);
 	}
 };
 
@@ -305,6 +325,9 @@ HTCondorView.prototype.starting_elements = function(options) {
 	this.graph_fullscreen_id= this.new_graph_id();
 	this.graph_edit_id= this.new_graph_id();
 
+	this.table_fullscreen_id= this.new_graph_id();
+	this.table_edit_id= this.new_graph_id();
+
 	function editmenu(fullscreen_id, edit_id) {
 		var editmenu = "<div class='editmenu'>\n";
 		if(has_fullscreen_link) {
@@ -325,6 +348,7 @@ HTCondorView.prototype.starting_elements = function(options) {
 	if(has_table) {
 		ret += "<div class=\"download-link\"> <a href=\"#\">Download this table</a> </div>\n" +
 			"<div id='"+this.table_id+"' class='table'>\n" +
+			editmenu(this.table_fullscreen_id, this.table_edit_id) +
 			this.html_for_graph()+ "\n" +
 			"</div>\n";
 	}
