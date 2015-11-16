@@ -21,9 +21,18 @@
 #thechart, #thechart .htcondorview, #thechart .htcondorview .graph, #thechart .htcondorview .graph .vizchart {
 	width: 100%;
 }
+#thechart .graph .vizchart {
+	height: 300px;
+}
 
 .help {
 	font-size: 90%;
+}
+.htclogo {
+}
+h1.htclogo img { height: 1.0em; }
+h1 {
+margin: 0; padding: 0;
 }
 </style>
 </head>
@@ -35,9 +44,9 @@
 <div id="thechart"></div>
 
 <div>
-Title: <input type="text" id="title" name="title" value="DATA"> (help link)<br>
+Title: <input type="text" id="title" name="title" value="DATA"> <br>
 Data source: <input type="text" id="data_url" name="data_url" value="DATA">
-<span class="help"><a href="#" target="_blank" id="view_data_url_link">view</a> (help link)<br>
+<span class="help"><a href="#" target="_blank" id="view_data_url_link">view</a> <br>
 Query: <span class="help"><a href="help.html" target="_blank">syntax reference</a></span><br>
 <textarea rows="10" style="width: 90%;" id="graph_query" name="graph_query">DATA</textarea>
 <button id="updatebtn">Update Graph</button>
