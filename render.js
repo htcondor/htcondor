@@ -2368,7 +2368,7 @@ var afterquery = (function() {
   }
 
   /* Runs all of the data transforms, then returns it. Useful
-     for creating a version to had to some other system. */
+     for creating a version to hand to some other system. */
   function load_post_transform(query, startdata, done, myid) {
     var args = parseArgs(query);
     var editlink = args.get('editlink');
