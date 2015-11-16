@@ -130,16 +130,23 @@ function build_graph_query_url(graph_query) {
 	var idx;
 	var key;
 	var value;
+	var tmp;
 	for(i = 0; i < gqlines.length; i++) {
-		idx = gqlines[i].indexOf("=");
-		if(idx === -1) {
-			key = gqlines[i];
-			value = '';
-		} else {
-			key = gqlines[i].substr(0, idx);
-			value = gqlines[i].substr(idx+1);
+		tmp = gqlines[i].trim();	
+		if(tmp.length !== 0) {
+			idx = gqlines[i].indexOf("=");
+			if(idx === -1) {
+				key = gqlines[i];
+				value = '';
+			} else {
+				key = gqlines[i].substr(0, idx);
+				value = gqlines[i].substr(idx+1);
+			}
+			graph_query_url += encodeURIComponent(key) + "=" + encodeURIComponent(value) + "&";
 		}
-		graph_query_url += encodeURIComponent(key) + "=" + encodeURIComponent(value) + "&";
+	}
+	if(graph_query_url[graph_query_url.length-1] === '&') {
+		graph_query_url = graph_query_url.slice(0,-1);
 	}
 	return graph_query_url;
 }
