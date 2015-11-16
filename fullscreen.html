@@ -44,6 +44,9 @@ $(document).ready(function(){
 
 	var args = afterquery.parseArgs(window.location.search);
 	var title = args.get('title');
+	if(title !== null && title !== undefined && title.length) {
+		document.title = "HTCondor View " + title;
+	}
 	var data_url = args.get('data_url');
 	var graph_query = args.get('graph_query');
 	if((!data_url) || !graph_query) {
