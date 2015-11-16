@@ -5,7 +5,7 @@
 	background: #eee;
 	visibility: hidden;
 }
-body .htcondorview:hover div.editmenu {
+body .htcondorview div:hover > div.editmenu {
 	visibility: visible;
 }
 .htcondorview div.editmenu a {
