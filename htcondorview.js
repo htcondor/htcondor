@@ -99,19 +99,9 @@ HTCondorView.prototype.initialize_from_object = function(options) {
 	container.append(starting_elements);
 	this.fullscreen_link = $('#'+this.fullscreen_id);
 
-/*
-	window.onpopstate = function() {
-		setTimeout(function(){
-			mythis.load_arguments_to_form();
-			mythis.load_and_render(mythis.current_graphargs, mythis.current_tableargs);
-			},1);
-	}
-	*/
-
 	$('.download-link').click(function(ev) { mythis.download_csv(mythis.data.value); ev.preventDefault();});
 
 
-	//this.load_arguments_to_form();
 	//this.change_view()
 	this.starting_graphargs = graph_args;
 	this.set_graph_query(graph_args);
@@ -184,36 +174,6 @@ HTCondorView.prototype.toggle_edit = function(btn, controls) {
 	}
 };
 
-/*
-HTCondorView.prototype.load_arguments_to_form = function() {
-	"use strict";
-	var args = afterquery.parseArgs(window.location.search);
-
-	var source = args.get('source');
-	if(source === undefined) { source = 'submitters'; }
-	$('#data-source input[type="radio"][value="'+source+'"]').prop('checked', true);
-
-	var duration = args.get('duration');
-	if(duration === undefined) { duration = 'day'; }
-	$('#data-duration input[type="radio"][value="'+duration+'"]').prop('checked', true);
-
-	var filterstr = args.get('filter');
-	if(filterstr !== undefined) {
-		var filterlist = filterstr.split(';');
-		this.active_filter = {};
-		for(var i = 0; i < filterlist.length; i++) {
-			if(filterlist[i].length == 0) { continue; }
-			var pair = filterlist[i].split('=');
-			this.active_filter[pair[0]] = pair[1];
-		}
-	} else {
-		this.active_filter = undefined;
-	}
-
-	var title = args.get('title');
-	if(title !== undefined) { this.alt_title = title; }
-}
-*/
 
 HTCondorView.prototype.replace_search_arg = function(oldurl, newkey, newval) {
 	"use strict";
@@ -236,61 +196,9 @@ HTCondorView.prototype.replace_search_arg = function(oldurl, newkey, newval) {
 	return this.urlTool.href;
 };
 
-/*
-HTCondorView.prototype.save_arguments_to_url = function() {
-	"use strict";
-	var url = window.location.href;
-
-	var source = $('#data-source input[type="radio"]:checked').val()
-	var duration = $('#data-duration input[type="radio"]:checked').val()
-
-	url = this.replace_search_arg(url, 'source', source);
-	url = this.replace_search_arg(url, 'duration', duration);
-
-	var filter;
-	if(this.active_filter !== undefined) {
-		filter = '';
-		for(var key in this.active_filter) {
-			filter = filter + key + "=" + this.active_filter[key] + ";";
-		}
-		filter = encodeURI(filter);
-	}
-	url = this.replace_search_arg(url, 'filter', filter);
-
-	url = this.replace_search_arg(url, 'title', this.alt_title);
-
-	if(url != window.location.href) {
-		history.pushState(null, null, url);
-	}
-}
-*/
-
-/*
-HTCondorView.prototype.read_arguments = function(source) {
-	"use strict";
-  var out = [];
-  var parts = $(source).val().trim().split('\n');
-  for (var parti in parts) {
-    var part = parts[parti];
-    if (part) {
-      var bits = afterquery.internal.trySplitOne(part, '=');
-      if (bits) {
-        out.push(encodeURIComponent(bits[0]) + '=' + encodeURIComponent(bits[1]));
-      } else {
-        out.push(encodeURIComponent(part));
-      }
-    }
-  }
-  return  '?' + out.join('&');
-}
-*/
 
 HTCondorView.prototype.load_and_render = function(graphargs, tableargs) {
 	"use strict";
-
-	/*
-	this.save_arguments_to_url();
-	*/
 
 	var mythis = this;
 	var callback_render_table = function() {
