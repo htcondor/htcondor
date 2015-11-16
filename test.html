@@ -2,79 +2,9 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Graph Testing</title>
-  <style>
-  div#editmenu {
-    position: absolute;
-    right: 0;
-    z-index: 5;
-    background: #eee;
-    visibility: hidden;
-  }
-  body:hover div#editmenu {
-    visibility: visible;
-  }
-  div#editmenu a {
-    text-decoration: none;
-    padding: 2px;
-  }
-  div#editmenu a:hover {
-    background: #aaa;
-  }
-  .vizchart {
-	width: 100%;
-	height: 400px;
-	}
-  #vizlog {
-    white-space: pre;
-  }
-  .vizstatus {
-    position: absolute;
-    z-index: 4;
-    width: 100%;
-    text-align: center;
-    padding-top: 1em;
-  }
-  #statussub {
-    padding-left: 1em;
-    color: #aaa;
-  }
-  .vizstep {
-    margin-top: 2em;
-    //display: none;
-  }
-  .vizstep .text {
-    font-family: mono;
-    font-weight: bold;
-  }
-  .vizstep .grid {
-    margin-left: 3em;
-    max-height: 10em;
-    width: 50%;
-    overflow: auto;
-  }
-  .dy-chart {
-    border-bottom: 3px solid black;
-  }
-  .dy-chart-odd {
-    background-color: #eee;
-  }
-  .dy-line {
-    background-color: rgba(0,0,0,0.2);
-    position: absolute;
-    pointer-events: none;  /* don't capture double clicks, etc. */
-  }
-  .dy-xline {
-    height: 100%;
-    width: 3px;
-    top: 0;
-  }
-  .dy-yline {
-    height: 3px;
-    width: 100%;
-    left: 0;
-  }
-  </style>
+  <title>HTCondorView Test</title>
+  <link rel="stylesheet" href="htcondor.css" />
+  <link rel="stylesheet" href="htcondorview.css" />
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/dygraph/1.1.0/dygraph-combined.js"></script>
   <script src="https://www.google.com/jsapi"></script>
@@ -85,125 +15,112 @@
   </script>
   <script src="heatgrid.js"></script>
   <script src="render.js"></script>
+  <script src="htcondorview.js"></script>
+  <script src="htcondorview-linked.js"></script>
+
+<style>
+
+h2 {
+    font-family: "HelveticaNeue-Light", "HelveticaNeueLight", "Helvetica Neue Light", "Helvetica Neue", Helvetica, Roboto, Arial, "Lucida Grande", sans-serif; 
+	font-weight: 300;
+	font-size: 200%;
+	margin-bottom: 0;
+
+}
+h2+p {
+	margin-top: 0;
+}
+.HTCondorViewSimple {
+/*
+	display: inline-block;
+	width: 300px;
+	height: 200px;
+*/
+}
+
+div.simple { text-align: center; }
+
+ul.radio-tabs {
+	display: inline;
+	margin: 0;
+	padding: 0;
+}
+
+ul.radio-tabs li {
+	display: inline-block;
+}
+ul.radio-tabs li input[type="radio"] {
+	display: none;
+}
+ul.radio-tabs li label {
+	display: block;
+	border: 1px solid black;
+	background: #ededed;
+	padding: .1em .8em;
+	cursor: pointer;
+}
+ul.radio-tabs li:first-child label {
+	border-top-left-radius: .6em;
+	border-bottom-left-radius: 0.6em;
+}
+ul.radio-tabs li:last-child label {
+	border-top-right-radius: 0.6em;
+	border-bottom-right-radius: 0.6em;
+}
+ul.radio-tabs li input[type="radio"]:checked + label {
+	background: white;
+	cursor: inherit;
+}
+
+#simple-paired .graph .vizchart {
+	height: 300px;
+}
+
+#view-paired .graph .vizchart {
+	height: 400px;
+}
+
+h1 { margin-bottom: 0; }
+
+</style>
 </head>
 <body>
-<form>
-<textarea id='editor' wrap='off'>
-url=foo.json
-order=State
-pivot=Date;State;Cpus
-chart=stacked
-</textarea>
-</form>
 
-<button id="reload1">Reload 1</button>
-<button id="rerender1">Re-render 1</button>
-<button id="reload2">Reload 2</button>
-<button id="rerender2">Re-render 2</button>
+<h1 class="htclogo"><img src="HTCondor-View.svg" alt="HTCondor View"></h1>
+<h1>Testing</h1>
 
-<h2>Graph 1</h2>
-<div id='editmenu'><a id='editlink' href='' target='_top'>edit</a></div>
-<div id='graph1'>
-<div class='vizstatus'>
-  <div class='statustext'></div>
-  <div class='statussub'></div>
-</div>
-<div class='vizraw'></div>
-<div class='vizchart'></div>
-</div>
+<h2>JSON: Valid</h2>
+<p>[{foo:bar},{foo:qux}]
+<script>HTCondorView.simple("url=test-data/valid.json&limit=5");</script>
 
-<h2>Graph 2</h2>
-<div id='graph2'>
-<div class='vizstatus'>
-  <div class='statustext'></div>
-  <div class='statussub'></div>
-</div>
-<div class='vizraw'></div>
-<div class='vizchart'></div>
-</div>
+<h2>JSON: Missing brackets</h2>
+<p>{foo:bar},{foo:qux}
+<script>HTCondorView.simple("url=test-data/nb.json&limit=5");</script>
 
-<h2>Log</h2>
-  <div id='vizlog'></div>
+<h2>JSON: Missing brackets and extra comma</h2>
+<p>{foo:bar},{foo:qux},
+<script>HTCondorView.simple("url=test-data/nbec.json&limit=5");</script>
 
-<script>
-$('#editlink').attr('href', 'edit.html' + window.location.search);
+<h2>JSON: Extra comma</h2>
+<p>[{foo:bar},{foo:qux},]
+<p>Not implemented.  Highly unlikely to be found in the wild.
 
-function load_arguments_to_form() {
-	var default_args = '?url=foo.json&order=State&pivot=Date;State;Cpus&chart=stacked';
-	var args = afterquery.parseArgs(window.location.search || default_args);
-	var text = "";
-	for(var argi in args.all) {
-		var arg = args.all[argi];
-		var key = arg[0];
-		var val = arg[1];
-		text += key + "=" + val + "\n";	
-	}
-	$('#editor').text(text);
-	
-}
+<h2>Strict JSONP: Valid</h2>
+<p>jsonp([{foo:bar},{foo:qux}]);
+<p>"Strict" means the first 6 characters must be exactly "jsonp(" and the
+last two ");".
+<script>HTCondorView.simple("url=test-data/valid.json&limit=5");</script>
 
-function save_arguments_to_url(args) {
-	before = window.location.href;
-	console.log("Before: " + before);
-	base = before.replace(/\?.*/,'');
-	console.log("Base: " + base);
-	newuri = base + args;
-	console.log("New: " + newuri);
-	history.pushState(null, null, newuri);
-}
+<h2>END</h2>
 
-function read_arguments() {
-  var out = [];
-  var parts = $('#editor').attr('value').trim().split('\n');
-  for (var parti in parts) {
-    var part = parts[parti];
-    if (part) {
-      var bits = afterquery.internal.trySplitOne(part, '=');
-      if (bits) {
-        out.push(encodeURIComponent(bits[0]) + '=' + encodeURIComponent(bits[1]));
-      } else {
-        out.push(encodeURIComponent(part));
-      }
-    }
-  }
-  return  '?' + out.join('&');
-}
 
-var data;
-function load_and_render(myid) {
-    var args = read_arguments();
-	data = afterquery.load(args,null,
-		function(){
-		setTimeout(function() {
-			afterquery.render(args, data.value, null,
-myid);
-			},0)
-		},
-		myid
-		);
-}
-//load_and_render();
-//afterquery.render(window.location.search);
-$('#reload1').click(function() {
-	console.log("Reload 1");
-	load_and_render('graph1');
-	console.log("Reload 2");
-	save_arguments_to_url(read_arguments());
-	console.log("Reload 3");
-	});
-$('#rerender1').click(function() { afterquery.render(read_arguments(),
-data.value,null,'graph1'); });
-$('#reload2').click(function() { load_and_render('graph2'); });
-$('#rerender2').click(function() { afterquery.render(read_arguments(),
-data.value,null,'graph2'); });
-//afterquery.render(window.location.search, data);
 
-$('#graph2.statustext').text('statustext');
-$('#graph2.statussub').text('statustext');
 
-load_arguments_to_form();
 
-</script>
+
+<!-- vizlog is where errors will go. -->
+<div id="vizlog"></div>
+
 
 </body>
 </html>
