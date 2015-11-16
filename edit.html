@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>HTCondorView</title>
+  <title>HTCondorView Graph Editor</title>
   <link rel="stylesheet" href="htcondor.css" />
   <link rel="stylesheet" href="htcondorview.css" />
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.js"></script>
@@ -26,7 +26,7 @@
 </head>
 <body>
 <h1 class="htclogo"><img src="HTCondor-View.svg" alt="HTCondor View"></h1>
-<h1>Edit Graph</h1>
+<h1>Graph Editor</h1>
 
 
 <div id="thechart"></div>
@@ -36,14 +36,35 @@ Title: <input type="text" id="title" name="title" value="DATA"> (help link)<br>
 Data source: <input type="text" id="data_url" name="data_url" value="DATA"> (view link) (help link)<br>
 Query: <a href="help.html" target="_blank">syntax reference</a><br>
 <textarea rows="10" style="width: 90%;" id="graph_query" name="graph_query">DATA</textarea>
+<button id="updatebtn">Update Graph</button>
 </div>
 
 <!-- vizlog is where errors will go. -->
 <div id="vizlog"></div>
 
 <script>
+var urlTool;
 $(document).ready(function(){
 
+	initialize_from_url();
+	update_graph();
+
+	$('#updatebtn').click(function() {
+		update_graph();
+		update_url();
+	});
+
+	window.onpopstate = function() {
+		setTimeout(function(){
+			initialize_from_url();
+			update_graph();
+			},1);
+	}
+
+	urlTool = document.createElement('a');
+});
+
+function initialize_from_url() {
 	var args = afterquery.parseArgs(window.location.search);
 	$('#title').val(args.get('title'));
 	$('#data_url').val(args.get('data_url'));
@@ -62,9 +83,7 @@ $(document).ready(function(){
 	}
 
 	$('#graph_query').val(graph_query);
-	update_graph();
-
-});
+}
 
 function update_graph() {
 
@@ -77,6 +96,19 @@ function update_graph() {
 		return;
 	}
 
+	var graph_query_url = build_graph_query_url(graph_query);
+
+	new HTCondorView({
+		dst_id: "thechart",
+		title: title,
+		data_url: data_url,
+		graph_query: graph_query_url,
+	});
+}
+
+// Take newline separated query and turn into URI escaped version with
+// arguments specified like a GET query.
+function build_graph_query_url(graph_query) {
 	var graph_query_url = '';
 	var gqlines = graph_query.split("\n");
 	var i;
@@ -94,15 +126,24 @@ function update_graph() {
 		}
 		graph_query_url += encodeURIComponent(key) + "=" + encodeURIComponent(value) + "&";
 	}
-	console.log(graph_query_url);
-	
+	return graph_query_url;
+}
 
-	new HTCondorView({
-		dst_id: "thechart",
-		title: title,
-		data_url: data_url,
-		graph_query: graph_query_url,
-	});
+function update_url() {
+	var title = $('#title').val();
+	var data_url = $('#data_url').val();
+	var graph_query = $('#graph_query').val();
+	var graph_query_url = build_graph_query_url(graph_query);
+
+	urlTool.href = window.location.href;
+	var search = "?" +
+		"title=" + encodeURIComponent(title) + "&" +
+		"data_url=" + encodeURIComponent(data_url) + "&" +
+		"data_url=" + encodeURIComponent(data_url) + "&" +
+		"graph_query=" + encodeURIComponent(graph_query_url);
+	urlTool.search = search;
+	var url = urlTool.href;
+	history.pushState(null, null, url);
 }
 
 </script>
