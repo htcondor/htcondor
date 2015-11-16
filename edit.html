@@ -22,6 +22,9 @@
 	width: 100%;
 }
 
+.help {
+	font-size: 90%;
+}
 </style>
 </head>
 <body>
@@ -33,8 +36,9 @@
 
 <div>
 Title: <input type="text" id="title" name="title" value="DATA"> (help link)<br>
-Data source: <input type="text" id="data_url" name="data_url" value="DATA"> (view link) (help link)<br>
-Query: <a href="help.html" target="_blank">syntax reference</a><br>
+Data source: <input type="text" id="data_url" name="data_url" value="DATA">
+<span class="help"><a href="#" target="_blank" id="view_data_url_link">view</a> (help link)<br>
+Query: <span class="help"><a href="help.html" target="_blank">syntax reference</a></span><br>
 <textarea rows="10" style="width: 90%;" id="graph_query" name="graph_query">DATA</textarea>
 <button id="updatebtn">Update Graph</button>
 </div>
@@ -60,6 +64,11 @@ $(document).ready(function(){
 			update_graph();
 			},1);
 	}
+
+	$('#view_data_url_link').click(function(e) {
+		e.preventDefault();
+		window.open($('#data_url','').val());
+	});
 
 	urlTool = document.createElement('a');
 });
