@@ -310,7 +310,7 @@ HTCondorView.prototype.starting_elements = function(options) {
 		  "<div id='"+this.graph_id+"' class='graph'>\n" +
 		    "<div class='editmenu'>\n";
 	if(has_fullscreen_link) {
-		ret += "<a href='#' id='"+this.fullscreen_id+"' class=\"editlink\">full screen</a>\n";
+		ret += "<a href='#' id='"+this.fullscreen_id+"' class=\"editlink\">full screen</a><br>\n";
 	}
 	ret += "<a href='#' id='"+this.edit_id+"' class=\"editlink\">edit</a>\n";
 	ret += "</div>\n" +
