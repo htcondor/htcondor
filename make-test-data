@@ -1,15 +1,17 @@
 #! /usr/bin/perl -w
 use strict;
 
-my $records = 100;
+my $records = 20;
 
-my(@colors) = qw(red green blue);
-my(@shapes) = qw(cube sphere pyramid);
-my(@sizes) = (1, 2, 3);
+my(@colors) = qw(red green);
+my(@highlight) = qw(black white);
+my(@shapes) = qw(cube sphere);
+my(@sizes) = (1, 2);
 
 print "[\n";
 for(my $i = 0; $i < $records; $i++) {
 	my $c = $colors[int rand @colors];
+	my $c2 = $highlight[int rand @highlight];
 	my $s = $shapes[int rand @shapes];
 	my $si = $sizes[int rand @sizes];
 	my $qty = 1+ int rand 5;
@@ -18,6 +20,7 @@ for(my $i = 0; $i < $records; $i++) {
 	print <<END;
 {
 	"color": "$c",
+	"highlight": "$c2",
 	"shape": "$s",
 	"size": $si,
 	"count": $qty
