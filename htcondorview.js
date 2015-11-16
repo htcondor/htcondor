@@ -98,6 +98,7 @@ HTCondorView.prototype.initialize_from_object = function(options) {
 	});
 	container.append(starting_elements);
 	this.fullscreen_link = $('#'+this.fullscreen_id);
+	this.edit_link = $('#'+this.edit_id);
 
 	$('.download-link').click(function(ev) { mythis.download_csv(mythis.data.value); ev.preventDefault();});
 
@@ -153,14 +154,18 @@ HTCondorView.prototype.new_graph_id = function() {
 
 HTCondorView.prototype.set_graph_query = function(graph_query) {
 	this.current_graphargs = graph_query;
-	var new_link = "fullscreen.html?";
-	if(this.fullscreen_link) {
+	var search = '?';
 		if(this.title) {
-			new_link += "title=" + encodeURIComponent(this.title) + "&";	
+			search += "title=" + encodeURIComponent(this.title) + "&";	
 		}
-		new_link += "data_url=" + encodeURIComponent(this.url) + "&";	
-		new_link += "graph_query=" + encodeURIComponent(this.current_graphargs) + "&";	
-		this.fullscreen_link.attr('href', new_link);
+		search += "data_url=" + encodeURIComponent(this.url) + "&";	
+		search += "graph_query=" + encodeURIComponent(this.current_graphargs) + "&";	
+	if(this.fullscreen_link) {
+		this.fullscreen_link.attr('href', "fullscreen.html" + search);
+	}
+
+	if(this.edit_link) {
+		this.edit_link.attr('href', "edit.html" + search);
 	}
 };
 
@@ -298,6 +303,7 @@ HTCondorView.prototype.starting_elements = function(options) {
 	this.graph_id = this.new_graph_id();
 	this.table_id = this.new_graph_id();
 	this.fullscreen_id= this.new_graph_id();
+	this.edit_id= this.new_graph_id();
 
 	var ret = "" +
 		'<div class="htcondorview">\n' +
@@ -306,6 +312,7 @@ HTCondorView.prototype.starting_elements = function(options) {
 	if(has_fullscreen_link) {
 		ret += "<a href='#' id='"+this.fullscreen_id+"' class=\"editlink\">full screen</a>\n";
 	}
+	ret += "<a href='#' id='"+this.edit_id+"' class=\"editlink\">edit</a>\n";
 	ret += "</div>\n" +
 	        this.html_for_graph() + "\n"+
 		  "</div>\n";
