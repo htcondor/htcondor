@@ -33,12 +33,13 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item \Condor{history} no longer reports an error when run on a system that does not have a history file.
-This change was made because the history file is not created until after the first job runs, so users
-were always seeing an error message on a fresh installation of HTCondor.
+\item \Condor{history} no longer reports an error when run on a system that does
+not have a history file.
+This change was made because the history file is not created until after the
+first job runs.
+So, users were always seeing an error message on a fresh installation of
+HTCondor.
 \Ticket{5374}
-
-\item None.
 
 \end{itemize}
 
@@ -46,42 +47,61 @@ were always seeing an error message on a fresh installation of HTCondor.
 
 \begin{itemize}
 
-\item HTCondor now applies the configuration settings
-\MacroNI{GRIDMANAGER\_GAHP\_CALL\_TIMEOUT} and
-\MacroNI{GRIDMANAGER\_CONNECT\_FAILURE\_RETRY\_COUNT}
-when running grid universe jobs for EC2 or Google Compute Engine.
-\Ticket{5300}
-
-\item Fixed a bug introduced in 8.4.1 that could cause the \Condor{schedd} to exit.
+\item Fixed a bug introduced in 8.4.1 that could cause the \Condor{schedd}
+to exit.
 This affected remote submit, HTCondor-CE, and HTCondor-C.
 \Ticket{4522}
 
-\item Fixed a crash in the \Condor{schedd} that happened when the
-schedd was under load and being shutdown in the fast mode.
-\Ticket{5371}
-
-\item Fixed \MacroNI{TCP\_FORWARDING\_HOST}.  (It now changes how HTCondor
-version 8.3.6 and higher contact the daemon configured with it.)
+\item The \MacroNI{TCP\_FORWARDING\_HOST} is now honored by
+HTCondor client programs.
 \Ticket{5339}
 
-\item Added a default request\_memory for \Condor{submit} -interactive
-of 512 megabytes.  Formerly, the default was one, which is
-insufficient in environments that strictly enforce memory
-usage.
-\Ticket{5344}
-
-\item Added a timeout to the \Condor{fetchlog} command so that it
-will not hang forever waiting for a unresponsive daemon.
-\Ticket{5325}
+\item Fixed a problem where Standard Universe jobs could not restart
+from a checkpoint in the Enterprise Linux 6 RPM distribution.
+\Ticket{5382}
+\Ticket{5383}
 
 \item Fixed bugs in the function of the DAGMan
 \Macro{DAGMAN\_MAX\_JOBS\_IDLE}/\Macro{-maxidle} throttle,
 especially for node jobs that create multiple procs.
 \Ticket{5333}
 
+\item Fixed a problem where the RPMs would claim to publicly provide
+Globus shared libraries that are in a private location.
+\Ticket{5349}
+
+\item Added a default \Expr{request\_memory} for \Condor{submit} -interactive
+of 512 megabytes.  Formerly, the default was one, which is
+insufficient in environments that strictly enforce memory
+usage.
+\Ticket{5344}
+
+\item Fixed a problem were the \Expr{condor\_classad} RPM would claim to
+provide a replacement for the \Expr{classad} RPM in EPEL.
+\Ticket{5400}
+
+\item HTCondor now applies the configuration settings
+\MacroNI{GRIDMANAGER\_GAHP\_CALL\_TIMEOUT} and
+\MacroNI{GRIDMANAGER\_CONNECT\_FAILURE\_RETRY\_COUNT}
+when running grid universe jobs for EC2 or Google Compute Engine.
+\Ticket{5300}
+
+\item Fixed a crash in the \Condor{schedd} that happened when the
+schedd was under load and being shutdown in the fast mode.
+\Ticket{5371}
+
+\item Added a timeout to the \Condor{fetchlog} command so that it
+will not hang forever waiting for a unresponsive daemon.
+\Ticket{5325}
+
 \item Fixed a problem that prevented HTCondor from building on some 64-bit Linux
-platforms such as Arm64.  Bug was reported by Debian maintainers as their Bug 804386.
+platforms such as Arm64.
+This was reported by Debian maintainers as their Bug 804386.
 \Ticket{5380}
+
+\item Fixed a problem where the platform string was incorrect in the RPM
+packages.
+\Ticket{5384}
 
 \end{itemize}
 
