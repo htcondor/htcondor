@@ -2151,9 +2151,23 @@ var afterquery = (function() {
     var start = data.indexOf('jsonp(');
     if (start >= 0) {
       data = data.substr(start + 6, data.length - start - 6 - 2);
-    } else if (start == -1) {
+	}
+
+	// A trailing comma is common in progammatically generated data
+	// (Just toss a comma after each record), but not technically valid.
+	// Chop it off so JSON.parse is happy.
+	if(data[data.length-1] === ',') {
+		data = data.slice(0,-1);
+	}
+
+	// If we're reading a file that is constantly appended to, there
+	// is no [] wrapper around the records (because the writer would
+	// need to constantly remove and re-add the "]".  Add it so
+	// JSON.parse is happy.
+	if(data[0] !== '[') {
 		data = "[" + data + "]";
 	}
+
     debug_log('in extractJsonFromJsonp start: ', start);
     data = JSON.parse(data);
     success_func(data);
