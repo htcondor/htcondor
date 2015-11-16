@@ -250,7 +250,11 @@ HTCondorView.prototype.load_and_render = function(graphargs, tableargs) {
 			if(mythis.title) {
 				query += "&title="+ encodeURIComponent(mythis.title);
 			}
-			afterquery.render(query, mythis.data.value, callback_render_table, mythis.graph_id);
+			var options = {
+				num_pattern: '#,##0.0',
+				disable_height: true
+			};
+			afterquery.render(query, mythis.data.value, callback_render_table, mythis.graph_id, options);
 			},0);
 		};
 
