@@ -97,8 +97,8 @@ HTCondorView.prototype.initialize_from_object = function(options) {
 		has_fullscreen_link: has_fullscreen_link
 	});
 	container.append(starting_elements);
-	this.fullscreen_link = $('#'+this.fullscreen_id);
-	this.edit_link = $('#'+this.edit_id);
+	this.graph_fullscreen_link = $('#'+this.graph_fullscreen_id);
+	this.graph_edit_link = $('#'+this.graph_edit_id);
 
 	$('.download-link').click(function(ev) { mythis.download_csv(mythis.data.value); ev.preventDefault();});
 
@@ -160,12 +160,12 @@ HTCondorView.prototype.set_graph_query = function(graph_query) {
 		}
 		search += "data_url=" + encodeURIComponent(this.url) + "&";	
 		search += "graph_query=" + encodeURIComponent(this.current_graphargs) + "&";	
-	if(this.fullscreen_link) {
-		this.fullscreen_link.attr('href', "fullscreen.html" + search);
+	if(this.graph_fullscreen_link) {
+		this.graph_fullscreen_link.attr('href', "fullscreen.html" + search);
 	}
 
-	if(this.edit_link) {
-		this.edit_link.attr('href', "edit.html" + search);
+	if(this.graph_edit_link) {
+		this.graph_edit_link.attr('href', "edit.html" + search);
 	}
 };
 
@@ -302,18 +302,24 @@ HTCondorView.prototype.starting_elements = function(options) {
 
 	this.graph_id = this.new_graph_id();
 	this.table_id = this.new_graph_id();
-	this.fullscreen_id= this.new_graph_id();
-	this.edit_id= this.new_graph_id();
+	this.graph_fullscreen_id= this.new_graph_id();
+	this.graph_edit_id= this.new_graph_id();
+
+	function editmenu(fullscreen_id, edit_id) {
+		var editmenu = "<div class='editmenu'>\n";
+		if(has_fullscreen_link) {
+			editmenu += "<a href='#' id='"+fullscreen_id+"' class=\"editlink\">full screen</a><br>\n";
+		}
+		editmenu += "<a href='#' id='"+edit_id+"' class=\"editlink\">edit</a>\n";
+		editmenu += "</div>\n";
+		return editmenu;
+	}
+
 
 	var ret = "" +
 		'<div class="htcondorview">\n' +
 		  "<div id='"+this.graph_id+"' class='graph'>\n" +
-		    "<div class='editmenu'>\n";
-	if(has_fullscreen_link) {
-		ret += "<a href='#' id='"+this.fullscreen_id+"' class=\"editlink\">full screen</a><br>\n";
-	}
-	ret += "<a href='#' id='"+this.edit_id+"' class=\"editlink\">edit</a>\n";
-	ret += "</div>\n" +
+			editmenu(this.graph_fullscreen_id, this.graph_edit_id) +
 	        this.html_for_graph() + "\n"+
 		  "</div>\n";
 	if(has_table) {
