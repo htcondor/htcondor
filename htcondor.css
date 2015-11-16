@@ -27,6 +27,7 @@ h1.htclogo {
 h1.htclogo img {
 	display: inline-block;
 	height: 1.5em;
+	vertical-align: bottom;
 }
 
 
