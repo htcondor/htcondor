@@ -23,6 +23,23 @@ em.variable {
 	text-decoration:  underline;
 	font-family: monospace;
 }
+table.example {
+	margin-left: auto;
+	margin-right: auto;
+	border-collapse: collapse;	
+}
+table.example td, table.example th {
+	padding: 0.3em;
+}
+table.example th {
+	background-color: #4444CC;
+	color: white;
+}
+table.example tr:nth-child(odd) {
+	background-color: #CCCCFF;
+}
+table.example tr:nth-child(even) {
+}
 </style>
 </head>
 <body>
@@ -131,9 +148,12 @@ learn about them is to play with an example.
 
 <p>The simplest way to think of a pivot table is like this:
 the values originally in the columns named by <em class="variable">rowkeys</em>
-end up down the left of the output table.  The values
+end up down the left of the output table, one column per <em
+class="variable">rowkey</em>.
+The values
 originally in the columns named by <em class="variable">colkeys</em> end up
-as headings across the top of the output table.  The values
+as headings across the top of the output table, the values concatenated
+together with a space.  The values
 originally in the columns named by <em class="variable">valkeys</em> end up
 as values in the body section of the output table.  A
 pivot table is very handy when you have raw data in
@@ -150,7 +170,50 @@ essentially equivalent to a
 If the <em class="variable">valkeys</em> section is empty, there are no
 values used to calculate the table body, so it is
 equivalent to an <b>group=<em class="variable">rowkeys...</em>;</b>
-operation.</dd>
+operation.
+
+<p>For example, given this data:
+
+<table class="example">
+<tr><th>color</th><th>highlight</th><th>shape</th><th>size</th><th>count</th></tr>
+<tr><td>green</td><td>black</td><td>cube</td><td>2</td><td>1</td></tr>
+<tr><td>red</td><td>white</td><td>cube</td><td>1</td><td>4</td></tr>
+<tr><td>red</td><td>white</td><td>sphere</td><td>2</td><td>4</td></tr>
+<tr><td>green</td><td>black</td><td>sphere</td><td>2</td><td>2</td></tr>
+<tr><td>green</td><td>white</td><td>sphere</td><td>1</td><td>5</td></tr>
+<tr><td>red</td><td>white</td><td>cube</td><td>1</td><td>4</td></tr>
+<tr><td>red</td><td>black</td><td>sphere</td><td>2</td><td>3</td></tr>
+<tr><td>red</td><td>white</td><td>cube</td><td>1</td><td>3</td></tr>
+<tr><td>green</td><td>white</td><td>cube</td><td>1</td><td>2</td></tr>
+<tr><td>green</td><td>black</td><td>sphere</td><td>2</td><td>5</td></tr>
+<tr><td>red</td><td>black</td><td>cube</td><td>2</td><td>2</td></tr>
+<tr><td>red</td><td>white</td><td>cube</td><td>2</td><td>5</td></tr>
+<tr><td>red</td><td>white</td><td>sphere</td><td>1</td><td>1</td></tr>
+<tr><td>green</td><td>black</td><td>cube</td><td>1</td><td>4</td></tr>
+<tr><td>red</td><td>black</td><td>cube</td><td>1</td><td>4</td></tr>
+<tr><td>red</td><td>black</td><td>cube</td><td>2</td><td>2</td></tr>
+<tr><td>green</td><td>white</td><td>sphere</td><td>1</td><td>3</td></tr>
+<tr><td>red</td><td>white</td><td>cube</td><td>2</td><td>2</td></tr>
+<tr><td>green</td><td>black</td><td>cube</td><td>2</td><td>5</td></tr>
+<tr><td>red</td><td>white</td><td>cube</td><td>2</td><td>1</td></tr>
+</table>
+
+<p>The pivot
+<pre>
+pivot=color,highlight;shape,size;count
+</pre>
+
+<p>yields this table:
+
+<table class="example">
+<tr><th>color</th><th>highlight</th><th>cube 2</th><th>cube 1</th><th>sphere 2</th><th>sphere 1</th></tr>
+<tr><td>green</td><td>black</td><td>6</td><td>4</td><td>7</td><td>0</td></tr>
+<tr><td>red</td><td>white</td><td>8</td><td>11</td><td>4</td><td>1</td></tr>
+<tr><td>green</td><td>white</td><td>0</td><td>2</td><td>0</td><td>8</td></tr>
+<tr><td>red</td><td>black</td><td>4</td><td>4</td><td>3</td><td>0</td></tr>
+
+</table>
+</dd>
 
 <dt>chart=<em class="variable">charttype</em></dt>
 <dd>
