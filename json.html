@@ -140,3 +140,26 @@ jsonp([
 }
 ]);
 </pre>
+
+<p>Values can be strings, numbers, dates, time/date pairs, or boolean values.  The system attempts
+to deduce the correct type for a given field by examining values.  Numbers
+can be placed in quotes; they will be interpreted as numbers if all values
+for that field can be.  Dates can be in a variety of
+formats, including:
+
+<table class="example">
+<tr><th>Format</th><th>Example</th></tr>
+<tr><td>"YYYY-MM-DDThh:mm:ss.mmm"</td><td>"2015-12-31T23:59:59.999"</td>
+<tr><td>"YYYY-MM-DDThh:mm:ss"</td><td>"2015-12-31T23:59:59"</td>
+<tr><td>"YYYY-MM-DDThh:mm"</td><td>"2015-12-31T23:59"</td>
+<tr><td>"YYYY-MM-DD hh:mm"</td><td>"2015-12-31 23:59"</td>
+<tr><td>"YYYY-MM-DD"</td><td>"2015-12-31"</td>
+<tr><td>"Date(YYYY,MM,DD)"</td><td>"Date(2015,12,31)"</td></tr>
+<tr><td>"Date(YYYY,MM,DD,hh,mm,ss)"</td><td>"Date(2015,12,31,23,59,59)"</td></tr>
+</table>
+
+<p>Years must always be four digits.
+
+</body>
+</html>
+
