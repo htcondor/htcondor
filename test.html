@@ -90,25 +90,25 @@ h1 { margin-bottom: 0; }
 <h1>Testing</h1>
 
 <h2>JSON: Valid</h2>
-<p>[{foo:bar},{foo:qux}]
+<p>[{foo:bar},{foo:qux}]</p>
 <script>HTCondorView.simple("url=test-data/valid.json&limit=5");</script>
 
 <h2>JSON: Missing brackets</h2>
-<p>{foo:bar},{foo:qux}
+<p>{foo:bar},{foo:qux}</p>
 <script>HTCondorView.simple("url=test-data/nb.json&limit=5");</script>
 
 <h2>JSON: Missing brackets and extra comma</h2>
-<p>{foo:bar},{foo:qux},
+<p>{foo:bar},{foo:qux},</p>
 <script>HTCondorView.simple("url=test-data/nbec.json&limit=5");</script>
 
 <h2>JSON: Extra comma</h2>
-<p>[{foo:bar},{foo:qux},]
+<p>[{foo:bar},{foo:qux},]</p>
 <p>Not implemented.  Highly unlikely to be found in the wild.
 
 <h2>Strict JSONP: Valid</h2>
-<p>jsonp([{foo:bar},{foo:qux}]);
+<p>jsonp([{foo:bar},{foo:qux}]);</p>
 <p>"Strict" means the first 6 characters must be exactly "jsonp(" and the
-last two ");".
+last two ");".</p>
 <script>HTCondorView.simple("url=test-data/valid.json&limit=5");</script>
 
 <h2>END</h2>
