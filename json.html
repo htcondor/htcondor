@@ -57,9 +57,11 @@ pre {
 
 <p>The data is a series of records, each with one or more named fields.
 
-<p>The data must be a single list, either of objects or nested lists.  A
-list of objects has one property for each value, with the name of the
-property being the field name.  A nested list has TODO.
+<p>The data must be a single array, either of objects or nested array.  An
+array of objects has one property for each value, with the name of the
+property being the field name.  A nested array begins with an array of field
+names, then has one array for each record, with the values matching the
+field names with the same index.
 
 <p>Given the data set
 
@@ -89,7 +91,11 @@ property being the field name.  A nested list has TODO.
 <p>or
 
 <pre>
-TODO
+[
+	[ "Color", "Shape", "Count"],
+	[ "red",   "sphere", 14],
+	[ "blue",  "cube",   6]
+]
 </pre>
 
 <p>In JSON format, the framing "[" "]" are optional. In JSON format, an
@@ -114,8 +120,11 @@ the first example could be written as:
 
 <p>The JSONP is the same as the JSON format with a wrapper function.
 The function must be "jsonp".  The first 6 characters
-must be exactly "jsonp(" and the last two ");".  This is the first JSON
-example modified to be JSONP:
+must be exactly "jsonp(" and the last two ");".  The contents must be
+strictly valid JSON; the framing "[" "]" must be present and there must
+not be a comma after the last record.
+
+<p> This is the first JSON example modified to be JSONP:
 
 <pre>
 jsonp([
