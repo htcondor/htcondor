@@ -901,13 +901,22 @@ class SecManStartCommand: Service, public ClassyCountedPtr {
 	}
 
 	~SecManStartCommand() {
-		if( m_pending_socket_registered ) {
-			m_pending_socket_registered = false;
-			daemonCore->decrementPendingSockets();
-		}
 		if( m_private_key ) {
 			delete m_private_key;
 			m_private_key = NULL;
+		}
+
+			// we may be called after the daemonCore object
+			// has been destructed and nulled out in a 
+			// shutdown.  If so, just return now.
+
+		if (!daemonCore) {
+			return;
+		}
+
+		if( m_pending_socket_registered ) {
+			m_pending_socket_registered = false;
+			daemonCore->decrementPendingSockets();
 		}
 			// The callback function _must_ have been called
 			// (and set to NULL) by now.
