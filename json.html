@@ -1,0 +1,133 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>HTCondor View JSON Formats</title>
+<link rel="stylesheet" href="htcondor.css" />
+<style>
+body {
+  max-width: 50em;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 0.5em;
+  padding-right: 0.5em;
+}
+dt {
+  font-weight: bold;
+  font-family: monospace;
+  font-size: 150%;
+  margin-bottom: 0.5em;
+}
+dd { margin-bottom: 1.5em; }
+em.variable {
+  text-decoration:  underline;
+  font-family: monospace;
+}
+table.example {
+  margin-left: auto;
+  margin-right: auto;
+  border-collapse: collapse;  
+}
+table.example td, table.example th {
+  padding: 0.3em;
+}
+table.example th {
+  background-color: #4444CC;
+  color: white;
+}
+table.example tr:nth-child(odd) {
+  background-color: #CCCCFF;
+}
+table.example tr:nth-child(even) {
+}
+pre {
+  margin: 0 3em;
+  padding: 0.5em;
+  background-color: #CCCCFF;
+}
+</style>
+</head>
+<body>
+
+
+<h1 class="htclogo"><img src="HTCondor-View.svg" alt="HTCondor View"></h1>
+<h1>JSON Formats </h1>
+
+<p>Data for HTCondor View is provided in JSON or JSONP format.
+
+<p>The data is a series of records, each with one or more named fields.
+
+<p>The data must be a single list, either of objects or nested lists.  A
+list of objects has one property for each value, with the name of the
+property being the field name.  A nested list has TODO.
+
+<p>Given the data set
+
+<table class="example">
+<tr><th>Color</th><th>Shape</th><th>Count</th></tr>
+<tr><td>red</td><td>sphere</td><td>14</tr>
+<tr><td>blue</td><td>cube</td><td>6</tr>
+</table>
+
+<p>It could be represented as
+
+<pre>
+[
+{
+  "Color": "red",
+  "Shape": "sphere",
+  "Count": 14,
+},
+{
+  "Color": "blue",
+  "Shape": "cube",
+  "Count": 6,
+}
+]
+</pre>
+
+<p>or
+
+<pre>
+TODO
+</pre>
+
+<p>In JSON format, the framing "[" "]" are optional. In JSON format, an
+extra comma at the end is also allowed, but in that case the framing "["
+"]" <em>must</em> be omitted.  This may be useful for files where
+additional records are regularly appended, eliminating the need to keep
+moving the "]" and allowing every record to end with a comma.  For example,
+the first example could be written as:
+
+<pre>
+{
+  "Color": "red",
+  "Shape": "sphere",
+  "Count": 14,
+},
+{
+  "Color": "blue",
+  "Shape": "cube",
+  "Count": 6,
+},
+</pre>
+
+<p>The JSONP is the same as the JSON format with a wrapper function.
+The function must be "jsonp".  The first 6 characters
+must be exactly "jsonp(" and the last two ");".  This is the first JSON
+example modified to be JSONP:
+
+<pre>
+jsonp([
+{
+  "Color": "red",
+  "Shape": "sphere",
+  "Count": 14,
+},
+{
+  "Color": "blue",
+  "Shape": "cube",
+  "Count": 6,
+}
+]);
+</pre>
