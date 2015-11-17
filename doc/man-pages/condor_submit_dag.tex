@@ -11,11 +11,11 @@
 \oOpt{-no\_submit}
 \oOpt{-verbose}
 \oOpt{-force}
-\oOptArg{-maxidle}{NumberOfJobs}
-\oOptArg{-maxjobs}{NumberOfJobs}
+\oOptArg{-maxidle}{NumberOfProcs}
+\oOptArg{-maxjobs}{NumberOfClusters}
 \oOptArg{-dagman}{DagmanExecutable}
-\oOptArg{-maxpre}{NumberOfPREscripts}
-\oOptArg{-maxpost}{NumberOfPOSTscripts}
+\oOptArg{-maxpre}{NumberOfPreScripts}
+\oOptArg{-maxpost}{NumberOfPostScripts}
 \oOptArg{-notification}{value}
 \oOpt{-noeventchecks}
 \oOpt{-allowlogerror}
@@ -91,39 +91,54 @@ as the value of \MacroNI{DAGMAN\_SUPPRESS\_NOTIFICATION} is enforced.
      If old-style rescue DAG mode
      is in effect, any existing old-style rescue DAGs will be deleted,
      and the original DAG will be run. }
-  \OptItem{\OptArg{-maxidle}{NumberOfJobs}}{Sets the maximum number of idle
-     jobs allowed before \Condor{dagman} stops submitting more jobs.  Once
-     idle jobs start to run, \Condor{dagman} will resume submitting jobs.
-     \Arg{NumberOfJobs} is a positive integer. If the option is
-     omitted, the number of idle jobs is defined by 
-     configuration variable \Macro{DAGMAN\_MAX\_JOBS\_IDLE},
-     which defaults to 1000.
+  \OptItem{\OptArg{-maxidle}{NumberOfProcs}}{Sets the maximum number of idle
+     procs allowed before \Condor{dagman} stops submitting more node jobs.
      Note that for
-     this argument, each individual process within a cluster counts as a 
-     job, which is inconsistent with \OptArg{-maxjobs}. 
-     Nothing special is done to the submit description file. 
+     this argument, each individual proc within a cluster counts as a 
+     towards the limit, which is inconsistent with \OptArg{-maxjobs}. 
+     Once
+     idle procs start to run, \Condor{dagman} will resume submitting jobs
+     once the number of idle procs falls below the specified limit.
+     \Arg{NumberOfProcs} is a non-negative integer. If this option is
+     omitted, the number of idle procs is limited by 
+     the configuration variable \Macro{DAGMAN\_MAX\_JOBS\_IDLE}
+     (see ~\ref{param:DAGManMaxJobsIdle}),
+     which defaults to 1000.
+     To disable this limit, set \Arg{NumberOfProcs} to 0.
+     Note that submit description files that queue multiple procs can
+     cause the \Arg{NumberOfProcs} limit to be exceeded.
      Setting \Expr{queue 5000} in the submit description file,
      where \Arg{-maxidle} is set to 250 will result in a cluster
-     of 5000 new jobs being submitted to the \Condor{schedd}.
+     of 5000 new procs being submitted to the \Condor{schedd}, not 250.
      In this case, \Condor{dagman} will resume submitting jobs 
-     when the number of idle jobs falls below 250. }
-  \OptItem{\OptArg{-maxjobs}{NumberOfJobs}}{Sets the maximum number of jobs
+     when the number of idle procs falls below 250. }
+  \OptItem{\OptArg{-maxjobs}{NumberOfClusters}}{Sets the maximum number of clusters
      within the DAG that will be submitted to HTCondor at one time.
-     \Arg{NumberOfJobs} is a positive integer. If the option is
-     omitted, the default number of jobs is unlimited.  Note that for
+     Note that for
      this argument, each cluster counts as one job, no matter how many
-     individual processes are in the cluster.}
+     individual procs are in the cluster.
+     \Arg{NumberOfClusters} is a non-negative integer. If this option is
+     omitted, the number of clusters is limited by the
+     configuration variable \Macro{DAGMAN\_MAX\_JOBS\_SUBMITTED}
+     (see ~\ref{param:DAGManMaxJobsSubmitted}),
+     which defaults to 0 (unlimited).}
   \OptItem{\OptArg{-dagman}{DagmanExecutable}}{Allows the specification of an 
      alternate \Condor{dagman} executable to be used instead of the one found 
      in the user's path. This must be a fully qualified path.}
-  \OptItem{\OptArg{-maxpre}{NumberOfPREscripts}}{Sets the maximum number of PRE
+  \OptItem{\OptArg{-maxpre}{NumberOfPreScripts}}{Sets the maximum number of PRE
      scripts within the DAG that may be running at one time.
-     \Arg{NumberOfPREScripts} is a positive integer. If this option is
-     omitted, the default number of PRE scripts is unlimited.}
-  \OptItem{\OptArg{-maxpost}{NumberOfPOSTscripts}}{Sets the maximum number of 
+     \Arg{NumberOfPreScripts} is a non-negative integer.
+     If this option is omitted, the number of PRE scripts is limited
+     by the configuration variable \Macro{DAGMAN\_MAX\_PRE\_SCRIPTS}
+     (see ~\ref{param:DAGManMaxPreScripts}),
+     which defaults to 20.}
+  \OptItem{\OptArg{-maxpost}{NumberOfPostScripts}}{Sets the maximum number of 
      POST scripts within the DAG that may be running at one time.
-     \Arg{NumberOfPOSTScripts} is a positive integer. If this option is
-     omitted, the default number of POST scripts is unlimited.}
+     \Arg{NumberOfPostScripts} is a non-negative integer.
+     If this option is omitted, the number of POST scripts is limited
+     by the configuration variable \Macro{DAGMAN\_MAX\_POST\_SCRIPTS}
+     (see ~\ref{param:DAGManMaxPostScripts}),
+     which defaults to 20.}
   \OptItem{\OptArg{-notification}{value}}{Sets the e-mail notification
      for DAGMan itself. This information will be used within the HTCondor
      submit description file for DAGMan. This file is produced by
