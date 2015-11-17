@@ -40,6 +40,15 @@ table.example tr:nth-child(odd) {
 }
 table.example tr:nth-child(even) {
 }
+
+h2 {
+    font-family: "HelveticaNeue-Light", "HelveticaNeueLight", "Helvetica Neue Light", "Helvetica Neue", Helvetica, Roboto, Arial, "Lucida Grande", sans-serif; 
+	font-weight: 300;
+	font-size: 200%;
+	margin-bottom: 0;
+	margin-top: 2em;
+
+}
 </style>
 </head>
 <body>
@@ -47,7 +56,12 @@ table.example tr:nth-child(even) {
 
 <h1 class="htclogo"><img src="HTCondor-View.svg" alt="HTCondor View"></h1>
 <h1>Query Syntax</h1>
+
+<h2>Transforms</h2>
 <p>Transforms are applied in order. The last entry should be a chart type.  If no chart is specified, a table view of the data is shown.
+
+<p>Normally transforms will be one per line, but when used with
+HTCondorView.simple, they should be concatenated with ampersands ("&amp;").
 
 <dl>
 
@@ -222,10 +236,16 @@ available <em class="variable">charttypes</em> are currently: stacked (a
 stacked area chart), line, spark, column, bar, pie,
 tree (see <b>treegroup</b>), candle, timeline, dygraph, dygraph+errors.</dd>
 
-<dt>title=<em class="variable">title</em></dt>
-<dd>
-Add a title to the chart. Not used for tables.</dd>
+<dt>delta=key1,key2...</dt>
+<dd>Replace entries for the named columns with the difference from the
+previous row.</dd>
 
+<dt>unselect=key1,key2...</dt>
+<dd>Remove the named columns.</dd>
+
+<dt>yspread</dt>
+<dd>For each field in a row that is a number, divide it by the sum of all
+numbers in that row.</dd>
 
 <dt>finishtree</dt>
 <dd></dd>
@@ -236,19 +256,25 @@ Add a title to the chart. Not used for tables.</dd>
 <dt>cracktree</dt>
 <dd></dd>
 
-<dt>delta=key1,key2...</dt>
-<dd>Replace entries for the named columns with the difference from the
-previous row.</dd>
-
-<dt>unselect=key1,key2...</dt>
-<dd>Remove the named columns.</dd>
 
 <dt>quantize</dt>
 <dd></dd>
 
-<dt>yspread</dt>
-<dd>For each field in a row that is a number, divide it by the sum of all
-numbers in that row.</dd>
+
+</dl>
+
+<h2>HTCondorView.simple</h2>
+
+<p>The following options are only used with HTCondorView.simple. In normal
+usage they are separate fields.
+
+<dl>
+
+<dt>url=<em class="variable">url</em></dt>
+<dd>URL where data should be loaded from.</dd>
+
+<dt>title=<em class="variable">title</em></dt>
+<dd> Add a title to the chart. Not used for tables.</dd>
 
 </dl>
 
