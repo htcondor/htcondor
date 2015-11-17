@@ -10400,37 +10400,37 @@ in section~\ref{sec:DAG-configuration}.
 
 \label{param:DAGManMaxJobsIdle}
 \item[\Macro{DAGMAN\_MAX\_JOBS\_IDLE}]
-  An integer value that controls the maximum number of idle node jobs
+  An integer value that controls the maximum number of idle procs
   allowed within the DAG before \Condor{dagman} temporarily stops
-  submitting jobs.  Once idle jobs start to run, \Condor{dagman} will
-  resume submitting jobs.  If both the command line option and the
-  configuration variable are specified, the command line option overrides
-  the configuration variable.  Unfortunately,
+  submitting jobs.  \Condor{dagman} will
+  resume submitting jobs once the number of idle procs falls below
+  the specified limit.
   \MacroNI{DAGMAN\_MAX\_JOBS\_IDLE} currently counts each individual
-  process within a cluster as a job, which is inconsistent with
+  proc within a cluster as a job, which is inconsistent with
   \MacroNI{DAGMAN\_MAX\_JOBS\_SUBMITTED}.
-  Note that nothing special is 
-  done to the submit description file.
+  Note that submit description files that queue multiple procs can
+  cause the \MacroNI{DAGMAN\_MAX\_JOBS\_IDLE} limit to be exceeded.
   If a submit description file contains \Expr{queue 5000}
   and \MacroNI{DAGMAN\_MAX\_JOBS\_IDLE} is set to 250, 
-  this will result in 5000 jobs being submitted to the \Condor{schedd},
+  this will result in 5000 procs being submitted to the \Condor{schedd},
   not 250; in this case, no
   further jobs will then be submitted by \Condor{dagman} until the number of
-  idle jobs falls below 250.
-  The default value is 1000.
+  idle procs falls below 250.
+  The default value is 1000.  To disable this limit, set the value
+  to 0.
+  This configuration option can be overridden by the \Condor{submit\_dag}
+  \OptArg{-maxidle} command-line argument (see ~\ref{man-condor-submit-dag}).
 
 \label{param:DAGManMaxJobsSubmitted}
 \item[\Macro{DAGMAN\_MAX\_JOBS\_SUBMITTED}]
-  An integer value that controls the maximum number of node jobs within the
-  DAG that will  be submitted to HTCondor at one time.  Note that this
-  variable has the same functionality as the \OptArg{-maxjobs} 
-  command line option to \Condor{submit\_dag}.
-  If both the command line option and the
-  configuration parameter are specified, the command line option overrides
-  the configuration variable.  A single invocation of \Condor{submit}
-  counts as one job, even if the submit file produces a multi-job cluster.
-  The default is that there is no limit on the maximum number of jobs
-  run at one time.
+  An integer value that controls the maximum number of node jobs (clusters)
+  within the
+  DAG that will  be submitted to HTCondor at one time.
+  A single invocation of \Condor{submit} by \Condor{dagman}
+  counts as one job, even if the submit file produces a multi-proc cluster.
+  The default value is 0 (unlimited).
+  This configuration option can be overridden by the \Condor{submit\_dag}
+  \OptArg{-maxjobs} command-line argument (see ~\ref{man-condor-submit-dag}).
 
 \label{param:DAGManMungeNodeNames}
 \item[\Macro{DAGMAN\_MUNGE\_NODE\_NAMES}]
@@ -10855,6 +10855,8 @@ in section~\ref{sec:DAG-configuration}.
   \Condor{dagman} will run at the same time.  
   The value 0 allows any number of PRE scripts to run.
   The default value if not defined is 20.
+  Note that the \MacroNI{DAGMAN\_MAX\_PRE\_SCRIPTS} value can be overridden
+  by the \Condor{submit\_dag} \Opt{-maxpre} command line option.
 
 \label{param:DAGManMaxPostScripts}
 \item[\Macro{DAGMAN\_MAX\_POST\_SCRIPTS}]
@@ -10862,6 +10864,8 @@ in section~\ref{sec:DAG-configuration}.
   \Condor{dagman} will run at the same time.
   The value 0 allows any number of POST scripts to run.
   The default value if not defined is 20.
+  Note that the \MacroNI{DAGMAN\_MAX\_POST\_SCRIPTS} value can be overridden
+  by the \Condor{submit\_dag} \Opt{-maxpost} command line option.
 
 \label{param:DAGManAllowLogError}
 \item[\Macro{DAGMAN\_ALLOW\_LOG\_ERROR}]
