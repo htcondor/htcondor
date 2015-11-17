@@ -80,12 +80,12 @@ $(document).ready(function(){
 });
 
 function initialize_from_url() {
-	var args = afterquery.parseArgs(window.location.search);
+	var args = Afterquery.prototype.parseArgs(window.location.search);
 	$('#title').val(args.get('title'));
 	$('#data_url').val(args.get('data_url'));
 
 	var graph_query_url = args.get('graph_query');
-	var gqargs = afterquery.parseArgs(graph_query_url);
+	var gqargs = Afterquery.prototype.parseArgs(graph_query_url);
 	var graph_query = '';
 	var i;
 	for(i = 0; i < gqargs.all.length; i++) {

@@ -20,10 +20,9 @@
  *      as part of integration with HTCondor.
  */
 
-// TODO: gotError calls need a myid
 'use strict';
 
-var afterquery = (function() {
+var Afterquery = (function() {
   // To appease v8shell
   var console, localStorage;
   try {
@@ -2162,7 +2161,7 @@ var afterquery = (function() {
 
 	// If we're reading a file that is constantly appended to, there
 	// is no [] wrapper around the records (because the writer would
-	// need to constantly remove and re-add the "]".  Add it so
+	// need to constantly remove and re-add the "]".)  Add it so
 	// JSON.parse is happy.
 	if(data[0] !== '[') {
 		data = "[" + data + "]";
@@ -2398,39 +2397,18 @@ var afterquery = (function() {
     return results;
   }
 
-
-  return {
-    internal: {
-      trySplitOne: trySplitOne,
-      dataToGvizTable: dataToGvizTable,
-      guessTypes: guessTypes,
-      myParseDate: myParseDate,
-      groupBy: groupBy,
-      pivotBy: pivotBy,
-      stringifiedCols: stringifiedCols,
-      filterBy: filterBy,
-      queryBy: queryBy,
-      deltaBy: deltaBy,
-      unselectBy: unselectBy,
-      orderBy: orderBy,
-      extractRegexp: extractRegexp,
-      fillNullsWithZero: fillNullsWithZero,
-      urlMinusPath: urlMinusPath,
-      checkUrlSafety: checkUrlSafety,
-      argsToArray: argsToArray,
-      enqueue: enqueue,
-      runqueue: runqueue,
-      gridFromData: gridFromData,
-    },
-    T_NUM: T_NUM,
-    T_DATE: T_DATE,
-    T_DATETIME: T_DATETIME,
-    T_BOOL: T_BOOL,
-    T_STRING: T_STRING,
-    parseArgs: parseArgs,
-    exec: exec,
-    render: wrap(render),
-    load: wrap(load),
-    load_post_transform: wrap(load_post_transform)
+  var aq = function() {
   };
+  aq.prototype.T_NUM = T_NUM;
+  aq.prototype.T_DATE = T_DATE;
+  aq.prototype.T_DATETIME = T_DATETIME;
+  aq.prototype.T_BOOL = T_BOOL;
+  aq.prototype.T_STRING = T_STRING;
+  aq.prototype.parseArgs = parseArgs;
+  aq.prototype.exec = exec;
+  aq.prototype.render = wrap(render);
+  aq.prototype.load = wrap(load);
+  aq.prototype.load_post_transform = wrap(load_post_transform);
+
+  return aq;
 })();

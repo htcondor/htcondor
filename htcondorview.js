@@ -68,6 +68,7 @@ HTCondorView.prototype.initialize_from_object = function(options) {
 
 	if(typeof(options) !== 'object') { options = {}; }
 
+
 	var id = options.dst_id;
 	var url = options.data_url;
 	var graph_args = options.graph_query;
@@ -76,6 +77,8 @@ HTCondorView.prototype.initialize_from_object = function(options) {
 	this.urlTool = document.createElement('a');
 	var mythis = this;
 	var i;
+
+	this.afterquery = new Afterquery(id);
 
 	this.original_title = options.title;
 	this.title = options.title;
@@ -128,7 +131,7 @@ HTCondorView.prototype.initialize = function(id, query) {
 	}
 
 	// This is a (hopefully) a raw afterquery query.
-	var args = afterquery.parseArgs(query);
+	var args = Afterquery.prototype.parseArgs(query);
 	var options = {
 		dst_id: id,
 		title: args.get("title"),
@@ -205,7 +208,7 @@ HTCondorView.prototype.replace_search_arg = function(oldurl, newkey, newval) {
 	"use strict";
 	this.urlTool.href = oldurl;
 	var oldsearch = this.urlTool.search;
-	var args = afterquery.parseArgs(oldsearch);
+	var args = this.afterquery.parseArgs(oldsearch);
 	var newsearch = "?";
 	for(var argi in args.all) {
 		var arg = args.all[argi];
@@ -237,7 +240,7 @@ HTCondorView.prototype.load_and_render = function(graphargs, tableargs) {
 			};
 
 			var query = "url="+mythis.url+"&"+tableargs;
-			afterquery.render(query, mythis.data.value, null, mythis.table_id, options);
+			mythis.afterquery.render(query, mythis.data.value, null, mythis.table_id, options);
 		}, 0);
 	 };
 	if(tableargs === this.last_tableargs) { callback_render_table = null; }
@@ -255,7 +258,7 @@ HTCondorView.prototype.load_and_render = function(graphargs, tableargs) {
 				num_pattern: '#,##0.0',
 				disable_height: true
 			};
-			afterquery.render(query, mythis.data.value, callback_render_table, mythis.graph_id, options);
+			mythis.afterquery.render(query, mythis.data.value, callback_render_table, mythis.graph_id, options);
 			},0);
 		};
 
@@ -268,12 +271,12 @@ HTCondorView.prototype.load_and_render = function(graphargs, tableargs) {
 	}
 
 	var args = "url="+mythis.url+"&"+graphargs;
-	var newurl = afterquery.parseArgs(args).get('url');
+	var newurl = this.afterquery.parseArgs(args).get('url');
 	if(newurl == this.data_url) {
 		callback_render_graph();
 	} else {
 		this.data_url = newurl;
-		this.data = afterquery.load(args, null, function(){
+		this.data = this.afterquery.load(args, null, function(){
 			callback_render_graph();
 			}, this.graph_id);
 	}
@@ -429,7 +432,7 @@ HTCondorView.prototype.download_csv = function(data, query) {
 		mythis.csv_source_data = undefined;
 		mythis.download_data("HTCondor-View-Data.csv", "text/csv", csv);
 	};
-	this.csv_source_data = afterquery.load_post_transform(query, data, handle_csv, null);
+	this.csv_source_data = mythis.afterquery.load_post_transform(query, data, handle_csv, null);
 };
 
 
