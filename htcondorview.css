@@ -4,6 +4,7 @@
 	z-index: 20;
 	background: #eee;
 	visibility: hidden;
+	line-height: 0.9em;
 }
 body .htcondorview div:hover > div.editmenu {
 	visibility: visible;
