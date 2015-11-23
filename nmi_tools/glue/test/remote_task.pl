@@ -236,32 +236,25 @@ my @returns = TestGlue::ProcessReturn($batchteststatus);
 
 $batchteststatus = $returns[0];
 my $signal = $returns[1];
+my $signalmsg = $signal ? " and signal $signal" : "";
+out("batch_test returned $batchteststatus" . $signalmsg);
 
-if($signal != 0) {
-	out("a signal error was involved:$signal");
-}
-
-# figure out here if the test passed or failed.  
-my $teststatus;
-if( $batchteststatus != 0 ) {
-	CondorTest::RegisterResult(0,"test_name",$testname);
-}
-
+# if we started a personal HTCondor, stop it now, if we can't, then fail the test.
+#
+my $teststatus = $batchteststatus;
 if(exists $requirements->{personal}) {
-	my $exit_status = 0;
 	out("Stopping personal HTCondor for '$testname'");
-	$exit_status = StopTestPersonal($testname);
-	if($exit_status == 1) {
-		print "Failing test due to either a core file or ERRORs in Log(s)\n";
-		print "a couple other possibilities. look at CondorTest::EndTest\n";
-		# done in EndTest
-        #CondorTest::RegisterResult(0,"test_name",$testname);
-		$batchteststatus = $exit_status;
-    } else {
-		# will go with currrent value in $batchteststatus
-        #CondorTest::RegisterResult(1,"test_name",$testname);
-    }
+	my $personalstatus = StopTestPersonal($testname);
+	if($personalstatus != 0 && $teststatus == 0) {
+		print "\tTest succeeded, but condor failed to shut down or there were\n";
+		print "\tcore files or error messages in the logs. see CondorTest::EndTest\n";
+		$teststatus = $personalstatus;
+	}
 }
+
+# report here figure if the test passed or failed.
+my $run_success = $batchteststatus ? 0 : 1; # 0 is success for batch test, but 1 is success for RegisterResult
+CondorTest::RegisterResult($run_success,test_name=>$testname, check_name=>"run_test");
 
 ######################################################################
 # print output from .run script to stdout of this task, and final exit
@@ -277,8 +270,8 @@ my $test_err      = "$testname.err";
 my $test_err_path = File::Spec->catfile($compiler_path, $test_err);
 
 out("Looking for run.out file");
-out("compiler_path:$compiler_path run_out:$run_out run_out_path:$run_out_path compiler_path:$compiler_path");
-out("test_out:$test_out test_out_path:$test_out_path test_err:$test_err test_err_path:$test_err_path");
+print "\tcompiler_path: $compiler_path\n\trun_out: $run_out\n\trun_out_path: $run_out_path\n\tcompiler_path: $compiler_path\n";
+print "\ttest_out: $test_out\n\ttest_out_path: $test_out_path\n\ttest_err: $test_err\n\ttest_err_path: $test_err_path\n";
 #print "Here now:\n";
 #system("pwd;ls -lh $run_out_path");
 
@@ -311,8 +304,8 @@ else {
 }
 
 
-print "\n********************** EXIT REMOTE_TASK.$$: Status:$batchteststatus ******************\n";
-exit $batchteststatus;
+print "\n********************** EXIT REMOTE_TASK.$$: Status:$teststatus ******************\n";
+exit $teststatus;
 
 ######################################################################
 # helper methods
@@ -323,7 +316,7 @@ sub ProcessTestRequirements
 	my $requirements;
 
 	my $requirementslist = "Test_Requirements";
-	open( TR, "< ${requirementslist}" ) or die( "Failed to open '${requirementslist}': $!\n" );
+	open( TR, "< ${requirementslist}" ) or c_die( "Failed to open '${requirementslist}': $!\n" );
 	while( my $line = <TR> ) {
 		TestGlue::fullchomp( $line );
 		if( $line =~ /\s*$testname\s*:\s*(.*)/ ) {

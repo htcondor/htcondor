@@ -1401,12 +1401,13 @@ Scheduler::count_jobs()
 	// appear in condor_q -global and condor_status -schedd
 	if( FlockCollectors ) {
 		FlockCollectors->rewind();
+		DCCollectorAdSequences & adSeq = daemonCore->getUpdateAdSeq();
 		Daemon* d;
 		DCCollector* col;
 		FlockCollectors->next(d);
 		for(int ii=0; d && ii < FlockLevel; ii++ ) {
 			col = (DCCollector*)d;
-			col->sendUpdate( UPDATE_SCHEDD_AD, cad, NULL, true );
+			col->sendUpdate( UPDATE_SCHEDD_AD, cad, adSeq, NULL, true );
 			FlockCollectors->next( d );
 		}
 	}
@@ -1450,6 +1451,7 @@ Scheduler::count_jobs()
 
 	// update collector of the pools with which we are flocking, if
 	// any
+	DCCollectorAdSequences & adSeq = daemonCore->getUpdateAdSeq();
 	Daemon* d;
 	Daemon* flock_neg;
 	DCCollector* flock_col;
@@ -1501,7 +1503,7 @@ Scheduler::count_jobs()
 					// CM we are negotiating with when we negotiate
 				pAd.Assign(ATTR_SUBMITTER_TAG,flock_col->name());
 
-				flock_col->sendUpdate( UPDATE_SUBMITTOR_AD, &pAd, NULL, true );
+				flock_col->sendUpdate( UPDATE_SUBMITTOR_AD, &pAd, adSeq, NULL, true );
 			}
 		}
 	}
@@ -1594,7 +1596,7 @@ Scheduler::count_jobs()
 		  for( flock_level=1, FlockCollectors->rewind();
 			   flock_level <= old_flock_level &&
 				   FlockCollectors->next(da); flock_level++ ) {
-			  ((DCCollector*)da)->sendUpdate( UPDATE_SUBMITTOR_AD, &pAd, NULL, true );
+			  ((DCCollector*)da)->sendUpdate( UPDATE_SUBMITTOR_AD, &pAd, adSeq, NULL, true );
 		  }
 	  }
 	}
@@ -12890,12 +12892,13 @@ Scheduler::invalidate_ads()
 					  ATTR_NAME, submitter.Value() );
 		cad->Insert( line.Value() );
 
+		DCCollectorAdSequences & adSeq = daemonCore->getUpdateAdSeq();
 		Daemon* d;
 		if( FlockCollectors && FlockLevel > 0 ) {
 			int level;
 			for( level=1, FlockCollectors->rewind();
 				 level <= FlockLevel && FlockCollectors->next(d); level++ ) {
-				((DCCollector*)d)->sendUpdate( INVALIDATE_SUBMITTOR_ADS, cad, NULL, false );
+				((DCCollector*)d)->sendUpdate( INVALIDATE_SUBMITTOR_ADS, cad, adSeq, NULL, false );
 			}
 		}
 	}

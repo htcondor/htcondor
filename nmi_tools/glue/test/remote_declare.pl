@@ -54,7 +54,7 @@ my $requirements = processAllTestRequirements();
 
 my $ipV4Disabled = 0;
 if( exists( $appendFile->{ "ENABLE_IPV4" } ) &&
-  $appendFile->{ "ENABLE_IPV4" } =~ m/false/i || $appendFile->{ "ENABLE_IPV4" } eq "0" ) {
+  ($appendFile->{ "ENABLE_IPV4" } =~ m/false/i || $appendFile->{ "ENABLE_IPV4" } eq "0") ) {
   	print( "Marking IPv4 as disabled.\n" );
 	$ipV4Disabled = 1;
 }

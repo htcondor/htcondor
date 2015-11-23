@@ -29,32 +29,18 @@ use CondorTest;
 use CondorUtils;
 use Check::SimpleJob;
 use Check::CondorLog;
+use strict;
+use warnings;
 
-my @submitfiles =	();
+my $testname = "cmd_submit_massive";
+my @submitfiles = ();
 
 my $pid = $$;
-my $submitfile = "cmd_submit_massive$pid.cmd"; 
+my $submitfile = "$testname$pid.sub"; 
 my $ClusterId = 0;
 
-# this will get it submitted later after we build it
-push @submitfiles, $submitfile;
-
-my @basesubmit = " universe = vanilla
-executable = x_sleep.pl
-log = $submitfile.log
-hold = False
-arguments = 1
-notification = never
-";
-
-print "Building submit file:$submitfile\n";
-
-open(SF,">$submitfile") or die "Failed to open:$submitfile :$!\n";
-print SF @basesubmit;
-GenerateMassive(1000);
-print SF "queue\n";
-close(SF);
-
+# ================ start a personal condor ===============
+#
 my $firstappend_condor_config = '
 	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
 	WANT_SUSPEND = FALSE
@@ -63,54 +49,87 @@ my $firstappend_condor_config = '
 	MACHINE_RESOURCE_Boats = 30
 ';
 
-$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"cmdsubmitcoverage");
+my $configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"cmdsubmitmassive");
 
 CondorTest::StartCondorWithParams(
-	condor_name => "basickill",
+	condor_name => "massive",
 	fresh_local => "TRUE",
 	condorlocalsrc => "$configfile",
 );
 
-my $executecount = 0;
-my $result = 1;
-my $testname = "cmd_submit_coverage";
+# ========= submit a small job first to test the node ==================
+
+TLOG("Submitting small job to test the pool\n");
+my $result = SimpleJob::RunCheck();
+Condor::EventReset();
+
+# ========= create a massive submit file ==================
+
+# this will get it submitted later after we build it
+push @submitfiles, $submitfile;
+
+my @basesubmit = "universe = vanilla
+executable = x_sleep.pl
+log = $submitfile.log
+hold = False
+arguments = 1
+notification = never
+";
+
+TLOG("Building massive submit file '$submitfile'\n");
+
+open(SF,">$submitfile") or die "Failed to open:$submitfile :$!\n";
+print SF @basesubmit;
+GenerateMassive(1000);
+print SF "queue\n";
+close(SF);
 
 my $on_execute = sub {
-	print "********************************** OnExecute *****************************\n";
-};
-
-my $on_hold = sub {
-	print "Expected to be on hold\n Calling CheckForSigTermIgnore \n";
-	runToolNTimes("condor_rm $ClusterId", 1);
+	TLOG("Saw Execute event in userlog\n");
 };
 
 my $on_evictedwithoutcheckpoint = sub {
-	print "Evicted Without Checkpoint\n";
+	TLOG("Saw Evicted Without Checkpoint in userlog. This can happen\n");
 };
 
 my $submitted = sub {
-	print "Submit occured\n";
+	TLOG("Saw Submit event in userlog. removing job $ClusterId\n");
 	runToolNTimes("condor_rm $ClusterId",1,0);
 };
 
 my $aborted = sub {
-	print "Abort expected\n";
+	TLOG("Saw Abort event in userlog. this was expected\n");
 };
 
+# this gets passed in to RunTest to get the cluster id back.
 my $GetClusterId = sub {
 	my $cid = shift;
 	$ClusterId = $cid;
-	print "Resquestd Cluster Got $ClusterId\n";
-	##########################
-	#
-	# Convoluted: This function is paased to RunCheck which uses it in RunTest in the fourth
-	# position which is always an undefined variable EXCEPT when it is a call back routine 
-	# to pass out the cluster Id.
-	#
-	##########################
-	#runcmd("condor_q",{emit_output => 1});
+	TLOG("Got Cluster $ClusterId from condor_submit\n");
 };
 
+# ========= submit the massive submit file ==================
+
+CondorTest::RegisterSubmit( $testname, $submitted );
+CondorTest::RegisterAbort( $testname, $aborted );
+CondorTest::RegisterEvictedWithoutCheckpoint( $testname, $on_evictedwithoutcheckpoint );
+
+my $res = 0;
+foreach my $file (@submitfiles) {
+	TLOG("Running submit_massive test on file $file:\n");
+	$res = CondorTest::RunTest($testname, $file, 0, $GetClusterId);
+	CondorTest::RegisterResult($res, test_name=>$testname);
+	if($res == 1) {
+		CondorTest::debug("$testname: SUCCESS\n",1);
+	} else {
+		CondorTest::debug("$testname: FAILED\n",1);
+	}
+}
+
+CondorTest::EndTest();
+
+## Subroutines here
+##
 sub GenerateMassive {
 	my $iterations = shift;
 	my $counter = 0;
@@ -125,24 +144,3 @@ sub GenerateMassive {
 	}
 };
 
-#Do a job before setting tesing exit codes
-print "First test basic job\n";
-$result = SimpleJob::RunCheck(); # jobid 1
-Condor::EventReset();
-
-CondorTest::RegisterAbort( $testname, $aborted );
-CondorTest::RegisterSubmit( $testname, $submitted );
-
-my $res = 0;
-foreach my $file (@submitfiles) {
-	print "Running test on file:$file:\n";
-	$res = CondorTest::RunTest($testname, $file, 0, $GetClusterId);
-	CondorTest::RegisterResult($res, "test_name", $testname);
-	if($res == 1) {
-		CondorTest::debug("$testname: SUCCESS\n",1);
-	} else {
-		CondorTest::debug("$testname: FAILED\n",1);
-	}
-}
-
-CondorTest::EndTest();

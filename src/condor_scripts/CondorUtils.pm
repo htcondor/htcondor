@@ -19,10 +19,6 @@ BEGIN {
 
 package CondorUtils;
 
-#if(CondorUtils::is_windows()) {
-	#use Win32::Pipe;
-#}
-
 our $VERSION = '1.00';
 my $btdebug = 0;
 
@@ -1286,8 +1282,8 @@ sub DryExtract {
     my $extractstring = shift;
     foreach my $dryline (@{$dryinarrayref}) {
         chomp($dryline);
-        if($dryline =~ /\s*$extractstring=/) {
-#print "DryExtract:$dryline\n";
+        if($dryline =~ /\s*$extractstring\s*=/i) {
+            #print "DryExtract: found $dryline\n";
             push @{$dryoutarrayref}, $dryline;
 		}
 	}
@@ -1297,10 +1293,19 @@ sub GatherDryData {
     my $submitfile = shift;
 	my $targetfile = shift;
 	my @storage = ();
-    my $cmdtorun = "condor_submit -dry-run $targetfile $submitfile";
-	my $res = system("$cmdtorun");
+	my @out = ();
+	my $res = 0;
+	@out = `condor_submit -dry-run $targetfile $submitfile`;
+	# my $res = system("$cmdtorun");
+	$res = $?;
 	if($res != 0) {
-		die "Return from system call non-zero\n";
+		die "non-zero return from condor_submit\n";
+	} elsif ($targetfile eq "-") {
+		foreach (@out) {
+			fullchomp($_);
+			next if ($_ =~ /dry-run/i);
+			push @storage, $_;
+		}
 	} else {
 		open(TF,"<$targetfile") or die "Failed to open dry data file:$targetfile:$!\n";
 		while (<TF>) {

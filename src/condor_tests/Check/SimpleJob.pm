@@ -395,7 +395,7 @@ sub RunCheck
 	}
     close( SUBMIT );
 
-	print "RunCheck finally calling RunTest\n";
+	CondorTest::debug("  RunCheck: calling RunTest($testname, $submit_fname)\n");
 	if (defined $args{GetClusterId}) {
     	$result = CondorTest::RunTest($testname, $submit_fname, 0, $args{GetClusterId});
 	} else {
