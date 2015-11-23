@@ -322,7 +322,8 @@ HTCondorView.prototype.html_for_graph = function() {
 		"  <div class='statussub'></div>\n" +
 		"</div>\n" +
 		"<div class='vizraw'></div>\n" +
-		"<div class='vizchart'></div>\n";
+		"<div class='vizchart'></div>\n" +
+		"<div class='vizlog'></div>\n";
 };
 
 HTCondorView.prototype.starting_elements = function(options) {
