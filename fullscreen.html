@@ -43,7 +43,7 @@ h1 { margin-bottom: 0; }
 <script>
 $(document).ready(function(){
 
-	var args = Afterquery.prototype.parseArgs(window.location.search);
+	var args = AfterqueryObj.parseArgs(window.location.search);
 	var title = args.get('title');
 	if(title !== null && title !== undefined && title.length) {
 		document.title = "HTCondor View " + title;
