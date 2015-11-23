@@ -2,6 +2,11 @@
 
 body {
 	font-family: "Helvetica Neue", Helvetica, sans-serif;
+	line-height: 1.5em;
+}
+
+h1 + h2 {
+	margin-top: 0;
 }
 
 h1 {
@@ -23,6 +28,7 @@ h1.htclogo + h1 {
 h1.htclogo {
 	text-align: center;
 	margin: 0;
+	margin-bottom: 0.2em;
 }
 h1.htclogo img {
 	display: inline-block;
