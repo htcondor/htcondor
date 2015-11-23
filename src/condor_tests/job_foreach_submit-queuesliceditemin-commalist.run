@@ -26,90 +26,116 @@ use Check::SimpleJob;
 
 print scalar localtime() . "\n";
 
-$testname = "job_basic_submit-queuespliceditemin-commalist";
-$mypid = $$;
+sub runSliceTest {
+    my $testname = shift;
+    my $submitfile = shift;
+    my $extraction = shift;
 
-my $counter = 0;
-my $datafilename = "";
-my $targetname = "";
-my @results = ();
-my @extraction = ();
-my $extractionsize = 0;
+    my @results = ();
+    my $mypid = $$;
+    my $submitfilename = "$testname$mypid.cmd";
+    my $return;
 
-my @array = (1 .. 100);
-my $start = 0;
-my $end = @array;
-my $step = 1;
-my $arraysize = @array;
+    print($submitfile);
 
-for (my $i = $start, $j = 0; $i < $end; $j++, $i += $step) {
-    $newarray[$j] = $array[$i];
+    open(SF,">$submitfilename") or die "failed to open submit file:$submitfilename:$!\n";
+    print SF "$submitfile";
+    close(SF);
+
+    my $datafilename = CondorTest::TempFileName("$testname");
+    my $cmdtorun = "condor_submit -dry-run - $submitfilename";
+    runCondorTool($cmdtorun, \@results, \$return, {emit_output=>1, expect_result=>1});
+
+    DryExtract(\@results, $extraction, "Args");
+    return($return);
 }
 
-my $arglist = join(' ', @array);
-my $newarglist = join(' ', @newarray);
-my @allargs = split(' ', $newarglist);
+sub checkOutputAndRegisterResult {
+    my $extraction = shift;
+    my $allargs = shift;
+    my $newarraysize = shift;
 
-my $submitfile = "
-	executable = x_print-args.pl
-	should_transfer_files = yes
-	when_to_transfer_output = ON_EXIT
-	log = $testname$mypid.log
-	Arguments = \$(ITEM)
-	queue ITEM in [$start:$end:$sep] (
-        $arglist
-    )
-";
+    $extractionsize = @{$extraction};
 
-my $submitfilename = "$testname$mypid.cmd";
-open(SF,">$submitfilename") or die "failed to open submit file:$submitfilename:$!\n";
-print SF "$submitfile";
-close(SF);
+    print "Size of argument list:$extractionsize\n";
 
-my $datafilename = CondorTest::TempFileName("$testname");
-my $cmdtorun = "condor_submit -dry-run - $submitfilename";
-runCondorTool($cmdtorun, \@results, \$return, {emit_output=>1, expect_result=>1});
+    my %seenargs = ();
 
-DryExtract(\@results, \@extraction, "Args");
+    foreach my $arg (@{$extraction}){
+        if($arg =~ /Args=\"(.*?)\"/) {
+            $seenargs{$1} = 1;
+        }
+    }
 
-$extractionsize = @extraction;
+    my $testfailed = 0;
+    foreach my $findit (@{$allargs}) {
+        if(not exists $seenargs{$findit}) {
+            print "Expected $findit and DID NOT GET it - Bad\n";
+            $testfailed = 1;
+        }
+    }
 
-print "Size of argument list:$extractionsize\n";
+    my $seenargsize = keys %seenargs;
 
-my %seenargs = ();
-
-foreach my $arg (@extraction){
-	if($arg =~ /Args=\"(.*?)\"/) {
-		$seenargs{$1} = 1;
-	}
-}
-
-my $testfailed = 0;
-foreach my $findit (@allargs) {
-	if(not exists $seenargs{$findit}) {
-        print "Expected $findit and DID NOT GET it - Bad\n";
+    if ($newarraysize != $seenargsize) {
+        print "Expected no. of args $newarraysize, received args $seenargsize - Bad\n";
         $testfailed = 1;
-	}
+    }
+
+    if( $return != 0 ) {
+        $testfailed = 1;
+        print "condor_submit did not return with success($return) - Bad\n";
+    }
+
+    if( $testfailed == 1) {
+        RegisterResult(0,"test_name","$testname");
+    } else {
+        RegisterResult(1,"test_name","$testname");
+    }
 }
 
-my $newarraysize = scalar @newarray;
-my $seenargsize = keys %seenargs;
+sub main {
+    my $testname = "job_basic_submit-queuespliceditemin-commalist";
 
-if ($newarraysize != $seenargsize) {
-    print "Expected no. of args $newarraysize, received args $seenargsize - Bad\n";
-    $testfailed = 1;
+    my @testcases = (
+        [1 .. 100],
+        [1 .. 10],
+        ["This", "is", "a", "Test"],
+    );
+
+    foreach my $test (@testcases) {
+        my @extraction = ();
+        my @newarray = ();
+        my @array = @{$test};
+        my $start = 0;
+        my $end = @array;
+        my $step = 1;
+
+        for (my $i = $start, $j = 0; $i < $end; $j++, $i += $step) {
+            $newarray[$j] = $array[$i];
+        }
+
+        my $arglist = join(' ', @array);
+        my $newarglist = join(' ', @newarray);
+        my @allargs = split(' ', $newarglist);
+
+        my $submitfile = "
+            executable = x_print-args.pl
+            should_transfer_files = yes
+            when_to_transfer_output = ON_EXIT
+            log = $testname$mypid.log
+            Arguments = \$(ITEM)
+            queue ITEM in [$start:$end:$step] (
+                $arglist
+            )
+        ";
+
+        my $return = runSliceTest($testname, $submitfile, \@extraction);
+        checkOutputAndRegisterResult(\@extraction, \@allargs, scalar @newarray);
+    }
 }
 
-if( $return != 0 ) {
-    $testfailed = 1;
-	print "condor_submit did not return with success($return) - Bad\n";
-}
-
-if( $testfailed == 1) {
-    RegisterResult(0,"test_name","$testname");
-} else {
-    RegisterResult(1,"test_name","$testname");
-}
+main();
 
 CondorTest::EndTest();
 print scalar localtime() . "\n";
