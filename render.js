@@ -1297,6 +1297,25 @@ AfterqueryObj.prototype.doQuantize = function(grid, argval) {
     return grid;
   };
 
+AfterqueryObj.prototype.doRename = function(ingrid, argval) {
+    AfterqueryObj.log('rename:', argval);
+    var parts = this.trySplitOne(argval, '=');
+    var src = parts[0];
+    var dst = parts[1];
+    var grid = {
+      data: ingrid.data,
+      types: ingrid.types,
+      headers: [],
+    };
+    for(var i = 0; i < ingrid.headers.length; i++) {
+      var header = ingrid.headers[i];
+      if(header === src) { header = dst; }
+      grid.headers.push(header);
+    }
+    AfterqueryObj.log('grid:', grid);
+    return grid;
+  };
+
 
 AfterqueryObj.prototype.yspread = function(grid) {
     for (var rowi in grid.data) {
@@ -1660,6 +1679,8 @@ AfterqueryObj.prototype.addTransforms = function(queue, args) {
         transform(function(g,a){return that.doExtractRegexp(g,a);}, argval);
       } else if (argkey == 'quantize') {
         transform(function(g,a){return that.doQuantize(g,a);}, argval);
+      } else if (argkey == 'rename') {
+        transform(function(g,a){return that.doRename(g,a);}, argval);
       } else if (argkey == 'yspread') {
         transform(function(g,a){return that.doYSpread(g,a);}, argval);
       }
