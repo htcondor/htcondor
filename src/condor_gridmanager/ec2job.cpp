@@ -1477,6 +1477,8 @@ void EC2Job::doEvaluateState()
 											m_availability_zone,
 											m_vpc_subnet, m_vpc_ip,
 											m_client_token,
+											m_iam_profile_arn,
+											m_iam_profile_name,
 											* m_group_names,
 											spot_request_id,
 											gahp_error_code );
