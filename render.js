@@ -533,7 +533,7 @@ AfterqueryObj.prototype.agg_funcs = {
       }
       return Math.sqrt(sumsq);
     },
-	color: function(l,aqo) {
+    color: function(l,aqo) {
       for (var i in l) {
         var v = l[i];
         if (!(v in aqo.colormap)) {
@@ -1957,7 +1957,7 @@ AfterqueryObj.prototype.addRenderers = function(queue, args, more_options_in) {
           var wantwidth = trace ? $(el).innerWidth - 40 : $(el).innerWidth;
           $(el).width(wantwidth);
           if(!has_more_opts || !more_options.disable_height) {
-          	$(el).height(window.innerHeight);
+            $(el).height(window.innerHeight);
             options.height = window.innerHeight;
           }
           t.draw(datatable, options);
@@ -2027,7 +2027,7 @@ AfterqueryObj.prototype.finishQueue = function(queue, args, done) {
     if (trace) {
       var prevdata;
       var after_each = function(grid, stepi, nsteps, text, msec_time) {
-		AfterqueryObj.vizstep++;
+        AfterqueryObj.vizstep++;
         $(that.elid('vizlog')).append('<div class="vizstep" id="step' + AfterqueryObj.vizstep + '">' +
                             '  <div class="text"></div>' +
                             '  <div class="grid"></div>' +
@@ -2126,12 +2126,12 @@ AfterqueryObj.prototype.extendDataUrl = function(url) {
     // some services expect callback=, some expect jsonp=, so supply both
     var plus = 'callback=jsonp&jsonp=jsonp';
     var hostpart = this.urlMinusPath(url);
-	var auth;
-	if( (/\/\//.exec(url))) {
-		// No "//"? Probably a local file, and this operation
-		// is doomed.
-		auth = this.localStorage[['auth', hostpart]];
-	}
+    var auth;
+    if( (/\/\//.exec(url))) {
+      // No "//"? Probably a local file, and this operation
+      // is doomed.
+      auth = this.localStorage[['auth', hostpart]];
+    }
     if (auth) {
       plus += '&auth=' + encodeURIComponent(auth);
     }
@@ -2149,23 +2149,23 @@ AfterqueryObj.prototype.extractJsonFromJsonp = function(text, success_func) {
     var start = data.indexOf('jsonp(');
     if (start >= 0) {
       data = data.substr(start + 6, data.length - start - 6 - 2);
-	  data = data.trim();
+      data = data.trim();
     }
 
-	// Drop spurious trailing comma.
-	// Likely in programmatically generated data where a comma is
-	// appended to every record.
-	if(data[data.length-1] === ',') {
-		data = data.slice(0,-1);
-	}
+    // Drop spurious trailing comma.
+    // Likely in programmatically generated data where a comma is
+    // appended to every record.
+    if(data[data.length-1] === ',') {
+      data = data.slice(0,-1);
+    }
 
-	// Ensure there is a "[" "]" wrapper around the whole thing.
-	// Likely in programmatically generated data where new data is
-	// regularly appended.  Maintaining the framing "[" "]" is a 
-	// nuisance, so it doesn't get done.
-	if(data.charAt(0) !== '[') {
-		data = "[" + data + "]";
-	}
+    // Ensure there is a "[" "]" wrapper around the whole thing.
+    // Likely in programmatically generated data where new data is
+    // regularly appended.  Maintaining the framing "[" "]" is a 
+    // nuisance, so it doesn't get done.
+    if(data.charAt(0) !== '[') {
+      data = "[" + data + "]";
+    }
 
     data = JSON.parse(data);
     success_func(data);
@@ -2330,7 +2330,7 @@ AfterqueryObj.prototype.addUrlGettersDirect = function(queue, url, startdata) {
   };
 
 AfterqueryObj.prototype.addUrlGetters = function(queue, args, startdata) {
-	this.addUrlGettersDirect(queue, args.get('url'), startdata);
+  this.addUrlGettersDirect(queue, args.get('url'), startdata);
 }
 
 
