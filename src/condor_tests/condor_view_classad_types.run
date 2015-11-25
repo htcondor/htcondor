@@ -61,29 +61,25 @@ open(IN, '<', $view_addr_file) or die("Cannot open $view_addr_file for reading: 
 my $first_line = <IN>;
 close(IN);
 
-print "The first line of the View Collector address file ($view_addr_file):\n";
+TLOG "The first line of the View Collector address file ($view_addr_file):\n";
 print "\t$first_line";
 
 # FIXME: Write a single shared module for parsing sinful strings.
 my $viewCollector = $first_line;
 CondorUtils::fullchomp( $viewCollector );
 if( ! ($viewCollector =~ m/^</ && $viewCollector =~ m/>$/) ) {
-	print( "'${viewCollector}' doesn't look like a sinful.\n" );
-    print( "The first line of the view address file was:\n" );
-    print( $first_line );
+	print( "\t'${viewCollector}' doesn't look like a sinful. failing test.\n" );
 	exit( 1 );
 }
 $viewCollector =~ s/^<//;
 $viewCollector =~ s/>$//;
 
 if( $viewCollector =~ m/^[[][\d:]+]:\d+/ ) {
-	print( "'${viewCollector}' looks like an IPv6 address.\n" );
+	print( "\t'${viewCollector}' looks like an IPv6 address.\n" );
 } elsif( $viewCollector =~ m/^\d+\.\d+\.\d+\.\d+:\d+/ ) {
-	print( "'${viewCollector}' looks like an IPv4 address.\n" );
+	print( "\t'${viewCollector}' looks like an IPv4 address.\n" );
 } else {
-	print( "'${viewCollector}' doesn't look like an address.\n" );
-    print( "The first line of the view address file was:\n" );
-    print( $first_line );
+	print( "\t'${viewCollector}' doesn't look like an address. failing test.\n" );
 	exit( 1 );
 }
 
@@ -94,7 +90,7 @@ CondorTest::runCondorTool("condor_reconfig -collector");
 
 # Validate that we set this properly
 my $cmd = "condor_config_val -collector CONDOR_VIEW_HOST";
-print "Running `$cmd`:\n";
+TLOG "Running $cmd:\n";
 print "\t" . `$cmd`;
 
 CondorLog::RunCheck(
@@ -116,7 +112,7 @@ CondorLog::RunCheck(
 
 CondorTest::runCondorTool("condor_off -fast -negotiator");
 
-print "Waiting for Negotiator to leave - ";
+TLOG "Waiting for Negotiator to leave - ";
 my $backoff = 2;
 my $runlimit = 8;
 my $loopcount = 0;
@@ -127,11 +123,11 @@ while( $done eq "no") {
 
     if (!@cmd) {
 	$done = "yes";
-	print "ok\n";
+	TLOG "Negotiator Ad is gone from collector. checking logs...\n";
 	last;
     }
     if ($loopcount == $runlimit) { 
-	print "bad\n";
+	TLOG "Loop count exceeded, but negotiator Ad is still in collector. checking logs...\n";
 	last; 
     }
     sleep ($loopcount * $backoff);
@@ -157,7 +153,7 @@ CondorTest::runCondorTool("condor_config_val -collector -rset \"CONDOR_VIEW_CLAS
 CondorTest::runCondorTool("condor_reconfig -collector");
 CondorTest::runCondorTool("condor_reconfig -startd");
 
-print "Waiting for Startd to show up in view collector - ";
+TLOG "Waiting for Startd to show up in view collector - ";
 $loopcount = 0;
 $done = "no";
 while( $done eq "no") {
@@ -166,11 +162,11 @@ while( $done eq "no") {
 
     if (@cmd) {
 	$done = "yes";
-	print "ok\n";
+	TLOG "Saw Startd ad in view collector. checking logs...\n";
 	last;
     }
     if ($loopcount == $runlimit) { 
-	print "bad\n";
+	TLOG "Loop count exceeded, but no Startd ad in view collector. checking logs\n";
 	last; 
     }
     sleep ($loopcount * $backoff);
