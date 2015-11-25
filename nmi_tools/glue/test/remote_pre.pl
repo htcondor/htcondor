@@ -54,7 +54,7 @@ my $iscygwin  = TestGlue::is_cygwin_perl();
 
 my $BaseDir = $ENV{BASE_DIR} || die "BASE_DIR not in environment!\n";
 
-print "My BASE_DIR:$BaseDir and I can see:\n";
+print "My BASE_DIR=$BaseDir and I can see:\n";
 
 if($iswindows == 1) {
 	system("dir");
@@ -89,21 +89,22 @@ if( TestGlue::is_windows() ) {
 	# msi name is what?
 	my $foundmsi = 0;
 	my $foundzip = 0;
-	print "condor to be stashed here:$targetdir\n";
-	print "Windows glue. Looking for msi\n";
+	print "condor to be stashed here: $targetdir\n";
+	print "Looking for MSI, ZIP or release_dir\n";
 
-	print "find zip and msi so we don't need to bring them back\n";
-	opendir DS, "." or die "Can not open dataset: $1\n";
+	opendir DS, "." or die "Can not open directory: $1\n";
     foreach my $subfile (readdir DS) {
 		next if $subfile =~ /^\.\.?$/;
 		if($subfile =~ /^(.*?\.msi)$/) {
-			print "MSI:$subfile\n";
+			print "MSI $subfile\n";
 			$msiname = $subfile;
 			$foundmsi = 1;
 		}elsif($subfile =~ /^(.*?\.zip)$/) {
-			print "ZIP:$subfile\n";
-			$zipname = $subfile;
-			$foundzip = 1;
+			print "ZIP $subfile\n";
+			if ($subfile =~ /condor/i) { # must actually be the condor zip file.
+				$zipname = $subfile;
+				$foundzip = 1;
+			}
 		} else {
 			print "$subfile: not msi or zip\n";
 		}
@@ -116,17 +117,47 @@ if( TestGlue::is_windows() ) {
 	# first find name of the msi
 	# now extract msi into ./condor
 
-	if($foundmsi == 1) {
-		print "About to extract:$msiname\n";
-		my $command = "msiexec /a $msiname TARGETDIR=$targetdir /qn";
-		print "about to execute:$command\n";
+	if ($foundmsi) {
+		print "About to extract: $msiname\n";
+		my $command = "msiexec /qn /a $msiname TARGETDIR=$targetdir";
+		print "about to execute $command\n";
 		system($command);
-	} else {
-		die "Failed to find msi\n";
+		if ($?) {
+			print "\textract of $msiname failed with error $? will try the zip file instead.\n";
+			print STDERR "Extract of MSI $msiname failed with error $? : $!\n";
+			$foundmsi = 0; # try using the zip file
+		} else {
+			print "done extractiing $msiname\n";
+			($version) = $msiname =~ /^(.*)\.[^.]+$/;
+		}
 	}
-	print "done extractiing:$msiname\n";
-	unlink($msiname) or die "could not remove:$msiname :$!\n";
-	unlink($zipname) or die "could not remove:$zipname :$!\n";
+	unlink($msiname) or print "could not remove $msiname :$!\n";
+
+	if ($foundzip && ! $foundmsi) {
+		print "About to extract $zipname\n";
+		my $command = "unzip $zipname -d $targetdir";
+		print "about to execute $command\n";
+		system($command) or print "unzip reported error $?: $!\n";
+		if ($?) {
+			print "\tunzip of $zipname failed with error $? will try the release_dir instead.\n";
+			print STDERR "Extract of ZIP $zipname failed with error $? : $!\n";
+			$foundzip = 0; # try using release_dir
+		} else {
+			print "done extractiing $zipname\n";
+			($version) = $zipname =~ /^(.*)\.[^.]+$/;
+			print "directory listing of $targetdir:\n";
+			print `dir $targetdir`;
+		}
+	}
+	unlink($zipname) or print "could not remove $zipname :$!\n";
+
+	if ( ! $foundmsi && ! $foundzip) {
+		print "Could not unpack either MSI or ZIP, attempting to rename release_dir to condor\n";
+		rename("release_dir", "condor") or print "rename failed. things will probably fail from here on...\n";
+		print "directory listing of $targetdir:\n";
+		print `dir $targetdir`;
+		$version = "unknown";
+	}
 
 	# lets get our base config in place
 	my $genericconfig = "$targetdir" . "\\etc\\condor_config.generic";

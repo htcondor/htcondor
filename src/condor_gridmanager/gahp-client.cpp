@@ -7218,16 +7218,18 @@ int GahpClient::ec2_spot_start( std::string service_url,
                                 std::string vpc_subnet,
                                 std::string vpc_ip,
                                 std::string client_token,
+                                std::string iam_profile_arn,
+                                std::string iam_profile_name,
                                 StringList & groupnames,
                                 std::string & request_id,
                                 std::string & error_code )
 {
     static const char * command = "EC2_VM_START_SPOT";
-    
+
     if( server->m_commands_supported->contains_anycase( command ) == FALSE ) {
         return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
     }
-    
+
     if( service_url.empty()
      || publickeyfile.empty()
      || privatekeyfile.empty()
@@ -7236,7 +7238,7 @@ int GahpClient::ec2_spot_start( std::string service_url,
         return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
     }
 
-    if( keypair.empty() ) { keypair = NULLSTRING; }    
+    if( keypair.empty() ) { keypair = NULLSTRING; }
     if( user_data.empty() ) { user_data = NULLSTRING; }
     if( user_data_file.empty() ) { user_data_file = NULLSTRING; }
     if( instance_type.empty() ) { instance_type = NULLSTRING; }
@@ -7244,6 +7246,8 @@ int GahpClient::ec2_spot_start( std::string service_url,
     if( vpc_subnet.empty() ) { vpc_subnet = NULLSTRING; }
     if( vpc_ip.empty() ) { vpc_ip = NULLSTRING; }
     if( client_token.empty() ) { client_token = NULLSTRING; }
+    if ( iam_profile_arn.empty() ) iam_profile_arn = NULLSTRING;
+    if ( iam_profile_name.empty() ) iam_profile_name = NULLSTRING;
 
     std::string space = " ";
     std::string requestLine;
@@ -7259,14 +7263,16 @@ int GahpClient::ec2_spot_start( std::string service_url,
     requestLine += escapeGahpString( availability_zone ) + space;
     requestLine += escapeGahpString( vpc_subnet ) + space;
     requestLine += escapeGahpString( vpc_ip ) + space;
-    requestLine += escapeGahpString( client_token );
+    requestLine += escapeGahpString( client_token ) + space;
+    requestLine += escapeGahpString( iam_profile_arn ) + space;
+    requestLine += escapeGahpString( iam_profile_name );
 
     char * groups = groupnames.print_to_delimed_string( " " );
     if( groups != NULL ) {
         requestLine += space + groups;
     }
     free( groups );
-    
+
     const char * arguments = requestLine.c_str();
     if( ! is_pending( command, arguments ) ) {
         if( m_mode == results_only ) {
@@ -7274,8 +7280,8 @@ int GahpClient::ec2_spot_start( std::string service_url,
         }
         now_pending( command, arguments, deleg_proxy );
     }
-    
-    Gahp_Args * result = get_pending_result( command, arguments );        
+
+    Gahp_Args * result = get_pending_result( command, arguments );
     if( result ) {
         int rc = 0;
         switch( result->argc ) {
@@ -7303,14 +7309,14 @@ int GahpClient::ec2_spot_start( std::string service_url,
         delete result;
         return rc;
     }
-    
+
     if( check_pending_timeout( command, arguments ) ) {
 		formatstr( error_string, "%s timed out", command );
         return GAHPCLIENT_COMMAND_TIMED_OUT;
     }
-    
+
     return GAHPCLIENT_COMMAND_PENDING;
-}    
+}
 
 int GahpClient::ec2_spot_stop(  std::string service_url,
                                 std::string publickeyfile,
