@@ -3633,7 +3633,12 @@ sub GetFileTime
 	my $file = shift;
 	my ($dev, $ino, $mode, $nlink, $uid, $gid, $rdev, $size, $atime, $mtime, $ctime, $blksize, $blocks) = stat($file);
 
-	my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime($ctime);
+	my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst);
+	if ( ! (defined $ctime)) {
+		($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime();
+	} else {
+		($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime($ctime);
+	}
 
 	$mon = $mon + 1;
 	$year = $year + 1900;

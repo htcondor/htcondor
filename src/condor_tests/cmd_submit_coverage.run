@@ -95,7 +95,7 @@ my $GetClusterId = sub {
 };
 
 #Do a job before setting tesing exit codes
-print "First test basic job\n";
+TLOG "Testing if SimpleJob runs\n";
 $result = SimpleJob::RunCheck(); # jobid 1
 
 #CondorTest::RegisterExecute($testname, $executed);
@@ -114,5 +114,59 @@ foreach my $file (@submitfiles) {
 		CondorTest::debug("$testname: FAILED\n",1);
 	}
 }
+
+# check command line attribute assignment
+TLOG "Testing if submit statements work on submit command line (i.e -append)\n";
+
+my $submit_base = '
+	N = 2
+	executable = x_sleep.pl
+	arguments = $(Process), $(A), $(B), $(D), $(N)
+	D = dog
+	Queue $(N)
+';
+my $submit_append = "'A=alpha' 'b=beta' -append 'N=3' -a 'd=delta'";
+if (CondorUtils::is_windows()) { $submit_append =~ s/'//g; } # windows doesn't like the ' and doesn't need them
+
+print "\tUsing arguments: $submit_append\n";
+print "\tand a submit file that contains:\n$submit_base\n";
+
+my $submit_fname = "cmd_submit_coverage2.$$.submit";
+open( SUBMIT, ">$submit_fname" ) || die "error writing to $submit_fname: $!\n";
+print SUBMIT $submit_base;
+close( SUBMIT );
+
+# remember runCondorTool returns 1 for success.
+my $succeeded = 0;
+my @ads = ();
+my $res = runCondorTool( "condor_submit -dry-run - $submit_fname $submit_append", \@ads, 2, {emit_output=>0} );
+if ( ! $res) {
+	$succeeded = 0;
+} else {
+	# check the output to see if we got only 2 ads and arguments is "ProcId, alpha, beta, 2"
+	my $found = 0;
+	my $ids = "";
+	my $args = "";
+	TLOG "condor_submit -dry relevant output:\n";
+	foreach my $line (@ads) {
+		if ($line =~ /^ProcId\s*=\s*(\d+)\s*$/i) {
+			print "\t$line";
+			$ids .= $1;
+			++$found;
+		} elsif ($line =~ /^Arg[a-z1-9]*\s*=\s*(.*)\s*$/i) {
+			print "\t$line";
+			if ($1 =~ /"(\d+), alpha, beta, delta, 3"/) {
+				$args .= $1;
+				++$found;
+			}
+		}
+	}
+	TLOG "Expected 6 matching lines with ids='012' args='012'.  found $found matching lines with ids='$ids' args='$args'\n";
+	$succeeded = ($found == 6 && $ids eq '012' && $args eq '012');
+
+	# this line gives success with broken -append on queue line for 8.4.0
+	#$succeeded = ($found == 4 && $ids eq '01' && $args eq '01');
+}
+RegisterResult($succeeded,test_name=>$handle, check_name=>"submit_dash_append");
 
 CondorTest::EndTest();

@@ -758,8 +758,10 @@ sub List
 		if ($cmdline =~ /^\-([a-zA-Z]+)\s+(.*)$/ ) {
 			# translate flags?
 			#my $flags = $1;
-			$cmdline = $2;;
+			# translate path separators
+			$cmdline = $2;
 		}
+		$cmdline =~ s/\//\\/g; # convert / to \ before passing to dir
 		$ret = system("cmd /C dir $cmdline");
 	} elsif (is_windows()) {
 		$cmdline =~ s/\\/\//g; # if windows, but not native, we need to convert \ to / before passing to ls.
@@ -861,11 +863,11 @@ sub CopyIt
 			# check target
 			$windest =~ s/\//\\/g;
         	$fullcmd = "xcopy $winsrc $windest /Y";
-			#print "native perl:$fullcmd\n";
         	if($dashr eq "yes") {
             	$fullcmd = $fullcmd . " /s /e";
 				#print "native perl -r:$fullcmd\n";
         	}
+			#print "native perl: $fullcmd\n";
 		} else {
         	$winsrc = `cygpath -w $argsin[0]`;
         	$windest = `cygpath -w $argsin[1]`;
@@ -883,7 +885,9 @@ sub CopyIt
         	}
 
 		}
-        $ret = system("$fullcmd");
+		#print "CopyIt executing: $fullcmd\n";
+        #$ret = system("$fullcmd");
+		$ret = verbose_system("$fullcmd");
 		if($btdebug == 1) {
 			print "Tried to create dir got ret value:$ret cmd:$fullcmd\n";
 		}
