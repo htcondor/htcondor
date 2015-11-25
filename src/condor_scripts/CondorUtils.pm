@@ -758,8 +758,10 @@ sub List
 		if ($cmdline =~ /^\-([a-zA-Z]+)\s+(.*)$/ ) {
 			# translate flags?
 			#my $flags = $1;
-			$cmdline = $2;;
+			# translate path separators
+			$cmdline = $2;
 		}
+		$cmdline =~ s/\//\\/g; # convert / to \ before passing to dir
 		$ret = system("cmd /C dir $cmdline");
 	} elsif (is_windows()) {
 		$cmdline =~ s/\\/\//g; # if windows, but not native, we need to convert \ to / before passing to ls.
