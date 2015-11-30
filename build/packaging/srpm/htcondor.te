@@ -36,5 +36,5 @@ allow condor_schedd_t autofs_t:dir search;
 allow condor_schedd_t nfs_t:dir { search getattr };
 allow condor_schedd_t nfs_t:file { getattr open read write append ioctl };
 allow condor_schedd_t self:process setsched;
-allow condor_schedd_t sendmail_exec_t:file { getattr execute };
+allow condor_schedd_t sendmail_exec_t:file { getattr open read execute };
 
