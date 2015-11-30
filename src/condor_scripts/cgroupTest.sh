@@ -25,7 +25,7 @@
 
 mypid=$$
 
-cgroup_root=`mount | grep ^cgroup | grep memory | awk '{print $3}'`
+cgroup_root=`cat /proc/mounts | grep ^cgroup | grep memory | awk '{print $2}'`
 
 if [ "$cgroup_root"x = "x" ]
 then
@@ -44,11 +44,11 @@ echo "Moving shell to testing cgroup"
 echo $mypid >  $group/tasks
 
 echo "Limiting testing cgroup to 100 Mb"
-echo "10000000" > $group/memory.limit_in_bytes
-echo "10000000" > $group/memory.memsw.limit_in_bytes
+echo "100000000" > $group/memory.limit_in_bytes
+echo "100000000" > $group/memory.memsw.limit_in_bytes
 
 echo "Running dd..."
-dd if=/dev/zero of=big_file bs=32M count=1024 > /dev/null 2>&1
+dd if=/dev/zero of=big_file bs=8M count=1024 > /dev/null 2>&1
 
 result=$?
 if [ $result = 0 ]
@@ -58,8 +58,8 @@ else
 	echo "Failure: cgroup is killing processes that do too much file io"
 fi
 
-# Remove self from cgroup so I can remove testing cgroup
 rm -f big_file
+# Remove self from cgroup so I can remove testing cgroup
 echo $mypid > $group/../tasks
 rmdir $group
 exit 0
