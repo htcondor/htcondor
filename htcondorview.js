@@ -100,6 +100,7 @@ HTCondorView.prototype.initialize_from_object = function(options) {
 	});
 
 	this.aq_table = new AfterqueryObj({root_id: this.table_id});
+	this.aq_total_table = new AfterqueryObj({root_id: this.total_table_id});
 	this.aq_graph = new AfterqueryObj({root_id: this.graph_id});
 
 	container.append(starting_elements);
@@ -228,11 +229,38 @@ HTCondorView.prototype.replace_search_arg = function(oldurl, newkey, newval) {
 	return this.urlTool.href;
 };
 
+HTCondorView.prototype.total_table_args = function(headers, tableargs, select_tuble) {
+	var fields = [];
+	var i; 
+	for(i = 0; i < headers.length; i++) {
+		if( ! this.select_tuple[headers[i]]) {
+			fields.push(headers[i]);
+		}
+	}
+	tableargs += "&group=;"+fields.join(",");
+	return tableargs;
+}
+
 
 HTCondorView.prototype.load_and_render = function(graphargs, tableargs) {
 	"use strict";
-
 	var mythis = this;
+
+	var callback_render_total_table = function(data) {
+		$('#'+mythis.total_table_id+' .vizchart').empty();
+		setTimeout(function() {
+			var options = {
+				select_handler: function(e,t,d){ mythis.total_table_select_handler(e,t,d); },
+				num_pattern: '#,##0.0',
+				disable_height: true
+			};
+			var totaltableargs = mythis.total_table_args(data.headers, tableargs, this.select_tuple);
+
+			var query = "url="+mythis.url+"&"+totaltableargs;
+			mythis.aq_total_table.render(query, mythis.data.value, null, options);
+		}, 0);
+	};
+
 	var callback_render_table = function() {
 		$('#'+mythis.table_id+' .vizchart').empty();
 		setTimeout(function() {
@@ -243,7 +271,7 @@ HTCondorView.prototype.load_and_render = function(graphargs, tableargs) {
 			};
 
 			var query = "url="+mythis.url+"&"+tableargs;
-			mythis.aq_table.render(query, mythis.data.value, null, options);
+			mythis.aq_table.render(query, mythis.data.value, callback_render_total_table, options);
 		}, 0);
 	 };
 	if(tableargs === this.last_tableargs) { callback_render_table = null; }
@@ -285,10 +313,33 @@ HTCondorView.prototype.load_and_render = function(graphargs, tableargs) {
 	}
 };
 
+HTCondorView.prototype.total_table_select_handler = function(evnt,table,data) {
+	"use strict";
+	var selection = table.getSelection();
+	if(!selection) { return; }
+	if(this.table_obj) {
+		this.table_obj.setSelection(null);
+	}
+
+	this.total_table_obj = table;
+
+	this.title = this.original_title;
+
+	this.set_graph_query(this.starting_graphargs);
+
+	this.load_and_render(this.current_graphargs, this.current_tableargs);
+};
+
 HTCondorView.prototype.table_select_handler = function(evnt,table,data) {
 	"use strict";
 	var selection = table.getSelection();
 	if(!selection) { return; }
+
+	if(this.total_table_obj) {
+		this.total_table_obj.setSelection(null);
+	}
+
+	this.table_obj = table;
 
 	var col;
 	var filter = "";
@@ -334,6 +385,7 @@ HTCondorView.prototype.starting_elements = function(options) {
 
 	this.graph_id = this.new_graph_id();
 	this.table_id = this.new_graph_id();
+	this.total_table_id = this.new_graph_id();
 	this.graph_fullscreen_id= this.new_graph_id();
 	this.graph_edit_id= this.new_graph_id();
 	this.graph_download_id= this.new_graph_id();
@@ -361,6 +413,9 @@ HTCondorView.prototype.starting_elements = function(options) {
 	        this.html_for_graph() + "\n"+
 		  "</div>\n";
 	if(has_table) {
+		ret += "<div id='"+this.total_table_id+"' class='table'>\n" +
+			this.html_for_graph()+ "\n" +
+			"</div>\n";
 		ret += "<div id='"+this.table_id+"' class='table'>\n" +
 			editmenu(this.table_fullscreen_id, this.table_edit_id, this.table_download_id) +
 			this.html_for_graph()+ "\n" +
