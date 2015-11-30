@@ -94,26 +94,99 @@ sub checkOutputAndRegisterResult {
     }
 }
 
+sub generateExpectedOutput {
+    $expectedoutputref = shift;
+    $dataref = shift;
+    $start = shift;
+    $step = shift;
+    $end = shift;
+
+    @data = @{$dataref};
+
+    if (not defined $start) {
+        $start = 0;
+    }
+
+    if (not defined $step) {
+        $step = 1;
+    }
+
+    if (not defined $end) {
+        $end = @data;
+    }
+
+    for (my $i = $start; $i < $end; $i += $step) {
+        push @{$expectedoutputref}, $data[$i];
+    }
+
+}
+
 sub main {
     my $testname = "job_basic_submit-queuespliceditemin-commalist";
 
     my @testcases = (
-        [1 .. 100],
-        [1 .. 10],
-        ["This", "is", "a", "Test"],
+        {
+            data => [1 .. 10],
+            start => 0,
+            step => 1,
+            end => 10,
+        },
+        {
+            data => [1 .. 100],
+            start => 0,
+            step => 1,
+            end => 100,
+        },
+        {
+            data => [1 .. 10],
+            start => 0,
+            end => 10,
+        },
+        {
+            data => [1 .. 10],
+            start => 0,
+        },
+        {
+            data => [1 .. 10],
+            end => 10,
+        },
+        {
+            data => [1 .. 10],
+            step => 2,
+        },
+        {
+            data => [1 .. 10],
+        },
+        {
+            data => ["This", "is", "a", "Test"],
+            start => 0,
+            step => 1,
+            end => 4,
+        },
+        {
+            data => ["This", "is", "a", "Test"],
+            start => 1,
+            step => 2,
+        },
+        {
+            data => ["This", "is", "a", "Test"],
+            start => 1,
+            step => 2,
+            end => 1,
+        },
     );
 
     foreach my $test (@testcases) {
         my @extraction = ();
         my @newarray = ();
-        my @array = @{$test};
-        my $start = 0;
-        my $end = @array;
-        my $step = 1;
+        my $blehash = {};
+        my $arrayref = $test->{data};
+        my @array = @{$arrayref};
+        my $start = $test->{start};
+        my $end = $test->{end};
+        my $step = $test->{step};
 
-        for (my $i = $start, $j = 0; $i < $end; $j++, $i += $step) {
-            $newarray[$j] = $array[$i];
-        }
+        generateExpectedOutput(\@newarray, \@array, $start, $step, $end);
 
         my $arglist = join(' ', @array);
         my $newarglist = join(' ', @newarray);
