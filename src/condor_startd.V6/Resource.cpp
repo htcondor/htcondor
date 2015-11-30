@@ -46,6 +46,7 @@
 extern FILESQL *FILEObj;
 
 std::vector<SlotType> SlotType::types(10);
+static bool warned_startd_attrs_once = false; // used to prevent repetition of the warning about mixing STARTD_ATTRS and STARTD_EXPRS
 
 const char * SlotType::type_param(const char * name)
 {
@@ -162,6 +163,7 @@ const char * SlotType::type_param(const char * name)
 		types.resize(max_type_id);
 	}
 	for (size_t ix = 0; ix < types.size(); ++ix) { types[ix].clear(); }
+	warned_startd_attrs_once = false; // allow the warning about mixing STARTD_ATTRS and STARTD_EXPRS once again
 
 	Regex re;
 	int err = 0;
@@ -2146,7 +2148,7 @@ Resource::publish( ClassAd* cap, amask_t mask )
 		if ( ! tmp.empty()) { slot_attrs.initializeFromString(tmp); }
 
 		// check for obsolete STARTD_EXPRS and generate a warning if both STARTD_ATTRS and STARTD_EXPRS is set.
-		if ( ! slot_attrs.isEmpty())
+		if ( ! slot_attrs.isEmpty() && ! warned_startd_attrs_once)
 		{
 			MyString tname(slot_name); tname += "_STARTD_EXPRS";
 			auto_free_ptr tmp2(param(tname.c_str()));
@@ -2157,6 +2159,7 @@ Resource::publish( ClassAd* cap, amask_t mask )
 			if ( ! tmp2.empty()) {
 				dprintf(D_ALWAYS, "WARNING: config contains obsolete STARTD_EXPRS or SLOT_TYPE_n_STARTD_EXPRS which will be (partially) ignored! use STARTD_ATTRS instead.\n");
 			}
+			warned_startd_attrs_once = true;
 		}
 
 		// now append any attrs needed by HTCondor itself
