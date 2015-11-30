@@ -1569,7 +1569,6 @@ AfterqueryObj.prototype.gridFromManyData = function(rawdata) {
       return {headers: [], data: [], types: []};
     }
 
-
     var grid = this.gridFromData(rawdata[0]);
     var newgrid;
     var i;
@@ -2259,7 +2258,7 @@ AfterqueryObj.prototype.getUrlData_xhr = function(state, success_func, error_fun
       dataType: 'text',
       success: function(text) {
         that.extractJsonFromJsonp(text, function(grid) {
-          that.getUrlDataSuccess(grid, state, success_func, error_func);
+        that.getUrlDataSuccess(grid, state, success_func, error_func);
           }
           );
         },
@@ -2267,7 +2266,7 @@ AfterqueryObj.prototype.getUrlData_xhr = function(state, success_func, error_fun
         console.debug("XHR failed:", textStatus, errorThrown);
         error_func(state, success_func, 
           function(a,b,c,d,e) { that.getUrlDataFailure(a,b,c,d,e); }
-        );
+          );
         }
       }
     );
@@ -2427,14 +2426,6 @@ AfterqueryObj.prototype.addUrlGetters = function(queue, args, startdata) {
     var i;
     var urls;
     var url;
-
-    var state = {
-      todo: [],
-      success: [],
-      failure: [],
-      rawdata: [],
-    };
-
     if (!startdata) {
       urls = [];
       for(i = 0; i < args.all.length; i++) {
@@ -2451,7 +2442,12 @@ AfterqueryObj.prototype.addUrlGetters = function(queue, args, startdata) {
          throw new Error('Missing url= in query parameter');
       }
 
-      state.todo = urls;
+      var state = {
+        todo: urls,
+        success: [],
+        failure: [],
+        rawdata: [],
+      };
 
       this.enqueue(queue, 'get data', function(_, done) {
         that.getUrlData(state, that.wrap(done), that.wrap(that.gotError, urls[0]));
