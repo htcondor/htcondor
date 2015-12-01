@@ -7122,20 +7122,7 @@ int SpecialSubmitParse(void* pv, MACRO_SOURCE& source, MACRO_SET& macro_set, cha
 
 		GotQueueCommand = true;
 
-		auto_free_ptr expanded_queue_args(expand_macro(queue_args, SubmitMacroSet));
-		char * pqargs = expanded_queue_args.ptr();
-		ASSERT(pqargs);
-
-		if (DashDryRun && DumpSubmitHash) {
-			fprintf(stdout, "\n----- Queue arguments -----\nSpecified: %s\nExpanded : %s", queue_args, pqargs);
-		}
-
-		if ( ! queueCommandLine.empty() && fp_submit != NULL) {
-			errmsg = "-queue argument conflicts with queue statement in submit file";
-			return -1;
-		}
-
-		// now parse the extra lines.
+		// parse the extra lines before doing $ expansion on the queue line
 		ErrContext.phase = PHASE_DASH_APPEND;
 		ExtraLineNo = 0;
 		extraLines.Rewind();
@@ -7150,6 +7137,19 @@ int SpecialSubmitParse(void* pv, MACRO_SOURCE& source, MACRO_SET& macro_set, cha
 		ExtraLineNo = 0;
 		ErrContext.phase = PHASE_QUEUE;
 		ErrContext.step = -1;
+
+		auto_free_ptr expanded_queue_args(expand_macro(queue_args, SubmitMacroSet));
+		char * pqargs = expanded_queue_args.ptr();
+		ASSERT(pqargs);
+
+		if (DashDryRun && DumpSubmitHash) {
+			fprintf(stdout, "\n----- Queue arguments -----\nSpecified: %s\nExpanded : %s", queue_args, pqargs);
+		}
+
+		if ( ! queueCommandLine.empty() && fp_submit != NULL) {
+			errmsg = "-queue argument conflicts with queue statement in submit file";
+			return -1;
+		}
 
 		// HACK! the queue function uses a global flag to know whether or not to ask for a new cluster
 		// In 8.2 this flag is set whenever the "executable" or "cmd" value is set in the submit file.
