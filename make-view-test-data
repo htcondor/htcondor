@@ -121,6 +121,8 @@ sub draw_n_random {
 
 
 
+# Algorithm based on http://freespace.virgin.net/hugo.elias/models/m_perlin.htm
+# except noise1, which is based on https://stackoverflow.com/questions/3062746/special-simple-random-number-generator 
 sub perlin_noise {
 	sub noise1 {
 		my($x) = int($_[0]);
