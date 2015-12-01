@@ -620,6 +620,17 @@ Group: Applications/System
 Requires: python >= 2.2
 Requires: %name = %version-%release
 
+%if 0%{?rhel} >= 7 && ! %uw_build
+# auto provides generator does not pick these up for some reason
+    %ifarch x86_64
+Provides: classad.so()(64bit)
+Provides: htcondor.so()(64bit)
+    %else
+Provides: classad.so
+Provides: htcondor.so
+    %endif
+%endif
+
 %description python
 The python bindings allow one to directly invoke the C++ implementations of
 the ClassAd library and HTCondor from python
