@@ -2,6 +2,7 @@
 use strict;
 use List::Util;
 use Digest::MD5 qw(md5);
+use POSIX qw(strftime);
 
 my $num_submit_hosts = 3;
 my $num_users = 5;
@@ -41,15 +42,15 @@ sub epoch_to_iso {
 }
 
 sub epoch_to_monthly {
-	my($ctime) = @_;
-	my($sec,$min,$hour,$mday,$mon,$year) = localtime($ctime);
-	return sprintf("%04d-%02d", $year+1900, $mon+1);
+	return strftime("%Y-%m",localtime($_[0]));
+}
+
+sub epoch_to_weekly {
+	return strftime("%Y-W%V",localtime($_[0]));
 }
 
 sub epoch_to_daily {
-	my($ctime) = @_;
-	my($sec,$min,$hour,$mday,$mon,$year) = localtime($ctime);
-	return sprintf("%04d-%02d-%02d", $year+1900, $mon+1, $mday);
+	return strftime("%Y-%m-%d",localtime($_[0]));
 }
 
 sub submitter_count {
@@ -105,10 +106,24 @@ sub create_submitter_files {
 	my $end = $LAST_DATE;
 	my $start_daily = $end - 3*$day;
 	my $start_weekly = $end - 3*$week;
-	my $start_monthly = $end - 3*$monthish; #TODO 24 months
+	my $start_monthly = $end - 24*$monthish;
 
-	create_submitter_file($start_monthly, $day/4, $end, "submitter.monthly.", \&epoch_to_monthly);
-	create_submitter_file($start_daily, $MINUTE*15, $end, "submitter.daily.", \&epoch_to_daily);
+	create_submitter_file($start_monthly, $day/4, $end, "data/submitter.monthly.", \&epoch_to_monthly);
+	create_submitter_file($start_weekly, $HOUR*2, $end, "data/submitter.weekly.", \&epoch_to_weekly);
+	create_submitter_file($start_daily, $MINUTE*15, $end, "data/submitter.daily.", \&epoch_to_daily);
+	open my $fh, '>', "data/submitter.oldest" or die "Unable to open >submitter.oldest: $!";
+
+	my $oldest_daily = epoch_to_daily($start_daily);
+	my $oldest_weekly = epoch_to_weekly($start_weekly);
+	my $oldest_monthly = epoch_to_monthly($start_monthly);
+	print $fh <<END;
+[
+{ "interval": "monthly", "oldest": "$oldest_monthly" },
+{ "interval": "weekly", "oldest": "$oldest_weekly" },
+{ "interval": "daily", "oldest": "$oldest_daily" }
+]
+END
+	close $fh;
 
 
 }
