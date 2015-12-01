@@ -268,7 +268,6 @@ HTCondorView.prototype.load_and_render = function(graphargs, tableargs) {
 
 
 	var callback_render_total_table = function(data) {
-		console.log("render")
 		$('#'+mythis.total_table_id+' .vizchart').empty();
 		var options = {
 			select_handler: function(e,t,d){ mythis.total_table_select_handler(e,t,d); },
@@ -281,11 +280,9 @@ HTCondorView.prototype.load_and_render = function(graphargs, tableargs) {
 
 	var callback_transform_total_table = function(data) {
 		setTimeout(function() {
-			console.log("transform");
 			var totaltableargs = mythis.total_table_args(data.headers, tableargs, this.select_tuple);
 
 			var query = "url="+mythis.url+"&"+totaltableargs;
-			console.log(query);
 			mythis.aq_total_table.load_post_transform(query, null, callback_render_total_table);
 		}, 0);
 	};
