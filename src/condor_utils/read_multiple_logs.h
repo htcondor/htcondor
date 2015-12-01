@@ -41,18 +41,6 @@
 class MultiLogFiles
 {
 public:
-		/** getValuesFromFileNew() performs exactly the same function as
-			getValuesFromFile(); the difference is that
-			getValuesFromFileNew() reads the given file line-by-line
-			rather than reading the whole thing into one string (this
-			fixes gittrac #4171).  As of 8.0.6 we are keeping both
-			versions so the new one can be turned off with configuration,
-			but eventually the old version should be torn out completely
-			(see gittrac #4189).
-		*/
-	static MyString getValuesFromFileNew(const MyString &fileName,
-			const MyString &keyword, StringList &values, int skipTokens = 0);
-
 		/** Gets the specified value from a submit file (looking for the
 			syntax <keyword> = <value>).
 			@param strSubFilename: the submit file name
