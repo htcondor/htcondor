@@ -241,23 +241,52 @@ HTCondorView.prototype.total_table_args = function(headers, tableargs, select_tu
 	return tableargs;
 }
 
+	/*var mythis = this;
+	var handle_csv = function() {
+		var csv = mythis.afterquerydata_to_csv(mythis.csv_source_data.value);
+		mythis.csv_source_data = undefined;
+		mythis.download_data("HTCondor-View-Data.csv", "text/csv", csv);
+	};
+	this.csv_source_data = mythis.aq_table.load_post_transform(query, data, handle_csv);
+	*/
+
+// Given a data grid in Afterquery format, prepend a new field
+// with a header of "", type of T_STRING, and all values of "TOTAL".
+HTCondorView.prototype.add_total_field = function(grid) {
+	grid.headers.unshift('');
+	grid.types.unshift(AfterqueryObj.T_STRING);
+	var i;
+	for(i = 0; i < grid.data.length; i++) {
+		grid.data[i].unshift('TOTAL');
+	}
+	return grid;
+}
 
 HTCondorView.prototype.load_and_render = function(graphargs, tableargs) {
 	"use strict";
 	var mythis = this;
 
+
 	var callback_render_total_table = function(data) {
+		console.log("render")
 		$('#'+mythis.total_table_id+' .vizchart').empty();
+		var options = {
+			select_handler: function(e,t,d){ mythis.total_table_select_handler(e,t,d); },
+			num_pattern: '#,##0.0',
+			disable_height: true
+		};
+		data = mythis.add_total_field(data);
+		mythis.aq_total_table.render("", data, null, options);
+	}
+
+	var callback_transform_total_table = function(data) {
 		setTimeout(function() {
-			var options = {
-				select_handler: function(e,t,d){ mythis.total_table_select_handler(e,t,d); },
-				num_pattern: '#,##0.0',
-				disable_height: true
-			};
+			console.log("transform");
 			var totaltableargs = mythis.total_table_args(data.headers, tableargs, this.select_tuple);
 
 			var query = "url="+mythis.url+"&"+totaltableargs;
-			mythis.aq_total_table.render(query, mythis.data.value, null, options);
+			console.log(query);
+			mythis.aq_total_table.load_post_transform(query, null, callback_render_total_table);
 		}, 0);
 	};
 
@@ -271,7 +300,7 @@ HTCondorView.prototype.load_and_render = function(graphargs, tableargs) {
 			};
 
 			var query = "url="+mythis.url+"&"+tableargs;
-			mythis.aq_table.render(query, mythis.data.value, callback_render_total_table, options);
+			mythis.aq_table.render(query, mythis.data.value, callback_transform_total_table, options);
 		}, 0);
 	 };
 	if(tableargs === this.last_tableargs) { callback_render_table = null; }
