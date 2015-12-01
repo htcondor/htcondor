@@ -900,31 +900,25 @@ void writeSubmitFile( /* const */ SubmitDagDeepOptions &deepOpts,
 
 	MyString env_str;
 	MyString env_errors;
-	if(!env.getDelimitedStringV1RawOrV2Quoted(&env_str,&env_errors)) {
-		fprintf(stderr,"Failed to insert environment: %s",env_errors.Value());
+	if ( !env.getDelimitedStringV1RawOrV2Quoted( &env_str, &env_errors ) ) {
+		fprintf( stderr,"Failed to insert environment: %s",
+					env_errors.Value() );
 		exit(1);
 	}
     fprintf(pSubFile, "environment\t= %s\n",env_str.Value());
 
-    if(deepOpts.strNotification != "") 
-	{	
-		fprintf(pSubFile, "notification\t= %s\n", deepOpts.strNotification.Value());
+    if ( deepOpts.strNotification != "" ) {	
+		fprintf( pSubFile, "notification\t= %s\n",
+					deepOpts.strNotification.Value() );
     }
 
-	//TEMPTEMP -- should dagFileAppendLines stuff come before or after append file???
-		// Now append lines specified in the DAG file.
-	dagFileAppendLines.rewind();
-	char *command;
-	while ((command = dagFileAppendLines.next()) != NULL) {
-    	fprintf(pSubFile, "%s\n", command);
-	}
-
 		// Append user-specified stuff to submit file...
+
 		// ...first, the insert file, if any...
-	if (shallowOpts.appendFile != "") {
-		FILE *aFile = safe_fopen_wrapper_follow(shallowOpts.appendFile.Value(), "r");
-		if (!aFile)
-		{
+	if ( shallowOpts.appendFile != "" ) {
+		FILE *aFile = safe_fopen_wrapper_follow(
+					shallowOpts.appendFile.Value(), "r");
+		if ( !aFile ) {
 			fprintf( stderr, "ERROR: unable to read submit append file (%s)\n",
 				 	shallowOpts.appendFile.Value() );
 			exit( 1 );
@@ -932,18 +926,25 @@ void writeSubmitFile( /* const */ SubmitDagDeepOptions &deepOpts,
 
 		char *line;
 		int lineno = 0;
-		while ((line = getline_trim(aFile, lineno)) != NULL) {
+		while ( (line = getline_trim( aFile, lineno )) != NULL ) {
     		fprintf(pSubFile, "%s\n", line);
 		}
 
-		fclose(aFile);
+		fclose( aFile );
+	}
+
+		// ...now append lines specified in the DAG file...
+	dagFileAppendLines.rewind();
+	char *appendCmd;
+	while ( (appendCmd = dagFileAppendLines.next()) != NULL ) {
+    	fprintf( pSubFile, "%s\n", appendCmd );
 	}
 
 		// ...now things specified directly on the command line.
 	shallowOpts.appendLines.rewind();
-	//TEMPTEMP? char *command;
-	while ((command = shallowOpts.appendLines.next()) != NULL) {
-    	fprintf(pSubFile, "%s\n", command);
+	char *command;
+	while ( (command = shallowOpts.appendLines.next()) != NULL ) {
+    	fprintf( pSubFile, "%s\n", command );
 	}
 
     fprintf(pSubFile, "queue\n");
@@ -1096,7 +1097,6 @@ parseCommandLine(SubmitDagDeepOptions &deepOpts,
 			}
 			else if (strArg.find("-insert") != -1) // -insert_sub_file
 			{
-				//TEMPTEMP -- add this to test!!
 				if (iArg + 1 >= argc) {
 					fprintf(stderr, "-insert_sub_file argument needs a value\n");
 					printUsage();

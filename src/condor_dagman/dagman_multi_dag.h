@@ -33,9 +33,9 @@ const int MAX_RESCUE_DAG_DEFAULT = 100;
 	// is normally configured lower).
 const int ABS_MAX_RESCUE_DAG_NUM = 999;
 
-/** Get the configuration file, if any, specified by the given list of
-	DAG files.  If more than one DAG file specifies a configuration file,
-	they must specify the same file.
+/** Get the configuration file (if any) and the submit append commands
+	(if any), specified by the given list of DAG files.  If more than one
+	DAG file specifies a configuration file, they must specify the same file.
 	@param dagFiles: the list of DAG files
 	@param useDagDir: run DAGs in directories from DAG file paths 
 			if true
@@ -44,9 +44,9 @@ const int ABS_MAX_RESCUE_DAG_NUM = 999;
 			be set to that value before this method is called; the
 			value of configFile will be changed if it's not already
 			set and the DAG file(s) specify a configuration file
+	@param appendLines: a StringList to receive the submit append commands.
 	@param errMsg: a MyString to receive any error message
 	@return true if the operation succeeded; otherwise false
-TEMPTEMP -- update documentation
 */
 bool GetConfigAndAppend( /* const */ StringList &dagFiles, bool useDagDir,
 			MyString &configFile, StringList &appendLines, MyString &errMsg );

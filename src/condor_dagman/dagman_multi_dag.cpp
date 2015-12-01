@@ -44,6 +44,7 @@ GetConfigAndAppend( /* const */ StringList &dagFiles, bool useDagDir,
 {
 	bool		result = true;
 
+		// Note: destructor will change back to original directory.
 	TmpDir		dagDir;
 
 	dagFiles.rewind();
@@ -70,10 +71,11 @@ GetConfigAndAppend( /* const */ StringList &dagFiles, bool useDagDir,
 
 		StringList		configFiles;
 
+			// Note: destructor will close file.
 		MultiLogFiles::FileReader reader;
 		errMsg = reader.Open( newDagFile );
 		if ( errMsg != "" ) {
-			return false;//TEMPTEMP?
+			return false;
 		}
 
 		MyString logicalLine;
@@ -90,36 +92,44 @@ GetConfigAndAppend( /* const */ StringList &dagFiles, bool useDagDir,
 						// Get the value.
 					const char *newValue = tokens.next();
 					if ( !newValue || !strcmp( newValue, "" ) ) {
-						MyString result = MyString( "Improperly-formatted "
+						AppendError( errMsg, "Improperly-formatted "
 									"file: value missing after keyword "
-									"<config>" );
-			    		return false;//TEMPTEMP?
-					}
+									"CONFIG" );
+			    		result = false;
+					} else {
 
-						// Add the value we just found to the config files list
-						// (if it's not already in the list -- we don't want
-						// duplicates).
-					configFiles.rewind();
-					char *existingValue;
-					bool alreadyInList = false;
-					while ( ( existingValue = configFiles.next() ) ) {
-						if ( !strcmp( existingValue, newValue ) ) {
-							alreadyInList = true;
+							// Add the value we just found to the config
+							// files list (if it's not already in the
+							// list -- we don't want duplicates).
+						configFiles.rewind();
+						char *existingValue;
+						bool alreadyInList = false;
+						while ( ( existingValue = configFiles.next() ) ) {
+							if ( !strcmp( existingValue, newValue ) ) {
+								alreadyInList = true;
+							}
+						}
+
+						if ( !alreadyInList ) {
+								// Note: append copies the string here.
+							configFiles.append( newValue );
 						}
 					}
 
-					if ( !alreadyInList ) {
-							// Note: append copies the string here.
-						configFiles.append( newValue );
-					}
 					//some DAG commands are needed for condor_submit_dag, too...
 				} else if ( !strcasecmp( firstToken, "DAG_SUBMIT_COMMAND" ) ) {
-printf( "  DIAG dag_submit_command line <%s>\n", logicalLine.Value() );//TEMPTEMP
 						// Strip of DAGMan-specific command name; the
 						// rest we pass to the submit file.
 					logicalLine.replaceString( "DAG_SUBMIT_COMMAND", "" );
 					logicalLine.trim();
-					appendLines.append( logicalLine.Value() );
+					if ( logicalLine == "" ) {
+						AppendError( errMsg, "Improperly-formatted "
+									"file: value missing after keyword "
+									"DAG_SUBMIT_COMMAND" );
+						result = false;
+					} else {
+						appendLines.append( logicalLine.Value() );
+					}
 				}
 			}
 		}
