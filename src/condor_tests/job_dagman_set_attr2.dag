@@ -1,0 +1,6 @@
+#TEMPTEMP -- try line continuation?
+DAG_SUBMIT_COMMAND +test_attr1 = 234
+DAG_SUBMIT_COMMAND +test_attr6 = 987
+
+Job NodeB job_dagman_set_attr-nodeB.cmd
+

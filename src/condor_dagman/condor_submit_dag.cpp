@@ -1,5 +1,5 @@
 //TEMPTEMP -- -append on command line should override attr from DAG? or maybe warning or error...
-//TEMPTEMP -- add multiple dags to test??
+//TEMPTEMP -- warning or error if same attr is multiply-defined?
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
