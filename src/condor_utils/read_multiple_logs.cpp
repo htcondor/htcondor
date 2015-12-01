@@ -501,51 +501,7 @@ MultiLogFiles::makePathAbsolute(MyString &filename, CondorError &errstack)
 
 ///////////////////////////////////////////////////////////////////////////////
 
-// Skip whitespace in a std::string buffer.
-void
-MultiLogFiles::skip_whitespace(std::string const &s,int &offset) {
-	while((int)s.size() > offset && isspace(s[offset])) offset++;
-};
-
-// Read a file into a std::string.  Return false on error.
-MyString
-MultiLogFiles::readFile(char const *filename,std::string& buf)
-{
-    char chunk[4000];
-	MyString rtnVal;
-
-	int fd = safe_open_wrapper_follow(filename, O_RDONLY);
-	if (fd < 0) {
-		rtnVal.formatstr("error opening submit file %s: %s",
-				filename, strerror(errno) );
-		dprintf(D_ALWAYS, "%s\n", rtnVal.Value() );
-		return rtnVal;
-	}
-
-    while(1) {
-        ssize_t n = read(fd,chunk,sizeof(chunk)-1);
-        if(n>0) {
-            chunk[n] = '\0';
-            buf += chunk;
-        }
-        else if(n==0) {
-            break;
-        }
-        else {
-            rtnVal.formatstr("failed to read submit file %s: %s",
-					filename, strerror(errno) );
-			dprintf(D_ALWAYS, "%s\n", rtnVal.Value() );
-			close(fd);
-			return rtnVal;
-        }
-    }
-
-	close(fd);
-    return rtnVal;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
+//TEMPTEMP -- do we need this anymore?
 MyString
 MultiLogFiles::getValuesFromFileNew(const MyString &fileName, 
 			const MyString &keyword, StringList &values, int skipTokens)

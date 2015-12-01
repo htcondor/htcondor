@@ -164,27 +164,6 @@ private:
 		 */
 	static MyString CombineLines(StringList &listIn, char continuation,
 			const MyString &filename, StringList &listOut);
-
-		/**
-		 * Skip whitespace in a std::string buffer.  This is a helper function
-		 * for loadLogFileNamesFromStorkSubFile().  When the new ClassAds
-		 * parser can skip whitespace on it's own, this function can be
-		 * removed.
-		 * @param buffer name
-		 * @param input/output offset into buffer
-		 * @return void
-		 */
-	static void skip_whitespace(std::string const &s,int &offset);
-
-		/**
-		 * Read a file into a std::string helper function for
-		 * loadLogFileNamesFromStorkSubFile().
-		 * @param Filename to read.
-		 * @param output buffer
-		 * @return "" if okay, or else an error message.
-		 */
-	static MyString readFile(char const *filename,std::string& buf);
-
 };
 
 class ReadMultipleUserLogs

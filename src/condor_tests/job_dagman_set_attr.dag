@@ -1,0 +1,8 @@
+#TEMPTEMP -- try line continuation?
+DAG_SUBMIT_COMMAND +test_attr1 = 123
+DAG_SUBMIT_COMMAND +test_attr2 = 0.987
+DAG_SUBMIT_COMMAND accounting_group = agrp1
+DAG_SUBMIT_COMMAND accounting_group_user = auser1
+
+Job NodeA job_dagman_set_attr-nodeA.cmd
+

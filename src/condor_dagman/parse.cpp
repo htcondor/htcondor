@@ -327,6 +327,12 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 			parsed_line_successfully = true;
 		}
 
+		// Allow a DAG_SUBMIT_COMMAND spec, but ignore it here because it
+		// is actually parsed by condor_submit_dag.
+		else if (strcasecmp( token, "DAG_SUBMIT_COMMAND" ) == 0 ) {
+			parsed_line_successfully = true;
+		}
+
 		// Handle a Splice spec
 		else if(strcasecmp(token, "SPLICE") == 0) {
 			parsed_line_successfully = parse_splice(dag, filename,
@@ -368,7 +374,8 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 			debug_printf( DEBUG_QUIET, "%s (line %d): "
 				"ERROR: expected JOB, DATA, SUBDAG, SCRIPT, PARENT, RETRY, "
 				"ABORT-DAG-ON, DOT, VARS, PRIORITY, CATEGORY, MAXJOBS, "
-				"CONFIG, SPLICE, FINAL, NODE_STATUS_FILE, or PRE_SKIP token\n",
+				"CONFIG, DAG_SUBMIT_COMMAND, SPLICE, FINAL, "
+				"NODE_STATUS_FILE, or PRE_SKIP token\n",
 				filename, lineNumber );
 			parsed_line_successfully = false;
 		}

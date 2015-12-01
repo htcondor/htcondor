@@ -46,9 +46,10 @@ const int ABS_MAX_RESCUE_DAG_NUM = 999;
 			set and the DAG file(s) specify a configuration file
 	@param errMsg: a MyString to receive any error message
 	@return true if the operation succeeded; otherwise false
+TEMPTEMP -- update documentation
 */
-bool GetConfigFile(/* const */ StringList &dagFiles, bool useDagDir,
-			MyString &configFile, MyString &errMsg);
+bool GetConfigAndAppend( /* const */ StringList &dagFiles, bool useDagDir,
+			MyString &configFile, StringList &appendLines, MyString &errMsg );
 
 /** Make the given path into an absolute path, if it is not already.
 	@param filePath: the path to make absolute (filePath is changed)

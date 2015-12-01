@@ -1,3 +1,5 @@
+//TEMPTEMP -- -append on command line should override attr from DAG? or maybe warning or error...
+//TEMPTEMP -- add multiple dags to test??
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -57,14 +59,16 @@ int parseJobOrDagLine( const char *dagLine, StringList &tokens,
 			const char *fileType, const char *&submitOrDagFile,
 			const char *&directory );
 int setUpOptions( SubmitDagDeepOptions &deepOpts,
-			SubmitDagShallowOptions &shallowOpts );
+			SubmitDagShallowOptions &shallowOpts,
+			StringList &dagFileAppendLines );
 void ensureOutputFilesExist(const SubmitDagDeepOptions &deepOpts,
 			SubmitDagShallowOptions &shallowOpts);
 int getOldSubmitFlags( SubmitDagShallowOptions &shallowOpts );
 int parseArgumentsLine( const MyString &subLine,
 			SubmitDagShallowOptions &shallowOpts );
 void writeSubmitFile(/* const */ SubmitDagDeepOptions &deepOpts,
-			/* const */ SubmitDagShallowOptions &shallowOpts);
+			/* const */ SubmitDagShallowOptions &shallowOpts,
+			/* const */ StringList &dagFileAppendLines );
 int submitDag( SubmitDagShallowOptions &shallowOpts );
 
 //---------------------------------------------------------------------------
@@ -80,6 +84,9 @@ int main(int argc, char *argv[])
 
 		// Initialize our Distribution object -- condor vs. hawkeye, etc.
 	myDistro->Init( argc, argv );
+
+		// Save submit append lines from DAG file here (see gittrac #5107).
+	StringList dagFileAppendLines;
 
 		// Load command-line arguments into the deepOpts and shallowOpts
 		// structures.
@@ -117,7 +124,7 @@ int main(int argc, char *argv[])
 	}
 	
 		// Further work to get the shallowOpts structure set up properly.
-	tmpResult = setUpOptions( deepOpts, shallowOpts );
+	tmpResult = setUpOptions( deepOpts, shallowOpts, dagFileAppendLines );
 	if ( tmpResult != 0 ) return tmpResult;
 
 		// Check whether the output files already exist; if so, we may
@@ -137,7 +144,7 @@ int main(int argc, char *argv[])
 	}
 
 		// Write the actual submit file for DAGMan.
-	writeSubmitFile( deepOpts, shallowOpts );
+	writeSubmitFile( deepOpts, shallowOpts, dagFileAppendLines );
 
 	return submitDag( shallowOpts );
 }
@@ -292,7 +299,8 @@ parseJobOrDagLine( const char *dagLine, StringList &tokens,
 */
 int
 setUpOptions( SubmitDagDeepOptions &deepOpts,
-			SubmitDagShallowOptions &shallowOpts )
+			SubmitDagShallowOptions &shallowOpts,
+			StringList &dagFileAppendLines )
 {
 	shallowOpts.strLibOut = shallowOpts.primaryDagFile + ".lib.out";
 	shallowOpts.strLibErr = shallowOpts.primaryDagFile + ".lib.err";
@@ -348,8 +356,9 @@ setUpOptions( SubmitDagDeepOptions &deepOpts,
 	}
 
 	MyString	msg;
-	if ( !GetConfigFile( shallowOpts.dagFiles, deepOpts.useDagDir,
-				shallowOpts.strConfigFile, msg) ) {
+	if ( !GetConfigAndAppend( shallowOpts.dagFiles, deepOpts.useDagDir,
+				shallowOpts.strConfigFile,
+				dagFileAppendLines, msg) ) {
 		fprintf( stderr, "ERROR: %s\n", msg.Value() );
 		return 1;
 	}
@@ -641,8 +650,9 @@ EnvFilter::ImportFilter( const MyString &var, const MyString &val ) const
 }
 
 //---------------------------------------------------------------------------
-void writeSubmitFile(/* const */ SubmitDagDeepOptions &deepOpts,
-			/* const */ SubmitDagShallowOptions &shallowOpts)
+void writeSubmitFile( /* const */ SubmitDagDeepOptions &deepOpts,
+			/* const */ SubmitDagShallowOptions &shallowOpts,
+			/* const */ StringList &dagFileAppendLines )
 {
 	FILE *pSubFile = safe_fopen_wrapper_follow(shallowOpts.strSubFile.Value(), "w");
 	if (!pSubFile)
@@ -901,6 +911,14 @@ void writeSubmitFile(/* const */ SubmitDagDeepOptions &deepOpts,
 		fprintf(pSubFile, "notification\t= %s\n", deepOpts.strNotification.Value());
     }
 
+	//TEMPTEMP -- should dagFileAppendLines stuff come before or after append file???
+		// Now append lines specified in the DAG file.
+	dagFileAppendLines.rewind();
+	char *command;
+	while ((command = dagFileAppendLines.next()) != NULL) {
+    	fprintf(pSubFile, "%s\n", command);
+	}
+
 		// Append user-specified stuff to submit file...
 		// ...first, the insert file, if any...
 	if (shallowOpts.appendFile != "") {
@@ -923,7 +941,7 @@ void writeSubmitFile(/* const */ SubmitDagDeepOptions &deepOpts,
 
 		// ...now things specified directly on the command line.
 	shallowOpts.appendLines.rewind();
-	char *command;
+	//TEMPTEMP? char *command;
 	while ((command = shallowOpts.appendLines.next()) != NULL) {
     	fprintf(pSubFile, "%s\n", command);
 	}
@@ -1078,6 +1096,7 @@ parseCommandLine(SubmitDagDeepOptions &deepOpts,
 			}
 			else if (strArg.find("-insert") != -1) // -insert_sub_file
 			{
+				//TEMPTEMP -- add this to test!!
 				if (iArg + 1 >= argc) {
 					fprintf(stderr, "-insert_sub_file argument needs a value\n");
 					printUsage();
