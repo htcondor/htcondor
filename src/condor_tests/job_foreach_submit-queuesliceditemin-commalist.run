@@ -113,8 +113,16 @@ sub generateExpectedOutput {
         $step = 1;
     }
 
-    if (not defined $end) {
+    if (not defined $end or $end > @data) {
         $end = @data;
+    }
+
+    if ($start < 0) {
+        $start = @data + $start;
+    }
+
+    if ($end < 0) {
+        $end = @data + $end;
     }
 
     for (my $i = $start; $i < $end; $i += $step) {
@@ -132,12 +140,6 @@ sub main {
             end => 10,
         },
         {
-            data => [1 .. 100],
-            start => 0,
-            step => 1,
-            end => 100,
-        },
-        {
             data => [1 .. 10],
             start => 0,
             end => 10,
@@ -156,6 +158,24 @@ sub main {
         },
         {
             data => [1 .. 10],
+        },
+        {
+            data => [1 .. 100],
+            start => 17,
+            step => 9,
+            end => 93,
+        },
+        {
+            data => [1 .. 100],
+            start => 0,
+            step => 1,
+            end => 100,
+        },
+        {
+            data => [100000 .. 110000],
+            start => 9000,
+            step => 1000,
+            end => 110000,
         },
         {
             data => ["This", "is", "a", "Test"],
@@ -173,6 +193,23 @@ sub main {
             start => 1,
             step => 2,
             end => 1,
+        },
+        {
+            data => ["This", "is", "a", "Test"],
+            start => -1,
+        },
+        {
+            data => ["This", "is", "a", "Test"],
+            start => 1,
+            end => -1,
+        },
+        {
+            data => ["This", "is", "a", "Test"],
+            end => 100,
+        },
+        {
+            data => ["This", "is", "a", "Test"],
+            start => 5,
         },
     );
 
