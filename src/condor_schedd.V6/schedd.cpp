@@ -500,6 +500,12 @@ match_rec::~match_rec()
 		free(pool);
 	}
 
+		// If we are shuting down, the daemonCore instance will be null
+		// and any use of it will cause a core dump.  At best.
+	if (!daemonCore) {
+		return;
+	}
+
 	if( claim_requester.get() ) {
 			// misc_data points to this object, so NULL it out, just to be safe
 		claim_requester->setMiscDataPtr( NULL );
@@ -507,7 +513,7 @@ match_rec::~match_rec()
 		claim_requester = NULL;
 	}
 
-	if( secSessionId() && daemonCore ) {
+	if( secSessionId()) {
 			// Expire the session after enough time to let the final
 			// RELEASE_CLAIM command finish, in case it is still in
 			// progress.  This also allows us to more gracefully
