@@ -653,8 +653,9 @@ sub DoChild
 	#my $rmcmd = "rm -f $log $out $err $runout $cmdout";
 	#CondorTest::verbose_system("$rmcmd",{emit_output=>0});
 
-	my $corecount = 0;
-	my $res;
+
+	my $test_program_out = "";
+
 	alarm($test_retirement);
 	if(defined $test_id) {
 		$log = $testname . ".$test_id" . ".log";
@@ -663,11 +664,7 @@ sub DoChild
 		$err = $testname . ".$test_id" . ".err";
 		$runout = $testname . ".$test_id" . ".run.out";
 		$cmdout = $testname . ".$test_id" . ".cmd.out";
-
-		if( $hush == 0 ) {
-			debug( "Child Starting:perl $test_program > $test_program.$test_id.out\n",6);
-		}
-		$res = system("perl $test_program > $test_program.$test_id.out 2>&1");
+		$test_program_out = "$test_program.$test_id.out";
 	} else {
 		$log = $testname . ".log";
 		$cmd = $testname . ".cmd";
@@ -675,11 +672,19 @@ sub DoChild
 		$err = $testname . ".err";
 		$runout = $testname . ".run.out";
 		$cmdout = $testname . ".cmd.out";
+		$test_program_out = "$test_program.out";
+	}
 
-		if( $hush == 0 ) {
-			debug( "Child Starting:perl $test_program > $test_program.out\n",6);
-		}
-		$res = system("perl $test_program > $test_program.out 2>&1");
+	my $res;
+	my $use_timed_cmd = 1; # use the timed_cmd helper binary to timeout the test and cleaup processes
+	if ($iswindows && $use_timed_cmd) {
+		my $dtm = ""; if (defined $ENV{TIMED_CMD_DEBUG_WAIT}) { $dtm = ":$ENV{TIMED_CMD_DEBUG_WAIT}"; }
+		my $verb = ($hush == 0) ? "" : "-v";
+		my $timeout = "-t 12M";
+		$res = system("timed_cmd.exe -jgd$dtm $verb -o $test_program_out $timeout perl $test_program");
+	} else {
+		if( $hush == 0 ) { debug( "Child Starting: perl $test_program > $test_program_out\n",6); }
+		$res = system("perl $test_program > $test_program_out 2>&1");
 	}
 
 	my $newlog =  $piddir . "/" . $log;
