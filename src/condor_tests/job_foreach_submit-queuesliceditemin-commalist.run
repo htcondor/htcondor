@@ -24,7 +24,9 @@ use Cwd;
 use POSIX;
 use Check::SimpleJob;
 
-print scalar localtime() . "\n";
+my $testname = "job_basic_submit-queuespliceditemin-commalist";
+
+TLOG "Starting $testname...\n";
 
 sub runSliceTest {
     my $testname = shift;
@@ -122,8 +124,6 @@ sub generateExpectedOutput {
 }
 
 sub main {
-    my $testname = "job_basic_submit-queuespliceditemin-commalist";
-
     my @testcases = (
         {
             data => [1 .. 10],
@@ -211,7 +211,6 @@ sub main {
 main();
 
 CondorTest::EndTest();
-print scalar localtime() . "\n";
-
 CondorTest::debug("$testname SUCCESS\n",1);
+
 exit(0);
