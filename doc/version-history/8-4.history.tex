@@ -41,6 +41,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug which caused \SubmitCmdNI{ec2\_iam\_profile\_name}
+not to work for Spot instances.
+\Ticket{5410}
+
 \item Fixed a bug that caused the \Opt{-append} option to be handled too
 late to apply to the first Queue statement in a \Condor{submit} file.
 \Ticket{5414}
