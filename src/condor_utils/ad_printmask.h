@@ -94,6 +94,23 @@ struct Formatter
 	};
 };
 
+class tokener;
+typedef struct {
+	const char * key;           // keyword, table should be sorted by this.
+	const char * default_attr;  // default attribute to fetch
+	CustomFormatFn cust;        // custom format callback function
+	const char * extra_attribs; // other attributes that the custom format needs
+	bool operator<(const tokener & toke) const;
+} CustomFormatFnTableItem;
+template <class T> struct tokener_lookup_table {
+	size_t cItems;
+	bool is_sorted;
+	const T * pTable;
+	const T * find_match(const tokener & toke) const;
+};
+typedef tokener_lookup_table<CustomFormatFnTableItem> CustomFormatFnTable;
+#define SORTED_TOKENER_TABLE(tbl) { sizeof(tbl)/sizeof(tbl[0]), true, tbl }
+
 class AttrListPrintMask
 {
   public:
@@ -114,6 +131,9 @@ class AttrListPrintMask
 	// clear all formats
 	void clearFormats (void);
 	bool IsEmpty(void) { return formats.IsEmpty(); }
+
+	// for debugging, dump the current config
+	void dump(std::string & out, const CustomFormatFnTable * pFnTable);
 
 	// display functions
 	int   display (FILE *, AttrList *, AttrList *target=NULL);		// output to FILE *
@@ -178,22 +198,6 @@ public:
 	bool        decending;
 };
 
-class tokener;
-typedef struct {
-	const char * key;           // keyword, table should be sorted by this.
-	const char * default_attr;  // default attribute to fetch
-	CustomFormatFn cust;        // custom format callback function
-	const char * extra_attribs; // other attributes that the custom format needs
-	bool operator<(const tokener & toke) const;
-} CustomFormatFnTableItem;
-template <class T> struct tokener_lookup_table {
-	size_t cItems;
-	bool is_sorted;
-	const T * pTable;
-	const T * find_match(const tokener & toke) const;
-};
-typedef tokener_lookup_table<CustomFormatFnTableItem> CustomFormatFnTable;
-#define SORTED_TOKENER_TABLE(tbl) { sizeof(tbl)/sizeof(tbl[0]), true, tbl }
 
 // used to return what kind of header and footers have been requested in the
 // file parsed by SetAttrListPrintMaskFromFile

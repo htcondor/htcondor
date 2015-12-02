@@ -828,6 +828,51 @@ display (std::string & out, AttrList *al, AttrList *target /* = NULL */)
 	return retval.length();
 }
 
+void AttrListPrintMask::
+dump(std::string & out, const CustomFormatFnTable * pFnTable)
+{
+	Formatter *fmt;
+	char 	*attr;
+
+	formats.Rewind();
+	attributes.Rewind();
+	headings.Rewind();
+
+	std::string item;
+	std::string scratch;
+
+	// for each item registered in the print mask
+	while ( (fmt = formats.Next()) && (attr = attributes.Next()) )
+	{
+		const char * pszHead = headings.Next();
+		const char * fnName = "";
+		item.clear();
+		if (pszHead) { formatstr(item, "HEAD: '%s'\n", pszHead); out += item; }
+		if (attr) { formatstr(item, "ATTR: '%s'\n", attr); out += item; }
+
+		// if there is a custom format function, attempt to turn that into a string
+		// by looking it up in the given table.
+		if (fmt->sf) {
+			if (pFnTable) {
+				const CustomFormatFnTableItem * ptable = pFnTable->pTable;
+				for (int ii = 0; ii < (int)pFnTable->cItems; ++ii) {
+					if ((StringCustomFormat)ptable[ii].cust == fmt->sf) {
+						fnName = ptable[ii].key;
+						break;
+					}
+				}
+			} else {
+				formatstr(scratch, "%p", fmt->sf);
+				fnName = scratch.c_str();
+			}
+		}
+
+		formatstr(item, "FMT: %4d %05x %d %d %d %d %s %s\n",
+			fmt->width, fmt->options, fmt->fmt_letter, fmt->fmt_type, fmt->fmtKind, fmt->altKind,
+			fmt->printfFmt ? fmt->printfFmt : "", fnName);
+		out += item;
+	}
+}
 
 int AttrListPrintMask::
 display (FILE *file, AttrListList *list, AttrList *target /* = NULL */, List<const char> * pheadings /* = NULL */)
