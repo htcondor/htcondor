@@ -114,7 +114,7 @@ wait_pid() {
 # Stdout: pid
 #
 get_pid() {
-    if [ -f $1 ]; then
+    if [ -s $1 ]; then
 	pid=`cat $1` &>/dev/null
 	if [ $? -ne 0 -o -z "$pid" ]; then
 	    return 2
