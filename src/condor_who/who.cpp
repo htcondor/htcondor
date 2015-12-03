@@ -83,6 +83,7 @@ static void scan_a_log_for_info(LOG_INFO_MAP & info, MAP_STRING_TO_PID & job_to_
 static void query_daemons_for_pids(LOG_INFO_MAP & info);
 static void ping_all_known_addrs(LOG_INFO_MAP & info);
 static char * get_daemon_param(const char * addr, const char * param_name);
+static char * get_daemon_ready(const char * addr, const char * requirements, time_t sec_to_wait);
 
 // app globals
 static struct {
@@ -104,6 +105,8 @@ static struct {
 	bool   quick_scan;      // do only the scanning that can be done quickly (i.e. no talking to daemons)
 	bool   timed_scan;
 	bool   ping_all_addrs;	 //
+	int    query_ready_timeout;
+	MyString query_ready_requirements;
 	int    test_backward;   // test backward reading code.
 	vector<pid_t> query_pids;
 	vector<const char *> query_log_dirs;
@@ -163,6 +166,7 @@ void InitAppGlobals(const char * argv0)
 	App.quick_scan = false;
 	App.ping_all_addrs = false;
 	App.test_backward = false;
+	App.query_ready_timeout = 0;
 
 	// map Log name to daemon name for those that don't match the rule : 'remove Log'
 	App.log_to_daemon["Sched"] = "Schedd";
@@ -1026,6 +1030,16 @@ void parse_args(int /*argc*/, char *argv[])
 				App.show_daemons = true;
 			} else if (IsArg(parg, "quick", 4)) {
 				App.quick_scan = true;
+			} else if (IsArgColon(parg, "wait-for-ready", &pcolon, 4)) {
+				App.quick_scan = true;
+				if (pcolon) App.query_ready_timeout = atoi(++pcolon);
+				if ( ! argv[ixArg+1] || *argv[ixArg+1] == '-') {
+					fprintf(stderr, "Error: Argument %s requires a requirements expression\n", argv[ixArg]);
+					exit(1);
+				}
+				++ixArg;
+				App.query_ready_requirements = argv[ixArg];
+				// fprintf(stderr, "got wait-for-ready expr='%s'\n", App.query_ready_requirements.c_str());
 			} else if (IsArg(parg, "timed", 5)) {
 				App.timed_scan = true;
 			} else if (IsArg(parg, "address", 4)) {
@@ -1371,6 +1385,27 @@ main( int argc, char *argv[] )
 			if ( ! App.quick_scan) {
 				// fill in missing PIDS for daemons by sending them DC_CONFIG_VAL commands
 				query_daemons_for_pids(info);
+			} else {
+				LOG_INFO_MAP::const_iterator it = info.find("Master");
+				if (it != info.end()) {
+					LOG_INFO * pli = it->second;
+					if ( ! pli->addr.empty() && pli->exit_code.empty()) {
+						if (App.query_ready_requirements.empty()) {
+							printf("\nQuerying Master %s for daemon states.\n", pli->addr.c_str());
+						} else {
+							printf("\nQuerying Master %s for daemon states and waiting for %s\n", pli->addr.c_str(), App.query_ready_requirements.c_str());
+						}
+						char * states = get_daemon_ready(pli->addr.c_str(), App.query_ready_requirements.c_str(), App.query_ready_timeout);
+						if (states) {
+							printf("%s\n", states);
+							free(states);
+						}
+					} else {
+						const char * addr = pli->addr.empty() ? "NULL" : pli->addr.c_str();
+						const char * exit_code = pli->exit_code.empty() ? "" : pli->exit_code.c_str();
+						printf("\nMaster %s Exited with code=%s\n", addr, exit_code);
+					}
+				}
 			}
 
 			if (App.verbose || (App.diagnostic && ! App.show_daemons)) {
@@ -2173,6 +2208,54 @@ void print_daemon_info(LOG_INFO_MAP & info, bool fQuick)
 	}
 }
 
+
+// make  DC_QUERY_READY query
+static char * get_daemon_ready(const char * addr, const char * requirements, time_t sec_to_wait)
+{
+	char * value = NULL;
+
+	Daemon dae(DT_ANY, addr, addr);
+
+	ReliSock sock;
+	sock.timeout(sec_to_wait + 2); // wait 2 seconds longer than the requested timeout.
+	sock.connect(addr);
+
+	if ( ! dae.startCommand(DC_QUERY_READY, &sock, sec_to_wait + 2)) {
+		if (App.diagnostic > 1) { fprintf(stderr, "Can't startCommand DC_QUERY_READY to %s\n", addr); }
+		sock.close();
+		return value;
+	}
+
+	ClassAd ad;
+	ad.Assign("WaitTimeout", sec_to_wait);
+	if (requirements && *requirements) {
+		if ( ! ad.AssignExpr("ReadyRequirements", requirements)) {
+			fprintf(stderr, "invalid expression for DC_QUERY_READY ReadyRequirements.  Expr = '%s'\n", requirements);
+			return NULL;
+		}
+	}
+
+	sock.encode();
+	if ( ! putClassAd(&sock, ad)) {
+		if (App.diagnostic > 1) { fprintf(stderr, "Can't send DC_QUERY_READY to %s\n", addr); }
+	} else if ( ! sock.end_of_message()) {
+		if (App.diagnostic > 1) { fprintf(stderr, "Can't send end of message to %s\n", addr); }
+	} else {
+		ad.Clear();
+		sock.decode();
+		if ( ! getClassAd(&sock, ad)) {
+			if (App.diagnostic > 1) { fprintf(stderr, "Can't receive end of message from %s\n", addr); }
+		} else if ( ! sock.end_of_message()) {
+			if (App.diagnostic > 1) { fprintf(stderr, "Can't receive end of message from %s\n", addr); }
+		} else {
+			MyString states("\n");
+			sPrintAd(states, ad);
+			value = strdup(states.c_str());
+		}
+	}
+	sock.close();
+	return value;
+}
 
 // make a DC config val query for a particular daemon.
 static char * get_daemon_param(const char * addr, const char * param_name)

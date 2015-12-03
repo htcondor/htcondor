@@ -679,8 +679,10 @@ class DaemonCore : public Service
         @return Not_Yet_Documented
     */
     int Was_Not_Responding(pid_t pid);
+    int Got_Alive_Messages(pid_t pid, bool & not_responding); // returns number of DC_CHILDALIVE messages received
+
 	//@}
-        
+
 	/** @name Socket events.
 	 */
 	//@{
@@ -1933,6 +1935,7 @@ class DaemonCore : public Service
         int reaper_id;
         int hung_tid;   // Timer to detect hung processes
         int was_not_responding;
+        int got_alive_msg; // number of child alive messages received
         int std_pipes[3];  // Pipe handles for automagic DC std pipes.
         MyString* pipe_buf[3];  // Buffers for data written to DC std pipes.
         int stdin_offset;
