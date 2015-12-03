@@ -38,8 +38,6 @@ sub runSliceTest {
     my $submitfilename = "$testname$mypid.cmd";
     my $return;
 
-    print($submitfile);
-
     open(SF,">$submitfilename") or die "failed to open submit file:$submitfilename:$!\n";
     print SF "$submitfile";
     close(SF);
@@ -59,8 +57,6 @@ sub checkOutputAndRegisterResult {
 
     $extractionsize = @{$extraction};
 
-    print "Size of argument list:$extractionsize\n";
-
     my %seenargs = ();
 
     foreach my $arg (@{$extraction}){
@@ -72,7 +68,7 @@ sub checkOutputAndRegisterResult {
     my $testfailed = 0;
     foreach my $findit (@{$allargs}) {
         if(not exists $seenargs{$findit}) {
-            print "Expected $findit and DID NOT GET it - Bad\n";
+            TLOG "Expected $findit and DID NOT GET it - Bad\n";
             $testfailed = 1;
         }
     }
@@ -80,13 +76,12 @@ sub checkOutputAndRegisterResult {
     my $seenargsize = keys %seenargs;
 
     if ($newarraysize != $seenargsize) {
-        print "Expected no. of args $newarraysize, received args $seenargsize - Bad\n";
+        TLOG "Expected no. of args $newarraysize, received args $seenargsize - Bad\n";
         $testfailed = 1;
     }
 
     if( $return != 0 ) {
         $testfailed = 1;
-        print "condor_submit did not return with success($return) - Bad\n";
     }
 
     if( $testfailed == 1) {
