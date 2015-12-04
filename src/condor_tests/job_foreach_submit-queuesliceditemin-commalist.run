@@ -24,93 +24,225 @@ use Cwd;
 use POSIX;
 use Check::SimpleJob;
 
-print scalar localtime() . "\n";
+my $testname = "job_basic_submit-queuespliceditemin-commalist";
 
-$testname = "job_basic_submit-queuespliceditemin-commalist";
-$mypid = $$;
+TLOG "Starting $testname...\n";
 
-my $counter = 0;
-my $datafilename = "";
-my $targetname = "";
-my @results = ();
-my @extraction = ();
-my $extractionsize = 0;
+sub runSliceTest {
+    my $testname = shift;
+    my $submitfile = shift;
+    my $extraction = shift;
 
-my @array = (1 .. 100);
-my $start = 0;
-my $end = @array;
-my $step = 1;
-my $arraysize = @array;
+    my @results = ();
+    my $mypid = $$;
+    my $submitfilename = "$testname$mypid.cmd";
+    my $return;
 
-for (my $i = $start, $j = 0; $i < $end; $j++, $i += $step) {
-    $newarray[$j] = $array[$i];
+    open(SF,">$submitfilename") or die "failed to open submit file:$submitfilename:$!\n";
+    print SF "$submitfile";
+    close(SF);
+
+    my $datafilename = CondorTest::TempFileName("$testname");
+    my $cmdtorun = "condor_submit -dry-run - $submitfilename";
+    runCondorTool($cmdtorun, \@results, \$return, {emit_output=>1, expect_result=>1});
+
+    DryExtract(\@results, $extraction, "Args");
+    return($return);
 }
 
-my $arglist = join(' ', @array);
-my $newarglist = join(' ', @newarray);
-my @allargs = split(' ', $newarglist);
+sub checkOutputAndRegisterResult {
+    my $extraction = shift;
+    my $allargs = shift;
+    my $newarraysize = shift;
 
-my $submitfile = "
-	executable = x_print-args.pl
-	should_transfer_files = yes
-	when_to_transfer_output = ON_EXIT
-	log = $testname$mypid.log
-	Arguments = \$(ITEM)
-	queue ITEM in [$start:$end:$sep] (
-        $arglist
-    )
-";
+    $extractionsize = @{$extraction};
 
-my $submitfilename = "$testname$mypid.cmd";
-open(SF,">$submitfilename") or die "failed to open submit file:$submitfilename:$!\n";
-print SF "$submitfile";
-close(SF);
+    my %seenargs = ();
 
-my $datafilename = CondorTest::TempFileName("$testname");
-my $cmdtorun = "condor_submit -dry-run - $submitfilename";
-runCondorTool($cmdtorun, \@results, \$return, {emit_output=>1, expect_result=>1});
+    foreach my $arg (@{$extraction}){
+        if($arg =~ /Args=\"(.*?)\"/) {
+            $seenargs{$1} = 1;
+        }
+    }
 
-DryExtract(\@results, \@extraction, "Args");
+    my $testfailed = 0;
+    foreach my $findit (@{$allargs}) {
+        if(not exists $seenargs{$findit}) {
+            TLOG "Expected $findit and DID NOT GET it - Bad\n";
+            $testfailed = 1;
+        }
+    }
 
-$extractionsize = @extraction;
+    my $seenargsize = keys %seenargs;
 
-print "Size of argument list:$extractionsize\n";
+    if ($newarraysize != $seenargsize) {
+        TLOG "Expected no. of args $newarraysize, received args $seenargsize - Bad\n";
+        $testfailed = 1;
+    }
 
-my %seenargs = ();
+    if( $return != 0 ) {
+        $testfailed = 1;
+    }
 
-foreach my $arg (@extraction){
-	if($arg =~ /Args=\"(.*?)\"/) {
-		print "Captured:$1:\n";
-		$seenargs{$1} = 1;
-	}
+    if( $testfailed == 1) {
+        RegisterResult(0,"test_name","$testname");
+    } else {
+        RegisterResult(1,"test_name","$testname");
+    }
 }
 
-foreach my $findit (@allargs) {
-	print "Validate:$findit:\n";
-	if(exists $seenargs{$findit}) {
-		print "Expected $findit and got it - Good\n";
-		RegisterResult(1,"test_name","$testname");
-	} else {
-		print "Expected $findit and DID NOT GET it - Bad\n";
-		RegisterResult(0,"test_name","$testname");
-	}
+sub generateExpectedOutput {
+    $expectedoutputref = shift;
+    $dataref = shift;
+    $start = shift;
+    $step = shift;
+    $end = shift;
+
+    @data = @{$dataref};
+
+    if (not defined $start) {
+        $start = 0;
+    }
+
+    if (not defined $step) {
+        $step = 1;
+    }
+
+    if (not defined $end or $end > @data) {
+        $end = @data;
+    }
+
+    if ($start < 0) {
+        $start = @data + $start;
+    }
+
+    if ($end < 0) {
+        $end = @data + $end;
+    }
+
+    for (my $i = $start; $i < $end; $i += $step) {
+        push @{$expectedoutputref}, $data[$i];
+    }
+
 }
 
-my $newarraysize = scalar @newarray;
-my $seenargsize = keys %seenargs;
+sub main {
+    my @testcases = (
+        {
+            data => [1 .. 10],
+            start => 0,
+            step => 1,
+            end => 10,
+        },
+        {
+            data => [1 .. 10],
+            start => 0,
+            end => 10,
+        },
+        {
+            data => [1 .. 10],
+            start => 0,
+        },
+        {
+            data => [1 .. 10],
+            end => 10,
+        },
+        {
+            data => [1 .. 10],
+            step => 2,
+        },
+        {
+            data => [1 .. 10],
+        },
+        {
+            data => [1 .. 100],
+            start => 17,
+            step => 9,
+            end => 93,
+        },
+        {
+            data => [1 .. 100],
+            start => 0,
+            step => 1,
+            end => 100,
+        },
+        {
+            data => [100000 .. 110000],
+            start => 9000,
+            step => 1000,
+            end => 110000,
+        },
+        {
+            data => ["This", "is", "a", "Test"],
+            start => 0,
+            step => 1,
+            end => 4,
+        },
+        {
+            data => ["This", "is", "a", "Test"],
+            start => 1,
+            step => 2,
+        },
+        {
+            data => ["This", "is", "a", "Test"],
+            start => 1,
+            step => 2,
+            end => 1,
+        },
+        {
+            data => ["This", "is", "a", "Test"],
+            start => -1,
+        },
+        {
+            data => ["This", "is", "a", "Test"],
+            start => 1,
+            end => -1,
+        },
+        {
+            data => ["This", "is", "a", "Test"],
+            end => 100,
+        },
+        {
+            data => ["This", "is", "a", "Test"],
+            start => 5,
+        },
+    );
 
-if ($newarraysize != $seenargsize) {
-		print "Expected no. of args $newarraysize, received args $seenargsize - Bad\n";
-		RegisterResult(0,"test_name","$testname");
+    foreach my $test (@testcases) {
+        my @extraction = ();
+        my @newarray = ();
+        my $blehash = {};
+        my $arrayref = $test->{data};
+        my @array = @{$arrayref};
+        my $start = $test->{start};
+        my $end = $test->{end};
+        my $step = $test->{step};
+
+        generateExpectedOutput(\@newarray, \@array, $start, $step, $end);
+
+        my $arglist = join(' ', @array);
+        my $newarglist = join(' ', @newarray);
+        my @allargs = split(' ', $newarglist);
+
+        my $submitfile = "
+            executable = x_print-args.pl
+            should_transfer_files = yes
+            when_to_transfer_output = ON_EXIT
+            log = $testname$mypid.log
+            Arguments = \$(ITEM)
+            queue ITEM in [$start:$end:$step] (
+                $arglist
+            )
+        ";
+
+        my $return = runSliceTest($testname, $submitfile, \@extraction);
+        checkOutputAndRegisterResult(\@extraction, \@allargs, scalar @newarray);
+    }
 }
+
+main();
 
 CondorTest::EndTest();
-print scalar localtime() . "\n";
-
-if( $return != 0 )
-{
-	exit(1);
-}
-
 CondorTest::debug("$testname SUCCESS\n",1);
+
 exit(0);

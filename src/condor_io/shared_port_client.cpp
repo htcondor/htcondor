@@ -227,16 +227,32 @@ SharedPortClient::PassSocket(Sock *sock_to_pass,char const *shared_port_id,char 
 
 		if(GetLastError() == ERROR_PIPE_BUSY)
 		{
-			if (!WaitNamedPipe(pipe_name.c_str(), 20000)) 
+			dprintf(D_FULLDEBUG, "SharedPortClient: pipe id '%s' %s is busy, waiting\n", shared_port_id, requested_by);
+		#if 1 // tj: this *might*? make a difference?
+			bool timeout = true;
+			for (int ii = 0; ii < 5; ++ii) {
+				if (WaitNamedPipe(pipe_name.c_str(), 3 * 1000)) { timeout = false; break; }
+				DWORD err = GetLastError();
+				dprintf(D_FULLDEBUG, "SharedPortClient: pipe id '%s' %s wait returned %d\n", shared_port_id, requested_by, err);
+			}
+			if (timeout)
+		#else
+			if (!WaitNamedPipe(pipe_name.c_str(), 20 * 1000))
+		#endif
 			{
-				dprintf(D_ALWAYS, "ERROR: SharedPortClient: Wait for named pipe for sending socket timed out: %d\n", GetLastError());
+				DWORD err = GetLastError();
+				dprintf(D_ALWAYS, "ERROR: SharedPortClient: Wait for named pipe id '%s' %s for sending failed: %d %s\n",
+					shared_port_id, requested_by, err, GetLastErrorString(err));
 				SharedPortClient::m_failPassSocketCalls++;
 				return FALSE;
 			}
+			dprintf(D_FULLDEBUG, "SharedPortClient: wait for pipe id '%s' %s succeeded.\n", shared_port_id, requested_by);
 		}
 		else
 		{
-			dprintf(D_ALWAYS, "ERROR: SharedPortClient: Failed to open named pipe for sending socket: %d\n", GetLastError());
+			DWORD err = GetLastError();
+			dprintf(D_ALWAYS, "ERROR: SharedPortClient: Failed to open named pipe id '%s' %s for sending socket: %d %s\n", 
+				shared_port_id, requested_by, err, GetLastErrorString(err));
 			SharedPortClient::m_failPassSocketCalls++;
 			return FALSE;
 		}
@@ -260,7 +276,6 @@ SharedPortClient::PassSocket(Sock *sock_to_pass,char const *shared_port_id,char 
 		dprintf(D_FULLDEBUG, "SharedPortClient: Read PID: %d\n", child_pid);
 	}
 
-#if 1  // tj:2012 kill the else block later
 	#pragma pack(push, 4)
 	struct {
 		int id; // condor commmand id
@@ -277,28 +292,10 @@ SharedPortClient::PassSocket(Sock *sock_to_pass,char const *shared_port_id,char 
 		SharedPortClient::m_failPassSocketCalls++;
 		return FALSE;
 	}
+
 	protocol_command.id = SHARED_PORT_PASS_SOCK;
 	BOOL write_result = WriteFile(child_pipe, &protocol_command, sizeof(protocol_command), &read_bytes, 0);
-#else
-	WSAPROTOCOL_INFO protocol_info;
-	int dup_result = WSADuplicateSocket(sock_to_pass->get_file_desc(), child_pid, &protocol_info);
-	if(dup_result == SOCKET_ERROR)
-	{
-		dprintf(D_ALWAYS, "ERROR: SharedPortClient: Failed to duplicate socket.\n");
-		CloseHandle(child_pipe);
-		SharedPortClient::m_failPassSocketCalls++;
-		return FALSE;
-	}
-	int bufferSize = (sizeof(int) + sizeof(protocol_info));
-	char *buffer = new char[bufferSize];
-	ASSERT( buffer );
-	int cmd = SHARED_PORT_PASS_SOCK;
-	memcpy_s(buffer, sizeof(int), &cmd, sizeof(int));
-	memcpy_s(buffer+sizeof(int), sizeof(protocol_info), &protocol_info, sizeof(protocol_info));
-	BOOL write_result = WriteFile(child_pipe, buffer, bufferSize, &read_bytes, 0);
 
-	delete [] buffer;
-#endif
 	if(!write_result)
 	{
 		dprintf(D_ALWAYS, "ERROR: SharedPortClient: Failed to send WSAPROTOCOL_INFO struct: %d\n", GetLastError());
