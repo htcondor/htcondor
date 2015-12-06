@@ -235,6 +235,32 @@ SharedPortServer::HandleConnectRequest(int,Stream *sock)
 		return r->doProtocol();
 	}
 
+	// Technically optional, but since HTCondor code always sets it to
+	// its own Sinful string, check to see if it's a daemon trying to
+	// connect to itself and refuse.
+	if( client_name[0] ) {
+		//dprintf( D_FULLDEBUG, "Found client name '%s'.\n", client_name );
+		char * client_sinful = strstr( client_name, "<" );
+		Sinful s( client_sinful );
+		if( s.valid() ) {
+			//dprintf( D_FULLDEBUG, "Client name '%s' contains a valid Sinful.\n", client_name );
+			char const * sourceSharedPortID = s.getSharedPortID();
+			if( sourceSharedPortID && strcmp( sourceSharedPortID, shared_port_id ) == 0 ) {
+				dprintf( D_FULLDEBUG, "Client name '%s' has same shared port ID as its target (%s).\n", client_name, shared_port_id );
+				s.setSharedPortID( NULL );
+				Sinful t( global_dc_sinful() );
+				if( t.valid() ) {
+					//dprintf( D_FULLDEBUG, "Daemon core Sinful (%s) is valid.\n", global_dc_sinful() );
+					t.setSharedPortID( NULL );
+					if( t.addressPointsToMe( s ) ) {
+						dprintf( D_ALWAYS, "Rejected request from %s to connect to itself.\n", sock->peer_description() );
+						return FALSE;
+					}
+				}
+			}
+		}
+	}
+
 	return PassRequest(static_cast<Sock*>(sock), shared_port_id);
 }
 
