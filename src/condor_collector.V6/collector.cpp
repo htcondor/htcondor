@@ -1362,6 +1362,7 @@ void CollectorDaemon::Config()
 		Sinful currentSinful( current );
 		if( mySinful.addressPointsToMe( currentSinful ) ) {
 			collectorsToUpdate->deleteCurrent();
+			continue;
 		}
 
 		// addressPointsToMe() doesn't know that the shared port daemon
@@ -1374,12 +1375,14 @@ void CollectorDaemon::Config()
 		// process of doing something else -- we can safely assume that
 		// any currentSinful without a shared port ID intends to connect
 		// to the default collector.
+		dprintf( D_FULLDEBUG, "checking for self: '%s', '%s, '%s'\n", mySinful.getSharedPortID(), mySharedPortDaemonSinful.getSinful(), currentSinful.getSinful() );
 		if( mySinful.getSharedPortID() != NULL && mySharedPortDaemonSinful.addressPointsToMe( currentSinful ) ) {
 			// Check to see if I'm the default collector.
 			std::string collectorSPID;
 			param( collectorSPID, "SHARED_PORT_DEFAULT_ID" );
 			if(! collectorSPID.size()) { collectorSPID = "collector"; }
 			if( strcmp( mySinful.getSharedPortID(), collectorSPID.c_str() ) == 0 ) {
+				dprintf( D_FULLDEBUG, "Skipping sending update to myself via my shared port daemon.\n" );
 				collectorsToUpdate->deleteCurrent();
 			}
 		}

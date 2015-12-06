@@ -564,9 +564,7 @@ int daemon::RealStart( )
 		// Windows has a global pipe namespace, meaning that several instances of
 		// HTCondor share the same default ID; we make it unique below.
 #ifdef WIN32
-	std::stringstream ss;
-	ss << default_id << "_" << getpid();
-	default_id = ss.str();
+	formatstr_cat(default_id, "_%d", getpid());
 #endif
 
 	// Copy a couple of checks from Start
@@ -611,13 +609,17 @@ int daemon::RealStart( )
 		daemonCore->ClearSharedPortServerAddr();
 	}
 
+	// later we will want to take special action when starting shared port or the collector
+	bool daemon_is_shared_port = (MATCH == strcasecmp(name_in_config_file,"SHARED_PORT"));
+	bool daemon_is_collector = (MATCH == strcasecmp(name_in_config_file,"COLLECTOR"));
+
 		// We didn't want them to use root for any reason, but b/c of
 		// evil in the security code where we're looking up host certs
 		// in the keytab file, we still need root afterall. :(
 	bool wants_condor_priv = false;
 	bool collector_uses_shared_port = param_boolean("COLLECTOR_USES_SHARED_PORT", true) && param_boolean("USE_SHARED_PORT", false);
 		// Collector needs to listen on a well known port.
-	if ( strcmp(name_in_config_file,"COLLECTOR") == 0 || (!strcmp(name_in_config_file, "SHARED_PORT") && collector_uses_shared_port) ) {
+	if ( daemon_is_collector || (daemon_is_shared_port && collector_uses_shared_port) ) {
 
 			// Go through all of the
 			// collectors until we find the one for THIS machine. Then
@@ -685,7 +687,7 @@ int daemon::RealStart( )
 
 		if (command_port == -1) {
 				// strange....
-			int default_port = !strcmp(name_in_config_file, "SHARED_PORT") ? param_integer("SHARED_PORT_PORT", COLLECTOR_PORT) : param_integer("COLLECTOR_PORT", COLLECTOR_PORT);
+			int default_port = daemon_is_shared_port ? param_integer("SHARED_PORT_PORT", COLLECTOR_PORT) : param_integer("COLLECTOR_PORT", COLLECTOR_PORT);
 			command_port = default_port;
 			dprintf (D_ALWAYS, "Collector port not defined, will use default: %d\n", default_port);
 
@@ -693,7 +695,7 @@ int daemon::RealStart( )
 			if( command_port == 0 ) { command_port = 1; }
 		}
 
-		if (collector_uses_shared_port && !strcmp(name_in_config_file,"COLLECTOR")) {
+		if (collector_uses_shared_port && daemon_is_collector) {
 			daemon_sock = default_id.c_str();
 		}
 
@@ -821,17 +823,22 @@ int daemon::RealStart( )
 	if( m_never_use_shared_port ) {
 		jobopts |= DCJOBOPT_NEVER_USE_SHARED_PORT;
 	}
-	if( !strcmp(name_in_config_file,"SHARED_PORT") ) {
+	if( daemon_is_shared_port ) {
 		jobopts |= DCJOBOPT_NO_UDP | DCJOBOPT_NEVER_USE_SHARED_PORT;
-#ifdef WIN32
-		env.SetEnv("_condor_SHARED_PORT_DEFAULT_ID", default_id.c_str());
-#endif
 	}
+	#ifdef WIN32
+	// tell the shared port and collector (via the environment) to use "collector_<master-pid>"
+	// as the default shared port id.
+	if( daemon_is_shared_port || daemon_is_collector ) {
+		env.SetEnv("_condor_SHARED_PORT_DEFAULT_ID", default_id.c_str());
+	}
+	#endif
+
 	// If we are starting a collector and passed a "-sock" command in the command line,
 	// but didn't set the COLLECTOR_HOST to use shared port, have the collector listen on
 	// the UDP socket and not the TCP socket.  We assume that the TCP socket will be taken
 	// by the shared port daemon.
-	if( !strcmp(name_in_config_file,"COLLECTOR") && daemon_sock && command_port > 1 && collector_uses_shared_port ) {
+	if( daemon_is_collector && daemon_sock && command_port > 1 && collector_uses_shared_port ) {
 		udp_command_port = command_port;
 		command_port = 1;
 	} else {
@@ -931,7 +938,7 @@ int daemon::RealStart( )
 	// If we just started the shared port daemon, update its entry in
 	// in the pid table so that when we shut it down, it doesn't forward
 	// the shutdown signal on to the collector.
-	if( strcmp( name_in_config_file, "SHARED_PORT" ) == 0 ) {
+	if( daemon_is_shared_port ) {
 		if(! daemonCore->setChildSharedPortID( pid, "self" ) ) {
 			EXCEPT( "Unable to update shared port daemon's Sinful string, won't be able to kill it.\n" );
 		}
