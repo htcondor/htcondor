@@ -479,7 +479,7 @@ InstanceThread(void* instance)
 */	return 0;
 }
 
-#if 0 // set this to 1 if you need logging to visual studio debugger of the threaded code that cannot use dprintf
+#if 1 // set this to 1 if you need logging to visual studio debugger of the threaded code that cannot use dprintf
 #include <time.h>
 #include <sys\timeb.h>
 void ThreadSafeLogError(const char * msg, int err) {
@@ -599,9 +599,9 @@ SharedPortEndpoint::PipeListenerThread()
 			
 			if(!wake_select_dest)
 			{
-				ThreadSafeLogError("SharedPortEndpoint: Registering timer", 0);
-				int status = daemonCore->Register_Timer_TS(0, (TimerHandlercpp)&SharedPortEndpoint::PipeListenerHelper, "Received socket handler", this);
-				ThreadSafeLogError("SharedPortEndpoint: Timer registration status", status);
+				ThreadSafeLogError("SharedPortEndpoint: Registering Pump worker to move the socket", 0);
+				int status = daemonCore->Register_PumpWork_TS(SharedPortEndpoint::PipeListenerHelper, this, NULL);
+				ThreadSafeLogError("SharedPortEndpoint: back from Register_PumpWork_TS with status", status);
 			}
 			else
 			{
@@ -629,15 +629,19 @@ SharedPortEndpoint::PipeListenerThread()
 	}
 }
 
-void
-SharedPortEndpoint::PipeListenerHelper()
+/* static */
+int SharedPortEndpoint::PipeListenerHelper(void* pv, void* data)
 {
-	dprintf(D_FULLDEBUG, "SharedPortEndpoint: Inside PipeListenerHelper\n");
-	ThreadSafeLogError("SharedPortEndpoint: TInside PipeListenerHelper", 0);
-	DoListenerAccept(NULL);
-	ThreadSafeLogError("SharedPortEndpoint: TInside PipeListenerHelper returning", 0);
+	SharedPortEndpoint * pthis = (SharedPortEndpoint *)pv;
+	//dprintf(D_FULLDEBUG, "SharedPortEndpoint: Inside PumpWork PipeListenerHelper\n");
+	ThreadSafeLogError("SharedPortEndpoint: Inside PipeListenerHelper", 0);
+	pthis->DoListenerAccept(NULL);
+	ThreadSafeLogError("SharedPortEndpoint: Inside PipeListenerHelper returning", 0);
+	return 0;
 }
-#endif
+
+#endif // WIN32
+
 int
 SharedPortEndpoint::TouchSocketInterval()
 {
@@ -925,7 +929,7 @@ void
 SharedPortEndpoint::DoListenerAccept(ReliSock *return_remote_sock)
 {
 #ifdef WIN32
-	dprintf(D_FULLDEBUG, "SharedPortEndpoint: Entered DoListerAccept Win32 path.\n");
+	dprintf(D_FULLDEBUG, "SharedPortEndpoint: Entered DoListenerAccept Win32 path.\n");
 	ReliSock *remote_sock = return_remote_sock;
 	if(!remote_sock)
 	{
@@ -937,6 +941,7 @@ SharedPortEndpoint::DoListenerAccept(ReliSock *return_remote_sock)
 		WSAPROTOCOL_INFO *received_socket = received_sockets.front();
 		received_sockets.pop();
 		LeaveCriticalSection(&received_lock);
+
 		remote_sock->assign(received_socket);
 		remote_sock->enter_connected_state();
 		remote_sock->isClient(false);

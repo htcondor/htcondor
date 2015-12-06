@@ -272,6 +272,8 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 	EnterCriticalSection(&Big_fat_mutex);
 
 	mypid = ::GetCurrentProcessId();
+
+	InitializeSListHead(&PumpWorkHead);
 #else
 	mypid = ::getpid();
 #endif
@@ -848,21 +850,64 @@ int	DaemonCore::Register_Timer(unsigned deltawhen, TimerHandler handler,
 	return( t.NewTimer(deltawhen, handler, event_descrip, 0) );
 }
 
+int DaemonCore::Register_PumpWork_TS(PumpWorkCallback handler, void* cls, void* data)
+{
 #ifdef WIN32
-int DaemonCore::Register_Timer_TS(unsigned deltawhen, TimerHandlercpp handler,
-				const char *event_descrip, Service* s)
-{
-	EnterCriticalSection(&Big_fat_mutex);
-	int status = Register_Timer(deltawhen, handler, event_descrip, s);
-	Do_Wake_up_select();
-	LeaveCriticalSection(&Big_fat_mutex);
+	PumpWorkItem * work = (PumpWorkItem*)_aligned_malloc(sizeof(PumpWorkItem), MEMORY_ALLOCATION_ALIGNMENT);
+	if ( ! work) return -1;
 
-	return status;
+	work->callback = handler;
+	work->cls = cls;
+	work->data = data;
+	if ( ! InterlockedPushEntrySList(&PumpWorkHead, &work->slist)) {
+		// we get false back when the list used to be empty
+	}
+	if (GetCurrentThreadId() != dcmainThreadId) {
+		Do_Wake_up_select();
+	}
+	return 1;
 #else
-int DaemonCore::Register_Timer_TS(unsigned /* deltawhen */,
-				TimerHandlercpp /* handler */,
-				const char * /* event_descrip */, Service * /* s */ )
-{
+	// implement for non-windows?
+	dprintf(D_ALWAYS|D_FAILURE, "Register_PumpWork_TS(%p, %p, %p) called, but has not (yet) been implemented on this platform\n",
+			handler, cls, data);
+	return -1;
+#endif
+}
+
+// call on main thread to handle all of work in the PumpWork list, returns number of callbacks handled
+int DaemonCore::DoPumpWork() {
+#ifdef WIN32
+	// the InterlockedSList is a stack (LIFO) but we want to handle them in FIFO
+	// order, so first step it to remove items from the interlocked stack and put
+	// them in the order we want to handle them. We can re-use the Next pointer
+	// of items we have removed from the slist to build this processing list.
+	PumpWorkItem * work;
+	PumpWorkItem * last = (PumpWorkItem*)InterlockedPopEntrySList(&PumpWorkHead);
+	if (last) {
+		last->slist.Next = NULL;
+		while ((work = (PumpWorkItem*)InterlockedPopEntrySList(&PumpWorkHead))) {
+			work->slist.Next = &(last->slist);
+			last = work;
+		}
+	}
+
+	// now process the items.
+	int citems = 0;
+	for (work = last; work; ) {
+
+		// call the handler
+		work->callback(work->cls, work->data);
+		++citems;
+
+		// advance the pointer along the list
+		// and then free the current item.
+		last = work;
+		work = (PumpWorkItem*)work->slist.Next;
+		_aligned_free(last);
+	}
+	return citems;
+#else
+	// implement for non-windows?
 	return 0;
 #endif
 }
@@ -3375,6 +3420,10 @@ void DaemonCore::Driver()
 
 		// Prepare to enter main select()
 
+		// handle queued pump work. these are like zero timeout one-shot timers
+		// but unlike timers, can be registered from any thread
+		int num_pumpwork_fired = DoPumpWork();
+
 		// call Timeout() - this function does 2 things:
 		//   first, it calls any timer handlers whose time has arrived.
 		//   second, it returns how many seconds until the next timer
@@ -3389,6 +3438,7 @@ void DaemonCore::Driver()
         int num_timers_fired = 0;
 		timeout = t.Timeout(&num_timers_fired, &runtime);
 
+		num_timers_fired += num_pumpwork_fired;
         dc_stats.TimersFired += num_timers_fired;
 
 		if ( sent_signal == TRUE ) {

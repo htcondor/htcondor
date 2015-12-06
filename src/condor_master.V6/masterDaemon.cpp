@@ -1186,6 +1186,8 @@ daemon::Exited( int status )
 				// immediately), and it doesn't check executable
 				// timestamps and restart based on that, either.
 			on_hold = true;
+		} else if (WEXITSTATUS(status) == 0 && MasterShuttingDown) {
+			had_failure = false;
 		}
 	}
 	int d_flag = D_ALWAYS;

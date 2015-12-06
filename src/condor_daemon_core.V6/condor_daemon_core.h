@@ -145,6 +145,9 @@ typedef int     (Service::*ReaperHandlercpp)(int pid,int exit_status);
 ///
 typedef int		(*ThreadStartFunc)(void *,Stream*);
 
+///
+typedef int     (*PumpWorkCallback)(void* cls, void* data);
+
 /// Register with RegisterTimeSkipCallback. Call when clock skips.  First
 //variable is opaque data pointer passed to RegisterTimeSkipCallback.  Second
 //variable is the _rough_ unexpected change in time (negative for backwards).
@@ -973,15 +976,14 @@ class DaemonCore : public Service
                         const char * event_descrip,
                         Service*     s);
 
-	/** Thread-safe Register_Timer().
-		This function locks the big fat daemon-core mutex, so it can
-		be safely called from within a thread, as long as there is no
-		way that thread could already have locked the same mutex.
-	 */
-	int Register_Timer_TS (unsigned deltawhen,
-		TimerHandlercpp handler,
-		const char * event_descrip,
-		Service* s);
+    // register a callback from any thread that will be called on the main thread
+    // as soon as we are back in the daemon core pump (just before timers are handled).
+    // In effect, this is a thread safe register of a zero length one-shot timer
+    int Register_PumpWork_TS (
+        PumpWorkCallback handler,
+        void* cls, // intended to be the 'this' pointer when registering a static method in a class
+        void* data); // intended for use as the data pointer
+
     /** Not_Yet_Documented
         @param deltawhen       Not_Yet_Documented
         @param period          Not_Yet_Documented
@@ -1971,7 +1973,25 @@ class DaemonCore : public Service
     List<PidWatcherEntry> PidWatcherList;
 
     int                 WatchPid(PidEntry *pidentry);
+
+    // PumpWorkItem is an item in the PumpWorkCallback list
+    // note that you should use __aligned_malloc TO to allocate these
+    // in order to gurantee alignment
+    struct __declspec(align(MEMORY_ALLOCATION_ALIGNMENT)) PumpWorkItem
+    {
+        SLIST_ENTRY      slist;
+        PumpWorkCallback callback;
+        void *           cls;
+        void *           data;
+    };
+
+    __declspec(align(MEMORY_ALLOCATION_ALIGNMENT))
+    SLIST_HEADER        PumpWorkHead; // list head for async PumpWorkCallback items.
+#else
+    // implement for non windows?
+
 #endif
+    int  DoPumpWork(); // call on main thread to handle all of work in the PumpWork list, returns number of callbacks handled
             
     TimerManager &t;
     void                DumpTimerList(int, const char* = NULL);
