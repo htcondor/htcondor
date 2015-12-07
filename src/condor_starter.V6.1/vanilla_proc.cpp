@@ -643,7 +643,7 @@ VanillaProc::StartJob()
 				int VMemKb;
 				if (MachineAd->LookupInteger(ATTR_VIRTUAL_MEMORY, VMemKb)) {
 
-					uint64_t memsw_limit = 1024 * VMemKb;
+					uint64_t memsw_limit = ((uint64_t)1024) * VMemKb;
 					if (VMemKb > 0) {
 						// we're not allowed to set memsw limit <
 						// the hard memory limit.  If we haven't set the hard
