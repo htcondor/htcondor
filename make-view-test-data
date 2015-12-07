@@ -46,7 +46,7 @@ sub epoch_to_monthly {
 }
 
 sub epoch_to_weekly {
-	return strftime("%Y-W%V",localtime($_[0]));
+	return strftime("%G-W%V",localtime($_[0]));
 }
 
 sub epoch_to_daily {
