@@ -42,7 +42,7 @@ int get_credmon_pid() {
 		if (num_items != 1) {
 			_static_credmon_pid = -1;
 		}
-		dprintf(D_ALWAYS, "CERN: get_credmon_pid %s == %i\n", pid_path.c_str(), _static_credmon_pid);
+		dprintf(D_FULLDEBUG, "CREDMON: get_credmon_pid %s == %i\n", pid_path.c_str(), _static_credmon_pid);
 	}
 	return _static_credmon_pid;
 }
@@ -57,7 +57,7 @@ bool credmon_poll(const char* user, bool force_fresh, bool send_signal) {
 	// construct filename to poll for
 	char* cred_dir = param("SEC_CREDENTIAL_DIRECTORY");
 	if(!cred_dir) {
-		dprintf(D_ALWAYS, "ERROR: got credmon_poll() but SEC_CREDENTIAL_DIRECTORY not defined!\n");
+		dprintf(D_ALWAYS, "CREDMON: ERROR: got credmon_poll() but SEC_CREDENTIAL_DIRECTORY not defined!\n");
 		return false;
 	}
 
@@ -95,14 +95,14 @@ bool credmon_poll(const char* user, bool force_fresh, bool send_signal) {
 		// now signal the credmon
 		pid_t credmon_pid = get_credmon_pid();
 		if (credmon_pid == -1) {
-			dprintf(D_ALWAYS, "ZKM: failed to get pid of credmon.\n");
+			dprintf(D_ALWAYS, "CREDMON: failed to get pid of credmon.\n");
 			return false;
 		}
 
-		dprintf(D_ALWAYS, "ZKM: sending SIGHUP to credmon pid %i\n", credmon_pid);
+		dprintf(D_FULLDEBUG, "CREDMON: sending SIGHUP to credmon pid %i\n", credmon_pid);
 		int rc = kill(credmon_pid, SIGHUP);
 		if (rc == -1) {
-			dprintf(D_ALWAYS, "ZKM: failed to signal credmon: %i\n", errno);
+			dprintf(D_ALWAYS, "CREDMON: failed to signal credmon: %i\n", errno);
 			return false;
 		}
 	}
@@ -113,7 +113,7 @@ bool credmon_poll(const char* user, bool force_fresh, bool send_signal) {
 	while (retries > 0) {
 		int rc = stat(watchfilename, &junk_buf);
 		if (rc==-1) {
-			dprintf(D_ALWAYS, "ZKM: errno %i, waiting for %s to appear (%i seconds left)\n", errno, watchfilename, retries);
+			dprintf(D_FULLDEBUG, "CREDMON: warning, got errno %i, waiting for %s to appear (%i seconds left)\n", errno, watchfilename, retries);
 			sleep(1);
 			retries--;
 		} else {
@@ -121,11 +121,11 @@ bool credmon_poll(const char* user, bool force_fresh, bool send_signal) {
 		}
 	}
 	if (retries == 0) {
-		dprintf(D_ALWAYS, "ZKM: FAILURE: credmon never created %s after 20 seconds!\n", watchfilename);
+		dprintf(D_ALWAYS, "CREDMON: FAILURE: credmon never created %s after 20 seconds!\n", watchfilename);
 		return false;
 	}
 
-	dprintf(D_ALWAYS, "ZKM: SUCCESS: file %s found after %i seconds\n", watchfilename, 20-retries);
+	dprintf(D_FULLDEBUG, "CREDMON: SUCCESS: file %s found after %i seconds\n", watchfilename, 20-retries);
 	return true;
 }
 
@@ -134,7 +134,7 @@ bool credmon_mark_creds_for_sweeping(const char* user) {
 	// construct filename to create
 	char* cred_dir = param("SEC_CREDENTIAL_DIRECTORY");
 	if(!cred_dir) {
-		dprintf(D_ALWAYS, "ERROR: got mark_creds_for_sweeping but SEC_CREDENTIAL_DIRECTORY not defined!\n");
+		dprintf(D_ALWAYS, "CREDMON: ERROR: got mark_creds_for_sweeping but SEC_CREDENTIAL_DIRECTORY not defined!\n");
 		return false;
 	}
 
@@ -157,7 +157,7 @@ bool credmon_mark_creds_for_sweeping(const char* user) {
 	FILE* f = safe_fcreate_replace_if_exists(markfilename, "w", 0600);
 	set_priv(priv);
 	if (f == NULL) {
-		dprintf(D_ALWAYS, "ERROR: safe_fcreate_replace_if_exists(%s) failed!\n", markfilename);
+		dprintf(D_ALWAYS, "CREDMON: ERROR: safe_fcreate_replace_if_exists(%s) failed!\n", markfilename);
 		return false;
 	}
 
@@ -175,13 +175,14 @@ void process_cred_file(const char *src) {
    //char * src = fname;
    char * trg = strdup(src);
    strcpy((trg + strlen(src) - 5), ".cred");
-   dprintf(D_ALWAYS, "%li: FOUND %s UNLINK %s\n", time(0), src, trg);
+   dprintf(D_FULLDEBUG, "CREDMON: %li: FOUND %s UNLINK %s\n", time(0), src, trg);
    unlink(trg);
    strcpy((trg + strlen(src) - 5), ".cc");
-   dprintf(D_ALWAYS, "%li: FOUND %s UNLINK %s\n", time(0), src, trg);
+   dprintf(D_FULLDEBUG, "CREDMON: %li: FOUND %s UNLINK %s\n", time(0), src, trg);
    unlink(trg);
    strcpy((trg + strlen(src) - 5), ".mark");
-   dprintf(D_ALWAYS, "%li: FOUND %s UNLINK %s\n", time(0), src, trg);
+   dprintf(D_FULLDEBUG, "CREDMON: %li: FOUND %s UNLINK %s\n", time(0), src, trg);
+
    unlink(trg);
 
    free(trg);
@@ -194,12 +195,12 @@ void credmon_sweep_creds() {
 	// construct filename to poll for
 	char* cred_dir = param("SEC_CREDENTIAL_DIRECTORY");
 	if(!cred_dir) {
-		dprintf(D_ALWAYS, "ZKM: skipping sweep, SEC_CREDENTIAL_DIRECTORY not defined!\n");
+		dprintf(D_FULLDEBUG, "CREDMON: skipping sweep, SEC_CREDENTIAL_DIRECTORY not defined!\n");
 		return;
 	}
 
 	MyString fullpathname;
-	dprintf(D_ALWAYS, "ZKM: scandir(%s)\n", cred_dir);
+	dprintf(D_FULLDEBUG, "CREDMON: scandir(%s)\n", cred_dir);
 	n = scandir(cred_dir, &namelist, &markfilter, alphasort);
 	if (n >= 0) {
 		while (n--) {
@@ -211,7 +212,7 @@ void credmon_sweep_creds() {
 		}
 		free(namelist);
 	} else {
-		dprintf(D_ALWAYS, "ZKM: skipping sweep, scandir(%s) not defined!\n", cred_dir);
+		dprintf(D_FULLDEBUG, "CREDMON: skipping sweep, scandir(%s) not defined!\n", cred_dir);
 	}
 	free(cred_dir);
 }
@@ -220,7 +221,7 @@ void credmon_sweep_creds() {
 bool credmon_clear_mark(const char* user) {
 	char* cred_dir = param("SEC_CREDENTIAL_DIRECTORY");
 	if(!cred_dir) {
-		dprintf(D_ALWAYS, "ERROR: got credmon_clear_mark() but SEC_CREDENTIAL_DIRECTORY not defined!\n");
+		dprintf(D_ALWAYS, "CREDMON: ERROR: got credmon_clear_mark() but SEC_CREDENTIAL_DIRECTORY not defined!\n");
 		return false;
 	}
 
@@ -244,13 +245,13 @@ bool credmon_clear_mark(const char* user) {
 	set_priv(priv);
 
 	if(rc) {
-		// ENOENT is common and not worth reporting
+		// ENOENT is common and not worth reporting as an error
 		if(errno != ENOENT) {
-			dprintf(D_ALWAYS, "CERN: WARNING! unlink(%s) got error %i (%s)\n",
+			dprintf(D_FULLDEBUG, "CREDMON: warning! unlink(%s) got error %i (%s)\n",
 				markfilename, errno, strerror(errno));
 		}
 	} else {
-		dprintf(D_ALWAYS, "ZKM: cleared mark file %s\n", markfilename);
+		dprintf(D_FULLDEBUG, "CREDMON: cleared mark file %s\n", markfilename);
 	}
 
 	return true;

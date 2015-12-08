@@ -71,7 +71,7 @@ CredDaemon::CredDaemon() : m_name(NULL), m_update_collector_tid(-1)
 	if(p) {
 		// didn't need the value, just to see if it's defined.
 		free(p);
-		dprintf(D_ALWAYS, "ZKM: setting sweep_timer_handler\n");
+		dprintf(D_FULLDEBUG, "CREDD: setting sweep_timer_handler\n");
 		int sec_cred_sweep_interval = param_integer("SEC_CREDENTIAL_SWEEP_INTERVAL", 30);
 		m_cred_sweep_tid = daemonCore->Register_Timer( sec_cred_sweep_interval, sec_cred_sweep_interval,
 								(TimerHandlercpp)&CredDaemon::sweep_timer_handler,
@@ -130,7 +130,7 @@ CredDaemon::reconfig()
 void
 CredDaemon::sweep_timer_handler( void )
 {
-	dprintf(D_ALWAYS, "ZKM: sweep_timer_handler()\n");
+	dprintf(D_FULLDEBUG, "CREDD: calling and resetting sweep_timer_handler()\n");
 	credmon_sweep_creds();
 	int sec_cred_sweep_interval = param_integer("SEC_CREDENTIAL_SWEEP_INTERVAL", 30);
 	daemonCore->Reset_Timer (m_cred_sweep_tid, sec_cred_sweep_interval, sec_cred_sweep_interval);
@@ -206,11 +206,10 @@ CredDaemon::refresh_all_handler( int, Stream* s)
 	}
 
 	r->encode();
-	dprintf(D_ALWAYS, "ZKM: sending ad:\n");
-	dPrintAd(D_ALWAYS, ad);
+	dprintf(D_SECURITY | D_FULLDEBUG, "CREDD: refresh_all sending response ad:\n");
+	dPrintAd(D_SECURITY | D_FULLDEBUG, ad);
 	putClassAd(r, ad);
 	r->end_of_message();
-	dprintf(D_ALWAYS, "ZKM: done!\n");
 }
 
 //-------------------------------------------------------------

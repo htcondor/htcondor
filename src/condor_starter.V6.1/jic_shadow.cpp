@@ -2508,7 +2508,7 @@ JICShadow::initUserCredentials() {
 				 "Job does not define %s; setting to false\n",
 				 ATTR_JOB_SEND_CREDENTIAL);
 	} else {
-		dprintf( D_ALWAYS, "Job has %s=%s\n", ATTR_JOB_SEND_CREDENTIAL,
+		dprintf( D_FULLDEBUG, "Job has %s=%s\n", ATTR_JOB_SEND_CREDENTIAL,
 				 send_credential ? "true" : "false" );
 	}
 
@@ -2519,7 +2519,7 @@ JICShadow::initUserCredentials() {
 
 	char* cred_dir = param("SEC_CREDENTIAL_DIRECTORY");
 	if(!cred_dir) {
-		dprintf(D_ALWAYS, "ERROR: got STORE_CRED but SEC_CREDENTIAL_DIRECTORY not defined!\n");
+		dprintf(D_ALWAYS, "ERROR: in initUserCredentials() but SEC_CREDENTIAL_DIRECTORY not defined!\n");
 		return false;
 	}
 
@@ -2537,7 +2537,7 @@ JICShadow::initUserCredentials() {
 	struct stat junk_buf;
 	int rc = stat(ccfilename, &junk_buf);
 	if (rc==0) {
-		dprintf(D_ALWAYS, "CERN: credentials for user %s domain %s already exist in %s\n",
+		dprintf(D_FULLDEBUG, "CREDMON: credentials for user %s domain %s already exist in %s\n",
 			user.c_str(), domain.c_str(), ccfilename );
 		// if the credential cache already exists, we don't even need
 		// to talk to the shadow.  just return success as quickly as
@@ -2548,13 +2548,13 @@ JICShadow::initUserCredentials() {
 		rc = refreshSandboxCredentials();
 		return rc;
 	}
-	dprintf(D_ALWAYS, "CERN: obtaining credentials for user %s domain %s from shadow %s\n",
+	dprintf(D_FULLDEBUG, "CREDMON: obtaining credentials for user %s domain %s from shadow %s\n",
 		 user.c_str(), domain.c_str(), shadow->addr() );
 
 	// get credential from shadow
 	MyString credential;
 	shadow->getUserCredential(user.c_str(), domain.c_str(), credential);
-	dprintf(D_ALWAYS, "CERN: got cred %s\n", credential.c_str());
+	dprintf(D_FULLDEBUG, "CREDMON: got cred %s\n", credential.c_str());
 
 	//
 	// We should refactor the below code and that of ZKM_UNIX_STORE_CRED as
@@ -2566,7 +2566,7 @@ JICShadow::initUserCredentials() {
 	char filename[PATH_MAX];
 	sprintf(tmpfilename, "%s%c%s.cred.tmp", cred_dir, DIR_DELIM_CHAR, user.c_str());
 	sprintf(filename, "%s%c%s.cred", cred_dir, DIR_DELIM_CHAR, user.c_str());
-	dprintf(D_ALWAYS, "ZKM: writing data to %s\n", tmpfilename);
+	dprintf(D_FULLDEBUG, "CREDMON: writing data to %s\n", tmpfilename);
 
 /*
 	// contents of credential are base64 encoded.  decode now just before
@@ -2581,7 +2581,7 @@ JICShadow::initUserCredentials() {
 	zkm_base64_decode(credential.c_str(), &rawbuf, &rawlen);
 
 	if (rawlen <= 0) {
-		dprintf(D_ALWAYS, "ZKM: failed to decode credential!\n");
+		dprintf(D_ALWAYS, "CREDMON: failed to decode credential into file (%s)!\n", filename);
 		return false;
 	}
 
@@ -2592,18 +2592,18 @@ JICShadow::initUserCredentials() {
 	free(rawbuf);
 
 	if (rc != SUCCESS) {
-		dprintf(D_ALWAYS, "ZKM: failed to write secure temp file %s\n", tmpfilename);
+		dprintf(D_ALWAYS, "CREDMON: failed to write secure temp file %s\n", tmpfilename);
 		return false;
 	}
 
 	// now move into place
-	dprintf(D_ALWAYS, "ZKM: renaming %s to %s\n", tmpfilename, filename);
+	dprintf(D_SECURITY | D_VERBOSE, "CREDMON: renaming %s to %s\n", tmpfilename, filename);
 	priv_state priv = set_root_priv();
 	rc = rename(tmpfilename, filename);
 	set_priv(priv);
 
 	if (rc == -1) {
-		dprintf(D_ALWAYS, "ZKM: failed to rename %s to %s\n", tmpfilename, filename);
+		dprintf(D_ALWAYS, "CREDMON: failed to rename %s to %s\n", tmpfilename, filename);
 
 		// should we rm tmpfilename ?
 		return false;
@@ -2612,7 +2612,7 @@ JICShadow::initUserCredentials() {
 	// now signal the credmon
 	rc = credmon_poll(user.c_str(), false, true);
 	if(!rc) {
-		dprintf(D_ALWAYS, "ZKM: credmon failed to produce .cc file!");
+		dprintf(D_ALWAYS, "CREDMON: credmon failed to produce .cc file!");
 		return false;
 	}
 

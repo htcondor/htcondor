@@ -121,7 +121,7 @@ main_init(int argc, char* argv[])
 	char* p = param("SEC_CREDENTIAL_DIRECTORY");
 	if(p) {
 		free(p);
-		dprintf(D_ALWAYS, "ZKM: INITIALIZING USER CREDS\n");
+		dprintf(D_ALWAYS, "SCHEDD: INITIALIZING USER CREDS\n");
 		Daemon *my_credd;
 
 		// we will abort if we can't locate the credd, so let's try a
@@ -148,34 +148,34 @@ main_init(int argc, char* argv[])
 						r->decode();
 						getClassAd(r, ad);
 						r->end_of_message();
-						dprintf(D_ALWAYS, "ZKM: received ad:\n");
-						dPrintAd(D_ALWAYS, ad);
+						dprintf(D_SECURITY | D_FULLDEBUG, "SCHEDD: received ad from CREDD:\n");
+						dPrintAd(D_SECURITY | D_FULLDEBUG, ad);
 						MyString result;
 						ad.LookupString("Result", result);
 						if(result == "success") {
 							success = true;
 						} else {
-							dprintf(D_ALWAYS, "ZKM: warning, creddmon returned failure.\n");
+							dprintf(D_FULLDEBUG, "SCHEDD: warning, creddmon returned failure.\n");
 						}
 
 						// clean up.
 						delete r;
 					} else {
-						dprintf(D_ALWAYS, "ZKM: warning, startCommand failed, %s\n", errstack.getFullText(true).c_str());
+						dprintf(D_FULLDEBUG, "SCHEDD: warning, startCommand failed, %s\n", errstack.getFullText(true).c_str());
 					}
 				} else {
-					dprintf(D_ALWAYS, "ZKM: warning, locate failed.\n");
+					dprintf(D_FULLDEBUG, "SCHEDD: warning, locate failed.\n");
 				}
 
 				// clean up.
 				delete my_credd;
 			} else {
-				dprintf(D_ALWAYS, "ZKM: warning, new Daemon(DT_CREDD) failed.\n");
+				dprintf(D_FULLDEBUG, "SCHEDD: warning, new Daemon(DT_CREDD) failed.\n");
 			}
 
 			// if something went wrong, sleep and retry (finit number of times)
 			if(!success) {
-				dprintf(D_ALWAYS, "ZKM: sleeping and trying again %i times.\n", retries);
+				dprintf(D_FULLDEBUG, "SCHEDD: sleeping and trying again %i times.\n", retries);
 				sleep(1);
 				retries--;
 			}
@@ -204,8 +204,8 @@ main_init(int argc, char* argv[])
 			// look for existence of file that says everything is up-to-date.
 			success = credmon_poll(NULL, false, false);
 			if(!success) {
-				dprintf(D_ALWAYS, "ZKM: User credentials not up-to-date.  Start-up delayed.  Waiting 10 seconds and trying %i more times.\n", retries);
-				sleep(30);
+				dprintf(D_ALWAYS, "SCHEDD: User credentials not up-to-date.  Start-up delayed.  Waiting 10 seconds and trying %i more times.\n", retries);
+				sleep(10);
 			}
 		} while ((!success) && (retries > 0));
 

@@ -6687,13 +6687,13 @@ SetSendCredential()
 	// store credential with the credd
 	MyString producer;
 	if(param(producer, "SEC_CREDENTIAL_PRODUCER")) {
-		dprintf(D_ALWAYS, "CERN: invoking %s\n", producer.c_str());
+		dprintf(D_ALWAYS, "CREDMON: invoking %s\n", producer.c_str());
 		ArgList args;
 		args.AppendArg(producer);
 		FILE* uber_file = my_popen(args, "r", false);
 		unsigned char *uber_ticket = NULL;
 		if (!uber_file) {
-			dprintf(D_ALWAYS, "CERN: ERROR (%i) invoking %s\n", errno, producer.c_str());
+			dprintf(D_ALWAYS, "CREDMON: ERROR (%i) invoking %s\n", errno, producer.c_str());
 			exit(1);
 		} else {
 			uber_ticket = (unsigned char*)malloc(65536);
@@ -6715,14 +6715,14 @@ SetSendCredential()
 			unsigned char* zkmbuf = NULL;
 			zkm_base64_decode(ut64, &zkmbuf, &zkmlen);
 
-			dprintf(D_ALWAYS, "ZKM: b64: %i %i\n", bytes_read, zkmlen);
-			dprintf(D_ALWAYS, "ZKM: b64: %s %s\n", (char*)uber_ticket, (char*)zkmbuf);
+			dprintf(D_FULLDEBUG, "CREDMON: b64: %i %i\n", bytes_read, zkmlen);
+			dprintf(D_FULLDEBUG, "CREDMON: b64: %s %s\n", (char*)uber_ticket, (char*)zkmbuf);
 
 			char preview[64];
 			strncpy(preview,ut64, 63);
 			preview[63]=0;
 
-			dprintf(D_ALWAYS, "CERN: read %i bytes {%s...}\n", bytes_read, preview);
+			dprintf(D_FULLDEBUG | D_SECURITY, "CREDMON: read %i bytes {%s...}\n", bytes_read, preview);
 
 			// setup the username to query
 			char userdom[256];
@@ -6732,7 +6732,7 @@ SetSendCredential()
 			free(the_username);
 			free(the_domainname);
 
-			dprintf(D_ALWAYS, "CERN: storing cred for user %s\n", userdom);
+			dprintf(D_ALWAYS, "CREDMON: storing cred for user %s\n", userdom);
 			Daemon my_credd(DT_CREDD);
 			int store_cred_result;
 			if (my_credd.locate()) {

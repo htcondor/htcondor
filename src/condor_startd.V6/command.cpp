@@ -522,10 +522,10 @@ countres:
 		}
 	}
 	if (ResCount == 0) {
-		dprintf(D_ALWAYS, "ZKM: user %s no longer running jobs, mark cred for sweeping.\n", curuser.c_str());
+		dprintf(D_FULLDEBUG, "CREDMON: user %s no longer running jobs, mark cred for sweeping.\n", curuser.c_str());
 		credmon_mark_creds_for_sweeping(curuser.c_str());
 	} else {
-		dprintf(D_ALWAYS, "ZKM: user %s still running %i jobs\n", curuser.c_str(), ResCount);
+		dprintf(D_FULLDEBUG, "CREDMON: user %s still running %i jobs\n", curuser.c_str(), ResCount);
 	}
 
 	return TRUE;
