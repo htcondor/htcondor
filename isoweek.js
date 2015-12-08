@@ -40,7 +40,7 @@ Date.parseMore = function(str) {
 	var week = Number(fields[2]);
 
 	// Based on http://stackoverflow.com/a/19375264/16672
-	var d = new Date(year, 0, 1);
+	var d = new Date(Date.UTC(year, 0, 1));
 	var week_in_ms = 1000*60*60*24*7;
 	d.setDate(d.getDate() + 4 - (d.getDay() || 7));
 	d.setTime(d.getTime() + week_in_ms * (week + (year == d.getFullYear() ? -1 : 0 )));
