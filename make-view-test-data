@@ -85,7 +85,7 @@ sub create_submitter_file {
 	my $filename ='';
 	my $fh;
 	for(; $now < $end; $now += $step) {
-		my $newfile = $basename."".$datefunc->($now);
+		my $newfile = $basename."".$datefunc->($now).".json";
 		if($newfile ne $filename) {
 			$filename = $newfile;
 			open $fh, '>', $filename or die "unable to open(>$filename): $!";
@@ -111,16 +111,16 @@ sub create_submitter_files {
 	create_submitter_file($start_monthly, $day/4, $end, "data/submitter.monthly.", \&epoch_to_monthly);
 	create_submitter_file($start_weekly, $HOUR*2, $end, "data/submitter.weekly.", \&epoch_to_weekly);
 	create_submitter_file($start_daily, $MINUTE*15, $end, "data/submitter.daily.", \&epoch_to_daily);
-	open my $fh, '>', "data/submitter.oldest" or die "Unable to open >submitter.oldest: $!";
+	open my $fh, '>', "data/submitter.oldest.json" or die "Unable to open >submitter.oldest: $!";
 
 	my $oldest_daily = epoch_to_daily($start_daily);
 	my $oldest_weekly = epoch_to_weekly($start_weekly);
 	my $oldest_monthly = epoch_to_monthly($start_monthly);
 	print $fh <<END;
-[
-{ "interval": "monthly", "oldest": "$oldest_monthly" },
-{ "interval": "weekly", "oldest": "$oldest_weekly" },
-{ "interval": "daily", "oldest": "$oldest_daily" }
+{
+"monthly": "$oldest_monthly",
+"weekly": "$oldest_weekly",
+"daily": "$oldest_daily"
 ]
 END
 	close $fh;
