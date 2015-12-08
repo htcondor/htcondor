@@ -30,3 +30,20 @@ Date.prototype.getISOWeekDate = function ()  {
 	var year = this.getWeekYear();
 	return year+"-W"+week;
 }
+
+// Identical to "new Date(str)", but accepts ISO 8601 week dates (eg "2015-W04").
+// Week dates will return midnight on the Monday morning of that week. 
+Date.parseMore = function(str) {
+	var fields = /^(\d\d\d\d)-W(\d\d)$/.exec(str);
+	if(fields.length !== 3) { return new Date(Date.parse(str)); }
+	var year = Number(fields[1]);
+	var week = Number(fields[2]);
+
+	// Based on http://stackoverflow.com/a/19375264/16672
+	var d = new Date(year, 0, 1);
+	var week_in_ms = 1000*60*60*24*7;
+	d.setDate(d.getDate() + 4 - (d.getDay() || 7));
+	d.setTime(d.getTime() + week_in_ms * (week + (year == d.getFullYear() ? -1 : 0 )));
+	d.setDate(d.getDate() - 3);
+	return d;
+}
