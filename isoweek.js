@@ -35,7 +35,7 @@ Date.prototype.getISOWeekDate = function ()  {
 // Week dates will return midnight on the Monday morning of that week. 
 Date.parseMore = function(str) {
 	var fields = /^(\d\d\d\d)-W(\d\d)$/.exec(str);
-	if(fields.length !== 3) { return new Date(Date.parse(str)); }
+	if((!fields) || fields.length !== 3) { return new Date(Date.parse(str)); }
 	var year = Number(fields[1]);
 	var week = Number(fields[2]);
 
