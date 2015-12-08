@@ -20,7 +20,9 @@ COMPLEX USAGE:
 	<script>
 	new HTCondorView({
 			dst_id: "myexample",
-			data_url: "submitters.json",
+			data_url: "submitters..json",
+			date_start: new Date("2015-01-01T00:00:00"),
+			date_end: new Date("2016-01-01T00:00:00"),
 			graph_query: "order=Date&pivot=Date;JobStatus;Count&chart=stacked",
 			title: "Total Jobs",
 			table_query: "order=Date&pivot=Name;JobStatus;avg(Count)",
@@ -31,7 +33,11 @@ COMPLEX USAGE:
 
 dst_id - The chart will be placed inside the <div> or other element with this id.  Previous contents will be destroyed.
 
-data_url - URL, possibly relative, to the data to be loaded.
+data_url - URL, possibly relative, to the data to be loaded.  If the URL contains "..", AND date_start is present, the date (ex "2016-04") or the word "oldest" will be inserted into the first ".." in the URL as necessary to satisfy the date range.  Otherwise the URL is loaded exactly as is.
+
+date_start - Optional. Date object.  The start of the range to download and display. If present, the data_url MUST contain "..".
+
+date_end - Optional. Date object. If present, date_start is mandatory.  The end of the range to download and display.  If date_start is specified, but not date_end, date_end is assumed to be "now" (ie "new Date()".
 
 graph_query - Afterquery query, but not including the title or url entries.  This is the chart to display.
 
@@ -70,7 +76,6 @@ HTCondorView.prototype.initialize_from_object = function(options) {
 
 
 	var id = options.dst_id;
-	var url = options.data_url;
 	var graph_args = options.graph_query;
 	var table_args = options.table_query;
 	var select_tuple = options.select_tuple;
@@ -81,7 +86,7 @@ HTCondorView.prototype.initialize_from_object = function(options) {
 
 	this.original_title = options.title;
 	this.title = options.title;
-	this.url = url;
+	this.url = options.data_url;
 
 	var container = $('#'+id);
 	if(container.length === 0) {
