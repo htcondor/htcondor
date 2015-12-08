@@ -1,0 +1,17 @@
+# This is testing a simple maxidle case.
+Config job_dagman_maxidle-C.config
+Job A0 job_dagman_maxidle-C-node.cmd
+Job A1 job_dagman_maxidle-C-node.cmd
+Job A2 job_dagman_maxidle-C-node.cmd
+Job A3 job_dagman_maxidle-C-node.cmd
+Job A4 job_dagman_maxidle-C-node.cmd
+Job A5 job_dagman_maxidle-C-node.cmd
+Job A6 job_dagman_maxidle-C-node.cmd
+Job A7 job_dagman_maxidle-C-node.cmd
+Job A8 job_dagman_maxidle-C-node.cmd
+Job A9 job_dagman_maxidle-C-node.cmd
+Job A10 job_dagman_maxidle-C-node.cmd
+Job A11 job_dagman_maxidle-C-node.cmd
+Job A12 job_dagman_maxidle-C-node.cmd
+Job A13 job_dagman_maxidle-C-node.cmd
+Job A14 job_dagman_maxidle-C-node.cmd

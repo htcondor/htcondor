@@ -12871,6 +12871,7 @@ Scheduler::shutdown_fast()
 		CronJobMgr->Shutdown( true );
 	}
 
+	DestroyJobQueue();
 		// Since this is just sending a bunch of UDP updates, we can
 		// still invalidate our classads, even on a fast shutdown.
 	invalidate_ads();
@@ -13043,6 +13044,7 @@ Scheduler::sendReschedule()
 
 	classy_counted_ptr<Daemon> negotiator = new Daemon(DT_NEGOTIATOR);
 	classy_counted_ptr<DCCommandOnlyMsg> msg = new DCCommandOnlyMsg(RESCHEDULE);
+	negotiator->locate(Daemon::LOCATE_FOR_LOOKUP);
 
 	Stream::stream_type st = negotiator->hasUDPCommandPort() ? Stream::safe_sock : Stream::reli_sock;
 	msg->setStreamType(st);

@@ -2790,11 +2790,17 @@ tags=gridmanager
 
 # The STARTD_ATTRS entry allows you to have the startd advertise arbitrary attributes from the config file into it's ClassAd
 [STARTD_ATTRS]
-default=COLLECTOR_HOST_STRING
+default=
+friendly_name=Attibutes from config file to insert into STARTD ads
 review=?
+
 # support the "$$(COLLECTOR_HOST)" syntax in the submit file
 [COLLECTOR_HOST_STRING]
 default="$(COLLECTOR_HOST)"
+review=?
+[SYSTEM_STARTD_ATTRS]
+default=COLLECTOR_HOST_STRING DedicatedScheduler
+friendly_name=configuration attibutes that HTCondor needs to insert into STARTD ads
 review=?
 
 [UNICORE_GAHP]
@@ -3153,12 +3159,21 @@ friendly_name=Max Claim Alives Missed
 review=?
 tags=startd,startd_main
 
-[STARTD_JOB_EXPRS]
+[SYSTEM_STARTD_JOB_ATTRS]
 default=ImageSize, ExecutableSize, JobUniverse, NiceUser
 type=string
 reconfig=true
-customization=seldom
-friendly_name=Startd Job Exprs
+customization=never
+friendly_name=Job Attributes that must be copied into the STARTD ad for HTCondor to work correctly
+review=?
+tags=startd,startd_main
+
+[STARTD_JOB_ATTRS]
+default=
+type=string
+reconfig=true
+customization=normal
+friendly_name=Job Attributes to copy into the STARTD ad
 review=?
 tags=startd,startd_main
 
@@ -3166,8 +3181,17 @@ tags=startd,startd_main
 default=
 type=string
 reconfig=true
-customization=seldom
+customization=normal
 friendly_name=Startd Slot Attrs
+review=?
+tags=startd,startd_main
+
+[SYSTEM_STARTD_SLOT_ATTRS]
+default=
+type=string
+reconfig=true
+customization=never
+friendly_name=Startd Slot Attrs needed by HTCondor
 review=?
 tags=startd,startd_main
 
@@ -3176,25 +3200,7 @@ default=
 type=string
 reconfig=true
 customization=seldom
-friendly_name=Startd Slot Exprs
-review=?
-tags=startd,startd_main
-
-[STARTD_VM_ATTRS]
-default=
-type=string
-reconfig=true
-customization=seldom
-friendly_name=Startd Vm Attrs
-review=?
-tags=startd,startd_main
-
-[STARTD_VM_EXPRS]
-default=
-type=string
-reconfig=true
-customization=seldom
-friendly_name=Startd Vm Exprs
+friendly_name=Obsolete name for startd Slot Attrs
 review=?
 tags=startd,startd_main
 
@@ -3570,12 +3576,21 @@ friendly_name=Log On Nfs Is Error
 review=?
 tags=submit,submit
 
+[SUBMIT_ATTRS]
+default=
+type=string
+reconfig=true
+customization=seldom
+friendly_name=Submit Attributes
+review=?
+tags=submit,submit
+
 [SUBMIT_EXPRS]
 default=
 type=string
 reconfig=true
 customization=seldom
-friendly_name=Submit Exprs
+friendly_name=Obsolete name for submit Attributes
 review=?
 tags=submit,submit
 
@@ -8175,7 +8190,7 @@ default : @end
         ifthenelse(TotalLoadAvg < $(DETECTED_CORES), TotalLoadAvg, $(DETECTED_CORES)) \
         * 100) / 100.0, \
      0)
-  STARTD_EXPRS = $(STARTD_EXPRS) CpusUsage
+  STARTD_ATTRS = $(STARTD_ATTRS) CpusUsage
   #
   # If the startd sees the number of CPU cores used by the job exceed the
   # number of cores in the slot by more than 0.8, preempt the job

@@ -2868,7 +2868,7 @@ which use DaemonCore).
   section~\ref{sec:HTCondor-Subsystem-Names}.
 
   \MacroNI{<SUBSYS>\_EXPRS} is a historic setting that functions identically to
-  \MacroNI{<SUBSYS>\_ATTRS}. Use \MacroNI{<SUBSYS>\_ATTRS}.
+  \MacroNI{<SUBSYS>\_ATTRS}. It may be removed in the future, so use \MacroNI{<SUBSYS>\_ATTRS}.
 
   \Note The \Condor{kbdd} does not send
   ClassAds now, so this entry does not affect it.  The
@@ -2876,7 +2876,7 @@ which use DaemonCore).
   \Condor{collector} do send ClassAds, so those would be valid
   subsystems to set this entry for.
   
-  \MacroNI{SUBMIT\_EXPRS} not part of the \MacroNI{<SUBSYS>\_EXPRS}, it is
+  \MacroNI{SUBMIT\_ATTRS} not part of the \MacroNI{<SUBSYS>\_ATTRS}, it is
   documented in section~\ref{sec:Submit-Config-File-Entries}
 
   Because of the different syntax of the configuration
@@ -4964,15 +4964,18 @@ WANT_HOLD_REASON = \
   before bump testing begins. 
   The default is 15 minutes. 
 
-\label{param:StartdJobExprs}
-\item[\Macro{STARTD\_JOB\_EXPRS}]
+\label{param:StartdJobAttrs}
+\item[\Macro{STARTD\_JOB\_ATTRS}]
   When the machine is claimed by a remote user,
   the \Condor{startd} can also advertise
   arbitrary attributes from the job ClassAd in the machine ClassAd.
   List the attribute names to be advertised.  \Note Since
   these are already ClassAd expressions, do not do anything
-  unusual with strings.   
-  This setting defaults to ``JobUniverse''.
+  unusual with strings.
+  By default, the job ClassAd attributes JobUniverse, NiceUser, ExecutableSize and ImageSize
+  are advertised into the machine ClassAd.
+  This setting was formerly called \MacroNI{STARTD\_JOB\_EXPRS}.
+  The older name is still supported, but support for the older name may be removed in a future version of HTCondor.
 
 \label{param:StartdAttrs}
 \item[\Macro{STARTD\_ATTRS}]
@@ -8109,8 +8112,8 @@ do not specify their own with:
   an obstacle to scalability.
   The default value is True.
 
-\label{param:SubmitExprs}
-\item[\Macro{SUBMIT\_EXPRS}]
+\label{param:SubmitAttrs}
+\item[\Macro{SUBMIT\_ATTRS}]
   A comma-separated and/or space-separated 
   list of ClassAd attribute names for which the attribute and value will
   be inserted into all the job ClassAds that \Condor{submit} creates.  
@@ -8118,14 +8121,16 @@ do not specify their own with:
   it is like the \verb@"+"@ syntax in a submit description file.
   Attributes defined in the submit description file with \verb@"+"@ will
   override attributes defined in the configuration file with
-  \MacroNI{SUBMIT\_EXPRS}. 
+  \MacroNI{SUBMIT\_ATTRS}. 
   Note that adding an attribute to a job's ClassAd will \emph{not} function
   as a method for specifying default values of submit description file commands
   forgotten in a job's submit description file.
   The command in the submit description file results in actions by
   \Condor{submit},
-  while the use of \MacroNI{SUBMIT\_EXPRS} adds a job ClassAd attribute
+  while the use of \MacroNI{SUBMIT\_ATTRS} adds a job ClassAd attribute
   at a later point in time.
+  \MacroNI{SUBMIT\_EXPRS} is a historic setting that functions identically to
+  \MacroNI{SUBMIT\_ATTRS}. It may be removed in the future, so use \MacroNI{SUBMIT\_ATTRS}.
 
 \label{param:LogOnNfsIsError}
 \item[\Macro{LOG\_ON\_NFS\_IS\_ERROR}]
@@ -10292,12 +10297,16 @@ in section~\ref{sec:DAG-configuration}.
 \label{param:DAGManUserLogScanInterval}
 \item[\Macro{DAGMAN\_USER\_LOG\_SCAN\_INTERVAL}]
   An integer value representing the number of seconds that 
-  \Condor{dagman} waits between checking job log files for status updates.
+  \Condor{dagman} waits between checking the workflow log file for
+  status updates.
   Setting this value lower than the default increases the CPU
   time \Condor{dagman} spends checking files, perhaps fruitlessly, but
   increases responsiveness to nodes completing or failing.
   The legal range of values is 1 to INT\_MAX.
   If not defined, it defaults to 5 seconds.
+  (As of version 8.4.2, the default may be automatically decreased if
+  \Macro{DAGMAN\_MAX\_JOBS\_IDLE} is set to a small value.  If so,
+  this will be noted in the \File{dagman.out} file.)
 
 \label{param:DAGManDebugCacheEnable}
 \item[\Macro{DAGMAN\_DEBUG\_CACHE\_ENABLE}]
@@ -10329,6 +10338,9 @@ in section~\ref{sec:DAG-configuration}.
   If defined with a value less than 1, the  value 1 will be used.
   If defined with a value greater than 1000, the value 1000 will be used.
   If not defined, it defaults to 5.
+  (As of version 8.4.2, the default may be automatically decreased if
+  \Macro{DAGMAN\_MAX\_JOBS\_IDLE} is set to a small value.  If so,
+  this will be noted in the \File{dagman.out} file.)
 
 \label{param:DAGManMaxSubmitAttempts}
 \item[\Macro{DAGMAN\_MAX\_SUBMIT\_ATTEMPTS}]

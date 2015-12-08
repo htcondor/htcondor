@@ -1321,6 +1321,7 @@ processCommandLineArguments (int argc, char *argv[])
 			}
 			sprintf (constraint, "%s == \"%s\"", ATTR_NAME, daemonname);
 			scheddQuery.addORConstraint (constraint);
+			scheddQuery.setLocationLookup(daemonname);
 			Q.addSchedd(daemonname);
 
 #ifdef HAVE_EXT_POSTGRESQL

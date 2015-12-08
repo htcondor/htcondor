@@ -389,6 +389,33 @@ addORConstraint (const char *value)
 }
 
 
+// If this query is a DNS style, "just give me the ad so I can
+// look up the address of the daemon", project out only those
+// attributes needed for lookup.  This speeds up lookups
+// for daemons like the schedd that may have thousands of
+// superflous statistics in the ad.
+bool
+CondorQuery::setLocationLookup(const std::string &location)
+{
+	extraAttrs.InsertAttr(ATTR_LOCATION_QUERY, location);
+
+	std::vector<std::string> attrs; attrs.reserve(7);
+	attrs.push_back(ATTR_VERSION);
+	attrs.push_back(ATTR_PLATFORM);
+	attrs.push_back(ATTR_MY_ADDRESS);
+	attrs.push_back(ATTR_ADDRESS_V1);
+	attrs.push_back(ATTR_NAME);
+	attrs.push_back(ATTR_MACHINE);
+	if (queryType == SCHEDD_AD)
+	{
+		attrs.push_back(ATTR_SCHEDD_IP_ADDR);
+	}
+
+	setDesiredAttrs(attrs);
+	return true;
+}
+
+
 // fetch all ads from the collector that satisfy the constraints
 QueryResult CondorQuery::
 fetchAds (ClassAdList &adList, const char *poolName, CondorError* errstack)
@@ -633,6 +660,27 @@ CondorQuery::setDesiredAttrs(char const * const *attrs)
 	MyString val;
 	::join_args(attrs,&val);
 	extraAttrs.Assign(ATTR_PROJECTION,val.Value());
+}
+
+void
+CondorQuery::setDesiredAttrs(const std::vector<std::string> &attrs)
+{
+	std::stringstream ss;
+	std::vector<std::string>::const_iterator it=attrs.begin();
+	while (true)
+	{
+		ss << *it;
+		it++;
+		if (it != attrs.end())
+		{
+			ss << " ";
+		}
+		else
+		{
+			break;
+		}
+	}
+	extraAttrs.InsertAttr(ATTR_PROJECTION, ss.str());
 }
 
 void

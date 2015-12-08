@@ -114,6 +114,7 @@ void EC2Resource::Reconfig()
 {
 	BaseResource::Reconfig();
 	gahp->setTimeout( EC2Job::gahpCallTimeout );
+	status_gahp->setTimeout( EC2Job::gahpCallTimeout );
 }
 
 const char *EC2Resource::ResourceType()

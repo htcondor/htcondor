@@ -37,7 +37,7 @@ print "$host\n";
 
 my $firstappend_condor_config = '
 	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
-	STARTD_JOB_EXPRS = MemoryUsage, ResidentSetSize_RAW, ResidentSetSize
+	STARTD_JOB_ATTRS = MemoryUsage, ResidentSetSize_RAW, ResidentSetSize
 	ALL_DEBUG = 
 	NEGOTIATOR_INTERVAL = 5
 	STARTER_UPDATE_INTERVAL = 5

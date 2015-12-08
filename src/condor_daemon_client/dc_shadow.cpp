@@ -96,7 +96,7 @@ DCShadow::initFromClassAd( ClassAd* ad )
 
 
 bool
-DCShadow::locate( void )
+DCShadow::locate( LocateType /*method=LOCATE_FULL*/ )
 {
 	return is_initialized;
 }

@@ -231,6 +231,7 @@ BuildRequires: bind-utils
 BuildRequires: m4
 #BuildRequires: autoconf
 BuildRequires: libX11-devel
+BuildRequires: libXScrnSaver-devel
 BuildRequires: /usr/include/curl/curl.h
 BuildRequires: /usr/include/expat.h
 BuildRequires: openldap-devel
@@ -1124,6 +1125,7 @@ rm -rf %{buildroot}
 %files all
 #################
 %files
+%exclude %_sbindir/openstack_gahp
 %defattr(-,root,root,-)
 %doc LICENSE-2.0.txt examples
 %dir %_sysconfdir/condor/

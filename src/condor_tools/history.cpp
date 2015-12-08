@@ -494,7 +494,7 @@ main(int argc, char* argv[])
 			// jobqueuebirthdate
 		Daemon schedd( DT_SCHEDD, 0, 0 );
 
-        if ( schedd.locate() ) {
+        if ( schedd.locate(Daemon::LOCATE_FULL) ) {
 			char *scheddname = quillName;	
 			if (scheddname == NULL) {
 				// none set explictly, look it up in the daemon ad
@@ -924,7 +924,7 @@ static void readHistoryRemote(classad::ExprTree *constraintExpr)
 	ad.InsertAttr(ATTR_NUM_MATCHES, specifiedMatch <= 0 ? -1 : specifiedMatch);
 
 	DCSchedd schedd(g_name.size() ? g_name.c_str() : NULL, g_pool.size() ? g_pool.c_str() : NULL);
-	if (!schedd.locate()) {
+	if (!schedd.locate(Daemon::LOCATE_FOR_LOOKUP)) {
 		fprintf(stderr, "Unable to locate remote schedd (name=%s, pool=%s).\n", g_name.c_str(), g_pool.c_str());
 		exit(1);
 	}

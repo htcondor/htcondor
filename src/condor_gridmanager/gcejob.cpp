@@ -84,6 +84,12 @@ void GCEJobInit()
 
 void GCEJobReconfig()
 {
+    int gct = param_integer( "GRIDMANAGER_GAHP_CALL_TIMEOUT", 10 * 60 );
+	GCEJob::setGahpCallTimeout( gct );
+
+	int cfrc = param_integer("GRIDMANAGER_CONNECT_FAILURE_RETRY_COUNT", 3);
+	GCEJob::setConnectFailureRetry( cfrc );
+
 	// Tell all the resource objects to deal with their new config values
 	GCEResource *next_resource;
 
@@ -121,7 +127,6 @@ int GCEJob::gahpCallTimeout = 600;
 int GCEJob::submitInterval = 300;
 int GCEJob::maxConnectFailures = 3;
 int GCEJob::funcRetryInterval = 15;
-int GCEJob::pendingWaitTime = 15;
 int GCEJob::maxRetryTimes = 3;
 
 GCEJob::GCEJob( ClassAd *classad ) :

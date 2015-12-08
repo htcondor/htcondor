@@ -1280,7 +1280,7 @@ benchmarks_kflops_job_load = 1.0
 #CONSOLE_DEVICES = mouse, console
 
 
-##  The STARTD_ATTRS (and legacy STARTD_EXPRS) entry allows you to
+##  The STARTD_ATTRS (formerly STARTD_EXPRS) entry allows you to
 ##  have the startd advertise arbitrary attributes from the config
 ##  file in its ClassAd.  Give the comma-separated list of entries
 ##  from the config file you want in the startd ClassAd.
@@ -1327,21 +1327,21 @@ benchmarks_kflops_job_load = 1.0
 ## slot2 - favorite_color = "green"; favorite_season = "spring"
 ## slot3 - favorite_color = "blue"; favorite_season = "summer"
 ##
-##  Finally, the recommended default value for this setting, is to
+##  Finally, there is an automatic mechanism to
 ##  publish the COLLECTOR_HOST setting as a string.  This can be
-##  useful using the "$$(COLLECTOR_HOST)" syntax in the submit file
+##  useful using the "$$(COLLECTOR_HOST_STRING)" syntax in the submit file
 ##  for jobs to know (for example, via their environment) what pool
-##  they're running in.
-COLLECTOR_HOST_STRING = "$(COLLECTOR_HOST)"
-STARTD_ATTRS = COLLECTOR_HOST_STRING
+##  they're running in.  You can change the value published in the
+##  COLLECTOR_HOST_STRING attribute by changing this value,
+##  (this must be a value classad string value, so don't forget the quotes!)
+#COLLECTOR_HOST_STRING = "$(COLLECTOR_HOST)"
 
 ##  When the startd is claimed by a remote user, it can also advertise
-##  arbitrary attributes from the ClassAd of the job its working on.
+##  arbitrary attributes from the ClassAd of the job it is working on.
 ##  Just list the attribute names you want advertised.  
-##  Note: since this is already a ClassAd, you don't have to do
-##  anything funny with strings, etc.  This feature can be turned off
-##  by commenting out this setting (there is no default).
-STARTD_JOB_EXPRS = ImageSize, ExecutableSize, JobUniverse, NiceUser
+##  Note: since this is already a ClassAd, you don't have to do quoting.
+##  Note2: the job attributes ImageSize, ExecutableSize, JobUniverse, NiceUser are automatically advertised.
+#STARTD_JOB_ATTRS = 
 
 ##  If you want to "lie" to Condor about how many CPUs your machine
 ##  has, you can use this setting to override Condor's automatic
@@ -1735,13 +1735,13 @@ WINDOWS_SOFTKILL = $(SBIN)/condor_softkill
 
 ##  If you want condor_submit to automatically append expressions to
 ##  the job ClassAds it creates, you can uncomment and define the
-##  SUBMIT_EXPRS setting.  It works just like the STARTD_EXPRS
+##  SUBMIT_ATTRS (formerly SUBMIT_EXPRS) setting.  It works just like the STARTD_ATTRS
 ##  described above with respect to ClassAd vs. config file syntax,
 ##  strings, etc.  One common use would be to have the full hostname
 ##  of the machine where a job was submitted placed in the job
 ##  ClassAd.  You would do this by uncommenting the following lines: 
-#MACHINE = "$(FULL_HOSTNAME)"
-#SUBMIT_EXPRS = MACHINE
+#Machine = "$(FULL_HOSTNAME)"
+#SUBMIT_ATTRS = Machine
 
 ## Condor keeps a buffer of recently-used data for each file an
 ## application opens.  This macro specifies the default maximum number

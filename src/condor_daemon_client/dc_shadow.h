@@ -59,7 +59,7 @@ public:
 			check that the ClassAd was valid and we have the info we
 			need.  
 			@return true if we have the info, false if not */
-	bool locate( void );
+	virtual bool locate( LocateType method=LOCATE_FULL );
 
 		/** Send a ClassAd update with information about a job the
 			shadow is running.

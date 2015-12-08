@@ -245,7 +245,7 @@ ALLOW_READ_STARTD     = $(ALLOW_READ)
 ##  obvious security implications, so only grant this kind of
 ##  permission for custom attributes that you define for your own use
 ##  at your pool (custom attributes about your machines that are
-##  published with the STARTD_EXPRS setting, for example).
+##  published with the STARTD_ATTRS setting, for example).
 #SETTABLE_ATTRS_OWNER = your_custom_attribute, another_custom_attr
 
 ##  You can also define daemon-specific versions of each of these
@@ -624,7 +624,7 @@ RunBenchmarks = False
 ##  on all tty and pty devices.
 #STARTD_HAS_BAD_UTMP = False
 
-##  The STARTD_EXPRS entry allows you to have the startd advertise
+##  The STARTD_ATTRS entry allows you to have the startd advertise
 ##  arbitrary expressions from the config file in its ClassAd.  Give
 ##  the comma-separated list of entries from the config file you want
 ##  in the startd ClassAd.
@@ -637,22 +637,19 @@ RunBenchmarks = False
 ##  benchmarks, and how often it sends updates to the central manager,
 ##  you'd have to define the following helper macro:
 #MY_CONSOLE_DEVICES = "$(CONSOLE_DEVICES)"
-##  Note: this must come before you define STARTD_EXPRS because macros
+##  Note: this must come before you define STARTD_ATTRS because macros
 ##  must be defined before you use them in other macros or
 ##  expressions.
-##  Then, you'd set the STARTD_EXPRS setting to this:
-#STARTD_EXPRS = MY_CONSOLE_DEVICES, RunBenchmarks, UPDATE_INTERVAL
-
-COLLECTOR_HOST_STRING = "$(COLLECTOR_HOST)" 
-STARTD_EXPRS = COLLECTOR_HOST_STRING 
+##  Then, you'd set the STARTD_ATTRS setting to this:
+#STARTD_ATTRS = MY_CONSOLE_DEVICES, RunBenchmarks, UPDATE_INTERVAL
 
 ##  When the startd is claimed by a remote user, it can also advertise
 ##  arbitrary attributes from the ClassAd of the job its working on.
 ##  Just list the attribute names you want advertised.  
 ##  Note: since this is already a ClassAd, you don't have to do
-##  anything funny with strings, etc.  This feature can be turned off
-##  by commenting out this setting (there is no default).
-STARTD_JOB_EXPRS = ImageSize, ExecutableSize, JobUniverse, NiceUser
+##  anything funny with strings, etc.
+##  The job attributes ImageSize, ExecutableSize, JobUniverse, NiceUser are automatic
+#STARTD_JOB_ATTRS = 
 
 ##  If you want to "lie" to Hawkeye about how many CPUs your machine
 ##  has, you can use this setting to override Hawkeye's automatic
