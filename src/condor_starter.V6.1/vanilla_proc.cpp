@@ -699,6 +699,7 @@ bool
 VanillaProc::PublishUpdateAd( ClassAd* ad )
 {
 	dprintf( D_FULLDEBUG, "In VanillaProc::PublishUpdateAd()\n" );
+	static int max_rss = 0;
 
 	ProcFamilyUsage* usage;
 	ProcFamilyUsage cur_usage;
@@ -722,7 +723,11 @@ VanillaProc::PublishUpdateAd( ClassAd* ad )
 	ad->Assign(ATTR_JOB_REMOTE_USER_CPU, (double)usage->user_cpu_time);
 
 	ad->Assign(ATTR_IMAGE_SIZE, usage->max_image_size);
-	ad->Assign(ATTR_RESIDENT_SET_SIZE, usage->total_resident_set_size);
+
+	if (usage->total_resident_set_size > max_rss) {
+		max_rss = usage->total_resident_set_size;
+	}
+	ad->Assign(ATTR_RESIDENT_SET_SIZE, max_rss);
 
 	std::string memory_usage;
 	if (param(memory_usage, "MEMORY_USAGE_METRIC", "((ResidentSetSize+1023)/1024)")) {
