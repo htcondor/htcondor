@@ -42,7 +42,7 @@ The details of each version are described below.
 \begin{itemize}
 
 \item Fixed a bug that prevented running more than 100 slots on a single
-startd with partitionable slots.
+\Condor{startd} with partitionable slots.
 \Ticket{5398}
 
 \item Fixed a bug which caused \SubmitCmdNI{ec2\_iam\_profile\_name}
@@ -56,6 +56,10 @@ late to apply to the first Queue statement in a \Condor{submit} file.
 \item Added SELinux type enforcement rules to allow the \Condor{schedd}
 to use \Prog{sendmail}.
 \Ticket{5418}
+
+\item Fixed a bug where HTCondor service would not start if the
+\File{condor\_master.pid} file was empty.
+\Ticket{5427}
 
 \end{itemize}
 
