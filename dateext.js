@@ -31,6 +31,20 @@ Date.prototype.getISOWeekDate = function ()  {
 	return year+"-W"+week;
 }
 
+Date.prototype.getISOYearMonth = function() {
+	var year = this.getFullYear();
+	var month = this.getMonth()+1;
+	month = ("0"+month).slice(-2); // Zero pad.
+	return year+"-"+month;
+}
+
+Date.prototype.getISOYearMonthDay = function() {
+	var yearmonth = this.getISOYearMonth();
+	var day = this.getDate();
+	day = ("0"+day).slice(-2); // Zero pad.
+	return yearmonth+"-"+day;
+}
+
 // Identical to "new Date(str)", but accepts ISO 8601 week dates (eg "2015-W04").
 // Week dates will return midnight on the Monday morning of that week. 
 Date.parseMore = function(str) {
