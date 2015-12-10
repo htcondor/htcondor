@@ -699,7 +699,7 @@ bool
 VanillaProc::PublishUpdateAd( ClassAd* ad )
 {
 	dprintf( D_FULLDEBUG, "In VanillaProc::PublishUpdateAd()\n" );
-	static int max_rss = 0;
+	static unsigned int max_rss = 0;
 
 	ProcFamilyUsage* usage;
 	ProcFamilyUsage cur_usage;
