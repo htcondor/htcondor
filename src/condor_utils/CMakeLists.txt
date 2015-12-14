@@ -177,6 +177,9 @@ if (WANT_FULL_DEPLOYMENT)
 			 compat_classad_list.h
 			 compat_classad_util.h
 			 stl_string_utils.h
+			 credmon_interface.h
+			 secure_file.h
+			 zkm_base64.h
 			DESTINATION ${C_INCLUDE})
 
     install ( TARGETS condorapi DESTINATION ${C_LIB} )

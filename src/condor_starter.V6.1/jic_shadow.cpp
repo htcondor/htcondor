@@ -2501,6 +2501,7 @@ JICShadow::initIOProxy( void )
 
 bool
 JICShadow::initUserCredentials() {
+#ifndef WINDOWS
 	bool send_credential = false;
 	if( ! job_ad->EvaluateAttrBool( ATTR_JOB_SEND_CREDENTIAL, send_credential ) ) {
 		send_credential = false;
@@ -2621,6 +2622,9 @@ JICShadow::initUserCredentials() {
 	rc = refreshSandboxCredentials();
 
 	return rc;
+#else   // WINDOWS
+	return true;
+#endif  // WINDOWS
 }
 
 bool

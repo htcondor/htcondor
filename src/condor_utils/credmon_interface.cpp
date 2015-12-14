@@ -18,6 +18,9 @@
  ***************************************************************/
 
 
+// none of this is intended for windows
+#ifndef WINDOWS
+
 
 #include "condor_common.h"
 #include "condor_debug.h"
@@ -165,7 +168,12 @@ bool credmon_mark_creds_for_sweeping(const char* user) {
 	return true;
 }
 
+// different function signatures, hooray for POSIX!
+#ifdef DARWIN
+int markfilter(dirent*d) {
+#else
 int markfilter(const dirent*d) {
+#endif
   bool match = !fnmatch("*.mark", d->d_name, FNM_PATHNAME);
   // printf("d: %s, %i\n", d->d_name, match);
   return match;
@@ -256,4 +264,7 @@ bool credmon_clear_mark(const char* user) {
 
 	return true;
 }
+
+
+#endif  // WINDOWS
 
