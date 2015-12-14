@@ -130,10 +130,13 @@ function run_next_tests_impl() {
 	var input = test_groups[group_num].tests[test_num][1];
 	var expected = test_groups[group_num].tests[test_num][2];
 	var actual;
+	var funcname;
+	if(func.name) { funcname = func.name; }
+	else { funcname = func; }
 	try {
 		actual = func(input);
 	} catch (e) {
-		add_paragraph("Failed:", group_num, test_num, func, "(", input ,") EXCEPTED with", e, "!=", expected);
+		add_paragraph("Failed:", group_num, test_num, funcname+"("+input+") EXCEPTED with", e, "!=", expected);
 		group_fail++;
 		test_num++;
 		run_next_tests();
@@ -142,7 +145,7 @@ function run_next_tests_impl() {
 	if(actual === expected) {
 		group_success++;
 	} else {
-		add_paragraph("Failed:", group_num, test_num, func, "(", input ,") ->", actual, "!=", expected);
+		add_paragraph("Failed:", group_num, test_num, funcname+"("+input+") ->", actual, "!=", expected);
 		group_fail++;
 	}
 	test_num++;
