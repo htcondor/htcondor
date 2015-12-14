@@ -101,12 +101,16 @@ print <<END;
 <script src="dateext.js"></script>
 </head>
 <body>
-<div id="progress"></div>
+<div>
+<progress id="pbar" value="0" max="100"></progress>
+<span id="progress"></span>
+</div>
 <div id="output"></div>
 <script>
 
 var outdiv;
 var progressdiv;
+var progressbardiv;
 
 function add_h1() {
 	var args_arr = Array.prototype.slice.call(arguments);
@@ -127,11 +131,20 @@ function add_paragraph() {
 }
 
 function progress() {
+	var args_arr = Array.prototype.slice.call(arguments);
+
+	var final = args_arr.shift();
+	if(this.last_update === undefined) { this.last_update = 0; }
+	if(!final && (this.last_update+100)>Date.now()) {
+		return;
+	}
+
+	this.last_update = Date.now();
+
 	while (progressdiv.firstChild) {
 		progressdiv.removeChild(progressdiv.firstChild);
 	}
 
-	var args_arr = Array.prototype.slice.call(arguments);
 	var s = args_arr.join(" ");
 	var txt = document.createTextNode(s);
 	progressdiv.appendChild(txt);
@@ -174,13 +187,18 @@ var test_num = 0;
 var group_success = 0;
 var group_fail = 0;
 
+var total_possible = 0;
+var total_success = 0;
+var total_fail = 0;
+
 function run_next_tests_impl() {
 	if(group_num >= test_groups.length) {
-		progress("");
+		progress(true, "done");
 		return;
 	}
 	var num_tests_in_group = test_groups[group_num].tests.length;
-	progress(group_num+1, "/", test_groups.length,"|", test_num+1, "/", num_tests_in_group);
+	progress(false, total_success+total_fail,"/",total_possible);
+	progressbardiv.setAttribute("value", total_success+total_fail);
 	if(test_num >= num_tests_in_group) {
 		test_num = 0;
 		add_paragraph(group_success, "/", num_tests_in_group, "succeeded.", group_fail, "/", num_tests_in_group, "failed.", "Found", group_success+group_fail, "out of", num_tests_in_group, "tests.");
@@ -205,15 +223,18 @@ function run_next_tests_impl() {
 	} catch (e) {
 		add_paragraph("Failed:", test_num, funcname+"("+input+") EXCEPTED with", e, "!=", expected);
 		group_fail++;
+		total_fail++;
 		test_num++;
 		run_next_tests();
 		return;
 	}
 	if(actual === expected) {
 		group_success++;
+		total_success++;
 	} else {
 		add_paragraph("Failed:", test_num, funcname+"("+input+") ->", actual, "!=", expected);
 		group_fail++;
+		total_fail++;
 	}
 	test_num++;
 	run_next_tests();
@@ -223,9 +244,21 @@ function run_next_tests() {
 	setTimeout(run_next_tests_impl, 0);
 }
 
+function count_all_tests() {
+	var g;
+	var count = 0;;
+	for(g = 0; g < test_groups.length; g++) {
+		count += test_groups[g].tests.length;
+	}
+	return count;
+}
+
 window.onload = function() {
 	outdiv = document.getElementById('output');
 	progressdiv = document.getElementById('progress');
+	progressbardiv = document.getElementById('pbar');
+	total_possible = count_all_tests();
+	progressbardiv.setAttribute("max", total_possible);
 	run_next_tests();
 }
 
