@@ -3662,7 +3662,7 @@ assignWork(const ScheddWorkMap &workMap, CurrentWorkMap &curWork, ScheddWork &ne
 void
 Matchmaker::prefetchResourceRequestLists(ClassAdListDoesNotDeleteAds &submitterAds)
 {
-	if (!param_boolean("PREFETCH_REQUESTS", false))
+	if (!param_boolean("NEGOTIATOR_PREFETCH_REQUESTS", false))
 	{
 		return;
 	}
@@ -3705,8 +3705,8 @@ Matchmaker::prefetchResourceRequestLists(ClassAdListDoesNotDeleteAds &submitterA
 	FDToRRLMap fdToRRL;
 	unsigned attemptedPrefetches = 0, successfulPrefetches = 0;
 	double startTime = _condor_debug_get_time_double();
-	int prefetchTimeout = param_integer("PREFETCH_REQUESTS_TIMEOUT", NegotiatorTimeout);
-	int prefetchCycle = param_integer("PREFETCH_REQUESTS_MAX_TIME");
+	int prefetchTimeout = param_integer("NEGOTIATOR_PREFETCH_REQUESTS_TIMEOUT", NegotiatorTimeout);
+	int prefetchCycle = param_integer("NEGOTIATOR_PREFETCH_REQUESTS_MAX_TIME");
 	double deadline = (prefetchCycle > 0) ? (startTime + prefetchCycle) : -1;
 
 	Selector selector;
