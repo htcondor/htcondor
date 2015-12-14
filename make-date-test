@@ -8,47 +8,68 @@ my $end_year = 1993;
 #my $end_year = 2100;
 
 my @test_groups;
-my $test_group;
 
 
-################################################################################
-$test_group = {};
-$test_group->{name} = 'datext.js Date.parseMore: YYYY-Www dates';
-$test_group->{tests} = '';
+sub create_tests_parseMore {
+	my $test_group = {};
+	$test_group->{name} = 'datext.js Date.parseMore: YYYY-Www dates';
+	$test_group->{tests} = '';
 
-for(my $year = $start_year; $year < $end_year; $year++) {
-	for(my $week = 1; $week <= 53; $week++) {
-		my $date = sprintf("%04d-W%02d", $year, $week);
-		my $dm = ParseDate($date);
-		my $fulldate = UnixDate($dm, "%O.000Z");
-		if(length($test_group->{tests})) { $test_group->{tests} .= ",\n"; }
-		$test_group->{tests} .= "      [try_parseMore, '$date', '$fulldate']";
+	for(my $year = $start_year; $year < $end_year; $year++) {
+		for(my $week = 1; $week <= 53; $week++) {
+			my $date = sprintf("%04d-W%02d", $year, $week);
+			my $dm = ParseDate($date);
+			my $fulldate = UnixDate($dm, "%O.000Z");
+			if(length($test_group->{tests})) { $test_group->{tests} .= ",\n"; }
+			$test_group->{tests} .= "      [try_parseMore, '$date', '$fulldate']";
+		}
 	}
+	return $test_group;
 }
+#push @test_groups, create_tests_parseMore();
 
-push @test_groups, $test_group;
-
-################################################################################
-$test_group = {};
-$test_group->{name} = 'datext.js Date.getISOWeekDate';
-$test_group->{tests} = '';
+sub create_tests_getISOWeekDate {
+	my $test_group = {};
+	$test_group->{name} = 'datext.js Date.getISOWeekDate';
+	$test_group->{tests} = '';
 
 
-my $now = mktime(0, 0, 0, 1, 0, $start_year-1900);
-my $end = mktime(0,0, 12, 1,0, $end_year-1900);
-my $last_year = 0;
-while($now < $end) {
-	my($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime($now);
-	my $input = strftime("%Y-%m-%dT%H:%M:%S",localtime($now));
-	my $expected = strftime("%G-W%V",localtime($now));
-	if(length($test_group->{tests})) { $test_group->{tests} .= ",\n"; }
-	$test_group->{tests} .= "      [try_getISOWeekDate, '$input', '$expected']";
-	$now += 60*60*24;
+	my $now = mktime(0, 0, 0, 1, 0, $start_year-1900);
+	my $end = mktime(0,0, 12, 1,0, $end_year-1900);
+	my $last_year = 0;
+	while($now < $end) {
+		my($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime($now);
+		my $input = strftime("%Y-%m-%dT%H:%M:%S",localtime($now));
+		my $expected = strftime("%G-W%V",localtime($now));
+		if(length($test_group->{tests})) { $test_group->{tests} .= ",\n"; }
+		$test_group->{tests} .= "      [try_getISOWeekDate, '$input', '$expected']";
+		$now += 60*60*24;
+	}
+	return $test_group;
 }
+#push @test_groups, create_tests_getISOWeekDate();
 
-push @test_groups, $test_group;
+sub create_tests_roundtripweek {
+	my $test_group = {};
+	$test_group->{name} = 'datext.js ISOWeekDate round trip';
+	$test_group->{tests} = '';
 
-################################################################################
+	my $now = mktime(0, 0, 0, 1, 0, $start_year-1900);
+	#my $end = mktime(0,0, 12, 1,0, $end_year-1900);
+	my $end = mktime(0,0, 12, 1,1, $start_year-1900);
+	my $last_year = 0;
+	while($now < $end) {
+		my($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime($now);
+		my $input = strftime("%Y-%m-%dT%H:%M:%S",localtime($now));
+		if(length($test_group->{tests})) { $test_group->{tests} .= ",\n"; }
+		$test_group->{tests} .= "      [try_round_trip_week, '$input', true]";
+		$now += 60*60*24;
+	}
+
+	return $test_group;
+}
+push @test_groups, create_tests_roundtripweek();
+
 
 
 
@@ -100,6 +121,16 @@ function progress() {
 function try_parseMore(i) { return Date.parseMore(i).toISOString(); }
 
 function try_getISOWeekDate(i) { return Date.parseMore(i).getUTCISOWeekDate(); }
+
+function try_round_trip_week(i) {
+	var initial = new Date(i);
+	var week_start = initial.getUTCISOWeekDate();
+	var back_to_obj = Date.parseMore(week_start);
+	var week_end = back_to_obj.getUTCISOWeekDate();
+	if(week_start === week_end) { return true; }
+	return week_start + " became " + back_to_obj.toISOString() + " became " + week_end;
+}
+
 
 END
 print "test_groups = [\n";
