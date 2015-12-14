@@ -56,8 +56,8 @@ Date.parseMore = function(str) {
 	// Based on http://stackoverflow.com/a/19375264/16672
 	var d = new Date(Date.UTC(year, 0, 1));
 	var week_in_ms = 1000*60*60*24*7;
-	d.setDate(d.getDate() + 4 - (d.getDay() || 7));
-	d.setTime(d.getTime() + week_in_ms * (week + (year == d.getFullYear() ? -1 : 0 )));
-	d.setDate(d.getDate() - 3);
+	d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+	d.setTime(d.getTime() + week_in_ms * (week + (year == d.getUTCFullYear() ? -1 : 0 )));
+	d.setUTCDate(d.getUTCDate() - 3);
 	return d;
 }
