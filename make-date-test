@@ -4,7 +4,7 @@ use POSIX qw(strftime mktime);
 use Date::Manip;
 
 my $start_year = 1990;
-my $end_year = 1991;
+my $end_year = 1993;
 #my $end_year = 2100;
 
 my @test_groups;
@@ -15,6 +15,7 @@ $test_group->{name} = 'datext.js Date.parseMore: YYYY-Www dates';
 $test_group->{tests} = '';
 
 for(my $year = $start_year; $year < $end_year; $year++) {
+	#for(my $week = 1; $week <= 3; $week++) {
 	for(my $week = 1; $week <= 53; $week++) {
 		my $date = sprintf("%04d-W%02d", $year, $week);
 		my $dm = ParseDate($date);
@@ -25,8 +26,6 @@ for(my $year = $start_year; $year < $end_year; $year++) {
 		$test_group->{tests} .= "      [try_parseMore, '$date', '$fulldate']";
 	}
 }
-$test_group->{tests} .= "      ,[try_parseMore, '2015-W01', 'expected to fail']";
-$test_group->{tests} .= "      ,[try_parseMore, 'invalid input', 'expected to fail']";
 
 push @test_groups, $test_group;
 
