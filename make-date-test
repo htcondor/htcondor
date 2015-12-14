@@ -1,0 +1,116 @@
+#! /usr/bin/perl -w
+use strict;
+use POSIX qw(strftime mktime);
+use Date::Manip;
+
+my $start_year = 1990;
+my $end_year = 1991;
+#my $end_year = 2100;
+
+my @test_groups;
+my $test_group;
+
+$test_group = {};
+$test_group->{name} = 'datext.js Date.parseMore: YYYY-Www dates';
+$test_group->{tests} = '';
+
+for(my $year = $start_year; $year < $end_year; $year++) {
+	for(my $week = 1; $week <= 53; $week++) {
+		my $date = sprintf("%04d-W%02d", $year, $week);
+		my $dm = ParseDate($date);
+		my $fulldate = UnixDate($dm, "%O.000Z");
+		if(length($test_group->{tests})) { 
+			$test_group->{tests} .= ",\n";
+		}
+		$test_group->{tests} .= "      [try_parseMore, '$date', '$fulldate']";
+	}
+}
+$test_group->{tests} .= "      ,[try_parseMore, '2015-W01', 'expected to fail']";
+$test_group->{tests} .= "      ,[try_parseMore, 'invalid input', 'expected to fail']";
+
+push @test_groups, $test_group;
+
+print <<END;
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Date testing</title>
+<script src="dateext.js"></script>
+</head>
+<body>
+<script>
+
+function try_parseMore(i) { return Date.parseMore(i).toISOString(); }
+
+END
+print "test_groups = [\n";
+
+for(my $group = 0; $group < @test_groups; $group++) {
+	print qq(  { name: "$test_groups[$group]{name}",\n);
+	print qq(    tests: [\n);
+	print $test_groups[$group]{tests},"\n";
+	print qq(    ] });
+	if(($group+1) != @test_groups) {
+		print ",";
+	}
+	print "\n";
+}
+
+print "];\n";
+print <<END;
+
+var group_num = 0;
+var test_num = 0;
+
+var group_success = 0;
+var group_fail = 0;
+
+function run_next_tests_impl() {
+	if(group_num >= test_groups.length) { return; }
+	var num_tests_in_group = test_groups[group_num].tests.length;
+	if(test_num >= num_tests_in_group) {
+		test_num = 0;
+		console.log("group ", group_num, test_groups[group_num].name, "completed.", group_success, "/", num_tests_in_group, "succeeded.", group_fail, "/", num_tests_in_group, "failed.", "Fround", group_success+group_fail, "out of", num_tests_in_group, "tests.");
+		group_num++;
+		group_success = 0;
+		group_fail = 0;
+		run_next_tests();
+		return;
+	}
+	var func = test_groups[group_num].tests[test_num][0];
+	var input = test_groups[group_num].tests[test_num][1];
+	var expected = test_groups[group_num].tests[test_num][2];
+	var actual;
+	try {
+		actual = func(input);
+	} catch (e) {
+		console.log("Failed:", group_num, test_num, func, "(", input ,") EXCEPTED with", e, "!=", expected);
+		group_fail++;
+		test_num++;
+		run_next_tests();
+		return;
+	}
+	if(actual === expected) {
+		group_success++;
+	} else {
+		console.log("Failed:", group_num, test_num, func, "(", input ,") ->", actual, "!=", expected);
+		group_fail++;
+	}
+	test_num++;
+	run_next_tests();
+}
+
+function run_next_tests() {
+	setTimeout(run_next_tests_impl, 0);
+}
+
+run_next_tests();
+
+
+</script>
+</body>
+</html>
+END
+
+
