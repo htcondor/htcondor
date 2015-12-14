@@ -87,19 +87,36 @@ HTCondorViewDateFiles.truncate_to_day = function(dateobj) {
 	return Date.parseMore(dateobj.getUTCISOYearMonthDay());
 }
 
+HTCondorViewDateFiles.truncate_to_week = function(dateobj) {
+	// TODO: There is probably a faster solution, but it may
+	// be complex.
+	var w = dateobj.getUTCISOWeekDate();
+	var r = Date.parseMore(w);
+	var tmp = r.getUTCISOWeekDate();
+	console.log("        ", dateobj,"->", w, "->", r, "(",tmp,")");
+	return r;
+}
+
+HTCondorViewDateFiles.truncate_to_month = function(dateobj) {
+	// TODO: probably faster to set individual fields to 0.
+	return Date.parseMore(dateobj.getUTCISOYearMonth());
+}
+
 HTCondorViewDateFiles.prototype.get_files_aide = function(start, end, step, truncater, formatter) {
+console.log("    ", start, end, step, truncater, formatter);
 	var now = truncater(start);
 	end = truncater(end);
 	end.setDate(end.getDate()+1);
+console.log("    BEGIN ", now, end);
 
 	var retfiles = [];
 
 	while(now.getTime() < end.getTime()) {
-	//console.log(now, end);
+console.log("    ", now, end);
 		stamp = formatter(now);
 		retfiles.push(stamp);
 		now.setTime(now.getTime() + step);
-	//console.log("   ", now, end);
+console.log("       ", now, end);
 	}
 
 	return retfiles;
@@ -138,27 +155,11 @@ HTCondorViewDateFiles.prototype.get_files = function(start,end) {
 	if( delta <= day &&
 		this.oldest.daily &&
 		start.getTime() >= this.oldest.daily.getTime()) {
+		console.log("  using daily files");
 		retfiles = this.get_files_aide(start, end, day,
 			HTCondorViewDateFiles.truncate_to_day,
 			function(d) { return d.getUTCISOYearMonthDay(); }
 			);
-
-/*
-		now = HTCondorViewDateFiles.truncate_to_day(start);
-		end = HTCondorViewDateFiles.truncate_to_day(end);
-		end.setDate(end.getDate()+1);
-
-		console.log("  using daily files");
-		while(now.getTime() < end.getTime()) {
-		//console.log(now, end);
-			stamp = now.getUTCISOYearMonthDay();
-			stamp = HTCondorViewDateFiles.expand(this.base_url, stamp);
-			retfiles.push(stamp);
-			now.setTime(now.getTime() + day);
-		//console.log("   ", now, end);
-		}
-*/
-
 		return retfiles;
 	}
 
@@ -166,6 +167,10 @@ HTCondorViewDateFiles.prototype.get_files = function(start,end) {
 		this.oldest.weekly &&
 		start.getTime() >= this.oldest.weekly.getTime()) {
 		console.log("  using weekly files");
+		retfiles = this.get_files_aide(start, end, week,
+			HTCondorViewDateFiles.truncate_to_week,
+			function(d) { return d.getUTCISOWeekDate(); }
+			);
 		return retfiles;
 	}
 
