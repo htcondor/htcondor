@@ -1,46 +1,46 @@
 ////////////////////////////////////////////////////////////////////////////////
-// getWeek and getWeekYear are from:
+// getWeek and getUTCWeekYear are from:
 // van den Broek, Taco. Calculate ISO 8601 week and year in javascript. Procuios. 2009-04-22. URL:http://techblog.procurios.nl/k/news/view/33796/14863/calculate-iso-8601-week-and-year-in-javascript.html. Accessed: 2015-12-07. (Archived by WebCite® at http://www.webcitation.org/6dbdvnbtj)
 // Released and used under the MIT license.
 
 // Get ISO 8601 week number for a date.
-Date.prototype.getWeek = function () {
+Date.prototype.getUTCWeek = function () {
 	var target  = new Date(this.valueOf());
-	var dayNr   = (this.getDay() + 6) % 7;
-	target.setDate(target.getDate() - dayNr + 3);
+	var dayNr   = (this.getUTCDay() + 6) % 7;
+	target.setDate(target.getUTCDate() - dayNr + 3);
 	var firstThursday = target.valueOf();
-	target.setMonth(0, 1);
-	if (target.getDay() != 4) {
-		target.setMonth(0, 1 + ((4 - target.getDay()) + 7) % 7);
+	target.setUTCMonth(0, 1);
+	if (target.getUTCDay() != 4) {
+		target.setUTCMonth(0, 1 + ((4 - target.getUTCDay()) + 7) % 7);
 	}
 	return 1 + Math.ceil((firstThursday - target) / 604800000);
 }
 
 // Get ISO 8601 year, assuming we're using week numbers.
-Date.prototype.getWeekYear = function () {
+Date.prototype.getUTCWeekYear = function () {
 	var target	= new Date(this.valueOf());
-	target.setDate(target.getDate() - ((this.getDay() + 6) % 7) + 3);
-	return target.getFullYear();
+	target.setUTCDate(target.getUTCDate() - ((this.getUTCDay() + 6) % 7) + 3);
+	return target.getUTCFullYear();
 }
 
 // Get ISO 8610 year and week in form "2016-W01"
-Date.prototype.getISOWeekDate = function ()  {
-	var week = this.getWeek();
+Date.prototype.getUTCISOWeekDate = function ()  {
+	var week = this.getUTCWeek();
 	week = ("0"+week).slice(-2); // Zero pad.
-	var year = this.getWeekYear();
+	var year = this.getUTCWeekYear();
 	return year+"-W"+week;
 }
 
-Date.prototype.getISOYearMonth = function() {
-	var year = this.getFullYear();
-	var month = this.getMonth()+1;
+Date.prototype.getUTCISOYearMonth = function() {
+	var year = this.getUTCFullYear();
+	var month = this.getUTCMonth()+1;
 	month = ("0"+month).slice(-2); // Zero pad.
 	return year+"-"+month;
 }
 
-Date.prototype.getISOYearMonthDay = function() {
-	var yearmonth = this.getISOYearMonth();
-	var day = this.getDate();
+Date.prototype.getUTCISOYearMonthDay = function() {
+	var yearmonth = this.getUTCISOYearMonth();
+	var day = this.getUTCDate();
 	day = ("0"+day).slice(-2); // Zero pad.
 	return yearmonth+"-"+day;
 }

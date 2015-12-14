@@ -1,0 +1,207 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>test</title>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.js"></script>
+<script src="dateext.js"></script>
+</head>
+<body>
+
+<pre></pre>
+
+<script>
+
+
+
+/*
+base_url - Mandatory. URL (relative or absolute) to the data files.  The
+URL must contain the string "..", which indicates where ".oldest." or
+".DATE." will be placed.
+
+ready_func - Optional. If present, called when the object is ready. Will be
+passed a copy of "this".  The delay is because the object needs to load the
+".oldest." file before it can field queries.
+
+fail_func - Optional. If present, called if the object is unable to
+initialize.  Will be passed a copy of "this".  Will fail if the ".oldest."
+file could not be loaded.
+*/
+function HTCondorViewDateFiles(base_url, ready_func, fail_func) {
+	this.base_url = base_url;
+	this.my_promise = jQuery.Deferred();
+
+	if(ready_func) { this.my_promise.done(ready_func); }
+	if(fail_func) { this.my_promise.fail(fail_func); }
+
+	var oldest_url = HTCondorViewDateFiles.expand(base_url, "oldest");
+	var that = this;
+	$.ajax(oldest_url, {dataType:'json'}).then(
+		function(data){that.oldest_loaded(data);},
+		function(data){that.failed_load();}
+		);
+}
+
+/*
+Returns a jQuery.promise which triggers when the object is ready to
+field queries, or upon failing to load the ".oldest." file (and thus
+will never be ready to field queries)
+*/
+HTCondorViewDateFiles.prototype.promise = function() {
+	return this.my_promise.promise();
+};
+
+
+HTCondorViewDateFiles.expand = function(base_url, content) {
+	return base_url.replace("..", "."+content+".");
+};
+
+
+HTCondorViewDateFiles.prototype.oldest_loaded = function(oldest) {
+	this.oldest = {};
+	var keys = Object.keys(oldest);
+	var key;
+	var val;
+	var dateval;
+	for (var i = 0; i < keys.length; i++) {
+		key = keys[i];
+		val = oldest[key];
+		dateval = Date.parseMore(val);
+		this.oldest[key] = dateval;
+		//console.log(val," -> ", dateval.toUTCString());
+		if((!this.absolute_oldest) || this.absolute_oldest.getTime() > dateval.getTime()) {
+			this.absolute_oldest = dateval;
+		}
+	}
+	console.log("Oldest available data", this.oldest);
+	console.log("Absolute oldest:", this.absolute_oldest);
+	this.my_promise.resolve(this);
+};
+
+HTCondorViewDateFiles.prototype.failed_load = function() {
+	this.my_promise.reject(this);
+};
+
+HTCondorViewDateFiles.truncate_to_day = function(dateobj) {
+	// TODO: probably faster to set individual fields to 0.
+	return Date.parseMore(dateobj.getUTCISOYearMonthDay());
+}
+
+HTCondorViewDateFiles.prototype.get_files_aide = function(start, end, step, truncater, formatter) {
+	var now = truncater(start);
+	end = truncater(end);
+	end.setDate(end.getDate()+1);
+
+	var retfiles = [];
+
+	while(now.getTime() < end.getTime()) {
+	//console.log(now, end);
+		stamp = formatter(now);
+		retfiles.push(stamp);
+		now.setTime(now.getTime() + step);
+	//console.log("   ", now, end);
+	}
+
+	return retfiles;
+}
+
+HTCondorViewDateFiles.prototype.get_files = function(start,end) {
+	start = Date.parseMore(start);
+	end = Date.parseMore(end);
+
+	if(start.getTime() < this.absolute_oldest.getTime()) {
+		start = this.absolute_oldest;
+	}
+	if(start.getTime() > end.getTime()) { return []; }
+
+	console.log("considering", start, "to", end);
+
+	var day = 1000*60*60*24;
+	var week = day*7;
+	var month = day*31;
+
+	var delta = end.getTime() - start.getTime();
+
+	var stamp;
+	var retfiles = [];
+
+
+	var now;
+
+	// We choose the smallest interval that covers the time period
+	// and is at least as long as the time period.
+
+	//console.log("delta", delta, day);
+	//console.log("daily?", this.oldest.daily);
+	//console.log("old enough?", start.getTime(), this.oldest.daily.getTime());
+
+	if( delta <= day &&
+		this.oldest.daily &&
+		start.getTime() >= this.oldest.daily.getTime()) {
+		retfiles = this.get_files_aide(start, end, day,
+			HTCondorViewDateFiles.truncate_to_day,
+			function(d) { return d.getUTCISOYearMonthDay(); }
+			);
+
+/*
+		now = HTCondorViewDateFiles.truncate_to_day(start);
+		end = HTCondorViewDateFiles.truncate_to_day(end);
+		end.setDate(end.getDate()+1);
+
+		console.log("  using daily files");
+		while(now.getTime() < end.getTime()) {
+		//console.log(now, end);
+			stamp = now.getUTCISOYearMonthDay();
+			stamp = HTCondorViewDateFiles.expand(this.base_url, stamp);
+			retfiles.push(stamp);
+			now.setTime(now.getTime() + day);
+		//console.log("   ", now, end);
+		}
+*/
+
+		return retfiles;
+	}
+
+	if( delta <= week &&
+		this.oldest.weekly &&
+		start.getTime() >= this.oldest.weekly.getTime()) {
+		console.log("  using weekly files");
+		return retfiles;
+	}
+
+	if( this.oldest.weekly &&
+		start.getTime() >= this.oldest.weekly.getTime()) {
+		console.log("  using monthly files");
+		return retfiles;
+	}
+
+	console.log("Unable to process request");
+
+
+	
+};
+
+
+
+
+var df = new HTCondorViewDateFiles("data/submitter..json", ready_to_go);
+
+function tryit(df, s,e) {
+	var r = df.get_files(s,e);
+	console.log("    ",r);
+	console.log("");
+}
+
+function ready_to_go(df) {
+	tryit(df, "2015-11-30T00:00:00Z", "2015-11-30T23:59:59Z");
+	tryit(df, "2015-11-30T00:00:00Z", "2015-12-01T00:00:00Z");
+	tryit(df, "2015-11-30T00:00:01Z", "2015-12-01T00:00:01Z");
+	tryit(df, "2015-11-29T00:00:00Z", "2015-12-01T00:00:00Z");
+	tryit(df, "2015-11-29T23:59:59Z", "2015-12-01T00:00:00Z");
+	tryit(df, "2015-12-01T12:00:00Z", "2015-12-01T13:00:00Z");
+}
+</script>
+
+
+</body>
+</html>
