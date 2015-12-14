@@ -61,7 +61,28 @@ print <<END;
 <script src="dateext.js"></script>
 </head>
 <body>
+<div id="output"></div>
 <script>
+
+var outdiv;
+
+function add_h1(x) {
+	var args_arr = Array.prototype.slice.call(arguments);
+	var s = args_arr.join(" ");
+	var p = document.createElement("h1");
+	var txt = document.createTextNode(s);
+	p.appendChild(txt);
+	outdiv.appendChild(p);
+}
+
+function add_paragraph(x) {
+	var args_arr = Array.prototype.slice.call(arguments);
+	var s = args_arr.join(" ");
+	var p = document.createElement("p");
+	var txt = document.createTextNode(s);
+	p.appendChild(txt);
+	outdiv.appendChild(p);
+}
 
 function try_parseMore(i) { return Date.parseMore(i).toISOString(); }
 
@@ -95,12 +116,15 @@ function run_next_tests_impl() {
 	var num_tests_in_group = test_groups[group_num].tests.length;
 	if(test_num >= num_tests_in_group) {
 		test_num = 0;
-		console.log("group ", group_num, test_groups[group_num].name, "completed.", group_success, "/", num_tests_in_group, "succeeded.", group_fail, "/", num_tests_in_group, "failed.", "Found", group_success+group_fail, "out of", num_tests_in_group, "tests.");
+		add_paragraph(group_success, "/", num_tests_in_group, "succeeded.", group_fail, "/", num_tests_in_group, "failed.", "Found", group_success+group_fail, "out of", num_tests_in_group, "tests.");
 		group_num++;
 		group_success = 0;
 		group_fail = 0;
 		run_next_tests();
 		return;
+	}
+	if(test_num === 0) {
+		add_h1(group_num, test_groups[group_num].name);
 	}
 	var func = test_groups[group_num].tests[test_num][0];
 	var input = test_groups[group_num].tests[test_num][1];
@@ -109,7 +133,7 @@ function run_next_tests_impl() {
 	try {
 		actual = func(input);
 	} catch (e) {
-		console.log("Failed:", group_num, test_num, func, "(", input ,") EXCEPTED with", e, "!=", expected);
+		add_paragraph("Failed:", group_num, test_num, func, "(", input ,") EXCEPTED with", e, "!=", expected);
 		group_fail++;
 		test_num++;
 		run_next_tests();
@@ -118,7 +142,7 @@ function run_next_tests_impl() {
 	if(actual === expected) {
 		group_success++;
 	} else {
-		console.log("Failed:", group_num, test_num, func, "(", input ,") ->", actual, "!=", expected);
+		add_paragraph("Failed:", group_num, test_num, func, "(", input ,") ->", actual, "!=", expected);
 		group_fail++;
 	}
 	test_num++;
@@ -129,7 +153,10 @@ function run_next_tests() {
 	setTimeout(run_next_tests_impl, 0);
 }
 
-run_next_tests();
+window.onload = function() {
+	outdiv = document.getElementById('output');
+	run_next_tests();
+}
 
 
 </script>
