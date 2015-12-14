@@ -1,5 +1,5 @@
 ////////////////////////////////////////////////////////////////////////////////
-// getWeek and getUTCWeekYear are from:
+// getUTCWeek and getUTCWeekYear are from:
 // van den Broek, Taco. Calculate ISO 8601 week and year in javascript. Procuios. 2009-04-22. URL:http://techblog.procurios.nl/k/news/view/33796/14863/calculate-iso-8601-week-and-year-in-javascript.html. Accessed: 2015-12-07. (Archived by WebCite® at http://www.webcitation.org/6dbdvnbtj)
 // Released and used under the MIT license.
 
@@ -7,7 +7,7 @@
 Date.prototype.getUTCWeek = function () {
 	var target  = new Date(this.valueOf());
 	var dayNr   = (this.getUTCDay() + 6) % 7;
-	target.setDate(target.getUTCDate() - dayNr + 3);
+	target.setUTCDate(target.getUTCDate() - dayNr + 3);
 	var firstThursday = target.valueOf();
 	target.setUTCMonth(0, 1);
 	if (target.getUTCDay() != 4) {
@@ -45,7 +45,7 @@ Date.prototype.getUTCISOYearMonthDay = function() {
 	return yearmonth+"-"+day;
 }
 
-// Identical to "new Date(str)", but accepts ISO 8601 week dates (eg "2015-W04").
+// Identical to "new Date(str)", but accepts ISO 8601 week dates (eg "2015-W04"). Dates are assumed to always be in UTC.
 // Week dates will return midnight on the Monday morning of that week. 
 Date.parseMore = function(str) {
 	var fields = /^(\d\d\d\d)-W(\d\d)$/.exec(str);
