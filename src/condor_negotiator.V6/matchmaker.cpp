@@ -40,7 +40,7 @@
 #include "ConcurrencyLimitUtils.h"
 #include "MyString.h"
 #include "condor_daemon_core.h"
-
+#include "selector.h"
 #include "consumption_policy.h"
 
 #include <vector>
@@ -2664,6 +2664,8 @@ negotiateWithGroup ( int untrimmed_num_startds,
             duration_phase3 += time(NULL) - start_time_phase3;
         }
 
+	prefetchResourceRequestLists(scheddAds);
+
 		pieLeftOrig = pieLeft;
 		scheddAdsCountOrig = scheddAds.MyLength();
 
@@ -3582,6 +3584,489 @@ Matchmaker::MakeClaimIdHash(ClassAdList &startdPvtAdList, ClaimIdHash &claimIds)
 	startdPvtAdList.Close();
 }
 
+
+static
+bool getScheddAddr(const ClassAd &ad, std::string &scheddAddr)
+{
+        if (!ad.EvaluateAttrString(ATTR_SCHEDD_IP_ADDR, scheddAddr))
+        {
+                return false;
+        }
+	return true;
+}
+
+static
+bool getSubmitter(const ClassAd &ad, std::string &submitter)
+{
+	if (!ad.EvaluateAttrString(ATTR_NAME, submitter))
+	{
+		return false;
+	}
+	return true;
+}
+
+
+static
+bool makeSubmitterScheddHash(const ClassAd &ad, std::string &hash)
+{
+	std::stringstream ss;
+	std::string scheddAddr, submitterName;
+	if (!getScheddAddr(ad, scheddAddr) || !getSubmitter(ad, submitterName))
+	{
+		return false;
+	}
+	ss << submitterName << "," << scheddAddr;
+	int jobprio = 0;
+	ad.EvaluateAttrInt("JOBPRIO_MIN", jobprio);
+	ss << "," << jobprio;
+	ad.EvaluateAttrInt("JOBPRIO_MAX", jobprio);
+	ss << "," << jobprio;
+	hash = ss.str();
+	return true;
+}
+
+
+typedef std::deque<ClassAd*> ScheddWork;
+typedef classad_shared_ptr<ScheddWork> ScheddWorkPtr;
+typedef std::map<std::string, ScheddWorkPtr> ScheddWorkMap;
+typedef classad_shared_ptr<ResourceRequestList> RRLPtr;
+typedef std::map<std::string, std::pair<ClassAd*, RRLPtr> > CurrentWorkMap;
+
+static bool
+assignWork(const ScheddWorkMap &workMap, CurrentWorkMap &curWork, ScheddWork &negotiations)
+{
+	negotiations.clear();
+	unsigned workAssigned = 0;
+	for (ScheddWorkMap::const_iterator schedd_it=workMap.begin(); schedd_it!=workMap.end(); schedd_it++)
+	{
+		if (!schedd_it->second.get()) {continue;} // null pointer.
+
+		CurrentWorkMap::iterator cur_it = curWork.find(schedd_it->first);
+		if (cur_it != curWork.end()) {continue;} // Already work for this schedd.
+
+		ScheddWork & workRef = *schedd_it->second;
+		if (workRef.empty()) {continue;} // No work for this schedd.
+
+		RRLPtr emptyPtr;
+		std::pair<ClassAd*, RRLPtr> work( workRef.front(), emptyPtr );
+		curWork.insert(cur_it, std::make_pair(schedd_it->first, work));
+		negotiations.push_back(workRef.front());
+		workRef.pop_front();
+		workAssigned++;
+	}
+	dprintf(D_FULLDEBUG, "Assigned %u units of work for prefetching.\n", workAssigned);
+	return workAssigned;
+}
+
+
+void
+Matchmaker::prefetchResourceRequestLists(ClassAdListDoesNotDeleteAds &submitterAds)
+{
+	if (!param_boolean("PREFETCH_REQUESTS", false))
+	{
+		return;
+	}
+
+	ReliSock *sock;
+
+	m_cachedRRLs.clear();
+	ScheddWorkMap scheddWorkQueues;
+	submitterAds.Open();
+	ClassAd *submitterAd;
+	unsigned todoPrefetches = 0;
+	while ((submitterAd = submitterAds.Next()))
+	{
+		std::string scheddAddr;
+		if (!getScheddAddr(*submitterAd, scheddAddr))
+		{
+			continue;
+		}
+		ScheddWorkMap::iterator iter = scheddWorkQueues.find(scheddAddr);
+		if (iter == scheddWorkQueues.end())
+		{
+			ScheddWorkPtr work_ptr(new ScheddWork());
+			iter = scheddWorkQueues.insert(iter, std::make_pair(scheddAddr, work_ptr));
+		}
+		iter->second->push_back(submitterAd);
+		todoPrefetches++;
+	}
+	submitterAds.Close();
+	dprintf(D_ALWAYS, "Starting prefetch round; %u potential prefetches to do.\n", todoPrefetches);
+
+	// Make sure our socket cache is big enough for all our current schedds.
+	if (static_cast<unsigned>(sockCache->size()) < scheddWorkQueues.size())
+	{
+		sockCache->resize(scheddWorkQueues.size()+1);
+	}
+	
+	CurrentWorkMap currentWork;
+	ScheddWork negotiations;
+	typedef std::map<int, std::pair<ClassAd*, RRLPtr> > FDToRRLMap;
+	FDToRRLMap fdToRRL;
+	unsigned attemptedPrefetches = 0, successfulPrefetches = 0;
+	double startTime = _condor_debug_get_time_double();
+	int prefetchTimeout = param_integer("PREFETCH_REQUESTS_TIMEOUT", NegotiatorTimeout);
+	int prefetchCycle = param_integer("PREFETCH_REQUESTS_MAX_TIME");
+	double deadline = (prefetchCycle > 0) ? (startTime + prefetchCycle) : -1;
+
+	Selector selector;
+	while (assignWork(scheddWorkQueues, currentWork, negotiations) || !currentWork.empty())
+	{
+		dprintf(D_FULLDEBUG, "Starting prefetch loop.\n");
+		// Start a bunch of negotiations
+		for (ScheddWork::const_iterator it=negotiations.begin(); it!=negotiations.end(); it++)
+		{
+			std::string submitter; getSubmitter(**it, submitter);
+			std::string scheddAddr; getScheddAddr(**it, scheddAddr);
+			dprintf(D_ALWAYS, "Starting prefetch negotiation for %s.\n", submitter.c_str());
+			classad_shared_ptr<ResourceRequestList> rrl;
+			attemptedPrefetches++;
+			bool success = false;
+			if (startNegotiateProtocol(submitter, **it, sock, rrl))
+			{
+				switch (rrl->tryRetrieve(sock))
+				{
+				case ResourceRequestList::RRL_DONE:
+				case ResourceRequestList::RRL_NO_MORE_JOBS:
+				{
+					dprintf(D_FULLDEBUG, "Prefetch negotiation immediately finished.\n");
+					if (rrl->needsEndNegotiateNow()) {endNegotiate(scheddAddr);}
+					std::string hash; makeSubmitterScheddHash(**it, hash);
+					m_cachedRRLs[hash] = rrl;
+					CurrentWorkMap::iterator iter = currentWork.find(scheddAddr);
+					if (iter != currentWork.end()) {currentWork.erase(iter);}
+					else {dprintf(D_ALWAYS, "ERROR: Did prefetch work, but couldn't find it in the internal TODO list\n");}
+					success = true;
+					successfulPrefetches++;
+					break;
+				}
+				case ResourceRequestList::RRL_ERROR:
+					success = false;
+					break;
+				case ResourceRequestList::RRL_CONTINUE:
+					dprintf(D_FULLDEBUG, "Prefetch negotiation would block.\n");
+					currentWork[scheddAddr] = std::make_pair(*it, rrl);
+					success = true;
+					break;
+				}
+			}
+			if (!success)
+			{
+				dprintf(D_ALWAYS, "Failed to prefetch resource request lists for %s(%s).\n", submitter.c_str(), scheddAddr.c_str());
+				scheddWorkQueues[scheddAddr]->clear();
+				CurrentWorkMap::iterator iter = currentWork.find(scheddAddr);
+				if (iter != currentWork.end()) {currentWork.erase(iter);}
+			}
+		}
+
+		if ((deadline >= 0) && (_condor_debug_get_time_double() > deadline))
+		{
+			dprintf(D_ALWAYS, "Prefetch cycle hit deadline of %d; skipping remaining submitters.\n", prefetchCycle);
+			break;
+		}
+
+		// Non-blocking reads of RRLs
+		selector.reset();
+		selector.set_timeout(prefetchTimeout);
+
+			// Put together the selector.
+		unsigned workCount = 0;
+		fdToRRL.clear();
+		for (CurrentWorkMap::const_iterator it=currentWork.begin(); it!=currentWork.end(); it++)
+		{
+			ReliSock *sock = sockCache->findReliSock(it->first);
+			if (!sock) {continue;}
+			int fd = sock->get_file_desc();
+			selector.add_fd(fd, Selector::IO_READ);
+			fdToRRL[fd] = it->second;
+			workCount++;
+		}
+		if (!workCount) {continue;}
+		dprintf(D_FULLDEBUG, "Waiting on the results of %u negotiation sessions.\n", workCount);
+		selector.execute();
+		if (selector.timed_out() && selector.failed())
+		{
+			for (FDToRRLMap::const_iterator it = fdToRRL.begin(); it != fdToRRL.end(); it++)
+			{
+				std::string scheddAddr; getScheddAddr(*(it->second.first), scheddAddr);
+				scheddWorkQueues[scheddAddr]->clear();
+				ReliSock *sock = sockCache->findReliSock(scheddAddr);
+				if (!sock) {continue;}
+				CurrentWorkMap::iterator iter = currentWork.find(scheddAddr);
+				if (iter != currentWork.end()) {currentWork.erase(iter);}
+				if (selector.timed_out()) {dprintf(D_ALWAYS, "Timeout when prefetching from %s; will skip this schedd for the remainder of prefetch cycle.\n", scheddAddr.c_str());}
+				else {dprintf(D_ALWAYS, "Failure when waiting on results of negotiations sessions (%s, errno=%d).\n", strerror(selector.select_errno()), selector.select_errno());}
+			}
+		}
+		else
+			// Try getting the RRL for all ready sockets.
+		for (FDToRRLMap::const_iterator it = fdToRRL.begin(); it != fdToRRL.end(); it++)
+		{
+			if (!selector.fd_ready(it->first, Selector::IO_READ)) {continue;}
+			ResourceRequestList &rrl = *(it->second.second);
+			std::string scheddAddr; getScheddAddr(*(it->second.first), scheddAddr);
+			ReliSock *sock = sockCache->findReliSock(scheddAddr);
+			if (!sock) {continue;}
+			switch (rrl.tryRetrieve(sock)) {
+			case ResourceRequestList::RRL_DONE:
+			case ResourceRequestList::RRL_NO_MORE_JOBS:
+			{
+					// Successfully prefetched a RRL; cache it in the negotiator.
+				if (rrl.needsEndNegotiateNow()) {endNegotiate(scheddAddr);}
+				std::string hash; makeSubmitterScheddHash(*(it->second.first), hash);
+				m_cachedRRLs[hash] = it->second.second;
+				CurrentWorkMap::iterator iter = currentWork.find(scheddAddr);
+				if (iter != currentWork.end()) {currentWork.erase(iter);}
+				successfulPrefetches++;
+				break;
+			}
+			case ResourceRequestList::RRL_ERROR:
+			{
+					// Do not attempt further prefetching with this schedd.
+				scheddWorkQueues[scheddAddr]->clear();
+				CurrentWorkMap::iterator iter = currentWork.find(scheddAddr);
+				if (iter != currentWork.end()) {currentWork.erase(iter);}
+				dprintf(D_ALWAYS, "Error when prefetching from %s; will skip this schedd for the remainder of prefetch cycle.\n", scheddAddr.c_str());
+				break;
+			}
+			case ResourceRequestList::RRL_CONTINUE:
+				// Nothing to do.
+				break;
+			}
+		}
+
+		if ((deadline >= 0) && (_condor_debug_get_time_double() > deadline))
+		{
+			dprintf(D_ALWAYS, "Prefetch cycle hit deadline of %d; skipping remaining submitters.\n", prefetchCycle);
+			break;
+		}
+	}
+	unsigned timedOutPrefetches = 0;
+	for (CurrentWorkMap::const_iterator it=currentWork.begin(); it!=currentWork.end(); it++)
+	{
+		timedOutPrefetches++;
+		dprintf(D_ALWAYS, "At end of the prefetch cycle, still waiting on response from %s; giving up and invalidating socket.\n", it->first.c_str());
+		sockCache->invalidateSock(it->first);
+		endNegotiate(it->first);
+	}
+	dprintf(D_ALWAYS, "Prefetch summary: %u attempted, %u successful.\n", attemptedPrefetches, successfulPrefetches);
+	if (timedOutPrefetches)
+	{
+		dprintf(D_ALWAYS, "There were %u prefetches in progress when timeout limit was reached.\n", timedOutPrefetches);
+	}
+}
+
+
+void
+Matchmaker::endNegotiate(const std::string &scheddAddr)
+{
+	ReliSock *sock = sockCache->findReliSock(scheddAddr);
+	if (!sock)
+	{
+		dprintf(D_ALWAYS, "    Asked to stop negotiation for %s but no active connection.\n", scheddAddr.c_str());
+		return;
+	}
+	sock->encode();
+	if (!sock->put (END_NEGOTIATE) || !sock->end_of_message())
+	{       
+		dprintf(D_ALWAYS, "    Could not send END_NEGOTIATE/eom\n");
+		sockCache->invalidateSock(scheddAddr.c_str());
+	}
+	dprintf(D_FULLDEBUG, "    Send END_NEGOTIATE to remote schedd\n");
+}
+
+
+classad_shared_ptr<ResourceRequestList>
+Matchmaker::startNegotiate(const std::string &submitter, const ClassAd &submitterAd, ReliSock *&sock)
+{
+	RRLPtr request_list;
+	std::string hash; makeSubmitterScheddHash(submitterAd, hash);
+	RRLHash::iterator iter = m_cachedRRLs.find(hash);
+	if (iter != m_cachedRRLs.end())
+	{
+		dprintf(D_FULLDEBUG, "Using resource request list from cache.\n");
+		request_list = iter->second;
+		m_cachedRRLs.erase(iter);
+	}
+
+	if (!startNegotiateProtocol(submitter, submitterAd, sock, request_list))
+	{
+		dprintf(D_FULLDEBUG, "Failed to start negotiation; ignoring cached request list.\n");
+		request_list.reset();
+	}
+
+	return request_list;
+}
+
+
+bool
+Matchmaker::startNegotiateProtocol(const std::string &submitter, const ClassAd &submitterAd, ReliSock *&sock, RRLPtr &request_list)
+{
+	std::string submitter_tag;
+	int negotiate_cmd = NEGOTIATE; // 7.5.4+
+	if (!submitterAd.EvaluateAttrString(ATTR_SUBMITTER_TAG, submitter_tag))
+	{
+			// schedd must be older than 7.5.4
+		negotiate_cmd = NEGOTIATE_WITH_SIGATTRS;
+	}
+
+	// fetch the verison of the schedd, so we can take advantage of
+	// protocol improvements in newer versions while still being
+	// backwards compatible.  
+	std::string schedd_version_string;
+	// from the version of the schedd, figure out the version of the negotiate 
+	// protocol supported.
+	int schedd_negotiate_protocol_version = 0; 
+	if (submitterAd.EvaluateAttrString(ATTR_VERSION, schedd_version_string) && !schedd_version_string.empty())
+	{
+		CondorVersionInfo scheddVersion(schedd_version_string.c_str());
+		if (scheddVersion.built_since_version(8,3,0))
+		{
+			// resource request lists supported...
+			schedd_negotiate_protocol_version = 1;
+		}
+	}
+
+	// Because of CCB, we may end up contacting a different
+	// address than scheddAddr!  This is used for logging (to identify
+	// the schedd) and to uniquely identify the host in the socketCache.
+	// Do not attempt direct connections to this sinful string!
+	std::string scheddAddr;
+	if (!getScheddAddr(submitterAd, scheddAddr))
+	{
+		dprintf(D_ALWAYS, "Matchmaker::negotiate: Internal error: Missing IP address for schedd %s.  Please contact the Condor developers.\n", submitter.c_str());
+		return false;
+	}
+
+	// Used for log messages to identify the schedd.
+	// Not for other uses, as it may change!
+	std::string schedd_id;
+	formatstr(schedd_id, "%s (%s)", submitter.c_str(), scheddAddr.c_str());
+
+	// 0.  connect to the schedd --- ask the cache for a connection
+	sock = sockCache->findReliSock(scheddAddr);
+	if (!sock)
+	{
+		dprintf(D_FULLDEBUG, "Socket to %s not in cache, creating one\n", 
+				 schedd_id.c_str());
+			// not in the cache already, create a new connection and
+			// add it to the cache.  We want to use a Daemon object to
+			// send the first command so we setup a security session. 
+
+		if (IsDebugLevel(D_COMMAND))
+		{
+			int cmd = negotiate_cmd;
+			dprintf(D_COMMAND, "Matchmaker::negotiate(%s,...) making connection to %s\n", getCommandStringSafe(cmd), scheddAddr.c_str());
+		}
+
+		Daemon schedd(&submitterAd, DT_SCHEDD, 0);
+		sock = schedd.reliSock(NegotiatorTimeout);
+		if (!sock)
+		{
+			dprintf(D_ALWAYS, "    Failed to connect to %s\n", schedd_id.c_str());
+			return false;
+		}
+		if (!schedd.startCommand(negotiate_cmd, sock, NegotiatorTimeout)) {
+			dprintf(D_ALWAYS, "    Failed to send NEGOTIATE command to %s\n",
+					 schedd_id.c_str());
+			delete sock;
+			return false;
+		}
+			// finally, add it to the cache for later...
+		sockCache->addReliSock(scheddAddr, sock);
+	}
+	else
+	{ 
+		dprintf(D_FULLDEBUG, "Socket to %s already in cache, reusing\n", 
+				 schedd_id.c_str());
+			// this address is already in our socket cache.  since
+			// we've already got a TCP connection, we do *NOT* want to
+			// use a Daemon::startCommand() to create a new security
+			// session, we just want to encode the command
+			// int on the socket...
+		sock->encode();
+		if (!sock->put(negotiate_cmd)) {
+			dprintf(D_ALWAYS, "    Failed to send NEGOTIATE command to %s\n",
+					 schedd_id.c_str());
+			sockCache->invalidateSock(scheddAddr);
+			return false;
+		}
+	}
+
+	sock->encode();
+	if (negotiate_cmd == NEGOTIATE)
+	{
+		// Here we create a negotiation ClassAd to pass parameters to the
+		// schedd's negotiation method.
+		ClassAd negotiate_ad;
+		int jmin, jmax;
+		// Tell the schedd to limit negotiation to this owner
+		negotiate_ad.InsertAttr(ATTR_OWNER, submitter);
+		// Tell the schedd to limit negotiation to this job priority range
+		if (want_globaljobprio && submitterAd.LookupInteger("JOBPRIO_MIN", jmin))
+		{
+			if (!submitterAd.LookupInteger("JOBPRIO_MAX", jmax))
+			{
+				EXCEPT("SubmitterAd with JOBPRIO_MIN attr, but no JOBPRIO_MAX");
+			}
+			negotiate_ad.Assign("JOBPRIO_MIN", jmin);
+			negotiate_ad.Assign("JOBPRIO_MAX", jmax);
+			dprintf (D_ALWAYS | D_MATCH,
+				"    USE_GLOBAL_JOB_PRIOS limit to jobprios between %d and %d\n",
+				jmin, jmax);
+		}
+		// Tell the schedd what sigificant attributes we found in the startd ads
+		negotiate_ad.InsertAttr(ATTR_AUTO_CLUSTER_ATTRS, job_attr_references ? job_attr_references : "");
+		// Tell the schedd a submitter tag value (used for flocking levels)
+		negotiate_ad.InsertAttr(ATTR_SUBMITTER_TAG, submitter_tag.c_str());
+		if (!putClassAd(sock, negotiate_ad))
+		{
+			dprintf(D_ALWAYS, "    Failed to send negotiation header to %s\n",
+					 schedd_id.c_str());
+			sockCache->invalidateSock(scheddAddr);
+			return false;
+		}
+	}
+	else if (negotiate_cmd == NEGOTIATE_WITH_SIGATTRS)
+	{
+			// old protocol prior to 7.5.4
+		if (!sock->put(submitter))
+		{
+			dprintf(D_ALWAYS, "    Failed to send scheddName to %s\n",
+					 schedd_id.c_str());
+			sockCache->invalidateSock(scheddAddr);
+			return false;
+		}
+			// send the significant attributes
+		if (!sock->put(job_attr_references)) 
+		{
+			dprintf (D_ALWAYS, "    Failed to send significant attrs to %s\n",
+					 schedd_id.c_str());
+			sockCache->invalidateSock(scheddAddr);
+			return false;
+		}
+	}
+	else
+	{
+		EXCEPT("Unexpected negotiate_cmd=%d", negotiate_cmd);
+	}
+
+	if (!sock->end_of_message())
+	{
+		dprintf(D_ALWAYS, "    Failed to send scheddName/eom to %s\n",
+			schedd_id.c_str());
+		sockCache->invalidateSock(scheddAddr);
+		return false;
+	}
+	dprintf(D_FULLDEBUG, "Started NEGOTIATE with remote schedd; protocol version %d.\n", schedd_negotiate_protocol_version);
+
+	if (!request_list.get())
+	{
+		request_list.reset(new ResourceRequestList(schedd_negotiate_protocol_version));
+	}
+	return true;
+}
+
 int Matchmaker::
 negotiate(char const* groupName, char const *scheddName, const ClassAd *scheddAd, double priority,
 		   double submitterLimit, double submitterLimitUnclaimed,
@@ -3599,156 +4084,27 @@ negotiate(char const* groupName, char const *scheddName, const ClassAd *scheddAd
 	bool		only_consider_startd_rank = false;
 	bool		display_overlimit = true;
 	bool		limited_by_submitterLimit = false;
-    string remoteUser;
-    double limitUsed = 0.0;
-    double limitUsedUnclaimed = 0.0;
+	string remoteUser;
+	double limitUsed = 0.0;
+	double limitUsedUnclaimed = 0.0;
 
 	numMatched = 0;
 
-	MyString submitter_tag;
-	int negotiate_cmd = NEGOTIATE; // 7.5.4+
-	if( !scheddAd->LookupString(ATTR_SUBMITTER_TAG,submitter_tag) ) {
-			// schedd must be older than 7.5.4
-		negotiate_cmd = NEGOTIATE_WITH_SIGATTRS;
-	}
+	classad_shared_ptr<ResourceRequestList> request_list = startNegotiate(scheddName, *scheddAd, sock);
+	if (!request_list.get()) {return MM_ERROR;}
 
-	// fetch the verison of the schedd, so we can take advantage of
-	// protocol improvements in newer versions while still being
-	// backwards compatible.  
-	MyString schedd_version_string;
-	scheddAd->LookupString(ATTR_VERSION,schedd_version_string);	
-	// from the version of the schedd, figure out the version of the negotiate 
-	// protocol supported.
-	int schedd_negotiate_protocol_version = 0; 
-	if ( !schedd_version_string.empty() ) {
-		CondorVersionInfo	scheddVersion(schedd_version_string.Value());
-		if ( scheddVersion.built_since_version(8,3,0) ) {
-			// resource request lists supported...
-			schedd_negotiate_protocol_version = 1;
-		}
-	}
-
-	// Because of CCB, we may end up contacting a different
-	// address than scheddAddr!  This is used for logging (to identify
-	// the schedd) and to uniquely identify the host in the socketCache.
-	// Do not attempt direct connections to this sinful string!
-	MyString scheddAddr;
-	if( !scheddAd->LookupString( ATTR_SCHEDD_IP_ADDR, scheddAddr ) ) {
-		dprintf( D_ALWAYS, "Matchmaker::negotiate: Internal error: Missing IP address for schedd %s.  Please contact the Condor developers.\n", scheddName);
+	std::string scheddAddr;
+	if (!getScheddAddr(*scheddAd, scheddAddr))
+	{
+		dprintf (D_ALWAYS, "Matchmaker::negotiate: Internal error: Missing IP address for schedd %s.  Please contact the Condor developers.\n", scheddName);
 		return MM_ERROR;
 	}
-
 	// Used for log messages to identify the schedd.
 	// Not for other uses, as it may change!
-	MyString schedd_id;
-	schedd_id.formatstr("%s (%s)", scheddName, scheddAddr.Value());
-	
-	// 0.  connect to the schedd --- ask the cache for a connection
-	sock = sockCache->findReliSock( scheddAddr.Value() );
-	if( ! sock ) {
-		dprintf( D_FULLDEBUG, "Socket to %s not in cache, creating one\n", 
-				 schedd_id.Value() );
-			// not in the cache already, create a new connection and
-			// add it to the cache.  We want to use a Daemon object to
-			// send the first command so we setup a security session. 
-
-		if (IsDebugLevel(D_COMMAND)) {
-			int cmd = negotiate_cmd;
-			dprintf (D_COMMAND, "Matchmaker::negotiate(%s,...) making connection to %s\n", getCommandStringSafe(cmd), scheddAddr.Value());
-		}
-
-		Daemon schedd( scheddAd, DT_SCHEDD, 0 );
-		sock = schedd.reliSock( NegotiatorTimeout );
-		if( ! sock ) {
-			dprintf( D_ALWAYS, "    Failed to connect to %s\n", schedd_id.Value() );
-			return MM_ERROR;
-		}
-		if( ! schedd.startCommand(negotiate_cmd, sock, NegotiatorTimeout) ) {
-			dprintf( D_ALWAYS, "    Failed to send NEGOTIATE command to %s\n",
-					 schedd_id.Value() );
-			delete sock;
-			return MM_ERROR;
-		}
-			// finally, add it to the cache for later...
-		sockCache->addReliSock( scheddAddr.Value(), sock );
-	} else { 
-		dprintf( D_FULLDEBUG, "Socket to %s already in cache, reusing\n", 
-				 schedd_id.Value() );
-			// this address is already in our socket cache.  since
-			// we've already got a TCP connection, we do *NOT* want to
-			// use a Daemon::startCommand() to create a new security
-			// session, we just want to encode the command
-			// int on the socket...
-		sock->encode();
-		if( ! sock->put(negotiate_cmd) ) {
-			dprintf( D_ALWAYS, "    Failed to send NEGOTIATE command to %s\n",
-					 schedd_id.Value() );
-			sockCache->invalidateSock( scheddAddr.Value() );
-			return MM_ERROR;
-		}
-	}
-
-	sock->encode();
-	if( negotiate_cmd == NEGOTIATE ) {
-		// Here we create a negotiation ClassAd to pass parameters to the
-		// schedd's negotiation method.
-		ClassAd negotiate_ad;
-		int jmin, jmax;
-		// Tell the schedd to limit negotiation to this owner
-		negotiate_ad.Assign(ATTR_OWNER,scheddName);
-		// Tell the schedd to limit negotiation to this job priority range
-		if ( want_globaljobprio && scheddAd->LookupInteger("JOBPRIO_MIN",jmin) ) {
-			if (!scheddAd->LookupInteger("JOBPRIO_MAX",jmax)) {
-				EXCEPT("SubmitterAd with JOBPRIO_MIN attr, but no JOBPRIO_MAX");
-			}
-			negotiate_ad.Assign("JOBPRIO_MIN",jmin);
-			negotiate_ad.Assign("JOBPRIO_MAX",jmax);
-			dprintf (D_ALWAYS | D_MATCH,
-				"    USE_GLOBAL_JOB_PRIOS limit to jobprios between %d and %d\n",
-				jmin, jmax);
-		}
-		// Tell the schedd what sigificant attributes we found in the startd ads
-		negotiate_ad.Assign(ATTR_AUTO_CLUSTER_ATTRS,job_attr_references ? job_attr_references : "");
-		// Tell the schedd a submitter tag value (used for flocking levels)
-		negotiate_ad.Assign(ATTR_SUBMITTER_TAG,submitter_tag.Value());
-		if( !putClassAd( sock, negotiate_ad ) ) {
-			dprintf (D_ALWAYS, "    Failed to send negotiation header to %s\n",
-					 schedd_id.Value() );
-			sockCache->invalidateSock(scheddAddr.Value());
-			return MM_ERROR;
-		}
-	}
-	else if( negotiate_cmd == NEGOTIATE_WITH_SIGATTRS ) {
-			// old protocol prior to 7.5.4
-		if (!sock->put(scheddName))
-		{
-			dprintf (D_ALWAYS, "    Failed to send scheddName to %s\n",
-					 schedd_id.Value() );
-			sockCache->invalidateSock(scheddAddr.Value());
-			return MM_ERROR;
-		}
-			// send the significant attributes
-		if (!sock->put(job_attr_references)) 
-		{
-			dprintf (D_ALWAYS, "    Failed to send significant attrs to %s\n",
-					 schedd_id.Value() );
-			sockCache->invalidateSock(scheddAddr.Value());
-			return MM_ERROR;
-		}
-	}
-	else {
-		EXCEPT("Unexpected negotiate_cmd=%d",negotiate_cmd);
-	}
-	if (!sock->end_of_message())
-	{
-		dprintf (D_ALWAYS, "    Failed to send scheddName/eom to %s\n",
-			schedd_id.Value() );
-		sockCache->invalidateSock(scheddAddr.Value());
-		return MM_ERROR;
-	}
+	std::string schedd_id;
+	formatstr(schedd_id, "%s (%s)", scheddName, scheddAddr.c_str());
 	
 	// 2.  negotiation loop with schedd
-	ResourceRequestList request_list(schedd_negotiate_protocol_version);  
 	for (numMatched=0;true;numMatched++)
 	{
 		// Service any interactive commands on our command socket.
@@ -3766,7 +4122,7 @@ negotiate(char const* groupName, char const *scheddName, const ClassAd *scheddAd
 			dprintf (D_ALWAYS, 	
 			"    Reached deadline for %s after %d sec... stopping\n"
 			"       MAX_TIME_PER_SUBMITTER = %d sec, MAX_TIME_PER_SCHEDD = %d sec, MAX_TIME_PER_CYCLE = %d sec, MAX_TIME_PER_PIESPIN = %d sec\n",
-				schedd_id.Value(), (int)(currentTime - beginTime),
+				schedd_id.c_str(), (int)(currentTime - beginTime),
 				MaxTimePerSubmitter, MaxTimePerSchedd, MaxTimePerCycle,
 				MaxTimePerSpin);
 			break;	// get out of the infinite for loop & stop negotiating
@@ -3794,13 +4150,17 @@ negotiate(char const* groupName, char const *scheddName, const ClassAd *scheddAd
 
 
 		// 2a.  ask for job information
-		if ( !request_list.getRequest(request,cluster,proc,autocluster,sock) ) {
+		if ( !request_list->getRequest(request,cluster,proc,autocluster,sock) ) {
 			// Failed to get a request.  Check to see if it is because
 			// of an error talking to the schedd.
-			if ( request_list.hadError() ) {
+			if ( request_list->hadError() ) {
 				// note: error message already dprintf-ed 
-				sockCache->invalidateSock(scheddAddr.Value());
+				sockCache->invalidateSock(scheddAddr);
 				return MM_ERROR;
+			}
+			if (request_list->needsEndNegotiate())
+			{
+				endNegotiate(scheddAddr);
 			} 
 			// Failed to get a request, and no error occured.  
 			// If we have negotiated above our submitterLimit, we have only
@@ -3870,7 +4230,7 @@ negotiate(char const* groupName, char const *scheddName, const ClassAd *scheddAd
 		{
             remoteUser = "";
 			// 2e(i).  find a compatible offer
-			offer=matchmakingAlgorithm(scheddName, scheddAddr.Value(), request,
+			offer=matchmakingAlgorithm(scheddName, scheddAddr.c_str(), request,
                                              startdAds, priority,
                                              limitUsed, limitUsedUnclaimed, 
                                              submitterLimit, submitterLimitUnclaimed,
@@ -3888,7 +4248,7 @@ negotiate(char const* groupName, char const *scheddName, const ClassAd *scheddAd
 				string diagnostic_message;
 				// no match found
 				dprintf(D_ALWAYS|D_MATCH, "      Rejected %d.%d %s %s: ",
-						cluster, proc, scheddName, scheddAddr.Value());
+						cluster, proc, scheddName, scheddAddr.c_str());
 
 				negotiation_cycle_stats[0]->rejections++;
 
@@ -3941,7 +4301,7 @@ negotiate(char const* groupName, char const *scheddName, const ClassAd *scheddAd
 					{
 						dprintf (D_ALWAYS, "      Could not send rejection\n");
 						sock->end_of_message ();
-						sockCache->invalidateSock(scheddAddr.Value());
+						sockCache->invalidateSock(scheddAddr.c_str());
 						
 						return MM_ERROR;
 					}
@@ -3979,7 +4339,7 @@ negotiate(char const* groupName, char const *scheddName, const ClassAd *scheddAd
 
 			// 2e(ii).  perform the matchmaking protocol
 			result = matchmakingProtocol (request, offer, claimIds, sock, 
-					scheddName, scheddAddr.Value());
+					scheddName, scheddAddr.c_str());
 
 			// 2e(iii). if the matchmaking protocol failed, do not consider the
 			//			startd again for this negotiation cycle.
@@ -3990,7 +4350,7 @@ negotiate(char const* groupName, char const *scheddName, const ClassAd *scheddAd
 			//			schedd, invalidate the connection and return
 			if (result == MM_ERROR)
 			{
-				sockCache->invalidateSock (scheddAddr.Value());
+				sockCache->invalidateSock (scheddAddr.c_str());
 				return MM_ERROR;
 			}
 		}
@@ -4000,7 +4360,7 @@ negotiate(char const* groupName, char const *scheddName, const ClassAd *scheddAd
 		{
 			numMatched--;		// haven't used any resources this cycle
 
-			request_list.noMatchFound(); // do not reuse any cached requests
+			request_list->noMatchFound(); // do not reuse any cached requests
 
             if (rejForSubmitterLimit && !ConsiderPreemption && !accountant.UsingWeightedSlots()) {
                 // If we aren't considering preemption and slots are unweighted, then we can
@@ -4057,12 +4417,7 @@ negotiate(char const* groupName, char const *scheddName, const ClassAd *scheddAd
 
 
 	// break off negotiations
-	sock->encode();
-	if (!sock->put (END_NEGOTIATE) || !sock->end_of_message())
-	{
-		dprintf (D_ALWAYS, "    Could not send END_NEGOTIATE/eom\n");
-        sockCache->invalidateSock(scheddAddr.Value());
-	}
+	endNegotiate(scheddAddr);
 
 	// ... and continue negotiating with others
 	return MM_RESUME;

@@ -7254,6 +7254,25 @@ friendly_name=Size of Resource Request List
 review=?
 tags=negotiator,matchmaker
 
+[PREFETCH_REQUESTS]
+default=false
+type=bool
+reconfig=true
+customization=seldom
+friendly_name=Enable parallel prefetching of requests in the negotiator
+review=?
+tags=negotiator,matchmaker
+
+[PREFETCH_REQUESTS_MAX_TIME]
+default=120
+range=0,
+type=int
+reconfig=true
+customization=seldom
+friendly_name=Timeout for prefetch requests lists phase of negotiator
+review=?
+tags=negotiator,matchmaker
+
 [HISTORY_HELPER_MAX_HISTORY]
 default=10000
 range=0,

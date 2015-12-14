@@ -26,6 +26,9 @@
 #include "matchmaker_negotiate.h"
 
 ResourceRequestList::ResourceRequestList(int protocol_version)
+	: m_send_end_negotiate(false),
+	m_send_end_negotiate_now(false),
+	m_requests_to_fetch(0)
 {
 	m_protocol_version = protocol_version;
 	m_clear_rejected_autoclusters = false;
@@ -58,6 +61,20 @@ ResourceRequestList::~ResourceRequestList()
 }
 
 bool
+ResourceRequestList::needsEndNegotiate()
+{
+	return m_send_end_negotiate;
+}
+
+
+bool
+ResourceRequestList::needsEndNegotiateNow()
+{
+	return m_send_end_negotiate_now;
+}
+
+
+bool
 ResourceRequestList::getRequest(ClassAd &request, int &cluster, int &proc, int &autocluster,
 								ReliSock* const sock)
 {
@@ -73,6 +90,17 @@ ResourceRequestList::getRequest(ClassAd &request, int &cluster, int &proc, int &
 		// for the request we already have cached.
 		request = cached_resource_request;
 	} else {
+			// The prefetch of RRLs saw a NO_MORE_JOBS from the schedd.
+			// Hence, once m_ads is empty and we run out or resource_request_count,
+			// then we ought to return false.
+			//
+			// In this case, we never ask the schedd to send job info, so we must
+			// send an explicit END_NEGOTIATE to inform it we are done.
+		if (m_send_end_negotiate && m_ads.empty())
+		{
+			return false;
+		}
+
 		// We used up our cached_resource_request, so no we need to grab the
 		// next request from our list m_ads.
 		
@@ -92,7 +120,8 @@ ResourceRequestList::getRequest(ClassAd &request, int &cluster, int &proc, int &
 					m_rejected_auto_clusters.clear();
 					m_clear_rejected_autoclusters = false;
 				}
-				if (!fetchRequestsFromSchedd(sock))
+				TryStates result = fetchRequestsFromSchedd(sock, true);
+				if ((result != RRL_DONE) && (result != RRL_NO_MORE_JOBS))
 				{
 					// note: Do not set errcode here, it had better be set
 					// appropriately by fetchRequestFromSchedd()
@@ -176,8 +205,24 @@ ResourceRequestList::noMatchFound()
 	}
 }
 
-bool
-ResourceRequestList::fetchRequestsFromSchedd(ReliSock* const sock)
+ResourceRequestList::TryStates
+ResourceRequestList::tryRetrieve(ReliSock *const sock)
+{
+	TryStates result = fetchRequestsFromSchedd(sock, false);
+		// Protocol version 1 requires an END_NEGOTIATE after NO_MORE_JOBS if *any* RRLs were received
+		//   - If NO_MORE_JOBS was sent without any RRLs, then END_NEGOTIATE is not needed
+		//
+		// Protocol version 0 does not require any immediate end negotiate -- NO_MORE_JOBS indicates
+		// the schedd is done.
+	m_send_end_negotiate_now = (result == RRL_DONE) || ((result == RRL_NO_MORE_JOBS) && !m_ads.empty() && (m_protocol_version==1));
+		// This indicates that we already saw NO_MORE_JOBS; hence, when using the cached RRL, we'll
+		// never request jobs.
+	m_send_end_negotiate = (result == RRL_NO_MORE_JOBS);
+	return result;
+}
+
+ResourceRequestList::TryStates
+ResourceRequestList::fetchRequestsFromSchedd(ReliSock* const sock, bool blocking)
 {
 	int reply;
 	ClassAd *request_ad;
@@ -198,41 +243,59 @@ ResourceRequestList::fetchRequestsFromSchedd(ReliSock* const sock)
 
 	ASSERT(m_num_to_fetch > 0);	
 
-	if ( m_num_to_fetch == 1 ) {
-		dprintf (D_FULLDEBUG, 
-			"    Sending SEND_JOB_INFO/eom\n");
-		sock->encode();
-		if (!sock->put(SEND_JOB_INFO) || !sock->end_of_message())
-		{
-			dprintf (D_ALWAYS, 
-				"    Failed to send SEND_JOB_INFO/eom\n");
-			errcode = __LINE__;
-			return false;
+	if (!m_requests_to_fetch)
+	{
+		if ( m_num_to_fetch == 1 ) {
+			dprintf (D_FULLDEBUG, 
+				"    Sending SEND_JOB_INFO/eom\n");
+			sock->encode();
+			if (!sock->put(SEND_JOB_INFO) || !sock->end_of_message())
+			{
+				dprintf (D_ALWAYS, 
+					"    Failed to send SEND_JOB_INFO/eom\n");
+				errcode = __LINE__;
+				return RRL_ERROR;
+			}
+		} else {
+			dprintf (D_FULLDEBUG, 
+				"    Sending SEND_RESOURCE_REQUEST_LIST/%d/eom\n",m_num_to_fetch);
+			sock->encode();
+			if (!sock->put(SEND_RESOURCE_REQUEST_LIST) || !sock->put(m_num_to_fetch) || 
+				!sock->end_of_message())
+			{
+				dprintf (D_ALWAYS, 
+					"    Failed to send SEND_RESOURCE_REQUEST_LIST/%d/eom\n",m_num_to_fetch);
+				errcode = __LINE__;
+				return RRL_ERROR;
+			}
 		}
-	} else {
-		dprintf (D_FULLDEBUG, 
-			"    Sending SEND_RESOURCE_REQUEST_LIST/%d/eom\n",m_num_to_fetch);
-		sock->encode();
-		if (!sock->put(SEND_RESOURCE_REQUEST_LIST) || !sock->put(m_num_to_fetch) || 
-			!sock->end_of_message())
-		{
-			dprintf (D_ALWAYS, 
-				"    Failed to send SEND_RESOURCE_REQUEST_LIST/%d/eom\n",m_num_to_fetch);
-			errcode = __LINE__;
-			return false;
-		}
+		m_requests_to_fetch = m_num_to_fetch;
 	}
 
-	for (int i=0; i<m_num_to_fetch; i++) {
+	while (m_requests_to_fetch > 0) {
 		// 2b.  the schedd may either reply with JOB_INFO or NO_MORE_JOBS
 		dprintf (D_FULLDEBUG, "    Getting reply from schedd ...\n");
 		sock->decode();
-		if (!sock->get (reply))
+		int retval;
+		bool read_would_block;
+		{
+			BlockingModeGuard guard(sock, !blocking);
+			retval = sock->get(reply);
+			read_would_block = sock->clear_read_block_flag();
+		}
+		if (read_would_block)
+		{
+			dprintf(D_NETWORK, "Resource request would block.\n");
+			return RRL_CONTINUE;
+		}
+		m_requests_to_fetch--;
+		if (!retval)
 		{
 			dprintf (D_ALWAYS, "    Failed to get reply from schedd\n");
 			sock->end_of_message ();
 			errcode = __LINE__;
-			return false;
+			m_requests_to_fetch = 0;
+			return RRL_ERROR;
 		}
 
 		// 2c.  if the schedd replied with NO_MORE_JOBS, cleanup and quit
@@ -241,7 +304,8 @@ ResourceRequestList::fetchRequestsFromSchedd(ReliSock* const sock)
 			dprintf (D_ALWAYS, "    Got NO_MORE_JOBS;  schedd has no more requests\n");
 			sock->end_of_message ();
 			// Note: do NOT set errcode here, as this is not an error condition
-			return true;
+			m_requests_to_fetch = 0;
+			return RRL_NO_MORE_JOBS;
 		}
 		else
 		if (reply != JOB_INFO)
@@ -250,7 +314,8 @@ ResourceRequestList::fetchRequestsFromSchedd(ReliSock* const sock)
 			dprintf(D_ALWAYS,"    Got illegal command %d from schedd\n",reply);
 			sock->end_of_message ();
 			errcode = __LINE__;
-			return false;
+			m_requests_to_fetch = 0;
+			return RRL_ERROR;
 		}
 
 		// 2d.  get the request
@@ -261,37 +326,12 @@ ResourceRequestList::fetchRequestsFromSchedd(ReliSock* const sock)
 			dprintf(D_ALWAYS, "    JOB_INFO command not followed by ad/eom\n");
 			sock->end_of_message();
 			errcode = __LINE__;
-			return false;
+			m_requests_to_fetch = 0;
+			return RRL_ERROR;
 		}
 		m_ads.push_back(request_ad);
 	}
 
-	return true;
+	return RRL_DONE;
 }
 
-#if 0
-	RequestListManager::~RequestListManager()
-	{
-		clear();
-	}
-
-	void
-	RequestListManager::clear()
-	{
-		m_request_lists_map.clear();	
-	}
-
-	ResourceRequestList*
-	RequestListManager::getRequestList(const MyString &key)
-	{
-		if ( m_request_lists_map.find(key) == m_request_lists_map.end() ) {
-			// key is not in the map, create a new object on the heap
-			ResourceRequestList *entry;
-			entry = new ResourceRequestList(0);
-			m_request_lists_map[key] = entry;
-			return entry;
-		} else {
-			return m_request_lists_map[key].get();
-		}
-	}
-#endif
