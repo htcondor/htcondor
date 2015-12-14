@@ -61,12 +61,14 @@ print <<END;
 <script src="dateext.js"></script>
 </head>
 <body>
+<div id="progress"></div>
 <div id="output"></div>
 <script>
 
 var outdiv;
+var progressdiv;
 
-function add_h1(x) {
+function add_h1() {
 	var args_arr = Array.prototype.slice.call(arguments);
 	var s = args_arr.join(" ");
 	var p = document.createElement("h1");
@@ -75,13 +77,24 @@ function add_h1(x) {
 	outdiv.appendChild(p);
 }
 
-function add_paragraph(x) {
+function add_paragraph() {
 	var args_arr = Array.prototype.slice.call(arguments);
 	var s = args_arr.join(" ");
 	var p = document.createElement("p");
 	var txt = document.createTextNode(s);
 	p.appendChild(txt);
 	outdiv.appendChild(p);
+}
+
+function progress() {
+	while (progressdiv.firstChild) {
+		progressdiv.removeChild(progressdiv.firstChild);
+	}
+
+	var args_arr = Array.prototype.slice.call(arguments);
+	var s = args_arr.join(" ");
+	var txt = document.createTextNode(s);
+	progressdiv.appendChild(txt);
 }
 
 function try_parseMore(i) { return Date.parseMore(i).toISOString(); }
@@ -112,8 +125,12 @@ var group_success = 0;
 var group_fail = 0;
 
 function run_next_tests_impl() {
-	if(group_num >= test_groups.length) { return; }
+	if(group_num >= test_groups.length) {
+		progress("");
+		return;
+	}
 	var num_tests_in_group = test_groups[group_num].tests.length;
+	progress(group_num+1, "/", test_groups.length,"|", test_num+1, "/", num_tests_in_group);
 	if(test_num >= num_tests_in_group) {
 		test_num = 0;
 		add_paragraph(group_success, "/", num_tests_in_group, "succeeded.", group_fail, "/", num_tests_in_group, "failed.", "Found", group_success+group_fail, "out of", num_tests_in_group, "tests.");
@@ -158,6 +175,7 @@ function run_next_tests() {
 
 window.onload = function() {
 	outdiv = document.getElementById('output');
+	progressdiv = document.getElementById('progress');
 	run_next_tests();
 }
 
