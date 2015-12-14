@@ -5,7 +5,6 @@ use Date::Manip;
 
 my $start_year = 1990;
 my $end_year = 1993;
-#my $end_year = 2100;
 
 my @test_groups;
 
@@ -26,7 +25,7 @@ sub create_tests_parseMore {
 	}
 	return $test_group;
 }
-#push @test_groups, create_tests_parseMore();
+push @test_groups, create_tests_parseMore();
 
 sub create_tests_getISOWeekDate {
 	my $test_group = {};
@@ -47,7 +46,28 @@ sub create_tests_getISOWeekDate {
 	}
 	return $test_group;
 }
-#push @test_groups, create_tests_getISOWeekDate();
+push @test_groups, create_tests_getISOWeekDate();
+
+sub create_tests_getISOWeekDateUTC {
+	my $test_group = {};
+	$test_group->{name} = 'datext.js Date.getISOWeekDate with UTC dates';
+	$test_group->{tests} = '';
+
+
+	my $now = mktime(0, 0, 0, 1, 0, $start_year-1900);
+	my $end = mktime(0,0, 12, 1,0, $end_year-1900);
+	my $last_year = 0;
+	while($now < $end) {
+		my($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime($now);
+		my $input = strftime("%Y-%m-%dT%H:%M:%S.000Z",localtime($now));
+		my $expected = strftime("%G-W%V",localtime($now));
+		if(length($test_group->{tests})) { $test_group->{tests} .= ",\n"; }
+		$test_group->{tests} .= "      [try_getISOWeekDate, '$input', '$expected']";
+		$now += 60*60*24;
+	}
+	return $test_group;
+}
+push @test_groups, create_tests_getISOWeekDateUTC();
 
 sub create_tests_roundtripweek {
 	my $test_group = {};
@@ -55,8 +75,7 @@ sub create_tests_roundtripweek {
 	$test_group->{tests} = '';
 
 	my $now = mktime(0, 0, 0, 1, 0, $start_year-1900);
-	#my $end = mktime(0,0, 12, 1,0, $end_year-1900);
-	my $end = mktime(0,0, 12, 1,1, $start_year-1900);
+	my $end = mktime(0,0, 12, 1,0, $end_year-1900);
 	my $last_year = 0;
 	while($now < $end) {
 		my($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime($now);
@@ -184,7 +203,7 @@ function run_next_tests_impl() {
 	try {
 		actual = func(input);
 	} catch (e) {
-		add_paragraph("Failed:", group_num, test_num, funcname+"("+input+") EXCEPTED with", e, "!=", expected);
+		add_paragraph("Failed:", test_num, funcname+"("+input+") EXCEPTED with", e, "!=", expected);
 		group_fail++;
 		test_num++;
 		run_next_tests();
@@ -193,7 +212,7 @@ function run_next_tests_impl() {
 	if(actual === expected) {
 		group_success++;
 	} else {
-		add_paragraph("Failed:", group_num, test_num, funcname+"("+input+") ->", actual, "!=", expected);
+		add_paragraph("Failed:", test_num, funcname+"("+input+") ->", actual, "!=", expected);
 		group_fail++;
 	}
 	test_num++;
