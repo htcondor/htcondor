@@ -4,7 +4,7 @@ use POSIX qw(strftime mktime);
 use Date::Manip;
 
 my $start_year = 1990;
-my $end_year = 1993;
+my $end_year = 2100;
 
 my @test_groups;
 
@@ -191,57 +191,71 @@ var total_possible = 0;
 var total_success = 0;
 var total_fail = 0;
 
+var current_test_start;
+var max_run_time = 10;
+
 function run_next_tests_impl() {
-	if(group_num >= test_groups.length) {
-		progress(true, "done");
-		return;
-	}
-	var num_tests_in_group = test_groups[group_num].tests.length;
-	progress(false, total_success+total_fail,"/",total_possible);
-	progressbardiv.setAttribute("value", total_success+total_fail);
-	if(test_num >= num_tests_in_group) {
-		test_num = 0;
-		add_paragraph(group_success, "/", num_tests_in_group, "succeeded.", group_fail, "/", num_tests_in_group, "failed.", "Found", group_success+group_fail, "out of", num_tests_in_group, "tests.");
-		group_num++;
-		group_success = 0;
-		group_fail = 0;
-		run_next_tests();
-		return;
-	}
-	if(test_num === 0) {
-		add_h1(group_num, test_groups[group_num].name);
-	}
-	var func = test_groups[group_num].tests[test_num][0];
-	var input = test_groups[group_num].tests[test_num][1];
-	var expected = test_groups[group_num].tests[test_num][2];
-	var actual;
-	var funcname;
-	if(func.name) { funcname = func.name; }
-	else { funcname = func; }
-	try {
-		actual = func(input);
-	} catch (e) {
-		add_paragraph("Failed:", test_num, funcname+"("+input+") EXCEPTED with", e, "!=", expected);
-		group_fail++;
-		total_fail++;
+	while(true) {
+
+		if(group_num >= test_groups.length) {
+			progress(true, "done");
+			return;
+		}
+		var num_tests_in_group = test_groups[group_num].tests.length;
+		progress(false, total_success+total_fail,"/",total_possible);
+		progressbardiv.setAttribute("value", total_success+total_fail);
+		if(test_num >= num_tests_in_group) {
+			test_num = 0;
+			add_paragraph(group_success, "/", num_tests_in_group, "succeeded.", group_fail, "/", num_tests_in_group, "failed.", "Found", group_success+group_fail, "out of", num_tests_in_group, "tests.");
+			group_num++;
+			group_success = 0;
+			group_fail = 0;
+			if(run_next_tests()) { return; }
+			continue;
+		}
+		if(test_num === 0) {
+			add_h1(group_num, test_groups[group_num].name);
+		}
+		var func = test_groups[group_num].tests[test_num][0];
+		var input = test_groups[group_num].tests[test_num][1];
+		var expected = test_groups[group_num].tests[test_num][2];
+		var actual;
+		var funcname;
+		if(func.name) { funcname = func.name; }
+		else { funcname = func; }
+		try {
+			actual = func(input);
+		} catch (e) {
+			add_paragraph("Failed:", test_num, funcname+"("+input+") EXCEPTED with", e, "!=", expected);
+			group_fail++;
+			total_fail++;
+			test_num++;
+			if(run_next_tests()) { return; }
+			continue;
+		}
+		if(actual === expected) {
+			group_success++;
+			total_success++;
+		} else {
+			add_paragraph("Failed:", test_num, funcname+"("+input+") ->", actual, "!=", expected);
+			group_fail++;
+			total_fail++;
+		}
 		test_num++;
-		run_next_tests();
-		return;
+		if(run_next_tests()) { return; }
 	}
-	if(actual === expected) {
-		group_success++;
-		total_success++;
-	} else {
-		add_paragraph("Failed:", test_num, funcname+"("+input+") ->", actual, "!=", expected);
-		group_fail++;
-		total_fail++;
-	}
-	test_num++;
-	run_next_tests();
 }
 
 function run_next_tests() {
+	var now = Date.now();
+	if(current_test_start === undefined) { current_test_start = 0; }
+	if((current_test_start+10) > now) {
+		return false;
+	}
+	//console.log(group_num, test_num);
+	current_test_start = Date.now();
 	setTimeout(run_next_tests_impl, 0);
+	return true;
 }
 
 function count_all_tests() {
