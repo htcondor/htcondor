@@ -279,12 +279,12 @@ HTCondorView.prototype.aq_load = function(args) {
 	return def.promise();
 };
 
-HTCondorView.prototype.callback_render_graph = function(graphargs, data){
+HTCondorView.prototype.callback_render_graph = function(graph_id, url, title, graphargs, data){
 	var def = $.Deferred();
-	$('#'+this.graph_id+' .vizchart').empty();
+	$('#'+graph_id+' .vizchart').empty();
 	var query = "url="+this.url+"&"+graphargs;
-	if(this.title) {
-		query += "&title="+ encodeURIComponent(this.title);
+	if(title) {
+		query += "&title="+ encodeURIComponent(title);
 	}
 	var options = {
 		num_pattern: '#,##0.0',
@@ -294,9 +294,9 @@ HTCondorView.prototype.callback_render_graph = function(graphargs, data){
 	return def.promise();
 
 };
-HTCondorView.prototype.callback_render_table = function(tableargs, data) {
+HTCondorView.prototype.callback_render_table = function(table_id, url, tableargs, data) {
 	var def = $.Deferred();
-	$('#'+this.table_id+' .vizchart').empty();
+	$('#'+table_id+' .vizchart').empty();
 	var that = this;
 	var options = {
 		select_handler: function(e,t,d){ that.table_select_handler(e,t,d); },
@@ -304,7 +304,7 @@ HTCondorView.prototype.callback_render_table = function(tableargs, data) {
 		disable_height: true
 	};
 
-	var query = "url="+this.url+"&"+tableargs;
+	var query = "url="+url+"&"+tableargs;
 	this.aq_table.render(query, data, function(data){def.resolve(data);}, options);
 	return def.promise();
 };
@@ -337,11 +337,21 @@ HTCondorView.prototype.load_and_render = function(graphargs, tableargs) {
 	var args = "url="+mythis.url+"&"+graphargs;
 	var promise_data_loaded = this.aq_load(args);
 	var promise;
+
+	var graph_id = this.graph_id;
+	var url = this.url;
+	var table_id = this.table_id;
+	var title = this.title;
+
 	if(graphargs) {
-		promise_data_loaded.then(function(d){return mythis.callback_render_graph(graphargs,d);});
+		promise_data_loaded.then(function(data){
+			return mythis.callback_render_graph(graph_id, url, title, graphargs, data);
+			});
 	}
 	if(tableargs && tableargs !== this.last_tableargs) {
-		promise = promise_data_loaded.then(function(d){return mythis.callback_render_table(tableargs,d);});
+		promise = promise_data_loaded.then(function(data){
+			return mythis.callback_render_table(table_id, url, tableargs, data);
+			});
 		promise = promise.then(function(d){return mythis.callback_transform_total_table(tableargs,d);});
 		promise = promise.then(function(data){return mythis.callback_render_total_table(data);});
 		promise = promise.then(function(){return mythis.last_tableargs = tableargs;});
