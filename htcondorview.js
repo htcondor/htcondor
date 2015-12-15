@@ -234,7 +234,7 @@ HTCondorView.prototype.replace_search_arg = function(oldurl, newkey, newval) {
 	return this.urlTool.href;
 };
 
-HTCondorView.prototype.total_table_args = function(headers, tableargs, select_tuble) {
+HTCondorView.prototype.total_table_args = function(headers, select_tuble) {
 	var fields = [];
 	var i; 
 	for(i = 0; i < headers.length; i++) {
@@ -242,9 +242,8 @@ HTCondorView.prototype.total_table_args = function(headers, tableargs, select_tu
 			fields.push(headers[i]);
 		}
 	}
-	tableargs += "&group=;"+fields.join(",");
-	return tableargs;
-}
+	return "group=;"+fields.join(",");
+};
 
 	/*var mythis = this;
 	var handle_csv = function() {
@@ -326,11 +325,8 @@ HTCondorView.prototype.callback_render_total_table = function(data) {
 
 HTCondorView.prototype.callback_transform_total_table = function(tableargs, data) {
 	var def = $.Deferred();
-	var that = this;
-	var totaltableargs = this.total_table_args(data.headers, tableargs, this.select_tuple);
-
-	var query = "url="+this.url+"&"+totaltableargs;
-	this.aq_total_table.load_post_transform(query, null, function(d){def.resolve(d);});
+	var query = this.total_table_args(data.headers, tableargs, this.select_tuple);
+	this.aq_total_table.load_post_transform(query, data, function(d){def.resolve(d);});
 	return def.promise();
 };
 
