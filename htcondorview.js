@@ -338,6 +338,7 @@ HTCondorView.prototype.load_and_render = function(graphargs, tableargs) {
 			});
 	}
 	if(tableargs && tableargs !== this.last_tableargs) {
+		mythis.last_tableargs = tableargs;
 		promise = promise_data_loaded.then(function(data){
 			return mythis.promise_render_viz(mythis.aq_table, {
 				id: table_id,
@@ -347,16 +348,17 @@ HTCondorView.prototype.load_and_render = function(graphargs, tableargs) {
 				data: data
 				});
 			});
-		promise = promise.then(function(d){return mythis.callback_transform_total_table(tableargs,d);});
-		promise = promise.then(function(data){
-			return mythis.promise_render_viz(mythis.aq_total_table, {
-				id: total_table_id,
-				url: url,
-				select_handler: function(e,t,d){ mythis.total_table_select_handler(e,t,d); },
-				data: data
+		promise = promise
+			.then(function(d){return mythis.callback_transform_total_table(tableargs,d);})
+			.then(function(d){return mythis.add_total_field(d);})
+			.then(function(data){
+				return mythis.promise_render_viz(mythis.aq_total_table, {
+					id: total_table_id,
+					url: url,
+					select_handler: function(e,t,d){ mythis.total_table_select_handler(e,t,d); },
+					data: data
+					});
 				});
-			});
-		promise = promise.then(function(){ mythis.last_tableargs = tableargs;});
 	}
 };
 
