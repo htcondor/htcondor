@@ -5,6 +5,7 @@
 
 // Get ISO 8601 week number for a date.
 Date.prototype.getUTCWeek = function () {
+	"use strict";
 	var target  = new Date(this.valueOf());
 	var dayNr   = (this.getUTCDay() + 6) % 7;
 	target.setUTCDate(target.getUTCDate() - dayNr + 3);
@@ -18,6 +19,7 @@ Date.prototype.getUTCWeek = function () {
 
 // Get ISO 8601 year, assuming we're using week numbers.
 Date.prototype.getUTCWeekYear = function () {
+	"use strict";
 	var target	= new Date(this.valueOf());
 	target.setUTCDate(target.getUTCDate() - ((this.getUTCDay() + 6) % 7) + 3);
 	return target.getUTCFullYear();
@@ -25,6 +27,7 @@ Date.prototype.getUTCWeekYear = function () {
 
 // Get ISO 8610 year and week in form "2016-W01"
 Date.prototype.getUTCISOWeekDate = function ()  {
+	"use strict";
 	var week = this.getUTCWeek();
 	week = ("0"+week).slice(-2); // Zero pad.
 	var year = this.getUTCWeekYear();
@@ -32,6 +35,7 @@ Date.prototype.getUTCISOWeekDate = function ()  {
 }
 
 Date.prototype.getUTCISOYearMonth = function() {
+	"use strict";
 	var year = this.getUTCFullYear();
 	var month = this.getUTCMonth()+1;
 	month = ("0"+month).slice(-2); // Zero pad.
@@ -39,6 +43,7 @@ Date.prototype.getUTCISOYearMonth = function() {
 }
 
 Date.prototype.getUTCISOYearMonthDay = function() {
+	"use strict";
 	var yearmonth = this.getUTCISOYearMonth();
 	var day = this.getUTCDate();
 	day = ("0"+day).slice(-2); // Zero pad.
@@ -48,6 +53,7 @@ Date.prototype.getUTCISOYearMonthDay = function() {
 // Identical to "new Date(str)", but accepts ISO 8601 week dates (eg "2015-W04"). Dates are assumed to always be in UTC.
 // Week dates will return midnight on the Monday morning of that week. 
 Date.parseMore = function(str) {
+	"use strict";
 	var fields = /^(\d\d\d\d)-W(\d\d)$/.exec(str);
 	if((!fields) || fields.length !== 3) { return new Date(Date.parse(str)); }
 	var year = Number(fields[1]);
