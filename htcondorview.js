@@ -267,80 +267,87 @@ HTCondorView.prototype.add_total_field = function(grid) {
 	return grid;
 }
 
+HTCondorView.prototype.aq_load = function(args) {
+	var def = $.Deferred();
+	var newurl = AfterqueryObj.parseArgs(args).get('url');
+	if(newurl == this.data_url) {
+		def.resolve()
+		return def;
+	} else {
+		this.data_url = newurl;
+		this.data = this.aq_graph.load(args, null, function(data){def.resolve(data);});
+	}
+	return def.promise();
+};
+
+HTCondorView.prototype.callback_render_graph = function(graphargs){
+	var def = $.Deferred();
+	$('#'+this.graph_id+' .vizchart').empty();
+	var query = "url="+this.url+"&"+graphargs;
+	if(this.title) {
+		query += "&title="+ encodeURIComponent(this.title);
+	}
+	var options = {
+		num_pattern: '#,##0.0',
+		disable_height: true
+	};
+	this.aq_graph.render(query, this.data.value, function(data){def.resolve(data);}, options);
+	return def.promise();
+
+};
+HTCondorView.prototype.callback_render_table = function(tableargs) {
+	var def = $.Deferred();
+	$('#'+this.table_id+' .vizchart').empty();
+	var that = this;
+	var options = {
+		select_handler: function(e,t,d){ that.table_select_handler(e,t,d); },
+		num_pattern: '#,##0.0',
+		disable_height: true
+	};
+
+	var query = "url="+this.url+"&"+tableargs;
+	this.aq_table.render(query, this.data.value, function(data){def.resolve(data);}, options);
+	return def.promise();
+};
+
+HTCondorView.prototype.callback_render_total_table = function(data) {
+	var def = $.Deferred();
+	$('#'+this.total_table_id+' .vizchart').empty();
+	var that = this;
+	var options = {
+		select_handler: function(e,t,d){ that.total_table_select_handler(e,t,d); },
+		num_pattern: '#,##0.0',
+		disable_height: true
+	};
+	data = this.add_total_field(data);
+	this.aq_total_table.render("", data, function(data){def.resolve(data);}, options);
+	return def.promise();
+}
+
+HTCondorView.prototype.callback_transform_total_table = function(tableargs, data) {
+	var def = $.Deferred();
+	var that = this;
+	var totaltableargs = this.total_table_args(data.headers, tableargs, this.select_tuple);
+
+	var query = "url="+this.url+"&"+totaltableargs;
+	this.aq_total_table.load_post_transform(query, null, function(d){def.resolve(d);});
+	return def.promise();
+};
+
 HTCondorView.prototype.load_and_render = function(graphargs, tableargs) {
 	"use strict";
 	var mythis = this;
 
-
-	var callback_render_total_table = function(data) {
-		$('#'+mythis.total_table_id+' .vizchart').empty();
-		var options = {
-			select_handler: function(e,t,d){ mythis.total_table_select_handler(e,t,d); },
-			num_pattern: '#,##0.0',
-			disable_height: true
-		};
-		data = mythis.add_total_field(data);
-		mythis.aq_total_table.render("", data, null, options);
-	}
-
-	var callback_transform_total_table = function(data) {
-		setTimeout(function() {
-			var totaltableargs = mythis.total_table_args(data.headers, tableargs, this.select_tuple);
-
-			var query = "url="+mythis.url+"&"+totaltableargs;
-			mythis.aq_total_table.load_post_transform(query, null, callback_render_total_table);
-		}, 0);
-	};
-
-	var callback_render_table = function() {
-		$('#'+mythis.table_id+' .vizchart').empty();
-		setTimeout(function() {
-			var options = {
-				select_handler: function(e,t,d){ mythis.table_select_handler(e,t,d); },
-				num_pattern: '#,##0.0',
-				disable_height: true
-			};
-
-			var query = "url="+mythis.url+"&"+tableargs;
-			mythis.aq_table.render(query, mythis.data.value, callback_transform_total_table, options);
-		}, 0);
-	 };
-	if(tableargs === this.last_tableargs) { callback_render_table = null; }
-	if(!tableargs) { callback_render_table = null; }
-	this.last_tableargs = tableargs;
-
-	var callback_render_graph = function(){
-		$('#'+mythis.graph_id+' .vizchart').empty();
-		setTimeout(function() {
-			var query = "url="+mythis.url+"&"+graphargs;
-			if(mythis.title) {
-				query += "&title="+ encodeURIComponent(mythis.title);
-			}
-			var options = {
-				num_pattern: '#,##0.0',
-				disable_height: true
-			};
-			mythis.aq_graph.render(query, mythis.data.value, callback_render_table, options);
-			},0);
-		};
-
-	if(!graphargs) {
-		if(callback_render_table) {
-			callback_render_graph = callback_render_table; 
-		} else {
-			return; // Nothing to do.
-		}
-	}
-
 	var args = "url="+mythis.url+"&"+graphargs;
-	var newurl = AfterqueryObj.parseArgs(args).get('url');
-	if(newurl == this.data_url) {
-		callback_render_graph();
-	} else {
-		this.data_url = newurl;
-		this.data = this.aq_graph.load(args, null, function(){
-			callback_render_graph();
-			});
+	var promise = this.aq_load(args);
+	if(graphargs) {
+		promise = promise.then(function(){return mythis.callback_render_graph(graphargs);});
+	}
+	if(tableargs && tableargs !== this.last_tableargs) {
+		promise = promise.then(function(){return mythis.callback_render_table(tableargs);});
+		promise = promise.then(function(d){return mythis.callback_transform_total_table(tableargs,d);});
+		promise = promise.then(function(data){return mythis.callback_render_total_table(data);});
+		promise = promise.then(function(){return mythis.last_tableargs = tableargs;});
 	}
 };
 
