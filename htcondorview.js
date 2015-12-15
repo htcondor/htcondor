@@ -81,7 +81,7 @@ HTCondorView.prototype.initialize_from_object = function(options) {
 	var table_args = options.table_query;
 	var select_tuple = options.select_tuple;
 	this.urlTool = document.createElement('a');
-	var mythis = this;
+	var that = this;
 	var i;
 
 	this.date_start = options.date_start;
@@ -120,9 +120,9 @@ HTCondorView.prototype.initialize_from_object = function(options) {
 	this.table_fullscreen_link = $('#'+this.table_fullscreen_id);
 	this.table_edit_link = $('#'+this.table_edit_id);
 
-	$('#'+this.table_download_id).click(function(ev) { mythis.download_csv(mythis.data, mythis.current_tableargs); ev.preventDefault();});
+	$('#'+this.table_download_id).click(function(ev) { that.download_csv(that.data, that.current_tableargs); ev.preventDefault();});
 
-	$('#'+this.graph_download_id).click(function(ev) { mythis.download_csv(mythis.data, mythis.current_graphargs); ev.preventDefault();});
+	$('#'+this.graph_download_id).click(function(ev) { that.download_csv(that.data, that.current_graphargs); ev.preventDefault();});
 
 	//this.change_view()
 	this.starting_graphargs = graph_args;
@@ -313,9 +313,9 @@ HTCondorView.prototype.callback_transform_total_table = function(tableargs, data
 
 HTCondorView.prototype.load_and_render = function(graphargs, tableargs) {
 	"use strict";
-	var mythis = this;
+	var that = this;
 
-	var promise_data_loaded = this.aq_load(mythis.url, mythis.date_start, mythis.date_end);
+	var promise_data_loaded = this.aq_load(that.url, that.date_start, that.date_end);
 	var promise;
 
 	var graph_id = this.graph_id;
@@ -326,7 +326,7 @@ HTCondorView.prototype.load_and_render = function(graphargs, tableargs) {
 
 	if(graphargs) {
 		promise_data_loaded.then(function(data){
-			return mythis.promise_render_viz(mythis.aq_graph, {
+			return that.promise_render_viz(that.aq_graph, {
 				id: graph_id,
 				url: url,
 				title: title,
@@ -336,24 +336,24 @@ HTCondorView.prototype.load_and_render = function(graphargs, tableargs) {
 			});
 	}
 	if(tableargs && tableargs !== this.last_tableargs) {
-		mythis.last_tableargs = tableargs;
+		that.last_tableargs = tableargs;
 		promise = promise_data_loaded.then(function(data){
-			return mythis.promise_render_viz(mythis.aq_table, {
+			return that.promise_render_viz(that.aq_table, {
 				id: table_id,
 				url: url,
 				query_args: tableargs,
-				select_handler: function(e,t,d){ mythis.table_select_handler(e,t,d); },
+				select_handler: function(e,t,d){ that.table_select_handler(e,t,d); },
 				data: data
 				});
 			});
 		promise = promise
-			.then(function(d){return mythis.callback_transform_total_table(tableargs,d);})
-			.then(function(d){return mythis.add_total_field(d);})
+			.then(function(d){return that.callback_transform_total_table(tableargs,d);})
+			.then(function(d){return that.add_total_field(d);})
 			.then(function(data){
-				return mythis.promise_render_viz(mythis.aq_total_table, {
+				return that.promise_render_viz(that.aq_total_table, {
 					id: total_table_id,
 					url: url,
-					select_handler: function(e,t,d){ mythis.total_table_select_handler(e,t,d); },
+					select_handler: function(e,t,d){ that.total_table_select_handler(e,t,d); },
 					data: data
 					});
 				});
@@ -532,13 +532,13 @@ HTCondorView.prototype.download_data = function(filename, type, data) {
 
 HTCondorView.prototype.download_csv = function(data, query) {
 	"use strict";
-	var mythis = this;
+	var that = this;
 	var handle_csv = function() {
-		var csv = mythis.afterquerydata_to_csv(mythis.csv_source_data.value);
-		mythis.csv_source_data = undefined;
-		mythis.download_data("HTCondor-View-Data.csv", "text/csv", csv);
+		var csv = that.afterquerydata_to_csv(that.csv_source_data.value);
+		that.csv_source_data = undefined;
+		that.download_data("HTCondor-View-Data.csv", "text/csv", csv);
 	};
-	this.csv_source_data = mythis.aq_table.load_post_transform(query, data, handle_csv);
+	this.csv_source_data = that.aq_table.load_post_transform(query, data, handle_csv);
 };
 
 
