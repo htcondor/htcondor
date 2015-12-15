@@ -11,6 +11,7 @@
 <pre></pre>
 
 <script>
+"use strict";
 
 
 
@@ -73,8 +74,8 @@ HTCondorViewDateFiles.prototype.oldest_loaded = function(oldest) {
 			this.absolute_oldest = dateval;
 		}
 	}
-	console.log("Oldest available data", this.oldest);
-	console.log("Absolute oldest:", this.absolute_oldest);
+	//console.log("Oldest available data", this.oldest);
+	//console.log("Absolute oldest:", this.absolute_oldest);
 	this.my_promise.resolve(this);
 };
 
@@ -93,7 +94,7 @@ HTCondorViewDateFiles.truncate_to_week = function(dateobj) {
 	var w = dateobj.getUTCISOWeekDate();
 	var r = Date.parseMore(w);
 	var tmp = r.getUTCISOWeekDate();
-	console.log("        ", dateobj,"->", w, "->", r, "(",tmp,")");
+	//console.log("        ", dateobj,"->", w, "->", r, "(",tmp,")");
 	return r;
 }
 
@@ -103,20 +104,25 @@ HTCondorViewDateFiles.truncate_to_month = function(dateobj) {
 }
 
 HTCondorViewDateFiles.prototype.get_files_aide = function(start, end, step, truncater, formatter) {
-console.log("    ", start, end, step, truncater, formatter);
+//console.log("    ", start, end, step, truncater, formatter);
+//console.log("  start", start);
 	var now = truncater(start);
+//console.log("  trunc", now);
+//console.log("    end", end, "+",step,"- 1");
+	end.setTime(end.getTime()+step-1);
+//console.log("      =", end);
 	end = truncater(end);
-	end.setDate(end.getDate()+1);
-console.log("    BEGIN ", now, end);
+//console.log("  trunc", end);
 
 	var retfiles = [];
+	var stamp;
 
 	while(now.getTime() < end.getTime()) {
-console.log("    ", now, end);
+//console.log("    ", now, end);
 		stamp = formatter(now);
 		retfiles.push(stamp);
 		now.setTime(now.getTime() + step);
-console.log("       ", now, end);
+//console.log("       ", now, end);
 	}
 
 	return retfiles;
@@ -131,7 +137,7 @@ HTCondorViewDateFiles.prototype.get_files = function(start,end) {
 	}
 	if(start.getTime() > end.getTime()) { return []; }
 
-	console.log("considering", start, "to", end);
+	//console.log("considering", start, "to", end);
 
 	var day = 1000*60*60*24;
 	var week = day*7;
@@ -147,43 +153,40 @@ HTCondorViewDateFiles.prototype.get_files = function(start,end) {
 
 	// We choose the smallest interval that covers the time period
 	// and is at least as long as the time period.
-
-	//console.log("delta", delta, day);
-	//console.log("daily?", this.oldest.daily);
-	//console.log("old enough?", start.getTime(), this.oldest.daily.getTime());
+	// Goal is to load no more than 2 files unless there are no other
+	// options. In addition, which granularity of files we load should
+	// always be the same for a given duration; we don't want to jump
+	// between daily and weekly files because we're loading 36 hours and
+	// sometimes we'd need 2 daily and sometimes 3.
 
 	if( delta <= day &&
 		this.oldest.daily &&
 		start.getTime() >= this.oldest.daily.getTime()) {
-		console.log("  using daily files");
 		retfiles = this.get_files_aide(start, end, day,
 			HTCondorViewDateFiles.truncate_to_day,
 			function(d) { return d.getUTCISOYearMonthDay(); }
 			);
+		console.log("  daily:", retfiles);
 		return retfiles;
 	}
 
 	if( delta <= week &&
 		this.oldest.weekly &&
 		start.getTime() >= this.oldest.weekly.getTime()) {
-		console.log("  using weekly files");
 		retfiles = this.get_files_aide(start, end, week,
 			HTCondorViewDateFiles.truncate_to_week,
 			function(d) { return d.getUTCISOWeekDate(); }
 			);
+		console.log("  weekly:", retfiles);
 		return retfiles;
 	}
 
-	if( this.oldest.weekly &&
-		start.getTime() >= this.oldest.weekly.getTime()) {
-		console.log("  using monthly files");
-		return retfiles;
-	}
-
-	console.log("Unable to process request");
-
-
-	
+	retfiles = this.get_files_aide(start, end, month,
+		HTCondorViewDateFiles.truncate_to_month,
+		function(d) { return d.getUTCISOYearMonth(); }
+		);
+	console.log("  monthly:", retfiles);
+	return retfiles;
 };
 
 
@@ -191,19 +194,44 @@ HTCondorViewDateFiles.prototype.get_files = function(start,end) {
 
 var df = new HTCondorViewDateFiles("data/submitter..json", ready_to_go);
 
-function tryit(df, s,e) {
+function tryit(desc, df, s,e) {
+	console.log(desc);
 	var r = df.get_files(s,e);
-	console.log("    ",r);
+	//console.log("    ",r);
 	console.log("");
 }
 
 function ready_to_go(df) {
-	tryit(df, "2015-11-30T00:00:00Z", "2015-11-30T23:59:59Z");
-	tryit(df, "2015-11-30T00:00:00Z", "2015-12-01T00:00:00Z");
-	tryit(df, "2015-11-30T00:00:01Z", "2015-12-01T00:00:01Z");
-	tryit(df, "2015-11-29T00:00:00Z", "2015-12-01T00:00:00Z");
-	tryit(df, "2015-11-29T23:59:59Z", "2015-12-01T00:00:00Z");
-	tryit(df, "2015-12-01T12:00:00Z", "2015-12-01T13:00:00Z");
+	tryit("daily, 1 (1 hour)", df, "2015-12-01T12:00:00Z", "2015-12-01T13:00:00Z");
+	tryit("daily, 1 (1 day)", df, "2015-11-30T00:00:00Z", "2015-12-01T00:00:00Z");
+	tryit("daily, 1 (1 day -1s)", df, "2015-11-30T00:00:00Z", "2015-11-30T23:59:59Z");
+	tryit("daily, 2 (1 day)", df, "2015-11-30T03:00:00Z", "2015-12-01T03:00:00Z");
+	tryit("daily, 2 (1 day -1s)", df, "2015-11-30T03:00:00Z", "2015-12-01T02:59:59Z");
+
+
+	tryit("weekly, 1 (1 day +1s)", df, "2015-11-30T00:00:00Z", "2015-12-01T00:00:01Z");
+	tryit("weekly, 1 (1 week -1s)", df, "2015-11-23T00:00:00Z", "2015-11-29T23:59:59Z");
+	tryit("weekly, 1 (1 week)", df, "2015-11-23T00:00:00Z", "2015-11-30T00:00:00Z");
+	tryit("weekly, 2 (1 week)", df, "2015-11-23T00:00:01Z", "2015-11-30T00:00:01Z");
+	tryit("weekly, 2 (1 week shift)", df, "2015-11-24T00:00:00Z", "2015-12-01T00:00:00Z");
+	tryit("weekly, 2 (3 days)", df, "2015-11-29T00:00:00Z", "2015-12-01T00:00:00Z");
+	tryit("weekly, 2 (3 daysish)", df, "2015-11-29T23:59:59Z", "2015-12-01T00:00:00Z");
+
+	tryit("monthly, 1 (2 weeks)", df, "2015-11-16T00:00:00", "2015-11-29T23:59:59Z");
+	tryit("monthly, 1 (1 week and change)", df, "2015-11-23T00:00:00Z", "2015-11-30T00:00:01Z");
+	tryit("monthly, 2 (1 week and change)", df, "2015-11-24T00:00:00Z", "2015-12-01T00:00:00Z");
+	tryit("monthly, 2 (1 week and change)", df, "2015-11-24T00:00:00Z", "2015-12-01T00:00:01Z");
+	tryit("monthly, 2 (1 week and change)", df, "2015-11-25T00:00:00Z", "2015-12-02T00:00:01Z");
+	tryit("monthly, 2 (1 week and change)", df, "2015-11-26T00:00:00Z", "2015-12-03T00:00:01Z");
+	tryit("monthly, 2 (3 weeks)", df, "2015-11-25T00:00:00Z", "2015-12-16T00:00:01Z");
+	tryit("monthly, 2 (3 weeks)", df, "2015-10-25T00:00:00Z", "2015-11-16T00:00:01Z");
+	tryit("monthly, 1 (1 month)", df, "2015-11-01T00:00:00Z", "2015-12-01T00:00:00Z");
+	tryit("monthly, 2 (1 month)", df, "2015-11-01T00:00:01Z", "2015-12-01T00:00:01Z");
+	tryit("monthly, 12 (12 months)", df, "2015-01-01T00:00:00Z", "2016-01-01T00:00:00Z");
+	tryit("monthly, 13 (12 months)", df, "2015-01-01T00:00:01Z", "2016-01-01T00:00:01Z");
+	tryit("monthly, 13 (12 months)", df, "2015-06-01T00:00:01Z", "2016-06-01T00:00:01Z");
+
+
 }
 </script>
 
