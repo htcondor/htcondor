@@ -267,14 +267,14 @@ HTCondorView.prototype.add_total_field = function(grid) {
 	return grid;
 };
 
-HTCondorView.prototype.aq_load = function(url) {
+HTCondorView.prototype.aq_load = function(url, start, end) {
 	var def = $.Deferred();
 	var that = this;
-	if(url === this.data_url) {
+	if(url === this.data_id) {
 		def.resolve(this.data);
 		return def;
 	} else {
-		this.data_url = url;
+		this.data_id = url;
 		this.aq_graph.load("url="+url, null, function(data){
 			that.data = data;
 			def.resolve(data);
@@ -315,7 +315,7 @@ HTCondorView.prototype.load_and_render = function(graphargs, tableargs) {
 	"use strict";
 	var mythis = this;
 
-	var promise_data_loaded = this.aq_load(mythis.url);
+	var promise_data_loaded = this.aq_load(mythis.url, mythis.date_start, mythis.date_end);
 	var promise;
 
 	var graph_id = this.graph_id;
