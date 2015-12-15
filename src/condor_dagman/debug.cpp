@@ -166,46 +166,29 @@ debug_cache_stop_caching(void)
 	}
 }
 
+//TEMPTEMP -- test this...
 /*--------------------------------------------------------------------------*/
 void
 debug_cache_insert(int flags, const char *fmt, va_list args)
 {
 	time_t clock_now;
-	struct tm *tm = NULL;
 
 	MyString tstamp, fds, line, pid, cid;
 	pid_t my_pid;
 
 #ifdef D_CATEGORY_MASK
 	int HdrFlags = (DebugHeaderOptions|flags) & ~D_CATEGORY_RESERVED_MASK;
-	bool UseTimestamps = (DebugHeaderOptions & D_TIMESTAMP) != 0;
 #else
 	int HdrFlags = DebugFlags|flags;
-	int UseTimestamps = DebugUseTimestamps;
 #endif
 	// XXX TODO
 	// handle flags...
 	// For now, always assume D_ALWAYS since the caller assumes it as well.
 
-	// HACK
-	// Note: This nasty bit of code is copied in spirit from dprintf.c
-	// It needs abstracting out a little bit from there into its own
-	// function, but this is a quick hack for LIGO. I'll come back to it
-	// and do it better later when I have time.
-	clock_now = time(NULL);
-	if (!UseTimestamps) {
-		tm = localtime(&clock_now);
-	}
+	clock_now = time( NULL );
+	time_to_str( clock_now, tstamp );
 
 	if ((HdrFlags & D_NOHEADER) == 0) {
-		if (UseTimestamps) {
-			tstamp.formatstr("(%d) ", (int)clock_now);
-		} else {
-			tstamp.formatstr("%d/%d %02d:%02d:%02d ",
-				tm->tm_mon + 1, tm->tm_mday, tm->tm_hour,
-				tm->tm_min, tm->tm_sec );
-		}
-
 		if (HdrFlags & D_FDS) {
 				// Because of Z's dprintf changes, we no longer have
 				// access to the dprintf FP.  For now we're just going
@@ -292,4 +275,35 @@ bool check_warning_strictness( strict_level_t strictness, bool quit_if_error )
 	}
 
 	return false;
+}
+
+/*--------------------------------------------------------------------------*/
+
+void
+time_to_str( time_t timestamp, MyString &tstr )
+{
+	struct tm *tm = NULL;
+
+#ifdef D_CATEGORY_MASK
+	bool UseTimestamps = (DebugHeaderOptions & D_TIMESTAMP) != 0;
+#else
+	int UseTimestamps = DebugUseTimestamps;
+#endif
+
+	// HACK
+	// Note: This nasty bit of code is copied in spirit from dprintf.c
+	// It needs abstracting out a little bit from there into its own
+	// function, but this is a quick hack for LIGO. I'll come back to it
+	// and do it better later when I have time.
+	if ( !UseTimestamps ) {
+		tm = localtime( &timestamp );
+	}
+
+	if ( UseTimestamps ) {
+		tstr.formatstr( "(%d) ", (int)timestamp );
+	} else {
+		tstr.formatstr( "%d/%d %02d:%02d:%02d ",
+			tm->tm_mon + 1, tm->tm_mday, tm->tm_hour,
+			tm->tm_min, tm->tm_sec );
+	}
 }

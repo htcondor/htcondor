@@ -2379,16 +2379,22 @@ PrintEvent( debug_level_t level, const ULogEvent* event, Job* node,
 
 	const char *recovStr = recovery ? " [recovery mode]" : "";
 
+	MyString timestr;
+	struct tm eventTm = event->eventTime;
+	time_t timestamp = mktime( &eventTm );//TEMPTEMP -- is this right?? or shouldwe use eventclock???
+	time_to_str( timestamp, timestr );
+	timestr.trim();
+
 	if( node ) {
-	    debug_printf( level, "Event: %s for %s Node %s (%d.%d.%d)%s\n",
+	    debug_printf( level, "Event: %s for %s Node %s (%d.%d.%d) {%s}%s\n",
 					  event->eventName(), node->JobTypeString(),
 					  node->GetJobName(), event->cluster, event->proc,
-					  event->subproc, recovStr );
+					  event->subproc, timestr.Value(), recovStr );
 	} else {
-        debug_printf( level, "Event: %s for unknown Node (%d.%d.%d): "
+        debug_printf( level, "Event: %s for unknown Node (%d.%d.%d) {%s}: "
 					  "ignoring...%s\n", event->eventName(),
 					  event->cluster, event->proc,
-					  event->subproc, recovStr );
+					  event->subproc, timestr.Value(), recovStr );
 	}
 }
 

@@ -23,6 +23,8 @@
 
 #include "condor_header_features.h"
 
+class MyString;
+
 BEGIN_C_DECLS   /* from condor_header_features.h */
 
 /** @name debug.h
@@ -171,6 +173,9 @@ typedef enum strict_level strict_level_t;
 */
 bool check_warning_strictness( strict_level_t strictness,
 			bool quit_if_error = true );
+
+//TEMPTEMP -- document
+void time_to_str( time_t timestamp, MyString &tstr );
 
 END_C_DECLS /* from condor_header_features.h */
 
