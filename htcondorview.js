@@ -37,7 +37,7 @@ data_url - URL, possibly relative, to the data to be loaded.  If the URL contain
 
 date_start - Optional. Date object.  The start of the range to download and display. If present, the data_url MUST contain "..".
 
-date_end - Optional. Date object. If present, date_start is mandatory.  The end of the range to download and display.  If date_start is specified, but not date_end, date_end is assumed to be "now" (ie "new Date()".
+date_end - Optional. Date object. If present, date_start is mandatory.  The end of the range to download and display.  If date_start is specified, but not date_end, date_end is assumed to be "now" (ie "new Date()").
 
 graph_query - Afterquery query, but not including the title or url entries.  This is the chart to display.
 
@@ -84,6 +84,10 @@ HTCondorView.prototype.initialize_from_object = function(options) {
 	var mythis = this;
 	var i;
 
+	this.date_start = options.date_start;
+	this.date_end = options.date_end;
+	if(this.date_start && !this.date_end) { this.date_end = new Date(); }
+	else if(this.date_end && !this.date_start) { this.date_end = null; }
 
 	this.original_title = options.title;
 	this.title = options.title;
