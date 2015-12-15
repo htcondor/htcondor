@@ -279,49 +279,24 @@ HTCondorView.prototype.aq_load = function(args) {
 	return def.promise();
 };
 
-HTCondorView.prototype.callback_render_graph = function(graph_id, url, title, graphargs, data){
+HTCondorView.prototype.promise_render_viz = function(viz, args) {
 	var def = $.Deferred();
-	$('#'+graph_id+' .vizchart').empty();
-	var query = "url="+this.url+"&"+graphargs;
-	if(title) {
-		query += "&title="+ encodeURIComponent(title);
+	$('#'+args.id+' .vizchart').empty();
+	var query_bits = [];
+	if(args.url) { query_bits.push("url="+args.url); }
+	if(args.query_args) { query_bits.push(args.query_args); }
+	if(args.title) { query_bits.push("&title="+ encodeURIComponent(args.title)); }
+	var options = {
+		num_pattern: '#,##0.0',
+		disable_height: true
+	};
+	if(args.select_handler) {
+		options.select_handler = args.select_handler;
 	}
-	var options = {
-		num_pattern: '#,##0.0',
-		disable_height: true
-	};
-	this.aq_graph.render(query, data, function(data){def.resolve(data);}, options);
-	return def.promise();
-
-};
-HTCondorView.prototype.callback_render_table = function(table_id, url, tableargs, data) {
-	var def = $.Deferred();
-	$('#'+table_id+' .vizchart').empty();
-	var that = this;
-	var options = {
-		select_handler: function(e,t,d){ that.table_select_handler(e,t,d); },
-		num_pattern: '#,##0.0',
-		disable_height: true
-	};
-
-	var query = "url="+url+"&"+tableargs;
-	this.aq_table.render(query, data, function(data){def.resolve(data);}, options);
+	var query = query_bits.join("&");
+	viz.render(query, args.data, function(data){def.resolve(data);}, options);
 	return def.promise();
 };
-
-HTCondorView.prototype.callback_render_total_table = function(data) {
-	var def = $.Deferred();
-	$('#'+this.total_table_id+' .vizchart').empty();
-	var that = this;
-	var options = {
-		select_handler: function(e,t,d){ that.total_table_select_handler(e,t,d); },
-		num_pattern: '#,##0.0',
-		disable_height: true
-	};
-	data = this.add_total_field(data);
-	this.aq_total_table.render("", data, function(data){def.resolve(data);}, options);
-	return def.promise();
-}
 
 HTCondorView.prototype.callback_transform_total_table = function(tableargs, data) {
 	var def = $.Deferred();
@@ -339,21 +314,41 @@ HTCondorView.prototype.load_and_render = function(graphargs, tableargs) {
 	var promise;
 
 	var graph_id = this.graph_id;
-	var url = this.url;
 	var table_id = this.table_id;
+	var total_table_id = this.total_table_id;
+	var url = this.url;
 	var title = this.title;
 
 	if(graphargs) {
 		promise_data_loaded.then(function(data){
-			return mythis.callback_render_graph(graph_id, url, title, graphargs, data);
+			return mythis.promise_render_viz(mythis.aq_graph, {
+				id: graph_id,
+				url: url,
+				title: title,
+				query_args: graphargs,
+				data: data
+				});
 			});
 	}
 	if(tableargs && tableargs !== this.last_tableargs) {
 		promise = promise_data_loaded.then(function(data){
-			return mythis.callback_render_table(table_id, url, tableargs, data);
+			return mythis.promise_render_viz(mythis.aq_table, {
+				id: table_id,
+				url: url,
+				query_args: tableargs,
+				select_handler: function(e,t,d){ mythis.table_select_handler(e,t,d); },
+				data: data
+				});
 			});
 		promise = promise.then(function(d){return mythis.callback_transform_total_table(tableargs,d);});
-		promise = promise.then(function(data){return mythis.callback_render_total_table(data);});
+		promise = promise.then(function(data){
+			return mythis.promise_render_viz(mythis.aq_total_table, {
+				id: total_table_id,
+				url: url,
+				select_handler: function(e,t,d){ mythis.total_table_select_handler(e,t,d); },
+				data: data
+				});
+			});
 		promise = promise.then(function(){return mythis.last_tableargs = tableargs;});
 	}
 };
