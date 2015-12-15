@@ -115,9 +115,9 @@ HTCondorView.prototype.initialize_from_object = function(options) {
 	this.table_fullscreen_link = $('#'+this.table_fullscreen_id);
 	this.table_edit_link = $('#'+this.table_edit_id);
 
-	$('#'+this.table_download_id).click(function(ev) { mythis.download_csv(mythis.data.value, mythis.current_tableargs); ev.preventDefault();});
+	$('#'+this.table_download_id).click(function(ev) { mythis.download_csv(mythis.data, mythis.current_tableargs); ev.preventDefault();});
 
-	$('#'+this.graph_download_id).click(function(ev) { mythis.download_csv(mythis.data.value, mythis.current_graphargs); ev.preventDefault();});
+	$('#'+this.graph_download_id).click(function(ev) { mythis.download_csv(mythis.data, mythis.current_graphargs); ev.preventDefault();});
 
 	//this.change_view()
 	this.starting_graphargs = graph_args;
@@ -269,12 +269,16 @@ HTCondorView.prototype.add_total_field = function(grid) {
 HTCondorView.prototype.aq_load = function(args) {
 	var def = $.Deferred();
 	var newurl = AfterqueryObj.parseArgs(args).get('url');
-	if(newurl == this.data_url) {
-		def.resolve()
+	var that = this;
+	if(newurl === this.data_url) {
+		def.resolve(this.data)
 		return def;
 	} else {
 		this.data_url = newurl;
-		this.data = this.aq_graph.load(args, null, function(data){def.resolve(data);});
+		this.aq_graph.load(args, null, function(data){
+			that.data = data;
+			def.resolve(data);
+			});
 	}
 	return def.promise();
 };
