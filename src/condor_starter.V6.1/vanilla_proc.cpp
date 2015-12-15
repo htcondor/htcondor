@@ -1039,15 +1039,10 @@ VanillaProc::outOfMemoryEvent(int /* fd */)
 		ss << "  This occurred while the job was checkpointing.";
 	}
 
-	// this will actually clean up the job
-	Starter->Hold( );
 	dprintf( D_ALWAYS, "Job was held due to OOM event: %s\n", ss.str().c_str());
-	Starter->allJobsDone();
 
 	dprintf(D_FULLDEBUG, "Closing event FD pipe %d.\n", m_oom_efd);
 	cleanupOOM();
-
-	Starter->ShutdownFast();
 
 	// This ulogs the hold event and KILLS the shadow
 	Starter->jic->holdJob(ss.str().c_str(), CONDOR_HOLD_CODE_JobOutOfResources, 0);

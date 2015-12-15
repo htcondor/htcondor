@@ -16,15 +16,15 @@ New features will be added in the 8.5.x development series.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{\label{sec:New-8-4-3}Version 8.4.3}
+\subsection*{\label{sec:New-8-4-4}Version 8.4.4}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \noindent Release Notes:
 
 \begin{itemize}
 
-\item HTCondor version 8.4.3 not yet released.
-%\item HTCondor version 8.4.3 released on Month Date, 2015.
+\item HTCondor version 8.4.4 not yet released.
+%\item HTCondor version 8.4.4 released on Month Date, 2015.
 
 \end{itemize}
 
@@ -41,6 +41,39 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item None.
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-8-4-3}Version 8.4.3}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item HTCondor version 8.4.3 released on December 16, 2015.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item Fixed a bug that caused the \Opt{-append} option to be handled too
+late to apply to the first Queue statement in a \Condor{submit} file.
+\Ticket{5414}
+
 \item Fixed a bug that prevented running more than 100 slots on a single
 \Condor{startd} with partitionable slots.
 \Ticket{5398}
@@ -49,16 +82,24 @@ The details of each version are described below.
 not to work for Spot instances.
 \Ticket{5410}
 
-\item Fixed a bug that caused the \Opt{-append} option to be handled too
-late to apply to the first Queue statement in a \Condor{submit} file.
-\Ticket{5414}
+\item Fixed a bug where the cgroup VM limit would not be set for sizes over
+2 Gibibytes.
+\Ticket{5434}
+
+\item Fixed bugs that prevented the HTCondor daemons from working promptly at
+startup when the \Condor{shared\_port} daemon was in use on Windows platforms.
+\Ticket{5283}
+\Ticket{5430}
+\Ticket{5431}
+\Ticket{5432}
+\Ticket{5433}
 
 \item Added SELinux type enforcement rules to allow the \Condor{schedd}
-to use \Prog{sendmail}.
+to use \Prog{sendmail} on Enterprise Linux 7 platforms.
 \Ticket{5418}
 
 \item Fixed a bug where HTCondor service would not start if the
-\File{condor\_master.pid} file was empty.
+\File{condor\_master.pid} file was empty on Linux platforms.
 \Ticket{5427}
 
 \end{itemize}

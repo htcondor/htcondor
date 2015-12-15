@@ -479,7 +479,7 @@ InstanceThread(void* instance)
 */	return 0;
 }
 
-#if 1 // set this to 1 if you need logging to visual studio debugger of the threaded code that cannot use dprintf
+#if 0 // set this to 1 if you need logging to visual studio debugger of the threaded code that cannot use dprintf
 #include <time.h>
 #include <sys\timeb.h>
 void ThreadSafeLogError(const char * msg, int err) {

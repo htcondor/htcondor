@@ -43,16 +43,30 @@ class ResourceRequestList : public ClassyCountedPtr {
 		// 
 	void noMatchFound();
 
+	bool needsEndNegotiate();
+	bool needsEndNegotiateNow();
+
 		//
 	void clearRejectedAutoclusters() { m_clear_rejected_autoclusters = true; }
 
+	enum TryStates {
+		RRL_DONE,
+		RRL_NO_MORE_JOBS,
+		RRL_ERROR,
+		RRL_CONTINUE
+	};
+	TryStates tryRetrieve(ReliSock* const sock);
+
  private:
 
-	bool fetchRequestsFromSchedd(ReliSock* const sock);
+	TryStates fetchRequestsFromSchedd(ReliSock* const sock, bool blocking);
 
 	int m_protocol_version;
+	bool m_send_end_negotiate;
+	bool m_send_end_negotiate_now;
 	bool m_use_resource_request_counts;
 	bool m_clear_rejected_autoclusters;
+	int m_requests_to_fetch;
 	int m_num_to_fetch;
 	int errcode;
 	int current_autocluster;

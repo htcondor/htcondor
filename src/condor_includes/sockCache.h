@@ -61,9 +61,12 @@ public:
 
 	void clearCache( void );
 	void invalidateSock( const char* );
+	void invalidateSock(const std::string &sockAddr) {invalidateSock(sockAddr.c_str());}
 
 	ReliSock*	findReliSock( const char* addr );
+	ReliSock*	findReliSock(const std::string &addr ) {return findReliSock(addr.c_str());}
 	void		addReliSock( const char* addr, ReliSock* rsock );
+	void		addReliSock( const std::string &addr, ReliSock* rsock ) {addReliSock(addr.c_str(), rsock);}
 
 	bool	isFull( void );
 	int		size( void );
