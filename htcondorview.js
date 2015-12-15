@@ -60,6 +60,7 @@ function HTCondorView(id, url, graph_args, options) {
 }
 
 HTCondorView.simple = function(query, thisclass) {
+	"use strict";
 	var newid = HTCondorView.prototype.new_graph_id();
 	if(thisclass === null || thisclass === undefined) { 
 		thisclass = "HTCondorViewSimple";
@@ -169,6 +170,7 @@ HTCondorView.prototype.new_graph_id = function() {
 };
 
 HTCondorView.prototype.set_graph_query = function(graph_query) {
+	"use strict";
 	this.current_graphargs = graph_query;
 	var search = '?';
 		if(this.title) {
@@ -186,6 +188,7 @@ HTCondorView.prototype.set_graph_query = function(graph_query) {
 };
 
 HTCondorView.prototype.set_table_query = function(table_query) {
+	"use strict";
 	this.current_tableargs = table_query;
 	var search = '?';
 		if(this.title) {
@@ -235,6 +238,7 @@ HTCondorView.prototype.replace_search_arg = function(oldurl, newkey, newval) {
 };
 
 HTCondorView.prototype.total_table_args = function(headers, select_tuble) {
+	"use strict";
 	var fields = [];
 	var i; 
 	for(i = 0; i < headers.length; i++) {
@@ -249,6 +253,7 @@ HTCondorView.prototype.total_table_args = function(headers, select_tuble) {
 // Given a data grid in Afterquery format, prepend a new field
 // with a header of "", type of T_STRING, and all values of "TOTAL".
 HTCondorView.prototype.add_total_field = function(grid) {
+	"use strict";
 	grid.headers.unshift('');
 	grid.types.unshift(AfterqueryObj.T_STRING);
 	var i;
@@ -276,6 +281,7 @@ HTCondorView.prototype.aq_load = function(args) {
 };
 
 HTCondorView.prototype.promise_render_viz = function(viz, args) {
+	"use strict";
 	var def = $.Deferred();
 	$('#'+args.id+' .vizchart').empty();
 	var query_bits = [];
@@ -295,6 +301,7 @@ HTCondorView.prototype.promise_render_viz = function(viz, args) {
 };
 
 HTCondorView.prototype.callback_transform_total_table = function(tableargs, data) {
+	"use strict";
 	var def = $.Deferred();
 	var query = this.total_table_args(data.headers, tableargs, this.select_tuple);
 	this.aq_total_table.load_post_transform(query, data, function(d){def.resolve(d);});
