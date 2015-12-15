@@ -245,14 +245,6 @@ HTCondorView.prototype.total_table_args = function(headers, select_tuble) {
 	return "group=;"+fields.join(",");
 };
 
-	/*var mythis = this;
-	var handle_csv = function() {
-		var csv = mythis.afterquerydata_to_csv(mythis.csv_source_data.value);
-		mythis.csv_source_data = undefined;
-		mythis.download_data("HTCondor-View-Data.csv", "text/csv", csv);
-	};
-	this.csv_source_data = mythis.aq_table.load_post_transform(query, data, handle_csv);
-	*/
 
 // Given a data grid in Afterquery format, prepend a new field
 // with a header of "", type of T_STRING, and all values of "TOTAL".
