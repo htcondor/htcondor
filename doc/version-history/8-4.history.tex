@@ -71,6 +71,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug that caused the \Opt{-append} option to be handled too
+late to apply to the first Queue statement in a \Condor{submit} file.
+\Ticket{5414}
+
 \item Fixed a bug that prevented running more than 100 slots on a single
 \Condor{startd} with partitionable slots.
 \Ticket{5398}
@@ -79,16 +83,24 @@ The details of each version are described below.
 not to work for Spot instances.
 \Ticket{5410}
 
-\item Fixed a bug that caused the \Opt{-append} option to be handled too
-late to apply to the first Queue statement in a \Condor{submit} file.
-\Ticket{5414}
+\item Fixed a bug where the cgroup VM limit would not be set for sizes over
+2 Gibibytes.
+\Ticket{5434}
+
+\item Fixed bugs that prevented the HTCondor daemons from working promptly at
+startup when the \Condor{shared\_port} daemon was in use on Windows platforms.
+\Ticket{5283}
+\Ticket{5430}
+\Ticket{5431}
+\Ticket{5432}
+\Ticket{5433}
 
 \item Added SELinux type enforcement rules to allow the \Condor{schedd}
-to use \Prog{sendmail}.
+to use \Prog{sendmail} on Enterprise Linux 7 platforms.
 \Ticket{5418}
 
 \item Fixed a bug where HTCondor service would not start if the
-\File{condor\_master.pid} file was empty.
+\File{condor\_master.pid} file was empty on Linux platforms.
 \Ticket{5427}
 
 \end{itemize}
