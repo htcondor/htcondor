@@ -261,14 +261,14 @@ HTCondorView.prototype.add_total_field = function(grid) {
 		grid.data[i].unshift('TOTAL');
 	}
 	return grid;
-}
+};
 
 HTCondorView.prototype.aq_load = function(args) {
 	var def = $.Deferred();
 	var newurl = AfterqueryObj.parseArgs(args).get('url');
 	var that = this;
 	if(newurl === this.data_url) {
-		def.resolve(this.data)
+		def.resolve(this.data);
 		return def;
 	} else {
 		this.data_url = newurl;
@@ -352,7 +352,7 @@ HTCondorView.prototype.load_and_render = function(graphargs, tableargs) {
 				data: data
 				});
 			});
-		promise = promise.then(function(){return mythis.last_tableargs = tableargs;});
+		promise = promise.then(function(){ mythis.last_tableargs = tableargs;});
 	}
 };
 
@@ -438,14 +438,14 @@ HTCondorView.prototype.starting_elements = function(options) {
 	this.table_download_id= this.new_graph_id();
 
 	function editmenu(fullscreen_id, edit_id, download_id) {
-		var editmenu = "<div class='editmenu'>\n";
+		var ret = "<div class='editmenu'>\n";
 		if(has_fullscreen_link) {
-			editmenu += "<a href='#' id='"+fullscreen_id+"' class=\"editlink\">full screen</a><br>\n";
+			ret += "<a href='#' id='"+fullscreen_id+"' class=\"editlink\">full screen</a><br>\n";
 		}
-		editmenu += "<a href='#' id='"+download_id+"' class=\"editlink\">download data</a><br>\n";
-		editmenu += "<a href='#' id='"+edit_id+"' class=\"editlink\">edit</a><br>\n";
-		editmenu += "</div>\n";
-		return editmenu;
+		ret += "<a href='#' id='"+download_id+"' class=\"editlink\">download data</a><br>\n";
+		ret += "<a href='#' id='"+edit_id+"' class=\"editlink\">edit</a><br>\n";
+		ret += "</div>\n";
+		return ret;
 	}
 
 
