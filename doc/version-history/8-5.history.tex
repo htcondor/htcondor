@@ -32,6 +32,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item The \Condor{startd} history file now contains the peak
+memory usage, by an exited job, not the more recent.
+\Ticket{5436}
+
 \item The \Condor{startd} now advertises the following attributes
 on Linux machines: CpuFamily CpuModelNumber CacheSize.  These are
 pulled from the /proc/cpuinfo file.
