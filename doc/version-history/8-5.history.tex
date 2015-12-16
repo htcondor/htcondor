@@ -62,6 +62,21 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item When the \Condor{starter} evicts a job, perhaps because
+it has exceeded a memory limit, it does not transfer back to
+the submit machine the sandbox of working files.  This is
+consistent with other types of holds.
+\Ticket{5437}
+
+\item The \Condor{startd} history file now contains the peak
+memory usage, by an exited job, not the more recent.
+\Ticket{5436}
+
+\item The \Condor{startd} now advertises the following attributes
+on Linux machines: CpuFamily CpuModelNumber CacheSize.  These are
+pulled from the /proc/cpuinfo file.
+\Ticket{5323}
+
 \item When an HTCondor-C job is submitted to a remote \Condor{schedd},
 the remote job ad now includes the attribute \AdAttr{SubmitterGlobalJobId},
 whose value is the same as the attribute \AdAttr{GlobalJobId} in the
