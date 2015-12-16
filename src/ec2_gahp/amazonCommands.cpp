@@ -426,7 +426,22 @@ bool AmazonRequest::SendRequest() {
 
     // We may, technically, need to replace '%20' in the canonicalized
     // query string with '+' to be compliant.
-    dprintf( D_FULLDEBUG, "Post body is '%s'\n", canonicalizedQueryString.c_str() );
+    // dprintf( D_FULLDEBUG, "Post body is '%s'\n", canonicalizedQueryString.c_str() );
+    size_t index = canonicalizedQueryString.find( "AWSAccessKeyId=" );
+    if( index != std::string::npos ) {
+        size_t skipLast = canonicalizedQueryString.find( "&", index + 14 );
+        char swap = canonicalizedQueryString[ index + 15 ];
+        canonicalizedQueryString[ index + 15 ] = '\0';
+        char const * cqs = canonicalizedQueryString.c_str();
+        if( skipLast == std::string::npos ) {
+	        dprintf( D_FULLDEBUG, "Post body is '%s...'\n", cqs );
+        } else {
+        	dprintf( D_FULLDEBUG, "Post body is '%s...%s'\n", cqs, cqs + skipLast );
+        }
+        canonicalizedQueryString[ index + 15 ] = swap;
+    } else {
+        dprintf( D_FULLDEBUG, "Post body is '%s'\n", canonicalizedQueryString.c_str() );
+    }
 
     rv = curl_easy_setopt( curl, CURLOPT_POSTFIELDS, canonicalizedQueryString.c_str() );
     if( rv != CURLE_OK ) {

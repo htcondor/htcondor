@@ -459,6 +459,7 @@ GahpServer::read_argv(Gahp_Args &g_args)
 
 	ibuf = 0;
 
+	int errorCount = 0;
 	for (;;) {
 
 		ASSERT(ibuf < buf_size);
@@ -467,6 +468,14 @@ GahpServer::read_argv(Gahp_Args &g_args)
 
 		/* Check return value from read() */
 		if ( result < 0 ) {		/* Error - try reading again */
+			++errorCount;
+			if( errorCount == 5000 ) {
+				EXCEPT( "Waited five seconds for GAHP to reply, assuming it hung and giving up.\n" );
+			}
+			if( errorCount % 100 == 0 ) {
+				struct timespec req = { 0, 10000000 };
+				nanosleep( & req, NULL );
+			}
 			continue;
 		}
 		if ( result == 0 ) {	/* End of File */
