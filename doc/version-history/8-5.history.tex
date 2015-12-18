@@ -68,6 +68,13 @@ the submit machine the sandbox of working files.  This is
 consistent with other types of holds.
 \Ticket{5437}
 
+\item The \Condor{startd} history file now contains two
+new attributes, BadputCausedByDraining and BadputCausedByPreemption
+which are boolean valued attributes which are true if the job
+was preempted before completion, either because of draining or 
+preemption, respectively.
+\Ticket{5255}
+
 \item The \Condor{startd} history file now contains the peak
 memory usage, by an exited job, not the more recent.
 \Ticket{5436}
