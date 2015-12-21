@@ -2442,7 +2442,7 @@ AfterqueryObj.prototype.addUrlGetters = function(queue, args, startdata) {
           urls.push(url);
         }
       }
-      console.debug("Original data URLs:", urls);
+      //console.debug("Original data URLs:", urls);
       if(urls.length === 0) {
          throw new Error('Missing url= in query parameter');
       }
