@@ -193,11 +193,11 @@ HTCondorView.prototype.set_graph_query = function(graph_query) {
 	"use strict";
 	this.current_graphargs = graph_query;
 	var search = '?';
-		if(this.title) {
-			search += "title=" + encodeURIComponent(this.title) + "&";	
-		}
-		search += "data_url=" + encodeURIComponent(this.url) + "&";	
-		search += "graph_query=" + encodeURIComponent(this.current_graphargs) + "&";	
+	if(this.title) {
+		search += "title=" + encodeURIComponent(this.title) + "&";	
+	}
+	search += "data_url=" + encodeURIComponent(this.url) + "&";	
+	search += "graph_query=" + encodeURIComponent(this.current_graphargs) + "&";	
 	if(this.graph_fullscreen_link) {
 		this.graph_fullscreen_link.attr('href', "fullscreen.html" + search);
 	}
@@ -211,11 +211,11 @@ HTCondorView.prototype.set_table_query = function(table_query) {
 	"use strict";
 	this.current_tableargs = table_query;
 	var search = '?';
-		if(this.title) {
-			search += "title=" + encodeURIComponent(this.title) + "&";	
-		}
-		search += "data_url=" + encodeURIComponent(this.url) + "&";	
-		search += "graph_query=" + encodeURIComponent(this.current_tableargs) + "&";	
+	if(this.title) {
+		search += "title=" + encodeURIComponent(this.title) + "&";	
+	}
+	search += "data_url=" + encodeURIComponent(this.url) + "&";	
+	search += "graph_query=" + encodeURIComponent(this.current_tableargs) + "&";	
 	if(this.table_fullscreen_link) {
 		this.table_fullscreen_link.attr('href', "fullscreen.html" + search);
 	}
