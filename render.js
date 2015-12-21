@@ -276,7 +276,7 @@ AfterqueryObj.myParseDate = function(s) {
     var DATE_RE1 = RegExp(
         '^(\\d{1,4})[-/](\\d{1,2})(?:[-/](\\d{1,4})' +
         '(?:[T\\s](\\d{1,2}):(\\d\\d)(?::(\\d\\d)(?:\\.(\\d+))?)?)?)?' +
-        '(?: \\w\\w\\w)?$');
+        '(?:Z| \\w\\w\\w)?$');
     // Some people (gviz, for example) provide "json" files where dates
     // look like javascript Date() object declarations, eg.
     // Date(2014,0,1,2,3,4)
@@ -309,9 +309,9 @@ AfterqueryObj.myParseDate = function(s) {
         for (var i = g[7].length; i > 3; i--) g[7] /= 10.0;
         g[7] = Math.round(g[7], 0);
       }
-      return new Date(yyyy, mm - 1, dd || 1,
+      return new Date(Date.UTC(yyyy, mm - 1, dd || 1,
                       g[4] || 0, g[5] || 0, g[6] || 0,
-                      g[7] || 0);
+                      g[7] || 0));
     }
     return NaN;
   };
