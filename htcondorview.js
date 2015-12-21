@@ -56,7 +56,10 @@ has_fullscreen_link: true/false - Optional. Defaults to true. If false (and exac
 function HTCondorView(id, url, graph_args, options) {
 	"use strict";
 	var that = this;
-	$(document).ready(function() { that.initialize(id,url,graph_args,options); });
+	$(document).ready(function() { 
+
+		that.initialize(id,url,graph_args,options);
+	});
 }
 
 HTCondorView.simple = function(query, thisclass) {
@@ -270,12 +273,22 @@ HTCondorView.prototype.add_total_field = function(grid) {
 HTCondorView.prototype.aq_load = function(url, start, end) {
 	var def = $.Deferred();
 	var that = this;
-	if(url === this.data_id) {
+
+	var query = "url="+url;
+
+	var new_data_id = url;
+	if(start) {
+		new_data_id = url+"\0"+start+"\0"+end;
+
+		//TODOupdate file list here
+	}
+
+	if(new_data_id === this.data_id) {
 		def.resolve(this.data);
 		return def;
 	} else {
-		this.data_id = url;
-		this.aq_graph.load("url="+url, null, function(data){
+		this.data_id = new_data_id;
+		this.aq_graph.load(query, null, function(data){
 			that.data = data;
 			def.resolve(data);
 			});
@@ -540,6 +553,190 @@ HTCondorView.prototype.download_csv = function(data, query) {
 	};
 	this.csv_source_data = that.aq_table.load_post_transform(query, data, handle_csv);
 };
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+
+/*
+base_url - Mandatory. URL (relative or absolute) to the data files.  The
+URL must contain the string "..", which indicates where ".oldest." or
+".DATE." will be placed.
+
+ready_func - Optional. If present, called when the object is ready. Will be
+passed a copy of "this".  The delay is because the object needs to load the
+".oldest." file before it can field queries.
+
+fail_func - Optional. If present, called if the object is unable to
+initialize.  Will be passed a copy of "this".  Will fail if the ".oldest."
+file could not be loaded.
+*/
+function HTCondorViewDateFiles(base_url, ready_func, fail_func) {
+	this.base_url = base_url;
+	this.my_promise = jQuery.Deferred();
+
+	if(ready_func) { this.my_promise.done(ready_func); }
+	if(fail_func) { this.my_promise.fail(fail_func); }
+
+	var oldest_url = HTCondorViewDateFiles.expand(base_url, "oldest");
+	var that = this;
+	$.ajax(oldest_url, {dataType:'json'}).then(
+		function(data){that.oldest_loaded(data);},
+		function(data){that.failed_load();}
+		);
+}
+
+/*
+Returns a jQuery.promise which triggers when the object is ready to
+field queries, or upon failing to load the ".oldest." file (and thus
+will never be ready to field queries)
+*/
+HTCondorViewDateFiles.prototype.promise = function() {
+	return this.my_promise.promise();
+};
+
+
+HTCondorViewDateFiles.expand = function(base_url, content) {
+	return base_url.replace("..", "."+content+".");
+};
+
+
+HTCondorViewDateFiles.prototype.oldest_loaded = function(oldest) {
+	this.oldest = {};
+	var keys = Object.keys(oldest);
+	var key;
+	var val;
+	var dateval;
+	for (var i = 0; i < keys.length; i++) {
+		key = keys[i];
+		val = oldest[key];
+		dateval = Date.parseMore(val);
+		this.oldest[key] = dateval;
+		//console.log(val," -> ", dateval.toUTCString());
+		if((!this.absolute_oldest) || this.absolute_oldest.getTime() > dateval.getTime()) {
+			this.absolute_oldest = dateval;
+		}
+	}
+	//console.log("Oldest available data", this.oldest);
+	//console.log("Absolute oldest:", this.absolute_oldest);
+	this.my_promise.resolve(this);
+};
+
+HTCondorViewDateFiles.prototype.failed_load = function() {
+	this.my_promise.reject(this);
+};
+
+HTCondorViewDateFiles.truncate_to_day = function(dateobj) {
+	// TODO: probably faster to set individual fields to 0.
+	return Date.parseMore(dateobj.getUTCISOYearMonthDay());
+}
+
+HTCondorViewDateFiles.truncate_to_week = function(dateobj) {
+	// TODO: There is probably a faster solution, but it may
+	// be complex.
+	var w = dateobj.getUTCISOWeekDate();
+	var r = Date.parseMore(w);
+	var tmp = r.getUTCISOWeekDate();
+	//console.log("        ", dateobj,"->", w, "->", r, "(",tmp,")");
+	return r;
+}
+
+HTCondorViewDateFiles.truncate_to_month = function(dateobj) {
+	// TODO: probably faster to set individual fields to 0.
+	return Date.parseMore(dateobj.getUTCISOYearMonth());
+}
+
+HTCondorViewDateFiles.prototype.get_files_aide = function(start, end, step, truncater, formatter) {
+//console.log("    ", start, end, step, truncater, formatter);
+//console.log("  start", start);
+	var now = truncater(start);
+//console.log("  trunc", now);
+//console.log("    end", end, "+",step,"- 1");
+	end.setTime(end.getTime()+step-1);
+//console.log("      =", end);
+	end = truncater(end);
+//console.log("  trunc", end);
+
+	var retfiles = [];
+	var stamp;
+
+	while(now.getTime() < end.getTime()) {
+//console.log("    ", now, end);
+		stamp = formatter(now);
+		retfiles.push(stamp);
+		now.setTime(now.getTime() + step);
+//console.log("       ", now, end);
+	}
+
+	return retfiles;
+}
+
+HTCondorViewDateFiles.prototype.get_files = function(start,end) {
+	start = Date.parseMore(start);
+	end = Date.parseMore(end);
+
+	if(start.getTime() < this.absolute_oldest.getTime()) {
+		start = this.absolute_oldest;
+	}
+	if(start.getTime() > end.getTime()) { return []; }
+
+	//console.log("considering", start, "to", end);
+
+	var day = 1000*60*60*24;
+	var week = day*7;
+	var month = day*31;
+
+	var delta = end.getTime() - start.getTime();
+
+	var stamp;
+	var retfiles = [];
+
+
+	var now;
+
+	// We choose the smallest interval that covers the time period
+	// and is at least as long as the time period.
+	// Goal is to load no more than 2 files unless there are no other
+	// options. In addition, which granularity of files we load should
+	// always be the same for a given duration; we don't want to jump
+	// between daily and weekly files because we're loading 36 hours and
+	// sometimes we'd need 2 daily and sometimes 3.
+
+	if( delta <= day &&
+		this.oldest.daily &&
+		start.getTime() >= this.oldest.daily.getTime()) {
+		retfiles = this.get_files_aide(start, end, day,
+			HTCondorViewDateFiles.truncate_to_day,
+			function(d) { return d.getUTCISOYearMonthDay(); }
+			);
+		console.log("  daily:", retfiles);
+		return retfiles;
+	}
+
+	if( delta <= week &&
+		this.oldest.weekly &&
+		start.getTime() >= this.oldest.weekly.getTime()) {
+		retfiles = this.get_files_aide(start, end, week,
+			HTCondorViewDateFiles.truncate_to_week,
+			function(d) { return d.getUTCISOWeekDate(); }
+			);
+		console.log("  weekly:", retfiles);
+		return retfiles;
+	}
+
+	retfiles = this.get_files_aide(start, end, month,
+		HTCondorViewDateFiles.truncate_to_month,
+		function(d) { return d.getUTCISOYearMonth(); }
+		);
+	console.log("  monthly:", retfiles);
+	return retfiles;
+};
+
+
+
+
+
+
 
 
 
