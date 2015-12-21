@@ -81,7 +81,25 @@ function HTCondorView(id, url, graph_args, options) {
 		}
 	}
 
-	$(document).ready(function() { that.initialize(options_obj); });
+	var ready_datefiles;
+	if(options_obj.data_url.search(/\.\./) != -1) {
+		this.datefiles = new HTCondorViewDateFiles(options_obj.data_url);
+		ready_datefiles = this.datefiles.promise();
+		ready_datefiles.fail(function(){
+			console.log("Failed to initialize HTCondorViewDateFiles");
+		});
+	} else {
+		ready_datefiles = $.Deferred();
+		ready_datefiles.resolve();
+	}
+
+	var ready_document = $.Deferred();
+	$(document).ready(function() { ready_document.resolve(); });
+
+	$.when(ready_datefiles, ready_document).then(function(){
+		that.initialize(options_obj);
+	});
+		
 }
 
 HTCondorView.simple = function(query, thisclass) {
@@ -574,10 +592,11 @@ function HTCondorViewDateFiles(base_url, ready_func, fail_func) {
 	if(fail_func) { this.my_promise.fail(fail_func); }
 
 	var oldest_url = HTCondorViewDateFiles.expand(base_url, "oldest");
+	console.log("Seeking",oldest_url);
 	var that = this;
 	$.ajax(oldest_url, {dataType:'json'}).then(
 		function(data){that.oldest_loaded(data);},
-		function(data){that.failed_load();}
+		function(j,t,e){that.failed_load(j, t, e);}
 		);
 }
 
@@ -617,7 +636,9 @@ HTCondorViewDateFiles.prototype.oldest_loaded = function(oldest) {
 	this.my_promise.resolve(this);
 };
 
-HTCondorViewDateFiles.prototype.failed_load = function() {
+HTCondorViewDateFiles.prototype.failed_load = function(jqXHR, textStatus, errorThrown) {
+	console.log(this.base_url);
+	console.log(jqXHR, textStatus, errorThrown);
 	this.my_promise.reject(this);
 };
 
