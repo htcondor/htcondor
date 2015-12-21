@@ -287,20 +287,19 @@ HTCondorView.prototype.aq_load = function(url, start, end) {
 	var def = $.Deferred();
 	var that = this;
 
-	var query = "url="+url;
+	var files = [url];
 
-	var new_data_id = url;
 	if(start) {
-		new_data_id = url+"\0"+start+"\0"+end;
-
-		//TODOupdate file list here
+		files = this.datefiles.get_files(start, end);
 	}
 
-	if(new_data_id === this.data_id) {
+	var query = "url="+files.join("&url=");
+
+	if(query === this.data_id) {
 		def.resolve(this.data);
 		return def;
 	} else {
-		this.data_id = new_data_id;
+		this.data_id = query;
 		this.aq_graph.load(query, null, function(data){
 			that.data = data;
 			def.resolve(data);
@@ -662,7 +661,7 @@ HTCondorViewDateFiles.truncate_to_month = function(dateobj) {
 	return Date.parseMore(dateobj.getUTCISOYearMonth());
 }
 
-HTCondorViewDateFiles.prototype.get_files_aide = function(start, end, step, truncater, formatter) {
+HTCondorViewDateFiles.prototype.get_files_aide = function(label, start, end, step, truncater, formatter) {
 //console.log("    ", start, end, step, truncater, formatter);
 //console.log("  start", start);
 	var now = truncater(start);
@@ -684,7 +683,14 @@ HTCondorViewDateFiles.prototype.get_files_aide = function(start, end, step, trun
 //console.log("       ", now, end);
 	}
 
-	return retfiles;
+	var ret_urls = [];
+	for(var i = 0; i < retfiles.length; i++) {
+		var insert = label + "." + retfiles[i];
+		var expanded = HTCondorViewDateFiles.expand(this.base_url, insert);
+		ret_urls.push(expanded);
+	}
+
+	return ret_urls;
 }
 
 HTCondorViewDateFiles.prototype.get_files = function(start,end) {
@@ -721,7 +727,7 @@ HTCondorViewDateFiles.prototype.get_files = function(start,end) {
 	if( delta <= day &&
 		this.oldest.daily &&
 		start.getTime() >= this.oldest.daily.getTime()) {
-		retfiles = this.get_files_aide(start, end, day,
+		retfiles = this.get_files_aide("daily", start, end, day,
 			HTCondorViewDateFiles.truncate_to_day,
 			function(d) { return d.getUTCISOYearMonthDay(); }
 			);
@@ -732,7 +738,7 @@ HTCondorViewDateFiles.prototype.get_files = function(start,end) {
 	if( delta <= week &&
 		this.oldest.weekly &&
 		start.getTime() >= this.oldest.weekly.getTime()) {
-		retfiles = this.get_files_aide(start, end, week,
+		retfiles = this.get_files_aide("weekly", start, end, week,
 			HTCondorViewDateFiles.truncate_to_week,
 			function(d) { return d.getUTCISOWeekDate(); }
 			);
@@ -740,7 +746,7 @@ HTCondorViewDateFiles.prototype.get_files = function(start,end) {
 		return retfiles;
 	}
 
-	retfiles = this.get_files_aide(start, end, month,
+	retfiles = this.get_files_aide("monthly", start, end, month,
 		HTCondorViewDateFiles.truncate_to_month,
 		function(d) { return d.getUTCISOYearMonth(); }
 		);
