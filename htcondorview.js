@@ -56,10 +56,32 @@ has_fullscreen_link: true/false - Optional. Defaults to true. If false (and exac
 function HTCondorView(id, url, graph_args, options) {
 	"use strict";
 	var that = this;
-	$(document).ready(function() { 
 
-		that.initialize(id,url,graph_args,options);
-	});
+	var options_obj;
+	if(typeof(id) === 'object') {
+		options_obj = id;
+
+	} else {
+		// This is a (hopefully) a raw afterquery query.
+		var args = AfterqueryObj.parseArgs(url);
+		options_obj = {
+			dst_id: id,
+			title: args.get("title"),
+			data_url: args.get("url"),
+			graph_query: "",
+		};
+
+		for(var argi in args.all) {
+			var arg = args.all[argi];
+			var key = arg[0];
+			if(key.length && key !== "title" && key !== "url") {
+				var val = arg[1];
+				options_obj.graph_query += encodeURIComponent(key) + "=" + encodeURIComponent(val) + "&";	
+			}
+		}
+	}
+
+	$(document).ready(function() { that.initialize(options_obj); });
 }
 
 HTCondorView.simple = function(query, thisclass) {
@@ -73,7 +95,7 @@ HTCondorView.simple = function(query, thisclass) {
 	return new HTCondorView(newid, query);
 };
 
-HTCondorView.prototype.initialize_from_object = function(options) {
+HTCondorView.prototype.initialize = function(options) {
 	"use strict";
 
 	if(typeof(options) !== 'object') { options = {}; }
@@ -138,33 +160,6 @@ HTCondorView.prototype.initialize_from_object = function(options) {
 		}
 	}
 	this.load_and_render(this.current_graphargs, this.current_tableargs);
-};
-
-HTCondorView.prototype.initialize = function(id, query) {
-	"use strict";
-
-	if(typeof(id) === 'object') {
-		return this.initialize_from_object(id);
-	}
-
-	// This is a (hopefully) a raw afterquery query.
-	var args = AfterqueryObj.parseArgs(query);
-	var options = {
-		dst_id: id,
-		title: args.get("title"),
-		data_url: args.get("url"),
-		graph_query: "",
-	};
-
-	for(var argi in args.all) {
-		var arg = args.all[argi];
-		var key = arg[0];
-		if(key.length && key !== "title" && key !== "url") {
-			var val = arg[1];
-			options.graph_query += encodeURIComponent(key) + "=" + encodeURIComponent(val) + "&";	
-		}
-	}
-	return this.initialize_from_object(options);
 };
 
 HTCondorView.next_graph_id = 0;
