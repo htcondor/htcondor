@@ -167,6 +167,16 @@ HTCondorView.prototype.initialize = function(options) {
 
 	$('#'+this.graph_download_id).click(function(ev) { that.download_csv(that.data, that.current_graphargs); ev.preventDefault();});
 
+	var date_filter = '';
+
+	if(this.date_start) {
+		date_filter += "filter=Date>="+this.date_start.toISOString() + "&";
+		date_filter += "filter=Date<"+this.date_end.toISOString() + "&";
+	}
+
+	if(graph_args) { graph_args = date_filter + graph_args; }
+	if(table_args) { table_args = date_filter + table_args; }
+
 	//this.change_view()
 	this.starting_graphargs = graph_args;
 	this.set_graph_query(graph_args);
