@@ -833,9 +833,9 @@ HTCondorViewRanged.prototype.parse_date = function(date, time) {
 
 	if(ampm && ampm.match(/PM/i)) { hour += 12; }
 
-	var epochtime = Date.UTC(yyyy, mm-1, dd, hour, min, sec, millisec);
-	console.log(yyyy, mm-1, dd, hour, min, sec, millisec, '->',epochtime);
-	return new Date(epochtime);
+	var ret_date = new Date(yyyy, mm-1, dd, hour, min, sec, millisec);
+	if(isNaN(ret_date.getTime())) { return; }
+	return ret_date;
 };
 
 
