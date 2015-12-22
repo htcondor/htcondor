@@ -921,7 +921,7 @@ HTCondorViewRanged.prototype.html_tabs = function() {
 		'<div class="range">\n' +
 			input_date+'name="start_date" id="'+this.id_start_date+'">\n'+
 			input_time+'name="start_time" id="'+this.id_start_time+'">\n'+
-			'through' +
+			'through\n' +
 			input_date+'name="end_date" id="'+this.id_end_date+'">\n'+
 			input_time+'name="end_time" id="'+this.id_end_time+'">\n'+
 		'</div>\n' +
