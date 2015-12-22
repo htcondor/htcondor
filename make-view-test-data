@@ -60,8 +60,10 @@ sub submitter_count {
 	$ctime = $ctime / (60*60*24);
 	my $hash = unpack("I",md5("$name|$machine|$status"));
 	my $fraction = perlin_noise($ctime + $hash);
-	$fraction -= 0.1; # want about 10% empty
+	$fraction -= 0.5; # want about 10% empty
 	my $machines = int($fraction * 200);
+	if($status eq 'Held') { $machines -= 50; }
+	if($status eq 'Running') { $machines -= 25; }
 	if($machines < 0) { $machines = 0; }
 	return $machines;
 }
@@ -169,7 +171,7 @@ sub perlin_noise {
 	}
 	my($x) = @_;
 	my $total = 0;
-	my $persistence = 0.5;
+	my $persistence = 0.3;
 	my $octaves = 10;
 	for(my $i = 0; $i < $octaves; $i++) {
 		my $frequency = 2**$i;
