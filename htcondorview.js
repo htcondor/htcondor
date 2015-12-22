@@ -765,8 +765,104 @@ HTCondorViewDateFiles.prototype.get_files = function(start,end) {
 };
 
 
+////////////////////////////////////////////////////////////////////////////////
 
 
+function HTCondorViewRanged(options) {
+	"use strict";
+	var that = this;
+	this.options = options;
+	$(document).ready( function() { that.initialize(); });
+}
+
+
+HTCondorViewRanged.prototype.new_graph_id = function() {
+	"use strict";
+	return HTCondorView.prototype.new_graph_id();
+};
+
+HTCondorViewRanged.prototype.initialize = function() {
+	"use strict";
+	var that = this;
+	this.dst_id = this.options.dst_id;
+	var container = $('#'+this.dst_id);
+	if(container.length === 0) {
+		console.log('HTCondorViewRanged is not able to intialize. There is no element with an ID of "'+this.dst_id+'".');
+		return;
+	}
+	var new_html = this.html_tabs();
+	this.graph_id = this.new_graph_id();
+	new_html += '<div id="'+this.graph_id+'"></div>';
+	container.html(new_html);
+	this.options.dst_id = this.graph_id;
+
+	// Initialize tabs
+	$('#'+this.dst_id+' ul.tabs li').click(function(){
+		$('#'+this.dst_id+' ul.tabs li').removeClass('current');
+		$(this).addClass('current');
+	});
+	$('#'+this.dst_id+' ul.radio-tabs input').change(function() {
+		that.change_view();
+		});
+
+	this.change_view();
+
+};
+
+
+
+
+
+HTCondorViewRanged.prototype.change_view = function() {
+	// Purge everything.
+	//$("#"+this.graph_id).empty();
+	//this.htcondor_view = null;
+
+	var duration = $("#"+this.dst_id+' .data-duration input[type="radio"]:checked').val();
+
+	var options = {};
+	for(key in this.options) {
+		options[key] = this.options[key];
+	}
+	var now = new Date();
+	var start = new Date();
+	if(duration === "day") {
+		start.setTime(start.getTime() - 1000*60*60*24);
+		options.date_start = start;
+		options.date_end = now;
+	} else if(duration === "week") {
+		start.setTime(start.getTime() - 1000*60*60*24*7);
+		options.date_start = start;
+		options.date_end = now;
+	} else if(duration === "month") {
+		start.setTime(start.getTime() - 1000*60*60*24*31);
+		options.date_start = start;
+		options.date_end = now;
+	} else if(duration === "custom") {
+		console.log("custom not yet implemented");
+		return;
+	}
+	
+	this.htcondor_view = new HTCondorView(options);
+};
+
+
+HTCondorViewRanged.prototype.html_tabs = function() {
+	// We need to ensure the IDs are all unique.
+	var id_dd = this.new_graph_id();
+	var id_dw = this.new_graph_id();
+	var id_dm = this.new_graph_id();
+	var id_dc = this.new_graph_id();
+	return "" +
+	"<div style='text-align: center'>\n" +
+		"<ul class='radio-tabs data-duration'>\n" +
+			"<li><input type='radio' name='data-duration' id='data-duration-day"+id_dd+"' value='day' checked> <label for='data-duration-day"+id_dd+"'>Day</label>\n" +
+			"<li><input type='radio' name='data-duration' id='data-duration-week"+id_dw+"' value='week'> <label for='data-duration-week"+id_dw+"'>Week</label>\n" +
+			"<li><input type='radio' name='data-duration' id='data-duration-month"+id_dm+"' value='month'> <label for='data-duration-month"+id_dm+"'>Month</label>\n" +
+			"<li><input type='radio' name='data-duration' id='data-duration-custom"+id_dc+"' value='custom'> <label for='data-duration-custom"+id_dc+"'>Custom</label>\n" +
+		"</ul>\n" +
+	"</div>\n";
+};
 
 
 
