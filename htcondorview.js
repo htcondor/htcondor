@@ -851,16 +851,39 @@ HTCondorViewRanged.prototype.html_tabs = function() {
 	var id_dw = this.new_graph_id();
 	var id_dm = this.new_graph_id();
 	var id_dc = this.new_graph_id();
+
+	var id_range = this.new_graph_id();
+	var id_start_date = this.new_graph_id();
+	var id_start_time = this.new_graph_id();
+	var id_end_date = this.new_graph_id();
+	var id_end_time = this.new_graph_id();
+
+	function html_radio(name, id, value, label, checked) {
+		if(checked) { checked = " checked"; }
+		else { checked = ""; }
+		return "<input type='radio' name='"+name+"' id='"+id+"' value='"+value+"'"+checked+"> <label for='"+id+"'>"+label+"</label>";
+	}
+
+	var input_date = '<input type="date" placeholder="YYYY-MM-DD" title="Use YYYY-MM-DD format.\rFor example, use 2015-06-01 for June 1, 2015" pattern="\d\d\d\d-\d\d-\d\d" ';
+	var input_time = '<input type="time" placeholder="HH:MM" title="Use HH:MM format.\rFor example, use 13:00 for 1:00 PM" pattern="\d+:\d\d(:\d\d)?" ';
+
 	this.graph_id = this.new_graph_id();
 	return "" +
 	"<div style='text-align: center'>\n" +
 		"<ul class='radio-tabs data-duration'>\n" +
-			"<li><input type='radio' name='data-duration' id='data-duration-day"+id_dd+"' value='day' checked> <label for='data-duration-day"+id_dd+"'>Day</label>\n" +
-			"<li><input type='radio' name='data-duration' id='data-duration-week"+id_dw+"' value='week'> <label for='data-duration-week"+id_dw+"'>Week</label>\n" +
-			"<li><input type='radio' name='data-duration' id='data-duration-month"+id_dm+"' value='month'> <label for='data-duration-month"+id_dm+"'>Month</label>\n" +
-			"<li><input type='radio' name='data-duration' id='data-duration-custom"+id_dc+"' value='custom'> <label for='data-duration-custom"+id_dc+"'>Custom</label>\n" +
+			"<li>"+html_radio("data-duration", "data-duration-day-"+id_dd, "day", "Day", "checked") + "\n" +
+			"<li>"+html_radio("data-duration", "data-duration-week-"+id_dw, "week", "Week") + "\n" +
+			"<li>"+html_radio("data-duration", "data-duration-month-"+id_dm, "month", "Month") + "\n" +
+			"<li>"+html_radio("data-duration", "data-duration-custom-"+id_dc, "custom", "Custom") + "\n" +
 		"</ul>\n" +
 	"</div>\n" +
+	'<div id="'+id_range+'">\n' +
+		input_date+'name="start_date" id="'+id_start_date+'">\n'+
+		input_time+'name="start_time" id="'+id_start_time+'">\n'+
+		'through' +
+		input_date+'name="end_date" id="'+id_end_date+'">\n'+
+		input_time+'name="end_time" id="'+id_end_time+'">\n'+
+	'</div>\n' +
 	'<div id="'+this.graph_id+'"></div>\n';
 };
 
