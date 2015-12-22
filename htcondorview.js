@@ -170,6 +170,7 @@ HTCondorView.prototype.initialize = function(options) {
 	var date_filter = '';
 
 	if(this.date_start) {
+		console.log(this.date_start,"-", this.date_end);
 		date_filter += "filter=Date>="+this.date_start.toISOString() + "&";
 		date_filter += "filter=Date<"+this.date_end.toISOString() + "&";
 	}
@@ -802,11 +803,40 @@ HTCondorViewRanged.prototype.initialize = function() {
 	$('#'+this.dst_id+' ul.radio-tabs input').change(function() {
 		that.change_view();
 		});
+	$('#'+this.dst_id+' .range_input').on('input', function() {
+		that.change_view();
+		});
 
 	this.change_view();
 
 };
 
+HTCondorViewRanged.prototype.parse_date = function(date, time) {
+	var RE_DATE = /(\d\d\d\d)[-\/](\d+)[-\/](\d+)/;
+
+	var hits = RE_DATE.exec(date);
+	if(!hits) { return; }
+	var yyyy = hits[1];
+	var mm = hits[2];
+	var dd = hits[3];
+
+	if(!time) { time = "00:00"; }
+	var RE_TIME = /(\d+):(\d\d)(?::(\d\d)(?:\.(\d\d\d))?)?\s*([AP][M])?/i;
+	hits = RE_TIME.exec(time);
+	console.log(hits);
+	if(!hits) { return; }
+	var hour = hits[1];
+	var min = hits[2];
+	var sec = hits[3]||0;
+	var millisec = hits[4]||0;
+	var ampm = hits[5];
+
+	if(ampm && ampm.match(/PM/i)) { hour += 12; }
+
+	var epochtime = Date.UTC(yyyy, mm-1, dd, hour, min, sec, millisec);
+	console.log(yyyy, mm-1, dd, hour, min, sec, millisec, '->',epochtime);
+	return new Date(epochtime);
+};
 
 
 
@@ -822,8 +852,8 @@ HTCondorViewRanged.prototype.change_view = function() {
 	for(key in this.options) {
 		options[key] = this.options[key];
 	}
-	var now = new Date();
-	var start = new Date();
+	var now = new Date(Date.now());
+	var start = new Date(Date.now());
 	if(duration === "day") {
 		start.setTime(start.getTime() - 1000*60*60*24);
 		options.date_start = start;
@@ -837,8 +867,20 @@ HTCondorViewRanged.prototype.change_view = function() {
 		options.date_start = start;
 		options.date_end = now;
 	} else if(duration === "custom") {
-		console.log("custom not yet implemented");
-		return;
+		options.date_start = this.parse_date(
+			$('#'+this.id_start_date).val(),
+			$('#'+this.id_start_time).val())
+		options.date_end = this.parse_date(
+			$('#'+this.id_end_date).val(),
+			$('#'+this.id_end_time).val())
+		if(!options.date_start || (!options.date_end)) {
+			console.log("unparsable");
+			return;
+		}
+		if(options.date_start.getTime() > options.date_end.getTime()) {
+			console.log("Backward range");
+			return;
+		}
 	}
 	
 	this.htcondor_view = new HTCondorView(options);
@@ -853,10 +895,10 @@ HTCondorViewRanged.prototype.html_tabs = function() {
 	var id_dc = this.new_graph_id();
 
 	var id_range = this.new_graph_id();
-	var id_start_date = this.new_graph_id();
-	var id_start_time = this.new_graph_id();
-	var id_end_date = this.new_graph_id();
-	var id_end_time = this.new_graph_id();
+	this.id_start_date = this.new_graph_id();
+	this.id_start_time = this.new_graph_id();
+	this.id_end_date = this.new_graph_id();
+	this.id_end_time = this.new_graph_id();
 
 	function html_radio(name, id, value, label, checked) {
 		if(checked) { checked = " checked"; }
@@ -864,8 +906,8 @@ HTCondorViewRanged.prototype.html_tabs = function() {
 		return "<input type='radio' name='"+name+"' id='"+id+"' value='"+value+"'"+checked+"> <label for='"+id+"'>"+label+"</label>";
 	}
 
-	var input_date = '<input type="date" placeholder="YYYY-MM-DD" title="Use YYYY-MM-DD format.\rFor example, use 2015-06-01 for June 1, 2015" pattern="\d\d\d\d-\d\d-\d\d" ';
-	var input_time = '<input type="time" placeholder="HH:MM" title="Use HH:MM format.\rFor example, use 13:00 for 1:00 PM" pattern="\d+:\d\d(:\d\d)?" ';
+	var input_date = '<input type="date" placeholder="YYYY-MM-DD" title="Use YYYY-MM-DD format.\\rFor example, use 2015-06-01 for June 1, 2015" pattern="\\d\\d\\d\\d-\\d\\d?-\\d\\d?" class="range_input"';
+	var input_time = '<input type="time" placeholder="HH:MM" title="Use HH:MM format.\\rFor example, use 13:00 for 1:00 PM" pattern="\\d+:\\d\\d(:\\d\\d(\\.\\d\\d\\d)?)?\\s*([aApP][mM])?" class="range_input"';
 
 	this.graph_id = this.new_graph_id();
 	return "" +
@@ -878,11 +920,11 @@ HTCondorViewRanged.prototype.html_tabs = function() {
 		"</ul>\n" +
 	"</div>\n" +
 	'<div id="'+id_range+'">\n' +
-		input_date+'name="start_date" id="'+id_start_date+'">\n'+
-		input_time+'name="start_time" id="'+id_start_time+'">\n'+
+		input_date+'name="start_date" id="'+this.id_start_date+'">\n'+
+		input_time+'name="start_time" id="'+this.id_start_time+'">\n'+
 		'through' +
-		input_date+'name="end_date" id="'+id_end_date+'">\n'+
-		input_time+'name="end_time" id="'+id_end_time+'">\n'+
+		input_date+'name="end_date" id="'+this.id_end_date+'">\n'+
+		input_time+'name="end_time" id="'+this.id_end_time+'">\n'+
 	'</div>\n' +
 	'<div id="'+this.graph_id+'"></div>\n';
 };
