@@ -791,8 +791,6 @@ HTCondorViewRanged.prototype.initialize = function() {
 		return;
 	}
 	var new_html = this.html_tabs();
-	this.graph_id = this.new_graph_id();
-	new_html += '<div id="'+this.graph_id+'"></div>';
 	container.html(new_html);
 	this.options.dst_id = this.graph_id;
 
@@ -853,6 +851,7 @@ HTCondorViewRanged.prototype.html_tabs = function() {
 	var id_dw = this.new_graph_id();
 	var id_dm = this.new_graph_id();
 	var id_dc = this.new_graph_id();
+	this.graph_id = this.new_graph_id();
 	return "" +
 	"<div style='text-align: center'>\n" +
 		"<ul class='radio-tabs data-duration'>\n" +
@@ -861,7 +860,8 @@ HTCondorViewRanged.prototype.html_tabs = function() {
 			"<li><input type='radio' name='data-duration' id='data-duration-month"+id_dm+"' value='month'> <label for='data-duration-month"+id_dm+"'>Month</label>\n" +
 			"<li><input type='radio' name='data-duration' id='data-duration-custom"+id_dc+"' value='custom'> <label for='data-duration-custom"+id_dc+"'>Custom</label>\n" +
 		"</ul>\n" +
-	"</div>\n";
+	"</div>\n" +
+	'<div id="'+this.graph_id+'"></div>\n';
 };
 
 
