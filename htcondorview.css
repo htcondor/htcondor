@@ -100,3 +100,15 @@ body .htcondorview div:hover > div.editmenu {
 	text-align: center;
 }
 
+.htcondorviewranged input[type="date"].range_input {
+	width: 10em;
+}
+.htcondorviewranged input[type="time"].range_input {
+	width: 10em;
+}
+.htcondorviewranged div.tabs {
+	text-align: center;
+}
+.htcondorviewranged div.range {
+	text-align: center;
+}

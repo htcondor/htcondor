@@ -893,8 +893,6 @@ HTCondorViewRanged.prototype.html_tabs = function() {
 	var id_dw = this.new_graph_id();
 	var id_dm = this.new_graph_id();
 	var id_dc = this.new_graph_id();
-
-	var id_range = this.new_graph_id();
 	this.id_start_date = this.new_graph_id();
 	this.id_start_time = this.new_graph_id();
 	this.id_end_date = this.new_graph_id();
@@ -911,22 +909,24 @@ HTCondorViewRanged.prototype.html_tabs = function() {
 
 	this.graph_id = this.new_graph_id();
 	return "" +
-	"<div style='text-align: center'>\n" +
-		"<ul class='radio-tabs data-duration'>\n" +
-			"<li>"+html_radio("data-duration", "data-duration-day-"+id_dd, "day", "Day", "checked") + "\n" +
-			"<li>"+html_radio("data-duration", "data-duration-week-"+id_dw, "week", "Week") + "\n" +
-			"<li>"+html_radio("data-duration", "data-duration-month-"+id_dm, "month", "Month") + "\n" +
-			"<li>"+html_radio("data-duration", "data-duration-custom-"+id_dc, "custom", "Custom") + "\n" +
-		"</ul>\n" +
-	"</div>\n" +
-	'<div id="'+id_range+'">\n' +
-		input_date+'name="start_date" id="'+this.id_start_date+'">\n'+
-		input_time+'name="start_time" id="'+this.id_start_time+'">\n'+
-		'through' +
-		input_date+'name="end_date" id="'+this.id_end_date+'">\n'+
-		input_time+'name="end_time" id="'+this.id_end_time+'">\n'+
-	'</div>\n' +
-	'<div id="'+this.graph_id+'"></div>\n';
+	"<div class='htcondorviewranged'>\n"+
+		"<div class='tabs'>\n" +
+			"<ul class='radio-tabs data-duration'>\n" +
+				"<li>"+html_radio("data-duration", "data-duration-day-"+id_dd, "day", "Day", "checked") + "\n" +
+				"<li>"+html_radio("data-duration", "data-duration-week-"+id_dw, "week", "Week") + "\n" +
+				"<li>"+html_radio("data-duration", "data-duration-month-"+id_dm, "month", "Month") + "\n" +
+				"<li>"+html_radio("data-duration", "data-duration-custom-"+id_dc, "custom", "Custom") + "\n" +
+			"</ul>\n" +
+		"</div>\n" +
+		'<div class="range">\n' +
+			input_date+'name="start_date" id="'+this.id_start_date+'">\n'+
+			input_time+'name="start_time" id="'+this.id_start_time+'">\n'+
+			'through' +
+			input_date+'name="end_date" id="'+this.id_end_date+'">\n'+
+			input_time+'name="end_time" id="'+this.id_end_time+'">\n'+
+		'</div>\n' +
+		'<div id="'+this.graph_id+'"></div>\n' +
+	'</div>\n';
 };
 
 
