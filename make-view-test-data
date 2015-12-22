@@ -27,7 +27,9 @@ my $day = 24 * $HOUR;
 my $week = 7 * $day;
 my $monthish = 30.5 * $day;
 
-my $LAST_DATE = 1449003077; # Roughly Dec 1 2015
+#my $LAST_DATE = 1449003077; # Roughly Dec 1 2015
+#my $LAST_DATE = 1467349200; # Roughly July 1, 2016
+my $LAST_DATE = time() + 60*60*24; # Tomorrow.
 
 exit main();
 
@@ -121,7 +123,7 @@ sub create_submitter_files {
 "monthly": "$oldest_monthly",
 "weekly": "$oldest_weekly",
 "daily": "$oldest_daily"
-]
+}
 END
 	close $fh;
 
