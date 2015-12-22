@@ -602,7 +602,6 @@ function HTCondorViewDateFiles(base_url, ready_func, fail_func) {
 	if(fail_func) { this.my_promise.fail(fail_func); }
 
 	var oldest_url = HTCondorViewDateFiles.expand(base_url, "oldest");
-	console.log("Seeking",oldest_url);
 	var that = this;
 	$.ajax(oldest_url, {dataType:'json'}).then(
 		function(data){that.oldest_loaded(data);},
@@ -647,7 +646,7 @@ HTCondorViewDateFiles.prototype.oldest_loaded = function(oldest) {
 };
 
 HTCondorViewDateFiles.prototype.failed_load = function(jqXHR, textStatus, errorThrown) {
-	console.log(this.base_url);
+	console.log("failed to load", this.base_url);
 	console.log(jqXHR, textStatus, errorThrown);
 	this.my_promise.reject(this);
 };
@@ -795,6 +794,8 @@ HTCondorViewRanged.prototype.initialize = function() {
 	container.html(new_html);
 	this.options.dst_id = this.graph_id;
 
+	$('#'+this.id_range).hide();
+
 	// Initialize tabs
 	$('#'+this.dst_id+' ul.tabs li').click(function(){
 		$('#'+this.dst_id+' ul.tabs li').removeClass('current');
@@ -823,7 +824,6 @@ HTCondorViewRanged.prototype.parse_date = function(date, time) {
 	if(!time) { time = "00:00"; }
 	var RE_TIME = /(\d+):(\d\d)(?::(\d\d)(?:\.(\d\d\d))?)?\s*([AP][M])?/i;
 	hits = RE_TIME.exec(time);
-	console.log(hits);
 	if(!hits) { return; }
 	var hour = hits[1];
 	var min = hits[2];
@@ -858,15 +858,19 @@ HTCondorViewRanged.prototype.change_view = function() {
 		start.setTime(start.getTime() - 1000*60*60*24);
 		options.date_start = start;
 		options.date_end = now;
+		$('#'+this.id_range).hide();
 	} else if(duration === "week") {
 		start.setTime(start.getTime() - 1000*60*60*24*7);
 		options.date_start = start;
 		options.date_end = now;
+		$('#'+this.id_range).hide();
 	} else if(duration === "month") {
 		start.setTime(start.getTime() - 1000*60*60*24*31);
 		options.date_start = start;
 		options.date_end = now;
+		$('#'+this.id_range).hide();
 	} else if(duration === "custom") {
+		$('#'+this.id_range).show();
 		options.date_start = this.parse_date(
 			$('#'+this.id_start_date).val(),
 			$('#'+this.id_start_time).val())
@@ -874,11 +878,11 @@ HTCondorViewRanged.prototype.change_view = function() {
 			$('#'+this.id_end_date).val(),
 			$('#'+this.id_end_time).val())
 		if(!options.date_start || (!options.date_end)) {
-			console.log("unparsable");
+			//console.log("unparsable");
 			return;
 		}
 		if(options.date_start.getTime() > options.date_end.getTime()) {
-			console.log("Backward range");
+			//console.log("Backward range");
 			return;
 		}
 	}
@@ -897,6 +901,8 @@ HTCondorViewRanged.prototype.html_tabs = function() {
 	this.id_start_time = this.new_graph_id();
 	this.id_end_date = this.new_graph_id();
 	this.id_end_time = this.new_graph_id();
+
+	this.id_range = this.new_graph_id();
 
 	function html_radio(name, id, value, label, checked) {
 		if(checked) { checked = " checked"; }
@@ -918,7 +924,7 @@ HTCondorViewRanged.prototype.html_tabs = function() {
 				"<li>"+html_radio("data-duration", "data-duration-custom-"+id_dc, "custom", "Custom") + "\n" +
 			"</ul>\n" +
 		"</div>\n" +
-		'<div class="range">\n' +
+		'<div class="range" id="'+this.id_range+'">\n' +
 			input_date+'name="start_date" id="'+this.id_start_date+'">\n'+
 			input_time+'name="start_time" id="'+this.id_start_time+'">\n'+
 			'through\n' +
