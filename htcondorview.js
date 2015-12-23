@@ -208,6 +208,12 @@ HTCondorView.prototype.set_graph_query = function(graph_query) {
 		search += "title=" + encodeURIComponent(this.title) + "&";	
 	}
 	search += "data_url=" + encodeURIComponent(this.url) + "&";	
+	if(this.date_start) {
+		search += "date_start=" + encodeURIComponent(this.date_start.toISOString()) + "&";	
+	}
+	if(this.date_end) {
+		search += "date_end=" + encodeURIComponent(this.date_end.toISOString()) + "&";	
+	}
 	search += "graph_query=" + encodeURIComponent(this.current_graphargs) + "&";	
 	if(this.graph_fullscreen_link) {
 		this.graph_fullscreen_link.attr('href', "fullscreen.html" + search);

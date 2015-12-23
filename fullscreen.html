@@ -15,6 +15,7 @@
   </script>
   <script src="heatgrid.js"></script>
   <script src="render.js"></script>
+  <script src="dateext.js"></script>
   <script src="htcondorview.js"></script>
 
 <style>
@@ -50,6 +51,15 @@ $(document).ready(function(){
 	}
 	var data_url = args.get('data_url');
 	var graph_query = args.get('graph_query');
+
+	var date_start = args.get('date_start');
+	if(date_start) { date_start = new Date(date_start); }
+	else { date_start = null; }
+
+	var date_end = args.get('date_end');
+	if(date_end) { date_end = new Date(date_end); }
+	else { date_end = null; }
+
 	if((!data_url) || !graph_query) {
 		$('#thechart').html("<h1>No graph requested</h1>\n" +
 				"<p>At the least a data_url and graph_query argument are required.\n");
@@ -60,6 +70,8 @@ new HTCondorView({
 	dst_id: "thechart",
 	title: title,
 	data_url: data_url,
+	date_start: date_start,
+	date_end: date_end,
 	graph_query: graph_query,
 	has_fullscreen_link: false
 });
