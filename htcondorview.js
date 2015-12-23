@@ -817,21 +817,23 @@ HTCondorViewRanged.prototype.parse_date = function(date, time) {
 
 	var hits = RE_DATE.exec(date);
 	if(!hits) { return; }
-	var yyyy = hits[1];
-	var mm = hits[2];
-	var dd = hits[3];
+	var yyyy = parseInt(hits[1]);
+	var mm = parseInt(hits[2]);
+	var dd = parseInt(hits[3]);
 
 	if(!time) { time = "00:00"; }
 	var RE_TIME = /(\d+):(\d\d)(?::(\d\d)(?:\.(\d\d\d))?)?\s*([AP][M])?/i;
 	hits = RE_TIME.exec(time);
 	if(!hits) { return; }
-	var hour = hits[1];
-	var min = hits[2];
-	var sec = hits[3]||0;
-	var millisec = hits[4]||0;
+	var hour = parseInt(hits[1]);
+	var min = parseInt(hits[2]);
+	var sec = parseInt(hits[3])||0;
+	var millisec = parseInt(hits[4])||0;
 	var ampm = hits[5];
 
-	if(ampm && ampm.match(/PM/i)) { hour += 12; }
+	if(ampm && ampm.match(/PM/i)) {
+		hour += 12;
+	}
 
 	var ret_date = new Date(yyyy, mm-1, dd, hour, min, sec, millisec);
 	if(isNaN(ret_date.getTime())) { return; }
