@@ -781,6 +781,46 @@ HTCondorViewRanged.prototype.new_graph_id = function() {
 	return HTCondorView.prototype.new_graph_id();
 };
 
+
+// If the browser doesn't provide a native UI for <input type=date>,
+// use jQueryUIs. This replaces everything with class="datepicker".
+HTCondorViewRanged.prototype.add_date_pickers = function(root_id) {
+	if( HTCondorViewRanged.has_native_date !== false && 
+		HTCondorViewRanged.has_native_date !== true) {
+
+		HTCondorViewRanged.has_native_date = false;
+		try {
+			// This test is based on the design from inputtypes.js in Modernizr, released under an MIT license. This is a reimplementation. If we every need more Modernizr tests, we should probably just use the real library.
+			var test_input_e = $('<input>');
+			test_input_e.hide();
+			$('body').append(test_input_e);
+			test_input_e.attr('type', 'date');
+			if(test_input_e.attr('type') === 'text') {
+				test_input_e.remove();
+				throw "input type='date' is not supported";
+			}
+			test_input_e[0].value = "1)";
+			if(test_input_e[0].value === "1)") {
+				test_input_e.remove();
+				throw "input type='date' is not supported";
+			}
+			test_input_e.remove();
+			HTCondorViewRanged.has_native_date = true;
+			native_date = true;
+		} catch(e) {
+			// Something went wrong. We don't care what, just fallback to whatever the browser provides.
+		}
+	}
+	console.log("Native dates?", HTCondorViewRanged.has_native_date);
+	if(! HTCondorViewRanged.has_native_date ) {
+		// TODO: we could set minDate/maxDate to the range of data we know we have.
+		$('#'+root_id+' .datepicker').datepicker({
+			dateFormat: 'yy-mm-dd',
+			autoSize: true
+		});
+	}
+};
+
 HTCondorViewRanged.prototype.initialize = function() {
 	"use strict";
 	var that = this;
@@ -792,6 +832,9 @@ HTCondorViewRanged.prototype.initialize = function() {
 	}
 	var new_html = this.html_tabs();
 	container.html(new_html);
+	this.add_date_pickers(this.dst_id);
+
+
 	this.options.dst_id = this.graph_id;
 
 	$('#'+this.id_range).hide();
@@ -912,7 +955,7 @@ HTCondorViewRanged.prototype.html_tabs = function() {
 		return "<input type='radio' name='"+name+"' id='"+id+"' value='"+value+"'"+checked+"> <label for='"+id+"'>"+label+"</label>";
 	}
 
-	var input_date = '<input type="date" placeholder="YYYY-MM-DD" title="Use YYYY-MM-DD format.\\rFor example, use 2015-06-01 for June 1, 2015" pattern="\\d\\d\\d\\d-\\d\\d?-\\d\\d?" class="range_input"';
+	var input_date = '<input type="date" placeholder="YYYY-MM-DD" title="Use YYYY-MM-DD format.\\rFor example, use 2015-06-01 for June 1, 2015" pattern="\\d\\d\\d\\d-\\d\\d?-\\d\\d?" class="range_input datepicker"';
 	var input_time = '<input type="time" placeholder="HH:MM" title="Use HH:MM format.\\rFor example, use 13:00 for 1:00 PM" pattern="\\d+:\\d\\d(:\\d\\d(\\.\\d\\d\\d)?)?\\s*([aApP][mM])?" class="range_input"';
 
 	this.graph_id = this.new_graph_id();
