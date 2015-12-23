@@ -813,6 +813,8 @@ HTCondorViewRanged.prototype.add_date_pickers = function(root_id) {
 	}
 	console.log("Native dates?", HTCondorViewRanged.has_native_date);
 	if(! HTCondorViewRanged.has_native_date ) {
+		// We clear the style so autoSize can work.
+		$('#'+root_id+' .datepicker').removeClass("range_input");
 		// TODO: we could set minDate/maxDate to the range of data we know we have.
 		$('#'+root_id+' .datepicker').datepicker({
 			dateFormat: 'yy-mm-dd',
@@ -847,7 +849,8 @@ HTCondorViewRanged.prototype.initialize = function() {
 	$('#'+this.dst_id+' ul.radio-tabs input').change(function() {
 		that.change_view();
 		});
-	$('#'+this.dst_id+' .range_input').on('input', function() {
+
+	$('#'+this.dst_id+' button.update_range').click(function() {
 		that.change_view();
 		});
 
@@ -955,8 +958,8 @@ HTCondorViewRanged.prototype.html_tabs = function() {
 		return "<input type='radio' name='"+name+"' id='"+id+"' value='"+value+"'"+checked+"> <label for='"+id+"'>"+label+"</label>";
 	}
 
-	var input_date = '<input type="date" placeholder="YYYY-MM-DD" title="Use YYYY-MM-DD format.\\rFor example, use 2015-06-01 for June 1, 2015" pattern="\\d\\d\\d\\d-\\d\\d?-\\d\\d?" class="range_input datepicker"';
-	var input_time = '<input type="time" placeholder="HH:MM" title="Use HH:MM format.\\rFor example, use 13:00 for 1:00 PM" pattern="\\d+:\\d\\d(:\\d\\d(\\.\\d\\d\\d)?)?\\s*([aApP][mM])?" class="range_input"';
+	var input_date = '<input type="date" placeholder="YYYY-MM-DD" title="Use YYYY-MM-DD format.\rFor example, use 2015-06-01 for June 1, 2015" pattern="\\d\\d\\d\\d-\\d\\d?-\\d\\d?" class="range_input datepicker" ';
+	var input_time = '<input type="time" placeholder="HH:MM" title="Use HH:MM format.\rFor example, use 13:00 for 1:00 PM" pattern="\\d+:\\d\\d(:\\d\\d(\\.\\d\\d\\d)?)?\\s*([aApP][mM])?" class="range_input" ';
 
 	this.graph_id = this.new_graph_id();
 	return "" +
@@ -975,6 +978,7 @@ HTCondorViewRanged.prototype.html_tabs = function() {
 			'through\n' +
 			input_date+'name="end_date" id="'+this.id_end_date+'">\n'+
 			input_time+'name="end_time" id="'+this.id_end_time+'">\n'+
+			"<button class='update_range'>Update chart</button>\n"+
 		'</div>\n' +
 		'<div id="'+this.graph_id+'"></div>\n' +
 	'</div>\n';
