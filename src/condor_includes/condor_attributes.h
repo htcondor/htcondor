@@ -460,6 +460,8 @@
 #define ATTR_NAME  "Name"
 #define ATTR_NICE_USER  "NiceUser"
 #define ATTR_NEGOTIATOR_REQUIREMENTS  "NegotiatorRequirements"
+#define ATTR_NETWORK_IN  "NetworkInput"
+#define ATTR_NETWORK_OUT  "NetworkOutput"
 #define ATTR_NEXT_CLUSTER_NUM  "NextClusterNum"
 #define ATTR_NEXT_FETCH_WORK_DELAY  "NextFetchWorkDelay"
 #define ATTR_NEXT_JOB_START_DELAY  "NextJobStartDelay"

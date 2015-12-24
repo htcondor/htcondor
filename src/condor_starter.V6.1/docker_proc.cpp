@@ -480,6 +480,17 @@ bool DockerProc::PublishUpdateAd( ClassAd * ad ) {
 	// or set them during our status polling.
 	//
 
+	uint64_t memUsage, netIn, netOut;
+	DockerAPI::stats( containerName, memUsage, netIn, netOut);
+
+	if (memUsage > 0) {
+		// Set RSS, Memory and ImageSize to same values, best we have
+		ad->Assign(ATTR_RESIDENT_SET_SIZE, int(memUsage / 1024));
+		ad->Assign(ATTR_MEMORY_USAGE, int(memUsage / (1024 * 1024)));
+		ad->Assign(ATTR_IMAGE_SIZE, int(memUsage / (1024 * 1024)));
+		ad->Assign(ATTR_NETWORK_IN, double(netIn) / (1024 * 1024));
+		ad->Assign(ATTR_NETWORK_OUT, double(netOut) / (1024 * 1024));
+	}
 	return OsProc::PublishUpdateAd( ad );
 }
 
