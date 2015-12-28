@@ -2141,14 +2141,24 @@ AfterqueryObj.prototype.finishQueue = function(queue, args, done) {
   };
 
 
-AfterqueryObj.prototype.gotError = function(url, jqxhr, status) {
+AfterqueryObj.prototype.gotError = function(state) {
     this.showstatus('');
-    $(this.elid('vizraw')).html('<a href="' + encodeURI(url) + '">' +
-                      encodeURI(url) +
-                      '</a>');
-    throw new Error('error getting url "' + url + '": ' +
-                    status + ': ' +
-                    'visit the data page and ensure it\'s valid jsonp.');
+    var msg = "<p>Unable to load any data files.</p>\n<table>";
+    for(var i = 0; i < state.failure.length; i++) {
+      msg += "<tr>" +
+        "<td><a href='"+encodeURI(state.failure[i].url)+"'>" +
+          encodeURI(state.failure[i].url)+"</a></td>" +
+        "<td>"+ AfterqueryObj.htmlEscape(state.failure[i].status)+"</td>" +
+        "</tr>\n";
+    }
+    if(state.failure.length == 0) {
+      msg += "<tr><td>>No errors were logged.</td></tr>>\n";
+    }
+    msg += "</table>";
+
+    $(this.elid('vizraw')).html(msg);
+    var msg_txt = $(this.elid('vizraw')).text();
+    throw new Error(msg_txt);
   };
 
 
@@ -2268,10 +2278,8 @@ AfterqueryObj.prototype.getUrlData_xhr = function(state, success_func, error_fun
           );
         },
       error: function(jqXHR, textStatus, errorThrown) {
-        console.debug("XHR failed:", textStatus, errorThrown);
-        error_func(state, success_func, 
-          function(a,b,c,d,e) { that.getUrlDataFailure(a,b,c,d,e); }
-          );
+        AfterqueryObj.log("XHR failed:", state.todo[0], textStatus, errorThrown, "Trying JSON.");
+        that.getUrlData_jsonp(state, success_func, error_func);
         }
       }
     );
@@ -2285,6 +2293,7 @@ AfterqueryObj.prototype.getUrlData_jsonp = function(state, success_func, error_f
     iframe.style.display = 'none';
 
     iframe.onload = function() {
+      var failfunc_called;
       var successfunc_called;
       var real_success_func = function(data) {
         AfterqueryObj.log('calling success_func');
@@ -2349,13 +2358,20 @@ AfterqueryObj.prototype.getUrlData_jsonp = function(state, success_func, error_f
 
       iframe.contentWindow.onerror = function(message, xurl, lineno) {
         that.err(message + ' url=' + xurl + ' line=' + lineno);
+        if(!failfunc_called) {
+          that.getUrlDataFailure("Error loading data; check javascript console for details. "+message+" url="+xurl+" line="+lineno, "", state, success_func, error_func);
+          failfunc_called = true;
+        }
       };
 
       iframe.contentWindow.onpostscript = function() {
         if (successfunc_called) {
           AfterqueryObj.log('json load was successful.');
         } else {
-          that.getUrlDataFailure("Error loading data; check javascript console for details.", "", state, success_func, error_func);
+          if(!failfunc_called) {
+            that.getUrlDataFailure("Error loading data; check javascript console for details.", "", state, success_func, error_func);
+            failfunc_called = true;
+          }
         }
       };
 
@@ -2407,7 +2423,7 @@ AfterqueryObj.prototype.getUrlData = function(state, success_func, error_func) {
         success_func(state.rawdata);
       } else {
         // Failure
-        error_func(state.failure[0].url, state.failure[0].status);
+        error_func(state);
       }
       return;
     }
@@ -2417,12 +2433,7 @@ AfterqueryObj.prototype.getUrlData = function(state, success_func, error_func) {
 
     var that = this;
     AfterqueryObj.log('fetching data url:', url);
-    var onError = function(xhr, msg) {
-      AfterqueryObj.log('xhr returned error:', msg);
-      AfterqueryObj.log('(trying jsonp instead)');
-      that.getUrlData_jsonp(state, success_func, error_func);
-    };
-    this.getUrlData_xhr(state, success_func, onError);
+    this.getUrlData_xhr(state, success_func, error_func);
   };
 
 
@@ -2455,7 +2466,7 @@ AfterqueryObj.prototype.addUrlGetters = function(queue, args, startdata) {
       };
 
       this.enqueue(queue, 'get data', function(_, done) {
-        that.getUrlData(state, that.wrap(done), that.wrap(that.gotError, urls[0]));
+        that.getUrlData(state, that.wrap(done), function(s){that.gotError(s);});
       });
     } else {
       this.enqueue(queue, 'init data', function(_, done) {
