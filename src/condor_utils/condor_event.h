@@ -203,7 +203,10 @@ class ULogEvent {
     /// The event last read, or to be written.
     ULogEventNumber    eventNumber;
 
-    /// The time this event occurred
+    /// The time this event occurred (eventclock is Unix timestamp;
+	/// eventTime is local time)
+//TEMPTEMP -- hmm -- now I'm not sure what the hell eventclock is -- in general, it does not represent the same time as eventTime(!)
+	time_t				eventclock;
     struct tm          eventTime;
 
 /*
@@ -225,8 +228,6 @@ log readers.
     /// Added by Ameet
     char *scheddname;
     //char globaljobid[100];
-
-	time_t eventclock;
 
   protected:
 

@@ -324,8 +324,12 @@ JobstateLog::WriteEvent( const ULogEvent *event, Job *node )
 	if ( eventName != NULL ) {
 		MyString condorID;
 		CondorID2Str( event->cluster, event->proc, condorID );
+		//TEMPTEMP -- hmm -- we might be able to just grab event->eventclock here
 		struct tm eventTm = event->eventTime;
 		time_t eventTime = mktime( &eventTm );
+		debug_printf( DEBUG_QUIET, "DIAG eventTime: %lu; eventclock: %lu\n", (unsigned long)eventTime, (unsigned long)event->eventclock );//TEMPTEMP
+		//TEMPTEMP -- this assertion failed (sometimes)!  I don't know now whether eventTime or eventclock is the thing I should rely on!
+		//ASSERT( eventTime == event->eventclock );//TEMPTEMP???
 		Write( &eventTime, node, eventName, condorID.Value() );
 	}
 }
