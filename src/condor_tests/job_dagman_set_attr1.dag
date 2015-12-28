@@ -1,10 +1,7 @@
-DAG_SUBMIT_COMMAND +test_attr0 = Bodrum
-DAG_SUBMIT_COMMAND +test_attr1 = 123
-DAG_SUBMIT_COMMAND +test_attr2 = 0.543
-DAG_SUBMIT_COMMAND +test_attr2 = 0.987
-DAG_SUBMIT_COMMAND accounting_group = \
-	agrp1
-DAG_SUBMIT_COMMAND accounting_group_user = auser1
+SET_JOB_ATTR test_attr0 = Bodrum
+SET_JOB_ATTR test_attr1 = 123
+SET_JOB_ATTR test_attr2 = 0.543
+SET_JOB_ATTR test_attr2 = 0.987
 
 Job NodeA job_dagman_set_attr-nodeA.cmd
 

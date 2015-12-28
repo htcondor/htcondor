@@ -58,7 +58,7 @@ int parseJobOrDagLine( const char *dagLine, StringList &tokens,
 			const char *&directory );
 int setUpOptions( SubmitDagDeepOptions &deepOpts,
 			SubmitDagShallowOptions &shallowOpts,
-			StringList &dagFileAppendLines );
+			StringList &dagFileAttrLines );
 void ensureOutputFilesExist(const SubmitDagDeepOptions &deepOpts,
 			SubmitDagShallowOptions &shallowOpts);
 int getOldSubmitFlags( SubmitDagShallowOptions &shallowOpts );
@@ -66,7 +66,7 @@ int parseArgumentsLine( const MyString &subLine,
 			SubmitDagShallowOptions &shallowOpts );
 void writeSubmitFile(/* const */ SubmitDagDeepOptions &deepOpts,
 			/* const */ SubmitDagShallowOptions &shallowOpts,
-			/* const */ StringList &dagFileAppendLines );
+			/* const */ StringList &dagFileAttrLines );
 int submitDag( SubmitDagShallowOptions &shallowOpts );
 
 //---------------------------------------------------------------------------
@@ -84,7 +84,7 @@ int main(int argc, char *argv[])
 	myDistro->Init( argc, argv );
 
 		// Save submit append lines from DAG file here (see gittrac #5107).
-	StringList dagFileAppendLines;
+	StringList dagFileAttrLines;
 
 		// Load command-line arguments into the deepOpts and shallowOpts
 		// structures.
@@ -122,7 +122,7 @@ int main(int argc, char *argv[])
 	}
 	
 		// Further work to get the shallowOpts structure set up properly.
-	tmpResult = setUpOptions( deepOpts, shallowOpts, dagFileAppendLines );
+	tmpResult = setUpOptions( deepOpts, shallowOpts, dagFileAttrLines );
 	if ( tmpResult != 0 ) return tmpResult;
 
 		// Check whether the output files already exist; if so, we may
@@ -142,7 +142,7 @@ int main(int argc, char *argv[])
 	}
 
 		// Write the actual submit file for DAGMan.
-	writeSubmitFile( deepOpts, shallowOpts, dagFileAppendLines );
+	writeSubmitFile( deepOpts, shallowOpts, dagFileAttrLines );
 
 	return submitDag( shallowOpts );
 }
@@ -298,7 +298,7 @@ parseJobOrDagLine( const char *dagLine, StringList &tokens,
 int
 setUpOptions( SubmitDagDeepOptions &deepOpts,
 			SubmitDagShallowOptions &shallowOpts,
-			StringList &dagFileAppendLines )
+			StringList &dagFileAttrLines )
 {
 	shallowOpts.strLibOut = shallowOpts.primaryDagFile + ".lib.out";
 	shallowOpts.strLibErr = shallowOpts.primaryDagFile + ".lib.err";
@@ -354,9 +354,9 @@ setUpOptions( SubmitDagDeepOptions &deepOpts,
 	}
 
 	MyString	msg;
-	if ( !GetConfigAndAppend( shallowOpts.dagFiles, deepOpts.useDagDir,
+	if ( !GetConfigAndAttrs( shallowOpts.dagFiles, deepOpts.useDagDir,
 				shallowOpts.strConfigFile,
-				dagFileAppendLines, msg) ) {
+				dagFileAttrLines, msg) ) {
 		fprintf( stderr, "ERROR: %s\n", msg.Value() );
 		return 1;
 	}
@@ -650,7 +650,7 @@ EnvFilter::ImportFilter( const MyString &var, const MyString &val ) const
 //---------------------------------------------------------------------------
 void writeSubmitFile( /* const */ SubmitDagDeepOptions &deepOpts,
 			/* const */ SubmitDagShallowOptions &shallowOpts,
-			/* const */ StringList &dagFileAppendLines )
+			/* const */ StringList &dagFileAttrLines )
 {
 	FILE *pSubFile = safe_fopen_wrapper_follow(shallowOpts.strSubFile.Value(), "w");
 	if (!pSubFile)
@@ -932,10 +932,12 @@ void writeSubmitFile( /* const */ SubmitDagDeepOptions &deepOpts,
 	}
 
 		// ...now append lines specified in the DAG file...
-	dagFileAppendLines.rewind();
-	char *appendCmd;
-	while ( (appendCmd = dagFileAppendLines.next()) != NULL ) {
-    	fprintf( pSubFile, "%s\n", appendCmd );
+	dagFileAttrLines.rewind();
+	char *attrCmd;
+	while ( (attrCmd = dagFileAttrLines.next()) != NULL ) {
+			// Note:  prepending "+" here means that this only works
+			// for setting ClassAd attributes.
+    	fprintf( pSubFile, "+%s\n", attrCmd );
 	}
 
 		// ...now things specified directly on the command line.

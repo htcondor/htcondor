@@ -38,7 +38,6 @@ $dagman_args = "-verbose -append '+test_attr0 = Dalyan' -append '+test_attr3 = V
 	'test_attr3 = Vrsic',
 	'test_attr4 = 3.14159',
 	'test_attr6 = 987',
-	'AccountingGroup = "agrp1.auser1"',
 );
 
 my $killedchosen = 0;

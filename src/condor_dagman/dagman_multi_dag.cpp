@@ -39,8 +39,8 @@ AppendError(MyString &errMsg, const MyString &newError)
 
 //-------------------------------------------------------------------------
 bool
-GetConfigAndAppend( /* const */ StringList &dagFiles, bool useDagDir, 
-			MyString &configFile, StringList &appendLines, MyString &errMsg )
+GetConfigAndAttrs( /* const */ StringList &dagFiles, bool useDagDir, 
+			MyString &configFile, StringList &attrLines, MyString &errMsg )
 {
 	bool		result = true;
 
@@ -117,18 +117,18 @@ GetConfigAndAppend( /* const */ StringList &dagFiles, bool useDagDir,
 					}
 
 					//some DAG commands are needed for condor_submit_dag, too...
-				} else if ( !strcasecmp( firstToken, "DAG_SUBMIT_COMMAND" ) ) {
+				} else if ( !strcasecmp( firstToken, "SET_JOB_ATTR" ) ) {
 						// Strip of DAGMan-specific command name; the
 						// rest we pass to the submit file.
-					logicalLine.replaceString( "DAG_SUBMIT_COMMAND", "" );
+					logicalLine.replaceString( "SET_JOB_ATTR", "" );
 					logicalLine.trim();
 					if ( logicalLine == "" ) {
 						AppendError( errMsg, "Improperly-formatted "
 									"file: value missing after keyword "
-									"DAG_SUBMIT_COMMAND" );
+									"SET_JOB_ATTR" );
 						result = false;
 					} else {
-						appendLines.append( logicalLine.Value() );
+						attrLines.append( logicalLine.Value() );
 					}
 				}
 			}
