@@ -1474,7 +1474,7 @@ into the ClassAd when the NodeG job is run for a second time,
 which is the first retry and the value 1. 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{Setting Priorities for Nodes}
+\subsubsection{\label{sec:DAG-SetNodePriority}Setting Priorities for Nodes}
 \index{DAGMan input file!PRIORITY keyword}
 
 The \Arg{PRIORITY} keyword assigns a priority to a DAG node.
@@ -1684,6 +1684,44 @@ configuration file.
 Configuration variables that are not for \Condor{dagman}
 and not utilized by DaemonCore, yet are specified in a
 \Condor{dagman}-specific configuration file are ignored.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:DAG-SetAttributes}Setting ClassAd attributes in the DAG file}
+\index{DAGMan input file!SET\_JOB\_ATTR keyword}
+\index{DAGMan!SET\_JOB\_ATTR}
+\index{DAGMan!Setting ClassAd attributes in a DAG}
+
+The \Arg{SET\_JOB\_ATTR} keyword within the DAG input file specifies
+an attribute/value pair to be set in the DAGMan job's ClassAd.
+The syntax for \Arg{SET\_JOB\_ATTR} is
+
+\Opt{SET\_JOB\_ATTR} \Arg{AttributeName}=\Arg{AttributeValue}
+
+As an example, if the DAG input file contains:
+\begin{verbatim}
+  SET_JOB_ATTR TestNumber = 17
+\end{verbatim}
+the ClassAd of the DAGMan job itself will have an attribute
+\MacroNI{TestNumber} with the value \MacroNI{17}.
+
+The attribute set by the \Arg{SET\_JOB\_ATTR} command is set only
+in the ClassAd of the DAGMan job itself -- it is not propagated to
+node jobs of the DAG.
+
+Values with spaces can be set by surrounding the string containing a
+space with single or double quotes.  (Note that the quote marks
+themselves will be part of the value.)
+
+Only a single attribute/value pair can be specified per
+\Arg{SET\_JOB\_ATTR} command.  If the same attribute is specified
+multiple times in the DAG (or in multiple DAGs run by the same
+DAGMan instance) the last-specified value is the one that will
+be utilized.  An attribute set in the DAG file can be overridden
+by specifying
+\begin{verbatim}
+-append '+<attribute> = <value>'
+\end{verbatim}
+on the \Condor{submit\_dag} command line.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:MultipleDAGs}Optimization of Submission Time}
