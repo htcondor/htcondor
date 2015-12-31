@@ -1018,7 +1018,7 @@ int DaemonCore::Register_Command(int command, const char* command_descrip,
 		if ( comTable[j].num == command ) {
 			MyString msg;
 			msg.formatstr("DaemonCore: Same command registered twice (id=%d)", command);
-			EXCEPT(msg.c_str());
+			EXCEPT("%s",msg.c_str());
 		}
 	}
 	if ( i == -1 ) {
@@ -10278,7 +10278,7 @@ InitCommandSockets(int tcp_port, int udp_port, DaemonCore::SockPairVec & socks, 
 
 					std::string message;
 					formatstr( message, "Warning: Failed to create IPv6 command socket for ports %d/%d%s", tcp_port, udp_port, want_udp ? "" : "no UDP" );
-					if( fatal ) { EXCEPT( message.c_str() ); }
+					if( fatal ) { EXCEPT( "%s", message.c_str() ); }
 					dprintf(D_ALWAYS | D_FAILURE, "%s\n", message.c_str() );
 					return false;
 				}
