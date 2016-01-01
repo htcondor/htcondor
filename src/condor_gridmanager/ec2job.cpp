@@ -946,28 +946,9 @@ void EC2Job::doEvaluateState()
 					if( ! probeNow ) { break; }
 					probeNow = false;
 
-					if ( lastProbeTime < enteredCurrentGmState ) {
-						lastProbeTime = enteredCurrentGmState;
-					}
-
-					// if current state isn't "running", we should check its state
-					// every "funcRetryInterval" seconds. Otherwise the interval should
-					// be "probeInterval" seconds.
-					int interval = myResource->GetJobPollInterval();
-					if ( remoteJobState != EC2_VM_STATE_RUNNING ) {
-						interval = funcRetryInterval;
-					}
-
-					if ( now >= lastProbeTime + interval ) {
-						gmState = GM_PROBE_JOB;
-						break;
-					}
-
-					unsigned int delay = 0;
-					if ( (lastProbeTime + interval) > now ) {
-						delay = (lastProbeTime + interval) - now;
-					}
-					daemonCore->Reset_Timer( evaluateStateTid, delay );
+					// We can't ignore any state transitions, so go into
+					// GM_PROBE_JOB regardless of the timer intervals.
+					gmState = GM_PROBE_JOB;
 				}
 				break;
 
@@ -1502,7 +1483,7 @@ void EC2Job::doEvaluateState()
 					ASSERT( spot_request_id != "" );
 
 					if( strcmp( m_failure_injection, "1A" ) == 0 ) {
-						EXCEPT( "On request, crashing after requesting a spot instance but before recording its ID.\n" );
+						EXCEPT( "On request, crashing after requesting a spot instance but before recording its ID." );
 					}
 
 					SetRequestID( spot_request_id.c_str() );
@@ -1578,6 +1559,10 @@ void EC2Job::doEvaluateState()
 					// Since we know the request is gone, forget about it.
 					SetRequestID( NULL );
 					requestScheddUpdate( this, false );
+
+					// Instances only set their state reason code when
+					// terminating.
+					m_state_reason_code.clear();
 
 					// Rather than decide if we crashed after cancelling a
 					// request but before removing its ID from the job ad,
@@ -1656,11 +1641,12 @@ void EC2Job::doEvaluateState()
 					gmState = GM_HOLD;
 					break;
 				}
+				purgedTwice = false;
 
 				// The remote job state was updated in StatusUpdate().
-
 				if( ! m_state_reason_code.empty() ) {
-					SetRemoteJobStatus( m_state_reason_code.c_str() );
+					jobAd->Assign( ATTR_EC2_STATUS_REASON_CODE, m_state_reason_code.c_str() );
+					requestScheddUpdate( this, false );
 				}
 
 				// If the request spawned an instance, we must save the
@@ -1738,16 +1724,17 @@ void EC2Job::doEvaluateState()
 
 				} break;
 
-			// If, during recovery of a spot request, we have a client token
-			// but not a spot instance ID, look at all spot requests to see
-			// if we actually made the request or not.  Assume we don't hit
-			// the race condition between the return of a spot request ID
-			// and its presence in the list of all SIRs.
 			case GM_SPOT_CHECK: {
 				if( ! probeNow ) { break; }
 				probeNow = false;
 
 				if( remoteJobState == EC2_VM_STATE_PURGED ) {
+					if( ! purgedTwice ) {
+						purgedTwice = true;
+						gmState = GM_SPOT_CHECK;
+						break;
+					}
+
 					//
 					// We didn't find the SIR.  Since we never submit requests
 					// with leases, if the SIR doesn't exist, either it never
@@ -1767,6 +1754,7 @@ void EC2Job::doEvaluateState()
 					}
 					break;
 				}
+				purgedTwice = false;
 
 				// Otherwise, we were found and our spot request ID and
 				// instance ID (if available) were updated.
@@ -2221,6 +2209,14 @@ void EC2Job::StatusUpdate( const char * instanceID,
 	 	// than try to be clever here, just handle the PURGED state in
 	 	// state machine appopriately.
 		status = EC2_VM_STATE_PURGED;
+
+		// The race condition may be a lie, but there's certainly a misfeature
+		// in the bulk polling code where spot jobs without a request ID can
+		// be misinformed about having been purged.  As a result, we wait for
+		// two purges, which means we must always consider being purged an
+		// event.
+		probeNow = true;
+		SetEvaluateState();
 	}
 
 	// SetRemoteJobStatus() sets the last-update timestamp, but
@@ -2244,7 +2240,7 @@ void EC2Job::SetRequestID( const char * requestID ) {
 		if( ! m_spot_request_id.empty() ) {
 			// If the job is forgetting about its request ID, make sure that
 			// the resource does, as well; otherwise, we can have one job
-			// updates by both the dedicated and spot batch status processes.
+			// updated by both the dedicated and spot batch status processes.
 			myResource->spotJobsByRequestID.remove( HashKey( m_spot_request_id.c_str() ) );
 		}
 		jobAd->AssignExpr( ATTR_EC2_SPOT_REQUEST_ID, "Undefined" );
