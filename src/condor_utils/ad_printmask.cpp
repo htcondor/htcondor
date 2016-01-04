@@ -255,6 +255,27 @@ calc_widths(AttrList * al, AttrList *target /*=NULL*/ )
 }
 #endif
 
+int AttrListPrintMask::
+adjust_formats(int (*pfn)(void*pv, int index, Formatter * fmt, const char * attr), void* pv)
+{
+	Formatter *fmt;
+	char 	*attr;
+
+	formats.Rewind();
+	attributes.Rewind();
+
+	// for each item registered in the print mask, call pfn giving it a change to make adjustments.
+	int index = 0;
+	int ret = 0;
+	while ((fmt=formats.Next()) && (attr=attributes.Next()))
+	{
+		ret = pfn(pv, index, fmt, attr);
+		if (ret < 0) break;
+		++index;
+	}
+	return ret;
+}
+
 void AttrListPrintMask::set_heading(const char * heading)
 {
 	if (heading && heading[0]) {
@@ -902,7 +923,6 @@ render (MyRowOfData & retval, AttrList *al, AttrList *target /* = NULL */)
 	return retval.ColCount();
 }
 
-// returns a new char * that is your responsibility to delete.
 int AttrListPrintMask::
 display (std::string & out, MyRowOfData & rod)
 {
@@ -1370,14 +1390,16 @@ display (std::string & out, AttrList *al, AttrList *target /* = NULL */)
 #endif
 
 void AttrListPrintMask::
-dump(std::string & out, const CustomFormatFnTable * pFnTable)
+dump(std::string & out, const CustomFormatFnTable * pFnTable, List<const char> * pheadings /*=NULL*/)
 {
 	Formatter *fmt;
 	char 	*attr;
 
+	if ( ! pheadings) pheadings = &headings;
+
 	formats.Rewind();
 	attributes.Rewind();
-	headings.Rewind();
+	pheadings->Rewind();
 
 	std::string item;
 	std::string scratch;
@@ -1385,7 +1407,7 @@ dump(std::string & out, const CustomFormatFnTable * pFnTable)
 	// for each item registered in the print mask
 	while ( (fmt = formats.Next()) && (attr = attributes.Next()) )
 	{
-		const char * pszHead = headings.Next();
+		const char * pszHead = pheadings->Next();
 		const char * fnName = "";
 		item.clear();
 		if (pszHead) { formatstr(item, "HEAD: '%s'\n", pszHead); out += item; }

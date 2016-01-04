@@ -36,6 +36,10 @@ enum {
 	FormatOptionLeftAlign = 0x10,
 	FormatOptionAlwaysCall = 0x80,
 
+	FormatOptionSpecial001 = 0x1000, // for use by the adjust_formats callback
+	FormatOptionSpecial002 = 0x2000,
+	FormatOptionSpecial004 = 0x4000,
+
 	AltQuestion = 0x10000,     // alt text is single ?
 	AltWide     = 0x20000,     // alt text is the width of the field.
 	AltFixMe    = 0x40000,     // some alt text that needs to be fixed somehow.
@@ -136,7 +140,7 @@ class AttrListPrintMask
 	int  ColCount(void) { return formats.Length(); }
 
 	// for debugging, dump the current config
-	void dump(std::string & out, const CustomFormatFnTable * pFnTable);
+	void dump(std::string & out, const CustomFormatFnTable * pFnTable, List<const char> * pheadings=NULL);
 
 	// display functions
 	int   display (FILE *, AttrList *, AttrList *target=NULL);		// output to FILE *
@@ -154,6 +158,8 @@ class AttrListPrintMask
 	void set_heading(const char * heading);
 	bool has_headings() { return headings.Length() > 0; }
 	const char * store(const char * psz) { return stringpool.insert(psz); } // store a string in the local string pool.
+	// iterate formatter and attribs, calling pfn and allowing fmt to be changed until pfn returns < 0
+	int adjust_formats(int (*pfn)(void*pv, int index, Formatter * fmt, const char * attr), void* pv);
 
   private:
 	List<Formatter> formats;
