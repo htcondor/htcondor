@@ -817,7 +817,6 @@ HTCondorViewRanged.prototype.add_date_pickers = function(root_id) {
 			// Something went wrong. We don't care what, just fallback to whatever the browser provides.
 		}
 	}
-	console.log("Native dates?", HTCondorViewRanged.has_native_date);
 	if(! HTCondorViewRanged.has_native_date ) {
 		// We clear the style so autoSize can work.
 		$('#'+root_id+' .datepicker').removeClass("range_input");
@@ -883,9 +882,15 @@ HTCondorViewRanged.prototype.parse_date = function(date, time) {
 	var millisec = parseInt(hits[4])||0;
 	var ampm = hits[5];
 
-	if(ampm && ampm.match(/PM/i)) {
-		hour += 12;
+	console.log("hour", hour, ampm);
+	if(ampm) {
+		if(ampm.match(/PM/i) && hour < 12) {
+			hour += 12;
+		} else if(ampm.match(/AM/i) && hour == 12) {
+			hour -= 12;
+		}
 	}
+	console.log("hour", hour, ampm);
 
 	var ret_date = new Date(yyyy, mm-1, dd, hour, min, sec, millisec);
 	if(isNaN(ret_date.getTime())) { return; }
@@ -931,6 +936,7 @@ HTCondorViewRanged.prototype.change_view = function() {
 		options.date_end = this.parse_date(
 			$('#'+this.id_end_date).val(),
 			$('#'+this.id_end_time).val())
+		console.log(options.date_start, options.date_end);
 		if(!options.date_start || (!options.date_end)) {
 			//console.log("unparsable");
 			return;
