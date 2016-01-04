@@ -584,6 +584,14 @@ HTCondorView.prototype.download_csv = function(data, query) {
 };
 
 
+HTCondorView.input_date = function(name, id) {
+	return '<input type="date" placeholder="YYYY-MM-DD" title="Use YYYY-MM-DD format.\rFor example, use 2015-06-01 for June 1, 2015" pattern="\\d\\d\\d\\d-\\d\\d?-\\d\\d?" class="range_input datepicker" name="'+name+'" id="'+id+'">';
+}
+
+HTCondorView.input_time = function(name, id) {
+	return '<input type="time" placeholder="HH:MM" title="Use HH:MM format.\rFor example, use 13:00 for 1:00 PM" pattern="\\d+:\\d\\d(:\\d\\d(\\.\\d\\d\\d)?)?\\s*([aApP][mM])?" class="range_input" name="'+name+'" id="'+id+'">';
+}
+
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -863,42 +871,6 @@ HTCondorViewRanged.prototype.initialize = function() {
 
 };
 
-HTCondorViewRanged.prototype.parse_date = function(date, time) {
-	var RE_DATE = /(\d\d\d\d)[-\/](\d+)[-\/](\d+)/;
-
-	var hits = RE_DATE.exec(date);
-	if(!hits) { return; }
-	var yyyy = parseInt(hits[1]);
-	var mm = parseInt(hits[2]);
-	var dd = parseInt(hits[3]);
-
-	if(!time) { time = "00:00"; }
-	var RE_TIME = /(\d+):(\d\d)(?::(\d\d)(?:\.(\d\d\d))?)?\s*([AP][M])?/i;
-	hits = RE_TIME.exec(time);
-	if(!hits) { return; }
-	var hour = parseInt(hits[1]);
-	var min = parseInt(hits[2]);
-	var sec = parseInt(hits[3])||0;
-	var millisec = parseInt(hits[4])||0;
-	var ampm = hits[5];
-
-	console.log("hour", hour, ampm);
-	if(ampm) {
-		if(ampm.match(/PM/i) && hour < 12) {
-			hour += 12;
-		} else if(ampm.match(/AM/i) && hour == 12) {
-			hour -= 12;
-		}
-	}
-	console.log("hour", hour, ampm);
-
-	var ret_date = new Date(yyyy, mm-1, dd, hour, min, sec, millisec);
-	if(isNaN(ret_date.getTime())) { return; }
-	return ret_date;
-};
-
-
-
 
 HTCondorViewRanged.prototype.change_view = function() {
 	// Purge everything.
@@ -930,10 +902,10 @@ HTCondorViewRanged.prototype.change_view = function() {
 		$('#'+this.id_range).hide();
 	} else if(duration === "custom") {
 		$('#'+this.id_range).show();
-		options.date_start = this.parse_date(
+		options.date_start = Date.parseDateTime(
 			$('#'+this.id_start_date).val(),
 			$('#'+this.id_start_time).val())
-		options.date_end = this.parse_date(
+		options.date_end = Date.parseDateTime(
 			$('#'+this.id_end_date).val(),
 			$('#'+this.id_end_time).val())
 		console.log(options.date_start, options.date_end);
@@ -949,7 +921,6 @@ HTCondorViewRanged.prototype.change_view = function() {
 	
 	this.htcondor_view = new HTCondorView(options);
 };
-
 
 HTCondorViewRanged.prototype.html_tabs = function() {
 	// We need to ensure the IDs are all unique.
@@ -970,9 +941,6 @@ HTCondorViewRanged.prototype.html_tabs = function() {
 		return "<input type='radio' name='"+name+"' id='"+id+"' value='"+value+"'"+checked+"> <label for='"+id+"'>"+label+"</label>";
 	}
 
-	var input_date = '<input type="date" placeholder="YYYY-MM-DD" title="Use YYYY-MM-DD format.\rFor example, use 2015-06-01 for June 1, 2015" pattern="\\d\\d\\d\\d-\\d\\d?-\\d\\d?" class="range_input datepicker" ';
-	var input_time = '<input type="time" placeholder="HH:MM" title="Use HH:MM format.\rFor example, use 13:00 for 1:00 PM" pattern="\\d+:\\d\\d(:\\d\\d(\\.\\d\\d\\d)?)?\\s*([aApP][mM])?" class="range_input" ';
-
 	this.graph_id = this.new_graph_id();
 	return "" +
 	"<div class='htcondorviewranged'>\n"+
@@ -985,11 +953,11 @@ HTCondorViewRanged.prototype.html_tabs = function() {
 			"</ul>\n" +
 		"</div>\n" +
 		'<div class="range" id="'+this.id_range+'">\n' +
-			input_date+'name="start_date" id="'+this.id_start_date+'">\n'+
-			input_time+'name="start_time" id="'+this.id_start_time+'">\n'+
+			HTCondorView.input_date('start_date', this.id_start_date) +"\n" +
+			HTCondorView.input_time('start_time', this.id_start_time) +"\n" +
 			'through\n' +
-			input_date+'name="end_date" id="'+this.id_end_date+'">\n'+
-			input_time+'name="end_time" id="'+this.id_end_time+'">\n'+
+			HTCondorView.input_date('end_date', this.id_end_date) +"\n" +
+			HTCondorView.input_time('end_time', this.id_end_time) +"\n" +
 			"<button class='update_range'>Update chart</button>\n"+
 		'</div>\n' +
 		'<div id="'+this.graph_id+'"></div>\n' +

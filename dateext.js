@@ -67,3 +67,37 @@ Date.parseMore = function(str) {
 	d.setUTCDate(d.getUTCDate() - 3);
 	return d;
 }
+
+Date.parseDateTime = function(date, time) {
+	var RE_DATE = /(\d\d\d\d)[-\/](\d+)[-\/](\d+)/;
+
+	var hits = RE_DATE.exec(date);
+	if(!hits) { return; }
+	var yyyy = parseInt(hits[1]);
+	var mm = parseInt(hits[2]);
+	var dd = parseInt(hits[3]);
+
+	if(!time) { time = "00:00"; }
+	var RE_TIME = /(\d+):(\d\d)(?::(\d\d)(?:\.(\d\d\d))?)?\s*([AP][M])?/i;
+	hits = RE_TIME.exec(time);
+	if(!hits) { return; }
+	var hour = parseInt(hits[1]);
+	var min = parseInt(hits[2]);
+	var sec = parseInt(hits[3])||0;
+	var millisec = parseInt(hits[4])||0;
+	var ampm = hits[5];
+
+	console.log("hour", hour, ampm);
+	if(ampm) {
+		if(ampm.match(/PM/i) && hour < 12) {
+			hour += 12;
+		} else if(ampm.match(/AM/i) && hour == 12) {
+			hour -= 12;
+		}
+	}
+	console.log("hour", hour, ampm);
+
+	var ret_date = new Date(yyyy, mm-1, dd, hour, min, sec, millisec);
+	if(isNaN(ret_date.getTime())) { return; }
+	return ret_date;
+}
