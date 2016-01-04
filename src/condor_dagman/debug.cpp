@@ -302,8 +302,8 @@ time_to_str( time_t timestamp, MyString &tstr )
 	if ( UseTimestamps ) {
 		tstr.formatstr( "(%d) ", (int)timestamp );
 	} else {
-		tstr.formatstr( "%d/%d %02d:%02d:%02d ",
-			tm->tm_mon + 1, tm->tm_mday, tm->tm_hour,
-			tm->tm_min, tm->tm_sec );
+		tstr.formatstr( "%02d/%02d/%02d %02d:%02d:%02d ",
+			tm->tm_mon + 1, tm->tm_mday, tm->tm_year - 100,
+			tm->tm_hour, tm->tm_min, tm->tm_sec );
 	}
 }
