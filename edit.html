@@ -5,7 +5,9 @@
   <title>HTCondorView Graph Editor</title>
   <link rel="stylesheet" href="htcondor.css" />
   <link rel="stylesheet" href="htcondorview.css" />
+  <link rel="stylesheet" href="https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/themes/smoothness/jquery-ui.css">
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.js"></script>
+  <script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/jquery-ui.min.js"></script> 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/dygraph/1.1.0/dygraph-combined.js"></script>
   <script src="https://www.google.com/jsapi"></script>
   <script>
@@ -45,6 +47,7 @@ h1 { margin-bottom: 0.3em; }
 Title: <input type="text" id="title" name="title" value="DATA"> <br>
 Data source: <input type="text" id="data_url" name="data_url" value="DATA">
 <span class="help"><a href="#" target="_blank" id="view_data_url_link">view</a> <a target="_blank" href="json.html">file format</a></span><br>
+Date range: <input type="text" id="date_start" name="date_start"> through <input type="text" id="date_end" name="date_end"><br>
 Query: <span class="help"><a href="syntax.html" target="_blank">syntax reference</a></span><br>
 <textarea rows="10" style="width: 90%;" id="graph_query" name="graph_query">DATA</textarea>
 <button id="updatebtn">Update Graph</button>
@@ -55,6 +58,9 @@ Query: <span class="help"><a href="syntax.html" target="_blank">syntax reference
 
 <script>
 var urlTool;
+
+var id_start_date = HTCondorView.prototype.new_graph_id();
+var id_end_date = HTCondorView.prototype.new_graph_id();
 $(document).ready(function(){
 
 	initialize_from_url();
@@ -85,6 +91,9 @@ function initialize_from_url() {
 	$('#title').val(args.get('title'));
 	$('#data_url').val(args.get('data_url'));
 
+	$('#date_start').val(args.get('date_start'));
+	$('#date_end').val(args.get('date_end'));
+
 	var graph_query_url = args.get('graph_query');
 	var gqargs = AfterqueryObj.parseArgs(graph_query_url);
 	var graph_query = '';
@@ -114,12 +123,17 @@ function update_graph() {
 
 	var graph_query_url = build_graph_query_url(graph_query);
 
-	new HTCondorView({
+	var args = {
 		dst_id: "thechart",
 		title: title,
 		data_url: data_url,
 		graph_query: graph_query_url,
-	});
+	};
+
+	if($('#date_start').val()) { args.date_start = new Date($('#date_start').val()); }
+	if($('#date_end').val()) { args.date_end = new Date($('#date_end').val()); }
+
+	new HTCondorView(args);
 }
 
 // Take newline separated query and turn into URI escaped version with
