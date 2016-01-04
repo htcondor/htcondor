@@ -41,18 +41,6 @@
 class MultiLogFiles
 {
 public:
-		/** getValuesFromFileNew() performs exactly the same function as
-			getValuesFromFile(); the difference is that
-			getValuesFromFileNew() reads the given file line-by-line
-			rather than reading the whole thing into one string (this
-			fixes gittrac #4171).  As of 8.0.6 we are keeping both
-			versions so the new one can be turned off with configuration,
-			but eventually the old version should be torn out completely
-			(see gittrac #4189).
-		*/
-	static MyString getValuesFromFileNew(const MyString &fileName,
-			const MyString &keyword, StringList &values, int skipTokens = 0);
-
 		/** Gets the specified value from a submit file (looking for the
 			syntax <keyword> = <value>).
 			@param strSubFilename: the submit file name
@@ -164,27 +152,6 @@ private:
 		 */
 	static MyString CombineLines(StringList &listIn, char continuation,
 			const MyString &filename, StringList &listOut);
-
-		/**
-		 * Skip whitespace in a std::string buffer.  This is a helper function
-		 * for loadLogFileNamesFromStorkSubFile().  When the new ClassAds
-		 * parser can skip whitespace on it's own, this function can be
-		 * removed.
-		 * @param buffer name
-		 * @param input/output offset into buffer
-		 * @return void
-		 */
-	static void skip_whitespace(std::string const &s,int &offset);
-
-		/**
-		 * Read a file into a std::string helper function for
-		 * loadLogFileNamesFromStorkSubFile().
-		 * @param Filename to read.
-		 * @param output buffer
-		 * @return "" if okay, or else an error message.
-		 */
-	static MyString readFile(char const *filename,std::string& buf);
-
 };
 
 class ReadMultipleUserLogs

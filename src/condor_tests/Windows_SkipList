@@ -134,6 +134,7 @@ job_dagman_use_hold_claim
 job_dagman_usedagdir
 job_dagman_vars
 job_dagman_script_defer
+job_dagman_set_attr
 job_negotiator_restart
 
 lib_eventlog_rotation-no_rotations_1
