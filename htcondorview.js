@@ -596,6 +596,11 @@ HTCondorView.input_time = function(name, id) {
 ////////////////////////////////////////////////////////////////////////////////
 
 /*
+HTCondorViewDateFiles is an internal-to-HTCondorView object for determining
+which data files we need to load to display a given range at an acceptable
+level of detail.
+
+
 base_url - Mandatory. URL (relative or absolute) to the data files.  The
 URL must contain the string "..", which indicates where ".oldest." or
 ".DATE." will be placed.
@@ -780,6 +785,13 @@ HTCondorViewDateFiles.prototype.get_files = function(start,end) {
 
 
 ////////////////////////////////////////////////////////////////////////////////
+
+/*
+HTCondorViewRanged provides the same constructor interface as HTCondorView.
+In addition, it addres a Date|Week|Month|Custom UI to select what date ranges
+are displayed.  The provided data_url _must_ contain "..", which will be 
+replaced with the interval and start date as appropriate.
+*/
 
 
 function HTCondorViewRanged(options) {
