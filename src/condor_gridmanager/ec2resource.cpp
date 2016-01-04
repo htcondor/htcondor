@@ -376,7 +376,7 @@ EC2Resource::BatchStatusResult EC2Resource::StartBatchStatus() {
 				// The SIR's "launch group" is its client token.  This lets
 				// us recover jobs which crashed between requesting a spot
 				// instance and recording the request ID.
-	    	    EC2Job * nextJob = NULL;
+				EC2Job * nextJob = NULL;
 				BaseJob * nextBaseJob = NULL;
 				registeredJobs.Rewind();
 				while ( (nextBaseJob = registeredJobs.Next()) ) {
@@ -386,10 +386,10 @@ EC2Resource::BatchStatusResult EC2Resource::StartBatchStatus() {
 					// dprintf( D_FULLDEBUG, "... does it match '%s'?\n", nextJob->m_client_token.c_str() );
 					if( nextJob->m_client_token == launchGroup ) {
 						dprintf( D_FULLDEBUG, "Found spot job object for '%s' using client token '%s'; updating status ('%s').\n", requestID.c_str(), launchGroup.c_str(), state.c_str() );
-			            nextJob->StatusUpdate( instanceID.c_str(), state.c_str(), statusCode.c_str(), NULL, requestID.c_str() );
-			            // We don't need to remove this job from the list
-			            // because it can't have been present in it.
-			            continue;
+						nextJob->StatusUpdate( instanceID.c_str(), state.c_str(), statusCode.c_str(), NULL, requestID.c_str() );
+						// We don't need to remove this job from the list
+						// because it can't have been present in it.
+						continue;
 					}
 				}
 

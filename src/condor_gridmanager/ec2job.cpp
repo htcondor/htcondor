@@ -1590,19 +1590,8 @@ void EC2Job::doEvaluateState()
 				if( ! probeNow ) { break; }
 				probeNow = false;
 
-				// Always wait at least interval before probing.
-				if( lastProbeTime < enteredCurrentGmState ) {
-					lastProbeTime = enteredCurrentGmState;
-				}
-
-				if( now >= lastProbeTime + myResource->GetJobPollInterval() ) {
-					gmState = GM_SPOT_QUERY;
-					break;
-				} else {
-					// Why is this more complicated in GM_SUBMITTED?
-					unsigned int delay = (lastProbeTime + myResource->GetJobPollInterval()) - now;
-					daemonCore->Reset_Timer( evaluateStateTid, delay );
-				}
+				// Don't ever skip a job state transition.
+				gmState = GM_SPOT_QUERY;
 				break;
 
 			// Alternates with GM_SPOT_SUBMITTED to watch for instance start.
@@ -1610,10 +1599,22 @@ void EC2Job::doEvaluateState()
 				probeNow = false;
 
 				if( remoteJobState == EC2_VM_STATE_PURGED ) {
-					// There's a race condition between when we get a spot
-					// request ID and when the EC2 service includes that
+					// There may be a race condition between when we get a
+					// spot request ID and when the EC2 service includes that
 					// ID in its list of all IDs.  This means that SIRs
 					// may briefly appear to have been purged.
+					//
+					// It may also be that this appeared to happen because
+					// the batch status update code flagged spot job objects
+					// as purged if they didn't appear in the service's list
+					// of instances... which, of course, they couldn't.
+					//
+					// That no longer happens for spot job objects which have
+					// spot request IDs, but for other spot job objects, we'd
+					// need to be able to distinguish between "purged" and
+					// "not yet started", which could be tricky to do without
+					// knowing which state the job's in (and/or during
+					// recovery.)  So we leave this code in place.
 					if((! m_spot_request_id.empty()) && m_remoteJobId.empty() ) {
 						if(! purgedTwice) {
 							purgedTwice = true;
@@ -1697,15 +1698,17 @@ void EC2Job::doEvaluateState()
 					gmState = GM_HOLD;
 					break;
 				} else if( remoteJobState == "pending" ) {
-					// Because the bulk status update may occurs between
+					// Because the bulk status update may occur between
 					// creating this job object and its state machine reaching
 					// GM_SPOT_START, GM_SPOT_START unconditionally sets the
 					// remote job state to EC2_VM_STATE_PENDING.  Since the
 					// job didn't exist at the time of the poll,
 					// m_state_reason_code is unset, and we have to handle
-					// the "actual" job status here.  Arguably, we should
-					// instead have GM_SPOT_START clear probeNow to force the
-					// wait for another poll...
+					// the "actual" job status here.
+					//
+					//
+					// Arguably, we should instead have GM_SPOT_START
+					// clear probeNow to force the wait for another poll...
 					gmState = GM_SPOT_SUBMITTED;
 					break;
 				} else {
@@ -2204,17 +2207,17 @@ void EC2Job::StatusUpdate( const char * instanceID,
 	// if it wasn't previously purged.
 	if( instanceID == NULL && status == NULL
 	 && stateReasonCode == NULL && publicDNSName == NULL ) {
-	 	// There's a race condition between obtaining a spot request ID
-	 	// and that spot request appearing the list of all of them.  Rather
-	 	// than try to be clever here, just handle the PURGED state in
-	 	// state machine appopriately.
 		status = EC2_VM_STATE_PURGED;
 
-		// The race condition may be a lie, but there's certainly a misfeature
-		// in the bulk polling code where spot jobs without a request ID can
-		// be misinformed about having been purged.  As a result, we wait for
-		// two purges, which means we must always consider being purged an
-		// event.
+		// There's certainly a misfeature in the bulk status code where spot
+		// jobs without a request ID will be told they've been purged.  As a
+		// result, we wait for two purged statuses in a row, which means we
+		// must always consider being purged an event.  (The bulk status code
+		// checks for spot job statuses after instance job statuses, so if
+		// the spot job truly doesn't exist, both checks will fail; if it
+		// does, it will alternate until it manages to register its request ID,
+		// which causes it to stop being notified it's been purged when it
+		// doesn't show up in the list of all instances.
 		probeNow = true;
 		SetEvaluateState();
 	}
