@@ -1,0 +1,126 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+use CondorTest;
+use CondorUtils;
+
+$cmd = 'job_dagman_event_timestamp.dag';
+$testdesc =  'Condor submit dag - test dagman.out event timestamps - scheduler U';
+$testname = "job_dagman_event_timestamp";
+$dagman_args = "-verbose";
+
+$outfile = "job_dagman_event_timestamp.dag.dagman.out";
+
+@expected_lines = (
+	'\d\d/\d\d/\d\d \d\d:\d\d:\d\d\ Event: ULOG_SUBMIT for HTCondor Node NodeA \(\d+\.\d+\.\d+\) \{\d\d/\d\d/\d\d \d\d:\d\d:\d\d\}',
+	'\d\d/\d\d/\d\d \d\d:\d\d:\d\d\ Event: ULOG_EXECUTE for HTCondor Node NodeA \(\d+\.\d+\.\d+\) \{\d\d/\d\d/\d\d \d\d:\d\d:\d\d\}',
+	'\d\d/\d\d/\d\d \d\d:\d\d:\d\d\ Event: ULOG_JOB_TERMINATED for HTCondor Node NodeA \(\d+\.\d+\.\d+\) \{\d\d/\d\d/\d\d \d\d:\d\d:\d\d\}',
+	'\d\d/\d\d/\d\d \d\d:\d\d:\d\d\ Event: ULOG_SUBMIT for HTCondor Node NodeB \(\d+\.\d+\.\d+\) \{\d\d/\d\d/\d\d \d\d:\d\d:\d\d\}',
+	'\d\d/\d\d/\d\d \d\d:\d\d:\d\d\ Event: ULOG_JOB_TERMINATED for HTCondor Node NodeB \(\d+\.\d+\.\d+\) \{\d\d/\d\d/\d\d \d\d:\d\d:\d\d\}',
+);
+
+my $killedchosen = 0;
+
+# truly const variables in perl
+sub IDLE{1};
+sub HELD{5};
+sub RUNNING{2};
+
+# Get rid of any existing output files.
+if (-e $outfile) {
+	runcmd("rm -f $outfile");
+}
+
+$abnormal = sub 
+{
+	die "Want to see only submit, execute and unsuccessful completion\n";
+};
+
+$failure = sub 
+{
+	die "Error: DAG is not expected to fail!\n";
+};
+
+$aborted = sub 
+{
+	die "Abort event NOT expected\n";
+};
+
+$held = sub 
+{
+	die "Held event NOT expected\n";
+};
+
+$executed = sub
+{
+	my %info = @_;
+
+	CondorTest::debug("Good. We need the dag to run<$info{cluster}>\n",1);
+};
+
+$submitted = sub
+{
+	CondorTest::debug("submitted: This test will see submit, executing and unsuccessful completion\n",1);
+};
+
+$success = sub
+{
+	CondorTest::debug("executed successfully\n",1);
+	CondorTest::debug("Verifying output\n",1);
+	$diditpass = 1;
+	CondorTest::debug("Checking $outfile\n",1);
+
+	$canopen = open(OUT, "<$outfile");
+	if (! (defined $canopen)) {
+		CondorTest::debug("Cannot open output file <$outfile>:$!\n",1);
+		$diditpass = 0;
+	} else {
+		$contents = do { local $/; <OUT>; };
+		foreach $eline (@expected_lines) {
+			if ( $contents =~/$eline/ ) {
+				CondorTest::debug("Found $eline in $outfile\n",1);
+			} else {
+				CondorTest::debug("ERROR: $eline not found in $outfile\n",1);
+				$diditpass = 0;
+			}
+		}
+		close(OUT);
+	}
+
+	if ($diditpass == 0) {
+		die "All expected files and correct output failed\n";
+	}
+};
+
+CondorTest::RegisterExitedSuccess( $testname, $success);
+CondorTest::RegisterExitedFailure( $testname, $failure );
+CondorTest::RegisterExecute($testname, $executed);
+CondorTest::RegisterExitedAbnormal( $testname, $abnormal );
+CondorTest::RegisterAbort( $testname, $aborted );
+CondorTest::RegisterHold( $testname, $held );
+CondorTest::RegisterSubmit( $testname, $submitted );
+
+if( CondorTest::RunDagTest($testname, $cmd, 0, $dagman_args) ) {
+	CondorTest::debug("$testname: SUCCESS\n",1);
+	exit(0);
+} else {
+	die "$testname: CondorTest::RunTest() failed\n";
+}
+
