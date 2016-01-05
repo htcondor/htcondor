@@ -153,9 +153,12 @@ static int dryFetchQueue(const char * file, StringList & proj, int fetch_opts, i
 
 #ifdef USE_LATE_PROJECTION
 static void initOutputMask(AttrListPrintMask & pqmask, int qdo_mode, bool wide_mode);
-PRAGMA_REMIND("make width of the name column adjust to the display width")
+//PRAGMA_REMIND("make width of the name column adjust to the display width")
 const int name_column_index = 2;
-const int name_column_width = 17;
+const int name_column_width = 14;
+bool can_fixup_column_widths = false;
+bool is_standard_format = false;
+int  max_name_column_width = 14;
 #else
 static 	void short_header (void);
 static 	void buffer_io_display (std::string & out, ClassAd *);
@@ -1210,7 +1213,8 @@ parse_analyze_detail(const char * pch, int current_details)
 // this enum encodes the user choice of the various reports that condor_q can show
 // The first few are mutually exclusive, the last are flags
 enum {
-	QDO_JobDefault = 0,
+	QDO_NotSet=0,
+	QDO_JobNormal,
 	QDO_JobRuntime,
 	QDO_JobGoodput,
 	QDO_JobGlobusInfo,
@@ -1219,6 +1223,8 @@ enum {
 	QDO_JobIO,
 	QDO_DAG,
 	QDO_Totals,
+
+	QDO_AutoclusterNormal, // Print typical autocluster attributes
 
 	QDO_Analyze, // not really a print format.
 
@@ -1246,7 +1252,7 @@ processCommandLineArguments (int argc, char *argv[])
 	const char * pcolon;
 
 #ifdef USE_LATE_PROJECTION
-	int qdo_mode = QDO_JobDefault;
+	int qdo_mode = QDO_NotSet;
 #else
 	bool custom_attributes = false;
 	attrs.initializeFromString(
@@ -2180,77 +2186,6 @@ processCommandLineArguments (int argc, char *argv[])
 #endif
 	}
 }
-
-#ifdef USE_LATE_PROJECTION
-#if 0 // unused
-void initProjection(StringList & proj, int qdo_mode)
-{
-	int base_mode = qdo_mode & QDO_BaseMask;
-	if (base_mode < QDO_Totals && base_mode != QDO_DAG) {
-		proj.initializeFromString(
-		"ClusterId ProcId Owner JobStatus"
-		" QDate RemoteUserCpu ServerTime ShadowBday RemoteWallClockTime"
-		" JobPrio ImageSize Cmd Args Arguments"
-		" JobDescription MATCH_EXP_JobDescription"
-		" TransferringInput TransferringOutput TransferQueued");
-	}
-	switch (base_mode) {
-	case QDO_JobDefault:
-		break;
-	case QDO_JobRuntime:
-		proj.append(ATTR_REMOTE_HOST);
-		proj.append(ATTR_JOB_UNIVERSE);
-		proj.append(ATTR_EC2_REMOTE_VM_NAME);
-		break;
-	case QDO_JobGoodput:
-		proj.append(ATTR_JOB_COMMITTED_TIME);
-		proj.append(ATTR_SHADOW_BIRTHDATE);
-		proj.append(ATTR_LAST_CKPT_TIME);
-		proj.append(ATTR_JOB_REMOTE_WALL_CLOCK);
-		break;
-	case QDO_JobIO:
-		proj.append(ATTR_NUM_JOB_STARTS);
-		proj.append(ATTR_NUM_CKPTS_RAW);
-		proj.append(ATTR_FILE_READ_BYTES);
-		proj.append(ATTR_BYTES_RECVD);
-		proj.append(ATTR_FILE_WRITE_BYTES);
-		proj.append(ATTR_BYTES_SENT);
-		proj.append(ATTR_JOB_REMOTE_WALL_CLOCK);
-		proj.append(ATTR_FILE_SEEK_COUNT);
-		proj.append(ATTR_BUFFER_SIZE);
-		proj.append(ATTR_BUFFER_BLOCK_SIZE);
-		proj.append(ATTR_TRANSFERRING_INPUT);
-		proj.append(ATTR_TRANSFERRING_OUTPUT);
-		proj.append(ATTR_TRANSFER_QUEUED);
-		break;
-	case QDO_JobHold:
-		proj.append(ATTR_ENTERED_CURRENT_STATUS);
-		proj.append(ATTR_HOLD_REASON);
-		break;
-	case QDO_JobGridInfo:
-		proj.append(ATTR_GRID_JOB_ID);
-		proj.append(ATTR_GRID_RESOURCE);
-		proj.append(ATTR_GRID_JOB_STATUS);
-		proj.append(ATTR_GLOBUS_STATUS);
-		proj.append(ATTR_EC2_REMOTE_VM_NAME);
-		break;
-	case QDO_JobGlobusInfo:
-		proj.append(ATTR_GLOBUS_STATUS);
-		proj.append(ATTR_GRID_RESOURCE);
-		proj.append(ATTR_GRID_JOB_STATUS);
-		proj.append(ATTR_GRID_JOB_ID);
-		break;
-	case QDO_DAG:
-	case QDO_Totals:
-		break;
-	}
-
-	if (qdo_mode & QDO_Cputime) {
-	 	proj.append(ATTR_JOB_REMOTE_USER_CPU);
-	}
-}
-#endif // unused
-#endif
 
 static double
 job_time(double cpu_time,ClassAd *ad)
@@ -3637,6 +3572,7 @@ extern const char * const jobHold_PrintFormat;
 extern const char * const jobIO_PrintFormat;
 extern const char * const jobDAG_PrintFormat;
 extern const char * const jobTotals_PrintFormat;
+extern const char * const autoclusterNormal_PrintFormat;
 
 static void initOutputMask(AttrListPrintMask & prmask, int qdo_mode, bool wide_mode)
 {
@@ -3652,12 +3588,18 @@ static void initOutputMask(AttrListPrintMask & prmask, int qdo_mode, bool wide_m
 		return;
 	setup_mask = true;
 
+	// If no display mode has been set, pick one.
+	if ((qdo_mode & QDO_BaseMask) == QDO_NotSet) {
+		if (dash_autocluster == CondorQ::fetch_DefaultAutoCluster) { qdo_mode = QDO_AutoclusterNormal; }
+		else { qdo_mode |= QDO_JobNormal; }
+	}
+
 	static const struct {
 		int mode;
 		const char * tag;
 		const char * fmt;
 	} info[] = {
-		{ QDO_JobDefault,    "",       jobDefault_PrintFormat },
+		{ QDO_JobNormal,    "",       jobDefault_PrintFormat },
 		{ QDO_JobRuntime,    "RUN",    jobRuntime_PrintFormat },
 		{ QDO_JobGoodput,    "GOODPUT",jobGoodput_PrintFormat },
 		{ QDO_JobGlobusInfo, "GLOBUS", jobGlobus_PrintFormat },
@@ -3666,6 +3608,7 @@ static void initOutputMask(AttrListPrintMask & prmask, int qdo_mode, bool wide_m
 		{ QDO_JobIO,         "IO",	   jobIO_PrintFormat },
 		{ QDO_DAG,           "DAG",	   jobDAG_PrintFormat },
 		{ QDO_Totals,        "TOTALS", jobTotals_PrintFormat },
+		{ QDO_AutoclusterNormal, "AUTOCLUSTER", autoclusterNormal_PrintFormat },
 	};
 
 	int ixInfo = -1;
@@ -3717,7 +3660,14 @@ static void initOutputMask(AttrListPrintMask & prmask, int qdo_mode, bool wide_m
 		}
 	}
 
-	if ( ! wide_mode) prmask.SetOverallWidth(getDisplayWidth()-1);
+	is_standard_format = true;
+	if ( ! wide_mode) {
+		int display_wid = getDisplayWidth();
+		prmask.SetOverallWidth(display_wid-1);
+		can_fixup_column_widths = (display_wid > 80) && (qdo_mode != QDO_Totals);
+		max_name_column_width = 14 + (display_wid - 80);
+		if (dash_dag) max_name_column_width += 3;
+	}
 
 	if (set_print_mask_from_stream(prmask, fmt, false, app.attrs) < 0) {
 		fprintf(stderr, "Internal error: default %s print-format is invalid !\n", tag);
@@ -4319,6 +4269,20 @@ static void group_job(JobRowOfData & jrod, ClassAd* job)
 	}
 }
 
+// callback for the pretty-printer's adjust_formats method that will adjust the width
+// of the cluster column to be big enough for the largest cluster we will print.
+static int fnAdjustClusterWidth(void* pv, int index, Formatter * fmt, const char * /*attr*/) {
+	int cluster_width = (int)(long long)pv;
+	char * pf = const_cast<char*>(fmt->printfFmt);
+	if ((index == 0) && (fmt->width == 5)) {
+		if (cluster_width > 4 && cluster_width <= 9) {
+			if (pf && pf[1] == '4') { pf[1] = '0' + cluster_width; }
+			fmt->width = cluster_width + 1;
+		}
+	}
+	return -1;
+}
+
 union _jobid {
 	struct { int proc; int cluster; };
 	long long id;
@@ -4343,6 +4307,13 @@ static bool process_job_to_rod_per_ad_map(void * pv,  ClassAd* job)
 	}
 
 	int columns = app.mask.ColCount();
+
+	// HACK! before we render the first job, adjust the width of the cluster column
+	//PRAGMA_REMIND("remove this hack once we render to Values rather than strings.")
+	if (pmap->empty() && ! dash_autocluster && jobid.cluster > 9999 && is_standard_format) {
+		char buf[16]; sprintf(buf, "%d", jobid.cluster);
+		app.mask.adjust_formats(fnAdjustClusterWidth, (void*)strlen(buf));
+	}
 
 	std::pair<ROD_MAP_BY_ID::iterator,bool> pp = pmap->insert(std::pair<long long, JobRowOfData>(jobid.id,jobid.id));
 	if( ! pp.second ) {
@@ -4455,6 +4426,58 @@ static long long make_parentage_sort_key(long long id, std::string & key, ROD_MA
 }
 */
 
+#if 0 // future
+static struct _fixup_width_values {
+	int cluster_width;
+	int proc_width;
+	int name_width;
+};
+
+// hacky way to adjust column widths based on the data.
+static bool fnFixupWidthCallback(void* pv, int index, Formatter * fmt, char * attr, const char * heading) {
+	struct _fixup_width_values * p = (struct _fixup_width_values *)pv;
+	char * pf = const_cast<char*>(fmt->printfFmt);
+	if (index == 0) {
+		if (p->cluster_width > 4 && p->cluster_width <= 9) {
+			if (pf && pf[1] == '4') { pf[1] = '0' + p->cluster_width; }
+		}
+	} else if (index == 1) {
+		if (p->proc_width > 3 && p->proc_width <= 9) {
+			if (pf && pf[2] == '3') { pf[2] = '0' + p->proc_width; }
+		}
+	} else if (index == 2) { // owner
+		if (p->name_width > 14 && p->name_width < 50) {
+			fmt->width = p->name_width;
+		}
+	} else {
+		return false; // stop iterating
+	}
+	return true;
+}
+
+static void fixup_std_column_widths(int max_cluster, int max_proc, int longest_name) {
+	if ( ! can_fixup_column_widths)
+		return;
+	if (max_cluster < 9999 && max_proc < 999)
+		return; // nothing to do.
+
+	struct _fixup_width_values vals;
+	memset(&vals, 0, sizeof(vals));
+
+	char buf[20];
+	sprintf(buf, "%d", max_cluster);
+	vals.cluster_width = strlen(buf);
+	sprintf(buf, "%d", max_proc);
+	vals.proc_width = strlen(buf);
+
+	//if (vals.cluster_width > 4) max_name_column_width -= (vals.cluster_width -4);
+	//if (vals.proc_width > 3) max_name_column_width -= (vals.proc_width -3);
+	if (longest_name > 14) vals.name_width = MIN(longest_name, max_name_column_width);
+
+	app.mask.walk(&vals, fnFixupWidthCallback);
+}
+#endif
+
 // link multi-proc clusters into a peer list (with the lowest proc id being the first peer)
 // and children to parents (i.e. dag nodes to their owning dagman)
 static void linkup_nodes_by_id(ROD_MAP_BY_ID & results)
@@ -4462,13 +4485,19 @@ static void linkup_nodes_by_id(ROD_MAP_BY_ID & results)
 	ROD_MAP_BY_ID::iterator it = results.begin();
 	if (it == results.end()) return;
 
-	//// because owners must always have a lower id then the owned, the first item can never be owned.
-	// it->second.owner = NULL;
+	union _jobid idp, idn;
+	idp.id = it->second.id;
+
+	int max_cluster = idp.cluster;
+	int max_proc = idp.proc;
+
+	int max_name = 0;
+	const char * pname = it->second.rod.Column(name_column_index);
+	if (pname) max_name = strlen(pname);
 
 	ROD_MAP_BY_ID::iterator prev = it++;
 	while (it != results.end()) {
 
-		union _jobid idp, idn;
 		idp.id = prev->second.id;
 		idn.id = it->second.id;
 		if (idp.cluster == idn.cluster) {
@@ -4476,6 +4505,11 @@ static void linkup_nodes_by_id(ROD_MAP_BY_ID & results)
 		} else {
 			prev->second.next_proc = NULL;
 		}
+		max_cluster = MAX(max_cluster, idn.cluster);
+		max_proc = MAX(max_proc, idn.proc);
+
+		pname = it->second.rod.Column(name_column_index);
+		if (pname) { int cch = strlen(pname); max_name = MAX(max_name, cch); }
 
 		// also link dag children to their parent
 		if (it->second.parent_id > 0) {
@@ -4512,10 +4546,12 @@ static void linkup_nodes_by_id(ROD_MAP_BY_ID & results)
 
 		prev = it++;
 	}
+
+	//fixup_std_column_widths(max_cluster, max_proc, max_name);
 }
 
 static void
-format_name_column_for_dag_nodes(ROD_MAP_BY_ID & results, int name_column, int col_width)
+format_name_column_for_dag_nodes(ROD_MAP_BY_ID & results, int name_column, int /*col_width*/)
 {
 	std::string buf;
 	for(ROD_MAP_BY_ID::iterator it = results.begin(); it != results.end(); ++it) {
@@ -4527,7 +4563,14 @@ format_name_column_for_dag_nodes(ROD_MAP_BY_ID & results, int name_column, int c
 			for (int ii = 0; ii < it->second.generation; ++ii) buf += ' ';
 			buf += "|-";
 			int ix = (int)buf.size();
+		#if 1
+			// at the moment, the name field will have been formatted to a fixed width (i.e. already padded/truncated)
+			// so we don't pay attention to the passed-in column width, we just crop same number of characters from the
+			// end that we added to the beginning.
+			cch -= ix;
+		#else
 			if (cch+ix > col_width) cch = col_width-ix;
+		#endif
 			buf.append(name, cch);
 			name = it->second.rod.SwapColumnData(name_column, strdup(buf.c_str()));
 			if (name) free(const_cast<char*>(name));
@@ -4900,11 +4943,6 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 #ifdef USE_ROD_PRINTMASK
 	int cResults = (int)rod_result_map.size();
 
-	// we want a header for this schedd if we are not showing the global queue OR if there is any data
-	if ( ! global || cResults > 0 || jobs.Length() > 0) {
-		print_full_header(source_label.c_str());
-	}
-
 	// at this point we either have a populated jobs list, or a populated rod_result_map
 	// if it's a jobs list, then we want to process the jobs into the rod_result_map
 	// then we want to linkup the nodes and (possibly) rewrite the name columns
@@ -4919,6 +4957,11 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 		}
 		jobs.Close();
 		cResults = (int)rod_result_map.size();
+	}
+
+	// we want a header for this schedd if we are not showing the global queue OR if there is any data
+	if ( ! global || cResults > 0 || jobs.Length() > 0) {
+		print_full_header(source_label.c_str());
 	}
 
 	if (cResults > 0) {
@@ -5153,7 +5196,6 @@ show_file_queue(const char* jobads, const char* userlog)
 
 		// display the jobs from this submittor
 	if( jobs.MyLength() != 0 || !global ) {
-		print_full_header(source_label.c_str());
 
 #ifdef USE_ROD_PRINTMASK
 		jobs.Open();
@@ -5166,6 +5208,8 @@ show_file_queue(const char* jobads, const char* userlog)
 		}
 		jobs.Close();
 
+		print_full_header(source_label.c_str());
+
 		int cResults = (int)rod_result_map.size();
 		if (cResults > 0) {
 			linkup_nodes_by_id(rod_result_map);
@@ -5176,6 +5220,8 @@ show_file_queue(const char* jobads, const char* userlog)
 			clear_results(rod_result_map, rod_sort_key_map);
 		}
 #else
+		print_full_header(source_label.c_str());
+
 		jobs.Open();
 		while(ClassAd *job = jobs.Next()) {
 			process_and_print_job(NULL, job);
@@ -6582,13 +6628,23 @@ const char * const jobIO_PrintFormat = "SELECT\n"
 "   IfThenElse(JobUniverse==1,NumCkpts_RAW,NumJobStarts) AS RUNS PRINTF '%4d' OR ?\n"
 "   JobStatus     AS ST                       PRINTAS JOB_STATUS\n"
 "   IfThenElse(JobUniverse==1,FileReadBytes,BytesRecvd) AS ' INPUT' FORMATAS READABLE_BYTES OR ??\n"
-"   IfThenElse(JobUniverse==1,FileWriteBytes,BytesSent) AS ' OUTPUT' FORMATAS READABLE_BYTES or ??\n"
+"   IfThenElse(JobUniverse==1,FileWriteBytes,BytesSent) AS ' OUTPUT' FORMATAS READABLE_BYTES OR ??\n"
 "   IfThenElse(JobUniverse==1,FileReadBytes+FileWriteBytes,BytesRecvd+BytesSent)   AS ' RATE' WIDTH 10 FORMATAS READABLE_BYTES OR ??\n"
 "   JobUniverse AS 'MISC' FORMATAS BUFFER_IO_MISC\n"
 "WHERE JobUniverse==1 || TransferQueued=?=true || TransferringOutput=?=true || TransferringInput=?=true\n"
 "SUMMARY STANDARD\n";
 
 const char * const jobTotals_PrintFormat = "SELECT NOHEADER\nSUMMARY STANDARD";
+
+const char * const autoclusterNormal_PrintFormat = "SELECT\n"
+"   AutoClusterId AS '   ID'    WIDTH 5 PRINTF %5d\n"
+"   JobCount      AS COUNT      WIDTH 5 PRINTF %5d\n"
+"   JobUniverse   AS UINVERSE   WIDTH -8 PRINTAS JOB_UNIVERSE OR ??\n"
+"   RequestCPUs   AS CPUS       WIDTH 4 PRINTF %4d OR ??\n"
+"   RequestMemory AS MEMORY     WIDTH 6 PRINTF %6d OR ??\n"
+"   RequestDisk   AS '    DISK' WIDTH 8 PRINTF %8d OR ??\n"
+"   Requirements  AS REQUIREMENTS PRINTF %r\n"
+"SUMMARY NONE\n";
 
 
 // !!! ENTRIES IN THIS TABLE MUST BE SORTED BY THE FIRST FIELD !!

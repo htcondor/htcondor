@@ -362,7 +362,8 @@ int SetAttrListPrintMaskFromStream (
 			std::string name;
 			int opts = 0;
 			int def_opts = FormatOptionAutoWidth | FormatOptionNoTruncate;
-			const char * fmt = "%v";
+			const char * def_fmt = "%v";
+			const char * fmt = def_fmt;
 			int wid = 0;
 			bool width_from_label = true;
 			CustomFormatFn cust;
@@ -463,6 +464,9 @@ int SetAttrListPrintMaskFromStream (
 							def_opts &= ~(FormatOptionAutoWidth | FormatOptionNoTruncate);
 							width_from_label = false;
 							//PRAGMA_REMIND("TJ: decide how LEFT & RIGHT interact with pos and neg widths."
+							if (fmt == def_fmt) {
+								fmt = NULL;
+							}
 						}
 					} else {
 						expected_token(error_message, "number or AUTO after WIDTH", "SELECT", stream, toke);
@@ -503,6 +507,20 @@ int SetAttrListPrintMaskFromStream (
 				if (width_from_label) { wid = 0 - (int)strlen(lbl); }
 				mask.set_heading(lbl);
 				lbl = NULL;
+				// if we get to here and there is no format, that means that
+				// a width was specified, but no custom or printf format. so we
+				// need to manufacture a printf format based on the given width.
+				if ( ! fmt) {
+					if ( ! wid) { fmt = def_fmt; }
+					else {
+						char tmp[40] = "%"; char *p = tmp+1;
+						if (wid < 0) { opts |= FormatOptionLeftAlign; wid = -wid; *p++ = '-'; }
+						p += sprintf(p, "%d", wid);
+						if ( ! (opts & FormatOptionNoTruncate)) p += sprintf(p, ".%d", wid);
+						*p++ = 'v'; *p = 0;
+						fmt = mask.store(tmp);
+					}
+				}
 			}
 			if (cust) {
 				mask.registerFormat (lbl, wid, opts, cust, attr.c_str());
