@@ -2380,9 +2380,9 @@ PrintEvent( debug_level_t level, const ULogEvent* event, Job* node,
 	const char *recovStr = recovery ? " [recovery mode]" : "";
 
 	MyString timestr;
-	struct tm eventTm = event->eventTime;
-	time_t timestamp = mktime( &eventTm );//TEMPTEMP -- is this right?? or shouldwe use eventclock???
-	time_to_str( timestamp, timestr );
+	time_to_str( &event->eventTime, timestr );
+		// String from time_to_str has trailing blank (needed for other
+		// places in the code).
 	timestr.trim();
 
 	if( node ) {

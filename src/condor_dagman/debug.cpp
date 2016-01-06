@@ -166,7 +166,6 @@ debug_cache_stop_caching(void)
 	}
 }
 
-//TEMPTEMP -- test this...
 /*--------------------------------------------------------------------------*/
 void
 debug_cache_insert(int flags, const char *fmt, va_list args)
@@ -302,8 +301,15 @@ time_to_str( time_t timestamp, MyString &tstr )
 	if ( UseTimestamps ) {
 		tstr.formatstr( "(%d) ", (int)timestamp );
 	} else {
-		tstr.formatstr( "%02d/%02d/%02d %02d:%02d:%02d ",
-			tm->tm_mon + 1, tm->tm_mday, tm->tm_year - 100,
-			tm->tm_hour, tm->tm_min, tm->tm_sec );
+		time_to_str( tm, tstr );
 	}
+}
+
+/*--------------------------------------------------------------------------*/
+void
+time_to_str( const struct tm *tm, MyString &tstr )
+{
+	tstr.formatstr( "%02d/%02d/%02d %02d:%02d:%02d ",
+		tm->tm_mon + 1, tm->tm_mday, tm->tm_year - 100,
+		tm->tm_hour, tm->tm_min, tm->tm_sec );
 }
