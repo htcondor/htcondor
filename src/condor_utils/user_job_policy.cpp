@@ -527,6 +527,7 @@ UserPolicy::AnalyzePolicy( int mode )
 		// Clear out our stateful variables
 	m_fire_expr = NULL;
 	m_fire_expr_val = -1;
+	m_fire_unparsed_expr.clear();
 
 	/*	The user_policy is checked in this
 			order. The first one to succeed is the winner:
