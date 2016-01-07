@@ -379,8 +379,8 @@ IOProcess::startUp(int stdin_pipe, int min_workers, int max_workers)
 int
 IOProcess::stdinPipeHandler()
 {
-	char command[1024];
-	while( m_stdin_buffer.GetNextLine( command, 1024 ) ) {
+	char command[131072];
+	while( m_stdin_buffer.GetNextLine( command, sizeof( command ) ) ) {
 		dprintf (D_FULLDEBUG, "got stdin: '%s'\n", command);
 
 		Gahp_Args args;

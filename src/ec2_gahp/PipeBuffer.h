@@ -23,7 +23,7 @@
 #include "condor_common.h"
 #include <string>
 
-const int PIPE_BUFFER_READAHEAD_SIZE = 1024;
+const int PIPE_BUFFER_READAHEAD_SIZE = 16384;
 
 class PipeBuffer {
 public:
