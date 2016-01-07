@@ -911,7 +911,7 @@ static void *worker_function( void *ptr )
 // threads simultaneously (if a request arrives while curl is working).
 //
 
-const unsigned int requestPoolSize = 4;
+const unsigned int requestPoolSize = 4096;
 bool initializedRequestMap = false;
 unsigned char requestMap[ requestPoolSize ];
 unsigned char requests[ requestPoolSize * sizeof( Request ) ];
