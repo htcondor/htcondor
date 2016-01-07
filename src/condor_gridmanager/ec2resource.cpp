@@ -235,7 +235,7 @@ EC2Resource::BatchStatusResult EC2Resource::StartBatchStatus() {
             if( rc == 0 ) {
                 ASSERT( job );
 
-                dprintf( D_FULLDEBUG, "Found job object for '%s', updating status ('%s').\n", instanceID.c_str(), status.c_str() );
+                dprintf( D_FULLDEBUG, "(%d.%d) Found job object for '%s', updating status ('%s') and state reason code ('%s').\n", job->procID.cluster, job->procID.proc, instanceID.c_str(), status.c_str(), stateReasonCode.c_str() );
                 job->StatusUpdate( instanceID.c_str(), status.c_str(),
                                    stateReasonCode.c_str(), publicDNSName.c_str(), NULL );
                 myJobs.Delete( job );
@@ -262,7 +262,7 @@ EC2Resource::BatchStatusResult EC2Resource::StartBatchStatus() {
                         EXCEPT( "Found non-EC2Job identified by '%s'.", remoteJobID.c_str() );
                     }
 
-                    dprintf( D_FULLDEBUG, "Found job object for '%s' using client token '%s', updating status ('%s').\n", instanceID.c_str(), clientToken.c_str(), status.c_str() );
+                    dprintf( D_FULLDEBUG, "(%d.%d) Found job object for '%s' using client token '%s', updating status ('%s') and state reason code ('%s').\n", job->procID.cluster, job->procID.proc, instanceID.c_str(), clientToken.c_str(), status.c_str(), stateReasonCode.c_str() );
                     job->StatusUpdate( instanceID.c_str(), status.c_str(),
                                        stateReasonCode.c_str(), publicDNSName.c_str(), NULL );
                     myJobs.Delete( job );
@@ -283,7 +283,7 @@ EC2Resource::BatchStatusResult EC2Resource::StartBatchStatus() {
 				myJobs.Rewind();
 				while ( ( job = myJobs.Next() ) ) {
 					if ( job->m_key_pair == keyName ) {
-						dprintf( D_FULLDEBUG, "Found job object via ssh keypair for '%s', updating status ('%s').\n", instanceID.c_str(), status.c_str() );
+						dprintf( D_FULLDEBUG, "(%d.%d) Found job object via ssh keypair for '%s', updating status ('%s') and state reason code ('%s').\n", job->procID.cluster, job->procID.proc, instanceID.c_str(), status.c_str(), stateReasonCode.c_str() );
 						job->StatusUpdate( instanceID.c_str(), status.c_str(),
 										   stateReasonCode.c_str(),
 										   publicDNSName.c_str(), NULL );
@@ -319,9 +319,9 @@ EC2Resource::BatchStatusResult EC2Resource::StartBatchStatus() {
     	    }
 
     	    if( spotRC == 0 ) {
-    	    	dprintf( D_FULLDEBUG, "Not informing job %p it got no status because it's a registered spot request.\n", nextJob );
+    	    	dprintf( D_FULLDEBUG, "(%d.%d) Not informing job it got no status because it's a registered spot request.\n", nextJob->procID.cluster, nextJob->procID.proc );
 			} else {
-	            dprintf( D_FULLDEBUG, "Informing job %p it got no status.\n", nextJob );
+	            dprintf( D_FULLDEBUG, "(%d.%d) Informing job it got no status.\n", nextJob->procID.cluster, nextJob->procID.proc );
     	        nextJob->StatusUpdate( NULL, NULL, NULL, NULL, NULL );
     	    }
         }
@@ -385,20 +385,39 @@ EC2Resource::BatchStatusResult EC2Resource::StartBatchStatus() {
 
 					// dprintf( D_FULLDEBUG, "... does it match '%s'?\n", nextJob->m_client_token.c_str() );
 					if( nextJob->m_client_token == launchGroup ) {
-						dprintf( D_FULLDEBUG, "Found spot job object for '%s' using client token '%s'; updating status ('%s').\n", requestID.c_str(), launchGroup.c_str(), state.c_str() );
-						nextJob->StatusUpdate( instanceID.c_str(), state.c_str(), statusCode.c_str(), NULL, requestID.c_str() );
-						// We don't need to remove this job from the list
-						// because it can't have been present in it.
-						continue;
+						break;
 					}
 				}
 
-                dprintf( D_FULLDEBUG, "Found unknown spot request '%s'; skipping.\n", requestID.c_str() );
+    	        //
+	            // PROBLEM -- GM_SPOT_CANCEL deliberately removes spot jobs
+        	    // from the list of spot instances because they've become
+            	// regular instance jobs.  However, they still have their
+            	// client tokens...
+            	//
+            	// FIXME: This will probably work, but the real solution
+            	// is register both spot /and/ dedicated jobs in their own
+            	// hashtables, and only use the table of all registered jobs
+            	// to assert that each registered job is either a spot job
+            	// or an instance job.
+            	//
+				if( nextJob && nextJob->m_client_token == launchGroup ) {
+					if( nextJob->m_remoteJobId.empty() ) {
+						dprintf( D_FULLDEBUG, "(%d.%d) Found spot job object for '%s' using client token '%s'; updating status ('%s') and state reason code ('%s').\n", nextJob->procID.cluster, nextJob->procID.proc, requestID.c_str(), launchGroup.c_str(), state.c_str(), statusCode.c_str() );
+						nextJob->StatusUpdate( instanceID.c_str(), state.c_str(), statusCode.c_str(), NULL, requestID.c_str() );
+					} else {
+						dprintf( D_FULLDEBUG, "(%d.%d) Not updating spot job object for '%s' because it has an instance ID already.\n", nextJob->procID.cluster, nextJob->procID.proc, requestID.c_str() );
+					}
+					// We don't need to remove this job from mySpotJobs
+					// because it can't have been present in it.
+				} else {
+					dprintf( D_FULLDEBUG, "Found unknown spot request '%s'; skipping.\n", requestID.c_str() );
+				}
                 continue;
             }
             ASSERT( spotJob );
 
-            dprintf( D_FULLDEBUG, "Found spot job object for '%s', updating status ('%s').\n", requestID.c_str(), state.c_str() );
+            dprintf( D_FULLDEBUG, "Found spot job object for '%s', updating status ('%s') and state reason code ('%s').\n", requestID.c_str(), state.c_str(), statusCode.c_str() );
             spotJob->StatusUpdate( instanceID.c_str(), state.c_str(), statusCode.c_str(), NULL, NULL );
             mySpotJobs.Delete( spotJob );
         }

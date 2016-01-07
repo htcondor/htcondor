@@ -151,6 +151,7 @@ private:
 	int resourceLeaseTID;
 
 	bool purgedTwice;
+	bool updatedOnce;
 };
 
 #endif

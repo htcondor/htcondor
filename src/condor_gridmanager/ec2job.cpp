@@ -158,7 +158,8 @@ EC2Job::EC2Job( ClassAd *classad ) :
 	m_retry_times( 0 ),
 	probeNow( false ),
 	resourceLeaseTID( -1 ),
-	purgedTwice( false )
+	purgedTwice( false ),
+	updatedOnce( false )
 {
 	string error_string = "";
 	char *gahp_path = NULL;
@@ -2182,6 +2183,7 @@ void EC2Job::StatusUpdate( const char * instanceID,
 
 	if( stateReasonCode != NULL && strlen( stateReasonCode ) != 0
 	 && strcmp( stateReasonCode, "NULL" ) != 0 ) {
+		// dprintf( D_FULLDEBUG, "(%d.%d) Updating state reason code to from '%s' to '%s' for job '%s'.\n", procID.cluster, procID.proc, m_state_reason_code.c_str(), stateReasonCode, m_remoteJobId.c_str() );
 		m_state_reason_code = stateReasonCode;
 	} else {
 		m_state_reason_code.clear();
@@ -2227,7 +2229,14 @@ void EC2Job::StatusUpdate( const char * instanceID,
 	// can handle NULL statuses, but remoteJobState's assignment operator
 	// can't.  One way to get a status update with a NULL status is if
 	// a spot instance was purged (e.g., recovery after a long downtime).
-	if( SetRemoteJobStatus( status ) ) {
+	//
+	// Because we wait for the next job poll between cancelling a spot
+	// request and changing the condor state of the job, we should always
+	// treat the first update as new information (since we could easily
+	// crash between updating the remote job status and the condor job
+	// status).
+	if( SetRemoteJobStatus( status ) || (! updatedOnce) ) {
+		updatedOnce = true;
 		if( status != NULL ) { remoteJobState = status; }
 		else { remoteJobState.clear(); }
 		probeNow = true;
