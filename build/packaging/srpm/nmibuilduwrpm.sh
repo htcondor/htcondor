@@ -87,7 +87,10 @@ update_spec_define condor_build_id "$condor_build_id"
 # Set HTCondor base release to 1 for final release.
 update_spec_define condor_base_release "1"
 
-rpmbuild $buildmethod "$@" --define="_topdir $tmpd" SOURCES/condor.spec
+VERBOSE=1
+export VERBOSE
+rpmbuild -v $buildmethod "$@" --define="_topdir $tmpd" SOURCES/condor.spec
+
 
 mv $(find *RPMS -name \*.rpm) "$dest_dir"
 ls -lh "$dest_dir"
