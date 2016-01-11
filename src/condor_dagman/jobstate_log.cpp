@@ -325,15 +325,17 @@ JobstateLog::WriteEvent( const ULogEvent *event, Job *node )
 		MyString condorID;
 		CondorID2Str( event->cluster, event->proc, condorID );
 		//TEMPTEMP -- hmm -- we might be able to just grab event->eventclock here
-		struct tm eventTm = event->eventTime;
-		time_t eventTime = mktime( &eventTm );
-		debug_printf( DEBUG_QUIET, "DIAG eventTime: %lu; eventclock: %lu\n", (unsigned long)eventTime, (unsigned long)event->eventclock );//TEMPTEMP
+		//TEMPTEMP? struct tm eventTm = event->GetEventTime();
+		//TEMPTEMP? time_t eventTime = mktime( &eventTm );
+		//TEMPTEMP? debug_printf( DEBUG_QUIET, "DIAG eventTime: %lu; eventclock: %lu\n", (unsigned long)eventTime, (unsigned long)event->GetEventclock() );//TEMPTEMP
 		//TEMPTEMP -- this assertion failed (sometimes)!  I don't know now whether eventTime or eventclock is the thing I should rely on!
 		//TEMPTEMP -- this is from the jobstate.log test...
 		//TEMPTEMP 01/06/16 13:34:45 Event: ULOG_SUBMIT for HTCondor Node NodeA (595.0.0) {01/06/16 13:29:40} [recovery mode]
 		//TEMPTEMP 01/06/16 13:34:45 DIAG eventTime: 1452108580; eventclock: 1452108885
 		//TEMPTEMP 01/06/16 13:34:45 ERROR "Assertion ERROR on (eventTime == event->eventclock)" at line 332 in file /u/w/e/wenger/cb/git1/CONDOR_SRC/src/condor_dagman/jobstate_log.cpp
-		//ASSERT( eventTime == event->eventclock );//TEMPTEMP???
+		//TEMPTEMP? ASSERT( eventTime == event->GetEventclock() );//TEMPTEMP???
+		//TEMPTEMP? Write( &eventTime, node, eventName, condorID.Value() );
+		time_t eventTime = event->GetEventclock();
 		Write( &eventTime, node, eventName, condorID.Value() );
 	}
 }

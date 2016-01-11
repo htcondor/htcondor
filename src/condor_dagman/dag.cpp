@@ -580,7 +580,7 @@ bool Dag::ProcessOneEvent (ULogEventOutcome outcome,
 
 			case ULOG_JOB_ABORTED:
 #if !defined(DISABLE_NODE_TIME_METRICS)
-				job->TermAbortMetrics( event->proc, event->eventTime,
+				job->TermAbortMetrics( event->proc, event->GetEventTime(),
 							_metrics );
 #endif
 					// Make sure we don't count finished jobs as idle.
@@ -590,7 +590,7 @@ bool Dag::ProcessOneEvent (ULogEventOutcome outcome,
               
 			case ULOG_JOB_TERMINATED:
 #if !defined(DISABLE_NODE_TIME_METRICS)
-				job->TermAbortMetrics( event->proc, event->eventTime,
+				job->TermAbortMetrics( event->proc, event->GetEventTime(),
 							_metrics );
 #endif
 					// Make sure we don't count finished jobs as idle.
@@ -625,7 +625,7 @@ bool Dag::ProcessOneEvent (ULogEventOutcome outcome,
 
 			case ULOG_EXECUTE:
 #if !defined(DISABLE_NODE_TIME_METRICS)
-				job->ExecMetrics( event->proc, event->eventTime,
+				job->ExecMetrics( event->proc, event->GetEventTime(),
 							_metrics );
 #endif
 				ProcessNotIdleEvent( job, event->proc );
@@ -2380,7 +2380,7 @@ PrintEvent( debug_level_t level, const ULogEvent* event, Job* node,
 	const char *recovStr = recovery ? " [recovery mode]" : "";
 
 	MyString timestr;
-	time_to_str( &event->eventTime, timestr );
+	time_to_str( &event->GetEventTime(), timestr );
 		// String from time_to_str has trailing blank (needed for other
 		// places in the code).
 	timestr.trim();

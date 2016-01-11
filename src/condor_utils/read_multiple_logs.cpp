@@ -133,8 +133,8 @@ ReadMultipleUserLogs::readEvent (ULogEvent * & event)
 
 		if ( outcome != ULOG_NO_EVENT ) {
 			if ( oldestEventMon == NULL ||
-						(oldestEventMon->lastLogEvent->eventTime >
-						monitor->lastLogEvent->eventTime) ) {
+						(oldestEventMon->lastLogEvent->GetEventclock() >
+						monitor->lastLogEvent->GetEventclock()) ) {
 				oldestEventMon = monitor;
 			}
 		}
