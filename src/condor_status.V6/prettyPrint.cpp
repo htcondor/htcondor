@@ -77,15 +77,14 @@ void printVerbose   	(ClassAd *);
 void printXML       	(ClassAd *, bool first_ad, bool last_ad);
 void printCustom    	(ClassAd *);
 
-static const char *formatActivityTime( int , AttrList* , Formatter &);
-static const char *formatDueDate( int , AttrList* , Formatter &);
-//static const char *formatElapsedDate( int , AttrList* , Formatter &);
-static const char *formatElapsedTime( int , AttrList* , Formatter &);
-static const char *formatRealTime( int , AttrList * , Formatter &);
-static const char *formatRealDate( int , AttrList * , Formatter &);
+static bool renderActivityTime(long long & atime, AttrList* , Formatter &);
+static bool renderDueDate(long long & atime, AttrList* , Formatter &);
+static bool renderElapsedTime(long long & etime, AttrList* , Formatter &);
+static const char *formatRealTime( long long , Formatter &);
+static const char *formatRealDate( long long , Formatter &);
 //static const char *formatFloat (double, AttrList *, Formatter &);
-static const char *formatLoadAvg (double, AttrList *, Formatter &);
-static const char *formatStringsFromList( const classad::Value &, AttrList *, struct Formatter & );
+static const char *formatLoadAvg (double, Formatter &);
+static const char *formatStringsFromList( const classad::Value &, Formatter & );
 
 #ifdef WIN32
 int getConsoleWindowSize(int * pHeight = NULL) {
@@ -187,7 +186,7 @@ static void ppSetColumnFormat(const char * print, int width, bool truncate, ivfi
 static void ppSetColumnFormat(const CustomFormatFn & fmt, const char * print, int width, bool truncate, ivfield alt, const char * attr)
 {
 	int opts = ppWidthOpts(width, truncate) | ppAltOpts(alt);
-	if (width == 11 && fmt.IsNumber() && (fmt.Is(formatElapsedTime) || fmt.Is(formatRealTime))) {
+	if (width == 11 && fmt.IsNumber() && (fmt.Is(renderElapsedTime) || fmt.Is(formatRealTime))) {
 		opts |= FormatOptionNoPrefix;
 		width = 12;
 	}
@@ -582,7 +581,7 @@ prettyPrint (ClassAdList &adList, TrackTotals *totals)
 
 // The strdup() make leak memory, but IsListValue() may as well?
 const char *
-formatStringsFromList( const classad::Value & value, AttrList *, struct Formatter & ) {
+formatStringsFromList( const classad::Value & value, Formatter & ) {
 	const classad::ExprList * list = NULL;
 	if( ! value.IsListValue( list ) ) {
 		return "[Attribute not a list.]";
@@ -639,7 +638,7 @@ void ppSetStartdAbsentCols (int /*width*/)
 		ppSetColumn(ATTR_OPSYS, -10, true);
 		ppSetColumn(ATTR_ARCH, -8, true);
 		ppSetColumn(ATTR_LAST_HEARD_FROM, Lbl("Went Absent"), formatRealDate, -11, true);
-		ppSetColumn(ATTR_CLASSAD_LIFETIME, Lbl("Will Forget"), formatDueDate, -11, true);
+		ppSetColumn(ATTR_CLASSAD_LIFETIME, Lbl("Will Forget"), renderDueDate, "%Y", -11, true);
 }
 
 void
@@ -689,8 +688,8 @@ void ppSetStartdNormalCols (int width)
 		ppSetColumn(ATTR_MEMORY, Lbl("Mem"), "%4d", false);
 	}
 	pm_head.Append(wide_display ? "ActivityTime" : "  ActvtyTime");
-	pm.registerFormat(NULL, 12, FormatOptionAutoWidth | (wide_display ? 0 : FormatOptionNoPrefix) | AltFixMe,
-		formatActivityTime, ATTR_ENTERED_CURRENT_ACTIVITY /* "   [Unknown]"*/);
+	pm.registerFormat("%T", 12, FormatOptionAutoWidth | (wide_display ? 0 : FormatOptionNoPrefix) | AltFixMe,
+		renderActivityTime, ATTR_ENTERED_CURRENT_ACTIVITY /* "   [Unknown]"*/);
 }
 
 void
@@ -747,9 +746,9 @@ void ppSetStateCols (int width)
 	ppSetColumn(ATTR_LOAD_AVG, Lbl("LoadAv"), formatLoadAvg, NULL, 6, true);
 	ppSetColumn(ATTR_KEYBOARD_IDLE, Lbl("  KbdIdle"), formatRealTime, timewid, true);
 	ppSetColumn(ATTR_STATE, -7,  true);
-	ppSetColumn(ATTR_ENTERED_CURRENT_STATE, Lbl("  StateTime"), formatElapsedTime, timewid, true);
+	ppSetColumn(ATTR_ENTERED_CURRENT_STATE, Lbl("  StateTime"), renderElapsedTime, "%T", timewid, true);
 	ppSetColumn(ATTR_ACTIVITY, Lbl("Activ"), -5, true);
-	ppSetColumn(ATTR_ENTERED_CURRENT_ACTIVITY, Lbl("  ActvtyTime"), formatElapsedTime, timewid, true);
+	ppSetColumn(ATTR_ENTERED_CURRENT_ACTIVITY, Lbl("  ActvtyTime"), renderElapsedTime, "%T", timewid, true);
 }
 
 void
@@ -1122,7 +1121,7 @@ These are actually contained in the ClassAd.
 */
 
 const char *
-formatAdType (const char * type, AttrList *, Formatter &)
+formatAdType (const char * type, Formatter &)
 {
 	static char temp[19];
 	if ( ! type || ! type[0]) return "None";
@@ -1287,7 +1286,7 @@ void ppInitPrintMask(ppOption pps)
 
 
 static const char *
-formatLoadAvg (double fl, AttrList *, Formatter &)
+formatLoadAvg (double fl, Formatter &)
 {
 	static char buf[60];
 	sprintf(buf, "%.3f", fl);
@@ -1304,26 +1303,27 @@ formatFloat (double fl, AttrList *, Formatter & fmt)
 }
 #endif
 
-static const char *
-formatActivityTime ( int actvty, AttrList *al, Formatter &)
+static bool
+renderActivityTime (long long & atime, AttrList *al, Formatter &)
 {
-	int now = 0;
+	long long now = 0;
 	if (al->LookupInteger(ATTR_MY_CURRENT_TIME, now)
 		|| al->LookupInteger(ATTR_LAST_HEARD_FROM, now)) {
-		actvty = now - actvty;
-		return format_time(actvty);
+		atime = now - atime; // format_time
+		return true; 
 	}
-	return "   [Unknown]";
+	return false; // print "   [Unknown]"
 }
 
-static const char *
-formatDueDate (int dt, AttrList *al, Formatter &)
+static bool
+renderDueDate (long long & dt, AttrList *al, Formatter &)
 {
-	int now;
+	long long now;
 	if (al->LookupInteger(ATTR_LAST_HEARD_FROM , now)) {
-		return format_date(now + dt);
+		dt = now + dt; // format_date
+		return true;
 	}
-	return "";
+	return false;
 }
 
 #if 0 // not currently used
@@ -1338,24 +1338,25 @@ formatElapsedDate (int dt, AttrList *al, Formatter &)
 }
 #endif
 
-static const char *
-formatElapsedTime (int tm, AttrList *al , Formatter &)
+static bool
+renderElapsedTime (long long & tm, AttrList *al , Formatter &)
 {
-	int now;
-	if (al->LookupInteger(ATTR_LAST_HEARD_FROM , now)) {
-		return format_time(now - tm);
+	long long now;
+	if (al->LookupInteger(ATTR_LAST_HEARD_FROM, now)) {
+		tm = now - tm; // format_time
+		return true;
 	}
-	return "";
+	return false;
 }
 
 static const char *
-formatRealDate (int dt, AttrList * , Formatter &)
+formatRealDate (long long dt, Formatter &)
 {
 	return format_date(dt);
 }
 
 static const char *
-formatRealTime( int t , AttrList * , Formatter &)
+formatRealTime(long long t, Formatter &)
 {
 	return format_time( t );
 }
@@ -1376,13 +1377,13 @@ SUMMARY STANDARD
 
 // !!! ENTRIES IN THIS TABLE MUST BE SORTED BY THE FIRST FIELD !!
 static const CustomFormatFnTableItem LocalPrintFormats[] = {
-	{ "ACTIVITY_TIME", NULL, formatActivityTime, ATTR_LAST_HEARD_FROM "\0" ATTR_MY_CURRENT_TIME "\0"  },
-	{ "DATE",         NULL, formatRealDate, NULL },
-	{ "DUE_DATE",     ATTR_CLASSAD_LIFETIME, formatDueDate, ATTR_LAST_HEARD_FROM "\0" },
-	{ "ELAPSED_TIME", ATTR_LAST_HEARD_FROM, formatElapsedTime, ATTR_LAST_HEARD_FROM "\0" },
-	{ "LOAD_AVG",     ATTR_LOAD_AVG, formatLoadAvg, NULL },
-	{ "STRINGS_FROM_LIST", NULL, formatStringsFromList, NULL },
-	{ "TIME",         ATTR_KEYBOARD_IDLE, formatRealTime, NULL },
+	{ "ACTIVITY_TIME", ATTR_ENTERED_CURRENT_ACTIVITY, "%T", renderActivityTime, ATTR_LAST_HEARD_FROM "\0" ATTR_MY_CURRENT_TIME "\0"  },
+	{ "DATE",         NULL, 0, formatRealDate, NULL },
+	{ "DUE_DATE",     ATTR_CLASSAD_LIFETIME, "%Y", renderDueDate, ATTR_LAST_HEARD_FROM "\0" },
+	{ "ELAPSED_TIME", ATTR_LAST_HEARD_FROM, "%T", renderElapsedTime, ATTR_LAST_HEARD_FROM "\0" },
+	{ "LOAD_AVG",     ATTR_LOAD_AVG, 0, formatLoadAvg, NULL },
+	{ "STRINGS_FROM_LIST", NULL, 0, formatStringsFromList, NULL },
+	{ "TIME",         ATTR_KEYBOARD_IDLE, 0, formatRealTime, NULL },
 };
 static const CustomFormatFnTable LocalPrintFormatsTable = SORTED_TOKENER_TABLE(LocalPrintFormats);
 const CustomFormatFnTable * getCondorStatusPrintFormats() { return &LocalPrintFormatsTable; }

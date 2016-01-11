@@ -35,6 +35,7 @@
 #include "condor_string.h"   // for strnewp()
 #include "status_types.h"
 #include "directory.h"
+#include "format_time.h"
 #include <my_popen.h>
 
 #include "condor_distribution.h"
@@ -304,15 +305,19 @@ void AddPrintColumn(const char * heading, int width, const char * expr)
 
 // print a utime in human readable form
 static const char *
-format_int_runtime (int utime, AttrList * /*ad*/, Formatter & /*fmt*/)
+format_int_runtime (long long utime, Formatter & /*fmt*/)
 {
 	return format_time(utime);
 }
 
 // print out static or dynamic slot id.
-static const char *
-format_slot_id (int slotid, AttrList * ad, Formatter & /*fmt*/)
+static bool
+render_slot_id (std::string & out, AttrList * ad, Formatter & /*fmt*/)
 {
+	int slotid;
+	if ( ! ad->LookupInteger(ATTR_SLOT_ID, slotid))
+		return false;
+
 	static char outstr[10];
 	outstr[0] = 0;
 	//bool from_name = false;
@@ -332,12 +337,13 @@ format_slot_id (int slotid, AttrList * ad, Formatter & /*fmt*/)
 	} else {
 		sprintf(outstr, "%u", slotid);
 	}
-	return outstr;
+	out = outstr;
+	return true;
 }
 
 // print the pid for a jobid.
 static const char *
-format_jobid_pid (const char *jobid, AttrList * /*ad*/, Formatter & /*fmt*/)
+format_jobid_pid (const char *jobid, Formatter & /*fmt*/)
 {
 	static char outstr[16];
 	outstr[0] = 0;
@@ -963,7 +969,7 @@ static void init_program_for_pid(pid_t pid)
 
 
 static const char *
-format_jobid_program (const char *jobid, AttrList * /*ad*/, Formatter & /*fmt*/)
+format_jobid_program (const char *jobid, Formatter & /*fmt*/)
 {
 	const char * outstr = NULL;
 
@@ -1121,7 +1127,7 @@ void parse_args(int /*argc*/, char *argv[])
 					if (*parg == '#') {
 						++parg;
 						if (MATCH == strcasecmp(parg, "SLOT") || MATCH == strcasecmp(parg, "SlotID")) {
-							cust_fmt = format_slot_id;
+							cust_fmt = render_slot_id;
 							pattr = ATTR_SLOT_ID;
 							App.projection.AppendArg(pattr);
 							App.projection.AppendArg(ATTR_SLOT_DYNAMIC);
@@ -1209,7 +1215,7 @@ void parse_args(int /*argc*/, char *argv[])
 			//SLOT OWNER   PID   RUNTIME  MEMORY  COMMAND
 			AddPrintColumn("OWNER", 0, ATTR_REMOTE_OWNER);
 			AddPrintColumn("CLIENT", 0, ATTR_CLIENT_MACHINE);
-			AddPrintColumn("SLOT", 0, ATTR_SLOT_ID, format_slot_id);
+			AddPrintColumn("SLOT", 0, ATTR_SLOT_ID, render_slot_id);
 			App.projection.AppendArg(ATTR_SLOT_DYNAMIC);
 			App.projection.AppendArg(ATTR_NAME);
 			AddPrintColumn("JOB", -6, ATTR_JOB_ID);

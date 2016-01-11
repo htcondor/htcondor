@@ -30,6 +30,8 @@ typedef enum {
 	PFT_POINTER,
 	PFT_VALUE,    // a ClassAd Value use %f %d or %s as appropriate
 	PFT_RAW,      // an unparsed unevaluated ClassAd value. i.e what -long would print.
+	PFT_TIME,     // 'T' a timestamp, use format_time to print
+	PFT_DATE,     // 'Y' a unix epoch time, use format_date to print
 } printf_fmt_t;
 
 

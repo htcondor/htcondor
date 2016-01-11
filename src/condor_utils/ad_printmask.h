@@ -45,26 +45,34 @@ enum {
 	AltFixMe    = 0x40000,     // some alt text that needs to be fixed somehow.
 };
 
-typedef const char *(*IntCustomFormat)(int,AttrList*,struct Formatter &);
-typedef const char *(*FloatCustomFormat)(double,AttrList*,struct Formatter &);
-typedef const char *(*StringCustomFormat)(const char*,AttrList*,struct Formatter &);
-typedef const char *(*AlwaysCustomFormat)(AttrList*,struct Formatter &);
-typedef const char *(*ValueCustomFormat)(const classad::Value & value, AttrList*,struct Formatter &);
+typedef const char *(*IntCustomFormat)(long long, struct Formatter &);
+typedef const char *(*FloatCustomFormat)(double, struct Formatter &);
+typedef const char *(*StringCustomFormat)(const char*, struct Formatter &);
+//typedef const char *(*AlwaysCustomFormat)(AttrList*,struct Formatter &);
+typedef const char *(*ValueCustomFormat)(const classad::Value & value, struct Formatter &);
+typedef bool (*StringCustomRender)(std::string & str, AttrList*, struct Formatter &);
+typedef bool (*IntCustomRender)(long long & lval, AttrList*, struct Formatter &);
+typedef bool (*FloatCustomRender)(double & dval, AttrList*, struct Formatter &);
+typedef bool (*ValueCustomRender)(classad::Value & value, AttrList*, struct Formatter &);
 
 class CustomFormatFn {
 public:
-	enum FormatKind { PRINTF_FMT=0, INT_CUSTOM_FMT, FLT_CUSTOM_FMT, STR_CUSTOM_FMT, ALWAYS_CUSTOM_FMT, VALUE_CUSTOM_FMT };
+	enum FormatKind { PRINTF_FMT=0, INT_CUSTOM_FMT, FLT_CUSTOM_FMT, STR_CUSTOM_FMT, VALUE_CUSTOM_FMT, INT_CUSTOM_RENDER, FLT_CUSTOM_RENDER, STR_CUSTOM_RENDER, VALUE_CUSTOM_RENDER };
 	operator StringCustomFormat() const { return reinterpret_cast<StringCustomFormat>(pfn); }
 	char Kind() const { return (char)fn_type; }
 	bool IsString() const { return fn_type == STR_CUSTOM_FMT; }
 	bool IsNumber() const { return fn_type >= INT_CUSTOM_FMT && fn_type <= FLT_CUSTOM_FMT; }
 	bool Is(IntCustomFormat pf) const { return (void*)pf == pfn; } // This hack is for the condor_status code...
+	bool Is(IntCustomRender pf) const { return (void*)pf == pfn; } // This hack is for the condor_status code...
 	CustomFormatFn() : pfn(NULL), fn_type(PRINTF_FMT) {};
 	CustomFormatFn(StringCustomFormat pf) : pfn((void*)pf), fn_type(STR_CUSTOM_FMT) {};
 	CustomFormatFn(IntCustomFormat pf) : pfn((void*)pf), fn_type(INT_CUSTOM_FMT) {};
 	CustomFormatFn(FloatCustomFormat pf) : pfn((void*)pf), fn_type(FLT_CUSTOM_FMT) {};
-	CustomFormatFn(AlwaysCustomFormat pf) : pfn((void*)pf), fn_type(ALWAYS_CUSTOM_FMT) {};
 	CustomFormatFn(ValueCustomFormat pf) : pfn((void*)pf), fn_type(VALUE_CUSTOM_FMT) {};
+	CustomFormatFn(StringCustomRender pf) : pfn((void*)pf), fn_type(STR_CUSTOM_RENDER) {};
+	CustomFormatFn(IntCustomRender pf) : pfn((void*)pf), fn_type(INT_CUSTOM_RENDER) {};
+	CustomFormatFn(FloatCustomRender pf) : pfn((void*)pf), fn_type(FLT_CUSTOM_RENDER) {};
+	CustomFormatFn(ValueCustomRender pf) : pfn((void*)pf), fn_type(VALUE_CUSTOM_RENDER) {};
 private:
 	void * pfn;
 	FormatKind fn_type;
@@ -93,8 +101,12 @@ struct Formatter
 		StringCustomFormat	sf;
 		IntCustomFormat 	df;
 		FloatCustomFormat 	ff;
-		AlwaysCustomFormat	af;
+//		AlwaysCustomFormat	af;
 		ValueCustomFormat	vf;
+		StringCustomRender  sr;
+		IntCustomRender     dr;
+		FloatCustomRender   fr;
+		ValueCustomRender   vr;
 	};
 };
 
@@ -102,6 +114,7 @@ class tokener;
 typedef struct {
 	const char * key;           // keyword, table should be sorted by this.
 	const char * default_attr;  // default attribute to fetch
+	const char * printfFmt;     // optional % printf formatting after custom function is called
 	CustomFormatFn cust;        // custom format callback function
 	const char * extra_attribs; // other attributes that the custom format needs
 	bool operator<(const tokener & toke) const;
@@ -116,6 +129,7 @@ typedef tokener_lookup_table<CustomFormatFnTableItem> CustomFormatFnTable;
 #define SORTED_TOKENER_TABLE(tbl) { sizeof(tbl)/sizeof(tbl[0]), true, tbl }
 
 class MyRowOfData; // forward ref
+class MyRowOfValues; // forward ref
 
 class AttrListPrintMask
 {
@@ -147,7 +161,9 @@ class AttrListPrintMask
 	int   display (FILE *, AttrListList *, AttrList *target=NULL, List<const char> * pheadings=NULL); // output a list -> FILE *
 	int   display (std::string & out, AttrList *, AttrList *target=NULL ); // append to string out. return number of chars added
 	int   render (MyRowOfData & row, AttrList *, AttrList *target=NULL ); // render columns to text and add to MyRowOfData, returns number of cols
+	int   render (MyRowOfValues & row, AttrList *, AttrList *target=NULL ); // render columns to text and add to MyRowOfValues, returns number of cols
 	int   display (std::string & out, MyRowOfData & row); // append to string out. return number of chars added
+	int   display (std::string & out, MyRowOfValues & row); // append to string out. return number of chars added
 	int   calc_widths(AttrList *, AttrList *target=NULL );          // set column widths
 	int   calc_widths(AttrListList *, AttrList *target=NULL);
 	int   display_Headings(FILE *, List<const char> & headings);
@@ -232,6 +248,37 @@ private:
 	bool          flat;
 };
 
+class MyRowOfValues
+{
+public:
+	MyRowOfValues() : pdata(NULL), pvalid(NULL), cols(0), cmax(0) {};
+	~MyRowOfValues();
+	int SetMaxCols(int max_cols);
+
+	int cat(const classad::Value & s);
+	classad::Value * next(int & index);
+	MyRowOfValues& operator+=(const classad::Value &S) { cat(S); return *this; }
+
+	int ColCount() { return cols; }
+	classad::Value * Column(int index) {
+		if (index < 0) index = cols+index;
+		if (index >= 0 && index < cols) return &pdata[index];
+		return NULL;
+	}
+	unsigned char is_valid(int index) {
+		if (index < 0) index = cols+index;
+		if (index >= 0 && index < cols) return pvalid[index];
+		return 0;
+	}
+	void set_valid(bool valid) { if (cols > 0 && cols <= cmax) pvalid[cols-1] = valid; }
+	void reset() { cols = 0; }
+
+private:
+	classad::Value * pdata; // pointer to data, an array of classad::Values
+	unsigned char  * pvalid; // point to array of flags per classad::Value
+	int           cols;
+	int           cmax;
+};
 
 // parse -af: options after the : and all of the included arguments up to the next -
 // returns the number of arguments consumed
