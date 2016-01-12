@@ -26,7 +26,8 @@
 #include "condor_attributes.h"
 #include "pool_allocator.h"
 
-#define AD_PRINTMASK_V2
+// currently no-one uses the MyRowOfData version of the print mask
+//#define ALLOW_ROD_PRINTMASK
 
 enum {
 	FormatOptionNoPrefix = 0x01,
@@ -128,7 +129,9 @@ template <class T> struct tokener_lookup_table {
 typedef tokener_lookup_table<CustomFormatFnTableItem> CustomFormatFnTable;
 #define SORTED_TOKENER_TABLE(tbl) { sizeof(tbl)/sizeof(tbl[0]), true, tbl }
 
+#ifdef ALLOW_ROD_PRINTMASK
 class MyRowOfData; // forward ref
+#endif
 class MyRowOfValues; // forward ref
 
 class AttrListPrintMask
@@ -160,9 +163,11 @@ class AttrListPrintMask
 	int   display (FILE *, AttrList *, AttrList *target=NULL);		// output to FILE *
 	int   display (FILE *, AttrListList *, AttrList *target=NULL, List<const char> * pheadings=NULL); // output a list -> FILE *
 	int   display (std::string & out, AttrList *, AttrList *target=NULL ); // append to string out. return number of chars added
+#ifdef ALLOW_ROD_PRINTMASK
 	int   render (MyRowOfData & row, AttrList *, AttrList *target=NULL ); // render columns to text and add to MyRowOfData, returns number of cols
-	int   render (MyRowOfValues & row, AttrList *, AttrList *target=NULL ); // render columns to text and add to MyRowOfValues, returns number of cols
 	int   display (std::string & out, MyRowOfData & row); // append to string out. return number of chars added
+#endif
+	int   render (MyRowOfValues & row, AttrList *, AttrList *target=NULL ); // render columns to text and add to MyRowOfValues, returns number of cols
 	int   display (std::string & out, MyRowOfValues & row); // append to string out. return number of chars added
 	int   calc_widths(AttrList *, AttrList *target=NULL );          // set column widths
 	int   calc_widths(AttrListList *, AttrList *target=NULL);
@@ -201,6 +206,8 @@ class AttrListPrintMask
 							const char *attr
 							);
 };
+
+#ifdef ALLOW_ROD_PRINTMASK
 
 class MyRowOfData
 {
@@ -247,6 +254,8 @@ private:
 	int           cmax;
 	bool          flat;
 };
+
+#endif
 
 class MyRowOfValues
 {

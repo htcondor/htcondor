@@ -437,7 +437,7 @@ static void appendFieldofQuestions(MyString & buf, int width)
 	}
 }
 
-#if 1
+#if 1 // print using MyRowOfValues as intermediate 
 
 MyRowOfValues::~MyRowOfValues()
 {
@@ -481,6 +481,7 @@ classad::Value * MyRowOfValues::next(int & index) {
 	return NULL;
 }
 
+#ifdef ALLOW_ROD_PRINTMASK
 
 MyRowOfData::~MyRowOfData()
 {
@@ -540,6 +541,8 @@ static void append_alt(MyString & buf, Formatter & fmt)
 	}
 }
 
+#endif // ALLOW_ROD_PRINTMASK
+
 static const char * set_alt(MyString & buf, Formatter & fmt)
 {
 	buf = "";
@@ -551,6 +554,8 @@ static const char * set_alt(MyString & buf, Formatter & fmt)
 	}
 	return buf.c_str();
 }
+
+#ifdef ALLOW_ROD_PRINTMASK
 
 static void AddCol(MyRowOfData & rod, Formatter & fmt, const char * value)
 {
@@ -600,6 +605,8 @@ static void append_alt(MyRowOfData & rod, Formatter & fmt)
 	if (fmt.altKind) append_alt(buf, fmt);
 	rod += buf;
 }
+
+#endif // ALLOW_ROD_PRINTMASK
 
 template <typename t>
 static const char * format_value(MyString & str, t & val, printf_fmt_t fmt_type, const Formatter & fmt)
@@ -679,8 +686,9 @@ static const t * format_value(MyString & str, const t* & val, printf_fmt_t fmt_t
 }
 
 
-//
-//
+#ifdef ALLOW_ROD_PRINTMASK
+
+// render an ad into a row of data (essentially an array of char*)
 //
 
 int AttrListPrintMask::
@@ -1176,7 +1184,6 @@ display (std::string & out, MyRowOfData & rod)
 	return retval.length();
 }
 
-// returns a new char * that is your responsibility to delete.
 int AttrListPrintMask::
 display (std::string & out, AttrList *al, AttrList *target /* = NULL */)
 {
@@ -1186,6 +1193,8 @@ display (std::string & out, AttrList *al, AttrList *target /* = NULL */)
 	render(rod, al, target);
 	return display(out, rod);
 }
+
+#endif // ALLOW_ROD_PRINTMASK
 
 //
 // ###########################################################
@@ -1576,8 +1585,20 @@ display (std::string & out, MyRowOfValues & rov)
 	return (int)(out.length() - row_start);
 }
 
-
+#ifdef ALLOW_ROD_PRINTMASK
 #else
+int AttrListPrintMask::
+display (std::string & out, AttrList *al, AttrList *target /* = NULL */)
+{
+	int columns = formats.Length();
+	MyRowOfValues rov;
+	rov.SetMaxCols(columns);
+	render(rov, al, target);
+	return display(out, rov);
+}
+#endif
+
+#else // old code before MyRowOfValues
 
 // returns a new char * that is your responsibility to delete.
 int AttrListPrintMask::
