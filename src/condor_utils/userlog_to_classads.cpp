@@ -31,9 +31,6 @@
 typedef long condor_time_t;
 static condor_time_t getEventTime(const ULogEvent *event)
 {
-  //TEMPTEMP -- simplify here?
-  //TEMPTEMP? struct tm tmpTime = event->GetEventTime();
-  //TEMPTEMP? return condor_time_t(mktime(&tmpTime));
   return condor_time_t( event->GetEventclock() );
 }
 

@@ -478,10 +478,7 @@ read_log(const char *filename, int select_cluster, int select_proc)
 					break;
 				}
 				time_t start_time, end_time, ckpt_time=0;
-				//TEMPTEMP -- simplify here??
-				//TEMPTEMP? start_time = mktime(&execEvent->eventTime);
 				start_time = execEvent->GetEventclock();
-				//TEMPTEMP? end_time = mktime(&event->eventTime);
 				end_time = event->GetEventclock();
 				int cpu_usage = 0;
 				if (evictEvent->checkpointed) {
@@ -491,8 +488,6 @@ read_log(const char *filename, int select_cluster, int select_proc)
 				} else {
 					CheckpointedEvent *ckptEvent;
 					if (CkptRecs.lookup(key, ckptEvent) >= 0) {
-						//TEMPTEMP -- simplify here??
-						//TEMPTEMP? ckpt_time = mktime(&ckptEvent->eventTime);
 						ckpt_time = ckptEvent->GetEventclock();
 						cpu_usage =
 							ckptEvent->run_remote_rusage.ru_utime.tv_sec +
@@ -536,10 +531,7 @@ read_log(const char *filename, int select_cluster, int select_proc)
 					break;
 				}
 				time_t start_time, end_time;
-				//TEMPTEMP -- simplify here??
-				//TEMPTEMP? start_time = mktime(&execEvent->eventTime);
 				start_time = execEvent->GetEventclock();
-				//TEMPTEMP? end_time = mktime(&event->eventTime);
 				end_time = event->GetEventclock();
 				if (!evict_only) {
 					new_record(event->cluster, event->proc, (int)start_time,
@@ -583,16 +575,11 @@ read_log(const char *filename, int select_cluster, int select_proc)
 					break;
 				}
 				time_t start_time, end_time, ckpt_time=0;
-				//TEMPTEMP -- simplify here??
-				//TEMPTEMP? start_time = mktime(&execEvent->eventTime);
 				start_time = execEvent->GetEventclock();
-				//TEMPTEMP? end_time = mktime(&event->eventTime);
 				end_time = event->GetEventclock();
 				int cpu_usage = 0;
 				CheckpointedEvent *ckptEvent;
 				if (CkptRecs.lookup(key, ckptEvent) >= 0) {
-					//TEMPTEMP -- simplify here??
-					//TEMPTEMP? ckpt_time = mktime(&ckptEvent->eventTime);
 					ckpt_time = ckptEvent->GetEventclock();
 					cpu_usage = ckptEvent->run_remote_rusage.ru_utime.tv_sec +
 						ckptEvent->run_remote_rusage.ru_stime.tv_sec;

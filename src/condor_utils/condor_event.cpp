@@ -441,9 +441,6 @@ ULogEvent::toClassAd(void)
 		return NULL;
 	}
 
-	//TEMPTEMP -- do we really need tmdup here?  can't we just pass the eventTime directly?
-	//TEMPTEMP? const struct tm tmdup = eventTime;
-	//TEMPTEMP? char* eventTimeStr = time_to_iso8601(tmdup, ISO8601_ExtendedFormat,
 	char* eventTimeStr = time_to_iso8601(eventTime, ISO8601_ExtendedFormat,
 										 ISO8601_DateAndTime, FALSE);
 	if( eventTimeStr ) {
