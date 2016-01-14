@@ -2380,6 +2380,9 @@ PrintEvent( debug_level_t level, const ULogEvent* event, Job* node,
 	const char *recovStr = recovery ? " [recovery mode]" : "";
 
 	MyString timestr;
+		// Be sure to pass GetEventTime() here, because we want the
+		// event time to always be output has a human-readable string,
+		// even if dprintf() is configured to print timestamps.
 	time_to_str( &event->GetEventTime(), timestr );
 		// String from time_to_str has trailing blank (needed for other
 		// places in the code).

@@ -281,8 +281,6 @@ bool check_warning_strictness( strict_level_t strictness, bool quit_if_error )
 void
 time_to_str( time_t timestamp, MyString &tstr )
 {
-	struct tm *tm = NULL;
-
 #ifdef D_CATEGORY_MASK
 	bool UseTimestamps = (DebugHeaderOptions & D_TIMESTAMP) != 0;
 #else
@@ -294,13 +292,11 @@ time_to_str( time_t timestamp, MyString &tstr )
 	// It needs abstracting out a little bit from there into its own
 	// function, but this is a quick hack for LIGO. I'll come back to it
 	// and do it better later when I have time.
-	if ( !UseTimestamps ) {
-		tm = localtime( &timestamp );
-	}
-
 	if ( UseTimestamps ) {
 		tstr.formatstr( "(%d) ", (int)timestamp );
 	} else {
+		struct tm *tm = NULL;
+		tm = localtime( &timestamp );
 		time_to_str( tm, tstr );
 	}
 }
