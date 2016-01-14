@@ -29,9 +29,9 @@
 #include "userlog_to_classads.h"
 
 typedef long condor_time_t;
-static condor_time_t getEventTime(ULogEvent *event)
+static condor_time_t getEventTime(const ULogEvent *event)
 {
-  return condor_time_t(mktime(&(event->eventTime)));
+  return condor_time_t( event->GetEventclock() );
 }
 
 static double tmval2double(struct timeval &t)

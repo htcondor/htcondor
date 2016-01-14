@@ -35,6 +35,16 @@ The details of each version are described below.
 for details.)
 \Ticket{5107}
 
+\item The \File{dagman.out} file produced by \Condor{dagman} now has event
+timestamps added to the lines that report \Condor{dagman} reading
+a log event.  For example:
+\begin{verbatim}
+  01/13/16 11:29:03 Event: ULOG_SUBMIT for HTCondor Node NodeA (674.0.0) {01/13/16 11:28:59}
+\end{verbatim}
+The timestamp in curly brackets at the end is the actual timestamp
+of the event.
+\Ticket{5439}
+
 \end{itemize}
 
 \noindent Bugs Fixed:

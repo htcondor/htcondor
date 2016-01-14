@@ -204,6 +204,7 @@ job_dagman_script_defer: personal
 job_dagman_submit_glob-A: personal
 job_dagman_submit_glob-B: personal
 job_dagman_set_attr: personal
+job_dagman_event_timestamp: personal
 job_filexfer_base-input1_van: personal
 job_filexfer_base_van: personal
 job_filexfer_basic_van: personal

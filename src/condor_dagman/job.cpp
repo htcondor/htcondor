@@ -801,8 +801,7 @@ Job::GetJobstateSequenceNum()
 void
 Job::SetLastEventTime( const ULogEvent *event )
 {
-	struct tm eventTm = event->eventTime;
-	_lastEventTime = mktime( &eventTm );
+	_lastEventTime = event->GetEventclock();
 }
 
 //---------------------------------------------------------------------------
