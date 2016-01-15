@@ -156,6 +156,7 @@ bool has_owner_column = false;
 int  max_name_column_width = 14;
 
 int max_owner_name = 0; // width of longest owner name, from calls to render_owner or render_dag_owner
+int max_batch_name = 0; // width of longest batch name
 //int max_cluster_id = 0; // future
 //int max_proc_id = 0;    // future
 #else
@@ -209,7 +210,7 @@ void warnScheddLimits(Daemon *schedd,ClassAd *job,MyString &result_buf);
 	failover semantics */
 static unsigned int direct = DIRECT_ALL;
 
-static 	int dash_long = 0, summarize = 1, global = 0, show_io = 0, dash_dag = 0, show_held = 0;
+static 	int dash_long = 0, summarize = 1, global = 0, show_io = 0, dash_dag = 0, show_held = 0, dash_progress = 0;
 static  int use_xml = 0;
 static  int dash_autocluster = 0;
 static  bool widescreen = false;
@@ -249,6 +250,7 @@ static  ClassAdAnalyzer analyzer;
 
 static bool render_owner(std::string & out, AttrList*, Formatter &);
 static bool render_dag_owner(std::string & out, AttrList*, Formatter &);
+static bool render_batch_name(std::string & out, AttrList*, Formatter &);
 
 
 // the condor q strategy will be to ingest ads and print them into MyRowOfValues structures
@@ -263,21 +265,56 @@ class JobRowOfData {
 public:
 	MyRowOfValues rov;
 	long long   id;        // this will probably be cluster/proc, but may be some other unique id (like autocluster id)
-	long long   parent_id; // parent id (dag node id)
-	int         generation;// when parent is non-zero, this indicates what generation this node is
-	int         spare;     // spare to align the pointer fields on 64 bit boundary.
+	long long   dag_id;    // if non-zero, dag parent job id
+	long long   batch_uid; // for non-dag nodes, this is the unique id of the batch name
+	int         generation;// when dag_id is non-zero, this is the dag nesting depth
+	unsigned int flags;    // JROD_* flags used while processing, also align the pointer fields on 64 bit boundary.
 	class JobRowOfData * next_proc; // used at runtime to linkup procs for a cluster
 	class JobRowOfData * children;  // used at runtime to linkup dag nodes, points to linked list of children
-	class JobRowOfData * next_sib;   // used at runtime to connnect up children of a common dag parent
-	class JobRowOfData * last_sib;   // used at runtime to connnect up children of a common dag parent
+	class JobRowOfData * next_sib;  // used at runtime to connect up children of a common dag parent or common batch id
+	class JobRowOfData * last_sib;  // used at runtime to connect up children of a common dag parent or common batch id
 	JobRowOfData(long long _id=0)
-		: id(_id), parent_id(0)
-		, generation(0), spare(0)
+		: id(_id), dag_id(0), batch_uid(0), generation(0), flags(0)
 		, next_proc(NULL), children(NULL)
 		, next_sib(NULL), last_sib(NULL)
 	{}
+
+	bool isValid(int index) {
+		if ( ! rov.is_valid(index)) return false;
+		return rov.Column(index) != NULL;
+	}
+
+	template <class t>
+	bool getNumber(int index, t & val) {
+		val = 0;
+		if ( ! rov.is_valid(index)) return false;
+		classad::Value * pval = rov.Column(index);
+		if ( ! pval) return false;
+		return pval->IsNumber(val);
+	}
+
+	template <class s>
+	bool getString(int index, s & val) {
+		if ( ! rov.is_valid(index)) return false;
+		classad::Value * pval = rov.Column(index);
+		if ( ! pval) return false;
+		return pval->IsStringValue(val);
+	}
+	bool getString(int index, char * buf, int cch) {
+		if ( ! rov.is_valid(index)) return false;
+		classad::Value * pval = rov.Column(index);
+		if ( ! pval) return false;
+		return pval->IsStringValue(buf, cch);
+	}
 };
 typedef std::map<long long, JobRowOfData> ROD_MAP_BY_ID;
+
+#define JROD_COOKED  0x0001   // set when the row data has been cooked (i.e. folded into)
+#define JROD_SKIP    0x0002   // this row should be skipped entirely
+#define JROD_FOLDED  0x0004   // data from this row has been folded into another row
+#define JROD_PRINTED 0x0008   // Set during printing so we can know what has already been printed
+#define JROD_SCHEDUNIV 0x0010  // job is a scheduler univers job (i.e. a dagman) so we still know after universe column has been baked.
+#define JROD_ISDAGNODE 0x0020  // this is a node in a dag (i.e. it has a DAGManJobId)
 
 
 /* counters for job matchmaking analysis */
@@ -1142,6 +1179,7 @@ enum {
 	QDO_JobIO,
 	QDO_DAG,
 	QDO_Totals,
+	QDO_Progress,
 
 	QDO_AutoclusterNormal, // Print typical autocluster attributes
 
@@ -1808,7 +1846,7 @@ processCommandLineArguments (int argc, char *argv[])
 					 ATTR_JOB_STATUS, TRANSFERRING_OUTPUT, ATTR_JOB_STATUS, SUSPENDED );
 			Q.addAND( expr.c_str() );
 			dash_run = true;
-			if( !dash_dag ) {
+			if( ! dash_dag && ! dash_progress) {
 #ifdef USE_LATE_PROJECTION
 			qdo_mode = QDO_JobRuntime;
 #else
@@ -1928,12 +1966,30 @@ processCommandLineArguments (int argc, char *argv[])
 		else if (is_dash_arg_prefix(dash_arg, "dag", 2)) {
 			dash_dag = true;
 #ifdef USE_LATE_PROJECTION
-			qdo_mode = QDO_DAG;
+			if ( ! dash_progress) {
+				qdo_mode = QDO_DAG;
+			}
 #else
 			attrs.clearAll();
 #endif
 			if( g_stream_results  ) {
 				fprintf( stderr, "-stream-results and -dag are incompatible\n" );
+				usage( argv[0] );
+				exit( 1 );
+			}
+		}
+		else if (is_dash_arg_colon_prefix(dash_arg, "progress", &pcolon, 3)) {
+			dash_progress = true;
+			if (pcolon && pcolon[1]) {
+				dash_progress = atoi(++pcolon);
+			}
+#ifdef USE_LATE_PROJECTION
+			qdo_mode = QDO_Progress;
+#else
+			error. cannot do this..
+#endif
+			if( g_stream_results  ) {
+				fprintf( stderr, "-stream-results and -progress are incompatible\n" );
 				usage( argv[0] );
 				exit( 1 );
 			}
@@ -2031,8 +2087,8 @@ processCommandLineArguments (int argc, char *argv[])
 		else
 		if (is_dash_arg_prefix (dash_arg, "stream-results", 2)) {
 			g_stream_results = true;
-			if( dash_dag ) {
-				fprintf( stderr, "-stream-results and -dag are incompatible\n" );
+			if( dash_dag || (qdo_mode == QDO_Progress)) {
+				fprintf( stderr, "-stream-results and -dag or -progress are incompatible\n" );
 				usage( argv[0] );
 				exit( 1 );
 			}
@@ -2091,7 +2147,7 @@ processCommandLineArguments (int argc, char *argv[])
 
 			// if we are doing -dag output, then also request any jobs that are inside this dag.
 			// we know that a jobid for a dagman job will always never have a proc > 0
-			if (dash_dag && it->_proc < 1) {
+			if ((dash_dag || dash_progress) && it->_proc < 1) {
 				sprintf(constraint, ATTR_DAGMAN_JOB_ID " == %d", it->_cluster);
 				Q.addOR(constraint);
 			}
@@ -2800,6 +2856,26 @@ render_dag_owner (std::string & out, AttrList *ad, Formatter & fmt)
 		}
 	}
 	return render_owner(out, ad, fmt);
+}
+
+static bool
+render_batch_name (std::string & out, AttrList *ad, Formatter & /*fmt*/)
+{
+	std::string tmp;
+	if (ad->LookupString(ATTR_JOB_BATCH_NAME, out)) {
+		// got it.
+	} else if (ad->LookupExpr(ATTR_DAGMAN_JOB_ID)
+				&& ad->LookupString(ATTR_DAG_NODE_NAME, out)) {
+		out.insert(0,"NODE: ");
+	} else if (ad->LookupString(ATTR_JOB_CMD, tmp)) {
+		const char * name = tmp.c_str();
+		if (tmp.length() > 24) { name = condor_basename(name); }
+		formatstr(out, "CMD: %s", name);
+	} else {
+		return false;
+	}
+	max_batch_name = MAX(max_batch_name, (int)out.length());
+	return true;
 }
 
 #else
@@ -3516,6 +3592,7 @@ extern const char * const jobHold_PrintFormat;
 extern const char * const jobIO_PrintFormat;
 extern const char * const jobDAG_PrintFormat;
 extern const char * const jobTotals_PrintFormat;
+extern const char * const jobProgress_PrintFormat; // NEW, summarize progress
 extern const char * const autoclusterNormal_PrintFormat;
 
 static void initOutputMask(AttrListPrintMask & prmask, int qdo_mode, bool wide_mode)
@@ -3552,6 +3629,7 @@ static void initOutputMask(AttrListPrintMask & prmask, int qdo_mode, bool wide_m
 		{ QDO_JobIO,         "IO",	   jobIO_PrintFormat },
 		{ QDO_DAG,           "DAG",	   jobDAG_PrintFormat },
 		{ QDO_Totals,        "TOTALS", jobTotals_PrintFormat },
+		{ QDO_Progress,      "PROGRESS", jobProgress_PrintFormat },
 		{ QDO_AutoclusterNormal, "AUTOCLUSTER", autoclusterNormal_PrintFormat },
 	};
 
@@ -4135,8 +4213,9 @@ ROD_MAP_BY_ID rod_result_map;   // jobs are rendered and inserted here before pr
 KeyToIdMap    rod_sort_key_map; // this indexes the above when we want to sort by something other than id
 //IdToIdsMap    dag_to_cluster_map;
 
-// this code assumes that the cluster id of a dagman job will always be 0.
-static long long lookup_dagman_job_id(ClassAd* job)
+// this code assumes that the proc id of a dagman job will always be 0.
+// and returns the cluster id of the dag job that is the parent of the current job.
+static int lookup_dagman_job_id(ClassAd* job)
 {
 	// the old (obsolete) form of dagman job id is a string
 	// the current form is an integer, we want to handle either.
@@ -4190,6 +4269,57 @@ union _jobid {
 	long long id;
 };
 
+// used to hold a map of unique batch names with the key being the name
+// and the values being the cluster/proc of the first job to use that name.
+// aka. the "batch id"
+std::map<std::string, int> batch_name_to_batch_uid_map;
+std::map<int, long long> batch_uid_to_first_job_id_map;
+static int next_batch_uid = 0;
+
+static long long resolve_job_batch_uid(JobRowOfData & jrod, ClassAd* job) 
+{
+	std::string name;
+	if (job->LookupString(ATTR_JOB_BATCH_NAME, name)) {
+	} else if (job->LookupExpr(ATTR_DAGMAN_JOB_ID) && job->LookupString(ATTR_DAG_NODE_NAME, name)) {
+		name.insert(0, "NODE: ");
+	} else if (job->LookupString(ATTR_JOB_CMD, name)) {
+		name.insert(0, "CMD: ");
+	} else {
+		return 0;
+	}
+
+	// we want batch names to be unique by owner, so append the owner as well.
+	std::string owner;
+	if (job->LookupString(ATTR_OWNER, owner)) {
+		name += "\n";
+		name += owner;
+	}
+
+	std::map<std::string, int>::iterator it = batch_name_to_batch_uid_map.find(name);
+	if (it != batch_name_to_batch_uid_map.end()) {
+		jrod.batch_uid = it->second;
+	} else {
+		int batch_uid = ++next_batch_uid;
+		batch_name_to_batch_uid_map[name] = batch_uid;
+		jrod.batch_uid = batch_uid;
+	}
+	// max_batch_name = MAX(max_batch_name, (int)name.length());
+	return true;
+}
+
+// returns an interator that points to the first use of a batch uid with first
+// being defined as the first to call this function with a unique batch_uid value.
+long long resolve_first_use_of_batch_uid(int batch_uid, long long id)
+{
+	std::map<int, long long>::iterator it = batch_uid_to_first_job_id_map.find(batch_uid);
+	if (it != batch_uid_to_first_job_id_map.end()) {
+		return it->second;
+	} else {
+		batch_uid_to_first_job_id_map[batch_uid] = id;
+		return 0;
+	}
+}
+
 static bool process_job_to_rod_per_ad_map(void * pv,  ClassAd* job)
 {
 	ROD_MAP_BY_ID * pmap = (ROD_MAP_BY_ID *)pv;
@@ -4222,14 +4352,20 @@ static bool process_job_to_rod_per_ad_map(void * pv,  ClassAd* job)
 		app.mask.render(pp.first->second.rov, job);
 
 		// if displaying jobs in dag order, also add this job to the set of clusters for this dagid
-		if (dash_dag && ! dash_autocluster) {
-			long long dagid = lookup_dagman_job_id(job);
-			if (dagid > 0) {
-				union _jobid parent_id;
-				parent_id.cluster = (int)dagid;
-				parent_id.proc = 0;
-				pp.first->second.parent_id = parent_id.id;
+		if ((dash_dag || dash_progress) && ! dash_autocluster) {
+			int dag_cluster = lookup_dagman_job_id(job); // this is actually the dagman cluster id
+			if (dag_cluster > 0) {
+				union _jobid dag_id;
+				dag_id.cluster = dag_cluster; dag_id.proc = 0;
+				pp.first->second.dag_id = dag_id.id;
+				pp.first->second.flags |= JROD_ISDAGNODE;
 				//dag_to_cluster_map[dagid].insert(jobid.cluster);
+			} else if (dash_progress) {
+				resolve_job_batch_uid(pp.first->second, job);
+			}
+			int universe = CONDOR_UNIVERSE_MIN;
+			if (job->LookupInteger(ATTR_JOB_UNIVERSE, universe) && universe == CONDOR_UNIVERSE_SCHEDULER) {
+				pp.first->second.flags |= JROD_SCHEDUNIV;
 			}
 		}
 		group_job(pp.first->second, job);
@@ -4242,7 +4378,7 @@ static void print_a_result(std::string & buf, JobRowOfData & jrod)
 	buf.clear();
 	app.mask.display(buf, jrod.rov);
 	printf("%s", buf.c_str());
-	++(jrod.spare); // hack, for debugging, keep track of what we already printed.
+	jrod.flags |= JROD_PRINTED; // for debugging, keep track of what we already printed.
 }
 
 // print all children, grandchildren etc of this job
@@ -4257,19 +4393,34 @@ static void print_children(std::string & buf, JobRowOfData * pjrod)
 	}
 }
 
+// print the results array, optionally floating children up under their parents
+// As we print the results, if we do float the children up we will see
+// the children again as part of the normal iteration, so we want to skip
+// them the second time.
 void print_results(ROD_MAP_BY_ID & results, KeyToIdMap order, bool children_under_parents)
 {
 	std::string buf;
-	if ( ! order.empty()) {
+	if (dash_progress) {
+		// when in progress mode, we print only the cooked rows.
+		for(ROD_MAP_BY_ID::iterator it = results.begin(); it != results.end(); ++it) {
+			if (!(it->second.flags & JROD_COOKED)) continue;
+			print_a_result(buf, it->second);
+		}
+	}
+	else if ( ! order.empty()) {
 		for (KeyToIdMap::const_iterator it = order.begin(); it != order.end(); ++it) {
 			ROD_MAP_BY_ID::iterator jt = results.find(it->second);
 			if (jt != results.end()) {
+				if (children_under_parents && (jt->second.flags & JROD_PRINTED)) continue;
 				print_a_result(buf, jt->second);
+				if (children_under_parents && jt->second.children) {
+					print_children(buf, jt->second.children);
+				}
 			}
 		}
 	} else {
 		for(ROD_MAP_BY_ID::iterator it = results.begin(); it != results.end(); ++it) {
-			if (children_under_parents && it->second.parent_id) continue;
+			if (children_under_parents && (it->second.flags & JROD_PRINTED)) continue;
 			print_a_result(buf, it->second);
 			if (children_under_parents && it->second.children) {
 				print_children(buf, it->second.children);
@@ -4314,8 +4465,8 @@ static long long make_parentage_sort_key(long long id, std::string & key, ROD_MA
 	long long root_id = id;
 	ROD_MAP_BY_ID::const_iterator ht = results.find(id);
 	// put parents id (recursively) first, then append our own id.
-	if (ht != results.end() && ht->second.parent_id < id) {
-		root_id = make_parentage_sort_key(ht->second.parent_id, key, results);
+	if (ht != results.end() && ht->second.dag_id < id) {
+		root_id = make_parentage_sort_key(ht->second.dag_id, key, results);
 	}
 	formatstr_cat(key, "%016llX\n", id);
 }
@@ -4373,15 +4524,33 @@ static void fixup_std_column_widths(int max_cluster, int max_proc, int longest_n
 	name_column_width = vals.name_width; // propage the returned width
 }
 
+static void append_sibling(JobRowOfData * sib_list, JobRowOfData * sib)
+{
+	// the first sibling gets the first sib slot, thereafter we want to append
+	// siblings, so we keep track of the last entry in the sibling list as well.
+	if ( ! sib_list->next_sib) {
+		sib_list->next_sib = sib;
+		sib_list->last_sib = sib; // remember last added so we can easily append another
+	} else {
+		sib_list->last_sib->next_sib = sib;
+		sib_list->last_sib = sib; // remember last added so we can easily append another
+	}
+}
+
 // link multi-proc clusters into a peer list (with the lowest proc id being the first peer)
 // and children to parents (i.e. dag nodes to their owning dagman)
 static void linkup_nodes_by_id(ROD_MAP_BY_ID & results)
 {
+	const bool fold_dagman_sibs = dash_progress && (dash_progress & 2);
+
 	ROD_MAP_BY_ID::iterator it = results.begin();
 	if (it == results.end()) return;
 
 	union _jobid idp, idn;
 	idp.id = it->second.id;
+	if (it->second.batch_uid) {
+		resolve_first_use_of_batch_uid(it->second.batch_uid, it->second.id);
+	}
 
 	int max_cluster = idp.cluster;
 	int max_proc = idp.proc;
@@ -4393,32 +4562,29 @@ static void linkup_nodes_by_id(ROD_MAP_BY_ID & results)
 
 		idp.id = prev->second.id;
 		idn.id = it->second.id;
-		if (idp.cluster == idn.cluster) {
-			prev->second.next_proc = &it->second;
-		} else {
+		bool first_proc = (idp.cluster != idn.cluster);
+		if (first_proc) {
 			prev->second.next_proc = NULL;
+		} else {
+			// link all procs in a cluster to the first proc
+			prev->second.next_proc = &it->second;
 		}
 		max_cluster = MAX(max_cluster, idn.cluster);
 		max_proc = MAX(max_proc, idn.proc);
 
-		// also link dag children to their parent
-		if (it->second.parent_id > 0) {
-			ROD_MAP_BY_ID::iterator parent = results.find(it->second.parent_id);
+		// also link dag children to their parent.
+		// 
+		if (it->second.dag_id > 0) {
+			ROD_MAP_BY_ID::iterator parent = results.find(it->second.dag_id);
 			if (parent != results.end()) {
 				it->second.generation = parent->second.generation + 1;
 				if ( ! parent->second.children) {
 					parent->second.children = &it->second;
-				} else {
+				} else if (first_proc) {
+					// link the first proc in a cluster to other clusters
+					// that are also children of the same parent.
 					JobRowOfData * sib_list = parent->second.children;
-					// the first sibling gets the first sib slot, thereafter we want to append
-					// siblings, so we keep track of the last entry in the sibling list as well.
-					if ( ! sib_list->next_sib) {
-						sib_list->next_sib = &it->second;
-						sib_list->last_sib = &it->second; // remember last added so we can easily append another
-					} else {
-						sib_list->last_sib->next_sib = &it->second;
-						sib_list->last_sib = &it->second; // remember last added so we can easily append another
-					}
+					append_sibling(sib_list, &it->second);
 				}
 
 				// also adjust name column width to account for nesting depth if we have nested dags
@@ -4430,6 +4596,20 @@ static void linkup_nodes_by_id(ROD_MAP_BY_ID & results)
 						int cch = wid + 2 + it->second.generation;
 						max_name = MAX(max_name, cch);
 					}
+				}
+			}
+		} else if (it->second.batch_uid && first_proc) {
+			// when we call this function for all jobs that have a batch_uid, it will always
+			// return the id of the FIRST job that passed it a given unique id.  since we are
+			// calling this function on data sorted by jobid, we will thus always get back
+			// the lowest job id.
+			bool link_sibs = fold_dagman_sibs || ! (it->second.flags & JROD_SCHEDUNIV);
+			long long id = resolve_first_use_of_batch_uid(it->second.batch_uid, it->second.id);
+			if (link_sibs && id && (id != it->second.id)) {
+				ROD_MAP_BY_ID::iterator oldest = results.find(id);
+				if (oldest != results.end()) {
+					JobRowOfData * sib_list = &oldest->second;
+					append_sibling(sib_list, &it->second);
 				}
 			}
 		}
@@ -4445,7 +4625,7 @@ format_name_column_for_dag_nodes(ROD_MAP_BY_ID & results, int name_column, int c
 {
 	std::string buf;
 	for(ROD_MAP_BY_ID::iterator it = results.begin(); it != results.end(); ++it) {
-		if (it->second.parent_id > 0) {
+		if (it->second.flags & JROD_ISDAGNODE) {
 			const char * name = NULL;
 			classad::Value * pcolval = it->second.rov.Column(name_column);
 			if (pcolval) pcolval->IsStringValue(name);
@@ -4464,6 +4644,306 @@ format_name_column_for_dag_nodes(ROD_MAP_BY_ID & results, int name_column, int c
 	}
 }
 
+// this defines the attributes to fetch for the -progress output
+// but does not actually define the output because the results are
+// extensively post-processed.
+const char * const jobProgress_PrintFormat = "SELECT\n"
+	ATTR_OWNER               " AS OWNER           WIDTH AUTO PRINTAS DAG_OWNER OR ??\n"  // 0
+	ATTR_JOB_CMD             " AS BATCH_NAME      WIDTH -12  PRINTAS BATCH_NAME\n" // 1
+	ATTR_Q_DATE              " AS '   SUBMITTED'  WIDTH 12   PRINTAS QDATE\n" // 2
+	ATTR_JOB_STATUS          " AS '  DONE' WIDTH 6 PRINTF %6d\n"  // Done   // 3
+	ATTR_JOB_UNIVERSE        " AS 'ACTIVE' WIDTH 6 PRINTF %6d\n"  // Active // 4
+	ATTR_DAG_NODES_QUEUED    " AS '  IDLE' WIDTH 6 PRINTF %6d\n"  // Idle   // 5
+	ATTR_DAG_NODES_DONE      " AS '  HELD' WIDTH 6 PRINTF %6d\n"  // Held   // 6
+	ATTR_DAG_NODES_TOTAL     " AS ' TOTAL' WIDTH 6 PRINTF %6d\n"  // Total  // 7
+	ATTR_JOB_STATUS          " AS JOB_IDS WIDTH 0 PRINTAS JOB_STATUS\n"     // 8
+//	ATTR_JOB_REMOTE_USER_CPU " AS '    RUN_TIME'  WIDTH 12   PRINTAS CPU_TIME\n"
+//	ATTR_IMAGE_SIZE          " AS SIZE       WIDTH 4    PRINTAS MEMORY_USAGE\n"
+//	ATTR_HOLD_REASON         " AS HOLD_REASON\n"
+"SUMMARY STANDARD\n";
+
+
+class  cluster_progress {
+public:
+	int count;   // number of rows counted
+	int jobs;    // number of job rows (i.e. non-dag rows)
+	int dags;    // number of dag rows
+	int nodes_total; // accumulation of ATTR_DAG_NODES_TOTAL for dag jobs, and of ProcIds for non-dag jobs
+	int nodes_done;  // accumulation of ATTR_DAG_NODES_DONE for dag jobs, and a guess of completed procs for non-dag jobs
+	int cluster;
+	int min_proc;
+	int max_proc;
+	int states[JOB_STATUS_MAX+1];
+	cluster_progress() : count(0), jobs(0), dags(0), nodes_total(0), nodes_done(0),
+		cluster(0), min_proc(INT_MAX), max_proc(0) {
+		memset(states, 0, sizeof(states));
+	}
+};
+
+class child_progress : public cluster_progress {
+public:
+	long long min_jobid; // use union _jobid to extract cluster/proc
+	long long max_jobid;
+	child_progress() : min_jobid(0), max_jobid(0) {}
+};
+
+static void reduce_procs(cluster_progress & prog, JobRowOfData & jr)
+{
+	// these refer to column indexes in the jobProgress_PrintFormat declaration
+	const int ixJobStatusCol = 3;
+	const int ixUniverseCol  = 4;
+	const int ixDagNodesDone = 6;
+	const int ixDagNodesTotal = 7;
+
+	prog.count += 1;
+
+	union _jobid jid; jid.id = jr.id;
+	prog.cluster = jid.cluster;
+	prog.min_proc = prog.max_proc = jid.proc;
+
+	int universe = CONDOR_UNIVERSE_MIN, status = 0;
+	if (jr.getNumber(ixUniverseCol, universe) && universe == CONDOR_UNIVERSE_SCHEDULER) {
+		jr.flags |= JROD_SCHEDUNIV;
+		prog.dags += 1;
+		int dag_done = 0, dag_total = 0;
+		if (jr.getNumber(ixDagNodesTotal, dag_total)) { prog.nodes_total += dag_total; }
+		if (jr.getNumber(ixDagNodesDone, dag_done)) { prog.nodes_done += dag_done; }
+	} else {
+		prog.jobs += 1;
+
+		jr.getNumber(ixJobStatusCol, status);
+		if (status < 0 || status > JOB_STATUS_MAX) status = 0;
+		prog.states[status] += 1;
+	}
+
+	JobRowOfData *jrod2 = jr.next_proc;
+	while (jrod2) {
+		if ( ! (jrod2->flags & (JROD_FOLDED | JROD_SKIP))) {
+			prog.count += 1;
+			prog.jobs += 1; // on the assumption that dagmen can't be multi proc
+
+			int st;
+			jrod2->getNumber(ixJobStatusCol, st);
+			if (st < 0 || st > JOB_STATUS_MAX) st = 0;
+			prog.states[st] += 1;
+
+			union _jobid jid2; jid2.id = jrod2->id;
+			prog.min_proc = MIN(prog.min_proc, jid2.proc);
+			prog.max_proc = MAX(prog.min_proc, jid2.proc);
+
+			jrod2->flags |= JROD_FOLDED;
+		}
+		jrod2 = jrod2->next_proc;
+	}
+
+	// for non-dagman jobs, we can extrapolate the total number of jobs and the number of 
+	// number of completed jobs by looking at the max procid.
+	// by counting procids that have left the queue.
+	if ( ! (jr.flags & (JROD_SCHEDUNIV | JROD_ISDAGNODE))) {
+		int total = prog.max_proc+1;
+		int done = total - prog.jobs;
+		prog.nodes_total += total;
+		prog.nodes_done += done;
+	}
+}
+
+static void reduce_children(child_progress & prog, JobRowOfData * pjr, int & depth)
+{
+	// we can follow the next_sib link to find all jobs that are siblings
+	// and the children link to find child jobs.
+	while (pjr) {
+		//{ union _jobid jidt; jidt.id = pjr->id; fprintf(stderr, " %sfolding %x %d.%d\n", "                    "+20-MIN(depth,20), pjr->flags, jidt.cluster, jidt.proc); }
+		ASSERT(!(pjr->flags & JROD_FOLDED));
+		reduce_procs(prog, *pjr);
+		if ( ! (pjr->flags & JROD_SCHEDUNIV)) {
+			union _jobid jid;
+			jid.cluster = prog.cluster;
+			jid.proc = prog.min_proc;
+			if ( ! prog.min_jobid) {
+				prog.min_jobid = jid.id;
+			} else {
+				prog.min_jobid = MIN(prog.min_jobid, jid.id);
+			}
+			jid.proc = prog.max_proc;
+			prog.max_jobid = MAX(prog.max_jobid, jid.id);
+		}
+		pjr->flags |= JROD_FOLDED;
+		if (pjr->children) {
+			depth += 1;
+			reduce_children(prog, pjr->children, depth);
+			depth -= 1;
+		}
+		pjr = pjr->next_sib;
+	}
+}
+
+// passed to fnFixupWidthsForProgressFormat
+struct _fixup_progress_width_values {
+	int owner_width;
+	int batch_name_width;
+	int ids_width;
+	bool any_held;
+};
+
+// hacky way to adjust column widths based on the data.
+static int fnFixupWidthsForProgressFormat(void* pv, int index, Formatter * fmt, const char * /*attr*/) {
+	struct _fixup_progress_width_values * p = (struct _fixup_progress_width_values *)pv;
+	//char * pf = const_cast<char*>(fmt->printfFmt);
+	if (index == 0) { // owner
+		if (p->owner_width < fmt->width) {
+			fmt->width = MAX(8, p->owner_width);
+			fmt->options &= ~(FormatOptionNoTruncate | FormatOptionAutoWidth);
+		} else {
+			fmt->width = p->owner_width;
+		}
+		p->owner_width = fmt->width; // return the actual width
+	} else if (index == 1) { // batch name
+		int wid = (fmt->width < 0) ? -(fmt->width) : fmt->width;
+		wid = MAX(10, p->batch_name_width);
+		p->batch_name_width = wid; // return the actual width
+		fmt->width = -wid;
+	} else if (index == 6) { // held
+		if ( ! p->any_held) {
+			fmt->options |= FormatOptionHideMe;
+		}
+	}
+	return 1;
+}
+
+// reduce the data by summarizing all of the procs in a cluster
+// and all of the nodes in a dag into a single line of output.
+//
+static void
+reduce_results(ROD_MAP_BY_ID & results) {
+	//const int ixJobStatusCol = 2;
+	//const int ixUniverseCol  = 3;
+	int ixOwnerCol = 0;
+	int ixBatchNameCol = 1;
+	int ixFirstCounterCol = 3;
+	int ixJobIdsCol = 8;
+
+	const bool fold_dagman_sibs = dash_progress && (dash_progress & 2);
+
+	struct _fixup_progress_width_values wids;
+	memset(&wids, 0, sizeof(wids));
+
+	for(ROD_MAP_BY_ID::iterator it = results.begin(); it != results.end(); ++it) {
+		JobRowOfData & jr = it->second;
+		if (jr.flags & (JROD_FOLDED | JROD_SKIP | JROD_COOKED))
+			continue;
+
+#if 1
+		//{ union _jobid jidt; jidt.id = jr.id; fprintf(stderr, "reducing %d.%d\n", jidt.cluster, jidt.proc); }
+		child_progress prog;
+		int depth = 0;
+		reduce_children(prog, &jr, depth);
+#else
+		child_progress prog;
+		reduce_procs(prog, jr);
+		if ( ! (jr.flags & JROD_SCHEDUNIV)) { prog.min_cluster = prog.max_cluster = prog.cluster; }
+		// also fold up dag child nodes
+		if (jr.children) { reduce_children(prog, jr.children); }
+#endif
+		// now write baked results into this row and mark it as cooked
+		jr.flags |= JROD_COOKED;
+
+		// rewrite the values in the counter columns with the values
+		// we got by summing all of the peers and children
+		int num_done    = prog.nodes_done;
+		int num_total   = prog.nodes_total;
+		//int num_jobs    = prog.jobs;
+		int num_idle    = prog.states[IDLE] + prog.states[SUSPENDED];
+		int num_active  = prog.states[RUNNING] + prog.states[TRANSFERRING_OUTPUT];
+		int num_held    = prog.states[HELD];
+		if (num_held > 0) wids.any_held = true;
+
+		int ixCol = ixFirstCounterCol; // starting column for counters
+		jr.rov.Column(ixCol)->SetIntegerValue(num_done);
+		jr.rov.set_col_valid(ixCol, (bool)(num_done > 0));
+
+		++ixCol;
+		jr.rov.Column(ixCol)->SetIntegerValue(num_active);
+		jr.rov.set_col_valid(ixCol, (bool)(num_active > 0));
+
+		++ixCol;
+		jr.rov.Column(ixCol)->SetIntegerValue(num_idle);
+		jr.rov.set_col_valid(ixCol, (bool)(num_idle > 0));
+
+		++ixCol;
+		jr.rov.Column(ixCol)->SetIntegerValue(num_held);
+		jr.rov.set_col_valid(ixCol, (bool)(num_held > 0));
+
+		++ixCol;
+		jr.rov.Column(ixCol)->SetIntegerValue(num_total);
+		jr.rov.set_col_valid(ixCol, true);
+
+		int name_width = 0;
+		jr.getString(ixOwnerCol, name_width);
+		wids.owner_width = MAX(wids.owner_width, name_width);
+
+		MyString tmp;
+		union _jobid jid; jid.id = jr.id;
+		if (jr.flags & JROD_SCHEDUNIV) {
+			if (fold_dagman_sibs && jr.batch_uid && jr.next_sib && jr.getString(ixBatchNameCol, name_width)) {
+				wids.batch_name_width = MAX(wids.batch_name_width, name_width);
+			} else {
+				tmp.formatstr("DAG %d", jid.cluster);
+				jr.rov.Column(ixBatchNameCol)->SetStringValue(tmp.c_str());
+				jr.rov.set_col_valid(ixBatchNameCol, true);
+				wids.batch_name_width = MAX(wids.batch_name_width, (int)tmp.length());
+			}
+		} else {
+			if (jr.getString(ixBatchNameCol, name_width)) {
+				wids.batch_name_width = MAX(wids.batch_name_width, name_width);
+			} else {
+				tmp.formatstr("Cluster %d", jid.cluster);
+				jr.rov.Column(ixBatchNameCol)->SetStringValue(tmp.c_str());
+				jr.rov.set_col_valid(ixBatchNameCol, true);
+				wids.batch_name_width = MAX(wids.batch_name_width, (int)tmp.length());
+			}
+		}
+
+		union _jobid jmin, jmax; jmin.id = prog.min_jobid; jmax.id = prog.max_jobid;
+		if (jmin.id != jmax.id) {
+			if (jmin.cluster == jmax.cluster) {
+				tmp.formatstr("%d.%d-%d", jmin.cluster, jmin.proc, jmax.proc);
+			} else {
+				tmp.formatstr("%d.%d ... %d.%d", jmin.cluster, jmin.proc, jmax.cluster, jmax.proc);
+			}
+		} else {
+			tmp.formatstr("%d.%d", jmin.cluster, jmin.proc);
+		}
+		jr.rov.Column(ixJobIdsCol)->SetStringValue(tmp.c_str());
+		jr.rov.set_col_valid(ixJobIdsCol, true);
+		wids.ids_width = MAX(wids.ids_width, (int)tmp.length());
+	}
+
+	// now fixup columns to fit the data, we have 50 chars worth of fixed width
+	// 123456789 123456789 123456789 123456789 123456789 123456789 123456789 123456789
+	//   1/5  11:45    319                    9    329 52521977.50 ... 52524203.277
+	if ( ! widescreen) {
+		int display_wid = getDisplayWidth();
+		int var_wid = display_wid - 50;
+		if (wids.batch_name_width + wids.owner_width + wids.ids_width > var_wid) {
+			int var_min = 8 + 10 + 9; // 8 for name and 10 for batch, 9 for ids
+			int bw,nw,iw;
+			bw = nw = iw = (var_wid - var_min)/3; // start by distributing the surplus evenly
+
+			// if we are really short of pixels, give the ids only half of what they requested (i.e show the first id only)
+			if (iw < wids.ids_width) { 
+				int needed = (wids.batch_name_width + wids.owner_width) - (bw+nw+10+8);
+				if (needed > 7 && bw < 10) { wids.ids_width /= 2; }
+			}
+			if (iw+9 > wids.ids_width) { int rw = iw+9 - wids.ids_width; nw += rw/2; bw += rw - rw/2; }
+			if (bw+10 > wids.batch_name_width) { int rw = bw+10 - wids.batch_name_width; nw = MIN(8+nw+rw, wids.owner_width) - 8; }
+			if (nw+8 > wids.owner_width) { int rw = nw+8 - wids.owner_width; bw =  MIN(10+bw+rw, wids.batch_name_width) - 10; }
+
+			wids.batch_name_width = MIN(wids.batch_name_width, bw+10);
+			wids.owner_width = MIN(wids.owner_width, nw+8);
+		}
+	}
+	app.mask.adjust_formats(fnFixupWidthsForProgressFormat, &wids);
+}
 
 
 //PRAGMA_REMIND("Write this properly as a method on the sinful object.")
@@ -4523,7 +5003,7 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 	//
 	buffer_line_processor pfnProcess = NULL;
 	void *                pvProcess = NULL;
-	if (dash_long || better_analyze) {
+	if (better_analyze || (dash_long && ! g_stream_results)) {
 		pfnProcess = AddToClassAdList;
 		pvProcess = &jobs;
 	} else if (g_stream_results) {
@@ -4617,21 +5097,22 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 		cResults = (int)rod_result_map.size();
 	}
 
+	if (cResults > 0) {
+		linkup_nodes_by_id(rod_result_map);
+		if (dash_progress) {
+			reduce_results(rod_result_map);
+		} else if (dash_dag) {
+			format_name_column_for_dag_nodes(rod_result_map, name_column_index, name_column_width);
+		}
+	}
+
 	// we want a header for this schedd if we are not showing the global queue OR if there is any data
 	if ( ! global || cResults > 0 || jobs.Length() > 0) {
 		print_full_header(source_label.c_str());
 	}
 
-	if (cResults > 0) {
-		linkup_nodes_by_id(rod_result_map);
-		if (dash_dag) {
-			format_name_column_for_dag_nodes(rod_result_map, name_column_index, name_column_width);
-		}
-
-		// print out jobs
-		print_results(rod_result_map, rod_sort_key_map, dash_dag);
-		clear_results(rod_result_map, rod_sort_key_map);
-	}
+	print_results(rod_result_map, rod_sort_key_map, dash_dag);
+	clear_results(rod_result_map, rod_sort_key_map);
 
 	// print out summary line (if enabled) and/or xml closure
 	// we want to print out a footer if we printed any data, OR if this is not 
@@ -4817,7 +5298,9 @@ show_file_queue(const char* jobads, const char* userlog)
 		int cResults = (int)rod_result_map.size();
 		if (cResults > 0) {
 			linkup_nodes_by_id(rod_result_map);
-			if (dash_dag) {
+			if (dash_progress) {
+				reduce_results(rod_result_map);
+			} else if (dash_dag) {
 				format_name_column_for_dag_nodes(rod_result_map, name_column_index, name_column_width);
 			}
 		}
@@ -6247,6 +6730,7 @@ const char * const autoclusterNormal_PrintFormat = "SELECT\n"
 
 // !!! ENTRIES IN THIS TABLE MUST BE SORTED BY THE FIRST FIELD !!
 static const CustomFormatFnTableItem LocalPrintFormats[] = {
+	{ "BATCH_NAME",      ATTR_JOB_CMD, 0, render_batch_name, ATTR_JOB_BATCH_NAME "\0" ATTR_JOB_CMD "\0" ATTR_DAGMAN_JOB_ID "\0" ATTR_DAG_NODE_NAME "\0" },
 	{ "BUFFER_IO_MISC",  ATTR_JOB_UNIVERSE, 0, render_buffer_io_misc, ATTR_FILE_SEEK_COUNT "\0" ATTR_BUFFER_SIZE "\0" ATTR_BUFFER_BLOCK_SIZE "\0" ATTR_TRANSFERRING_INPUT "\0" ATTR_TRANSFERRING_OUTPUT "\0" ATTR_TRANSFER_QUEUED "\0" },
 	{ "CPU_TIME",        ATTR_JOB_REMOTE_USER_CPU, "%T", render_cpu_time, ATTR_JOB_STATUS "\0" ATTR_SERVER_TIME "\0" ATTR_SHADOW_BIRTHDATE "\0" ATTR_JOB_REMOTE_WALL_CLOCK "\0" },
 	{ "CPU_UTIL",        ATTR_JOB_REMOTE_USER_CPU, "%.1f", render_cpu_util, ATTR_JOB_COMMITTED_TIME "\0" },

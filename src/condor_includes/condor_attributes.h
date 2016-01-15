@@ -373,6 +373,7 @@
 #define ATTR_JOB_SANDBOX_JOBAD  "DropJobAdInSandbox"
 #define ATTR_JOB_SUBMISSION  "Submission"
 #define ATTR_JOB_SUBMISSION_ID  "SubmissionId"
+#define ATTR_JOB_BATCH_NAME "JobBatchName"
 #define ATTR_JOB_START  "JobStart"
 #define ATTR_JOB_START_DATE  "JobStartDate"
 #define ATTR_JOB_STATE  "JobState"

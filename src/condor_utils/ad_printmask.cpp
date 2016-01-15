@@ -307,6 +307,11 @@ char * AttrListPrintMask::display_Headings(List<const char> & headings)
 		const char * pszHead = headings.Next();
 		if ( ! pszHead) break;
 
+		if (fmt->options & FormatOptionHideMe) {
+			++icol;
+			continue;
+		}
+
 		if ((icol != 0) && col_prefix && ! (fmt->options & FormatOptionNoPrefix)) {
 			retval += col_prefix;
 		}
@@ -1453,6 +1458,11 @@ display (std::string & out, MyRowOfValues & rov)
 	// for each item registered in the print mask
 	while ((fmt = formats.Next()))
 	{
+		if (fmt->options & FormatOptionHideMe) {
+			++icol;
+			continue;
+		}
+
 		if (col_prefix && icol > 0 && ! (fmt->options & FormatOptionNoPrefix))
 			out += col_prefix;
 

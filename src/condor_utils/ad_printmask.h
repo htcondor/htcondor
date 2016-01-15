@@ -36,6 +36,7 @@ enum {
 	FormatOptionAutoWidth = 0x08,
 	FormatOptionLeftAlign = 0x10,
 	FormatOptionAlwaysCall = 0x80,
+	FormatOptionHideMe    = 0x100,
 
 	FormatOptionSpecial001 = 0x1000, // for use by the adjust_formats callback
 	FormatOptionSpecial002 = 0x2000,
@@ -277,6 +278,15 @@ public:
 	unsigned char is_valid(int index) {
 		if (index < 0) index = cols+index;
 		if (index >= 0 && index < cols) return pvalid[index];
+		return 0;
+	}
+	unsigned char set_col_valid(int index, unsigned char states) {
+		if (index < 0) index = cols+index;
+		if (index >= 0 && index < cols) { 
+			unsigned char old = pvalid[index];
+			pvalid[index] = states;
+			return old;
+		}
 		return 0;
 	}
 	void set_valid(bool valid) { if (cols > 0 && cols <= cmax) pvalid[cols-1] = valid; }
