@@ -1,0 +1,6 @@
+#TEMPTEMP -- get rid of noops eventually
+job NodeA foo NOOP
+job NodeB foo NOOP
+job NodeC foo NOOP
+
+#TEMPTEMP -- this should have pin outs
