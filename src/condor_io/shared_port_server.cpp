@@ -105,10 +105,18 @@ SharedPortServer::RemoveDeadAddressFile()
 		// ungraceful shutdown.
 	MyString shared_port_server_ad_file;
 	if( !param(shared_port_server_ad_file,"SHARED_PORT_DAEMON_AD_FILE") ) {
-		EXCEPT("SHARED_PORT_DAEMON_AD_FILE must be defined");
+		dprintf( D_FULLDEBUG, "SHARED_PORT_DAEMON_AD_FILE not defined, not removing shared port daemon ad file.\n" );
+		return;
 	}
-	if( unlink(shared_port_server_ad_file.Value()) == 0 ) {
-		dprintf(D_ALWAYS,"Removed %s (assuming it is left over from previous run)\n",shared_port_server_ad_file.Value());
+
+	int fd = open( shared_port_server_ad_file.Value(), O_RDONLY );
+	if( fd != -1 ) {
+		close( fd );
+		if( unlink(shared_port_server_ad_file.Value()) == 0 ) {
+			dprintf(D_ALWAYS,"Removed %s (assuming it is left over from previous run)\n",shared_port_server_ad_file.Value());
+		} else {
+			EXCEPT( "Failed to remove dead shared port address file '%s'!", shared_port_server_ad_file.Value() );
+		}
 	}
 }
 

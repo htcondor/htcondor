@@ -561,6 +561,16 @@ dprintf(D_FULLDEBUG,"(%d.%d) UpdateJobLeaseSent(%d)\n",procID.cluster,procID.pro
 						   new_expiration_time );
 		}
 
+		if ( old_expiration_time == TIMER_UNSET ||
+			 ( new_expiration_time != TIMER_UNSET &&
+			   new_expiration_time < old_expiration_time ) ) {
+
+			BaseResource *resource = GetResource();
+			if ( resource ) {
+				resource->RequestUpdateLeases();
+			}
+		}
+
 		requestScheddUpdate( this, false );
 
 		SetJobLeaseTimers();
