@@ -92,15 +92,15 @@ sub on_imageupdated {
 Condor::SetAllowedEvents("RegisterEvictedWithoutCheckpoint,RegisterSubmit,RegisterExecute,RegisterAbort");
 
 # enter most slots needed. We will verify
-my $neededslots = 5;
-my $haveslots = ConcurrencyTools::ExamineSlots($neededslots);
+#my $neededslots = 5;
+#my $haveslots = ConcurrencyTools::ExamineSlots($neededslots);
 
-if($haveslots < $neededslots) {
-	print "We need <$neededslots> but only have <$haveslots>\n";
-	system("condor_config_val -dump | sort");
-	system("condor_config_val -v NUM_CPUS");
-	die "We need <$neededslots> but only have <$haveslots>\n";
-}
+#if($haveslots < $neededslots) {
+#	print "We need <$neededslots> but only have <$haveslots>\n";
+#	system("condor_config_val -dump | sort");
+#	system("condor_config_val -v NUM_CPUS");
+#	die "We need <$neededslots> but only have <$haveslots>\n";
+#}
 
 $append_submit_commands = '
 concurrency_limits = XSW

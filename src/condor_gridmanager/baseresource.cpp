@@ -338,6 +338,12 @@ void BaseResource::RegisterJob( BaseJob *job )
 		}
 	}
 
+	int lease_expiration = -1;
+	job->jobAd->LookupInteger( ATTR_JOB_LEASE_EXPIRATION, lease_expiration );
+	if ( lease_expiration > 0 ) {
+		RequestUpdateLeases();
+	}
+
 	if ( deleteMeTid != TIMER_UNSET ) {
 		daemonCore->Cancel_Timer( deleteMeTid );
 		deleteMeTid = TIMER_UNSET;
@@ -537,6 +543,13 @@ void BaseResource::DoPing( unsigned& ping_delay, bool& ping_complete,
 	ping_delay = 0;
 	ping_complete = true;
 	ping_succeeded = true;
+}
+
+void BaseResource::RequestUpdateLeases()
+{
+	if ( updateLeasesTimerId != TIMER_UNSET ) {
+		daemonCore->Reset_Timer( updateLeasesTimerId, 0 );
+	}
 }
 
 void BaseResource::UpdateLeases()

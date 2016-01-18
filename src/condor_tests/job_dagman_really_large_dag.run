@@ -116,7 +116,7 @@ $success = sub
 			chomp();
 			$line = $_;
 
-			if( $line =~ /Event: ULOG_SUBMIT for Condor Node job_dagman_really_large_dag-nodeA/ ) {
+			if( $line =~ /Event: ULOG_SUBMIT for HTCondor Node job_dagman_really_large_dag-nodeA/ ) {
 				CondorTest::debug("$name: $line\n",1);
 				if( $dag_state == 0 ) {
 					# Pre-recovery -- okay.
@@ -129,7 +129,7 @@ $success = sub
 								"wrong sequence\n");
 				}
 
-			} elsif( $line =~ /Event: ULOG_JOB_TERMINATED for Condor Node job_dagman_really_large_dag-nodeC / ) {
+			} elsif( $line =~ /Event: ULOG_JOB_TERMINATED for HTCondor Node job_dagman_really_large_dag-nodeC / ) {
 				CondorTest::debug("$name: $line\n",1);
 				if( $dag_state == 2 ) {
 					$dag_state = 3;

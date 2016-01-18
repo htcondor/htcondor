@@ -172,6 +172,8 @@ sub Cleanup()
     KillAllPersonalCondors();
     if($failed_coreERROR ne "") {
 
+	print STDERR "\nTest being marked as FAILED from discovery of core file or ERROR in logs\n\t$failed_coreERROR\n";
+
 	print "\nTest being marked as FAILED from discovery of core file or ERROR in logs\n";
 	print "Results indicate: $failed_coreERROR\n";
 	print "Time, Log, message are stored in condor_tests/Cores/core_error_trace\n\n";
@@ -1071,7 +1073,9 @@ sub StartTest
 	} elsif ($retval) {
 		# ok we think we want to pass it but how did core and ERROR checking go
 		if ($failed_coreERROR ne "") {
-			# 
+			# Write to STDERR as well as stdout so that we can easily scan the .err files tests that succeeded but failed on cores
+			print STDERR "\n'Successful' Test FAILED because $failed_coreERROR\n";
+			#
 			print "\n'Successful' Test FAILED because $failed_coreERROR\n";
 			print "\tThe first 15 lines of condor_tests/Cores/core_error_trace are\n\n";
 			print "************************************\n";

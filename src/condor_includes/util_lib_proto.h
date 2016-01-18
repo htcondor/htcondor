@@ -54,7 +54,7 @@ void condor_except_should_dump_core( int flag );
 int getdtablesize ( void );
 
 int mkargv ( int *argc, char *argv[], char *line );
-char * format_time ( float fp_secs );
+//char * format_time ( float fp_secs );
 void update_rusage( register struct rusage *ru1, register struct rusage *ru2 );
 
 #if defined(__cplusplus)

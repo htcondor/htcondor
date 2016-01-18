@@ -89,7 +89,7 @@ DCStarter::initFromClassAd( ClassAd* ad )
 
 
 bool
-DCStarter::locate( void )
+DCStarter::locate( LocateType /*method=LOCATE_FULL*/ )
 {
 	if( _addr ) {
 		return true;

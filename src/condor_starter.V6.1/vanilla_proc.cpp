@@ -1026,10 +1026,12 @@ VanillaProc::outOfMemoryEvent(int /* fd */)
 	ClassAd updateAd;
 	PublishUpdateAd( &updateAd );
 	Starter->jic->periodicJobUpdate( &updateAd, true );
+	int usage;
+	updateAd.LookupInteger(ATTR_MEMORY_USAGE, usage);
 
 	std::stringstream ss;
 	if (m_memory_limit >= 0) {
-		ss << "Job has gone over memory limit of " << m_memory_limit << " megabytes.";
+		ss << "Job has gone over memory limit of " << m_memory_limit << " megabytes. Peak usage: " << usage << " megabytes.";
 	} else {
 		ss << "Job has encountered an out-of-memory event.";
 	}

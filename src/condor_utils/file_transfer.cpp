@@ -4073,7 +4073,8 @@ bool FileTransfer::BuildFileCatalog(time_t spool_time, const char* iwd, FileCata
 	//
 	// make sure this iteration is done as the actual owner of the directory,
 	// as it may not be world-readable.
-	Directory file_iterator(iwd, PRIV_USER);
+	// desired_priv_state indicates which priv state that is.
+	Directory file_iterator(iwd, desired_priv_state);
 	const char * f = NULL;
 	while( (f = file_iterator.Next()) ) {
 		if (!file_iterator.IsDirectory()) {

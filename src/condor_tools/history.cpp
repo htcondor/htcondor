@@ -494,7 +494,7 @@ main(int argc, char* argv[])
 			// jobqueuebirthdate
 		Daemon schedd( DT_SCHEDD, 0, 0 );
 
-        if ( schedd.locate() ) {
+        if ( schedd.locate(Daemon::LOCATE_FULL) ) {
 			char *scheddname = quillName;	
 			if (scheddname == NULL) {
 				// none set explictly, look it up in the daemon ad
@@ -609,8 +609,8 @@ static int getDisplayWidth() {
 	return wide_format_width;
 }
 
-static const char *
-format_hist_runtime (int /*unused_utime*/, AttrList * ad, Formatter & /*fmt*/)
+static bool
+render_hist_runtime (std::string & out, AttrList * ad, Formatter & /*fmt*/)
 {
 	double utime;
 	if(!ad->EvalFloat(ATTR_JOB_REMOTE_WALL_CLOCK,NULL,utime)) {
@@ -618,23 +618,24 @@ format_hist_runtime (int /*unused_utime*/, AttrList * ad, Formatter & /*fmt*/)
 			utime = 0;
 		}
 	}
-	return format_time((time_t)utime);
+	out = format_time((time_t)utime);
+	return (time_t)utime != 0;
 }
 
 static const char *
-format_utime_double (double utime, AttrList * /*ad*/, Formatter & /*fmt*/)
+format_utime_double (double utime, Formatter & /*fmt*/)
 {
 	return format_time((time_t)utime);
 }
 
 static const char *
-format_int_date(int date, AttrList * /*ad*/, Formatter & /*fmt*/)
+format_int_date(long long date, Formatter & /*fmt*/)
 {
-	return format_date(date);
+	return format_date((int)date);
 }
 
 static const char *
-format_readable_mb(const classad::Value &val, AttrList *, Formatter &)
+format_readable_mb(const classad::Value &val, Formatter &)
 {
 	long long kbi;
 	double kb;
@@ -649,7 +650,7 @@ format_readable_mb(const classad::Value &val, AttrList *, Formatter &)
 }
 
 static const char *
-format_readable_kb(const classad::Value &val, AttrList *, Formatter &)
+format_readable_kb(const classad::Value &val, Formatter &)
 {
 	long long kbi;
 	double kb;
@@ -664,7 +665,7 @@ format_readable_kb(const classad::Value &val, AttrList *, Formatter &)
 }
 
 static const char *
-format_int_job_status(int status, AttrList * /*ad*/, Formatter & /*fmt*/)
+format_int_job_status(long long status, Formatter & /*fmt*/)
 {
 	const char * ret = " ";
 	switch( status ) 
@@ -679,7 +680,7 @@ format_int_job_status(int status, AttrList * /*ad*/, Formatter & /*fmt*/)
 }
 
 static const char *
-format_job_status_raw(int job_status, AttrList* /*ad*/, Formatter &)
+format_job_status_raw(long long job_status, Formatter &)
 {
 	switch(job_status) {
 	case IDLE:      return "Idle   ";
@@ -694,36 +695,35 @@ format_job_status_raw(int job_status, AttrList* /*ad*/, Formatter &)
 }
 
 static const char *
-format_job_universe(int job_universe, AttrList* /*ad*/, Formatter &)
+format_job_universe(long long job_universe, Formatter &)
 {
-	return CondorUniverseNameUcFirst(job_universe);
+	return CondorUniverseNameUcFirst((int)job_universe);
 }
 
-static const char *
-format_job_id(int clusterId, AttrList * ad, Formatter & /*fmt*/)
+static bool
+render_job_id(std::string & val, AttrList * ad, Formatter & /*fmt*/)
 {
-	static MyString ret;
-	ret = "";
-	int procId;
+	int clusterId, procId;
+	if( ! ad->EvalInteger(ATTR_CLUSTER_ID,NULL,clusterId)) clusterId = 0;
 	if( ! ad->EvalInteger(ATTR_PROC_ID,NULL,procId)) procId = 0;
-	ret.formatstr("%4d.%-3d", clusterId, procId);
-	return ret.Value();
+	formatstr(val, "%4d.%-3d", clusterId, procId);
+	return true;
 }
 
-static const char *
-format_job_cmd_and_args(const char * cmd, AttrList * ad, Formatter & /*fmt*/)
+static bool
+render_job_cmd_and_args(std::string & val, AttrList * ad, Formatter & /*fmt*/)
 {
-	static MyString ret;
-	ret = cmd;
+	if ( ! ad->EvalString(ATTR_JOB_CMD, NULL, val))
+		return false;
 
 	char * args;
 	if (ad->EvalString (ATTR_JOB_ARGUMENTS1, NULL, &args) || 
 		ad->EvalString (ATTR_JOB_ARGUMENTS2, NULL, &args)) {
-		ret += " ";
-		ret += args;
+		val += " ";
+		val += args;
 		free(args);
 	}
-	return ret.Value();
+	return true;
 }
 
 static void AddPrintColumn(const char * heading, int width, int opts, const char * expr)
@@ -747,13 +747,13 @@ static void init_default_custom_format()
 	mask.SetAutoSep(NULL, " ", NULL, "\n");
 
 	int opts = wide_format ? (FormatOptionNoTruncate | FormatOptionAutoWidth) : 0;
-	AddPrintColumn(" ID",        -7, FormatOptionNoTruncate, ATTR_CLUSTER_ID, format_job_id);
+	AddPrintColumn(" ID",        -7, FormatOptionNoTruncate, ATTR_CLUSTER_ID, render_job_id);
 	AddPrintColumn("OWNER",     -14, FormatOptionAutoWidth | opts, ATTR_OWNER);
 	AddPrintColumn("SUBMITTED",  11,    0, ATTR_Q_DATE, format_int_date);
-	AddPrintColumn("RUN_TIME",   12,    0, ATTR_CLUSTER_ID, format_hist_runtime);
+	AddPrintColumn("RUN_TIME",   12,    0, ATTR_CLUSTER_ID, render_hist_runtime);
 	AddPrintColumn("ST",         -2,    0, ATTR_JOB_STATUS, format_int_job_status);
 	AddPrintColumn("COMPLETED",  11,    0, ATTR_COMPLETION_DATE, format_int_date);
-	AddPrintColumn("CMD",       -15, FormatOptionLeftAlign | FormatOptionNoTruncate, ATTR_JOB_CMD, format_job_cmd_and_args);
+	AddPrintColumn("CMD",       -15, FormatOptionLeftAlign | FormatOptionNoTruncate, ATTR_JOB_CMD, render_job_cmd_and_args);
 
 	customFormat = TRUE;
 }
@@ -924,7 +924,7 @@ static void readHistoryRemote(classad::ExprTree *constraintExpr)
 	ad.InsertAttr(ATTR_NUM_MATCHES, specifiedMatch <= 0 ? -1 : specifiedMatch);
 
 	DCSchedd schedd(g_name.size() ? g_name.c_str() : NULL, g_pool.size() ? g_pool.c_str() : NULL);
-	if (!schedd.locate()) {
+	if (!schedd.locate(Daemon::LOCATE_FOR_LOOKUP)) {
 		fprintf(stderr, "Unable to locate remote schedd (name=%s, pool=%s).\n", g_name.c_str(), g_pool.c_str());
 		exit(1);
 	}
@@ -1481,15 +1481,15 @@ static void readHistoryFromFileEx(const char *JobHistoryFileName, const char* co
 
 // !!! ENTRIES IN THIS TABLE MUST BE SORTED BY THE FIRST FIELD !!
 static const CustomFormatFnTableItem LocalPrintFormats[] = {
-	{ "DATE",            ATTR_Q_DATE, format_int_date, NULL },
-	{ "JOB_COMMAND",     ATTR_JOB_CMD, format_job_cmd_and_args, ATTR_JOB_DESCRIPTION "\0MATCH_EXP_" ATTR_JOB_DESCRIPTION "\0" },
-	{ "JOB_ID",          ATTR_CLUSTER_ID, format_job_id, ATTR_PROC_ID "\0" },
-	{ "JOB_STATUS",      ATTR_JOB_STATUS, format_int_job_status, ATTR_LAST_SUSPENSION_TIME "\0" ATTR_TRANSFERRING_INPUT "\0" ATTR_TRANSFERRING_OUTPUT "\0" },
-	{ "JOB_STATUS_RAW",  ATTR_JOB_STATUS, format_job_status_raw, NULL },
-	{ "JOB_UNIVERSE",    ATTR_JOB_UNIVERSE, format_job_universe, NULL },
-	{ "READABLE_KB",     ATTR_REQUEST_DISK, format_readable_kb, NULL },
-	{ "READABLE_MB",     ATTR_REQUEST_MEMORY, format_readable_mb, NULL },
-	{ "RUNTIME",         ATTR_JOB_REMOTE_WALL_CLOCK, format_utime_double, NULL },
+	{ "DATE",            ATTR_Q_DATE, 0, format_int_date, NULL },
+	{ "JOB_COMMAND",     ATTR_JOB_CMD, 0, render_job_cmd_and_args, ATTR_JOB_DESCRIPTION "\0MATCH_EXP_" ATTR_JOB_DESCRIPTION "\0" },
+	{ "JOB_ID",          ATTR_CLUSTER_ID, 0, render_job_id, ATTR_PROC_ID "\0" },
+	{ "JOB_STATUS",      ATTR_JOB_STATUS, 0, format_int_job_status, ATTR_LAST_SUSPENSION_TIME "\0" ATTR_TRANSFERRING_INPUT "\0" ATTR_TRANSFERRING_OUTPUT "\0" },
+	{ "JOB_STATUS_RAW",  ATTR_JOB_STATUS, 0, format_job_status_raw, NULL },
+	{ "JOB_UNIVERSE",    ATTR_JOB_UNIVERSE, 0, format_job_universe, NULL },
+	{ "READABLE_KB",     ATTR_REQUEST_DISK, 0, format_readable_kb, NULL },
+	{ "READABLE_MB",     ATTR_REQUEST_MEMORY, 0, format_readable_mb, NULL },
+	{ "RUNTIME",         ATTR_JOB_REMOTE_WALL_CLOCK, 0, format_utime_double, NULL },
 };
 static const CustomFormatFnTable LocalPrintFormatsTable = SORTED_TOKENER_TABLE(LocalPrintFormats);
 

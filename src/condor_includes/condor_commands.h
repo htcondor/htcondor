@@ -395,6 +395,8 @@ NAMETABLE_DIRECTIVE:END_SECTION:collector
 #define DC_SEC_QUERY        (DC_BASE+40)
 #define DC_SET_FORCE_SHUTDOWN (DC_BASE+41)
 #define DC_OFF_FORCE       (DC_BASE+42)
+#define DC_SET_READY       (DC_BASE+43)  // sent to parent to indicate a demon is ready for use
+#define DC_QUERY_READY     (DC_BASE+44)  // daemon command handler should reply only once it and children are ready
 
 
 /*

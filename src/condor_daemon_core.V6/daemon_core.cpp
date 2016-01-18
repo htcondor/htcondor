@@ -1110,6 +1110,7 @@ char const * DaemonCore::InfoCommandSinfulString(int pid)
 	if ( pid == -1 ) {
 		return InfoCommandSinfulStringMyself(false);
 	} else {
+		if (pid == -2) pid = ppid; // a value of -2 means use my parent pid
 		PidEntry *pidinfo = NULL;
 		if ((pidTable->lookup(pid, pidinfo) < 0)) {
 			// we have no information on this pid
@@ -8042,6 +8043,7 @@ int DaemonCore::Create_Process(
 	pidtmp->reaper_id = reaper_id;
 	pidtmp->hung_tid = -1;
 	pidtmp->was_not_responding = FALSE;
+	pidtmp->got_alive_msg = 0;
 	if(!session_id.empty())
 	{
 		pidtmp->child_session_id = strdup(session_id.c_str());
@@ -8448,6 +8450,7 @@ DaemonCore::Create_Thread(ThreadStartFunc start_func, void *arg, Stream *sock,
 	pidtmp->reaper_id = reaper_id;
 	pidtmp->hung_tid = -1;
 	pidtmp->was_not_responding = FALSE;
+	pidtmp->got_alive_msg = 0;
 #ifdef WIN32
 	// we lie here and set pidtmp->pid to equal the tid.  this allows
 	// the DaemonCore WinNT pidwatcher code to remain mostly ignorant
@@ -8607,6 +8610,7 @@ DaemonCore::Inherit( void )
 		pidtmp->reaper_id = 0;
 		pidtmp->hung_tid = -1;
 		pidtmp->was_not_responding = FALSE;
+		pidtmp->got_alive_msg = 0;
 #ifdef WIN32
 		pidtmp->deallocate = 0L;
 
@@ -9631,6 +9635,7 @@ int DaemonCore::HandleChildAliveCommand(int, Stream* stream)
 	}
 
 	pidentry->was_not_responding = FALSE;
+	pidentry->got_alive_msg += 1;
 
 	dprintf(D_DAEMONCORE,
 			"received childalive, pid=%d, secs=%d, dprintf_lock_delay=%f\n",child_pid,timeout_secs,dprintf_lock_delay);
@@ -9782,6 +9787,19 @@ int DaemonCore::Was_Not_Responding(pid_t pid)
 	return pidentry->was_not_responding;
 }
 
+int DaemonCore::Got_Alive_Messages(pid_t pid, bool & not_responding)
+{
+	PidEntry *pidentry;
+
+	if ((pidTable->lookup(pid, pidentry) < 0)) {
+		// we have no information on this pid, assume the safe
+		// case.
+		return 0;
+	}
+
+	not_responding = pidentry->was_not_responding;
+	return pidentry->got_alive_msg;
+}
 
 int DaemonCore::SendAliveToParent()
 {
@@ -10962,6 +10980,7 @@ DaemonCore::PidEntry::PidEntry() : pid(0),
 	reaper_id(0),
 	hung_tid(0),
 	was_not_responding(0),
+	got_alive_msg(0),
 	stdin_offset(0),
 	child_session_id(NULL)
 {

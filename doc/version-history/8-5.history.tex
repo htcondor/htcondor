@@ -11,6 +11,52 @@
 This is the development release series of HTCondor.
 The details of each version are described below.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-8-5-2}Version 8.5.2}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item HTCondor version 8.5.2 not yet released.
+%\item HTCondor version 8.5.2 released on Month Date, 2015.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item Added the capability to set ClassAd attributes for a
+\Condor{dagman} job within the DAG file by using the new
+\MacroNI{SET\_JOB\_ATTR} command.  (See section~\ref{sec:DAG-SetAttributes}
+for details.)
+\Ticket{5107}
+
+\item The \File{dagman.out} file produced by \Condor{dagman} now has event
+timestamps added to the lines that report \Condor{dagman} reading
+a log event.  For example:
+\begin{verbatim}
+  01/13/16 11:29:03 Event: ULOG_SUBMIT for HTCondor Node NodeA (674.0.0) {01/13/16 11:28:59}
+\end{verbatim}
+The timestamp in curly brackets at the end is the actual timestamp
+of the event.
+\Ticket{5439}
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item Fixed a bug that could cause a daemon to be in the wrong
+privilege state when attempting to act as the user.
+\Ticket{5467}
+
+\end{itemize}
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-8-5-1}Version 8.5.1}

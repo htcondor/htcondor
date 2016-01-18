@@ -1059,7 +1059,7 @@ main( int argc, const char* argv[] )
 			target = new Daemon( dt, name, collector_addr );
 			free( collector_addr );
 		}
-		if( ! target->locate() ) {
+		if( ! target->locate(evaluate_daemon_vars ? Daemon::LOCATE_FULL : Daemon::LOCATE_FOR_LOOKUP) ) {
 			fprintf( stderr, "Can't find address for this %s\n", 
 					 daemonString(dt) );
 			fprintf( stderr, "Perhaps you need to query another pool.\n" );
