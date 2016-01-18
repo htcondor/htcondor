@@ -289,7 +289,6 @@ ULogEvent::readHeader (FILE *file)
 					 &(eventTime.tm_mon), &(eventTime.tm_mday),
 					 &(eventTime.tm_hour), &(eventTime.tm_min),
 					 &(eventTime.tm_sec));
-
 	// check if all fields were successfully read
 	if (retval != 8)
 	{
@@ -298,6 +297,9 @@ ULogEvent::readHeader (FILE *file)
 
 	// recall that tm_mon+1 was written to log; decrement to compensate
 	eventTime.tm_mon--;
+		// Need to set eventclock here, otherwise eventclock and
+		// eventTime will not match!!  (See gittrac #5468.)
+	eventclock = mktime( &eventTime );
 
 	return 1;
 }
@@ -313,16 +315,17 @@ bool ULogEvent::formatHeader( std::string &out )
 					  "%03d (%03d.%03d.%03d) %02d/%02d %02d:%02d:%02d.%06d ",
 					  eventNumber,
 					  cluster, proc, subproc,
-					  eventTime.tm_mon+1, eventTime.tm_mday,
-					  eventTime.tm_hour, eventTime.tm_min, eventTime.tm_sec, (int)eventTimeval.tv_usec);
+					  GetEventTime().tm_mon+1, GetEventTime().tm_mday,
+					  GetEventTime().tm_hour, GetEventTime().tm_min,
+					  GetEventTime().tm_sec, (int)eventTimeval.tv_usec);
 #else
 	retval = formatstr_cat(out,
 					  "%03d (%03d.%03d.%03d) %02d/%02d %02d:%02d:%02d ",
 					  eventNumber,
 					  cluster, proc, subproc,
-					  eventTime.tm_mon+1, eventTime.tm_mday,
-					  eventTime.tm_hour, eventTime.tm_min, eventTime.tm_sec);
-
+					  GetEventTime().tm_mon+1, GetEventTime().tm_mday,
+					  GetEventTime().tm_hour, GetEventTime().tm_min,
+					  GetEventTime().tm_sec);
 #endif
 
 	// check if all fields were sucessfully written
@@ -438,8 +441,7 @@ ULogEvent::toClassAd(void)
 		return NULL;
 	}
 
-	const struct tm tmdup = eventTime;
-	char* eventTimeStr = time_to_iso8601(tmdup, ISO8601_ExtendedFormat,
+	char* eventTimeStr = time_to_iso8601(eventTime, ISO8601_ExtendedFormat,
 										 ISO8601_DateAndTime, FALSE);
 	if( eventTimeStr ) {
 		if ( !myad->InsertAttr("EventTime", eventTimeStr) ) {
@@ -489,6 +491,9 @@ ULogEvent::initFromClassAd(ClassAd* ad)
 	if( ad->LookupString("EventTime", &timestr) ) {
 		bool f = FALSE;
 		iso8601_to_time(timestr, &eventTime, &f);
+			// Need to set eventclock here, otherwise eventclock and
+			// eventTime will not match!!  (See gittrac #5468.)
+		eventclock = mktime( &eventTime );
 		free(timestr);
 	}
 	ad->LookupInteger("Cluster", cluster);
@@ -1446,7 +1451,7 @@ RemoteErrorEvent::formatBody( std::string &out )
 				 execute_host);
 
 		if (critical_error) {
-			tmpCl1.Assign("endts", (int)eventclock);
+			tmpCl1.Assign("endts", (int)GetEventclock());
 			tmpCl1.Assign("endtype", ULOG_REMOTE_ERROR);
 			tmpCl1.Assign("endmessage", messagestr);
 
@@ -1471,7 +1476,7 @@ RemoteErrorEvent::formatBody( std::string &out )
 			insertCommonIdentifiers(tmpCl1);
 
 			tmpCl1.Assign("eventtype", ULOG_REMOTE_ERROR);
-			tmpCl1.Assign("eventtime", (int)eventclock);
+			tmpCl1.Assign("eventtime", (int)GetEventclock());
 			tmpCl1.Assign("description", messagestr);
 
 			if (FILEObj->file_newEvent("Events", &tmpCl1) == QUILL_FAILURE) {
@@ -1739,7 +1744,7 @@ ExecuteEvent::formatBody( std::string &out )
 
 		dprintf(D_FULLDEBUG, "Executehost name = %s\n", remoteName ? remoteName : "" );
 
-		tmpCl1.Assign("endts", (int)eventclock);
+		tmpCl1.Assign("endts", (int)GetEventclock());
 
 		tmp.formatstr("endtype = -1");
 		tmpCl1.Insert(tmp.Value());
@@ -1766,7 +1771,7 @@ ExecuteEvent::formatBody( std::string &out )
 		// this inserts scheddname, cluster, proc, etc
 		insertCommonIdentifiers(tmpCl3);
 
-		tmpCl3.Assign("startts", (int)eventclock);
+		tmpCl3.Assign("startts", (int)GetEventclock());
 
 		if (FILEObj->file_newEvent("Runs", &tmpCl3) == QUILL_FAILURE) {
 			dprintf(D_ALWAYS, "Logging Event 1--- Error\n");
@@ -1861,7 +1866,7 @@ ExecutableErrorEvent::formatBody( std::string &out )
 		ClassAd tmpCl1, tmpCl2;
 		MyString tmp = "";
 
-		tmpCl1.Assign("endts", (int)eventclock);
+		tmpCl1.Assign("endts", (int)GetEventclock());
 		tmpCl1.Assign("endtype", ULOG_EXECUTABLE_ERROR);
 		tmpCl1.Assign("endmessage", messagestr);
 
@@ -1982,7 +1987,7 @@ CheckpointedEvent::formatBody( std::string &out )
 		insertCommonIdentifiers(tmpCl1);
 
 		tmpCl1.Assign("eventtype", ULOG_CHECKPOINTED);
-		tmpCl1.Assign("eventtime", (int)eventclock);
+		tmpCl1.Assign("eventtime", (int)GetEventclock());
 
 		tmpCl1.Assign("description", messagestr);
 
@@ -2377,7 +2382,7 @@ JobEvictedEvent::formatBody( std::string &out )
 			}
 		}
 
-		tmpCl1.Assign("endts", (int)eventclock);
+		tmpCl1.Assign("endts", (int)GetEventclock());
 		tmpCl1.Assign("endtype", ULOG_JOB_EVICTED);
 
 		tmp.formatstr( "endmessage = \"%s%s\"", messagestr, terminatestr);
@@ -2581,7 +2586,7 @@ JobAbortedEvent::formatBody( std::string &out )
 		insertCommonIdentifiers(tmpCl1);
 
 		tmpCl1.Assign("eventtype", ULOG_JOB_ABORTED);
-		tmpCl1.Assign("eventtime", (int)eventclock);
+		tmpCl1.Assign("eventtime", (int)GetEventclock());
 		tmpCl1.Assign("description", messagestr);
 
 		if (FILEObj->file_newEvent("Events", &tmpCl1) == QUILL_FAILURE) {
@@ -2785,7 +2790,7 @@ TerminatedEvent::formatBody( std::string &out, const char *header )
 		// this inserts scheddname, cluster, proc, etc
 		insertCommonIdentifiers(tmpCl2);
 
-		tmpCl2.Assign("endts", (int)eventclock);
+		tmpCl2.Assign("endts", (int)GetEventclock());
 
 		if (FILEObj->file_updateEvent("Runs", &tmpCl1, &tmpCl2) == QUILL_FAILURE) {
 			dprintf(D_ALWAYS, "Logging Event 3--- Error\n");
@@ -2935,7 +2940,7 @@ JobTerminatedEvent::formatBody( std::string &out )
 		ClassAd tmpCl1, tmpCl2;
 		MyString tmp = "";
 
-		tmpCl1.Assign("endts", (int)eventclock);
+		tmpCl1.Assign("endts", (int)GetEventclock());
 		tmpCl1.Assign("endtype", ULOG_JOB_TERMINATED);
 
 		// this inserts scheddname, cluster, proc, etc
@@ -3285,7 +3290,7 @@ ShadowExceptionEvent::formatBody( std::string &out )
 			messagestr[strlen(messagestr)-1] = '\0';
 
 		if (began_execution) {
-			tmpCl1.Assign("endts", (int)eventclock);
+			tmpCl1.Assign("endts", (int)GetEventclock());
 			tmpCl1.Assign("endtype", ULOG_SHADOW_EXCEPTION);
 			tmpCl1.Assign("endmessage", messagestr);
 			tmpCl1.Assign("runbytessent", sent_bytes);
@@ -3307,7 +3312,7 @@ ShadowExceptionEvent::formatBody( std::string &out )
 			insertCommonIdentifiers(tmpCl1);
 
 			tmpCl1.Assign("eventtype", ULOG_SHADOW_EXCEPTION);
-			tmpCl1.Assign("eventtime", (int)eventclock);
+			tmpCl1.Assign("eventtime", (int)GetEventclock());
 			tmpCl1.Assign("description", messagestr);
 
 			if (FILEObj->file_newEvent("Events", &tmpCl1) == QUILL_FAILURE) {
@@ -3405,7 +3410,7 @@ JobSuspendedEvent::formatBody( std::string &out )
 		insertCommonIdentifiers(tmpCl1);
 
 		tmpCl1.Assign("eventtype", ULOG_JOB_SUSPENDED);
-		tmpCl1.Assign("eventtime", (int)eventclock);
+		tmpCl1.Assign("eventtime", (int)GetEventclock());
 		tmpCl1.Assign("description", messagestr);
 
 		if (FILEObj->file_newEvent("Events", &tmpCl1) == QUILL_FAILURE) {
@@ -3479,7 +3484,7 @@ JobUnsuspendedEvent::formatBody( std::string &out )
 		insertCommonIdentifiers(tmpCl1);
 
 		tmpCl1.Assign("eventtype", ULOG_JOB_UNSUSPENDED);
-		tmpCl1.Assign("eventtime", (int)eventclock);
+		tmpCl1.Assign("eventtime", (int)GetEventclock());
 		tmpCl1.Assign("description", messagestr);
 
  	    if (FILEObj->file_newEvent("Events", &tmpCl1) == QUILL_FAILURE) {
@@ -3632,7 +3637,7 @@ JobHeldEvent::formatBody( std::string &out )
 		insertCommonIdentifiers(tmpCl1);
 
 		tmpCl1.Assign("eventtype", ULOG_JOB_HELD);
-		tmpCl1.Assign("eventtime", (int)eventclock);
+		tmpCl1.Assign("eventtime", (int)GetEventclock());
 		tmpCl1.Assign("description", messagestr);
 
 		if (FILEObj->file_newEvent("Events", &tmpCl1) == QUILL_FAILURE) {
@@ -3791,7 +3796,7 @@ JobReleasedEvent::formatBody( std::string &out )
 		insertCommonIdentifiers(tmpCl1);
 
 		tmpCl1.Assign("eventtype", ULOG_JOB_RELEASED);
-		tmpCl1.Assign("eventtime", (int)eventclock);
+		tmpCl1.Assign("eventtime", (int)GetEventclock());
 		tmpCl1.Assign("description", messagestr);
 
 		if (FILEObj->file_newEvent("Events", &tmpCl1) == QUILL_FAILURE) {

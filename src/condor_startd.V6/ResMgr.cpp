@@ -1063,7 +1063,29 @@ ResMgr::send_update( int cmd, ClassAd* public_ad, ClassAd* private_ad,
 		// Increment the resmgr's count of updates.
 	num_updates++;
 		// Actually do the updates, and return the # of updates sent.
-	return daemonCore->sendUpdates(cmd, public_ad, private_ad, nonblock);
+	int res = daemonCore->sendUpdates(cmd, public_ad, private_ad, nonblock);
+
+	static bool first_time = true;
+	if (first_time) {
+		first_time = false;
+		dprintf( D_ALWAYS, "Initial update sent to collector(s)\n");
+		if ( ! param_boolean("STARTD_SEND_READY_AFTER_FIRST_UPDATE", true)) return res;
+
+		// send a DC_SET_READY message to the master to indicate the STARTD is ready to go
+		std::string master_sinful(daemonCore->InfoCommandSinfulString(-2));
+		if ( ! master_sinful.empty()) {
+			dprintf( D_ALWAYS, "Sending DC_SET_READY message to master %s\n", master_sinful.c_str());
+			ClassAd readyAd;
+			readyAd.Assign("DaemonPID", getpid());
+			readyAd.Assign("DaemonName", "STARTD"); // fix to use the environment
+			readyAd.Assign("DaemonState", "Ready");
+			classy_counted_ptr<Daemon> dmn = new Daemon(DT_ANY,master_sinful.c_str());
+			classy_counted_ptr<ClassAdMsg> msg = new ClassAdMsg(DC_SET_READY, readyAd);
+			dmn->sendMsg(msg.get());
+		}
+	}
+
+	return res;
 }
 
 

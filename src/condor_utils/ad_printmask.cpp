@@ -23,6 +23,7 @@
 #include "MyString.h"
 #include "condor_string.h"
 #include "printf_format.h"
+#include "format_time.h"
 
 static char *new_strdup (const char *);
 
@@ -255,6 +256,27 @@ calc_widths(AttrList * al, AttrList *target /*=NULL*/ )
 }
 #endif
 
+int AttrListPrintMask::
+adjust_formats(int (*pfn)(void*pv, int index, Formatter * fmt, const char * attr), void* pv)
+{
+	Formatter *fmt;
+	char 	*attr;
+
+	formats.Rewind();
+	attributes.Rewind();
+
+	// for each item registered in the print mask, call pfn giving it a change to make adjustments.
+	int index = 0;
+	int ret = 0;
+	while ((fmt=formats.Next()) && (attr=attributes.Next()))
+	{
+		ret = pfn(pv, index, fmt, attr);
+		if (ret < 0) break;
+		++index;
+	}
+	return ret;
+}
+
 void AttrListPrintMask::set_heading(const char * heading)
 {
 	if (heading && heading[0]) {
@@ -284,6 +306,11 @@ char * AttrListPrintMask::display_Headings(List<const char> & headings)
 	{
 		const char * pszHead = headings.Next();
 		if ( ! pszHead) break;
+
+		if (fmt->options & FormatOptionHideMe) {
+			++icol;
+			continue;
+		}
 
 		if ((icol != 0) && col_prefix && ! (fmt->options & FormatOptionNoPrefix)) {
 			retval += col_prefix;
@@ -415,6 +442,100 @@ static void appendFieldofQuestions(MyString & buf, int width)
 	}
 }
 
+#if 1 // print using MyRowOfValues as intermediate 
+
+MyRowOfValues::~MyRowOfValues()
+{
+	if ( ! pdata) return;
+	delete [] pdata;
+	delete [] pvalid;
+	cmax = cols = 0;
+	pdata = NULL;
+	pvalid = NULL;
+}
+
+int MyRowOfValues::SetMaxCols(int max_cols)
+{
+	if (max_cols > cmax) {
+		classad::Value * pd = new classad::Value[max_cols];
+		unsigned char * pv = new unsigned char[max_cols];
+		if (pdata) {
+			for (int ii = 0; ii < cmax; ++ii) { pd[ii] = pdata[ii]; pvalid[ii] = pv[ii]; }
+			delete [] pdata;
+			delete [] pvalid;
+		}
+		pdata = pd;
+		pvalid = pv;
+		cmax = max_cols;
+	}
+	return cmax;
+}
+
+int MyRowOfValues::cat(const classad::Value & s)
+{
+	if (pdata && (cols < cmax)) { pvalid[cols] = true; pdata[cols++] = s; }
+	return cols;
+}
+
+classad::Value * MyRowOfValues::next(int & index) {
+	if (pdata && (cols < cmax)) {
+		index = cols++;
+		pvalid[index] = false;
+		return &pdata[index];
+	}
+	return NULL;
+}
+
+#ifdef ALLOW_ROD_PRINTMASK
+
+MyRowOfData::~MyRowOfData()
+{
+	if ( ! pdata) return;
+	for (int ii = 0; ii < cols; ++ii) { if (pdata[ii]) free(pdata[ii]); pdata[ii] = NULL; }
+	free(pdata); pdata = NULL;
+	cmax = cols = 0;
+	flat = false;
+	pdata = NULL;
+}
+
+int MyRowOfData::SetMaxCols(int max_cols)
+{
+	if (max_cols > cmax) {
+		int cb = (max_cols+1)*sizeof(char*);
+		char **pd = (char**)malloc(cb);
+		memset(pd, 0, cb);
+		if (pdata) {
+			for (int ii = 0; ii < cmax; ++ii) { pd[ii] = pdata[ii]; pdata[ii] = 0; }
+			free(pdata);
+		}
+		pdata = pd;
+		cmax = max_cols;
+	}
+	return cmax;
+}
+
+
+int MyRowOfData::cat(const char * s)
+{
+	if ( ! s) s = "";
+	if (pdata && (cols < cmax) && !flat) { pdata[cols++] = strdup(s); }
+	return cols;
+}
+
+
+bool MyRowOfData::formatstr_cat(const char *format, ...) {
+	MyString tmp;
+	va_list args;
+
+	va_start(args, format);
+	bool succeeded = tmp.vformatstr(format,args);
+	va_end(args);
+
+	this->cat(tmp.c_str());
+
+	return succeeded;
+}
+
 static void append_alt(MyString & buf, Formatter & fmt)
 {
 	int alt = (int)fmt.altKind * AltQuestion;
@@ -424,6 +545,1070 @@ static void append_alt(MyString & buf, Formatter & fmt)
 		appendFieldofQuestions(buf, fmt.width);
 	}
 }
+
+#endif // ALLOW_ROD_PRINTMASK
+
+static const char * set_alt(MyString & buf, Formatter & fmt)
+{
+	buf = "";
+	int alt = (int)fmt.altKind * AltQuestion;
+	if (alt == AltQuestion) {
+		buf += "?";
+	} else if (alt == (AltQuestion | AltWide)) {
+		appendFieldofQuestions(buf, fmt.width);
+	}
+	return buf.c_str();
+}
+
+#ifdef ALLOW_ROD_PRINTMASK
+
+static void AddCol(MyRowOfData & rod, Formatter & fmt, const char * value)
+{
+	char tmp_fmt[40];
+
+	/*
+	if (col_prefix && ! (fmt.options & FormatOptionNoPrefix))
+		(*prow) += col_prefix;
+
+	int col_start = prow->Length();
+	*/
+
+	const char * printfFmt = fmt.printfFmt;
+	if ( ! printfFmt && fmt.width) {
+		int width = (fmt.options & FormatOptionLeftAlign) ? -fmt.width : fmt.width;
+		if (fmt.options & FormatOptionNoTruncate) {
+			sprintf(tmp_fmt, "%%%ds", width);
+		} else {
+			sprintf(tmp_fmt, "%%%d.%ds", width, fmt.width);
+		}
+		printfFmt = tmp_fmt;
+		fmt.fmt_type = (char)PFT_STRING;
+		fmt.fmt_letter = 's';
+	}
+
+	if (printfFmt && (fmt.fmt_type == PFT_STRING)) {
+		rod.formatstr_cat(printfFmt, value ? value : "");
+	} else if (value) {
+		rod.cat(value);
+	}
+
+	/*
+	if (fmt.options & FormatOptionAutoWidth) {
+		int col_width = prow->Length() - col_start;
+		fmt.width = MAX(fmt.width, col_width);
+	}
+
+	if (col_suffix && ! (fmt.options & FormatOptionNoSuffix))
+		(*prow) += col_suffix;
+	*/
+}
+
+
+static void append_alt(MyRowOfData & rod, Formatter & fmt)
+{
+	MyString buf("");
+	if (fmt.altKind) append_alt(buf, fmt);
+	rod += buf;
+}
+
+#endif // ALLOW_ROD_PRINTMASK
+
+template <typename t>
+static const char * format_value(MyString & str, t & val, printf_fmt_t fmt_type, const Formatter & fmt)
+{
+	switch (fmt_type) {
+	case PFT_FLOAT: str.formatstr(fmt.printfFmt, (double)val);
+		break;
+	case PFT_POINTER:
+	case PFT_CHAR:
+	case PFT_INT:   str.formatstr(fmt.printfFmt, (long long)val);
+		break;
+	case PFT_TIME:  str = format_time(val);
+		break;
+	case PFT_DATE:  str = format_date((time_t)val);
+		break;
+	case PFT_RAW: // we don't really expect to see raw and value here...
+	case PFT_VALUE:
+	case PFT_STRING:  str.formatstr(fmt.printfFmt, val);
+		break;
+	default:
+		ASSERT(0);
+		break;
+	}
+	if (fmt.width > (int)str.length()) {
+		std::string tmp(str.c_str());
+		tmp.insert(0, (size_t)fmt.width - str.length(), ' ');
+		str = tmp.c_str();
+	}
+	return str.c_str();
+}
+
+#ifdef WIN32
+template <>
+static const char * format_value<const char *>(MyString & str, const char* & val, printf_fmt_t fmt_type, const Formatter & fmt)
+#else
+// we really expect this template to catch only the case where val is type const char*
+template <typename t>
+static const t * format_value(MyString & str, const t* & val, printf_fmt_t fmt_type, const Formatter & fmt)
+#endif
+{
+	switch (fmt_type) {
+	case PFT_FLOAT:
+	case PFT_TIME:
+	case PFT_DATE:
+	case PFT_INT:
+		ASSERT(0);
+		break;
+	case PFT_CHAR:
+	case PFT_POINTER:
+		str.formatstr(fmt.printfFmt, val);
+		break;
+	case PFT_RAW:
+	case PFT_VALUE:
+	case PFT_STRING:
+		if (fmt.printfFmt) {
+			str.formatstr(fmt.printfFmt, val);
+		} else {
+			char tfmt[40];
+			int width = (fmt.options & FormatOptionLeftAlign) ? -fmt.width : fmt.width;
+			if ( ! width) {
+				str = val;
+			} else {
+				if (fmt.options & FormatOptionNoTruncate) {
+					sprintf(tfmt, "%%%ds", width);
+				} else {
+					sprintf(tfmt, "%%%d.%ds", width, fmt.width);
+				}
+				str.formatstr(tfmt, val);
+			}
+		}
+		break;
+	default:
+		str = val;
+		break;
+	}
+	return str.c_str();
+}
+
+
+#ifdef ALLOW_ROD_PRINTMASK
+
+// render an ad into a row of data (essentially an array of char*)
+//
+
+int AttrListPrintMask::
+render (MyRowOfData & retval, AttrList *al, AttrList *target /* = NULL */)
+{
+	Formatter *fmt;
+	char 	*attr;
+	ExprTree *tree;
+	classad::Value result;
+	long long	intValue;
+	double	realValue;
+	MyString stringValue;
+	const char*	bool_str = NULL;
+	char *value_from_classad = NULL;
+
+	struct printf_fmt_info fmt_info;
+	printf_fmt_t fmt_type = PFT_NONE;
+	const char* tmp_fmt = NULL;
+	const char * pszVal;
+
+	formats.Rewind();
+	attributes.Rewind();
+
+	int columns = formats.Length();
+	int icol = 0;
+
+	// for each item registered in the print mask
+	while ( (fmt = formats.Next()) && (attr = attributes.Next()) )
+	{
+		//const char * alt = NULL;
+		if (icol == 0) {
+			fmt->options |= FormatOptionNoPrefix;
+		}
+		if (++icol == columns) {
+			fmt->options |= FormatOptionNoSuffix;
+		}
+
+		// first determine the basic type (int, string, float)
+		// that we want to retrieve, and whether we even want to bother
+		// to evaluate the attribute/expression
+		bool print_no_data = false;
+		switch (fmt->fmtKind) {
+			case CustomFormatFn::INT_CUSTOM_FMT: fmt_type = PFT_INT;   break;
+			case CustomFormatFn::FLT_CUSTOM_FMT: fmt_type = PFT_FLOAT; break;
+			case CustomFormatFn::STR_CUSTOM_FMT: fmt_type = PFT_VALUE; break;
+			case CustomFormatFn::VALUE_CUSTOM_FMT: fmt_type = PFT_VALUE; break;
+//			case CustomFormatFn::ALWAYS_CUSTOM_FMT: print_no_data = true; break;
+			default:
+					// figure out what kind of format string the
+					// caller is using, we will print out the appropriate
+					// value depending on what they want. we also determine
+					// that no data is needed here.
+				tmp_fmt = fmt->printfFmt;
+				if ( ! parsePrintfFormat(&tmp_fmt, &fmt_info) ) {
+					print_no_data = true;
+				}
+				fmt_type = fmt_info.type;
+			break;
+			case CustomFormatFn::STR_CUSTOM_RENDER:
+			case CustomFormatFn::INT_CUSTOM_RENDER:
+			case CustomFormatFn::FLT_CUSTOM_RENDER:
+			case CustomFormatFn::VALUE_CUSTOM_RENDER:
+				tmp_fmt = fmt->printfFmt;
+				if (tmp_fmt && parsePrintfFormat(&tmp_fmt, &fmt_info)) {
+					fmt_type = fmt_info.type;
+				} else {
+					fmt_type = PFT_VALUE;
+				}
+			break;
+		}
+
+			// If we decide that the "attr" requested is actually
+			// an expression, we need to remember that, as 1.
+			// it needs to be deleted, and 2. there is some
+			// special handling for the string case.
+		bool attr_is_expr = false;
+		bool result_is_valid = false;
+		if ( ! print_no_data) {
+				// if we got here, there's some data to be fetched
+				// so we'll need to get the expression tree of the
+				// attribute they asked for...
+			if ( ! (tree = al->LookupExpr (attr))) {
+					// we couldn't find it. Maybe it's an expression?
+				tree = NULL;
+				if (ParseClassAdRvalExpr(attr, tree) != 0) {
+					delete tree;
+					tree = NULL;
+				} else {
+					attr_is_expr = true; // so we know to delete tree
+				}
+			}
+
+			// conversion of the PRINTF_FMT to data types is complicated
+			// so we will leave expression evaluation to the formatting code
+			// for now.  but for the custom formats, we can get the result now
+			if (tree && (fmt->fmtKind != CustomFormatFn::PRINTF_FMT)) {
+				result_is_valid = EvalExprTree(tree, al, target, result);
+				if (attr_is_expr) { delete tree; tree = NULL; }
+			}
+		}
+
+		// now do the actual formatting.
+		//									   			classad::Value value;
+
+		//int  col_start;
+		switch( fmt->fmtKind )
+		{
+			case CustomFormatFn::PRINTF_FMT:
+				if (print_no_data) {
+						/*
+						  if parsePrintfFormat() returned 0, it means
+						  there are no conversion strings in the
+						  format string.  some users do this as a hack
+						  for always printing a newline after printing
+						  some attributes that might not be there.
+						  since we don't have a better alternative
+						  yet, we should support this kind of use.
+						  in this case, we should just print out the
+						  format string directly, and not worry about
+						  looking up attributes at all.  however, if
+						  there is an alt string defined, we should
+						  print that, instead. -Derek 2004-10-15
+						*/
+					if (fmt->altKind) {
+						append_alt(retval, *fmt);
+					} else {
+						retval.cat(fmt->printfFmt);
+					}
+					if (fmt->options & FormatOptionAutoWidth) {
+						int col_width = retval.ColWidth();
+						fmt->width = MAX(fmt->width, col_width);
+					}
+					continue;
+				}
+
+				if ( ! tree) {
+						// drat, there's no data to print if there's an
+						// alt string, use that, otherwise bail.
+					append_alt(retval, *fmt);
+					if (fmt->options & FormatOptionAutoWidth) {
+						int col_width = retval.ColWidth();
+						fmt->width = MAX(fmt->width, col_width);
+					}
+					continue;
+				}
+				ASSERT(tree);
+
+					// Now, figure out what kind of value they want,
+					// based on the kind of % conversion in their
+					// format string
+				switch( fmt_type ) {
+				case PFT_STRING:
+					if( attr_is_expr ) {
+						std::string buff;
+						if( EvalExprTree(tree, al, target, result) &&
+							result.IsStringValue(buff) ) {
+							retval.formatstr_cat(fmt->printfFmt, buff.c_str());
+						} else {
+							// couldn't eval
+							append_alt(retval, *fmt);
+						}
+					} else if( al->EvalString( attr, target, &value_from_classad ) ) {
+						stringValue.formatstr( fmt->printfFmt,
+											 value_from_classad );
+						retval += stringValue;
+						free( value_from_classad );
+						value_from_classad = NULL;
+					} else {
+						bool_str = ExprTreeToString( tree );
+						if( bool_str ) {
+							stringValue.formatstr(fmt->printfFmt, bool_str);
+							retval += stringValue;
+						} else {
+							append_alt(retval, *fmt);
+						}
+					}
+					break;
+
+				case PFT_RAW:
+					{
+						std::string buff;
+						classad::ClassAdUnParser unparser;
+						unparser.SetOldClassAd( true, true );
+						unparser.Unparse( buff, tree );
+
+						if ((fmt->options & FormatOptionAutoWidth) && strlen(fmt->printfFmt) == 2) {
+							char tfmt[40];
+							int width = (fmt->options & FormatOptionLeftAlign) ? -fmt->width : fmt->width;
+							if ( ! width) {
+								stringValue = buff;
+							} else {
+								if (fmt->options & FormatOptionNoTruncate) {
+									sprintf(tfmt, "%%%ds", width);
+								} else {
+									sprintf(tfmt, "%%%d.%ds", width, fmt->width);
+								}
+								stringValue.formatstr( tfmt, buff.c_str() );
+							}
+						} else {
+							char * tfmt = strdup(fmt->printfFmt); ASSERT(tfmt);
+							char * ptag = tfmt + ((tmp_fmt-1) - fmt->printfFmt);
+							if (*ptag == 'r' || *ptag == 'R')
+								*ptag = 's'; // convert printf format to %s
+							stringValue.formatstr( tfmt, buff.c_str() );
+							free(tfmt);
+						}
+						retval += stringValue;
+					}
+					break;
+
+				case PFT_VALUE:
+					{
+						const char * pszValue = NULL;
+						std::string buff;
+						if( EvalExprTree(tree, al, target, result) ) {
+							// Only strings are formatted differently for
+							// %v vs %V
+							bool fQuote = (fmt_info.fmt_letter == 'V');
+							if ( fQuote || !result.IsStringValue(buff) ) {
+								classad::ClassAdUnParser unparser;
+								unparser.SetOldClassAd( true, true );
+								unparser.Unparse( buff, result );
+							}
+							pszValue = buff.c_str();
+						}
+						else if (fmt->altKind) {
+							buff = "?";
+							pszValue = buff.c_str();
+						}
+
+						if ((fmt->options & FormatOptionAutoWidth) && strlen(fmt->printfFmt) == 2) {
+							char tfmt[40];
+							int width = (fmt->options & FormatOptionLeftAlign) ? -fmt->width : fmt->width;
+							if ( ! width) {
+								stringValue = pszValue;
+							} else {
+								if (fmt->options & FormatOptionNoTruncate) {
+									sprintf(tfmt, "%%%ds", width);
+								} else {
+									sprintf(tfmt, "%%%d.%ds", width, fmt->width);
+								}
+								stringValue.formatstr( tfmt, pszValue );
+							}
+						} else {
+							char * tfmt = strdup(fmt->printfFmt); ASSERT(tfmt);
+							char * ptag = tfmt + ((tmp_fmt-1) - fmt->printfFmt);
+							//bool fQuote = (*ptag == 'V');
+							if (*ptag == 'v' || *ptag == 'V')
+								*ptag = 's'; // convert printf format to %s
+							stringValue.formatstr( tfmt, pszValue );
+							free(tfmt);
+						}
+						retval += stringValue;
+					}
+					break;
+
+				case PFT_INT:
+				case PFT_FLOAT:
+				case PFT_TIME:
+				case PFT_DATE:
+					if( EvalExprTree(tree, al, target, result) ) {
+						switch( result.GetType() ) {
+						case classad::Value::REAL_VALUE:
+							result.IsRealValue(realValue);
+							retval += format_value<double>(stringValue, realValue, fmt_type, *fmt);
+							break;
+
+						case classad::Value::INTEGER_VALUE:
+							result.IsIntegerValue(intValue);
+							retval += format_value<long long>(stringValue, intValue, fmt_type, *fmt);
+							break;
+
+						case classad::Value::BOOLEAN_VALUE:
+							{ bool b; result.IsBooleanValue( b ); intValue = b?1:0; }
+							retval += format_value<long long>(stringValue, intValue, fmt_type, *fmt);
+							break;
+
+						default:
+								// the thing they want to print
+								// doesn't evaulate to an int or a
+								// float, so just print the alternate
+							append_alt(retval, *fmt);
+							break;
+						}
+					} else {
+							// couldn't eval
+						append_alt(retval, *fmt);
+					}
+					break;
+
+				default:
+					EXCEPT( "Unknown value (%d) from parsePrintfFormat()!",
+							(int)fmt_type );
+					break;
+				}
+				if (fmt->options & FormatOptionAutoWidth) {
+					int col_width = retval.ColWidth();
+					fmt->width = MAX(fmt->width, col_width);
+				}
+				if(attr_is_expr) { delete tree; tree = NULL; }
+				break;
+
+			case CustomFormatFn::INT_CUSTOM_RENDER:
+			case CustomFormatFn::INT_CUSTOM_FMT:
+				if (result_is_valid) {
+					result_is_valid = result.IsNumber(intValue);
+				} else {
+					intValue = 0;
+				}
+				if (result_is_valid || (fmt->options & FormatOptionAlwaysCall)) {
+					if (fmt->fmtKind == CustomFormatFn::INT_CUSTOM_RENDER) {
+						result_is_valid = fmt->dr(intValue, al, *fmt);
+						if (result_is_valid) {
+							pszVal = format_value<long long>(stringValue, intValue, fmt_type, *fmt);
+						} else {
+							pszVal = set_alt(stringValue, *fmt);
+						}
+					} else {
+						pszVal = fmt->df(intValue , *fmt);
+					}
+				} else {
+					pszVal = set_alt(stringValue, *fmt);
+				}
+				AddCol(retval, *fmt, pszVal);
+				break;
+
+			case CustomFormatFn::FLT_CUSTOM_RENDER:
+			case CustomFormatFn::FLT_CUSTOM_FMT:
+				if (result_is_valid) {
+					result_is_valid = result.IsNumber(realValue);
+				} else {
+					realValue = 0.0;
+				}
+				if (result_is_valid || (fmt->options & FormatOptionAlwaysCall)) {
+					if (fmt->fmtKind == CustomFormatFn::FLT_CUSTOM_RENDER) {
+						result_is_valid = fmt->fr(realValue, al, *fmt);
+						if (result_is_valid) {
+							pszVal = format_value<double>(stringValue, realValue, fmt_type, *fmt);
+						} else {
+							pszVal = set_alt(stringValue, *fmt);
+						}
+					} else {
+						pszVal = fmt->ff(realValue , *fmt);
+					}
+				} else {
+					pszVal = set_alt(stringValue, *fmt);
+				}
+				AddCol(retval, *fmt, pszVal);
+				break;
+
+			case CustomFormatFn::STR_CUSTOM_RENDER:
+			case CustomFormatFn::STR_CUSTOM_FMT:
+				pszVal = NULL;
+				if (result_is_valid) {
+					result_is_valid = result.IsStringValue(pszVal);
+					// unlike numeric values, if we have a custom renderer
+					// then we want to call it even if the current value isn't a string
+					if ( ! result_is_valid && fmt->fmtKind == CustomFormatFn::STR_CUSTOM_RENDER) {
+						result_is_valid = ! result.IsExceptional();
+					}
+				}
+				if (result_is_valid || (fmt->options & FormatOptionAlwaysCall)) {
+					if (fmt->fmtKind == CustomFormatFn::STR_CUSTOM_RENDER) {
+						std::string val(pszVal?pszVal:"");
+						result_is_valid = fmt->sr(val, al, *fmt);
+						if (result_is_valid) {
+							pszVal = val.c_str();
+							pszVal = format_value(stringValue, pszVal, fmt_type, *fmt);
+						} else {
+							pszVal = set_alt(stringValue, *fmt);
+						}
+					} else {
+						pszVal = fmt->sf(pszVal, *fmt);
+					}
+				} else {
+					pszVal = set_alt(stringValue, *fmt);
+				}
+				AddCol(retval, *fmt, pszVal);
+				break;
+
+			case CustomFormatFn::VALUE_CUSTOM_FMT:
+				pszVal = fmt->vf(result, *fmt);
+				if ( ! pszVal) pszVal = set_alt(stringValue, *fmt);
+				AddCol(retval, *fmt, pszVal);
+				break;
+
+			case CustomFormatFn::VALUE_CUSTOM_RENDER:
+				result_is_valid = fmt->vr(result, al, *fmt);
+				if ( ! result_is_valid) pszVal = set_alt(stringValue, *fmt);
+				else switch (result.GetType()) {
+					case classad::Value::REAL_VALUE:
+						result.IsRealValue(realValue);
+						pszVal = format_value<double>(stringValue, realValue, fmt_type, *fmt);
+						break;
+
+					case classad::Value::INTEGER_VALUE:
+						result.IsIntegerValue(intValue);
+						pszVal = format_value<long long>(stringValue, intValue, fmt_type, *fmt);
+						break;
+
+					case classad::Value::BOOLEAN_VALUE:
+						{ bool b; result.IsBooleanValue( b ); intValue = b?1:0; }
+						pszVal = format_value<long long>(stringValue, intValue, fmt_type, *fmt);
+						break;
+
+					case classad::Value::STRING_VALUE:
+						result.IsStringValue(pszVal);
+						pszVal = format_value(stringValue, pszVal, fmt_type, *fmt);
+						break;
+
+					case classad::Value::UNDEFINED_VALUE:
+						pszVal = "undefined";
+						pszVal = format_value(stringValue, pszVal, fmt_type, *fmt);
+						break;
+
+					case classad::Value::ERROR_VALUE:
+						pszVal = "error";
+						pszVal = format_value(stringValue, pszVal, fmt_type, *fmt);
+						break;
+
+					default:
+						{
+						std::string buff;
+						classad::ClassAdUnParser unparser;
+						unparser.SetOldClassAd( true, true );
+						unparser.Unparse( buff, result );
+						stringValue = buff.c_str();
+						pszVal = stringValue.c_str();
+						}
+						break;
+				}
+				AddCol(retval, *fmt, pszVal);
+				break;
+				/*
+			case CustomFormatFn::ALWAYS_CUSTOM_FMT:
+				pszVal = fmt->af(al, *fmt);
+				AddCol(retval, *fmt, pszVal);
+				break;
+				*/
+
+			default:
+				AddCol(retval, *fmt, set_alt(stringValue, *fmt));
+				break;
+		}
+	}
+
+	return retval.ColCount();
+}
+
+int AttrListPrintMask::
+display (std::string & out, MyRowOfData & rod)
+{
+	Formatter *fmt;
+	MyString retval("");
+
+	//PRAGMA_REMIND("tj: change this to write directly into the output string")
+	formats.Rewind();
+	attributes.Rewind();
+	int columns = formats.Length();
+
+	if (row_prefix)
+		retval += row_prefix;
+
+	int icol = 0;
+
+	// for each item registered in the print mask
+	while ((fmt = formats.Next()))
+	{
+		if (col_prefix && icol > 0 && ! (fmt->options & FormatOptionNoPrefix))
+			retval += col_prefix;
+
+		retval += rod.Column(icol);
+		/*
+		if (fmt->options & FormatOptionAutoWidth) {
+			int col_width = retval.Length() - col_start;
+			fmt->width = MAX(fmt->width, col_width);
+		}
+		*/
+
+		++icol;
+		if (col_suffix && (icol < columns) && ! (fmt->options & FormatOptionNoSuffix))
+			retval += col_suffix;
+	}
+
+	if (overall_max_width && retval.Length() > overall_max_width)
+		retval.setChar(overall_max_width, 0);
+
+	if (row_suffix)
+		retval += row_suffix;
+
+	// append result into the supplied std::string, and also return it's c_str()
+	out += retval.Value();
+	return retval.length();
+}
+
+int AttrListPrintMask::
+display (std::string & out, AttrList *al, AttrList *target /* = NULL */)
+{
+	int columns = formats.Length();
+	MyRowOfData rod;
+	rod.SetMaxCols(columns);
+	render(rod, al, target);
+	return display(out, rod);
+}
+
+#endif // ALLOW_ROD_PRINTMASK
+
+//
+// ###########################################################
+//
+
+static int calc_column_width(Formatter *fmt, classad::Value * pval)
+{
+	MyString tmp;
+	printf_fmt_t fmt_type = (printf_fmt_t)(fmt->fmt_type);
+	switch (pval->GetType()) {
+	case classad::Value::REAL_VALUE: {
+		double realValue  = 0;
+		pval->IsRealValue(realValue);
+		if (fmt_type == PFT_FLOAT || fmt_type == PFT_INT || fmt_type == PFT_TIME || fmt_type == PFT_DATE) {
+			format_value<double>(tmp, realValue, fmt_type, *fmt);
+			return (int)tmp.length();
+			}
+		else if (fmt_type == PFT_VALUE || fmt_type == PFT_STRING || fmt_type == PFT_RAW) {
+			classad::ClassAdUnParser unparser;
+			std::string buf;
+			unparser.Unparse(buf, *pval);
+			return (int)buf.length();
+			}
+		}
+		break;
+
+	case classad::Value::INTEGER_VALUE: {
+		long long intValue = 0;
+		pval->IsNumber(intValue);
+		if (fmt_type == PFT_FLOAT || fmt_type == PFT_INT || fmt_type == PFT_TIME || fmt_type == PFT_DATE || fmt_type == PFT_POINTER) {
+			format_value<long long>(tmp, intValue, fmt_type, *fmt);
+			return (int)tmp.length();
+			}
+		else if (fmt_type == PFT_VALUE || fmt_type == PFT_STRING || fmt_type == PFT_RAW) {
+			tmp.formatstr("%lld", intValue);
+			return (int)tmp.length();
+			}
+		}
+		break;
+
+	case classad::Value::STRING_VALUE: {
+		int length = fmt->width;
+		if (pval->IsStringValue(length))
+			return length;
+		}
+		break;
+
+	default: /// g++ bitches if there is no default case... <sigh>
+		break;
+	}
+	return fmt->width;
+}
+
+//
+//
+//
+int AttrListPrintMask::
+render (MyRowOfValues & rov, AttrList *al, AttrList *target /* = NULL */)
+{
+	Formatter *fmt;
+	char 	*attr;
+	formats.Rewind();
+	attributes.Rewind();
+	struct printf_fmt_info fmt_info;
+	printf_fmt_t fmt_type = PFT_NONE;
+	const char* tmp_fmt = NULL;
+
+	rov.reset(); // in case a non-empty one was passed in.
+
+	// for each item registered in the print mask
+	while ( (fmt = formats.Next()) && (attr = attributes.Next()) )
+	{
+		int icol; // to hold the icol out param from rov.next
+		classad::Value * pval = rov.next(icol);
+
+		// first determine the basic type (int, string, float)
+		// that we want to retrieve, and whether we even want to bother
+		// to evaluate the attribute/expression
+		bool print_no_data = false;
+		switch (fmt->fmtKind) {
+			case CustomFormatFn::INT_CUSTOM_FMT: fmt_type = PFT_INT;   break;
+			case CustomFormatFn::FLT_CUSTOM_FMT: fmt_type = PFT_FLOAT; break;
+			case CustomFormatFn::STR_CUSTOM_FMT: fmt_type = PFT_STRING; break;
+			case CustomFormatFn::VALUE_CUSTOM_FMT: fmt_type = PFT_VALUE; break;
+			default:
+					// figure out what kind of format string the
+					// caller is using, we will fetch the appropriate
+					// value depending on what they want. we also determine
+					// that no data is needed here.
+				tmp_fmt = fmt->printfFmt;
+				if ( ! parsePrintfFormat(&tmp_fmt, &fmt_info) ) {
+					print_no_data = true;
+				}
+				fmt_type = fmt_info.type;
+			break;
+			case CustomFormatFn::STR_CUSTOM_RENDER:
+			case CustomFormatFn::INT_CUSTOM_RENDER:
+			case CustomFormatFn::FLT_CUSTOM_RENDER:
+			case CustomFormatFn::VALUE_CUSTOM_RENDER:
+				fmt_type = PFT_VALUE;
+			break;
+		}
+
+		if (print_no_data) {
+			pval->SetStringValue(fmt->printfFmt ? fmt->printfFmt : "");
+			if ((fmt->options & FormatOptionAutoWidth)) { 
+				int wid = 0; pval->IsStringValue(wid);
+				fmt->width = MAX(fmt->width, wid);
+			}
+			rov.set_valid(true);
+			continue;
+		}
+
+			// if we got here, there's some data to be fetched
+			// so we'll need to get the expression tree of the
+			// attribute they asked for...
+			// If we decide that the "attr" requested is actually
+			// an expression, we need to remember that, as 1.
+			// it needs to be deleted, and 2. there is some
+			// special handling for the string case.
+		bool attr_is_expr = false;
+		ExprTree *tree = NULL;
+		if ( ! (tree = al->LookupExpr (attr))) {
+				// we couldn't find it. Maybe it's an expression?
+			tree = NULL;
+			if (ParseClassAdRvalExpr(attr, tree) != 0) {
+				delete tree;
+				tree = NULL;
+			} else {
+				attr_is_expr = true; // so we know to delete tree
+			}
+		}
+
+		bool col_is_valid = false;
+		if (tree) {
+			// The string format type is a very special case, because it will
+			// UNPARSE when the attr is not an expression and doesn't evaluate to a string...
+			if (fmt->fmtKind == CustomFormatFn::PRINTF_FMT && (fmt_type == PFT_STRING) && ! attr_is_expr) {
+				char * value_from_classad = NULL;
+				if (al->EvalString(attr, target, &value_from_classad)) {
+					pval->SetStringValue(value_from_classad);
+					free(value_from_classad);
+					value_from_classad = NULL;
+					col_is_valid = true;
+				} else {
+					// For the %s format, if we can't evaluate then unparse.
+					fmt_type = PFT_RAW;
+				}
+			}
+			if (fmt_type ==  PFT_RAW) {
+				std::string buff;
+				classad::ClassAdUnParser unparser;
+				unparser.SetOldClassAd(true, true);
+				unparser.Unparse(buff, tree);
+				pval->SetStringValue(buff);
+				col_is_valid = true;
+			} else {
+				col_is_valid = EvalExprTree(tree, al, target, *pval);
+			}
+
+			// if we made the tree, then unmake it now.
+			if (attr_is_expr) { delete tree; tree = NULL; }
+		}
+
+		// now give custom renderers a chance to render
+		switch (fmt->fmtKind) {
+			case CustomFormatFn::INT_CUSTOM_RENDER: {
+				long long intValue = 0;
+				pval->IsNumber(intValue);
+				col_is_valid = fmt->dr(intValue, al, *fmt);
+				pval->SetIntegerValue(intValue);
+			} break;
+
+			case CustomFormatFn::FLT_CUSTOM_RENDER: {
+				double realValue = 0;
+				pval->IsNumber(realValue);
+				col_is_valid = fmt->fr(realValue , al, *fmt);
+				pval->SetRealValue(realValue);
+			} break;
+
+			case CustomFormatFn::STR_CUSTOM_RENDER: {
+				std::string str;
+				pval->IsStringValue(str);
+				col_is_valid = fmt->sr(str, al, *fmt);
+				pval->SetStringValue(str);
+			} break;
+
+			case CustomFormatFn::VALUE_CUSTOM_RENDER:
+				col_is_valid = fmt->vr(*pval, al, *fmt);
+			break;
+
+			default:
+				// for printf and formatters, make sure that the value is of the correct type
+				if ( ! col_is_valid) break;
+				if (fmt_type == PFT_INT || fmt_type == PFT_CHAR || fmt_type == PFT_TIME) {
+					long long intValue = 0;
+					col_is_valid = pval->IsNumber(intValue);
+					pval->SetIntegerValue(intValue);
+				} else if (fmt_type == PFT_FLOAT) {
+					double realValue = 0;
+					col_is_valid = pval->IsNumber(realValue);
+					pval->SetRealValue(realValue);
+				} else if (fmt_type == PFT_STRING) {
+					col_is_valid = pval->IsStringValue();
+				} else if (fmt_type == PFT_RAW) {
+					// unparsing should have already happened.
+				} else if (fmt_type == PFT_DATE) {
+					long long intValue = 0;
+					classad::abstime_t date;
+					col_is_valid = pval->IsNumber(intValue);
+					if (col_is_valid) {
+						pval->SetIntegerValue(intValue);
+					} else {
+						col_is_valid = pval->IsAbsoluteTimeValue(date);
+					}
+				} else {
+					//PRAGMA_REMIND("tj: need other cases here??")
+				}
+			break;
+		}
+
+		if (col_is_valid && (fmt->options & FormatOptionAutoWidth)) {
+			int col_width = calc_column_width(fmt, pval);
+			fmt->width = MAX(fmt->width, (int)(col_width));
+		}
+
+		rov.set_valid(col_is_valid);
+	} // while
+
+	return rov.ColCount();
+}
+
+int AttrListPrintMask::
+display (std::string & out, MyRowOfValues & rov)
+{
+	Formatter *fmt;
+	MyString mstrValue;
+	std::string strValue;
+	std::string tfmt;
+	long long intValue;
+	double    realValue;
+	classad::ClassAdUnParser unparser;
+	unparser.SetOldClassAd( true, true );
+
+	//PRAGMA_REMIND("tj: change this to write directly into the output string")
+	formats.Rewind();
+	attributes.Rewind();
+	int columns = formats.Length();
+	size_t row_start = out.length();
+
+	if (row_prefix)
+		out += row_prefix;
+
+	int icol = 0;
+
+	// for each item registered in the print mask
+	while ((fmt = formats.Next()))
+	{
+		if (fmt->options & FormatOptionHideMe) {
+			++icol;
+			continue;
+		}
+
+		if (col_prefix && icol > 0 && ! (fmt->options & FormatOptionNoPrefix))
+			out += col_prefix;
+
+		//size_t field_start = out.length();
+
+		classad::Value * pval = rov.Column(icol);
+		unsigned char col_is_valid = rov.is_valid(icol);
+		const char * pszVal = NULL;
+		const char * printfFmt = fmt->printfFmt;
+		if (printfFmt && ( ! printfFmt[0] || (printfFmt[0] == '%' && printfFmt[1] == 's' && printfFmt[2] == 0))) printfFmt = NULL;
+
+		switch (fmt->fmtKind) {
+		case CustomFormatFn::INT_CUSTOM_FMT:
+			if (col_is_valid || (fmt->options & FormatOptionAlwaysCall)) {
+				pval->IsNumber(intValue);
+				pszVal = fmt->df(intValue, *fmt);
+				col_is_valid = true; printfFmt = NULL;
+			}
+			break;
+		case CustomFormatFn::FLT_CUSTOM_FMT:
+			if (col_is_valid || (fmt->options & FormatOptionAlwaysCall)) {
+				pval->IsNumber(realValue);
+				pszVal = fmt->df(realValue, *fmt);
+				col_is_valid = true; printfFmt = NULL;
+			}
+			break;
+		case CustomFormatFn::STR_CUSTOM_FMT:
+			if (col_is_valid || (fmt->options & FormatOptionAlwaysCall)) {
+				pval->IsStringValue(pszVal);
+				pszVal = fmt->sf(pszVal, *fmt);
+				col_is_valid = true; printfFmt = NULL;
+			}
+			break;
+		case CustomFormatFn::VALUE_CUSTOM_FMT:
+			if (col_is_valid || (fmt->options & FormatOptionAlwaysCall)) {
+				pszVal = fmt->vf(*pval, *fmt);
+				col_is_valid = true; printfFmt = NULL;
+			}
+			break;
+		default:
+			// handle printf formatting below
+			break;
+		}
+
+		if ( ! col_is_valid) {
+			pszVal = set_alt(mstrValue, *fmt);
+			printfFmt = NULL;
+		} else if (printfFmt) {
+			struct printf_fmt_info fmt_info;
+			const char * ptag = printfFmt;
+			if ( ! parsePrintfFormat(&ptag, &fmt_info)) {
+				pszVal = printfFmt;
+			} else {
+				switch (fmt_info.type) {
+				case PFT_TIME:
+				case PFT_DATE:
+				case PFT_INT:
+				case PFT_POINTER:
+				case PFT_CHAR:
+					pval->IsNumber(intValue);
+					pszVal = format_value<long long>(mstrValue, intValue, fmt_info.type, *fmt);
+					break;
+				case PFT_FLOAT:
+					pval->IsNumber(realValue);
+					pszVal = format_value<double>(mstrValue, realValue, fmt_info.type, *fmt);
+					break;
+				case PFT_STRING:
+					if ( ! pszVal) pval->IsStringValue(pszVal);
+					pszVal = format_value(mstrValue, pszVal, fmt_info.type, *fmt);
+					break;
+				case PFT_RAW:
+				case PFT_VALUE:
+					// for 'v' type values, we print strings rather than unparsing them. (for cap V we unparse)
+					if ( ! pszVal && fmt_info.fmt_letter != 'V') pval->IsStringValue(pszVal);
+					if ( ! pszVal) {
+						strValue.clear();
+						unparser.Unparse(strValue, *pval);
+						pszVal = strValue.c_str();
+					}
+					tfmt = printfFmt; tfmt[(ptag-1)-printfFmt] = 's';
+					mstrValue.formatstr(tfmt.c_str(), pszVal);
+					pszVal = mstrValue.c_str();
+					break;
+				default:  // just here to make g++ shut up
+					break;
+				}
+			}
+		} else if ( ! pszVal) {
+			pval->IsStringValue(pszVal);
+		}
+
+		// at this point, pszVal is the display text for the column
+		// now we want to align it to the column width and possibly truncate it.
+		//
+		size_t col_width = pszVal ? strlen(pszVal) : 0;
+		if (fmt->options & FormatOptionAutoWidth) {
+			fmt->width = MAX(fmt->width, (int)(col_width));
+		}
+		if ( ! fmt->width) {
+			if (col_width > 0) out += pszVal;
+		} else {
+			// insert the pszVal aligned and/or truncated to the given column width
+			size_t wid = (size_t)((fmt->width < 0) ? -fmt->width : fmt->width);
+			if (col_width > wid) {
+				out.append(pszVal, wid);
+			} else {
+				if ((fmt->width < 0) || (fmt->options & FormatOptionLeftAlign)) {
+					if (col_width > 0) out.append(pszVal);
+					out.append(wid - col_width, ' '); 
+				} else {
+					if (wid > col_width) out.append(wid - col_width, ' '); 
+					if (col_width > 0) out.append(pszVal);
+				}
+			}
+		}
+
+		++icol;
+		if (col_suffix && (icol < columns) && ! (fmt->options & FormatOptionNoSuffix))
+			out += col_suffix;
+	}
+
+	int width = (int)(out.length() - row_start);
+	if ((overall_max_width > 0) && (width > overall_max_width))
+		out.erase(row_start + overall_max_width, std::string::npos);
+
+	if (row_suffix)
+		out += row_suffix;
+
+	// return number of chars that we added.
+	return (int)(out.length() - row_start);
+}
+
+#ifdef ALLOW_ROD_PRINTMASK
+#else
+int AttrListPrintMask::
+display (std::string & out, AttrList *al, AttrList *target /* = NULL */)
+{
+	int columns = formats.Length();
+	MyRowOfValues rov;
+	rov.SetMaxCols(columns);
+	render(rov, al, target);
+	return display(out, rov);
+}
+#endif
+
+#else // old code before MyRowOfValues
 
 // returns a new char * that is your responsibility to delete.
 int AttrListPrintMask::
@@ -828,6 +2013,55 @@ display (std::string & out, AttrList *al, AttrList *target /* = NULL */)
 	return retval.length();
 }
 
+#endif
+
+void AttrListPrintMask::
+dump(std::string & out, const CustomFormatFnTable * pFnTable, List<const char> * pheadings /*=NULL*/)
+{
+	Formatter *fmt;
+	char 	*attr;
+
+	if ( ! pheadings) pheadings = &headings;
+
+	formats.Rewind();
+	attributes.Rewind();
+	pheadings->Rewind();
+
+	std::string item;
+	std::string scratch;
+
+	// for each item registered in the print mask
+	while ( (fmt = formats.Next()) && (attr = attributes.Next()) )
+	{
+		const char * pszHead = pheadings->Next();
+		const char * fnName = "";
+		item.clear();
+		if (pszHead) { formatstr(item, "HEAD: '%s'\n", pszHead); out += item; }
+		if (attr) { formatstr(item, "ATTR: '%s'\n", attr); out += item; }
+
+		// if there is a custom format function, attempt to turn that into a string
+		// by looking it up in the given table.
+		if (fmt->sf) {
+			if (pFnTable) {
+				const CustomFormatFnTableItem * ptable = pFnTable->pTable;
+				for (int ii = 0; ii < (int)pFnTable->cItems; ++ii) {
+					if ((StringCustomFormat)ptable[ii].cust == fmt->sf) {
+						fnName = ptable[ii].key;
+						break;
+					}
+				}
+			} else {
+				formatstr(scratch, "%p", fmt->sf);
+				fnName = scratch.c_str();
+			}
+		}
+
+		formatstr(item, "FMT: %4d %05x %d %d %d %d %s %s\n",
+			fmt->width, fmt->options, fmt->fmt_letter, fmt->fmt_type, fmt->fmtKind, fmt->altKind,
+			fmt->printfFmt ? fmt->printfFmt : "", fnName);
+		out += item;
+	}
+}
 
 int AttrListPrintMask::
 display (FILE *file, AttrListList *list, AttrList *target /* = NULL */, List<const char> * pheadings /* = NULL */)

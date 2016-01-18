@@ -118,9 +118,8 @@ public:
 		/// Destructor.
 	virtual ~Daemon();
 
-		/** Find all information about the daemon.  This is virtual,
-		  since the way you find info for a daemon depends on the type
-		  of daemon.  But, all the different methods you might use to
+		/** Find all information about the daemon.
+		  All the different methods you might use to
 		  find the info are supposed to be handled through here: fully
 		  resolving hostnames, address files, querying the collector,
 		  well-known addresses, DNS lookups, whatever it takes.  If
@@ -128,7 +127,8 @@ public:
 		  what went wrong.
 		  @return Success or failure of getting all the info.
 		*/
-	virtual bool locate( void );
+	enum LocateType {LOCATE_FULL, LOCATE_FOR_LOOKUP};
+	virtual bool locate( LocateType method=LOCATE_FULL );
 
 		/** Return the error string.  If there's ever a problem
 		  enountered in the Daemon object, this will start returning a
@@ -614,7 +614,7 @@ protected:
 		  @param adtype The type of ClassAd we'll query.
 		  @parma query_collector Whether to query collector if all else fails
 		  */
-	bool getDaemonInfo( AdTypes adtype, bool query_collector = true );
+	bool getDaemonInfo( AdTypes adtype, bool query_collector, LocateType method );
 
 		/** Helper for central manager daemons (collector and
 		  negotiator).  These are a special case since they have

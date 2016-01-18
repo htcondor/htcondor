@@ -37,9 +37,9 @@ extern int set_status_print_mask_from_stream (const char * streamid, bool is_fil
 const char * getTypeStr ();
 
 const char *
-getPPStyleStr ()
+getPPStyleStr (ppOption pps)
 {
-	switch (ppStyle)
+	switch (pps)
 	{
     	case PP_NOTSET:			return "<Not set>";
 		case PP_GENERIC:		return "Generic";
@@ -63,8 +63,7 @@ getPPStyleStr ()
     	case PP_CUSTOM:			return "Custom";
         default:				return "<Unknown!>";
 	}
-	// should not reach here
-	exit (1);
+	return "<Unknown!>";
 }
 
 
@@ -74,9 +73,9 @@ setPPstyle (ppOption pps, int i, const char *argv)
     static int setBy = 0;
     static const char *setArg = NULL;
 
-	if (argv == NULL) {
-		printf ("Set by arg %d (%-10s), PrettyPrint style = %s\n",
-				setBy, setArg, getPPStyleStr());
+	if (argv == NULL && i < 0) {
+		fprintf (i==-2?stderr:stdout,"PrettyPrint: %s   (Set by arg %d '%s')\nTotals: %s\n",
+				getPPStyleStr(ppStyle), setBy, setArg, getPPStyleStr(pps));
 		return;
 	}
 		
@@ -158,8 +157,7 @@ setType (const char *dtype, int i, const char *argv)
     static const char *setArg = NULL;
 
 	if (argv == NULL) {
-		printf ("Set by arg %d (%-10s), Query type = %s\n",
-				setBy, setArg, getTypeStr());
+		fprintf (i==-2?stderr:stdout,"Query type: %s   (Set by arg %d '%s')\n", getTypeStr(), setBy, setArg);
 		return;
 	}
 
@@ -258,6 +256,7 @@ getModeStr()
 		case MODE_STORAGE_NORMAL:	return "Normal (Storage)";
 		case MODE_GENERIC_NORMAL:	return "Normal (Generic)";
 		case MODE_OTHER:		return "Generic";
+		case MODE_HAD_NORMAL:		return "Had";
 		case MODE_ANY_NORMAL:		return "Normal (Any)";
 		default:			return "<Unknown!>";
 	}
@@ -273,7 +272,7 @@ setMode (Mode mod, int i, const char *argv)
     static const char *setArg = NULL;
 
 	if (argv == NULL) {
-		printf("Set by arg %d (%-10s), Mode = %s\n",setBy,setArg,getModeStr());
+		fprintf(i==-2?stderr:stdout,"Mode: %s   (Set by arg %d '%s')\n", getModeStr(), setBy, setArg);
 		return;
 	}
 
@@ -390,5 +389,20 @@ setMode (Mode mod, int i, const char *argv)
 			exit (1);
 		}
     }
+}
+
+const CustomFormatFnTable * getCondorStatusPrintFormats();
+void dumpPPMask (std::string & out, AttrListPrintMask & mask)
+{
+	extern List<const char> pm_head; // The list of headings for the mask entries
+	extern void prettyPrintInitMask();
+	prettyPrintInitMask();
+
+	List<const char> * pheadings = NULL;
+	if ( ! mask.has_headings()) {
+		if (pm_head.Length() > 0) pheadings = &pm_head;
+	}
+
+	mask.dump(out, getCondorStatusPrintFormats(), pheadings);
 }
 

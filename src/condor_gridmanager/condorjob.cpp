@@ -1634,7 +1634,7 @@ ClassAd *CondorJob::buildSubmitAd()
 	if ( universeCanReconnect( tmp_int ) &&
 		 submit_ad->Lookup( ATTR_JOB_LEASE_DURATION ) == NULL ) {
 
-		submit_ad->Assign( ATTR_JOB_LEASE_DURATION, 20 * 60 );
+		submit_ad->Assign( ATTR_JOB_LEASE_DURATION, 40 * 60 );
 	}
 
 		// worry about ATTR_JOB_[OUTPUT|ERROR]_ORIG

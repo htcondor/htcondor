@@ -580,7 +580,7 @@ bool Dag::ProcessOneEvent (ULogEventOutcome outcome,
 
 			case ULOG_JOB_ABORTED:
 #if !defined(DISABLE_NODE_TIME_METRICS)
-				job->TermAbortMetrics( event->proc, event->eventTime,
+				job->TermAbortMetrics( event->proc, event->GetEventTime(),
 							_metrics );
 #endif
 					// Make sure we don't count finished jobs as idle.
@@ -590,7 +590,7 @@ bool Dag::ProcessOneEvent (ULogEventOutcome outcome,
               
 			case ULOG_JOB_TERMINATED:
 #if !defined(DISABLE_NODE_TIME_METRICS)
-				job->TermAbortMetrics( event->proc, event->eventTime,
+				job->TermAbortMetrics( event->proc, event->GetEventTime(),
 							_metrics );
 #endif
 					// Make sure we don't count finished jobs as idle.
@@ -625,7 +625,7 @@ bool Dag::ProcessOneEvent (ULogEventOutcome outcome,
 
 			case ULOG_EXECUTE:
 #if !defined(DISABLE_NODE_TIME_METRICS)
-				job->ExecMetrics( event->proc, event->eventTime,
+				job->ExecMetrics( event->proc, event->GetEventTime(),
 							_metrics );
 #endif
 				ProcessNotIdleEvent( job, event->proc );
@@ -2379,16 +2379,25 @@ PrintEvent( debug_level_t level, const ULogEvent* event, Job* node,
 
 	const char *recovStr = recovery ? " [recovery mode]" : "";
 
+	MyString timestr;
+		// Be sure to pass GetEventTime() here, because we want the
+		// event time to always be output has a human-readable string,
+		// even if dprintf() is configured to print timestamps.
+	time_to_str( &event->GetEventTime(), timestr );
+		// String from time_to_str has trailing blank (needed for other
+		// places in the code).
+	timestr.trim();
+
 	if( node ) {
-	    debug_printf( level, "Event: %s for %s Node %s (%d.%d.%d)%s\n",
+	    debug_printf( level, "Event: %s for %s Node %s (%d.%d.%d) {%s}%s\n",
 					  event->eventName(), node->JobTypeString(),
 					  node->GetJobName(), event->cluster, event->proc,
-					  event->subproc, recovStr );
+					  event->subproc, timestr.Value(), recovStr );
 	} else {
-        debug_printf( level, "Event: %s for unknown Node (%d.%d.%d): "
+        debug_printf( level, "Event: %s for unknown Node (%d.%d.%d) {%s}: "
 					  "ignoring...%s\n", event->eventName(),
 					  event->cluster, event->proc,
-					  event->subproc, recovStr );
+					  event->subproc, timestr.Value(), recovStr );
 	}
 }
 

@@ -1182,6 +1182,7 @@ rm -rf %{buildroot}
 %files all
 #################
 %files
+%exclude %_sbindir/openstack_gahp
 %defattr(-,root,root,-)
 %doc LICENSE-2.0.txt examples
 %dir %_sysconfdir/condor/

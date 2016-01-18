@@ -157,6 +157,7 @@ daemon::daemon(const char *name, bool is_daemon_core, bool is_h )
 	process_name = NULL;
 	watch_name = NULL;
 	log_name = NULL;
+	ready_state = NULL;
 	if( strcmp(name, "MASTER") == MATCH ) {
 		runs_here = FALSE;
 	} else {
@@ -167,7 +168,7 @@ daemon::daemon(const char *name, bool is_daemon_core, bool is_h )
 	restarts = 0;
 	newExec = FALSE; 
 	timeStamp = 0;
-	startTime = 0;
+	startTime = 0;	// startTime of 0 indicates we have not (yet) ever tried to start this daemon
 	isDC = is_daemon_core;
 	start_tid = -1;
 	recover_tid = -1;
@@ -208,6 +209,9 @@ daemon::~daemon()
 	}
 	if( log_name != NULL ) {
 		free( log_name );
+	}
+	if( ready_state != NULL ) {
+		free( ready_state );
 	}
 	if( ha_lock != NULL ) {
 		delete( ha_lock );
@@ -418,7 +422,7 @@ daemon::DoConfig( bool init )
 	// Check for the _INITIAL_STATE parameter (only at init time)
 	// Default to on_hold = false, set to true of state eq "off"
 	if ( init ) {
-		on_hold = true;
+		on_hold = 2;
 	}
 
 	// XXX These defaults look to be very wrong, compare with 
@@ -1501,6 +1505,24 @@ daemon::InitParams()
 	}
 }
 
+// set the deamon readiness state text
+void daemon::SetReadyState(const char * state)
+{
+	// if there is existing state text, and the new text fits just overwrite
+	// otherwise free the old text and dup the new text into a new allocation.
+	if (ready_state) {
+		if (state && strlen(state) <= strlen(ready_state)) {
+			strcpy(ready_state, state);
+			return;
+		}
+		free (ready_state);
+		ready_state = NULL;
+	}
+	if (state) {
+		ready_state = strdup(state);
+	}
+}
+
 
 int
 daemon::SetupHighAvailability( void )
@@ -1742,6 +1764,7 @@ Daemons::Daemons()
 	stop_other_daemons_when_startds_gone = NONE;
 	prevLHF = 0;
 	m_retry_start_all_daemons_tid = -1;
+	m_deferred_query_ready_tid = -1;
 	master = NULL;
 }
 
@@ -1774,6 +1797,262 @@ Daemons::SetupControllers( void )
 	}
 	return 0;
 }
+
+DeferredQuery::DeferredQuery(int /*cmd*/, Stream * stm, ExprTree * req, time_t expires)
+	: stream(stm), requirements(NULL), expire_time(expires)
+{
+	if (stream) { Sock* sock = (Sock*)stream; sock->incRefCount(); }
+	if (req) { requirements = req->Copy(); }
+}
+
+DeferredQuery::~DeferredQuery()
+{
+	if (stream) { Sock* sock = (Sock*)stream; sock->decRefCount(); stream = NULL; }
+	if (requirements) { delete requirements; requirements = NULL; }
+}
+
+
+bool Daemons::InitDaemonReadyAd(ClassAd & readyAd)
+{
+	bool all_daemons_alive = true;
+	int  num_startup = 0;
+	int  num_hung = 0;
+	int  num_dead = 0;
+
+	std::map<std::string, class daemon*>::iterator it;
+	for (it = daemon_ptr.begin(); it != daemon_ptr.end(); it++ ) {
+		class daemon* dmn = it->second;
+
+		std::string attr(dmn->name_in_config_file); attr += "_PID";
+		readyAd.Assign(attr.c_str(), dmn->pid);
+
+		if (dmn->ready_state) {
+			attr = dmn->name_in_config_file; attr += "_State";
+			readyAd.Assign(attr.c_str(), dmn->ready_state);
+		}
+
+		//const char * state = dmn->ready_state;
+		const char * state;
+		if (dmn->pid) {
+			bool hung = false;
+			int num_alive_msgs = 1;
+			if (dmn->type != DT_MASTER) num_alive_msgs = daemonCore->Got_Alive_Messages(dmn->pid, hung);
+			if ( ! num_alive_msgs) all_daemons_alive = false;
+			if (hung) {
+				++num_hung;
+				state = "Hung";
+			} else if (num_alive_msgs) {
+				state = "Alive";
+			} else {
+				state = "Startup";
+				++num_startup;
+			}
+		} else {
+			bool for_file = false;
+			int hold = dmn->OnHold();
+			if (hold && (hold != 2)) { // hold value of 2 indicates a startup hold not a "real" hold.
+				state = "Hold";
+			} else {
+				all_daemons_alive = false;
+				if (dmn->WaitingforStartup(for_file)) {
+					state = for_file ? "WaitForStartupFile" : "WaitForStartup";
+					++num_startup;
+				} else if ( ! dmn->startTime) {
+					// if not on hold or dead, a startTime of 0 indicates we are in very early init
+					state = "Startup";
+					++num_startup;
+				} else {
+					state = "Dead";
+					++num_dead;
+				}
+			}
+		}
+		readyAd.Assign(dmn->name_in_config_file, state);
+	}
+
+	readyAd.Assign("AllAlive", all_daemons_alive);
+	readyAd.Assign("NumStartup", num_startup);
+	readyAd.Assign("NumHung", num_hung);
+	readyAd.Assign("NumDead", num_dead);
+	readyAd.Assign("IsReady", all_daemons_alive && ! (num_hung || num_dead));
+
+	return all_daemons_alive;
+}
+
+#if 0
+bool Daemons::GetDaemonReadyStates(std::string & ready)
+{
+	bool all_daemons_ready = true;
+
+	std::map<std::string, class daemon*>::iterator it;
+	for (it = daemon_ptr.begin(); it != daemon_ptr.end(); it++ ) {
+		class daemon* dmn = it->second;
+		if (dmn->type == DT_MASTER) continue;
+
+		if ( ! ready.empty()) ready += " ";
+		ready += dmn->name_in_config_file;
+		ready += ":";
+		if (dmn->pid) {
+			if (dmn->ready_state) { ready += dmn->ready_state; }
+			else {
+				bool hung = false;
+				if (daemonCore->Got_Alive_Messages(dmn->pid, hung)) {
+					ready += hung ? "hung" : "alive";
+				} else {
+					ready += "startup";
+				}
+			}
+		} else {
+			bool for_file = false;
+			if (dmn->OnHold()) { ready += "hold"; }
+			else if (dmn->WaitingforStartup(for_file)) { ready += "waitForStartup"; if (for_file) ready += "File"; }
+			else { ready += "dead"; }
+		}
+
+		if ( ! dmn->ready_state || MATCH != strcasecmp(dmn->ready_state, "ready")) {
+			all_daemons_ready = false;
+		}
+	}
+
+	return all_daemons_ready;
+}
+#endif
+
+// timer callback to handle deferred replys for DC_QUERY_READY command
+void
+Daemons::DeferredQueryReadyReply()
+{
+	if (deferred_queries.empty()) {
+		dprintf(D_ALWAYS, "WARNING: DeferredQueryReadyReply called with empty queries list\n");
+	}
+
+	time_t now = time(NULL);
+
+	// make a reply ad containing daemon ready states
+	// we will return this, and may also use it to evaluate ready requirements.
+	// the default is_ready value is true when all non-held daemons are alive.
+	ClassAd readyAd;
+	bool is_ready = InitDaemonReadyAd(readyAd);
+	dprintf(D_FULLDEBUG, "DeferredQueryReadyReply - %d\n", is_ready);
+
+	// check for expired queries, and those that have requirements satisfied
+	// if we find any, send the reply and remove it from the list.
+	//
+	std::list<DeferredQuery*>::iterator it;
+	for (it = deferred_queries.begin(); it != deferred_queries.end(); ) {
+		DeferredQuery * query = (*it);
+		bool expired = query->expire_time > 0 && now >= query->expire_time;
+
+		// for non-expired queries, that have requirements, check the requirements.
+		//
+		if ( ! expired && query->requirements) {
+			classad::Value result;
+			dprintf(D_FULLDEBUG, "DeferredQueryReadyReply - %d evaluating %s\n",
+				is_ready, ExprTreeToString(query->requirements));
+			if (readyAd.EvaluateExpr(query->requirements, result)) {
+				bool bb=false;
+				is_ready = result.IsBooleanValueEquiv(bb) && bb;
+			}
+		}
+
+		// send reply for satisfied requirements, or expired queries
+		// then remove it from the list, note that removing also increments the iterator
+		if (is_ready || expired) {
+			dprintf(D_ALWAYS, "DeferredQueryReadyReply - replying %d%s\n", is_ready, expired ? " (timer expired)" : "");
+			query->stream->encode();
+			if (!putClassAd(query->stream, readyAd) || !query->stream->end_of_message()) {
+				dprintf(D_ALWAYS, "Failed to send reply message to ready query.\n");
+			}
+			it = deferred_queries.erase(it);
+			delete query;
+		} else {
+			it++;
+		}
+	}
+
+	// when the deferred query list is empty, cancel the timer
+	if (m_deferred_query_ready_tid >= 0 && deferred_queries.empty()) {
+		dprintf(D_FULLDEBUG, "DeferredQueryReadyReply - no deferred queries, cancelling timer %d.\n", m_deferred_query_ready_tid);
+		daemonCore->Cancel_Timer(m_deferred_query_ready_tid);
+		m_deferred_query_ready_tid = -1;
+	}
+}
+
+// handle the DC_QUERY_READY command
+int
+Daemons::QueryReady(ClassAd & cmdAd, Stream* stm)
+{
+	time_t wait_time = 0;
+	cmdAd.LookupInteger("WaitTimeout", wait_time);
+	ExprTree * requirements = cmdAd.Lookup("ReadyRequirements");
+
+	// make a reply ad containing daemon ready states
+	// we will return this, and may also use it to evaluate ready requirements.
+	// the default is_ready value is true when all non-held daemons are alive.
+	ClassAd readyAd;
+	bool is_ready = InitDaemonReadyAd(readyAd);
+
+	// if there is a requirements expression, check the requirements and use
+	// it to override the is_ready flag.  At this time we also validate
+	// the requirements expression and return immediately if it is invalid
+	if (requirements) {
+		classad::Value result;
+		dprintf(D_FULLDEBUG, "QueryReady - %d evaluating %s\n", is_ready, ExprTreeToString(requirements));
+		if ( ! readyAd.EvaluateExpr(requirements, result)) {
+			is_ready = true; // force an immediate reply
+			readyAd.Assign("Error", "invalid ReadyRequirements expression");
+		} else {
+			bool bb = false;
+			if ( ! result.IsBooleanValueEquiv(bb)) {
+				is_ready = true; // force an immediate reply
+				readyAd.Assign("Error", "ReadyRequirements does not evaluate to a bool or equivalent");
+			} else {
+				is_ready = bb;
+			}
+		}
+	}
+
+	// We send a reply now if ready or if the timeout value is 0 or negative
+	// otherwise we add the query to the deferred queries list and start a timer
+	// the timer runs fairly quickly (1 second intervals) because we use this
+	// query mostly in the test suite where we want timely answers.
+	if (stm && wait_time > 0 && ! is_ready) {
+		time_t expire_time = time(NULL) + wait_time -1;
+		DeferredQuery * query = new DeferredQuery(DC_QUERY_READY, stm, requirements, expire_time);
+		if ( ! query) {
+			return FALSE;
+		}
+
+		dprintf(D_FULLDEBUG, "QueryReady - adding query to deferred queries list\n");
+		deferred_queries.push_back(query);
+
+		// start a timer if one is not already running
+		if (m_deferred_query_ready_tid < 0) {
+			m_deferred_query_ready_tid = daemonCore->Register_Timer(1, 1,
+				(TimerHandlercpp)&Daemons::DeferredQueryReadyReply,
+				"Daemons::DeferredQueryReadyReply", this);
+			if (m_deferred_query_ready_tid < 0) {
+				return FALSE;
+			}
+			//dprintf(D_FULLDEBUG, "QueryReady - registered timer %d\n", m_deferred_query_ready_tid);
+		}
+		//dprintf(D_FULLDEBUG, "QueryReady - returning KEEP_STREAM\n");
+		return KEEP_STREAM;
+
+	} else if (stm) {
+		// send a reply now
+		dprintf(D_ALWAYS, "QueryReady - replying %d\n", is_ready);
+		stm->encode();
+		if (!putClassAd(stm, readyAd) || !stm->end_of_message())
+		{
+			dprintf(D_ALWAYS, "Failed to send reply message to ready query.\n");
+			return FALSE;
+		}
+		return TRUE;
+	}
+	return TRUE;
+}
+
 
 void
 Daemons::InitParams()
@@ -2858,6 +3137,18 @@ Daemons::FindDaemon( daemon_t dt )
 	return NULL;
 }
 
+class daemon*
+Daemons::FindDaemonByPID( int pid )
+{
+	std::map<std::string, class daemon*>::iterator iter;
+
+	for( iter = daemon_ptr.begin(); iter != daemon_ptr.end(); iter++ ) {
+		if( iter->second->pid == pid ) {
+			return iter->second;
+		}
+	}
+	return NULL;
+}
 
 void
 Daemons::CancelRestartTimers( void )

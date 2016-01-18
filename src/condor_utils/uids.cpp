@@ -1083,6 +1083,18 @@ static int
 set_user_ids_implementation( uid_t uid, gid_t gid, const char *username, 
 							 int is_quiet ) 
 {
+		// Don't allow changing of user ids when we're in user priv state.
+	if ( CurrentPrivState == PRIV_USER || CurrentPrivState == PRIV_USER_FINAL ) {
+		if ( uid != UserUid || gid != UserGid ) {
+			if ( !is_quiet ) {
+				dprintf( D_ALWAYS, "ERROR: Attempt to change user ids while in user privilege state\n" );
+			}
+			return FALSE;
+		} else {
+			return TRUE;
+		}
+	}
+
 	if( uid == 0 || gid == 0 ) {
 			// NOTE: we want this dprintf() even if we're in quiet
 			// mode, since we should *never* be allowing this.
@@ -1236,6 +1248,18 @@ init_user_ids_implementation( const char username[], int is_quiet )
 	int					scm;
 	uid_t 				usr_uid;
 	gid_t				usr_gid;
+
+		// Don't allow changing of user ids when we're in user priv state.
+	if ( CurrentPrivState == PRIV_USER || CurrentPrivState == PRIV_USER_FINAL ) {
+		if ( strcmp( username, UserName ) ) {
+			if ( !is_quiet ) {
+				dprintf( D_ALWAYS, "ERROR: Attempt to change user ids while in user privilege state\n" );
+			}
+			return FALSE;
+		} else {
+			return TRUE;
+		}
+	}
 
 		// So if we are not root, trying to use any user id is bogus
 		// since the OS will disallow it.  So if we are not running as
@@ -1402,6 +1426,10 @@ _set_priv(priv_state s, const char *file, int line, int dologging)
 	CurrentPrivState = s;
 
 	if (can_switch_ids()) {
+		if ((s == PRIV_USER || s == PRIV_USER_FINAL) && !UserIdsInited ) {
+			EXCEPT("Programmer Error: attempted switch to user privilege, "
+				   "but user ids are not initialized");
+		}
 		switch (s) {
 		case PRIV_ROOT:
 			set_root_euid();
