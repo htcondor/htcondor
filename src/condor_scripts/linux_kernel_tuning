@@ -11,6 +11,12 @@
 ##
 
 #
+# This script logs its actions to syslog.  If you'd rather it didn't,
+# change the line below to something like '/bin/true'.
+#
+LOGGER='/usr/bin/logger -t htcondor'
+
+#
 # Increase the global number of file descriptors.  For example, each
 # dynamically-linked shadow uses approximately 13 just to open its
 # libraries.
@@ -54,6 +60,25 @@ MAX_RECEIVE_BUFFER=10383360
 ##
 ## Implementation.  You shouldn't need to change anything below here.
 ##
+
+LOG=/dev/null
+if [ -d /etc/sysctl.d ]; then
+	LOG=/etc/sysctl.d/99-htcondor.conf
+	(
+		echo "#"
+		echo "# This file was written by $0"
+		echo "# when the condor_master started up."
+		echo "#"
+		echo "# This script tunes kernel parameters to support HTCondor at"
+		echo "# larger scales.  A list of the changes follows.  You can set"
+		echo "# ENABLE_KERNEL_TUNING = FALSE"
+		echo "# in your HTCondor configuration to disable this entirely, or"
+		echo "# set LINUX_KERNEL_TUNING_SCRIPT to some other file to change"
+		echo "# which script is run when the condor_master daemon starts."
+		echo "#"
+	) > ${LOG}
+fi
+
 increaseKernelParameter() {
 	PARAMETER=$1
 	FILE=$2
@@ -63,9 +88,13 @@ increaseKernelParameter() {
 		OLD=`cat ${FILE}`
 		if [ ${NEW} -gt ${OLD} ]; then
 			echo "Changing ${PARAMETER} from ${OLD} to ${NEW}"
+			echo "# Changing ${PARAMETER} from ${OLD} to ${NEW}" >> ${LOG}
+			echo "Changing ${PARAMETER} from ${OLD} to ${NEW}" | ${LOGGER}
 			echo ${NEW} > ${FILE}
 		else
 			echo "Not changing ${PARAMETER}: new value (${NEW}) <= old value (${OLD})."
+			echo "# Not changing ${PARAMETER}: new value (${NEW}) <= old value (${OLD})." >> ${LOG}
+			echo "Not changing ${PARAMETER}: new value (${NEW}) <= old value (${OLD})." | ${LOGGER}
 		fi
 	fi
 }
@@ -78,6 +107,8 @@ setKernelParameter() {
 	if [ -n "${NEW}" ]; then
 		OLD=`cat ${FILE}`
 		echo "Changing ${PARAMETER} from ${OLD} to ${NEW}"
+		echo "# Changing ${PARAMETER} from ${OLD} to ${NEW}" >> ${LOG}
+		echo "Changing ${PARAMETER} from ${OLD} to ${NEW}" | ${LOGGER}
 		echo ${NEW} > ${FILE}
 	fi
 }
