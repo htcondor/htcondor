@@ -2861,9 +2861,17 @@ render_dag_owner (std::string & out, AttrList *ad, Formatter & fmt)
 static bool
 render_batch_name (std::string & out, AttrList *ad, Formatter & /*fmt*/)
 {
+	const bool fold_dagman_sibs = dash_progress && (dash_progress & 2);
+
+	int universe = 0;
 	std::string tmp;
 	if (ad->LookupString(ATTR_JOB_BATCH_NAME, out)) {
 		// got it.
+	} else if ( ! fold_dagman_sibs && ad->LookupInteger(ATTR_JOB_UNIVERSE, universe) && universe == CONDOR_UNIVERSE_SCHEDULER) {
+		// set batch name to dag id, but not if we allow folding of multiple root dagmans into a single batchname
+		int cluster = 0;
+		ad->LookupInteger(ATTR_CLUSTER_ID, cluster);
+		formatstr(out, "DAG: %d", cluster);
 	} else if (ad->LookupExpr(ATTR_DAGMAN_JOB_ID)
 				&& ad->LookupString(ATTR_DAG_NODE_NAME, out)) {
 		out.insert(0,"NODE: ");
@@ -4887,10 +4895,15 @@ reduce_results(ROD_MAP_BY_ID & results) {
 			if (fold_dagman_sibs && jr.batch_uid && jr.next_sib && jr.getString(ixBatchNameCol, name_width)) {
 				wids.batch_name_width = MAX(wids.batch_name_width, name_width);
 			} else {
+			#if 1 // assume batch name column is already correct.
+				jr.getString(ixBatchNameCol, name_width);
+				wids.batch_name_width = MAX(wids.batch_name_width, name_width);
+			#else
 				tmp.formatstr("DAG %d", jid.cluster);
 				jr.rov.Column(ixBatchNameCol)->SetStringValue(tmp.c_str());
 				jr.rov.set_col_valid(ixBatchNameCol, true);
 				wids.batch_name_width = MAX(wids.batch_name_width, (int)tmp.length());
+			#endif
 			}
 		} else {
 			if (jr.getString(ixBatchNameCol, name_width)) {
