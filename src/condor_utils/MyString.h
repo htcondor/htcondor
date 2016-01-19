@@ -303,6 +303,10 @@ class MyString
 	*/
 	void trim( void );
 
+	/** Trim leading and trailing quotes from this string, returns the quote char if there were any
+	*/
+	char trim_quotes(const char * quote_chars="\"");
+
 	/** Remove all the whitespace from this string
 	*/
 	void compressSpaces( void );
