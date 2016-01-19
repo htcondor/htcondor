@@ -41,7 +41,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Fixed a bug that caused updates to the job attribute
+\Attr{TimerRemove} to not be respected while the job was being managed
+by the \Condor{shadow}, \Condor{gridmanager}, or the Job Router.
+\Ticket{5470}
 
 \end{itemize}
 
