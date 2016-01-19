@@ -256,6 +256,7 @@ public:
 		JOB_ID_KEY k(key);
 		JobQueueJob* Ad = new JobQueueJob();  // TODO: find out of we can count on ad already being a JobQueueJob*
 		Ad->Update(*ad); delete ad; // TODO: transfer ownership of attributes from ad to Ad? I think this ad is always nearly empty.
+		Ad->SetDirtyTracking(true);
 		int iret = table.insert(k, Ad);
 		return iret >= 0;
 	}
