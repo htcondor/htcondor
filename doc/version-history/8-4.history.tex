@@ -41,6 +41,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug that caused the \Condor{master} to fail if a shared port
+daemon address file from before version 8.4.0 were still present.
+\Ticket{5488}
+
 \item Fixed a bug that caused updates to the job attribute
 \Attr{TimerRemove} to not be respected while the job was being managed
 by the \Condor{shadow}, \Condor{gridmanager}, or the Job Router.
@@ -72,10 +76,6 @@ by the \Condor{shadow}, \Condor{gridmanager}, or the Job Router.
 \noindent Bugs Fixed:
 
 \begin{itemize}
-
-\item Fixed a bug that caused the \Condor{master} to fail if a shared port
-daemon address file from before version 8.4.0 were still present.
-\Ticket{5488}
 
 \item Fixed a bug that caused the \Opt{-append} option to be handled too
 late to apply to the first Queue statement in a \Condor{submit} file.
