@@ -81,6 +81,11 @@ bool VanillaToGrid::vanillaToGrid(classad::ClassAd * ad, int target_universe, co
 	ad->Delete( ATTR_STAGE_IN_FINISH );
 	ad->Delete( ATTR_STAGE_IN_START );
 
+	// We aren't going to forward updates to this attribute,
+	// so strip it out.
+	// We do evaluate it locally in the source job ad.
+	ad->Delete(ATTR_TIMER_REMOVE_CHECK);
+
 	ad->Delete("SUBMIT_" ATTR_JOB_IWD); // the presence of this would prevent schedd from rewriting spooled iwd
 
 	// Stuff to reset
