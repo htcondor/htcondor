@@ -37,6 +37,7 @@
 #define USERAUTH_ADTYPE			"Authentication"
 #define LICENSE_ADTYPE			"License"
 #define STORAGE_ADTYPE			"Storage"
+#define ACCOUNTING_ADTYPE			"Accounting"
 #define NEGOTIATOR_ADTYPE		"Negotiator"
 #define HAD_ADTYPE			"HAD"
 #define XFER_SERVICE_ADTYPE		"XferService"
@@ -81,6 +82,7 @@ enum AdTypes
 	XFER_SERVICE_AD,
 	LEASE_MANAGER_AD,
 	DEFRAG_AD,
+	ACCOUNTING_AD,
 	// This should *ALWAYS* be at the end of this list
 	NUM_AD_TYPES,
 };

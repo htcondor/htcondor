@@ -1266,6 +1266,7 @@ negotiationTime ()
 	ClassAdListDoesNotDeleteAds startdAds; // ptrs to startd ads in allAds
         //ClaimIdHash claimIds(MyStringHash);
     ClaimIdHash claimIds;
+	std::set<std::string> accountingNames; // set of active submitter names to publish
 	ClassAdListDoesNotDeleteAds scheddAds; // ptrs to schedd ads in allAds
 
 	/**
@@ -1316,7 +1317,7 @@ negotiationTime ()
 	// ----- Get all required ads from the collector
     time_t start_time_phase1 = time(NULL);
 	dprintf( D_ALWAYS, "Phase 1:  Obtaining ads from collector ...\n" );
-	if( !obtainAdsFromCollector( allAds, startdAds, scheddAds,
+	if( !obtainAdsFromCollector( allAds, startdAds, scheddAds, accountingNames,
 		claimIds ) )
 	{
 		dprintf( D_ALWAYS, "Aborting negotiation cycle\n" );
@@ -1798,6 +1799,10 @@ negotiationTime ()
 
 	if (param_boolean("NEGOTIATOR_UPDATE_AFTER_CYCLE", false)) {
 		updateCollector();
+	}
+
+	if (param_boolean("NEGOTIATOR_ADVERTISE_ACCOUNTING", true)) {
+		forwardAccountingData(accountingNames);
 	}
 
     // reduce negotiator delay drift
@@ -2406,6 +2411,37 @@ double Matchmaker::hgq_round_robin(GroupEntry* group, double surplus) {
     return surplus;
 }
 
+// Make an accounting ad per active submitter, and send them
+// to the collector.
+void
+Matchmaker::forwardAccountingData(std::set<std::string> &names) {
+		std::set<std::string>::iterator it;
+		
+		DCCollector collector;
+	
+		dprintf(D_FULLDEBUG, "Updating collector with accounting information\n");
+			// for all of the names of active submitters
+		for (it = names.begin(); it != names.end(); it++) {
+			std::string name = *it;
+			std::string key("Customer.");  // hashkey is "Customer" followed by name
+			key += name;
+
+			ClassAd *accountingAd = accountant.GetClassAd(MyString(key));
+			if (accountingAd) {
+
+				ClassAd updateAd(*accountingAd); // copy all fields from Accountant Ad
+
+				DCCollectorAdSequences seq; // Don't need them, interface requires them
+				updateAd.Assign(ATTR_NAME, name.c_str()); // the hash key
+				updateAd.Assign("Priority", accountant.GetPriority(MyString(name)));
+
+				SetMyTypeName(updateAd, "Accounting");
+				SetTargetTypeName(updateAd, "none");
+				collector.sendUpdate(UPDATE_ACCOUNTING_AD, &updateAd, seq, NULL, false);
+			}
+		}
+		dprintf(D_FULLDEBUG, "Done Updating collector with accounting information\n");
+}
 
 GroupEntry::GroupEntry():
     name(),
@@ -3149,6 +3185,7 @@ obtainAdsFromCollector (
 						ClassAdList &allAds,
 						ClassAdListDoesNotDeleteAds &startdAds, 
 						ClassAdListDoesNotDeleteAds &scheddAds, 
+						std::set<std::string> &submitterNames,
 						ClaimIdHash &claimIds )
 {
 	CondorQuery privateQuery(STARTD_PVT_AD);
@@ -3394,6 +3431,8 @@ obtainAdsFromCollector (
                 dprintf(D_FULLDEBUG, "Ignoring submitter %s with no requested jobs\n", subname.Value());
                 continue;
             }
+
+			submitterNames.insert(std::string(subname.Value()));
 
     		ad->Assign(ATTR_TOTAL_TIME_IN_CYCLE, 0);
 

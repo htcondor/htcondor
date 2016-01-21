@@ -327,6 +327,11 @@ const int QUERY_GENERIC_ADS = 74;
 const int SHARED_PORT_CONNECT = 75;
 const int SHARED_PORT_PASS_SOCK = 76;
 
+const int UPDATE_ACCOUNTING_AD = 77;
+const int QUERY_ACCOUNTING_ADS = 78;
+const int INVALIDATE_ACCOUNTING_ADS = 79;
+
+
 /* these comments are used to control command_table_generator.pl
 NAMETABLE_DIRECTIVE:END_SECTION:collector
 */

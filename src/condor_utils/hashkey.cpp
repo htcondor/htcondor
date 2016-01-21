@@ -320,6 +320,13 @@ makeStorageAdHashKey (AdNameHashKey &hk, ClassAd *ad)
 	return adLookup( "Storage", ad, ATTR_NAME, NULL, hk.name );
 }
 
+bool
+makeAccountingAdHashKey (AdNameHashKey &hk, ClassAd *ad)
+{
+	hk.ip_addr = "";
+	return adLookup( "Accounting", ad, ATTR_NAME, NULL, hk.name );
+}
+
 
 bool
 makeNegotiatorAdHashKey (AdNameHashKey &hk, ClassAd *ad)
