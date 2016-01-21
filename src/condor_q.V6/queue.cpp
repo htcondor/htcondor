@@ -221,6 +221,7 @@ static  int g_match_limit = -1;
 
 static 	int malformed, running, idle, held, suspended, completed, removed;
 
+static char dash_progress_alt_char = 0;
 static  const char *jobads_file = NULL; // NULL, or points to jobads filename from argv
 static  const char *machineads_file = NULL; // NULL, or points to machineads filename from argv
 static  const char *userprios_file = NULL; // NULL, or points to userprios filename from argv
@@ -1980,8 +1981,17 @@ processCommandLineArguments (int argc, char *argv[])
 		}
 		else if (is_dash_arg_colon_prefix(dash_arg, "progress", &pcolon, 3)) {
 			dash_progress = true;
-			if (pcolon && pcolon[1]) {
-				dash_progress = atoi(++pcolon);
+			if (pcolon) {
+				StringList opts(++pcolon, ",:");
+				opts.rewind();
+				while (const char * popt = opts.next()) {
+					char ch = *popt;
+					if (ch >= '0' && ch <= '9') {
+						dash_progress = atoi(popt);
+					} else if (strchr("b?*.-_#z", ch)) {
+						dash_progress_alt_char = ch;
+					}
+				}
 			}
 #ifdef USE_LATE_PROJECTION
 			qdo_mode = QDO_Progress;
@@ -4659,11 +4669,11 @@ const char * const jobProgress_PrintFormat = "SELECT\n"
 	ATTR_OWNER               " AS OWNER           WIDTH AUTO PRINTAS DAG_OWNER OR ??\n"  // 0
 	ATTR_JOB_CMD             " AS BATCH_NAME      WIDTH -12  PRINTAS BATCH_NAME\n" // 1
 	ATTR_Q_DATE              " AS '   SUBMITTED'  WIDTH 12   PRINTAS QDATE\n" // 2
-	ATTR_JOB_STATUS          " AS '  DONE' WIDTH 6 PRINTF %6d\n"  // Done   // 3
-	ATTR_JOB_UNIVERSE        " AS 'ACTIVE' WIDTH 6 PRINTF %6d\n"  // Active // 4
-	ATTR_DAG_NODES_QUEUED    " AS '  IDLE' WIDTH 6 PRINTF %6d\n"  // Idle   // 5
-	ATTR_DAG_NODES_DONE      " AS '  HELD' WIDTH 6 PRINTF %6d\n"  // Held   // 6
-	ATTR_DAG_NODES_TOTAL     " AS ' TOTAL' WIDTH 6 PRINTF %6d\n"  // Total  // 7
+	ATTR_JOB_STATUS          " AS '  DONE' WIDTH 6 PRINTF %6d OR _\n"  // Done   // 3
+	ATTR_JOB_UNIVERSE        " AS '  RUN ' WIDTH 6 PRINTF %6d OR _\n"  // Active // 4
+	ATTR_DAG_NODES_QUEUED    " AS '  IDLE' WIDTH 6 PRINTF %6d OR _\n"  // Idle   // 5
+	ATTR_DAG_NODES_DONE      " AS '  HOLD' WIDTH 6 PRINTF %6d OR _\n"  // Held   // 6
+	ATTR_DAG_NODES_TOTAL     " AS ' TOTAL' WIDTH 6 PRINTF %6d OR _\n"  // Total  // 7
 	ATTR_JOB_STATUS          " AS JOB_IDS WIDTH 0 PRINTAS JOB_STATUS\n"     // 8
 //	ATTR_JOB_REMOTE_USER_CPU " AS '    RUN_TIME'  WIDTH 12   PRINTAS CPU_TIME\n"
 //	ATTR_IMAGE_SIZE          " AS SIZE       WIDTH 4    PRINTAS MEMORY_USAGE\n"
@@ -4748,10 +4758,13 @@ static void reduce_procs(cluster_progress & prog, JobRowOfData & jr)
 	// number of completed jobs by looking at the max procid.
 	// by counting procids that have left the queue.
 	if ( ! (jr.flags & (JROD_SCHEDUNIV | JROD_ISDAGNODE))) {
-		int total = prog.max_proc+1;
-		int done = total - prog.jobs;
-		prog.nodes_total += total;
-		prog.nodes_done += done;
+		const bool guess_at_jobs_done_per_cluster = (dash_progress & 0x10);
+		if (guess_at_jobs_done_per_cluster) {
+			int total = prog.max_proc+1;
+			int done = total - prog.jobs;
+			prog.nodes_total += total;
+			prog.nodes_done += done;
+		}
 	}
 }
 
@@ -4791,6 +4804,8 @@ struct _fixup_progress_width_values {
 	int batch_name_width;
 	int ids_width;
 	bool any_held;
+	bool zeros_as_dashes;
+	char alt_kind;
 };
 
 // hacky way to adjust column widths based on the data.
@@ -4815,6 +4830,9 @@ static int fnFixupWidthsForProgressFormat(void* pv, int index, Formatter * fmt, 
 			fmt->options |= FormatOptionHideMe;
 		}
 	}
+	if (p->zeros_as_dashes && (index >= 3 && index <= 7)) {
+		fmt->altKind = p->alt_kind;
+	}
 	return 1;
 }
 
@@ -4834,6 +4852,13 @@ reduce_results(ROD_MAP_BY_ID & results) {
 
 	struct _fixup_progress_width_values wids;
 	memset(&wids, 0, sizeof(wids));
+	static const char alt_char_map[] = "b?*.-_#z"; // map cmd line option char to alt_kind index
+	for (int ix = 0; ix < (int)sizeof(alt_char_map)-1; ++ix) {
+		if (alt_char_map[ix] == dash_progress_alt_char) {
+			wids.zeros_as_dashes = true;
+			wids.alt_kind = (char)ix;
+		}
+	}
 
 	for(ROD_MAP_BY_ID::iterator it = results.begin(); it != results.end(); ++it) {
 		JobRowOfData & jr = it->second;
@@ -4883,7 +4908,7 @@ reduce_results(ROD_MAP_BY_ID & results) {
 
 		++ixCol;
 		jr.rov.Column(ixCol)->SetIntegerValue(num_total);
-		jr.rov.set_col_valid(ixCol, true);
+		jr.rov.set_col_valid(ixCol, (bool)(num_total > 0));
 
 		int name_width = 0;
 		jr.getString(ixOwnerCol, name_width);

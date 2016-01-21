@@ -95,7 +95,7 @@ commonRegisterFormat (int wid, int opts, const char *print,
 	newFmt->sf = sf;
 	newFmt->width = abs(wid);
 	newFmt->options = opts;
-	newFmt->altKind = (char)((opts & (AltQuestion | AltWide | AltFixMe)) / AltQuestion);
+	newFmt->altKind = (char)((opts & (AltQuestion | AltWide | AltMask)) / AltQuestion);
 	if (wid < 0)
 		newFmt->options |= FormatOptionLeftAlign;
 	if (print) {
@@ -423,7 +423,7 @@ PrintCol(MyString * prow, Formatter & fmt, const char * value)
 		(*prow) += col_suffix;
 }
 
-static void appendFieldofQuestions(MyString & buf, int width)
+static void appendFieldofChar(MyString & buf, int width, char ch = '?')
 {
 	int cq = width;
 	if ( ! cq)
@@ -432,12 +432,13 @@ static void appendFieldofQuestions(MyString & buf, int width)
 		cq = 0-width;
 
 	if (cq < 3) {
-		buf += "?";
+		char ach[2] = { ch, 0 };
+		buf += ach;
 	} else {
 		buf.reserve_at_least(buf.length() + cq+1);
 		buf += '[';
 		--cq;
-		while (--cq) buf += '?';
+		while (--cq) buf += ch;
 		buf += ']';
 	}
 }
@@ -536,27 +537,25 @@ bool MyRowOfData::formatstr_cat(const char *format, ...) {
 	return succeeded;
 }
 
+#endif // ALLOW_ROD_PRINTMASK
+
 static void append_alt(MyString & buf, Formatter & fmt)
 {
+	static const char alt_chars[] = { ' ', '?', '*', '.', '-', '_', '#', '0', };
 	int alt = (int)fmt.altKind * AltQuestion;
-	if (alt == AltQuestion) {
-		buf += "?";
-	} else if (alt == (AltQuestion | AltWide)) {
-		appendFieldofQuestions(buf, fmt.width);
+	char alt_char = alt_chars[fmt.altKind & 7];
+	if (alt & AltWide) {
+		appendFieldofChar(buf, fmt.width, alt_char);
+	} else if (alt_char != ' ') {
+		char ach[2] = { alt_char, 0 };
+		buf += ach;
 	}
 }
-
-#endif // ALLOW_ROD_PRINTMASK
 
 static const char * set_alt(MyString & buf, Formatter & fmt)
 {
 	buf = "";
-	int alt = (int)fmt.altKind * AltQuestion;
-	if (alt == AltQuestion) {
-		buf += "?";
-	} else if (alt == (AltQuestion | AltWide)) {
-		appendFieldofQuestions(buf, fmt.width);
-	}
+	append_alt(buf, fmt);
 	return buf.c_str();
 }
 

@@ -171,7 +171,7 @@ static int ppAltOpts(ivfield alt_in)
 	} else if (alt == CallInvalidField) {
 		opts |= FormatOptionAlwaysCall;
 	} else if (alt != BlankInvalidField) {
-		opts |= AltFixMe;
+		//opts |= AltFixMe;
 	}
 	if (alt_in & FitToName) { opts |= FormatOptionSpecial001; }
 	return opts;
@@ -688,7 +688,7 @@ void ppSetStartdNormalCols (int width)
 		ppSetColumn(ATTR_MEMORY, Lbl("Mem"), "%4d", false);
 	}
 	pm_head.Append(wide_display ? "ActivityTime" : "  ActvtyTime");
-	pm.registerFormat("%T", 12, FormatOptionAutoWidth | (wide_display ? 0 : FormatOptionNoPrefix) | AltFixMe,
+	pm.registerFormat("%T", 12, FormatOptionAutoWidth | (wide_display ? 0 : FormatOptionNoPrefix) | AltDash,
 		renderActivityTime, ATTR_ENTERED_CURRENT_ACTIVITY /* "   [Unknown]"*/);
 }
 
