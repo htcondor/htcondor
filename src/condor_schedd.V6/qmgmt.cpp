@@ -3032,7 +3032,7 @@ SetTimerAttribute( int cluster, int proc, const char *attr_name, int dur )
 		return -1;
 	}
 
-	rc = SetAttributeInt( cluster, proc, attr_name, xact_start_time + dur );
+	rc = SetAttributeInt( cluster, proc, attr_name, xact_start_time + dur, SETDIRTY );
 	return rc;
 }
 
