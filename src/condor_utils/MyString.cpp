@@ -684,6 +684,25 @@ MyString::trim( void )
 	}
 }
 
+char
+MyString::trim_quotes(const char * quote_chars)
+{
+	if ( ! quote_chars) quote_chars = "\"";
+	if( Len < 2 ) {
+		return 0;
+	}
+	int begin = 0;
+	char ch = Data[begin];
+	if (strchr(quote_chars, ch)) {
+		int end = Length() -1;
+		if (end > begin && Data[end] == ch) {
+			*this = Substr(begin+1, end-1);
+			return ch;
+		}
+	}
+	return 0;
+}
+
 void
 MyString::compressSpaces( void )
 {

@@ -42,9 +42,15 @@ enum {
 	FormatOptionSpecial002 = 0x2000,
 	FormatOptionSpecial004 = 0x4000,
 
-	AltQuestion = 0x10000,     // alt text is single ?
-	AltWide     = 0x20000,     // alt text is the width of the field.
-	AltFixMe    = 0x40000,     // some alt text that needs to be fixed somehow.
+	AltQuestion = 0x10000,     // alt text is ?
+	AltStar     = 0x20000,     // alt text is *
+	AltDot      = 0x30000,     // alt text is .
+	AltDash     = 0x40000,     // alt text is -
+	AltUnder    = 0x50000,     // alt text is _
+	AltPound    = 0x60000,     // alt text is #
+	AltZero     = 0x70000,     // alt text is 0
+	AltMask     = 0x70000,     // mask to extract alt text type
+	AltWide     = 0x80000,     // alt text is the width of the field with [] around it
 };
 
 typedef const char *(*IntCustomFormat)(long long, struct Formatter &);
