@@ -418,6 +418,9 @@ RemoteResource::RemoteResource( BaseShadow *shad )
 	std::string prefix;
 	param(prefix, "CHIRP_DELAYED_UPDATE_PREFIX", "CHIRP*");
 	m_delayed_update_prefix.initializeFromString(prefix.c_str());
+
+	param_and_insert_attrs("PROTECTED_JOB_ATTRS", m_protected_attrs);
+	param_and_insert_attrs("SYSTEM_PROTECTED_JOB_ATTRS", m_protected_attrs);
 }
 
 
@@ -2705,6 +2708,16 @@ RemoteResource::allowRemoteWriteAttributeAccess( const std::string &name )
 	{
 		response = m_delayed_update_prefix.contains_anycase_withwildcard(name.c_str());
 	}
+
+	// Since this function is called to see if a user job is allowed to update
+	// the given attribute (via mechanisms like chirp), make certain we disallow 
+	// protected attributes. We do this here because the schedd may allow it to happen 
+	// since the shadow will likely be connected as a queue super user with access
+	// to modify protected attributes.
+	if (response && m_protected_attrs.find(name) != m_protected_attrs.end()) {
+		response = false;
+	}
+
 	// Do NOT log failures -- unfortunately, this routine doesn't know about the other
 	// whitelisted attributes (for example, ExitCode)
 	if (response) logRemoteAccessCheck(response,"write access to attribute",name.c_str());
