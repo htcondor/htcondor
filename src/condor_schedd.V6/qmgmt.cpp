@@ -2585,10 +2585,9 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		{
 			errno = EACCES;
 			dprintf(D_ALWAYS,
-					"SetAttribute of protected attribute denied, ",
-					"RealOwner=%s EffectiveOwner=%s  AllowPAttrchange=%d Attr=%s in job %d.%d\n", 
+					"SetAttribute of protected attribute denied, RealOwner=%s EffectiveOwner=%s AllowPAttrchange=%s Attr=%s in job %d.%d\n",
 					Q_SOCK->getRealOwner() ? Q_SOCK->getRealOwner() : "(null)",
-					Q_SOCK->getOwner() ? Q_SOCK->getOwner() : "(null)", 
+					Q_SOCK->getOwner() ? Q_SOCK->getOwner() : "(null)",
 					Q_SOCK->getAllowProtectedAttrChanges() ? "true" : "false",
 					attr_name, cluster_id, proc_id);
 			return -1;

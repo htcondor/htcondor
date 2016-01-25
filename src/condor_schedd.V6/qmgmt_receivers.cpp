@@ -139,7 +139,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		}
 		assert( syscall_sock->end_of_message() );
 
-		dprintf(D_SYSCALLS, "\tSetAllowProtectedAttrChanges(%d)\n, val");
+		dprintf(D_SYSCALLS, "\tSetAllowProtectedAttrChanges(%d)\n", val);
 		dprintf(D_SYSCALLS, "\trval %d, errno %d\n", rval, terrno);
 
 		return 0;
