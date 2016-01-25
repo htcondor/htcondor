@@ -183,7 +183,7 @@ char* tdp_input = NULL;
 #if defined(WIN32)
 char* RunAsOwnerCredD = NULL;
 #endif
-
+char * batch_name_line = NULL;
 
 // For mpi universe testing
 bool use_condor_mpi_universe = false;
@@ -1281,6 +1281,23 @@ main( int argc, const char *argv[] )
 				} else {
 					extraLines.Append( *ptr );
 				}
+			} else if (is_dash_arg_prefix(ptr[0], "batch-name", 1)) {
+				if( !(--argc) || !(*(++ptr)) ) {
+					fprintf( stderr, "%s: -batch-name requires another argument\n",
+							 MyName );
+					exit( 1 );
+				}
+				const char * bname = *ptr;
+				MyString tmp; // if -batch-name was specified, this holds the string 'MY.JobBatchName = "name"'
+				if (*bname == '"') {
+					tmp.formatstr("MY.JobBatchName = %s", bname);
+				} else {
+					tmp.formatstr("MY.JobBatchName = \"%s\"", bname);
+				}
+				// if batch_name_line is not NULL,  we will leak a bit here, but that's better than
+				// freeing something behind the back of the extraLines
+				batch_name_line = strdup(tmp.c_str());
+				extraLines.Append(const_cast<const char*>(batch_name_line));
 			} else if (is_dash_arg_prefix(ptr[0], "queue", 1)) {
 				if( !(--argc) || (!(*ptr[1]) || *ptr[1] == '-')) {
 					fprintf( stderr, "%s: -queue requires at least one argument\n",
@@ -8629,6 +8646,8 @@ usage()
 					 "\t              \t\t(overrides submit file; multiple -a lines ok)\n" );
 	fprintf( stderr, "\t-queue <queue-opts>\tappend Queue statement to submit file before processing\n"
 					 "\t                   \t(submit file must not already have a Queue statement)\n" );
+	fprintf( stderr, "\t-batch-name <name>\tappend a line to submit file that sets the batch name\n"
+					/* "\t                  \t(overrides batch_name in submit file)\n" */);
 	fprintf( stderr, "\t-disable\t\tdisable file permission checks\n" );
 	fprintf( stderr, "\t-dry-run <filename>\tprocess submit file and write ClassAd attributes to <filename>\n"
 					 "\t        \t\tbut do not actually submit the job(s) to the SCHEDD\n" );

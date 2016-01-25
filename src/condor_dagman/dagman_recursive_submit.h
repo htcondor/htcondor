@@ -104,6 +104,7 @@ struct SubmitDagDeepOptions
 	MyString strDagmanPath; // path to dagman binary
 	bool useDagDir;
 	MyString strOutfileDir;
+	MyString batchName; // optional value from -batch-name argument, will be double quoted if it exists.
 	bool autoRescue;
 	int doRescueFrom;
 	bool allowVerMismatch;

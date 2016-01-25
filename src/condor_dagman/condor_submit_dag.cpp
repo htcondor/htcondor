@@ -691,6 +691,9 @@ void writeSubmitFile( /* const */ SubmitDagDeepOptions &deepOpts,
 	fprintf(pSubFile, "output\t\t= %s\n", shallowOpts.strLibOut.Value());
     fprintf(pSubFile, "error\t\t= %s\n", shallowOpts.strLibErr.Value());
     fprintf(pSubFile, "log\t\t= %s\n", shallowOpts.strSchedLog.Value());
+	if ( ! deepOpts.batchName.empty()) {
+		fprintf(pSubFile, "+JobBatchName\t=\"%s\"\n", deepOpts.batchName.c_str());
+	}
 #if !defined ( WIN32 )
     fprintf(pSubFile, "remove_kill_sig\t= SIGUSR1\n" );
 #endif
@@ -1095,6 +1098,15 @@ parseCommandLine(SubmitDagDeepOptions &deepOpts,
 				}
 				shallowOpts.appendLines.append(argv[++iArg]);
 			}
+			else if (strArg.find("-bat") != -1) // -batch-name
+			{
+				if (iArg + 1 >= argc) {
+					fprintf(stderr, "-batch-name argument needs a value\n");
+					printUsage();
+				}
+				deepOpts.batchName = argv[++iArg];
+				deepOpts.batchName.trim_quotes("\""); // trim "" if any
+			}
 			else if (strArg.find("-insert") != -1) // -insert_sub_file
 			{
 				if (iArg + 1 >= argc) {
@@ -1308,6 +1320,7 @@ int printUsage(int iExitCode)
     printf("    -config <filename>  (Specify a DAGMan configuration file)\n");
 	printf("    -append <command>   (Append specified command to .condor.sub file)\n");
 	printf("    -insert_sub_file <filename>   (Insert specified file into .condor.sub file)\n");
+	printf("    -batch-name <name>  (Set the batch name for the dag and all of it's children)\n");
 	printf("    -AutoRescue 0|1     (whether to automatically run newest rescue DAG;\n");
 	printf("         0 = false, 1 = true)\n");
 	printf("    -DoRescueFrom <number>  (run rescue DAG of given number)\n");

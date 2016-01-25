@@ -427,9 +427,12 @@ int SetAttrListPrintMaskFromStream (
 				case kw_OR: {
 					if (toke.next()) {
 						std::string val; toke.copy_token(val);
-						if (val == "?") { opts |= AltQuestion; }
-						else if (val == "??") { opts |= (AltQuestion | AltWide); }
-						else {
+						const char alt_chars[] = " ?*.-_#0";
+						if (val.length() > 0 && strchr(alt_chars, val[0])) {
+							int ix = (int)(strchr(alt_chars, val[0]) - &alt_chars[0]);
+							opts |= (ix*AltQuestion);
+							if (val.length() > 1 && val[0] == val[1]) { opts |= AltWide; }
+						} else {
 							formatstr_cat(error_message, "Unknown argument %s for OR\n", val.c_str());
 						}
 					} else {
