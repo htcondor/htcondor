@@ -90,6 +90,9 @@ static bool parse_jobstate_log(Dag  *dag, const char *filename,
 static bool parse_pre_skip(Dag *dag, const char* filename,
 		int lineNumber);
 static bool parse_done(Dag  *dag, const char *filename, int  lineNumber);
+static bool parse_connect( Dag  *dag, const char *filename, int  lineNumber );
+static bool parse_pin_in_out( Dag  *dag, const char *filename,
+			int  lineNumber, bool isPinIn );
 static MyString munge_job_name(const char *jobName);
 
 static MyString current_splice_scope(void);
@@ -369,14 +372,32 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 						filename, lineNumber);
 		}
 
+		// Handle a CONNECT spec
+		else if(strcasecmp(token, "CONNECT") == 0) {
+			parsed_line_successfully = parse_connect( dag,
+						filename, lineNumber );
+		}
+
+		// Handle a PIN_IN spec
+		else if(strcasecmp(token, "PIN_IN") == 0) {
+			parsed_line_successfully = parse_pin_in_out( dag,
+						filename, lineNumber, true );
+		}
+
+		// Handle a PIN_OUT spec
+		else if(strcasecmp(token, "PIN_OUT") == 0) {
+			parsed_line_successfully = parse_pin_in_out( dag,
+						filename, lineNumber, false );
+		}
+
 		// None of the above means that there was bad input.
 		else {
 			debug_printf( DEBUG_QUIET, "%s (line %d): "
-				"ERROR: expected JOB, DATA, SUBDAG, SCRIPT, PARENT, RETRY, "
-				"ABORT-DAG-ON, DOT, VARS, PRIORITY, CATEGORY, MAXJOBS, "
-				"CONFIG, SET_JOB_ATTR, SPLICE, FINAL, "
-				"NODE_STATUS_FILE, or PRE_SKIP token\n",
-				filename, lineNumber );
+				"ERROR: expected JOB, DATA, SUBDAG, FINAL, SCRIPT, PARENT, "
+				"RETRY, ABORT-DAG-ON, DOT, VARS, PRIORITY, CATEGORY, "
+				"MAXJOBS, CONFIG, SET_JOB_ATTR, SPLICE, FINAL, "
+				"NODE_STATUS_FILE, REJECT, JOBSTATE_LOG, PRE_SKIP, DONE, "
+				"CONNECT, PIN_IN, or PIN_OUT token\n", filename, lineNumber );
 			parsed_line_successfully = false;
 		}
 		
@@ -2166,6 +2187,126 @@ parse_done(
 
 	job->SetStatus( Job::STATUS_DONE );
 	
+	return true;
+}
+
+//-----------------------------------------------------------------------------
+// 
+// Function: parse_connect
+// Purpose:  Parse a line of the format "Connect splice1 splice2"
+// 
+//-----------------------------------------------------------------------------
+static bool 
+parse_connect(
+	Dag  *dag, 
+	const char *filename, 
+	int  lineNumber )
+{
+	const char *example = "CONNECT splice1 splice2";
+
+	debug_printf( DEBUG_QUIET, "DIAG parse_connect()\n" );//TEMPTEMP
+
+	const char *splice1 = strtok( NULL, DELIMITERS );
+	if ( splice1 == NULL ) {
+		debug_printf( DEBUG_QUIET,
+					  "ERROR: %s (line %d): Missing splice1 name\n",
+					  filename, lineNumber );
+		exampleSyntax( example );
+		return false;
+	}
+
+	const char *splice2 = strtok( NULL, DELIMITERS );
+	if ( splice2 == NULL ) {
+		debug_printf( DEBUG_QUIET,
+					  "ERROR: %s (line %d): Missing splice2 name\n",
+					  filename, lineNumber );
+		exampleSyntax( example );
+		return false;
+	}
+
+	//
+	// Check for illegal extra tokens.
+	//
+	char *extraTok = strtok( NULL, DELIMITERS );
+	if ( extraTok != NULL ) {
+		debug_printf( DEBUG_QUIET,
+					  "ERROR: %s (line %d): Extra token (%s) on CONNECT line\n",
+					  filename, lineNumber, extraTok );
+		exampleSyntax( example );
+		return false;
+	}
+
+	debug_printf( DEBUG_QUIET, "DIAG parse_connect(%s, %s)\n", splice1, splice2 );//TEMPTEMP
+	
+	return true;
+}
+
+//-----------------------------------------------------------------------------
+// 
+// Function: parse_pin_in_out
+// Purpose:  Parse a line of the format "Pin_in|pin_out node pin_num"
+// 
+//-----------------------------------------------------------------------------
+static bool 
+parse_pin_in_out(
+	Dag  *dag, 
+	const char *filename, 
+	int  lineNumber, bool isPinIn )
+{
+	const char *example = "PIN_IN|PIN_OUT node pin_number";
+
+	debug_printf( DEBUG_QUIET, "DIAG parse_pin_in_out()\n" );//TEMPTEMP
+
+	const char *splice = strtok( NULL, DELIMITERS );
+	if ( splice == NULL ) {
+		debug_printf( DEBUG_QUIET,
+					  "ERROR: %s (line %d): Missing splice name\n",
+					  filename, lineNumber );
+		exampleSyntax( example );
+		return false;
+	}
+
+	const char *pinNumber = strtok( NULL, DELIMITERS );
+	if ( pinNumber == NULL ) {
+		debug_printf( DEBUG_QUIET,
+					  "ERROR: %s (line %d): Missing pin_number\n",
+					  filename, lineNumber );
+		exampleSyntax( example );
+		return false;
+	}
+
+	int pinNum;
+	char *tmp;
+	pinNum = (int)strtol( pinNumber, &tmp, 10 );
+	if( tmp == pinNumber ) {
+		debug_printf( DEBUG_QUIET,
+					  "ERROR: %s (line %d): Invalid pin_number value \"%s\"\n",
+					  filename, lineNumber, pinNumber );
+		exampleSyntax( example );
+		return false;
+	}
+	if ( pinNum < 1 ) {
+		debug_printf( DEBUG_QUIET,
+					  "ERROR: %s (line %d): pin_number value must be positive\n",
+					  filename, lineNumber );
+		return false;
+	}
+
+	//
+	// Check for illegal extra tokens.
+	//
+	char *extraTok = strtok( NULL, DELIMITERS );
+	if ( extraTok != NULL ) {
+		debug_printf( DEBUG_QUIET,
+					  "ERROR: %s (line %d): Extra token (%s) on PIN_IN/PIN_OUT line\n",
+					  filename, lineNumber, extraTok );
+		exampleSyntax( example );
+		return false;
+	}
+	
+	debug_printf( DEBUG_QUIET, "DIAG parse_pin_in_out(%d, %s, %d)\n",
+				isPinIn, splice, pinNum );//TEMPTEMP
+
 	return true;
 }
 
