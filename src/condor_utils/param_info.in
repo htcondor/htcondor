@@ -5058,6 +5058,43 @@ friendly_name=Queue All Users Trusted
 review=?
 tags=schedd,qmgmt
 
+[SYSTEM_IMMUTABLE_JOB_ATTRS]
+default=Owner ClusterId ProcId MyType TargetType
+type=string
+reconfig=true
+customization=never
+friendly_name=Job attributes that may not change once set
+review=?
+tags=schedd,qmgmt,qedit
+
+[IMMUTABLE_JOB_ATTRS]
+default=
+type=string
+reconfig=true
+customization=seldom
+friendly_name=Job attributes that may not change once set
+review=?
+tags=schedd,qmgmt,qedit
+
+[SYSTEM_PROTECTED_JOB_ATTRS]
+default=
+type=string
+reconfig=true
+customization=never
+friendly_name=Job attributes that may only be changed by a queue superuser once set
+review=?
+tags=schedd,qmgmt,qedit
+
+[PROTECTED_JOB_ATTRS]
+default=
+type=string
+reconfig=true
+customization=seldom
+friendly_name=Job attributes that may only be changed by a queue superuser once set
+review=?
+tags=schedd,qmgmt,qedit
+
+
 [GLOBAL_JOB_ID_WITH_TIME]
 default=true
 type=bool

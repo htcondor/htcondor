@@ -471,6 +471,25 @@ bool param_and_insert_unique_items(const char * param_name, StringList & items, 
 	return num_inserts > 0;
 }
 
+/* 
+  A convenience function that calls param() then inserts items from the value
+  into the given classad:References set.  Useful whenever a param knob contains
+  a string list of ClassAd attribute names, e.g. IMMUTABLE_JOB_ATTRS.
+  Return true if given param name was found, false if not.
+*/
+bool
+param_and_insert_attrs(const char * param_name, classad::References & attrs)
+{
+	std::string value;
+	const std::string * attr;
+	if (param(value, param_name)) {
+		StringTokenIterator it(value);
+		while ((attr = it.next_string())) { attrs.insert(*attr); }
+		return true;
+	}
+	return false;
+}
+
 // Function implementations
 
 void

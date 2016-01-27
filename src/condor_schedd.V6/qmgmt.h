@@ -52,6 +52,8 @@ class QmgmtPeer {
 		void unset();
 
 		bool setEffectiveOwner(char const *o);
+		bool setAllowProtectedAttrChanges(bool val);
+		bool getAllowProtectedAttrChanges() { return allow_protected_attr_changes_by_superuser; }
 
 		ReliSock *getReliSock() const { return sock; };
 
@@ -65,6 +67,7 @@ class QmgmtPeer {
 	protected:
 
 		char *owner;  
+		bool allow_protected_attr_changes_by_superuser;
 		char *fquser;  // owner@domain
 		char *myendpoint; 
 		condor_sockaddr addr;

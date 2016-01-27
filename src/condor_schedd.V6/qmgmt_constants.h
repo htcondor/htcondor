@@ -51,3 +51,4 @@
 #define	CONDOR_SetAttributeByConstraint2	10032		/* Rob */
 #define CONDOR_GetDirtyAttributes	10033		/* Rob */
 #define CONDOR_GetNextDirtyJobByConstraint	10034	/* Rob */
+#define CONDOR_SetAllowProtectedAttrChanges 10035

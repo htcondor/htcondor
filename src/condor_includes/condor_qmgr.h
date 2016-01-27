@@ -344,6 +344,16 @@ int float_to_rusage(double, double, struct rusage *);
 
 int QmgmtSetEffectiveOwner(char const *owner);
 
+/* Set to TRUE (1) if changes to protected job attributes should be allowed,
+   or FALSE (0) to refuse changes to protected attributes by having
+   SetAttribute() fail.  Defaults to TRUE.
+   Note that this function has no effect unless the real authenticated
+   owner is a queue super user, as changes to protected attributes
+   also always require that the real owner is a queue super user.
+   Returns previous value of the flag. */
+
+int QmgmtSetAllowProtectedAttrChanges(int val);
+
 /* Call this to begin iterating over jobs in the queue that match
    a constraint.
    Returns 0 on success, -1 on error*/
