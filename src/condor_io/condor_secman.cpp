@@ -3159,6 +3159,7 @@ SecMan::getSessionPolicy(const char *session_id, classad::ClassAd &policy_ad)
 	if (!policy) {return false;}
 
 	sec_copy_attribute(policy_ad, *policy, ATTR_X509_USER_PROXY_SUBJECT);
+	sec_copy_attribute(policy_ad, *policy, ATTR_X509_USER_PROXY_EXPIRATION);
 	sec_copy_attribute(policy_ad, *policy, ATTR_X509_USER_PROXY_EMAIL);
 	sec_copy_attribute(policy_ad, *policy, ATTR_X509_USER_PROXY_VONAME);
 	sec_copy_attribute(policy_ad, *policy, ATTR_X509_USER_PROXY_FIRST_FQAN);

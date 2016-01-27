@@ -3245,15 +3245,13 @@ AddSessionAttributes(const std::list<std::string> new_ad_keys)
 			// Set attribute for process ads: prevents jobs from overriding these.
 		if (job.proc == -1) {continue;}
 		JobQueueKeyBuf cluster( job.cluster, -1 );
-		ClassAd proc_ad;
-		JobQueue->AddAttrsFromTransaction(cluster.c_str(), proc_ad);
-		JobQueue->AddAttrsFromTransaction(it->c_str(), proc_ad);
 
 		for (AttrList::const_iterator attr_it = policy_ad.begin(); attr_it != policy_ad.end(); ++attr_it)
 		{
 			std::string attr_value_buf;
 			unparse.Unparse(attr_value_buf, attr_it->second);
 			SetAttribute(job.cluster, job.proc, attr_it->first.c_str(), attr_value_buf.c_str());
+			dprintf(D_SECURITY, "SOCKET ATTRIBUTES: SetAttribute %i.%i %s=%s\n", job.cluster, job.proc, attr_it->first.c_str(), attr_value_buf.c_str());
 		}
 	}
 }

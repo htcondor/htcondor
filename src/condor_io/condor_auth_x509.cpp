@@ -1226,13 +1226,19 @@ Condor_Auth_X509::authenticate_server_gss(CondorError* errstack, bool non_blocki
 		if (gss_name) {
 			setAuthenticatedName(gss_name);
 			ad.InsertAttr(ATTR_X509_USER_PROXY_SUBJECT, gss_name);
-			ad.InsertAttr("x509subject", gss_name);
 			free(gss_name);
 		}
 		setRemoteUser("gsi");
 		setRemoteDomain( UNMAPPED_DOMAIN );
 
+		// get handle to cred so we can extract other attributes
 		globus_gsi_cred_handle_t peer_cred = context_handle->peer_cred_handle->cred_handle;
+
+		time_t expiration = x509_proxy_expiration_time(peer_cred);
+		if (expiration != -1) {
+			ad.InsertAttr(ATTR_X509_USER_PROXY_EXPIRATION, expiration);
+		}
+
 		char *email_name = x509_proxy_email(peer_cred);
 		if (email_name)
 		{
