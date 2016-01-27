@@ -2049,13 +2049,101 @@ int Scheduler::command_query_job_ads(int, Stream* stream)
 		return command_query_job_aggregates(queryAd, stream);
 	}
 
-	classad::ExprTree *requirements = queryAd.Lookup(ATTR_REQUIREMENTS);
+	// REMOVE this code once we have working user detection
+	//
+	int dpf_level = D_ALWAYS; // D_COMMAND | D_FULLDEBUG
+	if (IsDebugCatAndVerbosity(dpf_level)) {
+		ReliSock* rsock = (ReliSock*)stream;
+		const char * p0wn = rsock->getOwner();
+		dprintf(dpf_level, "QUERY_JOB_ADS detected owner = %s\n", p0wn ? p0wn : "<null>");
+	}
+
+	// If the query request that only the querier's jobs be returned
+	// we have to figure out who the quierier is and add a clause to the requirements expression
+	classad::ExprTree *my_jobs_expr = queryAd.Lookup("MyJobs");
+	bool was_my_jobs = my_jobs_expr != NULL;
+	if (my_jobs_expr) {
+		std::string owner;
+		//PRAGMA_REMIND("figure out username of invoker, and create a my_jobs_expr for them.")
+		ReliSock* rsock = (ReliSock*)stream;
+		const char * p0wn = rsock->getOwner();
+		if (p0wn && MATCH == strcasecmp(p0wn, "unauthenticated")) p0wn = NULL;
+
+		long long val;
+		// if MyJobs is a literal true/false, then we are being asked to either NOT show
+		// just the users jobs, or figure out who the user is and show just their jobs.
+		if (ExprTreeIsLiteralNumber(my_jobs_expr, val)) {
+			if (val) {
+				// MyJobs is just a boolean equivalent TRUE or FALSE, so it's up to the schedd to choose
+				// the appropriate ownername.
+				if (p0wn) owner = p0wn;
+			} else {
+				// false means we don't want just this owners jobs. set my_jobs_expr to NULL to signal that.
+				my_jobs_expr = NULL;
+			}
+		} else {
+			// if my_jobs_expr is not literal true/valse, then we assume it is Owner==Me
+			// and that ME is also an attribute in the query ad. With Me being a guess as
+			// to the correct owner.  We will use the suggested value of Me unless we can
+			// determine a better value. 
+			classad::ExprTree * me_expr = queryAd.Lookup("Me");
+			if (me_expr && ExprTreeIsLiteralString(me_expr, owner)) {
+				// owner is set, buf if owner is a queue superuser, then we still want to show all jobs.
+				if (isQueueSuperUser(owner.c_str())) {
+					my_jobs_expr = NULL; 
+				}
+			} else {
+				my_jobs_expr = NULL;
+			}
+			if (p0wn) owner = p0wn;
+		}
+
+		// at this point owner should be set if my_jobs_expr is non-null
+		// and that means we can construct the correct my_jobs_expr contraint expression
+		if (my_jobs_expr) {
+			MyString sub_expr;
+			sub_expr.formatstr("(owner == \"%s\")", owner.c_str());
+			classad::ClassAdParser parser;
+			my_jobs_expr = parser.ParseExpression(sub_expr.c_str());
+		}
+	}
+
+	// at this point, my_jobs_expr is either NULL, or an ExprTree that we are responsible for deleting
+
+	classad::ExprTree *requirements_in = queryAd.Lookup(ATTR_REQUIREMENTS);
+	classad::ExprTree *requirements = my_jobs_expr;
+#if 1 // new for 8.5.3, use my_jobs_expr, or requirements (or both if both are set)
+	if (requirements_in) {
+		bool bval = false;
+		requirements_in = SkipExprParens(requirements_in);
+		if (IsDebugCatAndVerbosity(dpf_level)) {
+			dprintf(dpf_level, "QUERY_JOB_ADS %d formal requirements without excess parens: %s\n", was_my_jobs, ExprTreeToString(requirements_in));
+		}
+		if ( ! requirements) {
+			requirements = requirements_in->Copy();
+		} else if ( ! ExprTreeIsLiteralBool(requirements_in, bval) || bval) {
+			// if we have both requirements, and requirements_in, and the requirements_in is not a trivial 'true' 
+			// we need to join them both requirements with a logical && op.
+			requirements = JoinExprTreeCopiesWithOp(classad::Operation::LOGICAL_AND_OP, my_jobs_expr, requirements_in);
+			delete my_jobs_expr; my_jobs_expr = NULL;
+		}
+	} else if ( ! requirements) {
+		classad::Value val; val.SetBooleanValue(true);
+		requirements = classad::Literal::MakeLiteral(val);
+	}
+	if ( ! requirements) return sendJobErrorAd(stream, 1, "Failed to create requirements expression");
+	if (IsDebugCatAndVerbosity(dpf_level)) {
+		dprintf(dpf_level, "QUERY_JOB_ADS %d effective requirements: %s\n", was_my_jobs, ExprTreeToString(requirements));
+	}
+	classad_shared_ptr<classad::ExprTree> requirements_ptr(requirements);
+#else
 	if (!requirements) {
 		classad::Value val; val.SetBooleanValue(true);
 		requirements = classad::Literal::MakeLiteral(val);
 		if (!requirements) return sendJobErrorAd(stream, 1, "Failed to create default requirements");
 	}
 	classad_shared_ptr<classad::ExprTree> requirements_ptr(requirements->Copy());
+#endif
 
 	int resultLimit=-1;
 	if (!queryAd.EvaluateAttrInt(ATTR_LIMIT_RESULTS, resultLimit)) {

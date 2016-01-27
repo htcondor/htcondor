@@ -212,7 +212,8 @@ static unsigned int direct = DIRECT_ALL;
 
 static 	int dash_long = 0, summarize = 1, global = 0, show_io = 0, dash_dag = 0, show_held = 0, dash_progress = 0;
 static  int use_xml = 0;
-static  int dash_autocluster = 0;
+static  int dash_autocluster = 0; // can be 0, or CondorQ::fetch_DefaultAutoCluster or CondorQ::fetch_GroupBy
+static  int default_fetch_opts = CondorQ::fetch_MyJobs;
 static  bool widescreen = false;
 //static  int  use_old_code = true;
 static  bool expert = false;
@@ -1236,6 +1237,8 @@ processCommandLineArguments (int argc, char *argv[])
 					fprintf( stderr, "Error: Argument %d (%s) must be a jobid or user\n", i, argv[i] );
 					exit( 1 );
 				}
+				// dont default to 'my jobs' if an owner was specified.
+				default_fetch_opts &= ~CondorQ::fetch_MyJobs;
 			}
 
 			continue;
@@ -1450,6 +1453,8 @@ processCommandLineArguments (int argc, char *argv[])
 							uid_domain);
 				free (uid_domain);
 			}
+			// dont default to 'my jobs'
+			default_fetch_opts &= ~CondorQ::fetch_MyJobs;
 
 			// insert the constraints
 			submittorQuery.addORConstraint (constraint);
@@ -1732,7 +1737,11 @@ processCommandLineArguments (int argc, char *argv[])
 		else
 		if (is_dash_arg_prefix (dash_arg, "global", 1)) {
 			global = 1;
-		} 
+		}
+		else
+		if (is_dash_arg_prefix (dash_arg, "all-users", 2)) {
+			default_fetch_opts &= ~CondorQ::fetch_MyJobs;
+		}
 		else
 		if (is_dash_arg_prefix (dash_arg, "schedd-constraint", 5)) {
 			// make sure we have at least one more argument
@@ -2141,6 +2150,9 @@ processCommandLineArguments (int argc, char *argv[])
 	// if there is a -dag argument, then we look up all children of the dag
 	// as well as the dag itself.
 	if ( ! constrID.empty()) {
+		// dont default to 'my jobs'
+		default_fetch_opts &= ~CondorQ::fetch_MyJobs;
+
 		for (std::vector<CondorID>::const_iterator it = constrID.begin(); it != constrID.end(); ++it) {
 
 			// if we aren't doing db queries, do we need to do this?
@@ -4490,13 +4502,14 @@ static long long make_parentage_sort_key(long long id, std::string & key, ROD_MA
 }
 */
 
+// instance data for fixup_std_column_widths callback
 struct _fixup_width_values {
 	int cluster_width;
 	int proc_width;
 	int name_width;
 };
 
-// hacky way to adjust column widths based on the data.
+// callback used by fixup_std_column_widths
 static int fnFixupWidthCallback(void* pv, int index, Formatter * fmt, const char * /*attr*/) {
 	struct _fixup_width_values * p = (struct _fixup_width_values *)pv;
 	char * pf = const_cast<char*>(fmt->printfFmt);
@@ -4517,6 +4530,8 @@ static int fnFixupWidthCallback(void* pv, int index, Formatter * fmt, const char
 	return 1;
 }
 
+// fix width of cluster,proc and name columns for all standard display formats other than -progress
+//
 static void fixup_std_column_widths(int max_cluster, int max_proc, int longest_name) {
 	if ( ! is_standard_format || ( ! first_col_is_job_id && ! has_owner_column))
 		return; // nothing to do
@@ -4556,7 +4571,15 @@ static void append_sibling(JobRowOfData * sib_list, JobRowOfData * sib)
 }
 
 // link multi-proc clusters into a peer list (with the lowest proc id being the first peer)
-// and children to parents (i.e. dag nodes to their owning dagman)
+// and children to parents (i.e. dag nodes to their owning dagman), or jobs that share a batch-name together
+// when this function returns
+//  * all procs in a cluster will be linked via the next_proc links in order of increasing procid
+//  * all cluster jobs in a dag will be pointed to by either the children link of the parent dag node
+//    or the next_sib link of a sibling node. the last_sib link of the first child will point to the last sibling.
+//    when following the children links or next_sib links, jobids will always increase.
+//  * all cluster non-dag jobs which have the same batch-name will be connected by a chain of 
+//    next_sib links in order of increasing cluster id.
+//  (a cluster job is the job in a cluster with the lowest procid. this is usually procid 0, but is not guranteed to be so)
 static void linkup_nodes_by_id(ROD_MAP_BY_ID & results)
 {
 	const bool fold_dagman_sibs = dash_progress && (dash_progress & 2);
@@ -5061,6 +5084,9 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 	bool use_v3 = dash_autocluster || param_boolean("CONDOR_Q_USE_V3_PROTOCOL", true);
 	if ((useFastPath == 2) && !use_v3) {
 		useFastPath = 1;
+	}
+	if ( ! fetch_opts && use_v3) {
+		fetch_opts = default_fetch_opts;
 	}
 #ifdef USE_LATE_PROJECTION
 	StringList *pattrs = &app.attrs;
