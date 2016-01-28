@@ -111,6 +111,69 @@ const char * ClassAdValueToString ( const classad::Value & value )
 	return ClassAdValueToString(value, buffer);
 }
 
+classad::ExprTree * SkipExprEnvelope(classad::ExprTree * tree) {
+	if ( ! tree) return tree;
+	classad::ExprTree::NodeKind kind = tree->GetKind();
+	if (kind == classad::ExprTree::EXPR_ENVELOPE) {
+		return ((classad::CachedExprEnvelope*)tree)->get();
+	}
+	return tree;
+}
+
+classad::ExprTree * SkipExprParens(classad::ExprTree * tree) {
+	if ( ! tree) return tree;
+	classad::ExprTree::NodeKind kind = tree->GetKind();
+	classad::ExprTree * expr = tree;
+	if (kind == classad::ExprTree::EXPR_ENVELOPE) {
+		expr = ((classad::CachedExprEnvelope*)tree)->get();
+		if (expr) tree = expr;
+	}
+
+	kind = tree->GetKind();
+	while (kind == classad::ExprTree::OP_NODE) {
+		classad::ExprTree *e2, *e3;
+		classad::Operation::OpKind op;
+		((classad::Operation*)tree)->GetComponents(op, expr, e2, e3);
+		if ( ! expr || op != classad::Operation::PARENTHESES_OP) break;
+		tree = expr;
+		kind = tree->GetKind();
+	}
+
+	return tree;
+}
+
+
+static classad::ExprTree * wrap_in_parens_if_needed(classad::ExprTree * expr, classad::Operation::OpKind op)
+{
+	if ( ! expr) return expr;
+
+	classad::ExprTree::NodeKind kind = expr->GetKind();
+	if (kind == classad::ExprTree::OP_NODE) {
+		classad::Operation::OpKind op1 = ((classad::Operation*)expr)->GetOpKind();
+		if (op1 == classad::Operation::PARENTHESES_OP) {
+			// no need to insert parends, this already is one.
+		} else if (classad::Operation::PrecedenceLevel(op1) < classad::Operation::PrecedenceLevel(op)) {
+			expr = classad::Operation::MakeOperation(classad::Operation::PARENTHESES_OP, expr, NULL, NULL);
+		}
+	}
+	return expr;
+}
+
+classad::ExprTree * JoinExprTreeCopiesWithOp(classad::Operation::OpKind op, classad::ExprTree * exp1, classad::ExprTree * exp2)
+{
+	// before we join these into a new tree, we want to skip over the envelope nodes (if any) and copy them.
+	if (exp1) {
+		exp1 = SkipExprEnvelope(exp1)->Copy();
+		exp1 = wrap_in_parens_if_needed(exp1, op);
+	}
+	if (exp2) {
+		exp2 = SkipExprEnvelope(exp2)->Copy();
+		exp2 = wrap_in_parens_if_needed(exp2, op);
+	}
+	
+	return classad::Operation::MakeOperation(op, exp1, exp2, NULL);
+}
+
 bool ExprTreeIsLiteral(classad::ExprTree * expr, classad::Value & value)
 {
 	if ( ! expr) return false;
@@ -153,6 +216,16 @@ bool ExprTreeIsLiteralNumber(classad::ExprTree * expr, double & rval)
 	classad::Value val;
 	if ( ! ExprTreeIsLiteral(expr, val)) return false;
 	return val.IsNumber(rval);
+}
+
+bool ExprTreeIsLiteralBool(classad::ExprTree * expr, bool & bval)
+{
+	classad::Value val;
+	if ( ! ExprTreeIsLiteral(expr, val)) return false;
+	long long ival;
+	if ( !  val.IsNumber(ival)) return false;
+	bval = ival != 0;
+	return true;
 }
 
 bool ExprTreeIsLiteralString(classad::ExprTree * expr, std::string & sval)

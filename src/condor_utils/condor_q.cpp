@@ -29,6 +29,7 @@
 #include "condor_classad.h"
 #include "quill_enums.h"
 #include "dc_schedd.h"
+#include "my_username.h"
 
 #ifdef HAVE_EXT_POSTGRESQL
 #include "pgsqldatabase.h"
@@ -440,10 +441,13 @@ CondorQ::fetchQueueFromHostAndProcessV2(const char *host,
 	} else if (fetch_opts == fetch_GroupBy) {
 		ad.InsertAttr("ProjectionIsGroupBy", true);
 		ad.InsertAttr("MaxReturnedJobIds", 2); // TODO: make this settable by caller of this function.
+	} else if (fetch_opts == fetch_MyJobs) {
+		const char * owner = my_username();
+		if (owner) { ad.InsertAttr("Me", owner); }
+		ad.InsertAttr("MyJobs", owner ? "(Owner == Me)" : "true");
 	}
 
-	if (match_limit >= 0)
-	{
+	if (match_limit >= 0) {
 		ad.InsertAttr(ATTR_LIMIT_RESULTS, match_limit);
 	}
 

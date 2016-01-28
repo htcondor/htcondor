@@ -35,6 +35,13 @@ bool ExprTreeIsLiteral(classad::ExprTree * expr, classad::Value & value);
 bool ExprTreeIsLiteralNumber(classad::ExprTree * expr, long long & ival);
 bool ExprTreeIsLiteralNumber(classad::ExprTree * expr, double & rval);
 bool ExprTreeIsLiteralString(classad::ExprTree * expr, std::string & sval);
+bool ExprTreeIsLiteralBool(classad::ExprTree * expr, bool & bval);
+classad::ExprTree * SkipExprEnvelope(classad::ExprTree * tree);
+classad::ExprTree * SkipExprParens(classad::ExprTree * tree);
+// create an op node, using copies of the input expr trees. this function will not copy envelope nodes (it skips over them)
+// and it is clever enough to insert parentheses around the input expressions when needed to insure that the expression
+// will unparse correctly.
+classad::ExprTree * JoinExprTreeCopiesWithOp(classad::Operation::OpKind, classad::ExprTree * exp1, classad::ExprTree * exp2);
 
 bool EvalBool(compat_classad::ClassAd *ad, const char *constraint);
 
