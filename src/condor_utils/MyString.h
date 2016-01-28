@@ -303,7 +303,11 @@ class MyString
 	*/
 	void trim( void );
 
-	/** Trim leading and trailing quotes from this string, returns the quote char if there were any
+	/** Trim leading and trailing quotes from this string, both leading and trailing
+		quotes must exist and they must be the same or no trimming occurrs. At most one
+		lead character and one trailing character are removed.
+		optional argument is the set of possible quote characters.
+		return value is 0 if no trimming occurred, or the quote char if it was trimmed.
 	*/
 	char trim_quotes(const char * quote_chars="\"");
 

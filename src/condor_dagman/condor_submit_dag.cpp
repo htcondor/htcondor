@@ -692,7 +692,7 @@ void writeSubmitFile( /* const */ SubmitDagDeepOptions &deepOpts,
     fprintf(pSubFile, "error\t\t= %s\n", shallowOpts.strLibErr.Value());
     fprintf(pSubFile, "log\t\t= %s\n", shallowOpts.strSchedLog.Value());
 	if ( ! deepOpts.batchName.empty()) {
-		fprintf(pSubFile, "+JobBatchName\t=\"%s\"\n", deepOpts.batchName.c_str());
+		fprintf(pSubFile, "+JobBatchName\t= \"%s\"\n", deepOpts.batchName.c_str());
 	}
 #if !defined ( WIN32 )
     fprintf(pSubFile, "remove_kill_sig\t= SIGUSR1\n" );
@@ -1320,7 +1320,7 @@ int printUsage(int iExitCode)
     printf("    -config <filename>  (Specify a DAGMan configuration file)\n");
 	printf("    -append <command>   (Append specified command to .condor.sub file)\n");
 	printf("    -insert_sub_file <filename>   (Insert specified file into .condor.sub file)\n");
-	printf("    -batch-name <name>  (Set the batch name for the dag and all of it's children)\n");
+	printf("    -batch-name <name>  (Set the batch name for the dag)\n");
 	printf("    -AutoRescue 0|1     (whether to automatically run newest rescue DAG;\n");
 	printf("         0 = false, 1 = true)\n");
 	printf("    -DoRescueFrom <number>  (run rescue DAG of given number)\n");

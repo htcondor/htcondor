@@ -15,6 +15,7 @@
 \ToolDebugOption
 % this option needs the dots in boldface, so using the macro oOptArg won't work
 \Lbr\Opt{-append} \Arg{command} \Opt{\Dots}\Rbr 
+\oOpt{-batch-name}{batch\_name}
 \oOpt{-spool}
 \oOptArg{-dump}{filename}
 \oOpt{-interactive}
@@ -140,6 +141,12 @@ based on the value of the configuration variable \MacroNI{TOOL\_DEBUG}.}
   Each new command is given in a separate \Opt{-append} option.
   Commands with spaces in them will need to be enclosed in double quote
   marks. }
+
+\OptItem{\OptArg{-batch-name}{command}}{Set the batch name for this submit.
+  The batch name is displayed by \Condor{q} \Opt{-progress}.  It is intended
+  for use by users to give meaningful names to their jobs and to influence
+  how \Condor{q} groups jobs for display. Use of this argument
+  takes precedence over a batch name specified in the submit description file itself. }
 
 \OptItem{\Opt{-spool}}{Spool all required input files, job event log, and
 proxy over the connection to the \Condor{schedd}.
