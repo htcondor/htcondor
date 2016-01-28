@@ -348,6 +348,7 @@ bool		DumpFileIsStdout = 0;
 */
 const char	*Cluster 		= "Cluster";
 const char	*Process			= "Process";
+const char	*BatchName		= "batch_name";
 const char	*Hold			= "hold";
 const char	*Priority		= "priority";
 const char	*Notification	= "notification";
@@ -2390,6 +2391,12 @@ SetDescription()
 	}
 	else if ( InteractiveJob ){
 		InsertJobExprString(ATTR_JOB_DESCRIPTION, "interactive job");
+	}
+
+	MyString batch_name = condor_param_mystring(BatchName, ATTR_JOB_BATCH_NAME);
+	if ( ! batch_name.empty()) {
+		batch_name.trim_quotes("\"'"); // in case they supplied a quoted string, trim the quotes
+		InsertJobExprString(ATTR_JOB_BATCH_NAME, batch_name.c_str());
 	}
 }
 
