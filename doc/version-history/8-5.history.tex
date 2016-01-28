@@ -45,6 +45,27 @@ The timestamp in curly brackets at the end is the actual timestamp
 of the event.
 \Ticket{5439}
 
+\item \Condor{q} will now only show the current user's jobs by default. This behavior
+can be turned off by setting the new configuration option \Macro{CONDOR\_Q\_ONLY\_MY\_JOBS}
+to false in the configuration for either the \Condor{schedd} or \Condor{q}. It can also be 
+turned off by passing the new \Opt{-all-users} command line option to \Condor{q}.
+\Ticket{5271}
+
+\item A new \Opt{-progress} command line option to \Condor{q} can be used to show a single
+line of progress information for a batch of jobs, where batch is either an entire DAG, all
+of the jobs in a cluster, all of the jobs from a singlue user that have the same command,
+or all of the jobs from a single user that have the same batch name.
+\Ticket{4976}
+
+\item \Condor{q} and \Condor{submit\_dag} both have a new command line option \Opt{-batch-name}
+which can be used to set the batch name used by \Condor{q} \Opt{-progress}.
+\Ticket{5490}
+
+\item \Condor{q} and \Condor{status} now attempt to avoid truncating data by making use of the
+full width of the terminal.
+\Ticket{5429}
+\Ticket{5459}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
