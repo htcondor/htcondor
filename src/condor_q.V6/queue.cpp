@@ -3316,6 +3316,7 @@ usage (const char *myName, int other)
 		"\t<owner>\t\t\tInformation about jobs owned by <owner>\n"
 		"\t-autocluster\t\tGet information about the SCHEDD's autoclusters\n"
 		"\t-constraint <expr>\tGet information about jobs that match <expr>\n"
+		"\t-all-users\t\tConsider jobs from all users\n"
 		);
 
 	printf ("\n    [output-opts] are\n"
@@ -3376,6 +3377,13 @@ usage (const char *myName, int other)
 		"\t-nouserprios\t\tDon't consider user priority during analysis\n"
 		"\t-reverse\t\tAnalyze Machine requirements against jobs\n"
 		"\t-verbose\t\tShow progress and machine names in results\n"
+		"\n"
+		);
+
+	printf ("\n    Only information about jobs owned by the current user will be returned.\n"
+			"This default is overridden when the restriction list has usernames and/or\n"
+			"job ids, when the -submitter or -all-users arguments are specified, or\n"
+			"when the current user is a queue superuser\n"
 		"\n"
 		);
 
