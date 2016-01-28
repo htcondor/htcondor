@@ -2060,8 +2060,12 @@ int Scheduler::command_query_job_ads(int, Stream* stream)
 
 	// If the query request that only the querier's jobs be returned
 	// we have to figure out who the quierier is and add a clause to the requirements expression
-	classad::ExprTree *my_jobs_expr = queryAd.Lookup("MyJobs");
-	bool was_my_jobs = my_jobs_expr != NULL;
+	classad::ExprTree *my_jobs_expr = NULL;
+	bool was_my_jobs = false;
+	if (param_boolean("CONDOR_Q_ONLY_MY_JOBS", true)) {
+		my_jobs_expr = queryAd.Lookup("MyJobs");
+		was_my_jobs = my_jobs_expr != NULL;
+	}
 	if (my_jobs_expr) {
 		std::string owner;
 		//PRAGMA_REMIND("figure out username of invoker, and create a my_jobs_expr for them.")

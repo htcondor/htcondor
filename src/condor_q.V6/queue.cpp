@@ -607,6 +607,12 @@ int main (int argc, char **argv)
 	install_sig_handler(SIGPIPE, SIG_IGN );
 #endif
 
+	if (param_boolean("CONDOR_Q_ONLY_MY_JOBS", true)) {
+		default_fetch_opts |= CondorQ::fetch_MyJobs;
+	} else {
+		default_fetch_opts &= ~CondorQ::fetch_MyJobs;
+	}
+
 	// process arguments
 	processCommandLineArguments (argc, argv);
 

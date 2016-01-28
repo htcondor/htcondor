@@ -7338,6 +7338,13 @@ customization=devel
 friendly_name=Control use of V3 query protocol for condor_q
 usage=Set to false to disable V3 query protocol for condor_q.
 
+[CONDOR_Q_ONLY_MY_JOBS]
+default=true
+type=bool
+reconfig=false
+friendly_Name=Whether condor_q will query all jobs, or only the current owners jobs by default
+usage=Set to true to have condor_q query only the owners jobs by default
+
 [ENABLE_IPV6]
 default=false
 type=bool
