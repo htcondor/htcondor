@@ -1745,7 +1745,7 @@ processCommandLineArguments (int argc, char *argv[])
 			global = 1;
 		}
 		else
-		if (is_dash_arg_prefix (dash_arg, "all-users", 2)) {
+		if (is_dash_arg_prefix (dash_arg, "allusers", 2) || is_dash_arg_prefix (dash_arg, "all-users", 2)) {
 			default_fetch_opts &= ~CondorQ::fetch_MyJobs;
 		}
 		else
@@ -3316,7 +3316,7 @@ usage (const char *myName, int other)
 		"\t<owner>\t\t\tInformation about jobs owned by <owner>\n"
 		"\t-autocluster\t\tGet information about the SCHEDD's autoclusters\n"
 		"\t-constraint <expr>\tGet information about jobs that match <expr>\n"
-		"\t-all-users\t\tConsider jobs from all users\n"
+		"\t-allusers\t\tConsider jobs from all users\n"
 		);
 
 	printf ("\n    [output-opts] are\n"
@@ -3331,6 +3331,7 @@ usage (const char *myName, int other)
 		"\t-help [Universe|State]\tDisplay this screen, JobUniverses, JobStates\n"
 		"\t-hold\t\t\tGet information about jobs on hold\n"
 		"\t-io\t\t\tDisplay information regarding I/O\n"
+		"\t-progress\t\tDisplay progress of DAGs and batches of similar jobs\n"
 //FUTURE		"\t-transfer\t\tDisplay information for jobs that are doing file transfer\n"
 		"\t-run\t\t\tGet information about running jobs\n"
 		"\t-totals\t\t\tDisplay only job totals\n"
@@ -3382,7 +3383,7 @@ usage (const char *myName, int other)
 
 	printf ("\n    Only information about jobs owned by the current user will be returned.\n"
 			"This default is overridden when the restriction list has usernames and/or\n"
-			"job ids, when the -submitter or -all-users arguments are specified, or\n"
+			"job ids, when the -submitter or -allusers arguments are specified, or\n"
 			"when the current user is a queue superuser\n"
 		"\n"
 		);
