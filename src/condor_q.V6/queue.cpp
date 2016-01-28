@@ -4384,6 +4384,8 @@ static bool process_job_to_rod_per_ad_map(void * pv,  ClassAd* job)
 	}
 
 	int columns = app.mask.ColCount();
+	if (0 == columns)
+		return true;
 
 	std::pair<ROD_MAP_BY_ID::iterator,bool> pp = pmap->insert(std::pair<long long, JobRowOfData>(jobid.id,jobid.id));
 	if( ! pp.second ) {
@@ -4498,7 +4500,7 @@ streaming_print_job(void *, ClassAd *job)
 		sPrintAd(result_text, *job, false, (dash_autocluster || app.attrs.isEmpty()) ? NULL : &app.attrs);
 		fmt = "%s\n";
 	} else {
-		app.mask.display(result_text, job);
+		if (app.mask.ColCount() > 0) { app.mask.display(result_text, job); }
 	}
 	if ( ! result_text.empty()) { printf(fmt, result_text.c_str()); }
 	return true;
