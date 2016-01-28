@@ -41,6 +41,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug that caused the \Condor{collector} to crash if
+\MacroNI{CONDOR\_DEVELOPERS\_COLLECTOR}, or its default value it unset,
+failed to resolve.
+\Ticket{5492}
+
 \item Fixed a bug that caused the \Condor{master} to fail if a shared port
 daemon address file from before version 8.4.0 were still present.
 \Ticket{5488}
