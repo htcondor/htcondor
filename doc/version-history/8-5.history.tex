@@ -48,7 +48,7 @@ of the event.
 \item \Condor{q} will now only show the current user's jobs by default. This behavior
 can be turned off by setting the new configuration option \Macro{CONDOR\_Q\_ONLY\_MY\_JOBS}
 to false in the configuration for either the \Condor{schedd} or \Condor{q}. It can also be 
-turned off by passing the new \Opt{-all-users} command line option to \Condor{q}.
+turned off by passing the new \Opt{-allusers} command line option to \Condor{q}.
 \Ticket{5271}
 
 \item A new \Opt{-progress} command line option to \Condor{q} can be used to show a single
@@ -65,6 +65,11 @@ which can be used to set the batch name used by \Condor{q} \Opt{-progress}.
 full width of the terminal.
 \Ticket{5429}
 \Ticket{5459}
+
+\item the \Opt{-run} and \Opt{-hold} arguments of \Condor{q} used to produce garbage output
+when used with other formatting options such as \Opt{-format}.  Now they will always constrain
+the query, and will also set the output format when used by themselves.
+\Ticket{11}
 
 \end{itemize}
 

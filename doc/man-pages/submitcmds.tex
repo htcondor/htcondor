@@ -3280,6 +3280,19 @@ but it applies to the job event log, instead of the system event log.
 
 
 %%%%%%%%%%%%%%%%%%%
+%% JobBatchName
+%%%%%%%%%%%%%%%%%%%
+\index{submit commands!JobBatchName}
+\label{condor-submit-JobBatchName}
+\item[JobBatchName = $<$batch\_name$>$] Set the batch name for this submit.
+  The batch name is displayed by \Condor{q} \Opt{-progress}.  It is intended
+  for use by users to give meaningful names to their jobs and to influence
+  how \Condor{q} groups jobs for display.  This value in a submit file
+  can be overridden by specifying the \Opt{-batch-name} argument on
+  the \Condor{submit} command line.
+
+
+%%%%%%%%%%%%%%%%%%%
 %% job_lease_duration
 %%%%%%%%%%%%%%%%%%%
 \index{submit commands!job\_lease\_duration}

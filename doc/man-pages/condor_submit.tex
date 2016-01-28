@@ -15,12 +15,12 @@
 \ToolDebugOption
 % this option needs the dots in boldface, so using the macro oOptArg won't work
 \Lbr\Opt{-append} \Arg{command} \Opt{\Dots}\Rbr 
-\oOpt{-batch-name}{batch\_name}
+\oOptArg{-batch-name}{batch\_name}
 \oOpt{-spool}
 \oOptArg{-dump}{filename}
 \oOpt{-interactive}
 \oOpt{-dry-run}
-\oOptArg{-maxjobs}{<number-of-jobs>}
+\oOptArg{-maxjobs}{number-of-jobs}
 \oOpt{-single-cluster}
 \oOpt{<submit-variable>=<value>}
 \oArg{submit description file}
@@ -142,11 +142,12 @@ based on the value of the configuration variable \MacroNI{TOOL\_DEBUG}.}
   Commands with spaces in them will need to be enclosed in double quote
   marks. }
 
-\OptItem{\OptArg{-batch-name}{command}}{Set the batch name for this submit.
+\OptItem{\OptArg{-batch-name}{batch\_name}}{Set the batch name for this submit.
   The batch name is displayed by \Condor{q} \Opt{-progress}.  It is intended
   for use by users to give meaningful names to their jobs and to influence
   how \Condor{q} groups jobs for display. Use of this argument
-  takes precedence over a batch name specified in the submit description file itself. }
+  takes precedence over a batch name specified in the submit description
+  file itself. }
 
 \OptItem{\Opt{-spool}}{Spool all required input files, job event log, and
 proxy over the connection to the \Condor{schedd}.
@@ -178,18 +179,18 @@ files for completed jobs need to be retrieved with \Condor{transfer\_data}.}
   The job ClassAd attribute \Attr{InteractiveJob} is set to \Expr{True}
   to identify interactive jobs for \Condor{startd} policy usage.  }
 
-\OptItem{\Opt{-dry-run}{<file>}}{Parse the submit description file,
-  sending the job ClassAd to the file given by \Opt{<file>}, but do not submit the job(s).
-  This permits an observation of job specification, 
+\OptItem{\OptArg{-dry-run}{file}}{Parse the submit description file,
+  sending the resulting job ClassAd to the file given by \Arg{file}, but
+  do not submit the job(s).
+  This permits observation of the job specification, 
   and it facilitates debugging the submit description file contents.
-  if \Opt{<file>} is -, the output is written to \File{stdout}.
-   }
+  If \Arg{file} is \Opt{-}, the output is written to \File{stdout}. }
 
-\OptItem{\OptArg{-maxjobs}{<number-of-jobs>}}{If the total number
+\OptItem{\OptArg{-maxjobs}{number-of-jobs}}{If the total number
   of jobs specified by the submit description file is more than
-  the integer value given by \Opt{<number-of-jobs>}, 
+  the integer value given by \Arg{number-of-jobs}, 
   then no jobs are submitted for execution and an error message is generated. 
-  A 0 or negative value for the \Opt{<number-of-jobs>}
+  A 0 or negative value for the \Arg{number-of-jobs}
   causes no limit to be imposed. }
 
 \OptItem{\Opt{-single-cluster}}{If the jobs specified by the submit description
