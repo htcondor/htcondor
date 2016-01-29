@@ -46,6 +46,11 @@ The details of each version are described below.
 failed to resolve.
 \Ticket{5492}
 
+\item Fixed a bug that caused Condor-C jobs to fail when
+\Attr{JobLeaseDuration} was set to less than one hour (3600 seconds).
+The remote job would be aborted due to the job lease not being renewed.
+\Ticket{5446}
+
 \item Fixed a bug that caused the \Condor{master} to fail if a shared port
 daemon address file from before version 8.4.0 were still present.
 \Ticket{5488}
@@ -54,11 +59,6 @@ daemon address file from before version 8.4.0 were still present.
 \Attr{TimerRemove} to not be respected while the job was being managed
 by the \Condor{shadow}, \Condor{gridmanager}, or the Job Router.
 \Ticket{5470}
-
-\item Fixed a bug that caused Condor-C jobs to fail when
-\Attr{JobLeaseDuration} was set to less than one hour (3600 seconds).
-The remote job would be aborted due to the job lease not being renewed.
-\Ticket{5446}
 
 \item Fixed a bug where the job policy expression of a job could appear
 in one of the Reason attributes of another job.
