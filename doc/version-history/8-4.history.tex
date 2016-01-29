@@ -24,7 +24,7 @@ The details of each version are described below.
 \begin{itemize}
 
 \item HTCondor version 8.4.4 not yet released.
-%\item HTCondor version 8.4.4 released on Month Date, 2015.
+%\item HTCondor version 8.4.4 released on Month Date, 2016.
 
 \end{itemize}
 
@@ -41,7 +41,24 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Fixed a bug that caused the \Condor{collector} to crash if
+\MacroNI{CONDOR\_DEVELOPERS\_COLLECTOR}, or its default value it unset,
+failed to resolve.
+\Ticket{5492}
+
+\item Fixed a bug that caused the \Condor{master} to fail if a shared port
+daemon address file from before version 8.4.0 were still present.
+\Ticket{5488}
+
+\item Fixed a bug that caused updates to the job attribute
+\Attr{TimerRemove} to not be respected while the job was being managed
+by the \Condor{shadow}, \Condor{gridmanager}, or the Job Router.
+\Ticket{5470}
+
+\item Fixed a bug that caused Condor-C jobs to fail when
+\Attr{JobLeaseDuration} was set to less than one hour (3600 seconds).
+The remote job would be aborted due to the job lease not being renewed.
+\Ticket{5446}
 
 \end{itemize}
 

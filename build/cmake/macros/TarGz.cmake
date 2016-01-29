@@ -18,9 +18,10 @@ if (NOT WINDOWS)
     add_custom_command(
         OUTPUT ${CPACK_PACKAGE_FILE_NAME}.tar.gz
         COMMAND mv ARGS ${CMAKE_INSTALL_PREFIX} ${CPACK_PACKAGE_FILE_NAME}
-        COMMAND ls ARGS -lR ${CPACK_PACKAGE_FILE_NAME}
-        COMMAND ps ARGS auwx
-        COMMAND ${TAR_COMMAND} ARGS czf ${CPACK_PACKAGE_FILE_NAME}.tar.gz --owner=0 --group=0 --numeric-owner ${CPACK_PACKAGE_FILE_NAME}
+	# For reasons we just can't explain, occasionally, on macos only, 
+	# tar fails with "file changed as we read it", because the mtime
+	# of a .a file moved.  Just retry the tar if it fails for any reason
+        COMMAND ${TAR_COMMAND} ARGS czf ${CPACK_PACKAGE_FILE_NAME}.tar.gz --owner=0 --group=0 --numeric-owner ${CPACK_PACKAGE_FILE_NAME} || ${TAR_COMMAND} ARGS czf ${CPACK_PACKAGE_FILE_NAME}.tar.gz --owner=0 --group=0 --numeric-owner ${CPACK_PACKAGE_FILE_NAME}
         COMMAND mv ARGS ${CPACK_PACKAGE_FILE_NAME} ${CMAKE_INSTALL_PREFIX}
     )
     add_custom_target(targz DEPENDS ${CPACK_PACKAGE_FILE_NAME}.tar.gz)

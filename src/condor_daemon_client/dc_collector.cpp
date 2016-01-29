@@ -247,7 +247,11 @@ DCCollector::sendUpdate( int cmd, ClassAd* ad1, DCCollectorAdSequences& adSeq, C
 		if( daemonCore ) {
 			const char * myOwnSinful = daemonCore->InfoCommandSinfulString();
 			if( myOwnSinful == NULL ) {
-				dprintf( D_ALWAYS | D_FAILURE, "Unable to determine my own address, will not update or invalidate collector ad to avoid potential deadlock.\n" );
+				dprintf( D_ALWAYS, "Unable to determine my own address, will not update or invalidate collector ad to avoid potential deadlock.\n" );
+				return false;
+			}
+			if( _addr == NULL ) {
+				dprintf( D_ALWAYS, "Failing attempt to update or invalidate collector ad because of missing daemon address (probably an unresolved hostname; daemon name is '%s').\n", _name );
 				return false;
 			}
 			if( strcmp( myOwnSinful, _addr ) == 0 ) {
