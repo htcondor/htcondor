@@ -354,11 +354,11 @@ char *findOldest(char *dirName, int *count) {
 		if ( ! oldFile) {
 			oldFile = (char*)malloc(strlen(logBaseName) + 2 + MAX_ISO_TIMESTAMP);
 			ASSERT( oldFile );
-			strcpy(oldFile, ffd.cFileName);
+			sprintf(oldFile, "%s%c%s", dirName, DIR_DELIM_CHAR, ffd.cFileName);
 		} else {
 			int cch = strlen(ffd.cFileName);
 			if (cch > cchBase && strcmp(ffd.cFileName+cchBase, oldFile+cchBase) < 0) {
-				strcpy(oldFile, ffd.cFileName);
+				sprintf(oldFile, "%s%c%s", dirName, DIR_DELIM_CHAR, ffd.cFileName);
 			}
 		}
 	}
