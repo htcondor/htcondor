@@ -39,6 +39,7 @@ class DockerAPI {
 						const ArgList & arguments,
 						const Env & environment,
 						const std::string & directory,
+						const std::list<std::string> extraVolumes,
 						int & pid,
 						int * childFDs,
 						CondorError & error );
@@ -87,6 +88,8 @@ class DockerAPI {
 
 		// Only available in Docker 1.1 or later.
 		static int unpause( const std::string & container, CondorError & err );
+
+		static int stats(const std::string &container, uint64_t &memUsage, uint64_t &netIn, uint64_t &netOut);
 
 		/**
 		 * Obtains the docker-inspect values State.Running and State.ExitCode.

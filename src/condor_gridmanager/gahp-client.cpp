@@ -32,6 +32,7 @@
 #include "condor_claimid_parser.h"
 #include "authentication.h"
 #include "condor_version.h"
+#include "selector.h"
 
 #include "gahp-client.h"
 #include "gridmanager.h"
@@ -50,6 +51,7 @@ using std::string;
 
 bool logGahpIo = true;
 unsigned long logGahpIoSize = 0;
+int gahpResponseTimeout = 20;
 
 HashTable <HashKey, GahpServer *>
     GahpServer::GahpServersById( HASH_TABLE_SIZE,
@@ -68,6 +70,7 @@ void GahpReconfig()
 
 	logGahpIo = param_boolean( "GRIDMANAGER_GAHPCLIENT_DEBUG", true );
 	logGahpIoSize = param_integer( "GRIDMANAGER_GAHPCLIENT_DEBUG_SIZE", 0 );
+	gahpResponseTimeout = param_integer( "GRIDMANAGER_GAHP_RESPONSE_TIMEOUT", 20 );
 
 	tmp_int = param_integer( "GRIDMANAGER_MAX_PENDING_REQUESTS", 50 );
 
@@ -79,6 +82,17 @@ void GahpReconfig()
 			// TODO should we kick the server in the ass to submit any
 			//   unsubmitted requests?
 	}
+}
+
+bool GahpOverloadError( const Gahp_Args &return_line )
+{
+		// The blahp will return this error if a new request will cause it
+		// to exceed its limit on the number of threads it has. The limit
+		// is set in the blahp's config file.
+	if ( return_line.argc > 1 && !strcmp( return_line.argv[1], "Threads limit reached" ) ) {
+		return true;
+	}
+	return false;
 }
 
 void GahpClient::setErrorString( const std::string & newErrorString ) {
@@ -115,6 +129,8 @@ GahpServer::GahpServer(const char *id, const char *path, const ArgList *args)
 	m_gahp_readfd = -1;
 	m_gahp_writefd = -1;
 	m_gahp_errorfd = -1;
+	m_gahp_real_readfd = -1;
+	m_gahp_real_errorfd = -1;
 	m_gahp_error_buffer = "";
 	m_reference_count = 0;
 	m_commands_supported = NULL;
@@ -431,6 +447,7 @@ GahpServer::read_argv(Gahp_Args &g_args)
 	bool trash_this_line = false;
 	bool escape_seen = false;
 	static const int buf_size = 1024 * 500;
+	time_t response_timeout = time(NULL) + gahpResponseTimeout;
 
 	g_args.reset();
 
@@ -454,8 +471,23 @@ GahpServer::read_argv(Gahp_Args &g_args)
 		//result = daemonCore->Read_Pipe(m_gahp_readfd, &(buf[ibuf]), 1 );
 		result = buffered_read(m_gahp_readfd, &(buf[ibuf]), 1 );
 
+		if ( time(NULL) >= response_timeout ) {
+			EXCEPT( "Gahp Server (pid=%d) unresponsive for %d seconds",
+					m_gahp_pid, gahpResponseTimeout );
+		}
+
 		/* Check return value from read() */
 		if ( result < 0 ) {		/* Error - try reading again */
+			// Avoid a tight spin-lock waiting for the gahp to respond.
+#if !defined(WIN32)
+			Selector selector;
+			selector.add_fd( m_gahp_real_readfd, Selector::IO_READ );
+			selector.add_fd( m_gahp_real_errorfd, Selector::IO_READ );
+			selector.set_timeout( response_timeout - time(NULL) );
+			selector.execute();
+#else
+			Sleep(1);
+#endif
 			continue;
 		}
 		if ( result == 0 ) {	/* End of File */
@@ -838,6 +870,10 @@ GahpServer::Startup()
 	m_gahp_errorfd = stderr_pipefds[0];
 	m_gahp_readfd = stdout_pipefds[0];
 	m_gahp_writefd = stdin_pipefds[1];
+#if !defined(WIN32)
+	m_gahp_real_readfd = daemonCore->Get_Pipe_FD( m_gahp_readfd, &m_gahp_real_readfd );
+	m_gahp_real_errorfd = daemonCore->Get_Pipe_FD( m_gahp_errorfd, &m_gahp_real_errorfd );
+#endif
 
 		// Read in the initial greeting from the GAHP, which is the version.
 	if ( command_version() == false ) {
@@ -921,6 +957,8 @@ GahpServer::Startup()
 	m_gahp_errorfd = -1;
 	m_gahp_readfd = -1;
 	m_gahp_writefd = -1;
+	m_gahp_real_readfd = -1;
+	m_gahp_real_errorfd = -1;
 
 	return false;
 }
@@ -2534,13 +2572,13 @@ GahpClient::now_pending(const char *command,const char *buf,
 			// this request for later.
 		switch ( prio_level ) {
 		case high_prio:
-			server->waitingHighPrio.push( pending_reqid );
+			server->waitingHighPrio.push_back( pending_reqid );
 			break;
 		case medium_prio:
-			server->waitingMediumPrio.push( pending_reqid );
+			server->waitingMediumPrio.push_back( pending_reqid );
 			break;
 		case low_prio:
-			server->waitingLowPrio.push( pending_reqid );
+			server->waitingLowPrio.push_back( pending_reqid );
 			break;
 		}
 		return;
@@ -2565,6 +2603,19 @@ GahpClient::now_pending(const char *command,const char *buf,
 	Gahp_Args return_line;
 	server->read_argv(return_line);
 	if ( return_line.argc == 0 || return_line.argv[0][0] != 'S' ) {
+			// If the gahp server says it's overloaded, lower our limit on
+			// pending requests and make this request the next one to be
+			// issued when more results come back.
+		if ( GahpOverloadError( return_line ) && server->num_pending_requests > 0 ) {
+			if ( server->max_pending_requests > server->num_pending_requests ) {
+				dprintf( D_ALWAYS, "GAHP server %d overloaded, lowering pending limit to %d\n", server->m_gahp_pid, server->num_pending_requests );
+				server->max_pending_requests = server->num_pending_requests;
+			} else {
+				dprintf( D_ALWAYS, "GAHP server %d overloaded, will retry request\n", server->m_gahp_pid );
+			}
+			server->waitingHighPrio.push_front( pending_reqid );
+			return;
+		}
 		// Badness !
 		EXCEPT("Bad %s Request: %s",pending_command, return_line.argc?return_line.argv[0]:"Empty response");
 	}
@@ -2751,13 +2802,13 @@ GahpServer::poll()
 	{
 		if ( waitingHighPrio.size() > 0 ) {
 			waiting_reqid = waitingHighPrio.front();
-			waitingHighPrio.pop();
+			waitingHighPrio.pop_front();
 		} else if ( waitingMediumPrio.size() > 0 ) {
 			waiting_reqid = waitingMediumPrio.front();
-			waitingMediumPrio.pop();
+			waitingMediumPrio.pop_front();
 		} else if ( waitingLowPrio.size() > 0 ) {
 			waiting_reqid = waitingLowPrio.front();
-			waitingLowPrio.pop();
+			waitingLowPrio.pop_front();
 		} else {
 			break;
 		}
@@ -7194,16 +7245,18 @@ int GahpClient::ec2_spot_start( std::string service_url,
                                 std::string vpc_subnet,
                                 std::string vpc_ip,
                                 std::string client_token,
+                                std::string iam_profile_arn,
+                                std::string iam_profile_name,
                                 StringList & groupnames,
                                 std::string & request_id,
                                 std::string & error_code )
 {
     static const char * command = "EC2_VM_START_SPOT";
-    
+
     if( server->m_commands_supported->contains_anycase( command ) == FALSE ) {
         return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
     }
-    
+
     if( service_url.empty()
      || publickeyfile.empty()
      || privatekeyfile.empty()
@@ -7212,7 +7265,7 @@ int GahpClient::ec2_spot_start( std::string service_url,
         return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
     }
 
-    if( keypair.empty() ) { keypair = NULLSTRING; }    
+    if( keypair.empty() ) { keypair = NULLSTRING; }
     if( user_data.empty() ) { user_data = NULLSTRING; }
     if( user_data_file.empty() ) { user_data_file = NULLSTRING; }
     if( instance_type.empty() ) { instance_type = NULLSTRING; }
@@ -7220,6 +7273,8 @@ int GahpClient::ec2_spot_start( std::string service_url,
     if( vpc_subnet.empty() ) { vpc_subnet = NULLSTRING; }
     if( vpc_ip.empty() ) { vpc_ip = NULLSTRING; }
     if( client_token.empty() ) { client_token = NULLSTRING; }
+    if ( iam_profile_arn.empty() ) iam_profile_arn = NULLSTRING;
+    if ( iam_profile_name.empty() ) iam_profile_name = NULLSTRING;
 
     std::string space = " ";
     std::string requestLine;
@@ -7235,14 +7290,16 @@ int GahpClient::ec2_spot_start( std::string service_url,
     requestLine += escapeGahpString( availability_zone ) + space;
     requestLine += escapeGahpString( vpc_subnet ) + space;
     requestLine += escapeGahpString( vpc_ip ) + space;
-    requestLine += escapeGahpString( client_token );
+    requestLine += escapeGahpString( client_token ) + space;
+    requestLine += escapeGahpString( iam_profile_arn ) + space;
+    requestLine += escapeGahpString( iam_profile_name );
 
     char * groups = groupnames.print_to_delimed_string( " " );
     if( groups != NULL ) {
         requestLine += space + groups;
     }
     free( groups );
-    
+
     const char * arguments = requestLine.c_str();
     if( ! is_pending( command, arguments ) ) {
         if( m_mode == results_only ) {
@@ -7250,8 +7307,8 @@ int GahpClient::ec2_spot_start( std::string service_url,
         }
         now_pending( command, arguments, deleg_proxy );
     }
-    
-    Gahp_Args * result = get_pending_result( command, arguments );        
+
+    Gahp_Args * result = get_pending_result( command, arguments );
     if( result ) {
         int rc = 0;
         switch( result->argc ) {
@@ -7279,14 +7336,14 @@ int GahpClient::ec2_spot_start( std::string service_url,
         delete result;
         return rc;
     }
-    
+
     if( check_pending_timeout( command, arguments ) ) {
 		formatstr( error_string, "%s timed out", command );
         return GAHPCLIENT_COMMAND_TIMED_OUT;
     }
-    
+
     return GAHPCLIENT_COMMAND_PENDING;
-}    
+}
 
 int GahpClient::ec2_spot_stop(  std::string service_url,
                                 std::string publickeyfile,

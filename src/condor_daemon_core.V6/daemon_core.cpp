@@ -272,6 +272,8 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 	EnterCriticalSection(&Big_fat_mutex);
 
 	mypid = ::GetCurrentProcessId();
+
+	InitializeSListHead(&PumpWorkHead);
 #else
 	mypid = ::getpid();
 #endif
@@ -848,21 +850,64 @@ int	DaemonCore::Register_Timer(unsigned deltawhen, TimerHandler handler,
 	return( t.NewTimer(deltawhen, handler, event_descrip, 0) );
 }
 
+int DaemonCore::Register_PumpWork_TS(PumpWorkCallback handler, void* cls, void* data)
+{
 #ifdef WIN32
-int DaemonCore::Register_Timer_TS(unsigned deltawhen, TimerHandlercpp handler,
-				const char *event_descrip, Service* s)
-{
-	EnterCriticalSection(&Big_fat_mutex);
-	int status = Register_Timer(deltawhen, handler, event_descrip, s);
-	Do_Wake_up_select();
-	LeaveCriticalSection(&Big_fat_mutex);
+	PumpWorkItem * work = (PumpWorkItem*)_aligned_malloc(sizeof(PumpWorkItem), MEMORY_ALLOCATION_ALIGNMENT);
+	if ( ! work) return -1;
 
-	return status;
+	work->callback = handler;
+	work->cls = cls;
+	work->data = data;
+	if ( ! InterlockedPushEntrySList(&PumpWorkHead, &work->slist)) {
+		// we get false back when the list used to be empty
+	}
+	if (GetCurrentThreadId() != dcmainThreadId) {
+		Do_Wake_up_select();
+	}
+	return 1;
 #else
-int DaemonCore::Register_Timer_TS(unsigned /* deltawhen */,
-				TimerHandlercpp /* handler */,
-				const char * /* event_descrip */, Service * /* s */ )
-{
+	// implement for non-windows?
+	dprintf(D_ALWAYS|D_FAILURE, "Register_PumpWork_TS(%p, %p, %p) called, but has not (yet) been implemented on this platform\n",
+			handler, cls, data);
+	return -1;
+#endif
+}
+
+// call on main thread to handle all of work in the PumpWork list, returns number of callbacks handled
+int DaemonCore::DoPumpWork() {
+#ifdef WIN32
+	// the InterlockedSList is a stack (LIFO) but we want to handle them in FIFO
+	// order, so first step it to remove items from the interlocked stack and put
+	// them in the order we want to handle them. We can re-use the Next pointer
+	// of items we have removed from the slist to build this processing list.
+	PumpWorkItem * work;
+	PumpWorkItem * last = (PumpWorkItem*)InterlockedPopEntrySList(&PumpWorkHead);
+	if (last) {
+		last->slist.Next = NULL;
+		while ((work = (PumpWorkItem*)InterlockedPopEntrySList(&PumpWorkHead))) {
+			work->slist.Next = &(last->slist);
+			last = work;
+		}
+	}
+
+	// now process the items.
+	int citems = 0;
+	for (work = last; work; ) {
+
+		// call the handler
+		work->callback(work->cls, work->data);
+		++citems;
+
+		// advance the pointer along the list
+		// and then free the current item.
+		last = work;
+		work = (PumpWorkItem*)work->slist.Next;
+		_aligned_free(last);
+	}
+	return citems;
+#else
+	// implement for non-windows?
 	return 0;
 #endif
 }
@@ -973,7 +1018,7 @@ int DaemonCore::Register_Command(int command, const char* command_descrip,
 		if ( comTable[j].num == command ) {
 			MyString msg;
 			msg.formatstr("DaemonCore: Same command registered twice (id=%d)", command);
-			EXCEPT(msg.c_str());
+			EXCEPT("%s",msg.c_str());
 		}
 	}
 	if ( i == -1 ) {
@@ -1065,6 +1110,7 @@ char const * DaemonCore::InfoCommandSinfulString(int pid)
 	if ( pid == -1 ) {
 		return InfoCommandSinfulStringMyself(false);
 	} else {
+		if (pid == -2) pid = ppid; // a value of -2 means use my parent pid
 		PidEntry *pidinfo = NULL;
 		if ((pidTable->lookup(pid, pidinfo) < 0)) {
 			// we have no information on this pid
@@ -1132,9 +1178,6 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 		free( sinful_public );
 		sinful_public = NULL;
 
-		// In mixed mode, this will probably be an IPv6 address, which is
-		// suboptimal for backwards-compatibility.
-		// char const *addr = ((Sock*)(*sockTable)[initial_command_sock()].iosock)->get_sinful_public();
 		int initialCommandSock = initial_command_sock();
 		if( initialCommandSock == -1 ) {
 			EXCEPT( "Unable to find initial command socket!" );
@@ -1143,6 +1186,13 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 		Sock * sock = (Sock *)(*sockTable)[initialCommandSock].iosock;
 		condor_sockaddr sa = sock->my_addr();
 
+		// FIXME: get_sinful_public() will return the TCP_FORWARDING_HOST.
+		// We need to check where else it can end up and if it will cause
+		// problems there.  It's safe to do here, unless you're running
+		// an older version of HTCondor on the same node (because the
+		// Sinful in the address file will have TCP_FORWARDING_HOST as its
+		// primary address, and older versions of HTCondor don't ignore
+		// the primary address).
 		char const * addr = sock->get_sinful_public();
 		if(! sa.is_ipv4()) {
 			for( int i = initialCommandSock; i < nSock; ++i ) {
@@ -1274,16 +1324,55 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 			}
 		}
 
+		// TCP_FORWARDING_HOST is defined in 8.4 to be the singlular
+		// advertised public address of the daemon.  The client sorts
+		// addrs by desirability and then uses the first address of a
+		// protocol that it has enabled.  Since we don't know that
+		// TCP_FORWARDING_HOST is more desirable (although it should be),
+		// replace the public address of the corresponding protocol
+		// with TCP_FORWARDING_HOST.
+		//
+		// Note that sPublic, despite its name, is used to generate the
+		// private address, and therefore shouldn't be changed, since it
+		// is (for instance) written to the address file (and the
+		// TCP_FORWARDING_HOST may only forward TCP connections in one
+		// direction).
+		condor_sockaddr fa;
+		forwarding = param( "TCP_FORWARDING_HOST" );
+		if( forwarding ) {
+			if(! fa.from_ip_string( forwarding )) {
+				// This duplicates the logic from get_sinful_public().  It's
+				// not the best logic, but at least it's consistent.
+				std::vector< condor_sockaddr > addrs = resolve_hostname( forwarding );
+				if( addrs.empty() ) {
+					dprintf( D_ALWAYS, "Failed to resolve address of TCP_FORWARDING_HOST=%s\n", forwarding );
+				} else {
+					fa = addrs.front();
+				}
+			}
+			free( forwarding );
+		}
+
 		ASSERT( sa6.is_valid() || sa4.is_valid() );
 		Sinful sPublic( sinful_public );
 		Sinful sPrivate( sinful_private != NULL ? sinful_private : "" );
 		if( sa6.is_valid() ) {
-			m_sinful.addAddrToAddrs( sa6 );
+			if( fa.is_valid() && fa.is_ipv6() ) {
+				fa.set_port( sa6.get_port() );
+				m_sinful.addAddrToAddrs( fa );
+			} else {
+				m_sinful.addAddrToAddrs( sa6 );
+			}
 			sPublic.addAddrToAddrs( sa6 );
 			sPrivate.addAddrToAddrs( sa6 );
 		}
 		if( sa4.is_valid() ) {
-			m_sinful.addAddrToAddrs( sa4 );
+			if( fa.is_valid() && fa.is_ipv4() ) {
+				fa.set_port( sa4.get_port() );
+				m_sinful.addAddrToAddrs( fa );
+			} else {
+				m_sinful.addAddrToAddrs( sa4 );
+			}
 			sPublic.addAddrToAddrs( sa4 );
 			sPrivate.addAddrToAddrs( sa4 );
 		}
@@ -3168,7 +3257,7 @@ DaemonCore::Wake_up_select()
 	if (CondorThreads::get_tid() <= 1) {
 #ifdef WIN32
 		if (GetCurrentThreadId() != dcmainThreadId) {
-			dprintf (D_ALWAYS, "DaemonCore::Wake_up_select called from an unknown thread. windows tid = %d", 
+			dprintf (D_ALWAYS, "DaemonCore::Wake_up_select called from an unknown thread. windows tid = %d\n",
 				GetCurrentThreadId());
 		}
 #endif
@@ -3331,6 +3420,10 @@ void DaemonCore::Driver()
 
 		// Prepare to enter main select()
 
+		// handle queued pump work. these are like zero timeout one-shot timers
+		// but unlike timers, can be registered from any thread
+		int num_pumpwork_fired = DoPumpWork();
+
 		// call Timeout() - this function does 2 things:
 		//   first, it calls any timer handlers whose time has arrived.
 		//   second, it returns how many seconds until the next timer
@@ -3345,6 +3438,7 @@ void DaemonCore::Driver()
         int num_timers_fired = 0;
 		timeout = t.Timeout(&num_timers_fired, &runtime);
 
+		num_timers_fired += num_pumpwork_fired;
         dc_stats.TimersFired += num_timers_fired;
 
 		if ( sent_signal == TRUE ) {
@@ -7949,6 +8043,7 @@ int DaemonCore::Create_Process(
 	pidtmp->reaper_id = reaper_id;
 	pidtmp->hung_tid = -1;
 	pidtmp->was_not_responding = FALSE;
+	pidtmp->got_alive_msg = 0;
 	if(!session_id.empty())
 	{
 		pidtmp->child_session_id = strdup(session_id.c_str());
@@ -8355,6 +8450,7 @@ DaemonCore::Create_Thread(ThreadStartFunc start_func, void *arg, Stream *sock,
 	pidtmp->reaper_id = reaper_id;
 	pidtmp->hung_tid = -1;
 	pidtmp->was_not_responding = FALSE;
+	pidtmp->got_alive_msg = 0;
 #ifdef WIN32
 	// we lie here and set pidtmp->pid to equal the tid.  this allows
 	// the DaemonCore WinNT pidwatcher code to remain mostly ignorant
@@ -8514,6 +8610,7 @@ DaemonCore::Inherit( void )
 		pidtmp->reaper_id = 0;
 		pidtmp->hung_tid = -1;
 		pidtmp->was_not_responding = FALSE;
+		pidtmp->got_alive_msg = 0;
 #ifdef WIN32
 		pidtmp->deallocate = 0L;
 
@@ -9538,6 +9635,7 @@ int DaemonCore::HandleChildAliveCommand(int, Stream* stream)
 	}
 
 	pidentry->was_not_responding = FALSE;
+	pidentry->got_alive_msg += 1;
 
 	dprintf(D_DAEMONCORE,
 			"received childalive, pid=%d, secs=%d, dprintf_lock_delay=%f\n",child_pid,timeout_secs,dprintf_lock_delay);
@@ -9689,6 +9787,19 @@ int DaemonCore::Was_Not_Responding(pid_t pid)
 	return pidentry->was_not_responding;
 }
 
+int DaemonCore::Got_Alive_Messages(pid_t pid, bool & not_responding)
+{
+	PidEntry *pidentry;
+
+	if ((pidTable->lookup(pid, pidentry) < 0)) {
+		// we have no information on this pid, assume the safe
+		// case.
+		return 0;
+	}
+
+	not_responding = pidentry->was_not_responding;
+	return pidentry->got_alive_msg;
+}
 
 int DaemonCore::SendAliveToParent()
 {
@@ -10185,7 +10296,7 @@ InitCommandSockets(int tcp_port, int udp_port, DaemonCore::SockPairVec & socks, 
 
 					std::string message;
 					formatstr( message, "Warning: Failed to create IPv6 command socket for ports %d/%d%s", tcp_port, udp_port, want_udp ? "" : "no UDP" );
-					if( fatal ) { EXCEPT( message.c_str() ); }
+					if( fatal ) { EXCEPT( "%s", message.c_str() ); }
 					dprintf(D_ALWAYS | D_FAILURE, "%s\n", message.c_str() );
 					return false;
 				}
@@ -10782,10 +10893,12 @@ DaemonCore::publish(ClassAd *ad) {
 
 void
 DaemonCore::initCollectorList() {
+	DCCollectorAdSequences * adSeq = NULL;
 	if (m_collector_list) {
+		adSeq = m_collector_list->detachAdSequences();
 		delete m_collector_list;
 	}
-	m_collector_list = CollectorList::create();
+	m_collector_list = CollectorList::create(NULL, adSeq);
 }
 
 
@@ -10867,6 +10980,7 @@ DaemonCore::PidEntry::PidEntry() : pid(0),
 	reaper_id(0),
 	hung_tid(0),
 	was_not_responding(0),
+	got_alive_msg(0),
 	stdin_offset(0),
 	child_session_id(NULL)
 {

@@ -19,6 +19,7 @@ my $firstappend_condor_config = '
     WANT_SUSPEND = FALSE
     NEGOTIATION_INTERVAL = 5
     NUM_CPUS = 6
+    USE_SHARED_PORT=FALSE
 ';
 
 my $testname = "condor_urlfetch_test";
@@ -36,12 +37,12 @@ CondorTest::StartCondorWithParams(
 
 my $fileh;
 # creating line to be seen in local config file
- open(FT, ">defaultlocal.txt") or die "can not opn defaultlocal.txt:$!\n";
-
+ open(FT, ">defaultlocal.txt") or die "can not open defaultlocal.txt:$!\n";
+print "Line to go into local file:$conf\n";
 print FT "$conf\n";
 close(FT);
 
-print "Line to go into local file:$conf\n";
+
 my $forkpid = fork();
 if($forkpid == 0)
 {
@@ -79,17 +80,22 @@ if($forkpid == 0)
   while (<OF>) {
   	 print NF "$_";
   }
-  $extraline = "LOCAL_CONFIG_FILE = condor_urlfetch _P(SUBSYSTEM) " . $url . " condor_config_file_cache";
+  $extraline = 'LOCAL_CONFIG_FILE = $(LIBEXEC)/condor_urlfetch -$(SUBSYSTEM) ' . $url . ' $(LOCAL_DIR)/condor_config_file_cache |';
+  print NF "$extraline\n";
+  
   print NF "$extraline\n";
   close(OF);
   close(NF);
   system("mv $newconfig $configpath");
 
   my $fetchedfh;
-  open($fetchedfh, "$(LOCAL_DIR)/condor_config_file_cache");
+  my $configdir = $configpath;
+  $configdir =~ s/condor_config//;
+  print("Config directory is: $configdir\n");
+  open($fetchedfh, $configdir . "condor_config_file_cache");
   
-  runCondorToolNTimes("condor_restart",1,1);
-  sleep(40);
+  #runCondorTool("condor_restart");
+  sleep(10);
 
   use File::Compare;
   if(compare($fileh, $fetchedfh) != 0)

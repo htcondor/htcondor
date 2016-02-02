@@ -35,17 +35,21 @@
 #include "error_utils.h"
 #include "condor_distribution.h"
 #include "condor_version.h"
+#include "natural_cmp.h"
 
 #include <vector>
 #include <sstream>
 #include <iostream>
 
-// use strverscmp for numerical sorting of hosts/slots if available
-#if defined(GLIBC)
-# define STRVCMP (naturalSort ? strverscmp : strcmp)
-#else
-# define STRVCMP strcmp
-#endif
+#define USE_LATE_PROJECTION 1
+
+// if enabled, use natural_cmp for numerical sorting of hosts/slots
+#define STRVCMP (naturalSort ? natural_cmp : strcmp)
+
+// for use with qsort, note the double de-ref 
+static int string_compare(const void *x, const void *y) {
+	return strcmp(*(char * const *) x, *(char * const *) y);
+}
 
 using std::vector;
 using std::string;
@@ -114,9 +118,7 @@ char		buffer[1024];
 char		*myName;
 vector<SortSpec> sortSpecs;
 bool            noSort = false; // set to true to disable sorting entirely
-#if defined(GLIBC)
-bool            naturalSort = false;
-#endif
+bool            naturalSort = true;
 bool            javaMode = false;
 bool			vmMode = false;
 bool			absentMode = false;
@@ -134,7 +136,6 @@ void usage 		();
 void firstPass  (int, char *[]);
 void secondPass (int, char *[]);
 void prettyPrint(ClassAdList &, TrackTotals *);
-int  matchPrefix(const char *, const char *, int min_len);
 int  lessThanFunc(AttrList*,AttrList*,void*);
 int  customLessThanFunc(AttrList*,AttrList*,void*);
 static bool read_classad_file(const char *filename, ClassAdList &classads, const char * constr);
@@ -144,6 +145,11 @@ extern	void setPPstyle (ppOption, int, const char *);
 extern  void setPPwidth ();
 extern	void setType    (const char *, int, const char *);
 extern	void setMode 	(Mode, int, const char *);
+#ifdef USE_LATE_PROJECTION
+extern void prettyPrintInitMask();
+#else
+extern	void dumpPPMask (std::string & out, AttrListPrintMask & mask);
+#endif
 extern  int  forced_display_width;
 
 int
@@ -404,30 +410,75 @@ main (int argc, char *argv[])
 				projList.AppendArg(s);
 			}
 		}
+		pmHeadFoot = HF_BARE;
+	}
+
+#ifdef USE_LATE_PROJECTION
+	// Setup the pretty printer for the given mode.
+	if (ppStyle != PP_VERBOSE && ppStyle != PP_XML && ppStyle != PP_CUSTOM) {
+		prettyPrintInitMask();
+	}
+#endif
+
+	// if diagnose was requested, just print the query ad
+	if (diagnose) {
+
+		FILE* fout = stderr;
+
+		fprintf(fout, "diagnose: ");
+		for (int ii = 0; ii < argc; ++ii) { fprintf(fout, "%s ", argv[ii]); }
+		fprintf(fout, "\n----------\n");
+
+		// print diagnostic information about inferred internal state
+		setMode ((Mode) 0, -2, NULL);
+		setType (NULL, -2, NULL);
+
+		// hack! because some if this information is accessible only as a static inside setPPStyle,
+		// we call it with magic arguments to print some stuff out.
+		setPPstyle(ppTotalStyle, -2, NULL);
+		fprintf(fout, "Opts: HF=%x\n", pmHeadFoot);
+
+		std::string style_text("");
+		style_text.reserve(8000);
+	#ifdef USE_LATE_PROJECTION
+		const CustomFormatFnTable * getCondorStatusPrintFormats();
+		List<const char> * pheadings = NULL;
+		if ( ! pm.has_headings()) {
+			if (pm_head.Length() > 0) pheadings = &pm_head;
+		}
+		pm.dump(style_text, getCondorStatusPrintFormats(), pheadings);
+	#else
+		dumpPPMask (style_text, pm);
+	#endif
+		fprintf(fout, "\nPrintMask:\n%s\n", style_text.c_str());
+
+		ClassAd queryAd;
+		q = query->getQueryAd (queryAd);
+		fPrintAd (fout, queryAd);
+
+		// print projection
+		int num_attrs = projList.Count();
+		if (num_attrs <= 0) {
+			fprintf(fout, "Projection: <NULL>\n");
+		} else {
+			char **attr_list = projList.GetStringArray();
+			::qsort(attr_list, num_attrs, sizeof(char*), string_compare);
+			fprintf(fout, "Projection:\n");
+			for (int ii = 0; ii < num_attrs; ++ii) {
+				fprintf(fout, "  %s\n",  attr_list[ii]);
+			}
+			deleteStringArray(attr_list);
+		}
+
+		fprintf (fout, "\n\n");
+		fprintf (stdout, "Result of making query ad was:  %d\n", q);
+		exit (1);
 	}
 
 	if( projList.Count() > 0 ) {
 		char **attr_list = projList.GetStringArray();
 		query->setDesiredAttrs(attr_list);
 		deleteStringArray(attr_list);
-	}
-
-	// if diagnose was requested, just print the query ad
-	if (diagnose) {
-		ClassAd 	queryAd;
-
-		// print diagnostic information about inferred internal state
-		setMode ((Mode) 0, 0, NULL);
-		setType (NULL, 0, NULL);
-		setPPstyle ((ppOption) 0, 0, DEFAULT);
-		printf ("----------\n");
-
-		q = query->getQueryAd (queryAd);
-		fPrintAd (stdout, queryAd);
-
-		printf ("----------\n");
-		fprintf (stderr, "Result of making query ad was:  %d\n", q);
-		exit (1);
 	}
 
         // Address (host:port) is taken from requested pool, if given.
@@ -598,6 +649,7 @@ main (int argc, char *argv[])
 
 const CustomFormatFnTable * getCondorStatusPrintFormats();
 
+
 int set_status_print_mask_from_stream (
 	const char * streamid,
 	bool is_filename,
@@ -762,9 +814,7 @@ usage ()
 		"\n    and [display-opts] are one or more of\n"
 		"\t-long\t\t\tDisplay entire classads\n"
 		"\t-sort <expr>\t\tSort entries by expressions. 'no' disables sorting\n"
-#if defined(GLIBC)
-		"\t-natural\t\t\tUse natural sort order in default output\n"
-#endif
+		"\t-natural[:off]\t\tUse natural sort order in default output (default=on)\n"
 		"\t-total\t\t\tDisplay totals only\n"
 //		"\t-verbose\t\tSame as -long\n"
 		"\t-expert\t\t\tDisplay shorter error messages\n"
@@ -809,10 +859,10 @@ firstPass (int argc, char *argv[])
 	// o since -c can be processed only after the query has been instantiated,
 	//   constraints are added on the second pass
 	for (int i = 1; i < argc; i++) {
-		if (matchPrefix (argv[i], "-avail", 3)) {
+		if (is_dash_arg_prefix (argv[i], "avail", 2)) {
 			setMode (MODE_STARTD_AVAIL, i, argv[i]);
 		} else
-		if (matchPrefix (argv[i], "-pool", 2)) {
+		if (is_dash_arg_prefix (argv[i], "pool", 1)) {
 			if( pool ) {
 				delete pool;
 				had_pool_error = 1;
@@ -857,7 +907,7 @@ firstPass (int argc, char *argv[])
 			i += 1;
 			ads_file = argv[i];
 		} else
-		if (matchPrefix (argv[i], "-format", 2)) {
+		if (is_dash_arg_prefix (argv[i], "format", 1)) {
 			setPPstyle (PP_CUSTOM, i, argv[i]);
 			if( !argv[i+1] || !argv[i+2] ) {
 				fprintf( stderr, "%s: -format requires two other arguments\n",
@@ -866,6 +916,7 @@ firstPass (int argc, char *argv[])
 				exit( 1 );
 			}
 			i += 2;
+			pmHeadFoot = HF_BARE;
 			explicit_format = true;
 		} else
 		if (*argv[i] == '-' &&
@@ -878,6 +929,7 @@ firstPass (int argc, char *argv[])
 				fprintf( stderr, "Use \"%s -help\" for details\n", myName );
 				exit( 1 );
 			}
+			pmHeadFoot = HF_NOSUMMARY;
 			explicit_format = true;
 			setPPstyle (PP_CUSTOM, i, argv[i]);
 			while (argv[i+1] && *(argv[i+1]) != '-') {
@@ -901,12 +953,20 @@ firstPass (int argc, char *argv[])
 			wide_display = true; // when true, don't truncate field data
 			if (pcolon) {
 				forced_display_width = atoi(++pcolon);
-				if (forced_display_width <= 80) wide_display = false;
+				if (forced_display_width <= 100) wide_display = false;
 				setPPwidth();
 			}
 			//invalid_fields_empty = true;
 		} else
-		if (matchPrefix (argv[i], "-target", 5)) {
+		if (is_dash_arg_colon_prefix (argv[i], "natural", &pcolon, 3)) {
+			naturalSort = true;
+			if (pcolon) {
+				if (MATCH == strcmp(++pcolon,"off")) {
+					naturalSort = false;
+				}
+			}
+		} else
+		if (is_dash_arg_prefix (argv[i], "target", 4)) {
 			if( !argv[i+1] ) {
 				fprintf( stderr, "%s: -target requires one additional argument\n",
 						 myName );
@@ -920,7 +980,7 @@ firstPass (int argc, char *argv[])
 			targetAd = new ClassAd(targetFile, "\n\n", iseof, iserror, empty);
 			fclose(targetFile);
 		} else
-		if (matchPrefix (argv[i], "-constraint", 4)) {
+		if (is_dash_arg_prefix (argv[i], "constraint", 3)) {
 			// can add constraints on second pass only
 			i++;
 			if( ! argv[i] ) {
@@ -930,7 +990,7 @@ firstPass (int argc, char *argv[])
 				exit( 1 );
 			}
 		} else
-		if (matchPrefix (argv[i], "-direct", 4)) {
+		if (is_dash_arg_prefix (argv[i], "direct", 3)) {
 			if( direct ) {
 				free( direct );
 				had_direct_error = 1;
@@ -944,28 +1004,28 @@ firstPass (int argc, char *argv[])
 			}
 			direct = strdup( argv[i] );
 		} else
-		if (matchPrefix (argv[i], "-diagnose", 4)) {
+		if (is_dash_arg_prefix (argv[i], "diagnose", 3)) {
 			diagnose = 1;
 		} else
-		if (matchPrefix (argv[i], "-debug", 3)) {
+		if (is_dash_arg_prefix (argv[i], "debug", 2)) {
 			// dprintf to console
 			dprintf_set_tool_debug("TOOL", 0);
 		} else
-		if (matchPrefix (argv[i], "-defrag", 4)) {
+		if (is_dash_arg_prefix (argv[i], "defrag", 3)) {
 			setMode (MODE_DEFRAG_NORMAL, i, argv[i]);
 		} else
-		if (matchPrefix (argv[i], "-help", 2)) {
+		if (is_dash_arg_prefix (argv[i], "help", 1)) {
 			usage ();
 			exit (0);
 		} else
-		if (matchPrefix (argv[i], "-long", 2) || matchPrefix (argv[i],"-verbose", 3)) {
+		if (is_dash_arg_prefix (argv[i], "long", 1) /* || matchPrefix (argv[i],"-verbose", 3)*/) {
 			//PRAGMA_REMIND("tj: remove -verbose as a synonym for -long")
 			setPPstyle (PP_VERBOSE, i, argv[i]);
 		} else
-		if (matchPrefix (argv[i],"-xml", 2)){
+		if (is_dash_arg_prefix (argv[i],"xml", 1)){
 			setPPstyle (PP_XML, i, argv[i]);
 		} else
-		if (matchPrefix (argv[i],"-attributes", 3)){
+		if (is_dash_arg_prefix (argv[i],"attributes", 2)){
 			if( !argv[i+1] ) {
 				fprintf( stderr, "%s: -attributes requires one additional argument\n",
 						 myName );
@@ -974,31 +1034,31 @@ firstPass (int argc, char *argv[])
 			}
 			i++;
 		} else	
-		if (matchPrefix (argv[i], "-run", 2) || matchPrefix(argv[i], "-claimed", 3)) {
+		if (is_dash_arg_prefix(argv[i], "claimed", 2) || is_dash_arg_prefix (argv[i], "run", 1)) {
 			setMode (MODE_STARTD_RUN, i, argv[i]);
 		} else
-		if( matchPrefix (argv[i], "-cod", 4) ) {
+		if( is_dash_arg_prefix (argv[i], "cod", 3) ) {
 			setMode (MODE_STARTD_COD, i, argv[i]);
 		} else
-		if (matchPrefix (argv[i], "-java", 2)) {
+		if (is_dash_arg_prefix (argv[i], "java", 1)) {
 			/*explicit_mode =*/ javaMode = true;
 		} else
-		if (matchPrefix (argv[i], "-absent", 3)) {
+		if (is_dash_arg_prefix (argv[i], "absent", 2)) {
 			/*explicit_mode =*/ absentMode = true;
 		} else
-		if (matchPrefix (argv[i], "-offline", 3)) {
+		if (is_dash_arg_prefix (argv[i], "offline", 2)) {
 			/*explicit_mode =*/ offlineMode = true;
 		} else
-		if (matchPrefix (argv[i], "-vm", 3)) {
+		if (is_dash_arg_prefix (argv[i], "vm", 2)) {
 			/*explicit_mode =*/ vmMode = true;
 		} else
-		if (matchPrefix (argv[i], "-server", 3)) {
+		if (is_dash_arg_prefix (argv[i], "server", 2)) {
 			setPPstyle (PP_STARTD_SERVER, i, argv[i]);
 		} else
-		if (matchPrefix (argv[i], "-state", 5)) {
+		if (is_dash_arg_prefix (argv[i], "state", 4)) {
 			setPPstyle (PP_STARTD_STATE, i, argv[i]);
 		} else
-		if (matchPrefix (argv[i], "-statistics", 6)) {
+		if (is_dash_arg_prefix (argv[i], "statistics", 5)) {
 			if( statistics ) {
 				free( statistics );
 				had_statistics_error = 1;
@@ -1012,16 +1072,16 @@ firstPass (int argc, char *argv[])
 			}
 			statistics = strdup( argv[i] );
 		} else
-		if (matchPrefix (argv[i], "-startd", 5)) {
+		if (is_dash_arg_prefix (argv[i], "startd", 4)) {
 			setMode (MODE_STARTD_NORMAL,i, argv[i]);
 		} else
-		if (matchPrefix (argv[i], "-schedd", 3)) {
+		if (is_dash_arg_prefix (argv[i], "schedd", 2)) {
 			setMode (MODE_SCHEDD_NORMAL, i, argv[i]);
 		} else
-		if (matchPrefix (argv[i], "-grid", 2)) {
+		if (is_dash_arg_prefix (argv[i], "grid", 1)) {
 			setMode (MODE_GRID_NORMAL, i, argv[i]);
 		} else
-		if (matchPrefix (argv[i], "-subsystem", 5)) {
+		if (is_dash_arg_prefix (argv[i], "subsystem", 4)) {
 			i++;
 			if( !argv[i] ) {
 				fprintf( stderr, "%s: -subsystem requires another argument\n",
@@ -1029,28 +1089,28 @@ firstPass (int argc, char *argv[])
 				fprintf( stderr, "Use \"%s -help\" for details\n", myName );
 				exit( 1 );
 			}
-			if (matchPrefix (argv[i], "schedd", 6)) {
+			if (is_arg_prefix (argv[i], "schedd", -1)) {
 				setMode (MODE_SCHEDD_NORMAL, i, argv[i]);
 			} else
-			if (matchPrefix (argv[i], "startd", 6)) {
+			if (is_arg_prefix (argv[i], "startd", -1)) {
 				setMode (MODE_STARTD_NORMAL, i, argv[i]);
 			} else
-			if (matchPrefix (argv[i], "quill", 5)) {
+			if (is_arg_prefix (argv[i], "quill", -1)) {
 				setMode (MODE_QUILL_NORMAL, i, argv[i]);
 			} else
-			if (matchPrefix (argv[i], "negotiator", 10)) {
+			if (is_arg_prefix (argv[i], "negotiator", -1)) {
 				setMode (MODE_NEGOTIATOR_NORMAL, i, argv[i]);
 			} else
-			if (matchPrefix (argv[i], "master", 6)) {
+			if (is_arg_prefix (argv[i], "master", -1)) {
 				setMode (MODE_MASTER_NORMAL, i, argv[i]);
 			} else
-			if (matchPrefix (argv[i], "collector", 9)) {
+			if (is_arg_prefix (argv[i], "collector", -1)) {
 				setMode (MODE_COLLECTOR_NORMAL, i, argv[i]);
 			} else
-			if (matchPrefix (argv[i], "generic", 7)) {
+			if (is_arg_prefix (argv[i], "generic", -1)) {
 				setMode (MODE_GENERIC_NORMAL, i, argv[i]);
 			} else
-			if (matchPrefix (argv[i], "had", 3)) {
+			if (is_arg_prefix (argv[i], "had", -1)) {
 				setMode (MODE_HAD_NORMAL, i, argv[i]);
 			} else
 			if (*argv[i] == '-') {
@@ -1067,26 +1127,26 @@ firstPass (int argc, char *argv[])
 			}
 		} else
 #ifdef HAVE_EXT_POSTGRESQL
-		if (matchPrefix (argv[i], "-quill", 2)) {
+		if (is_dash_arg_prefix (argv[i], "quill", 1)) {
 			setMode (MODE_QUILL_NORMAL, i, argv[i]);
 		} else
 #endif /* HAVE_EXT_POSTGRESQL */
-		if (matchPrefix (argv[i], "-license", 3)) {
+		if (is_dash_arg_prefix (argv[i], "license", 2)) {
 			setMode (MODE_LICENSE_NORMAL, i, argv[i]);
 		} else
-		if (matchPrefix (argv[i], "-storage", 4)) {
+		if (is_dash_arg_prefix (argv[i], "storage", 3)) {
 			setMode (MODE_STORAGE_NORMAL, i, argv[i]);
 		} else
-		if (matchPrefix (argv[i], "-negotiator", 2)) {
+		if (is_dash_arg_prefix (argv[i], "negotiator", 1)) {
 			setMode (MODE_NEGOTIATOR_NORMAL, i, argv[i]);
 		} else
-		if (matchPrefix (argv[i], "-generic", 3)) {
+		if (is_dash_arg_prefix (argv[i], "generic", 2)) {
 			setMode (MODE_GENERIC_NORMAL, i, argv[i]);
 		} else
-		if (matchPrefix (argv[i], "-any", 3)) {
+		if (is_dash_arg_prefix (argv[i], "any", 2)) {
 			setMode (MODE_ANY_NORMAL, i, argv[i]);
 		} else
-		if (matchPrefix (argv[i], "-sort", 3)) {
+		if (is_dash_arg_prefix (argv[i], "sort", 2)) {
 			i++;
 			if( ! argv[i] ) {
 				fprintf( stderr, "%s: -sort requires another argument\n",
@@ -1136,34 +1196,30 @@ firstPass (int argc, char *argv[])
 				// the silent constraint TARGET.%s =!= UNDEFINED is added
 				// as a customAND constraint on the second pass
 		} else
-#if defined(GLIBC)
-		if (matchPrefix (argv[i], "-natural", 4)) {
-			naturalSort = true;
-		} else
-#endif
-		if (matchPrefix (argv[i], "-submitters", 5)) {
+		if (is_dash_arg_prefix (argv[i], "submitters", 4)) {
 			setMode (MODE_SCHEDD_SUBMITTORS, i, argv[i]);
 		} else
-		if (matchPrefix (argv[i], "-master", 2)) {
+		if (is_dash_arg_prefix (argv[i], "master", 1)) {
 			setMode (MODE_MASTER_NORMAL, i, argv[i]);
 		} else
-		if (matchPrefix (argv[i], "-collector", 4)) {
+		if (is_dash_arg_prefix (argv[i], "collector", 3)) {
 			setMode (MODE_COLLECTOR_NORMAL, i, argv[i]);
 		} else
-		if (matchPrefix (argv[i], "-world", 2)) {
+		if (is_dash_arg_prefix (argv[i], "world", 1)) {
 			setMode (MODE_COLLECTOR_NORMAL, i, argv[i]);
 		} else
-		if (matchPrefix (argv[i], "-ckptsrvr", 3)) {
+		if (is_dash_arg_prefix (argv[i], "ckptsrvr", 2)) {
 			setMode (MODE_CKPT_SRVR_NORMAL, i, argv[i]);
 		} else
-		if (matchPrefix (argv[i], "-total", 2)) {
+		if (is_dash_arg_prefix (argv[i], "total", 1)) {
 			wantOnlyTotals = 1;
+			pmHeadFoot = (printmask_headerfooter_t)(HF_NOTITLE | HF_NOHEADER);
 			explicit_format = true;
 		} else
-		if (matchPrefix(argv[i], "-expert", 2)) {
+		if (is_dash_arg_prefix(argv[i], "expert", 1)) {
 			expert = true;
 		} else
-		if (matchPrefix(argv[i], "-version", 4)) {
+		if (is_dash_arg_prefix(argv[i], "version", 3)) {
 			printf( "%s\n%s\n", CondorVersion(), CondorPlatform() );
 			exit(0);
 		} else
@@ -1198,15 +1254,15 @@ secondPass (int argc, char *argv[])
 	char *daemonname;
 	for (int i = 1; i < argc; i++) {
 		// omit parameters which qualify switches
-		if( matchPrefix(argv[i],"-pool", 2) || matchPrefix(argv[i],"-direct", 4) ) {
+		if( is_dash_arg_prefix(argv[i],"pool", 1) || is_dash_arg_prefix(argv[i],"direct", 3) ) {
 			i++;
 			continue;
 		}
-		if( matchPrefix(argv[i],"-subsystem", 5) ) {
+		if( is_dash_arg_prefix(argv[i],"subsystem", 4) ) {
 			i++;
 			continue;
 		}
-		if (matchPrefix (argv[i], "-format", 2)) {
+		if (is_dash_arg_prefix (argv[i], "format", 1)) {
 			pm.registerFormat (argv[i+1], argv[i+2]);
 
 			StringList attributes;
@@ -1329,7 +1385,7 @@ secondPass (int argc, char *argv[])
 			using_print_format = true; // so we can hack totals.
 			continue;
 		}
-		if (matchPrefix (argv[i], "-target", 5)) {
+		if (is_dash_arg_prefix (argv[i], "target", 4)) {
 			i++;
 			continue;
 		}
@@ -1337,7 +1393,7 @@ secondPass (int argc, char *argv[])
 			++i;
 			continue;
 		}
-		if( matchPrefix(argv[i], "-sort", 3) ) {
+		if( is_dash_arg_prefix(argv[i], "sort", 2) ) {
 			i++;
 			if ( ! noSort) {
 				sprintf( buffer, "%s =!= UNDEFINED", argv[i] );
@@ -1346,7 +1402,7 @@ secondPass (int argc, char *argv[])
 			continue;
 		}
 		
-		if (matchPrefix (argv[i], "-statistics", 6)) {
+		if (is_dash_arg_prefix (argv[i], "statistics", 5)) {
 			i += 2;
             sprintf(buffer,"STATISTICS_TO_PUBLISH = \"%s\"", statistics);
             if (diagnose) {
@@ -1356,7 +1412,7 @@ secondPass (int argc, char *argv[])
             continue;
         }
 
-		if (matchPrefix (argv[i], "-attributes", 3) ) {
+		if (is_dash_arg_prefix (argv[i], "attributes", 2) ) {
 			// parse attributes to be selected and split them along ","
 			StringList more_attrs(argv[i+1],",");
 			char const *s;
@@ -1437,7 +1493,7 @@ secondPass (int argc, char *argv[])
 			delete [] daemonname;
 			daemonname = NULL;
 		} else
-		if (matchPrefix (argv[i], "-constraint", 4)) {
+		if (is_dash_arg_prefix (argv[i], "constraint", 3)) {
 			if (diagnose) {
 				printf ("[%s]\n", argv[i+1]);
 			}
@@ -1448,6 +1504,7 @@ secondPass (int argc, char *argv[])
 }
 
 
+/*
 int
 matchPrefix (const char *s1, const char *s2, int min_len)
 {
@@ -1460,7 +1517,7 @@ matchPrefix (const char *s1, const char *s2, int min_len)
 
 	return (strncmp (s1, s2, len) == 0);
 }
-
+*/
 
 int
 lessThanFunc(AttrList *ad1, AttrList *ad2, void *)

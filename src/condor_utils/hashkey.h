@@ -60,6 +60,7 @@ bool makeMasterAdHashKey (AdNameHashKey &, ClassAd *);
 bool makeCkptSrvrAdHashKey (AdNameHashKey &, ClassAd *);
 bool makeCollectorAdHashKey (AdNameHashKey &, ClassAd *);
 bool makeStorageAdHashKey (AdNameHashKey &, ClassAd *);
+bool makeAccountingAdHashKey (AdNameHashKey &, ClassAd *);
 bool makeNegotiatorAdHashKey (AdNameHashKey &, ClassAd *);
 bool makeHadAdHashKey (AdNameHashKey &, ClassAd *);
 bool makeXferServiceAdHashKey (AdNameHashKey &, ClassAd *);

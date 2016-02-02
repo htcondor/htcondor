@@ -500,6 +500,12 @@ match_rec::~match_rec()
 		free(pool);
 	}
 
+		// If we are shuting down, the daemonCore instance will be null
+		// and any use of it will cause a core dump.  At best.
+	if (!daemonCore) {
+		return;
+	}
+
 	if( claim_requester.get() ) {
 			// misc_data points to this object, so NULL it out, just to be safe
 		claim_requester->setMiscDataPtr( NULL );
@@ -507,7 +513,7 @@ match_rec::~match_rec()
 		claim_requester = NULL;
 	}
 
-	if( secSessionId() && daemonCore ) {
+	if( secSessionId()) {
 			// Expire the session after enough time to let the final
 			// RELEASE_CLAIM command finish, in case it is still in
 			// progress.  This also allows us to more gracefully
@@ -574,7 +580,8 @@ Scheduler::Scheduler() :
 	slotWeightMapAd(0),
 	m_use_slot_weights(false),
 	m_local_startd_pid(-1),
-	m_history_helper_count(0)
+	m_history_helper_count(0),
+	m_matchPasswordEnabled(false)
 {
 	MyShadowSockName = NULL;
 	shadowCommandrsock = NULL;
@@ -1401,12 +1408,13 @@ Scheduler::count_jobs()
 	// appear in condor_q -global and condor_status -schedd
 	if( FlockCollectors ) {
 		FlockCollectors->rewind();
+		DCCollectorAdSequences & adSeq = daemonCore->getUpdateAdSeq();
 		Daemon* d;
 		DCCollector* col;
 		FlockCollectors->next(d);
 		for(int ii=0; d && ii < FlockLevel; ii++ ) {
 			col = (DCCollector*)d;
-			col->sendUpdate( UPDATE_SCHEDD_AD, cad, NULL, true );
+			col->sendUpdate( UPDATE_SCHEDD_AD, cad, adSeq, NULL, true );
 			FlockCollectors->next( d );
 		}
 	}
@@ -1450,6 +1458,7 @@ Scheduler::count_jobs()
 
 	// update collector of the pools with which we are flocking, if
 	// any
+	DCCollectorAdSequences & adSeq = daemonCore->getUpdateAdSeq();
 	Daemon* d;
 	Daemon* flock_neg;
 	DCCollector* flock_col;
@@ -1501,7 +1510,7 @@ Scheduler::count_jobs()
 					// CM we are negotiating with when we negotiate
 				pAd.Assign(ATTR_SUBMITTER_TAG,flock_col->name());
 
-				flock_col->sendUpdate( UPDATE_SUBMITTOR_AD, &pAd, NULL, true );
+				flock_col->sendUpdate( UPDATE_SUBMITTOR_AD, &pAd, adSeq, NULL, true );
 			}
 		}
 	}
@@ -1594,7 +1603,7 @@ Scheduler::count_jobs()
 		  for( flock_level=1, FlockCollectors->rewind();
 			   flock_level <= old_flock_level &&
 				   FlockCollectors->next(da); flock_level++ ) {
-			  ((DCCollector*)da)->sendUpdate( UPDATE_SUBMITTOR_AD, &pAd, NULL, true );
+			  ((DCCollector*)da)->sendUpdate( UPDATE_SUBMITTOR_AD, &pAd, adSeq, NULL, true );
 		  }
 	  }
 	}
@@ -2040,13 +2049,105 @@ int Scheduler::command_query_job_ads(int, Stream* stream)
 		return command_query_job_aggregates(queryAd, stream);
 	}
 
-	classad::ExprTree *requirements = queryAd.Lookup(ATTR_REQUIREMENTS);
+	// REMOVE this code once we have working user detection
+	//
+	int dpf_level = D_ALWAYS; // D_COMMAND | D_FULLDEBUG
+	if (IsDebugCatAndVerbosity(dpf_level)) {
+		ReliSock* rsock = (ReliSock*)stream;
+		const char * p0wn = rsock->getOwner();
+		dprintf(dpf_level, "QUERY_JOB_ADS detected owner = %s\n", p0wn ? p0wn : "<null>");
+	}
+
+	// If the query request that only the querier's jobs be returned
+	// we have to figure out who the quierier is and add a clause to the requirements expression
+	classad::ExprTree *my_jobs_expr = NULL;
+	bool was_my_jobs = false;
+	if (param_boolean("CONDOR_Q_ONLY_MY_JOBS", true)) {
+		my_jobs_expr = queryAd.Lookup("MyJobs");
+		was_my_jobs = my_jobs_expr != NULL;
+	}
+	if (my_jobs_expr) {
+		std::string owner;
+		//PRAGMA_REMIND("figure out username of invoker, and create a my_jobs_expr for them.")
+		ReliSock* rsock = (ReliSock*)stream;
+		const char * p0wn = rsock->getOwner();
+		if (p0wn && MATCH == strcasecmp(p0wn, "unauthenticated")) p0wn = NULL;
+
+		long long val;
+		// if MyJobs is a literal true/false, then we are being asked to either NOT show
+		// just the users jobs, or figure out who the user is and show just their jobs.
+		if (ExprTreeIsLiteralNumber(my_jobs_expr, val)) {
+			if (val) {
+				// MyJobs is just a boolean equivalent TRUE or FALSE, so it's up to the schedd to choose
+				// the appropriate ownername.
+				if (p0wn) owner = p0wn;
+			} else {
+				// false means we don't want just this owners jobs. set my_jobs_expr to NULL to signal that.
+				my_jobs_expr = NULL;
+			}
+		} else {
+			// if my_jobs_expr is not literal true/valse, then we assume it is Owner==Me
+			// and that ME is also an attribute in the query ad. With Me being a guess as
+			// to the correct owner.  We will use the suggested value of Me unless we can
+			// determine a better value. 
+			classad::ExprTree * me_expr = queryAd.Lookup("Me");
+			if (me_expr && ExprTreeIsLiteralString(me_expr, owner)) {
+				// owner is set, buf if owner is a queue superuser, then we still want to show all jobs.
+				if (isQueueSuperUser(owner.c_str())) {
+					my_jobs_expr = NULL; 
+				}
+			} else {
+				my_jobs_expr = NULL;
+			}
+			if (p0wn) owner = p0wn;
+		}
+
+		// at this point owner should be set if my_jobs_expr is non-null
+		// and that means we can construct the correct my_jobs_expr contraint expression
+		if (my_jobs_expr) {
+			MyString sub_expr;
+			sub_expr.formatstr("(owner == \"%s\")", owner.c_str());
+			classad::ClassAdParser parser;
+			my_jobs_expr = parser.ParseExpression(sub_expr.c_str());
+		}
+	}
+
+	// at this point, my_jobs_expr is either NULL, or an ExprTree that we are responsible for deleting
+
+	classad::ExprTree *requirements_in = queryAd.Lookup(ATTR_REQUIREMENTS);
+	classad::ExprTree *requirements = my_jobs_expr;
+#if 1 // new for 8.5.3, use my_jobs_expr, or requirements (or both if both are set)
+	if (requirements_in) {
+		bool bval = false;
+		requirements_in = SkipExprParens(requirements_in);
+		if (IsDebugCatAndVerbosity(dpf_level)) {
+			dprintf(dpf_level, "QUERY_JOB_ADS %d formal requirements without excess parens: %s\n", was_my_jobs, ExprTreeToString(requirements_in));
+		}
+		if ( ! requirements) {
+			requirements = requirements_in->Copy();
+		} else if ( ! ExprTreeIsLiteralBool(requirements_in, bval) || bval) {
+			// if we have both requirements, and requirements_in, and the requirements_in is not a trivial 'true' 
+			// we need to join them both requirements with a logical && op.
+			requirements = JoinExprTreeCopiesWithOp(classad::Operation::LOGICAL_AND_OP, my_jobs_expr, requirements_in);
+			delete my_jobs_expr; my_jobs_expr = NULL;
+		}
+	} else if ( ! requirements) {
+		classad::Value val; val.SetBooleanValue(true);
+		requirements = classad::Literal::MakeLiteral(val);
+	}
+	if ( ! requirements) return sendJobErrorAd(stream, 1, "Failed to create requirements expression");
+	if (IsDebugCatAndVerbosity(dpf_level)) {
+		dprintf(dpf_level, "QUERY_JOB_ADS %d effective requirements: %s\n", was_my_jobs, ExprTreeToString(requirements));
+	}
+	classad_shared_ptr<classad::ExprTree> requirements_ptr(requirements);
+#else
 	if (!requirements) {
 		classad::Value val; val.SetBooleanValue(true);
 		requirements = classad::Literal::MakeLiteral(val);
 		if (!requirements) return sendJobErrorAd(stream, 1, "Failed to create default requirements");
 	}
 	classad_shared_ptr<classad::ExprTree> requirements_ptr(requirements->Copy());
+#endif
 
 	int resultLimit=-1;
 	if (!queryAd.EvaluateAttrInt(ATTR_LIMIT_RESULTS, resultLimit)) {
@@ -4165,6 +4266,13 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 	 */
 	old_timeout = s->timeout(60 * 60 * 8);  
 
+	priv_state xfer_priv = PRIV_UNKNOWN;
+#if !defined(WIN32)
+	if ( param_boolean( "CHOWN_JOB_SPOOL_FILES", false ) == false ) {
+		xfer_priv = PRIV_USER;
+	}
+#endif
+
 	JobAdsArrayLen = jobs->getlast() + 1;
 //	dprintf(D_FULLDEBUG,"TODD spoolJobFilesWorkerThread: JobAdsArrayLen=%d\n",JobAdsArrayLen);
 	if ( mode == TRANSFER_DATA || mode == TRANSFER_DATA_WITH_PERMS ) {
@@ -4202,11 +4310,35 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 		dprintf(D_ALWAYS, "The submitting job ad as the FileTransferObject sees it\n");
 		dPrintAd(D_ALWAYS, *ad);
 
+#if !defined(WIN32)
+		if ( xfer_priv == PRIV_USER ) {
+			// If sending the output sandbox, first ensure that it's owned
+			// by the user, in case we were using the old chowning behavior
+			// when the job completed.
+			if ( (mode == TRANSFER_DATA || mode == TRANSFER_DATA_WITH_PERMS) &&
+				 SpooledJobFiles::jobRequiresSpoolDirectory( ad ) )
+			{
+				SpooledJobFiles::createJobSpoolDirectory( ad, PRIV_USER );
+			}
+			string owner;
+			ad->LookupString( ATTR_OWNER, owner );
+			if ( !init_user_ids( owner.c_str(), NULL ) ) {
+				dprintf( D_AUDIT | D_FAILURE, *rsock, "generalJobFilesWorkerThread(): "
+						 "failed to initialize user id for job %d.%d\n",
+						 cluster, proc );
+				s->timeout( 10 ); // avoid hanging due to huge timeout
+				refuse(s);
+				s->timeout(old_timeout);
+				return FALSE;
+			}
+		}
+#endif
+
 			// Create a file transfer object, with schedd as the server.
 			// If we're receiving files, don't create a file catalog in
 			// the FileTransfer object. The submitter's IWD is probably not
 			// valid on this machine and we won't use the catalog anyway.
-		result = ftrans.SimpleInit(ad, true, true, rsock, PRIV_UNKNOWN,
+		result = ftrans.SimpleInit(ad, true, true, rsock, xfer_priv,
 								   (mode == TRANSFER_DATA ||
 									mode == TRANSFER_DATA_WITH_PERMS));
 		if ( !result ) {
@@ -4245,6 +4377,12 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 				result = ftrans.UploadFiles();
 			}
 		}
+
+#if !defined(WIN32)
+		if ( xfer_priv == PRIV_USER ) {
+			uninit_user_ids();
+		}
+#endif
 
 		if ( !result ) {
 			dprintf( D_AUDIT | D_FAILURE, *rsock, "generalJobFilesWorkerThread(): "
@@ -5926,6 +6064,12 @@ MainScheddNegotiate::scheduler_handleJobRejected(PROC_ID job_id,char const *reas
 	dprintf(D_FULLDEBUG, "Job %d.%d (delivered=%d) rejected: %s\n",
 			job_id.cluster, job_id.proc, m_current_resources_delivered, reason);
 
+	if ( job_id.cluster < 0 || job_id.proc < 0 ) {
+		// If we asked the negotiator for matches for jobs that can no
+		// longer use them, the negotiation code uses a job id of -1.-1.
+		return;
+	}
+
 	SetAttributeString(
 		job_id.cluster, job_id.proc,
 		ATTR_LAST_REJ_MATCH_REASON,	reason, NONDURABLE);
@@ -6649,6 +6793,14 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 			msg_ad->LookupInteger(ATTR_CLUSTER_ID, jobid.cluster);
 			msg_ad->LookupInteger(ATTR_PROC_ID, jobid.proc);
 		}
+	
+		std::string last_slot_name;
+		msg->leftover_startd_ad()->LookupString(ATTR_LAST_SLOT_NAME, last_slot_name);
+
+		if (last_slot_name.length() > 0) {
+			match->my_match_ad->Assign(ATTR_NAME, last_slot_name);
+		}
+
 			// Need to pass handleMatch a slot name; grab from leftover slot ad
 		std::string slot_name_buf;
 		msg->leftover_startd_ad()->LookupString(ATTR_NAME,slot_name_buf);
@@ -9155,6 +9307,16 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 		dprintf( D_ALWAYS, "Failed to set _CONDOR_JOB_AD environment variable\n");
 	}
 
+	if (param_boolean("USE_LOCAL_SCHEDD_FOR_SCHEDULER_UNIVERSE", true))
+	{
+		std::string ad_file;
+		if (!param(ad_file, "SCHEDD_DAEMON_AD_FILE") || !envobject.SetEnv("_condor_SCHEDD_DAEMON_AD_FILE", ad_file)) {
+			dprintf(D_ALWAYS, "Failed to set _condor_SCHEDD_DAEMON_AD_FILE environment variable\n");
+		}
+		if (!param(ad_file, "SCHEDD_ADDRESS_FILE") || !envobject.SetEnv("_condor_SCHEDD_ADDRESS_FILE", ad_file)) {
+			dprintf(D_ALWAYS, "Failed to set _condor_SCHEDD_DAEMON_AD_FILE environment variable\n");
+		}
+	}
 
 		// Scheduler universe jobs should not be told about the shadow
 		// command socket in the inherit buffer.
@@ -12256,7 +12418,7 @@ Scheduler::Init()
 		delete slotWeightMapAd;
 		slotWeightMapAd = 0;
 	}
-	m_use_slot_weights = param_boolean("SCHEDD_USE_SLOT_WEIGHT", false);
+	m_use_slot_weights = param_boolean("SCHEDD_USE_SLOT_WEIGHT", true);
 
 	std::string sswma = "Memory = RequestMemory \n Disk = RequestDisk \n Cpus = RequestCpus";
 	slotWeightMapAd = new ClassAd;
@@ -12310,6 +12472,17 @@ Scheduler::Init()
 				dprintf( D_ALWAYS, "Submit requirement %s not defined, ignoring.\n", srName );
 			}
 		}
+	}
+
+	bool new_match_password = param_boolean( "SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION", true );
+	if ( new_match_password != m_matchPasswordEnabled ) {
+		IpVerify* ipv = daemonCore->getIpVerify();
+		if ( new_match_password ) {
+			ipv->PunchHole( CLIENT_PERM, EXECUTE_SIDE_MATCHSESSION_FQU );
+		} else {
+			ipv->FillHole( CLIENT_PERM, EXECUTE_SIDE_MATCHSESSION_FQU );
+		}
+		m_matchPasswordEnabled = new_match_password;
 	}
 
 	first_time_in_init = false;
@@ -12791,6 +12964,7 @@ Scheduler::shutdown_fast()
 		CronJobMgr->Shutdown( true );
 	}
 
+	DestroyJobQueue();
 		// Since this is just sending a bunch of UDP updates, we can
 		// still invalidate our classads, even on a fast shutdown.
 	invalidate_ads();
@@ -12883,12 +13057,13 @@ Scheduler::invalidate_ads()
 					  ATTR_NAME, submitter.Value() );
 		cad->Insert( line.Value() );
 
+		DCCollectorAdSequences & adSeq = daemonCore->getUpdateAdSeq();
 		Daemon* d;
 		if( FlockCollectors && FlockLevel > 0 ) {
 			int level;
 			for( level=1, FlockCollectors->rewind();
 				 level <= FlockLevel && FlockCollectors->next(d); level++ ) {
-				((DCCollector*)d)->sendUpdate( INVALIDATE_SUBMITTOR_ADS, cad, NULL, false );
+				((DCCollector*)d)->sendUpdate( INVALIDATE_SUBMITTOR_ADS, cad, adSeq, NULL, false );
 			}
 		}
 	}
@@ -12962,6 +13137,7 @@ Scheduler::sendReschedule()
 
 	classy_counted_ptr<Daemon> negotiator = new Daemon(DT_NEGOTIATOR);
 	classy_counted_ptr<DCCommandOnlyMsg> msg = new DCCommandOnlyMsg(RESCHEDULE);
+	negotiator->locate(Daemon::LOCATE_FOR_LOOKUP);
 
 	Stream::stream_type st = negotiator->hasUDPCommandPort() ? Stream::safe_sock : Stream::reli_sock;
 	msg->setStreamType(st);
@@ -15253,6 +15429,7 @@ WriteCompletionVisa(ClassAd* ad)
 	                   iwd.Value(),
 	                   NULL);
 	set_priv(prev_priv_state);
+	uninit_user_ids();
 }
 
 int

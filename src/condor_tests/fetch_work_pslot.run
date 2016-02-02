@@ -41,8 +41,6 @@ my $primarycollector = $currenthost;
 my @adarray;
 
 
-print scalar localtime() . "\n";
-
 my $iswindows = CondorUtils::is_windows();
 
 my $mypid = $$;
@@ -59,27 +57,23 @@ if($mypid == 0) {
 	die "Saveme setup for test failed\n";
 }
 
-CondorTest::debug("Master PID is $mypid\n",$debuglevel);
-
-CondorTest::debug("Running here: $topdir\n",$debuglevel);
+TLOG "Master PID is $mypid, running here: $topdir\n";
 
 my $scripts = "x_fetchwork_scripts.tar.gz";
-CondorTest::debug("Work fetch scripts here: $workfetchscripts\n",$debuglevel);
 
-
-CondorTest::debug("create saveme: $mysaveme\n",$debuglevel);
+print "\tCreating dir for workfetch scripts: $workfetchscripts\n";
 CreateDir("-p $mysaveme");
-CondorTest::debug("create saveme/pid: $mysavemepid\n",$debuglevel);
 CreateDir("-p $mysavemepid");
-CondorTest::debug("create workfetch scripts: $workfetchscripts\n",$debuglevel);
 CreateDir("-p $workfetchscripts");
-CondorTest::debug("Call CopyIt: $scripts to $workfetchscripts\n",$debuglevel);
-CopyIt("$scripts $workfetchscripts");
-CondorTest::debug("back from Call CopyIt: $scripts to $workfetchscripts\n",$debuglevel);
 
-CondorTest::debug("create work: $work\n",$debuglevel);
+my $curdir = getcwd();
+print "\tCurrently here: $curdir\n";
+print "\tCopying $scripts to $workfetchscripts\n";
+my $ret = CopyIt("$scripts $workfetchscripts");
+
+TLOG "create work dir: $work\n";
 CreateDir("-p $work");
-CondorTest::debug("create results: $results\n",$debuglevel);
+print "\tand results dir: $results\n";
 CreateDir("-p $results");
 
 # Here is my expected hash result from the work fetch
@@ -95,22 +89,24 @@ my %expected_results =
 my %fetch_results = ();
 
 my $here = getcwd();
+TLOG "chdir from $here to $workfetchscripts\n";
 chdir("$workfetchscripts");
+DirLs();
 ###### extract work fetch scripts ######
 
 TarExtract("$scripts");
 if( !(-f "job_fetch.pl")) {
-	CondorTest::debug("Failed to setup fetch scripts\n",$debuglevel);
+	TLOG "Failed to extract fetch scripts\n";
 	DirLs();
 	exit(1);
 } else {
-	CondorTest::debug("Have setup fetch scripts\n",$debuglevel);
+	TLOG "Have extracted fetch scripts\n";
 	DirLs();
 }
 
 ###### tie to this unique test ######
 my $targetdir = '.';
-CondorTest::debug("Directory to change is $targetdir\n",$debuglevel);
+TLOG "Rewriting test scripts for $targetdir\n";
 opendir DH, $targetdir or die "Can not open $targetdir:$!\n";
 foreach my $file (readdir DH)
 {
@@ -119,7 +115,7 @@ foreach my $file (readdir DH)
     next if $file =~ /^\.\.?$/;
     next if $file =~ /^.*\.txt$/;
     next if $file =~ /^.*\.tar\.gz$/;
-	CondorTest::debug("Edit $file.......\n",$debuglevel);
+	TLOG "Edit $file.......\n";
 	open(OLD,"<$file") || die "Can not open $file:$!\n";
 	open(NEW,">$new") || die "Can not open $new:$!\n";
 	while(<OLD>) {
@@ -128,7 +124,10 @@ foreach my $file (readdir DH)
 		if($line =~ /^(.*)--WORK--(.*)$/) {
 			print NEW "$1$work$2\n";
 		} elsif($line =~ /^(.*)--RESULTS--(.*)$/) {
+			print NEW "use Cwd;\n";
 			print NEW "$1$results$2\n";
+		} elsif($line =~ /currentdir = `/) {
+			print NEW "my \@currentdir = getcwd();\n";
 		} else {
 			print NEW "$line\n";
 		}
@@ -175,9 +174,7 @@ my @addedconfig =
 my @readyconfigplus = ();
 my $tmp = "";
 if($iswindows == 1) {
-	print "This Is Windows. $workfetchscripts OK";
-} else {
-	print "NOT Windows. NOT Changing $workfetchscripts: $iswindows\n";
+	TLOG "This Is Windows. Creating batch_fetch_job.bat to help running fetch_job.pl\n";
 }
 
 my $batchnm = "";
@@ -188,7 +185,7 @@ if($iswindows == 1) {
 	$batchnm = "batch_fetch_job.bat";
 	$fullloc = "$workfetchscripts\\$batchnm";
 	open(BAT,">$fullloc") or die "Trouble creating batch file:$fullloc:$!\n";
-	print BAT "perl $workfetchscripts\\fetch_job.pl \%1\n";
+	print BAT "\@perl $workfetchscripts\\fetch_job.pl \%1\n";
 	close(BAT);
 }
 
@@ -215,7 +212,7 @@ foreach my $line (@addedconfig) {
 				$fullloc = "$workfetchscripts\\$batchnm";
 				#print "fullloc:$fullloc\n";
 				open(BAT,">$fullloc") or die "Trouble creating batch file:$fullloc:$!\n";
-				print BAT "perl $workfetchscripts\\$scriptnm\n";
+				print BAT "\@perl $workfetchscripts\\$scriptnm\n";
 				close(BAT);
 				$newline = "$hooknm = $fullloc";
 			} else {
@@ -237,7 +234,7 @@ CondorTest::StartCondorWithParams(
 );
 
 my $version = "fetch" . "$expected_results{TESTNUMBER}";
-print "Myconfig = $ENV{CONDOR_CONFIG}\n";
+#TLOG "Myconfig = $ENV{CONDOR_CONFIG}\n";
 
 my $bail = 0;
 
@@ -245,32 +242,29 @@ CondorTest::RunTest($testname);
 
 my $test_classad_name = "$corename-" . "$expected_results{TESTNUMBER}";
 my $fetchstatus = DoAFetch($work,$results,$version,$workfetchscripts,$test_classad_name);
-CondorTest::debug("Status of work fetch is \"$fetchstatus\"\n",$debuglevel);
+TLOG "Status of work fetch is \"$fetchstatus\"\n";
 
-CondorTest::debug("Saving things and cleaning up....\n",$debuglevel);
+TLOG "Saving things and cleaning up....\n";
 
-print "Fetch Status:$fetchstatus**********************************\n";
 if( $fetchstatus != 0 ) {
 	CondorTest::RegisterResult(0, "test_name", $testname);
 } else {
 	CondorTest::RegisterResult(1, "test_name", $testname);
 }
+
 #fails due to directory matching the pattern
 CopyIt("fetch_work_pslot.run.out $mysaveme");
-
-print scalar localtime() . "\n";
 
 CondorTest::EndTest();
 
 if( $fetchstatus != 0 )
 {
 	# actual test failed but we allowed cleanup
-	CondorTest::debug("fetck_work-basic FAILED\n",$debuglevel);
-	print scalar localtime() . "\n";
+	TLOG "fetch_work-basic FAILED\n";
 	exit(1);
 }
 
-CondorTest::debug("fetck_work-basic SUCCESS\n",$debuglevel);
+TLOG "fetch_work-basic SUCCESS\n";
 exit(0);
 
 sub DoAFetch 
@@ -284,8 +278,6 @@ sub DoAFetch
 	my $counter = 0;
 	my $maxwait = 1200; # better happen in 3 minutes
 
-	print scalar localtime() . "\n";
-
 	my @classadproto = (
 		"Cmd = \"/bin/cat\"",
 		"Iwd = \"XXXXXX\"",
@@ -295,7 +287,7 @@ sub DoAFetch
 		"User = \"bt\@cs.wisc.edu\"",
 		"JobUniverse = 5",
 		"RequestCpus = 1",
-		"RequestDisk = 1000000",
+		"RequestDisk = 1000",
 		"RequestMemory = 100",
 		"JobLeaseDuration = 500000",
 		"IsFetched = TRUE"
@@ -303,59 +295,53 @@ sub DoAFetch
 	if($iswindows == 1) {
 		my $winscripts = $scriptloc;
 
-
-		
-		#"perl $workfetchscripts\\fetch_job.pl \%1\n";
+		TLOG "Building Windows workfetch Classad: $classad\n";
 		# create unique classad
 		open(CA,">$classad") || die "Can not open $classad:$!\n";
 		foreach my $line (@classadproto) {
 			if($line =~ /^.*XXXXXX.*$/ ) {
-				print CA "Iwd = \"\.\"\n";
+				$line = "Iwd = \"\.\"";
 			} elsif($line =~ /^.*YYYYYY.*$/ ) {
-				print CA "Out = \"$resultsdir\\$version\"\n";
+				$line = "Out = \"$resultsdir\\$version\"";
 			} elsif($line =~ /^.*ZZZZZZ.*$/ ) {
-				print CA "Args = \"$classad\"\n";
+				$line = "Args = \"$classad\"";
 			} elsif($line =~ /^Cmd\s*=.*$/ ) {
-				print CA "Cmd = \"$winscripts\\batch_fetch_job.bat\"\n";
-			} else {
-				print CA "$line\n";
+				$line = "Cmd = \"$winscripts\\batch_fetch_job.bat\"";
 			}
+			print "\t$line\n";
+			print CA "$line\n";
 		}
 		close(CA);
 	} else {
-		print "Building Linux Classad\n";
+		TLOG "Building Linux workfetch Classad: $classad\n";
 		# create unique classad
 		open(CA,">$classad") || die "Can not open $classad:$!\n";
 		foreach my $line (@classadproto) {
 			if($line =~ /^.*XXXXXX.*$/ ) {
-				print CA "Iwd = \"\.\"\n";
+				$line = "Iwd = \"\.\"";
 			} elsif($line =~ /^.*YYYYYY.*$/ ) {
-				print CA "Out = \"$resultsdir\/$version\"\n";
+				$line = "Out = \"$resultsdir\/$version\"";
 			} elsif($line =~ /^.*ZZZZZZ.*$/ ) {
-				print CA "Args = \"$classad\"\n";
+				$line = "Args = \"$classad\"";
 			} elsif($line =~ /^Cmd\s*=.*$/ ) {
-				print CA "Cmd = \"$scriptloc/fetch_job.pl\"\n";
-			} else {
-				print CA "$line\n";
+				$line = "Cmd = \"$scriptloc/fetch_job.pl\"";
 			}
+			print "\t$line\n";
+			print CA "$line\n";
 		}
 		close(CA);
 	}
 
 	# trigger the test by placing classad in work dir
-	print "Good  sending work\n";
-	#print "Good  sending copy to $resultsdir\n";
-	#print "Work is $classad\n";
+	TLOG "Copying fetchwork ad into work dir\n";
 	CopyIt( "$classad $resultsdir");
 	CopyIt( "$classad $workdir");
 	List("ls $resultsdir");
 
 	# wait
-	print "Waiting - ";
 	while($counter < $maxwait) {
+		TLOG "Checking for results in $resultsdir\n";
 		if( ! ( -f "$resultsdir/$classad.results")) {
-			print scalar localtime() . "\n";
-			#print "Waiting for $resultsdir/$classad.results\n";
 			List("$resultsdir $workdir");
 			sleep 6;
 		} else {
@@ -364,16 +350,15 @@ sub DoAFetch
 		$counter += 3;
 	}
 	if( $counter >= $maxwait ) {
-		print "bad\n";
-		#print "Error took $maxwait seconds\n";
+		TLOG "Exceed wait ($maxwait) for workfetch results\n";
 		exit(1);
 	} else {
-		print "ok\n";
+		TLOG "Got workfetch result\n";
 	}
 
 	ParseResults("$resultsdir/$version");
 	my $status = CompareResults();
-	print "Status on hash compare is <$status>\n";
+	TLOG "Status on hash compare: $status\n";
 	return($status);
 }
 
@@ -383,13 +368,15 @@ sub ParseResults
 	my $line = "";
 
 	open(PR,"<$fetchoutput") or die "Can not open $fetchoutput:$!\n";
-	print "Parsing fetch work output file\n";
+	TLOG "Parsing fetch work output file: $fetchoutput\n";
 	while (<PR>) {
 		$line = $_;
 		CondorUtils::fullchomp($line);
 		if($line =~ /\s*(\w+)\s*=\s*(.*)/) {
 			$fetch_results{$1} = $2;
-			print "$1 => $2\n";
+			print "\t$1 => $2\n";
+		} else {
+			print "!!\t$line\n";
 		}
 	}
 	print "\n";

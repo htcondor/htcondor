@@ -1,0 +1,7 @@
+SET_JOB_ATTR test_attr0 = Bodrum
+SET_JOB_ATTR test_attr1 = 123
+SET_JOB_ATTR test_attr2 = 0.543
+SET_JOB_ATTR test_attr2 = "0.987 6.402"
+
+Job NodeA job_dagman_set_attr-nodeA.cmd
+

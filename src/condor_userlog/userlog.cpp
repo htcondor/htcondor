@@ -478,8 +478,8 @@ read_log(const char *filename, int select_cluster, int select_proc)
 					break;
 				}
 				time_t start_time, end_time, ckpt_time=0;
-				start_time = mktime(&execEvent->eventTime);
-				end_time = mktime(&event->eventTime);
+				start_time = execEvent->GetEventclock();
+				end_time = event->GetEventclock();
 				int cpu_usage = 0;
 				if (evictEvent->checkpointed) {
 					ckpt_time = end_time;
@@ -488,7 +488,7 @@ read_log(const char *filename, int select_cluster, int select_proc)
 				} else {
 					CheckpointedEvent *ckptEvent;
 					if (CkptRecs.lookup(key, ckptEvent) >= 0) {
-						ckpt_time = mktime(&ckptEvent->eventTime);
+						ckpt_time = ckptEvent->GetEventclock();
 						cpu_usage =
 							ckptEvent->run_remote_rusage.ru_utime.tv_sec +
 							ckptEvent->run_remote_rusage.ru_stime.tv_sec;
@@ -531,8 +531,8 @@ read_log(const char *filename, int select_cluster, int select_proc)
 					break;
 				}
 				time_t start_time, end_time;
-				start_time = mktime(&execEvent->eventTime);
-				end_time = mktime(&event->eventTime);
+				start_time = execEvent->GetEventclock();
+				end_time = event->GetEventclock();
 				if (!evict_only) {
 					new_record(event->cluster, event->proc, (int)start_time,
 							   (int)end_time,
@@ -575,12 +575,12 @@ read_log(const char *filename, int select_cluster, int select_proc)
 					break;
 				}
 				time_t start_time, end_time, ckpt_time=0;
-				start_time = mktime(&execEvent->eventTime);
-				end_time = mktime(&event->eventTime);
+				start_time = execEvent->GetEventclock();
+				end_time = event->GetEventclock();
 				int cpu_usage = 0;
 				CheckpointedEvent *ckptEvent;
 				if (CkptRecs.lookup(key, ckptEvent) >= 0) {
-					ckpt_time = mktime(&ckptEvent->eventTime);
+					ckpt_time = ckptEvent->GetEventclock();
 					cpu_usage = ckptEvent->run_remote_rusage.ru_utime.tv_sec +
 						ckptEvent->run_remote_rusage.ru_stime.tv_sec;
 				}

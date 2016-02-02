@@ -1,0 +1,2 @@
+Job NodeA job_dagman_parallel_retry-node.cmd
+Retry NodeA 3

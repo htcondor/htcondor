@@ -179,6 +179,8 @@ void CollectorDaemon::Init()
 	}
 	daemonCore->Register_CommandWithPayload(QUERY_STORAGE_ADS,"QUERY_STORAGE_ADS",
 		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
+	daemonCore->Register_CommandWithPayload(QUERY_ACCOUNTING_ADS,"QUERY_ACCOUNTING_ADS",
+		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
 	daemonCore->Register_CommandWithPayload(QUERY_NEGOTIATOR_ADS,"QUERY_NEGOTIATOR_ADS",
 		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
 	daemonCore->Register_CommandWithPayload(QUERY_HAD_ADS,"QUERY_HAD_ADS",
@@ -222,6 +224,9 @@ void CollectorDaemon::Init()
 	daemonCore->Register_CommandWithPayload(INVALIDATE_STORAGE_ADS,
 		"INVALIDATE_STORAGE_ADS", (CommandHandler)receive_invalidation,
 		"receive_invalidation",NULL,DAEMON);
+	daemonCore->Register_CommandWithPayload(INVALIDATE_ACCOUNTING_ADS,
+		"INVALIDATE_ACCOUNTING_ADS", (CommandHandler)receive_invalidation,
+		"receive_invalidation",NULL,NEGOTIATOR);
 	daemonCore->Register_CommandWithPayload(INVALIDATE_NEGOTIATOR_ADS,
 		"INVALIDATE_NEGOTIATOR_ADS", (CommandHandler)receive_invalidation,
 		"receive_invalidation",NULL,NEGOTIATOR);
@@ -278,6 +283,8 @@ void CollectorDaemon::Init()
 		(CommandHandler)receive_update,"receive_update", NULL, DAEMON);
     daemonCore->Register_CommandWithPayload(UPDATE_GRID_AD,"UPDATE_GRID_AD",
 		(CommandHandler)receive_update,"receive_update",NULL,DAEMON);
+	daemonCore->Register_CommandWithPayload(UPDATE_ACCOUNTING_AD,"UPDATE_ACCOUNTING_AD",
+		(CommandHandler)receive_update,"receive_update",NULL,NEGOTIATOR);
 
     // install command handlers for updates with acknowledgement
 
@@ -538,6 +545,11 @@ CollectorDaemon::receive_query_public( int command )
 		whichAds = STORAGE_AD;
 		break;
 
+	  case QUERY_ACCOUNTING_ADS:
+		dprintf (D_FULLDEBUG,"Got QUERY_ACCOUNTING_ADS\n");
+		whichAds = ACCOUNTING_AD;
+		break;
+
 	  case QUERY_NEGOTIATOR_ADS:
 		dprintf (D_FULLDEBUG,"Got QUERY_NEGOTIATOR_ADS\n");
 		whichAds = NEGOTIATOR_AD;
@@ -679,6 +691,11 @@ int CollectorDaemon::receive_invalidation(Service* /*s*/,
 	  case INVALIDATE_STORAGE_ADS:
 		dprintf (D_ALWAYS, "Got INVALIDATE_STORAGE_ADS\n");
 		whichAds = STORAGE_AD;
+		break;
+
+	  case INVALIDATE_ACCOUNTING_ADS:
+		dprintf (D_ALWAYS, "Got INVALIDATE_ACCOUNTING_ADS\n");
+		whichAds = ACCOUNTING_AD;
 		break;
 
 	  case INVALIDATE_ADS_GENERIC:
@@ -1330,11 +1347,13 @@ void CollectorDaemon::Config()
 		UpdateTimerId = -1;
 	}
 
+	DCCollectorAdSequences * adSeq = NULL;
 	if( collectorsToUpdate ) {
+		adSeq = collectorsToUpdate->detachAdSequences();
 		delete collectorsToUpdate;
 		collectorsToUpdate = NULL;
 	}
-	collectorsToUpdate = CollectorList::create( NULL );
+	collectorsToUpdate = CollectorList::create(NULL, adSeq);
 
 	//
 	// If we don't use the network to update ourselves, we could allow
@@ -1360,6 +1379,7 @@ void CollectorDaemon::Config()
 		Sinful currentSinful( current );
 		if( mySinful.addressPointsToMe( currentSinful ) ) {
 			collectorsToUpdate->deleteCurrent();
+			continue;
 		}
 
 		// addressPointsToMe() doesn't know that the shared port daemon
@@ -1372,12 +1392,14 @@ void CollectorDaemon::Config()
 		// process of doing something else -- we can safely assume that
 		// any currentSinful without a shared port ID intends to connect
 		// to the default collector.
+		dprintf( D_FULLDEBUG, "checking for self: '%s', '%s, '%s'\n", mySinful.getSharedPortID(), mySharedPortDaemonSinful.getSinful(), currentSinful.getSinful() );
 		if( mySinful.getSharedPortID() != NULL && mySharedPortDaemonSinful.addressPointsToMe( currentSinful ) ) {
 			// Check to see if I'm the default collector.
 			std::string collectorSPID;
 			param( collectorSPID, "SHARED_PORT_DEFAULT_ID" );
 			if(! collectorSPID.size()) { collectorSPID = "collector"; }
 			if( strcmp( mySinful.getSharedPortID(), collectorSPID.c_str() ) == 0 ) {
+				dprintf( D_FULLDEBUG, "Skipping sending update to myself via my shared port daemon.\n" );
 				collectorsToUpdate->deleteCurrent();
 			}
 		}
@@ -1648,7 +1670,7 @@ void CollectorDaemon::sendCollectorAd()
 		char update_addr_default [] = "(null)";
 		char *update_addr = worldCollector->addr();
 		if (!update_addr) update_addr = update_addr_default;
-		if( ! worldCollector->sendUpdate(UPDATE_COLLECTOR_AD, ad, NULL, false) ) {
+		if( ! worldCollector->sendUpdate(UPDATE_COLLECTOR_AD, ad, collectorsToUpdate->getAdSeq(), NULL, false) ) {
 			dprintf( D_ALWAYS, "Can't send UPDATE_COLLECTOR_AD to collector "
 					 "(%s): %s\n", update_addr,
 					 worldCollector->error() );

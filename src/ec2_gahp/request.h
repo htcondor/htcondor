@@ -35,6 +35,9 @@ class Request {
 		std::string m_raw_cmd;
 		Gahp_Args m_args;
 		std::string m_result;
+
+		static void * operator new( size_t i ) throw();
+		static void operator delete( void * v ) throw();
 };
 
 #endif

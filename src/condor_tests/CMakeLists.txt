@@ -352,6 +352,7 @@ if (BUILD_TESTING)
 	condor_pl_test(job_foreach_submit-queueitemMLineIn-run "submit file usage queue ITEM in - run submit file" "core;quick;full;quicknolink")
 	condor_pl_test(job_foreach_submit-simple-glob "submit file usage match" "core;quick;full;quicknolink")
 	condor_pl_test(job_foreach_submit-simple-glob-run "submit file usage match - run submit file" "core;quick;full;quicknolink")
+    condor_pl_test(job_foreach_submit-queuesliceditemin-commalist "submit file slice test" "core;quick;full;quicknolink")
 	##### generic lib tests
 	# TSTCLAIR: I can not move the "condor_unit_tests" into the actual unit_test b/c it depends 
 	# on condor_config ++ deps. 
@@ -655,6 +656,8 @@ if (BUILD_TESTING)
 	condor_pl_test(job_dagman_script_defer "Test DAG pre/post script deferral feature" "dagman;quick;full;quicknolink")
 	condor_pl_test(job_dagman_submit_glob-A "Test DAG with node jobs using new submit globbing feature" "dagman;quick;full;quicknolink")
 	condor_pl_test(job_dagman_submit_glob-B "Test DAG with node jobs using feature, in combination with DAGMAN_PROHIBIT_MULTI_JOBS" "dagman;quick;full;quicknolink")
+	condor_pl_test(job_dagman_set_attr "Test setting ClassAd attrs in DAG file" "dagman;quick;full;quicknolink")
+	condor_pl_test(job_dagman_event_timestamp "Test event timestamps in dagman.out file" "dagman;quick;full;quicknolink")
 	#condor_pl_test(perf_jobs_sue_10_10_30_van "Generated jobs performance test" "performance;long")
 	#condor_pl_test(perf_xfer_deb_10_10_30_van "Generated transfer performance test" "performance;long")
 	condor_pl_test(job_filexfer_sandbox-empty_van "Are job sandboxes with bad permissions cleaned up?" "framework;quick;full;quicknolink")

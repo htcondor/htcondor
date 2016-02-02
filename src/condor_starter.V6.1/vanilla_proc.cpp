@@ -323,7 +323,7 @@ VanillaProc::StartJob()
 	// This way, the job will be heavily preferred to be killed over a normal process.
 	// OOM score is currently exponential - a score of 4 is a factor-16 increase in
 	// the OOM score.
-	setupOOMScore(4);
+	setupOOMScore(4,800);
 #endif
 
 #if defined(HAVE_EXT_LIBCGROUP)
@@ -640,11 +640,20 @@ VanillaProc::StartJob()
 				// Note that ATTR_VIRTUAL_MEMORY on Linux
 				// is sum of memory and swap, in Kilobytes
 
-				if (MachineAd->LookupInteger(ATTR_VIRTUAL_MEMORY, MemMb)) {
-					uint64_t VMemMb_big = MemMb;
+				int VMemKb;
+				if (MachineAd->LookupInteger(ATTR_VIRTUAL_MEMORY, VMemKb)) {
 
-					if (MemMb > 0) {
-						climits.set_memsw_limit_bytes(1024*VMemMb_big);
+					uint64_t memsw_limit = ((uint64_t)1024) * VMemKb;
+					if (VMemKb > 0) {
+						// we're not allowed to set memsw limit <
+						// the hard memory limit.  If we haven't set the hard
+						// memory limit, the default may be infinity.
+						// So, if we've set soft, set hard limit to memsw - one page
+						if (mem_is_soft) {
+							uint64_t hard_limit = memsw_limit - 4096;
+							climits.set_memory_limit_bytes(hard_limit, false);
+						}
+						climits.set_memsw_limit_bytes(memsw_limit);
 					}
 				} else {
 					dprintf(D_ALWAYS, "Not setting virtual memory limit in cgroup because "
@@ -677,7 +686,7 @@ VanillaProc::StartJob()
 	// is killed instead of the job itself.
 	if (retval)
 	{
-		setupOOMScore(-4);
+		setupOOMScore(0,0);
 	}
 
 #endif
@@ -690,6 +699,7 @@ bool
 VanillaProc::PublishUpdateAd( ClassAd* ad )
 {
 	dprintf( D_FULLDEBUG, "In VanillaProc::PublishUpdateAd()\n" );
+	static unsigned int max_rss = 0;
 
 	ProcFamilyUsage* usage;
 	ProcFamilyUsage cur_usage;
@@ -713,7 +723,11 @@ VanillaProc::PublishUpdateAd( ClassAd* ad )
 	ad->Assign(ATTR_JOB_REMOTE_USER_CPU, (double)usage->user_cpu_time);
 
 	ad->Assign(ATTR_IMAGE_SIZE, usage->max_image_size);
-	ad->Assign(ATTR_RESIDENT_SET_SIZE, usage->total_resident_set_size);
+
+	if (usage->total_resident_set_size > max_rss) {
+		max_rss = usage->total_resident_set_size;
+	}
+	ad->Assign(ATTR_RESIDENT_SET_SIZE, max_rss);
 
 	std::string memory_usage;
 	if (param(memory_usage, "MEMORY_USAGE_METRIC", "((ResidentSetSize+1023)/1024)")) {
@@ -1072,42 +1086,51 @@ VanillaProc::outOfMemoryEvent(int /* fd */)
 		return 0;
 	}
 
+	// The OOM killer has fired, and the process is frozen.  However,
+	// the cgroup still has accurate memory usage.  Let's grab that
+	// and make a final update, so the user can see exactly how much
+	// memory they used.
+	ClassAd updateAd;
+	PublishUpdateAd( &updateAd );
+	Starter->jic->periodicJobUpdate( &updateAd, true );
+	int usage;
+	updateAd.LookupInteger(ATTR_MEMORY_USAGE, usage);
+
 	std::stringstream ss;
 	if (m_memory_limit >= 0) {
-		ss << "Job has gone over memory limit of " << m_memory_limit << " megabytes.";
+		ss << "Job has gone over memory limit of " << m_memory_limit << " megabytes. Peak usage: " << usage << " megabytes.";
 	} else {
 		ss << "Job has encountered an out-of-memory event.";
 	}
 	if( isCheckpointing ) {
 		ss << "  This occurred while the job was checkpointing.";
 	}
-	Starter->jic->holdJob(ss.str().c_str(), CONDOR_HOLD_CODE_JobOutOfResources, 0);
 
-	// this will actually clean up the job
-	if ( Starter->Hold( ) ) {
-		dprintf( D_ALWAYS, "Job was held due to OOM event: %s\n", ss.str().c_str());
-		Starter->allJobsDone();
-	}
+	dprintf( D_ALWAYS, "Job was held due to OOM event: %s\n", ss.str().c_str());
 
 	dprintf(D_FULLDEBUG, "Closing event FD pipe %d.\n", m_oom_efd);
 	cleanupOOM();
 
-	Starter->ShutdownFast();
+	// This ulogs the hold event and KILLS the shadow
+	Starter->jic->holdJob(ss.str().c_str(), CONDOR_HOLD_CODE_JobOutOfResources, 0);
 
 	return 0;
 }
 
 int
-VanillaProc::setupOOMScore(int new_score)
+VanillaProc::setupOOMScore(int oom_adj, int oom_score_adj)
 {
 
 #if !(defined(HAVE_EVENTFD))
-	if (new_score) // Done to suppress compiler warnings.
+	if (oom_adj + oom_score_adj) // Done to suppress compiler warnings.
 		return 0;
 	return 0;
 #else 
 	TemporaryPrivSentry sentry(PRIV_ROOT);
 	// oom_adj is deprecated on modern kernels and causes a deprecation warning when used.
+
+	int oom_score = oom_adj; // assume the old way
+
 	int oom_score_fd = open("/proc/self/oom_score_adj", O_WRONLY | O_CLOEXEC);
 	if (oom_score_fd == -1) {
 		if (errno != ENOENT) {
@@ -1125,15 +1148,12 @@ VanillaProc::setupOOMScore(int new_score)
 			}
 		}
 	} else {
-		// oom_score_adj is linear; oom_adj was exponential.
-		if (new_score > 0)
-			new_score = 1 << new_score;
-		else
-			new_score = -(1 << -new_score);
+		// oops, we've got the new kind.  Use that.
+		oom_score = oom_score_adj;
 	}
 
 	std::stringstream ss;
-	ss << new_score;
+	ss << oom_score;
 	std::string new_score_str = ss.str();
         ssize_t nwritten = full_write(oom_score_fd, new_score_str.c_str(), new_score_str.length());
 	if (nwritten < 0) {

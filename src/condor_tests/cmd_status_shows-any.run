@@ -32,7 +32,7 @@ sub RUNNING{2};
 my $testname = "cmd_status_shows-any";
 my $debuglevel = 2;
 
-print scalar localtime() . "\n";
+print "Starting $testname.run at " .  scalar localtime() . " PID=$$\n";
 
 my $mypid = $$;
 
@@ -66,7 +66,7 @@ my @expectations = ("Submitter", "Negotiator", "DaemonMaster", "Scheduler", "Mac
 if($stable == 1) {
 	print "Looking for 5 Ad types - ";
 	# process one of each ad type and then compare with expected list
-	my $cmd = "condor_status -any -format \"%s:\" MyType -format \"%s\n\" Name";
+	my $cmd = "condor_status -any -format \"%s:\" MyType -format \"%s\\n\" Name";
 	CondorTest::debug("Looking at -any($cmd)\n",$debuglevel);
 	my $cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
     if(!$cmdstatus)
@@ -122,7 +122,7 @@ $res = runCondorTool("condor_rm -all",\@rm1,2,{emit_output=>0});
 $ENV{CONDOR_CONFIG} = $scheddoneconfig;
 $res = runCondorTool("condor_rm -all",\@rm2,2,{emit_output=>0});
 
-print scalar localtime() . "\n";
+print "Exiting $testname.run at " .  scalar localtime() . " PID=$$ success=$done\n";
 
 if( $done == 0 )
 {

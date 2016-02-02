@@ -58,6 +58,31 @@ InitializeReadOnlyConnection( const char * /*owner*/ )
 }
 
 int
+QmgmtSetAllowProtectedAttrChanges( int val )
+{
+	int	rval = -1;
+
+	CurrentSysCall = CONDOR_SetAllowProtectedAttrChanges;
+
+	qmgmt_sock->encode();
+	neg_on_error( qmgmt_sock->code(CurrentSysCall) );
+	neg_on_error( qmgmt_sock->code(val) );
+	neg_on_error( qmgmt_sock->end_of_message() );
+
+	qmgmt_sock->decode();
+	neg_on_error( qmgmt_sock->code(rval) );
+	if( rval < 0 ) {
+		neg_on_error( qmgmt_sock->code(terrno) );
+		neg_on_error( qmgmt_sock->end_of_message() );
+		errno = terrno;
+		return rval;
+	}
+	neg_on_error( qmgmt_sock->end_of_message() );
+
+	return rval;
+}
+
+int
 QmgmtSetEffectiveOwner(char const *o)
 {
 	int rval = -1;

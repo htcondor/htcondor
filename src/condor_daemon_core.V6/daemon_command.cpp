@@ -621,7 +621,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadHeader()
 // depending on whether or not authentication was requested.
 DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand()
 {
-	dprintf( D_FULLDEBUG, "DAEMONCORE: ReadCommand()\n");
+	dprintf( D_DAEMONCORE, "DAEMONCORE: ReadCommand()\n");
 
 	m_sock->decode();
 
@@ -1078,7 +1078,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 
 DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::Authenticate()
 {
-	dprintf( D_FULLDEBUG, "DAEMONCORE: Authenticate()\n");
+	dprintf( D_DAEMONCORE, "DAEMONCORE: Authenticate()\n");
 
 	if (m_errstack) { delete m_errstack;}
 	m_errstack = new CondorError();
@@ -1121,7 +1121,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::Authenticate
 
 DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::AuthenticateContinue()
 {
-	dprintf( D_FULLDEBUG, "DAEMONCORE: AuthenticateContinue()\n");
+	dprintf( D_DAEMONCORE, "DAEMONCORE: AuthenticateContinue()\n");
 
 	char *method_used = NULL;
 	int auth_result = m_sock->authenticate_continue(m_errstack, true, &method_used);
@@ -1134,7 +1134,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::Authenticate
 
 DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::AuthenticateFinish(int auth_success, char * method_used)
 {
-	dprintf( D_FULLDEBUG, "DAEMONCORE: AuthenticateFinish(%i, %s)\n", auth_success, method_used?method_used:"(no authentication)");
+	dprintf( D_DAEMONCORE, "DAEMONCORE: AuthenticateFinish(%i, %s)\n", auth_success, method_used?method_used:"(no authentication)");
 
 	if ( method_used ) {
 		m_policy->Assign(ATTR_SEC_AUTHENTICATION_METHODS, method_used);
@@ -1201,7 +1201,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::Authenticate
 
 DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::EnableCrypto()
 {
-	dprintf( D_FULLDEBUG, "DAEMONCORE: EnableCrypto()\n");
+	dprintf( D_DAEMONCORE, "DAEMONCORE: EnableCrypto()\n");
 
 	if (m_will_enable_integrity == SecMan::SEC_FEAT_ACT_YES) {
 
@@ -1254,7 +1254,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::EnableCrypto
 
 DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::VerifyCommand()
 {
-	dprintf( D_FULLDEBUG, "DAEMONCORE: VerifyCommand()\n");
+	dprintf( D_DAEMONCORE, "DAEMONCORE: VerifyCommand()\n");
 
 	CondorError errstack;
 
@@ -1434,10 +1434,10 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::VerifyComman
 
 DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::SendResponse()
 {
-	dprintf( D_FULLDEBUG, "DAEMONCORE: SendResponse()\n");
+	dprintf( D_DAEMONCORE, "DAEMONCORE: SendResponse()\n");
 
 	if (m_new_session) {
-		dprintf( D_FULLDEBUG, "DAEMONCORE: SendResponse() : m_new_session\n");
+		dprintf( D_DAEMONCORE, "DAEMONCORE: SendResponse() : m_new_session\n");
 
 		// clear the buffer
 		m_sock->decode();
@@ -1578,7 +1578,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::SendResponse
 		free( return_addr );
 		return_addr = NULL;
 	} else {
-		dprintf( D_FULLDEBUG, "DAEMONCORE: SendResponse() : NOT m_new_session\n");
+		dprintf( D_DAEMONCORE, "DAEMONCORE: SendResponse() : NOT m_new_session\n");
 	}
 
 	// what about DC_QUERY?  we want to stay in encode()
@@ -1605,7 +1605,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::SendResponse
 // Authorization is first verified.
 DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ExecCommand()
 {
-	dprintf( D_FULLDEBUG, "DAEMONCORE: ExecCommand(m_req == %i, m_real_cmd == %i, m_auth_cmd == %i)\n",
+	dprintf( D_DAEMONCORE, "DAEMONCORE: ExecCommand(m_req == %i, m_real_cmd == %i, m_auth_cmd == %i)\n",
 		 m_req, m_real_cmd, m_auth_cmd);
 
 	// There is no command handler for DC_AUTHENTICATE.
@@ -1615,7 +1615,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ExecCommand(
 	// used to create a session using TCP that UDP commands can then resume
 	// without any round-trips.
 	if (m_real_cmd == DC_AUTHENTICATE) {
-		dprintf( D_FULLDEBUG, "DAEMONCORE: ExecCommand : m_real_cmd was DC_AUTHENTICATE. NO-OP.\n");
+		dprintf( D_DAEMONCORE, "DAEMONCORE: ExecCommand : m_real_cmd was DC_AUTHENTICATE. NO-OP.\n");
 		m_result = TRUE;
 		return CommandProtocolFinished;
 	}

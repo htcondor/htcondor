@@ -217,6 +217,7 @@ typedef HashTable<int, int> ClusterSizeHashTable_t;
 static ClusterSizeHashTable_t *ClusterSizeHashTable = 0;
 static int TotalJobsCount = 0;
 
+static classad::References immutable_attrs, protected_attrs;
 static int flush_job_queue_log_timer_id = -1;
 static int dirty_notice_timer_id = -1;
 static int flush_job_queue_log_delay = 0;
@@ -234,7 +235,6 @@ static const char *default_super_user =
 #else
 	"root";
 #endif
-
 
 
 //static int allow_remote_submit = FALSE;
@@ -509,6 +509,7 @@ QmgmtPeer::QmgmtPeer()
 	myendpoint = NULL;
 	sock = NULL;
 	transaction = NULL;
+	allow_protected_attr_changes_by_superuser = true;
 
 	unset();
 }
@@ -553,6 +554,16 @@ QmgmtPeer::set(const condor_sockaddr& raddr, const char *o)
 	myendpoint = strnewp(addr.to_ip_string().Value());
 
 	return true;
+}
+
+bool
+QmgmtPeer::setAllowProtectedAttrChanges(bool val)
+{
+	bool old_val = allow_protected_attr_changes_by_superuser;
+
+	allow_protected_attr_changes_by_superuser = val;
+
+	return old_val;
 }
 
 bool
@@ -728,6 +739,13 @@ InitQmgmt()
 			EXCEPT("QUEUE_SUPER_USER_MAY_IMPERSONATE is an invalid regular expression: %s",queue_super_user_may_impersonate.c_str());
 		}
 	}
+
+	immutable_attrs.clear();
+	param_and_insert_attrs("IMMUTABLE_JOB_ATTRS", immutable_attrs);
+	param_and_insert_attrs("SYSTEM_IMMUTABLE_JOB_ATTRS", immutable_attrs);
+	protected_attrs.clear();
+	param_and_insert_attrs("PROTECTED_JOB_ATTRS", protected_attrs);
+	param_and_insert_attrs("SYSTEM_PROTECTED_JOB_ATTRS", protected_attrs);
 
 	schedd_forker.Initialize();
 	int max_schedd_forkers = param_integer ("SCHEDD_QUERY_WORKERS",8,0);
@@ -1513,7 +1531,7 @@ SuperUserAllowedToSetOwnerTo(const MyString &user) {
 		if( queue_super_user_may_impersonate_regex->match(user.Value()) ) {
 			return true;
 		}
-		dprintf(D_FULLDEBUG,"Queue super user not allowed to set owner to %s, because this does not match the ALLOW_QUEUE_SUPER_USER_TO_IMPERSONATE regular expression.\n",user.Value());
+		dprintf(D_FULLDEBUG,"Queue super user not allowed to set owner to %s, because this does not match the QUEUE_SUPER_USER_MAY_IMPERSONATE regular expression.\n",user.Value());
 		return false;
 	}
 
@@ -1523,6 +1541,21 @@ SuperUserAllowedToSetOwnerTo(const MyString &user) {
 	}
 	dprintf(D_FULLDEBUG,"Queue super user not allowed to set owner to %s, because this instance of the schedd has never seen that user submit any jobs.\n",user.Value());
 	return false;
+}
+
+
+int 
+QmgmtSetAllowProtectedAttrChanges(int val)
+{
+	if( !Q_SOCK ) {
+		errno = ENOENT;
+		return -1;
+	}
+
+	bool old_value = 
+		Q_SOCK->setAllowProtectedAttrChanges(val ? true : false);
+
+	return old_value ? TRUE : FALSE;
 }
 
 int
@@ -2030,22 +2063,34 @@ NewProc(int cluster_id)
 	// agree on who the owner is (or until we change the schedd so that /it/
 	// sets the Owner string), it's safe to do this rather than complicate
 	// things by using the owner attribute from the job ad we don't have yet.
+	//
+	// The queue super-user(s) can pretend to be someone, in which case it's
+	// valid and sensible to apply that someone's quota; or they could change
+	// the owner attribute after the submission.  The latter would allow them
+	// to bypass the job quota, but that's not necessarily a bad thing.
 	if (Q_SOCK) {
 		const char * owner = Q_SOCK->getOwner();
-		ASSERT( owner != NULL );
-		const OwnerData * ownerData = scheduler.insert_owner_const( owner );
-		ASSERT( ownerData != NULL );
-		int ownerJobCount = ownerData->num.JobsCounted
-							+ ownerData->num.JobsRecentlyAdded
-							+ jobs_added_this_transaction;
+		if( owner == NULL ) {
+			// This should only happen for job submission via SOAP, but
+			// it's unclear how we can verify that.  Regardless, if we
+			// don't know who the owner of the job is, we can't enfore
+			// MAX_JOBS_PER_OWNER.
+			dprintf( D_FULLDEBUG, "Not enforcing MAX_JOBS_PER_OWNER for submit without owner of cluster %d.\n", cluster_id );
+		} else {
+			const OwnerData * ownerData = scheduler.insert_owner_const( owner );
+			ASSERT( ownerData != NULL );
+			int ownerJobCount = ownerData->num.JobsCounted
+								+ ownerData->num.JobsRecentlyAdded
+								+ jobs_added_this_transaction;
 
-		int maxJobsPerOwner = scheduler.getMaxJobsPerOwner();
-		if( ownerJobCount >= maxJobsPerOwner ) {
-			dprintf( D_ALWAYS,
-				"NewProc(): MAX_JOBS_PER_OWNER exceeded, submit failed.  "
-				"Current total is %d.  Limit is %d.\n",
-				ownerJobCount, maxJobsPerOwner );
-			return -3;
+			int maxJobsPerOwner = scheduler.getMaxJobsPerOwner();
+			if( ownerJobCount >= maxJobsPerOwner ) {
+				dprintf( D_ALWAYS,
+					"NewProc(): MAX_JOBS_PER_OWNER exceeded, submit failed.  "
+					"Current total is %d.  Limit is %d.\n",
+					ownerJobCount, maxJobsPerOwner );
+				return -3;
+			}
 		}
 	}
 
@@ -2501,6 +2546,10 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 	IdToKey(cluster_id,proc_id,key);
 
 	if (JobQueue->Lookup(key, job)) {
+		// If we made it here, the user is adding or editing attrbiutes
+		// to an ad that has already been committed in the queue.
+
+		// Ensure the user is not changing a job they do not own.
 		if ( Q_SOCK && !OwnerCheck(job, Q_SOCK->getOwner() )) {
 			const char *owner = Q_SOCK->getOwner( );
 			if ( ! owner ) {
@@ -2509,6 +2558,38 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			dprintf(D_ALWAYS,
 					"OwnerCheck(%s) failed in SetAttribute for job %d.%d\n",
 					owner, cluster_id, proc_id);
+			return -1;
+		}
+
+		// Ensure user is not changing an immutable attribute to a committed job
+		if (immutable_attrs.find(attr_name) != immutable_attrs.end())
+		{
+			errno = EACCES;
+			dprintf(D_ALWAYS,
+					"SetAttribute attempt to edit immutable attribute %s in job %d.%d\n",
+					attr_name, cluster_id, proc_id);
+			return -1;
+		}
+
+		// Ensure user is not changing a protected attribute to a committed job
+		// unless the real owner (i.e the peer on the socket) is a queue superuser or
+		// the user is the schedd itself (in which case Q_SOCK == NULL).
+		// Also check the allow_protected_attr_changes_by_superuser flag, which will
+		// be set to false when a superuser process (like the shadow) is acting under
+		// the direction of a non-super user (like when the shadow is forwarding chirp
+		// updates from the user).
+		if ( Q_SOCK && 
+			 ( (!isQueueSuperUser(Q_SOCK->getRealOwner()) && !qmgmt_all_users_trusted) || 
+			    !Q_SOCK->getAllowProtectedAttrChanges() ) &&
+			 protected_attrs.find(attr_name) != protected_attrs.end() )
+		{
+			errno = EACCES;
+			dprintf(D_ALWAYS,
+					"SetAttribute of protected attribute denied, RealOwner=%s EffectiveOwner=%s AllowPAttrchange=%s Attr=%s in job %d.%d\n",
+					Q_SOCK->getRealOwner() ? Q_SOCK->getRealOwner() : "(null)",
+					Q_SOCK->getOwner() ? Q_SOCK->getOwner() : "(null)",
+					Q_SOCK->getAllowProtectedAttrChanges() ? "true" : "false",
+					attr_name, cluster_id, proc_id);
 			return -1;
 		}
 	} else {
@@ -3020,7 +3101,7 @@ SetTimerAttribute( int cluster, int proc, const char *attr_name, int dur )
 		return -1;
 	}
 
-	rc = SetAttributeInt( cluster, proc, attr_name, xact_start_time + dur );
+	rc = SetAttributeInt( cluster, proc, attr_name, xact_start_time + dur, SETDIRTY );
 	return rc;
 }
 
@@ -3309,7 +3390,9 @@ CommitTransaction(SetAttributeFlags_t flags /* = 0 */)
 				dprintf(D_FULLDEBUG,"New job: %s\n",job_id.c_str());
 
 					// increment the 'recently added' job count for this owner
-				scheduler.incrementRecentlyAdded( Q_SOCK->getOwner() );
+				if( Q_SOCK->getOwner() ) {
+					scheduler.incrementRecentlyAdded( Q_SOCK->getOwner() );
+				}
 
 					// chain proc ads to cluster ad
 				procad->ChainToAd(clusterad);

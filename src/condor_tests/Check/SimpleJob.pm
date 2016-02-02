@@ -190,14 +190,18 @@ sub RunCheck
 
 	# we preset call backs before fork since if child does this and requests saved
 	# callbacks, the next child won't see it
-	 
+
+	my $submit_only = 0;
 	if($args{no_wait}) {
-		my $pid = fork();
-		if($pid != 0) {
-			push @children, $pid;
-			#ShowChildren();
-			return(0);
-		}
+		$submit_only = 1;
+		$timedcallback_fn = undef;
+# tj - 2015 - dont do this, no_wait really means 'I don't care if the job ever runs!'
+#		my $pid = fork();
+#		if($pid != 0) {
+#			push @children, $pid;
+#			#ShowChildren();
+#			return(0);
+#		}
 	}
 	
 	my $queuesz = $args{queue_sz} || 1;
@@ -395,7 +399,18 @@ sub RunCheck
 	}
     close( SUBMIT );
 
-	print "RunCheck finally calling RunTest\n";
+	if ($submit_only) {
+		my $cluster = Condor::TestSubmit( $submit_fname );
+
+		if(exists $args{ClusterIdCallback}) {
+			my $clusteridcallback = $args{ClusterIdCallback};
+			&$clusteridcallback($cluster);
+		}
+
+		return $cluster ? 0 : 1;
+	}
+
+	CondorTest::debug("  RunCheck: calling RunTest($testname, $submit_fname)\n");
 	if (defined $args{GetClusterId}) {
     	$result = CondorTest::RunTest($testname, $submit_fname, 0, $args{GetClusterId});
 	} else {
@@ -406,10 +421,11 @@ sub RunCheck
 	Condor::RemoveSJTimed();
 
     CondorTest::RegisterResult( $result, %args );
-	 	if(($args{no_wait}) & ($pid == 0)) {
-	 	#print "Child exiting\n";
-		exit(0);
-	}
+#	if(($args{no_wait}) & ($pid == 0)) {
+#		#print "Child exiting\n";
+#		exit(0);
+#	}
+
 }
 
 sub ExamineSlots

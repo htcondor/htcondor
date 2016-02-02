@@ -11,6 +11,12 @@
 ##
 
 #
+# This script logs its actions to syslog.  If you'd rather it didn't,
+# change the line below to something like '/bin/true'.
+#
+LOGGER='/usr/bin/logger -t htcondor'
+
+#
 # Increase the global number of file descriptors.  For example, each
 # dynamically-linked shadow uses approximately 13 just to open its
 # libraries.
@@ -51,9 +57,39 @@ TCP_LISTEN_QUEUE=1024
 MAX_RECEIVE_BUFFER=10383360
 
 
+# Maximum amount of dirty filesystem bytes to buffer in the kernel
+# before processes writing to the filesystem are blocked, and made 
+# to do their own i/o synchronously.  Set to 0 to undo
+
+# If we are running with cgroups on, there's a Linux kernel bug
+# that causes spurious OOM events sent to a cgroup with a hard memory limit
+# if it writes a lot of data to the filesystem quickly.  Limitting
+# the buffering to 100M works around the problem
+
+DIRTY_BYTES=100000000
+
 ##
 ## Implementation.  You shouldn't need to change anything below here.
 ##
+
+LOG=/dev/null
+if [ -d /etc/sysctl.d ]; then
+	LOG=/etc/sysctl.d/99-htcondor.conf
+	(
+		echo "#"
+		echo "# This file was written by $0"
+		echo "# when the condor_master started up."
+		echo "#"
+		echo "# This script tunes kernel parameters to support HTCondor at"
+		echo "# larger scales.  A list of the changes follows.  You can set"
+		echo "# ENABLE_KERNEL_TUNING = FALSE"
+		echo "# in your HTCondor configuration to disable this entirely, or"
+		echo "# set LINUX_KERNEL_TUNING_SCRIPT to some other file to change"
+		echo "# which script is run when the condor_master daemon starts."
+		echo "#"
+	) > ${LOG}
+fi
+
 increaseKernelParameter() {
 	PARAMETER=$1
 	FILE=$2
@@ -63,9 +99,13 @@ increaseKernelParameter() {
 		OLD=`cat ${FILE}`
 		if [ ${NEW} -gt ${OLD} ]; then
 			echo "Changing ${PARAMETER} from ${OLD} to ${NEW}"
+			echo "# Changing ${PARAMETER} from ${OLD} to ${NEW}" >> ${LOG}
+			echo "Changing ${PARAMETER} from ${OLD} to ${NEW}" | ${LOGGER}
 			echo ${NEW} > ${FILE}
 		else
 			echo "Not changing ${PARAMETER}: new value (${NEW}) <= old value (${OLD})."
+			echo "# Not changing ${PARAMETER}: new value (${NEW}) <= old value (${OLD})." >> ${LOG}
+			echo "Not changing ${PARAMETER}: new value (${NEW}) <= old value (${OLD})." | ${LOGGER}
 		fi
 	fi
 }
@@ -78,6 +118,8 @@ setKernelParameter() {
 	if [ -n "${NEW}" ]; then
 		OLD=`cat ${FILE}`
 		echo "Changing ${PARAMETER} from ${OLD} to ${NEW}"
+		echo "# Changing ${PARAMETER} from ${OLD} to ${NEW}" >> ${LOG}
+		echo "Changing ${PARAMETER} from ${OLD} to ${NEW}" | ${LOGGER}
 		echo ${NEW} > ${FILE}
 	fi
 }
@@ -86,6 +128,11 @@ increaseKernelParameter "GLOBAL_MAX_FDS" "/proc/sys/fs/file-max" ${GLOBAL_MAX_FD
 increaseKernelParameter "GLOBAL_MAX_PROCESSES" "/proc/sys/kernel/pid_max" ${GLOBAL_MAX_PROCESSES}
 setKernelParameter "LOCAL_PORT_RANGE" "/proc/sys/net/ipv4/ip_local_port_range" "${LOCAL_PORT_RANGE}"
 increaseKernelParameter "TCP_LISTEN_QUEUE" "/proc/sys/net/core/somaxconn" ${TCP_LISTEN_QUEUE}
+
+if condor_config_val BASE_CGROUP > /dev/null 2>&1
+then
+	setKernelParameter "FS_CACHE_DIRTY_BYTES" "/proc/sys/vm/dirty_bytes" "${DIRTY_BYTES}"
+fi
 
 # FIXME: Only on the collector.
 increaseKernelParameter "MAX_RECEIVE_BUFFER" "/proc/sys/net/core/rmem_max" ${MAX_RECEIVE_BUFFER}

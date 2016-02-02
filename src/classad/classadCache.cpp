@@ -294,7 +294,7 @@ CacheEntry::CacheEntry(const std::string & szNameIn, const std::string & szValue
 
 CacheEntry::~CacheEntry()
 {
-    if (pData)
+    if (pData && _cache && _cache.use_count())
     {
         _cache->flush(szName, szValue);
 		delete pData;

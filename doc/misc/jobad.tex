@@ -408,15 +408,6 @@ If not initialized by the job,
 non-\SubmitCmdNI{vm} universe jobs will default to an initial value of the 
 sum of the job's executable and all input files.
 
-%%% ClassAd attribute: EC2AccessKey
-\index{ClassAd job attribute!EC2AccessKey}
-\index{EC2AccessKey!job ClassAd attribute}
-\item[\AdAttr{EC2AccessKey}:] 
-Used for grid type ec2 jobs;
-the access key (account ID) extracted from the contents of
-the file specified by the submit description
-file command \SubmitCmd{ec2\_access\_key\_id}.
-
 %%% ClassAd attribute: EC2AccessKeyId
 \index{ClassAd job attribute!EC2AccessKeyId}
 \index{EC2AccessKeyId!job ClassAd attribute}
@@ -1723,6 +1714,14 @@ by the \Condor{negotiator} when it makes a match.
 It will be \Expr{True} if the resource was claimed via negotiation
 when the configuration variable \Macro{GROUP\_AUTOREGROUP} was \Expr{True}.
 It will be \Expr{False} otherwise.
+
+%%% ClassAd attribute: SubmitterGlobalJobId
+\index{ClassAd job attribute!SubmitterGlobalJobId}
+\index{SubmitterGlobalJobId!job ClassAd attribute}
+\item[\AdAttr{SubmitterGlobalJobId}:]
+When HTCondor-C submits a job to a remote \Condor{schedd}, it sets this
+attribute in the remote job ad to match the \AdAttr{GlobalJobId} attribute
+of the original, local job.
 
 %%% ClassAd attribute: SubmitterGroup 
 \index{ClassAd job attribute!SubmitterGroup}

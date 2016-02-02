@@ -426,7 +426,22 @@ bool AmazonRequest::SendRequest() {
 
     // We may, technically, need to replace '%20' in the canonicalized
     // query string with '+' to be compliant.
-    dprintf( D_FULLDEBUG, "Post body is '%s'\n", canonicalizedQueryString.c_str() );
+    // dprintf( D_FULLDEBUG, "Post body is '%s'\n", canonicalizedQueryString.c_str() );
+    size_t index = canonicalizedQueryString.find( "AWSAccessKeyId=" );
+    if( index != std::string::npos ) {
+        size_t skipLast = canonicalizedQueryString.find( "&", index + 14 );
+        char swap = canonicalizedQueryString[ index + 15 ];
+        canonicalizedQueryString[ index + 15 ] = '\0';
+        char const * cqs = canonicalizedQueryString.c_str();
+        if( skipLast == std::string::npos ) {
+	        dprintf( D_FULLDEBUG, "Post body is '%s...'\n", cqs );
+        } else {
+        	dprintf( D_FULLDEBUG, "Post body is '%s...%s'\n", cqs, cqs + skipLast );
+        }
+        canonicalizedQueryString[ index + 15 ] = swap;
+    } else {
+        dprintf( D_FULLDEBUG, "Post body is '%s'\n", canonicalizedQueryString.c_str() );
+    }
 
     rv = curl_easy_setopt( curl, CURLOPT_POSTFIELDS, canonicalizedQueryString.c_str() );
     if( rv != CURLE_OK ) {
@@ -955,16 +970,16 @@ bool AmazonVMStartSpot::SendRequest() {
 
 bool AmazonVMStartSpot::workerFunction( char ** argv, int argc, std::string & result_string ) {
     assert( strcasecmp( argv[0], "EC2_VM_START_SPOT" ) == 0 );
-    
+
     // Uses the Query AP function 'RequestSpotInstances', as documented at
     // http://docs.amazonwebservices.com/AWSEC2/latest/APIReference/ApiReference-query-RequestSpotInstances.html
 
     int requestID;
     get_int( argv[1], & requestID );
-    
-    if( ! verify_min_number_args( argc, 15 ) ) {
+
+    if( ! verify_min_number_args( argc, 17 ) ) {
         result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
-        dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n", argc, 15, argv[0] );
+        dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n", argc, 17, argv[0] );
         return false;
     }
 
@@ -996,23 +1011,31 @@ bool AmazonVMStartSpot::workerFunction( char ** argv, int argc, std::string & re
     if( strcasecmp( argv[12], NULLSTRING ) ) {
         vmSpotRequest.query_parameters[ "LaunchSpecification.SubnetId" ] = argv[12];
     }
-    
+
     if( strcasecmp( argv[13], NULLSTRING ) ) {
         vmSpotRequest.query_parameters[ "LaunchSpecification.NetworkInterface.1.PrivateIpAddress" ] = argv[13];
     }
- 
+
     // Use LaunchGroup, which we don't otherwise support, as an idempotence
     // token, since RequestSpotInstances doesn't support ClientToken.
     if( strcasecmp( argv[14], NULLSTRING ) ) {
         vmSpotRequest.query_parameters[ "LaunchGroup" ] = argv[14];
     }
-    
-    for( int i = 15; i < argc; ++i ) {
+
+    if( strcasecmp( argv[15], NULLSTRING ) ) {
+        vmSpotRequest.query_parameters[ "LaunchSpecification.IamInstanceProfile.Arn" ] = argv[15];
+    }
+
+    if( strcasecmp( argv[16], NULLSTRING ) ) {
+        vmSpotRequest.query_parameters[ "LaunchSpecification.IamInstanceProfile.Name" ] = argv[16];
+    }
+
+    for( int i = 17; i < argc; ++i ) {
         std::ostringstream groupName;
         groupName << "LaunchSpecification.SecurityGroup." << (i - 14 + 1);
         vmSpotRequest.query_parameters[ groupName.str() ] = argv[ i ];
     }
-    
+
     // Handle user data.
     std::string buffer;
     if( strcasecmp( argv[8], NULLSTRING ) ) {

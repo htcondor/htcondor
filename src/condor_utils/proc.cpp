@@ -39,7 +39,8 @@
 
 int		DontDisplayTime;
 
-
+// note format_time.cpp has a version of this function that takes a time_t
+// does anyone actually link to this one?
 #define SECOND	1
 #define MINUTE	(60 * SECOND)
 #define HOUR	(60 * MINUTE)

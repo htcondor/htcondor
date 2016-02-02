@@ -1,0 +1,6 @@
+SET_JOB_ATTR \
+	test_attr1 = 234
+SET_JOB_ATTR test_attr6 = 987
+
+Job NodeB job_dagman_set_attr-nodeB.cmd
+

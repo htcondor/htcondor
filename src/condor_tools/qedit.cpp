@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2016, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -45,12 +45,14 @@ usage(char name[])
 bool
 ProtectedAttribute(char attr[])
 {
-	return (strcasecmp(attr, ATTR_OWNER) == 0) ||
-		(strcasecmp(attr, ATTR_CLUSTER_ID) == 0) ||
-		(strcasecmp(attr, ATTR_PROC_ID) == 0) ||
-		(strcasecmp(attr, ATTR_MY_TYPE) == 0) ||
-		(strcasecmp(attr, ATTR_TARGET_TYPE) == 0) ||
-		(strcasecmp(attr, ATTR_JOB_STATUS) == 0);
+	classad::References protected_attrs;
+
+	param_and_insert_attrs("IMMUTABLE_JOB_ATTRS", protected_attrs);
+	param_and_insert_attrs("SYSTEM_IMMUTABLE_JOB_ATTRS", protected_attrs);
+	param_and_insert_attrs("PROTECTED_JOB_ATTRS", protected_attrs);
+	param_and_insert_attrs("SYSTEM_PROTECTED_JOB_ATTRS", protected_attrs);
+
+	return protected_attrs.find(attr) != protected_attrs.end();
 }
 
 int
@@ -116,7 +118,7 @@ main(int argc, char *argv[])
 
 	DCSchedd schedd((schedd_name.Length() == 0) ? NULL : schedd_name.Value(),
 					(pool_name.Length() == 0) ? NULL   : pool_name.Value());
-	if ( schedd.locate() == false ) {
+	if ( schedd.locate(Daemon::LOCATE_FOR_LOOKUP) == false ) {
 		if (schedd_name == "") {
 			fprintf( stderr, "%s: ERROR: Can't find address of local schedd\n",
 				argv[0] );

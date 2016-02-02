@@ -23,7 +23,7 @@
 
 #include "condor_header_features.h"
 
-BEGIN_C_DECLS   /* from condor_header_features.h */
+class MyString;
 
 /** @name debug.h
     
@@ -172,7 +172,19 @@ typedef enum strict_level strict_level_t;
 bool check_warning_strictness( strict_level_t strictness,
 			bool quit_if_error = true );
 
-END_C_DECLS /* from condor_header_features.h */
+/** Convert a timestamp into a string, formatted in the same way
+    as HTCondor dprintf strings.
+	@param timestamp:  The timestamp to convert.
+	@param tstr:  A MyString to hold the resulting string.
+*/
+void time_to_str( time_t timestamp, MyString &tstr );
+
+/** Convert a timestamp into a string, formatted in the same way
+    as HTCondor dprintf strings.
+	@param tm:  The tm to convert.
+	@param tstr:  A MyString to hold the resulting string.
+*/
+void time_to_str( const struct tm *tm, MyString &tstr );
 
 #endif /* ifndef DAGMAN_DEBUG_H */
 

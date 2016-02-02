@@ -32,6 +32,7 @@
 
 std::map< std::string, Timeslice > DCCollector::blacklist;
 
+
 // Instantiate things
 
 DCCollector::DCCollector( const char* dcName, UpdateType uType ) 
@@ -39,9 +40,7 @@ DCCollector::DCCollector( const char* dcName, UpdateType uType )
 {
 	up_type = uType;
 	init( true );
-	adSeqMan = new DCCollectorAdSeqMan();
 }
-
 
 void
 DCCollector::init( bool needs_reconfig )
@@ -57,8 +56,6 @@ DCCollector::init( bool needs_reconfig )
 		bootTime = time( NULL );
 	} 
 	startTime = bootTime;
-
-	adSeqMan = NULL;
 
 	if( needs_reconfig ) {
 		reconfig();
@@ -117,15 +114,6 @@ DCCollector::deepCopy( const DCCollector& copy )
 
 	startTime = copy.startTime;
 
-	if( adSeqMan ) {
-		delete adSeqMan;
-		adSeqMan = NULL;
-	}
-	if( copy.adSeqMan ) {
-		adSeqMan = new DCCollectorAdSeqMan( *copy.adSeqMan );
-	} else {
-		adSeqMan = new DCCollectorAdSeqMan();
-	}
 }
 
 
@@ -189,7 +177,7 @@ DCCollector::parseTCPInfo( void )
 
 
 bool
-DCCollector::sendUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblocking ) 
+DCCollector::sendUpdate( int cmd, ClassAd* ad1, DCCollectorAdSequences& adSeq, ClassAd* ad2, bool nonblocking ) 
 {
 	if( ! _is_configured ) {
 			// nothing to do, treat it as success...
@@ -205,18 +193,19 @@ DCCollector::sendUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblocking )
 
 	// Add start time & seq # to the ads before we publish 'em
 	if ( ad1 ) {
-		ad1->Assign(ATTR_DAEMON_START_TIME,(long)startTime);
+		ad1->Assign(ATTR_DAEMON_START_TIME, startTime);
 	}
 	if ( ad2 ) {
-		ad2->Assign(ATTR_DAEMON_START_TIME,(long)startTime);
+		ad2->Assign(ATTR_DAEMON_START_TIME, startTime);
 	}
+
 	if ( ad1 ) {
-		unsigned seq = adSeqMan->getSequence( ad1 );
-		ad1->Assign(ATTR_UPDATE_SEQUENCE_NUMBER,seq);
-	}
-	if ( ad2 ) {
-		unsigned seq = adSeqMan->getSequence( ad2 );
-		ad2->Assign(ATTR_UPDATE_SEQUENCE_NUMBER,seq);
+		DCCollectorAdSeq* seqgen = adSeq.getAdSeq(*ad1);
+		if (seqgen) {
+			long long seq = seqgen->getSequence();
+			ad1->Assign(ATTR_UPDATE_SEQUENCE_NUMBER, seq);
+			if (ad2) { ad2->Assign(ATTR_UPDATE_SEQUENCE_NUMBER, seq); }
+		}
 	}
 
 		// Prior to 7.2.0, the negotiator depended on the startd
@@ -224,19 +213,6 @@ DCCollector::sendUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblocking )
 	if ( ad1 && ad2 ) {
 		ad2->CopyAttribute(ATTR_MY_ADDRESS,ad1);
 	}
-
-#if 0 // don't want this in all ads, moving to self_monitor code so it shows up only in daemon ads
-    // My initial plan was to publish these for schedd, however they will provide
-    // potentially useful context for performance/health assessment of any daemon 
-    if (ad1) {
-        ad1->Assign(ATTR_DETECTED_CPUS, param_integer("DETECTED_CORES", 0));
-        ad1->Assign(ATTR_DETECTED_MEMORY, param_integer("DETECTED_MEMORY", 0));
-    }
-    if (ad2) {
-        ad2->Assign(ATTR_DETECTED_CPUS, param_integer("DETECTED_CORES", 0));
-        ad2->Assign(ATTR_DETECTED_MEMORY, param_integer("DETECTED_MEMORY", 0));
-    }
-#endif
 
 		// We never want to try sending an update to port 0.  If we're
 		// about to try that, and we're trying to talk to a local
@@ -271,7 +247,11 @@ DCCollector::sendUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblocking )
 		if( daemonCore ) {
 			const char * myOwnSinful = daemonCore->InfoCommandSinfulString();
 			if( myOwnSinful == NULL ) {
-				dprintf( D_ALWAYS | D_FAILURE, "Unable to determine my own address, will not update or invalidate collector ad to avoid potential deadlock.\n" );
+				dprintf( D_ALWAYS, "Unable to determine my own address, will not update or invalidate collector ad to avoid potential deadlock.\n" );
+				return false;
+			}
+			if( _addr == NULL ) {
+				dprintf( D_ALWAYS, "Failing attempt to update or invalidate collector ad because of missing daemon address (probably an unresolved hostname; daemon name is '%s').\n", _name );
 				return false;
 			}
 			if( strcmp( myOwnSinful, _addr ) == 0 ) {
@@ -617,227 +597,27 @@ DCCollector::initDestinationStrings( void )
 // Ad Sequence Number class methods
 //
 
-// Constructor for the Ad Sequence Number
-DCCollectorAdSeq::DCCollectorAdSeq( const char *inName,
-									const char *inMyType,
-									const char *inMachine )
+// Get a sequence number class for this classad, creating it if needed.
+DCCollectorAdSeq* DCCollectorAdSequences::getAdSeq(const ClassAd & ad)
 {
-	// Copy the fields
-	if ( inName ) {
-		Name = strdup( inName );
-	} else {
-		Name = NULL;
+	std::string name, attr;
+	ad.LookupString( ATTR_NAME, name );
+	ad.LookupString( ATTR_MY_TYPE, attr );
+	name += "\n"; name += attr;
+	ad.LookupString( ATTR_MACHINE, attr );
+	name += "\n"; name += attr;
+
+	DCCollectorAdSeqMap::iterator it = seqs.find(name);
+	if (it != seqs.end()) {
+		return &(it->second);
 	}
-	if ( inMyType ) {
-		MyType = strdup( inMyType );
-	} else {
-		MyType = NULL;
-	}
-	if ( inMachine ) {
-		Machine = strdup( inMachine );
-	} else {
-		Machine = NULL;
-	}
-	sequence = 0;
-}
-
-// Copy constructor for the Ad Sequence Number
-DCCollectorAdSeq::DCCollectorAdSeq( const DCCollectorAdSeq &ref )
-{
-	const char *tmp;
-
-	tmp = ref.getName( );
-	if ( tmp ) {
-		this->Name = strdup( tmp );
-	} else {
-		this->Name = NULL;
-	}
-
-	tmp = ref.getMyType( );
-	if ( tmp ) {
-		this->MyType = strdup( tmp );
-	} else {
-		this->MyType = NULL;
-	}
-
-	tmp = ref.getMachine( );
-	if ( tmp ) {
-		this->Machine = strdup( tmp );
-	} else {
-		this->Machine = NULL;
-	}
-
-	this->sequence = ref.getSequence( );
-}
-
-// Destructor for the Ad Sequence Number
-DCCollectorAdSeq::~DCCollectorAdSeq( void )
-{
-	// Free the allocated strings
-	if ( Name ) {
-		free( Name );
-	}
-	if ( MyType ) {
-		free( MyType );
-	}
-	if ( Machine ) {
-		free( Machine );
-	}
-}
-
-// Match operator
-bool
-DCCollectorAdSeq::Match( const char *inName,
-						 const char *inMyType,
-						 const char *inMachine ) const
-{	
-	// Check for complete match.. Return false if there are ANY mismatches
-	if ( inName ) {
-		if ( ! Name ) {
-			return false;
-		}
-		if ( strcmp( Name, inName ) ) {
-			return false;
-		}
-	} else if ( Name )
-	{
-		return false;
-	}
-
-	if ( inMyType ) {
-		if ( ! MyType ) {
-			return false;
-		}
-		if ( strcmp( MyType, inMyType ) ) {
-			return false;
-		}
-	} else if ( MyType )
-	{
-		return false;
-	}
-
-	if ( inMachine ) {
-		if ( ! Machine ) {
-			return false;
-		}
-		if ( strcmp( Machine, inMachine ) ) {
-			return false;
-		}
-	} else if ( Machine )
-	{
-		return false;
-	}
-
-	// If we passed all the tests, must be good.
-	return true;
-}
-
-// Get the sequence number
-unsigned
-DCCollectorAdSeq::getSequenceAndIncrement( void )
-{
-	return sequence++;
-}
-
-
-//
-// Ad Sequence Number Mananager class methods
-//
-
-// Constructor for the Ad Sequence Number Manager
-DCCollectorAdSeqMan::DCCollectorAdSeqMan( void ) 
-{
-	numAds = 0;
-}
-
-// Constructor for the Ad Sequence Number Manager
-DCCollectorAdSeqMan::DCCollectorAdSeqMan( const DCCollectorAdSeqMan &ref,
-										  bool copy_list )
-{
-	numAds = 0;
-	if ( ! copy_list ) {
-		return;
-	}
-
-	// Get list info from
-	int count = ref.getNumAds( );
-	const ExtArray<DCCollectorAdSeq *> &copy_array =
-		ref.getSeqInfo( );
-
-	// Now, copy the whole thing
-	int		adNum;
-	for( adNum = 0;  adNum < count;  adNum++ ) {
-		DCCollectorAdSeq *newAdSeq =
-			new DCCollectorAdSeq ( *(copy_array[adNum]) );
-		this->adSeqInfo[this->numAds++] = newAdSeq;
-	}
-	
-}
-
-// Destructor for the Ad Sequence Number Manager
-DCCollectorAdSeqMan::~DCCollectorAdSeqMan( void )
-{
-	int				adNum;
-
-	for ( adNum = 0;  adNum < numAds;  adNum++ ) {
-		delete adSeqInfo[adNum];
-	}
-}
-
-// Get the sequence number
-unsigned
-DCCollectorAdSeqMan::getSequence( const ClassAd *ad )
-{
-	int					adNum;
-	char				*name = NULL;
-	char				*myType = NULL;
-	char				*machine = NULL;
-	DCCollectorAdSeq	*adSeq = NULL;
-
-	// Extract the 'key' attributes of the ClassAd
-	ad->LookupString( ATTR_NAME, &name );
-	ad->LookupString( ATTR_MY_TYPE, &myType );
-	ad->LookupString( ATTR_MACHINE, &machine );
-
-	// Walk through the ads that we know of, find a match...
-	for ( adNum = 0;  adNum < numAds;  adNum++ ) {
-		if ( adSeqInfo[adNum]->Match( name, myType, machine ) ) {
-			adSeq = adSeqInfo[adNum];
-			break;
-		}
-	}
-
-	// No matches; create a new one, add to the list
-	if ( ! adSeq ) {
-		adSeq = new DCCollectorAdSeq ( name, myType, machine );
-		adSeqInfo[numAds++] = adSeq;
-	}
-
-	// Free up memory...
-	if ( name ) {
-		free( name );
-		name = NULL;
-	}
-	if ( myType ) {
-		free( myType );
-		myType = NULL;
-	}
-	if ( machine ) {
-		free( machine );
-		machine = NULL;
-	}
-
-	// Finally, return the sequence
-	return adSeq->getSequenceAndIncrement( );
+	return &(seqs[name]);
 }
 
 DCCollector::~DCCollector( void )
 {
 	if( update_rsock ) {
 		delete( update_rsock );
-	}
-	if( adSeqMan ) {
-		delete( adSeqMan );
 	}
 	if( update_destination ) {
 		delete [] update_destination;

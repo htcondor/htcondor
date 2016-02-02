@@ -121,7 +121,7 @@ A set of basic keywords appearing in a DAG input file is described below.
 \begin{itemize}
 
 \label{dagman:JOB}
-\index{DAGMan input file!JOB keyword}
+\index{DAG input file!JOB keyword}
 \item \Bold{JOB}
 
 The \Arg{JOB} keyword specifies an HTCondor job.
@@ -132,7 +132,7 @@ The syntax used for each \Arg{JOB} entry is
 
 A \Arg{JOB} entry maps a \Arg{JobName} to an HTCondor submit description file.
 The \Arg{JobName} uniquely identifies nodes within the
-DAGMan input file and in output messages.
+DAG input file and in output messages.
 Each node name, given by \Arg{JobName}, within the DAG must be unique.
 The \Arg{JOB} entry must appear within the DAG input file before
 other items that reference the node.
@@ -203,14 +203,14 @@ A node marked with \Arg{DONE} will not have a PRE or POST script run,
 and the HTCondor job will not be submitted.
 
 \label{dagman:DATA}
-\index{DAGMan input file!DATA keyword}
+\index{DAG input file!DATA keyword}
 \item \Bold{DATA}
 
 As of version 8.3.5, \Condor{dagman} no longer supports DATA nodes.
 
 %----------------------------
 \label{dagman:ParentChild}
-\index{DAGMan input file!PARENT \Dots CHILD keyword}
+\index{DAG input file!PARENT \Dots CHILD keyword}
 \item \Bold{PARENT \Dots CHILD}
 
 The \Arg{PARENT} and \Arg{CHILD} keywords specify the
@@ -260,7 +260,7 @@ produces four dependencies:
 
 %----------------------------
 \label{dagman:SCRIPT}
-\index{DAGMan input file!SCRIPT keyword}
+\index{DAG input file!SCRIPT keyword}
 \item \Bold{SCRIPT}
 \index{DAGMan!PRE and POST scripts}
 
@@ -576,7 +576,7 @@ there is no space between the \Expr{=} sign and the variable \Expr{\$RETURN},
 there is no substitution of the macro's value.
 
 \label{dagman:PRE-SKIP}
-\index{DAGMan input file!PRE\_SKIP keyword}
+\index{DAG input file!PRE\_SKIP keyword}
 \index{DAGMan!PRE\_SKIP command}
 \item \Bold{PRE\_SKIP}
 
@@ -719,41 +719,72 @@ to \Condor{submit\_dag}.
 These same limits can be set in configuration.
 Each limit is applied within a single DAG.
 
-The \Arg{-maxjobs} option 
-specifies the maximum number of job clusters that \Condor{dagman} may
-submit at one time.
-Since each node may represent a single cluster of jobs,
-this limit restricts the number of nodes that can be submitted at a time.
+\subsubsection{\label{sec:DAG-throttling}DAG Throttling}
+
+\Bold{Total nodes/clusters:}
+The \Opt{-maxjobs} option 
+specifies the maximum number of clusters that \Condor{dagman}
+can submit at one time.
+Since each node corresponds to a single cluster,
+this limit restricts the number of nodes that can be submitted (in the
+HTCondor queue) at a time.
 It is commonly used when
 there is a limited amount of input file staging capacity.
 As a specific example, consider a case where each node represents
-a single HTCondor job that requires 4 MB of input files,
-and the jobs will run in a directory with a volume of 100 MB
+a single HTCondor proc that requires 4 MB of input files,
+and the proc will run in a directory with a volume of 100 MB
 of free space.
-Using the argument \Arg{-maxjobs 25} guarantees that a maximum
-of 25 jobs, using a maximum of 100 MB of space,
+Using the argument \Opt{-maxjobs 25} guarantees that a maximum
+of 25 clusters, using a maximum of 100 MB of space,
 will be submitted to HTCondor at one time.
+(See the \Condor{submit\_dag} man page (~\ref{man-condor-submit-dag})
+for more information.  Also see the equivalent
+\Macro{DAGMAN\_MAX\_JOBS\_SUBMITTED} configuration option
+(~\ref{param:DAGManMaxJobsSubmitted}).)
 
+\Bold{Idle procs:}
+The number of idle procs within a given DAG can be limited with
+the optional command line argument \Opt{-maxidle}. 
+\Condor{dagman} will not submit any more node jobs 
+until the number of idle procs in the DAG goes below this
+specified value,
+even if there are ready nodes in the DAG.
+This allows \Condor{dagman} to submit jobs in a way that adapts to
+the load on the HTCondor pool at any given time.  If the pool is
+lightly loaded, \Condor{dagman} will end up submitting more jobs;
+if the pool is heavily loaded, \Condor{dagman} will submit fewer jobs.
+(See the \Condor{submit\_dag} man page (~\ref{man-condor-submit-dag})
+for more information.  Also see the equivalent
+\Macro{DAGMAN\_MAX\_JOBS\_IDLE} configuration option
+(~\ref{param:DAGManMaxJobsIdle}).)
+
+Note that the \Opt{-maxjobs} option applies to counts of
+\emph{clusters}, whereas the \Opt{-maxidle} option
+applies to counts of \emph{procs}.  Unfortunately, this can
+be a bit confusing.  Of course, if none of your submit files
+create more than one proc, the distinction doesn't matter.
+For example, though, a node job submit file that queues
+5 procs will count as one for \Opt{-maxjobs}, but five
+for \Opt{-maxidle} (if all of the procs are idle).
+
+\Bold{Subsets of nodes:}
+Node submission can also be throttled in a finer-grained manner by
+grouping nodes into categories.  See section ~\ref{sec:DAG-node-category}
+for more details.
+
+\Bold{PRE/POST scripts:}
 Since PRE and POST scripts run on the submit machine,
 it may be desirable to limit the number of PRE or POST scripts running
 at one time.
-The optional \Arg{-maxpre} command line argument limits the number of PRE
+The optional \Opt{-maxpre} command line argument limits the number of PRE
 scripts that may be running at one time,
-and the optional \Arg{-maxpost} command line argument limits the number of POST
-scripts that may be running at one time.
-
-The number of idle jobs within a given DAG may be limited with
-the optional command line argument \Arg{-maxidle}. 
-\Condor{dagman} will not submit further clusters of jobs 
-until the number of idle node jobs in the DAG goes below this
-specified value,
-even if there are ready nodes in the DAG.
-Note that while the \Arg{-maxjobs} option limits the number of clusters
-of jobs submitted,
-there can be more than one job per cluster.
-This \Arg{-maxidle} option is applied using counts of jobs,
-not counts of clusters.
-Therefore, it can prevent further clusters from being submitted.
+and the optional \Opt{-maxpost} command line argument limits the number
+of POST scripts that may be running at one time.
+(See the \Condor{submit\_dag} man page (~\ref{man-condor-submit-dag})
+for more information.  Also see the equivalent
+\Macro{DAGMAN\_MAX\_PRE\_SCRIPTS} (~\ref{param:DAGManMaxPreScripts}) and
+\Macro{DAGMAN\_MAX\_POST\_SCRIPTS} (~\ref{param:DAGManMaxPostScripts})
+configuration options.)
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:DAGPaths}File Paths in DAGs}
@@ -993,9 +1024,9 @@ If one exists, it is removed.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{dagman:retry}Retrying Failed Nodes or Stopping the Entire DAG}
 
-\index{DAGMan input file!RETRY keyword}
+\index{DAG input file!RETRY keyword}
 \index{DAGMan!RETRY of failed nodes}
-\index{DAGMan input file!ABORT-DAG-ON keyword}
+\index{DAG input file!ABORT-DAG-ON keyword}
 \index{DAGMan!ABORT-DAG-ON}
 
 DAGMan can retry any failed node in a DAG by
@@ -1443,8 +1474,8 @@ into the ClassAd when the NodeG job is run for a second time,
 which is the first retry and the value 1. 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{Setting Priorities for Nodes}
-\index{DAGMan input file!PRIORITY keyword}
+\subsubsection{\label{sec:DAG-SetNodePriority}Setting Priorities for Nodes}
+\index{DAG input file!PRIORITY keyword}
 
 The \Arg{PRIORITY} keyword assigns a priority to a DAG node.
 The syntax for \Arg{PRIORITY} is
@@ -1535,10 +1566,10 @@ or of DAGs with a relatively small number of dependencies,
 will \emph{not} tend to be the same.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:DAG-node-category}Limiting the Number of Submitted Job Clusters within a DAG}
+\subsubsection{\label{sec:DAG-node-category}Throttling Nodes by Category}
 
-\index{DAGMan input file!CATEGORY keyword}
-\index{DAGMan input file!MAXJOBS keyword}
+\index{DAG input file!CATEGORY keyword}
+\index{DAG input file!MAXJOBS keyword}
 
 In order to limit the number of submitted job clusters within a DAG,
 the nodes may be placed into categories by assignment of a name.
@@ -1571,7 +1602,8 @@ The number of HTCondor jobs within a cluster may be greater than 1.
 
 The  configuration variable \MacroNI{DAGMAN\_MAX\_JOBS\_SUBMITTED} 
 and the \Condor{submit\_dag} \Arg{-maxjobs} command-line option
-are still enforced if these \Arg{CATEGORY} and \Arg{MAXJOBS} throttles are used.
+are still enforced if these \Arg{CATEGORY} and \Arg{MAXJOBS}
+throttles are used.
 
 Please see the end of section~\ref{sec:DAGSplicing}
 on DAG Splicing for a description of the interaction between
@@ -1579,7 +1611,7 @@ categories and splices.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:DAG-configuration}Configuration Specific to a DAG}
-\index{DAGMan input file!CONFIG keyword}
+\index{DAG input file!CONFIG keyword}
 \index{DAGMan!CONFIG}
 \index{DAGMan!configuration specific to a DAG}
 
@@ -1652,6 +1684,44 @@ configuration file.
 Configuration variables that are not for \Condor{dagman}
 and not utilized by DaemonCore, yet are specified in a
 \Condor{dagman}-specific configuration file are ignored.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:DAG-SetAttributes}Setting ClassAd attributes in the DAG file}
+\index{DAG input file!SET\_JOB\_ATTR keyword}
+\index{DAGMan!SET\_JOB\_ATTR}
+\index{DAGMan!Setting ClassAd attributes in a DAG}
+
+The \Arg{SET\_JOB\_ATTR} keyword within the DAG input file specifies
+an attribute/value pair to be set in the DAGMan job's ClassAd.
+The syntax for \Arg{SET\_JOB\_ATTR} is
+
+\Opt{SET\_JOB\_ATTR} \Arg{AttributeName}=\Arg{AttributeValue}
+
+As an example, if the DAG input file contains:
+\begin{verbatim}
+  SET_JOB_ATTR TestNumber = 17
+\end{verbatim}
+the ClassAd of the DAGMan job itself will have an attribute
+\MacroNI{TestNumber} with the value \MacroNI{17}.
+
+The attribute set by the \Arg{SET\_JOB\_ATTR} command is set only
+in the ClassAd of the DAGMan job itself -- it is not propagated to
+node jobs of the DAG.
+
+Values with spaces can be set by surrounding the string containing a
+space with single or double quotes.  (Note that the quote marks
+themselves will be part of the value.)
+
+Only a single attribute/value pair can be specified per
+\Arg{SET\_JOB\_ATTR} command.  If the same attribute is specified
+multiple times in the DAG (or in multiple DAGs run by the same
+DAGMan instance) the last-specified value is the one that will
+be utilized.  An attribute set in the DAG file can be overridden
+by specifying
+\begin{verbatim}
+-append '+<attribute> = <value>'
+\end{verbatim}
+on the \Condor{submit\_dag} command line.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:MultipleDAGs}Optimization of Submission Time}
@@ -1743,7 +1813,7 @@ to \Expr{False} (see ~\ref{param:DAGManMungeNodeNames}).
 \subsubsection{\label{sec:DAGsinDAGs}A DAG Within a DAG Is a SUBDAG}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{DAGMan!DAGs within DAGs}
-\index{DAGMan input file!SUBDAG keyword}
+\index{DAG input file!SUBDAG keyword}
 
 The organization and dependencies of the jobs within a DAG
 are the keys to its utility.
@@ -1752,12 +1822,15 @@ such that a node within a DAG is also a DAG.
 HTCondor DAGMan handles this situation easily.
 DAGs can be nested to any depth.
 
-One of the highlights of using the SUBDAG feature is that portions of a DAG
-may be constructed and modified during the execution of the DAG.
+One of the benefits of using the SUBDAG feature is that portions of
+the overall workflow
+can be constructed and modified during the execution of the DAG.
+(a SUBDAG doesn't have to be defined until just before it is submitted).
 A drawback may be that each SUBDAG causes its own distinct job submission
 of \Condor{dagman}, leading to a larger number of jobs,
-together with their potential need of carefully constructed policy configuration
-to throttle node submission or execution.
+together with their potential need of carefully constructed policy
+configuration to throttle node submission or execution (because each
+SUBDAG has its own throttles).
 
 Since more than one DAG is being discussed, 
 here is terminology introduced to clarify which DAG is which. 
@@ -2013,7 +2086,7 @@ must be specified accordingly.
 \subsubsection{\label{sec:DAGSplicing}DAG Splicing}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{DAGMan!Splicing DAGs}
-\index{DAGMan input file!SPLICE keyword}
+\index{DAG input file!SPLICE keyword}
 
 A weakness in scalability exists when submitting a DAG within a DAG,
 which is called a SUBDAG.
@@ -2496,7 +2569,7 @@ at a higher level, the splice name must be included.
 \subsubsection{\label{sec:DAGFinalNode}FINAL node}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{DAGMan!DAG FINAL node}
-\index{DAGMan input file!FINAL keyword}
+\index{DAG input file!FINAL keyword}
 
 A FINAL node is a single and special node that is always run at 
 the end of the DAG,
@@ -2947,7 +3020,7 @@ and it is used to draw pictures of DAGs.
 
 DAGMan produces one or more dot files as the result of
 an extra line
-in a DAGMan input file. 
+in a DAG input file. 
 The line appears as
 %For example, to produce a single dot
 %file that shows the state of your DAG before any jobs are running, add
@@ -2968,7 +3041,7 @@ This example creates a Postscript file, with a visualization of the DAG:
     dot -Tps dag.dot -o dag.ps
 \end{verbatim}
 
-Within the DAGMan input file,
+Within the DAG input file,
 the DOT command can take several optional parameters:
 
 \begin{itemize}
@@ -2988,7 +3061,7 @@ is specified.
 of overwriting the single one specified.
 To create file names,
 DAGMan uses the name of the file concatenated with a period and an
-integer. For example, the DAGMan input file line
+integer. For example, the DAG input file line
 \begin{verbatim}
     DOT dag.dot DONT-OVERWRITE
 \end{verbatim}

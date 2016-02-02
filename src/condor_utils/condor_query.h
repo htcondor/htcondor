@@ -154,6 +154,9 @@ class CondorQuery
 	QueryResult addORConstraint (const char *);			 // custom constraints
 	QueryResult addANDConstraint (const char *);		 // custom constraints
 
+	// This query should perform only a location lookup.
+	bool setLocationLookup(const std::string &location);
+
 	// fetch from collector
 	QueryResult fetchAds (ClassAdList &adList, const char * pool, CondorError* errstack = NULL);
 
@@ -176,6 +179,7 @@ class CondorQuery
 		// to be returned in the queried ads.
 		// If not set, all attributes are returned.
 	void setDesiredAttrs(char const * const *attrs);
+	void setDesiredAttrs(const std::vector<std::string> &attrs);
 	void setDesiredAttrsExpr(const char *expr);
 
   private:

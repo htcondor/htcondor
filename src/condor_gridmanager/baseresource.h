@@ -59,6 +59,8 @@ class BaseResource : public Service
 	void CancelSubmit( BaseJob *job );
 	void AlreadySubmitted( BaseJob *job );
 
+	void RequestUpdateLeases();
+
     static void setProbeInterval( int new_interval )
 		{ probeInterval = new_interval; }
 

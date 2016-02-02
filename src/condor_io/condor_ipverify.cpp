@@ -1092,7 +1092,7 @@ IpVerify::lookup_user(NetStringList *hosts, UserHash_t *users, netgroup_list_t& 
 // granted to a remote startd host when a shadow starts up.)
 //
 bool
-IpVerify::PunchHole(DCpermission perm, MyString& id)
+IpVerify::PunchHole(DCpermission perm, const MyString& id)
 {
 	int count = 0;
 	if (PunchedHoleArray[perm] == NULL) {
@@ -1145,7 +1145,7 @@ IpVerify::PunchHole(DCpermission perm, MyString& id)
 // FillHole - plug up a dynamically punched authorization hole
 //
 bool
-IpVerify::FillHole(DCpermission perm, MyString& id)
+IpVerify::FillHole(DCpermission perm, const MyString& id)
 {
 	HolePunchTable_t* table = PunchedHoleArray[perm];
 	if (table == NULL) {

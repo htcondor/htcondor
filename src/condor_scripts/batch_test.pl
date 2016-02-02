@@ -9,7 +9,7 @@
 ## may not use this file except in compliance with the License.  You may
 ## obtain a copy of the License at
 ## 
-##    http://www.apache.org/licenses/LICENSE-2.0
+##    http://www.apache.org/licenses/LICENSE-2.0											 star
 ## 
 ## Unless required by applicable law or agreed to in writing, software
 ## distributed under the License is distributed on an "AS IS" BASIS,
@@ -89,8 +89,8 @@ my $UseNewRunning = 1;
 
 my $starttime = time();
 
-my $time = strftime("%Y/%m/%d %H:%M:%S", localtime);
-print "batch_test $$: ($^O perl) starting at $time\n";
+my $time = strftime("%H:%M:%S", localtime);
+print "batch_test $$: $time Starting ($^O perl)\n";
 
 my $iswindows = CondorUtils::is_windows();
 my $iscygwin  = CondorUtils::is_cygwin_perl();
@@ -256,8 +256,8 @@ if($pretestsetuponly == 1) {
 	exit(0);
 }
 
-$time = strftime("%H:%M:%S", localtime);
-print "batch_test $$: Ready for Testing at $time\n";
+#$time = strftime("%H:%M:%S", localtime);
+#print "batch_test $$: Ready for Testing at $time\n";
 
 # figure out what tests to try to run.  first, figure out what
 # compilers we're trying to test.  if that was given on the command
@@ -268,7 +268,7 @@ if($#compilers == -1 ) {
 }
 
 if($timestamp == 1) {
-	print scalar localtime() . "\n";
+	#print scalar localtime() . "\n";
 }
 
 # now we find the tests we care about.
@@ -430,10 +430,11 @@ foreach my $compiler (@compilers) {
 		$res = DoChild($test_program, $test_retirement);
 		StartTestOutput($compiler, $test_program); 
 		CompleteTestOutput($compiler, $test_program, $res);
+		$time = strftime("%H:%M:%S", localtime);
 		if($res == 0) {
-			print "batch_test $$: $test_program Succeeded\n";
+			print "batch_test $$: $time $test_program passed\n";
 		} else {
-			print "batch_test $$: $test_program failed\n";
+			print "batch_test $$: $time $test_program FAILED\n";
 		}
 
 	} # end of foreach $test_program
@@ -470,6 +471,8 @@ if ($isXML){
 
 
 
+$time = strftime("%H:%M:%S", localtime);
+my $duration = "";
 {
 	my $endtime = time();
 	my $deltatime = $endtime - $starttime;
@@ -477,7 +480,7 @@ if ($isXML){
 	my $minutes = int(($deltatime - $hours*60*60) / 60);
 	my $seconds = $deltatime - $hours*60*60 - $minutes*60;
 
-	printf("Tests took %d:%02d:%02d (%d seconds)\n", $hours, $minutes, $seconds, $deltatime);
+	$duration = sprintf("%d:%02d:%02d (%d seconds)", $hours, $minutes, $seconds, $deltatime);
 }
 
 my @returns = CondorUtils::ProcessReturn($res);
@@ -489,7 +492,7 @@ my $signal = $returns[1];
 # thing looking at the status of batch_test is the batlag
 # test glue which runs only one test each call to batch_test
 # and this has no impact on workstation tests.
-print "Batch_test $$: exiting with status=$res signal=$signal\n";
+print "batch_test $$: $time exiting with status=$res signal=$signal after $duration\n";
 alarm(0); # revoke overall timeout
 exit $res;
 
@@ -524,6 +527,7 @@ sub CleanFromPath
 	}
 }
 
+# TODO_TJ: this does nothing unless xml output...
 # StartTestOutput($compiler,$test_program);
 sub StartTestOutput
 {
@@ -540,6 +544,7 @@ sub StartTestOutput
 	}
 }
 
+# TODO_TJ: this does nothing unless xml output...
 # CompleteTestOutput($compiler,$test_program,$status);
 sub CompleteTestOutput
 {
@@ -555,10 +560,10 @@ sub CompleteTestOutput
 	#if( WIFEXITED( $status ) && WEXITSTATUS( $status ) == 0 )
 	{
 		if($groupsize == 0) {
-			print "$test_name: succeeded!\n";
+			#print "$test_name: succeeded!\n";
 		} else {
 			#print "Not Xml: group size <$groupsize> test <$test_name>\n";
-			print "$test_name; succeeded!\n";
+			#print "$test_name; succeeded!\n";
 		}
 	} else {
 		#my $testname = "$test{$child}";
@@ -595,32 +600,46 @@ sub DoChild
 	my $id = 0;
 
 	if(defined $test_id) {
-		print "Starting batch id: $test_id PID: $$\n";
+		#print "Starting batch id: $test_id PID: $$\n";
 		$id = $test_id;
-		print "ID = $id\n";
 	}
-	my $test_starttime = time();
-	# with wrapping all test(most) in a personal condor
-	# we know where the published directories are if we ask by name
-	# and they are relevant for the entire test time. We need ask
-	# and check only once.
-	debug( "Test start @ $test_starttime \n",6);
-	sleep(1);
-	# add test core file
 
 	$_ = $test_program;
 	s/\.run//;
 	my $testname = $_;
+
+	my $needs = load_test_requirements($testname);
+	if (exists($needs->{personal})) {
+		print "batch_test $$: $testname requires a running HTCondor, checking...\n";
+		print "\tCONDOR_CONFIG=$ENV{CONDOR_CONFIG}\n";
+		my @whodata = `condor_who -daemons -quick 2>&1`;
+		my $masterpid;
+		foreach (@whodata) {
+			next if ($_ =~ /^\s*$/);
+			next if ($_ =~ /^Daemon|^----/);
+			print "\t" . $_; 
+			if ($_ =~ /^Master\s+(\S+)/) { $masterpid = $1; }
+		}
+		if ( ! defined $masterpid) { print "\tNo Master - aborting $testname\n"; return 1; }
+	}
+
+	my $test_starttime = time();
+	debug( "Test start @ $test_starttime \n",6);
+	sleep(1);
+
+	# with wrapping all test(most) in a personal condor
+	# we know where the published directories are if we ask by name
+	# and they are relevant for the entire test time. We need ask
+	# and check only once.
+	# add test core file
+
+	# make sure pid storage directory exists
 	my $save = $testname . ".saveme";
 	my $piddir = $save . "/pdir$$";
-	# make sure pid storage directory exists
 	#print "Batch_test: checking on saveme: $save\n";
 	CreateDir("-p $save");
-	#verbose_system("mkdir -p $save",{emit_output=>0});
-	my $pidcmd =  $save . "/" . "pdir$$";
-	#print "Batch_test: checking on saveme/pid: $pidcmd\n";
-	CreateDir("-p $pidcmd");
-	#verbose_system("$pidcmd",{emit_output=>0});
+	#print "Batch_test: checking on saveme/pid: $piddir\n";
+	CreateDir("-p $piddir");
 
 	my $log = "";
 	my $cmd = "";
@@ -634,8 +653,9 @@ sub DoChild
 	#my $rmcmd = "rm -f $log $out $err $runout $cmdout";
 	#CondorTest::verbose_system("$rmcmd",{emit_output=>0});
 
-	my $corecount = 0;
-	my $res;
+
+	my $test_program_out = "";
+
 	alarm($test_retirement);
 	if(defined $test_id) {
 		$log = $testname . ".$test_id" . ".log";
@@ -644,11 +664,7 @@ sub DoChild
 		$err = $testname . ".$test_id" . ".err";
 		$runout = $testname . ".$test_id" . ".run.out";
 		$cmdout = $testname . ".$test_id" . ".cmd.out";
-
-		if( $hush == 0 ) {
-			debug( "Child Starting:perl $test_program > $test_program.$test_id.out\n",6);
-		}
-		$res = system("perl $test_program > $test_program.$test_id.out 2>&1");
+		$test_program_out = "$test_program.$test_id.out";
 	} else {
 		$log = $testname . ".log";
 		$cmd = $testname . ".cmd";
@@ -656,11 +672,19 @@ sub DoChild
 		$err = $testname . ".err";
 		$runout = $testname . ".run.out";
 		$cmdout = $testname . ".cmd.out";
+		$test_program_out = "$test_program.out";
+	}
 
-		if( $hush == 0 ) {
-			debug( "Child Starting:perl $test_program > $test_program.out\n",6);
-		}
-		$res = system("perl $test_program > $test_program.out 2>&1");
+	my $res;
+	my $use_timed_cmd = 1; # use the timed_cmd helper binary to timeout the test and cleaup processes
+	if ($iswindows && $use_timed_cmd) {
+		my $dtm = ""; if (defined $ENV{TIMED_CMD_DEBUG_WAIT}) { $dtm = ":$ENV{TIMED_CMD_DEBUG_WAIT}"; }
+		my $verb = ($hush == 0) ? "" : "-v";
+		my $timeout = "-t 12M";
+		$res = system("timed_cmd.exe -jgd$dtm $verb -o $test_program_out $timeout perl $test_program");
+	} else {
+		if( $hush == 0 ) { debug( "Child Starting: perl $test_program > $test_program_out\n",6); }
+		$res = system("perl $test_program > $test_program_out 2>&1");
 	}
 
 	my $newlog =  $piddir . "/" . $log;
@@ -681,39 +705,44 @@ sub DoChild
 	copy($cmdout, $newcmdout);
 
 	return($res);
-	#if($res != 0) { 
-	    #print "Perl test($test_program) returned <<$res>>!!! \n"; 
-	    #exit(1); 
-	#}
-	#exit(0);
-#
-	#if($@) {
-		#if($@ =~ /timeout/) {
-			#print "\n$test_program            Timeout\n";
-			#exit(1);
-		#} else {
-			#alarm(0);
-			#exit(0);
-		#}
-	#}
-	#exit(0);
 }
 
 # Call down to Condor Perl Module for now
 sub debug {
 	my ($msg, $level) = @_;
-	my $time = Condor::timestamp();
-	chomp($time);
-	push @debugcollection, "$time: $msg";
-	Condor::debug("batch_test(L=$level) - $msg", $level);
+	my $time = Condor::timestamp(); #chomp($time);
+	push @debugcollection, "$time BT$level $msg";
+	Condor::debug("BT$level $msg", $level);
 }
 
 sub debug_flush {
-	print "\n\n\n---------------------------- Flushing Test Info Cache ----------------------------\n";
+	print "\n\n---------------------------- Flushing Test Info Cache ----------------------------\n";
 	foreach my $line (@debugcollection) {
 		print "$line";
 	}
-	print "---------------------------- Done Flushing Test Info Cache ----------------------------\n\n\n\n";
+	print "---------------------------- Done Flushing Test Info Cache ----------------------------\n\n\n";
+}
+
+sub load_test_requirements
+{
+	my $name = shift;
+	my $requirements;
+
+	my $requirementslist = "Test_Requirements";
+	open( TR, "< ${requirementslist}" ) or return $requirements;
+	while( my $line = <TR> ) {
+		CondorUtils::fullchomp( $line );
+		if( $line =~ /\s*$name\s*:\s*(.*)/ ) {
+			my @requirementList = split( /,/, $1 );
+			foreach my $requirement (@requirementList) {
+				$requirement =~ s/^\s+//;
+				$requirement =~ s/\s+$//;
+				$requirements->{ $requirement } = 1;
+			}
+		}
+	}
+
+	return $requirements;
 }
 
 
@@ -728,10 +757,6 @@ sub yates_shuffle
 		@$array[$i,$j] = @$array[$j,$i];
 	}
 }
-
-#sub timestamp {
-	#return scalar localtime();
-#}
 
 sub safe_copy {
 	my( $src, $dest ) = @_;
@@ -837,8 +862,7 @@ sub wait_for_test_children {
 		#print "Name from hash is <$tname>\n";
 		#print "Done waiting on test $test_name\n";
 
-		StartTestOutput($compiler, $test_name) 
-			unless $suppress_start_test_output;
+		StartTestOutput($compiler, $test_name) unless $suppress_start_test_output;
 
 		CompleteTestOutput($compiler, $test_name, $child, $status);
 		delete $test->{$child};

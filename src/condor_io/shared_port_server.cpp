@@ -105,10 +105,18 @@ SharedPortServer::RemoveDeadAddressFile()
 		// ungraceful shutdown.
 	MyString shared_port_server_ad_file;
 	if( !param(shared_port_server_ad_file,"SHARED_PORT_DAEMON_AD_FILE") ) {
-		EXCEPT("SHARED_PORT_DAEMON_AD_FILE must be defined");
+		dprintf( D_FULLDEBUG, "SHARED_PORT_DAEMON_AD_FILE not defined, not removing shared port daemon ad file.\n" );
+		return;
 	}
-	if( unlink(shared_port_server_ad_file.Value()) == 0 ) {
-		dprintf(D_ALWAYS,"Removed %s (assuming it is left over from previous run)\n",shared_port_server_ad_file.Value());
+
+	int fd = open( shared_port_server_ad_file.Value(), O_RDONLY );
+	if( fd != -1 ) {
+		close( fd );
+		if( unlink(shared_port_server_ad_file.Value()) == 0 ) {
+			dprintf(D_ALWAYS,"Removed %s (assuming it is left over from previous run)\n",shared_port_server_ad_file.Value());
+		} else {
+			EXCEPT( "Failed to remove dead shared port address file '%s'!", shared_port_server_ad_file.Value() );
+		}
 	}
 }
 
@@ -233,6 +241,32 @@ SharedPortServer::HandleConnectRequest(int,Stream *sock)
 		// we won't ever end up back here and pass off the request.
 		classy_counted_ptr< DaemonCommandProtocol > r = new DaemonCommandProtocol( sock, true, true );
 		return r->doProtocol();
+	}
+
+	// Technically optional, but since HTCondor code always sets it to
+	// its own Sinful string, check to see if it's a daemon trying to
+	// connect to itself and refuse.
+	if( client_name[0] ) {
+		//dprintf( D_FULLDEBUG, "Found client name '%s'.\n", client_name );
+		char * client_sinful = strstr( client_name, "<" );
+		Sinful s( client_sinful );
+		if( s.valid() ) {
+			//dprintf( D_FULLDEBUG, "Client name '%s' contains a valid Sinful.\n", client_name );
+			char const * sourceSharedPortID = s.getSharedPortID();
+			if( sourceSharedPortID && strcmp( sourceSharedPortID, shared_port_id ) == 0 ) {
+				dprintf( D_FULLDEBUG, "Client name '%s' has same shared port ID as its target (%s).\n", client_name, shared_port_id );
+				s.setSharedPortID( NULL );
+				Sinful t( global_dc_sinful() );
+				if( t.valid() ) {
+					//dprintf( D_FULLDEBUG, "Daemon core Sinful (%s) is valid.\n", global_dc_sinful() );
+					t.setSharedPortID( NULL );
+					if( t.addressPointsToMe( s ) ) {
+						dprintf( D_ALWAYS, "Rejected request from %s to connect to itself.\n", sock->peer_description() );
+						return FALSE;
+					}
+				}
+			}
+		}
 	}
 
 	return PassRequest(static_cast<Sock*>(sock), shared_port_id);

@@ -64,7 +64,6 @@ public:
 	static int gahpCallTimeout;
 	static int maxConnectFailures;
 	static int funcRetryInterval;
-	static int pendingWaitTime;
 	static int maxRetryTimes;
 	
 	static void setSubmitInterval( int new_interval )	{ submitInterval = new_interval; }
@@ -87,7 +86,8 @@ public:
     void StatusUpdate( const char * instanceID,
                        const char * status,
                        const char * stateReasonCode,
-                       const char * publicDNSName );
+                       const char * publicDNSName,
+                       const char * launchGroup );
 
 	friend class EC2Resource;
 
@@ -149,6 +149,9 @@ private:
 	bool probeNow;
 
 	int resourceLeaseTID;
+
+	bool purgedTwice;
+	bool updatedOnce;
 };
 
 #endif

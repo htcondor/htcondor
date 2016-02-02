@@ -183,7 +183,7 @@ char* tdp_input = NULL;
 #if defined(WIN32)
 char* RunAsOwnerCredD = NULL;
 #endif
-
+char * batch_name_line = NULL;
 
 // For mpi universe testing
 bool use_condor_mpi_universe = false;
@@ -348,6 +348,7 @@ bool		DumpFileIsStdout = 0;
 */
 const char	*Cluster 		= "Cluster";
 const char	*Process			= "Process";
+const char	*BatchName		= "batch_name";
 const char	*Hold			= "hold";
 const char	*Priority		= "priority";
 const char	*Notification	= "notification";
@@ -1281,6 +1282,23 @@ main( int argc, const char *argv[] )
 				} else {
 					extraLines.Append( *ptr );
 				}
+			} else if (is_dash_arg_prefix(ptr[0], "batch-name", 1)) {
+				if( !(--argc) || !(*(++ptr)) ) {
+					fprintf( stderr, "%s: -batch-name requires another argument\n",
+							 MyName );
+					exit( 1 );
+				}
+				const char * bname = *ptr;
+				MyString tmp; // if -batch-name was specified, this holds the string 'MY.JobBatchName = "name"'
+				if (*bname == '"') {
+					tmp.formatstr("MY.JobBatchName = %s", bname);
+				} else {
+					tmp.formatstr("MY.JobBatchName = \"%s\"", bname);
+				}
+				// if batch_name_line is not NULL,  we will leak a bit here, but that's better than
+				// freeing something behind the back of the extraLines
+				batch_name_line = strdup(tmp.c_str());
+				extraLines.Append(const_cast<const char*>(batch_name_line));
 			} else if (is_dash_arg_prefix(ptr[0], "queue", 1)) {
 				if( !(--argc) || (!(*ptr[1]) || *ptr[1] == '-')) {
 					fprintf( stderr, "%s: -queue requires at least one argument\n",
@@ -2373,6 +2391,12 @@ SetDescription()
 	}
 	else if ( InteractiveJob ){
 		InsertJobExprString(ATTR_JOB_DESCRIPTION, "interactive job");
+	}
+
+	MyString batch_name = condor_param_mystring(BatchName, ATTR_JOB_BATCH_NAME);
+	if ( ! batch_name.empty()) {
+		batch_name.trim_quotes("\"'"); // in case they supplied a quoted string, trim the quotes
+		InsertJobExprString(ATTR_JOB_BATCH_NAME, batch_name.c_str());
 	}
 }
 
@@ -4975,7 +4999,7 @@ SetEnvironment()
 		envobject.Import( );
 	}
 
-	//There may already be environment info in the ClassAd from SUBMIT_EXPRS.
+	//There may already be environment info in the ClassAd from SUBMIT_ATTRS.
 	//Check for that now.
 
 	bool ad_contains_env1 = job->LookupExpr(ATTR_JOB_ENVIRONMENT1);
@@ -4991,7 +5015,7 @@ SetEnvironment()
 
 	if(!env1 && !env2 && envobject.Count() == 0 && \
 	   (ad_contains_env1 || ad_contains_env2)) {
-			// User did not specify any environment, but SUBMIT_EXPRS did.
+			// User did not specify any environment, but SUBMIT_ATTRS did.
 			// Do not do anything (i.e. avoid overwriting with empty env).
 		insert_env1 = insert_env2 = false;
 	}
@@ -5899,30 +5923,13 @@ SetGridParams()
 							 full_path(tmp), strerror(errno));
 				exit(1);
 			}
+			fclose(fp);
 
 			StatInfo si(full_path(tmp));
 			if (si.IsDirectory()) {
 				fprintf(stderr, "\nERROR: %s is a directory\n", full_path(tmp));
 				exit(1);
 			}
-
-			// Should this depend on file checks not being disabled?
-			unsigned long fileSize = si.GetFileSize();
-			char * rawBuffer = (char *)malloc( fileSize + 1 );
-			assert( rawBuffer != NULL );
-			unsigned long totalRead = full_read( fileno(fp), rawBuffer, fileSize );
-			fclose( fp );
-			if( totalRead != fileSize ) {
-				fprintf( stderr, "Failed to completely read public key file '%s'; need %lu bytes, read only %lu.\n", tmp, fileSize, totalRead );
-				free( rawBuffer );
-				exit(1);
-			}
-			rawBuffer[ fileSize ] = '\0';
-			std::string accessKey( rawBuffer );
-			trim( accessKey );
-			buffer.formatstr( "%s = \"%s\"", ATTR_EC2_ACCESS_KEY, accessKey.c_str() );
-			InsertJobExpr( buffer.Value() );
-			free( rawBuffer );
 		}
 		buffer.formatstr( "%s = \"%s\"", ATTR_EC2_ACCESS_KEY_ID, full_path(tmp) );
 		InsertJobExpr( buffer.Value() );
@@ -6825,6 +6832,22 @@ public:
 		return ix >= is && ix < ie && ( !(flags&8) || (0 == ((ix-is) % step)) );
 	}
 
+	int to_string(char * buf, int cch) {
+		char sz[16*3];
+		if ( ! (flags&1)) return 0;
+		char * p = sz;
+		*p++  = '[';
+		if (flags&2) { p += sprintf(p,"%d", start); }
+		*p++ = ':';
+		if (flags&4) { p += sprintf(p,"%d", end); }
+		*p++ = ':';
+		if (flags&8) { p += sprintf(p,"%d", step); }
+		*p++ = ']';
+		*p = 0;
+		strncpy(buf, sz, cch); buf[cch-1] = 0;
+		return (int)(p - sz);
+	}
+
 private:
 	int flags; // 1==initialized, 2==start set, 4==length set, 8==step set
 	int start;
@@ -6857,8 +6880,8 @@ char * queue_token_scan(char * ptr, const struct _qtoken tokens[], int ctokens, 
 						break;
 				}
 				if (ix < ctokens) { token_id = tokens[ix].id; *pptoken = ptok; break; }
-				if ( ! scan_until_match) { *pptoken = ptok; break; }
 			}
+			if ( ! scan_until_match) { *pptoken = ptok; break; }
 			cchtok = 0;
 		} else {
 			if ( ! cchtok) { ptok = p; }
@@ -7123,20 +7146,7 @@ int SpecialSubmitParse(void* pv, MACRO_SOURCE& source, MACRO_SET& macro_set, cha
 
 		GotQueueCommand = true;
 
-		auto_free_ptr expanded_queue_args(expand_macro(queue_args, SubmitMacroSet));
-		char * pqargs = expanded_queue_args.ptr();
-		ASSERT(pqargs);
-
-		if (DashDryRun && DumpSubmitHash) {
-			fprintf(stdout, "\n----- Queue arguments -----\nSpecified: %s\nExpanded : %s", queue_args, pqargs);
-		}
-
-		if ( ! queueCommandLine.empty() && fp_submit != NULL) {
-			errmsg = "-queue argument conflicts with queue statement in submit file";
-			return -1;
-		}
-
-		// now parse the extra lines.
+		// parse the extra lines before doing $ expansion on the queue line
 		ErrContext.phase = PHASE_DASH_APPEND;
 		ExtraLineNo = 0;
 		extraLines.Rewind();
@@ -7151,6 +7161,19 @@ int SpecialSubmitParse(void* pv, MACRO_SOURCE& source, MACRO_SET& macro_set, cha
 		ExtraLineNo = 0;
 		ErrContext.phase = PHASE_QUEUE;
 		ErrContext.step = -1;
+
+		auto_free_ptr expanded_queue_args(expand_macro(queue_args, SubmitMacroSet));
+		char * pqargs = expanded_queue_args.ptr();
+		ASSERT(pqargs);
+
+		if (DashDryRun && DumpSubmitHash) {
+			fprintf(stdout, "\n----- Queue arguments -----\nSpecified: %s\nExpanded : %s", queue_args, pqargs);
+		}
+
+		if ( ! queueCommandLine.empty() && fp_submit != NULL) {
+			errmsg = "-queue argument conflicts with queue statement in submit file";
+			return -1;
+		}
 
 		// HACK! the queue function uses a global flag to know whether or not to ask for a new cluster
 		// In 8.2 this flag is set whenever the "executable" or "cmd" value is set in the submit file.
@@ -7397,6 +7420,18 @@ condor_param( const char* name)
 	return condor_param(name, NULL);
 }
 
+void param_and_insert_unique_items(const char * param_name, classad::References & attrs)
+{
+	auto_free_ptr value(param(param_name));
+	if (value) {
+		StringTokenIterator it(value);
+		const std::string * item;
+		while ((item = it.next_string())) {
+			attrs.insert(*item);
+		}
+	}
+}
+
 char *
 condor_param( const char* name, const char* alt_name )
 {
@@ -7405,15 +7440,13 @@ condor_param( const char* name, const char* alt_name )
 	char * pval_expanded = NULL;
 
 	// TODO: change this to use the defaults table from SubmitMacroSet
-	static StringList* submit_exprs = NULL;
-	static bool submit_exprs_initialized = false;
-	if( ! submit_exprs_initialized ) {
-		char* tmp = param( "SUBMIT_EXPRS" );
-		if( tmp ) {
-			submit_exprs = new StringList( tmp );
-			free( tmp ); 
-		}
-		submit_exprs_initialized = true;
+	static classad::References submit_attrs;
+	static bool submit_attrs_initialized = false;
+	if ( ! submit_attrs_initialized) {
+		param_and_insert_unique_items("SUBMIT_ATTRS", submit_attrs);
+		param_and_insert_unique_items("SUBMIT_EXPRS", submit_attrs);
+		param_and_insert_unique_items("SYSTEM_SUBMIT_ATTRS", submit_attrs);
+		submit_attrs_initialized = true;
 	}
 
 	if( ! pval && alt_name ) {
@@ -7424,15 +7457,15 @@ condor_param( const char* name, const char* alt_name )
 	if( ! pval ) {
 			// if the value isn't in the submit file, check in the
 			// submit_exprs list and use that as a default.  
-		if( submit_exprs ) {
-			if( submit_exprs->contains_anycase(name) ) {
-				return( param(name) );
+		if ( ! submit_attrs.empty()) {
+			if (submit_attrs.find(name) != submit_attrs.end()) {
+				return param(name);
 			}
-			if( alt_name && submit_exprs->contains_anycase(alt_name) ) {
-				return( param(alt_name) );
+			if (submit_attrs.find(name) != submit_attrs.end()) {
+				return param(alt_name);
 			}
-		}			
-		return( NULL );
+		}
+		return NULL;
 	}
 
 	ErrContext.macro_name = used_alt ? alt_name : name;
@@ -8620,6 +8653,8 @@ usage()
 					 "\t              \t\t(overrides submit file; multiple -a lines ok)\n" );
 	fprintf( stderr, "\t-queue <queue-opts>\tappend Queue statement to submit file before processing\n"
 					 "\t                   \t(submit file must not already have a Queue statement)\n" );
+	fprintf( stderr, "\t-batch-name <name>\tappend a line to submit file that sets the batch name\n"
+					/* "\t                  \t(overrides batch_name in submit file)\n" */);
 	fprintf( stderr, "\t-disable\t\tdisable file permission checks\n" );
 	fprintf( stderr, "\t-dry-run <filename>\tprocess submit file and write ClassAd attributes to <filename>\n"
 					 "\t        \t\tbut do not actually submit the job(s) to the SCHEDD\n" );
@@ -9959,6 +9994,13 @@ int DoUnitTests(int options)
 		{0,  "arg from [:1] args.lst",     1, foreach_from,   1,  0},
 		{0,  "arg from [::] args.lst",     1, foreach_from,   1,  0},
 
+		{0,  "arg from [100::] args.lst",     1, foreach_from,   1,  0},
+		{0,  "arg from [:100:] args.lst",     1, foreach_from,   1,  0},
+		{0,  "arg from [::100] args.lst",     1, foreach_from,   1,  0},
+
+		{0,  "arg from [100:10:5] args.lst",     1, foreach_from,   1,  0},
+		{0,  "arg from [10:100:5] args.lst",     1, foreach_from,   1,  0},
+
 		{0,  "",             1, 0, 0, 0},
 		{0,  "2",            2, 0, 0, 0},
 		{0,  "9 - 2",        7, 0, 0, 0},
@@ -9996,6 +10038,7 @@ int DoUnitTests(int options)
 		fprintf(stderr, "%s num:   %d/%d  mode:  %d/%d  vars:  %d/%d {%s} ", ok ? " " : "!",
 				queue_num, trials[ii].num, foreach_mode, trials[ii].mode, cvars, trials[ii].cvars, vars_list);
 		fprintf(stderr, "  items: %d/%d {%s}", citems, trials[ii].citems, items_list);
+		if (slice.initialized()) { char sz[16*3]; slice.to_string(sz, sizeof(sz)); fprintf(stderr, " slice: %s", sz); }
 		if ( ! items_filename.empty()) { fprintf(stderr, " file:'%s'\n", items_filename.Value()); }
 		fprintf(stderr, "\tqargs: '%s' -> '%s'\trval: %d/%d\n", trials[ii].args, pqargs, rval, trials[ii].rval);
 

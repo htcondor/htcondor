@@ -678,6 +678,34 @@ the set of configuration it incorporates.
     If this policy is used together with the \texttt{Always\_Run\_Jobs} policy,
     order the specification by placing this \texttt{Limit\_Job\_Runtimes} 
     policy second. 
+	\item \texttt{Preempt\_If\_Cpus\_Exceeded}
+	If the startd observes the number of CPU cores used by the job exceed
+	the number of cores in the slot by more than 0.8 on average over the past
+	minute, preempt the job immediately
+	ignoring any job retirement time.
+	\item \texttt{Hold\_If\_Cpus\_Exceeded}
+	If the startd observes the number of CPU cores used by the job exceed
+	the number of cores in the slot by more than 0.8 on average over the past
+	minute, immediately place the job on hold
+	ignoring any job retirement time.  The job will go on hold with a reasonable
+	hold reason in job attribute \Attr{HoldReason} and a value of 101 in job
+	attribute \Attr{HoldReasonCode}.  The hold reason and code can be customized by
+	specifying \MacroNI{HOLD\_REASON\_CPU\_EXCEEDED} and
+	\MacroNI{HOLD\_SUBCODE\_CPU\_EXCEEDED} respectively.
+	\item \texttt{Preempt\_If\_Memory\_Exceeded}
+	If the startd observes the memory usage of the job exceed
+	the memory provisioned in the slot, preempt the job immediately
+	ignoring any job retirement time.
+	\item \texttt{Hold\_If\_Memory\_Exceeded}
+	If the startd observes the memory usage of the job exceed
+	the memory provisioned in the slot,
+	immediately place the job on hold
+	ignoring any job retirement time.
+	The job will go on hold with a reasonable
+	hold reason in job attribute \Attr{HoldReason} and a value of 102 in job
+	attribute \Attr{HoldReasonCode}.  The hold reason and code can be customized by
+	specifying \MacroNI{HOLD\_REASON\_MEMORY\_EXCEEDED} and
+	\MacroNI{HOLD\_SUBCODE\_MEMORY\_EXCEEDED} respectively.
   \end{itemize}
 
 \label{usecategory:SECURITY}
@@ -2279,7 +2307,7 @@ of the subsystem corresponding to the daemon.
   so see that manual page for platform-specific details.
   If not defined, the default value is 
 \begin{verbatim}
-   "%m/%d %H:%M:%S "  
+   "%m/%d/%y %H:%M:%S"
 \end{verbatim}
 
 \label{param:SubsysDebug}
@@ -2840,7 +2868,7 @@ which use DaemonCore).
   section~\ref{sec:HTCondor-Subsystem-Names}.
 
   \MacroNI{<SUBSYS>\_EXPRS} is a historic setting that functions identically to
-  \MacroNI{<SUBSYS>\_ATTRS}. Use \MacroNI{<SUBSYS>\_ATTRS}.
+  \MacroNI{<SUBSYS>\_ATTRS}. It may be removed in the future, so use \MacroNI{<SUBSYS>\_ATTRS}.
 
   \Note The \Condor{kbdd} does not send
   ClassAds now, so this entry does not affect it.  The
@@ -2848,7 +2876,7 @@ which use DaemonCore).
   \Condor{collector} do send ClassAds, so those would be valid
   subsystems to set this entry for.
   
-  \MacroNI{SUBMIT\_EXPRS} not part of the \MacroNI{<SUBSYS>\_EXPRS}, it is
+  \MacroNI{SUBMIT\_ATTRS} not part of the \MacroNI{<SUBSYS>\_ATTRS}, it is
   documented in section~\ref{sec:Submit-Config-File-Entries}
 
   Because of the different syntax of the configuration
@@ -4726,6 +4754,11 @@ WANT_HOLD_REASON = \
   It will be rotated in the same way,
   and the same parameters that apply to the \MacroNI{HISTORY} file
   rotation apply to the \Condor{startd} daemon history as well.
+  This can be read with the \Condor{history} command by passing the
+  name of the file to the -file option of \Condor{history}.
+\begin{verbatim}
+	condor_history -file `condor_config_val LOG`/startd_history
+\end{verbatim}
 
 \end{description}
 
@@ -4931,15 +4964,18 @@ WANT_HOLD_REASON = \
   before bump testing begins. 
   The default is 15 minutes. 
 
-\label{param:StartdJobExprs}
-\item[\Macro{STARTD\_JOB\_EXPRS}]
+\label{param:StartdJobAttrs}
+\item[\Macro{STARTD\_JOB\_ATTRS}]
   When the machine is claimed by a remote user,
   the \Condor{startd} can also advertise
   arbitrary attributes from the job ClassAd in the machine ClassAd.
   List the attribute names to be advertised.  \Note Since
   these are already ClassAd expressions, do not do anything
-  unusual with strings.   
-  This setting defaults to ``JobUniverse''.
+  unusual with strings.
+  By default, the job ClassAd attributes JobUniverse, NiceUser, ExecutableSize and ImageSize
+  are advertised into the machine ClassAd.
+  This setting was formerly called \MacroNI{STARTD\_JOB\_EXPRS}.
+  The older name is still supported, but support for the older name may be removed in a future version of HTCondor.
 
 \label{param:StartdAttrs}
 \item[\Macro{STARTD\_ATTRS}]
@@ -5657,9 +5693,10 @@ CONSUMPTION_DISK = quantize(target.RequestDisk,{1024})
 %\end{verbatim}
   In the case of slots with consumption policies, the cost of each match is
   is assessed as the difference in the slot weight expression before and after
-  the resources consumed by the match are deducted from the slot.
-  Any definition of the form \MacroNI{SLOT\_TYPE\_<N>\_SLOT\_WEIGHT}
-  overrides this global definition for the given slot type.
+  the resources consumed by the match are deducted from the slot.  Only
+  Memory, Cpus and Disk are valid attributes for this parameter.
+  %Any definition of the form \MacroNI{SLOT\_TYPE\_<N>\_SLOT\_WEIGHT}
+  %overrides this global definition for the given slot type.
 
 \label{param:NumClaims}
 \item[\Macro{NUM\_CLAIMS}]
@@ -6385,6 +6422,15 @@ MAX_JOBS_RUNNING	= \
   \Condor{q} requests by \emph{not} forking itself to handle each request.
   It instead handles the requests in a non-blocking way.
   The default value is \Expr{True}.
+
+\label{param:CondorQOnlyMyJobs}
+\item[\Macro{CONDOR\_Q\_ONLY\_MY\_JOBS}]
+  A boolean value that, when \Expr{True},
+  causes \Condor{q} to request that only the current users jobs be queried
+  unless the current user is a queue superuser.  It also causes the \Condor{schedd}
+  to honor that request.
+  The default value is \Expr{True}. A value of \Expr{False} in either \Condor{q} or
+  the \Condor{schedd} will result in the old behavior of querying all jobs.
 
 \label{param:ScheddInterval}
 \item[\Macro{SCHEDD\_INTERVAL}]
@@ -7303,6 +7349,25 @@ SYSTEM_PERIODIC_REMOVE = \
   The default value is \File{\$(LOG)/ScheddRestartReport}.
   If a blank value is set, then no report is written or emailed.
 
+\label{param:JobSpoolPermissions}
+\item[\Macro{JOB\_SPOOL\_PERMISSIONS}]
+  Control the permissions on the job's spool directory. Defaults to
+  \Expr{user} which sets permissions to \emph{0700}. Possible values are
+  \Expr{user}, \Expr{group}, and \Expr{world}.
+  If set to \Expr{group}, then the directory is group-accessible,
+  with permissions set to \emph{0750}.
+  If set to \Expr{world},
+  then the directory is created with permissions set to \emph{0755}.
+
+\label{param:ChownJobSpoolFiles}
+\item[\Macro{CHOWN\_JOB\_SPOOL\_FILES}]
+  Prior to HTCondor 8.5.0 on unix, the \condor{schedd} would chown job
+  files in the SPOOL directory between the condor account and the
+  account of the job sbumitter.
+  Now, these job files are always owned by the job submitter by default.
+  To restore the older behavior, set this parameter to \Expr{True}.
+  The default value is \Expr{False}.
+
 \end{description}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Shadow-Config-File-Entries}\condor{shadow}
@@ -8056,8 +8121,8 @@ do not specify their own with:
   an obstacle to scalability.
   The default value is True.
 
-\label{param:SubmitExprs}
-\item[\Macro{SUBMIT\_EXPRS}]
+\label{param:SubmitAttrs}
+\item[\Macro{SUBMIT\_ATTRS}]
   A comma-separated and/or space-separated 
   list of ClassAd attribute names for which the attribute and value will
   be inserted into all the job ClassAds that \Condor{submit} creates.  
@@ -8065,14 +8130,16 @@ do not specify their own with:
   it is like the \verb@"+"@ syntax in a submit description file.
   Attributes defined in the submit description file with \verb@"+"@ will
   override attributes defined in the configuration file with
-  \MacroNI{SUBMIT\_EXPRS}. 
+  \MacroNI{SUBMIT\_ATTRS}. 
   Note that adding an attribute to a job's ClassAd will \emph{not} function
   as a method for specifying default values of submit description file commands
   forgotten in a job's submit description file.
   The command in the submit description file results in actions by
   \Condor{submit},
-  while the use of \MacroNI{SUBMIT\_EXPRS} adds a job ClassAd attribute
+  while the use of \MacroNI{SUBMIT\_ATTRS} adds a job ClassAd attribute
   at a later point in time.
+  \MacroNI{SUBMIT\_EXPRS} is a historic setting that functions identically to
+  \MacroNI{SUBMIT\_ATTRS}. It may be removed in the future, so use \MacroNI{SUBMIT\_ATTRS}.
 
 \label{param:LogOnNfsIsError}
 \item[\Macro{LOG\_ON\_NFS\_IS\_ERROR}]
@@ -10239,12 +10306,16 @@ in section~\ref{sec:DAG-configuration}.
 \label{param:DAGManUserLogScanInterval}
 \item[\Macro{DAGMAN\_USER\_LOG\_SCAN\_INTERVAL}]
   An integer value representing the number of seconds that 
-  \Condor{dagman} waits between checking job log files for status updates.
+  \Condor{dagman} waits between checking the workflow log file for
+  status updates.
   Setting this value lower than the default increases the CPU
   time \Condor{dagman} spends checking files, perhaps fruitlessly, but
   increases responsiveness to nodes completing or failing.
   The legal range of values is 1 to INT\_MAX.
   If not defined, it defaults to 5 seconds.
+  (As of version 8.4.2, the default may be automatically decreased if
+  \Macro{DAGMAN\_MAX\_JOBS\_IDLE} is set to a small value.  If so,
+  this will be noted in the \File{dagman.out} file.)
 
 \label{param:DAGManDebugCacheEnable}
 \item[\Macro{DAGMAN\_DEBUG\_CACHE\_ENABLE}]
@@ -10276,6 +10347,9 @@ in section~\ref{sec:DAG-configuration}.
   If defined with a value less than 1, the  value 1 will be used.
   If defined with a value greater than 1000, the value 1000 will be used.
   If not defined, it defaults to 5.
+  (As of version 8.4.2, the default may be automatically decreased if
+  \Macro{DAGMAN\_MAX\_JOBS\_IDLE} is set to a small value.  If so,
+  this will be noted in the \File{dagman.out} file.)
 
 \label{param:DAGManMaxSubmitAttempts}
 \item[\Macro{DAGMAN\_MAX\_SUBMIT\_ATTEMPTS}]
@@ -10335,37 +10409,37 @@ in section~\ref{sec:DAG-configuration}.
 
 \label{param:DAGManMaxJobsIdle}
 \item[\Macro{DAGMAN\_MAX\_JOBS\_IDLE}]
-  An integer value that controls the maximum number of idle node jobs
+  An integer value that controls the maximum number of idle procs
   allowed within the DAG before \Condor{dagman} temporarily stops
-  submitting jobs.  Once idle jobs start to run, \Condor{dagman} will
-  resume submitting jobs.  If both the command line option and the
-  configuration variable are specified, the command line option overrides
-  the configuration variable.  Unfortunately,
+  submitting jobs.  \Condor{dagman} will
+  resume submitting jobs once the number of idle procs falls below
+  the specified limit.
   \MacroNI{DAGMAN\_MAX\_JOBS\_IDLE} currently counts each individual
-  process within a cluster as a job, which is inconsistent with
+  proc within a cluster as a job, which is inconsistent with
   \MacroNI{DAGMAN\_MAX\_JOBS\_SUBMITTED}.
-  Note that nothing special is 
-  done to the submit description file.
+  Note that submit description files that queue multiple procs can
+  cause the \MacroNI{DAGMAN\_MAX\_JOBS\_IDLE} limit to be exceeded.
   If a submit description file contains \Expr{queue 5000}
   and \MacroNI{DAGMAN\_MAX\_JOBS\_IDLE} is set to 250, 
-  this will result in 5000 jobs being submitted to the \Condor{schedd},
+  this will result in 5000 procs being submitted to the \Condor{schedd},
   not 250; in this case, no
   further jobs will then be submitted by \Condor{dagman} until the number of
-  idle jobs falls below 250.
-  The default value is 1000.
+  idle procs falls below 250.
+  The default value is 1000.  To disable this limit, set the value
+  to 0.
+  This configuration option can be overridden by the \Condor{submit\_dag}
+  \OptArg{-maxidle} command-line argument (see ~\ref{man-condor-submit-dag}).
 
 \label{param:DAGManMaxJobsSubmitted}
 \item[\Macro{DAGMAN\_MAX\_JOBS\_SUBMITTED}]
-  An integer value that controls the maximum number of node jobs within the
-  DAG that will  be submitted to HTCondor at one time.  Note that this
-  variable has the same functionality as the \OptArg{-maxjobs} 
-  command line option to \Condor{submit\_dag}.
-  If both the command line option and the
-  configuration parameter are specified, the command line option overrides
-  the configuration variable.  A single invocation of \Condor{submit}
-  counts as one job, even if the submit file produces a multi-job cluster.
-  The default is that there is no limit on the maximum number of jobs
-  run at one time.
+  An integer value that controls the maximum number of node jobs (clusters)
+  within the
+  DAG that will  be submitted to HTCondor at one time.
+  A single invocation of \Condor{submit} by \Condor{dagman}
+  counts as one job, even if the submit file produces a multi-proc cluster.
+  The default value is 0 (unlimited).
+  This configuration option can be overridden by the \Condor{submit\_dag}
+  \OptArg{-maxjobs} command-line argument (see ~\ref{man-condor-submit-dag}).
 
 \label{param:DAGManMungeNodeNames}
 \item[\Macro{DAGMAN\_MUNGE\_NODE\_NAMES}]
@@ -10790,6 +10864,8 @@ in section~\ref{sec:DAG-configuration}.
   \Condor{dagman} will run at the same time.  
   The value 0 allows any number of PRE scripts to run.
   The default value if not defined is 20.
+  Note that the \MacroNI{DAGMAN\_MAX\_PRE\_SCRIPTS} value can be overridden
+  by the \Condor{submit\_dag} \Opt{-maxpre} command line option.
 
 \label{param:DAGManMaxPostScripts}
 \item[\Macro{DAGMAN\_MAX\_POST\_SCRIPTS}]
@@ -10797,6 +10873,8 @@ in section~\ref{sec:DAG-configuration}.
   \Condor{dagman} will run at the same time.
   The value 0 allows any number of POST scripts to run.
   The default value if not defined is 20.
+  Note that the \MacroNI{DAGMAN\_MAX\_POST\_SCRIPTS} value can be overridden
+  by the \Condor{submit\_dag} \Opt{-maxpost} command line option.
 
 \label{param:DAGManAllowLogError}
 \item[\Macro{DAGMAN\_ALLOW\_LOG\_ERROR}]
@@ -11398,15 +11476,9 @@ COLLECTOR.SEC_DEFAULT_SESSION_DURATION = 50000
   \verb|submit-side@matchsession| when they talk to the \Condor{startd} and
   \Condor{starter}.  The \Condor{startd} and \Condor{starter} will be authenticated as
   \verb|execute-side@matchsession| when they talk to the \Condor{schedd} and
-  \Condor{shadow}.  On the submit side, authorization of the execute side happens
-  automatically.  On the execute side, it is necessary to explicitly
-  authorize the submit side.  Example:
-
-\begin{verbatim}
-  ALLOW_DAEMON = submit-side@matchsession/192.168.123.*
-\end{verbatim}
-
-  Replace the example netmask with something suitable for your situation.
+  \Condor{shadow}.
+  These identities is automatically added to the DAEMON, READ, and CLIENT
+  authorization levels in these daemons when needed.
 
 \label{param:KerberosServerKeytab}
 \item[\Macro{KERBEROS\_SERVER\_KEYTAB}]
@@ -11965,7 +12037,7 @@ MASTER_NEGOTIATOR_CONTROLLER = HAD
   It is defined in seconds and defaults to 300 (5 minutes).
 
 \label{param:MaxTransferLifetime}
-\item[\Macro{MAX\_TRANSFERER\_LIFETIME}]
+\item[\Macro{MAX\_TRANSFER\_LIFETIME}]
   A timeout period within which the process that
   transfers the state file must complete its transfer.
   The recommended value is
@@ -12488,7 +12560,7 @@ see~\pageref{sec:shared-port-daemon}.
   \Condor{shared\_port} daemon for receiving incoming connections.  
   Under Unix, write access to the location defined by 
   \Macro{DAEMON\_SOCKET\_DIR} is required for this to take effect.
-  The default is \Expr{False}.
+  The default is \Expr{True}.
 
 \label{param:SharedPortPort}
 \item[\Macro{SHARED\_PORT\_PORT}]

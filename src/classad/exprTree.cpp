@@ -77,6 +77,8 @@ void ExprTree::debug_format_value(Value &value, double time) const {
 			case Value::ERROR_VALUE:
 				if ((FN_CALL_NODE == GetKind()) && !static_cast<const FunctionCall*>(this)->FunctionIsDefined()) {
 					result += "ERROR (function is not defined)\n";
+				} else if (classad::CondorErrMsg.size()) {
+					result += "ERROR (" + classad::CondorErrMsg + ")\n";
 				} else {
 					result += "ERROR\n";
 				}

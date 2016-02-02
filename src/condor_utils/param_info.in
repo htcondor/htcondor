@@ -1795,8 +1795,8 @@ review=?
 tags=privsep,privsep_client.UNIX
 
 [HAD_USE_PRIMARY]
-default=
-type=string
+default=false
+type=bool
 reconfig=true
 customization=seldom
 friendly_name=Had Use Primary
@@ -1831,8 +1831,8 @@ review=?
 tags=had,StateMachine
 
 [HAD_USE_REPLICATION]
-default=
-type=string
+default=false
+type=bool
 reconfig=true
 customization=seldom
 friendly_name=Had Use Replication
@@ -2752,6 +2752,15 @@ friendly_name=Gridmanager Gahp Call Timeout Condor
 review=?
 tags=gridmanager,condorjob
 
+[GRIDMANAGER_GAHP_RESPONSE_TIMEOUT]
+default=20
+type=int
+reconfig=true
+customization=seldom
+friendly_name=Gridmanager Gahp Response Timeout
+review=?
+tags=gridmanager,gahp-client
+
 [CONDORC_ATTRS_TO_COPY]
 default=
 type=string
@@ -2790,11 +2799,17 @@ tags=gridmanager
 
 # The STARTD_ATTRS entry allows you to have the startd advertise arbitrary attributes from the config file into it's ClassAd
 [STARTD_ATTRS]
-default=COLLECTOR_HOST_STRING
+default=
+friendly_name=Attibutes from config file to insert into STARTD ads
 review=?
+
 # support the "$$(COLLECTOR_HOST)" syntax in the submit file
 [COLLECTOR_HOST_STRING]
 default="$(COLLECTOR_HOST)"
+review=?
+[SYSTEM_STARTD_ATTRS]
+default=COLLECTOR_HOST_STRING DedicatedScheduler
+friendly_name=configuration attibutes that HTCondor needs to insert into STARTD ads
 review=?
 
 [UNICORE_GAHP]
@@ -3153,12 +3168,21 @@ friendly_name=Max Claim Alives Missed
 review=?
 tags=startd,startd_main
 
-[STARTD_JOB_EXPRS]
+[SYSTEM_STARTD_JOB_ATTRS]
 default=ImageSize, ExecutableSize, JobUniverse, NiceUser
 type=string
 reconfig=true
-customization=seldom
-friendly_name=Startd Job Exprs
+customization=never
+friendly_name=Job Attributes that must be copied into the STARTD ad for HTCondor to work correctly
+review=?
+tags=startd,startd_main
+
+[STARTD_JOB_ATTRS]
+default=
+type=string
+reconfig=true
+customization=normal
+friendly_name=Job Attributes to copy into the STARTD ad
 review=?
 tags=startd,startd_main
 
@@ -3166,8 +3190,17 @@ tags=startd,startd_main
 default=
 type=string
 reconfig=true
-customization=seldom
+customization=normal
 friendly_name=Startd Slot Attrs
+review=?
+tags=startd,startd_main
+
+[SYSTEM_STARTD_SLOT_ATTRS]
+default=
+type=string
+reconfig=true
+customization=never
+friendly_name=Startd Slot Attrs needed by HTCondor
 review=?
 tags=startd,startd_main
 
@@ -3176,25 +3209,7 @@ default=
 type=string
 reconfig=true
 customization=seldom
-friendly_name=Startd Slot Exprs
-review=?
-tags=startd,startd_main
-
-[STARTD_VM_ATTRS]
-default=
-type=string
-reconfig=true
-customization=seldom
-friendly_name=Startd Vm Attrs
-review=?
-tags=startd,startd_main
-
-[STARTD_VM_EXPRS]
-default=
-type=string
-reconfig=true
-customization=seldom
-friendly_name=Startd Vm Exprs
+friendly_name=Obsolete name for startd Slot Attrs
 review=?
 tags=startd,startd_main
 
@@ -3570,12 +3585,21 @@ friendly_name=Log On Nfs Is Error
 review=?
 tags=submit,submit
 
+[SUBMIT_ATTRS]
+default=
+type=string
+reconfig=true
+customization=seldom
+friendly_name=Submit Attributes
+review=?
+tags=submit,submit
+
 [SUBMIT_EXPRS]
 default=
 type=string
 reconfig=true
 customization=seldom
-friendly_name=Submit Exprs
+friendly_name=Obsolete name for submit Attributes
 review=?
 tags=submit,submit
 
@@ -4753,6 +4777,14 @@ friendly_name=History
 review=?
 tags=tools,preen
 
+[STARTD_HISTORY]
+default=$(LOG)/startd_history
+type=string
+reconfig=true
+customization=seldom
+friendly_name=Startd History
+review=?
+
 [PREEN_ADMIN]
 default=
 type=string
@@ -5034,6 +5066,43 @@ customization=seldom
 friendly_name=Queue All Users Trusted
 review=?
 tags=schedd,qmgmt
+
+[SYSTEM_IMMUTABLE_JOB_ATTRS]
+default=Owner ClusterId ProcId MyType TargetType
+type=string
+reconfig=true
+customization=never
+friendly_name=Job attributes that may not change once set
+review=?
+tags=schedd,qmgmt,qedit
+
+[IMMUTABLE_JOB_ATTRS]
+default=
+type=string
+reconfig=true
+customization=seldom
+friendly_name=Job attributes that may not change once set
+review=?
+tags=schedd,qmgmt,qedit
+
+[SYSTEM_PROTECTED_JOB_ATTRS]
+default=
+type=string
+reconfig=true
+customization=never
+friendly_name=Job attributes that may only be changed by a queue superuser once set
+review=?
+tags=schedd,qmgmt,qedit
+
+[PROTECTED_JOB_ATTRS]
+default=
+type=string
+reconfig=true
+customization=seldom
+friendly_name=Job attributes that may only be changed by a queue superuser once set
+review=?
+tags=schedd,qmgmt,qedit
+
 
 [GLOBAL_JOB_ID_WITH_TIME]
 default=true
@@ -5411,6 +5480,15 @@ type=string
 reconfig=true
 customization=seldom
 friendly_name=Schedd Backup Spool
+review=?
+tags=schedd,schedd_main
+
+[CHOWN_JOB_SPOOL_FILES]
+default=False
+type=bool
+reconfig=true
+customization=seldom
+friendly_name=Chown Job Spool Files
 review=?
 tags=schedd,schedd_main
 
@@ -6020,7 +6098,7 @@ friendly_name=Shared Port Daemon Ad File
 review=?
 
 [USE_SHARED_PORT]
-default=false
+default=true
 version=7.5.0
 type=bool
 reconfig=true
@@ -7183,6 +7261,16 @@ friendly_name=Schedd Max File Descriptors
 usage=Set the limit on file descriptor usage for the scheduler.
 review=?
 
+[SCHEDD_USE_SLOT_WEIGHT]
+default=true
+rant=
+type=bool
+reconfig=true
+constomization=seldom
+friendly_name=Should Schedd obey SLOT_WEIGHT
+usage=
+review=?
+
 [SHARED_PORT_MAX_FILE_DESCRIPTORS]
 default=4096
 range=0,
@@ -7209,6 +7297,25 @@ type=int
 reconfig=true
 customization=seldom
 friendly_name=Size of Resource Request List
+review=?
+tags=negotiator,matchmaker
+
+[NEGOTIATOR_PREFETCH_REQUESTS]
+default=false
+type=bool
+reconfig=true
+customization=seldom
+friendly_name=Enable parallel prefetching of requests in the negotiator
+review=?
+tags=negotiator,matchmaker
+
+[NEGOTIATOR_PREFETCH_REQUESTS_MAX_TIME]
+default=120
+range=0,
+type=int
+reconfig=true
+customization=seldom
+friendly_name=Timeout for prefetch requests lists phase of negotiator
 review=?
 tags=negotiator,matchmaker
 
@@ -7240,6 +7347,13 @@ customization=devel
 friendly_name=Control use of V3 query protocol for condor_q
 usage=Set to false to disable V3 query protocol for condor_q.
 
+[CONDOR_Q_ONLY_MY_JOBS]
+default=true
+type=bool
+reconfig=false
+friendly_Name=Whether condor_q will query all jobs, or only the current owners jobs by default
+usage=Set to true to have condor_q query only the owners jobs by default
+
 [ENABLE_IPV6]
 default=false
 type=bool
@@ -7268,6 +7382,14 @@ customization=seldom
 friendly_name=Permissions on the job's execute directory
 review=?
 tags=starter
+
+[JOB_SPOOL_PERMISSIONS]
+default=user
+type=string
+reconfig=true
+customization=seldom
+friendly_name=Permissions on the job's spool directory
+review=?
 
 [PANDAD]
 default=$(LIBEXEC)/condor_pandad
@@ -7409,6 +7531,20 @@ review=?
 default=$(LIBEXEC)/condor_shared_port
 win32_default=$(LIBEXEC)\condor_shared_port.exe
 friendly_name=Location of the Shared Port daemon
+type=path
+review=?
+
+[HAD]
+default=$(SBIN)/condor_had
+win32_default=$(SBIN)\condor_had.exe
+friendly_name=Location of the High-Availability daemon
+type=path
+review=?
+
+[REPLICATION]
+default=$(SBIN)/condor_replication
+win32_default=$(SBIN)\condor_replication.exe
+friendly_name=Location of the Replication daemon
 type=path
 review=?
 
@@ -8108,6 +8244,84 @@ friendly_name=Limit job runtimes to 24 hours
 default : @end
 	MAX_JOB_RUNTIME=24*3600
 	PREMPT=(Activity == "Busy") && ((time() - EnteredCurrentActivity) > $(MAX_JOB_RUNTIME))
+@end
+review=?
+
+[$POLICY.PREEMPT_IF_CPUS_EXCEEDED]
+friendly_name=Preempt jobs that use more cpu cores than in slot
+default : @end
+  #
+  # Publish the number of CPU cores being used by the job into
+  # to slot ad as attribute "CpusUsage". This value will
+  # be the average number of cores used by the job over the
+  # past minute, sampling every 5 seconds, and rounded to two digits.
+  #
+  CpusUsage = ifthenelse( \
+     TotalLoadAvg > 0.0 && Activity!="Idle", \
+     int(CondorLoadAvg / TotalLoadAvg * \
+        ifthenelse(TotalLoadAvg < $(DETECTED_CORES), TotalLoadAvg, $(DETECTED_CORES)) \
+        * 100) / 100.0, \
+     0)
+  STARTD_ATTRS = $(STARTD_ATTRS) CpusUsage
+  #
+  # If the startd sees the number of CPU cores used by the job exceed the
+  # number of cores in the slot by more than 0.8, preempt the job
+  # immediately ignoring any retirement time.
+  #
+  CPU_EXCEEDED = (CpusUsage > Cpus + 0.8)
+  PREEMPT = ($(PREEMPT:False)) || $(CPU_EXCEEDED)
+  MAXJOBRETIREMENTTIME = ifthenelse($(CPU_EXCEEDED),0,$(MAXJOBRETIREMENTTIME:0))
+  WANT_SUSPEND = ($(WANT_SUSPEND:False)) && $(CPU_EXCEEDED) =!= TRUE
+@end
+review=?
+
+[$POLICY.HOLD_IF_CPUS_EXCEEDED]
+friendly_name=Hold jobs that use more cpu cores than in slot
+default : @end
+  use policy: preempt_if_cpus_exceeded
+  #
+  # If the startd preempted a job because CPU usage exceeded the number
+  # of cores in the slot, put the job on hold.
+  #
+  WANT_HOLD = ($(WANT_HOLD:False)) || $(CPU_EXCEEDED)
+  WANT_HOLD_REASON = ifThenElse($(CPU_EXCEEDED), \
+     $(HOLD_REASON_CPU_EXCEEDED:"cpu usage exceeded request_cpus"), \
+     $(WANT_HOLD_REASON:UNDEFINED))
+  WANT_HOLD_SUBCODE = ifThenElse($(CPU_EXCEEDED), \
+     $(HOLD_SUBCODE_CPU_EXCEEDED:101), \
+     $(WANT_HOLD_SUBCODE:UNDEFINED))
+@end
+review=?
+
+[$POLICY.PREEMPT_IF_MEMORY_EXCEEDED]
+friendly_name=Preempt jobs that use more memory than in slot
+default : @end
+  #
+  # If the startd sees the memory usage of the job exceed the
+  # memory in the slot, preempt the job immediately ignoring any retirement time.
+  #
+  MEMORY_EXCEEDED = (MemoryUsage =!= UNDEFINED && MemoryUsage > Memory)
+  PREEMPT = ($(PREEMPT:False)) || $(MEMORY_EXCEEDED)
+  MAXJOBRETIREMENTTIME = ifthenelse($(MEMORY_EXCEEDED),0,$(MAXJOBRETIREMENTTIME:0))
+  WANT_SUSPEND = ($(WANT_SUSPEND:False)) && $(MEMORY_EXCEEDED) =!= TRUE
+@end
+review=?
+
+[$POLICY.HOLD_IF_MEMORY_EXCEEDED]
+friendly_name=Hold jobs that use more memory than in slot
+default : @end
+  use policy: preempt_if_memory_exceeded
+  #
+  # If the startd preempted a job because memory usage exceeded the amount
+  # of memory in the slot, put the job on hold.
+  #
+  WANT_HOLD = ($(WANT_HOLD:False)) || $(MEMORY_EXCEEDED)
+  WANT_HOLD_REASON = ifThenElse($(MEMORY_EXCEEDED), \
+     $(HOLD_REASON_MEMORY_EXCEEDED:"memory usage exceeded request_memory"), \
+     $(WANT_HOLD_REASON:UNDEFINED))
+  WANT_HOLD_SUBCODE = ifThenElse($(MEMORY_EXCEEDED), \
+     $(HOLD_SUBCODE_MEMORY_EXCEEDED:102), \
+     $(WANT_HOLD_SUBCODE:UNDEFINED))
 @end
 review=?
 

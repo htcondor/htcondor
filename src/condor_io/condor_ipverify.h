@@ -111,14 +111,14 @@ public:
 	                     "user/IP" or just "IP" for any user.
 	        @return      true on success, false on failure.
 	*/
-	bool PunchHole(DCpermission perm, MyString& id);
+	bool PunchHole(DCpermission perm, const MyString& id);
 
 	/** Remove an authorization hole previously opened using PunchHole().
 	        @param  perm The permission level that was opened.
 	        @param  id   The user / IP that the hole was opened for.
 	        @return      true on success, false on failure.
 	*/
-	bool FillHole(DCpermission perm, MyString& id);
+	bool FillHole(DCpermission perm, const MyString& id);
 
 private:
 

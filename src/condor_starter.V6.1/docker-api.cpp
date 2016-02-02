@@ -31,6 +31,7 @@ int DockerAPI::run(
 	const ArgList & args,
 	const Env & env,
 	const std::string & sandboxPath,
+	const std::list<std::string> extraVolumes,
 	int & pid,
 	int * childFDs,
 	CondorError & /* err */ )
@@ -94,6 +95,13 @@ int DockerAPI::run(
 	runArgs.AppendArg( "--volume" );
 	runArgs.AppendArg( sandboxPath + ":" + sandboxPath );
 
+	// Now any extra volumes
+	for (std::list<std::string>::const_iterator it = extraVolumes.begin(); it != extraVolumes.end(); it++) {
+		runArgs.AppendArg("--volume");
+		std::string volume = *it;
+		runArgs.AppendArg(volume);
+	}
+	
 	// Start in the sandbox.
 	runArgs.AppendArg( "--workdir" );
 	runArgs.AppendArg( sandboxPath );
@@ -264,6 +272,88 @@ DockerAPI::unpause( const std::string & container, CondorError & err ) {
 	return run_simple_docker_command("unpause", container, err);
 }
 
+static uint64_t
+convertUnits(uint64_t raw, char *unit) {
+	switch (*unit) {
+	case 'B':
+		return raw;
+		break;
+	case 'K':
+		return raw * 1024;
+		break;
+	case 'M':
+		return raw * 1024 * 1024;
+		break;
+	case 'G':
+		return raw * 1024 * 1024 * 1024;
+		break;
+	case 'T':
+		return raw * 1024 * 1024 * 1024 * 1024;
+	default:
+		return -1;
+		break;
+	}
+}
+
+int
+DockerAPI::stats(const std::string &container, uint64_t &memUsage, uint64_t &netIn, uint64_t &netOut) {
+	ArgList args;
+	if ( ! add_docker_arg(args))
+		return -1;
+	args.AppendArg( "stats" );
+	args.AppendArg( "--no-stream" );
+	args.AppendArg( container.c_str() );
+
+	MyString displayString;
+	TemporaryPrivSentry sentry(PRIV_ROOT);
+
+	args.GetArgsStringForLogging( & displayString );
+
+	dprintf( D_FULLDEBUG, "Attempting to run: %s\n", displayString.c_str() );
+
+		// Read from Docker's combined output and error streams.
+	FILE * dockerResults = my_popen( args, "r", 1 , 0, false);
+	if( dockerResults == NULL ) {
+		dprintf( D_ALWAYS | D_FAILURE, "Failed to run '%s'.\n", displayString.c_str() );
+		return -2;
+	}
+
+	const int statLineSize = 256;
+	char header[statLineSize];
+	char data[statLineSize];
+	if( NULL == fgets( header, statLineSize, dockerResults ) ) {
+		my_pclose(dockerResults);
+		return -2;
+	}
+
+	if( NULL == fgets( data, statLineSize, dockerResults ) ) {
+		my_pclose(dockerResults);
+		return -2;
+	}
+	my_pclose(dockerResults);
+
+	dprintf(D_FULLDEBUG, "Docker stats data is:\n%s\n", data);
+		// condor stats output looks like:
+		// Name	cpu%   mem usage/limit  mem%  net i/o   block i/o
+		// container  0.00%  0 B / 0 B        0.00% 0 B / 0 B  0 B / 0 B
+		//
+	char memUsageUnit[2];
+	char netInUnit[2];
+	char netOutUnit[2];
+
+	double memRaw, netInRaw, netOutRaw;
+	int matches = sscanf(data, "%*s %*g%% %lg %s / %*g %*s %*g%% %lg %s / %lg %s", &memRaw, &memUsageUnit[0], &netInRaw, &netInUnit[0], &netOutRaw, &netOutUnit[0]);
+	if (matches < 6) {
+		return -2;
+	}
+
+	memUsage = convertUnits(memRaw, memUsageUnit);
+	netIn    = convertUnits(netInRaw, netInUnit);
+	netOut   = convertUnits(netOutRaw, netOutUnit);
+  
+	dprintf(D_FULLDEBUG, "memUsage is %g (%s), net In is %g (%s), net Out is %g (%s)\n", memRaw, memUsageUnit, netInRaw, netInUnit, netOutRaw, netOutUnit);
+	return 0;
+}
 int DockerAPI::detect( CondorError & err ) {
 	// FIXME: Remove ::version() as a public API and return it from here,
 	// because there's no point in doing this twice.

@@ -57,7 +57,6 @@ int main( int argc, char *argv[] )
 	char *pool=0;
 	int command=-1;
 	int i;
-	bool use_tcp = false;
 	bool with_ack = false;
 	bool allow_multiple = false;
 	bool many_connections = false;
@@ -65,11 +64,13 @@ int main( int argc, char *argv[] )
 	myDistro->Init( argc, argv );
 	config();
 
+	bool use_tcp = param_boolean( "UPDATE_COLLECTOR_WITH_TCP", true );
+
 	for( i=1; i<argc; i++ ) {
 		if(!strcmp(argv[i],"-help")) {
 			usage(argv[0]);
 			exit(0);
-		} else if(!strcmp(argv[i],"-pool")) {	
+		} else if(!strcmp(argv[i],"-pool")) {
 			i++;
 			if(!argv[i]) {
 				fprintf(stderr,"-pool requires an argument.\n\n");
@@ -79,6 +80,8 @@ int main( int argc, char *argv[] )
 			pool = argv[i];
 		} else if(!strncmp(argv[i],"-tcp",strlen(argv[i]))) {
 			use_tcp = true;
+		} else if(!strncmp(argv[i],"-udp",strlen(argv[i]))) {
+			use_tcp = false;
 		} else if(!strncmp(argv[i],"-multiple",strlen(argv[i]))) {
 				// We don't set allow_multiple=true by default, because
 				// existing users (e.g. glideinWMS) have stray blank lines
@@ -182,10 +185,10 @@ int main( int argc, char *argv[] )
 
 	collectors->rewind();
 	while (collectors->next(collector)) {
-		
+
 		dprintf(D_FULLDEBUG,"locating collector %s...\n", collector->name());
 
-		if(!collector->locate()) {
+		if(!collector->locate(Daemon::LOCATE_FOR_LOOKUP)) {
 			fprintf(stderr,"couldn't locate collector: %s\n",collector->error());
 			had_error = true;
 			continue;

@@ -276,7 +276,7 @@ sub SubmitDagman
 		if( /\d+ job\(s\) submitted to cluster (\d+)./ )
 		{
 	    	$cluster = $1;
-			debug("Cluster is $cluster\n",5);
+			debug("  Cluster is $cluster\n",5);
 	    	last;
 		}
     }
@@ -404,7 +404,7 @@ sub TestSubmitDagman
 	if( /\d+ job\(s\) submitted to cluster (\d+)./ )
 	{
 	    $cluster = $1;
-		debug("Cluster is $cluster\n",5);
+		debug("  Cluster is $cluster\n",5);
 	    last;
 	}
     }
@@ -451,7 +451,7 @@ sub runCommand
     my $command_string = shift;
     my ($command) = split /\s+/, $command_string;
     
-    debug( "running $command_string\n" ,5);
+    debug( "  Running command: $command_string\n" ,5);
     my $retval = system( $command_string );
 
     # did command die abormally?
@@ -463,7 +463,7 @@ sub runCommand
 		$info{'ErrorMessage'} = "error: $command died abnormally";
 		if (defined $WantErrorCallback )
 		{
-			debug("Calling error callback!!!!!! at @ $WantErrorCallback\n",6);
+			debug("  Calling error callback! at @ $WantErrorCallback\n",6);
 			&$WantErrorCallback( %info );
 			return 1;
 		}
@@ -480,7 +480,7 @@ sub runCommand
 		$info{'ErrorMessage'} = "error: $command failed (returned $exitval)";
 		if (defined $WantErrorCallback )
 		{
-			debug("Calling error callback!!!!!! at @ $WantErrorCallback\n",6);
+			debug("  Calling error callback! at @ $WantErrorCallback\n",6);
 			&$WantErrorCallback( %info );
 			return 1;
 		}
@@ -601,13 +601,13 @@ sub RegisterDisconnected
 {
     my $sub = shift || croak "missing argument";
     $DisconnectedCallback = $sub;
-	debug("Registering Disconnnected callback\n",2);
+	debug("  Registering Disconnnected callback\n",2);
 }
 sub RegisterReconnected
 {
     my $sub = shift || croak "missing argument";
     $ReconnectedCallback = $sub;
-	debug("Registering Reconnnected callback\n",2);
+	debug("  Registering Reconnnected callback\n",2);
 }
 sub RegisterReconnectFailed
 {
@@ -634,14 +634,14 @@ sub RegisterSuspended
     my $sub = shift || croak "missing argument";
     $SuspendedCallback = $sub;
 
-	debug("Registering Suspended callback\n",2);
+	debug("  Registering Suspended callback\n",2);
 }
 sub RegisterUnsuspended
 {
     my $sub = shift || croak "missing argument";
     $UnsuspendedCallback = $sub;
 
-	debug("Registering Unsuspended callback\n",2);
+	debug("  Registering Unsuspended callback\n",2);
 }
 
 sub RegisterCLTimed
@@ -721,6 +721,12 @@ sub IsAbsolutePath {
     return File::Spec->file_name_is_absolute($path);
 }
 
+sub monitor_debug {
+	my ($msg, $level) = @_;
+	my $indent = " " x ($level+1);
+	debug ( $indent . "(Mon$$) $msg", $level);
+}
+
 # spawn process to monitor the submit log file and execute callbacks
 # upon seeing registered events
 # July 26, 2013
@@ -750,8 +756,7 @@ sub Monitor
     #my %info;
 	my $timestamp = 0;
 
-    debug( "Entering Monitor\n" ,5);
-	print "Entering Monitor\n";
+	debug( "Monitor (Mon$$) Beginning eventlog monitor\n" , 1);
 
 # commented out until we can do it right -- pfc
 
@@ -770,8 +775,6 @@ sub Monitor
 #
 # if $submit_info{'log'} is valid, go with it for now. At this point we have filled @userlogs
 # and we might want to iterate though that array and Monitor each one sequentialy.
-
-    debug( "In Monitor child\n" ,6);
 
 	my $reallog = "";
 	my $userlogcnt = @userlogs;
@@ -819,9 +822,8 @@ sub Monitor
 
 		if( $saw_submit && $num_active_jobs == 0 )
 		{
-		    	debug( "num_active_jobs = $num_active_jobs -- monitor returning\n" ,5);
-				print "num_active_jobs = $num_active_jobs -- monitor returning\n";
-		    	return 1;
+			monitor_debug( "leaving eventlog monitor because num_active_jobs=$num_active_jobs\n" , 1);
+			return 1;
 		}
 
 		# once every event or second see if we should do a timedCallback
@@ -875,7 +877,7 @@ sub Monitor
 		# if this line is for another cluster, ignore
 		if ( $line =~ /^\d+\s+\(0*(\d+)\./ && $1 != $cluster )
 		{
-		    #debug( "log line for cluster $1, not $cluster -- ignoring...\n" ,1);
+		    #monitor_debug( "log line for cluster $1, not $cluster -- ignoring...\n" ,1);
 		    next LINE;
 		}
 		
@@ -884,8 +886,9 @@ sub Monitor
 		{
 		    $info{'cluster'} = $1;
 		    $info{'job'} = $2;
+		    my $job_id = "$1.$2";
 
-		    debug( "Saw job ($1.$2) evicted\n" ,2);
+		    monitor_debug( "Saw job $job_id evicted\n" ,2);
 
 		    # read next line to see if job was checkpointed (but first
 		    # sleep for 5 seconds to give it a chance to appear)
@@ -916,7 +919,7 @@ sub Monitor
 
 		    if( $line =~ /^\s+\(0\) Job was not checkpointed\./ )
 		    {
-			debug( "job was evicted without ckpt\n" ,2);
+			monitor_debug( "$job_id was evicted without ckpt\n" ,2);
 			# execute callback if one is registered
 			&$EvictedWithoutCheckpointCallback( %info )
 			    if defined $EvictedWithoutCheckpointCallback;
@@ -924,24 +927,21 @@ sub Monitor
 		    }
 		    elsif( $line =~ /^\s+\(1\) Job was checkpointed\./ )
 		    {
-			debug( "job was evicted with ckpt\n" ,2);
+			monitor_debug( "$job_id was evicted with ckpt\n" ,2);
 			# execute callback if one is registered
 			&$EvictedWithCheckpointCallback( %info )
 			    if defined $EvictedWithCheckpointCallback;
 		    }
 		    elsif( $line =~ /^\s+\(0\) Job terminated and was requeued.*$/ )
 		    {
-			debug( "job was evicted and requeued\n" ,2);
+			monitor_debug( "$job_id was evicted and requeued\n" ,2);
 			# execute callback if one is registered
 			&$EvictedWithRequeueCallback( %info )
 			    if defined $EvictedWithRequeueCallback;
 		    }
 		    else
 		    {
-			debug( "parse error on line $linenum of $info{'log'}:\n" .
-			       "   no checkpoint message found after eviction: " .
-			       "continuing...\n" ,1);
-			debug( "Eviction type expected:<$line>\n", 1);
+			monitor_debug( "parse error on line $linenum of $info{'log'}\n\tno checkpoint message found after eviction. continuing...\n", 1);
 			# re-parse line so we don't miss whatever it said
 			goto PARSE;
 		    }
@@ -959,8 +959,9 @@ sub Monitor
 		{
 		    $info{'cluster'} = $1;
 		    $info{'job'} = $2;
+		    my $job_id = "$1.$2";
 
-		    debug( "Saw job terminated\n" ,2);
+		    monitor_debug( "Saw job $job_id terminated\n" ,2);
 
 		    # decrement # of queued jobs so we will know when to exit monitor
 		    $num_active_jobs--;
@@ -1012,11 +1013,11 @@ sub Monitor
 		    # abnormal termination
 		    elsif( $line =~ /^\s+\(0\) Abnormal termination \(signal (\d+)\)/ )
 		    {
-			debug( "Loading $1 as info{'signal'}\n" ,1);
+			monitor_debug( "Loading $1 as info{'signal'}\n" ,1);
 			$info{'signal'} = $1;
 			#print "keys:".join(" ",keys %info)."\n";
 
-			debug( "checking for core file...\n" ,1);
+			monitor_debug( "checking for core file...\n" ,1);
 
 			# read next line to find core file
 			$line = <SUBMIT_LOG>;
@@ -1048,14 +1049,12 @@ sub Monitor
 			}
 			elsif( $line =~ /^\s+\(0\) No core file/ )
 			{
-			    debug( "no core file found\n" ,5);
+			    monitor_debug( "no core file found\n" ,5);
 			    # not sure what to do here with $info{'core'}...
 			}
 			else
 			{
-			    die( "parse error on line $linenum of $info{'log'}:\n" .
-				   "   no core file message found after " .
-				   "abornal termination: continuing...\n" );
+			    monitor_debug( "parse error on line $linenum of $info{'log'}:\n\tno core file message found after abornal termination: continuing...\n", 1);
 			}
 			# execute callback if one is registered
 			&$ExitedAbnormalCallback( %info )
@@ -1063,9 +1062,7 @@ sub Monitor
 		    }
 		    else
 		    {
-			debug( "parse error on line $linenum of $info{'log'}:\n" .
-			       "   no termination status message found after " .
-			       "termination: continuing...\n" ,2);
+			monitor_debug( "parse error on line $linenum of $info{'log'}:\n\tno termination status message found after termination. continuing...\n" , 2);
 			# re-parse line so we don't miss whatever it said
 			goto PARSE;
 		    }
@@ -1078,8 +1075,9 @@ sub Monitor
 		    $info{'cluster'} = $1;
 		    $info{'job'} = $2;
 			$info{'imagesize'} = $3;
+			my $job_id = "$1.$2";
 
-		    debug( "Saw Image Size Update <$3>\n" ,2);
+		    monitor_debug( "Saw Image Size Update <$3> for job $job_id\n" ,2);
 
 		    # read next line to see current Megs
 		    $line = <SUBMIT_LOG>;
@@ -1108,7 +1106,7 @@ sub Monitor
 			# Grab current memory in Megs
 			if($line =~ /^\s*(\d+).*$/) {
 				$info{'megs'} = $1;
-				debug( "Memory usage $1 (MB)\n",2);
+				monitor_debug( "Memory usage $1 (MB)\n",2);
 			}
 
 		    # read next line to see current RSS
@@ -1138,7 +1136,7 @@ sub Monitor
 			# Grab current memory in Megs
 			if($line =~ /^\s*(\d+).*$/) {
 				$info{'rss'} = $1;
-				debug( "RSS usage $1 (K)\n",2);
+				monitor_debug( "RSS usage $1 (K)\n",2);
 			}
 
 			# execute callback if one is registered
@@ -1157,8 +1155,9 @@ sub Monitor
 		{
 		    $info{'cluster'} = $1;
 		    $info{'job'} = $2;
+		    my $job_id = "$1.$2";
 
-		    debug( "Saw Shadow Exception\n" ,2);
+		    monitor_debug( "Saw Shadow Exception for job $job_id\n" ,2);
 
 			if(! defined $ShadowCallback)
 			{
@@ -1207,8 +1206,9 @@ sub Monitor
 		{
 		    $info{'cluster'} = $1;
 		    $info{'job'} = $2;
+		    my $job_id = "$1.$2";
 
-		    debug( "Saw Job Disconnected\n" ,1);
+		    monitor_debug( "Saw Job $job_id Disconnected\n" ,1);
 
 		    # read next line to see cause
 		    $line = <SUBMIT_LOG>;
@@ -1274,8 +1274,9 @@ sub Monitor
 		{
 		    $info{'cluster'} = $1;
 		    $info{'job'} = $2;
+		    my $job_id = "$1.$2";
 
-		    debug( "Saw Job Reconnected\n" ,1);
+		    monitor_debug( "Saw Job $job_id Reconnected\n" ,1);
 
 		    # read next line to see cause
 		    $line = <SUBMIT_LOG>;
@@ -1341,9 +1342,9 @@ sub Monitor
 		{
 		    $info{'cluster'} = $1;
 		    $info{'job'} = $2;
+		    my $job_id = "$1.$2";
 
-		    debug( "Saw Job Reconnect Fail\n" ,2);
-			print "Saw reconnect fail\n";
+		    monitor_debug( "Saw Job $job_id Reconnect Fail\n" , 1);
 
 		    # read next line to see cause
 		    $line = <SUBMIT_LOG>;
@@ -1409,8 +1410,9 @@ sub Monitor
 		{
 		    $info{'cluster'} = $1;
 		    $info{'job'} = $2;
+		    my $job_id = "$1.$2";
 
-		    debug( "Saw Job Suspended\n" ,1);
+		    monitor_debug( "Saw Job $job_id Suspended\n" ,1);
 
 		    # read next line to see processes affected
 		    $line = <SUBMIT_LOG>;
@@ -1450,8 +1452,9 @@ sub Monitor
 		{
 		    $info{'cluster'} = $1;
 		    $info{'job'} = $2;
+		    my $job_id = "$1.$2";
 
-		    debug( "Saw Job Unsuspended\n" ,1);
+		    monitor_debug( "Saw Job $job_id Unsuspended\n" ,1);
 
 			# execute callback if one is registered
 			&$UnsuspendedCallback( %info )
@@ -1468,11 +1471,13 @@ sub Monitor
 		    $info{'job'} = $2;
 		    $info{'sinful'} = $3;
 		    $info{'host'} = $3;
+		    my $job_id = "$1.$2";
+
 		    # Strip off the < and > from a sinful string for 'host'
 		    # For grid universe jobs, there won't be any
 		    $info{'host'} =~ s/^<([^>]+)>/$1/;
 		    
-		    debug( "Saw job executing\n" ,2);
+		    monitor_debug( "Saw job $job_id executing\n" ,2);
 
 		    # execute callback if one is registered
 		    &$ExecuteCallback( %info )
@@ -1489,8 +1494,9 @@ sub Monitor
 		    $info{'job'} = $2;
 		    $info{'host'} = $3;
 		    $info{'sinful'} = "<$3>";
+		    my $job_id = "$1.$2";
 
-		    debug( "Saw job submitted\n" ,2);
+		    monitor_debug( "Saw job $job_id submitted\n" ,2);
 		    $submit_info{'cluster'} = $1; # squirrel it away for TimedWait
 
 		    # mark that we've seen a submit so we can start watching # of jobs
@@ -1510,8 +1516,9 @@ sub Monitor
 		{
 		    $info{'cluster'} = $1;
 		    $info{'job'} = $2;
+		    my $job_id = "$1.$2";
 
-		    debug( "Saw job abort cluster $1 job $2\n" ,2);
+		    monitor_debug( "Saw job $job_id aborted by user\n" ,2);
 
 		    # decrement # of queued jobs so we will know when to exit monitor
 		    $num_active_jobs--;
@@ -1528,6 +1535,7 @@ sub Monitor
 		    $info{'job'} = $2;
 		    #$info{'host'} = $3;
 		    #$info{'sinful'} = "<$3:$4>";
+			my $job_id = "$1.$2";
 		    
 		    # read next line to see how job was held
 		    $line = <SUBMIT_LOG>;
@@ -1555,7 +1563,7 @@ sub Monitor
 
 			$info{'holdreason'} = $line;
 
-		    debug( "Saw job held\n" ,1);
+		    monitor_debug( "Saw job $job_id held\n" ,1);
 
 		    
 		    # execute callback if one is registered
@@ -1570,8 +1578,9 @@ sub Monitor
 		    $info{'job'} = $2;
 		    #$info{'host'} = $3;
 		    #$info{'sinful'} = "<$3:$4>";
+			my $job_id = "$1.$2";
 		    
-		    debug( "Saw job released\n" ,1);
+		    monitor_debug( "Saw job $job_id released\n" ,1);
 
 		    
 		    # execute callback if one is registered
@@ -1599,8 +1608,9 @@ sub Monitor
 		    $info{'date'} = $3;
 		    $info{'time'} = $4;
 		    $info{'ulog'} = $5;
+		    my $job_id = "$1.$2";
 
-		    debug( "Saw job ulog cluster $1 job $2 : $5\n" ,1);
+		    monitor_debug( "Saw job $job_id ulog: $5\n" ,1);
 
 		    &$ULogCallback( %info )
 			if defined $ULogCallback;
@@ -1616,19 +1626,9 @@ sub MultiMonitor
     my $line;
     #my %info;
 	my $timestamp = 0;
+	my $userlogcnt = @userlogs;
 
-    debug( "Entering Monitor\n" ,5);
-	print "Entering MultiMonitor\n";
-
-# commented out until we can do it right -- pfc
-
-#    # fork new process
-#    $pid = fork();
-#    die "error: fork() failed: $!\n" unless defined $pid;
-#    # if we're the parent, return
-#    return if $pid;
- 
-
+	debug( "MultiMonitor (Mon$$) Beginning eventlog monitor with $userlogcnt logs.\n" , 1);
 
 # 4/3/2015 bt
 # as we start to test codnor_submit foreach, our clusters are more disperse
@@ -1638,18 +1638,13 @@ sub MultiMonitor
 # if $submit_info{'log'} is valid, go with it for now. At this point we have filled @userlogs
 # and we might want to iterate though that array and Monitor each one sequentialy.
 
-    debug( "In MultiMonitor\n" ,6);
-
 	my $reallog = "";
-	my $userlogcnt = @userlogs;
 	my $thislog = 0;
 	my @children = ();
 	my $mypid = 0;
 
-	print "We are in the MultiMonitor with $userlogcnt logs\n";
-
 	foreach my $log (@userlogs) {
-		print "Logs being extracted in MultiMonitor:$log:\n";
+		print "\t$log\n";
 		open(SUBMIT_LOG,"<$log") or die "MultiMonitor failed to open $log for about to be child:$!\n";
 		$mypid = fork();
 		if($mypid == 0) {
@@ -1669,8 +1664,7 @@ sub MultiMonitor
 
 		if( $saw_submit && $num_active_jobs == 0 )
 		{
-		    	debug( "num_active_jobs = $num_active_jobs -- monitor returning\n" ,5);
-				#print "num_active_jobs = $num_active_jobs -- monitor returning\n";
+		    	monitor_debug( "exiting monitor because num_active_jobs=$num_active_jobs\n" , 1);
 		    	exit(0);
 		}
 
@@ -1725,7 +1719,7 @@ sub MultiMonitor
 		# if this line is for another cluster, ignore
 		if ( $line =~ /^\d+\s+\(0*(\d+)\./ && $1 != $cluster )
 		{
-		    #debug( "log line for cluster $1, not $cluster -- ignoring...\n" ,1);
+		    #monitor_debug( "log line for cluster $1, not $cluster -- ignoring...\n" ,1);
 		    next LINE;
 		}
 		
@@ -1735,7 +1729,7 @@ sub MultiMonitor
 		    $info{'cluster'} = $1;
 		    $info{'job'} = $2;
 
-		    debug( "Saw job ($1.$2) evicted\n" ,2);
+		    monitor_debug( "Saw job $1.$2 evicted\n" ,2);
 
 		    # read next line to see if job was checkpointed (but first
 		    # sleep for 5 seconds to give it a chance to appear)
@@ -1766,7 +1760,7 @@ sub MultiMonitor
 
 		    if( $line =~ /^\s+\(0\) Job was not checkpointed\./ )
 		    {
-			debug( "job was evicted without ckpt\n" ,2);
+			monitor_debug( "job was evicted without ckpt\n" ,2);
 			# execute callback if one is registered
 			&$EvictedWithoutCheckpointCallback( %info )
 			    if defined $EvictedWithoutCheckpointCallback;
@@ -1774,24 +1768,21 @@ sub MultiMonitor
 		    }
 		    elsif( $line =~ /^\s+\(1\) Job was checkpointed\./ )
 		    {
-			debug( "job was evicted with ckpt\n" ,2);
+			monitor_debug( "job was evicted with ckpt\n" ,2);
 			# execute callback if one is registered
 			&$EvictedWithCheckpointCallback( %info )
 			    if defined $EvictedWithCheckpointCallback;
 		    }
 		    elsif( $line =~ /^\s+\(0\) Job terminated and was requeued.*$/ )
 		    {
-			debug( "job was evicted and requeued\n" ,2);
+			monitor_debug( "job was evicted and requeued\n" ,2);
 			# execute callback if one is registered
 			&$EvictedWithRequeueCallback( %info )
 			    if defined $EvictedWithRequeueCallback;
 		    }
 		    else
 		    {
-			debug( "parse error on line $linenum of $info{'log'}:\n" .
-			       "   no checkpoint message found after eviction: " .
-			       "continuing...\n" ,1);
-			debug( "Eviction type expected:<$line>\n", 1);
+			monitor_debug( "parse error on line $linenum of $info{'log'}:\n\tno checkpoint message found after eviction. continuing...\n", 1);
 			# re-parse line so we don't miss whatever it said
 			goto PARSE;
 		    }
@@ -1810,7 +1801,7 @@ sub MultiMonitor
 		    $info{'cluster'} = $1;
 		    $info{'job'} = $2;
 
-		    debug( "Saw job terminated\n" ,2);
+		    monitor_debug( "Saw job terminated\n" ,2);
 
 		    # decrement # of queued jobs so we will know when to exit monitor
 		    $num_active_jobs--;
@@ -1862,11 +1853,11 @@ sub MultiMonitor
 		    # abnormal termination
 		    elsif( $line =~ /^\s+\(0\) Abnormal termination \(signal (\d+)\)/ )
 		    {
-			debug( "Loading $1 as info{'signal'}\n" ,1);
+			monitor_debug( "Loading $1 as info{'signal'}\n" ,1);
 			$info{'signal'} = $1;
 			#print "keys:".join(" ",keys %info)."\n";
 
-			debug( "checking for core file...\n" ,1);
+			monitor_debug( "checking for core file...\n" ,1);
 
 			# read next line to find core file
 			$line = <SUBMIT_LOG>;
@@ -1898,14 +1889,12 @@ sub MultiMonitor
 			}
 			elsif( $line =~ /^\s+\(0\) No core file/ )
 			{
-			    debug( "no core file found\n" ,5);
+			    monitor_debug( "no core file found\n" ,5);
 			    # not sure what to do here with $info{'core'}...
 			}
 			else
 			{
-			    die( "parse error on line $linenum of $info{'log'}:\n" .
-				   "   no core file message found after " .
-				   "abornal termination: continuing...\n" );
+			    monitor_debug( "parse error on line $linenum of $info{'log'}:\n\tno core file message found after abornal termination: continuing...\n", 1);
 			}
 			# execute callback if one is registered
 			&$ExitedAbnormalCallback( %info )
@@ -1913,9 +1902,7 @@ sub MultiMonitor
 		    }
 		    else
 		    {
-			debug( "parse error on line $linenum of $info{'log'}:\n" .
-			       "   no termination status message found after " .
-			       "termination: continuing...\n" ,2);
+			monitor_debug( "parse error on line $linenum of $info{'log'}:\n\tno termination status message found after termination: continuing...\n" , 2);
 			# re-parse line so we don't miss whatever it said
 			goto PARSE;
 		    }
@@ -1929,7 +1916,7 @@ sub MultiMonitor
 		    $info{'job'} = $2;
 			$info{'imagesize'} = $3;
 
-		    debug( "Saw Image Size Update <$3>\n" ,2);
+		    monitor_debug( "Saw Image Size Update <$3>\n" ,2);
 
 		    # read next line to see current Megs
 		    $line = <SUBMIT_LOG>;
@@ -1958,7 +1945,7 @@ sub MultiMonitor
 			# Grab current memory in Megs
 			if($line =~ /^\s*(\d+).*$/) {
 				$info{'megs'} = $1;
-				debug( "Memory usage $1 (MB)\n",2);
+				monitor_debug( "Memory usage $1 (MB)\n",2);
 			}
 
 		    # read next line to see current RSS
@@ -1988,7 +1975,7 @@ sub MultiMonitor
 			# Grab current memory in Megs
 			if($line =~ /^\s*(\d+).*$/) {
 				$info{'rss'} = $1;
-				debug( "RSS usage $1 (K)\n",2);
+				monitor_debug( "RSS usage $1 (K)\n",2);
 			}
 
 			# execute callback if one is registered
@@ -2008,7 +1995,7 @@ sub MultiMonitor
 		    $info{'cluster'} = $1;
 		    $info{'job'} = $2;
 
-		    debug( "Saw Shadow Exception\n" ,2);
+		    monitor_debug( "Saw Shadow Exception\n" ,2);
 
 			if(! defined $ShadowCallback)
 			{
@@ -2058,7 +2045,7 @@ sub MultiMonitor
 		    $info{'cluster'} = $1;
 		    $info{'job'} = $2;
 
-		    debug( "Saw Job Disconnected\n" ,1);
+		    monitor_debug( "Saw Job Disconnected\n" ,1);
 
 		    # read next line to see cause
 		    $line = <SUBMIT_LOG>;
@@ -2125,7 +2112,7 @@ sub MultiMonitor
 		    $info{'cluster'} = $1;
 		    $info{'job'} = $2;
 
-		    debug( "Saw Job Reconnected\n" ,1);
+		    monitor_debug( "Saw Job Reconnected\n" ,1);
 
 		    # read next line to see cause
 		    $line = <SUBMIT_LOG>;
@@ -2192,7 +2179,7 @@ sub MultiMonitor
 		    $info{'cluster'} = $1;
 		    $info{'job'} = $2;
 
-		    debug( "Saw Job Reconnect Fail\n" ,2);
+		    monitor_debug( "Saw Job Reconnect Fail\n" ,2);
 			print "Saw reconnect fail\n";
 
 		    # read next line to see cause
@@ -2260,7 +2247,7 @@ sub MultiMonitor
 		    $info{'cluster'} = $1;
 		    $info{'job'} = $2;
 
-		    debug( "Saw Job Suspended\n" ,1);
+		    monitor_debug( "Saw Job Suspended\n" ,1);
 
 		    # read next line to see processes affected
 		    $line = <SUBMIT_LOG>;
@@ -2301,7 +2288,7 @@ sub MultiMonitor
 		    $info{'cluster'} = $1;
 		    $info{'job'} = $2;
 
-		    debug( "Saw Job Unsuspended\n" ,1);
+		    monitor_debug( "Saw Job Unsuspended\n" ,1);
 
 			# execute callback if one is registered
 			&$UnsuspendedCallback( %info )
@@ -2322,7 +2309,7 @@ sub MultiMonitor
 		    # For grid universe jobs, there won't be any
 		    $info{'host'} =~ s/^<([^>]+)>/$1/;
 		    
-		    debug( "Saw job executing\n" ,2);
+		    monitor_debug( "Saw job executing\n" ,2);
 
 		    # execute callback if one is registered
 		    &$ExecuteCallback( %info )
@@ -2340,7 +2327,7 @@ sub MultiMonitor
 		    $info{'host'} = $3;
 		    $info{'sinful'} = "<$3>";
 
-		    debug( "Saw job submitted\n" ,2);
+		    monitor_debug( "Saw job submitted\n" ,2);
 		    $submit_info{'cluster'} = $1; # squirrel it away for TimedWait
 
 		    # mark that we've seen a submit so we can start watching # of jobs
@@ -2361,7 +2348,7 @@ sub MultiMonitor
 		    $info{'cluster'} = $1;
 		    $info{'job'} = $2;
 
-		    debug( "Saw job abort cluster $1 job $2\n" ,2);
+		    monitor_debug( "Saw job abort cluster $1 job $2\n" ,2);
 
 		    # decrement # of queued jobs so we will know when to exit monitor
 		    $num_active_jobs--;
@@ -2395,7 +2382,7 @@ sub MultiMonitor
 
 			$info{'holdreason'} = $line;
 
-		    debug( "Saw job held\n" ,1);
+		    monitor_debug( "Saw job held\n" ,1);
 
 		    
 		    # execute callback if one is registered
@@ -2411,7 +2398,7 @@ sub MultiMonitor
 		    #$info{'host'} = $3;
 		    #$info{'sinful'} = "<$3:$4>";
 		    
-		    debug( "Saw job released\n" ,1);
+		    monitor_debug( "Saw job released\n" ,1);
 
 		    
 		    # execute callback if one is registered
@@ -2440,7 +2427,7 @@ sub MultiMonitor
 		    $info{'time'} = $4;
 		    $info{'ulog'} = $5;
 
-		    debug( "Saw job ulog cluster $1 job $2 : $5\n" ,1);
+		    monitor_debug( "Saw job ulog cluster $1 job $2 : $5\n" ,1);
 
 		    &$ULogCallback( %info )
 			if defined $ULogCallback;
@@ -2476,10 +2463,10 @@ sub MultiMonitor
 		}
 	}
 	if($accumulatedreturn == 0) {
-		print "all children ran clean\n";
+		monitor_debug ("leaving eventlog monitor. All children ran clean\n", 1);
 		return(1);
 	} else {
-		print "one or more of the children children had issues\n";
+		monitor_debug ("leaving eventlog montior. One or more of the children had issues\n", 1);
 		return(0);
 	}
 }
@@ -2492,11 +2479,11 @@ sub CheckCLTimedCallback
 
 	$timestamp = time; #get current time
 	$diff = $timestamp - $timer_CLtime;
-	debug("Delta for timer is $diff\n",6);
+	monitor_debug("Delta for timer is $diff\n",6);
 	if( $diff >= $CLTimedCallbackWait)
 	{
 		#call timed callback
-		debug("Called timed callback!!!!!!-- $cluster --\n",5);
+		monitor_debug("Called timed callback-- $cluster --\n",5);
 		if(defined $CLTimedCallback) {
 			my $tempcallback = $CLTimedCallback; # save and removed callback request
 			RemoveCLTimed();
@@ -2513,11 +2500,11 @@ sub CheckSJTimedCallback
 
 	$timestamp = time; #get current time
 	$diff = $timestamp - $timer_SJtime;
-	debug("Delta for timer is $diff\n",6);
+	monitor_debug("Delta for timer is $diff\n",6);
 	if( $diff >= $SJTimedCallbackWait)
 	{
 		#call timed callback
-		debug("Called timed callback!!!!!!-- $cluster --\n",5);
+		monitor_debug("Called timed callback-- $cluster --\n",5);
 		if(defined $SJTimedCallback) {
 			my $tempcallback = $SJTimedCallback; # save and removed callback request
 			RemoveSJTimed();
@@ -2534,11 +2521,11 @@ sub CheckTimedCallback
 
 	$timestamp = time; #get current time
 	$diff = $timestamp - $timer_time;
-	debug("Delta for timer is $diff\n",6);
+	monitor_debug("Delta for timer is $diff\n",6);
 	if( $diff >= $TimedCallbackWait)
 	{
 		#call timed callback
-		debug("Called timed callback!!!!!!-- $cluster --\n",5);
+		monitor_debug("Called timed callback-- $cluster --\n",5);
 		if(defined $TimedCallback) {
 			my $tempcallback = $TimedCallback; # save and removed callback request
 			RemoveTimed();
@@ -2567,10 +2554,10 @@ sub debug {
     my ($msg, $level) = @_;
     
     if(!(defined $level)) {
-    	print timestamp() . ": $msg";
+    	print timestamp() . " $msg";
     }
     elsif($level <= $DEBUGLEVEL) {
-    	print timestamp() . ": $msg";
+    	print timestamp() . " $msg";
     }
 }
 
@@ -2587,7 +2574,7 @@ sub ParseSubmitFile
     my $line = 0;
 	my $variable;
 	my $value;
-	my $drydatafile = CondorTest::TempFileName("fetchdrydata");
+	#my $drydatafile = CondorTest::TempFileName("fetchdrydata");
 
     if( ! open( SUBMIT_FILE, $submit_file ) )
     {
@@ -2595,13 +2582,12 @@ sub ParseSubmitFile
 		return 0;
     }
     
-    debug( "reading submit file...\n" ,5);
-    #print "reading submit file...\n";
+    debug( "  reading submit file $submit_file\n" ,5);
 
 	#print "Seeing how many user logs there are\n";
 
 	# this could be a condor_submit foreach syntax expansion test
-	GatherUserLogs($submit_file,$drydatafile);
+	GatherUserLogs($submit_file,"-");
 
     while( <SUBMIT_FILE> )
     {
@@ -2641,20 +2627,18 @@ sub ParseSubmitFile
 		    if( $value =~ /(.*)\$ENV\((.*)\)(.*)/ )
 		    {
 				my $envlookup = $ENV{$2};
-		    	debug( "Found $envlookup in environment \n",6);
+		    	debug( "  Found $envlookup in environment \n", 6);
 				$value = $1.$envlookup.$3;
 		    }
 
-		    debug( "$variable = $value\n" ,5);
-			#print "ParseSubmitFile:$variable = $value\n"; 
+		    debug( "  $variable = $value\n" ,5);
 		    
 		    # save the variable/value pair
 		    $submit_info{$variable} = $value;
 		}
 		else
 		{
-		    debug( "line $line of $submit_file not a variable assignment... " .
-			   "skipping\n" ,6);
+		    debug( "  line $line of $submit_file not a variable assignment... skipping\n", 6);
 			#print "ParseSubmitFile: $_ not variable assignment\n";
 		}
     }
@@ -2665,7 +2649,7 @@ sub ParseSubmitFile
 sub AccessUserLogs {
 	my $arrayref = shift;
 	my $count = @userlogs;
-	print "transferring $count UserLogs to CondorTest module\n";
+	debug("  transferring $count UserLogs to CondorTest module\n", 3);
 	foreach my $log (@userlogs) {
 		push @{$arrayref}, $log;
 	}
@@ -2727,13 +2711,12 @@ sub safe_WEXITSTATUS {
 #
 sub GatherUserLogs {
 	my $submitfile = shift;
-	my $drydatafile = shift;
+	#my $drydatafile = shift;
 	my $arrayref;
 	my $logcount = 0;
 	my @tmplogs = ();
-	print "No longer assuming one log file because of submit foreach\n";
-	print "Exploring logs in GatherUserLogs\n";
-	$arrayref = GatherDryData($submitfile,$drydatafile);
+
+	$arrayref = GatherDryData($submitfile,"-");
 	# store dry data in expected locaton
 	foreach my $line (@{$arrayref}) {
 		push @submitdrydata, $line;
@@ -2745,15 +2728,14 @@ sub GatherUserLogs {
 		}
 	}
 	$logcount = @userlogs;
-	print "Found $logcount userlogs\n";
 	foreach my $log (@userlogs) {
-		print "userlog:$log\n";
+		debug("  GatherUserLogs: found $log\n", 4);
 	}
 	# how many jobs did this submit produce
 	@tmplogs = ();
 	DryExtract(\@submitdrydata,\@tmplogs,"ProcId");
 	$dryrun_jobcount = @tmplogs;
-	print "There are  $logcount logs and $dryrun_jobcount jobs\n";
+	debug ("  GatherUserLogs found $logcount logs and $dryrun_jobcount jobs\n", 3);
 }
 
 sub CheckAllowed {
@@ -2763,21 +2745,22 @@ sub CheckAllowed {
 	if(exists $AllowedEvents{$event}) {
 		#print "$event allowed for $test: $mesg\n";
 	} else {
-		die "$test: FAILURE $mesg\n";
+		die "$test: FAILED $mesg\n";
 	}
 }
 
 sub SetAllowedEvents {
 	my $allowed = shift;
 	my @block = split /,/, $allowed;
-	#print "Allowing events\n";
+	debug ("SetAllowedEvents events called for events:\n", 1);
 	foreach my $item (@block) {
-		#print "$item\n";
+		if ($DEBUGLEVEL >= 1) { print "\t$item\n"; }
 		$AllowedEvents{$item} = 1;
 	}
 }
 
 sub ClearAllowedEvents {
+	debug ("ClearAllowedEvents events called. clearing events.\n", 1);
 	%AllowedEvents = ();
 }
 

@@ -289,7 +289,6 @@ ULogEvent::readHeader (FILE *file)
 					 &(eventTime.tm_mon), &(eventTime.tm_mday),
 					 &(eventTime.tm_hour), &(eventTime.tm_min),
 					 &(eventTime.tm_sec));
-
 	// check if all fields were successfully read
 	if (retval != 8)
 	{
@@ -298,6 +297,9 @@ ULogEvent::readHeader (FILE *file)
 
 	// recall that tm_mon+1 was written to log; decrement to compensate
 	eventTime.tm_mon--;
+		// Need to set eventclock here, otherwise eventclock and
+		// eventTime will not match!!  (See gittrac #5468.)
+	eventclock = mktime( &eventTime );
 
 	return 1;
 }
@@ -313,16 +315,17 @@ bool ULogEvent::formatHeader( std::string &out )
 					  "%03d (%03d.%03d.%03d) %02d/%02d %02d:%02d:%02d.%06d ",
 					  eventNumber,
 					  cluster, proc, subproc,
-					  eventTime.tm_mon+1, eventTime.tm_mday,
-					  eventTime.tm_hour, eventTime.tm_min, eventTime.tm_sec, (int)eventTimeval.tv_usec);
+					  GetEventTime().tm_mon+1, GetEventTime().tm_mday,
+					  GetEventTime().tm_hour, GetEventTime().tm_min,
+					  GetEventTime().tm_sec, (int)eventTimeval.tv_usec);
 #else
 	retval = formatstr_cat(out,
 					  "%03d (%03d.%03d.%03d) %02d/%02d %02d:%02d:%02d ",
 					  eventNumber,
 					  cluster, proc, subproc,
-					  eventTime.tm_mon+1, eventTime.tm_mday,
-					  eventTime.tm_hour, eventTime.tm_min, eventTime.tm_sec);
-
+					  GetEventTime().tm_mon+1, GetEventTime().tm_mday,
+					  GetEventTime().tm_hour, GetEventTime().tm_min,
+					  GetEventTime().tm_sec);
 #endif
 
 	// check if all fields were sucessfully written
@@ -438,8 +441,7 @@ ULogEvent::toClassAd(void)
 		return NULL;
 	}
 
-	const struct tm tmdup = eventTime;
-	char* eventTimeStr = time_to_iso8601(tmdup, ISO8601_ExtendedFormat,
+	char* eventTimeStr = time_to_iso8601(eventTime, ISO8601_ExtendedFormat,
 										 ISO8601_DateAndTime, FALSE);
 	if( eventTimeStr ) {
 		if ( !myad->InsertAttr("EventTime", eventTimeStr) ) {
@@ -489,6 +491,9 @@ ULogEvent::initFromClassAd(ClassAd* ad)
 	if( ad->LookupString("EventTime", &timestr) ) {
 		bool f = FALSE;
 		iso8601_to_time(timestr, &eventTime, &f);
+			// Need to set eventclock here, otherwise eventclock and
+			// eventTime will not match!!  (See gittrac #5468.)
+		eventclock = mktime( &eventTime );
 		free(timestr);
 	}
 	ad->LookupInteger("Cluster", cluster);
@@ -1446,7 +1451,7 @@ RemoteErrorEvent::formatBody( std::string &out )
 				 execute_host);
 
 		if (critical_error) {
-			tmpCl1.Assign("endts", (int)eventclock);
+			tmpCl1.Assign("endts", (int)GetEventclock());
 			tmpCl1.Assign("endtype", ULOG_REMOTE_ERROR);
 			tmpCl1.Assign("endmessage", messagestr);
 
@@ -1471,7 +1476,7 @@ RemoteErrorEvent::formatBody( std::string &out )
 			insertCommonIdentifiers(tmpCl1);
 
 			tmpCl1.Assign("eventtype", ULOG_REMOTE_ERROR);
-			tmpCl1.Assign("eventtime", (int)eventclock);
+			tmpCl1.Assign("eventtime", (int)GetEventclock());
 			tmpCl1.Assign("description", messagestr);
 
 			if (FILEObj->file_newEvent("Events", &tmpCl1) == QUILL_FAILURE) {
@@ -1739,7 +1744,7 @@ ExecuteEvent::formatBody( std::string &out )
 
 		dprintf(D_FULLDEBUG, "Executehost name = %s\n", remoteName ? remoteName : "" );
 
-		tmpCl1.Assign("endts", (int)eventclock);
+		tmpCl1.Assign("endts", (int)GetEventclock());
 
 		tmp.formatstr("endtype = -1");
 		tmpCl1.Insert(tmp.Value());
@@ -1766,7 +1771,7 @@ ExecuteEvent::formatBody( std::string &out )
 		// this inserts scheddname, cluster, proc, etc
 		insertCommonIdentifiers(tmpCl3);
 
-		tmpCl3.Assign("startts", (int)eventclock);
+		tmpCl3.Assign("startts", (int)GetEventclock());
 
 		if (FILEObj->file_newEvent("Runs", &tmpCl3) == QUILL_FAILURE) {
 			dprintf(D_ALWAYS, "Logging Event 1--- Error\n");
@@ -1861,7 +1866,7 @@ ExecutableErrorEvent::formatBody( std::string &out )
 		ClassAd tmpCl1, tmpCl2;
 		MyString tmp = "";
 
-		tmpCl1.Assign("endts", (int)eventclock);
+		tmpCl1.Assign("endts", (int)GetEventclock());
 		tmpCl1.Assign("endtype", ULOG_EXECUTABLE_ERROR);
 		tmpCl1.Assign("endmessage", messagestr);
 
@@ -1982,7 +1987,7 @@ CheckpointedEvent::formatBody( std::string &out )
 		insertCommonIdentifiers(tmpCl1);
 
 		tmpCl1.Assign("eventtype", ULOG_CHECKPOINTED);
-		tmpCl1.Assign("eventtime", (int)eventclock);
+		tmpCl1.Assign("eventtime", (int)GetEventclock());
 
 		tmpCl1.Assign("description", messagestr);
 
@@ -2377,7 +2382,7 @@ JobEvictedEvent::formatBody( std::string &out )
 			}
 		}
 
-		tmpCl1.Assign("endts", (int)eventclock);
+		tmpCl1.Assign("endts", (int)GetEventclock());
 		tmpCl1.Assign("endtype", ULOG_JOB_EVICTED);
 
 		tmp.formatstr( "endmessage = \"%s%s\"", messagestr, terminatestr);
@@ -2581,7 +2586,7 @@ JobAbortedEvent::formatBody( std::string &out )
 		insertCommonIdentifiers(tmpCl1);
 
 		tmpCl1.Assign("eventtype", ULOG_JOB_ABORTED);
-		tmpCl1.Assign("eventtime", (int)eventclock);
+		tmpCl1.Assign("eventtime", (int)GetEventclock());
 		tmpCl1.Assign("description", messagestr);
 
 		if (FILEObj->file_newEvent("Events", &tmpCl1) == QUILL_FAILURE) {
@@ -2785,7 +2790,7 @@ TerminatedEvent::formatBody( std::string &out, const char *header )
 		// this inserts scheddname, cluster, proc, etc
 		insertCommonIdentifiers(tmpCl2);
 
-		tmpCl2.Assign("endts", (int)eventclock);
+		tmpCl2.Assign("endts", (int)GetEventclock());
 
 		if (FILEObj->file_updateEvent("Runs", &tmpCl1, &tmpCl2) == QUILL_FAILURE) {
 			dprintf(D_ALWAYS, "Logging Event 3--- Error\n");
@@ -2935,7 +2940,7 @@ JobTerminatedEvent::formatBody( std::string &out )
 		ClassAd tmpCl1, tmpCl2;
 		MyString tmp = "";
 
-		tmpCl1.Assign("endts", (int)eventclock);
+		tmpCl1.Assign("endts", (int)GetEventclock());
 		tmpCl1.Assign("endtype", ULOG_JOB_TERMINATED);
 
 		// this inserts scheddname, cluster, proc, etc
@@ -3110,20 +3115,20 @@ JobImageSizeEvent::~JobImageSizeEvent(void)
 bool
 JobImageSizeEvent::formatBody( std::string &out )
 {
-	if (formatstr_cat( out, "Image size of job updated: %" PRId64"\n", image_size_kb ) < 0)
+	if (formatstr_cat( out, "Image size of job updated: %lld\n", image_size_kb ) < 0)
 		return false;
 
 	// when talking to older starters, memory_usage, rss & pss may not be set
 	if (memory_usage_mb >= 0 && 
-		formatstr_cat( out, "\t%" PRId64"  -  MemoryUsage of job (MB)\n", memory_usage_mb ) < 0)
+		formatstr_cat( out, "\t%lld  -  MemoryUsage of job (MB)\n", memory_usage_mb ) < 0)
 		return false;
 
 	if (resident_set_size_kb >= 0 &&
-		formatstr_cat( out, "\t%" PRId64"  -  ResidentSetSize of job (KB)\n", resident_set_size_kb ) < 0)
+		formatstr_cat( out, "\t%lld  -  ResidentSetSize of job (KB)\n", resident_set_size_kb ) < 0)
 		return false;
 
 	if (proportional_set_size_kb >= 0 &&
-		formatstr_cat( out, "\t%" PRId64"  -  ProportionalSetSize of job (KB)\n", proportional_set_size_kb ) < 0)
+		formatstr_cat( out, "\t%lld  -  ProportionalSetSize of job (KB)\n", proportional_set_size_kb ) < 0)
 		return false;
 
 	return true;
@@ -3134,7 +3139,7 @@ int
 JobImageSizeEvent::readEvent (FILE *file)
 {
 	int retval;
-	if ((retval=fscanf(file,"Image size of job updated: %" PRId64, &image_size_kb)) != 1)
+	if ((retval=fscanf(file,"Image size of job updated: %lld\n", &image_size_kb)) != 1)
 		return 0;
 
 	// These fields were added to this event in 2012, so we need to tolerate the
@@ -3145,7 +3150,6 @@ JobImageSizeEvent::readEvent (FILE *file)
 
 	for (;;) {
 		char sz[250];
-		char lbl[48+1];
 
 		// if we hit end of file or end of record "..." rewind the file pointer.
 		fpos_t filep;
@@ -3156,13 +3160,35 @@ JobImageSizeEvent::readEvent (FILE *file)
 			break;
 		}
 
-		int64_t val; lbl[0] = 0;
-		if (2 == sscanf(sz, "\t%" PRId64"  -  %48s", &val, lbl)) {
-			if (!strcmp(lbl,"MemoryUsage")) {
+		// line should be a number, followed by "  -  " followed by an attribute name
+		// parse the number, then find the start of the attribute and null terminate it.
+		char * p = sz;
+		const char * lbl = NULL;
+		while (*p && isspace(*p)) ++p;
+		char *endptr = NULL;
+		long long val = strtoll(p,&endptr,10);
+		if (endptr != p && isspace(*endptr)) {
+			p = endptr;
+			while (*p && isspace(*p)) ++p;
+			if (*p == '-')  {
+				++p;
+				while (*p && isspace(*p)) ++p;
+				lbl = p;
+				while (*p && ! isspace(*p)) ++p;
+				*p = 0;
+			}
+		}
+
+		if ( ! lbl) {
+			// rewind the file pointer so we don't consume what we can't parse.
+			fsetpos(file, &filep);
+			break;
+		} else {
+			if (MATCH == strcasecmp(lbl,"MemoryUsage")) {
 				memory_usage_mb = val;
-			} else if (!strcmp(lbl, "ResidentSetSize")) {
+			} else if (MATCH == strcasecmp(lbl, "ResidentSetSize")) {
 				resident_set_size_kb = val;
-			} else if (!strcmp(lbl, "ProportionalSetSize")) {
+			} else if (MATCH == strcasecmp(lbl, "ProportionalSetSize")) {
 				proportional_set_size_kb = val;
 			} else {
 				// rewind the file pointer so we don't consume what we can't parse.
@@ -3180,27 +3206,18 @@ JobImageSizeEvent::toClassAd(void)
 {
 	ClassAd* myad = ULogEvent::toClassAd();
 	if( !myad ) return NULL;
-	char buf0[250];
 
 	if( image_size_kb >= 0 ) {
-		snprintf(buf0, sizeof(buf0), "Size = %" PRId64, image_size_kb);
-		buf0[sizeof(buf0)-1] = 0;
-		if( !myad->Insert(buf0) ) return NULL;
+		if( !myad->Assign("Size", image_size_kb) ) return NULL;
 	}
 	if( memory_usage_mb >= 0 ) {
-		snprintf(buf0, sizeof(buf0), "MemoryUsage = %" PRId64, memory_usage_mb);
-		buf0[sizeof(buf0)-1] = 0;
-		if( !myad->Insert(buf0) ) return NULL;
+		if( !myad->Assign("MemoryUsage", memory_usage_mb) ) return NULL;
 	}
 	if( resident_set_size_kb >= 0 ) {
-		snprintf(buf0, sizeof(buf0), "ResidentSetSize = %" PRId64, resident_set_size_kb);
-		buf0[sizeof(buf0)-1] = 0;
-		if( !myad->Insert(buf0) ) return NULL;
+		if( !myad->Assign("ResidentSetSize", resident_set_size_kb) ) return NULL;
 	}
 	if( proportional_set_size_kb >= 0 ) {
-		snprintf(buf0, sizeof(buf0), "ProportionalSetSize = %" PRId64, proportional_set_size_kb);
-		buf0[sizeof(buf0)-1] = 0;
-		if( !myad->Insert(buf0) ) return NULL;
+		if( !myad->Assign("ProportionalSetSize", proportional_set_size_kb) ) return NULL;
 	}
 
 	return myad;
@@ -3273,7 +3290,7 @@ ShadowExceptionEvent::formatBody( std::string &out )
 			messagestr[strlen(messagestr)-1] = '\0';
 
 		if (began_execution) {
-			tmpCl1.Assign("endts", (int)eventclock);
+			tmpCl1.Assign("endts", (int)GetEventclock());
 			tmpCl1.Assign("endtype", ULOG_SHADOW_EXCEPTION);
 			tmpCl1.Assign("endmessage", messagestr);
 			tmpCl1.Assign("runbytessent", sent_bytes);
@@ -3295,7 +3312,7 @@ ShadowExceptionEvent::formatBody( std::string &out )
 			insertCommonIdentifiers(tmpCl1);
 
 			tmpCl1.Assign("eventtype", ULOG_SHADOW_EXCEPTION);
-			tmpCl1.Assign("eventtime", (int)eventclock);
+			tmpCl1.Assign("eventtime", (int)GetEventclock());
 			tmpCl1.Assign("description", messagestr);
 
 			if (FILEObj->file_newEvent("Events", &tmpCl1) == QUILL_FAILURE) {
@@ -3393,7 +3410,7 @@ JobSuspendedEvent::formatBody( std::string &out )
 		insertCommonIdentifiers(tmpCl1);
 
 		tmpCl1.Assign("eventtype", ULOG_JOB_SUSPENDED);
-		tmpCl1.Assign("eventtime", (int)eventclock);
+		tmpCl1.Assign("eventtime", (int)GetEventclock());
 		tmpCl1.Assign("description", messagestr);
 
 		if (FILEObj->file_newEvent("Events", &tmpCl1) == QUILL_FAILURE) {
@@ -3467,7 +3484,7 @@ JobUnsuspendedEvent::formatBody( std::string &out )
 		insertCommonIdentifiers(tmpCl1);
 
 		tmpCl1.Assign("eventtype", ULOG_JOB_UNSUSPENDED);
-		tmpCl1.Assign("eventtime", (int)eventclock);
+		tmpCl1.Assign("eventtime", (int)GetEventclock());
 		tmpCl1.Assign("description", messagestr);
 
  	    if (FILEObj->file_newEvent("Events", &tmpCl1) == QUILL_FAILURE) {
@@ -3620,7 +3637,7 @@ JobHeldEvent::formatBody( std::string &out )
 		insertCommonIdentifiers(tmpCl1);
 
 		tmpCl1.Assign("eventtype", ULOG_JOB_HELD);
-		tmpCl1.Assign("eventtime", (int)eventclock);
+		tmpCl1.Assign("eventtime", (int)GetEventclock());
 		tmpCl1.Assign("description", messagestr);
 
 		if (FILEObj->file_newEvent("Events", &tmpCl1) == QUILL_FAILURE) {
@@ -3779,7 +3796,7 @@ JobReleasedEvent::formatBody( std::string &out )
 		insertCommonIdentifiers(tmpCl1);
 
 		tmpCl1.Assign("eventtype", ULOG_JOB_RELEASED);
-		tmpCl1.Assign("eventtime", (int)eventclock);
+		tmpCl1.Assign("eventtime", (int)GetEventclock());
 		tmpCl1.Assign("description", messagestr);
 
 		if (FILEObj->file_newEvent("Events", &tmpCl1) == QUILL_FAILURE) {

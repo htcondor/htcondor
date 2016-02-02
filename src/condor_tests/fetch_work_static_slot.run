@@ -41,8 +41,6 @@ my $primarycollector = $currenthost;
 my @adarray;
 
 
-print scalar localtime() . "\n";
-
 my $iswindows = CondorUtils::is_windows();
 
 my $mypid = $$;
@@ -59,27 +57,23 @@ if($mypid == 0) {
 	die "Saveme setup for test failed\n";
 }
 
-CondorTest::debug("Master PID is $mypid\n",$debuglevel);
-
-CondorTest::debug("Running here: $topdir\n",$debuglevel);
+TLOG "Master PID is $mypid, running here: $topdir\n";
 
 my $scripts = "x_fetchwork_scripts.tar.gz";
-CondorTest::debug("Work fetch scripts here: $workfetchscripts\n",$debuglevel);
 
-
-CondorTest::debug("create saveme: $mysaveme\n",$debuglevel);
+print "\tCreating dir for workfetch scripts: $workfetchscripts\n";
 CreateDir("-p $mysaveme");
-CondorTest::debug("create saveme/pid: $mysavemepid\n",$debuglevel);
 CreateDir("-p $mysavemepid");
-CondorTest::debug("create workfetch scripts: $workfetchscripts\n",$debuglevel);
 CreateDir("-p $workfetchscripts");
-CondorTest::debug("Call CopyIt: $scripts to $workfetchscripts\n",$debuglevel);
-CopyIt("$scripts $workfetchscripts");
-CondorTest::debug("back from Call CopyIt: $scripts to $workfetchscripts\n",$debuglevel);
 
-CondorTest::debug("create work: $work\n",$debuglevel);
+my $curdir = getcwd();
+print "\tCurrently here: $curdir\n";
+print "\tCopying $scripts to $workfetchscripts\n";
+my $ret = CopyIt("$scripts $workfetchscripts");
+
+TLOG "create work dir: $work\n";
 CreateDir("-p $work");
-CondorTest::debug("create results: $results\n",$debuglevel);
+print "\tand results dir: $results\n";
 CreateDir("-p $results");
 
 # Here is my expected hash result from the work fetch
@@ -100,17 +94,17 @@ chdir("$workfetchscripts");
 
 TarExtract("$scripts");
 if( !(-f "job_fetch.pl")) {
-	CondorTest::debug("Failed to setup fetch scripts\n",$debuglevel);
+	TLOG "Failed to setup fetch scripts. aborting tests\n";
 	DirLs();
 	exit(1);
 } else {
-	CondorTest::debug("Have setup fetch scripts\n",$debuglevel);
+	TLOG "Test Scripts have been set up \n";
 	DirLs();
 }
 
 ###### tie to this unique test ######
 my $targetdir = '.';
-CondorTest::debug("Directory to change is $targetdir\n",$debuglevel);
+TLOG "Rewriting test scripts for $targetdir\n";
 opendir DH, $targetdir or die "Can not open $targetdir:$!\n";
 foreach my $file (readdir DH)
 {
@@ -119,7 +113,7 @@ foreach my $file (readdir DH)
     next if $file =~ /^\.\.?$/;
     next if $file =~ /^.*\.txt$/;
     next if $file =~ /^.*\.tar\.gz$/;
-	CondorTest::debug("Edit $file.......\n",$debuglevel);
+	TLOG "Editing $file.......\n";
 	open(OLD,"<$file") || die "Can not open $file:$!\n";
 	open(NEW,">$new") || die "Can not open $new:$!\n";
 	while(<OLD>) {

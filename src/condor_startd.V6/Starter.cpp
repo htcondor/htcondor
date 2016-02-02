@@ -651,7 +651,16 @@ Starter::exited(int status)
 	if (WIFSIGNALED(status)) {
 		jobStatus = REMOVED;
 	}
+
+	jobAd->Assign(ATTR_STARTER_EXIT_STATUS, status);
 	jobAd->Assign(ATTR_JOB_STATUS, jobStatus);
+
+	if (s_claim) {
+		bool badputFromDraining = s_claim->getBadputCausedByDraining();
+		jobAd->Assign(ATTR_BADPUT_CAUSED_BY_DRAINING, badputFromDraining);
+		bool badputFromPreemption = s_claim->getBadputCausedByPreemption();
+		jobAd->Assign(ATTR_BADPUT_CAUSED_BY_PREEMPTION, badputFromPreemption);
+	}
 	AppendHistory(jobAd);
 	WritePerJobHistoryFile(jobAd, true /* use gjid for filename*/);
 

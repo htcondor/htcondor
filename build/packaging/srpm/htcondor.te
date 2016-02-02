@@ -1,0 +1,40 @@
+
+module htcondor 1.0;
+
+require {
+	type fs_t;
+	type autofs_t;
+	type nfs_t;
+	type user_home_dir_t;
+	type user_home_t;
+	type user_tmp_t;
+	type condor_master_t;
+	type condor_schedd_t;
+	type sysctl_fs_t;
+	type sysctl_kernel_t;
+	type sysctl_net_t;
+	type sendmail_exec_t;
+	class process { setrlimit setsched };
+	class dir { search getattr };
+	class file { getattr open read write append ioctl execute };
+	class filesystem getattr;
+}
+
+#============= condor_master_t ==============
+allow condor_master_t sysctl_fs_t:dir search;
+allow condor_master_t sysctl_kernel_t:file write;
+allow condor_master_t sysctl_net_t:dir search;
+
+#============= condor_schedd_t ==============
+allow condor_schedd_t fs_t:filesystem getattr;
+allow condor_schedd_t self:process setrlimit;
+allow condor_schedd_t user_home_dir_t:dir { search getattr };
+allow condor_schedd_t user_home_t:dir { search getattr };
+allow condor_schedd_t user_home_t:file { getattr open read write append ioctl };
+allow condor_schedd_t user_tmp_t:dir getattr;
+allow condor_schedd_t autofs_t:dir search;
+allow condor_schedd_t nfs_t:dir { search getattr };
+allow condor_schedd_t nfs_t:file { getattr open read write append ioctl };
+allow condor_schedd_t self:process setsched;
+allow condor_schedd_t sendmail_exec_t:file { getattr open read execute };
+

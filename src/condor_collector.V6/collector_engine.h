@@ -110,6 +110,7 @@ class CollectorEngine : public Service
 	CollectorHashTable MasterAds;
 	CollectorHashTable StorageAds;
 	CollectorHashTable XferServiceAds;
+	CollectorHashTable AccountingAds;
 
 	// the lesser tables
 	enum {LESSER_TABLE_SIZE = 32};

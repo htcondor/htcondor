@@ -1,0 +1,12 @@
+# This is testing how maxidle interacts with DAGMAN_MAX_SUBMITS_PER_INTERVAL.
+Config job_dagman_maxidle-B.config
+Job A0 job_dagman_maxidle-B-node.cmd
+Job A1 job_dagman_maxidle-B-node.cmd
+Job A2 job_dagman_maxidle-B-node.cmd
+Job A3 job_dagman_maxidle-B-node.cmd
+Job A4 job_dagman_maxidle-B-node.cmd
+Job A5 job_dagman_maxidle-B-node.cmd
+Job A6 job_dagman_maxidle-B-node.cmd
+Job A7 job_dagman_maxidle-B-node.cmd
+Job A8 job_dagman_maxidle-B-node.cmd
+Job A9 job_dagman_maxidle-B-node.cmd

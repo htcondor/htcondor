@@ -203,18 +203,18 @@ class ULogEvent {
     /// The event last read, or to be written.
     ULogEventNumber    eventNumber;
 
-    /// The time this event occurred
-    struct tm          eventTime;
+	/** Get the time at which this event occurred, in the form
+	    of a struct tm.
+		@return The time at which this event occurred.
+	*/
+	const struct tm& GetEventTime() const { return eventTime; }
 
-/*
-define ULOG_MICROSECONDS on linux to get microsecond resolution in the
-user log.  This is write only, and probably breaks compatability with
-log readers.
-*/
+	/** Get the time at which this event occurred, in the form
+	    of a time_t.
+		@return The time at which this event occurred.
+	*/
+	time_t GetEventclock() const { return eventclock; }
 
-#ifdef ULOG_MICROSECONDS
-	struct timeval     eventTimeval;
-#endif
     /// The cluster field of the Condor ID for this event
     int                cluster;
     /// The proc    field of the Condor ID for this event
@@ -225,8 +225,6 @@ log readers.
     /// Added by Ameet
     char *scheddname;
     //char globaljobid[100];
-
-	time_t eventclock;
 
   protected:
 
@@ -287,6 +285,23 @@ log readers.
 	/// the global job id for the job associated with this event
 	void insertCommonIdentifiers(ClassAd &adToFill);
 	const char *m_gjid;
+
+  private:
+    /// The time this event occurred (eventclock is Unix timestamp;
+	/// eventTime is local time); these MUST correspond to the same
+	/// time!!
+	/// We should get rid of one of these (see gittrac #5468).
+	time_t				eventclock;
+    struct tm			eventTime;
+
+/*
+define ULOG_MICROSECONDS on linux to get microsecond resolution in the
+user log.  This is write only, and probably breaks compatability with
+log readers.
+*/
+#ifdef ULOG_MICROSECONDS
+	struct timeval     eventTimeval;
+#endif
 };
 
 //----------------------------------------------------------------------------
@@ -1178,10 +1193,10 @@ class JobImageSizeEvent : public ULogEvent
 	virtual void initFromClassAd(ClassAd* ad);
 
 	/// The new size of the image
-	int64_t image_size_kb;
-	int64_t resident_set_size_kb;
-	int64_t proportional_set_size_kb;
-	int64_t memory_usage_mb;
+	long long image_size_kb;
+	long long resident_set_size_kb;
+	long long proportional_set_size_kb;
+	long long memory_usage_mb;
 };
 
 //----------------------------------------------------------------------------

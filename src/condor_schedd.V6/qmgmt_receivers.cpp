@@ -121,6 +121,30 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		return 0;
 	}
 
+	case CONDOR_SetAllowProtectedAttrChanges:
+	{
+		int val;
+		int terrno;
+
+		assert( syscall_sock->get(val) );
+		assert( syscall_sock->end_of_message() );
+
+		rval = QmgmtSetAllowProtectedAttrChanges( val );
+		terrno = errno;
+
+		syscall_sock->encode();
+		assert( syscall_sock->code(rval) );
+		if( rval < 0 ) {
+			assert( syscall_sock->code(terrno) );
+		}
+		assert( syscall_sock->end_of_message() );
+
+		dprintf(D_SYSCALLS, "\tSetAllowProtectedAttrChanges(%d)\n", val);
+		dprintf(D_SYSCALLS, "\trval %d, errno %d\n", rval, terrno);
+
+		return 0;
+	}
+
 	case CONDOR_SetEffectiveOwner:
 	{
 		MyString owner;

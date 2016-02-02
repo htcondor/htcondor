@@ -35,16 +35,20 @@ my $corename = $testname;
 my $piddir = "pdir$$";
 CreateDir("-p $piddir");
 my $fetchfile = "new_config.local";
-my $fetchfilewrite = "$piddir/new_config.local";
 my $fetchfile2 = "new_config.local";
-my $fetchfilewrite2 = "$piddir/new_config.local2";
-my $newconfig = "$piddir" . "/condor_config.local";
-my $webport = 0;
-$webport = FindWebServerPort($$,$iswindows);
-print "Alternat ports to use = $webport\n";
-if($webport == -1) {
-	die "Failed to get viable web server port\n";
+my $fetchfilewrite = "";
+my $fetchfilewrite2 = "";
+my $newconfig = "";
+if($iswindows) {
+$fetchfilewrite = "$piddir\\new_config.local";
+$fetchfilewrite2 = "$piddir\\new_config.local2";
+$newconfig = "$piddir" . "\\condor_config.local";
+} else {
+$fetchfilewrite = "$piddir/new_config.local";
+$fetchfilewrite2 = "$piddir/new_config.local2";
+$newconfig = "$piddir" . "/condor_config.local";
 }
+my $webport = 0;
 
 my %childrenpids = ();
 my $havewebserver = 0;
@@ -58,7 +62,7 @@ my $havewebserver = 0;
 # The real pid of the python web server lets us validate our web server is running
 # where expected and owned by our pyhon launch.
 
-$havewebserver = StartWebServer($testname,$iswindows,$piddir,$webport,\%childrenpids);
+$havewebserver = StartWebServer($testname,$iswindows,$piddir,$$,\%childrenpids);
 
 if($havewebserver != 0) {
 	print "Failed to secure web server.............return:$havewebserver\n";
@@ -67,6 +71,16 @@ if($havewebserver != 0) {
 	EndTest();
 }
 
+# get web port from pid branded file 
+$webport = FindHttpPort($$);
+
+if($webport > 0) {
+	print "our web port:$webport\n";
+	RegisterResult(1,"test_name","$testname");
+} else {
+	print "our web port:$webport\n";
+	RegisterResult(0,"test_name","$testname");
+}
 
 my %firstuniqueconfig = (); # values we expect
 my %firstuniqueconfigdump = (); # values we expect
@@ -132,15 +146,15 @@ my $masterlocalconfigpart2 = "";
 my $schedlocalconfigfile = "";
 
 if($iswindows) {
-	$masterlocalconfigfile = "\$(LIBEXEC)\\condor_urlfetch -master http://127.0.0.1:$webport\\new_config.local \$(LOCAL_DIR)\\config.cache |";
-	$masterlocalconfigpart1 = "condor_urlfetch -master http://127.0.0.1:$webport\\new_config.local";
+	$masterlocalconfigfile = "\$(LIBEXEC)\\condor_urlfetch -MASTER http://127.0.0.1:$webport/new_config.local \$(LOCAL_DIR)\\config.cache |";
+	$masterlocalconfigpart1 = "condor_urlfetch -MASTER http://127.0.0.1:$webport\\new_config.local";
 	$masterlocalconfigpart2 = "\\config.cache |";
-	$schedlocalconfigfile = "\$(LIBEXEC)/condor_urlfetch -schedd http://127.0.0.1:$webport\\new_config.local \$(LOCAL_DIR)\\config.cache";
+	$schedlocalconfigfile = "\$(LIBEXEC)/condor_urlfetch -schedd http://127.0.0.1:$webport/new_config.local \$(LOCAL_DIR)\\config.cache |";
 } else {
-	$masterlocalconfigfile = "\$(LIBEXEC)/condor_urlfetch -master http://127.0.0.1:$webport/new_config.local \$(LOCAL_DIR)/config.cache |";
-	$masterlocalconfigpart1 = "condor_urlfetch -master http://127.0.0.1:$webport/new_config.local";
+	$masterlocalconfigfile = "\$(LIBEXEC)/condor_urlfetch -MASTER http://127.0.0.1:$webport/new_config.local \$(LOCAL_DIR)/config.cache |";
+	$masterlocalconfigpart1 = "condor_urlfetch -MASTER http://127.0.0.1:$webport/new_config.local";
 	$masterlocalconfigpart2 = "/config.cache |";
-	$schedlocalconfigfile = "\$(LIBEXEC)/condor_urlfetch -schedd http://127.0.0.1:$webport/new_config.local \$(LOCAL_DIR)/config.cache";
+	$schedlocalconfigfile = "\$(LIBEXEC)/condor_urlfetch -schedd http://127.0.0.1:$webport/new_config.local \$(LOCAL_DIR)/config.cache |";
 }
 
 # this one is normal and establishes the config cache
@@ -149,13 +163,11 @@ if($iswindows) {
 	$firstappend_condor_config = "DAEMON_LIST = MASTER,SCHEDD
 NUM_CPUS = 2
 NEGOTIATOR_INTERVAL = 5
-LOCAL_CONFIG_FILE = \$(LIBEXEC)\\condor_urlfetch -master http://127.0.0.1:$webport\\$fetchfile \$(LOCAL_DIR)\\config.cache |
 ";
 } else {
 	$firstappend_condor_config = "DAEMON_LIST = MASTER,SCHEDD
 NUM_CPUS = 2
 NEGOTIATOR_INTERVAL = 5
-LOCAL_CONFIG_FILE = \$(LIBEXEC)/condor_urlfetch -master http://127.0.0.1:$webport/$fetchfile \$(LOCAL_DIR)/config.cache |
 ";
 }
 
@@ -169,6 +181,24 @@ CondorTest::StartCondorWithParams(
 	do_not_start => "TRUE",
     condorlocalsrc => "$configfile",
 );
+
+my $newconfigfile = "condor_config.new";
+print "After configuring personal, config file:$ENV{CONDOR_CONFIG}\n";
+$line = "";
+open(CF,"<$ENV{CONDOR_CONFIG}") or die "failed to open:$ENV{CONDOR_CONFIG}:$!\n";
+open(NCF,">$newconfigfile") or die "failed to open:$newconfigfile:$!\n";
+while (<CF>) {
+	$line = $_;
+	fullchomp($line);
+	if($line =~ /^LOCAL_CONFIG_FILE\s*=\s*.*$/) {
+		print NCF "LOCAL_CONFIG_FILE = $masterlocalconfigfile\n";
+	} else {
+		print NCF "$line\n";
+	}
+}
+close(CF);
+system("mv $ENV{CONDOR_CONFIG} $ENV{CONDOR_CONFIG}.old");
+system("mv condor_config.new $ENV{CONDOR_CONFIG}");
 
 print "********************* What values do we have for:condor_config_val -dump unique *********************\n";
 #system("condor_config_val -dump unique");
@@ -267,7 +297,6 @@ fullchomp($maincache);
 my $secondappend_condor_config = "DAEMON_LIST = MASTER,SCHEDD
 NUM_CPUS = 2
 NEGOTIATOR_INTERVAL = 5
-LOCAL_CONFIG_FILE = \$(LIBEXEC)/condor_urlfetch -schedd http://127.0.0.1:$webport/$fetchfile2 $maincache/config.cache |
 ";
 
 print "dollar libexec evaluates to:$execdir:\n";
@@ -283,8 +312,25 @@ CondorTest::StartCondorWithParams(
     condorlocalsrc => "$configfile2",
 );
 
+print "After configuring personal, config file:$ENV{CONDOR_CONFIG}\n";
+$line = "";
+open(CF,"<$ENV{CONDOR_CONFIG}") or die "failed to open:$ENV{CONDOR_CONFIG}:$!\n";
+open(NCF,">$newconfigfile") or die "failed to open:$newconfigfile:$!\n";
+while (<CF>) {
+	$line = $_;
+	fullchomp($line);
+	if($line =~ /^LOCAL_CONFIG_FILE\s*=\s*.*$/) {
+		print NCF "LOCAL_CONFIG_FILE = $schedlocalconfigfile\n";
+	} else {
+		print NCF "$line\n";
+	}
+}
+close(CF);
+system("mv $ENV{CONDOR_CONFIG} $ENV{CONDOR_CONFIG}.old");
+system("mv condor_config.new $ENV{CONDOR_CONFIG}");
+
 print "********************* What values do we have for:condor_config_val -dump unique *********************\n";
-print "********************* In second config which is not -master  *********************\n";
+print "********************* In second config which is not -MASTER  *********************\n";
 
 print "********************* What values do we have for:condor_config_val -dump unique *********************\n";
 #system("condor_config_val -dump unique");
@@ -372,7 +418,7 @@ sub CompareHashes {
 	my $expectedvalue = 1;
 	my $passedexpected = shift;
 	if(defined $passedexpected) {
-		print "Access count now expected to be not:$expectedvalue but:$passedexpected\n";
+		#print "Access count now expected to be not:$expectedvalue but:$passedexpected\n";
 		$expectedvalue = $passedexpected;
 	}
 

@@ -145,6 +145,8 @@ class Matchmaker : public Service
 
 		bool getGroupInfoFromUserId(const char* user, string& groupName, float& groupQuota, float& groupUsage);
 
+		void forwardAccountingData(std::set<std::string> &names);
+
     protected:
 		char * NegotiatorName;
 		int update_interval;
@@ -158,10 +160,29 @@ class Matchmaker : public Service
 		void updateCollector();
 		
 		// auxillary functions
-		bool obtainAdsFromCollector (ClassAdList&, ClassAdListDoesNotDeleteAds&, ClassAdListDoesNotDeleteAds&, ClaimIdHash& );	
+		bool obtainAdsFromCollector (ClassAdList&, ClassAdListDoesNotDeleteAds&, ClassAdListDoesNotDeleteAds&, std::set<std::string> &, ClaimIdHash& );	
 		char * compute_significant_attrs(ClassAdListDoesNotDeleteAds & startdAds);
 		bool consolidate_globaljobprio_submitter_ads(ClassAdListDoesNotDeleteAds & scheddAds);
-		
+
+		/**
+		 * Start the network communication necessary for a negotiation cycle.
+		 */
+		typedef classad_shared_ptr<ResourceRequestList> RRLPtr;
+		bool startNegotiateProtocol(const std::string &submitter, const ClassAd &submitterAd, ReliSock *&sock, RRLPtr &request_list);
+
+		/**
+		 * Get a resource request list for purposes of negotiation
+		 */
+		RRLPtr startNegotiate(const std::string &submitter, const ClassAd &submitterAd, ReliSock *&sock);
+		void endNegotiate(const std::string &scheddAddr);
+
+		/**
+		 * Try starting negotiations with all schedds in parallel.
+		 */
+		void prefetchResourceRequestLists(ClassAdListDoesNotDeleteAds &scheddAds);
+		typedef std::map<std::string, classad_shared_ptr<ResourceRequestList> > RRLHash;
+		RRLHash m_cachedRRLs;
+
 		/** Negotiate w/ one schedd for one user, for one 'pie spin'.
             @param groupName name of group negotiating under (or NULL)
 			@param scheddName Name attribute from the submitter ad.

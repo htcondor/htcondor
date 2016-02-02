@@ -92,6 +92,7 @@ void	main_config();
 int	agent_starter(ReliSock *);
 int	handle_agent_fetch_log(ReliSock *);
 int	admin_command_handler(Service *, int, Stream *);
+int	ready_command_handler(Service *, int, Stream *);
 int	handle_subsys_command(int, Stream *);
 int     handle_shutdown_program( int cmd, Stream* stream );
 void	time_skip_handler(void * /*data*/, int delta);
@@ -526,6 +527,15 @@ main_init( int argc, char* argv[] )
 								(CommandHandler)&store_pool_cred_handler,
 								"store_pool_cred_handler", NULL, CONFIG_PERM,
 								D_FULLDEBUG );
+
+	// Command handler for handling the ready state
+	daemonCore->Register_CommandWithPayload( DC_SET_READY, "DC_SET_READY",
+								  (CommandHandler)ready_command_handler,
+								  "ready_command_handler", 0, WRITE );
+	daemonCore->Register_CommandWithPayload( DC_QUERY_READY, "DC_QUERY_READY",
+								  (CommandHandler)ready_command_handler,
+								  "ready_command_handler", 0, READ );
+
 	/*
 	daemonCore->Register_Command( START_AGENT, "START_AGENT",
 					  (CommandHandler)admin_command_handler, 
@@ -550,6 +560,51 @@ main_init( int argc, char* argv[] )
 	daemons.StartTimers();
 }
 
+
+int
+ready_command_handler( Service*, int cmd, Stream* stm )
+{
+	ReliSock* stream = (ReliSock*)stm;
+	ClassAd cmdAd;
+
+	stream->decode();
+	stream->timeout(15);
+	if( !getClassAd(stream, cmdAd) || !stream->end_of_message()) {
+		dprintf( D_ALWAYS, "Failed to receive ready command (%d) on TCP: aborting\n", cmd );
+		return FALSE;
+	}
+	MyString daemon_name; // using MyString here because it will never return NULL
+	cmdAd.LookupString("DaemonName", daemon_name);
+	int daemon_pid = 0;
+	cmdAd.LookupInteger("DaemonPID", daemon_pid);
+
+	dprintf( D_FULLDEBUG, "Got ready command (%d) from %s pid=%d\n", cmd, daemon_name.c_str(), daemon_pid );
+
+	switch (cmd) {
+		case DC_SET_READY:
+		{
+			MyString state; // using MyString because its c_str() never faults or returns NULL
+			cmdAd.LookupString("DaemonState", state);
+			class daemon* daemon = daemons.FindDaemonByPID(daemon_pid);
+			if ( ! daemon) {
+				dprintf(D_ALWAYS, "Cant find daemon %s to set ready state '%s'\n", daemon_name.c_str(), state.c_str());
+			} else {
+				dprintf(D_ALWAYS, "Setting ready state '%s' for %s\n", state.c_str(), daemon_name.c_str());
+				daemon->SetReadyState(state.c_str());
+			}
+		}
+		return TRUE;
+
+		case DC_QUERY_READY:
+			return daemons.QueryReady(cmdAd, stm);
+		return FALSE;
+
+		default:
+			EXCEPT("Unknown ready command (%d) in ready_command_handler", cmd);
+	}
+
+	return FALSE;
+}
 
 int
 admin_command_handler( Service*, int cmd, Stream* stream )
@@ -1457,20 +1512,19 @@ main_pre_command_sock_init()
 #endif
 	}
 
-	MyString daemon_list;
-	if( param(daemon_list,"DAEMON_LIST") ) {
-		StringList sl(daemon_list.Value());
-		if( sl.contains("SHARED_PORT") ) {
-				// in case a shared port address file got left behind by an
-				// unclean shutdown, clean it up now before we create our
-				// command socket to avoid confusion
-			SharedPortServer::RemoveDeadAddressFile();
-		}
-	}
+ 	// in case a shared port address file got left behind by an
+ 	// unclean shutdown, clean it up now before we create our
+ 	// command socket to avoid confusion
+	// Do so unconditionally, because the master will decide later (when
+	// it's ready to start daemons) if it will be starting the shared
+	// port daemon.
+ 	SharedPortServer::RemoveDeadAddressFile();
 
-	if ( param_boolean( "USE_SHARED_PORT", false ) ) {
-		SharedPortEndpoint::InitializeDaemonSocketDir();
-	}
+	// The master and its daemons may disagree on if they're using shared
+	// port, so make sure everything's ready, just in case.
+	//
+	// FIXME: condor_preen doesn't look to know about "auto" directories.
+	SharedPortEndpoint::InitializeDaemonSocketDir();
 }
 
 #ifdef WIN32

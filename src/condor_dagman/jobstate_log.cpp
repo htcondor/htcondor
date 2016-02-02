@@ -324,8 +324,7 @@ JobstateLog::WriteEvent( const ULogEvent *event, Job *node )
 	if ( eventName != NULL ) {
 		MyString condorID;
 		CondorID2Str( event->cluster, event->proc, condorID );
-		struct tm eventTm = event->eventTime;
-		time_t eventTime = mktime( &eventTm );
+		time_t eventTime = event->GetEventclock();
 		Write( &eventTime, node, eventName, condorID.Value() );
 	}
 }

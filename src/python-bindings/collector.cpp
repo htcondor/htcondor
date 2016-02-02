@@ -147,95 +147,12 @@ struct Collector {
         return daemon.query(convert_to_ad_type(d_type), boost::python::object(""), attrs, statistics)[0];
     }
 
-    object query(AdTypes ad_type=ANY_AD, boost::python::object constraint_obj=boost::python::object(""), list attrs=boost::python::list(), const std::string &statistics="")
+
+    boost::python::object query(AdTypes ad_type=ANY_AD, boost::python::object constraint_obj=boost::python::object(""), boost::python::list attrs=boost::python::list(), const std::string &statistics="")
     {
-        std::string constraint;
-        extract<std::string> constraint_extract(constraint_obj);
-        if (constraint_extract.check())
-        {
-            constraint = constraint_extract();
-        }
-        else
-        {
-            classad::ClassAdUnParser printer;
-            classad_shared_ptr<classad::ExprTree> expr(convert_python_to_exprtree(constraint_obj));
-            printer.Unparse(constraint, expr.get());
-        }
-
-
-        CondorQuery query(ad_type);
-        if (constraint.length())
-        {
-            query.addANDConstraint(constraint.c_str());
-        }
-        if (statistics.size())
-        {
-            std::string result = quote_classads_string(statistics);
-            result = "STATISTICS_TO_PUBLISH = " + result;
-            query.addExtraAttribute(result.c_str());
-        }
-        std::vector<const char *> attrs_char;
-        std::vector<std::string> attrs_str;
-        int len_attrs = py_len(attrs);
-        if (len_attrs)
-        {
-            attrs_str.reserve(len_attrs);
-            attrs_char.reserve(len_attrs+1);
-            attrs_char[len_attrs] = NULL;
-            for (int i=0; i<len_attrs; i++)
-            {
-                std::string str = extract<std::string>(attrs[i]);
-                attrs_str.push_back(str);
-                attrs_char[i] = attrs_str[i].c_str();
-            }
-            query.setDesiredAttrs(&attrs_char[0]);
-        }
-        ClassAdList adList;
-
-        QueryResult result;
-        {
-        condor::ModuleLock ml;
-        result = m_collectors->query(query, adList, NULL);
-        }
-
-        switch (result)
-        {
-        case Q_OK:
-            break;
-        case Q_INVALID_CATEGORY:
-            PyErr_SetString(PyExc_RuntimeError, "Category not supported by query type.");
-            boost::python::throw_error_already_set();
-        case Q_MEMORY_ERROR:
-            PyErr_SetString(PyExc_MemoryError, "Memory allocation error.");
-            boost::python::throw_error_already_set();
-        case Q_PARSE_ERROR:
-            PyErr_SetString(PyExc_SyntaxError, "Query constraints could not be parsed.");
-            boost::python::throw_error_already_set();
-        case Q_COMMUNICATION_ERROR:
-            PyErr_SetString(PyExc_IOError, "Failed communication with collector.");
-            boost::python::throw_error_already_set();
-        case Q_INVALID_QUERY:
-            PyErr_SetString(PyExc_RuntimeError, "Invalid query.");
-            boost::python::throw_error_already_set();
-        case Q_NO_COLLECTOR_HOST:
-            PyErr_SetString(PyExc_RuntimeError, "Unable to determine collector host.");
-            boost::python::throw_error_already_set();
-        default:
-            PyErr_SetString(PyExc_RuntimeError, "Unknown error from collector query.");
-            boost::python::throw_error_already_set();
-        }
-
-        list retval;
-        ClassAd * ad;
-        adList.Open();
-        while ((ad = adList.Next()))
-        {
-            boost::shared_ptr<ClassAdWrapper> wrapper(new ClassAdWrapper());
-            wrapper->CopyFrom(*ad);
-            retval.append(wrapper);
-        }
-        return retval;
+        return query_internal(ad_type, constraint_obj, attrs, statistics, "");
     }
+
 
     object locateAll(daemon_t d_type)
     {
@@ -247,7 +164,14 @@ struct Collector {
     {
         if (!name.size()) {return locateLocal(d_type);}
         std::string constraint = "stricmp(" ATTR_NAME ", " + quote_classads_string(name) + ") == 0";
-        object result = query(convert_to_ad_type(d_type), boost::python::object(constraint), list(), "");
+        boost::python::list attrlist;
+        attrlist.append("MyAddress");
+        attrlist.append("AddressV1");
+        attrlist.append("CondorVersion");
+        attrlist.append("CondorPlatform");
+        attrlist.append("Name");
+        attrlist.append("Machine");
+        object result = query_internal(convert_to_ad_type(d_type), boost::python::object(constraint), attrlist, "", name);
         if (py_len(result) >= 1) {
             return result[0];
         }
@@ -404,6 +328,103 @@ struct Collector {
     }
 
 private:
+
+    object query_internal(AdTypes ad_type, boost::python::object constraint_obj, boost::python::list attrs, const std::string &statistics, std::string locationName)
+    {
+        std::string constraint;
+        extract<std::string> constraint_extract(constraint_obj);
+        if (constraint_extract.check())
+        {
+            constraint = constraint_extract();
+        }
+        else
+        {
+            classad::ClassAdUnParser printer;
+            classad_shared_ptr<classad::ExprTree> expr(convert_python_to_exprtree(constraint_obj));
+            printer.Unparse(constraint, expr.get());
+        }
+
+
+        CondorQuery query(ad_type);
+        if (constraint.length())
+        {
+            query.addANDConstraint(constraint.c_str());
+        }
+        if (statistics.size())
+        {
+            std::string result = quote_classads_string(statistics);
+            result = "STATISTICS_TO_PUBLISH = " + result;
+            query.addExtraAttribute(result.c_str());
+        }
+        if (locationName.size())
+        {
+            std::string result = quote_classads_string(locationName);
+            result = "LocationQuery = " + result;
+            query.addExtraAttribute(result.c_str());
+        }
+        std::vector<const char *> attrs_char;
+        std::vector<std::string> attrs_str;
+        int len_attrs = py_len(attrs);
+        if (len_attrs)
+        {
+            attrs_str.reserve(len_attrs);
+            attrs_char.reserve(len_attrs+1);
+            attrs_char[len_attrs] = NULL;
+            for (int i=0; i<len_attrs; i++)
+            {
+                std::string str = extract<std::string>(attrs[i]);
+                attrs_str.push_back(str);
+                attrs_char[i] = attrs_str[i].c_str();
+            }
+            query.setDesiredAttrs(&attrs_char[0]);
+        }
+        ClassAdList adList;
+
+        QueryResult result;
+        {
+        condor::ModuleLock ml;
+        result = m_collectors->query(query, adList, NULL);
+        }
+
+        switch (result)
+        {
+        case Q_OK:
+            break;
+        case Q_INVALID_CATEGORY:
+            PyErr_SetString(PyExc_RuntimeError, "Category not supported by query type.");
+            boost::python::throw_error_already_set();
+        case Q_MEMORY_ERROR:
+            PyErr_SetString(PyExc_MemoryError, "Memory allocation error.");
+            boost::python::throw_error_already_set();
+        case Q_PARSE_ERROR:
+            PyErr_SetString(PyExc_SyntaxError, "Query constraints could not be parsed.");
+            boost::python::throw_error_already_set();
+        case Q_COMMUNICATION_ERROR:
+            PyErr_SetString(PyExc_IOError, "Failed communication with collector.");
+            boost::python::throw_error_already_set();
+        case Q_INVALID_QUERY:
+            PyErr_SetString(PyExc_RuntimeError, "Invalid query.");
+            boost::python::throw_error_already_set();
+        case Q_NO_COLLECTOR_HOST:
+            PyErr_SetString(PyExc_RuntimeError, "Unable to determine collector host.");
+            boost::python::throw_error_already_set();
+        default:
+            PyErr_SetString(PyExc_RuntimeError, "Unknown error from collector query.");
+            boost::python::throw_error_already_set();
+        }
+
+        list retval;
+        ClassAd * ad;
+        adList.Open();
+        while ((ad = adList.Next()))
+        {
+            boost::shared_ptr<ClassAdWrapper> wrapper(new ClassAdWrapper());
+            wrapper->CopyFrom(*ad);
+            retval.append(wrapper);
+        }
+        return retval;
+    }
+
 
     CollectorList *m_collectors;
     bool m_default;

@@ -127,7 +127,10 @@ private:
 	int m_oom_fd; // The file descriptor which recieves events
 	int m_oom_efd; // The event FD "pipe" to watch
 	int m_oom_efd2; // The other end of m_oom_efd.
-	int setupOOMScore(int new_score);
+
+		// old kernels have /proc/self/oom_adj, newer /proc/self/oom_score_adj
+		// and the scales are different.
+	int setupOOMScore(int oom_adj, int oom_score_adj);
 	void cleanupOOM();
 	int outOfMemoryEvent(int fd);
 	int setupOOMEvent(const std::string & cgroup_string);

@@ -19,10 +19,6 @@ BEGIN {
 
 package CondorUtils;
 
-#if(CondorUtils::is_windows()) {
-	#use Win32::Pipe;
-#}
-
 our $VERSION = '1.00';
 my $btdebug = 0;
 
@@ -762,8 +758,10 @@ sub List
 		if ($cmdline =~ /^\-([a-zA-Z]+)\s+(.*)$/ ) {
 			# translate flags?
 			#my $flags = $1;
-			$cmdline = $2;;
+			# translate path separators
+			$cmdline = $2;
 		}
+		$cmdline =~ s/\//\\/g; # convert / to \ before passing to dir
 		$ret = system("cmd /C dir $cmdline");
 	} elsif (is_windows()) {
 		$cmdline =~ s/\\/\//g; # if windows, but not native, we need to convert \ to / before passing to ls.
@@ -865,11 +863,11 @@ sub CopyIt
 			# check target
 			$windest =~ s/\//\\/g;
         	$fullcmd = "xcopy $winsrc $windest /Y";
-			#print "native perl:$fullcmd\n";
         	if($dashr eq "yes") {
             	$fullcmd = $fullcmd . " /s /e";
 				#print "native perl -r:$fullcmd\n";
         	}
+			#print "native perl: $fullcmd\n";
 		} else {
         	$winsrc = `cygpath -w $argsin[0]`;
         	$windest = `cygpath -w $argsin[1]`;
@@ -887,7 +885,9 @@ sub CopyIt
         	}
 
 		}
-        $ret = system("$fullcmd");
+		#print "CopyIt executing: $fullcmd\n";
+        #$ret = system("$fullcmd");
+		$ret = verbose_system("$fullcmd");
 		if($btdebug == 1) {
 			print "Tried to create dir got ret value:$ret cmd:$fullcmd\n";
 		}
@@ -1286,8 +1286,8 @@ sub DryExtract {
     my $extractstring = shift;
     foreach my $dryline (@{$dryinarrayref}) {
         chomp($dryline);
-        if($dryline =~ /\s*$extractstring=/) {
-#print "DryExtract:$dryline\n";
+        if($dryline =~ /\s*$extractstring\s*=/i) {
+            #print "DryExtract: found $dryline\n";
             push @{$dryoutarrayref}, $dryline;
 		}
 	}
@@ -1297,10 +1297,19 @@ sub GatherDryData {
     my $submitfile = shift;
 	my $targetfile = shift;
 	my @storage = ();
-    my $cmdtorun = "condor_submit -dry-run $targetfile $submitfile";
-	my $res = system("$cmdtorun");
+	my @out = ();
+	my $res = 0;
+	@out = `condor_submit -dry-run $targetfile $submitfile`;
+	# my $res = system("$cmdtorun");
+	$res = $?;
 	if($res != 0) {
-		die "Return from system call non-zero\n";
+		die "non-zero return from condor_submit\n";
+	} elsif ($targetfile eq "-") {
+		foreach (@out) {
+			fullchomp($_);
+			next if ($_ =~ /dry-run/i);
+			push @storage, $_;
+		}
 	} else {
 		open(TF,"<$targetfile") or die "Failed to open dry data file:$targetfile:$!\n";
 		while (<TF>) {

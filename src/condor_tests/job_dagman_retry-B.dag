@@ -27,6 +27,22 @@ Retry NodeC 1
 Job NodeD job_dagman_retry-B-nodeD.cmd
 Retry NodeD 1
 
+# Test retries with NOOP nodes (see gittrac #5277).
+# Retry 0: post script fails
+# Retry 1: success
+Job NodeE foobar Noop
+Script Post NodeE job_dagman_retry-B-nodeE-post.pl $RETRY
+Retry NodeE 1
+
+# Test retries with NOOP nodes (see gittrac #5277).
+# Retry 0: pre script fails
+# Retry 1: success
+Job NodeF foobar Noop
+Script Pre NodeF job_dagman_retry-B-nodeF-pre.pl $RETRY
+Retry NodeF 1
+
 Parent NodeA Child NodeB
 Parent NodeB Child NodeC
 Parent NodeC Child NodeD
+Parent NodeD Child NodeE
+Parent NodeE Child NodeF

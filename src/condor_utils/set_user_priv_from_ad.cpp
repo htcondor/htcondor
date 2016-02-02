@@ -24,22 +24,32 @@
 #include "condor_attributes.h"
 #include "set_user_priv_from_ad.h"
 
-priv_state set_user_priv_from_ad(classad::ClassAd const &ad)
+bool init_user_ids_from_ad( const classad::ClassAd &ad )
 {
 	std::string owner;
 	std::string domain;
 
 	if (!ad.EvaluateAttrString(ATTR_OWNER,  owner)) {
 		dPrintAd(D_ALWAYS, ad);
-		EXCEPT("Failed to find %s in job ad.", ATTR_OWNER);
+		dprintf( D_ALWAYS, "Failed to find %s in job ad.\n", ATTR_OWNER );
+		return false;
 	}
 
 	ad.EvaluateAttrString(ATTR_NT_DOMAIN, domain);
 
 	if (!init_user_ids(owner.c_str(), domain.c_str())) {
-		EXCEPT("Failed in init_user_ids(%s,%s)",
-			   owner.c_str(),
-			   domain.c_str());
+		dprintf( D_ALWAYS, "Failed in init_user_ids(%s,%s)\n",
+				 owner.c_str(), domain.c_str() );
+		return false;
+	}
+
+	return true;
+}
+
+priv_state set_user_priv_from_ad(classad::ClassAd const &ad)
+{
+	if ( !init_user_ids_from_ad( ad ) ) {
+		EXCEPT( "Failed to initialize user ids." );
 	}
 
 	return set_user_priv();

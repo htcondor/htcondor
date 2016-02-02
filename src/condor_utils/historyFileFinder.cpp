@@ -42,65 +42,97 @@ static int compareHistoryFilenames(const void *item1, const void *item2);
 
 static  char *BaseJobHistoryFileName = NULL;
 
-// Find all of the history files that the schedd created, and put them
-// in order by time that they were created. The time comes from a
-// timestamp in the file name.
-char **findHistoryFiles(const char *paramName, int *numHistoryFiles)
+extern void freeHistoryFilesList(const char ** files)
 {
-    int  fileIndex;
-    char **historyFiles = NULL;
-    char *historyDir;
+	if (files) free(const_cast<char**>(files));
+}
 
+// Find all of the history files that the schedd created, and put them
+// in order by time that they were created, so the current file is always last
+// For instance, if there is a current file and 2 rotated older files we would have
+//    [0] = "/scratch/condor/spool/history.20151019T161810"
+//    [1] = "/scratch/condor/spool/history.20151020T161810"
+//    [2] = "/scratch/condor/spool/history"
+// the return value is a pointer to an array of const char* filenames.
+// if the history configuration is invalid, then NULL is returned.
+// if the history configuration is valid, but there are no history files
+// then an allocated pointer is still returned, but *pnumHistoryFiles will be 0
+const char **findHistoryFiles(const char *paramName, int *pnumHistoryFiles)
+{
+    char **historyFiles = NULL;
+    bool foundCurrent = false; // true if 'current' history file (i.e. without extension) exists
+    int  cchExtra = 0; // total number of characters needed to hold the file extensions
+    int  numFiles = 0;
+    StringList tmpList; // temporarily hold the filenames so we don't have to iterate the directory twice.
+
+    if (BaseJobHistoryFileName) { free(BaseJobHistoryFileName); }
     BaseJobHistoryFileName = param(paramName);
 	if ( BaseJobHistoryFileName == NULL ) {
 		return NULL;
 	}
-    historyDir = condor_dirname(BaseJobHistoryFileName);
+    char *historyDir = condor_dirname(BaseJobHistoryFileName);
+    const char * historyBase = condor_basename(BaseJobHistoryFileName);
 
-    *numHistoryFiles = 0;
     if (historyDir != NULL) {
         Directory dir(historyDir);
-        const char *current_filename;
+        int cchBaseName = strlen(historyBase);
+        int cchBaseFileName = strlen(BaseJobHistoryFileName);
 
         // We walk through once and count the number of history file backups
-         for (current_filename = dir.Next(); 
+        // and keep track of all of the file extensions for backup files.
+         for (const char *current_filename = dir.Next(); 
              current_filename != NULL; 
              current_filename = dir.Next()) {
-            
-            if (isHistoryBackup(current_filename, NULL)) {
-                (*numHistoryFiles)++;
+
+            const char * current_base = condor_basename(current_filename);
+           #ifdef WIN32
+            if (MATCH == strcasecmp(historyBase, current_base)) {
+           #else
+            if (MATCH == strcmp(historyBase, current_base)) {
+           #endif
+                numFiles++;
+                foundCurrent = true;
+            } else if (isHistoryBackup(current_filename, NULL)) {
+                numFiles++;
+                const char * pextra = current_filename + cchBaseName;
+                tmpList.append(pextra);
+                cchExtra += strlen(pextra);
             }
         }
 
-        // Add one for the current history file
-        (*numHistoryFiles)++;
-
-        // Make space for the filenames
-        historyFiles = (char **) malloc(sizeof(char*) * (*numHistoryFiles));
+        // allocate space for the array, and also for copies of the filenames
+        // we will use this the first part of this allocation as the array,
+        // and later parts to hold the filenames
+        historyFiles = (char **) malloc(cchExtra + numFiles * (cchBaseFileName+1) + (numFiles+1) * (sizeof(char*)));
         ASSERT( historyFiles );
 
-        // Walk through again to fill in the names
-        // Note that we won't get the current history file
-        dir.Rewind();
-        for (fileIndex = 0, current_filename = dir.Next(); 
-             current_filename != NULL; 
-             current_filename = dir.Next()) {
-            
-            if (isHistoryBackup(current_filename, NULL)) {
-                historyFiles[fileIndex++] = strdup(dir.GetFullPath());
-            }
+        // Walk through the extension list to again to fill in the names
+        // then append the current history file (if any)
+        int  fileIndex = 0;
+        char * p = (char*)historyFiles + sizeof(const char*) * (numFiles+1); // start at first byte after the char* array
+        for (const char * ext = tmpList.first(); ext != NULL; ext = tmpList.next()) {
+            historyFiles[fileIndex++] = p;
+            strcpy(p, BaseJobHistoryFileName);
+            strcpy(p + cchBaseFileName, ext);
+            p += cchBaseFileName + strlen(ext) + 1;
         }
-        historyFiles[fileIndex] = strdup(BaseJobHistoryFileName);
+        // if the base history file was found in the directory, add it to the list also
+        if (foundCurrent) {
+            historyFiles[fileIndex++] = p;
+            strcpy(p, BaseJobHistoryFileName);
+        }
+        historyFiles[fileIndex] = NULL; // put a NULL at the end of the array.
 
-        if ((*numHistoryFiles) > 2) {
+        if (numFiles > 2) {
             // Sort the backup files so that they are in the proper 
             // order. The current history file is already in the right place.
-            qsort(historyFiles, (*numHistoryFiles)-1, sizeof(char*), compareHistoryFilenames);
+            qsort(historyFiles, numFiles-1, sizeof(char*), compareHistoryFilenames);
         }
         
         free(historyDir);
     }
-    return historyFiles;
+    *pnumHistoryFiles = numFiles;
+    return const_cast<const char**>(historyFiles);
 }
 
 // Returns true if the filename is a history file, false otherwise.
@@ -150,8 +182,8 @@ static int compareHistoryFilenames(const void *item1, const void *item2)
 {
     time_t time1, time2;
 
-    isHistoryBackup((const char *) item1, &time1);
-    isHistoryBackup((const char *) item2, &time2);
+    isHistoryBackup(*(const char * const *) item1, &time1);
+    isHistoryBackup(*(const char * const *) item2, &time2);
     return time1 - time2;
 }
 

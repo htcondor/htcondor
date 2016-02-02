@@ -580,21 +580,21 @@ bool Dag::ProcessOneEvent (ULogEventOutcome outcome,
 
 			case ULOG_JOB_ABORTED:
 #if !defined(DISABLE_NODE_TIME_METRICS)
-				job->TermAbortMetrics( event->proc, event->eventTime,
+				job->TermAbortMetrics( event->proc, event->GetEventTime(),
 							_metrics );
 #endif
 					// Make sure we don't count finished jobs as idle.
-				ProcessNotIdleEvent(job);
+				ProcessNotIdleEvent( job, event->proc );
 				ProcessAbortEvent(event, job, recovery);
 				break;
               
 			case ULOG_JOB_TERMINATED:
 #if !defined(DISABLE_NODE_TIME_METRICS)
-				job->TermAbortMetrics( event->proc, event->eventTime,
+				job->TermAbortMetrics( event->proc, event->GetEventTime(),
 							_metrics );
 #endif
 					// Make sure we don't count finished jobs as idle.
-				ProcessNotIdleEvent(job);
+				ProcessNotIdleEvent( job, event->proc );
 				ProcessTerminatedEvent(event, job, recovery);
 				break;
 
@@ -604,31 +604,31 @@ bool Dag::ProcessOneEvent (ULogEventOutcome outcome,
 
 			case ULOG_SUBMIT:
 				ProcessSubmitEvent(job, recovery, submitEventIsSane);
-				ProcessIsIdleEvent(job);
+				ProcessIsIdleEvent( job, event->proc );
 				break;
 
 			case ULOG_JOB_RECONNECT_FAILED:
 			case ULOG_JOB_EVICTED:
 			case ULOG_JOB_SUSPENDED:
 			case ULOG_SHADOW_EXCEPTION:
-				ProcessIsIdleEvent(job);
+				ProcessIsIdleEvent( job, event->proc );
 				break;
 
 			case ULOG_JOB_HELD:
 				ProcessHeldEvent(job, event);
-				ProcessIsIdleEvent(job);
+				ProcessIsIdleEvent(job, event->proc);
 				break;
 
 			case ULOG_JOB_UNSUSPENDED:
-				ProcessNotIdleEvent(job);
+				ProcessNotIdleEvent( job, event->proc );
 				break;
 
 			case ULOG_EXECUTE:
 #if !defined(DISABLE_NODE_TIME_METRICS)
-				job->ExecMetrics( event->proc, event->eventTime,
+				job->ExecMetrics( event->proc, event->GetEventTime(),
 							_metrics );
 #endif
-				ProcessNotIdleEvent(job);
+				ProcessNotIdleEvent( job, event->proc );
 				break;
 
 			case ULOG_JOB_RELEASED:
@@ -682,7 +682,7 @@ Dag::ProcessAbortEvent(const ULogEvent *event, Job *job,
   // same *job* (not job proc).
 
 	if ( job ) {
-		DecrementJobCounts( job );
+		DecrementProcCount( job );
 
 			// This code is here because if a held job is removed, we
 			// don't get a released event for that job.  This may not
@@ -722,7 +722,7 @@ Dag::ProcessTerminatedEvent(const ULogEvent *event, Job *job,
 		bool recovery) {
 	if( job ) {
 
-		DecrementJobCounts( job );
+		DecrementProcCount( job );
 
 		const JobTerminatedEvent * termEvent =
 					(const JobTerminatedEvent*) event;
@@ -1149,15 +1149,18 @@ Dag::ProcessSubmitEvent(Job *job, bool recovery, bool &submitEventIsSane) {
 
 //---------------------------------------------------------------------------
 void
-Dag::ProcessIsIdleEvent(Job *job) {
+Dag::ProcessIsIdleEvent( Job *job, int proc ) {
 
 	if ( !job ) {
 		return;
 	}
 
-	if ( !job->GetIsIdle() &&
+		// Note:  we need to make sure here that the job proc isn't already
+		// idle so we don't count it twice if, for example, we get a hold
+		// event for a job that's already idle.
+	if ( !job->GetProcIsIdle( proc ) &&
 				( job->GetStatus() == Job::STATUS_SUBMITTED ) ) {
-		job->SetIsIdle(true);
+		job->SetProcIsIdle( proc, true );
 		_numIdleJobProcs++;
 	}
 
@@ -1176,15 +1179,16 @@ Dag::ProcessIsIdleEvent(Job *job) {
 
 //---------------------------------------------------------------------------
 void
-Dag::ProcessNotIdleEvent(Job *job) {
+Dag::ProcessNotIdleEvent( Job *job, int proc ) {
 
 	if ( !job ) {
 		return;
 	}
 
-	if ( job->GetIsIdle() &&
-				( job->GetStatus() == Job::STATUS_SUBMITTED ) ) {
-		job->SetIsIdle(false);
+	if ( job->GetProcIsIdle( proc ) &&
+				( ( job->GetStatus() == Job::STATUS_SUBMITTED ) ||
+				( job->GetStatus() == Job::STATUS_ERROR ) ) ) {
+		job->SetProcIsIdle( proc, false );
 		_numIdleJobProcs--;
 	}
 
@@ -1546,7 +1550,9 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 			_catThrottleDeferredCount++;
 		} else {
 
-    		CondorID condorID(0,0,0);
+				// Note:  I'm not sure why we don't just use the default
+				// constructor here.  wenger 2015-09-25
+    		CondorID condorID( 0, 0, 0 );
 			submit_result_t submit_result = SubmitNodeJob( dm, job, condorID );
 	
 				// Note: if instead of switch here so we can use break
@@ -2373,16 +2379,25 @@ PrintEvent( debug_level_t level, const ULogEvent* event, Job* node,
 
 	const char *recovStr = recovery ? " [recovery mode]" : "";
 
+	MyString timestr;
+		// Be sure to pass GetEventTime() here, because we want the
+		// event time to always be output has a human-readable string,
+		// even if dprintf() is configured to print timestamps.
+	time_to_str( &event->GetEventTime(), timestr );
+		// String from time_to_str has trailing blank (needed for other
+		// places in the code).
+	timestr.trim();
+
 	if( node ) {
-	    debug_printf( level, "Event: %s for %s Node %s (%d.%d.%d)%s\n",
+	    debug_printf( level, "Event: %s for %s Node %s (%d.%d.%d) {%s}%s\n",
 					  event->eventName(), node->JobTypeString(),
 					  node->GetJobName(), event->cluster, event->proc,
-					  event->subproc, recovStr );
+					  event->subproc, timestr.Value(), recovStr );
 	} else {
-        debug_printf( level, "Event: %s for unknown Node (%d.%d.%d): "
+        debug_printf( level, "Event: %s for unknown Node (%d.%d.%d) {%s}: "
 					  "ignoring...%s\n", event->eventName(),
 					  event->cluster, event->proc,
-					  event->subproc, recovStr );
+					  event->subproc, timestr.Value(), recovStr );
 	}
 }
 
@@ -2891,7 +2906,7 @@ Dag::DumpNodeStatus( bool held, bool removed )
 	fprintf( outfile, "  NodesUnready = %d;\n",NumNodesUnready( true ) );
 	fprintf( outfile, "  NodesFailed = %d;\n", nodesFailed );
 	fprintf( outfile, "  JobProcsHeld = %d;\n", nodesHeld );
-	fprintf( outfile, "  JobProcsIdle = %d;\n", nodesIdle );
+	fprintf( outfile, "  JobProcsIdle = %d; /* includes held */\n", nodesIdle );
 	fprintf( outfile, "]\n" );
 
 		//
@@ -2923,7 +2938,10 @@ Dag::DumpNodeStatus( bool held, bool removed )
 				jobProcsQueued = 0;
 				jobProcsHeld = 0;
 			} else {
-				nodeNote = node->GetIsIdle() ? "idle" : "not_idle";
+					// This isn't really the right thing to do for multi-
+					// proc nodes, but I want to get in a fix for
+					// gittrac #5333 today...  wenger 2015-11-05
+				nodeNote = node->GetProcIsIdle( 0 ) ? "idle" : "not_idle";
 				// Note: add info here about whether the job(s) are
 				// held, once that code is integrated.
 			}
@@ -3902,7 +3920,8 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 
 		// Resetting the HTCondor ID here fixes PR 799.  wenger 2007-01-24.
 	if ( node->GetCluster() != _defaultCondorId._cluster ) {
-		ASSERT( JobIsNoop( condorID ) == node->GetNoop() );
+			// Remove the "previous" HTCondor ID for this node from
+			// the ID->node hash table.
 		int id = GetIndexID( node->GetID() );
 		int removeResult = GetEventIDHash( node->GetNoop() )->remove( id );
 		ASSERT( removeResult == 0 );
@@ -4072,13 +4091,14 @@ Dag::ProcessFailedSubmit( Job *node, int max_submit_attempts )
 
 //---------------------------------------------------------------------------
 void
-Dag::DecrementJobCounts( Job *node )
+Dag::DecrementProcCount( Job *node )
 {
 	node->_queuedNodeJobProcs--;
 	ASSERT( node->_queuedNodeJobProcs >= 0 );
 
 	if( node->_queuedNodeJobProcs == 0 ) {
 		UpdateJobCounts( node, -1 );
+		node->Cleanup();
 	}
 }
 

@@ -2143,7 +2143,7 @@ handle_nordugrid_ldap_query( char **input_line )
 	next_entry = ldap_first_entry( hdl, search_result );
 	while ( next_entry ) {
 		BerElement *ber;
-		const char *next_attr;
+		char *next_attr;
 //		char *dn;
 
 		if ( !first_entry ) {
@@ -2173,6 +2173,7 @@ handle_nordugrid_ldap_query( char **input_line )
 
 			ldap_value_free( values );
 
+			ldap_memfree( next_attr );
 			next_attr = ldap_next_attribute( hdl, next_entry, ber );
 		}
 
@@ -2585,11 +2586,10 @@ handle_refresh_proxy_from_file( char **input_line )
 		return 0;
 	}
 
-	// if setenv copies it's second argument, this leaks memory
-	if(file_name) {
-		environ_variable = (char *) malloc(strlen(file_name) + 1);
-		strcpy(environ_variable, file_name); 
-		setenv("X509_USER_PROXY", environ_variable, 1);	
+	environ_variable = getenv("X509_USER_PROXY");
+	if ( file_name &&
+		 ( !environ_variable || strcmp( environ_variable, file_name ) ) ) {
+		setenv("X509_USER_PROXY", file_name, 1);
 	}
 
 	// this is a macro, not a function - hence the lack of a semicolon
@@ -2606,6 +2606,7 @@ handle_refresh_proxy_from_file( char **input_line )
 			return 0;
 	} 
 
+	gss_release_cred( &minor_status, &credential_handle );
 /*
 	globus_gram_client_set_credentials(credential_handle);
 */

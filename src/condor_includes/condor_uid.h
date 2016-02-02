@@ -145,28 +145,36 @@ extern passwd_cache* pcache(void);
 #endif
 
 // An object that automatically returns the previous privilege level when destroyed
+// Optionally, also undo user id initialization.
 class TemporaryPrivSentry {
 
 public:
-	TemporaryPrivSentry(priv_state dest_state) {
+	TemporaryPrivSentry(bool clear_user_ids = false) {
+		m_orig_state = get_priv_state();
+		m_clear_user_ids = clear_user_ids;
+	}
+
+	TemporaryPrivSentry(priv_state dest_state, bool clear_user_ids = false) {
 		m_orig_state = set_priv(dest_state);
+		m_clear_user_ids = clear_user_ids;
 	}
 
 	~TemporaryPrivSentry() {
 		if (m_orig_state != PRIV_UNKNOWN) {
 			set_priv(m_orig_state);
 		}
+		if (m_clear_user_ids) {
+			uninit_user_ids();
+		}
 	}
 
 private:
-	// no default constructor
-	TemporaryPrivSentry();
-
 	// non-copyable.
 	TemporaryPrivSentry(const TemporaryPrivSentry&);
 	TemporaryPrivSentry& operator=(const TemporaryPrivSentry&);
 
 	priv_state m_orig_state;
+	bool m_clear_user_ids;
 };
 
 #endif // __cplusplus

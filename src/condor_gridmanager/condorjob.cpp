@@ -1547,6 +1547,10 @@ ClassAd *CondorJob::buildSubmitAd()
 
 	submit_ad->Assign( ATTR_SUBMITTER_ID, submitterId );
 
+	expr.clear();
+	jobAd->LookupString( ATTR_GLOBAL_JOB_ID, expr );
+	submit_ad->Assign( ATTR_SUBMITTER_GLOBAL_JOB_ID, expr );
+
 		// If JOB_PROXY_OVERRIDE_FILE is set in the config file, then
 		// these attributes aren't set in the local job ad, so we need
 		// to set them explicitly.
@@ -1630,7 +1634,7 @@ ClassAd *CondorJob::buildSubmitAd()
 	if ( universeCanReconnect( tmp_int ) &&
 		 submit_ad->Lookup( ATTR_JOB_LEASE_DURATION ) == NULL ) {
 
-		submit_ad->Assign( ATTR_JOB_LEASE_DURATION, 20 * 60 );
+		submit_ad->Assign( ATTR_JOB_LEASE_DURATION, 40 * 60 );
 	}
 
 		// worry about ATTR_JOB_[OUTPUT|ERROR]_ORIG

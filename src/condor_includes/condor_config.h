@@ -191,8 +191,21 @@ typedef struct macro_set {
 	/* A convenience function that calls param() with a std::string buffer. */
 	bool param(std::string &buf,char const *param_name,char const *default_value=NULL);
 
-	/* A function to fill in a wrapper class for the param functions. */
-	param_functions * get_param_functions();
+	/* A convenience function that calls param() then inserts items from the value into the given StringList if they are not already there */
+	bool param_and_insert_unique_items(const char * param_name, StringList & items, bool case_sensitive=false);
+
+	/*  A convenience function that calls param() then inserts items from the value
+		into the given classad:References set.  Useful whenever a param knob contains
+		a string list of ClassAd attribute names, e.g. IMMUTABLE_JOB_ATTRS.
+		Return true if given param name was found, false if not. */
+	bool param_and_insert_attrs(const char * param_name, classad::References & attrs);
+
+	/* Call this after loading the config files to see if the given user has access to all of the files
+	   Used when running as root to verfiy that the config files will still be accessible after we switch
+	   to the condor user. returns true on success, false if access check fails
+	   when false is returned, the errmsg will indicate the names of files that cannot be accessed.
+	*/
+	bool check_config_file_access(const char * username, class StringList &errfiles);
 
 	bool get_config_dir_file_list( char const *dirpath, class StringList &files );
 

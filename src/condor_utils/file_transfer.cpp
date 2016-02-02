@@ -394,6 +394,9 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 	if ( (IsServer() || (IsClient() && simple_init)) && 
 		 (Ad->LookupString(ATTR_JOB_CMD, buf, sizeof(buf)) == 1) ) 
 	{
+		// TODO: If desired_priv_state isn't PRIV_UNKNOWN, shouldn't
+		//   we switch priv state for these file checks?
+
 		// stash the executable name for comparison later, so
 		// we know that this file should be called condor_exec on the
 		// client machine.  if an executable for this cluster exists
@@ -1435,6 +1438,14 @@ FileTransfer::Reaper(Service *, int pid, int exit_status)
 	daemonCore->Close_Pipe(transobject->TransferPipe[0]);
 	transobject->TransferPipe[0] = -1;
 
+	if ( transobject->Info.success ) {
+		if ( transobject->Info.type == DownloadFilesType ) {
+			transobject->downloadEndTime = time(NULL);
+		} else if ( transobject->Info.type == UploadFilesType ) {
+			transobject->uploadEndTime = time(NULL);
+		}
+	}
+
 	// If Download was successful (it returns 1 on success) and
 	// upload_changed_files is true, then we must record the current
 	// time in last_download_time so in UploadFiles we have a timestamp
@@ -1689,6 +1700,7 @@ FileTransfer::Download(ReliSock *s, bool blocking)
 		// daemonCore will free(info) when the thread exits
 		TransThreadTable->insert(ActiveTransferTid, this);
 
+		downloadStartTime = time(NULL);
 	}
 	
 	return 1;
@@ -2661,6 +2673,8 @@ FileTransfer::Upload(ReliSock *s, bool blocking)
 				ActiveTransferTid);
 		// daemonCore will free(info) when the thread exits
 		TransThreadTable->insert(ActiveTransferTid, this);
+
+		uploadStartTime = time(NULL);
 	}
 		
 	return 1;
@@ -4059,7 +4073,8 @@ bool FileTransfer::BuildFileCatalog(time_t spool_time, const char* iwd, FileCata
 	//
 	// make sure this iteration is done as the actual owner of the directory,
 	// as it may not be world-readable.
-	Directory file_iterator(iwd, PRIV_USER);
+	// desired_priv_state indicates which priv state that is.
+	Directory file_iterator(iwd, desired_priv_state);
 	const char * f = NULL;
 	while( (f = file_iterator.Next()) ) {
 		if (!file_iterator.IsDirectory()) {

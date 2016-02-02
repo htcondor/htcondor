@@ -59,13 +59,14 @@
 #include "expr_analyze.h"
 #include "classad/classadCache.h" // for CachedExprEnvelope stats
 
-// pass the exit code through dprintf_SetExitCode so that it knows
-// whether to print out the on-error buffer or not.
-#define exit(n) (exit)(dprintf_SetExitCode(n))
+static int cleanup_globals(int exit_code); // called on exit to do necessary cleanup
+#define exit(n) (exit)(cleanup_globals(n))
 
 #ifdef HAVE_EXT_POSTGRESQL
 #include "sqlquery.h"
 #endif /* HAVE_EXT_POSTGRESQL */
+
+#define USE_LATE_PROJECTION 1
 
 /* Since this enum can have conditional compilation applied to it, I'm
 	specifying the values for it to keep their actual integral values
@@ -128,17 +129,12 @@ extern 	"C" int SetSyscalls(int val){return val;}
 extern  void short_print(int,int,const char*,int,int,int,int,int,const char *);
 static  void processCommandLineArguments(int, char *[]);
 
-//static  bool process_buffer_line_old(void*, ClassAd *);
-static  bool process_job_and_render_to_dag_map(void*, ClassAd*);
-static  bool process_and_print_job(void*, ClassAd*);
+static  bool streaming_print_job(void*, ClassAd*);
 typedef bool (* buffer_line_processor)(void*, ClassAd *);
 
-static 	void short_header (void);
 static 	void usage (const char *, int other=0);
 enum { usage_Universe=1, usage_JobStatus=2, usage_AllOther=0xFF };
-static 	void buffer_io_display (std::string & out, ClassAd *);
-static 	char * bufferJobShort (ClassAd *);
-static const char * format_job_status_char(int job_status, AttrList*ad, Formatter &);
+static bool render_job_status_char(std::string & result, AttrList*ad, Formatter &);
 
 // functions to fetch job ads and print them out
 //
@@ -147,8 +143,29 @@ static bool show_schedd_queue(const char* scheddAddress, const char* scheddName,
 #ifdef HAVE_EXT_POSTGRESQL
 static bool show_db_queue( const char* quill_name, const char* db_ipAddr, const char* db_name, const char* query_password);
 #endif
+static int dryFetchQueue(const char * file, StringList & proj, int fetch_opts, int limit, buffer_line_processor pfnProcess, void *pvProcess);
 
+#ifdef USE_LATE_PROJECTION
+static void initOutputMask(AttrListPrintMask & pqmask, int qdo_mode, bool wide_mode);
+//PRAGMA_REMIND("make width of the name column adjust to the display width")
+const int name_column_index = 2;
+int name_column_width = 14;
+bool is_standard_format = false;
+bool first_col_is_job_id = false;
+bool has_owner_column = false;
+int  max_name_column_width = 14;
+
+int max_owner_name = 0; // width of longest owner name, from calls to render_owner or render_dag_owner
+int max_batch_name = 0; // width of longest batch name
+//int max_cluster_id = 0; // future
+//int max_proc_id = 0;    // future
+#else
+static 	void short_header (void);
+static 	void buffer_io_display (std::string & out, ClassAd *);
+static 	char * bufferJobShort (ClassAd *);
 static void init_output_mask();
+static const char* format_owner(const char*, AttrList*);
+#endif
 
 static bool read_classad_file(const char *filename, ClassAdList &classads, ClassAdFileParseHelper* pparse_help, const char * constr);
 static int read_userprio_file(const char *filename, ExtArray<PrioEntry> & prios);
@@ -159,6 +176,17 @@ static int read_userprio_file(const char *filename, ExtArray<PrioEntry> & prios)
 unsigned int process_direct_argument(char *arg);
 
 #ifdef HAVE_EXT_POSTGRESQL
+static void quillCleanupOnExit(int n);
+static void freeConnectionStrings();
+
+// use std::strings to hold these strings so that we don't have to worry about freeing them on exit.
+static std::string squillName, squeryPassword, sdbIpAddr, sdbName, squillMachine, quillAddr;
+const char *quillName = NULL;
+const char *dbIpAddr = NULL;
+const char *dbName = NULL;
+const char *queryPassword = NULL;
+const char *quillMachine = NULL;
+
 /* execute a database query directly */ 
 static void exec_db_query(const char *quill_name, const char *db_ipAddr, const char *db_name,const char *query_password);
 
@@ -166,7 +194,7 @@ static void exec_db_query(const char *quill_name, const char *db_ipAddr, const c
 static char * getDBConnStr(char const *&, char const *&, char const *&, char const *&);
 
 /* get the quill address for the quill_name specified */
-static QueryResult getQuillAddrFromCollector(char *quill_name, char *&quill_addr);
+static QueryResult getQuillAddrFromCollector(const char *quill_name, std::string &quill_addr);
 
 /* avgqueuetime is used to indicate a request to query average wait time for uncompleted jobs in queue */
 static  bool avgqueuetime = false;
@@ -182,9 +210,10 @@ void warnScheddLimits(Daemon *schedd,ClassAd *job,MyString &result_buf);
 	failover semantics */
 static unsigned int direct = DIRECT_ALL;
 
-static 	int dash_long = 0, summarize = 1, global = 0, show_io = 0, dash_dag = 0, show_held = 0;
+static 	int dash_long = 0, summarize = 1, global = 0, show_io = 0, dash_dag = 0, show_held = 0, dash_progress = 0;
 static  int use_xml = 0;
-static  int dash_autocluster = 0;
+static  int dash_autocluster = 0; // can be 0, or CondorQ::fetch_DefaultAutoCluster or CondorQ::fetch_GroupBy
+static  int default_fetch_opts = CondorQ::fetch_MyJobs;
 static  bool widescreen = false;
 //static  int  use_old_code = true;
 static  bool expert = false;
@@ -193,16 +222,17 @@ static  int g_match_limit = -1;
 
 static 	int malformed, running, idle, held, suspended, completed, removed;
 
-static  char *jobads_file = NULL;
-static  char *machineads_file = NULL;
-static  char *userprios_file = NULL;
+static char dash_progress_alt_char = 0;
+static  const char *jobads_file = NULL; // NULL, or points to jobads filename from argv
+static  const char *machineads_file = NULL; // NULL, or points to machineads filename from argv
+static  const char *userprios_file = NULL; // NULL, or points to userprios filename from argv
+static  const char *userlog_file = NULL; // NULL, or points to userlog filename from argv
 static  bool analyze_with_userprio = false;
 static  const char * analyze_memory_usage = NULL;
 static  bool dash_profile = false;
 //static  bool analyze_dslots = false;
 static  bool disable_user_print_files = false;
 
-static  char *userlog_file = NULL;
 
 // Constraint on JobIDs for faster filtering
 // a list and not set since we expect a very shallow depth
@@ -220,91 +250,74 @@ static	ClassAdList	scheddList;
 
 static  ClassAdAnalyzer analyzer;
 
-static const char* format_owner(const char*, AttrList*);
-static const char* format_owner_wide(const char*, AttrList*, Formatter &);
+static bool render_owner(std::string & out, AttrList*, Formatter &);
+static bool render_dag_owner(std::string & out, AttrList*, Formatter &);
+static bool render_batch_name(std::string & out, AttrList*, Formatter &);
 
-#define Q_SORT_BY_NAME
 
-#define ALLOW_DASH_DAG
-#ifdef ALLOW_DASH_DAG
+// the condor q strategy will be to ingest ads and print them into MyRowOfValues structures
+// then insert those into a map which is indexed (and thus ordered) by job id.
+// Once all of the jobs have arrived we linkup the JobRowOfData structures by job id and dag id.
+// Finally, then we adjust column widths and formats based on the actual data and finally print.
 
-// clusterProcString is the container where the output strings are
-//    stored.  We need the cluster and proc so that we can sort in an
-//    orderly manner (and don't need to rely on the cluster.proc to be
-//    available....)
-
-class clusterProcString {
+// This structure hold the rendered fields from a single job ad, it will be inserted in to a map by job id
+// and also linked up using the various pointers
+//
+class JobRowOfData {
 public:
-	clusterProcString();
-	int dagman_cluster_id;
-	int dagman_proc_id;
-	int cluster;
-	int proc;
-	char * string;
-	clusterProcString *parent;
-	std::vector<clusterProcString*> children;
-};
+	MyRowOfValues rov;
+	long long   id;        // this will probably be cluster/proc, but may be some other unique id (like autocluster id)
+	long long   dag_id;    // if non-zero, dag parent job id
+	long long   batch_uid; // for non-dag nodes, this is the unique id of the batch name
+	int         generation;// when dag_id is non-zero, this is the dag nesting depth
+	unsigned int flags;    // JROD_* flags used while processing, also align the pointer fields on 64 bit boundary.
+	class JobRowOfData * next_proc; // used at runtime to linkup procs for a cluster
+	class JobRowOfData * children;  // used at runtime to linkup dag nodes, points to linked list of children
+	class JobRowOfData * next_sib;  // used at runtime to connect up children of a common dag parent or common batch id
+	class JobRowOfData * last_sib;  // used at runtime to connect up children of a common dag parent or common batch id
+	JobRowOfData(long long _id=0)
+		: id(_id), dag_id(0), batch_uid(0), generation(0), flags(0)
+		, next_proc(NULL), children(NULL)
+		, next_sib(NULL), last_sib(NULL)
+	{}
 
-class clusterProcMapper {
-public:
-	int dagman_cluster_id;
-	int dagman_proc_id;
-	int cluster;
-	int proc;
-	clusterProcMapper(const clusterProcString& cps) : dagman_cluster_id(cps.dagman_cluster_id),
-		dagman_proc_id(cps.dagman_proc_id), cluster(cps.cluster), proc(cps.proc) {}
-	clusterProcMapper(int dci) : dagman_cluster_id(dci), dagman_proc_id(0), cluster(dci),
-		proc(0) {}
-};
+	bool isValid(int index) {
+		if ( ! rov.is_valid(index)) return false;
+		return rov.Column(index) != NULL;
+	}
 
-class clusterIDProcIDMapper {
-public:
-	int cluster;
-	int proc;
-	clusterIDProcIDMapper(const clusterProcString& cps) :  cluster(cps.cluster), proc(cps.proc) {}
-	clusterIDProcIDMapper(int dci) : cluster(dci), proc(0) {}
-};
+	template <class t>
+	bool getNumber(int index, t & val) {
+		val = 0;
+		if ( ! rov.is_valid(index)) return false;
+		classad::Value * pval = rov.Column(index);
+		if ( ! pval) return false;
+		return pval->IsNumber(val);
+	}
 
-class CompareProcMaps {
-public:
-	bool operator()(const clusterProcMapper& a, const clusterProcMapper& b) const {
-		if (a.cluster < 0 || a.proc < 0) return true;
-		if (b.cluster < 0 || b.proc < 0) return false;
-		if (a.dagman_cluster_id < b.dagman_cluster_id) { return true; }
-		if (a.dagman_cluster_id > b.dagman_cluster_id) { return false; }
-		if (a.dagman_proc_id < b.dagman_proc_id) { return true; }
-		if (a.dagman_proc_id > b.dagman_proc_id) { return false; }
-		if (a.cluster < b.cluster ) { return true; }
-		if (a.cluster > b.cluster ) { return false; }
-		if (a.proc    < b.proc    ) { return true; }
-		if (a.proc    > b.proc    ) { return false; }
-		return false;
+	template <class s>
+	bool getString(int index, s & val) {
+		if ( ! rov.is_valid(index)) return false;
+		classad::Value * pval = rov.Column(index);
+		if ( ! pval) return false;
+		return pval->IsStringValue(val);
+	}
+	bool getString(int index, char * buf, int cch) {
+		if ( ! rov.is_valid(index)) return false;
+		classad::Value * pval = rov.Column(index);
+		if ( ! pval) return false;
+		return pval->IsStringValue(buf, cch);
 	}
 };
+typedef std::map<long long, JobRowOfData> ROD_MAP_BY_ID;
 
-class CompareProcIDMaps {
-public:
-	bool operator()(const clusterIDProcIDMapper& a, const clusterIDProcIDMapper& b) const {
-		if (a.cluster < 0 || a.proc < 0) return true;
-		if (b.cluster < 0 || b.proc < 0) return false;
-		if (a.cluster < b.cluster ) { return true; }
-		if (a.cluster > b.cluster ) { return false; }
-		if (a.proc    < b.proc    ) { return true; }
-		if (a.proc    > b.proc    ) { return false; }
-		return false;
-	}
-};
+#define JROD_COOKED  0x0001   // set when the row data has been cooked (i.e. folded into)
+#define JROD_SKIP    0x0002   // this row should be skipped entirely
+#define JROD_FOLDED  0x0004   // data from this row has been folded into another row
+#define JROD_PRINTED 0x0008   // Set during printing so we can know what has already been printed
+#define JROD_SCHEDUNIV 0x0010  // job is a scheduler univers job (i.e. a dagman) so we still know after universe column has been baked.
+#define JROD_ISDAGNODE 0x0020  // this is a node in a dag (i.e. it has a DAGManJobId)
 
-/* To save typing */
-typedef std::map<clusterProcMapper,clusterProcString*,CompareProcMaps> dag_map_type;
-typedef std::map<clusterIDProcIDMapper,clusterProcString*,CompareProcIDMaps> dag_cluster_map_type;
-dag_map_type dag_map;
-dag_cluster_map_type dag_cluster_map;
-
-clusterProcString::clusterProcString() : dagman_cluster_id(-1), dagman_proc_id(-1),
-	cluster(-1), proc(-1), string(0), parent(0) {}
-
-#endif
 
 /* counters for job matchmaking analysis */
 typedef struct {
@@ -322,9 +335,10 @@ typedef struct {
 	void clear() { memset((void*)this, 0, sizeof(*this)); }
 } anaCounters;
 
-static int set_print_mask_from_stream(const char * streamid, bool is_filename, StringList & attrs);
+static int set_print_mask_from_stream(AttrListPrintMask & prmask, const char * streamid, bool is_filename, StringList & attrs);
+static void dump_print_mask(std::string & tmp);
 
-static	bool		usingPrintMask = false;
+
 static 	printmask_headerfooter_t customHeadFoot = STD_HEADFOOT;
 static std::vector<GroupByKeyInfo> group_by_keys;
 static  bool		cputime = false;
@@ -333,20 +347,18 @@ static 	bool		dash_globus = false;
 static	bool		dash_grid = false;
 static	bool		dash_run = false;
 static	bool		dash_goodput = false;
+static	bool		dash_dry_run = false;
+static  const char * dry_run_file = NULL;
 static  const char		*JOB_TIME = "RUN_TIME";
 static	bool		querySchedds 	= false;
 static	bool		querySubmittors = false;
 static	char		constraint[4096];
 static  const char *user_job_constraint = NULL; // just the constraint given by the user
 static  const char *user_slot_constraint = NULL; // just the machine constraint given by the user
+static  const char *global_schedd_constraint = NULL; // argument from -schedd-constraint
 static  bool        single_machine = false;
 static	DCCollector* pool = NULL; 
 static	char		*scheddAddr;	// used by format_remote_host()
-static	AttrListPrintMask 	mask;
-#if 0
-static  List<const char> mask_head; // The list of headings for the mask entries
-//static const char * mask_headings = NULL;
-#endif
 static CollectorList * Collectors = NULL;
 
 // for run failure analysis
@@ -377,47 +389,20 @@ const int SHORT_BUFFER_SIZE = 8192;
 const int LONG_BUFFER_SIZE = 16384;	
 char return_buff[LONG_BUFFER_SIZE * 100];
 
-char *quillName = NULL;
-char *quillAddr = NULL;
-char *quillMachine = NULL;
-char *dbIpAddr = NULL;
-char *dbName = NULL;
-char *queryPassword = NULL;
 
+#ifdef USE_LATE_PROJECTION
+static struct {
+	StringList attrs;
+	AttrListPrintMask mask;
+} app;
+#else
+static bool usingPrintMask = false;
+static AttrListPrintMask mask;
 StringList attrs(NULL, "\n");; // The list of attrs we want, "" for all
+#endif
 
 bool g_stream_results = false;
 
-static void freeConnectionStrings(bool for_exit=true) {
-	if(quillName) {
-		free(quillName);
-		quillName = NULL;
-	}
-	if(quillAddr) {
-		free(quillAddr);
-		quillAddr = NULL;
-	}
-	if(quillMachine) {
-		free(quillMachine);
-		quillMachine = NULL;
-	}
-	if(dbIpAddr) {
-		free(dbIpAddr);
-		dbIpAddr = NULL;
-	}
-	if(dbName) {
-		free(dbName);
-		dbName = NULL;
-	}
-	if(queryPassword) {
-		free(queryPassword);
-		queryPassword = NULL;
-	}
-	if (for_exit) {
-		startdAds.Clear();
-		scheddList.Clear();
-	}
-}
 
 static int longest_slot_machine_name = 0;
 static int longest_slot_name = 0;
@@ -622,6 +607,12 @@ int main (int argc, char **argv)
 	install_sig_handler(SIGPIPE, SIG_IGN );
 #endif
 
+	if (param_boolean("CONDOR_Q_ONLY_MY_JOBS", true)) {
+		default_fetch_opts |= CondorQ::fetch_MyJobs;
+	} else {
+		default_fetch_opts &= ~CondorQ::fetch_MyJobs;
+	}
+
 	// process arguments
 	processCommandLineArguments (argc, argv);
 
@@ -644,7 +635,6 @@ int main (int argc, char **argv)
 	// if fetching jobads from a file or userlog, we don't need to init any daemon or database communication
 	if ((jobads_file != NULL || userlog_file != NULL)) {
 		retval = show_file_queue(jobads_file, userlog_file);
-		freeConnectionStrings();
 		exit(retval?EXIT_SUCCESS:EXIT_FAILURE);
 	}
 
@@ -687,15 +677,17 @@ int main (int argc, char **argv)
 				}
 
 				exec_db_query(NULL, NULL, NULL, NULL);
-				freeConnectionStrings();
 				exit(EXIT_SUCCESS);
 			} 
 #endif /* HAVE_EXT_POSTGRESQL */
 
 			/* .. not a direct db query, so just happily continue ... */
 
+#ifdef USE_LATE_PROJECTION
+#else
 			init_output_mask();
-			
+#endif
+
 			/* When an installation has database parameters configured, 
 				it means there is quill daemon. If database
 				is not accessible, we fail over to
@@ -718,7 +710,6 @@ int main (int argc, char **argv)
 						if (retval)
 						{
 							/* if the queue was retrieved, then I am done */
-							freeConnectionStrings();
 							exit(retval?EXIT_SUCCESS:EXIT_FAILURE);
 						}
 						
@@ -768,7 +759,6 @@ int main (int argc, char **argv)
 							)
 						{
 							/* if the queue was retrieved, then I am done */
-							freeConnectionStrings();
 							exit(retval?EXIT_SUCCESS:EXIT_FAILURE);
 						}
 
@@ -810,7 +800,6 @@ int main (int argc, char **argv)
 					retval = show_schedd_queue(scheddAddr, scheddName, scheddMachine, useFastScheddQuery);
 			
 					/* Hopefully I got the queue from the schedd... */
-					freeConnectionStrings();
 					exit(retval?EXIT_SUCCESS:EXIT_FAILURE);
 					break;
 
@@ -861,7 +850,6 @@ int main (int argc, char **argv)
 							   "SCHEDD_ADDRESS_FILE.",  stderr );
 		}
 
-		freeConnectionStrings();
 		exit( EXIT_FAILURE );
 	}
 	
@@ -874,8 +862,7 @@ int main (int argc, char **argv)
 			ATTR_TOTAL_JOB_ADS );
 		result = scheddQuery.addANDConstraint( constraint );
 		if( result != Q_OK ) {
-			fprintf( stderr, "Error: Couldn't add constraint %s\n", constraint);
-			freeConnectionStrings();
+			fprintf( stderr, "Error: Couldn't add schedd-constraint %s\n", constraint);
 			exit( 1 );
 		}
 	}
@@ -894,18 +881,15 @@ int main (int argc, char **argv)
 			// if we're not an expert, we want verbose output
 		printNoCollectorContact( stderr, pool ? pool->name() : NULL,
 								 !expert ); 
-		freeConnectionStrings();
 		exit( 1 );
 	case Q_NO_COLLECTOR_HOST:
 		ASSERT( pool );
 		fprintf( stderr, "Error: Can't contact condor_collector: "
 				 "invalid hostname: %s\n", pool->name() );
-		freeConnectionStrings();
 		exit( 1 );
 	default:
 		fprintf( stderr, "Error fetching ads: %s\n", 
 				 getStrQueryResult(result) );
-		freeConnectionStrings();
 		exit( 1 );
 	}
 
@@ -921,9 +905,8 @@ int main (int argc, char **argv)
 		/* default to true for remotely queryable */
 #ifdef HAVE_EXT_POSTGRESQL
 		int flag=1;
+		freeConnectionStrings();
 #endif
-
-		freeConnectionStrings(false);
 		useDB = FALSE;
 		if ( ! (ad->LookupString(ATTR_SCHEDD_IP_ADDR, &scheddAddr)  &&
 				ad->LookupString(ATTR_NAME, &scheddName) &&
@@ -936,24 +919,30 @@ int main (int argc, char **argv)
 		}
 
 #ifdef HAVE_EXT_POSTGRESQL
-		char		daemonAdName[128];
+		std::string daemonAdName;
 			// get the address of the database
-		if (ad->LookupString(ATTR_QUILL_DB_IP_ADDR, &dbIpAddr) &&
-			ad->LookupString(ATTR_QUILL_NAME, &quillName) &&
-			ad->LookupString(ATTR_QUILL_DB_NAME, &dbName) && 
-			ad->LookupString(ATTR_QUILL_DB_QUERY_PASSWORD, &queryPassword) &&
+		if (ad->LookupString(ATTR_QUILL_DB_IP_ADDR, sdbIpAddr) &&
+			ad->LookupString(ATTR_QUILL_NAME, squillName) &&
+			ad->LookupString(ATTR_QUILL_DB_NAME, sdbName) && 
+			ad->LookupString(ATTR_QUILL_DB_QUERY_PASSWORD, squeryPassword) &&
 			(!ad->LookupBool(ATTR_QUILL_IS_REMOTELY_QUERYABLE,flag) || flag)) {
+
+			dbIpAddr = sdbIpAddr.c_str();
+			quillName = squillName.c_str();
+			dbName = sdbName.c_str();
+			queryPassword = squeryPassword.c_str();
 
 			/* If the quill information is available, try to use it first */
 			useDB = TRUE;
 	    	if (ad->LookupString(ATTR_SCHEDD_NAME, daemonAdName)) {
-				Q.addSchedd(daemonAdName);
+				Q.addSchedd(daemonAdName.c_str());
 			} else {
 				Q.addSchedd(scheddName);
 			}
 
 				/* get the quill info for fail-over processing */
-			ASSERT(ad->LookupString(ATTR_MACHINE, &quillMachine));
+			ASSERT(ad->LookupString(ATTR_MACHINE, squillMachine));
+			quillMachine = squillMachine.c_str();
 		}
 #endif 
 
@@ -977,7 +966,10 @@ int main (int argc, char **argv)
 		}
 #endif /* HAVE_EXT_POSTGRESQL */
 
+#ifdef USE_LATE_PROJECTION
+#else
 		init_output_mask();
+#endif
 
 		/* When an installation has database parameters configured, it means 
 		   there is quill daemon. If database is not accessible, we fail
@@ -1036,8 +1028,8 @@ int main (int argc, char **argv)
 						schedd's ad had a quill name in it, the collector
 						didn't have a quill ad by that name. */
 
-					if((result2 == Q_OK) && quillAddr &&
-					   (retval = show_schedd_queue(quillAddr, quillName, quillMachine, 0))
+					if((result2 == Q_OK) && !quillAddr.empty() &&
+					   (retval = show_schedd_queue(quillAddr.c_str(), quillName, quillMachine, 0))
 					   )
 					{
 						/* processed correctly, so do the next ad */
@@ -1054,10 +1046,10 @@ int main (int argc, char **argv)
 						"-- Quill daemon %s(%s)\n"
 						"\tassociated with schedd %s(%s)\n"
 						"\tis not reachable or can't talk to rdbms.\n",
-						quillName, quillAddr!=NULL?quillAddr:"<\?\?\?>", 
+						quillName, quillAddr.empty()?"<\?\?\?>":quillAddr.c_str(),
 						scheddName, scheddAddr);
 
-					if (quillAddr == NULL) {
+					if (quillAddr.empty()) {
 						fprintf(stderr,
 							"\t- Possible misconfiguration of quill\n"
 							"\tassociated with this schedd since associated\n"
@@ -1127,13 +1119,29 @@ int main (int argc, char **argv)
 			fprintf(stderr,"Error: Collector has no record of "
 							"schedd/submitter\n");
 
-			freeConnectionStrings();
 			exit(1);
 		}
 	}
 
-	freeConnectionStrings();
 	exit(retval?EXIT_SUCCESS:EXIT_FAILURE);
+}
+
+// when exit is called, this is called also
+static int cleanup_globals(int exit_code)
+{
+	// pass the exit code through dprintf_SetExitCode so that it knows
+	// whether to print out the on-error buffer or not.
+	dprintf_SetExitCode(exit_code);
+
+#ifdef HAVE_EXT_POSTGRESQL
+	quillCleanupOnExit(exit_code);
+#endif
+
+	// do this to make Valgrind happy.
+	startdAds.Clear();
+	scheddList.Clear();
+
+	return exit_code;
 }
 
 // append all variable references made by expression to references list
@@ -1165,83 +1173,123 @@ parse_analyze_detail(const char * pch, int current_details)
 	return current_details | details | flg;
 }
 
+#ifdef USE_LATE_PROJECTION
+// this enum encodes the user choice of the various reports that condor_q can show
+// The first few are mutually exclusive, the last are flags
+enum {
+	QDO_NotSet=0,
+	QDO_JobNormal,
+	QDO_JobRuntime,
+	QDO_JobGoodput,
+	QDO_JobGlobusInfo,
+	QDO_JobGridInfo,
+	QDO_JobHold,
+	QDO_JobIO,
+	QDO_DAG,
+	QDO_Totals,
+	QDO_Progress,
+
+	QDO_AutoclusterNormal, // Print typical autocluster attributes
+
+	QDO_Custom,  // a custom printformat file was loaded, standard outputs should be below this one.
+	QDO_Analyze, // not really a print format.
+
+	QDO_BaseMask  = 0x0000FF,
+
+	// modifier flags
+	QDO_Cputime  = 0x010000,
+
+	// flags
+	QDO_Format      = 0x100000,
+	QDO_PrintFormat = 0x200000,
+	QDO_AutoFormat  = 0x300000, // Format + PrintFormat == AutoFormat
+	QDO_Attribs     = 0x800000,
+};
+//void initProjection(StringList & proj, int qdo_mode);
+#else
+static bool dash_totals = false;
+#endif
+
 static void 
 processCommandLineArguments (int argc, char *argv[])
 {
 	int i;
-	char *arg, *at, *daemonname;
+	char *at, *daemonname;
 	const char * pcolon;
 
+#ifdef USE_LATE_PROJECTION
+	int qdo_mode = QDO_NotSet;
+#else
 	bool custom_attributes = false;
 	attrs.initializeFromString(
-		"ClusterId\nProcId\nQDate\nRemoteUserCPU\nJobStatus\nServerTime\nShadowBday\n"
-		"RemoteWallClockTime\nJobPrio\nImageSize\nOwner\nCmd\nArgs\nArguments\n"
+		"ClusterId\nProcId\nOwner\nJobStatus\nQDate\nRemoteUserCpu\nServerTime\nShadowBday\n"
+		"RemoteWallClockTime\nJobPrio\nImageSize\nCmd\nArgs\nArguments\n"
 		"JobDescription\nMATCH_EXP_JobDescription\nTransferringInput\nTransferringOutput\nTransferQueued");
+#endif
 
 	for (i = 1; i < argc; i++)
 	{
+		// no dash means this arg is a cluster/proc, proc, or owner
 		if( *argv[i] != '-' ) {
 			int cluster, proc;
-			// no dash means this arg is a cluster/proc, proc, or owner
-		#if 1
 			const char * pend;
 			if (StrIsProcId(argv[i], cluster, proc, &pend) && *pend == 0) {
 				constrID.push_back(CondorID(cluster,proc,-1));
 			}
-		#else
-			if( sscanf( argv[i], "%d.%d", &cluster, &proc ) == 2 ) {
-				constrID.push_back(CondorID(cluster,proc,-1));
-			} 
-			else if( sscanf ( argv[i], "%d", &cluster ) == 1 ) {
-				constrID.push_back(CondorID(cluster,-1,-1));
-			} 
-		#endif
 			else {
 				++cOwnersOnCmdline;
 				if( Q.add( CQ_OWNER, argv[i] ) != Q_OK ) {
 					// this error doesn't seem very helpful... can't we say more?
-					fprintf( stderr, "Error: Argument %d (%s)\n", i, argv[i] );
+					fprintf( stderr, "Error: Argument %d (%s) must be a jobid or user\n", i, argv[i] );
 					exit( 1 );
 				}
+				// dont default to 'my jobs' if an owner was specified.
+				default_fetch_opts &= ~CondorQ::fetch_MyJobs;
 			}
+
 			continue;
 		}
 
 		// the argument began with a '-', so use only the part after
 		// the '-' for prefix matches
-		arg = argv[i]+1;
+		const char* dash_arg = argv[i];
 
-		if (is_arg_colon_prefix (arg, "wide", &pcolon, 1)) {
+		if (is_dash_arg_colon_prefix (dash_arg, "wide", &pcolon, 1)) {
 			widescreen = true;
 			if (pcolon) {
 				testing_width = atoi(++pcolon);
+#ifdef USE_LATE_PROJECTION
+				// TODO: fix this...
+				widescreen = false;
+#else
 				if ( ! mask.IsEmpty()) mask.SetOverallWidth(getDisplayWidth()-1);
 				if (testing_width <= 80) widescreen = false;
+#endif
 			}
 			continue;
 		}
-		if (is_arg_prefix (arg, "long", 1)) {
+		if (is_dash_arg_prefix (dash_arg, "long", 1)) {
 			dash_long = 1;
 			summarize = 0;
 		} 
 		else
-		if (is_arg_prefix (arg, "xml", 3)) {
+		if (is_dash_arg_prefix (dash_arg, "xml", 3)) {
 			use_xml = 1;
 			dash_long = 1;
 			summarize = 0;
 			customHeadFoot = HF_BARE;
 		}
 		else
-		if (is_arg_prefix (arg, "limit", 3)) {
+		if (is_dash_arg_prefix (dash_arg, "limit", 3)) {
 			if (++i >= argc) {
-				fprintf(stderr, "Error: Argument -limit requires the max number of results as an argument.\n");
+				fprintf(stderr, "Error: -limit requires the max number of results as an argument.\n");
 				exit(1);
 			}
 			char *endptr;
 			g_match_limit = strtol(argv[i], &endptr, 10);
 			if (*endptr != '\0')
 			{
-				fprintf(stderr, "Error: Unable to convert argument (%s) to a number for -limit.\n", argv[i]);
+				fprintf(stderr, "Error: Unable to convert (%s) to a number for -limit.\n", argv[i]);
 				exit(1);
 			}
 			if (g_match_limit <= 0)
@@ -1251,13 +1299,13 @@ processCommandLineArguments (int argc, char *argv[])
 			}
 		}
 		else
-		if (is_arg_prefix (arg, "pool", 1)) {
+		if (is_dash_arg_prefix (dash_arg, "pool", 1)) {
 			if( pool ) {
 				delete pool;
 			}
 			if( ++i >= argc ) {
 				fprintf( stderr,
-						 "Error: Argument -pool requires a hostname as an argument.\n" );
+						 "Error: -pool requires a hostname as an argument.\n" );
 				if (!expert) {
 					printf("\n");
 					print_wrapped_text("Extra Info: The hostname should be the central "
@@ -1287,15 +1335,15 @@ processCommandLineArguments (int argc, char *argv[])
 			Collectors->append ( new DCCollector( *pool ) );
 		} 
 		else
-		if (is_arg_prefix (arg, "D", 1)) {
+		if (is_arg_prefix (dash_arg+1, "D", 1)) {
 			if( ++i >= argc ) {
 				fprintf( stderr, 
-						 "Error: Argument -%s requires a list of flags as an argument.\n", arg );
+						 "Error: %s requires a list of flags as an argument.\n", dash_arg );
 				if (!expert) {
 					printf("\n");
 					print_wrapped_text("Extra Info: You need to specify debug flags "
 									   "as a quoted string. Common flags are D_ALL, and "
-									   "D_ALWAYS.",
+									   "D_FULLDEBUG.",
 									   stderr);
 				}
 				exit( 1 );
@@ -1303,7 +1351,7 @@ processCommandLineArguments (int argc, char *argv[])
 			set_debug_flags( argv[i], 0 );
 		} 
 		else
-		if (is_arg_prefix (arg, "name", 1)) {
+		if (is_dash_arg_prefix (dash_arg, "name", 1)) {
 
 			if (querySubmittors) {
 				// cannot query both schedd's and submittors
@@ -1323,7 +1371,7 @@ processCommandLineArguments (int argc, char *argv[])
 			// make sure we have at least one more argument
 			if (argc <= i+1) {
 				fprintf( stderr, 
-						 "Error: Argument -name requires the name of a schedd as a parameter.\n" );
+						 "Error: -name requires the name of a schedd as an argument.\n" );
 				exit(1);
 			}
 
@@ -1344,6 +1392,7 @@ processCommandLineArguments (int argc, char *argv[])
 			}
 			sprintf (constraint, "%s == \"%s\"", ATTR_NAME, daemonname);
 			scheddQuery.addORConstraint (constraint);
+			scheddQuery.setLocationLookup(daemonname);
 			Q.addSchedd(daemonname);
 
 #ifdef HAVE_EXT_POSTGRESQL
@@ -1356,11 +1405,11 @@ processCommandLineArguments (int argc, char *argv[])
 			querySchedds = true;
 		} 
 		else
-		if (is_arg_prefix (arg, "direct", 1)) {
+		if (is_dash_arg_prefix (dash_arg, "direct", 1)) {
 			/* check for one more argument */
 			if (argc <= i+1) {
 				fprintf( stderr, 
-					"Error: Argument -direct requires ["
+					"Error: -direct requires ["
 					#ifdef HAVE_EXT_POSTGRESQL
 						"rdbms | quilld | "
 					#endif
@@ -1371,7 +1420,7 @@ processCommandLineArguments (int argc, char *argv[])
 			i++;
 		}
 		else
-		if (is_arg_prefix (arg, "submitter", 1)) {
+		if (is_dash_arg_prefix (dash_arg, "submitter", 1)) {
 
 			if (querySchedds) {
 				// cannot query both schedd's and submittors
@@ -1390,8 +1439,7 @@ processCommandLineArguments (int argc, char *argv[])
 			
 			// make sure we have at least one more argument
 			if (argc <= i+1) {
-				fprintf( stderr, "Error: Argument -submitter requires the name of a "
-						 "user.\n");
+				fprintf( stderr, "Error: -submitter requires the name of a user.\n");
 				exit(1);
 			}
 				
@@ -1411,6 +1459,8 @@ processCommandLineArguments (int argc, char *argv[])
 							uid_domain);
 				free (uid_domain);
 			}
+			// dont default to 'my jobs'
+			default_fetch_opts &= ~CondorQ::fetch_MyJobs;
 
 			// insert the constraints
 			submittorQuery.addORConstraint (constraint);
@@ -1448,40 +1498,39 @@ processCommandLineArguments (int argc, char *argv[])
 			querySubmittors = true;
 		}
 		else
-		if (is_arg_prefix (arg, "constraint", 1)) {
+		if (is_dash_arg_prefix (dash_arg, "constraint", 1)) {
 			// make sure we have at least one more argument
 			if (argc <= i+1) {
-				fprintf( stderr, "Error: Argument -constraint requires "
-							"another parameter\n");
+				fprintf( stderr, "Error: -constraint requires another parameter\n");
 				exit(1);
 			}
 			user_job_constraint = argv[++i];
 
 			if (Q.addAND (user_job_constraint) != Q_OK) {
-				fprintf (stderr, "Error: Argument %d (%s)\n", i, user_job_constraint);
+				fprintf (stderr, "Error: Argument %d (%s) is not a valid constraint\n", i, user_job_constraint);
 				exit (1);
 			}
 		} 
 		else
-		if (is_arg_prefix(arg, "slotconstraint", 5) || is_arg_prefix(arg, "mconstraint", 2)) {
+		if (is_dash_arg_prefix (dash_arg, "slotconstraint", 5) || is_dash_arg_prefix (dash_arg, "mconstraint", 2)) {
 			// make sure we have at least one more argument
 			if (argc <= i+1) {
-				fprintf( stderr, "Error: Argument -%s requires another parameter\n", arg);
+				fprintf( stderr, "Error: %s requires another parameter\n", dash_arg);
 				exit(1);
 			}
 			user_slot_constraint = argv[++i];
 		}
 		else
-		if (is_arg_prefix(arg, "machine", 2)) {
+		if (is_dash_arg_prefix (dash_arg, "machine", 2)) {
 			// make sure we have at least one more argument
 			if (argc <= i+1) {
-				fprintf( stderr, "Error: Argument -%s requires another parameter\n", arg);
+				fprintf( stderr, "Error: %s requires another parameter\n", dash_arg);
 				exit(1);
 			}
 			user_slot_constraint = argv[++i];
 		}
 		else
-		if (is_arg_prefix(arg, "address", 1)) {
+		if (is_dash_arg_prefix (dash_arg, "address", 1)) {
 
 			if (querySubmittors) {
 				// cannot query both schedd's and submittors
@@ -1492,8 +1541,7 @@ processCommandLineArguments (int argc, char *argv[])
 			// make sure we have at least one more argument
 			if (argc <= i+1) {
 				fprintf( stderr,
-						 "Error: Argument -address requires another "
-						 "parameter\n" );
+						 "Error: -address requires another parameter\n" );
 				exit(1);
 			}
 			if( ! is_valid_sinful(argv[i+1]) ) {
@@ -1507,20 +1555,27 @@ processCommandLineArguments (int argc, char *argv[])
 			querySchedds = true;
 		} 
 		else
-		if (is_arg_colon_prefix (arg, "autocluster", &pcolon, 2)) {
+		if (is_dash_arg_colon_prefix (dash_arg, "autocluster", &pcolon, 2)) {
 			dash_autocluster = CondorQ::fetch_DefaultAutoCluster;
 		}
 		else
-		if (is_arg_colon_prefix (arg, "group-by", &pcolon, 2)) {
+		if (is_dash_arg_colon_prefix (dash_arg, "group-by", &pcolon, 2)) {
 			dash_autocluster = CondorQ::fetch_GroupBy;
 		}
 		else
-		if (is_arg_prefix(arg, "attributes", 2)) {
+		if (is_dash_arg_prefix (dash_arg, "attributes", 2)) {
 			if( argc <= i+1 ) {
-				fprintf( stderr, "Error: Argument -attributes requires "
-						 "a list of attributes to show\n" );
+				fprintf( stderr, "Error: -attributes requires a list of attributes to show\n" );
 				exit( 1 );
 			}
+#ifdef USE_LATE_PROJECTION
+			qdo_mode |= QDO_Attribs;
+			StringTokenIterator more_attrs(argv[i+1]);
+			const char * s;
+			while ( (s = more_attrs.next()) ) {
+				app.attrs.append(s);
+			}
+#else
 			if( !custom_attributes ) {
 				custom_attributes = true;
 				attrs.clearAll();
@@ -1531,16 +1586,24 @@ processCommandLineArguments (int argc, char *argv[])
 			while( (s=more_attrs.next()) ) {
 				attrs.append(s);
 			}
+#endif
 			i++;
 		}
 		else
-		if (is_arg_prefix(arg, "format", 1)) {
+		if (is_dash_arg_prefix (dash_arg, "format", 1)) {
 				// make sure we have at least two more arguments
 			if( argc <= i+2 ) {
-				fprintf( stderr, "Error: Argument -format requires "
-						 "format and attribute parameters\n" );
+				fprintf( stderr, "Error: -format requires format and attribute parameters\n" );
 				exit( 1 );
 			}
+#ifdef USE_LATE_PROJECTION
+			qdo_mode = QDO_Format;
+			app.mask.registerFormat( argv[i+1], argv[i+2] );
+			if ( ! dash_autocluster) {
+				app.attrs.initializeFromString("ClusterId ProcId"); // this is needed to prevent some DAG code from faulting.
+			}
+			GetAllReferencesFromClassAdExpr(argv[i+2], app.attrs);
+#else
 			if( !custom_attributes ) {
 				custom_attributes = true;
 				attrs.clearAll();
@@ -1549,21 +1612,29 @@ processCommandLineArguments (int argc, char *argv[])
 				}
 			}
 			GetAllReferencesFromClassAdExpr(argv[i+2],attrs);
-				
-			customHeadFoot = HF_BARE;
 			mask.registerFormat( argv[i+1], argv[i+2] );
 			usingPrintMask = true;
+#endif
+			summarize = 0;
+			customHeadFoot = HF_BARE;
 			i+=2;
 		}
 		else
-		if (is_arg_colon_prefix(arg, "autoformat", &pcolon, 5) ||
-			is_arg_colon_prefix(arg, "af", &pcolon, 2)) {
+		if (is_dash_arg_colon_prefix(dash_arg, "autoformat", &pcolon, 5) ||
+			is_dash_arg_colon_prefix(dash_arg, "af", &pcolon, 2)) {
 				// make sure we have at least one more argument
 			if ( (i+1 >= argc)  || *(argv[i+1]) == '-') {
-				fprintf( stderr, "Error: Argument -autoformat requires "
-						 "at last one attribute parameter\n" );
+				fprintf( stderr, "Error: -autoformat requires at last one attribute parameter\n" );
 				exit( 1 );
 			}
+#ifdef USE_LATE_PROJECTION
+			qdo_mode = QDO_AutoFormat;
+			if ( ! dash_autocluster) {
+				app.attrs.initializeFromString("ClusterId ProcId"); // this is needed to prevent some DAG code from faulting.
+			}
+			AttrListPrintMask & prmask = app.mask;
+			StringList & attrs = app.attrs;
+#else
 			if( !custom_attributes ) {
 				custom_attributes = true;
 				attrs.clearAll();
@@ -1571,6 +1642,9 @@ processCommandLineArguments (int argc, char *argv[])
 					attrs.initializeFromString("ClusterId\nProcId"); // this is needed to prevent some DAG code from faulting.
 				}
 			}
+			usingPrintMask = true;
+			AttrListPrintMask & prmask = mask;
+#endif
 			bool flabel = false;
 			bool fCapV  = false;
 			bool fheadings = false;
@@ -1598,14 +1672,14 @@ processCommandLineArguments (int argc, char *argv[])
 				}
 			}
 			if (fJobId) {
-				if (fheadings || mask.has_headings()) {
-					mask.set_heading(" ID");
-					mask.registerFormat (flabel ? "ID = %4d." : "%4d.", 5, FormatOptionAutoWidth | FormatOptionNoSuffix, ATTR_CLUSTER_ID);
-					mask.set_heading(" ");
-					mask.registerFormat ("%-3d", 3, FormatOptionAutoWidth | FormatOptionNoPrefix, ATTR_PROC_ID);
+				if (fheadings || prmask.has_headings()) {
+					prmask.set_heading(" ID");
+					prmask.registerFormat (flabel ? "ID = %4d." : "%4d.", 5, FormatOptionAutoWidth | FormatOptionNoSuffix, ATTR_CLUSTER_ID);
+					prmask.set_heading(" ");
+					prmask.registerFormat ("%-3d", 3, FormatOptionAutoWidth | FormatOptionNoPrefix, ATTR_PROC_ID);
 				} else {
-					mask.registerFormat (flabel ? "ID = %d." : "%d.", 0, FormatOptionNoSuffix, ATTR_CLUSTER_ID);
-					mask.registerFormat ("%d", 0, FormatOptionNoPrefix, ATTR_PROC_ID);
+					prmask.registerFormat (flabel ? "ID = %d." : "%d.", 0, FormatOptionNoSuffix, ATTR_CLUSTER_ID);
+					prmask.registerFormat ("%d", 0, FormatOptionNoPrefix, ATTR_PROC_ID);
 				}
 			}
 			// process all arguments that don't begin with "-" as part
@@ -1616,20 +1690,20 @@ processCommandLineArguments (int argc, char *argv[])
 				MyString lbl = "";
 				int wid = 0;
 				int opts = FormatOptionNoTruncate;
-				if (fheadings || mask.has_headings()) {
+				if (fheadings || prmask.has_headings()) {
 					const char * hd = fheadings ? argv[i] : "(expr)";
 					wid = 0 - (int)strlen(hd);
 					opts = FormatOptionAutoWidth | FormatOptionNoTruncate; 
-					mask.set_heading(hd);
+					prmask.set_heading(hd);
 				}
 				else if (flabel) { lbl.formatstr("%s = ", argv[i]); wid = 0; opts = 0; }
 				lbl += fRaw ? "%r" : (fCapV ? "%V" : "%v");
-				mask.registerFormat(lbl.Value(), wid, opts, argv[i]);
+				prmask.registerFormat(lbl.Value(), wid, opts, argv[i]);
 			}
-			mask.SetAutoSep(prowpre, pcolpre, pcolsux, "\n");
+			prmask.SetAutoSep(prowpre, pcolpre, pcolsux, "\n");
+			summarize = 0;
 			customHeadFoot = HF_BARE;
 			if (fheadings) { customHeadFoot = (printmask_headerfooter_t)(customHeadFoot & ~HF_NOHEADER); }
-			usingPrintMask = true;
 			// if autoformat list ends in a '-' without any characters after it, just eat the arg and keep going.
 			if (i+1 < argc && '-' == (argv[i+1])[0] && 0 == (argv[i+1])[1]) {
 				++i;
@@ -1638,7 +1712,7 @@ processCommandLineArguments (int argc, char *argv[])
 		else
 		if (is_dash_arg_colon_prefix(argv[i], "print-format", &pcolon, 2)) {
 			if ( (i+1 >= argc)  || (*(argv[i+1]) == '-' && (argv[i+1])[1] != 0)) {
-				fprintf( stderr, "Error: Argument -print-format requires a filename argument\n");
+				fprintf( stderr, "Error: -print-format requires a filename argument\n");
 				exit( 1 );
 			}
 			// hack allow -pr ! to disable use of user-default print format files.
@@ -1647,21 +1721,48 @@ processCommandLineArguments (int argc, char *argv[])
 				disable_user_print_files = true;
 				continue;
 			}
+#ifdef USE_LATE_PROJECTION
+			qdo_mode = QDO_PrintFormat | QDO_Custom;
+			if ( ! widescreen) app.mask.SetOverallWidth(getDisplayWidth()-1);
+			++i;
+			if (set_print_mask_from_stream(app.mask, argv[i], true, app.attrs) < 0) {
+#else
 			if ( ! widescreen) mask.SetOverallWidth(getDisplayWidth()-1);
 			if( !custom_attributes ) {
 				custom_attributes = true;
 				attrs.clearAll();
 			}
+			usingPrintMask = true;
 			++i;
-			if (set_print_mask_from_stream(argv[i], true, attrs) < 0) {
+			if (set_print_mask_from_stream(mask, argv[i], true, attrs) < 0) {
+#endif
 				fprintf(stderr, "Error: invalid select file %s\n", argv[i]);
 				exit (1);
 			}
 		}
 		else
-		if (is_arg_prefix (arg, "global", 1)) {
+		if (is_dash_arg_prefix (dash_arg, "global", 1)) {
 			global = 1;
-		} 
+		}
+		else
+		if (is_dash_arg_prefix (dash_arg, "allusers", 2) || is_dash_arg_prefix (dash_arg, "all-users", 2)) {
+			default_fetch_opts &= ~CondorQ::fetch_MyJobs;
+		}
+		else
+		if (is_dash_arg_prefix (dash_arg, "schedd-constraint", 5)) {
+			// make sure we have at least one more argument
+			if (argc <= i+1) {
+				fprintf( stderr, "Error: -schedd-constraint requires a constraint argument\n");
+				exit(1);
+			}
+			global_schedd_constraint = argv[++i];
+
+			if (scheddQuery.addANDConstraint (global_schedd_constraint) != Q_OK) {
+				fprintf (stderr, "Error: Invalid constraint (%s)\n", global_schedd_constraint);
+				exit (1);
+			}
+			global = 1;
+		}
 		else
 		if (is_dash_arg_prefix (argv[i], "help", 1)) {
 			int other = 0;
@@ -1679,13 +1780,13 @@ processCommandLineArguments (int argc, char *argv[])
 			exit(0);
 		}
 		else
-		if (is_arg_colon_prefix(arg, "better-analyze", &pcolon, 2)
-			|| is_arg_colon_prefix(arg, "better-analyse", &pcolon, 2)
-			|| is_arg_colon_prefix(arg, "analyze", &pcolon, 2)
-			|| is_arg_colon_prefix(arg, "analyse", &pcolon, 2)
+		if (is_dash_arg_colon_prefix(dash_arg, "better-analyze", &pcolon, 2)
+			|| is_dash_arg_colon_prefix(dash_arg, "better-analyse", &pcolon, 2)
+			|| is_dash_arg_colon_prefix(dash_arg, "analyze", &pcolon, 2)
+			|| is_dash_arg_colon_prefix(dash_arg, "analyse", &pcolon, 2)
 			) {
 			better_analyze = true;
-			if (arg[0] == 'b') { // if better, default to higher verbosity output.
+			if (dash_arg[1] == 'b' || dash_arg[2] == 'b') { // if better, default to higher verbosity output.
 				analyze_detail_level |= detail_better | detail_analyze_each_sub_expr | detail_always_analyze_req;
 			}
 			if (pcolon) { 
@@ -1716,101 +1817,138 @@ processCommandLineArguments (int argc, char *argv[])
 					}
 				}
 			}
+#ifdef USE_LATE_PROJECTION
+			qdo_mode = QDO_Analyze;
+#else
 			attrs.clearAll();
+#endif
 		}
 		else
-		if (is_arg_colon_prefix(arg, "reverse", &pcolon, 3)) {
+		if (is_dash_arg_colon_prefix(dash_arg, "reverse", &pcolon, 3)) {
 			reverse_analyze = true; // modify analyze to be reverse analysis
 			if (pcolon) { 
 				analyze_detail_level |= parse_analyze_detail(++pcolon, analyze_detail_level);
 			}
 		}
 		else
-		if (is_arg_colon_prefix(arg, "reverse-analyze", &pcolon, 10)) {
+		if (is_dash_arg_colon_prefix(dash_arg, "reverse-analyze", &pcolon, 10)) {
 			reverse_analyze = true; // modify analyze to be reverse analysis
 			better_analyze = true;	// enable analysis
 			analyze_with_userprio = false;
 			if (pcolon) { 
 				analyze_detail_level |= parse_analyze_detail(++pcolon, analyze_detail_level);
 			}
+#ifdef USE_LATE_PROJECTION
+			qdo_mode = QDO_Analyze;
+#else
 			attrs.clearAll();
+#endif
 		}
 		else
-		if (is_arg_prefix(arg, "verbose", 4)) {
+		if (is_dash_arg_colon_prefix(dash_arg, "dry-run", &pcolon, 3)) {
+			dash_dry_run = true;
+			if (pcolon && pcolon[1]) { dry_run_file = ++pcolon; }
+		}
+		else
+		if (is_dash_arg_prefix(dash_arg, "verbose", 4)) {
 			// chatty output, mostly for for -analyze
 			// this is not the same as -long. 
 			verbose = true;
 		}
 		else
-		if (is_arg_prefix(arg, "run", 1)) {
+		if (is_dash_arg_prefix(dash_arg, "run", 1)) {
 			std::string expr;
 			formatstr( expr, "%s == %d || %s == %d || %s == %d", ATTR_JOB_STATUS, RUNNING,
 					 ATTR_JOB_STATUS, TRANSFERRING_OUTPUT, ATTR_JOB_STATUS, SUSPENDED );
 			Q.addAND( expr.c_str() );
 			dash_run = true;
-			if( !dash_dag ) {
+			if( ! dash_dag && ! dash_progress) {
+#ifdef USE_LATE_PROJECTION
+			qdo_mode = QDO_JobRuntime;
+#else
 				attrs.append( ATTR_REMOTE_HOST );
 				attrs.append( ATTR_JOB_UNIVERSE );
 				attrs.append( ATTR_EC2_REMOTE_VM_NAME ); // for displaying HOST(s) in EC2
+#endif
 			}
 		}
 		else
-		if (is_arg_prefix(arg, "hold", 2) || is_arg_prefix( arg, "held", 2)) {
-			Q.add (CQ_STATUS, HELD);		
+		if (is_dash_arg_prefix(dash_arg, "hold", 2) || is_dash_arg_prefix(dash_arg, "held", 2)) {
+			Q.add (CQ_STATUS, HELD);
 			show_held = true;
 			widescreen = true;
+#ifdef USE_LATE_PROJECTION
+			qdo_mode = QDO_JobHold;
+#else
 			attrs.append( ATTR_ENTERED_CURRENT_STATUS );
 			attrs.append( ATTR_HOLD_REASON );
+#endif
 		}
 		else
-		if (is_arg_prefix(arg, "goodput", 2)) {
+		if (is_dash_arg_prefix(dash_arg, "goodput", 2)) {
 			// goodput and show_io require the same column
 			// real-estate, so they're mutually exclusive
 			dash_goodput = true;
 			show_io = false;
+#ifdef USE_LATE_PROJECTION
+			qdo_mode = QDO_JobGoodput;
+#else
 			attrs.append( ATTR_JOB_COMMITTED_TIME );
 			attrs.append( ATTR_SHADOW_BIRTHDATE );
 			attrs.append( ATTR_LAST_CKPT_TIME );
 			attrs.append( ATTR_JOB_REMOTE_WALL_CLOCK );
+#endif
 		}
 		else
-		if (is_arg_prefix(arg, "cputime", 2)) {
+		if (is_dash_arg_prefix(dash_arg, "cputime", 2)) {
 			cputime = true;
 			JOB_TIME = "CPU_TIME";
+#ifdef USE_LATE_PROJECTION
+			qdo_mode |= QDO_Cputime;
+#else
 		 	attrs.append( ATTR_JOB_REMOTE_USER_CPU );
+#endif
 		}
 		else
-		if (is_arg_prefix(arg, "currentrun", 2)) {
+		if (is_dash_arg_prefix(dash_arg, "currentrun", 2)) {
 			current_run = true;
 		}
 		else
-		if (is_arg_prefix(arg, "grid", 2 )) {
+		if (is_dash_arg_prefix(dash_arg, "grid", 2 )) {
 			// grid is a superset of globus, so we can't do grid if globus has been specifed
 			if ( ! dash_globus) {
 				dash_grid = true;
+#ifdef USE_LATE_PROJECTION
+			qdo_mode = QDO_JobGridInfo;
+#else
 				attrs.append( ATTR_GRID_JOB_ID );
 				attrs.append( ATTR_GRID_RESOURCE );
 				attrs.append( ATTR_GRID_JOB_STATUS );
 				attrs.append( ATTR_GLOBUS_STATUS );
     			attrs.append( ATTR_EC2_REMOTE_VM_NAME );
+#endif
 				Q.addAND( "JobUniverse == 9" );
 			}
 		}
 		else
-		if (is_arg_prefix(arg, "globus", 5 )) {
+		if (is_dash_arg_prefix(dash_arg, "globus", 5 )) {
 			Q.addAND( "GlobusStatus =!= UNDEFINED" );
 			dash_globus = true;
 			if (dash_grid) {
 				dash_grid = false;
 			} else {
+#ifdef USE_LATE_PROJECTION
+			qdo_mode = QDO_JobGlobusInfo;
+#else
 				attrs.append( ATTR_GLOBUS_STATUS );
 				attrs.append( ATTR_GRID_RESOURCE );
 				attrs.append( ATTR_GRID_JOB_STATUS );
 				attrs.append( ATTR_GRID_JOB_ID );
+#endif
 			}
 		}
 		else
-		if (is_arg_colon_prefix(arg, "debug", &pcolon, 3)) {
+		if (is_dash_arg_colon_prefix(dash_arg, "debug", &pcolon, 3)) {
 			// dprintf to console
 			dprintf_set_tool_debug("TOOL", 0);
 			if (pcolon && pcolon[1]) {
@@ -1818,11 +1956,14 @@ processCommandLineArguments (int argc, char *argv[])
 			}
 		}
 		else
-		if (is_arg_prefix(arg, "io", 2)) {
+		if (is_dash_arg_prefix(dash_arg, "io", 2)) {
 			// goodput and show_io require the same column
 			// real-estate, so they're mutually exclusive
 			show_io = true;
 			dash_goodput = false;
+#ifdef USE_LATE_PROJECTION
+			qdo_mode = QDO_JobIO;
+#else
 			attrs.append(ATTR_NUM_JOB_STARTS);
 			attrs.append(ATTR_NUM_CKPTS_RAW);
 			attrs.append(ATTR_FILE_READ_BYTES);
@@ -1836,91 +1977,125 @@ processCommandLineArguments (int argc, char *argv[])
 			attrs.append(ATTR_TRANSFERRING_INPUT);
 			attrs.append(ATTR_TRANSFERRING_OUTPUT);
 			attrs.append(ATTR_TRANSFER_QUEUED);
+#endif
 		}
-		else if (is_arg_prefix(arg, "dag", 2)) {
+		else if (is_dash_arg_prefix(dash_arg, "dag", 2)) {
 			dash_dag = true;
+#ifdef USE_LATE_PROJECTION
+			if ( ! dash_progress) {
+				qdo_mode = QDO_DAG;
+			}
+#else
 			attrs.clearAll();
+#endif
 			if( g_stream_results  ) {
 				fprintf( stderr, "-stream-results and -dag are incompatible\n" );
 				usage( argv[0] );
 				exit( 1 );
 			}
 		}
-		else if (is_arg_prefix(arg, "totals", 3)) {
+		else if (is_dash_arg_colon_prefix(dash_arg, "progress", &pcolon, 3)) {
+			dash_progress = true;
+			if (pcolon) {
+				StringList opts(++pcolon, ",:");
+				opts.rewind();
+				while (const char * popt = opts.next()) {
+					char ch = *popt;
+					if (ch >= '0' && ch <= '9') {
+						dash_progress = atoi(popt);
+					} else if (strchr("b?*.-_#z", ch)) {
+						dash_progress_alt_char = ch;
+					}
+				}
+			}
+#ifdef USE_LATE_PROJECTION
+			qdo_mode = QDO_Progress;
+#else
+			error. cannot do this..
+#endif
+			if( g_stream_results  ) {
+				fprintf( stderr, "-stream-results and -progress are incompatible\n" );
+				usage( argv[0] );
+				exit( 1 );
+			}
+		}
+		else if (is_dash_arg_prefix(dash_arg, "totals", 3)) {
+#ifdef USE_LATE_PROJECTION
+			qdo_mode = QDO_Totals;
+			if (set_print_mask_from_stream(app.mask, "SELECT NOHEADER\nSUMMARY STANDARD", false, app.attrs) < 0) {
+#else
+			dash_totals = true;
 			if( !custom_attributes ) {
 				custom_attributes = true;
 				attrs.clearAll();
 			}
-			if (set_print_mask_from_stream("SELECT NOHEADER\nSUMMARY STANDARD", false, attrs) < 0) {
+			usingPrintMask = true;
+			if (set_print_mask_from_stream(mask, "SELECT NOHEADER\nSUMMARY STANDARD", false, attrs) < 0) {
+#endif
 				fprintf(stderr, "Error: unexpected error!\n");
 				exit (1);
 			}
 		}
-		else if (is_arg_prefix(arg, "expert", 1)) {
+		else if (is_dash_arg_prefix(dash_arg, "expert", 1)) {
 			expert = true;
+#ifdef USE_LATE_PROJECTION
+			/// fix me
+#else
 			attrs.clearAll();
+#endif
 		}
-		else if (is_arg_prefix(arg, "jobads", 1)) {
+		else if (is_dash_arg_prefix(dash_arg, "jobads", 1)) {
 			if (argc <= i+1) {
-				fprintf( stderr, "Error: Argument -jobads requires a filename\n");
+				fprintf( stderr, "Error: -jobads requires a filename\n");
 				exit(1);
 			} else {
 				i++;
-				jobads_file = strdup(argv[i]);
+				jobads_file = argv[i];
 			}
 		}
-		else if (is_arg_prefix(arg, "userlog", 1)) {
+		else if (is_dash_arg_prefix(dash_arg, "userlog", 1)) {
 			if (argc <= i+1) {
-				fprintf( stderr, "Error: Argument -userlog requires a filename\n");
+				fprintf( stderr, "Error: -userlog requires a filename\n");
 				exit(1);
 			} else {
 				i++;
-				if (userlog_file) {
-					free(userlog_file);
-				}
-				userlog_file = strdup(argv[i]);
+				userlog_file = argv[i];
 			}
 		}
-		else if (is_arg_prefix(arg, "slotads", 1)) {
+		else if (is_dash_arg_prefix(dash_arg, "slotads", 1)) {
 			if (argc <= i+1) {
-				fprintf( stderr, "Error: Argument -slotads requires a filename\n");
+				fprintf( stderr, "Error: -slotads requires a filename\n");
 				exit(1);
 			} else {
 				i++;
-				if (machineads_file) {
-					free(machineads_file);
-				}
-				machineads_file = strdup(argv[i]);
+				machineads_file = argv[i];
 			}
 		}
-		else if (is_arg_colon_prefix(arg, "userprios", &pcolon, 5)) {
+		else if (is_dash_arg_colon_prefix(dash_arg, "userprios", &pcolon, 5)) {
 			if (argc <= i+1) {
-				fprintf( stderr, "Error: Argument -userprios requires a filename\n");
+				fprintf( stderr, "Error: -userprios requires a filename argument\n");
 				exit(1);
 			} else {
 				i++;
-				if (userprios_file) {
-					free(userprios_file);
-				}
-				userprios_file = strdup(argv[i]);
+				userprios_file = argv[i];
 				analyze_with_userprio = true;
 			}
 		}
-		else if (is_arg_colon_prefix(arg, "nouserprios", &pcolon, 7)) {
+		else if (is_dash_arg_colon_prefix(dash_arg, "nouserprios", &pcolon, 7)) {
 			analyze_with_userprio = false;
 		}
 #ifdef HAVE_EXT_POSTGRESQL
-		else if (match_prefix(arg, "avgqueuetime")) {
+		else if (is_dash_arg_prefix(dash_arg, "avgqueuetime", 4)) {
 				/* if user want average wait time, we will perform direct DB query */
 			avgqueuetime = true;
 			directDBquery =  true;
 		}
 #endif /* HAVE_EXT_POSTGRESQL */
-        else if (is_arg_prefix(arg, "version", 1)) {
+		else if (is_dash_arg_prefix(dash_arg, "version", 1)) {
 			printf( "%s\n%s\n", CondorVersion(), CondorPlatform() );
 			exit(0);
-        }
-		else if (is_arg_colon_prefix(arg, "profile", &pcolon, 4)) {
+		}
+		else if (is_dash_arg_colon_prefix(dash_arg, "profile", &pcolon, 4)) {
 			dash_profile = true;
 			if (pcolon) {
 				StringList opts(++pcolon, ",:");
@@ -1935,30 +2110,55 @@ processCommandLineArguments (int argc, char *argv[])
 			}
 		}
 		else
-		if (is_arg_prefix (arg, "stream-results", 2)) {
+		if (is_dash_arg_prefix (dash_arg, "stream-results", 2)) {
 			g_stream_results = true;
-			if( dash_dag ) {
-				fprintf( stderr, "-stream-results and -dag are incompatible\n" );
+			if( dash_dag || (qdo_mode == QDO_Progress)) {
+				fprintf( stderr, "-stream-results and -dag or -progress are incompatible\n" );
 				usage( argv[0] );
 				exit( 1 );
 			}
 		}
 		else {
-			fprintf( stderr, "Error: unrecognized argument -%s\n", arg );
+			fprintf( stderr, "Error: unrecognized argument %s\n", dash_arg );
 			usage(argv[0]);
 			exit( 1 );
 		}
 	}
 
+#ifdef USE_LATE_PROJECTION
+	if (dash_dry_run) {
+		const char * const amo[] = { "", "run", "goodput", "globus", "grid", "hold", "io", "dag", "totals", "autocluster", "custom", "analyze" };
+		fprintf(stderr, "\ncondor_q %s %s\n", amo[qdo_mode & QDO_BaseMask], dash_long ? "-long" : "");
+	}
+	if ( ! dash_long && ! (qdo_mode & QDO_Format) && (qdo_mode & QDO_BaseMask) < QDO_Custom) {
+		initOutputMask(app.mask, qdo_mode, widescreen);
+	}
+#else
+	if (dash_dry_run) {
+		const char * pdash = "";
+		if (dash_totals) { pdash = "totals"; }
+		if (dash_dag) { pdash = "dag"; }
+		if (dash_run) { pdash = "run"; }
+		else if (dash_goodput) { pdash = "goodput"; }
+		else if (dash_globus) { pdash = "globus"; }
+		else if (dash_grid) { pdash = "grid"; }
+		else if (show_held) { pdash = "hold"; }
+		else if (show_io) { pdash = "io"; }
+		fprintf(stderr, "\ncondor_q %s %s\n", pdash, dash_long ? "-long" : "");
+	}
 		//Added so -long or -xml can be listed before other options
 	if(dash_long && !custom_attributes) {
 		attrs.clearAll();
 	}
+#endif
 
 	// convert cluster and cluster.proc into constraints
 	// if there is a -dag argument, then we look up all children of the dag
 	// as well as the dag itself.
 	if ( ! constrID.empty()) {
+		// dont default to 'my jobs'
+		default_fetch_opts &= ~CondorQ::fetch_MyJobs;
+
 		for (std::vector<CondorID>::const_iterator it = constrID.begin(); it != constrID.end(); ++it) {
 
 			// if we aren't doing db queries, do we need to do this?
@@ -1975,14 +2175,18 @@ processCommandLineArguments (int argc, char *argv[])
 
 			// if we are doing -dag output, then also request any jobs that are inside this dag.
 			// we know that a jobid for a dagman job will always never have a proc > 0
-			if (dash_dag && it->_proc < 1) {
+			if ((dash_dag || dash_progress) && it->_proc < 1) {
 				sprintf(constraint, ATTR_DAGMAN_JOB_ID " == %d", it->_cluster);
 				Q.addOR(constraint);
 			}
 		}
 	} else if (show_io) {
+#ifdef USE_LATE_PROJECTION
+	// InitOutputMask does this now
+#else
 		// if no job id's specifed, then constrain the query to jobs that are doing file transfer
 		Q.addAND("JobUniverse==1 || TransferQueued=?=true || TransferringOutput=?=true || TransferringInput=?=true");
+#endif
 	}
 }
 
@@ -2052,12 +2256,11 @@ unsigned int process_direct_argument(char *arg)
 
 #ifdef HAVE_EXT_POSTGRESQL
 	fprintf( stderr, 
-		"Error: Argument -direct requires [rdbms | quilld | schedd]\n" ); 
-/*		"Error: Argument -direct requires [rdbms | schedd]\n" ); */
+		"Error: -direct requires [rdbms | quilld | schedd]\n" );
 #else
 	fprintf( stderr, 
 		"Error: Quill feature set is not available.\n"
-		"Error: Argument -direct may only take 'schedd' as an option.\n" );
+		"-direct may only take 'schedd' as an option.\n" );
 #endif
 
 	exit(EXIT_FAILURE);
@@ -2066,6 +2269,8 @@ unsigned int process_direct_argument(char *arg)
 	return DIRECT_UNKNOWN;
 }
 
+#ifdef USE_LATE_PROJECTION
+#else
 
 static void
 buffer_io_display(std::string & out, ClassAd *ad)
@@ -2320,71 +2525,71 @@ short_header (void)
 	}
 }
 
-static const char *
-format_remote_host (const char *, AttrList *ad, Formatter &)
+#endif
+
+static bool
+render_remote_host (std::string & result, AttrList *ad, Formatter &)
 {
-	static char host_result[MAXHOSTNAMELEN];
-	static char unknownHost [] = "[????????????????]";
+	//static char host_result[MAXHOSTNAMELEN];
+	//static char unknownHost [] = "[????????????????]";
 	condor_sockaddr addr;
 
 	int universe = CONDOR_UNIVERSE_STANDARD;
 	ad->LookupInteger( ATTR_JOB_UNIVERSE, universe );
 	if (((universe == CONDOR_UNIVERSE_SCHEDULER) || (universe == CONDOR_UNIVERSE_LOCAL)) &&
 		addr.from_sinful(scheddAddr) == true) {
-		MyString hostname = get_hostname(addr);
-		if (hostname.Length() > 0) {
-			strcpy( host_result, hostname.Value() );
-			return host_result;
-		} else {
-			return unknownHost;
-		}
+		result = get_hostname(addr);
+		return result.length();
 	} else if (universe == CONDOR_UNIVERSE_GRID) {
-		if (ad->LookupString(ATTR_EC2_REMOTE_VM_NAME,host_result,sizeof(host_result)) == 1)
-			return host_result;
-		else if (ad->LookupString(ATTR_GRID_RESOURCE,host_result, sizeof(host_result)) == 1 )
-			return host_result;
+		if (ad->LookupString(ATTR_EC2_REMOTE_VM_NAME,result) == 1)
+			return true;
+		else if (ad->LookupString(ATTR_GRID_RESOURCE,result) == 1 )
+			return true;
 		else
-			return unknownHost;
+			return false;
 	}
 
-	if (ad->LookupString(ATTR_REMOTE_HOST, host_result, sizeof(host_result)) == 1) {
-		if( is_valid_sinful(host_result) && 
-			addr.from_sinful(host_result) == true ) {
-			MyString hostname = get_hostname(addr);
-			if (hostname.Length() > 0) {
-				strcpy(host_result, hostname.Value());
-			} else {
-				return unknownHost;
-			}
+	if (ad->LookupString(ATTR_REMOTE_HOST, result) == 1) {
+		if( is_valid_sinful(result.c_str()) &&
+			addr.from_sinful(result.c_str()) == true ) {
+			result = get_hostname(addr);
+			return result.length() > 0;
 		}
-		return host_result;
+		return true;
 	}
-	return unknownHost;
+	return false;
 }
 
-static const char *
-format_cpu_time (double utime, AttrList *ad, Formatter &)
+static bool
+render_cpu_time (double & cputime, AttrList *ad, Formatter &)
 {
-	return format_time( (int) job_time(utime,(ClassAd *)ad) );
+	if ( ! ad->EvalFloat(ATTR_JOB_REMOTE_USER_CPU, NULL, cputime))
+		return false;
+
+	cputime = job_time(cputime, ad);
+	//return format_time( (int) job_time(utime,(ClassAd *)ad) );
+	return true;
 }
 
-static const char *
-format_memory_usage(int image_size, AttrList *ad, Formatter &)
+static bool
+render_memory_usage(double & mem_used_mb, AttrList *ad, Formatter &)
 {
-	static char put_result[10];
+	long long  image_size;
 	long long memory_usage;
 	// print memory usage unless it's unavailable, then print image size
 	// note that memory usage is megabytes but imagesize is kilobytes.
-	double memory_used_mb = image_size / 1024.0;
 	if (ad->EvalInteger(ATTR_MEMORY_USAGE, NULL, memory_usage)) {
-		memory_used_mb = memory_usage;
+		mem_used_mb = memory_usage;
+	} else if (ad->EvalInteger(ATTR_IMAGE_SIZE, NULL, image_size)) {
+		mem_used_mb = image_size / 1024.0;
+	} else {
+		return false;
 	}
-	sprintf(put_result, "%-4.1f", memory_used_mb);
-	return put_result;
+	return true;
 }
 
 static const char *
-format_readable_mb(const classad::Value &val, AttrList *, Formatter &)
+format_readable_mb(const classad::Value &val, Formatter &)
 {
 	long long kbi;
 	double kb;
@@ -2399,7 +2604,7 @@ format_readable_mb(const classad::Value &val, AttrList *, Formatter &)
 }
 
 static const char *
-format_readable_kb(const classad::Value &val, AttrList *, Formatter &)
+format_readable_kb(const classad::Value &val, Formatter &)
 {
 	long long kbi;
 	double kb;
@@ -2414,7 +2619,7 @@ format_readable_kb(const classad::Value &val, AttrList *, Formatter &)
 }
 
 static const char *
-format_readable_bytes(const classad::Value &val, AttrList *, Formatter &)
+format_readable_bytes(const classad::Value &val, Formatter &)
 {
 	long long kbi;
 	double kb;
@@ -2428,47 +2633,51 @@ format_readable_bytes(const classad::Value &val, AttrList *, Formatter &)
 	return metric_units(kb);
 }
 
-static const char *
-format_job_description(const char* cmd, AttrList *ad, Formatter &)
+static bool
+render_job_description(std::string & out, AttrList *ad, Formatter &)
 {
-	static MyString put_result;
+	if ( ! ad->EvalString(ATTR_JOB_CMD, NULL, out))
+		return false;
+
 	std::string description;
 	if ( ! ad->EvalString("MATCH_EXP_" ATTR_JOB_DESCRIPTION, NULL, description)) {
 		ad->EvalString(ATTR_JOB_DESCRIPTION, NULL, description);
 	}
 	if ( ! description.empty()) {
-		put_result.formatstr("(%s)", description.c_str());
+		formatstr(out, "(%s)", description.c_str());
 	} else {
-		put_result = condor_basename(cmd);
+		MyString put_result = condor_basename(out.c_str());
 		MyString args_string;
 		ArgList::GetArgsStringForDisplay(ad,&args_string);
 		if ( ! args_string.IsEmpty()) {
-			put_result.formatstr_cat( " %s", args_string.Value() );
-			//put_result += " ";
-			//put_result += args_string.Value();
+			put_result.formatstr_cat(" %s", args_string.Value());
 		}
+		out = put_result;
 	}
-	return put_result.c_str();
+	return true;
 }
 
 static const char *
-format_job_universe(int job_universe, AttrList* /*ad*/, Formatter &)
+format_job_universe(long long job_universe, Formatter &)
 {
 	return CondorUniverseNameUcFirst(job_universe);
 }
 
-static const char *
-format_job_id(int cluster_id, AttrList* ad, Formatter &)
+static bool
+render_job_id(std::string & result, AttrList* ad, Formatter &)
 {
-	static char put_result[PROC_ID_STR_BUFLEN];
-	int proc_id=0;
+	static char str[PROC_ID_STR_BUFLEN];
+	int cluster_id=0, proc_id=0;
+	if ( ! ad->LookupInteger(ATTR_CLUSTER_ID, cluster_id))
+		return false;
 	ad->LookupInteger(ATTR_PROC_ID,proc_id);
-	ProcIdToStr(cluster_id, proc_id, put_result);
-	return put_result;
+	ProcIdToStr(cluster_id, proc_id, str);
+	result = str;
+	return true;
 }
 
 static const char *
-format_job_status_raw(int job_status, AttrList* /*ad*/, Formatter &)
+format_job_status_raw(long long job_status, Formatter &)
 {
 	switch(job_status) {
 	case IDLE:      return "Idle   ";
@@ -2482,9 +2691,13 @@ format_job_status_raw(int job_status, AttrList* /*ad*/, Formatter &)
 	}
 }
 
-static const char *
-format_job_status_char(int job_status, AttrList*ad, Formatter &)
+static bool
+render_job_status_char(std::string & result, AttrList*ad, Formatter &)
 {
+	int job_status;
+	if ( ! ad->LookupInteger(ATTR_JOB_STATUS, job_status))
+		return false;
+
 	static char put_result[3];
 	put_result[1] = ' ';
 	put_result[2] = 0;
@@ -2526,15 +2739,19 @@ format_job_status_char(int job_status, AttrList*ad, Formatter &)
 		put_result[0] = transfer_queued ? 'q' : ' ';
 		put_result[1] = '>';
 	}
-	return put_result;
+	result = put_result;
+	return true;
 }
 
-static const char *
-format_goodput (int job_status, AttrList *ad, Formatter & /*fmt*/)
+static bool
+render_goodput (double & goodput_time, AttrList *ad, Formatter & /*fmt*/)
 {
-	static char put_result[9];
+	int job_status;
+	if ( ! ad->LookupInteger(ATTR_JOB_STATUS, job_status))
+		return false;
+
 	int ckpt_time = 0, shadow_bday = 0, last_ckpt = 0;
-	float wall_clock = 0.0;
+	double wall_clock = 0.0;
 	ad->LookupInteger( ATTR_JOB_COMMITTED_TIME, ckpt_time );
 	ad->LookupInteger( ATTR_SHADOW_BIRTHDATE, shadow_bday );
 	ad->LookupInteger( ATTR_LAST_CKPT_TIME, last_ckpt );
@@ -2544,18 +2761,22 @@ format_goodput (int job_status, AttrList *ad, Formatter & /*fmt*/)
 	{
 		wall_clock += last_ckpt - shadow_bday;
 	}
-	if (wall_clock <= 0.0) return " [?????]";
-	float goodput_time = ckpt_time/wall_clock*100.0;
+	if (wall_clock <= 0.0) return false;
+
+	goodput_time = ckpt_time/wall_clock*100.0;
 	if (goodput_time > 100.0) goodput_time = 100.0;
-	else if (goodput_time < 0.0) return " [?????]";
-	sprintf(put_result, " %6.1f%%", goodput_time);
-	return put_result;
+	else if (goodput_time < 0.0) return false;
+	//sprintf(put_result, " %6.1f%%", goodput_time);
+	return true;
 }
 
-static const char *
-format_mbps (double bytes_sent, AttrList *ad, Formatter & /*fmt*/)
+static bool
+render_mbps (double & mbps, AttrList *ad, Formatter & /*fmt*/)
 {
-	static char result_format[10];
+	double bytes_sent;
+	if ( ! ad->EvalFloat(ATTR_BYTES_SENT, NULL, bytes_sent))
+		return false;
+
 	double wall_clock=0.0, bytes_recvd=0.0, total_mbits;
 	int shadow_bday = 0, last_ckpt = 0, job_status = IDLE;
 	ad->LookupFloat( ATTR_JOB_REMOTE_WALL_CLOCK, wall_clock );
@@ -2567,24 +2788,133 @@ format_mbps (double bytes_sent, AttrList *ad, Formatter & /*fmt*/)
 	}
 	ad->LookupFloat(ATTR_BYTES_RECVD, bytes_recvd);
 	total_mbits = (bytes_sent+bytes_recvd)*8/(1024*1024); // bytes to mbits
-	if (total_mbits <= 0) return " [????]";
-	sprintf(result_format, " %6.2f", total_mbits/wall_clock);
-	return result_format;
+	if (total_mbits <= 0) return false;
+	mbps = total_mbits / wall_clock;
+	// sprintf(result_format, " %6.2f", mbps);
+	return true;
 }
 
-static const char *
-format_cpu_util (double utime, AttrList *ad, Formatter & /*fmt*/)
+static bool
+render_cpu_util (double & cputime, AttrList *ad, Formatter & /*fmt*/)
 {
-	static char result_format[10];
+	if ( ! ad->EvalFloat(ATTR_JOB_REMOTE_USER_CPU, NULL, cputime))
+		return false;
+
 	int ckpt_time = 0;
 	ad->LookupInteger( ATTR_JOB_COMMITTED_TIME, ckpt_time);
-	if (ckpt_time == 0) return " [??????]";
-	double util = utime/ckpt_time*100.0;
+	if (ckpt_time == 0) return false;
+	double util = cputime/ckpt_time*100.0;
 	if (util > 100.0) util = 100.0;
-	else if (util < 0.0) return " [??????]";
-	sprintf(result_format, "  %6.1f%%", util);
-	return result_format;
+	else if (util < 0.0) return false;
+	util = cputime;
+	// printf(result_format, "  %6.1f%%", util);
+	return true;
 }
+
+static bool
+render_buffer_io_misc (std::string & misc, AttrList *ad, Formatter & /*fmt*/)
+{
+	misc.clear();
+
+	int univ = 0;
+	if ( ! ad->EvalInteger(ATTR_JOB_UNIVERSE,NULL,univ))
+		return false;
+
+	if (univ==CONDOR_UNIVERSE_STANDARD) {
+
+		double seek_count=0;
+		int buffer_size=0, block_size=0;
+		ad->EvalFloat(ATTR_FILE_SEEK_COUNT,NULL,seek_count);
+		ad->EvalInteger(ATTR_BUFFER_SIZE,NULL,buffer_size);
+		ad->EvalInteger(ATTR_BUFFER_BLOCK_SIZE,NULL,block_size);
+
+		formatstr(misc, " seeks=%d, buf=%d,%d", (int)seek_count, buffer_size, block_size);
+	} else {
+
+		int ix = 0;
+		int bb = false;
+		ad->EvalBool(ATTR_TRANSFERRING_INPUT,NULL, bb);
+		ix += bb?1:0;
+
+		bb = false;
+		ad->EvalBool(ATTR_TRANSFERRING_OUTPUT,NULL,bb);
+		ix += bb?2:0;
+
+		bb = false;
+		ad->EvalBool(ATTR_TRANSFER_QUEUED,NULL,bb);
+		ix += bb?4:0;
+
+		if (ix) {
+			static const char * const ax[] = { "in", "out", "in,out", "queued", "in,queued", "out,queued", "in,out,queued" };
+			formatstr(misc, " transfer=%s", ax[ix-1]); 
+		}
+	}
+
+	return true;
+}
+
+#ifdef USE_LATE_PROJECTION
+
+static bool
+render_owner(std::string & out, AttrList *ad, Formatter & /*fmt*/)
+{
+	if ( ! ad->LookupString(ATTR_OWNER, out))
+		return false;
+
+	int niceUser;
+	if (ad->LookupInteger( ATTR_NICE_USER, niceUser) && niceUser ) {
+		char tmp[sizeof(NiceUserName)+2];
+		strcpy(tmp, NiceUserName);
+		strcat(tmp, ".");
+		out.insert(0, tmp);
+	}
+	max_owner_name = MAX(max_owner_name, (int)out.length());
+	return true;
+}
+
+static bool
+render_dag_owner (std::string & out, AttrList *ad, Formatter & fmt)
+{
+	if (dash_dag && ad->LookupExpr(ATTR_DAGMAN_JOB_ID)) {
+		if (ad->LookupString(ATTR_DAG_NODE_NAME, out)) {
+			max_owner_name = MAX(max_owner_name, (int)out.length()+3);
+			return true;
+		} else {
+			fprintf(stderr, "DAG node job with no %s attribute!\n", ATTR_DAG_NODE_NAME);
+		}
+	}
+	return render_owner(out, ad, fmt);
+}
+
+static bool
+render_batch_name (std::string & out, AttrList *ad, Formatter & /*fmt*/)
+{
+	const bool fold_dagman_sibs = dash_progress && (dash_progress & 2);
+
+	int universe = 0;
+	std::string tmp;
+	if (ad->LookupString(ATTR_JOB_BATCH_NAME, out)) {
+		// got it.
+	} else if ( ! fold_dagman_sibs && ad->LookupInteger(ATTR_JOB_UNIVERSE, universe) && universe == CONDOR_UNIVERSE_SCHEDULER) {
+		// set batch name to dag id, but not if we allow folding of multiple root dagmans into a single batchname
+		int cluster = 0;
+		ad->LookupInteger(ATTR_CLUSTER_ID, cluster);
+		formatstr(out, "DAG: %d", cluster);
+	} else if (ad->LookupExpr(ATTR_DAGMAN_JOB_ID)
+				&& ad->LookupString(ATTR_DAG_NODE_NAME, out)) {
+		out.insert(0,"NODE: ");
+	} else if (ad->LookupString(ATTR_JOB_CMD, tmp)) {
+		const char * name = tmp.c_str();
+		if (tmp.length() > 24) { name = condor_basename(name); }
+		formatstr(out, "CMD: %s", name);
+	} else {
+		return false;
+	}
+	max_batch_name = MAX(max_batch_name, (int)out.length());
+	return true;
+}
+
+#else
 
 static const char *
 format_owner_common (const char *owner, AttrList *ad)
@@ -2633,17 +2963,28 @@ format_owner (const char *owner, AttrList *ad)
 }
 
 static const char *
-format_owner_wide (const char *owner, AttrList *ad, Formatter & /*fmt*/)
+format_dag_owner (const char *owner, AttrList *ad, Formatter & /*fmt*/)
 {
 	return format_owner_common(owner, ad);
 }
 
 static const char *
-format_globusStatus( int globusStatus, AttrList * /* ad */, Formatter & /*fmt*/ )
+format_owner_wide (const char *owner, AttrList *ad, Formatter & /*fmt*/)
 {
-	static char result_str[64];
+	return format_owner_common(owner, ad);
+}
+#endif
+
+static bool
+render_globusStatus(std::string & result, AttrList * ad, Formatter & /*fmt*/ )
+{
+	int globusStatus;
+	if ( ! ad->LookupInteger(ATTR_GLOBUS_STATUS, globusStatus))
+		return false;
 #if defined(HAVE_EXT_GLOBUS)
+	char result_str[64];
 	sprintf(result_str, " %7.7s", GlobusJobStatusName( globusStatus ) );
+	result = result_str;
 #else
 	static const struct {
 		int status;
@@ -2660,12 +3001,13 @@ format_globusStatus( int globusStatus, AttrList * /* ad */, Formatter & /*fmt*/ 
 	};
 	for (size_t ii = 0; ii < COUNTOF(gram_states); ++ii) {
 		if (globusStatus == gram_states[ii].status) {
-			return gram_states[ii].psz;
+			result = gram_states[ii].psz;
+			return true;
 		}
 	}
-	sprintf(result_str, "%d", globusStatus);
+	formatstr(result, "%d", globusStatus);
 #endif
-	return result_str;
+	return true;
 }
 
 // The remote hostname may be in GlobusResource or GridResource.
@@ -2674,10 +3016,10 @@ format_globusStatus( int globusStatus, AttrList * /* ad */, Formatter & /*fmt*/ 
 // with is defined. So we register it with an attribute we know will
 // always be present and be a string. We then ignore that attribute
 // and examine GlobusResource and GridResource.
-static const char *
-format_globusHostAndJM(const char *, AttrList *ad, Formatter & /*fmt*/ )
+static bool
+render_globusHostAndJM(std::string & result, AttrList *ad, Formatter & /*fmt*/ )
 {
-	static char result_format[64];
+	//static char result_format[64];
 	char	host[80] = "[?????]";
 	char	jm[80] = "fork";
 	char	*tmp;
@@ -2686,15 +3028,18 @@ format_globusHostAndJM(const char *, AttrList *ad, Formatter & /*fmt*/ )
 	char *resource_name = NULL;
 	char *grid_type = NULL;
 
-	if ( ad->LookupString( ATTR_GRID_RESOURCE, &attr_value ) ) {
-			// If ATTR_GRID_RESOURCE exists, skip past the initial
-			// '<job type> '.
-		resource_name = strchr( attr_value, ' ' );
-		if ( resource_name ) {
-			*resource_name = '\0';
-			grid_type = strdup( attr_value );
-			resource_name++;
-		}
+	result.clear();
+
+	if ( ! ad->LookupString( ATTR_GRID_RESOURCE, &attr_value ))
+		return false;
+
+	// ATTR_GRID_RESOURCE exists, skip past the initial
+	// '<job type> '.
+	resource_name = strchr( attr_value, ' ' );
+	if ( resource_name ) {
+		*resource_name = '\0';
+		grid_type = strdup( attr_value );
+		resource_name++;
 	}
 
 	if ( resource_name != NULL ) {
@@ -2758,21 +3103,23 @@ format_globusHostAndJM(const char *, AttrList *ad, Formatter & /*fmt*/ )
 	}
 
 	// done --- pack components into the result string and return
-	sprintf( result_format, " %-8.8s %-18.18s  ", jm, host );
-	return( result_format );
+	formatstr( result, " %-8.8s %-18.18s  ", jm, host );
+	return true;
 }
 
-static const char *
-format_gridStatus( int jobStatus, AttrList * ad, Formatter & fmt )
+static bool
+render_gridStatus( std::string & result, AttrList * ad, Formatter & fmt )
 {
-	static char result_str[32];
-	if (ad->LookupString( ATTR_GRID_JOB_STATUS, result_str, COUNTOF(result_str) )) {
-		return result_str;
+	if (ad->LookupString(ATTR_GRID_JOB_STATUS, result)) {
+		return true;
 	} 
-	int globusStatus = 0;
-	if (ad->LookupInteger( ATTR_GLOBUS_STATUS, globusStatus )) {
-		return format_globusStatus(globusStatus, ad, fmt);
-	} 
+	if (render_globusStatus(result, ad, fmt))
+		return true;
+
+	int jobStatus;
+	if ( ! ad->LookupInteger(ATTR_GRID_JOB_STATUS, jobStatus))
+		return false;
+
 	static const struct {
 		int status;
 		const char * psz;
@@ -2787,11 +3134,12 @@ format_gridStatus( int jobStatus, AttrList * ad, Formatter & fmt )
 	};
 	for (size_t ii = 0; ii < COUNTOF(states); ++ii) {
 		if (jobStatus == states[ii].status) {
-			return states[ii].psz;
+			result = states[ii].psz;
+			return true;
 		}
 	}
-	sprintf(result_str, "%d", jobStatus);
-	return result_str;
+	formatstr(result, "%d", jobStatus);
+	return true;
 }
 
 #if 0 // not currently used, disabled to shut up fedora.
@@ -2816,15 +3164,18 @@ format_gridType( int , AttrList * ad )
 }
 #endif
 
-static const char *
-format_gridResource(const char * grid_res, AttrList * ad, Formatter & /*fmt*/ )
+static bool
+render_gridResource(std::string & result, AttrList * ad, Formatter & /*fmt*/ )
 {
 	std::string grid_type;
-	std::string str = grid_res;
+	std::string str;
 	std::string mgr = "[?]";
 	std::string host = "[???]";
 	const bool fshow_host_port = false;
 	const unsigned int width = 1+6+1+8+1+18+1;
+
+	if ( ! ad->EvalString(ATTR_GRID_RESOURCE, NULL, str))
+		return false;
 
 	// GridResource is a string with the format 
 	//      "type host_url manager" (where manager can contain whitespace)
@@ -2837,10 +3188,6 @@ format_gridResource(const char * grid_res, AttrList * ad, Formatter & /*fmt*/ )
 		grid_type = "globus";
 		ixHost = 0;
 	}
-
-	//if ((MATCH == grid_type.find("gt")) || (MATCH == grid_type.compare("globus"))){
-	//	return format_globusHostAndJM( grid_res, ad );
-	//}
 
 	unsigned int ix2 = str.find_first_of(' ', ixHost);
 	if (ix2 < str.length()) {
@@ -2879,15 +3226,18 @@ format_gridResource(const char * grid_res, AttrList * ad, Formatter & /*fmt*/ )
 	ix2 = strlen(result_str);
 	if ( ! widescreen) ix2 = width;
 	result_str[ix2] = 0;
-	return result_str;
+	result = result_str;
+	return true;
 }
 
-static const char *
-format_gridJobId(const char * grid_jobid, AttrList *ad, Formatter & /*fmt*/ )
+static bool
+render_gridJobId(std::string & jid, AttrList *ad, Formatter & /*fmt*/ )
 {
-	std::string str = grid_jobid;
-	std::string jid;
+	std::string str;
 	std::string host;
+
+	if ( ! ad->EvalString(ATTR_GRID_JOB_ID, NULL, str))
+		return false;
 
 	std::string grid_type = "globus";
 	char grid_res[64];
@@ -2911,7 +3261,7 @@ format_gridJobId(const char * grid_jobid, AttrList *ad, Formatter & /*fmt*/ )
 	host = str.substr(ix3, ix4-ix3);
 
 	if (gram) {
-		jid += host;
+		jid = host;
 		jid += " : ";
 		if (str[ix4] == '/') ix4 += 1;
 		unsigned int ix5 = str.find_first_of("/",ix4);
@@ -2923,20 +3273,19 @@ format_gridJobId(const char * grid_jobid, AttrList *ad, Formatter & /*fmt*/ )
 			jid += str.substr(ix5, ix6-ix5);
 		}
 	} else {
+		jid.clear();
 		//jid = grid_type;
 		//jid += " : ";
 		jid += str.substr(ix4);
 	}
 
-	static char result_str[1024];
-	sprintf(result_str, "%s", jid.c_str());
-	return result_str;
+	return true;
 }
 
 static const char *
-format_q_date (int d, AttrList *, Formatter &)
+format_q_date (long long d, Formatter &)
 {
-	return format_date(d);
+	return format_date((int)d);
 }
 
 
@@ -2946,6 +3295,7 @@ usage (const char *myName, int other)
 	printf ("Usage: %s [general-opts] [restriction-list] [output-opts | analyze-opts]\n", myName);
 	printf ("\n    [general-opts] are\n"
 		"\t-global\t\t\tQuery all Schedulers in this pool\n"
+		"\t-schedd-constraint\tQuery all Schedulers matching this constraint\n"
 		"\t-submitter <submitter>\tGet queue of specific submitter\n"
 		"\t-name <name>\t\tName of Scheduler\n"
 		"\t-pool <host>\t\tUse host as the central manager to query\n"
@@ -2966,6 +3316,7 @@ usage (const char *myName, int other)
 		"\t<owner>\t\t\tInformation about jobs owned by <owner>\n"
 		"\t-autocluster\t\tGet information about the SCHEDD's autoclusters\n"
 		"\t-constraint <expr>\tGet information about jobs that match <expr>\n"
+		"\t-allusers\t\tConsider jobs from all users\n"
 		);
 
 	printf ("\n    [output-opts] are\n"
@@ -2980,6 +3331,7 @@ usage (const char *myName, int other)
 		"\t-help [Universe|State]\tDisplay this screen, JobUniverses, JobStates\n"
 		"\t-hold\t\t\tGet information about jobs on hold\n"
 		"\t-io\t\t\tDisplay information regarding I/O\n"
+		"\t-progress\t\tDisplay progress of DAGs and batches of similar jobs\n"
 //FUTURE		"\t-transfer\t\tDisplay information for jobs that are doing file transfer\n"
 		"\t-run\t\t\tGet information about running jobs\n"
 		"\t-totals\t\t\tDisplay only job totals\n"
@@ -3026,6 +3378,13 @@ usage (const char *myName, int other)
 		"\t-nouserprios\t\tDon't consider user priority during analysis\n"
 		"\t-reverse\t\tAnalyze Machine requirements against jobs\n"
 		"\t-verbose\t\tShow progress and machine names in results\n"
+		"\n"
+		);
+
+	printf ("\n    Only information about jobs owned by the current user will be returned.\n"
+			"This default is overridden when the restriction list has usernames and/or\n"
+			"job ids, when the -submitter or -allusers arguments are specified, or\n"
+			"when the current user is a queue superuser\n"
 		"\n"
 		);
 
@@ -3081,11 +3440,17 @@ print_full_header(const char * source_label)
 		}
 		if ( ! (customHeadFoot&HF_NOHEADER)) {
 			// Print the output header
+#ifdef USE_LATE_PROJECTION
+			if (app.mask.has_headings()) {
+				app.mask.display_Headings(stdout);
+			}
+#else
 			if (usingPrintMask && mask.has_headings()) {
 				mask.display_Headings(stdout);
 			} else if ( ! better_analyze) {
 				short_header();
 			}
+#endif
 		}
 	}
 	if( use_xml ) {
@@ -3261,6 +3626,128 @@ SELECT
 SUMMARY STANDARD
 */
 
+#ifdef USE_LATE_PROJECTION
+
+extern const char * const jobDefault_PrintFormat;
+extern const char * const jobRuntime_PrintFormat;
+extern const char * const jobGoodput_PrintFormat;
+extern const char * const jobGlobus_PrintFormat;
+extern const char * const jobGrid_PrintFormat;
+extern const char * const jobHold_PrintFormat;
+extern const char * const jobIO_PrintFormat;
+extern const char * const jobDAG_PrintFormat;
+extern const char * const jobTotals_PrintFormat;
+extern const char * const jobProgress_PrintFormat; // NEW, summarize progress
+extern const char * const autoclusterNormal_PrintFormat;
+
+static void initOutputMask(AttrListPrintMask & prmask, int qdo_mode, bool wide_mode)
+{
+	// just  in case we re-enter this function, only setup the mask once
+	static bool	setup_mask = false;
+	// TJ: before my 2012 refactoring setup_mask didn't protect summarize, so I'm preserving that.
+	if ( dash_run || dash_goodput || dash_globus || dash_grid ) 
+		summarize = false;
+	else if ((customHeadFoot&HF_NOSUMMARY) && ! show_held)
+		summarize = false;
+
+	if (setup_mask)
+		return;
+	setup_mask = true;
+
+	// If no display mode has been set, pick one.
+	if ((qdo_mode & QDO_BaseMask) == QDO_NotSet) {
+		if (dash_autocluster == CondorQ::fetch_DefaultAutoCluster) { qdo_mode = QDO_AutoclusterNormal; }
+		else { qdo_mode |= QDO_JobNormal; }
+	}
+
+	static const struct {
+		int mode;
+		const char * tag;
+		const char * fmt;
+	} info[] = {
+		{ QDO_JobNormal,    "",       jobDefault_PrintFormat },
+		{ QDO_JobRuntime,    "RUN",    jobRuntime_PrintFormat },
+		{ QDO_JobGoodput,    "GOODPUT",jobGoodput_PrintFormat },
+		{ QDO_JobGlobusInfo, "GLOBUS", jobGlobus_PrintFormat },
+		{ QDO_JobGridInfo,   "GRID",   jobGrid_PrintFormat },
+		{ QDO_JobHold,       "HOLD",   jobHold_PrintFormat },
+		{ QDO_JobIO,         "IO",	   jobIO_PrintFormat },
+		{ QDO_DAG,           "DAG",	   jobDAG_PrintFormat },
+		{ QDO_Totals,        "TOTALS", jobTotals_PrintFormat },
+		{ QDO_Progress,      "PROGRESS", jobProgress_PrintFormat },
+		{ QDO_AutoclusterNormal, "AUTOCLUSTER", autoclusterNormal_PrintFormat },
+	};
+
+	int ixInfo = -1;
+	for (int ix = 0; ix < (int)COUNTOF(info); ++ix) {
+		if (info[ix].mode == (qdo_mode & QDO_BaseMask)) {
+			ixInfo = ix;
+			break;
+		}
+	}
+
+	if (ixInfo < 0)
+		return;
+
+	const char * tag = info[ixInfo].tag;
+
+	// if there is a user-override output mask, then use that instead of the code below
+	if ( ! disable_user_print_files) {
+		MyString param_name("Q_DEFAULT_");
+		if (tag[0]) {
+			param_name += tag;
+			param_name += "_";
+		}
+		param_name += "PRINT_FORMAT_FILE";
+
+		auto_free_ptr pf_file(param(param_name.c_str()));
+		if (pf_file) {
+			struct stat stat_buff;
+			if (0 != stat(pf_file.ptr(), &stat_buff)) {
+				// do nothing, this is not an error.
+			} else if (set_print_mask_from_stream(prmask, pf_file.ptr(), true, app.attrs) < 0) {
+				fprintf(stderr, "Warning: default %s print-format file '%s' is invalid\n", tag, pf_file.ptr());
+			} else {
+				if (customHeadFoot&HF_NOSUMMARY) summarize = false;
+				return;
+			}
+		}
+	}
+
+	const char * fmt = info[ixInfo].fmt;
+	std::string alt_fmt;
+	if (cputime) {
+		alt_fmt = fmt;
+		size_t ix = alt_fmt.find("RUN_TIME");
+		if (ix != string::npos) {
+			alt_fmt[ix] = 'C';
+			alt_fmt[ix+1] = 'P';
+			alt_fmt[ix+2] = 'U';
+			fmt = alt_fmt.c_str();
+		}
+	}
+
+	is_standard_format = true;
+	has_owner_column = first_col_is_job_id = qdo_mode < QDO_Totals;
+	if ( ! wide_mode) {
+		int display_wid = getDisplayWidth();
+		prmask.SetOverallWidth(display_wid-1);
+		max_name_column_width = 14 + (display_wid - 80);
+		if (dash_dag) {
+			max_name_column_width += 3;
+			name_column_width = 17;
+		}
+	}
+
+	if (set_print_mask_from_stream(prmask, fmt, false, app.attrs) < 0) {
+		fprintf(stderr, "Internal error: default %s print-format is invalid !\n", tag);
+	}
+	customHeadFoot = (printmask_headerfooter_t)(customHeadFoot & ~HF_CUSTOM);
+	if (customHeadFoot&HF_NOSUMMARY) summarize = false;
+}
+
+#else
+
 static bool init_user_override_output_mask()
 {
 	// if someone already setup a print mask, then don't use an override file.
@@ -3285,9 +3772,10 @@ static bool init_user_override_output_mask()
 		struct stat stat_buff;
 		if (0 != stat(pf_file, &stat_buff)) {
 			// do nothing, this is not an error.
-		} else if (set_print_mask_from_stream(pf_file, true, attrs) < 0) {
+		} else if (set_print_mask_from_stream(mask, pf_file, true, attrs) < 0) {
 			fprintf(stderr, "Warning: default %s print-format file '%s' is invalid\n", pdash, pf_file);
 		} else {
+			usingPrintMask = true;
 			using_override = true;
 			if (customHeadFoot&HF_NOSUMMARY) summarize = false;
 		}
@@ -3418,16 +3906,13 @@ static void init_output_mask()
 		const char * pszz = mask_headings;
 		size_t cch = strlen(pszz);
 		while (cch > 0) {
-#if 1
 			mask.set_heading(pszz);
-#else
-			mask_head.Append(pszz);
-#endif
 			pszz += cch+1;
 			cch = strlen(pszz);
 		}
 	}
 }
+#endif
 
 
 // Given a list of jobs, do analysis for each job and print out the results.
@@ -3668,8 +4153,8 @@ show_db_queue( const char* quill_name, const char* db_ipAddr, const char* db_nam
 		}
 #else
 		if (query_password) {} /* Done to suppress set-but-not-used warnings */
-		if (pfnProcess || pvProcess) {}
 #endif /* HAVE_EXT_POSTGRESQL */
+	if (pfnProcess || pvProcess) {}
 
 	// if we streamed, then the results have already been printed out.
 	// we just need to write the footer/summary
@@ -3679,8 +4164,7 @@ show_db_queue( const char* quill_name, const char* db_ipAddr, const char* db_nam
 	}
 
 	if (better_analyze) {
-		print_full_header(source_label.c_str());
-		return print_jobs_analysis(jobs, NULL);
+		return print_jobs_analysis(jobs, source_label.c_str(), NULL);
 	}
 
 	// at this point we either have a populated jobs list, or a populated dag_map
@@ -3689,7 +4173,7 @@ show_db_queue( const char* quill_name, const char* db_ipAddr, const char* db_nam
 
 	// if outputing dag format, we want to build the parent child links in the dag map
 	// and then edit the text for jobs that are dag nodes.
-	if (dag && (dag_map.size() > 0)) {
+	if (dash_dag && (dag_map.size() > 0)) {
 		linkup_dag_nodes_in_dag_map(/*dag_map, dag_cluster_map*/);
 		rewrite_output_for_dag_nodes_in_dag_map(/*dag_map*/);
 	}
@@ -3742,7 +4226,8 @@ static void count_job(ClassAd *job)
 	}
 }
 
-
+#ifdef USE_LATE_PROJECTION
+#else
 static const char * render_job_text(ClassAd *job, std::string & result_text)
 {
 	if (use_xml) {
@@ -3762,159 +4247,49 @@ static const char * render_job_text(ClassAd *job, std::string & result_text)
 	}
 	return result_text.c_str();
 }
+#endif
 
-static bool
-process_and_print_job(void *, ClassAd *job)
+typedef std::map<long long, long long>   IdToIdMap;    // maps a integer key into another integer key
+typedef std::map<std::string, long long> KeyToIdMap; // maps a string key into a index in the JobDisplayData vector
+typedef std::map<long long, std::string> IdToKeyMap; // maps a string key into a index in the JobDisplayData vector
+typedef std::map<int, std::set<int> >    IdToIdsMap;   // maps a integer key into a list of integer keys, use for dagid->[clusters] or clusterid->[procs]
+
+ROD_MAP_BY_ID rod_result_map;   // jobs are rendered and inserted here before processing and printing
+KeyToIdMap    rod_sort_key_map; // this indexes the above when we want to sort by something other than id
+//IdToIdsMap    dag_to_cluster_map;
+
+// this code assumes that the proc id of a dagman job will always be 0.
+// and returns the cluster id of the dag job that is the parent of the current job.
+static int lookup_dagman_job_id(ClassAd* job)
 {
-	count_job(job);
+	// the old (obsolete) form of dagman job id is a string
+	// the current form is an integer, we want to handle either.
 
-	std::string result_text;
-	render_job_text(job, result_text);
-	if ( ! result_text.empty()) { printf("%s", result_text.c_str()); }
-	return true;
-}
+	classad::Value dagid;
+	if ( ! job->EvaluateAttr(ATTR_DAGMAN_JOB_ID, dagid))
+		return -1;
 
-#ifdef ALLOW_DASH_DAG
+	long long id;
+	if (dagid.IsIntegerValue(id)) return id;
 
-// insert a line of formatted output into the dag_map, so we can print out
-// sorted results.
-//
-static bool
-insert_job_output_into_dag_map(ClassAd * job, const char * job_output)
-{
-	clusterProcString * tempCPS = new clusterProcString;
-	if (dash_autocluster) {
-		const char * attr_id = ATTR_AUTO_CLUSTER_ID;
-		if (dash_autocluster == CondorQ::fetch_GroupBy) attr_id = "Id";
-		job->LookupInteger(attr_id, tempCPS->cluster );
-		tempCPS->proc = 0;
-	} else {
-		job->LookupInteger( ATTR_CLUSTER_ID, tempCPS->cluster );
-		job->LookupInteger( ATTR_PROC_ID, tempCPS->proc );
-	}
-
-	// If it's not a DAGMan job (and this includes the DAGMan process
-	// itself), then set the dagman_cluster_id equal to cluster so that
-	// it sorts properly against dagman jobs.
-	char dagman_job_string[32];
-	bool dci_initialized = false;
-	if (!job->LookupString(ATTR_DAGMAN_JOB_ID, dagman_job_string, sizeof(dagman_job_string))) {
-			// we failed to find an DAGManJobId string attribute,
-			// let's see if we find one that is an integer.
-		int temp_cluster = -1;
-		if (!job->LookupInteger(ATTR_DAGMAN_JOB_ID,temp_cluster)) {
-				// could not job DAGManJobId, so fall back on
-				// just the regular job id
-			tempCPS->dagman_cluster_id = tempCPS->cluster;
-			tempCPS->dagman_proc_id    = tempCPS->proc;
-			dci_initialized = true;
-		} else {
-				// in this case, we found DAGManJobId set as
-				// an integer, not a string --- this means it is
-				// the cluster id.
-			tempCPS->dagman_cluster_id = temp_cluster;
-			tempCPS->dagman_proc_id    = 0;
-			dci_initialized = true;
-		}
-	} else {
+	const char * idstr = NULL;
+	if (dagid.IsStringValue(idstr)) {
 		// We've gotten a string, probably something like "201.0"
 		// we want to convert it to the numbers 201 and 0. To be safe, we
 		// use atoi on either side of the period. We could just use
 		// sscanf, but I want to know each fail case, so I can set them
 		// to reasonable values.
-		char *loc_period = strchr(dagman_job_string, '.');
-		char *proc_string_start = NULL;
-		if (loc_period != NULL) {
-			*loc_period = 0;
-			proc_string_start = loc_period+1;
-		}
-		if (isdigit(*dagman_job_string)) {
-			tempCPS->dagman_cluster_id = atoi(dagman_job_string);
-			dci_initialized = true;
-		} else {
-			// It must not be a cluster id, because it's not a number.
-			tempCPS->dagman_cluster_id = tempCPS->cluster;
-			dci_initialized = true;
-		}
-
-		if (proc_string_start != NULL && isdigit(*proc_string_start)) {
-			tempCPS->dagman_proc_id = atoi(proc_string_start);
-			dci_initialized = true;
-		} else {
-			tempCPS->dagman_proc_id = 0;
-			dci_initialized = true;
+		char * endptr = NULL;
+		id = strtoll(idstr, &endptr, 10);
+		if (id > 0 && endptr > idstr && (*endptr == '.' || *endptr == 0)) {
+			return id;
 		}
 	}
-
-	if ( ! dci_initialized) {
-		return false;
-	}
-
-	tempCPS->string = strnewp(job_output);
-	//PRAGMA_REMIND("tj: change tempCPS->string to a set of fields, so we can set column widths based on data.")
-
-	// insert tempCPS (and job_output copy) into the dag_map.
-	// this transfers ownership of both allocations, they will be freed in the code
-	// that deletes the map.
-	clusterProcMapper cpm(*tempCPS);
-	std::pair<dag_map_type::iterator,bool> pp = dag_map.insert(
-		std::pair<clusterProcMapper,clusterProcString*>(
-			cpm, tempCPS ) );
-	if( !pp.second ) {
-		fprintf( stderr, "Error: Two clusters with the same ID.\n" );
-		fprintf( stderr, "tempCPS: %d %d %d %d\n", tempCPS->dagman_cluster_id,
-			tempCPS->dagman_proc_id, tempCPS->cluster, tempCPS->proc );
-		dag_map_type::iterator ppp = dag_map.find(cpm);
-		fprintf( stderr, "Comparing against: %d %d %d %d\n",
-			ppp->second->dagman_cluster_id, ppp->second->dagman_proc_id,
-			ppp->second->cluster, ppp->second->proc );
-		//tj: 2013 -don't abort without printing jobs
-		// exit( 1 );
-		//maybe we should toss tempCPS into an orphan list rather than simply leaking it?
-		return false;
-	}
-
-	// also insert into the dag_cluster_map
-	//
-	clusterIDProcIDMapper cipim(*tempCPS);
-	std::pair<dag_cluster_map_type::iterator,bool> pq = dag_cluster_map.insert(
-		std::pair<clusterIDProcIDMapper,clusterProcString*>(
-			cipim,tempCPS ) );
-	if( !pq.second ) {
-		fprintf( stderr, "Error: Clusters have nonunique IDs.\n" );
-		//tj: 2013 -don't abort without printing jobs
-		//exit( 1 );
-	}
-
-	return true;
+	return -1;
 }
 
-static bool
-process_job_and_render_to_dag_map(void *,  ClassAd* job)
+static void group_job(JobRowOfData & jrod, ClassAd* job)
 {
-	count_job(job);
-
-	ASSERT( ! g_stream_results);
-
-	std::string result_text;
-	render_job_text(job, result_text);
-	insert_job_output_into_dag_map(job, result_text.c_str());
-	return true;
-}
-
-#endif
-
-typedef std::map<std::string, std::string> RESULT_MAP_TYPE;
-RESULT_MAP_TYPE result_map;
-
-static bool
-process_job_to_map(void * pv,  ClassAd* job)
-{
-	RESULT_MAP_TYPE * pmap = (RESULT_MAP_TYPE *)pv;
-	count_job(job);
-
-	ASSERT( ! g_stream_results);
-
 	std::string key;
 	//PRAGMA_REMIND("TJ: this should be a sort of arbitrary keys, including numeric keys.")
 	//PRAGMA_REMIND("TJ: fix to honor ascending/descending.")
@@ -3926,12 +4301,78 @@ process_job_to_map(void * pv,  ClassAd* job)
 				key += "\n";
 			}
 		}
+
+		// tack on the row unique adentifier as a final sort key
+		// (this will usually be cluster/proc or autocluster id)
+		formatstr_cat(key, "%016llX", jrod.id);
+		rod_sort_key_map[key] = jrod.id;
+	}
+}
+
+union _jobid {
+	struct { int proc; int cluster; };
+	long long id;
+};
+
+// used to hold a map of unique batch names with the key being the name
+// and the values being the cluster/proc of the first job to use that name.
+// aka. the "batch id"
+std::map<std::string, int> batch_name_to_batch_uid_map;
+std::map<int, long long> batch_uid_to_first_job_id_map;
+static int next_batch_uid = 0;
+
+static long long resolve_job_batch_uid(JobRowOfData & jrod, ClassAd* job) 
+{
+	std::string name;
+	if (job->LookupString(ATTR_JOB_BATCH_NAME, name)) {
+	} else if (job->LookupExpr(ATTR_DAGMAN_JOB_ID) && job->LookupString(ATTR_DAG_NODE_NAME, name)) {
+		name.insert(0, "NODE: ");
+	} else if (job->LookupString(ATTR_JOB_CMD, name)) {
+		name.insert(0, "CMD: ");
+	} else {
+		return 0;
 	}
 
-	union {
-		struct { int proc; int cluster; };
-		long long id;
-	} jobid;
+	// we want batch names to be unique by owner, so append the owner as well.
+	std::string owner;
+	if (job->LookupString(ATTR_OWNER, owner)) {
+		name += "\n";
+		name += owner;
+	}
+
+	std::map<std::string, int>::iterator it = batch_name_to_batch_uid_map.find(name);
+	if (it != batch_name_to_batch_uid_map.end()) {
+		jrod.batch_uid = it->second;
+	} else {
+		int batch_uid = ++next_batch_uid;
+		batch_name_to_batch_uid_map[name] = batch_uid;
+		jrod.batch_uid = batch_uid;
+	}
+	// max_batch_name = MAX(max_batch_name, (int)name.length());
+	return true;
+}
+
+// returns an interator that points to the first use of a batch uid with first
+// being defined as the first to call this function with a unique batch_uid value.
+long long resolve_first_use_of_batch_uid(int batch_uid, long long id)
+{
+	std::map<int, long long>::iterator it = batch_uid_to_first_job_id_map.find(batch_uid);
+	if (it != batch_uid_to_first_job_id_map.end()) {
+		return it->second;
+	} else {
+		batch_uid_to_first_job_id_map[batch_uid] = id;
+		return 0;
+	}
+}
+
+static bool process_job_to_rod_per_ad_map(void * pv,  ClassAd* job)
+{
+	ROD_MAP_BY_ID * pmap = (ROD_MAP_BY_ID *)pv;
+	count_job(job);
+
+	ASSERT( ! g_stream_results);
+
+	union _jobid jobid;
 
 	if (dash_autocluster) {
 		const char * attr_id = ATTR_AUTO_CLUSTER_ID;
@@ -3941,33 +4382,645 @@ process_job_to_map(void * pv,  ClassAd* job)
 		job->LookupInteger( ATTR_CLUSTER_ID, jobid.cluster );
 		job->LookupInteger( ATTR_PROC_ID, jobid.proc );
 	}
-	formatstr_cat(key, "%016llX", jobid.id);
 
+	int columns = app.mask.ColCount();
+	if (0 == columns)
+		return true;
 
-	std::pair<RESULT_MAP_TYPE::iterator,bool> pp = pmap->insert(std::pair<std::string, std::string>(key, ""));
+	std::pair<ROD_MAP_BY_ID::iterator,bool> pp = pmap->insert(std::pair<long long, JobRowOfData>(jobid.id,jobid.id));
 	if( ! pp.second ) {
 		fprintf( stderr, "Error: Two results with the same ID.\n" );
 		//tj: 2013 -don't abort without printing jobs
 		// exit( 1 );
 		return false;
 	} else {
-		render_job_text(job, pp.first->second);
-	}
+		pp.first->second.id = jobid.id;
+		pp.first->second.rov.SetMaxCols(columns);
+		app.mask.render(pp.first->second.rov, job);
 
+		// if displaying jobs in dag order, also add this job to the set of clusters for this dagid
+		if ((dash_dag || dash_progress) && ! dash_autocluster) {
+			int dag_cluster = lookup_dagman_job_id(job); // this is actually the dagman cluster id
+			if (dag_cluster > 0) {
+				union _jobid dag_id;
+				dag_id.cluster = dag_cluster; dag_id.proc = 0;
+				pp.first->second.dag_id = dag_id.id;
+				pp.first->second.flags |= JROD_ISDAGNODE;
+				//dag_to_cluster_map[dagid].insert(jobid.cluster);
+			} else if (dash_progress) {
+				resolve_job_batch_uid(pp.first->second, job);
+			}
+			int universe = CONDOR_UNIVERSE_MIN;
+			if (job->LookupInteger(ATTR_JOB_UNIVERSE, universe) && universe == CONDOR_UNIVERSE_SCHEDULER) {
+				pp.first->second.flags |= JROD_SCHEDUNIV;
+			}
+		}
+		group_job(pp.first->second, job);
+	}
 	return true;
 }
 
-void print_results(RESULT_MAP_TYPE & result_map)
+static void print_a_result(std::string & buf, JobRowOfData & jrod)
 {
-	for(RESULT_MAP_TYPE::iterator it = result_map.begin(); it != result_map.end(); ++it) {
-		//printf("%s", it->first.c_str()); 
-		printf("%s", it->second.c_str());
+	buf.clear();
+	app.mask.display(buf, jrod.rov);
+	printf("%s", buf.c_str());
+	jrod.flags |= JROD_PRINTED; // for debugging, keep track of what we already printed.
+}
+
+// print all children, grandchildren etc of this job
+static void print_children(std::string & buf, JobRowOfData * pjrod)
+{
+	// we can follow the next_sib link to find all jobs that are siblings
+	// but these will be in the reverse order of what we want to print.
+	while (pjrod) {
+		print_a_result(buf, *pjrod);
+		if (pjrod->children) print_children(buf, pjrod->children);
+		pjrod = pjrod->next_sib;
 	}
 }
 
-void clear_results(RESULT_MAP_TYPE & result_map)
+// print the results array, optionally floating children up under their parents
+// As we print the results, if we do float the children up we will see
+// the children again as part of the normal iteration, so we want to skip
+// them the second time.
+void print_results(ROD_MAP_BY_ID & results, KeyToIdMap order, bool children_under_parents)
 {
-	result_map.clear();
+	std::string buf;
+	if (dash_progress) {
+		// when in progress mode, we print only the cooked rows.
+		for(ROD_MAP_BY_ID::iterator it = results.begin(); it != results.end(); ++it) {
+			if (!(it->second.flags & JROD_COOKED)) continue;
+			print_a_result(buf, it->second);
+		}
+	}
+	else if ( ! order.empty()) {
+		for (KeyToIdMap::const_iterator it = order.begin(); it != order.end(); ++it) {
+			ROD_MAP_BY_ID::iterator jt = results.find(it->second);
+			if (jt != results.end()) {
+				if (children_under_parents && (jt->second.flags & JROD_PRINTED)) continue;
+				print_a_result(buf, jt->second);
+				if (children_under_parents && jt->second.children) {
+					print_children(buf, jt->second.children);
+				}
+			}
+		}
+	} else {
+		for(ROD_MAP_BY_ID::iterator it = results.begin(); it != results.end(); ++it) {
+			if (children_under_parents && (it->second.flags & JROD_PRINTED)) continue;
+			print_a_result(buf, it->second);
+			if (children_under_parents && it->second.children) {
+				print_children(buf, it->second.children);
+			}
+		}
+	}
+}
+
+void clear_results(ROD_MAP_BY_ID & results, KeyToIdMap & order)
+{
+	/*
+	for(ROD_MAP_BY_ID::iterator it = results.begin(); it != results.end(); ++it) {
+		free (it->second);
+	}
+	*/
+	order.clear();
+	results.clear();
+}
+
+static bool
+streaming_print_job(void *, ClassAd *job)
+{
+	count_job(job);
+
+	std::string result_text;
+	const char * fmt = "%s";
+	if (use_xml) {
+		sPrintAdAsXML(result_text, *job, app.attrs.isEmpty() ? NULL : &app.attrs);
+	} else if (dash_long) {
+		sPrintAd(result_text, *job, false, (dash_autocluster || app.attrs.isEmpty()) ? NULL : &app.attrs);
+		fmt = "%s\n";
+	} else {
+		if (app.mask.ColCount() > 0) { app.mask.display(result_text, job); }
+	}
+	if ( ! result_text.empty()) { printf(fmt, result_text.c_str()); }
+	return true;
+}
+
+/*
+static long long make_parentage_sort_key(long long id, std::string & key, ROD_MAP_BY_ID & results)
+{
+	long long root_id = id;
+	ROD_MAP_BY_ID::const_iterator ht = results.find(id);
+	// put parents id (recursively) first, then append our own id.
+	if (ht != results.end() && ht->second.dag_id < id) {
+		root_id = make_parentage_sort_key(ht->second.dag_id, key, results);
+	}
+	formatstr_cat(key, "%016llX\n", id);
+}
+*/
+
+// instance data for fixup_std_column_widths callback
+struct _fixup_width_values {
+	int cluster_width;
+	int proc_width;
+	int name_width;
+};
+
+// callback used by fixup_std_column_widths
+static int fnFixupWidthCallback(void* pv, int index, Formatter * fmt, const char * /*attr*/) {
+	struct _fixup_width_values * p = (struct _fixup_width_values *)pv;
+	char * pf = const_cast<char*>(fmt->printfFmt);
+	if (index == 0) {
+		if (p->cluster_width > 4 && p->cluster_width <= 9) {
+			if (pf && pf[1] == '4') { pf[1] = '0' + p->cluster_width; fmt->width = p->cluster_width+1; }
+		}
+	} else if (index == 1) {
+		if (p->proc_width > 3 && p->proc_width <= 9) {
+			if (pf && pf[2] == '3') { pf[2] = '0' + p->proc_width; fmt->width = p->proc_width; }
+		}
+	} else if (index == name_column_index) { // owner
+		fmt->width = MAX(fmt->width, p->name_width);
+		p->name_width = fmt->width; // return the actual width
+	} else {
+		return -1; // stop iterating
+	}
+	return 1;
+}
+
+// fix width of cluster,proc and name columns for all standard display formats other than -progress
+//
+static void fixup_std_column_widths(int max_cluster, int max_proc, int longest_name) {
+	if ( ! is_standard_format || ( ! first_col_is_job_id && ! has_owner_column))
+		return; // nothing to do
+	if (max_cluster < 9999 && max_proc < 999 && longest_name <= 14)
+		return; // nothing to do.
+
+	struct _fixup_width_values vals;
+	memset(&vals, 0, sizeof(vals));
+
+	if (first_col_is_job_id) {
+		char buf[20];
+		sprintf(buf, "%d", max_cluster);
+		vals.cluster_width = strlen(buf);
+		sprintf(buf, "%d", max_proc);
+		vals.proc_width = strlen(buf);
+	}
+
+	if (has_owner_column && ! widescreen && longest_name > 14) {
+		vals.name_width = MIN(longest_name, max_name_column_width);
+	}
+
+	app.mask.adjust_formats(fnFixupWidthCallback, &vals);
+	name_column_width = vals.name_width; // propage the returned width
+}
+
+static void append_sibling(JobRowOfData * sib_list, JobRowOfData * sib)
+{
+	// the first sibling gets the first sib slot, thereafter we want to append
+	// siblings, so we keep track of the last entry in the sibling list as well.
+	if ( ! sib_list->next_sib) {
+		sib_list->next_sib = sib;
+		sib_list->last_sib = sib; // remember last added so we can easily append another
+	} else {
+		sib_list->last_sib->next_sib = sib;
+		sib_list->last_sib = sib; // remember last added so we can easily append another
+	}
+}
+
+// link multi-proc clusters into a peer list (with the lowest proc id being the first peer)
+// and children to parents (i.e. dag nodes to their owning dagman), or jobs that share a batch-name together
+// when this function returns
+//  * all procs in a cluster will be linked via the next_proc links in order of increasing procid
+//  * all cluster jobs in a dag will be pointed to by either the children link of the parent dag node
+//    or the next_sib link of a sibling node. the last_sib link of the first child will point to the last sibling.
+//    when following the children links or next_sib links, jobids will always increase.
+//  * all cluster non-dag jobs which have the same batch-name will be connected by a chain of 
+//    next_sib links in order of increasing cluster id.
+//  (a cluster job is the job in a cluster with the lowest procid. this is usually procid 0, but is not guranteed to be so)
+static void linkup_nodes_by_id(ROD_MAP_BY_ID & results)
+{
+	const bool fold_dagman_sibs = dash_progress && (dash_progress & 2);
+
+	ROD_MAP_BY_ID::iterator it = results.begin();
+	if (it == results.end()) return;
+
+	union _jobid idp, idn;
+	idp.id = it->second.id;
+	if (it->second.batch_uid) {
+		resolve_first_use_of_batch_uid(it->second.batch_uid, it->second.id);
+	}
+
+	int max_cluster = idp.cluster;
+	int max_proc = idp.proc;
+
+	int max_name = max_owner_name; // set by calls to render_owner or render_dag_owner
+
+	ROD_MAP_BY_ID::iterator prev = it++;
+	while (it != results.end()) {
+
+		idp.id = prev->second.id;
+		idn.id = it->second.id;
+		bool first_proc = (idp.cluster != idn.cluster);
+		if (first_proc) {
+			prev->second.next_proc = NULL;
+		} else {
+			// link all procs in a cluster to the first proc
+			prev->second.next_proc = &it->second;
+		}
+		max_cluster = MAX(max_cluster, idn.cluster);
+		max_proc = MAX(max_proc, idn.proc);
+
+		// also link dag children to their parent.
+		// 
+		if (it->second.dag_id > 0) {
+			ROD_MAP_BY_ID::iterator parent = results.find(it->second.dag_id);
+			if (parent != results.end()) {
+				it->second.generation = parent->second.generation + 1;
+				if ( ! parent->second.children) {
+					parent->second.children = &it->second;
+				} else if (first_proc) {
+					// link the first proc in a cluster to other clusters
+					// that are also children of the same parent.
+					JobRowOfData * sib_list = parent->second.children;
+					append_sibling(sib_list, &it->second);
+				}
+
+				// also adjust name column width to account for nesting depth if we have nested dags
+				// (the 3 characters needed for the level 1 " |-" are already accounted for.
+				if (dash_dag && it->second.generation > 1) {
+					int wid;
+					classad::Value * pcolval = it->second.rov.Column(name_column_index);
+					if (pcolval && pcolval->IsStringValue(wid)) {
+						int cch = wid + 2 + it->second.generation;
+						max_name = MAX(max_name, cch);
+					}
+				}
+			}
+		} else if (it->second.batch_uid && first_proc) {
+			// when we call this function for all jobs that have a batch_uid, it will always
+			// return the id of the FIRST job that passed it a given unique id.  since we are
+			// calling this function on data sorted by jobid, we will thus always get back
+			// the lowest job id.
+			bool link_sibs = fold_dagman_sibs || ! (it->second.flags & JROD_SCHEDUNIV);
+			long long id = resolve_first_use_of_batch_uid(it->second.batch_uid, it->second.id);
+			if (link_sibs && id && (id != it->second.id)) {
+				ROD_MAP_BY_ID::iterator oldest = results.find(id);
+				if (oldest != results.end()) {
+					JobRowOfData * sib_list = &oldest->second;
+					append_sibling(sib_list, &it->second);
+				}
+			}
+		}
+
+		prev = it++;
+	}
+
+	fixup_std_column_widths(max_cluster, max_proc, max_name);
+}
+
+static void
+format_name_column_for_dag_nodes(ROD_MAP_BY_ID & results, int name_column, int col_width)
+{
+	std::string buf;
+	for(ROD_MAP_BY_ID::iterator it = results.begin(); it != results.end(); ++it) {
+		if (it->second.flags & JROD_ISDAGNODE) {
+			const char * name = NULL;
+			classad::Value * pcolval = it->second.rov.Column(name_column);
+			if (pcolval) pcolval->IsStringValue(name);
+			int cch = strlen(name);
+
+			buf.clear();
+			buf.reserve(cch + 3 + it->second.generation);
+			for (int ii = 0; ii < it->second.generation; ++ii) buf += ' ';
+			buf += "|-";
+			int ix = (int)buf.size();
+			if (cch+ix > col_width) cch = col_width-ix;
+
+			buf.append(name, cch);
+			pcolval->SetStringValue(buf);
+		}
+	}
+}
+
+// this defines the attributes to fetch for the -progress output
+// but does not actually define the output because the results are
+// extensively post-processed.
+const char * const jobProgress_PrintFormat = "SELECT\n"
+	ATTR_OWNER               " AS OWNER           WIDTH AUTO PRINTAS DAG_OWNER OR ??\n"  // 0
+	ATTR_JOB_CMD             " AS BATCH_NAME      WIDTH -12  PRINTAS BATCH_NAME\n" // 1
+	ATTR_Q_DATE              " AS '   SUBMITTED'  WIDTH 12   PRINTAS QDATE\n" // 2
+	ATTR_JOB_STATUS          " AS '  DONE' WIDTH 6 PRINTF %6d OR _\n"  // Done   // 3
+	ATTR_JOB_UNIVERSE        " AS '  RUN ' WIDTH 6 PRINTF %6d OR _\n"  // Active // 4
+	ATTR_DAG_NODES_QUEUED    " AS '  IDLE' WIDTH 6 PRINTF %6d OR _\n"  // Idle   // 5
+	ATTR_DAG_NODES_DONE      " AS '  HOLD' WIDTH 6 PRINTF %6d OR _\n"  // Held   // 6
+	ATTR_DAG_NODES_TOTAL     " AS ' TOTAL' WIDTH 6 PRINTF %6d OR _\n"  // Total  // 7
+	ATTR_JOB_STATUS          " AS JOB_IDS WIDTH 0 PRINTAS JOB_STATUS\n"     // 8
+//	ATTR_JOB_REMOTE_USER_CPU " AS '    RUN_TIME'  WIDTH 12   PRINTAS CPU_TIME\n"
+//	ATTR_IMAGE_SIZE          " AS SIZE       WIDTH 4    PRINTAS MEMORY_USAGE\n"
+//	ATTR_HOLD_REASON         " AS HOLD_REASON\n"
+"SUMMARY STANDARD\n";
+
+
+class  cluster_progress {
+public:
+	int count;   // number of rows counted
+	int jobs;    // number of job rows (i.e. non-dag rows)
+	int dags;    // number of dag rows
+	int nodes_total; // accumulation of ATTR_DAG_NODES_TOTAL for dag jobs, and of ProcIds for non-dag jobs
+	int nodes_done;  // accumulation of ATTR_DAG_NODES_DONE for dag jobs, and a guess of completed procs for non-dag jobs
+	int cluster;
+	int min_proc;
+	int max_proc;
+	int states[JOB_STATUS_MAX+1];
+	cluster_progress() : count(0), jobs(0), dags(0), nodes_total(0), nodes_done(0),
+		cluster(0), min_proc(INT_MAX), max_proc(0) {
+		memset(states, 0, sizeof(states));
+	}
+};
+
+class child_progress : public cluster_progress {
+public:
+	long long min_jobid; // use union _jobid to extract cluster/proc
+	long long max_jobid;
+	child_progress() : min_jobid(0), max_jobid(0) {}
+};
+
+static void reduce_procs(cluster_progress & prog, JobRowOfData & jr)
+{
+	// these refer to column indexes in the jobProgress_PrintFormat declaration
+	const int ixJobStatusCol = 3;
+	const int ixUniverseCol  = 4;
+	const int ixDagNodesDone = 6;
+	const int ixDagNodesTotal = 7;
+
+	prog.count += 1;
+
+	union _jobid jid; jid.id = jr.id;
+	prog.cluster = jid.cluster;
+	prog.min_proc = prog.max_proc = jid.proc;
+
+	int universe = CONDOR_UNIVERSE_MIN, status = 0;
+	if (jr.getNumber(ixUniverseCol, universe) && universe == CONDOR_UNIVERSE_SCHEDULER) {
+		jr.flags |= JROD_SCHEDUNIV;
+		prog.dags += 1;
+		int dag_done = 0, dag_total = 0;
+		if (jr.getNumber(ixDagNodesTotal, dag_total)) { prog.nodes_total += dag_total; }
+		if (jr.getNumber(ixDagNodesDone, dag_done)) { prog.nodes_done += dag_done; }
+	} else {
+		prog.jobs += 1;
+
+		jr.getNumber(ixJobStatusCol, status);
+		if (status < 0 || status > JOB_STATUS_MAX) status = 0;
+		prog.states[status] += 1;
+	}
+
+	JobRowOfData *jrod2 = jr.next_proc;
+	while (jrod2) {
+		if ( ! (jrod2->flags & (JROD_FOLDED | JROD_SKIP))) {
+			prog.count += 1;
+			prog.jobs += 1; // on the assumption that dagmen can't be multi proc
+
+			int st;
+			jrod2->getNumber(ixJobStatusCol, st);
+			if (st < 0 || st > JOB_STATUS_MAX) st = 0;
+			prog.states[st] += 1;
+
+			union _jobid jid2; jid2.id = jrod2->id;
+			prog.min_proc = MIN(prog.min_proc, jid2.proc);
+			prog.max_proc = MAX(prog.min_proc, jid2.proc);
+
+			jrod2->flags |= JROD_FOLDED;
+		}
+		jrod2 = jrod2->next_proc;
+	}
+
+	// for non-dagman jobs, we can extrapolate the total number of jobs and the number of 
+	// number of completed jobs by looking at the max procid.
+	// by counting procids that have left the queue.
+	if ( ! (jr.flags & (JROD_SCHEDUNIV | JROD_ISDAGNODE))) {
+		const bool guess_at_jobs_done_per_cluster = (dash_progress & 0x10);
+		if (guess_at_jobs_done_per_cluster) {
+			int total = prog.max_proc+1;
+			int done = total - prog.jobs;
+			prog.nodes_total += total;
+			prog.nodes_done += done;
+		}
+	}
+}
+
+static void reduce_children(child_progress & prog, JobRowOfData * pjr, int & depth)
+{
+	// we can follow the next_sib link to find all jobs that are siblings
+	// and the children link to find child jobs.
+	while (pjr) {
+		//{ union _jobid jidt; jidt.id = pjr->id; fprintf(stderr, " %sfolding %x %d.%d\n", "                    "+20-MIN(depth,20), pjr->flags, jidt.cluster, jidt.proc); }
+		ASSERT(!(pjr->flags & JROD_FOLDED));
+		reduce_procs(prog, *pjr);
+		if ( ! (pjr->flags & JROD_SCHEDUNIV)) {
+			union _jobid jid;
+			jid.cluster = prog.cluster;
+			jid.proc = prog.min_proc;
+			if ( ! prog.min_jobid) {
+				prog.min_jobid = jid.id;
+			} else {
+				prog.min_jobid = MIN(prog.min_jobid, jid.id);
+			}
+			jid.proc = prog.max_proc;
+			prog.max_jobid = MAX(prog.max_jobid, jid.id);
+		}
+		pjr->flags |= JROD_FOLDED;
+		if (pjr->children) {
+			depth += 1;
+			reduce_children(prog, pjr->children, depth);
+			depth -= 1;
+		}
+		pjr = pjr->next_sib;
+	}
+}
+
+// passed to fnFixupWidthsForProgressFormat
+struct _fixup_progress_width_values {
+	int owner_width;
+	int batch_name_width;
+	int ids_width;
+	bool any_held;
+	bool zeros_as_dashes;
+	char alt_kind;
+};
+
+// hacky way to adjust column widths based on the data.
+static int fnFixupWidthsForProgressFormat(void* pv, int index, Formatter * fmt, const char * /*attr*/) {
+	struct _fixup_progress_width_values * p = (struct _fixup_progress_width_values *)pv;
+	//char * pf = const_cast<char*>(fmt->printfFmt);
+	if (index == 0) { // owner
+		if (p->owner_width < fmt->width) {
+			fmt->width = MAX(8, p->owner_width);
+			fmt->options &= ~(FormatOptionNoTruncate | FormatOptionAutoWidth);
+		} else {
+			fmt->width = p->owner_width;
+		}
+		p->owner_width = fmt->width; // return the actual width
+	} else if (index == 1) { // batch name
+		int wid = (fmt->width < 0) ? -(fmt->width) : fmt->width;
+		wid = MAX(10, p->batch_name_width);
+		p->batch_name_width = wid; // return the actual width
+		fmt->width = -wid;
+	} else if (index == 6) { // held
+		if ( ! p->any_held) {
+			fmt->options |= FormatOptionHideMe;
+		}
+	}
+	if (p->zeros_as_dashes && (index >= 3 && index <= 7)) {
+		fmt->altKind = p->alt_kind;
+	}
+	return 1;
+}
+
+// reduce the data by summarizing all of the procs in a cluster
+// and all of the nodes in a dag into a single line of output.
+//
+static void
+reduce_results(ROD_MAP_BY_ID & results) {
+	//const int ixJobStatusCol = 2;
+	//const int ixUniverseCol  = 3;
+	int ixOwnerCol = 0;
+	int ixBatchNameCol = 1;
+	int ixFirstCounterCol = 3;
+	int ixJobIdsCol = 8;
+
+	const bool fold_dagman_sibs = dash_progress && (dash_progress & 2);
+
+	struct _fixup_progress_width_values wids;
+	memset(&wids, 0, sizeof(wids));
+	static const char alt_char_map[] = "b?*.-_#z"; // map cmd line option char to alt_kind index
+	for (int ix = 0; ix < (int)sizeof(alt_char_map)-1; ++ix) {
+		if (alt_char_map[ix] == dash_progress_alt_char) {
+			wids.zeros_as_dashes = true;
+			wids.alt_kind = (char)ix;
+		}
+	}
+
+	for(ROD_MAP_BY_ID::iterator it = results.begin(); it != results.end(); ++it) {
+		JobRowOfData & jr = it->second;
+		if (jr.flags & (JROD_FOLDED | JROD_SKIP | JROD_COOKED))
+			continue;
+
+#if 1
+		//{ union _jobid jidt; jidt.id = jr.id; fprintf(stderr, "reducing %d.%d\n", jidt.cluster, jidt.proc); }
+		child_progress prog;
+		int depth = 0;
+		reduce_children(prog, &jr, depth);
+#else
+		child_progress prog;
+		reduce_procs(prog, jr);
+		if ( ! (jr.flags & JROD_SCHEDUNIV)) { prog.min_cluster = prog.max_cluster = prog.cluster; }
+		// also fold up dag child nodes
+		if (jr.children) { reduce_children(prog, jr.children); }
+#endif
+		// now write baked results into this row and mark it as cooked
+		jr.flags |= JROD_COOKED;
+
+		// rewrite the values in the counter columns with the values
+		// we got by summing all of the peers and children
+		int num_done    = prog.nodes_done;
+		int num_total   = prog.nodes_total;
+		//int num_jobs    = prog.jobs;
+		int num_idle    = prog.states[IDLE] + prog.states[SUSPENDED];
+		int num_active  = prog.states[RUNNING] + prog.states[TRANSFERRING_OUTPUT];
+		int num_held    = prog.states[HELD];
+		if (num_held > 0) wids.any_held = true;
+
+		int ixCol = ixFirstCounterCol; // starting column for counters
+		jr.rov.Column(ixCol)->SetIntegerValue(num_done);
+		jr.rov.set_col_valid(ixCol, (bool)(num_done > 0));
+
+		++ixCol;
+		jr.rov.Column(ixCol)->SetIntegerValue(num_active);
+		jr.rov.set_col_valid(ixCol, (bool)(num_active > 0));
+
+		++ixCol;
+		jr.rov.Column(ixCol)->SetIntegerValue(num_idle);
+		jr.rov.set_col_valid(ixCol, (bool)(num_idle > 0));
+
+		++ixCol;
+		jr.rov.Column(ixCol)->SetIntegerValue(num_held);
+		jr.rov.set_col_valid(ixCol, (bool)(num_held > 0));
+
+		++ixCol;
+		jr.rov.Column(ixCol)->SetIntegerValue(num_total);
+		jr.rov.set_col_valid(ixCol, (bool)(num_total > 0));
+
+		int name_width = 0;
+		jr.getString(ixOwnerCol, name_width);
+		wids.owner_width = MAX(wids.owner_width, name_width);
+
+		MyString tmp;
+		union _jobid jid; jid.id = jr.id;
+		if (jr.flags & JROD_SCHEDUNIV) {
+			if (fold_dagman_sibs && jr.batch_uid && jr.next_sib && jr.getString(ixBatchNameCol, name_width)) {
+				wids.batch_name_width = MAX(wids.batch_name_width, name_width);
+			} else {
+			#if 1 // assume batch name column is already correct.
+				jr.getString(ixBatchNameCol, name_width);
+				wids.batch_name_width = MAX(wids.batch_name_width, name_width);
+			#else
+				tmp.formatstr("DAG %d", jid.cluster);
+				jr.rov.Column(ixBatchNameCol)->SetStringValue(tmp.c_str());
+				jr.rov.set_col_valid(ixBatchNameCol, true);
+				wids.batch_name_width = MAX(wids.batch_name_width, (int)tmp.length());
+			#endif
+			}
+		} else {
+			if (jr.getString(ixBatchNameCol, name_width)) {
+				wids.batch_name_width = MAX(wids.batch_name_width, name_width);
+			} else {
+				tmp.formatstr("Cluster %d", jid.cluster);
+				jr.rov.Column(ixBatchNameCol)->SetStringValue(tmp.c_str());
+				jr.rov.set_col_valid(ixBatchNameCol, true);
+				wids.batch_name_width = MAX(wids.batch_name_width, (int)tmp.length());
+			}
+		}
+
+		union _jobid jmin, jmax; jmin.id = prog.min_jobid; jmax.id = prog.max_jobid;
+		if (jmin.id != jmax.id) {
+			if (jmin.cluster == jmax.cluster) {
+				tmp.formatstr("%d.%d-%d", jmin.cluster, jmin.proc, jmax.proc);
+			} else {
+				tmp.formatstr("%d.%d ... %d.%d", jmin.cluster, jmin.proc, jmax.cluster, jmax.proc);
+			}
+		} else {
+			tmp.formatstr("%d.%d", jmin.cluster, jmin.proc);
+		}
+		jr.rov.Column(ixJobIdsCol)->SetStringValue(tmp.c_str());
+		jr.rov.set_col_valid(ixJobIdsCol, true);
+		wids.ids_width = MAX(wids.ids_width, (int)tmp.length());
+	}
+
+	// now fixup columns to fit the data, we have 50 chars worth of fixed width
+	// 123456789 123456789 123456789 123456789 123456789 123456789 123456789 123456789
+	//   1/5  11:45    319                    9    329 52521977.50 ... 52524203.277
+	if ( ! widescreen) {
+		int display_wid = getDisplayWidth();
+		int var_wid = display_wid - 50;
+		if (wids.batch_name_width + wids.owner_width + wids.ids_width > var_wid) {
+			int var_min = 8 + 10 + 9; // 8 for name and 10 for batch, 9 for ids
+			int bw,nw,iw;
+			bw = nw = iw = (var_wid - var_min)/3; // start by distributing the surplus evenly
+
+			// if we are really short of pixels, give the ids only half of what they requested (i.e show the first id only)
+			if (iw < wids.ids_width) { 
+				int needed = (wids.batch_name_width + wids.owner_width) - (bw+nw+10+8);
+				if (needed > 7 && bw < 10) { wids.ids_width /= 2; }
+			}
+			if (iw+9 > wids.ids_width) { int rw = iw+9 - wids.ids_width; nw += rw/2; bw += rw - rw/2; }
+			if (bw+10 > wids.batch_name_width) { int rw = bw+10 - wids.batch_name_width; nw = MIN(8+nw+rw, wids.owner_width) - 8; }
+			if (nw+8 > wids.owner_width) { int rw = nw+8 - wids.owner_width; bw =  MIN(10+bw+rw, wids.batch_name_width) - 10; }
+
+			wids.batch_name_width = MIN(wids.batch_name_width, bw+10);
+			wids.owner_width = MIN(wids.owner_width, nw+8);
+		}
+	}
+	app.mask.adjust_formats(fnFixupWidthsForProgressFormat, &wids);
 }
 
 
@@ -4028,25 +5081,17 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 	//
 	buffer_line_processor pfnProcess = NULL;
 	void *                pvProcess = NULL;
-	if (dash_long || better_analyze) {
+	if (better_analyze || (dash_long && ! g_stream_results)) {
 		pfnProcess = AddToClassAdList;
 		pvProcess = &jobs;
 	} else if (g_stream_results) {
-		pfnProcess = process_and_print_job;
+		pfnProcess = streaming_print_job;
 		// we are about to print out the jobads, so print an output header now.
 		print_full_header(source_label.c_str());
 	} else {
-		if (dash_dag) {
-		#ifdef ALLOW_DASH_DAG
-			pfnProcess = process_job_and_render_to_dag_map;
-			pvProcess = &dag_map;
-		#else
-			ASSERT(!dash_dag);
-		#endif
-		} else {
-			pfnProcess = process_job_to_map;
-			pvProcess = &result_map;
-		}
+		// digest each job into a row of values and insert into the rod_result_map
+		pfnProcess = process_job_to_rod_per_ad_map;
+		pvProcess = &rod_result_map;
 	}
 
 	int fetch_opts = 0;
@@ -4057,7 +5102,20 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 	if ((useFastPath == 2) && !use_v3) {
 		useFastPath = 1;
 	}
-	int fetchResult = Q.fetchQueueFromHostAndProcess(scheddAddress, attrs, fetch_opts, g_match_limit, pfnProcess, pvProcess, useFastPath, &errstack);
+	if ( ! fetch_opts && use_v3) {
+		fetch_opts = default_fetch_opts;
+	}
+#ifdef USE_LATE_PROJECTION
+	StringList *pattrs = &app.attrs;
+#else
+	StringList *pattrs = &attrs;
+#endif
+	int fetchResult;
+	if (dash_dry_run) {
+		fetchResult = dryFetchQueue(dry_run_file, *pattrs, fetch_opts, g_match_limit, pfnProcess, pvProcess);
+	} else {
+		fetchResult = Q.fetchQueueFromHostAndProcess(scheddAddress, *pattrs, fetch_opts, g_match_limit, pfnProcess, pvProcess, useFastPath, &errstack);
+	}
 	if (fetchResult != Q_OK) {
 		// The parse + fetch failed, print out why
 		switch(fetchResult) {
@@ -4102,49 +5160,40 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 		return print_jobs_analysis(jobs, source_label.c_str(), &schedd);
 	}
 
-	// at this point we either have a populated jobs list, or a populated dag_map
-	// depending on which processing function we used in the query above.
-	// for -long -xml or -analyze, we should have jobs, but no dag_map
+	int cResults = (int)rod_result_map.size();
 
-	// if outputing dag format, we want to build the parent child links in the dag map
-	// and then edit the text for jobs that are dag nodes.
-	int cResults = (int)result_map.size();
-	#ifdef ALLOW_DASH_DAG
-	if (dash_dag) {
-		cResults = (int)dag_map.size();
-		if (cResults) {
-			linkup_dag_nodes_in_dag_map(/*dag_map, dag_cluster_map*/);
-			rewrite_output_for_dag_nodes_in_dag_map(/*dag_map*/);
+	// at this point we either have a populated jobs list, or a populated rod_result_map
+	// if it's a jobs list, then we want to process the jobs into the rod_result_map
+	// then we want to linkup the nodes and (possibly) rewrite the name columns
+	if (jobs.Length() > 0) {
+		jobs.Open();
+		while(ClassAd *job = jobs.Next()) {
+			if (dash_long) {
+				streaming_print_job(NULL, job);
+			} else {
+				process_job_to_rod_per_ad_map(&rod_result_map, job);
+			}
+		}
+		jobs.Close();
+		cResults = (int)rod_result_map.size();
+	}
+
+	if (cResults > 0) {
+		linkup_nodes_by_id(rod_result_map);
+		if (dash_progress) {
+			reduce_results(rod_result_map);
+		} else if (dash_dag) {
+			format_name_column_for_dag_nodes(rod_result_map, name_column_index, name_column_width);
 		}
 	}
-	#endif
 
 	// we want a header for this schedd if we are not showing the global queue OR if there is any data
 	if ( ! global || cResults > 0 || jobs.Length() > 0) {
 		print_full_header(source_label.c_str());
 	}
 
-	// print out jobs, either from the dag_map, or the jobs list, we expect only
-	// one of these to be populated depending on which processing function we passed to the query
-	if (cResults > 0) {
-	#ifdef ALLOW_DASH_DAG
-		if (dash_dag) {
-			print_dag_map(/*dag_map*/);
-			// free the strings in the dag_map
-			clear_dag_map(/*dag_map, dag_cluster_map*/);
-		} else
-	#endif
-		{
-			print_results(result_map);
-			clear_results(result_map);
-		}
-	} else {
-		jobs.Open();
-		while(ClassAd *job = jobs.Next()) {
-			process_and_print_job(NULL, job);
-		}
-		jobs.Close();
-	}
+	print_results(rod_result_map, rod_sort_key_map, dash_dag);
+	clear_results(rod_result_map, rod_sort_key_map);
 
 	// print out summary line (if enabled) and/or xml closure
 	// we want to print out a footer if we printed any data, OR if this is not 
@@ -4155,6 +5204,70 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 	}
 
 	return true;
+}
+
+static int
+dryFetchQueue(const char * file, StringList & proj, int fetch_opts, int limit, buffer_line_processor pfnProcess, void *pvProcess)
+{
+	// print header
+#ifdef USE_LATE_PROJECTION
+	int ver = 2;
+#else
+	int ver = 1;
+#endif
+	fprintf(stderr, "\nDryRun v%d from %s\n", ver, file ? file : "<null>");
+
+	// get the constraint as a string
+	const char * constr = NULL;
+	std::string constr_string; // to hold the return from ExprTreeToString()
+	ExprTree *tree = NULL;
+	Q.rawQuery(tree);
+	if (tree) {
+		constr_string = ExprTreeToString(tree);
+		constr = constr_string.c_str();
+		delete tree;
+	}
+
+	// print constraint
+	fprintf(stderr, "Constraint: %s\n", constr ? constr : "<null>");
+	fprintf(stderr, "Opts: fetch=%d limit=%d HF=%x\n", fetch_opts, limit, customHeadFoot);
+
+	// print projection
+	proj.qsort();
+	auto_free_ptr projection(proj.print_to_delimed_string("\n  "));
+	if (projection.empty()) {
+		fprintf(stderr, "Projection: <NULL>\n");
+	} else {
+		fprintf(stderr, "Projection:\n  %s\n",  projection.ptr());
+	}
+
+	// print output mask
+	std::string tmp("");
+	dump_print_mask(tmp);
+	fprintf(stderr, "Mask:\n%s\n", tmp.c_str());
+
+	// 
+	if ( ! file || ! file[0]) { 
+		return Q_OK;
+	}
+
+	ClassAdList jobs;
+
+	/* get the "q" from the job ads file */
+	CondorQClassAdFileParseHelper jobads_file_parse_helper;
+	if ( ! read_classad_file(file, jobs, &jobads_file_parse_helper, constr)) {
+		return Q_COMMUNICATION_ERROR;
+	}
+
+	jobs.Open();
+	while(ClassAd *job = jobs.Next()) {
+		if ( ! pfnProcess(pvProcess, job)) {
+			jobs.Remove(job);
+		}
+	}
+	jobs.Close();
+
+	return Q_OK;
 }
 
 // Read ads from a file, either in classad format, or userlog format.
@@ -4200,7 +5313,7 @@ show_file_queue(const char* jobads, const char* userlog)
 			const char *scheddAddress = jobads_file_parse_helper.schedd_addr.c_str();
 			const char *queryType     = jobads_file_parse_helper.is_submitter ? "Submitter" : "Schedd";
 			formatstr(source_label, "%s: %s : %s", queryType, scheddName, scheddAddress);
-			}
+		}
 		
 		/* The variable UseDB should be false in this branch since it was set 
 			in main() because jobads_file had a good value. */
@@ -4250,13 +5363,32 @@ show_file_queue(const char* jobads, const char* userlog)
 
 		// display the jobs from this submittor
 	if( jobs.MyLength() != 0 || !global ) {
-		print_full_header(source_label.c_str());
 
 		jobs.Open();
 		while(ClassAd *job = jobs.Next()) {
-			process_and_print_job(NULL, job);
+			if (dash_long) {
+				streaming_print_job(NULL, job);
+			} else {
+				process_job_to_rod_per_ad_map(&rod_result_map, job);
+			}
 		}
 		jobs.Close();
+
+		if (dash_long) return true;
+
+		int cResults = (int)rod_result_map.size();
+		if (cResults > 0) {
+			linkup_nodes_by_id(rod_result_map);
+			if (dash_progress) {
+				reduce_results(rod_result_map);
+			} else if (dash_dag) {
+				format_name_column_for_dag_nodes(rod_result_map, name_column_index, name_column_width);
+			}
+		}
+
+		print_full_header(source_label.c_str());
+		print_results(rod_result_map, rod_sort_key_map, dash_dag);
+		clear_results(rod_result_map, rod_sort_key_map);
 
 		print_full_footer();
 	}
@@ -5368,7 +6500,7 @@ static bool read_classad_file(const char *filename, ClassAdList &classads, Class
 #ifdef HAVE_EXT_POSTGRESQL
 
 /* get the quill address for the quillName specified */
-static QueryResult getQuillAddrFromCollector(char *quill_name, char *&quill_addr) {
+static QueryResult getQuillAddrFromCollector(const char *quill_name, std::string & quill_addr) {
 	QueryResult query_result = Q_OK;
 	char		query_constraint[1024];
 	CondorQuery	quillQuery(QUILL_AD);
@@ -5382,7 +6514,7 @@ static QueryResult getQuillAddrFromCollector(char *quill_name, char *&quill_addr
 
 	quillList.Open();	
 	while ((ad = quillList.Next())) {
-		ad->LookupString(ATTR_MY_ADDRESS, &quill_addr);
+		ad->LookupString(ATTR_MY_ADDRESS, quill_addr);
 	}
 	quillList.Close();
 	return query_result;
@@ -5490,6 +6622,25 @@ static void exec_db_query(const char *quill_name, const char *db_ipAddr, const c
 
 }
 
+static void freeConnectionStrings() {
+	squillName.clear();
+	quillName = NULL;
+	squillMachine.clear();
+	quillMachine = NULL;
+	sdbIpAddr.clear();
+	dbIpAddr = NULL;
+	sdbName.clear();
+	dbName = NULL;
+	squeryPassword.clear();
+	queryPassword = NULL;
+	quillAddr.clear();
+}
+
+static void quillCleanupOnExit(int n)
+{
+	freeConnectionStrings();
+}
+
 #endif /* HAVE_EXT_POSTGRESQL */
 
 void warnScheddLimits(Daemon *schedd,ClassAd *job,MyString &result_buf) {
@@ -5562,26 +6713,143 @@ void warnScheddLimits(Daemon *schedd,ClassAd *job,MyString &result_buf) {
 	}
 }
 
+const char * const jobDefault_PrintFormat = "SELECT\n"
+"   ClusterId     AS ' ID'  NOSUFFIX  WIDTH 5 PRINTF '%4d.'\n"
+"   ProcId        AS ' '    NOPREFIX  WIDTH 3 PRINTF '%-3d'\n"
+"   Owner         AS  OWNER           WIDTH -14 PRINTAS OWNER OR ??\n"
+"   QDate         AS '  SUBMITTED'    WIDTH 11 PRINTAS QDATE\n"
+"   RemoteUserCpu AS '    RUN_TIME'   WIDTH 12 PRINTAS CPU_TIME\n"
+"   JobStatus     AS ST                       PRINTAS JOB_STATUS\n"
+"   JobPrio       AS PRI             WIDTH AUTO\n"
+"   ImageSize     AS SIZE            WIDTH 4  PRINTAS MEMORY_USAGE\n"
+"   Cmd           AS CMD             WIDTH 0 PRINTAS JOB_DESCRIPTION\n"
+"SUMMARY STANDARD\n";
+
+const char * const jobDAG_PrintFormat = "SELECT\n"
+"   ClusterId     AS ' ID'  NOSUFFIX  WIDTH 5 PRINTF '%4d.'\n"
+"   ProcId        AS ' '    NOPREFIX  WIDTH 3 PRINTF '%-3d'\n"
+"   Owner         AS 'OWNER/NODENAME' WIDTH -17 PRINTAS DAG_OWNER\n"
+"   QDate         AS '  SUBMITTED'    WIDTH 11 PRINTAS QDATE\n"
+"   RemoteUserCpu AS '    RUN_TIME'   WIDTH 12 PRINTAS CPU_TIME\n"
+"   JobStatus     AS ST                       PRINTAS JOB_STATUS\n"
+"   JobPrio       AS PRI             WIDTH AUTO\n"
+"   ImageSize     AS SIZE            WIDTH 4  PRINTAS MEMORY_USAGE\n"
+"   Cmd           AS CMD             WIDTH 0 PRINTAS JOB_DESCRIPTION\n"
+"SUMMARY STANDARD\n";
+
+const char * const jobRuntime_PrintFormat = "SELECT\n"
+"   ClusterId     AS ' ID'  NOSUFFIX WIDTH 5 PRINTF '%4d.'\n"
+"   ProcId        AS ' '    NOPREFIX WIDTH 3 PRINTF '%-3d'\n"
+"   Owner         AS  OWNER          WIDTH -14 PRINTAS OWNER OR ??\n"
+"   QDate         AS '  SUBMITTED'   WIDTH 11  PRINTAS QDATE OR ??\n"
+"   RemoteUserCpu AS '    RUN_TIME'  WIDTH 12  PRINTAS CPU_TIME OR ??\n"
+"   Owner         AS 'HOST(S)'       WIDTH 0   PRINTAS REMOTE_HOST OR ??\n"
+"SUMMARY STANDARD\n";
+
+const char * const jobGoodput_PrintFormat = "SELECT\n"
+"   ClusterId     AS ' ID'  NOSUFFIX WIDTH 5 PRINTF '%4d.'\n"
+"   ProcId        AS ' '    NOPREFIX WIDTH 3 PRINTF '%-3d'\n"
+"   Owner         AS  OWNER          WIDTH -14 PRINTAS OWNER OR ??\n"
+"   QDate         AS '  SUBMITTED'   WIDTH 11  PRINTAS QDATE OR ??\n"
+"   RemoteUserCpu AS '    RUN_TIME'  WIDTH 12  PRINTAS CPU_TIME OR ??\n"
+"   JobStatus     AS GOODPUT         WIDTH 8   PRINTAS STDU_GOODPUT OR ??\n"
+"   RemoteUserCpu AS CPU_UTIL        WIDTH 9   PRINTAS CPU_UTIL OR ??\n"
+"   BytesSent     AS 'Mb/s'          WIDTH 7   PRINTAS STDU_MPBS OR ??\n"
+"SUMMARY STANDARD\n";
+
+const char * const jobGrid_PrintFormat = "SELECT\n"
+"   ClusterId     AS ' ID'  NOSUFFIX WIDTH 5 PRINTF '%4d.'\n"
+"   ProcId        AS ' '    NOPREFIX WIDTH 3 PRINTF '%-3d'\n"
+"   Owner         AS  OWNER          WIDTH -14 PRINTAS OWNER\n"
+"   JobStatus     AS STATUS          WIDTH -10 PRINTAS GRID_STATUS\n"
+"   GridResource  AS 'GRID->MANAGER    HOST' WIDTH -27 PRINTAS GRID_RESOURCE\n"
+"   GridJobId     AS GRID_JOB_ID             WIDTH   0 PRINTAS GRID_JOB_ID\n"
+"SUMMARY STANDARD\n";
+
+const char * const jobGlobus_PrintFormat = "SELECT\n"
+"   ClusterId     AS ' ID'  NOSUFFIX WIDTH 5 PRINTF '%4d.'\n"
+"   ProcId        AS ' '    NOPREFIX WIDTH 3 PRINTF '%-3d'\n"
+"   Owner         AS  OWNER WIDTH -14 PRINTAS OWNER OR ??\n"
+"   GlobusStatus  AS STATUS WIDTH -8 PRINTAS GLOBUS_STATUS OR ??\n"
+"   Cmd           AS 'MANAGER    HOST' WIDTH 30 PRINTAS GLOBUS_HOST ALWAYS\n"
+"   Cmd           AS EXECUTABLE     WIDTH 0\n"
+"SUMMARY STANDARD\n";
+
+const char * const jobHold_PrintFormat = "SELECT\n"
+"   ClusterId     AS ' ID'  NOSUFFIX WIDTH 5 PRINTF '%4d.'\n"
+"   ProcId        AS ' '    NOPREFIX WIDTH 3 PRINTF '%-3d'\n"
+"   Owner         AS  OWNER WIDTH -14 PRINTAS OWNER OR ??\n"
+"   EnteredCurrentStatus  AS HELD_SINCE WIDTH 11 PRINTAS QDATE OR ??\n"
+"   HoldReason           AS HOLD_REASON WIDTH 0\n"
+"SUMMARY STANDARD\n";
+
+const char * const jobIO_PrintFormat = "SELECT\n"
+"   ClusterId     AS ' ID'  NOSUFFIX WIDTH 5 PRINTF '%4d.'\n"
+"   ProcId        AS ' '    NOPREFIX WIDTH 3 PRINTF '%-3d'\n"
+"   Owner         AS  OWNER WIDTH -14 PRINTAS OWNER OR ??\n"
+"   IfThenElse(JobUniverse==1,NumCkpts_RAW,NumJobStarts) AS RUNS PRINTF '%4d' OR ?\n"
+"   JobStatus     AS ST                       PRINTAS JOB_STATUS\n"
+"   IfThenElse(JobUniverse==1,FileReadBytes,BytesRecvd) AS ' INPUT' FORMATAS READABLE_BYTES OR ??\n"
+"   IfThenElse(JobUniverse==1,FileWriteBytes,BytesSent) AS ' OUTPUT' FORMATAS READABLE_BYTES OR ??\n"
+"   IfThenElse(JobUniverse==1,FileReadBytes+FileWriteBytes,BytesRecvd+BytesSent)   AS ' RATE' WIDTH 10 FORMATAS READABLE_BYTES OR ??\n"
+"   JobUniverse AS 'MISC' FORMATAS BUFFER_IO_MISC\n"
+"WHERE JobUniverse==1 || TransferQueued=?=true || TransferringOutput=?=true || TransferringInput=?=true\n"
+"SUMMARY STANDARD\n";
+
+const char * const jobTotals_PrintFormat = "SELECT NOHEADER\nSUMMARY STANDARD";
+
+const char * const autoclusterNormal_PrintFormat = "SELECT\n"
+"   AutoClusterId AS '   ID'    WIDTH 5 PRINTF %5d\n"
+"   JobCount      AS COUNT      WIDTH 5 PRINTF %5d\n"
+"   JobUniverse   AS UINVERSE   WIDTH -8 PRINTAS JOB_UNIVERSE OR ??\n"
+"   RequestCPUs   AS CPUS       WIDTH 4 PRINTF %4d OR ??\n"
+"   RequestMemory AS MEMORY     WIDTH 6 PRINTF %6d OR ??\n"
+"   RequestDisk   AS '    DISK' WIDTH 8 PRINTF %8d OR ??\n"
+"   Requirements  AS REQUIREMENTS PRINTF %r\n"
+"SUMMARY NONE\n";
+
+
 // !!! ENTRIES IN THIS TABLE MUST BE SORTED BY THE FIRST FIELD !!
 static const CustomFormatFnTableItem LocalPrintFormats[] = {
-	{ "CPU_TIME",        ATTR_JOB_REMOTE_USER_CPU, format_cpu_time, NULL },
-	{ "JOB_DESCRIPTION", ATTR_JOB_CMD, format_job_description, ATTR_JOB_DESCRIPTION "\0MATCH_EXP_" ATTR_JOB_DESCRIPTION "\0" },
-	{ "JOB_ID",          ATTR_CLUSTER_ID, format_job_id, ATTR_PROC_ID "\0" },
-	{ "JOB_STATUS",      ATTR_JOB_STATUS, format_job_status_char, ATTR_LAST_SUSPENSION_TIME "\0" ATTR_TRANSFERRING_INPUT "\0" ATTR_TRANSFERRING_OUTPUT "\0" ATTR_TRANSFER_QUEUED "\0" },
-	{ "JOB_STATUS_RAW",  ATTR_JOB_STATUS, format_job_status_raw, NULL },
-	{ "JOB_UNIVERSE",    ATTR_JOB_UNIVERSE, format_job_universe, NULL },
-	{ "MEMORY_USAGE",    ATTR_IMAGE_SIZE, format_memory_usage, ATTR_MEMORY_USAGE "\0" },
-	{ "OWNER",           ATTR_OWNER, format_owner_wide, ATTR_NICE_USER "\0" ATTR_DAGMAN_JOB_ID "\0" ATTR_DAG_NODE_NAME "\0" },
-	{ "QDATE",           ATTR_Q_DATE, format_q_date, NULL },
-	{ "READABLE_BYTES",  ATTR_BYTES_RECVD, format_readable_bytes, NULL },
-	{ "READABLE_KB",     ATTR_REQUEST_DISK, format_readable_kb, NULL },
-	{ "READABLE_MB",     ATTR_REQUEST_MEMORY, format_readable_mb, NULL },
+	{ "BATCH_NAME",      ATTR_JOB_CMD, 0, render_batch_name, ATTR_JOB_BATCH_NAME "\0" ATTR_JOB_CMD "\0" ATTR_DAGMAN_JOB_ID "\0" ATTR_DAG_NODE_NAME "\0" },
+	{ "BUFFER_IO_MISC",  ATTR_JOB_UNIVERSE, 0, render_buffer_io_misc, ATTR_FILE_SEEK_COUNT "\0" ATTR_BUFFER_SIZE "\0" ATTR_BUFFER_BLOCK_SIZE "\0" ATTR_TRANSFERRING_INPUT "\0" ATTR_TRANSFERRING_OUTPUT "\0" ATTR_TRANSFER_QUEUED "\0" },
+	{ "CPU_TIME",        ATTR_JOB_REMOTE_USER_CPU, "%T", render_cpu_time, ATTR_JOB_STATUS "\0" ATTR_SERVER_TIME "\0" ATTR_SHADOW_BIRTHDATE "\0" ATTR_JOB_REMOTE_WALL_CLOCK "\0" },
+	{ "CPU_UTIL",        ATTR_JOB_REMOTE_USER_CPU, "%.1f", render_cpu_util, ATTR_JOB_COMMITTED_TIME "\0" },
+	{ "DAG_OWNER",       ATTR_OWNER, 0, render_dag_owner, ATTR_NICE_USER "\0" ATTR_DAGMAN_JOB_ID "\0" ATTR_DAG_NODE_NAME "\0"  },
+	{ "GLOBUS_HOST",     ATTR_GRID_RESOURCE, 0, render_globusHostAndJM, NULL },
+	{ "GLOBUS_STATUS",   ATTR_GLOBUS_STATUS, 0, render_globusStatus, NULL },
+	{ "GRID_JOB_ID",     ATTR_GRID_JOB_ID, 0, render_gridJobId, ATTR_GRID_RESOURCE "\0" },
+	{ "GRID_RESOURCE",   ATTR_GRID_RESOURCE, 0, render_gridResource, ATTR_EC2_REMOTE_VM_NAME "\0" },
+	{ "GRID_STATUS",     ATTR_GRID_JOB_STATUS, 0, render_gridStatus, ATTR_GLOBUS_STATUS "\0" },
+	{ "JOB_DESCRIPTION", ATTR_JOB_CMD, 0, render_job_description, ATTR_JOB_ARGUMENTS1 "\0" ATTR_JOB_ARGUMENTS2 "\0" ATTR_JOB_DESCRIPTION "\0MATCH_EXP_" ATTR_JOB_DESCRIPTION "\0" },
+	{ "JOB_ID",          ATTR_CLUSTER_ID, 0, render_job_id, ATTR_PROC_ID "\0" },
+	{ "JOB_STATUS",      ATTR_JOB_STATUS, 0, render_job_status_char, ATTR_LAST_SUSPENSION_TIME "\0" ATTR_TRANSFERRING_INPUT "\0" ATTR_TRANSFERRING_OUTPUT "\0" ATTR_TRANSFER_QUEUED "\0" },
+	{ "JOB_STATUS_RAW",  ATTR_JOB_STATUS, 0, format_job_status_raw, NULL },
+	{ "JOB_UNIVERSE",    ATTR_JOB_UNIVERSE, 0, format_job_universe, NULL },
+	{ "MEMORY_USAGE",    ATTR_IMAGE_SIZE, "%.1f", render_memory_usage, ATTR_MEMORY_USAGE "\0" },
+	{ "OWNER",           ATTR_OWNER, 0, render_owner, ATTR_NICE_USER "\0" },
+	{ "QDATE",           ATTR_Q_DATE, "%Y", format_q_date, NULL },
+	{ "READABLE_BYTES",  ATTR_BYTES_RECVD, 0, format_readable_bytes, NULL },
+	{ "READABLE_KB",     ATTR_REQUEST_DISK, 0, format_readable_kb, NULL },
+	{ "READABLE_MB",     ATTR_REQUEST_MEMORY, 0, format_readable_mb, NULL },
 	// PRAGMA_REMIND("format_remote_host is using ATTR_OWNER because it is StringCustomFormat, it should be AlwaysCustomFormat and ATTR_REMOTE_HOST
-	{ "REMOTE_HOST",     ATTR_OWNER, format_remote_host, ATTR_JOB_UNIVERSE "\0" ATTR_REMOTE_HOST "\0" ATTR_EC2_REMOTE_VM_NAME "\0" ATTR_GRID_RESOURCE "\0" },
+	{ "REMOTE_HOST",     ATTR_OWNER, 0, render_remote_host, ATTR_JOB_UNIVERSE "\0" ATTR_REMOTE_HOST "\0" ATTR_EC2_REMOTE_VM_NAME "\0" ATTR_GRID_RESOURCE "\0" },
+	{ "STDU_GOODPUT",    ATTR_JOB_STATUS, "%.1f", render_goodput, ATTR_JOB_REMOTE_WALL_CLOCK "\0" ATTR_SHADOW_BIRTHDATE "\0" ATTR_LAST_CKPT_TIME "\0" },
+	{ "STDU_MPBS",       ATTR_BYTES_SENT, "%.2f", render_mbps, ATTR_JOB_REMOTE_WALL_CLOCK "\0" ATTR_SHADOW_BIRTHDATE "\0" ATTR_LAST_CKPT_TIME "\0" ATTR_JOB_STATUS "\0" ATTR_BYTES_RECVD "\0"},
 };
 static const CustomFormatFnTable LocalPrintFormatsTable = SORTED_TOKENER_TABLE(LocalPrintFormats);
 
+static void dump_print_mask(std::string & tmp)
+{
+#ifdef USE_LATE_PROJECTION
+	app.mask.dump(tmp, &LocalPrintFormatsTable);
+#else
+	mask.dump(tmp, &LocalPrintFormatsTable);
+#endif
+}
+
 static int set_print_mask_from_stream(
+	AttrListPrintMask & prmask,
 	const char * streamid,
 	bool is_filename,
 	StringList & attrs) // out
@@ -5610,7 +6878,7 @@ static int set_print_mask_from_stream(
 	int err = SetAttrListPrintMaskFromStream(
 					*pstream,
 					LocalPrintFormatsTable,
-					mask,
+					prmask,
 					customHeadFoot,
 					aggregation,
 					group_by_keys,
@@ -5619,9 +6887,9 @@ static int set_print_mask_from_stream(
 					messages);
 	delete pstream; pstream = NULL;
 	if ( ! err) {
-		usingPrintMask = true;
+		//usingPrintMask = true;
 		if ( ! where_expr.empty()) {
-			user_job_constraint = mask.store(where_expr.c_str());
+			user_job_constraint = prmask.store(where_expr.c_str());
 			if (Q.addAND (user_job_constraint) != Q_OK) {
 				formatstr_cat(messages, "WHERE expression is not valid: %s\n", user_job_constraint);
 			}

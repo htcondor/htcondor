@@ -65,6 +65,7 @@ CollectorEngine::CollectorEngine (CollectorStats *stats ) :
 	MasterAds     (GREATER_TABLE_SIZE, &adNameHashFunction),
 	StorageAds    (GREATER_TABLE_SIZE, &adNameHashFunction),
 	XferServiceAds(GREATER_TABLE_SIZE, &adNameHashFunction),
+	AccountingAds (GREATER_TABLE_SIZE, &adNameHashFunction),
 	CkptServerAds (LESSER_TABLE_SIZE , &adNameHashFunction),
 	GatewayAds    (LESSER_TABLE_SIZE , &adNameHashFunction),
 	CollectorAds  (LESSER_TABLE_SIZE , &adNameHashFunction),
@@ -98,6 +99,7 @@ CollectorEngine::
 	killHashTable (LicenseAds);
 	killHashTable (MasterAds);
 	killHashTable (StorageAds);
+	killHashTable (AccountingAds);
 	killHashTable (CkptServerAds);
 	killHashTable (GatewayAds);
 	killHashTable (CollectorAds);
@@ -276,6 +278,7 @@ walkHashTable (AdTypes adType, int (*scanFunction)(ClassAd *))
 		return walkGenericTables(scanFunction);
 	} else if (ANY_AD == adType) {
 		return
+			AccountingAds.walk(scanFunction) &&
 			StorageAds.walk(scanFunction) &&
 			CkptServerAds.walk(scanFunction) &&
 			LicenseAds.walk(scanFunction) &&
@@ -722,6 +725,19 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 							  clientAd, hk, hashString, insert, from );
 		break;
 
+	  case UPDATE_ACCOUNTING_AD:
+		if (!makeAccountingAdHashKey (hk, clientAd))
+		{
+			dprintf (D_ALWAYS, "Could not make hashkey --- ignoring ad\n");
+			insert = -3;
+			retVal = 0;
+			break;
+		}
+		hashString.Build( hk );
+		retVal=updateClassAd (AccountingAds, "AccountingAd  ", "Accouting",
+							  clientAd, hk, hashString, insert, from );
+		break;
+
 	  case UPDATE_NEGOTIATOR_AD:
 		if (!makeNegotiatorAdHashKey (hk, clientAd))
 		{
@@ -1138,6 +1154,9 @@ housekeeper()
 	dprintf (D_ALWAYS, "\tCleaning StorageAds ...\n");
 	cleanHashTable (StorageAds, now, makeStorageAdHashKey);
 
+	dprintf (D_ALWAYS, "\tCleaning AccountingAds ...\n");
+	cleanHashTable (AccountingAds, now, makeAccountingAdHashKey);
+
 	dprintf (D_ALWAYS, "\tCleaning NegotiatorAds ...\n");
 	cleanHashTable (NegotiatorAds, now, makeNegotiatorAdHashKey);
 
@@ -1272,6 +1291,10 @@ CollectorEngine::LookupByAdType(AdTypes adType,
 		case STORAGE_AD:
 			table = &StorageAds;
 			func = makeStorageAdHashKey;
+			break;
+		case ACCOUNTING_AD:
+			table = &AccountingAds;
+			func = makeAccountingAdHashKey;
 			break;
 		case NEGOTIATOR_AD:
 			table = &NegotiatorAds;

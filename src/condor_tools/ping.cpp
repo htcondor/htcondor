@@ -532,7 +532,7 @@ int main( int argc, char *argv[] )
 		}
 	}
 
-	if (!(daemon->locate())) {
+	if (!(daemon->locate(Daemon::LOCATE_FOR_LOOKUP))) {
 		if(output_mode) {
 			fprintf(stderr, "ERROR: couldn't locate %s!\n", address?address:name);
 		}

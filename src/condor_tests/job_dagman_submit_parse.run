@@ -35,6 +35,16 @@ sub IDLE{1};
 sub HELD{5};
 sub RUNNING{2};
 
+# We need to turn off shared port for this test if we're testing on Windows.
+my $appendCondorConfig = "";
+if( is_windows() ) {
+    $appendCondorConfig .= "JOB_ROUTER.USE_SHARED_PORT = FALSE\n";
+}
+
+CondorTest::StartCondorWithParams(
+	append_condor_config => $appendCondorConfig
+);
+
 # Get rid of dagman.out file if it exists.
 if (-e $outfile) {
 	runcmd("rm -f $outfile");

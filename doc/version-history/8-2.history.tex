@@ -24,8 +24,7 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item HTCondor version 8.2.10 not yet released.
-%\item HTCondor version 8.2.10 released on Month Date, 2015.
+\item HTCondor version 8.2.10 released on October 22, 2015.
 
 \end{itemize}
 
@@ -42,11 +41,31 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug that prevented the \Condor{negotiator} from preempting
+jobs based on user priority when \Macro{ALLOW\_PSLOT\_PREEMPTION} was set
+to \Expr{True}.
+\Ticket{5236}
+
+\item Added post install rules to the Enterprise Linux 7 RPM to configure
+SELinux for HTCondor operation.
+HTCondor works with SELinux in a default HTCondor configuration.
+Advanced HTCondor configurations using cgroups do not yet work with SELinux.
+\Ticket{5012}
+
+\item Fixed bugs that prevented the \Condor{kbdd} from authenticating
+to the X server, and thus from correctly reporting when the keyboard
+or mouse were in use.
+\Ticket{5264}
+
+\item The \Condor{kbdd} now works with shared port enabled.
+\Ticket{5239}
+
 \item Fixed a bug that caused HTCondor daemons to crash 
-on RHEL 7 when using more than 1024 file descriptors.
+when using more than 1024 file descriptors
+on Enterprise Linux 7 systems.
 \Ticket{5240}
 
-\item Fixed a memory leak when the ClassAd function split() is used.
+\item Fixed a memory leak when the ClassAd function \Procedure{split} is used.
 \Ticket{5219}
 
 \item \Condor{vacate} will now fail with an error message when the \Opt{-constraint}
@@ -55,10 +74,19 @@ while processing the constraint.  Earlier versions would just quietly ignore all
 the last constraint.
 \Ticket{5234}
 
-\item Fixed a bug that prevented the \Condor{negotiator} from preempting
-jobs based on user priority when \Macro{ALLOW\_PSLOT\_PREEMPTION} was set
-to \Expr{True}.
-\Ticket{5236}
+\item Fixed a bug that could cause the Job Router to not see the current
+job queue state when it restarts.
+This could result in routed jobs experiencing file permissions errors
+and the submission of two routed jobs for a single source job.
+\Ticket{5270}
+
+\item Fixed a bug that could cause spurious data to be sent in a SOAP file
+transfer.
+\Ticket{5320}
+
+\item Fixed a bug that caused \Condor{history} to return jobs out of order when
+there were more than 2 history files.
+\Ticket{5305}
 
 \end{itemize}
 

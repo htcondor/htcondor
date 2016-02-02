@@ -353,7 +353,7 @@ HADStateMachine::reinitialize(void)
 
 	// reconfiguring data members, on which the negotiator location inside the
 	// pool depends
-	m_usePrimary = param_boolean("HAD_USE_PRIMARY", m_usePrimary);
+	m_usePrimary = param_boolean("HAD_USE_PRIMARY", false);
 
     tmp = param( "HAD_LIST" );
     if ( tmp ) {

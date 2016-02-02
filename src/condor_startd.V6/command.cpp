@@ -1578,6 +1578,8 @@ accept_request_claim( Resource* rip, Claim* leftover_claim, bool and_pair )
 		// us to send back to the classad and the new claim id for
 		// leftovers in the parent partitionable slot.
 		dprintf(D_FULLDEBUG,"Will send partitionable slot leftovers to schedd\n");
+
+		leftover_claim->rip()->r_classad->Assign(ATTR_LAST_SLOT_NAME, rip->r_name);
 		MyString claimId(leftover_claim->id());
 		if ( !stream->put(claimId) ||
 			 !putClassAd(stream, *leftover_claim->rip()->r_classad) )

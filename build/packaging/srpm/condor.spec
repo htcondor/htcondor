@@ -94,6 +94,12 @@
 %endif
 %endif
 
+%if 0%{?osg} && 0%{?rhel} == 7
+%define aviary 0
+%define std_univ 0
+%define cream 0
+%endif
+
 %define glexec 1
 
 # Temporarily turn parallel_setup off
@@ -178,6 +184,16 @@ Source5: condor_config.local.dedicated.resource
 Source6: 10-batch_gahp_blahp.config
 Source7: 00-restart_peaceful.config
 
+Source8: htcondor.pp
+
+# custom find-requires script for filtering stuff from condor-external-libs
+Source90: find-requires.sh
+
+%if %uw_build
+%define __find_requires %{SOURCE90}
+%define _use_internal_dependency_generator 0
+%endif
+
 %if %bundle_uw_externals
 Source101: blahp-1.16.5.1.tar.gz
 Source102: boost_1_49_0.tar.gz
@@ -229,6 +245,7 @@ BuildRequires: bind-utils
 BuildRequires: m4
 #BuildRequires: autoconf
 BuildRequires: libX11-devel
+BuildRequires: libXScrnSaver-devel
 BuildRequires: /usr/include/curl/curl.h
 BuildRequires: /usr/include/expat.h
 BuildRequires: openldap-devel
@@ -260,7 +277,9 @@ BuildRequires: libxml2-devel
 BuildRequires: expat-devel
 BuildRequires: perl-Archive-Tar
 BuildRequires: perl-XML-Parser
+BuildRequires: perl(Digest::MD5)
 BuildRequires: python-devel
+BuildRequires: libcurl-devel
 %endif
 
 # Globus GSI build requirements
@@ -358,6 +377,10 @@ Requires: blahp >= 1.16.1
 
 %if %gsoap
 Requires: gsoap >= 2.7.12
+%endif
+
+%if %uw_build
+Requires: %name-external-libs%{?_isa} = %version-%release
 %endif
 
 
@@ -514,9 +537,11 @@ resources exposed by the deltacloud API.
 %package classads
 Summary: HTCondor's classified advertisement language
 Group: Development/Libraries
+%if 0%{?osg} || 0%{?hcc}
 Obsoletes: classads <= 1.0.10
 Obsoletes: classads-static <= 1.0.10
 Provides: classads = %version-%release
+%endif
 
 %description classads
 Classified Advertisements (classads) are the lingua franca of
@@ -544,8 +569,10 @@ Summary: Headers for HTCondor's classified advertisement language
 Group: Development/System
 Requires: %name-classads = %version-%release
 Requires: pcre-devel
+%if 0%{?osg} || 0%{?hcc}
 Obsoletes: classads-devel <= 1.0.10
 Provides: classads-devel = %version-%release
+%endif
 
 %description classads-devel
 Header files for HTCondor's ClassAd Library, a powerful and flexible,
@@ -568,6 +595,9 @@ Summary: HTCondor's CREAM Gahp
 Group: Applications/System
 Requires: %name = %version-%release
 Requires: %name-classads = %{version}-%{release}
+%if %uw_build
+Requires: %name-external-libs%{?_isa} = %version-%release
+%endif
 
 %description cream-gahp
 The condor-cream-gahp enables CREAM interoperability for HTCondor.
@@ -596,6 +626,17 @@ Summary: Python bindings for HTCondor.
 Group: Applications/System
 Requires: python >= 2.2
 Requires: %name = %version-%release
+
+%if 0%{?rhel} >= 7 && ! %uw_build
+# auto provides generator does not pick these up for some reason
+    %ifarch x86_64
+Provides: classad.so()(64bit)
+Provides: htcondor.so()(64bit)
+    %else
+Provides: classad.so
+Provides: htcondor.so
+    %endif
+%endif
 
 %description python
 The python bindings allow one to directly invoke the C++ implementations of
@@ -645,6 +686,7 @@ on a single machine at once when memory is the limiting factor.
 Summary: External packages built into HTCondor
 Group: Applications/System
 Requires: %name = %version-%release
+Requires: %name-external-libs%{?_isa} = %version-%release
 
 %description externals
 Includes the external packages built when UW_BUILD is enabled
@@ -652,6 +694,8 @@ Includes the external packages built when UW_BUILD is enabled
 %package external-libs
 Summary: Libraries for external packages built into HTCondor
 Group: Applications/System
+# disable automatic provides generation to prevent conflicts with system libs
+AutoProv: 0
 
 %description external-libs
 Includes the libraries for external packages built when UW_BUILD is enabled
@@ -698,7 +742,9 @@ exit 0
 %setup -q -n %{name}-%{tarball_version}
 %endif
 
+%if 0%{?osg} || 0%{?hcc}
 %patch8 -p1
+%endif
 
 %if 0%{?hcc}
 %patch15 -p0
@@ -721,7 +767,7 @@ export CMAKE_PREFIX_PATH=/usr
 %if %uw_build
 %define condor_build_id UW_development
 
-%cmake \
+cmake \
        -DBUILDID:STRING=%condor_build_id \
        -DUW_BUILD:BOOL=TRUE \
 %if ! %std_univ
@@ -730,13 +776,27 @@ export CMAKE_PREFIX_PATH=/usr
 %if %bundle_uw_externals || %bundle_std_univ_externals
        -DEXTERNALS_SOURCE_URL:STRING="$RPM_SOURCE_DIR" \
 %endif
-       -D_DEBUG:BOOL=TRUE \
        -D_VERBOSE:BOOL=TRUE \
        -DBUILD_TESTING:BOOL=FALSE \
        -DHAVE_BACKFILL:BOOL=FALSE \
        -DHAVE_BOINC:BOOL=FALSE \
        -DWITH_POSTGRESQL:BOOL=FALSE \
-       -DWANT_LEASE_MANAGER:BOOL=FALSE
+       -DWANT_LEASE_MANAGER:BOOL=FALSE \
+       -DPLATFORM:STRING=${NMI_PLATFORM:-unknown} \
+       -DCMAKE_VERBOSE_MAKEFILE=ON \
+       -DCMAKE_INSTALL_PREFIX:PATH=/usr \
+       -DINCLUDE_INSTALL_DIR:PATH=/usr/include \
+       -DSYSCONF_INSTALL_DIR:PATH=/etc \
+       -DSHARE_INSTALL_PREFIX:PATH=/usr/share \
+%ifarch x86_64
+       -DCMAKE_INSTALL_LIBDIR:PATH=/usr/lib64 \
+       -DLIB_INSTALL_DIR:PATH=/usr/lib64 \
+       -DLIB_SUFFIX=64 \
+%else
+       -DCMAKE_INSTALL_LIBDIR:PATH=/usr/lib \
+       -DLIB_INSTALL_DIR:PATH=/usr/lib \
+%endif 
+       -DBUILD_SHARED_LIBS:BOOL=ON
 
 %else
 
@@ -958,9 +1018,15 @@ cp %{SOURCE3} %{buildroot}%{_unitdir}/condor.service
 %else
 # install the lsb init script
 install -Dp -m0755 %{buildroot}/etc/examples/condor.init %{buildroot}%{_initrddir}/condor
+%if 0%{?osg} || 0%{?hcc}
 install -Dp -m 0644 %{SOURCE4} %buildroot/usr/share/osg/sysconfig/condor
+%endif
 mkdir %{buildroot}%{_sysconfdir}/sysconfig/
 install -Dp -m 0644 %{buildroot}/etc/examples/condor.sysconfig %{buildroot}%{_sysconfdir}/sysconfig/condor
+%endif
+
+%if 0%{?rhel} >= 7
+cp %{SOURCE8} %{buildroot}%{_datadir}/condor/
 %endif
 
 # Install perl modules
@@ -1116,6 +1182,7 @@ rm -rf %{buildroot}
 %files all
 #################
 %files
+%exclude %_sbindir/openstack_gahp
 %defattr(-,root,root,-)
 %doc LICENSE-2.0.txt examples
 %dir %_sysconfdir/condor/
@@ -1125,7 +1192,9 @@ rm -rf %{buildroot}
 %{_unitdir}/condor.service
 %else
 %_initrddir/condor
+%if 0%{?osg} || 0%{?hcc}
 /usr/share/osg/sysconfig/condor
+%endif
 %config(noreplace) /etc/sysconfig/condor
 %endif
 %dir %_datadir/condor/
@@ -1137,6 +1206,9 @@ rm -rf %{buildroot}
 %_datadir/condor/CondorPersonal.pm
 %_datadir/condor/CondorTest.pm
 %_datadir/condor/CondorUtils.pm
+%if 0%{?rhel} >= 7
+%_datadir/condor/htcondor.pp
+%endif
 %dir %_sysconfdir/condor/config.d/
 %_sysconfdir/condor/condor_ssh_to_job_sshd_config_template
 %if %gsoap || %uw_build
@@ -1738,6 +1810,13 @@ if [ $? = 0 ]; then
    setsebool -P condor_domain_can_network_connect 1
    semanage port -a -t condor_port_t -p tcp 12345
    # the number of extraneous SELinux warnings on f17 is very high
+fi
+%endif
+%if 0%{?rhel} >= 7
+test -x /usr/sbin/selinuxenabled && /usr/sbin/selinuxenabled
+if [ $? = 0 ]; then
+   /usr/sbin/setsebool -P condor_domain_can_network_connect 1
+   /usr/sbin/semodule -i /usr/share/condor/htcondor.pp
 fi
 %endif
 if [ $1 -eq 1 ] ; then

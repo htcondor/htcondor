@@ -27,6 +27,8 @@
 
 extern CStarter *Starter;
 
+static void buildExtraVolumes(std::list<std::string> &extras);
+
 //
 // TODO: Allow the use of HTCondor file-transfer to provide the image.
 // May require understanding "self-hosting".
@@ -131,7 +133,10 @@ int DockerProc::StartJob() {
 	
 	ClassAd *machineAd = Starter->jic->machClassAd();
 
-	int rv = DockerAPI::run( *machineAd, containerName, imageID, command, args, job_env, sandboxPath, JobPid, childFDs, err );
+	std::list<std::string> extras;
+	buildExtraVolumes(extras);
+
+	int rv = DockerAPI::run( *machineAd, containerName, imageID, command, args, job_env, sandboxPath, extras, JobPid, childFDs, err );
 	if( rv < 0 ) {
 		dprintf( D_ALWAYS | D_FAILURE, "DockerAPI::run( %s, %s, ... ) failed with return value %d\n", imageID.c_str(), command.c_str(), rv );
 		return FALSE;
@@ -475,6 +480,17 @@ bool DockerProc::PublishUpdateAd( ClassAd * ad ) {
 	// or set them during our status polling.
 	//
 
+	uint64_t memUsage, netIn, netOut;
+	DockerAPI::stats( containerName, memUsage, netIn, netOut);
+
+	if (memUsage > 0) {
+		// Set RSS, Memory and ImageSize to same values, best we have
+		ad->Assign(ATTR_RESIDENT_SET_SIZE, int(memUsage / 1024));
+		ad->Assign(ATTR_MEMORY_USAGE, int(memUsage / (1024 * 1024)));
+		ad->Assign(ATTR_IMAGE_SIZE, int(memUsage / (1024 * 1024)));
+		ad->Assign(ATTR_NETWORK_IN, double(netIn) / (1024 * 1024));
+		ad->Assign(ATTR_NETWORK_OUT, double(netOut) / (1024 * 1024));
+	}
 	return OsProc::PublishUpdateAd( ad );
 }
 
@@ -512,4 +528,42 @@ bool DockerProc::Version( std::string & version ) {
 	bool foundVersion = DockerAPI::version( version, err ) == 0;
 
 	return foundVersion;
+}
+
+// Generate a list of strings that are suitable arguments to
+// docker run --volume
+static void buildExtraVolumes(std::list<std::string> &extras) {
+	// These are the ones the administrator wants unconditionally mounted
+	char *volumeNames = param("DOCKER_MOUNT_VOLUMES");
+	if (!volumeNames) {
+		// Nothing extra to mount, give up
+		return;
+	}
+
+	StringList vl(volumeNames);
+	vl.rewind();
+	char *volumeName = 0;
+		// Foreach volume name...
+	while ( (volumeName=vl.next()) ) {
+		std::string paramName("DOCKER_VOLUME_DIR_");
+		paramName += volumeName;
+		char *volumePath = param(paramName.c_str());
+		if (volumePath) {
+			if (strchr(volumePath, ':') == 0) {
+				// Must have a colon.  If none, assume we meant
+				// source:source
+				char *volumePath2 = (char *)malloc(1 + 2 * strlen(volumePath));
+				strcpy(volumePath2, volumePath);
+				strcat(volumePath2, ":");
+				strcat(volumePath2, volumePath);
+				free(volumePath);
+				volumePath = volumePath2;
+			}
+			extras.push_back(volumePath);
+			dprintf(D_ALWAYS, "Adding %s as a docker volume to mount\n", volumePath);
+			free(volumePath);
+		} else {
+			dprintf(D_ALWAYS, "WARNING: DOCKER_VOLUME_DIR_%s is missing in config file.\n", volumeName);
+		}
+	}
 }

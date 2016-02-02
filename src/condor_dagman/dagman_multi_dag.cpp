@@ -39,11 +39,12 @@ AppendError(MyString &errMsg, const MyString &newError)
 
 //-------------------------------------------------------------------------
 bool
-GetConfigFile(/* const */ StringList &dagFiles, bool useDagDir, 
-			MyString &configFile, MyString &errMsg)
+GetConfigAndAttrs( /* const */ StringList &dagFiles, bool useDagDir, 
+			MyString &configFile, StringList &attrLines, MyString &errMsg )
 {
 	bool		result = true;
 
+		// Note: destructor will change back to original directory.
 	TmpDir		dagDir;
 
 	dagFiles.rewind();
@@ -68,23 +69,72 @@ GetConfigFile(/* const */ StringList &dagFiles, bool useDagDir,
 			newDagFile = dagFile;
 		}
 
-			//
-			// Get the list of config files from the current DAG file.
-			//
 		StringList		configFiles;
-		if ( param_boolean( "DAGMAN_USE_OLD_DAG_READER", false ) ) {
-			dprintf( D_ALWAYS, "Warning: DAGMAN_USE_OLD_DAG_READER "
-						"is no longer supported\n" );
+
+			// Note: destructor will close file.
+		MultiLogFiles::FileReader reader;
+		errMsg = reader.Open( newDagFile );
+		if ( errMsg != "" ) {
+			return false;
 		}
-		MyString msg;
-		msg = MultiLogFiles::getValuesFromFileNew( newDagFile,
-				"config", configFiles );
-		if ( msg != "" ) {
-			AppendError( errMsg,
-					MyString("Error getting DAGMan config file: ") +
-					msg );
-			result = false;
+
+		MyString logicalLine;
+		while ( reader.NextLogicalLine( logicalLine ) ) {
+			if ( logicalLine != "" ) {
+					// Note: StringList constructor removes leading
+					// whitespace from lines.
+				StringList tokens( logicalLine.Value(), " \t" );
+				tokens.rewind();
+
+				const char *firstToken = tokens.next();
+				if ( !strcasecmp( firstToken, "config" ) ) {
+
+						// Get the value.
+					const char *newValue = tokens.next();
+					if ( !newValue || !strcmp( newValue, "" ) ) {
+						AppendError( errMsg, "Improperly-formatted "
+									"file: value missing after keyword "
+									"CONFIG" );
+			    		result = false;
+					} else {
+
+							// Add the value we just found to the config
+							// files list (if it's not already in the
+							// list -- we don't want duplicates).
+						configFiles.rewind();
+						char *existingValue;
+						bool alreadyInList = false;
+						while ( ( existingValue = configFiles.next() ) ) {
+							if ( !strcmp( existingValue, newValue ) ) {
+								alreadyInList = true;
+							}
+						}
+
+						if ( !alreadyInList ) {
+								// Note: append copies the string here.
+							configFiles.append( newValue );
+						}
+					}
+
+					//some DAG commands are needed for condor_submit_dag, too...
+				} else if ( !strcasecmp( firstToken, "SET_JOB_ATTR" ) ) {
+						// Strip of DAGMan-specific command name; the
+						// rest we pass to the submit file.
+					logicalLine.replaceString( "SET_JOB_ATTR", "" );
+					logicalLine.trim();
+					if ( logicalLine == "" ) {
+						AppendError( errMsg, "Improperly-formatted "
+									"file: value missing after keyword "
+									"SET_JOB_ATTR" );
+						result = false;
+					} else {
+						attrLines.append( logicalLine.Value() );
+					}
+				}
+			}
 		}
+	
+		reader.Close();
 
 			//
 			// Check the specified config file(s) against whatever we
