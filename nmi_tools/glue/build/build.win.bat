@@ -44,6 +44,30 @@ for /D %%I in ("%VS110COMNTOOLS%..") do if exist %%~sdpIVC\bin\cl.exe set VC110_
 for /D %%I in ("%VS110COMNTOOLS%..") do if exist %%~sdpICommon7\IDE\devenv.exe set VC110_IDE=%%~sdpICommon7\IDE
 for /D %%I in ("%VS110COMNTOOLS%..") do set VS110ROOT=%%~sdpI
 
+:: pick up compiler path from VS111COMNTOOLS environment variable
+::
+for /D %%I in ("%VS111COMNTOOLS%..") do if exist %%~sdpIVC\bin\cl.exe set VC111_BIN=%%~sdpIVC\bin
+for /D %%I in ("%VS111COMNTOOLS%..") do if exist %%~sdpICommon7\IDE\devenv.exe set VC111_IDE=%%~sdpICommon7\IDE
+for /D %%I in ("%VS111COMNTOOLS%..") do set VS111ROOT=%%~sdpI
+
+:: pick up compiler path from VS112COMNTOOLS environment variable
+::
+for /D %%I in ("%VS112COMNTOOLS%..") do if exist %%~sdpIVC\bin\cl.exe set VC112_BIN=%%~sdpIVC\bin
+for /D %%I in ("%VS112COMNTOOLS%..") do if exist %%~sdpICommon7\IDE\devenv.exe set VC112_IDE=%%~sdpICommon7\IDE
+for /D %%I in ("%VS112COMNTOOLS%..") do set VS112ROOT=%%~sdpI
+
+:: pick up compiler path from VS113COMNTOOLS environment variable
+::
+for /D %%I in ("%VS113COMNTOOLS%..") do if exist %%~sdpIVC\bin\cl.exe set VC113_BIN=%%~sdpIVC\bin
+for /D %%I in ("%VS113COMNTOOLS%..") do if exist %%~sdpICommon7\IDE\devenv.exe set VC113_IDE=%%~sdpICommon7\IDE
+for /D %%I in ("%VS113COMNTOOLS%..") do set VS113ROOT=%%~sdpI
+
+:: pick up compiler path from VS114COMNTOOLS environment variable
+::
+for /D %%I in ("%VS114COMNTOOLS%..") do if exist %%~sdpIVC\bin\cl.exe set VC114_BIN=%%~sdpIVC\bin
+for /D %%I in ("%VS114COMNTOOLS%..") do if exist %%~sdpICommon7\IDE\devenv.exe set VC114_IDE=%%~sdpICommon7\IDE
+for /D %%I in ("%VS114COMNTOOLS%..") do set VS114ROOT=%%~sdpI
+
 set VS_DIR=%VS90ROOT:~0,-1%
 set VS_GEN="Visual Studio 9 2008"
 if "%~2"=="VC10" (
@@ -56,6 +80,24 @@ if "%~2"=="VC11" (
     if DEFINED VS110ROOT (
         set VS_DIR=%VS110ROOT:~0,-1%
         set VS_GEN="Visual Studio 11"
+    )
+)
+if "%~2"=="VC12" (
+    if DEFINED VS120ROOT (
+        set VS_DIR=%VS120ROOT:~0,-1%
+        set VS_GEN="Visual Studio 12"
+    )
+)
+if "%~2"=="VC13" (
+    if DEFINED VS130ROOT (
+        set VS_DIR=%VS130ROOT:~0,-1%
+        set VS_GEN="Visual Studio 13"
+    )
+)
+if "%~2"=="VC14" (
+    if DEFINED VS140ROOT (
+        set VS_DIR=%VS140ROOT:~0,-1%
+        set VS_GEN="Visual Studio 14"
     )
 )
 echo VS_DIR is now [%VS_DIR%] %VS_GEN%
@@ -157,6 +199,7 @@ if NOT "%BUILD_VERSION%"=="" (
 :: the BUILD_WIN_TAG is used to indicate the Windows version in the .zip and .msi names
 :: 7 indicates that XP is no longer supported, which is currently the case when we build with VC11
 set BUILD_WIN_TAG=
+if "%NMI_PLATFORM%"=="x86_64_Windows10" set BUILD_WIN_TAG=10
 if "%2"=="VC9" set BUILD_WIN_TAG=XP
 @echo BUILDID=%BUILDID%
 @echo BUILD_VERSION=%BUILD_VERSION%
@@ -203,8 +246,8 @@ pushd %BUILD_ROOT%\release_dir
 izip -r ..\condor-%BUILD_VERSION%-Windows%BUILD_WIN_TAG%-x86.zip *
 dir .
 popd
-goto finis   
-   
+goto finis
+
 :ZIP_ALL
 @echo ZIPPING up ALL build products
 :: zip build products before zip the release directory so we don't include condor zip file build_products
