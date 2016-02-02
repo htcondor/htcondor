@@ -86,7 +86,8 @@ public:
     void StatusUpdate( const char * instanceID,
                        const char * status,
                        const char * stateReasonCode,
-                       const char * publicDNSName );
+                       const char * publicDNSName,
+                       const char * launchGroup );
 
 	friend class EC2Resource;
 
@@ -148,6 +149,9 @@ private:
 	bool probeNow;
 
 	int resourceLeaseTID;
+
+	bool purgedTwice;
+	bool updatedOnce;
 };
 
 #endif

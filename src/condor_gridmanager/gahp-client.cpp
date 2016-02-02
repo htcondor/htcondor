@@ -32,6 +32,7 @@
 #include "condor_claimid_parser.h"
 #include "authentication.h"
 #include "condor_version.h"
+#include "selector.h"
 
 #include "gahp-client.h"
 #include "gridmanager.h"
@@ -50,6 +51,7 @@ using std::string;
 
 bool logGahpIo = true;
 unsigned long logGahpIoSize = 0;
+int gahpResponseTimeout = 20;
 
 HashTable <HashKey, GahpServer *>
     GahpServer::GahpServersById( HASH_TABLE_SIZE,
@@ -68,6 +70,7 @@ void GahpReconfig()
 
 	logGahpIo = param_boolean( "GRIDMANAGER_GAHPCLIENT_DEBUG", true );
 	logGahpIoSize = param_integer( "GRIDMANAGER_GAHPCLIENT_DEBUG_SIZE", 0 );
+	gahpResponseTimeout = param_integer( "GRIDMANAGER_GAHP_RESPONSE_TIMEOUT", 20 );
 
 	tmp_int = param_integer( "GRIDMANAGER_MAX_PENDING_REQUESTS", 50 );
 
@@ -126,6 +129,8 @@ GahpServer::GahpServer(const char *id, const char *path, const ArgList *args)
 	m_gahp_readfd = -1;
 	m_gahp_writefd = -1;
 	m_gahp_errorfd = -1;
+	m_gahp_real_readfd = -1;
+	m_gahp_real_errorfd = -1;
 	m_gahp_error_buffer = "";
 	m_reference_count = 0;
 	m_commands_supported = NULL;
@@ -442,6 +447,7 @@ GahpServer::read_argv(Gahp_Args &g_args)
 	bool trash_this_line = false;
 	bool escape_seen = false;
 	static const int buf_size = 1024 * 500;
+	time_t response_timeout = time(NULL) + gahpResponseTimeout;
 
 	g_args.reset();
 
@@ -465,8 +471,23 @@ GahpServer::read_argv(Gahp_Args &g_args)
 		//result = daemonCore->Read_Pipe(m_gahp_readfd, &(buf[ibuf]), 1 );
 		result = buffered_read(m_gahp_readfd, &(buf[ibuf]), 1 );
 
+		if ( time(NULL) >= response_timeout ) {
+			EXCEPT( "Gahp Server (pid=%d) unresponsive for %d seconds",
+					m_gahp_pid, gahpResponseTimeout );
+		}
+
 		/* Check return value from read() */
 		if ( result < 0 ) {		/* Error - try reading again */
+			// Avoid a tight spin-lock waiting for the gahp to respond.
+#if !defined(WIN32)
+			Selector selector;
+			selector.add_fd( m_gahp_real_readfd, Selector::IO_READ );
+			selector.add_fd( m_gahp_real_errorfd, Selector::IO_READ );
+			selector.set_timeout( response_timeout - time(NULL) );
+			selector.execute();
+#else
+			Sleep(1);
+#endif
 			continue;
 		}
 		if ( result == 0 ) {	/* End of File */
@@ -849,6 +870,10 @@ GahpServer::Startup()
 	m_gahp_errorfd = stderr_pipefds[0];
 	m_gahp_readfd = stdout_pipefds[0];
 	m_gahp_writefd = stdin_pipefds[1];
+#if !defined(WIN32)
+	m_gahp_real_readfd = daemonCore->Get_Pipe_FD( m_gahp_readfd, &m_gahp_real_readfd );
+	m_gahp_real_errorfd = daemonCore->Get_Pipe_FD( m_gahp_errorfd, &m_gahp_real_errorfd );
+#endif
 
 		// Read in the initial greeting from the GAHP, which is the version.
 	if ( command_version() == false ) {
@@ -932,6 +957,8 @@ GahpServer::Startup()
 	m_gahp_errorfd = -1;
 	m_gahp_readfd = -1;
 	m_gahp_writefd = -1;
+	m_gahp_real_readfd = -1;
+	m_gahp_real_errorfd = -1;
 
 	return false;
 }

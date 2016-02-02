@@ -2752,6 +2752,15 @@ friendly_name=Gridmanager Gahp Call Timeout Condor
 review=?
 tags=gridmanager,condorjob
 
+[GRIDMANAGER_GAHP_RESPONSE_TIMEOUT]
+default=20
+type=int
+reconfig=true
+customization=seldom
+friendly_name=Gridmanager Gahp Response Timeout
+review=?
+tags=gridmanager,gahp-client
+
 [CONDORC_ATTRS_TO_COPY]
 default=
 type=string
