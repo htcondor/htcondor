@@ -216,6 +216,8 @@ int cleanUpOldLogFiles(int maxNum) {
 			case a config change took place. */
 	if (maxNum > 0 ) {
 		oldFile = findOldest(baseDirName, &count);
+		int initial_count = count;
+		int delete_attempts = 0;
 		while (count > maxNum) {
 			(void)sprintf( empty, "%s.old", logBaseName );
 			// catch the exception that the file name pattern is disturbed by external influence
@@ -226,6 +228,14 @@ int cleanUpOldLogFiles(int maxNum) {
 			}
 			free(oldFile);
 			oldFile = findOldest(baseDirName, &count);
+
+			// in case we fail to clean up old files, keep track of the number of deletion attempts
+			// and don't try and delete more files than we initially thought there were.
+			delete_attempts += 1;
+			if (delete_attempts > MIN(initial_count, 10)) {
+				dprintf(D_ALWAYS | D_FAILURE, "Giving up on rotation cleanup of old files after %d attempts. Something is very wrong!\n", delete_attempts);
+				break;
+			}
 		}
 	}
 	if (oldFile != NULL) {
@@ -344,11 +354,11 @@ char *findOldest(char *dirName, int *count) {
 		if ( ! oldFile) {
 			oldFile = (char*)malloc(strlen(logBaseName) + 2 + MAX_ISO_TIMESTAMP);
 			ASSERT( oldFile );
-			strcpy(oldFile, ffd.cFileName);
+			sprintf(oldFile, "%s%c%s", dirName, DIR_DELIM_CHAR, ffd.cFileName);
 		} else {
 			int cch = strlen(ffd.cFileName);
 			if (cch > cchBase && strcmp(ffd.cFileName+cchBase, oldFile+cchBase) < 0) {
-				strcpy(oldFile, ffd.cFileName);
+				sprintf(oldFile, "%s%c%s", dirName, DIR_DELIM_CHAR, ffd.cFileName);
 			}
 		}
 	}
