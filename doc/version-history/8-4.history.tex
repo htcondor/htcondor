@@ -23,8 +23,7 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item HTCondor version 8.4.4 not yet released.
-%\item HTCondor version 8.4.4 released on Month Date, 2016.
+\item HTCondor version 8.4.4 released on February 4, 2016.
 
 \end{itemize}
 
@@ -41,14 +40,34 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug that caused the \Condor{collector} to crash if
+\MacroNI{CONDOR\_DEVELOPERS\_COLLECTOR} failed to resolve.
+\Ticket{5492}
+
+\item Fixed a bug that caused Condor-C jobs to fail when
+\Attr{JobLeaseDuration} was set to less than one hour (3600 seconds).
+The remote job would be aborted due to the job lease not being renewed.
+\Ticket{5446}
+
 \item Fixed a bug that caused the \Condor{master} to fail if a shared port
-daemon address file from before version 8.4.0 were still present.
+daemon address file written by a version of HTCondor prior to 8.4.0
+is present.
 \Ticket{5488}
 
 \item Fixed a bug that caused updates to the job attribute
 \Attr{TimerRemove} to not be respected while the job was being managed
 by the \Condor{shadow}, \Condor{gridmanager}, or the Job Router.
 \Ticket{5470}
+
+\item Fixed a bug where the job policy expression of a job could appear
+in one of the \Attr{Reason} attributes of another job.
+\Ticket{5466}
+
+\item Fixed a bug, that occurred on the Windows platform, that would cause
+the \Condor{shadow} to hang while trying to delete old shadow logs when the
+value of \Macro{MAX\_NUM\_SHADOW\_LOG} was larger than the default value of 1.
+This bug would also sometimes result in the \Condor{schedd} hanging.
+\Ticket{5499}
 
 \end{itemize}
 

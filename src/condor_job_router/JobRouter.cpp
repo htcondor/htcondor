@@ -574,6 +574,9 @@ JobRouter::EvalAllSrcJobPeriodicExprs()
 		orig_ad = ad_collection->GetClassAd(job->src_key);
 		// Forward any update of TimerRemove from the source schedd's
 		// job ad to our other copy of the ad.
+		// This brute-force update assumes that if  TimerRemove initially
+		// evaluates to an integer, it will continue to do so throughout
+		// the job's life.
 		int timer_remove = -1;
 		if (orig_ad->EvaluateAttrInt(ATTR_TIMER_REMOVE_CHECK, timer_remove)) {
 			job->src_ad.InsertAttr(ATTR_TIMER_REMOVE_CHECK, timer_remove);

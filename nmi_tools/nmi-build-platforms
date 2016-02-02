@@ -12,7 +12,7 @@ x86_64_Ubuntu12
 x86_64_Ubuntu14
 x86_64_Windows7
 x86_64_Windows8
-#x86_64_Windows10
+x86_64_Windows10
 x86_RedHat6
 
 # Not yet officially supported.
@@ -24,4 +24,3 @@ x86_64_Fedora22
 # We might as well build on SL
 x86_64_SL6
 x86_64_SL7
-
