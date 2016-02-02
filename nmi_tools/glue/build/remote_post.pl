@@ -31,6 +31,7 @@ use strict;
 use warnings;
 use Cwd;
 use File::Basename;
+use File::Copy;
 
 my $BaseDir = getcwd();
 my $SrcDir = "$BaseDir/src";
@@ -97,38 +98,53 @@ if( $ENV{NMI_PLATFORM} =~ /_win/i ) {
 	# ticket #4188 for enhanced windows testing environment
 	# get msconfig into condor_tests
 	if ($ENV{COMPUTERNAME} =~ /^EXEC\-/) {
-                my $bsdtar = "$BaseDir/msconfig/tar.exe";
+		my $bsdtar = "$BaseDir/msconfig/tar.exe";
 		print "COMPUTERNAME=$ENV{COMPUTERNAME} In new batlab\n";
 		if ( -f "$bsdtar" ) {
 			my $zips = ""; if ( <$BaseDir/*.zip> ) { $zips = '*.zip'; }
 			my $msis = ""; if ( <$BaseDir/*.msi> ) { $msis = '*.msi'; }
 			my $reldir = ""; if ( -d "$BaseDir/release_dir" ) { $reldir = "release_dir"; }
-			print "Is param_info_tables.h here:$SrcDir/condor_utils?\n";
-			system("dir $SrcDir/condor_utils");
-			print "Is msconfig here:$BaseDir?\n";
-			system("dir $BaseDir");
-			$_ = $BaseDir;
-			s/\//\\\\/g;
-			my $winbasedir = $_;
-			$winbasedir = $winbasedir . "\\msconfig";
-			$_ = $SrcDir;
-			s/\//\\\\/g;
-			my $winsrcdir = $_;
-			my $wintestloc = $winsrcdir . "\\condor_tests";
-			my $winutilloc = $winsrcdir . "\\condor_utils\\param_info_tables.h";
-			my $winutilloc2 = $winsrcdir . "\\condor_utils\\param_info.in";
+			print "Is param_info_tables.h here: $SrcDir/condor_utils?\n";
+			if ( -f "$SrcDir/condor_utils/param_info_tables.h") {
+				print "copying $SrcDir/condor_utils/param_info_tables.h, $SrcDir/condor_tests/param_info_tables.h\n";
+				copy("$SrcDir/condor_utils/param_info_tables.h", "$SrcDir/condor_tests/param_info_tables.h");
+				print "copying $SrcDir/condor_utils/param_info.in, $SrcDir/condor_tests/param_info.in\n";
+				copy("$SrcDir/condor_utils/param_info.in", "$SrcDir/condor_tests/param_info.in");
+			} else {
+				print "looks like no...\n";
+				system("dir $SrcDir/condor_utils");
+			}
+			print "Is msconfig here: $BaseDir?\n";
+			if ( -d "$BaseDir/msconfig") {
+			} else {
+				print "looks like no...\n";
+				system("dir $BaseDir");
+			}
+			if (1) {
+			} else {
+				$_ = $BaseDir;
+				s/\//\\\\/g;
+				my $winbasedir = $_;
+				$winbasedir = $winbasedir . "\\msconfig";
+				$_ = $SrcDir;
+				s/\//\\\\/g;
+				my $winsrcdir = $_;
+				my $wintestloc = $winsrcdir . "\\condor_tests";
+				my $winutilloc = $winsrcdir . "\\condor_utils\\param_info_tables.h";
+				my $winutilloc2 = $winsrcdir . "\\condor_utils\\param_info.in";
 			
-			my $xcopy1 = "xcopy $winbasedir $wintestloc /E /y";
-			print "Get msconfig into test folder:$xcopy1\n";
-			system("$xcopy1");
-			my $xcopy2 = "xcopy  $winutilloc $wintestloc /E /y";
-			print "get param_info_tables.h into test folder:$xcopy2\n";
-			system("$xcopy2");
-			my $xcopy3 = "xcopy  $winutilloc2 $wintestloc /E /y";
-			print "get param_info.in into test folder:$xcopy3\n";
-			system("$xcopy3");
-			print "$SrcDir now:\n";
-			system("dir $SrcDir");
+				my $xcopy1 = "xcopy $winbasedir $wintestloc /E /y";
+				print "Get msconfig into test folder:$xcopy1\n";
+				system("$xcopy1");
+				my $xcopy2 = "xcopy  $winutilloc $wintestloc /E /y";
+				print "get param_info_tables.h into test folder:$xcopy2\n";
+				system("$xcopy2");
+				my $xcopy3 = "xcopy  $winutilloc2 $wintestloc /E /y";
+				print "get param_info.in into test folder:$xcopy3\n";
+				system("$xcopy3");
+				print "$SrcDir now:\n";
+				system("dir $SrcDir");
+			}
 			print "Tarring up results and tests ($zips $msis $reldir)\n";
 			open( TAR, "$bsdtar -czvf results.tar.gz -C $BaseDir $zips $msis $reldir msconfig -C $SrcDir condor_tests condor_examples |" ) || 
 				die "Can't open tar as a pipe: $!\n";
