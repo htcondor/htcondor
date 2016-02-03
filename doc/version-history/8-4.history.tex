@@ -40,6 +40,15 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug that caused the \Condor{collector} to crash if
+\MacroNI{CONDOR\_DEVELOPERS\_COLLECTOR} failed to resolve.
+\Ticket{5492}
+
+\item Fixed a bug that caused Condor-C jobs to fail when
+\Attr{JobLeaseDuration} was set to less than one hour (3600 seconds).
+The remote job would be aborted due to the job lease not being renewed.
+\Ticket{5446}
+
 \item Fixed a bug that could cause HTCondor to misreport an EC2 job as running
 when it had in fact been purged from the service.  Fixed bugs that could
 cause a running EC2 job to be misreported as idle.  HTCondor also no longer
@@ -52,15 +61,6 @@ the absence of a response after \MacroNI{GRIDMANAGER\_GAHP\_RESPONSE\_TIMEOUT}
 seconds.  The EC2 GAHP now performs many fewer memory allocations in the
 course of normal operations, which improves stability on some systems.
 \Ticket{5442}
-
-\item Fixed a bug that caused the \Condor{collector} to crash if
-\MacroNI{CONDOR\_DEVELOPERS\_COLLECTOR} failed to resolve.
-\Ticket{5492}
-
-\item Fixed a bug that caused Condor-C jobs to fail when
-\Attr{JobLeaseDuration} was set to less than one hour (3600 seconds).
-The remote job would be aborted due to the job lease not being renewed.
-\Ticket{5446}
 
 \item Fixed a bug that caused the \Condor{master} to fail if a shared port
 daemon address file written by a version of HTCondor prior to 8.4.0
