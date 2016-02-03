@@ -2237,7 +2237,25 @@ parse_connect(
 	}
 
 	debug_printf( DEBUG_QUIET, "DIAG parse_connect(%s, %s)\n", splice1, splice2 );//TEMPTEMP
-	
+
+	Dag *parentSplice;
+	if ( dag->LookupSplice( splice1, parentSplice ) != 0) {
+		debug_printf( DEBUG_QUIET,
+					  "ERROR: %s (line %d): Splice %s not found!\n",
+					  filename, lineNumber, splice1 );
+		return false;
+	}
+
+	Dag *childSplice;
+	if ( dag->LookupSplice( splice2, childSplice ) != 0) {
+		debug_printf( DEBUG_QUIET,
+					  "ERROR: %s (line %d): Splice %s not found!\n",
+					  filename, lineNumber, splice2 );
+		return false;
+	}
+
+	//TEMPTEMP -- actually make the connections here...
+
 	return true;
 }
 
@@ -2257,10 +2275,10 @@ parse_pin_in_out(
 
 	debug_printf( DEBUG_QUIET, "DIAG parse_pin_in_out()\n" );//TEMPTEMP
 
-	const char *splice = strtok( NULL, DELIMITERS );
-	if ( splice == NULL ) {
+	const char *node = strtok( NULL, DELIMITERS );
+	if ( node == NULL ) {
 		debug_printf( DEBUG_QUIET,
-					  "ERROR: %s (line %d): Missing splice name\n",
+					  "ERROR: %s (line %d): Missing node name\n",
 					  filename, lineNumber );
 		exampleSyntax( example );
 		return false;
@@ -2278,13 +2296,14 @@ parse_pin_in_out(
 	int pinNum;
 	char *tmp;
 	pinNum = (int)strtol( pinNumber, &tmp, 10 );
-	if( tmp == pinNumber ) {
+	if ( tmp == pinNumber ) {
 		debug_printf( DEBUG_QUIET,
 					  "ERROR: %s (line %d): Invalid pin_number value \"%s\"\n",
 					  filename, lineNumber, pinNumber );
 		exampleSyntax( example );
 		return false;
 	}
+
 	if ( pinNum < 1 ) {
 		debug_printf( DEBUG_QUIET,
 					  "ERROR: %s (line %d): pin_number value must be positive\n",
@@ -2304,8 +2323,12 @@ parse_pin_in_out(
 		return false;
 	}
 	
-	debug_printf( DEBUG_QUIET, "DIAG parse_pin_in_out(%d, %s, %d)\n",
-				isPinIn, splice, pinNum );//TEMPTEMP
+	if ( !dag->SetPinInOut( isPinIn, node, pinNum ) ) {
+		debug_printf( DEBUG_QUIET,
+					  "ERROR: %s (line %d): (see previous line)\n",
+					  filename, lineNumber );
+		return false;
+	}
 
 	return true;
 }

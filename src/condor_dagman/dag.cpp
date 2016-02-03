@@ -242,6 +242,8 @@ Dag::~Dag()
 
 	delete _metrics;
 
+	//TEMPTEMP -- clean up pin in/out vectors?
+
     return;
 }
 
@@ -4132,7 +4134,7 @@ Dag::SetDirectory(char *dir)
 
 //---------------------------------------------------------------------------
 void
-Dag::PropogateDirectoryToAllNodes(void)
+Dag::PropagateDirectoryToAllNodes(void)
 {
 	Job *job = NULL;
 	MyString key;
@@ -4141,7 +4143,7 @@ Dag::PropogateDirectoryToAllNodes(void)
 		return;
 	}
 
-	// Propogate the directory setting to all nodes in the DAG.
+	// Propagate the directory setting to all nodes in the DAG.
 	_jobs.Rewind();
 	while( (job = _jobs.Next()) ) {
 		ASSERT( job != NULL );
@@ -4153,6 +4155,86 @@ Dag::PropogateDirectoryToAllNodes(void)
 	// likely wrong.
 
 	m_directory = ".";
+}
+
+//-------------------------------------------------------------------------
+bool
+Dag::SetPinInOut( bool isPinIn, const char *nodeName, int pinNum )
+{
+#if 1 //TEMPTEMP
+	debug_printf( DEBUG_QUIET, "Dag(%s)::SetPinInOut(%d, %s, %d)\n",
+				_spliceScope.Value(), isPinIn, nodeName, pinNum );
+#endif //TEMPTEMP
+
+	ASSERT( pinNum > 0 );
+
+	Job *node = FindNodeByName( nodeName );
+	if ( !node ) {
+		debug_printf( DEBUG_QUIET, "ERROR: node %s not found!\n", nodeName );
+		return false;
+	}
+
+	bool result = false;
+	if ( isPinIn ) {
+		result = SetPinInOut( _pinIns, "in", node, pinNum );
+	} else {
+		result = SetPinInOut( _pinOuts, "out", node, pinNum );
+	}
+
+	return result;
+}
+
+//---------------------------------------------------------------------------
+bool
+Dag::SetPinInOut( std::vector<Job *> &pinList, const char *inOutStr,
+			Job *node, int pinNum )
+{
+	if ( pinNum >= static_cast<int>( pinList.size() ) ) {
+		pinList.resize( pinNum+1, NULL );
+	} else if ( pinList[pinNum] ) {
+		//TEMPTEMP -- have a test for this...
+		debug_printf( DEBUG_QUIET,
+					"ERROR: pin %s %d was already set in %s!\n",
+					inOutStr, pinNum, _spliceScope.Value() );
+		return false;
+	}
+	pinList[pinNum] = node;
+
+	return true;
+}
+
+//---------------------------------------------------------------------------
+Job *
+Dag::GetPinInOut( bool isPinIn, int pinNum )
+{
+#if 1 //TEMPTEMP
+	debug_printf( DEBUG_QUIET, "Dag(%s)::GetPinInOut(%d, %d)\n",
+				_spliceScope.Value(), isPinIn, pinNum );
+#endif //TEMPTEMP
+
+	ASSERT( pinNum > 0 );
+
+	Job *node;
+	if ( isPinIn ) {
+		node = GetPinInOut( _pinIns, "in", pinNum );
+	} else {
+		node = GetPinInOut( _pinOuts, "out", pinNum );
+	}
+
+	return node;
+}
+
+//---------------------------------------------------------------------------
+Job *
+Dag::GetPinInOut( std::vector<Job *> &pinList, const char *inOutStr,
+			int pinNum )
+{
+	if ( pinNum >= static_cast<int>( pinList.size() ) ) {
+		//TEMPTEMP -- error message here?
+		return NULL;
+	} else {
+		return pinList[pinNum];
+	}
 }
 
 //---------------------------------------------------------------------------
@@ -4312,7 +4394,7 @@ Dag::LiftSplices(SpliceLayer layer)
 	}
 
 	// and prefix them if there was a DIR for the dag.
-	PropogateDirectoryToAllNodes();
+	PropagateDirectoryToAllNodes();
 
 	// base case is above.
 	return NULL;

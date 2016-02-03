@@ -706,7 +706,21 @@ class Dag {
 	// After the nodes in the dag have been made, we take our DIR setting,
 	// and if it isn't ".", we prefix it to the directory setting for each
 	// node, unless it is an absolute path, in which case we ignore it.
-	void PropogateDirectoryToAllNodes(void);
+	void PropagateDirectoryToAllNodes(void);
+
+	//TEMPTEMP -- document -- for now fails if pin already set
+	bool SetPinInOut( bool isPinIn, const char *nodeName, int pinNum );
+
+	//TEMPTEMP -- document, move to private...
+	bool SetPinInOut( std::vector<Job *> &pinList,
+				const char *inOutStr, Job *node, int pinNum );
+
+	//TEMPTEMP -- document
+	Job *GetPinInOut( bool isPinIn, int pinNum );
+
+	//TEMPTEMP -- document, move to private...
+	static Job *GetPinInOut( std::vector<Job *> &pinList,
+				const char *inOutStr, int pinNum );
 
 	/** Set the maximum number of job holds before a node is declared
 		a failure.
@@ -1207,6 +1221,11 @@ private:
 	
 		// Object to deal with reporting DAGMan metrics (to Pegasus).
 	DagmanMetrics *_metrics;
+
+	//TEMPTEMP -- document
+	//TEMPTEMP -- hmm -- should these be Job * or JobID_t?
+	std::vector<Job *> _pinIns;
+	std::vector<Job *> _pinOuts;
 };
 
 #endif /* #ifndef DAG_H */
