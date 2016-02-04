@@ -29,6 +29,15 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Docker Universe jobs now report and update
+ResidentSetSize, ImageSize MemoryUsage, NetworkInput and 
+NetworkOutput attributes in the job ad and log file.
+\Ticket{5456}
+
+\item Improved the speed of \Condor{q} and other tools when
+querying non-local servers.
+\Ticket{5150}
+
 \item Added the capability to set ClassAd attributes for a
 \Condor{dagman} job within the DAG file by using the new
 \MacroNI{SET\_JOB\_ATTR} command.  (See section~\ref{sec:DAG-SetAttributes}
