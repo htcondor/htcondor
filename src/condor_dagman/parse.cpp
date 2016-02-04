@@ -834,17 +834,11 @@ parse_parent(
 	int  lineNumber)
 {
 	const char * example = "PARENT p1 [p2 p3 ...] CHILD c1 [c2 c3 ...]";
-	Dag *splice_dag;
-	
-	List<Job> parents;
-	ExtArray<Job*> *splice_initial;
-	ExtArray<Job*> *splice_final;
-	int i;
-	Job *job;
 	
 	const char *jobName;
 	
 	// get the job objects for the parents
+	List<Job> parents;
 	while ((jobName = strtok (NULL, DELIMITERS)) != NULL &&
 		   strcasecmp (jobName, "CHILD") != 0) {
 		const char *jobNameOrig = jobName; // for error output
@@ -852,15 +846,17 @@ parse_parent(
 		const char *jobName2 = tmpJobName.Value();
 
 		// if splice name then deal with that first...
+		Dag *splice_dag;
 		if (dag->LookupSplice(jobName2, splice_dag) == 0) {
 
 			// grab all of the final nodes of the splice and make them parents
 			// for this job.
+			ExtArray<Job*> *splice_final;
 			splice_final = splice_dag->FinalRecordedNodes();
 
 			// now add each final node as a parent
-			for (i = 0; i < splice_final->length(); i++) {
-				job = (*splice_final)[i];
+			for (int i = 0; i < splice_final->length(); i++) {
+				Job *job = (*splice_final)[i];
 				parents.Append(job);
 			}
 
@@ -868,7 +864,7 @@ parse_parent(
 
 			// orig code
 			// if the name is not a splice, then see if it is a true node name.
-			job = dag->FindNodeByName( jobName2 );
+			Job *job = dag->FindNodeByName( jobName2 );
 			if (job == NULL) {
 				// oops, it was neither a splice nor a parent name, bail
 				debug_printf( DEBUG_QUIET, 
@@ -907,6 +903,7 @@ parse_parent(
 		const char *jobName2 = tmpJobName.Value();
 
 		// if splice name then deal with that first...
+		Dag *splice_dag;
 		if (dag->LookupSplice(jobName2, splice_dag) == 0) {
 			// grab all of the initial nodes of the splice and make them 
 			// children for this job.
@@ -915,13 +912,14 @@ parse_parent(
 				"Detected splice %s as a child....\n", filename, lineNumber,
 					jobName2);
 
+			ExtArray<Job*> *splice_initial;
 			splice_initial = splice_dag->InitialRecordedNodes();
 			debug_printf( DEBUG_DEBUG_1, "Adding %d initial nodes\n", 
 				splice_initial->length());
 
 			// now add each initial node as a child
-			for (i = 0; i < splice_initial->length(); i++) {
-				job = (*splice_initial)[i];
+			for (int i = 0; i < splice_initial->length(); i++) {
+				Job *job = (*splice_initial)[i];
 
 				children.Append(job);
 			}
@@ -930,7 +928,7 @@ parse_parent(
 
 			// orig code
 			// if the name is not a splice, then see if it is a true node name.
-			job = dag->FindNodeByName( jobName2 );
+			Job *job = dag->FindNodeByName( jobName2 );
 			if (job == NULL) {
 				// oops, it was neither a splice nor a child name, bail
 				debug_printf( DEBUG_QUIET, 
@@ -2206,6 +2204,8 @@ parse_connect(
 
 	debug_printf( DEBUG_QUIET, "DIAG parse_connect()\n" );//TEMPTEMP
 
+//TEMPTEMP -- need to munge splice names!! (make test with multiple DAGs and splice connects...)
+
 	const char *splice1 = strtok( NULL, DELIMITERS );
 	if ( splice1 == NULL ) {
 		debug_printf( DEBUG_QUIET,
@@ -2254,7 +2254,12 @@ parse_connect(
 		return false;
 	}
 
-	//TEMPTEMP -- actually make the connections here...
+	if ( !Dag::ConnectSplices( parentSplice, childSplice ) ) {
+		debug_printf( DEBUG_QUIET,
+					  "ERROR: %s (line %d): (see previous line)\n",
+					  filename, lineNumber );
+		return false;
+	}
 
 	return true;
 }

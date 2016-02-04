@@ -4189,13 +4189,14 @@ bool
 Dag::SetPinInOut( std::vector<Job *> &pinList, const char *inOutStr,
 			Job *node, int pinNum )
 {
+	--pinNum; // Pin numbers start with 1
 	if ( pinNum >= static_cast<int>( pinList.size() ) ) {
 		pinList.resize( pinNum+1, NULL );
 	} else if ( pinList[pinNum] ) {
 		//TEMPTEMP -- have a test for this...
 		debug_printf( DEBUG_QUIET,
-					"ERROR: pin %s %d was already set in %s!\n",
-					inOutStr, pinNum, _spliceScope.Value() );
+					"ERROR: pin_%s %d was already set in %s!\n",
+					inOutStr, pinNum+1, _spliceScope.Value() );
 		return false;
 	}
 	pinList[pinNum] = node;
@@ -4229,12 +4230,73 @@ Job *
 Dag::GetPinInOut( std::vector<Job *> &pinList, const char *inOutStr,
 			int pinNum )
 {
+	--pinNum; // Pin numbers start with 1
 	if ( pinNum >= static_cast<int>( pinList.size() ) ) {
 		//TEMPTEMP -- error message here?
 		return NULL;
 	} else {
 		return pinList[pinNum];
 	}
+}
+
+//---------------------------------------------------------------------------
+int
+Dag::GetPinCount( bool isPinIn )
+{
+	if ( isPinIn ) {
+		return _pinIns.size();
+	} else {
+		return _pinOuts.size();
+	}
+}
+
+//---------------------------------------------------------------------------
+bool
+Dag::ConnectSplices( Dag *parentSplice, Dag *childSplice )
+{
+#if 1 //TEMPTEMP
+	debug_printf( DEBUG_QUIET, "Dag::ConnectSplices(%s, %s)\n",
+				parentSplice->_spliceScope.Value(),
+				childSplice->_spliceScope.Value() );
+#endif //TEMPTEMP
+
+	int pinOutCount = parentSplice->GetPinCount( false );
+	int pinInCount = childSplice->GetPinCount( true );
+	if ( pinOutCount != pinInCount ) {
+		debug_printf( DEBUG_QUIET,
+					"ERROR: pin_in/out mismatch:  parent splice %s has %d pin_outs; child splice %s has %d pin_ins\n",
+					parentSplice->_spliceScope.Value(), pinOutCount,
+					childSplice->_spliceScope.Value(), pinInCount );
+		return false;
+	}
+
+	for (int pinNum = 1; pinNum <= pinOutCount; ++pinNum ) {
+		Job *parentNode = parentSplice->GetPinInOut( false, pinNum );
+		if ( !parentNode ) {
+			debug_printf( DEBUG_QUIET,
+						"ERROR: parent splice %s has no node for pin_out %d\n",
+						parentSplice->_spliceScope.Value(), pinNum );
+			return false;
+		}
+
+		Job *childNode = childSplice->GetPinInOut( true, pinNum );
+		if ( !childNode ) {
+			debug_printf( DEBUG_QUIET,
+						"ERROR: child splice %s has no node for pin_in %d\n",
+						childSplice->_spliceScope.Value(), pinNum );
+			return false;
+		}
+
+		if ( !AddDependency( parentNode, childNode ) ) {
+			debug_printf( DEBUG_QUIET,
+						//TEMPTEMP -- add more detail here?
+						"ERROR: unable to add parent/child dependency for pin %d\n", pinNum );
+
+			return false;
+		}
+	}
+
+	return true;
 }
 
 //---------------------------------------------------------------------------

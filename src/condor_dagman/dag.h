@@ -169,13 +169,14 @@ class Dag {
 
     /// Add a job to the collection of jobs managed by this Dag.
     bool Add( Job& job );
+
     /** Specify a dependency between two jobs. The child job will only
         run after the parent job has finished.
         @param parent The parent job
         @param child The child job (depends on the parent)
         @return true: successful, false: failure
     */
-    bool AddDependency (Job * parent, Job * child);
+    static bool AddDependency (Job * parent, Job * child);
 
 	/** Run waiting/deferred scripts that are ready to run.  Note: scripts
 	    are also limited by halt status and maxpre/maxpost.
@@ -721,6 +722,10 @@ class Dag {
 	//TEMPTEMP -- document, move to private...
 	static Job *GetPinInOut( std::vector<Job *> &pinList,
 				const char *inOutStr, int pinNum );
+
+	int GetPinCount( bool isPinIn );
+
+	static bool ConnectSplices( Dag *parentSplice, Dag *childSplice );
 
 	/** Set the maximum number of job holds before a node is declared
 		a failure.
