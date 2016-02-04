@@ -899,7 +899,7 @@ _condor_dprintf_va( int cat_and_flags, DPF_IDENT ident, const char* fmt, va_list
 			   loop.  -Derek 9/14 */
 		memset((void*)&info,0,sizeof(info)); // just to stop Purify UMR errors
 		info.ident = ident;
-		unsigned int hdr_flags = DebugHeaderOptions;
+		unsigned int hdr_flags = DebugHeaderOptions | (cat_and_flags & D_BACKTRACE);
 		_condor_dprintf_gettime(info, hdr_flags, &hdr_flags);
 		if (hdr_flags & D_BACKTRACE) _condor_dprintf_getbacktrace(info, hdr_flags, &hdr_flags);
 	
@@ -2482,6 +2482,21 @@ void dprintf_to_outdbgstr(int cat_and_flags, int hdr_flags, DebugHeaderInfo & in
 }
 #endif
 
+#ifdef __cplusplus
+dprintf_on_function_exit::dprintf_on_function_exit(bool on_entry, int _flags, const char * fmt, ...)
+	: msg("\n"), flags(_flags), print_on_exit(true)
+{
+	va_list args;
+	va_start(args, fmt);
+	int r = vformatstr(msg, fmt, args);
+	va_end(args);
+	if (on_entry) dprintf(flags,      "entering %s", msg.c_str());
+}
+dprintf_on_function_exit::~dprintf_on_function_exit()
+{
+	if (print_on_exit) dprintf(flags, "leaving  %s", msg.c_str());
+}
+#endif
 
 // get pointers to the two dprintf entry points, because we can't refer to their addresses any other way.
 #ifdef __cplusplus
