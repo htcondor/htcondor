@@ -9650,6 +9650,11 @@ These macros affect the \Condor{gridmanager}.
   which a pending GAHP command should time out. 
   The default is 5 minutes (300 seconds).
 
+\label{param:GridmanagerGahpResponseTimeout}
+\item[\Macro{GRIDMANAGER\_GAHP\_RESPONSE\_TIMEOUT}]
+  The \Condor{gridmanager} will assume a GAHP is hung if this many
+  seconds pass without a response.  The default is 20.
+
 \label{param:GridmanagerMaxPendingRequests}
 \item[\Macro{GRIDMANAGER\_MAX\_PENDING\_REQUESTS}]
   The maximum number of GAHP

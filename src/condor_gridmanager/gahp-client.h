@@ -177,6 +177,8 @@ class GahpServer : public Service {
 	int m_gahp_readfd;
 	int m_gahp_writefd;
 	int m_gahp_errorfd;
+	int m_gahp_real_readfd;
+	int m_gahp_real_errorfd;
 	std::string m_gahp_error_buffer;
 	std::list<std::string> m_gahp_error_list;
 	bool m_gahp_startup_failed;

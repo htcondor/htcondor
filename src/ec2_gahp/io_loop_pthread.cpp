@@ -2,13 +2,13 @@
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -82,14 +82,14 @@ registerAllAmazonCommands(void)
 
 	// EC2 Commands
 
-	registerAmazonGahpCommand(AMAZON_COMMAND_VM_START, 
+	registerAmazonGahpCommand(AMAZON_COMMAND_VM_START,
 			AmazonVMStart::ioCheck, AmazonVMStart::workerFunction);
     registerAmazonGahpCommand(AMAZON_COMMAND_VM_START_SPOT,
             AmazonVMStartSpot::ioCheck, AmazonVMStartSpot::workerFunction);
 
-	registerAmazonGahpCommand(AMAZON_COMMAND_VM_STOP, 
+	registerAmazonGahpCommand(AMAZON_COMMAND_VM_STOP,
 			AmazonVMStop::ioCheck, AmazonVMStop::workerFunction);
-	registerAmazonGahpCommand(AMAZON_COMMAND_VM_STOP_SPOT, 
+	registerAmazonGahpCommand(AMAZON_COMMAND_VM_STOP_SPOT,
 			AmazonVMStopSpot::ioCheck, AmazonVMStopSpot::workerFunction);
 
     registerAmazonGahpCommand(AMAZON_COMMAND_VM_STATUS_SPOT,
@@ -98,97 +98,29 @@ registerAllAmazonCommands(void)
     registerAmazonGahpCommand(AMAZON_COMMAND_VM_STATUS_ALL_SPOT,
             AmazonVMStatusAllSpot::ioCheck, AmazonVMStatusAllSpot::workerFunction);
 
-	/*
-	registerAmazonGahpCommand(AMAZON_COMMAND_VM_REBOOT, 
-			AmazonVMReboot::ioCheck, AmazonVMReboot::workerFunction);
-	*/
-
-	registerAmazonGahpCommand(AMAZON_COMMAND_VM_STATUS, 
+	registerAmazonGahpCommand(AMAZON_COMMAND_VM_STATUS,
 			AmazonVMStatus::ioCheck, AmazonVMStatus::workerFunction);
 
-	registerAmazonGahpCommand(AMAZON_COMMAND_VM_STATUS_ALL, 
+	registerAmazonGahpCommand(AMAZON_COMMAND_VM_STATUS_ALL,
 			AmazonVMStatusAll::ioCheck, AmazonVMStatusAll::workerFunction);
 
-	/*
-	registerAmazonGahpCommand(AMAZON_COMMAND_VM_CREATE_GROUP, 
-			AmazonVMCreateGroup::ioCheck, AmazonVMCreateGroup::workerFunction);
-
-	registerAmazonGahpCommand(AMAZON_COMMAND_VM_DELETE_GROUP, 
-			AmazonVMDeleteGroup::ioCheck, AmazonVMDeleteGroup::workerFunction);
-
-	registerAmazonGahpCommand(AMAZON_COMMAND_VM_GROUP_NAMES, 
-			AmazonVMGroupNames::ioCheck, AmazonVMGroupNames::workerFunction);
-
-	registerAmazonGahpCommand(AMAZON_COMMAND_VM_GROUP_RULES, 
-			AmazonVMGroupRules::ioCheck, AmazonVMGroupRules::workerFunction);
-
-	registerAmazonGahpCommand(AMAZON_COMMAND_VM_ADD_GROUP_RULE, 
-			AmazonVMAddGroupRule::ioCheck, AmazonVMAddGroupRule::workerFunction);
-
-	registerAmazonGahpCommand(AMAZON_COMMAND_VM_DEL_GROUP_RULE, 
-			AmazonVMDelGroupRule::ioCheck, AmazonVMDelGroupRule::workerFunction);
-
-	*/
-
-	registerAmazonGahpCommand(AMAZON_COMMAND_VM_CREATE_KEYPAIR, 
+	registerAmazonGahpCommand(AMAZON_COMMAND_VM_CREATE_KEYPAIR,
 			AmazonVMCreateKeypair::ioCheck, AmazonVMCreateKeypair::workerFunction);
 
-	registerAmazonGahpCommand(AMAZON_COMMAND_VM_DESTROY_KEYPAIR, 
+	registerAmazonGahpCommand(AMAZON_COMMAND_VM_DESTROY_KEYPAIR,
 			AmazonVMDestroyKeypair::ioCheck, AmazonVMDestroyKeypair::workerFunction);
 
-    registerAmazonGahpCommand(AMAZON_COMMAND_VM_ASSOCIATE_ADDRESS, 
+    registerAmazonGahpCommand(AMAZON_COMMAND_VM_ASSOCIATE_ADDRESS,
             AmazonAssociateAddress::ioCheck, AmazonAssociateAddress::workerFunction);
 
-	 registerAmazonGahpCommand(AMAZON_COMMAND_VM_ATTACH_VOLUME, 
+	 registerAmazonGahpCommand(AMAZON_COMMAND_VM_ATTACH_VOLUME,
             AmazonAttachVolume::ioCheck, AmazonAttachVolume::workerFunction);
 
-	 registerAmazonGahpCommand(AMAZON_COMMAND_VM_CREATE_TAGS, 
+	 registerAmazonGahpCommand(AMAZON_COMMAND_VM_CREATE_TAGS,
             AmazonCreateTags::ioCheck, AmazonCreateTags::workerFunction);
 
-	 registerAmazonGahpCommand(AMAZON_COMMAND_VM_SERVER_TYPE, 
+	 registerAmazonGahpCommand(AMAZON_COMMAND_VM_SERVER_TYPE,
             AmazonVMServerType::ioCheck, AmazonVMServerType::workerFunction);
-
-    //registerAmazonGahpCommand(AMAZON_COMMAND_VM_RELEASE_ADDRESS, 
-    //        AmazonReleaseAddress::ioCheck, AmazonReleaseAddress::workerFunction);
-
-	/*
-	registerAmazonGahpCommand(AMAZON_COMMAND_VM_REGISTER_IMAGE, 
-			AmazonVMRegisterImage::ioCheck, AmazonVMRegisterImage::workerFunction);
-
-	registerAmazonGahpCommand(AMAZON_COMMAND_VM_DEREGISTER_IMAGE, 
-			AmazonVMDeregisterImage::ioCheck, AmazonVMDeregisterImage::workerFunction);
-	*/
-
-
-	// S3 Commands
-	/*
-	registerAmazonGahpCommand(AMAZON_COMMAND_S3_ALL_BUCKETS,
-			AmazonS3AllBuckets::ioCheck, AmazonS3AllBuckets::workerFunction);
-
-	registerAmazonGahpCommand(AMAZON_COMMAND_S3_CREATE_BUCKET,
-			AmazonS3CreateBucket::ioCheck, AmazonS3CreateBucket::workerFunction);
-
-	registerAmazonGahpCommand(AMAZON_COMMAND_S3_DELETE_BUCKET,
-			AmazonS3DeleteBucket::ioCheck, AmazonS3DeleteBucket::workerFunction);
-
-	registerAmazonGahpCommand(AMAZON_COMMAND_S3_LIST_BUCKET,
-			AmazonS3ListBucket::ioCheck, AmazonS3ListBucket::workerFunction);
-
-	registerAmazonGahpCommand(AMAZON_COMMAND_S3_UPLOAD_FILE,
-			AmazonS3UploadFile::ioCheck, AmazonS3UploadFile::workerFunction);
-
-	registerAmazonGahpCommand(AMAZON_COMMAND_S3_UPLOAD_DIR,
-			AmazonS3UploadDir::ioCheck, AmazonS3UploadDir::workerFunction);
-
-	registerAmazonGahpCommand(AMAZON_COMMAND_S3_DELETE_FILE,
-			AmazonS3DeleteFile::ioCheck, AmazonS3DeleteFile::workerFunction);
-
-	registerAmazonGahpCommand(AMAZON_COMMAND_S3_DOWNLOAD_FILE,
-			AmazonS3DownloadFile::ioCheck, AmazonS3DownloadFile::workerFunction);
-
-	registerAmazonGahpCommand(AMAZON_COMMAND_S3_DOWNLOAD_BUCKET,
-			AmazonS3DownloadBucket::ioCheck, AmazonS3DownloadBucket::workerFunction);
-	*/
 
 	return true;
 }
@@ -285,7 +217,7 @@ main( int argc, char ** const argv )
 		dprintf(D_ALWAYS, "Can't register Amazon Commands\n");
 		exit(1);
 	}
-	
+
 	// Create IOProcess class
 	ioprocess = new IOProcess;
 	ASSERT(ioprocess);
@@ -331,13 +263,11 @@ verify_gahp_command(char ** argv, int argc) {
 		return verify_number_args (argc, 1);
 	}
 
-	return executeIOCheckFunc(argv[0], argv, argc); 
+	return executeIOCheckFunc(argv[0], argv, argc);
 }
 
 void
 gahp_output_return (const char ** results, const int count) {
-//	amazon_gahp_io_lock();
-
 	int i=0;
 	for (i=0; i<count; i++) {
 		printf ("%s", results[i]);
@@ -348,8 +278,6 @@ gahp_output_return (const char ** results, const int count) {
 
 	printf ("\n");
 	fflush(stdout);
-
-//	amazon_gahp_io_unlock();
 }
 
 static void
@@ -364,7 +292,7 @@ gahp_output_return_error() {
 	gahp_output_return (result, 1);
 }
 
-Worker::Worker(int worker_id) 
+Worker::Worker(int worker_id)
 {
 	m_id = worker_id;
 	m_can_use = false;
@@ -372,25 +300,20 @@ Worker::Worker(int worker_id)
 	m_is_waiting = false;
 	m_must_be_alive = false;
 
-//	pthread_mutex_init(&m_mutex, NULL);
 	pthread_cond_init(&m_cond, NULL);
 }
 
-Worker::~Worker() 
+Worker::~Worker()
 {
 	Request *request = NULL;
 
-//	pthread_mutex_lock(&m_mutex);
 	m_request_list.Rewind();
 	while( m_request_list.Next(request) ) {
 		m_request_list.DeleteCurrent();
 		delete request;
 	}
 
-//	pthread_mutex_unlock(&m_mutex);
-
 	pthread_cond_destroy(&m_cond);
-//	pthread_mutex_destroy(&m_mutex);
 }
 
 bool
@@ -398,7 +321,6 @@ Worker::removeRequest(int req_id)
 {
 	Request *request = NULL;
 
-//	pthread_mutex_lock(&m_mutex);
 	m_request_list.Rewind();
 	while( m_request_list.Next(request) ) {
 
@@ -406,23 +328,21 @@ Worker::removeRequest(int req_id)
 			// remove this request from worker request queue
 			m_request_list.DeleteCurrent();
 			delete request;
-//			pthread_mutex_unlock(&m_mutex);
 			return true;
-		}	
+		}
 	}
-//	pthread_mutex_unlock(&m_mutex);
 
 	return false;
 }
 
 
 // Functions for IOProcess class
-IOProcess::IOProcess() 
+IOProcess::IOProcess()
 	: m_workers_list(20, &hashFuncInt)
 {
 	m_async_mode = false;
 	m_new_results_signaled = false;
-	
+
 	m_min_workers = MIN_NUMBER_WORKERS;
 	m_max_workers = -1;
 
@@ -430,17 +350,10 @@ IOProcess::IOProcess()
 	m_rotated_worker_ids = false;
 
 	m_avail_workers_num = 0;
-
-//	pthread_mutex_init(&m_result_mutex, NULL);
-//	pthread_mutex_init(&m_worker_list_mutex, NULL);
-//	pthread_mutex_init(&m_pending_req_list_mutex, NULL);
 }
 
 IOProcess::~IOProcess()
 {
-//	pthread_mutex_destroy(&m_result_mutex);
-//	pthread_mutex_destroy(&m_worker_list_mutex);
-//	pthread_mutex_destroy(&m_pending_req_list_mutex);
 }
 
 bool
@@ -464,14 +377,11 @@ IOProcess::startUp(int stdin_pipe, int min_workers, int max_workers)
 }
 
 int
-IOProcess::stdinPipeHandler() 
+IOProcess::stdinPipeHandler()
 {
-	std::string* line;
-	while ((line = m_stdin_buffer.GetNextLine()) != NULL) {
-
-		const char *command = line->c_str();
-
-		dprintf (D_FULLDEBUG, "got stdin: %s\n", command);
+	char command[131072];
+	while( m_stdin_buffer.GetNextLine( command, sizeof( command ) ) ) {
+		dprintf (D_FULLDEBUG, "got stdin: '%s'\n", command);
 
 		Gahp_Args args;
 
@@ -481,9 +391,6 @@ IOProcess::stdinPipeHandler()
 				// Catch "special commands first
 			if (strcasecmp (args.argv[0], GAHP_COMMAND_RESULTS) == 0) {
 				// Print each result line
-
-//				amazon_gahp_io_lock();
-//				pthread_mutex_lock(&m_result_mutex);
 
 				// Print number of results
 				printf("%s %d\n", GAHP_RESULT_SUCCESS, numOfResult());
@@ -498,17 +405,9 @@ IOProcess::stdinPipeHandler()
 					deleteCurrentResult();
 				}
 				m_new_results_signaled = false;
-
-//				pthread_mutex_unlock(&ioprocess->m_result_mutex);
-//				amazon_gahp_io_unlock();
-
 			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_VERSION) == 0) {
-
-//				amazon_gahp_io_lock();
 				printf ("S %s\n", version);
 				fflush (stdout);
-//				amazon_gahp_io_unlock();
-
 			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_QUIT) == 0) {
 				gahp_output_return_success();
 				io_process_exit(0);
@@ -548,16 +447,13 @@ IOProcess::stdinPipeHandler()
 				// got new command
 				if( !addNewRequest(command) ) {
 					gahp_output_return_error();
-				}else {
-					gahp_output_return_success(); 
+				} else {
+					gahp_output_return_success();
 				}
 			}
-			
 		} else {
 			gahp_output_return_error();
 		}
-
-		delete line;
 	}
 
 	// check if GetNextLine() returned NULL because of an error or EOF
@@ -580,9 +476,9 @@ IOProcess::createNewWorker(void)
 	// Set this worker is available
 	new_worker->m_can_use = true;
 
-	// Create pthread 
+	// Create pthread
 	pthread_t thread;
-	if( pthread_create(&thread, NULL, 
+	if( pthread_create(&thread, NULL,
 				worker_function, (void *)new_worker) !=  0 ) {
 		dprintf(D_ALWAYS, "Failed to create a new thread\n");
 
@@ -590,43 +486,30 @@ IOProcess::createNewWorker(void)
 		return NULL;
 	}
 
-	// Deatch this thread 
+	// Deatch this thread
 	pthread_detach(thread);
 
 	// Insert a new worker to HashTable
-//	pthread_mutex_lock(&m_worker_list_mutex);
 	m_workers_list.insert(new_worker->m_id, new_worker);
 	m_avail_workers_num++;
-//	pthread_mutex_unlock(&m_worker_list_mutex);
 
 	dprintf(D_FULLDEBUG, "New Worker[id=%d] is created!\n", new_worker->m_id);
 	return new_worker;
 }
 
-Worker* 
+Worker*
 IOProcess::findFreeWorker(void)
 {
 	int currentkey = 0;
 	Worker *worker = NULL;
 
-//	pthread_mutex_lock(&m_worker_list_mutex);
 	m_workers_list.startIterations();
 	while( m_workers_list.iterate(currentkey, worker) != 0 ) {
-
-//		pthread_mutex_lock(&worker->m_mutex);
-
-		if( !worker->m_is_doing && worker->m_can_use ) { 
-			worker->m_must_be_alive = true;	
-
-//			pthread_mutex_unlock(&worker->m_mutex);
-//			pthread_mutex_unlock(&m_worker_list_mutex);
-
+		if( !worker->m_is_doing && worker->m_can_use ) {
+			worker->m_must_be_alive = true;
 			return worker;
 		}
-
-//		pthread_mutex_unlock(&worker->m_mutex);
 	}
-//	pthread_mutex_unlock(&m_worker_list_mutex);
 	return NULL;
 }
 
@@ -636,30 +519,20 @@ IOProcess::findFirstAvailWorker(void)
 	int currentkey = 0;
 	Worker *worker = NULL;
 
-//	pthread_mutex_lock(&m_worker_list_mutex);
-
 	m_workers_list.startIterations();
 	while( m_workers_list.iterate(currentkey, worker) != 0 ) {
 
-//		pthread_mutex_lock(&worker->m_mutex);
-
 		if( worker->m_can_use ) {
 			worker->m_must_be_alive = true;
-
-//			pthread_mutex_unlock(&worker->m_mutex);
-//			pthread_mutex_unlock(&m_worker_list_mutex);
 			return worker;
 		}
-
-//		pthread_mutex_unlock(&worker->m_mutex);
 	}
-//	pthread_mutex_unlock(&m_worker_list_mutex);
 
 	return NULL;
 }
 
 
-Worker* 
+Worker*
 IOProcess::findWorker(int id)
 {
 	Worker *worker = NULL;
@@ -668,7 +541,7 @@ IOProcess::findWorker(int id)
 	return worker;
 }
 
-bool 
+bool
 IOProcess::removeWorkerFromWorkerList(int id)
 {
 	Worker* worker = findWorker(id);
@@ -685,16 +558,14 @@ IOProcess::removeWorkerFromWorkerList(int id)
 void
 IOProcess::LockWorkerList(void)
 {
-//	pthread_mutex_lock(&m_worker_list_mutex);
 }
 
 void
 IOProcess::UnlockWorkerList(void)
 {
-//	pthread_mutex_unlock(&m_worker_list_mutex);
 }
 
-Request* 
+Request*
 IOProcess::addNewRequest(const char *cmd)
 {
 	if( !cmd ) {
@@ -719,15 +590,12 @@ IOProcess::addNewRequest(const char *cmd)
 	return new_req;
 }
 
-void 
+void
 IOProcess::addResult(const char *result)
 {
 	if( !result ) {
 		return;
 	}
-
-//	amazon_gahp_io_lock();
-//	pthread_mutex_lock(&m_result_mutex);
 
 	// Put this result into result buffer
 	m_result_list.append(result);
@@ -739,12 +607,9 @@ IOProcess::addResult(const char *result)
 		}
 		m_new_results_signaled = true;	// So that we only do it once
 	}
-
-//	pthread_mutex_unlock(&m_result_mutex);
-//	amazon_gahp_io_unlock();
 }
 
-int 
+int
 IOProcess::newWorkerId(void)
 {
 	Worker* unused = NULL;
@@ -758,16 +623,13 @@ IOProcess::newWorkerId(void)
 
 		if( !m_rotated_worker_ids ) {
 			return m_next_worker_id;
-		}	
+		}
 
-//		pthread_mutex_lock(&m_worker_list_mutex);
 		// Make certain this worker_id is not already in use
 		if( m_workers_list.lookup(m_next_worker_id, unused) == -1 ) {
 			// not in use, we are done
-//			pthread_mutex_unlock(&m_worker_list_mutex);
 			return m_next_worker_id;
 		}
-//		pthread_mutex_unlock(&m_worker_list_mutex);
 
 		m_next_worker_id++;
 	}
@@ -784,11 +646,9 @@ IOProcess::addRequestToWorker(Request* request, Worker* worker)
 		return;
 	}
 
-	if( worker ) { 
-		dprintf (D_FULLDEBUG, "Sending %s to worker %d\n", 
+	if( worker ) {
+		dprintf (D_FULLDEBUG, "Sending %s to worker %d\n",
 				request->m_raw_cmd.c_str(), worker->m_id);
-
-//		pthread_mutex_lock(&worker->m_mutex);
 
 		request->m_worker = worker;
 		worker->m_request_list.Append(request);
@@ -797,43 +657,34 @@ IOProcess::addRequestToWorker(Request* request, Worker* worker)
 		if( worker->m_is_waiting ) {
 			pthread_cond_signal(&worker->m_cond);
 		}
-
-//		pthread_mutex_unlock(&worker->m_mutex);
-	}else {
+	} else {
 		// There is no available worker.
 		// So we will insert this request to global pending request list
-		dprintf (D_FULLDEBUG, "Appending %s to global pending request list\n", 
+		dprintf (D_FULLDEBUG, "Appending %s to global pending request list\n",
 				request->m_raw_cmd.c_str());
 
-//		pthread_mutex_lock(&m_pending_req_list_mutex);
 		m_pending_req_list.Append(request);
-//		pthread_mutex_unlock(&m_pending_req_list_mutex);
 	}
 }
 
-int 
+int
 IOProcess::numOfPendingRequest(void)
 {
 	int num = 0;
-//	pthread_mutex_lock(&m_pending_req_list_mutex);
 	num = m_pending_req_list.Number();
-//	pthread_mutex_unlock(&m_pending_req_list_mutex);
-
 	return num;
 }
 
-Request* 
+Request*
 IOProcess::popPendingRequest(void)
 {
 	Request *new_request = NULL;
 
-//	pthread_mutex_lock(&m_pending_req_list_mutex);
 	m_pending_req_list.Rewind();
 	m_pending_req_list.Next(new_request);
 	if( new_request ) {
 		m_pending_req_list.DeleteCurrent();
 	}
-//	pthread_mutex_unlock(&m_pending_req_list_mutex);
 
 	return new_request;
 }
@@ -851,14 +702,14 @@ Request* popRequest(Worker* worker)
 	if( new_request ) {
 		// Remove this request from worker request queue
 		worker->m_request_list.DeleteCurrent();
-	}else {
+	} else {
 		if( ioprocess ) {
 			new_request = ioprocess->popPendingRequest();
 
 			if( new_request ) {
 				new_request->m_worker = worker;
 
-				dprintf (D_FULLDEBUG, "Assigning %s to worker %d\n", 
+				dprintf (D_FULLDEBUG, "Assigning %s to worker %d\n",
 						new_request->m_raw_cmd.c_str(), worker->m_id);
 			}
 		}
@@ -870,8 +721,7 @@ Request* popRequest(Worker* worker)
 static void
 enqueue_result(Request* request)
 {
-	if( !request || request->m_result.empty() 
-			|| !ioprocess ) {
+	if( !request || request->m_result.empty() || !ioprocess ) {
 		return;
 	}
 
@@ -936,29 +786,22 @@ static void worker_exit(Worker *worker, bool force)
 	}
 
 	if( need_remove ) {
-		dprintf(D_FULLDEBUG, "Thread(%d) is exiting...\n", worker_id); 
+		dprintf(D_FULLDEBUG, "Thread(%d) is exiting...\n", worker_id);
 
 		int retval = 0;
 		amazon_gahp_release_big_mutex();
 		pthread_exit(&retval);
-	}else {
-		//dprintf(D_FULLDEBUG, "Thread(%d) is going to be used again\n",
-		//		worker_id);
-
+	} else {
 		// We need to keep this thread running
-//		pthread_mutex_lock(&worker->m_mutex);
-
 		worker->m_can_use = true;
 
 		worker->m_is_doing = false;
 		worker->m_is_waiting = false;
 		worker->m_must_be_alive = false;
-
-//		pthread_mutex_unlock(&worker->m_mutex);
 	}
 }
 
-static void *worker_function( void *ptr ) 
+static void *worker_function( void *ptr )
 {
 	Worker *worker = (Worker *)ptr;
 
@@ -975,21 +818,18 @@ static void *worker_function( void *ptr )
 		return NULL;
 	}
 
-	// Pop Request 
+	// Pop Request
 	Request *new_request = NULL;
 	struct timespec ts;
 	struct timeval tp;
 
 	while(1) {
 
-//		pthread_mutex_lock(&worker->m_mutex);
-
 		worker->m_is_doing = false;
 		worker->m_is_waiting = false;
 
 		if( worker->m_can_use == false ) {
 			// Need to die
-//			pthread_mutex_unlock(&worker->m_mutex);
 			worker_exit(worker, true);
 		}
 
@@ -1011,29 +851,16 @@ static void *worker_function( void *ptr )
 				}
 			}
 
-			//dprintf(D_FULLDEBUG, "Thread(%d) is calling cond_wait\n", 
-			//		worker->m_id);
-
-			// The pthread_cond_timedwait will block until signalled
-			// with more work from our main thread; so we MUST release
-			// the big fat mutex here or we will deadlock.	
-//			amazon_gahp_release_big_mutex();
-			int retval = pthread_cond_timedwait(&worker->m_cond, 
+			int retval = pthread_cond_timedwait(&worker->m_cond,
 					&global_big_mutex, &ts);
-//			amazon_gahp_grab_big_mutex();
 
 			if( worker->m_can_use == false ) {
 				// Need to die
-				worker->m_is_waiting = false;	
-
-//				pthread_mutex_unlock(&worker->m_mutex);
+				worker->m_is_waiting = false;
 				worker_exit(worker, true);
-			}else {
+			} else {
 				// If timeout happends, need to check m_must_be_alive
 				if( retval == ETIMEDOUT ) {
-					//dprintf(D_FULLDEBUG, "Thread(%d) Wait timed out !\n", 
-					//		worker->m_id);
-
 					if( ioprocess ) {
 						if( ioprocess->numOfPendingRequest() > 0 ) {
 							continue;
@@ -1043,12 +870,11 @@ static void *worker_function( void *ptr )
 					if( !worker->m_must_be_alive ) {
 						// Need to die according to the min number of workers
 
-						worker->m_is_waiting = false;	
+						worker->m_is_waiting = false;
 						worker->m_can_use = false;
 
-//						pthread_mutex_unlock(&worker->m_mutex);
 						worker_exit(worker, false);
-					}else {
+					} else {
 						dprintf(D_FULLDEBUG, "Thread(%d) must be alive for "
 								"another request\n", worker->m_id);
 					}
@@ -1060,18 +886,16 @@ static void *worker_function( void *ptr )
 		worker->m_is_waiting = false;
 		worker->m_must_be_alive = false;
 
-//		pthread_mutex_unlock(&worker->m_mutex);
-
 		if(!handle_gahp_command(new_request) ) {
-			dprintf(D_ALWAYS, "ERROR (io_loop) processing %s\n", 
+			dprintf(D_ALWAYS, "ERROR (io_loop) processing %s\n",
 					new_request->m_raw_cmd.c_str());
-		}else {
-			dprintf(D_FULLDEBUG, "CMD(\"%s\") is done with result %s", 
+		} else {
+			dprintf(D_FULLDEBUG, "CMD(\"%s\") is done with result %s",
 					new_request->m_raw_cmd.c_str(),
 					new_request->m_result.c_str());
 		}
 
-		// Now we processed one request 
+		// Now we processed one request
 		delete new_request;
 		new_request = NULL;
 
@@ -1079,4 +903,62 @@ static void *worker_function( void *ptr )
 
 	amazon_gahp_release_big_mutex();
 	return NULL;
+}
+
+//
+// This pool allocator isn't thread-safe, but it avoids calling glibc's
+// allocator, which is also not thread-safe ... and called from two
+// threads simultaneously (if a request arrives while curl is working).
+//
+
+const unsigned int requestPoolSize = 4096;
+bool initializedRequestMap = false;
+unsigned char requestMap[ requestPoolSize ];
+unsigned char requests[ requestPoolSize * sizeof( Request ) ];
+
+void * Request::operator new( size_t i ) throw() {
+	static unsigned int index = 0;
+	if( ! initializedRequestMap ) {
+		memset( requestMap, 0, requestPoolSize );
+		initializedRequestMap = true;
+	}
+
+	if( i != sizeof( Request ) ) {
+		fprintf( stderr, "Request::operator new() called with wrong size request.\n" );
+		return NULL;
+	}
+
+	unsigned int count = 0;
+	for( ; count < requestPoolSize; ++index, ++count ) {
+		if( index >= requestPoolSize ) {
+			index = 0;
+		}
+
+		if( requestMap[ index ] == 0 ) {
+			requestMap[ index ] = 1;
+			break;
+		}
+	}
+
+	if( count == requestPoolSize ) {
+		fprintf( stderr, "Failed to find space for request in pool.\n" );
+		return NULL;
+	}
+
+	void * address = &(((Request *)requests)[ index ]);
+	++index;
+
+	// fprintf( stderr, "Allocating %u = %p.\n", index, address );
+	return address;
+}
+
+void Request::operator delete( void * v ) throw() {
+	if( requests <= v && v < requests + sizeof( requests ) ) {
+		unsigned long offset = ((unsigned long)v) - ((unsigned long)requests);
+		offset = offset / sizeof( Request );
+		// fprintf( stderr, "Deleting %p = %lu.\n", v, offset );
+		requestMap[ offset ] = 0;
+	} else {
+		fprintf( stderr, "Reqeust::operator delete( %p ) invalid: not in pool (%p -- %p).\n", v, requests, requests + sizeof( requests ) );
+	}
 }

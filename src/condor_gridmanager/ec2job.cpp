@@ -92,7 +92,7 @@ static const char *GMStateNames[] = {
 #define EC2_VM_STATE_STOPPED			"stopped"
 
 // These are pseduostates used internally by the grid manager.
-#define EC2_VM_STATE_PURGED				"purged"
+#define EC2_VM_STATE_PURGED				"not-found"
 #define EC2_VM_STATE_CANCELLING			"cancelling"
 
 // TODO: Let the maximum submit attempts be set in the job ad or, better yet,
@@ -157,7 +157,9 @@ EC2Job::EC2Job( ClassAd *classad ) :
 	m_was_job_completion( false ),
 	m_retry_times( 0 ),
 	probeNow( false ),
-	resourceLeaseTID( -1 )
+	resourceLeaseTID( -1 ),
+	purgedTwice( false ),
+	updatedOnce( false )
 {
 	string error_string = "";
 	char *gahp_path = NULL;
@@ -603,10 +605,6 @@ void EC2Job::doEvaluateState()
 							if ( condorState == RUNNING || condorState == COMPLETED ) {
 								executeLogged = true;
 							}
-							// Do NOT set probeNow; if we're recovering from
-							// a queue with 5000 jobs, we'd hit the service
-							// with 5000 status update requests, which is
-							// precisely what we're trying to avoid.
 							gmState = GM_SUBMITTED;
 						} else if( condorState == REMOVED ||
 								   m_should_gen_key_pair ) {
@@ -833,13 +831,21 @@ void EC2Job::doEvaluateState()
 					}
 
 					if ( rc == 0 ) {
-
 						ASSERT( instance_id != "" );
 						SetInstanceId( instance_id.c_str() );
 						WriteGridSubmitEventToUserLog(jobAd);
 
-						gmState = GM_SAVE_INSTANCE_ID;
+						// The batch status update may have declared this
+						// job purged if the update occurred between job
+						// object insantiation and the state machine
+						// advancing to this state.  However, since we
+						// know we just got the instance ID, we can safely
+						// force the state of the job and avoid confusing
+						// GM_SUBMITTED (when we eventually get to it).
+						remoteJobState = EC2_VM_STATE_PENDING;
+						SetRemoteJobStatus( remoteJobState.c_str() );
 
+						gmState = GM_SAVE_INSTANCE_ID;
 					} else if ( gahp_error_code == "InstanceLimitExceeded" ) {
 						// meet the resource limitation (maximum 20 instances)
 						// should retry this command later
@@ -874,7 +880,6 @@ void EC2Job::doEvaluateState()
 
 
 			case GM_SAVE_INSTANCE_ID:
-
 				jobAd->GetDirtyFlag( ATTR_GRID_JOB_ID,
 									 &attr_exists, &attr_dirty );
 				if ( attr_exists && attr_dirty ) {
@@ -882,12 +887,6 @@ void EC2Job::doEvaluateState()
 					requestScheddUpdate( this, true );
 					break;
 				}
-
-				// If we just now, for the first time, discovered
-				// an instance's ID, we don't presently know its
-				// address(es) (or hostnames).  It seems reasonable
-				// to learn this as quickly as possible.
-				probeNow = true;
 
 				if( ! m_spot_price.empty() ) {
 					gmState = GM_SPOT_CANCEL;
@@ -946,29 +945,11 @@ void EC2Job::doEvaluateState()
 					// Don't go to GM probe until asked (when the remote
 					// job status changes).
 					if( ! probeNow ) { break; }
+					probeNow = false;
 
-					if ( lastProbeTime < enteredCurrentGmState ) {
-						lastProbeTime = enteredCurrentGmState;
-					}
-
-					// if current state isn't "running", we should check its state
-					// every "funcRetryInterval" seconds. Otherwise the interval should
-					// be "probeInterval" seconds.
-					int interval = myResource->GetJobPollInterval();
-					if ( remoteJobState != EC2_VM_STATE_RUNNING ) {
-						interval = funcRetryInterval;
-					}
-
-					if ( now >= lastProbeTime + interval ) {
-						gmState = GM_PROBE_JOB;
-						break;
-					}
-
-					unsigned int delay = 0;
-					if ( (lastProbeTime + interval) > now ) {
-						delay = (lastProbeTime + interval) - now;
-					}
-					daemonCore->Reset_Timer( evaluateStateTid, delay );
+					// We can't ignore any state transitions, so go into
+					// GM_PROBE_JOB regardless of the timer intervals.
+					gmState = GM_PROBE_JOB;
 				}
 				break;
 
@@ -1122,10 +1103,6 @@ void EC2Job::doEvaluateState()
 
 
 			case GM_PROBE_JOB:
-				// Note that we do an individual-job probe because it can
-				// return information (e.g., the public DNS name) that the
-				// user should now about it.  It also simplifies the coding,
-				// since the status-handling code can stay here.
 				probeNow = false;
 
 				if ( condorState == REMOVED || condorState == HELD ) {
@@ -1506,8 +1483,22 @@ void EC2Job::doEvaluateState()
 				if( rc == 0 ) {
 					ASSERT( spot_request_id != "" );
 
+					if( strcmp( m_failure_injection, "1A" ) == 0 ) {
+						EXCEPT( "On request, crashing after requesting a spot instance but before recording its ID." );
+					}
+
 					SetRequestID( spot_request_id.c_str() );
 					requestScheddUpdate( this, false );
+
+					// The batch status update may have declared this
+					// job purged if the update occurred between job
+					// object insantiation and the state machine
+					// advancing to this state.  However, since we
+					// know we just got the instance ID, we can safely
+					// force the state of the job and avoid confusing
+					// GM_SUBMITTED (when we eventually get to it).
+					remoteJobState = EC2_VM_STATE_PENDING;
+					SetRemoteJobStatus( remoteJobState.c_str() );
 
 					gmState = GM_SPOT_SUBMITTED;
 					break;
@@ -1570,6 +1561,10 @@ void EC2Job::doEvaluateState()
 					SetRequestID( NULL );
 					requestScheddUpdate( this, false );
 
+					// Instances only set their state reason code when
+					// terminating.
+					m_state_reason_code.clear();
+
 					// Rather than decide if we crashed after cancelling a
 					// request but before removing its ID from the job ad,
 					// just never remove it.  It won't hurt to try to cancel
@@ -1577,9 +1572,6 @@ void EC2Job::doEvaluateState()
 					// instance ID, we know we're not done when we cancel it.
 				}
 
-				// Do NOT set probeNow here.  If we came from
-				// GM_SAVE_INSTANCE_ID, it's already set.  If we came from
-				// recovery, see the argument in recovery as to why not.
 				gmState = GM_SUBMITTED;
 				break;
 
@@ -1597,65 +1589,48 @@ void EC2Job::doEvaluateState()
 				// Don't go to GM probe until asked (when the remote
 				// job status changes).
 				if( ! probeNow ) { break; }
+				probeNow = false;
 
-				// Always wait at least interval before probing.
-				if( lastProbeTime < enteredCurrentGmState ) {
-					lastProbeTime = enteredCurrentGmState;
-				}
-
-				if( now >= lastProbeTime + myResource->GetJobPollInterval() ) {
-					gmState = GM_SPOT_QUERY;
-					break;
-				} else {
-					// Why is this more complicated in GM_SUBMITTED?
-					unsigned int delay = (lastProbeTime + myResource->GetJobPollInterval()) - now;
-					daemonCore->Reset_Timer( evaluateStateTid, delay );
-				}
+				// Don't ever skip a job state transition.
+				gmState = GM_SPOT_QUERY;
 				break;
 
 			// Alternates with GM_SPOT_SUBMITTED to watch for instance start.
 			case GM_SPOT_QUERY: {
 				probeNow = false;
 
-				// Send a command to the GAHP, or poll for its result(s).
-				StringList returnStatus;
-				rc = gahp->ec2_spot_status( m_serviceUrl,
-											m_public_key_file,
-											m_private_key_file,
-											m_spot_request_id,
-											returnStatus,
-											gahp_error_code );
+				if( remoteJobState == EC2_VM_STATE_PURGED ) {
+					// There may be a race condition between when we get a
+					// spot request ID and when the EC2 service includes that
+					// ID in its list of all IDs.  This means that SIRs
+					// may briefly appear to have been purged.
+					//
+					// It may also be that this appeared to happen because
+					// the batch status update code flagged spot job objects
+					// as purged if they didn't appear in the service's list
+					// of instances... which, of course, they couldn't.
+					//
+					// That no longer happens for spot job objects which have
+					// spot request IDs, but for other spot job objects, we'd
+					// need to be able to distinguish between "purged" and
+					// "not yet started", which could be tricky to do without
+					// knowing which state the job's in (and/or during
+					// recovery.)  So we leave this code in place.
+					if((! m_spot_request_id.empty()) && m_remoteJobId.empty() ) {
+						if(! purgedTwice) {
+							purgedTwice = true;
 
-				if( strcmp( m_failure_injection, "3" ) == 0 ) {
-					rc = 1;
-					gahp_error_code = "E_TESTING";
-					gahp->setErrorString( "GM_FAILURE_INJECTION #3" );
-				}
+							// If we don't change remoteJobState, and the
+							// SIR really was purged, we won't ever exit
+							// GM_SPOT_SUBMITTED -- we won't exit the PURGED
+							// state.
+							remoteJobState = EC2_VM_STATE_PENDING;
+							SetRemoteJobStatus( remoteJobState.c_str() );
+							gmState = GM_SPOT_SUBMITTED;
+							break;
+						}
+					}
 
-				// If the command hasn't terminated yet, return to this
-				// state and poll again.
-				if( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
-					rc == GAHPCLIENT_COMMAND_PENDING ) {
-					break;
-				}
-
-				// If the command fails, put the job on hold.
-				if( rc != 0 ) {
-					if( gahp_error_code == "E_CURL_IO" ) { myResource->RequestPing( this ); }
-					errorString = gahp->getErrorString();
-					dprintf( D_ALWAYS, "(%d.%d) spot request probe failed: %s: %s\n",
-								procID.cluster, procID.proc,
-								gahp_error_code.c_str(),
-								errorString.c_str() );
-					dprintf( D_FULLDEBUG, "Error transition: GM_SPOT_QUERY + <GAHP failure> = GM_HOLD\n" );
-					gmState = GM_HOLD;
-					break;
-				}
-
-				if( strcmp( m_failure_injection, "4" ) == 0 ) { returnStatus.clearAll(); }
-
-				// Update the job state.
-				if( returnStatus.number() == 0 ) {
 					// The spot instance request has been purged.  This should
 					// only happen during recovery.  Put the job on hold so
 					// we get a chance to tell the user that an instance may
@@ -1668,61 +1643,25 @@ void EC2Job::doEvaluateState()
 					gmState = GM_HOLD;
 					break;
 				}
+				purgedTwice = false;
 
-				// Spot status results are 5-tuples of request IDs, status
-				// strings, AMI IDs (probably superflous), instance IDs,
-				// and status codes.
-				// There should only ever be one result when probing a job.
-				std::string status;
-				std::string requestID;
-				std::string instanceID;
-				std::string statusCode;
-				returnStatus.rewind();
-
-				// The GAHP client will EXCEPT() returnStatus.number()
-				// isn't 0 or a multiple of 5.  (gahp-client.cpp:7070-86)
-				// Should we EXCEPT again here?
-				for( int i = 0; i < returnStatus.number(); i += 5 ) {
-					requestID = returnStatus.next();
-					status = returnStatus.next();
-					std::string launchGroup = returnStatus.next();
-					instanceID = returnStatus.next();
-					statusCode = returnStatus.next();
-
-					if( requestID == m_spot_request_id ) { break; }
-				}
-
-				// The single result should always be the job we asked about.
-				if( requestID != m_spot_request_id ) {
-					formatstr( errorString, "GM_SPOT_QUERY asked about %s, got %s instead.", m_spot_request_id.c_str(), requestID.c_str() );
-					dprintf( D_ALWAYS, "(%d.%d) %s\n", procID.cluster, procID.proc, errorString.c_str() );
-					dprintf( D_FULLDEBUG, "Error transition: GM_SPOT_QUERY + <bogus query data> = GM_HOLD\n" );
-					gmState = GM_HOLD;
-					break;
-				}
-
-				//
-				// Now that we're sure we have the right status, update it.
-				//
-				remoteJobState = status;
-				SetRemoteJobStatus( status.c_str() );
-
-				if( ! statusCode.empty() ) {
-					SetRemoteJobStatus( statusCode.c_str() );
+				// The remote job state was updated in StatusUpdate().
+				if( ! m_state_reason_code.empty() ) {
+					jobAd->Assign( ATTR_EC2_STATUS_REASON_CODE, m_state_reason_code.c_str() );
+					requestScheddUpdate( this, false );
 				}
 
 				// If the request spawned an instance, we must save the
 				// instance ID.  This (GM_SAVE_INSTANCE_ID) will then cancel
 				// the request (GM_SPOT_CANCEL) and after checking the job
 				// state (GM_SUBMITTED), cancel the instance.
-				if( ! instanceID.empty() ) {
-					SetInstanceId( instanceID.c_str() );
+				if( ! m_remoteJobId.empty() ) {
 					gmState = GM_SAVE_INSTANCE_ID;
 					break;
 				}
 
 				// All 'active'-status requests have instance IDs.
-				ASSERT( status != "active" );
+				ASSERT( remoteJobState != "active" );
 
 				// If the request didn't spawn an instance, but the Condor
 				// job has been held or removed, cancel the request.  (It's
@@ -1736,13 +1675,13 @@ void EC2Job::doEvaluateState()
 					break;
 				}
 
-				if( strcmp( m_failure_injection, "5" ) == 0 ) { status = "not-open"; }
+				if( strcmp( m_failure_injection, "5" ) == 0 ) { remoteJobState = "not-open"; }
 
-				if( status == "open" ) {
+				if( remoteJobState == "open" ) {
 					// Nothing interesting happened, so ask again latter.
 					gmState = GM_SPOT_SUBMITTED;
 					break;
-				} else if( status == "cancelled" ) {
+				} else if( remoteJobState == "cancelled" ) {
 					// We'll never see the cancelled state from GM_SPOT_CANCEL
 					// because it exits the SPOT subgraph.  Thus, this cancel
 					// must have come from the user (because we don't specify
@@ -1759,6 +1698,20 @@ void EC2Job::doEvaluateState()
 					dprintf( D_FULLDEBUG, "Error transition: GM_SPOT_QUERY + <cancelled> = GM_HOLD\n" );
 					gmState = GM_HOLD;
 					break;
+				} else if( remoteJobState == "pending" ) {
+					// Because the bulk status update may occur between
+					// creating this job object and its state machine reaching
+					// GM_SPOT_START, GM_SPOT_START unconditionally sets the
+					// remote job state to EC2_VM_STATE_PENDING.  Since the
+					// job didn't exist at the time of the poll,
+					// m_state_reason_code is unset, and we have to handle
+					// the "actual" job status here.
+					//
+					//
+					// Arguably, we should instead have GM_SPOT_START
+					// clear probeNow to force the wait for another poll...
+					gmState = GM_SPOT_SUBMITTED;
+					break;
 				} else {
 					// We should notify the user about a 'failed' job.
 					// The other possible status is 'closed', which we should
@@ -1766,7 +1719,7 @@ void EC2Job::doEvaluateState()
 					// so they can't expire, and even if it somehow started
 					// and finished instance while we weren't paying attention,
 					// we still would have seen the instance ID already.
-					formatstr( errorString, "Request status '%s' unexpected in GM_SPOT_QUERY.", status.c_str() );
+					formatstr( errorString, "Request status '%s' unexpected in GM_SPOT_QUERY.", remoteJobState.c_str() );
 					dprintf( D_ALWAYS, "(%d.%d) %s\n", procID.cluster, procID.proc, errorString.c_str() );
 					dprintf( D_FULLDEBUG, "Error transition: GM_SPOT_QUERY + <unexpected state> = GM_HOLD\n" );
 					gmState = GM_HOLD;
@@ -1775,92 +1728,55 @@ void EC2Job::doEvaluateState()
 
 				} break;
 
-			// If, during recovery of a spot request, we have a client token
-			// but not a spot instance ID, look at all spot requests to see
-			// if we actually made the request or not.
 			case GM_SPOT_CHECK: {
-				// Send a command to the GAHP, or poll for its result(s).
-				StringList returnStatus;
-				rc = gahp->ec2_spot_status_all( m_serviceUrl,
-												m_public_key_file,
-												m_private_key_file,
-												returnStatus,
-												gahp_error_code );
+				if( ! probeNow ) { break; }
+				probeNow = false;
 
-				if( strcmp( m_failure_injection, "6" ) == 0 ) {
-					rc = 1;
-					gahp_error_code = "E_TESTING";
-					gahp->setErrorString( "GM_FAILURE_INJECTION #6" );
-				}
-
-				// If the command hasn't terminated yet, return to this
-				// state and poll again.
-				if( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
-					rc == GAHPCLIENT_COMMAND_PENDING ) {
-					break;
-				}
-
-				// Place the job on hold if we can't look for the corresponding
-				// spot instance; this may not be optimal, but at least the
-				// user could notice and try again later.
-				if( rc != 0 ) {
-					errorString = "Spot check failed.";
-					dprintf( D_ALWAYS, "(%d.%d) %s\n", procID.cluster, procID.proc, errorString.c_str() );
-					dprintf( D_FULLDEBUG, "Error transition: GM_SPOT_CHECK + <spot check failed> = GM_HOLD\n" );
-					gmState = GM_HOLD;
-					break;
-				}
-
-				// Look for the stray SIR.
-				int originalState = gmState;
-				returnStatus.rewind();
-				for( int i = 0; i < returnStatus.number(); i += 5 ) {
-					std::string requestID = returnStatus.next();
-					std::string state = returnStatus.next();
-					std::string launchGroup = returnStatus.next();
-					std::string instanceID = returnStatus.next();
-					std::string statusCode = returnStatus.next();
-
-					if( launchGroup == m_client_token ) {
-						SetRequestID( requestID.c_str() );
-						requestScheddUpdate( this, false );
-
-						if( ! instanceID.empty() ) {
-							SetInstanceId( instanceID.c_str() );
-							gmState = GM_SAVE_INSTANCE_ID;
-							// dprintf( D_FULLDEBUG, "Recovery transition: GM_SPOT_CHECK -> GM_SAVE_INSTANCE_ID\n" );
-							break;
-						}
-
-						gmState = GM_SPOT_SUBMITTED;
-						// dprintf( D_FULLDEBUG, "Recovery transition: GM_SPOT_CHECK -> GM_SUBMITTED\n" );
+				if( remoteJobState == EC2_VM_STATE_PURGED ) {
+					if( ! purgedTwice ) {
+						purgedTwice = true;
+						gmState = GM_SPOT_CHECK;
 						break;
 					}
-				}
-				if( originalState != gmState ) { break; }
 
-				//
-				// We didn't find the SIR.  Since we never submit requests
-				// with leases, if the SIR doesn't exist, either it never
-				// did or the instance it spawned terminated long enough
-				// ago for the request to have been purged.  The usual
-				// Condor semantics of "it didn't succeed if we didn't see
-				// it succeed" apply here, so it makes sense to submit
-				// in both cases.
-				//
-				// However, if we're removing the job, this just means
-				// that we have nothing else to do.
-				//
-				if( condorState == REMOVED ) {
-					gmState = GM_DELETE;
-				} else {
-					gmState = GM_SPOT_START;
+					//
+					// We didn't find the SIR.  Since we never submit requests
+					// with leases, if the SIR doesn't exist, either it never
+					// did or the instance it spawned terminated long enough
+					// ago for the request to have been purged.  The usual
+					// Condor semantics of "it didn't succeed if we didn't see
+					// it succeed" apply here, so it makes sense to submit
+					// in both cases.
+					//
+					// However, if we're removing the job, this just means
+					// that we have nothing else to do.
+					//
+					if( condorState == REMOVED ) {
+						gmState = GM_DELETE;
+					} else {
+						gmState = GM_SPOT_START;
+					}
+					break;
 				}
+				purgedTwice = false;
+
+				// Otherwise, we were found and our spot request ID and
+				// instance ID (if available) were updated.
+
+				if( ! m_remoteJobId.empty() ) {
+					gmState = GM_SAVE_INSTANCE_ID;
+					dprintf( D_FULLDEBUG, "Recovery transition: GM_SPOT_CHECK -> GM_SAVE_INSTANCE_ID\n" );
+					break;
+				}
+
+				gmState = GM_SPOT_SUBMITTED;
+				dprintf( D_FULLDEBUG, "Recovery transition: GM_SPOT_CHECK -> GM_SUBMITTED\n" );
 				} break;
 
 			case GM_SEEK_INSTANCE_ID: {
 				// Wait for the next scheduled bulk query.
 				if( ! probeNow ) { break; }
+				probeNow = false;
 
 				// If the bulk query found this job, it has an instance ID.
 				// (If the job had an instance ID before, we would be in
@@ -2251,51 +2167,61 @@ void EC2Job::associate_n_attach()
 void EC2Job::StatusUpdate( const char * instanceID,
 						   const char * status,
 						   const char * stateReasonCode,
-						   const char * publicDNSName ) {
+						   const char * publicDNSName,
+						   const char * launchGroup ) {
 	// This avoids having to store the public DNS name for GM_PROBE_JOB.
 	if( publicDNSName != NULL && strlen( publicDNSName ) != 0
 	 && strcmp( publicDNSName, "NULL" ) != 0 ) {
 		SetRemoteVMName( publicDNSName );
 	}
 
+	if( launchGroup != NULL && strlen( launchGroup ) != 0
+	 && strcmp( launchGroup, "NULL" ) != 0 ) {
+		SetRequestID( launchGroup );
+		requestScheddUpdate( this, false );
+	}
+
 	if( stateReasonCode != NULL && strlen( stateReasonCode ) != 0
 	 && strcmp( stateReasonCode, "NULL" ) != 0 ) {
+		// dprintf( D_FULLDEBUG, "(%d.%d) Updating state reason code to from '%s' to '%s' for job '%s'.\n", procID.cluster, procID.proc, m_state_reason_code.c_str(), stateReasonCode, m_remoteJobId.c_str() );
 		m_state_reason_code = stateReasonCode;
 	} else {
 		m_state_reason_code.clear();
 	}
 
-	// To avoid concurrency issues, we could delay calling SetEvaluateState()
-	// until just before we exit the function.
+	if( instanceID != NULL && strlen( instanceID ) != 0
+	 && strcmp( instanceID, "NULL" ) != 0 ) {
+	 	if( m_remoteJobId.empty() ) {
+	 		SetInstanceId( instanceID );
+
+			// We only consider discovering the instance ID a status change
+			// when it occurs while we're blocked in GM_SEEK_INSTANCE_ID,
+			// or if we're a spot instance.
+			if( gmState == GM_SEEK_INSTANCE_ID || (!m_spot_price.empty()) ) {
+				probeNow = true;
+				SetEvaluateState();
+			}
+	 	}
+	}
 
 	// If the bulk status update didn't find this job, assume it's gone.
 	// The job will be unblocked after the SetRemoteStatus() call below
 	// if it wasn't previously purged.
-	//
-	// I've seen this state fire after a GM_SPOT_START - > GM_SPOT_SUBMITTED
-	// transition, and after a GM_SPOT_SUBMITTED -> GM_SPOT_QUERY transition,
-	// both of which had updated their EC2SpotRequestIDs -- that is, the
-	// SIRs we knew about weren't immediately in the server's response.
-	// What's truly disconcerting is that (after GM_SPOT_QUERY ignores the
-	// status field) and makes it own query, it gets the right answer...
-	// .. for now, let's not scare the user by passing through the "purged"
-	// state on spot instances.
-	if( m_spot_price.empty() && !m_remoteJobId.empty() && status == NULL ) {
+	if( instanceID == NULL && status == NULL
+	 && stateReasonCode == NULL && publicDNSName == NULL ) {
 		status = EC2_VM_STATE_PURGED;
-	}
 
-	// Update the instance ID, if this is the first time we've seen it.
-	if( m_spot_price.empty() && m_remoteJobId.empty() ) {
-		if( instanceID && *instanceID ) {
-			SetInstanceId( instanceID );
-		}
-
-		// We only consider discovering the instance ID a status change
-		// when it occurs while we're blocked in GM_SEEK_INSTANCE_ID.
-		if( gmState == GM_SEEK_INSTANCE_ID ) {
-			probeNow = true;
-			SetEvaluateState();
-		}
+		// There's certainly a misfeature in the bulk status code where spot
+		// jobs without a request ID will be told they've been purged.  As a
+		// result, we wait for two purged statuses in a row, which means we
+		// must always consider being purged an event.  (The bulk status code
+		// checks for spot job statuses after instance job statuses, so if
+		// the spot job truly doesn't exist, both checks will fail; if it
+		// does, it will alternate until it manages to register its request ID,
+		// which causes it to stop being notified it's been purged when it
+		// doesn't show up in the list of all instances.
+		probeNow = true;
+		SetEvaluateState();
 	}
 
 	// SetRemoteJobStatus() sets the last-update timestamp, but
@@ -2303,8 +2229,16 @@ void EC2Job::StatusUpdate( const char * instanceID,
 	// can handle NULL statuses, but remoteJobState's assignment operator
 	// can't.  One way to get a status update with a NULL status is if
 	// a spot instance was purged (e.g., recovery after a long downtime).
-	if( SetRemoteJobStatus( status ) ) {
+	//
+	// Because we wait for the next job poll between cancelling a spot
+	// request and changing the condor state of the job, we should always
+	// treat the first update as new information (since we could easily
+	// crash between updating the remote job status and the condor job
+	// status).
+	if( SetRemoteJobStatus( status ) || (! updatedOnce) ) {
+		updatedOnce = true;
 		if( status != NULL ) { remoteJobState = status; }
+		else { remoteJobState.clear(); }
 		probeNow = true;
 		SetEvaluateState();
 	}
@@ -2318,7 +2252,7 @@ void EC2Job::SetRequestID( const char * requestID ) {
 		if( ! m_spot_request_id.empty() ) {
 			// If the job is forgetting about its request ID, make sure that
 			// the resource does, as well; otherwise, we can have one job
-			// updates by both the dedicated and spot batch status processes.
+			// updated by both the dedicated and spot batch status processes.
 			myResource->spotJobsByRequestID.remove( HashKey( m_spot_request_id.c_str() ) );
 		}
 		jobAd->AssignExpr( ATTR_EC2_SPOT_REQUEST_ID, "Undefined" );
