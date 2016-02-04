@@ -2488,7 +2488,7 @@ dprintf_on_function_exit::dprintf_on_function_exit(bool on_entry, int _flags, co
 {
 	va_list args;
 	va_start(args, fmt);
-	int r = vformatstr(msg, fmt, args);
+	vformatstr(msg, fmt, args);
 	va_end(args);
 	if (on_entry) dprintf(flags,      "entering %s", msg.c_str());
 }
