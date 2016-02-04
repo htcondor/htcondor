@@ -288,6 +288,16 @@ extern PREFAST_NORETURN void _EXCEPT_(const char*, ...) CHECK_PRINTF_FORMAT(1,2)
 #endif
 
 #if defined(__cplusplus)
+
+class dprintf_on_function_exit {
+public:
+	dprintf_on_function_exit(bool on_entry, int _flags, const char * fmt, ...);
+	~dprintf_on_function_exit();
+	std::string msg;
+	int flags;
+	bool print_on_exit;
+};
+
 /* must call this upon entering child of fork() if child calls dprintf */
 void dprintf_init_fork_child( bool cloned = false );
 
