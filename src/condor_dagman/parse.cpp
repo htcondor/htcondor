@@ -93,6 +93,7 @@ static bool parse_done(Dag  *dag, const char *filename, int  lineNumber);
 static bool parse_connect( Dag  *dag, const char *filename, int  lineNumber );
 static bool parse_pin_in_out( Dag  *dag, const char *filename,
 			int  lineNumber, bool isPinIn );
+static bool parse_include( Dag  *dag, const char *filename, int  lineNumber );
 static MyString munge_job_name(const char *jobName);
 
 static MyString current_splice_scope(void);
@@ -135,10 +136,13 @@ void parseSetThisDagNum(int num)
 }
 
 //-----------------------------------------------------------------------------
-bool parse (Dag *dag, const char *filename, bool useDagDir) {
+bool parse (Dag *dag, const char *filename, bool useDagDir, bool isInclude) {
 	ASSERT( dag != NULL );
 
-	++_thisDagNum;
+	//TEMPTEMP -- what is this for?
+	if ( !isInclude ) {
+		++_thisDagNum;
+	}
 
 	_useDagDir = useDagDir;
 
@@ -390,6 +394,12 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 						filename, lineNumber, false );
 		}
 
+		// Handle a INCLUDE spec
+		else if(strcasecmp(token, "INCLUDE") == 0) {
+			parsed_line_successfully = parse_include( dag,
+						filename, lineNumber );
+		}
+
 		// None of the above means that there was bad input.
 		else {
 			debug_printf( DEBUG_QUIET, "%s (line %d): "
@@ -397,7 +407,8 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 				"RETRY, ABORT-DAG-ON, DOT, VARS, PRIORITY, CATEGORY, "
 				"MAXJOBS, CONFIG, SET_JOB_ATTR, SPLICE, FINAL, "
 				"NODE_STATUS_FILE, REJECT, JOBSTATE_LOG, PRE_SKIP, DONE, "
-				"CONNECT, PIN_IN, or PIN_OUT token\n", filename, lineNumber );
+				"CONNECT, PIN_IN, PIN_OUT, or INCLUDE token (found %s)\n",
+				filename, lineNumber, token );
 			parsed_line_successfully = false;
 		}
 		
@@ -2336,6 +2347,49 @@ parse_pin_in_out(
 	}
 
 	return true;
+}
+
+//-----------------------------------------------------------------------------
+// 
+// Function: parse_include
+// Purpose:  Parse a line of the format "Include filename"
+// 
+//-----------------------------------------------------------------------------
+static bool 
+parse_include(
+	Dag  *dag, 
+	const char *filename, 
+	int  lineNumber )
+{
+	const char *example = "INCLUDE filename";
+//TEMPTEMP -- what about useDagDir?
+
+	debug_printf( DEBUG_QUIET, "DIAG parse_include()\n" );//TEMPTEMP
+
+	const char *includeFile = strtok( NULL, DELIMITERS );
+	if ( includeFile == NULL ) {
+		debug_printf( DEBUG_QUIET,
+					  "ERROR: %s (line %d): Missing include file name\n",
+					  filename, lineNumber );
+		exampleSyntax( example );
+		return false;
+	}
+
+	//
+	// Check for illegal extra tokens.
+	//
+	char *extraTok = strtok( NULL, DELIMITERS );
+	if ( extraTok != NULL ) {
+		debug_printf( DEBUG_QUIET,
+					  "ERROR: %s (line %d): Extra token (%s) on INCLUDE line\n",
+					  filename, lineNumber, extraTok );
+		exampleSyntax( example );
+		return false;
+	}
+
+	debug_printf( DEBUG_QUIET, "DIAG parse_include(%s)\n", includeFile );//TEMPTEMP
+
+	return parse( dag, includeFile, false/*TEMPTEMP!!*/, true );
 }
 
 static MyString munge_job_name(const char *jobName)

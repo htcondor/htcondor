@@ -35,8 +35,10 @@ void parseSetDoNameMunge(bool doit);
  * @param The Dag object we'll be adding nodes to.
  * @param The name of the DAG file.
  * @param Run DAGs in directories from DAG file paths if true
+ TEMPTEMP -- isInclude
  */
-bool parse (Dag *dag, const char * filename, bool useDagDir);
+bool parse (Dag *dag, const char * filename, bool useDagDir,
+			bool isInclude = false );
 
 /**
  * Determine whether the given token is a DAGMan reserved word.

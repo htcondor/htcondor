@@ -1,6 +1,10 @@
+#TEMPTEMP -- for test, maybe have all nodes of each "skewer" echo to
+# per-skewer output file; make sure each file has output in correct order;
+# maybe also have "first level" nodes have sleeps, so the order will
+# be incorrect if the dependencies are broken (test by commenting out
+# connects)
 splice SpliceA job_dagman_splice_connect-A-splice1.dag
 splice SpliceB job_dagman_splice_connect-A-splice2.dag
 splice SpliceC job_dagman_splice_connect-A-splice3.dag
 
-connect SpliceA SpliceB
-connect SpliceB SpliceC
+include job_dagman_splice_connect-A-inc1.dag
