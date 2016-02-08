@@ -1994,7 +1994,8 @@ processCommandLineArguments (int argc, char *argv[])
 				exit( 1 );
 			}
 		}
-		else if (is_dash_arg_colon_prefix(dash_arg, "progress", &pcolon, 3)) {
+		else if (is_dash_arg_colon_prefix(dash_arg, "batch", &pcolon, 2) ||
+			     is_dash_arg_colon_prefix(dash_arg, "progress", &pcolon, 3)) {
 			dash_progress = true;
 			if (pcolon) {
 				StringList opts(++pcolon, ",:");
@@ -2014,9 +2015,15 @@ processCommandLineArguments (int argc, char *argv[])
 			error. cannot do this..
 #endif
 			if( g_stream_results  ) {
-				fprintf( stderr, "-stream-results and -progress are incompatible\n" );
+				fprintf( stderr, "-stream-results and -batch are incompatible\n" );
 				usage( argv[0] );
 				exit( 1 );
+			}
+		}
+		else if (is_dash_arg_prefix(dash_arg, "nobatch", 3)) {
+			dash_progress = false;
+			if ((qdo_mode & QDO_BaseMask) == QDO_Progress) {
+				qdo_mode = (qdo_mode & ~QDO_BaseMask) | QDO_NotSet;
 			}
 		}
 		else if (is_dash_arg_prefix(dash_arg, "totals", 3)) {
@@ -2113,7 +2120,7 @@ processCommandLineArguments (int argc, char *argv[])
 		if (is_dash_arg_prefix (dash_arg, "stream-results", 2)) {
 			g_stream_results = true;
 			if( dash_dag || (qdo_mode == QDO_Progress)) {
-				fprintf( stderr, "-stream-results and -dag or -progress are incompatible\n" );
+				fprintf( stderr, "-stream-results and -dag or -batch are incompatible\n" );
 				usage( argv[0] );
 				exit( 1 );
 			}
@@ -3331,7 +3338,8 @@ usage (const char *myName, int other)
 		"\t-help [Universe|State]\tDisplay this screen, JobUniverses, JobStates\n"
 		"\t-hold\t\t\tGet information about jobs on hold\n"
 		"\t-io\t\t\tDisplay information regarding I/O\n"
-		"\t-progress\t\tDisplay progress of DAGs and batches of similar jobs\n"
+		"\t-batch\t\t\tDisplay DAGs or batches of similar jobs as a single line\n"
+		"\t-nobatch\t\tDisplay one line per job, rather than one line per batch\n"
 //FUTURE		"\t-transfer\t\tDisplay information for jobs that are doing file transfer\n"
 		"\t-run\t\t\tGet information about running jobs\n"
 		"\t-totals\t\t\tDisplay only job totals\n"
@@ -3637,7 +3645,7 @@ extern const char * const jobHold_PrintFormat;
 extern const char * const jobIO_PrintFormat;
 extern const char * const jobDAG_PrintFormat;
 extern const char * const jobTotals_PrintFormat;
-extern const char * const jobProgress_PrintFormat; // NEW, summarize progress
+extern const char * const jobProgress_PrintFormat; // NEW, summarize batch progress
 extern const char * const autoclusterNormal_PrintFormat;
 
 static void initOutputMask(AttrListPrintMask & prmask, int qdo_mode, bool wide_mode)
@@ -4448,7 +4456,7 @@ void print_results(ROD_MAP_BY_ID & results, KeyToIdMap order, bool children_unde
 {
 	std::string buf;
 	if (dash_progress) {
-		// when in progress mode, we print only the cooked rows.
+		// when in batch/progress mode, we print only the cooked rows.
 		for(ROD_MAP_BY_ID::iterator it = results.begin(); it != results.end(); ++it) {
 			if (!(it->second.flags & JROD_COOKED)) continue;
 			print_a_result(buf, it->second);
@@ -4547,7 +4555,7 @@ static int fnFixupWidthCallback(void* pv, int index, Formatter * fmt, const char
 	return 1;
 }
 
-// fix width of cluster,proc and name columns for all standard display formats other than -progress
+// fix width of cluster,proc and name columns for all standard display formats other than -batch
 //
 static void fixup_std_column_widths(int max_cluster, int max_proc, int longest_name) {
 	if ( ! is_standard_format || ( ! first_col_is_job_id && ! has_owner_column))
@@ -4702,7 +4710,7 @@ format_name_column_for_dag_nodes(ROD_MAP_BY_ID & results, int name_column, int c
 	}
 }
 
-// this defines the attributes to fetch for the -progress output
+// this defines the attributes to fetch for the -batch output
 // but does not actually define the output because the results are
 // extensively post-processed.
 const char * const jobProgress_PrintFormat = "SELECT\n"
