@@ -77,6 +77,7 @@ CollectorEngine::CollectorEngine (CollectorStats *stats ) :
 {
 	clientTimeout = 20;
 	machineUpdateInterval = 30;
+	m_forwardInterval = machineUpdateInterval / 3;
 	housekeeperTimerID = -1;
 
 	collectorStats = stats;
@@ -152,6 +153,12 @@ CollectorEngine::setCollectorRequirements( char const *str, MyString &error_desc
 int CollectorEngine::
 scheduleHousekeeper (int timeout)
 {
+	// JEF Set watch list for cms forwarding hack
+	std::string watch_list;
+	param(watch_list,"FORWARD_WATCH_LIST", "State,Cpus,Memory");
+	m_forwardWatchList.clearAll();
+	m_forwardWatchList.initializeFromString(watch_list.c_str());
+
 	// cancel outstanding housekeeping requests
 	if (housekeeperTimerID != -1)
 	{
@@ -164,6 +171,8 @@ scheduleHousekeeper (int timeout)
 
 	// set to new timeout interval
 	machineUpdateInterval = timeout;
+
+	m_forwardInterval = param_integer("FORWARD_INTERVAL", machineUpdateInterval / 3, 0);
 
 	// if timeout interval was non-zero (i.e., housekeeping required) ...
 	if (timeout > 0)
@@ -1020,6 +1029,12 @@ updateClassAd (CollectorHashTable &hashTable,
 		
 		insert = 1;
 		
+		// JEF do should-forward decision
+		if ( m_forwardInterval > 0 && strcmp( label, "Start" ) == 0 ) {
+dprintf(D_FULLDEBUG,"JEF setting LastForwarded in new ad\n");
+			new_ad->Assign( "LastForwarded", (int)time(NULL) );
+		}
+
 		return new_ad;
 	}
 	else
@@ -1036,6 +1051,38 @@ updateClassAd (CollectorHashTable &hashTable,
 		}
 		if (hashTable.insert(hk, new_ad) == -1) {
 			EXCEPT( "Error inserting ad" );
+		}
+
+		// JEF do should-forward decision
+		if ( m_forwardInterval > 0 && strcmp( label, "Start" ) == 0 ) {
+			bool forward = false;
+			int last_forwarded = 0;
+			old_ad->LookupInteger( "LastForwarded", last_forwarded );
+			if ( last_forwarded + m_forwardInterval < time(NULL) ) {
+dprintf(D_FULLDEBUG,"JEF Forwarding due to interval (%d + %d < %d)\n",last_forwarded,m_forwardInterval,(int)time(NULL));
+				forward = true;
+			} else {
+				classad::Value old_val;
+				classad::Value new_val;
+				const char *attr;
+				m_forwardWatchList.rewind();
+				while ( (attr = m_forwardWatchList.next()) ) {
+					// TODO This doesn't handle attrs appearing or
+					//   disappearing
+					if ( old_ad->EvaluateAttr( attr, old_val ) &&
+						 new_ad->EvaluateAttr( attr, new_val ) &&
+						 !new_val.SameAs( old_val ) )
+					{
+dprintf(D_FULLDEBUG,"JEF Forwarding due to attribute change: %s\n",attr);
+						forward = true;
+						break;
+					}
+				}
+			}
+			new_ad->Assign( "ShouldForward", forward );
+			new_ad->Assign( "LastForwarded", forward ? (int)time(NULL) : last_forwarded );
+dprintf(D_FULLDEBUG,"JEF setting ShouldForward=%s\n", forward ? "True" : "False");
+dprintf(D_FULLDEBUG,"JEF setting LastForwarded=%d\n", forward ? (int)time(NULL) : last_forwarded);
 		}
 
 		if (isSelfAd(old_ad)) { __self_ad__ = new_ad; }

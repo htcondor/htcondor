@@ -1730,6 +1730,14 @@ void CollectorDaemon::send_classad_to_sock(int cmd, ClassAd* theAd) {
         return;
     }
 
+	// JEF CMS forwarding hack
+	bool should_forward = true;
+	theAd->LookupBool( "ShouldForward", should_forward );
+	if ( !should_forward ) {
+		dprintf( D_FULLDEBUG, "Trying to forward ad on, but ShouldForward=False\n");
+		return;
+	}
+
     for (vector<vc_entry>::iterator e(vc_list.begin());  e != vc_list.end();  ++e) {
         DCCollector* view_coll = e->collector;
         Sock* view_sock = e->sock;
