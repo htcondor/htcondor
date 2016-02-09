@@ -46,9 +46,9 @@
 
 
 void computeRealAction( void );
-bool resolveNames( DaemonList* daemon_list, StringList* name_list );
+bool resolveNames( DaemonList* daemon_list, StringList* name_list, StringList* unresolved_names_list );
 void doCommand( Daemon* d );
-int doCommands(int argc,char *argv[],char *MyName);
+int doCommands(int argc,char *argv[],char *MyName, StringList & unresolved_names);
 void version();
 void handleAll();
 void doSquawk( char *addr );
@@ -331,6 +331,7 @@ main( int argc, char *argv[] )
 	int size;
 	int rc;
 	int got_name_or_addr = 0;
+	StringList unresolved_names;
 
 #ifndef WIN32
 	// Ignore SIGPIPE so if we cannot connect to a daemon we do not
@@ -868,12 +869,12 @@ main( int argc, char *argv[] )
 
 			if( !subsys || !strcmp(subsys,"startd") ) {
 				real_dt = DT_STARTD;
-				rc = doCommands(argc,argv,MyName);
+				rc = doCommands(argc,argv,MyName,unresolved_names);
 				if(rc) return rc;
 			}
 			if( !subsys || !strcmp(subsys,"schedd") ) {
 				real_dt = DT_SCHEDD;
-				rc = doCommands(argc,argv,MyName);
+				rc = doCommands(argc,argv,MyName,unresolved_names);
 				if(rc) return rc;
 			}
 
@@ -885,11 +886,21 @@ main( int argc, char *argv[] )
 		}
 	}
 
-	return doCommands(argc,argv,MyName);
+	rc = doCommands(argc,argv,MyName,unresolved_names);
+
+	if ( ! unresolved_names.isEmpty()) {
+		for (const char * name = unresolved_names.first(); name; name = unresolved_names.next()) {
+			fprintf( stderr, "Can't find address for %s\n", name);
+		}
+		fprintf( stderr, "Perhaps you need to query another pool.\n" );
+		if ( ! rc) rc = 1;
+	}
+
+	return rc;
 }
 
 int
-doCommands(int /*argc*/,char * argv[],char *MyName)
+doCommands(int /*argc*/,char * argv[],char *MyName,StringList & unresolved_names)
 {
 	StringList names;
 	StringList addrs;
@@ -1037,7 +1048,7 @@ doCommands(int /*argc*/,char * argv[],char *MyName)
 		// If we got here, there were some targets specified on the
 		// command line.  that we know all the targets, resolve any
 		// names, with a single query to the collector...
-	if( ! resolveNames(&daemons, &names) ) {
+	if( ! resolveNames(&daemons, &names, &unresolved_names) ) {
 		fprintf( stderr, "ERROR: Failed to resolve daemon names, aborting\n" );
 		exit( 1 );
 	}
@@ -1157,7 +1168,7 @@ computeRealAction( void )
 
 
 bool
-resolveNames( DaemonList* daemon_list, StringList* name_list )
+resolveNames( DaemonList* daemon_list, StringList* name_list, StringList* unresolved_names )
 {
 	Daemon* d = NULL;
 	char* name = NULL;
@@ -1295,6 +1306,8 @@ resolveNames( DaemonList* daemon_list, StringList* name_list )
 		// sure we find them all.
 	name_list->rewind();
 	while( (name = name_list->next()) ) {
+		if (unresolved_names && unresolved_names->contains(name))
+			continue;
 		ads.Rewind();
 		while( !d && (ad = ads.Next()) ) {
 				// we only want to use the special ATTR_MACHINE hack
@@ -1376,7 +1389,11 @@ resolveNames( DaemonList* daemon_list, StringList* name_list )
 		} else {
 			fprintf( stderr, "Can't find address for %s %s\n",
 					 daemonString(real_dt), name );
-			had_error = true;
+			if (unresolved_names) {
+				unresolved_names->append(name);
+			} else {
+				had_error = true;
+			}
 		}
 	} // while( each name we were given ) 
 
@@ -1668,7 +1685,7 @@ handleAll()
 {
 	DaemonList daemons;
 
-	if( ! resolveNames(&daemons, NULL) ) {
+	if( ! resolveNames(&daemons, NULL, NULL) ) {
 	  if ( constraint!=NULL ) {
 	    fprintf( stderr, "ERROR: Failed to find daemons matching the constraint\n" );
 	  } else {
