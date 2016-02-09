@@ -2289,7 +2289,7 @@ parse_pin_in_out(
 {
 	const char *example = "PIN_IN|PIN_OUT node pin_number";
 
-	debug_printf( DEBUG_QUIET, "DIAG parse_pin_in_out()\n" );//TEMPTEMP
+	debug_printf( DEBUG_QUIET, "DIAG parse_pin_in_out(%s)\n", filename );//TEMPTEMP
 
 	const char *node = strtok( NULL, DELIMITERS );
 	if ( node == NULL ) {
@@ -2362,7 +2362,6 @@ parse_include(
 	int  lineNumber )
 {
 	const char *example = "INCLUDE filename";
-//TEMPTEMP -- what about useDagDir?
 
 	debug_printf( DEBUG_QUIET, "DIAG parse_include()\n" );//TEMPTEMP
 
@@ -2389,7 +2388,10 @@ parse_include(
 
 	debug_printf( DEBUG_QUIET, "DIAG parse_include(%s)\n", includeFile );//TEMPTEMP
 
-	return parse( dag, includeFile, false/*TEMPTEMP!!*/, true );
+		// Note:  we save the filename here because otherwise it gets
+		// goofed up by the tokenizing in parse().
+	MyString tmpFilename( includeFile );
+	return parse( dag, tmpFilename.Value(), false/*TEMPTEMP!!*/, true );
 }
 
 static MyString munge_job_name(const char *jobName)

@@ -4232,7 +4232,9 @@ Dag::GetPinInOut( std::vector<Job *> &pinList, const char *inOutStr,
 {
 	--pinNum; // Pin numbers start with 1
 	if ( pinNum >= static_cast<int>( pinList.size() ) ) {
-		//TEMPTEMP -- error message here?
+		debug_printf( DEBUG_QUIET,
+					"ERROR: pin %s number %d specified; max is %d\n",
+					inOutStr, pinNum+1, static_cast<int>( pinList.size() ) );
 		return NULL;
 	} else {
 		return pinList[pinNum];
