@@ -509,13 +509,13 @@ sub parseOptions
     } elsif ( defined $opt_nightly ) {
         print "You specified --nightly, will munge tag name with --desc for " . 
 				"Condor's NMI pages\n";
-    } elsif ( defined $opt_workspace ) {
-		print "Working from local workspace $opt_workspace\n";
-		$src_workspace = File::Spec->rel2abs($opt_workspace);
     } else {
-        print "You need to define either --tag and --module, ";
-        print "possibly with --nightly, or use --workspace\n";
-        printUsage( 1 );
+		if( ! defined $opt_workspace ) {
+			print( "Using default workspace (the parent directory).\n" );
+			$opt_workspace = "..";
+		}
+
+		$src_workspace = File::Spec->rel2abs($opt_workspace);
     }
 
 	if ( defined($opt_nightly) && !(defined($opt_tag) || defined($opt_module)))
