@@ -56,23 +56,19 @@ if( ! -f "tasklist.nmi" || -z "tasklist.nmi" ) {
     exit $exit_status;
 }
 
-# workaround for socket directoy path too long
+# on Windows in the new batlab. we have to use the tar from the msconfig directory
+# if that isn't found, we just have to pray that there is already one in the path.
+my $tarbin = "tar";
+if( $ENV{NMI_PLATFORM} =~ /_win/i ) {
+	if ($ENV{COMPUTERNAME} =~ /^EXEC\-/) {
+		my $bsdtar = "$BaseDir/msconfig/tar.exe";
+		if ( -f "$bsdtar" ) {
+			$tarbin = $bsdtar;
+			$tarbin =~ s/\//\\/g;
+		}
+	}
+}
 
-# If we use the switch at the top of CondorPersonal
-# we will leak folders in /tmp. No one cleans
-
-#my $sd = "SOCKETDIR";
-#my $dirname = "";
-#if(-f "$sd") {
-	###This will not be here for windows
-	##don't die on error, we want results tarred up
-	#open(SD,"<$sd") or print "Could not read SOCKETDIR:$!\n";
-	#$dirname = <SD>;
-	#print "Name of socket dir:$dirname\n";
-	#chomp($dirname);
-	#close(SD);
-	#system("rm -r /tmp/$dirname");
-#}
 
 print "cding to $BaseDir \n";
 chdir("$BaseDir") || die "Can't chdir($BaseDir): $!\n";
@@ -80,10 +76,9 @@ chdir("$BaseDir") || die "Can't chdir($BaseDir): $!\n";
 #----------------------------------------
 # final tar and exit
 #----------------------------------------
-print "Tarring up all results\n";
-chdir("$BaseDir") || die "Can't chdir($BaseDir): $!\n";
-my $test_dir = File::Spec->catdir($BaseDir, "condor_tests");
-#system("tar zcf results.tar.gz --exclude *.exe $test_dir local");
-system("tar zcf results.tar.gz --exclude=results.tar.gz *");
+print "Tarring up all results using $tarbin\n";
+#my $test_dir = File::Spec->catdir($BaseDir, "condor_tests");
+#system("$tarbin zcf results.tar.gz --exclude *.exe $test_dir local");
+system("$tarbin zcf results.tar.gz --exclude=results.tar.gz *");
 
 exit $exit_status;
