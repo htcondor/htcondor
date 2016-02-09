@@ -1,0 +1,13 @@
+splice Splice2Aa job_dagman_splice_connect-B-2-1a.dag
+splice Splice2Ab job_dagman_splice_connect-B-2-1b.dag
+splice Splice2Ba job_dagman_splice_connect-B-2-2a.dag
+splice Splice2Bb job_dagman_splice_connect-B-2-2b.dag
+
+connect Splice2Aa Splice2Ab
+connect Splice2Ba Splice2Bb
+
+#TEMPTEMP pin_in Splice2Aa 1
+#TEMPTEMP pin_in Splice2Ba 2
+
+#TEMPTEMP pin_out Splice2Ab 1
+#TEMPTEMP pin_out Splice2Bb 2
