@@ -21,5 +21,10 @@ Here is a list of items that administrators should be aware of.
 
 \item Shared port is now enabled by default.
 
+\item To mitigate performance problems, \MacroNI{LOWPORT} and
+\MacroNI{HIGHPORT} no longer restrict outbound port ranges on Windows.  To
+re-enable this functionality, set \MacroNI{OUT\_LOWPORT} and
+\MacroNI{OUT\_HIGHPORT}.  (\Ticket{4711})
+
 \end{itemize}
 

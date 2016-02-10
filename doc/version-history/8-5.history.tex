@@ -86,6 +86,14 @@ the query, and will also set the output format when used by themselves.
 
 \begin{itemize}
 
+\item On Windows, configuring HTCondor to restrict the range of outbound
+port numbers may cause substantial delays when using the command-line
+tools.  Since we now know that it's not free to do so, \MacroNI{LOWPORT}
+and \MacroNI{HIGHPORT} no longer restrict the port numbers of outbound
+connections on Windows.  If you still require this functionality, use
+\MacroNI{OUT\_LOWPORT} and \MacroNI{OUT\_HIGHPORT}.
+\Ticket{4711}
+
 \item Fixed a bug that could cause a daemon to be in the wrong
 privilege state when attempting to act as the user.
 \Ticket{5467}
