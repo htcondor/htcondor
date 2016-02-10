@@ -394,31 +394,37 @@ sub parseOptions
         printUsage( 1 );
     }
 
-    if( defined $opt_platforms ) {
-        foreach $platform ( split(/\s*,\s*/, $opt_platforms) ) {
-            if( $platform eq "all" ) {
-		if($runtype eq "build") {
-		    my $file = dirname($0) . "/nmi-build-platforms";
-		    open(IN, '<', $file) or die("Cannot open $file for reading: $!");
-		    while(<IN>) {
-			chomp;
-			next if(/^\s*#/);
-			next if(/^\s*$/);
-			$opt_platforms{$_} = 1;
-		    }
-		    close(IN);
-		    next;
+	if(! defined( $opt_platforms ) ) {
+		$opt_platforms = "all";
+	}
+
+	if( defined $opt_platforms ) {
+		foreach $platform ( split(/\s*,\s*/, $opt_platforms) ) {
+			if( $platform eq "all" ) {
+				if($runtype eq "build") {
+					my $file = dirname($0) . "/nmi-build-platforms";
+					open(IN, '<', $file) or die("Cannot open $file for reading: $!");
+					while(<IN>) {
+						chomp;
+						next if(/^\s*#/);
+						next if(/^\s*$/);
+						$opt_platforms{$_} = 1;
+					}
+					close(IN);
+					next;
+				}
+				elsif($runtype eq "test") {
+					if( ! defined $opt_buildid ) {
+						print "ERROR: --platforms=all only works with --buildid\n";
+						printUsage( 1 );
+					}
+				}
+			}
+
+			# Thus, only tests will have 'all' in their platform hash.
+			$opt_platforms{$platform} = 1;
 		}
-		elsif($runtype eq "test") {
-		    if( ! defined $opt_buildid ) {
-			print "ERROR: --platforms=all only works with --buildid\n";
-			printUsage( 1 );
-		    }
-		}
-            }
-            $opt_platforms{$platform} = 1;
-        }
-    }
+	}
 
     # do some sanity checking for test submit...
     if( $runtype eq "test" ) {
@@ -503,13 +509,13 @@ sub parseOptions
     } elsif ( defined $opt_nightly ) {
         print "You specified --nightly, will munge tag name with --desc for " . 
 				"Condor's NMI pages\n";
-    } elsif ( defined $opt_workspace ) {
-		print "Working from local workspace $opt_workspace\n";
-		$src_workspace = File::Spec->rel2abs($opt_workspace);
     } else {
-        print "You need to define either --tag and --module, ";
-        print "possibly with --nightly, or use --workspace\n";
-        printUsage( 1 );
+		if( ! defined $opt_workspace ) {
+			print( "Using default workspace (the parent directory).\n" );
+			$opt_workspace = "..";
+		}
+
+		$src_workspace = File::Spec->rel2abs($opt_workspace);
     }
 
 	if ( defined($opt_nightly) && !(defined($opt_tag) || defined($opt_module)))
