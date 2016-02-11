@@ -277,6 +277,13 @@ CondorQuery (AdTypes qType)
 		command = QUERY_ANY_ADS;
 		break;
 
+	  case ACCOUNTING_AD:
+		query.setNumStringCats (0);
+		query.setNumIntegerCats(0);
+		query.setNumFloatCats  (0);
+		command = QUERY_ACCOUNTING_ADS;
+		break;
+
 	  default:
 		command = -1;
 		queryType = (AdTypes) -1;
@@ -602,6 +609,9 @@ getQueryAd (ClassAd &queryAd)
 		SetTargetTypeName (queryAd, HAD_ADTYPE);
 		break;
 
+	  case ACCOUNTING_AD:
+		SetTargetTypeName(queryAd, ACCOUNTING_ADTYPE);
+		break;
 	  default:
 		return Q_INVALID_QUERY;
 	}

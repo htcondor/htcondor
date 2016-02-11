@@ -36,6 +36,7 @@
 #include "match_prefix.h"
 #include "ad_printmask.h"
 #include "generic_query.h"
+#include "dc_collector.h"
 // for std::sort
 #include <algorithm> 
 #include <vector>
@@ -107,10 +108,10 @@ struct LineRec {
 
 static int CalcTime(int,int,int);
 static void usage(char* name);
-static void ProcessInfo(AttrList* ad,bool GroupRollup,bool HierFlag);
+static void ProcessInfo(AttrList* ad,std::vector<AttrList> &accountingAds, bool GroupRollup,bool HierFlag);
 static int CountElem(AttrList* ad);
-static void CollectInfo(int numElem, AttrList* ad, LineRec* LR, bool GroupRollup);
-static void PrintInfo(AttrList* ad, LineRec* LR, int NumElem, bool HierFlag);
+static void CollectInfo(int numElem, AttrList* ad, std::vector<AttrList> & accountingAds, LineRec* LR, bool GroupRollup);
+static void PrintInfo(int tmLast, LineRec* LR, int NumElem, bool HierFlag);
 static void PrintResList(AttrList* ad);
 
 //-----------------------------------------------------------------
@@ -129,6 +130,7 @@ bool UsersHaveQuotas = false;       // set to true if we got quota info back for
 bool HideGroups = false;            // set to true when it doesn't make sense to show groups (i.e. just displaying prio)
 bool HideUsers  = false;            // set to true when it doesn't make sense to show users (i.e. just showing quotas)
 time_t MinLastUsageTime;
+bool fromCollector = false; // query accounting ad from collector instead of negotiator
 
 enum {
    SortByColumn1 = 0,  // sort by prio or by useage depending on which is in column 1 
@@ -292,12 +294,20 @@ void ConvertLegacyUserprioAdToAdList(AttrList &ad, std::vector<AttrList> & prios
 static void PrintModularAds(
 	FILE *    out,
 	AttrList* ad,
+	std::vector<AttrList> accountingAds, // if ad is NULL, values are here
 	bool      customFormat,
 	AttrListPrintMask & print_mask,
 	GenericQuery constraint)
 {
 	std::vector<AttrList> prioAds;
-	ConvertLegacyUserprioAdToAdList(*ad, prioAds);
+
+	// if ad is not-null, we're passed in the ads in the old format in ad
+	if (ad != 0) {
+		ConvertLegacyUserprioAdToAdList(*ad, prioAds);
+	} else {
+		// otherwise, we've been given the ads in the new format, just copy them over
+		prioAds = accountingAds;
+	}
 
 	MyString my_constraint;
 	constraint.makeQuery(my_constraint);
@@ -311,9 +321,6 @@ static void PrintModularAds(
 
 	if (customFormat) {
 		if (print_mask.has_headings()) print_mask.display_Headings(out);
-		if ( ! constraintExpr || EvalBool(ad, constraintExpr)) {
-			print_mask.display(out, ad);
-		}
 
 		// now print the userprio records
 		for (int id = 0; id < (int)prioAds.size(); ++id) {
@@ -322,11 +329,6 @@ static void PrintModularAds(
 			print_mask.display(out, &prioAds[id]);
 		}
 	} else {
-		// first print what remains in the userprio ad
-		if ( ! constraintExpr || EvalBool(ad, constraintExpr)) {
-			fPrintAd(out, *ad);
-		}
-
 		// now print the userprio records
 		for (int id = 0; id < (int)prioAds.size(); ++id) {
 			if (constraintExpr && ! EvalBool(&prioAds[id], constraintExpr))
@@ -508,6 +510,7 @@ main(int argc, char* argv[])
       i+=3;
     }
     else if (IsArg(argv[i],"allusers")) {
+	  fromCollector = false;
       MinLastUsageTime=-1;
     }
     else if (IsArg(argv[i],"usage",2)) {
@@ -518,6 +521,7 @@ main(int argc, char* argv[])
     }
     else if (IsArg(argv[i],"getreslist",6)) {
       if (argc-i<=1) usage(argv[0]);
+	  fromCollector = false;
       GetResList=i;
       i+=1;
     }
@@ -860,34 +864,72 @@ main(int argc, char* argv[])
 
     if (LongFlag || customFormat) {
        if ( ! LegacyAdFormat || customFormat) {
-          PrintModularAds(stdout, ad, customFormat, print_mask, constraint);
+		  std::vector<AttrList> empty;
+          PrintModularAds(stdout, ad, empty, customFormat, print_mask, constraint);
        } else {
           fPrintAd(stdout, *ad);
        }
     }
-    else ProcessInfo(ad,GroupRollup,HierFlag);
+    else {
+		std::vector<AttrList> empty;
+		ProcessInfo(ad,empty,GroupRollup,HierFlag);
+	}
 
   }
-  else {  // list priorities
+  else {  // Get prios not from file, but from collector or negotiator
 
-    Sock* sock;
-    if (!(sock = negotiator.startCommand((GroupRollup) ? GET_PRIORITY_ROLLUP : GET_PRIORITY, Stream::reli_sock, 0)) ||
-        !sock->end_of_message()) {
-        fprintf(stderr, "failed to send %s command to negotiator\n", (GroupRollup) ? "GET_PRIORITY_ROLLUP" : "GET_PRIORITY");
-        exit(1);
-    }
+	AttrList *ad = NULL;
+	std::vector<AttrList> accountingAds;
 
-    // get reply
-    sock->decode();
-    AttrList* ad=new AttrList();
-    if (!getClassAdNoTypes(sock, *ad) ||
-        !sock->end_of_message()) {
-      fprintf( stderr, "failed to get classad from negotiator\n" );
-      exit(1);
-    }
+	DCCollector c((pool.length() > 0) ? pool.c_str() : 0);
+	c.locate();
+	char *v = c.version();
+	CondorVersionInfo cvi(v);
+	if (!cvi.built_since_version(8,5,2)) {
+		fromCollector = false;	
+	} else {
+}
 
-    sock->close();
-    delete sock;
+	if (fromCollector) {
+		CondorQuery query(ACCOUNTING_AD);
+		ClassAdList ads;
+		CondorError errstack;
+		QueryResult q;
+
+		CollectorList * collectors = CollectorList::create((pool.length() > 0) ? pool.c_str() : 0);
+		q = collectors->query (query, ads, &errstack);
+		delete collectors;
+		if (q != Q_OK) {
+			fprintf(stderr, "Can't query collector for ads: %s\n", errstack.getFullText().c_str());
+			exit(1);
+		}
+        ads.Open();
+        while (ClassAd* oneAd = ads.Next()) {
+			accountingAds.push_back(*oneAd);
+		}
+		ads.Close();
+
+	} else { // oldWay
+
+		Sock* sock;
+		if (!(sock = negotiator.startCommand((GroupRollup) ? GET_PRIORITY_ROLLUP : GET_PRIORITY, Stream::reli_sock, 0)) ||
+			!sock->end_of_message()) {
+				fprintf(stderr, "failed to send %s command to negotiator\n", (GroupRollup) ? "GET_PRIORITY_ROLLUP" : "GET_PRIORITY");
+				exit(1);
+		}
+
+	    // get reply
+		sock->decode();
+		ad=new AttrList();
+		if (!getClassAdNoTypes(sock, *ad) ||
+   	     !sock->end_of_message()) {
+			fprintf( stderr, "failed to get classad from negotiator\n" );
+			exit(1);
+   	 	}
+	
+		sock->close();
+		delete sock;
+	}
 
     // if no details specified, show priorities
     if ( ! DetailFlag) {
@@ -904,11 +946,25 @@ main(int argc, char* argv[])
 
     if (LongFlag || customFormat) {
        if ( ! LegacyAdFormat || customFormat) {
-          PrintModularAds(stdout, ad, customFormat, print_mask, constraint);
+          PrintModularAds(stdout, ad, accountingAds, customFormat, print_mask, constraint);
        } else {
-          fPrintAd(stdout, *ad);
+			if (ad) {
+          		fPrintAd(stdout, *ad);
+			} else {
+					// if we have the ad in the vector-of-ads format, print them
+					// out like we do with condor_history, newline separated
+					// and without the numbered attr names.  Different, but more useful
+				for (std::vector<AttrList>::iterator it = accountingAds.begin();
+						it != accountingAds.end();
+						it++) {
+					fPrintAd(stdout, *it);
+					fprintf(stdout, "\n");
+				}
+			}
        }
-    } else ProcessInfo(ad,GroupRollup,HierFlag);
+    } else {
+		ProcessInfo(ad, accountingAds,GroupRollup,HierFlag);
+	}
   }
 
   exit(0);
@@ -917,14 +973,22 @@ main(int argc, char* argv[])
 
 //-----------------------------------------------------------------
 
-static void ProcessInfo(AttrList* ad,bool GroupRollup,bool HierFlag)
+static void ProcessInfo(AttrList* ad, std::vector<AttrList> &accountingAds, bool GroupRollup,bool HierFlag)
 {
-  int NumElem=CountElem(ad);
+  int NumElem = 0;
+
+  if (ad) {
+	NumElem = CountElem(ad);
+  } else {
+	NumElem = accountingAds.size();
+  }
+
   if ( NumElem <= 0 ) {
 	  return;
   }
+
   LineRec* LR=new LineRec[NumElem];
-  CollectInfo(NumElem,ad,LR,GroupRollup);
+  CollectInfo(NumElem,ad, accountingAds, LR,GroupRollup);
 
   // check to see if all of the visible users are in the none group.
   bool all_users_in_none_group = true;
@@ -966,7 +1030,11 @@ static void ProcessInfo(AttrList* ad,bool GroupRollup,bool HierFlag)
   }
   std::sort(LR, LR+NumElem, LineRecLT(DetailFlag, order, none_last));
 
-  PrintInfo(ad,LR,NumElem,HierFlag);
+  int tmLast = 0;
+  if (ad) {
+  	ad->LookupInteger( ATTR_LAST_UPDATE, tmLast );
+  }
+  PrintInfo(tmLast,LR,NumElem,HierFlag);
   delete[] LR;
 } 
 
@@ -986,7 +1054,7 @@ static int CountElem(AttrList* ad)
 
 //-----------------------------------------------------------------
 
-static void CollectInfo(int numElem, AttrList* ad, LineRec* LR, bool GroupRollup)
+static void CollectInfo(int numElem, AttrList* ad, std::vector<AttrList> &accountingAds, LineRec* LR, bool GroupRollup)
 {
   char  attrName[32], attrPrio[32], attrResUsed[32], attrWtResUsed[32], attrFactor[32], attrBeginUsage[32], attrAccUsage[42], attrRequested[32];
   char  attrLastUsage[32];
@@ -1012,17 +1080,28 @@ static void CollectInfo(int numElem, AttrList* ad, LineRec* LR, bool GroupRollup
     LR[i-1].HasDetail = 0;
     LR[i-1].LastUsage=MinLastUsageTime;
     LR[i-1].Requested=0.0;
-    sprintf( attrName , "Name%d", i );
-    sprintf( attrPrio , "Priority%d", i );
-    sprintf( attrResUsed , "ResourcesUsed%d", i );
-    sprintf( attrRequested , "Requested%d", i );
-    sprintf( attrWtResUsed , "WeightedResourcesUsed%d", i );
-    sprintf( attrFactor , "PriorityFactor%d", i );
-    sprintf( attrBeginUsage , "BeginUsageTime%d", i );
-    sprintf( attrLastUsage , "LastUsageTime%d", i );
-    sprintf( attrAccUsage , "WeightedAccumulatedUsage%d", i );
-    attrAcctGroup.formatstr("AccountingGroup%d", i);
-    attrIsAcctGroup.formatstr("IsAccountingGroup%d", i);
+
+	char strI[32];
+
+		// The old format, one big ad
+	if (ad) {
+		sprintf(strI, "%d", i);
+	} else {
+		strI[0] = '\0';
+		ad = & accountingAds[i - 1];
+	}
+
+    sprintf( attrName , "Name%s", strI );
+    sprintf( attrPrio , "Priority%s", strI );
+    sprintf( attrResUsed , "ResourcesUsed%s", strI );
+    sprintf( attrRequested , "Requested%s", strI );
+    sprintf( attrWtResUsed , "WeightedResourcesUsed%s", strI );
+    sprintf( attrFactor , "PriorityFactor%s", strI );
+    sprintf( attrBeginUsage , "BeginUsageTime%s", strI );
+    sprintf( attrLastUsage , "LastUsageTime%s", strI );
+    sprintf( attrAccUsage , "WeightedAccumulatedUsage%s", strI );
+    attrAcctGroup.formatstr("AccountingGroup%s", strI);
+    attrIsAcctGroup.formatstr("IsAccountingGroup%s", strI);
 
     if( !ad->LookupString	( attrName, name, COUNTOF(name) ) 		|| 
 		!ad->LookupFloat	( attrPrio, priority ) )
@@ -1055,9 +1134,9 @@ static void CollectInfo(int numElem, AttrList* ad, LineRec* LR, bool GroupRollup
     }
 
     char attr[32];
-    sprintf( attr, "EffectiveQuota%d", i );
+    sprintf( attr, "EffectiveQuota%s", strI );
     if (ad->LookupFloat(attr, effective_quota)) LR[i-1].HasDetail |= DetailEffQuota;
-    sprintf( attr, "ConfigQuota%d", i );
+    sprintf( attr, "ConfigQuota%s", strI );
     if (ad->LookupFloat(attr, config_quota)) LR[i-1].HasDetail |= DetailCfgQuota;
 
     if (IsAcctGroup) {
@@ -1065,14 +1144,14 @@ static void CollectInfo(int numElem, AttrList* ad, LineRec* LR, bool GroupRollup
         if (!strcmp(name,"<none>") || !strcmp(name,"."))
            LR[i-1].GroupId = 0;
 
-        sprintf( attr, "GroupAutoRegroup%d", i );
+        sprintf( attr, "GroupAutoRegroup%s", strI );
         bool regroup = false;
         if (ad->LookupBool(attr, regroup)) LR[i-1].HasDetail |= DetailSurplus;
         LR[i-1].Surplus = regroup ? SurplusRegroup : SurplusNone;
         if (regroup)
            GlobalSurplusPolicy = SurplusRegroup;
 
-        sprintf( attr, "SurplusPolicy%d", i );
+        sprintf( attr, "SurplusPolicy%s", strI );
         if (ad->LookupString(attr, policy, COUNTOF(policy) )) {
            LR[i-1].HasDetail |= DetailSurplus;
            if (MATCH == strcasecmp(policy, "regroup")) {
@@ -1089,11 +1168,11 @@ static void CollectInfo(int numElem, AttrList* ad, LineRec* LR, bool GroupRollup
         }
 
         float sort_key = LR[i-1].SortKey;
-        sprintf( attr, "GroupSortKey%d", i );
+        sprintf( attr, "GroupSortKey%s", strI );
         if (ad->LookupFloat(attr, sort_key)) LR[i-1].HasDetail |= DetailSortKey;
         LR[i-1].SortKey = sort_key;
 
-        sprintf( attr, "SubtreeQuota%d", i );
+        sprintf( attr, "SubtreeQuota%s", strI );
         if (ad->LookupFloat(attr, subtree_quota)) LR[i-1].HasDetail |= DetailTreeQuota;
         if (GroupRollup && !(LR[i-1].HasDetail & DetailEffQuota)) {
            LR[i-1].HasDetail &= ~DetailPrios;
@@ -1333,7 +1412,7 @@ static const struct {
 };
 const int MAX_NAME_COLUMN_WIDTH = 99;
 
-static void PrintInfo(AttrList* ad, LineRec* LR, int NumElem, bool HierFlag)
+static void PrintInfo(int tmLast, LineRec* LR, int NumElem, bool HierFlag)
 {
 
    // figure out the width of the longest name column.
@@ -1351,8 +1430,6 @@ static void PrintInfo(AttrList* ad, LineRec* LR, int NumElem, bool HierFlag)
       }
    }
 
-   int tmLast = 0;
-   ad->LookupInteger( ATTR_LAST_UPDATE, tmLast );
    printf("Last Priority Update: %s\n",format_date(tmLast));
 
    LineRec Totals;
