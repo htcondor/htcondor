@@ -155,7 +155,7 @@ scheduleHousekeeper (int timeout)
 {
 	// JEF Set watch list for cms forwarding hack
 	std::string watch_list;
-	param(watch_list,"FORWARD_WATCH_LIST", "State,Cpus,Memory");
+	param(watch_list,"FORWARD_WATCH_LIST", "State,Cpus,Memory,IdleJobs");
 	m_forwardWatchList.clearAll();
 	m_forwardWatchList.initializeFromString(watch_list.c_str());
 
@@ -1030,7 +1030,7 @@ updateClassAd (CollectorHashTable &hashTable,
 		insert = 1;
 		
 		// JEF do should-forward decision
-		if ( m_forwardInterval > 0 && strcmp( label, "Start" ) == 0 ) {
+		if ( m_forwardInterval > 0 && ( strcmp( label, "Start" ) == 0 || strcmp( label, "Submittor" ) == 0 ) ) {
 dprintf(D_FULLDEBUG,"JEF setting LastForwarded in new ad\n");
 			new_ad->Assign( "LastForwarded", (int)time(NULL) );
 		}
@@ -1054,7 +1054,7 @@ dprintf(D_FULLDEBUG,"JEF setting LastForwarded in new ad\n");
 		}
 
 		// JEF do should-forward decision
-		if ( m_forwardInterval > 0 && strcmp( label, "Start" ) == 0 ) {
+		if ( m_forwardInterval > 0 && ( strcmp( label, "Start" ) == 0 || strcmp( label, "Submittor" ) == 0 ) ) {
 			bool forward = false;
 			int last_forwarded = 0;
 			old_ad->LookupInteger( "LastForwarded", last_forwarded );
