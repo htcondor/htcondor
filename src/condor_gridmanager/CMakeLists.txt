@@ -67,6 +67,11 @@ if(NOT WIN_EXEC_NODE_ONLY)
                 nqs_resume.sh
                 nqs_status.sh
                 nqs_submit.sh
+                slurm_cancel.sh
+                slurm_hold.sh
+                slurm_resume.sh
+                slurm_status.sh
+                slurm_submit.sh
                 DESTINATION ${C_LIBEXEC}/glite/bin
                 PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
         endif()
