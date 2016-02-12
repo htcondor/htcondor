@@ -2864,7 +2864,37 @@ reinsert_specials( const char* host )
 	}
 	snprintf(buf,40,"%u",reinsert_ppid);
 	insert("PPID", buf, ConfigMacroSet, DetectedMacro);
-	insert("IP_ADDRESS", my_ip_string(), ConfigMacroSet, DetectedMacro);
+
+	//
+	// get_local_ipaddr() may return the 'default' IP if the protocol-
+	// specific address for the given protocol isn't set.  The 'default'
+	// IP address could be IPv6 if:
+	//
+	//	* NETWORK_INTERACE is IPv6,
+	//  * the IPv6 address is the only public one, or
+	//	* the public IPv6 address is listed before the IPv4 address.
+	//
+	// (We should probably prefer public Ipv4 to public IPv6, but don't.)  See
+	// init_local_hostname_impl(), which calls network_interface_to_ip().
+	//
+	condor_sockaddr ip = get_local_ipaddr( CP_IPV4 );
+	insert( "IP_ADDRESS", ip.to_ip_string().Value(), ConfigMacroSet, DetectedMacro );
+	if( ip.is_ipv6() ) {
+		insert( "IP_ADDRESS_IS_IPV6", "true", ConfigMacroSet, DetectedMacro );
+	} else {
+		insert( "IP_ADDRESS_IS_IPV6", "false", ConfigMacroSet, DetectedMacro );
+	}
+
+	condor_sockaddr v4 = get_local_ipaddr( CP_IPV4 );
+	if( v4.is_ipv4() ) {
+		insert( "IPV4_ADDRESS", v4.to_ip_string().Value(), ConfigMacroSet, DetectedMacro );
+	}
+
+	condor_sockaddr v6 = get_local_ipaddr( CP_IPV6 );
+	if( v6.is_ipv6() ) {
+		insert( "IPV6_ADDRESS", v6.to_ip_string().Value(), ConfigMacroSet, DetectedMacro );
+	}
+
 
 	{ // set DETECTED_CPUS to the correct value, either hyperthreaded or not.
 		int num_cpus=0;
