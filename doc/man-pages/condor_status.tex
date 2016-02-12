@@ -119,8 +119,8 @@ Any number of \Arg{custom options} and \Arg{host options} may be specified.
       options.  Limiting the number of attributes increases the efficiency 
       of the query.}  
     \OptItem{\Opt{-expert}}{(Display option) Display shortened error messages.}
-    \OptItem{\Opt{-long}}{(Display option) Display entire ClassAds 
-      (same as \Opt{-verbose}).}
+    \OptItem{\Opt{-long}}{(Display option) Display entire ClassAds.  Implies
+      that totals will not be displayed.}
     \OptItem{\OptArg{-sort}{expr}}{(Display option) Change the display order
       to be based on ascending values of an evaluated expression 
       given by \Arg{expr}.
@@ -139,8 +139,6 @@ Any number of \Arg{custom options} and \Arg{host options} may be specified.
       gives the result of evaluating the sort expression that is numbered
       \Expr{<N>}.}
     \OptItem{\Opt{-total}}{(Display option) Display totals only.}
-    \OptItem{\Opt{-verbose}}{(Display option) Display entire ClassAds.  Implies
-      that totals will not be displayed.}
     \OptItem{\Opt{-xml}}{(Display option) Display entire ClassAds,
       in XML format.  
       The XML format is fully defined in the reference manual,
