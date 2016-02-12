@@ -6426,9 +6426,9 @@ MAX_JOBS_RUNNING	= \
 \label{param:CondorQOnlyMyJobs}
 \item[\Macro{CONDOR\_Q\_ONLY\_MY\_JOBS}]
   A boolean value that, when \Expr{True},
-  causes \Condor{q} to request that only the current users jobs be queried
-  unless the current user is a queue superuser.  It also causes the \Condor{schedd}
-  to honor that request.
+  causes \Condor{q} to request that only the current user's jobs be queried
+  unless the current user is a queue superuser.  It also causes the
+  \Condor{schedd} to honor that request.
   The default value is \Expr{True}. A value of \Expr{False} in either \Condor{q} or
   the \Condor{schedd} will result in the old behavior of querying all jobs.
 

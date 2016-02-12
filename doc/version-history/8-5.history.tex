@@ -54,19 +54,20 @@ The timestamp in curly brackets at the end is the actual timestamp
 of the event.
 \Ticket{5439}
 
-\item \Condor{q} will now only show the current user's jobs by default. This behavior
+\item \Bold{\Condor{q} now defaults to showing only the current user's
+jobs, unless the current user is a queue superuser.} This behavior
 can be turned off by setting the new configuration option \Macro{CONDOR\_Q\_ONLY\_MY\_JOBS}
-to false in the configuration for either the \Condor{schedd} or \Condor{q}. It can also be 
+to \Expr{False} in the configuration for either the \Condor{schedd} or \Condor{q}. It can also be 
 turned off by passing the new \Opt{-allusers} command line option to \Condor{q}.
 \Ticket{5271}
 
-\item A new \Opt{-batch} command line option to \Condor{q} can be used to show a single
-line of progress information for a batch of jobs, where batch is either an entire DAG, all
-of the jobs in a cluster, all of the jobs from a single user that have the same command,
+\item The new \Opt{-batch} command line option to \Condor{q} can be used to show a single
+line of progress information for a batch of jobs, where a batch is either an entire workflow (a DAG, including sub-DAGs), all
+of the jobs in a cluster, all of the jobs from a single user that have the same executable specified in their submit file,
 or all of the jobs from a single user that have the same batch name.
 \Ticket{4976}
 
-\item \Condor{q} and \Condor{submit\_dag} both have a new command line option \Opt{-batch-name}
+\item \Condor{submit} and \Condor{submit\_dag} both have a new command line option \Opt{-batch-name}
 which can be used to set the batch name used by \Condor{q} \Opt{-batch}.
 \Ticket{5490}
 

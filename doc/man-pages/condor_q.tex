@@ -20,16 +20,26 @@ default, \Condor{q} queries the local job queue,
 but this behavior may be 
 modified by specifying one of the general options.
 
+\Bold{As of version 8.5.2, \Condor{q} defaults to querying only the current
+user's jobs.  This default is overridden when the restriction list has
+usernames and/or job ids, when the \Opt{-submitter} or \Opt{-allusers}
+arguments are specified, or when the current user is a queue superuser.
+It can also be overridden by setting the
+\MacroNI{CONDOR\_Q\_ONLY\_MY\_JOBS} configuration macro to \Expr{False}.}
+
 To restrict the display to jobs of interest, a list of zero or more 
 restriction options may be supplied.  Each restriction may be one of:
 \begin{itemize}
-	\item a \Arg{cluster} and a \Arg{process} matches jobs which
+	\item \Bold{\Arg{cluster}.\Arg{process}}, which matches jobs which
 		belong to the specified cluster and have the specified process number
-	\item a \Arg{cluster} without a \Arg{process} matches all jobs belonging
+	\item \Bold{\Arg{cluster}} (without a \Arg{process}), which matches all jobs belonging
 		to the specified cluster
-	\item an \Arg{owner} matches all jobs owned by the specified owner
-	\item a \OptArg{-constraint}{expression} which matches all jobs that
+	\item \Bold{\Arg{owner}}, which matches all jobs owned by the specified owner
+	\item \Bold{\OptArg{-constraint}{expression}}, which matches all jobs that
 		satisfy the specified ClassAd expression. 
+	\item \Opt{-allusers}, which overrides the default
+		restriction of only matching jobs submitted by the
+		current user
 \end{itemize}
 If no restrictions are present in the list to specify an
 \Arg{owner}, the job matches the 
@@ -188,9 +198,29 @@ the values of relevant attributes of the machine ClassAd are also displayed.
 
 \begin{Options}
   \ToolDebugDesc
+  % Note: the way the LaTeX code is constructed here is kind of goofy,
+  % but I couldn't get an itemized list to work inside an OptItem.
+  % Also, I haven't documented the optional :<qual> stuff for -batch
+  % yet.
+  % wenger 2016-02-12
+  \OptItem{\Opt{-batch}}{(output option) Show a single line of progress
+    information for a batch of jobs, where a batch is defined as follows:}
+    \begin{itemize}
+    \item An entire workflow (a DAG or hierarchy of nested DAGs)
+    \item All jobs in a single cluster
+    \item All jobs submitted by a single user that have the same
+      executable specified in their submit file
+    \item All jobs submitted by a single user that have the same
+      batch name specified in their submit file or on the \Condor{submit}
+      or \Condor{submit\_dag} command line.
+    \end{itemize}
+  \OptItem{\Opt{-nobatch}}{(output option) Show a line for each job (turn
+    off the \Opt{-batch} option).  Note that \Opt{-nobatch} is currently
+    the default, but this option is included because \Opt{-batch}
+    will become the default at some point in the 8.5 series.}
   \OptItem{\Opt{-global}}{(general option) Queries all job queues in the pool.}
   \OptItem{\OptArg{-submitter}{submitter}}{(general option) List jobs of 
-    a specific submitter.} 
+    a specific submitter in the entire pool, not just for a single \Condor{schedd}.} 
   \OptItem{\OptArg{-name}{name}}{(general option) Query only the job queue 
     of the named \Condor{schedd} daemon. }
   \OptItem{\OptArg{-pool}{centralmanagerhostname[:portnumber]}}
@@ -232,11 +262,10 @@ the values of relevant attributes of the machine ClassAd are also displayed.
     accumulated during the current run plus all previous runs.  If this
     option is specified, RUN\_TIME only displays the time accumulated so
     far on this current run.}
-  \OptItem{\OptArg{-dag}{<DAG-ID>}} {(output option) Display DAG node jobs 
+  \OptItem{\Opt{-dag}} {(output option) Display DAG node jobs 
     under their DAGMan instance.
     Child nodes are listed using indentation to show the structure
-    of the DAG. 
-    When the optional \Arg{DAG-ID} is specified, display all jobs in the DAG. }
+    of the DAG.}
   \OptItem{\Opt{-expert}}{(output option) Display shorter error messages. }
   \OptItem{\Opt{-globus}}{(output option) Get information only about 
     jobs submitted to grid resources described as \SubmitCmdNI{gt2}
@@ -525,6 +554,30 @@ slot1@a-002.chtc.wisc.edu       Part            0  2633               0.00
 slot1_10@a-002.chtc.wisc.edu    Den          2623  2601              85.10 
 \end{verbatim}
 \normalsize
+
+An example that shows the \Opt{-batch} option:
+\footnotesize
+\begin{verbatim}
+$ condor_q -batch
+
+-- Schedd: wenger@manta.cs.wisc.edu : <128.105.14.228:35169?...
+OWNER  BATCH_NAME    SUBMITTED   DONE   RUN    IDLE  TOTAL JOB_IDS
+wenger DAG: 3696    2/12 11:55      _     10      _     10 3698.0 ... 3707.0
+wenger DAG: 3697    2/12 11:55      1      1      1     10 3709.0 ... 3710.0
+
+14 jobs; 0 completed, 0 removed, 1 idle, 13 running, 0 held, 0 suspended
+\end{verbatim}
+\normalsize
+
+Note that the "13 running" in the last line is two more than the
+total of the RUN column, because the two \Condor{dagman} jobs
+themselves are counted in the last line but not the RUN column.
+
+Also note that the "completed" value in the last line does not
+correspond to the total of the DONE column, because the "completed"
+value in the last line only counts jobs that are completed but still
+in the queue, whereas the DONE column counts jobs that are no
+longer in the queue.
 
 \ExitStatus
 

@@ -13,13 +13,22 @@ These new features include:
 \end{itemize}
 
 Upgrading from the 8.4 series of HTCondor to the 8.6 series will
-also introduce changes that administrators of sites running from an older
+also introduce changes that administrators and users of sites running from an older
 HTCondor version should be aware of when planning an upgrade.
 Here is a list of items that administrators should be aware of.
 
 \begin{itemize}
 
 \item Shared port is now enabled by default.
+
+\item By default, \Condor{q} queries only the current user's jobs,
+unless the current user is a queue superuser or the
+MacroNI{CONDOR\_Q\_ONLY\_MY\_JOBS} configuration macro is set to
+\Expr{False}.
+
+% \item By default, \Condor{q} is now invoked with the \Opt{-batch}
+% option, which displays a single line for each batch of jobs,
+% rather than one line per job.
 
 \end{itemize}
 
