@@ -1244,6 +1244,11 @@ rm -rf %{buildroot}
 %_libexecdir/condor/glite/bin/nqs_resume.sh
 %_libexecdir/condor/glite/bin/nqs_status.sh
 %_libexecdir/condor/glite/bin/nqs_submit.sh
+%_libexecdir/condor/glite/bin/slurm_cancel.sh
+%_libexecdir/condor/glite/bin/slurm_hold.sh
+%_libexecdir/condor/glite/bin/slurm_resume.sh
+%_libexecdir/condor/glite/bin/slurm_status.sh
+%_libexecdir/condor/glite/bin/slurm_submit.sh
 %if ! %uw_build
 %config(noreplace) %{_sysconfdir}/condor/config.d/10-batch_gahp_blahp.config
 %endif
