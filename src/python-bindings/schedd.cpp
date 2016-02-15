@@ -684,7 +684,7 @@ struct Schedd {
     Schedd(const ClassAdWrapper &ad)
       : m_connection(NULL), m_addr(), m_name("Unknown"), m_version("")
     {
-        if (!ad.EvaluateAttrString(ATTR_SCHEDD_IP_ADDR, m_addr))
+        if (!ad.EvaluateAttrString(ATTR_MY_ADDRESS, m_addr))
         {
             PyErr_SetString(PyExc_ValueError, "Schedd address not specified.");
             throw_error_already_set();
