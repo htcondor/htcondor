@@ -42,14 +42,18 @@
 #include <iostream>
 
 #define USE_LATE_PROJECTION 1
+#define USE_PROJECTION_SET 1
 
 // if enabled, use natural_cmp for numerical sorting of hosts/slots
 #define STRVCMP (naturalSort ? natural_cmp : strcmp)
 
+#ifdef USE_PROJECTION_SET
+#else
 // for use with qsort, note the double de-ref 
 static int string_compare(const void *x, const void *y) {
 	return strcmp(*(char * const *) x, *(char * const *) y);
 }
+#endif
 
 using std::vector;
 using std::string;
@@ -99,7 +103,8 @@ bool using_print_format = false; // hack for now so we can get standard totals w
 bool disable_user_print_files = false; // allow command line to defeat use of default user print files.
 const char		*DEFAULT= "<default>";
 DCCollector* pool = NULL;
-AdTypes		type 	= (AdTypes) -1;
+//AdTypes		type 	= (AdTypes) -1;
+int			sdo_mode = SDO_NotSet;
 ppOption	ppStyle	= PP_NOTSET;
 ppOption	ppTotalStyle = PP_NOTSET; // used when setting PP_CUSTOM to keep track of how to do totals.
 int			wantOnlyTotals 	= 0;
@@ -107,12 +112,11 @@ int			summarySize = -1;
 bool        expert = false;
 bool		wide_display = false; // when true, don't truncate field data
 bool		invalid_fields_empty = false; // when true, print "" instead of "[?]" for missing data
-Mode		mode	= MODE_NOTSET;
 const char * mode_constraint = NULL; // constraint set by mode
 int			diagnose = 0;
 char*		direct = NULL;
 char*       statistics = NULL;
-char*		genericType = NULL;
+const char*	genericType = NULL;
 CondorQuery *query;
 char		buffer[1024];
 char		*myName;
@@ -126,7 +130,12 @@ bool			offlineMode = false;
 char 		*target = NULL;
 const char * ads_file = NULL; // read classads from this file instead of querying them from the collector
 ClassAd		*targetAd = NULL;
+
+#ifdef USE_PROJECTION_SET
+classad::References projList;
+#else
 ArgList projList;		// Attributes that we want the server to send us
+#endif
 StringList dashAttributes; // Attributes specifically requested via the -attributes argument
 
 // instantiate templates
@@ -141,13 +150,16 @@ int  customLessThanFunc(AttrList*,AttrList*,void*);
 static bool read_classad_file(const char *filename, ClassAdList &classads, const char * constr);
 
 extern "C" int SetSyscalls (int) {return 0;}
-extern	void setPPstyle (ppOption, int, const char *);
+extern	int setPPstyle (ppOption, int, const char *);
 extern  void setPPwidth ();
+extern  void dumpPPMode(FILE* out);
+extern const char * getPPStyleStr (ppOption pps);
+#ifdef USE_LATE_PROJECTION
+extern void prettyPrintInitMask(classad::References & proj);
+extern AdTypes setMode(int sdo_mode, int arg_index, const char * arg);
+#else
 extern	void setType    (const char *, int, const char *);
 extern	void setMode 	(Mode, int, const char *);
-#ifdef USE_LATE_PROJECTION
-extern void prettyPrintInitMask();
-#else
 extern	void dumpPPMask (std::string & out, AttrListPrintMask & mask);
 #endif
 extern  int  forced_display_width;
@@ -171,13 +183,16 @@ main (int argc, char *argv[])
 	// the second pass.
 	firstPass (argc, argv);
 	
-	// if the mode has not been set, it is STARTD_NORMAL
-	if (mode == MODE_NOTSET) {
-		setMode (MODE_STARTD_NORMAL, 0, DEFAULT);
-	}
+	// if the mode has not been set, it is SDO_Startd, we set it here
+	// but with default priority, so that any mode set in the first pass
+	// takes precedence.
+	// the actual adType to be queried is returned, note that this will
+	// _not_ be STARTD_AD if another ad type was set in pass 1
+	AdTypes adType = setMode (SDO_Startd, 0, DEFAULT);
+	ASSERT(sdo_mode != SDO_NotSet);
 
 	// instantiate query object
-	if (!(query = new CondorQuery (type))) {
+	if (!(query = new CondorQuery (adType))) {
 		dprintf_WriteOnErrorBuffer(stderr, true);
 		fprintf (stderr, "Error:  Out of memory\n");
 		exit (1);
@@ -187,6 +202,7 @@ main (int argc, char *argv[])
 		query->addANDConstraint(mode_constraint);
 	}
 
+#if 0 
 	// set pretty print style implied by the type of entity being queried
 	// but do it with default priority, so that explicitly requested options
 	// can override it
@@ -246,7 +262,36 @@ main (int argc, char *argv[])
 	  default:
 		setPPstyle(PP_VERBOSE, 0, DEFAULT);
 	}
+#endif
 
+#if 1
+		// if there was a generic type specified
+	if (genericType) {
+		// tell the query object what the type we're querying is
+		if (diagnose) { printf ("Setting generic ad type to %s\n", genericType); }
+		query->setGenericQueryType(genericType);
+	}
+
+	// set the constraints implied by the mode
+	if (sdo_mode == SDO_Startd_Avail) {
+		// -avail shows unclaimed slots
+		sprintf (buffer, "%s == \"%s\" && Cpus > 0", ATTR_STATE, state_to_string(unclaimed_state));
+		if (diagnose) { printf ("Adding OR constraint [%s]\n", buffer); }
+		query->addORConstraint (buffer);
+	}
+	else if (sdo_mode == SDO_Startd_Run) {
+		// -run shows claimed slots
+		sprintf (buffer, "%s == \"%s\"", ATTR_STATE, state_to_string(claimed_state));
+		if (diagnose) { printf ("Adding OR constraint [%s]\n", buffer); }
+		query->addORConstraint (buffer);
+	}
+	else if (sdo_mode == SDO_Startd_Cod) {
+		// -run shows claimed slots
+		sprintf (buffer, ATTR_NUM_COD_CLAIMS " > 0");
+		if (diagnose) { printf ("Adding OR constraint [%s]\n", buffer); }
+		query->addORConstraint (buffer);
+	}
+#else
 	// set the constraints implied by the mode
 	switch (mode) {
 #ifdef HAVE_EXT_POSTGRESQL
@@ -271,8 +316,6 @@ main (int argc, char *argv[])
 	  case MODE_OTHER:
 			// tell the query object what the type we're querying is
 		query->setGenericQueryType(genericType);
-		free(genericType);
-		genericType = NULL;
 		break;
 
 	  case MODE_STARTD_AVAIL:
@@ -306,6 +349,7 @@ main (int argc, char *argv[])
 	  default:
 		break;
 	}	
+#endif
 
 	if(javaMode) {
 		sprintf( buffer, "%s == TRUE", ATTR_HAS_JAVA );
@@ -314,26 +358,42 @@ main (int argc, char *argv[])
 		}
 		query->addANDConstraint (buffer);
 		
+#ifdef USE_PROJECTION_SET
+		projList.insert(ATTR_HAS_JAVA);
+		projList.insert(ATTR_JAVA_MFLOPS);
+		projList.insert(ATTR_JAVA_VENDOR);
+		projList.insert(ATTR_JAVA_VERSION);
+#else
 		projList.AppendArg(ATTR_HAS_JAVA);
 		projList.AppendArg(ATTR_JAVA_MFLOPS);
 		projList.AppendArg(ATTR_JAVA_VENDOR);
 		projList.AppendArg(ATTR_JAVA_VERSION);
-
+#endif
 	}
 
 	if(offlineMode) {
 		query->addANDConstraint( "size( OfflineUniverses ) != 0" );
 
+#ifdef USE_PROJECTION_SET
+		projList.insert( "OfflineUniverses" );
+#else
 		projList.AppendArg( "OfflineUniverses" );
+#endif
 
 		//
 		// Since we can't add a regex to a projection, explicitly list all
 		// the attributes we know about.
 		//
 
+#ifdef USE_PROJECTION_SET
+		projList.insert( "HasVM" );
+		projList.insert( "VMOfflineReason" );
+		projList.insert( "VMOfflineTime" );
+#else
 		projList.AppendArg( "HasVM" );
 		projList.AppendArg( "VMOfflineReason" );
 		projList.AppendArg( "VMOfflineTime" );
+#endif
 	}
 
 	if(absentMode) {
@@ -343,9 +403,15 @@ main (int argc, char *argv[])
 	    }
 	    query->addANDConstraint( buffer );
 	    
+#ifdef USE_PROJECTION_SET
+	    projList.insert( ATTR_ABSENT );
+	    projList.insert( ATTR_LAST_HEARD_FROM );
+	    projList.insert( ATTR_CLASSAD_LIFETIME );
+#else
 	    projList.AppendArg( ATTR_ABSENT );
 	    projList.AppendArg( ATTR_LAST_HEARD_FROM );
 	    projList.AppendArg( ATTR_CLASSAD_LIFETIME );
+#endif
 	}
 
 	if(vmMode) {
@@ -355,6 +421,18 @@ main (int argc, char *argv[])
 		}
 		query->addANDConstraint (buffer);
 
+#ifdef USE_PROJECTION_SET
+		projList.insert(ATTR_VM_TYPE);
+		projList.insert(ATTR_VM_MEMORY);
+		projList.insert(ATTR_VM_NETWORKING);
+		projList.insert(ATTR_VM_NETWORKING_TYPES);
+		projList.insert(ATTR_VM_HARDWARE_VT);
+		projList.insert(ATTR_VM_AVAIL_NUM);
+		projList.insert(ATTR_VM_ALL_GUEST_MACS);
+		projList.insert(ATTR_VM_ALL_GUEST_IPS);
+		projList.insert(ATTR_VM_GUEST_MAC);
+		projList.insert(ATTR_VM_GUEST_IP);
+#else
 		projList.AppendArg(ATTR_VM_TYPE);
 		projList.AppendArg(ATTR_VM_MEMORY);
 		projList.AppendArg(ATTR_VM_NETWORKING);
@@ -365,7 +443,7 @@ main (int argc, char *argv[])
 		projList.AppendArg(ATTR_VM_ALL_GUEST_IPS);
 		projList.AppendArg(ATTR_VM_GUEST_MAC);
 		projList.AppendArg(ATTR_VM_GUEST_IP);
-
+#endif
 	}
 
 	// second pass:  add regular parameters and constraints
@@ -383,9 +461,61 @@ main (int argc, char *argv[])
 	}
 	TrackTotals	totals(ppTotalStyle);
 
+	// in order to totals, the projection MUST have certain attributes
+#ifdef USE_PROJECTION_SET
+	if (wantOnlyTotals || ((ppTotalStyle != PP_CUSTOM) && ! projList.empty()))
+	switch (ppTotalStyle) {
+		case PP_STARTD_SERVER:
+			projList.insert(ATTR_MEMORY);
+			projList.insert(ATTR_DISK);
+			// fall through
+		case PP_STARTD_RUN:
+			projList.insert(ATTR_LOAD_AVG);
+			projList.insert(ATTR_MIPS);
+			projList.insert(ATTR_KFLOPS);
+			// fall through
+		case PP_STARTD_NORMAL:
+		case PP_STARTD_COD:
+			if (ppTotalStyle == PP_STARTD_COD) {
+				projList.insert(ATTR_CLAIM_STATE);
+				projList.insert(ATTR_COD_CLAIMS);
+			}
+			projList.insert(ATTR_STATE); // Norm, state, server
+			projList.insert(ATTR_ARCH);  // for key
+			projList.insert(ATTR_OPSYS); // for key
+			break;
+
+		case PP_STARTD_STATE:
+			projList.insert(ATTR_STATE);
+			projList.insert(ATTR_ACTIVITY); // for key
+			break;
+
+		case PP_SCHEDD_SUBMITTORS:
+			projList.insert(ATTR_NAME); // for key
+			projList.insert(ATTR_RUNNING_JOBS);
+			projList.insert(ATTR_IDLE_JOBS);
+			projList.insert(ATTR_HELD_JOBS);
+			break;
+
+		case PP_SCHEDD_NORMAL: // no key
+			projList.insert(ATTR_TOTAL_RUNNING_JOBS);
+			projList.insert(ATTR_TOTAL_IDLE_JOBS);
+			projList.insert(ATTR_TOTAL_HELD_JOBS);
+			break;
+
+		case PP_CKPT_SRVR_NORMAL:
+			projList.insert(ATTR_DISK);
+			break;
+
+		default:
+			break;
+	}
+#endif
+
 	// fetch the query
 	QueryResult q;
 
+#if 0
 	if ((mode == MODE_STARTD_NORMAL) && (ppStyle == PP_STARTD_NORMAL)) {
 		projList.AppendArg("Name");
 		projList.AppendArg("Machine");
@@ -398,16 +528,26 @@ main (int argc, char *argv[])
 		projList.AppendArg("ActvtyTime");
 		projList.AppendArg("MyCurrentTime");
 		projList.AppendArg("EnteredCurrentActivity");
-	} else if( ppStyle == PP_VERBOSE ) {
-	    // Remove everything from the projection list if we're displaying
-	    // the "long form" of the ads.
-	    projList.Clear();
+	} else 
+#endif
+	if( ppStyle == PP_VERBOSE ) {
+		// Remove everything from the projection list if we're displaying
+		// the "long form" of the ads.
+#ifdef USE_PROJECTION_SET
+		projList.clear();
+#else
+		projList.Clear();
+#endif
 		// but if -attributes was supplied, show only those attributes
 		if ( ! dashAttributes.isEmpty()) {
 			const char * s;
 			dashAttributes.rewind();
 			while ((s = dashAttributes.next())) {
+#ifdef USE_PROJECTION_SET
+				projList.insert(s);
+#else
 				projList.AppendArg(s);
+#endif
 			}
 		}
 		pmHeadFoot = HF_BARE;
@@ -416,7 +556,7 @@ main (int argc, char *argv[])
 #ifdef USE_LATE_PROJECTION
 	// Setup the pretty printer for the given mode.
 	if (ppStyle != PP_VERBOSE && ppStyle != PP_XML && ppStyle != PP_CUSTOM) {
-		prettyPrintInitMask();
+		prettyPrintInitMask(projList);
 	}
 #endif
 
@@ -430,12 +570,8 @@ main (int argc, char *argv[])
 		fprintf(fout, "\n----------\n");
 
 		// print diagnostic information about inferred internal state
-		setMode ((Mode) 0, -2, NULL);
-		setType (NULL, -2, NULL);
-
-		// hack! because some if this information is accessible only as a static inside setPPStyle,
-		// we call it with magic arguments to print some stuff out.
-		setPPstyle(ppTotalStyle, -2, NULL);
+		dumpPPMode(fout);
+		fprintf(fout, "Totals: %s\n", getPPStyleStr(ppTotalStyle));
 		fprintf(fout, "Opts: HF=%x\n", pmHeadFoot);
 
 		std::string style_text("");
@@ -457,6 +593,17 @@ main (int argc, char *argv[])
 		fPrintAd (fout, queryAd);
 
 		// print projection
+#ifdef USE_PROJECTION_SET
+		if (projList.empty()) {
+			fprintf(fout, "Projection: <NULL>\n");
+		} else {
+			fprintf(fout, "Projection:\n");
+			classad::References::const_iterator it;
+			for (it = projList.begin(); it != projList.end(); ++it) {
+				fprintf(fout, "  %s\n",  it->c_str());
+			}
+		}
+#else
 		int num_attrs = projList.Count();
 		if (num_attrs <= 0) {
 			fprintf(fout, "Projection: <NULL>\n");
@@ -469,17 +616,35 @@ main (int argc, char *argv[])
 			}
 			deleteStringArray(attr_list);
 		}
+#endif
 
 		fprintf (fout, "\n\n");
 		fprintf (stdout, "Result of making query ad was:  %d\n", q);
 		exit (1);
 	}
 
+#ifdef USE_PROJECTION_SET
+	if ( ! projList.empty()) {
+	#if 0 // for debugging
+		std::string attrs;
+		attrs.reserve(projList.size()*24);
+		for (classad::References::const_iterator it = projList.begin(); it != projList.end(); ++it) {
+			if ( ! attrs.empty()) attrs += " ";
+			attrs += *it;
+		}
+		fprintf(stdout, "Projection is [%s]\n", attrs.c_str());
+		query->setDesiredAttrs(attrs.c_str());
+	#else
+		query->setDesiredAttrs(projList);
+	#endif
+	}
+#else
 	if( projList.Count() > 0 ) {
 		char **attr_list = projList.GetStringArray();
 		query->setDesiredAttrs(attr_list);
 		deleteStringArray(attr_list);
 	}
+#endif
 
         // Address (host:port) is taken from requested pool, if given.
 	char* addr = (NULL != pool) ? pool->addr() : NULL;
@@ -491,6 +656,19 @@ main (int argc, char *argv[])
         // pool is being consulted
 	if( direct ) {
 		Daemon *d = NULL;
+#if 1
+		switch (adType) {
+		case MASTER_AD: d = new Daemon( DT_MASTER, direct, addr ); break;
+		case STARTD_AD: d = new Daemon( DT_STARTD, direct, addr ); break;
+		case QUILL_AD:  d = new Daemon( DT_QUILL, direct, addr ); break;
+		case SCHEDD_AD:
+		case SUBMITTOR_AD: d = new Daemon( DT_SCHEDD, direct, addr ); break;
+		case NEGOTIATOR_AD:
+		case ACCOUNTING_AD: d = new Daemon( DT_NEGOTIATOR, direct, addr ); break;
+		default: // These have to go to the collector, there is no 'direct'
+			break;
+		}
+#else
 		switch( mode ) {
 		case MODE_MASTER_NORMAL:
 			d = new Daemon( DT_MASTER, direct, addr );
@@ -531,7 +709,7 @@ main (int argc, char *argv[])
 			exit( 1 );
 			break;
 		}
-
+#endif
                 // Here is where we actually override 'addr', if we can obtain
                 // address of the requested daemon/subsys.  If it can't be
                 // located, then fail with error msg.
@@ -702,9 +880,13 @@ int set_status_print_mask_from_stream (
 			//}
 		}
 		// convert projection list into the format that condor status likes. because programmers.
+#ifdef USE_PROJECTION_SET
+		for (const char * attr = attrs.first(); attr; attr = attrs.next()) { projList.insert(attr); }
+#else
 		attrs.rewind();
 		const char * attr;
 		while ((attr = attrs.next())) { projList.AppendArg(attr); }
+#endif
 	}
 	if ( ! messages.empty()) { fprintf(stderr, "%s", messages.c_str()); }
 	return err;
@@ -860,7 +1042,7 @@ firstPass (int argc, char *argv[])
 	//   constraints are added on the second pass
 	for (int i = 1; i < argc; i++) {
 		if (is_dash_arg_prefix (argv[i], "avail", 2)) {
-			setMode (MODE_STARTD_AVAIL, i, argv[i]);
+			setMode (SDO_Startd_Avail, i, argv[i]);
 		} else
 		if (is_dash_arg_prefix (argv[i], "pool", 1)) {
 			if( pool ) {
@@ -1012,7 +1194,7 @@ firstPass (int argc, char *argv[])
 			dprintf_set_tool_debug("TOOL", 0);
 		} else
 		if (is_dash_arg_prefix (argv[i], "defrag", 3)) {
-			setMode (MODE_DEFRAG_NORMAL, i, argv[i]);
+			setMode (SDO_Defrag, i, argv[i]);
 		} else
 		if (is_dash_arg_prefix (argv[i], "help", 1)) {
 			usage ();
@@ -1035,10 +1217,10 @@ firstPass (int argc, char *argv[])
 			i++;
 		} else	
 		if (is_dash_arg_prefix(argv[i], "claimed", 2) || is_dash_arg_prefix (argv[i], "run", 1)) {
-			setMode (MODE_STARTD_RUN, i, argv[i]);
+			setMode (SDO_Startd_Run, i, argv[i]);
 		} else
 		if( is_dash_arg_prefix (argv[i], "cod", 3) ) {
-			setMode (MODE_STARTD_COD, i, argv[i]);
+			setMode (SDO_Startd_Cod, i, argv[i]);
 		} else
 		if (is_dash_arg_prefix (argv[i], "java", 1)) {
 			/*explicit_mode =*/ javaMode = true;
@@ -1053,9 +1235,11 @@ firstPass (int argc, char *argv[])
 			/*explicit_mode =*/ vmMode = true;
 		} else
 		if (is_dash_arg_prefix (argv[i], "server", 2)) {
+			//PRAGMA_REMIND("TJ: change to sdo_mode")
 			setPPstyle (PP_STARTD_SERVER, i, argv[i]);
 		} else
 		if (is_dash_arg_prefix (argv[i], "state", 4)) {
+			//PRAGMA_REMIND("TJ: change to sdo_mode")
 			setPPstyle (PP_STARTD_STATE, i, argv[i]);
 		} else
 		if (is_dash_arg_prefix (argv[i], "statistics", 5)) {
@@ -1073,78 +1257,69 @@ firstPass (int argc, char *argv[])
 			statistics = strdup( argv[i] );
 		} else
 		if (is_dash_arg_prefix (argv[i], "startd", 4)) {
-			setMode (MODE_STARTD_NORMAL,i, argv[i]);
+			setMode (SDO_Startd,i, argv[i]);
 		} else
 		if (is_dash_arg_prefix (argv[i], "schedd", 2)) {
-			setMode (MODE_SCHEDD_NORMAL, i, argv[i]);
+			setMode (SDO_Schedd, i, argv[i]);
 		} else
 		if (is_dash_arg_prefix (argv[i], "grid", 1)) {
-			setMode (MODE_GRID_NORMAL, i, argv[i]);
+			setMode (SDO_Grid, i, argv[i]);
 		} else
 		if (is_dash_arg_prefix (argv[i], "subsystem", 4)) {
 			i++;
-			if( !argv[i] ) {
+			if( !argv[i] || *argv[i] == '-') {
 				fprintf( stderr, "%s: -subsystem requires another argument\n",
 						 myName );
 				fprintf( stderr, "Use \"%s -help\" for details\n", myName );
 				exit( 1 );
 			}
-			if (is_arg_prefix (argv[i], "schedd", -1)) {
-				setMode (MODE_SCHEDD_NORMAL, i, argv[i]);
-			} else
-			if (is_arg_prefix (argv[i], "startd", -1)) {
-				setMode (MODE_STARTD_NORMAL, i, argv[i]);
-			} else
-			if (is_arg_prefix (argv[i], "quill", -1)) {
-				setMode (MODE_QUILL_NORMAL, i, argv[i]);
-			} else
-			if (is_arg_prefix (argv[i], "negotiator", -1)) {
-				setMode (MODE_NEGOTIATOR_NORMAL, i, argv[i]);
-			} else
-			if (is_arg_prefix (argv[i], "master", -1)) {
-				setMode (MODE_MASTER_NORMAL, i, argv[i]);
-			} else
-			if (is_arg_prefix (argv[i], "collector", -1)) {
-				setMode (MODE_COLLECTOR_NORMAL, i, argv[i]);
-			} else
-			if (is_arg_prefix (argv[i], "generic", -1)) {
-				setMode (MODE_GENERIC_NORMAL, i, argv[i]);
-			} else
-			if (is_arg_prefix (argv[i], "had", -1)) {
-				setMode (MODE_HAD_NORMAL, i, argv[i]);
-			} else
-			if (*argv[i] == '-') {
-				fprintf(stderr, "%s: -subsystem requires another argument\n",
-						myName);
-				fprintf( stderr, "Use \"%s -help\" for details\n", myName );
-				exit(1);
-			} else {
-				if (genericType) {
-					free(genericType);
+			static const struct { const char * tag; int sm; } asub[] = {
+				{"schedd", SDO_Schedd},
+				{"submitters", SDO_Submittors},
+				{"startd", SDO_Startd},
+				{"quill", SDO_Quill},
+				{"defrag", SDO_Defrag},
+				{"grid", SDO_Grid},
+				{"accounting", SDO_Accounting},
+				{"negotiator", SDO_Negotiator},
+				{"master", SDO_Master},
+				{"collector", SDO_Collector},
+				{"generic", SDO_Generic},
+				{"had", SDO_HAD},
+			};
+			int sm = SDO_NotSet;
+			for (int ii = 0; ii < (int)COUNTOF(asub); ++ii) {
+				if (is_arg_prefix(argv[i], asub[ii].tag, -1)) {
+					sm = asub[ii].sm;
+					break;
 				}
-				genericType = strdup(argv[i]);
-				setMode (MODE_OTHER, i, argv[i]);
+			}
+			if (sm != SDO_NotSet) {
+				setMode (sm, i, argv[i]);
+			} else {
+				genericType = argv[i];
+				setMode (SDO_Other, i, argv[i]);
 			}
 		} else
 #ifdef HAVE_EXT_POSTGRESQL
 		if (is_dash_arg_prefix (argv[i], "quill", 1)) {
-			setMode (MODE_QUILL_NORMAL, i, argv[i]);
+			setMode (SDO_Quill, i, argv[i]);
 		} else
 #endif /* HAVE_EXT_POSTGRESQL */
 		if (is_dash_arg_prefix (argv[i], "license", 2)) {
-			setMode (MODE_LICENSE_NORMAL, i, argv[i]);
+			setMode (SDO_License, i, argv[i]);
 		} else
 		if (is_dash_arg_prefix (argv[i], "storage", 3)) {
-			setMode (MODE_STORAGE_NORMAL, i, argv[i]);
+			setMode (SDO_Storage, i, argv[i]);
 		} else
 		if (is_dash_arg_prefix (argv[i], "negotiator", 1)) {
-			setMode (MODE_NEGOTIATOR_NORMAL, i, argv[i]);
+			setMode (SDO_Negotiator, i, argv[i]);
 		} else
 		if (is_dash_arg_prefix (argv[i], "generic", 2)) {
-			setMode (MODE_GENERIC_NORMAL, i, argv[i]);
+			setMode (SDO_Generic, i, argv[i]);
 		} else
 		if (is_dash_arg_prefix (argv[i], "any", 2)) {
-			setMode (MODE_ANY_NORMAL, i, argv[i]);
+			setMode (SDO_Any, i, argv[i]);
 		} else
 		if (is_dash_arg_prefix (argv[i], "sort", 2)) {
 			i++;
@@ -1197,19 +1372,19 @@ firstPass (int argc, char *argv[])
 				// as a customAND constraint on the second pass
 		} else
 		if (is_dash_arg_prefix (argv[i], "submitters", 4)) {
-			setMode (MODE_SCHEDD_SUBMITTORS, i, argv[i]);
+			setMode (SDO_Submittors, i, argv[i]);
 		} else
 		if (is_dash_arg_prefix (argv[i], "master", 1)) {
-			setMode (MODE_MASTER_NORMAL, i, argv[i]);
+			setMode (SDO_Master, i, argv[i]);
 		} else
 		if (is_dash_arg_prefix (argv[i], "collector", 3)) {
-			setMode (MODE_COLLECTOR_NORMAL, i, argv[i]);
+			setMode (SDO_Collector, i, argv[i]);
 		} else
 		if (is_dash_arg_prefix (argv[i], "world", 1)) {
-			setMode (MODE_COLLECTOR_NORMAL, i, argv[i]);
+			setMode (SDO_Collector, i, argv[i]);
 		} else
 		if (is_dash_arg_prefix (argv[i], "ckptsrvr", 2)) {
-			setMode (MODE_CKPT_SRVR_NORMAL, i, argv[i]);
+			setMode (SDO_CkptSvr, i, argv[i]);
 		} else
 		if (is_dash_arg_prefix (argv[i], "total", 1)) {
 			wantOnlyTotals = 1;
@@ -1272,11 +1447,17 @@ secondPass (int argc, char *argv[])
 				exit(1);
 			}
 
+#ifdef USE_PROJECTION_SET
+			for (const char * attr = attributes.first(); attr; attr = attributes.next()) {
+				projList.insert(attr);
+			}
+#else
 			attributes.rewind();
 			char const *s;
 			while( (s=attributes.next()) ) {
 				projList.AppendArg(s);
 			}
+#endif
 
 			if (diagnose) {
 				printf ("Arg %d --- register format [%s] for [%s]\n",
@@ -1331,11 +1512,17 @@ secondPass (int argc, char *argv[])
 					exit(1);
 				}
 
+#ifdef USE_PROJECTION_SET
+				for (const char * attr = attributes.first(); attr; attr = attributes.next()) {
+					projList.insert(attr);
+				}
+#else
 				attributes.rewind();
 				char const *s;
 				while ((s = attributes.next())) {
 					projList.AppendArg(s);
 				}
+#endif
 
 				MyString lbl = "";
 				int wid = 0;
@@ -1415,12 +1602,19 @@ secondPass (int argc, char *argv[])
 		if (is_dash_arg_prefix (argv[i], "attributes", 2) ) {
 			// parse attributes to be selected and split them along ","
 			StringList more_attrs(argv[i+1],",");
+#ifdef USE_PROJECTION_SET
+			for (const char * s = more_attrs.first(); s; s = more_attrs.next()) {
+				projList.insert(s);
+				dashAttributes.append(s);
+			}
+#else
 			char const *s;
 			more_attrs.rewind();
 			while( (s=more_attrs.next()) ) {
 				projList.AppendArg(s);
 				dashAttributes.append(s);
 			}
+#endif
 			i++;
 			continue;
 		}
@@ -1434,23 +1628,38 @@ secondPass (int argc, char *argv[])
 				printf ("Arg %d (%s) --- adding constraint", i, argv[i]);
 			}
 
-			if( !(daemonname = get_daemon_name(argv[i])) ) {
-				if ( (mode==MODE_SCHEDD_SUBMITTORS) && strchr(argv[i],'@') ) {
+			const char * name = argv[i];
+			daemonname = get_daemon_name(name);
+			if( ! daemonname || ! daemonname[0]) {
+				if ( (sdo_mode == SDO_Submittors) && strchr(argv[i],'@') ) {
 					// For a submittor query, it is possible that the
 					// hostname is really a UID_DOMAIN.  And there is
 					// no requirement that UID_DOMAIN actually have
 					// an inverse lookup in DNS...  so if get_daemon_name()
 					// fails with a fully qualified submittor lookup, just
 					// use what we are given and do not flag an error.
-					daemonname = strnewp(argv[i]);
 				} else {
+					//PRAGMA_REMIND("TJ: change this to do the query rather than reporting an error?")
 					dprintf_WriteOnErrorBuffer(stderr, true);
 					fprintf( stderr, "%s: unknown host %s\n",
 								 argv[0], get_host_part(argv[i]) );
 					exit(1);
 				}
+			} else {
+				name = daemonname;
 			}
 
+#if 1
+			if (sdo_mode == SDO_Startd_Run) {
+				sprintf (buffer, ATTR_REMOTE_USER " == \"%s\"", argv[i]);
+				if (diagnose) { printf ("[%s]\n", buffer); }
+				query->addORConstraint (buffer);
+			} else {
+				sprintf(buffer, ATTR_NAME "==\"%s\" || " ATTR_MACHINE "==\"%s\"", name, name);
+				if (diagnose) { printf ("[%s]\n", buffer); }
+				query->addORConstraint (buffer);
+			}
+#else
 			switch (mode) {
 			  case MODE_DEFRAG_NORMAL:
 			  case MODE_STARTD_NORMAL:
@@ -1490,13 +1699,12 @@ secondPass (int argc, char *argv[])
 			  default:
 				fprintf(stderr,"Error: Don't know how to process %s\n",argv[i]);
 			}
+#endif
 			delete [] daemonname;
 			daemonname = NULL;
 		} else
 		if (is_dash_arg_prefix (argv[i], "constraint", 3)) {
-			if (diagnose) {
-				printf ("[%s]\n", argv[i+1]);
-			}
+			if (diagnose) { printf ("[%s]\n", argv[i+1]); }
 			query->addANDConstraint (argv[i+1]);
 			i++;
 		}

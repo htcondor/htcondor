@@ -24,6 +24,7 @@
 #include "totals.h"
 #include "format_time.h"
 #include "string_list.h"
+#include "metric_units.h"
 
 #define USE_LATE_PROJECTION 1
 
@@ -47,7 +48,8 @@ extern char *format_time( int );
 static int stashed_now = 0;
 
 #ifdef USE_LATE_PROJECTION
-void ppInitPrintMask(ppOption pps);
+void ppInitPrintMask(ppOption pps, classad::References & proj);
+const CustomFormatFnTable * getCondorStatusPrintFormats();
 #else
 
 void printStartdNormal 	(ClassAd *, bool first);
@@ -80,11 +82,28 @@ void printCustom    	(ClassAd *);
 static bool renderActivityTime(long long & atime, AttrList* , Formatter &);
 static bool renderDueDate(long long & atime, AttrList* , Formatter &);
 static bool renderElapsedTime(long long & etime, AttrList* , Formatter &);
+static bool renderVersion(std::string & str, AttrList*, Formatter & fmt);
+static const char* formatVersion(const char * condorver, Formatter &);
 static const char *formatRealTime( long long , Formatter &);
 static const char *formatRealDate( long long , Formatter &);
 //static const char *formatFloat (double, AttrList *, Formatter &);
 static const char *formatLoadAvg (double, Formatter &);
 static const char *formatStringsFromList( const classad::Value &, Formatter & );
+
+static const char *
+format_readable_mb(const classad::Value &val, Formatter &)
+{
+	long long kbi;
+	double kb;
+	if (val.IsIntegerValue(kbi)) {
+		kb = kbi * 1024.0 * 1024.0;
+	} else if (val.IsRealValue(kb)) {
+		kb *= 1024.0 * 1024.0;
+	} else {
+		return "        ";
+	}
+	return metric_units(kb);
+}
 
 #ifdef WIN32
 int getConsoleWindowSize(int * pHeight = NULL) {
@@ -130,12 +149,15 @@ void setPPwidth () {
 	}
 }
 
+#ifdef USE_LATE_PROJECTION
+#else
 static void ppInit()
 {
 	pm.SetAutoSep(NULL, " ", NULL, "\n");
 	//pm.SetAutoSep(NULL, " (", ")", "\n"); // for debugging, delimit the field data explicitly
 	setPPwidth();
 }
+#endif
 
 enum ivfield {
 	BlankInvalidField = 0,
@@ -261,13 +283,13 @@ static void ppDisplayHeadings(FILE* file, ClassAd *ad, const char * pszExtra)
 }
 
 #ifdef USE_LATE_PROJECTION
-void prettyPrintInitMask()
+void prettyPrintInitMask(classad::References & proj)
 {
 	//bool old_headings = (ppStyle == PP_STARTD_COD) || (ppStyle == PP_QUILL_NORMAL);
 	bool long_form = (ppStyle == PP_VERBOSE) || (ppStyle == PP_XML);
 	bool custom = (ppStyle == PP_CUSTOM);
 	if ( ! using_print_format && ! wantOnlyTotals && ! custom && ! long_form) {
-		ppInitPrintMask(ppStyle);
+		ppInitPrintMask(ppStyle, proj);
 	}
 }
 #else
@@ -616,6 +638,8 @@ void ppSetStartdOfflineCols (int /*width*/)
 
 }
 
+#ifdef USE_LATE_PROJECTION
+#else
 void
 printStartdOffline( ClassAd *ad, bool first ) {
 	if( first ) {
@@ -631,6 +655,7 @@ printStartdOffline( ClassAd *ad, bool first ) {
 
 	return;
 }
+#endif
 
 void ppSetStartdAbsentCols (int /*width*/)
 {
@@ -641,6 +666,8 @@ void ppSetStartdAbsentCols (int /*width*/)
 		ppSetColumn(ATTR_CLASSAD_LIFETIME, Lbl("Will Forget"), renderDueDate, "%Y", -11, true);
 }
 
+#ifdef USE_LATE_PROJECTION
+#else
 void
 printStartdAbsent (ClassAd *ad, bool first)
 {
@@ -654,6 +681,7 @@ printStartdAbsent (ClassAd *ad, bool first)
 		pm.display (stdout, ad);
 	return;
 }
+#endif
 
 void ppSetStartdNormalCols (int width)
 {
@@ -692,6 +720,8 @@ void ppSetStartdNormalCols (int width)
 		renderActivityTime, ATTR_ENTERED_CURRENT_ACTIVITY /* "   [Unknown]"*/);
 }
 
+#ifdef USE_LATE_PROJECTION
+#else
 void
 printStartdNormal (ClassAd *ad, bool first)
 {
@@ -704,6 +734,7 @@ printStartdNormal (ClassAd *ad, bool first)
 	if (ad)
 		pm.display (stdout, ad);
 }
+#endif
 
 void ppSetServerCols (int width)
 {
@@ -720,6 +751,8 @@ void ppSetServerCols (int width)
 	ppSetColumn(ATTR_KFLOPS, "%9d", true);
 }
 
+#ifdef USE_LATE_PROJECTION
+#else
 void
 printServer (ClassAd *ad, bool first)
 {
@@ -732,6 +765,7 @@ printServer (ClassAd *ad, bool first)
 	if (ad)
 		pm.display (stdout, ad);
 }
+#endif
 
 void ppSetStateCols (int width)
 {
@@ -751,6 +785,8 @@ void ppSetStateCols (int width)
 	ppSetColumn(ATTR_ENTERED_CURRENT_ACTIVITY, Lbl("  ActvtyTime"), renderElapsedTime, "%T", timewid, true);
 }
 
+#ifdef USE_LATE_PROJECTION
+#else
 void
 printState (ClassAd *ad, bool first)
 {
@@ -763,6 +799,7 @@ printState (ClassAd *ad, bool first)
 	if (ad)
 		pm.display (stdout, ad);
 }
+#endif
 
 void ppSetRunCols (int width)
 {
@@ -785,6 +822,8 @@ void ppSetRunCols (int width)
 	ppSetColumn(ATTR_CLIENT_MACHINE, -16, ! wide_display);
 }
 
+#ifdef USE_LATE_PROJECTION
+#else
 void
 printRun (ClassAd *ad, bool first)
 {
@@ -797,7 +836,7 @@ printRun (ClassAd *ad, bool first)
 	if (ad)
 		pm.display (stdout, ad);
 }
-
+#endif
 
 void
 printCODDetailLine( ClassAd* ad, const char* id )
@@ -923,6 +962,8 @@ void ppSetScheddNormalCols (int width)
 	ppSetColumn(ATTR_TOTAL_HELD_JOBS,    "%14d", true);
 }
 
+#ifdef USE_LATE_PROJECTION
+#else
 void
 printScheddNormal (ClassAd *ad, bool first)
 {
@@ -935,6 +976,7 @@ printScheddNormal (ClassAd *ad, bool first)
 	if (ad)
 		pm.display (stdout, ad);
 }
+#endif
 
 void ppSetScheddSubmittorsCols (int width)
 {
@@ -956,6 +998,8 @@ void ppSetScheddSubmittorsCols (int width)
 	ppSetColumn(ATTR_HELD_JOBS,    "%8d", true);
 }
 
+#ifdef USE_LATE_PROJECTION
+#else
 void
 printScheddSubmittors (ClassAd *ad, bool first)
 {
@@ -968,6 +1012,7 @@ printScheddSubmittors (ClassAd *ad, bool first)
 	if (ad)
 		pm.display (stdout, ad);
 }
+#endif
 
 void ppSetCollectorNormalCols (int width)
 {
@@ -989,6 +1034,8 @@ void ppSetCollectorNormalCols (int width)
 	ppSetColumn(ATTR_NUM_HOSTS_TOTAL,    "%10d", true);
 }
 
+#ifdef USE_LATE_PROJECTION
+#else
 void
 printCollectorNormal(ClassAd *ad, bool first)
 {
@@ -1001,12 +1048,25 @@ printCollectorNormal(ClassAd *ad, bool first)
 	if (ad)
 		pm.display (stdout, ad);
 }
+#endif
 
 void ppSetMasterNormalCols(int /*width*/)
 {
-		ppSetColumn(ATTR_NAME, -20, false);
+	int name_width = wide_display ? -34 : -28;
+	ppSetColumn(ATTR_NAME, name_width, ! wide_display);
+
+	//pm_head.Append("Version");
+	//ppSetColumnFormat(formatVersion, NULL, 14, true, BlankInvalidField, "CondorVersion");
+	ppSetColumn("CondorVersion", Lbl("Version"), renderVersion, NULL, -14, true);
+
+	ppSetColumn("DetectedCpus", Lbl("Cpus"), "%4d", false);
+	ppSetColumn("DetectedMemory", Lbl("Memory"), format_readable_mb, NULL, 12, false);
+
+	ppSetColumn(ATTR_DAEMON_START_TIME, Lbl("   Uptime"), renderElapsedTime, "%T", 13, true);
 }
 
+#ifdef USE_LATE_PROJECTION
+#else
 void
 printMasterNormal(ClassAd *ad, bool first)
 {
@@ -1019,6 +1079,7 @@ printMasterNormal(ClassAd *ad, bool first)
 	if (ad)
 		pm.display (stdout, ad);
 }
+#endif
 
 void ppSetCkptSrvrNormalCols (int width)
 {
@@ -1030,6 +1091,8 @@ void ppSetCkptSrvrNormalCols (int width)
 	ppSetColumn(ATTR_SUBNET, "%-11s", !wide_display);
 }
 
+#ifdef USE_LATE_PROJECTION
+#else
 void
 printCkptSrvrNormal(ClassAd *ad, bool first)
 {
@@ -1042,6 +1105,7 @@ printCkptSrvrNormal(ClassAd *ad, bool first)
 	if (ad)
 		pm.display (stdout, ad);
 }
+#endif
 
 void ppSetStorageNormalCols (int width)
 {
@@ -1053,6 +1117,8 @@ void ppSetStorageNormalCols (int width)
 	ppSetColumn(ATTR_SUBNET, "%-11s", !wide_display);
 }
 
+#ifdef USE_LATE_PROJECTION
+#else
 void
 printStorageNormal(ClassAd *ad, bool first)
 {
@@ -1064,6 +1130,32 @@ printStorageNormal(ClassAd *ad, bool first)
 	}
 	if (ad)
 		pm.display (stdout, ad);
+}
+#endif
+
+void ppSetDefragNormalCols (int width)
+{
+	int name_width = wide_display ? -34 : -30;
+	if (width > 79 && ! wide_display) { name_width = MAX(-40, 48-width); }
+
+	ppSetColumn(ATTR_NAME,  name_width, ! wide_display);
+	ppSetColumn("MachinesDraining",     Lbl("Draining"), "%8d", true);
+	ppSetColumn("MachinesDrainingPeak", Lbl("    Peak"), "%8d", true);
+	ppSetColumn("DrainedMachines",      Lbl("TotalDrained"), "%12d", true);
+}
+
+void ppSetAccountingNormalCols (int width)
+{
+	int name_width = wide_display ? -34 : -20;
+	if (width > 79 && ! wide_display) { name_width = MAX(-40, 63-width); }
+
+	ppSetColumn(ATTR_NAME,  name_width, ! wide_display);
+	ppSetColumn("Priority",           Lbl("Priority"), "%8.2f", true);
+	ppSetColumn("PriorityFactor",     Lbl("PrioFactor"), "%10.2f", true);
+	ppSetColumn("ResourcesUsed",      Lbl("ResInUse"), "%8d", true);
+	//ppSetColumn("AccumulatedUsage",
+	ppSetColumn("WeightedAccumulatedUsage", Lbl("WeightedUsage"), "%13.2f", true);
+	ppSetColumn("LastUsageTime", Lbl("  LastUsage"), renderElapsedTime, "%T", 12, true);
 }
 
 void ppSetGridNormalCols (int width)
@@ -1079,6 +1171,8 @@ void ppSetGridNormalCols (int width)
 	ppSetColumn(ATTR_IDLE_JOBS,    "%8d", true);
 }
 
+#ifdef USE_LATE_PROJECTION
+#else
 void
 printGridNormal(ClassAd *ad, bool first)
 {
@@ -1091,6 +1185,7 @@ printGridNormal(ClassAd *ad, bool first)
 	if (ad)
 		pm.display (stdout, ad);
 }
+#endif
 
 void ppSetNegotiatorNormalCols (int width)
 {
@@ -1101,6 +1196,8 @@ void ppSetNegotiatorNormalCols (int width)
 	ppSetColumn(ATTR_MACHINE, name_width, ! wide_display);
 }
 
+#ifdef USE_LATE_PROJECTION
+#else
 void
 printNegotiatorNormal(ClassAd *ad, bool first)
 {
@@ -1113,6 +1210,7 @@ printNegotiatorNormal(ClassAd *ad, bool first)
 	if (ad)
 		pm.display (stdout, ad);
 }
+#endif
 
 /*
 We can't use the AttrListPrintMask here, because the AttrList does not actually contain
@@ -1137,6 +1235,8 @@ void ppSetAnyNormalCols (int /*width*/)
 	ppSetColumn(ATTR_NAME, wide_display ? "%-41s" : "%-41.41s", ! wide_display, ShortInvalidField /*"[???]"*/);
 }
 
+#ifdef USE_LATE_PROJECTION
+#else
 void
 printAnyNormal(ClassAd *ad, bool first)
 {
@@ -1149,7 +1249,7 @@ printAnyNormal(ClassAd *ad, bool first)
 	if (ad)
 		pm.display (stdout, ad);
 }
-
+#endif
 
 void
 printVerbose (ClassAd *ad)
@@ -1188,7 +1288,34 @@ printCustom (ClassAd *ad)
 }
 
 #ifdef USE_LATE_PROJECTION
-void ppInitPrintMask(ppOption pps)
+
+int ppAdjustProjection(void*pv, int /*index*/, Formatter * fmt, const char * attr)
+{
+	classad::References * proj = (classad::References *)pv;
+	if (attr) proj->insert(attr);
+	if (fmt->sf) {
+		const CustomFormatFnTable * pFnTable = getCondorStatusPrintFormats();
+		if (pFnTable) {
+			const CustomFormatFnTableItem * ptable = pFnTable->pTable;
+			for (int ii = 0; ii < (int)pFnTable->cItems; ++ii) {
+				if ((StringCustomFormat)ptable[ii].cust == fmt->sf) {
+					const char * pszz = ptable[ii].extra_attribs;
+					if (pszz) {
+						size_t cch = strlen(pszz);
+						while (cch > 0) {
+							proj->insert(pszz);
+							pszz += cch+1; cch = strlen(pszz);
+						}
+					}
+					break;
+				}
+			}
+		}
+	}
+	return 0;
+}
+
+void ppInitPrintMask(ppOption pps, classad::References & proj)
 {
 	if (using_print_format) {
 		return;
@@ -1268,6 +1395,14 @@ void ppInitPrintMask(ppOption pps)
 		ppSetStorageNormalCols(display_width);
 		break;
 
+		case PP_DEFRAG_NORMAL:
+		ppSetDefragNormalCols(display_width);
+		break;
+
+		case PP_ACCOUNTING_NORMAL:
+		ppSetAccountingNormalCols(display_width);
+		break;
+
 		case PP_GRID_NORMAL:
 		ppSetGridNormalCols(display_width);
 		break;
@@ -1281,6 +1416,8 @@ void ppInitPrintMask(ppOption pps)
 		default: // some cases have nothing to setup, this is needed to prevent gcc to bitching...
 		break;
 	}
+
+	pm.adjust_formats(ppAdjustProjection, &proj);
 }
 #endif // USE_LATE_PROJECTION
 
@@ -1361,6 +1498,46 @@ formatRealTime(long long t, Formatter &)
 	return format_time( t );
 }
 
+// extract version and build id from $CondorVersion string
+static const char *
+formatVersion(const char * condorver, Formatter & fmt)
+{
+	bool no_build_id = !(fmt.options & FormatOptionAutoWidth) && (fmt.width > -10 && fmt.width < 10);
+	static char ret[9+12+2];
+	char * r = ret;
+	const char * p = condorver;
+	while (*p && *p != ' ') ++p;  // skip $CondorVersion:
+	while (*p == ' ') ++p;
+	while (*p && *p != ' ') *r++ = *p++; // copy X.Y.Z version
+	while (*p == ' ') ++p;
+	while (*p && *p != ' ') ++p; // skip Feb
+	while (*p == ' ') ++p;
+	while (*p && *p != ' ') ++p; // skip 12
+	while (*p == ' ') ++p;
+	while (*p && *p != ' ') ++p; // skip 2016
+	while (*p == ' ') ++p;
+	// *p now points to a BuildId:, or "PRE-RELEASE"
+	if (*p == 'B') {
+		while (*p && *p != ' ') ++p;
+		while (*p == ' ') ++p;
+	}
+	if (*p != '$' || no_build_id) {
+		*r++ = '.';
+		while (*p && *p != '-' && *p != ' ') *r++ = *p++;
+	}
+	*r = 0;
+	return ret;
+}
+
+static bool renderVersion(std::string & str, AttrList*, Formatter & fmt)
+{
+	if ( ! str.empty()) {
+		str = formatVersion(str.c_str(), fmt);
+		return true;
+	}
+	return false;
+}
+
 /*
 # default condor_status output
 SELECT
@@ -1387,3 +1564,4 @@ static const CustomFormatFnTableItem LocalPrintFormats[] = {
 };
 static const CustomFormatFnTable LocalPrintFormatsTable = SORTED_TOKENER_TABLE(LocalPrintFormats);
 const CustomFormatFnTable * getCondorStatusPrintFormats() { return &LocalPrintFormatsTable; }
+

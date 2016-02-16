@@ -180,6 +180,9 @@ class CondorQuery
 		// If not set, all attributes are returned.
 	void setDesiredAttrs(char const * const *attrs);
 	void setDesiredAttrs(const std::vector<std::string> &attrs);
+	void setDesiredAttrs(const classad::References & attrs);
+		// set list of desired attributes as a space-separated string
+	void setDesiredAttrs(const char * attrs) { extraAttrs.Assign(ATTR_PROJECTION, attrs); }
 	void setDesiredAttrsExpr(const char *expr);
 
   private:
