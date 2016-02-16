@@ -81,9 +81,9 @@ struct Negotiator {
     Negotiator(const ClassAdWrapper &ad)
       : m_addr(), m_name("Unknown"), m_version("")
     {
-        if (!ad.EvaluateAttrString(ATTR_NEGOTIATOR_IP_ADDR, m_addr))
+        if (!ad.EvaluateAttrString(ATTR_MY_ADDRESS, m_addr))
         {
-            THROW_EX(ValueError, "Schedd address not specified.");
+            THROW_EX(ValueError, "Negotiator address not specified.");
         }
         ad.EvaluateAttrString(ATTR_NAME, m_name);
         ad.EvaluateAttrString(ATTR_VERSION, m_version);

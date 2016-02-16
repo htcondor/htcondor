@@ -46,7 +46,7 @@ struct Claim
             ad.EvaluateAttrString(ATTR_CAPABILITY, m_claim);
         }
 
-        if (!ad.EvaluateAttrString(ATTR_MY_ADDRESS, m_addr) && !ad.EvaluateAttrString(ATTR_STARTD_IP_ADDR, m_addr))
+        if (!ad.EvaluateAttrString(ATTR_MY_ADDRESS, m_addr))
         {
             THROW_EX(ValueError, "No contact string in ClassAd");
         }
