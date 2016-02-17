@@ -19,8 +19,7 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item HTCondor version 8.5.2 not yet released.
-%\item HTCondor version 8.5.2 released on Month Date, 2015.
+\item HTCondor version 8.5.2 released on February 18, 2015.
 
 \end{itemize}
 
@@ -29,14 +28,39 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Docker Universe jobs now report and update
-ResidentSetSize, ImageSize, MemoryUsage, NetworkInput, and 
-NetworkOutput attributes in the job ad and log file.
-\Ticket{5456}
+\item \Bold{\Condor{q} now defaults to showing only the current user's
+jobs, unless the current user is a queue superuser.} This behavior
+can be turned off by setting the new configuration option \Macro{CONDOR\_Q\_ONLY\_MY\_JOBS}
+to \Expr{False} in the configuration for either the \Condor{schedd} or \Condor{q}. It can also be 
+turned off by passing the new \Opt{-allusers} command line option to \Condor{q}.
+\Ticket{5271}
+
+\item Added support for immutable job attributes and protected job attributes.
+\Ticket{5065}
 
 \item Improved the speed of \Condor{q} and other tools when
 querying non-local servers.
 \Ticket{5150}
+
+\item The new \Opt{-batch} command line option to \Condor{q} can be used to show a single
+line of progress information for a batch of jobs, where a batch is either an entire workflow (a DAG, including sub-DAGs), all
+of the jobs in a cluster, all of the jobs from a single user that have the same executable specified in their submit file,
+or all of the jobs from a single user that have the same batch name.
+\Ticket{4976}
+
+\item \Condor{submit} and \Condor{submit\_dag} both have a new command line option \Opt{-batch-name}
+which can be used to set the batch name used by \Condor{q} \Opt{-batch}.
+\Ticket{5490}
+
+\item \Condor{q} and \Condor{status} now attempt to avoid truncating data by making use of the
+full width of the terminal.
+\Ticket{5429}
+\Ticket{5459}
+
+\item Docker Universe jobs now report and update
+ResidentSetSize, ImageSize, MemoryUsage, NetworkInput, and 
+NetworkOutput attributes in the job ad and log file.
+\Ticket{5456}
 
 \item Added the capability to set ClassAd attributes for a
 \Condor{dagman} job within the DAG file by using the new
@@ -54,28 +78,6 @@ The timestamp in curly brackets at the end is the actual timestamp
 of the event.
 \Ticket{5439}
 
-\item \Bold{\Condor{q} now defaults to showing only the current user's
-jobs, unless the current user is a queue superuser.} This behavior
-can be turned off by setting the new configuration option \Macro{CONDOR\_Q\_ONLY\_MY\_JOBS}
-to \Expr{False} in the configuration for either the \Condor{schedd} or \Condor{q}. It can also be 
-turned off by passing the new \Opt{-allusers} command line option to \Condor{q}.
-\Ticket{5271}
-
-\item The new \Opt{-batch} command line option to \Condor{q} can be used to show a single
-line of progress information for a batch of jobs, where a batch is either an entire workflow (a DAG, including sub-DAGs), all
-of the jobs in a cluster, all of the jobs from a single user that have the same executable specified in their submit file,
-or all of the jobs from a single user that have the same batch name.
-\Ticket{4976}
-
-\item \Condor{submit} and \Condor{submit\_dag} both have a new command line option \Opt{-batch-name}
-which can be used to set the batch name used by \Condor{q} \Opt{-batch}.
-\Ticket{5490}
-
-\item \Condor{q} and \Condor{status} now attempt to avoid truncating data by making use of the
-full width of the terminal.
-\Ticket{5429}
-\Ticket{5459}
-
 \item The \Opt{-run} and \Opt{-hold} arguments of \Condor{q} used to produce garbage output
 when used with other formatting options such as \Opt{-format}.  Now they will always constrain
 the query, and will also set the output format when used by themselves.
@@ -84,9 +86,6 @@ the query, and will also set the output format when used by themselves.
 \item The \Condor{status} \Opt{-verbose} argument has been removed;
 the equivalent \Opt{-long} argument should be used instead.
 % No ticket for this -- wenger 2016-02-11
-
-\item Support for immutable job attributes and protected job attributes.
-\Ticket{5065}
 
 \end{itemize}
 
