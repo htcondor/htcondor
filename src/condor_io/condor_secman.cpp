@@ -2020,15 +2020,21 @@ SecManStartCommand::receivePostAuthInfo_inner()
 				// gather some additional data for useful error reporting
 				MyString response_user;
 				MyString response_method = m_sock->getAuthenticationMethodUsed();
-				if (response_method == "") {
-					response_method = "(no authentication)";
-				}
 				post_auth_info.LookupString(ATTR_SEC_USER,response_user);
 
 				// push error message on the stack and print to the log
 				MyString errmsg;
-				errmsg.formatstr("Received \"%s\" from server for user %s using method %s.",
-					response_rc.Value(), response_user.Value(), response_method.Value());
+				if (response_method == "") {
+					response_method = "(no authentication)";
+					errmsg.formatstr( "Received \"%s\" from server for user %s using no authentication method, which may imply host-based security.  Our address was '%s', and server's address was '%s'.  Check your ALLOW settings and IP protocols.",
+						response_rc.Value(), response_user.Value(),
+						m_sock->my_addr().to_ip_string().Value(),
+						m_sock->peer_addr().to_ip_string().Value()
+						);
+				} else {
+					errmsg.formatstr("Received \"%s\" from server for user %s using method %s.",
+						response_rc.Value(), response_user.Value(), response_method.Value());
+				}
 				dprintf (D_ALWAYS, "SECMAN: FAILED: %s\n", errmsg.Value());
 				m_errstack->push ("SECMAN", SECMAN_ERR_AUTHORIZATION_FAILED, errmsg.Value());
 				return StartCommandFailed;
