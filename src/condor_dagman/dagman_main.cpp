@@ -1421,7 +1421,9 @@ Dagman::ResolveDefaultLog()
 		check_warning_strictness( DAG_STRICT_1 );
 	}
 
-	bool nfsLogIsError = param_boolean( "DAGMAN_LOG_ON_NFS_IS_ERROR", true );
+	bool nfsLogIsError = param_boolean( "DAGMAN_LOG_ON_NFS_IS_ERROR", false );
+	debug_printf( DEBUG_NORMAL, "DAGMAN_LOG_ON_NFS_IS_ERROR setting: %s\n",
+				nfsLogIsError ? "True" : "False" );
 	if ( nfsLogIsError ) {
 		bool userlog_locking = param_boolean( "ENABLE_USERLOG_LOCKING", false );
 		if ( userlog_locking ) {
