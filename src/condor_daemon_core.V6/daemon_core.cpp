@@ -244,7 +244,8 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 	sigTable(10),
 	reapTable(4),
 	t(TimerManager::GetTimerManager()),
-	m_dirty_command_sock_sinfuls(true)
+	m_dirty_command_sock_sinfuls(true),
+	m_advertise_ipv4_first(false)
 {
 
 	if(ComSize < 0 || SigSize < 0 || SocSize < 0 || PidSize < 0 || ReapSize < 0)
@@ -327,6 +328,13 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 #ifdef HAVE_EXT_GSOAP
 	soap_ssl_sock = -1;
 #endif
+
+	// See the comment in the header.  This can't be a reconfigure setting
+	// because everybody's sinfuls are derived from the shared port's sinful
+	// (when shared port is enabled, which it is by default), and the shared
+	// port's sinful (and ad file on disk) isn't necessarily updated before
+	// anyone else's, the master particularly included.
+	m_advertise_ipv4_first = param_boolean( "ADVERTISE_IPV4_FIRST", false );
 
 	m_dirty_sinful = true;
 
@@ -1125,6 +1133,20 @@ char const * DaemonCore::InfoCommandSinfulString(int pid)
 }
 
 
+void addIPToSinfuls(	condor_sockaddr & sa, condor_sockaddr & fa,
+						Sinful & m_sinful, Sinful & sPublic, Sinful & sPrivate ) {
+	if( sa.is_valid() ) {
+		if( fa.is_valid() && fa.get_protocol() == sa.get_protocol() ) {
+			fa.set_port( sa.get_port() );
+			m_sinful.addAddrToAddrs( fa );
+		} else {
+			m_sinful.addAddrToAddrs( sa );
+		}
+		sPublic.addAddrToAddrs( sa );
+		sPrivate.addAddrToAddrs( sa );
+	}
+}
+
 // NOTE: InfoCommandSinfulStringMyself always returns a pointer to a _static_ buffer!
 // This means you'd better copy or strdup the result if you expect it to never
 // change on you.  Plus, realize static buffers aren't exactly thread safe!
@@ -1356,25 +1378,13 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 		ASSERT( sa6.is_valid() || sa4.is_valid() );
 		Sinful sPublic( sinful_public );
 		Sinful sPrivate( sinful_private != NULL ? sinful_private : "" );
-		if( sa6.is_valid() ) {
-			if( fa.is_valid() && fa.is_ipv6() ) {
-				fa.set_port( sa6.get_port() );
-				m_sinful.addAddrToAddrs( fa );
-			} else {
-				m_sinful.addAddrToAddrs( sa6 );
-			}
-			sPublic.addAddrToAddrs( sa6 );
-			sPrivate.addAddrToAddrs( sa6 );
-		}
-		if( sa4.is_valid() ) {
-			if( fa.is_valid() && fa.is_ipv4() ) {
-				fa.set_port( sa4.get_port() );
-				m_sinful.addAddrToAddrs( fa );
-			} else {
-				m_sinful.addAddrToAddrs( sa4 );
-			}
-			sPublic.addAddrToAddrs( sa4 );
-			sPrivate.addAddrToAddrs( sa4 );
+
+		if( m_advertise_ipv4_first ) {
+			addIPToSinfuls( sa4, fa, m_sinful, sPublic, sPrivate );
+			addIPToSinfuls( sa6, fa, m_sinful, sPublic, sPrivate );
+		} else {
+			addIPToSinfuls( sa6, fa, m_sinful, sPublic, sPrivate );
+			addIPToSinfuls( sa4, fa, m_sinful, sPublic, sPrivate );
 		}
 
 		free( sinful_public );

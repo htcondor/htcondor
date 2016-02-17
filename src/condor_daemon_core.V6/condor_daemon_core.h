@@ -2139,6 +2139,17 @@ class DaemonCore : public Service
 	std::vector<Sinful> m_command_sock_sinfuls; // Cached copy of our command sockets' sinful strings.
 	bool m_dirty_command_sock_sinfuls; // true if m_command_sock_sinfuls needs to be reinitialized.
 
+	//
+	// For compabitility with existing configurations and code, when we
+	// enabled mixed-mode (IPv4 and IPv6) by default, we decided to change
+	// to advertising IPv4 addresses first.  Since older mixed-mode clients
+	// will always use the earliest of the addresses it can, this avoids
+	// a number of problems with host-based ALLOW settings.  Of course,
+	// this is against the RFC, and may not be what administrators want to
+	// do as they continue to migrate to IPv6, so now we have a new knob.
+	//
+	bool m_advertise_ipv4_first;
+
 	bool CommandNumToTableIndex(int cmd,int *cmd_index);
 
 	void InitSharedPort(bool in_init_dc_command_socket=false);

@@ -7355,7 +7355,7 @@ friendly_Name=Whether condor_q will query all jobs, or only the current owners j
 usage=Set to true to have condor_q query only the owners jobs by default
 
 [ENABLE_IPV6]
-default=false
+default=true
 type=bool
 reconfig=true
 customization=seldom
@@ -7371,6 +7371,23 @@ reconfig=true
 customization=seldom
 friendly_name=Enable IPv4
 usage=Should HTCondor listen on IPv4 interfaces?
+tags=daemon_core
+
+[PREFER_IPV4]
+default=true
+version=8.5.3
+type=bool
+reconfig=false
+friendly_name=Prefer IPv4
+usage=Should HTCondor prefer IPv4 (over IPv6) when given the choice?
+tags=daemon_core
+
+[ADVERTISE_IPV4_FIRST]
+default=$(PREFER_IPV4)
+version=8.5.3
+reconfig=false
+friendly_name=Advertise IPv4 First
+usage=Should HTCondor list its IPv4 address(es) before its IPv6 addresses?
 tags=daemon_core
 
 [JOB_EXECDIR_PERMISSIONS]
