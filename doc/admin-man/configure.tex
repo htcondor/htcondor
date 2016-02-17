@@ -10559,21 +10559,15 @@ in section~\ref{sec:DAG-configuration}.
 \label{param:DAGManLogOnNfsIsError}
 \item[\Macro{DAGMAN\_LOG\_ON\_NFS\_IS\_ERROR}]
   A boolean value that controls whether \Condor{dagman} prohibits
-  node job submit description files with job event log files on NFS.
-  This value is ignored if \MacroNI{CREATE\_LOCKS\_ON\_LOCAL\_DISK} is 
-  \Expr{True} and
-  \MacroNI{ENABLE\_USERLOG\_LOCKING} is \Expr{True}.
-  If a DAG references such a submit description file and
-  \MacroNI{DAGMAN\_LOG\_ON\_NFS\_IS\_ERROR} is \Expr{True},
+  a DAG workflow log from being on an NFS file system.
+  This value is ignored if \MacroNI{CREATE\_LOCKS\_ON\_LOCAL\_DISK} 
+  and \MacroNI{ENABLE\_USERLOG\_LOCKING} are both \Expr{True}.
+  If a DAG uses such a workflow log file file and
+  \MacroNI{DAGMAN\_LOG\_ON\_NFS\_IS\_ERROR} is \Expr{True}
+  (and not ignored),
   the DAG will abort during the initialization process. 
-  If \MacroNI{DAGMAN\_LOG\_ON\_NFS\_IS\_ERROR} is \Expr{False}, a warning
-  will be issued, but the DAG will still be submitted.
-  It is \emph{strongly}
-  recommended that \MacroNI{DAGMAN\_LOG\_ON\_NFS\_IS\_ERROR}
-  remain set to the default value, because running a DAG with node job
-  log files on NFS will often cause errors.
   If not defined, \MacroNI{DAGMAN\_LOG\_ON\_NFS\_IS\_ERROR} defaults to
-  \Expr{True}.
+  \Expr{False}.
 
 \label{param:DAGManAbortDuplicates}
 \item[\Macro{DAGMAN\_ABORT\_DUPLICATES}]

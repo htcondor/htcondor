@@ -33,7 +33,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item The default for \MacroNI{DAGMAN\_LOG\_ON\_NFS\_IS\_ERROR} has
+been changed from \Expr{True} to \Expr{False}.  This is the result
+of changes in the 8.3 series that mean that file locking is no
+longer required on user logs.
+\Ticket{5516}
 
 \end{itemize}
 
