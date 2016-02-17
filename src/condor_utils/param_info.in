@@ -977,7 +977,7 @@ review=?
 tags=dagman,dagman_main
 
 [DAGMAN_ALWAYS_RUN_POST]
-default=true
+default=false
 type=bool
 reconfig=false
 customization=seldom

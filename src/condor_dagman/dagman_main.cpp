@@ -343,7 +343,7 @@ Dagman::Config()
 	debug_printf( DEBUG_NORMAL, "DAGMAN_SUBMIT_DEPTH_FIRST setting: %s\n",
 				submitDepthFirst ? "True" : "False" );
 
-	_runPost = param_boolean( "DAGMAN_ALWAYS_RUN_POST", true );
+	_runPost = param_boolean( "DAGMAN_ALWAYS_RUN_POST", false );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_ALWAYS_RUN_POST setting: %s\n",
 			_runPost ? "True" : "False" );
 
