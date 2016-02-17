@@ -1110,7 +1110,16 @@ bool Sock::guess_address_string(char const* host, int port, condor_sockaddr& add
 	return true;
 }
 
+bool routingParametersInitialized = false;
+bool ignoreTargetProtocolPreference = false;
+bool preferOutboundIPv4 = false;
+
 bool Sock::chooseAddrFromAddrs( char const * host, std::string & addr ) {
+	if(! routingParametersInitialized) {
+		ignoreTargetProtocolPreference = param_boolean( "IGNORE_TARGET_PROTOCOL_PREFERENCE", false );
+		preferOutboundIPv4 = param_boolean( "PREFER_OUTBOUND_IPV4", false );
+	}
+
 	//
 	// If host is a Sinful string and contains an addrs parameter,
 	// choose one of the listed addresses and rewrite host to match.
@@ -1147,6 +1156,12 @@ bool Sock::chooseAddrFromAddrs( char const * host, std::string & addr ) {
 	for( unsigned i = 0; i < v->size(); ++i ) {
 		condor_sockaddr c = (*v)[i];
 		int d = -1 * c.desirability();
+		if( ignoreTargetProtocolPreference ) {
+			// These constants assume that the max desirability() < 10.
+			d *= 100;
+			if( preferOutboundIPv4 && c.is_ipv4() ) { d -= 10; }
+			if( (!preferOutboundIPv4) && (!c.is_ipv4()) ) { d -= 10; }
+		}
 		sortedByDesire.insert(std::make_pair( d, c ));
 		dprintf( D_HOSTNAME, "\t%d\t%s\n", d, c.to_ip_and_port_string().c_str() );
 	}
