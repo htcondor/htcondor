@@ -76,7 +76,7 @@ full width of the terminal.
 \Ticket{5429}
 \Ticket{5459}
 
-\item the \Opt{-run} and \Opt{-hold} arguments of \Condor{q} used to produce garbage output
+\item The \Opt{-run} and \Opt{-hold} arguments of \Condor{q} used to produce garbage output
 when used with other formatting options such as \Opt{-format}.  Now they will always constrain
 the query, and will also set the output format when used by themselves.
 \Ticket{11}
@@ -84,6 +84,9 @@ the query, and will also set the output format when used by themselves.
 \item The \Condor{status} \Opt{-verbose} argument has been removed;
 the equivalent \Opt{-long} argument should be used instead.
 % No ticket for this -- wenger 2016-02-11
+
+\item Support for immutable job attributes and protected job attributes.
+\Ticket{5065}
 
 \end{itemize}
 
