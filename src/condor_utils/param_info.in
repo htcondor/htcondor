@@ -794,7 +794,7 @@ review=?
 tags=eventd,scheduled_event
 
 [DAGMAN_LOG_ON_NFS_IS_ERROR]
-default=true
+default=false
 type=bool
 reconfig=false
 customization=seldom
