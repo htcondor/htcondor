@@ -2377,6 +2377,7 @@ enum {
 	idATTR_OWNER,
 	idATTR_RANK,
 	idATTR_REQUIREMENTS,
+	idATTR_X509_USER_PROXY,
 };
 
 enum {
@@ -2419,6 +2420,7 @@ static const ATTR_IDENT_PAIR aSpecialSetAttrs[] = {
 	FILL(ATTR_PROC_ID,            catJobId),
 	FILL(ATTR_RANK,               catTargetScope),
 	FILL(ATTR_REQUIREMENTS,       catTargetScope),
+	FILL(ATTR_X509_USER_PROXY,    0),
 };
 #undef FILL
 
@@ -2699,6 +2701,65 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		if ( new_status != curr_status && curr_status > 0 ) {
 			SetAttributeInt( cluster_id, proc_id, ATTR_LAST_JOB_STATUS, curr_status, flags );
 		}
+	} else if (attr_id == idATTR_X509_USER_PROXY) {
+		dprintf (D_SECURITY, "ATTRS: setting x509userproxy for %i %i\n", cluster_id, proc_id);
+
+#if defined(HAVE_EXT_GLOBUS)
+			// We can't just use attr_value, since it contains '"'
+			// marks.  Carefully remove them here.
+		MyString proxy_buf;
+		char const *proxy = attr_value;
+		bool proxy_is_quoted = false;
+		if( *proxy == '"' ) {
+			proxy_buf = proxy+1;
+			if( proxy_buf.Length() && proxy_buf[proxy_buf.Length()-1] == '"' )
+			{
+				proxy_buf.setChar(proxy_buf.Length()-1,'\0');
+				proxy_is_quoted = true;
+			}
+			proxy = proxy_buf.Value();
+		}
+
+		// load the proxy so we can extract attrs
+		globus_gsi_cred_handle_t proxy_handle = x509_proxy_read( proxy );
+
+		char *proxy_subject = x509_proxy_subject_name( proxy_handle );
+		dprintf (D_SECURITY, "ATTRS: %s = %s\n", ATTR_X509_USER_PROXY_SUBJECT, proxy_subject?proxy_subject:"NULL");
+		SetAttributeRawString(cluster_id, proc_id, ATTR_X509_USER_PROXY_SUBJECT, proxy_subject?proxy_subject:"");
+
+		time_t proxy_expiration = x509_proxy_expiration_time( proxy_handle );
+		dprintf (D_SECURITY, "ATTRS: %s = %li\n", ATTR_X509_USER_PROXY_EXPIRATION, proxy_expiration);
+		SetAttributeInt( cluster_id, proc_id, ATTR_X509_USER_PROXY_EXPIRATION, proxy_expiration, flags );
+
+		char *proxy_email = x509_proxy_email( proxy_handle );
+		dprintf (D_SECURITY, "ATTRS: %s = %s\n", ATTR_X509_USER_PROXY_EMAIL, proxy_email?proxy_email:"NULL");
+		SetAttributeRawString(cluster_id, proc_id, ATTR_X509_USER_PROXY_EMAIL, proxy_email?proxy_email:"");
+
+		// set VOMS attrs regardless of if they are present -- we need to explicitly clear them if not
+		char* voname = NULL;
+		char* firstfqan = NULL;
+		char* fullfqan = NULL;
+
+		// returns zero on success -- doesn't matter here.
+		extract_VOMS_info( proxy_handle, 0, &voname, &firstfqan, &fullfqan);
+
+		dprintf( D_SECURITY, "ATTRS: %s = %s\n", ATTR_X509_USER_PROXY_VONAME, voname?voname:"NULL");
+		SetAttributeRawString(cluster_id, proc_id, ATTR_X509_USER_PROXY_VONAME, voname?voname:"");
+
+		dprintf( D_SECURITY, "ATTRS: %s = %s\n", ATTR_X509_USER_PROXY_FIRST_FQAN, firstfqan?firstfqan:"NULL");
+		SetAttributeRawString(cluster_id, proc_id, ATTR_X509_USER_PROXY_FIRST_FQAN, firstfqan?firstfqan:"");
+
+		dprintf( D_SECURITY, "ATTRS: %s = %s\n", ATTR_X509_USER_PROXY_FQAN, fullfqan?fullfqan:"NULL");
+		SetAttributeRawString(cluster_id, proc_id, ATTR_X509_USER_PROXY_FQAN, fullfqan?fullfqan:"");
+
+		// clean up
+		free( proxy_subject );
+		free( proxy_email );
+		free( voname );
+		free( firstfqan );
+		free( fullfqan );
+		x509_proxy_free( proxy_handle );
+#endif
 	}
 #if defined(ADD_TARGET_SCOPING)
 /* Disable AddTargetRefs() for now
@@ -3239,19 +3300,29 @@ AddSessionAttributes(const std::list<std::string> new_ad_keys)
 	classad::ClassAdUnParser unparse;
 	unparse.SetOldClassAd(true, true);
 
+	// See if the values have already been set
+	char* x509up = NULL;
+
 	for (std::list<std::string>::const_iterator it = new_ad_keys.begin(); it != new_ad_keys.end(); ++it)
 	{
 		JobQueueKey job( it->c_str() );
 			// Set attribute for process ads: prevents jobs from overriding these.
 		if (job.proc == -1) {continue;}
-		JobQueueKeyBuf cluster( job.cluster, -1 );
+
+		// check if x509up was defined for this job
+		int rc = GetAttributeExprNew(job.cluster, job.proc, "x509userproxy", &x509up);
+		if (rc != -1) {
+			// we don't need this value, but it was allocated for us
+			free(x509up);
+			continue;
+		}
 
 		for (AttrList::const_iterator attr_it = policy_ad.begin(); attr_it != policy_ad.end(); ++attr_it)
 		{
 			std::string attr_value_buf;
 			unparse.Unparse(attr_value_buf, attr_it->second);
 			SetAttribute(job.cluster, job.proc, attr_it->first.c_str(), attr_value_buf.c_str());
-			dprintf(D_SECURITY, "SOCKET ATTRIBUTES: SetAttribute %i.%i %s=%s\n", job.cluster, job.proc, attr_it->first.c_str(), attr_value_buf.c_str());
+			dprintf(D_SECURITY, "ATTRS: SetAttribute %i.%i %s=%s\n", job.cluster, job.proc, attr_it->first.c_str(), attr_value_buf.c_str());
 		}
 	}
 }
