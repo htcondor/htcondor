@@ -24,6 +24,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
+#include <dlfcn.h>
 
 #include "config.h"
 
@@ -1953,6 +1954,21 @@ int main(int, char **)
 	/* Parse command line args */
 
 	/* Activate Globus modules we intend to use */
+
+	// When loading a driver library for XIO, Globus
+	// uses lt_dlopen(), which ignores our RPATH. This means that
+	// it won't find the globus_xio_gsi_driver library that we
+	// include in UW builds of Condor.
+	// If we load the library with dlopen() first, then lt_dlopen()
+	// will find it.
+#if defined(LINUX)
+	void *dl_ptr = dlopen( "libglobus_xio_gsi_driver.so", RTLD_LAZY);
+	if ( dl_ptr == NULL ) {
+		fprintf( stderr, "Failed to open globus_xio_gsi_driver.\n" );
+		return 1;
+	}
+#endif
+
 	if ( globus_thread_set_model(GLOBUS_THREAD_MODEL_NONE) != GLOBUS_SUCCESS ) {
 		printf("Unable to set Globus thread model!\n");
 		_exit(1);

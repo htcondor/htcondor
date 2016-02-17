@@ -26,6 +26,7 @@
 #include <strings.h>
 #include <libgen.h>
 #include <ldap.h>
+#include <dlfcn.h>
 
 #include "config.h"
 
@@ -2920,17 +2921,6 @@ main_activate_globus()
 {
 	int err;
 
-	err = globus_thread_set_model(GLOBUS_THREAD_MODEL_NONE);
-	if ( err != GLOBUS_SUCCESS ) {
-		return err;
-	}
-/*
-	err = globus_module_activate( GLOBUS_GRAM_CLIENT_MODULE );
-	if ( err != GLOBUS_SUCCESS ) {
-		globus_module_deactivate( GLOBUS_GRAM_CLIENT_MODULE );
-		return err;
-	}
-*/
 	err = globus_module_activate( GLOBUS_FTP_CLIENT_MODULE );
 	if ( err != GLOBUS_SUCCESS ) {
 		globus_module_deactivate( GLOBUS_FTP_CLIENT_MODULE );
@@ -3283,6 +3273,26 @@ int main(int argc, char ** argv)
 	unsetenv("X509_USER_CERT");
 
 	/* Parse command line args */
+
+	// When loading a driver library for XIO, Globus
+	// uses lt_dlopen(), which ignores our RPATH. This means that
+	// it won't find the globus_xio_gsi_driver library that we
+	// include in UW builds of Condor.
+	// If we load the library with dlopen() first, then lt_dlopen()
+	// will find it.
+#if defined(LINUX)
+	void *dl_ptr = dlopen( "libglobus_xio_gsi_driver.so", RTLD_LAZY);
+	if ( dl_ptr == NULL ) {
+		fprintf( stderr, "Failed to open globus_xio_gsi_driver.\n" );
+		return 1;
+	}
+#endif
+
+	// TODO Try enabling threaded mode.
+	if ( globus_thread_set_model(GLOBUS_THREAD_MODEL_NONE) != GLOBUS_SUCCESS ) {
+		printf("Unable to set Globus thread model!\n");
+		_exit(1);
+	}
 
 	/* Activate Globus modules we intend to use */
     err = globus_module_activate( GLOBUS_COMMON_MODULE );
