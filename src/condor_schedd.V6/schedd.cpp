@@ -2593,7 +2593,7 @@ count_a_job(JobQueueJob* job, const JOB_ID_KEY& /*jid*/, void*)
 			scheduler.SchedUniverseJobsRunning += cur_hosts;
 			scheduler.SchedUniverseJobsIdle += (max_hosts - cur_hosts);
 			Counters->SchedulerJobsRunning += cur_hosts;
-			Counters->SchedulerJobsIdle = (max_hosts - cur_hosts);
+			Counters->SchedulerJobsIdle += (max_hosts - cur_hosts);
 		}
 		if (universe == CONDOR_UNIVERSE_LOCAL)
 		{
@@ -2602,7 +2602,7 @@ count_a_job(JobQueueJob* job, const JOB_ID_KEY& /*jid*/, void*)
 			scheduler.LocalUniverseJobsRunning += cur_hosts;
 			scheduler.LocalUniverseJobsIdle += (max_hosts - cur_hosts);
 			Counters->LocalJobsRunning += cur_hosts;
-			Counters->LocalJobsIdle = (max_hosts - cur_hosts);
+			Counters->LocalJobsIdle += (max_hosts - cur_hosts);
 		}
 			// We want to record the cluster id of all idle MPI and parallel
 		    // jobs
