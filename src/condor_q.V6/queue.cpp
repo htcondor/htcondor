@@ -5110,7 +5110,7 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 	if ((useFastPath == 2) && !use_v3) {
 		useFastPath = 1;
 	}
-	if ( ! fetch_opts && use_v3) {
+	if ( ! fetch_opts && (useFastPath == 2)) {
 		fetch_opts = default_fetch_opts;
 	}
 #ifdef USE_LATE_PROJECTION

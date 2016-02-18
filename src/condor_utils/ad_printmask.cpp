@@ -1484,7 +1484,7 @@ display (std::string & out, MyRowOfValues & rov)
 		case CustomFormatFn::FLT_CUSTOM_FMT:
 			if (col_is_valid || (fmt->options & FormatOptionAlwaysCall)) {
 				pval->IsNumber(realValue);
-				pszVal = fmt->df(realValue, *fmt);
+				pszVal = fmt->ff(realValue, *fmt);
 				col_is_valid = true; printfFmt = NULL;
 			}
 			break;
