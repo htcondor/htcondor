@@ -920,6 +920,10 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 
 #define ATTR_WEIGHTED_IDLE_JOBS "WeightedIdleJobs"
 #define ATTR_WEIGHTED_RUNNING_JOBS "WeightedRunningJobs"
+#define ATTR_IDLE_LOCAL_JOBS "LocalJobsIdle"
+#define ATTR_RUNNING_LOCAL_JOBS "LocalJobsRunning"
+#define ATTR_IDLE_SCHEDULER_JOBS "SchedulerJobsIdle"
+#define ATTR_RUNNING_SCHEDULER_JOBS "SchedulerJobsRunning"
 
 //************* Added for EC2 Jobs ***************************//
 #define ATTR_EC2_ACCESS_KEY_ID  "EC2AccessKeyId"

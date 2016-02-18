@@ -1034,6 +1034,22 @@ Scheduler::fill_submitter_ad(ClassAd & pAd, const OwnerData & Owner, int flock_l
 	if (want_dprintf)
 		dprintf (dprint_level, "Changed attribute: %s = %d\n", ATTR_WEIGHTED_IDLE_JOBS, Counters.WeightedJobsIdle);
 
+	pAd.Assign(ATTR_RUNNING_LOCAL_JOBS, Counters.LocalJobsIdle);
+	if (want_dprintf)
+		dprintf (dprint_level, "Changed attribute: %s = %d\n", ATTR_RUNNING_LOCAL_JOBS, Counters.LocalJobsIdle);
+
+	pAd.Assign(ATTR_IDLE_LOCAL_JOBS, Counters.LocalJobsRunning);
+	if (want_dprintf)
+		dprintf (dprint_level, "Changed attribute: %s = %d\n", ATTR_IDLE_LOCAL_JOBS, Counters.LocalJobsRunning);
+
+	pAd.Assign(ATTR_RUNNING_SCHEDULER_JOBS, Counters.SchedulerJobsRunning);
+	if (want_dprintf)
+		dprintf (dprint_level, "Changed attribute: %s = %d\n", ATTR_RUNNING_SCHEDULER_JOBS, Counters.SchedulerJobsRunning);
+
+	pAd.Assign(ATTR_IDLE_SCHEDULER_JOBS, Counters.SchedulerJobsIdle);
+	if (want_dprintf)
+		dprintf (dprint_level, "Changed attribute: %s = %d\n", ATTR_IDLE_SCHEDULER_JOBS, Counters.SchedulerJobsIdle);
+
 	pAd.Assign(ATTR_HELD_JOBS, Counters.JobsHeld);
 	if (want_dprintf)
 		dprintf (dprint_level, "Changed attribute: %s = %d\n", ATTR_HELD_JOBS, Counters.JobsHeld);
@@ -1550,6 +1566,10 @@ Scheduler::count_jobs()
 	pAd.Assign(ATTR_HELD_JOBS, 0);
 	pAd.Assign(ATTR_WEIGHTED_RUNNING_JOBS, 0);
 	pAd.Assign(ATTR_WEIGHTED_IDLE_JOBS, 0);
+	pAd.Assign(ATTR_IDLE_LOCAL_JOBS, 0);
+	pAd.Assign(ATTR_RUNNING_LOCAL_JOBS, 0);
+	pAd.Assign(ATTR_IDLE_SCHEDULER_JOBS, 0);
+	pAd.Assign(ATTR_RUNNING_SCHEDULER_JOBS, 0);
 
 	// clear owner stats in case we have stale ones in pAd
 	// PRAGMA_REMIND("tj: perhaps we should be continuing to publish Owner status until the owners decay?")
@@ -2562,23 +2582,27 @@ count_a_job(JobQueueJob* job, const JOB_ID_KEY& /*jid*/, void*)
 	Counters->JobsRecentlyAdded = 0;
 
 	if ( (universe != CONDOR_UNIVERSE_GRID) &&	// handle Globus below...
-		 (!service_this_universe(universe,job))  ) 
+		 (!service_this_universe(universe,job))  )
 	{
 			// Deal with all the Universes which we do not service, expect
 			// for Globus, which we deal with below.
-		if( universe == CONDOR_UNIVERSE_SCHEDULER ) 
+		if (universe == CONDOR_UNIVERSE_SCHEDULER)
 		{
 			// Count REMOVED or HELD jobs that are in the process of being
 			// killed. cur_hosts tells us which these are.
 			scheduler.SchedUniverseJobsRunning += cur_hosts;
 			scheduler.SchedUniverseJobsIdle += (max_hosts - cur_hosts);
+			Counters->SchedulerJobsRunning += cur_hosts;
+			Counters->SchedulerJobsIdle = (max_hosts - cur_hosts);
 		}
-		if( universe == CONDOR_UNIVERSE_LOCAL ) 
+		if (universe == CONDOR_UNIVERSE_LOCAL)
 		{
 			// Count REMOVED or HELD jobs that are in the process of being
 			// killed. cur_hosts tells us which these are.
 			scheduler.LocalUniverseJobsRunning += cur_hosts;
 			scheduler.LocalUniverseJobsIdle += (max_hosts - cur_hosts);
+			Counters->LocalJobsRunning += cur_hosts;
+			Counters->LocalJobsIdle = (max_hosts - cur_hosts);
 		}
 			// We want to record the cluster id of all idle MPI and parallel
 		    // jobs
