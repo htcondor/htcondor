@@ -651,7 +651,7 @@ CondorQ::getFilterAndProcessAds( const char *constraint,
 
 	if (useAll) {
 			// The fast case with the new protocol
-		char *attrs_str = attrs.print_to_delimed_string();
+		char *attrs_str = attrs.print_to_delimed_string("\n");
 		GetAllJobsByConstraint_Start(constraint, attrs_str);
 		free(attrs_str);
 
