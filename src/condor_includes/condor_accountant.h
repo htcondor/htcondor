@@ -87,6 +87,8 @@ public:
 
   void CheckMatches(ClassAdListDoesNotDeleteAds& ResourceList);  // Remove matches that are not claimed
 
+  int GetLastUpdateTime() const { return LastUpdateTime; }
+
   double GetLimit(const MyString& limit);
   double GetLimitMax(const MyString& limit);
   void ReportLimits(AttrList *attrList);

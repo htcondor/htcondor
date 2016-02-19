@@ -465,6 +465,7 @@ main(int argc, char* argv[])
     }
     else if (IsArg(argv[i],"grouprollup")) {
       GroupRollup=true;
+	  fromCollector = false;
     }
     else if (IsArg(argv[i],"grouporder")) {
       GroupOrder=true;
@@ -534,6 +535,14 @@ main(int argc, char* argv[])
       if (argc-i<=1) usage(argv[0]);
       pool = argv[i+1];
       i++;
+	} 
+	else if (IsArg(argv[i], "collector", 3)) {
+		fromCollector = true;
+      	i++;
+	}
+	else if (IsArg(argv[i], "negotiator", 3)) {
+		fromCollector = false;
+      	i++;
 	}
     else {
       usage(argv[0]);
@@ -887,8 +896,7 @@ main(int argc, char* argv[])
 	CondorVersionInfo cvi(v);
 	if (!cvi.built_since_version(8,5,2)) {
 		fromCollector = false;	
-	} else {
-}
+	}
 
 	if (fromCollector) {
 		CondorQuery query(ACCOUNTING_AD);
@@ -1033,6 +1041,8 @@ static void ProcessInfo(AttrList* ad, std::vector<AttrList> &accountingAds, bool
   int tmLast = 0;
   if (ad) {
   	ad->LookupInteger( ATTR_LAST_UPDATE, tmLast );
+  } else {
+	accountingAds[0].LookupInteger(ATTR_LAST_UPDATE, tmLast);
   }
   PrintInfo(tmLast,LR,NumElem,HierFlag);
   delete[] LR;
@@ -1084,9 +1094,10 @@ static void CollectInfo(int numElem, AttrList* ad, std::vector<AttrList> &accoun
 	char strI[32];
 
 		// The old format, one big ad
-	if (ad) {
+	if (accountingAds.size() == 0) {
 		sprintf(strI, "%d", i);
 	} else {
+		// The new format, all ads in the vector
 		strI[0] = '\0';
 		ad = & accountingAds[i - 1];
 	}
@@ -1500,17 +1511,20 @@ static void PrintInfo(int tmLast, LineRec* LR, int NumElem, bool HierFlag)
       // We want to avoid counting totals twice for acct group records
       bool is_group = LR[j].IsAcctGroup;
 
-      if (LR[j].LastUsage < MinLastUsageTime) 
+      if (LR[j].LastUsage < MinLastUsageTime)  {
          continue;
+	  }
 
       if ( ! is_group) {
          ++UserCount;
-         if (HideUsers)
+         if (HideUsers) {
             continue;
+		 }
       } else {
          if (HideGroups || 
-             ( ! HierFlag && HideNoneGroupIfPossible && ! LR[j].GroupId))
-            continue;
+             ( ! HierFlag && HideNoneGroupIfPossible && ! LR[j].GroupId)) {
+            	continue;
+		 }
          // if we show any groups, then show the none group.
          HideNoneGroupIfPossible = false;
       }
@@ -1535,8 +1549,9 @@ static void PrintInfo(int tmLast, LineRec* LR, int NumElem, bool HierFlag)
       // append columnar data into Line
       for (int ii = 0; ii < (int)COUNTOF(aCols); ++ii)
          {
-         if (!(aCols[ii].DetailFlag & DetailFlag))
+         if (!(aCols[ii].DetailFlag & DetailFlag)) {
             continue;
+		 }
 
          Line[ix++] = ' ';
 

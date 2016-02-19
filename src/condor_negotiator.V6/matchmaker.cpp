@@ -42,6 +42,7 @@
 #include "condor_daemon_core.h"
 #include "selector.h"
 #include "consumption_policy.h"
+#include "condor_classad.h"
 
 #include <vector>
 #include <string>
@@ -2431,16 +2432,123 @@ Matchmaker::forwardAccountingData(std::set<std::string> &names) {
 
 				ClassAd updateAd(*accountingAd); // copy all fields from Accountant Ad
 
-				DCCollectorAdSequences seq; // Don't need them, interface requires them
+
 				updateAd.Assign(ATTR_NAME, name.c_str()); // the hash key
 				updateAd.Assign("Priority", accountant.GetPriority(MyString(name)));
 
+				bool isGroup;
+				MyString nameMyString(name);
+
+				GroupEntry *ge = accountant.GetAssignedGroup(nameMyString, isGroup);
+				std::string groupName(ge->name);
+
+				updateAd.Assign("IsAccountingGroup", isGroup);
+				updateAd.Assign("AccountingGroup", groupName);
+
+				updateAd.Assign(ATTR_LAST_UPDATE, accountant.GetLastUpdateTime());
+
+				updateAd.Assign("MyType", "Accounting");
 				SetMyTypeName(updateAd, "Accounting");
 				SetTargetTypeName(updateAd, "none");
+
+				DCCollectorAdSequences seq; // Don't need them, interface requires them
 				collector.sendUpdate(UPDATE_ACCOUNTING_AD, &updateAd, seq, NULL, false);
 			}
 		}
+		forwardGroupAccounting(collector, hgq_root_group);
 		dprintf(D_FULLDEBUG, "Done Updating collector with accounting information\n");
+}
+
+void 
+Matchmaker::forwardGroupAccounting(DCCollector &collector, GroupEntry* group) {
+
+	ClassAd accountingAd;
+	accountingAd.Assign("MyType", "Accounting");
+	SetMyTypeName(accountingAd, "Accounting");
+	SetTargetTypeName(accountingAd, "none");
+	accountingAd.Assign(ATTR_LAST_UPDATE, accountant.GetLastUpdateTime());
+
+
+    MyString CustomerName = group->name;
+
+	ClassAd *CustomerAd = accountant.GetClassAd(MyString("Customer.") + CustomerName);
+
+    if (CustomerAd == NULL) {
+        dprintf(D_ALWAYS, "WARNING: Expected AcctLog entry \"%s\" to exist.\n", CustomerName.Value());
+        return;
+    } 
+
+    bool isGroup=false;
+    GroupEntry* cgrp = accountant.GetAssignedGroup(CustomerName, isGroup);
+
+    std::string cgname;
+    if (isGroup) {
+        cgname = (cgrp->parent != NULL) ? cgrp->parent->name : cgrp->name;
+    } else {
+        dprintf(D_ALWAYS, "WARNING: Expected \"%s\" to be a defined group in the accountant", CustomerName.Value());
+        return;
+    }
+
+    accountingAd.Assign(ATTR_NAME, CustomerName);
+    accountingAd.Assign("IsAccountingGroup", isGroup);
+    accountingAd.Assign("AccountingGroup", cgname);
+    
+    float Priority = accountant.GetPriority(CustomerName);
+    accountingAd.Assign("Priority", Priority);
+    
+    float PriorityFactor = 0;
+    if (CustomerAd->LookupFloat("PriorityFactor",PriorityFactor)==0) {
+		PriorityFactor=0;
+	}
+
+    accountingAd.Assign("PriorityFactor", PriorityFactor);
+    
+    if (cgrp) {
+        accountingAd.Assign("EffectiveQuota", cgrp->quota);
+        accountingAd.Assign("ConfigQuota", cgrp->config_quota);
+        accountingAd.Assign("SubtreeQuota", cgrp->subtree_quota);
+        accountingAd.Assign("GroupSortKey", cgrp->sort_key);
+
+        const char * policy = "no";
+        if (cgrp->autoregroup) policy = "regroup";
+        else if (cgrp->accept_surplus) policy = "byquota";
+        accountingAd.Assign("SurplusPolicy", policy);
+
+        accountingAd.Assign("Requested", cgrp->currently_requested);
+    }
+
+    int ResourcesUsed = 0;
+    if (CustomerAd->LookupInteger("ResourcesUsed", ResourcesUsed)==0) ResourcesUsed=0;
+    accountingAd.Assign("ResourcesUsed", ResourcesUsed);
+    
+    float WeightedResourcesUsed = 0;
+    if (CustomerAd->LookupFloat("WeightedResourcesUsed",WeightedResourcesUsed)==0) WeightedResourcesUsed=0;
+    accountingAd.Assign("WeightedResourcesUsed", WeightedResourcesUsed);
+    
+    float AccumulatedUsage = 0;
+    if (CustomerAd->LookupFloat("AccumulatedUsage",AccumulatedUsage)==0) AccumulatedUsage=0;
+    accountingAd.Assign("AccumulatedUsage", AccumulatedUsage);
+    
+    float WeightedAccumulatedUsage = 0;
+    if (CustomerAd->LookupFloat("WeightedAccumulatedUsage",WeightedAccumulatedUsage)==0) WeightedAccumulatedUsage=0;
+    accountingAd.Assign("WeightedAccumulatedUsage", WeightedAccumulatedUsage);
+    
+    int BeginUsageTime = 0;
+    if (CustomerAd->LookupInteger("BeginUsageTime",BeginUsageTime)==0) BeginUsageTime=0;
+    accountingAd.Assign("BeginUsageTime", BeginUsageTime);
+    
+    int LastUsageTime = 0;
+    if (CustomerAd->LookupInteger("LastUsageTime",LastUsageTime)==0) LastUsageTime=0;
+    accountingAd.Assign("LastUsageTime", LastUsageTime);
+    
+	// And send the ad to the collector
+	DCCollectorAdSequences seq; // Don't need them, interface requires them
+	collector.sendUpdate(UPDATE_ACCOUNTING_AD, &accountingAd, seq, NULL, false);
+
+    // Populate group's children recursively, if it has any
+    for (vector<GroupEntry*>::iterator j(group->children.begin());  j != group->children.end();  ++j) {
+        forwardGroupAccounting(collector, *j);
+    }
 }
 
 GroupEntry::GroupEntry():
