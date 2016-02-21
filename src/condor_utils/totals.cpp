@@ -105,7 +105,7 @@ displayTotals (FILE *file, int keyLength)
 #endif /* HAVE_EXT_POSTGRESQL */
 
     	case PP_SCHEDD_NORMAL:
-    	case PP_SCHEDD_SUBMITTORS:   
+    	case PP_SUBMITTER_NORMAL:
     	case PP_CKPT_SRVR_NORMAL:
 			break;
 
@@ -144,15 +144,18 @@ displayTotals (FILE *file, int keyLength)
 	fprintf (file, "\n");
 
 	// now that our keys are sorted, display the totals in sort order
+	bool had_tot_keys = false;
 	for (k = 0; k < allTotals.getNumElements(); k++)
 	{
 		fprintf (file, "%*.*s", keyLength, keyLength, keys[k]);
 		allTotals.lookup(MyString(keys[k]), ct);
 		free((void *)const_cast<char*>(keys[k]));
 		ct->displayInfo(file);
+		had_tot_keys = true;
 	}
 	delete [] keys;
-	fprintf (file, "\n%*.*s", keyLength, keyLength, "Total");
+	if (had_tot_keys) fprintf(file, "\n");
+	fprintf (file, "%*.*s", keyLength, keyLength, "Total");
 	topLevelTotal->displayInfo(file,1);
 
 	if (malformed > 0)
@@ -612,14 +615,14 @@ update (ClassAd *ad)
 void ScheddSubmittorTotal::
 displayHeader(FILE *file)
 {
-	fprintf (file, "%18s %18s %18s\n", "RunningJobs", "IdleJobs", "HeldJobs");
+	fprintf (file, "%11s %10s %10s\n", "RunningJobs", "IdleJobs", "HeldJobs");
 }
 
 
 void ScheddSubmittorTotal::
 displayInfo (FILE *file, int)
 {
-	fprintf (file, "%18d %18d %18d\n", runningJobs, idleJobs, heldJobs);
+	fprintf (file, "%11d %10d %10d\n", runningJobs, idleJobs, heldJobs);
 }
 
 
@@ -689,7 +692,7 @@ makeTotalObject (ppOption ppo)
 		case PP_QUILL_NORMAL:		ct = new QuillNormalTotal; break;
 #endif /* HAVE_EXT_POSTGRESQL */
 
-		case PP_SCHEDD_SUBMITTORS:	ct = new ScheddSubmittorTotal; break;
+		case PP_SUBMITTER_NORMAL:	ct = new ScheddSubmittorTotal; break;
 		case PP_CKPT_SRVR_NORMAL:	ct = new CkptSrvrNormalTotal; break;
 
 		default:
@@ -725,7 +728,7 @@ makeKey (MyString &key, ClassAd *ad, ppOption ppo)
 			key = buf;
 			return 1;
 
-		case PP_SCHEDD_SUBMITTORS:
+		case PP_SUBMITTER_NORMAL:
 			if (!ad->LookupString(ATTR_NAME, p1, sizeof(p1))) return 0;
 			key = p1;
 			return 1;

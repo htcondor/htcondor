@@ -94,7 +94,7 @@ getPPStyleStr (ppOption pps)
 		case PP_GENERIC:		return "Generic";
     	case PP_STARTD_NORMAL:	return "Normal (Startd)";
     	case PP_SCHEDD_NORMAL:	return "Normal (Schedd)";
-    	case PP_SCHEDD_SUBMITTORS:return "Normal (Schedd)";
+    	case PP_SUBMITTER_NORMAL:return "Normal (Submitter)";
     	case PP_MASTER_NORMAL:	return "Normal (Master)";
     	case PP_CKPT_SRVR_NORMAL:return"Normal (CkptSrvr)";
 		case PP_COLLECTOR_NORMAL:return"Normal (Collector)";
@@ -234,7 +234,7 @@ const char * getOldModeStr(int sdo_mode)
 		case SDO_Startd_Cod:		return "COD (Startd)";
 		case SDO_Quill:		return "Normal (Quill)";
 		case SDO_Schedd:	return "Normal (Schedd)";
-		case SDO_Submittors:	return "Submittors (Schedd)";
+		case SDO_Submitters:	return "Submittors (Schedd)";
 		case SDO_Master:	return "Normal (Master)";
 		case SDO_CkptSvr:	return "Normal (CkptSrvr)";
 		case SDO_Collector:	return "Normal (Collector)";
@@ -297,7 +297,7 @@ static const struct _sdo_mode_info {
 	SDO(SDO_Startd_Cod,    STARTD_AD, PP_STARTD_COD),	//  MODE_STARTD_COD,
 	SDO(SDO_Quill,          QUILL_AD, PP_QUILL_NORMAL),	//  MODE_QUILL_NORMAL,
 	SDO(SDO_Schedd,        SCHEDD_AD, PP_SCHEDD_NORMAL),//  MODE_SCHEDD_NORMAL,
-	SDO(SDO_Submittors, SUBMITTOR_AD, PP_SCHEDD_SUBMITTORS),//  MODE_SCHEDD_SUBMITTORS,
+	SDO(SDO_Submitters, SUBMITTOR_AD, PP_SUBMITTER_NORMAL),//  MODE_SCHEDD_SUBMITTORS,
 	SDO(SDO_Master,        MASTER_AD, PP_MASTER_NORMAL),	//  MODE_MASTER_NORMAL,
 	SDO(SDO_Collector,  COLLECTOR_AD, PP_COLLECTOR_NORMAL),	//  MODE_COLLECTOR_NORMAL,
 	SDO(SDO_CkptSvr,    CKPT_SRVR_AD, PP_CKPT_SRVR_NORMAL),	//  MODE_CKPT_SRVR_NORMAL,

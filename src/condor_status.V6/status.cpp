@@ -490,7 +490,7 @@ main (int argc, char *argv[])
 			projList.insert(ATTR_ACTIVITY); // for key
 			break;
 
-		case PP_SCHEDD_SUBMITTORS:
+		case PP_SUBMITTER_NORMAL:
 			projList.insert(ATTR_NAME); // for key
 			projList.insert(ATTR_RUNNING_JOBS);
 			projList.insert(ATTR_IDLE_JOBS);
@@ -1275,7 +1275,7 @@ firstPass (int argc, char *argv[])
 			}
 			static const struct { const char * tag; int sm; } asub[] = {
 				{"schedd", SDO_Schedd},
-				{"submitters", SDO_Submittors},
+				{"submitters", SDO_Submitters},
 				{"startd", SDO_Startd},
 				{"quill", SDO_Quill},
 				{"defrag", SDO_Defrag},
@@ -1372,7 +1372,7 @@ firstPass (int argc, char *argv[])
 				// as a customAND constraint on the second pass
 		} else
 		if (is_dash_arg_prefix (argv[i], "submitters", 4)) {
-			setMode (SDO_Submittors, i, argv[i]);
+			setMode (SDO_Submitters, i, argv[i]);
 		} else
 		if (is_dash_arg_prefix (argv[i], "master", 1)) {
 			setMode (SDO_Master, i, argv[i]);
@@ -1631,7 +1631,7 @@ secondPass (int argc, char *argv[])
 			const char * name = argv[i];
 			daemonname = get_daemon_name(name);
 			if( ! daemonname || ! daemonname[0]) {
-				if ( (sdo_mode == SDO_Submittors) && strchr(argv[i],'@') ) {
+				if ( (sdo_mode == SDO_Submitters) && strchr(argv[i],'@') ) {
 					// For a submittor query, it is possible that the
 					// hostname is really a UID_DOMAIN.  And there is
 					// no requirement that UID_DOMAIN actually have
