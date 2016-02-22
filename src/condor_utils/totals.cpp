@@ -82,15 +82,8 @@ update (ClassAd *ad)
 	return rval;
 }
 
-
-void TrackTotals::
-displayTotals (FILE *file, int keyLength)
+bool TrackTotals::haveTotals()
 {
-	ClassTotal *ct=0;
-	MyString	key;
-	int k;
-	bool auto_key_length = keyLength < 0;
-
 	// display totals only for meaningful modes
 	switch (ppo)
 	{
@@ -110,8 +103,22 @@ displayTotals (FILE *file, int keyLength)
 			break;
 
 		default:
-			return;
+			return false;
 	}
+	return true;
+}
+
+
+void TrackTotals::
+displayTotals (FILE *file, int keyLength)
+{
+	ClassTotal *ct=0;
+	MyString	key;
+	int k;
+	bool auto_key_length = keyLength < 0;
+
+	// display totals only for meaningful modes
+	if ( ! haveTotals()) return;
 
 		
 	// sort the keys (insertion sort) so we display totals in sorted order

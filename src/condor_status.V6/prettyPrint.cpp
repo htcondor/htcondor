@@ -409,7 +409,7 @@ prettyPrint (ClassAdList &adList, TrackTotals *totals)
 	}
 
 	// if totals are required, display totals
-	if (classad_index > 0 && totals) {
+	if (classad_index > 0 && totals && totals->haveTotals()) {
 		fprintf(stdout, "\n");
 		totals->displayTotals(stdout, totals_key_width);
 	}
