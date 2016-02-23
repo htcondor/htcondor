@@ -860,7 +860,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 					// they did not request a cached session.  see if they
 					// want to start one.  look at our security policy.
 				ClassAd our_policy;
-				if( ! m_sec_man->FillInSecurityPolicyAd(
+				if( ! m_sec_man->FillInSecurityPolicyAdFromCache(
 					m_comTable[m_cmd_index].perm,
 					&our_policy,
 					false,
@@ -1324,7 +1324,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::VerifyComman
 			if (m_comTable[m_cmd_index].perm != ALLOW) {
 
 				ClassAd our_policy;
-				if( ! m_sec_man->FillInSecurityPolicyAd(
+				if( ! m_sec_man->FillInSecurityPolicyAdFromCache(
 					m_comTable[m_cmd_index].perm,
 					&our_policy,
 					false,

@@ -568,6 +568,41 @@ SecMan::FillInSecurityPolicyAd( DCpermission auth_level, ClassAd* ad,
 	return true;
 }
 
+// Fill'ing in the security policy ad is very expensive, sometimes requiring
+// 400 param calls.  Usually, we call it with the same parameters over and over,
+// so keep track of the last set of parameters, and cache the last one returned.
+
+bool
+SecMan::FillInSecurityPolicyAdFromCache(DCpermission auth_level, ClassAd* ad, 
+								bool raw_protocol,
+								bool use_tmp_sec_session,
+								bool force_authentication )
+{
+	if ((m_cached_auth_level == auth_level) &&
+		(m_cached_raw_protocol == raw_protocol) &&
+		(m_cached_use_tmp_sec_session == use_tmp_sec_session) &&
+		(m_cached_force_authentication == force_authentication)) {
+
+			// A Hit!
+		if (m_cached_return_value) {
+			ad->Update(m_cached_policy_ad);
+
+		}
+		return m_cached_return_value;
+	}	
+
+		// Miss...
+	m_cached_auth_level = auth_level;
+	m_cached_raw_protocol = raw_protocol;
+	m_cached_use_tmp_sec_session = use_tmp_sec_session;
+	m_cached_force_authentication = force_authentication;
+	
+	m_cached_policy_ad.Clear(); 
+	m_cached_return_value = FillInSecurityPolicyAd(auth_level, &m_cached_policy_ad, raw_protocol, use_tmp_sec_session, force_authentication);
+	ad->Update(m_cached_policy_ad);
+	return m_cached_return_value;
+}
+
 bool
 SecMan::ReconcileSecurityDependency (sec_req &a, sec_req &b) {
 	if (a == SEC_REQ_NEVER) {
@@ -2627,6 +2662,7 @@ SecMan::SecMan()
 	if ( NULL == m_ipverify ) {
 		m_ipverify = new IpVerify( );
 	}
+	m_cached_auth_level = (DCpermission)-1; // intentionally invalid
 	sec_man_ref_count++;
 }
 

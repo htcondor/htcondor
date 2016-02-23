@@ -130,6 +130,13 @@ public:
 									bool raw_protocol=false,
 									bool use_tmp_sec_session=false,
 									bool force_authentication=false);
+
+	bool	FillInSecurityPolicyAdFromCache( DCpermission auth_level,
+									ClassAd* ad,
+									bool raw_protocol=false,
+									bool use_tmp_sec_session=false,
+									bool force_authentication=false);
+
 	ClassAd * 				ReconcileSecurityPolicyAds(ClassAd &cli_ad, ClassAd &srv_ad);
 	bool 					ReconcileSecurityDependency (sec_req &a, sec_req &b);
 	SecMan::sec_feat_act	ReconcileSecurityAttribute(const char* attr, ClassAd &cli_ad, ClassAd &srv_ad, bool *required = NULL);
@@ -227,6 +234,15 @@ public:
 		// of the session attributes produced by ExportSecSessionInfo
 		// and apply them while creating a session.
 	bool ImportSecSessionInfo(char const *session_info,ClassAd &policy);
+
+	// Attributes for cached Security Policy Ad
+	DCpermission m_cached_auth_level;
+	bool m_cached_raw_protocol;
+	bool m_cached_use_tmp_sec_session;
+	bool m_cached_force_authentication;
+	ClassAd m_cached_policy_ad;
+	bool m_cached_return_value;
+
 };
 
 #endif
