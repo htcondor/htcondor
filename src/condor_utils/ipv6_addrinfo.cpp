@@ -40,7 +40,7 @@ addrinfo get_default_hint()
 	ret.ai_socktype = SOCK_STREAM;
 	ret.ai_protocol = IPPROTO_TCP;
 #if defined( WORKING_GETADDRINFO )
-	if(param_boolean("ENABLE_IPV6", false)) {
+	if(! param_false( "ENABLE_IPV6" )) {
 		ret.ai_family = AF_UNSPEC;
 	} else {
 		ret.ai_family = AF_INET;
@@ -77,7 +77,7 @@ struct shared_context
 addrinfo_iterator::addrinfo_iterator() : cxt_(NULL),
 	current_(NULL)
 {
-	ipv6 = param_boolean( "ENABLE_IPV6", false );
+	ipv6 = ! param_false( "ENABLE_IPV6" );
 }
 
 addrinfo_iterator::addrinfo_iterator(const addrinfo_iterator& rhs) :
@@ -89,7 +89,7 @@ addrinfo_iterator::addrinfo_iterator(const addrinfo_iterator& rhs) :
 addrinfo_iterator::addrinfo_iterator(addrinfo* res) : cxt_(new shared_context),
 	current_(NULL)
 {
-	ipv6 = param_boolean( "ENABLE_IPV6", false );
+	ipv6 = ! param_false( "ENABLE_IPV6" );
 	cxt_->add_ref();
 	cxt_->head = res;
 }

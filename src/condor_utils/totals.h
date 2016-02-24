@@ -58,6 +58,7 @@ class TrackTotals
 
 		int  update(ClassAd *);
 		void displayTotals(FILE *, int keyLength);
+		bool haveTotals();
 
 	private:
 		ppOption ppo;

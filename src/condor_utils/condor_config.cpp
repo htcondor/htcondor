@@ -2596,6 +2596,24 @@ param_boolean( const char *name, bool default_value, bool do_log,
 	return result;
 }
 
+bool
+param_true( const char * name ) {
+	bool value;
+	char * string = param( name );
+	bool valid = string_is_boolean_param( string, value );
+	free( string );
+	return valid && value;
+}
+
+bool
+param_false( const char * name ) {
+	bool value;
+	char * string = param( name );
+	bool valid = string_is_boolean_param( string, value );
+	free( string );
+	return valid && (!value);
+}
+
 char *
 expand_param( const char *str )
 {
