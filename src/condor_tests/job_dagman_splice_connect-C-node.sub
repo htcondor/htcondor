@@ -1,0 +1,6 @@
+universe = vanilla
+executable = ./x_echostring.pl
+arguments = $$([DAGParentNodeNames])
+output = job_dagman_splice_connect-C.$(name).out
+error = job_dagman_splice_connect-C.$(name).err
+queue

@@ -213,6 +213,7 @@ Dag::Dag( /* const */ StringList &dagFiles,
 }
 
 //-------------------------------------------------------------------------
+//TEMPTEMP -- make sure splice DAGs/pin lists are destroyed after parsing...
 Dag::~Dag()
 {
 	if ( _condorLogRdr.activeLogFileCount() > 0 ) {
@@ -4186,26 +4187,26 @@ Dag::SetPinInOut( bool isPinIn, const char *nodeName, int pinNum )
 
 //---------------------------------------------------------------------------
 bool
-Dag::SetPinInOut( std::vector<Job *> &pinList, const char *inOutStr,
+Dag::SetPinInOut( PinList &pinList, const char *inOutStr,
 			Job *node, int pinNum )
 {
 	--pinNum; // Pin numbers start with 1
 	if ( pinNum >= static_cast<int>( pinList.size() ) ) {
 		pinList.resize( pinNum+1, NULL );
-	} else if ( pinList[pinNum] ) {
-		//TEMPTEMP -- have a test for this...
-		debug_printf( DEBUG_QUIET,
-					"ERROR: pin_%s %d was already set in %s!\n",
-					inOutStr, pinNum+1, _spliceScope.Value() );
-		return false;
 	}
-	pinList[pinNum] = node;
+	PinNodes *pn = pinList[pinNum];
+	if ( !pn ) {
+		pinList[pinNum] = new PinNodes();
+		pn = pinList[pinNum];
+	}
+	pn->push_back( node );//TEMPTEMP?
+	//TEMPTEMP -- should we check for duplicates and warn?  would a set be better for that?
 
 	return true;
 }
 
 //---------------------------------------------------------------------------
-Job *
+Dag::PinNodes *
 Dag::GetPinInOut( bool isPinIn, int pinNum )
 {
 #if 1 //TEMPTEMP
@@ -4215,19 +4216,19 @@ Dag::GetPinInOut( bool isPinIn, int pinNum )
 
 	ASSERT( pinNum > 0 );
 
-	Job *node;
+	PinNodes *pn;
 	if ( isPinIn ) {
-		node = GetPinInOut( _pinIns, "in", pinNum );
+		pn = GetPinInOut( _pinIns, "in", pinNum );
 	} else {
-		node = GetPinInOut( _pinOuts, "out", pinNum );
+		pn = GetPinInOut( _pinOuts, "out", pinNum );
 	}
 
-	return node;
+	return pn;
 }
 
 //---------------------------------------------------------------------------
-Job *
-Dag::GetPinInOut( std::vector<Job *> &pinList, const char *inOutStr,
+Dag::PinNodes *
+Dag::GetPinInOut( PinList &pinList, const char *inOutStr,
 			int pinNum )
 {
 	--pinNum; // Pin numbers start with 1
@@ -4273,28 +4274,39 @@ Dag::ConnectSplices( Dag *parentSplice, Dag *childSplice )
 	}
 
 	for (int pinNum = 1; pinNum <= pinOutCount; ++pinNum ) {
-		Job *parentNode = parentSplice->GetPinInOut( false, pinNum );
-		if ( !parentNode ) {
+		PinNodes *parentPNs = parentSplice->GetPinInOut( false, pinNum );
+		if ( !parentPNs ) {
 			debug_printf( DEBUG_QUIET,
 						"ERROR: parent splice %s has no node for pin_out %d\n",
 						parentSplice->_spliceScope.Value(), pinNum );
 			return false;
 		}
 
-		Job *childNode = childSplice->GetPinInOut( true, pinNum );
-		if ( !childNode ) {
+		PinNodes *childPNs = childSplice->GetPinInOut( true, pinNum );
+		if ( !childPNs ) {
 			debug_printf( DEBUG_QUIET,
 						"ERROR: child splice %s has no node for pin_in %d\n",
 						childSplice->_spliceScope.Value(), pinNum );
 			return false;
 		}
 
-		if ( !AddDependency( parentNode, childNode ) ) {
-			debug_printf( DEBUG_QUIET,
-						//TEMPTEMP -- add more detail here?
-						"ERROR: unable to add parent/child dependency for pin %d\n", pinNum );
+		for ( int parentNodeNum = 0;
+					parentNodeNum < static_cast<int>( parentPNs->size() );
+					++parentNodeNum ) {
+			Job *parentNode = parentPNs->at(parentNodeNum);
+			for ( int childNodeNum = 0;
+						childNodeNum < static_cast<int>( childPNs->size() );
+						++childNodeNum ) {
+				Job *childNode = childPNs->at(childNodeNum);
 
-			return false;
+				if ( !AddDependency( parentNode, childNode ) ) {
+					debug_printf( DEBUG_QUIET,
+								//TEMPTEMP -- add more detail here?
+								"ERROR: unable to add parent/child dependency for pin %d\n", pinNum );
+		
+					return false;
+				}
+			}
 		}
 	}
 

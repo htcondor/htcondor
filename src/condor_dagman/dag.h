@@ -709,18 +709,24 @@ class Dag {
 	// node, unless it is an absolute path, in which case we ignore it.
 	void PropagateDirectoryToAllNodes(void);
 
-	//TEMPTEMP -- document -- for now fails if pin already set
+	typedef std::vector<Job *> PinNodes;
+		//TEMPTEMP -- should this be <PinNodes> instead of <PinNodes *> so PinNOdes get automatically destroyed?
+	typedef std::vector<PinNodes *> PinList;//TEMPTEMP -- move to private?
+
+	//TEMPTEMP -- document
 	bool SetPinInOut( bool isPinIn, const char *nodeName, int pinNum );
 
 	//TEMPTEMP -- document, move to private...
-	bool SetPinInOut( std::vector<Job *> &pinList,
+	bool SetPinInOut( PinList &pinList,
 				const char *inOutStr, Job *node, int pinNum );
 
 	//TEMPTEMP -- document
-	Job *GetPinInOut( bool isPinIn, int pinNum );
+	//TEMPTEMP -- should this return a *const* PinNodes *?
+	PinNodes *GetPinInOut( bool isPinIn, int pinNum );
 
 	//TEMPTEMP -- document, move to private...
-	static Job *GetPinInOut( std::vector<Job *> &pinList,
+	//TEMPTEMP -- should this return a *const* PinNodes *?
+	static PinNodes *GetPinInOut( PinList &pinList,
 				const char *inOutStr, int pinNum );
 
 	int GetPinCount( bool isPinIn );
@@ -1228,9 +1234,8 @@ private:
 	DagmanMetrics *_metrics;
 
 	//TEMPTEMP -- document
-	//TEMPTEMP -- hmm -- should these be Job * or JobID_t?
-	std::vector<Job *> _pinIns;
-	std::vector<Job *> _pinOuts;
+	PinList _pinIns;
+	PinList _pinOuts;
 };
 
 #endif /* #ifndef DAG_H */
