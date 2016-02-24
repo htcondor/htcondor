@@ -710,28 +710,39 @@ class Dag {
 	void PropagateDirectoryToAllNodes(void);
 
 	typedef std::vector<Job *> PinNodes;
-		//TEMPTEMP -- should this be <PinNodes> instead of <PinNodes *> so PinNOdes get automatically destroyed?
-	typedef std::vector<PinNodes *> PinList;//TEMPTEMP -- move to private?
 
-	//TEMPTEMP -- document
+	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	// Splice connections.
+
+	/** Set a pin in or pin out connection for this DAG.
+		@param isPinIn: true if this is for a pin in, false for pin out
+		@param nodeName: the name of the node we're connecting
+		@param pinNum: the number of the pin we're connecting
+		@return: true on success, false otherwise
+	*/
 	bool SetPinInOut( bool isPinIn, const char *nodeName, int pinNum );
 
-	//TEMPTEMP -- document, move to private...
-	bool SetPinInOut( PinList &pinList,
-				const char *inOutStr, Job *node, int pinNum );
+	/** Get the list of nodes connected to a pin in or pin out
+		@param isPinIn: true if this is for a pin in, false for pin out
+		@param pinNum: the number of the pin for which we're getting
+			nodes
+		@return: a list of nodes connected to this pin
+	*/
+	const PinNodes *GetPinInOut( bool isPinIn, int pinNum ) const;
 
-	//TEMPTEMP -- document
-	//TEMPTEMP -- should this return a *const* PinNodes *?
-	PinNodes *GetPinInOut( bool isPinIn, int pinNum );
-
-	//TEMPTEMP -- document, move to private...
-	//TEMPTEMP -- should this return a *const* PinNodes *?
-	static PinNodes *GetPinInOut( PinList &pinList,
-				const char *inOutStr, int pinNum );
-
+	/** Get the number of pin ins or pin outs we have in this DAG
+		@param isPinIn: true if this is for pin ins, false for pin outs
+		@return: the number of pin ins or pin outs
+	*/
 	int GetPinCount( bool isPinIn );
 
+	/** Connect two splices via pin outs/pin ins
+		@param parentSplice: the splice connected via its pin outs
+		@param childSplice: the splice connected via its pin ins
+		@return: true on success, false otherwise
+	*/
 	static bool ConnectSplices( Dag *parentSplice, Dag *childSplice );
+	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	/** Set the maximum number of job holds before a node is declared
 		a failure.
@@ -1233,9 +1244,41 @@ private:
 		// Object to deal with reporting DAGMan metrics (to Pegasus).
 	DagmanMetrics *_metrics;
 
-	//TEMPTEMP -- document
+	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	// Splice connections.
+	typedef std::vector<PinNodes *> PinList;
+
+	/** Set a pin in or pin out connection for this DAG.
+		@param pinList: the pin list to update
+		@param inOutStr: "in" or "out" as appropriate
+		@param node: the node to connect
+		@param pinNum: the number of the pin we're connecting
+		@return: true on success, false otherwise
+	*/
+	bool SetPinInOut( PinList &pinList,
+				const char *inOutStr, Job *node, int pinNum );
+
+	/** Get the list of nodes connected to a pin in or pin out
+		@param pinList: the pin list to access
+		@param inOutStr: "in" or "out" as appropriate
+		@param pinNum: the number of the pin for which we're getting
+			nodes
+		@return: a list of nodes connected to this pin
+	*/
+	const static PinNodes *GetPinInOut( const PinList &pinList,
+				const char *inOutStr, int pinNum );
+
+	/** Delete memory allocated as part of this pin list
+		@param pinList: the pin list to delete
+	*/
+	static void DeletePinList( PinList &pinList );
+
+		// The pin ins for this DAG.
 	PinList _pinIns;
+
+		// The pin outs for this DAG.
 	PinList _pinOuts;
+	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 };
 
 #endif /* #ifndef DAG_H */

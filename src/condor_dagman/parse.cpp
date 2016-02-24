@@ -2213,8 +2213,6 @@ parse_connect(
 {
 	const char *example = "CONNECT splice1 splice2";
 
-	debug_printf( DEBUG_QUIET, "DIAG parse_connect()\n" );//TEMPTEMP
-
 //TEMPTEMP -- need to munge splice names!! (make test with multiple DAGs and splice connects...)
 
 	const char *splice1 = strtok( NULL, DELIMITERS );
@@ -2246,8 +2244,6 @@ parse_connect(
 		exampleSyntax( example );
 		return false;
 	}
-
-	debug_printf( DEBUG_QUIET, "DIAG parse_connect(%s, %s)\n", splice1, splice2 );//TEMPTEMP
 
 	Dag *parentSplice;
 	if ( dag->LookupSplice( splice1, parentSplice ) != 0) {
@@ -2288,8 +2284,6 @@ parse_pin_in_out(
 	int  lineNumber, bool isPinIn )
 {
 	const char *example = "PIN_IN|PIN_OUT node pin_number";
-
-	debug_printf( DEBUG_QUIET, "DIAG parse_pin_in_out(%s)\n", filename );//TEMPTEMP
 
 	const char *node = strtok( NULL, DELIMITERS );
 	if ( node == NULL ) {
@@ -2363,8 +2357,6 @@ parse_include(
 {
 	const char *example = "INCLUDE filename";
 
-	debug_printf( DEBUG_QUIET, "DIAG parse_include()\n" );//TEMPTEMP
-
 	const char *includeFile = strtok( NULL, DELIMITERS );
 	if ( includeFile == NULL ) {
 		debug_printf( DEBUG_QUIET,
@@ -2385,8 +2377,6 @@ parse_include(
 		exampleSyntax( example );
 		return false;
 	}
-
-	debug_printf( DEBUG_QUIET, "DIAG parse_include(%s)\n", includeFile );//TEMPTEMP
 
 		// Note:  we save the filename here because otherwise it gets
 		// goofed up by the tokenizing in parse().

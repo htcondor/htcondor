@@ -136,6 +136,7 @@ Dag::Dag( /* const */ StringList &dagFiles,
 	_defaultPriority	  (0),
 	_metrics			  (NULL)
 {
+	debug_printf( DEBUG_DEBUG_1, "Dag(%s)::Dag()\n", _spliceScope.Value() );
 
 	// If this dag is a splice, then it may have been specified with a DIR
 	// directive. If so, then this records what it was so we can later
@@ -213,9 +214,10 @@ Dag::Dag( /* const */ StringList &dagFiles,
 }
 
 //-------------------------------------------------------------------------
-//TEMPTEMP -- make sure splice DAGs/pin lists are destroyed after parsing...
 Dag::~Dag()
 {
+	debug_printf( DEBUG_DEBUG_1, "Dag(%s)::~Dag()\n", _spliceScope.Value() );
+
 	if ( _condorLogRdr.activeLogFileCount() > 0 ) {
 		(void) UnmonitorLogFile();
 	}
@@ -243,7 +245,8 @@ Dag::~Dag()
 
 	delete _metrics;
 
-	//TEMPTEMP -- clean up pin in/out vectors?
+	DeletePinList( _pinIns );
+	DeletePinList( _pinOuts );
 
     return;
 }
@@ -4162,10 +4165,8 @@ Dag::PropagateDirectoryToAllNodes(void)
 bool
 Dag::SetPinInOut( bool isPinIn, const char *nodeName, int pinNum )
 {
-#if 1 //TEMPTEMP
-	debug_printf( DEBUG_QUIET, "Dag(%s)::SetPinInOut(%d, %s, %d)\n",
+	debug_printf( DEBUG_DEBUG_1, "Dag(%s)::SetPinInOut(%d, %s, %d)\n",
 				_spliceScope.Value(), isPinIn, nodeName, pinNum );
-#endif //TEMPTEMP
 
 	ASSERT( pinNum > 0 );
 
@@ -4199,24 +4200,22 @@ Dag::SetPinInOut( PinList &pinList, const char *inOutStr,
 		pinList[pinNum] = new PinNodes();
 		pn = pinList[pinNum];
 	}
-	pn->push_back( node );//TEMPTEMP?
+	pn->push_back( node );
 	//TEMPTEMP -- should we check for duplicates and warn?  would a set be better for that?
 
 	return true;
 }
 
 //---------------------------------------------------------------------------
-Dag::PinNodes *
-Dag::GetPinInOut( bool isPinIn, int pinNum )
+const Dag::PinNodes *
+Dag::GetPinInOut( bool isPinIn, int pinNum ) const
 {
-#if 1 //TEMPTEMP
-	debug_printf( DEBUG_QUIET, "Dag(%s)::GetPinInOut(%d, %d)\n",
+	debug_printf( DEBUG_DEBUG_1, "Dag(%s)::GetPinInOut(%d, %d)\n",
 				_spliceScope.Value(), isPinIn, pinNum );
-#endif //TEMPTEMP
 
 	ASSERT( pinNum > 0 );
 
-	PinNodes *pn;
+	const PinNodes *pn;
 	if ( isPinIn ) {
 		pn = GetPinInOut( _pinIns, "in", pinNum );
 	} else {
@@ -4227,8 +4226,8 @@ Dag::GetPinInOut( bool isPinIn, int pinNum )
 }
 
 //---------------------------------------------------------------------------
-Dag::PinNodes *
-Dag::GetPinInOut( PinList &pinList, const char *inOutStr,
+const Dag::PinNodes *
+Dag::GetPinInOut( const PinList &pinList, const char *inOutStr,
 			int pinNum )
 {
 	--pinNum; // Pin numbers start with 1
@@ -4257,11 +4256,9 @@ Dag::GetPinCount( bool isPinIn )
 bool
 Dag::ConnectSplices( Dag *parentSplice, Dag *childSplice )
 {
-#if 1 //TEMPTEMP
-	debug_printf( DEBUG_QUIET, "Dag::ConnectSplices(%s, %s)\n",
+	debug_printf( DEBUG_DEBUG_1, "Dag::ConnectSplices(%s, %s)\n",
 				parentSplice->_spliceScope.Value(),
 				childSplice->_spliceScope.Value() );
-#endif //TEMPTEMP
 
 	int pinOutCount = parentSplice->GetPinCount( false );
 	int pinInCount = childSplice->GetPinCount( true );
@@ -4272,9 +4269,11 @@ Dag::ConnectSplices( Dag *parentSplice, Dag *childSplice )
 					childSplice->_spliceScope.Value(), pinInCount );
 		return false;
 	}
+	//TEMPTEMP -- this should probably report an error if there are no pins...
+	//TEMPTEMP -- need lots more error checking here (e.g., "orphan" nodes)
 
 	for (int pinNum = 1; pinNum <= pinOutCount; ++pinNum ) {
-		PinNodes *parentPNs = parentSplice->GetPinInOut( false, pinNum );
+		const PinNodes *parentPNs = parentSplice->GetPinInOut( false, pinNum );
 		if ( !parentPNs ) {
 			debug_printf( DEBUG_QUIET,
 						"ERROR: parent splice %s has no node for pin_out %d\n",
@@ -4282,7 +4281,7 @@ Dag::ConnectSplices( Dag *parentSplice, Dag *childSplice )
 			return false;
 		}
 
-		PinNodes *childPNs = childSplice->GetPinInOut( true, pinNum );
+		const PinNodes *childPNs = childSplice->GetPinInOut( true, pinNum );
 		if ( !childPNs ) {
 			debug_printf( DEBUG_QUIET,
 						"ERROR: child splice %s has no node for pin_in %d\n",
@@ -4311,6 +4310,17 @@ Dag::ConnectSplices( Dag *parentSplice, Dag *childSplice )
 	}
 
 	return true;
+}
+
+//---------------------------------------------------------------------------
+void
+Dag::DeletePinList( PinList &pinList )
+{
+	for ( int pinNum = 0; pinNum < static_cast<int>( pinList.size() );
+				++pinNum ) {
+		PinNodes *pn = pinList[pinNum];
+		delete pn;
+	}
 }
 
 //---------------------------------------------------------------------------
