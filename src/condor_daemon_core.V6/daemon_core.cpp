@@ -9984,8 +9984,8 @@ int
 BindAnyLocalCommandPort(ReliSock *rsock, SafeSock *ssock)
 {
 	condor_protocol proto;
-	if(param_boolean("ENABLE_IPV4", true)) { proto = CP_IPV4; }
-	else if(param_boolean("ENABLE_IPV6", true)) { proto = CP_IPV6; }
+	if(! param_false( "ENABLE_IPV4" )) { proto = CP_IPV4; }
+	else if(! param_false( "ENABLE_IPV6" )) { proto = CP_IPV6; }
 	else {
 		dprintf(D_ALWAYS, "Error: No protocols are enabled, unable to BindAnyLocalCommandPort!\n");
 		return FALSE;
@@ -10242,12 +10242,27 @@ InitCommandSockets(int tcp_port, int udp_port, DaemonCore::SockPairVec & socks, 
 
 	DaemonCore::SockPairVec new_socks;
 
+	// We validated the ENABLE_* params earlier, in init_network_interfaces().
+	bool tryIPv4 = ! param_false( "ENABLE_IPV4" );
+	if( tryIPv4 && ! param_defined( "IPV4_ADDRESS" ) ) {
+		tryIPv4 = false;
+	}
+
+	bool tryIPv6 = ! param_false( "ENABLE_IPV6" );
+	if( tryIPv6 && ! param_defined( "IPV6_ADDRESS" ) ) {
+		tryIPv6 = false;
+	}
+
+	if( (!tryIPv4) && (!tryIPv6) ) {
+		EXCEPT( "Unwilling or unable to try IPv4 or IPv6.  Check the settings ENABLE_IPV4, ENABLE_IPV6, and NETWORK_INTERFACE.\n" );
+	}
+
 	// Arbitrary constant, borrowed from bindAnyCommandPort().
 	const int MAX_RETRIES = 1000;
 	int tries;
 	for(tries = 1; tries <= MAX_RETRIES; tries++) {
 
-		if(param_boolean("ENABLE_IPV4", true)) {
+		if( tryIPv4 ) {
 			DaemonCore::SockPair sock_pair;
 			if( ! InitCommandSocket(CP_IPV4, tcp_port, udp_port, sock_pair, want_udp, fatal)) {
 				dprintf(D_ALWAYS | D_FAILURE, "Warning: Failed to create IPv4 command socket for ports %d/%d%s.\n", tcp_port, udp_port, want_udp?"":"no UDP");
@@ -10262,7 +10277,7 @@ InitCommandSockets(int tcp_port, int udp_port, DaemonCore::SockPairVec & socks, 
 		// can include both protocols' address(es).
 		int targetTCPPort = tcp_port;
 		int targetUDPPort = udp_port;
-		if( param_boolean( "ENABLE_IPV4", true ) && param_boolean("ENABLE_IPV6", true ) ) {
+		if( tryIPv4 && tryIPv6 ) {
 			// If tcp_port and udp_port are both static, we don't have to do anything.
 			if( tcp_port <= 1 || udp_port <= 1 ) {
 				// Determine which port IPv4 got, and try to get that port for IPv6.
@@ -10274,12 +10289,12 @@ InitCommandSockets(int tcp_port, int udp_port, DaemonCore::SockPairVec & socks, 
 			}
 		}
 
-		if(param_boolean("ENABLE_IPV6", true)) {
+		if( tryIPv6 ) {
 			DaemonCore::SockPair sock_pair;
 			// We emulate fatal, below, because it's only a fatal error
 			// to fail to match an IPv4 port number if it was static.
 			if( ! InitCommandSocket(CP_IPV6, targetTCPPort, targetUDPPort, sock_pair, want_udp, false)) {
-				// TODO: If we're asking for a dynamically chosen TCP port 
+				// TODO: If we're asking for a dynamically chosen TCP port
 				// (targetTCPPort <= 1) but a statically chosen UDP port
 				// (targetUDPPort > 1), and the reason InitCommandSocket
 				// fails is that it couldn't get the UDP port, then we

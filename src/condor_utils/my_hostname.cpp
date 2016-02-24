@@ -105,8 +105,8 @@ network_interface_to_ip(char const *interface_param_name,char const *interface_p
 	std::vector<NetworkDeviceInfo> dev_list;
 	std::vector<NetworkDeviceInfo>::iterator dev;
 
-	bool want_v4 = param_boolean("ENABLE_IPV4", true);
-	bool want_v6 = param_boolean("ENABLE_IPV6", true);
+	bool want_v4 = ! param_false( "ENABLE_IPV4" );
+	bool want_v6 = ! param_false( "ENABLE_IPV6" );
 	sysapi_get_network_device_info(dev_list, want_v4, want_v6);
 
 		// Order of preference:
@@ -219,6 +219,10 @@ init_network_interfaces( int config_done )
 
 	network_interface_matches_all = (network_interface == "*");
 
+	if( param_false( "ENABLE_IPV4" ) && param_false( "ENABLE_IPV6" ) ) {
+		EXCEPT( "ENABLE_IPV4 and ENABLE_IPV6 are both false." );
+	}
+
 	std::string network_interface_ipv4;
 	std::string network_interface_ipv6;
 	std::string network_interface_best;
@@ -235,128 +239,39 @@ init_network_interfaces( int config_done )
 		EXCEPT("Failed to determine my IP address using NETWORK_INTERFACE=%s",
 			   network_interface.c_str());
 	}
+
+	//
+	// Check the validity of the configuration.
+	//
+	if( network_interface_ipv4.empty() && param_true( "ENABLE_IPV4" ) ) {
+		EXCEPT( "ENABLE_IPV4 is TRUE, but no IPv4 address was detected.  Ensure that your NETWORK_INTERFACE parameter is not set to an IPv6 address." );
+	}
+	// We don't have an enum type in the param system (yet), so check.
+	if( (!param_true( "ENABLE_IPV4" )) && (!param_false( "ENABLE_IPV4" )) ) {
+		if( strcasecmp( param( "ENABLE_IPV4" ), "AUTO" ) ) {
+			EXCEPT( "ENABLE_IPV4 is '%s', must be 'true', 'false', or 'auto'.", param( "ENABLE_IPV4" ) );
+		}
+	}
+
+	if( network_interface_ipv6.empty() && param_true( "ENABLE_IPV6" ) ) {
+		EXCEPT( "ENABLE_IPV6 is TRUE, but no IPv6 address was detected.  Ensure that your NETWORK_INTERFACE parameter is not set to an IPv4 address." );
+	}
+	// We don't have an enum type in the param system (yet), so check.
+	if( (!param_true( "ENABLE_IPV6" )) && (!param_false( "ENABLE_IPV6" )) ) {
+		if( strcasecmp( param( "ENABLE_IPV6" ), "AUTO" ) ) {
+			EXCEPT( "ENABLE_IPV6 is '%s', must be 'true', 'false', or 'auto'.", param( "ENABLE_IPV6" ) );
+		}
+	}
+
+	if( (!network_interface_ipv4.empty()) && param_false( "ENABLE_IPV4" ) ) {
+		EXCEPT( "ENABLE_IPV4 is false, yet we found an IPv4 address.  Ensure that NETWORK_INTERFACE is set appropriately." );
+	}
+
+	if( (!network_interface_ipv6.empty()) && param_false( "ENABLE_IPV6" ) ) {
+		EXCEPT( "ENABLE_IPV6 is false, yet we found an IPv6 address.  Ensure that NETWORK_INTERFACE is set appropriately." );
+	}
+
 }
-
-//void
-//init_ipaddr( int config_done )
-//{
-//    if( ! hostname ) {
-//		init_hostnames();
-//	}
-//
-//	dprintf( D_HOSTNAME, "Trying to initialize local IP address (%s)\n",
-//		 config_done ? "after reading config" : "config file not read" );
-//
-//	std::string network_interface;
-//
-//	if( config_done ) {
-//		param(network_interface,"NETWORK_INTERFACE");
-//	}
-//	if( network_interface.empty() ) {
-//		network_interface = "*";
-//	}
-//
-//	network_interface_matches_all = (network_interface == "*");
-//
-//	std::string network_interface_ip;
-//	bool ok;
-//	ok = network_interface_to_ip(
-//		"NETWORK_INTERFACE",
-//		network_interface.c_str(),
-//		network_interface_ip,
-//		&configured_network_interface_ips);
-//
-//	if( !ok ) {
-//		EXCEPT("Failed to determine my IP address using NETWORK_INTERFACE=%s",
-//			   network_interface.c_str());
-//	}
-//
-//	if(!is_ipaddr(network_interface_ip.c_str(), &sin_addr) )
-//	{
-//		EXCEPT("My IP address is invalid: %s",network_interface_ip.c_str());
-//	}
-//
-//	has_sin_addr = true;
-//	ip_addr = ntohl( sin_addr.s_addr );
-//	ipaddr_initialized = TRUE;
-//}
-
-#ifdef WIN32
-	// see below comment in init_hostname() to learn why we must
-	// include condor_io in this module.
-#include "condor_io.h"
-#endif
-
-//void
-//init_hostnames()
-//{
-//    char *tmp, hostbuf[MAXHOSTNAMELEN];
-//    hostbuf[0]='\0';
-//#ifdef WIN32
-//	// There are a  tools in Condor, like
-//	// condor_history, which do not use any CEDAR sockets but which call
-//	// some socket helper functions like gethostbyname().  These helper
-//	// functions will fail unless WINSOCK is initialized.  WINSOCK
-//	// is initialized via a global constructor in CEDAR, so we must
-//	// make certain we call at least one CEDAR function so the linker
-//	// brings in the global constructor to initialize WINSOCK!
-//	// In addition, some global constructors end up calling
-//	// init_hostnames(), and thus will fail if the global constructor
-//	// in CEDAR is not called first.  Instead of relying upon a
-//	// specified global constructor ordering (which we cannot),
-//	// we explicitly invoke SockInitializer::init() right here -Todd T.
-//	SockInitializer startmeup;
-//	startmeup.init();
-//#endif
-//
-//    if( hostname ) {
-//        free( hostname );
-//    }
-//    if( full_hostname ) {
-//        free( full_hostname );
-//        full_hostname = NULL;
-//    }
-//
-//	dprintf( D_HOSTNAME, "Finding local host information, "
-//			 "calling gethostname()\n" );
-//
-//        // Get our local hostname, and strip off the domain if
-//        // gethostname returns it.
-//    if( condor_gethostname(hostbuf, sizeof(hostbuf)) == 0 ) {
-//        if( hostbuf[0] ) {
-//            if( (tmp = strchr(hostbuf, '.')) ) {
-//                    // There's a '.' in the hostname, assume we've got
-//                    // the full hostname here, save it, and trim the
-//                    // domain off and save that as the hostname.
-//                full_hostname = strdup( hostbuf );
-//				dprintf( D_HOSTNAME, "gethostname() returned fully "
-//						 "qualified name \"%s\"\n", hostbuf );
-//                *tmp = '\0';
-//            } else {
-//				dprintf( D_HOSTNAME, "gethostname() returned a host "
-//						 "with no domain \"%s\"\n", hostbuf );
-//			}
-//            hostname = strdup( hostbuf );
-//        } else {
-//            EXCEPT( "gethostname succeeded, but hostbuf is empty" );
-//        }
-//    } else {
-//        EXCEPT( "gethostname failed, errno = %d",
-//#ifndef WIN32
-//                errno );
-//#else
-//                WSAGetLastError() );
-//#endif
-//    }
-//    if( ! full_hostname ) {
-//		init_full_hostname();
-//	}
-//	hostnames_initialized = TRUE;
-//}
-
-// Returns true if given attribute is used by Condor to advertise the
-// IP address of the sender.  This is used by
-// ConvertDefaultIPToSocketIP().
 
 static bool is_sender_ip_attr(char const *attr_name)
 {

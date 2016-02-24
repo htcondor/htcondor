@@ -131,7 +131,7 @@ bool IOProxy::init( JICShadow *shadow, const char *config_file, bool want_io, bo
 	//
 
 	condor_protocol proto = CP_IPV4;
-	if( ! param_boolean( "ENABLE_IPV4", true ) ) { proto = CP_IPV6; }
+	if( param_false( "ENABLE_IPV4" ) ) { proto = CP_IPV6; }
 	if(!server->bind( proto, false, 0, true )) {
 		dprintf(D_ALWAYS,"IOProxy: couldn't bind: %s\n",strerror(errno));
 		return false;

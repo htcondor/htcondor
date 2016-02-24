@@ -156,6 +156,12 @@ typedef struct macro_set {
 	bool string_is_double_param(const char * string, double& result, ClassAd *me = NULL, ClassAd *target = NULL, const char * name=NULL, int* err_reason=NULL);
 	bool string_is_long_param(const char * string, long long& result, ClassAd *me = NULL, ClassAd *target = NULL, const char * name=NULL, int* err_reason=NULL);
 
+	// A convenience function for use with trinary parameters.
+	bool param_true( const char * name );
+
+	// A convenience function for use with trinary parameters.
+	bool param_false( const char * name );
+
 	const char * param_get_location(const MACRO_META * pmet, MyString & value);
 
 	const char * param_get_info(const char * name,
@@ -470,7 +476,6 @@ BEGIN_C_DECLS
 void condor_auth_config(int is_daemon);
 
 END_C_DECLS
-
 
 #endif /* CONFIG_H */
 

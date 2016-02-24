@@ -1287,9 +1287,10 @@ ReliSock::connect_socketpair( ReliSock & sock, char const * asIfConnectingTo ) {
 bool
 ReliSock::connect_socketpair( ReliSock & sock ) {
 	condor_protocol proto = CP_IPV4;
-	bool ipV4Enabled = param_boolean( "ENABLE_IPV4", true );
-	bool ipV6Enabled = param_boolean( "ENABLE_IPV6", false );
-	if( ipV6Enabled && (! ipV4Enabled) ) {
+	bool ipV4Allowed = ! param_false( "ENABLE_IPV4" );
+	bool ipV6Allowed = ! param_false( "ENABLE_IPV6" );
+
+	if( ipV6Allowed && (! ipV4Allowed) ) {
 		proto = CP_IPV6;
 	}
 
