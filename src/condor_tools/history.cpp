@@ -432,7 +432,9 @@ main(int argc, char* argv[])
   }
   if (i<argc) Usage(argv[0]);
   
-  
+	// Since we only deal with one ad at a time, this doubles the speed of parsing
+  classad::ClassAdSetExpressionCaching(false);
+ 
   MyString my_constraint;
   constraint.makeQuery(my_constraint);
   if (diagnostic) {
