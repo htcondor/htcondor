@@ -506,7 +506,6 @@ bool ClassAd::Insert( const std::string& serialized_nvp)
 		}
 	}
 
-    // 	GGT
     if (doLazyParsing) {
     	doExpressionCaching = false;
     }
@@ -584,8 +583,6 @@ bool ClassAd::Insert( const std::string& attrName, ExprTree *& pRef, bool cache 
 		return( false );
 	}
 
-	// GGT
-	//doExpressionCaching = false;
 	if (doExpressionCaching && cache)
 	{
 	  std::string empty; // an empty string to tell the cache to unparse the pRef
