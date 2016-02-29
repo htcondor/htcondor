@@ -24,7 +24,7 @@ use CondorUtils;
 $cmd = 'job_dagman_always_run_post-A.dag';
 $testdesc =  'Condor DAGman test for always running the POST script - scheduler U';
 $testname = "job_dagman_always_run_post-A";
-$dagman_args = "-verbose";
+$dagman_args = "-verbose -AlwaysRunPost";
 
 #**************************************************************
 #

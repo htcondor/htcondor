@@ -37,6 +37,7 @@
 \oOpt{-DumpRescue}
 \oOpt{-valgrind}
 \oOpt{-DontAlwaysRunPost}
+\oOpt{-AlwaysRunPost}
 \oOptArg{-priority}{number}
 \oOpt{-dont\_use\_default\_node\_log}
 \oOptArg{-schedd-daemon-ad-file}{FileName}
@@ -313,6 +314,8 @@ as the value of \MacroNI{DAGMAN\_SUPPRESS\_NOTIFICATION} is enforced.
      POST script regardless of the return value of the PRE script. 
      Versions of \Condor{dagman} prior to 7.7.2 did not ignore the return
      value and would not run the POST script if the PRE script failed.
+  }
+  \OptItem{\Opt{-AlwaysRunPost}}{TEMPTEMP -- add details here
   }
   \OptItem{\OptArg{-priority}{number}}{Sets the minimum job priority
     of node jobs submitted and running under the \Condor{dagman} job

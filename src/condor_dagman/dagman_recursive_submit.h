@@ -69,7 +69,7 @@ struct SubmitDagShallowOptions
 	SubmitDagShallowOptions() 
 	{ 
 		bSubmit = true;
-		bPostRun = true;
+		bPostRun = false;
 		strRemoteSchedd = "";
 		strScheddDaemonAdFile = "";
 		strScheddAddressFile = "";
