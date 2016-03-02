@@ -45,7 +45,12 @@ longer required on user logs.
 
 \begin{itemize}
 
-\item None.
+\item Fixed a bug that would cause schedds flocking to remote
+pools to not send no jobs, or fewer jobs than possible to the
+remote pool. This was a result of not correctly setting
+the submitter attribute \Macro{WeightedJobsRunning} for
+flocked pools.
+\Ticket{5539}
 
 \end{itemize}
 
