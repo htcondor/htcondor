@@ -3349,7 +3349,7 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
                 if (j != consumption.begin()) type += " ";
                 if (MATCH == strcasecmp(j->first.c_str(),"disk")) {
                     // if it weren't for special cases, we'd have no cases at all
-                    type.formatstr_cat("disk=%3.3g%%", max(0, (0.001 + 100 * j->second / (double)rip->r_attr->get_total_disk())));
+                    type.formatstr_cat("disk=%d%%", max(0, (int)ceil(100 * j->second / (double)rip->r_attr->get_total_disk())));
                 } else {
                     type.formatstr_cat("%s=%d", j->first.c_str(), int(j->second));
                 }
@@ -3391,8 +3391,8 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
                     return NULL;
                 }
             }
-            type.formatstr_cat( "disk=%3.3g%%",
-                                max((0.001 + disk / (double) rip->r_attr->get_total_disk() * 100), 0.001) );
+            type.formatstr_cat( "disk=%d%%",
+                                max((int) ceil((disk / (double) rip->r_attr->get_total_disk()) * 100), 1) );
 
 
                 // Look to see how much swap is being requested.
