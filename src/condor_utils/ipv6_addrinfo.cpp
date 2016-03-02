@@ -59,16 +59,29 @@ addrinfo get_default_hint()
 
 struct shared_context
 {
-	shared_context() : count(0), head(NULL) {}
+	shared_context() : count(0), head(NULL), was_duplicated(false) {}
 	int count;
 	addrinfo* head;
+	bool was_duplicated;
 	void add_ref() {
 	    count++;
     }
 	void release() {
 	    count--;
 	    if (!count && head) {
-	        freeaddrinfo(head);
+	    	if(! was_duplicated) {
+	        	freeaddrinfo(head);
+	        } else {
+	        	addrinfo * next = NULL;
+	        	addrinfo * current = head;
+	        	while( current != NULL ) {
+	        		next = current->ai_next;
+	        		if( current->ai_addr ) { free( current->ai_addr ); }
+	        		if( current->ai_canonname ) { free( current->ai_canonname ); }
+	        		free( current );
+	        		current = next;
+	        	}
+	        }
             delete this;
 	    }
     }
@@ -86,12 +99,98 @@ addrinfo_iterator::addrinfo_iterator(const addrinfo_iterator& rhs) :
 	if (cxt_) cxt_->add_ref();
 }
 
+addrinfo * aidup( addrinfo * ai ) {
+	if( ai == NULL ) { return NULL; }
+	addrinfo * rv = (addrinfo *)malloc( sizeof( addrinfo ) );
+	ASSERT( rv );
+	memcpy( rv, ai, sizeof( addrinfo ) );
+	if( rv->ai_addr ) {
+		rv->ai_addr = (sockaddr *)malloc( rv->ai_addrlen );
+		ASSERT( rv->ai_addr );
+		memcpy( rv->ai_addr, ai->ai_addr, rv->ai_addrlen );
+	}
+	if( rv->ai_canonname ) {
+		rv->ai_canonname = strdup( ai->ai_canonname );
+		ASSERT( rv->ai_canonname );
+	}
+	rv->ai_next = NULL;
+	return rv;
+}
+
+#include "condor_sockaddr.h"
 addrinfo_iterator::addrinfo_iterator(addrinfo* res) : cxt_(new shared_context),
 	current_(NULL)
 {
 	ipv6 = ! param_false( "ENABLE_IPV6" );
 	cxt_->add_ref();
 	cxt_->head = res;
+
+	if( param_boolean( "IGNORE_DNS_PROTOCOL_PREFERENCE", true ) ) {
+		addrinfo * v4head = NULL;
+		addrinfo * v6head = NULL;
+
+		dprintf( D_HOSTNAME, "DNS returned:\n" );
+		for( addrinfo * c = res; c != NULL; c = c->ai_next ) {
+			condor_sockaddr sa( c->ai_addr );
+			dprintf( D_HOSTNAME, "\t%s\n", sa.to_ip_string().c_str() );
+		}
+
+		// It seems dangerous to reorder the linked list, so instead
+		// make a (deep) copy of each element as we sort it onto one
+		// of the lists above.  When we're done, staple the two lists
+		// together according to the PREFER_OUTBOUND_IPV4 setting.
+		//
+		// Then free the original list [and change the destructor to
+		// free our list, instead].
+		addrinfo * v4 = NULL;
+		addrinfo * v6 = NULL;
+		for( addrinfo * current = res; current != NULL; current = current->ai_next ) {
+			if( current->ai_family == AF_INET ) {
+				if( v4 == NULL ) { v4head = v4 = aidup( current ); }
+				else { v4->ai_next = aidup( current ); v4 = v4->ai_next; }
+			} else if( current->ai_family == AF_INET6 ) {
+				if( v6 == NULL ) { v6head = v6 = aidup( current ); }
+				else { v6->ai_next = aidup( current ); v6 = v6->ai_next; }
+			}
+		}
+
+		if( param_boolean( "PREFER_OUTBOUND_IPV4", true ) ) {
+			if( v4head ) {
+				cxt_->head = v4head;
+				v4->ai_next = v6head;
+			} else {
+				cxt_->head = v6head;
+			}
+		} else {
+			if( v6head ) {
+				cxt_->head = v6head;
+				v6->ai_next = v4head;
+			} else {
+				cxt_->head = v4head;
+			}
+		}
+
+		// getaddrinfo() promises that ai_canonname will be set in the
+		// first addrinfo structure (and implicitly, nowhere else).
+		for( addrinfo * c = cxt_->head; c != NULL; c = c->ai_next ) {
+			if( c->ai_canonname ) {
+				// Need a temporary in case we get only one result.
+				char * canonname = c->ai_canonname;
+				c->ai_canonname = NULL;
+				cxt_->head->ai_canonname = canonname;
+				break;
+			}
+		}
+
+		dprintf( D_HOSTNAME, "We returned:\n" );
+		for( addrinfo * c = cxt_->head; c != NULL; c = c->ai_next ) {
+			condor_sockaddr sa( c->ai_addr );
+			dprintf( D_HOSTNAME, "\t%s\n", sa.to_ip_string().c_str() );
+		}
+
+		cxt_->was_duplicated = true;
+		freeaddrinfo( res );
+	}
 }
 
 addrinfo_iterator::~addrinfo_iterator()
@@ -162,16 +261,6 @@ addrinfo* addrinfo_iterator::next()
 void addrinfo_iterator::reset()
 {
 	current_ = NULL;
-}
-
-bool find_any_ipv4(addrinfo_iterator& ai, sockaddr_in& sin)
-{
-	while ( addrinfo* r = ai.next() )
-		if ( r->ai_family == AF_INET ) {
-			memcpy(&sin, r->ai_addr, r->ai_addrlen);
-			return true;
-		}
-	return false;
 }
 
 // these stats keep track of the cost of DNS lookups

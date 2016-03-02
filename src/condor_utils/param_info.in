@@ -7394,12 +7394,20 @@ friendly_name=Ignore target protocol preference
 usage=Should HTCondor ignore the target's listed protocol preferences?
 tags=daemon_core
 
+[IGNORE_DNS_PROTOCOL_PREFERENCE]
+default=$(PREFER_IPV4)
+version=8.5.3
+reconfig=false
+friendly_name=Ignore target protocol preference
+usage=Should HTCondor ignore the protocol order returned by DNS?
+tags=daemon_core
+
 [PREFER_OUTBOUND_IPV4]
 default=$(PREFER_IPV4)
 version=8.5.3
 reconfig=false
 friendly_name=Prefer to connect over IPv4
-usage=Should HTCondor prefer IPv4 if it's ignoring the target's preferences?
+usage=Should HTCondor prefer IPv4 when ignoring preferences?
 tags=daemon_core
 
 [JOB_EXECDIR_PERMISSIONS]

@@ -36,12 +36,6 @@ int condor_getnameinfo (const condor_sockaddr& addr,
 				char * __serv, socklen_t __servlen,
 				unsigned int __flags);
 
-
-int condor_getaddrinfo(const char *node,
-                const char *service,
-                const addrinfo *hints,
-                addrinfo **res);
-
 int condor_sendto(int sockfd, const void* buf, size_t len, int flags,
 				  const condor_sockaddr& addr);
 int condor_recvfrom(int sockfd, void* buf, size_t buf_size, int flags,
@@ -60,7 +54,6 @@ int condor_socket(const addrinfo& ai);
 // returns 1 if succeeded
 int condor_inet_pton(const char* src, condor_sockaddr& dest);
 
-hostent* condor_gethostbyaddr_ipv6(const condor_sockaddr& addr);
 int condor_getsockaddr(int fd, condor_sockaddr& addr);
 
 #endif // CONDOR_SOCKFUNC_H
