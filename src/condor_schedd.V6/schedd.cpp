@@ -1012,9 +1012,12 @@ Scheduler::fill_submitter_ad(ClassAd & pAd, const OwnerData & Owner, int flock_l
 	}
 
 	int JobsRunningHere = Counters.JobsRunning;
+	int WeightedJobsRunningHere = Counters.WeightedJobsRunning;
 	int JobsRunningElsewhere = Counters.JobsFlocked;
+
 	if (flock_level > 0) {
 		JobsRunningHere = Counters.JobsFlockedHere;
+		WeightedJobsRunningHere = Counters.WeightedJobsFlockedHere;
 		JobsRunningElsewhere = (Counters.JobsRunning + Counters.JobsFlocked) - Counters.JobsFlockedHere;
 	}
 
@@ -1026,9 +1029,9 @@ Scheduler::fill_submitter_ad(ClassAd & pAd, const OwnerData & Owner, int flock_l
 	if (want_dprintf)
 		dprintf (dprint_level, "Changed attribute: %s = %d\n", ATTR_IDLE_JOBS, Counters.JobsIdle);
 
-	pAd.Assign(ATTR_WEIGHTED_RUNNING_JOBS, Counters.WeightedJobsRunning);
+	pAd.Assign(ATTR_WEIGHTED_RUNNING_JOBS, WeightedJobsRunningHere);
 	if (want_dprintf)
-		dprintf (dprint_level, "Changed attribute: %s = %d\n", ATTR_WEIGHTED_RUNNING_JOBS, Counters.WeightedJobsRunning);
+		dprintf (dprint_level, "Changed attribute: %s = %d\n", ATTR_WEIGHTED_RUNNING_JOBS, WeightedJobsRunningHere);
 
 	pAd.Assign(ATTR_WEIGHTED_IDLE_JOBS, Counters.WeightedJobsIdle);
 	if (want_dprintf)
@@ -1235,23 +1238,7 @@ Scheduler::count_jobs()
 				// Sum up the # of cpus claimed by this user and advertise it as
 				// WeightedJobsRunning. 
 
-			int job_weight = 1;
-			if (m_use_slot_weights && slotWeight && rec->my_match_ad) {
-					// if the schedd slot weight expression is set and parses,
-					// evaluate it here
-				classad::Value result;
-				int rval = EvalExprTree( slotWeight, rec->my_match_ad, NULL, result );
-				if( !rval || !result.IsNumber(job_weight)) {
-					job_weight = 1;
-				}
-			} else {
-					// slot weight isn't set, fall back to assuming cpus
-				if (rec->my_match_ad) {
-					if(0 == rec->my_match_ad->LookupInteger(ATTR_CPUS, job_weight)) {
-						job_weight = 1; // or fall back to one if CPUS isn't in the startds
-					}
-				}
-			}
+			int job_weight = calcSlotWeight(rec->my_match_ad);
 			
 			Owner->num.WeightedJobsRunning += job_weight;
 			Owner->num.JobsRunning++;
@@ -1498,6 +1485,7 @@ Scheduler::count_jobs()
 			for (OwnerDataMap::iterator it = Owners.begin(); it != Owners.end(); ++it) {
 				OwnerData & Owner = it->second;
 				Owner.num.JobsFlockedHere = 0;
+				Owner.num.WeightedJobsFlockedHere = 0;
 			}
 			matches->startIterations();
 			match_rec *mRec;
@@ -1509,6 +1497,8 @@ Scheduler::count_jobs()
 				if (mRec->shadowRec && mRec->pool &&
 					!strcmp(mRec->pool, flock_neg->pool())) {
 					Owner->num.JobsFlockedHere++;
+
+					Owner->num.WeightedJobsFlockedHere += calcSlotWeight(mRec->my_match_ad);
 				}
 			}
 
@@ -2415,6 +2405,30 @@ clear_autocluster_id(JobQueueJob *job, const JOB_ID_KEY & /*jid*/, void *)
 	return 0;
 }
 
+	// This function, given a job, calculates the "weight", or cost
+	// of the slot for accounting purposes.  Usually the # of cpus
+int 
+Scheduler::calcSlotWeight(ClassAd *machine) {
+	int job_weight = 1;
+	if (m_use_slot_weights && slotWeight && machine) {
+			// if the schedd slot weight expression is set and parses,
+			// evaluate it here
+		classad::Value result;
+		int rval = EvalExprTree( slotWeight, machine, NULL, result );
+		if( !rval || !result.IsNumber(job_weight)) {
+			job_weight = 1;
+		}
+	} else {
+			// slot weight isn't set, fall back to assuming cpus
+		if (machine) {
+			if(0 == machine->LookupInteger(ATTR_CPUS, job_weight)) {
+				job_weight = 1; // or fall back to one if CPUS isn't in the startds
+			}
+		}
+	}
+	
+	return job_weight;
+}
 
 int
 count_a_job(JobQueueJob* job, const JOB_ID_KEY& /*jid*/, void*)
@@ -2705,8 +2719,8 @@ count_a_job(JobQueueJob* job, const JOB_ID_KEY& /*jid*/, void*)
 		if ((scheduler.m_use_slot_weights) && (cur_hosts == 0) && scheduler.slotWeightMapAd) {
 
 				// if we're biasing idle jobs by SLOT_WEIGHT, eval that here
-			classad::Value result;
 			int job_weight;
+			classad::Value result;
 			int rval = EvalExprTree( scheduler.slotWeight, scheduler.slotWeightMapAd, job, result );
 
 			if( !rval || !result.IsNumber(job_weight)) {
