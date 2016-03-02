@@ -306,16 +306,19 @@ as the value of \MacroNI{DAGMAN\_SUPPRESS\_NOTIFICATION} is enforced.
   \OptItem{\Opt{-DontAlwaysRunPost}}{This option causes the submit
      description file generated for the submission of \Condor{dagman} to
      be modified.  
-     It causes the \Opt{-DontAlwaysRunPost} option to be in the
-     arguments to \Condor{dagman} in the submit description file, 
-     which causes \Condor{dagman} to use the return value from a PRE script 
-     to determine whether or not a POST script will run.  
-     By default, \Condor{dagman} runs the
-     POST script regardless of the return value of the PRE script. 
-     Versions of \Condor{dagman} prior to 7.7.2 did not ignore the return
-     value and would not run the POST script if the PRE script failed.
+     It causes \Condor{dagman} to
+     not run the POST script of a node if the PRE script fails.
+     (This was the default behavior prior to HTCondor version 7.7.2,
+     and is again the default behavior from version 8.5.4 onwards.)
   }
-  \OptItem{\Opt{-AlwaysRunPost}}{TEMPTEMP -- add details here
+  \OptItem{\Opt{-AlwaysRunPost}}{This option causes the submit
+     description file generated for the submission of \Condor{dagman} to
+     be modified.  
+     It causes \Condor{dagman} to
+     always run the POST script of a node, even if the PRE script
+     fails.
+     (This was the default behavior for HTCondor version 7.7.2 through
+     version 8.5.3.)
   }
   \OptItem{\OptArg{-priority}{number}}{Sets the minimum job priority
     of node jobs submitted and running under the \Condor{dagman} job
