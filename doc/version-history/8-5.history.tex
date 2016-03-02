@@ -28,7 +28,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item In addition to logging to the file \MacroNI{KERNEL\_TUNING\_LOG},
+the default \MacroNI{LINUX\_KERNEL\_TUNING\_SCRIPT} now also logs to
+syslog and \File{/etc/systcl.d/99-htcondor.conf}.
+\Ticket{5489}
 
 \end{itemize}
 
