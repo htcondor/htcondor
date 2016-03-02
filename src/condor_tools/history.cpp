@@ -1348,8 +1348,8 @@ static void printJobIfConstraint(std::vector<std::string> & exprs, const char* c
 
 	// convert lines vector into classad.
 	while ((ix = exprs.size()) > 0) {
-		const char * pexpr = exprs[ix-1].c_str();
-		if ( ! ad.Insert(pexpr)) {
+		if ( ! ad.Insert(exprs[ix-1])) {
+			const char * pexpr = exprs[ix-1].c_str();
 			dprintf(D_ALWAYS,"failed to create classad; bad expr = '%s'\n", pexpr);
 			printf( "\t*** Warning: Bad history file; skipping malformed ad(s)\n" );
 			exprs.clear();

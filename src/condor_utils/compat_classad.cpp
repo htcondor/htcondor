@@ -1353,6 +1353,23 @@ int ClassAd::Insert( const char *name, classad::ExprTree *& expr, bool bCache )
 }
 
 int
+ClassAd::Insert(const std::string &str)
+{
+	
+	size_t backslash = str.find('\\');
+	if (backslash == std::string::npos) {
+		// No backslashes, no need to escape 'em (and mutate the string)
+		if (!classad::ClassAd::Insert(str)) {
+	  		return FALSE;
+		}
+		return TRUE;
+	}
+
+	// At least one backslash, take the slow path, allocate a new string
+	return this->Insert(str.c_str());
+}
+
+int
 ClassAd::Insert( const char *str )
 {
 		// String escaping is different between new and old ClassAds.

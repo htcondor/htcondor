@@ -109,6 +109,7 @@ class ClassAd : public classad::ClassAd
 		 *  @param str A string of the form "Attribute = Value"
 		 */
 	int Insert(const char *str);
+	int Insert(const std::string &str); // somewhat faster than above
 
 		/* Insert an attribute/value into the Classad
 		 */
