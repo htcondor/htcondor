@@ -821,7 +821,32 @@ the changed value.
   
 \label{param:IpAddress}
 \item[\MacroU{IP\_ADDRESS}]
-  The ASCII string version of the local machine's IP address.
+  The ASCII string version of the local machine's ``most public'' IP address.
+  This address may be IPv4 or IPv6, but the macro will always be set.
+
+  HTCondor selects the ``most public'' address heuristically.  Your
+  configuration should not depend on HTCondor picking any particular IP
+  address for this macro; this macro's value may not even be one of the IP
+  addresses HTCondor is configured to advertise.
+
+label{param:IPv4Address}
+\item[\MacroU{IPV4\_ADDRESS}]
+  The ASCII string version of the local machine's ``most public'' IPv4
+  address; unset if the local machine has no IPv4 address.
+
+  See \MacroNI{IP\_ADDRESS} about ``most public''.
+
+\label{param:IPv6Address}
+\item[\MacroU{IPV6\_ADDRESS}]
+  The ASCII string version of the local machine's ``most public'' IPv6
+  address; unset if the local machine has no IPv6 address.
+
+  See \MacroNI{IP\_ADDRESS} about ``most public''.
+
+\label{param:IpAddressIsV6}
+\item[\MacroU{IP\_ADDRESS\_IS\_V6}]
+  A boolean which is true if and only if \Macro{IP\_ADDRESS} is an IPv6
+  address.  Useful for conditonal configuration.
 
 \label{param:Tilde}
 \item[\MacroU{TILDE}]
