@@ -1173,7 +1173,10 @@ bool Sock::chooseAddrFromAddrs( char const * host, std::string & addr ) {
 		condor_sockaddr c = (*v)[i];
 		int d = -1 * c.desirability();
 		if( ignoreTargetProtocolPreference ) {
-			// These constants assume that the max desirability() < 10.
+			// This would work with d *= 2 and d -= 1.  10 and 1 may be
+			// more obvious when looking at logs, but there's no point
+			// changing it unless we need more room in the desirability
+			// spae for some reason.
 			d *= 100;
 			if( preferOutboundIPv4 && c.is_ipv4() ) { d -= 10; }
 			if( (!preferOutboundIPv4) && (!c.is_ipv4()) ) { d -= 10; }
