@@ -127,6 +127,7 @@ struct OwnerCounters {
   int JobsHeld;
   int JobsFlocked;
   int JobsFlockedHere; // volatile field use to hold the JobsRunning calculation when sending submitter adds to flock collectors
+  int WeightedJobsFlockedHere; // volatile field use to hold the JobsRunning calculation when sending submitter adds to flock collectors
   int Hits;  // used in the mark/sweep algorithm of count_jobs to detect Owners that no longer have any jobs in the queue.
   int JobsCounted; // smaller than Hits by the number of match recs for this Owner.
   int JobsRecentlyAdded; // zeroed on each sweep, incremented on submission.
@@ -759,6 +760,7 @@ private:
 	void			initLocalStarterDir( void );
 	void	noShadowForJob( shadow_rec* srec, NoShadowFailure_t why );
 	bool			jobExitCode( PROC_ID job_id, int exit_code );
+	int			calcSlotWeight(ClassAd *machine);
 	
 	// -----------------------------------------------
 	// CronTab Jobs
