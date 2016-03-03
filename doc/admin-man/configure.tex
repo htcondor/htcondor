@@ -2058,6 +2058,25 @@ the default \\ \hline
   A value of 0 will use the operating system default,
   and a value of -1 will disable HTCondor's use of a TCP keep alive.
 
+\label{param:EnableIPv4}
+\item[\Macro{ENABLE\_IPV4}]
+  A boolean with the additional special value of \Expr{auto}.  If true,
+  HTCondor will use IPv4 if available, and fail otherwise.  If false,
+  HTCondor will not use IPv4.  If \Expr{auto}, HTCondor will use IPv4
+  if it can find an interface with an IPv4 address; this is the default.
+
+\label{param:EnableIPv6}
+\item[\Macro{ENABLE\_IPV6}]
+  A boolean with the additional special value of \Expr{auto}.  If true,
+  HTCondor will use IPv6 if available, and fail otherwise.  If false,
+  HTCondor will not use IPv6.  If \Expr{auto}, HTCondor will use IPv6
+  if it can find an interface with an IPv6 address; this is the default.
+
+\label{param:PreferIPv4}
+\item[\Macro{PREFER\_IPV4}]
+  A boolean which will cause HTCondor to prefer IPv4 when it is able
+  to choose.  HTCondor will otherwise prefer IPv6.
+
 \end{description}
 
 
