@@ -62,7 +62,11 @@ std::vector<BYTE> Base64::zkm_base64_decode(std::string encoded_string) {
   BYTE char_array_4[4], char_array_3[3];
   std::vector<BYTE> ret;
 
-  while (in_len-- && ( encoded_string[in_] != '=') && is_base64(encoded_string[in_])) {
+  while (in_len-- && ( (encoded_string[in_]=='\n') || (( encoded_string[in_] != '=') && is_base64(encoded_string[in_])))) {
+    if(encoded_string[in_]=='\n') {
+      in_++;
+      continue;
+    }
     char_array_4[i++] = encoded_string[in_]; in_++;
     if (i ==4) {
       for (i = 0; i <4; i++)
