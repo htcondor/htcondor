@@ -127,6 +127,7 @@ struct OwnerCounters {
   int JobsHeld;
   int JobsFlocked;
   int JobsFlockedHere; // volatile field use to hold the JobsRunning calculation when sending submitter adds to flock collectors
+  int WeightedJobsFlockedHere; // volatile field use to hold the JobsRunning calculation when sending submitter adds to flock collectors
   int SchedulerJobsRunning; // Scheduler Universe (i.e dags)
   int SchedulerJobsIdle;    // Scheduler Universe (i.e dags)
   int LocalJobsRunning; // Local universe
@@ -765,6 +766,7 @@ private:
 	void			initLocalStarterDir( void );
 	void	noShadowForJob( shadow_rec* srec, NoShadowFailure_t why );
 	bool			jobExitCode( PROC_ID job_id, int exit_code );
+	int			calcSlotWeight(ClassAd *machine);
 	
 	// -----------------------------------------------
 	// CronTab Jobs
