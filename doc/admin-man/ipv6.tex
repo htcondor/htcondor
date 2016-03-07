@@ -3,39 +3,53 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{IPv6|(}
 
-By default, HTCondor uses only IPv4 networks.  To enable IPv6 networking,
-set configuration variable \Macro{ENABLE\_IPV6} to \Expr{True}.
-Do \emph{not} enable IP6 unless
-the machine on which the daemon is running has an IPv6 address that the
-other machines within the pool can reach.  
-Otherwise, as HTCondor prefers to use IPv6 networks,
-enabling IPv6 can cause connectivity problems.
-In particular, it is unlikely IPv6 should be enabled if the IPv6 addresses
-are loopback (::1) or link-local (fe80::).
+HTCondor supports using IPv4, IPv6, or both.  By default, HTCondor will
+look at a machine's interfaces, and on that machine, enable each protocol
+for which it finds at least one interface with an address of that procol.
 
-To disable IPv4 networking, set configuration variable \Macro{ENABLE\_IPV4} 
-to \Expr{False}.
-HTCondor operates normally using only IPv6 addresses.
+To require IPv4, you may set \Macro{ENABLE\_IPV4} to true; if the
+machine does not have an interface with an IPv4 address, HTCondor will
+not start.  Likewise, to require IPv6, you may set \Macro{ENABLE\_IPV6}
+to true.
+
+If you set \Macro{ENABLE\_IPV4} to false, HTCondor will not use IPv4,
+even if it is available; likewise for \Macro{ENABLE\_IPV6} and IPv6.
+
+The default setting for \Macro{ENABLE\_IPV4} and \Macro{ENABLE\_IPV6} is
+\Expr{auto}, which uses the corresponding protocol if and only HTCondor
+finds an interface with an address of that protocol.
 
 If both IPv4 and IPv6 networking are enabled, HTCondor runs in mixed mode.
-In mixed mode, HTCondor daemons have at least two addresses that include
-an IPv4 address and an IPv6 address.  
-Generally, other daemons and the HTCondor client
-tools will choose between these addresses based on which protocols are enabled
-for them, preferring IPv6 when given the choice.
+In mixed mode, HTCondor daemons have at least one IPv4 address and at
+least one IPv6 address.  Other daemons and the command-line tools choose
+between these addresses based on which protocols are enabled for them; if
+both are, they will prefer the first address listed by that daemon.
 
-There are two important cases in which the preference will not be for an IPv6 address:
+A daemon may be listening on one, some, or all of its machine's addresses.
+(See \Macro{NETWORK\_INTERFACE}.)  Daemons may presently list at most two
+addresses, one IPv6 and one IPv4.  Each address is the ``most public''
+address of its protocol; by default, the IPv6 address is listed first.
+HTCondor selects the ``most public'' address heuristically.
+
+Nonetheless, there are two cases in which HTCondor may not use an IPv6
+address when one is available:
 \begin{itemize}
 \item{When given a literal IP address, HTCondor will use that IP address.  }
-\item{When looking up a host name using DNS,
-HTCondor will use the first address whose
-protocol is enabled for the tool or daemon doing the look up.  }
+\item{When looking up a host name using DNS, HTCondor will use the first
+address whose protocol is enabled for the tool or daemon doing the look up.  }
 \end{itemize}
 
-In practice, this means that both an HTCondor pool's central manager
-and any submit machines within a mixed mode pool must have both IPv4 and IPv6
-addresses for both IPv4-only and IPv6-only \Condor{startd} daemons 
-to function properly.
+You may force HTCondor to prefer IPv4 in all three of these situations by
+setting the macro \Macro{PREFER\_IPV4} to true; this is the default.
+With \Macro{PREFER\_IPV4} set, HTCondor daemons will list their
+``most public'' IPv4 address first; prefer the IPv4 address when
+choosing from another's daemon list; and prefer the IPv4 address when
+looking up a host name in DNS.
+
+In practice, both an HTCondor pool's central manager and any submit
+machines within a mixed mode pool must have both IPv4 and IPv6 addresses
+for both IPv4-only and IPv6-only \Condor{startd} daemons to function
+properly.
 
 \subsubsection{IPv6 and Host-Based Security}
 

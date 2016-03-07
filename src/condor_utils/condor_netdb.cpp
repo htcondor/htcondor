@@ -106,86 +106,6 @@ condor_gethostbyname_ipv4(const char *name) {
 	}
 }
 
-// This is obsolete function. do not use.
-struct hostent *
-condor_gethostbyname_ipv6(const char* name) {
-    #define MAXADDR 16
-    static struct hostent hostent;
-	static struct in_addr addr_list[MAXADDR];
-	static char *h_addr_list[MAXADDR+1];
-	static char h_name[NI_MAXHOST];
-	struct addrinfo hints;
-	struct addrinfo* res = NULL;
-	struct addrinfo* iter;
-	struct hostent* hostent_alias = NULL;
-	int e;
-	int addrcount = 0;
-	int first = 1;
-
-    if (nodns_enabled()) {
-        return get_nodns_hostent(name);
-    }
-
-    memset(&hints, 0, sizeof(hints));
-    hints.ai_socktype = SOCK_STREAM;
-#ifdef WIN32
-	// AI_ADDRCONFIG is supported since Windows Server 2008 SDK.
-    hints.ai_flags = AI_CANONNAME;
-#else
-    // Unfortunately, Ubuntu 10 and 12 disagree with everyone else about
-    // what AI_ADDRCONFIG means, so we need to ask for all addresses and
-    // filter on our end.
-    hints.ai_flags = AI_CANONNAME;
-#endif 
-
-    e = getaddrinfo(name, NULL, &hints, &res);
-    if (e != 0)
-        return NULL;
-
-    memset(h_addr_list, 0, sizeof(h_addr_list));
-    memset(h_name, 0, sizeof(h_name));
-    memset(&hostent, 0, sizeof(hostent));
-    hostent.h_name = h_name;
-
-	// fill up h_aliases field by calling gethostbyname().
-	// it seems there is no way to get DNS aliases from IPv6 functions.
-	// **YOU SHOULD NOT CALL gethostbyname() inside this fn after this point**
-	hostent_alias = gethostbyname(name);
-	if (hostent_alias) {
-		hostent.h_aliases = hostent_alias->h_aliases;
-	}
-
-    hostent.h_addrtype = AF_INET;
-    hostent.h_length = sizeof(struct in_addr);
-    hostent.h_addr_list = &h_addr_list[0];
-
-    for ( iter = res; iter != NULL; iter = iter->ai_next ) {
-        if (first) {
-            // first canonical name is primary name for the host.
-            // rest is aliases
-            if ( iter->ai_canonname ) {
-                strncpy(h_name, iter->ai_canonname, sizeof(h_name)-1);
-                first = 0;
-            }
-        }
-        // pick only IPv4 address
-        if (iter->ai_addr && iter->ai_addr->sa_family == AF_INET) {
-            sockaddr_storage_ptr sock_address;
-            sock_address.raw = iter->ai_addr;
-            struct sockaddr_in* _sin = sock_address.in;
-            memcpy(&addr_list[addrcount], &_sin->sin_addr, sizeof(struct in_addr));
-            h_addr_list[addrcount] = (char*)&addr_list[addrcount];
-            addrcount++;
-            if (addrcount == MAXADDR)
-                break;
-        }
-    }
-
-    h_addr_list[addrcount] = NULL;
-    freeaddrinfo(res);
-    return &hostent;
-}
-
 struct hostent *
 condor_gethostbyname(const char *name)
 {
@@ -219,41 +139,6 @@ condor_gethostbyaddr_ipv4(const char *addr, SOCKET_LENGTH_TYPE len, int type) {
 	} else {
 		return gethostbyaddr(addr, len, type);
 	}
-}
-
-// This is obsolete function. do not use.
-struct hostent *
-condor_gethostbyaddr_ipv6(const char *addr, SOCKET_LENGTH_TYPE len, int type) {
-    char _hostname[NI_MAXHOST];
-    struct sockaddr_in sinaddr;
-    int e;
-
-    MSC_SUPPRESS_WARNING(6287) // warning: Redundant code: the left and right sub-expressions are identical
-    if (type != AF_INET || type != PF_INET) {
-        // fallback
-        return condor_gethostbyaddr_ipv4(addr, len, type);
-    }
-
-	if (nodns_enabled()) {
-	    return get_nodns_addr(addr);
-	}
-
-	memset(&sinaddr, 0, sizeof(sinaddr));
-	sinaddr.sin_family = type;
-	in_addr_ptr in_address_ptr;
-	in_address_ptr.as_char = addr;
-	sinaddr.sin_addr = *(in_address_ptr.in);
-
-#ifdef HAVE_STRUCT_SOCKADDR_IN_SIN_LEN
-	sinaddr.sin_len = sizeof(struct sockaddr_in);
-#endif
-
-	e = getnameinfo((const struct sockaddr*)&sinaddr, sizeof(sinaddr), _hostname, sizeof(_hostname), NULL, 0, 0);
-	if (e != 0)
-        return NULL;
-
-    // getnameinfo only returns hostname. in order to fill up struct hostent, call condor_gethotsbyname_ipv6
-    return condor_gethostbyname_ipv6(_hostname);
 }
 
 struct hostent *

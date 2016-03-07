@@ -58,7 +58,27 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item In addition to logging to the file \MacroNI{KERNEL\_TUNING\_LOG},
+the default \MacroNI{LINUX\_KERNEL\_TUNING\_SCRIPT} now also logs to
+syslog and \File{/etc/systcl.d/99-htcondor.conf}.
+\Ticket{5489}
+
+\item New configuration macros added: \MacroNI{IPV4\_ADDRESS},
+\Macro{IPV6\_ADDRESS}, \MacroNI{IP\_ADDRESS\_IS\_V6}.
+\Ticket{5512}
+
+\item \MacroNI{ENABLE\_IPV4} and \MacroNI{ENABLE\_IPV6} both now accept
+the special value "AUTO", which is true if an interface with the corresponding
+protocol exists on the host, and false otherwise.
+\Ticket{5524}
+
+\item \MacroNI{ENABLE\_IPV4} and \MacroNI{ENABLE\_IPV6} both now default
+to the special value "AUTO".  Additionally, the new configuration macro
+\MacroNI{PREFER\_IPV4} is true by default.  This macro causes HTCondor to
+prefer IPv4 over IPv6 when choosing an address to advertise, when choosing
+the address of daemon looked up in the collector, and when resolving DNS
+queries.
+\Ticket{5104}
 
 \end{itemize}
 
