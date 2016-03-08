@@ -535,6 +535,7 @@ e		*/
         int size(void) const { return attrList.size(); }
 		//@}
 
+		void rehash(size_t s) { attrList.rehash(s);}
 		/** Deconstructor to get the components of a classad
 		 * 	@param vec A vector of (name,expression) pairs which are the
 		 * 		attributes of the classad

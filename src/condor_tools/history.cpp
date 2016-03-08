@@ -1344,6 +1344,8 @@ static void printJobIfConstraint(std::vector<std::string> & exprs, const char* c
 		return;
 
 	ClassAd ad;
+	ad.rehash(521); // big enough to prevent regrowing hash table
+
 	size_t ix;
 
 	// convert lines vector into classad.
