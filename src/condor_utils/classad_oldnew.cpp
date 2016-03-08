@@ -81,6 +81,11 @@ bool getClassAd( Stream *sock, classad::ClassAd& ad )
  		return false;
 	}
 
+	// at least numExprs are coming, but we may add
+	// my, target, and a couple extra right away
+
+	ad.rehash(numExprs + 5);
+
 		// pack exprs into classad
 	for( int i = 0 ; i < numExprs ; i++ ) {
 		char const *strptr = NULL;
