@@ -2192,6 +2192,7 @@ SecManStartCommand::receivePostAuthInfo_inner()
 				}
 			}
 			
+			m_sock->setSessionID(sesid);
 			free( sesid );
             free( cmd_list );
 
@@ -2703,7 +2704,7 @@ SecMan::Verify(DCpermission perm, const condor_sockaddr& addr, const char * fqu,
 
 
 bool
-SecMan::sec_copy_attribute( ClassAd &dest, ClassAd &source, const char* attr ) {
+SecMan::sec_copy_attribute( classad::ClassAd &dest, ClassAd &source, const char* attr ) {
 	ExprTree *e = source.LookupExpr(attr);
 	if (e) {
 		ExprTree *cp = e->Copy();
@@ -3146,6 +3147,23 @@ SecMan::ImportSecSessionInfo(char const *session_info,ClassAd &policy) {
 	sec_copy_attribute(policy,imp_policy,ATTR_SEC_SESSION_EXPIRES);
 	sec_copy_attribute(policy,imp_policy,ATTR_SEC_VALID_COMMANDS);
 
+	return true;
+}
+
+bool
+SecMan::getSessionPolicy(const char *session_id, classad::ClassAd &policy_ad)
+{
+	KeyCacheEntry *session_key = NULL;
+	if (!session_cache.lookup(session_id, session_key)) {return false;}
+	ClassAd *policy = session_key->policy();
+	if (!policy) {return false;}
+
+	sec_copy_attribute(policy_ad, *policy, ATTR_X509_USER_PROXY_SUBJECT);
+	sec_copy_attribute(policy_ad, *policy, ATTR_X509_USER_PROXY_EXPIRATION);
+	sec_copy_attribute(policy_ad, *policy, ATTR_X509_USER_PROXY_EMAIL);
+	sec_copy_attribute(policy_ad, *policy, ATTR_X509_USER_PROXY_VONAME);
+	sec_copy_attribute(policy_ad, *policy, ATTR_X509_USER_PROXY_FIRST_FQAN);
+	sec_copy_attribute(policy_ad, *policy, ATTR_X509_USER_PROXY_FQAN);
 	return true;
 }
 

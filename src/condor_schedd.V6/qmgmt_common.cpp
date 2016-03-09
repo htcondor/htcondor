@@ -52,6 +52,22 @@ SetAttributeFloat(int cl, int pr, const char *name, float val, SetAttributeFlags
 }
 
 int
+SetAttributeRawString(int cl, int pr, const char *name, const char *val, SetAttributeFlags_t flags)
+{
+	if (val == NULL || name == NULL) {return -1;}
+
+	classad::Value tmpValue;
+	classad::ClassAdUnParser unparse;
+	unparse.SetOldClassAd( true, true );
+
+	tmpValue.SetStringValue(val);
+	std::string buf;
+	unparse.Unparse(buf, tmpValue);
+
+	return SetAttribute(cl, pr, name, buf.c_str(), flags);
+}
+
+int
 SetAttributeString(int cl, int pr, const char *name, const char *val, SetAttributeFlags_t flags )
 {
 	MyString buf;
