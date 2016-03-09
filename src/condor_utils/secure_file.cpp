@@ -246,7 +246,6 @@ read_secure_file(const char *fname, void **buf, size_t *len, bool as_root)
 	*buf = fbuf;
 	*len = fsize;
 
-	dprintf(D_ALWAYS, "CERN: STORE CRED SUCCEEDED!\n");
 	return true;
 }
 

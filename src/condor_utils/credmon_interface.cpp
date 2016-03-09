@@ -220,7 +220,7 @@ void credmon_sweep_creds() {
 		}
 		free(namelist);
 	} else {
-		dprintf(D_FULLDEBUG, "CREDMON: skipping sweep, scandir(%s) not defined!\n", cred_dir);
+		dprintf(D_FULLDEBUG, "CREDMON: skipping sweep, scandir(%s) got errno %i\n", cred_dir, errno);
 	}
 	free(cred_dir);
 }
