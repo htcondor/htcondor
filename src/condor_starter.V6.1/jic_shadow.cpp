@@ -2649,6 +2649,9 @@ JICShadow::refreshSandboxCredentials()
 	// get username
 	MyString user = get_user_loginname();
 
+	// declaring at top since we use goto for error handling
+	priv_state priv;
+
 	// construct filename to stat
 	char* cred_dir = param("SEC_CREDENTIAL_DIRECTORY");
 	if(!cred_dir) {
@@ -2695,14 +2698,19 @@ JICShadow::refreshSandboxCredentials()
 	}
 
 	// as user, write tmp file securely
-	if (!write_secure_file(sandboxcctmpfilename, ccbuf, cclen, false)) {
+	priv = set_user_priv();
+	rc = write_secure_file(sandboxcctmpfilename, ccbuf, cclen, false);
+	set_priv(priv);
+	if (!rc) {
 		dprintf(D_ALWAYS, "ERROR: write_secure_file(%s,ccbuf,%lu) failed\n", sandboxcctmpfilename,cclen);
 		rc = false;
 		goto resettimer;
 	}
 
 	// as user, atomically move tmp file into correct location
+	priv = set_user_priv();
 	rc = rename(sandboxcctmpfilename, sandboxccfilename);
+	set_priv(priv);
 	if (rc!=0) {
 		dprintf(D_ALWAYS, "ERROR: rename(%s,%s) failed with %i\n", sandboxcctmpfilename,sandboxccfilename,errno);
 		rc = false;
