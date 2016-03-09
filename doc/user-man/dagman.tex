@@ -293,7 +293,7 @@ the \Arg{PRE} or \Arg{POST} keyword,
 which specifies the relative timing of when the script is to be run.
 The \Arg{JobName} identifies the node to which the script is attached.
 The \Arg{ExecutableName}
-specifies the shell script/batch file to be executed, 
+specifies the executable (e.g., shell script or batch file) to be executed, 
 and may not contain spaces.
 The optional \Arg{arguments} are command line arguments to the script,
 and spaces delimit the arguments.
@@ -338,12 +338,11 @@ and (as of version 8.5.4) the POST
 script is not run either (by default).
 However, if the job is submitted, and there is a POST script, the POST
 script is always run once the job finishes.
-The behavior when the PRE script fails may
+(The behavior when the PRE script fails may
 may be changed to run the POST script
 by setting configuration variable \MacroNI{DAGMAN\_ALWAYS\_RUN\_POST} 
-to \Expr{True}.
-With this setting, the failure of the PRE script
-means that the job is not submitted, but the POST script \emph{is} run.
+to \Expr{True} or by passing the \Opt{-AlwaysRunPost}
+argument to \Condor{submit\_dag}.)
 
 Progress towards completion of the DAG is based upon
 the success of the nodes within the DAG.
