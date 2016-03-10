@@ -42,10 +42,12 @@ void simple_scramble(char* scrambled,  const char* orig, int len)
 int write_password_file(const char* path, const char* password)
 {
 	size_t password_len = strlen(password);
-	char scrambled_password[password_len + 1];
+	char *scrambled_password = (char*)malloc(password_len + 1);
 	memset(scrambled_password, 0, password_len + 1);
 	simple_scramble(scrambled_password, password, password_len);
-	return write_secure_file(path, scrambled_password, password_len + 1, true);
+	int rc = write_secure_file(path, scrambled_password, password_len + 1, true);
+	free(scrambled_password);
+	return rc;
 }
 
 
@@ -157,6 +159,8 @@ read_secure_file(const char *fname, void **buf, size_t *len, bool as_root)
 		return false;
 	}
 
+	// skip ownership check on windows
+#ifndef WIN32
 	// make sure the file owner matches expected owner
 	uid_t fowner;
 	if(as_root) {
@@ -171,6 +175,7 @@ read_secure_file(const char *fname, void **buf, size_t *len, bool as_root)
 		fclose(fp);
 		return false;
 	}
+#endif
 
 	// make sure no one else can read the file
 	if (st.st_mode & 077) {
