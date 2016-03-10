@@ -1269,8 +1269,8 @@ section~\ref{sec:HDFS-Config-File-Entries}.
 
 % #824
 \item Added the ClassAd attributes
-\Attr{TotalLocalRunningJobs}, \Attr{TotalLocalIdleJobs},
-\Attr{TotalSchedulerRunningJobs}, and \Attr{TotalSchedulerIdleJobs}
+\Attr{TotalLocalJobsRunning}, \Attr{TotalLocalJobsIdle},
+\Attr{TotalSchedulerJobsRunning}, and \Attr{TotalSchedulerJobsIdle}
 to the published ClassAd for the \Condor{schedd}.  This means that
 \Condor{q} \Opt{-analyze} can still give helpful information about
 why local or scheduler universe jobs are idle when
