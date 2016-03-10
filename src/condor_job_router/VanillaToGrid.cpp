@@ -306,6 +306,10 @@ bool update_job_status( classad::ClassAd const & orig, classad::ClassAd & newgri
 		ATTR_JOB_CORE_DUMPED,
 		ATTR_EXECUTABLE_SIZE,
 		ATTR_IMAGE_SIZE,
+		ATTR_MEMORY_USAGE,
+		ATTR_RESIDENT_SET_SIZE,
+		ATTR_PROPORTIONAL_SET_SIZE,
+		ATTR_DISK_USAGE,
 		ATTR_SHADOW_BIRTHDATE,
 		ATTR_SPOOLED_OUTPUT_FILES,
 		NULL };		// list must end with a NULL

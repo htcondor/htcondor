@@ -14,6 +14,10 @@
  * limitations under the License.
  */
 
+/*
+ * This file contains functions and constants related to negotiation
+ * that are needed outside of the negotiator daemon.
+ */
 
 /*
  * Parse the limit into a limit and its increment. The input limit is
@@ -23,3 +27,9 @@
  * e.g. m:3 or f.
  */
 bool ParseConcurrencyLimit(char *&limit, double &increment);
+
+/* Validate a submitter name for use in negotiation.
+ * The negotiator will ignore submitters with invalid names.
+ * Currently, the name can't contain any whitespace.
+ */
+bool IsValidSubmitterName( const char *name );

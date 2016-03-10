@@ -660,7 +660,7 @@ Sock::bindWithin(condor_protocol proto, const int low_port, const int high_port,
 	// int pid = (int) getpid();
 
 	// lets use time as the starting point instead...
-	long randomish_val;
+	unsigned long randomish_val;
 #ifndef WIN32
 	struct timeval curTime;
 	(void) gettimeofday(&curTime, NULL);
@@ -668,7 +668,7 @@ Sock::bindWithin(condor_protocol proto, const int low_port, const int high_port,
 #else
 	LARGE_INTEGER li;
 	::QueryPerformanceCounter(&li);
-	randomish_val = (int)li.LowPart;
+	randomish_val = li.LowPart % 1000000; // force into range of usec to avoid overflow when we multiply
 #endif
 
 	int range = high_port - low_port + 1;
