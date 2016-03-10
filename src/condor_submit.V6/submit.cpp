@@ -76,7 +76,7 @@
 #include "condor_holdcodes.h"
 #include "condor_url.h"
 #include "condor_version.h"
-#include "ConcurrencyLimitUtils.h"
+#include "NegotiationUtils.h"
 #include "submit_internal.h"
 
 #include "list.h"
@@ -9492,6 +9492,17 @@ void SetAccountingGroup() {
         group_user = gu;
         free(gu);
     }
+
+	if ( group && !IsValidSubmitterName(group) ) {
+		fprintf(stderr, "\nERROR: Invalid %s: %s\n", AcctGroup, group);
+		DoCleanup(0,0,NULL);
+		exit( 1 );
+	}
+	if ( !IsValidSubmitterName(group_user.c_str()) ) {
+		fprintf(stderr, "\nERROR: Invalid %s: %s\n", AcctGroupUser, group_user.c_str());
+		DoCleanup(0,0,NULL);
+		exit( 1 );
+	}
 
     // set attributes AcctGroup, AcctGroupUser and AccountingGroup on the job ad:
     std::string assign;
