@@ -613,8 +613,7 @@ get_cred_handler(void *, int /*i*/, Stream *s)
 	}
 
 		// Now that we sent the password, immediately zero it out from ram
-	//SecureZeroMemory(password,strlen(password));
-	bzero(password,strlen(password));
+	SecureZeroMemory(password,strlen(password));
 
 	dprintf(D_ALWAYS,
 			"Fetched user %s@%s password requested by %s@%s at %s\n",
