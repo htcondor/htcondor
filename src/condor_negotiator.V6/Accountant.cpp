@@ -32,7 +32,7 @@
 #include "classad_log.h"
 #include "string_list.h"
 #include "HashTable.h"
-#include "ConcurrencyLimitUtils.h"
+#include "NegotiationUtils.h"
 #include "matchmaker.h"
 #include <string>
 #include <deque>
