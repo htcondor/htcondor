@@ -131,7 +131,9 @@ void
 CredDaemon::sweep_timer_handler( void )
 {
 	dprintf(D_FULLDEBUG, "CREDD: calling and resetting sweep_timer_handler()\n");
+#ifndef WIN32
 	credmon_sweep_creds();
+#endif  // WIN32
 	int sec_cred_sweep_interval = param_integer("SEC_CREDENTIAL_SWEEP_INTERVAL", 30);
 	daemonCore->Reset_Timer (m_cred_sweep_tid, sec_cred_sweep_interval, sec_cred_sweep_interval);
 }
@@ -198,12 +200,17 @@ CredDaemon::refresh_all_handler( int, Stream* s)
 	// don't actually care (at the moment) what's in the ad, it's for
 	// forward/backward compatibility.
 
+#ifndef WIN32
 	// refresh ALL credentials
 	if(credmon_poll( NULL, true, true )) {
 		ad.Assign("result", "success");
 	} else {
 		ad.Assign("result", "failure");
 	}
+#else   // WIN32
+	// this command handler shouldn't be getting called on windows, so fail.
+	ad.Assign("result", "failure");
+#endif  // WIN32
 
 	r->encode();
 	dprintf(D_SECURITY | D_FULLDEBUG, "CREDD: refresh_all sending response ad:\n");

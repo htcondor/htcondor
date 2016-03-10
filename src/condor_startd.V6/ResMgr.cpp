@@ -1456,7 +1456,9 @@ void
 ResMgr::sweep_timer_handler( void )
 {
 	dprintf(D_FULLDEBUG, "STARTD: calling and resetting sweep_timer_handler()\n");
+#ifndef WIN32
 	credmon_sweep_creds();
+#endif  // WIN32
 	int sec_cred_sweep_interval = param_integer("SEC_CREDENTIAL_SWEEP_INTERVAL", 30);
 	daemonCore->Reset_Timer (m_cred_sweep_tid, sec_cred_sweep_interval, sec_cred_sweep_interval);
 }

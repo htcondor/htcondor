@@ -327,7 +327,7 @@ char* getStoredCredential(const char *username, const char *domain)
 	return strdup(pw);
 }
 
-int store_cred_service(const char *user, const char *pw, int mode) 
+int store_cred_service(const char *user, const char *pw, const size_t, int mode)
 {
 
 	wchar_t pwbuf[MAX_PASSWORD_LENGTH];
@@ -665,10 +665,12 @@ void store_cred_handler(void *, int /*i*/, Stream *s)
 				answer = FAILURE;
 			} else {
 				answer = store_cred_service(user,pw,strlen(pw)+1,mode);
+#ifndef WIN32  // no credmon on windows
 				if(answer == SUCCESS) {
 					// THIS WILL BLOCK
 					answer = credmon_poll(user, false, true);
 				}
+#endif // WIN32
 			}
 		}
 	}

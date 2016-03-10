@@ -521,12 +521,14 @@ countres:
 			ResCount++;
 		}
 	}
+#ifndef WIN32
 	if (ResCount == 0) {
 		dprintf(D_FULLDEBUG, "CREDMON: user %s no longer running jobs, mark cred for sweeping.\n", curuser.c_str());
 		credmon_mark_creds_for_sweeping(curuser.c_str());
 	} else {
 		dprintf(D_FULLDEBUG, "CREDMON: user %s still running %i jobs\n", curuser.c_str(), ResCount);
 	}
+#endif //WIN32
 
 	return TRUE;
 }

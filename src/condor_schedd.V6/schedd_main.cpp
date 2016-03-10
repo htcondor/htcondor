@@ -189,6 +189,7 @@ main_init(int argc, char* argv[])
 	// END ZKM HACK
 */
 
+#ifndef WIN32
 	// if using the SEC_CREDENTIAL_DIRECTORY, confirm we are "up-to-date".
 	// at the moment, we take an "all-or-nothing" approach.  ultimately, this
 	// should be per-user, and the SchedD should start normally and run jobs
@@ -215,6 +216,7 @@ main_init(int argc, char* argv[])
 		}
 	}
 	// User creds good to go, let's start this thing up!
+#endif  // WIN32
 
 		// Initialize all the modules
 	scheduler.Init();
