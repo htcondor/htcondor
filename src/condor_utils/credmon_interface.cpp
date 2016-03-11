@@ -168,7 +168,14 @@ bool credmon_mark_creds_for_sweeping(const char* user) {
 	return true;
 }
 
+// NOTE: some older platforms have a different signature for this function.
+// I have added a "custom" cmake attribute called HAVE_OLD_SCANDIR which is
+// currently set only for DARWIN 10.6 and 10.7.   -zmiller  2016-03-11
+#ifdef HAVE_OLD_SCANDIR
+int markfilter(dirent*d) {
+#else
 int markfilter(const dirent*d) {
+#endif
   bool match = !fnmatch("*.mark", d->d_name, FNM_PATHNAME);
   // printf("d: %s, %i\n", d->d_name, match);
   return match;
