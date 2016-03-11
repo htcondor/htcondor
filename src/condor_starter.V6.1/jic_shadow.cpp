@@ -115,7 +115,7 @@ JICShadow::JICShadow( const char* shadow_name ) : JobInfoCommunicator(),
 
 	m_proxy_expiration_tid = -1;
 	m_refresh_sandbox_creds_tid = -1;
-	bzero(&m_sandbox_creds_last_update, sizeof(m_sandbox_creds_last_update));
+	memset(&m_sandbox_creds_last_update, 0, sizeof(m_sandbox_creds_last_update));
 
 		/* Set a timeout on remote system calls.  This is needed in
 		   case the user job exits in the middle of a remote system
