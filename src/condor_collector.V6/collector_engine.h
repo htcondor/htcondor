@@ -164,6 +164,7 @@ class CollectorEngine : public Service
 	ClassAd *m_collector_requirements;
 
 	// JEF CMS Hack
+	bool m_forwardFilteringEnabled;
 	StringList m_forwardWatchList;
 	int m_forwardInterval;
 };

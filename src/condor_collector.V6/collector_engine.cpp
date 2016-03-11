@@ -78,6 +78,7 @@ CollectorEngine::CollectorEngine (CollectorStats *stats ) :
 	clientTimeout = 20;
 	machineUpdateInterval = 30;
 	m_forwardInterval = machineUpdateInterval / 3;
+	m_forwardFilteringEnabled = false;
 	housekeeperTimerID = -1;
 
 	collectorStats = stats;
@@ -155,9 +156,11 @@ scheduleHousekeeper (int timeout)
 {
 	// JEF Set watch list for cms forwarding hack
 	std::string watch_list;
-	param(watch_list,"FORWARD_WATCH_LIST", "State,Cpus,Memory,IdleJobs");
+	param(watch_list,"COLLECTOR_FORWARD_WATCH_LIST", "State,Cpus,Memory,IdleJobs");
 	m_forwardWatchList.clearAll();
 	m_forwardWatchList.initializeFromString(watch_list.c_str());
+
+	m_forwardFilteringEnabled = param_boolean( "COLLECTOR_FORWARD_FILTERING", false );
 
 	// cancel outstanding housekeeping requests
 	if (housekeeperTimerID != -1)
@@ -172,7 +175,7 @@ scheduleHousekeeper (int timeout)
 	// set to new timeout interval
 	machineUpdateInterval = timeout;
 
-	m_forwardInterval = param_integer("FORWARD_INTERVAL", machineUpdateInterval / 3, 0);
+	m_forwardInterval = param_integer("COLLECTOR_FORWARD_INTERVAL", machineUpdateInterval / 3, 0);
 
 	// if timeout interval was non-zero (i.e., housekeeping required) ...
 	if (timeout > 0)
@@ -1030,9 +1033,9 @@ updateClassAd (CollectorHashTable &hashTable,
 		insert = 1;
 		
 		// JEF do should-forward decision
-		if ( m_forwardInterval > 0 && ( strcmp( label, "Start" ) == 0 || strcmp( label, "Submittor" ) == 0 ) ) {
+		if ( m_forwardFilteringEnabled && ( strcmp( label, "Start" ) == 0 || strcmp( label, "Submittor" ) == 0 ) ) {
 dprintf(D_FULLDEBUG,"JEF setting LastForwarded in new ad\n");
-			new_ad->Assign( "LastForwarded", (int)time(NULL) );
+			new_ad->Assign( ATTR_LAST_FORWARDED, (int)time(NULL) );
 		}
 
 		return new_ad;
@@ -1054,7 +1057,7 @@ dprintf(D_FULLDEBUG,"JEF setting LastForwarded in new ad\n");
 		}
 
 		// JEF do should-forward decision
-		if ( m_forwardInterval > 0 && ( strcmp( label, "Start" ) == 0 || strcmp( label, "Submittor" ) == 0 ) ) {
+		if ( m_forwardFilteringEnabled && ( strcmp( label, "Start" ) == 0 || strcmp( label, "Submittor" ) == 0 ) ) {
 			bool forward = false;
 			int last_forwarded = 0;
 			old_ad->LookupInteger( "LastForwarded", last_forwarded );
@@ -1067,8 +1070,8 @@ dprintf(D_FULLDEBUG,"JEF Forwarding due to interval (%d + %d < %d)\n",last_forwa
 				const char *attr;
 				m_forwardWatchList.rewind();
 				while ( (attr = m_forwardWatchList.next()) ) {
-					// TODO This doesn't handle attrs appearing or
-					//   disappearing
+					// This treats attribute-not-present and
+					// attribute-evaluates-to-UNDEFINED as equivalent.
 					if ( old_ad->EvaluateAttr( attr, old_val ) &&
 						 new_ad->EvaluateAttr( attr, new_val ) &&
 						 !new_val.SameAs( old_val ) )
@@ -1079,8 +1082,8 @@ dprintf(D_FULLDEBUG,"JEF Forwarding due to attribute change: %s\n",attr);
 					}
 				}
 			}
-			new_ad->Assign( "ShouldForward", forward );
-			new_ad->Assign( "LastForwarded", forward ? (int)time(NULL) : last_forwarded );
+			new_ad->Assign( ATTR_SHOULD_FORWARD, forward );
+			new_ad->Assign( ATTR_LAST_FORWARDED, forward ? (int)time(NULL) : last_forwarded );
 dprintf(D_FULLDEBUG,"JEF setting ShouldForward=%s\n", forward ? "True" : "False");
 dprintf(D_FULLDEBUG,"JEF setting LastForwarded=%d\n", forward ? (int)time(NULL) : last_forwarded);
 		}

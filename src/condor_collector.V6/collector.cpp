@@ -1732,9 +1732,9 @@ void CollectorDaemon::send_classad_to_sock(int cmd, ClassAd* theAd) {
 
 	// JEF CMS forwarding hack
 	bool should_forward = true;
-	theAd->LookupBool( "ShouldForward", should_forward );
+	theAd->LookupBool( ATTR_SHOULD_FORWARD, should_forward );
 	if ( !should_forward ) {
-		dprintf( D_FULLDEBUG, "Trying to forward ad on, but ShouldForward=False\n");
+		dprintf( D_FULLDEBUG, "Trying to forward ad on, but %s=False\n", ATTR_SHOULD_FORWARD );
 		return;
 	}
 
