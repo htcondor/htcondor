@@ -1730,10 +1730,10 @@ void CollectorDaemon::send_classad_to_sock(int cmd, ClassAd* theAd) {
         return;
     }
 
-	// JEF CMS forwarding hack
 	bool should_forward = true;
 	theAd->LookupBool( ATTR_SHOULD_FORWARD, should_forward );
 	if ( !should_forward ) {
+		// TODO Should we remove the ShouldForward attribute?
 		dprintf( D_FULLDEBUG, "Trying to forward ad on, but %s=False\n", ATTR_SHOULD_FORWARD );
 		return;
 	}

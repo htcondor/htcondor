@@ -154,7 +154,7 @@ CollectorEngine::setCollectorRequirements( char const *str, MyString &error_desc
 int CollectorEngine::
 scheduleHousekeeper (int timeout)
 {
-	// JEF Set watch list for cms forwarding hack
+	// Are we filtering updates that we forward to the view collector?
 	std::string watch_list;
 	param(watch_list,"COLLECTOR_FORWARD_WATCH_LIST", "State,Cpus,Memory,IdleJobs");
 	m_forwardWatchList.clearAll();
@@ -1032,9 +1032,7 @@ updateClassAd (CollectorHashTable &hashTable,
 		
 		insert = 1;
 		
-		// JEF do should-forward decision
 		if ( m_forwardFilteringEnabled && ( strcmp( label, "Start" ) == 0 || strcmp( label, "Submittor" ) == 0 ) ) {
-dprintf(D_FULLDEBUG,"JEF setting LastForwarded in new ad\n");
 			new_ad->Assign( ATTR_LAST_FORWARDED, (int)time(NULL) );
 		}
 
@@ -1056,13 +1054,11 @@ dprintf(D_FULLDEBUG,"JEF setting LastForwarded in new ad\n");
 			EXCEPT( "Error inserting ad" );
 		}
 
-		// JEF do should-forward decision
 		if ( m_forwardFilteringEnabled && ( strcmp( label, "Start" ) == 0 || strcmp( label, "Submittor" ) == 0 ) ) {
 			bool forward = false;
 			int last_forwarded = 0;
 			old_ad->LookupInteger( "LastForwarded", last_forwarded );
 			if ( last_forwarded + m_forwardInterval < time(NULL) ) {
-dprintf(D_FULLDEBUG,"JEF Forwarding due to interval (%d + %d < %d)\n",last_forwarded,m_forwardInterval,(int)time(NULL));
 				forward = true;
 			} else {
 				classad::Value old_val;
@@ -1076,7 +1072,6 @@ dprintf(D_FULLDEBUG,"JEF Forwarding due to interval (%d + %d < %d)\n",last_forwa
 						 new_ad->EvaluateAttr( attr, new_val ) &&
 						 !new_val.SameAs( old_val ) )
 					{
-dprintf(D_FULLDEBUG,"JEF Forwarding due to attribute change: %s\n",attr);
 						forward = true;
 						break;
 					}
@@ -1084,8 +1079,6 @@ dprintf(D_FULLDEBUG,"JEF Forwarding due to attribute change: %s\n",attr);
 			}
 			new_ad->Assign( ATTR_SHOULD_FORWARD, forward );
 			new_ad->Assign( ATTR_LAST_FORWARDED, forward ? (int)time(NULL) : last_forwarded );
-dprintf(D_FULLDEBUG,"JEF setting ShouldForward=%s\n", forward ? "True" : "False");
-dprintf(D_FULLDEBUG,"JEF setting LastForwarded=%d\n", forward ? (int)time(NULL) : last_forwarded);
 		}
 
 		if (isSelfAd(old_ad)) { __self_ad__ = new_ad; }
