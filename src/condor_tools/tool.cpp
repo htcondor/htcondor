@@ -578,8 +578,15 @@ main( int argc, char *argv[] )
 			printf( "Set exec to %s\n", exec_program );
 			break;
 		case 'g':
-			fast = false;
-			peaceful_shutdown = false;
+			if ( is_dash_arg_prefix( *tmp, "graceful", 1 ) ) {
+				fast = false;
+				peaceful_shutdown = false;
+			} else {
+				fprintf( stderr,
+						 "ERROR: unknown parameter: \"%s\"\n",
+						 *tmp );
+				usage( NULL );
+			}
 			break;
 		case 'a':
 			if( (*tmp)[2] ) {
