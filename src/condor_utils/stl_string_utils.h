@@ -137,5 +137,4 @@ protected:
 	std::string current;
 };
 
-
 #endif // _stl_string_utils_h_
