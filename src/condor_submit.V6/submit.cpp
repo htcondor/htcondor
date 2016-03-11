@@ -6662,10 +6662,10 @@ SetGSICredentials()
 	// END MyProxy-related crap
 }
 
-#if !defined(WIN32)
 void
 SetSendCredential()
 {
+#ifndef WIN32
 	// in theory, each queued job may have a different value for this, so first we
 	// process this attribute
 	bool send_credential = condor_param_bool( "SendCredential", SendCredential, false );
@@ -6754,9 +6754,11 @@ SetSendCredential()
 	// this will prevent us from sending it a second time if multiple jobs
 	// are queued
 	sent_credential_to_credd = true;
+#endif // WIN32
 }
 
 
+#if !defined(WIN32)
 // this allocates memory, free() it when you're done.
 char*
 findKillSigName( const char* submit_name, const char* attr_name )
