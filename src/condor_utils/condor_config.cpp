@@ -88,6 +88,7 @@
 #include "Regex.h"
 #include "filename_tools.h"
 #include "which.h"
+#include "classad_helpers.h"
 #include <algorithm> // for std::sort
 
 #ifdef WIN32
@@ -480,6 +481,13 @@ bool param_and_insert_unique_items(const char * param_name, StringList & items, 
 bool
 param_and_insert_attrs(const char * param_name, classad::References & attrs)
 {
+#if 1
+	auto_free_ptr value(param(param_name));
+	if (value) {
+		insert_tokens_as_attrs(value, attrs);
+		return true;
+	}
+#else
 	std::string value;
 	const std::string * attr;
 	if (param(value, param_name)) {
@@ -487,6 +495,7 @@ param_and_insert_attrs(const char * param_name, classad::References & attrs)
 		while ((attr = it.next_string())) { attrs.insert(*attr); }
 		return true;
 	}
+#endif
 	return false;
 }
 
