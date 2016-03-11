@@ -156,6 +156,11 @@ if (HAVE_LIBDL)
 	set(APILIBDEP dl)
 endif()
 
+if (HAVE_OLD_SCANDIR)
+	add_definitions(-DHAVE_OLD_SCANDIR)
+endif()
+
+
 target_link_libraries(condorapi ${CLASSADS_FOUND};${APILIBDEP};${RT_FOUND})
 
 if (LINUX OR DARWIN)
