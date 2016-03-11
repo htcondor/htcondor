@@ -80,13 +80,19 @@ the address of daemon looked up in the collector, and when resolving DNS
 queries.
 \Ticket{5104}
 
+\item \Condor{history} \Opt{-autoformat} now supports the j option to print
+job ids like \Condor{q} does.
+\Ticket{5558}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
 
-\item None.
+\item Fixed a bug on \Condor{history} that could result in truncation of
+the job id field.
+\Ticket{5527}
 
 \end{itemize}
 

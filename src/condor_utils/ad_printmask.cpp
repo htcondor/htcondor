@@ -2168,6 +2168,7 @@ int parse_autoformat_args (
 	bool fCapV  = false;
 	bool fRaw = false;
 	bool fheadings = false;
+	bool fJobId = false;
 	const char * prowpre = NULL;
 	const char * pcolpre = " ";
 	const char * pcolsux = NULL;
@@ -2183,11 +2184,24 @@ int parse_autoformat_args (
 				case 'V': fCapV = true; break;
 				case 'r': case 'o': fRaw = true; break;
 				case 'h': fheadings = true; break;
+				case 'j': fJobId = true; break;
 			}
 			++popts;
 		}
 	}
 	print_mask.SetAutoSep(prowpre, pcolpre, pcolsux, "\n");
+
+	if (fJobId) {
+		if (fheadings || print_mask.has_headings()) {
+			print_mask.set_heading(" ID");
+			print_mask.registerFormat (flabel ? "ID = %4d." : "%4d.", 5, FormatOptionAutoWidth | FormatOptionNoSuffix, ATTR_CLUSTER_ID);
+			print_mask.set_heading(" ");
+			print_mask.registerFormat ("%-3d", 3, FormatOptionAutoWidth | FormatOptionNoPrefix, ATTR_PROC_ID);
+		} else {
+			print_mask.registerFormat (flabel ? "ID = %d." : "%d.", 0, FormatOptionNoSuffix, ATTR_CLUSTER_ID);
+			print_mask.registerFormat ("%d", 0, FormatOptionNoPrefix, ATTR_PROC_ID);
+		}
+	}
 
 	while (argv[ixArg] && *(argv[ixArg]) != '-') {
 

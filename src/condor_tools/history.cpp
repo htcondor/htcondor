@@ -83,6 +83,7 @@ void Usage(char* name, int iExitCode)
 		"\t-autoformat[:lhVr,tng] <attr> [<attr2 ...]   Display attr(s) with automatic formatting\n"
 		"\t-af[:lhVr,tng] <attr> [<attr2 ...]\t    Same as -autoformat above\n"
 		"\t    where the [lhVr,tng] options influence the automatic formatting:\n"
+		"\t    j\tDisplay Job Id\n"
 		"\t    l\tattribute labels\n"
 		"\t    h\tattribute column headings\n"
 		"\t    V\t%%V formatting (string values are quoted)\n"
