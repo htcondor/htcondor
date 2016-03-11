@@ -163,6 +163,10 @@ class CollectorEngine : public Service
 	CollectorStats	*collectorStats;
 
 	ClassAd *m_collector_requirements;
+
+	bool m_forwardFilteringEnabled;
+	StringList m_forwardWatchList;
+	int m_forwardInterval;
 };
 
 

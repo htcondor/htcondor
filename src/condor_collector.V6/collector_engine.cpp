@@ -78,6 +78,8 @@ CollectorEngine::CollectorEngine (CollectorStats *stats ) :
 {
 	clientTimeout = 20;
 	machineUpdateInterval = 30;
+	m_forwardInterval = machineUpdateInterval / 3;
+	m_forwardFilteringEnabled = false;
 	housekeeperTimerID = -1;
 
 	collectorStats = stats;
@@ -154,6 +156,14 @@ CollectorEngine::setCollectorRequirements( char const *str, MyString &error_desc
 int CollectorEngine::
 scheduleHousekeeper (int timeout)
 {
+	// Are we filtering updates that we forward to the view collector?
+	std::string watch_list;
+	param(watch_list,"COLLECTOR_FORWARD_WATCH_LIST", "State,Cpus,Memory,IdleJobs");
+	m_forwardWatchList.clearAll();
+	m_forwardWatchList.initializeFromString(watch_list.c_str());
+
+	m_forwardFilteringEnabled = param_boolean( "COLLECTOR_FORWARD_FILTERING", false );
+
 	// cancel outstanding housekeeping requests
 	if (housekeeperTimerID != -1)
 	{
@@ -166,6 +176,8 @@ scheduleHousekeeper (int timeout)
 
 	// set to new timeout interval
 	machineUpdateInterval = timeout;
+
+	m_forwardInterval = param_integer("COLLECTOR_FORWARD_INTERVAL", machineUpdateInterval / 3, 0);
 
 	// if timeout interval was non-zero (i.e., housekeeping required) ...
 	if (timeout > 0)
@@ -1036,6 +1048,10 @@ updateClassAd (CollectorHashTable &hashTable,
 		
 		insert = 1;
 		
+		if ( m_forwardFilteringEnabled && ( strcmp( label, "Start" ) == 0 || strcmp( label, "Submittor" ) == 0 ) ) {
+			new_ad->Assign( ATTR_LAST_FORWARDED, (int)time(NULL) );
+		}
+
 		return new_ad;
 	}
 	else
@@ -1052,6 +1068,33 @@ updateClassAd (CollectorHashTable &hashTable,
 		}
 		if (hashTable.insert(hk, new_ad) == -1) {
 			EXCEPT( "Error inserting ad" );
+		}
+
+		if ( m_forwardFilteringEnabled && ( strcmp( label, "Start" ) == 0 || strcmp( label, "Submittor" ) == 0 ) ) {
+			bool forward = false;
+			int last_forwarded = 0;
+			old_ad->LookupInteger( "LastForwarded", last_forwarded );
+			if ( last_forwarded + m_forwardInterval < time(NULL) ) {
+				forward = true;
+			} else {
+				classad::Value old_val;
+				classad::Value new_val;
+				const char *attr;
+				m_forwardWatchList.rewind();
+				while ( (attr = m_forwardWatchList.next()) ) {
+					// This treats attribute-not-present and
+					// attribute-evaluates-to-UNDEFINED as equivalent.
+					if ( old_ad->EvaluateAttr( attr, old_val ) &&
+						 new_ad->EvaluateAttr( attr, new_val ) &&
+						 !new_val.SameAs( old_val ) )
+					{
+						forward = true;
+						break;
+					}
+				}
+			}
+			new_ad->Assign( ATTR_SHOULD_FORWARD, forward );
+			new_ad->Assign( ATTR_LAST_FORWARDED, forward ? (int)time(NULL) : last_forwarded );
 		}
 
 		if (isSelfAd(old_ad)) { __self_ad__ = new_ad; }
