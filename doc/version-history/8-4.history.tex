@@ -52,6 +52,12 @@ the submitter attribute \Macro{WeightedJobsRunning} for
 flocked pools.
 \Ticket{5539}
 
+\item Accounting group names that contain spaces are now rejected by
+\Condor{submit} and ignored by the \Condor{negotiator}.
+Previously, submitting a job with an accounting group name that contained
+a space would cause the \Condor{negotiator} to fail at startup.
+\Ticket{5538}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

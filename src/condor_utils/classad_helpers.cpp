@@ -404,3 +404,15 @@ bool getPathToUserLog(ClassAd *job_ad, MyString &result,
 
 	return ret_val;
 }
+
+// tokenize the input string, and insert tokens into the attrs set
+bool insert_tokens_as_attrs(const char * str, classad::References & attrs, const char * delims=NULL)
+{
+	if (str && str[0]) {
+		StringTokenIterator it(str, 40, delims ? delims : ", \t\r\n");
+		const std::string * attr;
+		while ((attr = it.next_string())) { attrs.insert(*attr); }
+		return true;
+	}
+	return false;
+}

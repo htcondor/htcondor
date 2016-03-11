@@ -429,7 +429,7 @@ CondorQ::fetchQueueFromHostAndProcessV2(const char *host,
 	classad::ClassAd ad;
 	ad.Insert(ATTR_REQUIREMENTS, expr);
 
-	char *projection = attrs.print_to_delimed_string(",");
+	char *projection = attrs.print_to_delimed_string("\n");
 	if (projection) {
 		ad.InsertAttr(ATTR_PROJECTION, projection);
 		free(projection);
@@ -710,7 +710,7 @@ CondorQ::getAndFilterAds (const char *constraint,
 						  int useAllJobs)
 {
 	if (useAllJobs == 1) {
-		char *attrs_str = attrs.print_to_delimed_string();
+		char *attrs_str = attrs.print_to_delimed_string("\n");
 		GetAllJobsByConstraint(constraint, attrs_str, list);
 		free(attrs_str);
 

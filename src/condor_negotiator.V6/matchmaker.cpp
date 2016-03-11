@@ -37,7 +37,7 @@
 #include "condor_netdb.h"
 #include "condor_claimid_parser.h"
 #include "misc_utils.h"
-#include "ConcurrencyLimitUtils.h"
+#include "NegotiationUtils.h"
 #include "MyString.h"
 #include "condor_daemon_core.h"
 #include "selector.h"
@@ -3527,6 +3527,10 @@ obtainAdsFromCollector (
                 dprintf(D_ALWAYS, "WARNING: ignoring submitter ad with no name and/or address\n");
                 continue;
             }
+			if ( !IsValidSubmitterName( subname.c_str() ) ) {
+				dprintf( D_ALWAYS, "WARNING: ignoring submitter ad with invalid name: %s\n", subname.c_str() );
+				continue;
+			}
 
             int numidle=0;
             ad->LookupInteger(ATTR_IDLE_JOBS, numidle);

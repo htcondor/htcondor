@@ -16,7 +16,7 @@
 
 #include "condor_common.h"
 
-#include "ConcurrencyLimitUtils.h"
+#include "NegotiationUtils.h"
 #include "condor_classad.h"
 
 bool
@@ -53,4 +53,20 @@ ParseConcurrencyLimit(char *&input, double &increment)
 	}
 
 	return valid;
+}
+
+
+/* Submitter names cannot contain any whitespace, because the name is
+ * used as part of a key for the Accountant ClassAd log.
+ * Additional restrictions may be introduced later.
+ */
+bool IsValidSubmitterName( const char *name )
+{
+	while ( *name != '\0' ) {
+		if ( isspace( name[0] ) ) {
+			return false;
+		}
+		name++;
+	}
+	return true;
 }

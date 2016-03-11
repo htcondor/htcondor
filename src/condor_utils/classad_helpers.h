@@ -78,3 +78,11 @@ ClassAd *CreateJobAd( const char *owner, int universe, const char *cmd );
 */
 bool getPathToUserLog(ClassAd *job_ad, MyString &result,
 					   const char* ulog_path_attr = ATTR_ULOG_FILE);
+
+
+// tokenize the input string, and insert tokens into the attrs set
+bool insert_tokens_as_attrs(const char * str, classad::References & attrs, const char * delims=NULL);
+inline bool insert_tokens_as_attrs(const std::string & str, classad::References & attrs, const char * delims=NULL) {
+	if (str.empty()) return false;
+	return insert_tokens_as_attrs(str.c_str(), attrs, delims);
+}
