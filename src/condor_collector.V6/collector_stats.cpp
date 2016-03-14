@@ -96,7 +96,6 @@ CollectorBaseStats::~CollectorBaseStats ( void )
 {
 	// Free up the history buffer
 	if ( historyBuffer ) {
-		//dprintf( D_ALWAYS, "Freeing history buffer\n" );
 		delete [] historyBuffer;
 		historyBuffer = NULL;
 	}
@@ -530,7 +529,7 @@ CollectorDaemonStatsList::updateStats( const char *class_name,
 
 		MyString	string;
 		key.getstr( string );
-		dprintf( D_ALWAYS,
+		dprintf( D_FULLDEBUG,
 				 "stats: Inserting new hashent for %s\n", string.Value() );
 	}
 
