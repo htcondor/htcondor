@@ -155,8 +155,15 @@ ReplaceLeftAd( ClassAd *ad )
 		// its parent scope to be the context ad.
 		lCtx->SetParentScope(this);
 		lad->SetParentScope(lCtx);
+
+		if ( _useOldClassAdSemantics ) {
+			lad->alternateScope = rad;
+		}
 	} else {
 		Delete( "LEFT" );
+	}
+	if ( rad && _useOldClassAdSemantics ) {
+		rad->alternateScope = lad;
 	}
 	return true;
 }
@@ -181,8 +188,15 @@ ReplaceRightAd( ClassAd *ad )
 		// its parent scope to be the context ad.
 		rCtx->SetParentScope(this);
 		rad->SetParentScope(rCtx);
+
+		if ( _useOldClassAdSemantics ) {
+			rad->alternateScope = lad;
+		}
 	} else {
 		Delete( "RIGHT" );
+	}
+	if ( lad && _useOldClassAdSemantics ) {
+		lad->alternateScope = rad;
 	}
 	return true;
 }
@@ -223,6 +237,10 @@ RemoveLeftAd( )
 	Remove( "LEFT" );
 	if( lad ) {
 		lad->SetParentScope( ladParent );
+		if ( _useOldClassAdSemantics && rad ) {
+			lad->alternateScope = NULL;
+			rad->alternateScope = NULL;
+		}
 	}
 	ladParent = NULL;
 	lad = NULL;
@@ -237,6 +255,10 @@ RemoveRightAd( )
 	Remove( "RIGHT" );
 	if( rad ) {
 		rad->SetParentScope( radParent );
+		if ( _useOldClassAdSemantics && lad ) {
+			lad->alternateScope = NULL;
+			rad->alternateScope = NULL;
+		}
 	}
 	radParent = NULL;
 	rad = NULL;
