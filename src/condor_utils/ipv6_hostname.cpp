@@ -123,8 +123,13 @@ bool init_local_hostname_impl()
 			hint.ai_family = AF_UNSPEC;
 			int ret = ipv6_getaddrinfo(test_hostname.Value(), NULL, ai, hint);
 			if(ret == 0) { gai_success = true; break; }
+			if(ret != EAI_AGAIN ) {
+				dprintf(D_ALWAYS, "init_local_hostname_impl: ipv6_getaddrinfo() could not look up '%s': %s (%d).  Error is not recoverable; giving up.  Problems are likely.\n", test_hostname.Value(), gai_strerror(ret), ret );
+				gai_success = false;
+				break;
+			}
 
-			dprintf(D_ALWAYS, "init_local_hostname_impl: ipv6_getaddrinfo() could not look up %s: %s (%d). Try %d of %d. Sleeping for %d seconds\n", test_hostname.Value(), gai_strerror(ret), ret, try_count+1, MAX_TRIES, SLEEP_DUR);
+			dprintf(D_ALWAYS, "init_local_hostname_impl: ipv6_getaddrinfo() returned EAI_AGAIN for '%s'.  Will try again after sleeping %d seconds (try %d of %d).\n", test_hostname.Value(), SLEEP_DUR, try_count + 1, MAX_TRIES );
 			if(try_count == MAX_TRIES) {
 				dprintf(D_ALWAYS, "init_local_hostname_impl: ipv6_getaddrinfo() never succeeded. Giving up. Problems are likely\n");
 				break;

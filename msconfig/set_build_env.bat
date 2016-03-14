@@ -36,7 +36,7 @@ REM   MSCONFIG_TOOLS_DIR must be set to the condor sources msconfig dir
 REM   or this batch file must be run from that directory
 REM
 REM   the location of the MS C compiler is derived from the
-REM   VS90COMNTOOLS environment variable. (which is set in all
+REM   VS110COMNTOOLS environment variable. (which is set in all
 REM   user's environments by the default compiler install.)
 REM
 REM
@@ -132,16 +132,16 @@ REM I'll harden it further if there is a requirement for it.)
 set PROGRAMS_DIR=%ProgramFiles%
 if not "~%ProgramFiles(x86)%"=="~" set PROGRAMS_DIR=%SystemDrive%\PROGRA~2
 
-:: If Visual Studio 2008 is installed, then VS90COMNTOOLS should be defined
+:: If Visual Studio 2012 is installed, then VS110COMNTOOLS should be defined
 :: we can use that to setup the compiler environment. if it's not set
 :: then all we can do is choose default values for environment variables.
 ::
-if "~%VS90COMNTOOLS%"=="~" goto use_default_paths
+if "~%VS110COMNTOOLS%"=="~" goto use_default_paths
 
-:: derive from VS90COMNTOOLS
+:: derive from VS110COMNTOOLS
 ::
-for /D %%I in ("%VS90COMNTOOLS%..") do set VS90ROOT=%%~sdpI
-set VS_DIR=%VS90ROOT:~0,-1%
+for /D %%I in ("%VS110COMNTOOLS%..") do set VS110ROOT=%%~sdpI
+set VS_DIR=%VS110ROOT:~0,-1%
 set VC_DIR=%VS_DIR%\VC
 set VC_BIN=%VC_DIR%\bin
 set DBG_TOOLS_DIR=%ProgramFiles%\Debugging Tools for Windows (x86);%ProgramFiles%\Debugging Tools for Windows (x64)
@@ -163,12 +163,12 @@ if "~%SDK_DIR:~-1%"=="~\" Set SDK_DIR=%SDK_DIR:~0,-1%
 goto got_paths
 
 
-:: don't have VS90COMNTOOLS defined, so we will have to assume default
+:: don't have VS110COMNTOOLS defined, so we will have to assume default
 :: installation paths for compiler
 ::
 :use_default_paths
 :: Set default paths for Visual C++, the Platform SDKs, and Perl
-set VS_DIR=%PROGRAMS_DIR%\Microsoft Visual Studio 9.0
+set VS_DIR=%PROGRAMS_DIR%\Microsoft Visual Studio 11.0
 set VC_DIR=%VS_DIR%\VC
 set VC_BIN=%VC_DIR%\bin
 set PERL_BIN_DIR=%SystemDrive%\Perl\bin
