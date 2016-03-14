@@ -45,6 +45,13 @@ longer required on user logs.
 
 \begin{itemize}
 
+\item Fixed a bug where HTCondor would unconditionally retry non-success1ful
+DNS lookups of the local system's hostname; this could cause delays of up
+to sixty seconds when using command-line tools on systems whose hostname
+was not in DNS.  We no longer retry on errors at all, and only retry
+failures which are temporary.
+\Ticket{5553}
+
 \item Fixed a bug that would cause schedds flocking to remote
 pools to not send no jobs, or fewer jobs than possible to the
 remote pool. This was a result of not correctly setting
