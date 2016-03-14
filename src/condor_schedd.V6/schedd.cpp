@@ -881,6 +881,8 @@ Scheduler::timeout()
 	SchedDInterval.expediteNextRun();
 	unsigned int time_to_next_run = SchedDInterval.getTimeToNextRun();
 
+	//dprintf_on_function_exit on_exit(true, D_FULLDEBUG, "Scheduler::timeout() InWalk=%d time_to_next_run = %u\n", InWalkJobQueue(), time_to_next_run );
+
 	if ( time_to_next_run > 0 ) {
 		if (!min_interval_timer_set) {
 			dprintf(D_FULLDEBUG,"Setting delay until next queue scan to %u seconds\n",time_to_next_run);
@@ -1182,8 +1184,11 @@ Scheduler::count_jobs()
 {
 	ClassAd * cad = m_adSchedd;
 
+	//dprintf_on_function_exit on_exit(true, D_FULLDEBUG, "count_jobs()\n");
+
 	 // copy owner data to old-owners table
-	time_t UnusedSubmitterLifetime = 60*60*24*7; // 1 week.
+	time_t AbsentSubmitterLifetime = param_integer("ABSENT_SUBMITTER_LIFETIME", 60*60*24*7); // 1 week.
+	time_t AbsentSubmitterUpdateRate = param_integer("ABSENT_SUBMITTER_UPDATE_RATE", 60*5); // 5 min
 
 	JobsRunning = 0;
 	JobsIdle = 0;
@@ -1405,7 +1410,7 @@ Scheduler::count_jobs()
 		// Update collectors
 	int num_updates = daemonCore->sendUpdates(UPDATE_SCHEDD_AD, cad, NULL, true);
 	dprintf( D_FULLDEBUG, 
-			 "Sent HEART BEAT ad to %d collectors. Number of submittors=%d\n",
+			 "Sent HEART BEAT ad to %d collectors. Number of active submittors=%d\n",
 			 num_updates, NumOwners );
 
 	// send the schedd ad to our flock collectors too, so we will
@@ -1438,6 +1443,8 @@ Scheduler::count_jobs()
 	// Create a new add for the per-submitter attribs 
 	// and chain it to the base ad.
 
+	time_t update_time = time(0); // time at which submitter ads are updated
+
 	ClassAd pAd;
 	pAd.ChainToAd(m_adBase);
 	pAd.Assign(ATTR_SUBMITTER_TAG,HOME_POOL_SUBMITTER_TAG);
@@ -1445,19 +1452,23 @@ Scheduler::count_jobs()
 	for (OwnerDataMap::iterator it = Owners.begin(); it != Owners.end(); ++it) {
 		OwnerData & Owner = it->second;
 		const char * owner_name = Owner.Name();
+		if (Owner.num.Hits == 0 && Owner.absentUpdateSent) {
+			dprintf( D_FULLDEBUG, "Skipping send ad to collectors for %s@%s Hit=%d Tot=%d Idle=%d Run=%d\n",
+				owner_name, UidDomain, Owner.num.Hits, Owner.num.JobsCounted, Owner.num.JobsIdle, Owner.num.JobsRunning );
+			continue;
+		}
 		if ( !fill_submitter_ad(pAd, Owner, -1, D_FULLDEBUG) ) continue;
-
-	  dprintf( D_ALWAYS, "Sent ad to central manager for %s@%s\n", 
-			   owner_name, UidDomain );
 
 #if defined(HAVE_DLOPEN)
 	  ScheddPluginManager::Update(UPDATE_SUBMITTOR_AD, &pAd);
 #endif
 
-		// Update collectors
-	  num_updates = daemonCore->sendUpdates(UPDATE_SUBMITTOR_AD, &pAd, NULL, true);
-	  dprintf( D_ALWAYS, "Sent ad to %d collectors for %s@%s\n", 
-			   num_updates, owner_name, UidDomain );
+		// Update non-flock collectors
+		num_updates = daemonCore->sendUpdates(UPDATE_SUBMITTOR_AD, &pAd, NULL, true);
+		Owner.lastUpdateTime = update_time;
+		Owner.absentUpdateSent = (Owner.num.Hits == 0);
+		dprintf( D_FULLDEBUG, "Sent ad to %d collectors for %s@%s Hit=%d Tot=%d Idle=%d Run=%d\n",
+			num_updates, owner_name, UidDomain, Owner.num.Hits, Owner.num.JobsCounted, Owner.num.JobsIdle, Owner.num.JobsRunning );
 	}
 
 	// update collector of the pools with which we are flocking, if
@@ -1581,19 +1592,19 @@ Scheduler::count_jobs()
 		int old_flock_level = Owner.OldFlockLevel;
 
 		// expire and mark for removal Owners that have not had any hits (i.e jobs in the queue)
-		// for more than UnusedSubmitterLifetime. 
+		// for more than AbsentSubmitterLifetime. 
 		if ( ! Owner.LastHitTime) {
 			// this is unxpected, we really should never get here with LastHitTime of 0, but in case
 			// we do. start the decay timer now.
 			Owner.LastHitTime = current_time;
-		} else if (UnusedSubmitterLifetime && (current_time - Owner.LastHitTime > UnusedSubmitterLifetime)) {
+		} else if (AbsentSubmitterLifetime && (current_time - Owner.LastHitTime > AbsentSubmitterLifetime)) {
 			// Now that we've finished using Owner.Name, we can
 			// free it.  this marks the entry as unused
 			Owner.name.clear();
 		}
 
 		pAd.Assign(ATTR_NAME, submitter_name.Value());
-		dprintf (D_FULLDEBUG, "Changed attribute: %s = %s\n", ATTR_NAME, submitter_name.Value());
+		//dprintf (D_FULLDEBUG, "Changed attribute: %s = %s\n", ATTR_NAME, submitter_name.Value());
 
 #if defined(HAVE_DLOPEN)
 	// update plugins
@@ -1601,11 +1612,20 @@ Scheduler::count_jobs()
 	ScheddPluginManager::Update(UPDATE_SUBMITTOR_AD, &pAd);
 #endif
 
+		if (Owner.lastUpdateTime == update_time) continue; // if we already sent this owner, skip updating
+		if (Owner.lastUpdateTime + AbsentSubmitterUpdateRate > update_time) {
+			dprintf( D_FULLDEBUG, "Skipping absent submitter ad for %s. lastupdate=%d Hit=%d Tot=%d Idle=%d Run=%d\n",
+					submitter_name.c_str(), (int)(update_time - Owner.lastUpdateTime),
+					Owner.num.Hits, Owner.num.JobsCounted, Owner.num.JobsIdle, Owner.num.JobsRunning );
+			continue; // we updated this owner recently
+		}
+
 		// Update collectors
-	  int num_udates = 
-		  daemonCore->sendUpdates(UPDATE_SUBMITTOR_AD, &pAd, NULL, true);
-	  dprintf(D_ALWAYS, "Sent owner (0 jobs) ad to %d collectors\n",
-			  num_udates);
+		int num_udates = daemonCore->sendUpdates(UPDATE_SUBMITTOR_AD, &pAd, NULL, true);
+		dprintf(D_FULLDEBUG, "Sent absent submitter ad to %d collectors for %s. lastupdate=%d Hit=%d Tot=%d Idle=%d Run=%d\n",
+				num_udates, submitter_name.c_str(), (int)(update_time - Owner.lastUpdateTime),
+				Owner.num.Hits, Owner.num.JobsCounted, Owner.num.JobsIdle, Owner.num.JobsRunning );
+		Owner.lastUpdateTime = update_time;
 
 	  // also update all of the flock hosts
 	  Daemon *da;

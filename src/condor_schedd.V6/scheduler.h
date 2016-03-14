@@ -166,8 +166,11 @@ struct OwnerData {
   int FlockLevel;
   int OldFlockLevel;
   time_t NegotiationTimestamp;
+  time_t lastUpdateTime; // the last time we sent updates to the collector
+  bool absentUpdateSent;
   std::set<int> PrioSet; // Set of job priorities, used for JobPrioArray attr
-  OwnerData() : LastHitTime(0), FlockLevel(0), OldFlockLevel(0), NegotiationTimestamp(0) { }
+  OwnerData() : LastHitTime(0), FlockLevel(0), OldFlockLevel(0), NegotiationTimestamp(0)
+      , lastUpdateTime(0), absentUpdateSent(false)  { }
 };
 
 typedef std::map<std::string, OwnerData> OwnerDataMap;
