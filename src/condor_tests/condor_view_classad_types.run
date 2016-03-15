@@ -50,7 +50,7 @@ CondorTest::StartCondorWithParams(
 # Sanity, the Negotiator showed up in the Collector
 CondorLog::RunCheck(
     daemon => "COLLECTOR",
-    match_regexp => "Inserting new hashent for 'Negotiator'"
+    match_regexp => "NegotiatorAd +: Inserting"
 );
 
 # Figure out what port the view collector started with
@@ -106,11 +106,11 @@ system("condor_reconfig -negotiator");
 # The Negotiator got forwarded to the View Collector
 CondorLog::RunCheck(
     daemon => "VIEW_COLLECTOR.COLLECTOR",
-    match_regexp => "Inserting new hashent for 'Negotiator'",
+    match_regexp => "NegotiatorAd +: Inserting",
     num_retries => 10,
 );
 
-CondorTest::runCondorTool("condor_off -fast -negotiator");
+CondorTest::runCondorTool("condor_off -negotiator");
 
 TLOG "Waiting for Negotiator to leave - ";
 my $backoff = 2;
@@ -179,7 +179,7 @@ CondorLog::RunCheck(
 );
 CondorLog::RunCheck(
     daemon => "VIEW_COLLECTOR.COLLECTOR",
-    match_regexp => "Inserting new hashent for 'Start'"
+    match_regexp => "StartdAd +: Inserting"
 );
 
 
