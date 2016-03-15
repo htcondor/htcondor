@@ -1,0 +1,341 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+	<title>HTCondor View Query Syntax</title>
+<link rel="stylesheet" href="htcondor.css" />
+<style>
+body {
+	max-width: 50em;
+	margin-left: auto;
+	margin-right: auto;
+	padding-left: 0.5em;
+	padding-right: 0.5em;
+}
+dt {
+	font-weight: bold;
+	font-family: monospace;
+	font-size: 150%;
+	margin-bottom: 0.5em;
+}
+dd { margin-bottom: 1.5em; }
+em.variable {
+	text-decoration:  underline;
+	font-family: monospace;
+}
+table.example {
+	margin-left: auto;
+	margin-right: auto;
+	border-collapse: collapse;	
+}
+table.example td, table.example th {
+	padding: 0.3em;
+}
+table.example th {
+	background-color: #4444CC;
+	color: white;
+}
+table.example tr:nth-child(odd) {
+	background-color: #CCCCFF;
+}
+table.example tr:nth-child(even) {
+}
+
+h2 {
+    font-family: "HelveticaNeue-Light", "HelveticaNeueLight", "Helvetica Neue Light", "Helvetica Neue", Helvetica, Roboto, Arial, "Lucida Grande", sans-serif; 
+	font-weight: 300;
+	font-size: 200%;
+	margin-bottom: 0;
+	margin-top: 2em;
+
+}
+</style>
+</head>
+<body>
+
+
+<h1 class="htclogo"><img src="HTCondor-View.svg" alt="HTCondor View"></h1>
+<h1>Query Syntax</h1>
+
+<h2>Transforms</h2>
+<p>Transforms are applied in order. The last entry should be a chart type.  If no chart is specified, a table view of the data is shown.
+
+<p>Normally transforms will be one per line, but when used with
+HTCondorView.simple, they should be concatenated with ampersands ("&amp;").
+
+<dl>
+
+
+<dt>limit=<em class="variable">n</em></dt>
+<dd>
+Discard all data after <em class="variable">n</em> rows.</dd>
+
+<dt>filter=<em class="variable">key</em>>=<em class="variable">value1</em>,<em class="variable">value2</em>,...</dt>
+<dd>
+Show only rows where the column named <em class="variable">key</em> has a
+value >= <em class="variable">value1</em> or <em class="variable">value2</em> etc.  The
+operator (>= in this example) can be one
+of =, &lt;, >, &lt;=, >=, &lt;>, or !=.  If you specify more
+than one value, they
+are combined in an OR configuration (ie. a row matches
+if any of the values match).  If you provide
+more than one filter= clause, they are combined
+successively in an AND configuration (ie. a row matches
+only if all the filters are true).</dd>
+
+<dt>q=<em class="variable">value1</em>,<em class="variable">value2</em>,...</dt>
+<dd>
+Show only rows where any of the columns contain the
+substring <em class="variable">value1</em> or <em class="variable">value2</em> etc.  If more
+than one value is specified, they are combined in an OR
+configuration.  If you provide more than one q= clause,
+they are combined successively in an AND configuration.</dd>
+
+<dt>order=<em class="variable">[-]key1</em>,<em class="variable">[-]key2</em></dt>
+<dd>
+Sort the table in order of <em class="variable">key1</em> and then (if key1
+is the same) by <em class="variable">key2</em> etc.  If a key starts with
+'-' that means to sort that key in descending order
+(largest to smallest).</dd>
+
+<dt>extract_regexp=<em class="variable">key</em>=<em class="variable">regexp(match)regexp</em></dt>
+<dd>
+Search for the given regular expression in each row in
+the column named <em class="variable">key</em>.  If it's found, replace the
+column with the substring in the <em class="variable">(match)</em> part of
+the regexp.  For example,
+<code>extract_regexp=ver=version-(.*)</code> would replace a
+string <code>version-25.4</code> in column <code>ver</code> with the string <code>25.4</code>.</dd>
+
+<dt>group=<em class="variable">key1</em>,<em class="variable">key2</em>,...;<em class="variable">val1</em>,<em class="variable">val2</em>,...</dt>
+<dd>
+Summarize the table data by summing and counting.  This
+operation works like a simplified version of SQL's
+"group by" clause.  In the resulting output, the order
+of the columns will be
+<em class="variable">key1</em>,<em class="variable">key2</em>,...,<em class="variable">val1</em>,<em class="variable">val2</em>... 
+and there will only be at most one row with any
+particular combination of <em class="variable">key1</em>,<em class="variable">key2</em>,... 
+fields.  The <em class="variable">val</em> columns will be summed (if they
+were already numerical) or counted (if they were
+non-numeric).</p>
+
+<p>A clause like <code>group=a,b;x,y</code> (if x is a string and y
+is a number) would be equivalent to this in SQL: <code>select
+a, b, count(x) x, sum(y) y from MyTable group by a, b</code></p>
+
+<p>If you apply multiple <b>group=</b> clauses, it works like
+using multiple nested subqueries in SQL.  (That is, the
+output of one <b>group=</b> clause becomes the MyTable
+of the next one.)</p>
+
+<p>If you leave out the ';' and the <em class="variable">val</em> column
+names, the default is to automatically include all
+columns other than the <em class="variable">key</em> columns.</p>
+
+<p>If you include the ';' but leave out the <em class="variable">val</em>
+column names, that means you don't want any value
+columns (so only the key fields will be included, and
+nothing will be summed or counted at that step).  So
+<code>group=a,b;</code> (with a trailing semicolon) is equivalent
+to this in SQL: <code>select a, b from MyTable group by a,
+b</code>.</dd>
+
+<dt>treegroup=<em class="variable">key1</em>,<em class="variable">key2</em>,...;[<em class="variable">val1</em>,[<em class="variable">val2</em>]]</dt>
+<dd>
+Like <b>group=</b>, but produces an output table arranged hierarchically
+by each <em class="variable">key1</em>..<em class="variable">keyn</em>, so you can drill down.  There can be
+zero, one, or two <em class="variable">val</em> columns; the first value is the size of
+each box in the tree view (if omitted, they are all the same size), and
+the second value is the colour of each box (if omitted, the colour varies
+with the size).  <b>treegroup=</b> isn't really useful unless you also
+use <b>chart=tree</b>.</dd>
+
+<dt>pivot=<em class="variable">rowkeys...</em>;<em class="variable">colkeys...</em>;<em class="variable">valkeys...</em></dt>
+<dd>
+A <b>pivot=</b> clause works like a <b>group=</b>
+clause, but creates a
+<a href="http://en.wikipedia.org/wiki/Pivot_table">pivot table</a>. 
+Pivot tables are a bit complicated; the easiest way to
+learn about them is to play with an example.
+</p>
+
+<p>The simplest way to think of a pivot table is like this:
+the values originally in the columns named by <em class="variable">rowkeys</em>
+end up down the left of the output table, one column per <em
+class="variable">rowkey</em>.
+The values
+originally in the columns named by <em class="variable">colkeys</em> end up
+as headings across the top of the output table, the values concatenated
+together with a space.  The values
+originally in the columns named by <em class="variable">valkeys</em> end up
+as values in the body section of the output table.  A
+pivot table is very handy when you have raw data in
+SQL-like format and you want to rearrange it to be
+suitable for charting (where each line in a line chart,
+say, is usually one column of the table).</p>
+
+<p>If the <em class="variable">rowkeys</em> section is empty, the output will
+have exactly one row (with all the value fields counted
+or summed into that one row).  If the <em class="variable">colkeys</em>
+section is empty, the <b>pivot=</b> operation is
+essentially equivalent to a
+<b>group=<em class="variable">rowkeys...</em>;<em class="variable">valkeys...</em></b> operation. 
+If the <em class="variable">valkeys</em> section is empty, there are no
+values used to calculate the table body, so it is
+equivalent to an <b>group=<em class="variable">rowkeys...</em>;</b>
+operation.
+
+<p>For example, given this data:
+
+<table class="example">
+<tr><th>color</th><th>highlight</th><th>shape</th><th>size</th><th>count</th></tr>
+<tr><td>green</td><td>black</td><td>cube</td><td>2</td><td>1</td></tr>
+<tr><td>red</td><td>white</td><td>cube</td><td>1</td><td>4</td></tr>
+<tr><td>red</td><td>white</td><td>sphere</td><td>2</td><td>4</td></tr>
+<tr><td>green</td><td>black</td><td>sphere</td><td>2</td><td>2</td></tr>
+<tr><td>green</td><td>white</td><td>sphere</td><td>1</td><td>5</td></tr>
+<tr><td>red</td><td>white</td><td>cube</td><td>1</td><td>4</td></tr>
+<tr><td>red</td><td>black</td><td>sphere</td><td>2</td><td>3</td></tr>
+<tr><td>red</td><td>white</td><td>cube</td><td>1</td><td>3</td></tr>
+<tr><td>green</td><td>white</td><td>cube</td><td>1</td><td>2</td></tr>
+<tr><td>green</td><td>black</td><td>sphere</td><td>2</td><td>5</td></tr>
+<tr><td>red</td><td>black</td><td>cube</td><td>2</td><td>2</td></tr>
+<tr><td>red</td><td>white</td><td>cube</td><td>2</td><td>5</td></tr>
+<tr><td>red</td><td>white</td><td>sphere</td><td>1</td><td>1</td></tr>
+<tr><td>green</td><td>black</td><td>cube</td><td>1</td><td>4</td></tr>
+<tr><td>red</td><td>black</td><td>cube</td><td>1</td><td>4</td></tr>
+<tr><td>red</td><td>black</td><td>cube</td><td>2</td><td>2</td></tr>
+<tr><td>green</td><td>white</td><td>sphere</td><td>1</td><td>3</td></tr>
+<tr><td>red</td><td>white</td><td>cube</td><td>2</td><td>2</td></tr>
+<tr><td>green</td><td>black</td><td>cube</td><td>2</td><td>5</td></tr>
+<tr><td>red</td><td>white</td><td>cube</td><td>2</td><td>1</td></tr>
+</table>
+
+<p>The pivot
+<pre>
+pivot=color,highlight;shape,size;count
+</pre>
+
+<p>yields this table:
+
+<table class="example">
+<tr><th>color</th><th>highlight</th><th>cube 2</th><th>cube 1</th><th>sphere 2</th><th>sphere 1</th></tr>
+<tr><td>green</td><td>black</td><td>6</td><td>4</td><td>7</td><td>0</td></tr>
+<tr><td>red</td><td>white</td><td>8</td><td>11</td><td>4</td><td>1</td></tr>
+<tr><td>green</td><td>white</td><td>0</td><td>2</td><td>0</td><td>8</td></tr>
+<tr><td>red</td><td>black</td><td>4</td><td>4</td><td>3</td><td>0</td></tr>
+
+</table>
+</dd>
+
+<dt>rename=<em class="variable">keysrc</em>=<em
+class="variable">keydst</em></dt>
+<dd>Change the column header from 
+<em class="variable">keysrc</em>
+to
+<em class="variable">keydst</em>.
+</dd>
+
+<dt>chart=<em class="variable">charttype</em></dt>
+<dd>
+Instead of showing a table of values, show a chart.  The
+available <em class="variable">charttypes</em> are currently: stacked (a
+stacked area chart), line, spark, column, bar, pie,
+tree (see <b>treegroup</b>), candle, timeline, dygraph, dygraph+errors.</dd>
+
+<dt>delta=key1,key2...</dt>
+<dd>Replace entries for the named columns with the difference from the
+previous row.</dd>
+
+<dt>unselect=key1,key2...</dt>
+<dd>Remove the named columns.</dd>
+
+<dt>yspread</dt>
+<dd>For each field in a row that is a number, divide it by the sum of all
+numbers in that row.</dd>
+
+<dt>finishtree</dt>
+<dd></dd>
+
+<dt>inverttree</dt>
+<dd></dd>
+
+<dt>cracktree</dt>
+<dd></dd>
+
+
+<dt>quantize</dt>
+<dd></dd>
+
+
+</dl>
+
+<h2>HTCondorView.simple</h2>
+
+<p>The following options are only used with HTCondorView.simple. In normal
+usage they are separate fields.
+
+<dl>
+
+<dt>url=<em class="variable">url</em></dt>
+<dd>URL where data should be loaded from.</dd>
+
+<dt>title=<em class="variable">title</em></dt>
+<dd> Add a title to the chart. Not used for tables.</dd>
+
+</dl>
+
+
+<h2>Functions</h2>
+
+<dl>
+
+<dt>avg(l)</dt>
+<dd>Returns average (mean) of all entries in a list.</dd>
+
+<dt>cat(l)</dt>
+<dd>Returns a string of all entries in a list joined together with
+spaces.</dd>
+
+<dt>color(l)
+<dd>Returns a unique integer for each unique entry in the list.</dd>
+
+<dt>count(l)</dt>
+<dd>Returns number of entries in a list</dd>
+
+<dt>count_distinct</dt>
+<dd>Returns number of distinct values in a list.</dd>
+
+<dt>count_nz(l)</dt>
+<dd>Returns number of entries in a list that are not null or 0.</dd>
+
+<dt>first(l)</dt>
+<dd>Returns first element from a list.</dd>
+
+<dt>last(l)</dt>
+<dd>Returns last element from a list.</dd>
+
+<dt>max(l)</dt>
+<dd>Returns largest entry from the list.</dd>
+
+<dt>median(l)</dt>
+<dd>Returns median (middle-most) value from the list.</dd>
+
+<dt>min(l)</dt>
+<dd>Returns smallest entry from the list.</dd>
+
+<dt>only(l)</dt>
+<dd>If a list has only one item, returns the item. If the list is empty,
+returns null. Otherwise throws an error.</dd>
+
+<dt>stddev(l)</dt>
+<dd>Returns standard deviation for all entries in a list.</dd>
+
+<dt>sum(l)</dt>
+<dd>Returns sum of all entries in a list.</dd>
+
+</dl>
+
+</body>
+</html>
