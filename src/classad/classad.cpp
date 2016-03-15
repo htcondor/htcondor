@@ -636,6 +636,20 @@ Lookup( const string &name ) const
 	return tree;
 }
 
+ExprTree *ClassAd::
+LookupIgnoreChain( const string &name ) const
+{
+	ExprTree *tree;
+	AttrList::const_iterator itr;
+
+	itr = attrList.find( name );
+	if (itr != attrList.end()) {
+		tree = itr->second;
+	} else {
+		tree = NULL;
+	}
+	return tree;
+}
 
 ExprTree *ClassAd::
 LookupInScope( const string &name, const ClassAd *&finalScope ) const
