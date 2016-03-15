@@ -1,8 +1,3 @@
-- Need a button to return to all users.
-	- Or better, a "Total" entry at the top of the chart.
-
-- Rename colums for human friendlyness
-
 - Stub in columns after a pivot (if we pivot on State and there are no Preempting, but we want one anyway, just fill it with zeros)
 
 - Sort Name using locale or something; currently ASCII/Unicode, so capital before lower.
