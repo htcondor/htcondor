@@ -1,4 +1,0 @@
-CONFIG job_dagman_always_run_post-C.cfg
-Job C_A job_dagman_always_run_post-C_A.cmd
-SCRIPT PRE C_A job_dagman_always_run_post-C_A_pre.sh
-SCRIPT POST C_A job_dagman_always_run_post-C_A_post.sh

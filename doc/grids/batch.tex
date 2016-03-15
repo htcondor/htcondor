@@ -1,12 +1,13 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:batch}The batch Grid Type (for PBS, LSF, and SGE) }
+\subsection{\label{sec:batch}The batch Grid Type (for PBS, LSF, SGE, and SLURM) }
 \label{sec:PBS}
 \label{sec:LSF}
 \label{sec:SGE}
+\label{sec:SLURM}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{batch grid type}
 
-The \SubmitCmdNI{batch} grid type is used to submit to a local PBS, LSF, or SGE
+The \SubmitCmdNI{batch} grid type is used to submit to a local PBS, LSF, SGE, or SLURM
 system using the \SubmitCmdNI{grid} universe and the
 \SubmitCmd{grid\_resource} command by placing a variant of the following
 into the submit description file.
@@ -15,7 +16,7 @@ grid_resource = batch pbs
 \end{verbatim}
 
 The second argument on the right hand side will be one of
-\Expr{pbs}, \Expr{lsf}, or \Expr{sge}.
+\Expr{pbs}, \Expr{lsf}, \Expr{sge}, or \Expr{slurm}.
 
 Any of these batch grid types requires two variables to be set in the HTCondor
 configuration file.
