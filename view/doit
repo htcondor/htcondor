@@ -1,1 +1,0 @@
-condor_status -pool cm.chtc.wisc.edu -format '[\n "%s",\n' slottype -format ' "%s",\n' name -format ' "%s",\n' state -format ' "%s",\n' cpus -format ' "%s",\n' totalcpus -format ' "%s",\n' memory -format ' "%s",\n' totalmemory -format ' "%s"\n],\n' 'ifthenelse(remoteuser=!=UNDEFINED,remoteuser,"nobody")'
