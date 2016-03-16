@@ -553,16 +553,24 @@ void WritePerJobHistoryFile(ClassAd* ad, bool useGjid)
 		return;
 	}
 	MyString file_name;
+	MyString temp_file_name;
 	if (useGjid) {
 		MyString gjid;
 		ad->LookupString(ATTR_GLOBAL_JOB_ID, gjid);
 		file_name.formatstr("%s/history.%s", PerJobHistoryDir, gjid.Value());
+		temp_file_name.formatstr("%s/.history.%s.tmp", PerJobHistoryDir, gjid.Value());
 	} else {
 		file_name.formatstr("%s/history.%d.%d", PerJobHistoryDir, cluster, proc);
+		temp_file_name.formatstr("%s/.history.%d.%d.tmp", PerJobHistoryDir, cluster, proc);
 	}
 
-	// write out the file
-	int fd = safe_open_wrapper_follow(file_name.Value(), O_WRONLY | O_CREAT | O_EXCL, 0644);
+	// Now write out the file.  We write it first to temp_file_name, and then
+	// atomically rename it to file_name, so that another process reading history
+	// files will never see an empty file or incomplete data in the event the history file
+	// is read at the same time we are still writing it.
+
+	// first write out the file to the temp_file_name
+	int fd = safe_open_wrapper_follow(temp_file_name.Value(), O_WRONLY | O_CREAT | O_EXCL, 0644);
 	if (fd == -1) {
 		dprintf(D_ALWAYS | D_FAILURE,
 		        "error %d (%s) opening per-job history file for job %d.%d\n",
@@ -575,13 +583,25 @@ void WritePerJobHistoryFile(ClassAd* ad, bool useGjid)
 		        "error %d (%s) opening file stream for per-job history for job %d.%d\n",
 		        errno, strerror(errno), cluster, proc);
 		close(fd);
+		unlink(temp_file_name.Value());
 		return;
 	}
 	if (!fPrintAd(fp, *ad)) {
 		dprintf(D_ALWAYS | D_FAILURE,
 		        "error writing per-job history file for job %d.%d\n",
 		        cluster, proc);
+		fclose(fp);
+		unlink(temp_file_name.Value());
+		return;
 	}
 	fclose(fp);
+
+	// now atomically rename from temp_file_name to file_name
+    if (rotate_file(temp_file_name.Value(), file_name.Value())) {
+		dprintf(D_ALWAYS | D_FAILURE,
+		        "error writing per-job history file for job %d.%d (during rename)\n",
+		        cluster, proc);
+		unlink(temp_file_name.Value());
+    }
 }
 

@@ -35,6 +35,9 @@ use Check::CondorLog;
 
 my $ClusterId = 0;
 my $expect_return = 0;
+my $suspend_count = 0;
+my $continue_count = 0;
+my $testname = "job_basic_suspend_continue_test";
 
 	#NEGOTIATE_ALL_JOBS_IN_CLUSTER = True
 
@@ -42,7 +45,7 @@ my $firstappend_condor_config = '
 	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
 	MAX_NEGOTIATOR_LOG = 5000000000
 	MAX_SCHEDD_LOG = 5000000000
-	SUSPEND = TotalClaimRunTime > 20
+	SUSPEND = TotalClaimRunTime > 20 && (TotalClaimSuspendTime is undefined || TotalClaimSuspendTime < 20)
 	CONTINUE = TotalClaimSuspendTime > 20
 	WANT_SUSPEND = True
 	PREEMPT = FALSE
@@ -58,22 +61,25 @@ CondorTest::StartCondorWithParams(
 );
 
 my $on_execute = sub {
+	TLOG("Job Executing\n");
 };
 
 my $on_suspend = sub {
-	print "Job suspended\n";
+	$suspend_count += 1;
+	TLOG("Job Suspended ($suspend_count times)\n");
 };
 
 my $on_unsuspend = sub {
-	print "Job suspended\n";
+	$continue_count += 1;
+	TLOG("Job Continued ($continue_count times)\n");
 };
 
-my $on_disconnected = sub {
-	print "Job disconnected\n";
+my $on_disconnect = sub {
+	TLOG("Job Disconnected\n");
 };
 
-my $on_reconnected = sub {
-	print "Job reconnected\n";
+my $on_reconnect = sub {
+	TLOG("Job Reconnected\n");
 };
 
 
@@ -87,60 +93,16 @@ $result = SimpleJob::RunCheck(); # jobid 1
 
 $result = SimpleJob::RunCheck(
 	test_name => "$test_name",
-	on_suspended => $on_suspended,
-	on_unsuspended => $on_unsuspended,
+	on_suspended => $on_suspend,
+	on_unsuspended => $on_unsuspend,
 	on_execute => $on_execute,
-	on_disconnected => $ondisconnected,
-	on_reconnected => $on_reconnected,
+	on_disconnected => $on_disconnect,
+	on_reconnected => $on_reconnect,
 	duration => 60,
 );
 
-print "******************** Test should be suspended and continued to completeion \n";
-if($result == 1) {
-	print "ok\n\n\n";
-} else {
-	print "bad\n\n\n";
-}
-
+RegisterResult($suspend_count, check_name => "Job Was Suspended");
+RegisterResult($continue_count, check_name => "Job Was Continued");
 
 CondorTest::EndTest();
 
-
-sub CheckExpectations
-{
-	my $ad = shift;
-	my $got = shift;
-	my $expected = shift;
-
-	CondorTest::debug("CheckExpectations: $ad Got,$got Expected,$expected\n",2);
-	if($got != $expected) {
-		die "$ad: Expected <$expected> but only got <$got>\n";
-	} 
-}
-
-sub RunNTimes
-{
-	my $cmd = shift;
-	my $goal = shift;
-	my $wantoutput = shift;
-
-	my $count = 0;
-	my $stop = 0;
-	my @cmdout = ();
-	my $date;
-	$stop = $goal;
-
-	while($count < $stop) {
-		@cmdout = ();
-		$date = scalar(localtime());
-		print "$date $cmd $count\n";
-		@cmdout = `$cmd`;
-
-		if(defined $wantoutput) {
-			foreach my $line (@cmdout) {
-				print "$line\n";
-			}
-		}
-		$count += 1;
-	}
-}

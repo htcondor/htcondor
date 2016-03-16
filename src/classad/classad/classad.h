@@ -263,6 +263,15 @@ e		*/
 		*/
 		ExprTree *Lookup( const std::string &attrName ) const;
 
+		/** Finds the expression bound to an attribute name, ignoring chained parent.
+		        Behaves just like Lookup(), except any parent ad chained to this
+				ad is ignored.
+			@param attrName The name of the attribute.
+			@return The expression bound to the name in the ClassAd, or NULL
+				otherwise.
+		*/
+		ExprTree *LookupIgnoreChain( const std::string &attrName ) const;
+
 		/** Finds the expression bound to an attribute name.  The lookup uses
 				the scoping structure (including <tt>super</tt> attributes) to 
 				determine the expression bound to the given attribute name in
