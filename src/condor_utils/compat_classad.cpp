@@ -2014,6 +2014,9 @@ sPrintAd( MyString &output, const classad::ClassAd &ad, bool exclude_private, St
 			if ( attr_white_list && !attr_white_list->contains_anycase(itr->first.c_str()) ) {
 				continue; // not in white-list
 			}
+			if ( ad.LookupIgnoreChain(itr->first) ) {
+				continue; // attribute exists in child ad; we will print it below
+			}
 			if ( !exclude_private ||
 				 !ClassAdAttributeIsPrivate( itr->first.c_str() ) ) {
 				value = "";

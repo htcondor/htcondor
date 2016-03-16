@@ -259,7 +259,7 @@ NUM_SLOTS_TYPE_4 = 1
 SLOT_TYPE_4_CONSUMPTION_CPUS = TotalSlotCpus
 SLOT_TYPE_4_CONSUMPTION_MEMORY = TotalSlotMemory
 # Disk is unreliable -- TotalSlotDisk != Disk even on a virgin slot
-SLOT_TYPE_4_CONSUMPTION_DISK = floor(0.9 * TotalSlotDisk)
+SLOT_TYPE_4_CONSUMPTION_DISK = floor(0.9 * Disk)
 SLOT_TYPE_4_CONSUMPTION_TOKENS = TotalSlotTokens
 
 # turn this off to demonstrate that consumption policy will handle this kind of logic
