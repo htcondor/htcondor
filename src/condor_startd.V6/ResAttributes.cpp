@@ -1330,13 +1330,23 @@ CpuAttributes::compute( amask_t how_much )
 		// Dynamic, non-shared attributes we need to actually compute
 		c_condor_load = rip->compute_condor_load();
 
-		c_total_disk = sysapi_disk_space(rip->executeDir());
+			// If the admin is forcing DISK via param, set that here,
+			// else calculate current free disk space for exec partition
+		long long temp_disk = -1;
+		char *disk_as_str = param("DISK");
+		if (disk_as_str && string_is_long_param(disk_as_str, temp_disk)) {
+			free(disk_as_str);
+			c_total_disk = temp_disk;
+		} else {
+			c_total_disk = sysapi_disk_space(rip->executeDir());
+		}
+
 		if (IS_UPDATE(how_much)) {
 			dprintf(D_FULLDEBUG, "Total execute space: %lu\n", c_total_disk);
 		}
 
 		val = c_total_disk * c_disk_fraction;
-		c_disk = (long long)floor(val);
+		c_disk = (long long)ceil(val);
 		if (0 == (long long)c_slot_disk)
 		{
 		  // only use the 1st compute ignore subsequent.

@@ -65,6 +65,15 @@ Previously, submitting a job with an accounting group name that contained
 a space would cause the \Condor{negotiator} to fail at startup.
 \Ticket{5538}
 
+\item Fixed a bug whereby per-job history files (enabled by
+the config setting \Macro{PER\_JOB\_HISTORY\_DIR}) may briefly
+appear to be empty or incomplete.
+\Ticket{5562}
+
+\item Fixed a bug whereby ClassAds written into history files
+may contain the same attribute multiple times.
+\Ticket{5548}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
