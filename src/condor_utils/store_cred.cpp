@@ -664,7 +664,11 @@ void store_cred_handler(void *, int /*i*/, Stream *s)
 				dprintf(D_ALWAYS, "ERROR: attempt to set pool password via STORE_CRED! (must use STORE_POOL_CRED)\n");
 				answer = FAILURE;
 			} else {
-				answer = store_cred_service(user,pw,strlen(pw)+1,mode);
+				int pwlen = 0;
+				if(pw) {
+					pwlen = strlen(pw)+1;
+				}
+				answer = store_cred_service(user,pw,pwlen,mode);
 #ifndef WIN32  // no credmon on windows
 				if(answer == SUCCESS) {
 					// THIS WILL BLOCK
@@ -785,7 +789,8 @@ void store_pool_cred_handler(void *, int  /*i*/, Stream *s)
 
 	// do the real work
 	if (pw) {
-		result = store_cred_service(username.Value(), pw, strlen(pw)+1, ADD_MODE);
+		int pwlen = strlen(pw)+1;
+		result = store_cred_service(username.Value(), pw, pwlen, ADD_MODE);
 		SecureZeroMemory(pw, strlen(pw));
 	}
 	else {
@@ -833,7 +838,11 @@ store_cred(const char* user, const char* pw, int mode, Daemon* d, bool force) {
 
 	if ( is_root() && d == NULL ) {
 			// do the work directly onto the local registry
-		return_val = store_cred_service(user,pw,strlen(pw)+1,mode);
+		int pwlen = 0;
+		if(pw) {
+			pwlen=strlen(pw)+1;
+		}
+		return_val = store_cred_service(user,pw,pwlen,mode);
 	} else {
 			// send out the request remotely.
 
