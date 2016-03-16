@@ -115,6 +115,7 @@ extern GridUniverseLogic* _gridlogic;
 #include "condor_qmgr.h"
 #include "condor_vm_universe_types.h"
 #include "enum_utils.h"
+#include "credmon_interface.h"
 
 extern "C"
 {
@@ -1587,6 +1588,12 @@ Scheduler::count_jobs()
 		// If this Owner has any jobs in the queue or match records,
 		// we don't want to send the, so we continue to the next
 		if (Owner.num.Hits > 0) continue;
+
+#ifndef WIN32
+		// mark user creds for sweeping.
+		dprintf( D_ALWAYS, "ZKM: creating mark file for user %s\n", Owner.Name());
+		credmon_mark_creds_for_sweeping(Owner.Name());
+#endif // WIN32
 
 		submitter_name.formatstr("%s@%s", Owner.Name(), UidDomain);
 		int old_flock_level = Owner.OldFlockLevel;

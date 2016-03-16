@@ -567,6 +567,14 @@ elseif(${OS_NAME} STREQUAL "DARWIN")
 		set(HAS_PTHREADS FALSE)
 		set(HAVE_PTHREADS FALSE)
 	endif()
+
+	exec_program (sw_vers ARGS -productVersion OUTPUT_VARIABLE TEST_VER)
+	if(${TEST_VER} MATCHES "10.([67])")
+		set (HAVE_OLD_SCANDIR 1)
+		dprint("Using old function signature for scandir()")
+	else()
+		dprint("Using POSIX function signature for scandir()")
+	endif()
 endif()
 
 ##################################################

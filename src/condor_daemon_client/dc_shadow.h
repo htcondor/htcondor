@@ -69,6 +69,15 @@ public:
 		*/
 	bool updateJobInfo( ClassAd* ad, bool insure_update = false );
 
+		/** Get a magic user credential from the shadow that will be neeed
+			to run the job.
+			@param user The username under which to find the credential
+			@param domain The domain under which to find the credential
+			@param credential The result of fetching the credential
+			@return true on success, false on failure
+		*/
+	bool getUserCredential( const char* user, const char* domain, MyString& credential);
+
  private:
 	bool is_initialized;
 	SafeSock* shadow_safesock;

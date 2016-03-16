@@ -16,30 +16,9 @@
  # 
  ############################################################### 
 
-if (WINDOWS)
-
-	condor_exe( condor_credd
-				"credd.windows.cpp;credd.windows.h"
-				${C_SBIN}
-				"${CONDOR_LIBS}"
-				ON )
-				
-else()
-
-	if ( WANT_FULL_DEPLOYMENT )
-
-		file( GLOB CREDRMVSRCS *_cred* )
-		condor_glob( CREDDHDRS CREDDSRCS "${CREDRMVSRCS}" )
-		condor_exe( condor_credd
-			"${CREDDHDRS};${CREDDSRCS}"
+condor_exe( condor_credd
+			"credd.cpp;credd.h"
 			${C_SBIN}
 			"${CONDOR_LIBS}"
-			OFF )
-		
-	else ()
+			ON )
 
-		message(STATUS "NOTE: *credd* targets will not be built WANT_FULL_DEPLOYMENT=FALSE")
-
-	endif()
-	
-endif (WINDOWS)

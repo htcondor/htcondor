@@ -171,3 +171,57 @@ DCShadow::updateJobInfo( ClassAd* ad, bool insure_update )
 	}
 	return true;
 }
+
+bool
+DCShadow::getUserCredential( const char* user, const char* domain, MyString& credential)
+{
+	ReliSock reli_sock;
+	bool  result;
+
+		// For now, if we have to ensure that the update gets
+		// there, we use a ReliSock (TCP).
+	reli_sock.timeout(20);   // years of research... :)
+	if( ! reli_sock.connect(_addr) ) {
+		dprintf( D_ALWAYS, "getUserCredential: Failed to connect to shadow "
+				 "(%s)\n", _addr );
+		return false;
+	}
+	result = startCommand( CREDD_GET_PASSWD, (Sock*)&reli_sock );
+
+	if( ! result ) {
+		dprintf( D_FULLDEBUG,
+				 "Failed to send CREDD_GET_PASSWD command to shadow\n" );
+		return false;
+	}
+
+	MyString senduser = user;
+	MyString senddomain = domain;
+	MyString recvcredential;
+
+	if(!reli_sock.code(senduser)) {
+		dprintf( D_FULLDEBUG, "Failed to send user (%s) to shadow\n", senduser.c_str() );
+		return false;
+	}
+	if(!reli_sock.code(senddomain)) {
+		dprintf( D_FULLDEBUG, "Failed to send domain (%s) to shadow\n", senddomain.c_str() );
+		return false;
+	}
+	if(!reli_sock.end_of_message()) {
+		dprintf( D_FULLDEBUG, "Failed to send EOM to shadow\n" );
+		return false;
+	}
+
+	reli_sock.decode();
+	if(!reli_sock.code(recvcredential)) {
+		dprintf( D_FULLDEBUG, "Failed to receive credential from shadow\n");
+		return false;
+	}
+	if(!reli_sock.end_of_message()) {
+		dprintf( D_FULLDEBUG, "Failed to receive EOM from shadow\n");
+		return false;
+	}
+
+	credential = recvcredential;
+	return true;
+}
+

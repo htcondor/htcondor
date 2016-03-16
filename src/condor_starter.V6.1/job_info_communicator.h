@@ -279,6 +279,9 @@ public:
 	bool writeOutputAdFile( ClassAd* ad );
 	void initOutputAdFile( void );
 
+	void setKRB5CCNAME( const char* path );
+	const char* getKRB5CCNAME( void ) { return job_KRB5CCNAME; };
+
 		/**
 		   Send a periodic update ClassAd to our controller.  The
 		   "insure_update" just controls if we make sure the update
@@ -475,6 +478,8 @@ protected:
 
 	char* job_output_ad_file;
 	bool job_output_ad_is_stdout;
+
+	char* job_KRB5CCNAME;
 	
 		/// The ClassAd for our job.  We control the memory for this.
 	ClassAd* job_ad;

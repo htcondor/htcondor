@@ -38,10 +38,8 @@
 #if !defined(WIN32)
 #include <pwd.h>
 #include <sys/stat.h>
-#else
-// WINDOWS only
-#include "store_cred.h"
 #endif
+#include "store_cred.h"
 #include "internet.h"
 #include "my_hostname.h"
 #include "domain_tools.h"
@@ -83,6 +81,9 @@
 #include "condor_vm_universe_types.h"
 #include "vm_univ_utils.h"
 #include "condor_md.h"
+#include "my_popen.h"
+#include "condor_base64.h"
+#include "zkm_base64.h"
 
 #include <algorithm>
 #include <string>
@@ -184,6 +185,8 @@ char* tdp_input = NULL;
 char* RunAsOwnerCredD = NULL;
 #endif
 char * batch_name_line = NULL;
+bool sent_credential_to_credd = false;
+
 
 // For mpi universe testing
 bool use_condor_mpi_universe = false;
@@ -410,6 +413,8 @@ const char	*KeystoreAlias = "keystore_alias";
 const char	*KeystorePassphraseFile = "keystore_passphrase_file";
 const char  *CreamAttributes = "cream_attributes";
 const char  *BatchQueue = "batch_queue";
+
+const char	*SendCredential	= "send_credential";
 
 const char	*FileRemaps = "file_remaps";
 const char	*BufferFiles = "buffer_files";
@@ -6682,8 +6687,103 @@ SetGSICredentials()
 	// END MyProxy-related crap
 }
 
-#if !defined(WIN32)
+void
+SetSendCredential()
+{
+#ifndef WIN32
+	// in theory, each queued job may have a different value for this, so first we
+	// process this attribute
+	bool send_credential = condor_param_bool( "SendCredential", SendCredential, false );
 
+	if (!send_credential) {
+		return;
+	}
+
+	// add it to the job ad (starter needs to know this value)
+	MyString buffer;
+	(void) buffer.formatstr( "%s = True", ATTR_JOB_SEND_CREDENTIAL);
+	InsertJobExpr(buffer);
+
+	// however, if we do need to send it for any job, we only need to do that once.
+	if (sent_credential_to_credd) {
+		return;
+	}
+
+	// store credential with the credd
+	MyString producer;
+	if(param(producer, "SEC_CREDENTIAL_PRODUCER")) {
+		dprintf(D_ALWAYS, "CREDMON: invoking %s\n", producer.c_str());
+		ArgList args;
+		args.AppendArg(producer);
+		FILE* uber_file = my_popen(args, "r", false);
+		unsigned char *uber_ticket = NULL;
+		if (!uber_file) {
+			dprintf(D_ALWAYS, "CREDMON: ERROR (%i) invoking %s\n", errno, producer.c_str());
+			exit(1);
+		} else {
+			uber_ticket = (unsigned char*)malloc(65536);
+			int bytes_read = fread(uber_ticket, 1, 65536, uber_file);
+			// what constitutes failure?
+			my_pclose(uber_file);
+
+			if(bytes_read == 0) {
+				fprintf(stderr, "\nERROR: failed to read any data from %s!\n", producer.c_str());
+				exit(1);
+			}
+
+			// immediately convert to base64
+			char* ut64 = condor_base64_encode(uber_ticket, bytes_read);
+
+			// sanity check:  convert it back.
+			//unsigned char *zkmbuf = 0;
+			int zkmlen = -1;
+			unsigned char* zkmbuf = NULL;
+			zkm_base64_decode(ut64, &zkmbuf, &zkmlen);
+
+			dprintf(D_FULLDEBUG, "CREDMON: b64: %i %i\n", bytes_read, zkmlen);
+			dprintf(D_FULLDEBUG, "CREDMON: b64: %s %s\n", (char*)uber_ticket, (char*)zkmbuf);
+
+			char preview[64];
+			strncpy(preview,ut64, 63);
+			preview[63]=0;
+
+			dprintf(D_FULLDEBUG | D_SECURITY, "CREDMON: read %i bytes {%s...}\n", bytes_read, preview);
+
+			// setup the username to query
+			char userdom[256];
+			char* the_username = my_username();
+			char* the_domainname = my_domainname();
+			sprintf(userdom, "%s@%s", the_username, the_domainname);
+			free(the_username);
+			free(the_domainname);
+
+			dprintf(D_ALWAYS, "CREDMON: storing cred for user %s\n", userdom);
+			Daemon my_credd(DT_CREDD);
+			int store_cred_result;
+			if (my_credd.locate()) {
+				store_cred_result = store_cred(userdom, ut64, ADD_MODE, &my_credd);
+				if ( store_cred_result != SUCCESS ) {
+					fprintf( stderr, "\nERROR: store_cred failed!\n");
+					exit(1);
+				}
+			} else {
+				fprintf( stderr, "\nERROR: locate(credd) failed!\n");
+				exit(1);
+			}
+		}
+	} else {
+		fprintf( stderr, "\nERROR: Job requested SendCredential but SEC_CREDENTIAL_PRODUCER not defined!\n");
+		exit(1);
+	}
+
+	// this will prevent us from sending it a second time if multiple jobs
+	// are queued
+	sent_credential_to_credd = true;
+#endif // WIN32
+}
+
+
+#if !defined(WIN32)
 // this allocates memory, free() it when you're done.
 char*
 findKillSigName( const char* submit_name, const char* attr_name )
@@ -7916,6 +8016,7 @@ int queue_item(int num, StringList & vars, char * item, int item_index, int opti
 		SetArguments();
 		SetGridParams();
 		SetGSICredentials();
+		SetSendCredential();
 		SetMatchListLen();
 		SetDAGNodeName();
 		SetDAGManJobId();

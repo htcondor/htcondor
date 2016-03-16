@@ -25,6 +25,7 @@
 #include "vm_common.h"
 #include "ipv6_hostname.h"
 #include "consumption_policy.h"
+#include "credmon_interface.h"
 
 #include <map>
 using std::map;
@@ -461,6 +462,9 @@ command_release_claim( Service*, int cmd, Stream* stream )
 
 	State s = rip->state();
 
+	// stash current user
+	MyString curuser = rip->r_cur->client()->user();
+
 	//There are two cases: claim id is the current or the preempting claim
 	if( rip->r_pre && rip->r_pre->idMatches(id) ) {
 		// preempting claim is being canceled by schedd
@@ -469,7 +473,7 @@ command_release_claim( Service*, int cmd, Stream* stream )
 		rip->r_pre->scheddClosedClaim();
 		rip->removeClaim(rip->r_pre);
 		free(id);
-		return TRUE;
+		goto countres;
 	}
 	else if( rip->r_pre_pre && rip->r_pre_pre->idMatches(id) ) {
 		// preempting preempting claim is being canceled by schedd
@@ -478,7 +482,7 @@ command_release_claim( Service*, int cmd, Stream* stream )
 		rip->r_pre_pre->scheddClosedClaim();
 		rip->removeClaim(rip->r_pre_pre);
 		free(id);
-		return TRUE;
+		goto countres;
 	}
 	else if( rip->r_cur && rip->r_cur->idMatches(id) ) {
 		if( (s == claimed_state) || (s == matched_state) ) {
@@ -486,7 +490,8 @@ command_release_claim( Service*, int cmd, Stream* stream )
 						  "State change: received RELEASE_CLAIM command\n" );
 			free(id);
 			rip->r_cur->scheddClosedClaim();
-			return rip->release_claim();
+			rip->release_claim();
+			goto countres;
 		} else {
 			rip->log_ignore( cmd, s );
 			free(id);
@@ -499,6 +504,33 @@ command_release_claim( Service*, int cmd, Stream* stream )
 	rip->log_ignore( cmd, s );
 	free( id );
 	return FALSE;
+
+countres:
+
+	ClassAdList cal;
+	resmgr->makeAdList(&cal);
+        ClassAd *ad;
+	int ResCount = 0;
+	cal.Open();
+	while( (ad=cal.Next()) ) {
+                MyString remoteuser;
+                MyString name;
+                ad->LookupString("RemoteUser",remoteuser);
+                ad->LookupString("Name",name);
+		if(strcmp(curuser.c_str(), remoteuser.c_str()) == 0) {
+			ResCount++;
+		}
+	}
+#ifndef WIN32
+	if (ResCount == 0) {
+		dprintf(D_FULLDEBUG, "CREDMON: user %s no longer running jobs, mark cred for sweeping.\n", curuser.c_str());
+		credmon_mark_creds_for_sweeping(curuser.c_str());
+	} else {
+		dprintf(D_FULLDEBUG, "CREDMON: user %s still running %i jobs\n", curuser.c_str(), ResCount);
+	}
+#endif //WIN32
+
+	return TRUE;
 }
 
 int command_suspend_claim( Service*, int cmd, Stream* stream )

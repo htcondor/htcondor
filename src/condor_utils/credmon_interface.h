@@ -18,20 +18,14 @@
  ***************************************************************/
 
 
-#ifndef __CLASSADUTIL_H__
-#define __CLASSADUTIL_H__
+#ifndef CREDMON_INTERFACE_H
+#define CREDMON_INTERFACE_H
 
-#include "condor_common.h"
-#include "condor_io.h"
-#include <iostream>
-#include "classad/classad_distribution.h"
+int get_credmon_pid();
+bool credmon_poll(const char* user, bool force_fresh, bool send_signal);
+bool credmon_mark_creds_for_sweeping(const char* user);
+void credmon_sweep_creds();
+bool credmon_clear_mark(const char* user);
 
-
-namespace classad {
-
-bool getOldClassAd( Stream *sock, ClassAd& ad );
-bool putOldClassAd ( Stream *sock, ClassAd& ad );
-
-} // classad
-#endif // __CLASSADUTIL_H__
+#endif // CREDMON_INTERFACE_H
 

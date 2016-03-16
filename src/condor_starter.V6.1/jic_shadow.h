@@ -407,6 +407,9 @@ private:
 		// for file transfer and reconnect, do it.
 	void initMatchSecuritySession();
 
+		/// If the job ad says so, acquire user credentials
+	bool initUserCredentials();
+
 		/** Compare our own UIDDomain vs. where the job came from.  We
 			check in the job ClassAd for ATTR_UID_DOMAIN and compare
 			it to info we have about the shadow and the local machine.
@@ -434,6 +437,8 @@ private:
 		// The proxy is about to expire, do something!
 	void proxyExpiring();
 
+	bool refreshSandboxCredentials();
+
 		// // // // // // // //
 		// Private Data Members
 		// // // // // // // //
@@ -442,6 +447,10 @@ private:
 
 		/** The version of the shadow if known; otherwise NULL */
 	CondorVersionInfo* shadow_version;
+
+		/// timer id of the credential checking timer
+	int m_refresh_sandbox_creds_tid;
+	time_t m_sandbox_creds_last_update;
 
 		/// timer id of the proxy expiration timer
 	int m_proxy_expiration_tid;

@@ -53,6 +53,7 @@ JobInfoCommunicator::JobInfoCommunicator()
 	job_remote_iwd = NULL;
 	job_output_ad_file = NULL;
 	job_output_ad_is_stdout = false;
+	job_KRB5CCNAME = NULL;
 	requested_exit = false;
 	fast_exit = false;
 	graceful_exit = false;
@@ -102,6 +103,9 @@ JobInfoCommunicator::~JobInfoCommunicator()
 	}
 	if( job_output_ad_file ) {
 		free( job_output_ad_file );
+	}
+	if( job_KRB5CCNAME ) {
+		free( job_KRB5CCNAME );
 	}
 #if HAVE_JOB_HOOKS
     if (m_hook_mgr) {
@@ -394,6 +398,16 @@ JobInfoCommunicator::setOutputAdFile( const char* path )
 	}
 	job_output_ad_file = strdup( path );
 }
+
+void
+JobInfoCommunicator::setKRB5CCNAME( const char* path )
+{
+	if( job_KRB5CCNAME ) {
+		free( job_KRB5CCNAME );
+	}
+	job_KRB5CCNAME = strdup( path );
+}
+
 
 
 bool

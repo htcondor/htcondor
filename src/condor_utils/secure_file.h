@@ -17,31 +17,16 @@
  *
  ***************************************************************/
 
+
+#ifndef SECURE_FILE_H
+#define SECURE_FILE_H
+
 #include "condor_common.h"
-#include "condor_daemon_core.h"
-#include "daemon.h"
-#include "X509credential.h"
-#include "dc_credd.h"
 
-int main(int argc, char **argv)
-{
-  char * credd_sin = argv[1];
-  char * cred_name = argv[2];
+void simple_scramble(char* scrambled,  const char* orig, int len);
+int write_password_file(const char* path, const char* password);
+bool write_secure_file(const char* path, const void* data, size_t len, bool as_root);
+bool read_secure_file(const char *fname, void **buf, size_t *len, bool as_root);
 
-  CondorError errorstack;
-  char * cred_data = NULL;
-  int cred_size = 0;
+#endif // SECURE_FILE_H
 
-  DCCredd credd(credd_sin);
-  if (credd.getCredentialData ((const char*)cred_name, (void*&)cred_data, cred_size, errorstack)) {
-      printf ("Received %d \n%s\n", cred_size, cred_data);
-	  return 0;
-  } else {
-	  fprintf (stderr, "ERROR (%d : %s)\n", 
-			   errorstack.code(),
-			   errorstack.message());
-	  return 1;
-  }
-}
-
-  
