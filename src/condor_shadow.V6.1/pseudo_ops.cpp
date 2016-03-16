@@ -470,7 +470,6 @@ static int use_local_access( const char *file )
 int
 pseudo_ulog( ClassAd *ad )
 {
-dprintf( D_ALWAYS, "DIAG pseudo_ulog()\n" );//TEMPTEMP
 	// Ignore the event time we were given, use the
 	// current time and timezone
 	ad->Delete("EventTime");
@@ -559,7 +558,6 @@ dprintf( D_ALWAYS, "DIAG pseudo_ulog()\n" );//TEMPTEMP
 		//Suppress ugly "Shadow exception!"
 		Shadow->exception_already_logged = true;
 
-		//TEMPTEMP -- we get here in vanilla universe, I think... (at least with the gittrac #5299 fix)
 		//lame: at the time of this writing, EXCEPT does not want const:
 		EXCEPT("%s", critical_error);
 	}

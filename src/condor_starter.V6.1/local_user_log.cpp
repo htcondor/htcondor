@@ -75,7 +75,6 @@ bool
 LocalUserLog::initFromJobAd( ClassAd* ad, const char* path_attr,
 							 const char* xml_attr )
 {
-dprintf( D_ALWAYS, "DIAG LocalUserLog::initFromJobAd()\n" );//TEMPTEMP
 	MyString tmp, dagmanLogFilename, logfilename;
 	bool use_xml = false;
 	const char* iwd = jic->jobIWD();
@@ -84,13 +83,8 @@ dprintf( D_ALWAYS, "DIAG LocalUserLog::initFromJobAd()\n" );//TEMPTEMP
 	int subproc = jic->jobSubproc();
 	std::vector<const char*> logfiles;
 	
-	//TEMPTEMP -- for vanilla universe, path_attr = StarterUserLog
-	//TEMPTEMP -- for local universe, path_attr = UserLog
-	//TEMPTEMP -- does this mean that StarterUserLog doesn't work for local universe?
 	dprintf( D_FULLDEBUG, "LocalUserLog::initFromJobAd: path_attr = %s\n", path_attr);
-	dprintf( D_ALWAYS, "DIAG 3010 LocalUserLog::initFromJobAd: path_attr = %s\n", path_attr );//TEMPTEMP
 	dprintf( D_FULLDEBUG, "LocalUserLog::initFromJobAd: xml_attr = %s\n", xml_attr);
-	dprintf( D_ALWAYS, "DIAG 3020 LocalUserLog::initFromJobAd: xml_attr = %s\n", xml_attr );//TEMPTEMP
 	if( ! ad->LookupString(path_attr, tmp) ) {
 			// The fact that this attribute is not found in the ClassAd
 			// indicates we do not want logging to a log file specified
@@ -98,15 +92,13 @@ dprintf( D_ALWAYS, "DIAG LocalUserLog::initFromJobAd()\n" );//TEMPTEMP
 			// a DAGMan-specified workflow log file!!
 			// These semantics are defined in JICShadow::init.
 		dprintf( D_FULLDEBUG, "No %s found in job ClassAd\n", path_attr );
-		dprintf( D_ALWAYS, "DIAG 3030 No %s found in job ClassAd\n", path_attr );//TEMPTEMP
 			// Not returning here for local universe fixes gittrac #5299.
 			// Kind of ugly, though...
 		if ( jic->jobUniverse() != CONDOR_UNIVERSE_LOCAL ) {
-			return initNoLogging();//TEMPTEMP!!!!
+			return initNoLogging();
 		}
 	} else {
-		//TEMPTEMP dprintf( D_FULLDEBUG, "LocalUserLog::initFromJobAd: tmp = %s\n",
-		dprintf( D_ALWAYS, "DIAG 3040 LocalUserLog::initFromJobAd: tmp = %s\n",//TEMPTEMP
+		dprintf( D_FULLDEBUG, "LocalUserLog::initFromJobAd: tmp = %s\n",
 			tmp.Value());
 		if( fullpath (tmp.Value() ) ) {
 				// we have a full pathname in the job ad.  however, if the
@@ -127,11 +119,9 @@ dprintf( D_ALWAYS, "DIAG LocalUserLog::initFromJobAd()\n" );//TEMPTEMP
 	}
 	std::vector<ULogEventNumber> mask_vec;
 	if( ad->LookupString(ATTR_DAGMAN_WORKFLOW_LOG, tmp) ) {
-		//TEMPTEMP dprintf( D_FULLDEBUG, "LocalUserLog::initFromJobAd: %s is defined\n",
-		dprintf( D_ALWAYS, "DIAG 3110 LocalUserLog::initFromJobAd: %s is defined\n",//TEMPTEMP
+		dprintf( D_FULLDEBUG, "LocalUserLog::initFromJobAd: %s is defined\n",
 			ATTR_DAGMAN_WORKFLOW_LOG);
-		//TEMPTEMP dprintf( D_FULLDEBUG, "LocalUserLog::initFromJobAd: tmp = %s\n",
-		dprintf( D_ALWAYS, "DIAG 3120 LocalUserLog::initFromJobAd: tmp = %s\n",//TEMPTEMP
+		dprintf( D_FULLDEBUG, "LocalUserLog::initFromJobAd: tmp = %s\n",
 			tmp.Value());
 		if( fullpath (tmp.Value() ) ) {
 				// we have a full pathname in the job ad.  however, if the
@@ -179,8 +169,7 @@ dprintf( D_ALWAYS, "DIAG LocalUserLog::initFromJobAd()\n" );//TEMPTEMP
 			u_log.AddToMask(*m);
 		}
 	}
-	//TEMPTEMP dprintf( D_FULLDEBUG, "LocalUserLog::initFromJobAd: returning %s\n",
-	dprintf( D_ALWAYS, "DIAG 3310 LocalUserLog::initFromJobAd: returning %s\n",//TEMPTEMP
+	dprintf( D_FULLDEBUG, "LocalUserLog::initFromJobAd: returning %s\n",
 		ret?"True":"False");
 	return ret;
 }
