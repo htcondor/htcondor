@@ -1,2 +1,4 @@
 job job_dagman_local-nodeA job_dagman_local.cmd
 vars job_dagman_local-nodeA node="$(JOB)"
+job job_dagman_local-nodeB job_dagman_local2.cmd
+vars job_dagman_local-nodeB node="$(JOB)"
