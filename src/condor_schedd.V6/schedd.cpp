@@ -3601,7 +3601,6 @@ namespace {
 // events and must be deleted when you're done.  This returns NULL if
 // the user didn't want a WriteUserLog, so you must check for NULL before
 // using the pointer you get back.
-//TEMPTEMP -- return value here may be problematic...  (if user log and workflow log are specified, which one do we return?)
 WriteUserLog*
 Scheduler::InitializeUserLog( PROC_ID job_id ) 
 {

@@ -88,9 +88,10 @@ LocalUserLog::initFromJobAd( ClassAd* ad, const char* path_attr,
 	if( ! ad->LookupString(path_attr, tmp) ) {
 			// The fact that this attribute is not found in the ClassAd
 			// indicates we do not want logging to a log file specified
-			// in the submit file.  We still need to check below for
-			// a DAGMan-specified workflow log file!!
+			// in the submit file.
 			// These semantics are defined in JICShadow::init.
+			// We still need to check below for a DAGMan-specified
+			// workflow log file for local universe!!
 		dprintf( D_FULLDEBUG, "No %s found in job ClassAd\n", path_attr );
 			// Not returning here for local universe fixes gittrac #5299.
 			// Kind of ugly, though...
