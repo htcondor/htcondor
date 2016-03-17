@@ -87,10 +87,17 @@ LocalUserLog::initFromJobAd( ClassAd* ad, const char* path_attr,
 	dprintf( D_FULLDEBUG, "LocalUserLog::initFromJobAd: xml_attr = %s\n", xml_attr);
 	if( ! ad->LookupString(path_attr, tmp) ) {
 			// The fact that this attribute is not found in the ClassAd
-			// indicates we do not want logging.
+			// indicates we do not want logging to a log file specified
+			// in the submit file.
 			// These semantics are defined in JICShadow::init.
+			// We still need to check below for a DAGMan-specified
+			// workflow log file for local universe!!
 		dprintf( D_FULLDEBUG, "No %s found in job ClassAd\n", path_attr );
-		return initNoLogging();
+			// Not returning here for local universe fixes gittrac #5299.
+			// Kind of ugly, though...
+		if ( jic->jobUniverse() != CONDOR_UNIVERSE_LOCAL ) {
+			return initNoLogging();
+		}
 	} else {
 		dprintf( D_FULLDEBUG, "LocalUserLog::initFromJobAd: tmp = %s\n",
 			tmp.Value());
@@ -145,9 +152,11 @@ LocalUserLog::initFromJobAd( ClassAd* ad, const char* path_attr,
 			}
 		}
 	}
-	if( logfiles.empty() ) {
+
+	if ( logfiles.empty() ) {
 		return initNoLogging();
 	}
+
 	ad->LookupBool( xml_attr, use_xml );
 	for(std::vector<const char*>::iterator p = logfiles.begin();
 			p != logfiles.end(); ++p) {

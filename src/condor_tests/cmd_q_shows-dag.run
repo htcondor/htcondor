@@ -208,6 +208,7 @@ VARS B_A_A JOB=\"B_A_A\"
 ";
 
 	# all of the dag submit files are derived from this with TAG, LOT and TIME substituted.
+	# these jobs start on hold because we don't want them to start until the sub_q_content job releases them.
 	my $sub_tag_content = "universe = vanilla
 if \$(IsWindows)
   executable = ${testname}.bat
@@ -218,6 +219,7 @@ output = ${testname}_TAG.out
 error = ${testname}_TAG.err
 log = ${testname}LOT.log
 arguments = \$(JOB) TIME
+hold=true
 queue
 ";
 
@@ -239,9 +241,9 @@ queue
 ";
 
 	if (CondorUtils::is_windows()) {
-		emit_file(".bat", "\@echo \%1\n\@sleep \%2\n");
+		emit_file(".bat", "\@echo \%1 \%2\n");
 	} else {
-		emit_file(".sh", "#!/usr/bin/env bash\necho \$1\nsleep \$2\n");
+		emit_file(".sh", "#!/usr/bin/env bash\necho \$1 \$2\n");
 	}
 
 	# make sure out and err files exist, NMI complains if these files are not around
@@ -255,16 +257,15 @@ queue
 
 	# create submit files
 	emit_file("-A.cmd", specialize_content($sub_tag_content, "TAG"=>"A", "TIME"=>"120", "LOT"=>""));
-	### emit_file("-B_A_A.cmd", specialize_content($sub_tag_content, "TAG"=>"B_A_A", "TIME"=>"80", "LOT"=>"-B_A"));
 	emit_file("-B_B.cmd", specialize_content($sub_tag_content, "TAG"=>"B_B", "TIME"=>"100", "LOT"=>"-B"));
 	emit_file("-B_C.cmd", specialize_content($sub_tag_content, "TAG"=>"B_C", "TIME"=>"100", "LOT"=>"-B"));
 	emit_file("-C.cmd", specialize_content($sub_tag_content, "TAG"=>"C", "TIME"=>"120", "LOT"=>""));
 
 	emit_file("-B_A_A.cmd", specialize_content($sub_q_content, "TAG"=>"B_A_A", "TIME"=>"80", "LOT"=>"-B_A"));
 	if (CondorUtils::is_windows()) {
-		emit_file("-q.bat", "\@condor_q -dag\n\@exit /b 1\n");
+		emit_file("-q.bat", "\@condor_q -dag\n\@condor_release -all\@exit /b 1\n");
 	} else {
-		emit_file("-q.sh", "#!/usr/bin/env bash\ncondor_q -dag\nexit 1\n");
+		emit_file("-q.sh", "#!/usr/bin/env bash\ncondor_q -dag\ncondor_release -all\nexit 1\n");
 	}
 }
 
