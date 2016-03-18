@@ -527,25 +527,32 @@ CollectorDaemonStatsList::updateStats( const char *class_name,
 		daemon = new CollectorBaseStats( historySize );
 		hashTable->insert( key, daemon );
 
-		MyString	string;
-		key.getstr( string );
-		dprintf( D_FULLDEBUG,
+		if (IsFulldebug(D_FULLDEBUG)) {
+			MyString	string;
+			key.getstr( string );
+			dprintf( D_FULLDEBUG,
 				 "stats: Inserting new hashent for %s\n", string.Value() );
+		}
 	}
 
 	// Update the daemon object...
 	daemon->updateStats( sequenced, dropped );
 
+		// static const so we're not always new'ing/deleting them
+	static const std::string UpdateStatsTotal(ATTR_UPDATESTATS_TOTAL);
+	static const std::string UpdateStatsSequenced(ATTR_UPDATESTATS_SEQUENCED);
+	static const std::string UpdateStatsLost(ATTR_UPDATESTATS_LOST);
+	static const std::string UpdateStatsHistory(ATTR_UPDATESTATS_HISTORY);
 
-	ad->InsertAttr(ATTR_UPDATESTATS_TOTAL, daemon->getTotal());
-	ad->InsertAttr(ATTR_UPDATESTATS_SEQUENCED, daemon->getSequenced());
-	ad->InsertAttr(ATTR_UPDATESTATS_LOST, daemon->getDropped());
+	ad->InsertAttr(UpdateStatsTotal, daemon->getTotal());
+	ad->InsertAttr(UpdateStatsSequenced, daemon->getSequenced());
+	ad->InsertAttr(UpdateStatsLost, daemon->getDropped());
 
 	// Get the history string & insert it if it's valid
 	// Compute the size of the string we need..
 	char *hist = new char [daemon->getHistoryStringLen()];
 	if (daemon->getHistoryString(hist)) {
-		ad->InsertAttr(ATTR_UPDATESTATS_HISTORY, hist);
+		ad->InsertAttr(UpdateStatsHistory, hist);
 	}
 	delete [] hist;
 
