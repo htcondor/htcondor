@@ -39,6 +39,7 @@ UniShadow::UniShadow() {
 UniShadow::~UniShadow() {
 	if ( remRes ) delete remRes;
 	daemonCore->Cancel_Command( SHADOW_UPDATEINFO );
+	daemonCore->Cancel_Command( CREDD_GET_PASSWD );
 }
 
 
