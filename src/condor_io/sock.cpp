@@ -404,7 +404,7 @@ int Sock::set_inheritable( int flag )
 	{
 		int err = WSAGetLastError();
 		dprintf(D_NETWORK,
-			"Failed SIO_BASE_HANDLE in set_inheritable on sock %d to %d (err=%d, %s)",
+			"Failed SIO_BASE_HANDLE in set_inheritable on sock %d to %d (err=%d, %s)\n",
 			_sock, flag, err, GetLastErrorString(err) );
 		// Well, we failed to get the "real" handle for whatever reason.
 		// We may as well try to move forward with the original _sock handle.
@@ -422,7 +422,7 @@ int Sock::set_inheritable( int flag )
 		{
 			int err = WSAGetLastError();
 			dprintf(D_NETWORK,
-				"Failed to set_inheritable on sock %d to %d (err=%d, %s)",
+				"Failed to set_inheritable on sock %d to %d (err=%d, %s)\n",
 				_sock, flag, err, GetLastErrorString(err) );
 		} else {
 			sethandle_worked = true;
