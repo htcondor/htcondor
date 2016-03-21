@@ -6254,11 +6254,14 @@ SetGridParams()
 		if (JobUniverse == CONDOR_UNIVERSE_GRID &&
 			JobGridType != NULL &&
 			(strcasecmp( JobGridType, "ec2" ) == MATCH)) {
-			char *ename = condor_param(Executable, ATTR_JOB_CMD); // !NULL by now
-			tagNames.append("Name");
-			buffer.formatstr("%sName = \"%s\"", ATTR_EC2_TAG_PREFIX, ename);
-			InsertJobExpr(buffer);
-			free(ename); ename = NULL;
+			bool wantsNameTag = condor_param_bool( "WantNameTag", NULL, true );
+			if( wantsNameTag ) {
+				char *ename = condor_param(Executable, ATTR_JOB_CMD); // !NULL by now
+				tagNames.append("Name");
+				buffer.formatstr("%sName = \"%s\"", ATTR_EC2_TAG_PREFIX, ename);
+				InsertJobExpr(buffer);
+				free(ename); ename = NULL;
+			}
 		}
 	}
 
