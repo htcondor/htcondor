@@ -79,6 +79,23 @@ some local universe node jobs.  (This bug was introduced in version
 8.3.0.)
 \Ticket{5299}
 
+\item Fixed a bug that resulted in jobs managed by the \Condor{job\_router}
+not reporting memory and disk usage of the job correctly.
+\Ticket{5552}
+
+\item Tuned a bug fix from the 8.5.3 release that was designed to allow for
+more than 100 dynamic slots to be a bit more generous in allocating Disk
+so that the slots would less prone to fail to match subsequent jobs.
+\Ticket{5535}
+
+\item Fixed a bug in the randomization of ports within the LOWPORT to HIGHPORT range
+that would sometimes generate ports outside of this range on Windows.
+\Ticket{5555}
+
+\item Fixed a bug in \Condor{off} \Opt{-peaceful} that could result in sending the
+off command to machines that had never received the peaceful command that should have proceeded it.
+\Ticket{5504}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
