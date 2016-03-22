@@ -29,11 +29,11 @@ $dagman_args = "-verbose";
 $outfile = "job_dagman_event_timestamp.dag.dagman.out";
 
 @expected_lines = (
-	'\d\d/\d\d/\d\d \d\d:\d\d:\d\d\ Event: ULOG_SUBMIT for HTCondor Node NodeA \(\d+\.\d+\.\d+\) \{\d\d/\d\d/\d\d \d\d:\d\d:\d\d\}',
-	'\d\d/\d\d/\d\d \d\d:\d\d:\d\d\ Event: ULOG_EXECUTE for HTCondor Node NodeA \(\d+\.\d+\.\d+\) \{\d\d/\d\d/\d\d \d\d:\d\d:\d\d\}',
-	'\d\d/\d\d/\d\d \d\d:\d\d:\d\d\ Event: ULOG_JOB_TERMINATED for HTCondor Node NodeA \(\d+\.\d+\.\d+\) \{\d\d/\d\d/\d\d \d\d:\d\d:\d\d\}',
-	'\d\d/\d\d/\d\d \d\d:\d\d:\d\d\ Event: ULOG_SUBMIT for HTCondor Node NodeB \(\d+\.\d+\.\d+\) \{\d\d/\d\d/\d\d \d\d:\d\d:\d\d\}',
-	'\d\d/\d\d/\d\d \d\d:\d\d:\d\d\ Event: ULOG_JOB_TERMINATED for HTCondor Node NodeB \(\d+\.\d+\.\d+\) \{\d\d/\d\d/\d\d \d\d:\d\d:\d\d\}',
+	' Event: ULOG_SUBMIT for HTCondor Node NodeA \(\d+\.\d+\.\d+\) \{\d\d/\d\d/\d\d \d\d:\d\d:\d\d\}',
+	' Event: ULOG_EXECUTE for HTCondor Node NodeA \(\d+\.\d+\.\d+\) \{\d\d/\d\d/\d\d \d\d:\d\d:\d\d\}',
+	' Event: ULOG_JOB_TERMINATED for HTCondor Node NodeA \(\d+\.\d+\.\d+\) \{\d\d/\d\d/\d\d \d\d:\d\d:\d\d\}',
+	' Event: ULOG_SUBMIT for HTCondor Node NodeB \(\d+\.\d+\.\d+\) \{\d\d/\d\d/\d\d \d\d:\d\d:\d\d\}',
+	' Event: ULOG_JOB_TERMINATED for HTCondor Node NodeB \(\d+\.\d+\.\d+\) \{\d\d/\d\d/\d\d \d\d:\d\d:\d\d\}',
 );
 
 my $killedchosen = 0;
