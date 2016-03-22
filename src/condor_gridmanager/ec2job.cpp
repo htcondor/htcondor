@@ -180,6 +180,7 @@ EC2Job::EC2Job( ClassAd *classad ) :
 	m_group_names = NULL;
 	m_should_gen_key_pair = false;
 	m_keypair_created = false;
+	std::string gahpName;
 
 	// check the public_key_file
 	jobAd->LookupString( ATTR_EC2_ACCESS_KEY_ID, m_public_key_file );
@@ -354,7 +355,12 @@ EC2Job::EC2Job( ClassAd *classad ) :
 		free(gahp_debug);
 	}
 
-	gahp = new GahpClient( EC2_RESOURCE_NAME, gahp_path, &args );
+	// The EC2 GAHP assumes (for purposes of responding to RequestLimitExceeded
+	// errors) that it's only using a single account.  Note that the resource
+	// doesn't start any GAHPs, so we have to make sure that the gahpName
+	// here is the same as the gahp_name there.
+	gahpName = "EC2-" + m_public_key_file;
+	gahp = new GahpClient( gahpName.c_str(), gahp_path, &args );
 	free(gahp_path);
 	gahp->setNotificationTimerId( evaluateStateTid );
 	gahp->setMode( GahpClient::normal );
@@ -888,11 +894,24 @@ void EC2Job::doEvaluateState()
 					break;
 				}
 
+				// Copied from GM_SPOT_CANCEL, so we don't want to waste
+				// a request there.
 				if( ! m_spot_price.empty() ) {
-					gmState = GM_SPOT_CANCEL;
-				} else {
-					gmState = GM_SUBMITTED;
+					// Since we know the request is gone, forget about it.
+					SetRequestID( NULL );
+					requestScheddUpdate( this, false );
+
+					// Dedicated instances only set their state reason code
+					// when terminating; avoid confusing our code.
+					m_state_reason_code.clear();
+
+					// Cancelling a one-time spot request which has been
+					// fulfilled is totally pointless (it's not even required
+					// to shrink the list of SIR IDs).  Instead, go directly
+					// to GM_SUBMITTED.
 				}
+
+				gmState = GM_SUBMITTED;
 				break;
 
 

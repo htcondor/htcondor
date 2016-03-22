@@ -574,6 +574,8 @@ IOProcess::addNewRequest(const char *cmd)
 
 	Request* new_req = new Request(cmd);
 	ASSERT(new_req);
+	dprintf( D_PERF_TRACE, "request #%d (%s): dispatch\n",
+		new_req->m_reqid, new_req->m_args.argv[0] );
 
 	// check if there is available worker process
 	Worker *worker = findFreeWorker();

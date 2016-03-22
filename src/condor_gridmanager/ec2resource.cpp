@@ -79,16 +79,18 @@ EC2Resource::EC2Resource( const char *resource_name,
 		dprintf(D_ALWAYS, "EC2_GAHP not defined! \n");
 		return;
 	}
-	
+
 	ArgList args;
 	args.AppendArg("-f");
 
-	gahp = new GahpClient( EC2_RESOURCE_NAME, gahp_path, &args );
+	std::string gahp_name = "EC2-";
+	gahp_name += m_public_key_file;
+	gahp = new GahpClient( gahp_name.c_str(), gahp_path, &args );
 	gahp->setNotificationTimerId( pingTimerId );
 	gahp->setMode( GahpClient::normal );
 	gahp->setTimeout( EC2Job::gahpCallTimeout );
 
-	status_gahp = new GahpClient( EC2_RESOURCE_NAME, gahp_path, &args );
+	status_gahp = new GahpClient( gahp_name.c_str(), gahp_path, &args );
 
 	StartBatchStatusTimer();
 
