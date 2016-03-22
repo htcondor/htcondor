@@ -29,7 +29,15 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item The default value of \MacroNI{DAGMAN\_ALWAYS\_RUN\_POST} has been
+changed from \Expr{True} to \Expr{False}.  This means that, by
+default, if the PRE script of a DAG node fails, the POST script
+of the node will \emph{not} be run.  (This had been the default
+behavior until version 7.7.2.  The 7.7.2-8.5.3 behavior can be
+restored by setting \MacroNI{DAGMAN\_ALWAYS\_RUN\_POST} to 
+\Expr{True}, or by passing the new \Opt{-AlwaysRunPost}
+argument to \Condor{submit\_dag}.)
+\Ticket{5477}
 
 \end{itemize}
 

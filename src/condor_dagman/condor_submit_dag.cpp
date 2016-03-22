@@ -788,9 +788,9 @@ void writeSubmitFile( /* const */ SubmitDagDeepOptions &deepOpts,
 					"the DAGMAN_ALLOW_EVENTS config parameter instead\n");
 	}
 
-	if(!shallowOpts.bPostRun)
+	if(shallowOpts.bPostRun)
 	{
-		args.AppendArg("-DontAlwaysRunPost");
+		args.AppendArg("-AlwaysRunPost");
 	}
 
 	if(deepOpts.bAllowLogError)
@@ -1175,6 +1175,10 @@ parseCommandLine(SubmitDagDeepOptions &deepOpts,
 			{
 				shallowOpts.bPostRun = false;
 			}
+			else if ( (strArg.find("-alwaysrun") != -1) ) // AlwaysRunPost
+			{
+				shallowOpts.bPostRun = true;
+			}
 			else if ( (strArg.find("-dont_use_default_node_log") != -1) )
 			{
 				fprintf( stderr, "Error: -dont_use_default_node_log is no longer allowed\n" );
@@ -1309,6 +1313,7 @@ int printUsage(int iExitCode)
     printf("        See the condor_submit man page for values.)\n");
     printf("    -NoEventChecks      (Now ignored -- use DAGMAN_ALLOW_EVENTS)\n"); 
     printf("    -DontAlwaysRunPost  (Don't run POST script if PRE script fails)\n");
+    printf("    -AlwaysRunPost      (Run POST script if PRE script fails)\n");
     printf("    -AllowLogError      (Allows the DAG to attempt execution even if the log\n");
     printf("        reading code finds errors when parsing the submit files)\n"); 
 	printf("    -UseDagDir          (Run DAGs in directories specified in DAG file paths)\n");

@@ -24,8 +24,8 @@ use CondorUtils;
 $testname = "job_dagman_always_run_post-A";
 $cmd = 'job_dagman_always_run_post-A.dag';
 $testdesc =  'Condor DAGman test for always running the POST script - scheduler U';
-$outfile = "$testname.dag.dagman.out";
-$dagman_args = "-verbose";
+$testname = "job_dagman_always_run_post-A";
+$dagman_args = "-verbose -AlwaysRunPost";
 
 #**************************************************************
 #
@@ -37,6 +37,9 @@ $dagman_args = "-verbose";
 #**************************************************************
 
 # TEMP -- to-do: add check of jobstate.log file.
+
+$outfile = "$testname.dag.dagman.out";
+runcmd("rm -f $outfile");
 
 # remove any dag files created by the last run.
 unlink glob "${testname}.dag*";

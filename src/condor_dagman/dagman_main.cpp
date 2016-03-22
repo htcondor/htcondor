@@ -71,6 +71,7 @@ static void Usage() {
             "\t\t[-NoEventChecks]\n"
             "\t\t[-AllowLogError]\n"
             "\t\t[-DontAlwaysRunPost]\n"
+            "\t\t[-AlwaysRunPost]\n"
             "\t\t[-WaitForDebug]\n"
             "\t\t[-UseDagDir]\n"
             "\t\t[-AutoRescue <0|1>]\n"
@@ -343,7 +344,7 @@ Dagman::Config()
 	debug_printf( DEBUG_NORMAL, "DAGMAN_SUBMIT_DEPTH_FIRST setting: %s\n",
 				submitDepthFirst ? "True" : "False" );
 
-	_runPost = param_boolean( "DAGMAN_ALWAYS_RUN_POST", true );
+	_runPost = param_boolean( "DAGMAN_ALWAYS_RUN_POST", false );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_ALWAYS_RUN_POST setting: %s\n",
 			_runPost ? "True" : "False" );
 
@@ -739,6 +740,9 @@ void main_init (int argc, char ** const argv) {
 
         } else if( !strcasecmp( "-DontAlwaysRunPost",argv[i] ) ) {
 			dagman._runPost = false;
+
+        } else if( !strcasecmp( "-AlwaysRunPost",argv[i] ) ) {
+			dagman._runPost = true;
 
         } else if( !strcasecmp( "-WaitForDebug", argv[i] ) ) {
 			wait_for_debug = 1;
