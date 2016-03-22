@@ -27,6 +27,7 @@
 #include "VMRegister.h"
 #include "overflow.h"
 #include <math.h>
+#include "credmon_interface.h"
 
 #include "slot_builder.h"
 
@@ -38,6 +39,7 @@ ResMgr::ResMgr() : extras_classad( NULL )
 	config_classad = NULL;
 	up_tid = -1;
 	poll_tid = -1;
+	m_cred_sweep_tid = -1;
 
 	draining = false;
 	draining_is_graceful = false;
@@ -1472,6 +1474,35 @@ ResMgr::check_polling( void )
 }
 
 
+void
+ResMgr::sweep_timer_handler( void )
+{
+	dprintf(D_FULLDEBUG, "STARTD: calling and resetting sweep_timer_handler()\n");
+#ifndef WIN32
+	credmon_sweep_creds();
+#endif  // WIN32
+	int sec_cred_sweep_interval = param_integer("SEC_CREDENTIAL_SWEEP_INTERVAL", 30);
+	daemonCore->Reset_Timer (m_cred_sweep_tid, sec_cred_sweep_interval, sec_cred_sweep_interval);
+}
+
+int
+ResMgr::start_sweep_timer( void )
+{
+	// only sweep if we have a cred dir
+	char* p = param("SEC_CREDENTIAL_DIRECTORY");
+	if(!p) {
+		return TRUE;
+	}
+
+	dprintf(D_FULLDEBUG, "STARTD: setting start_sweep_timer()\n");
+	int sec_cred_sweep_interval = param_integer("SEC_CREDENTIAL_SWEEP_INTERVAL", 30);
+	m_cred_sweep_tid = daemonCore->Register_Timer( sec_cred_sweep_interval, sec_cred_sweep_interval,
+							(TimerHandlercpp)&ResMgr::sweep_timer_handler,
+							"sweep_timer_handler", this );
+	return TRUE;
+}
+
+
 int
 ResMgr::start_update_timer( void )
 {
@@ -1551,6 +1582,12 @@ ResMgr::reset_timers( void )
 	if( up_tid != -1 ) {
 		daemonCore->Reset_Timer( up_tid, update_offset,
 								 update_interval );
+	}
+
+	int sec_cred_sweep_interval = param_integer("SEC_CREDENTIAL_SWEEP_INTERVAL", 30);
+	if( m_cred_sweep_tid != -1 ) {
+		daemonCore->Reset_Timer( m_cred_sweep_tid, sec_cred_sweep_interval,
+								 sec_cred_sweep_interval );
 	}
 
 #if HAVE_HIBERNATION

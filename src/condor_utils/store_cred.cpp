@@ -28,6 +28,10 @@
 #include "store_cred.h"
 #include "condor_config.h"
 #include "ipv6_hostname.h"
+#include "credmon_interface.h"
+#include "secure_file.h"
+#include "condor_base64.h"
+#include "zkm_base64.h"
 
 static int code_store_cred(Stream *socket, char* &user, char* &pw, int &mode);
 
@@ -40,58 +44,117 @@ void SecureZeroMemory(void *p, size_t n)
 	memset(p, 0, n);
 }
 
-// trivial scramble on password file to prevent accidental viewing
-// NOTE: its up to the caller to ensure scrambled has enough room
-void simple_scramble(char* scrambled,  const char* orig, int len)
-{
-	const unsigned char deadbeef[] = {0xDE, 0xAD, 0xBE, 0xEF};
 
-	for (int i = 0; i < len; i++) {
-		scrambled[i] = orig[i] ^ deadbeef[i % sizeof(deadbeef)];
+int
+ZKM_UNIX_STORE_CRED(const char *user, const char *pw, const int len, int mode)
+{
+	dprintf(D_ALWAYS, "ZKM: store cred user %s len %i mode %i contents: {%s}\n", user, len, mode, pw);
+
+	char* cred_dir = param("SEC_CREDENTIAL_DIRECTORY");
+	if(!cred_dir) {
+		dprintf(D_ALWAYS, "ERROR: got STORE_CRED but SEC_CREDENTIAL_DIRECTORY not defined!\n");
+		return FAILURE;
 	}
+
+	// get username
+	char username[256];
+	const char *at = strchr(user, '@');
+	strncpy(username, user, (at-user));
+	username[at-user] = 0;
+
+	// remove mark on update for "mark and sweep"
+	credmon_clear_mark(username);
+
+	// check to see if .cc already exists
+	char ccfilename[PATH_MAX];
+	sprintf(ccfilename, "%s%c%s.cc", cred_dir, DIR_DELIM_CHAR, username);
+	struct stat junk_buf;
+	int rc = stat(ccfilename, &junk_buf);
+	if (rc==0) {
+		// if the credential cache already exists, we don't even need
+		// to write the file.  just return success as quickly as
+		// possible.
+		return SUCCESS;
+	}
+
+	// create filenames
+	char tmpfilename[PATH_MAX];
+	char filename[PATH_MAX];
+	sprintf(tmpfilename, "%s%c%s.cred.tmp", cred_dir, DIR_DELIM_CHAR, username);
+	sprintf(filename, "%s%c%s.cred", cred_dir, DIR_DELIM_CHAR, username);
+	dprintf(D_ALWAYS, "ZKM: writing data to %s\n", tmpfilename);
+
+	// contents of pw are base64 encoded.  decode now just before they go
+	// into the file.
+	int rawlen = -1;
+	unsigned char* rawbuf = NULL;
+	zkm_base64_decode(pw, &rawbuf, &rawlen);
+
+	if (rawlen <= 0) {
+		dprintf(D_ALWAYS, "ZKM: failed to decode credential!\n");
+		return false;
+	}
+
+	// write temp file
+	rc = write_secure_file(tmpfilename, rawbuf, rawlen, true);
+
+	// caller of condor_base64_decode is responsible for freeing buffer
+	free(rawbuf);
+
+	if (rc != SUCCESS) {
+		dprintf(D_ALWAYS, "ZKM: failed to write secure temp file %s\n", tmpfilename);
+		return FAILURE;
+	}
+
+	// now move into place
+	dprintf(D_ALWAYS, "ZKM: renaming %s to %s\n", tmpfilename, filename);
+	priv_state priv = set_root_priv();
+	rc = rename(tmpfilename, filename);
+	set_priv(priv);
+
+	if (rc == -1) {
+		dprintf(D_ALWAYS, "ZKM: failed to rename %s to %s\n", tmpfilename, filename);
+
+		// should we rm tmpfilename ?
+		return FAILURE;
+	}
+
+	// credential succesfully stored
+	return SUCCESS;
 }
 
-// writes a pool password file using the given password
-// returns SUCCESS or FAILURE
-//
-int write_password_file(const char* path, const char* password)
+
+char*
+ZKM_UNIX_GET_CRED(const char *user, const char *domain)
 {
-		int fd = safe_open_wrapper_follow(path,
-		                           O_WRONLY | O_CREAT | O_TRUNC,
-		                           0600);
-		if (fd == -1) {
-			dprintf(D_ALWAYS,
-			        "store_cred_service: open failed on %s: %s (%d)\n",
-			        path,
-			        strerror(errno),
-					errno);
-			return FAILURE;
-		}
-		FILE *fp = fdopen(fd, "w");
-		if (fp == NULL) {
-			dprintf(D_ALWAYS,
-			        "store_cred_service: fdopen failed: %s (%d)\n",
-			        strerror(errno),
-			        errno);
-			return FAILURE;
-		}
-		size_t password_len = strlen(password);
-		char scrambled_password[MAX_PASSWORD_LENGTH + 1];
-		memset(scrambled_password, 0, MAX_PASSWORD_LENGTH + 1);
-		simple_scramble(scrambled_password, password, password_len);
-		size_t sz = fwrite(scrambled_password, 1, MAX_PASSWORD_LENGTH + 1, fp);
-		int save_errno = errno;
-		fclose(fp);
-		if (sz != MAX_PASSWORD_LENGTH + 1) {
-			dprintf(D_ALWAYS,
-			        "store_cred_service: "
-			            "error writing to password file: %s (%d)\n",
-					strerror(save_errno),
-			        save_errno);
-			return FAILURE;
-		}
-		return SUCCESS;
+	dprintf(D_ALWAYS, "ZKM: get cred user %s domain %s\n", user, domain);
+
+	char* cred_dir = param("SEC_CREDENTIAL_DIRECTORY");
+	if(!cred_dir) {
+		dprintf(D_ALWAYS, "ERROR: got GET_CRED but SEC_CREDENTIAL_DIRECTORY not defined!\n");
+		return NULL;
+	}
+
+	// create filenames
+	MyString filename;
+	filename.formatstr("%s%c%s.cred", cred_dir, DIR_DELIM_CHAR, user);
+	dprintf(D_ALWAYS, "CERN: reading data from %s\n", filename.c_str());
+
+	// read the file (fourth argument "true" means as_root)
+	unsigned char *buf = 0;
+	size_t len = 0;
+	bool rc = read_secure_file(filename.c_str(), (void**)(&buf), &len, true);
+
+	if(rc) {
+		// immediately convert to base64
+		char* textpw = condor_base64_encode(buf, len);
+		free(buf);
+		return textpw;
+	}
+
+	return NULL;
 }
+
 
 char* getStoredCredential(const char *username, const char *domain)
 {
@@ -102,11 +165,11 @@ char* getStoredCredential(const char *username, const char *domain)
 	}
 
 	if (strcmp(username, POOL_PASSWORD_USERNAME) != 0) {
-		dprintf(D_ALWAYS,
-		        "getStoredCredential: "
-		            "only pool password is supported on UNIX\n");
-		return NULL;
+		dprintf(D_ALWAYS, "ZKM: GOT UNIX GET CRED\n");
+		return ZKM_UNIX_GET_CRED(username, domain);
 	} 
+
+	// EVERYTHING BELOW HERE IS FOR POOL PASSWORD ONLY
 
 	char *filename = param("SEC_PASSWORD_FILE");
 	if (filename == NULL) {
@@ -116,62 +179,23 @@ char* getStoredCredential(const char *username, const char *domain)
 		return NULL;
 	}
 
-	// open the pool password file with root priv
-	priv_state priv = set_root_priv();
-	FILE* fp = safe_fopen_wrapper_follow(filename, "r");
-	int save_errno = errno;
-	set_priv(priv);
-	if (fp == NULL) {
-		dprintf(D_FULLDEBUG,
-		        "error opening SEC_PASSWORD_FILE (%s), %s (errno: %d)\n",
-		        filename,
-		        strerror(save_errno),
-		        save_errno);
-		free(filename);
-		return NULL;
+	char  *buffer;
+	size_t len;
+	bool rc = read_secure_file(filename, (void**)(&buffer), &len, true);
+	if(rc) {
+		// undo the trivial scramble
+		char *pw = (char *)malloc(len + 1);
+		simple_scramble(pw, buffer, len);
+		pw[len] = '\0';
+		free(buffer);
+		return pw;
 	}
 
-	// make sure the file owner matches our real uid
-	struct stat st;
-	if (fstat(fileno(fp), &st) == -1) {
-		dprintf(D_ALWAYS,
-		        "fstat failed on SEC_PASSWORD_FILE (%s), %s (errno: %d)\n",
-		        filename,
-		        strerror(errno),
-		        errno);
-		fclose(fp);
-		free(filename);
-		return NULL;
-	}
-	free(filename);
-	if (st.st_uid != get_my_uid()) {
-		dprintf(D_ALWAYS,
-		        "error: SEC_PASSWORD_FILE must be owned "
-		            "by Condor's real uid\n");
-		fclose(fp);
-		return NULL;
-	}
-
-	char scrambled_pw[MAX_PASSWORD_LENGTH + 1];
-	size_t sz = fread(scrambled_pw, 1, MAX_PASSWORD_LENGTH, fp);
-	fclose(fp);
-
-	if (sz == 0) {
-		dprintf(D_ALWAYS, "error reading pool password (file may be empty)\n");
-		return NULL;
-	}
-	scrambled_pw[sz] = '\0';  // ensure the last char is nil
-
-	// undo the trivial scramble
-	int len = strlen(scrambled_pw);
-	char *pw = (char *)malloc(len + 1);
-	simple_scramble(pw, scrambled_pw, len);
-	pw[len] = '\0';
-
-	return pw;
+	dprintf(D_ALWAYS, "getStoredCredential(): read_secure_file(%s) failed!\n", filename);
+	return NULL;
 }
 
-int store_cred_service(const char *user, const char *pw, int mode)
+int store_cred_service(const char *user, const char *cred, const size_t credlen, int mode)
 {
 	const char *at = strchr(user, '@');
 	if ((at == NULL) || (at == user)) {
@@ -181,9 +205,13 @@ int store_cred_service(const char *user, const char *pw, int mode)
 	if (( (size_t)(at - user) != strlen(POOL_PASSWORD_USERNAME)) ||
 	    (memcmp(user, POOL_PASSWORD_USERNAME, at - user) != 0))
 	{
-		dprintf(D_ALWAYS, "store_cred: only pool password is supported on UNIX\n");
-		return FAILURE;
+		dprintf(D_ALWAYS, "ZKM: GOT UNIX STORE CRED\n");
+		return ZKM_UNIX_STORE_CRED(user, cred, credlen, mode);
 	}
+
+	//
+	// THIS CODE BELOW ALL DEALS EXCLUSIVELY WITH POOL PASSWORD
+	//
 
 	char *filename;
 	if (mode != QUERY_MODE) {
@@ -198,18 +226,18 @@ int store_cred_service(const char *user, const char *pw, int mode)
 	switch (mode) {
 	case ADD_MODE: {
 		answer = FAILURE;
-		size_t pw_sz = strlen(pw);
-		if (!pw_sz) {
+		size_t cred_sz = strlen(cred);
+		if (!cred_sz) {
 			dprintf(D_ALWAYS,
 			        "store_cred_service: empty password not allowed\n");
 			break;
 		}
-		if (pw_sz > MAX_PASSWORD_LENGTH) {
+		if (cred_sz > MAX_PASSWORD_LENGTH) {
 			dprintf(D_ALWAYS, "store_cred_service: password too large\n");
 			break;
 		}
 		priv_state priv = set_root_priv();
-		answer = write_password_file(filename, pw);
+		answer = write_password_file(filename, cred);
 		set_priv(priv);
 		break;
 	}
@@ -249,6 +277,7 @@ int store_cred_service(const char *user, const char *pw, int mode)
 
 	return answer;
 }
+
 
 #else
 	// **** WIN32 CODE ****
@@ -298,7 +327,7 @@ char* getStoredCredential(const char *username, const char *domain)
 	return strdup(pw);
 }
 
-int store_cred_service(const char *user, const char *pw, int mode) 
+int store_cred_service(const char *user, const char *pw, const size_t, int mode)
 {
 
 	wchar_t pwbuf[MAX_PASSWORD_LENGTH];
@@ -413,68 +442,6 @@ int store_cred_service(const char *user, const char *pw, int mode)
 }	
 
 
-void store_cred_handler(void *, int i, Stream *s) 
-{
-	char *user = NULL;
-	char *pw = NULL;
-	int mode;
-	int result;
-	int answer = FAILURE;
-	lsa_mgr lsa_man;
-	
-	s->decode();
-	
-	result = code_store_cred(s, user, pw, mode);
-	
-	if( result == FALSE ) {
-		dprintf(D_ALWAYS, "store_cred: code_store_cred failed.\n");
-		return;
-	} 
-
-	if ( user ) {
-			// ensure that the username has an '@' delimteter
-		char const *tmp = strchr(user, '@');
-		if ((tmp == NULL) || (tmp == user)) {
-			dprintf(D_ALWAYS, "store_cred_handler: user not in user@domain format\n");
-			answer = FAILURE;
-		}
-		else {
-				// we don't allow updates to the pool password through this interface
-			if ((mode != QUERY_MODE) &&
-			    (tmp - user == strlen(POOL_PASSWORD_USERNAME)) &&
-			    (memcmp(user, POOL_PASSWORD_USERNAME, tmp - user) == 0))
-			{
-				dprintf(D_ALWAYS, "ERROR: attempt to set pool password via STORE_CRED! (must use STORE_POOL_CRED)\n");
-				answer = FAILURE;
-			} else {
-				answer = store_cred_service(user,pw,mode);
-			}
-		}
-	}
-	
-	if (pw) {
-		SecureZeroMemory(pw, strlen(pw));
-		free(pw);
-	}
-	if (user) {
-		free(user);
-	}
-
-	s->encode();
-	if( ! s->code(answer) ) {
-		dprintf( D_ALWAYS,
-			"store_cred: Failed to send result.\n" );
-		return;
-	}
-	
-	if( ! s->end_of_message() ) {
-		dprintf( D_ALWAYS,
-			"store_cred: Failed to send end of message.\n");
-	}	
-
-	return;
-}	
-
 // takes user@domain format for user argument
 bool
 isValidCredential( const char *input_user, const char* input_pw ) {
@@ -551,6 +518,189 @@ isValidCredential( const char *input_user, const char* input_pw ) {
 }
 
 #endif // WIN32
+
+
+int
+get_cred_handler(void *, int /*i*/, Stream *s)
+{
+	char *client_user = NULL;
+	char *client_domain = NULL;
+	char *client_ipaddr = NULL;
+	int result;
+	char * user = NULL;
+	char * domain = NULL;
+	char * password = NULL;
+
+	/* Check our connection.  We must be very picky since we are talking
+	   about sending out passwords.  We want to make certain
+	     a) the Stream is a ReliSock (tcp)
+		 b) it is authenticated (and thus authorized by daemoncore)
+		 c) it is encrypted
+	*/
+
+	if ( s->type() != Stream::reli_sock ) {
+		dprintf(D_ALWAYS,
+			"WARNING - password fetch attempt via UDP from %s\n",
+				((Sock*)s)->peer_addr().to_sinful().Value());
+		return TRUE;
+	}
+
+	ReliSock* sock = (ReliSock*)s;
+
+	if ( !sock->triedAuthentication() ) {
+		dprintf(D_ALWAYS,
+			"WARNING - password fetch attempt without authentication from %s\n",
+				sock->peer_addr().to_sinful().Value());
+		goto bail_out;
+	}
+
+	if ( !sock->get_encryption() ) {
+		dprintf(D_ALWAYS,
+			"WARNING - password fetch attempt without encryption from %s\n",
+				sock->peer_addr().to_sinful().Value());
+		goto bail_out;
+	}
+
+		// Get the username and domain from the wire
+
+	sock->decode();
+
+	result = sock->code(user);
+	if( !result ) {
+		dprintf(D_ALWAYS, "get_passwd_handler: Failed to recv user.\n");
+		goto bail_out;
+	}
+
+	result = sock->code(domain);
+	if( !result ) {
+		dprintf(D_ALWAYS, "get_passwd_handler: Failed to recv domain.\n");
+		goto bail_out;
+	}
+
+	result = sock->end_of_message();
+	if( !result ) {
+		dprintf(D_ALWAYS, "get_passwd_handler: Failed to recv eom.\n");
+		goto bail_out;
+	}
+
+	client_user = strdup(sock->getOwner());
+	client_domain = strdup(sock->getDomain());
+	client_ipaddr = strdup(sock->peer_addr().to_sinful().Value());
+
+		// Now fetch the password from the secure store --
+		// If not LocalSystem, this step will fail.
+	password = getStoredCredential(user,domain);
+	if (!password) {
+		dprintf(D_ALWAYS,
+			"Failed to fetch password for %s@%s requested by %s@%s at %s\n",
+			user,domain,
+			client_user,client_domain,client_ipaddr);
+		goto bail_out;
+	}
+
+		// Got the password, send it
+	sock->encode();
+	result = sock->code(password);
+	if( !result ) {
+		dprintf(D_ALWAYS, "get_passwd_handler: Failed to send password.\n");
+		goto bail_out;
+	}
+
+	result = sock->end_of_message();
+	if( !result ) {
+		dprintf(D_ALWAYS, "get_passwd_handler: Failed to send eom.\n");
+		goto bail_out;
+	}
+
+		// Now that we sent the password, immediately zero it out from ram
+	SecureZeroMemory(password,strlen(password));
+
+	dprintf(D_ALWAYS,
+			"Fetched user %s@%s password requested by %s@%s at %s\n",
+			user,domain,client_user,client_domain,client_ipaddr);
+
+bail_out:
+	if (client_user) free(client_user);
+	if (client_domain) free(client_domain);
+	if (client_ipaddr) free(client_ipaddr);
+	if (user) free(user);
+	if (domain) free(domain);
+	if (password) free(password);
+	return TRUE;
+}
+
+
+/* NOW WORKS ON BOTH WINDOWS AND UNIX */
+void store_cred_handler(void *, int /*i*/, Stream *s)
+{
+	char *user = NULL;
+	char *pw = NULL;
+	int mode;
+	int result;
+	int answer = FAILURE;
+
+	s->decode();
+
+	result = code_store_cred(s, user, pw, mode);
+
+	if( result == FALSE ) {
+		dprintf(D_ALWAYS, "store_cred: code_store_cred failed.\n");
+		return;
+	}
+
+	if ( user ) {
+			// ensure that the username has an '@' delimteter
+		char const *tmp = strchr(user, '@');
+		if ((tmp == NULL) || (tmp == user)) {
+			dprintf(D_ALWAYS, "store_cred_handler: user not in user@domain format\n");
+			answer = FAILURE;
+		}
+		else {
+				// we don't allow updates to the pool password through this interface
+			if ((mode != QUERY_MODE) &&
+			    (tmp - user == strlen(POOL_PASSWORD_USERNAME)) &&
+			    (memcmp(user, POOL_PASSWORD_USERNAME, tmp - user) == 0))
+			{
+				dprintf(D_ALWAYS, "ERROR: attempt to set pool password via STORE_CRED! (must use STORE_POOL_CRED)\n");
+				answer = FAILURE;
+			} else {
+				int pwlen = 0;
+				if(pw) {
+					pwlen = strlen(pw)+1;
+				}
+				answer = store_cred_service(user,pw,pwlen,mode);
+#ifndef WIN32  // no credmon on windows
+				if(answer == SUCCESS) {
+					// THIS WILL BLOCK
+					answer = credmon_poll(user, false, true);
+				}
+#endif // WIN32
+			}
+		}
+	}
+
+	if (pw) {
+		SecureZeroMemory(pw, strlen(pw));
+		free(pw);
+	}
+	if (user) {
+		free(user);
+	}
+
+	s->encode();
+	if( ! s->code(answer) ) {
+		dprintf( D_ALWAYS,
+			"store_cred: Failed to send result.\n" );
+		return;
+	}
+
+	if( ! s->end_of_message() ) {
+		dprintf( D_ALWAYS,
+			"store_cred: Failed to send end of message.\n");
+	}
+
+	return;
+}
 
 static int code_store_cred(Stream *socket, char* &user, char* &pw, int &mode) {
 	
@@ -639,11 +789,12 @@ void store_pool_cred_handler(void *, int  /*i*/, Stream *s)
 
 	// do the real work
 	if (pw) {
-		result = store_cred_service(username.Value(), pw, ADD_MODE);
+		int pwlen = strlen(pw)+1;
+		result = store_cred_service(username.Value(), pw, pwlen, ADD_MODE);
 		SecureZeroMemory(pw, strlen(pw));
 	}
 	else {
-		result = store_cred_service(username.Value(), NULL, DELETE_MODE);
+		result = store_cred_service(username.Value(), NULL, 0, DELETE_MODE);
 	}
 
 	s->encode();
@@ -687,7 +838,11 @@ store_cred(const char* user, const char* pw, int mode, Daemon* d, bool force) {
 
 	if ( is_root() && d == NULL ) {
 			// do the work directly onto the local registry
-		return_val = store_cred_service(user,pw,mode);
+		int pwlen = 0;
+		if(pw) {
+			pwlen=strlen(pw)+1;
+		}
+		return_val = store_cred_service(user,pw,pwlen,mode);
 	} else {
 			// send out the request remotely.
 
@@ -954,3 +1109,5 @@ get_password() {
 	
 	return buf;
 }
+
+

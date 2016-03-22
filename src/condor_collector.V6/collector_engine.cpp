@@ -1037,8 +1037,10 @@ updateClassAd (CollectorHashTable &hashTable,
 		// no ... new ad
 		dprintf (D_ALWAYS, "%s: Inserting ** \"%s\"\n", adType, hashString.Value() );
 
-		// Update statistics
-		collectorStats->update( label, NULL, new_ad );
+		// Update statistics, but not for private ads we can't see
+		if (strcmp(label, "StartdPvt") != 0) {
+			collectorStats->update( label, NULL, new_ad );
+		}
 
 		// Now, store it away
 		if (hashTable.insert (hk, new_ad) == -1)
@@ -1060,7 +1062,9 @@ updateClassAd (CollectorHashTable &hashTable,
 		dprintf (D_FULLDEBUG, "%s: Updating ... \"%s\"\n", adType, hashString.Value() );
 
 		// Update statistics
-		collectorStats->update( label, old_ad, new_ad );
+		if (strcmp(label, "StartdPvt") != 0) {
+			collectorStats->update( label, old_ad, new_ad );
+		}
 
 		// Now, finally, store the new ClassAd
 		if (hashTable.remove(hk) == -1) {

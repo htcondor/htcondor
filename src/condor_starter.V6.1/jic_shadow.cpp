@@ -42,6 +42,11 @@
 #include "authentication.h"
 #include "condor_mkstemp.h"
 #include "globus_utils.h"
+#include "store_cred.h"
+#include "secure_file.h"
+#include "credmon_interface.h"
+#include "condor_base64.h"
+#include "zkm_base64.h"
 
 #include <algorithm>
 
@@ -109,6 +114,8 @@ JICShadow::JICShadow( const char* shadow_name ) : JobInfoCommunicator(),
 	socks++;
 
 	m_proxy_expiration_tid = -1;
+	m_refresh_sandbox_creds_tid = -1;
+	memset(&m_sandbox_creds_last_update, 0, sizeof(m_sandbox_creds_last_update));
 
 		/* Set a timeout on remote system calls.  This is needed in
 		   case the user job exits in the middle of a remote system
@@ -121,6 +128,9 @@ JICShadow::JICShadow( const char* shadow_name ) : JobInfoCommunicator(),
 
 JICShadow::~JICShadow()
 {
+	if( m_refresh_sandbox_creds_tid != -1 ){
+		daemonCore->Cancel_Timer(m_refresh_sandbox_creds_tid);
+	}
 	if( m_proxy_expiration_tid != -1 ){
 		daemonCore->Cancel_Timer(m_proxy_expiration_tid);
 	}
@@ -238,6 +248,13 @@ JICShadow::init( void )
 		// Drop a job ad "visa" into the sandbox now if the job
 		// requested it
 	writeExecutionVisa(orig_ad);
+
+		// If the job requests a user credential (SendCredential is
+		// true) then grab it from the shadow and get everything
+		// prepared.
+	if (! initUserCredentials() ) {
+		return false;
+	}
 
 	return true;
 }
@@ -2480,6 +2497,274 @@ JICShadow::initIOProxy( void )
 	}
 	return false;
 }
+
+
+bool
+JICShadow::initUserCredentials() {
+#ifndef WIN32
+	bool send_credential = false;
+	if( ! job_ad->EvaluateAttrBool( ATTR_JOB_SEND_CREDENTIAL, send_credential ) ) {
+		send_credential = false;
+		dprintf( D_FULLDEBUG, "JICShadow::initUserCredentials(): "
+				 "Job does not define %s; setting to false\n",
+				 ATTR_JOB_SEND_CREDENTIAL);
+	} else {
+		dprintf( D_FULLDEBUG, "Job has %s=%s\n", ATTR_JOB_SEND_CREDENTIAL,
+				 send_credential ? "true" : "false" );
+	}
+
+	// no credentials needed?  no problem!  we're done here.
+	if(!send_credential) {
+		return true;
+	}
+
+	char* cred_dir = param("SEC_CREDENTIAL_DIRECTORY");
+	if(!cred_dir) {
+		dprintf(D_ALWAYS, "ERROR: in initUserCredentials() but SEC_CREDENTIAL_DIRECTORY not defined!\n");
+		return false;
+	}
+
+
+	// get username
+	MyString user = get_user_loginname();
+	MyString domain = "DOMAIN";
+
+	// remove mark on update for "mark and sweep"
+	credmon_clear_mark(user.c_str());
+
+	// check to see if .cc already exists
+	char ccfilename[PATH_MAX];
+	sprintf(ccfilename, "%s%c%s.cc", cred_dir, DIR_DELIM_CHAR, user.c_str());
+	struct stat junk_buf;
+	int rc = stat(ccfilename, &junk_buf);
+	if (rc==0) {
+		dprintf(D_FULLDEBUG, "CREDMON: credentials for user %s domain %s already exist in %s\n",
+			user.c_str(), domain.c_str(), ccfilename );
+		// if the credential cache already exists, we don't even need
+		// to talk to the shadow.  just return success as quickly as
+		// possible.
+		//
+		// before we do, copy the creds to the sandbox and initialize
+		// the timer to monitor them.  propagate any errors.
+		rc = refreshSandboxCredentials();
+		return rc;
+	}
+	dprintf(D_FULLDEBUG, "CREDMON: obtaining credentials for user %s domain %s from shadow %s\n",
+		 user.c_str(), domain.c_str(), shadow->addr() );
+
+	// get credential from shadow
+	MyString credential;
+	shadow->getUserCredential(user.c_str(), domain.c_str(), credential);
+	dprintf(D_FULLDEBUG, "CREDMON: got cred %s\n", credential.c_str());
+
+	//
+	// We should refactor the below code and that of ZKM_UNIX_STORE_CRED as
+	// they are essentially identical.
+	//
+
+	// create filenames
+	char tmpfilename[PATH_MAX];
+	char filename[PATH_MAX];
+	sprintf(tmpfilename, "%s%c%s.cred.tmp", cred_dir, DIR_DELIM_CHAR, user.c_str());
+	sprintf(filename, "%s%c%s.cred", cred_dir, DIR_DELIM_CHAR, user.c_str());
+	dprintf(D_FULLDEBUG, "CREDMON: writing data to %s\n", tmpfilename);
+
+/*
+	// contents of credential are base64 encoded.  decode now just before
+	// they go into the file.
+	int rawlen = -1;
+	std::string tmp_in(credential.c_str());
+	std::vector<BYTE> rawbuf = Base64::zkm_base64_decode(tmp_in);
+	rawlen = rawbuf.size();
+*/
+	int rawlen = -1;
+	unsigned char* rawbuf = NULL;
+	zkm_base64_decode(credential.c_str(), &rawbuf, &rawlen);
+
+	if (rawlen <= 0) {
+		dprintf(D_ALWAYS, "CREDMON: failed to decode credential into file (%s)!\n", filename);
+		return false;
+	}
+
+	// write temp file
+	rc = write_secure_file(tmpfilename, rawbuf, rawlen, true);
+
+	// caller of condor_base64_decode is responsible for freeing buffer
+	free(rawbuf);
+
+	if (rc != SUCCESS) {
+		dprintf(D_ALWAYS, "CREDMON: failed to write secure temp file %s\n", tmpfilename);
+		return false;
+	}
+
+	// now move into place
+	dprintf(D_SECURITY | D_VERBOSE, "CREDMON: renaming %s to %s\n", tmpfilename, filename);
+	priv_state priv = set_root_priv();
+	rc = rename(tmpfilename, filename);
+	set_priv(priv);
+
+	if (rc == -1) {
+		dprintf(D_ALWAYS, "CREDMON: failed to rename %s to %s\n", tmpfilename, filename);
+
+		// should we rm tmpfilename ?
+		return false;
+	}
+
+	// now signal the credmon
+	rc = credmon_poll(user.c_str(), false, true);
+	if(!rc) {
+		dprintf(D_ALWAYS, "CREDMON: credmon failed to produce .cc file!");
+		return false;
+	}
+
+	// this will set up the credentials in the sandbox and set a timer to
+	// do it periodically.  propagate any errors.
+	rc = refreshSandboxCredentials();
+
+	return rc;
+#else   // WIN32
+	return true;
+#endif  // WIN32
+}
+
+#ifndef WIN32
+bool
+JICShadow::refreshSandboxCredentials()
+{
+	/*
+	  This method is invoked whenever we should check
+	  the user credential in SEC_CREDENTIAL_DIRECTORY and
+	  then, if needed, copy them to the job sandbox.
+	*/
+
+	dprintf(D_ALWAYS, "CERN: in refreshSandboxCredentials()\n");
+
+	// poor, abuse return code.  used for booleans and syscalls, with
+	// opposite meanings.  assume failure.
+	int rc = false;
+
+	// the buffer
+	char  *ccbuf = 0;
+	size_t cclen = 0;
+
+	// get username
+	MyString user = get_user_loginname();
+
+	// declaring at top since we use goto for error handling
+	priv_state priv;
+
+	// construct filename to stat
+	char* cred_dir = param("SEC_CREDENTIAL_DIRECTORY");
+	if(!cred_dir) {
+		dprintf(D_ALWAYS, "ERROR: in refreshSandboxCredentials() but SEC_CREDENTIAL_DIRECTORY not defined!\n");
+		rc = false;
+		goto resettimer;
+	}
+
+	// stat the file
+	char ccfilename[PATH_MAX];
+	sprintf(ccfilename, "%s%c%s.cc", cred_dir, DIR_DELIM_CHAR, user.c_str());
+	struct stat syscred;
+	rc = stat(ccfilename, &syscred);
+	if (rc!=0) {
+		dprintf(D_ALWAYS, "ERROR: in refreshSandboxCredentials() but %s is gone!\n", ccfilename );
+		rc = false;
+		goto resettimer;
+	}
+
+	// has it been updated?
+	if (memcmp(&m_sandbox_creds_last_update, &syscred.st_mtime, sizeof(time_t)) == 0) {
+		// no update?  no problem, we'll check again later
+		rc = true;
+		goto resettimer;
+	}
+
+	// if it has been updated, we need to deal with it.
+	//
+	// securely copy the cc to sandbox.
+	//
+	char sandboxccfilename[PATH_MAX];
+	char sandboxcctmpfilename[PATH_MAX];
+	sprintf(sandboxccfilename, "%s%c%s.cc", Starter->GetWorkingDir(), DIR_DELIM_CHAR, user.c_str());
+	sprintf(sandboxcctmpfilename, "%s%c%s.cc.tmp", Starter->GetWorkingDir(), DIR_DELIM_CHAR, user.c_str());
+
+	dprintf(D_ALWAYS, "CERN: copying %s as root to %s as user %s\n",
+		ccfilename, sandboxcctmpfilename, user.c_str());
+
+	// read entire ccfilename as root into ccbuf
+	if (!read_secure_file(ccfilename, (void**)(&ccbuf), &cclen, true)) {
+		dprintf(D_ALWAYS, "ERROR: read_secure_file(%s,ccbuf,%lu) failed\n", sandboxcctmpfilename,cclen);
+		rc = false;
+		goto resettimer;
+	}
+
+	// as user, write tmp file securely
+	priv = set_user_priv();
+	rc = write_secure_file(sandboxcctmpfilename, ccbuf, cclen, false);
+	set_priv(priv);
+	if (!rc) {
+		dprintf(D_ALWAYS, "ERROR: write_secure_file(%s,ccbuf,%lu) failed\n", sandboxcctmpfilename,cclen);
+		rc = false;
+		goto resettimer;
+	}
+
+	// as user, atomically move tmp file into correct location
+	priv = set_user_priv();
+	rc = rename(sandboxcctmpfilename, sandboxccfilename);
+	set_priv(priv);
+	if (rc!=0) {
+		dprintf(D_ALWAYS, "ERROR: rename(%s,%s) failed with %i\n", sandboxcctmpfilename,sandboxccfilename,errno);
+		rc = false;
+		goto resettimer;
+	}
+
+	dprintf(D_ALWAYS, "CERN: renamed %s to %s\n", sandboxcctmpfilename, sandboxccfilename);
+
+	// aklog now if we decide to go that route
+	// my_popen_env("aklog", KRB5CCNAME=sandbox copy of .cc)
+
+	// store the mtime of the current copy
+	memcpy(&m_sandbox_creds_last_update, &syscred.st_mtime, sizeof(time_t));
+
+	// only need to do this once
+	if(getKRB5CCNAME() == NULL) {
+		dprintf(D_ALWAYS, "CERN: configuring job to use KRB5CCNAME %s\n", sandboxccfilename);
+		setKRB5CCNAME(sandboxccfilename);
+	}
+
+	// if we made it here, we succeeded!
+	rc = true;
+
+resettimer:
+	if(ccbuf) {
+		free(ccbuf);
+		ccbuf = NULL;
+	}
+
+	// rc at this point should be: true==SUCCESS, or false==FAILURE
+
+	// set/reset timer
+	int sec_cred_refresh = param_integer("SEC_CREDENTIAL_REFRESH", 300);
+	if (sec_cred_refresh > 0) {
+		if (m_refresh_sandbox_creds_tid == -1) {
+			m_refresh_sandbox_creds_tid = daemonCore->Register_Timer(
+				sec_cred_refresh,
+				(TimerHandlercpp)&JICShadow::refreshSandboxCredentials,
+				"refreshSandboxCredentials",
+				this );
+		} else {
+			daemonCore->Reset_Timer(m_refresh_sandbox_creds_tid, sec_cred_refresh);
+		}
+		dprintf(D_ALWAYS,
+			"CERN: will check credential again in %i seconds\n", sec_cred_refresh);
+	} else {
+		dprintf(D_ALWAYS, "CERN: cred refresh is DISABLED.\n");
+	}
+
+	// return boolean value true on success
+	return (rc);
+}
+#endif  // WIN32
 
 void
 JICShadow::initMatchSecuritySession()

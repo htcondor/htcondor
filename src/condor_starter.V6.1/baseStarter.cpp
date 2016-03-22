@@ -3153,6 +3153,15 @@ CStarter::PublishToEnv( Env* proc_env )
 		}
 	}
 
+		// kerberos credential cache (in sandbox)
+	const char* krb5ccname = jic->getKRB5CCNAME();
+	if( krb5ccname && (krb5ccname[0] != '\0') ) {
+		// using env_name as env_value
+		env_name = "FILE:";
+		env_name += krb5ccname;
+		proc_env->SetEnv( "KRB5CCNAME", env_name );
+	}
+
 		// path to the output ad, if any
 	const char* output_ad = jic->getOutputAdFile();
 	if( output_ad && !(output_ad[0] == '-' && output_ad[1] == '\0') ) {

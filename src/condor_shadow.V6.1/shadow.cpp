@@ -25,6 +25,7 @@
 #include "condor_attributes.h"   // for ATTR_ ClassAd stuff
 #include "condor_email.h"        // for email.
 #include "metric_units.h"
+#include "store_cred.h"
 
 extern "C" char* d_format_time(double);
 
@@ -38,6 +39,7 @@ UniShadow::UniShadow() {
 UniShadow::~UniShadow() {
 	if ( remRes ) delete remRes;
 	daemonCore->Cancel_Command( SHADOW_UPDATEINFO );
+	daemonCore->Cancel_Command( CREDD_GET_PASSWD );
 }
 
 
@@ -127,6 +129,13 @@ UniShadow::init( ClassAd* job_ad, const char* schedd_addr, const char *xfer_queu
 		Register_Command( SHADOW_UPDATEINFO, "SHADOW_UPDATEINFO",
 						  (CommandHandlercpp)&UniShadow::updateFromStarter, 
 						  "UniShadow::updateFromStarter", this, DAEMON );
+
+		// Register command which the starter uses to fetch a user
+		// credential if it needs to.
+	daemonCore->
+		Register_Command( CREDD_GET_PASSWD, "CREDD_GET_PASSWD",
+						  (CommandHandler)&get_cred_handler,
+						  "get_cred_handler", NULL, DAEMON );
 }
 
 void
