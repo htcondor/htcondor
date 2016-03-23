@@ -6733,7 +6733,7 @@ Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, double preemptPrio) 
 			EvalExprTree(PreemptionReqPslot, &mutatedMachine,job,result);
 
 				// and undo it for the next time
-			mutatedMachine.Remove("CandidateSlot");
+			mutatedMachine.Delete("CandidateSlot");
 
 			bool shouldPreempt = false;
 			if (!result.IsBooleanValue(shouldPreempt) || (shouldPreempt == false)) {
