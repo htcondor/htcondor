@@ -141,7 +141,9 @@ sysapi_get_windows_info(void)
 	opsys_legacy = strdup( tmp_info );
 	opsys = strdup( "WINDOWS" );
 	
-	if (info.dwMajorVersion == 6 && info.dwMinorVersion == 2) {
+	if (info.dwMajorVersion == 10) {
+		opsys_super_short_name = strdup("10");
+	} else if (info.dwMajorVersion == 6 && info.dwMinorVersion == 2) {
 		opsys_super_short_name = strdup("8");
 	} else if (info.dwMajorVersion == 6 && info.dwMinorVersion == 1) {
 		opsys_super_short_name = strdup("7");
