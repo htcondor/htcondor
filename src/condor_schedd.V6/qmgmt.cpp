@@ -217,7 +217,7 @@ typedef HashTable<int, int> ClusterSizeHashTable_t;
 static ClusterSizeHashTable_t *ClusterSizeHashTable = 0;
 static int TotalJobsCount = 0;
 
-static classad::References immutable_attrs, protected_attrs;
+static classad::References immutable_attrs, protected_attrs, secure_attrs;
 static int flush_job_queue_log_timer_id = -1;
 static int dirty_notice_timer_id = -1;
 static int flush_job_queue_log_delay = 0;
@@ -746,6 +746,9 @@ InitQmgmt()
 	protected_attrs.clear();
 	param_and_insert_attrs("PROTECTED_JOB_ATTRS", protected_attrs);
 	param_and_insert_attrs("SYSTEM_PROTECTED_JOB_ATTRS", protected_attrs);
+	secure_attrs.clear();
+	param_and_insert_attrs("SECURE_JOB_ATTRS", secure_attrs);
+	param_and_insert_attrs("SYSTEM_SECURE_JOB_ATTRS", secure_attrs);
 
 	schedd_forker.Initialize();
 	int max_schedd_forkers = param_integer ("SCHEDD_QUERY_WORKERS",8,0);
@@ -2543,6 +2546,22 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 				"job %d.%d, ignoring\n",
 				attr_value ? attr_value : "(null)", cluster_id, proc_id);
 		return -1;
+	}
+
+	// Ensure user is not changing a secure attribute.  Only schedd is
+	// allowed to do that, via the internal API.
+	if (secure_attrs.find(attr_name) != secure_attrs.end())
+	{
+		errno = EACCES;
+		dprintf(D_ALWAYS,
+				"SetAttribute attempt to edit secure attribute %s in job %d.%d\n",
+				attr_name, cluster_id, proc_id);
+		// should we fail or silently succeed?  (old submits set secure attrs)
+		if(param_boolean("SECURE_JOB_ATTRS_SET_FAIL", true)) {
+			return -1;
+		} else {
+			return 0;
+		}
 	}
 
 	IdToKey(cluster_id,proc_id,key);

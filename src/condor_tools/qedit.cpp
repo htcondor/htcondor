@@ -51,6 +51,8 @@ ProtectedAttribute(char attr[])
 	param_and_insert_attrs("SYSTEM_IMMUTABLE_JOB_ATTRS", protected_attrs);
 	param_and_insert_attrs("PROTECTED_JOB_ATTRS", protected_attrs);
 	param_and_insert_attrs("SYSTEM_PROTECTED_JOB_ATTRS", protected_attrs);
+	param_and_insert_attrs("SECURE_JOB_ATTRS", protected_attrs);
+	param_and_insert_attrs("SYSTEM_SECURE_JOB_ATTRS", protected_attrs);
 
 	return protected_attrs.find(attr) != protected_attrs.end();
 }
