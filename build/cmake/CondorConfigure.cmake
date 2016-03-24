@@ -801,7 +801,6 @@ else ()
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/unicoregahp/1.2.0)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libxml2/2.7.3)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libvirt/0.6.2)
-	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libdeltacloud/0.9)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libcgroup/0.37)
 
 	# globus is an odd *beast* which requires a bit more config.
