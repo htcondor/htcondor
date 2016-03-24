@@ -49,23 +49,13 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item HTCondor version 8.5.3 not yet released.
-%\item HTCondor version 8.5.3 released on Month Date, 2016.
+\item HTCondor version 8.5.3 released on March 24, 2016.
 
 \end{itemize}
 
 \noindent New Features:
 
 \begin{itemize}
-
-\item In addition to logging to the file \MacroNI{KERNEL\_TUNING\_LOG},
-the default \MacroNI{LINUX\_KERNEL\_TUNING\_SCRIPT} now also logs to
-syslog and \File{/etc/systcl.d/99-htcondor.conf}.
-\Ticket{5489}
-
-\item New configuration macros added: \MacroNI{IPV4\_ADDRESS},
-\Macro{IPV6\_ADDRESS}, \MacroNI{IP\_ADDRESS\_IS\_V6}.
-\Ticket{5512}
 
 \item \MacroNI{ENABLE\_IPV4} and \MacroNI{ENABLE\_IPV6} both now accept
 the special value "AUTO", which is true if an interface with the corresponding
@@ -80,16 +70,34 @@ the address of daemon looked up in the collector, and when resolving DNS
 queries.
 \Ticket{5104}
 
-\item \Condor{history} \Opt{-autoformat} now supports the j option to print
-job ids like \Condor{q} does.
-\Ticket{5558}
+\item New configuration macros added: \MacroNI{IPV4\_ADDRESS},
+\Macro{IPV6\_ADDRESS}, \MacroNI{IP\_ADDRESS\_IS\_V6}.
+\Ticket{5512}
+
+\item New attributes have been added to the Submitter ClassAd to indicate
+the number of Idle and Running jobs for Scheduler universe and for Local
+universe.
+\Ticket{5519}
 
 \item Jobs can now be submitted to the SLURM batch scheduling system via
 the new \SubmitCmdNI{slurm} type in the grid universe.
 \Ticket{5515}
 
+\item In addition to logging to the file \MacroNI{KERNEL\_TUNING\_LOG},
+the default \MacroNI{LINUX\_KERNEL\_TUNING\_SCRIPT} now also logs to
+syslog and \File{/etc/systcl.d/99-htcondor.conf}.
+\Ticket{5489}
+
+\item \Condor{history} \Opt{-autoformat} now supports the j option to print
+job ids like \Condor{q} does.
+\Ticket{5558}
+
 \item HTCondor is now built and linked with Globus 6.0.
 \Ticket{5520}
+
+\item Pre-size the ClassAd hash table to improve the performance of the
+\Condor{collector} when getting ClassAd updates.
+\Ticket{5551}
 
 \end{itemize}
 
