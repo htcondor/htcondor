@@ -1846,116 +1846,6 @@ variable \Macro{DELEGATE\_JOB\_GSI\_CREDENTIALS} is \Expr{False},
 because in that case the job proxy is copied rather than delegated.
 
 %%%%%%%%%%%%%%%%%%%
-%% deltacloud_hardware_profile
-%%%%%%%%%%%%%%%%%%%
-
-\index{submit commands!deltacloud\_hardware\_profile}
-\label{condor-submit-deltacloud-hardware-profile}
-\item[deltacloud\_hardware\_profile = $<$Deltacloud profile name$>$]
-Used for \SubmitCmdNI{deltacloud} jobs.
-An optional identifier for the type of VM desired. If not provided,
-a service-defined default is used.
-
-%%%%%%%%%%%%%%%%%%%
-%% deltacloud_hardware_profile_cpu
-%%%%%%%%%%%%%%%%%%%
-
-\index{submit commands!deltacloud\_hardware\_profile\_cpu}
-\label{condor-submit-deltacloud-hardware-profile-cpu}
-\item[deltacloud\_hardware\_profile\_cpu = $<$cpu details$>$]
-Used for \SubmitCmdNI{deltacloud} jobs.
-An optional description of the CPUs desired for the VM, overriding
-the selected hardware profile.
-
-%%%%%%%%%%%%%%%%%%%
-%% deltacloud_hardware_profile_memory
-%%%%%%%%%%%%%%%%%%%
-
-\index{submit commands!deltacloud\_hardware\_profile\_memory}
-\label{condor-submit-deltacloud-hardware-profile-memory}
-\item[deltacloud\_hardware\_profile\_memory = $<$memory details$>$]
-Used for \SubmitCmdNI{deltacloud} jobs.
-An optional description of the memory (RAM) desired for the VM, overriding
-the selected hardware profile.
-
-%%%%%%%%%%%%%%%%%%%
-%% deltacloud_hardware_profile_storage
-%%%%%%%%%%%%%%%%%%%
-
-\index{submit commands!deltacloud\_hardware\_profile\_storage}
-\label{condor-submit-deltacloud-hardware-profile-storage}
-\item[deltacloud\_hardware\_profile\_storage = $<$storage details$>$]
-Used for \SubmitCmdNI{deltacloud} jobs.
-An optional description of the storage (disk) desired for the VM, overriding
-the selected hardware profile.
-
-%%%%%%%%%%%%%%%%%%%
-%% deltacloud_image_id
-%%%%%%%%%%%%%%%%%%%
-
-\index{submit commands!deltacloud\_image\_id}
-\label{condor-submit-deltacloud-image-id}
-\item[deltacloud\_image\_id = $<$Deltacloud image ID$>$]
-Used for \SubmitCmdNI{deltacloud} jobs.
-Identifier of the VM image to run.
-
-%%%%%%%%%%%%%%%%%%%
-%% deltacloud_keyname
-%%%%%%%%%%%%%%%%%%%
-
-\index{submit commands!deltacloud\_keyname}
-\label{condor-submit-deltacloud-keyname}
-\item[deltacloud\_keyname = $<$Deltacloud key name$>$]
-Used for \SubmitCmdNI{deltacloud} jobs.
-Identifier of the SSH key pair that should be used to allow remote login
-to the running instance. The key pair needs to be created before
-submission.
-
-%%%%%%%%%%%%%%%%%%%
-%% deltacloud_password_file
-%%%%%%%%%%%%%%%%%%%
-
-\index{submit commands!deltacloud\_password\_file}
-\label{condor-submit-deltacloud-password-file}
-\item[deltacloud\_password\_file = $<$pathname$>$]
-Used for \SubmitCmdNI{deltacloud} jobs.
-Path and file name of a file containing the secret key to be used to
-authenticate with a Deltacloud service.
-
-%%%%%%%%%%%%%%%%%%%
-%% deltacloud_realm_id
-%%%%%%%%%%%%%%%%%%%
-
-\index{submit commands!deltacloud\_realm\_id}
-\label{condor-submit-deltacloud-realm-id}
-\item[deltacloud\_realm\_id = $<$Deltacloud realm ID$>$]
-Used for \SubmitCmdNI{deltacloud} jobs.
-An optional identifier specifying which of multiple locations within a
-cloud service should be used to run the VM. If not provided, a
-service-selected default is used.
-
-%%%%%%%%%%%%%%%%%%%
-%% deltacloud_user_data
-%%%%%%%%%%%%%%%%%%%
-
-\index{submit commands!deltacloud\_user\_data}
-\label{condor-submit-deltacloud-user-data}
-\item[deltacloud\_user\_data = $<$data$>$]
-Used for \SubmitCmdNI{deltacloud} jobs.
-A string, representing a block of data that can be accessed 
-by the virtual machine job inside the cloud service.
-
-%%%%%%%%%%%%%%%%%%%
-%% deltacloud_username
-%%%%%%%%%%%%%%%%%%%
-
-\index{submit commands!deltacloud\_username}
-\label{condor-submit-deltacloud-username}
-\item[deltacloud\_username = $<$Deltacloud username$>$]
-Used for \SubmitCmdNI{deltacloud} jobs.
-The user name to be used to authenticate with a Deltacloud service.
-
-%%%%%%%%%%%%%%%%%%%
 %% ec2_access_key_id
 %%%%%%%%%%%%%%%%%%%
 
@@ -2364,7 +2254,6 @@ be given in a space-separated list.
 Allowable \SubmitCmdNI{grid-type-string} values are
 \SubmitCmdNI{batch}, 
 \SubmitCmdNI{condor}, \SubmitCmdNI{cream}, 
-\SubmitCmdNI{deltacloud}, 
 \SubmitCmdNI{ec2},
 \SubmitCmdNI{gt2}, \SubmitCmdNI{gt5},
 \SubmitCmdNI{lsf}, \SubmitCmdNI{nordugrid}, \SubmitCmdNI{pbs},
@@ -2390,9 +2279,6 @@ The second parameter is the
 name of the batch system that sits behind the CREAM server.
 The third parameter identifies a site-specific queue
 within the batch system.
-
-For a \SubmitCmdNI{grid-type-string} of \SubmitCmdNI{deltacloud},
-the single parameter is the URL of the deltacloud service requested.
 
 For a \SubmitCmdNI{grid-type-string} of \SubmitCmdNI{ec2},
 one additional parameter specifies the EC2 URL. 

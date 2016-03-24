@@ -762,62 +762,6 @@ class GahpClient : public Service {
 							   StringList &statuses,
 							   StringList &status_msgs );
 
-		int
-		dcloud_submit( const char *service_url,
-					   const char *username,
-					   const char *password,
-					   const char *image_id,
-					   const char *instance_name,
-					   const char *realm_id,
-					   const char *hwp_id,
-					   const char *hwp_memory,
-					   const char *hwp_cpu,
-					   const char *hwp_storage,
-					   const char *keyname,
-					   const char *userdata,
-					   StringList &attrs );
-
-		int
-		dcloud_status_all( const char *service_url,
-						   const char *username,
-						   const char *password,
-						   StringList &instance_ids,
-						   StringList &statuses );
-
-		int
-		dcloud_action( const char *service_url,
-					   const char *username,
-					   const char *password,
-					   const char *instance_id,
-					   const char *action );
-
-		int
-		dcloud_info( const char *service_url,
-					 const char *username,
-					 const char *password,
-					 const char *instance_id,
-					 StringList &attrs );
-
-		int
-		dcloud_find( const char *service_url,
-					 const char *username,
-					 const char *password,
-					 const char *instance_name,
-					 char **instance_id );
-
-
-		int
-		dcloud_get_max_name_length( const char *service_url,
-									const char *username,
-									const char *password,
-									int *max_length );
-
-		int
-		dcloud_start_auto( const char *service_url,
-						   const char *username,
-						   const char *password,
-						   bool *autostart );
-
 		int boinc_ping();
 
 		int boinc_submit( const char *batch_name,

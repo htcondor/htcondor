@@ -10,7 +10,6 @@
 %if 0%{?fedora} >= 16
 # NOTE: HTCondor+gsoap doesn't work yet on F15; ticket not yet upstream AFAIK.  BB
 %define gsoap 0
-%define deltacloud 1
 %define aviary 1
 %ifarch %{ix86} x86_64
 # mongodb supports only x86/x86_64
@@ -22,7 +21,6 @@
 %define cgroups 1
 %else
 %define gsoap 1
-%define deltacloud 0
 %define aviary 0
 %define plumage 0
 %define systemd 0
@@ -209,7 +207,6 @@ Source111: gsoap-2.7.10.tar.gz
 Source112: gsoap_2.7.16.zip
 Source113: gt5.2.5-all-source-installer.tar.gz
 Source114: libcgroup-0.37.tar.bz2
-Source115: libdeltacloud-0.9.tar.gz
 Source116: log4cpp-1.0-3.tar.gz
 Source117: unicoregahp-1.2.0.tar.gz
 Source118: voms-2.0.6.tar.gz
@@ -312,10 +309,6 @@ BuildRequires: libtool-ltdl-devel
 
 %if %gsoap
 BuildRequires: gsoap-devel >= 2.7.12-1
-%endif
-
-%if %deltacloud
-BuildRequires: libdeltacloud-devel >= 0.9-1
 %endif
 
 %if %aviary
@@ -520,18 +513,6 @@ Requires: %name-classads = %{version}-%{release}
 The condor_vm-gahp enables the Virtual Machine Universe feature of
 HTCondor. The VM Universe uses libvirt to start and control VMs under
 HTCondor's Startd.
-
-#######################
-%if %deltacloud
-%package deltacloud-gahp
-Summary: HTCondor's Deltacloud Gahp
-Group: Applications/System
-Requires: %name = %version-%release
-
-%description deltacloud-gahp
-The deltacloud_gahp enables HTCondor's ability to manage jobs run on
-resources exposed by the deltacloud API.
-%endif
 
 #######################
 %package classads
@@ -863,11 +844,6 @@ cmake \
        -DWANT_GLEXEC:BOOL=TRUE \
 %else
        -DWANT_GLEXEC:BOOL=FALSE \
-%endif
-%if %deltacloud
-       -DWITH_LIBDELTACLOUD:BOOL=TRUE \
-%else
-       -DWITH_LIBDELTACLOUD:BOOL=FALSE \
 %endif
        -DWITH_GLOBUS:BOOL=TRUE \
        -DWITH_PYTHON_BINDINGS:BOOL=TRUE \
@@ -1589,14 +1565,6 @@ rm -rf %{buildroot}
 %_libexecdir/condor/libvirt_simple_script.awk
 
 #################
-%if %deltacloud
-%files deltacloud-gahp
-%defattr(-,root,root,-)
-%doc LICENSE-2.0.txt NOTICE.txt
-%_sbindir/deltacloud_gahp
-%endif
-
-#################
 %files classads
 %defattr(-,root,root,-)
 %doc LICENSE-2.0.txt NOTICE.txt
@@ -1742,7 +1710,6 @@ rm -rf %{buildroot}
 %_libdir/condor/ugahp.jar
 
 %files externals
-%_sbindir/deltacloud_gahp
 %_sbindir/unicore_gahp
 %if %blahp
 %_libexecdir/condor/glite/bin/BLClient
