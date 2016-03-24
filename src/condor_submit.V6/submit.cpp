@@ -575,21 +575,6 @@ const char* GceMachineType = "gce_machine_type";
 const char* GceMetadata = "gce_metadata";
 const char* GceMetadataFile = "gce_metadata_file";
 
-//
-// Deltacloud Parameters
-//
-const char* DeltacloudUsername = "deltacloud_username";
-const char* DeltacloudPasswordFile = "deltacloud_password_file";
-const char* DeltacloudImageId = "deltacloud_image_id";
-const char* DeltacloudInstanceName = "deltacloud_instance_name";
-const char* DeltacloudRealmId = "deltacloud_realm_id";
-const char* DeltacloudHardwareProfile = "deltacloud_hardware_profile";
-const char* DeltacloudHardwareProfileMemory = "deltacloud_hardware_profile_memory";
-const char* DeltacloudHardwareProfileCpu = "deltacloud_hardware_profile_cpu";
-const char* DeltacloudHardwareProfileStorage = "deltacloud_hardware_profile_storage";
-const char* DeltacloudKeyname = "deltacloud_keyname";
-const char* DeltacloudUserData = "deltacloud_user_data";
-
 char const *next_job_start_delay = "next_job_start_delay";
 char const *next_job_start_delay2 = "NextJobStartDelay";
 char const *want_graceful_removal = "want_graceful_removal";
@@ -2129,14 +2114,13 @@ SetExecutable()
 	MyString	full_ename;
 	MyString buffer;
 
-	// In vm universe and ec2/deltacloud/boinc grid jobs, 'Executable'
+	// In vm universe and ec2/boinc grid jobs, 'Executable'
 	// parameter is not a real file but just the name of job.
 	if ( JobUniverse == CONDOR_UNIVERSE_VM ||
 		 ( JobUniverse == CONDOR_UNIVERSE_GRID &&
 		   JobGridType != NULL &&
 		   ( strcasecmp( JobGridType, "ec2" ) == MATCH ||
 			 strcasecmp( JobGridType, "gce" ) == MATCH ||
-		     strcasecmp( JobGridType, "deltacloud" ) == MATCH ||
 			 strcasecmp( JobGridType, "boinc" ) == MATCH ) ) ) {
 		ignore_it = true;
 	}
@@ -2475,7 +2459,7 @@ SetUniverse()
 			// Validate
 			// Valid values are (as of 7.5.1): nordugrid, globus,
 			//    gt2, gt5, blah, pbs, lsf, nqs, naregi, condor,
-			//    unicore, cream, deltacloud, ec2, sge
+			//    unicore, cream, ec2, sge
 
 			// CRUFT: grid-type 'blah' is deprecated. Now, the specific batch
 			//   system names should be used (pbs, lsf). Glite are the only
@@ -2494,7 +2478,6 @@ SetUniverse()
 				(strcasecmp (JobGridType, "nordugrid") == MATCH) ||
 				(strcasecmp (JobGridType, "ec2") == MATCH) ||
 				(strcasecmp (JobGridType, "gce") == MATCH) ||
-				(strcasecmp (JobGridType, "deltacloud") == MATCH) ||
 				(strcasecmp (JobGridType, "unicore") == MATCH) ||
 				(strcasecmp (JobGridType, "boinc") == MATCH) ||
 				(strcasecmp (JobGridType, "cream") == MATCH)){
@@ -2508,7 +2491,7 @@ SetUniverse()
 
 				fprintf( stderr, "\nERROR: Invalid value '%s' for grid type\n", JobGridType );
 				fprintf( stderr, "Must be one of: gt2, gt5, pbs, lsf, "
-						 "sge, nqs, condor, nordugrid, unicore, ec2, gce, deltacloud, cream, or boinc\n" );
+						 "sge, nqs, condor, nordugrid, unicore, ec2, gce, cream, or boinc\n" );
 				exit( 1 );
 			}
 		}			
@@ -6364,98 +6347,6 @@ SetGridParams()
 		InsertJobExpr( buffer.Value() );
 	}
 
-
-	//
-	// Deltacloud grid-type submit attributes
-	//
-	if ( (tmp = condor_param( DeltacloudUsername, ATTR_DELTACLOUD_USERNAME )) ) {
-		buffer.formatstr( "%s = \"%s\"", ATTR_DELTACLOUD_USERNAME, tmp );
-		InsertJobExpr( buffer.Value() );
-		free( tmp );
-	} else if ( JobGridType && strcasecmp( JobGridType, "deltacloud" ) == 0 ) {
-		fprintf(stderr, "\nERROR: Deltacloud jobs require a \"%s\" parameter\n", DeltacloudUsername );
-		DoCleanup( 0, 0, NULL );
-		exit( 1 );
-	}
-
-	if ( (tmp = condor_param( DeltacloudPasswordFile, ATTR_DELTACLOUD_PASSWORD_FILE )) ) {
-		// check private key file can be opened
-		if ( !DisableFileChecks && !strstr( tmp, "$$" ) ) {
-			if( ( fp=safe_fopen_wrapper_follow(full_path(tmp),"r") ) == NULL ) {
-				fprintf( stderr, "\nERROR: Failed to open password file %s (%s)\n", 
-							 full_path(tmp), strerror(errno));
-				exit(1);
-			}
-			fclose(fp);
-		}
-		buffer.formatstr( "%s = \"%s\"", ATTR_DELTACLOUD_PASSWORD_FILE, full_path(tmp) );
-		InsertJobExpr( buffer.Value() );
-		free( tmp );
-	} else if ( JobGridType && strcasecmp( JobGridType, "deltacloud" ) == 0 ) {
-		fprintf(stderr, "\nERROR: Deltacloud jobs require a \"%s\" parameter\n", DeltacloudPasswordFile );
-		DoCleanup( 0, 0, NULL );
-		exit( 1 );
-	}
-
-	bool bInstanceName=false;
-	if( (tmp = condor_param( DeltacloudInstanceName, ATTR_DELTACLOUD_INSTANCE_NAME )) ) {
-		buffer.formatstr( "%s = \"%s\"", ATTR_DELTACLOUD_INSTANCE_NAME, tmp );
-		free( tmp );
-		InsertJobExpr( buffer.Value() );
-		bInstanceName = true;
-	}
-	
-	if ( (tmp = condor_param( DeltacloudImageId, ATTR_DELTACLOUD_IMAGE_ID )) ) {
-		buffer.formatstr( "%s = \"%s\"", ATTR_DELTACLOUD_IMAGE_ID, tmp );
-		InsertJobExpr( buffer.Value() );
-		free( tmp );
-	} else if ( JobGridType && !bInstanceName && strcasecmp( JobGridType, "deltacloud" ) == 0 ) {
-		fprintf(stderr, "\nERROR: Deltacloud jobs require a \"%s\" or \"%s\" parameters\n", DeltacloudImageId, DeltacloudInstanceName );
-		DoCleanup( 0, 0, NULL );
-		exit( 1 );
-	}
-
-	if( (tmp = condor_param( DeltacloudRealmId, ATTR_DELTACLOUD_REALM_ID )) ) {
-		buffer.formatstr( "%s = \"%s\"", ATTR_DELTACLOUD_REALM_ID, tmp );
-		free( tmp );
-		InsertJobExpr( buffer.Value() );
-	}
-
-	if( (tmp = condor_param( DeltacloudHardwareProfile, ATTR_DELTACLOUD_HARDWARE_PROFILE )) ) {
-		buffer.formatstr( "%s = \"%s\"", ATTR_DELTACLOUD_HARDWARE_PROFILE, tmp );
-		free( tmp );
-		InsertJobExpr( buffer.Value() );
-	}
-
-	if( (tmp = condor_param( DeltacloudHardwareProfileMemory, ATTR_DELTACLOUD_HARDWARE_PROFILE_MEMORY )) ) {
-		buffer.formatstr( "%s = \"%s\"", ATTR_DELTACLOUD_HARDWARE_PROFILE_MEMORY, tmp );
-		free( tmp );
-		InsertJobExpr( buffer.Value() );
-	}
-
-	if( (tmp = condor_param( DeltacloudHardwareProfileCpu, ATTR_DELTACLOUD_HARDWARE_PROFILE_CPU )) ) {
-		buffer.formatstr( "%s = \"%s\"", ATTR_DELTACLOUD_HARDWARE_PROFILE_CPU, tmp );
-		free( tmp );
-		InsertJobExpr( buffer.Value() );
-	}
-
-	if( (tmp = condor_param( DeltacloudHardwareProfileStorage, ATTR_DELTACLOUD_HARDWARE_PROFILE_STORAGE )) ) {
-		buffer.formatstr( "%s = \"%s\"", ATTR_DELTACLOUD_HARDWARE_PROFILE_STORAGE, tmp );
-		free( tmp );
-		InsertJobExpr( buffer.Value() );
-	}
-
-	if( (tmp = condor_param( DeltacloudKeyname, ATTR_DELTACLOUD_KEYNAME )) ) {
-		buffer.formatstr( "%s = \"%s\"", ATTR_DELTACLOUD_KEYNAME, tmp );
-		free( tmp );
-		InsertJobExpr( buffer.Value() );
-	}
-
-	if( (tmp = condor_param( DeltacloudUserData, ATTR_DELTACLOUD_USER_DATA )) ) {
-		buffer.formatstr( "%s = \"%s\"", ATTR_DELTACLOUD_USER_DATA, tmp );
-		free( tmp );
-		InsertJobExpr( buffer.Value() );
-	}
 
 	// CREAM clients support an alternate representation for resources:
 	//   host.edu:8443/cream-batchname-queuename

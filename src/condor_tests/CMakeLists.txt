@@ -171,10 +171,6 @@ if (BUILD_TESTING)
 		condor_pl_test( job_hyperthread_check "hyper thread testing test" "quick;full;quicknolink" )
 		condor_pl_test(lib_procapi_pidtracking-byenv "Slow Termination Child Cleanup Test" "core;quick;full;quicknolink")
 		#condor_pl_test(job_core_shadow-lessthan-memlimit_van "Make sure the shadow stays below memory limit" "core;quick;full;quicknolink")
-		if ( WITH_LIBDELTACLOUD )
-			# This test fails everywhere
-			#condor_pl_test(job_deltacloud_basic "Deltacloud test" "core;quick;full;quicknolink")
-		endif()
 	endif()
 
 	# negative matches. test on everything but this

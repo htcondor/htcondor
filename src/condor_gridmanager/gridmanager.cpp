@@ -49,10 +49,6 @@
 #  include "creamjob.h"
 #endif
 
-#if defined( LINUX )
-#  include "dcloudjob.h"
-#endif
-
 #define QMGMT_TIMEOUT 15
 
 #define UPDATE_SCHEDD_DELAY		5
@@ -366,16 +362,6 @@ Init()
 	new_type->ReconfigFunc = GCEJobReconfig;
 	new_type->AdMatchFunc = GCEJobAdMatch;
 	new_type->CreateFunc = GCEJobCreate;
-	jobTypes.Append( new_type );
-#endif
-	
-#if defined( LINUX )
-	new_type = new JobType;
-	new_type->Name = strdup( "Deltacloud" );
-	new_type->InitFunc = DCloudJobInit;
-	new_type->ReconfigFunc = DCloudJobReconfig;
-	new_type->AdMatchFunc = DCloudJobAdMatch;
-	new_type->CreateFunc = DCloudJobCreate;
 	jobTypes.Append( new_type );
 #endif
 	
