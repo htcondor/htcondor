@@ -233,7 +233,7 @@ main( int argc, char ** const argv )
 	printf ("%s\n", version);
 	fflush(stdout);
 
-	dprintf (D_FULLDEBUG, "EC2 GAHP initialized\n");
+	dprintf( D_ALWAYS, "EC2 GAHP initialized\n" );
 
 		/* Our main thread should grab the mutex first.  We will then
 		 * release it and let other threads run when we would otherwise

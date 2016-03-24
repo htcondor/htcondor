@@ -107,7 +107,7 @@ bool writeShortFile( const std::string & fileName, const std::string & contents 
     close( fd );
     if( written != contents.length() ) {
         dprintf( D_ALWAYS, "Failed to completely write file '%s'; wanted to write %lu but only put %lu.\n",
-				 fileName.c_str(), (unsigned long)contents.length(), written );
+                 fileName.c_str(), (unsigned long)contents.length(), written );
         return false;
     }
 
@@ -182,7 +182,7 @@ AmazonRequest::~AmazonRequest() { }
 
 class Throttle {
     public:
-        Throttle() : count( 0 ) {
+        Throttle() : count( 0 ), rateLimit( 0 ) {
             // Determine which type of clock to use.
             int rv = clock_gettime( CLOCK_MONOTONIC, & when );
             if( rv == 0 ) { type = CLOCK_MONOTONIC; }
@@ -198,22 +198,46 @@ class Throttle {
             deadline.tv_nsec = 0;
         }
 
-        bool isValid() { return when.tv_sec == 0; }
         struct timespec getWhen() { return when; }
 
-        void setDeadline( struct timespec t, time_t offset ) { deadline = t; deadline.tv_sec += offset; }
-        static void now( struct timespec * t ) { if( t != NULL ) { clock_gettime( type, t ); } }
+        // This function is called without the big mutex.  Do NOT add
+        // dprintf() statements or refers to globals other than 'this'.
+        bool isValid() { return when.tv_sec != 0; }
 
+        // This function is called without the big mutex.  Do NOT add
+        // dprintf() statements or refers to globals other than 'this'.
+        bool getDeadline( struct timespec * t ) {
+            if( t == NULL ) { return false; }
+            if( deadline.tv_sec == 0 ) { return false; }
+
+            * t = deadline;
+            return true;
+        }
+
+        // This function is called without the big mutex.  Do NOT add
+        // dprintf() statements or refers to globals other than 'this'.
+        bool setDeadline( struct timespec t, time_t offset ) {
+            if( t.tv_sec == 0 ) { return false; }
+
+            deadline = t;
+            deadline.tv_sec += offset;
+            return true;
+        }
+
+        // This function is called without the big mutex.  Do NOT add
+        // dprintf() statements or refers to globals other than 'this'.
         void sleepIfNecessary() {
             if( this->isValid() ) {
                 int rv;
                 do {
                     rv = clock_nanosleep( type, TIMER_ABSTIME, & when, NULL );
-                } while( rv == -1 );
+                } while( rv == EINTR );
                 // Suicide rather than overburden the service.
                 ASSERT( rv == 0 );
             }
         }
+
+        static void now( struct timespec * t ) { if( t != NULL ) { clock_gettime( type, t ); } }
 
         bool limitExceeded() {
             // Compute until when to sleep before making another request.
@@ -221,35 +245,73 @@ class Throttle {
 
             assert( count < 32 );
             unsigned milliseconds = (1 << count) * 100;
+   			if( rateLimit > 0 && milliseconds < (unsigned)rateLimit ) { milliseconds = rateLimit; }
             unsigned seconds = milliseconds / 1000;
             unsigned nanoseconds = (milliseconds % 1000) * 1000000;
 
-            dprintf( D_PERF_TRACE | D_VERBOSE, "now = %ld + %ld\n", when.tv_sec, when.tv_nsec );
-            dprintf( D_PERF_TRACE | D_VERBOSE, "after %u milliseconds\n", milliseconds );
+            dprintf( D_PERF_TRACE | D_VERBOSE,
+            	"limitExceeded(): setting when to %u milliseconds from now (%ld.%09ld)\n", milliseconds, when.tv_sec, when.tv_nsec );
             when.tv_sec += seconds;
             when.tv_nsec += nanoseconds;
-            dprintf( D_PERF_TRACE | D_VERBOSE, "will be = %ld + %ld\n", when.tv_sec, when.tv_nsec );
+            if( when.tv_nsec > 1000000000 ) {
+                when.tv_nsec -= 1000000000;
+                when.tv_sec += 1;
+            }
+            dprintf( D_PERF_TRACE | D_VERBOSE,
+            	"limitExceeded(): set when to %ld.%09ld\n", when.tv_sec, when.tv_nsec );
 
             // If we've waited so long that our next delay will be after
             // the deadline, fail immediately rather than get an invalid
             // signature error.
-            if( deadline.tv_sec >= when.tv_sec ) {
-                dprintf( D_PERF_TRACE | D_VERBOSE, "which is after the deadline.\n" );
+            if( deadline.tv_sec < when.tv_sec ||
+                (deadline.tv_sec == when.tv_sec &&
+                  deadline.tv_nsec < when.tv_nsec) ) {
+                dprintf( D_PERF_TRACE | D_VERBOSE,
+                	"limitExceeded(): which is after the deadline.\n" );
                 return true;
             }
 
-            // Even if we're given a longer deadline, assume that 102.4
+            // Even if we're given a longer deadline, assume that 204.8
             // seconds is as long as we ever want to wait.
-            if( count <= 10 ) { ++count; return false; }
+            if( count <= 11 ) { ++count; return false; }
             else { return true; }
         }
-        void limitNotExceeded() { count = 0; when.tv_sec = 0; deadline.tv_sec = 0; }
+
+        void limitNotExceeded() {
+            count = 0;
+            when.tv_sec = 0;
+            deadline.tv_sec = 0;
+
+            if( rateLimit <= 0 ) { return; }
+
+            clock_gettime( type, & when );
+            unsigned milliseconds = rateLimit;
+            unsigned seconds = milliseconds / 1000;
+            unsigned nanoseconds = (milliseconds % 1000) * 1000000;
+            dprintf( D_PERF_TRACE | D_VERBOSE,
+            	"rate limiting: setting when to %u milliseconds from now (%ld.%09ld)\n", milliseconds, when.tv_sec, when.tv_nsec );
+
+            when.tv_sec += seconds;
+            when.tv_nsec += nanoseconds;
+            if( when.tv_nsec > 1000000000 ) {
+                when.tv_nsec -= 1000000000;
+                when.tv_sec += 1;
+            }
+            dprintf( D_PERF_TRACE | D_VERBOSE,
+            	"rate limiting: set when to %ld.%09ld\n", when.tv_sec, when.tv_nsec );
+        }
 
     protected:
         static clockid_t type;
         unsigned int count;
         struct timespec when;
         struct timespec deadline;
+
+	public:
+		// Managed by AmazonRequest::SendRequest() because the param system
+		// isn't up yet when this object is constructed.
+        int rateLimit;
+
 };
 
 clockid_t Throttle::type;
@@ -257,6 +319,13 @@ Throttle globalCurlThrottle;
 
 pthread_mutex_t globalCurlMutex = PTHREAD_MUTEX_INITIALIZER;
 bool AmazonRequest::SendRequest() {
+	static bool rateLimitInitialized = false;
+	if(! rateLimitInitialized) {
+		globalCurlThrottle.rateLimit = param_integer( "EC2_GAHP_RATE_LIMIT", 100 );
+		dprintf( D_PERF_TRACE, "rate limit = %u\n", globalCurlThrottle.rateLimit );
+		rateLimitInitialized = true;
+	}
+
     //
     // Every request must have the following parameters:
     //
@@ -347,7 +416,7 @@ bool AmazonRequest::SendRequest() {
     char iso8601[] = "YYYY-MM-DDThh:mm:ssZ";
     strftime( iso8601, 20, "%Y-%m-%dT%H:%M:%SZ", & brokenDownTime );
     query_parameters.insert( std::make_pair( "Timestamp", iso8601 ) );
-	dprintf( D_PERF_TRACE | D_VERBOSE, "request #%d (%s): signature\n", requestID, requestCommand.c_str() );
+    dprintf( D_PERF_TRACE, "request #%d (%s): signature\n", requestID, requestCommand.c_str() );
 
 
     /*
@@ -509,9 +578,9 @@ bool AmazonRequest::SendRequest() {
         canonicalizedQueryString[ index + 15 ] = '\0';
         char const * cqs = canonicalizedQueryString.c_str();
         if( skipLast == std::string::npos ) {
-	        dprintf( D_FULLDEBUG, "Post body is '%s...'\n", cqs );
+            dprintf( D_FULLDEBUG, "Post body is '%s...'\n", cqs );
         } else {
-        	dprintf( D_FULLDEBUG, "Post body is '%s...%s'\n", cqs, cqs + skipLast );
+            dprintf( D_FULLDEBUG, "Post body is '%s...%s'\n", cqs, cqs + skipLast );
         }
         canonicalizedQueryString[ index + 15 ] = swap;
     } else {
@@ -537,16 +606,16 @@ bool AmazonRequest::SendRequest() {
         return false;
     }
 
-	if ( includeResponseHeader ) {
-		rv = curl_easy_setopt( curl, CURLOPT_HEADER, 1 );
-		if( rv != CURLE_OK ) {
-			this->errorCode = "E_CURL_LIB";
-			this->errorMessage = "curl_easy_setopt( CURLOPT_HEADER ) failed.";
-			dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_HEADER ) failed (%d): '%s', failing.\n",
-					 rv, curl_easy_strerror( rv ) );
-			return false;
-		}
-	}
+    if ( includeResponseHeader ) {
+        rv = curl_easy_setopt( curl, CURLOPT_HEADER, 1 );
+        if( rv != CURLE_OK ) {
+            this->errorCode = "E_CURL_LIB";
+            this->errorMessage = "curl_easy_setopt( CURLOPT_HEADER ) failed.";
+            dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_HEADER ) failed (%d): '%s', failing.\n",
+                     rv, curl_easy_strerror( rv ) );
+            return false;
+        }
+    }
 
     rv = curl_easy_setopt( curl, CURLOPT_WRITEFUNCTION, & appendToString );
     if( rv != CURLE_OK ) {
@@ -634,16 +703,21 @@ bool AmazonRequest::SendRequest() {
         SET_CURL_SECURITY_OPTION( curl, CURLOPT_SSLCERT, this->accessKeyFile.c_str() );
     }
 
-	dprintf( D_PERF_TRACE | D_VERBOSE, "request #%d (%s): ready\n", requestID, requestCommand.c_str() );
+    dprintf( D_PERF_TRACE, "request #%d (%s): ready to call %s\n", requestID, requestCommand.c_str(), query_parameters[ "Action" ].c_str() );
     amazon_gahp_release_big_mutex();
     pthread_mutex_lock( & globalCurlMutex );
     globalCurlThrottle.setDeadline( signatureTime, 300 );
+    // Skip this if we're not doing the dprintf().
+    // struct timespec deadline; globalCurlThrottle.getDeadline( & deadline );
+    // This is likely to cause grief, since dprintf() isn't thread safe
+    // and I don't have the big global mutex.
+    // dprintf( D_PERF_TRACE, "request #%d (%s): set deadline to %ld + %ld\n", requestID, requestCommand.c_str(), deadline.tv_sec, deadline.tv_nsec );
 
     retry: globalCurlThrottle.sleepIfNecessary();
     rv = curl_easy_perform( curl );
 
     amazon_gahp_grab_big_mutex();
-	dprintf( D_PERF_TRACE | D_VERBOSE, "request #%d (%s): complete\n", requestID, requestCommand.c_str() );
+    dprintf( D_PERF_TRACE, "request #%d (%s): called %s\n", requestID, requestCommand.c_str(), query_parameters[ "Action" ].c_str() );
 
     if( rv != 0 ) {
         this->errorCode = "E_CURL_IO";
@@ -671,21 +745,68 @@ bool AmazonRequest::SendRequest() {
         return false;
     }
 
-    curl_easy_cleanup( curl );
+    const char * failureMode = getenv( "EC2_GAHP_FAILURE_MODE" );
+    if( failureMode != NULL && (strcmp( failureMode, "1" ) == 0) ) {
+        responseCode = 503;
+        resultString = "FAILURE INJECTION: <Error><Code>RequestLimitExceeded</Code></Error>";
+    }
+
+    if( failureMode != NULL && (strcmp( failureMode, "2" ) == 0) ) {
+        if( requestCommand != "EC2_VM_STATUS_ALL" &&
+             requestCommand != "EC2_VM_STATUS_ALL_SPOT" &&
+              requestCommand != "EC2_VM_SERVER_TYPE" ) {
+            responseCode = 503;
+            resultString = "FAILURE INJECTION: <Error><Code>RequestLimitExceeded</Code></Error>";
+        }
+    }
+
+    static unsigned failureCount = 0;
+    if( failureMode != NULL && (strcmp( failureMode, "3" ) == 0) ) {
+        if( requestCommand != "EC2_VM_STATUS_ALL" &&
+             requestCommand != "EC2_VM_STATUS_ALL_SPOT" &&
+              requestCommand != "EC2_VM_SERVER_TYPE" ) {
+            if( failureCount < 3 && requestID % 2 ) {
+                ++failureCount;
+                responseCode = 503;
+                resultString = "FAILURE INJECTION: <Error><Code>RequestLimitExceeded</Code></Error>";
+            } else {
+                failureCount = 0;
+            }
+        }
+    }
+
+    if( failureMode != NULL && (strcmp( failureMode, "4" ) == 0) ) {
+        if( requestCommand != "EC2_VM_STOP_SPOT" &&
+              requestCommand != "EC2_VM_STOP" ) {
+            responseCode = 503;
+            resultString = "FAILURE INJECTION: <Error><Code>RequestLimitExceeded</Code></Error>";
+        }
+    }
 
     if( responseCode == 503 && (resultString.find( "<Error><Code>RequestLimitExceeded</Code>" ) != std::string::npos) ) {
         if( globalCurlThrottle.limitExceeded() ) {
-            dprintf( D_ALWAYS, "Retry limit exceeded, failing request.\n" );
+            dprintf( D_PERF_TRACE, "request #%d (%s): retry limit exceeded\n", requestID, requestCommand.c_str() );
+
+            // This should almost certainly be E_REQUEST_LIMIT_EXCEEDED, but
+            // for now return the same error code for this condition that
+            // we did before we recongized it.
+            formatstr( this->errorCode, "E_HTTP_RESPONSE_NOT_200 (%lu)", responseCode );
+            this->errorMessage = resultString;
+            curl_easy_cleanup( curl );
+
             pthread_mutex_unlock( & globalCurlMutex );
             return false;
         }
 
-		dprintf( D_PERF_TRACE | D_VERBOSE, "request #%d (%s): retry\n", requestID, requestCommand.c_str() );
+        dprintf( D_PERF_TRACE, "request #%d (%s): will retry\n", requestID, requestCommand.c_str() );
+        resultString.clear();
         amazon_gahp_release_big_mutex();
         goto retry;
     } else {
         globalCurlThrottle.limitNotExceeded();
     }
+
+    curl_easy_cleanup( curl );
 
     if( responseCode != 200 ) {
         formatstr( this->errorCode, "E_HTTP_RESPONSE_NOT_200 (%lu)", responseCode );
@@ -697,14 +818,14 @@ bool AmazonRequest::SendRequest() {
             responseCode );
         dprintf( D_FULLDEBUG, "Failure response text was '%s'.\n", resultString.c_str() );
 
-		dprintf( D_PERF_TRACE | D_VERBOSE, "request #%d (%s): failure\n", requestID, requestCommand.c_str() );
+        dprintf( D_PERF_TRACE, "request #%d (%s): call to %s returned %lu.\n", requestID, requestCommand.c_str(), query_parameters[ "Action" ].c_str(), responseCode );
         pthread_mutex_unlock( & globalCurlMutex );
         return false;
     }
 
     dprintf( D_FULLDEBUG, "Response was '%s'\n", resultString.c_str() );
     pthread_mutex_unlock( & globalCurlMutex );
-	dprintf( D_PERF_TRACE | D_VERBOSE, "request #%d (%s): success\n", requestID, requestCommand.c_str() );
+    dprintf( D_PERF_TRACE, "request #%d (%s): call to %s returned 200 (OK).\n", requestID, requestCommand.c_str(), query_parameters[ "Action" ].c_str() );
     return true;
 }
 
@@ -818,8 +939,8 @@ bool AmazonVMStart::workerFunction(char **argv, int argc, std::string &result_st
 
     int requestID;
     get_int( argv[1], & requestID );
-	dprintf( D_PERF_TRACE, "request #%d (%s): work begins\n",
-		requestID, argv[0] );
+    dprintf( D_PERF_TRACE, "request #%d (%s): work begins\n",
+        requestID, argv[0] );
 
     if( ! verify_min_number_args( argc, 15 ) ) {
         result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
@@ -834,49 +955,49 @@ bool AmazonVMStart::workerFunction(char **argv, int argc, std::string &result_st
     vmStartRequest.accessKeyFile = argv[3];
     vmStartRequest.secretKeyFile = argv[4];
 
-	// Fill in user-specified parameters.  (Also handles security groups
-	// and security group IDS.)
-	//
-	// We could have split up the block device mapping like this, but since
-	// we were inventing a syntax anyway, it wasn't too hard to make the
-	// parser simple.  Rather than risk a quoting problem with security
-	// names or group IDs, we just introduce a convention that we terminate
-	// each list with the null string.
+    // Fill in user-specified parameters.  (Also handles security groups
+    // and security group IDS.)
+    //
+    // We could have split up the block device mapping like this, but since
+    // we were inventing a syntax anyway, it wasn't too hard to make the
+    // parser simple.  Rather than risk a quoting problem with security
+    // names or group IDs, we just introduce a convention that we terminate
+    // each list with the null string.
 
-	unsigned positionInList = 0;
-	unsigned which = 0;
-	for( int i = 17; i < argc; ++i ) {
-		if( strcasecmp( argv[i], NULLSTRING ) == 0 ) {
-			++which;
-			positionInList = 0;
-			continue;
-		}
+    unsigned positionInList = 0;
+    unsigned which = 0;
+    for( int i = 17; i < argc; ++i ) {
+        if( strcasecmp( argv[i], NULLSTRING ) == 0 ) {
+            ++which;
+            positionInList = 0;
+            continue;
+        }
 
-		std::ostringstream parameterName;
-		switch( which ) {
-			case 0:
-				parameterName << "SecurityGroup." << positionInList;
-				++positionInList;
-				break;
-			case 1:
-				parameterName << "SecurityGroupId." << positionInList;
-				++positionInList;
-				break;
-			case 2:
-				parameterName << argv[i];
-				if( ! ( i + 1 < argc ) ) {
-					dprintf( D_ALWAYS, "Found parameter '%s' without value, ignoring it.\n", argv[i] );
-					continue;
-				}
-				++i;
-				break;
-			default:
-				dprintf( D_ALWAYS, "Found unexpected null strings at end of variable-count parameter lists.  Ignoring.\n" );
-				continue;
-		}
+        std::ostringstream parameterName;
+        switch( which ) {
+            case 0:
+                parameterName << "SecurityGroup." << positionInList;
+                ++positionInList;
+                break;
+            case 1:
+                parameterName << "SecurityGroupId." << positionInList;
+                ++positionInList;
+                break;
+            case 2:
+                parameterName << argv[i];
+                if( ! ( i + 1 < argc ) ) {
+                    dprintf( D_ALWAYS, "Found parameter '%s' without value, ignoring it.\n", argv[i] );
+                    continue;
+                }
+                ++i;
+                break;
+            default:
+                dprintf( D_ALWAYS, "Found unexpected null strings at end of variable-count parameter lists.  Ignoring.\n" );
+                continue;
+        }
 
-		vmStartRequest.query_parameters[ parameterName.str() ] = argv[ i ];
-	}
+        vmStartRequest.query_parameters[ parameterName.str() ] = argv[ i ];
+    }
 
     // Fill in required parameters.
     vmStartRequest.query_parameters[ "Action" ] = "RunInstances";
@@ -910,36 +1031,36 @@ bool AmazonVMStart::workerFunction(char **argv, int argc, std::string &result_st
         vmStartRequest.query_parameters[ "ClientToken" ] = argv[13];
     }
 
-	if( strcasecmp( argv[14], NULLSTRING ) ) {
-		// We can't pass an arbitrarily long list of block device mappings
-		// because we're already using that to pass security group names.
-		StringList mappings( argv[14] );
-		mappings.rewind();
-		char * mapping = NULL;
-		for( int i = 1; (mapping = mappings.next()) != NULL; ++i ) {
-			StringList pair( mapping, ":" );
-			pair.rewind();
-			if( pair.number() != 2 ) {
-				dprintf( D_ALWAYS, "Ignoring invalid block device mapping '%s'.\n", mapping );
-			}
+    if( strcasecmp( argv[14], NULLSTRING ) ) {
+        // We can't pass an arbitrarily long list of block device mappings
+        // because we're already using that to pass security group names.
+        StringList mappings( argv[14] );
+        mappings.rewind();
+        char * mapping = NULL;
+        for( int i = 1; (mapping = mappings.next()) != NULL; ++i ) {
+            StringList pair( mapping, ":" );
+            pair.rewind();
+            if( pair.number() != 2 ) {
+                dprintf( D_ALWAYS, "Ignoring invalid block device mapping '%s'.\n", mapping );
+            }
 
-			std::ostringstream virtualName;
-			virtualName << "BlockDeviceMapping." << i << ".VirtualName";
-			vmStartRequest.query_parameters[ virtualName.str() ] = pair.next();
+            std::ostringstream virtualName;
+            virtualName << "BlockDeviceMapping." << i << ".VirtualName";
+            vmStartRequest.query_parameters[ virtualName.str() ] = pair.next();
 
-			std::ostringstream deviceName;
-			deviceName << "BlockDeviceMapping." << i << ".DeviceName";
-			vmStartRequest.query_parameters[ deviceName.str() ] = pair.next();
-		}
-	}
+            std::ostringstream deviceName;
+            deviceName << "BlockDeviceMapping." << i << ".DeviceName";
+            vmStartRequest.query_parameters[ deviceName.str() ] = pair.next();
+        }
+    }
 
-	if( strcasecmp( argv[15], NULLSTRING ) ) {
-		vmStartRequest.query_parameters[ "IamInstanceProfile.Arn" ] = argv[15];
-	}
+    if( strcasecmp( argv[15], NULLSTRING ) ) {
+        vmStartRequest.query_parameters[ "IamInstanceProfile.Arn" ] = argv[15];
+    }
 
-	if( strcasecmp( argv[16], NULLSTRING ) ) {
-		vmStartRequest.query_parameters[ "IamInstanceProfile.Name" ] = argv[16];
-	}
+    if( strcasecmp( argv[16], NULLSTRING ) ) {
+        vmStartRequest.query_parameters[ "IamInstanceProfile.Name" ] = argv[16];
+    }
 
 
     //
@@ -1077,8 +1198,8 @@ bool AmazonVMStartSpot::workerFunction( char ** argv, int argc, std::string & re
 
     int requestID;
     get_int( argv[1], & requestID );
-	dprintf( D_PERF_TRACE, "request #%d (%s): work begins\n",
-		requestID, argv[0] );
+    dprintf( D_PERF_TRACE, "request #%d (%s): work begins\n",
+        requestID, argv[0] );
 
     if( ! verify_min_number_args( argc, 17 ) ) {
         result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
@@ -1159,7 +1280,7 @@ bool AmazonVMStartSpot::workerFunction( char ** argv, int argc, std::string & re
         vmSpotRequest.query_parameters[ "LaunchSpecification.UserData" ] = base64Encoded;
         free( base64Encoded );
     }
-    
+
     // Send the request.
     if( ! vmSpotRequest.SendRequest() ) {
         result_string = create_failure_result( requestID, vmSpotRequest.errorMessage.c_str(), vmSpotRequest.errorCode.c_str() ) ;
@@ -1198,8 +1319,8 @@ bool AmazonVMStop::workerFunction(char **argv, int argc, std::string &result_str
 
     int requestID;
     get_int( argv[1], & requestID );
-	dprintf( D_PERF_TRACE, "request #%d (%s): work begins\n",
-		requestID, argv[0] );
+    dprintf( D_PERF_TRACE, "request #%d (%s): work begins\n",
+        requestID, argv[0] );
 
     if( ! verify_min_number_args( argc, 6 ) ) {
         result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
@@ -1243,8 +1364,8 @@ bool AmazonVMStopSpot::workerFunction( char ** argv, int argc, std::string & res
 
     int requestID;
     get_int( argv[1], & requestID );
-	dprintf( D_PERF_TRACE, "request #%d (%s): work begins\n",
-		requestID, argv[0] );
+    dprintf( D_PERF_TRACE, "request #%d (%s): work begins\n",
+        requestID, argv[0] );
 
     if( ! verify_min_number_args( argc, 6 ) ) {
         result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
@@ -1289,8 +1410,8 @@ bool AmazonVMStatus::workerFunction(char **argv, int argc, std::string &result_s
 
     int requestID;
     get_int( argv[1], & requestID );
-	dprintf( D_PERF_TRACE, "request #%d (%s): work begins\n",
-		requestID, argv[0] );
+    dprintf( D_PERF_TRACE, "request #%d (%s): work begins\n",
+        requestID, argv[0] );
 
     if( ! verify_min_number_args( argc, 6 ) ) {
         result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
@@ -1490,8 +1611,8 @@ bool AmazonVMStatusSpot::workerFunction(char **argv, int argc, std::string &resu
 
     int requestID;
     get_int( argv[1], & requestID );
-	dprintf( D_PERF_TRACE, "request #%d (%s): work begins\n",
-		requestID, argv[0] );
+    dprintf( D_PERF_TRACE, "request #%d (%s): work begins\n",
+        requestID, argv[0] );
 
     if( ! verify_min_number_args( argc, 6 ) ) {
         result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
@@ -1544,8 +1665,8 @@ bool AmazonVMStatusAllSpot::workerFunction(char **argv, int argc, std::string &r
 
     int requestID;
     get_int( argv[1], & requestID );
-	dprintf( D_PERF_TRACE, "request #%d (%s): work begins\n",
-		requestID, argv[0] );
+    dprintf( D_PERF_TRACE, "request #%d (%s): work begins\n",
+        requestID, argv[0] );
 
     if( ! verify_min_number_args( argc, 5 ) ) {
         result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
@@ -1870,8 +1991,8 @@ bool AmazonVMStatusAll::workerFunction(char **argv, int argc, std::string &resul
 
     int requestID;
     get_int( argv[1], & requestID );
-	dprintf( D_PERF_TRACE, "request #%d (%s): work begins\n",
-		requestID, argv[0] );
+    dprintf( D_PERF_TRACE, "request #%d (%s): work begins\n",
+        requestID, argv[0] );
 
     if( ! verify_min_number_args( argc, 5 ) ) {
         result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
@@ -1985,8 +2106,8 @@ bool AmazonVMCreateKeypair::workerFunction(char **argv, int argc, std::string &r
 
     int requestID;
     get_int( argv[1], & requestID );
-	dprintf( D_PERF_TRACE, "request #%d (%s): work begins\n",
-		requestID, argv[0] );
+    dprintf( D_PERF_TRACE, "request #%d (%s): work begins\n",
+        requestID, argv[0] );
 
     if( ! verify_min_number_args( argc, 7 ) ) {
         result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
@@ -2029,8 +2150,8 @@ bool AmazonVMDestroyKeypair::workerFunction(char **argv, int argc, std::string &
 
     int requestID;
     get_int( argv[1], & requestID );
-	dprintf( D_PERF_TRACE, "request #%d (%s): work begins\n",
-		requestID, argv[0] );
+    dprintf( D_PERF_TRACE, "request #%d (%s): work begins\n",
+        requestID, argv[0] );
 
     if( ! verify_min_number_args( argc, 6 ) ) {
         result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
@@ -2072,8 +2193,8 @@ bool AmazonAssociateAddress::workerFunction(char **argv, int argc, std::string &
 
     int requestID;
     get_int( argv[1], & requestID );
-	dprintf( D_PERF_TRACE, "request #%d (%s): work begins\n",
-		requestID, argv[0] );
+    dprintf( D_PERF_TRACE, "request #%d (%s): work begins\n",
+        requestID, argv[0] );
 
     if( ! verify_min_number_args( argc, 7 ) ) {
         result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
@@ -2089,24 +2210,24 @@ bool AmazonAssociateAddress::workerFunction(char **argv, int argc, std::string &
     asRequest.query_parameters[ "Action" ] = "AssociateAddress";
     asRequest.query_parameters[ "InstanceId" ] = argv[5];
 
-	// here it could be a standard ip or a vpc ip
-	// vpc ip's will have a : separating
-	const char * pszFullIPStr = argv[6];
-	const char * pszIPStr=0;
-	const char * pszAllocationId=0;
-	StringList elastic_ip_addr_info (pszFullIPStr, ":");
-	elastic_ip_addr_info.rewind();
-	pszIPStr = elastic_ip_addr_info.next();
-	pszAllocationId=elastic_ip_addr_info.next();
+    // here it could be a standard ip or a vpc ip
+    // vpc ip's will have a : separating
+    const char * pszFullIPStr = argv[6];
+    const char * pszIPStr=0;
+    const char * pszAllocationId=0;
+    StringList elastic_ip_addr_info (pszFullIPStr, ":");
+    elastic_ip_addr_info.rewind();
+    pszIPStr = elastic_ip_addr_info.next();
+    pszAllocationId=elastic_ip_addr_info.next();
 
-	if ( pszAllocationId )
-	{
-		asRequest.query_parameters[ "AllocationId" ] = pszAllocationId;
-	}
-	else
-	{
-		asRequest.query_parameters[ "PublicIp" ] = pszIPStr;
-	}
+    if ( pszAllocationId )
+    {
+        asRequest.query_parameters[ "AllocationId" ] = pszAllocationId;
+    }
+    else
+    {
+        asRequest.query_parameters[ "PublicIp" ] = pszIPStr;
+    }
 
     // Send the request.
     if( ! asRequest.SendRequest() ) {
@@ -2132,21 +2253,21 @@ AmazonCreateTags::~AmazonCreateTags() { }
 // we support multiple groupnames
 bool AmazonCreateTags::ioCheck(char **argv, int argc)
 {
-	return verify_min_number_args(argc, 7) &&
-		verify_request_id(argv[1]) &&
-		verify_string_name(argv[2]) &&
-		verify_string_name(argv[3]) &&
-		verify_string_name(argv[4]) &&
-		verify_string_name(argv[5]) &&
-		verify_string_name(argv[6]);
+    return verify_min_number_args(argc, 7) &&
+        verify_request_id(argv[1]) &&
+        verify_string_name(argv[2]) &&
+        verify_string_name(argv[3]) &&
+        verify_string_name(argv[4]) &&
+        verify_string_name(argv[5]) &&
+        verify_string_name(argv[6]);
 }
 
 // Expecting:
 //   EC2_VM_CREATE_TAGS <req_id> <serviceurl> <accesskeyfile> <secretkeyfile> <instance-id> <tag name>=<tag value> ...
 bool
 AmazonCreateTags::workerFunction(char **argv,
-								 int argc,
-								 std::string &result_string)
+                                 int argc,
+                                 std::string &result_string)
 {
     assert(strcasecmp(argv[0], "EC2_VM_CREATE_TAGS") == 0);
 
@@ -2155,14 +2276,14 @@ AmazonCreateTags::workerFunction(char **argv,
 
     int requestID;
     get_int(argv[1], &requestID);
-	dprintf( D_PERF_TRACE, "request #%d (%s): work begins\n",
-		requestID, argv[0] );
+    dprintf( D_PERF_TRACE, "request #%d (%s): work begins\n",
+        requestID, argv[0] );
 
     if (!verify_min_number_args(argc, 7)) {
         result_string = create_failure_result(requestID, "Wrong_Argument_Number");
         dprintf(D_ALWAYS,
-				"Wrong number of arguments (%d should be >= %d) to %s\n",
-				argc, 7, argv[0]);
+                "Wrong number of arguments (%d should be >= %d) to %s\n",
+                argc, 7, argv[0]);
         return false;
     }
 
@@ -2174,22 +2295,22 @@ AmazonCreateTags::workerFunction(char **argv,
     asRequest.query_parameters["Action"] = "CreateTags";
     asRequest.query_parameters["ResourceId.0"] = argv[5];
 
-	std::string tag;
-	for (int i = 6; i < argc; i++) {
-		std::stringstream ss;
-		ss << "Tag." << (i - 6);
-		tag = argv[i];
-		asRequest.query_parameters[ss.str().append(".Key")] =
-			tag.substr(0, tag.find('='));
-		asRequest.query_parameters[ss.str().append(".Value")] =
-			tag.substr(tag.find('=') + 1);
-	}
+    std::string tag;
+    for (int i = 6; i < argc; i++) {
+        std::stringstream ss;
+        ss << "Tag." << (i - 6);
+        tag = argv[i];
+        asRequest.query_parameters[ss.str().append(".Key")] =
+            tag.substr(0, tag.find('='));
+        asRequest.query_parameters[ss.str().append(".Value")] =
+            tag.substr(tag.find('=') + 1);
+    }
 
     // Send the request.
     if (!asRequest.SendRequest()) {
         result_string = create_failure_result(requestID,
-											  asRequest.errorMessage.c_str(),
-											  asRequest.errorCode.c_str());
+                                              asRequest.errorMessage.c_str(),
+                                              asRequest.errorCode.c_str());
     } else {
         result_string = create_success_result(requestID, NULL);
     }
@@ -2204,12 +2325,12 @@ AmazonAttachVolume::~AmazonAttachVolume() { }
 
 bool AmazonAttachVolume::workerFunction(char **argv, int argc, std::string &result_string) 
 {
-	assert( strcasecmp( argv[0], "EC2_VM_ATTACH_VOLUME" ) == 0 );
+    assert( strcasecmp( argv[0], "EC2_VM_ATTACH_VOLUME" ) == 0 );
 
-	int requestID;
+    int requestID;
     get_int( argv[1], & requestID );
-	dprintf( D_PERF_TRACE, "request #%d (%s): work begins\n",
-		requestID, argv[0] );
+    dprintf( D_PERF_TRACE, "request #%d (%s): work begins\n",
+        requestID, argv[0] );
 
     if( ! verify_min_number_args( argc, 8 ) ) {
         result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
@@ -2225,7 +2346,7 @@ bool AmazonAttachVolume::workerFunction(char **argv, int argc, std::string &resu
     asRequest.query_parameters[ "Action" ] = "AttachVolume";
     asRequest.query_parameters[ "VolumeId" ] = argv[5];
     asRequest.query_parameters[ "InstanceId" ] = argv[6];
-	asRequest.query_parameters[ "Device" ] = argv[7];
+    asRequest.query_parameters[ "Device" ] = argv[7];
 
     // Send the request.
     if( ! asRequest.SendRequest() ) {
@@ -2262,105 +2383,105 @@ bool AmazonAttachVolume::workerFunction(char **argv, int argc, std::string &resu
 AmazonVMServerType::~AmazonVMServerType() { }
 
 bool AmazonVMServerType::SendRequest() {
-	bool result = AmazonRequest::SendRequest();
-	if( result ) {
-		serverType = "Unknown";
-		size_t idx = this->resultString.find( "\r\n\r\n" );
-		if ( idx == std::string::npos ) {
-			return result;
-		}
+    bool result = AmazonRequest::SendRequest();
+    if( result ) {
+        serverType = "Unknown";
+        size_t idx = this->resultString.find( "\r\n\r\n" );
+        if ( idx == std::string::npos ) {
+            return result;
+        }
 
-		std::string header = this->resultString.substr( 0, idx + 4 );
-		std::string body = this->resultString.substr( idx + 4 );
+        std::string header = this->resultString.substr( 0, idx + 4 );
+        std::string body = this->resultString.substr( idx + 4 );
 
-		bool server_amazon = false;
-		bool server_jetty = false;
-		bool xml_tag = false;
-		bool xml_encoding = false;
-		bool request_id = false;
-		bool euca_tag = false;
+        bool server_amazon = false;
+        bool server_jetty = false;
+        bool xml_tag = false;
+        bool xml_encoding = false;
+        bool request_id = false;
+        bool euca_tag = false;
 
-		if ( header.find( "Server: AmazonEC2" ) != std::string::npos ) {
-			server_amazon = true;
-		}
-		if ( header.find( "Server: Jetty" ) != std::string::npos ) {
-			server_jetty = true;
-		}
-		if ( body.find( "<?xml " ) != std::string::npos ) {
-			xml_tag = true;
-		}
-		if ( body.find( "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" ) != std::string::npos ) {
-			xml_encoding = true;
-		}
-		if ( body.find( "<requestId>" ) != std::string::npos ) {
-			request_id = true;
-		}
-		if ( body.find( "<euca:Describe" ) != std::string::npos ) {
-			euca_tag = true;
-		}
+        if ( header.find( "Server: AmazonEC2" ) != std::string::npos ) {
+            server_amazon = true;
+        }
+        if ( header.find( "Server: Jetty" ) != std::string::npos ) {
+            server_jetty = true;
+        }
+        if ( body.find( "<?xml " ) != std::string::npos ) {
+            xml_tag = true;
+        }
+        if ( body.find( "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" ) != std::string::npos ) {
+            xml_encoding = true;
+        }
+        if ( body.find( "<requestId>" ) != std::string::npos ) {
+            request_id = true;
+        }
+        if ( body.find( "<euca:Describe" ) != std::string::npos ) {
+            euca_tag = true;
+        }
 
-		if ( server_amazon && !server_jetty && xml_tag &&
-			 xml_encoding && request_id && !euca_tag ) {
-			serverType = "Amazon";
-		} else if ( !server_amazon && !server_jetty && xml_tag &&
-					!xml_encoding && request_id && !euca_tag ) {
-			serverType = "OpenStack";
-		} else if ( !server_amazon && !server_jetty && !xml_tag &&
-					!xml_encoding && request_id && !euca_tag ) {
-			// OpenStack Havana altered formatting from previous versions,
-			// but we don't want to treat it differently for now.
-			serverType = "OpenStack";
-		} else if ( !server_amazon && server_jetty && xml_tag &&
-					xml_encoding && !request_id && !euca_tag ) {
-			serverType = "Nimbus";
-		} else if ( !server_amazon && !server_jetty && !xml_tag &&
-					!xml_encoding && !request_id && euca_tag ) {
-			serverType = "Eucalyptus";
-		}
-	}
-	return result;
+        if ( server_amazon && !server_jetty && xml_tag &&
+             xml_encoding && request_id && !euca_tag ) {
+            serverType = "Amazon";
+        } else if ( !server_amazon && !server_jetty && xml_tag &&
+                    !xml_encoding && request_id && !euca_tag ) {
+            serverType = "OpenStack";
+        } else if ( !server_amazon && !server_jetty && !xml_tag &&
+                    !xml_encoding && request_id && !euca_tag ) {
+            // OpenStack Havana altered formatting from previous versions,
+            // but we don't want to treat it differently for now.
+            serverType = "OpenStack";
+        } else if ( !server_amazon && server_jetty && xml_tag &&
+                    xml_encoding && !request_id && !euca_tag ) {
+            serverType = "Nimbus";
+        } else if ( !server_amazon && !server_jetty && !xml_tag &&
+                    !xml_encoding && !request_id && euca_tag ) {
+            serverType = "Eucalyptus";
+        }
+    }
+    return result;
 }
 
 // Expecting:EC2_VM_SERVER_TYPE <req_id> <serviceurl> <accesskeyfile> <secretkeyfile>
 bool AmazonVMServerType::workerFunction(char **argv, int argc, std::string &result_string) {
-	assert( strcmp( argv[0], "EC2_VM_SERVER_TYPE" ) == 0 );
+    assert( strcmp( argv[0], "EC2_VM_SERVER_TYPE" ) == 0 );
 
-	// Uses the Query API function 'DescribeKeyPairs', as documented at
-	// http://docs.amazonwebservices.com/AWSEC2/latest/APIReference/ApiReference-query-DescribeKeyPairs.html
+    // Uses the Query API function 'DescribeKeyPairs', as documented at
+    // http://docs.amazonwebservices.com/AWSEC2/latest/APIReference/ApiReference-query-DescribeKeyPairs.html
 
-	int requestID;
-	get_int( argv[1], & requestID );
-	dprintf( D_PERF_TRACE, "request #%d (%s): work begins\n",
-		requestID, argv[0] );
+    int requestID;
+    get_int( argv[1], & requestID );
+    dprintf( D_PERF_TRACE, "request #%d (%s): work begins\n",
+        requestID, argv[0] );
 
-	if( ! verify_min_number_args( argc, 5 ) ) {
-		result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
-		dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n",
-				 argc, 5, argv[0] );
-		return false;
-	}
+    if( ! verify_min_number_args( argc, 5 ) ) {
+        result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
+        dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n",
+                 argc, 5, argv[0] );
+        return false;
+    }
 
-	// Fill in required attributes & parameters.
-	AmazonVMServerType serverTypeRequest = AmazonVMServerType( requestID, argv[0] );
-	serverTypeRequest.serviceURL = argv[2];
-	serverTypeRequest.accessKeyFile = argv[3];
-	serverTypeRequest.secretKeyFile = argv[4];
-	serverTypeRequest.query_parameters[ "Action" ] = "DescribeKeyPairs";
+    // Fill in required attributes & parameters.
+    AmazonVMServerType serverTypeRequest = AmazonVMServerType( requestID, argv[0] );
+    serverTypeRequest.serviceURL = argv[2];
+    serverTypeRequest.accessKeyFile = argv[3];
+    serverTypeRequest.secretKeyFile = argv[4];
+    serverTypeRequest.query_parameters[ "Action" ] = "DescribeKeyPairs";
 
-	// We need the header in the response to help determine what
-	// implementation we're talking with.
-	serverTypeRequest.includeResponseHeader = true;
+    // We need the header in the response to help determine what
+    // implementation we're talking with.
+    serverTypeRequest.includeResponseHeader = true;
 
-	// Send the request.
-	if( ! serverTypeRequest.SendRequest() ) {
-		result_string = create_failure_result( requestID,
-										serverTypeRequest.errorMessage.c_str(),
-										serverTypeRequest.errorCode.c_str() );
-	} else {
-		StringList resultList;
-		resultList.append( serverTypeRequest.serverType.c_str() );
-		result_string = create_success_result( requestID, & resultList );
-	}
+    // Send the request.
+    if( ! serverTypeRequest.SendRequest() ) {
+        result_string = create_failure_result( requestID,
+                                        serverTypeRequest.errorMessage.c_str(),
+                                        serverTypeRequest.errorCode.c_str() );
+    } else {
+        StringList resultList;
+        resultList.append( serverTypeRequest.serverType.c_str() );
+        result_string = create_success_result( requestID, & resultList );
+    }
 
-	return true;
+    return true;
 }

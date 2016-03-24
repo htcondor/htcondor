@@ -587,9 +587,22 @@ void EC2Job::doEvaluateState()
 						}
 
 						if( ! m_remoteJobId.empty() ) {
-							// If we've already spawned an instance, cancel
-							// the spot request immediately.
-							gmState = GM_SPOT_CANCEL;
+							// Copied from GM_SPOT_CANCEL, so we don't want
+							// to waste a request there.
+
+							// Since we know the request is done, forget it.
+							SetRequestID( NULL );
+							requestScheddUpdate( this, false );
+
+							// Dedicated instances only set their state reason
+							// code when terminating; avoid confusing our code.
+							m_state_reason_code.clear();
+
+							// Cancelling a one-time spot request which has
+							// been fulfilled is totally pointless (it's not
+							// even required to shrink the list of SIR IDs).
+							// Instead, go directly to GM_SUBMITTED.
+							gmState = GM_SUBMITTED;
 						}
 					} else {
 						// Our starting assumption is that we still have
@@ -955,12 +968,13 @@ void EC2Job::doEvaluateState()
 
 				if ( remoteJobState == EC2_VM_STATE_TERMINATED ) {
 					gmState = GM_DONE_SAVE;
+					// TODO: Ask Jaime if the lack of a break here
+					// is deliberate.
 				}
 
 				if ( condorState == REMOVED || condorState == HELD ) {
 					gmState = GM_CANCEL;
-				}
-				else {
+				} else {
 					// Don't go to GM probe until asked (when the remote
 					// job status changes).
 					if( ! probeNow ) { break; }
@@ -1228,8 +1242,18 @@ void EC2Job::doEvaluateState()
 				// Rather than duplicate code in the spot instance subgraph,
 				// just handle jobs with no corresponding instance here.
 				if( m_remoteJobId.empty() ) {
-					// Bypasses the polling delay in GM_CANCEL_CHECK.
-					probeNow = true;
+					// Since I haven't been able to prove that we will
+					// only arrive in GM_CANCEL without a remote job ID
+					// if we can't find one, we shouldn't skip the poll in
+					// GM_CANCEL_CHECK -- we might learn something important.
+					//
+					// However, if this job is a spot job, rather than
+					// showing up as terminated, shutting down, or purged,
+					// it may show up as "fulfilled", "cancelled", and the
+					// like.  Rather than handle those cases in the
+					// instance code, we should skip GM_CANCEL entirely if
+					// we know that we cancelled the spot request before
+					// it created an instance.
 				} else {
 					// Force us to wait a polling delay before checking
 					// to see if this worked.
@@ -1543,7 +1567,10 @@ void EC2Job::doEvaluateState()
 			// the request proper, handle any instance(s) that it may
 			// have spawned.
 			case GM_SPOT_CANCEL:
-				if( ! m_spot_request_id.empty() ) {
+				if( m_spot_request_id.empty() ) {
+					dprintf( D_ALWAYS, "(%d.%d) Entered GM_SPOT_CANCEL without a spot request ID; this should be impossible.\n", procID.cluster, procID.proc );
+					gmState = GM_SUBMITTED;
+				} else {
 					// Send a command to the GAHP, or poll for its result(s).
 					rc = gahp->ec2_spot_stop(   m_serviceUrl,
 												m_public_key_file,
@@ -1589,9 +1616,18 @@ void EC2Job::doEvaluateState()
 					// just never remove it.  It won't hurt to try to cancel
 					// the request again, and since we already have the
 					// instance ID, we know we're not done when we cancel it.
-				}
 
-				gmState = GM_SUBMITTED;
+					// FIXME: At this point, we should verify that (a) the
+					// state of spot request is "cancelled" and (b) that the
+					// spot request in that state does not have an instance ID.
+					// If it does go to GM_SAVE_INSTANCE_ID; it will fall int
+					// GM_SUBMITTED and then GM_CANCEL if the job is being
+					// removed.  (If the job isn't being remove, we shouldn't
+					// be here, but we need to track the instance anyway.)
+
+					// For now, just assume that the cancel was successful.
+					gmState = GM_DELETE;
+				}
 				break;
 
 			// Alternates with GM_SPOT_QUERY to watch for an instance start.
@@ -1599,7 +1635,18 @@ void EC2Job::doEvaluateState()
 				// If the Condor job has been held or removed, we need to
 				// know what the state of the remote job is (whether it's
 				// spawned an instance) before we can decide what to do.
+				//
+				// However, we can't just wait for a status update, because
+				// we may be trying to remove a spot request whose state
+				// isn't going to change.  (For instance, if the bid was
+				// too low, it may never become high enough.)
+				//
+				// During recovery, if the job doesn't have a spot request
+				// ID recorded, we'll end up here without ever having fetched
+				// the job's current status.  Make sure we've seen at least
+				// one update before proceeding.
 				if( condorState == HELD || condorState == REMOVED ) {
+					if( ! updatedOnce ) { break; }
 					dprintf( D_FULLDEBUG, "Error transition: GM_SPOT_SUBMITTED + HELD|REMOVED = GM_SPOT_QUERY\n" );
 					gmState = GM_SPOT_QUERY;
 					break;
@@ -1686,9 +1733,15 @@ void EC2Job::doEvaluateState()
 				// job has been held or removed, cancel the request.  (It's
 				// OK to cancel the request twice.)
 				if( condorState == HELD || condorState == REMOVED ) {
-					// Force GM_SUBMITTED (from GM_SPOT_CANCEL) to skip
-					// an instance-status probe.
-					remoteJobState = EC2_VM_STATE_TERMINATED;
+					// If at the end of GM_SPOT_CANCEL we confirm that the
+					// request is in the cancelled state /and/ has no
+					// instance ID, we can bypass the instance subgraph
+					// and therefore don't need to set the remoteJobState.
+					// OTOH, if the service wins the race (and starts an
+					// instance before we can cancel the request), we
+					// shouldn't mess with the remoteJobState (and instead
+					// deal with it being set appropriately by the next
+					// polling interval).
 					dprintf( D_FULLDEBUG, "Error transition: GM_SPOT_QUERY + HELD|REMOVED = GM_SPOT_CANCEL\n" );
 					gmState = GM_SPOT_CANCEL;
 					break;
@@ -1789,7 +1842,7 @@ void EC2Job::doEvaluateState()
 				}
 
 				gmState = GM_SPOT_SUBMITTED;
-				dprintf( D_FULLDEBUG, "Recovery transition: GM_SPOT_CHECK -> GM_SUBMITTED\n" );
+				dprintf( D_FULLDEBUG, "Recovery transition: GM_SPOT_CHECK -> GM_SPOT_SUBMITTED\n" );
 				} break;
 
 			case GM_SEEK_INSTANCE_ID: {
@@ -2204,6 +2257,7 @@ void EC2Job::StatusUpdate( const char * instanceID,
 	 && strcmp( stateReasonCode, "NULL" ) != 0 ) {
 		// dprintf( D_FULLDEBUG, "(%d.%d) Updating state reason code to from '%s' to '%s' for job '%s'.\n", procID.cluster, procID.proc, m_state_reason_code.c_str(), stateReasonCode, m_remoteJobId.c_str() );
 		m_state_reason_code = stateReasonCode;
+		requestScheddUpdate( this, false );
 	} else {
 		m_state_reason_code.clear();
 	}
