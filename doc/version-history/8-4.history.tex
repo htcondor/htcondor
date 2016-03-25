@@ -46,6 +46,16 @@ The details of each version are described below.
 \Macro{ALLOW\_PSLOT\_PREEMPTION} was enabled.
 \Ticket{5571}
 
+\item Fixed a bug when using \MacroNI{CLAIM\_PARTITIONABLE\_LEFTOVERS}
+and flocking.
+Machines from a remote pool could be treated as if they were in the local
+pool.
+As a result, the \Attr{RemotePool} attribute would not be set in the ads
+of jobs running on these machines, and the \Attr{FlockedJobs} and
+\Attr{RunningJobs} attributes of submitter ads would have incorrect
+values.
+\Ticket{5577}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

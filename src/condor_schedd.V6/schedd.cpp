@@ -6843,10 +6843,10 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 			// probably could/should be changed to be declared as a static method.
 			// Actually, must pass in owner so FindRunnableJob will find a job.
 
-			sn = new DedicatedScheddNegotiate(0, NULL, match->user, NULL);
+			sn = new DedicatedScheddNegotiate(0, NULL, match->user, match->pool);
 		} else {
 			// Use the DedSched
-			sn = new MainScheddNegotiate(0, NULL, match->user, NULL);
+			sn = new MainScheddNegotiate(0, NULL, match->user, match->pool);
 		}		
 
 			// Setting cluster.proc to -1.-1 should result in the schedd
