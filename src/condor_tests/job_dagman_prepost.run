@@ -1,5 +1,4 @@
 #! /usr/bin/env perl
-#TEMPTEMP -- this test failed on Fedora22 build -- check whether there could be problems
 ##**************************************************************
 ##
 ## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
