@@ -86,7 +86,8 @@ LocalUserLog::initFromJobAd( ClassAd* ad, const char* path_attr,
 	dprintf( D_FULLDEBUG, "LocalUserLog::initFromJobAd: path_attr = %s\n", path_attr);
 	dprintf( D_FULLDEBUG, "LocalUserLog::initFromJobAd: xml_attr = %s\n", xml_attr);
 
-		// Look for the "regular" user log file.
+		// Look for the "regular" user log file (e.g., UserLog or
+		// StarterUserLog).
 	if( ! ad->LookupString(path_attr, tmp) ) {
 			// The fact that this attribute is not found in the ClassAd
 			// indicates we do not want logging to a log file specified
@@ -119,7 +120,9 @@ LocalUserLog::initFromJobAd( ClassAd* ad, const char* path_attr,
 
 		// Look for the special workflow log file for DAGMan (local
 		// universe only -- for other universes, the schedd or the
-		// shadow will log to that file -- see gittrac #5299).
+		// shadow will log to that file and trying to write it in
+		// the starter will cause the starter to crash -- see
+		// gittrac #5299).
 	std::vector<ULogEventNumber> mask_vec;
 	if ( jic->jobUniverse() == CONDOR_UNIVERSE_LOCAL &&
 				ad->LookupString(ATTR_DAGMAN_WORKFLOW_LOG, tmp) ) {
