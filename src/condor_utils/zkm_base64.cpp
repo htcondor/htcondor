@@ -1,7 +1,6 @@
+#include "condor_common.h"
+
 #include "zkm_base64.h"
-#include <string.h>
-#include <iostream>
-#include <stdlib.h>
 
 static const std::string base64_chars = 
              "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
