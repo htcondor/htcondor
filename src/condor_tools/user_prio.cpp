@@ -131,6 +131,7 @@ bool HideGroups = false;            // set to true when it doesn't make sense to
 bool HideUsers  = false;            // set to true when it doesn't make sense to show users (i.e. just showing quotas)
 time_t MinLastUsageTime;
 bool fromCollector = false; // query accounting ad from collector instead of negotiator
+bool forceFromCollector = false; // don't use default value
 
 enum {
    SortByColumn1 = 0,  // sort by prio or by useage depending on which is in column 1 
@@ -466,6 +467,7 @@ main(int argc, char* argv[])
     else if (IsArg(argv[i],"grouprollup")) {
       GroupRollup=true;
 	  fromCollector = false;
+	  forceFromCollector = true;
     }
     else if (IsArg(argv[i],"grouporder")) {
       GroupOrder=true;
@@ -512,6 +514,7 @@ main(int argc, char* argv[])
     }
     else if (IsArg(argv[i],"allusers")) {
 	  fromCollector = false;
+	  forceFromCollector = true;
       MinLastUsageTime=-1;
     }
     else if (IsArg(argv[i],"usage",2)) {
@@ -523,6 +526,7 @@ main(int argc, char* argv[])
     else if (IsArg(argv[i],"getreslist",6)) {
       if (argc-i<=1) usage(argv[0]);
 	  fromCollector = false;
+	  forceFromCollector = true;
       GetResList=i;
       i+=1;
     }
@@ -538,11 +542,11 @@ main(int argc, char* argv[])
 	} 
 	else if (IsArg(argv[i], "collector", 3)) {
 		fromCollector = true;
-      	i++;
+	  forceFromCollector = true;
 	}
 	else if (IsArg(argv[i], "negotiator", 3)) {
 		fromCollector = false;
-      	i++;
+	    forceFromCollector = true;
 	}
     else {
       usage(argv[0]);
@@ -557,6 +561,15 @@ main(int argc, char* argv[])
 	  fprintf(stderr, "%s: Can't locate negotiator in %s\n", 
               argv[0], (pool != "") ? pool.c_str() : "local pool");
 	  exit(1);
+  }
+
+	// Only 8.5.3+ negotiators send their accounting data to the collector
+  const char *ver = negotiator.version();
+  if (ver) {
+	CondorVersionInfo vsi(ver);
+	if (!forceFromCollector && vsi.built_since_version(8,5,3)) {
+		fromCollector = true;
+	}
   }
 
   if (SetPrio) { // set priority
@@ -1730,6 +1743,8 @@ static void usage(char* name) {
      "\t-hierarchical\t\tDisplay users under their groups\n"
      "\t-grouporder\t\tDisplay groups first, then users\n"
      "\t-grouprollup\t\tGroup value are the sum of user values\n"
+     "\t-collector\t\tForce the query to come from the collector\n"
+     "\t-negotiator\t\tForce the query to come from the negotiator\n"
      "\t-long\t\t\tVerbose output (entire classads)\n"
      "\t  -legacy\t\tCauses -long to show a single classad\n"
      "\t  -modular\t\tCauses -long to show a classad per userprio record\n"
