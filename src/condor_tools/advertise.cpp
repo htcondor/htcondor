@@ -32,7 +32,7 @@
 #include "my_hostname.h"
 
 void
-usage( char *cmd )
+usage( const char *cmd , const char * opt)
 {
 	fprintf(stderr,"Usage: %s [options] <update-command> [<classad-filename>]\n",cmd);
 	fprintf(stderr,"Where options are:\n");
@@ -42,8 +42,75 @@ usage( char *cmd )
 	fprintf(stderr,"    -debug            Show extra debugging info\n");
 	fprintf(stderr,"    -tcp              Ship classad via TCP (default is UDP)\n");
 	fprintf(stderr,"    -multiple         Publish multiple ads, separated by blank lines\n");
-	fprintf(stderr,"\nExample: %s -debug UPDATE_STORAGE_AD adfile\n\n",cmd);
+
+	if (opt && ( !strcmp(opt,"all") || !strcmp(opt,"cmd"))) {
+		fprintf(stderr,"\nAnd <update-command> is one of:\n");
+		static const char * const aPre[] = {"UPDATE_", "MERGE_", "INVALIDATE_"};
+		for (int jj = 0; jj < (int)COUNTOF(aPre); ++jj) {
+			for (int id = UPDATE_STARTD_AD; id < UPDATE_STARTD_AD + 100; ++id) {
+				const char * cmdname = getCollectorCommandString(id);
+				if (cmdname && starts_with(cmdname, aPre[jj])) {
+					fprintf(stderr,"    %s\n",cmdname);
+				}
+			}
+		}
+	}
+
+	fprintf(stderr, "\nIf <classad-filename> does not exist or is -, classads will be read from standard input\n");
+	fprintf(stderr,"Example: %s -debug UPDATE_STORAGE_AD adfile\n\n",cmd);
 }
+
+// this class is used to help parse one or more ClassAd's from a FILE*
+class ToolClassAdFileParseHelper : public ClassAdFileParseHelper
+{
+ public:
+	// Some compilers whine when you have virtual methods but not an
+	// explicit virtual destructor
+	virtual ~ToolClassAdFileParseHelper() {}
+	ToolClassAdFileParseHelper(bool multi, FILE* errout) : multiple(multi), out(errout) {};
+
+	// return 0 to skip (is_comment), 1 to parse line, 2 for end-of-classad, -1 for abort
+	virtual int PreParse(std::string & line, ClassAd & /*ad*/, FILE* /*file*/) {
+		// if this line matches the ad delimitor, tell the parser to stop parsing
+		if (multiple && (line.empty() || (line[0] == '\n')))
+			return 2; //end-of-classad
+
+		// check for blank lines or lines whose first character is #
+		// tell the parse to skip those lines, otherwise tell the parser to
+		// parse the line.
+		for (size_t ix = 0; ix < line.size(); ++ix) {
+			if (line[ix] == '#' || line[ix] == '\n')
+				return 0; // skip this line, but don't stop parsing.
+			if (line[ix] != ' ' && line[ix] != '\t')
+				return 1; // parse this line
+		}
+		return 1; // parse this line.
+	}
+
+	// return 0 to skip and continue, 1 to re-parse line, 2 to quit parsing with success, -1 to abort parsing.
+	virtual int OnParseError(std::string & line, ClassAd & /*ad*/, FILE* file) {
+		// print out where we barfed to the log file
+		dprintf(D_ALWAYS,"failed to create classad; bad expr = '%s'\n", line.c_str());
+
+		if ( ! multiple) return -1; // abort
+
+		// skip the remainder of the ad by reading until we see eof or a blank line.
+		line = "";
+		while ( ! line.empty() && line[0] != '\n') {
+			if (feof(file))
+				break;
+			if ( ! readLine(line, file, false))
+				break;
+		}
+		return -1; // abort
+	}
+
+ private:
+	bool multiple;
+	FILE * out;
+	std::string delim;
+};
+
 
 void
 version()
@@ -66,14 +133,14 @@ int main( int argc, char *argv[] )
 	config();
 
 	for( i=1; i<argc; i++ ) {
-		if(!strcmp(argv[i],"-help")) {
-			usage(argv[0]);
+		if(!strcmp(argv[i],"-help") || !strcmp(argv[i],"--help")) {
+			usage(argv[0], argv[i+1] ? argv[i+1] : "cmd");
 			exit(0);
 		} else if(!strcmp(argv[i],"-pool")) {	
 			i++;
 			if(!argv[i]) {
 				fprintf(stderr,"-pool requires an argument.\n\n");
-				usage(argv[0]);
+				usage(argv[0], NULL);
 				exit(1);
 			}
 			pool = argv[i];
@@ -95,21 +162,21 @@ int main( int argc, char *argv[] )
 				command = getCollectorCommandNum(argv[i]);
 				if(command==-1) {
 					fprintf(stderr,"Unknown command name %s\n\n",argv[i]);
-					usage(argv[0]);
+					usage(argv[0], "all");
 					exit(1);
 				}
 			} else if(!filename) {
 				filename = argv[i];
 			} else {
 				fprintf(stderr,"Extra argument: %s\n\n",argv[i]);
-				usage(argv[0]);
+				usage(argv[0], NULL);
 				exit(1);
 			}
 		} else if(!strncmp(argv[i],"-many-connections", strlen(argv[i]))) { 
 			many_connections = true;
 		} else {
 			fprintf(stderr,"Unknown argument: %s\n\n",argv[i]);
-			usage(argv[0]);
+			usage(argv[0], NULL);
 			exit(1);
 		}
 	}
@@ -140,28 +207,32 @@ int main( int argc, char *argv[] )
 		return 1;
 	}
 
-	while(!feof(file)) {
-		int eof=0,error=0,empty=0;
-		char const *delim = "\n";
-		if( !allow_multiple ) {
-			delim = "***";
-		}
-		ClassAd *ad = new ClassAd(file,const_cast<char *>(delim),eof,error,empty);
-		if(error) {
-			fprintf(stderr,"couldn't parse ClassAd in %s\n",filename);
+	// create class that we can use to influence the behavior of Classad::InsertFromFile
+	ToolClassAdFileParseHelper parse_helper(allow_multiple, stderr);
+
+	for (;;) {
+		ClassAd *ad = new ClassAd();
+		int error;
+		bool eof;
+		int cAttrs = ad->InsertFromFile(file, eof, error, &parse_helper);
+		if (error < 0) {
+			fprintf(stderr,"couldn't parse ClassAd in %s\n", filename);
 			delete ad;
 			return 1;
 		}
-		if( empty ) {
+		if (cAttrs > 0) {
+			ads.Insert(ad);
+		} else {
 			delete ad;
+		}
+		if (eof) {
 			break;
 		}
 		if( !allow_multiple && ads.Length() > 0 ) {
-			fprintf(stderr,"ERROR: failed to parse '%s' as a ClassAd attribute\n",delim);
+			fprintf(stderr,"ERROR: multiple ads in %s\n", filename);
 			delete ad;
 			return 1;
 		}
-		ads.Insert(ad);
 	}
 
 	if(ads.Length() == 0) {
