@@ -42,6 +42,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug that would cause the \Condor{startd}
+to crash when \Macro{ALLOW\_PSLOT\_PREEMPTION} was enabled.
+\Ticket{5586}
+
 \item Fixed a memory leak in the \Condor{negotiator} when
 \Macro{ALLOW\_PSLOT\_PREEMPTION} was enabled.
 \Ticket{5571}
