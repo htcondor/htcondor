@@ -112,7 +112,12 @@ void zkm_base64_decode(const char *input,unsigned char **output, int *output_len
 	std::string tinput(input);
 	std::vector<BYTE> tvec =  Base64::zkm_base64_decode(tinput);
 	*output_length = tvec.size();
-	*output=(unsigned char*)malloc(*output_length);
-	memcpy(*output, tvec.data(), *output_length);
+	if (*output_length > 0 ) {
+		*output=(unsigned char*)malloc(*output_length);
+		// We want to use the .data() method on a vector, but
+		// this needs to wait until all platforms support C++11 standard.
+		// Do memcpy(*output, tvec.data(), *output_length);
+		memcpy(*output, &tvec.front(), *output_length);
+	}
 }
 
