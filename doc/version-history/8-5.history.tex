@@ -29,7 +29,12 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item \Condor{user\_prio} now queries the \Condor{collector} for 
+accounting information by default, when appropriate.  This should be
+much faster than the older way of querying the \Condor{negotiator}. The
+old path is still available by passing the -negotiator option to the
+tool.
+\Ticket{5508}.
 
 \end{itemize}
 
