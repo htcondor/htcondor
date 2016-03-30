@@ -1,7 +1,25 @@
+/***************************************************************
+ *
+ * Copyright (C) 1990-2016, Condor Team, Computer Sciences Department,
+ * University of Wisconsin-Madison, WI.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you
+ * may not use this file except in compliance with the License.  You may
+ * obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ ***************************************************************/
+
+#include "condor_common.h"
+
 #include "zkm_base64.h"
-#include <string.h>
-#include <iostream>
-#include <stdlib.h>
 
 static const std::string base64_chars = 
              "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -112,7 +130,12 @@ void zkm_base64_decode(const char *input,unsigned char **output, int *output_len
 	std::string tinput(input);
 	std::vector<BYTE> tvec =  Base64::zkm_base64_decode(tinput);
 	*output_length = tvec.size();
-	*output=(unsigned char*)malloc(*output_length);
-	memcpy(*output, tvec.data(), *output_length);
+	if (*output_length > 0 ) {
+		*output=(unsigned char*)malloc(*output_length);
+		// We want to use the .data() method on a vector, but
+		// this needs to wait until all platforms support C++11 standard.
+		// Do memcpy(*output, tvec.data(), *output_length);
+		memcpy(*output, &tvec.front(), *output_length);
+	}
 }
 
