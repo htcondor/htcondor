@@ -41,11 +41,14 @@ void simple_scramble(char* scrambled,  const char* orig, int len)
 //
 int write_password_file(const char* path, const char* password)
 {
+	// starting in 8.5.4, we write the file with no trailing NULLs.  this
+	// is because the passwords in the future may be read as binary data
+	// and the NULL would matter.  8.4.X is cool with no trailing NULL.
 	size_t password_len = strlen(password);
-	char *scrambled_password = (char*)malloc(password_len + 1);
-	memset(scrambled_password, 0, password_len + 1);
+	char *scrambled_password = (char*)malloc(password_len);
+	memset(scrambled_password, 0, password_len);
 	simple_scramble(scrambled_password, password, password_len);
-	int rc = write_secure_file(path, scrambled_password, password_len + 1, true);
+	int rc = write_secure_file(path, scrambled_password, password_len, true);
 	free(scrambled_password);
 	return rc;
 }
