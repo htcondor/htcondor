@@ -1,0 +1,52 @@
+From 3fe819d2daf673e0422b30726b6a422c393a3ee2 Mon Sep 17 00:00:00 2001
+From: Mihir Shete <mihirsht@gmail.com>
+Date: Mon, 21 Mar 2016 14:58:39 -0500
+Subject: [PATCH] condor_tests: handle job_test_scheddroation timeout
+
+Do no stop the test and report failure when all the jobs
+submitted as part of scheddroation do not stop successfully.
+We will just remove all the pending jobs from the queue and
+proceed with the test to check if the logs have rotated.
+---
+ src/condor_tests/job_test_scheddrotation.run | 18 ++++++++++++++++++
+ 1 file changed, 18 insertions(+)
+
+diff --git a/src/condor_tests/job_test_scheddrotation.run b/src/condor_tests/job_test_scheddrotation.run
+index f7472f2..6ec0a13 100755
+--- a/src/condor_tests/job_test_scheddrotation.run
++++ b/src/condor_tests/job_test_scheddrotation.run
+@@ -81,6 +81,22 @@ Condor::SetAllowedEvents("RegisterEvictedWithoutCheckpoint,RegisterSubmit,Regist
+ 	#timestamp();
+ #};
+ 
++sub on_timeout
++{
++	my @adarray = ();
++	my $now = CondorTest::timestamp();
++	print "SimpleJob timeout expired!\n";
++	runCondorTool("condor_status", \@adarray, 2, {emit_output=>1});
++	runCondorTool("condor_q", \@adarray, 2, {emit_output=>1});
++	runCondorTool("condor_rm -all", \@adarray, 2, {emit_output=>1});
++};
++
++sub on_abort
++{
++	my $now = CondorTest::timestamp();
++	print "$now SimpleJob aborted!\n";
++};
++
+ print "First test basic job\n";
+ $result = SimpleJob::RunCheck(
+ 	queue_sz => 40,
+@@ -89,6 +105,8 @@ $result = SimpleJob::RunCheck(
+ 	#on_success => \&on_success,
+ 	#on_submit => \&on_submit,
+ 	#on_imageupdated => \&on_imageupdated,
++	alt_timed => \&on_timeout,
++	abort_fn => \&on_abort
+ ); # jobid 1
+ 
+ my $return = "";
+-- 
+1.9.1
+
