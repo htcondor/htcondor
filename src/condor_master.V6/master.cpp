@@ -837,7 +837,7 @@ handle_shutdown_program( int cmd, Stream* stream )
 	pname += name;
 	char	*path = param( pname.Value() );
 	if ( NULL == path ) {
-		dprintf( D_ALWAYS, "No shutdown program defined for '%s'\n", name );
+		dprintf( D_ALWAYS, "No shutdown program defined for '%s'\n", name.c_str() );
 		return FALSE;
 	}
 
