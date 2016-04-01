@@ -3416,6 +3416,26 @@ usage (const char *myName, int other)
 	}
 }
 
+static void print_xml_footer()
+{
+	if( use_xml ) {
+			// keep this consistent with AttrListList::fPrintAttrListList()
+		std::string line;
+		AddClassAdXMLFileFooter(line);
+		fputs(line.c_str(), stdout);
+	}
+}
+
+static void print_xml_header(const char * /*source_label*/)
+{
+	if( use_xml ) {
+			// keep this consistent with AttrListList::fPrintAttrListList()
+		std::string line;
+		AddClassAdXMLFileHeader(line);
+		fputs(line.c_str(), stdout);
+	}
+}
+
 static void
 print_full_footer()
 {
@@ -3427,12 +3447,6 @@ print_full_footer()
 				completed,removed,idle,running,held,suspended);
 		if (malformed>0) printf( ", %d malformed",malformed);
 		printf("\n");
-	}
-	if( use_xml ) {
-			// keep this consistent with AttrListList::fPrintAttrListList()
-		std::string xml;
-		AddClassAdXMLFileFooter(xml);
-		printf("%s\n", xml.c_str());
 	}
 }
 
@@ -3460,12 +3474,6 @@ print_full_header(const char * source_label)
 			}
 #endif
 		}
-	}
-	if( use_xml ) {
-			// keep this consistent with AttrListList::fPrintAttrListList()
-		std::string xml;
-		AddClassAdXMLFileHeader(xml);
-		printf("%s\n", xml.c_str());
 	}
 }
 
@@ -4104,6 +4112,9 @@ show_db_queue( const char* quill_name, const char* db_ipAddr, const char* db_nam
 	std::string source_label;
 	formatstr(source_label, "Quill: %s : %s : %s : ", quill_name, db_ipAddr, db_name);
 
+	// for xml output, we want to get the header out first, and print it even if there are no jobs.
+	print_xml_header(source_label.c_str());
+
 	// choose a processing option for jobad's as the come off the wire.
 	// for -long -xml and -analyze, we need to save off the ad in a ClassAdList
 	// for -stream we print out the ad 
@@ -4168,6 +4179,7 @@ show_db_queue( const char* quill_name, const char* db_ipAddr, const char* db_nam
 	// we just need to write the footer/summary
 	if (g_stream_results) {
 		print_full_footer();
+		print_xml_footer();
 		return true;
 	}
 
@@ -4212,6 +4224,7 @@ show_db_queue( const char* quill_name, const char* db_ipAddr, const char* db_nam
 	if ( ! global || dag_map.size() > 0 || jobs.Length() > 0) {
 		print_full_footer();
 	}
+	print_xml_footer();
 
 	return true;
 }
@@ -5082,6 +5095,9 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 	ClassAdList jobs;  // this will get filled in for -long -xml and -analyze
 	CondorError errstack;
 
+	// for xml output, we want to get the header out first, and print it even if there are no jobs.
+	print_xml_header(source_label.c_str());
+
 	// choose a processing option for jobad's as the come off the wire.
 	// for -long -xml and -analyze, we need to save off the ad in a ClassAdList
 	// for -stream we print out the ad 
@@ -5146,6 +5162,7 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 	// we just need to write the footer/summary
 	if (g_stream_results) {
 		print_full_footer();
+		print_xml_footer();
 		return true;
 	}
 
@@ -5210,6 +5227,7 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 	if ( ! global || cResults > 0 || jobs.Length() > 0) {
 		print_full_footer();
 	}
+	print_xml_footer();
 
 	return true;
 }
@@ -5363,6 +5381,9 @@ show_file_queue(const char* jobads, const char* userlog)
 		return print_jobs_analysis(jobs, source_label.c_str(), NULL);
 	}
 
+	// for xml output, we want to get the header out first, and print it even if there are no jobs.
+	print_xml_header(source_label.c_str());
+
 	// TJ: copied this from the top of init_output_mask
 	if ( dash_run || dash_goodput || dash_globus || dash_grid )
 		summarize = false;
@@ -5400,6 +5421,7 @@ show_file_queue(const char* jobads, const char* userlog)
 
 		print_full_footer();
 	}
+	print_xml_footer();
 
 	return true;
 }
