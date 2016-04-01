@@ -53,6 +53,8 @@ struct SubmitDagShallowOptions
 	MyString primaryDagFile;
 	StringList	dagFiles;
 	bool doRecovery;
+	bool bPostRun;
+	bool bPostRunSet; // whether this was actually set on the command line
 
 	// non-command line options
 	MyString strLibOut;
@@ -64,12 +66,12 @@ struct SubmitDagShallowOptions
 	MyString strLockFile;
 	bool copyToSpool;
 	int iDebugLevel;
-	bool bPostRun;
 
 	SubmitDagShallowOptions() 
 	{ 
 		bSubmit = true;
-		bPostRun = true;
+		bPostRun = false;
+		bPostRunSet = false;
 		strRemoteSchedd = "";
 		strScheddDaemonAdFile = "";
 		strScheddAddressFile = "";

@@ -10968,12 +10968,16 @@ in section~\ref{sec:DAG-configuration}.
 
 \label{param:DAGmanAlwaysRunPost}
 \item[\Macro{DAGMAN\_ALWAYS\_RUN\_POST}]
-  A boolean value defining whether \Condor{dagman} will ignore the return value
-  of a PRE script when deciding to run a POST script.  The default is
-  \Expr{True}, which says that the POST script will run regardless of the return
-  value of the PRE script. Changing this to \Expr{False} will restore old
-  behavior of \Condor{dagman}, which is that the failure of a PRE script causes
-  the POST script to not be executed.
+  A boolean value defining whether \Condor{dagman} will ignore the
+  return value of a PRE script when deciding whether to run a POST
+  script.  The default is \Expr{False}, which means that the failure
+  of a PRE script causes the POST script to not be executed.
+  Changing this to \Expr{True} will restore the previous
+  behavior of \Condor{dagman}, which is that a POST script is always
+  executed, even if the PRE script fails.
+  (The default for this value had originally been \Expr{False}, was
+  changed to \Expr{True} in version 7.7.2, and then was changed back
+  to \Expr{False} in version 8.5.4.)
 
 \label{param:DAGmanHoldClaimTime}
 \item[\Macro{DAGMAN\_HOLD\_CLAIM\_TIME}]
