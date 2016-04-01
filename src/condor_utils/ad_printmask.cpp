@@ -1357,6 +1357,18 @@ render (MyRowOfValues & rov, AttrList *al, AttrList *target /* = NULL */)
 				col_is_valid = true;
 			} else {
 				col_is_valid = EvalExprTree(tree, al, target, *pval);
+				if (col_is_valid) {
+					// since we want to hold on to these Values after we throw away the input
+					// Classad al. We have to deep copy any Values of type list here.
+					// note that this problem will also occurr with values of type classad
+					// but we don't currently have a shared_ptr flavor of nested classads
+					// so we can't actually fix that here right now.
+					classad::ExprList * plist = NULL;
+					if (pval->IsListValue(plist) && plist) {
+						classad_shared_ptr<classad::ExprList> lst( (classad::ExprList*)plist->Copy() );
+						pval->SetListValue(lst);
+					}
+				}
 			}
 
 			// if we made the tree, then unmake it now.
