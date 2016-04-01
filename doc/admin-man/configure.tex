@@ -9381,8 +9381,8 @@ Configuration File Macros}
   from other HTCondor daemons. On Unix, this should point to a file system
   location that can be used for a named pipe. On Windows, named pipes
   are also used but they do not exist in the file system. The default
-  setting therefore depends on the platform: 
-  \verb@$(LOCK)/procd_pipe@ on Unix and
+  setting therefore depends on the platform and distribution: 
+  \verb@$(LOCK)/procd_pipe@ or \verb@$(RUN)/procd_pipe@ on Unix and
 %  \Code{$\backslash$$\backslash$.$\backslash$pipe$\backslash$procd\_pipe}
   \verb@\\.\pipe\procd_pipe@ on Windows.
 
