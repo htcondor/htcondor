@@ -275,6 +275,7 @@ public:
 	classad::Value * next(int & index);
 	MyRowOfValues& operator+=(const classad::Value &S) { cat(S); return *this; }
 
+	bool empty() { return cols > 0; }
 	int ColCount() { return cols; }
 	classad::Value * Column(int index) {
 		if (index < 0) index = cols+index;

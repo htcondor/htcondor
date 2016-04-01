@@ -51,13 +51,13 @@ TrackTotals::
 }
 
 int TrackTotals::
-update (ClassAd *ad)
+update (ClassAd *ad, int options, const char * _key /*=NULL*/)
 {
 	ClassTotal *ct;
-	MyString	key;
+	MyString	key(_key);
 	int		   	rval;
 
-	if (!ClassTotal::makeKey(key, ad, ppo)) 
+	if ( key.empty() && ! ClassTotal::makeKey(key, ad, ppo))
 	{
 		malformed++;
 		return 0;
@@ -74,8 +74,8 @@ update (ClassAd *ad)
 		}
 	}
 
-	rval = ct->update(ad);
-	topLevelTotal->update(ad);
+	rval = ct->update(ad, options);
+	topLevelTotal->update(ad, options);
 
 	if (rval == 0) malformed++;
 
@@ -116,6 +116,7 @@ displayTotals (FILE *file, int keyLength)
 	MyString	key;
 	int k;
 	bool auto_key_length = keyLength < 0;
+	if (auto_key_length) { keyLength = 5; } // must be at least 5 for "Total"
 
 	// display totals only for meaningful modes
 	if ( ! haveTotals()) return;
@@ -192,11 +193,41 @@ StartdNormalTotal()
 
 
 int StartdNormalTotal::
-update (ClassAd *ad)
+update (ClassAd *ad, int options)
 {
 	char state[32];
 
-	if (!ad->LookupString (ATTR_STATE, state, sizeof(state))) return 0;
+	bool partitionable_slot = false;
+	bool dynamic_slot = false;
+	if (options) {
+		ad->LookupBool(ATTR_SLOT_PARTITIONABLE, partitionable_slot);
+		if ( ! partitionable_slot) { ad->LookupBool(ATTR_SLOT_DYNAMIC, dynamic_slot); }
+	}
+
+	if ((options & TOTALS_OPTION_IGNORE_PARTITIONABLE) && partitionable_slot) return 1;
+	if ((options & TOTALS_OPTION_IGNORE_DYNAMIC) && dynamic_slot) return 1;
+	if ((options & TOTALS_OPTION_ROLLUP_PARTITIONABLE) && partitionable_slot) {
+		classad::Value lval;
+		const classad::ExprList* plist = NULL;
+		if ( ! ad->EvaluateAttr("Child" ATTR_STATE, lval) || ! lval.IsListValue(plist)) return 1; // ChildState can be validly empty
+		classad::ExprList::const_iterator it;
+		for (it = plist->begin(); it != plist->end(); ++it) {
+			const classad::ExprTree * pexpr = *it;
+			classad::Value val;
+			if (pexpr->Evaluate(val) && val.IsStringValue(state,sizeof(state))) {
+				update(state);
+			}
+		}
+		return 1;
+	} else {
+		if (!ad->LookupString (ATTR_STATE, state, sizeof(state))) return 0;
+		return update(state);
+	}
+}
+
+int StartdNormalTotal::
+update (const char * state)
+{
 	switch (string_to_state (state))
 	{
 		case owner_state: 		owner++; 		break;
@@ -257,12 +288,18 @@ StartdServerTotal()
 
 
 int StartdServerTotal::
-update (ClassAd *ad)
+update (ClassAd *ad, int options)
 {
 	char state[32];
-	int	 attrMem, attrDisk, attrMips, attrKflops;
+	int	 attrMem, attrDisk, attrMips, attrKflops = 0;
 	bool badAd = false;
-	State s;
+
+	bool partitionable_slot = false;
+	bool dynamic_slot = false;
+	if (options) {
+		ad->LookupBool(ATTR_SLOT_PARTITIONABLE, partitionable_slot);
+		if ( ! partitionable_slot) { ad->LookupBool(ATTR_SLOT_DYNAMIC, dynamic_slot); }
+	}
 
 	// if ATTR_STATE is not found, abort this ad
 	if (!ad->LookupString (ATTR_STATE, state, sizeof(state))) return 0;
@@ -273,7 +310,7 @@ update (ClassAd *ad)
 	if (!ad->LookupInteger(ATTR_MIPS,  attrMips)){ badAd = true; attrMips = 0;}
 	if (!ad->LookupInteger(ATTR_KFLOPS,attrKflops)){badAd= true;attrKflops = 0;}
 
-	s = string_to_state(state);
+	State s = string_to_state(state);
 	if (s == claimed_state || s == unclaimed_state)
 		avail++;
 
@@ -318,11 +355,18 @@ StartdRunTotal()
 
 
 int StartdRunTotal::
-update (ClassAd *ad)
+update (ClassAd *ad, int options)
 {
 	int attrMips, attrKflops;
 	float attrLoadAvg;
 	bool badAd = false;
+
+	bool partitionable_slot = false;
+	bool dynamic_slot = false;
+	if (options) {
+		ad->LookupBool(ATTR_SLOT_PARTITIONABLE, partitionable_slot);
+		if ( ! partitionable_slot) { ad->LookupBool(ATTR_SLOT_DYNAMIC, dynamic_slot); }
+	}
 
 	if (!ad->LookupInteger(ATTR_MIPS, attrMips)) { badAd = true; attrMips = 0;}
 	if (!ad->LookupInteger(ATTR_KFLOPS, attrKflops)){badAd=true; attrKflops=0;}
@@ -373,16 +417,46 @@ StartdStateTotal()
 }
 
 int StartdStateTotal::
-update( ClassAd *ad )
+update (ClassAd *ad, int options)
 {
-	char	stateStr[32];
-	State	state;
+	char state[32];
 
-	machines ++;
+	bool partitionable_slot = false;
+	bool dynamic_slot = false;
+	if (options) {
+		ad->LookupBool(ATTR_SLOT_PARTITIONABLE, partitionable_slot);
+		if ( ! partitionable_slot) { ad->LookupBool(ATTR_SLOT_DYNAMIC, dynamic_slot); }
+	}
 
-	if( !ad->LookupString( ATTR_STATE , stateStr, sizeof(stateStr) ) ) return false;
-	state = string_to_state( stateStr );
-	switch( state ) {
+	if ((options & TOTALS_OPTION_IGNORE_PARTITIONABLE) && partitionable_slot) return 1;
+	if ((options & TOTALS_OPTION_IGNORE_DYNAMIC) && dynamic_slot) return 1;
+	if ((options & TOTALS_OPTION_ROLLUP_PARTITIONABLE) && partitionable_slot) {
+		classad::Value lval;
+		const classad::ExprList* plist = NULL;
+		if ( ! ad->EvaluateAttr("Child" ATTR_STATE, lval) || ! lval.IsListValue(plist)) return 1;
+		classad::ExprList::const_iterator it;
+		for (it = plist->begin(); it != plist->end(); ++it) {
+			const classad::ExprTree * pexpr = *it;
+			classad::Value val;
+			if (pexpr->Evaluate(val) && val.IsStringValue(state,sizeof(state))) {
+				update(state);
+			}
+		}
+		return 1;
+	} else {
+		if (!ad->LookupString (ATTR_STATE, state, sizeof(state))) return 0;
+		return update(state);
+	}
+
+	++machines;
+	return 1;
+}
+
+
+int StartdStateTotal::
+update (const char * state)
+{
+	switch (string_to_state(state)) {
 		case owner_state	:	owner++;		break;
 		case unclaimed_state:	unclaimed++;	break;
 		case claimed_state	:	claimed++;		break;
@@ -394,10 +468,10 @@ update( ClassAd *ad )
 		case drained_state:		drained++;	break;
 		default				:	return false;
 	}
-
 	return 1;
 }
-		
+
+
 
 void StartdStateTotal::
 displayHeader(FILE *file)
@@ -455,7 +529,7 @@ StartdCODTotal::updateTotals( ClassAd* ad, const char* id )
 }
 
 int StartdCODTotal::
-update( ClassAd *ad )
+update (ClassAd *ad, int /*options*/)
 {
 	StringList cod_claim_list;
 	char* cod_claims = NULL;
@@ -497,7 +571,7 @@ QuillNormalTotal()
 }
 
 int QuillNormalTotal::
-update (ClassAd *ad)
+update (ClassAd *ad, int /*options*/)
 {
 	int attrSqlTotal, attrSqlLastBatch;
 	bool badAd = false;
@@ -543,7 +617,7 @@ ScheddNormalTotal()
 
 
 int ScheddNormalTotal::
-update (ClassAd *ad)
+update (ClassAd *ad, int /*options*/)
 {
 	int attrRunning, attrIdle, attrHeld;;
 	bool badAd = false;
@@ -594,7 +668,7 @@ ScheddSubmittorTotal()
 
 
 int ScheddSubmittorTotal::
-update (ClassAd *ad)
+update (ClassAd *ad, int /*options*/)
 {
 	int attrRunning=0, attrIdle=0, attrHeld=0;
 	bool badAd = false;
@@ -641,7 +715,7 @@ CkptSrvrNormalTotal()
 }
 
 int CkptSrvrNormalTotal::
-update (ClassAd *ad)
+update (ClassAd *ad, int /*options*/)
 {
 	int attrDisk = 0;
 

@@ -24,8 +24,8 @@
 #include "status_types.h"
 #include "totals.h"
 
+// use old diagnostic names when comparing v8.3 to v8.5
 #define USE_OLD_DIAGNOSTIC_NAMES 1
-#define USE_PROJECTION_SET 1
 
 
 //extern AdTypes	type;
@@ -117,7 +117,6 @@ getPPStyleStr (ppOption pps)
 	return "<Unknown!>";
 }
 
-#if 1
 int setPPstyle (ppOption pps, int arg_index, const char * argv)
 {
 	// if the style has already been set, and is trying to be reset by default
@@ -163,63 +162,6 @@ int setPPstyle (ppOption pps, int arg_index, const char * argv)
 		return -1;
 	}
 }
-#else
-void
-setPPstyle (ppOption pps, int i, const char *argv)
-{
-    static int setBy = 0;
-    static const char *setArg = NULL;
-
-	if (argv == NULL && i < 0) {
-		fprintf (i==-2?stderr:stdout,"PrettyPrint: %s   (Set by arg %d '%s')\nTotals: %s\n",
-				getPPStyleStr(ppStyle), setBy, setArg, getPPStyleStr(pps));
-		return;
-	}
-		
-	// if the style has already been set, and is trying to be reset by default
-	// rules, override the default  (i.e., don't make a change)
-	if (setBy != 0 && i == 0)
-		return;
-
-	// If -long or -xml or -format are specified, do not reset to
-	// "normal" style when followed by a flag such as -startd.
-	if( ppStyle == PP_XML || ppStyle == PP_VERBOSE || ppStyle == PP_CUSTOM )
-	{
-		if( pps != PP_XML && pps != PP_VERBOSE && pps != PP_CUSTOM ) {
-				// ignore this style setting and keep our existing setting
-			return;
-		}
-	}
-
-	// If setting a 'normal' output, check to see if there is a user-defined normal output
-	if ( ! disable_user_print_files && ! explicit_format
-		&& pps != PP_XML && pps != PP_VERBOSE && pps != PP_CUSTOM && pps != ppStyle) {
-		MyString param_name("STATUS_DEFAULT_"); param_name += getAdTypeStr(setby.adType); param_name += "_PRINT_FORMAT_FILE";
-		char * pf_file = param(param_name.c_str());
-		if (pf_file) {
-			struct stat stat_buff;
-			if (0 != stat(pf_file, &stat_buff)) {
-				// do nothing, this is not an error.
-			} else if (set_status_print_mask_from_stream(pf_file, true, &mode_constraint) < 0) {
-				fprintf(stderr, "Warning: default %s select file '%s' is invalid\n", getAdTypeStr(setby.adType), pf_file);
-			} else {
-				using_print_format = true;
-			}
-			free(pf_file);
-		}
-	}
-
-    if ( (PP_XML == pps) || PP_VERBOSE == pps || (ppStyle <= pps || setBy == 0) ) {
-        ppStyle = pps;
-        setBy = i;
-        setArg = argv;
-    } else {
-        fprintf (stderr, "Error:  arg %d (%s) contradicts arg %d (%s)\n",
-                            i, argv, setBy, setArg);
-        exit (1);
-    }
-}
-#endif
 
 #ifdef USE_OLD_DIAGNOSTIC_NAMES
 const char * getOldModeStr(int sdo_mode)
@@ -274,8 +216,6 @@ const char * getOldAdTypeStr (AdTypes type)
 #endif
 
 
-#if 1
-
 // this table defines the default ad type and output format for each
 // of the command line arguments that defines such.
 // for instance  -schedd sets the
@@ -323,168 +263,10 @@ const char * getSDOModeStr(int sm) {
 	return "<Unknown mode!>";
 }
 
-#else
-const char *
-getTypeStr ()
-{
-	switch (type)
-	{
-		case DEFRAG_AD:		return "DEFRAG";
-		case STARTD_AD:		return "STARTD";
-		case SCHEDD_AD:		return "SCHEDD";
-		case SUBMITTOR_AD:	return "SUBMITTOR";
-		case MASTER_AD:		return "MASTER";
-		case CKPT_SRVR_AD:	return "CKPT_SRVR";
-		case GATEWAY_AD:	return "GATEWAYS";
-		case COLLECTOR_AD:	return "COLLECTOR";
-	    case NEGOTIATOR_AD: return "NEGOTIATOR";
-		case GRID_AD:       return "GRID";
-		case LICENSE_AD:	return "LICENSE";
-		case STORAGE_AD:	return "STORAGE";
-		case ANY_AD:		return "ANY";
-		case GENERIC_AD:	return "GENERIC";
-        default: 			return "<Unknown type!>";
-	}
-	// should never get here
-	exit (1);
-}
-#endif
 
-#if 0
-
-static void
-setType (const char *dtype, int i, const char *argv)
-{
-#if 1
-	int setBy = setby.typeIndex;
-	const char * setArg = setby.typeArg;
-#else
-    static int setBy = 0;
-    static const char *setArg = NULL;
-
-	if (argv == NULL) {
-		fprintf (i==-2?stderr:stdout,"Query type: %s   (Set by arg %d '%s')\n", getTypeStr(), setBy, setArg);
-		return;
-	}
-#endif
-
-	// if the type has already been set, and is trying to be reset by default
-	// rules, override the default  (i.e., don't make a change)
-	if (setBy != 0 && i == 0)
-		return;
-
-    if (setArg == NULL) {
-        if (strcmp (dtype, "STARTD") == 0) {
-            type = STARTD_AD;
-        } else
-        if (strcmp (dtype, "LICENSE") == 0) {
-            type = LICENSE_AD;
-        } else
-
-#ifdef HAVE_EXT_POSTGRESQL
-        if (strcmp (dtype, "QUILL") == 0) {
-            type = QUILL_AD;
-        } else
-#endif /* HAVE_EXT_POSTGRESQL */
-
-        if (strcmp (dtype, "DEFRAG") == 0) {
-            type = DEFRAG_AD;
-        } else
-        if (strcmp (dtype, "SCHEDD") == 0) {
-            type = SCHEDD_AD;
-        } else
-		if (strcmp (dtype, "SUBMITTOR") == 0) {
-			type = SUBMITTOR_AD;
-		} else
-        if (strcmp (dtype, "MASTER") == 0) {
-            type = MASTER_AD;
-        } else
-        if (strcmp (dtype, "CKPT_SRVR") == 0) {
-            type = CKPT_SRVR_AD;
-        } else
-        if (strcmp (dtype, "COLLECTOR") == 0) {
-            type = COLLECTOR_AD;
-		} else
-        if (strcmp (dtype, "NEGOTIATOR") == 0) {
-            type = NEGOTIATOR_AD;
-        } else
-        if (strcmp (dtype, "GATEWAYS") == 0) {
-            type = GATEWAY_AD;
-        } else
-		if (strcmp(dtype, "GRID") == 0) {
-			type = GRID_AD;
-		} else
-	    if (strcmp (dtype, "STORAGE") == 0) {
-            type = STORAGE_AD;
-        } else
-        if (strcmp(dtype, "GENERIC") == 0) {
-	        type = GENERIC_AD;
-        } else
-        if (strcmp(dtype, "ANY") == 0) {
-	        type = ANY_AD;
-        } else
-        if (strcmp(dtype, "HAD") == 0) {
-	        type = HAD_AD;
-        } else {
-            fprintf (stderr, "Error:  Unknown entity type: %s\n", dtype);
-            exit (1);
-        }
-#if 1
-        setby.typeIndex = i;
-        setby.typeArg = argv;
-#else
-        setBy = i;
-        setArg = argv;
-#endif
-    } else {
-#if 1
-        fprintf (stderr, "Error:  Daemon type implied by arg %d (%s) contradicts arg %d (%s)\n",
-                 i, argv, setby.typeIndex, setby.typeArg);
-#else
-        fprintf (stderr,
-        "Error:  Daemon type implied by arg %d (%s) contradicts arg %d (%s)\n",
-        	i, argv, setBy, setArg);
-#endif
-    }
-}
-
-const char *
-getModeStr()
-{
-	switch (mode)
-	{
-		case MODE_NOTSET:		return "Not set";
-		case MODE_DEFRAG_NORMAL:	return "Normal (Defrag)";
-		case MODE_STARTD_NORMAL:	return "Normal (Startd)";
-		case MODE_STARTD_AVAIL:		return "Available (Startd)";
-		case MODE_STARTD_RUN:		return "Run (Startd)";
-		case MODE_STARTD_COD:		return "COD (Startd)";
-#ifdef HAVE_EXT_POSTGRESQL
-		case MODE_QUILL_NORMAL:		return "Normal (Quill)";
-#endif /* HAVE_EXT_POSTGRESQL */
-
-		case MODE_SCHEDD_NORMAL:	return "Normal (Schedd)";
-		case MODE_SCHEDD_SUBMITTORS:	return "Submittors (Schedd)";
-		case MODE_MASTER_NORMAL:	return "Normal (Master)";
-		case MODE_CKPT_SRVR_NORMAL:	return "Normal (CkptSrvr)";
-		case MODE_COLLECTOR_NORMAL:	return "Normal (Collector)";
-		case MODE_NEGOTIATOR_NORMAL:	return "Normal (Negotiator)";
-		case MODE_GRID_NORMAL:          return "Normal (Grid)";
-		case MODE_STORAGE_NORMAL:	return "Normal (Storage)";
-		case MODE_GENERIC_NORMAL:	return "Normal (Generic)";
-		case SDO_Other:		return "Generic";
-		case MODE_HAD_NORMAL:		return "Had";
-		case MODE_ANY_NORMAL:		return "Normal (Any)";
-		default:			return "<Unknown!>";
-	}
-	// should never get here
-	exit (1);
-}
-#endif
 
 AdTypes setMode (int sm, int i, const char *argv)
 {
-#if 1
 	if ( ! setby.argIndex) { // if not yet set. 
 		AdTypes adType = NO_AD;
 		ppOption pps = PP_NOTSET;
@@ -515,129 +297,6 @@ AdTypes setMode (int sm, int i, const char *argv)
 		}
 	}
 	return setby.adType;
-#else
-    static int setBy = 0;
-    static const char *setArg = NULL;
-
-	if (argv == NULL) {
-		fprintf(i==-2?stderr:stdout,"Mode: %s   (Set by arg %d '%s')\n", getModeStr(), setBy, setArg);
-		return;
-	}
-
-    if (setBy == 0) {
-        mode = mod;
-        switch (mod) {
-          case MODE_DEFRAG_NORMAL:
-            setType ("DEFRAG", i, argv);
-            setPPstyle (PP_GENERIC_NORMAL, i, argv);
-            break;
-
-          case MODE_STARTD_NORMAL:
-            setType ("STARTD", i, argv);
-            setPPstyle (PP_STARTD_NORMAL, i, argv);
-            break;
-
-          case MODE_STARTD_AVAIL:
-            setType ("STARTD", i, argv);
-            setPPstyle (PP_STARTD_NORMAL, i, argv);
-            break;
-
-          case MODE_STARTD_RUN:
-            setType ("STARTD", i, argv);
-            setPPstyle (PP_STARTD_RUN, i, argv);
-            break;
-
-          case MODE_STARTD_COD:
-            setType ("STARTD", i, argv);
-            setPPstyle (PP_STARTD_COD, i, argv);
-            break;
-
-		  case MODE_SCHEDD_NORMAL:
-            setType ("SCHEDD", i, argv);
-            setPPstyle (PP_SCHEDD_NORMAL, i, argv);
-            break;
-
-#ifdef HAVE_EXT_POSTGRESQL
-		  case MODE_QUILL_NORMAL:
-            setType ("QUILL", i, argv);
-            setPPstyle (PP_QUILL_NORMAL, i, argv);
-            break;
-#endif /* HAVE_EXT_POSTGRESQL */
-
-		  case MODE_LICENSE_NORMAL:
-            setType ("LICENSE", i, argv);
-            setPPstyle (PP_VERBOSE, i, argv);
-            break;
-
-		  case MODE_SCHEDD_SUBMITTORS:
-            setType ("SUBMITTOR", i, argv);
-            setPPstyle (PP_SCHEDD_SUBMITTORS, i, argv);
-            break;
-
-		  case MODE_MASTER_NORMAL:
-			setType ("MASTER", i, argv);
-			setPPstyle (PP_MASTER_NORMAL, i, argv);
-			break;
-
-		  case MODE_COLLECTOR_NORMAL:
-			setType ("COLLECTOR", i, argv);
-			setPPstyle (PP_COLLECTOR_NORMAL, i, argv);
-			break;
-
-		  case MODE_NEGOTIATOR_NORMAL:
-			setType ("NEGOTIATOR", i, argv);
-			setPPstyle (PP_NEGOTIATOR_NORMAL, i, argv);
-			break;
-
-		  case MODE_CKPT_SRVR_NORMAL:
-			setType ("CKPT_SRVR", i, argv);
-			setPPstyle (PP_CKPT_SRVR_NORMAL, i, argv);
-			break;
-
-		  case MODE_STORAGE_NORMAL:
-			setType ("STORAGE", i, argv);
-			setPPstyle (PP_STORAGE_NORMAL, i, argv);
-			break;
-
-          case MODE_GRID_NORMAL:
-            setType ("GRID", i, argv);
-            setPPstyle (PP_GRID_NORMAL, i, argv);
-			break;
-
-		  case MODE_GENERIC_NORMAL:
-			setType ("GENERIC", i, argv);
-			setPPstyle (PP_GENERIC_NORMAL, i, argv);
-			break;
-
-		  case MODE_ANY_NORMAL:
-			setType ("ANY", i, argv);
-			setPPstyle (PP_ANY_NORMAL, i, argv);
-			break;
-
-		  case MODE_OTHER:
-			setType ("GENERIC", i, argv);
-			setPPstyle (PP_GENERIC, i, argv);
-			break;
-
-		  case MODE_HAD_NORMAL:
-			setType ("HAD", i, argv);
-			setPPstyle (PP_GENERIC, i, argv);
-			break;
-
-          default:
-            fprintf (stderr, "Error:  Illegal mode %d\n", mode);
-            break;
-        }
-        setBy = i;
-        setArg = argv;
-    } else {
-		if( strcmp(argv,setArg)!=0 ) {
-			fprintf (stderr, "Error:  Arg %d (%s) contradicts arg %d (%s)\n",
-					 i, argv, setBy, setArg);
-			exit (1);
-		}
-    }
-#endif
 }
 
 void dumpPPMode(FILE* out)
@@ -654,21 +313,4 @@ void dumpPPMode(FILE* out)
 	fprintf (out, "PrettyPrint: %s   (Set by arg %d '%s')\n", style_str, setby.ppArgIndex, setby.ppArg ? setby.ppArg : "NULL");
 }
 
-#ifdef USE_PROJECTION_SET
-#else
-const CustomFormatFnTable * getCondorStatusPrintFormats();
-void dumpPPMask (std::string & out, AttrListPrintMask & mask)
-{
-	extern List<const char> pm_head; // The list of headings for the mask entries
-	extern void prettyPrintInitMask();
-	prettyPrintInitMask();
-
-	List<const char> * pheadings = NULL;
-	if ( ! mask.has_headings()) {
-		if (pm_head.Length() > 0) pheadings = &pm_head;
-	}
-
-	mask.dump(out, getCondorStatusPrintFormats(), pheadings);
-}
-#endif
 

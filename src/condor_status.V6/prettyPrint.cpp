@@ -20,6 +20,7 @@
 #include "condor_common.h"
 #include "condor_api.h"
 #include "condor_adtypes.h"
+#include "condor_state.h"
 #include "status_types.h"
 #include "totals.h"
 #include "format_time.h"
@@ -27,6 +28,7 @@
 #include "metric_units.h"
 
 #define USE_LATE_PROJECTION 1
+#define USE_QUERY_CALLBACKS 1
 
 extern ppOption				ppStyle;
 extern AttrListPrintMask 	pm;
@@ -41,6 +43,7 @@ extern bool javaMode;
 extern bool vmMode;
 extern bool absentMode;
 extern bool offlineMode;
+extern bool compactMode;
 extern ClassAd *targetAd;
 
 extern char *format_time( int );
@@ -50,6 +53,10 @@ static int stashed_now = 0;
 
 void ppInitPrintMask(ppOption pps, classad::References & proj);
 const CustomFormatFnTable * getCondorStatusPrintFormats();
+
+static int width_of_fixed_cols = -1;       // set when using ppAdjustNameWidth
+static int prettyprint_ixCol_Name = -1;    // set by ppAdjustProjection, used by ppAdjustNameWidth
+static int prettyprint_ixCol_Machine = -1; // set by ppAdjustProjection, used by ppAdjustNameWidth
 
 #ifdef HAVE_EXT_POSTGRESQL
 void printQuillNormal 	(ClassAd *);
@@ -61,9 +68,11 @@ void printXML       	(ClassAd *, bool first_ad, bool last_ad);
 void printCustom    	(ClassAd *);
 
 static bool renderActivityTime(long long & atime, AttrList* , Formatter &);
+static bool renderActivityCode(std::string & str, AttrList* , Formatter &);
 static bool renderDueDate(long long & atime, AttrList* , Formatter &);
 static bool renderElapsedTime(long long & etime, AttrList* , Formatter &);
 static bool renderVersion(std::string & str, AttrList*, Formatter & fmt);
+static bool renderCondorPlatform(std::string & str, AttrList*, Formatter & fmt);
 static bool renderPlatform(std::string & str, AttrList*, Formatter & fmt);
 static const char* formatVersion(const char * condorver, Formatter &);
 static const char *formatRealTime( long long , Formatter &);
@@ -110,7 +119,7 @@ int getConsoleWindowSize(int * pHeight = NULL) {
 			*pHeight = (int)(ws.srWindow.Bottom - ws.srWindow.Top)+1;
 		return (int)ws.dwSize.X;
 	}
-	return 80;
+	return -1;
 }
 #else
 #include <sys/ioctl.h> 
@@ -123,24 +132,29 @@ int getConsoleWindowSize(int * pHeight = NULL) {
 			*pHeight = (int)ws.ws_row;
 		return (int) ws.ws_col;
 	}
-	return 80;
+	return -1;
 }
 #endif
 
 int  forced_display_width = 0;
-int getDisplayWidth() {
+int getDisplayWidth(bool * is_piped) {
+	if (is_piped) *is_piped = false;
 	if (forced_display_width <= 0) {
 		int width = getConsoleWindowSize();
-		if (width <= 0)
+		if (width <= 0) {
+			if (is_piped) *is_piped = true;
 			return wide_display ? 1024 : 80;
+		}
 		return width;
 	}
 	return forced_display_width;
 }
 
 void setPPwidth () { 
-	if (wide_display || forced_display_width) {
-		pm.SetOverallWidth(getDisplayWidth()-1);
+	bool is_piped = false;
+	int display_width = getDisplayWidth(&is_piped)-1;
+	if (forced_display_width || ( ! wide_display && ! is_piped) ) {
+		pm.SetOverallWidth(display_width);
 	}
 }
 
@@ -150,6 +164,7 @@ enum ivfield {
 	ShortInvalidField = 2,
 	CallInvalidField = 3,   // call the formatter function to generate invalid fields.  only valid when there is a format function.
 	FitToName = 4,
+	FitToMachine = 8,
 };
 class Lbl {
 public:
@@ -181,6 +196,7 @@ static int ppAltOpts(ivfield alt_in)
 		//opts |= AltFixMe;
 	}
 	if (alt_in & FitToName) { opts |= FormatOptionSpecial001; }
+	if (alt_in & FitToMachine) { opts |= FormatOptionSpecial002; }
 	return opts;
 }
 
@@ -280,7 +296,9 @@ void prettyPrintInitMask(classad::References & proj)
 // this struct used pass args to the ppAdjustProjection or ppAdjustNameWidth callback
 struct _adjust_widths_info {
 	int name_width;
+	int name_flags;
 	int machine_width;
+	int machine_flags;
 	classad::References * proj;
 };
 
@@ -295,6 +313,7 @@ int ppAdjustNameWidth(void*pv, int /*index*/, Formatter * fmt, const char * /*at
 			else if (wide_display && fmt->width < max_width && fmt->width < max_allowable) {
 				fmt->width = MIN(max_allowable, max_width); // grow column
 			}
+			fmt->options &= ~FormatOptionAutoWidth;
 		}
 	}
 	if (fmt->options & FormatOptionSpecial002) {
@@ -305,10 +324,132 @@ int ppAdjustNameWidth(void*pv, int /*index*/, Formatter * fmt, const char * /*at
 			else if (wide_display && fmt->width < max_width && fmt->width < max_allowable) {
 				fmt->width = MIN(max_allowable, max_width); // grow column
 			}
+			fmt->options &= ~FormatOptionAutoWidth;
 		}
 	}
 	return 0;
 }
+
+int ppCropNameWidth(void*pv, int /*index*/, Formatter * fmt, const char * /*attr*/)
+{
+	struct _adjust_widths_info * pi = (struct _adjust_widths_info *)pv;
+	if (fmt->options & FormatOptionSpecial001) {
+		if (pi->name_width) {
+			fmt->width = pi->name_width;
+			fmt->options &= ~FormatOptionAutoWidth;
+		}
+	}
+	if (fmt->options & FormatOptionSpecial002) {
+		if (pi->machine_width) {
+			fmt->width = pi->machine_width;
+			fmt->options &= ~FormatOptionAutoWidth;
+		}
+	}
+	return 0;
+}
+
+int ppFetchColumnWidths(void*pv, int /*index*/, Formatter * fmt, const char * /*attr*/)
+{
+	struct _adjust_widths_info * pi = (struct _adjust_widths_info *)pv;
+	if (fmt->options & FormatOptionSpecial001) {
+		pi->name_width = fmt->width;
+	}
+	if (fmt->options & FormatOptionSpecial002) {
+		pi->machine_width = fmt->width;
+	}
+	return 0;
+}
+
+#ifdef USE_QUERY_CALLBACKS
+
+ppOption prettyPrintHeadings (bool any_ads)
+{
+	ppOption pps = ppStyle;
+	bool no_headings = wantOnlyTotals || ! any_ads;
+	bool old_headings = (pps == PP_STARTD_COD) || (pps == PP_QUILL_NORMAL);
+	bool long_form = (pps == PP_VERBOSE) || (pps == PP_XML);
+	const char * newline_after_headings = "\n";
+	if ((pps == PP_CUSTOM) || using_print_format) {
+		pps = PP_CUSTOM;
+		no_headings = true;
+		newline_after_headings = NULL;
+		if ( ! wantOnlyTotals) {
+			bool fHasHeadings = pm.has_headings() || (pm_head.Length() > 0);
+			if (fHasHeadings) {
+				no_headings = (pmHeadFoot & HF_NOHEADER);
+			}
+		}
+	} else if (old_headings || long_form) {
+		no_headings = true;
+	} else {
+		// before we print headings, adjust the width of the name column
+		bool is_piped = false;
+		int display_width = getDisplayWidth(&is_piped)-1;
+		if (any_ads && ( ! wide_display && ! is_piped ) ) {
+			struct _adjust_widths_info wid_info = { 0, 0, 0, 0, NULL };
+			if (width_of_fixed_cols > 0) {
+				pm.adjust_formats(ppFetchColumnWidths, &wid_info);
+				int remain = display_width - width_of_fixed_cols;
+				if (prettyprint_ixCol_Name >= 0) remain -= wid_info.name_width;
+				if (prettyprint_ixCol_Machine >= 0) remain -= wid_info.machine_width;
+				if (remain < 0) {
+					int crop = -remain;
+					if (prettyprint_ixCol_Name >= 0) {
+						if (prettyprint_ixCol_Machine >= 0) {
+							int mwidth = MAX(7, wid_info.machine_width - (crop/2));
+							crop -= (wid_info.machine_width - mwidth);
+							wid_info.machine_width = mwidth;
+						}
+						wid_info.name_width = MAX(12, wid_info.name_width - crop);
+					} else if (prettyprint_ixCol_Machine >= 0) {
+						wid_info.machine_width = MAX(7, wid_info.machine_width - crop);
+					}
+					pm.adjust_formats(ppCropNameWidth, &wid_info);
+				}
+				//printf("\n_1234567890_2345678901_3456789012_4567890123_5678901234_6789012345_7890123456_8901234567_90123456789\n");
+			}
+		}
+	}
+	if ( ! no_headings) {
+		//adList.Rewind();
+		//ad = adList.Next();
+		ClassAd * ad = NULL;
+		// we pass an ad into ppDisplayHeadings so that it can adjust column widths.
+		ppDisplayHeadings(stdout, ad, newline_after_headings);
+	}
+
+	return pps;
+}
+
+void prettyPrintAd(ppOption pps, ClassAd *ad)
+{
+	if (!wantOnlyTotals) {
+		switch (pps) {
+		case PP_VERBOSE:
+			printVerbose(ad);
+			break;
+		case PP_STARTD_COD:
+			printCOD (ad);
+			break;
+		case PP_CUSTOM:
+			printCustom (ad);
+			break;
+		case PP_XML:
+			printXML (ad, false, false);
+			break;
+	#ifdef HAVE_EXT_POSTGRESQL
+		case PP_QUILL_NORMAL:
+			printQuillNormal (ad);
+			break;
+	#endif /* HAVE_EXT_POSTGRESQL */
+		default:
+			pm.display(stdout, ad);
+			break;
+		}
+	}
+}
+
+#else
 
 void
 prettyPrint (ClassAdList &adList, TrackTotals *totals)
@@ -415,9 +556,8 @@ prettyPrint (ClassAdList &adList, TrackTotals *totals)
 	}
 }
 
+#endif
 
-
-// The strdup() make leak memory, but IsListValue() may as well?
 const char *
 formatStringsFromList( const classad::Value & value, Formatter & ) {
 	const classad::ExprList * list = NULL;
@@ -425,14 +565,14 @@ formatStringsFromList( const classad::Value & value, Formatter & ) {
 		return "[Attribute not a list.]";
 	}
 
-	std::string prettyList;
+	static std::string prettyList;
+	prettyList.clear();
 	classad::ExprList::const_iterator i = list->begin();
 	for( ; i != list->end(); ++i ) {
-		classad::Value value;
-		if( ! (*i)->Evaluate( value ) ) { continue; }
-
 		std::string universeName;
-		if( value.IsStringValue( universeName ) ) {
+		if ((*i)->GetKind() != classad::ExprTree::LITERAL_NODE) continue;
+		classad::Value * pval = reinterpret_cast<classad::Value*>(*i);
+		if (pval->IsStringValue(universeName)) {
 			prettyList += universeName + ", ";
 		}
 	}
@@ -440,7 +580,57 @@ formatStringsFromList( const classad::Value & value, Formatter & ) {
 		prettyList.erase( prettyList.length() - 2 );
 	}
 
-	return strdup( prettyList.c_str() );
+	return prettyList.c_str();
+}
+
+// print the set of unique items from the given list.
+const char *
+formatUniqueList( const classad::Value & value, Formatter & ) {
+	static std::string retval;
+	std::set<std::string> uniq;
+
+	classad::ClassAdUnParser unparser;
+	unparser.SetOldClassAd( true, true );
+
+	const classad::ExprList * list = NULL;
+	if (value.IsListValue(list)) {
+		// for lists, unparse each item into the uniqueness set.
+		for(classad::ExprList::const_iterator it = list->begin() ; it != list->end(); ++it ) {
+			std::string item;
+			if ((*it)->GetKind() != classad::ExprTree::LITERAL_NODE) {
+				unparser.Unparse( item, *it );
+			} else {
+				classad::Value val;
+				reinterpret_cast<classad::Literal*>(*it)->GetValue(val);
+				if ( ! val.IsStringValue(item)) {
+					unparser.Unparse( item, *it );
+				}
+			}
+			uniq.insert(item);
+		}
+	} else if (value.IsStringValue(retval)) {
+		// for strings, parse as a string list, and add each unique item into the set
+		StringList lst(retval.c_str());
+		for (const char * psz = lst.first(); psz; psz = lst.next()) {
+			uniq.insert(psz);
+		}
+	} else {
+		// for other types treat as a single item, no need to uniqify
+		retval.clear();
+		ClassAdValueToString(value, retval);
+		return retval.c_str();
+	}
+
+	retval.clear();
+	for (std::set<std::string>::const_iterator it = uniq.begin(); it != uniq.end(); ++it) {
+		if (retval.empty()) retval = *it;
+		else {
+			retval += ", ";
+			retval += *it;
+		}
+	}
+
+	return retval.c_str();
 }
 
 void ppSetStartdOfflineCols (int /*width*/)
@@ -462,6 +652,55 @@ void ppSetStartdAbsentCols (int /*width*/)
 		ppSetColumn(ATTR_LAST_HEARD_FROM, Lbl("Went Absent"), formatRealDate, -11, true);
 		ppSetColumn(ATTR_CLASSAD_LIFETIME, Lbl("Will Forget"), renderDueDate, "%Y", -11, true);
 }
+
+const char * const startdCompact_PrintFormat = "SELECT\n"
+	ATTR_MACHINE    " AS Machine      WIDTH AUTO\n"       // 0
+	ATTR_OPSYS      " AS Platform     PRINTAS PLATFORM\n" // 1
+	//	"split(CondorVersion)[1] AS Condor\n"
+	ATTR_NUM_DYNAMIC_SLOTS " AS Slots PRINTF %5d OR _\n"  // 2
+	ATTR_TOTAL_CPUS " AS Cpus  PRINTF %4d\n"              // 3
+	"TotalGpus        AS Gpus  PRINTF %4d\n"              // 4
+	ATTR_TOTAL_MEMORY "/1024.0 AS  ' TotalGb' PRINTF %8.2f\n" // 5
+	ATTR_CPUS       " AS FreCpu PRINTF %6d\n"              // 6
+	ATTR_MEMORY     "/1024.0 AS ' FreeGb ' PRINTF %8.2f\n"   // 7
+	"TotalLoadAvg*1.0/TotalCpus AS CpuLoad PRINTF %7.2f\n" // 8
+	ATTR_ACTIVITY   " AS ST WIDTH 2 PRINTAS ACTIVITY_CODE\n" // 9
+	"RecentJobStarts/20.0 AS Jobs/Min PRINTF %8.2f OR _\n" // 10
+	"Max(ChildMemory)/1024.0 AS MaxSlotGb   PRINTF %9.2f OR *\n" // 11
+"WHERE PartitionableSlot =?= true || DynamicSlot =!= true\n"
+"GROUP BY Machine\n"
+"SUMMARY STANDARD\n";
+
+// init these to negative numbers to disable them.
+int startdCompact_ixCol_Platform = -1;
+int startdCompact_ixCol_Slots = -2;
+int startdCompact_ixCol_FreeCpus = -6;
+int startdCompact_ixCol_FreeMem = -7; // double
+int startdCompact_ixCol_ActCode = -9;
+int startdCompact_ixCol_JobStarts = -10; // double
+int startdCompact_ixCol_MaxSlotMem = -11; // double
+
+int ppSetStartdCompactCols (int /*width*/, int & mach_width)
+{
+	const char * tag = "StartdCompact";
+	const char * fmt = startdCompact_PrintFormat;
+	const char * constr = NULL;
+	if (set_status_print_mask_from_stream(fmt, false, &constr) < 0) {
+		fprintf(stderr, "Internal error: default %s print-format is invalid !\n", tag);
+	}
+
+	startdCompact_ixCol_Platform = 1;
+	startdCompact_ixCol_Slots = 2;
+	startdCompact_ixCol_FreeCpus = 6;
+	startdCompact_ixCol_FreeMem = 7; // double
+	startdCompact_ixCol_ActCode = 9;
+	startdCompact_ixCol_JobStarts = 10; // double
+	startdCompact_ixCol_MaxSlotMem = 11; // double
+
+	mach_width = 12; // set a minimum value for machine column.
+	return 12;
+}
+
 
 void ppSetStartdNormalCols (int width)
 {
@@ -500,9 +739,41 @@ void ppSetStartdNormalCols (int width)
 		renderActivityTime, ATTR_ENTERED_CURRENT_ACTIVITY /* "   [Unknown]"*/);
 }
 
+const char * const serverCompact_PrintFormat = "SELECT\n"
+	ATTR_MACHINE    " AS Machine      WIDTH AUTO\n"       // 0
+	ATTR_OPSYS      " AS Platform     PRINTAS PLATFORM\n" // 1
+	//	"split(CondorVersion)[1] AS Condor\n"
+	ATTR_NUM_DYNAMIC_SLOTS " AS Slots PRINTF %5d OR _\n"  // 2
+	ATTR_TOTAL_CPUS " AS Cpus  PRINTF %4d\n"              // 3
+	"TotalGpus        AS Gpus  PRINTF %4d\n"              // 4
+	ATTR_TOTAL_MEMORY "/1024.0 AS  ' TotalGb' PRINTF %8.2f\n" // 5
+	ATTR_MIPS       " AS ' Mips  ' PRINTF %7d OR -\n"     // 6
+	ATTR_KFLOPS     " AS ' KFlops  ' PRINTF %9d OR -\n"     // 7
+	"TotalLoadAvg*1.0/TotalCpus AS CpuLoad PRINTF %7.2f\n" // 8
+	ATTR_ACTIVITY   " AS ST WIDTH 2 PRINTAS ACTIVITY_CODE\n" // 9
+	"RecentJobStarts/20.0 AS Jobs/Min PRINTF %8.2f OR _\n" // 10
+"WHERE PartitionableSlot =?= true || DynamicSlot =!= true\n"
+"GROUP BY Machine\n"
+"SUMMARY STANDARD\n";
 
 void ppSetServerCols (int width)
 {
+	if (compactMode) {
+		const char * tag = "ServerCompact";
+		const char * fmt = serverCompact_PrintFormat;
+		const char * constr = NULL;
+		if (set_status_print_mask_from_stream(fmt, false, &constr) < 0) {
+			fprintf(stderr, "Internal error: default %s print-format is invalid !\n", tag);
+		}
+
+		// adjust column offsets for these
+		startdCompact_ixCol_Platform = 1;
+		startdCompact_ixCol_Slots = 2;
+		startdCompact_ixCol_ActCode = 9;
+		startdCompact_ixCol_JobStarts = 10; // double
+
+		return;
+	}
 	int name_width = wide_display ? -34 : -13;
 	if (width > 79 && ! wide_display) { name_width = MAX(-40, 65-width); }
 
@@ -516,9 +787,41 @@ void ppSetServerCols (int width)
 	ppSetColumn(ATTR_KFLOPS, "%9d", true);
 }
 
+//PRAGMA_REMIND("stateCompact_PrintFormat should show rolled up state and activity times")
+const char * const stateCompact_PrintFormat = "SELECT\n"
+	ATTR_MACHINE    " AS Machine      WIDTH AUTO\n"       // 0
+	ATTR_OPSYS      " AS Platform     PRINTAS PLATFORM\n" // 1
+	//	"split(CondorVersion)[1] AS Condor\n"
+	ATTR_NUM_DYNAMIC_SLOTS " AS Slots PRINTF %5d OR _\n"  // 2
+	ATTR_TOTAL_CPUS " AS Cpus  PRINTF %4d\n"              // 3
+	"TotalGpus        AS Gpus  PRINTF %4d\n"              // 4
+	ATTR_TOTAL_MEMORY "/1024.0 AS  ' TotalGb' PRINTF %8.2f\n" // 5
+	"TotalLoadAvg*1.0/TotalCpus AS CpuLoad PRINTF %7.2f\n" // 6
+	ATTR_ACTIVITY   " AS ST WIDTH 2 PRINTAS ACTIVITY_CODE\n" // 7
+	"RecentJobStarts/20.0 AS Jobs/Min PRINTF %8.2f OR _\n" // 8
+"WHERE PartitionableSlot =?= true || DynamicSlot =!= true\n"
+"GROUP BY Machine\n"
+"SUMMARY STANDARD\n";
 
 void ppSetStateCols (int width)
 {
+	if (compactMode) {
+		const char * tag = "StateCompact";
+		const char * fmt = stateCompact_PrintFormat;
+		const char * constr = NULL;
+		if (set_status_print_mask_from_stream(fmt, false, &constr) < 0) {
+			fprintf(stderr, "Internal error: default %s print-format is invalid !\n", tag);
+		}
+
+		// adjust column offsets for these
+		startdCompact_ixCol_Platform = 1;
+		startdCompact_ixCol_Slots = 2;
+		startdCompact_ixCol_ActCode = 7;
+		startdCompact_ixCol_JobStarts = 8; // double
+
+		return;
+	}
+
 	int timewid = (wide_display||(width>90)) ? 12 : 11;
 	int name_width = wide_display ? -34 : -12;
 	if (width > 79 && ! wide_display) { name_width = MAX(-40, (34+3*timewid)-width); }
@@ -535,9 +838,34 @@ void ppSetStateCols (int width)
 	ppSetColumn(ATTR_ENTERED_CURRENT_ACTIVITY, Lbl("  ActvtyTime"), renderElapsedTime, "%T", timewid, true);
 }
 
+const char * const claimedCompact_PrintFormat = "SELECT\n"
+	ATTR_MACHINE    " AS Machine      WIDTH AUTO\n"       // 0
+	ATTR_OPSYS      " AS Platform     PRINTAS PLATFORM\n" // 1
+	//	"split(CondorVersion)[1] AS Condor\n"
+	ATTR_NUM_DYNAMIC_SLOTS " AS Slots PRINTF %5d OR _\n"  // 2
+	"Child" ATTR_REMOTE_USER " AS Users PRINTAS UNIQUE\n" // 3
+//	"Child" ATTR_CLIENT_MACHINE " AS Hosts PRINTAS UNIQUE\n" // 4
+"WHERE (State == \"Claimed\" && DynamicSlot =!= true) || (NumDynamicSlots isnt undefined && NumDynamicSlots > 0)\n"
+"GROUP BY Machine\n"
+"SUMMARY STANDARD\n";
 
 void ppSetRunCols (int width)
 {
+	if (compactMode) {
+		const char * tag = "ClaimedCompact";
+		const char * fmt = claimedCompact_PrintFormat;
+		const char * constr = NULL;
+		if (set_status_print_mask_from_stream(fmt, false, &constr) < 0) {
+			fprintf(stderr, "Internal error: default %s print-format is invalid !\n", tag);
+		}
+
+		// adjust column offsets for these
+		startdCompact_ixCol_Platform = 1;
+		startdCompact_ixCol_Slots = 2;
+
+		return;
+	}
+
 	int name_width = wide_display ? -34 : -15;
 	if (width > 79 && ! wide_display) { name_width = MAX(-40, 63-width); }
 
@@ -668,11 +996,10 @@ const char * const scheddNormal_PrintFormat = "SELECT\n"
 	"TotalRunningJobs AS RunningJobs  PRINTF %11d\n"
 	"TotalIdleJobs    AS '  IdleJobs' PRINTF %10d\n"
 	"TotalHeldJobs    AS '  HeldJobs' PRINTF %10d\n"
-"SUMMARY NONE\n";
+"SUMMARY STANDARD\n";
 
 int ppSetScheddNormalCols (int width, int & mach_width)
 {
-#if 1
 	const char * tag = "Schedd";
 	const char * fmt = scheddNormal_PrintFormat;
 	const char * constr = NULL;
@@ -680,35 +1007,10 @@ int ppSetScheddNormalCols (int width, int & mach_width)
 		fprintf(stderr, "Internal error: default %s print-format is invalid !\n", tag);
 	}
 
-	int name_width = wide_display ? 36 : 28;
-	mach_width = wide_display ? 32 : 15;
-	if (width > 79 && ! wide_display) { 
-		int wid = width - (20+10+11+10+10+4);
-		wid = MIN(wid,50);
-		int nw = MIN(20, wid*2/3);
-		int nm = MIN(30, wid - nw);
-		name_width += nw;
-		mach_width += nm;
-	}
+	// set a minimum size for name and machine columns
+	mach_width = width ? 12 : 12;
+	int name_width = 15;
 	return name_width;
-#else
-	int name_width = wide_display ? -34 : -20;
-	int mach_width = wide_display ? -34 : -10;
-	if (width > 79 && ! wide_display) { 
-		int wid = width - (20+10+16+13+14+4);
-		wid = MIN(wid,50);
-		int nw = MIN(20, wid*2/3);
-		int nm = MIN(30, wid - nw);
-		name_width -= nw;
-		mach_width -= nm;
-	}
-
-	ppSetColumn(ATTR_NAME,    name_width, ! wide_display);
-	ppSetColumn(ATTR_MACHINE, mach_width, ! wide_display);
-	ppSetColumn(ATTR_TOTAL_RUNNING_JOBS, "%16d", true);
-	ppSetColumn(ATTR_TOTAL_IDLE_JOBS,    "%13d", true);
-	ppSetColumn(ATTR_TOTAL_HELD_JOBS,    "%14d", true);
-#endif
 }
 
 const char * const submitterNormal_PrintFormat = "SELECT\n"
@@ -717,11 +1019,10 @@ const char * const submitterNormal_PrintFormat = "SELECT\n"
 	"RunningJobs AS RunningJobs  PRINTF %11d\n"
 	"IdleJobs    AS '  IdleJobs' PRINTF %10d\n"
 	"HeldJobs    AS '  HeldJobs' PRINTF %10d\n"
-"SUMMARY NONE\n";
+"SUMMARY STANDARD\n";
 
 int ppSetSubmitterNormalCols (int width, int & mach_width)
 {
-#if 1
 	const char * tag = "Submitter";
 	const char * fmt = submitterNormal_PrintFormat;
 	const char * constr = NULL;
@@ -729,35 +1030,10 @@ int ppSetSubmitterNormalCols (int width, int & mach_width)
 		fprintf(stderr, "Internal error: default %s print-format is invalid !\n", tag);
 	}
 
-	int name_width = wide_display ? 34 : 28;
-	mach_width = wide_display ? 34 : 15;
-	if (width > 79 && ! wide_display) { 
-		int wid = width - (20+10+11+10+10+4);
-		wid = MIN(wid,50);
-		int nw = MIN(20, wid*2/3);
-		int nm = MIN(30, wid - nw);
-		name_width += nw;
-		mach_width += nm;
-	}
+	// set a minimum size for name and machine columns
+	mach_width = width ? 12 : 12;
+	int name_width = 15;
 	return name_width;
-#else
-	int name_width = wide_display ? -34 : -28;
-	int mach_width = wide_display ? -34 : -18;
-	if (width > 79 && ! wide_display) { 
-		int wid = width - (28+18+11+8+8+4);
-		wid = MIN(wid,50);
-		int nw = MIN(20, wid*2/3);
-		int nm = MIN(30, wid - nw);
-		name_width -= nw;
-		mach_width -= nm;
-	}
-
-	ppSetColumn(ATTR_NAME,    name_width, ! wide_display);
-	ppSetColumn(ATTR_MACHINE, mach_width, ! wide_display);
-	ppSetColumn(ATTR_RUNNING_JOBS, "%11d", true);
-	ppSetColumn(ATTR_IDLE_JOBS,    "%8d", true);
-	ppSetColumn(ATTR_HELD_JOBS,    "%8d", true);
-#endif
 }
 
 
@@ -793,27 +1069,14 @@ const char * const masterNormal_PrintFormat = "SELECT\n"
 
 int ppSetMasterNormalCols(int width)
 {
-#if 1
 	const char * tag = "Master";
 	const char * fmt = masterNormal_PrintFormat;
 	const char * constr = NULL;
 	if (set_status_print_mask_from_stream(fmt, false, &constr) < 0) {
 		fprintf(stderr, "Internal error: default %s print-format is invalid !\n", tag);
 	}
-	return width - (1+14 + 1+4 + 1+10 + 1+13 +1);
-#else
-	int name_width = wide_display ? -34 : -28;
-	ppSetColumn(ATTR_NAME, name_width, ! wide_display);
-
-	//pm_head.Append("Version");
-	//ppSetColumnFormat(formatVersion, NULL, 14, true, BlankInvalidField, "CondorVersion");
-	ppSetColumn("CondorVersion", Lbl("Version"), renderVersion, NULL, -14, true);
-
-	ppSetColumn("DetectedCpus", Lbl("Cpus"), "%4d", false);
-	ppSetColumn("DetectedMemory", Lbl("Memory"), format_readable_mb, NULL, 12, false);
-
-	ppSetColumn(ATTR_DAEMON_START_TIME, Lbl("   Uptime"), renderElapsedTime, "%T", 13, true);
-#endif
+	// set a minumum size for name column
+	return width ? 12 : 12;
 }
 
 
@@ -847,23 +1110,14 @@ const char * const defragNormal_PrintFormat = "SELECT\n"
 
 int ppSetDefragNormalCols (int width)
 {
-#if 1
 	const char * tag = "Defrag";
 	const char * fmt = defragNormal_PrintFormat;
 	const char * constr = NULL;
 	if (set_status_print_mask_from_stream(fmt, false, &constr) < 0) {
 		fprintf(stderr, "Internal error: default %s print-format is invalid !\n", tag);
 	}
-	return width - (1+8 + 1+8 + 1+12 +1);
-#else
-	int name_width = wide_display ? -34 : -30;
-	if (width > 79 && ! wide_display) { name_width = MAX(-40, 48-width); }
-
-	ppSetColumn(ATTR_NAME,  name_width, ! wide_display);
-	ppSetColumn("MachinesDraining",     Lbl("Draining"), "%8d", true);
-	ppSetColumn("MachinesDrainingPeak", Lbl("    Peak"), "%8d", true);
-	ppSetColumn("DrainedMachines",      Lbl("TotalDrained"), "%12d", true);
-#endif
+	// set a minumum size for name column
+	return width ? 12 : 12;
 }
 
 const char * const accountingNormal_PrintFormat = "SELECT\n"
@@ -877,26 +1131,14 @@ const char * const accountingNormal_PrintFormat = "SELECT\n"
 
 int ppSetAccountingNormalCols (int width)
 {
-#if 1
 	const char * tag = "Accounting";
 	const char * fmt = accountingNormal_PrintFormat;
 	const char * constr = NULL;
 	if (set_status_print_mask_from_stream(fmt, false, &constr) < 0) {
 		fprintf(stderr, "Internal error: default %s print-format is invalid !\n", tag);
 	}
-	return width - (1+8 + 1+10 + 1+8 + 1+13 + 1+12 +1);
-#else
-	int name_width = wide_display ? -34 : -20;
-	if (width > 79 && ! wide_display) { name_width = MAX(-40, 63-width); }
-
-	ppSetColumn(ATTR_NAME,  name_width, ! wide_display);
-	ppSetColumn("Priority",           Lbl("Priority"), "%8.2f", true);
-	ppSetColumn("PriorityFactor",     Lbl("PrioFactor"), "%10.2f", true);
-	ppSetColumn("ResourcesUsed",      Lbl("ResInUse"), "%8d", true);
-	//ppSetColumn("AccumulatedUsage",
-	ppSetColumn("WeightedAccumulatedUsage", Lbl("WeightedUsage"), "%13.2f", true);
-	ppSetColumn("LastUsageTime", Lbl("  LastUsage"), renderElapsedTime, "%T", 12, true);
-#endif
+	// set a minumum size for name column
+	return width ? 12 : 12;
 }
 
 void ppSetGridNormalCols (int width)
@@ -984,24 +1226,34 @@ printCustom (ClassAd *ad)
 }
 
 
-int ppAdjustProjection(void*pv, int /*index*/, Formatter * fmt, const char * attr)
+int ppAdjustProjection(void*pv, int index, Formatter * fmt, const char * attr)
 {
 	struct _adjust_widths_info * pi = (struct _adjust_widths_info *)pv;
 	classad::References * proj = pi->proj;
 	if (attr) {
 		proj->insert(attr);
 		if (MATCH == strcasecmp(attr, ATTR_NAME)) {
-			fmt->options |= FormatOptionSpecial001;
-			if (pi->name_width) {
-				fmt->width = pi->name_width;
-				if ( ! wide_display) fmt->options &= ~FormatOptionAutoWidth;
+			prettyprint_ixCol_Name = index;
+			if (fmt->options & FormatOptionSpecial001) {
+				// special001 already set means FitToName
+				fmt->width = 12;  // HACK! to test autowidth code for startd normal
+				fmt->options |= FormatOptionAutoWidth;
+			} else {
+				fmt->options |= FormatOptionSpecial001;
+				if (pi->name_width) {
+					fmt->width = pi->name_width;
+					if ( ! wide_display) fmt->options &= ~FormatOptionAutoWidth;
+					fmt->options |= (pi->name_flags & FormatOptionAutoWidth);
+				}
 			}
 		}
 		else if (MATCH == strcasecmp(attr, ATTR_MACHINE)) {
+			prettyprint_ixCol_Machine = index;
 			fmt->options |= FormatOptionSpecial002;
 			if (pi->machine_width) {
 				fmt->width = pi->machine_width;
-				if ( ! wide_display) fmt->options &= ~FormatOptionAutoWidth;
+				fmt->options &= ~FormatOptionAutoWidth;
+				fmt->options |= (pi->machine_flags & FormatOptionAutoWidth);
 			}
 		}
 	}
@@ -1035,13 +1287,16 @@ void ppInitPrintMask(ppOption pps, classad::References & proj)
 
 	pm.SetAutoSep(NULL, " ", NULL, "\n");
 	//pm.SetAutoSep(NULL, " (", ")", "\n"); // for debugging, delimit the field data explicitly
-	int display_width = getDisplayWidth()-1;
-	if (wide_display || forced_display_width) {
+	bool is_piped = false;
+	int display_width = getDisplayWidth(&is_piped)-1;
+	if (forced_display_width || ( ! wide_display && ! is_piped) ) {
 		pm.SetOverallWidth(display_width);
 	}
 
 	int name_width = 0;
 	int machine_width = 0;
+	int name_flags =  wide_display ? FormatOptionAutoWidth : 0;
+	int machine_flags = name_flags;
 
 	switch (pps) {
 		case PP_STARTD_NORMAL:
@@ -1049,6 +1304,9 @@ void ppInitPrintMask(ppOption pps, classad::References & proj)
 			ppSetStartdAbsentCols(display_width);
 		} else if(offlineMode) {
 			ppSetStartdOfflineCols(display_width);
+		} else if (compactMode && ! (vmMode || javaMode)) {
+			ppSetStartdCompactCols(display_width, machine_width);
+			machine_flags = FormatOptionAutoWidth;
 		} else {
 			ppSetStartdNormalCols(display_width);
 		}
@@ -1063,7 +1321,7 @@ void ppInitPrintMask(ppOption pps, classad::References & proj)
 		break;
 
 		case PP_STARTD_COD:
-			PRAGMA_REMIND("COD format needs conversion to ppSetCodCols")
+			//PRAGMA_REMIND("COD format needs conversion to ppSetCodCols")
 		//ppSetCODNormalCols(display_width);
 		break;
 
@@ -1080,6 +1338,8 @@ void ppInitPrintMask(ppOption pps, classad::References & proj)
 
 		case PP_SCHEDD_NORMAL:
 		name_width = ppSetScheddNormalCols(display_width, machine_width);
+		machine_flags = name_flags = FormatOptionAutoWidth;
+		width_of_fixed_cols = 35;
 		break;
 
 		case PP_NEGOTIATOR_NORMAL:
@@ -1088,10 +1348,13 @@ void ppInitPrintMask(ppOption pps, classad::References & proj)
 
 		case PP_SUBMITTER_NORMAL:
 		name_width = ppSetSubmitterNormalCols(display_width, machine_width);
+		machine_flags = name_flags = FormatOptionAutoWidth;
+		width_of_fixed_cols = 35;
 		break;
 
 		case PP_MASTER_NORMAL:
 		name_width = ppSetMasterNormalCols(display_width);
+		name_flags = FormatOptionAutoWidth;
 		break;
 
 		case PP_COLLECTOR_NORMAL:
@@ -1108,6 +1371,7 @@ void ppInitPrintMask(ppOption pps, classad::References & proj)
 
 		case PP_DEFRAG_NORMAL:
 		name_width = ppSetDefragNormalCols(display_width);
+		name_flags = FormatOptionAutoWidth;
 		break;
 
 		case PP_ACCOUNTING_NORMAL:
@@ -1128,7 +1392,7 @@ void ppInitPrintMask(ppOption pps, classad::References & proj)
 		break;
 	}
 
-	struct _adjust_widths_info wid_info = { name_width, machine_width, &proj };
+	struct _adjust_widths_info wid_info = { name_width, name_flags, machine_width, machine_flags, &proj };
 	pm.adjust_formats(ppAdjustProjection, &wid_info);
 }
 
@@ -1161,6 +1425,86 @@ renderActivityTime (long long & atime, AttrList *al, Formatter &)
 		return true; 
 	}
 	return false; // print "   [Unknown]"
+}
+
+/*
+static const struct {
+	const char * name;
+	char         letter;
+	State        st;
+} slot_states[] = {
+	"Backfill",   'F', backfill_state,
+	"Claimed",    'C', claimed_state,
+	"Delete",     'E', delete_state,
+	"Drained",    'D', drained_state,
+	"Matched",    'M', matched_state,
+	"None",       '~', no_state,
+	"Owner",      'O', owner_state,
+	"Preempting", 'P', preempting_state,
+	"Shutdown",   'S', shutdown_state,
+	"Unclaimed",  'U', unclaimed_state,
+};
+
+static const struct {
+	const char * name;
+	char         letter;
+	Activity     st;
+} slot_activities[] = {
+	"Benchmarking", 'e', benchmarking_act,
+	"Busy",         'b', busy_act,
+	"Idle",         'i', idle_act,
+	"Killing",      'k', killing_act,
+	"None",         '0', no_act,
+	"Retiring",     'r', retiring_act,
+	"Suspended",    's', suspended_act,
+	"Vacating",     'v', vacating_act,
+};
+*/
+
+const char* digest_state_and_activity(char * sa, State st, Activity ac)
+{
+	static const char state_letters[] = "~OUMCPSXFD#?";
+	static const char act_letters[] = "0ibrvsek#?";
+
+	sa[1] = sa[0] = ' ';
+	sa[2] = 0;
+	if (st > no_state && st <= _state_threshold_) {
+		sa[0] = state_letters[st];
+	}
+	if (ac > no_act && ac <= _act_threshold_) {
+		sa[1] = act_letters[ac];
+	}
+	return sa;
+}
+
+static bool
+renderActivityCode (std::string & act, AttrList *al, Formatter &)
+{
+
+	char sa[4] = "  ";
+	bool ok = false;
+
+	// Input might be state OR activity, so try looking up both
+	State st = no_state;
+	Activity ac = string_to_activity(act.c_str());
+	if (ac > no_act && ac < _act_threshold_) {
+		ok = true;
+		// if it's a valid Activity, then fetch the state.
+		al->LookupString(ATTR_STATE, act);
+		st = string_to_state(act.c_str());
+	} else {
+		st = string_to_state(act.c_str());
+		if (st > no_state && st < _state_threshold_) {
+			ok = true;
+			// if the input was a valid state, then it can't have been a valid activity
+			// try and lookup the activity now
+			al->LookupString(ATTR_ACTIVITY, act);
+			ac = string_to_activity(act.c_str());
+		}
+	}
+	digest_state_and_activity(sa, st, ac);
+	act = sa;
+	return ok;
 }
 
 static bool
@@ -1256,7 +1600,8 @@ static bool renderVersion(std::string & str, AttrList*, Formatter & fmt)
 	return false;
 }
 
-static bool renderPlatform(std::string & str, AttrList*, Formatter & /*fmt*/)
+// reduce CondorPlatform attribute to a more useful string
+static bool renderCondorPlatform(std::string & str, AttrList*, Formatter & /*fmt*/)
 {
 	if ( ! str.empty()) {
 		size_t ix = str.find_first_of(' ');
@@ -1276,6 +1621,36 @@ static bool renderPlatform(std::string & str, AttrList*, Formatter & /*fmt*/)
 	return false;
 }
 
+bool platform_includes_arch = true;
+bool renderPlatformName(std::string & str, AttrList* al)
+{
+	std::string opsys, arch;
+	bool got_name = false;
+	if (al->LookupString(ATTR_OPSYS, opsys) && opsys == "WINDOWS") {
+		got_name = al->LookupString(ATTR_OPSYS_SHORT_NAME, opsys);
+	} else {
+		got_name = al->LookupString(ATTR_OPSYS_AND_VER, opsys);
+	}
+	if (got_name) {
+		if (platform_includes_arch) {
+			al->LookupString(ATTR_ARCH, str);
+			if (str == "X86_64") str = "x64";
+			else if (str == "X86") str = "x86";
+			str += "/";
+			str += opsys;
+		} else {
+			str = opsys;
+		}
+		return true;
+	}
+	return false;
+}
+// render Arch, OpSys, OpSysAndVer and OpSysShortName into a NMI style platform string
+static bool renderPlatform(std::string & str, AttrList* al, Formatter & /*fmt*/)
+{
+	return renderPlatformName(str, al);
+}
+
 /*
 # default condor_status output
 SELECT
@@ -1292,17 +1667,20 @@ SUMMARY STANDARD
 
 // !!! ENTRIES IN THIS TABLE MUST BE SORTED BY THE FIRST FIELD !!
 static const CustomFormatFnTableItem LocalPrintFormats[] = {
+	{ "ACTIVITY_CODE", ATTR_ACTIVITY, 0, renderActivityCode, ATTR_STATE "\0" },
 	{ "ACTIVITY_TIME", ATTR_ENTERED_CURRENT_ACTIVITY, "%T", renderActivityTime, ATTR_LAST_HEARD_FROM "\0" ATTR_MY_CURRENT_TIME "\0"  },
-	{ "CONDOR_PLATFORM", "CondorPlatform", 0, renderPlatform, ATTR_ARCH "\0" ATTR_OPSYS "\0" },
+	{ "CONDOR_PLATFORM", "CondorPlatform", 0, renderCondorPlatform, NULL },
 	{ "CONDOR_VERSION", "CondorVersion", 0, renderVersion, NULL },
 	{ "DATE",         NULL, 0, formatRealDate, NULL },
 	{ "DUE_DATE",     ATTR_CLASSAD_LIFETIME, "%Y", renderDueDate, ATTR_LAST_HEARD_FROM "\0" },
 	{ "ELAPSED_TIME", ATTR_LAST_HEARD_FROM, "%T", renderElapsedTime, ATTR_LAST_HEARD_FROM "\0" },
 	{ "LOAD_AVG",     ATTR_LOAD_AVG, 0, formatLoadAvg, NULL },
+	{ "PLATFORM",     ATTR_OPSYS, 0, renderPlatform, ATTR_ARCH "\0" ATTR_OPSYS_AND_VER "\0" ATTR_OPSYS_SHORT_NAME "\0" },
 	{ "READABLE_KB",  ATTR_DISK, 0, format_readable_kb, NULL },
 	{ "READABLE_MB",  ATTR_MEMORY, 0, format_readable_mb, NULL },
 	{ "STRINGS_FROM_LIST", NULL, 0, formatStringsFromList, NULL },
 	{ "TIME",         ATTR_KEYBOARD_IDLE, 0, formatRealTime, NULL },
+	{ "UNIQUE",       NULL, 0, formatUniqueList, NULL },
 };
 static const CustomFormatFnTable LocalPrintFormatsTable = SORTED_TOKENER_TABLE(LocalPrintFormats);
 const CustomFormatFnTable * getCondorStatusPrintFormats() { return &LocalPrintFormatsTable; }

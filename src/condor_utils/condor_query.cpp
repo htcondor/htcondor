@@ -422,21 +422,20 @@ CondorQuery::setLocationLookup(const std::string &location)
 	return true;
 }
 
-
-// fetch all ads from the collector that satisfy the constraints
+// process ads from the collector, handing each to the callback
+// callback will return 'false' if it took ownership of the ad.
 QueryResult CondorQuery::
-fetchAds (ClassAdList &adList, const char *poolName, CondorError* errstack)
+processAds (bool (*callback)(void*, ClassAd *), void* pv, const char * poolName, CondorError* errstack /*= NULL*/)
 {
 	Sock*    sock; 
-	int                     more;
 	QueryResult result;
-	ClassAd     queryAd(extraAttrs), *ad;
+	ClassAd  queryAd(extraAttrs);
 
 	if ( !poolName ) {
 		return Q_NO_COLLECTOR_HOST;
 	}
 
-        // contact collector
+	// contact collector
 	Daemon my_collector( DT_COLLECTOR, poolName, NULL );
 	if( !my_collector.locate() ) {
 			// We were passed a bogus poolName, abort gracefully
@@ -448,7 +447,7 @@ fetchAds (ClassAdList &adList, const char *poolName, CondorError* errstack)
 	result = getQueryAd (queryAd);
 	if (result != Q_OK) return result;
 
-	if( IsDebugLevel( D_HOSTNAME ) ) {
+	if (IsDebugLevel(D_HOSTNAME)) {
 		dprintf( D_HOSTNAME, "Querying collector %s (%s) with classad:\n", 
 				 my_collector.addr(), my_collector.fullHostname() );
 		dPrintAd( D_HOSTNAME, queryAd );
@@ -465,10 +464,10 @@ fetchAds (ClassAdList &adList, const char *poolName, CondorError* errstack)
 		}
 		return Q_COMMUNICATION_ERROR;
 	}
-	
+
 	// get result
 	sock->decode ();
-	more = 1;
+	int more = 1;
 	while (more)
 	{
 		if (!sock->code (more)) {
@@ -477,14 +476,16 @@ fetchAds (ClassAdList &adList, const char *poolName, CondorError* errstack)
 			return Q_COMMUNICATION_ERROR;
 		}
 		if (more) {
-			ad = new ClassAd;
+			ClassAd * ad = new ClassAd;
 			if( !getClassAd(sock, *ad) ) {
 				sock->end_of_message();
 				delete ad;
 				delete sock;
 				return Q_COMMUNICATION_ERROR;
 			}
-			adList.Insert (ad);
+			if (callback(pv, ad)) {
+				delete ad;
+			}
 		}
 	}
 	sock->end_of_message();
@@ -492,8 +493,18 @@ fetchAds (ClassAdList &adList, const char *poolName, CondorError* errstack)
 	// finalize
 	sock->close();
 	delete sock;
-	
+
 	return (Q_OK);
+}
+
+// callback used by fetchAds
+static bool fetchAds_callback(void* pv, ClassAd * ad) { ClassAdList * padList = (ClassAdList *)pv; padList->Insert (ad); return false; }
+
+// fetch all ads from the collector that satisfy the constraints
+QueryResult CondorQuery::
+fetchAds (ClassAdList &adList, const char *poolName, CondorError* errstack)
+{
+	return processAds(fetchAds_callback, &adList, poolName, errstack);
 }
 
 void CondorQuery::

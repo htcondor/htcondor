@@ -37,7 +37,7 @@ class ClassTotal
 		static ClassTotal *makeTotalObject(ppOption);
 		static int makeKey( MyString &, ClassAd *, ppOption);
 
-		virtual int update(ClassAd*) 	= 0;
+		virtual int update(ClassAd*, int options) 	= 0;
 		virtual void displayHeader(FILE*)= 0;
 
 		// param is zero for non-final totals
@@ -48,6 +48,10 @@ class ClassTotal
 };
 
 
+#define TOTALS_OPTION_IGNORE_PARTITIONABLE 0x0001
+#define TOTALS_OPTION_ROLLUP_PARTITIONABLE 0x0002
+#define TOTALS_OPTION_IGNORE_DYNAMIC       0x0004
+
 // object manages totals for different classes within the same ppo
 // (e.g., different "Arch/OpSys" in startd normal mode)
 class TrackTotals
@@ -56,7 +60,7 @@ class TrackTotals
 		TrackTotals (ppOption);
 		~TrackTotals();
 
-		int  update(ClassAd *);
+		int  update(ClassAd *, int options = 0, const char * key=NULL);
 		void displayTotals(FILE *, int keyLength);
 		bool haveTotals();
 
@@ -74,7 +78,7 @@ class StartdNormalTotal : public ClassTotal
 {
 	public:
 		StartdNormalTotal();
-		virtual int update (ClassAd *);
+		virtual int update (ClassAd *, int options);
 		virtual void displayHeader(FILE *);
 		virtual void displayInfo(FILE *, int);
 
@@ -89,6 +93,8 @@ class StartdNormalTotal : public ClassTotal
 		int backfill;
 #endif
 		int drained;
+
+		int update(const char * state);
 };
 
 
@@ -96,7 +102,7 @@ class StartdRunTotal : public ClassTotal
 {
 	public:
 		StartdRunTotal();
-		virtual int update (ClassAd *);
+		virtual int update (ClassAd *, int options);
 		virtual void displayHeader(FILE *);
 		virtual void displayInfo(FILE *,int);
 
@@ -112,7 +118,7 @@ class StartdServerTotal : public ClassTotal
 {
 	public:
 		StartdServerTotal();
-		virtual int update (ClassAd *);
+		virtual int update (ClassAd *, int options);
 		virtual void displayHeader(FILE*);
 		virtual void displayInfo(FILE*,int);
 
@@ -130,7 +136,7 @@ class StartdStateTotal : public ClassTotal
 {
 	public:
 		StartdStateTotal();
-		virtual int update (ClassAd *);
+		virtual int update (ClassAd *, int options);
 		virtual void displayHeader(FILE*);
 		virtual void displayInfo(FILE*,int);
 
@@ -145,6 +151,8 @@ class StartdStateTotal : public ClassTotal
 		int backfill;
 #endif
 		int drained;
+
+		int update(const char * state);
 };
 
 
@@ -153,7 +161,7 @@ class StartdCODTotal : public ClassTotal
 {
 public:
 	StartdCODTotal();
-	virtual int update (ClassAd *);
+	virtual int update (ClassAd *, int options);
 	virtual void displayHeader(FILE*);
 	virtual void displayInfo(FILE*,int);
 protected:
@@ -173,7 +181,7 @@ class QuillNormalTotal : public ClassTotal
 {
 	public:
 		QuillNormalTotal();
-		virtual int update (ClassAd *);
+		virtual int update (ClassAd *, int options);
 		virtual void displayHeader(FILE*);
 		virtual void displayInfo(FILE*,int);
 
@@ -187,7 +195,7 @@ class ScheddNormalTotal : public ClassTotal
 {
 	public:
 		ScheddNormalTotal();
-		virtual int update (ClassAd *);
+		virtual int update (ClassAd *, int options);
 		virtual void displayHeader(FILE*);
 		virtual void displayInfo(FILE*,int);
 
@@ -202,7 +210,7 @@ class ScheddSubmittorTotal : public ClassTotal
 {
 	public:
 		ScheddSubmittorTotal();
-		virtual int update (ClassAd *);
+		virtual int update (ClassAd *, int options);
 		virtual void displayHeader(FILE*);
 		virtual void displayInfo(FILE*,int);
 
@@ -218,7 +226,7 @@ class CkptSrvrNormalTotal : public ClassTotal
 {
 	public:
 		CkptSrvrNormalTotal();
-		virtual int update (ClassAd *);
+		virtual int update (ClassAd *, int options);
 		virtual void displayHeader(FILE*);
 		virtual void displayInfo(FILE*,int);
 

@@ -118,7 +118,17 @@ class CollectorList : public DaemonList {
 	DCCollectorAdSequences & getAdSeq();
 	
 		// Try querying all the collectors until you get a good one
-	QueryResult query (CondorQuery & query, ClassAdList & adList, CondorError *errstack = 0);
+	QueryResult query (CondorQuery & cQuery, bool (*callback)(void*, ClassAd *), void* pv, CondorError * errstack = 0);
+
+		// a common case is just wanting a list of ads back, so provide a ready-made callback that does that...
+	static bool fetchAds_callback(void* pv, ClassAd * ad) {
+		ClassAdList * padList = (ClassAdList *)pv;
+		padList->Insert (ad);
+		return false;
+	}
+	QueryResult query (CondorQuery & cQuery, ClassAdList & adList, CondorError *errstack = 0) {
+		return query(cQuery, fetchAds_callback, &adList, errstack);
+	}
 
     bool next( DCCollector* &);
     bool Next( DCCollector* &);
