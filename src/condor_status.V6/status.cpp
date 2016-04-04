@@ -1354,7 +1354,15 @@ static bool read_classad_file(const char *filename, ClassAdList &classads, const
 {
 	bool success = false;
 
-	FILE* file = safe_fopen_wrapper_follow(filename, "r");
+	FILE* file = NULL;
+	bool close_file = false;
+	if (MATCH == strcmp(filename,"-")) {
+		file = stdin;
+		close_file = false;
+	} else {
+		file = safe_fopen_wrapper_follow(filename, "r");
+		close_file = true;
+	}
 	if (file == NULL) {
 		fprintf(stderr, "Can't open file of job ads: %s\n", filename);
 		return false;
@@ -1401,7 +1409,8 @@ static bool read_classad_file(const char *filename, ClassAdList &classads, const
 			}
 		}
 
-		fclose(file);
+		if (close_file) fclose(file);
+		file = NULL;
 	}
 	return success;
 }
