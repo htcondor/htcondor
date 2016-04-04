@@ -1620,9 +1620,9 @@ void EC2Job::doEvaluateState()
 					// FIXME: At this point, we should verify that (a) the
 					// state of spot request is "cancelled" and (b) that the
 					// spot request in that state does not have an instance ID.
-					// If it does go to GM_SAVE_INSTANCE_ID; it will fall int
+					// If it does go to GM_SAVE_INSTANCE_ID; it will fall into
 					// GM_SUBMITTED and then GM_CANCEL if the job is being
-					// removed.  (If the job isn't being remove, we shouldn't
+					// removed.  (If the job isn't being removed, we shouldn't
 					// be here, but we need to track the instance anyway.)
 
 					// For now, just assume that the cancel was successful.

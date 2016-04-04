@@ -239,6 +239,13 @@ class Throttle {
 
         static void now( struct timespec * t ) { if( t != NULL ) { clock_gettime( type, t ); } }
 
+        static long difference( const struct timespec * s, const struct timespec * t ) {
+            long secondsDiff = t->tv_sec - s->tv_sec;
+            long millisDiff = ((t->tv_nsec - s->tv_nsec) + 500000)/1000000;
+            millisDiff += (secondsDiff * 1000);
+            return millisDiff;
+        }
+
         bool limitExceeded() {
             // Compute until when to sleep before making another request.
             clock_gettime( type, & when );
@@ -703,23 +710,119 @@ bool AmazonRequest::SendRequest() {
         SET_CURL_SECURITY_OPTION( curl, CURLOPT_SSLCERT, this->accessKeyFile.c_str() );
     }
 
+    static unsigned failureCount = 0;
+    const char * failureMode = getenv( "EC2_GAHP_FAILURE_MODE" );
+
     dprintf( D_PERF_TRACE, "request #%d (%s): ready to call %s\n", requestID, requestCommand.c_str(), query_parameters[ "Action" ].c_str() );
+
+    Throttle::now( & this->mutexReleased );
     amazon_gahp_release_big_mutex();
     pthread_mutex_lock( & globalCurlMutex );
-    globalCurlThrottle.setDeadline( signatureTime, 300 );
-    // Skip this if we're not doing the dprintf().
-    // struct timespec deadline; globalCurlThrottle.getDeadline( & deadline );
-    // This is likely to cause grief, since dprintf() isn't thread safe
-    // and I don't have the big global mutex.
-    // dprintf( D_PERF_TRACE, "request #%d (%s): set deadline to %ld + %ld\n", requestID, requestCommand.c_str(), deadline.tv_sec, deadline.tv_nsec );
+    Throttle::now( & this->lockGained );
 
-    retry: globalCurlThrottle.sleepIfNecessary();
-    rv = curl_easy_perform( curl );
+    // We don't check the deadline after the retry because limitExceeded()
+    // already checks.  (limitNotExceeded() does not, but if we call that
+    // then the request has succeeded and we won't be retrying.)
+    globalCurlThrottle.setDeadline( signatureTime, 300 );
+    struct timespec liveline = globalCurlThrottle.getWhen();
+    struct timespec deadline; globalCurlThrottle.getDeadline( & deadline );
+    if( Throttle::difference( & liveline, & deadline ) < 0 ) {
+        amazon_gahp_grab_big_mutex();
+        dprintf( D_PERF_TRACE, "request #%d (%s): deadline would be exceeded\n", requestID, requestCommand.c_str() );
+        failureCount = 0;
+
+        this->errorCode = "E_DEADLINE_WOULD_BE_EXCEEDED";
+        this->errorMessage = "Signature would have expired before next permissible time to use it.";
+        curl_easy_cleanup( curl );
+
+        pthread_mutex_unlock( & globalCurlMutex );
+        return false;
+    }
+
+retry:
+    this->liveLine = globalCurlThrottle.getWhen();
+    Throttle::now( & this->sleepBegan );
+    globalCurlThrottle.sleepIfNecessary();
+    Throttle::now( & this->sleepEnded );
+
+    Throttle::now( & this->requestBegan );
+    if( failureMode == NULL ) {
+        rv = curl_easy_perform( curl );
+    } else if( strcmp( failureMode, "0" ) == 0 ) {
+        rv = curl_easy_perform( curl );
+    } else {
+        switch( failureMode[0] ) {
+            default:
+                rv = curl_easy_perform( curl );
+                break;
+
+            case '1':
+                rv = CURLE_OK;
+                break;
+
+            case '2':
+                if( requestCommand != "EC2_VM_STATUS_ALL" &&
+                     requestCommand != "EC2_VM_STATUS_ALL_SPOT" &&
+                      requestCommand != "EC2_VM_SERVER_TYPE" ) {
+                    rv = CURLE_OK;
+                } else {
+                    rv = curl_easy_perform( curl );
+                }
+                break;
+
+            case '3':
+                if( requestCommand != "EC2_VM_STATUS_ALL" &&
+                     requestCommand != "EC2_VM_STATUS_ALL_SPOT" &&
+                      requestCommand != "EC2_VM_SERVER_TYPE" ) {
+                    if( /* failureCount < 3 && */ requestID % 2 ) {
+                        rv = CURLE_OK;
+                    } else {
+                        rv = curl_easy_perform( curl );
+                    }
+                } else {
+                    rv = curl_easy_perform( curl );
+                }
+                break;
+
+            case '4':
+                if( requestCommand != "EC2_VM_STOP_SPOT" &&
+                     requestCommand != "EC2_VM_STOP" ) {
+                    rv = CURLE_OK;
+                } else {
+                    rv = curl_easy_perform( curl );
+                }
+                break;
+        }
+    }
+    Throttle::now( & this->requestEnded );
 
     amazon_gahp_grab_big_mutex();
+    Throttle::now( & this->mutexGained );
+
     dprintf( D_PERF_TRACE, "request #%d (%s): called %s\n", requestID, requestCommand.c_str(), query_parameters[ "Action" ].c_str() );
+    dprintf( D_PERF_TRACE | D_VERBOSE,
+        "request #%d (%s): "
+        "scheduling delay (release mutex, grab lock): %ld ms; "
+        "cumulative delay time: %ld ms; "
+        "last delay time: %ld ms "
+        "request time: %ld ms; "
+        "grab mutex: %ld ms\n",
+        requestID, requestCommand.c_str(),
+        Throttle::difference( & this->mutexReleased, & this->lockGained ),
+        Throttle::difference( & this->lockGained, & this->requestBegan ),
+        Throttle::difference( & this->sleepBegan, & this->sleepEnded ),
+        Throttle::difference( & this->requestBegan, & this->requestEnded ),
+        Throttle::difference( & this->requestEnded, & this->mutexGained )
+    );
 
     if( rv != 0 ) {
+        // We'll be very conservative here, and set the next liveline as if
+        // this request had exceeded the server's rate limit, which will also
+        // set the client-side rate limit if that's larger.  Since we're
+        // already terminally failing the request, don't bother to check if
+        // this was our last chance at retrying.
+        globalCurlThrottle.limitExceeded();
+
         this->errorCode = "E_CURL_IO";
         std::ostringstream error;
         error << "curl_easy_perform() failed (" << rv << "): '" << curl_easy_strerror( rv ) << "'.";
@@ -735,6 +838,12 @@ bool AmazonRequest::SendRequest() {
     unsigned long responseCode = 0;
     rv = curl_easy_getinfo( curl, CURLINFO_RESPONSE_CODE, & responseCode );
     if( rv != CURLE_OK ) {
+        // So we contacted the server but it returned such gibberish that
+        // CURL couldn't identify the response code.  Let's assume that's
+        // bad news.  Since we're already terminally failing the request,
+        // don't bother to check if this was our last chance at retrying.
+        globalCurlThrottle.limitExceeded();
+
         this->errorCode = "E_CURL_LIB";
         this->errorMessage = "curl_easy_getinfo() failed.";
         dprintf( D_ALWAYS, "curl_easy_getinfo( CURLINFO_RESPONSE_CODE ) failed (%d): '%s', failing.\n",
@@ -745,7 +854,6 @@ bool AmazonRequest::SendRequest() {
         return false;
     }
 
-    const char * failureMode = getenv( "EC2_GAHP_FAILURE_MODE" );
     if( failureMode != NULL && (strcmp( failureMode, "1" ) == 0) ) {
         responseCode = 503;
         resultString = "FAILURE INJECTION: <Error><Code>RequestLimitExceeded</Code></Error>";
@@ -760,12 +868,11 @@ bool AmazonRequest::SendRequest() {
         }
     }
 
-    static unsigned failureCount = 0;
     if( failureMode != NULL && (strcmp( failureMode, "3" ) == 0) ) {
         if( requestCommand != "EC2_VM_STATUS_ALL" &&
              requestCommand != "EC2_VM_STATUS_ALL_SPOT" &&
               requestCommand != "EC2_VM_SERVER_TYPE" ) {
-            if( failureCount < 3 && requestID % 2 ) {
+            if( /* failureCount < 3 && */ requestID % 2 ) {
                 ++failureCount;
                 responseCode = 503;
                 resultString = "FAILURE INJECTION: <Error><Code>RequestLimitExceeded</Code></Error>";
@@ -786,6 +893,7 @@ bool AmazonRequest::SendRequest() {
     if( responseCode == 503 && (resultString.find( "<Error><Code>RequestLimitExceeded</Code>" ) != std::string::npos) ) {
         if( globalCurlThrottle.limitExceeded() ) {
             dprintf( D_PERF_TRACE, "request #%d (%s): retry limit exceeded\n", requestID, requestCommand.c_str() );
+        	failureCount = 0;
 
             // This should almost certainly be E_REQUEST_LIMIT_EXCEEDED, but
             // for now return the same error code for this condition that

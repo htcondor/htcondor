@@ -96,6 +96,15 @@ class AmazonRequest {
 		// For tracing.
 		int requestID;
 		std::string requestCommand;
+		struct timespec mutexReleased;
+		struct timespec lockGained;
+		struct timespec requestBegan;
+		struct timespec requestEnded;
+		struct timespec mutexGained;
+		struct timespec sleepBegan;
+		struct timespec liveLine;
+		struct timespec sleepEnded;
+
 };
 
 // EC2 Commands
