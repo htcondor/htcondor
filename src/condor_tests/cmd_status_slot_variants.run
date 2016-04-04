@@ -24,7 +24,7 @@
 ## current copy of the desired command so we can real them when we
 ## want to change out our master comparison file. The masters are
 ## kept in condor_tests/SavedAds. The curren saved location is
-## condor_status_dash_ads.saveme/$pid/CurrentSavedAds. This will
+## cmd_status_slot_variants.saveme/$pid/CurrentSavedAds. This will
 ## place them in the folder where all the personals are created.
 ## Each variance will have both a predefined name and exceptions.
 ##
@@ -41,7 +41,7 @@ use Check::CondorLog;
 
 my $expectedrunning = 0;
 my $pid = $$;
-my $testname = "condor_status_dash_ads";
+my $testname = "cmd_status_slot_variants";
 my $AdSaveLoc = "$testname" . ".saveme/pdir$pid"; 
 my $SaveName = "$testname" . ".saveme";
 
