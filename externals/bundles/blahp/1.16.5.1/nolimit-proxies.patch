@@ -1,0 +1,45 @@
+--- org.glite.ce.blahp/src/server.c.orig	2016-04-04 14:53:01.576002164 +0000
++++ org.glite.ce.blahp/src/server.c	2016-04-04 15:41:41.899003043 +0000
+@@ -178,6 +178,7 @@
+ int require_proxy_on_submit = FALSE;
+ int disable_wn_proxy_renewal = FALSE;
+ int disable_proxy_user_copy = FALSE;
++int disable_limited_proxy = FALSE;
+ int synchronous_termination = FALSE;
+ 
+ static char *mapping_parameter[MEXEC_PARAM_COUNT];
+@@ -373,6 +374,7 @@
+ 	enable_condor_glexec = config_test_boolean(config_get("blah_enable_glexec_from_condor",blah_config_handle));
+ 	disable_wn_proxy_renewal = config_test_boolean(config_get("blah_disable_wn_proxy_renewal",blah_config_handle));
+ 	disable_proxy_user_copy = config_test_boolean(config_get("blah_disable_proxy_user_copy",blah_config_handle));
++        disable_limited_proxy = config_test_boolean(config_get("blah_disable_limited_proxy",blah_config_handle));
+ 				
+ 	if (enable_condor_glexec)
+ 	{
+@@ -1050,7 +1052,7 @@
+ 			}
+ 		}
+ 	}
+-	else if (proxyname != NULL)
++	else if ((proxyname) != NULL && (!disable_limited_proxy))
+ 	{
+ 		/* not in glexec mode: need to limit the proxy */
+ 		if((proxynameNew = limit_proxy(proxyname, NULL)) == NULL)
+@@ -1887,7 +1889,7 @@
+ 		switch(jobStatus)
+ 		{
+ 			case 1: /* job queued: copy the proxy locally */
+-				if (!use_mapping)
++				if ((!use_mapping) && (!disable_limited_proxy))
+ 				{
+ 					limit_proxy(proxyFileName, old_proxy); /*FIXME: should check if limited proxies are enabled? */ 
+ 					resultLine = make_message("%s 0 Proxy\\ renewed", reqId);
+@@ -2014,7 +2016,7 @@
+ 
+ 	if (workernode != NULL && strcmp(workernode, ""))
+ 	{
+-		if(!use_glexec)
++               if((!use_glexec) && (!disable_limited_proxy))
+ 		{
+ 			proxyFileNameNew = limit_proxy(proxyFileName, NULL);
+ 		}
