@@ -49,7 +49,7 @@ if ( WITH_BLAHP )
 		endif()
 
 
-		condor_pre_external( BLAHP blahp-1.16.5.1-p18 "lib;include" "done")
+		condor_pre_external( BLAHP blahp-1.16.5.1-p19 "lib;include" "done")
 		
 		ExternalProject_Add(blahp
 						DEPENDS ${BLAHP_DEPENDS}
@@ -91,6 +91,7 @@ if ( WITH_BLAHP )
 							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/lsf-submit-conf.patch -p1 &&
 							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/pbs-empty-jobid.patch -p1 &&
 							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/job_registry.patch -p1 &&
+							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/nolimit-proxies.patch -p1 &&
 							mv config/blah.config.template config/batch_gahp.config.template
 						#--Configure step ----------
 						CONFIGURE_COMMAND export CPPFLAGS=${CPP11_FLAG} &&
