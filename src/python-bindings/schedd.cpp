@@ -1,21 +1,11 @@
-// pyconfig.h is broken on Debian and #defines HAVE_IO_H, when Debian doesn't.
-// This causes the Globus headers to fail.  Instead, include the Globus headers
-// as early as possible and hack around the other brokenness where pyconfig.h
-// redefines _XOPEN_SOURCE and _POSIX_C_SOURCE.  (Since pyconfig's definition
-// won before this change, this has no semantic effect.)
-#ifdef WIN32
-	#include "python_bindings_common.h"
-	#undef _XOPEN_SOURCE
-	#undef _POSIX_C_SOURCE
-	#include "condor_common.h"
-	#include "globus_utils.h"
-#else
-	#include "condor_common.h"
-	#include "globus_utils.h"
-	#undef _XOPEN_SOURCE
-	#undef _POSIX_C_SOURCE
-	#include "python_bindings_common.h"
-#endif
+#include "python_bindings_common.h"
+
+// hack around the other brokenness where pyconfig.h
+// redefines _XOPEN_SOURCE and _POSIX_C_SOURCE.
+#undef _XOPEN_SOURCE
+#undef _POSIX_C_SOURCE
+#include "condor_common.h"
+#include "globus_utils.h"
 
 #include "condor_attributes.h"
 #include "condor_universe.h"
@@ -33,7 +23,6 @@
 
 #include <classad/operators.h>
 
-#include <boost/python.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/erase.hpp>
 #include <boost/version.hpp>
