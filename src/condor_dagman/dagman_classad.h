@@ -60,6 +60,12 @@ class DagmanClassad {
 		*/
 	void GetInfo( MyString &owner, MyString &nodeName );
 
+		/** Get the JobBatchName value from our ClassAd (setting it
+		    to the default if it's not already set.
+			@param batchName: A MyString to receive the JobBatchName value
+		*/
+	void GetSetBatchName( MyString &batchName );
+
   private:
 		/** Initialize metrics information related to our classad.
 		*/
@@ -81,6 +87,12 @@ class DagmanClassad {
 			@param attrVal The value of the attribute.
 		*/
 	void SetDagAttribute( const char *attrName, int attrVal );
+
+		/** Set an attribute in this DAGMan's classad.
+			@param attrName The name of the attribute to set.
+			@param attrVal The value of the attribute.
+		*/
+	void SetDagAttribute( const char *attrName, const MyString &value );
 
 		/** Get the specified attribute (string) value from our ClassAd.
 			@param attrName: The name of the attribute.

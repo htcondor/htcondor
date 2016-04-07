@@ -3975,7 +3975,8 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 					node->GetJobName(), parents,
 					node->varsFromDag, node->GetRetries(),
 					node->GetDirectory(), _defaultNodeLog,
-					node->NumChildren() > 0 && dm._claim_hold_time > 0 );
+					node->NumChildren() > 0 && dm._claim_hold_time > 0,
+					dm._batchName );
 	}
 
 	result = submit_success ? SUBMIT_RESULT_OK : SUBMIT_RESULT_FAILED;

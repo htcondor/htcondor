@@ -226,6 +226,9 @@ class Dagman {
 		// log files specified in their submit files (see gittrac #4353).
 	bool _suppressJobLogs;
 
+		//TEMPTEMP -- document
+	MyString _batchName;
+
 	DagmanClassad *_dagmanClassad;
 };
 

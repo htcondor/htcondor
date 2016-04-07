@@ -1,0 +1,5 @@
+job NodeLA job_dagman_batch_name-node.sub
+vars NodeLA nodename = "$(JOB)"
+
+job NodeLB job_dagman_batch_name-node.sub
+vars NodeLB nodename = "$(JOB)"

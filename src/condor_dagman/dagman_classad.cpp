@@ -125,6 +125,34 @@ DagmanClassad::GetInfo( MyString &owner, MyString &nodeName )
 
 //---------------------------------------------------------------------------
 void
+DagmanClassad::GetSetBatchName( MyString &batchName )
+{
+	if ( !_valid ) {
+		debug_printf( DEBUG_VERBOSE,
+					"Skipping ClassAd query -- DagmanClassad object is invalid\n" );
+		return;
+	}
+
+	Qmgr_connection *queue = OpenConnection();
+	if ( !queue ) {
+		return;
+	}
+
+	if ( !GetDagAttribute( ATTR_JOB_BATCH_NAME, batchName ) ) {
+			// Default batch name is top-level DAG's Condor ID.
+		batchName = MyString( _dagmanId._cluster ) + "." +
+					MyString( _dagmanId._proc );
+		SetDagAttribute( ATTR_JOB_BATCH_NAME, batchName );
+	}
+
+	CloseConnection( queue );
+
+	debug_printf( DEBUG_VERBOSE, "Workflow batch-name: <%s>\n",
+				batchName.Value() );
+}
+
+//---------------------------------------------------------------------------
+void
 DagmanClassad::InitializeMetrics()
 {
 
@@ -185,6 +213,18 @@ DagmanClassad::SetDagAttribute( const char *attrName, int attrVal )
 {
 	if ( SetAttributeInt( _dagmanId._cluster, _dagmanId._proc,
 						  attrName, attrVal ) != 0 ) {
+		debug_printf( DEBUG_QUIET,
+					  "WARNING: failed to set attribute %s\n", attrName );
+		check_warning_strictness( DAG_STRICT_3 );
+	}
+}
+
+//---------------------------------------------------------------------------
+void
+DagmanClassad::SetDagAttribute( const char *attrName, const MyString &value )
+{
+	if ( SetAttributeString( _dagmanId._cluster, _dagmanId._proc,
+						  attrName, value.Value() ) != 0 ) {
 		debug_printf( DEBUG_QUIET,
 					  "WARNING: failed to set attribute %s\n", attrName );
 		check_warning_strictness( DAG_STRICT_3 );

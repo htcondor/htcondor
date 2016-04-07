@@ -143,6 +143,7 @@ Dagman::Dagman() :
 	_claim_hold_time(20),
 	_doRecovery(false),
 	_suppressJobLogs(false),
+	_batchName(""),
 	_dagmanClassad(NULL)
 {
     debug_level = DEBUG_VERBOSE;  // Default debug level is verbose output
@@ -641,6 +642,8 @@ void main_init (int argc, char ** const argv) {
 	dagman.DAGManJobId.SetFromString( getenv( EnvGetName( ENV_ID ) ) );
 
 	dagman._dagmanClassad = new DagmanClassad( dagman.DAGManJobId );
+
+	dagman._dagmanClassad->GetSetBatchName( dagman._batchName );
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		// Minimum legal version for a .condor.sub file to be compatible
