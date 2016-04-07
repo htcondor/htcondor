@@ -98,7 +98,6 @@ $success = sub
 		} else {
 			$contents = do { local $/; <OUT>; };
 			chomp $contents;
-			#CondorTest::debug("Contents: $contents\n",1);#TEMPTEMP?
 			if ($contents eq $expected_contents) {
 				CondorTest::debug("Found <$contents> in $file\n",1);
 			} else {
