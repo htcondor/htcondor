@@ -286,7 +286,6 @@ my_system(const char *cmd)
 //////////////////////////////////////////////////////////////////////////
 
 #include <fcntl.h> // for O_CLOEXEC
-#include <grp.h> // for setgroups
 
 static int	READ_END = 0;
 static int	WRITE_END = 1;
@@ -465,7 +464,8 @@ my_popenv_impl( const char *const args[],
 		}
 			/* to be safe, we want to switch our real uid/gid to our
 			   effective uid/gid (shedding any privledges we've got).
-			   we also want to drop any supplimental groups we're in.
+			   Our supplemental groups should already be set properly
+			   by the set_priv() code.
 			   we want to run this popen()'ed thing as our effective
 			   uid/gid, dropping the real uid/gid.  all of these calls
 			   will fail if we don't have a ruid of 0 (root), but
@@ -479,7 +479,6 @@ my_popenv_impl( const char *const args[],
 			euid = geteuid();
 			egid = getegid();
 			if( seteuid( 0 ) ) { }
-			setgroups( 1, &egid );
 			if( setgid( egid ) ) { }
 			if( setuid( euid ) ) _exit(ENOEXEC); // Unsafe?
 		}
@@ -788,7 +787,8 @@ my_spawnv( const char* cmd, const char *const argv[] )
 	if( ChildPid == 0 ) {
 			/* to be safe, we want to switch our real uid/gid to our
 			   effective uid/gid (shedding any privledges we've got).
-			   we also want to drop any supplimental groups we're in.
+			   Our supplemental groups should already be set properly
+			   by the set_priv() code.
 			   the whole point of my_spawn*() is that we want to run
 			   something as our effective uid/gid, and we want to do
 			   it safely.  all of these calls will fail if we don't
@@ -801,7 +801,6 @@ my_spawnv( const char* cmd, const char *const argv[] )
 		euid = geteuid();
 		egid = getegid();
 		if( seteuid( 0 ) ) { }
-		setgroups( 1, &egid );
 		if( setgid( egid ) ) { }
 		if( setuid( euid ) ) _exit(ENOEXEC); // Unsafe?
 
