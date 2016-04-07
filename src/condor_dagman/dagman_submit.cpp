@@ -1,4 +1,3 @@
-//TEMPTEMP -- use the #define for the batch name attribute... (not just in dagman)
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,

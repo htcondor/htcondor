@@ -29,7 +29,17 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item A batch-name specified for a DAG (with the \Condor{submit\_dag}
+\Opt{-batch-name} option) is now propagated to all jobs of that DAG, including
+sub-DAGs.
+\Ticket{5493}
+
+\item The batch-name for a DAG now defaults to the HTCondor ID of the
+\Condor{dagman} job, if not specified.  Because the batch-name is
+now propagated throughout a workflow, if no batch-name is specified,
+the batch-name for all jobs in the workflow will be the HTCondor ID
+of the top-level \Condor{dagman} job.
+\Ticket{5605}
 
 \end{itemize}
 

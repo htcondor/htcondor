@@ -61,7 +61,7 @@ class DagmanClassad {
 	void GetInfo( MyString &owner, MyString &nodeName );
 
 		/** Get the JobBatchName value from our ClassAd (setting it
-		    to the default if it's not already set.
+		    to the default if it's not already set).
 			@param batchName: A MyString to receive the JobBatchName value
 		*/
 	void GetSetBatchName( MyString &batchName );
