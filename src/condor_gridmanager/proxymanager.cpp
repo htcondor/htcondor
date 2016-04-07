@@ -308,16 +308,18 @@ AcquireProxy( const ClassAd *job_ad, std::string &error,
 		// find the proxy's expiration time and subject name
 		expire_time = x509_proxy_expiration_time( proxy_path.c_str() );
 		if ( expire_time < 0 ) {
-			dprintf( D_ALWAYS, "Failed to get expiration time of proxy %s\n",
-					 proxy_path.c_str() );
-			error = "Failed to get expiration time of proxy";
+			dprintf( D_ALWAYS, "Failed to get expiration time of proxy %s: %s\n",
+					 proxy_path.c_str(), x509_error_string() );
+			formatstr( error, "Failed to get expiration time of proxy: %s",
+					   x509_error_string() );
 			return NULL;
 		}
 		subject_name = x509_proxy_identity_name( proxy_path.c_str() );
 		if ( subject_name == NULL ) {
-			dprintf( D_ALWAYS, "Failed to get identity of proxy %s\n",
-					 proxy_path.c_str() );
-			error = "Failed to get identity of proxy";
+			dprintf( D_ALWAYS, "Failed to get identity of proxy %s: %s\n",
+					 proxy_path.c_str(), x509_error_string() );
+			formatstr( error, "Failed to get identity of proxy: %s",
+					   x509_error_string() );
 			return NULL;
 		}
 

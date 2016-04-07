@@ -2,30 +2,7 @@
 // Note - python_bindings_common.h must be included before condor_common to avoid
 // re-definition warnings.
 #include "python_bindings_common.h"
-
-# if defined(__APPLE__)
-# undef HAVE_SSIZE_T
-# include <pyport.h>
-# endif
-
-/*
- * #include <Python.h> solves a ctype function overload issue, but causes
- * a dprintf() conflict.  Redefining dprintf and getline prevents a collision
- * with the definitions in stdio.h, #included from Python.h, so the condor
- * versions are used instead.
- */
-
-#ifdef __FreeBSD__
-#define dprintf _hide_dprintf
-#define getline _hide_getline
-#include <Python.h>
-#undef getline
-#undef dprintf
-#endif
-
 #include "condor_common.h"
-
-#include <boost/python.hpp>
 
 #include "daemon.h"
 #include "daemon_types.h"
