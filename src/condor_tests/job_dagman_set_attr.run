@@ -56,7 +56,7 @@ foreach $name (@outfiles) {
 
 $abnormal = sub 
 {
-	die "Want to see only submit, execute and unsuccessful completion\n";
+	die "Want to see only submit, execute and successful completion\n";
 };
 
 $failure = sub 
@@ -83,7 +83,7 @@ $executed = sub
 
 $submitted = sub
 {
-	CondorTest::debug("submitted: This test will see submit, executing and unsuccessful completion\n",1);
+	CondorTest::debug("submitted: This test will see submit, executing and successful completion\n",1);
 };
 
 $success = sub
