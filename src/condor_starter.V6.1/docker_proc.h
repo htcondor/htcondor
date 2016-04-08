@@ -30,6 +30,7 @@ class DockerProc : public VanillaProc {
 		virtual bool PublishUpdateAd( ClassAd * jobAd );
 		virtual void PublishToEnv( Env * env );
 
+		virtual int getStats(int tid);
 		static bool Detect();
 		static bool Version( std::string & version );
 
@@ -37,6 +38,8 @@ class DockerProc : public VanillaProc {
 
 		std::string containerID;
 		std::string containerName;
+		int updateTid;
+		uint64_t memUsage, netIn, netOut, userCpu, sysCpu;
 };
 
 #endif /* _CONDOR_DOCKER_PROC_H */
