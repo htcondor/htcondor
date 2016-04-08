@@ -5365,6 +5365,7 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 	// of the dslots being preempted.
 	string claim_id;
 	string all_claim_ids;
+	string dslotDesc;
     ClaimIdHash::iterator claimset = claimIds.end();
 	if (want_claiming) {
         string key = startdName.Value();
@@ -5382,6 +5383,8 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 		if (offer->LookupString("PreemptDslotClaims", extraClaims)) {
 			all_claim_ids += " ";
 			all_claim_ids += extraClaims;
+			size_t numExtraClaims = std::count(extraClaims.begin(), extraClaims.end(), ' ');
+			formatstr(dslotDesc, "%ld dslots", numExtraClaims); 
 			offer->Delete("PreemptDslotClaims");
 		}
 
@@ -5490,6 +5493,11 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 	} else {
 		remoteUser = remoteOwner;
 	}
+	
+	if (dslotDesc.length() > 0) {
+		remoteUser = dslotDesc;
+	}
+
 	if (offer->LookupString (ATTR_STARTD_IP_ADDR, startdAddr) == 0) {
 		startdAddr = "<0.0.0.0:0>";
 	}
