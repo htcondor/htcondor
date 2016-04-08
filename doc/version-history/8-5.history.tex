@@ -22,10 +22,6 @@ The details of each version are described below.
 \item HTCondor version 8.5.4 not yet released.
 %\item HTCondor version 8.5.4 released on Month Date, 2016.
 
-\item The performance of the \Condor{history} tool has been
-significantly improved.
-\Ticket{5536}
-
 \item The \SubmitCmdNI{deltacloud} type in the grid universe, which allowed
 submission to Deltacloud services, has been removed.
 \Ticket{5569}
@@ -36,6 +32,15 @@ submission to Deltacloud services, has been removed.
 \noindent New Features:
 
 \begin{itemize}
+
+\item Improved the performance of the \Condor{collector} by
+not computing dropped update statistics, statistics which 
+have never been accessible by users.
+\Ticket{5566}
+
+\item The performance of the \Condor{history} tool has been
+significantly improved.
+\Ticket{5536}
 
 \item \Condor{user\_prio} now queries the \Condor{collector} for 
 accounting information by default, when appropriate.  This should be
