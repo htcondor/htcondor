@@ -34,11 +34,12 @@ The details of each version are described below.
 sub-DAGs.
 \Ticket{5493}
 
-\item The batch-name for a DAG now defaults to the HTCondor ID of the
-\Condor{dagman} job, if not specified.  Because the batch-name is
-now propagated throughout a workflow, if no batch-name is specified,
-the batch-name for all jobs in the workflow will be the HTCondor ID
-of the top-level \Condor{dagman} job.
+\item The batch-name for a \Condor{dagman} job now defaults to the
+file name of the primary DAG file, if not specified (just the file
+name itself, not the complete path).  Because the batch-name is now
+propagated throughout a workflow, if no batch-name is specified, the
+batch-name for all jobs in the workflow will be the name of the
+top-level DAG file.
 \Ticket{5605}
 
 \end{itemize}

@@ -64,7 +64,8 @@ class DagmanClassad {
 		    to the default if it's not already set).
 			@param batchName: A MyString to receive the JobBatchName value
 		*/
-	void GetSetBatchName( MyString &batchName );
+	void GetSetBatchName( const MyString &primaryDagFile,
+				MyString &batchName );
 
   private:
 		/** Initialize metrics information related to our classad.
@@ -97,8 +98,11 @@ class DagmanClassad {
 		/** Get the specified attribute (string) value from our ClassAd.
 			@param attrName: The name of the attribute.
 			@param attrVal: A MyString to receive the attribute value.
+			@param printWarning: Whether to print a warning if we
+				can't get the requested attribute.
 		*/
-	bool GetDagAttribute( const char *attrName, MyString &attrVal );
+	bool GetDagAttribute( const char *attrName, MyString &attrVal,
+				bool printWarning = true );
 
 		// Whether this object is valid.
 	bool _valid;

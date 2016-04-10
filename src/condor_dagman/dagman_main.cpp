@@ -643,8 +643,6 @@ void main_init (int argc, char ** const argv) {
 
 	dagman._dagmanClassad = new DagmanClassad( dagman.DAGManJobId );
 
-	dagman._dagmanClassad->GetSetBatchName( dagman._batchName );
-
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		// Minimum legal version for a .condor.sub file to be compatible
 		// with this condor_dagman binary.
@@ -865,6 +863,9 @@ void main_init (int argc, char ** const argv) {
 	dagman.dagFiles.rewind();
 	dagman.primaryDagFile = dagman.dagFiles.next();
 	dagman.multiDags = (dagman.dagFiles.number() > 1);
+
+	dagman._dagmanClassad->GetSetBatchName( dagman.primaryDagFile,
+				dagman._batchName );
 
 	dagman.ResolveDefaultLog();
 

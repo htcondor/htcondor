@@ -24,6 +24,7 @@
 #include "condor_qmgr.h"
 #include "debug.h"
 #include "dagman_metrics.h"
+#include "basename.h"
 
 //---------------------------------------------------------------------------
 DagmanClassad::DagmanClassad( const CondorID &DAGManJobId ) :
@@ -125,7 +126,8 @@ DagmanClassad::GetInfo( MyString &owner, MyString &nodeName )
 
 //---------------------------------------------------------------------------
 void
-DagmanClassad::GetSetBatchName( MyString &batchName )
+DagmanClassad::GetSetBatchName( const MyString &primaryDagFile,
+			MyString &batchName )
 {
 	if ( !_valid ) {
 		debug_printf( DEBUG_VERBOSE,
@@ -138,10 +140,10 @@ DagmanClassad::GetSetBatchName( MyString &batchName )
 		return;
 	}
 
-	if ( !GetDagAttribute( ATTR_JOB_BATCH_NAME, batchName ) ) {
-			// Default batch name is top-level DAG's Condor ID.
-		batchName = MyString( _dagmanId._cluster ) + "." +
-					MyString( _dagmanId._proc );
+	if ( !GetDagAttribute( ATTR_JOB_BATCH_NAME, batchName, false ) ) {
+			// Default batch name is top-level DAG's primary
+			// DAG file (base name only).
+		batchName = condor_basename( primaryDagFile.Value() );
 		SetDagAttribute( ATTR_JOB_BATCH_NAME, batchName );
 	}
 
@@ -233,13 +235,16 @@ DagmanClassad::SetDagAttribute( const char *attrName, const MyString &value )
 
 //---------------------------------------------------------------------------
 bool
-DagmanClassad::GetDagAttribute( const char *attrName, MyString &attrVal )
+DagmanClassad::GetDagAttribute( const char *attrName, MyString &attrVal,
+			bool printWarning )
 {
 	char *val;
 	if ( GetAttributeStringNew( _dagmanId._cluster, _dagmanId._proc,
 				attrName, &val ) != 0 ) {
-		debug_printf( DEBUG_QUIET,
-					  "Warning: failed to get attribute %s\n", attrName );
+		if ( printWarning ) {
+			debug_printf( DEBUG_QUIET,
+					  	"Warning: failed to get attribute %s\n", attrName );
+		}
 		return false;
 	}
 
