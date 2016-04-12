@@ -62,6 +62,8 @@ using namespace std;
 #define GM_CREATE_KEY_PAIR				17
 #define GM_CANCEL_CHECK					18
 
+#define GM_SPOT_CANCEL_CHECK			19
+
 static const char *GMStateNames[] = {
 	"GM_INIT",
 	"GM_START_VM",
@@ -82,6 +84,7 @@ static const char *GMStateNames[] = {
 	"GM_SEEK_INSTANCE_ID",
 	"GM_CREATE_KEY_PAIR",
 	"GM_CANCEL_CHECK",
+	"GM_SPOT_CANCEL_CHECK",
 };
 
 #define EC2_VM_STATE_RUNNING			"running"
@@ -91,9 +94,13 @@ static const char *GMStateNames[] = {
 #define EC2_VM_STATE_SHUTOFF			"shutoff"
 #define EC2_VM_STATE_STOPPED			"stopped"
 
-// These are pseduostates used internally by the grid manager.
+// These are pseduostates used internally by the grid manager.  It's
+// important that they aren't returned by the EC2 API, since that's how
+// we block until the next status poll has occured and not deadlock if
+// the job has already reached a terminal state.
 #define EC2_VM_STATE_PURGED				"not-found"
 #define EC2_VM_STATE_CANCELLING			"cancelling"
+#define EC2_VM_STATE_SPOT_CANCELLING	"cancelling-spot"
 
 // TODO: Let the maximum submit attempts be set in the job ad or, better yet,
 // evalute PeriodicHold expression in job ad.
@@ -1255,8 +1262,9 @@ void EC2Job::doEvaluateState()
 					// we know that we cancelled the spot request before
 					// it created an instance.
 				} else {
-					// Force us to wait a polling delay before checking
-					// to see if this worked.
+					// This will become true after the next status poll,
+					// because EC2_VM_STATE_CANCELLING isn't be returned by
+					// the EC2 API.
 					probeNow = false;
 
 					rc = gahp->ec2_vm_stop( m_serviceUrl,
@@ -1571,6 +1579,11 @@ void EC2Job::doEvaluateState()
 					dprintf( D_ALWAYS, "(%d.%d) Entered GM_SPOT_CANCEL without a spot request ID; this should be impossible.\n", procID.cluster, procID.proc );
 					gmState = GM_SUBMITTED;
 				} else {
+					// Forcing the state to be something the EC2 API doesn't
+					// return forces probeNow to set by the next status poll.
+					remoteJobState = EC2_VM_STATE_SPOT_CANCELLING;
+					SetRemoteJobStatus( EC2_VM_STATE_SPOT_CANCELLING );
+
 					// Send a command to the GAHP, or poll for its result(s).
 					rc = gahp->ec2_spot_stop(   m_serviceUrl,
 												m_public_key_file,
@@ -1603,6 +1616,41 @@ void EC2Job::doEvaluateState()
 						break;
 					}
 
+					// GM_SPOT_CANCEL_CHECK checks if the SIR has spawned an
+					// instance and, if it hasn't, that it's entered the
+					// cancelled state, at which point it's safe to forget it.
+					//
+					// If the SIR /did/ spawn an instance, we move into the
+					// on-demand instance subgraph of the state machine; we
+					// only enter GM_SPOT_CANCEL if the job was removed or
+					// held, so the on-demand state machine will immediately
+					// go into GM_CANCEL.
+					probeNow = false;
+					gmState = GM_SPOT_CANCEL_CHECK;
+				}
+				break;
+
+			case GM_SPOT_CANCEL_CHECK:
+				if( ! probeNow ) { break; }
+				probeNow = false;
+
+				// If the SIR has spawned an instance, record it; GM_SUBMITTED
+				// will restart the removal process, if appropriate.
+				if(! m_remoteJobId.empty()) {
+					// Try as often as we're willing to terminate the instance,
+					// even if we tried a few times to cancel the spot request.
+					m_retry_times = 0;
+
+					gmState = GM_SAVE_INSTANCE_ID;
+					break;
+				}
+
+				// If the SIR hasn't spawned an instance, but has been
+				// cancelled, go ahead and delete the job.
+				if( remoteJobState == "cancelled" ) {
+					// This shouldn't ever matter, but it's cleaner.
+					m_retry_times = 0;
+
 					// Since we know the request is gone, forget about it.
 					SetRequestID( NULL );
 					requestScheddUpdate( this, false );
@@ -1611,22 +1659,21 @@ void EC2Job::doEvaluateState()
 					// terminating.
 					m_state_reason_code.clear();
 
-					// Rather than decide if we crashed after cancelling a
-					// request but before removing its ID from the job ad,
-					// just never remove it.  It won't hurt to try to cancel
-					// the request again, and since we already have the
-					// instance ID, we know we're not done when we cancel it.
-
-					// FIXME: At this point, we should verify that (a) the
-					// state of spot request is "cancelled" and (b) that the
-					// spot request in that state does not have an instance ID.
-					// If it does go to GM_SAVE_INSTANCE_ID; it will fall into
-					// GM_SUBMITTED and then GM_CANCEL if the job is being
-					// removed.  (If the job isn't being removed, we shouldn't
-					// be here, but we need to track the instance anyway.)
-
 					// For now, just assume that the cancel was successful.
 					gmState = GM_DELETE;
+					break;
+				} else {
+					// If the SIR hasn't spawned an instance but we failed
+					// to cancel it, try a few more times, to be sure.
+					if( m_retry_times++ < maxRetryTimes ) {
+						gmState = GM_SPOT_CANCEL;
+						break;
+					} else {
+						formatstr( errorString, "Spot job cancel did not succeed after %d tries, giving up.", maxRetryTimes );
+						dprintf( D_ALWAYS, "(%d.%d) %s\n", procID.cluster, procID.proc, errorString.c_str() );
+						gmState = GM_HOLD;
+						break;
+					}
 				}
 				break;
 
