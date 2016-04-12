@@ -23,7 +23,15 @@ if ( HAVE_EXT_CREAM )
 	else()
 		set( CARES_LIB ${HAVE_LIBCARES} )
 	endif()
-        
+
+	# Ensure we use the version of gsoap that was used to build
+	# the glite libraries.
+	# This is different than the version we use for HTCondor's
+	# soap support.
+	if ( NOT PROPER )
+		include_directories( BEFORE ${CREAMSOAP_INSTALL_LOC}/include )
+	endif()
+
 	add_definitions(-D_REENTRANT)
 	# LTO fails with CREAM because they have references to the typeinfo of exceptions,
 	# but the typeinfo for these are not generated as the exceptions are solely defined
