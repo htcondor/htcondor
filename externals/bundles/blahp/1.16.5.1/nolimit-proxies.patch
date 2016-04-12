@@ -43,3 +43,16 @@
  		{
  			proxyFileNameNew = limit_proxy(proxyFileName, NULL);
  		}
+--- org.glite.ce.blahp/config/blah.config.template.orig	2016-04-12 09:50:17.336674714 -0500
++++ org.glite.ce.blahp/config/blah.config.template	2016-04-12 09:53:14.047265847 -0500
+@@ -14,6 +14,10 @@
+ #be enabled only if non-limited proxies are used for proxy renewal.
+ blah_delegate_renewed_proxies=no
+ 
++#Set to no if you wish the blahp to create a new limited proxy from
++#the given proxy (if any) to give to the job.
++blah_disable_limited_proxy=yes
++
+ #Path where PBS executables are located 
+ pbs_binpath=`which qsub 2>/dev/null|sed 's|/[^/]*$||'`
+ 
