@@ -263,7 +263,7 @@ struct RequestIterator;
 struct ScheddNegotiate
 {
 
-friend class Schedd;
+friend struct Schedd;
 
 public:
 
@@ -292,7 +292,7 @@ private:
 
 struct RequestIterator
 {
-    friend class ScheddNegotiate;
+    friend struct ScheddNegotiate;
 
     inline static boost::python::object pass_through(boost::python::object const& o) { return o; };
 
