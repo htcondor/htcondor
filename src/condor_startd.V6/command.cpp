@@ -2575,6 +2575,8 @@ command_drain_jobs( Service*, int /*dc_cmd*/, Stream* s )
 	if( !ok ) {
 		response_ad.Assign(ATTR_ERROR_STRING,error_msg);
 		response_ad.Assign(ATTR_ERROR_CODE,error_code);
+	} else if ( ! new_request_id.empty()) {
+		response_ad.Assign(ATTR_REQUEST_ID, new_request_id);
 	}
 	s->encode();
 	if( !putClassAd(s, response_ad) || !s->end_of_message() ) {

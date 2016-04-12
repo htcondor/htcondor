@@ -50,6 +50,7 @@ int how_fast = DRAIN_GRACEFUL;
 bool resume_on_completion = false;
 char *cancel_request_id = NULL;
 char *draining_check_expr = NULL;
+int dash_verbose = 0;
 
 // pass the exit code through dprintf_SetExitCode so that it knows
 // whether to print out the on-error buffer or not.
@@ -93,6 +94,7 @@ main( int argc, char *argv[] )
 		rval = startd.drainJobs( how_fast, resume_on_completion, draining_check_expr, request_id );
 		if( rval ) {
 			printf("Sent request to drain %s\n",startd.name());
+			if (dash_verbose && ! request_id.empty()) { printf("\tRequest id: %s\n", request_id.c_str()); }
 		}
 	}
 	else if( cmd == CANCEL_DRAIN_JOBS ) {
@@ -169,6 +171,9 @@ parseArgv( int argc, char* argv[] )
 		else if( match_prefix( argv[i], "-version" ) ) {
 			version();
 		}
+		else if( is_dash_arg_prefix( argv[i], "verbose", 4 ) ) {
+			dash_verbose = 1;
+		}
 		else if( match_prefix( argv[i], "-pool" ) ) {
 			if( i+1 >= argc ) another(argv[i]);
 			if (pool) {
@@ -205,9 +210,9 @@ parseArgv( int argc, char* argv[] )
 			}
 			draining_check_expr = strdup(argv[++i]);
 		}
-        else if( argv[i][0] != '-' ) {
-            break;
-        }
+		else if( argv[i][0] != '-' ) {
+			break;
+		}
 		else {
 			fprintf(stderr,"ERROR: unexpected argument: %s\n", argv[i]);
 			exit(2);
