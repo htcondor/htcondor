@@ -6233,7 +6233,7 @@ int GahpClient::ec2_vm_start( std::string service_url,
 		if ( m_mode == results_only ) {
 			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
 		}
-		now_pending(command, buf, deleg_proxy);
+		now_pending(command, buf, deleg_proxy, low_prio);
 	}
 
 	// If we made it here, command is pending.
@@ -6334,7 +6334,7 @@ int GahpClient::ec2_vm_stop( std::string service_url,
 		if ( m_mode == results_only ) {
 			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
 		}
-		now_pending(command, buf, deleg_proxy);
+		now_pending(command, buf, deleg_proxy, medium_prio);
 	}
 	
 	// If we made it here, command is pending.
@@ -6425,7 +6425,7 @@ int GahpClient::ec2_vm_status_all( std::string service_url,
 		if ( m_mode == results_only ) {
 			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
 		}
-		now_pending(command, buf, deleg_proxy);
+		now_pending(command, buf, deleg_proxy, high_prio);
 	}
 	
 	// If we made it here, command is pending.
@@ -6521,7 +6521,7 @@ int GahpClient::ec2_vm_status( std::string service_url,
 		if ( m_mode == results_only ) {
 			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
 		}
-		now_pending(command, buf, deleg_proxy);
+		now_pending(command, buf, deleg_proxy, high_prio);
 	}
 	
 	// If we made it here, command is pending.
@@ -6640,7 +6640,7 @@ int GahpClient::ec2_ping(std::string service_url,
 		if ( m_mode == results_only ) {
 			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
 		}
-		now_pending(command, buf, deleg_proxy);
+		now_pending(command, buf, deleg_proxy, high_prio);
 	}
 	
 	// If we made it here, command is pending.
@@ -6701,7 +6701,7 @@ int GahpClient::ec2_vm_server_type(std::string service_url,
 		if ( m_mode == results_only ) {
 			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
 		}
-		now_pending(command, buf, deleg_proxy);
+		now_pending(command, buf, deleg_proxy, high_prio);
 	}
 
 	// If we made it here, command is pending.
@@ -6806,7 +6806,7 @@ int GahpClient::ec2_vm_create_keypair( std::string service_url,
 		if ( m_mode == results_only ) {
 			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
 		}
-		now_pending(command, buf, deleg_proxy);
+		now_pending(command, buf, deleg_proxy, medium_prio);
 	}
 	
 	// If we made it here, command is pending.
@@ -6905,7 +6905,7 @@ int GahpClient::ec2_vm_destroy_keypair( std::string service_url,
 		if ( m_mode == results_only ) {
 			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
 		}
-		now_pending(command, buf, deleg_proxy);
+		now_pending(command, buf, deleg_proxy, medium_prio);
 	}
 	
 	// If we made it here, command is pending.
@@ -7004,7 +7004,7 @@ int GahpClient::ec2_associate_address(std::string service_url,
         if ( m_mode == results_only ) {
             return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
         }
-        now_pending(command, buf, deleg_proxy);
+        now_pending(command, buf, deleg_proxy, medium_prio);
     }
     
     // If we made it here, command is pending.
@@ -7112,7 +7112,7 @@ GahpClient::ec2_create_tags(std::string service_url,
         if (m_mode == results_only) {
             return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
         }
-        now_pending(command, buf, deleg_proxy);
+        now_pending(command, buf, deleg_proxy, medium_prio);
     }
     
     // If we made it here, command is pending.
@@ -7206,7 +7206,7 @@ int GahpClient::ec2_attach_volume(std::string service_url,
 	}
 	else
 	{
-        now_pending(command, buf, deleg_proxy);
+        now_pending(command, buf, deleg_proxy, medium_prio);
 	}
     
     // Check first if command completed.
@@ -7324,7 +7324,7 @@ int GahpClient::ec2_spot_start( std::string service_url,
         if( m_mode == results_only ) {
             return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
         }
-        now_pending( command, arguments, deleg_proxy );
+        now_pending( command, arguments, deleg_proxy, low_prio );
     }
 
     Gahp_Args * result = get_pending_result( command, arguments );
@@ -7395,7 +7395,7 @@ int GahpClient::ec2_spot_stop(  std::string service_url,
         if( m_mode == results_only ) {
             return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
         }
-        now_pending( command, arguments, deleg_proxy );
+        now_pending( command, arguments, deleg_proxy, medium_prio );
     }
 
     Gahp_Args * result = get_pending_result( command, arguments );        
@@ -7471,7 +7471,7 @@ int GahpClient::ec2_spot_status(    std::string service_url,
         if( m_mode == results_only ) {
             return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
         }
-        now_pending( command, arguments, deleg_proxy );
+        now_pending( command, arguments, deleg_proxy, high_prio );
     }
 
     Gahp_Args * result = get_pending_result( command, arguments );        
@@ -7543,7 +7543,7 @@ int GahpClient::ec2_spot_status_all(    std::string service_url,
         if( m_mode == results_only ) {
             return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
         }
-        now_pending( command, arguments, deleg_proxy );
+        now_pending( command, arguments, deleg_proxy, high_prio );
     }
 
     Gahp_Args * result = get_pending_result( command, arguments );        
