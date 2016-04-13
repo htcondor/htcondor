@@ -6375,8 +6375,27 @@ int GahpClient::ec2_vm_stop( std::string service_url,
 	}
 
 	// If we made it here, command is still pending...
-	return GAHPCLIENT_COMMAND_PENDING;	
-}							
+	return GAHPCLIENT_COMMAND_PENDING;
+}
+
+int GahpClient::ec2_gahp_statistics( StringList & returnStatistics ) {
+	server->write_line( "STATISTICS" );
+	Gahp_Args result;
+	server->read_argv( result );
+
+	// How do we normally handle this?
+	if( strcmp( result.argv[0], "S" ) != 0 ) {
+		return 1;
+	}
+
+	// For now, don't bother to check how many statistics came back.
+	for( int i = 1; i < result.argc; ++i ) {
+		returnStatistics.append( result.argv[i] );
+	}
+
+	return 0;
+}
+
 
 // ...
 int GahpClient::ec2_vm_status_all( std::string service_url,

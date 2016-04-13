@@ -2,13 +2,13 @@
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,7 +17,7 @@
  *
  ***************************************************************/
 
-  
+
 #include "condor_common.h"
 #include "condor_config.h"
 #include "string_list.h"
@@ -27,19 +27,19 @@
 
 #define HASH_TABLE_SIZE	500
 
-HashTable <HashKey, EC2Resource *> 
+HashTable <HashKey, EC2Resource *>
 	EC2Resource::ResourcesByName( HASH_TABLE_SIZE, hashFunction );
 
 const char * EC2Resource::HashName( const char * resource_name,
 		const char * public_key_file, const char * private_key_file )
-{								 
+{
 	static std::string hash_name;
 	formatstr( hash_name, "ec2 %s#%s#%s", resource_name, public_key_file, private_key_file );
 	return hash_name.c_str();
 }
 
 
-EC2Resource* EC2Resource::FindOrCreateResource(const char * resource_name, 
+EC2Resource* EC2Resource::FindOrCreateResource(const char * resource_name,
 	const char * public_key_file, const char * private_key_file )
 {
 	int rc;
@@ -59,7 +59,7 @@ EC2Resource* EC2Resource::FindOrCreateResource(const char * resource_name,
 }
 
 
-EC2Resource::EC2Resource( const char *resource_name, 
+EC2Resource::EC2Resource( const char *resource_name,
 	const char * public_key_file, const char * private_key_file ) :
 		BaseResource( resource_name ),
 		jobsByInstanceID( hashFunction ),
@@ -68,10 +68,10 @@ EC2Resource::EC2Resource( const char *resource_name,
 		m_checkSpotNext( false )
 {
 	// although no one will use resource_name, we still keep it for base class constructor
-	
+
 	m_public_key_file = strdup(public_key_file);
 	m_private_key_file = strdup(private_key_file);
-	
+
 	gahp = NULL;
 
 	char * gahp_path = param( "EC2_GAHP" );
@@ -82,6 +82,10 @@ EC2Resource::EC2Resource( const char *resource_name,
 
 	ArgList args;
 	args.AppendArg("-f");
+
+	// Set up & zero the statistics pool before we start the GAHP.
+	gs.Init();
+	gs.Clear();
 
 	std::string gahp_name = "EC2-";
 	gahp_name += m_public_key_file;
@@ -135,6 +139,9 @@ void EC2Resource::PublishResourceAd( ClassAd *resource_ad )
 
 	resource_ad->Assign( ATTR_EC2_ACCESS_KEY_ID, m_public_key_file );
 	resource_ad->Assign( ATTR_EC2_SECRET_ACCESS_KEY, m_private_key_file );
+
+	// Also publish the statistics we got from the GAHP.
+	gs.Publish( * resource_ad );
 }
 
 // we will use ec2 command "status_all" to do the Ping work
@@ -146,7 +153,7 @@ void EC2Resource::DoPing( unsigned& ping_delay, bool& ping_complete, bool& ping_
 		ping_delay = 5;
 		return;
 	}
-	
+
 	ping_delay = 0;
 
 	std::string error_code;
@@ -154,10 +161,10 @@ void EC2Resource::DoPing( unsigned& ping_delay, bool& ping_complete, bool& ping_
 
 	if ( rc == GAHPCLIENT_COMMAND_PENDING ) {
 		ping_complete = false;
-	} 
+	}
 	else if ( rc != 0 ) {
 		ping_complete = true;
-		
+
 		// If the service returns an authorization failure, that means
 		// the service is up, so return true.  Individual jobs with
 		// invalid authentication tokens will then go on hold, which is
@@ -167,11 +174,11 @@ void EC2Resource::DoPing( unsigned& ping_delay, bool& ping_complete, bool& ping_
 				ping_succeeded = true;
 				m_hadAuthFailure = true;
 				formatstr( authFailureMessage, "(%s): '%s'", error_code.c_str(), gahp->getErrorString() );
-			}    		    
+			}
 		} else {
 		    ping_succeeded = false;
 		}
-	} 
+	}
 	else {
 		ping_complete = true;
 		ping_succeeded = true;
@@ -182,6 +189,29 @@ void EC2Resource::DoPing( unsigned& ping_delay, bool& ping_complete, bool& ping_
 
 EC2Resource::BatchStatusResult EC2Resource::StartBatchStatus() {
     ASSERT( status_gahp );
+
+    // First, fetch the GAHP's statistics.
+    StringList statistics;
+    int rc = status_gahp->ec2_gahp_statistics( statistics );
+
+    if( rc == GAHPCLIENT_COMMAND_PENDING ) { return BSR_PENDING; }
+    if( rc != 0 ) {
+        std::string errorString = status_gahp->getErrorString();
+        dprintf( D_ALWAYS, "Failed to get GAHP statistics: %s.\n",
+                 errorString.c_str() );
+        return BSR_ERROR;
+    }
+
+    // Roll the ring buffer once to make room for the new statistics.
+    gs.Advance();
+
+    // Update the statistics with the numbers from the GAHP.
+    statistics.rewind();
+    ASSERT( statistics.number() == 4 );
+    gs.NumRequests = atoi( statistics.next() );
+    gs.NumDistinctRequests = atoi( statistics.next() );
+    gs.NumRequestsExceedingLimit = atoi( statistics.next() );
+    gs.NumExpiredSignatures = atoi( statistics.next() );
 
     // m_checkSpotNext starts out false
     if( ! m_checkSpotNext ) {
@@ -480,3 +510,40 @@ bool EC2Resource::ShuttingDownTrusted( EC2Job *job ) {
 	return false;
 }
 
+#define SAMPLES 4
+#define QUANTUM 1
+EC2Resource::GahpStatistics::GahpStatistics() :
+	NumRequests(SAMPLES), NumDistinctRequests(SAMPLES),
+	NumRequestsExceedingLimit(SAMPLES), NumExpiredSignatures(SAMPLES) { }
+
+#define ADD_PROBE(name) AddProbe( #name, & name )
+void EC2Resource::GahpStatistics::Init() {
+
+	pool.ADD_PROBE( NumRequests );
+	pool.ADD_PROBE( NumDistinctRequests );
+	pool.ADD_PROBE( NumRequestsExceedingLimit );
+	pool.ADD_PROBE( NumExpiredSignatures );
+
+	pool.SetRecentMax( SAMPLES, QUANTUM );
+}
+
+void EC2Resource::GahpStatistics::Clear() {
+	pool.Clear();
+
+    NumRequests = 0;
+    NumDistinctRequests = 0;
+    NumRequestsExceedingLimit = 0;
+    NumExpiredSignatures = 0;
+}
+
+void EC2Resource::GahpStatistics::Advance() {
+	pool.Advance( QUANTUM );
+}
+
+void EC2Resource::GahpStatistics::Publish( ClassAd & ad ) const {
+	pool.Publish( ad, (IF_BASICPUB & IF_PUBLEVEL) | IF_RECENTPUB );
+}
+
+void EC2Resource::GahpStatistics::Unpublish( ClassAd & ad ) const {
+	pool.Unpublish( ad );
+}

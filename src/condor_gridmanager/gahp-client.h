@@ -624,6 +624,8 @@ class GahpClient : public Service {
 							   StringList & returnStatus,
 							   std::string & error_code );
 
+		int ec2_gahp_statistics( StringList & returnStatistics );
+
 		int ec2_ping( std::string service_url,
 					  std::string publickeyfile,
 					  std::string privatekeyfile,

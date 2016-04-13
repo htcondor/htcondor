@@ -43,6 +43,12 @@
 #include <expat.h>
 #include "stl_string_utils.h"
 
+// Statistics of interest.
+int NumRequests = 0;
+int NumDistinctRequests = 0;
+int NumRequestsExceedingLimit = 0;
+int NumExpiredSignatures = 0;
+
 #define NULLSTRING "NULL"
 
 const char * nullStringIfEmpty( const std::string & str ) {
@@ -275,6 +281,7 @@ class Throttle {
                   deadline.tv_nsec < when.tv_nsec) ) {
                 dprintf( D_PERF_TRACE | D_VERBOSE,
                 	"limitExceeded(): which is after the deadline.\n" );
+                ++NumExpiredSignatures;
                 return true;
             }
 
@@ -714,6 +721,7 @@ bool AmazonRequest::SendRequest() {
     const char * failureMode = getenv( "EC2_GAHP_FAILURE_MODE" );
 
     dprintf( D_PERF_TRACE, "request #%d (%s): ready to call %s\n", requestID, requestCommand.c_str(), query_parameters[ "Action" ].c_str() );
+    ++NumDistinctRequests;
 
     Throttle::now( & this->mutexReleased );
     amazon_gahp_release_big_mutex();
@@ -730,6 +738,7 @@ bool AmazonRequest::SendRequest() {
         amazon_gahp_grab_big_mutex();
         dprintf( D_PERF_TRACE, "request #%d (%s): deadline would be exceeded\n", requestID, requestCommand.c_str() );
         failureCount = 0;
+        ++NumExpiredSignatures;
 
         this->errorCode = "E_DEADLINE_WOULD_BE_EXCEEDED";
         this->errorMessage = "Signature would have expired before next permissible time to use it.";
@@ -774,7 +783,7 @@ retry:
                 if( requestCommand != "EC2_VM_STATUS_ALL" &&
                      requestCommand != "EC2_VM_STATUS_ALL_SPOT" &&
                       requestCommand != "EC2_VM_SERVER_TYPE" ) {
-                    if( /* failureCount < 3 && */ requestID % 2 ) {
+                    if( failureCount < 3 && requestID % 2 ) {
                         rv = CURLE_OK;
                     } else {
                         rv = curl_easy_perform( curl );
@@ -798,6 +807,7 @@ retry:
 
     amazon_gahp_grab_big_mutex();
     Throttle::now( & this->mutexGained );
+    ++NumRequests;
 
     dprintf( D_PERF_TRACE, "request #%d (%s): called %s\n", requestID, requestCommand.c_str(), query_parameters[ "Action" ].c_str() );
     dprintf( D_PERF_TRACE | D_VERBOSE,
@@ -872,7 +882,7 @@ retry:
         if( requestCommand != "EC2_VM_STATUS_ALL" &&
              requestCommand != "EC2_VM_STATUS_ALL_SPOT" &&
               requestCommand != "EC2_VM_SERVER_TYPE" ) {
-            if( /* failureCount < 3 && */ requestID % 2 ) {
+            if( failureCount < 3 && requestID % 2 ) {
                 ++failureCount;
                 responseCode = 503;
                 resultString = "FAILURE INJECTION: <Error><Code>RequestLimitExceeded</Code></Error>";
@@ -891,6 +901,7 @@ retry:
     }
 
     if( responseCode == 503 && (resultString.find( "<Error><Code>RequestLimitExceeded</Code>" ) != std::string::npos) ) {
+    	++NumRequestsExceedingLimit;
         if( globalCurlThrottle.limitExceeded() ) {
             dprintf( D_PERF_TRACE, "request #%d (%s): retry limit exceeded\n", requestID, requestCommand.c_str() );
         	failureCount = 0;

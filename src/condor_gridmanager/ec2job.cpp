@@ -1758,12 +1758,6 @@ void EC2Job::doEvaluateState()
 				}
 				purgedTwice = false;
 
-				// The remote job state was updated in StatusUpdate().
-				if( ! m_state_reason_code.empty() ) {
-					jobAd->Assign( ATTR_EC2_STATUS_REASON_CODE, m_state_reason_code.c_str() );
-					requestScheddUpdate( this, false );
-				}
-
 				// If the request spawned an instance, we must save the
 				// instance ID.  This (GM_SAVE_INSTANCE_ID) will then cancel
 				// the request (GM_SPOT_CANCEL) and after checking the job
@@ -1825,7 +1819,6 @@ void EC2Job::doEvaluateState()
 					// job didn't exist at the time of the poll,
 					// m_state_reason_code is unset, and we have to handle
 					// the "actual" job status here.
-					//
 					//
 					// Arguably, we should instead have GM_SPOT_START
 					// clear probeNow to force the wait for another poll...
@@ -2302,11 +2295,19 @@ void EC2Job::StatusUpdate( const char * instanceID,
 
 	if( stateReasonCode != NULL && strlen( stateReasonCode ) != 0
 	 && strcmp( stateReasonCode, "NULL" ) != 0 ) {
-		// dprintf( D_FULLDEBUG, "(%d.%d) Updating state reason code to from '%s' to '%s' for job '%s'.\n", procID.cluster, procID.proc, m_state_reason_code.c_str(), stateReasonCode, m_remoteJobId.c_str() );
-		m_state_reason_code = stateReasonCode;
-		requestScheddUpdate( this, false );
+		if( m_state_reason_code != stateReasonCode ) {
+			// dprintf( D_FULLDEBUG, "(%d.%d) Updating state reason code to from '%s' to '%s' for job '%s'.\n", procID.cluster, procID.proc, m_state_reason_code.c_str(), stateReasonCode, m_remoteJobId.c_str() );
+			m_state_reason_code = stateReasonCode;
+			jobAd->Assign( ATTR_EC2_STATUS_REASON_CODE, m_state_reason_code.c_str() );
+			requestScheddUpdate( this, false );
+		}
 	} else {
-		m_state_reason_code.clear();
+		if(! m_state_reason_code.empty()) {
+			// dprintf( D_FULLDEBUG, "(%d.%d) Clearing old state reason code of '%s' for job '%s'.\n", procID.cluster, procID.proc, m_state_reason_code.c_str(), m_remoteJobId.c_str() );
+			m_state_reason_code.clear();
+			jobAd->Assign( ATTR_EC2_STATUS_REASON_CODE, m_state_reason_code.c_str() );
+			requestScheddUpdate( this, false );
+		}
 	}
 
 	if( instanceID != NULL && strlen( instanceID ) != 0
