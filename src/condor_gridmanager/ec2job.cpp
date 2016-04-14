@@ -168,6 +168,8 @@ EC2Job::EC2Job( ClassAd *classad ) :
 	purgedTwice( false ),
 	updatedOnce( false )
 {
+	int holdReasonCode = 0;
+	int holdReasonSubCode = 0;
 	string error_string = "";
 	char *gahp_path = NULL;
 	char *gahp_log = NULL;
@@ -193,6 +195,8 @@ EC2Job::EC2Job( ClassAd *classad ) :
 	jobAd->LookupString( ATTR_EC2_ACCESS_KEY_ID, m_public_key_file );
 
 	if ( m_public_key_file.empty() ) {
+		holdReasonCode = 1;
+		holdReasonSubCode = 1;
 		error_string = "Public key file not defined";
 		goto error_exit;
 	}
@@ -201,6 +205,8 @@ EC2Job::EC2Job( ClassAd *classad ) :
 	jobAd->LookupString( ATTR_EC2_SECRET_ACCESS_KEY, m_private_key_file );
 
 	if ( m_private_key_file.empty() ) {
+		holdReasonCode = 1;
+		holdReasonSubCode = 2;
 		error_string = "Private key file not defined";
 		goto error_exit;
 	}
@@ -298,7 +304,7 @@ EC2Job::EC2Job( ClassAd *classad ) :
 	// In GM_HOLD, we assume HoldReason to be set only if we set it, so make
 	// sure it's unset when we start (unless the job is already held).
 	if ( condorState != HELD &&
-		 jobAd->LookupString( ATTR_HOLD_REASON, NULL, 0 ) != 0 ) {
+		jobAd->LookupString( ATTR_HOLD_REASON, NULL, 0 ) != 0 ) {
 		jobAd->AssignExpr( ATTR_HOLD_REASON, "Undefined" );
 	}
 
@@ -310,6 +316,8 @@ EC2Job::EC2Job( ClassAd *classad ) :
 
 		token = GetNextToken( " ", false );
 		if ( !token || strcasecmp( token, "ec2" ) ) {
+			holdReasonCode = 2;
+			holdReasonSubCode = 3;
 			formatstr( error_string, "%s not of type ec2",
 									  ATTR_GRID_RESOURCE );
 			goto error_exit;
@@ -319,12 +327,16 @@ EC2Job::EC2Job( ClassAd *classad ) :
 		if ( token && *token ) {
 			m_serviceUrl = token;
 		} else {
+			holdReasonCode = 1;
+			holdReasonSubCode = 4;
 			formatstr( error_string, "%s missing EC2 service URL",
 									  ATTR_GRID_RESOURCE );
 			goto error_exit;
 		}
 
 	} else {
+		holdReasonCode = 2;
+		holdReasonSubCode = 5;
 		formatstr( error_string, "%s is not set in the job ad",
 								  ATTR_GRID_RESOURCE );
 		goto error_exit;
@@ -332,6 +344,8 @@ EC2Job::EC2Job( ClassAd *classad ) :
 
 	gahp_path = param( "EC2_GAHP" );
 	if ( gahp_path == NULL ) {
+		holdReasonCode = 3;
+		holdReasonSubCode = 6;
 		error_string = "EC2_GAHP not defined";
 		goto error_exit;
 	}
@@ -397,6 +411,8 @@ EC2Job::EC2Job( ClassAd *classad ) :
 
 		token = GetNextToken( " ", false );
 		if ( !token || strcasecmp( token, "ec2" ) ) {
+			holdReasonCode = 2;
+			holdReasonSubCode = 7;
 			formatstr( error_string, "%s not of type ec2", ATTR_GRID_JOB_ID );
 			goto error_exit;
 		}
@@ -440,6 +456,8 @@ EC2Job::EC2Job( ClassAd *classad ) :
 	gmState = GM_HOLD;
 	if ( !error_string.empty() ) {
 		jobAd->Assign( ATTR_HOLD_REASON, error_string.c_str() );
+		jobAd->Assign( ATTR_HOLD_REASON_CODE, holdReasonCode );
+		jobAd->Assign( ATTR_HOLD_REASON_SUBCODE, holdReasonSubCode );
 	}
 
 	return;
@@ -536,6 +554,8 @@ void EC2Job::doEvaluateState()
 					dprintf( D_ALWAYS, "(%d.%d) Error starting GAHP\n",
 							 procID.cluster, procID.proc );
 					jobAd->Assign( ATTR_HOLD_REASON, "Failed to start GAHP" );
+					jobAd->Assign( ATTR_HOLD_REASON_CODE, 2 );
+					jobAd->Assign( ATTR_HOLD_REASON_SUBCODE, 8 );
 					gmState = GM_HOLD;
 					break;
 				}
@@ -552,6 +572,8 @@ void EC2Job::doEvaluateState()
 						gmState = GM_DELETE;
 						break;
 					} else {
+						holdReasonCode = 1;
+						holdReasonSubCode = 9;
 						formatstr( errorString, "Failed to authenticate %s.",
 									myResource->authFailureMessage.c_str() );
 						dprintf( D_ALWAYS, "(%d.%d) %s\n",
@@ -671,6 +693,8 @@ void EC2Job::doEvaluateState()
 
 					if ( m_client_token.empty() && m_key_pair_file.empty() &&
 						 !m_key_pair.empty() ) {
+						holdReasonCode = 1;
+						holdReasonSubCode = 10;
 						formatstr( errorString, "Can't use existing ssh keypair for server type %s", myResource->m_serverType.c_str() );
 						gmState = GM_HOLD;
 						break;
@@ -767,6 +791,8 @@ void EC2Job::doEvaluateState()
 								gahp_error_code.c_str(),
 								errorString.c_str() );
 						gmState = GM_HOLD;
+						holdReasonCode = 4;
+						holdReasonSubCode = 11;
 						break;
 					}
 				}
@@ -886,6 +912,8 @@ void EC2Job::doEvaluateState()
 								procID.cluster, procID.proc,
 								gahp_error_code.c_str(),
 								errorString.c_str() );
+						holdReasonCode = 4;
+						holdReasonSubCode = 12;
 						gmState = GM_HOLD;
 					}
 
@@ -1227,12 +1255,16 @@ void EC2Job::doEvaluateState()
 							formatstr( errorString, "Abnormal instance termination: %s.", m_state_reason_code.c_str() );
 							dprintf( D_ALWAYS, "(%d.%d) %s\n", procID.cluster, procID.proc, errorString.c_str() );
 							gmState = GM_HOLD;
+							holdReasonCode = 5;
+							holdReasonSubCode = 13;
 							break;
 						} else {
 							// Treat all unrecognized reasons as abnormal.
 							formatstr( errorString, "Unrecognized reason for instance termination: %s.  Treating as abnormal.", m_state_reason_code.c_str() );
 							dprintf( D_ALWAYS, "(%d.%d) %s\n", procID.cluster, procID.proc, errorString.c_str() );
 							gmState = GM_HOLD;
+							holdReasonCode = 5;
+							holdReasonSubCode = 14;
 							break;
 						}
 					}
@@ -1300,6 +1332,8 @@ void EC2Job::doEvaluateState()
 									 gahp_error_code.c_str(),
 									 errorString.c_str() );
 							gmState = GM_HOLD;
+							holdReasonCode = 6;
+							holdReasonSubCode = 15;
 							break;
 						}
 
@@ -1374,6 +1408,8 @@ void EC2Job::doEvaluateState()
 						formatstr( errorString, "Job cancel did not succeed after %d tries, giving up.", maxRetryTimes );
 						dprintf( D_ALWAYS, "(%d.%d) %s\n", procID.cluster, procID.proc, errorString.c_str() );
 						gmState = GM_HOLD;
+						holdReasonCode = 6;
+						holdReasonSubCode = 16;
 						break;
 					}
 				}
@@ -1401,7 +1437,7 @@ void EC2Job::doEvaluateState()
 								 sizeof(holdReason) - 1 );
 					}
 
-					JobHeld( holdReason );
+					JobHeld( holdReason, holdReasonCode, holdReasonSubCode );
 				}
 
 				gmState = GM_DELETE;
@@ -1566,6 +1602,8 @@ void EC2Job::doEvaluateState()
 					// job, or put in on hold, before the spot instance
 					// request failed, they should learn about the failure.
 					gmState = GM_HOLD;
+					holdReasonCode = 4;
+					holdReasonSubCode = 17;
 					break;
 				}
 
@@ -1613,6 +1651,8 @@ void EC2Job::doEvaluateState()
 									errorString.c_str() );
 						dprintf( D_FULLDEBUG, "Error transition: GM_SPOT_CANCEL + <GAHP failure> = GM_HOLD\n" );
 						gmState = GM_HOLD;
+						holdReasonCode = 6;
+						holdReasonSubCode = 17;
 						break;
 					}
 
@@ -1672,6 +1712,8 @@ void EC2Job::doEvaluateState()
 						formatstr( errorString, "Spot job cancel did not succeed after %d tries, giving up.", maxRetryTimes );
 						dprintf( D_ALWAYS, "(%d.%d) %s\n", procID.cluster, procID.proc, errorString.c_str() );
 						gmState = GM_HOLD;
+						holdReasonCode = 6;
+						holdReasonSubCode = 18;
 						break;
 					}
 				}
@@ -1754,6 +1796,8 @@ void EC2Job::doEvaluateState()
 					dprintf( D_ALWAYS, "(%d.%d) %s\n", procID.cluster, procID.proc, errorString.c_str() );
 					dprintf( D_FULLDEBUG, "Error transition: GM_SPOT_QUERY + <spot purged> = GM_HOLD\n" );
 					gmState = GM_HOLD;
+					holdReasonCode = 6;
+					holdReasonSubCode = 19;
 					break;
 				}
 				purgedTwice = false;
@@ -1810,6 +1854,8 @@ void EC2Job::doEvaluateState()
 					dprintf( D_ALWAYS, "(%d.%d) %s\n", procID.cluster, procID.proc, errorString.c_str() );
 					dprintf( D_FULLDEBUG, "Error transition: GM_SPOT_QUERY + <cancelled> = GM_HOLD\n" );
 					gmState = GM_HOLD;
+					holdReasonCode = 1;
+					holdReasonSubCode = 20;
 					break;
 				} else if( remoteJobState == "pending" ) {
 					// Because the bulk status update may occur between
@@ -1835,6 +1881,8 @@ void EC2Job::doEvaluateState()
 					dprintf( D_ALWAYS, "(%d.%d) %s\n", procID.cluster, procID.proc, errorString.c_str() );
 					dprintf( D_FULLDEBUG, "Error transition: GM_SPOT_QUERY + <unexpected state> = GM_HOLD\n" );
 					gmState = GM_HOLD;
+					holdReasonCode = 2;
+					holdReasonSubCode = 21;
 					break;
 				}
 
@@ -2413,6 +2461,8 @@ void EC2Job::ResourceLeaseExpired() {
 	errorString = "Resource was down for too long.";
 	dprintf( D_ALWAYS, "(%d.%d) Putting job on hold: resource was down for too long.\n", procID.cluster, procID.proc );
 	gmState = GM_HOLD;
+	holdReasonCode = 5;
+	holdReasonSubCode = 22;
 	resourceLeaseTID = -1;
 	SetEvaluateState();
 }
