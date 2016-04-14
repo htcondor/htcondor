@@ -554,8 +554,6 @@ dprintf(D_FULLDEBUG,"(%d.%d) UpdateJobLeaseSent(%d)\n",procID.cluster,procID.pro
 
 		if ( new_expiration_time == TIMER_UNSET ) {
 			jobAd->AssignExpr( ATTR_JOB_LEASE_EXPIRATION, "Undefined" );
-			jobAd->AssignExpr( ATTR_LAST_JOB_LEASE_RENEWAL_FAILED,
-							   "Undefined" );
 		} else {
 			jobAd->Assign( ATTR_JOB_LEASE_EXPIRATION,
 						   new_expiration_time );

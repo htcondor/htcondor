@@ -118,9 +118,8 @@ class BaseResource : public Service
 	bool hasLeases;
 	int updateLeasesTimerId;
 	time_t lastUpdateLeases;
-	List<BaseJob> leaseUpdates;
+	SimpleList<BaseJob*> leaseUpdates;
 	bool updateLeasesActive;
-	bool leaseAttrsSynched;
 	bool updateLeasesCmdActive;
 	bool m_hasSharedLeases;
 	time_t m_sharedLeaseExpiration;

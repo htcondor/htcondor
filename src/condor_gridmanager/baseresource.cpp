@@ -55,7 +55,6 @@ BaseResource::BaseResource( const char *resource_name )
 								"BaseResource::UpdateLeases", (Service*)this );
 	lastUpdateLeases = 0;
 	updateLeasesActive = false;
-	leaseAttrsSynched = false;
 	updateLeasesCmdActive = false;
 	m_hasSharedLeases = false;
 	m_defaultLeaseDuration = -1;
@@ -611,6 +610,7 @@ dprintf(D_FULLDEBUG,"    UpdateLeases: new shared lease duration: %d\n", new_lea
 		int renew_threshold = ( new_lease_duration * 2 / 3 ) + 10;
 		if ( new_lease_duration == INT_MAX ||
 			 m_sharedLeaseExpiration > time(NULL) + renew_threshold ) {
+			// Lease doesn't need renewal, yet.
 			time_t next_renew_time = m_sharedLeaseExpiration - renew_threshold;
 			if ( new_lease_duration == INT_MAX ||
 				 next_renew_time > time(NULL) + 3600 ) {
@@ -620,18 +620,19 @@ dprintf(D_FULLDEBUG,"    UpdateLeases: nothing to renew, resetting timer for %ld
 			lastUpdateLeases = time(NULL);
 			daemonCore->Reset_Timer( updateLeasesTimerId,
 									 next_renew_time - time(NULL) );
+			return;
 		} else {
+			// Time to renew the lease
 			m_sharedLeaseExpiration = time(NULL) + new_lease_duration;
-			registeredJobs.Rewind();
-			while ( registeredJobs.Next( curr_job ) ) {
-				std::string job_id;
-				if ( curr_job->jobAd->LookupString( ATTR_GRID_JOB_ID, job_id ) &&
-					 ( m_hasSharedLeases ||
-					   curr_job->jobAd->LookupExpr( ATTR_JOB_LEASE_DURATION ) )
+			if ( !m_hasSharedLeases ) {
+				registeredJobs.Rewind();
+				while ( registeredJobs.Next( curr_job ) ) {
+					std::string job_id;
+					int tmp;
+					if ( curr_job->jobAd->LookupString( ATTR_GRID_JOB_ID, job_id ) &&
+						 curr_job->jobAd->LookupInteger( ATTR_JOB_LEASE_DURATION, tmp )
 					) {
-
-					curr_job->UpdateJobLeaseSent( m_sharedLeaseExpiration );
-					if ( !m_hasSharedLeases ) {
+dprintf(D_FULLDEBUG,"   UpdateLeases: Adding job %d.%d to renew list\n", curr_job->procID.cluster, curr_job->procID.proc);
 						leaseUpdates.Append( curr_job );
 					}
 				}
@@ -639,40 +640,8 @@ dprintf(D_FULLDEBUG,"    UpdateLeases: nothing to renew, resetting timer for %ld
 dprintf(D_FULLDEBUG,"    new shared lease expiration at %ld, updating job ads...\n",m_sharedLeaseExpiration);
 			requestScheddUpdateNotification( updateLeasesTimerId );
 			updateLeasesActive = true;
-			leaseAttrsSynched = false;
 		}
-		return;
 	}
-
-	if ( leaseAttrsSynched == false ) {
-		bool still_dirty = false;
-		BaseJob *curr_job;
-		leaseUpdates.Rewind();
-		while ( leaseUpdates.Next( curr_job ) ) {
-			bool exists, dirty;
-			curr_job->jobAd->GetDirtyFlag( ATTR_JOB_LEASE_EXPIRATION,
-										   &exists, &dirty );
-			if ( !exists ) {
-					// What!? The attribute disappeared? Forget about renewing
-					// the lease then
-				dprintf( D_ALWAYS, "Lease attribute disappeared for job %d.%d, ignoring it\n",
-						 curr_job->procID.cluster, curr_job->procID.proc );
-				leaseUpdates.DeleteCurrent();
-			}
-			if ( dirty ) {
-				still_dirty = true;
-				requestScheddUpdate( curr_job, false );
-			}
-		}
-		if ( still_dirty ) {
-			requestScheddUpdateNotification( updateLeasesTimerId );
-dprintf(D_FULLDEBUG,"    UpdateLeases: waiting for schedd synch\n");
-			return;
-		}
-else dprintf(D_FULLDEBUG,"    UpdateLeases: leases synched\n");
-	}
-
-	leaseAttrsSynched = true;
 
 	unsigned update_delay = 0;
 	bool update_complete;
@@ -713,46 +682,23 @@ dprintf(D_FULLDEBUG,"    UpdateLeases: DoUpdateLeases complete, processing resul
 				// before they proceed with submission.
 				curr_job->SetEvaluateState();
 			}
-			if ( !curr_job->jobAd->LookupString( ATTR_GRID_JOB_ID, tmp ) ) {
-				continue;
-			}
-			bool curr_renewal_failed = !update_success;
-			bool last_renewal_failed = false;
-			curr_job->jobAd->LookupBool( ATTR_LAST_JOB_LEASE_RENEWAL_FAILED,
-										 last_renewal_failed );
-			if ( curr_renewal_failed != last_renewal_failed ) {
-				curr_job->jobAd->Assign( ATTR_LAST_JOB_LEASE_RENEWAL_FAILED,
-										 curr_renewal_failed );
-				requestScheddUpdate( curr_job, false );
+			if ( curr_job->jobAd->LookupString( ATTR_GRID_JOB_ID, tmp ) ) {
+				curr_job->UpdateJobLeaseSent( m_sharedLeaseExpiration );
 			}
 		}
 	} else {
-update_succeeded.Rewind();
-PROC_ID id;
 std::string msg = "    update_succeeded:";
- while(update_succeeded.Next(id)) formatstr_cat(msg, " %d.%d", id.cluster, id.proc);
-dprintf(D_FULLDEBUG,"%s\n",msg.c_str());
 		BaseJob *curr_job;
-		leaseUpdates.Rewind();
-		while ( leaseUpdates.Next( curr_job ) ) {
-			bool curr_renewal_failed;
-			bool last_renewal_failed = false;
-			if ( update_succeeded.IsMember( curr_job->procID ) ) {
-dprintf(D_FULLDEBUG,"    %d.%d is in succeeded list\n",curr_job->procID.cluster,curr_job->procID.proc);
-				curr_renewal_failed = false;
-			} else {
-dprintf(D_FULLDEBUG,"    %d.%d is not in succeeded list\n",curr_job->procID.cluster,curr_job->procID.proc);
-				curr_renewal_failed = true;
+		PROC_ID curr_id;
+		update_succeeded.Rewind();
+		while ( update_succeeded.Next( curr_id ) ) {
+formatstr_cat(msg, " %d.%d", curr_id.cluster, curr_id.proc);
+			if ( BaseJob::JobsByProcId.lookup( curr_id, curr_job ) == 0 ) {
+				curr_job->UpdateJobLeaseSent( m_sharedLeaseExpiration );
 			}
-			curr_job->jobAd->LookupBool( ATTR_LAST_JOB_LEASE_RENEWAL_FAILED,
-										 last_renewal_failed );
-			if ( curr_renewal_failed != last_renewal_failed ) {
-				curr_job->jobAd->Assign( ATTR_LAST_JOB_LEASE_RENEWAL_FAILED,
-										 curr_renewal_failed );
-				requestScheddUpdate( curr_job, false );
-			}
-			leaseUpdates.DeleteCurrent();
 		}
+dprintf(D_FULLDEBUG,"%s\n",msg.c_str());
+		leaseUpdates.Clear();
 	}
 
 	updateLeasesActive = false;

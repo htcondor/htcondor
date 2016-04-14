@@ -501,6 +501,12 @@ dprintf(D_FULLDEBUG,"*** DoUpdateLeases called\n");
 
 	update_delay = 0;
 
+	if ( leaseUpdates.IsEmpty() ) {
+		dprintf( D_FULLDEBUG, "*** Job lease list empty, returning success immediately\n" );
+		update_complete = true;
+		return;
+	}
+
 	if ( updateLeasesCmdActive == false ) {
 		leaseUpdates.Rewind();
 		while ( leaseUpdates.Next( curr_job ) ) {
