@@ -546,16 +546,21 @@ void BaseResource::DoPing( unsigned& ping_delay, bool& ping_complete,
 
 time_t BaseResource::GetLeaseExpiration( const BaseJob *job )
 {
-	if ( job == NULL || m_sharedLeaseExpiration > 0 ) {
+	// Without a job to consider, just return the shared lease
+	// expiration, if we have one.
+	if ( job == NULL ) {
 		return m_sharedLeaseExpiration;
 	}
-	// We haven't established a shared lease yet.
-	// See what lease we would establish for just this job.
+	// What lease expiration should be used for this job?
+	// Some jobs may have no lease (default for grid-type condor).
+	// Otherwise, if we haven't established a shared lease yet,
+	// calculate one for this job only.
 	int new_expiration = 0;
 	int job_lease_duration = m_defaultLeaseDuration;
 	job->jobAd->LookupInteger( ATTR_JOB_LEASE_DURATION, job_lease_duration );
 	if ( job_lease_duration > 0 ) {
-		new_expiration = time(NULL) + job_lease_duration;
+		new_expiration = m_sharedLeaseExpiration > 0 ?
+			m_sharedLeaseExpiration : time(NULL) + job_lease_duration;
 	}
 	return new_expiration;
 }
