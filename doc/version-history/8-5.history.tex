@@ -29,17 +29,19 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item A batch-name specified for a DAG (with the \Condor{submit\_dag}
-\Opt{-batch-name} option) is now propagated to all jobs of that DAG, including
-sub-DAGs.
+\item A batch name specified for a DAG (with the \Condor{submit\_dag}
+\Opt{-batch-name} option) is now propagated to all jobs of that DAG,
+including sub-DAGs.
 \Ticket{5493}
 
-\item The batch-name for a \Condor{dagman} job now defaults to the
-file name of the primary DAG file, if not specified (just the file
-name itself, not the complete path).  Because the batch-name is now
-propagated throughout a workflow, if no batch-name is specified, the
-batch-name for all jobs in the workflow will be the name of the
-top-level DAG file.
+\item The batch name for a \Condor{dagman} job (if not set) now
+defaults to \Arg{DagFile}+\Arg{cluster} (where \Arg{DagFile}
+is the primary DAG file of the \Condor{dagman} job, and \Arg{cluster}
+is the HTCondor cluster of the \Condor{dagman} job).
+Because the batch name is now propagated throughout a workflow, if
+no batch name is specified, the batch name for all jobs in the
+workflow will be \Arg{DagFile}+\Arg{cluster} of the top-level
+\Condor{dagman} job.
 \Ticket{5605}
 
 \end{itemize}

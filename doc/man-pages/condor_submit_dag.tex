@@ -233,10 +233,19 @@ as the value of \MacroNI{DAGMAN\_SUPPRESS\_NOTIFICATION} is enforced.
     conflict.
   }
   \OptItem{\OptArg{-batch-name}{batch\_name}}{
-    Set the batch name for this DAG.
+    Set the batch name for this DAG/workflow.
     The batch name is displayed by \Condor{q} \Opt{-batch}.  It is intended
     for use by users to give meaningful names to their workflows and to
-    influence how \Condor{q} groups jobs for display.
+    influence how \Condor{q} groups jobs for display.  As of version
+    8.5.5, the batch name set with this argument is propagated to all
+    node jobs of the given DAG (including sub-DAGs), overriding any
+    batch names set in the individual submit files.  Note: set the
+    batch name to ' ' (space) to avoid overriding batch names specfied
+    in node job submit files.  If no batch name is set, the batch
+    name defaults to \Arg{DagFile}+\Arg{cluster} (where \Arg{DagFile}
+    is the primary DAG file of the top-level DAGMan, and \Arg{cluster}
+    is the HTCondor cluster of the top-level DAGMan); the default
+    \emph{will} override any lower-level batch names.
   }
   \OptItem{\OptArg{-autorescue}{0|1}}{Whether to automatically run the
     newest rescue DAG for the given DAG file, if one exists
