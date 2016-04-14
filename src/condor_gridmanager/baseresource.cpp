@@ -632,12 +632,11 @@ dprintf(D_FULLDEBUG,"    UpdateLeases: nothing to renew, resetting timer for %ld
 					if ( curr_job->jobAd->LookupString( ATTR_GRID_JOB_ID, job_id ) &&
 						 curr_job->jobAd->LookupInteger( ATTR_JOB_LEASE_DURATION, tmp )
 					) {
-dprintf(D_FULLDEBUG,"   UpdateLeases: Adding job %d.%d to renew list\n", curr_job->procID.cluster, curr_job->procID.proc);
 						leaseUpdates.Append( curr_job );
 					}
 				}
 			}
-dprintf(D_FULLDEBUG,"    new shared lease expiration at %ld, updating job ads...\n",m_sharedLeaseExpiration);
+dprintf(D_FULLDEBUG,"    new shared lease expiration at %ld, performing renewal...\n",m_sharedLeaseExpiration);
 			requestScheddUpdateNotification( updateLeasesTimerId );
 			updateLeasesActive = true;
 		}
@@ -656,7 +655,7 @@ dprintf(D_FULLDEBUG,"    UpdateLeases: calling DoUpdateLeases\n");
 
 	if ( update_delay ) {
 		daemonCore->Reset_Timer( updateLeasesTimerId, update_delay );
-dprintf(D_FULLDEBUG,"    UpdateLeases: DoUpdateLeases wants delay of %uld secs\n",update_delay);
+dprintf(D_FULLDEBUG,"    UpdateLeases: DoUpdateLeases wants delay of %lu secs\n",update_delay);
 		return;
 	}
 
