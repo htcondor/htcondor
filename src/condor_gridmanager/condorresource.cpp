@@ -514,11 +514,8 @@ dprintf(D_FULLDEBUG,"*** DoUpdateLeases called\n");
 				//   BaseJob, BaseResource can skip jobs that don't have a
 				//   a remote-job-id yet
 			if ( ((CondorJob*)curr_job)->remoteJobId.cluster != 0 ) {
-				int exp = 0;
 				jobs.Append( ((CondorJob*)curr_job)->remoteJobId );
-				curr_job->jobAd->LookupInteger( ATTR_JOB_LEASE_EXPIRATION,
-												exp );
-				expirations.Append( exp );
+				expirations.Append( m_sharedLeaseExpiration );
 			}
 		}
 	}
