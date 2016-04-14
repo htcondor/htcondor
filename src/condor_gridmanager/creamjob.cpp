@@ -28,7 +28,6 @@
 #include "basename.h"
 #include "spooled_job_files.h"
 #include "filename_tools.h"
-#include "job_lease.h"
 
 #include "gridmanager.h"
 #include "creamjob.h"
@@ -752,7 +751,7 @@ void CreamJob::doEvaluateState()
 					jobAd->Assign( ATTR_STAGE_IN_START, (int)now );
 					gmState = GM_SUBMIT_SAVE;				
 
-					UpdateJobLeaseSent(myResource->m_sharedLeaseExpiration);
+					UpdateJobLeaseSent(myResource->GetLeaseExpiration());
 					
 				} else {
 					if ( !resourcePingComplete && IsConnectionError( gahp->getErrorString() ) ) {

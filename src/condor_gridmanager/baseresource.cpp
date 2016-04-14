@@ -20,7 +20,6 @@
 
 #include "condor_common.h"
 #include "condor_config.h"
-#include "job_lease.h"
 
 #include "baseresource.h"
 #include "basejob.h"
@@ -545,6 +544,22 @@ void BaseResource::DoPing( unsigned& ping_delay, bool& ping_complete,
 	ping_succeeded = true;
 }
 
+time_t BaseResource::GetLeaseExpiration( const BaseJob *job )
+{
+	if ( job == NULL || m_sharedLeaseExpiration > 0 ) {
+		return m_sharedLeaseExpiration;
+	}
+	// We haven't established a shared lease yet.
+	// See what lease we would establish for just this job.
+	int new_expiration = 0;
+	int job_lease_duration = m_defaultLeaseDuration;
+	job->jobAd->LookupInteger( ATTR_JOB_LEASE_DURATION, job_lease_duration );
+	if ( job_lease_duration > 0 ) {
+		new_expiration = time(NULL) + job_lease_duration;
+	}
+	return new_expiration;
+}
+
 void BaseResource::RequestUpdateLeases()
 {
 	if ( updateLeasesTimerId != TIMER_UNSET ) {
@@ -575,40 +590,25 @@ dprintf(D_FULLDEBUG,"    UpdateLeases: last update too recent, delaying %d secs\
 
     if ( updateLeasesActive == false ) {
 		BaseJob *curr_job;
-		time_t next_renew_time = INT_MAX;
-		time_t job_renew_time;
-		int min_new_expire = INT_MAX;
+		int new_lease_duration = INT_MAX;
 dprintf(D_FULLDEBUG,"    UpdateLeases: calc'ing new leases\n");
 		registeredJobs.Rewind();
-dprintf(D_FULLDEBUG,"    starting min_new_expire=%d next_renew_time=%ld\n",min_new_expire,next_renew_time);
 		while ( registeredJobs.Next( curr_job ) ) {
-			int new_expire;
-			std::string  job_id;
-			job_renew_time = next_renew_time;
-				// Don't update the lease for a job that isn't submitted
-				// anywhere. The Job object will start the lease when it
-				// submits the job.
-			if ( ( m_hasSharedLeases || curr_job->jobAd->LookupString( ATTR_GRID_JOB_ID, job_id ) ) &&
-				 CalculateJobLease( curr_job->jobAd, new_expire,
-									m_defaultLeaseDuration,
-									&job_renew_time ) ) {
-
-				if ( new_expire < min_new_expire ) {
-					min_new_expire = new_expire;
-				}
-				if ( !m_hasSharedLeases ) {
-					curr_job->UpdateJobLeaseSent( new_expire );
-					leaseUpdates.Append( curr_job );
-				}
-			} else if ( job_renew_time < next_renew_time ) {
-				next_renew_time = job_renew_time;
+			int job_lease_duration = m_defaultLeaseDuration;
+			curr_job->jobAd->LookupInteger( ATTR_JOB_LEASE_DURATION, job_lease_duration );
+			if ( job_lease_duration > 0 && job_lease_duration < new_lease_duration ) {
+				new_lease_duration = job_lease_duration;
 			}
-dprintf(D_FULLDEBUG,"    after %d.%d: min_new_expire=%d next_renew_time=%ld job_renew_time=%ld\n",curr_job->procID.cluster,curr_job->procID.proc,min_new_expire,next_renew_time,job_renew_time);
 		}
-		if ( min_new_expire == INT_MAX ||
-			 ( m_hasSharedLeases && next_renew_time < INT_MAX &&
-			   m_sharedLeaseExpiration != 0 ) ) {
-			if ( next_renew_time > time(NULL) + 3600 ) {
+dprintf(D_FULLDEBUG,"    UpdateLeases: new shared lease duration: %d\n", new_lease_duration );
+		// This is how close to the lease expiration time we want to be
+		// when we try a renewal.
+		int renew_threshold = ( new_lease_duration * 2 / 3 ) + 10;
+		if ( new_lease_duration == INT_MAX ||
+			 m_sharedLeaseExpiration > time(NULL) + renew_threshold ) {
+			time_t next_renew_time = m_sharedLeaseExpiration - renew_threshold;
+			if ( new_lease_duration == INT_MAX ||
+				 next_renew_time > time(NULL) + 3600 ) {
 				next_renew_time = time(NULL) + 3600;
 			}
 dprintf(D_FULLDEBUG,"    UpdateLeases: nothing to renew, resetting timer for %ld secs\n",next_renew_time - time(NULL));
@@ -616,17 +616,22 @@ dprintf(D_FULLDEBUG,"    UpdateLeases: nothing to renew, resetting timer for %ld
 			daemonCore->Reset_Timer( updateLeasesTimerId,
 									 next_renew_time - time(NULL) );
 		} else {
-			if ( m_hasSharedLeases ) {
-				registeredJobs.Rewind();
-				while ( registeredJobs.Next( curr_job ) ) {
-					std::string job_id;
-					if ( curr_job->jobAd->LookupString( ATTR_GRID_JOB_ID, job_id ) ) {
-						curr_job->UpdateJobLeaseSent( min_new_expire );
+			m_sharedLeaseExpiration = time(NULL) + new_lease_duration;
+			registeredJobs.Rewind();
+			while ( registeredJobs.Next( curr_job ) ) {
+				std::string job_id;
+				if ( curr_job->jobAd->LookupString( ATTR_GRID_JOB_ID, job_id ) &&
+					 ( m_hasSharedLeases ||
+					   curr_job->jobAd->LookupExpr( ATTR_JOB_LEASE_DURATION ) )
+					) {
+
+					curr_job->UpdateJobLeaseSent( m_sharedLeaseExpiration );
+					if ( !m_hasSharedLeases ) {
+						leaseUpdates.Append( curr_job );
 					}
 				}
-				m_sharedLeaseExpiration = min_new_expire;
-dprintf(D_FULLDEBUG,"    new shared lease expiration at %ld, updating job ads...\n",m_sharedLeaseExpiration);
 			}
+dprintf(D_FULLDEBUG,"    new shared lease expiration at %ld, updating job ads...\n",m_sharedLeaseExpiration);
 			requestScheddUpdateNotification( updateLeasesTimerId );
 			updateLeasesActive = true;
 			leaseAttrsSynched = false;

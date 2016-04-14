@@ -27,7 +27,6 @@
 #include "spooled_job_files.h"
 #include "daemon.h"
 #include "dc_schedd.h"
-#include "job_lease.h"
 #include "nullfile.h"
 
 #include "gridmanager.h"
@@ -561,8 +560,8 @@ void CondorJob::doEvaluateState()
 				}
 				char *job_id_string = NULL;
 				if ( gahpAd == NULL ) {
-					int new_expiration;
-					if ( CalculateJobLease( jobAd, new_expiration ) ) {
+					int new_expiration = myResource->GetLeaseExpiration( this );
+					if ( new_expiration > 0 ) {
 							// This will set the job lease sent attrs,
 							// which get referenced in buildSubmitAd()
 						UpdateJobLeaseSent( new_expiration );

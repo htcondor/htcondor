@@ -60,15 +60,13 @@ class BaseResource : public Service
 	void AlreadySubmitted( BaseJob *job );
 
 	void RequestUpdateLeases();
+	time_t GetLeaseExpiration( const BaseJob *job = NULL );
 
     static void setProbeInterval( int new_interval )
 		{ probeInterval = new_interval; }
 
 	static void setProbeDelay( int new_delay )
 		{ probeDelay = new_delay; }
-
-	// TODO Make this private and provide an accessor function?
-	time_t m_sharedLeaseExpiration;
 
 	int m_paramJobPollRate;
 	int m_paramJobPollInterval;
@@ -125,6 +123,7 @@ class BaseResource : public Service
 	bool leaseAttrsSynched;
 	bool updateLeasesCmdActive;
 	bool m_hasSharedLeases;
+	time_t m_sharedLeaseExpiration;
 	time_t m_defaultLeaseDuration;
 
 	int _updateCollectorTimerId;
