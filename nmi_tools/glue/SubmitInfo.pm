@@ -89,7 +89,6 @@ my @minimal_build_configure_args =
 	 '-DWITH_GLOBUS:BOOL'		 => 'OFF',
 	 '-DWITH_GSOAP:BOOL'		 => 'OFF',
 	 '-DWITH_HADOOP:BOOL'		 => 'OFF',
-	 '-DWITH_LIBDELTACLOUD:BOOL' => 'OFF',
 	 '-DWITH_LIBVIRT:BOOL'		 => 'OFF',
 	 '-DWITH_LIBXML2:BOOL'		 => 'OFF',
 	 '-DWITH_UNICOREGAHP:BOOL'	 => 'OFF',
@@ -505,6 +504,7 @@ our %submit_info = (
 	'x86_64_Fedora20'				=> 'x86_64_Fedora',
 	'x86_64_Fedora21'				=> 'x86_64_Fedora',
 	'x86_64_Fedora22'				=> 'x86_64_Fedora',
+	'x86_64_Fedora23'				=> 'x86_64_Fedora',
 	
 	'x86_64_fedora_15'				=> 'x86_64_Fedora',
 	'x86_64_fedora_16'				=> 'x86_64_Fedora',

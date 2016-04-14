@@ -1289,15 +1289,23 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 					ABORT;
 				}
 			}
+			Resource *parent = dslots[0]->get_parent();
+
 			for ( int i = 0; i < num_preempting; i++ ) {
 				// TODO Should we call retire_claim() to go through
 				//   vacating_act instead of straight to killing_act?
+				bool is_busy = dslots[i]->activity() != idle_act;
 				dslots[i]->kill_claim();
-				*(dslots[i]->get_parent()->r_attr) += *(dslots[i]->r_attr);
-				*(dslots[i]->r_attr) -= *(dslots[i]->r_attr);
+				if (is_busy) {
+					// if they were idle, kill_claim delete'd them
+					*(dslots[i]->get_parent()->r_attr) += *(dslots[i]->r_attr);
+					*(dslots[i]->r_attr) -= *(dslots[i]->r_attr);
+				}
 				// TODO Do we need to call refresh_classad() on either slot?
 			}
-			dslots[0]->get_parent()->refresh_classad( A_PUBLIC );
+			if (parent) {
+				parent->refresh_classad( A_PUBLIC );
+			}
 			free( dslots );
 		}
 	} else {
@@ -2601,6 +2609,8 @@ command_drain_jobs( Service*, int /*dc_cmd*/, Stream* s )
 	if( !ok ) {
 		response_ad.Assign(ATTR_ERROR_STRING,error_msg);
 		response_ad.Assign(ATTR_ERROR_CODE,error_code);
+	} else if ( ! new_request_id.empty()) {
+		response_ad.Assign(ATTR_REQUEST_ID, new_request_id);
 	}
 	s->encode();
 	if( !putClassAd(s, response_ad) || !s->end_of_message() ) {

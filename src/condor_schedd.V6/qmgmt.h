@@ -56,6 +56,7 @@ class QmgmtPeer {
 		bool getAllowProtectedAttrChanges() { return allow_protected_attr_changes_by_superuser; }
 
 		ReliSock *getReliSock() const { return sock; };
+		const CondorVersionInfo *get_peer_version() const { return sock->get_peer_version(); };
 
 		const char *endpoint_ip_str() const;
 		const condor_sockaddr endpoint() const;

@@ -95,6 +95,7 @@ int	admin_command_handler(Service *, int, Stream *);
 int	ready_command_handler(Service *, int, Stream *);
 int	handle_subsys_command(int, Stream *);
 int     handle_shutdown_program( int cmd, Stream* stream );
+int     set_shutdown_program( const char * name );
 void	time_skip_handler(void * /*data*/, int delta);
 void	restart_everyone();
 
@@ -169,6 +170,17 @@ cleanup_memory( void )
 int
 master_exit(int retval)
 {
+	// If a shutdown_program has not been setup via the admin
+	// command-line tool, see if the condor_config specifies
+	// a default shutdown program to use.
+	if ( !shutdown_program ) {
+		char *defshut = param("DEFAULT_MASTER_SHUTDOWN_SCRIPT");
+		if (defshut) {
+			set_shutdown_program(defshut);
+			free(defshut);
+		}
+	}
+
 	cleanup_memory();
 
 #ifdef WIN32
@@ -198,7 +210,10 @@ master_exit(int retval)
 		}
 	}
 
-	DC_Exit(retval, shutdown_program );
+	// Exit via specified shutdown_program UNLESS retval is 2, which
+	// means the master never started and we are exiting via usage() message.
+	DC_Exit(retval, retval == 2 ? NULL : shutdown_program );
+
 	return 1;	// just to satisfy vc++
 }
 
@@ -206,7 +221,8 @@ void
 usage( const char* name )
 {
 	dprintf( D_ALWAYS, "Usage: %s [-f] [-t] [-n name]\n", name );
-	master_exit( 1 );
+	// Note: master_exit with value of 2 means do NOT run any shutdown_program
+	master_exit( 2 );
 }
 
 int
@@ -805,13 +821,13 @@ handle_shutdown_program( int cmd, Stream* stream )
 		EXCEPT( "Unknown command (%d) in handle_shutdown_program", cmd );
 	}
 
-	char	*name = NULL;
+	MyString name;
 	stream->decode();
 	if( ! stream->code(name) ) {
-		dprintf( D_ALWAYS, "Can't read program name\n" );
-		if ( name ) {
-			free( name );
-		}
+		dprintf( D_ALWAYS, "Can't read program name in handle_shutdown_program\n" );
+	}
+
+	if ( name.IsEmpty() ) {
 		return FALSE;
 	}
 
@@ -821,10 +837,20 @@ handle_shutdown_program( int cmd, Stream* stream )
 	pname += name;
 	char	*path = param( pname.Value() );
 	if ( NULL == path ) {
-		dprintf( D_ALWAYS, "No shutdown program defined for '%s'\n", name );
+		dprintf( D_ALWAYS, "No shutdown program defined for '%s'\n", name.c_str() );
 		return FALSE;
 	}
 
+	int ret_val = set_shutdown_program( path );
+
+	if (path) free(path);
+
+	return ret_val;
+}
+
+int
+set_shutdown_program(const char *path)
+{
 	// Try to access() it
 # if defined(HAVE_ACCESS)
 	priv_state	priv = set_root_priv();
@@ -841,7 +867,7 @@ handle_shutdown_program( int cmd, Stream* stream )
 	if ( shutdown_program ) {
 		free( shutdown_program );
 	}
-	shutdown_program = path;
+	shutdown_program = strdup(path);
 	dprintf( D_ALWAYS,
 			 "Shutdown program path set to %s\n", shutdown_program );
 	return TRUE;

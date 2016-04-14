@@ -535,6 +535,20 @@ class TestPythonBindings(WithDaemons):
         claim.deactivate(htcondor.VacateTypes.Fast)
         claim.release()
 
+    def testDrain(self):
+        self.launch_daemons(["COLLECTOR", "STARTD"])
+        output_file = os.path.abspath(os.path.join(testdir, "test.out"))
+        if os.path.exists(output_file):
+            os.unlink(output_file)
+        coll = htcondor.Collector()
+        for i in range(10):
+            ads = coll.locateAll(htcondor.DaemonTypes.Startd)
+            if len(ads) > 0: break
+            time.sleep(1)
+        startd = htcondor.Startd(ads[0])
+        drain_id = startd.drainJobs(htcondor.DrainTypes.Fast)
+        startd.cancelDrainAllJobs(drain_id)
+
     def testPing(self):
         self.launch_daemons(["COLLECTOR"])
         coll = htcondor.Collector()

@@ -288,7 +288,7 @@ CollectorList::sendUpdates (int cmd, ClassAd * ad1, ClassAd* ad2, bool nonblocki
 }
 
 QueryResult
-CollectorList::query(CondorQuery & cQuery, ClassAdList & adList, CondorError *errstack) {
+CollectorList::query (CondorQuery & cQuery, bool (*callback)(void*, ClassAd *), void* pv, CondorError * errstack) {
 
 	int num_collectors = this->number();
 	if (num_collectors < 1) {
@@ -301,13 +301,11 @@ CollectorList::query(CondorQuery & cQuery, ClassAdList & adList, CondorError *er
 
 	bool problems_resolving = false;
 
-	
 	// switch containers for easier random access.
 	this->rewind();
 	while (this->next(daemon)) {
 		vCollectors.push_back(daemon);
 	}
-	
 
 	while ( vCollectors.size() ) {
 		// choose a random collector in the list to query.
@@ -336,7 +334,7 @@ CollectorList::query(CondorQuery & cQuery, ClassAdList & adList, CondorError *er
 				daemon->blacklistMonitorQueryStarted();
 			}
 
-			result = cQuery.fetchAds (adList, daemon->addr(), errstack);
+			result = cQuery.processAds (callback, pv, daemon->addr(), errstack);
 
 			if( num_collectors > 1 ) {
 				daemon->blacklistMonitorQueryFinished( result == Q_OK );
@@ -360,7 +358,6 @@ CollectorList::query(CondorQuery & cQuery, ClassAdList & adList, CondorError *er
 		// If we've gotten here, there are no good collectors
 	return result;
 }
-
 
 
 bool

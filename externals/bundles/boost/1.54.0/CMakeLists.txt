@@ -56,7 +56,15 @@ if (BOOST_VER)
 
   # Set the target dependencies which the rest of condor depends on.
   if (WINDOWS)
-    install ( FILES ${BOOST_INSTALL_LOC}/lib/boost_python-vc110-mt-1_54.dll DESTINATION ${C_LIB} )
+	# note that on windows we ship a different library for debug vs. release builds (not that we actually ship debug...)
+	install ( FILES
+		${BOOST_INSTALL_LOC}/lib/boost_python-vc110-mt-1_54.dll
+		DESTINATION ${C_LIB}
+		CONFIGURATIONS RelWithDebInfo)
+	install ( FILES
+		${BOOST_INSTALL_LOC}/lib/boost_python-vc110-mt-gd-1_54.dll
+		DESTINATION ${C_LIB}
+		CONFIGURATIONS Debug)
   endif()
 	
 else(BOOST_VER)

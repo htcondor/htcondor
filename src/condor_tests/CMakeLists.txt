@@ -171,10 +171,6 @@ if (BUILD_TESTING)
 		condor_pl_test( job_hyperthread_check "hyper thread testing test" "quick;full;quicknolink" )
 		condor_pl_test(lib_procapi_pidtracking-byenv "Slow Termination Child Cleanup Test" "core;quick;full;quicknolink")
 		#condor_pl_test(job_core_shadow-lessthan-memlimit_van "Make sure the shadow stays below memory limit" "core;quick;full;quicknolink")
-		if ( WITH_LIBDELTACLOUD )
-			# This test fails everywhere
-			#condor_pl_test(job_deltacloud_basic "Deltacloud test" "core;quick;full;quicknolink")
-		endif()
 	endif()
 
 	# negative matches. test on everything but this
@@ -370,7 +366,7 @@ if (BUILD_TESTING)
 	#condor_pl_test(lib_auth_protocol-negot-prt4 "4 way negotiation test - last 8" "core;quick;full;quicknolink")
 	##### generic cmd tests
 
-	condor_pl_test(condor_status_dash_ads "Condor_status -any works as expected" "core;quick;full;quicknolink")
+	condor_pl_test(cmd_status_slot_variants "Condor_status works with static and partitionable slots" "core;quick;full;quicknolink")
 	condor_pl_test(cmd_status_shows-any "Condor_status -any works as expected" "core;quick;full;quicknolink")
 	condor_pl_test(cmd_status_shows-submitters "Condor_status -submitters works as expected" "core;quick;full;quicknolink")
 	condor_pl_test(cmd_status_shows-negotiator "Condor_status -negotiator works as expected" "core;quick;full;quicknolink")

@@ -7,9 +7,14 @@
 #include "condor_classad.h"
 #include "condor_daemon_core.h"
 #include "file_lock.h"
+#include "condor_rw.h"
 
 #include "docker-api.h"
 #include <algorithm>
+
+#if !defined(WIN32)
+#include <sys/un.h>
+#endif
 
 static bool add_env_to_args_for_docker(ArgList &runArgs, const Env &env);
 static bool add_docker_arg(ArgList &runArgs);
@@ -272,6 +277,7 @@ DockerAPI::unpause( const std::string & container, CondorError & err ) {
 	return run_simple_docker_command("unpause", container, err);
 }
 
+#if 0
 static uint64_t
 convertUnits(uint64_t raw, char *unit) {
 	switch (*unit) {
@@ -294,9 +300,110 @@ convertUnits(uint64_t raw, char *unit) {
 		break;
 	}
 }
+#endif
 
+
+	/* Find usage stats on a running container by talking
+ 	 * directly to the server
+ 	 */
+ 	 
+int
+DockerAPI::stats(const std::string &container, uint64_t &memUsage, uint64_t &netIn, uint64_t &netOut, uint64_t &userCpu, uint64_t &sysCpu) {
+
+#if defined(WIN32)
+	return -1;
+#else
+
+	/*
+ 	 * Create a Unix domain socket 
+ 	 *
+ 	 * This is what the docker server listens on
+ 	 */
+
+	int uds = socket(AF_UNIX, SOCK_STREAM, 0);
+	if (uds < 0) {
+		dprintf(D_ALWAYS, "Can't create unix domain socket, no docker statistics will be available\n");
+		return -1;
+	}
+
+	struct sockaddr_un sa;
+	memset(&sa, 0, sizeof(sa));
+	
+	sa.sun_family = AF_UNIX;
+	strncpy(sa.sun_path, "/var/run/docker.sock",sizeof(sa.sun_path) - 1);
+
+	{
+	TemporaryPrivSentry sentry(PRIV_ROOT);
+	int cr = connect(uds, (struct sockaddr *) &sa, sizeof(sa));
+	if (cr != 0) {
+		dprintf(D_ALWAYS, "Can't connect to /var/run/docker.sock %s, no statistics will be available\n", strerror(errno));
+		close(uds);
+		return -1;
+	}
+	}
+
+	char request[256];
+
+	sprintf(request, "GET /containers/%s/stats?stream=0 HTTP/0.9\r\n\r\n", container.c_str());
+	int ret = write(uds, request, strlen(request));
+	if (ret < 0) {
+		dprintf(D_ALWAYS, "Can't send request to docker server, no statistics will be available\n");
+		close(uds);
+		return -1;
+	}
+
+	std::string response;
+
+	char buf[1024];
+	int written;
+
+	// read with 200 second timeout, no flags, nonblocking
+	while ((written = condor_read("Docker Socket", uds, buf, 1024, 200, 0, false)) > 0) {
+		response.append(buf, written);
+	}
+	dprintf(D_FULLDEBUG, "docker stats: %s\n", response.c_str());
+	close(uds);
+
+	// Response now contains an enormous JSON formatted response
+	// Hackily extract the fields we are interested in
+	
+	size_t pos;
+	memUsage = netIn = netOut = userCpu = sysCpu = 0;
+
+		// Would really like a real JSON parser here...
+	pos = response.find("\"max_usage\"");
+	if (pos != std::string::npos) {
+		sscanf(response.c_str()+pos, "\"max_usage\":%ld", &memUsage);	
+	}
+	pos = response.find("\"tx_bytes\"");
+	if (pos != std::string::npos) {
+		sscanf(response.c_str()+pos, "\"tx_bytes\":%ld", &netOut);	
+	}
+	pos = response.find("\"rx_bytes\"");
+	if (pos != std::string::npos) {
+		sscanf(response.c_str()+pos, "\"rx_bytes\":%ld", &netIn);	
+	}
+	pos = response.find("\"usage_in_usermode\"");
+	if (pos != std::string::npos) {
+		sscanf(response.c_str()+pos, "\"usage_in_usermode\":%ld", &userCpu);	
+	}
+	pos = response.find("\"usage_in_kernelmode\"");
+	if (pos != std::string::npos) {
+		sscanf(response.c_str()+pos, "\"usage_in_kernelmode\":%ld", &sysCpu);	
+	}
+	dprintf(D_FULLDEBUG, "docker stats reports max_usage is %ld rx_bytes is %ld tx_bytes is %ld usage_in_usermode is %ld usage_in-sysmode is %ld\n", memUsage, netIn, netOut, userCpu, sysCpu);
+
+	return 0;
+#endif
+
+} /*
+ *  getting stats by running docker stats is now deprecated
+ */
+
+#if 0
 int
 DockerAPI::stats(const std::string &container, uint64_t &memUsage, uint64_t &netIn, uint64_t &netOut) {
+newstats(container, memUsage, netIn, netOut);
 	ArgList args;
 	if ( ! add_docker_arg(args))
 		return -1;
@@ -354,6 +461,8 @@ DockerAPI::stats(const std::string &container, uint64_t &memUsage, uint64_t &net
 	dprintf(D_FULLDEBUG, "memUsage is %g (%s), net In is %g (%s), net Out is %g (%s)\n", memRaw, memUsageUnit, netInRaw, netInUnit, netOutRaw, netOutUnit);
 	return 0;
 }
+#endif
+
 int DockerAPI::detect( CondorError & err ) {
 	// FIXME: Remove ::version() as a public API and return it from here,
 	// because there's no point in doing this twice.

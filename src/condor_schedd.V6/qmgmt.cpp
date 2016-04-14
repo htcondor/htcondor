@@ -217,7 +217,7 @@ typedef HashTable<int, int> ClusterSizeHashTable_t;
 static ClusterSizeHashTable_t *ClusterSizeHashTable = 0;
 static int TotalJobsCount = 0;
 
-static classad::References immutable_attrs, protected_attrs;
+static classad::References immutable_attrs, protected_attrs, secure_attrs;
 static int flush_job_queue_log_timer_id = -1;
 static int dirty_notice_timer_id = -1;
 static int flush_job_queue_log_delay = 0;
@@ -746,6 +746,9 @@ InitQmgmt()
 	protected_attrs.clear();
 	param_and_insert_attrs("PROTECTED_JOB_ATTRS", protected_attrs);
 	param_and_insert_attrs("SYSTEM_PROTECTED_JOB_ATTRS", protected_attrs);
+	secure_attrs.clear();
+	param_and_insert_attrs("SECURE_JOB_ATTRS", secure_attrs);
+	param_and_insert_attrs("SYSTEM_SECURE_JOB_ATTRS", secure_attrs);
 
 	schedd_forker.Initialize();
 	int max_schedd_forkers = param_integer ("SCHEDD_QUERY_WORKERS",8,0);
@@ -2515,6 +2518,46 @@ static int IsSepecialSetAttribute(const char *attr, int* set_cat=NULL)
 
 
 int
+SetSecureAttributeInt(int cluster_id, int proc_id, const char *attr_name, int attr_value, SetAttributeFlags_t flags)
+{
+	if (attr_name == NULL ) {return -1;}
+
+	char buf[100];
+	snprintf(buf,100,"%d",attr_value);
+
+	// lookup job and set attribute
+	JOB_ID_KEY_BUF key;
+	IdToKey(cluster_id,proc_id,key);
+	JobQueue->SetAttribute(key.c_str(), attr_name, buf, flags & SETDIRTY);
+
+	return 0;
+}
+
+
+int
+SetSecureAttributeRawString(int cluster_id, int proc_id, const char *attr_name, const char *attr_value, SetAttributeFlags_t flags)
+{
+	if (attr_name == NULL || attr_value == NULL) {return -1;}
+
+	// do quoting using oldclassad syntax
+	classad::Value tmpValue;
+	classad::ClassAdUnParser unparse;
+	unparse.SetOldClassAd( true, true );
+
+	tmpValue.SetStringValue(attr_value);
+	std::string buf;
+	unparse.Unparse(buf, tmpValue);
+
+	// lookup job and set attribute to quoted string
+	JOB_ID_KEY_BUF key;
+	IdToKey(cluster_id,proc_id,key);
+	JobQueue->SetAttribute(key.c_str(), attr_name, buf.c_str(), flags & SETDIRTY);
+
+	return 0;
+}
+
+
+int
 SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			 const char *attr_value, SetAttributeFlags_t flags)
 {
@@ -2543,6 +2586,31 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 				"job %d.%d, ignoring\n",
 				attr_value ? attr_value : "(null)", cluster_id, proc_id);
 		return -1;
+	}
+
+	// Ensure user is not changing a secure attribute.  Only schedd is
+	// allowed to do that, via the internal API.
+	if (secure_attrs.find(attr_name) != secure_attrs.end())
+	{
+		errno = EACCES;
+		// should we fail or silently succeed?  (old submits set secure attrs)
+		const CondorVersionInfo *vers = Q_SOCK->get_peer_version();
+		if (vers && vers->built_since_version( 8, 5, 4 ) ) {
+			// new versions should know better!  fail!
+			dprintf(D_ALWAYS,
+				"SetAttribute attempt to edit secure attribute %s in job %d.%d. Failing!\n",
+				attr_name, cluster_id, proc_id);
+			return -1;
+		} else {
+			// old versions get a pass.  succeed (but do nothing).
+			// The idea here is we will not set the secure attributes, but we won't
+			// propagate the error back because we don't want old condor_submits to not
+			// be able to submit jobs.
+			dprintf(D_ALWAYS,
+				"SetAttribute attempt to edit secure attribute %s in job %d.%d. Ignoring!\n",
+				attr_name, cluster_id, proc_id);
+			return 0;
+		}
 	}
 
 	IdToKey(cluster_id,proc_id,key);
@@ -2833,15 +2901,15 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 
 		char *proxy_subject = x509_proxy_subject_name( proxy_handle );
 		dprintf (D_SECURITY, "ATTRS: %s = %s\n", ATTR_X509_USER_PROXY_SUBJECT, proxy_subject?proxy_subject:"NULL");
-		SetAttributeRawString(cluster_id, proc_id, ATTR_X509_USER_PROXY_SUBJECT, proxy_subject?proxy_subject:"");
+		SetSecureAttributeRawString(cluster_id, proc_id, ATTR_X509_USER_PROXY_SUBJECT, proxy_subject?proxy_subject:"", flags );
 
 		time_t proxy_expiration = x509_proxy_expiration_time( proxy_handle );
 		dprintf (D_SECURITY, "ATTRS: %s = %li\n", ATTR_X509_USER_PROXY_EXPIRATION, proxy_expiration);
-		SetAttributeInt( cluster_id, proc_id, ATTR_X509_USER_PROXY_EXPIRATION, proxy_expiration, flags );
+		SetSecureAttributeInt( cluster_id, proc_id, ATTR_X509_USER_PROXY_EXPIRATION, proxy_expiration, flags );
 
 		char *proxy_email = x509_proxy_email( proxy_handle );
 		dprintf (D_SECURITY, "ATTRS: %s = %s\n", ATTR_X509_USER_PROXY_EMAIL, proxy_email?proxy_email:"NULL");
-		SetAttributeRawString(cluster_id, proc_id, ATTR_X509_USER_PROXY_EMAIL, proxy_email?proxy_email:"");
+		SetSecureAttributeRawString(cluster_id, proc_id, ATTR_X509_USER_PROXY_EMAIL, proxy_email?proxy_email:"", flags );
 
 		// set VOMS attrs regardless of if they are present -- we need to explicitly clear them if not
 		char* voname = NULL;
@@ -2852,13 +2920,13 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		extract_VOMS_info( proxy_handle, 0, &voname, &firstfqan, &fullfqan);
 
 		dprintf( D_SECURITY, "ATTRS: %s = %s\n", ATTR_X509_USER_PROXY_VONAME, voname?voname:"NULL");
-		SetAttributeRawString(cluster_id, proc_id, ATTR_X509_USER_PROXY_VONAME, voname?voname:"");
+		SetSecureAttributeRawString(cluster_id, proc_id, ATTR_X509_USER_PROXY_VONAME, voname?voname:"", flags );
 
 		dprintf( D_SECURITY, "ATTRS: %s = %s\n", ATTR_X509_USER_PROXY_FIRST_FQAN, firstfqan?firstfqan:"NULL");
-		SetAttributeRawString(cluster_id, proc_id, ATTR_X509_USER_PROXY_FIRST_FQAN, firstfqan?firstfqan:"");
+		SetSecureAttributeRawString(cluster_id, proc_id, ATTR_X509_USER_PROXY_FIRST_FQAN, firstfqan?firstfqan:"", flags );
 
 		dprintf( D_SECURITY, "ATTRS: %s = %s\n", ATTR_X509_USER_PROXY_FQAN, fullfqan?fullfqan:"NULL");
-		SetAttributeRawString(cluster_id, proc_id, ATTR_X509_USER_PROXY_FQAN, fullfqan?fullfqan:"");
+		SetSecureAttributeRawString(cluster_id, proc_id, ATTR_X509_USER_PROXY_FQAN, fullfqan?fullfqan:"", flags );
 
 		// clean up
 		free( proxy_subject );

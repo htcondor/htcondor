@@ -281,7 +281,7 @@ if( not TestGlue::is_windows() ) {
 
 #Look for condor_tests/testconfigappend which we want at the end
 #of the main config file
-print "CONGIGURING PERSONAL CONDOR\n";
+print "CONFIGURING PERSONAL CONDOR\n";
 print "TESTS set to: $ENV{TESTS}\n";
 print "CONDOR_CONFIG set to: $ENV{CONDOR_CONFIG}\n";
 
@@ -310,6 +310,9 @@ if( -f $testConfigAppendFile ) {
 		print NEW "$_";
 	}
 
+	# force stuff?
+	# print NEW "\nALL_DEBUG = D_SUB_SECOND D_CAT\n";
+
 	while (<APP>) {
 		print NEW "$_";
 	}
@@ -328,7 +331,11 @@ if( -f $testConfigAppendFile ) {
 	}
 	close( MAIN );
 } else {
-	print "No config append requested\n";
+	print "No config append requested, forcing ALL_DEBUG = D_SUB_SECOND D_CAT\n";
+	my $mainConfigFile = $ENV{ CONDOR_CONFIG };
+	open( MAIN,  ">> $mainConfigFile" ) or die "Failed to append to: $mainConfigFile :$!\n";
+	print MAIN "\nALL_DEBUG = D_SUB_SECOND D_CAT\n";
+	close ( MAIN );
 }
 
 

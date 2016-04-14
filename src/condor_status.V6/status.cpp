@@ -42,18 +42,128 @@
 #include <iostream>
 
 #define USE_LATE_PROJECTION 1
-#define USE_PROJECTION_SET 1
+#define USE_QUERY_CALLBACKS 1
 
 // if enabled, use natural_cmp for numerical sorting of hosts/slots
 #define STRVCMP (naturalSort ? natural_cmp : strcmp)
 
-#ifdef USE_PROJECTION_SET
+#ifdef USE_QUERY_CALLBACKS
+
+// the condor q strategy will be to ingest ads and print them into MyRowOfValues structures
+// then insert those into a map which is indexed (and thus ordered) by job id.
+// Once all of the jobs have arrived we linkup the JobRowOfData structures by job id and dag id.
+// Finally, then we adjust column widths and formats based on the actual data and finally print.
+
+// This structure hold the rendered fields from a single job ad, it will be inserted in to a map by job id
+// and also linked up using the various pointers
+//
+class StatusRowOfData {
+public:
+	MyRowOfValues rov;
+	unsigned int ordinal;  // id assigned to preserve the original order
+	unsigned int flags;    // SROD_* flags used while processing
+	ClassAd * ad;
+	class StatusRowOfData * next_slot; // used at runtime to linkup slots for a machine.
+	StatusRowOfData(unsigned int _ord)
+		: ordinal(_ord), flags(0), ad(NULL)
+		, next_slot(NULL)
+	{}
+
+	~StatusRowOfData() { if (ad) delete ad; ad = NULL; }
+
+	bool isValid(int index) {
+		if ( ! rov.is_valid(index)) return false;
+		return rov.Column(index) != NULL;
+	}
+
+	template <class t>
+	bool getNumber(int index, t & val) {
+		val = 0;
+		if ( ! rov.is_valid(index)) return false;
+		classad::Value * pval = rov.Column(index);
+		if ( ! pval) return false;
+		return pval->IsNumber(val);
+	}
+
+	template <class s>
+	bool getString(int index, s & val) {
+		if ( ! rov.is_valid(index)) return false;
+		classad::Value * pval = rov.Column(index);
+		if ( ! pval) return false;
+		return pval->IsStringValue(val);
+	}
+	bool getString(int index, char * buf, int cch) {
+		if ( ! rov.is_valid(index)) return false;
+		classad::Value * pval = rov.Column(index);
+		if ( ! pval) return false;
+		return pval->IsStringValue(buf, cch);
+	}
+};
+
+struct STRVCMPStr {
+   inline bool operator( )( const std::string &s1, const std::string &s2 ) const {
+       return( natural_cmp( s1.c_str( ), s2.c_str( ) ) < 0 );
+	}
+};
+
+typedef std::map<std::string, StatusRowOfData, STRVCMPStr> ROD_MAP_BY_KEY;
+
+#define SROD_COOKED  0x0001   // set when the row data has been cooked (i.e. folded into)
+#define SROD_SKIP    0x0002   // this row should be skipped entirely
+#define SROD_FOLDED  0x0004   // data from this row has been folded into another row
+#define SROD_PRINTED 0x0008   // Set during printing so we can know what has already been printed
+
+#define SROD_PARTITIONABLE_SLOT 0x1000 // is a partitionable slot
+#define SROD_BUSY_SLOT          0x2000 // is an busy slot (Claimed/Matched/Preempting)
+#define SROD_UNAVAIL_SLOT       0x4000 // is an unavailable slot (Owner/Drained/Delete?)
+#define SROD_EXHAUSTED_SLOT     0x8000 // is a partitionable slot with no cores remaining.
+
+class ClassadSortSpecs {
+public:
+	ClassadSortSpecs() {}
+	~ClassadSortSpecs() {
+		for (size_t ii = 0; ii < key_exprs.size(); ++ii) {
+			if (key_exprs[ii]) { delete key_exprs[ii]; }
+			key_exprs[ii] = NULL;
+		}
+	}
+
+	bool empty() { return key_args.empty(); }
+
+	// returns true on success, false if the arg did not parse as an attribute or classad expression
+	bool Add(const char * arg) {
+		ExprTree* expr = NULL;
+		if (ParseClassAdRvalExpr(arg, expr)) {
+			return false;
+		}
+		key_exprs.push_back(expr);
+		key_args.push_back(arg);
+		return true;
+	}
+	// make sure that the primary key is the same as arg, inserting arg as the first key if needed
+	bool ForcePrimaryKey(const char * arg) {
+		if ( ! key_args.size() || key_args[0].empty() || MATCH != strcasecmp(key_args[0].c_str(), arg)) {
+			ExprTree* expr = NULL;
+			if (ParseClassAdRvalExpr(arg, expr)) {
+				return false;
+			}
+			key_exprs.insert(key_exprs.begin(), expr);
+			key_args.insert(key_args.begin(), arg);
+		}
+		return true;
+	}
+
+	void RenderKey(std::string & key, unsigned int ord, ClassAd * ad);
+	void AddToProjection(classad::References & proj);
+	// for debugging, dump the sort expressions
+	void dump(std::string & out, const char * sep);
+
+protected:
+	std::vector<std::string> key_args;
+	std::vector<classad::ExprTree*> key_exprs;
+};
+
 #else
-// for use with qsort, note the double de-ref 
-static int string_compare(const void *x, const void *y) {
-	return strcmp(*(char * const *) x, *(char * const *) y);
-}
-#endif
 
 using std::vector;
 using std::string;
@@ -92,6 +202,7 @@ struct SortSpec {
     }
 };
 
+#endif
 
 // global variables
 AttrListPrintMask pm;
@@ -114,28 +225,30 @@ bool		wide_display = false; // when true, don't truncate field data
 bool		invalid_fields_empty = false; // when true, print "" instead of "[?]" for missing data
 const char * mode_constraint = NULL; // constraint set by mode
 int			diagnose = 0;
+const char* diagnostics_ads_file = NULL; // filename to write diagnostics query ads to, from -diagnose:<filename>
 char*		direct = NULL;
 char*       statistics = NULL;
 const char*	genericType = NULL;
 CondorQuery *query;
 char		buffer[1024];
 char		*myName;
+#ifdef USE_QUERY_CALLBACKS
+ClassadSortSpecs sortSpecs;
+#else
 vector<SortSpec> sortSpecs;
+#endif
 bool            noSort = false; // set to true to disable sorting entirely
 bool            naturalSort = true;
 bool            javaMode = false;
 bool			vmMode = false;
 bool			absentMode = false;
 bool			offlineMode = false;
+bool			compactMode = false;
 char 		*target = NULL;
 const char * ads_file = NULL; // read classads from this file instead of querying them from the collector
 ClassAd		*targetAd = NULL;
 
-#ifdef USE_PROJECTION_SET
 classad::References projList;
-#else
-ArgList projList;		// Attributes that we want the server to send us
-#endif
 StringList dashAttributes; // Attributes specifically requested via the -attributes argument
 
 // instantiate templates
@@ -144,10 +257,23 @@ StringList dashAttributes; // Attributes specifically requested via the -attribu
 void usage 		();
 void firstPass  (int, char *[]);
 void secondPass (int, char *[]);
+#ifdef USE_QUERY_CALLBACKS
+// prototype for CollectorList:query, CondorQuery::processAds,
+// and CondorQ::fetchQueueFromHostAndProcess callbacks.
+// callback should return false to take ownership of the ad
+typedef bool (*FNPROCESS_ADS_CALLBACK)(void* pv, ClassAd * ad);
+static bool read_classad_file(const char *filename, FNPROCESS_ADS_CALLBACK callback, void* pv, const char * constr);
+//void prettyPrint(ROD_MAP_BY_KEY &, TrackTotals *);
+ppOption prettyPrintHeadings (bool any_ads);
+void prettyPrintAd(ppOption pps, ClassAd *ad);
+int getDisplayWidth(bool * is_piped=NULL);
+const char* digest_state_and_activity(char * sa, State st, Activity ac); //  in prettyPrint.cpp
+#else
 void prettyPrint(ClassAdList &, TrackTotals *);
 int  lessThanFunc(AttrList*,AttrList*,void*);
 int  customLessThanFunc(AttrList*,AttrList*,void*);
 static bool read_classad_file(const char *filename, ClassAdList &classads, const char * constr);
+#endif
 
 extern "C" int SetSyscalls (int) {return 0;}
 extern	int setPPstyle (ppOption, int, const char *);
@@ -163,6 +289,428 @@ extern	void setMode 	(Mode, int, const char *);
 extern	void dumpPPMask (std::string & out, AttrListPrintMask & mask);
 #endif
 extern  int  forced_display_width;
+
+#ifdef USE_QUERY_CALLBACKS
+
+#if 0 // not currently used.
+// callback for CollectorList::query to build a classad list.
+static bool AddToClassAdList(void * pv, ClassAd* ad) {
+	ClassAdList * plist = (ClassAdList*)pv;
+	plist->Insert(ad);
+	return false; // return false to indicate we took ownership of the ad.
+}
+#endif
+
+
+void ClassadSortSpecs::AddToProjection(classad::References & proj)
+{
+	ClassAd ad;
+	for (size_t ii = 0; ii < key_exprs.size(); ++ii) {
+		classad::ExprTree * expr = key_exprs[ii];
+		if (expr) { ad.GetExternalReferences(expr, proj, true); }
+	}
+}
+
+void ClassadSortSpecs::dump(std::string & out, const char * sep)
+{
+	ClassAd ad;
+	for (size_t ii = 0; ii < key_exprs.size(); ++ii) {
+		classad::ExprTree * expr = key_exprs[ii];
+		if (expr) { ExprTreeToString(expr, out); }
+		out += sep;
+	}
+}
+
+void ClassadSortSpecs::RenderKey(std::string & key, unsigned int ord, ClassAd * ad)
+{
+	for (size_t ii = 0; ii < key_exprs.size(); ++ii) {
+		classad::Value val;
+		classad::ExprTree * expr = key_exprs[ii];
+		if (expr && ad->EvaluateExpr(expr, val)) {
+			std::string fld;
+			switch (val.GetType()) {
+			case classad::Value::REAL_VALUE: {
+				// render real by treating the bits of the double as integer bits. this works because
+				// IEEE 754 floats compare the same when the bits are compared as they do
+				// when compared as doubles because the exponent is the upper bits.
+				union { long long lval; double dval; };
+				val.IsRealValue(dval);
+				formatstr(fld, "%lld", lval);
+				}
+				break;
+			case classad::Value::INTEGER_VALUE:
+			case classad::Value::BOOLEAN_VALUE: {
+				long long lval;
+				val.IsNumber(lval);
+				formatstr(fld, "%lld", lval);
+				}
+				break;
+			case classad::Value::STRING_VALUE:
+				val.IsStringValue(fld);
+				break;
+			default: {
+				classad::ClassAdUnParser unp;
+				unp.Unparse(fld, val);
+				}
+				break;
+			}
+			key += fld;
+		}
+		key += "\n";
+	}
+
+	// append the ordinal as the key of last resort
+	formatstr_cat(key, "%08X", ord);
+}
+
+#if 0
+static void make_status_key(std::string & key, unsigned int ord, ClassAd* ad)
+{
+	std::string fld;
+	if ( ! ad->LookupString(ATTR_MACHINE, key)) key = "";
+	key += "\n";
+
+	if ( ! ad->LookupString(ATTR_NAME, fld)) fld = "";
+	key += fld;
+	key += "\n";
+
+	//if ( ! ad->LookupString(ATTR_OPSYS, fld)) fld = "";
+	//if ( ! ad->LookupString(ATTR_ARCH, fld)) fld = "";
+
+	// append the ordinal as the key of last resort
+	formatstr_cat(key, "\n%08X", ord);
+}
+#endif
+
+static State LookupStartdState(ClassAd* ad)
+{
+	char state[32];
+	if (!ad->LookupString (ATTR_STATE, state, sizeof(state))) return no_state;
+	return string_to_state (state);
+}
+
+// arguments passed to the process_ads_callback
+struct _process_ads_info {
+   ROD_MAP_BY_KEY * pmap;
+   TrackTotals *  totals;
+   unsigned int  ordinal;
+   int           columns;
+   FILE *        hfDiag; // write raw ads to this file for diagnostic purposes
+   unsigned int  diag_flags;
+};
+
+extern int startdCompact_ixCol_Platform;  // Platform
+extern int startdCompact_ixCol_ActCode;   // ST State+Activity code
+int max_totals_subkey = -1;
+
+static bool process_ads_callback(void * pv,  ClassAd* ad)
+{
+	bool done_with_ad = true;
+	struct _process_ads_info * pi = (struct _process_ads_info *)pv;
+	ROD_MAP_BY_KEY * pmap = pi->pmap;
+	TrackTotals *    totals = pi->totals;
+
+	std::string key;
+	unsigned int ord = pi->ordinal++;
+	sortSpecs.RenderKey(key, ord, ad);
+	//make_status_key(key, ord, ad);
+
+	// if diagnose flag is passed, unpack the key and ad and print them to the diagnostics file
+	if (pi->hfDiag) {
+		if (pi->diag_flags & 1) {
+			fprintf(pi->hfDiag, "#Key:");
+			size_t ib = 0;
+			do {
+				size_t ix = key.find_first_of("\n", ib);
+				size_t cb = ix != std::string::npos ?  ix-ib: std::string::npos;
+				fprintf(pi->hfDiag, " / %s", key.substr(ib, cb).c_str());
+				ib = ix+1;
+				if (ix == std::string::npos) break;
+			} while (ib != std::string::npos);
+			fputc('\n', pi->hfDiag);
+		}
+
+		if (pi->diag_flags & 2) {
+			fPrintAd(pi->hfDiag, *ad);
+			fputc('\n', pi->hfDiag);
+		}
+
+		return true; // done processing this ad
+	}
+
+	std::pair<ROD_MAP_BY_KEY::iterator,bool> pp = pmap->insert(std::pair<std::string, StatusRowOfData>(key, ord));
+	if( ! pp.second ) {
+		fprintf( stderr, "Error: Two results with the same key.\n" );
+		done_with_ad = true;
+	} else {
+
+		// we can do normal totals now. but compact mode totals we have to do after checking the slot type
+		if (totals && ! compactMode) { totals->update(ad); }
+
+		if (pi->columns) {
+			StatusRowOfData & srod = pp.first->second;
+
+			srod.rov.SetMaxCols(pi->columns);
+			pm.render(srod.rov, ad);
+
+			bool fPslot = false;
+			if (ad->LookupBool(ATTR_SLOT_PARTITIONABLE, fPslot) && fPslot) {
+				srod.flags |= SROD_PARTITIONABLE_SLOT;
+				double cpus = 0;
+				if (ad->LookupFloat(ATTR_CPUS, cpus)) {
+					if (cpus < 0.1) srod.flags |= SROD_EXHAUSTED_SLOT;
+				}
+			} // else
+			{
+				State state = LookupStartdState(ad);
+				if (state == matched_state || state == claimed_state || state == preempting_state)
+					srod.flags |= SROD_BUSY_SLOT;
+				else if (state == drained_state || state == owner_state || state == shutdown_state || state == delete_state)
+					srod.flags |= SROD_UNAVAIL_SLOT;
+			}
+			if (totals && compactMode) {
+				char keybuf[64] = " ";
+				const char * subtot_key = keybuf;
+				switch(ppTotalStyle) {
+					case PP_SUBMITTER_NORMAL: srod.getString(0, keybuf, sizeof(keybuf)); break;
+					case PP_SCHEDD_NORMAL: subtot_key = NULL; break;
+					case PP_STARTD_STATE: subtot_key = NULL; break; /* use activity as key */
+					default: srod.getString(startdCompact_ixCol_Platform, keybuf, sizeof(keybuf)); break;
+				}
+				if (subtot_key) {
+					int len = strlen(subtot_key);
+					max_totals_subkey = MAX(max_totals_subkey, len);
+				}
+				totals->update(ad, TOTALS_OPTION_ROLLUP_PARTITIONABLE | TOTALS_OPTION_IGNORE_DYNAMIC, subtot_key);
+				if ((srod.flags & (SROD_PARTITIONABLE_SLOT | SROD_EXHAUSTED_SLOT)) == SROD_PARTITIONABLE_SLOT) {
+					totals->update(ad, 0, subtot_key);
+				}
+			}
+
+			// for compact mode, we are about to throw about child state and activity attributes
+			// so roll them up now
+			if (compactMode && fPslot && startdCompact_ixCol_ActCode >= 0) {
+				State consensus_state = no_state;
+				Activity consensus_activity = no_act;
+
+				const bool preempting_wins = true;
+
+				char tmp[32];
+				classad::Value lval, val;
+				const classad::ExprList* plst = NULL;
+				// roll up child states into a consensus child state
+				if (ad->EvaluateAttr("Child" ATTR_STATE, lval) && lval.IsListValue(plst)) {
+					for (classad::ExprList::const_iterator it = plst->begin(); it != plst->end(); ++it) {
+						const classad::ExprTree * pexpr = *it;
+						if (pexpr->Evaluate(val) && val.IsStringValue(tmp,sizeof(tmp))) {
+							State st = string_to_state(tmp);
+							if (st >= no_state && st < _state_threshold_) {
+								if (consensus_state != st) {
+									if (consensus_state == no_state) consensus_state = st;
+									else {
+										if (preempting_wins && st == preempting_state) {
+											consensus_state = st; break;
+										} else {
+											consensus_state = _state_threshold_;
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+
+				// roll up child activity into a consensus child state
+				if (ad->EvaluateAttr("Child" ATTR_ACTIVITY, lval) && lval.IsListValue(plst)) {
+					for (classad::ExprList::const_iterator it = plst->begin(); it != plst->end(); ++it) {
+						const classad::ExprTree * pexpr = *it;
+						if (pexpr->Evaluate(val) && val.IsStringValue(tmp,sizeof(tmp))) {
+							Activity ac = string_to_activity(tmp);
+							if (ac >= no_act && ac < _act_threshold_) {
+								if (consensus_activity != ac) {
+									if (consensus_activity == no_act) consensus_activity = ac;
+									else {
+										if (preempting_wins && ac == vacating_act) {
+											consensus_activity = ac; break;
+										} else {
+											consensus_activity = _act_threshold_;
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+
+				// roll concensus state into parent slot state.
+				srod.getString(startdCompact_ixCol_ActCode, tmp, 4);
+				digest_state_and_activity(tmp+4, consensus_state, consensus_activity);
+				char bsc = tmp[4], bac = tmp[4+1];
+				char asc = tmp[0], aac = tmp[1];
+				if ((asc == 'U' && aac == 'i') && (srod.flags & SROD_EXHAUSTED_SLOT)) {
+					// For exhausted partitionable slots that are Unclaimed/Idle, just use the concensus state
+					asc = bsc; aac = bac;
+				} else if (asc == 'D' && bsc == 'C') {
+					// if partitionable slot is stated Drained and the children are claimed,
+					// show the overall state as Claimed/Retiring
+					asc = bsc;
+				}
+				if (preempting_wins) {
+					if (bsc == 'P') asc = bsc;
+					if (bac == 'v') aac = bac;
+				}
+				if (consensus_state != no_state && asc != bsc) asc = '*';
+				if (consensus_activity != no_act && aac != bac) aac = '*';
+				if (tmp[0] != asc || tmp[1] != aac) {
+					tmp[0] = asc; tmp[1] = aac; tmp[2] = 0;
+					srod.rov.Column(startdCompact_ixCol_ActCode)->SetStringValue(tmp);
+				}
+
+			}
+
+			done_with_ad = true;
+		} else {
+			pp.first->second.ad = ad;
+			done_with_ad = false;
+		}
+	}
+
+	return done_with_ad; // return false to indicate we took ownership of the passed in ad.
+}
+
+// return true if the strings are non-empty and match up to the first \n
+// or match exactly if there is no \n
+bool same_primary_key(const std::string & aa, const std::string & bb)
+{
+	size_t cb = aa.size();
+	if ( ! cb) return false;
+	for (size_t ix = 0; ix < cb; ++ix) {
+		char ch = aa[ix];
+		if (bb[ix] != ch) return false;
+		if (ch == '\n') return true;
+	}
+	return bb.size() == cb;
+}
+
+extern int startdCompact_ixCol_FreeCpus;  // Cpus
+extern int startdCompact_ixCol_MaxSlotMem;// Max(ChildMemory)
+extern int startdCompact_ixCol_FreeMem;   // Memory
+extern int startdCompact_ixCol_Slots;     // NumDynamicSlots
+extern int startdCompact_ixCol_JobStarts; // RecentJobStarts
+
+// fold slot bb into aa assuming startdCompact format
+void fold_slot_result(StatusRowOfData & aa, StatusRowOfData * pbb)
+{
+	if (aa.rov.empty()) return;
+
+	// If the destination slot is not partitionable and hasn't already been cooked, some setup work is needed.
+	if ( ! (aa.flags & SROD_PARTITIONABLE_SLOT) && ! (aa.flags & SROD_COOKED)) {
+
+		// The MaxMem column will be undefined or error, set it equal to Memory
+		if (startdCompact_ixCol_FreeMem >= 0 && startdCompact_ixCol_MaxSlotMem >= 0) {
+			double amem;
+			aa.getNumber(startdCompact_ixCol_FreeMem, amem);
+			aa.rov.Column(startdCompact_ixCol_MaxSlotMem)->SetRealValue(amem);
+			aa.rov.set_col_valid(startdCompact_ixCol_MaxSlotMem, true);
+		}
+
+		// The FreeMem and FreeCpus columns should be set to 0 if the slot is busy (or unavailable?)
+		if (aa.flags & SROD_BUSY_SLOT) {
+			if (startdCompact_ixCol_FreeCpus >= 0) aa.rov.Column(startdCompact_ixCol_FreeCpus)->SetIntegerValue(0);
+			if (startdCompact_ixCol_FreeMem >= 0) aa.rov.Column(startdCompact_ixCol_FreeMem)->SetRealValue(0.0);
+		}
+
+		// The Slots column should be set to 1
+		if (startdCompact_ixCol_Slots >= 0) {
+			aa.rov.Column(startdCompact_ixCol_Slots)->SetIntegerValue(1);
+			aa.rov.set_col_valid(startdCompact_ixCol_Slots, true);
+		}
+
+		aa.flags |= SROD_COOKED;
+	}
+
+	if ( ! pbb)
+		return;
+
+	StatusRowOfData & bb = *pbb;
+
+	// If the source slot is partitionable, we fold differently than if it is static
+	bool partitionable = (bb.flags & SROD_PARTITIONABLE_SLOT) != 0;
+
+	// calculate the memory size of the largest slot
+	double amem, bmem;
+	if (startdCompact_ixCol_MaxSlotMem >= 0) {
+		aa.getNumber(startdCompact_ixCol_MaxSlotMem, amem);
+		bb.getNumber(partitionable ? startdCompact_ixCol_MaxSlotMem : startdCompact_ixCol_FreeMem, bmem);
+		double maxslotmem = MAX(amem,bmem);
+		aa.rov.Column(startdCompact_ixCol_MaxSlotMem)->SetRealValue(maxslotmem);
+	}
+
+	// Add FreeMem and FreeCpus from bb into aa if slot bb is not busy
+	if (partitionable || !(bb.flags & SROD_BUSY_SLOT)) {
+		if (startdCompact_ixCol_FreeMem >= 0) {
+			aa.getNumber(startdCompact_ixCol_FreeMem, amem);
+			aa.rov.Column(startdCompact_ixCol_FreeMem)->SetRealValue(bmem + amem);
+		}
+
+		int acpus, bcpus;
+		if (startdCompact_ixCol_FreeCpus >= 0) {
+			aa.getNumber(startdCompact_ixCol_FreeCpus, acpus);
+			bb.getNumber(startdCompact_ixCol_FreeCpus, bcpus);
+			aa.rov.Column(startdCompact_ixCol_FreeCpus)->SetIntegerValue(acpus + bcpus);
+		}
+	}
+
+	// Increment the aa Slots column
+	int aslots, bslots = 1;
+	if (startdCompact_ixCol_Slots >= 0) {
+		aa.getNumber(startdCompact_ixCol_Slots, aslots);
+		if (partitionable) bb.getNumber(startdCompact_ixCol_Slots, bslots);
+		aa.rov.Column(startdCompact_ixCol_Slots)->SetIntegerValue(aslots + bslots);
+	}
+
+	// Sum the number of job starts
+	double astarts, bstarts;
+	if (startdCompact_ixCol_JobStarts) {
+		aa.getNumber(startdCompact_ixCol_JobStarts, astarts);
+		bb.getNumber(startdCompact_ixCol_JobStarts, bstarts);
+		aa.rov.Column(startdCompact_ixCol_JobStarts)->SetRealValue(astarts + bstarts);
+	}
+
+	// merge the state/activity (for static slots, partitionable merge happens elsewhere)
+	if (startdCompact_ixCol_ActCode >= 0) {
+		char ast[4] = {0,0,0,0}, bst[4] = {0,0,0,0};
+		aa.getString(startdCompact_ixCol_ActCode, ast, sizeof(ast));
+		bb.getString(startdCompact_ixCol_ActCode, bst, sizeof(bst));
+		char asc = ast[0], bsc = bst[0], aac = ast[1], bac = bst[1];
+		if (asc != bsc) asc = '*';
+		if (aac != bac) aac = '*';
+		if (ast[0] != asc || ast[1] != aac) {
+			ast[0] = asc; ast[1] = aac;
+			aa.rov.Column(startdCompact_ixCol_ActCode)->SetStringValue(ast);
+		}
+	}
+}
+
+void reduce_slot_results(ROD_MAP_BY_KEY & rmap)
+{
+	if (rmap.empty())
+		return;
+
+	ROD_MAP_BY_KEY::iterator it, itMachine = rmap.begin();
+	it = itMachine;
+	for (++it; it != rmap.end(); ++it) {
+		if (same_primary_key(it->first, itMachine->first)) {
+			fold_slot_result(itMachine->second, &it->second);
+			it->second.flags |= SROD_FOLDED;
+		} else {
+			fold_slot_result(itMachine->second, NULL);
+			itMachine = it;
+		}
+	}
+}
+
+#endif // USE_QUERY_CALLBACKS
 
 int
 main (int argc, char *argv[])
@@ -191,6 +739,13 @@ main (int argc, char *argv[])
 	AdTypes adType = setMode (SDO_Startd, 0, DEFAULT);
 	ASSERT(sdo_mode != SDO_NotSet);
 
+	/*
+	if (compactMode && (adType != STARTD_AD)) {
+		fprintf(stderr, "Error: -compact option conflicts with type of ClassAd being queried.\n");
+		exit(1);
+	}
+	*/
+
 	// instantiate query object
 	if (!(query = new CondorQuery (adType))) {
 		dprintf_WriteOnErrorBuffer(stderr, true);
@@ -202,69 +757,7 @@ main (int argc, char *argv[])
 		query->addANDConstraint(mode_constraint);
 	}
 
-#if 0 
-	// set pretty print style implied by the type of entity being queried
-	// but do it with default priority, so that explicitly requested options
-	// can override it
-	switch (type)
-	{
-#ifdef HAVE_EXT_POSTGRESQL
-	  case QUILL_AD:
-		setPPstyle(PP_QUILL_NORMAL, 0, DEFAULT);
-		break;
-#endif /* HAVE_EXT_POSTGRESQL */
 
-
-	  case DEFRAG_AD:
-		setPPstyle(PP_GENERIC_NORMAL, 0, DEFAULT);
-		break;
-
-	  case STARTD_AD:
-		setPPstyle(PP_STARTD_NORMAL, 0, DEFAULT);
-		break;
-
-	  case SCHEDD_AD:
-		setPPstyle(PP_SCHEDD_NORMAL, 0, DEFAULT);
-		break;
-
-	  case MASTER_AD:
-		setPPstyle(PP_MASTER_NORMAL, 0, DEFAULT);
-		break;
-
-	  case CKPT_SRVR_AD:
-		setPPstyle(PP_CKPT_SRVR_NORMAL, 0, DEFAULT);
-		break;
-
-	  case COLLECTOR_AD:
-		setPPstyle(PP_COLLECTOR_NORMAL, 0, DEFAULT);
-		break;
-
-	  case STORAGE_AD:
-		setPPstyle(PP_STORAGE_NORMAL, 0, DEFAULT);
-		break;
-
-	  case NEGOTIATOR_AD:
-		setPPstyle(PP_NEGOTIATOR_NORMAL, 0, DEFAULT);
-		break;
-
-      case GRID_AD:
-        setPPstyle(PP_GRID_NORMAL, 0, DEFAULT);
-		break;
-
-	  case GENERIC_AD:
-		setPPstyle(PP_GENERIC, 0, DEFAULT);
-		break;
-
-	  case ANY_AD:
-		setPPstyle(PP_ANY_NORMAL, 0, DEFAULT);
-		break;
-
-	  default:
-		setPPstyle(PP_VERBOSE, 0, DEFAULT);
-	}
-#endif
-
-#if 1
 		// if there was a generic type specified
 	if (genericType) {
 		// tell the query object what the type we're querying is
@@ -273,13 +766,13 @@ main (int argc, char *argv[])
 	}
 
 	// set the constraints implied by the mode
-	if (sdo_mode == SDO_Startd_Avail) {
+	if (sdo_mode == SDO_Startd_Avail && ! compactMode) {
 		// -avail shows unclaimed slots
 		sprintf (buffer, "%s == \"%s\" && Cpus > 0", ATTR_STATE, state_to_string(unclaimed_state));
 		if (diagnose) { printf ("Adding OR constraint [%s]\n", buffer); }
 		query->addORConstraint (buffer);
 	}
-	else if (sdo_mode == SDO_Startd_Run) {
+	else if (sdo_mode == SDO_Startd_Run && ! compactMode) {
 		// -run shows claimed slots
 		sprintf (buffer, "%s == \"%s\"", ATTR_STATE, state_to_string(claimed_state));
 		if (diagnose) { printf ("Adding OR constraint [%s]\n", buffer); }
@@ -291,65 +784,6 @@ main (int argc, char *argv[])
 		if (diagnose) { printf ("Adding OR constraint [%s]\n", buffer); }
 		query->addORConstraint (buffer);
 	}
-#else
-	// set the constraints implied by the mode
-	switch (mode) {
-#ifdef HAVE_EXT_POSTGRESQL
-	  case MODE_QUILL_NORMAL:
-#endif /* HAVE_EXT_POSTGRESQL */
-
-	  case MODE_DEFRAG_NORMAL:
-	  case MODE_STARTD_NORMAL:
-	  case MODE_MASTER_NORMAL:
-	  case MODE_CKPT_SRVR_NORMAL:
-	  case MODE_SCHEDD_NORMAL:
-	  case MODE_SCHEDD_SUBMITTORS:
-	  case MODE_COLLECTOR_NORMAL:
-	  case MODE_NEGOTIATOR_NORMAL:
-	  case MODE_STORAGE_NORMAL:
-	  case MODE_GENERIC_NORMAL:
-	  case MODE_ANY_NORMAL:
-	  case MODE_GRID_NORMAL:
-	  case MODE_HAD_NORMAL:
-		break;
-
-	  case MODE_OTHER:
-			// tell the query object what the type we're querying is
-		query->setGenericQueryType(genericType);
-		break;
-
-	  case MODE_STARTD_AVAIL:
-			  // For now, -avail shows you machines avail to anyone.
-		sprintf (buffer, "%s == \"%s\"", ATTR_STATE,
-					state_to_string(unclaimed_state));
-		if (diagnose) {
-			printf ("Adding constraint [%s]\n", buffer);
-		}
-		query->addORConstraint (buffer);
-		break;
-
-
-	  case MODE_STARTD_RUN:
-		sprintf (buffer, "%s == \"%s\"", ATTR_STATE,
-					state_to_string(claimed_state));
-		if (diagnose) {
-			printf ("Adding constraint [%s]\n", buffer);
-		}
-		query->addORConstraint (buffer);
-		break;
-
-	  case MODE_STARTD_COD:
-	    sprintf (buffer, "%s > 0", ATTR_NUM_COD_CLAIMS );
-		if (diagnose) {
-			printf ("Adding constraint [%s]\n", buffer);
-		}
-		query->addORConstraint (buffer);
-		break;
-
-	  default:
-		break;
-	}	
-#endif
 
 	if(javaMode) {
 		sprintf( buffer, "%s == TRUE", ATTR_HAS_JAVA );
@@ -358,42 +792,25 @@ main (int argc, char *argv[])
 		}
 		query->addANDConstraint (buffer);
 		
-#ifdef USE_PROJECTION_SET
 		projList.insert(ATTR_HAS_JAVA);
 		projList.insert(ATTR_JAVA_MFLOPS);
 		projList.insert(ATTR_JAVA_VENDOR);
 		projList.insert(ATTR_JAVA_VERSION);
-#else
-		projList.AppendArg(ATTR_HAS_JAVA);
-		projList.AppendArg(ATTR_JAVA_MFLOPS);
-		projList.AppendArg(ATTR_JAVA_VENDOR);
-		projList.AppendArg(ATTR_JAVA_VERSION);
-#endif
 	}
 
 	if(offlineMode) {
 		query->addANDConstraint( "size( OfflineUniverses ) != 0" );
 
-#ifdef USE_PROJECTION_SET
 		projList.insert( "OfflineUniverses" );
-#else
-		projList.AppendArg( "OfflineUniverses" );
-#endif
 
 		//
 		// Since we can't add a regex to a projection, explicitly list all
 		// the attributes we know about.
 		//
 
-#ifdef USE_PROJECTION_SET
 		projList.insert( "HasVM" );
 		projList.insert( "VMOfflineReason" );
 		projList.insert( "VMOfflineTime" );
-#else
-		projList.AppendArg( "HasVM" );
-		projList.AppendArg( "VMOfflineReason" );
-		projList.AppendArg( "VMOfflineTime" );
-#endif
 	}
 
 	if(absentMode) {
@@ -403,15 +820,9 @@ main (int argc, char *argv[])
 	    }
 	    query->addANDConstraint( buffer );
 	    
-#ifdef USE_PROJECTION_SET
 	    projList.insert( ATTR_ABSENT );
 	    projList.insert( ATTR_LAST_HEARD_FROM );
 	    projList.insert( ATTR_CLASSAD_LIFETIME );
-#else
-	    projList.AppendArg( ATTR_ABSENT );
-	    projList.AppendArg( ATTR_LAST_HEARD_FROM );
-	    projList.AppendArg( ATTR_CLASSAD_LIFETIME );
-#endif
 	}
 
 	if(vmMode) {
@@ -421,7 +832,6 @@ main (int argc, char *argv[])
 		}
 		query->addANDConstraint (buffer);
 
-#ifdef USE_PROJECTION_SET
 		projList.insert(ATTR_VM_TYPE);
 		projList.insert(ATTR_VM_MEMORY);
 		projList.insert(ATTR_VM_NETWORKING);
@@ -432,18 +842,34 @@ main (int argc, char *argv[])
 		projList.insert(ATTR_VM_ALL_GUEST_IPS);
 		projList.insert(ATTR_VM_GUEST_MAC);
 		projList.insert(ATTR_VM_GUEST_IP);
-#else
-		projList.AppendArg(ATTR_VM_TYPE);
-		projList.AppendArg(ATTR_VM_MEMORY);
-		projList.AppendArg(ATTR_VM_NETWORKING);
-		projList.AppendArg(ATTR_VM_NETWORKING_TYPES);
-		projList.AppendArg(ATTR_VM_HARDWARE_VT);
-		projList.AppendArg(ATTR_VM_AVAIL_NUM);
-		projList.AppendArg(ATTR_VM_ALL_GUEST_MACS);
-		projList.AppendArg(ATTR_VM_ALL_GUEST_IPS);
-		projList.AppendArg(ATTR_VM_GUEST_MAC);
-		projList.AppendArg(ATTR_VM_GUEST_IP);
-#endif
+	}
+
+	if (compactMode && ! (vmMode || javaMode)) {
+		if (sdo_mode == SDO_Startd_Avail) {
+			// State==Unclaimed picks up partitionable and unclaimed static, Cpus > 0 picks up only partitionable that have free memory
+			sprintf(buffer, "State == \"%s\" && Cpus > 0 && Memory > 0", state_to_string(unclaimed_state));
+		} else if (sdo_mode == SDO_Startd_Run) {
+			// State==Claimed picks up static slots, NumDynamicSlots picks up partitionable slots that are partly claimed.
+			sprintf(buffer, "(State == \"%s\" && DynamicSlot =!= true) || (NumDynamicSlots isnt undefined && NumDynamicSlots > 0)", state_to_string(claimed_state));
+		} else {
+			sprintf(buffer, "PartitionableSlot =?= true || DynamicSlot =!= true");
+		}
+		if (diagnose) {
+			printf ("Adding constraint [%s]\n", buffer);
+		}
+		query->addANDConstraint (buffer);
+		projList.insert(ATTR_ARCH);
+		projList.insert(ATTR_OPSYS_AND_VER);
+		projList.insert(ATTR_OPSYS_NAME);
+		projList.insert(ATTR_SLOT_DYNAMIC);
+		projList.insert(ATTR_SLOT_PARTITIONABLE);
+		projList.insert(ATTR_STATE);
+		projList.insert(ATTR_ACTIVITY);
+		//projList.insert(ATTR_MACHINE_RESOURCES);
+		//projList.insert(ATTR_WITHIN_RESOURCE_LIMITS); // this will force all partitionable resource values to be fetched.
+		projList.insert("ChildState"); // this is needed to do the summary rollup
+		projList.insert("ChildActivity"); // this is needed to do the summary rollup
+		//pmHeadFoot = (printmask_headerfooter_t)(pmHeadFoot | HF_NOSUMMARY);
 	}
 
 	// second pass:  add regular parameters and constraints
@@ -452,6 +878,17 @@ main (int argc, char *argv[])
 	}
 
 	secondPass (argc, argv);
+
+	if (sortSpecs.empty() && ! noSort) {
+		// set a default sort of Machine/Name
+		sortSpecs.Add(ATTR_MACHINE);
+		sortSpecs.Add(ATTR_NAME);
+	}
+	if (compactMode) {
+		// compact mode reqires machine to be the primary sort key.
+		sortSpecs.ForcePrimaryKey(ATTR_MACHINE);
+	}
+	sortSpecs.AddToProjection(projList);
 
 	// initialize the totals object
 	if (ppStyle == PP_CUSTOM && using_print_format) {
@@ -462,92 +899,69 @@ main (int argc, char *argv[])
 	TrackTotals	totals(ppTotalStyle);
 
 	// in order to totals, the projection MUST have certain attributes
-#ifdef USE_PROJECTION_SET
-	if (wantOnlyTotals || ((ppTotalStyle != PP_CUSTOM) && ! projList.empty()))
-	switch (ppTotalStyle) {
-		case PP_STARTD_SERVER:
-			projList.insert(ATTR_MEMORY);
-			projList.insert(ATTR_DISK);
-			// fall through
-		case PP_STARTD_RUN:
-			projList.insert(ATTR_LOAD_AVG);
-			projList.insert(ATTR_MIPS);
-			projList.insert(ATTR_KFLOPS);
-			// fall through
-		case PP_STARTD_NORMAL:
-		case PP_STARTD_COD:
-			if (ppTotalStyle == PP_STARTD_COD) {
-				projList.insert(ATTR_CLAIM_STATE);
-				projList.insert(ATTR_COD_CLAIMS);
-			}
-			projList.insert(ATTR_STATE); // Norm, state, server
-			projList.insert(ATTR_ARCH);  // for key
-			projList.insert(ATTR_OPSYS); // for key
-			break;
+	if (wantOnlyTotals || ((ppTotalStyle != PP_CUSTOM) && ! projList.empty())) {
+		switch (ppTotalStyle) {
+			case PP_STARTD_SERVER:
+				projList.insert(ATTR_MEMORY);
+				projList.insert(ATTR_DISK);
+				// fall through
+			case PP_STARTD_RUN:
+				projList.insert(ATTR_LOAD_AVG);
+				projList.insert(ATTR_MIPS);
+				projList.insert(ATTR_KFLOPS);
+				// fall through
+			case PP_STARTD_NORMAL:
+			case PP_STARTD_COD:
+				if (ppTotalStyle == PP_STARTD_COD) {
+					projList.insert(ATTR_CLAIM_STATE);
+					projList.insert(ATTR_COD_CLAIMS);
+				}
+				projList.insert(ATTR_STATE); // Norm, state, server
+				projList.insert(ATTR_ARCH);  // for key
+				projList.insert(ATTR_OPSYS); // for key
+				break;
 
-		case PP_STARTD_STATE:
-			projList.insert(ATTR_STATE);
-			projList.insert(ATTR_ACTIVITY); // for key
-			break;
+			case PP_STARTD_STATE:
+				projList.insert(ATTR_STATE);
+				projList.insert(ATTR_ACTIVITY); // for key
+				break;
 
-		case PP_SUBMITTER_NORMAL:
-			projList.insert(ATTR_NAME); // for key
-			projList.insert(ATTR_RUNNING_JOBS);
-			projList.insert(ATTR_IDLE_JOBS);
-			projList.insert(ATTR_HELD_JOBS);
-			break;
+			case PP_SUBMITTER_NORMAL:
+				projList.insert(ATTR_NAME); // for key
+				projList.insert(ATTR_RUNNING_JOBS);
+				projList.insert(ATTR_IDLE_JOBS);
+				projList.insert(ATTR_HELD_JOBS);
+				break;
 
-		case PP_SCHEDD_NORMAL: // no key
-			projList.insert(ATTR_TOTAL_RUNNING_JOBS);
-			projList.insert(ATTR_TOTAL_IDLE_JOBS);
-			projList.insert(ATTR_TOTAL_HELD_JOBS);
-			break;
+			case PP_SCHEDD_NORMAL: // no key
+				projList.insert(ATTR_TOTAL_RUNNING_JOBS);
+				projList.insert(ATTR_TOTAL_IDLE_JOBS);
+				projList.insert(ATTR_TOTAL_HELD_JOBS);
+				break;
 
-		case PP_CKPT_SRVR_NORMAL:
-			projList.insert(ATTR_DISK);
-			break;
+			case PP_CKPT_SRVR_NORMAL:
+				projList.insert(ATTR_DISK);
+				break;
 
-		default:
-			break;
+			default:
+				break;
+		}
 	}
-#endif
 
 	// fetch the query
 	QueryResult q;
 
-#if 0
-	if ((mode == MODE_STARTD_NORMAL) && (ppStyle == PP_STARTD_NORMAL)) {
-		projList.AppendArg("Name");
-		projList.AppendArg("Machine");
-		projList.AppendArg("Opsys");
-		projList.AppendArg("Arch");
-		projList.AppendArg("State");
-		projList.AppendArg("Activity");
-		projList.AppendArg("LoadAvg");
-		projList.AppendArg("Memory");
-		projList.AppendArg("ActvtyTime");
-		projList.AppendArg("MyCurrentTime");
-		projList.AppendArg("EnteredCurrentActivity");
-	} else 
-#endif
 	if( ppStyle == PP_VERBOSE ) {
 		// Remove everything from the projection list if we're displaying
 		// the "long form" of the ads.
-#ifdef USE_PROJECTION_SET
 		projList.clear();
-#else
-		projList.Clear();
-#endif
+
 		// but if -attributes was supplied, show only those attributes
 		if ( ! dashAttributes.isEmpty()) {
 			const char * s;
 			dashAttributes.rewind();
 			while ((s = dashAttributes.next())) {
-#ifdef USE_PROJECTION_SET
 				projList.insert(s);
-#else
-				projList.AppendArg(s);
-#endif
 			}
 		}
 		pmHeadFoot = HF_BARE;
@@ -574,8 +988,14 @@ main (int argc, char *argv[])
 		fprintf(fout, "Totals: %s\n", getPPStyleStr(ppTotalStyle));
 		fprintf(fout, "Opts: HF=%x\n", pmHeadFoot);
 
-		std::string style_text("");
+		std::string style_text;
 		style_text.reserve(8000);
+		style_text = "";
+
+		sortSpecs.dump(style_text, " ] [ ");
+		fprintf(fout, "Sort: [ %s<ord> ]\n", style_text.c_str());
+
+		style_text = "";
 	#ifdef USE_LATE_PROJECTION
 		const CustomFormatFnTable * getCondorStatusPrintFormats();
 		List<const char> * pheadings = NULL;
@@ -593,7 +1013,6 @@ main (int argc, char *argv[])
 		fPrintAd (fout, queryAd);
 
 		// print projection
-#ifdef USE_PROJECTION_SET
 		if (projList.empty()) {
 			fprintf(fout, "Projection: <NULL>\n");
 		} else {
@@ -603,29 +1022,14 @@ main (int argc, char *argv[])
 				fprintf(fout, "  %s\n",  it->c_str());
 			}
 		}
-#else
-		int num_attrs = projList.Count();
-		if (num_attrs <= 0) {
-			fprintf(fout, "Projection: <NULL>\n");
-		} else {
-			char **attr_list = projList.GetStringArray();
-			::qsort(attr_list, num_attrs, sizeof(char*), string_compare);
-			fprintf(fout, "Projection:\n");
-			for (int ii = 0; ii < num_attrs; ++ii) {
-				fprintf(fout, "  %s\n",  attr_list[ii]);
-			}
-			deleteStringArray(attr_list);
-		}
-#endif
 
 		fprintf (fout, "\n\n");
 		fprintf (stdout, "Result of making query ad was:  %d\n", q);
-		exit (1);
+		if ( ! diagnostics_ads_file) exit (1);
 	}
 
-#ifdef USE_PROJECTION_SET
 	if ( ! projList.empty()) {
-	#if 0 // for debugging
+		#if 0 // for debugging
 		std::string attrs;
 		attrs.reserve(projList.size()*24);
 		for (classad::References::const_iterator it = projList.begin(); it != projList.end(); ++it) {
@@ -633,30 +1037,20 @@ main (int argc, char *argv[])
 			attrs += *it;
 		}
 		fprintf(stdout, "Projection is [%s]\n", attrs.c_str());
-		query->setDesiredAttrs(attrs.c_str());
-	#else
+		#endif
 		query->setDesiredAttrs(projList);
-	#endif
 	}
-#else
-	if( projList.Count() > 0 ) {
-		char **attr_list = projList.GetStringArray();
-		query->setDesiredAttrs(attr_list);
-		deleteStringArray(attr_list);
-	}
-#endif
 
-        // Address (host:port) is taken from requested pool, if given.
+	// Address (host:port) is taken from requested pool, if given.
 	char* addr = (NULL != pool) ? pool->addr() : NULL;
-        Daemon* requested_daemon = pool;
+	Daemon* requested_daemon = pool;
 
-        // If we're in "direct" mode, then we attempt to locate the daemon
+	// If we're in "direct" mode, then we attempt to locate the daemon
 	// associated with the requested subsystem (here encoded by value of mode)
-        // In this case the host:port of pool (if given) denotes which
-        // pool is being consulted
+	// In this case the host:port of pool (if given) denotes which
+	// pool is being consulted
 	if( direct ) {
 		Daemon *d = NULL;
-#if 1
 		switch (adType) {
 		case MASTER_AD: d = new Daemon( DT_MASTER, direct, addr ); break;
 		case STARTD_AD: d = new Daemon( DT_STARTD, direct, addr ); break;
@@ -668,53 +1062,12 @@ main (int argc, char *argv[])
 		default: // These have to go to the collector, there is no 'direct'
 			break;
 		}
-#else
-		switch( mode ) {
-		case MODE_MASTER_NORMAL:
-			d = new Daemon( DT_MASTER, direct, addr );
-			break;
-		case MODE_STARTD_NORMAL:
-		case MODE_STARTD_AVAIL:
-		case MODE_STARTD_RUN:
-		case MODE_STARTD_COD:
-			d = new Daemon( DT_STARTD, direct, addr );
-			break;
 
-#ifdef HAVE_EXT_POSTGRESQL
-		case MODE_QUILL_NORMAL:
-			d = new Daemon( DT_QUILL, direct, addr );
-			break;
-#endif /* HAVE_EXT_POSTGRESQL */
-
-		case MODE_SCHEDD_NORMAL:
-		case MODE_SCHEDD_SUBMITTORS:
-			d = new Daemon( DT_SCHEDD, direct, addr );
-			break;
-		case MODE_NEGOTIATOR_NORMAL:
-			d = new Daemon( DT_NEGOTIATOR, direct, addr );
-			break;
-		case MODE_CKPT_SRVR_NORMAL:
-		case MODE_COLLECTOR_NORMAL:
-		case MODE_LICENSE_NORMAL:
-		case MODE_STORAGE_NORMAL:
-		case MODE_GENERIC_NORMAL:
-		case MODE_ANY_NORMAL:
-		case MODE_OTHER:
-		case MODE_GRID_NORMAL:
-		case MODE_HAD_NORMAL:
-				// These have to go to the collector, anyway.
-			break;
-		default:
-            fprintf( stderr, "Error:  Illegal mode %d\n", mode );
-			exit( 1 );
-			break;
-		}
-#endif
-                // Here is where we actually override 'addr', if we can obtain
-                // address of the requested daemon/subsys.  If it can't be
-                // located, then fail with error msg.
-                // 'd' will be null (unset) if mode is one of above that must go to
-                // collector (MODE_ANY_NORMAL, MODE_COLLECTOR_NORMAL, etc)
+		// Here is where we actually override 'addr', if we can obtain
+		// address of the requested daemon/subsys.  If it can't be
+		// located, then fail with error msg.
+		// 'd' will be null (unset) if mode is one of above that must go to
+		// collector (MODE_ANY_NORMAL, MODE_COLLECTOR_NORMAL, etc)
 		if (NULL != d) {
 			if( d->locate() ) {
 				addr = d->addr();
@@ -731,6 +1084,68 @@ main (int argc, char *argv[])
 		}
 	}
 
+#ifdef USE_QUERY_CALLBACKS
+	CondorError errstack;
+	ROD_MAP_BY_KEY admap;
+	struct _process_ads_info ai = {
+		&admap,
+		(pmHeadFoot&HF_NOSUMMARY) ? NULL : &totals,
+		1, // key of last resort, this counts up as members are added.
+		pm.ColCount(), // if 0, the ad is stored in the map, otherwise a row of data is stored and the add freed.
+		NULL, 0, // diagnostic file, flags
+	};
+
+	bool close_hfdiag = false;
+	if (diagnose) {
+		ai.diag_flags = 1 | 2;
+		if (diagnostics_ads_file && diagnostics_ads_file[0] != '-') {
+			ai.hfDiag = safe_fopen_wrapper_follow(diagnostics_ads_file, "w");
+			if ( ! ai.hfDiag) {
+				fprintf(stderr, "\nERROR: Failed to open file -diag output file (%s)\n", strerror(errno));
+			}
+			close_hfdiag = true;
+		} else {
+			ai.hfDiag = stdout;
+			if (diagnostics_ads_file && diagnostics_ads_file[0] == '-' && diagnostics_ads_file[1] == '2') ai.hfDiag = stderr;
+			close_hfdiag = false;
+		}
+		if ( ! ai.hfDiag) { exit(2); }
+	}
+
+	if (NULL != ads_file) {
+		MyString req; // query requirements
+		q = query->getRequirements(req);
+		const char * constraint = req.empty() ? NULL : req.c_str();
+		if (read_classad_file(ads_file, process_ads_callback, &ai, constraint)) {
+			q = Q_OK;
+		}
+	} else if (NULL != addr) {
+			// this case executes if pool was provided, or if in "direct" mode with
+			// subsystem that corresponds to a daemon (above).
+			// Here 'addr' represents either the host:port of requested pool, or
+			// alternatively the host:port of daemon associated with requested subsystem (direct mode)
+		q = query->processAds (process_ads_callback, &ai, addr, &errstack);
+	} else {
+			// otherwise obtain list of collectors and submit query that way
+		CollectorList * collectors = CollectorList::create();
+		q = collectors->query (*query, process_ads_callback, &ai, &errstack);
+		delete collectors;
+	}
+	if (diagnose) {
+		if (close_hfdiag) {
+			fclose(ai.hfDiag);
+			ai.hfDiag = NULL;
+		}
+		exit(1);
+	}
+
+	if (compactMode) {
+		switch (adType) {
+		case STARTD_AD: reduce_slot_results(admap); break;
+		default: break;
+		}
+	}
+#else
 	ClassAdList result;
 	CondorError errstack;
 	if (NULL != ads_file) {
@@ -752,7 +1167,7 @@ main (int argc, char *argv[])
 		q = collectors->query (*query, result, &errstack);
 		delete collectors;
 	}
-		
+#endif
 
 	// if any error was encountered during the query, report it and exit 
 	if (Q_OK != q) {
@@ -762,7 +1177,7 @@ main (int argc, char *argv[])
 		fprintf( stderr, "Error: %s\n", getStrQueryResult(q) );
 		fprintf( stderr, "%s\n", errstack.getFullText(true).c_str() );
 
-        if ((NULL != requested_daemon) && ((Q_NO_COLLECTOR_HOST == q) ||
+		if ((NULL != requested_daemon) && ((Q_NO_COLLECTOR_HOST == q) ||
 			(requested_daemon->type() == DT_COLLECTOR)))
 		{
 				// Specific long message if connection to collector failed.
@@ -772,8 +1187,8 @@ main (int argc, char *argv[])
 			if (NULL == daddr) daddr = "<unknown>";
 			char info[1000];
 			sprintf(info, "%s (%s)", fullhost, daddr);
-	        printNoCollectorContact( stderr, info, !expert );
-        } else if ((NULL != requested_daemon) && (Q_COMMUNICATION_ERROR == q)) {
+			printNoCollectorContact( stderr, info, !expert );
+		} else if ((NULL != requested_daemon) && (Q_COMMUNICATION_ERROR == q)) {
 				// more helpful message for failure to connect to some daemon/subsys
 			const char* id = requested_daemon->idStr();
 			if (NULL == id) id = requested_daemon->name();
@@ -787,6 +1202,50 @@ main (int argc, char *argv[])
 		exit (1);
 	}
 
+#ifdef USE_QUERY_CALLBACKS
+	bool any_ads = ! admap.empty();
+	ppOption pps = prettyPrintHeadings (any_ads);
+
+	bool is_piped = false;
+	int display_width = getDisplayWidth(&is_piped);
+	std::string line; line.reserve(is_piped ? 1024 : display_width);
+
+	// for XML output, print the xml header even if there are no ads.
+	if (PP_XML == pps) {
+		std::string line;
+		AddClassAdXMLFileHeader(line);
+		fputs(line.c_str(), stdout); // xml string already ends in a newline.
+	}
+
+	for (ROD_MAP_BY_KEY::iterator it = admap.begin(); it != admap.end(); ++it) {
+		if (it->second.flags & (SROD_FOLDED | SROD_SKIP))
+			continue;
+		if (ai.columns) {
+			line.clear();
+			pm.display(line, it->second.rov);
+			fputs(line.c_str(), stdout);
+		} else {
+			prettyPrintAd(pps, it->second.ad);
+		}
+		it->second.flags |= SROD_PRINTED; // for debugging, keep track of what we already printed.
+	}
+	
+	// for XML output, print the xml footer even if there are no ads.
+	if (PP_XML == pps) {
+		AddClassAdXMLFileFooter(line);
+		fputs(line.c_str(), stdout);
+		// PRAGMA_REMIND("tj: XML output used to have an extra trailing newline, do we need to preserve that?")
+	}
+
+	// if totals are required, display totals
+	if (any_ads && !(pmHeadFoot&HF_NOSUMMARY) && totals.haveTotals()) {
+		fputc('\n', stdout);
+		bool auto_width = (ppTotalStyle == PP_SUBMITTER_NORMAL);
+		int totals_key_width = (wide_display || auto_width) ? -1 : MAX(20, max_totals_subkey);
+		totals.displayTotals(stdout, totals_key_width);
+	}
+#else
+	//ClassAdList & result = adlist;
 	if (noSort) {
 		// do nothing 
 	} else if (sortSpecs.empty()) {
@@ -819,7 +1278,8 @@ main (int argc, char *argv[])
 	
 	// output result
 	prettyPrint (result, &totals);
-	
+#endif
+
     delete query;
 
 	return 0;
@@ -880,24 +1340,29 @@ int set_status_print_mask_from_stream (
 			//}
 		}
 		// convert projection list into the format that condor status likes. because programmers.
-#ifdef USE_PROJECTION_SET
 		for (const char * attr = attrs.first(); attr; attr = attrs.next()) { projList.insert(attr); }
-#else
-		attrs.rewind();
-		const char * attr;
-		while ((attr = attrs.next())) { projList.AppendArg(attr); }
-#endif
 	}
 	if ( ! messages.empty()) { fprintf(stderr, "%s", messages.c_str()); }
 	return err;
 }
 
-
+#ifdef USE_QUERY_CALLBACKS
+static bool read_classad_file(const char *filename, FNPROCESS_ADS_CALLBACK callback, void* pv, const char * constr)
+#else
 static bool read_classad_file(const char *filename, ClassAdList &classads, const char * constr)
+#endif
 {
 	bool success = false;
 
-	FILE* file = safe_fopen_wrapper_follow(filename, "r");
+	FILE* file = NULL;
+	bool close_file = false;
+	if (MATCH == strcmp(filename,"-")) {
+		file = stdin;
+		close_file = false;
+	} else {
+		file = safe_fopen_wrapper_follow(filename, "r");
+		close_file = true;
+	}
 	if (file == NULL) {
 		fprintf(stderr, "Can't open file of job ads: %s\n", filename);
 		return false;
@@ -920,11 +1385,19 @@ static bool read_classad_file(const char *filename, ClassAdList &classads, const
 					}
 				}
 			}
+#ifdef USE_QUERY_CALLBACKS
+			if ( ! include_classad || callback(pv, classad)) {
+				// delete the classad if we didn't pass it to the callback, or if
+				// the callback didn't take ownership of it.
+				delete classad;
+			}
+#else
 			if (include_classad) {
 				classads.Insert(classad);
 			} else {
 				delete classad;
 			}
+#endif
 
 			if (is_eof) {
 				success = true;
@@ -936,7 +1409,8 @@ static bool read_classad_file(const char *filename, ClassAdList &classads, const
 			}
 		}
 
-		fclose(file);
+		if (close_file) fclose(file);
+		file = NULL;
 	}
 	return success;
 }
@@ -989,6 +1463,7 @@ usage ()
 
 	fprintf (stderr, "\n    and [custom-opts ...] are one or more of\n"
 		"\t-constraint <const>\tAdd constraint on classads\n"
+		"\t-compact\t\t\tShow compact form, rolling up slots into a single line\n"
 		"\t-statistics <set>:<n>\tDisplay statistics for <set> at level <n>\n"
 		"\t\t\t\tsee STATISTICS_TO_PUBLISH for valid <set> and level values\n"
 		"\t\t\t\tuse with -direct queries to STARTD and SCHEDD daemons\n"
@@ -1009,7 +1484,7 @@ usage ()
 		"\t-af[:lhVr,tng] <attr> [attr2 [...]]\n"
 		"\t    Print attr(s) with automatic formatting\n"
 		"\t    the [lhVr,tng] options modify the formatting\n"
-		"\t        j   Display Job id\n"
+		//"\t        j   Display Job id\n"
 		"\t        l   attribute labels\n"
 		"\t        h   attribute column headings\n"
 		"\t        V   %%V formatting (string values are quoted)\n"
@@ -1186,8 +1661,9 @@ firstPass (int argc, char *argv[])
 			}
 			direct = strdup( argv[i] );
 		} else
-		if (is_dash_arg_prefix (argv[i], "diagnose", 3)) {
+		if (is_dash_arg_colon_prefix (argv[i], "diagnose", &pcolon, 3)) {
 			diagnose = 1;
+			if (pcolon) diagnostics_ads_file = ++pcolon;
 		} else
 		if (is_dash_arg_prefix (argv[i], "debug", 2)) {
 			// dprintf to console
@@ -1233,6 +1709,16 @@ firstPass (int argc, char *argv[])
 		} else
 		if (is_dash_arg_prefix (argv[i], "vm", 2)) {
 			/*explicit_mode =*/ vmMode = true;
+		} else
+		if (is_dash_arg_prefix (argv[i], "slots", 2)) {
+			setMode (SDO_Startd, i, argv[i]);
+			compactMode = false;
+		} else
+		if (is_dash_arg_prefix (argv[i], "compact", 3)) {
+			compactMode = true;
+		} else
+		if (is_dash_arg_prefix (argv[i], "nocompact", 5)) {
+			compactMode = false;
 		} else
 		if (is_dash_arg_prefix (argv[i], "server", 2)) {
 			//PRAGMA_REMIND("TJ: change to sdo_mode")
@@ -1339,6 +1825,12 @@ firstPass (int argc, char *argv[])
 				continue;
 			}
 
+#ifdef USE_QUERY_CALLBACKS
+			if ( ! sortSpecs.Add(argv[i])) {
+				fprintf(stderr, "Error:  Parse error of: %s\n", argv[i]);
+				exit(1);
+			}
+#else
             int jsort = sortSpecs.size();
             SortSpec ss;
 			ExprTree* sortExpr = NULL;
@@ -1370,6 +1862,7 @@ firstPass (int argc, char *argv[])
             sortSpecs.push_back(ss);
 				// the silent constraint TARGET.%s =!= UNDEFINED is added
 				// as a customAND constraint on the second pass
+#endif
 		} else
 		if (is_dash_arg_prefix (argv[i], "submitters", 4)) {
 			setMode (SDO_Submitters, i, argv[i]);
@@ -1447,17 +1940,9 @@ secondPass (int argc, char *argv[])
 				exit(1);
 			}
 
-#ifdef USE_PROJECTION_SET
 			for (const char * attr = attributes.first(); attr; attr = attributes.next()) {
 				projList.insert(attr);
 			}
-#else
-			attributes.rewind();
-			char const *s;
-			while( (s=attributes.next()) ) {
-				projList.AppendArg(s);
-			}
-#endif
 
 			if (diagnose) {
 				printf ("Arg %d --- register format [%s] for [%s]\n",
@@ -1512,17 +1997,10 @@ secondPass (int argc, char *argv[])
 					exit(1);
 				}
 
-#ifdef USE_PROJECTION_SET
+				//PRAGMA_REMIND("fix to use more set-based GetExprReferences")
 				for (const char * attr = attributes.first(); attr; attr = attributes.next()) {
 					projList.insert(attr);
 				}
-#else
-				attributes.rewind();
-				char const *s;
-				while ((s = attributes.next())) {
-					projList.AppendArg(s);
-				}
-#endif
 
 				MyString lbl = "";
 				int wid = 0;
@@ -1591,30 +2069,22 @@ secondPass (int argc, char *argv[])
 		
 		if (is_dash_arg_prefix (argv[i], "statistics", 5)) {
 			i += 2;
-            sprintf(buffer,"STATISTICS_TO_PUBLISH = \"%s\"", statistics);
-            if (diagnose) {
-               printf ("[%s]\n", buffer);
-               }
-            query->addExtraAttribute(buffer);
-            continue;
-        }
+			sprintf(buffer,"STATISTICS_TO_PUBLISH = \"%s\"", statistics);
+			if (diagnose) {
+				printf ("[%s]\n", buffer);
+			}
+			query->addExtraAttribute(buffer);
+			continue;
+		}
 
 		if (is_dash_arg_prefix (argv[i], "attributes", 2) ) {
 			// parse attributes to be selected and split them along ","
 			StringList more_attrs(argv[i+1],",");
-#ifdef USE_PROJECTION_SET
 			for (const char * s = more_attrs.first(); s; s = more_attrs.next()) {
 				projList.insert(s);
 				dashAttributes.append(s);
 			}
-#else
-			char const *s;
-			more_attrs.rewind();
-			while( (s=more_attrs.next()) ) {
-				projList.AppendArg(s);
-				dashAttributes.append(s);
-			}
-#endif
+
 			i++;
 			continue;
 		}
@@ -1649,7 +2119,6 @@ secondPass (int argc, char *argv[])
 				name = daemonname;
 			}
 
-#if 1
 			if (sdo_mode == SDO_Startd_Run) {
 				sprintf (buffer, ATTR_REMOTE_USER " == \"%s\"", argv[i]);
 				if (diagnose) { printf ("[%s]\n", buffer); }
@@ -1659,47 +2128,6 @@ secondPass (int argc, char *argv[])
 				if (diagnose) { printf ("[%s]\n", buffer); }
 				query->addORConstraint (buffer);
 			}
-#else
-			switch (mode) {
-			  case MODE_DEFRAG_NORMAL:
-			  case MODE_STARTD_NORMAL:
-			  case MODE_STARTD_COD:
-#ifdef HAVE_EXT_POSTGRESQL
-			  case MODE_QUILL_NORMAL:
-#endif /* HAVE_EXT_POSTGRESQL */
-			  case MODE_SCHEDD_NORMAL:
-			  case MODE_SCHEDD_SUBMITTORS:
-			  case MODE_MASTER_NORMAL:
-			  case MODE_COLLECTOR_NORMAL:
-			  case MODE_CKPT_SRVR_NORMAL:
-			  case MODE_NEGOTIATOR_NORMAL:
-			  case MODE_STORAGE_NORMAL:
-			  case MODE_ANY_NORMAL:
-			  case MODE_GENERIC_NORMAL:
-			  case MODE_STARTD_AVAIL:
-			  case MODE_OTHER:
-			  case MODE_GRID_NORMAL:
-			  case MODE_HAD_NORMAL:
-			  	sprintf(buffer,"(%s==\"%s\") || (%s==\"%s\")",
-						ATTR_NAME, daemonname, ATTR_MACHINE, daemonname );
-				if (diagnose) {
-					printf ("[%s]\n", buffer);
-				}
-				query->addORConstraint (buffer);
-				break;
-
-			  case MODE_STARTD_RUN:
-				sprintf (buffer,"%s == \"%s\"",ATTR_REMOTE_USER,argv[i]);
-				if (diagnose) {
-					printf ("[%s]\n", buffer);
-				}
-				query->addORConstraint (buffer);
-				break;
-
-			  default:
-				fprintf(stderr,"Error: Don't know how to process %s\n",argv[i]);
-			}
-#endif
 			delete [] daemonname;
 			daemonname = NULL;
 		} else
@@ -1712,20 +2140,8 @@ secondPass (int argc, char *argv[])
 }
 
 
-/*
-int
-matchPrefix (const char *s1, const char *s2, int min_len)
-{
-	int lenS1 = strlen (s1);
-	int lenS2 = strlen (s2);
-	int len = (lenS1 < lenS2) ? lenS1 : lenS2;
-	if(len < min_len) {
-		return 0;
-	}
-
-	return (strncmp (s1, s2, len) == 0);
-}
-*/
+#ifdef USE_QUERY_CALLBACKS
+#else
 
 int
 lessThanFunc(AttrList *ad1, AttrList *ad2, void *)
@@ -1795,3 +2211,4 @@ customLessThanFunc( AttrList *ad1, AttrList *ad2, void *)
 	}
 	return 0;
 }
+#endif

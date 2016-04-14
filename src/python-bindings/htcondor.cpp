@@ -30,6 +30,7 @@ BOOST_PYTHON_MODULE(htcondor)
     export_log_reader();
 #endif
     export_claim();
+    export_startd();
     export_query_iterator();
 
     def("enable_classad_extensions", enable_classad_extensions, "Register the HTCondor-specific extensions to the ClassAd library.");

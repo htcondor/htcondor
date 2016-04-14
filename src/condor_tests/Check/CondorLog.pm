@@ -80,7 +80,6 @@ sub RunCheckMultiple
     my $count = 0;
 	my $undead = undef;
 	my $testname = "RunCheckMultiple Tool";
-	print scalar(localtime()) . "\n";
 
 	CondorTest::RegisterCLTimed( $testname, $timed_callback, $match_timeout);
 	if(defined $args{match_callback}) {

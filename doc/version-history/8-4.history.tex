@@ -16,6 +16,66 @@ New features will be added in the 8.5.x development series.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-8-4-6}Version 8.4.6}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item HTCondor version 8.4.6 not yet released.
+%\item HTCondor version 8.4.X released on Month Date, 2016.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item Fixed a bug introduced in version 8.3 that
+removed the attribute \Macro{REMOTE\_GROUP\_RESOURCES\_IN\_USE}
+from the job ad in the negotiator.
+\Ticket{5593}
+
+\item Fixed a bug that would cause the \Condor{startd}
+to crash when \Macro{ALLOW\_PSLOT\_PREEMPTION} was enabled.
+\Ticket{5586}
+
+\item Fixed a memory leak in the \Condor{negotiator} when
+\Macro{ALLOW\_PSLOT\_PREEMPTION} was enabled.
+\Ticket{5571}
+
+\item Fixed a bug when using \MacroNI{CLAIM\_PARTITIONABLE\_LEFTOVERS}
+and flocking.
+Machines from a remote pool could be treated as if they were in the local
+pool.
+As a result, the \Attr{RemotePool} attribute would not be set in the ads
+of jobs running on these machines, and the \Attr{FlockedJobs} and
+\Attr{RunningJobs} attributes of submitter ads would have incorrect
+values.
+\Ticket{5577}
+
+\item Fixed a bug that could cause a job's supplemental groups to be set
+incorrectly when \MacroNI{SOFT\_UID\_DOMAIN} is set to \Expr{True}.
+\Ticket{5603}
+
+\item Fixed a bug that caused supplemental groups to be set incorrectly
+when executing file transfer plugins and various hooks.
+\Ticket{5600}
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-8-4-5}Version 8.4.5}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -23,8 +83,7 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item HTCondor version 8.4.5 not yet released.
-%\item HTCondor version 8.4.5 released on Month Date, 2016.
+\item HTCondor version 8.4.5 released on March 22, 2016.
 
 \end{itemize}
 
@@ -45,14 +104,14 @@ longer required on user logs.
 
 \begin{itemize}
 
-\item Fixed a bug where HTCondor would unconditionally retry non-success1ful
+\item Fixed a bug where HTCondor would unconditionally retry non-successful
 DNS lookups of the local system's hostname; this could cause delays of up
 to sixty seconds when using command-line tools on systems whose hostname
 was not in DNS.  We no longer retry on errors at all, and only retry
 failures which are temporary.
 \Ticket{5553}
 
-\item Fixed a bug that would cause schedds flocking to remote
+\item Fixed a bug that would cause \Condor{schedd}s flocking to remote
 pools to not send no jobs, or fewer jobs than possible to the
 remote pool. This was a result of not correctly setting
 the submitter attribute \Macro{WeightedJobsRunning} for
@@ -66,7 +125,7 @@ a space would cause the \Condor{negotiator} to fail at startup.
 \Ticket{5538}
 
 \item Fixed a bug whereby per-job history files (enabled by
-the config setting \Macro{PER\_JOB\_HISTORY\_DIR}) may briefly
+the configuration setting \Macro{PER\_JOB\_HISTORY\_DIR}) may briefly
 appear to be empty or incomplete.
 \Ticket{5562}
 
@@ -83,18 +142,25 @@ some local universe node jobs.  (This bug was introduced in version
 not reporting memory and disk usage of the job correctly.
 \Ticket{5552}
 
-\item Tuned a bug fix from the 8.5.3 release that was designed to allow for
-more than 100 dynamic slots to be a bit more generous in allocating Disk
-so that the slots would less prone to fail to match subsequent jobs.
+\item Reworked a bug fix from the 8.4.3 release that was designed to allow for
+more than 100 dynamic slots to be a bit more generous in allocating Disk to
+those slots.
+Now, those slots are less prone to fail to match subsequent jobs.
 \Ticket{5535}
 
 \item Fixed a bug in the randomization of ports within the LOWPORT to HIGHPORT range
 that would sometimes generate ports outside of this range on Windows.
 \Ticket{5555}
 
-\item Fixed a bug in \Condor{off} \Opt{-peaceful} that could result in sending the
-off command to machines that had never received the peaceful command that should have proceeded it.
+\item Fixed a bug in \Condor{off} \Opt{-peaceful} that could result in never
+sending the "off" command to machines when at least one of the machines could
+not be contacted when sending the previous "peaceful" command.
 \Ticket{5504}
+
+\item When cgroups are in use, limit the amount of file system cache in the
+kernel to prevent the OOM killer from killing jobs that use a large amount of
+file system cache.
+\Ticket{5500}
 
 \end{itemize}
 

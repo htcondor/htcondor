@@ -6,6 +6,12 @@
 #include <boost/python.hpp>
 #include <boost/iterator/transform_iterator.hpp>
 
+#ifdef WIN32
+#ifdef BOOST_DEBUG_PYTHON
+__pragma(message("====BOOST_DEBUG_PYTHON defined. python_d will be needed to use these bindings."))
+#endif
+#endif
+
 void registerFunction(boost::python::object function, boost::python::object name);
 
 classad::ExprTree* convert_python_to_exprtree(boost::python::object value);

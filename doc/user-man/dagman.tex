@@ -274,8 +274,11 @@ called a \Arg{PRE} script.
 Processing done after a job completes its execution is
 \index{DAGMan!POST script}
 called a \Arg{POST} script.
-It causes a shell script (Unix) or batch file (Windows) to be
-executed.
+Note that the executable specified does not necessarily
+have to be a shell script (Unix) or batch file (Windows);
+but it should be relatively light weight because it will
+be run directly on the submit machine, not submitted as
+an HTCondor job.
 
 The syntax used for each \Arg{PRE} or \Arg{POST} entry is
 
@@ -290,8 +293,8 @@ the \Arg{PRE} or \Arg{POST} keyword,
 which specifies the relative timing of when the script is to be run.
 The \Arg{JobName} identifies the node to which the script is attached.
 The \Arg{ExecutableName}
-specifies the shell script/batch file to be executed, 
-and the executable name may not contain spaces.
+specifies the executable (e.g., shell script or batch file) to be executed, 
+and may not contain spaces.
 The optional \Arg{arguments} are command line arguments to the script,
 and spaces delimit the arguments.
 Both \Arg{ExecutableName} and optional \Arg{arguments} are
@@ -329,28 +332,36 @@ producing output files.
 The POST script compresses the output files, writes them out to
 the tape, and then removes both the staged files and the output files.
 
+If the PRE script fails, 
+then the HTCondor job associated with the node is not submitted,
+and (as of version 8.5.4) the POST
+script is not run either (by default).
+However, if the job is submitted, and there is a POST script, the POST
+script is always run once the job finishes.
+(The behavior when the PRE script fails may
+may be changed to run the POST script
+by setting configuration variable \MacroNI{DAGMAN\_ALWAYS\_RUN\_POST} 
+to \Expr{True} or by passing the \Opt{-AlwaysRunPost}
+argument to \Condor{submit\_dag}.)
+
 Progress towards completion of the DAG is based upon
 the success of the nodes within the DAG.
 The success of a node is based upon the success of 
 the job(s), PRE script, and POST script.
-A job, PRE script, or POST script with an exit value not equal to 0 fails.  
-If the PRE script fails, 
-then the job does not run, but the POST script does run.
-The exit value of the POST script determines the success of the node. 
-Table~\ref{NodeS-F-ARP} lists the definition of node success and
-failure for all variations of scripts and job success and failure.
+A job, PRE script, or POST script with an exit value not equal to 0 is
+considered failed.  
+\Bold{The exit value of whatever component of the node was run last
+determines the success or failure of the node.}
+Table~\ref{NodeS-F} lists the definition of node success and
+failure for all variations of script and job success and failure,
+when \MacroNI{DAGMAN\_ALWAYS\_RUN\_POST} is set to \Expr{False}.
 In this table, a dash (\Expr{-}) represents the case where a script
 does not exist for the DAG, \Bold{S} represents success, 
 and  \Bold{F} represents failure.
 
-The behavior when the PRE script fails may
-may be changed to \emph{not} run the POST script
-by setting configuration variable \MacroNI{DAGMAN\_ALWAYS\_RUN\_POST} 
-to \Expr{False}.
-With this, the failure of the PRE script
-means that the job does not run, and the POST script is not run.
-Table~\ref{NodeS-F} lists the definition of node success and
-failure only for the cases where the PRE script fails.
+Table~\ref{NodeS-F-ARP} lists the definition of node success and
+failure only for the cases where the PRE script fails,
+when \MacroNI{DAGMAN\_ALWAYS\_RUN\_POST} is set to \Expr{True}.
 
 %An exit value not equal to 0 indicates program failure,
 %except as indicated by the \Arg{PRE\_SKIP} command:
@@ -369,23 +380,23 @@ failure only for the cases where the PRE script fails.
 \begin{table}[hbt]
 \begin{tabular}{|c|c|c|c|} \hline
 PRE  & JOB & POST & \Bold{Node}  \\
+\hline
 -  & S & - & \Bold{S}  \\
 -  & F & - & \Bold{F}  \\
 -  & S & S & \Bold{S}  \\
 -  & S & F & \Bold{F}  \\
 -  & F & S & \Bold{S}  \\
+-  & F & F & \Bold{F}  \\
 S  & S & - & \Bold{S}  \\
 S  & F & - & \Bold{F}  \\
 S  & S & S & \Bold{S}  \\
+S  & S & F & \Bold{F}  \\
 S  & F & S & \Bold{S}  \\
 S  & F & F & \Bold{F}  \\
-S  & S & F & \Bold{F}  \\
 F  & not run & - & \Bold{F}  \\
-F  & not run & S & \Bold{S}  \\
-F  & not run & F & \Bold{F}  \\
-\hline
+F  & not run & not run & \Bold{F}  \\
 \end{tabular}
-\caption{\label{NodeS-F-ARP}Node \Bold{S}uccess or \Bold{F}ailure definition with \Expr{ DAGMAN\_ALWAYS\_RUN\_POST = True} }
+\caption{\label{NodeS-F}Node success or failure definition with \Expr{DAGMAN\_ALWAYS\_RUN\_POST = False (the default)} }
 \end{table}
 \end{center}
 
@@ -393,11 +404,12 @@ F  & not run & F & \Bold{F}  \\
 \begin{table}[hbt]
 \begin{tabular}{|c|c|c|c|} \hline
 PRE  & JOB & POST & \Bold{Node}  \\
-\hline
 F  & not run & - & \Bold{F}  \\
-F  & not run & not run & \Bold{F}  \\
+F  & not run & S & \Bold{S}  \\
+F  & not run & F & \Bold{F}  \\
+\hline
 \end{tabular}
-\caption{\label{NodeS-F}Node success or failure definition with \Expr{DAGMAN\_ALWAYS\_RUN\_POST = False} }
+\caption{\label{NodeS-F-ARP}Node \Bold{S}uccess or \Bold{F}ailure definition with \Expr{ DAGMAN\_ALWAYS\_RUN\_POST = True} }
 \end{table}
 \end{center}
 

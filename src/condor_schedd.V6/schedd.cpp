@@ -273,25 +273,25 @@ void AuditLogJobProxy( Sock &sock, PROC_ID job_id, const char *proxy_file )
 	x509_proxy_free( proxy_handle );
 
 	dprintf( D_AUDIT, sock, "proxy expiration: %d\n", (int)expire_time );
-	SetAttributeInt(job_id.cluster, job_id.proc, ATTR_X509_USER_PROXY_EXPIRATION, expire_time);
+	SetSecureAttributeInt(job_id.cluster, job_id.proc, ATTR_X509_USER_PROXY_EXPIRATION, expire_time, 0);
 	dprintf( D_AUDIT, sock, "proxy identity: %s\n", proxy_identity );
 	dprintf( D_AUDIT, sock, "proxy subject: %s\n", proxy_subject );
-	SetAttributeRawString(job_id.cluster, job_id.proc, ATTR_X509_USER_PROXY_SUBJECT, proxy_identity);
+	SetSecureAttributeRawString(job_id.cluster, job_id.proc, ATTR_X509_USER_PROXY_SUBJECT, proxy_identity, 0);
 	if ( proxy_email ) {
 		dprintf( D_AUDIT, sock, "proxy email: %s\n", proxy_email );
-		SetAttributeRawString(job_id.cluster, job_id.proc, ATTR_X509_USER_PROXY_EMAIL, proxy_email);
+		SetSecureAttributeRawString(job_id.cluster, job_id.proc, ATTR_X509_USER_PROXY_EMAIL, proxy_email, 0);
 	}
 	if ( voname ) {
 		dprintf( D_AUDIT, sock, "proxy vo name: %s\n", voname );
-		SetAttributeRawString(job_id.cluster, job_id.proc, ATTR_X509_USER_PROXY_VONAME, voname);
+		SetSecureAttributeRawString(job_id.cluster, job_id.proc, ATTR_X509_USER_PROXY_VONAME, voname, 0);
 	}
 	if ( firstfqan ) {
 		dprintf( D_AUDIT, sock, "proxy first fqan: %s\n", firstfqan );
-		SetAttributeRawString(job_id.cluster, job_id.proc, ATTR_X509_USER_PROXY_FIRST_FQAN, firstfqan);
+		SetSecureAttributeRawString(job_id.cluster, job_id.proc, ATTR_X509_USER_PROXY_FIRST_FQAN, firstfqan, 0);
 	}
 	if ( fullfqan ) {
 		dprintf( D_AUDIT, sock, "proxy full fqan: %s\n", fullfqan );
-		SetAttributeRawString(job_id.cluster, job_id.proc, ATTR_X509_USER_PROXY_FQAN, fullfqan);
+		SetSecureAttributeRawString(job_id.cluster, job_id.proc, ATTR_X509_USER_PROXY_FQAN, fullfqan, 0);
 	}
 
 	free( proxy_subject );
@@ -6843,10 +6843,10 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 			// probably could/should be changed to be declared as a static method.
 			// Actually, must pass in owner so FindRunnableJob will find a job.
 
-			sn = new DedicatedScheddNegotiate(0, NULL, match->user, NULL);
+			sn = new DedicatedScheddNegotiate(0, NULL, match->user, match->pool);
 		} else {
 			// Use the DedSched
-			sn = new MainScheddNegotiate(0, NULL, match->user, NULL);
+			sn = new MainScheddNegotiate(0, NULL, match->user, match->pool);
 		}		
 
 			// Setting cluster.proc to -1.-1 should result in the schedd

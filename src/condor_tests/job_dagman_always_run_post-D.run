@@ -24,7 +24,7 @@ use CondorUtils;
 $cmd = 'job_dagman_always_run_post-D.dag';
 $testdesc =  'Condor DAGman test for always running the POST script - scheduler U';
 $testname = "job_dagman_always_run_post-D";
-$dagman_args = "-verbose";
+$dagman_args = "-verbose -AlwaysRunPost";
 
 $outfile = "$testname.dag.dagman.out";
 runcmd("rm -f $outfile");
@@ -107,7 +107,7 @@ $success = sub
 		}
 	}
 	if($passed_first != 1) {
-		CondorTest::debug("failed $outfile\n",1);
+		CondorTest::debug("ERROR: failed $outfile (missing PRE_SKIP event)\n",1);
 		$diditpass = 0;
 	}
 	if($diditpass == 0) {

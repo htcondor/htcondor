@@ -183,6 +183,20 @@ char* getStoredCredential(const char *username, const char *domain)
 	size_t len;
 	bool rc = read_secure_file(filename, (void**)(&buffer), &len, true);
 	if(rc) {
+		// buffer now contains the binary contents from the file.
+		// due to the way 8.4.X and earlier version wrote the file,
+		// there will be trailing NULL characters, although they are
+		// ignored in 8.4.X by the code that reads them.  As such, for
+		// us to agree on the password, we also need to discard
+		// everything after the first NULL.  we do this by simply
+		// resetting the len.  there is a function "strnlen" but it's a
+		// GNU extension so we just do the raw scan here:
+		size_t newlen = 0;
+		while(newlen < len && buffer[newlen]) {
+			newlen++;
+		}
+		len = newlen;
+
 		// undo the trivial scramble
 		char *pw = (char *)malloc(len + 1);
 		simple_scramble(pw, buffer, len);

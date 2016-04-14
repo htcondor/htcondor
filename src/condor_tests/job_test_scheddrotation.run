@@ -81,6 +81,22 @@ Condor::SetAllowedEvents("RegisterEvictedWithoutCheckpoint,RegisterSubmit,Regist
 	#timestamp();
 #};
 
+sub on_timeout
+{
+	my @adarray = ();
+	my $now = CondorTest::timestamp();
+	print "SimpleJob timeout expired!\n";
+	runCondorTool("condor_status", \@adarray, 2, {emit_output=>1});
+	runCondorTool("condor_q", \@adarray, 2, {emit_output=>1});
+	runCondorTool("condor_rm -all", \@adarray, 2, {emit_output=>1});
+};
+
+sub on_abort
+{
+	my $now = CondorTest::timestamp();
+	print "$now SimpleJob aborted!\n";
+};
+
 print "First test basic job\n";
 $result = SimpleJob::RunCheck(
 	queue_sz => 40,
@@ -89,6 +105,8 @@ $result = SimpleJob::RunCheck(
 	#on_success => \&on_success,
 	#on_submit => \&on_submit,
 	#on_imageupdated => \&on_imageupdated,
+	alt_timed => \&on_timeout,
+	abort_fn => \&on_abort
 ); # jobid 1
 
 my $return = "";

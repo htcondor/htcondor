@@ -343,8 +343,7 @@ sub StartTestPersonal {
 	my $test = shift;
 
 	my $firstappend_condor_config = '
-    	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
-    	ALL_DEBUG = D_ALWAYS
+		DAEMON_LIST = MASTER, SCHEDD, COLLECTOR, NEGOTIATOR, STARTD
 		NEGOTIATOR_INTERVAL = 5
 		JOB_MAX_VACATE_TIME = 15
 	';

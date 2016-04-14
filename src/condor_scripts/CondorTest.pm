@@ -2238,7 +2238,7 @@ sub SearchCondorLogMultiple
 	my $logdir = $fetchlog[0];
 	CondorUtils::fullchomp($logdir);
 	my $logloc = $logdir;
-	print "SearchCondorLog for daemon:$daemon yielded:$logloc\n";
+	print timestamp() . " SearchCondorLog for daemon:$daemon $logloc\n";
 
     CondorTest::TestDebug("Search this log: $logloc for: $regexp instances = $instances\n",2);
     CondorTest::TestDebug("Timeout = $timeout\n",2);
