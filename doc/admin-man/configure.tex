@@ -10370,6 +10370,8 @@ jobs within HTCondor.
 be most appropriately set on a per DAG basis, rather than in the
 global HTCondor configuration files.  Per DAG configuration is explained
 in section~\ref{sec:DAG-configuration}.
+Also note that configuration settings of a running \Condor{dagman} job are
+not changed by doing a \Condor{reconfig}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:General}General}
@@ -10424,6 +10426,7 @@ in section~\ref{sec:DAG-configuration}.
   gets rerun on that DAG.  This should be quite rare, however.
   If not defined, \MacroNI{DAGMAN\_ABORT\_DUPLICATES} defaults to
   \Expr{True}.
+  \Bold{Note: users should rarely change this setting.}
 
 \label{param:DAGmanUseOldDagReader}
 \item[\Macro{DAGMAN\_USE\_OLD\_DAG\_READER}]
@@ -10433,6 +10436,7 @@ in section~\ref{sec:DAG-configuration}.
   and the setting will have no effect on how a DAG input file is read. 
   The variable was previously used to change the reading of DAG input
   files to that of HTCondor versions prior to 8.0.6. 
+  \Bold{Note: users should never change this setting.}
 
 \end{description}
 
@@ -10662,6 +10666,7 @@ in section~\ref{sec:DAG-configuration}.
   So if DAG number 2 has a node named B,
   that node will internally be renamed to 2.B.
   If not defined, \MacroNI{DAGMAN\_MUNGE\_NODE\_NAMES} defaults to \Expr{True}.
+  \Bold{Note: users should rarely change this setting.}
 
 \label{param:DAGManSuppressJobLogs}
 \item[\Macro{DAGMAN\_SUPPRESS\_JOB\_LOGS}]
@@ -10685,11 +10690,13 @@ in section~\ref{sec:DAG-configuration}.
 \item[\Macro{DAGMAN\_CONDOR\_SUBMIT\_EXE}]
   The executable that \Condor{dagman} will use to submit HTCondor jobs.
   If not defined, \Condor{dagman} looks for \Condor{submit} in the path.
+  \Bold{Note: users should rarely change this setting.}
 
 \label{param:DAGManCondorRmExe}
 \item[\Macro{DAGMAN\_CONDOR\_RM\_EXE}]
   The executable that \Condor{dagman} will use to remove HTCondor jobs.
   If not defined, \Condor{dagman} looks for \Condor{rm} in the path.
+  \Bold{Note: users should rarely change this setting.}
 
 \item[\Macro{DAGMAN\_ABORT\_ON\_SCARY\_SUBMIT}]
 \label{param:DAGManAbortOnScarySubmit}
@@ -10704,6 +10711,7 @@ in section~\ref{sec:DAG-configuration}.
   \MacroNI{DAGMAN\_ABORT\_ON\_SCARY\_SUBMIT} is set to \Expr{False}.
   If not defined, \MacroNI{DAGMAN\_ABORT\_ON\_SCARY\_SUBMIT} defaults to
   \Expr{True}.
+  \Bold{Note: users should rarely change this setting.}
 
 \label{param:DAGManStorkSubmitExe}
 \item[\Macro{DAGMAN\_STORK\_SUBMIT\_EXE}]
@@ -10712,6 +10720,7 @@ in section~\ref{sec:DAG-configuration}.
   Setting this configuration variable will result in a warning
   from \Condor{dagman} (which will be turned into a fatal error
   if \MacroNI{DAGMAN\_USE\_STRICT} is set to 1 or above).
+  \Bold{Note: users should never change this setting.}
 
   For completeness, here is the definition for historical purposes: 
   The executable that \Condor{dagman} will use to submit Stork jobs.
@@ -10724,6 +10733,7 @@ in section~\ref{sec:DAG-configuration}.
   Setting this configuration variable will result in a warning
   from \Condor{dagman} (which will be turned into a fatal error
   if \MacroNI{DAGMAN\_USE\_STRICT} is set to 1 or above).
+  \Bold{Note: users should never change this setting.}
 
   For completeness, here is the definition for historical purposes: 
   The executable that \Condor{dagman} will use to remove Stork jobs.
@@ -10777,6 +10787,7 @@ in section~\ref{sec:DAG-configuration}.
   As of HTCondor version 7.2.2, writing a partial DAG is preferred.
   If not defined, \MacroNI{DAGMAN\_WRITE\_PARTIAL\_RESCUE} defaults to
   \Expr{True}.
+  \Bold{Note: users should rarely change this setting.}
 
 \label{param:DAGManRetrySubmitFirst}
 \item[\Macro{DAGMAN\_RETRY\_SUBMIT\_FIRST}]
@@ -10806,6 +10817,7 @@ in section~\ref{sec:DAG-configuration}.
 \label{param:DAGmanOldRescue}
 \item[\Macro{DAGMAN\_OLD\_RESCUE}]
   This configuration variable is no longer used.
+  \Bold{Note: users should never change this setting.}
 
 \end{description}
 
@@ -10893,6 +10905,7 @@ in section~\ref{sec:DAG-configuration}.
 \item[\Macro{DAGMAN\_ALLOW\_LOG\_ERROR}]
   This configuration variable is no longer used; 
   as of HTCondor version 8.3.4, \Condor{dagman} no longer supports Stork jobs.
+  \Bold{Note: users should never change this setting.}
 
   For completeness, here is the definition for historical purposes: 
   A boolean value defining whether \Condor{dagman} will still attempt
@@ -10909,6 +10922,7 @@ in section~\ref{sec:DAG-configuration}.
   \MacroNI{DAGMAN\_IGNORE\_DUPLICATE\_JOB\_EXECUTION} macro.
   If \MacroNI{DAGMAN\_ALLOW\_EVENTS} is set, it overrides the
   setting of \MacroNI{DAGMAN\_IGNORE\_DUPLICATE\_JOB\_EXECUTION}.
+  \Bold{Note: users should rarely change this setting.}
 
   The \MacroNI{DAGMAN\_ALLOW\_EVENTS} value is a logical bitwise OR of the
   following values:
@@ -10944,6 +10958,7 @@ in section~\ref{sec:DAG-configuration}.
   This configuration variable is no longer used. The improved functionality
   of the \MacroNI{DAGMAN\_ALLOW\_EVENTS} macro eliminates the
   need for this variable.
+  \Bold{Note: users should never change this setting.}
 
   For completeness, here is the definition for historical purposes: 
   A boolean value that controls
@@ -10980,6 +10995,7 @@ in section~\ref{sec:DAG-configuration}.
   Attempting to set it to \Expr{False} results in an error. 
   This causes incompatibility with using a \Condor{submit} executable 
   that is older than HTCondor version 7.9.0.
+  \Bold{Note: users should never change this setting.}
 
   For completeness, here is the definition for historical purposes: 
   A boolean value that when \Expr{True}  causes \Condor{dagman} to read
@@ -11094,6 +11110,7 @@ in section~\ref{sec:DAG-configuration}.
   For running large numbers of small DAGs, leave this
   variable unset or set it to \Expr{False}.
   The default value if not defined is \Expr{False}.
+  \Bold{Note: users should rarely change this setting.}
 
 \label{param:DAGManInsertSubFile}
 \item[\Macro{DAGMAN\_INSERT\_SUB\_FILE}]
@@ -11144,6 +11161,7 @@ in section~\ref{sec:DAG-configuration}.
   for Pegasus workflows.  
   Defaults to
   \File{\$(LIBEXEC)/condor\_dagman\_metrics\_reporter}.
+  \Bold{Note: users should rarely change this setting.}
 
 \label{param:DAGManPegasusReportTimeout}
 \item[\Macro{DAGMAN\_PEGASUS\_REPORT\_TIMEOUT}]
