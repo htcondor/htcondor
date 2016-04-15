@@ -3971,11 +3971,23 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 			// to condor_submit(), fixes a memory leak(!).
 			// wenger 2008-12-18
 		MyString parents = ParentListString( node );
+
+			// This is to allow specifying a top-level batch name of
+			// " " to *not* override batch names specified at a lower
+			// level.
+		const char *batchName;
+		if ( !node->GetDagFile() && dm._batchName == " " ) {
+			batchName = "";
+		} else {
+			batchName = dm._batchName.Value();
+		}
+
    		submit_success = condor_submit( dm, node->GetCmdFile(), condorID,
 					node->GetJobName(), parents,
 					node->varsFromDag, node->GetRetries(),
 					node->GetDirectory(), _defaultNodeLog,
-					node->NumChildren() > 0 && dm._claim_hold_time > 0 );
+					node->NumChildren() > 0 && dm._claim_hold_time > 0,
+					batchName );
 	}
 
 	result = submit_success ? SUBMIT_RESULT_OK : SUBMIT_RESULT_FAILED;

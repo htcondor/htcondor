@@ -143,6 +143,7 @@ Dagman::Dagman() :
 	_claim_hold_time(20),
 	_doRecovery(false),
 	_suppressJobLogs(false),
+	_batchName(""),
 	_dagmanClassad(NULL)
 {
     debug_level = DEBUG_VERBOSE;  // Default debug level is verbose output
@@ -862,6 +863,9 @@ void main_init (int argc, char ** const argv) {
 	dagman.dagFiles.rewind();
 	dagman.primaryDagFile = dagman.dagFiles.next();
 	dagman.multiDags = (dagman.dagFiles.number() > 1);
+
+	dagman._dagmanClassad->GetSetBatchName( dagman.primaryDagFile,
+				dagman._batchName );
 
 	dagman.ResolveDefaultLog();
 

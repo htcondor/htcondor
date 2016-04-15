@@ -1,0 +1,7 @@
+job NodeUA job_dagman_batch_name-node.sub
+vars NodeUA nodename = "$(JOB)"
+
+job NodeUB job_dagman_batch_name-node.sub
+vars NodeUB nodename = "$(JOB)"
+
+subdag external DagUC job_dagman_batch_name-lower.dag
