@@ -397,6 +397,19 @@ class TestClassad(unittest.TestCase):
         self.assertEquals(classad.ExprTree('size(myIntersect({1, 2}, {2, 3}))').eval(), 1)
         self.assertEquals(classad.ExprTree('myIntersect({1, 2}, {2, 3})[0]').eval(), 2)
 
+    def test_state(self):
+        def myFunc(state): return 1 if state else 0
+        classad.register(myFunc)
+        self.assertEquals(0, classad.ExprTree('myFunc(false)').eval())
+        self.assertEquals(1, classad.ExprTree('myFunc("foo")').eval())
+        ad = classad.ClassAd("""[foo = myFunc(); bar = 2]""")
+        self.assertEquals(1, ad.eval('foo'))
+        ad['foo'] = classad.ExprTree('myFunc(1)')
+        self.assertRaises(TypeError, ad.eval, ('foo',))
+        def myFunc(arg1, **kw): return kw['state']['bar']
+        classad.register(myFunc)
+        self.assertEquals(2, ad.eval('foo'))
+
     def test_refs(self):
         ad = classad.ClassAd({"bar": 2})
         expr = classad.ExprTree("foo =?= bar")
