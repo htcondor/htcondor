@@ -1,6 +1,11 @@
 
 #ifndef __MODULE_LOCK_H_
 #define __MODULE_LOCK_H_
+
+#include <vector>
+#include <string>
+#include <utility>
+
 #ifdef WIN32
   #include <windows.h> // for CRITICAL_SECTION
   #define MODULE_LOCK_MUTEX_TYPE CRITICAL_SECTION

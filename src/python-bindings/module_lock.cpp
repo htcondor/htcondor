@@ -79,7 +79,6 @@ ModuleLock::acquire()
     }
 
     m_tag_orig = SecMan::getTag();
-    const std::string &new_tag = SecManWrapper::getThreadLocalTag();
     SecMan::setTag(SecManWrapper::getThreadLocalTag());
 
     m_password_orig = SecMan::getPoolPassword();
