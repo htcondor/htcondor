@@ -86,7 +86,11 @@ const char SecMan::sec_req_rev[][10] = {
 	"REQUIRED"
 };
 
-KeyCache SecMan::session_cache;
+KeyCache SecMan::m_default_session_cache;
+std::map<std::string,KeyCache*> *SecMan::m_tagged_session_cache = NULL;
+std::string SecMan::m_tag;
+KeyCache *SecMan::session_cache = &SecMan::m_default_session_cache;
+std::string SecMan::m_pool_password;
 HashTable<MyString,MyString> SecMan::command_map(209, MyStringHash, updateDuplicateKeys);
 HashTable<MyString,classy_counted_ptr<SecManStartCommand> > SecMan::tcp_auth_in_progress(256, MyStringHash, rejectDuplicateKeys);
 int SecMan::sec_man_ref_count = 0;
@@ -94,6 +98,27 @@ char* SecMan::_my_unique_id = 0;
 char* SecMan::_my_parent_unique_id = 0;
 bool SecMan::_should_check_env_for_unique_id = true;
 IpVerify *SecMan::m_ipverify = NULL;
+
+void
+SecMan::setTag(const std::string &tag) {
+        m_tag = tag;
+	if (tag.size() == 0) {
+		session_cache = &m_default_session_cache;
+		return;
+	}
+	if (m_tagged_session_cache == NULL) {
+		m_tagged_session_cache = new std::map<std::string, KeyCache*>();
+	}
+	std::map<std::string, KeyCache*>::const_iterator iter = m_tagged_session_cache->find(tag);
+	KeyCache *tmp = NULL;
+	if (iter == m_tagged_session_cache->end()) {
+		tmp = new KeyCache();
+		m_tagged_session_cache->insert(std::make_pair(tag, tmp));
+	} else {
+		tmp = iter->second;
+	}
+	session_cache = tmp;
+}
 
 SecMan::sec_req
 SecMan::sec_alpha_to_sec_req(char *b) {
@@ -1281,7 +1306,7 @@ SecManStartCommand::startCommand_inner()
 bool
 SecMan::LookupNonExpiredSession(char const *session_id, KeyCacheEntry *&session_key)
 {
-	if(!session_cache.lookup(session_id,session_key)) {
+	if(!session_cache->lookup(session_id,session_key)) {
 		return false;
 	}
 
@@ -1289,7 +1314,7 @@ SecMan::LookupNonExpiredSession(char const *session_id, KeyCacheEntry *&session_
 	time_t cutoff_time = time(0);
 	time_t expiration = session_key->expiration();
 	if (expiration && expiration <= cutoff_time) {
-		session_cache.expire(session_key);
+		session_cache->expire(session_key);
 		session_key = NULL;
 		return false;
 	}
@@ -1315,7 +1340,12 @@ SecManStartCommand::sendAuthInfo_inner()
 		}
 	}
 
-	m_session_key.formatstr ("{%s,<%i>}", m_sock->get_connect_addr(), m_cmd);
+	const std::string &tag = SecMan::getTag();
+	if (tag.size()) {
+		m_session_key.formatstr ("{%s,%s,<%i>}", tag.c_str(), m_sock->get_connect_addr(), m_cmd);
+	} else {
+		m_session_key.formatstr ("{%s,<%i>}", m_sock->get_connect_addr(), m_cmd);
+	}
 	bool found_map_ent = false;
 	if( !m_have_session && !m_raw_protocol && !m_use_tmp_sec_session ) {
 		found_map_ent = (m_sec_man.command_map.lookup(m_session_key, sid) == 0);
@@ -2167,7 +2197,7 @@ SecManStartCommand::receivePostAuthInfo_inner()
             }
 
 			// stick the key in the cache
-			m_sec_man.session_cache.insert(tmp_key);
+			m_sec_man.session_cache->insert(tmp_key);
 
 
 			// now add entrys which map all the {<sinful_string>,<command>} pairs
@@ -2179,7 +2209,12 @@ SecManStartCommand::receivePostAuthInfo_inner()
 			coms.rewind();
 			while ( (p = coms.next()) ) {
 				MyString keybuf;
-				keybuf.formatstr ("{%s,<%s>}", m_sock->get_connect_addr(), p);
+				const std::string &tag = SecMan::getTag();
+				if (tag.size()) {
+					keybuf.formatstr ("{%s,%s,<%s>}", tag.c_str(), m_sock->get_connect_addr(), p);
+				} else {
+					keybuf.formatstr ("{%s,<%s>}", m_sock->get_connect_addr(), p);
+				}
 
 				// NOTE: HashTable returns ZERO on SUCCESS!!!
 				if (m_sec_man.command_map.insert(keybuf, sesid) == 0) {
@@ -2483,7 +2518,7 @@ SecManStartCommand::SocketCallback( Stream *stream )
 void
 SecMan::invalidateHost(const char * sin)
 {
-	StringList *keyids = session_cache.getKeysForPeerAddress(sin);
+	StringList *keyids = session_cache->getKeysForPeerAddress(sin);
 	if( !keyids ) {
 		return;
 	}
@@ -2501,7 +2536,7 @@ SecMan::invalidateHost(const char * sin)
 
 void
 SecMan::invalidateByParentAndPid(const char * parent, int pid) {
-	StringList *keyids = session_cache.getKeysForProcess(parent,pid);
+	StringList *keyids = session_cache->getKeysForProcess(parent,pid);
 	if( !keyids ) {
 		return;
 	}
@@ -2522,7 +2557,7 @@ bool SecMan :: invalidateKey(const char * key_id)
     bool removed = true;
     KeyCacheEntry * keyEntry = NULL;
 
-	session_cache.lookup(key_id, keyEntry);
+	session_cache->lookup(key_id, keyEntry);
 
 	if ( keyEntry && keyEntry->expiration() <= time(NULL) ) {
 		dprintf( D_SECURITY,
@@ -2533,7 +2568,7 @@ bool SecMan :: invalidateKey(const char * key_id)
 	remove_commands(keyEntry);
 
 	// Now, remove session id
-	if (session_cache.remove(key_id)) {
+	if (session_cache->remove(key_id)) {
 		dprintf ( D_SECURITY, 
 				  "DC_INVALIDATE_KEY: removed key id %s.\n", 
 				  key_id);
@@ -2730,7 +2765,7 @@ SecMan::sec_copy_attribute( ClassAd &dest, const char *to_attr, ClassAd &source,
 
 void
 SecMan::invalidateAllCache() {
-	session_cache.clear();
+	session_cache->clear();
 
 	command_map.clear();
 }
@@ -2739,7 +2774,7 @@ void
 SecMan :: invalidateExpiredCache()
 {
     // Go through all cache and invalide the ones that are expired
-    StringList * list = session_cache.getExpiredKeys();
+    StringList * list = session_cache->getExpiredKeys();
 
     // The current session cache, command map does not allow
     // easy random access based on host direcly. Therefore,
@@ -3023,25 +3058,25 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 
 	KeyCacheEntry key(sesid,peer_sinful ? &peer_addr : NULL,keyinfo,&policy,expiration_time,0);
 
-	if( !session_cache.insert(key) ) {
+	if( !session_cache->insert(key) ) {
 		KeyCacheEntry *existing = NULL;
 		bool fixed = false;
-		if( !session_cache.lookup(sesid,existing) ) {
+		if( !session_cache->lookup(sesid,existing) ) {
 			existing = NULL;
 		}
 		if( existing ) {
 			if( !LookupNonExpiredSession(sesid,existing) ) {
 					// the existing session must have expired, so try again
 				existing = NULL;
-				if( session_cache.insert(key) ) {
+				if( session_cache->insert(key) ) {
 					fixed = true;
 				}
 			}
 			else if( existing && existing->getLingerFlag() ) {
 				dprintf(D_ALWAYS,"SECMAN: removing lingering non-negotiated security session %s because it conflicts with new request\n",sesid);
-				session_cache.expire(existing);
+				session_cache->expire(existing);
 				existing = NULL;
-				if( session_cache.insert(key) ) {
+				if( session_cache->insert(key) ) {
 					fixed = true;
 				}
 			}
@@ -3076,7 +3111,12 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 	coms.rewind();
 	while ( (p = coms.next()) ) {
 		MyString keybuf;
-		keybuf.formatstr ("{%s,<%s>}", peer_sinful, p);
+		const std::string &tag = SecMan::getTag();
+		if (tag.size()) {
+			keybuf.formatstr ("{%s,%s,<%s>}", tag.c_str(), peer_sinful, p);
+		} else {
+			keybuf.formatstr ("{%s,<%s>}", peer_sinful, p);
+		}
 
 		// NOTE: HashTable returns ZERO on SUCCESS!!!
 		if (command_map.insert(keybuf, sesid) == 0) {
@@ -3154,7 +3194,7 @@ bool
 SecMan::getSessionPolicy(const char *session_id, classad::ClassAd &policy_ad)
 {
 	KeyCacheEntry *session_key = NULL;
-	if (!session_cache.lookup(session_id, session_key)) {return false;}
+	if (!session_cache->lookup(session_id, session_key)) {return false;}
 	ClassAd *policy = session_key->policy();
 	if (!policy) {return false;}
 
@@ -3172,7 +3212,7 @@ SecMan::ExportSecSessionInfo(char const *session_id,MyString &session_info) {
 	ASSERT( session_id );
 
 	KeyCacheEntry *session_key = NULL;
-	if(!session_cache.lookup(session_id,session_key)) {
+	if(!session_cache->lookup(session_id,session_key)) {
 		dprintf(D_ALWAYS,"SECMAN: ExportSecSessionInfo failed to find "
 				"session %s\n",session_id);
 		return false;
@@ -3218,7 +3258,7 @@ SecMan::SetSessionExpiration(char const *session_id,time_t expiration_time) {
 	ASSERT( session_id );
 
 	KeyCacheEntry *session_key = NULL;
-	if(!session_cache.lookup(session_id,session_key)) {
+	if(!session_cache->lookup(session_id,session_key)) {
 		dprintf(D_ALWAYS,"SECMAN: SetSessionExpiration failed to find "
 				"session %s\n",session_id);
 		return false;
@@ -3235,7 +3275,7 @@ SecMan::SetSessionLingerFlag(char const *session_id) {
 	ASSERT( session_id );
 
 	KeyCacheEntry *session_key = NULL;
-	if(!session_cache.lookup(session_id,session_key)) {
+	if(!session_cache->lookup(session_id,session_key)) {
 		dprintf(D_ALWAYS,"SECMAN: SetSessionLingerFlag failed to find "
 				"session %s\n",session_id);
 		return false;

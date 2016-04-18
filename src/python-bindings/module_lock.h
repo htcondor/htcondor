@@ -45,6 +45,13 @@ private:
     static bool is_intialized() { return true; }
 #endif
     PyThreadState *m_save;
+
+    // If there are any configuration overrides for this thread, this holds
+    // the prior global values.
+    std::vector<std::pair<std::string, std::string> > m_config_orig;
+    std::string m_tag_orig;
+    char *m_proxy_orig;
+    std::string m_password_orig;
 };
 
 }

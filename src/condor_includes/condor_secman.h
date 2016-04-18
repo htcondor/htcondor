@@ -83,9 +83,18 @@ public:
 	static const char sec_feat_act_rev[][10];
 	static const char sec_req_rev[][10];
 
-	static KeyCache                      session_cache;
+	// A pointer to the current session cache.
+	static KeyCache                     *session_cache;
+	// The default session cache - used when there are no tags
+	static KeyCache                      m_default_session_cache;
+	// Alternate session caches.
+	static std::map<std::string,KeyCache*> *m_tagged_session_cache;
+        static std::string m_tag;
 	static HashTable<MyString, MyString> command_map;
 	static int sec_man_ref_count;
+
+	// Manage the pool password
+	static std::string m_pool_password;
 
 		// The following is indexed by session index name ( "addr,<cmd>" )
 	static HashTable<MyString, classy_counted_ptr<SecManStartCommand> > tcp_auth_in_progress;
@@ -125,6 +134,20 @@ public:
     void                    invalidateExpiredCache();
 	void					invalidateByParentAndPid(const char * parent, int pid);
 
+	// Setup `tag`ing mechanism - provide a way for a unique set of session caches.
+	// This is useful when CEDAR needs to impersonate several logical users within the
+	// same process but does not want the session cache for user A to be reused by user B.
+	static void setTag(const std::string &);
+        static const std::string &getTag() {return m_tag;}
+
+	// Get and set a pool password - the SecMan controls this as it is a convenient global.
+	// This is useful when a pool password needs to be managed programmatically - and not
+	// read from disk.
+	//
+	// An empty pool password is invalid and indicates one should disable the feature.
+	static void setPoolPassword(const std::string &pool) {m_pool_password = pool;}
+	// An empty pool indicates this is not used.
+	static const std::string &getPoolPassword() {return m_pool_password;}
 
 	bool	FillInSecurityPolicyAd( DCpermission auth_level,
 									ClassAd* ad,

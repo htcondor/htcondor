@@ -169,6 +169,12 @@ char* getStoredCredential(const char *username, const char *domain)
 		return ZKM_UNIX_GET_CRED(username, domain);
 	} 
 
+	// See if the security manager has overridden the pool password.
+	const std::string &secman_pass = SecMan::getPoolPassword();
+	if (secman_pass.size()) {
+		return strdup(secman_pass.c_str());
+	}
+
 	// EVERYTHING BELOW HERE IS FOR POOL PASSWORD ONLY
 
 	char *filename = param("SEC_PASSWORD_FILE");

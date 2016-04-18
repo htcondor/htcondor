@@ -234,7 +234,12 @@ void print_useful_info_10(bool rv, MyString name, Sock*, ClassAd *ad, ClassAd *a
 
 void print_info(bool rv, const char * addr, Sock* s, MyString name, int cmd, ClassAd *authz_ad, CondorError *errstack, int output_mode) {
 	MyString cmd_map_ent;
-	cmd_map_ent.formatstr ("{%s,<%i>}", addr, cmd); 
+        const std::string &tag = SecMan::getTag();
+	if (tag.size()) {
+		cmd_map_ent.formatstr ("{%s,%s,<%i>}", tag.c_str(), addr, cmd);
+	} else {
+		cmd_map_ent.formatstr ("{%s,<%i>}", addr, cmd);
+	}
 
 	MyString session_id;
 	KeyCacheEntry *k = NULL;
@@ -250,7 +255,7 @@ void print_info(bool rv, const char * addr, Sock* s, MyString name, int cmd, Cla
 		}
 
 		// IMPORTANT: this hashtable returns 1 on success!
-		ret = (SecMan::session_cache).lookup(session_id.Value(), k);
+		ret = (SecMan::session_cache)->lookup(session_id.Value(), k);
 		if (!ret) {
 			printf("no session!\n");
 			return;
