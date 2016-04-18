@@ -68,8 +68,8 @@ static void Usage() {
             "\t\t[-MaxJobs <int N>]\n"
             "\t\t[-MaxPre <int N>]\n"
             "\t\t[-MaxPost <int N>]\n"
-            "\t\t[-NoEventChecks]\n"
-            "\t\t[-AllowLogError]\n"
+            "\t\t(obsolete) [-NoEventChecks]\n"
+            "\t\t(obsolete) [-AllowLogError]\n"
             "\t\t[-DontAlwaysRunPost]\n"
             "\t\t[-AlwaysRunPost]\n"
             "\t\t[-WaitForDebug]\n"
@@ -117,7 +117,6 @@ Dagman::Dagman() :
 	primaryDagFile (""),
 	multiDags (false),
 	startup_cycle_detect (false), // so Coverity is happy
-	allowLogError (false),
 	useDagDir (false),
 	allow_events (CheckEvents::ALLOW_NONE), // so Coverity is happy
 	retrySubmitFirst (true), // so Coverity is happy
@@ -326,9 +325,12 @@ Dagman::Config()
 	debug_printf( DEBUG_NORMAL, "DAGMAN_MAX_POST_SCRIPTS setting: %d\n",
 				maxPostScripts );
 
-	allowLogError = param_boolean( "DAGMAN_ALLOW_LOG_ERROR", allowLogError );
-	debug_printf( DEBUG_NORMAL, "DAGMAN_ALLOW_LOG_ERROR setting: %s\n",
-				allowLogError ? "True" : "False" );
+	bool allowLogError = param_boolean( "DAGMAN_ALLOW_LOG_ERROR", false );
+	if ( allowLogError ) {
+		debug_printf( DEBUG_NORMAL, "Warning: DAGMAN_ALLOW_LOG_ERROR is "
+					"no longer supported\n" );
+		check_warning_strictness( DAG_STRICT_2 );
+	}
 
 	mungeNodeNames = param_boolean( "DAGMAN_MUNGE_NODE_NAMES",
 				mungeNodeNames );
@@ -740,7 +742,9 @@ void main_init (int argc, char ** const argv) {
 			check_warning_strictness( DAG_STRICT_2 );
 
         } else if( !strcasecmp( "-AllowLogError", argv[i] ) ) {
-			dagman.allowLogError = true;
+			debug_printf( DEBUG_QUIET, "Warning: -AllowLogError is "
+						"no longer supported\n" );
+			check_warning_strictness( DAG_STRICT_2 );
 
         } else if( !strcasecmp( "-DontAlwaysRunPost", argv[i] ) ) {
 			if ( alwaysRunPostSet && dagman._runPost ) {
@@ -1090,7 +1094,6 @@ void main_init (int argc, char ** const argv) {
 		// Fill in values in the deep submit options that we haven't
 		// already set.
 		//
-	dagman._submitDagDeepOpts.bAllowLogError = dagman.allowLogError;
 	dagman._submitDagDeepOpts.useDagDir = dagman.useDagDir;
 	dagman._submitDagDeepOpts.autoRescue = dagman.autoRescue;
 	dagman._submitDagDeepOpts.doRescueFrom = dagman.doRescueFrom;
@@ -1107,7 +1110,7 @@ void main_init (int argc, char ** const argv) {
 	// wenger 2010-03-25
     dagman.dag = new Dag( dagman.dagFiles, dagman.maxJobs,
 						  dagman.maxPreScripts, dagman.maxPostScripts,
-						  dagman.allowLogError, dagman.useDagDir,
+						  dagman.useDagDir,
 						  dagman.maxIdle, dagman.retrySubmitFirst,
 						  dagman.retryNodeFirst, dagman.condorRmExe,
 						  &dagman.DAGManJobId,

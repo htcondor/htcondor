@@ -109,11 +109,6 @@ class Dagman {
 		// (note: we perform run-time cycle-detection regardless)
 	bool startup_cycle_detect;
 
-		// Allow the job to execute even if we have an error determining
-		// the log files (e.g., the log file is missing from one of the
-		// node submit files).
-	bool allowLogError;
-
 		// Whether to treat the dirname portion of any DAG file paths
 		// as a directory that the DAG should effectively be run from.
 	bool useDagDir;

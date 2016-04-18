@@ -85,10 +85,6 @@ runSubmitDag( const SubmitDagDeepOptions &deepOpts,
 		args.AppendArg( deepOpts.strDagmanPath.Value() );
 	}
 
-	if ( deepOpts.bAllowLogError ) {
-		args.AppendArg( "-allowlogerror" );
-	}
-
 	if ( deepOpts.useDagDir ) {
 		args.AppendArg( "-usedagdir" );
 	}

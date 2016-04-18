@@ -48,6 +48,11 @@ workflow will be \Arg{DagFile}+\Arg{cluster} of the top-level
 \Condor{dagman} job.
 \Ticket{5605}
 
+\item The \Arg{-AllowLogError} argument to \Condor{submit\_dag} and
+\Condor{dagman}, and the DAGMAN\_ALLOW\_LOG\_ERROR configuration
+macro, are no longer supported, and generate warnings if used.
+\Ticket{5630}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
