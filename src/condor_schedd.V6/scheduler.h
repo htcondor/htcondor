@@ -760,7 +760,7 @@ private:
 	void			initLocalStarterDir( void );
 	void	noShadowForJob( shadow_rec* srec, NoShadowFailure_t why );
 	bool			jobExitCode( PROC_ID job_id, int exit_code );
-	int			calcSlotWeight(ClassAd *machine);
+	int			calcSlotWeight(match_rec *mrec);
 	
 	// -----------------------------------------------
 	// CronTab Jobs
