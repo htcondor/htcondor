@@ -641,17 +641,42 @@ attribute(std::string name)
 }
 
 
+/**
+ * See if a given python function accepts an argument named `state`.
+ *
+ * We do this to determine whether a python-based classad function is able to
+ * accept the evaluation context (state).
+ *
+ * This function is likely a historical mistake.  I can think of no other case in
+ * python where the call is changed based on reflection of the target function.
+ * It has a few holes -- for example, it can only make this determination for
+ * functions implemented in Python (as it looks at the associated bytecode
+ * object).  It was done because so many users forgot to accept the state
+ * argument - and getting error messages out of ClassAds is so awkward.  We
+ * actually populate the `error` global - which is useless in multithreaded
+ * programs, but no one seems to look at this.  Python programmers expect
+ * exceptions -- but these can only be thrown when the ClassAd library is used
+ * inside a python interpreter.
+ */
 bool
 checkAcceptsState(boost::python::object pyFunc)
 {
+    // First, check all the named (positional) arguments.  Covers cases like:
+    //   def f1(arg1, arg2, state)
+    //   def f2(arg1, arg2=None, state={})
     boost::python::object varnames = pyFunc.attr("__code__").attr("co_varnames");
-    ssize_t len = py_len(varnames);
+    ssize_t len = boost::python::extract<ssize_t>(pyFunc.attr("__code__").attr("co_argcount"));
     for (int idx=0; idx<len; idx++)
     {
         std::string varname = boost::python::extract<std::string>(varnames[idx]);
         if (varname == "state") {return true;}
     }
-    return false;
+    // Next, check the flags to see if unnamed keywords are accepted.
+    // This is specified in the flags given to the code object.  Covers functions of the form
+    //    def f3(arg, **kw)
+    // The co_flags attribute is a bitmask; 0x08 indicates keyword arguments.
+    int flags = boost::python::extract<int>(pyFunc.attr("__code__").attr("co_flags"));
+    return (flags & 8) == 8;
 }
 
 
