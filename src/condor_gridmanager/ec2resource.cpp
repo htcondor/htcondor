@@ -87,8 +87,9 @@ EC2Resource::EC2Resource( const char *resource_name,
 	gs.Init();
 	gs.Clear();
 
-	std::string gahp_name = "EC2-";
-	gahp_name += m_public_key_file;
+	std::string gahp_name;
+	formatstr( gahp_name, "EC2-%s@%s", m_public_key_file, resource_name );
+	// dprintf( D_ALWAYS, "Using %s for GAHP name.\n", gahp_name.c_str() );
 	gahp = new GahpClient( gahp_name.c_str(), gahp_path, &args );
 	gahp->setNotificationTimerId( pingTimerId );
 	gahp->setMode( GahpClient::normal );

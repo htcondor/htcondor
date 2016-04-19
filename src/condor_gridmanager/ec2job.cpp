@@ -380,7 +380,8 @@ EC2Job::EC2Job( ClassAd *classad ) :
 	// errors) that it's only using a single account.  Note that the resource
 	// doesn't start any GAHPs, so we have to make sure that the gahpName
 	// here is the same as the gahp_name there.
-	gahpName = "EC2-" + m_public_key_file;
+	formatstr( gahpName, "EC2-%s@%s", m_public_key_file.c_str(), m_serviceUrl.c_str() );
+	// dprintf( D_ALWAYS, "Using %s for GAHP name.\n", gahpName.c_str() );
 	gahp = new GahpClient( gahpName.c_str(), gahp_path, &args );
 	free(gahp_path);
 	gahp->setNotificationTimerId( evaluateStateTid );
