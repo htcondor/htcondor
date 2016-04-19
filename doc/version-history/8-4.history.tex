@@ -42,6 +42,12 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug where HTCondor would regard as invalid text representations
+of IPv6 addresses which were the longest possible.  This bug typically
+manifested as a failure to contact hosts which were advertising IPv6 addresses
+of this sort.
+\Ticket{5585}
+
 \item Fixed bug where when partitionable slots were
 enabled in the \Condor{start}, a job would be unable
 to start running on that machine in some cases.
