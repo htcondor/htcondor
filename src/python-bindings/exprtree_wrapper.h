@@ -31,6 +31,9 @@ struct ExprTreeHolder
 
     std::string toString() const;
 
+    long long toLong() const;
+    double toDouble() const;
+
     classad::ExprTree *get() const;
 
     boost::python::object getItem(boost::python::object);

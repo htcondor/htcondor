@@ -70,6 +70,79 @@ bool ExprTreeHolder::ShouldEvaluate() const
            m_expr->GetKind() == classad::ExprTree::EXPR_LIST_NODE;
 }
 
+long long ExprTreeHolder::toLong() const
+{
+    classad::Value val;
+    const classad::ClassAd *origParent = m_expr->GetParentScope();
+    bool evalresult;
+    if (origParent) {
+        evalresult = m_expr->Evaluate(val);
+    } else {
+        classad::EvalState state;
+        evalresult = m_expr->Evaluate(state, val);
+    }
+    if (PyErr_Occurred()) {boost::python::throw_error_already_set();}
+    if (!evalresult)
+    {
+        THROW_EX(TypeError, "Unable to evaluate expression");
+    }
+    long long retInt;
+    std::string retStr;
+    if (val.IsNumber(retInt)) {return retInt;}
+    else if (val.IsStringValue(retStr)) {
+        errno = 0;
+        char *endptr;
+        long long val = strtoll(retStr.c_str(), &endptr, 10);
+        if (errno == ERANGE) {
+            if (val == LLONG_MIN) {THROW_EX(ValueError, "Underflow when converting to integer.");}
+            else {THROW_EX(ValueError, "Overflow when converting to integer.");}
+        }
+        if (endptr != (retStr.c_str() + retStr.size())) {
+            THROW_EX(ValueError, "Unable to convert string to integer.");
+        }
+        return val;
+    }
+    THROW_EX(ValueError, "Unable to convert expression to numeric type.");
+    return 0;  // Should never get here
+}
+
+double ExprTreeHolder::toDouble() const
+{
+    classad::Value val;
+    const classad::ClassAd *origParent = m_expr->GetParentScope();
+    bool evalresult;
+    if (origParent) {
+        evalresult = m_expr->Evaluate(val);
+    } else {
+        classad::EvalState state;
+        evalresult = m_expr->Evaluate(state, val);
+    }
+    if (PyErr_Occurred()) {boost::python::throw_error_already_set();}
+    if (!evalresult)
+    {   
+        THROW_EX(TypeError, "Unable to evaluate expression");
+    }   
+    double retDouble;
+    std::string retStr;
+    if (val.IsNumber(retDouble)) {return retDouble;}
+    else if (val.IsStringValue(retStr)) {
+        errno = 0;
+        char *endptr;
+        double val = strtod(retStr.c_str(), &endptr);
+        if (errno == ERANGE) {
+            // Any small value will indicate underflow.
+            if (fabs(val) < 1.0) {THROW_EX(ValueError, "Underflow when converting to integer.");}
+            else {THROW_EX(ValueError, "Overflow when converting to integer.");}
+        }
+        if (endptr != (retStr.c_str() + retStr.size())) {
+            THROW_EX(ValueError, "Unable to convert string to integer.");
+        }
+        return val;
+    }
+    THROW_EX(ValueError, "Unable to convert expression to numeric type.");
+    return 0;  // Should never get here
+}
+
 class ScopeGuard
 {
 public:
