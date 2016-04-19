@@ -29,6 +29,12 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Some Linux distributions for supercomputer compute nodes and
+others distros for docker images have no /var/run/utmp.  Condor no longer
+aborts when this file is missing, when it tries to determine keyboard
+idle times, it just assumes these kinds of machines have no keyboards.
+\Ticket{5624}
+
 \item Docker Universe jobs now correctly advertise \Macro{RemoteUserCpu}
 and \Macro{RemoteSysCpu} in their job ad and in the job log file.
 \Ticket{5609}
