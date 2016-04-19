@@ -24,6 +24,7 @@
 #include "condor_qmgr.h"
 #include "debug.h"
 #include "dagman_metrics.h"
+#include "basename.h"
 
 //---------------------------------------------------------------------------
 DagmanClassad::DagmanClassad( const CondorID &DAGManJobId ) :
@@ -125,6 +126,37 @@ DagmanClassad::GetInfo( MyString &owner, MyString &nodeName )
 
 //---------------------------------------------------------------------------
 void
+DagmanClassad::GetSetBatchName( const MyString &primaryDagFile,
+			MyString &batchName )
+{
+	if ( !_valid ) {
+		debug_printf( DEBUG_VERBOSE,
+					"Skipping ClassAd query -- DagmanClassad object is invalid\n" );
+		return;
+	}
+
+	Qmgr_connection *queue = OpenConnection();
+	if ( !queue ) {
+		return;
+	}
+
+	if ( !GetDagAttribute( ATTR_JOB_BATCH_NAME, batchName, false ) ) {
+			// Default batch name is top-level DAG's primary
+			// DAG file (base name only).
+		batchName = condor_basename( primaryDagFile.Value() );
+		batchName += "+";
+		batchName += _dagmanId._cluster;
+		SetDagAttribute( ATTR_JOB_BATCH_NAME, batchName );
+	}
+
+	CloseConnection( queue );
+
+	debug_printf( DEBUG_VERBOSE, "Workflow batch-name: <%s>\n",
+				batchName.Value() );
+}
+
+//---------------------------------------------------------------------------
+void
 DagmanClassad::InitializeMetrics()
 {
 
@@ -192,14 +224,29 @@ DagmanClassad::SetDagAttribute( const char *attrName, int attrVal )
 }
 
 //---------------------------------------------------------------------------
+void
+DagmanClassad::SetDagAttribute( const char *attrName, const MyString &value )
+{
+	if ( SetAttributeString( _dagmanId._cluster, _dagmanId._proc,
+						  attrName, value.Value() ) != 0 ) {
+		debug_printf( DEBUG_QUIET,
+					  "WARNING: failed to set attribute %s\n", attrName );
+		check_warning_strictness( DAG_STRICT_3 );
+	}
+}
+
+//---------------------------------------------------------------------------
 bool
-DagmanClassad::GetDagAttribute( const char *attrName, MyString &attrVal )
+DagmanClassad::GetDagAttribute( const char *attrName, MyString &attrVal,
+			bool printWarning )
 {
 	char *val;
 	if ( GetAttributeStringNew( _dagmanId._cluster, _dagmanId._proc,
 				attrName, &val ) != 0 ) {
-		debug_printf( DEBUG_QUIET,
-					  "Warning: failed to get attribute %s\n", attrName );
+		if ( printWarning ) {
+			debug_printf( DEBUG_QUIET,
+					  	"Warning: failed to get attribute %s\n", attrName );
+		}
 		return false;
 	}
 

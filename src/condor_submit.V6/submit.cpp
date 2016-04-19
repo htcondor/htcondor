@@ -1281,9 +1281,9 @@ main( int argc, const char *argv[] )
 				const char * bname = *ptr;
 				MyString tmp; // if -batch-name was specified, this holds the string 'MY.JobBatchName = "name"'
 				if (*bname == '"') {
-					tmp.formatstr("MY.JobBatchName = %s", bname);
+					tmp.formatstr("MY.%s = %s", ATTR_JOB_BATCH_NAME, bname);
 				} else {
-					tmp.formatstr("MY.JobBatchName = \"%s\"", bname);
+					tmp.formatstr("MY.%s = \"%s\"", ATTR_JOB_BATCH_NAME, bname);
 				}
 				// if batch_name_line is not NULL,  we will leak a bit here, but that's better than
 				// freeing something behind the back of the extraLines

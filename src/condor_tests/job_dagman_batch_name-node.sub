@@ -1,0 +1,8 @@
+universe = vanilla
+executable = ./x_echostring.pl
+arguments = batch-name: $$([JobBatchName])
+output = job_dagman_batch_name-$(nodename).out
+error = job_dagman_batch_name-$(nodename).err
+# Should get overridden by DAGMan
+JobBatchName = dummy_batch_name
+queue

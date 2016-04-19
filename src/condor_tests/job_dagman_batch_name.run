@@ -21,24 +21,19 @@
 use CondorTest;
 use CondorUtils;
 
-$cmd = ['job_dagman_set_attr1.dag', 'job_dagman_set_attr2.dag'];
-$testdesc =  'Condor submit dag - test setting ClassAd attributes - scheduler U';
-$testname = "job_dagman_set_attr";
-$dagman_args = "-verbose -append '+test_attr0 = Dalyan' -append '+test_attr3 = Vrsic' -insert_sub_file job_dagman_set_attr.sub";
+$cmd = 'job_dagman_batch_name-upper.dag';
+$testdesc =  'Condor submit dag - setting & propagation of batch-name - scheduler U';
+$testname = "job_dagman_batch_name";
+$dagman_args = "-verbose -batch-name job_dagman_batch_name";
 
-@outfiles = ("job_dagman_set_attr.dag.dagman.out",
-	"job_dagman_set_attr-nodeA.out",
-	"job_dagman_set_attr-nodeB.out");
+@outfiles = ("job_dagman_batch_name-upper.dag.lib.out",
+	"job_dagman_batch_name-lower.dag.dagman.out",
+	"job_dagman_batch_name-NodeLA.out",
+	"job_dagman_batch_name-NodeLB.out",
+	"job_dagman_batch_name-NodeUA.out",
+	"job_dagman_batch_name-NodeUB.out");
 
-# Note:  We won't necessarily find the lines in any specific order.
-@expected_lines = (
-	'test_attr0 = Dalyan',
-	'test_attr1 = 234',
-	'test_attr2 = "0.987 6.402"',
-	'test_attr3 = Vrsic',
-	'test_attr4 = 3.14159',
-	'test_attr6 = 987',
-);
+$expected_contents = "batch-name: job_dagman_batch_name ";
 
 my $killedchosen = 0;
 
@@ -91,7 +86,8 @@ $success = sub
 	CondorTest::debug("executed successfully\n",1);
 	CondorTest::debug("Verifying output\n",1);
 	$diditpass = 1;
-	shift @outfiles; # get rid of dagman.out
+	shift @outfiles; # get rid of upper dagman.out
+	shift @outfiles; # get rid of lower dagman.out
 	foreach $file (@outfiles) {
 		CondorTest::debug("Checking $file\n",1);
 
@@ -101,13 +97,12 @@ $success = sub
 			$diditpass = 0;
 		} else {
 			$contents = do { local $/; <OUT>; };
-			foreach $eline (@expected_lines) {
-				if (index($contents, $eline) >= 0) {
-					CondorTest::debug("Found $eline in $file\n",1);
-				} else {
-					CondorTest::debug("ERROR: $eline not found in $file\n",1);
-					$diditpass = 0;
-				}
+			chomp $contents;
+			if ($contents eq $expected_contents) {
+				CondorTest::debug("Found <$contents> in $file\n",1);
+			} else {
+				CondorTest::debug("ERROR: expected <$expected_contents> in file $file, but found <$contents>\n",1);
+				$diditpass = 0;
 			}
 			close(OUT);
 		}

@@ -691,8 +691,9 @@ void writeSubmitFile( /* const */ SubmitDagDeepOptions &deepOpts,
 	fprintf(pSubFile, "output\t\t= %s\n", shallowOpts.strLibOut.Value());
     fprintf(pSubFile, "error\t\t= %s\n", shallowOpts.strLibErr.Value());
     fprintf(pSubFile, "log\t\t= %s\n", shallowOpts.strSchedLog.Value());
-	if ( ! deepOpts.batchName.empty()) {
-		fprintf(pSubFile, "+JobBatchName\t= \"%s\"\n", deepOpts.batchName.c_str());
+	if ( ! deepOpts.batchName.empty() ) {
+		fprintf(pSubFile, "+%s\t= \"%s\"\n", ATTR_JOB_BATCH_NAME,
+					deepOpts.batchName.c_str());
 	}
 #if !defined ( WIN32 )
     fprintf(pSubFile, "remove_kill_sig\t= SIGUSR1\n" );

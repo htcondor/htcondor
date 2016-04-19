@@ -842,7 +842,7 @@ tags=dagman,condor_submit_dag
 default=
 type=path
 reconfig=false
-customization=seldom
+customization=normal
 friendly_name=Dagman Config File
 review=?
 tags=dagman,dagman_main,condor_submit_dag
@@ -967,11 +967,20 @@ friendly_name=Dagman Pending Report Interval
 review=?
 tags=dagman,dagman_main
 
+[MAX_DAGMAN_LOG]
+default=0
+type=int
+reconfig=false
+customization=seldom
+friendly_name=Max Dagman Log
+review=?
+tags=dagman,dagman_main
+
 [DAGMAN_ALLOW_LOG_ERROR]
 default=false
 type=bool
 reconfig=false
-customization=seldom
+customization=never
 friendly_name=Dagman Allow Log Error
 review=?
 tags=dagman,dagman_main
@@ -1016,7 +1025,7 @@ tags=dagman,dagman_main
 default=@(DAG_DIR)/@(DAG_FILE).nodes.log
 type=path
 reconfig=false
-customization=expert
+customization=seldom
 friendly_name=Dagman Default Node Log
 review=?
 tags=dagman,dagman_main
@@ -1145,6 +1154,15 @@ type=int
 reconfig=false
 customization=seldom
 friendly_name=Dagman Submit Delay
+review=?
+tags=dagman,dagman_main
+
+[DAGMAN_SUPPRESS_JOB_LOGS]
+default=false
+type=bool
+reconfig=false
+customization=normal
+friendly_name=Dagman Suppress Job Logs
 review=?
 tags=dagman,dagman_main
 

@@ -206,7 +206,7 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 			   const char* DAGNodeName, MyString &DAGParentNodeNames,
 			   List<Job::NodeVar> *vars, int retry,
 			   const char* directory, const char *workflowLogFile,
-			   bool hold_claim )
+			   bool hold_claim, const MyString &batchName )
 {
 	TmpDir		tmpDir;
 	MyString	errMsg;
@@ -250,6 +250,12 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 	MyString dagJobIdMacro = MyString( "" ) + ATTR_DAGMAN_JOB_ID + " = " +
 				dm.DAGManJobId._cluster;
 	args.AppendArg( dagJobIdMacro.Value() );
+
+		// Pass the batch name to lower levels.
+	if ( batchName != "" ) {
+		args.AppendArg( "-batch-name" );
+		args.AppendArg( batchName.Value() );
+	}
 
 	args.AppendArg( "-a" );
 	MyString submitEventNotes = MyString(
