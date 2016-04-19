@@ -268,9 +268,15 @@ utmp_pty_idle_time( time_t now )
 	FILE *fp;
 	struct UTMP_KIND utmp_info;
 
+	static bool warned_missing_utmp = false;
+
 	if ((fp=safe_fopen_wrapper_follow(UtmpName,"r")) == NULL) {
 		if ((fp=safe_fopen_wrapper_follow(AltUtmpName,"r")) == NULL) {
-			EXCEPT("fopen of \"%s\"", UtmpName);
+			if (!warned_missing_utmp) {
+				dprintf(D_ALWAYS, "Utmp files %s and %s missing, assuming infinite keyboard idle time\n", UtmpName, AltUtmpName);
+				warned_missing_utmp = true;
+			}
+			return answer; // is INT_MAX
 		}
 	}
 
