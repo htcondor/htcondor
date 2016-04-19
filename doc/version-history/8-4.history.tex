@@ -42,6 +42,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed bug where when partitionable slots were
+enabled in the \Condor{start}, a job would be unable
+to start running on that machine in some cases.
+\Ticket{5626}
+
 \item Fixed a bug where after a \Condor{schedd} restart
 the submitter attribute \Macro{WEIGHTED\_JOBS\_RUNNING}
 would be incorrectly computed.
