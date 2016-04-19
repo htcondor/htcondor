@@ -416,6 +416,27 @@ class TestClassad(unittest.TestCase):
         self.assertEquals(ad.externalRefs(expr), ["foo"])
         self.assertEquals(ad.internalRefs(expr), ["bar"])
 
+    def test_cast(self):
+        self.assertEquals(4, int(classad.ExprTree('1+3')))
+        self.assertEquals(4.5, float(classad.ExprTree('1.0+3.5')))
+        self.assertEquals(34, int(classad.ExprTree('strcat("3", "4")')))
+        self.assertEquals(34.5, float(classad.ExprTree('"34.5"')))
+        self.assertRaises(ValueError, float, classad.ExprTree('"34.foo"'))
+        self.assertRaises(ValueError, int, classad.ExprTree('"12 "'))
+        ad = classad.ClassAd("""[foo = 2+5; bar = foo]""")
+        expr = ad['bar']
+        self.assertEquals(7, int(expr))
+        self.assertEquals(7, int(ad.lookup('bar')))
+        self.assertEquals(0, int(classad.ExprTree('false')))
+        self.assertEquals(0.0, float(classad.ExprTree('false')))
+        self.assertEquals(1, int(classad.ExprTree('true')))
+        self.assertEquals(1.0, float(classad.ExprTree('true')))
+        self.assertEquals(3, int(classad.ExprTree('3.99')))
+        self.assertEquals(3.0, float(classad.ExprTree('1+2')))
+        self.assertRaises(ValueError, int, classad.ExprTree('undefined'))
+        self.assertRaises(ValueError, float, classad.ExprTree('error'))
+        self.assertRaises(ValueError, float, classad.ExprTree('foo'))
+
 if __name__ == '__main__':
     unittest.main()
 
