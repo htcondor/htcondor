@@ -1,5 +1,6 @@
 #!/usr/bin/python
 
+import os
 import re
 import types
 import pickle
@@ -402,6 +403,26 @@ class TestClassad(unittest.TestCase):
         expr = classad.ExprTree("foo =?= bar")
         self.assertEquals(ad.externalRefs(expr), ["foo"])
         self.assertEquals(ad.internalRefs(expr), ["bar"])
+
+    def test_pipes(self):
+        # One regression we saw in the ClassAd library is the new
+        # parsing routines would fail if tell/seek was non-functional.
+        r, w = os.pipe()
+        rfd = os.fdopen(r, 'r')
+        wfd = os.fdopen(w, 'w')
+        wfd.write("[foo = 1]")
+        wfd.close()
+        ad = classad.parseNext(rfd ,parser=classad.Parser.New)
+        self.assertEquals(tuple(dict(ad).items()), (('foo', 1),))
+        self.assertRaises(StopIteration, classad.parseNext, rfd, classad.Parser.New)
+        rfd.close()
+        r, w = os.pipe()
+        rfd = os.fdopen(r, 'r')
+        wfd = os.fdopen(w, 'w')
+        wfd.write("[foo = 1]")
+        wfd.close()
+        self.assertRaises(IOError, classad.parseNext, rfd)
+        rfd.close()
 
 if __name__ == '__main__':
     unittest.main()
