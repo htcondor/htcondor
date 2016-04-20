@@ -33,7 +33,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item \Condor{advertise} \Opt{-multiple} now tolerates multiple blank lines in the
+input file. It no longer quits parsing on the first first blank line that does not
+follow a valid ClassAd.
+\Ticket{5147}
 
 \end{itemize}
 
@@ -88,6 +91,15 @@ incorrectly when \MacroNI{SOFT\_UID\_DOMAIN} is set to \Expr{True}.
 \item Fixed a bug that caused supplemental groups to be set incorrectly
 when executing file transfer plugins and various hooks.
 \Ticket{5600}
+
+\item Fixed a bug that resulted in Windows 10 being reported as
+WindowsUnknown in the \Attr{OPSYSNAME} attribute of the \Condor{startd}
+ClassAd.
+\Ticket{5575}
+
+\item Fixed a typo in the \MacroNI{LIMIT_JOB_RUNTIMES} policy metaknob
+that prevented the policy from working as intended.
+\Ticket{5307}
 
 \end{itemize}
 
