@@ -62,6 +62,8 @@ using namespace std;
 #define GM_CREATE_KEY_PAIR				17
 #define GM_CANCEL_CHECK					18
 
+#define GM_SPOT_CANCEL_CHECK			19
+
 static const char *GMStateNames[] = {
 	"GM_INIT",
 	"GM_START_VM",
@@ -82,6 +84,7 @@ static const char *GMStateNames[] = {
 	"GM_SEEK_INSTANCE_ID",
 	"GM_CREATE_KEY_PAIR",
 	"GM_CANCEL_CHECK",
+	"GM_SPOT_CANCEL_CHECK",
 };
 
 #define EC2_VM_STATE_RUNNING			"running"
@@ -91,9 +94,13 @@ static const char *GMStateNames[] = {
 #define EC2_VM_STATE_SHUTOFF			"shutoff"
 #define EC2_VM_STATE_STOPPED			"stopped"
 
-// These are pseduostates used internally by the grid manager.
+// These are pseduostates used internally by the grid manager.  It's
+// important that they aren't returned by the EC2 API, since that's how
+// we block until the next status poll has occured and not deadlock if
+// the job has already reached a terminal state.
 #define EC2_VM_STATE_PURGED				"not-found"
 #define EC2_VM_STATE_CANCELLING			"cancelling"
+#define EC2_VM_STATE_SPOT_CANCELLING	"cancelling-spot"
 
 // TODO: Let the maximum submit attempts be set in the job ad or, better yet,
 // evalute PeriodicHold expression in job ad.
@@ -161,6 +168,8 @@ EC2Job::EC2Job( ClassAd *classad ) :
 	purgedTwice( false ),
 	updatedOnce( false )
 {
+	int holdReasonCode = 0;
+	int holdReasonSubCode = 0;
 	string error_string = "";
 	char *gahp_path = NULL;
 	char *gahp_log = NULL;
@@ -180,11 +189,14 @@ EC2Job::EC2Job( ClassAd *classad ) :
 	m_group_names = NULL;
 	m_should_gen_key_pair = false;
 	m_keypair_created = false;
+	std::string gahpName;
 
 	// check the public_key_file
 	jobAd->LookupString( ATTR_EC2_ACCESS_KEY_ID, m_public_key_file );
 
 	if ( m_public_key_file.empty() ) {
+		holdReasonCode = 1;
+		holdReasonSubCode = 1;
 		error_string = "Public key file not defined";
 		goto error_exit;
 	}
@@ -193,6 +205,8 @@ EC2Job::EC2Job( ClassAd *classad ) :
 	jobAd->LookupString( ATTR_EC2_SECRET_ACCESS_KEY, m_private_key_file );
 
 	if ( m_private_key_file.empty() ) {
+		holdReasonCode = 1;
+		holdReasonSubCode = 2;
 		error_string = "Private key file not defined";
 		goto error_exit;
 	}
@@ -290,7 +304,7 @@ EC2Job::EC2Job( ClassAd *classad ) :
 	// In GM_HOLD, we assume HoldReason to be set only if we set it, so make
 	// sure it's unset when we start (unless the job is already held).
 	if ( condorState != HELD &&
-		 jobAd->LookupString( ATTR_HOLD_REASON, NULL, 0 ) != 0 ) {
+		jobAd->LookupString( ATTR_HOLD_REASON, NULL, 0 ) != 0 ) {
 		jobAd->AssignExpr( ATTR_HOLD_REASON, "Undefined" );
 	}
 
@@ -302,6 +316,8 @@ EC2Job::EC2Job( ClassAd *classad ) :
 
 		token = GetNextToken( " ", false );
 		if ( !token || strcasecmp( token, "ec2" ) ) {
+			holdReasonCode = 2;
+			holdReasonSubCode = 3;
 			formatstr( error_string, "%s not of type ec2",
 									  ATTR_GRID_RESOURCE );
 			goto error_exit;
@@ -311,12 +327,16 @@ EC2Job::EC2Job( ClassAd *classad ) :
 		if ( token && *token ) {
 			m_serviceUrl = token;
 		} else {
+			holdReasonCode = 1;
+			holdReasonSubCode = 4;
 			formatstr( error_string, "%s missing EC2 service URL",
 									  ATTR_GRID_RESOURCE );
 			goto error_exit;
 		}
 
 	} else {
+		holdReasonCode = 2;
+		holdReasonSubCode = 5;
 		formatstr( error_string, "%s is not set in the job ad",
 								  ATTR_GRID_RESOURCE );
 		goto error_exit;
@@ -324,6 +344,8 @@ EC2Job::EC2Job( ClassAd *classad ) :
 
 	gahp_path = param( "EC2_GAHP" );
 	if ( gahp_path == NULL ) {
+		holdReasonCode = 3;
+		holdReasonSubCode = 6;
 		error_string = "EC2_GAHP not defined";
 		goto error_exit;
 	}
@@ -354,7 +376,13 @@ EC2Job::EC2Job( ClassAd *classad ) :
 		free(gahp_debug);
 	}
 
-	gahp = new GahpClient( EC2_RESOURCE_NAME, gahp_path, &args );
+	// The EC2 GAHP assumes (for purposes of responding to RequestLimitExceeded
+	// errors) that it's only using a single account.  Note that the resource
+	// doesn't start any GAHPs, so we have to make sure that the gahpName
+	// here is the same as the gahp_name there.
+	formatstr( gahpName, "EC2-%s@%s", m_public_key_file.c_str(), m_serviceUrl.c_str() );
+	// dprintf( D_ALWAYS, "Using %s for GAHP name.\n", gahpName.c_str() );
+	gahp = new GahpClient( gahpName.c_str(), gahp_path, &args );
 	free(gahp_path);
 	gahp->setNotificationTimerId( evaluateStateTid );
 	gahp->setMode( GahpClient::normal );
@@ -384,6 +412,8 @@ EC2Job::EC2Job( ClassAd *classad ) :
 
 		token = GetNextToken( " ", false );
 		if ( !token || strcasecmp( token, "ec2" ) ) {
+			holdReasonCode = 2;
+			holdReasonSubCode = 7;
 			formatstr( error_string, "%s not of type ec2", ATTR_GRID_JOB_ID );
 			goto error_exit;
 		}
@@ -427,6 +457,8 @@ EC2Job::EC2Job( ClassAd *classad ) :
 	gmState = GM_HOLD;
 	if ( !error_string.empty() ) {
 		jobAd->Assign( ATTR_HOLD_REASON, error_string.c_str() );
+		jobAd->Assign( ATTR_HOLD_REASON_CODE, holdReasonCode );
+		jobAd->Assign( ATTR_HOLD_REASON_SUBCODE, holdReasonSubCode );
 	}
 
 	return;
@@ -523,6 +555,8 @@ void EC2Job::doEvaluateState()
 					dprintf( D_ALWAYS, "(%d.%d) Error starting GAHP\n",
 							 procID.cluster, procID.proc );
 					jobAd->Assign( ATTR_HOLD_REASON, "Failed to start GAHP" );
+					jobAd->Assign( ATTR_HOLD_REASON_CODE, 2 );
+					jobAd->Assign( ATTR_HOLD_REASON_SUBCODE, 8 );
 					gmState = GM_HOLD;
 					break;
 				}
@@ -539,6 +573,8 @@ void EC2Job::doEvaluateState()
 						gmState = GM_DELETE;
 						break;
 					} else {
+						holdReasonCode = 1;
+						holdReasonSubCode = 9;
 						formatstr( errorString, "Failed to authenticate %s.",
 									myResource->authFailureMessage.c_str() );
 						dprintf( D_ALWAYS, "(%d.%d) %s\n",
@@ -581,9 +617,22 @@ void EC2Job::doEvaluateState()
 						}
 
 						if( ! m_remoteJobId.empty() ) {
-							// If we've already spawned an instance, cancel
-							// the spot request immediately.
-							gmState = GM_SPOT_CANCEL;
+							// Copied from GM_SPOT_CANCEL, so we don't want
+							// to waste a request there.
+
+							// Since we know the request is done, forget it.
+							SetRequestID( NULL );
+							requestScheddUpdate( this, false );
+
+							// Dedicated instances only set their state reason
+							// code when terminating; avoid confusing our code.
+							m_state_reason_code.clear();
+
+							// Cancelling a one-time spot request which has
+							// been fulfilled is totally pointless (it's not
+							// even required to shrink the list of SIR IDs).
+							// Instead, go directly to GM_SUBMITTED.
+							gmState = GM_SUBMITTED;
 						}
 					} else {
 						// Our starting assumption is that we still have
@@ -645,6 +694,8 @@ void EC2Job::doEvaluateState()
 
 					if ( m_client_token.empty() && m_key_pair_file.empty() &&
 						 !m_key_pair.empty() ) {
+						holdReasonCode = 1;
+						holdReasonSubCode = 10;
 						formatstr( errorString, "Can't use existing ssh keypair for server type %s", myResource->m_serverType.c_str() );
 						gmState = GM_HOLD;
 						break;
@@ -741,6 +792,8 @@ void EC2Job::doEvaluateState()
 								gahp_error_code.c_str(),
 								errorString.c_str() );
 						gmState = GM_HOLD;
+						holdReasonCode = 4;
+						holdReasonSubCode = 11;
 						break;
 					}
 				}
@@ -860,6 +913,8 @@ void EC2Job::doEvaluateState()
 								procID.cluster, procID.proc,
 								gahp_error_code.c_str(),
 								errorString.c_str() );
+						holdReasonCode = 4;
+						holdReasonSubCode = 12;
 						gmState = GM_HOLD;
 					}
 
@@ -888,11 +943,24 @@ void EC2Job::doEvaluateState()
 					break;
 				}
 
+				// Copied from GM_SPOT_CANCEL, so we don't want to waste
+				// a request there.
 				if( ! m_spot_price.empty() ) {
-					gmState = GM_SPOT_CANCEL;
-				} else {
-					gmState = GM_SUBMITTED;
+					// Since we know the request is gone, forget about it.
+					SetRequestID( NULL );
+					requestScheddUpdate( this, false );
+
+					// Dedicated instances only set their state reason code
+					// when terminating; avoid confusing our code.
+					m_state_reason_code.clear();
+
+					// Cancelling a one-time spot request which has been
+					// fulfilled is totally pointless (it's not even required
+					// to shrink the list of SIR IDs).  Instead, go directly
+					// to GM_SUBMITTED.
 				}
+
+				gmState = GM_SUBMITTED;
 				break;
 
 
@@ -936,12 +1004,13 @@ void EC2Job::doEvaluateState()
 
 				if ( remoteJobState == EC2_VM_STATE_TERMINATED ) {
 					gmState = GM_DONE_SAVE;
+					// TODO: Ask Jaime if the lack of a break here
+					// is deliberate.
 				}
 
 				if ( condorState == REMOVED || condorState == HELD ) {
 					gmState = GM_CANCEL;
-				}
-				else {
+				} else {
 					// Don't go to GM probe until asked (when the remote
 					// job status changes).
 					if( ! probeNow ) { break; }
@@ -1187,12 +1256,16 @@ void EC2Job::doEvaluateState()
 							formatstr( errorString, "Abnormal instance termination: %s.", m_state_reason_code.c_str() );
 							dprintf( D_ALWAYS, "(%d.%d) %s\n", procID.cluster, procID.proc, errorString.c_str() );
 							gmState = GM_HOLD;
+							holdReasonCode = 5;
+							holdReasonSubCode = 13;
 							break;
 						} else {
 							// Treat all unrecognized reasons as abnormal.
 							formatstr( errorString, "Unrecognized reason for instance termination: %s.  Treating as abnormal.", m_state_reason_code.c_str() );
 							dprintf( D_ALWAYS, "(%d.%d) %s\n", procID.cluster, procID.proc, errorString.c_str() );
 							gmState = GM_HOLD;
+							holdReasonCode = 5;
+							holdReasonSubCode = 14;
 							break;
 						}
 					}
@@ -1209,11 +1282,22 @@ void EC2Job::doEvaluateState()
 				// Rather than duplicate code in the spot instance subgraph,
 				// just handle jobs with no corresponding instance here.
 				if( m_remoteJobId.empty() ) {
-					// Bypasses the polling delay in GM_CANCEL_CHECK.
-					probeNow = true;
+					// Since I haven't been able to prove that we will
+					// only arrive in GM_CANCEL without a remote job ID
+					// if we can't find one, we shouldn't skip the poll in
+					// GM_CANCEL_CHECK -- we might learn something important.
+					//
+					// However, if this job is a spot job, rather than
+					// showing up as terminated, shutting down, or purged,
+					// it may show up as "fulfilled", "cancelled", and the
+					// like.  Rather than handle those cases in the
+					// instance code, we should skip GM_CANCEL entirely if
+					// we know that we cancelled the spot request before
+					// it created an instance.
 				} else {
-					// Force us to wait a polling delay before checking
-					// to see if this worked.
+					// This will become true after the next status poll,
+					// because EC2_VM_STATE_CANCELLING isn't be returned by
+					// the EC2 API.
 					probeNow = false;
 
 					rc = gahp->ec2_vm_stop( m_serviceUrl,
@@ -1249,6 +1333,8 @@ void EC2Job::doEvaluateState()
 									 gahp_error_code.c_str(),
 									 errorString.c_str() );
 							gmState = GM_HOLD;
+							holdReasonCode = 6;
+							holdReasonSubCode = 15;
 							break;
 						}
 
@@ -1323,6 +1409,8 @@ void EC2Job::doEvaluateState()
 						formatstr( errorString, "Job cancel did not succeed after %d tries, giving up.", maxRetryTimes );
 						dprintf( D_ALWAYS, "(%d.%d) %s\n", procID.cluster, procID.proc, errorString.c_str() );
 						gmState = GM_HOLD;
+						holdReasonCode = 6;
+						holdReasonSubCode = 16;
 						break;
 					}
 				}
@@ -1350,7 +1438,7 @@ void EC2Job::doEvaluateState()
 								 sizeof(holdReason) - 1 );
 					}
 
-					JobHeld( holdReason );
+					JobHeld( holdReason, holdReasonCode, holdReasonSubCode );
 				}
 
 				gmState = GM_DELETE;
@@ -1515,6 +1603,8 @@ void EC2Job::doEvaluateState()
 					// job, or put in on hold, before the spot instance
 					// request failed, they should learn about the failure.
 					gmState = GM_HOLD;
+					holdReasonCode = 4;
+					holdReasonSubCode = 17;
 					break;
 				}
 
@@ -1524,7 +1614,15 @@ void EC2Job::doEvaluateState()
 			// the request proper, handle any instance(s) that it may
 			// have spawned.
 			case GM_SPOT_CANCEL:
-				if( ! m_spot_request_id.empty() ) {
+				if( m_spot_request_id.empty() ) {
+					dprintf( D_ALWAYS, "(%d.%d) Entered GM_SPOT_CANCEL without a spot request ID; this should be impossible.\n", procID.cluster, procID.proc );
+					gmState = GM_SUBMITTED;
+				} else {
+					// Forcing the state to be something the EC2 API doesn't
+					// return forces probeNow to set by the next status poll.
+					remoteJobState = EC2_VM_STATE_SPOT_CANCELLING;
+					SetRemoteJobStatus( EC2_VM_STATE_SPOT_CANCELLING );
+
 					// Send a command to the GAHP, or poll for its result(s).
 					rc = gahp->ec2_spot_stop(   m_serviceUrl,
 												m_public_key_file,
@@ -1554,8 +1652,45 @@ void EC2Job::doEvaluateState()
 									errorString.c_str() );
 						dprintf( D_FULLDEBUG, "Error transition: GM_SPOT_CANCEL + <GAHP failure> = GM_HOLD\n" );
 						gmState = GM_HOLD;
+						holdReasonCode = 6;
+						holdReasonSubCode = 17;
 						break;
 					}
+
+					// GM_SPOT_CANCEL_CHECK checks if the SIR has spawned an
+					// instance and, if it hasn't, that it's entered the
+					// cancelled state, at which point it's safe to forget it.
+					//
+					// If the SIR /did/ spawn an instance, we move into the
+					// on-demand instance subgraph of the state machine; we
+					// only enter GM_SPOT_CANCEL if the job was removed or
+					// held, so the on-demand state machine will immediately
+					// go into GM_CANCEL.
+					probeNow = false;
+					gmState = GM_SPOT_CANCEL_CHECK;
+				}
+				break;
+
+			case GM_SPOT_CANCEL_CHECK:
+				if( ! probeNow ) { break; }
+				probeNow = false;
+
+				// If the SIR has spawned an instance, record it; GM_SUBMITTED
+				// will restart the removal process, if appropriate.
+				if(! m_remoteJobId.empty()) {
+					// Try as often as we're willing to terminate the instance,
+					// even if we tried a few times to cancel the spot request.
+					m_retry_times = 0;
+
+					gmState = GM_SAVE_INSTANCE_ID;
+					break;
+				}
+
+				// If the SIR hasn't spawned an instance, but has been
+				// cancelled, go ahead and delete the job.
+				if( remoteJobState == "cancelled" ) {
+					// This shouldn't ever matter, but it's cleaner.
+					m_retry_times = 0;
 
 					// Since we know the request is gone, forget about it.
 					SetRequestID( NULL );
@@ -1565,14 +1700,24 @@ void EC2Job::doEvaluateState()
 					// terminating.
 					m_state_reason_code.clear();
 
-					// Rather than decide if we crashed after cancelling a
-					// request but before removing its ID from the job ad,
-					// just never remove it.  It won't hurt to try to cancel
-					// the request again, and since we already have the
-					// instance ID, we know we're not done when we cancel it.
+					// For now, just assume that the cancel was successful.
+					gmState = GM_DELETE;
+					break;
+				} else {
+					// If the SIR hasn't spawned an instance but we failed
+					// to cancel it, try a few more times, to be sure.
+					if( m_retry_times++ < maxRetryTimes ) {
+						gmState = GM_SPOT_CANCEL;
+						break;
+					} else {
+						formatstr( errorString, "Spot job cancel did not succeed after %d tries, giving up.", maxRetryTimes );
+						dprintf( D_ALWAYS, "(%d.%d) %s\n", procID.cluster, procID.proc, errorString.c_str() );
+						gmState = GM_HOLD;
+						holdReasonCode = 6;
+						holdReasonSubCode = 18;
+						break;
+					}
 				}
-
-				gmState = GM_SUBMITTED;
 				break;
 
 			// Alternates with GM_SPOT_QUERY to watch for an instance start.
@@ -1580,7 +1725,18 @@ void EC2Job::doEvaluateState()
 				// If the Condor job has been held or removed, we need to
 				// know what the state of the remote job is (whether it's
 				// spawned an instance) before we can decide what to do.
+				//
+				// However, we can't just wait for a status update, because
+				// we may be trying to remove a spot request whose state
+				// isn't going to change.  (For instance, if the bid was
+				// too low, it may never become high enough.)
+				//
+				// During recovery, if the job doesn't have a spot request
+				// ID recorded, we'll end up here without ever having fetched
+				// the job's current status.  Make sure we've seen at least
+				// one update before proceeding.
 				if( condorState == HELD || condorState == REMOVED ) {
+					if( ! updatedOnce ) { break; }
 					dprintf( D_FULLDEBUG, "Error transition: GM_SPOT_SUBMITTED + HELD|REMOVED = GM_SPOT_QUERY\n" );
 					gmState = GM_SPOT_QUERY;
 					break;
@@ -1641,15 +1797,11 @@ void EC2Job::doEvaluateState()
 					dprintf( D_ALWAYS, "(%d.%d) %s\n", procID.cluster, procID.proc, errorString.c_str() );
 					dprintf( D_FULLDEBUG, "Error transition: GM_SPOT_QUERY + <spot purged> = GM_HOLD\n" );
 					gmState = GM_HOLD;
+					holdReasonCode = 6;
+					holdReasonSubCode = 19;
 					break;
 				}
 				purgedTwice = false;
-
-				// The remote job state was updated in StatusUpdate().
-				if( ! m_state_reason_code.empty() ) {
-					jobAd->Assign( ATTR_EC2_STATUS_REASON_CODE, m_state_reason_code.c_str() );
-					requestScheddUpdate( this, false );
-				}
 
 				// If the request spawned an instance, we must save the
 				// instance ID.  This (GM_SAVE_INSTANCE_ID) will then cancel
@@ -1667,9 +1819,15 @@ void EC2Job::doEvaluateState()
 				// job has been held or removed, cancel the request.  (It's
 				// OK to cancel the request twice.)
 				if( condorState == HELD || condorState == REMOVED ) {
-					// Force GM_SUBMITTED (from GM_SPOT_CANCEL) to skip
-					// an instance-status probe.
-					remoteJobState = EC2_VM_STATE_TERMINATED;
+					// If at the end of GM_SPOT_CANCEL we confirm that the
+					// request is in the cancelled state /and/ has no
+					// instance ID, we can bypass the instance subgraph
+					// and therefore don't need to set the remoteJobState.
+					// OTOH, if the service wins the race (and starts an
+					// instance before we can cancel the request), we
+					// shouldn't mess with the remoteJobState (and instead
+					// deal with it being set appropriately by the next
+					// polling interval).
 					dprintf( D_FULLDEBUG, "Error transition: GM_SPOT_QUERY + HELD|REMOVED = GM_SPOT_CANCEL\n" );
 					gmState = GM_SPOT_CANCEL;
 					break;
@@ -1697,6 +1855,8 @@ void EC2Job::doEvaluateState()
 					dprintf( D_ALWAYS, "(%d.%d) %s\n", procID.cluster, procID.proc, errorString.c_str() );
 					dprintf( D_FULLDEBUG, "Error transition: GM_SPOT_QUERY + <cancelled> = GM_HOLD\n" );
 					gmState = GM_HOLD;
+					holdReasonCode = 1;
+					holdReasonSubCode = 20;
 					break;
 				} else if( remoteJobState == "pending" ) {
 					// Because the bulk status update may occur between
@@ -1706,7 +1866,6 @@ void EC2Job::doEvaluateState()
 					// job didn't exist at the time of the poll,
 					// m_state_reason_code is unset, and we have to handle
 					// the "actual" job status here.
-					//
 					//
 					// Arguably, we should instead have GM_SPOT_START
 					// clear probeNow to force the wait for another poll...
@@ -1723,6 +1882,8 @@ void EC2Job::doEvaluateState()
 					dprintf( D_ALWAYS, "(%d.%d) %s\n", procID.cluster, procID.proc, errorString.c_str() );
 					dprintf( D_FULLDEBUG, "Error transition: GM_SPOT_QUERY + <unexpected state> = GM_HOLD\n" );
 					gmState = GM_HOLD;
+					holdReasonCode = 2;
+					holdReasonSubCode = 21;
 					break;
 				}
 
@@ -1770,7 +1931,7 @@ void EC2Job::doEvaluateState()
 				}
 
 				gmState = GM_SPOT_SUBMITTED;
-				dprintf( D_FULLDEBUG, "Recovery transition: GM_SPOT_CHECK -> GM_SUBMITTED\n" );
+				dprintf( D_FULLDEBUG, "Recovery transition: GM_SPOT_CHECK -> GM_SPOT_SUBMITTED\n" );
 				} break;
 
 			case GM_SEEK_INSTANCE_ID: {
@@ -2183,10 +2344,19 @@ void EC2Job::StatusUpdate( const char * instanceID,
 
 	if( stateReasonCode != NULL && strlen( stateReasonCode ) != 0
 	 && strcmp( stateReasonCode, "NULL" ) != 0 ) {
-		// dprintf( D_FULLDEBUG, "(%d.%d) Updating state reason code to from '%s' to '%s' for job '%s'.\n", procID.cluster, procID.proc, m_state_reason_code.c_str(), stateReasonCode, m_remoteJobId.c_str() );
-		m_state_reason_code = stateReasonCode;
+		if( m_state_reason_code != stateReasonCode ) {
+			// dprintf( D_FULLDEBUG, "(%d.%d) Updating state reason code to from '%s' to '%s' for job '%s'.\n", procID.cluster, procID.proc, m_state_reason_code.c_str(), stateReasonCode, m_remoteJobId.c_str() );
+			m_state_reason_code = stateReasonCode;
+			jobAd->Assign( ATTR_EC2_STATUS_REASON_CODE, m_state_reason_code.c_str() );
+			requestScheddUpdate( this, false );
+		}
 	} else {
-		m_state_reason_code.clear();
+		if(! m_state_reason_code.empty()) {
+			// dprintf( D_FULLDEBUG, "(%d.%d) Clearing old state reason code of '%s' for job '%s'.\n", procID.cluster, procID.proc, m_state_reason_code.c_str(), m_remoteJobId.c_str() );
+			m_state_reason_code.clear();
+			jobAd->Assign( ATTR_EC2_STATUS_REASON_CODE, m_state_reason_code.c_str() );
+			requestScheddUpdate( this, false );
+		}
 	}
 
 	if( instanceID != NULL && strlen( instanceID ) != 0
@@ -2292,6 +2462,8 @@ void EC2Job::ResourceLeaseExpired() {
 	errorString = "Resource was down for too long.";
 	dprintf( D_ALWAYS, "(%d.%d) Putting job on hold: resource was down for too long.\n", procID.cluster, procID.proc );
 	gmState = GM_HOLD;
+	holdReasonCode = 5;
+	holdReasonSubCode = 22;
 	resourceLeaseTID = -1;
 	SetEvaluateState();
 }

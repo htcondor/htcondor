@@ -7826,9 +7826,14 @@ default=/tmp/EC2GahpLog.$(USERNAME)
 win32_default=NUL
 review=?
 
+[EC2_GAHP_DEBUG]
+default=D_PID
+review=?
+
 [GT2_GAHP]
 default=$(SBIN)/gahp_server
 review=?
+
 [EC2_GAHP]
 default=$(SBIN)/ec2_gahp
 review=?

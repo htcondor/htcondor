@@ -76,6 +76,30 @@ public:
 	time_t lastSubmitAttempt;
 	int numSubmitAttempts;
 
+
+	//
+	// Hold reason codes were assigned as follows.  Hold reason sub codes
+	// were assigned sequentially by order of their appearance in the code,
+	// and as such are unique between hold codes.
+	//
+	//  1: (apparent) user error.  Example: an unspecified access key ID.
+	//  2: internal error.  Example: the grid resource type was not "ec2";
+	//     the GAHP should never have seen this job ad.
+	//  3: administrator error.  Example: EC2_GAHP being unset.
+	//  4: connection problem.  Example: E_CURL_IO.
+	//  5: server error.  Example: an unrecognized or unexpected job state.
+	//  6: INSTANCE MAY HAVE BEEN LOST.  Example: we tried and failed to
+	//     cancel a spot instance request.
+	//
+	// Of these, only code 4 has a decent chance of working if tried again.
+	// Code 5 may work, but probably won't (for example, the instance would
+	// have to change to a recognized state).  Codes 1, 2, and 3 would need
+	// to debugged; CODE 6 REQUIRES THE EC2 ACCOUNT OWNER TO INVESTIGATE.
+	//
+	int holdReasonCode;
+	int holdReasonSubCode;
+
+
 	std::string errorString;
 	std::string m_remoteJobId;
 	std::string remoteJobState;

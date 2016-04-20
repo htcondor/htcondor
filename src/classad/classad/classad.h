@@ -138,7 +138,7 @@ class ClassAd : public ExprTree
 			@param value The integer value of the attribute.
 			@param f The multiplicative factor to be attached to value.
 			@see Value::NumberFactor
-e		*/
+		*/
 		bool InsertAttr( const std::string &attrName,int value, 
 				Value::NumberFactor f=Value::NO_FACTOR );
 		bool InsertAttr( const std::string &attrName,long value, 

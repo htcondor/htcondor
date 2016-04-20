@@ -72,32 +72,46 @@
 
 class AmazonRequest {
     public:
-        AmazonRequest();
+        AmazonRequest( int i, const char * c ) :
+        	includeResponseHeader(false), requestID(i), requestCommand(c) { }
         virtual ~AmazonRequest();
 
         virtual bool SendRequest();
 
-    protected:    
+    protected:
         typedef std::map< std::string, std::string > AttributeValueMap;
         AttributeValueMap query_parameters;
-        
+
         std::string serviceURL;
         std::string accessKeyFile;
         std::string secretKeyFile;
-        
+
         std::string errorMessage;
         std::string errorCode;
-        
+
         std::string resultString;
 
 		bool includeResponseHeader;
+
+		// For tracing.
+		int requestID;
+		std::string requestCommand;
+		struct timespec mutexReleased;
+		struct timespec lockGained;
+		struct timespec requestBegan;
+		struct timespec requestEnded;
+		struct timespec mutexGained;
+		struct timespec sleepBegan;
+		struct timespec liveLine;
+		struct timespec sleepEnded;
+
 };
 
 // EC2 Commands
 
 class AmazonVMStart : public AmazonRequest {
 	public:
-		AmazonVMStart();
+		AmazonVMStart( int i, const char * c ) : AmazonRequest( i, c ) { }
 		virtual ~AmazonVMStart();
 
         virtual bool SendRequest();
@@ -111,11 +125,11 @@ class AmazonVMStart : public AmazonRequest {
 
 class AmazonVMStartSpot : public AmazonVMStart {
     public:
-        AmazonVMStartSpot();
+		AmazonVMStartSpot( int i, const char * c ) : AmazonVMStart( i, c ) { }
         virtual ~AmazonVMStartSpot();
-        
+
         virtual bool SendRequest();
-        
+
         static bool ioCheck( char ** argv, int argc );
         static bool workerFunction( char ** argv, int argc, std::string & result_string );
 
@@ -125,7 +139,7 @@ class AmazonVMStartSpot : public AmazonVMStart {
 
 class AmazonVMStop : public AmazonRequest {
 	public:
-		AmazonVMStop();
+		AmazonVMStop( int i, const char * c ) : AmazonRequest( i, c ) { }
 		virtual ~AmazonVMStop();
 
 		static bool ioCheck(char **argv, int argc);
@@ -134,9 +148,9 @@ class AmazonVMStop : public AmazonRequest {
 
 class AmazonVMStopSpot : public AmazonVMStop {
     public:
-        AmazonVMStopSpot();
+		AmazonVMStopSpot( int i, const char * c ) : AmazonVMStop( i, c ) { }
         virtual ~AmazonVMStopSpot();
-        
+
         // EC2_VM_STOP_SPOT uses the same argument structure as EC2_VM_STOP.
 		// static bool ioCheck( char ** argv, int argc );
 		static bool workerFunction( char ** argv, int argc, std::string & result_string );
@@ -164,7 +178,7 @@ class AmazonStatusResult {
 
 class AmazonVMStatusAll : public AmazonRequest {
 	public:
-		AmazonVMStatusAll();
+		AmazonVMStatusAll( int i, const char * c ) : AmazonRequest( i, c ) { }
 		virtual ~AmazonVMStatusAll();
 
         virtual bool SendRequest();
@@ -178,7 +192,7 @@ class AmazonVMStatusAll : public AmazonRequest {
 
 class AmazonVMStatus : public AmazonVMStatusAll {
 	public:
-		AmazonVMStatus();
+		AmazonVMStatus( int i, const char * c ) : AmazonVMStatusAll( i, c ) { }
 		virtual ~AmazonVMStatus();
 
 		static bool ioCheck(char **argv, int argc);
@@ -196,11 +210,11 @@ class AmazonStatusSpotResult {
 
 class AmazonVMStatusSpot : public AmazonVMStatus {
     public:
-        AmazonVMStatusSpot();
+		AmazonVMStatusSpot( int i, const char * c ) : AmazonVMStatus( i, c ) { }
         virtual ~AmazonVMStatusSpot();
 
         virtual bool SendRequest();
-        
+
         // EC2_VM_STATUS_SPOT uses the same argument structure as EC2_VM_STATUS_SPOT.
 		// static bool ioCheck( char ** argv, int argc );
 		static bool workerFunction( char ** argv, int argc, std::string & result_string );
@@ -211,7 +225,7 @@ class AmazonVMStatusSpot : public AmazonVMStatus {
 
 class AmazonVMStatusAllSpot : public AmazonVMStatusSpot {
     public:
-        AmazonVMStatusAllSpot();
+		AmazonVMStatusAllSpot( int i, const char * c ) : AmazonVMStatusSpot( i, c ) { }
         virtual ~AmazonVMStatusAllSpot();
 
 		static bool ioCheck( char ** argv, int argc );
@@ -220,7 +234,7 @@ class AmazonVMStatusAllSpot : public AmazonVMStatusSpot {
 
 class AmazonVMCreateKeypair : public AmazonRequest {
 	public:
-		AmazonVMCreateKeypair();
+		AmazonVMCreateKeypair( int i, const char * c ) : AmazonRequest( i, c ) { }
 		virtual ~AmazonVMCreateKeypair();
 
         virtual bool SendRequest();
@@ -234,7 +248,7 @@ class AmazonVMCreateKeypair : public AmazonRequest {
 
 class AmazonVMDestroyKeypair : public AmazonRequest {
 	public:
-		AmazonVMDestroyKeypair();
+		AmazonVMDestroyKeypair( int i, const char * c ) : AmazonRequest( i, c ) { }
 		virtual ~AmazonVMDestroyKeypair();
 
 		static bool ioCheck(char **argv, int argc);
@@ -243,7 +257,7 @@ class AmazonVMDestroyKeypair : public AmazonRequest {
 
 class AmazonAssociateAddress : public AmazonRequest {
     public:
-        AmazonAssociateAddress();
+		AmazonAssociateAddress( int i, const char * c ) : AmazonRequest( i, c ) { }
         virtual ~AmazonAssociateAddress();
 
         static bool ioCheck(char **argv, int argc);
@@ -252,7 +266,7 @@ class AmazonAssociateAddress : public AmazonRequest {
 
 class AmazonCreateTags : public AmazonRequest {
     public:
-        AmazonCreateTags();
+		AmazonCreateTags( int i, const char * c ) : AmazonRequest( i, c ) { }
         virtual ~AmazonCreateTags();
 
         static bool ioCheck(char **argv, int argc);
@@ -265,7 +279,7 @@ class AmazonCreateTags : public AmazonRequest {
  */
 class AmazonAttachVolume : public AmazonRequest {
     public:
-        AmazonAttachVolume();
+        AmazonAttachVolume( int i, const char * c ) : AmazonRequest( i, c ) { }
         virtual ~AmazonAttachVolume();
 
         static bool ioCheck(char **argv, int argc);
@@ -275,7 +289,7 @@ class AmazonAttachVolume : public AmazonRequest {
 
 class AmazonVMServerType : public AmazonRequest {
 	public:
-		AmazonVMServerType();
+        AmazonVMServerType( int i, const char * c ) : AmazonRequest( i, c ) { }
 		virtual ~AmazonVMServerType();
 
 		virtual bool SendRequest();

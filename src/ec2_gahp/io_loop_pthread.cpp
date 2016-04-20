@@ -33,6 +33,12 @@
 #include "amazonCommands.h"
 #include "subsystem_info.h"
 
+// Globals from amazonCommand.cpp's statistitcs.
+extern int NumRequests;
+extern int NumDistinctRequests;
+extern int NumRequestsExceedingLimit;
+extern int NumExpiredSignatures;
+
 #define MIN_WORKER_NUM 1
 #define AMAZON_GAHP_VERSION	"1.0"
 
@@ -233,7 +239,7 @@ main( int argc, char ** const argv )
 	printf ("%s\n", version);
 	fflush(stdout);
 
-	dprintf (D_FULLDEBUG, "EC2 GAHP initialized\n");
+	dprintf( D_ALWAYS, "EC2 GAHP initialized\n" );
 
 		/* Our main thread should grab the mutex first.  We will then
 		 * release it and let other threads run when we would otherwise
@@ -254,6 +260,7 @@ static int
 verify_gahp_command(char ** argv, int argc) {
 	// Special Commands First
 	if (strcasecmp (argv[0], GAHP_COMMAND_RESULTS) == 0 ||
+			strcasecmp (argv[0], GAHP_COMMAND_STATISTICS) == 0 ||
 			strcasecmp (argv[0], GAHP_COMMAND_VERSION) == 0 ||
 			strcasecmp (argv[0], GAHP_COMMAND_COMMANDS) == 0 ||
 			strcasecmp (argv[0], GAHP_COMMAND_QUIT) == 0 ||
@@ -418,6 +425,12 @@ IOProcess::stdinPipeHandler()
 			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_ASYNC_MODE_OFF) == 0) {
 				m_async_mode = false;
 				gahp_output_return_success();
+			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_STATISTICS) == 0) {
+				printf( "%s %d %d %d %d\n", GAHP_RESULT_SUCCESS,
+					NumRequests, NumDistinctRequests,
+					NumRequestsExceedingLimit, NumExpiredSignatures
+				);
+				fflush( stdout );
 			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_COMMANDS) == 0) {
 				StringList amazon_commands;
 				int num_commands = 0;
@@ -574,6 +587,8 @@ IOProcess::addNewRequest(const char *cmd)
 
 	Request* new_req = new Request(cmd);
 	ASSERT(new_req);
+	dprintf( D_PERF_TRACE, "request #%d (%s): dispatch\n",
+		new_req->m_reqid, new_req->m_args.argv[0] );
 
 	// check if there is available worker process
 	Worker *worker = findFreeWorker();
