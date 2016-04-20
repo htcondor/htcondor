@@ -23,8 +23,7 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item HTCondor version 8.4.6 not yet released.
-%\item HTCondor version 8.4.X released on Month Date, 2016.
+\item HTCondor version 8.4.6 released on April 11, 2016.
 
 \end{itemize}
 
@@ -33,7 +32,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item \Condor{advertise} \Opt{-multiple} now tolerates multiple blank lines in the
+input file. It no longer quits parsing on the first first blank line that does not
+follow a valid ClassAd.
+\Ticket{5147}
 
 \end{itemize}
 
@@ -42,18 +44,34 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Fixed a bug introduced in version 8.3 that
-removed the attribute \Macro{REMOTE\_GROUP\_RESOURCES\_IN\_USE}
-from the job ad in the negotiator.
-\Ticket{5593}
+\item Fixed bug where when partitionable slots were
+enabled in the \Condor{startd}, a job would be unable
+to start running on that machine in some cases.
+\Ticket{5626}
 
 \item Fixed a bug that would cause the \Condor{startd}
 to crash when \Macro{ALLOW\_PSLOT\_PREEMPTION} was enabled.
 \Ticket{5586}
 
+\item Fixed a bug introduced in version 8.3 that
+removed the attribute \Macro{REMOTE\_GROUP\_RESOURCES\_IN\_USE}
+from the job ad in the negotiator.
+\Ticket{5593}
+
+\item Fixed a bug where HTCondor would regard as invalid text representations
+of IPv6 addresses which were the longest possible.  This bug typically
+manifested as a failure to contact hosts which were advertising IPv6 addresses
+of this sort.
+\Ticket{5585}
+
 \item Fixed a memory leak in the \Condor{negotiator} when
 \Macro{ALLOW\_PSLOT\_PREEMPTION} was enabled.
 \Ticket{5571}
+
+\item Fixed a bug where after a \Condor{schedd} restart
+the submitter attribute \Macro{WEIGHTED\_JOBS\_RUNNING}
+would be incorrectly computed.
+\Ticket{5637}
 
 \item Fixed a bug when using \MacroNI{CLAIM\_PARTITIONABLE\_LEFTOVERS}
 and flocking.
@@ -72,6 +90,15 @@ incorrectly when \MacroNI{SOFT\_UID\_DOMAIN} is set to \Expr{True}.
 \item Fixed a bug that caused supplemental groups to be set incorrectly
 when executing file transfer plugins and various hooks.
 \Ticket{5600}
+
+\item Fixed a bug that resulted in Windows 10 being reported as
+WindowsUnknown in the \Attr{OPSYSNAME} attribute of the \Condor{startd}
+ClassAd.
+\Ticket{5575}
+
+\item Fixed a typo in the \MacroNI{LIMIT\_JOB\_RUNTIMES} policy metaknob
+that prevented the policy from working as intended.
+\Ticket{5307}
 
 \end{itemize}
 
