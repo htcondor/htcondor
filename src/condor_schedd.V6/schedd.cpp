@@ -4918,21 +4918,27 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 		if (proxy_path) free(proxy_path);
 		return FALSE;
 	}
-	free(SpoolSpace);
 	MyString final_proxy_path(proxy_path);
 	MyString temp_proxy_path(final_proxy_path);
 	temp_proxy_path += ".tmp";
 	free(proxy_path);
 
 #ifndef WIN32
-		// Check the ownership of the proxy and switch our priv state
-		// if needed
-	StatInfo si( final_proxy_path.Value() );
-	if ( si.Error() == SINoFile ) {
+		// Check the ownership of the job's spool directory and switch
+		// our priv state if needed.
+		// The permissions on the spool directory may prevent us from
+		// stat'ing the proxy file directly as the wrong user.
+		// CRUFT: Once we remove the option to have the schedd chown
+		//   the job's spool directory (CHOWN_JOB_SPOOL_FILES), this
+		//   check can be removed (the files will always be owned by
+		//   the job owner).
+	StatInfo si( SpoolSpace );
+	if ( si.Error() != SIGood ) {
 		dprintf( D_AUDIT | D_FAILURE, *rsock, "updateGSICred(%d): failed, "
-			 "job %d.%d's proxy doesn't exist\n", 
-			 cmd, jobid.cluster, jobid.proc );
+			"stat of spool dirctory for job %d.%d failed: %d\n",
+			cmd, jobid.cluster, jobid.proc, (int)si.Error() );
 		refuse(s);
+		free(SpoolSpace);
 		return FALSE;
 	}
 	uid_t proxy_uid = si.GetOwner();
@@ -4951,6 +4957,7 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 				 job_owner, jobid.cluster, jobid.proc );
 		free( job_owner );
 		refuse(s);
+		free(SpoolSpace);
 		return FALSE;
 	}
 		// If the uids match, then we need to switch to user priv to
@@ -4963,6 +4970,7 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 					 job_owner );
 			free( job_owner );
 			refuse(s);
+			free(SpoolSpace);
 			return FALSE;
 		}
 		priv = set_user_priv();
@@ -4974,6 +4982,8 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 	free( job_owner );
 	job_owner = NULL;
 #endif
+
+	free(SpoolSpace);
 
 		// Decode the proxy off the wire, and store into the
 		// file temp_proxy_path, which is known to be in the SPOOL dir
