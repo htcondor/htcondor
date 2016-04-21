@@ -83,6 +83,7 @@ if ( WITH_BLAHP )
 							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/ld-library-path.patch -p1 &&
 							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/run-dir.patch -p1 &&
 							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/request-memory.patch -p1 &&
+							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/condor-multicore.patch -p1 &&
 							cp ${CMAKE_CURRENT_SOURCE_DIR}/classads.m4 project/ &&
 							cp ${CMAKE_CURRENT_SOURCE_DIR}/${GLOBUS_M4_FILE} project/globus.m4 &&
 							cp ${CMAKE_CURRENT_SOURCE_DIR}/glite.m4 project/ &&
