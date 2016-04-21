@@ -212,13 +212,7 @@ class Throttle {
 
         // This function is called without the big mutex.  Do NOT add
         // dprintf() statements or refers to globals other than 'this'.
-        bool getDeadline( struct timespec * t ) {
-            if( t == NULL ) { return false; }
-            if( deadline.tv_sec == 0 ) { return false; }
-
-            * t = deadline;
-            return true;
-        }
+        struct timespec getDeadline() { return deadline; }
 
         // This function is called without the big mutex.  Do NOT add
         // dprintf() statements or refers to globals other than 'this'.
@@ -733,7 +727,7 @@ bool AmazonRequest::SendRequest() {
     // then the request has succeeded and we won't be retrying.)
     globalCurlThrottle.setDeadline( signatureTime, 300 );
     struct timespec liveline = globalCurlThrottle.getWhen();
-    struct timespec deadline; globalCurlThrottle.getDeadline( & deadline );
+    struct timespec deadline = globalCurlThrottle.getDeadline();
     if( Throttle::difference( & liveline, & deadline ) < 0 ) {
         amazon_gahp_grab_big_mutex();
         dprintf( D_PERF_TRACE, "request #%d (%s): deadline would be exceeded\n", requestID, requestCommand.c_str() );
