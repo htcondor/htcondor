@@ -174,8 +174,6 @@ Source1: generate-tarball.sh
 %endif
 
 # % if %systemd
-Source2: %{name}-tmpfiles.conf
-Source3: %{name}.service
 # % else
 Source4: condor.osg-sysconfig
 # % endif
@@ -1011,10 +1009,11 @@ rm -rf %{buildroot}/%{_sysconfdir}/init.d
 %if %systemd
 # install tmpfiles.d/condor.conf
 mkdir -p %{buildroot}%{_sysconfdir}/tmpfiles.d
-install -m 0644 %{SOURCE2} %{buildroot}%{_sysconfdir}/tmpfiles.d/%{name}.conf
+install -m 0644 %{buildroot}/etc/examples/condor-tmpfiles.conf %{buildroot}%{_sysconfdir}/tmpfiles.d/condor.conf
 
 mkdir -p %{buildroot}%{_unitdir}
-cp %{SOURCE3} %{buildroot}%{_unitdir}/condor.service
+install -m 0644 %{buildroot}/etc/examples/condor.service %{buildroot}%{_unitdir}/condor.service
+install -m 0644 %{buildroot}/etc/examples/condor.socket %{buildroot}%{_unitdir}/condor.socket
 %else
 # install the lsb init script
 install -Dp -m0755 %{buildroot}/etc/examples/condor.init %{buildroot}%{_initrddir}/condor
@@ -1189,6 +1188,7 @@ rm -rf %{buildroot}
 %if %systemd
 %config(noreplace) %_sysconfdir/tmpfiles.d/%{name}.conf
 %{_unitdir}/condor.service
+%{_unitdir}/condor.socket
 %else
 %_initrddir/condor
 %if 0%{?osg} || 0%{?hcc}
