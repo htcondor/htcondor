@@ -30,6 +30,7 @@
 
 #if !defined(WIN32)
 #include "glexec_kill.unix.h"
+#include <syslog.h>
 #endif
 
 extern int log_size;
@@ -413,8 +414,13 @@ main(int argc, char* argv[])
 	//
 	extern FILE* debug_fp;
 	extern char* debug_fn;
-	
-	if (log_file_name != NULL) {
+
+	if (log_file_name && !strcmp(log_file_name, "SYSLOG")) {
+#if !defined(WIN32)
+		openlog(NULL, LOG_NOWAIT|LOG_PID, LOG_DAEMON);
+		debug_fn = log_file_name;
+#endif
+	} else if (log_file_name != NULL) {
 		debug_fn = log_file_name;
 		debug_fp = safe_fopen_wrapper_follow(log_file_name, "a");
 		if (debug_fp == NULL) {

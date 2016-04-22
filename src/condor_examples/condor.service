@@ -3,6 +3,7 @@
 Description=Condor Distributed High-Throughput-Computing
 After=syslog.target network.target
 Wants=network.target
+Requires=condor.socket
 
 [Service]
 EnvironmentFile=-/etc/sysconfig/condor
@@ -11,7 +12,11 @@ ExecStop=/usr/sbin/condor_off -master
 ExecReload=/bin/kill -HUP $MAINPID
 Restart=always
 RestartSec=5
+WatchdogSec=5
+TimeoutStopSec=5
 StandardOutput=syslog
+NotifyAccess=main
+KillSignal=SIGKILL
 LimitNOFILE=16384
 ControlGroup=/condor
 

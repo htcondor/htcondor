@@ -55,6 +55,9 @@ extern int load_master_mgmt(void);
 #endif
 #endif
 
+#include "systemd_manager.h"
+#include <sstream>
+
 #ifdef WIN32
 
 #include "firewall.WINDOWS.h"
@@ -146,6 +149,84 @@ char	default_dc_daemon_list[] =
 
 // create an object of class daemons.
 class Daemons daemons;
+
+class SystemdNotifier : public Service {
+
+public:
+	SystemdNotifier() : m_watchdog_timer(-1) {}
+
+	void
+	config()
+	{
+		const condor_utils::SystemdManager & sd = condor_utils::SystemdManager::GetInstance();
+		int watchdog_secs = sd.GetWatchdogUsecs() / 1e6 / 2;
+		if (watchdog_secs <= 0) { watchdog_secs = 1; }
+		if (watchdog_secs > 20) { watchdog_secs = 10; }
+		Timeslice ts;
+		ts.setDefaultInterval(watchdog_secs);
+		m_watchdog_timer = daemonCore->Register_Timer(ts, static_cast<TimerHandlercpp>(&SystemdNotifier::status_handler),
+				"systemd status updater", this);
+		if (m_watchdog_timer < 0)
+		{
+			dprintf(D_ALWAYS, "Failed to register systemd update timer.\n");
+		} else {
+			dprintf(D_FULLDEBUG, "Set systemd to be notified once every %d seconds.\n", watchdog_secs);
+		}
+	}
+
+	void status_handler()
+	{
+		char *name;
+		class daemon *daemon;
+
+		daemons.ordered_daemon_names.rewind();
+		std::stringstream ss;
+		ss << "Problems: ";
+		bool had_prior = false;
+		bool missing_daemons = false;
+		while( (name = daemons.ordered_daemon_names.next()) ) {
+			daemon = daemons.FindDaemon( name );
+			if (!daemon->pid)
+			{
+				if (had_prior) { ss << ", "; }
+				else { had_prior = true; }
+				missing_daemons = true;
+				time_t starttime = daemon->GetNextRestart();
+				if (starttime)
+				{
+					time_t secs_to_start = starttime-time(NULL);
+					if (secs_to_start > 0)
+					{ ss << name << "=RESTART in " << secs_to_start << "s"; }
+					else
+					{ ss << name << "=RESTARTNG"; }
+				}
+				else
+				{ ss << name << "=STOPPED"; }
+			}
+		}
+		std::string status = ss.str();
+
+		const char * format_string = "STATUS=%s\nWATCHDOG=1";
+		if (!missing_daemons)
+		{
+			format_string = "READY=1\nSTATUS=%s\nWATCHDOG=1";
+			status = "All daemons are responding";
+		}
+
+		const condor_utils::SystemdManager &sd = condor_utils::SystemdManager::GetInstance();
+		int result = sd.Notify(format_string, status.c_str());
+		if (result == 0)
+		{
+			dprintf(D_ALWAYS, "systemd watchdog notification support disabled.\n");
+			daemonCore->Cancel_Timer(m_watchdog_timer);
+			m_watchdog_timer = -1;
+		}
+	}
+
+private:
+	int m_watchdog_timer;
+};
+SystemdNotifier g_systemd_notifier;
 
 // called at exit to deallocate stuff so that memory checking tools are
 // happy and don't think we leaked any of this...
@@ -488,6 +569,8 @@ main_init( int argc, char* argv[] )
 #endif
 	MasterPluginManager::Initialize();
 #endif
+
+	g_systemd_notifier.config();
 
 		// Register admin commands
 	daemonCore->Register_Command( RESTART, "RESTART",
@@ -1102,11 +1185,13 @@ init_daemon_list()
 		}
 
 			// start shared_port first for a cleaner startup
+		bool use_shared_port = false;
 		if( daemon_names.contains("SHARED_PORT") ) {
 			daemon_names.deleteCurrent();
 			daemon_names.rewind();
 			daemon_names.next();
 			daemon_names.insert( "SHARED_PORT" );
+			use_shared_port = true;
 		}
 		else if( SharedPortEndpoint::UseSharedPort() ) {
 			if( param_boolean("AUTO_INCLUDE_SHARED_PORT_IN_DAEMON_LIST",true) ) {
@@ -1114,8 +1199,20 @@ init_daemon_list()
 				daemon_names.rewind();
 				daemon_names.next();
 				daemon_names.insert( "SHARED_PORT" );
+				use_shared_port = true;
 			}
 		}
+			// In the case of a collector behind a shared port, we first
+			// start the collector, then the shared port.  That way, the collector
+			// is usable as soon as the shared port hits accept().
+		bool collector_uses_shared_port = param_boolean("COLLECTOR_USES_SHARED_PORT", true) && use_shared_port;
+		if( collector_uses_shared_port && daemon_names.contains("COLLECTOR") ) {
+			daemon_names.deleteCurrent();
+			daemon_names.rewind();
+			daemon_names.next();
+			daemon_names.insert( "COLLECTOR" );
+		}
+
 		daemons.ordered_daemon_names.create_union( daemon_names, false );
 
 		daemon_names.rewind();

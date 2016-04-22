@@ -633,6 +633,9 @@
 /* Define to 1 if the OS has support for the TCP_KEEPINTVL setsockopt */
 #cmakedefine HAVE_TCP_KEEPINTVL
 
+/* Define to 1 if /usr/include/sd-daemon.h exists.  Enables systemd integration */
+#cmakedefine HAVE_SD_DAEMON_H
+
 /* Define to 1 if the OS has support for the TCP_USER_TIMEOUT setsockopt */
 #cmakedefine HAVE_TCP_USER_TIMEOUT
 

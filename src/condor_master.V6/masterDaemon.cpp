@@ -41,6 +41,7 @@
 #include "condor_sockaddr.h"
 #include "ipv6_hostname.h"
 #include "setenv.h"
+#include "systemd_manager.h"
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
 #if defined(HAVE_DLOPEN) || defined(WIN32)
@@ -838,6 +839,17 @@ int daemon::RealStart( )
 	}
 	#endif
 
+	if (!strcmp(name_in_config_file,"SHARED_PORT"))
+	{
+		const condor_utils::SystemdManager & sd = condor_utils::SystemdManager::GetInstance();
+		const std::vector<int> &fds = sd.GetFDs();
+		if (fds.size())
+		{
+			dprintf(D_ALWAYS, "Using passed TCP socket from systemd.\n");
+			jobopts |= DCJOBOPT_USE_SYSTEMD_INET_SOCKET;
+		}
+	}
+
 	// If we are starting a collector and passed a "-sock" command in the command line,
 	// but didn't set the COLLECTOR_HOST to use shared port, have the collector listen on
 	// the UDP socket and not the TCP socket.  We assume that the TCP socket will be taken
@@ -1382,6 +1394,14 @@ daemon::CancelRestartTimers()
 	}
 }
 
+time_t
+daemon::GetNextRestart()
+{
+	if( start_tid != -1 ) {
+		return daemonCore->GetNextRuntime(start_tid);
+	}
+	return 0;
+}
 
 void
 daemon::Kill( int sig )

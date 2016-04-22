@@ -183,6 +183,7 @@ const int DCJOBOPT_NO_ENV_INHERIT   = (1<<2);        // do not pass our env or C
 const int DCJOBOPT_NEVER_USE_SHARED_PORT   = (1<<3);
 const int DCJOBOPT_NO_UDP           = (1<<4);
 const int DCJOBOPT_NO_CONDOR_ENV_INHERIT = (1<<5);   // do not pass CONDOR_INHERIT to the child
+const int DCJOBOPT_USE_SYSTEMD_INET_SOCKET = (1<<6);	     // Pass the reli sock from systemd as the command socket.
 
 #define HAS_DCJOBOPT_SUSPEND_ON_EXEC(mask)  ((mask)&DCJOBOPT_SUSPEND_ON_EXEC)
 #define HAS_DCJOBOPT_NO_ENV_INHERIT(mask)  ((mask)&DCJOBOPT_NO_ENV_INHERIT)
@@ -190,6 +191,7 @@ const int DCJOBOPT_NO_CONDOR_ENV_INHERIT = (1<<5);   // do not pass CONDOR_INHER
 #define HAS_DCJOBOPT_NEVER_USE_SHARED_PORT(mask) ((mask)&DCJOBOPT_NEVER_USE_SHARED_PORT)
 #define HAS_DCJOBOPT_NO_UDP(mask) ((mask)&DCJOBOPT_NO_UDP)
 #define HAS_DCJOBOPT_CONDOR_ENV_INHERIT(mask)  (!((mask)&DCJOBOPT_NO_CONDOR_ENV_INHERIT))
+#define HAS_DCJOBOPT_USE_SYSTEMD_INET_SOCKET(mask) ((mask)&DCJOBOPT_USE_SYSTEMD_INET_SOCKET)
 
 // structure to be used as an argument to Create_Process for tracking process
 // families
@@ -1046,6 +1048,11 @@ class DaemonCore : public Service
     */
     bool GetTimerTimeslice ( int id, Timeslice &timeslice );
 
+    /** Get the timestamp of when the timer is expected to fire
+     *  @param id The timer's ID
+     *  @return timestamp; 0 if the timer does not exist.
+     */
+    time_t GetNextRuntime(int id) {return t.GetNextRuntime(id);}
 	//@}
 
     /** Not_Yet_Documented

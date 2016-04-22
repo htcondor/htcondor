@@ -84,12 +84,16 @@ ProcFamilyProxy::ProcFamilyProxy(const char* address_suffix) :
 	// need to start one (use the address_suffix here as well to
 	// avoid collisions)
 	//
-	char* procd_log = param("PROCD_LOG");
-	if (procd_log != NULL) {
-		m_procd_log = procd_log;
-		free(procd_log);
-		if (address_suffix != NULL) {
-			m_procd_log.formatstr_cat(".%s", address_suffix);
+	if (param_boolean("LOG_TO_SYSLOG", false)) {
+		m_procd_log = "SYSLOG";
+	} else {
+		char* procd_log = param("PROCD_LOG");
+		if (procd_log != NULL) {
+			m_procd_log = procd_log;
+			free(procd_log);
+			if (address_suffix != NULL) {
+				m_procd_log.formatstr_cat(".%s", address_suffix);
+			}
 		}
 	}
 	

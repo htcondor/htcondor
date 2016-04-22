@@ -117,6 +117,8 @@ CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
 #define CLONE_NEWPID 0x20000000
 #endif
 
+#include "systemd_manager.h"
+
 static const char* EMPTY_DESCRIP = "<NULL>";
 
 // special errno values that may be returned from Create_Process
@@ -6767,6 +6769,51 @@ int DaemonCore::Create_Process(
     double delta_runtime = 0;
 	dprintf(D_DAEMONCORE,"In DaemonCore::Create_Process(%s,...)\n",executable ? executable : "NULL");
 
+	bool initialized_socket = false;
+	if (HAS_DCJOBOPT_USE_SYSTEMD_INET_SOCKET(job_opt_mask))
+	{
+		const condor_utils::SystemdManager &sd = condor_utils::SystemdManager::GetInstance();
+		const std::vector<int> fds = sd.GetFDs();
+		if (!fds.size())
+		{
+			dprintf(D_ALWAYS, "Create_Process: requested to use systemd INET socket, but none passed.\n");
+			goto wrapup;
+		}
+		for (std::vector<int>::const_iterator it = fds.begin(); it != fds.end(); it++)
+		{
+			// Create a duplicate socket - we give the duplicate FD to the relisock
+			// which will close it automatically.  We have to keep the copy from systemd
+			// in case if we need to respawn the daemon.  If we don't, we'll get an
+			// "Address already in use" error when we respawn.
+			int new_fd = dup(*it);
+			if (new_fd == -1)
+			{
+				dprintf(D_ALWAYS, "Failed to duplicate systemd TCP socket (errno=%d, %s).\n", errno, strerror(errno));
+				goto wrapup;
+			}
+			socks.push_back(SockPair());
+			socks.back().has_relisock(true);
+			if (!socks.back().rsock()->attach_to_file_desc(new_fd))
+			{
+				dprintf(D_ALWAYS, "Failed to attach systemd socket to ReliSock.\n");
+				goto wrapup;
+			}
+			int flags = fcntl(*it, F_GETFD);
+			if (flags == -1)
+			{
+				dprintf(D_ALWAYS, "Create_Process: Unable to get flags on systemd TCP socket.\n");
+				goto wrapup;
+			}
+			flags &= ~FD_CLOEXEC;
+			if (fcntl(*it, F_SETFD, flags) == -1)
+			{
+				dprintf(D_ALWAYS, "Create_Process: Unable to set flags on systemd TCP socket.\n");
+				goto wrapup;
+			}
+		}
+		dprintf(D_FULLDEBUG, "Create_Process: Passing systemd TCP socket to child process.\n");
+		initialized_socket = true;
+	}
 	// First do whatever error checking we can that is not platform specific
 
 	// check reaper_id validity.  note: reaper id of 0 means no reaper wanted.
@@ -6898,7 +6945,7 @@ int DaemonCore::Create_Process(
 	}
 	if ( (!enabled_shared_endpoint && want_command_port != FALSE) || (want_command_port > 1 || want_udp_command_port > 1) ) {
 		inherit_handles = TRUE;
-		if (!InitCommandSockets(want_command_port, want_udp_command_port, socks, want_udp, false)) {
+		if (!initialized_socket && !InitCommandSockets(want_command_port, want_udp_command_port, socks, want_udp, false)) {
 				// error messages already printed by InitCommandSockets()
 			goto wrapup;
 		}

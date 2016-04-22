@@ -36,18 +36,9 @@ addrinfo get_default_hint()
 	// ret.ai_flags = AI_ADDRCONFIG;
 #endif
 	ret.ai_flags |= AI_CANONNAME;
-
+	ret.ai_family = AF_UNSPEC;
 	ret.ai_socktype = SOCK_STREAM;
 	ret.ai_protocol = IPPROTO_TCP;
-#if defined( WORKING_GETADDRINFO )
-	if(! param_false( "ENABLE_IPV6" )) {
-		ret.ai_family = AF_UNSPEC;
-	} else {
-		ret.ai_family = AF_INET;
-	}
-#else
-	ret.ai_family = AF_UNSPEC;
-#endif
 	return ret;
 }
 

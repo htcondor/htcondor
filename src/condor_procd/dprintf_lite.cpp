@@ -21,6 +21,10 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 
+#if !defined(WIN32)
+#include "syslog.h"
+#endif
+
 FILE* debug_fp = NULL;
 char *debug_fn = NULL;
 int log_size = -1;
@@ -45,7 +49,14 @@ static char *formatTimeHeader(struct tm *tm) {
 extern "C" void
 dprintf(int, const char* format, ...)
 {
-	if (debug_fp != NULL) {
+	if (debug_fn && !strcmp(debug_fn, "SYSLOG")) {
+#if !defined(WIN32)
+		va_list ap;
+		va_start(ap, format);
+		vsyslog(LOG_INFO, format, ap);
+		va_end(ap);
+#endif
+	} else if (debug_fp) {
 		time_t clock_now;
 		(void)time( &clock_now );
 		struct tm *tm = localtime( &clock_now );
@@ -69,7 +80,16 @@ int	_EXCEPT_Errno;
 extern "C" void
 _EXCEPT_(const char* format, ...)
 {
-	if (debug_fp) {
+	if (debug_fn && !strcmp(debug_fn, "SYSLOG")) {
+#if !defined(WIN32)
+		std::string format_str = "ERROR: ";
+		format_str += format;
+		va_list ap;
+		va_start(ap, format);
+		vsyslog(LOG_INFO, format_str.c_str(), ap);
+		va_end(ap);
+#endif
+	} else if (debug_fp) {
 		time_t clock_now;
 		(void)time( &clock_now );
 		struct tm *tm = localtime( &clock_now );
