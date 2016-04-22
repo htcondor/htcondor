@@ -125,6 +125,7 @@ doContactSchedd()
 	bool do_reschedule = false;
 	int failure_line_num = 0;
 	int failure_errno = 0;
+	std::set< std::string, classad::CaseIgnLTStr > filter_attrs;
 
 	// Try connecting to schedd
 	DCSchedd dc_schedd ( ScheddAddr, ScheddPool );
@@ -817,6 +818,17 @@ update_report_result:
 
 	dprintf (D_FULLDEBUG, "Processing SUBMIT_JOB requests\n");
 
+	// Starting in 8.5.4, schedd clients can't set X509-related attributes
+	// other than the name of the proxy file.
+	if ( ver_info.built_since_version(8,5,4) ) {
+		 filter_attrs.insert( ATTR_X509_USER_PROXY_SUBJECT );
+		 filter_attrs.insert( ATTR_X509_USER_PROXY_EXPIRATION );
+		 filter_attrs.insert( ATTR_X509_USER_PROXY_EMAIL );
+		 filter_attrs.insert( ATTR_X509_USER_PROXY_VONAME );
+		 filter_attrs.insert( ATTR_X509_USER_PROXY_FIRST_FQAN );
+		 filter_attrs.insert( ATTR_X509_USER_PROXY_FQAN );
+	}
+
 	// SUBMIT_JOB
 	command_queue.Rewind();
 	while (command_queue.Next(current_command)) {
@@ -962,6 +974,9 @@ update_report_result:
 			const char *lhstr, *rhstr;
 			while( current_command->classad->NextExpr(lhstr, tree) ) {
 
+				if ( filter_attrs.find( lhstr ) != filter_attrs.end() ) {
+					continue;
+				}
 				rhstr = ExprTreeToString( tree );
 				if( !lhstr || !rhstr) {
 					formatstr( error_msg, "ERROR: ClassAd problem in Updating by constraint %s",
