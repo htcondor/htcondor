@@ -189,6 +189,7 @@ AmazonRequest::~AmazonRequest() { }
 class Throttle {
     public:
         Throttle() : count( 0 ), rateLimit( 0 ) {
+#if defined(HAVE_CLOCK_GETTIME)
             // Determine which type of clock to use.
             int rv = clock_gettime( CLOCK_MONOTONIC, & when );
             if( rv == 0 ) { type = CLOCK_MONOTONIC; }
@@ -196,6 +197,7 @@ class Throttle {
                 ASSERT( errno == EINVAL );
                 type = CLOCK_REALTIME;
             }
+#endif
 
             when.tv_sec = 0;
             when.tv_nsec = 0;
@@ -229,15 +231,43 @@ class Throttle {
         void sleepIfNecessary() {
             if( this->isValid() ) {
                 int rv;
+#if defined(HAVE_CLOCK_GETTIME)
                 do {
                     rv = clock_nanosleep( type, TIMER_ABSTIME, & when, NULL );
                 } while( rv == EINTR );
+#else
+                struct timespec delay;
+                now( &delay );
+                delay.tv_sec = when.tv_sec - delay.tv_sec;
+                delay.tv_nsec = when.tv_nsec - delay.tv_nsec;
+                if ( delay.tv_nsec < 0 ) {
+                    delay.tv_sec -= 1;
+                    delay.tv_nsec += 1000000000;
+                }
+                if ( delay.tv_sec < 0 ) {
+                    return;
+                }
+                do {
+                    rv = nanosleep( &delay, &delay );
+                } while ( rv != 0 && errno == EINTR );
+#endif
                 // Suicide rather than overburden the service.
                 ASSERT( rv == 0 );
             }
         }
 
-        static void now( struct timespec * t ) { if( t != NULL ) { clock_gettime( type, t ); } }
+        static void now( struct timespec * t ) {
+            if( t != NULL ) {
+#if defined(HAVE_CLOCK_GETTIME)
+                clock_gettime( type, t );
+#else
+                struct timeval tv;
+                gettimeofday( &tv, NULL );
+                t->tv_sec = tv.tv_sec;
+                t->tv_nsec = tv.tv_usec * 1000;
+#endif
+            }
+        }
 
         static long difference( const struct timespec * s, const struct timespec * t ) {
             long secondsDiff = t->tv_sec - s->tv_sec;
@@ -248,7 +278,7 @@ class Throttle {
 
         bool limitExceeded() {
             // Compute until when to sleep before making another request.
-            clock_gettime( type, & when );
+            now( & when );
 
             assert( count < 32 );
             unsigned milliseconds = (1 << count) * 100;
@@ -292,7 +322,7 @@ class Throttle {
 
             if( rateLimit <= 0 ) { return; }
 
-            clock_gettime( type, & when );
+            now( & when );
             unsigned milliseconds = rateLimit;
             unsigned seconds = milliseconds / 1000;
             unsigned nanoseconds = (milliseconds % 1000) * 1000000;
@@ -310,7 +340,9 @@ class Throttle {
         }
 
     protected:
+#if defined(HAVE_CLOCK_GETTIME)
         static clockid_t type;
+#endif
         unsigned int count;
         struct timespec when;
         struct timespec deadline;
@@ -322,7 +354,9 @@ class Throttle {
 
 };
 
+#if defined(HAVE_CLOCK_GETTIME)
 clockid_t Throttle::type;
+#endif
 Throttle globalCurlThrottle;
 
 pthread_mutex_t globalCurlMutex = PTHREAD_MUTEX_INITIALIZER;
