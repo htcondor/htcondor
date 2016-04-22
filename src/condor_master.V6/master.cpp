@@ -217,7 +217,7 @@ public:
 		int result = sd.Notify(format_string, status.c_str());
 		if (result == 0)
 		{
-			dprintf(D_ALWAYS, "systemd watchdog notification support disabled.\n");
+			dprintf(D_ALWAYS, "systemd watchdog notification support not available.\n");
 			daemonCore->Cancel_Timer(m_watchdog_timer);
 			m_watchdog_timer = -1;
 		}
@@ -1185,13 +1185,11 @@ init_daemon_list()
 		}
 
 			// start shared_port first for a cleaner startup
-		bool use_shared_port = false;
 		if( daemon_names.contains("SHARED_PORT") ) {
 			daemon_names.deleteCurrent();
 			daemon_names.rewind();
 			daemon_names.next();
 			daemon_names.insert( "SHARED_PORT" );
-			use_shared_port = true;
 		}
 		else if( SharedPortEndpoint::UseSharedPort() ) {
 			if( param_boolean("AUTO_INCLUDE_SHARED_PORT_IN_DAEMON_LIST",true) ) {
@@ -1199,18 +1197,7 @@ init_daemon_list()
 				daemon_names.rewind();
 				daemon_names.next();
 				daemon_names.insert( "SHARED_PORT" );
-				use_shared_port = true;
 			}
-		}
-			// In the case of a collector behind a shared port, we first
-			// start the collector, then the shared port.  That way, the collector
-			// is usable as soon as the shared port hits accept().
-		bool collector_uses_shared_port = param_boolean("COLLECTOR_USES_SHARED_PORT", true) && use_shared_port;
-		if( collector_uses_shared_port && daemon_names.contains("COLLECTOR") ) {
-			daemon_names.deleteCurrent();
-			daemon_names.rewind();
-			daemon_names.next();
-			daemon_names.insert( "COLLECTOR" );
 		}
 
 		daemons.ordered_daemon_names.create_union( daemon_names, false );

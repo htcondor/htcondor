@@ -51,7 +51,11 @@ SystemdManager::SystemdManager()
 
 #ifdef HAVE_DLOPEN
 	dlerror();
-	m_handle = dlopen("libsystemd-daemon.so", RTLD_NOW|RTLD_LOCAL);
+#ifdef LIBSYSTEMD_DAEMON_SO
+	m_handle = dlopen(LIBSYSTEMD_DAEMON_SO, RTLD_NOW|RTLD_LOCAL);
+#else
+        m_handle = NULL;
+#endif
 	const char *error;
 	if (m_handle == NULL)
 	{

@@ -528,6 +528,12 @@ elseif(${OS_NAME} STREQUAL "LINUX")
 	  find_library(HAVE_XEXT Xext)
 	endif()
 
+    check_include_files("systemd/sd-daemon.h" HAVE_SD_DAEMON_H)
+    if (HAVE_SD_DAEMON_H)
+        find_library(LIBSYSTEMD_DAEMON_PATH systemd-daemon)
+        find_so_name(LIBSYSTEMD_DAEMON_SO ${LIBSYSTEMD_DAEMON_PATH})
+    endif()
+
 	dprint("Threaded functionality only enabled in Linux, Windows, and Mac OS X > 10.6")
 	set(HAS_PTHREADS ${CMAKE_USE_PTHREADS_INIT})
 	set(HAVE_PTHREADS ${CMAKE_USE_PTHREADS_INIT})

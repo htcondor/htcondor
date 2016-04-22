@@ -6770,6 +6770,7 @@ int DaemonCore::Create_Process(
 	dprintf(D_DAEMONCORE,"In DaemonCore::Create_Process(%s,...)\n",executable ? executable : "NULL");
 
 	bool initialized_socket = false;
+#ifndef WIN32
 	if (HAS_DCJOBOPT_USE_SYSTEMD_INET_SOCKET(job_opt_mask))
 	{
 		const condor_utils::SystemdManager &sd = condor_utils::SystemdManager::GetInstance();
@@ -6814,6 +6815,7 @@ int DaemonCore::Create_Process(
 		dprintf(D_FULLDEBUG, "Create_Process: Passing systemd TCP socket to child process.\n");
 		initialized_socket = true;
 	}
+#endif
 	// First do whatever error checking we can that is not platform specific
 
 	// check reaper_id validity.  note: reaper id of 0 means no reaper wanted.

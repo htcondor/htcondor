@@ -349,6 +349,7 @@ BuildRequires: qpid-qmf-devel
 %endif
 
 %if %systemd
+BuildRequires: systemd-devel
 BuildRequires: systemd-units
 %endif
 
