@@ -4261,7 +4261,22 @@ Dag::ConnectSplices( Dag *parentSplice, Dag *childSplice )
 				childSplice->_spliceScope.Value() );
 
 	int pinOutCount = parentSplice->GetPinCount( false );
+	if ( pinOutCount <= 0 ) {
+		//TEMPTEMP -- splice name as "+" on end here -- do we need to fix that?
+		debug_printf( DEBUG_QUIET,
+					"ERROR: parent splice %s has 0 pin_outs\n",
+					parentSplice->_spliceScope.Value());
+		return false;
+	}
+
 	int pinInCount = childSplice->GetPinCount( true );
+	if ( pinInCount <= 0 ) {
+		debug_printf( DEBUG_QUIET,
+					"ERROR: child splice %s has 0 pin_ints\n",
+					parentSplice->_spliceScope.Value());
+		return false;
+	}
+
 	if ( pinOutCount != pinInCount ) {
 		debug_printf( DEBUG_QUIET,
 					"ERROR: pin_in/out mismatch:  parent splice %s has %d pin_outs; child splice %s has %d pin_ins\n",
