@@ -700,8 +700,7 @@ void SetVMParams();
 void SetVMRequirements();
 bool parse_vm_option(char *value, bool& onoff);
 void transfer_vm_file(const char *filename);
-bool make_vm_file_path(const char *filename, MyString& fixedname);
-bool validate_disk_parm(const char *disk, MyString &fixedname, int min_params=3, int max_params=4);
+bool validate_disk_param(const char *disk, int min_params=3, int max_params=4);
 
 char *owner = NULL;
 char *ntdomain = NULL;
@@ -6041,8 +6040,7 @@ SetGridParams()
 	
 	// EC2EBSVolumes is not a necessary parameter
     if( (tmp = condor_param( EC2EBSVolumes, ATTR_EC2_EBS_VOLUMES )) ) {
-		MyString fixedvalue = delete_quotation_marks(tmp);
-		if( validate_disk_parm(fixedvalue.Value(), fixedvalue, 2, 2) == false ) 
+		if( validate_disk_param(tmp, 2, 2) == false ) 
         {
 			fprintf(stderr, "\nERROR: 'ec2_ebs_volumes' has incorrect format.\n"
 					"The format shoud be like "
@@ -9182,44 +9180,9 @@ bool parse_vm_option(char *value, bool& onoff)
 	return true;
 }
 
-// If a file is in transfer_input_files, the file will have just basename.
-// Otherwise, it will have full path. To get full path, iwd is used.
-bool make_vm_file_path(const char *filename, MyString& fixedname)
-{
-	if( filename == NULL ) {
-		return false;
-	}
-
-	fixedname = delete_quotation_marks(filename);
-
-	MyString transfer_input_files;
-	// check whether the file will be transferred
-	if( job->LookupString(ATTR_TRANSFER_INPUT_FILES,transfer_input_files) == 1 ) {
-		StringList transfer_file_list(NULL, ",");
-		transfer_file_list.initializeFromString(transfer_input_files.Value() );
-
-		if( filelist_contains_file(fixedname.Value(), &transfer_file_list, true) ) {
-			// this file is already in transfer_input_files
-			// filename should have only basename
-			fixedname = condor_basename(fixedname.Value());
-			return true;
-		}
-	}
-
-	// This file will not be transferred
-	// filename should have absolute path
-	fixedname = full_path(fixedname.Value());
-	check_and_universalize_path(fixedname);
-	//check_open(fixedname.Value(), O_RDONLY);
-	
-	// we need the same file system for this file
-	vm_need_fsdomain = true;
-	return true;
-}
-
 // this function parses and checks xen disk parameters
 bool
-validate_disk_parm(const char *pszDisk, MyString &fixed_disk, int min_params, int max_params)
+validate_disk_param(const char *pszDisk, int min_params, int max_params)
 {
 	if( !pszDisk ) {
 		return false;
@@ -9238,8 +9201,6 @@ validate_disk_parm(const char *pszDisk, MyString &fixed_disk, int min_params, in
 		return false;
 	}
 
-	fixed_disk = "";
-
 	disk_files.rewind();
 	const char *one_disk = NULL;
 	while( (one_disk = disk_files.next() ) != NULL ) {
@@ -9249,46 +9210,6 @@ validate_disk_parm(const char *pszDisk, MyString &fixed_disk, int min_params, in
         int iNumDiskParams = single_disk_file.number();
 		if( iNumDiskParams < min_params || iNumDiskParams > max_params ) {
 			return false;
-		}
-
-		// check filename
-		single_disk_file.rewind();
-		MyString filename = single_disk_file.next();
-		filename.trim();
-
-		MyString fixedname;
-		if( make_vm_file_path(filename.Value(), fixedname) == false ) {
-			return false;
-		}else {
-			if( fullpath(fixedname.Value()) == false ) {
-				// This file will be transferred
-				xen_has_file_to_be_transferred = true;
-			}
-
-			if( fixed_disk.Length() > 0 ) {
-				fixed_disk += ",";
-			}
-			
-			// file name
-			fixed_disk += fixedname;
-			fixed_disk += ":";
-			
-			// device
-			fixed_disk += single_disk_file.next();
-			
-			if (iNumDiskParams >= 3)
-			{
-				// permission
-				fixed_disk += ":";
-				fixed_disk += single_disk_file.next();
-			}
-			
-            if (iNumDiskParams == 4)
-            {
-                // optional (format)
-                fixed_disk += ":";
-                fixed_disk += single_disk_file.next();
-            }
 		}
 	}
 	return true;
@@ -9659,20 +9580,6 @@ SetVMParams()
 		bool real_xen_kernel_file = false;
 		bool need_xen_root_device = false;
 
-		// Read the parameter of xen_transfer_files 
-		char *transfer_files = NULL;
-
-        transfer_files = condor_param("transfer_input_files");
-        if (transfer_files)
-        {
-            // tbd - I don't think we need to do anything here
-            free(transfer_files);
-        }
-        else
-        {
-            vm_need_fsdomain = true;
-        }
-
 		if ( strcasecmp(VMType.Value(), CONDOR_VM_UNIVERSE_XEN) == MATCH )
 		{
 			// xen_kernel is a required parameter
@@ -9688,15 +9595,13 @@ SetVMParams()
 				DoCleanup(0,0,NULL);
 				exit(1);
 			}else {
-				MyString fixedname = delete_quotation_marks(xen_kernel);
-
-				if ( strcasecmp(fixedname.Value(), XEN_KERNEL_INCLUDED) == 0) {
+				if ( strcasecmp(xen_kernel, XEN_KERNEL_INCLUDED) == 0) {
 					// kernel image is included in a disk image file
 					// so we will use bootloader(pygrub etc.) defined 
 					// in a vmgahp config file on an excute machine 
 					real_xen_kernel_file = false;
 					need_xen_root_device = false;
-				}else if ( strcasecmp(fixedname.Value(), XEN_KERNEL_HW_VT) == 0) {
+				}else if ( strcasecmp(xen_kernel, XEN_KERNEL_HW_VT) == 0) {
 					// A job user want to use an unmodified OS in Xen.
 					// so we require hardware virtualization.
 					real_xen_kernel_file = false;
@@ -9706,17 +9611,10 @@ SetVMParams()
 					InsertJobExpr( buffer );
 				}else {
 					// real kernel file
-					if( make_vm_file_path(xen_kernel, fixedname) 
-							== false ) {
-						DoCleanup(0,0,NULL);
-						exit(1);
-					}
 					real_xen_kernel_file = true;
 					need_xen_root_device = true;
 				}
-				buffer.formatstr( "%s = \"%s\"", VMPARAM_XEN_KERNEL, 
-						fixedname.Value());
-				InsertJobExpr(buffer);
+				InsertJobExprString(VMPARAM_XEN_KERNEL, xen_kernel);
 				free(xen_kernel);
 			}
 
@@ -9731,15 +9629,7 @@ SetVMParams()
 					DoCleanup(0,0,NULL);
 					exit(1);
 				}
-				MyString fixedname;
-				if( make_vm_file_path(xen_initrd, fixedname) 
-						== false ) {
-					DoCleanup(0,0,NULL);
-					exit(1);
-				}
-				buffer.formatstr( "%s = \"%s\"", VMPARAM_XEN_INITRD, 
-						fixedname.Value());
-				InsertJobExpr(buffer);
+				InsertJobExprString(VMPARAM_XEN_INITRD, xen_initrd);
 				free(xen_initrd);
 			}
 
@@ -9754,10 +9644,7 @@ SetVMParams()
 					DoCleanup(0,0,NULL);
 					exit(1);
 				}else {
-					MyString fixedvalue = delete_quotation_marks(xen_root);
-					buffer.formatstr( "%s = \"%s\"", VMPARAM_XEN_ROOT, 
-							fixedvalue.Value());
-					InsertJobExpr(buffer);
+					InsertJobExprString(VMPARAM_XEN_ROOT, xen_root);
 					free(xen_root);
 				}
 			}
@@ -9765,7 +9652,6 @@ SetVMParams()
 
 		// <x>_disk is a required parameter
 		char *disk = condor_param("vm_disk");
-		const char *disk_attr_name = VMPARAM_VM_DISK;
 
 		if( !disk ) {
 			fprintf( stderr, "\nERROR: '%s' cannot be found.\n"
@@ -9775,8 +9661,7 @@ SetVMParams()
 			DoCleanup(0,0,NULL);
 			exit(1);
 		}else {
-			MyString fixedvalue = delete_quotation_marks(disk);
-			if( validate_disk_parm(fixedvalue.Value(), fixedvalue) == false ) 
+			if( validate_disk_param(disk) == false ) 
             {
 				fprintf(stderr, "\nERROR: 'vm_disk' has incorrect format.\n"
 						"The format shoud be like "
@@ -9787,9 +9672,7 @@ SetVMParams()
 				DoCleanup(0,0,NULL);
 				exit(1);
 			}
-
-			buffer.formatstr( "%s = \"%s\"", disk_attr_name, fixedvalue.Value());
-			InsertJobExpr( buffer );
+			InsertJobExprString( VMPARAM_VM_DISK, disk );
 			free(disk);
 		}
 
@@ -9800,9 +9683,7 @@ SetVMParams()
 			xen_kernel_params = condor_param("xen_kernel_params");
 			if( xen_kernel_params ) {
 				MyString fixedvalue = delete_quotation_marks(xen_kernel_params);
-				buffer.formatstr( "%s = \"%s\"", VMPARAM_XEN_KERNEL_PARAMS, 
-						fixedvalue.Value());
-				InsertJobExpr( buffer );
+				InsertJobExprString( VMPARAM_XEN_KERNEL_PARAMS, xen_kernel_params );
 				free(xen_kernel_params);
 			}
 		}
