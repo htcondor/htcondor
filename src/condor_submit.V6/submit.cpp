@@ -205,7 +205,6 @@ bool VMVNC=false;
 MyString VMNetworkType;
 bool VMHardwareVT = false;
 bool vm_need_fsdomain = false;
-bool xen_has_file_to_be_transferred = false;
 
 time_t get_submit_time()
 {
@@ -9816,50 +9815,6 @@ SetVMParams()
 		}
 	}
 
-	// Check if a job user defines 'Argument'.
-	// If 'Argument' parameter is defined, 
-	// we will create a file called "condor.arg" on an execute machine 
-	// and add the file to input CDROM.
-	ArgList arglist;
-	MyString arg_err_msg;
-	MyString arg_str;
-	if(!arglist.GetArgsStringV1or2Raw(job, &arg_str, &arg_err_msg)) {
-		arg_str = "";
-	}
-
-	// Here we check if this job submit description file is 
-	// correct for vm checkpoint
-	if( VMCheckpoint ) {
-		if( strcasecmp(VMType.Value(), CONDOR_VM_UNIVERSE_XEN) == MATCH ) {
-			// For vm checkpoint in Xen
-			// 1. all disk files should be in a shared file system
-			// 2. If a job uses CDROM files, it should be 
-			// 	  single ISO file and be in a shared file system
-			if( xen_has_file_to_be_transferred || !arg_str.IsEmpty() ) 
-            {
-				MyString err_msg;
-				err_msg = "\nERROR: To use checkpoint in Xen, "
-					"You need to make sure the followings.\n"
-					"1. All xen disk files should be in a shared file system\n"
-					"2. You cannot use 'arguments' in a job description file\n\n";
-
-				if( xen_has_file_to_be_transferred ) {
-					err_msg += "ERROR: You requested to transfer at least one Xen "
-						"disk file\n";
-				}
-				
-				if( !arg_str.IsEmpty() ) {
-					err_msg += "ERROR: You defined 'arguments'.\n";
-				}
-
-				fprintf( stderr, "%s", err_msg.Value());
-				DoCleanup(0,0,NULL);
-				exit( 1 );
-			}
-		}
-		// For vmware, there is no limitation.
-	}
-			
 	// Now all VM parameters are set
 	// So we need to add necessary VM attributes to Requirements
 	SetVMRequirements();
