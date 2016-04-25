@@ -49,6 +49,8 @@ static const char * DELIMITERS = " \t";
 static ExtArray<char*> _spliceScope;
 static bool _useDagDir = false;
 
+// _thisDagNum will be incremented for each DAG specified on the
+// condor_submit_dag command line.
 static int _thisDagNum = -1;
 static bool _mungeNames = true;
 
@@ -130,17 +132,12 @@ void parseSetDoNameMunge(bool doit)
 }
 
 //-----------------------------------------------------------------------------
-void parseSetThisDagNum(int num)
+bool parse(Dag *dag, const char *filename, bool useDagDir,
+			bool incrementDagNum)
 {
-	_thisDagNum = num;
-}
-
-//-----------------------------------------------------------------------------
-bool parse (Dag *dag, const char *filename, bool useDagDir, bool isInclude) {
 	ASSERT( dag != NULL );
 
-	//TEMPTEMP -- what is this for?
-	if ( !isInclude ) {
+	if ( incrementDagNum ) {
 		++_thisDagNum;
 	}
 
@@ -1734,11 +1731,6 @@ parse_splice(
 
 	/* make a new dag to put everything into */
 
-	/* parse increments this number, however, we want the splice nodes to
-		be munged into the numeric identification of the invoking dag, so
-		decrement it here so when it is incremented, nothing happened. */
-	--_thisDagNum;
-
 	// This "copy" is tailored to be correct according to Dag::~Dag()
 	// We can pass in NULL for submitDagOpts because the splice DAG
 	// object will never actually do a submit.  wenger 2010-03-25
@@ -1779,7 +1771,7 @@ parse_splice(
 	}
 
 	// parse the splice file into a separate dag.
-	if (!parse(splice_dag, spliceFile.Value(), _useDagDir)) {
+	if (!parse(splice_dag, spliceFile.Value(), _useDagDir, false)) {
 		debug_error(1, DEBUG_QUIET, "ERROR: Failed to parse splice %s in file %s\n",
 			spliceName.Value(), spliceFile.Value());
 		return false;
@@ -2381,7 +2373,7 @@ parse_include(
 		// Note:  we save the filename here because otherwise it gets
 		// goofed up by the tokenizing in parse().
 	MyString tmpFilename( includeFile );
-	return parse( dag, tmpFilename.Value(), false/*TEMPTEMP!!*/, true );
+	return parse( dag, tmpFilename.Value(), false/*TEMPTEMP!!*/, false );
 }
 
 static MyString munge_job_name(const char *jobName)
