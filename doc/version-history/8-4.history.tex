@@ -44,6 +44,10 @@ follow a valid ClassAd.
 
 \begin{itemize}
 
+\item Fixed a bug in Docker universe where the job would
+not run with the correct group id.
+\Ticket{5649}
+
 \item Fixed bug where when partitionable slots were
 enabled in the \Condor{startd}, a job would be unable
 to start running on that machine in some cases.
