@@ -32,7 +32,6 @@
 #include "condor_gssapi_openssl.h"
 #include "ipv6_hostname.h"
 #include "condor_sinful.h"
-#include "condor_attributes.h"
 
 #if defined(HAVE_EXT_VOMS)
 extern "C" {
@@ -1224,54 +1223,29 @@ Condor_Auth_X509::authenticate_server_gss(CondorError* errstack, bool non_blocki
 		}
 		(*gss_release_buffer_ptr)(&minor_status, tmp_buffer);
 
-		classad::ClassAd ad;
-
 		// store the raw subject name for later mapping
 		if (gss_name) {
 			setAuthenticatedName(gss_name);
-			ad.InsertAttr(ATTR_X509_USER_PROXY_SUBJECT, gss_name);
 			free(gss_name);
 		}
 		setRemoteUser("gsi");
 		setRemoteDomain( UNMAPPED_DOMAIN );
 
-		// get handle to cred so we can extract other attributes
-		globus_gsi_cred_handle_t peer_cred = context_handle->peer_cred_handle->cred_handle;
-
-		time_t expiration = x509_proxy_expiration_time(peer_cred);
-		if (expiration != -1) {
-			ad.InsertAttr(ATTR_X509_USER_PROXY_EXPIRATION, expiration);
-		}
-
-		char *email_name = x509_proxy_email(peer_cred);
-		if (email_name)
-		{
-			ad.InsertAttr(ATTR_X509_USER_PROXY_EMAIL, email_name);
-			free(email_name);
-		}
-
 		if (param_boolean("USE_VOMS_ATTRIBUTES", true)) {
 
 			// get the voms attributes from the peer
+			globus_gsi_cred_handle_t peer_cred = context_handle->peer_cred_handle->cred_handle;
 
-			char * voname = NULL;
-			char * firstfqan = NULL;
 			char * voms_fqan = NULL;
-			int voms_err = extract_VOMS_info(peer_cred, 1, &voname, &firstfqan, &voms_fqan);
+			int voms_err = extract_VOMS_info(peer_cred, 1, NULL, NULL, &voms_fqan);
 			if (!voms_err) {
 				setFQAN(voms_fqan);
-				if (voms_fqan) {ad.InsertAttr(ATTR_X509_USER_PROXY_FQAN, voms_fqan);}
 				free(voms_fqan);
-				if (firstfqan) {ad.InsertAttr(ATTR_X509_USER_PROXY_FIRST_FQAN, firstfqan);}
-				free(firstfqan);
-				if (voname) {ad.InsertAttr(ATTR_X509_USER_PROXY_VONAME, voname);}
-				free(voname);
 			} else {
 				// complain!
 				dprintf(D_SECURITY, "ZKM: VOMS FQAN not present (error %i), ignoring.\n", voms_err);
 			}
 		}
-		mySock_->setPolicyAd(ad);
 
 		// XXX FIXME ZKM
 		// i am making failure to be mapped a non-fatal error at this point.

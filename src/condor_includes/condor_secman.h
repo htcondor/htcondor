@@ -114,7 +114,6 @@ public:
 	static int authenticate_sock(Sock *s,DCpermission perm, CondorError* errstack);
 	static int authenticate_sock(Sock *s,KeyInfo *&ki, DCpermission perm, CondorError* errstack);
 
-	bool getSessionPolicy(const char *sess_id, classad::ClassAd &policy);
 
     //------------------------------------------
     // invalidate cache
@@ -179,7 +178,7 @@ public:
 
 	static	int 			sec_char_to_auth_method( char* method );
 
-	bool 					sec_copy_attribute( classad::ClassAd &dest, ClassAd &source, const char* attr );
+	bool 					sec_copy_attribute( ClassAd &dest, ClassAd &source, const char* attr );
 
 	bool 					sec_copy_attribute( ClassAd &dest, const char *to_attr, ClassAd &source, const char *from_attr );
 
