@@ -1243,7 +1243,7 @@ Scheduler::count_jobs()
 				// Sum up the # of cpus claimed by this user and advertise it as
 				// WeightedJobsRunning. 
 
-			int job_weight = calcSlotWeight(rec->my_match_ad);
+			int job_weight = calcSlotWeight(rec);
 			
 			Owner->num.WeightedJobsRunning += job_weight;
 			Owner->num.JobsRunning++;
@@ -1509,7 +1509,7 @@ Scheduler::count_jobs()
 					!strcmp(mRec->pool, flock_neg->pool())) {
 					Owner->num.JobsFlockedHere++;
 
-					Owner->num.WeightedJobsFlockedHere += calcSlotWeight(mRec->my_match_ad);
+					Owner->num.WeightedJobsFlockedHere += calcSlotWeight(mRec);
 				}
 			}
 
@@ -2428,7 +2428,15 @@ clear_autocluster_id(JobQueueJob *job, const JOB_ID_KEY & /*jid*/, void *)
 	// This function, given a job, calculates the "weight", or cost
 	// of the slot for accounting purposes.  Usually the # of cpus
 int 
-Scheduler::calcSlotWeight(ClassAd *machine) {
+Scheduler::calcSlotWeight(match_rec *mrec) {
+	if (!mrec) {
+		// shouldn't ever happen, but be defensive
+		return 1;
+	}
+
+
+		// machine may be null	
+	ClassAd *machine = mrec->my_match_ad;
 	int job_weight = 1;
 	if (m_use_slot_weights && slotWeight && machine) {
 			// if the schedd slot weight expression is set and parses,
@@ -2443,6 +2451,19 @@ Scheduler::calcSlotWeight(ClassAd *machine) {
 		if (machine) {
 			if(0 == machine->LookupInteger(ATTR_CPUS, job_weight)) {
 				job_weight = 1; // or fall back to one if CPUS isn't in the startds
+			}
+		} else {
+			// machine == NULL, this happens on schedd restart and reconnect
+			// calculate using request_* attributes, as we do with idle
+			ClassAd *job = GetJobAd(mrec->cluster, mrec->proc);
+
+			if (job) {
+				classad::Value result;
+				int rval = EvalExprTree( scheduler.slotWeight, scheduler.slotWeightMapAd, job, result );
+
+				if( !rval || !result.IsNumber(job_weight)) {
+					job_weight = 1; // Fall back if it doesn't eval
+				}
 			}
 		}
 	}
@@ -6835,10 +6856,10 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 			// probably could/should be changed to be declared as a static method.
 			// Actually, must pass in owner so FindRunnableJob will find a job.
 
-			sn = new DedicatedScheddNegotiate(0, NULL, match->user, NULL);
+			sn = new DedicatedScheddNegotiate(0, NULL, match->user, match->pool);
 		} else {
 			// Use the DedSched
-			sn = new MainScheddNegotiate(0, NULL, match->user, NULL);
+			sn = new MainScheddNegotiate(0, NULL, match->user, match->pool);
 		}		
 
 			// Setting cluster.proc to -1.-1 should result in the schedd

@@ -505,6 +505,7 @@ our %submit_info = (
 	'x86_64_Fedora20'				=> 'x86_64_Fedora',
 	'x86_64_Fedora21'				=> 'x86_64_Fedora',
 	'x86_64_Fedora22'				=> 'x86_64_Fedora',
+	'x86_64_Fedora23'				=> 'x86_64_Fedora',
 	
 	'x86_64_fedora_15'				=> 'x86_64_Fedora',
 	'x86_64_fedora_16'				=> 'x86_64_Fedora',

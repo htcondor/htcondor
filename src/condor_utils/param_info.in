@@ -8280,7 +8280,7 @@ review=?
 friendly_name=Limit job runtimes to 24 hours
 default : @end
 	MAX_JOB_RUNTIME=24*3600
-	PREMPT=(Activity == "Busy") && ((time() - EnteredCurrentActivity) > $(MAX_JOB_RUNTIME))
+	PREEMPT=(Activity == "Busy") && ((time() - EnteredCurrentActivity) > $(MAX_JOB_RUNTIME))
 @end
 review=?
 
@@ -8380,14 +8380,14 @@ default : @end
 review=?
 
 [$ROLE.Submit]
-friendly_name=Settings for HTCondor Execute node
+friendly_name=Settings for HTCondor Submit node
 default : @end
 	DAEMON_LIST=$(DAEMON_LIST) SCHEDD
 @end
 review=?
 
 [$ROLE.CentralManager]
-friendly_name=Settings for HTCondor Execute node
+friendly_name=Settings for HTCondor Central Manager
 default : @end
 	DAEMON_LIST=$(DAEMON_LIST) COLLECTOR NEGOTIATOR
 @end
