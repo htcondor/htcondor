@@ -26,6 +26,7 @@
 #include "basename.h"
 #include "nullfile.h"
 #include "filename_tools.h"
+#include "condor_holdcodes.h"
 
 #ifdef WIN32
 #else
