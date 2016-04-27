@@ -114,19 +114,24 @@ int DockerAPI::run(
 	// Run with the uid that condor selects for the user
 	// either a slot user or submitting user or nobody
 	uid_t uid = 0;
+	uid_t gid = 0;
 
 	// Docker doesn't actually run on Windows, but we compile
 	// on Windows because...
 #ifndef WIN32
 	uid = get_user_uid();
+	gid = get_user_gid();
 #endif
 	
-	if (uid == 0) {
+	if ((uid == 0) || (gid == 0)) {
 		dprintf(D_ALWAYS|D_FAILURE, "Failed to get userid to run docker job\n");
 		return -9;
 	}
+
 	runArgs.AppendArg("--user");
-	runArgs.AppendArg(uid);
+	std::string uidgidarg;
+	formatstr(uidgidarg, "%d:%d", uid, gid);
+	runArgs.AppendArg(uidgidarg);
 
 	// Run the command with its arguments in the image.
 	runArgs.AppendArg( imageID );
