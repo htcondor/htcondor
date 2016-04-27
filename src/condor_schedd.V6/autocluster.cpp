@@ -140,9 +140,22 @@ bool JobCluster::setSigAttrs(const char* new_sig_attrs, bool free_input_attrs, b
 
 #ifdef USE_AUTOCLUSTER_TO_JOBID_MAP
 
-JobCluster::JobIdSetMap::iterator JobCluster::find(const JOB_ID_KEY & jid) // get current cluster id for a given job
+// lookup the autocluster for a job (assumes job.autocluster_id is valid)
+JobCluster::JobIdSetMap::iterator JobCluster::find_job_id_set(JobQueueJob & job)
 {
-	// scan the cluster id to job map, and return when we find a match on job id.
+	// use the job's cluster_id field to quickly lookup the old JobIdSetMap
+	// if that set map actually still contains the job, return it.
+	JobIdSetMap::iterator it = cluster_use.find(job.autocluster_id);
+	if (it != cluster_use.end() && it->second.contains(job.jid)) {
+		return it;
+	}
+	return cluster_use.end();
+}
+
+// scan all autoclusters for a given jobid
+/* not used, and can be expensive
+JobCluster::JobIdSetMap::iterator JobCluster::brute_force_find_job_id_set(const JOB_ID_KEY & jid)
+{
 	JobIdSetMap::iterator it;
 	for (it = cluster_use.begin(); it != cluster_use.end(); ++it) {
 		if (it->second.contains(jid)) {
@@ -151,6 +164,7 @@ JobCluster::JobIdSetMap::iterator JobCluster::find(const JOB_ID_KEY & jid) // ge
 	}
 	return it;
 }
+*/
 
 // free up unused autoclusters, if brute_force flags is used, then all autoclusters are checked to
 // see if they refer to any jobs that are still in the queue before deleting. otherwise only
@@ -300,7 +314,7 @@ int JobCluster::getClusterid(JobQueueJob & job, bool expand_refs, std::string * 
 #ifdef USE_AUTOCLUSTER_TO_JOBID_MAP
 	if (keep_job_ids) {
 		if (true) {
-			JobIdSetMap::iterator jit = find(job.jid);
+			JobIdSetMap::iterator jit = find_job_id_set(job);
 			if (jit != cluster_use.end()) {
 				int old_id = jit->first;
 				if (old_id == cur_id) {

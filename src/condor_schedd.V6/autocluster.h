@@ -55,7 +55,7 @@ protected:
 	typedef std::map<int, JobIdSet> JobIdSetMap;
 	JobIdSetMap cluster_use; // map clusterId to a set of jobIds
 	std::set<int> cluster_gone; // holds the set of deleted clusters until the next garbage collect pass
-	JobIdSetMap::iterator find(const JOB_ID_KEY & jid); // get current cluster id for a given job
+	JobIdSetMap::iterator find_job_id_set(JobQueueJob & job); // lookup the autocluster for a job (assumes job.autocluster_id is valid)
 #endif
 	int next_id;
 	const char *significant_attrs;
