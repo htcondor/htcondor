@@ -195,7 +195,7 @@ EC2Job::EC2Job( ClassAd *classad ) :
 	jobAd->LookupString( ATTR_EC2_ACCESS_KEY_ID, m_public_key_file );
 
 	if ( m_public_key_file.empty() ) {
-		holdReasonCode = 1;
+		holdReasonCode = CONDOR_HOLD_CODE_EC2UserError;
 		holdReasonSubCode = 1;
 		error_string = "Public key file not defined";
 		goto error_exit;
@@ -205,7 +205,7 @@ EC2Job::EC2Job( ClassAd *classad ) :
 	jobAd->LookupString( ATTR_EC2_SECRET_ACCESS_KEY, m_private_key_file );
 
 	if ( m_private_key_file.empty() ) {
-		holdReasonCode = 1;
+		holdReasonCode = CONDOR_HOLD_CODE_EC2UserError;
 		holdReasonSubCode = 2;
 		error_string = "Private key file not defined";
 		goto error_exit;
@@ -316,7 +316,7 @@ EC2Job::EC2Job( ClassAd *classad ) :
 
 		token = GetNextToken( " ", false );
 		if ( !token || strcasecmp( token, "ec2" ) ) {
-			holdReasonCode = 2;
+			holdReasonCode = CONDOR_HOLD_CODE_EC2InternalError;
 			holdReasonSubCode = 3;
 			formatstr( error_string, "%s not of type ec2",
 									  ATTR_GRID_RESOURCE );
@@ -327,7 +327,7 @@ EC2Job::EC2Job( ClassAd *classad ) :
 		if ( token && *token ) {
 			m_serviceUrl = token;
 		} else {
-			holdReasonCode = 1;
+			holdReasonCode = CONDOR_HOLD_CODE_EC2UserError;
 			holdReasonSubCode = 4;
 			formatstr( error_string, "%s missing EC2 service URL",
 									  ATTR_GRID_RESOURCE );
@@ -335,7 +335,7 @@ EC2Job::EC2Job( ClassAd *classad ) :
 		}
 
 	} else {
-		holdReasonCode = 2;
+		holdReasonCode = CONDOR_HOLD_CODE_EC2InternalError;
 		holdReasonSubCode = 5;
 		formatstr( error_string, "%s is not set in the job ad",
 								  ATTR_GRID_RESOURCE );
@@ -344,7 +344,7 @@ EC2Job::EC2Job( ClassAd *classad ) :
 
 	gahp_path = param( "EC2_GAHP" );
 	if ( gahp_path == NULL ) {
-		holdReasonCode = 3;
+		holdReasonCode = CONDOR_HOLD_CODE_EC2AdminError;
 		holdReasonSubCode = 6;
 		error_string = "EC2_GAHP not defined";
 		goto error_exit;
@@ -412,7 +412,7 @@ EC2Job::EC2Job( ClassAd *classad ) :
 
 		token = GetNextToken( " ", false );
 		if ( !token || strcasecmp( token, "ec2" ) ) {
-			holdReasonCode = 2;
+			holdReasonCode = CONDOR_HOLD_CODE_EC2InternalError;
 			holdReasonSubCode = 7;
 			formatstr( error_string, "%s not of type ec2", ATTR_GRID_JOB_ID );
 			goto error_exit;
@@ -573,7 +573,7 @@ void EC2Job::doEvaluateState()
 						gmState = GM_DELETE;
 						break;
 					} else {
-						holdReasonCode = 1;
+						holdReasonCode = CONDOR_HOLD_CODE_EC2UserError;
 						holdReasonSubCode = 9;
 						formatstr( errorString, "Failed to authenticate %s.",
 									myResource->authFailureMessage.c_str() );
@@ -694,7 +694,7 @@ void EC2Job::doEvaluateState()
 
 					if ( m_client_token.empty() && m_key_pair_file.empty() &&
 						 !m_key_pair.empty() ) {
-						holdReasonCode = 1;
+						holdReasonCode = CONDOR_HOLD_CODE_EC2UserError;
 						holdReasonSubCode = 10;
 						formatstr( errorString, "Can't use existing ssh keypair for server type %s", myResource->m_serverType.c_str() );
 						gmState = GM_HOLD;
@@ -792,7 +792,7 @@ void EC2Job::doEvaluateState()
 								gahp_error_code.c_str(),
 								errorString.c_str() );
 						gmState = GM_HOLD;
-						holdReasonCode = 4;
+						holdReasonCode = CONDOR_HOLD_CODE_EC2ConnectionProblem;
 						holdReasonSubCode = 11;
 						break;
 					}
@@ -913,7 +913,7 @@ void EC2Job::doEvaluateState()
 								procID.cluster, procID.proc,
 								gahp_error_code.c_str(),
 								errorString.c_str() );
-						holdReasonCode = 4;
+						holdReasonCode = CONDOR_HOLD_CODE_EC2ConnectionProblem;
 						holdReasonSubCode = 12;
 						gmState = GM_HOLD;
 					}
@@ -1256,7 +1256,7 @@ void EC2Job::doEvaluateState()
 							formatstr( errorString, "Abnormal instance termination: %s.", m_state_reason_code.c_str() );
 							dprintf( D_ALWAYS, "(%d.%d) %s\n", procID.cluster, procID.proc, errorString.c_str() );
 							gmState = GM_HOLD;
-							holdReasonCode = 5;
+							holdReasonCode = CONDOR_HOLD_CODE_EC2ServerError;
 							holdReasonSubCode = 13;
 							break;
 						} else {
@@ -1264,7 +1264,7 @@ void EC2Job::doEvaluateState()
 							formatstr( errorString, "Unrecognized reason for instance termination: %s.  Treating as abnormal.", m_state_reason_code.c_str() );
 							dprintf( D_ALWAYS, "(%d.%d) %s\n", procID.cluster, procID.proc, errorString.c_str() );
 							gmState = GM_HOLD;
-							holdReasonCode = 5;
+							holdReasonCode = CONDOR_HOLD_CODE_EC2ServerError;
 							holdReasonSubCode = 14;
 							break;
 						}
@@ -1333,7 +1333,7 @@ void EC2Job::doEvaluateState()
 									 gahp_error_code.c_str(),
 									 errorString.c_str() );
 							gmState = GM_HOLD;
-							holdReasonCode = 6;
+							holdReasonCode = CONDOR_HOLD_CODE_EC2InstancePotentiallyLostError;
 							holdReasonSubCode = 15;
 							break;
 						}
@@ -1409,7 +1409,7 @@ void EC2Job::doEvaluateState()
 						formatstr( errorString, "Job cancel did not succeed after %d tries, giving up.", maxRetryTimes );
 						dprintf( D_ALWAYS, "(%d.%d) %s\n", procID.cluster, procID.proc, errorString.c_str() );
 						gmState = GM_HOLD;
-						holdReasonCode = 6;
+						holdReasonCode = CONDOR_HOLD_CODE_EC2InstancePotentiallyLostError;
 						holdReasonSubCode = 16;
 						break;
 					}
@@ -1603,7 +1603,7 @@ void EC2Job::doEvaluateState()
 					// job, or put in on hold, before the spot instance
 					// request failed, they should learn about the failure.
 					gmState = GM_HOLD;
-					holdReasonCode = 4;
+					holdReasonCode = CONDOR_HOLD_CODE_EC2ConnectionProblem;
 					holdReasonSubCode = 17;
 					break;
 				}
@@ -1652,7 +1652,7 @@ void EC2Job::doEvaluateState()
 									errorString.c_str() );
 						dprintf( D_FULLDEBUG, "Error transition: GM_SPOT_CANCEL + <GAHP failure> = GM_HOLD\n" );
 						gmState = GM_HOLD;
-						holdReasonCode = 6;
+						holdReasonCode = CONDOR_HOLD_CODE_EC2InstancePotentiallyLostError;
 						holdReasonSubCode = 17;
 						break;
 					}
@@ -1713,7 +1713,7 @@ void EC2Job::doEvaluateState()
 						formatstr( errorString, "Spot job cancel did not succeed after %d tries, giving up.", maxRetryTimes );
 						dprintf( D_ALWAYS, "(%d.%d) %s\n", procID.cluster, procID.proc, errorString.c_str() );
 						gmState = GM_HOLD;
-						holdReasonCode = 6;
+						holdReasonCode = CONDOR_HOLD_CODE_EC2InstancePotentiallyLostError;
 						holdReasonSubCode = 18;
 						break;
 					}
@@ -1797,7 +1797,7 @@ void EC2Job::doEvaluateState()
 					dprintf( D_ALWAYS, "(%d.%d) %s\n", procID.cluster, procID.proc, errorString.c_str() );
 					dprintf( D_FULLDEBUG, "Error transition: GM_SPOT_QUERY + <spot purged> = GM_HOLD\n" );
 					gmState = GM_HOLD;
-					holdReasonCode = 6;
+					holdReasonCode = CONDOR_HOLD_CODE_EC2InstancePotentiallyLostError;
 					holdReasonSubCode = 19;
 					break;
 				}
@@ -1855,7 +1855,7 @@ void EC2Job::doEvaluateState()
 					dprintf( D_ALWAYS, "(%d.%d) %s\n", procID.cluster, procID.proc, errorString.c_str() );
 					dprintf( D_FULLDEBUG, "Error transition: GM_SPOT_QUERY + <cancelled> = GM_HOLD\n" );
 					gmState = GM_HOLD;
-					holdReasonCode = 1;
+					holdReasonCode = CONDOR_HOLD_CODE_EC2UserError;
 					holdReasonSubCode = 20;
 					break;
 				} else if( remoteJobState == "pending" ) {
@@ -1882,7 +1882,7 @@ void EC2Job::doEvaluateState()
 					dprintf( D_ALWAYS, "(%d.%d) %s\n", procID.cluster, procID.proc, errorString.c_str() );
 					dprintf( D_FULLDEBUG, "Error transition: GM_SPOT_QUERY + <unexpected state> = GM_HOLD\n" );
 					gmState = GM_HOLD;
-					holdReasonCode = 2;
+					holdReasonCode = CONDOR_HOLD_CODE_EC2InternalError;
 					holdReasonSubCode = 21;
 					break;
 				}
@@ -2462,7 +2462,7 @@ void EC2Job::ResourceLeaseExpired() {
 	errorString = "Resource was down for too long.";
 	dprintf( D_ALWAYS, "(%d.%d) Putting job on hold: resource was down for too long.\n", procID.cluster, procID.proc );
 	gmState = GM_HOLD;
-	holdReasonCode = 5;
+	holdReasonCode = CONDOR_HOLD_CODE_EC2ServerError;
 	holdReasonSubCode = 22;
 	resourceLeaseTID = -1;
 	SetEvaluateState();
