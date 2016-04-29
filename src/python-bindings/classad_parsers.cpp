@@ -96,7 +96,20 @@ bool isOldAd(boost::python::object source)
         return false;
     }
     if (!py_hasattr(source, "tell") || !py_hasattr(source, "read") || !py_hasattr(source, "seek")) {THROW_EX(ValueError, "Unable to determine if input is old or new classad");}
-    size_t end_ptr = boost::python::extract<size_t>(source.attr("tell")());
+    size_t end_ptr;
+    try
+    {
+        end_ptr = boost::python::extract<size_t>(source.attr("tell")());
+    }
+    catch (const boost::python::error_already_set&)
+    {
+        if (PyErr_ExceptionMatches(PyExc_IOError))
+        {
+            PyErr_Clear();
+            THROW_EX(ValueError, "Stream cannot rewind; must explicitly chose either old or new ClassAd parser.  Auto-detection not available.");
+        }
+        throw;
+    }
     bool isold = false;
     while (true)
     {
@@ -190,7 +203,22 @@ OldClassAdIterator::next()
 
     bool reset_ptr = py_hasattr(m_source, "tell");
     size_t end_ptr = 0;
-    if (reset_ptr) { end_ptr = boost::python::extract<size_t>(m_source.attr("tell")()); }
+    try
+    {
+        if (reset_ptr) { end_ptr = boost::python::extract<size_t>(m_source.attr("tell")()); }
+    }
+    catch (const boost::python::error_already_set&)
+    {
+        if (PyErr_ExceptionMatches(PyExc_IOError))
+        {
+            PyErr_Clear();
+            reset_ptr = false;
+        }
+        else
+        {
+            throw;
+        }
+    }
 
     while (true)
     {
