@@ -1,3 +1,6 @@
+# This workflow should succeed -- tests most splice connection
+# features.
+
 # Splice connections force nodes within a given "skewer" to run
 # in the correct order.
 splice SpliceA job_dagman_splice_connect-A-splice1.dag

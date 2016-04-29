@@ -21,20 +21,15 @@
 use CondorTest;
 use CondorUtils;
 
-$cmd = 'job_dagman_splice_connect-A.dag';
+$cmd = 'job_dagman_splice_connect-F.dag';
 $testdesc =  'Condor submit dag - test splice pin connections - scheduler U';
-$testname = "job_dagman_splice_connect-A";
+$testname = "job_dagman_splice_connect-F";
 $dagman_args = "-verbose";
 
-@outfiles = ("job_dagman_splice_connect-A.dag.dagman.out",
-	"job_dagman_splice_connect-A-skewer1.out",
-	"job_dagman_splice_connect-A-skewer2.out",
-	"job_dagman_splice_connect-A-skewer3.out");
+@outfiles = ("job_dagman_splice_connect-F.dag.dagman.out");
 
 # Lines must be *in order* within a given output file.
-@expected_output = ("SpliceA+NodeA\nSpliceB+NodeA\nSpliceC+NodeC\n",
-	"SpliceA+NodeB\nSpliceB+NodeB\nSpliceC+NodeB\n",
-	"SpliceA+NodeC\nSpliceB+NodeC\nSpliceC+NodeA\n");
+@expected_output = ();
 
 my $killedchosen = 0;
 
@@ -50,12 +45,7 @@ foreach $file (@outfiles) {
 
 $abnormal = sub 
 {
-	die "Want to see only submit, execute and successful completion\n";
-};
-
-$failure = sub 
-{
-	die "Error: DAG is not expected to fail!\n";
+	die "Want to see only submit, execute and unsuccessful completion\n";
 };
 
 $aborted = sub 
@@ -77,34 +67,19 @@ $executed = sub
 
 $submitted = sub
 {
-	CondorTest::debug("submitted: This test will see submit, executing and successful completion\n",1);
+	CondorTest::debug("submitted: This test will see submit, executing and unsuccessful completion\n",1);
 };
 
 $success = sub
 {
-	CondorTest::debug("executed successfully\n",1);
-	CondorTest::debug("Verifying output\n",1);
-	$diditpass = 1;
-	shift @outfiles; # Get rid of dagman.out
-	foreach $file (@outfiles) {
-		CondorTest::debug("Checking $file\n",1);
-		$canopen = open(OUT, "<$file");
-		if (! (defined $canopen)) {
-			CondorTest::debug("Cannot open output file <$file>:$!\n",1);
-			$diditpass = 0;
-		} else {
-			$contents = do { local $/; <OUT>; };
-			$expected = shift @expected_output;
-			if ($contents ne $expected) {
-				CondorTest::debug("ERROR: for file <$file> expected <$expected>; found <$contents>\n");
-				$diditpass = 0;
-			}
-		}
-	}
+	die "Error: DAG should fail!\n";
+};
 
-	if ($diditpass == 0) {
-		die "All expected files and correct output failed\n";
-	}
+$failure = sub 
+{
+	CondorTest::debug("DAG failed as expected\n",1);
+	CondorTest::debug("Verifying output\n",1);
+	#TEMPTEMP -- add checks here!
 };
 
 CondorTest::RegisterExitedSuccess( $testname, $success);

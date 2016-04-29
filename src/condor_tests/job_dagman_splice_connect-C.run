@@ -21,20 +21,17 @@
 use CondorTest;
 use CondorUtils;
 
-$cmd = 'job_dagman_splice_connect-A.dag';
+$cmd = 'job_dagman_splice_connect-C.dag';
 $testdesc =  'Condor submit dag - test splice pin connections - scheduler U';
-$testname = "job_dagman_splice_connect-A";
+$testname = "job_dagman_splice_connect-C";
 $dagman_args = "-verbose";
 
-@outfiles = ("job_dagman_splice_connect-A.dag.dagman.out",
-	"job_dagman_splice_connect-A-skewer1.out",
-	"job_dagman_splice_connect-A-skewer2.out",
-	"job_dagman_splice_connect-A-skewer3.out");
+#TEMPTEMP -- need to add stuff here
+@outfiles = ("job_dagman_splice_connect-C.dag.dagman.out");
 
 # Lines must be *in order* within a given output file.
-@expected_output = ("SpliceA+NodeA\nSpliceB+NodeA\nSpliceC+NodeC\n",
-	"SpliceA+NodeB\nSpliceB+NodeB\nSpliceC+NodeB\n",
-	"SpliceA+NodeC\nSpliceB+NodeC\nSpliceC+NodeA\n");
+#TEMPTEMP -- need to add stuff here
+@expected_output = ();
 
 my $killedchosen = 0;
 

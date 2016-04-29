@@ -228,7 +228,6 @@ Dag::~Dag()
     Job *job = NULL;
     _jobs.Rewind();
     while( (job = _jobs.Next()) ) {
-      ASSERT( job != NULL );
       delete job;
       _jobs.DeleteCurrent();
     }
@@ -3552,7 +3551,6 @@ Dag::RemoveNode( const char *name, MyString &whynot )
 	removed = false;
 	_jobs.Rewind();
 	while( _jobs.Next( candidate ) ) {
-		ASSERT( candidate );
         if( candidate == node ) {
 			_jobs.DeleteCurrent();
 			removed = true;
@@ -4150,7 +4148,6 @@ Dag::PropagateDirectoryToAllNodes(void)
 	// Propagate the directory setting to all nodes in the DAG.
 	_jobs.Rewind();
 	while( (job = _jobs.Next()) ) {
-		ASSERT( job != NULL );
 		job->PrefixDirectory(m_directory);
 	}
 
@@ -4260,6 +4257,9 @@ Dag::ConnectSplices( Dag *parentSplice, Dag *childSplice )
 				parentSplice->_spliceScope.Value(),
 				childSplice->_spliceScope.Value() );
 
+		// Make sure the parent and child splices have pin_ins/pin_outs
+		// as appropriate, and that the number of pin_ins and pin_outs
+		// matches.
 	int pinOutCount = parentSplice->GetPinCount( false );
 	if ( pinOutCount <= 0 ) {
 		//TEMPTEMP -- splice name as "+" on end here -- do we need to fix that?
@@ -4284,9 +4284,10 @@ Dag::ConnectSplices( Dag *parentSplice, Dag *childSplice )
 					childSplice->_spliceScope.Value(), pinInCount );
 		return false;
 	}
-	//TEMPTEMP -- this should probably report an error if there are no pins...
-	//TEMPTEMP -- need lots more error checking here (e.g., "orphan" nodes)
 
+		// Go thru the pin_in/pin_out lists, and add parent/child
+		// dependencies between splices as appropriate.  (Note that
+		// we will catch any missing pin_in/pin_out numbers here.)
 	for (int pinNum = 1; pinNum <= pinOutCount; ++pinNum ) {
 		const PinNodes *parentPNs = parentSplice->GetPinInOut( false, pinNum );
 		if ( !parentPNs ) {
@@ -4324,6 +4325,22 @@ Dag::ConnectSplices( Dag *parentSplice, Dag *childSplice )
 		}
 	}
 
+		// Check for "orphan" nodes in the child splice -- nodes that
+		// don't have either a parent within the splice or a pin_in
+		// connection.
+	Job *childNode;
+	childSplice->_jobs.Rewind();
+	while( (childNode = childSplice->_jobs.Next()) ) {
+		if ( childNode->NumParents() < 1 ) {
+			debug_printf( DEBUG_QUIET,
+						"ERROR: child splice node %s has no parents after making pin connections; add pin_in or parent\n",
+						childNode->GetJobName() );
+			return false;
+		}
+	}
+
+	//TEMPTEMP -- do we need any more error checking here?
+
 	return true;
 }
 
@@ -4350,7 +4367,6 @@ Dag::PrefixAllNodeNames(const MyString &prefix)
 
 	_jobs.Rewind();
 	while( (job = _jobs.Next()) ) {
-		ASSERT( job != NULL );
 		job->PrefixName(prefix);
 	}
 
@@ -4366,7 +4382,6 @@ Dag::PrefixAllNodeNames(const MyString &prefix)
 	// Then, reindex all the jobs keyed by their new name
 	_jobs.Rewind();
 	while( (job = _jobs.Next()) ) {
-		ASSERT( job != NULL );
 		key = job->GetJobName();
 		if (_nodeNameHash.insert(key, job) != 0) {
 			// I'm reinserting everything newly, so this should never happen

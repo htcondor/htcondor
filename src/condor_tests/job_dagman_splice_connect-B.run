@@ -21,20 +21,27 @@
 use CondorTest;
 use CondorUtils;
 
-$cmd = 'job_dagman_splice_connect-A.dag';
+$cmd = 'job_dagman_splice_connect-B.dag';
 $testdesc =  'Condor submit dag - test splice pin connections - scheduler U';
-$testname = "job_dagman_splice_connect-A";
+$testname = "job_dagman_splice_connect-B";
 $dagman_args = "-verbose";
 
-@outfiles = ("job_dagman_splice_connect-A.dag.dagman.out",
-	"job_dagman_splice_connect-A-skewer1.out",
-	"job_dagman_splice_connect-A-skewer2.out",
-	"job_dagman_splice_connect-A-skewer3.out");
+@outfiles = ("job_dagman_splice_connect-B.dag.dagman.out",
+	"job_dagman_splice_connect-B-skewer1.out",
+	"job_dagman_splice_connect-B-skewer2.out",
+	"job_dagman_splice_connect-B-skewer3.out",
+	"job_dagman_splice_connect-B-skewer4.out",
+	"job_dagman_splice_connect-B-skewer5.out",
+	"job_dagman_splice_connect-B-skewer6.out");
 
+#TEMPTEMP -- make sure this is right!
 # Lines must be *in order* within a given output file.
-@expected_output = ("SpliceA+NodeA\nSpliceB+NodeA\nSpliceC+NodeC\n",
-	"SpliceA+NodeB\nSpliceB+NodeB\nSpliceC+NodeB\n",
-	"SpliceA+NodeC\nSpliceB+NodeC\nSpliceC+NodeA\n");
+@expected_output = ("SpliceA+Node1A\nSpliceB+Splice2Aa+Node2-1a-A\nSpliceB+Splice2Ab+Node2-1b-A\nSpliceC+Node3A\n",
+	"SpliceA+Node1B\nSpliceB+Splice2Ba+Node2-2a-A\nSpliceB+Splice2Bb+Node2-2b-A\nSpliceC+Node3B\n",
+	"SpliceB+Splice2Aa+Node2-1a-B\nSpliceB+Splice2Ab+Node2-1b-B\n",
+	"SpliceB+Splice2Aa+Node2-1a-C\nSpliceB+Splice2Ab+Node2-1b-C\n",
+	"SpliceB+Splice2Ba+Node2-2a-B\nSpliceB+Splice2Bb+Node2-2b-B\n",
+	"SpliceB+Splice2Ba+Node2-2a-C\nSpliceB+Splice2Bb+Node2-2b-C\n");
 
 my $killedchosen = 0;
 
