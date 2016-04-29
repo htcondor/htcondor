@@ -33,6 +33,12 @@ submission to Deltacloud services, has been removed.
 
 \begin{itemize}
 
+\item \Condor{status} can now display the utilization of a \Condor{startd} with
+a single line of output for each machine rather than a line per slot.
+In this release this output is enabled by passing \Opt{-compact} to \Condor{status}
+but in a future release this will be the default output of \Condor{status}.
+\Ticket{5596}
+
 \item Improved the performance of the \Condor{collector} by
 not computing dropped update statistics, statistics which 
 have never been accessible by users.
