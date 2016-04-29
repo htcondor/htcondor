@@ -6483,6 +6483,19 @@ MAX_JOBS_RUNNING	= \
   how often the \Condor{schedd} daemon evaluates jobs.  It is defined
   in terms of seconds and defaults to 300 (every 5 minutes).
 
+\label{param:AbsentSubmitterLifetime}
+\item[\Macro{ABSENT\_SUBMITTER\_LIFETIME}]
+  This macro determines the maximum time that the \Condor{schedd} will
+  remember a submitter after the last job for that submitter leaves
+  the queue. It is defined in terms of seconds and defaults to 1 week.
+
+\label{param:AbsentSubmitterUpdateRate}
+\item[\Macro{ABSENT\_SUBMITTER\_UPDATE\_RATE}]
+  This macro can be used to set the maximum rate at which the \Condor{schedd}
+  sends updates to the \Condor{collector} for submitters that have no
+  jobs in the queue. It is defined in terms of seconds and defaults to 300
+  (every 5 minutes).
+
 \label{param:WindowedStatWidth}
 \item[\Macro{WINDOWED\_STAT\_WIDTH}]
   The number of seconds that forms a time window within which performance
