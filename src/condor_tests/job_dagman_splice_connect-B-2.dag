@@ -15,8 +15,8 @@ connect Splice2Ba Splice2Bb
 # pin_out Splice2Bb 2
 
 # "Manual" socket nodes to allow this to work -- remove them once
-# pins can connect to splices.
-#TEMPTEMP -- fix this up...
+# pins can connect to splices.  (Probably once we implement socket
+# nodes!)
 job SocketPreA foo NOOP
 job SocketPreB foo NOOP
 job SocketPostA foo NOOP

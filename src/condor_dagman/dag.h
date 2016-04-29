@@ -1256,7 +1256,7 @@ private:
 		@return: true on success, false otherwise
 	*/
 	bool SetPinInOut( PinList &pinList,
-				const char *inOutStr, Job *node, int pinNum );
+				/*TEMPTEMP? const char *inOutStr,*/ Job *node, int pinNum );
 
 	/** Get the list of nodes connected to a pin in or pin out
 		@param pinList: the pin list to access

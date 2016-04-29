@@ -4175,9 +4175,9 @@ Dag::SetPinInOut( bool isPinIn, const char *nodeName, int pinNum )
 
 	bool result = false;
 	if ( isPinIn ) {
-		result = SetPinInOut( _pinIns, "in", node, pinNum );
+		result = SetPinInOut( _pinIns, /*TEMPTEMP? "in",*/ node, pinNum );
 	} else {
-		result = SetPinInOut( _pinOuts, "out", node, pinNum );
+		result = SetPinInOut( _pinOuts, /*TEMPTEMP? "out",*/ node, pinNum );
 	}
 
 	return result;
@@ -4185,7 +4185,7 @@ Dag::SetPinInOut( bool isPinIn, const char *nodeName, int pinNum )
 
 //---------------------------------------------------------------------------
 bool
-Dag::SetPinInOut( PinList &pinList, const char *inOutStr,
+Dag::SetPinInOut( PinList &pinList, /*TEMPTEMP? const char *inOutStr,*/
 			Job *node, int pinNum )
 {
 	--pinNum; // Pin numbers start with 1
