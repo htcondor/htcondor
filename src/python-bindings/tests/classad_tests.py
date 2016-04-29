@@ -455,7 +455,7 @@ class TestClassad(unittest.TestCase):
         wfd = os.fdopen(w, 'w')
         wfd.write("[foo = 1]")
         wfd.close()
-        self.assertRaises(IOError, classad.parseNext, rfd)
+        self.assertRaises(ValueError, classad.parseNext, rfd)
         rfd.close()
 
 if __name__ == '__main__':
