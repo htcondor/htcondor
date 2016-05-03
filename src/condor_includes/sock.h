@@ -62,10 +62,6 @@ We want to define a callback function to be invoked when certain actions happen 
 
 typedef void (CedarHandler) (Stream *s);
 
-namespace classad {
-class ClassAd;
-}
-
 /*
 **	B A S E    S O C K
 */
@@ -371,12 +367,6 @@ public:
 	void setCryptoMethodUsed(char const *crypto_method);
 	const char* getCryptoMethodUsed();
 
-	void setSessionID(const std::string &session_id) {_session = session_id;}
-	const std::string &getSessionID() const {return _session;}
-
-	void getPolicyAd(classad::ClassAd &ad) const;
-	void setPolicyAd(const classad::ClassAd &ad);
-
 		/// True if socket has tried to authenticate or socket is
 		/// using a security session that tried to authenticate.
 		/// Authentication may or may not have succeeded and
@@ -534,8 +524,6 @@ protected:
 	char *          _auth_methods;
 	char *          _auth_name;
 	char *          _crypto_method;
-	std::string     _session;
-	classad::ClassAd *_policy_ad;
 	bool            _tried_authentication;
 
 	bool ignore_connect_timeout;	// Used by HA Daemon
