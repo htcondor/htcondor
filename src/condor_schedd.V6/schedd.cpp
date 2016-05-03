@@ -273,25 +273,25 @@ void AuditLogJobProxy( Sock &sock, PROC_ID job_id, const char *proxy_file )
 	x509_proxy_free( proxy_handle );
 
 	dprintf( D_AUDIT, sock, "proxy expiration: %d\n", (int)expire_time );
-	SetSecureAttributeInt(job_id.cluster, job_id.proc, ATTR_X509_USER_PROXY_EXPIRATION, expire_time, 0);
+	SetAttributeInt(job_id.cluster, job_id.proc, ATTR_X509_USER_PROXY_EXPIRATION, expire_time);
 	dprintf( D_AUDIT, sock, "proxy identity: %s\n", proxy_identity );
 	dprintf( D_AUDIT, sock, "proxy subject: %s\n", proxy_subject );
-	SetSecureAttributeRawString(job_id.cluster, job_id.proc, ATTR_X509_USER_PROXY_SUBJECT, proxy_identity, 0);
+	SetAttributeRawString(job_id.cluster, job_id.proc, ATTR_X509_USER_PROXY_SUBJECT, proxy_identity);
 	if ( proxy_email ) {
 		dprintf( D_AUDIT, sock, "proxy email: %s\n", proxy_email );
-		SetSecureAttributeRawString(job_id.cluster, job_id.proc, ATTR_X509_USER_PROXY_EMAIL, proxy_email, 0);
+		SetAttributeRawString(job_id.cluster, job_id.proc, ATTR_X509_USER_PROXY_EMAIL, proxy_email);
 	}
 	if ( voname ) {
 		dprintf( D_AUDIT, sock, "proxy vo name: %s\n", voname );
-		SetSecureAttributeRawString(job_id.cluster, job_id.proc, ATTR_X509_USER_PROXY_VONAME, voname, 0);
+		SetAttributeRawString(job_id.cluster, job_id.proc, ATTR_X509_USER_PROXY_VONAME, voname);
 	}
 	if ( firstfqan ) {
 		dprintf( D_AUDIT, sock, "proxy first fqan: %s\n", firstfqan );
-		SetSecureAttributeRawString(job_id.cluster, job_id.proc, ATTR_X509_USER_PROXY_FIRST_FQAN, firstfqan, 0);
+		SetAttributeRawString(job_id.cluster, job_id.proc, ATTR_X509_USER_PROXY_FIRST_FQAN, firstfqan);
 	}
 	if ( fullfqan ) {
 		dprintf( D_AUDIT, sock, "proxy full fqan: %s\n", fullfqan );
-		SetSecureAttributeRawString(job_id.cluster, job_id.proc, ATTR_X509_USER_PROXY_FQAN, fullfqan, 0);
+		SetAttributeRawString(job_id.cluster, job_id.proc, ATTR_X509_USER_PROXY_FQAN, fullfqan);
 	}
 
 	free( proxy_subject );
