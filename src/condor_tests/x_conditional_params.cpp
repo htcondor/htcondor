@@ -63,6 +63,8 @@ int main(int argc, const char ** argv)
 {
 	bool do_test = true;
 
+	init_config(0); // initialize the config defaults
+
 	int ix = 1;
 	while (ix < argc) {
 		if (is_dash_arg_prefix(argv[ix], "check-if", -1)) {
@@ -95,7 +97,7 @@ int main(int argc, const char ** argv)
 	if (check_configif) { 
 		std::string err_reason;
 		bool bb = false;
-		bool valid = config_test_if_expression(check_configif, bb, err_reason);
+		bool valid = config_test_if_expression(check_configif, bb, NULL, NULL, err_reason);
 		fprintf(stdout, "# %s: \"%s\" %s\n", 
 			valid ? "ok" : "not supported", 
 			check_configif, 
@@ -288,7 +290,7 @@ int do_iftest(int &cTests)
 					continue;
 				}
 			}
-			bool valid = config_test_if_expression(cond, bb, err_reason);
+			bool valid = config_test_if_expression(cond, bb, NULL, NULL, err_reason);
 			if ((valid != tset.valid) || (valid && (bb != tset.result))) {
 				++fail_count;
 				fprintf(stdout, "Test Failure: '%s' is (%s,%s) should be (%s,%s)\n",

@@ -335,6 +335,7 @@ MACRO_SOURCE FileMacroSource = { false, false, 0, 0, -1, -2 };
 
 #define MEG	(1<<20)
 
+
 //
 // Dump ClassAd to file junk
 //
@@ -1410,7 +1411,8 @@ main( int argc, const char *argv[] )
 				fprintf( stderr, "%s: invalid attribute name '%s' for attrib=value assigment\n", MyName, name.c_str() );
 				exit(1);
 			}
-			insert(name.c_str(), value.c_str(), SubmitMacroSet, ArgumentMacro);
+			MACRO_EVAL_CONTEXT ctx = { NULL, "SUBMIT", false, 0 };
+			insert_macro(name.c_str(), value.c_str(), SubmitMacroSet, ArgumentMacro, ctx);
 		} else {
 			cmd_file = *ptr;
 		}
@@ -1774,8 +1776,8 @@ main( int argc, const char *argv[] )
 		// Force non-zero ref count for DAG_STATUS and FAILED_COUNT
 		// these are specified for all DAG node jobs (see dagman_submit.cpp).
 		// wenger 2012-03-26 (refactored by TJ 2015-March)
-		lookup_macro("DAG_STATUS", NULL, SubmitMacroSet);
-		lookup_macro("FAILED_COUNT", NULL, SubmitMacroSet);
+		increment_macro_use_count("DAG_STATUS", SubmitMacroSet);
+		increment_macro_use_count("FAILED_COUNT", SubmitMacroSet);
 
 		HASHITER it = hash_iter_begin(SubmitMacroSet);
 		for ( ; !hash_iter_done(it); hash_iter_next(it) ) {
@@ -7113,7 +7115,7 @@ int SpecialSubmitParse(void* pv, MACRO_SOURCE& source, MACRO_SET& macro_set, cha
 {
 	FILE* fp_submit = (FILE*)pv;
 	int rval = 0;
-	const char * subsys = get_mySubSystem()->getName();
+	MACRO_EVAL_CONTEXT ctx = { NULL, "SUBMIT", false, 2 };
 
 	// Check to see if this is a queue statement.
 	//
@@ -7129,7 +7131,7 @@ int SpecialSubmitParse(void* pv, MACRO_SOURCE& source, MACRO_SET& macro_set, cha
 		const char * exline;
 		while (extraLines.Next(exline)) {
 			++ExtraLineNo;
-			rval = Parse_config_string(source, 1, exline, macro_set, subsys);
+			rval = Parse_config_string(source, 1, exline, macro_set, ctx);
 			if (rval < 0)
 				return rval;
 			rval = 0;
@@ -7138,7 +7140,7 @@ int SpecialSubmitParse(void* pv, MACRO_SOURCE& source, MACRO_SET& macro_set, cha
 		ErrContext.phase = PHASE_QUEUE;
 		ErrContext.step = -1;
 
-		auto_free_ptr expanded_queue_args(expand_macro(queue_args, SubmitMacroSet));
+		auto_free_ptr expanded_queue_args(expand_macro(queue_args, SubmitMacroSet, ctx));
 		char * pqargs = expanded_queue_args.ptr();
 		ASSERT(pqargs);
 
@@ -7156,12 +7158,12 @@ int SpecialSubmitParse(void* pv, MACRO_SOURCE& source, MACRO_SET& macro_set, cha
 		// As of 8.3, we don't believe this is still necessary, but we are afraid to change it. This
 		// code is *mostly* the same, but will differ in cases where the users is setting cmd or executble
 		// to the *same* value between queue statements. - hopefully this is close enough.
-		MyString cur_submit_executable(lookup_macro(Executable, NULL, macro_set, 0));
+		MyString cur_submit_executable(lookup_macro_exact_no_default(Executable, macro_set, 0));
 		if (last_submit_executable != cur_submit_executable) {
 			NewExecutable = true;
 			last_submit_executable = cur_submit_executable;
 		}
-		MyString cur_submit_cmd(lookup_macro("cmd", NULL, macro_set, 0));
+		MyString cur_submit_cmd(lookup_macro_exact_no_default("cmd", macro_set, 0));
 		if (last_submit_cmd != cur_submit_cmd) {
 			NewExecutable = true;
 			last_submit_cmd = cur_submit_cmd;
@@ -7363,10 +7365,12 @@ int read_submit_file(FILE * fp)
 {
 	ErrContext.phase = PHASE_READ_SUBMIT;
 
+	MACRO_EVAL_CONTEXT ctx = { NULL, "SUBMIT", false, 2 };
+
 	std::string errmsg;
 	int rval = Parse_macros(fp, FileMacroSource,
 		0, SubmitMacroSet, READ_MACROS_SUBMIT_SYNTAX,
-		get_mySubSystem()->getName(), errmsg,
+		&ctx, errmsg,
 		SpecialSubmitParse, fp);
 
 	if( rval < 0 ) {
@@ -7411,8 +7415,10 @@ void param_and_insert_unique_items(const char * param_name, classad::References 
 char *
 condor_param( const char* name, const char* alt_name )
 {
+	MACRO_EVAL_CONTEXT ctx = { NULL, "SUBMIT", false, 3 };
+
 	bool used_alt = false;
-	const char *pval = lookup_macro(name, NULL, SubmitMacroSet);
+	const char *pval = lookup_macro(name, SubmitMacroSet, ctx);
 	char * pval_expanded = NULL;
 
 	// TODO: change this to use the defaults table from SubmitMacroSet
@@ -7426,7 +7432,7 @@ condor_param( const char* name, const char* alt_name )
 	}
 
 	if( ! pval && alt_name ) {
-		pval = lookup_macro(alt_name, NULL, SubmitMacroSet);
+		pval = lookup_macro(alt_name, SubmitMacroSet, ctx);
 		used_alt = true;
 	}
 
@@ -7446,7 +7452,7 @@ condor_param( const char* name, const char* alt_name )
 
 	ErrContext.macro_name = used_alt ? alt_name : name;
 	ErrContext.raw_macro_val = pval;
-	pval_expanded = expand_macro(pval, SubmitMacroSet);
+	pval_expanded = expand_macro(pval, SubmitMacroSet, ctx);
 
 	if( pval == NULL ) {
 		fprintf( stderr, "\nERROR: Failed to expand macros in: %s\n",
@@ -7464,7 +7470,8 @@ condor_param( const char* name, const char* alt_name )
 void
 set_condor_param( const char *name, const char *value )
 {
-	insert(name, value, SubmitMacroSet, DefaultMacro);
+	MACRO_EVAL_CONTEXT ctx = { NULL, "SUBMIT", false, 2 };
+	insert_macro(name, value, SubmitMacroSet, DefaultMacro, ctx);
 }
 
 #ifdef PLUS_ATTRIBS_IN_CLUSTER_AD
@@ -7505,10 +7512,11 @@ void SetNoClusterAttr(const char * name)
 void
 set_live_submit_variable( const char *name, const char *live_value, bool force_used /*=true*/ )
 {
-	MACRO_ITEM* pitem = find_macro_item(name, SubmitMacroSet);
+	static MACRO_EVAL_CONTEXT ctx = { NULL, "SUBMIT", false, 2 };
+	MACRO_ITEM* pitem = find_macro_item(name, NULL, SubmitMacroSet);
 	if ( ! pitem) {
-		insert(name, "", SubmitMacroSet, LiveMacro);
-		pitem = find_macro_item(name, SubmitMacroSet);
+		insert_macro(name, "", SubmitMacroSet, LiveMacro, ctx);
+		pitem = find_macro_item(name, NULL, SubmitMacroSet);
 	}
 	ASSERT(pitem);
 	pitem->raw_value = live_value;
@@ -7714,7 +7722,7 @@ int queue_item(int num, StringList & vars, char * item, int item_index, int opti
 			vars.rewind();
 			std::string empties;
 			while ((var = vars.next())) {
-				MACRO_ITEM* pitem = find_macro_item(var, SubmitMacroSet);
+				MACRO_ITEM* pitem = find_macro_item(var, NULL, SubmitMacroSet);
 				if ( ! pitem || (pitem->raw_value != EmptyItemString && 0 == strlen(pitem->raw_value))) {
 					if ( ! empties.empty()) empties += ",";
 					empties += var;
@@ -7734,7 +7742,7 @@ int queue_item(int num, StringList & vars, char * item, int item_index, int opti
 		char * var;
 		vars.rewind();
 		while ((var = vars.next())) {
-			MACRO_ITEM* pitem = find_macro_item(var, SubmitMacroSet);
+			MACRO_ITEM* pitem = find_macro_item(var, NULL, SubmitMacroSet);
 			fprintf (stdout, "  %s = %s\n", var, pitem ? pitem->raw_value : "");
 		}
 		fprintf(stdout, "-----\n");

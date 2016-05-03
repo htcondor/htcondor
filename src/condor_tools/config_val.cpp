@@ -368,7 +368,7 @@ bool dump_both_callback(void* pv, HASHITER & it)
 			fprintf(stdout, " # at: %s, line %d\n", filename, pmeta->source_line);
 		}
 		if (rawval && rawval[0]) {
-			char * val = expand_param(rawval, NULL, 0);
+			char * val = expand_param(rawval, NULL, NULL, 0);
 			if (val) {
 				fprintf(stdout, " # expanded: %s\n", val);
 				free(val);
@@ -475,8 +475,23 @@ main( int argc, const char* argv[] )
 	const char * check_configif = NULL;
 
 #ifdef WIN32
-	// uncomment this if you need to debug crashes.
-	//g_ExceptionHandler.TurnOff();
+	// enable this if you need to debug crashes.
+	#if 1
+	const bool wait_for_win32_debugger = false;
+	#else
+	g_ExceptionHandler.TurnOff();
+	bool wait_for_win32_debugger = argv[1] && MATCH == strcasecmp(argv[1],"CCV_WAIT_FOR_DEBUGGER");
+	if (wait_for_win32_debugger) {
+		UINT ms = GetTickCount() - 10;
+		BOOL is_debugger = IsDebuggerPresent();
+		while ( ! is_debugger) {
+			fprintf(stderr, "waiting for debugger. PID = %d\n", GetCurrentProcessId());
+			sleep(3);
+			is_debugger = IsDebuggerPresent();
+		}
+	}
+	#endif
+
 #endif
 
 	PrintType pt = CONDOR_NONE;
@@ -500,6 +515,9 @@ main( int argc, const char* argv[] )
 					fprintf(stderr, "use should be followed by a category or category:option argument\n");
 					params.append("$");
 				}
+			#ifdef WIN32
+			} else if (i == 1 && wait_for_win32_debugger) {
+			#endif
 			} else {
 				params.append(argv[i]);
 			}
@@ -858,7 +876,7 @@ main( int argc, const char* argv[] )
 	if (check_configif) { 
 		std::string err_reason;
 		bool bb = false;
-		bool valid = config_test_if_expression(check_configif, bb, err_reason);
+		bool valid = config_test_if_expression(check_configif, bb, local_name, subsys, err_reason);
 		fprintf(stdout, "# %s: \"%s\" %s\n", 
 			valid ? "ok" : "not supported", 
 			check_configif, 

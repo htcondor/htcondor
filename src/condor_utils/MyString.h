@@ -414,16 +414,38 @@ unsigned int MyStringHash( const MyString &str );
 class YourSensitiveString {
 public:
 	YourSensitiveString() : m_str(0) {}
-	YourSensitiveString(char const *str) {
-		m_str = str;
-	}
+	YourSensitiveString(const char *str) : m_str(str) {}
+	YourSensitiveString(const YourSensitiveString &rhs) : m_str(rhs.m_str) {}
+
+	void operator =(const char *str) { m_str = str; }
+	const char * Value() { return m_str ? m_str : ""; }
+	const char * ptr() { return m_str; }
+
 	bool operator ==(const YourSensitiveString &rhs) {
 		if (m_str == rhs.m_str) return true;
 		if ((!m_str) || (!rhs.m_str)) return false;
 		return strcmp(m_str,rhs.m_str) == 0;
 	}
-	void operator =(char const *str) {
-		m_str = str;
+	bool operator ==(const char * str) {
+		if (m_str == str) return true;
+		if ((!m_str) || (!str)) return false;
+		return strcmp(m_str,str) == 0;
+	}
+	bool operator<(const char * str) const {
+		if ( ! m_str) {
+			 return str ? -1 : 0;
+		} else if ( ! str) {
+			return 1;
+		}
+		return strcmp(m_str, str);
+	}
+	bool operator<(const YourSensitiveString &rhs) const {
+		if ( ! m_str) {
+			 return rhs.m_str ? -1 : 0;
+		} else if ( ! rhs.m_str) {
+			return 1;
+		}
+		return strcmp(m_str, rhs.m_str);
 	}
 	static unsigned int hashFunction(const YourSensitiveString &s) {
 		// hash function for strings
@@ -441,8 +463,8 @@ public:
 	}
 
 
-private:
-	char const *m_str;
+protected:
+	const char *m_str;
 };
 
 

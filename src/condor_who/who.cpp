@@ -1273,7 +1273,7 @@ void init_condor_config()
 			bool fSetUG_IDS = false;
 			char * env = getenv(env_name);
 			if ( ! env) {
-				//env = param_without_default(env_name);
+				//env = param(env_name);
 				//if (env) {
 				//	free(env);
 				//} else {

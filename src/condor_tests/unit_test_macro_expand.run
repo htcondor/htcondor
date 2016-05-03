@@ -1,0 +1,24 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+
+use CondorTest;
+use CondorUtils;
+use NetworkTestConfigs;
+
+#
+# The 'test_sinful' binary validates that Sinful's multiple-address abstraction
+# is functioning properly, and that std::multimap sorts stably.
+#
+my $rv = system( 'test_macro_expand -v' );
+
+my $testName = "unit_test_macro_expand";
+if( $rv == 0 ) {
+	RegisterResult( 1, "test_name" => $testName );
+} else {
+	RegisterResult( 0, "test_name" => $testName );
+}
+
+EndTest();
+exit( 1 );
