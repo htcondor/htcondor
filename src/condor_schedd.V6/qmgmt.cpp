@@ -2595,7 +2595,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		errno = EACCES;
 		// should we fail or silently succeed?  (old submits set secure attrs)
 		const CondorVersionInfo *vers = Q_SOCK->get_peer_version();
-		if (vers && vers->built_since_version( 8, 5, 4 ) ) {
+		if (vers->built_since_version( 8, 5, 4 ) ) {
 			// new versions should know better!  fail!
 			dprintf(D_ALWAYS,
 				"SetAttribute attempt to edit secure attribute %s in job %d.%d. Failing!\n",
@@ -2603,9 +2603,6 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			return -1;
 		} else {
 			// old versions get a pass.  succeed (but do nothing).
-			// The idea here is we will not set the secure attributes, but we won't
-			// propagate the error back because we don't want old condor_submits to not
-			// be able to submit jobs.
 			dprintf(D_ALWAYS,
 				"SetAttribute attempt to edit secure attribute %s in job %d.%d. Ignoring!\n",
 				attr_name, cluster_id, proc_id);
