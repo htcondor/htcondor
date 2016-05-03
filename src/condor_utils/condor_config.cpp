@@ -106,7 +106,7 @@ extern "C" {
 // Function prototypes
 bool real_config(const char* host, int wantsQuiet, int config_options);
 //int Read_config(const char*, int depth, MACRO_SET& macro_set, int, bool, const char * subsys, std::string & errmsg);
-bool Test_config_if_expression(const char * expr, bool & result, std::string & err_reason, MACRO_SET& macro_set, const char * subsys);
+bool Test_config_if_expression(const char * expr, bool & result, std::string & err_reason, MACRO_SET& macro_set, MACRO_EVAL_CONTEXT & ctx);
 bool is_piped_command(const char* filename);
 bool is_valid_command(const char* cmdToExecute);
 int SetSyscalls(int);
@@ -399,8 +399,16 @@ MyString global_config_source;
 StringList local_config_sources;
 MyString user_config_source; // which if the files in local_config_sources is the user file
 
-param_functions config_p_funcs;
 
+static void init_macro_eval_context(MACRO_EVAL_CONTEXT &ctx)
+{
+	ctx.use_mask = 2;
+	ctx.without_default = false;
+	ctx.localname = get_mySubSystem()->getLocalName();
+	if (ctx.localname && ! ctx.localname[0]) ctx.localname = NULL;
+	ctx.subsys = get_mySubSystem()->getName();
+	if (ctx.subsys && ! ctx.subsys[0]) ctx.subsys = NULL;
+}
 
 bool config_continue_if_no_config(bool contin)
 {
@@ -904,6 +912,9 @@ real_config(const char* host, int wantsQuiet, int config_options)
 	dprintf( D_CONFIG, "config: using subsystem '%s', local '%s'\n",
 			 get_mySubSystem()->getName(), get_mySubSystem()->getLocalName("") );
 
+	MACRO_EVAL_CONTEXT ctx;
+	init_macro_eval_context(ctx);
+
 		/*
 		  N.B. if we are using the yellow pages, system calls which are
 		  not supported by either remote system calls or file descriptor
@@ -916,7 +927,7 @@ real_config(const char* host, int wantsQuiet, int config_options)
 
 		// Insert an entry for "tilde", (~condor)
 	if( tilde ) {
-		insert("TILDE", tilde, ConfigMacroSet, DetectedMacro);
+		insert_macro("TILDE", tilde, ConfigMacroSet, DetectedMacro, ctx);
 
 	} else {
 			// What about tilde if there's no ~condor?
@@ -1000,15 +1011,15 @@ real_config(const char* host, int wantsQuiet, int config_options)
 		// DEFAULT_DOMAIN_NAME parameter somewhere if they need it.
 		// -Derek Wright <wright@cs.wisc.edu> 5/11/98
 	if( host ) {
-		insert("HOSTNAME", host, ConfigMacroSet, DetectedMacro);
+		insert_macro("HOSTNAME", host, ConfigMacroSet, DetectedMacro, ctx);
 	} else {
-		insert("HOSTNAME", get_local_hostname().Value(), ConfigMacroSet, DetectedMacro);
+		insert_macro("HOSTNAME", get_local_hostname().Value(), ConfigMacroSet, DetectedMacro, ctx);
 	}
-	insert("FULL_HOSTNAME", get_local_fqdn().Value(), ConfigMacroSet, DetectedMacro);
+	insert_macro("FULL_HOSTNAME", get_local_fqdn().Value(), ConfigMacroSet, DetectedMacro, ctx);
 
 		// Also insert tilde since we don't want that over-written.
 	if( tilde ) {
-		insert("TILDE", tilde, ConfigMacroSet, DetectedMacro);
+		insert_macro("TILDE", tilde, ConfigMacroSet, DetectedMacro, ctx);
 	}
 
 		// Read in the LOCAL_CONFIG_FILE as a string list and process
@@ -1082,11 +1093,11 @@ real_config(const char* host, int wantsQuiet, int config_options)
 		if( !strcmp( macro_name, "START_owner" ) ) {
 			MyString ownerstr;
 			ownerstr.formatstr( "Owner == \"%s\"", varvalue );
-			insert("START", ownerstr.Value(), ConfigMacroSet, EnvMacro);
+			insert_macro("START", ownerstr.Value(), ConfigMacroSet, EnvMacro, ctx);
 		}
 		// ignore "_CONDOR_" without any macro name attached
 		else if( macro_name[0] != '\0' ) {
-			insert(macro_name, varvalue, ConfigMacroSet, EnvMacro);
+			insert_macro(macro_name, varvalue, ConfigMacroSet, EnvMacro, ctx);
 		}
 
 		free( varname ); varname = NULL;
@@ -1185,7 +1196,8 @@ process_config_source( const char* file, int depth, const char* name,
 		FILE * fp = Open_macro_source(source, file, false, ConfigMacroSet, errmsg);
 		if ( ! fp) { rval = -1; }
 		else {
-			rval = Parse_macros(fp, source, depth, ConfigMacroSet, 0, get_mySubSystem()->getName(), errmsg, NULL, NULL);
+			MACRO_EVAL_CONTEXT ctx; init_macro_eval_context(ctx);
+			rval = Parse_macros(fp, source, depth, ConfigMacroSet, 0, &ctx, errmsg, NULL, NULL);
 			rval = Close_macro_source(fp, source, ConfigMacroSet, rval); fp = NULL;
 		}
 		if( rval < 0 ) {
@@ -1706,84 +1718,88 @@ fill_attributes()
 
 	const char *tmp;
 	MyString val;
+	MACRO_EVAL_CONTEXT ctx;
+	init_macro_eval_context(ctx);
 
 	if( (tmp = sysapi_condor_arch()) != NULL ) {
-		insert("ARCH", tmp, ConfigMacroSet, DetectedMacro);
+		insert_macro("ARCH", tmp, ConfigMacroSet, DetectedMacro, ctx);
 	}
 
 	if( (tmp = sysapi_uname_arch()) != NULL ) {
-		insert("UNAME_ARCH", tmp, ConfigMacroSet, DetectedMacro);
+		insert_macro("UNAME_ARCH", tmp, ConfigMacroSet, DetectedMacro, ctx);
 	}
 
 	if( (tmp = sysapi_opsys()) != NULL ) {
-		insert("OPSYS", tmp, ConfigMacroSet, DetectedMacro);
+		insert_macro("OPSYS", tmp, ConfigMacroSet, DetectedMacro, ctx);
 
 		int ver = sysapi_opsys_version();
 		if (ver > 0) {
 			val.formatstr("%d", ver);
-			insert("OPSYSVER", val.Value(), ConfigMacroSet, DetectedMacro);
+			insert_macro("OPSYSVER", val.Value(), ConfigMacroSet, DetectedMacro, ctx);
 		}
 	}
 
 	if( (tmp = sysapi_opsys_versioned()) != NULL ) {
-		insert("OPSYSANDVER", tmp, ConfigMacroSet, DetectedMacro);
+		insert_macro("OPSYSANDVER", tmp, ConfigMacroSet, DetectedMacro, ctx);
 	}
 
 	if( (tmp = sysapi_uname_opsys()) != NULL ) {
-		insert("UNAME_OPSYS", tmp, ConfigMacroSet, DetectedMacro);
+		insert_macro("UNAME_OPSYS", tmp, ConfigMacroSet, DetectedMacro, ctx);
 	}
 
 	int major_ver = sysapi_opsys_major_version();
 	if (major_ver > 0) {
 		val.formatstr("%d", major_ver);
-		insert("OPSYSMAJORVER", val.Value(), ConfigMacroSet, DetectedMacro);
+		insert_macro("OPSYSMAJORVER", val.Value(), ConfigMacroSet, DetectedMacro, ctx);
 	}
 
 	if( (tmp = sysapi_opsys_name()) != NULL ) {
-		insert("OPSYSNAME", tmp, ConfigMacroSet, DetectedMacro);
+		insert_macro("OPSYSNAME", tmp, ConfigMacroSet, DetectedMacro, ctx);
 	}
 	
 	if( (tmp = sysapi_opsys_long_name()) != NULL ) {
-		insert("OPSYSLONGNAME", tmp, ConfigMacroSet, DetectedMacro);
+		insert_macro("OPSYSLONGNAME", tmp, ConfigMacroSet, DetectedMacro, ctx);
 	}
 
 	if( (tmp = sysapi_opsys_short_name()) != NULL ) {
-		insert("OPSYSSHORTNAME", tmp, ConfigMacroSet, DetectedMacro);
+		insert_macro("OPSYSSHORTNAME", tmp, ConfigMacroSet, DetectedMacro, ctx);
 	}
 
 	if( (tmp = sysapi_opsys_legacy()) != NULL ) {
-		insert("OPSYSLEGACY", tmp, ConfigMacroSet, DetectedMacro);
+		insert_macro("OPSYSLEGACY", tmp, ConfigMacroSet, DetectedMacro, ctx);
 	}
 
 #if ! defined WIN32
         // temporary attributes for raw utsname info
 	if( (tmp = sysapi_utsname_sysname()) != NULL ) {
-		insert("UTSNAME_SYSNAME", tmp, ConfigMacroSet, DetectedMacro);
+		insert_macro("UTSNAME_SYSNAME", tmp, ConfigMacroSet, DetectedMacro, ctx);
 	}
 
 	if( (tmp = sysapi_utsname_nodename()) != NULL ) {
-		insert("UTSNAME_NODENAME", tmp, ConfigMacroSet, DetectedMacro);
+		insert_macro("UTSNAME_NODENAME", tmp, ConfigMacroSet, DetectedMacro, ctx);
 	}
 
 	if( (tmp = sysapi_utsname_release()) != NULL ) {
-		insert("UTSNAME_RELEASE", tmp, ConfigMacroSet, DetectedMacro);
+		insert_macro("UTSNAME_RELEASE", tmp, ConfigMacroSet, DetectedMacro, ctx);
 	}
 
 	if( (tmp = sysapi_utsname_version()) != NULL ) {
-		insert("UTSNAME_VERSION", tmp, ConfigMacroSet, DetectedMacro);
+		insert_macro("UTSNAME_VERSION", tmp, ConfigMacroSet, DetectedMacro, ctx);
 	}
 
 	if( (tmp = sysapi_utsname_machine()) != NULL ) {
-		insert("UTSNAME_MACHINE", tmp, ConfigMacroSet, DetectedMacro);
+		insert_macro("UTSNAME_MACHINE", tmp, ConfigMacroSet, DetectedMacro, ctx);
 	}
 #endif
 
-	insert("CondorIsAdmin", can_switch_ids() ? "true" : "false", ConfigMacroSet, DetectedMacro);
+	insert_macro("CondorIsAdmin", can_switch_ids() ? "true" : "false", ConfigMacroSet, DetectedMacro, ctx);
 
-	insert("SUBSYSTEM", get_mySubSystem()->getName(), ConfigMacroSet, DetectedMacro);
+	insert_macro("SUBSYSTEM", get_mySubSystem()->getName(), ConfigMacroSet, DetectedMacro, ctx);
+	const char * localname = get_mySubSystem()->getLocalName();
+	if (localname && localname[0]) { insert_macro("LOCALNAME", localname, ConfigMacroSet, DetectedMacro, ctx); }
 
 	val.formatstr("%d",sysapi_phys_memory_raw_no_param());
-	insert("DETECTED_MEMORY", val.Value(), ConfigMacroSet, DetectedMacro);
+	insert_macro("DETECTED_MEMORY", val.Value(), ConfigMacroSet, DetectedMacro, ctx);
 
 		// Currently, num_hyperthread_cores is defined as everything
 		// in num_cores plus other junk, which on some systems may
@@ -1798,19 +1814,19 @@ fill_attributes()
 
 	// DETECTED_PHYSICAL_CPUS will always be the number of real CPUs not counting hyperthreads.
 	val.formatstr("%d",num_cpus);
-	insert("DETECTED_PHYSICAL_CPUS", val.Value(), ConfigMacroSet, DetectedMacro);
+	insert_macro("DETECTED_PHYSICAL_CPUS", val.Value(), ConfigMacroSet, DetectedMacro, ctx);
 
 	int def_valid = 0;
 	bool count_hyper = param_default_boolean("COUNT_HYPERTHREAD_CPUS", get_mySubSystem()->getName(), &def_valid);
 	if ( ! def_valid) count_hyper = true;
 	// DETECTED_CPUS will be the value that NUM_CPUS will be set to by default.
 	val.formatstr("%d", count_hyper ? num_hyperthread_cpus : num_cpus);
-	insert("DETECTED_CPUS", val.Value(), ConfigMacroSet, DetectedMacro);
+	insert_macro("DETECTED_CPUS", val.Value(), ConfigMacroSet, DetectedMacro, ctx);
 
 	// DETECTED_CORES is not a good name, but we're stuck with it now...
 	// it will ALWAYS be the number of hyperthreaded cores.
 	val.formatstr("%d",num_hyperthread_cpus);
-	insert("DETECTED_CORES", val.Value(), ConfigMacroSet, DetectedMacro);
+	insert_macro("DETECTED_CORES", val.Value(), ConfigMacroSet, DetectedMacro, ctx);
 }
 
 
@@ -1824,17 +1840,19 @@ check_domain_attributes()
 		   by the time we call this. -Derek Wright 10/20/98 */
 
 	char *uid_domain, *filesys_domain;
+	MACRO_EVAL_CONTEXT ctx;
+	init_macro_eval_context(ctx);
 
 	filesys_domain = param("FILESYSTEM_DOMAIN");
 	if( !filesys_domain ) {
-		insert("FILESYSTEM_DOMAIN", get_local_fqdn().Value(), ConfigMacroSet, DetectedMacro);
+		insert_macro("FILESYSTEM_DOMAIN", get_local_fqdn().Value(), ConfigMacroSet, DetectedMacro, ctx);
 	} else {
 		free( filesys_domain );
 	}
 
 	uid_domain = param("UID_DOMAIN");
 	if( !uid_domain ) {
-		insert("UID_DOMAIN", get_local_fqdn().Value(), ConfigMacroSet, DetectedMacro);
+		insert_macro("UID_DOMAIN", get_local_fqdn().Value(), ConfigMacroSet, DetectedMacro, ctx);
 	} else {
 		free( uid_domain );
 	}
@@ -1846,7 +1864,9 @@ check_domain_attributes()
 void 
 param_insert(const char * name, const char * value)
 {
-	insert(name, value, ConfigMacroSet, WireMacro);
+	MACRO_EVAL_CONTEXT ctx;
+	init_macro_eval_context(ctx);
+	insert_macro(name, value, ConfigMacroSet, WireMacro, ctx);
 }
 
 void
@@ -1917,227 +1937,48 @@ clear_config()
 }
 
 
-/*
-** Return the value associated with the named parameter.  Return NULL
-** if the given parameter is not defined.
-*/
-char *
-param_without_default( const char *name )
-{
-	const char *val = NULL;
-	char * expanded_val = NULL;
-
-	// Try in order to find the parameter
-	// As we walk through, any value (including empty string) will
-	// cause a 'match' since presumably it was set to empty
-	// specifically to clear this parameter for this specific
-	// subsystem / local.
-
-	const char *subsys = get_mySubSystem()->getName();
-	if (subsys && ! subsys[0]) subsys = NULL;
-	const char *local = get_mySubSystem()->getLocalName();
-	bool fLocalMatch = false, fSubsysMatch = false;
-	if (local && local[0]) {
-		// "subsys.local.name" and "local.name"
-		std::string local_name;
-		formatstr(local_name, "%s.%s", local, name);
-		fLocalMatch = true; fSubsysMatch = subsys != NULL;
-		val = lookup_macro(local_name.c_str(), subsys, ConfigMacroSet);
-		if (subsys && ! val) {
-			val = lookup_macro(local_name.c_str(), NULL, ConfigMacroSet);
-			fSubsysMatch = false;
-		}
-	}
-	if ( ! val) {
-		// lookup "subsys.name" and "name"
-		fLocalMatch = false; fSubsysMatch = subsys != NULL;
-		val = lookup_macro(name, subsys, ConfigMacroSet);
-		if (subsys && ! val) {
-			val = lookup_macro(name, NULL, ConfigMacroSet);
-			fSubsysMatch = false;
-		}
-	}
-	// Still nothing (or empty)?  Give up.
-	if ( ! val || ! val[0] ) {
-		//dprintf(D_STATUS, "param_without_default(%s) returns NULL\n", name);
-		return NULL;
-	}
-
-	if (IsDebugVerbose(D_CONFIG)) {
-		if (fLocalMatch || fSubsysMatch) {
-			std::string param_name;
-			if (fSubsysMatch) { param_name += subsys; param_name += "."; }
-			if (fLocalMatch) { param_name += local; param_name += "."; }
-			param_name += name;
-			dprintf( D_CONFIG | D_VERBOSE, "Config '%s': using prefix '%s' ==> '%s'\n",
-					 name, param_name.c_str(), val );
-		}
-		else {
-			dprintf( D_CONFIG | D_VERBOSE, "Config '%s': no prefix ==> '%s'\n", name, val );
-		}
-	}
-
-	// Ok, now expand it out...
-	expanded_val = expand_macro(val, ConfigMacroSet, false, subsys);
-
-	// If it returned an empty string, free it before returning NULL
-	if( expanded_val == NULL ) {
-		//dprintf(D_STATUS, "param_without_default(%s) returns NULL\n", name);
-		return NULL;
-	} else if ( expanded_val[0] == '\0' ) {
-		free( expanded_val );
-		//dprintf(D_STATUS, "param_without_default(%s) returns NULL\n", name);
-		return( NULL );
-	} else {
-		//dprintf(D_STATUS, "param_without_default(%s) returns %s\n", name, expanded_val);
-		return expanded_val;
-	}
-}
-
-//PRAGMA_REMIND("TJ: this gives incorrect result if the param is defined in defaults table.")
 bool param_defined(const char* name) {
-    bool retval = false;
-    char* v = param_without_default(name);
-    if (v) {
-        free(v);
-        retval = true;
-    }
-    //dprintf(D_STATUS, "param_defined(%s) returns %s\n", name, retval ? "true" : "false");
-    return retval;
+	MACRO_EVAL_CONTEXT ctx;
+	init_macro_eval_context(ctx);
+	const char * pval = lookup_macro(name, ConfigMacroSet, ctx);
+	return pval && pval[0];
 }
-
 
 char*
-param(const char* name) 
+param(const char* name)
 {
-		/* The zero means return NULL on not found instead of EXCEPT */
-	char * psz = param_with_default_abort(name, 0);
-	//dprintf(D_STATUS, "param(%s) returns %s\n", name, psz ? psz : "NULL");
-	return psz;
-}
+	MACRO_EVAL_CONTEXT ctx;
+	init_macro_eval_context(ctx);
+	ctx.use_mask = 3;
 
-char *
-param_with_default_abort(const char *name, int abort) 
-{
-	const char *val = NULL;
-#ifdef DISCARD_CONFIG_MATCHING_DEFAULT // don't copy params from default table to ConfigTab
-	const char* subsys = get_mySubSystem()->getName();
-	if (subsys && ! subsys[0]) subsys = NULL;
-
-	// params in the local namespace will not exist in the default param table
-	// so look them up only in ConfigTab
-	const char* local = get_mySubSystem()->getLocalName();
-	if (local && local[0]) {
-		std::string local_name(local);
-		local_name += "."; local_name += name;
-		val = lookup_macro(local_name.c_str(), subsys, ConfigMacroSet);
-		if (subsys && ! val) {
-			val = lookup_macro(local_name.c_str(), NULL, ConfigMacroSet);
+	//PRAGMA_REMIND("tj: remove subsys.local.knob support in the 8.5 devel series")
+	if (ctx.localname && ctx.subsys) {
+		MyString lcl(ctx.subsys); lcl += "."; lcl += ctx.localname;
+		const char * lval = lookup_macro_exact_no_default(name, lcl.c_str(), ConfigMacroSet, ctx.use_mask);
+		if (lval) {
+			char * expanded_val = expand_macro(lval, ConfigMacroSet, ctx);
+			if ( ! expanded_val) { return NULL; }
+			else if (  ! expanded_val[0]) { free(expanded_val); return NULL; }
+			return expanded_val;
 		}
 	}
-	// if not found in the local namespace, search the sybsystem and generic namespaces
-	if ( ! val) {
-		val = lookup_macro(name, subsys, ConfigMacroSet);
-		if (subsys && ! val) {
-			val = lookup_macro(name, NULL, ConfigMacroSet);
-		}
-		if ( ! val) {
-			val = param_default_string(name, subsys);
-			if (val) {
-				param_default_set_use(name, 3, ConfigMacroSet);
-				if (val[0] == '\0') {
-					// If indeed it was empty, then just bail since it was
-					// validly found in the Default Table, but empty.
-					return NULL;
-				}
-			}
-		}
-	}
-#else
-	const char * subsys = get_mySubSystem()->getName();
-	const char * local = get_mySubSystem()->getLocalName();
-	MyString subsys_name;
 
-	// Set up the namespace search for the param name.
-	// WARNING: The order of appending matters. We search more specific 
-	// to less specific in the namespace.
-	StringList sl;
-	if (local && local[0]) {
-		MyString subsys_local_name;
-		subsys_local_name.formatstr("%s.%s.%s", subsys, local, name);
-		sl.append(subsys_local_name.Value());
-
-		MyString local_name;
-		local_name.formatstr("%s.%s", local, name);
-		sl.append(local_name.Value());
-	}
-	subsys_name.formatstr("%s.%s", subsys, name);
-	sl.append(subsys_name.Value());
-	sl.append(name);
-
-	// Search in left to right order until we find a meaningful val or
-	// can bail out early from the search.
-	sl.rewind();
-	char *next_param_name = NULL;
-	while(val == NULL && (next_param_name = sl.next())) {
-		// See if the candidate is in the Config Table
-		val = lookup_macro(next_param_name, NULL, ConfigMacroSet);
-
-		if (val != NULL && val[0] == '\0') {
-			// The config table specifically wanted the value to be empty, 
-			// so we honor it regardless of what is in the Default Table.
-			return NULL;
-		}
-
-		if (val != NULL) {
-			// we found something not empty, don't look in the Default Table
-			// and stop the search
-			break;
-		}
-
-		// At this point in the loop, val == NULL, see if we can find
-		// something in the Default Table.
-
-		// The candidate wasn't in the Config Table, so check the Default Table
-		const char * def = param_exact_default_string(next_param_name);
-		if (def != NULL) {
-			// Yay! Found something! Add the entry found in the Default 
-			// Table to the Config Table. This could be adding an empty
-			// string. If a default found, the loop stops searching.
-			insert(next_param_name, def, ConfigMacroSet, DefaultMacro);
-			if (def[0] == '\0') {
-				// If indeed it was empty, then just bail since it was
-				// validly found in the Default Table, but empty.
-				return NULL;
-			}
-			val = def;
-		}
-	}
-#endif
-
-	// If we don't find any value at all, determine if we must abort or 
-	// simply return NULL which will allow older code calling param to do
-	// the right thing (usually by setting up an ad hoc default at the call
-	// site).
-	if (val == NULL) {
-		if (abort) {
-			EXCEPT("Param name '%s' did not have a definition in any of the "
-				   "usual namespaces or default table. Aborting since it MUST "
-				   "be defined.", name);
-		}
+	const char * pval = lookup_macro(name, ConfigMacroSet, ctx);
+	if ( ! pval || ! pval[0]) {
+		// If we don't find any value at all, return NULL
 		return NULL;
 	}
 
 	// if we get here, it means that we found a val of note, so expand it and
 	// return the canonical value of it. expand_macro returns allocated memory.
 	// note that expand_macro will first try and expand
-	char * expanded_val = expand_macro(val, ConfigMacroSet, true, subsys);
-	if (expanded_val == NULL) {
+	char * expanded_val = expand_macro(pval, ConfigMacroSet, ctx);
+	if ( ! expanded_val) {
 		return NULL;
 	}
 	
 	// If expand_macro returned an empty string, free it before returning NULL
-	if (expanded_val[0] == '\0') {
+	if ( ! expanded_val[0]) {
 		free(expanded_val);
 		return NULL;
 	}
@@ -2626,13 +2467,18 @@ param_false( const char * name ) {
 char *
 expand_param( const char *str )
 {
-	return expand_macro(str, ConfigMacroSet, true, get_mySubSystem()->getName());
+	MACRO_EVAL_CONTEXT ctx;
+	init_macro_eval_context(ctx);
+	return expand_macro(str, ConfigMacroSet, ctx);
 }
 
 char *
-expand_param(const char *str, const char *subsys, int use)
+expand_param(const char *str, const char * localname, const char *subsys, int use)
 {
-	return expand_macro(str, ConfigMacroSet, true, subsys, use);
+	MACRO_EVAL_CONTEXT ctx = { localname, subsys, false, use };
+	if (ctx.localname && ! ctx.localname[0]) ctx.localname = NULL;
+	if (ctx.subsys && ! ctx.subsys[0]) ctx.subsys = NULL;
+	return expand_macro(str, ConfigMacroSet, ctx);
 }
 
 /*
@@ -2680,8 +2526,9 @@ bool param_find_item (
 
 	MACRO_ITEM * pi = NULL;
 	if (subsys && local) {
-		name_found.formatstr("%s.%s.%s", subsys, local, name);
-		pi = find_macro_item(name_found.Value(), ConfigMacroSet);
+		//PRAGMA_REMIND("tj: remove subsys.local.knob support in the 8.5 devel series")
+		name_found.formatstr("%s.%s", subsys, local);
+		pi = find_macro_item(name, name_found.c_str(), ConfigMacroSet);
 		if (pi) {
 			name_found = pi->key;
 			it.ix = (int)(pi - it.set.table);
@@ -2689,8 +2536,7 @@ bool param_find_item (
 		}
 	}
 	if (local) {
-		name_found.formatstr("%s.%s", local, name);
-		pi = find_macro_item(name_found.Value(), ConfigMacroSet);
+		pi = find_macro_item(name, local, ConfigMacroSet);
 		if (pi) {
 			name_found = pi->key;
 			it.ix = (int)(pi - it.set.table);
@@ -2698,8 +2544,7 @@ bool param_find_item (
 		}
 	}
 	if (subsys) {
-		name_found.formatstr("%s.%s", subsys, name);
-		pi = find_macro_item(name_found.Value(), ConfigMacroSet);
+		pi = find_macro_item(name, subsys, ConfigMacroSet);
 		if (pi) {
 			name_found = pi->key;
 			it.ix = (int)(pi - it.set.table);
@@ -2718,7 +2563,7 @@ bool param_find_item (
 		}
 	}
 
-	pi = find_macro_item(name, ConfigMacroSet);
+	pi = find_macro_item(name, NULL, ConfigMacroSet);
 	if (pi) {
 		name_found = pi->key;
 		it.ix = (int)(pi - it.set.table);
@@ -2818,23 +2663,28 @@ reinsert_specials( const char* host )
 	static bool warned_no_user = false;
 	char buf[40];
 
+	MACRO_EVAL_CONTEXT ctx;
+	init_macro_eval_context(ctx);
+
 	if( tilde ) {
-		insert("TILDE", tilde, ConfigMacroSet, DetectedMacro);
+		insert_macro("TILDE", tilde, ConfigMacroSet, DetectedMacro, ctx);
 	}
 	if( host ) {
-		insert("HOSTNAME", host, ConfigMacroSet, DetectedMacro);
+		insert_macro("HOSTNAME", host, ConfigMacroSet, DetectedMacro, ctx);
 	} else {
-		insert("HOSTNAME", get_local_hostname().Value(), ConfigMacroSet, DetectedMacro);
+		insert_macro("HOSTNAME", get_local_hostname().Value(), ConfigMacroSet, DetectedMacro, ctx);
 	}
-	insert("FULL_HOSTNAME", get_local_fqdn().Value(), ConfigMacroSet, DetectedMacro);
-	insert("SUBSYSTEM", get_mySubSystem()->getName(), ConfigMacroSet, DetectedMacro);
+	insert_macro("FULL_HOSTNAME", get_local_fqdn().Value(), ConfigMacroSet, DetectedMacro, ctx);
+	insert_macro("SUBSYSTEM", get_mySubSystem()->getName(), ConfigMacroSet, DetectedMacro, ctx);
+	const char * localname = get_mySubSystem()->getLocalName();
+	if (localname && localname[0]) { insert_macro("LOCALNAME", localname, ConfigMacroSet, DetectedMacro, ctx); }
 
 	// Insert login-name for our real uid as "username".  At the time
 	// we're reading in the config source, the priv state code is not
 	// initialized, so our euid will always be the same as our ruid.
 	char *myusernm = my_username();
 	if( myusernm ) {
-		insert( "USERNAME", myusernm, ConfigMacroSet, DetectedMacro);
+		insert_macro( "USERNAME", myusernm, ConfigMacroSet, DetectedMacro, ctx);
 		free(myusernm);
 		myusernm = NULL;
 	} else {
@@ -2862,9 +2712,9 @@ reinsert_specials( const char* host )
 		myrgid = getgid();
 #endif
 		snprintf(buf,40,"%u",myruid);
-		insert("REAL_UID", buf, ConfigMacroSet, DetectedMacro);
+		insert_macro("REAL_UID", buf, ConfigMacroSet, DetectedMacro, ctx);
 		snprintf(buf,40,"%u",myrgid);
-		insert("REAL_GID", buf, ConfigMacroSet, DetectedMacro);
+		insert_macro("REAL_GID", buf, ConfigMacroSet, DetectedMacro, ctx);
 	}
 		
 	// Insert values for "pid" and "ppid".  Use static values since
@@ -2880,7 +2730,7 @@ reinsert_specials( const char* host )
 #endif
 	}
 	snprintf(buf,40,"%u",reinsert_pid);
-	insert("PID", buf, ConfigMacroSet, DetectedMacro);
+	insert_macro("PID", buf, ConfigMacroSet, DetectedMacro, ctx);
 	if ( !reinsert_ppid ) {
 #ifdef WIN32
 		CSysinfo system_hackery;
@@ -2890,7 +2740,7 @@ reinsert_specials( const char* host )
 #endif
 	}
 	snprintf(buf,40,"%u",reinsert_ppid);
-	insert("PPID", buf, ConfigMacroSet, DetectedMacro);
+	insert_macro("PPID", buf, ConfigMacroSet, DetectedMacro, ctx);
 
 	//
 	// get_local_ipaddr() may return the 'default' IP if the protocol-
@@ -2905,21 +2755,21 @@ reinsert_specials( const char* host )
 	// init_local_hostname_impl(), which calls network_interface_to_ip().
 	//
 	condor_sockaddr ip = get_local_ipaddr( CP_IPV4 );
-	insert( "IP_ADDRESS", ip.to_ip_string().Value(), ConfigMacroSet, DetectedMacro );
+	insert_macro("IP_ADDRESS", ip.to_ip_string().Value(), ConfigMacroSet, DetectedMacro, ctx);
 	if( ip.is_ipv6() ) {
-		insert( "IP_ADDRESS_IS_IPV6", "true", ConfigMacroSet, DetectedMacro );
+		insert_macro("IP_ADDRESS_IS_IPV6", "true", ConfigMacroSet, DetectedMacro, ctx);
 	} else {
-		insert( "IP_ADDRESS_IS_IPV6", "false", ConfigMacroSet, DetectedMacro );
+		insert_macro("IP_ADDRESS_IS_IPV6", "false", ConfigMacroSet, DetectedMacro, ctx);
 	}
 
 	condor_sockaddr v4 = get_local_ipaddr( CP_IPV4 );
 	if( v4.is_ipv4() ) {
-		insert( "IPV4_ADDRESS", v4.to_ip_string().Value(), ConfigMacroSet, DetectedMacro );
+		insert_macro("IPV4_ADDRESS", v4.to_ip_string().Value(), ConfigMacroSet, DetectedMacro, ctx);
 	}
 
 	condor_sockaddr v6 = get_local_ipaddr( CP_IPV6 );
 	if( v6.is_ipv6() ) {
-		insert( "IPV6_ADDRESS", v6.to_ip_string().Value(), ConfigMacroSet, DetectedMacro );
+		insert_macro("IPV6_ADDRESS", v6.to_ip_string().Value(), ConfigMacroSet, DetectedMacro, ctx);
 	}
 
 
@@ -2930,7 +2780,7 @@ reinsert_specials( const char* host )
 		bool count_hyper = param_boolean("COUNT_HYPERTHREAD_CPUS", true);
 		// DETECTED_CPUS will be the value that NUM_CPUS will be set to by default.
 		snprintf(buf,40,"%d", count_hyper ? num_hyperthread_cpus : num_cpus);
-		insert("DETECTED_CPUS", buf, ConfigMacroSet, DetectedMacro);
+		insert_macro("DETECTED_CPUS", buf, ConfigMacroSet, DetectedMacro, ctx);
 	}
 }
 
@@ -2941,7 +2791,9 @@ config_insert( const char* attrName, const char* attrValue )
 	if( ! (attrName && attrValue) ) {
 		return;
 	}
-	insert(attrName, attrValue, ConfigMacroSet, WireMacro);
+	MACRO_EVAL_CONTEXT ctx;
+	init_macro_eval_context(ctx);
+	insert_macro(attrName, attrValue, ConfigMacroSet, WireMacro, ctx);
 }
 
 int macro_stats(MACRO_SET& set, struct _macro_stats &stats)
@@ -3384,7 +3236,8 @@ static void process_persistent_config_or_die (const char * source_file, bool top
 		if ( ! Check_config_source_security(fp, source_file)) {
 			rval = -1;
 		} else {
-			rval = Parse_macros(fp, source, 0, ConfigMacroSet, 0, get_mySubSystem()->getName(), errmsg, NULL, NULL);
+			MACRO_EVAL_CONTEXT ctx; init_macro_eval_context(ctx);
+			rval = Parse_macros(fp, source, 0, ConfigMacroSet, 0, &ctx, errmsg, NULL, NULL);
 		}
 		fclose(fp); fp = NULL;
 	}
@@ -3464,11 +3317,14 @@ process_runtime_configs()
 	MACRO_SOURCE source;
 	insert_source("<runtime>", ConfigMacroSet, source);
 
+	MACRO_EVAL_CONTEXT ctx;
+	init_macro_eval_context(ctx);
+
 	for (i=0; i <= rArray.getlast(); i++) {
 		processed = true;
 		source.line = i;
 #if 1
-		rval = Parse_config_string(source, 0, rArray[i].config, ConfigMacroSet, get_mySubSystem()->getName());
+		rval = Parse_config_string(source, 0, rArray[i].config, ConfigMacroSet, ctx);
 		if (rval < 0) {
 			dprintf( D_ALWAYS | D_ERROR, "Configuration Error parsing runtime[%d] name '%s', at line %d in config: %s\n",
 					 i, rArray[i].admin, source.meta_off+1, rArray[i].config);
@@ -3629,9 +3485,12 @@ int write_config_file(const char* pathname, int options) {
 }
 
 // so that condor_config_val can test config if expressions.
-bool config_test_if_expression(const char * expr, bool & result, std::string & err_reason)
+bool config_test_if_expression(const char * expr, bool & result, const char * localname, const char * subsys, std::string & err_reason)
 {
-	return Test_config_if_expression(expr, result, err_reason, ConfigMacroSet, get_mySubSystem()->getName());
+	MACRO_EVAL_CONTEXT ctx = { localname, subsys, false, 0 };
+	if (ctx.localname && !ctx.localname[0]) ctx.localname = NULL;
+	if (ctx.subsys && !ctx.subsys[0]) ctx.subsys = NULL;
+	return Test_config_if_expression(expr, result, err_reason, ConfigMacroSet, ctx);
 }
 
 /* End code for runtime support for modifying a daemon's config source. */
@@ -3672,6 +3531,9 @@ bool param(std::string &buf,char const *param_name,char const *default_value)
 	return found;
 }
 
+/*
+PRAGMA_REMIND("tj: kill the param_functions code in 8.5 series.")
+param_functions config_p_funcs;
 param_functions* get_param_functions()
 {
 	config_p_funcs.set_param_func(&param);
@@ -3681,6 +3543,7 @@ param_functions* get_param_functions()
 
 	return &config_p_funcs;
 }
+*/
 
 /* Take a param which is the name of an executable, and safely expand it
  * if required to a full pathname by searching the PATH environment.

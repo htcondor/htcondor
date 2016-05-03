@@ -1387,7 +1387,7 @@ handle_config_val( Service*, int idCmd, Stream* stream )
 
 			dprintf(D_CONFIG | D_FULLDEBUG, "DC_CONFIG_VAL(%s) def: %s = %s\n", param_name, name_used.Value(), def_val ? def_val : "NULL");
 
-			if (val) { tmp = expand_param(val, subsys, 0); } else { tmp = NULL; }
+			if (val) { tmp = expand_param(val, local_name, subsys, 0); } else { tmp = NULL; }
 			if( ! stream->code(tmp) ) {
 				dprintf( D_ALWAYS, "Can't send reply for DC_CONFIG_VAL\n" );
 				retval = FALSE;
@@ -1426,7 +1426,7 @@ handle_config_val( Service*, int idCmd, Stream* stream )
 		if (val || ! filename.empty()) {
 			dprintf(D_CONFIG | D_FULLDEBUG, "DC_CONFIG_VAL(%s) def: %s = %s\n", param_name, name_used.Value(), def_val ? def_val : "NULL");
 
-			if (val) { tmp = expand_param(val, subsys, 0); } else { tmp = NULL; }
+			if (val) { tmp = expand_param(val, local_name, subsys, 0); } else { tmp = NULL; }
 			if( ! stream->code(tmp) ) {
 				dprintf( D_ALWAYS, "Can't send reply for DC_CONFIG_VAL\n" );
 				retval = FALSE;
