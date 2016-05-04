@@ -401,7 +401,6 @@
 #define ATTR_LAST_HOLD_REASON_CODE  "LastHoldReasonCode"
 #define ATTR_LAST_HOLD_REASON_SUBCODE  "LastHoldReasonSubCode"
 #define ATTR_LAST_JOB_LEASE_RENEWAL  "LastJobLeaseRenewal"
-#define ATTR_LAST_JOB_LEASE_RENEWAL_FAILED  "LastJobLeaseRenewalFailed"
 #define ATTR_LAST_MATCH_TIME  "LastMatchTime"
 #define ATTR_MACHINE_LAST_MATCH_TIME  "MachineLastMatchTime"
 #define ATTR_LAST_MATCH_LIST_PREFIX  "LastMatchName"

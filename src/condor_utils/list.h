@@ -125,6 +125,7 @@ public:
 
 	virtual ~List();
 	bool	Append( ObjType * obj );
+	void	Clear();
 
     /// Insert an element before the current element
 	/// Warning: if AtEnd(), Insert() will add the element before the
@@ -296,6 +297,20 @@ List<ObjType>::~List()
 	}
 	delete dummy;
 	// cout << "Destructed list" << endl;
+}
+
+/*
+  Remove all elements from the list. The scan pointer is reset to the
+  rewound position.
+*/
+template <class ObjType>
+void
+List<ObjType>::Clear()
+{
+	while( !IsEmpty() ) {
+		RemoveItem( dummy->next );
+	}
+	current = dummy;
 }
 
 /*

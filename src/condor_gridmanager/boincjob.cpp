@@ -28,7 +28,6 @@
 #include "basename.h"
 #include "spooled_job_files.h"
 #include "filename_tools.h"
-#include "job_lease.h"
 
 #include "gridmanager.h"
 #include "boincjob.h"
