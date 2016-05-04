@@ -655,7 +655,7 @@ dprintf(D_FULLDEBUG,"    UpdateLeases: calling DoUpdateLeases\n");
 
 	if ( update_delay ) {
 		daemonCore->Reset_Timer( updateLeasesTimerId, update_delay );
-dprintf(D_FULLDEBUG,"    UpdateLeases: DoUpdateLeases wants delay of %lu secs\n",update_delay);
+dprintf(D_FULLDEBUG,"    UpdateLeases: DoUpdateLeases wants delay of %u secs\n",update_delay);
 		return;
 	}
 
