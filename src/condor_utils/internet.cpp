@@ -849,7 +849,7 @@ getHostFromAddr( const char* addr )
 
 	copy = strdup( addr );
 
-	if( (tmp = strchr(copy, ']')) ) {
+	if( (copy[0] == '[' || copy[1] == '[') && (tmp = strchr(copy, ']')) ) {
 		// if it is an IPv6 address, we want to end that host part there
 		*tmp = '\0';
 
@@ -877,17 +877,15 @@ getHostFromAddr( const char* addr )
 		// skip that and just use what follows it...
 		//
 		// also, we want to skip '[' if it is an IPv6 address.
-	if( copy[0] == '<' ) {
-		if( copy[1] ) {
-			if (copy[1] == '[') {
-				if ( copy[2] )
-					host = strdup( &copy[2] );
-			} else
-				host = strdup( &copy[1] );
-		}
-	} else if( copy[0] ) {
-		host = strdup( copy );
+	tmp = copy;
+	if( tmp[0] == '<' ) {
+		tmp++;
 	}
+	if( tmp[0] == '[' ) {
+		tmp++;
+	}
+	host = strdup( tmp );
+
 	free( copy );
 	return host;
 }
