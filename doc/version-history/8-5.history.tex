@@ -54,6 +54,16 @@ workflow will be \Arg{DagFile}+\Arg{cluster} of the top-level
 \Condor{dagman} job.
 \Ticket{5605}
 
+\item The files named in the submit file attributes \SubmitCmdNI{vm\_disk},
+\SubmitCmdNI{xen\_kernel), and \SubmitCmdNI{xen\_initrd} now refer to
+locations on the execute machine.
+\Condor{submit} no longer modifies these values or checks for their
+existence on the submit machine.
+If these files need to be transferred by HTCondor, then they should be
+listed in \SubmitCmdNI{transfer\_input\_files} and their presence in
+these vm universe attributes shouldn't include any path information.
+\Ticket{4167}
+
 \end{itemize}
 
 \noindent Bugs Fixed:

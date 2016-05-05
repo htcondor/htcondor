@@ -2632,6 +2632,8 @@ The first field is the path and file name of the disk file.
 The second field specifies the device. 
 The third field specifies permissions,
 and the optional fourth field specifies the image format. 
+If a disk file will be transferred by HTCondor, then the first field
+should just be the simple file name (no path information).
 
 An example that specifies two disk files:
 \footnotesize
@@ -2772,10 +2774,12 @@ If not specified, the default value is \Expr{True}.
 \index{submit commands!xen\_initrd}
 \label{condor-submit-xen-initrd}
 \item[xen\_initrd = $<$image-file$>$]
-When \SubmitCmd{xen\_kernel} gives a path and file name for
+When \SubmitCmd{xen\_kernel} gives a file name for
 the kernel image to use, 
-this optional command may specify a path to and ramdisk 
+this optional command may specify a path to a ramdisk 
 (\File{initrd}) image file.
+If the image file will be transferred by HTCondor, then the value
+should just be the simple file name (no path information).
 
 %%%%%%%%%%%%%%%%%%%
 %% xen_kernel
@@ -2788,6 +2792,8 @@ A value of \SubmitCmd{included} specifies that the kernel is
 included in the disk file.
 If not one of these values, then the value is a path and
 file name of the kernel to be used.
+If a kernel file will be transferred by HTCondor, then the value
+should just be the simple file name (no path information).
 
 %%%%%%%%%%%%%%%%%%%
 %% xen_kernel_params
