@@ -28,6 +28,8 @@
 
 static bool test_normal_case(void);
 static bool test_hostname(void);
+static bool test_ipv6_sinful();
+static bool test_complex_sinful();
 
 bool FTEST_getHostFromAddr(void) {
 		// beginning junk for getPortFromAddr(() {
@@ -39,6 +41,8 @@ bool FTEST_getHostFromAddr(void) {
 	FunctionDriver driver;
 	driver.register_function(test_normal_case);
 	driver.register_function(test_hostname);
+	driver.register_function(test_ipv6_sinful);
+	driver.register_function(test_complex_sinful);
 	
 		// run the tests
 	return driver.do_all_functions();
@@ -75,6 +79,44 @@ static bool test_hostname() {
 	emit_output_expected_header();
 	char expected[30];
 	sprintf(expected, "balthazar.cs.wisc.edu");
+	emit_retval(expected);
+	emit_output_actual_header();
+	emit_retval(sinstring);
+	if(strcmp(expected, sinstring) != 0) {
+		free(sinstring);
+		FAIL;
+	}
+	free(sinstring);
+	PASS;
+}
+
+static bool test_ipv6_sinful() {
+	emit_test("Is IPv6 input parsed correctly?");
+	const char* inputstring = "<[2607:f388:107c:501:90e2:baff:fe2c:2724]:496>";
+	emit_input_header();
+	emit_param("STRING", inputstring);
+	char* sinstring = getHostFromAddr(inputstring);
+	emit_output_expected_header();
+	const char *expected = "2607:f388:107c:501:90e2:baff:fe2c:2724";
+	emit_retval(expected);
+	emit_output_actual_header();
+	emit_retval(sinstring);
+	if(strcmp(expected, sinstring) != 0) {
+		free(sinstring);
+		FAIL;
+	}
+	free(sinstring);
+	PASS;
+}
+
+static bool test_complex_sinful() {
+	emit_test("Is complex sinful input parsed correctly?");
+	const char* inputstring = "<192.168.0.2:51450?addrs=192.168.0.2-51450+[--1]-51450>";
+	emit_input_header();
+	emit_param("STRING", inputstring);
+	char* sinstring = getHostFromAddr(inputstring);
+	emit_output_expected_header();
+	const char *expected = "192.168.0.2";
 	emit_retval(expected);
 	emit_output_actual_header();
 	emit_retval(sinstring);
