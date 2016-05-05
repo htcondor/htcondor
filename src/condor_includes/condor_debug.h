@@ -74,7 +74,7 @@ enum {
    D_NFS,
    D_AUDIT, // messages for the audit log
    D_TEST,  // messages with this category are parsed by various tests.
-   D_UNUSED29,
+   D_STATS,
    D_UNUSED30,
    D_BUG,   // messages that indicate the daemon is going down.
 

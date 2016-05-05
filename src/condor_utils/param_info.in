@@ -660,7 +660,7 @@ review=?
 tags=starter,starter_common
 
 [STARTER_DEBUG]
-default=D_PID
+default=D_PID D_STATS
 type=string
 reconfig=true
 customization=seldom
@@ -5725,6 +5725,20 @@ friendly_name=Shadow Log
 review=?
 tags=shadow,log
 
+[SHADOW_STATS_LOG]
+default=$(LOG)/XferStatsLog
+type=path
+friendly_name=Log file of Xfer stats
+review=?
+tags=shadow,log
+
+[STARTER_STATS_LOG]
+default=$(LOG)/XferStatsLog
+type=path
+friendly_name=Log file of Xfer stats
+review=?
+tags=starter,log
+
 [STARTD_LOG]
 default=$(LOG)/StartLog
 type=path
@@ -7734,7 +7748,7 @@ default=$(MAX_DEFAULT_LOG)
 review=?
 
 [SHADOW_DEBUG]
-default=
+default=D_STATS
 review=?
 [MAX_SHADOW_LOG]
 default=$(MAX_DEFAULT_LOG)

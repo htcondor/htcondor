@@ -2420,6 +2420,19 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 	download_success = true;
 	SendTransferAck(s,download_success,try_again,hold_code,hold_subcode,NULL);
 
+		// Log some tcp statistics about this transfer
+	if (*total_bytes > 0) {
+		char *stats = s->get_statistics();
+		int cluster = -1;
+		int proc = -1;
+		jobAd.LookupInteger(ATTR_CLUSTER_ID, cluster);
+		jobAd.LookupInteger(ATTR_PROC_ID, proc);
+
+		dprintf(D_STATS, "File Transfer Download: JobId: %d.%d bytes: %ld seconds: %ld dest: %s %s\n", 
+			cluster, proc, *total_bytes, (downloadEndTime - downloadStartTime), s->peer_ip_str(), (stats ? stats : "") );
+	}
+
+
 	return_and_resetpriv( 0 );
 }
 
@@ -3794,6 +3807,18 @@ FileTransfer::ExitDoUpload(filesize_t *total_bytes, ReliSock *s, priv_state save
 	Info.hold_code = hold_code;
 	Info.hold_subcode = hold_subcode;
 	Info.error_desc = error_desc;
+
+		// Log some tcp statistics about this transfer
+	if (*total_bytes > 0) {
+		int cluster = -1;
+		int proc = -1;
+		jobAd.LookupInteger(ATTR_CLUSTER_ID, cluster);
+		jobAd.LookupInteger(ATTR_PROC_ID, proc);
+
+		char *stats = s->get_statistics();
+		dprintf(D_STATS, "File Transfer Upload: JobId: %d.%d bytes: %ld seconds: %ld dest: %s %s\n", 
+			cluster, proc, *total_bytes, (uploadEndTime - uploadStartTime), s->peer_ip_str(), (stats ? stats : "") );
+	}
 
 	return rc;
 }

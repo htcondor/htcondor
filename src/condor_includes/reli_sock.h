@@ -216,6 +216,12 @@ public:
 	void enter_reverse_connecting_state();
 	void exit_reverse_connecting_state(ReliSock *sock);
 
+		// returns a pointer to an internally managed
+		// buffer with a human-readable string containing
+		// tcp statistics from the TCP_INFO sockopt.  Don't free.
+		// may return null
+	char *get_statistics();
+
 #ifndef WIN32
 	// interface no longer supported 
 	int attach_to_file_desc(int);
@@ -351,6 +357,8 @@ protected:
 
 	int is_client;
 	char *hostAddr;
+	char *statsBuf;
+
 	classy_counted_ptr<class CCBClient> m_ccb_client; // for reverse connects
 
 		// after connecting, request to be routed to this daemon

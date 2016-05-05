@@ -55,6 +55,7 @@ ReliSock::init()
 	_special_state = relisock_none;
 	is_client = 0;
 	hostAddr = NULL;
+	statsBuf = NULL;
 	snd_msg.reset();
 	rcv_msg.reset();
 	rcv_msg.init_parent(this);
@@ -96,6 +97,10 @@ ReliSock::~ReliSock()
 	if ( hostAddr ) {
 		free( hostAddr );
 		hostAddr = NULL;
+	}
+	if (statsBuf) {
+		free(statsBuf);
+		statsBuf = NULL;
 	}
 	if( m_target_shared_port_id ) {
 		free( m_target_shared_port_id );
@@ -1343,6 +1348,77 @@ ReliSock::exit_reverse_connecting_state(ReliSock *sock)
 		sock->close();
 	}
 	m_ccb_client = NULL;
+}
+
+/*
+ * Use the Linux-specific TCP_INFO getsockopt to return a human readable
+ * string describing low-level tcp statistics
+ *
+ */
+char *
+ReliSock::get_statistics() {
+#ifndef LINUX
+	return 0;
+#else
+			// 20 entries, each with 16 bytes of text and up to 10 bytes numeric
+	int maxSize = 20 * (16 + 10);
+	if (statsBuf == 0) {
+		statsBuf = (char *)malloc(maxSize + 1); // dtor frees this
+		statsBuf[0] = '\0';
+	}
+
+	struct tcp_info ti;
+	socklen_t tcp_info_len = sizeof(struct tcp_info);
+
+	int ret = getsockopt(this->get_file_desc(), SOL_TCP, TCP_INFO, &ti, &tcp_info_len);
+	if (ret != 0) {
+			// maybe the sock was closed?  Return the last value, if any.
+		return statsBuf;
+	}
+
+	snprintf(statsBuf, maxSize,
+		"rto: %d "
+		"ato: %d "
+		"snd_mss: %d "
+		"rcv_mss: %d "
+		"unacked: %d "
+		"sacked: %d "
+		"lost: %d "
+		"retrans: %d "
+		"fackets: %d "
+		"pmtu: %d "
+		"rcv_ssthresh: %d "
+		"rtt: %d "
+		"snd_ssthresh: %d "
+		"snd_cwnd: %d "
+		"advmss: %d "
+		"reordering: %d "
+		"rcv_rtt: %d "
+		"rcv_space: %d "
+		"total_retrans: %d ",
+		
+		ti.tcpi_rto,
+		ti.tcpi_ato,
+		ti.tcpi_snd_mss,
+		ti.tcpi_rcv_mss,
+		ti.tcpi_unacked,
+		ti.tcpi_sacked,
+		ti.tcpi_lost,
+		ti.tcpi_retrans,
+		ti.tcpi_fackets,
+		ti.tcpi_pmtu,
+		ti.tcpi_rcv_ssthresh,
+		ti.tcpi_rtt,
+		ti.tcpi_snd_ssthresh,
+		ti.tcpi_snd_cwnd,
+		ti.tcpi_advmss,
+		ti.tcpi_reordering,
+		ti.tcpi_rcv_rtt,
+		ti.tcpi_rcv_space,
+		ti.tcpi_total_retrans);
+		
+	return statsBuf;
+#endif
 }
 
 void
