@@ -9814,8 +9814,13 @@ These macros affect the \Condor{gridmanager}.
 \item[\Macro{EC2\_RESOURCE\_TIMEOUT}]
   The number of seconds after which if an EC2 grid universe job fails to
   ping the EC2 service, the job will be put on hold.  Defaults to -1,
-  which implements an infinite length, 
+  which implements an infinite length,
   such that a failure to ping the service will never put the job on hold.
+
+\label{param:EC2GahpRateLimit}
+\item[\Macro{EC2\_GAHP\_RATE\_LIMIT}]
+  The minimum interval, in whole milliseconds, between requests to the same
+  EC2 service with the same credentials.  Defaults to 100.
 
 \label{param:GramVersionDetection}
 \item[\Macro{GRAM\_VERSION\_DETECTION}]

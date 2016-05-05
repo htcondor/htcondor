@@ -2059,10 +2059,22 @@ By default the list will be automatically generated.
 
 \index{submit commands!ec2\_tag\_$<$name$>$}
 \item[ec2\_tag\_$<$name$>$ = $<$value$>$]
-For grid type \SubmitCmdNI{ec2} jobs, 
+For grid type \SubmitCmdNI{ec2} jobs,
 specifies a tag to be associated with the running instance.
 The tag name will be lower-cased, use \SubmitCmd{ec2\_tag\_names} to
 change the case.
+
+%%%%%%%%%%%%%%%%%%%
+%% WantNameTag
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!WantNameTag}
+\label{condor-submit-want-name-tag}
+\item[WantNameTag = $<$True \Bar\ False$>$]
+For grid type \SubmitCmdNI{ec2} jobs,
+a job may request that its 'name' tag be (not) set by HTCondor.  If the job
+does not otherwise specify any tags, not setting its name tag will eliminate
+a call by the EC2 GAHP, improving performance.
 
 %%%%%%%%%%%%%%%%%%%
 %% ec2_user_data
