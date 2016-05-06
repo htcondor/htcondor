@@ -59,6 +59,26 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item The EC2 GAHP now rate-limits its requests, and responds to overload
+warnings with an exponential back-off.  Additionally, fewer operations are
+now performed on a per-job basis (as few as one in some cases).  The
+resulting scalability improvements have been demonstrated to permit a single
+GAHP to manage ten thousand instances.  Because the overload condition is
+account- and region- specific, the grid manager now launches a GAHP for
+each account-region pair.  We therefore recommend adding \Expr{D\_PID} to
+\MacroNI{EC2\_GAHP\_DEBUG}, for disambiguation, and this is now the default.
+\Ticket{5561}
+\Ticket{5588}
+\Ticket{5620}
+
+\item The grid manager now assigns \Attr{HoldReasonCode}s and
+\Attr{HoldReasonSubCode}s to EC2 jobs when they go on hold.  Values are
+subject to change until the stable release.
+\Ticket{5628}
+
+\item The grid manager now advertises some metrics from the EC2 GAHP.
+\Ticket{5580}
+
 \item Some Linux distributions for supercomputer compute nodes and
 others distributions for docker images have no /var/run/utmp.  Condor no longer
 aborts when this file is missing, when it tries to determine keyboard
@@ -83,6 +103,16 @@ no batch name is specified, the batch name for all jobs in the
 workflow will be \Arg{DagFile}+\Arg{cluster} of the top-level
 \Condor{dagman} job.
 \Ticket{5605}
+
+\item The files named in the submit file attributes \SubmitCmdNI{vm\_disk},
+\SubmitCmdNI{xen\_kernel}, and \SubmitCmdNI{xen\_initrd} now refer to
+locations on the execute machine.
+\Condor{submit} no longer modifies these values or checks for their
+existence on the submit machine.
+If these files need to be transferred by HTCondor, then they should be
+listed in \SubmitCmdNI{transfer\_input\_files} and their presence in
+these vm universe attributes shouldn't include any path information.
+\Ticket{4167}
 
 \end{itemize}
 

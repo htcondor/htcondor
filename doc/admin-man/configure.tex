@@ -8636,6 +8636,32 @@ These macros affect the \Condor{collector}.
 \end{verbatim} 
   There is no default value for this variable.
 
+\label{param:CollectorForwardFiltering}
+\item[\Macro{COLLECTOR\_FORWARD\_FILTERING}]
+  When this boolean variable is set to \Expr{True}, Machine and
+  Submitter ad updates are not forwarded to the
+  \MacroNI{CONDOR\_VIEW\_HOST} if certain attributes are unchanged
+  from the previous update of the ad.
+  The default is \Expr{False}, meaning all updates are forwarded.
+
+\label{param:CollectorForwardWatchList}
+\item[\Macro{COLLECTOR\_FORWARD\_WATCH\_LIST}]
+  When \MacroNI{COLLECTOR\_FORWARD\_FILTERING} is set to \Expr{True},
+  this variable provides the list of attributes that controls whether
+  a Machine or Submitter ad update is forwarded to the
+  \MacroNI{CONDOR\_VIEW\_HOST}.
+  If all attributes in this list are unchanged from the previous update,
+  then the new update is not forwarded.
+  The default value is \Expr{State,Cpus,Memory,IdleJobs}.
+
+\label{param:CollectorForwardInterval}
+\item[\Macro{COLLECTOR\_FORWARD\_INTERVAL}]
+  When \MacroNI{COLLECTOR\_FORWARD\_FILTERING} is set to \Expr{True},
+  this variable limits how long forwarding of updates for a given
+  ad can be filtered before an update must be forwarded.
+  The default is one third of \MacroNI{CLASSAD\_LIFETIME}.
+  
+
 \end{description}
 
 The following macros control where, when, and for how long HTCondor 
@@ -9788,8 +9814,13 @@ These macros affect the \Condor{gridmanager}.
 \item[\Macro{EC2\_RESOURCE\_TIMEOUT}]
   The number of seconds after which if an EC2 grid universe job fails to
   ping the EC2 service, the job will be put on hold.  Defaults to -1,
-  which implements an infinite length, 
+  which implements an infinite length,
   such that a failure to ping the service will never put the job on hold.
+
+\label{param:EC2GahpRateLimit}
+\item[\Macro{EC2\_GAHP\_RATE\_LIMIT}]
+  The minimum interval, in whole milliseconds, between requests to the same
+  EC2 service with the same credentials.  Defaults to 100.
 
 \label{param:GramVersionDetection}
 \item[\Macro{GRAM\_VERSION\_DETECTION}]

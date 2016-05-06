@@ -95,9 +95,13 @@ fourth specifies the format.
 Here is an example that identifies a single file:
 \footnotesize
 \begin{verbatim}
-  vm_disk = /var/lib/libvirt/images/swap.img:sda2:w:raw
+  vm_disk = swap.img:sda2:w:raw
 \end{verbatim}
 \normalsize
+
+If HTCondor will be transferring the disk file, then the file name given
+in \SubmitCmd{vm\_disk} should not contain any path information.
+Otherwise, the full path to the file should be given.
 
 Setting values in the submit description file for some commands
 have consequences for the virtual machine description file.
@@ -126,9 +130,8 @@ standard file transfer attributes:
   transfer_input_files = /myxen/diskfile.img,/myxen/swap.img
 \end{verbatim}
 \normalsize
-Any and all needed files on a system without a shared file
-system (between the submit machine and the machine where the
-job will execute) must be listed.
+Any and all needed files that will not accessible directly
+from the machines where the job may execute must be listed.
 
 Further commands specify information that is specific to the
 virtual machine type targeted.
@@ -224,10 +227,10 @@ utilizing one of the following definitions.
   is to be found in disk image given by the definition of the single file
   specified in \SubmitCmd{vm\_disk}. 
 
-\item \Expr{xen\_kernel = path-to-kernel} gives a full path and
+\item \Expr{xen\_kernel = path-to-kernel} gives the
   file name of the required kernel.  If this kernel must be transferred
   to machine on which the \SubmitCmdNI{vm} universe job will execute,
-  it must also be included in the \SubmitCmd{xen\_transfer\_files} command. 
+  it must also be included in the \SubmitCmd{transfer\_input\_files} command. 
 
   This form of the \SubmitCmd{xen\_kernel} command also requires further
   definition of the \SubmitCmd{xen\_root} command.

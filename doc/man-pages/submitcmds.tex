@@ -2059,10 +2059,22 @@ By default the list will be automatically generated.
 
 \index{submit commands!ec2\_tag\_$<$name$>$}
 \item[ec2\_tag\_$<$name$>$ = $<$value$>$]
-For grid type \SubmitCmdNI{ec2} jobs, 
+For grid type \SubmitCmdNI{ec2} jobs,
 specifies a tag to be associated with the running instance.
 The tag name will be lower-cased, use \SubmitCmd{ec2\_tag\_names} to
 change the case.
+
+%%%%%%%%%%%%%%%%%%%
+%% WantNameTag
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!WantNameTag}
+\label{condor-submit-want-name-tag}
+\item[WantNameTag = $<$True \Bar\ False$>$]
+For grid type \SubmitCmdNI{ec2} jobs,
+a job may request that its 'name' tag be (not) set by HTCondor.  If the job
+does not otherwise specify any tags, not setting its name tag will eliminate
+a call by the EC2 GAHP, improving performance.
 
 %%%%%%%%%%%%%%%%%%%
 %% ec2_user_data
@@ -2632,6 +2644,8 @@ The first field is the path and file name of the disk file.
 The second field specifies the device. 
 The third field specifies permissions,
 and the optional fourth field specifies the image format. 
+If a disk file will be transferred by HTCondor, then the first field
+should just be the simple file name (no path information).
 
 An example that specifies two disk files:
 \footnotesize
@@ -2772,10 +2786,12 @@ If not specified, the default value is \Expr{True}.
 \index{submit commands!xen\_initrd}
 \label{condor-submit-xen-initrd}
 \item[xen\_initrd = $<$image-file$>$]
-When \SubmitCmd{xen\_kernel} gives a path and file name for
+When \SubmitCmd{xen\_kernel} gives a file name for
 the kernel image to use, 
-this optional command may specify a path to and ramdisk 
+this optional command may specify a path to a ramdisk 
 (\File{initrd}) image file.
+If the image file will be transferred by HTCondor, then the value
+should just be the simple file name (no path information).
 
 %%%%%%%%%%%%%%%%%%%
 %% xen_kernel
@@ -2788,6 +2804,8 @@ A value of \SubmitCmd{included} specifies that the kernel is
 included in the disk file.
 If not one of these values, then the value is a path and
 file name of the kernel to be used.
+If a kernel file will be transferred by HTCondor, then the value
+should just be the simple file name (no path information).
 
 %%%%%%%%%%%%%%%%%%%
 %% xen_kernel_params
