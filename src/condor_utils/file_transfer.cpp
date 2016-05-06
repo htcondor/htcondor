@@ -2428,8 +2428,8 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 		jobAd.LookupInteger(ATTR_CLUSTER_ID, cluster);
 		jobAd.LookupInteger(ATTR_PROC_ID, proc);
 
-		dprintf(D_STATS, "File Transfer Download: JobId: %d.%d bytes: %ld seconds: %ld dest: %s %s\n", 
-			cluster, proc, *total_bytes, (downloadEndTime - downloadStartTime), s->peer_ip_str(), (stats ? stats : "") );
+		dprintf(D_STATS, "File Transfer Download: JobId: %d.%d bytes: %lld seconds: %.1f dest: %s %s\n", 
+			cluster, proc, *total_bytes, (double)(downloadEndTime - downloadStartTime), s->peer_ip_str(), (stats ? stats : "") );
 	}
 
 
@@ -3816,7 +3816,7 @@ FileTransfer::ExitDoUpload(filesize_t *total_bytes, ReliSock *s, priv_state save
 		jobAd.LookupInteger(ATTR_PROC_ID, proc);
 
 		char *stats = s->get_statistics();
-		dprintf(D_STATS, "File Transfer Upload: JobId: %d.%d bytes: %ld seconds: %ld dest: %s %s\n", 
+		dprintf(D_STATS, "File Transfer Upload: JobId: %d.%d bytes: %lld seconds: %.1f dest: %s %s\n", 
 			cluster, proc, *total_bytes, (uploadEndTime - uploadStartTime), s->peer_ip_str(), (stats ? stats : "") );
 	}
 
