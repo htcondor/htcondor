@@ -660,7 +660,7 @@ review=?
 tags=starter,starter_common
 
 [STARTER_DEBUG]
-default=D_PID D_STATS
+default=D_PID 
 type=string
 reconfig=true
 customization=seldom
@@ -7748,7 +7748,7 @@ default=$(MAX_DEFAULT_LOG)
 review=?
 
 [SHADOW_DEBUG]
-default=D_STATS
+default=
 review=?
 [MAX_SHADOW_LOG]
 default=$(MAX_DEFAULT_LOG)
