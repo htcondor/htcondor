@@ -20,10 +20,9 @@
 #if !defined(_SUBMIT_INTERNAL_H)
 #define _SUBMIT_INTERNAL_H
 
-#include "dc_schedd.h"
-
 #define PLUS_ATTRIBS_IN_CLUSTER_AD 1
 
+#ifndef EXPAND_GLOBS_WARN_EMPTY
 // functions in submit_glob.cpp
 #define EXPAND_GLOBS_WARN_EMPTY (1<<0)
 #define EXPAND_GLOBS_FAIL_EMPTY (1<<1)
@@ -33,6 +32,7 @@
 #define EXPAND_GLOBS_TO_FILES   (1<<5) // when you want files only
 
 int submit_expand_globs(StringList &items, int options, std::string & errmsg);
+#endif // EXPAND_GLOBS
 
 // functions for handling the queue statement
 int queue_connect();
@@ -123,11 +123,12 @@ public:
 	virtual bool disconnect(bool commit_transaction, CondorError & errstack);
 	virtual int  get_type() { return AbstractQ_TYPE_SIM; }
 
-	bool Connect(FILE* fp, bool close_on_disconnect);
+	bool Connect(FILE* fp, bool close_on_disconnect, bool log_all);
 private:
 	int cluster;
 	int proc;
 	bool close_file_on_disconnect;
+	bool log_all_communication;
 	FILE * fp;
 };
 

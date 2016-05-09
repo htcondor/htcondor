@@ -133,6 +133,7 @@ SimScheddQ::SimScheddQ(int starting_cluster)
 	: cluster(starting_cluster)
 	, proc(-1)
 	, close_file_on_disconnect(false)
+	, log_all_communication(false)
 	, fp(NULL)
 {
 }
@@ -145,10 +146,11 @@ SimScheddQ::~SimScheddQ()
 	fp = NULL;
 }
 
-bool SimScheddQ::Connect(FILE* _fp, bool close_on_disconnect) {
+bool SimScheddQ::Connect(FILE* _fp, bool close_on_disconnect, bool log_all) {
 	ASSERT( ! fp);
 	fp = _fp;
 	close_file_on_disconnect = close_on_disconnect;
+	log_all_communication = log_all;
 	return fp != NULL;
 }
 
@@ -163,12 +165,16 @@ bool SimScheddQ::disconnect(bool /*commit_transaction*/, CondorError & /*errstac
 
 int SimScheddQ::get_NewCluster() {
 	proc = -1;
+	if (log_all_communication) fprintf(fp, "::get_newCluster\n");
 	return ++cluster;
 }
 
 int SimScheddQ::get_NewProc(int cluster_id) {
 	ASSERT(cluster == cluster_id);
-	if (fp) { fprintf (fp, "\n"); }
+	if (fp) { 
+		if (log_all_communication) fprintf(fp, "::get_newProc\n");
+		fprintf (fp, "\n");
+	}
 	return ++proc;
 }
 
@@ -181,6 +187,7 @@ int SimScheddQ::set_Attribute(int cluster_id, int proc_id, const char *attr, con
 	ASSERT(cluster_id == cluster);
 	ASSERT(proc_id == proc || proc_id == -1);
 	if (fp) {
+		if (log_all_communication) fprintf(fp, "::set(%d,%d) ", cluster_id, proc_id);
 		fprintf(fp, "%s=%s\n", attr, value);
 	}
 	return 0;
@@ -189,18 +196,25 @@ int SimScheddQ::set_AttributeInt(int cluster_id, int proc_id, const char *attr, 
 	ASSERT(cluster_id == cluster);
 	ASSERT(proc_id == proc || proc_id == -1);
 	if (fp) {
+		if (log_all_communication) fprintf(fp, "::int(%d,%d) ", cluster_id, proc_id);
 		fprintf(fp, "%s=%d\n", attr, value);
 	}
 	return 0;
 }
 
-int SimScheddQ::send_SpoolFileIfNeeded(ClassAd& /*ad*/) {
+int SimScheddQ::send_SpoolFileIfNeeded(ClassAd& ad) {
+	if (fp) {
+		fprintf(fp, "::send_SpoolFileIfNeeded\n");
+		fPrintAd(fp, ad);
+	}
 	return 0;
 }
-int SimScheddQ::send_SpoolFile(char const * /*filename*/) {
+int SimScheddQ::send_SpoolFile(char const * filename) {
+	if (fp) { fprintf(fp, "::send_SpoolFile: %s\n", filename); }
 	return 0;
 }
-int SimScheddQ::send_SpoolFileBytes(char const * /*filename*/) {
+int SimScheddQ::send_SpoolFileBytes(char const * filename) {
+	if (fp) { fprintf(fp, "::send_SpoolFileBytes: %s\n", filename); }
 	return 0;
 }
 

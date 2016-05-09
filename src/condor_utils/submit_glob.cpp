@@ -53,8 +53,8 @@
 #include "condor_version.h"
 
 #include "list.h"
-#include "submit_internal.h"
-#include "binary_search.h"
+#include "submit_utils.h"
+//#include "binary_search.h"
 
 #ifdef WIN32
 
