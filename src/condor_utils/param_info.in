@@ -7353,6 +7353,16 @@ friendly_name=Timeout for prefetch requests lists phase of negotiator
 review=?
 tags=negotiator,matchmaker
 
+[HISTORY_HELPER]
+default=$(LIBEXEC)/condor_history_helper
+win32_default=$(LIBEXEC)\condor_history_helper.exe
+type=path
+reconfig=true
+customization=devel
+friendly_name=location of history helper executable
+review=?
+tags=schedd
+
 [HISTORY_HELPER_MAX_HISTORY]
 default=10000
 range=0,
