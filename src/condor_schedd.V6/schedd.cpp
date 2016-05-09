@@ -1862,11 +1862,13 @@ int Scheduler::history_helper_reaper(int, int) {
 
 int Scheduler::history_helper_launcher(const HistoryHelperState &state) {
 
-	std::string history_helper;
-	if ( !param(history_helper, "HISTORY_HELPER") ) {
-		char *tmp = expand_param("$(LIBEXEC)/condor_history_helper");
-		history_helper = tmp;
-		free(tmp);
+	auto_free_ptr history_helper(param("HISTORY_HELPER"));
+	if ( ! history_helper) {
+#ifdef WIN32
+		history_helper.set(expand_param("$(LIBEXEC)\\condor_history_helper.exe"));
+#else
+		history_helper.set(expand_param("$(LIBEXEC)/condor_history_helper"));
+#endif
 	}
 	ArgList args;
 	args.AppendArg("condor_history_helper");
@@ -1875,14 +1877,12 @@ int Scheduler::history_helper_launcher(const HistoryHelperState &state) {
 	args.AppendArg(state.Requirements());
 	args.AppendArg(state.Projection());
 	args.AppendArg(state.MatchCount());
-	std::stringstream ss;
-	ss << param_integer("HISTORY_HELPER_MAX_HISTORY", 10000);
-	args.AppendArg(ss.str());
+	args.AppendArg(param_integer("HISTORY_HELPER_MAX_HISTORY", 10000));
 
 	Stream *inherit_list[] = {state.GetStream(), NULL};
 
 	FamilyInfo fi;
-	pid_t pid = daemonCore->Create_Process(history_helper.c_str(), args, PRIV_ROOT, m_history_helper_rid,
+	pid_t pid = daemonCore->Create_Process(history_helper.ptr(), args, PRIV_ROOT, m_history_helper_rid,
 		false, false, NULL, NULL, NULL, inherit_list);
 	if (!pid)
 	{
