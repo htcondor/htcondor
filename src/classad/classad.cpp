@@ -408,7 +408,7 @@ InsertAttr( const string &name, const char *value )
 	val.SetStringValue( value );
 	plit  = Literal::MakeLiteral( val );
 	
-	return( Insert( name, plit ) );
+	return( Insert( name, plit, false ) );
 }
 
 bool ClassAd::
@@ -428,7 +428,7 @@ InsertAttr( const string &name, const string &value )
 	val.SetStringValue( value );
 	plit  = Literal::MakeLiteral( val );
 	
-	return( Insert( name, plit ) );
+	return( Insert( name, plit, false ) );
 }
 
 
