@@ -952,8 +952,10 @@ Parse_macros(
 			if (is_submit) {
 				// a line with no operator may be a QUEUE statement, so hand it off to the queue callback.
 				retval = fnSubmit(pvSubmitData, FileSource, macro_set, name, config_errmsg);
-				if (retval != 0)
+				if (retval != 0) {
+					name = NULL; // prevent cleanup from freeing name since it's owned by getline_implementation
 					goto cleanup;
+				}
 				continue;
 			} else if ( name && name[0] == '[' ) {
 				// Treat a line w/o an operator that begins w/ a square bracket
