@@ -573,7 +573,7 @@ SecMan::FillInSecurityPolicyAd( DCpermission auth_level, ClassAd* ad,
 // so keep track of the last set of parameters, and cache the last one returned.
 
 bool
-SecMan::FillInSecurityPolicyAdFromCache(DCpermission auth_level, ClassAd* ad, 
+SecMan::FillInSecurityPolicyAdFromCache(DCpermission auth_level, ClassAd* &ad, 
 								bool raw_protocol,
 								bool use_tmp_sec_session,
 								bool force_authentication )
@@ -585,7 +585,7 @@ SecMan::FillInSecurityPolicyAdFromCache(DCpermission auth_level, ClassAd* ad,
 
 			// A Hit!
 		if (m_cached_return_value) {
-			ad->Update(m_cached_policy_ad);
+			ad = &m_cached_policy_ad;
 
 		}
 		return m_cached_return_value;
@@ -599,7 +599,7 @@ SecMan::FillInSecurityPolicyAdFromCache(DCpermission auth_level, ClassAd* ad,
 	
 	m_cached_policy_ad.Clear(); 
 	m_cached_return_value = FillInSecurityPolicyAd(auth_level, &m_cached_policy_ad, raw_protocol, use_tmp_sec_session, force_authentication);
-	ad->Update(m_cached_policy_ad);
+	ad = & m_cached_policy_ad;
 	return m_cached_return_value;
 }
 

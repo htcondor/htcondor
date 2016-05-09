@@ -859,10 +859,10 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 			else {
 					// they did not request a cached session.  see if they
 					// want to start one.  look at our security policy.
-				ClassAd our_policy;
+				ClassAd *our_policy;
 				if( ! m_sec_man->FillInSecurityPolicyAdFromCache(
 					m_comTable[m_cmd_index].perm,
-					&our_policy,
+					our_policy,
 					false,
 					false,
 					m_comTable[m_cmd_index].force_authentication ) )
@@ -877,12 +877,12 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 
 				if (IsDebugVerbose(D_SECURITY)) {
 					dprintf ( D_SECURITY, "DC_AUTHENTICATE: our_policy:\n" );
-					dPrintAd(D_SECURITY, our_policy);
+					dPrintAd(D_SECURITY, *our_policy);
 				}
 
 				// reconcile.  if unable, close socket.
 				m_policy = m_sec_man->ReconcileSecurityPolicyAds( m_auth_info,
-																  our_policy );
+																  *our_policy );
 
 				if (!m_policy) {
 					dprintf(D_ALWAYS, "DC_AUTHENTICATE: Unable to reconcile!\n");
@@ -1323,10 +1323,10 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::VerifyComman
 			// security policy says, we just allow it.
 			if (m_comTable[m_cmd_index].perm != ALLOW) {
 
-				ClassAd our_policy;
+				ClassAd *our_policy;
 				if( ! m_sec_man->FillInSecurityPolicyAdFromCache(
 					m_comTable[m_cmd_index].perm,
-					&our_policy,
+					our_policy,
 					false,
 					false,
 					m_comTable[m_cmd_index].force_authentication ) )
@@ -1341,13 +1341,13 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::VerifyComman
 				// or turn on integrity.  check to see if any of those
 				// were required.
 
-				if (  (m_sec_man->sec_lookup_req(our_policy, ATTR_SEC_NEGOTIATION)
+				if (  (m_sec_man->sec_lookup_req(*our_policy, ATTR_SEC_NEGOTIATION)
 					   == SecMan::SEC_REQ_REQUIRED)
-				   || (m_sec_man->sec_lookup_req(our_policy, ATTR_SEC_AUTHENTICATION)
+				   || (m_sec_man->sec_lookup_req(*our_policy, ATTR_SEC_AUTHENTICATION)
 					   == SecMan::SEC_REQ_REQUIRED)
-				   || (m_sec_man->sec_lookup_req(our_policy, ATTR_SEC_ENCRYPTION)
+				   || (m_sec_man->sec_lookup_req(*our_policy, ATTR_SEC_ENCRYPTION)
 					   == SecMan::SEC_REQ_REQUIRED)
-				   || (m_sec_man->sec_lookup_req(our_policy, ATTR_SEC_INTEGRITY)
+				   || (m_sec_man->sec_lookup_req(*our_policy, ATTR_SEC_INTEGRITY)
 					   == SecMan::SEC_REQ_REQUIRED) ) {
 
 					// yep, they were.  deny.

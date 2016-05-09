@@ -132,7 +132,7 @@ public:
 									bool force_authentication=false);
 
 	bool	FillInSecurityPolicyAdFromCache( DCpermission auth_level,
-									ClassAd* ad,
+									ClassAd* &ad,
 									bool raw_protocol=false,
 									bool use_tmp_sec_session=false,
 									bool force_authentication=false);
