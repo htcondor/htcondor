@@ -292,6 +292,16 @@ int Authentication::authenticate_continue( CondorError* errstack, bool non_block
 					(m_method_name.size()?m_method_name.c_str():"?!?") );
 		}
 
+		// We have just picked a new method, so we definitely want to
+		// make this value true.  We log a message only if we changed
+		// it.
+		if(!do_authenticate) {
+			do_authenticate = true;
+			if (IsDebugVerbose(D_SECURITY)) {
+				dprintf(D_SECURITY, "AUTHENTICATE: forcing do_authenticate to true.\n");
+			}
+		}
+
 		//------------------------------------------
 		// Now authenticate
 		//------------------------------------------
@@ -301,6 +311,10 @@ authenticate:
 			dprintf(D_SECURITY, "AUTHENTICATE: exceeded deadline %ld\n", m_auth_timeout_time);
 			errstack->pushf( "AUTHENTICATE", AUTHENTICATE_ERR_TIMEOUT, "exceeded %ld deadline during authentication", m_auth_timeout_time );
 			break;
+		}
+
+		if (IsDebugVerbose(D_SECURITY)) {
+			dprintf (D_SECURITY, "AUTHENTICATE: do_authenticate is %i.\n", do_authenticate);
 		}
 
 		if (do_authenticate) {
