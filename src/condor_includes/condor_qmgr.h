@@ -50,6 +50,7 @@ const SetAttributeFlags_t NONDURABLE = (1<<0); // do not fsync
 const SetAttributeFlags_t SetAttribute_NoAck = (1<<1);
 const SetAttributeFlags_t SETDIRTY = (1<<2);
 const SetAttributeFlags_t SHOULDLOG = (1<<3);
+const SetAttributeFlags_t SetAttribute_LateInstantiation = (1<<4);
 
 #define SHADOW_QMGMT_TIMEOUT 300
 

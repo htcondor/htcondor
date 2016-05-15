@@ -317,7 +317,8 @@ SubmitHash::~SubmitHash()
 {
 	if (job) delete job;
 	job = NULL;
-	
+	if (clusterAd) delete clusterAd;
+	clusterAd = NULL;
 }
 
 static char * trim_and_strip_quotes_in_place(char * str)
@@ -2481,6 +2482,13 @@ int SubmitHash::ComputeIWD()
 			// neither "initialdir" nor "iwd" were there, try some
 			// others, just to be safe:
 		shortname = submit_param( "initial_dir", "job_iwd" );
+	}
+
+	// for factories initialize with a cluster ad, we NEVER want to use the current working directory
+	// as IWD because for the schedd, that will most likely the the LOG dir.
+	// instead, assume that FACTORY.Iwd will be set when the clusterAd is set.
+	if (! shortname && clusterAd) {
+		shortname = submit_param("FACTORY.Iwd");
 	}
 
 #if !defined(WIN32)
@@ -6796,6 +6804,27 @@ void SubmitHash::delete_job_ad()
 	job = NULL;
 }
 
+int SubmitHash::set_cluster_ad(ClassAd * ad)
+{
+	if (job) {
+		delete job;
+		job = NULL;
+	}
+
+	MACRO_EVAL_CONTEXT ctx = mctx; ctx.use_mask = 0;
+
+	ad->LookupString(ATTR_OWNER, submit_owner);
+	ad->LookupInteger(ATTR_CLUSTER_ID, jid.cluster);
+	ad->LookupInteger(ATTR_PROC_ID, jid.proc);
+	ad->LookupInteger(ATTR_Q_DATE, submit_time);
+	if (ad->LookupString(ATTR_JOB_IWD, JobIwd) && ! JobIwd.empty()) {
+		insert_macro("FACTORY.Iwd", JobIwd.c_str(), SubmitMacroSet, DetectedMacro, ctx);
+	}
+
+	this->clusterAd = new ClassAd(*ad);
+	return 0;
+}
+
 int SubmitHash::init_cluster_ad(time_t submit_time_in, const char * owner)
 {
 	MyString buffer;
@@ -6970,7 +6999,8 @@ ClassAd* SubmitHash::make_job_ad (
 		strcpy(LiveNodeString, "#MpInOdE#");
 	}
 
-	job = new ClassAd(baseJob);
+	ClassAd * baseAd = clusterAd ? clusterAd : &baseJob;
+	job = new ClassAd(*baseAd);
 
 #if !defined(WIN32)
 	SetRootDir();	// must be called very early

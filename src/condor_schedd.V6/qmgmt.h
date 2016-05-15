@@ -88,6 +88,8 @@ class QmgmtPeer {
 
 #define USE_JOB_QUEUE_JOB 1 // contents of the JobQueue is a class *derived* from ClassAd, (new for 8.3)
 
+class JobFactory;
+
 // used to store a ClassAd + runtime information in a condor hashtable.
 class JobQueueJob : public ClassAd {
 public:
@@ -99,6 +101,7 @@ protected:
 	char future_status; // FUTURE: keep this in sync with job status
 public:
 	int autocluster_id;
+	JobFactory * factory;
 protected:
 	JobQueueJob * link; // FUTURE: jobs are linked to clusters.
 	int future_num_procs_or_hosts; // FUTURE: num_procs if cluster, num hosts if job
@@ -111,9 +114,11 @@ public:
 		, has_noop_attr(2) // value of 2 forces PopulateFromAd() to check if it exists.
 		, future_status(0) // JOB_STATUS_MIN
 		, autocluster_id(0)
+		, factory(NULL)
+		, link(NULL)
 		, future_num_procs_or_hosts(0)
 	{}
-	virtual ~JobQueueJob() {};
+	virtual ~JobQueueJob();
 
 	enum {
 		entry_type_unknown=0,
@@ -145,6 +150,14 @@ public:
 	}
 };
 
+// from qmgmt_factory.cpp
+class JobFactory * MakeJobFactory(JobQueueJob* job, const char * submit_file);
+void DestroyJobFactory(JobFactory * factory);
+int  MaterializeNextFactoryJob(JobFactory * factory, JobQueueJob * cluster, int last_proc_id);
+int  CommitJobFactoryProcId(JobFactory * factory, JOB_ID_KEY & jid);
+// if pause_code < 0, pause is permanent, if > 0, cluster was removed.
+int  PauseJobFactory(JobFactory * factory, int pause_code);
+int  ResumeJobFactory(JobFactory * factory, int pause_code);
 
 void CloseJobHistoryFile();
 void SetMaxHistoricalLogs(int max_historical_logs);

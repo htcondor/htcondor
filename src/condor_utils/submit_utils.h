@@ -419,6 +419,9 @@ public:
 	// call once before parsing the submit file and/or calling make_job_ad.
 	int init_cluster_ad(time_t _submit_time, const char * owner); // returns 0 on success
 
+	// establish default attributes using a foreign ad rather than by calling init_cluster_ad above.
+	int set_cluster_ad(ClassAd * ad);
+
 	// fills out a job ad for the input job_id.
 	// while the job ad is created, the check_file callback will be called one for each file
 	// that might need to be transferred or checked for access.
@@ -455,6 +458,7 @@ protected:
 	MACRO_SET SubmitMacroSet;
 	MACRO_EVAL_CONTEXT mctx;
 	ClassAd baseJob; // defaults for job attributes, set by init_cluster_ad
+	ClassAd * clusterAd; // use instead of baseJob if non-null
 	ClassAd * job;
 	JOB_ID_KEY jid; // id of the current job being built
 	time_t     submit_time;

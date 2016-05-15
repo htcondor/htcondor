@@ -993,6 +993,15 @@ SpoolHierarchyChangePass2(char const *spool,std::list< PROC_ID > &spool_rename_l
 	}
 }
 
+JobQueueJob::~JobQueueJob()
+{
+	if (this->factory) {
+		DestroyJobFactory(this->factory);
+		this->factory = NULL;
+	}
+};
+
+
 bool JobQueueJob::IsNoopJob()
 {
 	if ( ! has_noop_attr) return false;
@@ -2037,11 +2046,12 @@ NewCluster()
 }
 
 
+int NewProc2(int cluster_id, int proc_id);
+
 int
 NewProc(int cluster_id)
 {
 	int				proc_id;
-	JobQueueKeyBuf	key;
 
 	if( Q_SOCK && !OwnerCheck(NULL, Q_SOCK->getOwner() ) ) {
 		return -1;
@@ -2106,18 +2116,24 @@ NewProc(int cluster_id)
 		return -4;
 	}
 
+	proc_id = next_proc_num++;
+	return NewProc2(cluster_id, proc_id);
+}
+
+int NewProc2(int cluster_id, int proc_id)
+{
+	JobQueueKeyBuf	key;
+
 	// We can't increase ownerData->num.JobsRecentlyAdded here because we
 	// don't know, at this point, that the overall transaction will succeed.
 	// Instead, track how many jobs we're adding this transaction.
 	++jobs_added_this_transaction;
 
-
-	proc_id = next_proc_num++;
 	IdToKey(cluster_id,proc_id,key);
 	JobQueue->NewClassAd(key.c_str(), JOB_ADTYPE, STARTD_ADTYPE);
 
 	IncrementClusterSize(cluster_id);
-    job_queued_count += 1;
+	job_queued_count += 1;
 
 	// can't increment the JobsSubmitted count for other pools yet
 	scheduler.OtherPoolStats.DeferJobsSubmitted(cluster_id, proc_id);
@@ -2226,10 +2242,25 @@ int DestroyProc(int cluster_id, int proc_id)
 		BeginTransaction();
 	}
 
+	PRAGMA_REMIND("keep pointers in job ad back to cluster ad so we don't have to do this.")
+	JobQueueJob * clusterad = NULL;
+	JobQueueKeyBuf cluster_key;
+	IdToKey(cluster_id,-1,cluster_key);
+	if ( ! JobQueue->Lookup(cluster_key, clusterad)) { clusterad = NULL; }
+
 	// ckireyev: Destroy MyProxyPassword
 	(void)DestroyMyProxyPassword (cluster_id, proc_id);
 
 	JobQueue->DestroyClassAd(key);
+
+	// if the cluster has a job factory, materialize the next factory job now.
+	PRAGMA_REMIND("for now, we materialize a new job only when a job completes. we do this because DestroyCluster isn't called by condor_rm until the proc count goes to 0")
+	//bool materialized = false;
+	if (clusterad && clusterad->factory && (job_status == COMPLETED)) {
+		if (1 == MaterializeNextFactoryJob(clusterad->factory, clusterad, proc_id)) {
+			//materialized = true;
+		}
+	}
 
 	DecrementClusterSize(cluster_id);
 
@@ -2299,6 +2330,14 @@ int DestroyCluster(int cluster_id, const char* reason)
 	// cannot destroy the header cluster(s)
 	if ( cluster_id < 1 ) {
 		return -1;
+	}
+
+	// find the cluster ad and turn off the job factory (if any)
+	IdToKey(cluster_id,-1,key);
+	JobQueueJob *clusterad;
+	JobQueue->Lookup(key, clusterad);
+	if (clusterad && clusterad->factory) {
+		PauseJobFactory(clusterad->factory, 1);
 	}
 
 	JobQueue->StartIterateAllClassAds();
@@ -2611,7 +2650,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 					attr_name, cluster_id, proc_id);
 			return -1;
 		}
-	} else {
+	} else if ( ! (flags & SetAttribute_LateInstantiation)) {
 		// If we made it here, the user is adding attributes to an ad
 		// that has not been committed yet (and thus cannot be found
 		// in the JobQueue above).  Restrict the user to only adding
@@ -3408,8 +3447,9 @@ CommitTransaction(SetAttributeFlags_t flags /* = 0 */)
 			{
 				dprintf(D_FULLDEBUG,"New job: %s\n",job_id.c_str());
 
+				PRAGMA_REMIND("recently added count will be broken for late materialization jobs.")
 					// increment the 'recently added' job count for this owner
-				if( Q_SOCK->getOwner() ) {
+				if( Q_SOCK && Q_SOCK->getOwner() ) {
 					scheduler.incrementRecentlyAdded( Q_SOCK->getOwner() );
 				}
 
@@ -3430,6 +3470,23 @@ CommitTransaction(SetAttributeFlags_t flags /* = 0 */)
 				clusterad->IncrementNumProcs();
 				clusterad->PopulateFromAd();
 				procad->PopulateFromAd();
+
+				if ( ! clusterad->factory) {
+					int num_factory_procs = 0;
+					if (clusterad->LookupInteger("JobFactoryNumProcs", num_factory_procs) && num_factory_procs > 1) {
+						std::string submit_file;
+						if ( ! clusterad->LookupString("JobFactorySubmitFile", submit_file)) {
+							dprintf(D_ALWAYS, "Warning: No submit file specified for a job with JobFactoryNumProcs > 1. No factory will be created.");
+						} else {
+							dprintf(D_FULLDEBUG, "Job %d.%d specifies job factory %s with num=%d, creating factory\n",
+								job_id.cluster, job_id.proc, submit_file.c_str(), num_factory_procs);
+							clusterad->factory = MakeJobFactory(clusterad, submit_file.c_str());
+						}
+					}
+				}
+				if (clusterad->factory) {
+					CommitJobFactoryProcId(clusterad->factory, job_id);
+				}
 
 					// If input files are going to be spooled, rewrite
 					// the paths in the job ad to point at our spool
