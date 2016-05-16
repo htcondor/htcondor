@@ -76,6 +76,7 @@
 #include "condor_version.h"
 #include "NegotiationUtils.h"
 #include <submit_utils.h>
+#define ENABLE_FACTORY_DEMO 1
 //uncomment this to have condor_submit use the new for 8.5 submit_utils classes
 //#define USE_SUBMIT_UTILS 1
 #include "submit_internal.h"
@@ -318,6 +319,7 @@ static condor_params::string_value IsWinMacroDef = { ZeroString, 0 };
 static condor_params::string_value IsLinuxMacroDef = { ZeroString, 0 };
 static condor_params::string_value IsWinMacroDef = { ZeroString, 0 };
 #endif
+static condor_params::string_value SubmitFileMacroDef = { EmptyItemString, 0 };
 
 static char StrictFalseMetaKnob[] = 
 	"SubmitWarnEmptyMatches=false\n"
@@ -365,6 +367,7 @@ static MACRO_DEF_ITEM SubmitMacroDefaults[] = {
 	{ "Row",       &RowMacroDef },
 	{ "SPOOL",     &SpoolMacroDef },
 	{ "Step",      &StepMacroDef },
+	{ "SUBMIT_FILE", &SubmitFileMacroDef },
 };
 
 static MACRO_DEFAULTS SubmitMacroDefaultSet = {
@@ -1659,8 +1662,10 @@ main( int argc, const char *argv[] )
 		}
 #ifdef USE_SUBMIT_UTILS
 		submit_hash.insert_source(cmd_file, FileMacroSource);
+		SubmitFileMacroDef.psz = const_cast<char*>(submit_hash.apool.insert(full_path(cmd_file, false)));
 #else
 		insert_source(cmd_file, SubmitMacroSet, FileMacroSource);
+		SubmitFileMacroDef.psz = const_cast<char*>(SubmitMacroSet.apool.insert(full_path(cmd_file, false)));
 #endif
 	}
 
@@ -7682,6 +7687,16 @@ int SpecialSubmitParse(void* pv, MACRO_SOURCE& source, MACRO_SET& macro_set, cha
 			errmsg = "invalid Queue statement";
 			return rval;
 		}
+
+#ifdef ENABLE_FACTORY_DEMO
+		int max_in_queue = condor_param_int("max_materialize", "JobFactoryMaxMaterialize", -1);
+		if (max_in_queue > 0 && queue_modifier > max_in_queue) {
+			MyString num_procs; num_procs.formatstr("%d", queue_modifier);
+			set_condor_param("MY.JobFactoryNumProcs", num_procs.c_str());
+			set_condor_param("MY.JobFactorySubmitFile", "$Fq(SUBMIT_FILE)");
+			queue_modifier = max_in_queue;
+		}
+#endif
 
 		// if no loop variable specified, but a foreach mode is used. use "Item" for the loop variable.
 		if (vars.isEmpty() && (foreach_mode != foreach_not)) { vars.append("Item"); }
