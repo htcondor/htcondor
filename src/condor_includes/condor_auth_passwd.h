@@ -91,6 +91,7 @@ class Condor_Auth_Passwd : public Condor_Auth_Base {
 	~Condor_Auth_Passwd();
 
 	int authenticate(const char * remoteHost, CondorError* errstack, bool non_blocking);
+	int authenticate_continue(CondorError*, bool);
 
 	/** Tells whether the authenticator is in a valid state, i.e.
 		authentication has been successfully performed sometime in the past,
@@ -113,6 +114,19 @@ class Condor_Auth_Passwd : public Condor_Auth_Base {
 
 
  private:
+
+	enum CondorAuthPasswordState {
+		ServerRec1 = 100,
+		ServerRec2
+	};
+
+	enum CondorAuthPasswordRetval {
+		Fail = 0,
+		Success,
+		WouldBlock,
+		Continue
+	};
+
 
 		/// This structure stores the message referred to as T in the book.
 	struct msg_t_buf {
@@ -246,6 +260,27 @@ class Condor_Auth_Passwd : public Condor_Auth_Base {
 		*/
 	volatile void *spc_memset(volatile void *dst, int c, size_t len);
 		//void print_binary(volatile unsigned char *buf, int len);
+		//
+
+		// state machine drivers
+	CondorAuthPasswordRetval doServerRec1(CondorError* errstack, bool non_blocking);
+	CondorAuthPasswordRetval doServerRec2(CondorError* errstack, bool non_blocking);
+
+	int m_client_status;
+	int m_server_status;
+	int m_ret_value;
+
+	struct msg_t_buf m_t_client;
+	struct msg_t_buf m_t_server;
+
+		// In order to create the shared keys used by the client and
+		// the server in this protocol, we take a single shared secret
+		// and hmac it twice with two different keys.  The original
+		// password buffer and the two generated keys are stored in
+		// the sk_buf structure.
+	struct sk_buf m_sk;
+
+	CondorAuthPasswordState m_state;
 };
 
 #endif /* SKIP_AUTHENTICATION */

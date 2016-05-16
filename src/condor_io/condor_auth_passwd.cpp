@@ -32,6 +32,7 @@
 #include "store_cred.h"
 #include "my_username.h"
 #include "MyString.h"
+#include "condor_config.h"
 
 #include "condor_auth_passwd.h"
 
@@ -903,202 +904,112 @@ Condor_Auth_Passwd::destroy_t_buf(struct msg_t_buf *t)
 
 int
 Condor_Auth_Passwd::authenticate(const char * /* remoteHost */, 
-								 CondorError* /* errstack */,
-								 bool /*non_blocking*/ )
+				 CondorError* errstack,
+				 bool non_blocking )
 {
-    int client_status = AUTH_PW_A_OK;
-    int server_status = AUTH_PW_A_OK;
-	int ret_value = -1;
-    
-    struct msg_t_buf t_client;
-    struct msg_t_buf t_server;
-
-		// In order to create the shared keys used by the client and
-		// the server in this protocol, we take a single shared secret
-		// and hmac it twice with two different keys.  The original
-		// password buffer and the two generated keys are stored in
-		// the sk_buf structure.
-    struct sk_buf sk;
-
-	int tmp_rv;
+	m_client_status = AUTH_PW_A_OK;
+	m_server_status = AUTH_PW_A_OK;
+	m_ret_value = -1;
 
 		// Initialize these structures (with NULLs)
-    init_t_buf(&t_client);
-    init_t_buf(&t_server);
-    init_sk(&sk);
+	init_t_buf(&m_t_client);
+	init_t_buf(&m_t_server);
+	init_sk(&m_sk);
 	dprintf(D_SECURITY, "PW.\n");
 
 	if ( mySock_->isClient() ) {
 			// ** client side authentication **
-        
+
 			// Get my name, password and setup the shared keys based
 			// on this data.  The server will do the same when it
 			// learns my name.
 		dprintf(D_SECURITY, "PW: getting name.\n");
-        t_client.a = fetchLogin();
+		m_t_client.a = fetchLogin();
 
 			// We complete the entire protocol even if there's an
 			// error, but there's no point trying to actually do any
 			// work.  This is protocol step (a).
 		dprintf(D_SECURITY, "PW: Generating ra.\n");
-	        
-        if(client_status == AUTH_PW_A_OK) {
-			t_client.ra = Condor_Crypt_Base::randomKey(AUTH_PW_KEY_LEN);
-			if(!t_client.ra) {
+
+		if(m_client_status == AUTH_PW_A_OK) {
+			m_t_client.ra = Condor_Crypt_Base::randomKey(AUTH_PW_KEY_LEN);
+			if(!m_t_client.ra) {
 				dprintf(D_SECURITY, "Malloc error in random key?\n");
-				client_status = AUTH_PW_ERROR;
+				m_client_status = AUTH_PW_ERROR;
 			}
-        }
-        
+		}
+
 			// This differs from the protocol description in the book
 			// only that the client also sends its name "A".  The
 			// protocol doesn't mention how the peers know who they're
 			// talking to.  This is also protocol step (a).
 		dprintf(D_SECURITY, "PW: Client sending.\n");
-        client_status = client_send_one(client_status, &t_client);
+		m_client_status = client_send_one(m_client_status, &m_t_client);
 
-		if(client_status == AUTH_PW_ABORT) {
+		if(m_client_status == AUTH_PW_ABORT) {
 			goto client_abort;
 		}
 			// This is protocol step (b).
 		dprintf(D_SECURITY, "PW: Client receiving.\n");
-        server_status = client_receive(&client_status, &t_server);
-		if(client_status == AUTH_PW_ABORT) {
+		m_server_status = client_receive(&m_client_status, &m_t_server);
+		if(m_client_status == AUTH_PW_ABORT) {
 			goto client_abort;
 		}
 
 			// Now that we've received the server's name, we can go
 			// ahead and setup the keys.
-		if(client_status == AUTH_PW_A_OK && server_status == AUTH_PW_A_OK) {
-			sk.shared_key = fetchPassword(t_client.a, t_server.b);
+		if(m_client_status == AUTH_PW_A_OK && m_server_status == AUTH_PW_A_OK) {
+			m_sk.shared_key = fetchPassword(m_t_client.a, m_t_server.b);
 			dprintf(D_SECURITY, "PW: Client setting keys.\n");
-			if(!setup_shared_keys(&sk)) {
-				client_status = AUTH_PW_ERROR;
+			if(!setup_shared_keys(&m_sk)) {
+				m_client_status = AUTH_PW_ERROR;
 			}
 		}
 
 			// This is protocol step (c).
-		if(client_status == AUTH_PW_A_OK
-		   && server_status == AUTH_PW_A_OK) {
+		if(m_client_status == AUTH_PW_A_OK
+		   && m_server_status == AUTH_PW_A_OK) {
 			dprintf(D_SECURITY, "PW: Client checking T.\n");
-			client_status = client_check_t_validity(&t_client, &t_server, &sk);
+			m_client_status = client_check_t_validity(&m_t_client, &m_t_server, &m_sk);
 		}
 
-			// Are we copying the data into the t_client struct?
+			// Are we copying the data into the m_t_client struct?
 			// This is protocol step (d).  Server does (e).
 		dprintf(D_SECURITY, "PW: CLient sending two.\n");
-        client_status = client_send_two(client_status, &t_client, &sk);
-		if(client_status == AUTH_PW_ABORT) {
+		m_client_status = client_send_two(m_client_status, &m_t_client, &m_sk);
+		if(m_client_status == AUTH_PW_ABORT) {
 			goto client_abort;
 		}
 
 	client_abort:
 			// This is protocol step (f).
-		if(client_status == AUTH_PW_A_OK
-		   && server_status == AUTH_PW_A_OK
-		   && set_session_key(&t_client, &sk)) {
+		if(m_client_status == AUTH_PW_A_OK
+		   && m_server_status == AUTH_PW_A_OK
+		   && set_session_key(&m_t_client, &m_sk)) {
 			dprintf(D_SECURITY, "PW: CLient set session key.\n");
-			ret_value = 1;
+			m_ret_value = 1;
 		} else {
-			ret_value = 0;
+			m_ret_value = 0;
 		}
 	}
 	else {
-			// ** server side authentication **
-		
-			// First we get the client's name and ra, protocol step
-			// (a).
-		dprintf(D_SECURITY, "PW: Server receiving 1.\n");
-		client_status = server_receive_one(&server_status, &t_client);
-		if(client_status == AUTH_PW_ABORT || server_status == AUTH_PW_ABORT) {
-			goto server_abort;
-		}
-
-			// Then we do the key setup, and generate the random string.
-		if(client_status == AUTH_PW_A_OK && server_status == AUTH_PW_A_OK) {
-			t_server.b = fetchLogin();
-			dprintf(D_SECURITY, "PW: Server fetching password.\n");
-			sk.shared_key = fetchPassword(t_client.a, t_server.b);
-			if(!setup_shared_keys(&sk)) {
-				server_status = AUTH_PW_ERROR;
-			} else {
-				dprintf(D_SECURITY, "PW: Server generating rb.\n");
-		//server_status = server_gen_rand_rb(&t_server);
-	            t_server.rb = Condor_Crypt_Base::randomKey(AUTH_PW_KEY_LEN);
-				if(t_client.a) {
-					t_server.a = strdup(t_client.a);
-				} else {
-					t_server.a = NULL;
-				}
-				t_server.ra = (unsigned char *)malloc(AUTH_PW_KEY_LEN);
-				if(!t_server.ra || !t_server.rb) {
-					dprintf(D_SECURITY, "Malloc error 1.\n"); 
-					server_status = AUTH_PW_ERROR;
-				} else {
-					memcpy(t_server.ra, t_client.ra, AUTH_PW_KEY_LEN);
-				}
-			}
-		}
-
-			// Protocol message (2), step (b).
-		dprintf(D_SECURITY, "PW: Server sending.\n");
-		tmp_rv = server_send(server_status, &t_server, &sk);
-		if(server_status == AUTH_PW_A_OK) {
-			server_status = tmp_rv;
-		}
-		if(server_status == AUTH_PW_ABORT) {
-			goto server_abort;
-		}
-
-			// Protocol step (d)
-		dprintf(D_SECURITY, "PW: Server receiving 2.\n");
-		if(t_server.a) {
-			t_client.a = strdup(t_server.a);
-		} else { 
-			t_client.a = NULL;
-		}
-        if(server_status == AUTH_PW_A_OK) {
-			t_client.rb = (unsigned char *)malloc(AUTH_PW_KEY_LEN);
-			if(!t_client.rb) {
-				dprintf(D_SECURITY, "Malloc_error.\n");
-				server_status = AUTH_PW_ERROR;
-			} else {
-				memcpy(t_client.rb, t_server.rb, AUTH_PW_KEY_LEN);
-			}
-		} else {
-			t_client.rb = NULL;
-		}
-		client_status = server_receive_two(&server_status, &t_client);
-
-		if(server_status == AUTH_PW_A_OK
-		   && client_status == AUTH_PW_A_OK) {
-				// Protocol step (e)
-			dprintf(D_SECURITY, "PW: Server checking hk.\n");
-			server_status = server_check_hk_validity(&t_client, 
-													 &t_server, &sk);
-		}
-		
-	server_abort:
-				// protocol step (f)
-		if(client_status == AUTH_PW_A_OK
-		   && server_status == AUTH_PW_A_OK
-		   && set_session_key(&t_server, &sk)) {
-			dprintf(D_SECURITY, "PW: Server set session key.\n");
-			ret_value = 1;
-		} else {
-			ret_value = 0;
-		}
-		
+		// enter state machine
+		m_state = ServerRec1;
+		return (int)doServerRec1(errstack, non_blocking);
 	}
 
-		//ret_value is 1 for success, 0 for failure.
-	if ( ret_value == 1 ) {
+
+	// code below here is client only, as server has gone into state machine.
+
+
+		//m_ret_value is 1 for success, 0 for failure.
+	if ( m_ret_value == 1 ) {
 			// if all is good, set the remote user and domain names
 		char *login, *domain;
 		if ( mySock_->isClient() ) {
-			login = t_server.b;	// server is remote to client
+			login = m_t_server.b;	// server is remote to client
 		} else {
-			login = t_client.a; // client is remote to server
+			login = m_t_client.a; // client is remote to server
 		}
 		ASSERT(login);
 		domain = strchr(login,'@');
@@ -1111,15 +1022,198 @@ Condor_Auth_Passwd::authenticate(const char * /* remoteHost */,
 		setRemoteDomain(domain);
 	}
 
-	destroy_t_buf(&t_client);
-	destroy_t_buf(&t_server);
-	destroy_sk(&sk);
+	destroy_t_buf(&m_t_client);
+	destroy_t_buf(&m_t_server);
+	destroy_sk(&m_sk);
 
 		//return 1 for success, 0 for failure. Server should send
 		//sucess/failure back to client so client can know what to
 		//return.
-	return ret_value;
+	return m_ret_value;
 }
+
+
+int Condor_Auth_Passwd::authenticate_continue(CondorError* errstack, bool non_blocking)
+{
+
+//	int password_auth_timeout = param_integer("PASSWORD_AUTHENTICATION_TIMEOUT",-1);
+//	int old_timeout=0;
+//	if (password_auth_timeout>=0) {
+//		old_timeout = mySock_->timeout(password_auth_timeout);
+//	}
+
+	dprintf(D_SECURITY, "PASSWORD: entered authenticate_continue, state==%i\n", (int)m_state);
+
+	CondorAuthPasswordRetval retval = Continue;
+	while (retval == Continue)
+	{
+		switch (m_state)
+		{
+		case ServerRec1:
+			retval = doServerRec1(errstack, non_blocking);
+			break;
+		case ServerRec2:
+			retval = doServerRec2(errstack, non_blocking);
+			break;
+		default:
+			retval = Fail;
+			break;
+		}
+	}
+
+//	if (password_auth_timeout>=0) {
+//		mySock_->timeout(old_timeout); //put it back to what it was before
+//	}
+
+	dprintf(D_SECURITY, "PASSWORD: leaving authenticate_continue, state==%i, return=%i\n", (int)m_state, (int)retval);
+	return static_cast<int>(retval);
+}
+
+Condor_Auth_Passwd::CondorAuthPasswordRetval
+Condor_Auth_Passwd::doServerRec1(CondorError* /*errstack*/, bool non_blocking) {
+
+	if (non_blocking && !mySock_->readReady())
+	{
+		dprintf(D_NETWORK, "Returning to DC as read would block in PW::doServerRec1\n");
+		return WouldBlock;
+	}
+
+		// ** server side authentication **
+
+	// declare now because of use of goto below
+	int tmp_rv = 0;
+
+		// First we get the client's name and ra, protocol step
+		// (a).
+	dprintf(D_SECURITY, "PW: Server receiving 1.\n");
+	m_client_status = server_receive_one(&m_server_status, &m_t_client);
+	if(m_client_status == AUTH_PW_ABORT || m_server_status == AUTH_PW_ABORT) {
+		m_ret_value = 0;
+		goto server_rec_1_abort;
+	}
+
+		// Then we do the key setup, and generate the random string.
+	if(m_client_status == AUTH_PW_A_OK && m_server_status == AUTH_PW_A_OK) {
+		m_t_server.b = fetchLogin();
+		dprintf(D_SECURITY, "PW: Server fetching password.\n");
+		m_sk.shared_key = fetchPassword(m_t_client.a, m_t_server.b);
+		if(!setup_shared_keys(&m_sk)) {
+			m_server_status = AUTH_PW_ERROR;
+		} else {
+			dprintf(D_SECURITY, "PW: Server generating rb.\n");
+			//m_server_status = server_gen_rand_rb(&m_t_server);
+			m_t_server.rb = Condor_Crypt_Base::randomKey(AUTH_PW_KEY_LEN);
+			if(m_t_client.a) {
+				m_t_server.a = strdup(m_t_client.a);
+			} else {
+				m_t_server.a = NULL;
+			}
+			m_t_server.ra = (unsigned char *)malloc(AUTH_PW_KEY_LEN);
+			if(!m_t_server.ra || !m_t_server.rb) {
+				dprintf(D_SECURITY, "Malloc error 1.\n");
+				m_server_status = AUTH_PW_ERROR;
+			} else {
+				memcpy(m_t_server.ra, m_t_client.ra, AUTH_PW_KEY_LEN);
+			}
+		}
+	}
+
+		// Protocol message (2), step (b).
+	dprintf(D_SECURITY, "PW: Server sending.\n");
+	tmp_rv = server_send(m_server_status, &m_t_server, &m_sk);
+	if(m_server_status == AUTH_PW_A_OK) {
+		m_server_status = tmp_rv;
+	}
+	if(m_server_status == AUTH_PW_ABORT) {
+		m_ret_value = 0;
+		goto server_rec_1_abort;
+	}
+
+		// Protocol step (d)
+	if(m_t_server.a) {
+		m_t_client.a = strdup(m_t_server.a);
+	} else {
+		m_t_client.a = NULL;
+	}
+	if(m_server_status == AUTH_PW_A_OK) {
+		m_t_client.rb = (unsigned char *)malloc(AUTH_PW_KEY_LEN);
+		if(!m_t_client.rb) {
+			dprintf(D_SECURITY, "Malloc_error.\n");
+			m_server_status = AUTH_PW_ERROR;
+		} else {
+			memcpy(m_t_client.rb, m_t_server.rb, AUTH_PW_KEY_LEN);
+		}
+	} else {
+		m_t_client.rb = NULL;
+	}
+
+	m_state = ServerRec2;
+	return Continue;
+
+server_rec_1_abort:
+	destroy_t_buf(&m_t_client);
+	destroy_t_buf(&m_t_server);
+	destroy_sk(&m_sk);
+
+		//return 0 for failure.
+	return Fail;
+}
+
+
+Condor_Auth_Passwd::CondorAuthPasswordRetval
+Condor_Auth_Passwd::doServerRec2(CondorError* /*errstack*/, bool non_blocking) {
+
+	if (non_blocking && !mySock_->readReady())
+	{
+		dprintf(D_NETWORK, "SAYS NO BUT IM CONTINUING.  Returning to DC as read would block in PW::doServerRec2\n");
+		//return WouldBlock;
+	}
+
+	dprintf(D_SECURITY, "PW: Server receiving 2.\n");
+	m_client_status = server_receive_two(&m_server_status, &m_t_client);
+
+	if(m_server_status == AUTH_PW_A_OK
+	   && m_client_status == AUTH_PW_A_OK) {
+			// Protocol step (e)
+		dprintf(D_SECURITY, "PW: Server checking hk.\n");
+		m_server_status = server_check_hk_validity(&m_t_client, &m_t_server, &m_sk);
+	}
+
+			// protocol step (f)
+	if(m_client_status == AUTH_PW_A_OK
+	   && m_server_status == AUTH_PW_A_OK
+	   && set_session_key(&m_t_server, &m_sk)) {
+		dprintf(D_SECURITY, "PW: Server set session key.\n");
+		m_ret_value = 1;
+	} else {
+		m_ret_value = 0;
+	}
+
+
+		//m_ret_value is 1 for success, 0 for failure.
+	if ( m_ret_value == 1 ) {
+			// if all is good, set the remote user and domain names
+		char *login, *domain;
+		login = m_t_client.a; // client is remote to server
+		ASSERT(login);
+		domain = strchr(login,'@');
+		if (domain) {
+			*domain='\0';
+			domain++;
+		}
+
+		setRemoteUser(login);
+		setRemoteDomain(domain);
+	}
+
+	destroy_t_buf(&m_t_client);
+	destroy_t_buf(&m_t_server);
+	destroy_sk(&m_sk);
+
+		//return 1 for success, 0 for failure.
+	return (m_ret_value==1) ? Success : Fail;
+}
+
 
 bool 
 Condor_Auth_Passwd::calculate_hk(struct msg_t_buf *t_buf, struct sk_buf *sk)
