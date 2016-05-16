@@ -318,6 +318,7 @@ static condor_params::string_value IsWinMacroDef = { ZeroString, 0 };
 static condor_params::string_value IsLinuxMacroDef = { ZeroString, 0 };
 static condor_params::string_value IsWinMacroDef = { ZeroString, 0 };
 #endif
+static condor_params::string_value SubmitFileMacroDef = { EmptyItemString, 0 };
 
 static char StrictFalseMetaKnob[] = 
 	"SubmitWarnEmptyMatches=false\n"
@@ -365,6 +366,7 @@ static MACRO_DEF_ITEM SubmitMacroDefaults[] = {
 	{ "Row",       &RowMacroDef },
 	{ "SPOOL",     &SpoolMacroDef },
 	{ "Step",      &StepMacroDef },
+	{ "SUBMIT_FILE", &SubmitFileMacroDef },
 };
 
 static MACRO_DEFAULTS SubmitMacroDefaultSet = {
@@ -1659,8 +1661,10 @@ main( int argc, const char *argv[] )
 		}
 #ifdef USE_SUBMIT_UTILS
 		submit_hash.insert_source(cmd_file, FileMacroSource);
+		SubmitFileMacroDef.psz = const_cast<char*>(submit_hash.apool.insert(full_path(cmd_file, false)));
 #else
 		insert_source(cmd_file, SubmitMacroSet, FileMacroSource);
+		SubmitFileMacroDef.psz = const_cast<char*>(SubmitMacroSet.apool.insert(full_path(cmd_file, false)));
 #endif
 	}
 
