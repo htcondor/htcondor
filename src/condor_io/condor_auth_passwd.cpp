@@ -1165,8 +1165,7 @@ Condor_Auth_Passwd::doServerRec2(CondorError* /*errstack*/, bool non_blocking) {
 
 	if (non_blocking && !mySock_->readReady())
 	{
-		dprintf(D_NETWORK, "SAYS NO BUT IM CONTINUING.  Returning to DC as read would block in PW::doServerRec2\n");
-		//return WouldBlock;
+		return WouldBlock;
 	}
 
 	dprintf(D_SECURITY, "PW: Server receiving 2.\n");
