@@ -81,6 +81,11 @@ int DockerAPI::run(
 		runArgs.AppendArg(mem);
 	} 
 
+	// drop unneeded Linux capabilities
+	if (param_boolean("DOCKER_DROP_ALL_CAPABILITIES", true)) {
+		runArgs.AppendArg("--cap-drop=all");
+	}
+
 
 		// Now the container name
 	runArgs.AppendArg( "--name" );
