@@ -20,6 +20,7 @@
 #include "condor_holdcodes.h"
 #include "basename.h"
 #include "selector.h"
+#include "my_username.h"
 
 #include <classad/operators.h>
 
@@ -32,6 +33,7 @@
 #include "exprtree_wrapper.h"
 #include "module_lock.h"
 #include "query_iterator.h"
+#include "submit_utils.h"
 
 using namespace boost::python;
 
@@ -396,6 +398,10 @@ public:
 
     void abort();
     void disconnect();
+    bool connected() const {return m_connected;}
+    bool transaction() const {return m_transaction;}
+    void reschedule();
+    std::string owner() const;
 
     static boost::shared_ptr<ConnectionSentry> enter(boost::shared_ptr<ConnectionSentry> obj);
     static bool exit(boost::shared_ptr<ConnectionSentry> mgr, boost::python::object obj1, boost::python::object obj2, boost::python::object obj3);
@@ -775,6 +781,65 @@ struct Schedd {
         if (result) {
             dprintf(D_ALWAYS, "Can't send RESCHEDULE command to schedd.\n" );
         }
+    }
+
+
+    std::string
+    owner() const
+    {
+        std::string result;
+        if (owner_from_sock(result)) {return result;}
+
+        char *owner = my_username();
+        if (!owner)
+        {
+            result = "unknown";
+        }
+        else
+        {
+            result = owner;
+            free(owner);
+        }
+        return result;
+    }
+
+
+    bool
+    owner_from_sock(std::string &result) const
+    {
+        MyString cmd_map_ent;
+        cmd_map_ent.formatstr ("{%s,<%i>}", m_addr.c_str(), QMGMT_WRITE_CMD); 
+
+        MyString session_id;
+        KeyCacheEntry *k = NULL;
+        int ret = 0;
+
+        // IMPORTANT: this hashtable returns 0 on success!
+        ret = (SecMan::command_map).lookup(cmd_map_ent, session_id);
+        if (ret)
+        {
+            return false;
+        }
+
+        // IMPORTANT: this hashtable returns 1 on success!
+        ret = (SecMan::session_cache).lookup(session_id.Value(), k);
+        if (!ret)
+        {
+            return false;
+        }
+
+	ClassAd *policy = k->policy();
+
+        if (!policy->EvaluateAttrString(ATTR_SEC_MY_REMOTE_USER_NAME, result))
+        {
+            return false;
+        }
+        std::size_t pos = result.find("@");
+        if (pos != std::string::npos)
+        {
+            result = result.substr(0, result.find("@"));
+        }
+        return true;
     }
 
     object actOnJobs(JobAction action, object job_spec, object reason=object())
@@ -1449,6 +1514,19 @@ ConnectionSentry::ConnectionSentry(Schedd &schedd, bool transaction, SetAttribut
 
 
 void
+ConnectionSentry::reschedule()
+{
+    m_schedd.reschedule();
+}
+
+std::string
+ConnectionSentry::owner() const
+{
+    return m_schedd.owner();
+}
+
+
+void
 ConnectionSentry::abort()
 { 
     if (m_transaction)
@@ -1551,6 +1629,306 @@ ConnectionSentry::~ConnectionSentry()
     if (PyErr_Occurred()) {abort();}
     disconnect();
 }
+
+
+struct Submit
+{
+public:
+    Submit()
+    {
+        m_hash.init();
+    }
+
+
+    Submit(boost::python::dict input)
+    {
+        m_hash.init();
+        update(input);
+    }
+
+
+    std::string
+    expand(const std::string attr) const
+    {
+        char *val_char(const_cast<Submit*>(this)->m_hash.submit_param(attr.c_str()));
+        std::string value(val_char);
+        free(val_char);
+        return value;
+    }
+
+
+    std::string
+    getItem(const std::string attr) const
+    {
+        const char *val = const_cast<Submit*>(this)->m_hash.lookup(attr.c_str());
+        if (val == NULL)
+        {
+            THROW_EX(KeyError, attr.c_str())
+        }
+        return std::string(val);
+    }
+
+
+    std::string
+    get(const std::string attr, const std::string value) const
+    {
+        const char *val = const_cast<Submit*>(this)->m_hash.lookup(attr.c_str());
+        if (val == NULL)
+        {
+            return value;
+        }
+        return std::string(val);
+    }
+
+
+    std::string
+    setDefault(const std::string attr, const std::string default_value)
+    {
+        const char *val = m_hash.lookup(attr.c_str());
+        if (val == NULL)
+        {
+            m_hash.set_submit_param(attr.c_str(), default_value.c_str());
+            return default_value;
+        }
+        return std::string(val);
+    }
+
+
+    void
+    setItem(const std::string attr, const std::string value)
+    {
+        m_hash.set_submit_param(attr.c_str(), value.c_str());
+    }
+
+
+    void
+    deleteItem(const std::string attr)
+    {
+        const char *val = m_hash.lookup(attr.c_str());
+        if (val == NULL) {THROW_EX(KeyError, attr.c_str());}
+        m_hash.set_submit_param(attr.c_str(), NULL);
+    }
+
+
+    boost::python::list
+    keys()
+    {
+        boost::python::list results;
+        HASHITER it = hash_iter_begin(m_hash.macros(), HASHITER_NO_DEFAULTS);
+        while (!hash_iter_done(it))
+        {
+            const char *name = hash_iter_key(it);
+            try
+            {
+                results.append(name);
+            }
+            catch (boost::python::error_already_set)
+            {
+                hash_iter_delete(&it);
+                throw;
+            }
+            hash_iter_next(it);
+        }
+        hash_iter_delete(&it);
+        return results;
+    }
+
+
+    boost::python::list iter()
+    {
+        boost::python::object obj = keys().attr("__iter__")();
+        return boost::python::list(obj);
+    }
+
+
+    size_t
+    size()
+    {
+        HASHITER it = hash_iter_begin(m_hash.macros(), HASHITER_NO_DEFAULTS);
+        size_t mylen = 0;
+        while (!hash_iter_done(it))
+        {
+            mylen += 1;
+            hash_iter_next(it);
+        }
+        hash_iter_delete(&it);
+        return mylen;
+    }
+
+
+    boost::python::list
+    items()
+    {
+        boost::python::list results;
+        HASHITER it = hash_iter_begin(m_hash.macros(), HASHITER_NO_DEFAULTS);
+        while (!hash_iter_done(it))
+        {
+            const char *name = hash_iter_key(it);
+            const char *val = hash_iter_value(it);
+            try
+            {
+                results.append(boost::python::make_tuple<std::string, std::string>(name, val));
+            }
+            catch (boost::python::error_already_set)
+            {
+                hash_iter_delete(&it);
+                throw;
+            }
+            hash_iter_next(it);
+        }
+        hash_iter_delete(&it);
+        return results;
+    }
+
+
+    boost::python::list
+    values()
+    {
+        boost::python::list results;
+        HASHITER it = hash_iter_begin(m_hash.macros(), HASHITER_NO_DEFAULTS);
+        while (!hash_iter_done(it))
+        {
+            const char *val = hash_iter_value(it);
+            try
+            {
+                results.append(val);
+            }
+            catch (boost::python::error_already_set)
+            {
+                hash_iter_delete(&it);
+                throw;
+            }
+            hash_iter_next(it);
+        }
+        hash_iter_delete(&it);
+        return results;
+    }
+
+
+    void
+    update(boost::python::object source)
+    {
+        if (PyObject_HasAttrString(source.ptr(), "items"))
+        {
+            return this->update(source.attr("items")());
+        }
+        if (!PyObject_HasAttrString(source.ptr(), "__iter__")) THROW_EX(ValueError, "Must provide a dictionary-like object to update()");
+
+        boost::python::object iter = source.attr("__iter__")();
+        while (true) {
+            PyObject *pyobj = PyIter_Next(iter.ptr());
+            if (!pyobj) break;
+            if (PyErr_Occurred()) {
+                boost::python::throw_error_already_set();
+            }
+
+            boost::python::object obj = boost::python::object(boost::python::handle<>(pyobj));
+
+            boost::python::tuple tup = boost::python::extract<boost::python::tuple>(obj);
+            std::string attr = boost::python::extract<std::string>(tup[0]);
+            std::string value = boost::python::extract<std::string>(tup[1]);
+            m_hash.set_submit_param(attr.c_str(), value.c_str());
+        }
+    }
+
+
+    std::string
+    toString() const
+    {
+        std::stringstream ss;
+        HASHITER it = hash_iter_begin(const_cast<Submit *>(this)->m_hash.macros(), HASHITER_NO_DEFAULTS);
+        while (!hash_iter_done(it))
+        {
+            ss << hash_iter_key(it) << " = " << hash_iter_value(it) << "\n";
+            hash_iter_next(it);
+        }
+        ss << "queue";
+        hash_iter_delete(&it);
+        return ss.str();
+    }
+
+
+    boost::python::object
+    toRepr() const
+    {
+        boost::python::object obj(toString());
+        return obj.attr("__repr__")();
+    }
+
+
+    void
+    queue(boost::shared_ptr<ConnectionSentry> txn, int count, boost::python::object ad_results)
+    {
+        if (!txn.get() || !txn->transaction())
+        {
+            THROW_EX(RuntimeError, "Job queue attempt without active transaction");
+        }
+
+        bool keep_results = false;
+        boost::python::extract<boost::python::list> try_ad_results(ad_results);
+        if (try_ad_results.check())
+        {
+            keep_results = true;
+        }
+
+        if (m_hash.init_cluster_ad(time(NULL), txn->owner().c_str()))
+        {
+            THROW_EX(RuntimeError, "Failed to create a cluster ad");
+        }
+        int cluster;
+        {
+            condor::ModuleLock ml;
+            cluster = NewCluster();
+        }
+        if (cluster < 0)
+        {
+            THROW_EX(RuntimeError, "Failed to create new cluster.");
+        }
+        for (int idx=0; idx<count; idx++)
+        {
+            int procid;
+            {
+                condor::ModuleLock ml;
+                procid = NewProc(cluster);
+            }
+            if (procid < 0)
+            {
+                THROW_EX(RuntimeError, "Failed to create new proc ID.");
+            }
+            JOB_ID_KEY jid(cluster, procid);
+            ClassAd *proc_ad = m_hash.make_job_ad(jid, 0, idx, false, false, NULL, NULL);
+            proc_ad->InsertAttr(ATTR_CLUSTER_ID, cluster);
+            proc_ad->InsertAttr(ATTR_PROC_ID, procid);
+
+            classad::ClassAdUnParser unparser;
+            unparser.SetOldClassAd( true );
+            for (classad::ClassAd::const_iterator it = proc_ad->begin(); it != proc_ad->end(); it++)
+            {
+                std::string rhs;
+                unparser.Unparse(rhs, it->second);
+                if (-1 == SetAttribute(cluster, procid, it->first.c_str(), rhs.c_str(), SetAttribute_NoAck))
+                {
+                    THROW_EX(ValueError, it->first.c_str());
+                }
+            }
+            if (keep_results)
+            {
+                boost::shared_ptr<ClassAdWrapper> results_ad(new ClassAdWrapper());
+                results_ad->CopyFromChain(*proc_ad);
+                ad_results.attr("append")(results_ad);
+            }
+        }
+
+        if (param_boolean("SUBMIT_SEND_RESCHEDULE",true))
+        {
+            txn->reschedule();
+        }
+    }
+
+private:
+    SubmitHash m_hash;
+};
+
 
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(query_overloads, query, 0, 5);
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(submit_overloads, submit, 1, 4);
@@ -1708,6 +2086,32 @@ void export_schedd()
         .def("__enter__", &ScheddNegotiate::enter)
         .def("__exit__", &ScheddNegotiate::exit)
         .def("disconnect", &ScheddNegotiate::disconnect, "Disconnect from negotiation session.");
+        ;
+
+    class_<Submit>("Submit")
+        .def(init<boost::python::dict>())
+        //.def_pickle(submit_pickle_suite())
+        .def("expand", &Submit::expand, "Expand all macros for a given attribute")
+        .def("queue", &Submit::queue, "Submit the current object to the remote queue\n"
+             ":param txn: An active transaction object\n"
+             ":return: None.  Throws a RuntimeError if the submission fails\n",
+             (boost::python::arg("self"), boost::python::arg("txn"), boost::python::arg("count")=1, boost::python::arg("ad_results")=boost::python::object())
+            )
+        .def("__delitem__", &Submit::deleteItem)
+        .def("__getitem__", &Submit::getItem)
+        .def("__setitem__", &Submit::setItem)
+        .def("__str__", &Submit::toString)
+        .def("__repr__", &Submit::toRepr)
+        .def("__iter__", &Submit::iter)
+        .def("keys", &Submit::keys)
+        .def("values", &Submit::values)
+        .def("items", &Submit::items)
+        .def("__len__", &Submit::size)
+        .def("get", &Submit::get, "Retrieve a value from the submit description",
+             (boost::python::arg("self"), boost::python::arg("default")=boost::python::object())
+            )
+        .def("setdefault", &Submit::setDefault, "Set a default value for a command")
+        .def("update", &Submit::update, "Copy the contents of a given Submit object into the current object")
         ;
 
     class_<RequestIterator>("ResourceRequestIterator", no_init)
