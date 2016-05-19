@@ -70,7 +70,8 @@ if (BUILD_TESTING)
 	#endif(UNIX)
 
 	if(WINDOWS)
-		condor_exe_test(sleep.exe "sleep.cpp" "")
+		# can't build this using cmake because it insists on passing wrong compiler flags, the good thing is that we don't need to budil it anyway. 
+		# condor_exe_test(sleep.exe "sleep.cpp" "")
 	endif(WINDOWS)
 
 	if (NOT WINDOWS)
