@@ -194,7 +194,7 @@ Unparse( string &buffer, const Value &val )
                 sprintf(tempBuf, "%.16G", real);
                 // %G may print something that looks like an integer.
                 // In that case, tack on a ".0"
-                if (!strchr(tempBuf, '.')) {
+                if (tempBuf[strcspn(tempBuf, ".Ee")] == '\0') {
                     strcat(tempBuf, ".0");
                 }
                 buffer += tempBuf;
