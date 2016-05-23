@@ -50,6 +50,11 @@ cause it to become unresponsive for several minutes after the
 set of significant attributes for negotiation changes.
 \Ticket{5648}
 
+\item Fixed a bug where some floating point values would have an extra
+\Expr{.0} appended to the end when printed (e.g. \Expr{2E40.0}).
+These values could not be read properly by normal number parsing functions.
+\Ticket{5682}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
