@@ -30,6 +30,7 @@
 #include "gridmanager.h"
 
 char *myUserName = NULL;
+char *SelectionValue = NULL;
 
 // this appears at the bottom of this file
 int display_dprintf_header(char **buf,int *bufpos,int *buflen);
@@ -38,7 +39,7 @@ void
 usage( char *name )
 {
 	dprintf( D_ALWAYS, 
-		"Usage: %s [-f] [-b] [-t] [-p <port>] [-s <schedd addr>] [-o <owern@uid-domain>] [-C <job constraint>] [-S <scratch dir>]\n",
+		"Usage: %s [-f] [-b] [-t] [-p <port>] [-s <schedd addr>] [-o <owern@uid-domain>] [-C <job constraint>] [-S <scratch dir>] [-A <aux id>]\n",
 		condor_basename( name ) );
 	DC_Exit( 1 );
 }
@@ -60,6 +61,15 @@ main_init( int argc, char ** const argv )
 			usage( argv[0] );
 
 		switch( argv[i][1] ) {
+		case 'A':
+			if ( argc <= i + 1 )
+				usage( argv[0] );
+			if (SelectionValue) {
+				free(SelectionValue);
+			}
+			SelectionValue = strdup( argv[i + 1] );
+			i++;
+			break;
 		case 'C':
 			if ( argc <= i + 1 )
 				usage( argv[0] );

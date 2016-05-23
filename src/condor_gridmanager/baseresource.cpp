@@ -296,6 +296,9 @@ void BaseResource::PublishResourceAd( ClassAd *resource_ad )
 	resource_ad->Assign( ATTR_SCHEDD_NAME, ScheddName );
     resource_ad->Assign( ATTR_SCHEDD_IP_ADDR, ScheddObj->addr() );
 	resource_ad->Assign( ATTR_OWNER, myUserName );
+	if ( SelectionValue ) {
+		resource_ad->Assign( ATTR_GRIDMANAGER_SELECTION_VALUE, SelectionValue );
+	}
 	resource_ad->Assign( "NumJobs", registeredJobs.Number() );
 	resource_ad->Assign( "JobLimit", jobLimit );
 	resource_ad->Assign( "SubmitsAllowed", submitsAllowed.Number() );

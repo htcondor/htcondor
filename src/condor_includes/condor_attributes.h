@@ -234,6 +234,7 @@
 #define ATTR_GRID_RESOURCE_UNAVAILABLE_TIME  "GridResourceUnavailableTime"
 #define ATTR_GRID_JOB_ID  "GridJobId"
 #define ATTR_GRID_JOB_STATUS  "GridJobStatus"
+#define ATTR_GRIDMANAGER_SELECTION_VALUE "GridmanagerSelectionValue"
 // ckireyev myproxy
 #define ATTR_MYPROXY_SERVER_DN  "MyProxyServerDN"
 #define ATTR_MYPROXY_HOST_NAME  "MyProxyHost"
