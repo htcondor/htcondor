@@ -477,6 +477,9 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* domain,
 						   ATTR_OWNER,owner,
 						   attr_name,attr_value,
 						   ATTR_JOB_UNIVERSE,CONDOR_UNIVERSE_GRID);
+
+		args.AppendArg("-A");
+		args.AppendArg(attr_value);
 	}
 	args.AppendArg("-C");
 	args.AppendArg(constraint.Value());
