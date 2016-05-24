@@ -8559,7 +8559,7 @@ check_open( const char *name, int flags )
 		return;
 	}
 
-	if ( IsUrl( name ) ) {
+	if ( IsUrl( name ) || strstr(name, "$$(") ) {
 		return;
 	}
 

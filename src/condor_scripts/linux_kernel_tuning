@@ -56,17 +56,28 @@ TCP_LISTEN_QUEUE=1024
 #
 MAX_RECEIVE_BUFFER=10383360
 
-
 # Maximum amount of dirty filesystem bytes to buffer in the kernel
 # before processes writing to the filesystem are blocked, and made 
-# to do their own i/o synchronously.  Set to 0 to undo
-
+# to do their own i/o synchronously.  Set to 0 to undo.
 # If we are running with cgroups on, there's a Linux kernel bug
 # that causes spurious OOM events sent to a cgroup with a hard memory limit
 # if it writes a lot of data to the filesystem quickly.  Limitting
 # the buffering to 100M works around the problem
-
 DIRTY_BYTES=100000000
+
+# Set root user quota for max number of kernel session keys and
+# bytes.  Kernel session keys are used by Kerberos, AFS, ecryptfs, and
+# other services.  The condor_master creates a new session keying by
+# default on startup (via config knob DISCARD_SESSION_KEYRING_ON_STARTUP)
+# so that Kerberos tokens and the like are not leaked to user jobs, and
+# also to support encrypted execute directories.  The default quota
+# starting with RHEL 6.4 is 1M keys and 25M bytes, which is plenty
+# big.  But older kernels (like what shipped in RHEL 6.0) have a crazy
+# small quota of 200 keys.  So here we just set these params to what
+# RHEL 6.4+ use by default just in case people try to use HTCondor on
+# an earlier kernel.
+ROOT_MAXKEYS=1000000
+ROOT_MAXKEYS_BYTES=25000000
 
 ##
 ## Implementation.  You shouldn't need to change anything below here.
@@ -128,6 +139,8 @@ increaseKernelParameter "GLOBAL_MAX_FDS" "/proc/sys/fs/file-max" ${GLOBAL_MAX_FD
 increaseKernelParameter "GLOBAL_MAX_PROCESSES" "/proc/sys/kernel/pid_max" ${GLOBAL_MAX_PROCESSES}
 setKernelParameter "LOCAL_PORT_RANGE" "/proc/sys/net/ipv4/ip_local_port_range" "${LOCAL_PORT_RANGE}"
 increaseKernelParameter "TCP_LISTEN_QUEUE" "/proc/sys/net/core/somaxconn" ${TCP_LISTEN_QUEUE}
+increaseKernelParameter "ROOT_MAXKEYS" "/proc/sys/kernel/keys/root_maxkeys" ${ROOT_MAXKEYS}
+increaseKernelParameter "ROOT_MAXKEYS_BYTES" "/proc/sys/kernel/keys/root_maxbytes" ${ROOT_MAXKEYS_BYTES}
 
 if condor_config_val BASE_CGROUP > /dev/null 2>&1
 then

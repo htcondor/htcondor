@@ -46,6 +46,7 @@ extern DCSchedd *ScheddObj;
 extern char *ScheddJobConstraint;
 extern char *GridmanagerScratchDir;
 extern char *myUserName;
+extern char *SelectionValue;
 
 // initialization
 void Init();
