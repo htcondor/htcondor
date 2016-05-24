@@ -2066,7 +2066,7 @@ QueryJobAdsContinuation::finish(Stream *stream) {
 	return KEEP_STREAM;
 }
 
-int Scheduler::command_query_job_ads(int, Stream* stream)
+int Scheduler::command_query_job_ads(int cmd, Stream* stream)
 {
 	ClassAd queryAd;
 
@@ -2086,14 +2086,8 @@ int Scheduler::command_query_job_ads(int, Stream* stream)
 		return command_query_job_aggregates(queryAd, stream);
 	}
 
-	// REMOVE this code once we have working user detection
-	//
+	PRAGMA_REMIND("reduce dpf_level for CONDOR_Q_ONLY_MY_JOBS feature before it goes into stable.")
 	int dpf_level = D_ALWAYS; // D_COMMAND | D_FULLDEBUG
-	if (IsDebugCatAndVerbosity(dpf_level)) {
-		ReliSock* rsock = (ReliSock*)stream;
-		const char * p0wn = rsock->getOwner();
-		dprintf(dpf_level, "QUERY_JOB_ADS detected owner = %s\n", p0wn ? p0wn : "<null>");
-	}
 
 	// If the query request that only the querier's jobs be returned
 	// we have to figure out who the quierier is and add a clause to the requirements expression
@@ -2104,11 +2098,37 @@ int Scheduler::command_query_job_ads(int, Stream* stream)
 		was_my_jobs = my_jobs_expr != NULL;
 	}
 	if (my_jobs_expr) {
+		// if this is a 'only my jobs' query, then we have to figure out
+		// what the authenticated identity of the caller is. if the connection
+		// was already authenticated, then we are done, but if not we stop
+		// and do the authentication right now.
 		std::string owner;
-		//PRAGMA_REMIND("figure out username of invoker, and create a my_jobs_expr for them.")
 		ReliSock* rsock = (ReliSock*)stream;
+		bool authenticated = false;
+		if (rsock->triedAuthentication()) {
+			dprintf(dpf_level, "%s command was already authenticated.\n", getCommandStringSafe(cmd));
+			authenticated = true;
+		} else {
+#if 0
+			CondorVersionInfo const *peer_ver = rsock->get_peer_version();
+			auto_free_ptr verstr(peer_ver ? peer_ver->get_version_string() : NULL);
+			dprintf(dpf_level, "QUERY_JOB_ADS peer version is %s\n", verstr ? verstr.ptr() : "NULL");
+			if ( ! peer_ver || peer_ver->built_since_version(8,5,5)) {
+				dprintf(dpf_level, "QUERY_JOB_ADS doing late authentication\n");
+				CondorError errstack;
+				authenticated = SecMan::authenticate_sock(rsock, CLIENT_PERM, &errstack);
+				if ( ! authenticated && IsDebugCatAndVerbosity(dpf_level)) {
+					std::string errtext = errstack.getFullText();
+					dprintf(dpf_level, "QUERY_JOB_ADS late authentication failed: %s\n", errtext.c_str());
+				}
+			}
+#endif
+		}
 		const char * p0wn = rsock->getOwner();
-		if (p0wn && MATCH == strcasecmp(p0wn, "unauthenticated")) p0wn = NULL;
+		if (p0wn && ( ! authenticated || MATCH == strcasecmp(p0wn, "unauthenticated"))) p0wn = NULL;
+		if (IsDebugCatAndVerbosity(dpf_level)) {
+			dprintf(dpf_level, "QUERY_JOB_ADS detected owner = %s\n", p0wn ? p0wn : "<null>");
+		}
 
 		long long val;
 		// if MyJobs is a literal true/false, then we are being asked to either NOT show
@@ -12690,6 +12710,10 @@ Scheduler::Register()
 	daemonCore->Register_CommandWithPayload(QUERY_JOB_ADS, "QUERY_JOB_ADS",
 				(CommandHandlercpp)&Scheduler::command_query_job_ads,
 				"command_query_job_ads", this, READ);
+
+	daemonCore->Register_CommandWithPayload(QUERY_JOB_ADS_WITH_AUTH, "QUERY_JOB_ADS_WITH_AUTH",
+				(CommandHandlercpp)&Scheduler::command_query_job_ads,
+				"command_query_job_ads", this, READ, D_FULLDEBUG, true /*force authentication*/);
 
 	// Note: The QMGMT READ/WRITE commands have the same command handler.
 	// This is ok, because authorization to do write operations is verified

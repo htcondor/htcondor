@@ -660,9 +660,11 @@ int main (int argc, char **argv)
 			}
 			if (schedd.version()) {
 				CondorVersionInfo v(schedd.version());
-				useFastScheddQuery = v.built_since_version(6,9,3) ? 1 : 0;
-				if (v.built_since_version(8, 3, 3)) {
-					useFastScheddQuery = 2;
+				if (v.built_since_version(8,3,3)) {
+					bool v3_query_with_auth = v.built_since_version(8,5,6) && (default_fetch_opts & CondorQ::fetch_MyJobs);
+					useFastScheddQuery = v3_query_with_auth ? 3 : 2;
+				} else {
+					useFastScheddQuery = v.built_since_version(6,9,3) ? 1 : 0;
 				}
 			}
 			
@@ -1090,7 +1092,12 @@ int main (int argc, char **argv)
 				MyString scheddVersion;
 				ad->LookupString(ATTR_VERSION, scheddVersion);
 				CondorVersionInfo v(scheddVersion.Value());
-				useFastScheddQuery = v.built_since_version(6,9,3) ? (v.built_since_version(8, 3, 3) ? 2 : 1) : 0;
+				if (v.built_since_version(8, 3, 3)) {
+					bool v3_query_with_auth = v.built_since_version(8,5,6) && (default_fetch_opts & CondorQ::fetch_MyJobs);
+					useFastScheddQuery = v3_query_with_auth ? 3 : 2;
+				} else {
+					useFastScheddQuery = v.built_since_version(6,9,3) ? 1 : 0;
+				}
 				retval = show_schedd_queue(scheddAddr, scheddName, scheddMachine, useFastScheddQuery);
 				}
 
@@ -5123,10 +5130,10 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 		fetch_opts = dash_autocluster;
 	}
 	bool use_v3 = dash_autocluster || param_boolean("CONDOR_Q_USE_V3_PROTOCOL", true);
-	if ((useFastPath == 2) && !use_v3) {
+	if ((useFastPath > 1) && !use_v3) {
 		useFastPath = 1;
 	}
-	if ( ! fetch_opts && (useFastPath == 2)) {
+	if ( ! fetch_opts && (useFastPath > 1)) {
 		fetch_opts = default_fetch_opts;
 	}
 #ifdef USE_LATE_PROJECTION
