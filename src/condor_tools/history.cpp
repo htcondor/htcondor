@@ -747,7 +747,7 @@ static void init_default_custom_format()
 	mask.SetAutoSep(NULL, " ", NULL, "\n");
 
 	int opts = wide_format ? (FormatOptionNoTruncate | FormatOptionAutoWidth) : 0;
-	AddPrintColumn(" ID",        -7, FormatOptionNoTruncate, ATTR_CLUSTER_ID, format_job_id);
+	AddPrintColumn(" ID",        -7, FormatOptionNoTruncate | FormatOptionAutoWidth, ATTR_CLUSTER_ID, format_job_id);
 	AddPrintColumn("OWNER",     -14, FormatOptionAutoWidth | opts, ATTR_OWNER);
 	AddPrintColumn("SUBMITTED",  11,    0, ATTR_Q_DATE, format_int_date);
 	AddPrintColumn("RUN_TIME",   12,    0, ATTR_CLUSTER_ID, format_hist_runtime);

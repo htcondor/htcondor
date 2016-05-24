@@ -56,6 +56,20 @@ int get_port_range(int is_outgoing, int *low_port, int *high_port)
 
 	// check if the above settings existed
 	if ((t_low == 0) && (t_high == 0)) {
+#if defined( WIN32 )
+		// See ticket #4711.  If a socket isn't bound to a specific interface,
+		// (and it won't be, with BIND_ALL_INTERFACES defaulting to true)
+		// Windows will delay port-in-use errors from calls to bind() until
+		// the connect() call forces it to decide which interface to use.
+		// This gives our networking logic fits.  The simplest work-around
+		// is to stop trying to bind to a specific port for outbound
+		// connections unless the administrator /really/ wants it -- that is,
+		// has set OUT_{LOW,HIGH}PORT.
+		if( is_outgoing ) {
+			dprintf( D_NETWORK, "get_port_range - not checking LOWPORT, HIGHPORT for outgoing connection on Windows.\n" );
+			return FALSE;
+		}
+#endif
 		// fallback to the old LOWPORT and HIGHPORT
 		if (param_integer("LOWPORT", t_low, false, 0)) {
 			if (param_integer("HIGHPORT", t_high, false, 0)) {

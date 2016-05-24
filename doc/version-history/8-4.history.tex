@@ -50,6 +50,33 @@ cause it to become unresponsive for several minutes after the
 set of significant attributes for negotiation changes.
 \Ticket{5648}
 
+\item Fixed a bug where some floating point values would have an extra
+\Expr{.0} appended to the end when printed (e.g. \Expr{2E40.0}).
+These values could not be read properly by normal number parsing functions.
+\Ticket{5682}
+
+\item When using \MacroNI{GRIDMANAGER\_SELECTION\_EXPR}, grid ads from
+different \Condor{gridmanager} instances will no longer overwrite
+each other in the \Condor{collector}.
+\Ticket{5683}
+
+\item In addition to logging to the file \MacroNI{KERNEL\_TUNING\_LOG},
+the default \MacroNI{LINUX\_KERNEL\_TUNING\_SCRIPT} now also logs to
+syslog and \File{/etc/systcl.d/99-htcondor.conf}.
+\Ticket{5489}
+
+\item Fixed a bug on \Condor{history} that could result in truncation of
+the job id field.
+\Ticket{5527}
+
+\item On Windows, configuring HTCondor to restrict the range of outbound
+port numbers may cause substantial delays when using the command-line
+tools.  Since we now know that it's not free to do so, \MacroNI{LOWPORT}
+and \MacroNI{HIGHPORT} no longer restrict the port numbers of outbound
+connections on Windows.  If you still require this functionality, use
+\MacroNI{OUT\_LOWPORT} and \MacroNI{OUT\_HIGHPORT}.
+\Ticket{4711}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
