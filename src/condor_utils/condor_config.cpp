@@ -2512,7 +2512,7 @@ bool param_find_item (
 			name_found += pdf->key;
 			it.is_def = true;
 			it.pdef = pdf;
-			it.id = param_default_get_id(name);
+			it.id = param_default_get_id(name, NULL);
 			return true;
 		}
 	}
@@ -2534,7 +2534,7 @@ bool param_find_item (
 			name_found += pdf->key;
 			it.is_def = true;
 			it.pdef = pdf;
-			it.id = param_default_get_id(name);
+			it.id = param_default_get_id(name, NULL);
 			return true;
 		}
 	}
@@ -2544,7 +2544,7 @@ bool param_find_item (
 		name_found = pdf->key;
 		it.is_def = true;
 		it.pdef = pdf;
-		it.id = param_default_get_id(name);
+		it.id = param_default_get_id(name, NULL);
 		return true;
 	}
 
