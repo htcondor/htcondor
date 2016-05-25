@@ -234,13 +234,15 @@ int param_entry_get_type(const param_table_entry_t * p, bool & ranged) {
 	return (flags & condor_params::PARAM_FLAGS_TYPE_MASK);
 }
 
-int param_default_get_id(const char*param)
+int param_default_get_id(const char*param, const char * * ppdot)
 {
+	if (ppdot) *ppdot = NULL;
 	int ix = -1;
 	const param_table_entry_t* found = param_generic_default_lookup(param);
 	if ( ! found) {
 		const char * pdot = strchr(param, '.');
 		if (pdot) {
+			if (ppdot) *ppdot = pdot+1;
 			found = param_generic_default_lookup(pdot+1);
 		}
 	}
