@@ -1775,9 +1775,9 @@ processCommandLineArguments (int argc, char *argv[])
 			int other = 0;
 			while ((i+1 < argc) && *(argv[i+1]) != '-') {
 				++i;
-				if (is_arg_prefix(argv[i], "universe", 3)) {
+				if (is_arg_prefix(argv[i], "universe", 3) || is_arg_prefix(argv[i], "Universe", 3)) {
 					other |= usage_Universe;
-				} else if (is_arg_prefix(argv[i], "state", 2) || is_arg_prefix(argv[i], "status", 2)) {
+				} else if (is_arg_prefix(argv[i], "state", 2) || is_arg_prefix(argv[i], "State", 2) || is_arg_prefix(argv[i], "status", 2)) {
 					other |= usage_JobStatus;
 				} else if (is_arg_prefix(argv[i], "all", 2)) {
 					other |= usage_AllOther;
