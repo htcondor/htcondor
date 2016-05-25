@@ -1425,7 +1425,8 @@ void insert_macro(const char *name, const char *value, MACRO_SET & set, const MA
 			pmeta->inside = (source.is_inside != false);
 			pmeta->param_table = false;
 			// use the name here in case we have a compound name, i.e "master.value"
-			int param_id = param_default_get_id(name);
+			const char * post_prefix = NULL;
+			int param_id = param_default_get_id(name, &post_prefix);
 			const char * def_value = param_default_rawval_by_id(param_id);
 			pmeta->matches_default = (def_value == pitem->raw_value);
 			if ( ! pmeta->matches_default) {
@@ -1466,12 +1467,13 @@ void insert_macro(const char *name, const char *value, MACRO_SET & set, const MA
 	}
 
 	int matches_default = false;
-	int param_id = param_default_get_id(name);
+	const char * post_prefix = NULL; // if non-null, a pointer to the name after the "subsys." or "localname."
+	int param_id = param_default_get_id(name, &post_prefix);
 	const char * def_value = param_default_rawval_by_id(param_id);
 	bool is_path = param_default_ispath_by_id(param_id);
 	if (same_param_value(def_value, value, is_path)) {
 		matches_default = true; // flag value as matching the default.
-		if ( ! (set.options & CONFIG_OPT_KEEP_DEFAULTS))
+		if ( ! post_prefix && ! (set.options & CONFIG_OPT_KEEP_DEFAULTS))
 			return; // don't put default-matching values into the macro set
 	}
 
