@@ -201,6 +201,11 @@ my $atwdcBaseCommand = $cmd1 . $cmd2 . $cmd3;
 my $baseConfigDir = "nmi_tools/glue/test/configs";
 my @configurationDirectories = ( 'mixed-multi' );
 my %atwdcPlatforms = ( 'x86_64_RedHat6' => 1 );
+# The 8.4.x mixed-mode tests require a machine whose IPv6 address resolves.
+# Since we need to fix that (by adding a 'self' identifier and using it
+# in the test suite), for now we'd rather steer the tests than change the
+# machines.
+my %atwdcPlatformToMachineMap = ( 'x86_64_RedHat6' => 'exec-8.batlab.org' );
 
 my $atwdcPlatform = $atwdcPlatforms{ $platform };
 if( defined( $atwdcPlatform ) && $atwdcPlatform ) {
@@ -216,6 +221,10 @@ if( defined( $atwdcPlatform ) && $atwdcPlatform ) {
 		my $atwdcCommand = $atwdcBaseCommand .
 							"--append-config-dir=${baseConfigDir}/${configDir} " .
 							"--desc='Auto-Test Suite [$configDir] for ($platform, $runid)' ";
+		my $machine = $atwdcPlatformToMachineMap{ $platform };
+		if( defined( $machine ) ) {
+			$atwdcCommand .= qq/--append 'append_requirements = Machine =?= "${machine}"' /;
+		}
 		submit_test( $atwdcCommand, $platform );
 	}
 }
