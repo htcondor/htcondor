@@ -761,6 +761,7 @@ char *owner = NULL;
 char *ntdomain = NULL;
 char *myproxy_password = NULL;
 bool stream_std_file = false;
+classad::References forced_submit_attrs;
 #endif
 
 #ifdef USE_SUBMIT_UTILS
@@ -1190,7 +1191,40 @@ init_job_ad()
 	buffer.formatstr( "%s = FALSE", ATTR_ON_EXIT_BY_SIGNAL);
 	InsertJobExpr (buffer);
 
+#if 0 
+	// can't use this because it doesn't handle of MY. or +attrs correctly
 	config_fill_ad( job );
+#else
+	void param_and_insert_unique_items(const char * param_name, classad::References & attrs);
+
+	classad::References submit_attrs;
+	param_and_insert_unique_items("SUBMIT_ATTRS", submit_attrs);
+	param_and_insert_unique_items("SUBMIT_EXPRS", submit_attrs);
+	param_and_insert_unique_items("SYSTEM_SUBMIT_ATTRS", submit_attrs);
+
+	if ( ! submit_attrs.empty()) {
+		MyString buffer;
+
+		for (classad::References::const_iterator it = submit_attrs.begin(); it != submit_attrs.end(); ++it) {
+			if (starts_with(*it,"+")) {
+				forced_submit_attrs.insert(it->substr(1));
+				continue;
+			} else if (starts_with_ignore_case(*it, "MY.")) {
+				forced_submit_attrs.insert(it->substr(3));
+				continue;
+			}
+
+			auto_free_ptr expr(param(it->c_str()));
+			if ( ! expr) continue;
+			buffer.formatstr("%s = %s", it->c_str(), expr.ptr());
+			InsertJobExpr(buffer.c_str());
+		}
+	}
+	
+	/* Insert the version into the ClassAd */
+	job->Assign( ATTR_VERSION, CondorVersion() );
+	job->Assign( ATTR_PLATFORM, CondorPlatform() );
+#endif
 }
 #endif
 
@@ -5895,7 +5929,7 @@ SetJobLease( void )
 {
 	static bool warned_too_small = false;
 	long lease_duration = 0;
-	char *tmp = condor_param( "job_lease_duration", ATTR_JOB_LEASE_DURATION );
+	auto_free_ptr tmp(condor_param( "job_lease_duration", ATTR_JOB_LEASE_DURATION ));
 	if( ! tmp ) {
 		if( universeCanReconnect(JobUniverse)) {
 				/*
@@ -5913,38 +5947,38 @@ SetJobLease( void )
 		}
 	} else {
 		char *endptr = NULL;
-		lease_duration = strtol(tmp, &endptr, 10);
-		if (endptr != tmp) {
+		lease_duration = strtol(tmp.ptr(), &endptr, 10);
+		if (endptr != tmp.ptr()) {
 			while (isspace(*endptr)) {
 				endptr++;
 			}
 		}
-		bool valid = (endptr != tmp && *endptr == '\0');
-		if (!valid) {
-			fprintf(stderr, "\nERROR: invalid %s given: %s\n",
-					ATTR_JOB_LEASE_DURATION, tmp);
-			DoCleanup(0, 0, NULL);
-			exit(1);
-		}
-		if (lease_duration == 0) {
+		bool is_number = (endptr != tmp.ptr() && *endptr == '\0');
+		if ( ! is_number) {
+			lease_duration = 0; // set to zero to indicate it's an expression
+		} else {
+			if (lease_duration == 0) {
 				// User explicitly didn't want a lease, so we're done.
-			free(tmp);
-			return;
-		}
-		else if (lease_duration < 20) {
-			if (! warned_too_small) { 
-				fprintf(stderr, "\nWARNING: %s less than 20 seconds is not "
-						"allowed, using 20 instead\n",
-						ATTR_JOB_LEASE_DURATION);
-				warned_too_small = true;
+				return;
 			}
-			lease_duration = 20;
+			if (lease_duration < 20) {
+				if (! warned_too_small) { 
+					fprintf(stderr, "\nWARNING: %s less than 20 seconds is not "
+							"allowed, using 20 instead\n",
+							ATTR_JOB_LEASE_DURATION);
+					warned_too_small = true;
+				}
+				lease_duration = 20;
+			}
 		}
-		free(tmp);
 	}
 	MyString val = ATTR_JOB_LEASE_DURATION;
 	val += "=";
-	val += lease_duration;
+	if (lease_duration) {
+		val += lease_duration;
+	} else if (tmp) {
+		val += tmp.ptr();
+	}
 	InsertJobExpr( val.Value() );
 }
 
@@ -5953,6 +5987,19 @@ void
 SetForcedAttributes()
 {
 	MyString buffer;
+
+	for (classad::References::const_iterator it = forced_submit_attrs.begin(); it != forced_submit_attrs.end(); ++it) {
+		char * value = param(it->c_str());
+		if ( ! value)
+			continue;
+	#ifdef PLUS_ATTRIBS_IN_CLUSTER_AD
+		buffer.formatstr( "%s = %s", it->c_str(), value);
+		InsertJobExpr(buffer);
+	#else
+		this is unsupported...
+	#endif
+		free(value);
+	}
 
 	HASHITER it = hash_iter_begin(SubmitMacroSet);
 	for( ; ! hash_iter_done(it); hash_iter_next(it)) {
@@ -7957,7 +8004,7 @@ condor_param( const char* name, const char* alt_name )
 			if (submit_attrs.find(name) != submit_attrs.end()) {
 				return param(name);
 			}
-			if (submit_attrs.find(name) != submit_attrs.end()) {
+			if (alt_name && (submit_attrs.find(alt_name) != submit_attrs.end())) {
 				return param(alt_name);
 			}
 		}
@@ -9142,7 +9189,7 @@ check_open( const char *name, int flags )
 		return;
 	}
 
-	if ( IsUrl( name ) ) {
+	if ( IsUrl( name ) || strstr(name, "$$(") ) {
 		return;
 	}
 

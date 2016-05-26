@@ -2066,7 +2066,7 @@ QueryJobAdsContinuation::finish(Stream *stream) {
 	return KEEP_STREAM;
 }
 
-int Scheduler::command_query_job_ads(int, Stream* stream)
+int Scheduler::command_query_job_ads(int cmd, Stream* stream)
 {
 	ClassAd queryAd;
 
@@ -2086,14 +2086,8 @@ int Scheduler::command_query_job_ads(int, Stream* stream)
 		return command_query_job_aggregates(queryAd, stream);
 	}
 
-	// REMOVE this code once we have working user detection
-	//
+	PRAGMA_REMIND("reduce dpf_level for CONDOR_Q_ONLY_MY_JOBS feature before it goes into stable.")
 	int dpf_level = D_ALWAYS; // D_COMMAND | D_FULLDEBUG
-	if (IsDebugCatAndVerbosity(dpf_level)) {
-		ReliSock* rsock = (ReliSock*)stream;
-		const char * p0wn = rsock->getOwner();
-		dprintf(dpf_level, "QUERY_JOB_ADS detected owner = %s\n", p0wn ? p0wn : "<null>");
-	}
 
 	// If the query request that only the querier's jobs be returned
 	// we have to figure out who the quierier is and add a clause to the requirements expression
@@ -2104,11 +2098,21 @@ int Scheduler::command_query_job_ads(int, Stream* stream)
 		was_my_jobs = my_jobs_expr != NULL;
 	}
 	if (my_jobs_expr) {
+		// if this is a 'only my jobs' query, then we want to use the authenticated
+		// identity of the caller is. if the connection was already authenticated, use that owner.
 		std::string owner;
-		//PRAGMA_REMIND("figure out username of invoker, and create a my_jobs_expr for them.")
 		ReliSock* rsock = (ReliSock*)stream;
+		bool authenticated = false;
+		if (rsock->triedAuthentication()) {
+			authenticated = rsock->isAuthenticated();
+			dprintf(dpf_level, "%s command %s\n", getCommandStringSafe(cmd),
+				authenticated ? "was authenticated" : "failed to authenticate");
+		}
 		const char * p0wn = rsock->getOwner();
-		if (p0wn && MATCH == strcasecmp(p0wn, "unauthenticated")) p0wn = NULL;
+		if (p0wn && ( ! authenticated || MATCH == strcasecmp(p0wn, "unauthenticated"))) p0wn = NULL;
+		if (IsDebugCatAndVerbosity(dpf_level)) {
+			dprintf(dpf_level, "QUERY_JOB_ADS detected owner = %s\n", p0wn ? p0wn : "<null>");
+		}
 
 		long long val;
 		// if MyJobs is a literal true/false, then we are being asked to either NOT show
@@ -2120,23 +2124,28 @@ int Scheduler::command_query_job_ads(int, Stream* stream)
 				if (p0wn) owner = p0wn;
 			} else {
 				// false means we don't want just this owners jobs. set my_jobs_expr to NULL to signal that.
+				owner.clear();
 				my_jobs_expr = NULL;
 			}
 		} else {
-			// if my_jobs_expr is not literal true/valse, then we assume it is Owner==Me
-			// and that ME is also an attribute in the query ad. With Me being a guess as
-			// to the correct owner.  We will use the suggested value of Me unless we can
-			// determine a better value. 
-			classad::ExprTree * me_expr = queryAd.Lookup("Me");
-			if (me_expr && ExprTreeIsLiteralString(me_expr, owner)) {
-				// owner is set, buf if owner is a queue superuser, then we still want to show all jobs.
-				if (isQueueSuperUser(owner.c_str())) {
-					my_jobs_expr = NULL; 
-				}
+			if (p0wn) {
+				owner = p0wn;
 			} else {
-				my_jobs_expr = NULL;
+				// if my_jobs_expr is not literal true/valse, then we assume it is Owner==Me
+				// and that ME is also an attribute in the query ad. With Me being a guess as
+				// to the correct owner.  We will use the suggested value of Me unless we can
+				// determine a better value. 
+				classad::ExprTree * me_expr = queryAd.Lookup("Me");
+				if ( ! me_expr || ! ExprTreeIsLiteralString(me_expr, owner)) {
+					owner.clear();
+					my_jobs_expr = NULL; // no me or it's not a string, so show all jobs.
+				}
 			}
-			if (p0wn) owner = p0wn;
+		}
+		// at this point owner is valid or empty.
+		// if empty, or the owner is a queue superuser show all jobs.
+		if (owner.empty() || isQueueSuperUser(owner.c_str())) {
+			my_jobs_expr = NULL; 
 		}
 
 		// at this point owner should be set if my_jobs_expr is non-null
@@ -2153,7 +2162,6 @@ int Scheduler::command_query_job_ads(int, Stream* stream)
 
 	classad::ExprTree *requirements_in = queryAd.Lookup(ATTR_REQUIREMENTS);
 	classad::ExprTree *requirements = my_jobs_expr;
-#if 1 // new for 8.5.3, use my_jobs_expr, or requirements (or both if both are set)
 	if (requirements_in) {
 		bool bval = false;
 		requirements_in = SkipExprParens(requirements_in);
@@ -2164,7 +2172,7 @@ int Scheduler::command_query_job_ads(int, Stream* stream)
 			requirements = requirements_in->Copy();
 		} else if ( ! ExprTreeIsLiteralBool(requirements_in, bval) || bval) {
 			// if we have both requirements, and requirements_in, and the requirements_in is not a trivial 'true' 
-			// we need to join them both requirements with a logical && op.
+			// we need to join them both with a logical && op.
 			requirements = JoinExprTreeCopiesWithOp(classad::Operation::LOGICAL_AND_OP, my_jobs_expr, requirements_in);
 			delete my_jobs_expr; my_jobs_expr = NULL;
 		}
@@ -2177,14 +2185,6 @@ int Scheduler::command_query_job_ads(int, Stream* stream)
 		dprintf(dpf_level, "QUERY_JOB_ADS %d effective requirements: %s\n", was_my_jobs, ExprTreeToString(requirements));
 	}
 	classad_shared_ptr<classad::ExprTree> requirements_ptr(requirements);
-#else
-	if (!requirements) {
-		classad::Value val; val.SetBooleanValue(true);
-		requirements = classad::Literal::MakeLiteral(val);
-		if (!requirements) return sendJobErrorAd(stream, 1, "Failed to create default requirements");
-	}
-	classad_shared_ptr<classad::ExprTree> requirements_ptr(requirements->Copy());
-#endif
 
 	int resultLimit=-1;
 	if (!queryAd.EvaluateAttrInt(ATTR_LIMIT_RESULTS, resultLimit)) {
@@ -12690,6 +12690,10 @@ Scheduler::Register()
 	daemonCore->Register_CommandWithPayload(QUERY_JOB_ADS, "QUERY_JOB_ADS",
 				(CommandHandlercpp)&Scheduler::command_query_job_ads,
 				"command_query_job_ads", this, READ);
+
+	daemonCore->Register_CommandWithPayload(QUERY_JOB_ADS_WITH_AUTH, "QUERY_JOB_ADS_WITH_AUTH",
+				(CommandHandlercpp)&Scheduler::command_query_job_ads,
+				"command_query_job_ads", this, READ, D_FULLDEBUG, true /*force authentication*/);
 
 	// Note: The QMGMT READ/WRITE commands have the same command handler.
 	// This is ok, because authorization to do write operations is verified

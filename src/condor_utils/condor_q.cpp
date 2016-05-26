@@ -378,8 +378,8 @@ CondorQ::fetchQueueFromHostAndProcess ( const char *host,
 	constraint = strdup( ExprTreeToString( tree ) );
 	delete tree;
 
-	if (useFastPath == 2) {
-		int result = fetchQueueFromHostAndProcessV2(host, constraint, attrs, fetch_opts, match_limit, process_func, process_func_data, connect_timeout, errstack);
+	if (useFastPath > 1) {
+		int result = fetchQueueFromHostAndProcessV2(host, constraint, attrs, fetch_opts, match_limit, process_func, process_func_data, connect_timeout, useFastPath, errstack);
 		free( constraint);
 		return result;
 	}
@@ -419,6 +419,7 @@ CondorQ::fetchQueueFromHostAndProcessV2(const char *host,
 					condor_q_process_func process_func,
 					void * process_func_data,
 					int connect_timeout,
+					int useFastPath,
 					CondorError *errstack)
 {
 	classad::ClassAdParser parser;
@@ -435,6 +436,7 @@ CondorQ::fetchQueueFromHostAndProcessV2(const char *host,
 		free(projection);
 	}
 
+	bool want_authentication = false;
 	if (fetch_opts == fetch_DefaultAutoCluster) {
 		ad.InsertAttr("QueryDefaultAutocluster", true);
 		ad.InsertAttr("MaxReturnedJobIds", 2); // TODO: make this settable by caller of this function.
@@ -445,6 +447,7 @@ CondorQ::fetchQueueFromHostAndProcessV2(const char *host,
 		const char * owner = my_username();
 		if (owner) { ad.InsertAttr("Me", owner); }
 		ad.InsertAttr("MyJobs", owner ? "(Owner == Me)" : "true");
+		want_authentication = true;
 	}
 
 	if (match_limit >= 0) {
@@ -452,13 +455,48 @@ CondorQ::fetchQueueFromHostAndProcessV2(const char *host,
 	}
 
 	DCSchedd schedd(host);
+	int cmd = QUERY_JOB_ADS;
+	if (want_authentication && (useFastPath > 2)) {
+		cmd = QUERY_JOB_ADS_WITH_AUTH;
+	}
 	Sock* sock;
-	if (!(sock = schedd.startCommand(QUERY_JOB_ADS, Stream::reli_sock, connect_timeout, errstack))) return Q_SCHEDD_COMMUNICATION_ERROR;
+	if (!(sock = schedd.startCommand(cmd, Stream::reli_sock, connect_timeout, errstack))) return Q_SCHEDD_COMMUNICATION_ERROR;
 
 	classad_shared_ptr<Sock> sock_sentry(sock);
 
 	if (!putClassAd(sock, ad) || !sock->end_of_message()) return Q_SCHEDD_COMMUNICATION_ERROR;
 	dprintf(D_FULLDEBUG, "Sent classad to schedd\n");
+
+#if 0
+	// if doing MyJobs queryies, we can expect to get a late authentication request
+	// unless we have already authenticated, or the schedd is older and doesn't know to try.
+	if (expect_late_authentication) {
+		ReliSock* rsock = (ReliSock*)sock;
+		if (rsock->triedAuthentication()) {
+			expect_late_authentication = false;
+			dprintf(D_FULLDEBUG, "MyJobs option requires authentication, and it already happened.\n");
+		} else {
+			CondorVersionInfo const *peer_ver = rsock->get_peer_version();
+			auto_free_ptr verstr(peer_ver ? peer_ver->get_version_string() : NULL);
+			dprintf(D_FULLDEBUG, "Schedd version is %s\n", verstr ? verstr.ptr() : "NULL");
+			expect_late_authentication = peer_ver && peer_ver->built_since_version(8,5,5);
+			dprintf(D_FULLDEBUG, "MyJobs option requires authentication, and schedd %s late authentication\n", 
+				expect_late_authentication ? "supports" : "does not support");
+		}
+	}
+
+	// we interrupt this condor_q query to do authentication now.
+	if (expect_late_authentication) {
+		ReliSock* rsock = (ReliSock*)sock;
+		dprintf(D_FULLDEBUG, "Attempting late authentication\n");
+		CondorError errstack;
+		bool authenticated = SecMan::authenticate_sock(rsock, CLIENT_PERM, &errstack);
+		if ( ! authenticated && IsDebugCatAndVerbosity(D_FULLDEBUG)) {
+			dprintf(D_FULLDEBUG, "Authentication failed: %s\n", errstack.message());
+		}
+		dprintf(D_FULLDEBUG, "Continuing command %s Authentication\n", authenticated ? "with" : "without");
+	}
+#endif
 
 	int rval = 0;
 	do {

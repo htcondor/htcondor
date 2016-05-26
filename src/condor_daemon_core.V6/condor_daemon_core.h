@@ -1686,6 +1686,7 @@ class DaemonCore : public Service
 	SafeSock* super_dc_ssock;	// super user udp command socket
     int m_iMaxAcceptsPerCycle; ///< maximum number of inbound connections to accept per loop
 	int m_iMaxReapsPerCycle; // maximum number reapers to invoke per event loop
+	int m_MaxTimeSkip;
 
     void Inherit( void );  // called in main()
 	void InitDCCommandSocket( int command_port );  // called in main()
