@@ -49,7 +49,6 @@ static const int DEFAULT_MAXREAPS = 100;
 static const int DEFAULT_PIDBUCKETS = 11;
 static const int DEFAULT_MAX_PID_COLLISIONS = 9;
 static const char* DEFAULT_INDENT = "DaemonCore--> ";
-static const int MAX_TIME_SKIP = (60*20); //20 minutes
 static const int MIN_FILE_DESCRIPTOR_SAFETY_LIMIT = 20;
 static const int MIN_REGISTERED_SOCKET_SAFETY_LIMIT = 15;
 static const int DC_PIPE_BUF_SIZE = 65536;
@@ -394,6 +393,8 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 	super_dc_ssock = NULL;
 	m_iMaxReapsPerCycle = 1;
     m_iMaxAcceptsPerCycle = 1;
+
+	m_MaxTimeSkip = 60 * 20;  // 20 minutes
 
 	inheritedSocks[0] = NULL;
 	inServiceCommandSocket_flag = FALSE;
@@ -2962,6 +2963,8 @@ DaemonCore::reconfig(void) {
 	// Maximum number of bytes read from a stdout/stderr pipes.
 	// Default is 10k (10*1024 bytes)
 	maxPipeBuffer = param_integer("PIPE_BUFFER_MAX", 10240);
+
+	m_MaxTimeSkip = param_integer("MAX_TIME_SKIP", 1200, 0);
 
     m_iMaxAcceptsPerCycle = param_integer("MAX_ACCEPTS_PER_CYCLE", 8);
     if( m_iMaxAcceptsPerCycle != 1 ) {
@@ -10750,7 +10753,7 @@ DaemonCore::CheckForTimeSkip(time_t time_before, time_t okay_delta)
 		represent a given time_t value.  This means
 		different code paths depending on which variable is
 		larger. */
-	if((time_after + MAX_TIME_SKIP) < time_before) {
+	if((time_after + m_MaxTimeSkip) < time_before) {
 		// We've jumped backward in time.
 
 		// If this test is ever made more aggressive, remember that
@@ -10759,7 +10762,7 @@ DaemonCore::CheckForTimeSkip(time_t time_before, time_t okay_delta)
 
 		delta = -(int)(time_before - time_after);
 	}
-	if((time_before + okay_delta*2 + MAX_TIME_SKIP) < time_after) {
+	if((time_before + okay_delta*2 + m_MaxTimeSkip) < time_after) {
 		/*
 		We've jumped forward in time.
 
