@@ -502,7 +502,7 @@ SharedPortState::HandleUnbound(Stream *&s)
 	}
 
 	// Make certain SO_LINGER is Off.  This will result in the default
-	// of closesocket returning immediately and the system attempts to 
+	// of closesocket returning immediately and the system attempts to
 	// send any unsent data.
 
 	struct linger linger = {0,0};
@@ -522,7 +522,7 @@ SharedPortState::HandleUnbound(Stream *&s)
 		fcntl(named_sock_fd, F_SETFL, flags | O_NONBLOCK);
 	}
 
-	int connect_rc = 0, connect_errno = 0;
+	int connect_rc = 0, connect_errno = 0, p_errno = 0;
 	{
 		TemporaryPrivSentry sentry(PRIV_ROOT);
 
@@ -534,7 +534,7 @@ SharedPortState::HandleUnbound(Stream *&s)
 			connect_rc = connect(named_sock_fd,
 					(struct sockaddr *)&named_sock_addr,
 					named_sock_addr_len);
-			connect_errno = errno;	// stash away errno quick so not overwritten by sentry
+			p_errno = connect_errno = errno;
 		}
 		if (!has_socket || (has_alt_socket && connect_rc && (connect_errno == ENOENT || connect_errno == ECONNREFUSED)))
 		{
@@ -569,7 +569,7 @@ SharedPortState::HandleUnbound(Stream *&s)
 		ASSERT( connect_errno != EINPROGRESS );
 
 		/* The most likely/expected reason the connect fails is because the target daemon's 
-		 * listen queue is full, because the target daemon is swamped.  
+		 * listen queue is full, because the target daemon is swamped.
 		 * Let's count that situation specifically, so anyone looking
 		 * at general connection failures (i.e. m_failPassSocketCalls) can subtract out
 		 * this "expected" overload situation to figure out if something else is broken.
@@ -578,18 +578,31 @@ SharedPortState::HandleUnbound(Stream *&s)
 		 * listen queue full, and just return ECONNREFUSED in both events. -Todd Tannenbaum 2/1/2014
 		 */
 		bool server_busy = false;
-		if ( connect_errno == EAGAIN || connect_errno == EWOULDBLOCK || 
-			 connect_errno == ETIMEDOUT || connect_errno == ECONNREFUSED )  
+		if ( connect_errno == EAGAIN || connect_errno == EWOULDBLOCK ||
+			 connect_errno == ETIMEDOUT || connect_errno == ECONNREFUSED )
 		{
 			SharedPortClient::m_wouldBlockPassSocketCalls++;
 			server_busy = true;
 		}
 
-		dprintf(D_ALWAYS,"SharedPortServer:%s failed to connect to %s%s: %s (err=%d)\n",
-			server_busy ? " server was busy," : "",
-			m_sock_name.c_str(),
-			m_requested_by.c_str(),
-			strerror(errno),errno);
+		if( has_socket && has_alt_socket ) {
+			dprintf( D_ALWAYS, "SharedPortServer:%s failed to connect %s%s: "
+				"primary (%s): %s (%d); alt (%s): %s (%d)\n",
+				server_busy ? " server was busy," : "",
+				m_sock_name.c_str(),
+				m_requested_by.c_str(),
+				sock_name.c_str(),
+				strerror( p_errno ), p_errno,
+				alt_sock_name.c_str(),
+				strerror( connect_errno ), connect_errno
+				);
+		} else {
+			dprintf(D_ALWAYS,"SharedPortServer:%s failed to connect to %s%s: %s (err=%d)\n",
+				server_busy ? " server was busy," : "",
+				m_sock_name.c_str(),
+				m_requested_by.c_str(),
+				strerror(connect_errno),connect_errno);
+		}
 		delete named_sock;
 		return FAILED;
 	}
