@@ -74,6 +74,7 @@ CCBServer::CCBServer():
 	m_reconnect_fp(NULL),
 	m_last_reconnect_info_sweep(0),
 	m_reconnect_info_sweep_interval(0),
+	m_reconnect_allowed_from_any_ip(false),
 	m_next_ccbid(1),
 	m_next_request_id(1),
 	m_read_buffer_size(0),
@@ -158,6 +159,8 @@ CCBServer::InitAndReconfig()
 	m_reconnect_info_sweep_interval = param_integer("CCB_SWEEP_INTERVAL",1200);
 
 	CloseReconnectFile();
+
+	m_reconnect_allowed_from_any_ip = param_boolean("CCB_RECONNECT_ALLOWED_FROM_ANY_IP", false);
 
 	MyString old_reconnect_fname = m_reconnect_fname;
 	char *fname = param("CCB_RECONNECT_FILE");
@@ -876,13 +879,24 @@ CCBServer::ReconnectTarget( CCBTarget *target, CCBID reconnect_cookie )
 	char const *new_ip = target->getSock()->peer_ip_str();
 	if( strcmp(previous_ip,new_ip) )
 	{
-		dprintf(D_ALWAYS,
+		// The reconnect request is coming from a different IP address.
+		// Check if this is allowed.
+		if ( m_reconnect_allowed_from_any_ip == false ) {
+			dprintf(D_ALWAYS,
 				"CCB: reconnect request from target daemon %s with ccbid %lu "
-				"has wrong IP!  (expected IP=%s)\n",
+				"has wrong IP! (expected IP=%s)  - request denied\n",
 				target->getSock()->peer_description(),
 				target->getCCBID(),
 				previous_ip);
-		return false;
+			return false;  // return false now to deny the reconnect
+		} else {
+			dprintf(D_FULLDEBUG,
+				"CCB: reconnect request from target daemon %s with ccbid %lu "
+				"moved from previous_ip=%s to new_ip=%s\n",
+				target->getSock()->peer_description(),
+				target->getCCBID(),
+				previous_ip, new_ip);
+		}
 	}
 
 	if( reconnect_cookie != reconnect_info->getReconnectCookie() )
