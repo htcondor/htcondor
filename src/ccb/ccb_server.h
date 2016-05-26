@@ -57,6 +57,7 @@ class CCBServer: Service {
 	FILE *m_reconnect_fp;
 	time_t m_last_reconnect_info_sweep;
 	int m_reconnect_info_sweep_interval;
+	bool m_reconnect_allowed_from_any_ip;
 	CCBID m_next_ccbid;
 	CCBID m_next_request_id;
 	int m_read_buffer_size;
