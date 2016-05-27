@@ -217,6 +217,8 @@ void CondorResource::PublishResourceAd( ClassAd *resource_ad )
 	if ( proxyFQAN ) {
 		resource_ad->Assign( ATTR_X509_USER_PROXY_FQAN, proxyFQAN );
 	}
+
+	gahp->PublishStats( resource_ad );
 }
 
 void CondorResource::CondorRegisterJob( CondorJob *job, const char *submitter_id )
