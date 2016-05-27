@@ -71,7 +71,7 @@ condor_pre_external( CLASSADS classads-${PACKAGE_VERSION} "lib;include" "alwaysb
 
 if (NOT WINDOWS)
 
-  condor_selective_glob("attrrefs.*;classad.*;classadCache.*;collection.*;collectionBase.*;debug.*;exprList.*;exprTree.*;fnCall.*;indexfile.*;lexer.*;lexerSource.*;literals.*;matchClassad.*;operators.*;query.*;sink.*;source.*;transaction.*;util.*;value.*;view.*;xmlLexer.*;xmlSink.*;xmlSource.*;cclassad.*;common.*" ClassadSrcs)
+  condor_selective_glob("attrrefs.*;classad.*;classadCache.*;collection.*;collectionBase.*;debug.*;exprList.*;exprTree.*;fnCall.*;indexfile.*;lexer.*;lexerSource.*;literals.*;matchClassad.*;operators.*;query.*;sink.*;source.*;transaction.*;util.*;value.*;view.*;xmlLexer.*;xmlSink.*;xmlSource.*;jsonSink.*;jsonSource.*;cclassad.*;common.*" ClassadSrcs)
   add_library( classads STATIC ${ClassadSrcs} )    # the one which all of condor depends upon
   set_target_properties( classads PROPERTIES OUTPUT_NAME classad )
 
@@ -114,7 +114,7 @@ if (NOT WINDOWS)
 
 else()	
 	# windows specific configuration.
-	condor_selective_glob("attrrefs.cpp;common.cpp;collection*;classadCache.*;fnCall.cpp;expr*;indexfile*;lexer*;literals.cpp;matchClassad.cpp;classad.cpp;debug.cpp;operators.cpp;util.cpp;value.cpp;query.cpp;sink.cpp;source.cpp;transaction.cpp;view.cpp;xml*" ClassadSrcs)
+	condor_selective_glob("attrrefs.cpp;common.cpp;collection*;classadCache.*;fnCall.cpp;expr*;indexfile*;lexer*;literals.cpp;matchClassad.cpp;classad.cpp;debug.cpp;operators.cpp;util.cpp;value.cpp;query.cpp;sink.cpp;source.cpp;transaction.cpp;view.cpp;xml*;json*" ClassadSrcs)
 	add_library( classads STATIC ${ClassadSrcs} )
 	set (CLASSADS_FOUND classads)
 	set (CLASSADS_FOUND_STATIC classads)

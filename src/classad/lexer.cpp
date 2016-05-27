@@ -41,6 +41,7 @@ Lexer ()
 	tokenConsumed = true;
 	accumulating = false;
     initialized = false;
+	jsonLex = false;
 
 	// debug flag
 	debug = false;
@@ -94,6 +95,14 @@ WasInitialized(void)
     return initialized;
 }
 
+bool Lexer::
+SetJsonLex( bool do_json )
+{
+	bool old = jsonLex;
+	jsonLex = do_json;
+	return old;
+}
+
 // FinishedParse:  This function implements the cleanup phase of a parse.
 //   String valued tokens are entered into a string space, and maintained
 //   with reference counting.  When a parse is finished, this space is flushed
@@ -123,7 +132,7 @@ cut (void)
 {
 	if(lexBufferCount < lexBuffer.length())
 	{
-		lexBuffer[lexBufferCount] = '\0';
+		lexBuffer.erase( lexBufferCount );
 	}
 	accumulating = false;
 	return;
@@ -402,7 +411,7 @@ tokenizeNumber (void)
 		cut( );
 		long long l;
 		int base = 0;
-		if ( _useOldClassAdSemantics ) {
+		if ( _useOldClassAdSemantics || jsonLex ) {
 			// Old ClassAds don't support octal or hexidecimal
 			// representations for integers.
 			base = 10;
@@ -426,7 +435,10 @@ tokenizeNumber (void)
 			CLASSAD_EXCEPT("Should not reach here");
 	}
 
-	switch( toupper( ch ) ) {
+	if ( jsonLex ) {
+		f = Value::NO_FACTOR;
+	} else {
+		switch( toupper( ch ) ) {
 		case 'B': f = Value::B_FACTOR; wind( ); break;	
 		case 'K': f = Value::K_FACTOR; wind( ); break;
 		case 'M': f = Value::M_FACTOR; wind( ); break;
@@ -434,6 +446,7 @@ tokenizeNumber (void)
 		case 'T': f = Value::T_FACTOR; wind( ); break;
 		default:
 			f = Value::NO_FACTOR;
+		}
 	}
 
 	if( numberType == INTEGER ) {
@@ -483,7 +496,9 @@ tokenizeAlphaHead (void)
 	} else if (strcasecmp(lexBuffer.c_str(), "false") == 0) {
 		tokenType = LEX_BOOLEAN_VALUE;
 		yylval.SetBoolValue( false );
-	} else if (strcasecmp(lexBuffer.c_str(), "undefined") == 0) {
+	} else if (!jsonLex && strcasecmp(lexBuffer.c_str(), "undefined") == 0) {
+		tokenType = LEX_UNDEFINED_VALUE;
+	} else if (jsonLex && strcasecmp(lexBuffer.c_str(), "null") == 0) {
 		tokenType = LEX_UNDEFINED_VALUE;
 	} else if (strcasecmp(lexBuffer.c_str(), "error") == 0) {
 		tokenType = LEX_ERROR_VALUE;
@@ -554,7 +569,13 @@ tokenizeString(char delim)
 	cut( );
 	wind( );	// skip over the close quote
 	bool validStr = true; // to check if string is valid after converting escape
-	convert_escapes(lexBuffer, validStr);
+	bool quoted_expr = false; // for JSON, does string look like a quoted expression
+	if ( jsonLex ) {
+		convert_escapes_json(lexBuffer, validStr, quoted_expr);
+		yylval.SetQuotedExpr( quoted_expr );
+	} else {
+		convert_escapes(lexBuffer, validStr);
+	}
 	yylval.SetStringValue( lexBuffer.c_str( ) );
 	if (validStr) {
 		if(delim == '\"') {

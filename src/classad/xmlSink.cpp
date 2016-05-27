@@ -82,8 +82,7 @@ Unparse(
 		switch( tree->GetKind( ) ) {
 		case ExprTree::LITERAL_NODE: {
 			Value				val;
-			Value::NumberFactor	factor;
-			((Literal*)tree)->GetComponents(val, factor);
+			((Literal*)tree)->GetValue(val);
 			Unparse(buffer, val, indent);
 			break;
 		}

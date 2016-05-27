@@ -54,6 +54,7 @@ long timezone_offset( time_t clock, bool no_dst = false );
  * correct characters like tab. It also converts octal sequences. 
  */
 void convert_escapes(std::string &text, bool &validStr); 
+void convert_escapes_json(std::string &text, bool &validStr, bool &quotedExpr);
 
 void getLocalTime(time_t *now, struct tm *localtm);
 void getGMTime(time_t *now, struct tm *localtm);

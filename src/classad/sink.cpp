@@ -192,7 +192,7 @@ Unparse( string &buffer, const Value &val )
                 buffer += "real(\"INF\")";
             } else if (oldClassAd) {
                 sprintf(tempBuf, "%.16G", real);
-                // %G may print something that looks like an integer.
+                // %G may print something that looks like an integer or exponent.
                 // In that case, tack on a ".0"
                 if (tempBuf[strcspn(tempBuf, ".Ee")] == '\0') {
                     strcat(tempBuf, ".0");
