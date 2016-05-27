@@ -67,7 +67,7 @@ DIRTY_BYTES=100000000
 
 # Set root user quota for max number of kernel session keys and
 # bytes.  Kernel session keys are used by Kerberos, AFS, ecryptfs, and
-# other services.  The condor_master creates a new session keying by
+# other services.  The condor_master creates a new session keyring by
 # default on startup (via config knob DISCARD_SESSION_KEYRING_ON_STARTUP)
 # so that Kerberos tokens and the like are not leaked to user jobs, and
 # also to support encrypted execute directories.  The default quota
