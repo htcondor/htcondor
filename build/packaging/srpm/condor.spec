@@ -1597,6 +1597,8 @@ rm -rf %{buildroot}
 %_includedir/classad/exprTree.h
 %_includedir/classad/fnCall.h
 %_includedir/classad/indexfile.h
+%_includedir/classad/jsonSink.h
+%_includedir/classad/jsonSource.h
 %_includedir/classad/lexer.h
 %_includedir/classad/lexerSource.h
 %_includedir/classad/literals.h
