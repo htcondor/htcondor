@@ -63,7 +63,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item On Linux, HTCondor appropriately tunes kernel parameters
+root\_maxkeys and root\_maxbytes to prevent \Condor{master} 
+startup failures on older Linux kernels.
+\Ticket{5671}
 
 \end{itemize}
 
