@@ -1093,6 +1093,7 @@ Returns the Python string.
 
 Given \texttt{input} of a string or file, return an iterator of ClassAds.
 Parameter \texttt{parser} tells which ClassAd parser to use.
+Note that automatic selection of ClassAd parser does not work on stream input.
 
 Returns an iterator.
 \\ \hline
@@ -1311,7 +1312,7 @@ Here is an example that illustrates the use of the iterator
 >>> import classad
 >>> import os
 >>> fd = os.popen("condor_history -l -match 4")
->>> ads = classad.parseAds(fd)
+>>> ads = classad.parseAds(fd, classad.Parser.Old)
 >>> print [ad["ClusterId"] for ad in ads]
 [23389L, 23388L, 23386L, 23387L]
 >>>
