@@ -68,11 +68,25 @@ root\_maxkeys and root\_maxbytes to prevent \Condor{master}
 startup failures on older Linux kernels.
 \Ticket{5671}
 
+\item The configuration variable \MacroNI{SUBMIT\_ATTRS} now understands the +Attr
+syntax that \Condor{submit} uses to inject attributes directly into the job ClassAd.
+\Ticket{5694}
+
+\item The \Condor{submit} variable \MacroNI{job\_lease\_duration} can now be an
+expression.
+\Ticket{5694}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item all \$function macro substitutions in in configuration files
+will now correctly handle variables with subsystem and localname prefixes
+as well as self references.  In particular \verb@VAR = $F(VAR)@ now substitutes
+correctly rather than hanging forever.
+\Ticket{5565}
 
 \item Fixed a bug in Docker universe where the job would
 not run with the correct group id.
@@ -109,6 +123,18 @@ and \MacroNI{HIGHPORT} no longer restrict the port numbers of outbound
 connections on Windows.  If you still require this functionality, use
 \MacroNI{OUT\_LOWPORT} and \MacroNI{OUT\_HIGHPORT}.
 \Ticket{4711}
+
+\item Fixed a bug that would cause \Condor{submit} to create extra, incorrectly named
+output and error files when \verb@$$@ substitution is used as part of the filenames.
+\Ticket{2720}
+
+\item Fixed a bug that would cause the \Condor{history\_helper} to be invoked using
+the wrong name on Windows
+\Ticket{5656}
+
+\item Fixed a bug that would sometimes cause configuration variables with a subsystem prefix
+to be ignored.
+\Ticket{5310}
 
 \end{itemize}
 
