@@ -951,7 +951,7 @@ main (int argc, char *argv[])
 	// fetch the query
 	QueryResult q;
 
-	if( ppStyle == PP_VERBOSE ) {
+	if( ppStyle == PP_VERBOSE || ppStyle == PP_XML || ppStyle == PP_JSON ) {
 		// Remove everything from the projection list if we're displaying
 		// the "long form" of the ads.
 		projList.clear();
@@ -969,7 +969,7 @@ main (int argc, char *argv[])
 
 #ifdef USE_LATE_PROJECTION
 	// Setup the pretty printer for the given mode.
-	if (ppStyle != PP_VERBOSE && ppStyle != PP_XML && ppStyle != PP_CUSTOM) {
+	if (ppStyle != PP_VERBOSE && ppStyle != PP_XML && ppStyle != PP_JSON && ppStyle != PP_CUSTOM) {
 		prettyPrintInitMask(projList);
 	}
 #endif
@@ -1478,6 +1478,7 @@ usage ()
 		"\t-wide[:<width>]\t\tDon't truncate data to fit in 80 columns.\n"
 		"\t\t\t\tTruncates to console width or <width> argument if specified.\n"
 		"\t-xml\t\t\tDisplay entire classads, but in XML\n"
+		"\t-json\t\t\tDisplay entire classads, but in JSON\n"
 		"\t-attributes X,Y,...\tAttributes to show in -xml or -long \n"
 		"\t-format <fmt> <attr>\tDisplay <attr> values with formatting\n"
 		"\t-autoformat[:lhVr,tng] <attr> [<attr2> [...]]\n"
@@ -1682,6 +1683,9 @@ firstPass (int argc, char *argv[])
 		} else
 		if (is_dash_arg_prefix (argv[i],"xml", 1)){
 			setPPstyle (PP_XML, i, argv[i]);
+		} else
+		if (is_dash_arg_prefix (argv[i],"json", 1)){
+			setPPstyle (PP_JSON, i, argv[i]);
 		} else
 		if (is_dash_arg_prefix (argv[i],"attributes", 2)){
 			if( !argv[i+1] ) {

@@ -50,7 +50,8 @@ enum ppOption {
     PP_XML,
     PP_CUSTOM,
 
-    PP_VERBOSE
+    PP_VERBOSE,
+    PP_JSON
 };
 
 

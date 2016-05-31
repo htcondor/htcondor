@@ -111,6 +111,7 @@ getPPStyleStr (ppOption pps)
 		case PP_ANY_NORMAL:		return "Any";
     	case PP_VERBOSE:		return "Verbose";
     	case PP_XML:		    return "XML";
+		case PP_JSON:		    return "JSON";
     	case PP_CUSTOM:			return "Custom";
         default:				return "<Unknown!>";
 	}
@@ -126,9 +127,9 @@ int setPPstyle (ppOption pps, int arg_index, const char * argv)
 
 	// If -long or -xml or -format are specified, do not reset to
 	// "normal" style when followed by a flag such as -startd.
-	if( ppStyle == PP_XML || ppStyle == PP_VERBOSE || ppStyle == PP_CUSTOM )
+	if( ppStyle == PP_XML || ppStyle == PP_VERBOSE || ppStyle == PP_CUSTOM || ppStyle == PP_JSON )
 	{
-		if( pps != PP_XML && pps != PP_VERBOSE && pps != PP_CUSTOM ) {
+		if( pps != PP_XML && pps != PP_VERBOSE && pps != PP_CUSTOM && pps != PP_JSON ) {
 				// ignore this style setting and keep our existing setting
 			return 0;
 		}
@@ -136,7 +137,7 @@ int setPPstyle (ppOption pps, int arg_index, const char * argv)
 
 	// If setting a 'normal' output, check to see if there is a user-defined normal output
 	if ( ! disable_user_print_files && ! explicit_format
-		&& pps != PP_XML && pps != PP_VERBOSE && pps != PP_CUSTOM && pps != ppStyle) {
+		&& pps != PP_XML && pps != PP_JSON && pps != PP_VERBOSE && pps != PP_CUSTOM && pps != ppStyle) {
 		MyString param_name("STATUS_DEFAULT_"); param_name += getAdTypeStr(setby.adType); param_name += "_PRINT_FORMAT_FILE";
 		auto_free_ptr pf_file(param(param_name.c_str()));
 		if (pf_file) {
@@ -151,7 +152,7 @@ int setPPstyle (ppOption pps, int arg_index, const char * argv)
 		}
 	}
 
-	if ( (PP_XML == pps) || PP_VERBOSE == pps || (ppStyle <= pps || setby.ppArgIndex == 0) ) {
+	if ( (PP_XML == pps) || PP_JSON == pps || PP_VERBOSE == pps || (ppStyle <= pps || setby.ppArgIndex == 0) ) {
 		ppStyle = pps;
 		setby.ppArgIndex = arg_index;
 		setby.ppArg = argv;

@@ -65,6 +65,7 @@ void printQuillNormal 	(ClassAd *);
 void printCOD    		(ClassAd *);
 void printVerbose   	(ClassAd *);
 void printXML       	(ClassAd *, bool first_ad, bool last_ad);
+void printJSON       	(ClassAd *);
 void printCustom    	(ClassAd *);
 
 static bool renderActivityTime(long long & atime, AttrList* , Formatter &);
@@ -286,7 +287,7 @@ static void ppDisplayHeadings(FILE* file, ClassAd *ad, const char * pszExtra)
 void prettyPrintInitMask(classad::References & proj)
 {
 	//bool old_headings = (ppStyle == PP_STARTD_COD) || (ppStyle == PP_QUILL_NORMAL);
-	bool long_form = (ppStyle == PP_VERBOSE) || (ppStyle == PP_XML);
+	bool long_form = (ppStyle == PP_VERBOSE) || (ppStyle == PP_XML) || ppStyle == PP_JSON;
 	bool custom = (ppStyle == PP_CUSTOM);
 	if ( ! using_print_format && ! wantOnlyTotals && ! custom && ! long_form) {
 		ppInitPrintMask(ppStyle, proj);
@@ -367,7 +368,7 @@ ppOption prettyPrintHeadings (bool any_ads)
 	ppOption pps = ppStyle;
 	bool no_headings = wantOnlyTotals || ! any_ads;
 	bool old_headings = (pps == PP_STARTD_COD) || (pps == PP_QUILL_NORMAL);
-	bool long_form = (pps == PP_VERBOSE) || (pps == PP_XML);
+	bool long_form = (pps == PP_VERBOSE) || (pps == PP_XML) || pps == PP_JSON;
 	const char * newline_after_headings = "\n";
 	if ((pps == PP_CUSTOM) || using_print_format) {
 		pps = PP_CUSTOM;
@@ -437,6 +438,9 @@ void prettyPrintAd(ppOption pps, ClassAd *ad)
 		case PP_XML:
 			printXML (ad, false, false);
 			break;
+		case PP_JSON:
+			printJSON (ad);
+			break;
 	#ifdef HAVE_EXT_POSTGRESQL
 		case PP_QUILL_NORMAL:
 			printQuillNormal (ad);
@@ -463,7 +467,7 @@ prettyPrint (ClassAdList &adList, TrackTotals *totals)
 	ppOption pps = ppStyle;
 	bool no_headings = wantOnlyTotals || (num_ads <= 0);
 	bool old_headings = (pps == PP_STARTD_COD) || (pps == PP_QUILL_NORMAL);
-	bool long_form = (pps == PP_VERBOSE) || (pps == PP_XML);
+	bool long_form = (pps == PP_VERBOSE) || (pps == PP_XML) || pps == PP_JSON;
 	const char * newline_after_headings = "\n";
 	if ((pps == PP_CUSTOM) || using_print_format) {
 		pps = PP_CUSTOM;
@@ -526,6 +530,9 @@ prettyPrint (ClassAdList &adList, TrackTotals *totals)
 				break;
 			case PP_XML:
 				printXML (ad, (classad_index == 0), (classad_index == last_classad_index));
+				break;
+			case PP_JSON:
+				printJSON (ad);
 				break;
 		#ifdef HAVE_EXT_POSTGRESQL
 			case PP_QUILL_NORMAL:
@@ -1216,6 +1223,20 @@ printXML (ClassAd *ad, bool first_ad, bool last_ad)
 	}
 
 	printf("%s\n", xml.c_str());
+	return;
+}
+
+void
+printJSON (ClassAd *ad)
+{
+	classad::ClassAdJsonUnParser  unparser;
+	std::string            json;
+
+	if ( NULL != ad ) {
+		unparser.Unparse(json, ad);
+	}
+
+	printf("%s\n", json.c_str());
 	return;
 }
 

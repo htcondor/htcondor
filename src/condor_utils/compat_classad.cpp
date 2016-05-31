@@ -2472,6 +2472,55 @@ sPrintAdAsXML(std::string &output, const classad::ClassAd &ad, StringList *attr_
 }
 ///////////// end XML functions /////////
 
+int
+fPrintAdAsJson(FILE *fp, const classad::ClassAd &ad, StringList *attr_white_list)
+{
+    if(!fp)
+    {
+        return FALSE;
+    }
+
+    std::string out;
+    sPrintAdAsJson(out,ad,attr_white_list);
+    fprintf(fp, "%s", out.c_str());
+    return TRUE;
+}
+
+int
+sPrintAdAsJson(MyString &output, const classad::ClassAd &ad, StringList *attr_white_list)
+{
+	std::string std_output;
+	int rc = sPrintAdAsJson(std_output, ad, attr_white_list);
+	output += std_output;
+	return rc;
+}
+
+int
+sPrintAdAsJson(std::string &output, const classad::ClassAd &ad, StringList *attr_white_list)
+{
+	classad::ClassAdJsonUnParser unparser;
+
+	if ( attr_white_list ) {
+		classad::ClassAd tmp_ad;
+		classad::ExprTree *expr;
+		const char *attr;
+		attr_white_list->rewind();
+		while( (attr = attr_white_list->next()) ) {
+			if ( (expr = ad.Lookup( attr )) ) {
+				tmp_ad.Insert( attr, expr, false );
+			}
+		}
+		unparser.Unparse( output, &tmp_ad );
+		attr_white_list->rewind();
+		while( (attr = attr_white_list->next()) ) {
+			tmp_ad.Remove( attr );
+		}
+	} else {
+		unparser.Unparse( output, &ad );
+	}
+	return TRUE;
+}
+
 char const *
 EscapeAdStringValue(char const *val, std::string &buf)
 {

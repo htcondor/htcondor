@@ -212,6 +212,7 @@ static unsigned int direct = DIRECT_ALL;
 
 static 	int dash_long = 0, summarize = 1, global = 0, show_io = 0, dash_dag = 0, show_held = 0, dash_progress = 0;
 static  int use_xml = 0;
+static  bool use_json = false;
 static  int dash_autocluster = 0; // can be 0, or CondorQ::fetch_DefaultAutoCluster or CondorQ::fetch_GroupBy
 static  int default_fetch_opts = CondorQ::fetch_MyJobs;
 static  bool widescreen = false;
@@ -1287,6 +1288,13 @@ processCommandLineArguments (int argc, char *argv[])
 			customHeadFoot = HF_BARE;
 		}
 		else
+		if (is_dash_arg_prefix (dash_arg, "json", 3)) {
+			use_json = true;
+			dash_long = 1;
+			summarize = 0;
+			customHeadFoot = HF_BARE;
+		}
+		else
 		if (is_dash_arg_prefix (dash_arg, "limit", 3)) {
 			if (++i >= argc) {
 				fprintf(stderr, "Error: -limit requires the max number of results as an argument.\n");
@@ -2138,7 +2146,10 @@ processCommandLineArguments (int argc, char *argv[])
 			exit( 1 );
 		}
 	}
-
+	if (use_xml && use_json) {
+		fprintf( stderr, "Error: Cannot print as both XML and JSON\n" );
+		exit( 1 );
+	}
 #ifdef USE_LATE_PROJECTION
 	if (dash_dry_run) {
 		const char * const amo[] = { "", "run", "goodput", "globus", "grid", "hold", "io", "dag", "totals", "autocluster", "custom", "analyze" };
@@ -3374,7 +3385,8 @@ usage (const char *myName, int other)
 		"\t\t\t\t(experimental, see htcondor-wiki for more information)\n"
 		"\t-long\t\t\tDisplay entire ClassAds\n"
 		"\t-xml\t\t\tDisplay entire ClassAds, but in XML\n"
-		"\t-attributes X,Y,...\tAttributes to show in -xml and -long\n"
+		"\t-json\t\t\tDisplay entire ClassAds, but in JSON\n"
+		"\t-attributes X,Y,...\tAttributes to show in -xml, -json, and -long\n"
 		);
 
 	printf ("\n    [analyze-opts] are\n"
@@ -4123,7 +4135,7 @@ show_db_queue( const char* quill_name, const char* db_ipAddr, const char* db_nam
 	print_xml_header(source_label.c_str());
 
 	// choose a processing option for jobad's as the come off the wire.
-	// for -long -xml and -analyze, we need to save off the ad in a ClassAdList
+	// for -long -xml -json and -analyze, we need to save off the ad in a ClassAdList
 	// for -stream we print out the ad 
 	// and for everything else, we 
 	//
@@ -4196,7 +4208,7 @@ show_db_queue( const char* quill_name, const char* db_ipAddr, const char* db_nam
 
 	// at this point we either have a populated jobs list, or a populated dag_map
 	// depending on which processing function we used in the query above.
-	// for -long -xml or -analyze, we should have jobs, but no dag_map
+	// for -long -xml -json or -analyze, we should have jobs, but no dag_map
 
 	// if outputing dag format, we want to build the parent child links in the dag map
 	// and then edit the text for jobs that are dag nodes.
@@ -4258,7 +4270,10 @@ static void count_job(ClassAd *job)
 #else
 static const char * render_job_text(ClassAd *job, std::string & result_text)
 {
-	if (use_xml) {
+	if (use_json) {
+		sPrintAdAsJson(result_text, *job, attrs.isEmpty() ? NULL : &attrs);
+		result_text += "\n";
+	} else if (use_xml) {
 		sPrintAdAsXML(result_text, *job, attrs.isEmpty() ? NULL : &attrs);
 	} else if (dash_long) {
 		sPrintAd(result_text, *job, false, (dash_autocluster || attrs.isEmpty()) ? NULL : &attrs);
@@ -4522,7 +4537,10 @@ streaming_print_job(void *, ClassAd *job)
 
 	std::string result_text;
 	const char * fmt = "%s";
-	if (use_xml) {
+	if (use_json) {
+		sPrintAdAsJson(result_text, *job, app.attrs.isEmpty() ? NULL : &app.attrs);
+		fmt = "%s\n";
+	} else if (use_xml) {
 		sPrintAdAsXML(result_text, *job, app.attrs.isEmpty() ? NULL : &app.attrs);
 	} else if (dash_long) {
 		sPrintAd(result_text, *job, false, (dash_autocluster || app.attrs.isEmpty()) ? NULL : &app.attrs);
@@ -5099,14 +5117,14 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 	if (dash_profile) { cbBefore = ProcAPI::getBasicUsage(getpid(), &tmBefore); }
 
 	// fetch queue from schedd
-	ClassAdList jobs;  // this will get filled in for -long -xml and -analyze
+	ClassAdList jobs;  // this will get filled in for -long -json -xml and -analyze
 	CondorError errstack;
 
 	// for xml output, we want to get the header out first, and print it even if there are no jobs.
 	print_xml_header(source_label.c_str());
 
 	// choose a processing option for jobad's as the come off the wire.
-	// for -long -xml and -analyze, we need to save off the ad in a ClassAdList
+	// for -long -json -xml and -analyze, we need to save off the ad in a ClassAdList
 	// for -stream we print out the ad 
 	// and for everything else, we 
 	//
