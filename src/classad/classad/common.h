@@ -77,6 +77,7 @@
 #include <io.h>
 #define fsync _commit
 #define strcasecmp _stricmp
+#define strncasecmp _strnicmp
 #define strtoll _strtoi64
 #ifndef rint
 #define rint(num) floor(num + .5)

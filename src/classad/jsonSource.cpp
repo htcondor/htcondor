@@ -420,11 +420,7 @@ parseExpression( ExprTree *&tree, bool full )
 				tv.GetQuotedExpr( quoted_expr );
 				lexer.ConsumeToken( );
 				if ( quoted_expr &&
-#if defined(WIN32)
-					 _strnicmp( s.c_str(), "/Expr(", 6 ) == 0 &&
-#else
 					 strncasecmp( s.c_str(), "/Expr(", 6 ) == 0 &&
-#endif
 					 strcmp( s.c_str() + s.length() - 2, ")/" ) == 0 ) {
 
 					ClassAdParser parser;
