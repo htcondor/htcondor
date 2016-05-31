@@ -27,6 +27,8 @@
 #include "classad/sink.h"
 #include "classad/xmlSource.h"
 #include "classad/xmlSink.h"
+#include "classad/jsonSource.h"
+#include "classad/jsonSink.h"
 #include "classad/matchClassad.h"
 #include "classad/collection.h"
 #include "classad/collectionBase.h"

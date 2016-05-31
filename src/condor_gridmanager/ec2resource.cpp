@@ -141,6 +141,8 @@ void EC2Resource::PublishResourceAd( ClassAd *resource_ad )
 	resource_ad->Assign( ATTR_EC2_ACCESS_KEY_ID, m_public_key_file );
 	resource_ad->Assign( ATTR_EC2_SECRET_ACCESS_KEY, m_private_key_file );
 
+	gahp->PublishStats( resource_ad );
+
 	// Also publish the statistics we got from the GAHP.
 	gs.Publish( * resource_ad );
 }

@@ -93,6 +93,7 @@ class Lexer
 					intValue             = 0;
 					realValue            = 0.0;
 					boolValue            = false;
+					quotedExpr           = false;
 					relative_secs        = 0;
 					absolute_secs.secs   = 0;
 					absolute_secs.offset = 0;
@@ -119,8 +120,11 @@ class Lexer
 					boolValue = b;
 				}
 
-				void SetStringValue( const std::string &str) {
+				void SetStringValue( const std::string &str ) {
 					strValue = str;
+				}
+				void SetQuotedExpr( bool quoted ) {
+					quotedExpr = quoted;
 				}
 
 				void SetAbsTimeValue( abstime_t asecs ) {
@@ -151,7 +155,10 @@ class Lexer
 
 				void GetStringValue( std::string &str ) {
 					str = strValue;	
-				}	
+				}
+				void GetQuotedExpr( bool &quoted ) {
+					quoted = quotedExpr;
+				}
 
 				void GetAbsTimeValue( abstime_t& asecs ) {
 					asecs = absolute_secs;
@@ -167,6 +174,7 @@ class Lexer
 					intValue = tv.intValue;
 					realValue = tv.realValue;
 					boolValue = tv.boolValue;
+					quotedExpr = tv.quotedExpr;
 					relative_secs = tv.relative_secs;
 					absolute_secs = tv.absolute_secs;
 					strValue = tv.strValue;
@@ -178,6 +186,7 @@ class Lexer
 				long long			intValue;
 				double 				realValue;
 				bool 				boolValue;
+				bool				quotedExpr;
 				std::string			strValue;
 				double				relative_secs;
 				abstime_t           absolute_secs;
@@ -192,6 +201,8 @@ class Lexer
 		bool Reinitialize(void);
         
         bool WasInitialized(void);
+
+		bool SetJsonLex( bool do_json );
 
 		// cleanup function --- purges strings from string space
 		void FinishedParse();
@@ -231,6 +242,7 @@ class Lexer
 		unsigned int			lexBufferCount;				// current offset in lexBuffer
 		bool		inString;					// lexing a string constant
 		bool		accumulating;				// are we in a token?
+		bool		jsonLex;
 		int 		debug; 						// debug flag
 
 		// cached last token

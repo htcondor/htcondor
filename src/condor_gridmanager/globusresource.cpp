@@ -254,6 +254,8 @@ void GlobusResource::PublishResourceAd( ClassAd *resource_ad )
 	resource_ad->Assign( "RestartJobmanagerLimit", restartJMLimit );
 	resource_ad->Assign( "RestartJobmanagersAllowed", restartJMsAllowed.Number() );
 	resource_ad->Assign( "RestartJobmanagersWanted", restartJMsWanted.Number() );
+
+	gahp->PublishStats( resource_ad );
 }
 
 void GlobusResource::UnregisterJob( BaseJob *base_job )

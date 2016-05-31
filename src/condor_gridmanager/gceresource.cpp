@@ -138,6 +138,8 @@ void GCEResource::PublishResourceAd( ClassAd *resource_ad )
 	resource_ad->Assign( ATTR_GCE_AUTH_FILE, m_auth_file );
 	resource_ad->Assign( ATTR_GCE_PROJECT, m_project );
 	resource_ad->Assign( ATTR_GCE_ZONE, m_zone );
+
+	gahp->PublishStats( resource_ad );
 }
 
 void GCEResource::DoPing( unsigned& ping_delay, bool& ping_complete, bool& ping_succeeded )

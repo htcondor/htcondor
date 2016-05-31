@@ -389,6 +389,8 @@ void CreamResource::PublishResourceAd( ClassAd *resource_ad )
 	resource_ad->Assign( ATTR_X509_USER_PROXY_SUBJECT, proxySubject );
 	resource_ad->Assign( ATTR_X509_USER_PROXY_FQAN, proxyFQAN );
 	resource_ad->Assign( ATTR_X509_USER_PROXY_FIRST_FQAN, proxyFirstFQAN );
+
+	gahp->PublishStats( resource_ad );
 }
 
 void CreamResource::registerDelegationURI( const char *deleg_uri,

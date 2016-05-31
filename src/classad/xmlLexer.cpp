@@ -403,7 +403,6 @@ BreakdownTag(const char *complete_tag)
 			}
 		}
 		bool validStr = true;
-		//value.push_back('\0'); // force an explicit null terminator (because that's that the normal lexer does.)
 		convert_escapes(value, validStr);
 		if(!validStr) {  // contains a \0 escape char
 			current_token.tag_type = tagType_Invalid;

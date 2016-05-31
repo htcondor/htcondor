@@ -190,6 +190,7 @@
 #define ATTR_FLOCKED_JOBS  "FlockedJobs"
 #define ATTR_FLAVOR  "Flavor"
 #define ATTR_FORCE  "Force"
+#define ATTR_GAHP_PID "GahpPid"
 #define ATTR_GCE_AUTH_FILE  "GceAuthFile"
 #define ATTR_GCE_IMAGE  "GceImage"
 #define ATTR_GCE_MACHINE_TYPE  "GceMachineType"

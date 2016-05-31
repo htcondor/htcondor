@@ -97,6 +97,30 @@ class GahpServer : public Service {
 
 	static void Reaper(Service *,int pid,int status);
 
+	class GahpStatistics {
+	public:
+		GahpStatistics();
+
+		void Publish( ClassAd & ad ) const;
+		void Unpublish( ClassAd & ad ) const;
+
+		static void Tick();
+
+		static int RecentWindowMax;
+		static int RecentWindowQuantum;
+		static int Tick_tid;
+
+		stats_entry_recent<int> CommandsIssued;
+		stats_entry_recent<int> CommandsTimedOut;
+		stats_entry_abs<int> CommandsInFlight;
+		stats_entry_abs<int> CommandsQueued;
+		stats_entry_recent<Probe> CommandRuntime;
+
+		StatisticsPool Pool;
+	};
+
+	GahpStatistics m_stats;
+
 	void read_argv(Gahp_Args &g_args);
 	void read_argv(Gahp_Args *g_args) { read_argv(*g_args); }
 	void write_line(const char *command, const char *debug_cmd = NULL);
@@ -320,6 +344,8 @@ class GahpClient : public Service {
 		int getNotificationTimerId() { return user_timerid; }
 
 		//@}
+
+		void PublishStats( ClassAd *ad );
 
 		void setNormalProxy( Proxy *proxy );
 
@@ -838,7 +864,7 @@ class GahpClient : public Service {
 		Gahp_Args* pending_result;
 		time_t pending_timeout;
 		int pending_timeout_tid;
-		bool pending_submitted_to_gahp;
+		time_t pending_submitted_to_gahp;
 		int user_timerid;
 		GahpProxyInfo *normal_proxy;
 		GahpProxyInfo *deleg_proxy;

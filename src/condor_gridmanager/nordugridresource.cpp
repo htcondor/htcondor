@@ -135,6 +135,8 @@ void NordugridResource::PublishResourceAd( ClassAd *resource_ad )
 
 	resource_ad->Assign( ATTR_X509_USER_PROXY_SUBJECT, proxySubject );
 	resource_ad->Assign( ATTR_X509_USER_PROXY_FQAN, proxyFQAN );
+
+	gahp->PublishStats( resource_ad );
 }
 
 void NordugridResource::DoPing( unsigned& ping_delay, bool& ping_complete,

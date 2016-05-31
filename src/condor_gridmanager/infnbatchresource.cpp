@@ -120,6 +120,8 @@ const char *INFNBatchResource::GetHashName()
 void INFNBatchResource::PublishResourceAd( ClassAd *resource_ad )
 {
 	BaseResource::PublishResourceAd( resource_ad );
+
+	gahp->PublishStats( resource_ad );
 }
 
 // we will use ec2 command "status_all" to do the Ping work

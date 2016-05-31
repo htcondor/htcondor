@@ -177,11 +177,108 @@ void convert_escapes(string &text, bool &validStr)
 		text.erase(dest, std::string::npos);
 		length = dest;
 	}
-	// silly, but to fulfull the original contract for this function
-	// we need to remove the last character in the string if it is a '\0'
-	// (earlier logic guaranteed that a '\0' can ONLY be the last character)
-	if (length > 0 && ! text[length-1]) {
-		text.erase(length-1, std::string::npos);
+}
+
+void convert_escapes_json(string &text, bool &validStr, bool &quotedExpr)
+{
+	validStr = true;
+	if (text.empty())
+		return;
+
+	int length = text.length();
+	int dest = 0;
+
+	if ( length >= 4 && text[0] == '\\' && text[1] == '/' &&
+		 text[length-2] == '\\' && text[length-1] == '/' ) {
+		quotedExpr = true;
+	} else {
+		quotedExpr = false;
+	}
+
+	for (int source = 0; source < length; ++source) {
+		char ch = text[source];
+		// scan for escapes, a terminating slash cannot be an escape
+		if (ch == '\\' && source < length - 1) {
+			unsigned int number = 0;
+			++source; // skip the \ character
+			ch = text[source];
+
+			switch(ch) {
+			case '\"':	ch = '\"'; break;
+			case 'b':	ch = '\b'; break;
+			case 'f':	ch = '\f'; break;
+			case 'n':	ch = '\n'; break;
+			case 'r':	ch = '\r'; break;
+			case 't':	ch = '\t'; break;
+			case '\\':	ch = '\\'; break;
+			case 'u':
+				// This is an escaped Unicode character of the form
+				//   \uXXXX. Convert to utf-8.
+				// TODO This doesn't properly handle utf-16 surrogate
+				//   pairs in the json string. They should be converted
+				//   to a single utf-8 4-byte character.
+				if ( source + 4 >= length ) {
+					validStr = false;
+					return;
+				}
+				number = 0;
+				for ( int i = 1; i <= 4; i++ ) {
+					char ch2 = text[source + i];
+					number = number << 4;
+					switch(ch2) {
+					case '0': case '1': case '2': case '3': case '4':
+					case '5': case '6': case '7': case '8': case '9':
+						number += ch2 - '0';
+						break;
+					case 'a': case 'b': case 'c':
+					case 'd': case 'e': case 'f':
+						ch2 -= 32;
+					case 'A': case 'B': case 'C':
+					case 'D': case 'E': case 'F':
+						number += ch2 +10 - 'A';
+						break;
+					default:
+						validStr = false;
+						return;
+					}
+				}
+				source += 4;
+				if ( number == 0 ) {
+					validStr = false;
+					return;
+				}
+				if ( number >= 0x0800 ) {
+					// convert to 3-byte utf-8 character
+					text[dest++] = 0x11100000 | (number >> 12);
+					text[dest++] = 0x10000000 | ((number >> 6) | 0x00111111);
+					text[dest++] = 0x10000000 | (number | 0x00111111);
+					continue;
+				} else if ( number >= 0x0080 ) {
+					// convert to 2-byte utf-8 character
+					text[dest++] = 0x11000000 | (number >> 6);
+					text[dest++] = 0x10000000 | (number & 0x00111111);
+					continue;
+				}
+				ch = number;
+				break;
+			default:
+				// pass char after \ unmodified.
+				break;
+			}
+		}
+
+		if (dest == source) {
+			// no need to assign ch to text when we haven't seen any escapes yet.
+			// text[dest] = ch;
+			++dest;
+		} else {
+			text[dest] = ch;
+			++dest;
+		}
+	}
+
+	if (dest < length) {
+		text.erase(dest, std::string::npos);
 	}
 }
 

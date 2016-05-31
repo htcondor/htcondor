@@ -61,12 +61,27 @@ const int GahpServer::m_buffer_size = 4096;
 
 int GahpServer::m_reaperid = -1;
 
+int GahpServer::GahpStatistics::RecentWindowMax = 0;
+int GahpServer::GahpStatistics::RecentWindowQuantum = 0;
+int GahpServer::GahpStatistics::Tick_tid = TIMER_UNSET;
+
 const char *escapeGahpString(const std::string &input);
 const char *escapeGahpString(const char * input);
 
 void GahpReconfig()
 {
 	int tmp_int;
+
+	int window = param_integer("STATISTICS_WINDOW_SECONDS", 1200, 1, INT_MAX);
+	int quantum = param_integer("STATISTICS_WINDOW_QUANTUM", 4*60, 1, INT_MAX);
+	GahpServer::GahpStatistics::RecentWindowQuantum = quantum;
+	GahpServer::GahpStatistics::RecentWindowMax = ((window + quantum - 1) / quantum) * quantum;
+
+	if ( GahpServer::GahpStatistics::Tick_tid == TIMER_UNSET ) {
+		GahpServer::GahpStatistics::Tick_tid = daemonCore->Register_Timer( 0, quantum, GahpServer::GahpStatistics::Tick, "GahpServer::GahpStatistics::Tick" );
+	} else {
+		daemonCore->Reset_Timer( GahpServer::GahpStatistics::Tick_tid, 0, quantum );
+	}
 
 	logGahpIo = param_boolean( "GRIDMANAGER_GAHPCLIENT_DEBUG", true );
 	logGahpIoSize = param_integer( "GRIDMANAGER_GAHPCLIENT_DEBUG_SIZE", 0 );
@@ -81,6 +96,7 @@ void GahpReconfig()
 		next_server->max_pending_requests = tmp_int;
 			// TODO should we kick the server in the ass to submit any
 			//   unsubmitted requests?
+		next_server->m_stats.Pool.SetRecentMax( GahpServer::GahpStatistics::RecentWindowMax, GahpServer::GahpStatistics::RecentWindowQuantum );
 	}
 }
 
@@ -251,6 +267,38 @@ GahpServer::DeleteMe()
 	}
 }
 
+GahpServer::GahpStatistics::GahpStatistics()
+{
+	Pool.AddProbe( "GahpCommandsIssued", &CommandsIssued );
+	Pool.AddProbe( "GahpCommandsTimedOut", &CommandsTimedOut );
+	Pool.AddProbe( "GahpCommandsInFlight", &CommandsInFlight );
+	Pool.AddProbe( "GahpCommandsQueued", &CommandsQueued );
+	Pool.AddProbe( "GahpCommandRuntime", &CommandRuntime, "GahpCommandRuntime",
+				   IF_VERBOSEPUB | stats_entry_recent<Probe>::PubValueAndRecent );
+
+	Pool.SetRecentMax( RecentWindowMax, RecentWindowQuantum );
+}
+
+void GahpServer::GahpStatistics::Tick()
+{
+	GahpServer *next_server = NULL;
+	GahpServer::GahpServersById.startIterations();
+
+	while ( GahpServer::GahpServersById.iterate( next_server ) != 0 ) {
+		next_server->m_stats.Pool.Advance( 1 );
+	}
+}
+
+void GahpServer::GahpStatistics::Publish( ClassAd & ad ) const
+{
+	Pool.Publish( ad, IF_BASICPUB | IF_RECENTPUB | IF_VERBOSEPUB );
+}
+
+void GahpServer::GahpStatistics::Unpublish( ClassAd & ad ) const
+{
+	Pool.Unpublish( ad );
+}
+
 // Some GAHP commands may contain sensitive data that should be written
 // to a publically-readable log. If debug_cmd != NULL, it contains a
 // sanitized version to log.
@@ -371,7 +419,7 @@ GahpClient::GahpClient(const char *id, const char *path, const ArgList *args)
 	pending_result = NULL;
 	pending_timeout = 0;
 	pending_timeout_tid = -1;
-	pending_submitted_to_gahp = false;
+	pending_submitted_to_gahp = 0;
 	pending_proxy = NULL;
 	user_timerid = -1;
 	normal_proxy = NULL;
@@ -1569,6 +1617,11 @@ GahpClient::getGahpStderr()
 	return output.c_str();
 }
 
+void GahpClient::PublishStats( ClassAd *ad )
+{
+	ad->Assign( ATTR_GAHP_PID, server->m_gahp_pid );
+	server->m_stats.Publish( *ad );
+}
 
 
 const char *
@@ -2503,8 +2556,10 @@ GahpClient::clear_pending()
 	pending_timeout = 0;
 	if (pending_submitted_to_gahp) {
 		server->num_pending_requests--;
+		server->m_stats.CommandsInFlight = server->num_pending_requests;
+		server->m_stats.CommandRuntime += (double)(time(NULL) - pending_submitted_to_gahp);
 	}
-	pending_submitted_to_gahp = false;
+	pending_submitted_to_gahp = 0;
 	if ( pending_timeout_tid != -1 ) {
 		daemonCore->Cancel_Timer(pending_timeout_tid);
 		pending_timeout_tid = -1;
@@ -2581,6 +2636,7 @@ GahpClient::now_pending(const char *command,const char *buf,
 			server->waitingLowPrio.push_back( pending_reqid );
 			break;
 		}
+		server->m_stats.CommandsQueued += 1;
 		return;
 	}
 
@@ -2614,14 +2670,17 @@ GahpClient::now_pending(const char *command,const char *buf,
 				dprintf( D_ALWAYS, "GAHP server %d overloaded, will retry request\n", server->m_gahp_pid );
 			}
 			server->waitingHighPrio.push_front( pending_reqid );
+			server->m_stats.CommandsQueued += 1;
 			return;
 		}
 		// Badness !
 		EXCEPT("Bad %s Request: %s",pending_command, return_line.argc?return_line.argv[0]:"Empty response");
 	}
+	server->m_stats.CommandsIssued += 1;
 
-	pending_submitted_to_gahp = true;
+	pending_submitted_to_gahp = time(NULL);
 	server->num_pending_requests++;
+	server->m_stats.CommandsInFlight = server->num_pending_requests;
 
 	if (pending_timeout) {
 		pending_timeout_tid = daemonCore->Register_Timer(pending_timeout + 1,
@@ -2781,9 +2840,11 @@ GahpServer::poll()
 			entry->reset_user_timer(-1);				
 				// and decrement our counter
 			num_pending_requests--;
+			m_stats.CommandsInFlight = num_pending_requests;
 				// and reset our flag
 			ASSERT(entry->pending_submitted_to_gahp);
-			entry->pending_submitted_to_gahp = false;
+			m_stats.CommandRuntime += (double)(time(NULL) - entry->pending_submitted_to_gahp);
+			entry->pending_submitted_to_gahp = 0;
 		}
 			// clear entry from our hashtable so we can reuse the reqid
 		requestTable->remove(result_reqid);
@@ -2812,6 +2873,7 @@ GahpServer::poll()
 		} else {
 			break;
 		}
+		m_stats.CommandsQueued -= 1;
 		entry = NULL;
 		requestTable->lookup(waiting_reqid,entry);
 		if ( entry ) {
@@ -2842,12 +2904,13 @@ GahpClient::check_pending_timeout(const char *,const char *)
 		// if the command has not yet been given to the gahp server
 		// (i.e. it is in the WaitingToSubmit queue), then there is
 		// no timeout.
-	if ( pending_submitted_to_gahp == false ) {
+	if ( pending_submitted_to_gahp == 0 ) {
 		return false;
 	}
 
 	if ( pending_timeout && (time(NULL) > pending_timeout) ) {
 		clear_pending();	// we no longer want to hear about it...
+		server->m_stats.CommandsTimedOut += 1;
 		return true;
 	}
 

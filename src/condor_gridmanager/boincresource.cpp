@@ -312,6 +312,8 @@ const char *BoincResource::GetHashName()
 void BoincResource::PublishResourceAd( ClassAd *resource_ad )
 {
 	BaseResource::PublishResourceAd( resource_ad );
+
+	gahp->PublishStats( resource_ad );
 }
 
 bool BoincResource::JoinBatch( BoincJob *job, std::string &batch_name,

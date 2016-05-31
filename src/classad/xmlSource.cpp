@@ -358,7 +358,6 @@ ParseNumberOrString(XMLLexer::TagID tag_id)
 		}
 		else {        // its a string
 			bool validStr = true;
-			//token.text.push_back('\0'); // force an explicit null terminator (because that's that the normal lexer does.)
 			convert_escapes(token.text, validStr );
 			if(!validStr) {  // invalid string because it had /0 escape sequence
 				return NULL;
