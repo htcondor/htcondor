@@ -94,7 +94,7 @@ addrinfo * aidup( addrinfo * ai ) {
 	if( ai == NULL ) { return NULL; }
 	addrinfo * rv = (addrinfo *)malloc( sizeof( addrinfo ) );
 	ASSERT( rv );
-	memcpy( rv, ai, sizeof( addrinfo ) );
+	* rv = * ai;
 	if( rv->ai_addr ) {
 		rv->ai_addr = (sockaddr *)malloc( rv->ai_addrlen );
 		ASSERT( rv->ai_addr );
@@ -109,6 +109,57 @@ addrinfo * aidup( addrinfo * ai ) {
 }
 
 #include "condor_sockaddr.h"
+
+addrinfo * deepCopyAndSort( addrinfo * res, bool preferIPv4 ) {
+	addrinfo * r = NULL;
+	addrinfo * v4 = NULL;
+	addrinfo * v6 = NULL;
+	addrinfo * v4head = NULL;
+	addrinfo * v6head = NULL;
+
+	for( addrinfo * current = res; current != NULL; current = current->ai_next ) {
+		if( current->ai_family == AF_INET ) {
+			if( v4 == NULL ) { v4head = v4 = aidup( current ); }
+			else { v4->ai_next = aidup( current ); v4 = v4->ai_next; }
+		} else if( current->ai_family == AF_INET6 ) {
+			if( v6 == NULL ) { v6head = v6 = aidup( current ); }
+			else { v6->ai_next = aidup( current ); v6 = v6->ai_next; }
+		} else {
+			dprintf( D_NETWORK, "Ignoring address with family %d, which is neither IPv4 nor IPv6.\n", current->ai_family );
+		}
+	}
+
+	if( preferIPv4 ) {
+		if( v4head ) {
+			r = v4head;
+			v4->ai_next = v6head;
+		} else {
+			r = v6head;
+		}
+	} else {
+		if( v6head ) {
+			r = v6head;
+			v6->ai_next = v4head;
+		} else {
+			r = v4head;
+		}
+	}
+
+	// getaddrinfo() promises that ai_canonname will be set in the
+	// first addrinfo structure (and implicitly, nowhere else).
+	for( addrinfo * c = r; c != NULL; c = c->ai_next ) {
+		if( c->ai_canonname ) {
+			// Need a temporary in case we get only one result.
+			char * canonname = c->ai_canonname;
+			c->ai_canonname = NULL;
+			r->ai_canonname = canonname;
+			break;
+		}
+	}
+
+	return r;
+}
+
 addrinfo_iterator::addrinfo_iterator(addrinfo* res) : cxt_(new shared_context),
 	current_(NULL)
 {
@@ -117,9 +168,6 @@ addrinfo_iterator::addrinfo_iterator(addrinfo* res) : cxt_(new shared_context),
 	cxt_->head = res;
 
 	if( param_boolean( "IGNORE_DNS_PROTOCOL_PREFERENCE", true ) ) {
-		addrinfo * v4head = NULL;
-		addrinfo * v6head = NULL;
-
 		dprintf( D_HOSTNAME, "DNS returned:\n" );
 		for( addrinfo * c = res; c != NULL; c = c->ai_next ) {
 			condor_sockaddr sa( c->ai_addr );
@@ -131,56 +179,17 @@ addrinfo_iterator::addrinfo_iterator(addrinfo* res) : cxt_(new shared_context),
 		// of the lists above.  When we're done, staple the two lists
 		// together according to the PREFER_OUTBOUND_IPV4 setting.
 		//
-		// Then free the original list [and change the destructor to
-		// free our list, instead].
-		addrinfo * v4 = NULL;
-		addrinfo * v6 = NULL;
-		for( addrinfo * current = res; current != NULL; current = current->ai_next ) {
-			if( current->ai_family == AF_INET ) {
-				if( v4 == NULL ) { v4head = v4 = aidup( current ); }
-				else { v4->ai_next = aidup( current ); v4 = v4->ai_next; }
-			} else if( current->ai_family == AF_INET6 ) {
-				if( v6 == NULL ) { v6head = v6 = aidup( current ); }
-				else { v6->ai_next = aidup( current ); v6 = v6->ai_next; }
-			}
-		}
-
-		if( param_boolean( "PREFER_OUTBOUND_IPV4", true ) ) {
-			if( v4head ) {
-				cxt_->head = v4head;
-				v4->ai_next = v6head;
-			} else {
-				cxt_->head = v6head;
-			}
-		} else {
-			if( v6head ) {
-				cxt_->head = v6head;
-				v6->ai_next = v4head;
-			} else {
-				cxt_->head = v4head;
-			}
-		}
-
-		// getaddrinfo() promises that ai_canonname will be set in the
-		// first addrinfo structure (and implicitly, nowhere else).
-		for( addrinfo * c = cxt_->head; c != NULL; c = c->ai_next ) {
-			if( c->ai_canonname ) {
-				// Need a temporary in case we get only one result.
-				char * canonname = c->ai_canonname;
-				c->ai_canonname = NULL;
-				cxt_->head->ai_canonname = canonname;
-				break;
-			}
-		}
+		// Then free the original list and set the destructor to
+		// free our list, instead.
+		cxt_->head = deepCopyAndSort( res, param_boolean( "PREFER_OUTBOUND_IPV4", true ) );
+		cxt_->was_duplicated = true;
+		freeaddrinfo( res );
 
 		dprintf( D_HOSTNAME, "We returned:\n" );
 		for( addrinfo * c = cxt_->head; c != NULL; c = c->ai_next ) {
 			condor_sockaddr sa( c->ai_addr );
 			dprintf( D_HOSTNAME, "\t%s\n", sa.to_ip_string().c_str() );
 		}
-
-		cxt_->was_duplicated = true;
-		freeaddrinfo( res );
 	}
 }
 
