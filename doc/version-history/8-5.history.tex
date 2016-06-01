@@ -84,9 +84,15 @@ listed in \SubmitCmdNI{transfer\_input\_files} and their presence in
 these vm universe attributes shouldn't include any path information.
 \Ticket{4167}
 
-\item In the python bindinges, an \texttt{ExprTree} can be cast to an integer
+\item In the python bindings, an \texttt{ExprTree} can be cast to an integer
 or floating point value.
 \Ticket{5636}
+
+\item HTCondor now supports the following systemd features: Socket Activation,
+Watchdog, Status message, and journald logging. In these release, the
+Socket Activation is not configured, because the security system is not
+prepared to properly handle the socket passed in from outside HTCondor.
+\Ticket{4144}
 
 \end{itemize}
 
