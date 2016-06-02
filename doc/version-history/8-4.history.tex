@@ -150,6 +150,11 @@ to be ignored.
 address.
 \Ticket{5659}
 
+\item Fixed a bugs in \Condor{history} when fetching history from a remote \Condor{schedd}. The
+bugs caused complete failure when the remote \Condor{schedd} was running Windows, and
+would corrupt some string values when the remote \Condor{schedd} was any other operating system.
+\Ticket{5701}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
