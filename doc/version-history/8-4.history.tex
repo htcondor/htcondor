@@ -63,6 +63,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Docker universe jobs now drop all Linux capabilities by default.
+The new knob DOCKER\_DROP\_ALL\_CAPABILITIES, which defaults to true
+can be set to false to revert to the old behavior.
+\Ticket{5679}
+
 \item On Linux, HTCondor appropriately tunes kernel parameters
 root\_maxkeys and root\_maxbytes to prevent \Condor{master} 
 startup failures on older Linux kernels.
@@ -144,6 +149,11 @@ to be ignored.
 \item Fixed a bug that could cause HAD to fail if a machine has an IPv6
 address.
 \Ticket{5659}
+
+\item Fixed a bugs in \Condor{history} when fetching history from a remote \Condor{schedd}. The
+bugs caused complete failure when the remote \Condor{schedd} was running Windows, and
+would corrupt some string values when the remote \Condor{schedd} was any other operating system.
+\Ticket{5701}
 
 \end{itemize}
 
