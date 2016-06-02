@@ -2945,6 +2945,15 @@ which use DaemonCore).
   this setting is ignored and treated as \Expr{False}, to work around
   incompatibilities.
 
+\label{param:MaxTimeSkip}
+\item[\Macro{MAX\_TIME\_SKIP}]
+  When an HTCondor daemon notices the system clock skip forwards or
+  backwards more than the number of seconds specified by this parameter,
+  it may take special action.  For instance, the \Condor{master} will
+  restart HTCondor in the event of a clock skip.  Defaults to a value of
+  1200, which in effect means that HTCondor will restart if the system clock
+  jumps by more than 20 minutes.
+
 \label{param:NotRespondingTimeout}
 \item[\Macro{NOT\_RESPONDING\_TIMEOUT}]
   When an HTCondor daemon's parent process is another HTCondor daemon, 

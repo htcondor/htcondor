@@ -38,6 +38,10 @@ The new knob DOCKER\_DROP\_ALL\_CAPABILITIES, which defaults to true
 can be set to false to revert to the old behavior.
 \Ticket{5679}
 
+\item Added configuration variable \MacroNI{MAX\_TIME\_SKIP} to control 
+	how much system clock skip is allowed before the HTCondor daemons
+	restart.  See Section~\ref{param:MaxTimeSkip} for more information.
+
 \item On Linux, HTCondor appropriately tunes kernel parameters
 root\_maxkeys and root\_maxbytes to prevent \Condor{master} 
 startup failures on older Linux kernels.
