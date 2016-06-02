@@ -73,6 +73,15 @@ customization=seldom
 friendly_name=Preen Interval
 review=?
 
+[DEFAULT_MASTER_SHUTDOWN_SCRIPT]
+default=
+type=path
+reconfig=true
+customization=seldom
+friendly_name=Program to execute upon condor_master shutdown
+review=?
+tags=master
+
 [MASTER_NEW_BINARY_DELAY]
 default=120
 type=int
