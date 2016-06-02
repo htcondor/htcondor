@@ -1289,7 +1289,7 @@ processCommandLineArguments (int argc, char *argv[])
 			customHeadFoot = HF_BARE;
 		}
 		else
-		if (is_dash_arg_prefix (dash_arg, "json", 3)) {
+		if (is_dash_arg_prefix (dash_arg, "json", 2)) {
 			use_json = true;
 			dash_long = 1;
 			summarize = 0;
