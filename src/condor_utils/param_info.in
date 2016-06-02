@@ -7546,6 +7546,13 @@ customization=seldom
 friendly_name=Docker
 review=?
 
+[DOCKER_DROP_ALL_CAPABILITIES]
+default=true
+type=bool
+reconfig=true
+customization=seldom
+friendly_name=Docker drop all capabilities
+
 [SUBMIT_REQUIREMENT_NAMES]
 default=
 type=string

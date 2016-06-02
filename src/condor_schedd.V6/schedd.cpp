@@ -1922,10 +1922,13 @@ int Scheduler::history_helper_launcher(const HistoryHelperState &state) {
 	args.AppendArg("condor_history_helper");
 	args.AppendArg("-f");
 	args.AppendArg("-t");
-	args.AppendArg(state.Requirements());
-	args.AppendArg(state.Projection());
+	// NOTE: before 8.4.8 and 8.5.6 the argument order was: requirements projection match max
+	// starting with 8.4.8 and 8.5.6 the argument order was changed to: match max requirements projection
+	// this change was made so that projection could be empty without causing problems on Windows.
 	args.AppendArg(state.MatchCount());
 	args.AppendArg(param_integer("HISTORY_HELPER_MAX_HISTORY", 10000));
+	args.AppendArg(state.Requirements());
+	args.AppendArg(state.Projection());
 
 	Stream *inherit_list[] = {state.GetStream(), NULL};
 
