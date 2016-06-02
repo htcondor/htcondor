@@ -94,6 +94,11 @@ Socket Activation is not configured, because the security system is not
 prepared to properly handle the socket passed in from outside HTCondor.
 \Ticket{4144}
 
+\item Added config knob \MacroNI{DEFAULT\_MASTER\_SHUTDOWN\_SCRIPT} to
+	specify a default program to exec as root upon \Condor{master} exit.
+	See Section~\ref{param:DefaultMasterShutdownScript} for details.
+\Ticket{5590}
+
 \end{itemize}
 
 \noindent Bugs Fixed:

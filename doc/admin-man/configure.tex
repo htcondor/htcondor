@@ -4273,6 +4273,18 @@ NEGOTIATOR_USERID = condor
   fast shutdown procedure before the \Condor{master} kills them
   outright.  It is defined in seconds and defaults to 300 (5 minutes).
 
+\label{param:DefaultMasterShutdownScript}
+\item[\Macro{DEFAULT\_MASTER\_SHUTDOWN\_SCRIPT}]
+  A full path and file name of
+  a program that the \Condor{master} is to execute
+  via the Unix \Procedure{execl} call, 
+  or the similar Win32 \Procedure{\_execl} call,
+  instead of the normal call to \Procedure{exit}.
+  This allows the admin to specify a program to execute as root
+  when the \Condor{master} exits.  Note that a successful call
+  to the \Condor{set\_shutdown} program will override this setting; see
+  the documentation for config knob \Macro{MASTER\_SHUTDOWN\_<Name>} below.
+
 \label{param:MasterShutdownProgram}
 \item[\Macro{MASTER\_SHUTDOWN\_<Name>}]
   A full path and file name of
