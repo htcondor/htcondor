@@ -155,6 +155,7 @@ bool first_col_is_job_id = false;
 bool has_owner_column = false;
 int  max_name_column_width = 14;
 
+double max_mem_used = 0.0; // largest value of MEMORY_USAGE
 int max_owner_name = 0; // width of longest owner name, from calls to render_owner or render_dag_owner
 int max_batch_name = 0; // width of longest batch name
 //int max_cluster_id = 0; // future
@@ -2605,8 +2606,10 @@ render_memory_usage(double & mem_used_mb, AttrList *ad, Formatter &)
 	// note that memory usage is megabytes but imagesize is kilobytes.
 	if (ad->EvalInteger(ATTR_MEMORY_USAGE, NULL, memory_usage)) {
 		mem_used_mb = memory_usage;
+		max_mem_used = MAX(max_mem_used, mem_used_mb);
 	} else if (ad->EvalInteger(ATTR_IMAGE_SIZE, NULL, image_size)) {
 		mem_used_mb = image_size / 1024.0;
+		max_mem_used = MAX(max_mem_used, mem_used_mb);
 	} else {
 		return false;
 	}
@@ -4570,6 +4573,7 @@ struct _fixup_width_values {
 	int cluster_width;
 	int proc_width;
 	int name_width;
+	double max_mem_usage;
 };
 
 // callback used by fixup_std_column_widths
@@ -4587,15 +4591,19 @@ static int fnFixupWidthCallback(void* pv, int index, Formatter * fmt, const char
 	} else if (index == name_column_index) { // owner
 		fmt->width = MAX(fmt->width, p->name_width);
 		p->name_width = fmt->width; // return the actual width
+	} else if (fmt && fmt->fr == render_memory_usage) {
+		char buf[30];
+		int wid = sprintf(buf, fmt->printfFmt ? fmt->printfFmt : "%.1f", p->max_mem_usage);
+		fmt->width = MAX(fmt->width, wid);
 	} else {
-		return -1; // stop iterating
+		// return -1; // stop iterating
 	}
 	return 1;
 }
 
 // fix width of cluster,proc and name columns for all standard display formats other than -batch
 //
-static void fixup_std_column_widths(int max_cluster, int max_proc, int longest_name) {
+static void fixup_std_column_widths(int max_cluster, int max_proc, int longest_name, double max_mem) {
 	if ( ! is_standard_format || ( ! first_col_is_job_id && ! has_owner_column))
 		return; // nothing to do
 	if (max_cluster < 9999 && max_proc < 999 && longest_name <= 14)
@@ -4603,6 +4611,7 @@ static void fixup_std_column_widths(int max_cluster, int max_proc, int longest_n
 
 	struct _fixup_width_values vals;
 	memset(&vals, 0, sizeof(vals));
+	vals.max_mem_usage = max_mem;
 
 	if (first_col_is_job_id) {
 		char buf[20];
@@ -4721,7 +4730,7 @@ static void linkup_nodes_by_id(ROD_MAP_BY_ID & results)
 		prev = it++;
 	}
 
-	fixup_std_column_widths(max_cluster, max_proc, max_name);
+	fixup_std_column_widths(max_cluster, max_proc, max_name, max_mem_used);
 }
 
 static void
@@ -4762,7 +4771,7 @@ const char * const jobProgress_PrintFormat = "SELECT\n"
 	ATTR_DAG_NODES_TOTAL     " AS ' TOTAL' WIDTH 6 PRINTF %6d OR _\n"  // Total  // 7
 	ATTR_JOB_STATUS          " AS JOB_IDS WIDTH 0 PRINTAS JOB_STATUS\n"     // 8
 //	ATTR_JOB_REMOTE_USER_CPU " AS '    RUN_TIME'  WIDTH 12   PRINTAS CPU_TIME\n"
-//	ATTR_IMAGE_SIZE          " AS SIZE       WIDTH 4    PRINTAS MEMORY_USAGE\n"
+//	ATTR_IMAGE_SIZE          " AS SIZE        WIDTH 4    PRINTAS MEMORY_USAGE\n"
 //	ATTR_HOLD_REASON         " AS HOLD_REASON\n"
 "SUMMARY STANDARD\n";
 
@@ -6776,7 +6785,7 @@ const char * const jobDefault_PrintFormat = "SELECT\n"
 "   RemoteUserCpu AS '    RUN_TIME'   WIDTH 12 PRINTAS CPU_TIME\n"
 "   JobStatus     AS ST                       PRINTAS JOB_STATUS\n"
 "   JobPrio       AS PRI             WIDTH AUTO\n"
-"   ImageSize     AS SIZE            WIDTH 4  PRINTAS MEMORY_USAGE\n"
+"   ImageSize     AS SIZE            WIDTH 4 PRINTAS MEMORY_USAGE\n"
 "   Cmd           AS CMD             WIDTH 0 PRINTAS JOB_DESCRIPTION\n"
 "SUMMARY STANDARD\n";
 
@@ -6788,7 +6797,7 @@ const char * const jobDAG_PrintFormat = "SELECT\n"
 "   RemoteUserCpu AS '    RUN_TIME'   WIDTH 12 PRINTAS CPU_TIME\n"
 "   JobStatus     AS ST                       PRINTAS JOB_STATUS\n"
 "   JobPrio       AS PRI             WIDTH AUTO\n"
-"   ImageSize     AS SIZE            WIDTH 4  PRINTAS MEMORY_USAGE\n"
+"   ImageSize     AS SIZE            WIDTH 4 PRINTAS MEMORY_USAGE\n"
 "   Cmd           AS CMD             WIDTH 0 PRINTAS JOB_DESCRIPTION\n"
 "SUMMARY STANDARD\n";
 
