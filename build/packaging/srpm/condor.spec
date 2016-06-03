@@ -1935,6 +1935,9 @@ fi
 - fixed a bug that prevented startup if a prior version shared port file exists
 - fixed a bug that could cause the condor_shadow to hang on Windows
 
+* Fri Jan 08 2016 Tim Theisen <tim@cs.wisc.edu> - 8.4.3-2
+- optimized binaries
+
 * Wed Dec 16 2015 Tim Theisen <tim@cs.wisc.edu> - 8.4.3-1
 - fixed the processing of the -append option in the condor_submit command
 - fixed a bug to run more that 100 dynamic slots on a single execute node
