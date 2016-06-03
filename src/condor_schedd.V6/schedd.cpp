@@ -1856,24 +1856,20 @@ int Scheduler::command_history(int, Stream* stream)
 	unparser.Unparse(requirements_str, requirements);
 
 	classad::Value value;
-	classad::ExprList *list = NULL;
-	if ((queryAd.find(ATTR_PROJECTION) != queryAd.end()) &&
-		(!queryAd.EvaluateAttr(ATTR_PROJECTION, value) || !value.IsListValue(list)))
-	{
-		return sendHistoryErrorAd(stream, 2, "Unable to evaluate projection list");
+	classad::References projection;
+	int proj_err = mergeProjectionFromQueryAd(queryAd, ATTR_PROJECTION, projection, true);
+	if (proj_err < 0) {
+		if (proj_err == -1) {
+			return sendHistoryErrorAd(stream, 2, "Unable to evaluate projection list");
+		}
+		return sendHistoryErrorAd(stream, 3, "Unable to convert projection list to string list");
 	}
 	std::stringstream ss;
 	bool multiple = false;
-	if (list) for (classad::ExprList::const_iterator it = list->begin(); it != list->end(); it++)
-	{
-		std::string attr;
-		if (!(*it)->Evaluate(value) || !value.IsStringValue(attr))
-		{
-			return sendHistoryErrorAd(stream, 3, "Unable to convert projection list to string");
-		}
+	for (classad::References::const_iterator it = projection.begin(); it != projection.end(); ++it) {
 		if (multiple) ss << ",";
 		multiple = true;
-		ss << attr;
+		ss << *it;
 	}
 
 	int matchCount = -1;
