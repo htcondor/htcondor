@@ -50,7 +50,7 @@ subject to change until the stable release.
 \Ticket{5580}
 
 \item Some Linux distributions for supercomputer compute nodes and
-others distributions for docker images have no /var/run/utmp.  Condor no longer
+others distributions for docker images have no /var/run/utmp. HTCondor no longer
 aborts when this file is missing, when it tries to determine keyboard
 idle times, it just assumes these kinds of machines have no keyboards.
 \Ticket{5624}
@@ -95,8 +95,8 @@ prepared to properly handle the socket passed in from outside HTCondor.
 \Ticket{4144}
 
 \item Added config knob \MacroNI{DEFAULT\_MASTER\_SHUTDOWN\_SCRIPT} to
-	specify a default program to exec as root upon \Condor{master} exit.
-	See Section~\ref{param:DefaultMasterShutdownScript} for details.
+specify a default program to exec as root upon \Condor{master} exit.
+See Section~\ref{param:DefaultMasterShutdownScript} for details.
 \Ticket{5590}
 
 \end{itemize}
@@ -105,7 +105,8 @@ prepared to properly handle the socket passed in from outside HTCondor.
 
 \begin{itemize}
 
-\item None.
+\item Fixed a bug that caused file transfers to fail when using Bosco.
+\Ticket{5704}
 
 \end{itemize}
 
