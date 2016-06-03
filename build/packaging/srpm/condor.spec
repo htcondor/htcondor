@@ -1880,12 +1880,28 @@ fi
 %endif
 
 %changelog
+* Mon Jun 06 2016 Tim Theisen <tim@cs.wisc.edu> - 8.5.5-1
+- Improvements for scalability of EC2 grid universe jobs
+- Docker Universe jobs advertises remote user and system CPU time
+- Improved systemd support
+- The master can now run an administrator defined script at shutdown
+- DAGMan includes better support for the batch name feature
+
 * Mon Jun 06 2016 Tim Theisen <tim@cs.wisc.edu> - 8.4.6-1
 - fixed a bug that could cause the schedd to become unresponsive
 - fixed a bug where the Docker Universe would not set the group ID
 - Docker Universe jobs now drop all Linux capabilities by default
 - fixed a bug where subsystem specific configuration parameters were ignored
 - fixed bugs with history file processing on the Windows platform
+
+* Thu May 02 2016 Tim Theisen <tim@cs.wisc.edu> - 8.5.4-1
+- Fixed a bug that delays schedd response when significant attributes change
+- Fixed a bug where the group ID was not set in Docker universe jobs
+- Limit update rate of various attributes to not overload the collector
+- To make job router configuration easier, added implicit "target" scoping
+- To make BOSCO work, the blahp does not generate limited proxies by default
+- condor_status can now display utilization per machine rather than per slot
+- Improve performance of condor_history and other tools
 
 * Thu Apr 21 2016 Tim Theisen <tim@cs.wisc.edu> - 8.4.5-1
 - fixed a bug that could cause a job to fail to start in a dynamic slot
@@ -1894,6 +1910,13 @@ fi
 - properly identify the Windows 10 platform
 - fixed a typographic error in the LIMIT_JOB_RUNTIMES policy
 - fixed a bug where maximum length IPv6 addresses were not parsed
+
+* Thu Mar 24 2016 Tim Theisen <tim@cs.wisc.edu> - 8.5.3-1
+- Use IPv6 (and IPv4) interfaces if they are detected
+- Prefer IPv4 addresses when both are available
+- Count Idle and Running jobs in Submitter Ads for Local and Scheduler universes
+- Can submit jobs to SLURM with the new "slurm" type in the Grid universe
+- HTCondor is built and linked with Globus 6.0
 
 * Tue Mar 22 2016 Tim Theisen <tim@cs.wisc.edu> - 8.4.5-1
 - fixed a bug that would cause the condor_schedd to send no flocked jobs
@@ -1904,6 +1927,15 @@ fi
 - fixed a bug that prevented correct utilization reports from the job router
 - tune kernel when using cgroups to avoid OOM killing of jobs doing heavy I/O
 
+* Thu Feb 18 2016 Tim Theisen <tim@cs.wisc.edu> - 8.5.2-1
+- condor_q now defaults to showing only the current user's jobs
+- condor_q -batch produces a single line report for a batch of jobs
+- Docker Universe jobs now report and update memory and network usage
+- immutable and protected job attributes
+- improved performance when querying a HTCondor daemon's location
+- Added the ability to set ClassAd attributes within the DAG file
+- DAGMan now provides event timestamps in dagman.out
+
 * Tue Feb 02 2016 Tim Theisen <tim@cs.wisc.edu> - 8.4.4-1
 - fixed a bug that could cause the collector to crash when DNS lookup fails
 - fixed a bug that caused Condor-C jobs with short lease durations to fail
@@ -1911,8 +1943,18 @@ fi
 - fixed a bug that prevented startup if a prior version shared port file exists
 - fixed a bug that could cause the condor_shadow to hang on Windows
 
+* Fri Jan 08 2016 Tim Theisen <tim@cs.wisc.edu> - 8.5.1-2
+- optimized binaries
+
 * Fri Jan 08 2016 Tim Theisen <tim@cs.wisc.edu> - 8.4.3-2
 - optimized binaries
+
+* Mon Dec 21 2015 Tim Theisen <tim@cs.wisc.edu> - 8.5.1-1
+- the shared port daemon is enabled by default
+- the condor_startd now records the peak memory usage instead of recent
+- the condor_startd advertises CPU submodel and cache size
+- authorizations are automatically setup when "Match Password" is enabled
+- added a schedd-constraint option to condor_q
 
 * Wed Dec 16 2015 Tim Theisen <tim@cs.wisc.edu> - 8.4.3-1
 - fixed the processing of the -append option in the condor_submit command
@@ -1944,6 +1986,12 @@ fi
 - a bug fix to the JobRouter to properly process the queue on restart
 - a bug fix to prevent sending spurious data on a SOAP file transfer
 - a bug fix to always present jobs in order in condor_history
+
+* Mon Oct 12 2015 Tim Theisen <tim@cs.wisc.edu> - 8.5.0-1
+- multiple enhancements to the python bindings
+- the condor_schedd no longer changes the ownership of spooled job files
+- spooled job files are visible to only the user account by default
+- the condor_startd records when jobs are evicted by preemption or draining
 
 * Thu Sep 14 2015 Tim Theisen <tim@cs.wisc.edu> - 8.4.0-1
 - a Docker Universe to run a Docker container as an HTCondor job
