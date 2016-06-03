@@ -1904,14 +1904,14 @@ fi
 %endif
 
 %changelog
-* Mon Jun 06 2016 Tim Theisen <tim@cs.wisc.edu> - 8.4.6-1
+* Mon Jun 06 2016 Tim Theisen <tim@cs.wisc.edu> - 8.4.7-1
 - fixed a bug that could cause the schedd to become unresponsive
 - fixed a bug where the Docker Universe would not set the group ID
 - Docker Universe jobs now drop all Linux capabilities by default
 - fixed a bug where subsystem specific configuration parameters were ignored
 - fixed bugs with history file processing on the Windows platform
 
-* Thu Apr 21 2016 Tim Theisen <tim@cs.wisc.edu> - 8.4.5-1
+* Thu Apr 21 2016 Tim Theisen <tim@cs.wisc.edu> - 8.4.6-1
 - fixed a bug that could cause a job to fail to start in a dynamic slot
 - fixed a negotiator memory leak when using partitionable slot preemption
 - fixed a bug that caused supplemental groups to be wrong during file transfer
