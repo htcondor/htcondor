@@ -89,6 +89,12 @@ int DockerAPI::run(
 	// drop unneeded Linux capabilities
 	if (param_boolean("DOCKER_DROP_ALL_CAPABILITIES", true)) {
 		runArgs.AppendArg("--cap-drop=all");
+			
+		// --no-new-privileges flag appears in docker 1.11
+		if (DockerAPI::majorVersion > 1 ||
+		    DockerAPI::minorVersion > 10) {
+			runArgs.AppendArg("--no-new-privileges");
+		}
 	}
 
 
@@ -570,8 +576,11 @@ int DockerAPI::version( std::string & version, CondorError & /* err */ ) {
 	if( buffer[end] == '\n' ) { buffer[end] = '\0'; }
 	version = buffer;
 
+	sscanf(version.c_str(), "Docker version %d.%d", &DockerAPI::majorVersion, &DockerAPI::minorVersion);
 	return 0;
 }
+int DockerAPI::majorVersion = -1;
+int DockerAPI::minorVersion = -1;
 
 int DockerAPI::inspect( const std::string & containerID, ClassAd * dockerAd, CondorError & /* err */ ) {
 	if( dockerAd == NULL ) {
