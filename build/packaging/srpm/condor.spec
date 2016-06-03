@@ -1889,7 +1889,7 @@ fi
 - The master can now run an administrator defined script at shutdown
 - DAGMan includes better support for the batch name feature
 
-* Mon Jun 06 2016 Tim Theisen <tim@cs.wisc.edu> - 8.4.6-1
+* Mon Jun 06 2016 Tim Theisen <tim@cs.wisc.edu> - 8.4.7-1
 - fixed a bug that could cause the schedd to become unresponsive
 - fixed a bug where the Docker Universe would not set the group ID
 - Docker Universe jobs now drop all Linux capabilities by default
@@ -1905,7 +1905,7 @@ fi
 - condor_status can now display utilization per machine rather than per slot
 - Improve performance of condor_history and other tools
 
-* Thu Apr 21 2016 Tim Theisen <tim@cs.wisc.edu> - 8.4.5-1
+* Thu Apr 21 2016 Tim Theisen <tim@cs.wisc.edu> - 8.4.6-1
 - fixed a bug that could cause a job to fail to start in a dynamic slot
 - fixed a negotiator memory leak when using partitionable slot preemption
 - fixed a bug that caused supplemental groups to be wrong during file transfer
