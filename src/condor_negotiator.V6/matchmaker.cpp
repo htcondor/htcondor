@@ -6617,7 +6617,7 @@ Matchmaker::calculate_subtree_usage(GroupEntry *group) {
 	subtree_usage += accountant.GetWeightedResourcesUsed(group->name.c_str());
 
 	group->subtree_usage = subtree_usage;;
-	dprintf(D_ALWAYS, "subtree_usage at %s is %g\n", group->name.c_str(), subtree_usage);
+	dprintf(D_FULLDEBUG, "subtree_usage at %s is %g\n", group->name.c_str(), subtree_usage);
 	return subtree_usage;
 }
 
