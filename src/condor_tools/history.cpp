@@ -539,7 +539,11 @@ main(int argc, char* argv[])
         remoteread = true;
        #endif
     }
-    else {
+	else if (argv[i][0] == '-') {
+		fprintf(stderr, "Error: Unknown argument %s\n", argv[i]);
+		break; // quitting now will print usage and exit with an error below.
+	}
+	else {
 		std::string ownerconst;
 		owner = argv[i];
 		formatstr(ownerconst, "%s == \"%s\"", ATTR_OWNER, owner);
