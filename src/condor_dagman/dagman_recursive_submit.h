@@ -55,6 +55,7 @@ struct SubmitDagShallowOptions
 	bool doRecovery;
 	bool bPostRun;
 	bool bPostRunSet; // whether this was actually set on the command line
+	bool shadowMode; //TEMPTEMP -- move to deep??
 
 	// non-command line options
 	MyString strLibOut;
@@ -88,6 +89,7 @@ struct SubmitDagShallowOptions
 		doRecovery = false;
 		copyToSpool = param_boolean( "DAGMAN_COPY_TO_SPOOL", false );
 		iDebugLevel = DEBUG_UNSET;
+		shadowMode = false;
 	}
 };
 

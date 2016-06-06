@@ -1,3 +1,4 @@
+//TEMPTEMP -- shadow should not require -f...
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -312,6 +313,14 @@ setUpOptions( SubmitDagDeepOptions &deepOpts,
 	shallowOpts.strDebugLog += ".dagman.out";
 
 	shallowOpts.strSchedLog = shallowOpts.primaryDagFile + ".dagman.log";
+
+	if ( shallowOpts.shadowMode ) {
+		shallowOpts.strLibOut += ".shadow";
+		shallowOpts.strLibErr += ".shadow";
+		shallowOpts.strDebugLog += ".shadow";
+		shallowOpts.strSchedLog += ".shadow";
+	}
+
 	shallowOpts.strSubFile = shallowOpts.primaryDagFile + DAG_SUBMIT_FILE_SUFFIX;
 
 	MyString	rescueDagBase;
@@ -463,10 +472,11 @@ void ensureOutputFilesExist(const SubmitDagDeepOptions &deepOpts,
 	}
 
 		// Get rid of the halt file (if one exists).
-	tolerant_unlink( HaltFileName( shallowOpts.primaryDagFile ).Value() );
+	if ( !shallowOpts.shadowMode ) {
+		tolerant_unlink( HaltFileName( shallowOpts.primaryDagFile ).Value() );
+	}
 
-	if (deepOpts.bForce)
-	{
+	if ( deepOpts.bForce || shallowOpts.shadowMode ) {
 		tolerant_unlink(shallowOpts.strSubFile.Value());
 		tolerant_unlink(shallowOpts.strSchedLog.Value());
 		tolerant_unlink(shallowOpts.strLibOut.Value());
@@ -829,6 +839,10 @@ void writeSubmitFile( /* const */ SubmitDagDeepOptions &deepOpts,
 
 	if(shallowOpts.dumpRescueDag) {
 		args.AppendArg("-DumpRescue");
+	}
+
+	if ( shallowOpts.shadowMode ) {
+		args.AppendArg( "-Shadow" );
 	}
 
 	if(deepOpts.bVerbose) {
@@ -1217,6 +1231,11 @@ parseCommandLine(SubmitDagDeepOptions &deepOpts,
 			else if ( (strArg.find("-dorecov") != -1) )
 			{
 				shallowOpts.doRecovery = true;
+			}
+			else if ( (strArg.find("-shadow") != -1) )
+			{
+				printf( "TEMPTEMP -- shadow mode!!\n" );
+				shallowOpts.shadowMode = true;
 			}
 			else if ( parsePreservedArgs( strArg, iArg, argc, argv,
 						shallowOpts) )

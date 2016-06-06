@@ -163,9 +163,10 @@ class Dag {
 
     /** Prepare DAG for initial run.  Call this function ONLY ONCE.
         @param recovery specifies if this is a recovery
+	TEMPTEMP -- document shadowMode
         @return true: successful, false: failure
     */
-    bool Bootstrap (bool recovery);
+    bool Bootstrap ( bool recovery, bool shadowMode );
 
     /// Add a job to the collection of jobs managed by this Dag.
     bool Add( Job& job );

@@ -226,6 +226,9 @@ class Dagman {
 		// log files specified in their submit files (see gittrac #4353).
 	bool _suppressJobLogs;
 
+		//TEMPTEMP -- document
+	bool _shadowMode;
+
 		// Batch-name for this workflow.
 	MyString _batchName;
 

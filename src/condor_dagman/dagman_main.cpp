@@ -1,3 +1,5 @@
+//TEMPTEMP -- append .shadow to dagman.out
+//TEMPTEMP -- also stuff like jobstate.log, etc.
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -143,6 +145,7 @@ Dagman::Dagman() :
 	_claim_hold_time(20),
 	_doRecovery(false),
 	_suppressJobLogs(false),
+	_shadowMode(false),
 	_batchName(""),
 	_dagmanClassad(NULL)
 {
@@ -853,6 +856,9 @@ void main_init (int argc, char ** const argv) {
 		} else if ( !strcasecmp( "-dorecov", argv[i] ) ) {
 			dagman._doRecovery = true;
 
+		} else if ( !strcasecmp( "-shadow", argv[i] ) ) {
+			dagman._shadowMode = true;
+
         } else {
     		debug_printf( DEBUG_SILENT, "\nUnrecognized argument: %s\n",
 						argv[i] );
@@ -1295,8 +1301,13 @@ void main_init (int argc, char ** const argv) {
     // mode
 	// I don't know what this comment means.  wenger 2013-09-11
   
-    {
-    	bool recovery = access(lockFileName,  F_OK) == 0;
+	bool recovery = false;
+	if ( dagman._shadowMode ) {
+         debug_printf( DEBUG_VERBOSE, "Running in shadow mode because -Shadow flag was specified\n" );
+		recovery = true;
+		
+	} else {
+    	recovery = access(lockFileName,  F_OK) == 0;
       
         if (recovery) {
             debug_printf( DEBUG_VERBOSE, "Lock file %s detected, \n",
@@ -1321,6 +1332,7 @@ void main_init (int argc, char ** const argv) {
 			recovery = true;
 		}
 
+		//TEMPTEMP -- do we need this for shadow mode??
         if ( recovery ) {
 			dagman.CheckLogFileMode( submitFileVersion );
 		}
@@ -1330,14 +1342,14 @@ void main_init (int argc, char ** const argv) {
 			// file if it exists.
 			//
 		util_create_lock_file(lockFileName, dagman.abortDuplicates);
-
-        debug_printf( DEBUG_VERBOSE, "Bootstrapping...\n");
-        if( !dagman.dag->Bootstrap( recovery ) ) {
-            dagman.dag->PrintReadyQ( DEBUG_DEBUG_1 );
-            debug_error( 1, DEBUG_QUIET, "ERROR while bootstrapping\n");
-        }
-		print_status();
     }
+
+    debug_printf( DEBUG_VERBOSE, "Bootstrapping...\n");
+    if( !dagman.dag->Bootstrap( recovery, dagman._shadowMode ) ) {
+        dagman.dag->PrintReadyQ( DEBUG_DEBUG_1 );
+        debug_error( 1, DEBUG_QUIET, "ERROR while bootstrapping\n");
+    }
+	print_status();
 
     debug_printf( DEBUG_VERBOSE, "Registering condor_event_timer...\n" );
     daemonCore->Register_Timer( 1, dagman.m_user_log_scan_interval, 

@@ -268,7 +268,7 @@ Dag::ReportMetrics( int exitCode )
 }
 
 //-------------------------------------------------------------------------
-bool Dag::Bootstrap (bool recovery)
+bool Dag::Bootstrap( bool recovery, bool shadowMode )
 {
     Job* job;
     ListIterator<Job> jobs (_jobs);
@@ -308,6 +308,11 @@ bool Dag::Bootstrap (bool recovery)
 
 		debug_cache_start_caching();
 
+		//TEMPTEMP -- loop here if shadow mode?
+		//TEMPTEMP -- when is CondorLogFileCount ever 0?
+		bool firstTime = true;
+		//TEMPTEMP while ( firstTime || shadowMode ) {
+			firstTime = false;
 		if( CondorLogFileCount() > 0 ) {
 			if( !ProcessLogEvents( recovery ) ) {
 				_recovery = false;
@@ -316,6 +321,7 @@ bool Dag::Bootstrap (bool recovery)
 				return false;
 			}
 		}
+		//TEMPTEMP }//TEMPTEMP -- fix indentation
 
 		// all jobs stuck in STATUS_POSTRUN need their scripts run
 		jobs.ToBeforeFirst();
