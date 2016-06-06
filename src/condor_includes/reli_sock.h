@@ -265,6 +265,11 @@ public:
 	int clear_read_block_flag() {bool state = m_read_would_block; m_read_would_block = false; return state;}
 
 	bool is_closed() {return rcv_msg.m_closed;}
+
+	// serialize and deserialize
+	const char * serialize(const char *);	// restore state from buffer
+	char * serialize() const;	// save state into buffer
+
 //	PROTECTED INTERFACE TO RELIABLE SOCKS
 //
 protected:
@@ -284,8 +289,6 @@ protected:
 	/*
 	**	Methods
 	*/
-	char * serialize(char *);	// restore state from buffer
-	char * serialize() const;	// save state into buffer
 
 	int prepare_for_nobuffering( stream_coding = stream_unknown);
 	int perform_authenticate( bool with_key, KeyInfo *& key, 

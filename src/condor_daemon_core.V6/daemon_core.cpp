@@ -8613,10 +8613,83 @@ DaemonCore::Proc_Family_Cleanup()
 	}
 }
 
+#define REFACTOR_SOCK_INHERIT 1
+#ifdef REFACTOR_SOCK_INHERIT
+// extracts the parent address and inherited socket information from the given inherit string
+// then tokenizes the remaining items from the inherit string into the supplied StringList.
+// return value: number of entries in the socks[] array that were populated.
+// note: the size of the socks array should be 1 more than the maximum
+//
+int extractInheritedSocks (
+	const char * inherit,  // in: inherit string, usually from CONDOR_INHERIT environment variable
+	pid_t & ppid,          // out: pid of the parent
+	std::string & psinful, // out: sinful of the parent
+	Stream* socks[],   // out: filled in with items from the inherit string
+	int     cMaxSocks, // in: number of items in the socks array
+	StringList & remaining_items) // out: unparsed items from the inherit string are added to this
+{
+	if ( ! inherit || ! inherit[0])
+		return 0;
+
+	int cSocks = 0;
+	StringTokenIterator list(inherit, 100, " ");
+
+	// first is parent pid and sinful
+	const char * ptmp = list.first();
+	if (ptmp) {
+		ppid = atoi(ptmp);
+		ptmp = list.next();
+		if (ptmp) psinful = ptmp;
+	}
+
+	// inherit cedar socks
+	ptmp = list.next();
+	while (ptmp && (*ptmp != '0')) {
+		if (cSocks >= cMaxSocks) {
+			break;
+		}
+		switch (*ptmp) {
+			case '1' : {
+				// inherit a relisock
+				ReliSock * rsock = new ReliSock();
+				ptmp = list.next();
+				rsock->serialize(ptmp);
+				rsock->set_inheritable(FALSE);
+				dprintf(D_DAEMONCORE,"Inherited a ReliSock\n");
+				// place into array...
+				socks[cSocks++] = (Stream *)rsock;
+				break;
+			}
+			case '2': {
+				SafeSock * ssock = new SafeSock();
+				ptmp = list.next();
+				ssock->serialize(ptmp);
+				ssock->set_inheritable(FALSE);
+				dprintf(D_DAEMONCORE,"Inherited a SafeSock\n");
+				// place into array...
+				socks[cSocks++] = (Stream *)ssock;
+				break;
+			}
+			default:
+				EXCEPT("Daemoncore: Can only inherit SafeSock or ReliSocks, not %c (%d)", *ptmp, (int)*ptmp);
+				break;
+		} // end of switch
+		ptmp = list.next();
+	}
+
+	// put the remainder of the inherit items into a stringlist for use by the caller.
+	while ((ptmp = list.next())) {
+		remaining_items.append(ptmp);
+	}
+	remaining_items.rewind();
+
+	return cSocks;
+}
+#endif
+
 void
 DaemonCore::Inherit( void )
 {
-	char *inheritbuf = NULL;
 	int numInheritedSocks = 0;
 	char *ptmp;
 	static bool already_inherited = false;
@@ -8640,6 +8713,24 @@ DaemonCore::Inherit( void )
 	*/
 	const char *envName = EnvGetName( ENV_INHERIT );
 	const char *tmp = GetEnv( envName );
+#ifdef REFACTOR_SOCK_INHERIT
+	if (tmp) {
+		dprintf ( D_DAEMONCORE, "%s: \"%s\"\n", envName, tmp );
+		UnsetEnv( envName );
+	} else {
+		dprintf ( D_DAEMONCORE, "%s: is NULL\n", envName );
+	}
+
+	StringList inherit_list;
+	numInheritedSocks = extractInheritedSocks(tmp,
+		ppid, saved_sinful_string,
+		inheritedSocks, COUNTOF(inheritedSocks),
+		inherit_list);
+	if (ppid) {
+		// insert ppid into table
+		dprintf(D_DAEMONCORE,"Parent PID = %d\n", ppid);
+#else
+	char *inheritbuf = NULL;
 	if ( tmp != NULL ) {
 		inheritbuf = strdup( tmp );
 		dprintf ( D_DAEMONCORE, "%s: \"%s\"\n", envName, inheritbuf );
@@ -8661,12 +8752,13 @@ DaemonCore::Inherit( void )
 		// insert ppid into table
 		dprintf(D_DAEMONCORE,"Parent PID = %s\n",ptmp);
 		ppid = atoi(ptmp);
+		ptmp=inherit_list.next();
+		saved_sinful_string = ptmp;
+#endif
 		PidEntry *pidtmp = new PidEntry;
 		pidtmp->pid = ppid;
-		ptmp=inherit_list.next();
-		dprintf(D_DAEMONCORE,"Parent Command Sock = %s\n",ptmp);
-		saved_sinful_string = ptmp;
-		pidtmp->sinful_string = ptmp;
+		dprintf(D_DAEMONCORE,"Parent Command Sock = %s\n",saved_sinful_string.c_str());
+		pidtmp->sinful_string = saved_sinful_string.c_str();
 		pidtmp->is_local = TRUE;
 		pidtmp->parent_is_local = TRUE;
 		pidtmp->reaper_id = 0;
@@ -8714,6 +8806,12 @@ DaemonCore::Inherit( void )
 		}
 #endif
 
+#ifdef REFACTOR_SOCK_INHERIT
+	if (numInheritedSocks >= MAX_SOCKS_INHERITED) {
+		EXCEPT("MAX_SOCKS_INHERITED reached.");
+	}
+	inheritedSocks[numInheritedSocks] = NULL;
+#else
 		// inherit cedar socks
 		ptmp=inherit_list.next();
 		while ( ptmp && (*ptmp != '0') ) {
@@ -8749,6 +8847,7 @@ DaemonCore::Inherit( void )
 			ptmp=inherit_list.next();
 		}
 		inheritedSocks[numInheritedSocks] = NULL;
+#endif
 
 		// inherit our "command" cedar socks.  they are sent
 		// relisock, then safesock, then a "0".

@@ -512,8 +512,8 @@ StdUnivSock::peer_is_local()
 	return false;
 }
 
-char *
-StdUnivSock::serialize(char *)
+const char *
+StdUnivSock::serialize(const char *)
 {
 	EXCEPT("not implemented");
 	return NULL;

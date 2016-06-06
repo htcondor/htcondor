@@ -7387,6 +7387,16 @@ review=?
 tags=negotiator,matchmaker
 
 [HISTORY_HELPER]
+default=$(BIN)/condor_history
+win32_default=$(BIN)\condor_history.exe
+type=path
+reconfig=true
+customization=devel
+friendly_name=location of condor history helper executable used by remote condor_history
+review=?
+tags=schedd
+
+[OLD.HISTORY_HELPER]
 default=$(LIBEXEC)/condor_history_helper
 win32_default=$(LIBEXEC)\condor_history_helper.exe
 type=path
