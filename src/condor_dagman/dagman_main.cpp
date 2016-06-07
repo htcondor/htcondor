@@ -1121,6 +1121,7 @@ void main_init (int argc, char ** const argv) {
 						  dagman._defaultNodeLog.Value(),
 						  dagman._generateSubdagSubmits,
 						  &dagman._submitDagDeepOpts,
+						  dagman._shadowMode,//TEMPTEMP?
 						  false ); /* toplevel dag! */
 
     if( dagman.dag == NULL ) {

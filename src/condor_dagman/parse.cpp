@@ -1728,6 +1728,7 @@ parse_splice(
 							dag->DefaultNodeLog(),
 							dag->GenerateSubdagSubmits(),
 							NULL, // this Dag will never submit a job
+							false, /* don't care about shadow mode */
 							true, /* we are a splice! */
 							current_splice_scope() );
 	

@@ -1,3 +1,6 @@
+//TEMPTEMP -- put in ASSERTS to make sure we don't accidentally submit jobs or run scripts in shadow mode
+//TEMPTEMP -- make sure final nodes don't get run in shadow mode!!
+//TEMPTEMP -- shadow mode should probably not write a rescue DAG...
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -91,7 +94,9 @@ Dag::Dag( /* const */ StringList &dagFiles,
 		  const CondorID *DAGManJobID,
 		  bool prohibitMultiJobs, bool submitDepthFirst,
 		  const char *defaultNodeLog, bool generateSubdagSubmits,
-		  SubmitDagDeepOptions *submitDagDeepOpts, bool isSplice,
+		  SubmitDagDeepOptions *submitDagDeepOpts, 
+		  bool shadowMode,//TEMPTEMP?
+		  bool isSplice,
 		  const MyString &spliceScope ) :
     _maxPreScripts        (maxPreScripts),
     _maxPostScripts       (maxPostScripts),
@@ -134,7 +139,8 @@ Dag::Dag( /* const */ StringList &dagFiles,
 	_reject			  (false),
 	_alwaysRunPost		  (true),
 	_defaultPriority	  (0),
-	_metrics			  (NULL)
+	_metrics			  (NULL),
+	_shadowMode			  (shadowMode)
 {
 
 	// If this dag is a splice, then it may have been specified with a DIR
@@ -312,14 +318,7 @@ bool Dag::Bootstrap( bool recovery, bool shadowMode )
 //right thing to do for shadow mode -- I'm thinking we should go back
 //to daemoncore, so maybe we should operate in "normal" mode, but
 //never actually submit any jobs or run scripts?
-		//TEMPTEMP -- loop here if shadow mode?
-		//TEMPTEMP -- when is CondorLogFileCount ever 0?
-		bool firstTime = true;
-		while ( firstTime || shadowMode ) {
-			if ( !firstTime ) {
-				sleep( 5 );//TEMPTEMP
-			}
-			firstTime = false;
+		//TEMPTEMP is CondorLogFileCount() ever 0?
 		if( CondorLogFileCount() > 0 ) {
 			if( !ProcessLogEvents( recovery ) ) {
 				_recovery = false;
@@ -328,8 +327,8 @@ bool Dag::Bootstrap( bool recovery, bool shadowMode )
 				return false;
 			}
 		}
-		}//TEMPTEMP -- fix indentation
 
+//TEMPTEMP -- need to bypass this for shadow mode?
 		// all jobs stuck in STATUS_POSTRUN need their scripts run
 		jobs.ToBeforeFirst();
 		while( jobs.Next( job ) ) {
@@ -1383,6 +1382,11 @@ Dag::PrintDagFiles( /* const */ StringList &dagFiles )
 bool
 Dag::StartNode( Job *node, bool isRetry )
 {
+	//TEMPTEMP -- is this the right place to do this?
+	//TEMPTEMP if ( _shadowMode ) {
+		//TEMPTEMP return 0;
+	//TEMPTEMP }
+
 	ASSERT( !_finalNodeRun );
     ASSERT( node != NULL );
 
@@ -1398,7 +1402,8 @@ Dag::StartNode( Job *node, bool isRetry )
 	// first -- the PRE script's reaper function will submit the
 	// actual job to HTCondor if/when the script exits successfully
 
-    if( node->_scriptPre && node->_scriptPre->_done == FALSE ) {
+    //TEMPTEMP? if( node->_scriptPre && node->_scriptPre->_done == FALSE ) {
+    if ( node->_scriptPre && node->_scriptPre->_done == FALSE && !_shadowMode ) {//TEMPTEMP?
 		node->SetStatus( Job::STATUS_PRERUN );
 		_preRunNodeCount++;
 		_preScriptQ->Run( node->_scriptPre );
@@ -1466,6 +1471,11 @@ int
 Dag::SubmitReadyJobs(const Dagman &dm)
 {
 	debug_printf( DEBUG_DEBUG_1, "Dag::SubmitReadyJobs()\n" );
+
+	//TEMPTEMP -- is this the right place to do this?
+	if ( _shadowMode ) {
+		return 0;
+	}
 
 		// Jobs deferred by category throttles.
 	PrioritySimpleList<Job*> deferredJobs;
@@ -1722,6 +1732,11 @@ Dag::PreScriptReaper( Job *job, int status )
 bool Dag::RunPostScript( Job *job, bool ignore_status, int status,
 			bool incrementRunCount )
 {
+	//TEMPTEMP -- is this the right place to do this?
+	if ( _shadowMode ) {
+		return 0;
+	}
+
 	// A little defensive programming. Just check that we are
 	// allowed to run this script.  Because callers can be a little
 	// sloppy...
@@ -1858,14 +1873,17 @@ Dag::FinishedRunning( bool includeFinalNode ) const
 			// condition here otherwise, because all of the "regular"
 			// nodes can be done, and the final node not changed to
 			// ready yet.)
+debug_printf( DEBUG_QUIET, "DIAG 1210\n" );//TEMPTEMP
 		return false;
 	} else if ( IsHalted() ) {
 			// Note that we're checking for scripts actually running here,
 			// not the number of nodes in the PRERUN or POSTRUN state --
 			// if we're halted, we don't start any new PRE scripts.
+debug_printf( DEBUG_QUIET, "DIAG 1220\n" );//TEMPTEMP
 		return NumJobsSubmitted() == 0 && NumScriptsRunning() == 0;
 	}
 
+debug_printf( DEBUG_QUIET, "DIAG 1230\n" );//TEMPTEMP
 	return NumJobsSubmitted() == 0 && NumNodesReady() == 0 &&
 				ScriptRunNodeCount() == 0;
 }
@@ -1876,20 +1894,25 @@ Dag::DoneSuccess( bool includeFinalNode ) const
 {
 	if ( !FinishedRunning( includeFinalNode ) ) {
 			// Note: if final node is running we should get to here...
+debug_printf( DEBUG_QUIET, "DIAG 1010\n" );//TEMPTEMP
 		return false;
 	} else if ( NumNodesDone( includeFinalNode ) ==
 				NumNodes( includeFinalNode ) ) {
 			// This is the normal case.
+debug_printf( DEBUG_QUIET, "DIAG 1020\n" );//TEMPTEMP
 		return true;
 	} else if ( includeFinalNode && _final_job &&
 				_final_job->GetStatus() == Job::STATUS_DONE ) {
 			// Final node can override the overall DAG status.
+debug_printf( DEBUG_QUIET, "DIAG 1030\n" );//TEMPTEMP
 		return true;
 	} else if ( _dagIsAborted && _dagStatus == DAG_STATUS_OK ) {
 			// Abort-dag-on can override the overall DAG status.
+debug_printf( DEBUG_QUIET, "DIAG 1040\n" );//TEMPTEMP
 		return true;
 	}
 
+debug_printf( DEBUG_QUIET, "DIAG 1050\n" );//TEMPTEMP
 	return false;
 }
 
@@ -1899,18 +1922,23 @@ Dag::DoneFailed( bool includeFinalNode ) const
 {
 	if ( !FinishedRunning( includeFinalNode ) ) {
 			// Note: if final node is running we should get to here...
+debug_printf( DEBUG_QUIET, "DIAG 1110\n" );//TEMPTEMP
 		return false;
 	} else if ( includeFinalNode && _final_job &&
 				_final_job->GetStatus() == Job::STATUS_DONE ) {
 			// Success of final node overrides failure of any other node.
+debug_printf( DEBUG_QUIET, "DIAG 1120\n" );//TEMPTEMP
 		return false;
 	} else if ( _dagIsAborted && _dagStatus == DAG_STATUS_OK ) {
 			// Abort-dag-on can override the overall DAG status.
+debug_printf( DEBUG_QUIET, "DIAG 1130\n" );//TEMPTEMP
 		return false;
 	} else if ( IsHalted() ) {
+debug_printf( DEBUG_QUIET, "DIAG 1140\n" );//TEMPTEMP
 		return true;
 	}
 
+debug_printf( DEBUG_QUIET, "DIAG 1150\n" );//TEMPTEMP
 	return NumNodesFailed() > 0;
 }
 
@@ -3684,6 +3712,7 @@ Dag::LogEventNodeLookup( const ULogEvent* event,
 						// table if we don't already have it (e.g., recovery
 						// mode).  (In "normal" mode we should have already
 						// inserted it when we did the condor_submit.)
+						//TEMPTEMP -- do we have to do something special here for shadow mode?
 					Job *tmpNode = NULL;
 					bool isNoop = JobIsNoop( condorID );
 					ASSERT( isNoop == node->GetNoop() );
@@ -3940,6 +3969,11 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 		ASSERT( removeResult == 0 );
 	}
 	node->SetCondorID( _defaultCondorId );
+
+	//TEMPTEMP -- is this the right place to do this?  is SUBMIT_RESULT_OK the right thing to return?
+	//TEMPTEMP? if ( _shadowMode ) {
+		//TEMPTEMP? return SUBMIT_RESULT_OK;
+	//TEMPTEMP? }
 
 		// sleep for a specified time before submitting
 	if( dm.submit_delay != 0 ) {

@@ -135,6 +135,7 @@ class Dag {
 		 bool prohibitMultiJobs, bool submitDepthFirst,
 		 const char *defaultNodeLog, bool generateSubdagSubmits,
 		 SubmitDagDeepOptions *submitDagDeepOpts,
+		 bool shadowMode,//TEMPTEMP?
 		 bool isSplice = false, const MyString &spliceScope = "root" );
 
     ///
@@ -1208,6 +1209,9 @@ private:
 	
 		// Object to deal with reporting DAGMan metrics (to Pegasus).
 	DagmanMetrics *_metrics;
+
+		//TEMPTEMP -- document
+	bool _shadowMode;
 };
 
 #endif /* #ifndef DAG_H */
