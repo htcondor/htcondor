@@ -308,10 +308,17 @@ bool Dag::Bootstrap( bool recovery, bool shadowMode )
 
 		debug_cache_start_caching();
 
+//TEMPTEMP -- now I'm wondering whether staying in recovery mode is the
+//right thing to do for shadow mode -- I'm thinking we should go back
+//to daemoncore, so maybe we should operate in "normal" mode, but
+//never actually submit any jobs or run scripts?
 		//TEMPTEMP -- loop here if shadow mode?
 		//TEMPTEMP -- when is CondorLogFileCount ever 0?
 		bool firstTime = true;
-		//TEMPTEMP while ( firstTime || shadowMode ) {
+		while ( firstTime || shadowMode ) {
+			if ( !firstTime ) {
+				sleep( 5 );//TEMPTEMP
+			}
 			firstTime = false;
 		if( CondorLogFileCount() > 0 ) {
 			if( !ProcessLogEvents( recovery ) ) {
@@ -321,7 +328,7 @@ bool Dag::Bootstrap( bool recovery, bool shadowMode )
 				return false;
 			}
 		}
-		//TEMPTEMP }//TEMPTEMP -- fix indentation
+		}//TEMPTEMP -- fix indentation
 
 		// all jobs stuck in STATUS_POSTRUN need their scripts run
 		jobs.ToBeforeFirst();
