@@ -1770,6 +1770,8 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 	MyString error_buf;
 	int delegation_method = 0; /* 0 means this transfer is not a delegation. 1 means it is.*/
 	time_t start, elapsed;
+	int numFiles = 0;
+
 	bool I_go_ahead_always = false;
 	bool peer_goes_ahead_always = false;
 	DCTransferQueue xfer_queue(m_xfer_queue_contact_info);
@@ -2312,6 +2314,8 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 		}
 		*total_bytes += bytes;
 
+		numFiles++;
+
 #ifdef HAVE_EXT_POSTGRESQL
 	        file_transfer_record record;
 		record.fullname = fullname.Value();
@@ -2428,8 +2432,8 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 		jobAd.LookupInteger(ATTR_CLUSTER_ID, cluster);
 		jobAd.LookupInteger(ATTR_PROC_ID, proc);
 
-		dprintf(D_STATS, "File Transfer Download: JobId: %d.%d bytes: %lld seconds: %.1f dest: %s %s\n", 
-			cluster, proc, (long long)*total_bytes, (double)(downloadEndTime - downloadStartTime), s->peer_ip_str(), (stats ? stats : "") );
+		dprintf(D_STATS, "File Transfer Download: JobId: %d.%d files: %d bytes: %lld seconds: %.1f dest: %s %s\n", 
+			cluster, proc, numFiles, (long long)*total_bytes, (double)(downloadEndTime - downloadStartTime), s->peer_ip_str(), (stats ? stats : "") );
 	}
 
 
@@ -2803,6 +2807,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 	bool try_again = false;
 	int hold_code = 0;
 	int hold_subcode = 0;
+	int numFiles = 0;
 	MyString error_desc;
 	bool I_go_ahead_always = false;
 	bool peer_goes_ahead_always = false;
@@ -2945,7 +2950,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 			try_again = false; // put job on hold
 			hold_code = CONDOR_HOLD_CODE_UploadFileError;
 			hold_subcode = EPERM;
-			return ExitDoUpload(total_bytes,s,saved_priv,socket_default_crypto,
+			return ExitDoUpload(total_bytes,numFiles, s,saved_priv,socket_default_crypto,
 			                    upload_success,do_upload_ack,do_download_ack,
 								try_again,hold_code,hold_subcode,
 								error_desc.Value(),__LINE__);
@@ -3330,7 +3335,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 
 				// for the more interesting reasons why the transfer failed,
 				// we can try again and see what happens.
-				return ExitDoUpload(total_bytes,s,saved_priv,
+				return ExitDoUpload(total_bytes,numFiles, s,saved_priv,
 								socket_default_crypto,upload_success,
 								do_upload_ack,do_download_ack,
 			                    try_again,hold_code,hold_subcode,
@@ -3344,6 +3349,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 		}
 		
 		*total_bytes += bytes;
+		numFiles++;
 
 			// The spooled files list is used to generate
 			// SpooledOutputFiles, which replaces TransferOutputFiles
@@ -3368,7 +3374,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 	do_upload_ack = true;
 
 	if (first_failed_file_transfer_happened == true) {
-		return ExitDoUpload(total_bytes,s,saved_priv,socket_default_crypto,
+		return ExitDoUpload(total_bytes,numFiles, s,saved_priv,socket_default_crypto,
 			first_failed_upload_success,do_upload_ack,do_download_ack,
 			first_failed_try_again,first_failed_hold_code,
 			first_failed_hold_subcode,first_failed_error_desc.Value(),
@@ -3377,7 +3383,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 
 	uploadEndTime = (int)time(NULL);
 	upload_success = true;
-	return ExitDoUpload(total_bytes,s,saved_priv,socket_default_crypto,
+	return ExitDoUpload(total_bytes,numFiles, s,saved_priv,socket_default_crypto,
 	                    upload_success,do_upload_ack,do_download_ack,
 	                    try_again,hold_code,hold_subcode,NULL,__LINE__);
 }
@@ -3705,7 +3711,7 @@ FileTransfer::DoReceiveTransferGoAhead(
 }
 
 int
-FileTransfer::ExitDoUpload(filesize_t *total_bytes, ReliSock *s, priv_state saved_priv, bool socket_default_crypto, bool upload_success, bool do_upload_ack, bool do_download_ack, bool try_again, int hold_code, int hold_subcode, char const *upload_error_desc,int DoUpload_exit_line)
+FileTransfer::ExitDoUpload(filesize_t *total_bytes, int numFiles, ReliSock *s, priv_state saved_priv, bool socket_default_crypto, bool upload_success, bool do_upload_ack, bool do_download_ack, bool try_again, int hold_code, int hold_subcode, char const *upload_error_desc,int DoUpload_exit_line)
 {
 	int rc = upload_success ? 0 : -1;
 	bool download_success = false;
@@ -3816,8 +3822,8 @@ FileTransfer::ExitDoUpload(filesize_t *total_bytes, ReliSock *s, priv_state save
 		jobAd.LookupInteger(ATTR_PROC_ID, proc);
 
 		char *stats = s->get_statistics();
-		dprintf(D_STATS, "File Transfer Upload: JobId: %d.%d bytes: %lld seconds: %.1f dest: %s %s\n", 
-			cluster, proc, (long long)*total_bytes, (double) (uploadEndTime - uploadStartTime), s->peer_ip_str(), (stats ? stats : "") );
+		dprintf(D_STATS, "File Transfer Upload: JobId: %d.%d files: %d bytes: %lld seconds: %.1f dest: %s %s\n", 
+			cluster, proc, numFiles, (long long)*total_bytes, (double) (uploadEndTime - uploadStartTime), s->peer_ip_str(), (stats ? stats : "") );
 	}
 
 	return rc;
