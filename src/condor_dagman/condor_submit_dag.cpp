@@ -1218,6 +1218,15 @@ parseCommandLine(SubmitDagDeepOptions &deepOpts,
 			{
 				shallowOpts.doRecovery = true;
 			}
+/*TEMPTEMP? -- do we really need this, or should we just use -append??
+			//TEMPTEMP -- add accounting_group, accounting_group_user here?
+			else if ( (strArg.find?("-accounting_group") != -1) )
+			{
+			}
+			else if ( (strArg.find?("-accounting_group_user") != -1) )
+			{
+			}
+TEMPTEMP*/
 			else if ( parsePreservedArgs( strArg, iArg, argc, argv,
 						shallowOpts) )
 			{

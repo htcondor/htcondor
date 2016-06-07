@@ -331,6 +331,21 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 	var += dm.dag->NumNodesFailed();
 	args.AppendArg( var.Value() );
 
+	//TEMPTEMP -- accounting group stuff here
+	if ( dm._submitDagDeepOpts.acctGroup != "" ) {
+		args.AppendArg( "-append" );
+		MyString arg = "accounting_group=";
+		arg += dm._submitDagDeepOpts.acctGroup;
+		args.AppendArg( arg );
+	}
+
+	if ( dm._submitDagDeepOpts.acctGroupUser != "" ) {
+		args.AppendArg( "-append" );
+		MyString arg = "accounting_group_user=";
+		arg += dm._submitDagDeepOpts.acctGroupUser;
+		args.AppendArg( arg );
+	}
+
 		// how big is the command line so far
 	MyString display;
 	args.GetArgsStringForDisplay( &display );
@@ -356,6 +371,7 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 		args.AppendArgsFromArgList( parentNameArgs );
 	}
 
+	//TEMPTEMP -- this should probably get moved to before parent names!
 	if( hold_claim ){
 		args.AppendArg( "-a" );
 		MyString holdit = MyString("+") + MyString(ATTR_JOB_KEEP_CLAIM_IDLE) + " = "

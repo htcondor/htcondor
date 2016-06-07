@@ -157,6 +157,38 @@ DagmanClassad::GetSetBatchName( const MyString &primaryDagFile,
 
 //---------------------------------------------------------------------------
 void
+DagmanClassad::GetAcctInfo( MyString &group, MyString &user )
+{
+	if ( !_valid ) {
+		debug_printf( DEBUG_VERBOSE,
+					"Skipping ClassAd query -- DagmanClassad object is invalid\n" );
+		return;
+	}
+
+	Qmgr_connection *queue = OpenConnection();
+	if ( !queue ) {
+		return;
+	}
+
+	//TEMPTEMP -- make sure results are set to "" if the attrs don't exist!
+	if ( !GetDagAttribute( ATTR_ACCT_GROUP, group, false ) ) {
+		//TEMPTEMP owner = "undef";
+	}
+debug_printf( DEBUG_QUIET, "DIAG group: %s\n", group.Value() );//TEMPTEMP
+
+	//TEMPTEMP -- make sure results are set to "" if the attrs don't exist!
+	if ( !GetDagAttribute( ATTR_ACCT_GROUP_USER, user, false ) ) {
+		//TEMPTEMP nodeName = "undef";
+	}
+debug_printf( DEBUG_QUIET, "DIAG user: %s\n", user.Value() );//TEMPTEMP
+
+	CloseConnection( queue );
+
+	return;
+}
+
+//---------------------------------------------------------------------------
+void
 DagmanClassad::InitializeMetrics()
 {
 
