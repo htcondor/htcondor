@@ -33,7 +33,8 @@ class ScheddCronJobMgr : public CronJobMgr
 	bool ShutdownOk( void );
 
   protected:
-	CronJob *CreateJob( CronJobParams *params );
+	virtual CronJobParams *CreateJobParams( const char *job_name );
+	virtual CronJob *CreateJob( CronJobParams *params );
 
   private:
 	bool m_shutting_down;
