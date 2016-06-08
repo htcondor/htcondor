@@ -6,6 +6,7 @@ cmd_q_shows-hold: personal
 cmd_q_shows-run: personal
 cmd_q_shows-sub: personal
 cmd_q_shows-xml: personal
+cmd_q_formats: personal
 cmd_wait_shows-all: personal
 cmd_wait_shows-base: personal
 cmd_wait_shows-notimeout: personal
