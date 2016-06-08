@@ -37,7 +37,7 @@ StartdBenchJobMgrParams::StartdBenchJobMgrParams(
 {
 }
 
-const char *
+char *
 StartdBenchJobMgrParams::GetDefault( const char *item ) const
 {
 	if ( !strcasecmp( item, "JOBLIST" ) ) {

@@ -40,12 +40,6 @@ DAEMON_LIST = MASTER, SCHEDD, JOB_ROUTER, COLLECTOR, NEGOTIATOR
 JOB_ROUTER_POLLING_PERIOD = 10
 ';
 
-# Using shared port hangs the job router on Windows, at least for this
-# test.  Remove this once #5279 has been fixed.
-if(is_windows()) {
-	$append_condor_config .= "JOB_ROUTER.USE_SHARED_PORT = FALSE\n";
-}
-
 CondorTest::StartCondorWithParams(
     append_condor_config => $append_condor_config
 );

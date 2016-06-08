@@ -79,6 +79,12 @@ ScheddCronJobMgr::ShutdownOk( void )
 	return idle;
 }
 
+CronJobParams *
+ScheddCronJobMgr::CreateJobParams( const char *job_name )
+{
+	return new ClassAdCronJobParams( job_name, *this );
+}
+
 // Create a new job
 CronJob *
 ScheddCronJobMgr::CreateJob( CronJobParams *job_params )
@@ -86,8 +92,8 @@ ScheddCronJobMgr::CreateJob( CronJobParams *job_params )
 	dprintf( D_FULLDEBUG,
 			 "*** Creating Schedd Cron job '%s'***\n",
 			 job_params->GetName() );
-	ScheddCronJob *job = new ScheddCronJob(
-		static_cast<ClassAdCronJobParams *>(job_params), *this );
-
-	return static_cast<CronJob *>( job );
+	ClassAdCronJobParams *params =
+		dynamic_cast<ClassAdCronJobParams *>(job_params);
+	ASSERT( params );
+	return new ScheddCronJob( params, *this );
 }

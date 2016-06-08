@@ -157,6 +157,8 @@ class SharedPortEndpoint: Service {
 	bool kill_thread;
 	//Handle to the pipe that listens for connections.
 	HANDLE pipe_end;
+	//temporary inheritable handle to above pipe
+	HANDLE inheritable_to_child;
 
 	//Bookkeeping information for the listener thread.
 	HANDLE thread_handle;
