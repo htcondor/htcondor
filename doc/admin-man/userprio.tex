@@ -765,15 +765,15 @@ it then negotiates with the \Condor{schedd} daemons in the system to
 try to match jobs to each group.
 It does this one group at a time.  
 By default, it goes in "starvation group order." 
-That is, the group whose current usage is farthest under its quota goes first,
-then the next, and so on.  
+That is, the group whose current usage is the smallest fraction of its
+quota goes first, then the next, and so on.  
 The "<none>" group implicitly at the root of the tree goes last.
 This ordering can be replaced by defining configuration variable
 \Macro{GROUP\_SORT\_EXPR}.
 The \Condor{negotiator} evaluates this ClassAd expression for each group 
 ClassAd, 
-sorts the group by the floating point result, 
-and then negotiates with the largest positive value going first.
+sorts the groups by the floating point result, 
+and then negotiates with the smallest positive value going first.
 Useful attributes to use are documented
 in section~\ref{sec:Priorities-in-Negotiation-and-Preemption}.
 
