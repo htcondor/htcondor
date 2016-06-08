@@ -34,7 +34,7 @@ public:
 
 private:
 	const StartdBenchJobMgr	&m_mgr;
-	const char * GetDefault( const char *item ) const;
+	char * GetDefault( const char *item ) const;
 	void GetDefault( const char *item, double &dv ) const;
 };
 

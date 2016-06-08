@@ -34,7 +34,7 @@ public:
 
 private:
 	const char	*m_libexec;
-	const char *GetDefault( const char *item ) const;
+	char *GetDefault( const char *item ) const;
 	void GetDefault( const char *item, double &dv ) const;
 };
 
