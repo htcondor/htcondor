@@ -209,16 +209,6 @@ Dag::Dag( /* const */ StringList &dagFiles,
 	_haltFile = HaltFileName( _dagFiles.next() );
 	_dagStatus = DAG_STATUS_OK;
 
-/*TEMPTEMP
-	if ( _isSplice == false ) {
-		MyString group; //TEMPTEMP
-		MyString user; //TEMPTEMP
-		GetAcctInfo( group, user );
-	}
-TEMPTEMP*/
-    debug_printf( DEBUG_QUIET, "DIAG group: <%s>\n", submitDagDeepOpts->acctGroup.Value() );//TEMPTEMP
-    debug_printf( DEBUG_QUIET, "DIAG user: <%s>\n", submitDagDeepOpts->acctGroupUser.Value() );//TEMPTEMP
-
 	return;
 }
 

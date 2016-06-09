@@ -67,7 +67,10 @@ class DagmanClassad {
 	void GetSetBatchName( const MyString &primaryDagFile,
 				MyString &batchName );
 
-		//TEMPTEMP -- document
+		/** Get the AcctGroup and AcctGroupUser values from our ClassAd.
+			@param group: A MyString to receive the AcctGroup value
+			@param user: A MyString to receive the AcctGroupUser value
+		*/
 	void GetAcctInfo( MyString &group, MyString &user );
 
   private:

@@ -116,7 +116,6 @@ struct SubmitDagDeepOptions
 	int priority; // Priority of parent of DAG node
 
 	bool suppress_notification;
-	//TEMPTEMP -- is this the right place for these?
 	MyString acctGroup;
 	MyString acctGroupUser;
 

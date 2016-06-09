@@ -348,14 +348,14 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 		// Add accounting group and user if we have them.
 		//
 	if ( dm._submitDagDeepOpts.acctGroup != "" ) {
-		args.AppendArg( "-append" );
+		args.AppendArg( "-a" );
 		MyString arg = "accounting_group=";
 		arg += dm._submitDagDeepOpts.acctGroup;
 		args.AppendArg( arg );
 	}
 
 	if ( dm._submitDagDeepOpts.acctGroupUser != "" ) {
-		args.AppendArg( "-append" );
+		args.AppendArg( "-a" );
 		MyString arg = "accounting_group_user=";
 		arg += dm._submitDagDeepOpts.acctGroupUser;
 		args.AppendArg( arg );

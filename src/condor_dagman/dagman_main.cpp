@@ -642,12 +642,6 @@ void main_init (int argc, char ** const argv) {
 	dagman.DAGManJobId.SetFromString( getenv( EnvGetName( ENV_ID ) ) );
 
 	dagman._dagmanClassad = new DagmanClassad( dagman.DAGManJobId );
-//TEMPTEMP>>>
-	//TEMPTEMP -- is this the right place for this?
-	dagman._dagmanClassad->GetAcctInfo(
-				dagman._submitDagDeepOpts.acctGroup,
-				dagman._submitDagDeepOpts.acctGroupUser );
-//<<<TEMPTEMP
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		// Minimum legal version for a .condor.sub file to be compatible
@@ -872,6 +866,10 @@ void main_init (int argc, char ** const argv) {
 
 	dagman._dagmanClassad->GetSetBatchName( dagman.primaryDagFile,
 				dagman._batchName );
+
+	dagman._dagmanClassad->GetAcctInfo(
+				dagman._submitDagDeepOpts.acctGroup,
+				dagman._submitDagDeepOpts.acctGroupUser );
 
 	dagman.ResolveDefaultLog();
 

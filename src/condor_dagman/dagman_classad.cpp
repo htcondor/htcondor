@@ -170,17 +170,13 @@ DagmanClassad::GetAcctInfo( MyString &group, MyString &user )
 		return;
 	}
 
-	//TEMPTEMP -- make sure results are set to "" if the attrs don't exist!
-	if ( !GetDagAttribute( ATTR_ACCT_GROUP, group, false ) ) {
-		//TEMPTEMP owner = "undef";
-	}
-debug_printf( DEBUG_QUIET, "DIAG group: %s\n", group.Value() );//TEMPTEMP
+	GetDagAttribute( ATTR_ACCT_GROUP, group, false );
+	debug_printf( DEBUG_VERBOSE, "Workflow accounting_group: <%s>\n",
+				group.Value() );
 
-	//TEMPTEMP -- make sure results are set to "" if the attrs don't exist!
-	if ( !GetDagAttribute( ATTR_ACCT_GROUP_USER, user, false ) ) {
-		//TEMPTEMP nodeName = "undef";
-	}
-debug_printf( DEBUG_QUIET, "DIAG user: %s\n", user.Value() );//TEMPTEMP
+	GetDagAttribute( ATTR_ACCT_GROUP_USER, user, false );
+	debug_printf( DEBUG_VERBOSE, "Workflow accounting_group_user: <%s>\n",
+				user.Value() );
 
 	CloseConnection( queue );
 
