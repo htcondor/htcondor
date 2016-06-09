@@ -17,13 +17,14 @@
 ##
 ##**************************************************************
 
+package ConcurrencyTools;
+
 use CondorTest;
 use CondorUtils;
 use base 'Exporter';
 
-our @EXPORT = qw(WaitForIt InitGlobals CheckStatus CountIdle ExaminsSlots ExamineQueue QueueMore Jobs DelayOnNegotiator CountRunning InitLimits);
+our @EXPORT = qw(WaitForIt InitGlobals CheckStatus CountIdle ExamineSlots ExamineQueue QueueMoreJobs DelayOnNegotiator CountRunning InitLimits);
 
-package ConcurrencyTools;
 
 BEGIN 
 {
@@ -44,7 +45,7 @@ my $expect_checks = 0;
 my $total_checks = 8;
 
 sub InitLimits {
-	print "InitLimits: start real test right away\n";
+	TLOG("InitLimits: this function now does nothing. starting real test..\n");
 	# we used to start a regular non-concurrency personal and do
 	# two set of jobs before testing concurrenct. No More. Just start
 	# real test.
@@ -57,7 +58,7 @@ sub InitGlobals{
 	$expect_checks = shift;
 	$expect_run = shift;
 	$expect_idle = shift;
-	print "InitGlobals: expect idle $expect_idle expect run $expect_run expect checks $expect_checks total checks $total_checks\n";
+	TLOG("InitGlobals: expect idle $expect_idle, run $expect_run,  checks $expect_checks, total checks $total_checks\n");
 };
 
 sub WaitForIt {
@@ -68,51 +69,46 @@ sub WaitForIt {
     my $res = 0;
     my $final = 0;
 
-	print "entered WaitForIt\n";
-	CondorTest::PrintTimeStamp();
+	TLOG("entered ConcurrencyTools::WaitForIt\n");
 
-	my @catchstuff;
+    #my @catchstuff;
     while ($count < $looplimit) {
-		@catchstuff = {};
+        #@catchstuff = {};
         $count += 1;
         $sleeptime = ($variance);
         sleep($sleeptime);
-        print "Loop $count in WaitForIt\n";
-		CondorTest::PrintTimeStamp();
+        TLOG("Loop $count in ConcurrencyTools::WaitForIt\n");
 
-		print "Current queue in WaitForIt\n";
-        CondorTest::runCondorTool("condor_q",\@catchstuff,2,{emit_output=>0});
-        print "Calling CheckStatus with final:$final\n";
+        #print "\tCurrent queue in WaitForIt\n";
+        #CondorTest::runCondorTool("condor_q",\@catchstuff,2,{emit_output=>0});
+        TLOG("Calling CheckStatus(final=$final)\n");
         $res = CheckStatus($final);
-        print "Result from CheckStatus:$res\n";
+        TLOG("Result from CheckStatus: $res\n");
         if($res == 1) {
-            print "WaitForIt got 1, we are really done\n";
+            print "\tWaitForIt got 1, we are really done\n";
             return(1);
         } elsif ($res == 2) {
             # wait on the next negotiator cycle to ensure
             # no more jobs start. Check one last time
             $final = 1;
-            print "Looking for the start of next negotiation cycle\n";
-			CondorTest::PrintTimeStamp();
+            TLOG("Looking for the start of next negotiation cycle\n");
             DelayOnNegotiator();
-            print "BACK FROM Looking for the start of next negotiation cycle\n";
-			CondorTest::PrintTimeStamp();
+            TLOG("BACK FROM Looking for the start of next negotiation cycle\n");
         } elsif ($res == -1) {
-            print "WaitForIt got -1, something went wrong\n";
+            print "\tWaitForIt got -1, something went wrong\n";
             return (-1);
         } elsif ($res == 0) {
-            print "We need more time in WaitForIt\n";
+            print "\tWe need more time in WaitForIt\n";
         }
         if( $count != $looplimit ) {
             #$sleeptime = ($count * $variance);
-            print "sleep time set to $sleeptime\n";
+            print "\tsleep time set to $sleeptime\n";
         } else { 
-            print "Timeout in WaitForIt\n";
+            print "\tTimeout in WaitForIt\n";
             return(-1);
         }
     }
-	print "leaving WaitForIt\n";
-	CondorTest::PrintTimeStamp();
+	TLOG("leaving ConcurrencyTools::WaitForIt\n");
 };
 
 # return 0 needs more time
@@ -122,7 +118,7 @@ sub WaitForIt {
 sub CheckStatus {
     my $amidone = shift;
     $running_now = CountRunning();
-    print "Running Now:$running_now ($expect_run) Idle:$idles ($expect_idle)\n";
+    print "\tSaw Running: $running_now, Idle: $idles; Expecting Running: $expect_run, Idle: $expect_idle\n";
     if($running_now > $expect_run) {
         # clearly unhappy
         print "Running jobs <$running_now> exceeded concurrency limits <$expect_run>\n";
@@ -168,27 +164,34 @@ sub CheckStatus {
     }
 };
 
+
+#    JobStatus codes:
+#         1 I IDLE
+#         2 R RUNNING
+#         3 X REMOVED
+#         4 C COMPLETED
+#         5 H HELD
+#         6 > TRANSFERRING_OUTPUT
+#         7 S SUSPENDED
+
 sub CountRunning
 {
     my $runcount = 0;
-    my $line = ""; 
     my @goods = (); 
 
-	print "CountRunning: enter and get queue information\n";
-    CondorTest::runCondorTool("condor_q",\@goods,2,{emit_output => 1});
-	print "CountRunning: have queue information\n";
-    foreach my $job (@goods) {
-        chomp($job);
-        $line = $job;
-        #print "JOB: $line\n";
-        if($line =~ /^.*?\sR\s.*$/) {
+	TLOG("CountRunning: enter and get queue information\n");
+    CondorTest::runCondorTool("condor_q -af:j JobStatus",\@goods,2,{emit_output => 1});
+	TLOG("CountRunning: have queue information\n");
+    foreach my $line (@goods) {
+        #print "JOB: $line";
+        if($line =~ /\s+2\s*$/) {
             $runcount += 1;
-            print "Run count now:$runcount\n";
+            #print "$runcount: $runcount\n";
         } else {
-            #print "Parse error or Idle:$line\n";
+            #print "Parse error or Idle:$line";
         }   
     }   
-	print "CountRunning: returning $runcount\n";
+	print "\tCountRunning: returning $runcount\n";
     return($runcount);
 }
 
@@ -196,21 +199,19 @@ sub CountIdle
 {
     my $expectidle = shift;
     my $idlecount = 0;
-    my $line = "";
     my @goods = ();
 
-    print scalar(localtime()) . " In count Idle:allow_too_few_idle_once=$allow_too_few_idle_once\n";
+    TLOG("In count Idle allow_too_few_idle_once=$allow_too_few_idle_once\n");
     #runcmd("condor_q");
-    CondorTest::runCondorTool("condor_q",\@goods,2,{emit_output => 1});
-    foreach my $job (@goods) {
-        chomp($job);
-        $line = $job;
-        #print "JOB: $line\n";
-        if($line =~ /^.*?\sI\s.*$/) {
+    CondorTest::runCondorTool("condor_q -af:j JobStatus",\@goods,2,{emit_output => 1});
+    foreach my $line (@goods) {
+        #print "JOB: $line";
+        if($line =~ /\s+1\s*$/) {
             $idlecount += 1;
-            print "Idle count now <$idlecount>, expecting <$expectidle>\n";
+            # print "Idle count now <$idlecount>, expecting <$expectidle>\n";
         }
     }
+	print "\tIdle count now $idlecount, expecting $expectidle\n";
     if($allow_too_few_idle_once > 1) {
         # Case in point is a concurrency limit of one but two jobs
         # start. Triggering a fail on too few idle, could be failing
@@ -222,7 +223,7 @@ sub CountIdle
         $allow_too_few_idle_once -= 1;
     } else {
         if($idlecount != $expectidle) {
-            CondorTest::runToolNTimes("condor_q", 1, 1);
+            CondorTest::runToolNTimes("condor_q -af:j JobStatus", 1, 1);
             die "Expected $expectidle idle but found $idlecount - die\n";
         }
     }
@@ -233,7 +234,6 @@ sub CountIdle
 sub ExamineSlots
 {
     my $waitforit = shift;
-    my $line = "";
 
     my $available = 0;
     my $looplimit = 10;
@@ -244,10 +244,8 @@ sub ExamineSlots
     }
     while($count <= $looplimit) {
         $count += 1;
-        CondorTest::runCondorTool("condor_status",\@goods,2,{emit_output => 0});
-        foreach my $job (@goods) {
-            chomp($job);
-            $line = $job;
+        CondorTest::runCondorTool("condor_status -tot",\@goods,2,{emit_output => 0});
+        foreach my $line (@goods) {
             if($line =~ /^\s*Total\s+(\d+)\s*(\d+)\s*(\d+)\s*(\d+).*/) {
                 #print "<$4> unclaimed <$1> Total slots\n";
                 $available = $4;
@@ -288,21 +286,18 @@ sub ExamineSlots
 
 sub ExamineQueue
 {
-    my $line = "";
-
-    print "\nExpecting all jobs to be gone. Lets See.\n";
+    TLOG("Expecting all jobs to be gone. Lets See.\n");
     my @goods = ();
-    CondorTest::runCondorTool("condor_q",\@goods,2);
-    foreach my $job (@goods) {
-        chomp($job);
-        $line = $job;
-        print "JOB: $line\n";
-        if($line =~ /^\s*(\d+)\s*jobs; .*$/) {
-            $idlecount += 1;
-            print "<$1> jobs still running\n";
+    CondorTest::runCondorTool("condor_q -tot",\@goods,2);
+    foreach my $line (@goods) {
+        # print "\tJOB: $line";
+        if($line =~ /^\s*(\d+)\s*jobs;\s+/) {
+            if ($1 ne "0") {
+               print "\t$1 jobs still in the queue\n";
+            }
         }
     }
-    print "Total slots available here:\n\n";
+    TLOG("Total slots available here:\n\n");
     CondorTest::runToolNTimes("condor_status",1,0);
 }
 
@@ -361,8 +356,7 @@ sub SetIdleTolerance {
  };
 
 sub DelayOnNegotiator {
-    print "Watching for another job to start up\n";
-	CondorTest::PrintTimeStamp();
+    TLOG("Watching for another job to start up\n");
     # Started Negotiation Cycle A wait of about 10 seconds is caused here
     # leading the next one to occur in about 20 seconds
     #print scalar(localtime()) . " before multicheck\n";
@@ -376,8 +370,7 @@ sub DelayOnNegotiator {
         match_new => "true",
         no_result => "true",
     );
-	CondorTest::PrintTimeStamp();
-    print " After multicheck\n";
+    TLOG("After multicheck\n");
     # CondorTest::RemoveTimed(); done before returning from CondorLog::RunCheckMultiple
 };
 

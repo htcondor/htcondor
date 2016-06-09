@@ -95,9 +95,9 @@ $special = SubmitReturnCluster($sleepf2);
 my $numberinstate = 0;
 my $result = 0;
 CondorTest::VerifyNoJobsInState("running",2,30);
-system(" condor_q -run");
+system(" condor_q -run -nobatch");
 
-my @cmdout = `condor_q -run`;
+my @cmdout = `condor_q -run -nobatch`;
 
 my %jobs = ();
 foreach my $line (@cmdout) {
@@ -110,7 +110,7 @@ foreach my $line (@cmdout) {
 	}
 }
 
-# if this worked, spcial cluster should be 5 and the plain
+# if this worked, special cluster should be 5 and the plain
 # should be some number less.
 if($jobs{$special} == 5){
     print "Special job $special running on dedicated slot $jobs{$special}\n";

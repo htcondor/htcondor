@@ -1625,7 +1625,7 @@ sub getJobStatus
 	my @status;
 	my $qstatcluster = shift;
 	my $verbose = shift;
-	my $cmd = "condor_q $qstatcluster -format %d JobStatus";
+	my $cmd = "condor_q $qstatcluster -af JobStatus";
 	my $qstat = 1;
 	# shhhhhhhh third arg 0 makes it hush its output
 	if(defined $verbose) {
@@ -4045,7 +4045,7 @@ sub VerifyNoJobsInState
 			return($jobsstatus{$state});
         }
         $count += 1;
-        @queue = `condor_q`;
+        @queue = `condor_q -tot`;
         foreach my $line (@queue) {
             fullchomp($line);
             if($line =~ /^(\d+)\s+jobs;\s+(\d+)\s+completed,\s+(\d+)\s+removed,\s+(\d+)\s+idle,\s+(\d+)\s+running,\s+(\d+)\s+held,\s+(\d+)\s+suspended.*$/) {

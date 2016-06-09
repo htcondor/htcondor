@@ -46,7 +46,7 @@ my $GetClusterId = sub {
 
 my $on_submit = sub {
 	my %info = @_;
-	my $cmd = "condor_q -cputime ";
+	my $cmd = "condor_q -cputime -nobatch";
 
 	print "Running $cmd - ";
 	my $cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);

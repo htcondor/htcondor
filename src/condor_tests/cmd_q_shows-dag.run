@@ -263,9 +263,9 @@ queue
 
 	emit_file("-B_A_A.cmd", specialize_content($sub_q_content, "TAG"=>"B_A_A", "TIME"=>"80", "LOT"=>"-B_A"));
 	if (CondorUtils::is_windows()) {
-		emit_file("-q.bat", "\@condor_q -dag\n\@condor_release -all\@exit /b 1\n");
+		emit_file("-q.bat", "\@condor_q -dag -nobatch\n\@condor_release -all\@exit /b 1\n");
 	} else {
-		emit_file("-q.sh", "#!/usr/bin/env bash\ncondor_q -dag\ncondor_release -all\nexit 1\n");
+		emit_file("-q.sh", "#!/usr/bin/env bash\ncondor_q -dag -nobatch\ncondor_release -all\nexit 1\n");
 	}
 }
 
