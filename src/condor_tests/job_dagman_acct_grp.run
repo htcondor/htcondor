@@ -21,19 +21,19 @@
 use CondorTest;
 use CondorUtils;
 
-$cmd = 'job_dagman_batch_name-upper.dag';
-$testdesc =  'Condor submit dag - setting & propagation of batch-name - scheduler U';
-$testname = "job_dagman_batch_name";
-$dagman_args = "-verbose -batch-name job_dagman_batch_name";
+$cmd = 'job_dagman_acct_grp-upper.dag';
+$testdesc =  'Condor submit dag - setting & propagation of accounting group and user - scheduler U';
+$testname = "job_dagman_acct_grp";
+$dagman_args = "-verbose -append accounting_group=Physics -append accounting_group_user=Albert";
 
-@outfiles = ("job_dagman_batch_name-upper.dag.dagman.out",
-	"job_dagman_batch_name-lower.dag.dagman.out",
-	"job_dagman_batch_name-NodeLA.out",
-	"job_dagman_batch_name-NodeLB.out",
-	"job_dagman_batch_name-NodeUA.out",
-	"job_dagman_batch_name-NodeUB.out");
+@outfiles = ("job_dagman_acct_grp-upper.dag.dagman.out",
+	"job_dagman_acct_grp-lower.dag.dagman.out",
+	"job_dagman_acct_grp-NodeLA.out",
+	"job_dagman_acct_grp-NodeLB.out",
+	"job_dagman_acct_grp-NodeUA.out",
+	"job_dagman_acct_grp-NodeUB.out");
 
-$expected_contents = "batch-name: job_dagman_batch_name ";
+$expected_contents = "group: Physics user: Albert ";
 
 my $killedchosen = 0;
 
