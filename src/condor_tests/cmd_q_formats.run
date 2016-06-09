@@ -44,8 +44,8 @@ my $len = scalar @lines;
 my %all_keys;
 my $JobStatus = 1;
 
-my $via_condor_hold = 1;
-my $user_submit_to_hold = 0;
+my @hold_reasons = {1, 15, 3, 21};
+my $command_arg = '-nobatch';
 
 my $idle_cnt = 0;
 my $run_cnt = 0;
@@ -96,6 +96,7 @@ for my $i (0..$index-1){
 	$Attr{$i}{ImageSize} = cal_from_raw($Attr{$i}{ImageSize_RAW});
 }
 
+various_hold_reasons();
 add_status_ads();
 change_clusterid($ClusterId);
 multi_owners();
@@ -111,8 +112,11 @@ foreach my $k1 (sort keys %Attr){
 }
 close(FH);
 
+
+
 ############## generate an output from condor_q -job simulate_job.ads ###########################
-my @table = `condor_q -job $fname`;
+my @table = `condor_q -job $fname $command_arg`;
+
 
 # read everything before -- and store them to $other
 my %other;
@@ -137,38 +141,48 @@ my @fields = split_fields(\%data);
 my $arg = $table[(scalar @table)-1];
 my @summary = split / /, $arg;
 
-###################### check if the format of the output is correct #############################
+#############################################################
+########################  RULES #############################
+#############################################################
 my %st_num;
 my %cnt_num;
 %st_num = (1 => 'I', 2=>'R', 3=>'X', 4=>'C', 5=> 'H', 6=>'>');
 %cnt_num = (1 => \$idle_cnt, 2 => \$run_cnt, 3 => \$rmd_cnt, 4 => \$cmplt_cnt, 5 => \$hold_cnt, 6 => \$suspnd_cnt);
 
-# rules for checking if data is correct
-my %rules = (
-		ID => sub {
-		if ($Attr{$_[0]}{GlobalJobId} =~ /.+#(.+)#.+/
-			)
-		{
-		return $_[1] eq $1;
+# rules for checking if DATA is correct
+my %rules_data = (
+	'ID' => sub {
+		if ($Attr{$_[0]}{GlobalJobId} =~ /.+#(.+)#.+/){
+			return $_[1] eq $1;
 		} else {
-		return 0;
+			return 0;
 		}
-		},
-		OWNER => sub {return substr($Attr{$_[0]}{Owner},1, length($Attr{$_[0]}{Owner})-2) eq $_[1]},
-		SUBMITTED => sub{return $_[1]  =~ /[0-9]+\/[0-9]+\s+[0-9]+:[0-9]+/;},
-		RUN_TIME => sub{return $_[1] =~ /[0-9]\+[0-9][0-9]:[0-9][0-9]:[0-9][0-9]/;},
-		ST => sub{
-			if (defined $st_num{$Attr{$_[0]}{JobStatus}} && $_[1] eq $st_num{$Attr{$_[0]}{JobStatus}}){
-				${$cnt_num{$Attr{$_[0]}{JobStatus}}}++;
-				return 1;
-			} else {
-				print "        ERROR: JobStatus is $Attr{$_[0]}{JobStatus}, should be $_[1].\n";
-				return 0;
-			}
+	},
+	'OWNER' => sub {return substr($Attr{$_[0]}{Owner},1, length($Attr{$_[0]}{Owner})-2) eq $_[1]},
+	'SUBMITTED' => sub{return $_[1]  =~ /[0-9]+\/[0-9]+\s+[0-9]+:[0-9]+/;},
+	'RUN_TIME' => sub{return $_[1] =~ /[0-9]\+[0-9][0-9]:[0-9][0-9]:[0-9][0-9]/;},
+	'ST' => sub{
+		if (defined $st_num{$Attr{$_[0]}{JobStatus}} && $_[1] eq $st_num{$Attr{$_[0]}{JobStatus}}){
+			${$cnt_num{$Attr{$_[0]}{JobStatus}}}++;
+			return 1;
+		} else {
+			print "        ERROR: JobStatus is $Attr{$_[0]}{JobStatus}, should be $_[1].\n";
+			return 0;
 		}
+	},
+	'HOST(S)' => sub {return $_[1] eq substr($Attr{$_[0]}{RemoteHost},1, length($Attr{$_[0]}{RemoteHost})-2);}
+
 );
 
-if (check_data(\%rules)){
+# rules for checking if HEADING is correct
+my %rules_heading = (
+	'-nobatch' => sub {return $data{0} =~ /(\s*)ID(\s+)OWNER(\s+)SUBMITTED(\s+)RUN_TIME(\s+)ST(\s+)PRI(\s+)SIZE(\s+)CMD/},
+	'-run' => sub {return $data{0} =~ /(\s*)ID(\s+)OWNER(\s+)SUBMITTED(\S+)RUN_TIME(\s+)HOST\(S\)/}
+);
+###################### check if the format of the output is correct #############################
+
+
+if (check_heading(\%rules_heading) && check_data(\%rules_data)){
 	RegisterResult(check_summary(), test_name=>$testname, check_name=>"condor_q formats");
 } else {
 	RegisterResult(0, test_name=>$testname, check_name=>"condor_q formats");
@@ -186,22 +200,36 @@ sub cal_from_raw{
 	return $answer;
 }
 
+sub various_hold_reasons{
+	if ($JobStatus == 5){
+		my $nn = 0;
+		for my $i (0..(scalar keys %Attr)-1){
+			if ($nn >= scalar(@hold_reasons)){
+				$Attr{$i}{HoldReasonCode} = $hold_reasons[$nn];
+				$nn++;
+			} else {
+				$Attr{$i}{HoldReasonCode} = $hold_reasons[0];
+				$nn = 0;
+			}
+		}
+	}
+}
+
 # function to add additional job ads according to JobStatus
 sub add_status_ads{
-	for my $i (0..$index-1){
+	for my $i (0..(scalar keys %Attr)-1){
 
 # HOLD
 		if ($JobStatus == 5){
 
 # been directly put on hold
-			if ($user_submit_to_hold == 1){
+			if ($Attr{$i}{HoldReasonCode}==15){
 				$Attr{$i}{HoldReason} = "submitted on hold at user's request";
-				$Attr{$i}{HoldReasonCode} = 15;
 				$Attr{$i}{JobStatus} = 5;
 			}
 
 # from run to hold
-			if ($via_condor_hold == 1){
+			if ($Attr{$i}{HoldReasonCode} == 1){
 				my $extra_time = int(rand(4));
 				$Attr{$i}{AutoClusterAttrs} = "JobUniverse,LastCheckpointPlatform,NumCkpts,MachineLastMatchTime,ConcurrencyLimits,NiceUser,Rank,Requirements,DiskUsage,FileSystemDomain,ImageSize,MemoryUsage,RequestDisk,RequestMemory,ResidentSetSize";
 				$Attr{$i}{AutoClusterId} = 10;
@@ -209,7 +237,6 @@ sub add_status_ads{
 				$Attr{$i}{ByteSent} = 0.0;
 				$Attr{$i}{CumulativeSlotTime} = ($Attr{$i}{EnteredCurrentStatus} - $Attr{$i}{QDate} - $extra_time)."\."."0";
 				$Attr{$i}{HoldReason} = "\"via condor_hold (by user ".$Attr{$i}{Owner}.")\"";
-				$Attr{$i}{HoldReasonCode} = 1;
 				$Attr{$i}{HoldReasonSubCode} = 0;
 				$Attr{$i}{ImageSize_RAW} = 4068;
 				$Attr{$i}{ImageSize} = cal_from_raw($Attr{$i}{ImageSize_RAW});
@@ -287,9 +314,6 @@ sub multi_owners{
 		$Attr{$k}{Owner} = substr($Attr{$k}{Owner}, 0, length($Attr{$k}{Owner})-1).$k."\"";
 	}
 }
-
-# function to print the hash table
-# Usage: print_hash(\%Attr)
 
 
 # function to trim white spaces at the begining and the end of the string
@@ -385,29 +409,33 @@ sub split_fields {
 	return @fields;
 }
 
-
-
-# check if jobID, owner are correct, if date and time are in the correct format, and total job
-# number in respective state is correct;
-# Usage: check_data(\%rules);
-sub check_data {
+sub check_heading{
 	my $succeeded;
+	my %heading_style = %{$_[0]};
 	TLOG("Checking heading format of the output file\n");
-	my %space_pos_head; # store where each heading word starts and ends # starts from 1
-		if ($data{0} =~ /(\s*)ID(\s+)OWNER(\s+)SUBMITTED(\s+)RUN_TIME(\s+)ST(\s+)PRI(\s+)SIZE(\s+)CMD/){
-			$succeeded = 1;
+	if (defined $command_arg){
+		if ($heading_style{$command_arg}()){
+			return $succeeded = 1;
 			print "        PASSED: Headings are correct\n";
 		} else{
 			print "        ERROR: Headings are not correct\n";
 			return $succeeded = 0;
 		}
+	}
 
+}
+
+# check if jobID, owner are correct, if date and time are in the correct format, and total job
+# number in respective state is correct;
+# Usage: check_data(\%rules_data);
+sub check_data {
+	my $succeeded;
 	my %ruless = %{$_[0]};
 	for my $i (0..(scalar @fields)-1){
 		TLOG("Checking ".$fields[$i][0]."\n");
 		if (defined $ruless{$fields[$i][0]}){
 			for my $k (1..(scalar @{$fields[$i]})-1){
-				if ($rules{$fields[$i][0]}($k-1, $fields[$i][$k])){
+				if ($ruless{$fields[$i][0]}($k-1, $fields[$i][$k])){
 					$succeeded = 1;
 				} else {
 					print "        ERROR: $fields[$i][0] is not correct.\n";
