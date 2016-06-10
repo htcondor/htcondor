@@ -856,8 +856,8 @@ void Accountant::UpdatePriorities()
   float Priority, OldPrio, PriorityFactor;
   int UnchargedTime;
   float WeightedUnchargedTime;
-  float AccumulatedUsage;
-  float WeightedAccumulatedUsage;
+  float AccumulatedUsage, OldAccumulatedUsage;
+  float WeightedAccumulatedUsage, OldWeightedAccumulatedUsage;
   float RecentUsage;
   float WeightedRecentUsage;
   int ResourcesUsed;
@@ -898,16 +898,48 @@ void Accountant::UpdatePriorities()
     RecentUsage=float(ResourcesUsed)+float(UnchargedTime)/TimePassed;
     WeightedRecentUsage=float(WeightedResourcesUsed)+float(WeightedUnchargedTime)/TimePassed;
     Priority=Priority*AgingFactor+WeightedRecentUsage*(1-AgingFactor);
+	if (Priority < MinPriority) {
+		Priority = MinPriority;
+	}
+
+	OldAccumulatedUsage = AccumulatedUsage;
     AccumulatedUsage+=ResourcesUsed*TimePassed+UnchargedTime;
+
+	OldWeightedAccumulatedUsage = WeightedAccumulatedUsage;
     WeightedAccumulatedUsage+=WeightedResourcesUsed*TimePassed+WeightedUnchargedTime;
 
-    SetAttributeFloat(key,PriorityAttr,Priority);
-    SetAttributeFloat(key,AccumulatedUsageAttr,AccumulatedUsage);
-    SetAttributeFloat(key,WeightedAccumulatedUsageAttr,WeightedAccumulatedUsage);
-    if (AccumulatedUsage>0 && BeginUsageTime==0) SetAttributeInt(key,BeginUsageTimeAttr,T);
-    if (RecentUsage>0) SetAttributeInt(key,LastUsageTimeAttr,T);
-    SetAttributeInt(key,UnchargedTimeAttr,0);
-    SetAttributeFloat(key,WeightedUnchargedTimeAttr,0.0);
+	if (OldPrio != Priority) {
+    	SetAttributeFloat(key,PriorityAttr,Priority);
+	}
+
+	if (OldAccumulatedUsage != AccumulatedUsage) {
+    	SetAttributeFloat(key,AccumulatedUsageAttr,AccumulatedUsage);
+	}
+
+	if (OldWeightedAccumulatedUsage != WeightedAccumulatedUsage) {
+    	SetAttributeFloat(key,WeightedAccumulatedUsageAttr,WeightedAccumulatedUsage);
+	}
+
+    if (AccumulatedUsage>0 && BeginUsageTime==0) {
+		SetAttributeInt(key,BeginUsageTimeAttr,T);
+	}
+
+    if (RecentUsage>0) {
+		SetAttributeInt(key,LastUsageTimeAttr,T);
+	}
+
+		// This attribute is almost always 0, so don't write it unless needed
+	int oldUnchargedTime = -1;
+	GetAttributeInt(key,UnchargedTimeAttr, oldUnchargedTime);
+	if (oldUnchargedTime != 0) {
+    	SetAttributeInt(key,UnchargedTimeAttr,0);
+	}
+
+	float oldWeightedUnchargedTime = -1.0;
+	GetAttributeFloat(key,WeightedUnchargedTimeAttr, oldWeightedUnchargedTime);
+	if (oldWeightedUnchargedTime != 0.0) {
+    	SetAttributeFloat(key,WeightedUnchargedTimeAttr,0.0);
+	}
 
     if (Priority<MinPriority && ResourcesUsed==0 && AccumulatedUsage==0 && !set_prio_factor) {
 		DeleteClassAd(key);
