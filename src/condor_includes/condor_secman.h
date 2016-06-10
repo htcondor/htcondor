@@ -137,9 +137,9 @@ public:
 									bool use_tmp_sec_session=false,
 									bool force_authentication=false);
 
-	ClassAd * 				ReconcileSecurityPolicyAds(ClassAd &cli_ad, ClassAd &srv_ad);
+	ClassAd * 				ReconcileSecurityPolicyAds(const ClassAd &cli_ad, const ClassAd &srv_ad);
 	bool 					ReconcileSecurityDependency (sec_req &a, sec_req &b);
-	SecMan::sec_feat_act	ReconcileSecurityAttribute(const char* attr, ClassAd &cli_ad, ClassAd &srv_ad, bool *required = NULL);
+	SecMan::sec_feat_act	ReconcileSecurityAttribute(const char* attr, const ClassAd &cli_ad, const ClassAd &srv_ad, bool *required = NULL);
 	MyString			ReconcileMethodLists( char * cli_methods, char * srv_methods );
 
 
@@ -152,8 +152,8 @@ public:
 	static	MyString 		getDefaultCryptoMethods();
 	static	SecMan::sec_req 		sec_alpha_to_sec_req(char *b);
 	static	SecMan::sec_feat_act 	sec_alpha_to_sec_feat_act(char *b);
-	static	SecMan::sec_req 		sec_lookup_req( ClassAd &ad, const char* pname );
-	static	SecMan::sec_feat_act 	sec_lookup_feat_act( ClassAd &ad, const char* pname );
+	static	SecMan::sec_req 		sec_lookup_req( const ClassAd &ad, const char* pname );
+	static	SecMan::sec_feat_act 	sec_lookup_feat_act( const ClassAd &ad, const char* pname );
 
 		// For each auth level in config hierarchy, look up config value
 		// and return first one found.  Optionally, set param_name to the
@@ -178,9 +178,9 @@ public:
 
 	static	int 			sec_char_to_auth_method( char* method );
 
-	bool 					sec_copy_attribute( ClassAd &dest, ClassAd &source, const char* attr );
+	bool 					sec_copy_attribute( ClassAd &dest, const ClassAd &source, const char* attr );
 
-	bool 					sec_copy_attribute( ClassAd &dest, const char *to_attr, ClassAd &source, const char *from_attr );
+	bool 					sec_copy_attribute( ClassAd &dest, const char *to_attr, const ClassAd &source, const char *from_attr );
 
 	bool		set_parent_unique_id(const char *v);
 	char*		my_parent_unique_id();
