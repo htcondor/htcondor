@@ -25,7 +25,11 @@ display_dots () {
     fi
     while [ 1 ]; do
         # Get parent ID
+        # Note: $$ may be the parent's pid
         ppid=`ps -p $$ -o ppid=`
+        if [ $? -ne 0 ] ; then
+            exit
+        fi
         if [ "$ppid" -eq 1 ]; then
             exit
         fi
