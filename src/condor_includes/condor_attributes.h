@@ -472,6 +472,7 @@
 #define ATTR_NUM_HOPS_TO_LAST_CKPT_SERVER  "NumHopsToLastCkptServer"
 #define ATTR_NUM_HOPS_TO_CKPT_SERVER  "NumHopsToCkptServer"
 #define ATTR_NUM_JOB_STARTS  "NumJobStarts"
+#define ATTR_NUM_JOB_COMPLETIONS "NumJobCompletions"
 #define ATTR_NUM_JOB_RECONNECTS  "NumJobReconnects"
 #define ATTR_NUM_PIDS  "NumPids"
 #define ATTR_NUM_RESTARTS  "NumRestarts"

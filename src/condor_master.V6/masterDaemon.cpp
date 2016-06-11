@@ -839,7 +839,7 @@ int daemon::RealStart( )
 	}
 	#endif
 
-	if (!strcmp(name_in_config_file,"SHARED_PORT"))
+	if( daemon_is_shared_port )
 	{
 		const condor_utils::SystemdManager & sd = condor_utils::SystemdManager::GetInstance();
 		const std::vector<int> &fds = sd.GetFDs();

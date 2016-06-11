@@ -1906,6 +1906,13 @@ RemoteResource::resourceExit( int reason_for_exit, int exit_status )
 	}
 }
 
+void
+RemoteResource::incrementJobCompletionCount() {
+	int numJobCompletions = 0;
+	jobAd->LookupInteger( ATTR_NUM_JOB_COMPLETIONS, numJobCompletions );
+	++numJobCompletions;
+	jobAd->Assign( ATTR_NUM_JOB_COMPLETIONS, numJobCompletions );
+}
 
 void 
 RemoteResource::setResourceState( ResourceState s )
