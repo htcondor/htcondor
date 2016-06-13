@@ -1161,6 +1161,9 @@ init_job_ad()
 	buffer.formatstr( "%s = 0", ATTR_NUM_JOB_STARTS);
 	InsertJobExpr (buffer);
 
+	buffer.formatstr( "%s = 0", ATTR_NUM_JOB_COMPLETIONS);
+	InsertJobExpr (buffer);
+
 	buffer.formatstr( "%s = 0", ATTR_NUM_RESTARTS);
 	InsertJobExpr (buffer);
 
