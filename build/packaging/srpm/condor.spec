@@ -1226,6 +1226,7 @@ rm -rf %{buildroot}
 %_libexecdir/condor/glite/bin/slurm_cancel.sh
 %_libexecdir/condor/glite/bin/slurm_hold.sh
 %_libexecdir/condor/glite/bin/slurm_resume.sh
+%_libexecdir/condor/glite/bin/slurm_status.py
 %_libexecdir/condor/glite/bin/slurm_status.sh
 %_libexecdir/condor/glite/bin/slurm_submit.sh
 %if ! %uw_build
@@ -1750,6 +1751,7 @@ rm -rf %{buildroot}
 %_libexecdir/condor/glite/bin/pbs_cancel.sh
 %_libexecdir/condor/glite/bin/pbs_hold.sh
 %_libexecdir/condor/glite/bin/pbs_resume.sh
+%_libexecdir/condor/glite/bin/pbs_status.py
 %_libexecdir/condor/glite/bin/pbs_status.sh
 %_libexecdir/condor/glite/bin/pbs_submit.sh
 %_libexecdir/condor/glite/bin/runcmd.pl.template
