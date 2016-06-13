@@ -72,6 +72,7 @@ if(NOT WIN_EXEC_NODE_ONLY)
                 slurm_resume.sh
                 slurm_status.sh
                 slurm_submit.sh
+                slurm_status.py
                 DESTINATION ${C_LIBEXEC}/glite/bin
                 PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
         endif()
