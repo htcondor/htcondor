@@ -58,6 +58,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Improved the performance of the \Condor{negotiator} when running
+with a large number of users or groups.  The accounting data is only
+written to disk when it changes, not unconditionally.
+\Ticket{5719}
+
 \item The EC2 GAHP now rate-limits its requests, and responds to overload
 warnings with an exponential back-off.  Additionally, fewer operations are
 now performed on a per-job basis (as few as one in some cases).  The
