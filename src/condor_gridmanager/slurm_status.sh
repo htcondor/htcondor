@@ -19,6 +19,10 @@
 
 . `dirname $0`/blah_load_config.sh
 
+if [ -x ${blah_bin_directory}/slurm_status.py ] ; then
+    exec ${blah_bin_directory}/slurm_status.py "$@"
+fi
+
 if [ -z "$slurm_binpath" ] ; then
   slurm_binpath=/usr/bin
 fi
