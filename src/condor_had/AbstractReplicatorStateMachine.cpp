@@ -102,15 +102,20 @@ AbstractReplicatorStateMachine::initializeReplicationList( char* buffer )
 
             continue;
         }
-        if( my_addr.addressPointsToMe( Sinful(sinfulAddress) ) ) {
+
+		// See comments HADStateMachine::getHadList().
+		Sinful s( sinfulAddress );
+		free( sinfulAddress );
+		s.setSharedPortID( my_addr.getSharedPortID() );
+
+dprintf( D_ALWAYS, "Checking address with shared port ID '%s'...\n", s.getSinful() );
+        if( my_addr.addressPointsToMe( s.getSinful() ) ) {
+dprintf( D_ALWAYS, "... found myself in list: %s\n", s.getSinful() );
             isMyAddressPresent = true;
         }
         else {
-            m_replicationDaemonsList.insert( sinfulAddress );
+            m_replicationDaemonsList.insert( s.getSinful() );
         }
-        // pay attention to release memory allocated by malloc with free and by
-        // new with delete here utilToSinful returns memory allocated by malloc
-        free( sinfulAddress );
     }
 
     if( !isMyAddressPresent ) {
