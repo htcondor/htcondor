@@ -124,7 +124,7 @@ public:
 		//                  eg "[::1]"
 	MyString to_ip_string(bool decorate=false) const;
 		// We must "decorate".
-	MyString to_ip_and_port_string();
+	MyString to_ip_and_port_string() const;
 		// Have I mentioned recently how much I hate life?
 	MyString to_ccb_safe_string();
 		// it it fails on inet_ntop(), returns NULL and given buf

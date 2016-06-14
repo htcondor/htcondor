@@ -539,7 +539,7 @@ MyString condor_sockaddr::to_ip_string(bool decorate) const
 	return ret;
 }
 
-MyString condor_sockaddr::to_ip_and_port_string() {
+MyString condor_sockaddr::to_ip_and_port_string() const {
 	// Using formatstr() would be better in every possible way, but it
 	// doesn't exist in libcondorsyscall.
 	std::ostringstream oss;

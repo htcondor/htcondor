@@ -829,21 +829,33 @@ HADStateMachine::getHadList( const char *str,
 
     bool iAmPresent = false;
     while( (try_address = had_list.next()) ) {
-        char *sinful_addr = utilToSinful( try_address );
+        char * sinful_addr = utilToSinful( try_address );
 		dprintf(D_ALWAYS,
-				"HADStateMachine::initializeHADList my address %s "
-				"vs. next address in the list%s\n",
+				"HADStateMachine::initializeHADList my address '%s' "
+				"vs. address in the list '%s'\n",
 				my_addr.getSinful(), sinful_addr );
         if( sinful_addr == NULL ) {
             dprintf( D_ALWAYS,
-					 "HAD CONFIGURATION ERROR: pid %d", daemonCore->getpid() );
-            dprintf( D_ALWAYS,"not valid address %s\n", try_address );
-
+					 "HAD CONFIGURATION ERROR: pid %d "
+					 "address '%s' not valid\n",
+					 daemonCore->getpid(), try_address );
             utilCrucialError( "" );
             continue;
         }
-		allIps.insert( sinful_addr );
-        if( my_addr.addressPointsToMe( Sinful(sinful_addr) ) ) {
+		// The list doesn't include shared port IDs, so if we've got one
+		// give it to each other address in the list before we check to
+		// see if they're the same.  We know that sinful_addr can't
+		// already have a shared port ID because we called utilToSinful,
+		// and not just the Sinful constructor.  (The Sinful object and/or
+		// constructor should probably resolve hostnames, but HAD does it
+		// itself.)
+		Sinful s( sinful_addr );
+		free( sinful_addr );
+		s.setSharedPortID( my_addr.getSharedPortID() );
+		allIps.insert( s.getSinful() );
+dprintf( D_ALWAYS, "Checking address with shared port ID '%s'...\n", s.getSinful() );
+        if( my_addr.addressPointsToMe( s ) ) {
+dprintf( D_ALWAYS, "... found myself in list: %s\n", s.getSinful() );
             iAmPresent = true;
             // HAD id of each HAD is just the index of its <ip:port>
             // in HAD_LIST in reverse order
@@ -856,13 +868,8 @@ HADStateMachine::getHadList( const char *str,
 				isPrimaryCopy = true;
             }
         } else {
-            otherIps.insert( sinful_addr );
+            otherIps.insert( s.getSinful() );
         }
-
-		// put attention to release memory allocated by malloc with
-		// free and by new with delete here utilToSinful returns
-		// memory allocated by malloc
-        free( sinful_addr );
         counter-- ;
     } // end while
 
