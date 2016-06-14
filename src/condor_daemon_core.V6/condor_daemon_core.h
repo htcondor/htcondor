@@ -2195,6 +2195,26 @@ class DaemonCore : public Service
  */
 bool InitCommandSockets(int tcp_port, int udp_port, DaemonCore::SockPairVec & socks, bool want_udp, bool fatal);
 
+// helper function to extract the parent address and inherited socket information from
+// the inherit string that is normally passed via the CONDOR_INHERIT environment variable
+// This function extracts parent & socket info then tokenizes the remaining items from
+// the string into the supplied StringList.
+//
+// @return
+//    number of entries in the socks[] array that were populated.
+//    negative values for failure.
+//
+// note: the size of the socks array should be 1 more than the maximum if you want to have room
+// for a terminating null.
+//
+int extractInheritedSocks (
+	const char * inherit,  // in: inherit string, usually from CONDOR_INHERIT environment variable
+	pid_t & ppid,          // out: pid of the parent
+	std::string & psinful, // out: sinful of the parent
+	Stream* socks[],   // out: filled in with items from the inherit string
+	int     cMaxSocks, // in: number of items in the socks array
+	StringList & remaining_items); // out: unparsed items from the inherit string are appended
+
 // helper class that uses C++ constructor/destructor to automatically
 // time a function call. 
 class dc_stats_auto_runtime_probe

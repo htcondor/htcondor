@@ -555,13 +555,17 @@ void INFNBatchJob::doEvaluateState()
 			// tunneling.
 			if ( m_xfer_gahp->getSshForwardPort() ) {
 				std::string new_addr;
-				const char *old_addr = daemonCore->InfoCommandSinfulString();
-				while ( *old_addr != '\0' && *old_addr != '?' && *old_addr != '>' ) {
-					old_addr++;
-				}
-				// TODO IPV6: Rolling your own sinfuls WILL break soon.
-				formatstr( new_addr, "<127.0.0.1:%d%s",
-						   m_xfer_gahp->getSshForwardPort(), old_addr );
+				// TODO We're ignoring IPv6 for now.
+				Sinful our_sinful(daemonCore->InfoCommandSinfulString());
+				condor_sockaddr local_addr;
+				our_sinful.setHost("127.0.0.1");
+				our_sinful.setPort(m_xfer_gahp->getSshForwardPort());
+				our_sinful.clearAddrs();
+				local_addr.set_ipv4();
+				local_addr.set_loopback();
+				local_addr.set_port(m_xfer_gahp->getSshForwardPort());
+				our_sinful.addAddrToAddrs(local_addr);
+				new_addr = our_sinful.getSinful();
 				gahpAd->Assign( ATTR_TRANSFER_SOCKET, new_addr );
 			}
 
@@ -812,13 +816,17 @@ void INFNBatchJob::doEvaluateState()
 			// tunneling.
 			if ( m_xfer_gahp->getSshForwardPort() ) {
 				std::string new_addr;
-				const char *old_addr = daemonCore->InfoCommandSinfulString();
-				while ( *old_addr != '\0' && *old_addr != '?' && *old_addr != '>' ) {
-					old_addr++;
-				}
-				// TODO IPV6: Rolling your own sinfuls WILL break soon.
-				formatstr( new_addr, "<127.0.0.1:%d%s",
-						   m_xfer_gahp->getSshForwardPort(), old_addr );
+				// TODO We're ignoring IPv6 for now.
+				Sinful our_sinful(daemonCore->InfoCommandSinfulString());
+				condor_sockaddr local_addr;
+				our_sinful.setHost("127.0.0.1");
+				our_sinful.setPort(m_xfer_gahp->getSshForwardPort());
+				our_sinful.clearAddrs();
+				local_addr.set_ipv4();
+				local_addr.set_loopback();
+				local_addr.set_port(m_xfer_gahp->getSshForwardPort());
+				our_sinful.addAddrToAddrs(local_addr);
+				new_addr = our_sinful.getSinful();
 				gahpAd->Assign( ATTR_TRANSFER_SOCKET, new_addr );
 			}
 

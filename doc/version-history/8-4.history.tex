@@ -41,7 +41,8 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Fixed a bug that caused file transfers to fail when using Bosco.
+\Ticket{5710}
 
 \end{itemize}
 
@@ -53,8 +54,7 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item HTCondor version 8.4.7 not yet released.
-%\item HTCondor version 8.4.X released on Month Date, 2016.
+\item HTCondor version 8.4.7 released on June 6, 2016.
 
 \end{itemize}
 
@@ -62,6 +62,15 @@ The details of each version are described below.
 \noindent New Features:
 
 \begin{itemize}
+
+\item Docker universe jobs now drop all Linux capabilities by default.
+The new knob DOCKER\_DROP\_ALL\_CAPABILITIES, which defaults to true
+can be set to false to revert to the old behavior.
+\Ticket{5679}
+
+\item Added configuration variable \MacroNI{MAX\_TIME\_SKIP} to control 
+	how much system clock skip is allowed before the HTCondor daemons
+	restart.  See Section~\ref{param:MaxTimeSkip} for more information.
 
 \item On Linux, HTCondor appropriately tunes kernel parameters
 root\_maxkeys and root\_maxbytes to prevent \Condor{master} 
@@ -144,6 +153,11 @@ to be ignored.
 \item Fixed a bug that could cause HAD to fail if a machine has an IPv6
 address.
 \Ticket{5659}
+
+\item Fixed a bugs in \Condor{history} when fetching history from a remote \Condor{schedd}. The
+bugs caused complete failure when the remote \Condor{schedd} was running Windows, and
+would corrupt some string values when the remote \Condor{schedd} was any other operating system.
+\Ticket{5701}
 
 \end{itemize}
 

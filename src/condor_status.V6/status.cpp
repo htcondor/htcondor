@@ -1684,7 +1684,7 @@ firstPass (int argc, char *argv[])
 		if (is_dash_arg_prefix (argv[i],"xml", 1)){
 			setPPstyle (PP_XML, i, argv[i]);
 		} else
-		if (is_dash_arg_prefix (argv[i],"json", 1)){
+		if (is_dash_arg_prefix (argv[i],"json", 2)){
 			setPPstyle (PP_JSON, i, argv[i]);
 		} else
 		if (is_dash_arg_prefix (argv[i],"attributes", 2)){

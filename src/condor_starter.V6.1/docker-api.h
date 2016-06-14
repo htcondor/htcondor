@@ -118,6 +118,8 @@ class DockerAPI {
 		 * @return				0 on success, negative otherwise.
 		 */
 		static int version( std::string & version, CondorError & err );
+		static int majorVersion;
+		static int minorVersion;
 
 		/**
 		 * Returns a ClassAd corresponding to a subset of the output of

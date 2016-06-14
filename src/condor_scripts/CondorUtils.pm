@@ -312,14 +312,18 @@ sub runcmd {
 
 		#print "$bulkout\n";
 		#print "\n++++++++++++++++++++++++++\n";
-		$bulkout =~ s/\\r\\n/\n/g;
+		#$bulkout =~ s/\\r\\n/\n/g;
 		#print "$bulkout\n";
 		#print "\n++++++++++++++++++++++++++\n";
 		@outlines = split /\n/, $bulkout;
+		map {$_ =~ s/^\\r//} @outlines;
+		map {$_ =~ s/\\r$//} @outlines;
 		map {$_.= "\n"} @outlines;
 
-		$bulkerror =~ s/\\r\\n/\n/g;
+		#$bulkerror =~ s/\\r\\n/\n/g;
 		@errlines = split /\n/, $bulkerror;
+		map {$_ =~ s/^\\r//} @errlines;
+		map {$_ =~ s/\\r$//} @errlines;
 		map {$_.= "\n"} @errlines;
 
 		die "ERROR: waitpid failed to reap pid $childpid!" 

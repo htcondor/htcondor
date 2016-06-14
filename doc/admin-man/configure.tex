@@ -2989,6 +2989,15 @@ which use DaemonCore).
   this setting is ignored and treated as \Expr{False}, to work around
   incompatibilities.
 
+\label{param:MaxTimeSkip}
+\item[\Macro{MAX\_TIME\_SKIP}]
+  When an HTCondor daemon notices the system clock skip forwards or
+  backwards more than the number of seconds specified by this parameter,
+  it may take special action.  For instance, the \Condor{master} will
+  restart HTCondor in the event of a clock skip.  Defaults to a value of
+  1200, which in effect means that HTCondor will restart if the system clock
+  jumps by more than 20 minutes.
+
 \label{param:NotRespondingTimeout}
 \item[\Macro{NOT\_RESPONDING\_TIMEOUT}]
   When an HTCondor daemon's parent process is another HTCondor daemon, 
@@ -4263,6 +4272,18 @@ NEGOTIATOR_USERID = condor
   amount of time daemons are given to perform their
   fast shutdown procedure before the \Condor{master} kills them
   outright.  It is defined in seconds and defaults to 300 (5 minutes).
+
+\label{param:DefaultMasterShutdownScript}
+\item[\Macro{DEFAULT\_MASTER\_SHUTDOWN\_SCRIPT}]
+  A full path and file name of
+  a program that the \Condor{master} is to execute
+  via the Unix \Procedure{execl} call, 
+  or the similar Win32 \Procedure{\_execl} call,
+  instead of the normal call to \Procedure{exit}.
+  This allows the admin to specify a program to execute as root
+  when the \Condor{master} exits.  Note that a successful call
+  to the \Condor{set\_shutdown} program will override this setting; see
+  the documentation for config knob \Macro{MASTER\_SHUTDOWN\_<Name>} below.
 
 \label{param:MasterShutdownProgram}
 \item[\Macro{MASTER\_SHUTDOWN\_<Name>}]
@@ -9368,9 +9389,11 @@ The following configuration macros affect negotiation for group users.
 \item[\Macro{GROUP\_SORT\_EXPR}]
   A floating point ClassAd expression that controls the order in which the 
   \Condor{negotiator} considers groups when allocating resources.
-  The largest magnitude positive value goes first.
+  The smallest magnitude positive value goes first.
   The default value is set such that group \Expr{<none>} always
-  goes last when considering hierarchical group quotas.
+  goes last when considering group quotas, and groups are
+  considered in starvation order (the group using the smallest fraction
+  of its resource quota is considered first).
 
 \label{param:NegotiatorAllowQuotaOversubscription}
 \item[\Macro{NEGOTIATOR\_ALLOW\_QUOTA\_OVERSUBSCRIPTION}]

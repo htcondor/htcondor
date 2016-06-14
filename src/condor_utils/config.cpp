@@ -867,6 +867,9 @@ Parse_macros(
 	bool gl_opt_smart = (macro_set.options & CONFIG_OPT_SMART_COM_IN_CONT) ? true : false;
 	int opt_meta_colon = (macro_set.options & CONFIG_OPT_COLON_IS_META_ONLY) ? 1 : 0;
 	ConfigIfStack ifstack;
+	StringList    hereList; // used to accumulate @= multiline values
+	MyString      hereName;
+	MyString      hereTag;
 	MACRO_EVAL_CONTEXT defctx = { NULL, NULL, false, 2 };
 	if ( ! pctx) pctx = &defctx;
 
@@ -880,6 +883,11 @@ Parse_macros(
 		if (name == NULL) {
 			if (firstRead) {
 				dprintf(D_FULLDEBUG, "WARNING: %s is empty: %s\n", source_type, source_file);
+			}
+			if ( ! hereName.empty()) {
+				const char * tag = hereTag.c_str();
+				fprintf(stderr, "Found end-of-file while scanning for '@%s' in %s\n", tag ? tag : "", source_file);
+				retval = -1;
 			}
 			break;
 		}
@@ -896,6 +904,30 @@ Parse_macros(
 					opt_meta_colon = 2;
 				}
 			}
+			continue;
+		}
+
+		// if we are processing a here @= knob, just accumulate lines until we see the closing @
+		// we we see the closing @, expand the value and stuff it into the given name.
+		if ( ! hereName.empty()) {
+			if (name[0] == '@' && hereTag == name+1) {
+				/* expand self references only */
+				rhs = hereList.print_to_delimed_string("\n");
+				value = expand_self_macro(rhs, hereName.c_str(), macro_set, *pctx);
+				if( value == NULL ) {
+					retval = -1;
+					goto cleanup;
+				}
+				insert_macro(hereName.c_str(), value, macro_set, FileSource, *pctx);
+
+				FREE(rhs); rhs = NULL;
+				FREE(value); value = NULL;
+				hereName.clear();
+				hereTag.clear();
+				hereList.clearAll();
+				continue;
+			}
+			hereList.append(name);
 			continue;
 		}
 
@@ -975,18 +1007,25 @@ Parse_macros(
 		char * name_end = ptr; // keep track of where we null-terminate the name, so we can reverse it later
 		name_end_ch = *name_end;
 		if (*ptr) { *ptr++ = '\0'; }
-		// scan for an operator character if we don't have one already.
+		// scan for an operator character if we don't have one already. operator can be : = or @=
 		if ( ! ISOP(op)) {
-			while ( *ptr && ! ISOP(*ptr) ) {
+			while ( *ptr && ! ISOP(*ptr) && ! (*ptr == '@')) {
 				++ptr;
 			}
 			pop = ptr;
 			op = *ptr;
-			if (op) ++ptr;
+			if (op) {
+				++ptr;
+				if (op == '@') {
+					// the @ op must be followed by an = to be valid.
+					if (*ptr == '=') ++ptr;
+					else op = 0;
+				}
+			}
 		}
 		// if we still haven't got an operator, then this isn't a valid config line,
 		// (it *might* be a valid submit line however.)
-		if ( ! ISOP(op) && ! is_submit) {
+		if ( ! ISOP(op) && op != '@' && ! is_submit) {
 			retval = -1;
 			goto cleanup;
 		}
@@ -1137,7 +1176,7 @@ Parse_macros(
 			std::string plusname = "MY."; plusname += name+1;
 			insert_macro(plusname.c_str(), (*name=='+') ? rhs : "", macro_set, FileSource, *pctx);
 
-		} else if (is_submit && (op != '=' || MATCH == strcasecmp(name, "queue"))) {
+		} else if (is_submit && ((op != '=' && op != '@') || MATCH == strcasecmp(name, "queue"))) {
 
 			retval = fnSubmit(pvSubmitData, FileSource, macro_set, line, config_errmsg);
 			if (retval != 0) // this may or may not be a failure, but we should stop reading the file.
@@ -1153,6 +1192,14 @@ Parse_macros(
 						 source_type, source_file, FileSource.line, (name?name:"(null)") );
 				retval = -1;
 				goto cleanup;
+			}
+
+			if (op == '@') {
+				hereName = name;
+				hereTag = rhs;
+				hereList.clearAll();
+				FREE(name); name = NULL;
+				continue;
 			}
 
 			if (options & READ_MACROS_EXPAND_IMMEDIATE) {

@@ -98,6 +98,7 @@ SharedPortEndpoint::SharedPortEndpoint(char const *sock_name):
 	thread_killed = INVALID_HANDLE_VALUE;
 
 	pipe_end = INVALID_HANDLE_VALUE;
+	inheritable_to_child = INVALID_HANDLE_VALUE;
 
 	thread_handle = INVALID_HANDLE_VALUE;
 
@@ -122,7 +123,7 @@ SharedPortEndpoint::~SharedPortEndpoint()
 		DWORD wait_result = WaitForSingleObject(thread_killed, 100);
 		if(wait_result != WAIT_OBJECT_0)
 			dprintf(D_ALWAYS, "SharedPortEndpoint: Destructor: Problem in thread shutdown notification: %d\n", GetLastError());
-		CloseHandle(thread_killed);
+		CloseHandle(thread_killed); thread_killed = INVALID_HANDLE_VALUE;
 	}
 #endif
 }
@@ -170,11 +171,16 @@ SharedPortEndpoint::StopListener()
 	On Windows we only need to close the pipe ends for the
 	two pipes we're using.
 	*/
-	dprintf(D_FULLDEBUG, "SharedPortEndpoint: Inside stop listener.\n");
-	if( m_registered_listener )
-	{
+	dprintf(D_FULLDEBUG, "SharedPortEndpoint: Inside stop listener. m_registered_listener=%d\n", m_registered_listener);
+	if (inheritable_to_child && inheritable_to_child != INVALID_HANDLE_VALUE) {
+		CloseHandle(inheritable_to_child); inheritable_to_child = INVALID_HANDLE_VALUE;
+	}
+	if ( ! m_registered_listener) {
+		if (pipe_end && pipe_end != INVALID_HANDLE_VALUE) { CloseHandle(pipe_end); pipe_end = INVALID_HANDLE_VALUE; }
+		ASSERT (thread_killed == INVALID_HANDLE_VALUE && thread_handle == INVALID_HANDLE_VALUE);
+	} else {
 		bool tried = false;
-		HANDLE child_pipe;
+		HANDLE child_pipe = INVALID_HANDLE_VALUE;
 		EnterCriticalSection(&kill_lock);
 		kill_thread = true;
 		LeaveCriticalSection(&kill_lock);
@@ -219,11 +225,13 @@ SharedPortEndpoint::StopListener()
 				continue;
 			}
 
-			CloseHandle(child_pipe);
 			break;
 		}
+		if (child_pipe && (child_pipe != INVALID_HANDLE_VALUE)) {
+			CloseHandle(child_pipe); child_pipe = INVALID_HANDLE_VALUE;
+		}
 
-		CloseHandle(thread_handle);
+		CloseHandle(thread_handle); thread_handle = INVALID_HANDLE_VALUE;
 		DeleteCriticalSection(&received_lock);
 	}
 #else
@@ -442,6 +450,12 @@ SharedPortEndpoint::StartListenerWin32()
 	if( m_registered_listener )
 		return true;
 
+	m_registered_listener = true;
+	kill_thread = false;
+	thread_killed = CreateEvent(NULL, TRUE, FALSE, NULL);
+	if(thread_killed == INVALID_HANDLE_VALUE)
+		EXCEPT("SharedPortEndpoint: Failed to create cleanup event: %d", GetLastError());
+
 	DWORD threadID;
 	thread_handle = CreateThread(NULL,
 		0,
@@ -451,18 +465,12 @@ SharedPortEndpoint::StartListenerWin32()
 		&threadID);
 	if(thread_handle == INVALID_HANDLE_VALUE)
 	{
+		m_registered_listener = false;
+		kill_thread = true;
+		CloseHandle(thread_killed); thread_killed = INVALID_HANDLE_VALUE;
 		EXCEPT("SharedPortEndpoint: Failed to create listener thread: %d", GetLastError());
 	}
 	dprintf(D_DAEMONCORE|D_FULLDEBUG, "SharedPortEndpoint: StartListenerWin32: Thread spun off, listening on pipes.\n");
-
-	kill_thread = false;
-
-	thread_killed = CreateEvent(NULL, TRUE, FALSE, NULL);
-
-	if(thread_killed == INVALID_HANDLE_VALUE)
-		EXCEPT("SharedPortEndpoint: Failed to create cleanup event: %d", GetLastError());
-
-	m_registered_listener = true;
 
 	return m_registered_listener;
 }
@@ -523,7 +531,7 @@ SharedPortEndpoint::PipeListenerThread()
 			LeaveCriticalSection(&kill_lock);
 			ThreadSafeLogError("SharedPortEndpoint: Listener thread received kill request.", 0);
 			DisconnectNamedPipe(pipe_end);
-			CloseHandle(pipe_end);
+			CloseHandle(pipe_end); pipe_end = INVALID_HANDLE_VALUE;
 			DeleteCriticalSection(&kill_lock);
 			return;
 		}
@@ -1130,15 +1138,18 @@ SharedPortEndpoint::serialize(MyString &inherit_buf,int &inherit_fd)
 	Serializing requires acquiring the handles of the respective pipes and seeding them into
 	the buffer.
 	*/
+	if (inheritable_to_child && inheritable_to_child != INVALID_HANDLE_VALUE) {
+		dprintf(D_ALWAYS, "SharedPortEndpoint::serialize called when inheritable_to_child already has a value\n");
+		CloseHandle(inheritable_to_child); inheritable_to_child = INVALID_HANDLE_VALUE;
+	}
 
 	HANDLE current_process = GetCurrentProcess();
-	HANDLE to_child;
-	if(!DuplicateHandle(current_process, pipe_end, current_process, &to_child, NULL, true, DUPLICATE_SAME_ACCESS))
+	if(!DuplicateHandle(current_process, pipe_end, current_process, &inheritable_to_child, NULL, true, DUPLICATE_SAME_ACCESS))
 	{
 		dprintf(D_ALWAYS, "SharedPortEndpoint: Failed to duplicate named pipe for inheritance.\n");
 		return false;
 	}
-	inherit_buf.formatstr_cat("%d", to_child);
+	inherit_buf.formatstr_cat("%d", inheritable_to_child);
 #else
 	inherit_fd = m_listener_sock.get_file_desc();
 	ASSERT( inherit_fd != -1 );
@@ -1152,10 +1163,10 @@ SharedPortEndpoint::serialize(MyString &inherit_buf,int &inherit_fd)
 	return true;
 }
 
-char *
-SharedPortEndpoint::deserialize(char *inherit_buf)
+const char *
+SharedPortEndpoint::deserialize(const char *inherit_buf)
 {
-	char *ptr;
+	const char *ptr;
 	ptr = strchr(inherit_buf,'*');
 	ASSERT( ptr );
 	m_full_name.formatstr("%.*s",(int)(ptr-inherit_buf),inherit_buf);

@@ -27,7 +27,7 @@ class CronParamBase
   public:
 	CronParamBase( const char &base );
 	virtual ~CronParamBase( void ) { };
-	const char * Lookup( const char * ) const;
+	char * Lookup( const char * ) const;
 
 	// Virtual member functions
 	bool Lookup( const char *name, MyString &s ) const;
@@ -44,7 +44,7 @@ class CronParamBase
 
 	// Virtual Protected member functions
 	virtual const char *GetParamName( const char *item ) const;
-	virtual const char *GetDefault( const char * /*item*/ ) const;
+	virtual char *GetDefault( const char * /*item*/ ) const;
 	virtual void GetDefault( const char * /*item*/, double & /*dv*/ ) const;
 };
 

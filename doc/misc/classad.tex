@@ -1078,7 +1078,8 @@ if either of their operands have these exceptional values.
 The \Expr{=?=} operator is similar to the \Expr{==} operator.
 It checks if the left hand side operand is identical in both type and value
 to the the right hand side operand, returning \Expr{TRUE} when they
-are identical.
+are identical. \Bold{For strings, the comparison is case-insensitive with the
+\Expr{==} operator and case-sensitive with the \Expr{=?=} operator.}
 A key point in understanding is that
 the \Expr{=?=} operator only produces evaluation results of \Expr{TRUE}
 and \Expr{FALSE},
@@ -1097,6 +1098,7 @@ outcome of the \Expr{=?=} operator.
 \Expr{(10 == 10)}                       & \Expr{TRUE}  \\
 \Expr{(10 == 5)}                        & \Expr{FALSE} \\
 \Expr{(10 == "ABC")}                    & \Expr{ERROR} \\
+\Expr{{"ABC" == "abc"}}                 & \Expr{TRUE} \\
 \Expr{(10 == UNDEFINED)}                & \Expr{UNDEFINED} \\
 \Expr{(UNDEFINED == UNDEFINED)}         & \Expr{UNDEFINED}  \\ \hline
 \end{tabular}
@@ -1112,6 +1114,7 @@ outcome of the \Expr{=?=} operator.
 \Expr{(10 =?= 10)}                       & \Expr{TRUE}  \\
 \Expr{(10 =?= 5)}                        & \Expr{FALSE} \\
 \Expr{(10 =?= "ABC")}                    & \Expr{FALSE} \\
+\Expr{{"ABC" =?= "abc"}}                 & \Expr{FALSE} \\
 \Expr{(10 =?= UNDEFINED)}                & \Expr{FALSE} \\
 \Expr{(UNDEFINED =?= UNDEFINED)}         & \Expr{TRUE}  \\ \hline
 \end{tabular}
@@ -1122,7 +1125,9 @@ outcome of the \Expr{=?=} operator.
 The \Expr{=!=} operator is similar to the \Expr{!=} operator.
 It checks if the left hand side operand is \emph{not} identical 
 in both type and value to the the right hand side operand,
-returning \Expr{FALSE} when they are identical.
+returning \Expr{FALSE} when they are identical. \Bold{For strings, the comparison is
+case-insensitive with the \Expr{!=} operator and case-sensitive with the
+\Expr{=!=} operator.}
 A key point in understanding is that
 the \Expr{=!=} operator only produces evaluation results of \Expr{TRUE}
 and \Expr{FALSE},
@@ -1141,6 +1146,7 @@ outcome of the \Expr{=!=} operator.
 \Expr{(10 != 10)}                       & \Expr{FALSE}  \\
 \Expr{(10 != 5)}                        & \Expr{TRUE} \\
 \Expr{(10 != "ABC")}                    & \Expr{ERROR} \\
+\Expr{{"ABC" != "abc"}}                 & \Expr{FALSE} \\
 \Expr{(10 != UNDEFINED)}                & \Expr{UNDEFINED} \\
 \Expr{(UNDEFINED != UNDEFINED)}         & \Expr{UNDEFINED}  \\ \hline
 \end{tabular}
@@ -1156,6 +1162,7 @@ outcome of the \Expr{=!=} operator.
 \Expr{(10 =!= 10)}                       & \Expr{FALSE}  \\
 \Expr{(10 =!= 5)}                        & \Expr{TRUE} \\
 \Expr{(10 =!= "ABC")}                    & \Expr{TRUE} \\
+\Expr{{"ABC" =!= "abc"}}                 & \Expr{TRUE} \\
 \Expr{(10 =!= UNDEFINED)}                & \Expr{TRUE} \\
 \Expr{(UNDEFINED =!= UNDEFINED)}         & \Expr{FALSE}  \\ \hline
 \end{tabular}

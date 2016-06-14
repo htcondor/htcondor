@@ -73,6 +73,15 @@ customization=seldom
 friendly_name=Preen Interval
 review=?
 
+[DEFAULT_MASTER_SHUTDOWN_SCRIPT]
+default=
+type=path
+reconfig=true
+customization=seldom
+friendly_name=Program to execute upon condor_master shutdown
+review=?
+tags=master
+
 [MASTER_NEW_BINARY_DELAY]
 default=120
 type=int
@@ -7378,6 +7387,16 @@ review=?
 tags=negotiator,matchmaker
 
 [HISTORY_HELPER]
+default=$(BIN)/condor_history
+win32_default=$(BIN)\condor_history.exe
+type=path
+reconfig=true
+customization=devel
+friendly_name=location of condor history helper executable used by remote condor_history
+review=?
+tags=schedd
+
+[OLD.HISTORY_HELPER]
 default=$(LIBEXEC)/condor_history_helper
 win32_default=$(LIBEXEC)\condor_history_helper.exe
 type=path
@@ -7545,6 +7564,13 @@ reconfig=true
 customization=seldom
 friendly_name=Docker
 review=?
+
+[DOCKER_DROP_ALL_CAPABILITIES]
+default=true
+type=bool
+reconfig=true
+customization=seldom
+friendly_name=Docker drop all capabilities
 
 [SUBMIT_REQUIREMENT_NAMES]
 default=

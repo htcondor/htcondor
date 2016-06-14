@@ -404,6 +404,13 @@ public:
 
 	unsigned int getUniqueId() { return m_uniqueId; }
 
+#ifdef WIN32
+	int set_inheritable( int flag );
+#else
+	// On unix, sockets are always inheritable
+	inline int set_inheritable( int ) { return TRUE; }
+#endif
+
 //	PRIVATE INTERFACE TO ALL SOCKS
 //
 protected:
@@ -463,12 +470,12 @@ protected:
 	void set_connect_addr(char const *addr);
 
 	inline SOCKET get_socket (void) { return _sock; }
-	char * serialize(char *);
+	const char * serialize(const char *);
 	static void close_serialized_socket(char const *buf);
 	char * serialize() const;
-    char * serializeCryptoInfo(char * buf);
+    const char * serializeCryptoInfo(const char * buf);
     char * serializeCryptoInfo() const;
-    char * serializeMdInfo(char * buf);
+    const char * serializeMdInfo(const char * buf);
     char * serializeMdInfo() const;
         
 	virtual int encrypt(bool);
@@ -478,12 +485,6 @@ protected:
 	virtual bool is_hdr_encrypt();
     ///
 	virtual bool is_encrypt();
-#ifdef WIN32
-	int set_inheritable( int flag );
-#else
-	// On unix, sockets are always inheritable
-	inline int set_inheritable( int ) { return TRUE; }
-#endif
 
     ///
 	bool test_connection();

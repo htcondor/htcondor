@@ -49,7 +49,7 @@ CronParamBase::GetParamName( const char *name ) const
 }
 
 // Read a parameter
-const char *
+char *
 CronParamBase::Lookup( const char *item ) const
 {
 	const char *param_name = GetParamName( item );
@@ -58,7 +58,7 @@ CronParamBase::Lookup( const char *item ) const
 	}
 
 	// Now, go read the actual parameter
-	const char *param_buf = param( param_name );
+	char *param_buf = param( param_name );
 
 	// Empty?
 	if ( NULL == param_buf ) {
@@ -74,14 +74,14 @@ bool
 CronParamBase::Lookup( const char *item,
 					   MyString   &value ) const
 {
-	const char	*s = Lookup( item );
+	char *s = Lookup( item );
 	if ( NULL == s ) {
 		value = "";
 		return false;
 	}
 	else {
 		value = s;
-		free( const_cast<char *>(s) );
+		free( s );
 		return true;
 	}
 }
@@ -91,13 +91,13 @@ bool
 CronParamBase::Lookup( const char *item,
 					   bool       &value ) const
 {
-	const char	*s = Lookup( item );
+	char *s = Lookup( item );
 	if ( NULL == s ) {
 		return false;
 	}
 	else {
 		value = ( toupper(*s) == 'T' );
-		free( const_cast<char *>(s) );
+		free( s );
 		return true;
 	}
 }
@@ -123,7 +123,7 @@ CronParamBase::Lookup( const char	*item,
 	return true;
 }
 
-const char *
+char *
 CronParamBase::GetDefault( const char * /*item*/ ) const
 {
 	return NULL;

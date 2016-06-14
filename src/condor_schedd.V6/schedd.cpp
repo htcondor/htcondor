@@ -1855,25 +1855,25 @@ int Scheduler::command_history(int, Stream* stream)
 	std::string requirements_str;
 	unparser.Unparse(requirements_str, requirements);
 
+	classad::ExprTree * since_expr = queryAd.Lookup("Since");
+	std::string since_str;
+	if (since_expr) { unparser.Unparse(since_str, since_expr); }
+
 	classad::Value value;
-	classad::ExprList *list = NULL;
-	if ((queryAd.find(ATTR_PROJECTION) != queryAd.end()) &&
-		(!queryAd.EvaluateAttr(ATTR_PROJECTION, value) || !value.IsListValue(list)))
-	{
-		return sendHistoryErrorAd(stream, 2, "Unable to evaluate projection list");
+	classad::References projection;
+	int proj_err = mergeProjectionFromQueryAd(queryAd, ATTR_PROJECTION, projection, true);
+	if (proj_err < 0) {
+		if (proj_err == -1) {
+			return sendHistoryErrorAd(stream, 2, "Unable to evaluate projection list");
+		}
+		return sendHistoryErrorAd(stream, 3, "Unable to convert projection list to string list");
 	}
 	std::stringstream ss;
 	bool multiple = false;
-	if (list) for (classad::ExprList::const_iterator it = list->begin(); it != list->end(); it++)
-	{
-		std::string attr;
-		if (!(*it)->Evaluate(value) || !value.IsStringValue(attr))
-		{
-			return sendHistoryErrorAd(stream, 3, "Unable to convert projection list to string");
-		}
+	for (classad::References::const_iterator it = projection.begin(); it != projection.end(); ++it) {
 		if (multiple) ss << ",";
 		multiple = true;
-		ss << attr;
+		ss << *it;
 	}
 
 	int matchCount = -1;
@@ -1889,11 +1889,11 @@ int Scheduler::command_history(int, Stream* stream)
 			return sendHistoryErrorAd(stream, 9, "Cowardly refusing to queue more than 1000 requests.");
 		}
 		classad_shared_ptr<Stream> stream_shared(stream);
-		HistoryHelperState state(stream_shared, requirements_str, ss.str(), ss2.str());
+		HistoryHelperState state(stream_shared, requirements_str, since_str, ss.str(), ss2.str());
 		m_history_helper_queue.push_back(state);
 		return KEEP_STREAM;
 	} else {
-		HistoryHelperState state(*stream, requirements_str, ss.str(), ss2.str());
+		HistoryHelperState state(*stream, requirements_str, since_str, ss.str(), ss2.str());
 		return history_helper_launcher(state);
 	}
 }
@@ -1919,13 +1919,44 @@ int Scheduler::history_helper_launcher(const HistoryHelperState &state) {
 #endif
 	}
 	ArgList args;
-	args.AppendArg("condor_history_helper");
-	args.AppendArg("-f");
-	args.AppendArg("-t");
-	args.AppendArg(state.Requirements());
-	args.AppendArg(state.Projection());
-	args.AppendArg(state.MatchCount());
-	args.AppendArg(param_integer("HISTORY_HELPER_MAX_HISTORY", 10000));
+	if (strstr(history_helper.ptr(), "_helper")) {
+		dprintf(D_ALWAYS, "Using obsolete condor_history_helper arguments\n");
+		args.AppendArg("condor_history_helper");
+		args.AppendArg("-f");
+		args.AppendArg("-t");
+		// NOTE: before 8.4.8 and 8.5.6 the argument order was: requirements projection match max
+		// starting with 8.4.8 and 8.5.6 the argument order was changed to: match max requirements projection
+		// this change was made so that projection could be empty without causing problems on Windows.
+		args.AppendArg(state.MatchCount());
+		args.AppendArg(param_integer("HISTORY_HELPER_MAX_HISTORY", 10000));
+		args.AppendArg(state.Requirements());
+		args.AppendArg(state.Projection());
+	} else {
+		// pass arguments in the format that condor_history wants
+		args.AppendArg("condor_history");
+		args.AppendArg("-inherit"); // tell it to write to an inherited socket
+		if ( ! state.MatchCount().empty()) {
+			args.AppendArg("-match");
+			args.AppendArg(state.MatchCount());
+		}
+		args.AppendArg("-scanlimit");
+		args.AppendArg(param_integer("HISTORY_HELPER_MAX_HISTORY", 10000));
+		if ( ! state.Since().empty()) {
+			args.AppendArg("-since");
+			args.AppendArg(state.Since());
+		}
+		if ( ! state.Requirements().empty()) {
+			args.AppendArg("-constraint");
+			args.AppendArg(state.Requirements());
+		}
+		if ( ! state.Projection().empty()) {
+			args.AppendArg("-attributes");
+			args.AppendArg(state.Projection());
+		}
+		MyString myargs;
+		args.GetArgsStringForLogging(&myargs);
+		dprintf(D_FULLDEBUG, "invoking %s %s\n", history_helper.ptr(), myargs.c_str());
+	}
 
 	Stream *inherit_list[] = {state.GetStream(), NULL};
 

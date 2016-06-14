@@ -71,7 +71,7 @@ StartdBenchJobParams::~StartdBenchJobParams( void )
 	}
 }
 
-const char *
+char *
 StartdBenchJobParams::GetDefault( const char *item ) const
 {
 	if ( !strcasecmp( item, "EXECUTABLE" ) ) {

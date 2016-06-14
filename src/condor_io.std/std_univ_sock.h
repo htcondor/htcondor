@@ -150,7 +150,7 @@ public:
 
 	int bytes_available_to_read();
 	bool peer_is_local();
-	char * serialize(char *);
+	const char * serialize(const char *);
 	char * serialize() const;
 	Stream *CloneStream();
 	stream_type type();

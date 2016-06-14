@@ -1062,12 +1062,12 @@ ReliSock::serialize() const
 	return( parent_state );
 }
 
-char * 
-ReliSock::serialize(char *buf)
+const char *
+ReliSock::serialize(const char *buf)
 {
 	char * sinful_string = NULL;
 	char fqu[256];
-	char *ptmp, * ptr = NULL;
+	const char *ptmp, * ptr = NULL;
 	int len = 0;
 
     ASSERT(buf);

@@ -121,7 +121,7 @@ SecMan::sec_alpha_to_sec_req(char *b) {
 
 
 SecMan::sec_feat_act
-SecMan::sec_lookup_feat_act( ClassAd &ad, const char* pname ) {
+SecMan::sec_lookup_feat_act( const ClassAd &ad, const char* pname ) {
 
 	char* res = NULL;
 	ad.LookupString(pname, &res);
@@ -184,7 +184,7 @@ SecMan::sec_alpha_to_sec_act(char *b) {
 
 /*
 SecMan::sec_act
-SecMan::sec_lookup_act( ClassAd &ad, const char* pname ) {
+SecMan::sec_lookup_act( const ClassAd &ad, const char* pname ) {
 
 	char* res = NULL;
 	ad.LookupString(pname, &res);
@@ -204,7 +204,7 @@ SecMan::sec_lookup_act( ClassAd &ad, const char* pname ) {
 
 
 SecMan::sec_req
-SecMan::sec_lookup_req( ClassAd &ad, const char* pname ) {
+SecMan::sec_lookup_req( const ClassAd &ad, const char* pname ) {
 
 	char* res = NULL;
 	ad.LookupString(pname, &res);
@@ -622,7 +622,7 @@ SecMan::ReconcileSecurityDependency (sec_req &a, sec_req &b) {
 
 SecMan::sec_feat_act
 SecMan::ReconcileSecurityAttribute(const char* attr,
-								   ClassAd &cli_ad, ClassAd &srv_ad,
+								   const ClassAd &cli_ad, const ClassAd &srv_ad,
 								   bool *required ) {
 
 	// extract the values from the classads
@@ -730,7 +730,7 @@ SecMan::ReconcileSecurityAttribute(const char* attr,
 
 
 ClassAd *
-SecMan::ReconcileSecurityPolicyAds(ClassAd &cli_ad, ClassAd &srv_ad) {
+SecMan::ReconcileSecurityPolicyAds(const ClassAd &cli_ad, const ClassAd &srv_ad) {
 
 	// figure out what to do
 	sec_feat_act authentication_action;
@@ -2703,7 +2703,7 @@ SecMan::Verify(DCpermission perm, const condor_sockaddr& addr, const char * fqu,
 
 
 bool
-SecMan::sec_copy_attribute( ClassAd &dest, ClassAd &source, const char* attr ) {
+SecMan::sec_copy_attribute( ClassAd &dest, const ClassAd &source, const char* attr ) {
 	ExprTree *e = source.LookupExpr(attr);
 	if (e) {
 		ExprTree *cp = e->Copy();
@@ -2715,7 +2715,7 @@ SecMan::sec_copy_attribute( ClassAd &dest, ClassAd &source, const char* attr ) {
 }
 
 bool
-SecMan::sec_copy_attribute( ClassAd &dest, const char *to_attr, ClassAd &source, const char *from_attr ) {
+SecMan::sec_copy_attribute( ClassAd &dest, const char *to_attr, const ClassAd &source, const char *from_attr ) {
 	ExprTree *e = source.LookupExpr(from_attr);
 	if (!e) {
 		return false;
