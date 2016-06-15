@@ -1188,7 +1188,11 @@ WriteUserLog::doWriteEvent( ULogEvent *event,
 	} else {
 		fd = log.fd;
 		lock = log.lock;
-		priv = set_user_priv();
+		if ( m_init_user_ids ) {
+			priv = set_user_priv();
+		} else {
+			priv = set_condor_priv();
+		}
 	}
 
 		// We're seeing sporadic test suite failures where a daemon
