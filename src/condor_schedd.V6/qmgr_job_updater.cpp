@@ -153,6 +153,7 @@ QmgrJobUpdater::initJobQueueAttrLists( void )
 	common_job_queue_attrs->insert( ATTR_TRANSFER_QUEUED );
 	common_job_queue_attrs->insert( ATTR_JOB_TRANSFERRING_OUTPUT );
 	common_job_queue_attrs->insert( ATTR_JOB_TRANSFERRING_OUTPUT_TIME );
+	common_job_queue_attrs->insert( ATTR_NUM_JOB_COMPLETIONS );
 
 	hold_job_queue_attrs = new StringList();
 	hold_job_queue_attrs->insert( ATTR_HOLD_REASON );

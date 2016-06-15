@@ -6891,6 +6891,7 @@ int SubmitHash::init_cluster_ad(time_t submit_time_in, const char * owner)
 	job->Assign(ATTR_JOB_EXIT_STATUS, 0);
 	job->Assign(ATTR_NUM_CKPTS, 0);
 	job->Assign(ATTR_NUM_JOB_STARTS, 0);
+	job->Assign(ATTR_NUM_JOB_COMPLETIONS, 0);
 	job->Assign(ATTR_NUM_RESTARTS, 0);
 	job->Assign(ATTR_NUM_SYSTEM_HOLDS, 0);
 	job->Assign(ATTR_JOB_COMMITTED_TIME, 0);

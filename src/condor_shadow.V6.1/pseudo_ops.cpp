@@ -191,6 +191,14 @@ pseudo_job_exit(int status, int reason, ClassAd* ad)
 	}
 	dprintf(D_SYSCALLS, "in pseudo_job_exit: status=%d,reason=%d\n",
 			status, reason);
+
+	// Despite what exit.h says, JOB_COREDUMPED is set by the starter only
+	// when the job is NOT killed (and left a core file).
+	if( reason == JOB_EXITED
+		|| reason == JOB_EXITED_AND_CLAIM_CLOSING
+		|| reason == JOB_COREDUMPED ) {
+		thisRemoteResource->incrementJobCompletionCount();
+	}
 	thisRemoteResource->updateFromStarter( ad );
 	thisRemoteResource->resourceExit( reason, status );
 	return 0;
