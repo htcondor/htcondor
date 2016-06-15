@@ -158,7 +158,7 @@ main_init(int argc, char *argv[])
 {
 	int i=0;
 	for (char **ptr = argv + 1; *ptr && (i < argc - 1); ptr++,i++) {
-		if(ptr[0][0] == '-') {
+		if(ptr[0][0] == '-' && (ptr[0][1] == 'f' || ptr[0][1] == 't')) {
 			argv++;
 			argc--;
 		}
