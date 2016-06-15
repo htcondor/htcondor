@@ -3908,7 +3908,7 @@ static int fnFixupWidthCallback(void* pv, int index, Formatter * fmt, const char
 	} else if (index == name_column_index) { // owner
 		fmt->width = MAX(fmt->width, p->name_width);
 		p->name_width = fmt->width; // return the actual width
-	} else if (fmt && fmt->fr == render_memory_usage) {
+	} else if (fmt->fr == render_memory_usage) {
 		char buf[30];
 		int wid = sprintf(buf, fmt->printfFmt ? fmt->printfFmt : "%.1f", p->max_mem_usage);
 		fmt->width = MAX(fmt->width, wid);
