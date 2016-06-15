@@ -720,7 +720,7 @@ void 	compress( MyString &path );
 char const*full_path(const char *name, bool use_iwd=true);
 void 	get_time_conv( int &hours, int &minutes );
 int	  SaveClassAd ();
-void InsertJobExpr (const char *expr);
+void InsertJobExpr (const char *expr, bool from_config_file=false);
 void InsertJobExpr (const MyString &expr);
 void InsertJobExprInt(const char * name, int val);
 void InsertJobExprString(const char * name, const char * val);
@@ -1220,7 +1220,7 @@ init_job_ad()
 			auto_free_ptr expr(param(it->c_str()));
 			if ( ! expr) continue;
 			buffer.formatstr("%s = %s", it->c_str(), expr.ptr());
-			InsertJobExpr(buffer.c_str());
+			InsertJobExpr(buffer.c_str(), true);
 		}
 	}
 	
@@ -7985,6 +7985,7 @@ condor_param( const char* name, const char* alt_name )
 	const char *pval = lookup_macro(name, SubmitMacroSet, ctx);
 	char * pval_expanded = NULL;
 
+#ifdef SUBMIT_ATTRS_IS_ALSO_CONDOR_PARAM
 	// TODO: change this to use the defaults table from SubmitMacroSet
 	static classad::References submit_attrs;
 	static bool submit_attrs_initialized = false;
@@ -7994,6 +7995,7 @@ condor_param( const char* name, const char* alt_name )
 		param_and_insert_unique_items("SYSTEM_SUBMIT_ATTRS", submit_attrs);
 		submit_attrs_initialized = true;
 	}
+#endif
 
 	if( ! pval && alt_name ) {
 		pval = lookup_macro(alt_name, SubmitMacroSet, ctx);
@@ -8001,6 +8003,7 @@ condor_param( const char* name, const char* alt_name )
 	}
 
 	if( ! pval ) {
+#ifdef SUBMIT_ATTRS_IS_ALSO_CONDOR_PARAM // for (broken) legacy behavior
 			// if the value isn't in the submit file, check in the
 			// submit_exprs list and use that as a default.  
 		if ( ! submit_attrs.empty()) {
@@ -8011,6 +8014,7 @@ condor_param( const char* name, const char* alt_name )
 				return param(alt_name);
 			}
 		}
+#endif
 		return NULL;
 	}
 
@@ -9891,11 +9895,10 @@ InsertJobExpr (MyString const &expr)
 }
 
 void 
-InsertJobExpr (const char *expr)
+InsertJobExpr (const char *expr, bool from_config_file /*=false*/)
 {
 	MyString attr_name;
 	ExprTree *tree = NULL;
-	MyString hashkey(expr);
 	int pos = 0;
 	int retval = Parse (expr, attr_name, tree, &pos);
 
@@ -9906,7 +9909,7 @@ InsertJobExpr (const char *expr)
 			fputc( ' ', stderr );
 		}
 		fprintf (stderr, "^^^\n");
-		fprintf(stderr,"Error in submit file\n");
+		fprintf(stderr,"Error in %s file\n", from_config_file ? "config file SUBMIT_ATTRS or SUBMIT_EXPRS value" : "submit file");
 		DoCleanup(0,0,NULL);
 		exit( 1 );
 	}

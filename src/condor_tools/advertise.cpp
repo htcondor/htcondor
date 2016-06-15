@@ -227,6 +227,7 @@ int main( int argc, char *argv[] )
 			ads.Insert(ad);
 		} else {
 			delete ad;
+			ad = 0; // so we don't double delete it
 		}
 		if (eof) {
 			break;

@@ -22,6 +22,10 @@
 
 #define PLUS_ATTRIBS_IN_CLUSTER_AD 1
 
+// uncomment this to get (broken) legacy behavior that attributes in
+// SUBMIT_ATTRS/SUBMIT_EXPRS behave as if they were statements in your submit file
+//#define SUBMIT_ATTRS_IS_ALSO_CONDOR_PARAM 1
+
 #ifndef EXPAND_GLOBS_WARN_EMPTY
 // functions in submit_glob.cpp
 #define EXPAND_GLOBS_WARN_EMPTY (1<<0)
