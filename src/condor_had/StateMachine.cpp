@@ -692,14 +692,15 @@ HADStateMachine::setReplicationDaemonSinfulString( void )
 
         if(  (replicationDaemonIndex == m_selfId)     &&
 			 (strcmp( sinfulAddressHost, host ) == 0)  ) {
-            m_replicationDaemonSinfulString = sinfulAddress;
+            Sinful s( sinfulAddress );
+            s.setSharedPortID( param( "REPLICATION_SOCKET_NAME" ) );
+            m_replicationDaemonSinfulString = strdup( s.getSinful() );
             free( sinfulAddressHost );
+            free( sinfulAddress );
 			dprintf( D_ALWAYS,
 					"HADStateMachine::setReplicationDaemonSinfulString "
 					"corresponding replication daemon - %s\n",
-					 sinfulAddress );
-            // not freeing 'sinfulAddress', since its referent is pointed by
-            // 'replicationDaemonSinfulString' too
+					 s.getSinful() );
             break;
         } else if( replicationDaemonIndex == m_selfId ) {
 			sprintf( buffer,
