@@ -26,6 +26,8 @@ $testdesc =  'Condor submit dag - job held test - scheduler U';
 $testname = "job_dagman_job_held";
 $dagman_args = "-verbose";
 
+# I think this special configuration is just to make the test
+# run faster.  wenger 2016-06-14
 my $firstappend_condor_config = '
 	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
 	NUM_CPUS = 6
@@ -67,14 +69,7 @@ $abnormal = sub
 
 $aborted = sub 
 {
-	print "seeing abort from removing dag with held parts\n";
-	if($diditpass == 1) {
-		print "Job a success\n";
-		exit(0);
-	} else {
-		print "Job failed some tests\n";
-		exit(1);
-	}
+	die "Abort event NOT expected\n";
 };
 
 $held = sub 
@@ -143,10 +138,6 @@ $failure = sub
 		}
 	}
 	my $status = 0;
-	my @array = ();
-	print "At end of failure processing. Queue looks like this:\n";
-	runToolNTimes("condor_q", 1, 1);
-	$status = runCondorTool("condor_rm -all",\@array,2,{emit_output=>0});
 };
 
 CondorTest::RegisterExitedSuccess( $testname, $success);
@@ -157,12 +148,11 @@ CondorTest::RegisterAbort( $testname, $aborted );
 CondorTest::RegisterHold( $testname, $held );
 CondorTest::RegisterSubmit( $testname, $submitted );
 
-CondorTest::RunDagTest($testname, $cmd, 0, $dagman_args);
-#if( CondorTest::RunDagTest($testname, $cmd, 0, $dagman_args) ) {
-	#CondorTest::debug("$testname: SUCCESS\n",1);
-	#exit(0);
-#} else {
-	#die "$testname: CondorTest::RunTest() failed\n";
-#}
+if( CondorTest::RunDagTest($testname, $cmd, 0, $dagman_args) ) {
+	CondorTest::debug("$testname: SUCCESS\n",1);
+	exit(0);
+} else {
+	die "$testname: CondorTest::RunTest() failed\n";
+}
 
-CoondorTest:EndTest();
+CondorTest::EndTest();
