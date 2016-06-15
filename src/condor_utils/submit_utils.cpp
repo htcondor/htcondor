@@ -700,8 +700,7 @@ char * SubmitHash::submit_param( const char* name, const char* alt_name )
 	const char *pval = lookup_macro(name, SubmitMacroSet, mctx);
 	char * pval_expanded = NULL;
 
-	//PRAGMA_REMIND("tj: move submit_attrs into the defaults table.")
-
+#ifdef SUBMIT_ATTRS_IS_ALSO_CONDOR_PARAM
 	// TODO: change this to use the defaults table from SubmitMacroSet
 	static classad::References submit_attrs;
 	static bool submit_attrs_initialized = false;
@@ -711,6 +710,7 @@ char * SubmitHash::submit_param( const char* name, const char* alt_name )
 		param_and_insert_attrs("SYSTEM_SUBMIT_ATTRS", submit_attrs);
 		submit_attrs_initialized = true;
 	}
+#endif
 
 	if( ! pval && alt_name ) {
 		pval = lookup_macro(alt_name, SubmitMacroSet, mctx);
@@ -718,6 +718,7 @@ char * SubmitHash::submit_param( const char* name, const char* alt_name )
 	}
 
 	if( ! pval ) {
+#ifdef SUBMIT_ATTRS_IS_ALSO_CONDOR_PARAM
 			// if the value isn't in the submit file, check in the
 			// submit_exprs list and use that as a default.  
 		if ( ! submit_attrs.empty()) {
@@ -728,6 +729,7 @@ char * SubmitHash::submit_param( const char* name, const char* alt_name )
 				return param(alt_name);
 			}
 		}
+#endif
 		return NULL;
 	}
 
@@ -858,7 +860,7 @@ int SubmitHash::InsertJobExpr (MyString const &expr)
 	return InsertJobExpr(expr.Value());
 }
 
-int SubmitHash::InsertJobExpr (const char *expr)
+int SubmitHash::InsertJobExpr (const char *expr, const char * source_label /*=NULL*/)
 {
 	MyString attr_name;
 	ExprTree *tree = NULL;
@@ -873,7 +875,7 @@ int SubmitHash::InsertJobExpr (const char *expr)
 			fputc( ' ', stderr );
 		}
 		fprintf (stderr, "^^^\n");
-		fprintf(stderr,"Error in submit file\n");
+		fprintf(stderr,"Error in %s\n", source_label ? source_label : "submit file");
 		ABORT_AND_RETURN( 1 );
 	}
 
@@ -2875,6 +2877,16 @@ int SubmitHash::SetForcedAttributes()
 {
 	RETURN_IF_ABORT();
 	MyString buffer;
+
+	for (classad::References::const_iterator it = forcedSubmitAttrs.begin(); it != forcedSubmitAttrs.end(); ++it) {
+		char * value = param(it->c_str());
+		if ( ! value)
+			continue;
+		buffer.formatstr( "%s = %s", it->c_str(), value);
+		InsertJobExpr(buffer.c_str(), "SUBMIT_ATTRS or SUBMIT_EXPRS value");
+		free(value);
+	}
+
 
 	HASHITER it = hash_iter_begin(SubmitMacroSet);
 	for( ; ! hash_iter_done(it); hash_iter_next(it)) {
@@ -6903,7 +6915,38 @@ int SubmitHash::init_cluster_ad(time_t submit_time_in, const char * owner)
 	job->Assign(ATTR_COMMITTED_SUSPENSION_TIME, 0);
 	job->Assign(ATTR_ON_EXIT_BY_SIGNAL, false);
 
+#if 0 
+	// can't use this because it doesn't handle of MY. or +attrs correctly
 	config_fill_ad( job );
+#else
+	classad::References submit_attrs;
+	param_and_insert_attrs("SUBMIT_ATTRS", submit_attrs);
+	param_and_insert_attrs("SUBMIT_EXPRS", submit_attrs);
+	param_and_insert_attrs("SYSTEM_SUBMIT_ATTRS", submit_attrs);
+
+	if ( ! submit_attrs.empty()) {
+		MyString buffer;
+
+		for (classad::References::const_iterator it = submit_attrs.begin(); it != submit_attrs.end(); ++it) {
+			if (starts_with(*it,"+")) {
+				forcedSubmitAttrs.insert(it->substr(1));
+				continue;
+			} else if (starts_with_ignore_case(*it, "MY.")) {
+				forcedSubmitAttrs.insert(it->substr(3));
+				continue;
+			}
+
+			auto_free_ptr expr(param(it->c_str()));
+			if ( ! expr) continue;
+			buffer.formatstr("%s = %s", it->c_str(), expr.ptr());
+			InsertJobExpr(buffer.c_str(), "SUBMIT_ATTRS or SUBMIT_EXPRS value");
+		}
+	}
+	
+	/* Insert the version into the ClassAd */
+	job->Assign( ATTR_VERSION, CondorVersion() );
+	job->Assign( ATTR_PLATFORM, CondorPlatform() );
+#endif
 
 #if 0 // not used right now..
 	// if there is an Attrs ad, copy from it into this ad.

@@ -244,7 +244,7 @@ int read_meta_config(MACRO_SOURCE & source, int depth, const char *name, const c
 		while ((item = items.next()) != NULL) {
 			std::string metaname;
 			formatstr(metaname, "$%s.%s", name, item);
-			const MACRO_DEF_ITEM * p = find_macro_def_item(name, macro_set, ctx.use_mask);
+			const MACRO_DEF_ITEM * p = find_macro_def_item(metaname.c_str(), macro_set, ctx.use_mask);
 			if ( ! p) {
 				fprintf(stderr, "\nERROR: use %s: does not recognise %s\n", name, item);
 				return -1;

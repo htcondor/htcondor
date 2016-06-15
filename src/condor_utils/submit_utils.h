@@ -433,7 +433,7 @@ public:
 	// delete the last job ClassAd returned by make_job_ad (if any)
 	void delete_job_ad();
 
-	int InsertJobExpr (const char *expr);
+	int InsertJobExpr (const char *expr, const char * source_label=NULL);
 	int InsertJobExpr (const MyString &expr);
 	int InsertJobExprInt(const char * name, int val);
 	int InsertJobExprString(const char * name, const char * val);
@@ -518,6 +518,7 @@ protected:
 	MyString ScheddVersion; // target version of schedd, influences how jobad is filled in.
 	MyString MyProxyPassword; // set by command line or by submit file. command line wins
 	classad::References stringReqRes; // names of request_xxx submit variables that are string valued
+	classad::References forcedSubmitAttrs; // + and MY. attribute names from SUBMIT_ATTRS/EXPRS
 
 
 	// worker functions that build up the job from the hashtable
