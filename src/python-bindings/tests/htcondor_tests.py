@@ -67,6 +67,7 @@ class WithDaemons(unittest.TestCase):
         os.environ["_condor_STARTER"] = os.path.join(os.getcwd(), "../condor_starter.V6.1/condor_starter")
         os.environ["_condor_NEGOTIATOR"] = os.path.join(os.getcwd(), "../condor_negotiator.V6/condor_negotiator")
         os.environ["_condor_SHADOW"] = os.path.join(os.getcwd(), "../condor_shadow.V6.1/condor_shadow")
+        os.environ["_condor_SHARED_PORT"] = os.path.join(os.getcwd(), "../condor_shared_port/condor_shared_port")
         os.environ["_condor_CONDOR_HOST"] = socket.getfqdn()
         os.environ["_condor_LOCAL_DIR"] = testdir
         os.environ["_condor_LOG"] =  '$(LOCAL_DIR)/log'
@@ -496,6 +497,55 @@ class TestPythonBindings(WithDaemons):
         ads = schedd.query("ClusterId == %d" % cluster, ["JobStatus"])
         self.assertEquals(len(ads), 0)
         self.assertEquals(open(output_file).read(), "hello world\n")
+
+
+    def testScheddSubmitFile(self):
+        self.launch_daemons(["SCHEDD", "COLLECTOR", "STARTD", "NEGOTIATOR"])
+        submit_obj = htcondor.Submit()
+
+        submit_obj['foo'] = '$(bar) 1'
+        submit_obj['bar'] = '2'
+
+        self.assertEquals(str(submit_obj), "foo = $(bar) 1\nbar = 2\nqueue")
+        self.assertEquals(submit_obj.expand('foo'), "2 1")
+        self.assertEquals(set(submit_obj.keys()), set(['foo', 'bar']))
+        self.assertEquals(set(submit_obj.values()), set(['$(bar) 1', '2']))
+        self.assertEquals(set(submit_obj.items()), set([('foo', '$(bar) 1'), ('bar', '2')]))
+        d = dict(submit_obj)
+        self.assertEquals(set(d.items()), set([('foo', '$(bar) 1'), ('bar', '2')]))
+
+        self.assertEquals(str(htcondor.Submit(d)), str(submit_obj))
+
+        submit_obj = htcondor.Submit({"executable": "/bin/sh",
+                                      "arguments":  "-c ps faux",
+                                      "output":     "test.out.$(Cluster).$(Process)",
+                                      "+foo":       "true"})
+        schedd = htcondor.Schedd()
+        ads = []
+        with schedd.transaction() as txn:
+             cluster_id = submit_obj.queue(txn, ad_results=ads)
+
+        self.assertEquals(len(ads), 1)
+        ad = ads[0]
+        self.assertEquals(cluster_id, ad['ClusterId'])
+        self.assertEquals(ad['In'], '/dev/null')
+        self.assertEquals(ad['Args'], "-c ps faux")
+        outfile = "test.out.%d.0" % ad['ClusterId']
+        self.assertEquals(ad['Out'], outfile)
+        self.assertEquals(ad['foo'], True)
+
+        finished = False
+        for i in range(60):
+            ads = schedd.query("ClusterId == %d" % cluster_id, ["JobStatus"])
+            if len(ads) == 0:
+                finished = True
+                break
+            if i % 2 == 0:
+                schedd.reschedule()
+            time.sleep(1)
+        self.assertTrue(finished)
+        self.assertTrue(len(open(outfile).read()) > 0)
+
 
     def testClaim(self):
         os.environ['_condor_VALID_COD_USERS'] = pwd.getpwuid(os.geteuid()).pw_name

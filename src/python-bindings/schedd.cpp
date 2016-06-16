@@ -1856,7 +1856,7 @@ public:
     }
 
 
-    void
+    int 
     queue(boost::shared_ptr<ConnectionSentry> txn, int count, boost::python::object ad_results)
     {
         if (!txn.get() || !txn->transaction())
@@ -1875,6 +1875,27 @@ public:
         {
             THROW_EX(RuntimeError, "Failed to create a cluster ad");
         }
+
+        bool failed_copy = false;
+        ClassAd addl_ad;
+        std::stringstream ss;
+        HASHITER it = hash_iter_begin(const_cast<Submit *>(this)->m_hash.macros(), HASHITER_NO_DEFAULTS);
+        while (!hash_iter_done(it) && !failed_copy)
+        {
+            const char *key = hash_iter_key(it);
+            if (key && (*key == '+'))
+            {
+                ss << (key + 1) << " = " << hash_iter_value(it) << "\n";
+                failed_copy = !addl_ad.Insert(ss.str());
+            }
+            hash_iter_next(it);
+        }
+        hash_iter_delete(&it);
+        if (failed_copy)
+        {
+            THROW_EX(ValueError, "Failed to create a copy of attributes");
+        }
+
         int cluster;
         {
             condor::ModuleLock ml;
@@ -1900,6 +1921,11 @@ public:
             proc_ad->InsertAttr(ATTR_CLUSTER_ID, cluster);
             proc_ad->InsertAttr(ATTR_PROC_ID, procid);
 
+            if (!proc_ad->Update(addl_ad))
+            {
+                THROW_EX(ValueError, "Failed to copy extra attributes")
+            }
+
             classad::ClassAdUnParser unparser;
             unparser.SetOldClassAd( true );
             for (classad::ClassAd::const_iterator it = proc_ad->begin(); it != proc_ad->end(); it++)
@@ -1923,6 +1949,7 @@ public:
         {
             txn->reschedule();
         }
+        return cluster;
     }
 
 private:
@@ -2094,7 +2121,7 @@ void export_schedd()
         .def("expand", &Submit::expand, "Expand all macros for a given attribute")
         .def("queue", &Submit::queue, "Submit the current object to the remote queue\n"
              ":param txn: An active transaction object\n"
-             ":return: None.  Throws a RuntimeError if the submission fails\n",
+             ":return: Cluster ID of submitted job(s).  Throws a RuntimeError if the submission fails\n",
              (boost::python::arg("self"), boost::python::arg("txn"), boost::python::arg("count")=1, boost::python::arg("ad_results")=boost::python::object())
             )
         .def("__delitem__", &Submit::deleteItem)
