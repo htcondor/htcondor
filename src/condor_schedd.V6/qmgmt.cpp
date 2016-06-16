@@ -2630,7 +2630,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 
 #if !defined(WIN32)
 		uid_t user_uid;
-		if ( !pcache()->get_user_uid( owner, user_uid ) ) {
+		if ( can_switch_ids() && !pcache()->get_user_uid( owner, user_uid ) ) {
 			errno = EACCES;
 			dprintf( D_ALWAYS, "SetAttribute security violation: "
 					 "setting owner to %s, which is not a valid user account\n",
