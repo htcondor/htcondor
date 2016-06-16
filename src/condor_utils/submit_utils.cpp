@@ -1373,6 +1373,7 @@ int SubmitHash::SetStdFile( int which_file )
 	{
 		fprintf( stderr,"\nERROR: The '%s' takes exactly one argument (%s)\n", 
 				 generic_name, macro_value );
+		free(macro_value);
 		ABORT_AND_RETURN( 1 );
 	}	
 
