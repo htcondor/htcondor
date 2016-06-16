@@ -156,7 +156,7 @@ class Condor_Auth_Kerberos : public Condor_Auth_Base {
     // RETURNS: TRUE --success; FALSE -- failure
     //------------------------------------------
     
-    int send_request(krb5_data * request);
+    int send_request_and_receive_reply(krb5_data * request);
     //------------------------------------------
     // PURPOSE: Send an authentication request 
     // REQUIRE: None

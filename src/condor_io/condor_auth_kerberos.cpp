@@ -702,7 +702,7 @@ int Condor_Auth_Kerberos :: authenticate_client_kerberos()
     }
     
     // Send out the request
-    if ((reply = send_request(&request)) != KERBEROS_MUTUAL) {
+    if ((reply = send_request_and_receive_reply(&request)) != KERBEROS_MUTUAL) {
         dprintf( D_ALWAYS, "KERBEROS: Could not authenticate!\n" );
         return FALSE;
     }
@@ -855,7 +855,7 @@ int Condor_Auth_Kerberos :: authenticate_server_kerberos()
         }
 
         // send the message
-        if (send_request(&reply) != KERBEROS_GRANT) {
+        if (send_request_and_receive_reply(&reply) != KERBEROS_GRANT) {
             goto cleanup;
         }
     }
@@ -1217,7 +1217,7 @@ int Condor_Auth_Kerberos :: init_realm_mapping()
 	}
 }
    
-int Condor_Auth_Kerberos :: send_request(krb5_data * request)
+int Condor_Auth_Kerberos :: send_request_and_receive_reply(krb5_data * request)
 {
     int reply = KERBEROS_DENY;
     int message = KERBEROS_PROCEED;
@@ -1368,7 +1368,7 @@ int Condor_Auth_Kerberos :: forward_tgt_creds(krb5_creds      * cred,
         goto cleanup;
     }
     
-    rc = !(send_request(&request) == KERBEROS_GRANT);
+    rc = !(send_request_and_receive_reply(&request) == KERBEROS_GRANT);
     
     goto cleanup;
     
