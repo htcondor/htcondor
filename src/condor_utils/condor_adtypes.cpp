@@ -51,6 +51,8 @@ static const Lookup adtypes [] =
 	{ GRID_ADTYPE, 			GRID_AD, },
 	{ XFER_SERVICE_ADTYPE,	XFER_SERVICE_AD, },
 	{ LEASE_MANAGER_ADTYPE,	LEASE_MANAGER_AD, },
+	{ DEFRAG_ADTYPE,		DEFRAG_AD, },
+	{ ACCOUNTING_ADTYPE,	ACCOUNTING_AD, },
 	{ "",		NO_AD, },
 };
 
