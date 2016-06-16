@@ -29,6 +29,7 @@ on the HTCondor jobs.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:DAGTerminology}DAGMan Terminology}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{DAGMan!terminology}
 
 A node within a DAG may encompass more than a single
 program submitted to run under HTCondor.
@@ -74,10 +75,10 @@ Each node within a DAG may be further constrained  to succeed or fail
 based upon the return values of a PRE script and/or a POST script.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{The DAG Input File: the JOB, DATA, PARENT...CHILD, and SCRIPT Key Words}
+\subsection{The DAG Input File: Basic Commands}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
 \index{DAGMan!DAG input file}
+
 The input file used by DAGMan is called a DAG input file.
 It specifies the nodes of the DAG as well as the dependencies
 that order the DAG.
@@ -116,15 +117,15 @@ A very simple DAG input file for this diamond-shaped DAG is
 \end{verbatim}
 \normalsize
 
-A set of basic keywords appearing in a DAG input file is described below.
+A set of basic commands appearing in a DAG input file is described below.
 
-\begin{itemize}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:dagman_job_command}JOB}
 \label{dagman:JOB}
-\index{DAGMan input file!JOB keyword}
-\item \Bold{JOB}
+\index{DAG input file!JOB command}
 
-The \Arg{JOB} keyword specifies an HTCondor job.
+The \Arg{JOB} command specifies an HTCondor job.
 The syntax used for each \Arg{JOB} entry is
 
 \Opt{JOB} \Arg{JobName} \Arg{SubmitDescriptionFileName}
@@ -132,7 +133,7 @@ The syntax used for each \Arg{JOB} entry is
 
 A \Arg{JOB} entry maps a \Arg{JobName} to an HTCondor submit description file.
 The \Arg{JobName} uniquely identifies nodes within the
-DAGMan input file and in output messages.
+DAG input file and in output messages.
 Each node name, given by \Arg{JobName}, within the DAG must be unique.
 The \Arg{JOB} entry must appear within the DAG input file before
 other items that reference the node.
@@ -202,18 +203,19 @@ The \Arg{DONE} keyword applies to the entire node.
 A node marked with \Arg{DONE} will not have a PRE or POST script run,
 and the HTCondor job will not be submitted.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:dagman_data_command}DATA}
 \label{dagman:DATA}
-\index{DAGMan input file!DATA keyword}
-\item \Bold{DATA}
+\index{DAG input file!DATA command}
 
 As of version 8.3.5, \Condor{dagman} no longer supports DATA nodes.
 
-%----------------------------
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:dagman_parent_child_command}PARENT \Dots CHILD}
 \label{dagman:ParentChild}
-\index{DAGMan input file!PARENT \Dots CHILD keyword}
-\item \Bold{PARENT \Dots CHILD}
+\index{DAG input file!PARENT \Dots CHILD command}
 
-The \Arg{PARENT} and \Arg{CHILD} keywords specify the
+The \Arg{PARENT} \Arg{CHILD} command specifies the
 dependencies within the DAG.
 \index{DAGMan!describing dependencies}
 Nodes are parents and/or children within the DAG.
@@ -258,13 +260,13 @@ produces four dependencies:
 \item{\verb@p2@ to \verb@c2@}
 \end{enumerate}
 
-%----------------------------
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:dagman_script_command}SCRIPT}
 \label{dagman:SCRIPT}
-\index{DAGMan input file!SCRIPT keyword}
-\item \Bold{SCRIPT}
+\index{DAG input file!SCRIPT command}
 \index{DAGMan!PRE and POST scripts}
 
-The optional \Arg{SCRIPT} keyword specifies
+The optional \Arg{SCRIPT} command specifies
 processing that is done either before a job within
 a node is submitted
 or after a job within a node completes its execution.
@@ -285,7 +287,7 @@ The syntax used for each \Arg{PRE} or \Arg{POST} entry is
 \Opt{SCRIPT} \oOptArg{DEFER}{status time}
 \Opt{POST}  \Arg{JobName} \Arg{ExecutableName} \oArg{arguments}
 
-The \Arg{SCRIPT} keyword uses
+The \Arg{SCRIPT} command uses
 the \Arg{PRE} or \Arg{POST} keyword,
 which specifies the relative timing of when the script is to be run.
 The \Arg{JobName} identifies the node to which the script is attached.
@@ -449,7 +451,7 @@ An example of a job ID might be 1234.0.
 For nodes with multiple jobs in the same cluster,
 the \Attr{ProcId} value is the one of the last job within the cluster.
 
-\item \index{DAGMan!Return@\verb^$RETURN^ value}
+\item \index{DAGMan!return@\verb^$RETURN^ value}
 \Expr{\$RETURN} (for POST scripts only) variable evaluates to
 the return value of the 
 HTCondor job, if there is a single job within a cluster.
@@ -575,10 +577,11 @@ This example shows that when
 there is no space between the \Expr{=} sign and the variable \Expr{\$RETURN},
 there is no substitution of the macro's value.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:dagman_pre_skip_command}PRE\_SKIP}
 \label{dagman:PRE-SKIP}
-\index{DAGMan input file!PRE\_SKIP keyword}
-\index{DAGMan!PRE\_SKIP command}
-\item \Bold{PRE\_SKIP}
+\index{DAG input file!PRE\_SKIP command}
+\index{DAGMan!skipping node execution}
 
 The behavior of DAGMan with respect to node success or failure can
 be changed with the addition of a \Arg{PRE\_SKIP} command. 
@@ -596,16 +599,27 @@ and the node will be marked as successful.
 % $ % this comment just has a dollar sign so that emacs will not think
 %	  we're inside of a math section and will draw things more nicely
 
-\end{itemize}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:DAG-command_order}Command Order}
+\label{dagman:command order}
+\index{DAG input file!command order}
+\index{DAGMan!command order}
 
+It is important to note that all commands that reference a \Arg{JobName}
+must come \emph{after} the JOB command defining that \Arg{JobName}.  For
+example, the command sequence
+\begin{verbatim}
+SCRIPT PRE A foo.pl
+JOB A bar.sub
+\end{verbatim}
 
+is not legal and will result in a fatal parse error.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Submit Description File Contents}
+\subsection{Node Job Submit File Contents}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{DAGMan!node job submit description file}
 
-\index{DAGMan!submit description file with}
-\index{DAGMan!usage of log files}
 Each node in a DAG may use a unique submit description file.
 A key limitation is that
 each HTCondor submit description file must submit jobs
@@ -667,7 +681,7 @@ the job.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{dagman:submitdag}DAG Submission}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{DAGMan!job submission}
+\index{DAGMan!DAG submission}
 
 A DAG is submitted using the tool \Condor{submit\_dag}.
 The manual
@@ -719,7 +733,9 @@ to \Condor{submit\_dag}.
 These same limits can be set in configuration.
 Each limit is applied within a single DAG.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:DAG-throttling}DAG Throttling}
+\index{DAGMan!throttling}
 
 \Bold{Total nodes/clusters:}
 The \Opt{-maxjobs} option 
@@ -789,7 +805,7 @@ configuration options.)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:DAGPaths}File Paths in DAGs}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{DAGMan!File Paths in DAGs}
+\index{DAGMan!file paths in DAGs}
 
 \Condor{dagman} assumes that all relative paths in a
 DAG input file and the associated HTCondor submit description files
@@ -908,8 +924,10 @@ the \Arg{DIR} keyword.
 Using both will be detected and generate an error. 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:DAGMonitoring}Job Monitoring, Job Failure, and Job Removal}
+\subsection{\label{sec:DAGMonitoring}DAG Monitoring and DAG Removal}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{DAGMan!DAG monitoring}
+\index{DAGMan!DAG removal}
 
 After submission, the progress of the DAG can be monitored
 by looking at the job event log file(s),
@@ -928,12 +946,6 @@ The \File{dagman.out} file is an important resource for
 debugging; save this file if a problem occurs. 
 The \File{dagman.out} is appended to, rather than overwritten, 
 with each new DAGMan run.
-
-\Condor{submit\_dag} attempts to check the DAG input file
-for various types of errors,
-such as a cycle in the DAG.
-If a problem is detected,
-\Condor{submit\_dag} prints out an error message and aborts.
 
 To remove an entire DAG, consisting of the \Condor{dagman} job, 
 plus any jobs submitted to HTCondor,
@@ -966,6 +978,7 @@ in the HTCondor queue.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:DagSuspend}Suspending a Running DAG}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{DAGMan!suspending a running DAG}
 
 It may be desired to temporarily suspend a running DAG.
 For example, the load may be high on the submit machine,
@@ -1022,16 +1035,13 @@ If one exists, it is removed.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{dagman:retry}Retrying Failed Nodes or Stopping the Entire DAG}
-
-\index{DAGMan input file!RETRY keyword}
-\index{DAGMan!RETRY of failed nodes}
-\index{DAGMan input file!ABORT-DAG-ON keyword}
-\index{DAGMan!ABORT-DAG-ON}
+\subsubsection{\label{dagman:retry}Retrying Failed Nodes}
+\index{DAG input file!RETRY command}
+\index{DAGMan!retrying failed nodes}
 
 DAGMan can retry any failed node in a DAG by
 specifying the node in the DAG input file 
-with the \Arg{RETRY} keyword.
+with the \Arg{RETRY} command.
 The use of retry is optional.
 The syntax for retry is
 
@@ -1080,8 +1090,12 @@ The macro \Env{\$MAX\_RETRIES} is the value set for
 \Arg{NumberOfRetries}.
 These macros may be used as arguments passed to a PRE or POST script.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{dagman:abort}Stopping the Entire DAG}
+\index{DAG input file!ABORT-DAG-ON command}
+\index{DAGMan!aborting a DAG}
 
-The \Arg{ABORT-DAG-ON} keyword provides a way
+The \Arg{ABORT-DAG-ON} command provides a way
 to abort the entire DAG if a given node returns a specific exit
 code.  The syntax for \Arg{ABORT-DAG-ON} is
 
@@ -1148,13 +1162,12 @@ If this abort occurs, the return value for the DAG is 1.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{dagman:VARS}Variable Values Associated with Nodes}
-\index{DAG input file!VARS keyword}
-
+\index{DAG input file!VARS command}
 \index{DAGMan!VARS (macro for submit description file)}
-\index{VARS}
+
 Macros defined for DAG nodes can be used within the submit description
 file of the node job. 
-The \Arg{VARS} keyword provides a method for defining a macro.
+The \Arg{VARS} command provides a method for defining a macro.
 Macros are defined on a per-node basis, using the syntax
 
 \Opt{VARS} \Arg{JobName} \Arg{macroname=}\Arg{"string"} [\Arg{macroname=}\Arg{"string"\Dots}]
@@ -1288,7 +1301,6 @@ then the argument will be \Expr{bar}.
 \item[Special characters within VARS string definitions]
 \end{description}
 \index{DAGMan!VARS (use of special characters)}
-\index{VARS (use of special characters)}
 
 The value defined for a macro may contain spaces and tabs.
 It is also possible to have double quote marks and
@@ -1475,9 +1487,10 @@ which is the first retry and the value 1.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Setting Priorities for Nodes}
-\index{DAGMan input file!PRIORITY keyword}
+\index{DAG input file!PRIORITY command}
+\index{DAGMan!node priorities}
 
-The \Arg{PRIORITY} keyword assigns a priority to a DAG node.
+The \Arg{PRIORITY} command assigns a priority to a DAG node.
 The syntax for \Arg{PRIORITY} is
 
 \Opt{PRIORITY} \Arg{JobName} \Arg{PriorityValue}
@@ -1567,23 +1580,23 @@ will \emph{not} tend to be the same.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:DAG-node-category}Throttling Nodes by Category}
-
-\index{DAGMan input file!CATEGORY keyword}
-\index{DAGMan input file!MAXJOBS keyword}
+\index{DAG input file!CATEGORY command}
+\index{DAG input file!MAXJOBS command}
+\index{DAGMan!throttling nodes by category}
 
 In order to limit the number of submitted job clusters within a DAG,
 the nodes may be placed into categories by assignment of a name.
 Then, a maximum number of submitted clusters may be specified
 for each category.
 
-The \Arg{CATEGORY} keyword assigns a category name to a DAG node.
+The \Arg{CATEGORY} command assigns a category name to a DAG node.
 The syntax for \Arg{CATEGORY} is
 
 \Opt{CATEGORY} \Arg{JobName} \Arg{CategoryName}
 
 Category names cannot contain white space.
 
-The \Arg{MAXJOBS} keyword limits the number of submitted job clusters
+The \Arg{MAXJOBS} command limits the number of submitted job clusters
 on a per category basis.
 The syntax for \Arg{MAXJOBS} is
 
@@ -1611,8 +1624,7 @@ categories and splices.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:DAG-configuration}Configuration Specific to a DAG}
-\index{DAGMan input file!CONFIG keyword}
-\index{DAGMan!CONFIG}
+\index{DAG input file!CONFIG command}
 \index{DAGMan!configuration specific to a DAG}
 
 All configuration variables and their definitions that relate to 
@@ -1648,7 +1660,7 @@ configuration file.
 And, a value specified in a DAGMan-specific configuration
 file overrides values specified in a general HTCondor configuration file.
 
-The \Arg{CONFIG} keyword within the DAG input file specifies a 
+The \Arg{CONFIG} command within the DAG input file specifies a 
 configuration file to be used to set configuration variables 
 related to \Condor{dagman} when running this DAG.
 The syntax for \Arg{CONFIG} is
@@ -1687,7 +1699,7 @@ and not utilized by DaemonCore, yet are specified in a
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:MultipleDAGs}Optimization of Submission Time}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{DAGMan!optimization of submit time}
 
 \Condor{dagman} works by watching log files for events, such as submission,
 termination, and going on hold.
@@ -1723,8 +1735,7 @@ of the node job, unless the job requests it using the submit command
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:MultipleDAGs}Single Submission of Multiple, Independent DAGs}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{DAGMan!Single submission of multiple, independent DAGs}
+\index{DAGMan!single submission of multiple, independent DAGs}
 
 A single use of \Condor{submit\_dag} may execute multiple, independent DAGs.
 Each independent DAG has its own, distinct DAG input file.
@@ -1773,9 +1784,8 @@ to \Expr{False} (see ~\ref{param:DAGManMungeNodeNames}).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:DAGsinDAGs}A DAG Within a DAG Is a SUBDAG}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{DAG input file!SUBDAG command}
 \index{DAGMan!DAGs within DAGs}
-\index{DAGMan input file!SUBDAG keyword}
 
 The organization and dependencies of the jobs within a DAG
 are the keys to its utility.
@@ -1849,7 +1859,7 @@ The preferred presentation is equivalent to
 \end{verbatim}
 
 Within the outer DAG's input file,
-the \Opt{SUBDAG} keyword specifies a special case of a \Opt{JOB}
+the \Opt{SUBDAG} command specifies a special case of a \Opt{JOB}
 node, where the job is itself a DAG.
 
 The syntax for each SUBDAG entry is
@@ -2046,9 +2056,8 @@ must be specified accordingly.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:DAGSplicing}DAG Splicing}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{DAGMan!Splicing DAGs}
-\index{DAGMan input file!SPLICE keyword}
+\index{DAG input file!SPLICE command}
+\index{DAGMan!splicing DAGs}
 
 A weakness in scalability exists when submitting a DAG within a DAG,
 which is called a SUBDAG.
@@ -2093,7 +2102,7 @@ within the DAG.
 A DAGMan job that causes a cyclic inclusion of splices will
 eventually exhaust available memory and crash.
 
-The \Arg{SPLICE} keyword in a DAG input file
+The \Arg{SPLICE} command in a DAG input file
 creates a named instance of a DAG as specified
 in another file as an entity which may have \Arg{PARENT} and \Arg{CHILD}
 dependencies associated with other splice names or node names in the
@@ -2529,9 +2538,8 @@ at a higher level, the splice name must be included.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:DAGFinalNode}FINAL node}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{DAGMan!DAG FINAL node}
-\index{DAGMan input file!FINAL keyword}
+\index{DAG input file!FINAL command}
+\index{DAGMan!FINAL node}
 
 A FINAL node is a single and special node that is always run at 
 the end of the DAG,
@@ -2539,7 +2547,7 @@ even if previous nodes in the DAG have failed.
 A FINAL node can be used
 for tasks such as cleaning up intermediate files and checking the output
 of previous nodes.
-The \Arg{FINAL} keyword in the DAG input file specifies 
+The \Arg{FINAL} command in the DAG input file specifies 
 a node job to be run at the end of the DAG.  
 
 The syntax used for the \Arg{FINAL} entry is
@@ -2644,8 +2652,8 @@ if the DAG has been removed from the queue with \Condor{rm}.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:DAGMan-rescue}The Rescue DAG}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{DAGMan!rescue DAG}
 
-\index{DAGMan!Rescue DAG}
 Any time a DAG exits unsuccessfully, DAGMan generates a Rescue DAG.  
 The Rescue DAG records the state of the DAG, 
 with information such as which nodes completed successfully,
@@ -2901,7 +2909,7 @@ has a parse failure, the resulting incomplete Rescue DAG will be
 named \File{my.dag.parse\_failed}.
 
 To further prevent one of these incomplete Rescue DAG files from being used,
-a line within the file contains the single keyword \Arg{REJECT}.
+a line within the file contains the single command \Arg{REJECT}.
 This causes \Condor{dagman} to reject the DAG, if used as a DAG input file.
 This is done because the
 incomplete Rescue DAG may be a syntactically correct DAG input file.
@@ -2914,9 +2922,9 @@ it did not.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:DAGMan-recovery}DAG Recovery}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
 \index{DAGMan!DAG recovery}
 \index{DAGMan!difference between Rescue DAG and DAG recovery}
+
 DAG recovery restores the state of a DAG upon resubmission.
 Recovery is accomplished by reading the \File{.nodes.log}
 file that is used to enforce the dependencies of the DAG.
@@ -2968,8 +2976,7 @@ then recovery is indicated.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Visualizing DAGs with \Prog{dot}}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{DAGMan!dot}
-\index{dot}
+\index{DAG input file!DOT command}
 \index{DAGMan!visualizing DAGs}
 
 It can be helpful to see a picture of a DAG.
@@ -2982,7 +2989,7 @@ and it is used to draw pictures of DAGs.
 
 DAGMan produces one or more dot files as the result of
 an extra line
-in a DAGMan input file. 
+in a DAG input file. 
 The line appears as
 %For example, to produce a single dot
 %file that shows the state of your DAG before any jobs are running, add
@@ -3003,7 +3010,7 @@ This example creates a Postscript file, with a visualization of the DAG:
     dot -Tps dag.dot -o dag.ps
 \end{verbatim}
 
-Within the DAGMan input file,
+Within the DAG input file,
 the DOT command can take several optional parameters:
 
 \begin{itemize}
@@ -3023,7 +3030,7 @@ is specified.
 of overwriting the single one specified.
 To create file names,
 DAGMan uses the name of the file concatenated with a period and an
-integer. For example, the DAGMan input file line
+integer. For example, the DAG input file line
 \begin{verbatim}
     DOT dag.dot DONT-OVERWRITE
 \end{verbatim}
@@ -3055,8 +3062,9 @@ listed is used.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:DAG-node-status}Capturing the Status of Nodes in a File}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{DAG input file!NODE\_STATUS\_FILE command}
 \index{DAGMan!node status file}
-\index{status!of a DAGMan node}
+\index{status!of DAG nodes}
 
 DAGMan can capture the status of the overall DAG and all DAG nodes
 in a \emph{node status file},
@@ -3064,7 +3072,7 @@ such that the user or a script can monitor this status.
 This file is periodically rewritten
 while the DAG runs.
 To enable this feature, the DAG input file must contain a line with the
-\Arg{NODE\_STATUS\_FILE} keyword.
+\Arg{NODE\_STATUS\_FILE} command.
 
 The syntax for a \Arg{NODE\_STATUS\_FILE} specification is
 
@@ -3179,7 +3187,7 @@ yet running.
 \item 6 (\verb@STATUS_ERROR@): The node has failed.
 \end{itemize}
 
-A \Arg{NODE\_STATUS\_FILE} keyword inside any splice is ignored.
+A \Arg{NODE\_STATUS\_FILE} command inside any splice is ignored.
 If multiple DAG files are specified on the \Condor{submit\_dag} command line,
 and more than one specifies a node status file,
 the first specification takes precedence.
@@ -3187,6 +3195,7 @@ the first specification takes precedence.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:DAGJobstateLog}A Machine-Readable Event History, the jobstate.log File}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{DAG input file!JOBSTATE\_LOG command}
 \index{DAGMan!jobstate.log file}
 \index{DAGMan!machine-readable event history}
 
@@ -3197,7 +3206,7 @@ uses the \File{jobstate.log} file to monitor the state of a workflow.
 The \File{jobstate.log} file can used by any
 automated tool for the monitoring of workflows.
 
-DAGMan produces this file when the keyword \Arg{JOBSTATE\_LOG} is
+DAGMan produces this file when the command \Arg{JOBSTATE\_LOG} is
 in the DAG input file.
 The syntax for \Arg{JOBSTATE\_LOG} is
 
@@ -3274,7 +3283,7 @@ The formatting of the line is
 \Arg{timestamp} \Arg{JobName} \Arg{eventName} \Arg{condorID} \Arg{jobTag} - \Arg{sequenceNumber}
 
 The \Arg{JobName} is the name given to the node job as defined in
-the DAG input file with the keyword \Arg{JOB}.
+the DAG input file with the command \Arg{JOB}.
 It identifies the node within the DAG.
 
 The \Arg{eventName} is one of the many defined event or meta-events given
@@ -3516,7 +3525,7 @@ is that there are lots of submit description files.
 A single HTCondor submit description file might be used for all the many
 jobs of the parameter sweep.
 To distinguish the jobs and their associated distinct input and output files,
-the DAG input file assigns a unique identifier with the \Arg{VARS} keyword.
+the DAG input file assigns a unique identifier with the \Arg{VARS} command.
 \begin{verbatim}
   # file sweep.dag
   JOB job0 common.submit
