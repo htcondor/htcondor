@@ -32,12 +32,12 @@ CondorError::~CondorError() {
 	clear();
 }
 
-CondorError::CondorError(CondorError& copy) {
+CondorError::CondorError(const CondorError& copy) {
 	init();
 	deep_copy(copy);
 }
 
-CondorError& CondorError::operator=(CondorError& copy) {
+CondorError& CondorError::operator=(const CondorError& copy) {
 	if (&copy != this) {
 		clear();
 		deep_copy(copy);
@@ -80,10 +80,10 @@ bool CondorError::pop() {
 
 }
 
-void CondorError::deep_copy(CondorError& copy) {
-	_subsys = strdup(copy._subsys);
+void CondorError::deep_copy(const CondorError& copy) {
+	_subsys = copy._subsys ? strdup(copy._subsys) : NULL;
 	_code = copy._code;
-	_message = strdup(copy._message);
+	_message = copy._message ? strdup(copy._message) : NULL;
 	if(copy._next) {
 		_next = new CondorError();
 		_next->deep_copy(*(copy._next));
