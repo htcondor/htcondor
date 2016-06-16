@@ -2716,6 +2716,16 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 				return -1;
 		}
 
+#if !defined(WIN32)
+		uid_t user_uid;
+		if ( !pcache()->get_user_uid( owner, user_uid ) ) {
+			errno = EACCES;
+			dprintf( D_ALWAYS, "SetAttribute security violation: "
+					 "setting owner to %s, which is not a valid user account\n",
+					 attr_value );
+			return -1;
+		}
+#endif
 
 			// If we got this far, we're allowing the given value for
 			// ATTR_OWNER to be set.  However, now, we should try to
