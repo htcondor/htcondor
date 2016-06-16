@@ -7672,12 +7672,28 @@ friendly_name=Location of the High-Availability daemon
 type=path
 review=?
 
+[HAD_SOCKET_NAME]
+default=HAD
+type=string
+
+[HAD_ARGS]
+default=-sock $(HAD_SOCKET_NAME)
+type=string
+
 [REPLICATION]
 default=$(SBIN)/condor_replication
 win32_default=$(SBIN)\condor_replication.exe
 friendly_name=Location of the Replication daemon
 type=path
 review=?
+
+[REPLICATION_SOCKET_NAME]
+default=REPLICATION
+type=string
+
+[REPLICATION_ARGS]
+default=-sock $(REPLICATION_SOCKET_NAME)
+type=string
 
 [TRANSFERER]
 default=$(LIBEXEC)/condor_transferer
