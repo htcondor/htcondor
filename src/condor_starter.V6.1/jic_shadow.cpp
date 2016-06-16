@@ -2583,6 +2583,7 @@ JICShadow::initUserCredentials() {
 
 	if (rawlen <= 0) {
 		dprintf(D_ALWAYS, "CREDMON: failed to decode credential into file (%s)!\n", filename);
+		free(rawbuf);
 		return false;
 	}
 
