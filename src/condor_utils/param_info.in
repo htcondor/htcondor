@@ -7599,6 +7599,11 @@ review=?
 default=/tmp/CGAHPLog.$(USERNAME)
 win32_default=NUL
 review=?
+
+[C_GAHP_DEBUG]
+default=D_STATS
+review=?
+
 [C_GAHP_LOCK]
 default=/tmp/CGAHPLock.$(USERNAME)
 win32_default=NUL
