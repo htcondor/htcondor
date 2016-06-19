@@ -187,8 +187,15 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 	// wenger 2014-09-21
 	std::list<std::string> vars_to_save;
 
-//TEMPTEMP -- explain loop split
 	//
+	// We now parse in two passes, so that commands such as PARENT..CHILD
+	// can come before the relevant nodes are defined (see gittrac #5732).
+	// The first pass parses commands that define nodes (JOB, DATA, FINAL,
+	// SPLICE, SUBDAG); the second pass parses everything else.
+	//
+
+	//
+	// PASS 1.
 	// This loop will read every line of the input file
 	//
 	while ( ((line=getline_trim(fp, lineNumber)) != NULL) ) {
@@ -197,7 +204,6 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 		//
 		// Find the terminating '\0'
 		//
-		//TEMPTEMP -- move this into parse_script?  (I think that's the only place it's used)
 		char * endline = line;
 		while (*endline != '\0') endline++;
 
@@ -264,7 +270,8 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 						lineNumber);
 		}
 		else {
-			//TEMPTEMP -- is this the right way to handle things?
+				// Just accept everything for now -- we'll detect unknown
+				// command names in the second pass.
 			parsed_line_successfully = true;
 		}
 
@@ -274,8 +281,11 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 		}
 	}
 
+	//
+	// PASS 2.
+	// Seek back to the beginning of the DAG file.
+	//
 	if ( fseek( fp, 0, SEEK_SET ) != 0 ) {
-		//TEMPTEMP -- is this the right verbosity?
 		debug_printf( DEBUG_QUIET,
 					"Error (%d, %s) seeking back to beginning of DAG file\n",
 					errno, strerror( errno ) );
@@ -285,6 +295,9 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 
 	lineNumber = 0;
 
+	//
+	// This loop will read every line of the input file
+	//
 	while ( ((line=getline_trim(fp, lineNumber)) != NULL) ) {
 		std::string varline(line);
 
@@ -314,6 +327,7 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 		// Example Syntax is:  JOB j1 j1.condor [DONE]
 		//
 		if(strcasecmp(token, "JOB") == 0) {
+				// Parsed in first pass.
 			parsed_line_successfully = true;
 		}
 
@@ -321,20 +335,24 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 		// Example Syntax is:  DATA j1 j1.dapsubmit [DONE]
 		//
 		else if	(strcasecmp(token, "DAP") == 0) {	// DEPRECATED!
+				// Parsed in first pass.
 			parsed_line_successfully = true;
 		}
 
 		else if	(strcasecmp(token, "DATA") == 0) {
+				// Parsed in first pass.
 			parsed_line_successfully = true;
 		}
 
 		// Handle a SUBDAG spec
 		else if	(strcasecmp(token, "SUBDAG") == 0) {
+				// Parsed in first pass.
 			parsed_line_successfully = true;
 		}
 
 		// Handle a FINAL spec
 		else if(strcasecmp(token, "FINAL") == 0) {
+				// Parsed in first pass.
 			parsed_line_successfully = true;
 		}
 
@@ -417,6 +435,7 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 
 		// Handle a Splice spec
 		else if(strcasecmp(token, "SPLICE") == 0) {
+				// Parsed in first pass.
 			parsed_line_successfully = true;
 		}
 

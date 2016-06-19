@@ -207,6 +207,7 @@ job_dagman_submit_glob-B: personal
 job_dagman_set_attr: personal
 job_dagman_event_timestamp: personal
 job_dagman_batch_name: personal
+job_dagman_cmd_order: personal
 job_filexfer_base-input1_van: personal
 job_filexfer_base_van: personal
 job_filexfer_basic_van: personal

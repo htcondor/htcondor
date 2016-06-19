@@ -1,0 +1,6 @@
+universe = vanilla
+executable = x_echostring.pl
+arguments = $(nodename)
+output = job_dagman_cmd_order-$(nodename).out
+error = job_dagman_cmd_order-$(nodename).err
+queue
