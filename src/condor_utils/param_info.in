@@ -8615,6 +8615,50 @@ default : @end
 @end
 review=?
 
+[$EXPERIMENTAL.CollectorNode]
+friendly_name=One node of a Collector tree, args: id,port
+default: @end
+   COLLECTOR$(1) = $(COLLECTOR)
+   if $(2?)
+      COLLECTOR$(1)_ARGS = -f -local-name COLLECTOR$(1) -p $(2)
+   else
+      COLLECTOR$(1)_ARGS = -f -local-name COLLECTOR$(1) -sock collector$(1)
+   endif
+   COLLECTOR$(1).COLLECTOR_LOG = $(LOG)/Collector$(1)Log 
+   DAEMON_LIST = $(DAEMON_LIST) COLLECTOR$(1)
+@end
+
+[$EXPERIMENTAL.HAD]
+friendly_name=Shared port stuff for a HAD node? controlee, ip/hostname
+default: @end
+   DAEMON_LIST = $(DAEMON_LIST) HAD REPLICATION
+   HAD_USE_REPLICATION = TRUE
+   MASTER_HAD_BACKOFF_CONSTANT = 360
+@end
+
+[$EXPERIMENTAL.HADSharedPort]
+friendly_name=Shared port stuff for a HAD node? controlee, ip/hostname
+default: @end
+   use EXPERIMENTAL : HADReplication( $(1), $(2), $(SHARED_PORT_PORT), $(SHARED_PORT_PORT) )
+@end
+
+[$EXPERIMENTAL.HADFixedPort]
+friendly_name=Shared port stuff for a HAD node? controlee, ip/hostname, hadport, replport
+default: @end
+   HAD_ARGS = -p $(3)
+   REPLICATION_ARGS = -p $(4)
+   use EXPERIMENTAL : HADReplication( $(1), $(2), $(3), $(4) )
+@end
+
+[$EXPERIMENTAL.HADReplication]
+friendly_name=Shared port stuff for a HAD node? controlee, ip/hostname
+default: @end
+   HAD_LIST = $(HAD_LIST) $(2):$(3)
+   REPLICATION_LIST = $(REPLICATION_LIST) $(2):$(4)
+   HAD_CONTROLEE = $(1)
+   MASTER_$(1)_CONTROLLER = HAD
+@end
+
 [$EXPERIMENTAL.ASYNC_STAGEOUT]
 friendly_name=Knobs to enable the async stage-out hack for CMS
 default: @end

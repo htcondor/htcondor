@@ -32,6 +32,12 @@
 #include "my_popen.h"
 #include "printf_format.h"
 
+#define METAKNOBS_WITH_ARGS 1
+#ifdef METAKNOBS_WITH_ARGS
+char * expand_meta_args(const char *value, std::string & argstr);
+#endif
+
+
 #if defined(__cplusplus)
 extern "C" {
 #endif
@@ -207,6 +213,75 @@ is_piped_command(const char* filename)
 	return retVal;
 }
 
+// recursive brace matching, scans for a close that matches either *p or the
+// appropriate close if *p is ([{ or <.  Will recurse if a brace in recurse_set
+// is found while scanning. max recursion depth is depth, returns NULL when
+// max recursion depth is exceeded.
+// 
+const char * find_close_brace(const char * p, int depth, const char * recurse_set=NULL) {
+	if (depth < 0) return NULL;
+	char open_ch = *p;
+	if ( ! open_ch) return NULL;
+	char close_ch = open_ch;
+	switch (close_ch) {
+		case '(': close_ch = ')'; break;
+		case '[': close_ch = ']'; break;
+		case '{': close_ch = '}'; break;
+		case '<': close_ch = '>'; break;
+	}
+	while (*++p != close_ch) {
+		if (*p == open_ch || (recurse_set && strchr(recurse_set, *p))) {
+			const char * e = find_close_brace(p, depth-1, recurse_set);
+			if ( ! e) return NULL;
+			p = e;
+		}
+	}
+	return p;
+}
+
+class MetaKnobAndArgs {
+public:
+	std::string knob;
+	std::string args;
+	std::string extra;
+
+	MetaKnobAndArgs(const char * p=NULL) { if (p) init_from_string(p); }
+
+	const char* init_from_string(const char * p) {
+		// skip leading whitespace and ,
+		while (*p && (isspace(*p) || *p == ',')) ++p;
+		// parse knob name
+		const char * e = p;
+		while (*e && ( ! isspace(*e) && *e != ',' && *e != '(')) ++e;
+		if (e == p)
+			return e;
+		knob.assign (p, e-p);
+
+		p = e;
+		while (*p && isspace(*p)) ++p;
+
+		// knob MIGHT be followed by arguments in ()
+		// if there are arguments, capture them using a recursive scanner
+		// that handles nested () and [].
+		if (*p == '(') {
+			e = find_close_brace(p, 25, "([");
+			if (e && *e == ')') {
+				args.assign(p+1, (e-p)-1);
+				p = e;
+			}
+			++p;
+			while (*p && isspace(*p)) ++p;
+		}
+
+		// if there is non-whitespace after the knob/args and before the next ,
+		// capture it.
+		e = p;
+		while (*e && *e != ',') ++e;
+		if (e > p+1) { extra.assign(p, (e-p)-1); }
+		return e;
+	}
+};
+
 
 int read_meta_config(MACRO_SOURCE & source, int depth, const char *name, const char * rhs, MACRO_SET& macro_set, MACRO_EVAL_CONTEXT & ctx)
 {
@@ -238,6 +313,39 @@ int read_meta_config(MACRO_SOURCE & source, int depth, const char *name, const c
 	// the SUBMIT macro set stores metaknobs directly in it's defaults table.
 	if (macro_set.options & CONFIG_OPT_SUBMIT_SYNTAX) {
 
+#ifdef METAKNOBS_WITH_ARGS
+		MetaKnobAndArgs mag;
+		const char * rhs_remain = rhs;
+		while (*rhs_remain) {
+			// mag.init_from_string returns a pointer to the point at which it stopped parsing
+			const char * e = mag.init_from_string(rhs_remain);
+			if ( ! e || e == rhs_remain) break;
+			rhs_remain = e;
+			const char * item = mag.knob.c_str();
+
+			const char * psz = NULL;
+			const MACRO_ITEM * p = find_macro_item(item, name, macro_set);
+			if (p) {
+				if (p && macro_set.metat) {
+					macro_set.metat[p - macro_set.table].use_count += 1;
+				}
+				psz = p->raw_value;
+			} else {
+				std::string metaname;
+				formatstr(metaname, "$%s.%s", name, item);
+				const MACRO_DEF_ITEM * pd = find_macro_def_item(metaname.c_str(), macro_set, ctx.use_mask);
+				if (pd && pd->def) psz = pd->def->psz;
+			}
+			if ( ! psz) {
+				fprintf(stderr, "\nERROR: use %s: does not recognise %s\n", name, mag.knob.c_str());
+				return -1;
+			}
+			auto_free_ptr expanded(NULL);
+			if ( ! mag.args.empty()) {
+				expanded.set(expand_meta_args(psz, mag.args));
+				psz = expanded.ptr();
+			}
+#else
 		StringList items(rhs);
 		items.rewind();
 		char * item;
@@ -249,7 +357,9 @@ int read_meta_config(MACRO_SOURCE & source, int depth, const char *name, const c
 				fprintf(stderr, "\nERROR: use %s: does not recognise %s\n", name, item);
 				return -1;
 			}
-			int ret = Parse_config_string(source, depth, p->def->psz, macro_set, ctx);
+			const char * psz = p->def->psz;
+#endif
+			int ret = Parse_config_string(source, depth, psz, macro_set, ctx);
 			if (ret < 0) {
 				const char * msg = "Internal Submit Error: use %s: %s is invalid\n";
 				if (ret == -2) msg = "\nERROR: use %s: %s nesting too deep\n"; 
@@ -264,10 +374,21 @@ int read_meta_config(MACRO_SOURCE & source, int depth, const char *name, const c
 	if ( ! ptable)
 		return -1;
 
+#ifdef METAKNOBS_WITH_ARGS
+	MetaKnobAndArgs mag;
+	const char * rhs_remain = rhs;
+	while (*rhs_remain) {
+		// mag.init_from_string returns a pointer to the point at which it stopped parsing
+		const char * e = mag.init_from_string(rhs_remain);
+		if ( ! e || e == rhs_remain) break;
+		rhs_remain = e;
+		const char * item = mag.knob.c_str();
+#else
 	StringList items(rhs);
 	items.rewind();
 	char * item;
 	while ((item = items.next()) != NULL) {
+#endif
 		const char * value = param_meta_table_string(ptable, item);
 		if ( ! value) {
 			fprintf(stderr,
@@ -276,6 +397,13 @@ int read_meta_config(MACRO_SOURCE & source, int depth, const char *name, const c
 			return -1;
 		}
 		source.meta_id = param_default_get_source_meta_id(name, item);
+#ifdef METAKNOBS_WITH_ARGS
+		auto_free_ptr expanded(NULL);
+		if ( ! mag.args.empty()) {
+			expanded.set(expand_meta_args(value, mag.args));
+			value = expanded.ptr();
+		}
+#endif
 		int ret = Parse_config_string(source, depth, value, macro_set, ctx);
 		if (ret < 0) {
 			const char * msg = "Internal Configuration Error: use %s: %s is invalid\n";
@@ -1799,6 +1927,7 @@ enum {
 enum MACRO_BODY_CHARS {
 	MACRO_BODY_ANYTHING=0,   // allow anything other than ) in the body
 	MACRO_BODY_IDCHAR_COLON, // allow only identifier characters up to a : and  then a few more characters after
+	MACRO_BODY_META_ARG,     // allow only digits up to : ? or # then a few more characters after :
 	MACRO_BODY_SCAN_BRACKET, // scan ahead for "])"
 };
 
@@ -1872,6 +2001,15 @@ static int is_config_macro(const char* prefix, int length, MACRO_BODY_CHARS & bo
 	return is_special_config_macro(prefix, length, bodychars);
 }
 
+static int is_meta_arg_macro(const char* /*prefix*/, int length, MACRO_BODY_CHARS & bodychars)
+{
+	// prefix of just "$" is our normal macro expansion
+	if (length == 1) {
+		bodychars = MACRO_BODY_META_ARG;
+		return MACRO_ID_NORMAL;
+	}
+	return 0;
+}
 
 char * strdup_quoted(const char* str, int cch, bool quoted) {
 	if (cch < 0) cch = (int)strlen(str);
@@ -1912,6 +2050,126 @@ public:
 			|| MATCH != strncasecmp(body, DOLLAR_ID, DOLLAR_ID_LEN);
 	}
 };
+
+
+
+#ifdef METAKNOBS_WITH_ARGS
+
+class MetaArgOnlyBody : public ConfigMacroBodyCheck {
+public:
+	int index;
+	int colon; // offset of def value from 
+	bool empty_check;
+	bool num_args;
+	MetaArgOnlyBody() : index(0), colon(0), empty_check(false), num_args(false) {}
+	virtual bool skip(int func_id, const char * body, int /*len*/) {
+		if (func_id != MACRO_ID_NORMAL) return true;
+		if ( ! body || ! isdigit(*body)) return true;
+		char * pend;
+		index = strtol(body, &pend, 10);
+		if (pend) {
+			num_args = empty_check = false;
+			if (*pend == '?') { ++pend; empty_check = true; }
+			else if (*pend == '#' || *pend == '+') { ++pend; num_args = true; }
+			else if (*pend == ':') { colon = (int)(pend - body)+1; }
+		}
+		return false;
+	}
+};
+
+// destructively trim trailing whitespace from a input string
+// then return a pointer to the first non-whitespace character
+// of its c_str()
+const char * trimmed_cstr(std::string &str)
+{
+	if (str.empty()) return "";
+
+	int len = str.length();
+	int end = len - 1;
+	while (end > 0 && isspace(str[end])) --end;
+	if (end != (len - 1)) {
+		str[end+1] = 0;
+	}
+	const char * p = str.c_str();
+	while (*p && isspace(*p)) ++p;
+	return p;
+}
+
+// return copy of input value that has $(<num>) expanded against argstr
+// argstr should be a string containing a comma separated list of values
+// $(0) expands to all of argstr with leading and trailing whitespace trimmed
+// $(1) expands to everything up to the first comma of argstr with whitespace trimmed
+// $(2) expands to everthing between the first and second commas of argstr with whitespace trimmed.
+// ...
+//
+char * expand_meta_args(const char *value, std::string & argstr)
+{
+	char *tmp = strdup( value );
+	char *left, *name, *right, *func;
+	const char *tvalue;
+	char *rval;
+
+	bool all_done = false;
+	while ( ! all_done) { // loop until all done expanding
+		all_done = true;
+
+		// locate and expand any $(<num>) macros, where
+		// <num> is a number optionally followed by ? or #
+		// $(0) expands to all args
+		// $(0#) expands to the number of args
+		// $(1) expands to the first arg with whitespace stripped
+		// $(1?) expands to 1 if arg 1 is non-empty, to 0 if it is empty
+		// $(1+) expands to all args starting with 1
+		//
+		MetaArgOnlyBody meta_only; // this selects only $(<num>) macros
+		int special_id = next_config_macro(is_meta_arg_macro, meta_only, tmp, 0, &left, &name, &right, &func);
+		if (special_id) {
+			all_done = false;
+
+			StringTokenIterator it(argstr, 40, ","); it.rewind();
+
+			std::string buf;
+			if (meta_only.index <= 0) {
+				if (meta_only.num_args) {
+					int num = 0;
+					while (it.next_string()) { ++num; }
+					formatstr(buf, "%d", num);
+				} else {
+					buf = argstr;
+				}
+			} else {
+				int ix = 1;
+				if (meta_only.num_args) {
+					const char * remain = it.remain();
+					while (remain && (ix < meta_only.index)) { ++ix; it.next_string(); remain = it.remain(); }
+					if (remain) {
+						buf = remain;
+					}
+				} else {
+					const std::string * pi = it.next_string();
+					while (pi && (ix < meta_only.index)) { ++ix; pi = it.next_string(); }
+					if (pi) {
+						buf = *pi;
+					}
+				}
+			}
+			tvalue = trimmed_cstr(buf);
+			if (meta_only.empty_check) {
+				tvalue = *tvalue ? "1" : "0";
+			}
+
+			rval = (char *)MALLOC( (unsigned)(strlen(left) + strlen(tvalue) + strlen(right) + 1));
+			ASSERT(rval);
+
+			(void)sprintf( rval, "%s%s%s", left, tvalue, right );
+			FREE( tmp );
+			tmp = rval;
+		}
+	}
+
+	return tmp;
+}
+#endif
 
 /*
 ** Expand parameter references of the form "left$(middle)right".  This
@@ -2810,7 +3068,8 @@ tryagain:
 			name = ++value;
 			if (bodychars == MACRO_BODY_ANYTHING) {
 				while( *value && *value != ')' ) { ++value; }
-			} else if (bodychars == MACRO_BODY_IDCHAR_COLON) {
+			} else if (bodychars == MACRO_BODY_IDCHAR_COLON || bodychars == MACRO_BODY_META_ARG) {
+				bool is_meta_arg_body = (bodychars == MACRO_BODY_META_ARG);
 				after_colon = 0;
 				while( *value && *value != ')' ) {
 					char c = *value++;
@@ -2827,9 +3086,16 @@ tryagain:
 							continue;
 						}
 					}
-					if ( ! ISIDCHAR(c)) {
-						tvalue = name;
-						goto tryagain;
+					if (is_meta_arg_body) {
+						if ( ! isdigit(c) && c != '?' && c != '#') {
+							tvalue = name;
+							goto tryagain;
+						}
+					} else {
+						if ( ! ISIDCHAR(c)) {
+							tvalue = name;
+							goto tryagain;
+						}
 					}
 				}
 			} else if (bodychars == MACRO_BODY_SCAN_BRACKET) {
