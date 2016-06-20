@@ -116,6 +116,8 @@ struct SubmitDagDeepOptions
 	int priority; // Priority of parent of DAG node
 
 	bool suppress_notification;
+	MyString acctGroup;
+	MyString acctGroupUser;
 
 	SubmitDagDeepOptions() 
 	{ 
@@ -132,6 +134,8 @@ struct SubmitDagDeepOptions
 		importEnv = false;
 		priority = 0;
 		suppress_notification = true;
+		acctGroup = "";
+		acctGroupUser = "";
 	}
 };
 

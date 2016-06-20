@@ -38,6 +38,11 @@ separate query for each job.
 within a DAG file.  (See section~\ref{dagman:command order} for details.)
 \Ticket{5732}
 
+\item Any \SubmitCmd{accounting\_group} and
+\SubmitCmd{accounting\_group\_user} values specified for a
+DAG are now propagated to all jobs of the workflow, including sub-DAGs.
+\Ticket{5077}
+
 \end{itemize}
 
 \noindent Bugs Fixed:

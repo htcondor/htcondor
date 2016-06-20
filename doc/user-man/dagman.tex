@@ -3829,4 +3829,26 @@ The metrics are reported by the
 as described in the manual page at
 ~\pageref{man-condor-dagman-metrics-reporter}.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:DAGAcctGrp}DAGMan and Accounting Groups}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{DAGMan!accounting groups}
+
+As of version 8.5.6, \Condor{dagman} propagates
+\SubmitCmd{accounting\_group} and \SubmitCmd{accounting\_group\_user}
+values specified for \Condor{dagman} itself to all jobs within the
+DAG (including sub-DAGs).
+
+The \SubmitCmd{accounting\_group} and \SubmitCmd{accounting\_group\_user}
+values can be specified using the \Opt{-append} flag to
+\Condor{submit\_dag}, for example:
+
+\begin{verbatim}
+condor_submit_dag -append accounting_group=group_physics -append accounting_group_user=albert relativity.dag
+\end{verbatim}
+
+See section~\ref{sec:group-accounting} for a discussion of group accounting
+and section~\ref{sec:group-quotas} for a discussion of accounting groups
+with hierarchical group quotas.
+
 \index{DAGMan|)}
