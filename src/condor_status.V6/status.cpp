@@ -1216,6 +1216,9 @@ main (int argc, char *argv[])
 		AddClassAdXMLFileHeader(line);
 		fputs(line.c_str(), stdout); // xml string already ends in a newline.
 	}
+	if (PP_JSON == pps) {
+		printf("[\n");
+	}
 
 	for (ROD_MAP_BY_KEY::iterator it = admap.begin(); it != admap.end(); ++it) {
 		if (it->second.flags & (SROD_FOLDED | SROD_SKIP))
@@ -1235,6 +1238,9 @@ main (int argc, char *argv[])
 		AddClassAdXMLFileFooter(line);
 		fputs(line.c_str(), stdout);
 		// PRAGMA_REMIND("tj: XML output used to have an extra trailing newline, do we need to preserve that?")
+	}
+	if (PP_JSON == pps) {
+		printf("]\n");
 	}
 
 	// if totals are required, display totals

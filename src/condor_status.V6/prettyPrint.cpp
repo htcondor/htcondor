@@ -65,7 +65,7 @@ void printQuillNormal 	(ClassAd *);
 void printCOD    		(ClassAd *);
 void printVerbose   	(ClassAd *);
 void printXML       	(ClassAd *, bool first_ad, bool last_ad);
-void printJSON       	(ClassAd *);
+void printJSON       	(ClassAd *, bool first_ad, bool last_ad);
 void printCustom    	(ClassAd *);
 
 static bool renderActivityTime(long long & atime, AttrList* , Formatter &);
@@ -439,7 +439,7 @@ void prettyPrintAd(ppOption pps, ClassAd *ad)
 			printXML (ad, false, false);
 			break;
 		case PP_JSON:
-			printJSON (ad);
+			printJSON (ad, false, false);
 			break;
 	#ifdef HAVE_EXT_POSTGRESQL
 		case PP_QUILL_NORMAL:
@@ -532,7 +532,7 @@ prettyPrint (ClassAdList &adList, TrackTotals *totals)
 				printXML (ad, (classad_index == 0), (classad_index == last_classad_index));
 				break;
 			case PP_JSON:
-				printJSON (ad);
+				printJSON (ad, (classad_index == 0), (classad_index == last_classad_index));
 				break;
 		#ifdef HAVE_EXT_POSTGRESQL
 			case PP_QUILL_NORMAL:
@@ -554,6 +554,9 @@ prettyPrint (ClassAdList &adList, TrackTotals *totals)
 	// parsers won't get confused.
 	if ( PP_XML == pps && 0 == classad_index ) {
 		printXML (NULL, true, true);
+	}
+	if ( PP_JSON == pps && 0 == classad_index ) {
+		printJSON (NULL, true, true);
 	}
 
 	// if totals are required, display totals
@@ -1227,16 +1230,28 @@ printXML (ClassAd *ad, bool first_ad, bool last_ad)
 }
 
 void
-printJSON (ClassAd *ad)
+printJSON (ClassAd *ad, bool first_ad, bool last_ad)
 {
+	static bool first_time = true;
 	classad::ClassAdJsonUnParser  unparser;
 	std::string            json;
 
+	if ( first_ad ) {
+		json += "[\n";
+	}
 	if ( NULL != ad ) {
-		unparser.Unparse(json, ad);
+		if ( !first_time ) {
+			json += ",\n";
+		}
+		unparser.Unparse( json, ad );
+	}
+	if ( last_ad ) {
+		json += "\n]";
 	}
 
 	printf("%s\n", json.c_str());
+
+	first_time = false;
 	return;
 }
 
