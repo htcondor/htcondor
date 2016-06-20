@@ -304,26 +304,101 @@ int Condor_Auth_Kerberos :: authenticate(const char * /* remoteHost */, CondorEr
 			}
 		}
 	} else {
-		// we are the server.
-		int ready;
-		mySock_->decode();
-		if (!mySock_->code(ready) || !mySock_->end_of_message()) {
-			status = FALSE;
-		} else {
-			if (ready == KERBEROS_PROCEED) {
-				dprintf(D_SECURITY,"About to authenticate client using Kerberos\n" );
-				// initialize everything if needed.
-				if (init_kerberos_context() && init_server_info()) {
-					status = authenticate_server_kerberos();
-				} else {
-					status = FALSE;
-				}
-			}
-		}
+		// enter the server state machine
+		m_state = ServerReceiveClientReadiness;
+		status = WouldBlock;
 	}
 
     return( status );
 }
+
+
+int Condor_Auth_Kerberos::authenticate_continue(CondorError* errstack, bool non_blocking)
+{
+
+	dprintf(D_SECURITY, "KERBEROS: entered authenticate_continue, state==%i\n", (int)m_state);
+
+	CondorAuthKerberosRetval retval = Continue;
+	while (retval == Continue)
+	{
+		switch (m_state)
+		{
+		case ServerReceiveClientReadiness:
+			retval = doServerReceiveClientReadiness(errstack, non_blocking);
+			break;
+		case ServerAuthenticate:
+			retval = doServerAuthenticate(errstack, non_blocking);
+			break;
+		case ServerReceiveClientSuccessCode:
+			retval = doServerReceiveClientSuccessCode(errstack, non_blocking);
+			break;
+		default:
+			retval = Fail;
+			break;
+		}
+	}
+
+	dprintf(D_SECURITY, "KERBEROS: leaving authenticate_continue, state==%i, return=%i\n", (int)m_state, (int)retval);
+	return static_cast<int>(retval);
+}
+
+
+
+Condor_Auth_Kerberos::CondorAuthKerberosRetval
+Condor_Auth_Kerberos::doServerReceiveClientReadiness(CondorError* /*errstack*/, bool non_blocking)
+{
+
+	if (non_blocking && !mySock_->readReady())
+	{
+		dprintf(D_NETWORK, "Returning to DC as read would block in KRB::doServerReceiveClientReadiness\n");
+		return WouldBlock;
+	}
+
+	int status = authenticate_server_kerberos_0();
+	if(status) {
+		m_state = ServerAuthenticate;
+		return Continue;
+	}
+
+	return Fail;
+}
+
+
+Condor_Auth_Kerberos::CondorAuthKerberosRetval
+Condor_Auth_Kerberos::doServerAuthenticate(CondorError* /*errstack*/, bool non_blocking)
+{
+	if (non_blocking && !mySock_->readReady())
+	{
+		dprintf(D_NETWORK, "Returning to DC as read would block in KRB::doServerAuthenticate\n");
+		return WouldBlock;
+	}
+
+	int status = authenticate_server_kerberos_1();
+	if(status) {
+		m_state = ServerReceiveClientSuccessCode;
+		return Continue;
+	}
+
+	return Fail;
+}
+
+Condor_Auth_Kerberos::CondorAuthKerberosRetval
+Condor_Auth_Kerberos::doServerReceiveClientSuccessCode(CondorError* /*errstack*/, bool non_blocking)
+{
+	if (non_blocking && !mySock_->readReady())
+	{
+		dprintf(D_NETWORK, "Returning to DC as read would block in KRB::doServerReceiveClientSuccessCode\n");
+		return WouldBlock;
+	}
+
+	int status = authenticate_server_kerberos_2();
+	if(status) {
+		return Success;
+	}
+
+	return Fail;
+}
+
 
 int Condor_Auth_Kerberos :: wrap(char*  input, 
                                  int    input_len, 
@@ -775,17 +850,41 @@ int Condor_Auth_Kerberos :: authenticate_client_kerberos()
     
     return rc;
 }
-    
-int Condor_Auth_Kerberos :: authenticate_server_kerberos()
+
+
+
+int Condor_Auth_Kerberos :: authenticate_server_kerberos_0()
+{
+	// assume failure
+	CondorAuthKerberosRetval status = Fail;
+
+	int ready;
+	mySock_->decode();
+	if (mySock_->code(ready) && mySock_->end_of_message()) {
+		if (ready == KERBEROS_PROCEED) {
+			dprintf(D_SECURITY,"About to authenticate client using Kerberos\n" );
+			// initialize everything if needed.
+			if (init_kerberos_context() && init_server_info()) {
+				m_state = ServerAuthenticate;
+				status = Continue;
+			}
+		}
+	}
+
+	return status;
+}
+
+
+int Condor_Auth_Kerberos :: authenticate_server_kerberos_1()
 {
     krb5_error_code   code;
     krb5_flags        flags = 0;
     krb5_data         request, reply;
     priv_state        priv;
     krb5_keytab       keytab = 0;
-    int               message, rc = FALSE;
-    krb5_ticket *     ticket = NULL;
+    int               message;
 
+    ticket_ = NULL;
     request.data = 0;
     reply.data   = 0;
     
@@ -828,7 +927,7 @@ int Condor_Auth_Kerberos :: authenticate_server_kerberos()
 						   NULL,
                            keytab,
                            &flags,
-                           &ticket))) {
+                           &ticket_))) {
         set_priv(priv);   // Reset
         dprintf( D_ALWAYS, "2: Kerberos server authentication error:%s\n",
 				 (*error_message_ptr)(code) );
@@ -839,33 +938,101 @@ int Condor_Auth_Kerberos :: authenticate_server_kerberos()
 	dprintf ( D_FULLDEBUG, "KERBEROS: krb5_rd_req done.\n");
 
     //------------------------------------------
-    // See if mutual authentication is required
+    // Mutual authentication is always required
     //------------------------------------------
-    if (flags & AP_OPTS_MUTUAL_REQUIRED) {
-        if ((code = (*krb5_mk_rep_ptr)(krb_context_, auth_context_, &reply))) {
-            dprintf( D_ALWAYS, "3: Kerberos server authentication error:%s\n",
-					 (*error_message_ptr)(code) );
-            goto error;
-        }
-
-        mySock_->encode();
-        message = KERBEROS_MUTUAL;
-        if (!mySock_->code(message) || !mySock_->end_of_message()) {
-            goto error;
-        }
-
-        // send the message
-        if (send_request_and_receive_reply(&reply) != KERBEROS_GRANT) {
-            goto cleanup;
-        }
+    if ((code = (*krb5_mk_rep_ptr)(krb_context_, auth_context_, &reply))) {
+        dprintf( D_ALWAYS, "3: Kerberos server authentication error:%s\n",
+                           (*error_message_ptr)(code) );
+        goto error;
     }
+
+    mySock_->encode();
+    message = KERBEROS_MUTUAL;
+    if (!mySock_->code(message) || !mySock_->end_of_message()) {
+        goto error;
+    }
+
+    // send the message
+    if (send_request(&reply) != KERBEROS_PROCEED) {
+	// skip the error label and go straight to cleanup, as error tries to
+	// send a message in the same "phase" of the wire protocol that we just
+	// failed to use.
+        goto cleanup;
+    }
+
+
+    // this phase has succeeded.  free things we no longer need.  leave all
+    // state in ticket_ member variable.
+
+    if (keytab) {
+        (*krb5_kt_close_ptr)(krb_context_, keytab);
+    }
+
+    if (request.data) {
+        free(request.data);
+    }
+
+    if (reply.data) {
+        free(reply.data);
+    }
+
+    m_state = ServerReceiveClientSuccessCode;
+    return Continue;
+
+ error:
+    message = KERBEROS_DENY;
     
+    mySock_->encode();
+    if ((!mySock_->code(message)) || (!mySock_->end_of_message())) {
+        dprintf( D_ALWAYS, "KERBEROS: Failed to send response message!\n" );
+    }
+
+ cleanup:
+    //------------------------------------------
+    // Free up anything we allocated since we are done (failed).
+    //------------------------------------------
+    if (ticket_) {
+        (*krb5_free_ticket_ptr)(krb_context_, ticket_);
+    }
+
+    if (keytab) {
+        (*krb5_kt_close_ptr)(krb_context_, keytab);
+    }
+
+    if (request.data) {
+        free(request.data);
+    }
+
+    if (reply.data) {
+        free(reply.data);
+    }
+
+    return Fail;
+}
+
+
+int Condor_Auth_Kerberos :: authenticate_server_kerberos_2()
+{
+    int message;
+    int rc = FALSE;
+    krb5_error_code   code;
+
+    //------------------------------------------
+    // Next, wait for response
+    //------------------------------------------
+    message = KERBEROS_DENY;
+    mySock_->decode();
+    if ((!mySock_->code(message)) || (!mySock_->end_of_message())) {
+        dprintf(D_SECURITY, "KERBEROS: Failed to receive response from client\n");
+        // ENTER FAILURE MODE
+    }
+
     //------------------------------------------
     // extract client addresses
     //------------------------------------------
-    if (ticket->enc_part2->caddrs) {
+    if (ticket_->enc_part2->caddrs) {
         struct in_addr in;
-        memcpy(&(in.s_addr), ticket->enc_part2->caddrs[0]->contents, sizeof(in_addr));
+        memcpy(&(in.s_addr), ticket_->enc_part2->caddrs[0]->contents, sizeof(in_addr));
         
         setRemoteHost(inet_ntoa(in));
     
@@ -873,21 +1040,30 @@ int Condor_Auth_Kerberos :: authenticate_server_kerberos()
     }    
 
     // First, map the name, this has to take place before receive_tgt_creds!
-    if (!map_kerberos_name(&(ticket->enc_part2->client))) {
+    if (!map_kerberos_name(&(ticket_->enc_part2->client))) {
         dprintf(D_SECURITY, "Unable to map Kerberos name\n");
         goto error;
     }
 
     // copy the session key
     if ((code = (*krb5_copy_keyblock_ptr)(krb_context_, 
-                                  ticket->enc_part2->session, 
+                                  ticket_->enc_part2->session,
                                   &sessionKey_))){
         dprintf(D_SECURITY, "4: Kerberos server authentication error:%s\n", (*error_message_ptr)(code));
         goto error;
     }
     
-    // Next, see if we need client to forward the credential as well
-    if (receive_tgt_creds(ticket)) {
+    //------------------------------------------
+    // Tell the other side the good news
+    //------------------------------------------
+    message = KERBEROS_GRANT;
+
+    mySock_->encode();
+    if ((!mySock_->code(message)) || (!mySock_->end_of_message())) {
+        dprintf(D_ALWAYS, "Failed to send KERBEROS_GRANT response\n");
+	// skip the error label and go straight to cleanup, as error tries to
+	// send a message in the same "phase" of the wire protocol that we just
+	// failed to use.
         goto cleanup;
     }
     
@@ -913,27 +1089,14 @@ int Condor_Auth_Kerberos :: authenticate_server_kerberos()
     //------------------------------------------
     // Free up some stuff
     //------------------------------------------
-    if (ticket) {
-        (*krb5_free_ticket_ptr)(krb_context_, ticket);
-    }
-    
-    if (keytab) {
-        (*krb5_kt_close_ptr)(krb_context_, keytab);
-    }
-    //------------------------------------------
-    // Free it for now, in the future, we might 
-    // need this for future secure transctions.
-    //------------------------------------------
-    if (request.data) {
-        free(request.data);
-    }
-    
-    if (reply.data) {
-        free(reply.data);
+    if (ticket_) {
+        (*krb5_free_ticket_ptr)(krb_context_, ticket_);
     }
 
     return rc;
 }
+
+
 
 //----------------------------------------------------------------------
 // Mututal authentication
@@ -1217,7 +1380,7 @@ int Condor_Auth_Kerberos :: init_realm_mapping()
 	}
 }
    
-int Condor_Auth_Kerberos :: send_request_and_receive_reply(krb5_data * request)
+int Condor_Auth_Kerberos :: send_request(krb5_data * request)
 {
     int reply = KERBEROS_DENY;
     int message = KERBEROS_PROCEED;
@@ -1236,12 +1399,22 @@ int Condor_Auth_Kerberos :: send_request_and_receive_reply(krb5_data * request)
         dprintf(D_SECURITY, "Faile to send request data\n");
         return reply;
     }
+    return KERBEROS_PROCEED;
+}
+
+int Condor_Auth_Kerberos :: send_request_and_receive_reply(krb5_data * request)
+{
+
+    if(send_request(request) != KERBEROS_PROCEED) {
+        return KERBEROS_DENY;
+    }
 
     //------------------------------------------
     // Next, wait for response
     //------------------------------------------
     mySock_->decode();
     
+    int reply = KERBEROS_DENY;
     if ((!mySock_->code(reply)) || (!mySock_->end_of_message())) {
         dprintf(D_SECURITY, "Failed to receive response from server\n");
         return KERBEROS_DENY;
