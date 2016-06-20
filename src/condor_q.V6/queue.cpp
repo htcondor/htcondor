@@ -2952,6 +2952,8 @@ static void print_xml_footer()
 		std::string line;
 		AddClassAdXMLFileFooter(line);
 		fputs(line.c_str(), stdout);
+	} else if( use_json ) {
+		printf( "]\n" );
 	}
 }
 
@@ -2962,6 +2964,8 @@ static void print_xml_header(const char * /*source_label*/)
 		std::string line;
 		AddClassAdXMLFileHeader(line);
 		fputs(line.c_str(), stdout);
+	} else if( use_json ) {
+		printf( "[\n" );
 	}
 }
 
@@ -3858,6 +3862,12 @@ streaming_print_job(void *, ClassAd *job)
 	std::string result_text;
 	const char * fmt = "%s";
 	if (use_json) {
+		static bool first_time = true;
+		if (!first_time) {
+			result_text = ",\n";
+		} else {
+			first_time = false;
+		}
 		sPrintAdAsJson(result_text, *job, app.attrs.isEmpty() ? NULL : &app.attrs);
 		fmt = "%s\n";
 	} else if (use_xml) {
