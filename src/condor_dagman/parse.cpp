@@ -188,6 +188,14 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 	std::list<std::string> vars_to_save;
 
 	//
+	// We now parse in two passes, so that commands such as PARENT..CHILD
+	// can come before the relevant nodes are defined (see gittrac #5732).
+	// The first pass parses commands that define nodes (JOB, DATA, FINAL,
+	// SPLICE, SUBDAG); the second pass parses everything else.
+	//
+
+	//
+	// PASS 1.
 	// This loop will read every line of the input file
 	//
 	while ( ((line=getline_trim(fp, lineNumber)) != NULL) ) {
@@ -254,6 +262,98 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 					   token,
 					   filename, lineNumber, tmpDirectory.Value(), "",
 					   "submitfile" );
+		}
+
+		// Handle a Splice spec
+		else if(strcasecmp(token, "SPLICE") == 0) {
+			parsed_line_successfully = parse_splice(dag, filename,
+						lineNumber);
+		}
+		else {
+				// Just accept everything for now -- we'll detect unknown
+				// command names in the second pass.
+			parsed_line_successfully = true;
+		}
+
+		if (!parsed_line_successfully) {
+			fclose(fp);
+			return false;
+		}
+	}
+
+	//
+	// PASS 2.
+	// Seek back to the beginning of the DAG file.
+	//
+	if ( fseek( fp, 0, SEEK_SET ) != 0 ) {
+		debug_printf( DEBUG_QUIET,
+					"Error (%d, %s) seeking back to beginning of DAG file\n",
+					errno, strerror( errno ) );
+		fclose(fp);
+		return false;
+	}
+
+	lineNumber = 0;
+
+	//
+	// This loop will read every line of the input file
+	//
+	while ( ((line=getline_trim(fp, lineNumber)) != NULL) ) {
+		std::string varline(line);
+
+		//
+		// Find the terminating '\0'
+		//
+		char * endline = line;
+		while (*endline != '\0') endline++;
+
+
+		// Note that getline will truncate leading spaces (as defined by isspace())
+		// so we don't need to do that before checking for empty lines or comments.
+		if (line[0] == 0)       continue;  // Ignore blank lines
+		if (line[0] == COMMENT) continue;  // Ignore comments
+
+		debug_printf( DEBUG_DEBUG_3, "Parsing line <%s>\n", line );
+
+			// Note: strtok() could be replaced by MyString::Tokenize(),
+			// which is much safer, but I don't want to deal with that
+			// right now.  wenger 2005-02-02.
+		char *token = strtok(line, DELIMITERS);
+		if ( !token ) continue; // so Coverity is happy
+
+		bool parsed_line_successfully;
+
+		// Handle a Job spec
+		// Example Syntax is:  JOB j1 j1.condor [DONE]
+		//
+		if(strcasecmp(token, "JOB") == 0) {
+				// Parsed in first pass.
+			parsed_line_successfully = true;
+		}
+
+		// Handle a Stork job spec
+		// Example Syntax is:  DATA j1 j1.dapsubmit [DONE]
+		//
+		else if	(strcasecmp(token, "DAP") == 0) {	// DEPRECATED!
+				// Parsed in first pass.
+			parsed_line_successfully = true;
+		}
+
+		else if	(strcasecmp(token, "DATA") == 0) {
+				// Parsed in first pass.
+			parsed_line_successfully = true;
+		}
+
+		// Handle a SUBDAG spec
+		else if	(strcasecmp(token, "SUBDAG") == 0) {
+				// Parsed in first pass.
+			parsed_line_successfully = true;
+		}
+
+		// Handle a FINAL spec
+		else if(strcasecmp(token, "FINAL") == 0) {
+				// Parsed in first pass.
+			parsed_line_successfully = true;
 		}
 
 		// Handle a SCRIPT spec
@@ -335,8 +435,8 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 
 		// Handle a Splice spec
 		else if(strcasecmp(token, "SPLICE") == 0) {
-			parsed_line_successfully = parse_splice(dag, filename,
-						lineNumber);
+				// Parsed in first pass.
+			parsed_line_successfully = true;
 		}
 
 		// Handle a NODE_STATUS_FILE spec

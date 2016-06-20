@@ -1,0 +1,20 @@
+parent NodeLA child NodeLB
+maxjobs Cat1 2
+
+priority NodeLA 10
+abort-dag-on NodeLA 2
+retry NodeLA 1
+vars NodeLA nodename = "$(JOB)"
+script pre NodeLA x_sleep.pl 1
+script post NodeLA x_sleep.pl 1
+category NodeLA Cat1
+job NodeLA job_dagman_cmd_order-node.sub
+
+priority NodeLB 20
+abort-dag-on NodeLB 3
+retry NodeLB 3
+vars NodeLB nodename = "$(JOB)"
+script pre NodeLB x_sleep.pl 1
+script post NodeLB x_sleep.pl 1
+category NodeLB Cat1
+job NodeLB job_dagman_cmd_order-node.sub

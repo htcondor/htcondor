@@ -617,15 +617,17 @@ and the node will be marked as successful.
 \index{DAG input file!command order}
 \index{DAGMan!command order}
 
-It is important to note that all commands that reference a \Arg{JobName}
-must come \emph{after} the JOB command defining that \Arg{JobName}.  For
-example, the command sequence
-\begin{verbatim}
-SCRIPT PRE A foo.pl
-JOB A bar.sub
-\end{verbatim}
+As of version 8.5.6, commands referencing a \Arg{JobName} \emph{can}
+come before the JOB command defining that \Arg{JobName}.
 
-is not legal and will result in a fatal parse error.
+For example, the command sequence
+\begin{verbatim}
+SCRIPT PRE NodeA foo.pl
+VARS NodeA state="Wisconsin"
+JOB NodeA bar.sub
+\end{verbatim}
+is now legal (it would have been illegal in 8.5.5 and all previous
+versions).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Node Job Submit File Contents}
