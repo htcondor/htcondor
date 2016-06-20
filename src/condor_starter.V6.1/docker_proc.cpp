@@ -136,12 +136,16 @@ int DockerProc::StartJob() {
 	std::list<std::string> extras;
 	buildExtraVolumes(extras);
 
+	// The following line is for condor_who to parse
+	dprintf( D_ALWAYS, "About to exec docker:%s\n", command.c_str());
 	int rv = DockerAPI::run( *machineAd, containerName, imageID, command, args, job_env, sandboxPath, extras, JobPid, childFDs, err );
 	if( rv < 0 ) {
 		dprintf( D_ALWAYS | D_FAILURE, "DockerAPI::run( %s, %s, ... ) failed with return value %d\n", imageID.c_str(), command.c_str(), rv );
 		return FALSE;
 	}
 	dprintf( D_FULLDEBUG, "DockerAPI::run() returned pid %d\n", JobPid );
+	// The following line is for condor_who to parse
+	dprintf( D_ALWAYS, "Create_Process succeeded, pid=%d\n", JobPid);
 
 
 	// Start a timer to poll for job usage updates.
