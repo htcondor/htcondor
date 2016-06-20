@@ -2215,6 +2215,8 @@ parse_connect(
 		exampleSyntax( example );
 		return false;
 	}
+	MyString splice1Name = munge_job_name( splice1 );
+	splice1 = splice1Name.Value();
 
 	const char *splice2 = strtok( NULL, DELIMITERS );
 	if ( splice2 == NULL ) {
@@ -2224,6 +2226,8 @@ parse_connect(
 		exampleSyntax( example );
 		return false;
 	}
+	MyString splice2Name = munge_job_name( splice2 );
+	splice2 = splice2Name.Value();
 
 	//
 	// Check for illegal extra tokens.
@@ -2285,6 +2289,8 @@ parse_pin_in_out(
 		exampleSyntax( example );
 		return false;
 	}
+	MyString nodeName = munge_job_name( node );
+	node = nodeName.Value();
 
 	const char *pinNumber = strtok( NULL, DELIMITERS );
 	if ( pinNumber == NULL ) {

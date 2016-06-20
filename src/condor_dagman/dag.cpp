@@ -4175,9 +4175,9 @@ Dag::SetPinInOut( bool isPinIn, const char *nodeName, int pinNum )
 
 	bool result = false;
 	if ( isPinIn ) {
-		result = SetPinInOut( _pinIns, /*TEMPTEMP? "in",*/ node, pinNum );
+		result = SetPinInOut( _pinIns, node, pinNum );
 	} else {
-		result = SetPinInOut( _pinOuts, /*TEMPTEMP? "out",*/ node, pinNum );
+		result = SetPinInOut( _pinOuts, node, pinNum );
 	}
 
 	return result;
@@ -4185,8 +4185,7 @@ Dag::SetPinInOut( bool isPinIn, const char *nodeName, int pinNum )
 
 //---------------------------------------------------------------------------
 bool
-Dag::SetPinInOut( PinList &pinList, /*TEMPTEMP? const char *inOutStr,*/
-			Job *node, int pinNum )
+Dag::SetPinInOut( PinList &pinList, Job *node, int pinNum )
 {
 	--pinNum; // Pin numbers start with 1
 	if ( pinNum >= static_cast<int>( pinList.size() ) ) {
@@ -4198,7 +4197,6 @@ Dag::SetPinInOut( PinList &pinList, /*TEMPTEMP? const char *inOutStr,*/
 		pn = pinList[pinNum];
 	}
 	pn->push_back( node );
-	//TEMPTEMP -- should we check for duplicates and warn?  would a set be better for that?
 
 	return true;
 }
@@ -4257,31 +4255,46 @@ Dag::ConnectSplices( Dag *parentSplice, Dag *childSplice )
 				parentSplice->_spliceScope.Value(),
 				childSplice->_spliceScope.Value() );
 
+	MyString parentName = parentSplice->_spliceScope;
+		// Trim trailing '+' from parentName.
+	int last = parentName.Length() - 1;
+	ASSERT( last >= 0 );
+	if ( parentName[last] == '+' ) {
+		parentName.setChar( last, '\0' );
+	}
+
+	MyString childName = childSplice->_spliceScope;
+		// Trim trailing '+' from childName.
+	last = childName.Length() - 1;
+	ASSERT( last >= 0 );
+	if ( childName[last] == '+' ) {
+		childName.setChar( last, '\0' );
+	}
+
 		// Make sure the parent and child splices have pin_ins/pin_outs
 		// as appropriate, and that the number of pin_ins and pin_outs
 		// matches.
 	int pinOutCount = parentSplice->GetPinCount( false );
 	if ( pinOutCount <= 0 ) {
-		//TEMPTEMP -- splice name as "+" on end here -- do we need to fix that?
 		debug_printf( DEBUG_QUIET,
 					"ERROR: parent splice %s has 0 pin_outs\n",
-					parentSplice->_spliceScope.Value());
+					parentName.Value() );
 		return false;
 	}
 
 	int pinInCount = childSplice->GetPinCount( true );
 	if ( pinInCount <= 0 ) {
 		debug_printf( DEBUG_QUIET,
-					"ERROR: child splice %s has 0 pin_ints\n",
-					parentSplice->_spliceScope.Value());
+					"ERROR: child splice %s has 0 pin_ins\n",
+					childName.Value() );
 		return false;
 	}
 
 	if ( pinOutCount != pinInCount ) {
 		debug_printf( DEBUG_QUIET,
 					"ERROR: pin_in/out mismatch:  parent splice %s has %d pin_outs; child splice %s has %d pin_ins\n",
-					parentSplice->_spliceScope.Value(), pinOutCount,
-					childSplice->_spliceScope.Value(), pinInCount );
+					parentName.Value(), pinOutCount,
+					childName.Value(), pinInCount );
 		return false;
 	}
 
@@ -4293,7 +4306,7 @@ Dag::ConnectSplices( Dag *parentSplice, Dag *childSplice )
 		if ( !parentPNs ) {
 			debug_printf( DEBUG_QUIET,
 						"ERROR: parent splice %s has no node for pin_out %d\n",
-						parentSplice->_spliceScope.Value(), pinNum );
+						parentName.Value(), pinNum );
 			return false;
 		}
 
@@ -4301,7 +4314,7 @@ Dag::ConnectSplices( Dag *parentSplice, Dag *childSplice )
 		if ( !childPNs ) {
 			debug_printf( DEBUG_QUIET,
 						"ERROR: child splice %s has no node for pin_in %d\n",
-						childSplice->_spliceScope.Value(), pinNum );
+						childName.Value(), pinNum );
 			return false;
 		}
 
@@ -4316,7 +4329,6 @@ Dag::ConnectSplices( Dag *parentSplice, Dag *childSplice )
 
 				if ( !AddDependency( parentNode, childNode ) ) {
 					debug_printf( DEBUG_QUIET,
-								//TEMPTEMP -- add more detail here?
 								"ERROR: unable to add parent/child dependency for pin %d\n", pinNum );
 		
 					return false;
@@ -4338,8 +4350,6 @@ Dag::ConnectSplices( Dag *parentSplice, Dag *childSplice )
 			return false;
 		}
 	}
-
-	//TEMPTEMP -- do we need any more error checking here?
 
 	return true;
 }

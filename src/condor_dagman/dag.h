@@ -709,8 +709,6 @@ class Dag {
 	// node, unless it is an absolute path, in which case we ignore it.
 	void PropagateDirectoryToAllNodes(void);
 
-	typedef std::vector<Job *> PinNodes;
-
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	// Splice connections.
 
@@ -721,20 +719,6 @@ class Dag {
 		@return: true on success, false otherwise
 	*/
 	bool SetPinInOut( bool isPinIn, const char *nodeName, int pinNum );
-
-	/** Get the list of nodes connected to a pin in or pin out
-		@param isPinIn: true if this is for a pin in, false for pin out
-		@param pinNum: the number of the pin for which we're getting
-			nodes
-		@return: a list of nodes connected to this pin
-	*/
-	const PinNodes *GetPinInOut( bool isPinIn, int pinNum ) const;
-
-	/** Get the number of pin ins or pin outs we have in this DAG
-		@param isPinIn: true if this is for pin ins, false for pin outs
-		@return: the number of pin ins or pin outs
-	*/
-	int GetPinCount( bool isPinIn );
 
 	/** Connect two splices via pin outs/pin ins
 		@param parentSplice: the splice connected via its pin outs
@@ -1246,17 +1230,40 @@ private:
 
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	// Splice connections.
+
+		// This is the list of nodes connected to a given pin (in or out).
+	typedef std::vector<Job *> PinNodes;
+
+		// This is a list of pin ins or pin outs.
 	typedef std::vector<PinNodes *> PinList;
+
+		// The pin ins for this DAG.
+	PinList _pinIns;
+
+		// The pin outs for this DAG.
+	PinList _pinOuts;
+
+	/** Get the list of nodes connected to a pin in or pin out
+		@param isPinIn: true if this is for a pin in, false for pin out
+		@param pinNum: the number of the pin for which we're getting
+			nodes
+		@return: a list of nodes connected to this pin
+	*/
+	const PinNodes *GetPinInOut( bool isPinIn, int pinNum ) const;
+
+	/** Get the number of pin ins or pin outs we have in this DAG
+		@param isPinIn: true if this is for pin ins, false for pin outs
+		@return: the number of pin ins or pin outs
+	*/
+	int GetPinCount( bool isPinIn );
 
 	/** Set a pin in or pin out connection for this DAG.
 		@param pinList: the pin list to update
-		@param inOutStr: "in" or "out" as appropriate
 		@param node: the node to connect
 		@param pinNum: the number of the pin we're connecting
 		@return: true on success, false otherwise
 	*/
-	bool SetPinInOut( PinList &pinList,
-				/*TEMPTEMP? const char *inOutStr,*/ Job *node, int pinNum );
+	bool SetPinInOut( PinList &pinList, Job *node, int pinNum );
 
 	/** Get the list of nodes connected to a pin in or pin out
 		@param pinList: the pin list to access
@@ -1272,12 +1279,6 @@ private:
 		@param pinList: the pin list to delete
 	*/
 	static void DeletePinList( PinList &pinList );
-
-		// The pin ins for this DAG.
-	PinList _pinIns;
-
-		// The pin outs for this DAG.
-	PinList _pinOuts;
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 };
 
