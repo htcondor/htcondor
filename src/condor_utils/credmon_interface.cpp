@@ -40,10 +40,16 @@ int get_credmon_pid() {
 		MyString pid_path;
 		pid_path.formatstr("%s/pid", cred_dir.c_str());
 		FILE* credmon_pidfile = fopen(pid_path.c_str(), "r");
+		if(!credmon_pidfile) {
+			dprintf(D_FULLDEBUG, "CREDMON: unable to open %s (%i)\n", pid_path.c_str(), errno);
+			return -1;
+		}
 		int num_items = fscanf(credmon_pidfile, "%i", &_static_credmon_pid);
 		fclose(credmon_pidfile);
 		if (num_items != 1) {
+			dprintf(D_FULLDEBUG, "CREDMON: contents of %s unreadable\n", pid_path.c_str());
 			_static_credmon_pid = -1;
+			return -1;
 		}
 		dprintf(D_FULLDEBUG, "CREDMON: get_credmon_pid %s == %i\n", pid_path.c_str(), _static_credmon_pid);
 	}
