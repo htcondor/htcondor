@@ -7678,7 +7678,7 @@ type=path
 review=?
 
 [HAD_SOCKET_NAME]
-default=HAD
+default=$(LOCALNAME:had)
 type=string
 
 [HAD_ARGS]
@@ -7693,7 +7693,7 @@ type=path
 review=?
 
 [REPLICATION_SOCKET_NAME]
-default=REPLICATION
+default=$(LOCALNAME:replication)
 type=string
 
 [REPLICATION_ARGS]
