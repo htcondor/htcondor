@@ -81,7 +81,6 @@ bls_add_job_wrapper
 datenow=`date +%Y%m%d`
 jobID=`${slurm_binpath}/sbatch $bls_tmp_file` # actual submission
 retcode=$?
-cp $bls_tmp_file ~/bls_tmp_file.$$
 if [ "$retcode" != "0" ] ; then
 	rm -f $bls_tmp_file
 	exit 1

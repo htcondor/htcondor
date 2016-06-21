@@ -52,6 +52,10 @@ DAG are now propagated to all jobs of the workflow, including sub-DAGs.
 \item \Condor{who} now reports docker universe jobs more completely.
 \Ticket{5740}
 
+\item No longer leak a file in the user's home directory each time a
+job is submitted to SLURM.
+\Ticket{5742}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
