@@ -270,7 +270,7 @@ DagmanClassad::GetDagAttribute( const char *attrName, MyString &attrVal,
 {
 	char *val;
 	if ( GetAttributeStringNew( _dagmanId._cluster, _dagmanId._proc,
-				attrName, &val ) != 0 ) {
+				attrName, &val ) == -1 ) {
 		if ( printWarning ) {
 			debug_printf( DEBUG_QUIET,
 					  	"Warning: failed to get attribute %s\n", attrName );
