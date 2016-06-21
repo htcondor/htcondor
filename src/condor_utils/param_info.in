@@ -7441,6 +7441,13 @@ reconfig=false
 friendly_Name=Whether condor_q will query all jobs, or only the current owners jobs by default
 usage=Set to true to have condor_q query only the owners jobs by default
 
+[CONDOR_Q_DASH_BATCH_IS_DEFAULT]
+default=true
+type=bool
+reconfig=false
+friendly_Name=Whether condor_q will default to -batch display
+usage=Set to true to have condor_q defaulit to -batch display
+
 [ENABLE_IPV6]
 default=auto
 customization=seldom

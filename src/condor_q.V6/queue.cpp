@@ -204,7 +204,7 @@ void warnScheddLimits(Daemon *schedd,ClassAd *job,MyString &result_buf);
 static unsigned int direct = DIRECT_ALL;
 
 static 	int dash_long = 0, summarize = 1, global = 0, show_io = 0, dash_dag = 0, show_held = 0;
-static  int dash_batch = 0, dash_batch_specified = 0;
+static  int dash_batch = 0, dash_batch_specified = 0, dash_batch_is_default = 1;
 static  int use_xml = 0;
 static  bool use_json = false;
 static  int dash_autocluster = 0; // can be 0, or CondorQ::fetch_DefaultAutoCluster or CondorQ::fetch_GroupBy
@@ -600,6 +600,8 @@ int main (int argc, char **argv)
 	} else {
 		default_fetch_opts &= ~CondorQ::fetch_MyJobs;
 	}
+
+	dash_batch_is_default = param_boolean("CONDOR_Q_DASH_BATCH_IS_DEFAULT", true);
 
 	// process arguments
 	processCommandLineArguments (argc, argv);
@@ -1996,7 +1998,7 @@ processCommandLineArguments (int argc, char *argv[])
 			mode == QDO_JobNormal ||
 			mode == QDO_JobRuntime || // TODO: need a custom format for -batch -run
 			mode == QDO_DAG) { // DAG and batch go naturally together
-			dash_batch = true;
+			dash_batch = dash_batch_is_default;
 		}
 	}
 
