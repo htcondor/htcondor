@@ -260,6 +260,7 @@ void SubmitHash::setup_macro_defaults()
 
 SubmitHash::SubmitHash()
 	: job(NULL)
+	, submit_time(0)
 	, abort_code(0)
 	, abort_macro_name(NULL)
 	, abort_raw_macro_val(NULL)
