@@ -1089,9 +1089,7 @@ int Condor_Auth_Kerberos :: authenticate_server_kerberos_2()
     //------------------------------------------
     // Free up some stuff
     //------------------------------------------
-    if (ticket_) {
-        (*krb5_free_ticket_ptr)(krb_context_, ticket_);
-    }
+    (*krb5_free_ticket_ptr)(krb_context_, ticket_);
 
     return rc;
 }
