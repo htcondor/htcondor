@@ -43,6 +43,18 @@ within a DAG file.  (See section~\ref{dagman:command order} for details.)
 DAG are now propagated to all jobs of the workflow, including sub-DAGs.
 \Ticket{5077}
 
+\item Added several statistics about commands issued to the GAHP server
+to the grid ads that the \Condor{gridmanager} sends to the \Condor{collector}:
+  \begin{itemize}
+  \item GahpCommandsIssued
+  \item GahpCommandsTimedOut
+  \item GahpCommandsInFlight
+  \item GahpCommandsQueued
+  \item GahpCommandRuntime
+  \end{itemize}
+
+\Ticket{5698}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
