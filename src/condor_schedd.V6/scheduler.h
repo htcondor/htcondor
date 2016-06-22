@@ -644,6 +644,7 @@ private:
 	int				MaxJobsRunning;
 	char*			StartLocalUniverse; // expression for local jobs
 	char*			StartSchedulerUniverse; // expression for scheduler jobs
+	int				MaxRunningSchedulerJobsPerOwner;
 	int				MaxJobsSubmitted;
 	int				MaxJobsPerOwner;
 	int				MaxJobsPerSubmission;
@@ -755,6 +756,7 @@ private:
 	void   			check_claim_request_timeouts( void );
 	OwnerData * insert_owner(const char*);
 	OwnerData * find_owner(const char*);
+	OwnerData * get_ownerdata(JobQueueJob * job);
 	void		remove_unused_owners();
 	void			child_exit(int, int);
 	void			scheduler_univ_job_exit(int pid, int status, shadow_rec * srec);
