@@ -780,18 +780,18 @@ int relisock_gsi_get(void *arg, void **bufp, size_t *sizep)
     sock->decode();
     
     //read size of data to read
-    stat = sock->code( *((int *)sizep) );
+    stat = sock->code( *sizep );
 	if ( stat == FALSE ) {
 		*sizep = 0;
 	}
 
-	if( *((int *)sizep) == 0 ) {
+	if( *sizep == 0 ) {
 			// We avoid calling malloc(0) here, because the zero-length
 			// buffer is not being freed by globus.
 		*bufp = NULL;
 	}
 	else {
-		*bufp = malloc( *((int *)sizep) );
+		*bufp = malloc( *sizep );
 		if ( !*bufp ) {
 			dprintf( D_ALWAYS, "malloc failure relisock_gsi_get\n" );
 			stat = FALSE;
@@ -799,7 +799,7 @@ int relisock_gsi_get(void *arg, void **bufp, size_t *sizep)
 
 			//if successfully read size and malloced, read data
 		if ( stat ) {
-			sock->code_bytes( *bufp, *((int *)sizep) );
+			sock->code_bytes( *bufp, *sizep );
 		}
 	}
     
