@@ -40,3 +40,19 @@ diff -u -r org.glite.ce.blahp/src/scripts/pbs_submit.sh org.glite.ce.blahp-patch
  if [ "x$pbs_nologaccess" != "xyes" -a "x$pbs_nochecksubmission" != "xyes" ]; then
  
  # Don't trust qsub retcode, it could have crashed
+diff -u -r org.glite.ce.blahp/config/blah.config.template org.glite.ce.blahp-patched/config/blah.config.template
+--- org.glite.ce.blahp/config/blah.config.template	2016-06-13 11:18:26.608478177 -0500
++++ org.glite.ce.blahp-patched/config/blah.config.template	2016-06-21 14:58:17.390383682 -0500
+@@ -106,6 +106,12 @@
+ sge_cellname=$SGE_CELL
+ 
+ 
++## SLURM
++
++#path to the slurm executables
++slurm_binpath=`which sbatch 2>/dev/null|sed 's|/[^/]*$||'`
++
++
+ #
+ #LSF Updater
+ #
