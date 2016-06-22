@@ -2205,8 +2205,6 @@ parse_connect(
 {
 	const char *example = "CONNECT splice1 splice2";
 
-//TEMPTEMP -- need to munge splice names!! (make test with multiple DAGs and splice connects...)
-
 	const char *splice1 = strtok( NULL, DELIMITERS );
 	if ( splice1 == NULL ) {
 		debug_printf( DEBUG_QUIET,
