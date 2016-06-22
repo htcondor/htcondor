@@ -137,7 +137,7 @@ static MACRO_DEFAULTS ConfigMacroDefaults = { 0, NULL, NULL };
 static MACRO_SET ConfigMacroSet = {
 	0, 0,
 	/* CONFIG_OPT_WANT_META | CONFIG_OPT_KEEP_DEFAULT | */ 0,
-	0, NULL, NULL, ALLOCATION_POOL(), std::vector<const char*>(), &ConfigMacroDefaults };
+	0, NULL, NULL, ALLOCATION_POOL(), std::vector<const char*>(), &ConfigMacroDefaults, NULL };
 const MACRO_SOURCE DetectedMacro = { true,  false, 0, -2, -1, -2 };
 const MACRO_SOURCE DefaultMacro  = { true,  false, 1, -2, -1, -2 };
 const MACRO_SOURCE EnvMacro      = { false, false, 2, -2, -1, -2 };
@@ -408,6 +408,7 @@ static void init_macro_eval_context(MACRO_EVAL_CONTEXT &ctx)
 	if (ctx.localname && ! ctx.localname[0]) ctx.localname = NULL;
 	ctx.subsys = get_mySubSystem()->getName();
 	if (ctx.subsys && ! ctx.subsys[0]) ctx.subsys = NULL;
+	ctx.cwd = NULL;
 }
 
 bool config_continue_if_no_config(bool contin)
@@ -2475,7 +2476,7 @@ expand_param( const char *str )
 char *
 expand_param(const char *str, const char * localname, const char *subsys, int use)
 {
-	MACRO_EVAL_CONTEXT ctx = { localname, subsys, false, use };
+	MACRO_EVAL_CONTEXT ctx = { localname, subsys, NULL, false, use };
 	if (ctx.localname && ! ctx.localname[0]) ctx.localname = NULL;
 	if (ctx.subsys && ! ctx.subsys[0]) ctx.subsys = NULL;
 	return expand_macro(str, ConfigMacroSet, ctx);
@@ -3487,7 +3488,7 @@ int write_config_file(const char* pathname, int options) {
 // so that condor_config_val can test config if expressions.
 bool config_test_if_expression(const char * expr, bool & result, const char * localname, const char * subsys, std::string & err_reason)
 {
-	MACRO_EVAL_CONTEXT ctx = { localname, subsys, false, 0 };
+	MACRO_EVAL_CONTEXT ctx = { localname, subsys, NULL, false, 0 };
 	if (ctx.localname && !ctx.localname[0]) ctx.localname = NULL;
 	if (ctx.subsys && !ctx.subsys[0]) ctx.subsys = NULL;
 	return Test_config_if_expression(expr, result, err_reason, ConfigMacroSet, ctx);

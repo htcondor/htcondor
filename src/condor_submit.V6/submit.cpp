@@ -379,7 +379,7 @@ static MACRO_SET SubmitMacroSet = {
 	0, 0,
 	CONFIG_OPT_WANT_META | CONFIG_OPT_KEEP_DEFAULTS | CONFIG_OPT_SUBMIT_SYNTAX,
 	0, NULL, NULL, ALLOCATION_POOL(), std::vector<const char*>(),
-	&SubmitMacroDefaultSet };
+	&SubmitMacroDefaultSet, NULL };
 
 #endif
 
@@ -1541,7 +1541,7 @@ main( int argc, const char *argv[] )
 #ifdef USE_SUBMIT_UTILS
 			submit_hash.set_arg_variable(name.c_str(), value.c_str());
 #else
-			MACRO_EVAL_CONTEXT ctx = { NULL, "SUBMIT", false, 0 };
+			MACRO_EVAL_CONTEXT ctx = { NULL, "SUBMIT", NULL, false, 0 };
 			insert_macro(name.c_str(), value.c_str(), SubmitMacroSet, ArgumentMacro, ctx);
 #endif
 		} else {
@@ -7464,7 +7464,7 @@ MyString last_submit_cmd;
 
 int SpecialSubmitPreQueue(const char* queue_args, bool from_file, MACRO_SOURCE& source, MACRO_SET& macro_set, std::string & errmsg)
 {
-	MACRO_EVAL_CONTEXT ctx = { NULL, "SUBMIT", false, 2 };
+	MACRO_EVAL_CONTEXT ctx = { NULL, "SUBMIT", NULL, false, 2 };
 	int rval = 0;
 
 	GotQueueCommand = true;
@@ -7540,7 +7540,7 @@ int SpecialSubmitParse(void* pv, MACRO_SOURCE& source, MACRO_SET& macro_set, cha
 {
 	FILE* fp_submit = (FILE*)pv;
 	int rval = 0;
-	MACRO_EVAL_CONTEXT ctx = { NULL, "SUBMIT", false, 2 };
+	MACRO_EVAL_CONTEXT ctx = { NULL, "SUBMIT", NULL, false, 2 };
 
 	// Check to see if this is a queue statement.
 	//
@@ -7923,7 +7923,7 @@ int read_submit_file(FILE * fp)
 	int rval = submit_hash.parse_file(fp, FileMacroSource, errmsg, SpecialSubmitParse, fp);
   #endif
 #else
-	MACRO_EVAL_CONTEXT ctx = { NULL, "SUBMIT", false, 2 };
+	MACRO_EVAL_CONTEXT ctx = { NULL, "SUBMIT", NULL, false, 2 };
 
 	int rval = Parse_macros(fp, FileMacroSource,
 		0, SubmitMacroSet, READ_MACROS_SUBMIT_SYNTAX,
@@ -7933,6 +7933,10 @@ int read_submit_file(FILE * fp)
 
 	if( rval < 0 ) {
 		fprintf (stderr, "\nERROR: on Line %d of submit file: %s\n", FileMacroSource.line, errmsg.c_str());
+		if (SubmitMacroSet.errors) {
+			fprintf(stderr, "%s", SubmitMacroSet.errors->getFullText().c_str());
+			SubmitMacroSet.errors->clear();
+		}
 	} else {
 		ErrContext.phase = PHASE_QUEUE_ARG;
 
@@ -7979,7 +7983,7 @@ void param_and_insert_unique_items(const char * param_name, classad::References 
 char *
 condor_param( const char* name, const char* alt_name )
 {
-	MACRO_EVAL_CONTEXT ctx = { NULL, "SUBMIT", false, 3 };
+	MACRO_EVAL_CONTEXT ctx = { NULL, "SUBMIT", NULL, false, 3 };
 
 	bool used_alt = false;
 	const char *pval = lookup_macro(name, SubmitMacroSet, ctx);
@@ -8038,7 +8042,7 @@ condor_param( const char* name, const char* alt_name )
 void
 set_condor_param( const char *name, const char *value )
 {
-	MACRO_EVAL_CONTEXT ctx = { NULL, "SUBMIT", false, 2 };
+	MACRO_EVAL_CONTEXT ctx = { NULL, "SUBMIT", NULL, false, 2 };
 	insert_macro(name, value, SubmitMacroSet, DefaultMacro, ctx);
 }
 #endif
@@ -8083,7 +8087,7 @@ void SetNoClusterAttr(const char * name)
 void
 set_live_submit_variable( const char *name, const char *live_value, bool force_used /*=true*/ )
 {
-	static MACRO_EVAL_CONTEXT ctx = { NULL, "SUBMIT", false, 2 };
+	static MACRO_EVAL_CONTEXT ctx = { NULL, "SUBMIT", NULL, false, 2 };
 	MACRO_ITEM* pitem = find_macro_item(name, NULL, SubmitMacroSet);
 	if ( ! pitem) {
 		insert_macro(name, "", SubmitMacroSet, LiveMacro, ctx);
@@ -9385,6 +9389,9 @@ init_params()
 		exit( 1 );
 	}
 #else
+	if (SubmitMacroSet.errors) delete SubmitMacroSet.errors;
+	SubmitMacroSet.errors = new CondorError();
+
 	ArchMacroDef.psz = param( "ARCH" );
 
 	if( ArchMacroDef.psz == NULL ) {
@@ -9904,12 +9911,15 @@ InsertJobExpr (const char *expr, bool from_config_file /*=false*/)
 
 	if (retval)
 	{
-		fprintf (stderr, "\nERROR: Parse error in expression: \n\t%s\n\t", expr);
+		fprintf (stderr, "\nERROR: Parse error in expression: \n\t%s\n", expr);
+#if 0 // pos is currently always 0, so no point in this part...
+		fputs('\t', stderr);
 		while (pos--) {
 			fputc( ' ', stderr );
 		}
 		fprintf (stderr, "^^^\n");
-		fprintf(stderr,"Error in %s file\n", from_config_file ? "config file SUBMIT_ATTRS or SUBMIT_EXPRS value" : "submit file");
+#endif
+		fprintf(stderr,"Error in %s. Aborting submit.\n", from_config_file ? "config file SUBMIT_ATTRS or SUBMIT_EXPRS value" : "submit file");
 		DoCleanup(0,0,NULL);
 		exit( 1 );
 	}

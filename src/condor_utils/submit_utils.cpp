@@ -302,6 +302,7 @@ SubmitHash::SubmitHash()
 	SubmitMacroSet.options = CONFIG_OPT_WANT_META | CONFIG_OPT_KEEP_DEFAULTS | CONFIG_OPT_SUBMIT_SYNTAX;
 	SubmitMacroSet.apool = ALLOCATION_POOL();
 	SubmitMacroSet.sources = std::vector<const char*>();
+	SubmitMacroSet.errors = new CondorError();
 #if 1
 	setup_macro_defaults();
 #else
@@ -316,10 +317,56 @@ SubmitHash::SubmitHash()
 
 SubmitHash::~SubmitHash()
 {
+	if (SubmitMacroSet.errors) delete SubmitMacroSet.errors;
+	SubmitMacroSet.errors = NULL;
+
 	if (job) delete job;
 	job = NULL;
 	
 }
+
+void SubmitHash::push_error(FILE * fh, const char* format, ... ) //CHECK_PRINTF_FORMAT(3,4);
+{
+	va_list ap;
+	va_start(ap, format);
+	int cch = vprintf_length(format, ap);
+	char * message = (char*)malloc(cch + 1);
+	if (message) {
+		vsprintf ( message, format, ap );
+	}
+	va_end(ap);
+
+	if (SubmitMacroSet.errors) {
+		SubmitMacroSet.errors->push("Submit", -1, message);
+	} else {
+		fprintf(fh, "\nERROR: %s", message ? message : "");
+	}
+	if (message) {
+		free(message);
+	}
+}
+
+void SubmitHash::push_warning(FILE * fh, const char* format, ... ) //CHECK_PRINTF_FORMAT(3,4);
+{
+	va_list ap;
+	va_start(ap, format);
+	int cch = vprintf_length(format, ap);
+	char * message = (char*)malloc(cch + 1);
+	if (message) {
+		vsprintf ( message, format, ap );
+	}
+	va_end(ap);
+
+	if (SubmitMacroSet.errors) {
+		SubmitMacroSet.errors->push("Submit", 0, message);
+	} else {
+		fprintf(fh, "\nWARNING: %s", message ? message : "");
+	}
+	if (message) {
+		free(message);
+	}
+}
+
 
 static char * trim_and_strip_quotes_in_place(char * str)
 {
@@ -383,7 +430,7 @@ static void compress_path( MyString &path )
  * takes any network drive paths and converts them to UNC
  * paths.
  */
-static int check_and_universalize_path( MyString &path )
+int SubmitHash::check_and_universalize_path( MyString &path )
 {
 	(void) path;
 
@@ -434,7 +481,7 @@ static int check_and_universalize_path( MyString &path )
 			// test it, the expense is not worth it.
 			
 			if (strcasecmp(my_name, net_name) != 0 ) {
-				fprintf(stderr, "\nERROR: The path '%s' is associated with\n"
+				push_error(stderr, "The path '%s' is associated with\n"
 				"\tuser '%s', but you're '%s', so Condor can\n"
 			    "\tnot access it. Currently Condor only supports network\n"
 			    "\tdrives that are associated with the submitting user.\n", 
@@ -442,8 +489,7 @@ static int check_and_universalize_path( MyString &path )
 				return -1;
 			}
 		} else {
-			fprintf(stderr, 
-				"\nERROR: Unable to get name of user associated with \n"
+			push_error(stderr, "Unable to get name of user associated with \n"
 				"the following network path (err=%d):"
 				"\n\t%s\n", result, path.Value());
 			return -1;
@@ -452,8 +498,7 @@ static int check_and_universalize_path( MyString &path )
 		result = WNetGetUniversalName(path.Value(), UNIVERSAL_NAME_INFO_LEVEL, 
 			name_info_buf, &name_info_buf_size);
 		if ( result != NO_ERROR ) {
-			fprintf(stderr, 
-				"\nERROR: Unable to get universal name for path (err=%d):"
+			push_error(stderr, "Unable to get universal name for path (err=%d):"
 				"\n\t%s\n", result, path.Value());
 			return -1;
 		} else {
@@ -568,29 +613,6 @@ int64_t SubmitHash::calc_image_size_kb( const char *name)
 		return ((int64_t)dir.GetDirectorySize() + 1023) / 1024;
 	}
 	return ((int64_t)buf.st_size + 1023) / 1024;
-}
-
-int
-#if defined(WIN32)
-check_iwd( char const *iwd )
-#else
-check_iwd( char const *iwd, MyString & Rootdir )
-#endif
-{
-	MyString pathname;
-
-#if defined(WIN32)
-	pathname = iwd;
-#else
-	pathname.formatstr( "%s/%s", Rootdir.Value(), iwd );
-#endif
-	compress_path( pathname );
-
-	if( access(pathname.Value(), F_OK|X_OK) < 0 ) {
-		fprintf( stderr, "\nERROR: No such directory: %s\n", pathname.Value() );
-		return 1;
-	}
-	return 0;
 }
 
 
@@ -726,7 +748,7 @@ char * SubmitHash::submit_param( const char* name, const char* alt_name )
 			if (submit_attrs.find(name) != submit_attrs.end()) {
 				return param(name);
 			}
-			if (submit_attrs.find(name) != submit_attrs.end()) {
+			if (submit_attrs.find(alt_name) != submit_attrs.end()) {
 				return param(alt_name);
 			}
 		}
@@ -740,7 +762,7 @@ char * SubmitHash::submit_param( const char* name, const char* alt_name )
 	pval_expanded = expand_macro(pval);
 
 	if( pval == NULL ) {
-		fprintf( stderr, "\nERROR: Failed to expand macros in: %s\n",
+		push_error(stderr, "Failed to expand macros in: %s\n",
 				 used_alt ? alt_name : name );
 		abort_code = 1;
 		return NULL;
@@ -755,7 +777,7 @@ char * SubmitHash::submit_param( const char* name, const char* alt_name )
 
 void SubmitHash::set_submit_param( const char *name, const char *value )
 {
-	MACRO_EVAL_CONTEXT ctx = { NULL, "SUBMIT", false, 2 };
+	MACRO_EVAL_CONTEXT ctx = this->mctx; ctx.use_mask = 2;
 	insert_macro(name, value, SubmitMacroSet, DefaultMacro, ctx);
 }
 
@@ -776,7 +798,7 @@ int SubmitHash::submit_param_int(const char* name, const char * alt_name, int de
 	long long value = def_value;
 	if (*result) {
 		if ( ! string_is_long_param(result, value) || value < INT_MIN || value >= INT_MAX) {
-			fprintf(stderr, "\nERROR: %s=%s is invalid, must eval to an integer.\n", name, result);
+			push_error(stderr, "%s=%s is invalid, must eval to an integer.\n", name, result);
 			ABORT_AND_RETURN( 1 );
 		}
 	}
@@ -792,7 +814,7 @@ int SubmitHash::non_negative_int_fail(const char * Name, char * Value)
 	if (strstr(Value,".") || 
 		(sscanf(Value, "%d", &iTemp) > 0 && iTemp < 0))
 	{
-		fprintf( stderr, "\nERROR: '%s'='%s' is invalid, must eval to a non-negative integer.\n", Name, Value );
+		push_error(stderr, "'%s'='%s' is invalid, must eval to a non-negative integer.\n", Name, Value );
 		ABORT_AND_RETURN(1);
 	}
 	
@@ -811,7 +833,7 @@ int SubmitHash::submit_param_bool(const char* name, const char * alt_name, bool 
 	bool value = def_value;
 	if (*result) {
 		if ( ! string_is_boolean_param(result, value)) {
-			fprintf(stderr, "\nERROR: %s=%s is invalid, must eval to a boolean.\n", name, result);
+			push_error(stderr, "%s=%s is invalid, must eval to a boolean.\n", name, result);
 			ABORT_AND_RETURN(1);
 		}
 	}
@@ -871,18 +893,21 @@ int SubmitHash::InsertJobExpr (const char *expr, const char * source_label /*=NU
 
 	if (retval)
 	{
-		fprintf (stderr, "\nERROR: Parse error in expression: \n\t%s\n\t", expr);
-		while (pos--) {
-			fputc( ' ', stderr );
+		push_error(stderr, "Parse error in expression: \n\t%s\n\t", expr);
+		if ( ! SubmitMacroSet.errors) {
+			PRAGMA_REMIND("fix this to work with errorlist..")
+			while (pos--) {
+				fputc( ' ', stderr );
+			}
+			fprintf (stderr, "^^^\n");
+			fprintf(stderr,"Error in %s\n", source_label ? source_label : "submit file");
 		}
-		fprintf (stderr, "^^^\n");
-		fprintf(stderr,"Error in %s\n", source_label ? source_label : "submit file");
 		ABORT_AND_RETURN( 1 );
 	}
 
 	if (!job->Insert (attr_name.Value(), tree))
 	{	
-		fprintf(stderr,"\nERROR: Unable to insert expression: %s\n", expr);
+		push_error(stderr, "Unable to insert expression: %s\n", expr);
 		ABORT_AND_RETURN( 1 );
 	}
 
@@ -962,6 +987,7 @@ void SubmitHash::init()
 	should_transfer = STF_IF_NEEDED;
 	JobRequirements.clear();
 	JobIwd.clear();
+	mctx.cwd = NULL;
 }
 
 void SubmitHash::clear()
@@ -1100,7 +1126,7 @@ int SubmitHash::SetJavaVMArgs()
 	bool allow_arguments_v1 = submit_param_bool(SUBMIT_KEY_AllowArgumentsV1, NULL, false);
 
 	if(args1_ext && args1) {
-		fprintf(stderr,"\nERROR: you specified a value for both %s and %s.\n",
+		push_error(stderr, "you specified a value for both %s and %s.\n",
 				SUBMIT_KEY_JavaVMArgs, SUBMIT_KEY_JavaVMArguments1);
 		ABORT_AND_RETURN( 1 );
 	}
@@ -1113,8 +1139,7 @@ int SubmitHash::SetJavaVMArgs()
 	}
 
 	if(args2 && args1 && ! allow_arguments_v1) {
-		fprintf(stderr,
-		 "\nERROR: If you wish to specify both 'java_vm_arguments' and\n"
+		push_error(stderr, "If you wish to specify both 'java_vm_arguments' and\n"
 		 "'java_vm_arguments2' for maximal compatibility with different\n"
 		 "versions of Condor, then you must also specify\n"
 		 "allow_arguments_v1=true.\n");
@@ -1131,7 +1156,7 @@ int SubmitHash::SetJavaVMArgs()
 	}
 
 	if(!args_success) {
-		fprintf(stderr,"ERROR: failed to parse java VM arguments: %s\n"
+		push_error(stderr,"failed to parse java VM arguments: %s\n"
 				"The full arguments you specified were %s\n",
 				error_msg.Value(),args2 ? args2 : args1);
 		ABORT_AND_RETURN( 1 );
@@ -1159,7 +1184,7 @@ int SubmitHash::SetJavaVMArgs()
 	}
 
 	if(!args_success) {
-		fprintf(stderr,"\nERROR: failed to insert java vm arguments into "
+		push_error(stderr, "failed to insert java vm arguments into "
 				"ClassAd: %s\n",error_msg.Value());
 		ABORT_AND_RETURN( 1 );
 	}
@@ -1205,7 +1230,7 @@ int SubmitHash::check_open(_submit_file_role role,  const char *name, int flags 
 		return 0;
 	}
 
-	if ( IsUrl( name ) ) {
+	if ( IsUrl( name ) || strstr(name, "$$(") ) {
 		return 0;
 	}
 
@@ -1259,7 +1284,7 @@ int SubmitHash::check_open(_submit_file_role role,  const char *name, int flags 
 					// it up to the runtime to nicely report errors.
 				return 0;
 			}
-			fprintf( stderr, "\nERROR: Can't open \"%s\"  with flags 0%o (%s)\n",
+			push_error(stderr, "Can't open \"%s\"  with flags 0%o (%s)\n",
 					 strPathname.Value(), flags, strerror( errno ) );
 			ABORT_AND_RETURN( 1 );
 		} else {
@@ -1322,7 +1347,7 @@ int SubmitHash::SetStdFile( int which_file )
 		macro_value2 = submit_param( SUBMIT_KEY_StreamError, ATTR_STREAM_ERROR );
 		break;
 	default:
-		fprintf( stderr, "\nERROR: Unknown standard file descriptor (%d)\n",
+		push_error(stderr, "Unknown standard file descriptor (%d)\n",
 				 which_file ); 
 		ABORT_AND_RETURN( 1 );
 	}
@@ -1363,7 +1388,7 @@ int SubmitHash::SetStdFile( int which_file )
 		stream_it = false;
 	}else {
 		if( JobUniverse == CONDOR_UNIVERSE_VM ) {
-			fprintf( stderr,"\nERROR: You cannot use input, ouput, "
+			push_error(stderr, "You cannot use input, ouput, "
 					"and error parameters in the submit description "
 					"file for vm universe\n");
 			ABORT_AND_RETURN( 1 );
@@ -1372,7 +1397,7 @@ int SubmitHash::SetStdFile( int which_file )
 	
 	if( has_whitespace(macro_value) ) 
 	{
-		fprintf( stderr,"\nERROR: The '%s' takes exactly one argument (%s)\n", 
+		push_error(stderr, "The '%s' takes exactly one argument (%s)\n", 
 				 generic_name, macro_value );
 		free(macro_value);
 		ABORT_AND_RETURN( 1 );
@@ -1490,8 +1515,7 @@ int SubmitHash::SetEnvironment()
 
 	RETURN_IF_ABORT();
 	if( env1 && env2 && !allow_v1 ) {
-		fprintf(stderr,
-		 "\nERROR: If you wish to specify both 'environment' and\n"
+		push_error(stderr, "If you wish to specify both 'environment' and\n"
 		 "'environment2' for maximal compatibility with different\n"
 		 "versions of Condor, then you must also specify\n"
 		 "allow_environment_v1=true.\n");
@@ -1509,8 +1533,7 @@ int SubmitHash::SetEnvironment()
 	}
 
 	if(!env_success) {
-		fprintf(stderr,
-				"\n%s\nThe environment you specified was: '%s'\n",
+		push_error(stderr, "%s\nThe environment you specified was: '%s'\n",
 				error_msg.Value(),environment_string);
 		ABORT_AND_RETURN(1);
 	}
@@ -1582,8 +1605,7 @@ int SubmitHash::SetEnvironment()
 	}
 
 	if(!env_success) {
-		fprintf(stderr,
-				"\nERROR: failed to insert environment into job ad: %s\n",
+		push_error(stderr, "failed to insert environment into job ad: %s\n",
 				error_msg.Value());
 		ABORT_AND_RETURN(1);
 	}
@@ -1709,8 +1731,7 @@ int SubmitHash::SetTDP()
 	ArgList args;
 
 	if(tdp_args1_ext && tdp_args1) {
-		fprintf(stderr,
-				"\nERROR: you specified both tdp_daemon_args and tdp_daemon_arguments\n");
+		push_error(stderr, "you specified both tdp_daemon_args and tdp_daemon_arguments\n");
 		ABORT_AND_RETURN(1);
 	}
 	if(tdp_args1_ext) {
@@ -1720,8 +1741,7 @@ int SubmitHash::SetTDP()
 	}
 
 	if(tdp_args2 && tdp_args1 && ! allow_arguments_v1) {
-		fprintf(stderr,
-		 "\nERROR: If you wish to specify both 'tool_daemon_arguments' and\n"
+		push_error(stderr, "If you wish to specify both 'tool_daemon_arguments' and\n"
 		 "'tool_daemon_arguments2' for maximal compatibility with different\n"
 		 "versions of Condor, then you must also specify\n"
 		 "allow_arguments_v1=true.\n");
@@ -1736,7 +1756,7 @@ int SubmitHash::SetTDP()
 	}
 
 	if(!args_success) {
-		fprintf(stderr,"ERROR: failed to parse tool daemon arguments: %s\n"
+		push_error(stderr,"failed to parse tool daemon arguments: %s\n"
 				"The arguments you specified were: %s\n",
 				error_msg.Value(),
 				tdp_args2 ? tdp_args2 : tdp_args1);
@@ -1763,7 +1783,7 @@ int SubmitHash::SetTDP()
 	}
 
 	if(!args_success) {
-		fprintf(stderr,"ERROR: failed to insert tool daemon arguments: %s\n",
+		push_error(stderr, "failed to insert tool daemon arguments: %s\n",
 				error_msg.Value());
 		ABORT_AND_RETURN(1);
 	}
@@ -1795,8 +1815,7 @@ int SubmitHash::SetRunAsOwner()
 	if( bRunAsOwner ) {
 		RunAsOwnerCredD.set(param("CREDD_HOST"));
 		if ( ! RunAsOwnerCredD) {
-			fprintf(stderr,
-					"\nERROR: run_as_owner requires a valid CREDD_HOST configuration macro\n");
+			push_error(stderr, "run_as_owner requires a valid CREDD_HOST configuration macro\n");
 			ABORT_AND_RETURN(1);
 		}
 	}
@@ -1880,7 +1899,7 @@ int SubmitHash::SetRank()
 	}		
 
 	if( orig_pref && orig_rank ) {
-		fprintf( stderr, "\nERROR: %s and %s may not both be specified "
+		push_error(stderr, "%s and %s may not both be specified "
 				 "for a job\n", SUBMIT_KEY_Preferences, SUBMIT_KEY_Rank );
 		ABORT_AND_RETURN( 1 );
 	} else if( orig_rank ) {
@@ -1958,8 +1977,7 @@ int SubmitHash::SetUserLog()
 					if ( !DisableFileChecks ) {
 						FILE* test = safe_fopen_wrapper_follow(ulog.c_str(), "a+", 0664);
 						if (!test) {
-							fprintf(stderr,
-									"\nERROR: Invalid log file: \"%s\" (%s)\n", ulog.c_str(),
+							push_error(stderr, "Invalid log file: \"%s\" (%s)\n", ulog.c_str(),
 									strerror(errno));
 							ABORT_AND_RETURN( 1 );
 						} else {
@@ -1973,13 +1991,12 @@ int SubmitHash::SetUserLog()
 
 					if ( nfs_is_error ) {
 						if ( fs_detect_nfs( ulog.c_str(), &nfs ) != 0 ) {
-							fprintf(stderr,
-									"\nWARNING: Can't determine whether log file %s is on NFS\n",
+							push_warning(stderr,
+									"Can't determine whether log file %s is on NFS\n",
 									ulog.c_str() );
 						} else if ( nfs ) {
 
-							fprintf(stderr,
-									"\nERROR: Log file %s is on NFS.\nThis could cause"
+							push_error(stderr, "Log file %s is on NFS.\nThis could cause"
 									" log file corruption. Condor has been configured to"
 									" prohibit log files on NFS.\n",
 									ulog.c_str() );
@@ -2058,7 +2075,7 @@ int SubmitHash::SetJobLease()
 	RETURN_IF_ABORT();
 
 	long lease_duration = 0;
-	char *tmp = submit_param( "job_lease_duration", ATTR_JOB_LEASE_DURATION );
+	auto_free_ptr tmp(submit_param( "job_lease_duration", ATTR_JOB_LEASE_DURATION ));
 	if( ! tmp ) {
 		if( universeCanReconnect(JobUniverse)) {
 				/*
@@ -2076,35 +2093,39 @@ int SubmitHash::SetJobLease()
 		}
 	} else {
 		char *endptr = NULL;
-		lease_duration = strtol(tmp, &endptr, 10);
-		if (endptr != tmp) {
+		lease_duration = strtol(tmp.ptr(), &endptr, 10);
+		if (endptr != tmp.ptr()) {
 			while (isspace(*endptr)) {
 				endptr++;
 			}
 		}
-		bool valid = (endptr != tmp && *endptr == '\0');
-		if (!valid) {
-			fprintf(stderr, "\nERROR: invalid %s given: %s\n",
-					ATTR_JOB_LEASE_DURATION, tmp);
-			ABORT_AND_RETURN( 1 );
-		}
-		if (lease_duration == 0) {
+		bool is_number = (endptr != tmp.ptr() && *endptr == '\0');
+		if ( ! is_number) {
+			lease_duration = 0; // set to zero to indicate it's an expression
+		} else {
+			if (lease_duration == 0) {
 				// User explicitly didn't want a lease, so we're done.
-			free(tmp);
-			return 0;
-		}
-		else if (lease_duration < 20) {
-			if (! already_warned_job_lease_too_small) { 
-				fprintf(stderr, "\nWARNING: %s less than 20 seconds is not "
-						"allowed, using 20 instead\n",
-						ATTR_JOB_LEASE_DURATION);
-				already_warned_job_lease_too_small = true;
+				return 0;
 			}
-			lease_duration = 20;
+			if (lease_duration < 20) {
+				if (! already_warned_job_lease_too_small) { 
+					push_warning(stderr, "%s less than 20 seconds is not allowed, using 20 instead\n",
+							ATTR_JOB_LEASE_DURATION);
+					already_warned_job_lease_too_small = true;
+				}
+				lease_duration = 20;
+			}
 		}
-		free(tmp);
 	}
-	job->Assign(ATTR_JOB_LEASE_DURATION, lease_duration);
+	if (lease_duration) {
+		job->Assign(ATTR_JOB_LEASE_DURATION, lease_duration);
+	} else if (tmp) {
+		// lease is defined but not an int, try setting it as an expression
+		MyString buffer = ATTR_JOB_LEASE_DURATION;
+		buffer += "=";
+		buffer += tmp.ptr();
+		InsertJobExpr(buffer.c_str());
+	}
 	return 0;
 }
 
@@ -2125,7 +2146,7 @@ int SubmitHash::SetJobStatus()
 
 	if (hold) {
 		if ( IsRemoteJob ) {
-			fprintf( stderr,"\nERROR: Cannot set '%s' to 'true' when using -remote or -spool\n", 
+			push_error(stderr, "Cannot set '%s' to 'true' when using -remote or -spool\n", 
 					 SUBMIT_KEY_Hold );
 			ABORT_AND_RETURN( 1 );
 		}
@@ -2447,7 +2468,7 @@ int SubmitHash::ComputeRootDir()
 	else 
 	{
 		if( access(rootdir, F_OK|X_OK) < 0 ) {
-			fprintf( stderr, "\nERROR: No such directory: %s\n",
+			push_error(stderr, "No such directory: %s\n",
 					 rootdir );
 			ABORT_AND_RETURN( 1 );
 		}
@@ -2522,12 +2543,24 @@ int SubmitHash::ComputeIWD()
 
 	compress_path( iwd );
 	check_and_universalize_path(iwd);
+
 #if defined(WIN32)
-	if (check_iwd(iwd.Value())) { ABORT_AND_RETURN(1); }
+	if (access(iwd.Value(), F_OK|X_OK) < 0) {
+		push_error(stderr, "No such directory: %s\n", iwd.Value());
+		ABORT_AND_RETURN(1);
+	}
 #else
-	if (check_iwd(iwd.Value(), JobRootdir)) { ABORT_AND_RETURN(1); }
+	MyString pathname;
+	pathname.formatstr( "%s/%s", JobRootdir.Value(), iwd.Value() );
+	compress_path( pathname );
+
+	if( access(pathname.Value(), F_OK|X_OK) < 0 ) {
+		push_error(stderr, "No such directory: %s\n", pathname.Value() );
+		ABORT_AND_RETURN(1);
+	}
 #endif
 	JobIwd = iwd;
+	if ( ! JobIwd.empty()) { mctx.cwd = JobIwd.Value(); }
 
 	if ( shortname )
 		free(shortname);
@@ -2577,8 +2610,7 @@ int SubmitHash::SetGSICredentials()
 		proxy_file = get_x509_proxy_filename();
 		if ( proxy_file == NULL ) {
 
-			fprintf( stderr, "\nERROR: Can't determine proxy filename\n" );
-			fprintf( stderr, "X509 user proxy is required for this job.\n");
+			push_error(stderr, "Can't determine proxy filename\nX509 user proxy is required for this job.\n" );
 			ABORT_AND_RETURN( 1 );
 		}
 	}
@@ -2613,7 +2645,7 @@ int SubmitHash::SetGSICredentials()
 		if(submit_sends_x509) {
 
 			if ( check_x509_proxy(proxy_file) != 0 ) {
-				fprintf( stderr, "\nERROR: %s\n", x509_error_string() );
+				push_error(stderr, "%s\n", x509_error_string() );
 				ABORT_AND_RETURN( 1 );
 			}
 
@@ -2621,7 +2653,7 @@ int SubmitHash::SetGSICredentials()
 			time_t proxy_expiration;
 			proxy_expiration = x509_proxy_expiration_time(proxy_file);
 			if (proxy_expiration == -1) {
-				fprintf( stderr, "\nERROR: %s\n", x509_error_string() );
+				push_error(stderr, "%s\n", x509_error_string() );
 				ABORT_AND_RETURN( 1 );
 			}
 
@@ -2635,7 +2667,7 @@ int SubmitHash::SetGSICredentials()
 			proxy_subject = x509_proxy_identity_name(proxy_file);
 
 			if ( !proxy_subject ) {
-				fprintf( stderr, "\nERROR: %s\n", x509_error_string() );
+				push_error(stderr, "%s\n", x509_error_string() );
 				ABORT_AND_RETURN( 1 );
 			}
 
@@ -2664,7 +2696,7 @@ int SubmitHash::SetGSICredentials()
 					// no attributes, skip silently.
 				} else {
 					// log all other errors
-					fprintf( stderr, "\nWARNING: unable to extract VOMS attributes (proxy: %s, erro: %i). continuing \n", proxy_file, error );
+					push_warning(stderr, "unable to extract VOMS attributes (proxy: %s, erro: %i). continuing \n", proxy_file, error );
 				}
 			} else {
 				InsertJobExprString(ATTR_X509_USER_PROXY_VONAME, voname);	
@@ -2699,7 +2731,7 @@ int SubmitHash::SetGSICredentials()
 		char *endptr=NULL;
 		int lifetime = strtol(tmp,&endptr,10);
 		if( !endptr || *endptr != '\0' ) {
-			fprintf(stderr,"\nERROR: invalid integer setting %s = %s\n",SUBMIT_KEY_DelegateJobGSICredentialsLifetime,tmp);
+			push_error(stderr, "invalid integer setting %s = %s\n",SUBMIT_KEY_DelegateJobGSICredentialsLifetime,tmp);
 			ABORT_AND_RETURN( 1 );
 		}
 		InsertJobExprInt(ATTR_DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME,lifetime);
@@ -2790,7 +2822,7 @@ char* SubmitHash::findKillSigName( const char* submit_name, const char* attr_nam
 				// into a string for the classad:
 			tmp = signalName( signo );
 			if( ! tmp ) {
-				fprintf( stderr, "\nERROR: invalid signal %s\n", sig );
+				push_error(stderr, "invalid signal %s\n", sig );
 				free(sig);
 				abort_code=1;
 				return NULL;
@@ -2801,7 +2833,7 @@ char* SubmitHash::findKillSigName( const char* submit_name, const char* attr_nam
 				// should just be a string, let's see if it's valid:
 			signo = signalNumber( sig );
 			if( signo == -1 ) {
-				fprintf( stderr, "\nERROR: invalid signal %s\n", sig );
+				push_error(stderr, "invalid signal %s\n", sig );
 				abort_code=1;
 				free(sig);
 				return NULL;
@@ -2880,15 +2912,14 @@ int SubmitHash::SetForcedAttributes()
 	RETURN_IF_ABORT();
 	MyString buffer;
 
-	for (classad::References::const_iterator it = forcedSubmitAttrs.begin(); it != forcedSubmitAttrs.end(); ++it) {
-		char * value = param(it->c_str());
+	for (classad::References::const_iterator cit = forcedSubmitAttrs.begin(); cit != forcedSubmitAttrs.end(); ++cit) {
+		char * value = param(cit->c_str());
 		if ( ! value)
 			continue;
-		buffer.formatstr( "%s = %s", it->c_str(), value);
+		buffer.formatstr( "%s = %s", cit->c_str(), value);
 		InsertJobExpr(buffer.c_str(), "SUBMIT_ATTRS or SUBMIT_EXPRS value");
 		free(value);
 	}
-
 
 	HASHITER it = hash_iter_begin(SubmitMacroSet);
 	for( ; ! hash_iter_done(it); hash_iter_next(it)) {
@@ -2950,7 +2981,7 @@ int SubmitHash::SetGridParams()
 		}
 
 		if ( strcasecmp( tmp, "ec2" ) == 0 ) {
-			fprintf(stderr, "\nERROR: EC2 grid jobs require a "
+			push_error(stderr, "EC2 grid jobs require a "
 					"service URL\n");
 			ABORT_AND_RETURN( 1 );
 		}
@@ -2961,7 +2992,7 @@ int SubmitHash::SetGridParams()
 	} else {
 			// TODO Make this allowable, triggering matchmaking for
 			//   GridResource
-		fprintf(stderr, "\nERROR: No resource identifier was found.\n" );
+		push_error(stderr, "No resource identifier was found.\n" );
 		ABORT_AND_RETURN( 1 );
 	}
 
@@ -3038,7 +3069,7 @@ int SubmitHash::SetGridParams()
 		InsertJobExpr( buffer );
 		free( tmp );
 	} else if ( gridType == "unicore" ) {
-		fprintf(stderr, "\nERROR: Unicore grid jobs require a \"%s\" "
+		push_error(stderr, "Unicore grid jobs require a \"%s\" "
 				"parameter\n", SUBMIT_KEY_KeystoreFile );
 		ABORT_AND_RETURN( 1 );
 	}
@@ -3048,7 +3079,7 @@ int SubmitHash::SetGridParams()
 		InsertJobExpr( buffer );
 		free( tmp );
 	} else if ( gridType == "unicore" ) {
-		fprintf(stderr, "\nERROR: Unicore grid jobs require a \"%s\" "
+		push_error(stderr, "Unicore grid jobs require a \"%s\" "
 				"parameter\n",SUBMIT_KEY_KeystoreAlias );
 		ABORT_AND_RETURN( 1 );
 	}
@@ -3059,7 +3090,7 @@ int SubmitHash::SetGridParams()
 		InsertJobExpr( buffer );
 		free( tmp );
 	} else if ( gridType == "unicore" ) {
-		fprintf(stderr, "\nERROR: Unicore grid jobs require a \"%s\" "
+		push_error(stderr, "Unicore grid jobs require a \"%s\" "
 				"parameter\n", SUBMIT_KEY_KeystorePassphraseFile );
 		ABORT_AND_RETURN( 1 );
 	}
@@ -3071,7 +3102,7 @@ int SubmitHash::SetGridParams()
 		// check public key file can be opened
 		if ( !DisableFileChecks ) {
 			if( ( fp=safe_fopen_wrapper_follow(full_path(tmp),"r") ) == NULL ) {
-				fprintf( stderr, "\nERROR: Failed to open public key file %s (%s)\n", 
+				push_error(stderr, "Failed to open public key file %s (%s)\n", 
 							 full_path(tmp), strerror(errno));
 				ABORT_AND_RETURN( 1 );
 			}
@@ -3079,7 +3110,7 @@ int SubmitHash::SetGridParams()
 
 			StatInfo si(full_path(tmp));
 			if (si.IsDirectory()) {
-				fprintf(stderr, "\nERROR: %s is a directory\n", full_path(tmp));
+				push_error(stderr, "%s is a directory\n", full_path(tmp));
 				ABORT_AND_RETURN( 1 );
 			}
 		}
@@ -3087,7 +3118,7 @@ int SubmitHash::SetGridParams()
 		InsertJobExpr( buffer.Value() );
 		free( tmp );
 	} else if ( gridType == "ec2" ) {
-		fprintf(stderr, "\nERROR: EC2 jobs require a \"%s\" parameter\n", SUBMIT_KEY_EC2AccessKeyId );
+		push_error(stderr, "EC2 jobs require a \"%s\" parameter\n", SUBMIT_KEY_EC2AccessKeyId );
 		ABORT_AND_RETURN( 1 );
 	}
 	
@@ -3095,7 +3126,7 @@ int SubmitHash::SetGridParams()
 		// check private key file can be opened
 		if ( !DisableFileChecks ) {
 			if( ( fp=safe_fopen_wrapper_follow(full_path(tmp),"r") ) == NULL ) {
-				fprintf( stderr, "\nERROR: Failed to open private key file %s (%s)\n", 
+				push_error(stderr, "Failed to open private key file %s (%s)\n", 
 							 full_path(tmp), strerror(errno));
 				ABORT_AND_RETURN( 1 );
 			}
@@ -3103,7 +3134,7 @@ int SubmitHash::SetGridParams()
 
 			StatInfo si(full_path(tmp));
 			if (si.IsDirectory()) {
-				fprintf(stderr, "\nERROR: %s is a directory\n", full_path(tmp));
+				push_error(stderr, "%s is a directory\n", full_path(tmp));
 				ABORT_AND_RETURN( 1 );
 			}
 		}
@@ -3111,7 +3142,7 @@ int SubmitHash::SetGridParams()
 		InsertJobExpr( buffer.Value() );
 		free( tmp );
 	} else if ( gridType == "ec2" ) {
-		fprintf(stderr, "\nERROR: EC2 jobs require a \"%s\" parameter\n", SUBMIT_KEY_EC2SecretAccessKey );
+		push_error(stderr, "EC2 jobs require a \"%s\" parameter\n", SUBMIT_KEY_EC2SecretAccessKey );
 		ABORT_AND_RETURN( 1 );
 	}
 	
@@ -3129,7 +3160,7 @@ int SubmitHash::SetGridParams()
 	if( (tmp = submit_param( SUBMIT_KEY_EC2KeyPairFile, ATTR_EC2_KEY_PAIR_FILE )) ) {
 	    if (bKeyPairPresent)
 	    {
-	      fprintf(stderr, "\nWARNING: EC2 job(s) contain both ec2_keypair && ec2_keypair_file, ignoring ec2_keypair_file\n");
+	      push_warning(stderr, "EC2 job(s) contain both ec2_keypair && ec2_keypair_file, ignoring ec2_keypair_file\n");
 	    }
 	    else
 	    {
@@ -3159,7 +3190,7 @@ int SubmitHash::SetGridParams()
 		InsertJobExpr( buffer.Value() );
 		free( tmp );
 	} else if ( gridType == "ec2"  ) {
-		fprintf(stderr, "\nERROR: EC2 jobs require a \"%s\" parameter\n", SUBMIT_KEY_EC2AmiID );
+		push_error(stderr, "EC2 jobs require a \"%s\" parameter\n", SUBMIT_KEY_EC2AmiID );
 		ABORT_AND_RETURN( 1 );
 	}
 	
@@ -3204,7 +3235,7 @@ int SubmitHash::SetGridParams()
     if( (tmp = submit_param( SUBMIT_KEY_EC2EBSVolumes, ATTR_EC2_EBS_VOLUMES )) ) {
 		if( validate_disk_param(tmp, 2, 2) == false ) 
         {
-			fprintf(stderr, "\nERROR: 'ec2_ebs_volumes' has incorrect format.\n"
+			push_error(stderr, "'ec2_ebs_volumes' has incorrect format.\n"
 					"The format shoud be like "
 					"\"<instance_id>:<devicename>\"\n"
 					"e.g.> For single volume: ec2_ebs_volumes = vol-35bcc15e:hda1\n"
@@ -3215,7 +3246,7 @@ int SubmitHash::SetGridParams()
 		
 		if (!HasAvailabilityZone)
 		{
-			fprintf(stderr, "\nERROR: 'ec2_ebs_volumes' requires 'ec2_availability_zone'\n");
+			push_error(stderr, "'ec2_ebs_volumes' requires 'ec2_availability_zone'\n");
 			ABORT_AND_RETURN(1);
 		}
 		
@@ -3251,7 +3282,7 @@ int SubmitHash::SetGridParams()
 		// check user data file can be opened
 		if ( !DisableFileChecks ) {
 			if( ( fp=safe_fopen_wrapper_follow(full_path(tmp),"r") ) == NULL ) {
-				fprintf( stderr, "\nERROR: Failed to open user data file %s (%s)\n", 
+				push_error(stderr, "Failed to open user data file %s (%s)\n", 
 								 full_path(tmp), strerror(errno));
 				ABORT_AND_RETURN( 1 );
 			}
@@ -3275,7 +3306,7 @@ int SubmitHash::SetGridParams()
 
 	if( (tmp = submit_param( SUBMIT_KEY_EC2IamProfileName, ATTR_EC2_IAM_PROFILE_NAME )) ) {
 		if( bIamProfilePresent ) {
-			fprintf( stderr, "\nWARNING: EC2 job(s) contain both %s and %s; ignoring %s.\n",
+			push_warning( stderr, "EC2 job(s) contain both %s and %s; ignoring %s.\n",
 				SUBMIT_KEY_EC2IamProfileArn, SUBMIT_KEY_EC2IamProfileName, SUBMIT_KEY_EC2IamProfileName );
 		} else {
 			buffer.formatstr( "%s = \"%s\"", ATTR_EC2_IAM_PROFILE_NAME, tmp );
@@ -3421,7 +3452,7 @@ int SubmitHash::SetGridParams()
 		// check authenticator file can be opened
 		if ( !DisableFileChecks ) {
 			if( ( fp=safe_fopen_wrapper_follow(full_path(tmp),"r") ) == NULL ) {
-				fprintf( stderr, "\nERROR: Failed to open authenticator file %s (%s)\n", 
+				push_error(stderr, "Failed to open authenticator file %s (%s)\n", 
 								 full_path(tmp), strerror(errno));
 				ABORT_AND_RETURN( 1 );
 			}
@@ -3432,7 +3463,7 @@ int SubmitHash::SetGridParams()
 		InsertJobExpr( buffer.Value() );
 		free( tmp );
 	} else if ( gridType == "boinc" ) {
-		fprintf(stderr, "\nERROR: BOINC jobs require a \"%s\" parameter\n", SUBMIT_KEY_BoincAuthenticatorFile );
+		push_error(stderr, "BOINC jobs require a \"%s\" parameter\n", SUBMIT_KEY_BoincAuthenticatorFile );
 		ABORT_AND_RETURN( 1 );
 	}
 
@@ -3443,7 +3474,7 @@ int SubmitHash::SetGridParams()
 		// check auth file can be opened
 		if ( !DisableFileChecks ) {
 			if( ( fp=safe_fopen_wrapper_follow(full_path(tmp),"r") ) == NULL ) {
-				fprintf( stderr, "\nERROR: Failed to open auth file %s (%s)\n", 
+				push_error(stderr, "Failed to open auth file %s (%s)\n", 
 						 full_path(tmp), strerror(errno));
 				ABORT_AND_RETURN( 1 );
 			}
@@ -3451,7 +3482,7 @@ int SubmitHash::SetGridParams()
 
 			StatInfo si(full_path(tmp));
 			if (si.IsDirectory()) {
-				fprintf(stderr, "\nERROR: %s is a directory\n", full_path(tmp));
+				push_error(stderr, "%s is a directory\n", full_path(tmp));
 				ABORT_AND_RETURN( 1 );
 			}
 		}
@@ -3459,7 +3490,7 @@ int SubmitHash::SetGridParams()
 		InsertJobExpr( buffer.Value() );
 		free( tmp );
 	} else if ( gridType == "gce" ) {
-		fprintf(stderr, "\nERROR: GCE jobs require a \"%s\" parameter\n", SUBMIT_KEY_GceAuthFile );
+		push_error(stderr, "GCE jobs require a \"%s\" parameter\n", SUBMIT_KEY_GceAuthFile );
 		ABORT_AND_RETURN( 1 );
 	}
 
@@ -3468,7 +3499,7 @@ int SubmitHash::SetGridParams()
 		InsertJobExpr( buffer.Value() );
 		free( tmp );
 	} else if ( gridType == "gce" ) {
-		fprintf(stderr, "\nERROR: GCE jobs require a \"%s\" parameter\n", SUBMIT_KEY_GceImage );
+		push_error(stderr, "GCE jobs require a \"%s\" parameter\n", SUBMIT_KEY_GceImage );
 		ABORT_AND_RETURN( 1 );
 	}
 
@@ -3477,7 +3508,7 @@ int SubmitHash::SetGridParams()
 		InsertJobExpr( buffer.Value() );
 		free( tmp );
 	} else if ( gridType == "gce" ) {
-		fprintf(stderr, "\nERROR: GCE jobs require a \"%s\" parameter\n", SUBMIT_KEY_GceMachineType );
+		push_error(stderr, "GCE jobs require a \"%s\" parameter\n", SUBMIT_KEY_GceMachineType );
 		ABORT_AND_RETURN( 1 );
 	}
 
@@ -3496,7 +3527,7 @@ int SubmitHash::SetGridParams()
 		// check metadata file can be opened
 		if ( !DisableFileChecks ) {
 			if( ( fp=safe_fopen_wrapper_follow(full_path(tmp),"r") ) == NULL ) {
-				fprintf( stderr, "\nERROR: Failed to open metadata file %s (%s)\n", 
+				push_error(stderr, "Failed to open metadata file %s (%s)\n", 
 								 full_path(tmp), strerror(errno));
 				ABORT_AND_RETURN( 1 );
 			}
@@ -3567,7 +3598,7 @@ int SubmitHash::SetNotification()
 		notification = NOTIFY_ERROR;
 	} 
 	else {
-		fprintf( stderr, "\nERROR: Notification must be 'Never', "
+		push_error(stderr, "Notification must be 'Never', "
 				 "'Always', 'Complete', or 'Error'\n" );
 		ABORT_AND_RETURN( 1 );
 	}
@@ -3599,18 +3630,14 @@ int SubmitHash::SetNotifyUser()
 			}
 		}
 		if( needs_warning && ! already_warned_notification_never ) {
-            char* tmp = param( "UID_DOMAIN" );
+			auto_free_ptr tmp(param("UID_DOMAIN"));
 
-			fprintf( stderr, "\nWARNING: You used \"%s = %s\" in your "
-					 "submit file.\n", SUBMIT_KEY_NotifyUser, who );
-			fprintf( stderr, "This means notification email will go to "
-					 "user \"%s@%s\".\n", who, tmp );
-			free( tmp );
-			fprintf( stderr, "This is probably not what you expect!\n"
-					 "If you do not want notification email, put "
-					 "\"notification = never\"\n"
-					 "into your submit file, instead.\n" );
-
+			push_warning( stderr, "You used \"%s = %s\" in your submit file.\n"
+					"This means notification email will go to user \"%s@%s\".\n"
+					"This is probably not what you expect!\n"
+					"If you do not want notification email, put \"notification = never\"\n"
+					"into your submit file, instead.\n",
+					SUBMIT_KEY_NotifyUser, who, who, tmp.ptr() );
 			already_warned_notification_never = true;
 		}
 		buffer.formatstr( "%s = \"%s\"", ATTR_NOTIFY_USER, who);
@@ -3703,7 +3730,7 @@ int SubmitHash::SetCronTab()
 				//
 			MyString error;
 			if ( ! CronTab::validateParameter( ctr, param, error ) ) {
-				fprintf( stderr, "ERROR: %s\n", error.Value() );
+				push_error( stderr, "%s\n", error.Value() );
 				ABORT_AND_RETURN( 1 );
 			}
 				//
@@ -3723,11 +3750,8 @@ int SubmitHash::SetCronTab()
 		// to be able to use the job deferral feature
 		//
 	if ( NeedsJobDeferral && JobUniverse == CONDOR_UNIVERSE_SCHEDULER ) {
-		fprintf( stderr, "\nCronTab scheduling does not work for scheduler "
-						 "universe jobs.\n"
-						 "Consider submitting this job using the local "
-						 "universe, instead\n" );
-		fprintf( stderr, "Error in submit file\n" );
+		push_error( stderr, "CronTab scheduling does not work for scheduler universe jobs.\n"
+						"Consider submitting this job using the local universe, instead\n");
 		ABORT_AND_RETURN( 1 );
 	} // validation	
 	return 0;
@@ -3830,8 +3854,7 @@ int SubmitHash::SetExitRequirements()
 							  ATTR_JOB_EXIT_REQUIREMENTS );
 
 	if (who) {
-		fprintf(stderr, 
-			"\nERROR: %s is deprecated.\n"
+		push_error(stderr, "%s is deprecated.\n"
 			"Please use on_exit_remove or on_exit_hold.\n", 
 			SUBMIT_KEY_ExitRequirements );
 		free(who);
@@ -3866,8 +3889,7 @@ int SubmitHash::SetArguments()
 	MyString error_msg;
 
 	if(args2 && args1 && ! allow_arguments_v1 ) {
-		fprintf(stderr,
-		 "\nERROR: If you wish to specify both 'arguments' and\n"
+		push_error(stderr, "If you wish to specify both 'arguments' and\n"
 		 "'arguments2' for maximal compatibility with different\n"
 		 "versions of Condor, then you must also specify\n"
 		 "allow_arguments_v1=true.\n");
@@ -3885,7 +3907,7 @@ int SubmitHash::SetArguments()
 		if(error_msg.IsEmpty()) {
 			error_msg = "ERROR in arguments.";
 		}
-		fprintf(stderr,"\n%s\nThe full arguments you specified were: %s\n",
+		push_error(stderr, "%s\nThe full arguments you specified were: %s\n",
 				error_msg.Value(),
 				args2 ? args2 : args1);
 		ABORT_AND_RETURN(1);
@@ -3906,7 +3928,7 @@ int SubmitHash::SetArguments()
 	}
 
 	if(!args_success) {
-		fprintf(stderr,"\nERROR: failed to insert arguments: %s\n",
+		push_error(stderr, "failed to insert arguments: %s\n",
 				error_msg.Value());
 		ABORT_AND_RETURN(1);
 	}
@@ -3915,7 +3937,7 @@ int SubmitHash::SetArguments()
 
 	if( JobUniverse == CONDOR_UNIVERSE_JAVA && arglist.Count() == 0)
 	{
-		fprintf(stderr, "\nERROR: In Java universe, you must specify the class name to run.\nExample:\n\narguments = MyClass\n\n");
+		push_error(stderr, "In Java universe, you must specify the class name to run.\nExample:\n\narguments = MyClass\n\n");
 		ABORT_AND_RETURN( 1 );
 	}
 
@@ -4058,11 +4080,8 @@ int SubmitHash::SetJobDeferral()
 			// we can't let them use the job deferral feature
 			//
 		if ( JobUniverse == CONDOR_UNIVERSE_SCHEDULER ) {
-			fprintf( stderr, "\nJob deferral scheduling does not work for scheduler "
-							 "universe jobs.\n"
-							 "Consider submitting this job using the local "
-							 "universe, instead\n" );
-			fprintf( stderr, "Error in submit file\n" );
+			push_error( stderr, "Job deferral scheduling does not work for scheduler universe jobs.\n"
+							"Consider submitting this job using the local universe, instead\n");
 			ABORT_AND_RETURN( 1 );
 		} // validation	
 	}
@@ -4145,7 +4164,7 @@ int SubmitHash::SetRemoteAttrs()
 			MyString val = submit_param_mystring(Univ1.Value(), Univ2.Value());
 			int univ = CondorUniverseNumberEx(val.Value());
 			if(univ == 0) {
-				fprintf(stderr, "ERROR: Unknown universe of '%s' specified\n", val.Value());
+				push_error(stderr, "Unknown universe of '%s' specified\n", val.Value());
 				ABORT_AND_RETURN( 1 );
 			}
 			MyString attr = preremote + ATTR_JOB_UNIVERSE;
@@ -4200,7 +4219,7 @@ int SubmitHash::SetJobMachineAttrs()
 		char *endptr=NULL;
 		long history_len = strtol(history_len_str.Value(),&endptr,10);
 		if( history_len > INT_MAX || history_len < 0 || *endptr) {
-			fprintf(stderr,"\nERROR: job_machine_attrs_history_length=%s is out of bounds 0 to %d\n",history_len_str.Value(),INT_MAX);
+			push_error(stderr, "job_machine_attrs_history_length=%s is out of bounds 0 to %d\n",history_len_str.Value(),INT_MAX);
 			ABORT_AND_RETURN( 1 );
 		}
 		job->Assign(ATTR_JOB_MACHINE_ATTRS_HISTORY_LENGTH, history_len);
@@ -4245,12 +4264,12 @@ int SubmitHash::SetExecutable()
 	if (IsDockerJob) {
 		char * docker_image = submit_param(SUBMIT_KEY_DockerImage, ATTR_DOCKER_IMAGE);
 		if ( ! docker_image) {
-			fprintf(stderr, "\nERROR: docker jobs require a docker_image\n");
+			push_error(stderr, "docker jobs require a docker_image\n");
 			ABORT_AND_RETURN(1);
 		}
 		char * image = check_docker_image(docker_image);
 		if ( ! image || ! image[0]) {
-			fprintf(stderr, "\nERROR: '%s' is not a valid docker_image\n", docker_image);
+			push_error(stderr, "'%s' is not a valid docker_image\n", docker_image);
 			ABORT_AND_RETURN(1);
 		}
 		buffer.formatstr("%s = \"%s\"", ATTR_DOCKER_IMAGE, image);
@@ -4267,7 +4286,7 @@ int SubmitHash::SetExecutable()
 			ignore_it = true;
 			role = SFR_PSEUDO_EXECUTABLE;
 		} else {
-			fprintf( stderr, "No '%s' parameter was provided\n", SUBMIT_KEY_Executable);
+			push_error(stderr, "No '%s' parameter was provided\n", SUBMIT_KEY_Executable);
 			ABORT_AND_RETURN( 1 );
 		}
 	}
@@ -4329,7 +4348,7 @@ int SubmitHash::SetExecutable()
 	case CONDOR_UNIVERSE_MPI:  // for now
 		/*
 		if(!use_condor_mpi_universe) {
-			fprintf(stderr, "\nERROR: mpi universe no longer suppported. Please use parallel universe.\n"
+			push_error(stderr, "mpi universe no longer suppported. Please use parallel universe.\n"
 					"You can submit mpi jobs using parallel universe. Most likely, a substitution of\n"
 					"\nuniverse = parallel\n\n"
 					"in place of\n"
@@ -4353,7 +4372,7 @@ int SubmitHash::SetExecutable()
 		InsertJobExpr (buffer);
 		break;
 	default:
-		fprintf(stderr, "\nERROR: Unknown universe %d (%s)\n", JobUniverse, CondorUniverseName(JobUniverse) );
+		push_error(stderr, "Unknown universe %d (%s)\n", JobUniverse, CondorUniverseName(JobUniverse) );
 		ABORT_AND_RETURN( 1 );
 	}
 
@@ -4401,13 +4420,12 @@ int SubmitHash::SetExecutable()
 
 		StatInfo si(ename);
 		if ( SINoFile == si.Error () ) {
-			fprintf ( stderr, "\nERROR: Executable file %s does not exist\n", ename );
+			push_error(stderr, "Executable file %s does not exist\n", ename );
 			ABORT_AND_RETURN( 1 );
 		}
 			    
 		if (!si.Error() && (si.GetFileSize() == 0)) {
-			fprintf( stderr,
-					 "\nERROR: Executable file %s has zero length\n", 
+			push_error(stderr, "Executable file %s has zero length\n", 
 					 ename );
 			ABORT_AND_RETURN( 1 );
 		}
@@ -4456,8 +4474,7 @@ int SubmitHash::SetExecutable()
 			}
 
 			if (ret < 0) {
-				fprintf( stderr,
-				         "\nERROR: Request to transfer executable %s failed\n",
+				push_error(stderr, "Request to transfer executable %s failed\n",
 				         IckptName );
 				ABORT_AND_RETURN( 1 );
 			}
@@ -4469,8 +4486,7 @@ int SubmitHash::SetExecutable()
 			// and already has a copy, so no need
 			//
 			if ((ret == 0) && MyQ->send_SpoolFileBytes(full_path(ename,false)) < 0) {
-				fprintf( stderr,
-						 "\nERROR: failed to transfer executable file %s\n", 
+				push_error(stderr, "failed to transfer executable file %s\n", 
 						 ename );
 				ABORT_AND_RETURN( 1 );
 			}
@@ -4578,8 +4594,7 @@ int SubmitHash::SetUniverse()
 
 	if (JobUniverse == CONDOR_UNIVERSE_STANDARD) {
 #if defined( CLIPPED )
-		fprintf( stderr, 
-				 "\nERROR: You are trying to submit a \"%s\" job to Condor. "
+		push_error(stderr, "You are trying to submit a \"%s\" job to Condor. "
 				 "However, this installation of Condor does not support the "
 				 "Standard Universe.\n%s\n%s\n",
 				 univ.ptr(), CondorVersion(), CondorPlatform() );
@@ -4598,8 +4613,7 @@ int SubmitHash::SetUniverse()
 		// with '$$(', then we're matchmaking and don't know the grid-type.
 		JobGridType = submit_param_mystring( SUBMIT_KEY_GridResource, ATTR_GRID_RESOURCE );
 		if (JobGridType.empty()) {
-			fprintf( stderr, "ERROR: %s attribute not defined for grid "
-					 "universe job\n", SUBMIT_KEY_GridResource );
+			push_error(stderr, "%s attribute not defined for grid universe job\n",  SUBMIT_KEY_GridResource);
 			ABORT_AND_RETURN( 1 );
 		}
 
@@ -4648,9 +4662,9 @@ int SubmitHash::SetUniverse()
 				gridType = JobGridType.Value();
 			} else {
 
-				fprintf( stderr, "\nERROR: Invalid value '%s' for grid type\n", JobGridType.Value() );
-				fprintf( stderr, "Must be one of: gt2, gt5, pbs, lsf, "
-						 "sge, nqs, condor, nordugrid, unicore, ec2, gce, cream, or boinc\n" );
+				push_error(stderr, "Invalid value '%s' for grid type\n"
+					"Must be one of: gt2, gt5, pbs, lsf, sge, nqs, condor, nordugrid, unicore, ec2, gce, cream, or boinc\n",
+					JobGridType.Value() );
 				ABORT_AND_RETURN( 1 );
 			}
 		}			
@@ -4664,7 +4678,7 @@ int SubmitHash::SetUniverse()
 		// virtual machine type ( xen, vmware )
 		VMType = submit_param_mystring(SUBMIT_KEY_VM_Type, ATTR_JOB_VM_TYPE);
 		if (VMType.empty()) {
-			fprintf( stderr, "\nERROR: '%s' cannot be found.\n"
+			push_error(stderr, "'%s' cannot be found.\n"
 					"Please specify '%s' for vm universe "
 					"in your submit description file.\n", SUBMIT_KEY_VM_Type, SUBMIT_KEY_VM_Type);
 			ABORT_AND_RETURN(1);
@@ -4725,10 +4739,10 @@ int SubmitHash::SetUniverse()
 
 	// If we get to here, this is an unknown or unsupported universe.
 	if (univ && ! JobUniverse) {
-		fprintf( stderr, "\nERROR: I don't know about the '%s' universe.\n", univ.ptr());
+		push_error(stderr, "I don't know about the '%s' universe.\n", univ.ptr());
 		ABORT_AND_RETURN( 1 );
 	} else if (JobUniverse) {
-		fprintf( stderr, "\nERROR: '%s' is not a supported universe.\n", CondorUniverseNameUcFirst(JobUniverse));
+		push_error(stderr, "'%s' is not a supported universe.\n", CondorUniverseNameUcFirst(JobUniverse));
 		ABORT_AND_RETURN( 1 );
 	}
 
@@ -4761,7 +4775,7 @@ int SubmitHash::SetMachineCount()
 			free(mach_count);
 		}
 		else {
-			fprintf(stderr, "\nERROR: No machine_count specified!\n" );
+			push_error(stderr, "No machine_count specified!\n" );
 			ABORT_AND_RETURN( 1 );
 		}
 
@@ -4779,7 +4793,7 @@ int SubmitHash::SetMachineCount()
 			free(mach_count);
 
 			if( tmp < 1 ) {
-				fprintf(stderr, "\nERROR: machine_count must be >= 1\n" );
+				push_error(stderr, "machine_count must be >= 1\n" );
 				ABORT_AND_RETURN( 1 );
 			}
 
@@ -4908,12 +4922,12 @@ int SubmitHash::SetImageSize()
 	tmp = submit_param( SUBMIT_KEY_ImageSize, ATTR_IMAGE_SIZE );
 	if( tmp ) {
 		if ( ! parse_int64_bytes(tmp, image_size_kb, 1024)) {
-			fprintf(stderr, "\nERROR: '%s' is not valid for Image Size\n", tmp);
+			push_error(stderr, "'%s' is not valid for Image Size\n", tmp);
 			image_size_kb = 0;
 		}
 		free( tmp );
 		if( image_size_kb < 1 ) {
-			fprintf(stderr, "\nERROR: Image Size must be positive\n" );
+			push_error(stderr, "Image Size must be positive\n" );
 			ABORT_AND_RETURN( 1 );
 		}
 	}
@@ -4935,7 +4949,7 @@ int SubmitHash::SetImageSize()
 		int64_t memory_usage_mb = 0;
 		if ( ! parse_int64_bytes(tmp, memory_usage_mb, 1024*1024) ||
 			memory_usage_mb < 0) {
-			fprintf(stderr, "\nERROR: '%s' is not valid for Memory Usage\n", tmp);
+			push_error(stderr, "'%s' is not valid for Memory Usage\n", tmp);
 			ABORT_AND_RETURN( 1 );
 		}
 		free(tmp);
@@ -4948,7 +4962,7 @@ int SubmitHash::SetImageSize()
 	tmp = submit_param( SUBMIT_KEY_DiskUsage, ATTR_DISK_USAGE );
 	if( tmp ) {
 		if ( ! parse_int64_bytes(tmp, disk_usage_kb, 1024) || disk_usage_kb < 1) {
-			fprintf( stderr, "\nERROR: '%s' is not valid for disk_usage. It must be >= 1\n", tmp);
+			push_error(stderr, "'%s' is not valid for disk_usage. It must be >= 1\n", tmp);
 			ABORT_AND_RETURN( 1 );
 		}
 		free( tmp );
@@ -4977,7 +4991,7 @@ int SubmitHash::SetImageSize()
 		free(tmp);
 		InsertJobExpr(buffer);
 	} else if ( (tmp = submit_param(SUBMIT_KEY_VM_Memory, ATTR_JOB_VM_MEMORY)) ) {
-		fprintf(stderr, "\nNOTE: '%s' was NOT specified.  Using %s = %s. \n", ATTR_REQUEST_MEMORY,ATTR_JOB_VM_MEMORY, tmp );
+		push_warning(stderr, "'%s' was NOT specified.  Using %s = %s. \n", ATTR_REQUEST_MEMORY,ATTR_JOB_VM_MEMORY, tmp );
 		buffer.formatstr("%s = MY.%s", ATTR_REQUEST_MEMORY, ATTR_JOB_VM_MEMORY);
 		free(tmp);
 		InsertJobExpr(buffer);
@@ -5321,8 +5335,8 @@ bool SubmitHash::check_requirements( char const *orig, MyString &answer )
 				answer += " && (TARGET.Disk >= RequestDisk)";
 			}
 			if ( ! already_warned_requirements_disk && param_boolean("ENABLE_DEPRECATION_WARNINGS", false)) {
-				fprintf(stderr, 
-						"\nWARNING: Your Requirements expression refers to TARGET.Disk. "
+				push_warning(stderr,
+						"Your Requirements expression refers to TARGET.Disk. "
 						"This is obsolete. Set request_disk and condor_submit will modify the "
 						"Requirements expression as needed.\n");
 				already_warned_requirements_disk = true;
@@ -5339,8 +5353,8 @@ bool SubmitHash::check_requirements( char const *orig, MyString &answer )
 		}
 		if (checks_mem) {
 			if ( ! already_warned_requirements_mem && param_boolean("ENABLE_DEPRECATION_WARNINGS", false)) {
-				fprintf(stderr, 
-						"\nWARNING: your Requirements expression refers to TARGET.Memory. "
+				push_warning(stderr,
+						"your Requirements expression refers to TARGET.Memory. "
 						"This is obsolete. Set request_memory and condor_submit will modify the "
 						"Requirements expression as needed.\n");
 				already_warned_requirements_mem = true;
@@ -5723,7 +5737,7 @@ int SubmitHash::SetConcurrencyLimits()
 
 	if (!tmp.IsEmpty()) {
 		if (!tmp2.IsEmpty()) {
-			fprintf( stderr, "ERROR: %s and %s can't be used together\n",
+			push_error( stderr, "%s and %s can't be used together\n",
 					 SUBMIT_KEY_ConcurrencyLimits, SUBMIT_KEY_ConcurrencyLimitsExpr );
 			ABORT_AND_RETURN( 1 );
 		}
@@ -5740,8 +5754,7 @@ int SubmitHash::SetConcurrencyLimits()
 			char *limit_cpy = strdup( limit );
 
 			if ( !ParseConcurrencyLimit(limit_cpy, increment) ) {
-				fprintf( stderr,
-						 "\nERROR: Invalid concurrency limit '%s'\n",
+				push_error(stderr, "Invalid concurrency limit '%s'\n",
 						 limit );
 				ABORT_AND_RETURN( 1 );
 			}
@@ -5789,11 +5802,11 @@ int SubmitHash::SetAccountingGroup()
     }
 
 	if ( group && !IsValidSubmitterName(group) ) {
-		fprintf(stderr, "\nERROR: Invalid %s: %s\n", SUBMIT_KEY_AcctGroup, group);
+		push_error(stderr, "Invalid %s: %s\n", SUBMIT_KEY_AcctGroup, group);
 		ABORT_AND_RETURN( 1 );
 	}
 	if ( !IsValidSubmitterName(group_user.c_str()) ) {
-		fprintf(stderr, "\nERROR: Invalid %s: %s\n", SUBMIT_KEY_AcctGroupUser, group_user.c_str());
+		push_error(stderr, "Invalid %s: %s\n", SUBMIT_KEY_AcctGroupUser, group_user.c_str());
 		ABORT_AND_RETURN( 1 );
 	}
 
@@ -5919,7 +5932,7 @@ int SubmitHash::SetVMParams()
 	// Set memory for virtual machine
 	tmp_ptr = submit_param(SUBMIT_KEY_VM_Memory, ATTR_JOB_VM_MEMORY);
 	if( !tmp_ptr ) {
-		fprintf( stderr, "\nERROR: '%s' cannot be found.\n"
+		push_error(stderr, "'%s' cannot be found.\n"
 				"Please specify '%s' for vm universe "
 				"in your submit description file.\n", SUBMIT_KEY_VM_Memory, SUBMIT_KEY_VM_Memory);
 		ABORT_AND_RETURN(1);
@@ -5928,7 +5941,7 @@ int SubmitHash::SetVMParams()
 	int64_t vm_mem;
 	parse_int64_bytes(tmp_ptr, vm_mem, 1024*1024);
 	if( vm_mem <= 0 ) {
-		fprintf( stderr, "\nERROR: '%s' is incorrectly specified\n"
+		push_error(stderr, "'%s' is incorrectly specified\n"
 				"For example, for vm memroy of 128 Megabytes,\n"
 				"you need to use 128 in your submit description file.\n",
 				SUBMIT_KEY_VM_Memory);
@@ -5991,7 +6004,7 @@ int SubmitHash::SetVMParams()
 			char *xen_kernel = NULL;
 			xen_kernel = submit_param("xen_kernel");
 			if( !xen_kernel ) {
-				fprintf( stderr, "\nERROR: 'xen_kernel' cannot be found.\n"
+				push_error(stderr, "'xen_kernel' cannot be found.\n"
 						"Please specify 'xen_kernel' for the xen virtual machine "
 						"in your submit description file.\n"
 						"xen_kernel must be one of "
@@ -6028,7 +6041,7 @@ int SubmitHash::SetVMParams()
 			xen_initrd = submit_param("xen_initrd");
 			if( xen_initrd ) {
 				if( !real_xen_kernel_file ) {
-					fprintf( stderr, "\nERROR: To use xen_initrd, "
+					push_error(stderr, "To use xen_initrd, "
 							"xen_kernel should be a real kernel file.\n");
 					ABORT_AND_RETURN(1);
 				}
@@ -6040,7 +6053,7 @@ int SubmitHash::SetVMParams()
 				char *xen_root = NULL;
 				xen_root = submit_param("xen_root");
 				if( !xen_root ) {
-					fprintf( stderr, "\nERROR: '%s' cannot be found.\n"
+					push_error(stderr, "'%s' cannot be found.\n"
 							"Please specify '%s' for the xen virtual machine "
 							"in your submit description file.\n", "xen_root", 
 							"xen_root");
@@ -6056,7 +6069,7 @@ int SubmitHash::SetVMParams()
 		char *disk = submit_param("vm_disk");
 
 		if( !disk ) {
-			fprintf( stderr, "\nERROR: '%s' cannot be found.\n"
+			push_error(stderr, "'%s' cannot be found.\n"
 					"Please specify '%s' for the virtual machine "
 					"in your submit description file.\n", 
 					"<vm>_disk", "<vm>_disk");
@@ -6064,7 +6077,7 @@ int SubmitHash::SetVMParams()
 		}else {
 			if( validate_disk_param(disk,3,4) == false ) 
             {
-				fprintf(stderr, "\nERROR: 'vm_disk' has incorrect format.\n"
+				push_error(stderr, "'vm_disk' has incorrect format.\n"
 						"The format shoud be like "
 						"\"<filename>:<devicename>:<permission>\"\n"
 						"e.g.> For single disk: <vm>_disk = filename1:hda1:w\n"
@@ -6180,10 +6193,10 @@ int SubmitHash::SetVMParams()
 		}
 
 		if ( vmx_files.number() == 0 ) {
-			fprintf( stderr, "\nERROR: no vmx file for vmware can be found.\n" );
+			push_error(stderr, "no vmx file for vmware can be found.\n" );
 			ABORT_AND_RETURN(1);
 		} else if ( vmx_files.number() > 1 ) {
-			fprintf( stderr, "\nERROR: multiple vmx files exist. "
+			push_error(stderr, "multiple vmx files exist. "
 					 "Only one vmx file should be present.\n" );
 			ABORT_AND_RETURN(1);
 		} else {
@@ -6316,7 +6329,7 @@ int SubmitHash::SetTransferFiles()
 			MyString dll_path = which( dll_name );
 			if( dll_path.Length() == 0 ) {
 					// File not found, fatal error.
-				fprintf( stderr, "\nERROR: Condor cannot find the "
+				push_error(stderr, "Condor cannot find the "
 						 "\"mpich.dll\" file it needs to run your MPI job.\n"
 						 "Please specify the full path to this file in the "
 						 "\"transfer_input_files\"\n"
@@ -6726,7 +6739,7 @@ int SubmitHash::SetTransferFiles()
 	macro_value = submit_param( SUBMIT_KEY_TransferOutputRemaps,ATTR_TRANSFER_OUTPUT_REMAPS);
 	if(macro_value) {
 		if(*macro_value != '"' || macro_value[1] == '\0' || macro_value[strlen(macro_value)-1] != '"') {
-			fprintf(stderr,"\nERROR: transfer_output_remaps must be a quoted string, not: %s\n",macro_value);
+			push_error(stderr, "transfer_output_remaps must be a quoted string, not: %s\n",macro_value);
 			ABORT_AND_RETURN( 1 );
 		}
 
@@ -6917,8 +6930,8 @@ int SubmitHash::init_cluster_ad(time_t submit_time_in, const char * owner)
 	job->Assign(ATTR_COMMITTED_SUSPENSION_TIME, 0);
 	job->Assign(ATTR_ON_EXIT_BY_SIGNAL, false);
 
-#if 0 
-	// can't use this because it doesn't handle of MY. or +attrs correctly
+#if 0
+	// can't use this because of +attrs and My.attrs in SUBMIT_ATTRS
 	config_fill_ad( job );
 #else
 	classad::References submit_attrs;
@@ -7606,7 +7619,11 @@ int SubmitHash::load_q_foreach_items (
 		}
 		citems = submit_expand_globs(o.items, expand_options, errmsg);
 		if ( ! errmsg.empty()) {
-			fprintf(stderr, "\n%s: %s", citems >= 0 ? "WARNING" : "ERROR", errmsg.c_str());
+			if (citems >= 0) {
+				push_warning(stderr, "%s", errmsg.c_str());
+			} else {
+				push_error(stderr, "%s", errmsg.c_str());
+			}
 			errmsg.clear();
 		}
 		if (citems < 0) return citems;
@@ -7690,10 +7707,10 @@ void SubmitHash::warn_unused(FILE* out, const char *app)
 		if (pmeta && !pmeta->use_count && !pmeta->ref_count) {
 			const char *key = hash_iter_key(it);
 			if (pmeta->source_id == LiveMacro.id) {
-				fprintf(out, "WARNING: the Queue variable '%s' was unused by %s. Is it a typo?\n", key, app);
+				push_warning(out, "the Queue variable '%s' was unused by %s. Is it a typo?\n", key, app);
 			} else {
 				const char *val = hash_iter_value(it);
-				fprintf(out, "WARNING: the line '%s = %s' was unused by %s. Is it a typo?\n", key, val, app);
+				push_warning(out, "the line '%s = %s' was unused by %s. Is it a typo?\n", key, val, app);
 			}
 		}
 	}

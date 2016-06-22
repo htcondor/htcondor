@@ -31,6 +31,7 @@
 #include "condor_uid.h"
 #include "my_popen.h"
 #include "printf_format.h"
+#include "CondorError.h"
 
 #define METAKNOBS_WITH_ARGS 1
 #ifdef METAKNOBS_WITH_ARGS
@@ -305,8 +306,7 @@ int read_meta_config(MACRO_SOURCE & source, int depth, const char *name, const c
 #endif
 
 	if ( ! name || ! name[0]) {
-		fprintf(stderr,
-				"Configuration Error: use needs a keyword before : %s\n", rhs);
+		macro_set.push_error(stderr, -1, NULL, "Error: use needs a keyword before : %s\n", rhs);
 		return -1;
 	}
 
@@ -337,7 +337,7 @@ int read_meta_config(MACRO_SOURCE & source, int depth, const char *name, const c
 				if (pd && pd->def) psz = pd->def->psz;
 			}
 			if ( ! psz) {
-				fprintf(stderr, "\nERROR: use %s: does not recognise %s\n", name, mag.knob.c_str());
+				macro_set.push_error(stderr, -1, "\n", "ERROR: use %s: does not recognise %s\n", name, mag.knob.c_str());
 				return -1;
 			}
 			auto_free_ptr expanded(NULL);
@@ -354,16 +354,20 @@ int read_meta_config(MACRO_SOURCE & source, int depth, const char *name, const c
 			formatstr(metaname, "$%s.%s", name, item);
 			const MACRO_DEF_ITEM * p = find_macro_def_item(metaname.c_str(), macro_set, ctx.use_mask);
 			if ( ! p) {
-				fprintf(stderr, "\nERROR: use %s: does not recognise %s\n", name, item);
+				macro_set.push_error(stderr, -1, "\n", "ERROR: use %s: does not recognise %s\n", name, item);
 				return -1;
 			}
 			const char * psz = p->def->psz;
 #endif
 			int ret = Parse_config_string(source, depth, psz, macro_set, ctx);
 			if (ret < 0) {
-				const char * msg = "Internal Submit Error: use %s: %s is invalid\n";
-				if (ret == -2) msg = "\nERROR: use %s: %s nesting too deep\n"; 
-				fprintf(stderr, msg, name, item);
+				const char * pre = "Internal Submit";
+				const char * msg = "Error: use %s: %s is invalid\n";
+				if (ret == -2) {
+					pre = "\n";
+					msg = "ERROR: use %s: %s nesting too deep\n"; 
+				}
+				macro_set.push_error(stderr, ret, pre, msg, name, item);
 				return ret;
 			}
 		}
@@ -391,8 +395,8 @@ int read_meta_config(MACRO_SOURCE & source, int depth, const char *name, const c
 #endif
 		const char * value = param_meta_table_string(ptable, item);
 		if ( ! value) {
-			fprintf(stderr,
-					"Configuration Error: use %s: does not recognise %s\n",
+			macro_set.push_error(stderr, -1, NULL, 
+					"Error: use %s: does not recognise %s\n",
 					name, item);
 			return -1;
 		}
@@ -406,9 +410,13 @@ int read_meta_config(MACRO_SOURCE & source, int depth, const char *name, const c
 #endif
 		int ret = Parse_config_string(source, depth, value, macro_set, ctx);
 		if (ret < 0) {
-			const char * msg = "Internal Configuration Error: use %s: %s is invalid\n";
-			if (ret == -2) msg = "Configuration Error: use %s: %s nesting too deep\n"; 
-			fprintf(stderr, msg, name, item);
+			const char * pre = "Internal Configuration";
+			const char * msg = "Error: use %s: %s is invalid\n";
+			if (ret == -2) {
+				pre = "Configuration";
+				msg = "Error: use %s: %s nesting too deep\n"; 
+			}
+			macro_set.push_error(stderr, ret, pre, msg, name, item);
 			return ret;
 		}
 	}
@@ -970,6 +978,42 @@ int Parse_config_string(MACRO_SOURCE & source, int depth, const char * config, M
 	return 0;
 }
 
+// fprintf an error if the above errors field is NULL, otherwise format an error and add it to the above errorstack
+// the preface is printed with fprintf but not with the errors stack.
+void MACRO_SET::push_error(FILE * fh, int code, const char* preface, const char* format, ... ) //CHECK_PRINTF_FORMAT(5,6);
+{
+	int cchPre = (this->errors || ! preface) ? 0 : strlen(preface)+1;
+
+	va_list ap;
+	va_start(ap, format);
+	int cch = vprintf_length(format, ap);
+	char * message = (char*)malloc(cchPre + cch + 1);
+	if (message) {
+		if (cchPre) {
+			strcpy(message, preface);
+			if (message[cchPre-1] == '\n') { --cchPre; }
+			else { message[cchPre-1] = ' '; }
+		}
+		vsprintf ( message + cchPre, format, ap );
+	}
+	va_end(ap);
+
+	if (this->errors) {
+		const char * subsys = (this->options & CONFIG_OPT_SUBMIT_SYNTAX) ? "Submit" : "Config";
+		this->errors->push(subsys, code, message);
+	} else {
+		if (message) {
+			fprintf(fh, "%s", message);
+		} else {
+			fprintf(fh, "ERROR %d", code);
+		}
+	}
+	if (message) {
+		free(message);
+	}
+}
+
+
 int
 Parse_macros(
 	FILE* conf_fp,
@@ -998,7 +1042,7 @@ Parse_macros(
 	StringList    hereList; // used to accumulate @= multiline values
 	MyString      hereName;
 	MyString      hereTag;
-	MACRO_EVAL_CONTEXT defctx = { NULL, NULL, false, 2 };
+	MACRO_EVAL_CONTEXT defctx = { NULL, NULL, NULL, false, 2 };
 	if ( ! pctx) pctx = &defctx;
 
 	bool is_submit = (fnSubmit != NULL);
@@ -1014,7 +1058,7 @@ Parse_macros(
 			}
 			if ( ! hereName.empty()) {
 				const char * tag = hereTag.c_str();
-				fprintf(stderr, "Found end-of-file while scanning for '@%s' in %s\n", tag ? tag : "", source_file);
+				macro_set.push_error(stderr, -1, source_type, "Found end-of-file while scanning for '@%s' in %s\n", tag ? tag : "", source_file);
 				retval = -1;
 			}
 			break;
@@ -1239,8 +1283,9 @@ Parse_macros(
 			if (MATCH == strcasecmp(name, "RunBenchmarks")) { op = '='; if (opt_meta_colon < 2) opt_meta_colon = 0; }
 
 			if (opt_meta_colon) {
-				fprintf( stderr, "%s %s \"%s\", Line %d: obsolete use of ':' for parameter assignment at %s : %s\n",
-						source_type, op == ':' ? "Error" : "Warning",
+				macro_set.push_error( stderr, -1, source_type,
+						"%s \"%s\", Line %d: obsolete use of ':' for parameter assignment at %s : %s\n",
+						op == ':' ? "Error" : "Warning",
 						source_file, FileSource.line,
 						name, rhs
 						);
@@ -1270,9 +1315,9 @@ Parse_macros(
 			//FileSource.line = ConfigLineNo;
 			retval = read_meta_config(FileSource, depth+1, name, rhs, macro_set, *pctx);
 			if (retval < 0) {
-				fprintf( stderr,
-							"%s Error \"%s\", Line %d: at use %s:%s\n",
-							source_type, source_file, FileSource.line, name, rhs );
+				macro_set.push_error( stderr, retval, source_type,
+							"Error \"%s\", Line %d: at use %s:%s\n",
+							source_file, FileSource.line, name, rhs );
 				goto cleanup;
 			}
 		} else if (is_include) {
@@ -1289,9 +1334,9 @@ Parse_macros(
 				}
 			}
 			if (retval < 0) {
-				fprintf( stderr,
-							"%s Error \"%s\", Line %d, Include Depth %d: %s\n",
-							source_type, name, InnerSource.line, depth+1, config_errmsg.c_str());
+				macro_set.push_error( stderr, retval, source_type,
+							"Error \"%s\", Line %d, Include Depth %d: %s\n",
+							name, InnerSource.line, depth+1, config_errmsg.c_str());
 				config_errmsg.clear();
 				goto cleanup;
 			}
@@ -1307,17 +1352,24 @@ Parse_macros(
 		} else if (is_submit && ((op != '=' && op != '@') || MATCH == strcasecmp(name, "queue"))) {
 
 			retval = fnSubmit(pvSubmitData, FileSource, macro_set, line, config_errmsg);
-			if (retval != 0) // this may or may not be a failure, but we should stop reading the file.
+			if (retval != 0) { // this may or may not be a failure, but we should stop reading the file.
+				if (retval == -1) {
+					if (config_errmsg.empty()) config_errmsg = "invalid queue statement.";
+					macro_set.push_error(stderr, retval, source_type,
+						"Error \"%s\", Line %d: cannot parse: %s\n", source_file, FileSource.line,
+						line);
+				}
 				goto cleanup;
+			}
 
 		} else {
 
 			/* Check that "name" is a legal identifier : only
 			   alphanumeric characters and _ allowed*/
 			if( !is_valid_param_name(name) ) {
-				fprintf( stderr,
-						 "%s Error \"%s\", Line %d: Illegal Identifier: <%s>\n",
-						 source_type, source_file, FileSource.line, (name?name:"(null)") );
+				macro_set.push_error( stderr, -1, source_type,
+						 "Error \"%s\", Line %d: Illegal Identifier: <%s>\n",
+						 source_file, FileSource.line, (name?name:"(null)") );
 				retval = -1;
 				goto cleanup;
 			}
@@ -1354,9 +1406,9 @@ Parse_macros(
 					*/
 				insert_macro(name, value, macro_set, FileSource, *pctx);
 			} else {
-				fprintf( stderr,
-					"%s Error \"%s\", Line %d: Syntax Error, missing : or =\n",
-					source_type, source_file, FileSource.line );
+				macro_set.push_error( stderr, -1, source_type,
+					"Error \"%s\", Line %d: Syntax Error, missing : or =\n",
+					source_file, FileSource.line );
 				retval = -1;
 				goto cleanup;
 			}
@@ -1369,9 +1421,8 @@ Parse_macros(
 	}
 
 	if (ifstack.inside_if()) {
-		fprintf(stderr,
-				"%s Error \"%s\", Line %d: \n",
-				source_type, source_file, FileSource.line );
+		macro_set.push_error(stderr, -1, source_type,
+				"Error \"%s\", Line %d: \n", source_file, FileSource.line );
 		config_errmsg = "endif(s) not found before end-of-file";
 		retval = -1;
 		goto cleanup;
@@ -1449,9 +1500,9 @@ int Close_macro_source(FILE* conf_fp, MACRO_SOURCE& source, MACRO_SET& macro_set
 		if (source.is_command) {
 			int exit_code = my_pclose(conf_fp);
 			if (0 == parsing_return_val && exit_code != 0) {
-				fprintf( stderr, "Configuration Error \"%s\": "
-						 "command terminated with exit code %d\n",
-						 macro_source_filename(source, macro_set), exit_code );
+				macro_set.push_error( stderr, -1, NULL,
+					"Error \"%s\": command terminated with exit code %d\n",
+					macro_source_filename(source, macro_set), exit_code );
 				return -1;
 			}
 		} else {
@@ -1969,7 +2020,7 @@ static int is_special_config_macro(const char* prefix, int length, MACRO_BODY_CH
 		bool is_fname = true;
 		for (int ii = 2; ii < length; ++ii) {
 			int ch = prefix[ii] | 0x20; // convert to lowercase for comparision.
-			if (ch != 'p' && ch != 'n' && ch != 'x' && ch != 'd' && ch != 'q') {
+			if (ch != 'p' && ch != 'n' && ch != 'x' && ch != 'd' && ch != 'q' && ch != 'a' && ch != 'b' && ch != 'f') {
 				is_fname = false;
 				break;
 			}
@@ -2011,12 +2062,26 @@ static int is_meta_arg_macro(const char* /*prefix*/, int length, MACRO_BODY_CHAR
 	return 0;
 }
 
-char * strdup_quoted(const char* str, int cch, bool quoted) {
+const char * strlen_unquote(const char * str, int & cch) {
+	cch = strlen(str);
+	if (cch > 1 && str[0] == str[cch-1] && (str[0] == '"' || str[0] == '\'')) {
+		cch -= 2;
+		return str+1;
+	}
+	return str;
+}
+
+char * strlen_unquote(char * str, int & cch) { return const_cast<char*>(strlen_unquote((const char*)str, cch)); }
+
+#if 0
+// strdup a string with room to grow and an optional leading quote
+// and room for a trailing quote.
+char * strdup_quoted(const char* str, int cch, char quoted) {
 	if (cch < 0) cch = (int)strlen(str);
 
 	// ignore leading and/or trailing quotes when we dup
-	if (*str=='"') { ++str; --cch; }
-	if (cch > 0 && str[cch-1] == '"') --cch;
+	if (*str=='"' || (*str && *str == quoted)) { ++str; --cch; }
+	if (cch > 0 && (str[cch-1] == '"' || str[cch-1] == quoted)) --cch;
 
 	// malloc with room for quotes and a terminating 0
 	char * out = (char*)malloc(cch+3);
@@ -2024,13 +2089,92 @@ char * strdup_quoted(const char* str, int cch, bool quoted) {
 	char * p = out;
 
 	// copy, adding quotes or not as requested.
-	if (quoted) { *p++ = '"'; }
+	if (quoted) { *p++ = quoted; }
 	memcpy(p, str, cch*sizeof(str[0]));
-	if (quoted) { p[cch++] = '"'; }
+	if (quoted) { p[cch++] = quoted; }
 	p[cch] = 0;
 
 	return out;
 }
+#endif
+
+// strdup a string with room to grow and an optional leading quote
+// and room for a trailing quote.
+char * strcpy_quoted(char* out, const char* str, int cch, char quoted) {
+	ASSERT(cch >= 0);
+
+	// ignore leading and/or trailing quotes when we dup
+	char quote_char = 0;
+	if (*str=='"' || (*str && *str == quoted)) { quote_char = *str; ++str; --cch; }
+	if (cch > 0 && str[cch-1] && str[cch-1] == quote_char) --cch;
+
+	ASSERT(out);
+	char * p = out;
+
+	// copy, adding quotes or not as requested.
+	if (quoted) { *p++ = quoted; }
+	memcpy(p, str, cch*sizeof(str[0]));
+	if (quoted) { p[cch++] = quoted; }
+	p[cch] = 0;
+
+	return out;
+}
+
+// strdup a string with room to grow and an optional leading quote
+// and room for a trailing quote.
+char * strdup_quoted(const char* str, int cch, char quoted) {
+	if (cch < 0) cch = (int)strlen(str);
+
+	// malloc with room for quotes and a terminating 0
+	char * out = (char*)malloc(cch+3);
+	ASSERT(out);
+	return strcpy_quoted(out, str, cch, quoted);
+}
+
+
+char * strdup_full_path_quoted(const char *name, int cch, MACRO_EVAL_CONTEXT & ctx, char quoted, bool win_path)
+{
+	if (
+#if defined(WIN32)
+		( name[0] == '\\' || name[0] == '/' || (name[0] && name[1] == ':') )
+#else
+		( name[0] == '/' ) /* absolute wrt whatever the root is */
+#endif
+		&& ctx.cwd && ctx.cwd[0]
+	   )
+	{
+		return strdup_quoted(name, cch, quoted);
+	}
+	else
+	{
+		int cch_cwd = strlen(ctx.cwd);
+		const char delim_char = win_path ? '\\' : '/';
+	#ifdef WIN32
+		bool has_dir_delim = ctx.cwd[cch_cwd-1] == '/' || ctx.cwd[cch_cwd-1] == '\\';
+	#else
+		bool has_dir_delim = ctx.cwd[cch_cwd-1] == '/' || (win_path && (ctx.cwd[cch_cwd-1] == '\\'));
+	#endif
+		if (has_dir_delim) { cch_cwd -= 1; }
+		if (cch < 0) { name = strlen_unquote(name, cch); }
+		char * str = strdup_quoted(ctx.cwd, cch_cwd + cch + 1, quoted);
+		if (str) {
+			char * p = str + cch_cwd;
+			if (quoted) ++p;
+		#ifdef WIN32
+			if (cch > 2 && name[0] == '.' && (name[1] == '/' || name[1] == '\\')) {
+		#else
+			if (cch > 2 && name[0] == '.' && (name[1] == '/' || (win_path && (name[1] == '\\')))) {
+		#endif
+				name += 2;
+				cch -= 2;
+			}
+			strcpy_quoted(p + (quoted ? 0 : 1), name, cch, quoted);
+			*p = delim_char;
+		}
+		return str;
+	}
+}
+
 
 // use this class with next_config_macro to skip $(DOLLAR)
 class NoDollarBody : public ConfigMacroBodyCheck {
@@ -2635,33 +2779,53 @@ static const char * evaluate_macro_func (
 			// filename extraction macros, for expanding only parts of a filename in $(FILE).
 			// Any macro function of the form $Fqdpnx(FILE), where q,d,p,n,x are all optional
 			// and indicate which parts of the filename to keep.
+			// f - convert to full path first
 			// q - quote the result (incoming quotes are stripped if this is not specified)
+			// a - quote style is for Arguments (i.e single quotes, not double quotes)
 			// d - parent directory
 			// p - full directory path
 			// n - file basename without extension
 			// x - file extension, including the .
+			// b - bare - strip trailing / for p and d, leading . for x
 
 			int parts = 0;
 			bool quoted = false;
+			bool full_path = false;
+			bool windows_path = false;
+			bool bare = false;
+			bool arg_quote = false;
 			if (special_id == SPECIAL_MACRO_ID_BASENAME) {
 				parts = 1|2;
 			} else if (special_id == SPECIAL_MACRO_ID_DIRNAME) {
 				parts = 4;
 			} else {
-				for (const char*p = func; *p != '('; ++p) {
+				const char*p = func;
+				if (*p == 'F') ++p;
+				for (; *p != '('; ++p) {
 					switch (*p | 0x20) {
 					case 'x': parts |= 0x1; break;
 					case 'n': parts |= 0x2; break;
 					case 'p': parts |= 0x4; break;
 					case 'd': parts |= 0x8; break;
+					case 'a': arg_quote = true; break;
+					case 'b': bare = true; break;
+					case 'f': full_path = true; break;
+					case 'w': windows_path = true; break;
 					case 'q': quoted = true; break;
 					}
 				}
 			}
 
 			if (mval) {
+				char quote_char = quoted ? (arg_quote ? '\'' : '"') : 0;
+				int cchum = 0;
+				const char * umval = strlen_unquote(mval, cchum);
+				if (full_path) {
+					buf = strdup_full_path_quoted(umval, cchum, ctx, quote_char, windows_path);
+				} else {
+					buf = strdup_quoted(umval, cchum, quote_char);  // copy the macro value with quotes add/removed as requested.
+				}
 
-				buf = strdup_quoted(mval, -1, quoted);  // copy the macro value with quotes add/removed as requested.
 				int ixend = strlen(buf); // this will be the end of what we wish to return
 				int ixn = (int)(condor_basename(buf) - buf); // index of start of filename, ==0 if no path sep
 				int ixx = (int)(condor_basename_extension_ptr(buf+ixn) - buf); // index of . in extension, ==ixend if no ext
@@ -2671,22 +2835,23 @@ static const char * evaluate_macro_func (
 				// set tvalue to start, and ixend to end of text we want to return.
 				switch (parts & 0xF)
 				{
-				case 1:     tvalue = buf+ixx;  break;
+				case 1:     tvalue = buf+ixx; if (bare && (ixx < ixend)) ++tvalue; break;
 				case 2|1:   tvalue = buf+ixn;  break;
 				case 2:     tvalue = buf+ixn;  ixend = ixx; break;
 				case 0:
 				case 4|2|1: tvalue = buf;      break;
 				case 4|1:   tvalue = buf;      break; // TODO: fix to strip out filename part?
-				case 4:     tvalue = buf; ixend = ixn; break;
+				case 4:     tvalue = buf; ixend = ixn; if (bare && ixn > 0) ixend = ixn-1; break;
 				case 4|2:   tvalue = buf; ixend = ixx; break;
 				default:
 					// ixn is 0 if no dir.
 					if (ixn > 0) {
+						PRAGMA_REMIND("handle multiple d's")
 						char ch = buf[ixn-1]; buf[ixn-1] = 0; // truncate filename saving the old character
 						tvalue = condor_basename(buf); // tvalue now points to the start of the first directory
 						buf[ixn-1] = ch; // put back the dir/filename separator
 						if (2 == (parts&3)) { ixend = ixx; }
-						else if (0 == (parts&3)) { ixend = ixn; }
+						else if (0 == (parts&3)) { ixend = ixn; if (bare && ixn > 0) ixend = ixn-1; }
 						else if (1 == (parts&3)) { /* TODO: strip out filename part? */ }
 					} else {
 						// we get here when there is no dir, but only dir should be output
@@ -2702,9 +2867,9 @@ static const char * evaluate_macro_func (
 				// but if we did we know that buf has room to put them back.
 				if (quoted) {
 					int ixv = (int)(tvalue-buf);
-					if (buf[ixv] != '"') { ASSERT(ixv > 0); buf[--ixv] = '"'; tvalue = buf+ixv; }
-					if (ixend > 1 && buf[ixend-1] == '"') --ixend;
-					buf[ixend++] = '"';
+					if (buf[ixv] != quote_char) { ASSERT(ixv > 0); buf[--ixv] = quote_char; tvalue = buf+ixv; }
+					if (ixend > 1 && buf[ixend-1] == quote_char) --ixend;
+					buf[ixend++] = quote_char;
 				}
 				// make sure that the end of tvalue is null terminated.
 				buf[ixend] = 0;

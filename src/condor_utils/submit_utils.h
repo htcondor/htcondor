@@ -450,6 +450,7 @@ public:
 	const char * getScheddVersion() { return ScheddVersion.Value(); }
 	const char * getIWD() { return JobIwd.c_str(); }
 	const char * full_path(const char *name, bool use_iwd=true);
+	int check_and_universalize_path(MyString &path);
 
 protected:
 	MACRO_SET SubmitMacroSet;
@@ -605,7 +606,10 @@ protected:
 	int FixupTransferInputFiles();
 	int SetForcedAttributes();	// set +Attrib (MY.Attrib) hashtable keys directly into the job ad.  this should be called last.
 
+
 	// private helper functions
+	void push_error(FILE * fh, const char* format, ... ) CHECK_PRINTF_FORMAT(3,4);
+	void push_warning(FILE * fh, const char* format, ... ) CHECK_PRINTF_FORMAT(3,4);
 private:
 	int64_t calc_image_size_kb( const char *name);
 
