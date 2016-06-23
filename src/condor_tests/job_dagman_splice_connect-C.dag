@@ -1,0 +1,9 @@
+# This tests one pin to many nodes and one node to many pins connections.
+
+splice Splice1 job_dagman_splice_connect-C-splice1.dag
+splice Splice2 job_dagman_splice_connect-C-splice2.dag
+job node3 job_dagman_splice_connect-C-node.sub
+vars node3 name = "$(JOB)"
+
+connect Splice1 Splice2
+parent Splice2 child node3
