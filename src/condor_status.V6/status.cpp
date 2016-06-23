@@ -638,7 +638,9 @@ void fold_slot_result(StatusRowOfData & aa, StatusRowOfData * pbb)
 	bool partitionable = (bb.flags & SROD_PARTITIONABLE_SLOT) != 0;
 
 	// calculate the memory size of the largest slot
-	double amem, bmem;
+	double amem = 0.0;
+	double bmem = 0.0;
+
 	if (startdCompact_ixCol_MaxSlotMem >= 0) {
 		aa.getNumber(startdCompact_ixCol_MaxSlotMem, amem);
 		bb.getNumber(partitionable ? startdCompact_ixCol_MaxSlotMem : startdCompact_ixCol_FreeMem, bmem);
