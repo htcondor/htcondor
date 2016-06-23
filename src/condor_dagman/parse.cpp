@@ -2377,7 +2377,11 @@ parse_include(
 		// Note:  we save the filename here because otherwise it gets
 		// goofed up by the tokenizing in parse().
 	MyString tmpFilename( includeFile );
-	return parse( dag, tmpFilename.Value(), false/*TEMPTEMP!!*/, false );
+		// Note:  false here for useDagDir argument means that the
+		// include file path is always relative to the submit directory,
+		// *not* relative to the DAG file's directory, even if
+		// 'condor_submit -usedagdir' is specified.
+	return parse( dag, tmpFilename.Value(), false, false );
 }
 
 static MyString munge_job_name(const char *jobName)

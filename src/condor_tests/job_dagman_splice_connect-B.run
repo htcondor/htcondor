@@ -34,8 +34,6 @@ $dagman_args = "-verbose";
 	"job_dagman_splice_connect-B-skewer5.out",
 	"job_dagman_splice_connect-B-skewer6.out");
 
-#TEMPTEMP -- make sure this is right!
-# Lines must be *in order* within a given output file.
 @expected_output = ("SpliceA+Node1A\nSpliceB+Splice2Aa+Node2-1a-A\nSpliceB+Splice2Ab+Node2-1b-A\nSpliceC+Node3A\n",
 	"SpliceA+Node1B\nSpliceB+Splice2Ba+Node2-2a-A\nSpliceB+Splice2Bb+Node2-2b-A\nSpliceC+Node3B\n",
 	"SpliceB+Splice2Aa+Node2-1a-B\nSpliceB+Splice2Ab+Node2-1b-B\n",

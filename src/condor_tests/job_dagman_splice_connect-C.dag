@@ -1,4 +1,3 @@
-#TEMPTEMP -- output files for nodes have parent lists; .run file should check those
 # This tests one pin to many nodes and one node to many pins connections.
 
 splice Splice1 job_dagman_splice_connect-C-splice1.dag

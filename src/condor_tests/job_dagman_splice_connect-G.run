@@ -21,7 +21,6 @@
 use CondorTest;
 use CondorUtils;
 
-#TEMPTEMP
 $cmd = ['job_dagman_splice_connect-G-1upper.dag', 'job_dagman_splice_connect-G-2upper.dag'];
 $testdesc =  'Condor submit dag - test splice pin connections - scheduler U';
 $testname = "job_dagman_splice_connect-G";
@@ -46,7 +45,7 @@ foreach $file (@outfiles) {
 
 $abnormal = sub 
 {
-	die "Want to see only submit, execute and unsuccessful completion\n";
+	die "Want to see only submit, execute and successful completion\n";
 };
 
 $failure = sub 
@@ -80,7 +79,6 @@ $success = sub
 {
 	CondorTest::debug("executed successfully\n",1);
 	CondorTest::debug("Verifying output\n",1);
-	#TEMPTEMP -- add checks here!
 };
 
 CondorTest::RegisterExitedSuccess( $testname, $success);

@@ -26,12 +26,34 @@ $testdesc =  'Condor submit dag - test splice pin connections - scheduler U';
 $testname = "job_dagman_splice_connect-C";
 $dagman_args = "-verbose";
 
-#TEMPTEMP -- need to add stuff here
-@outfiles = ("job_dagman_splice_connect-C.dag.dagman.out");
+@outfiles = ("job_dagman_splice_connect-C.dag.dagman.out",
+	"job_dagman_splice_connect-C.node3.out",
+	"job_dagman_splice_connect-C.Splice1+Node0.out",
+	"job_dagman_splice_connect-C.Splice1+Node1.out",
+	"job_dagman_splice_connect-C.Splice1+Node2.out",
+	"job_dagman_splice_connect-C.Splice1+Node3.out",
+	"job_dagman_splice_connect-C.Splice1+Node4.out",
+	"job_dagman_splice_connect-C.Splice1+Node5.out",
+	"job_dagman_splice_connect-C.Splice1+Node6.out",
+	"job_dagman_splice_connect-C.Splice2+Node1.out",
+	"job_dagman_splice_connect-C.Splice2+Node2.out",
+	"job_dagman_splice_connect-C.Splice2+Node3.out",
+	"job_dagman_splice_connect-C.Splice2+Node4.out");
 
 # Lines must be *in order* within a given output file.
-#TEMPTEMP -- need to add stuff here
-@expected_output = ();
+@expected_output = (
+	"Splice2+Node1,Splice2+Node2,Splice2+Node3,Splice2+Node4 \n",
+	"\n",
+	"Splice1+Node0 \n",
+	"Splice1+Node0 \n",
+	"Splice1+Node0 \n",
+	"Splice1+Node0 \n",
+	"Splice1+Node0 \n",
+	"Splice1+Node0 \n",
+	"Splice1+Node1,Splice1+Node2,Splice1+Node3 \n",
+	"Splice1+Node1,Splice1+Node2,Splice1+Node3,Splice1+Node4,Splice1+Node5,Splice1+Node6 \n",
+	"Splice1+Node3,Splice1+Node4,Splice1+Node5,Splice1+Node6 \n",
+	"Splice1+Node3,Splice1+Node4,Splice1+Node5,Splice1+Node6 \n");
 
 my $killedchosen = 0;
 
