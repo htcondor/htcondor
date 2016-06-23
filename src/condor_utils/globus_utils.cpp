@@ -1294,7 +1294,7 @@ check_x509_proxy( const char *proxy_file )
 #if defined(HAVE_EXT_GLOBUS)
 
 static int
-buffer_to_bio( char *buffer, int buffer_len, BIO **bio )
+buffer_to_bio( char *buffer, size_t buffer_len, BIO **bio )
 {
 	if ( buffer == NULL ) {
 		return FALSE;
@@ -1305,7 +1305,7 @@ buffer_to_bio( char *buffer, int buffer_len, BIO **bio )
 		return FALSE;
 	}
 
-	if ( BIO_write( *bio, buffer, buffer_len ) < buffer_len ) {
+	if ( BIO_write( *bio, buffer, buffer_len ) < (int)buffer_len ) {
 		BIO_free( *bio );
 		return FALSE;
 	}
@@ -1314,7 +1314,7 @@ buffer_to_bio( char *buffer, int buffer_len, BIO **bio )
 }
 
 static int
-bio_to_buffer( BIO *bio, char **buffer, int *buffer_len )
+bio_to_buffer( BIO *bio, char **buffer, size_t *buffer_len )
 {
 	if ( bio == NULL ) {
 		return FALSE;
@@ -1327,7 +1327,7 @@ bio_to_buffer( BIO *bio, char **buffer, int *buffer_len )
 		return FALSE;
 	}
 
-	if ( BIO_read( bio, *buffer, *buffer_len ) < *buffer_len ) {
+	if ( BIO_read( bio, *buffer, *buffer_len ) < (int)*buffer_len ) {
 		free( *buffer );
 		return FALSE;
 	}
@@ -1366,7 +1366,7 @@ x509_send_delegation( const char *source_file,
 	globus_gsi_cred_handle_t source_cred =  NULL;
 	globus_gsi_proxy_handle_t new_proxy = NULL;
 	char *buffer = NULL;
-	int buffer_len = 0;
+	size_t buffer_len = 0;
 	BIO *bio = NULL;
 	X509 *cert = NULL;
 	STACK_OF(X509) *cert_chain = NULL;
@@ -1399,7 +1399,7 @@ x509_send_delegation( const char *source_file,
 		goto cleanup;
 	}
 
-	if ( recv_data_func( recv_data_ptr, (void **)&buffer, (size_t *)&buffer_len ) != 0 ) {
+	if ( recv_data_func( recv_data_ptr, (void **)&buffer, &buffer_len ) != 0 ) {
 		rc = -1;
 		error_line = __LINE__;
 		goto cleanup;
@@ -1617,7 +1617,7 @@ x509_receive_delegation( const char *destination_file,
 	globus_gsi_proxy_handle_t request_handle = NULL;
 	globus_gsi_proxy_handle_attrs_t handle_attrs = NULL;
 	char *buffer = NULL;
-	int buffer_len = 0;
+	size_t buffer_len = 0;
 	char *destination_file_tmp = NULL;
 	BIO *bio = NULL;
 
@@ -1723,7 +1723,7 @@ x509_receive_delegation( const char *destination_file,
 	free( buffer );
 	buffer = NULL;
 
-	if ( recv_data_func( recv_data_ptr, (void **)&buffer, (size_t*)&buffer_len ) != 0 ) {
+	if ( recv_data_func( recv_data_ptr, (void **)&buffer, &buffer_len ) != 0 ) {
 		rc = -1;
 		error_line = __LINE__;
 		goto cleanup;
