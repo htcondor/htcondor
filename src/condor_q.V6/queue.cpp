@@ -223,7 +223,7 @@ static  const char *machineads_file = NULL; // NULL, or points to machineads fil
 static  const char *userprios_file = NULL; // NULL, or points to userprios filename from argv
 static  const char *userlog_file = NULL; // NULL, or points to userlog filename from argv
 static  bool analyze_with_userprio = false;
-static  const char * analyze_memory_usage = NULL;
+static  char * analyze_memory_usage = NULL;
 static  bool dash_profile = false;
 //static  bool analyze_dslots = false;
 static  bool disable_user_print_files = false;
@@ -1737,9 +1737,12 @@ processCommandLineArguments (int argc, char *argv[])
 					} else if (is_arg_prefix(popt, "diagnostic",4)) {
 						analyze_detail_level |= detail_diagnostic;
 					} else if (is_arg_prefix(popt, "memory",3)) {
+						if (analyze_memory_usage) {
+							free(analyze_memory_usage);
+						}
 						analyze_memory_usage = opts.next();
 						if (analyze_memory_usage) { analyze_memory_usage = strdup(analyze_memory_usage); }
-						else { analyze_memory_usage = ATTR_REQUIREMENTS; }
+						else { analyze_memory_usage = strdup(ATTR_REQUIREMENTS); }
 					//} else if (is_arg_prefix(popt, "dslots",2)) {
 					//	analyze_dslots = true;
 					} else {
