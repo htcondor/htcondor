@@ -49,6 +49,8 @@ static const char * DELIMITERS = " \t";
 static ExtArray<char*> _spliceScope;
 static bool _useDagDir = false;
 
+// _thisDagNum will be incremented for each DAG specified on the
+// condor_submit_dag command line.
 static int _thisDagNum = -1;
 static bool _mungeNames = true;
 
@@ -90,6 +92,10 @@ static bool parse_jobstate_log(Dag  *dag, const char *filename,
 static bool parse_pre_skip(Dag *dag, const char* filename,
 		int lineNumber);
 static bool parse_done(Dag  *dag, const char *filename, int  lineNumber);
+static bool parse_connect( Dag  *dag, const char *filename, int  lineNumber );
+static bool parse_pin_in_out( Dag  *dag, const char *filename,
+			int  lineNumber, bool isPinIn );
+static bool parse_include( Dag  *dag, const char *filename, int  lineNumber );
 static MyString munge_job_name(const char *jobName);
 
 static MyString current_splice_scope(void);
@@ -126,16 +132,14 @@ void parseSetDoNameMunge(bool doit)
 }
 
 //-----------------------------------------------------------------------------
-void parseSetThisDagNum(int num)
+bool parse(Dag *dag, const char *filename, bool useDagDir,
+			bool incrementDagNum)
 {
-	_thisDagNum = num;
-}
-
-//-----------------------------------------------------------------------------
-bool parse (Dag *dag, const char *filename, bool useDagDir) {
 	ASSERT( dag != NULL );
 
-	++_thisDagNum;
+	if ( incrementDagNum ) {
+		++_thisDagNum;
+	}
 
 	_useDagDir = useDagDir;
 
@@ -469,14 +473,39 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 						filename, lineNumber);
 		}
 
+		// Handle a CONNECT spec
+		else if(strcasecmp(token, "CONNECT") == 0) {
+			parsed_line_successfully = parse_connect( dag,
+						filename, lineNumber );
+		}
+
+		// Handle a PIN_IN spec
+		else if(strcasecmp(token, "PIN_IN") == 0) {
+			parsed_line_successfully = parse_pin_in_out( dag,
+						filename, lineNumber, true );
+		}
+
+		// Handle a PIN_OUT spec
+		else if(strcasecmp(token, "PIN_OUT") == 0) {
+			parsed_line_successfully = parse_pin_in_out( dag,
+						filename, lineNumber, false );
+		}
+
+		// Handle a INCLUDE spec
+		else if(strcasecmp(token, "INCLUDE") == 0) {
+			parsed_line_successfully = parse_include( dag,
+						filename, lineNumber );
+		}
+
 		// None of the above means that there was bad input.
 		else {
 			debug_printf( DEBUG_QUIET, "%s (line %d): "
-				"ERROR: expected JOB, DATA, SUBDAG, SCRIPT, PARENT, RETRY, "
-				"ABORT-DAG-ON, DOT, VARS, PRIORITY, CATEGORY, MAXJOBS, "
-				"CONFIG, SET_JOB_ATTR, SPLICE, FINAL, "
-				"NODE_STATUS_FILE, or PRE_SKIP token\n",
-				filename, lineNumber );
+				"ERROR: expected JOB, DATA, SUBDAG, FINAL, SCRIPT, PARENT, "
+				"RETRY, ABORT-DAG-ON, DOT, VARS, PRIORITY, CATEGORY, "
+				"MAXJOBS, CONFIG, SET_JOB_ATTR, SPLICE, FINAL, "
+				"NODE_STATUS_FILE, REJECT, JOBSTATE_LOG, PRE_SKIP, DONE, "
+				"CONNECT, PIN_IN, PIN_OUT, or INCLUDE token (found %s)\n",
+				filename, lineNumber, token );
 			parsed_line_successfully = false;
 		}
 		
@@ -913,17 +942,11 @@ parse_parent(
 	int  lineNumber)
 {
 	const char * example = "PARENT p1 [p2 p3 ...] CHILD c1 [c2 c3 ...]";
-	Dag *splice_dag;
-	
-	List<Job> parents;
-	ExtArray<Job*> *splice_initial;
-	ExtArray<Job*> *splice_final;
-	int i;
-	Job *job;
 	
 	const char *jobName;
 	
 	// get the job objects for the parents
+	List<Job> parents;
 	while ((jobName = strtok (NULL, DELIMITERS)) != NULL &&
 		   strcasecmp (jobName, "CHILD") != 0) {
 		const char *jobNameOrig = jobName; // for error output
@@ -931,15 +954,17 @@ parse_parent(
 		const char *jobName2 = tmpJobName.Value();
 
 		// if splice name then deal with that first...
+		Dag *splice_dag;
 		if (dag->LookupSplice(jobName2, splice_dag) == 0) {
 
 			// grab all of the final nodes of the splice and make them parents
 			// for this job.
+			ExtArray<Job*> *splice_final;
 			splice_final = splice_dag->FinalRecordedNodes();
 
 			// now add each final node as a parent
-			for (i = 0; i < splice_final->length(); i++) {
-				job = (*splice_final)[i];
+			for (int i = 0; i < splice_final->length(); i++) {
+				Job *job = (*splice_final)[i];
 				parents.Append(job);
 			}
 
@@ -947,7 +972,7 @@ parse_parent(
 
 			// orig code
 			// if the name is not a splice, then see if it is a true node name.
-			job = dag->FindNodeByName( jobName2 );
+			Job *job = dag->FindNodeByName( jobName2 );
 			if (job == NULL) {
 				// oops, it was neither a splice nor a parent name, bail
 				debug_printf( DEBUG_QUIET, 
@@ -986,6 +1011,7 @@ parse_parent(
 		const char *jobName2 = tmpJobName.Value();
 
 		// if splice name then deal with that first...
+		Dag *splice_dag;
 		if (dag->LookupSplice(jobName2, splice_dag) == 0) {
 			// grab all of the initial nodes of the splice and make them 
 			// children for this job.
@@ -994,13 +1020,14 @@ parse_parent(
 				"Detected splice %s as a child....\n", filename, lineNumber,
 					jobName2);
 
+			ExtArray<Job*> *splice_initial;
 			splice_initial = splice_dag->InitialRecordedNodes();
 			debug_printf( DEBUG_DEBUG_1, "Adding %d initial nodes\n", 
 				splice_initial->length());
 
 			// now add each initial node as a child
-			for (i = 0; i < splice_initial->length(); i++) {
-				job = (*splice_initial)[i];
+			for (int i = 0; i < splice_initial->length(); i++) {
+				Job *job = (*splice_initial)[i];
 
 				children.Append(job);
 			}
@@ -1009,7 +1036,7 @@ parse_parent(
 
 			// orig code
 			// if the name is not a splice, then see if it is a true node name.
-			job = dag->FindNodeByName( jobName2 );
+			Job *job = dag->FindNodeByName( jobName2 );
 			if (job == NULL) {
 				// oops, it was neither a splice nor a child name, bail
 				debug_printf( DEBUG_QUIET, 
@@ -1804,11 +1831,6 @@ parse_splice(
 
 	/* make a new dag to put everything into */
 
-	/* parse increments this number, however, we want the splice nodes to
-		be munged into the numeric identification of the invoking dag, so
-		decrement it here so when it is incremented, nothing happened. */
-	--_thisDagNum;
-
 	// This "copy" is tailored to be correct according to Dag::~Dag()
 	// We can pass in NULL for submitDagOpts because the splice DAG
 	// object will never actually do a submit.  wenger 2010-03-25
@@ -1849,7 +1871,7 @@ parse_splice(
 	}
 
 	// parse the splice file into a separate dag.
-	if (!parse(splice_dag, spliceFile.Value(), _useDagDir)) {
+	if (!parse(splice_dag, spliceFile.Value(), _useDagDir, false)) {
 		debug_error(1, DEBUG_QUIET, "ERROR: Failed to parse splice %s in file %s\n",
 			spliceName.Value(), spliceFile.Value());
 		return false;
@@ -2267,6 +2289,199 @@ parse_done(
 	job->SetStatus( Job::STATUS_DONE );
 	
 	return true;
+}
+
+//-----------------------------------------------------------------------------
+// 
+// Function: parse_connect
+// Purpose:  Parse a line of the format "Connect splice1 splice2"
+// 
+//-----------------------------------------------------------------------------
+static bool 
+parse_connect(
+	Dag  *dag, 
+	const char *filename, 
+	int  lineNumber )
+{
+	const char *example = "CONNECT splice1 splice2";
+
+	const char *splice1 = strtok( NULL, DELIMITERS );
+	if ( splice1 == NULL ) {
+		debug_printf( DEBUG_QUIET,
+					  "ERROR: %s (line %d): Missing splice1 name\n",
+					  filename, lineNumber );
+		exampleSyntax( example );
+		return false;
+	}
+	MyString splice1Name = munge_job_name( splice1 );
+	splice1 = splice1Name.Value();
+
+	const char *splice2 = strtok( NULL, DELIMITERS );
+	if ( splice2 == NULL ) {
+		debug_printf( DEBUG_QUIET,
+					  "ERROR: %s (line %d): Missing splice2 name\n",
+					  filename, lineNumber );
+		exampleSyntax( example );
+		return false;
+	}
+	MyString splice2Name = munge_job_name( splice2 );
+	splice2 = splice2Name.Value();
+
+	//
+	// Check for illegal extra tokens.
+	//
+	char *extraTok = strtok( NULL, DELIMITERS );
+	if ( extraTok != NULL ) {
+		debug_printf( DEBUG_QUIET,
+					  "ERROR: %s (line %d): Extra token (%s) on CONNECT line\n",
+					  filename, lineNumber, extraTok );
+		exampleSyntax( example );
+		return false;
+	}
+
+	Dag *parentSplice;
+	if ( dag->LookupSplice( splice1, parentSplice ) != 0) {
+		debug_printf( DEBUG_QUIET,
+					  "ERROR: %s (line %d): Splice %s not found!\n",
+					  filename, lineNumber, splice1 );
+		return false;
+	}
+
+	Dag *childSplice;
+	if ( dag->LookupSplice( splice2, childSplice ) != 0) {
+		debug_printf( DEBUG_QUIET,
+					  "ERROR: %s (line %d): Splice %s not found!\n",
+					  filename, lineNumber, splice2 );
+		return false;
+	}
+
+	if ( !Dag::ConnectSplices( parentSplice, childSplice ) ) {
+		debug_printf( DEBUG_QUIET,
+					  "ERROR: %s (line %d): (see previous line)\n",
+					  filename, lineNumber );
+		return false;
+	}
+
+	return true;
+}
+
+//-----------------------------------------------------------------------------
+// 
+// Function: parse_pin_in_out
+// Purpose:  Parse a line of the format "Pin_in|pin_out node pin_num"
+// 
+//-----------------------------------------------------------------------------
+static bool 
+parse_pin_in_out(
+	Dag  *dag, 
+	const char *filename, 
+	int  lineNumber, bool isPinIn )
+{
+	const char *example = "PIN_IN|PIN_OUT node pin_number";
+
+	const char *node = strtok( NULL, DELIMITERS );
+	if ( node == NULL ) {
+		debug_printf( DEBUG_QUIET,
+					  "ERROR: %s (line %d): Missing node name\n",
+					  filename, lineNumber );
+		exampleSyntax( example );
+		return false;
+	}
+	MyString nodeName = munge_job_name( node );
+	node = nodeName.Value();
+
+	const char *pinNumber = strtok( NULL, DELIMITERS );
+	if ( pinNumber == NULL ) {
+		debug_printf( DEBUG_QUIET,
+					  "ERROR: %s (line %d): Missing pin_number\n",
+					  filename, lineNumber );
+		exampleSyntax( example );
+		return false;
+	}
+
+	int pinNum;
+	char *tmp;
+	pinNum = (int)strtol( pinNumber, &tmp, 10 );
+	if ( tmp == pinNumber ) {
+		debug_printf( DEBUG_QUIET,
+					  "ERROR: %s (line %d): Invalid pin_number value \"%s\"\n",
+					  filename, lineNumber, pinNumber );
+		exampleSyntax( example );
+		return false;
+	}
+
+	if ( pinNum < 1 ) {
+		debug_printf( DEBUG_QUIET,
+					  "ERROR: %s (line %d): pin_number value must be positive\n",
+					  filename, lineNumber );
+		return false;
+	}
+
+	//
+	// Check for illegal extra tokens.
+	//
+	char *extraTok = strtok( NULL, DELIMITERS );
+	if ( extraTok != NULL ) {
+		debug_printf( DEBUG_QUIET,
+					  "ERROR: %s (line %d): Extra token (%s) on PIN_IN/PIN_OUT line\n",
+					  filename, lineNumber, extraTok );
+		exampleSyntax( example );
+		return false;
+	}
+	
+	if ( !dag->SetPinInOut( isPinIn, node, pinNum ) ) {
+		debug_printf( DEBUG_QUIET,
+					  "ERROR: %s (line %d): (see previous line)\n",
+					  filename, lineNumber );
+		return false;
+	}
+
+	return true;
+}
+
+//-----------------------------------------------------------------------------
+// 
+// Function: parse_include
+// Purpose:  Parse a line of the format "Include filename"
+// 
+//-----------------------------------------------------------------------------
+static bool 
+parse_include(
+	Dag  *dag, 
+	const char *filename, 
+	int  lineNumber )
+{
+	const char *example = "INCLUDE filename";
+
+	const char *includeFile = strtok( NULL, DELIMITERS );
+	if ( includeFile == NULL ) {
+		debug_printf( DEBUG_QUIET,
+					  "ERROR: %s (line %d): Missing include file name\n",
+					  filename, lineNumber );
+		exampleSyntax( example );
+		return false;
+	}
+
+	//
+	// Check for illegal extra tokens.
+	//
+	char *extraTok = strtok( NULL, DELIMITERS );
+	if ( extraTok != NULL ) {
+		debug_printf( DEBUG_QUIET,
+					  "ERROR: %s (line %d): Extra token (%s) on INCLUDE line\n",
+					  filename, lineNumber, extraTok );
+		exampleSyntax( example );
+		return false;
+	}
+
+		// Note:  we save the filename here because otherwise it gets
+		// goofed up by the tokenizing in parse().
+	MyString tmpFilename( includeFile );
+		// Note:  false here for useDagDir argument means that the
+		// include file path is always relative to the submit directory,
+		// *not* relative to the DAG file's directory, even if
+		// 'condor_submit -usedagdir' is specified.
+	return parse( dag, tmpFilename.Value(), false, false );
 }
 
 static MyString munge_job_name(const char *jobName)

@@ -1,0 +1,7 @@
+# Test "orphan" nodes -- this should fail.
+
+splice Splice1 job_dagman_splice_connect-E-1.dag
+splice Splice2 job_dagman_splice_connect-E-2.dag
+
+connect Splice1 Splice2
+

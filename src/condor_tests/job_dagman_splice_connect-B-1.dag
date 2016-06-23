@@ -1,0 +1,12 @@
+job Node1A job_dagman_splice_connect-B-node.sub
+vars Node1A sleep = "0"
+vars Node1A file = "job_dagman_splice_connect-B-skewer1.out"
+vars Node1A name = "$(JOB)"
+
+job Node1B job_dagman_splice_connect-B-node.sub
+vars Node1B sleep = "0"
+vars Node1B file = "job_dagman_splice_connect-B-skewer2.out"
+vars Node1B name = "$(JOB)"
+
+pin_out Node1A 1
+pin_out Node1B 2
