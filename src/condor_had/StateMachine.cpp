@@ -180,7 +180,7 @@ HADStateMachine::isHardConfigurationNeeded(void)
 	// HAD in the list has changed or the rest of remote HAD sinful strings
 	// has changed their order or value, we do need the hard reconfiguration
 	if(  ( m_selfId     != selfId              )  ||
-		 ( !m_allHadIps.identical(m_allHadIps) )   ) {
+		 ( !m_allHadIps.identical(allHadIps) )   ) {
 		return true;
 	}
 
