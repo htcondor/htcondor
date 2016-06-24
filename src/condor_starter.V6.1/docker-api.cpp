@@ -374,9 +374,10 @@ DockerAPI::stats(const std::string &container, uint64_t &memUsage, uint64_t &net
 	int written;
 
 	// read with 200 second timeout, no flags, nonblocking
-	while ((written = condor_read("Docker Socket", uds, buf, 1024, 200, 0, false)) > 0) {
+	while ((written = condor_read("Docker Socket", uds, buf, 1, 200, 0, false)) > 0) {
 		response.append(buf, written);
-	}
+	} 
+
 	dprintf(D_FULLDEBUG, "docker stats: %s\n", response.c_str());
 	close(uds);
 
