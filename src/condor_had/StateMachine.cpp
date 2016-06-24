@@ -827,6 +827,10 @@ HADStateMachine::getHadList( const char *str,
 	Sinful my_addr( daemonCore->InfoCommandSinfulString() );
 	ASSERT( daemonCore->InfoCommandSinfulString() && my_addr.valid() );
 
+       // Don't add to the HAD list on each reconfig.
+       otherIps.clearAll();
+       allIps.clearAll();
+
     bool iAmPresent = false;
     while( (try_address = had_list.next()) ) {
         char *sinful_addr = utilToSinful( try_address );
