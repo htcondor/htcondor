@@ -61,4 +61,16 @@ void AttrList_setPublishServerTime( bool publish );
 void AddClassAdXMLFileHeader(std::string &buffer);
 void AddClassAdXMLFileFooter(std::string &buffer);
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+	// these functions are in classad_usermap.cpp (and also libcondorapi_stubs.cpp)
+	bool user_map_do_mapping(const char * mapname, const char * input, MyString & output);
+	void clear_user_maps(StringList * keep_list);
+	int add_user_map(const char * mapname, const char * filename, MapFile * mf /*=NULL*/);
+	int add_user_mapping(const char * mapname, char * mapdata);
+#ifdef __cplusplus
+} // end extern "C"
+#endif
+
 #endif

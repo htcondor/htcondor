@@ -1970,6 +1970,7 @@ enum {
 	SPECIAL_MACRO_ID_INT,
 	SPECIAL_MACRO_ID_REAL,
 	SPECIAL_MACRO_ID_STRING,
+	SPECIAL_MACRO_ID_EVAL,
 	SPECIAL_MACRO_ID_BASENAME,
 	SPECIAL_MACRO_ID_DIRNAME,
 	SPECIAL_MACRO_ID_FILENAME,
@@ -2004,6 +2005,7 @@ static int is_special_config_macro(const char* prefix, int length, MACRO_BODY_CH
 		PRE(INT),
 		PRE(REAL),
 		PRE(STRING),
+		PRE(EVAL),
 		PRE(BASENAME), PRE(DIRNAME),
 	};
 	#undef PRE
@@ -2763,6 +2765,112 @@ static const char * evaluate_macro_func (
 				tvalue = buf = (char*)malloc(cbuf+1);
 				snprintf( buf, cbuf, fmt ? fmt : "%.16G", dbl_val );
 				if (fmt && ! strchr(buf, '.')) { strcat(buf, ".0"); } // force it to look like a real
+			}
+
+			if (tmp2) free(tmp2); tmp2 = NULL;
+		}
+		break;
+
+			// $STRING(name) or $STRING(name,fmt)
+			// lookup name, macro expand it if necessary, then evaluate it as a string
+			// if it does not evaluate as a string, then just use it as a string literal
+			//
+		case SPECIAL_MACRO_ID_STRING:
+		{
+			char * fmt = strchr(body, ',');
+			if (fmt) {
+				*fmt++ = 0;
+				const char * tmp_fmt = fmt;
+				printf_fmt_info fmt_info;
+				if ( ! parsePrintfFormat(&tmp_fmt, &fmt_info) || fmt_info.type != PFT_STRING) {
+					EXCEPT( "$STRING macro: '%s' is not a valid format specifier!", fmt);
+				}
+			}
+
+			const char * mval = lookup_macro(name, macro_set, ctx);
+			if ( ! mval) mval = name;
+			tvalue = NULL;
+
+			char * tmp2 = NULL;
+			if (strchr(mval, '$')) {
+				tmp2 = expand_macro(mval, macro_set, ctx);
+				mval = tmp2;
+			}
+
+			// now we try to evaluate as a classad expression
+			classad::ExprTree* tree = NULL;
+			if (0 == ParseClassAdRvalExpr(mval, tree, NULL)) {
+				ClassAd rhs;
+				std::string val;
+				std::string attr("CondorString");
+				if ( ! rhs.Insert(attr, tree, false)) {
+					delete tree; tree = NULL;
+				} else if(rhs.EvaluateAttrString(attr, val)) {
+					// value is valid. use it instead of mval
+					if (tmp2) free(tmp2);
+					tmp2 = strdup(val.empty() ? "" : val.c_str());
+					mval = tmp2;
+				}
+			}
+
+			if (fmt) {
+				int cbuf = printf_length(fmt, mval);
+				tvalue = buf = (char*)malloc(cbuf+1);
+				snprintf(buf, cbuf, fmt, mval);
+			} else {
+				// no format, we just need to make an allocated copy into buf
+				if (tmp2) {
+					// no need to make another copy, just use the tmp2 allocation as the buf allocation
+					tvalue = buf = tmp2;
+					tmp2 = NULL;
+				} else {
+					tvalue = buf = strdup(mval);
+				}
+			}
+
+			if (tmp2) free(tmp2); tmp2 = NULL;
+		}
+		break;
+
+		case SPECIAL_MACRO_ID_EVAL:
+		{
+			const char * mval = lookup_macro(name, macro_set, ctx);
+			if ( ! mval) mval = body;
+			tvalue = NULL;
+
+			char * tmp2 = NULL;
+			if (strchr(mval, '$')) {
+				tmp2 = expand_macro(mval, macro_set, ctx);
+				mval = tmp2;
+			}
+
+			// now we try to evaluate as a classad expression
+			// if it doesn't evaluate, just use it as a string literal
+			std::string tmp3;
+			classad::ExprTree* tree = NULL;
+			if (0 == ParseClassAdRvalExpr(mval, tree, NULL)) {
+				ClassAd rhs;
+				classad::Value val;
+				tmp3 = "CondorValue";
+				if ( ! rhs.Insert(tmp3, tree, false)) {
+					delete tree; tree = NULL;
+				} else if(rhs.EvaluateAttr(tmp3, val)) {
+					if ( ! val.IsStringValue(tmp3)) {
+						classad::ClassAdUnParser unp;
+						tmp3.clear(); // because Unparse appends.
+						unp.Unparse(tmp3, val);
+					}
+					mval = tmp3.c_str();
+				}
+			}
+
+			// no format, we just need to make an allocated copy into buf
+			if (tmp2) {
+				// no need to make another copy, just use the tmp2 allocation as the buf allocation
+				tvalue = buf = tmp2;
+				tmp2 = NULL;
+			} else {
+				tvalue = buf = strdup(mval);
 			}
 
 			if (tmp2) free(tmp2); tmp2 = NULL;

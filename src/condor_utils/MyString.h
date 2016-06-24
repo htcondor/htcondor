@@ -27,6 +27,7 @@
 #include <string>
 
 class MyString;
+class MyStringSource;
 #include "stl_string_utils.h"
 
 /** The MyString class is a C++ representation of a string. It was
@@ -359,7 +360,7 @@ class MyString
 	//           I/O
 	// ----------------------------------------
   
-	/** Safely read from the given file until we've hit a newline or
+	/** Safely  from the given file until we've hit a newline or
 		an EOF.  We use fgets() in a loop to make sure we've read data
 		until we find a newline.  If the buffer wasn't big enough and
 		there's more to read, we fgets() again and append the results
@@ -372,6 +373,7 @@ class MyString
 		@returns True if we found data, false if we're at the EOF 
 	 */
 	bool readLine( FILE* fp, bool append = false);
+	bool readLine( MyStringSource & src, bool append = false);
 
 	// ----------------------------------------
 	//           Tokenize (safe replacement for strtok())
@@ -393,6 +395,8 @@ class MyString
 	//@}
 
 private:
+	friend class MyStringSource;
+	friend class MyStringCharSource;
 
 	/** Returns string. Note that it may return NULL */
 	const char *GetCStr() const { return Data;               }
@@ -475,5 +479,37 @@ protected:
 	const char *m_str;
 };
 
+class MyStringSource {
+public:
+	virtual ~MyStringSource() {};
+	virtual bool readLine(MyString & str, bool append = false) = 0;
+	virtual bool isEof()=0;
+};
+
+class MyStringFpSource : public MyStringSource {
+public:
+	MyStringFpSource(FILE*_fp=NULL, bool delete_fp=false) : fp(_fp), owns_fp(delete_fp) {}
+	virtual ~MyStringFpSource() { if (fp && owns_fp) fclose(fp); fp = NULL; };
+	virtual bool readLine(MyString & str, bool append = false);
+	virtual bool isEof();
+protected:
+	FILE* fp;
+	bool  owns_fp;
+};
+
+class MyStringCharSource : public MyStringSource {
+public:
+	MyStringCharSource(char* src=NULL, bool delete_src=true) : ptr(src), ix(0), owns_ptr(delete_src) {}
+	virtual ~MyStringCharSource() { if (ptr && owns_ptr) free(ptr); ptr = NULL; };
+
+	char* Attach(char* src) { char* pOld = ptr; ptr = src; return pOld; }
+	char* Detach() { return Attach(NULL); }
+	virtual bool readLine(MyString & str, bool append = false);
+	virtual bool isEof();
+protected:
+	char * ptr;
+	int    ix;
+	bool   owns_ptr;
+};
 
 #endif
