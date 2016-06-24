@@ -969,7 +969,7 @@ MyStringCharSource::readLine(MyString & str, bool append /* = false*/)
 bool
 MyStringCharSource::isEof()
 {
-	return !ptr || !*ptr;
+	return !ptr || !ptr[ix];
 }
 
 // populate a MyString from any MyStringSource

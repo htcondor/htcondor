@@ -108,7 +108,7 @@ Reconfig()
 			if (user_map) {
 				add_user_map(name, user_map.ptr(), NULL);
 			} else {
-				param_name.formatstr("CLASSAD_USER_MAP_%s", name);
+				param_name.formatstr("CLASSAD_USER_MAPDATA_%s", name);
 				user_map.set(param(param_name.c_str()));
 				if (user_map) {
 					add_user_mapping(name, user_map.ptr());
