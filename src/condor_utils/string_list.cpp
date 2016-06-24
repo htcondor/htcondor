@@ -481,7 +481,7 @@ StringList::contains_withwildcard(const char *string, bool anycase, StringList *
 	return NULL;
 }
 
-bool
+const char *
 StringList::find( const char *str, bool anycase ) const
 {
 	char	*x;
@@ -490,13 +490,13 @@ StringList::find( const char *str, bool anycase ) const
     iter.ToBeforeFirst ();
 	while ( iter.Next(x) ) {
 		if( (anycase) && (strcasecmp( str, x ) == MATCH) ) {
-			return true;
+			return x;
 		}
 		else if( (!anycase) && (strcmp(str, x) == MATCH) ) {
-			return true;
+			return x;
 		}
 	}
-	return false;
+	return NULL;
 }
 
 bool
