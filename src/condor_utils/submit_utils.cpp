@@ -895,11 +895,6 @@ int SubmitHash::InsertJobExpr (const char *expr, const char * source_label /*=NU
 	{
 		push_error(stderr, "Parse error in expression: \n\t%s\n\t", expr);
 		if ( ! SubmitMacroSet.errors) {
-			PRAGMA_REMIND("fix this to work with errorlist..")
-			while (pos--) {
-				fputc( ' ', stderr );
-			}
-			fprintf (stderr, "^^^\n");
 			fprintf(stderr,"Error in %s\n", source_label ? source_label : "submit file");
 		}
 		ABORT_AND_RETURN( 1 );
