@@ -3390,7 +3390,7 @@ default=
 type=string
 reconfig=true
 customization=seldom
-friendly_name=Startd Cron Name
+friendly_name=Obsolete Startd Cron Name
 review=?
 tags=startd,startd_cronmgr
 
@@ -8231,124 +8231,29 @@ default=((SubmitterGroup =?= RemoteGroup) && ($(StateTimer) > (1 * $(HOUR))) && 
 [UWCS_PREEMPTION_RANK]
 default=(RemoteUserPrio * 1000000) - ifThenElse(isUndefined(TotalJobRuntime), 0, TotalJobRuntime)
 
-# obsolete config file knobs to discard on upgrade
-[$UPGRADE.DISCARD]
-friendly_name=Config file knobs that should be ignored on upgrade
-default : @end
-	LeaseManager
-	LeaseManger_ADDRESS_FILE
-	LeaseManager_LOG
-	LeaseManager_DEBUG
-	MAX_LeaseManager_LOG
-	LeaseManager.GETADS_INTERVAL
-	LeaseManager.PRUNE_INTERVAL
-	LeaseManager.DEBUG_ADS
-	LeaseManager.CLASSAD_LOG
-	QUILL_LOG
-	QUILL_ADDRESS_FILE
-	DBMSD_ARGS
-	DBMSD_LOG
-	STORK
-	STORK_ADDRESS_FILE
-	STORK_LOG_BASE
-	STORK_LOG
-	STORK_DEBUG
-	MAX_STORK_LOG
-	STORK_PORT
-	STORK_ARGS
-@end
+######
+## add metaknobs below this banner
+##
+## as of 8.5.6 metaknobs can take arguments like this
+##   use FEATURE : Knob(arg1, , arg3)
+## where arg1 and arg2 are substituted in the knob definition where it has $(1) and $(2)
+## The permitted metaknob arg substitutions are
+##   $(0)  all arguments. '$(0)' is replaced with 'arg1, , arg3' in the above example
+##   $(0?) args are non-empty. '$(0?)' replaced with '1' in the above example. it would be '0' configuration had use FEATURE:Knob or use FEATURE:Knob()
+##   $(0#) num args. '$(0#)' is replaced with '3' in the above example. it would be '0' if configuration had use FEATURE : Knob
+##   $(1)  first arg. '$(1)' is replaced with 'arg1' in the above example
+##   $(1?) first arg is non-empty. '$(1?)' is replaced with '1' in the above example
+##   $(1+) args from first arg. '$(1+)' is replaced with 'arg1, , arg3' in the above example. $(1+) and $(0) are equivalent
+##   $(2)  first arg. '$(2)' is replaced with '' in the above example
+##   $(2?) second arg is non-empty. '$(2?)' is replaced with '0' in the above example
+##   $(2+) args from second arg. '$(2+)' is replaced with ', arg3' in the above example
+##   $(3) third arg. '$(3)' is replaced with 'arg3' in the above example
+##   $(3?) third arg is non-empty '$(3?)' is replaced with '1' in the above example
+## When a metaknob is not passed any arguments, all '$(N)' macros expand to '', all '$(0#)' and '$(N?)' macros expand to '0'
+######
 
-[$UPGRADE.DISCARDX]
-friendly_name=Platform specific file knobs that should be ignored on upgrade
-default=
-win32_default : @end
-	GT2_GAHP
-	UNICORE_GAHP
-	NORDUGRID_GAHP
-	CREAM_GAHP
-	DELTACLOUD_GAHP
-	LIBVIRT_XML_SCRIPT
-	STARTER_STANDARD
-	SHADOW_STANDARD
-	CKPT_PROBE
-@end
-
-# use this table to detect knobs that have not been changed by the user when the default knob value HAS been changed since 8.0
-[$UPGRADE.DISCARDIF]
-friendly_name=Knobs that should be ignored on upgrade if they match the given value
-default : @end
-	RESERVED_DISK=5
-	ALL_DEBUG=
-	MAX_COLLECTOR_LOG=1000000
-	MAX_KBDD_LOG=1000000
-	MAX_MASTER_LOG=1000000
-	MAX_NEGOTIATOR_LOG=1000000
-	MAX_NEGOTIATOR_MATCH_LOG=1000000
-	MAX_SCHEDD_LOG=1000000
-	MAX_SHADOW_LOG=1000000
-	MAX_SHARED_PORT_LOG=1000000
-	MAX_STARTD_LOG=1000000
-	MAX_STARTER_LOG=1000000
-	MAX_JOB_ROUTER_LOG=1000000
-	MAX_REPLICATION_LOG=1000000
-	MAX_ROOSTER_LOG=1000000
-	MAX_HDFS_LOG=1000000
-	MAX_HAD_LOG=1000000
-	MAX_TRANSFERER_LOG=1000000
-	MAX_GRIDMANAGER_LOG=1000000
-	MAX_C_GAHP_LOG=1000000
-	MAX_VM_GAHP_LOG=1000000
-	MAX_CREDD_LOG=4000000
-	VALID_SPOOL_FILES=job_queue.log, job_queue.log.tmp, history, Accountant.log, Accountantnew.log, local_univ_execute, .quillwritepassword, .pgpass, .schedd_address, .schedd_classad
-	VALID_SPOOL_FILES=job_queue.log, job_queue.log.tmp, history, Accountant.log, Accountantnew.log, local_univ_execute, .quillwritepassword, .pgpass, .schedd_address, .schedd_classad, OfflineLog
-@end
-
-# This table is for platform-specific knobs that fit the rules for $UPGRADE.DISCARDIF above
-[$UPGRADE.DISCARDIFX]
-friendly_name=Platform specific knobs that should be ignored on upgrade if they match the given value
-default : @end
-	QUEUE_SUPER_USERS=root, condor
-@end
-win32_default : @end
-	QUEUE_SUPER_USERS=condor, SYSTEM
-	EC2_GAHP_LOG=/tmp/EC2GahpLog.$(USERNAME)
-	MAIL_FROM=
-	VMWARE_SCRIPT=$(SBIN)\condor_vm_vmware.exe
-	JAVA_CLASSPATH_SEPARATOR=:
-	FILETRANSFER_PLUGINS=$(LIBEXEC)/curl_plugin, $(LIBEXEC)/data_plugin
-	INVALID_LOG_FILES=core
-	HDFS_NAMENODE=hdfs://example.com:9000
-	HDFS_NAMENODE_WEB=example.com:8000
-	HDFS_BACKUPNODE=hdfs://example.com:50100
-	HDFS_BACKUPNODE_WEB=example.com:50105
-	HDFS_NODETYPE=HDFS_DATANODE
-	HDFS_NAMENODE_ROLE=ACTIVE
-	HDFS_NAMENODE_DIR=/tmp/hadoop_name
-	HDFS_DATANODE_DIR=/scratch/tmp/hadoop_data
-	GLIDEIN_SERVER_URLS=http://www.cs.wisc.edu/condor/glidein/binaries
-@end
-
-[$UPGRADE.DISCARDIF_VMWARE]
-friendly_name=Platform specific file knobs that should be ignored on upgrade if they match the given value
-default=
-win32_default : @end
-	VM_MEMORY=128
-	VM_NETWORKING_DEFAULT_TYPE=nat
-	VM_NETWORKING_TYPE=nat
-	VM_MAX_NUMBER=$(NUM_CPUS)
-	VMWARE_PERL=perl
-	VMWARE_SCRIPT=$(SBIN)\condor_vm_vmware
-	VMWARE_SCRIPT=$(SBIN)/condor_vm_vmware.exe
-	VMWARE_SCRIPT=$(SBIN)/condor_vm_vmware.pl.exe
-	VMWARE_NAT_NETWORKING_TYPE=nat
-	VMWARE_BRIDGE_NETWORKING_TYPE=bridged
-	VMWARE_NETWORKING_TYPE=nat
-	VMWARE_LOCAL_SETTINGS_FILE=$(RELEASE_DIR)\condor_vmware_local_settings
-	VMWARE_LOCAL_SETTINGS_FILE=$(RELEASE_DIR)/condor_vmware_local_settings
-@end
-
-# use the UWCS desktop preemption policy
 [$POLICY.DESKTOP]
+# use the UWCS desktop preemption policy
 friendly_name=Use the UWCS preemption policy
 default : @end
 	WANT_SUSPEND=($(SmallJob) || $(KeyboardNotBusy) || $(IsVanilla) ) && ( $(SUSPEND))
@@ -8622,21 +8527,102 @@ default : @end
 @end
 review=?
 
-[$EXPERIMENTAL.CollectorNode]
-friendly_name=One node of a Collector tree, args: id,port
-default: @end
-   COLLECTOR$(1) = $(COLLECTOR)
-   if $(2?)
-      COLLECTOR$(1)_ARGS = -f -local-name COLLECTOR$(1) -p $(2)
-   else
-      COLLECTOR$(1)_ARGS = -f -local-name COLLECTOR$(1) -sock collector$(1)
+[$FEATURE.PartitionableSlot]
+friendly_name=Configure a partitionable slot, args: [type# [, allocation]]
+default : @end
+	if $(1?)
+	  NUM_SLOTS_TYPE_$(1)=1
+	  SLOT_TYPE_$(1)_PARTITIONABLE=true
+	  if $(2?)
+	     SLOT_TYPE_$(1)=$(2+)
+	  else
+	     SLOT_TYPE_$(1)=100%
+	  endif
+	else
+	  NUM_SLOTS_TYPE_1=1
+	  SLOT_TYPE_1_PARTITIONABLE=true
+	  SLOT_TYPE_1=100%
+	endif
+@end
+review=?
+
+[$FEATURE.OneShotCronHook]
+friendly_name=Configure a OneShot Cron Hook, args: STARTD_CRON | SCHEDD_CRON, tag, exe [, hook_args]
+default : @end
+   $(1)_JOBLIST=$($(1)_JOBLIST) $(2)
+   $(1)_$(2)_MODE=OneShot
+   $(1)_$(2)_KILL=true
+   $(1)_$(2)_RECONFIG_RERUN=true
+   $(1)_$(2)_EXECUTABLE=$(3)
+   if $(4?)
+     $(1)_$(2)_ARGS=$(4)
    endif
-   COLLECTOR$(1).COLLECTOR_LOG = $(LOG)/Collector$(1)Log 
-   DAEMON_LIST = $(DAEMON_LIST) COLLECTOR$(1)
+@end
+
+[$FEATURE.PeriodicCronHook]
+friendly_name=Configure a Periodic Cron Hook, args: STARTD_CRON | SCHEDD_CRON , tag, period, exe [,hook_args]
+default : @end
+   $(1)_JOBLIST=$($(1)_JOBLIST) $(2)
+   $(1)_$(2)_MODE=Periodic
+   $(1)_$(2)_PERIOD=$(3)
+   $(1)_$(2)_EXECUTABLE=$(4)
+   if $(5?)
+     $(1)_$(2)_ARGS=$(5)
+   endif
+@end
+
+[$FEATURE.ContinuousCronHook]
+friendly_name=Configure a Continuous Cron Hook, args: STARTD_CRON | SCHEDD_CRON , tag, exe [,hook_args]
+default : @end
+   $(1)_JOBLIST=$($(1)_JOBLIST) $(2)
+   $(1)_$(2)_MODE=WaitForExit
+   $(1)_$(2)_PERIOD=0
+   $(1)_$(2)_EXECUTABLE=$(3)
+   if $(4?)
+     $(1)_$(2)_ARGS=$(4)
+   endif
+@end
+
+[$FEATURE.StartdCronPeriodic]
+friendly_name=Configure a STARTD Cron periodic Hook, args: tag, period, exe [, hook_args]
+default = use FEATURE : PeriodicCronHook(STARTD_CRON, $(0))
+[$FEATURE.ScheddCronPeriodic]
+friendly_name=Configure a SCHEDD Cron periodic Hook, args: tag, period, exe [, hook_args]
+default = use FEATURE : PeriodicCronHook(SCHEDD_CRON, $(0))
+
+[$FEATURE.StartdCronOneShot]
+friendly_name=Configure a STARTD Cron periodic Hook, args: tag, exe [, hook_args]
+default = use FEATURE : OneShotCronHook(STARTD_CRON, $(0))
+[$FEATURE.ScheddCronOneShot]
+friendly_name=Configure a SCHEDD Cron periodic Hook, args: tag, exe [, hook_args]
+default = use FEATURE : OneShotCronHook(SCHEDD_CRON, $(0))
+
+[$FEATURE.StartdCronContinuous]
+friendly_name=Configure a STARTD Cron continuous Hook, args: tag, exe [, hook_args]
+default = use FEATURE : ContinuousCronHook(STARTD_CRON, $(0))
+[$FEATURE.ScheddCronContinuous]
+friendly_name=Configure a SCHEDD Cron continuous Hook, args: tag, exe [, hook_args]
+default = use FEATURE : ContinuousCronHook(SCHEDD_CRON, $(0))
+
+##
+## Experimental meta knobs
+##
+
+[$EXPERIMENTAL.CollectorNode]
+friendly_name=One node of a Collector tree, args: id [,port]
+default: @end
+   COLLECTOR$(1)=$(COLLECTOR)
+   if $(2?)
+      COLLECTOR$(1)_ARGS=-f -local-name COLLECTOR$(1) -p $(2)
+   else
+      COLLECTOR$(1)_ARGS=-f -local-name COLLECTOR$(1) -sock collector$(1)
+   endif
+   COLLECTOR$(1).COLLECTOR_LOG=$(LOG)/Collector$(1)Log 
+   DAEMON_LIST=$(DAEMON_LIST) COLLECTOR$(1)
 @end
 
 [$EXPERIMENTAL.HAD]
-friendly_name=Shared port stuff for a HAD node? controlee, ip/hostname
+friendly_name=Shared port stuff for a HAD node. args: none
 default: @end
    DAEMON_LIST = $(DAEMON_LIST) HAD REPLICATION
    HAD_USE_REPLICATION = TRUE
@@ -8644,13 +8630,13 @@ default: @end
 @end
 
 [$EXPERIMENTAL.HADSharedPort]
-friendly_name=Shared port stuff for a HAD node? controlee, ip/hostname
+friendly_name=Shared port stuff for a HAD node. args: controlee, ip/hostname
 default: @end
    use EXPERIMENTAL : HADReplication( $(1), $(2), $(SHARED_PORT_PORT), $(SHARED_PORT_PORT) )
 @end
 
 [$EXPERIMENTAL.HADFixedPort]
-friendly_name=Shared port stuff for a HAD node? controlee, ip/hostname, hadport, replport
+friendly_name=Shared port stuff for a HAD node. args: controlee, ip/hostname, hadport, replport
 default: @end
    HAD_ARGS = -p $(3)
    REPLICATION_ARGS = -p $(4)
@@ -8658,7 +8644,7 @@ default: @end
 @end
 
 [$EXPERIMENTAL.HADReplication]
-friendly_name=Shared port stuff for a HAD node? controlee, ip/hostname
+friendly_name=Shared port stuff for a HAD node. args: controlee, ip/hostname, hadport, replport
 default: @end
    HAD_LIST = $(HAD_LIST) $(2):$(3)
    REPLICATION_LIST = $(REPLICATION_LIST) $(2):$(4)
@@ -8683,5 +8669,122 @@ default: @end
 	# cross-advertise these slot attributes in all other slots
 	STARTD_SLOT_ATTRS = $(STARTD_SLOT_ATTRS) State Activity EnteredCurrentActivity JobId GlobalJobId
 @end
+
+# obsolete config file knobs to discard on upgrade
+[$UPGRADE.DISCARD]
+friendly_name=Config file knobs that should be ignored on upgrade
+default : @end
+	LeaseManager
+	LeaseManger_ADDRESS_FILE
+	LeaseManager_LOG
+	LeaseManager_DEBUG
+	MAX_LeaseManager_LOG
+	LeaseManager.GETADS_INTERVAL
+	LeaseManager.PRUNE_INTERVAL
+	LeaseManager.DEBUG_ADS
+	LeaseManager.CLASSAD_LOG
+	QUILL_LOG
+	QUILL_ADDRESS_FILE
+	DBMSD_ARGS
+	DBMSD_LOG
+	STORK
+	STORK_ADDRESS_FILE
+	STORK_LOG_BASE
+	STORK_LOG
+	STORK_DEBUG
+	MAX_STORK_LOG
+	STORK_PORT
+	STORK_ARGS
+@end
+
+[$UPGRADE.DISCARDX]
+friendly_name=Platform specific file knobs that should be ignored on upgrade
+default=
+win32_default : @end
+	GT2_GAHP
+	UNICORE_GAHP
+	NORDUGRID_GAHP
+	CREAM_GAHP
+	DELTACLOUD_GAHP
+	LIBVIRT_XML_SCRIPT
+	STARTER_STANDARD
+	SHADOW_STANDARD
+	CKPT_PROBE
+@end
+
+# use this table to detect knobs that have not been changed by the user when the default knob value HAS been changed since 8.0
+[$UPGRADE.DISCARDIF]
+friendly_name=Knobs that should be ignored on upgrade if they match the given value
+default : @end
+	RESERVED_DISK=5
+	ALL_DEBUG=
+	MAX_COLLECTOR_LOG=1000000
+	MAX_KBDD_LOG=1000000
+	MAX_MASTER_LOG=1000000
+	MAX_NEGOTIATOR_LOG=1000000
+	MAX_NEGOTIATOR_MATCH_LOG=1000000
+	MAX_SCHEDD_LOG=1000000
+	MAX_SHADOW_LOG=1000000
+	MAX_SHARED_PORT_LOG=1000000
+	MAX_STARTD_LOG=1000000
+	MAX_STARTER_LOG=1000000
+	MAX_JOB_ROUTER_LOG=1000000
+	MAX_REPLICATION_LOG=1000000
+	MAX_ROOSTER_LOG=1000000
+	MAX_HDFS_LOG=1000000
+	MAX_HAD_LOG=1000000
+	MAX_TRANSFERER_LOG=1000000
+	MAX_GRIDMANAGER_LOG=1000000
+	MAX_C_GAHP_LOG=1000000
+	MAX_VM_GAHP_LOG=1000000
+	MAX_CREDD_LOG=4000000
+	VALID_SPOOL_FILES=job_queue.log, job_queue.log.tmp, history, Accountant.log, Accountantnew.log, local_univ_execute, .quillwritepassword, .pgpass, .schedd_address, .schedd_classad
+	VALID_SPOOL_FILES=job_queue.log, job_queue.log.tmp, history, Accountant.log, Accountantnew.log, local_univ_execute, .quillwritepassword, .pgpass, .schedd_address, .schedd_classad, OfflineLog
+@end
+
+# This table is for platform-specific knobs that fit the rules for $UPGRADE.DISCARDIF above
+[$UPGRADE.DISCARDIFX]
+friendly_name=Platform specific knobs that should be ignored on upgrade if they match the given value
+default : @end
+	QUEUE_SUPER_USERS=root, condor
+@end
+win32_default : @end
+	QUEUE_SUPER_USERS=condor, SYSTEM
+	EC2_GAHP_LOG=/tmp/EC2GahpLog.$(USERNAME)
+	MAIL_FROM=
+	VMWARE_SCRIPT=$(SBIN)\condor_vm_vmware.exe
+	JAVA_CLASSPATH_SEPARATOR=:
+	FILETRANSFER_PLUGINS=$(LIBEXEC)/curl_plugin, $(LIBEXEC)/data_plugin
+	INVALID_LOG_FILES=core
+	HDFS_NAMENODE=hdfs://example.com:9000
+	HDFS_NAMENODE_WEB=example.com:8000
+	HDFS_BACKUPNODE=hdfs://example.com:50100
+	HDFS_BACKUPNODE_WEB=example.com:50105
+	HDFS_NODETYPE=HDFS_DATANODE
+	HDFS_NAMENODE_ROLE=ACTIVE
+	HDFS_NAMENODE_DIR=/tmp/hadoop_name
+	HDFS_DATANODE_DIR=/scratch/tmp/hadoop_data
+	GLIDEIN_SERVER_URLS=http://www.cs.wisc.edu/condor/glidein/binaries
+@end
+
+[$UPGRADE.DISCARDIF_VMWARE]
+friendly_name=Platform specific file knobs that should be ignored on upgrade if they match the given value
+default=
+win32_default : @end
+	VM_MEMORY=128
+	VM_NETWORKING_DEFAULT_TYPE=nat
+	VM_NETWORKING_TYPE=nat
+	VM_MAX_NUMBER=$(NUM_CPUS)
+	VMWARE_PERL=perl
+	VMWARE_SCRIPT=$(SBIN)\condor_vm_vmware
+	VMWARE_SCRIPT=$(SBIN)/condor_vm_vmware.exe
+	VMWARE_SCRIPT=$(SBIN)/condor_vm_vmware.pl.exe
+	VMWARE_NAT_NETWORKING_TYPE=nat
+	VMWARE_BRIDGE_NETWORKING_TYPE=bridged
+	VMWARE_NETWORKING_TYPE=nat
+	VMWARE_LOCAL_SETTINGS_FILE=$(RELEASE_DIR)\condor_vmware_local_settings
+	VMWARE_LOCAL_SETTINGS_FILE=$(RELEASE_DIR)/condor_vmware_local_settings
+@end
+
 
 # ^^^^ TJ SEZ: do NOT insert new param knobs here. insert meta knobs just above this banner, and regular knobs near to related knobs way up there ^^^^

@@ -906,7 +906,11 @@ sub parse {
 			# However, if $dataclass is longer than 0 characters, it will 
 			# attempt to parse the string.
 			add_property($property_name, $property_value, $dataclass_name);
-			ignore(WHITESPACE);
+			&ignore(WHITESPACE);
+			my $banner_charclass = ['\A\#\#+', 'banner'];
+			while (&next_is($banner_charclass)) {
+				&ignore(COMMENTS);
+			}
 			&ignore(COMMENTS);
 			&ignore(WHITESPACE);
 			if(length($remaining_text)<1){ last; } # End of file 

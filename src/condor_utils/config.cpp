@@ -36,6 +36,7 @@
 #define METAKNOBS_WITH_ARGS 1
 #ifdef METAKNOBS_WITH_ARGS
 char * expand_meta_args(const char *value, std::string & argstr);
+bool has_meta_args(const char * value);
 #endif
 
 
@@ -341,7 +342,7 @@ int read_meta_config(MACRO_SOURCE & source, int depth, const char *name, const c
 				return -1;
 			}
 			auto_free_ptr expanded(NULL);
-			if ( ! mag.args.empty()) {
+			if ( ! mag.args.empty() || has_meta_args(psz)) {
 				expanded.set(expand_meta_args(psz, mag.args));
 				psz = expanded.ptr();
 			}
@@ -403,7 +404,7 @@ int read_meta_config(MACRO_SOURCE & source, int depth, const char *name, const c
 		source.meta_id = param_default_get_source_meta_id(name, item);
 #ifdef METAKNOBS_WITH_ARGS
 		auto_free_ptr expanded(NULL);
-		if ( ! mag.args.empty()) {
+		if ( ! mag.args.empty() || has_meta_args(value)) {
 			expanded.set(expand_meta_args(value, mag.args));
 			value = expanded.ptr();
 		}
@@ -860,6 +861,11 @@ int Parse_config_string(MACRO_SOURCE & source, int depth, const char * config, M
 	lines.rewind();
 	char * line;
 	while ((line = lines.next()) != NULL) {
+		// trim leading and trailing whitespace
+		//while (*line && isspace(*line)) ++line;
+		//int ix = strlen(line);
+		//while (ix > 0 && isspace(line[ix-1])) { line[ix-1] = 0; --ix; }
+
 		++source.meta_off;
 		if( line[0] == '#' || blankline(line) )
 			continue;
@@ -918,6 +924,8 @@ int Parse_config_string(MACRO_SOURCE & source, int depth, const char * config, M
 			//PRAGMA_REMIND("tj: should report parse error in meta knobs here.")
 			return -1;
 		}
+
+		while (*ptr && isspace(*ptr)) ++ptr;
 
 		// ptr now points to the first non-space character of the right hand side, it may point to a \0
 		const char * rhs = ptr;
@@ -2241,6 +2249,18 @@ const char * trimmed_cstr(std::string &str)
 	return p;
 }
 
+// return true if value has any $(<num>) macros to expand.
+bool has_meta_args(const char * value)
+{
+	const char * p = strstr(value, "$(");
+	while (p) {
+		p = p+2;
+		if (isdigit(*p)) return true;
+		p = strstr(p, "$(");
+	}
+	return false;
+}
+
 // return copy of input value that has $(<num>) expanded against argstr
 // argstr should be a string containing a comma separated list of values
 // $(0) expands to all of argstr with leading and trailing whitespace trimmed
@@ -2289,6 +2309,7 @@ char * expand_meta_args(const char *value, std::string & argstr)
 					const char * remain = it.remain();
 					while (remain && (ix < meta_only.index)) { ++ix; it.next_string(); remain = it.remain(); }
 					if (remain) {
+						if (*remain == ',') ++remain; // skip leading comma
 						buf = remain;
 					}
 				} else {
@@ -3360,7 +3381,7 @@ tryagain:
 						}
 					}
 					if (is_meta_arg_body) {
-						if ( ! isdigit(c) && c != '?' && c != '#') {
+						if ( ! isdigit(c) && c != '?' && c != '#' && c != '+') {
 							tvalue = name;
 							goto tryagain;
 						}
