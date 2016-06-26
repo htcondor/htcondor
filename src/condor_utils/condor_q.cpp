@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2016, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -425,26 +425,28 @@ CondorQ::fetchQueueFromHostAndProcessV2(const char *host,
 	parser.ParseExpression(constraint, expr);
 	if (!expr) return Q_INVALID_REQUIREMENTS;
 
-	classad::ClassAd ad;
-	ad.Insert(ATTR_REQUIREMENTS, expr);
+	classad::ClassAd request_ad;  // query ad to send to schedd
+	ClassAd *ad = NULL;	// job ad result
+
+	request_ad.Insert(ATTR_REQUIREMENTS, expr);
 
 	char *projection = attrs.print_to_delimed_string(",");
 	if (projection) {
-		ad.InsertAttr(ATTR_PROJECTION, projection);
+		request_ad.InsertAttr(ATTR_PROJECTION, projection);
 		free(projection);
 	}
 
 	if (fetch_opts == fetch_DefaultAutoCluster) {
-		ad.InsertAttr("QueryDefaultAutocluster", true);
-		ad.InsertAttr("MaxReturnedJobIds", 2); // TODO: make this settable by caller of this function.
+		request_ad.InsertAttr("QueryDefaultAutocluster", true);
+		request_ad.InsertAttr("MaxReturnedJobIds", 2); // TODO: make this settable by caller of this function.
 	} else if (fetch_opts == fetch_GroupBy) {
-		ad.InsertAttr("ProjectionIsGroupBy", true);
-		ad.InsertAttr("MaxReturnedJobIds", 2); // TODO: make this settable by caller of this function.
+		request_ad.InsertAttr("ProjectionIsGroupBy", true);
+		request_ad.InsertAttr("MaxReturnedJobIds", 2); // TODO: make this settable by caller of this function.
 	}
 
 	if (match_limit >= 0)
 	{
-		ad.InsertAttr(ATTR_LIMIT_RESULTS, match_limit);
+		request_ad.InsertAttr(ATTR_LIMIT_RESULTS, match_limit);
 	}
 
 	DCSchedd schedd(host);
@@ -453,14 +455,13 @@ CondorQ::fetchQueueFromHostAndProcessV2(const char *host,
 
 	classad_shared_ptr<Sock> sock_sentry(sock);
 
-	if (!putClassAd(sock, ad) || !sock->end_of_message()) return Q_SCHEDD_COMMUNICATION_ERROR;
+	if (!putClassAd(sock, request_ad) || !sock->end_of_message()) return Q_SCHEDD_COMMUNICATION_ERROR;
 	dprintf(D_FULLDEBUG, "Sent classad to schedd\n");
 
 	int rval = 0;
 	do {
-		ClassAd * ad = new ClassAd();
+		ad = new ClassAd();
 		if ( ! getClassAd(sock, *ad) || ! sock->end_of_message()) {
-			delete(ad);
 			rval = Q_SCHEDD_COMMUNICATION_ERROR;
 			break;
 		}
@@ -473,17 +474,23 @@ CondorQ::fetchQueueFromHostAndProcessV2(const char *host,
 			std::string errorMsg;
 			if (ad->EvaluateAttrInt(ATTR_ERROR_CODE, intVal) && intVal && ad->EvaluateAttrString(ATTR_ERROR_STRING, errorMsg))
 			{
-				delete(ad);
 				if (errstack) errstack->push("TOOL", intVal, errorMsg.c_str());
-				return Q_REMOTE_ERROR;
+				rval = Q_REMOTE_ERROR;
 			}
 			break;
 		}
+		// Note: According to condor_q.h, process_func() will return false if taking
+		// ownership of ad, so only delete if it returns true, else set to NULL
+		// so we don't delete it here.  Either way, next set ad to NULL since either
+		// it has been deleted or will be deleted later by process_func().
 		if (process_func(process_func_data, ad)) {
-			delete(ad);
+			delete ad;
 		}
 		ad = NULL;
 	} while (true);
+
+	// Make sure ad is not leaked no matter how we break out of the above loop.
+	delete ad;
 
 	return rval;
 }
@@ -644,6 +651,8 @@ CondorQ::getFilterAndProcessAds( const char *constraint,
 								 bool useAll )
 {
 	int match_count = 0;
+	ClassAd *ad = NULL;	// job ad result
+	int rval = Q_OK; // return success by default, reset on error
 
 	if (useAll) {
 			// The fast case with the new protocol
@@ -652,13 +661,17 @@ CondorQ::getFilterAndProcessAds( const char *constraint,
 		free(attrs_str);
 
 		while( true ) {
-			ClassAd * ad = new ClassAd();
+			ad = new ClassAd();
 			if (match_limit >= 0 && match_count >= match_limit)
 				break;
 			if( GetAllJobsByConstraint_Next( *ad ) != 0 ) {
 				break;
 			}
 			++match_count;
+			// Note: According to condor_q.h, process_func() will return false if taking
+			// ownership of ad, so only delete if it returns true, else set to NULL
+			// so we don't delete it here.  Either way, next set ad to NULL since either
+			// it has been deleted or will be deleted later by process_func().
 			if (process_func(process_func_data, ad)) {
 				delete(ad);
 			}
@@ -667,34 +680,44 @@ CondorQ::getFilterAndProcessAds( const char *constraint,
 	} else {
 
 		// slow case, using old protocol
-		ClassAd * ad = GetNextJobByConstraint(constraint, 1);
+		ad = GetNextJobByConstraint(constraint, 1);
 		if (ad) {
-			// Process the data and insert it into the list
+			// Process the data and insert it into the list.
+			// Note: According to condor_q.h, process_func() will return false if taking
+			// ownership of ad, so only delete if it returns true, else set to NULL
+			// so we don't delete it here.  Either way, next set ad to NULL since either
+			// it has been deleted or will be deleted later by process_func().
 			if (process_func(process_func_data, ad)) {
 				delete ad;
 			}
 			ad = NULL;
+
 			++match_count;
 
 			while ((ad = GetNextJobByConstraint(constraint, 0)) != NULL) {
 				if (match_limit >= 0 && match_count >= match_limit)
 					break;
-				// Process the data and insert it into the list
+				// Process the data and insert it into the list.
+				// See comment above re the return value of process_func.
 				if (process_func(process_func_data, ad)) {
 					delete ad;
 				}
+				ad = NULL;
 			}
 		}
 	}
+
+	// Make sure ad is not leaked no matter how we break out of the above loops.
+	delete ad; 
 
 	// here GetNextJobByConstraint returned NULL.  check if it was
 	// because of the network or not.  if qmgmt had a problem with
 	// the net, then errno is set to ETIMEDOUT, and we should fail.
 	if ( errno == ETIMEDOUT ) {
-		return Q_SCHEDD_COMMUNICATION_ERROR;
+		rval = Q_SCHEDD_COMMUNICATION_ERROR;
 	}
 
-	return Q_OK;
+	return rval;
 }
 
 
