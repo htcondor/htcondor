@@ -27,8 +27,8 @@
 #define MAXOWNERLEN 20
 #define MAXSCHEDDLEN 255
 
-// This is for the getFilterAndProcess function
-// the caller will return false to take ownership of ad, true otherwise.
+// This callback signature is for the getFilterAndProcess function.
+// This callback should return false to take ownership of ad, true otherwise.
 // we do this to avoid a makeing a copy of the ad in a common use case,
 // because the caller will normally delete the ad, but in fact has no more use for it.
 typedef bool (*condor_q_process_func)(void*, ClassAd *ad);
