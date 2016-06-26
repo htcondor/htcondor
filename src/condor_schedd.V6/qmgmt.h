@@ -152,7 +152,6 @@ public:
 };
 
 
-void CloseJobHistoryFile();
 void SetMaxHistoricalLogs(int max_historical_logs);
 time_t GetOriginalJobQueueBirthdate();
 void DestroyJobQueue( void );
