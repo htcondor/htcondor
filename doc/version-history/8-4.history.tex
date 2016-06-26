@@ -41,6 +41,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a memory leak in the condor\_q client code that impacted
+users of the Python API call htcondor.Schedd().query().
+\Ticket{5727}
+
 \item The \Condor{schedd} now rejects job submissions when the job owner
 doesn't have a user account on the machine.
 Previously, the \Condor{schedd} would accept such jobs and then fail
