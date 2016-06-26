@@ -2127,9 +2127,11 @@ fPrintAd( FILE *file, const classad::ClassAd &ad, bool exclude_private, StringLi
 	MyString buffer;
 
 	sPrintAd( buffer, ad, exclude_private, attr_white_list );
-	fprintf( file, "%s", buffer.Value() );
-
-	return TRUE;
+	if ( fprintf(file, "%s", buffer.Value()) < 0 ) {
+		return FALSE;
+	} else {
+		return TRUE;
+	}
 }
 
 void
