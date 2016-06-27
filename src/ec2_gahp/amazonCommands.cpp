@@ -290,7 +290,7 @@ class Throttle {
             	"limitExceeded(): setting when to %u milliseconds from now (%ld.%09ld)\n", milliseconds, when.tv_sec, when.tv_nsec );
             when.tv_sec += seconds;
             when.tv_nsec += nanoseconds;
-            if( when.tv_nsec > 1000000000 ) {
+            if( when.tv_nsec >= 1000000000 ) {
                 when.tv_nsec -= 1000000000;
                 when.tv_sec += 1;
             }
