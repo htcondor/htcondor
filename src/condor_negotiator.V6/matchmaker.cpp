@@ -2452,7 +2452,14 @@ Matchmaker::forwardAccountingData(std::set<std::string> &names) {
 				SetTargetTypeName(updateAd, "none");
 
 				DCCollectorAdSequences seq; // Don't need them, interface requires them
-				collector.sendUpdate(UPDATE_ACCOUNTING_AD, &updateAd, seq, NULL, false);
+				int resUsed = -1;
+
+				// If flocking submitters aren't running here, ResourcesUsed
+				// will be zero.  Don't include those submitters.
+
+				if (updateAd.LookupInteger("ResourcesUsed", resUsed)) {
+					collector.sendUpdate(UPDATE_ACCOUNTING_AD, &updateAd, seq, NULL, false);
+				}
 			}
 		}
 		forwardGroupAccounting(collector, hgq_root_group);

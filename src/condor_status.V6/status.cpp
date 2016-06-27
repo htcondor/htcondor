@@ -638,7 +638,9 @@ void fold_slot_result(StatusRowOfData & aa, StatusRowOfData * pbb)
 	bool partitionable = (bb.flags & SROD_PARTITIONABLE_SLOT) != 0;
 
 	// calculate the memory size of the largest slot
-	double amem, bmem;
+	double amem = 0.0;
+	double bmem = 0.0;
+
 	if (startdCompact_ixCol_MaxSlotMem >= 0) {
 		aa.getNumber(startdCompact_ixCol_MaxSlotMem, amem);
 		bb.getNumber(partitionable ? startdCompact_ixCol_MaxSlotMem : startdCompact_ixCol_FreeMem, bmem);
@@ -1216,6 +1218,9 @@ main (int argc, char *argv[])
 		AddClassAdXMLFileHeader(line);
 		fputs(line.c_str(), stdout); // xml string already ends in a newline.
 	}
+	if (PP_JSON == pps) {
+		printf("[\n");
+	}
 
 	for (ROD_MAP_BY_KEY::iterator it = admap.begin(); it != admap.end(); ++it) {
 		if (it->second.flags & (SROD_FOLDED | SROD_SKIP))
@@ -1235,6 +1240,9 @@ main (int argc, char *argv[])
 		AddClassAdXMLFileFooter(line);
 		fputs(line.c_str(), stdout);
 		// PRAGMA_REMIND("tj: XML output used to have an extra trailing newline, do we need to preserve that?")
+	}
+	if (PP_JSON == pps) {
+		printf("]\n");
 	}
 
 	// if totals are required, display totals

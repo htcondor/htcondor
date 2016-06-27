@@ -867,6 +867,10 @@ void main_init (int argc, char ** const argv) {
 	dagman._dagmanClassad->GetSetBatchName( dagman.primaryDagFile,
 				dagman._batchName );
 
+	dagman._dagmanClassad->GetAcctInfo(
+				dagman._submitDagDeepOpts.acctGroup,
+				dagman._submitDagDeepOpts.acctGroupUser );
+
 	dagman.ResolveDefaultLog();
 
     //

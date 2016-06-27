@@ -104,8 +104,6 @@ MapFile::ParseField(MyString & line, int offset, MyString & field)
 int
 MapFile::ParseCanonicalizationFile(const MyString filename)
 {
-	int line = 0;
-
 	FILE *file = safe_fopen_wrapper_follow(filename.Value(), "r");
 	if (NULL == file) {
 		dprintf(D_ALWAYS,
@@ -115,7 +113,17 @@ MapFile::ParseCanonicalizationFile(const MyString filename)
 		return -1;
 	}
 
-	while (!feof(file)) {
+	MyStringFpSource myfs(file, true);
+
+	return ParseCanonicalization(myfs, filename.Value());
+}
+
+int
+MapFile::ParseCanonicalization(MyStringSource & src, const char * srcname)
+{
+	int line = 0;
+
+	while ( ! src.isEof()) {
 		MyString input_line;
 		int offset;
 		MyString method;
@@ -124,7 +132,7 @@ MapFile::ParseCanonicalizationFile(const MyString filename)
 
 		line++;
 
-		input_line.readLine(file); // Result ignored, we already monitor EOF
+		input_line.readLine(src); // Result ignored, we already monitor EOF
 
 		if (input_line.IsEmpty()) {
 			continue;
@@ -141,7 +149,7 @@ MapFile::ParseCanonicalizationFile(const MyString filename)
 			principal.IsEmpty() ||
 			canonicalization.IsEmpty()) {
 				dprintf(D_ALWAYS, "ERROR: Error parsing line %d of %s.  (Method=%s) (Principal=%s) (Canon=%s) Skipping to next line.\n",
-						line, filename.Value(), method.Value(), principal.Value(), canonicalization.Value());
+						line, srcname, method.Value(), principal.Value(), canonicalization.Value());
 
 				continue;
 		}
@@ -163,8 +171,6 @@ MapFile::ParseCanonicalizationFile(const MyString filename)
 		canonical_entries[last].principal = principal;
 		canonical_entries[last].canonicalization = canonicalization;
 	}
-
-	fclose(file);
 
 	// Compile the entries and print error messages for the ones that don't compile.
 	// We don't do this in the loop above because canonical_entries[] allocates 
@@ -189,8 +195,6 @@ MapFile::ParseCanonicalizationFile(const MyString filename)
 int
 MapFile::ParseUsermapFile(const MyString filename)
 {
-	int line = 0;
-
 	FILE *file = safe_fopen_wrapper_follow(filename.Value(), "r");
 	if (NULL == file) {
 		dprintf(D_ALWAYS,
@@ -200,7 +204,17 @@ MapFile::ParseUsermapFile(const MyString filename)
 		return -1;
 	}
 
-    while (!feof(file)) {
+	MyStringFpSource myfs(file, true);
+
+	return ParseUsermap(myfs, filename.Value());
+}
+
+int
+MapFile::ParseUsermap(MyStringSource & src, const char * srcname)
+{
+	int line = 0;
+
+    while ( ! src.isEof()) {
 		MyString input_line;
 		int offset;
 		MyString canonicalization;
@@ -208,7 +222,7 @@ MapFile::ParseUsermapFile(const MyString filename)
 
 		line++;
 
-		input_line.readLine(file); // Result ignored, we already monitor EOF
+		input_line.readLine(src); // Result ignored, we already monitor EOF
 
 		if (input_line.IsEmpty()) {
 			continue;
@@ -226,9 +240,7 @@ MapFile::ParseUsermapFile(const MyString filename)
 		if (canonicalization.IsEmpty() ||
 			user.IsEmpty()) {
 				dprintf(D_ALWAYS, "ERROR: Error parsing line %d of %s.\n",
-						line, filename.Value());
-				
-				fclose(file);
+						line, srcname);
 				return line;
 		}
 	
@@ -248,8 +260,6 @@ MapFile::ParseUsermapFile(const MyString filename)
 			return line;
 		}
 	}
-
-	fclose(file);
 
 	return 0;
 }

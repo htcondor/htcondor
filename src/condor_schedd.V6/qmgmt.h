@@ -99,6 +99,10 @@ protected:
 	char future_status; // FUTURE: keep this in sync with job status
 public:
 	int autocluster_id;
+	// cached pointer into schedulers's OwnerDataMap.
+	// it is set by count_jobs() or by scheduler::get_ownerdata
+	// DO NOT FREE FROM HERE!
+	struct OwnerData * ownerdata;
 protected:
 	JobQueueJob * link; // FUTURE: jobs are linked to clusters.
 	int future_num_procs_or_hosts; // FUTURE: num_procs if cluster, num hosts if job
@@ -111,6 +115,8 @@ public:
 		, has_noop_attr(2) // value of 2 forces PopulateFromAd() to check if it exists.
 		, future_status(0) // JOB_STATUS_MIN
 		, autocluster_id(0)
+		, ownerdata(NULL)
+		, link(NULL)
 		, future_num_procs_or_hosts(0)
 	{}
 	virtual ~JobQueueJob() {};
@@ -146,7 +152,6 @@ public:
 };
 
 
-void CloseJobHistoryFile();
 void SetMaxHistoricalLogs(int max_historical_logs);
 time_t GetOriginalJobQueueBirthdate();
 void DestroyJobQueue( void );

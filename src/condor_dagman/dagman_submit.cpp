@@ -331,7 +331,44 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 	var += dm.dag->NumNodesFailed();
 	args.AppendArg( var.Value() );
 
-		// how big is the command line so far
+	if( hold_claim ){
+		args.AppendArg( "-a" );
+		MyString holdit = MyString("+") + MyString(ATTR_JOB_KEEP_CLAIM_IDLE) + " = "
+			+ dm._claim_hold_time;
+		args.AppendArg( holdit.Value() );	
+	}
+	
+	if (dm._submitDagDeepOpts.suppress_notification) {
+		args.AppendArg( "-a" );
+		MyString notify = MyString("notification = never");
+		args.AppendArg( notify.Value() );
+	}
+
+		//
+		// Add accounting group and user if we have them.
+		//
+	if ( dm._submitDagDeepOpts.acctGroup != "" ) {
+		args.AppendArg( "-a" );
+		MyString arg = "accounting_group=";
+		arg += dm._submitDagDeepOpts.acctGroup;
+		args.AppendArg( arg );
+	}
+
+	if ( dm._submitDagDeepOpts.acctGroupUser != "" ) {
+		args.AppendArg( "-a" );
+		MyString arg = "accounting_group_user=";
+		arg += dm._submitDagDeepOpts.acctGroupUser;
+		args.AppendArg( arg );
+	}
+
+		//
+		// Add parents of this node to arguments, if we have room.
+		//
+		// This should be the last thing in the arguments, except
+		// for the submit file name!!!
+		//
+
+		// how big is the command line so far?
 	MyString display;
 	args.GetArgsStringForDisplay( &display );
 	int cmdLineSize = display.Length();
@@ -354,19 +391,6 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 		check_warning_strictness( DAG_STRICT_3 );
 	} else {
 		args.AppendArgsFromArgList( parentNameArgs );
-	}
-
-	if( hold_claim ){
-		args.AppendArg( "-a" );
-		MyString holdit = MyString("+") + MyString(ATTR_JOB_KEEP_CLAIM_IDLE) + " = "
-			+ dm._claim_hold_time;
-		args.AppendArg( holdit.Value() );	
-	}
-	
-	if (dm._submitDagDeepOpts.suppress_notification) {
-		args.AppendArg( "-a" );
-		MyString notify = MyString("notification = never");
-		args.AppendArg( notify.Value() );
 	}
 
 	args.AppendArg( cmdFile );

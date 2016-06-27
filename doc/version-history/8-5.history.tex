@@ -12,6 +12,36 @@ This is the development release series of HTCondor.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-8-5-7}Version 8.5.7}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item HTCondor version 8.5.7 not yet released.
+%\item HTCondor version 8.5.7 released on Month Date, 2016.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-8-5-6}Version 8.5.6}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -34,13 +64,49 @@ Now, one query to the batch system is done for all jobs, instead of a
 separate query for each job.
 \Ticket{5722}
 
+\item \Condor{dagman} now allows commands to be more flexibly ordered
+within a DAG file.  (See section~\ref{dagman:command order} for details.)
+\Ticket{5732}
+
+\item Any \SubmitCmd{accounting\_group} and
+\SubmitCmd{accounting\_group\_user} values specified for a
+DAG are now propagated to all jobs of the workflow, including sub-DAGs.
+\Ticket{5077}
+
+\item Added several statistics about commands issued to the GAHP server
+to the grid ads that the \Condor{gridmanager} sends to the \Condor{collector}:
+  \begin{itemize}
+  \item GahpCommandsIssued
+  \item GahpCommandsTimedOut
+  \item GahpCommandsInFlight
+  \item GahpCommandsQueued
+  \item GahpCommandRuntime
+  \end{itemize}
+
+\Ticket{5698}
+
+\item Kerberos authentication is now non-blocking, allowing an HTCondor
+daemon authenticating clients with Kerberos to handle more simultaneous
+incoming connections.
+\Ticket{5737}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
 
-\item None.
+\item \Condor{user\_prio} now more correctly shows information
+about submitters flocking to a pool, but who haven't used 
+any resources.
+\Ticket{5743}
+
+\item \Condor{who} now reports docker universe jobs more completely.
+\Ticket{5740}
+
+\item No longer leak a file in the user's home directory each time a
+job is submitted to SLURM.
+\Ticket{5742}
 
 \end{itemize}
 

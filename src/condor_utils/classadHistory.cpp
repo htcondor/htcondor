@@ -47,17 +47,16 @@ static int MaybeDeleteOneHistoryBackup(void);
 static bool IsHistoryFilename(const char *filename, time_t *backup_time);
 static void RotateHistory(void);
 static int findHistoryOffset(FILE *LogFile);
+static FILE* OpenHistoryFile();
+static void CloseJobHistoryFile();
+static void RelinquishHistoryFile(FILE *fp);
+
+// --------------------------------------------------------------------------
+// --------- PUBLIC FUNCTIONS (called by schedd, startd, etc) ---------------
+// --------------------------------------------------------------------------
 
 void
-CloseJobHistoryFile() {
-	ASSERT( HistoryFile_RefCount == 0 );
-	if( HistoryFile_fp ) {
-		fclose( HistoryFile_fp );
-		HistoryFile_fp = NULL;
-	}
-}
-
-void InitJobHistoryFile(const char *history_param, const char *per_job_history_param) {
+InitJobHistoryFile(const char *history_param, const char *per_job_history_param) {
 
 	CloseJobHistoryFile();
 	if( JobHistoryFileName ) free( JobHistoryFileName );
@@ -108,46 +107,12 @@ void InitJobHistoryFile(const char *history_param, const char *per_job_history_p
 
 }
 
-FILE *
-OpenHistoryFile() {
-		// Note that we are passing O_LARGEFILE, which lets us deal
-		// with files that are larger than 2GB. On systems where
-		// O_LARGEFILE isn't defined, the Condor source defines it to
-		// be 0 which has no effect. So we'll take advantage of large
-		// files where we can, but not where we can't.
-	if( !HistoryFile_fp ) {
-		int fd = safe_open_wrapper_follow(JobHistoryFileName,
-                O_RDWR|O_CREAT|O_APPEND|O_LARGEFILE|_O_NOINHERIT,
-                0644);
-		if( fd < 0 ) {
-			dprintf(D_ALWAYS,"ERROR opening history file (%s): %s\n",
-					JobHistoryFileName, strerror(errno));
-			return NULL;
-		}
-		HistoryFile_fp = fdopen(fd, "r+");
-		if ( !HistoryFile_fp ) {
-			dprintf(D_ALWAYS,"ERROR opening history file fp (%s): %s\n",
-					JobHistoryFileName, strerror(errno));
-			return NULL;
-		}
-	}
-	HistoryFile_RefCount++;
-	return HistoryFile_fp;
-}
-
-static void
-RelinquishHistoryFile(FILE *fp) {
-	if( fp ) {
-		HistoryFile_RefCount--;
-	}
-		// keep the file open
-}
-
 // --------------------------------------------------------------------------
 // Write job ads to history file when they're destroyed
 // --------------------------------------------------------------------------
 
-void AppendHistory(ClassAd* ad)
+void
+AppendHistory(ClassAd* ad)
 {
   bool failed = false;
   static bool sent_mail_about_bad_history = false;
@@ -176,7 +141,6 @@ void AppendHistory(ClassAd* ad)
 		  dprintf(D_ALWAYS, 
 				  "ERROR: failed to write job class ad to history file %s\n",
 				  JobHistoryFileName);
-		  fclose(LogFile);
 		  failed = true;
 	  } else {
 		  int cluster, proc, completion;
@@ -198,11 +162,23 @@ void AppendHistory(ClassAd* ad)
                       "*** Offset = %d ClusterId = %d ProcId = %d Owner = \"%s\" CompletionDate = %d\n",
 				  offset, cluster, proc, owner.Value(), completion);
 		  fflush( LogFile );
-		  RelinquishHistoryFile( LogFile );
       }
   }
 
+  // If we successfully obtained a handle to the history file,
+  // relinquish it now.  Note it is safe to call RelinquishHistoryFile
+  // even if OpenHistoryFile returned NULL.
+  RelinquishHistoryFile( LogFile );
+  LogFile = NULL;
+
   if ( failed ) {
+	  // We failed to write to the history file for some reason. May help
+	  // to close it and attempt to re-open it next time.
+	  // Note it is safe to call CloseJobHistoryFile() even if OpenHistoryFile
+	  // returned NULL.
+	  CloseJobHistoryFile();
+
+	  // Send email to the admin.
 	  if ( !sent_mail_about_bad_history ) {
 		  FILE* email_fp = email_admin_open("Failed to write to HISTORY file");
 		  if ( email_fp ) {
@@ -226,11 +202,135 @@ void AppendHistory(ClassAd* ad)
   return;
 }
 
+void
+WritePerJobHistoryFile(ClassAd* ad, bool useGjid)
+{
+	if (PerJobHistoryDir == NULL) {
+		return;
+	}
+
+	// construct the name (use cluster.proc)
+	int cluster, proc;
+	if (!ad->LookupInteger(ATTR_CLUSTER_ID, cluster)) {
+		dprintf(D_ALWAYS | D_FAILURE,
+		        "not writing per-job history file: no cluster id in ad\n");
+		return;
+	}
+	if (!ad->LookupInteger(ATTR_PROC_ID, proc)) {
+		dprintf(D_ALWAYS | D_FAILURE,
+		        "not writing per-job history file: no proc id in ad\n");
+		return;
+	}
+	MyString file_name;
+	MyString temp_file_name;
+	if (useGjid) {
+		MyString gjid;
+		ad->LookupString(ATTR_GLOBAL_JOB_ID, gjid);
+		file_name.formatstr("%s/history.%s", PerJobHistoryDir, gjid.Value());
+		temp_file_name.formatstr("%s/.history.%s.tmp", PerJobHistoryDir, gjid.Value());
+	} else {
+		file_name.formatstr("%s/history.%d.%d", PerJobHistoryDir, cluster, proc);
+		temp_file_name.formatstr("%s/.history.%d.%d.tmp", PerJobHistoryDir, cluster, proc);
+	}
+
+	// Now write out the file.  We write it first to temp_file_name, and then
+	// atomically rename it to file_name, so that another process reading history
+	// files will never see an empty file or incomplete data in the event the history file
+	// is read at the same time we are still writing it.
+
+	// first write out the file to the temp_file_name
+	int fd = safe_open_wrapper_follow(temp_file_name.Value(), O_WRONLY | O_CREAT | O_EXCL, 0644);
+	if (fd == -1) {
+		dprintf(D_ALWAYS | D_FAILURE,
+		        "error %d (%s) opening per-job history file for job %d.%d\n",
+		        errno, strerror(errno), cluster, proc);
+		return;
+	}
+	FILE* fp = fdopen(fd, "w");
+	if (fp == NULL) {
+		dprintf(D_ALWAYS | D_FAILURE,
+		        "error %d (%s) opening file stream for per-job history for job %d.%d\n",
+		        errno, strerror(errno), cluster, proc);
+		close(fd);
+		unlink(temp_file_name.Value());
+		return;
+	}
+	if (!fPrintAd(fp, *ad)) {
+		dprintf(D_ALWAYS | D_FAILURE,
+		        "error writing per-job history file for job %d.%d\n",
+		        cluster, proc);
+		fclose(fp);
+		unlink(temp_file_name.Value());
+		return;
+	}
+	fclose(fp);
+
+	// now atomically rename from temp_file_name to file_name
+    if (rotate_file(temp_file_name.Value(), file_name.Value())) {
+		dprintf(D_ALWAYS | D_FAILURE,
+		        "error writing per-job history file for job %d.%d (during rename)\n",
+		        cluster, proc);
+		unlink(temp_file_name.Value());
+    }
+}
+
+// --------------------------------------------------------------------------
+// ------ PRIVATE / STATIC FUNCTIONS (implementation specific to this module)
+// --------------------------------------------------------------------------
+
+// Obtain a handle to the HISTORY file.  Note that each call to OpenHistoryFile()
+// that return non-NULL _MUST_ be paired with a call to RelinquishHistoryFile().
+static FILE *
+OpenHistoryFile() {
+		// Note that we are passing O_LARGEFILE, which lets us deal
+		// with files that are larger than 2GB. On systems where
+		// O_LARGEFILE isn't defined, the Condor source defines it to
+		// be 0 which has no effect. So we'll take advantage of large
+		// files where we can, but not where we can't.
+	if( !HistoryFile_fp ) {
+		int fd = safe_open_wrapper_follow(JobHistoryFileName,
+                O_RDWR|O_CREAT|O_APPEND|O_LARGEFILE|_O_NOINHERIT,
+                0644);
+		if( fd < 0 ) {
+			dprintf(D_ALWAYS,"ERROR opening history file (%s): %s\n",
+					JobHistoryFileName, strerror(errno));
+			return NULL;
+		}
+		HistoryFile_fp = fdopen(fd, "r+");
+		if ( !HistoryFile_fp ) {
+			dprintf(D_ALWAYS,"ERROR opening history file fp (%s): %s\n",
+					JobHistoryFileName, strerror(errno));
+			// return now, because we CANNOT increment the refcount below on failure.
+			return NULL;
+		}
+	}
+	HistoryFile_RefCount++;
+	return HistoryFile_fp;
+}
+
+static void
+RelinquishHistoryFile(FILE *fp) {
+	if( fp ) {  // passing a NULL fp is allowed, but don't alter the refcount
+		HistoryFile_RefCount--;
+	}
+		// keep the file open
+}
+
+static void
+CloseJobHistoryFile() {
+	ASSERT( HistoryFile_RefCount == 0 );
+	if( HistoryFile_fp ) {
+		fclose( HistoryFile_fp );
+		HistoryFile_fp = NULL;
+	}
+}
+
 // --------------------------------------------------------------------------
 // Decide if we should rotate the history file, and do the rotation if 
 // necessary.
 // --------------------------------------------------------------------------
-static void MaybeRotateHistory(int size_to_append)
+static void
+MaybeRotateHistory(int size_to_append)
 {
     if (!JobHistoryFileName) {
         // We aren't writing to the history file, so we will
@@ -323,7 +423,8 @@ static void MaybeRotateHistory(int size_to_append)
 // I am willing to bet that this is rare enough that it's not worth making this
 // more complicated. 
 // --------------------------------------------------------------------------
-static void RemoveExtraHistoryFiles(void)
+static void
+RemoveExtraHistoryFiles(void)
 {
     int num_backups;
 
@@ -337,7 +438,8 @@ static void RemoveExtraHistoryFiles(void)
 // Count the number of history file backups. Delete the oldest one if we
 // are at the maximum. See RemoveExtraHistoryFiles();
 // --------------------------------------------------------------------------
-static int MaybeDeleteOneHistoryBackup(void)
+static int
+MaybeDeleteOneHistoryBackup(void)
 {
     int num_backups = 0;
     char *history_dir = condor_dirname(JobHistoryFileName);
@@ -395,7 +497,8 @@ static int MaybeDeleteOneHistoryBackup(void)
 // and it should end with an ISO time. We check both, and return the time
 // specified by the ISO time. 
 // --------------------------------------------------------------------------
-static bool IsHistoryFilename(const char *filename, time_t *backup_time)
+static bool
+IsHistoryFilename(const char *filename, time_t *backup_time)
 {
     bool       is_history_filename;
     const char *history_base;
@@ -429,7 +532,8 @@ static bool IsHistoryFilename(const char *filename, time_t *backup_time)
 // --------------------------------------------------------------------------
 // Rotate the history file. This is called by MaybeRotateHistory()
 // --------------------------------------------------------------------------
-static void RotateHistory(void)
+static void
+RotateHistory(void)
 {
     // The job history will be named with the current time. 
     // I hate timestamps of seconds, because they aren't readable by 
@@ -468,7 +572,8 @@ static void RotateHistory(void)
 // history file is. We assume that the file is open. We reset the file pointer
 // to the end of the file when we are done.
 // --------------------------------------------------------------------------
-static int findHistoryOffset(FILE *LogFile)
+static int
+findHistoryOffset(FILE *LogFile)
 {
     int offset=0;
     int file_size;
@@ -534,74 +639,6 @@ static int findHistoryOffset(FILE *LogFile)
     return offset;
 }
 
-void WritePerJobHistoryFile(ClassAd* ad, bool useGjid)
-{
-	if (PerJobHistoryDir == NULL) {
-		return;
-	}
 
-	// construct the name (use cluster.proc)
-	int cluster, proc;
-	if (!ad->LookupInteger(ATTR_CLUSTER_ID, cluster)) {
-		dprintf(D_ALWAYS | D_FAILURE,
-		        "not writing per-job history file: no cluster id in ad\n");
-		return;
-	}
-	if (!ad->LookupInteger(ATTR_PROC_ID, proc)) {
-		dprintf(D_ALWAYS | D_FAILURE,
-		        "not writing per-job history file: no proc id in ad\n");
-		return;
-	}
-	MyString file_name;
-	MyString temp_file_name;
-	if (useGjid) {
-		MyString gjid;
-		ad->LookupString(ATTR_GLOBAL_JOB_ID, gjid);
-		file_name.formatstr("%s/history.%s", PerJobHistoryDir, gjid.Value());
-		temp_file_name.formatstr("%s/.history.%s.tmp", PerJobHistoryDir, gjid.Value());
-	} else {
-		file_name.formatstr("%s/history.%d.%d", PerJobHistoryDir, cluster, proc);
-		temp_file_name.formatstr("%s/.history.%d.%d.tmp", PerJobHistoryDir, cluster, proc);
-	}
 
-	// Now write out the file.  We write it first to temp_file_name, and then
-	// atomically rename it to file_name, so that another process reading history
-	// files will never see an empty file or incomplete data in the event the history file
-	// is read at the same time we are still writing it.
-
-	// first write out the file to the temp_file_name
-	int fd = safe_open_wrapper_follow(temp_file_name.Value(), O_WRONLY | O_CREAT | O_EXCL, 0644);
-	if (fd == -1) {
-		dprintf(D_ALWAYS | D_FAILURE,
-		        "error %d (%s) opening per-job history file for job %d.%d\n",
-		        errno, strerror(errno), cluster, proc);
-		return;
-	}
-	FILE* fp = fdopen(fd, "w");
-	if (fp == NULL) {
-		dprintf(D_ALWAYS | D_FAILURE,
-		        "error %d (%s) opening file stream for per-job history for job %d.%d\n",
-		        errno, strerror(errno), cluster, proc);
-		close(fd);
-		unlink(temp_file_name.Value());
-		return;
-	}
-	if (!fPrintAd(fp, *ad)) {
-		dprintf(D_ALWAYS | D_FAILURE,
-		        "error writing per-job history file for job %d.%d\n",
-		        cluster, proc);
-		fclose(fp);
-		unlink(temp_file_name.Value());
-		return;
-	}
-	fclose(fp);
-
-	// now atomically rename from temp_file_name to file_name
-    if (rotate_file(temp_file_name.Value(), file_name.Value())) {
-		dprintf(D_ALWAYS | D_FAILURE,
-		        "error writing per-job history file for job %d.%d (during rename)\n",
-		        cluster, proc);
-		unlink(temp_file_name.Value());
-    }
-}
 

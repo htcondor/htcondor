@@ -1121,7 +1121,7 @@ Condor_Auth_X509::authenticate_server_gss(CondorError* errstack, bool non_blocki
 			break;
 		}
 
-		dprintf(D_NETWORK, "gss_assist_accept_sec_context(1):inlen:%u\n", static_cast<unsigned>(input_token->length));
+		dprintf(D_NETWORK, "gss_assist_accept_sec_context(1):inlen:%lu\n", static_cast<unsigned long>(input_token->length));
 
 		major_status = (*gss_accept_sec_context_ptr)(
 			&minor_status,

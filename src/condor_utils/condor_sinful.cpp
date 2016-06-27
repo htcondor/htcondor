@@ -324,6 +324,32 @@ Sinful::addressPointsToMe( Sinful const &addr ) const
 			addr_matches = true;
 		}
 
+		// If the primary addresses (getHost()) don't match, check the
+		// other Sinful's primary against our addrs.  This isn't generally
+		// sufficient, but should solve some problems.  (Since Sinful
+		// (a) doesn't require that the primary address is one of the
+		// addrs and (b) doesn't require that the primary address is an
+		// IP literal, the full solution is way more complicated.  Simply
+		// comparing the primary and addrs addresses against each other
+		// could cause problems -- e.g., ::1 is a common IPv6 address in
+		// addrs.  Also, the current private-address comparison is broken
+		// because it discards the private network name.)
+		if(! addr_matches) {
+			if( addr.getHost() ) {
+				condor_sockaddr other;
+				other.from_ip_string( addr.getHost() );
+				if( other.is_valid() ) {
+					other.set_port( addr.getPortNum() );
+					for( unsigned i = 0; i < this->addrs.size(); ++i ) {
+						if( other == this->addrs[i] ) {
+							addr_matches = true;
+							break;
+						}
+					}
+				}
+			}
+		}
+
 		// We may have failed to match host addresses above, but we now need
 		// to cover the case of the loopback interface (aka 127.0.0.1).  A common
 		// usage pattern for this method is for "this" object to represent our daemonCore 

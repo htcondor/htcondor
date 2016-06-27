@@ -268,8 +268,8 @@ class RemoteResource : public Service {
 	void initFileTransfer();
 
 	virtual void resourceExit( int reason_for_exit, int exit_status );
-
 	virtual void updateFromStarter( ClassAd* update_ad );
+	virtual void incrementJobCompletionCount();
 
 	int64_t getImageSize( int64_t & memory_usage_out, int64_t & rss, int64_t & pss  ) { 
 		memory_usage_out = memory_usage_mb;

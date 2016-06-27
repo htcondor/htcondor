@@ -1,0 +1,5 @@
+job NodeLA job_dagman_acct_grp-node.sub
+vars NodeLA nodename = "$(JOB)"
+
+job NodeLB job_dagman_acct_grp-node.sub
+vars NodeLB nodename = "$(JOB)"

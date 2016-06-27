@@ -69,9 +69,9 @@ static MACRO_DEFAULTS TestingMacroDefaults = { 0, NULL, NULL };
 static MACRO_SET TestingMacroSet = {
 	0, 0,
 	CONFIG_OPT_WANT_META,
-	0, NULL, NULL, ALLOCATION_POOL(), std::vector<const char*>(), &TestingMacroDefaults };
+	0, NULL, NULL, ALLOCATION_POOL(), std::vector<const char*>(), &TestingMacroDefaults, NULL };
 
-MACRO_EVAL_CONTEXT def_ctx = { NULL, "TOOL", false, 2 };
+MACRO_EVAL_CONTEXT def_ctx = { NULL, "TOOL", "/home/testing", false, 2 };
 MACRO_SOURCE TestMacroSource = { false, false, 0, 0, -1, -2 };
 MACRO_SOURCE FileMacroSource = { false, false, 0, 0, -1, -2 };
 
@@ -212,6 +212,7 @@ static void insert_testing_macros(const char * local, const char * subsys)
 		{"fileAbs", "/one/two/three.for"},
 		{"urlAbs", "file:/one/two/three.for"},
 		{"fileAbsQuoted", "\"/one/two/three.for\""},
+		{"fileAbsSQuoted", "'/one/two/three.for'"},
 		{"fileRel", "ein/zwei/drei.fir"},
 		{"fileRelSpaces", "\"ein/zw ei/dr ei.fir\""},
 		{"fileCurRel", "./here"},
@@ -238,7 +239,7 @@ static void insert_testing_macros(const char * local, const char * subsys)
 		{"StandardMinusVM", "$(STANDARD)-$(VM)"},
 	};
 
-	MACRO_EVAL_CONTEXT ctx = { local, subsys, false, 2 };
+	MACRO_EVAL_CONTEXT ctx = { local, subsys, "/home/testing", false, 2 };
 
 	insert_source("Insert", TestingMacroSet, TestMacroSource);
 
@@ -348,7 +349,7 @@ void testing_parser(bool verbose)
 	MACRO_SET set = {
 		0, 0,
 		CONFIG_OPT_WANT_META | CONFIG_OPT_DEFAULTS_ARE_PARAM_INFO,
-		0, NULL, NULL, ALLOCATION_POOL(), std::vector<const char*>(), &TestingMacroDefaults
+		0, NULL, NULL, ALLOCATION_POOL(), std::vector<const char*>(), &TestingMacroDefaults, NULL
 	};
 	MACRO_SOURCE source = { false, false, 0, 0, -1, -2 };
 	insert_source("parse", set, source);
@@ -550,10 +551,16 @@ void testing_$F_expand(bool verbose)
 	REQUIRE( expand("$Fx(fileBase)") == "" );
 	REQUIRE( expand("$Fd(fileBase)") == "" );
 
+	REQUIRE( expand("$Fdf(fileBase)") == "testing/" );
+	REQUIRE( expand("$Fpf(fileBase)") == "/home/testing/" );
+
 	REQUIRE( expand("$Fd(fileDirs)") == "dur/" );
 	REQUIRE( expand("$Fdx(fileDirs)") == "dur/der" );
 	REQUIRE( expand("$Fn(fileDirs)") == "der" );
 	REQUIRE( expand("$Fpnx(fileDirs)") == "/dur/der" );
+
+	//REQUIRE( expand("$Fpnf(fileDirs)") == "/home/testing/dur/der" );
+	REQUIRE( expand("$Fdf(fileDirs)") == "dur/" );
 
 	REQUIRE( expand("$Fdnx(fileSimple)") == "simple.dat" );
 	REQUIRE( expand("$Fd(fileSimple)") == "" );
@@ -574,16 +581,23 @@ void testing_$F_expand(bool verbose)
 	REQUIRE( expand("$Fn(fileCompound)") == "base" );
 	REQUIRE( expand("$Fx(fileCompound)") == ".ex" );
 	REQUIRE( expand("$Fnx(fileCompound)") == "base.ex" );
+	//REQUIRE( expand("$Fpf(fileCompound)") == "/home/testing/dur/der/" );
+	REQUIRE( expand("$Fnf(fileCompound)") == "base" );
+	REQUIRE( expand("$Fxf(fileCompound)") == ".ex" );
+	REQUIRE( expand("$Fnxf(fileCompound)") == "base.ex" );
 
 	REQUIRE( expand("$Fdnx(fileAbs)") == "two/three.for" );
 	REQUIRE( expand("$Fpnx(fileAbs)") == "/one/two/three.for" );
 	REQUIRE( expand("$Fqpnx(fileAbs)") == "\"/one/two/three.for\"" );
 	REQUIRE( expand("$Fq(fileAbs)") == "\"/one/two/three.for\"" );
+	REQUIRE( expand("$Fqapnx(fileAbs)") == "'/one/two/three.for'" );
+	REQUIRE( expand("$Fqa(fileAbs)") == "'/one/two/three.for'" );
 	REQUIRE( expand("$Fd(fileAbs)") == "two/" );
 	REQUIRE( expand("$Fp(fileAbs)") == "/one/two/" );
 	REQUIRE( expand("$Fn(fileAbs)") == "three" );
 	REQUIRE( expand("$Fx(fileAbs)") == ".for" );
 	REQUIRE( expand("$Fnx(fileAbs)") == "three.for" );
+	REQUIRE( expand("$Fpnxf(fileAbs)") == "/one/two/three.for" );
 
 	REQUIRE( expand("$Fdnx(urlAbs)") == "two/three.for" );
 	REQUIRE( expand("$Fpnx(urlAbs)") == "file:/one/two/three.for" );
@@ -600,7 +614,23 @@ void testing_$F_expand(bool verbose)
 	REQUIRE( expand("$Fp(fileAbsQuoted)") == "/one/two/" );
 	REQUIRE( expand("$Fn(fileAbsQuoted)") == "three" );
 	REQUIRE( expand("$Fx(fileAbsQuoted)") == ".for" );
+	REQUIRE( expand("$Fdb(fileAbsQuoted)") == "two" );
+	REQUIRE( expand("$Fpb(fileAbsQuoted)") == "/one/two" );
+	REQUIRE( expand("$Fnb(fileAbsQuoted)") == "three" );
+	REQUIRE( expand("$Fxb(fileAbsQuoted)") == "for" );
 	REQUIRE( expand("$Fnx(fileAbsQuoted)") == "three.for" );
+	//REQUIRE( expand("$Fpf(fileAbsQuoted)") == "/one/two/" );
+	REQUIRE( expand("$Fqn(fileAbsQuoted)") == "\"three\"" );
+	REQUIRE( expand("$Fqan(fileAbsQuoted)") == "'three'" );
+
+	REQUIRE( expand("$Fdnx(fileAbsSQuoted)") == "two/three.for" );
+	REQUIRE( expand("$Fd(fileAbsSQuoted)") == "two/" );
+	REQUIRE( expand("$Fp(fileAbsSQuoted)") == "/one/two/" );
+	REQUIRE( expand("$Fn(fileAbsSQuoted)") == "three" );
+	REQUIRE( expand("$Fx(fileAbsSQuoted)") == ".for" );
+	REQUIRE( expand("$Fnx(fileAbsSQuoted)") == "three.for" );
+	REQUIRE( expand("$Fqn(fileAbsSQuoted)") == "\"three\"" );
+	REQUIRE( expand("$Fqan(fileAbsSQuoted)") == "'three'" );
 
 	REQUIRE( expand("$Fpnx(fileRel)") == "ein/zwei/drei.fir" );
 	REQUIRE( expand("$Fd(fileRel)") == "zwei/" );
@@ -630,6 +660,9 @@ void testing_$F_expand(bool verbose)
 	REQUIRE( expand("$Fn(fileCurRel2)") == "dos" );
 	REQUIRE( expand("$Fx(fileCurRel2)") == ".tres" );
 	REQUIRE( expand("$Fnx(fileCurRel2)") == "dos.tres" );
+	REQUIRE( expand("$Fpnxf(fileCurRel2)") == "/home/testing/uno/dos.tres" );
+	REQUIRE( expand("$Fdnxf(fileCurRel2)") == "uno/dos.tres" );
+	REQUIRE( expand("$Fpf(fileCurRel2)") == "/home/testing/uno/" );
 
 #ifdef WIN32
 	REQUIRE( expand("$Fdnx(wfileAbs)") == "two\\three.for" );

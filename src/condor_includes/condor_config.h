@@ -32,10 +32,12 @@
 #include <string>
 
 typedef std::vector<const char *> MACRO_SOURCES;
+class CondorError;
 namespace condor_params { typedef struct key_value_pair key_value_pair; }
 typedef const struct condor_params::key_value_pair MACRO_DEF_ITEM;
 #else // ! __cplusplus
 typedef void* MACRO_SOURCES; // placeholder for use in C
+typedef void  CondorError;   // placeholder for use in C
 typedef struct key_value_pair { const char * key; const void * def; } key_value_pair;
 typedef const struct key_value_pair MACRO_DEF_ITEM;
 #endif
@@ -95,12 +97,19 @@ typedef struct macro_set {
 	ALLOCATION_POOL apool;
 	MACRO_SOURCES sources;
 	MACRO_DEFAULTS * defaults; // optional reference to const defaults table
+	CondorError * errors; // optional error stack, if non NULL, use instead of fprintf to stderr
+#ifdef __cplusplus
+	// fprintf an error if the above errors field is NULL, otherwise format an error and add it to the above errorstack
+	// the preface is printed with fprintf but not with the errors stack.
+	void push_error(FILE * fh, int code, const char* preface, const char* format, ... ) CHECK_PRINTF_FORMAT(5,6);
+#endif
 } MACRO_SET;
 
 // this holds context during macro lookup/expansion
 typedef struct macro_eval_context {
 	const char *localname;
 	const char *subsys;
+	const char *cwd; // current working directory, used for $F macro expansion
 	int without_default;
 	int use_mask;
 } MACRO_EVAL_CONTEXT;

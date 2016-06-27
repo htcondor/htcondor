@@ -36,7 +36,13 @@ class MapFile
 	ParseCanonicalizationFile(const MyString filename);
 
 	int
+	ParseCanonicalization(MyStringSource & src, const char* srcname);
+
+	int
 	ParseUsermapFile(const MyString filename);
+
+	int
+	ParseUsermap(MyStringSource & src, const char * srcname);
 
 	int
 	GetCanonicalization(const MyString method,

@@ -29,8 +29,8 @@ class CondorError {
 	public:
 		CondorError();
 		~CondorError();
-		CondorError(CondorError&);
-		CondorError& operator=(CondorError&);
+		CondorError(const CondorError&);
+		CondorError& operator=(const CondorError&);
 		void push( const char* subsys, int code, const char* message );
 		void pushf( const char* subsys, int code, const char* format, ... ) CHECK_PRINTF_FORMAT(4,5); 
 		std::string getFullText( bool want_newline = false );
@@ -43,7 +43,7 @@ class CondorError {
 
 	private:
 		void init();
-		void deep_copy(CondorError&);
+		void deep_copy(const CondorError&);
 
 		char* _subsys;
 		int   _code;

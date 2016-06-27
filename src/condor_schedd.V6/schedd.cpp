@@ -591,6 +591,7 @@ Scheduler::Scheduler() :
 	JobStopDelay = 0;
 	JobStopCount = 1;
 	RequestClaimTimeout = 0;
+	MaxRunningSchedulerJobsPerOwner = INT_MAX;
 	MaxJobsRunning = 0;
 	MaxJobsSubmitted = INT_MAX;
 	MaxJobsPerOwner = INT_MAX;
@@ -1307,6 +1308,7 @@ Scheduler::count_jobs()
 			SchedUniverseJobsIdle );
 	dprintf( D_FULLDEBUG, "N_Owners = %d\n", NumOwners );
 	dprintf( D_FULLDEBUG, "MaxJobsRunning = %d\n", MaxJobsRunning );
+	dprintf( D_FULLDEBUG, "MaxRunningSchedulerJobsPerOwner = %d\n", MaxRunningSchedulerJobsPerOwner );
 
 	// later when we compute job priorities, we will need PrioRec
 	// to have as many elements as there are jobs in the queue.  since
@@ -1317,6 +1319,9 @@ Scheduler::count_jobs()
 	
 	cad->Assign(ATTR_NUM_USERS, NumOwners);
 	cad->Assign(ATTR_MAX_JOBS_RUNNING, MaxJobsRunning);
+	if (MaxRunningSchedulerJobsPerOwner >= 0 && MaxRunningSchedulerJobsPerOwner < MaxJobsPerOwner) {
+		cad->Assign( "MaxRunningSchedulerJobsPerOwner", MaxRunningSchedulerJobsPerOwner );
+	}
 
 	cad->AssignExpr(ATTR_START_LOCAL_UNIVERSE, this->StartLocalUniverse);
 	// m_adBase->AssignExpr(ATTR_START_LOCAL_UNIVERSE, this->StartLocalUniverse);
@@ -2513,10 +2518,13 @@ int
 count_a_job(JobQueueJob* job, const JOB_ID_KEY& /*jid*/, void*)
 {
 	int		status;
+#if 1  // cache ownerdata pointer in job object
+#else
 	int		niceUser;
 	MyString owner_buf;
 	char const*	owner;
 	MyString domain;
+#endif
 	int		cur_hosts;
 	int		max_hosts;
 	int		universe;
@@ -2527,6 +2535,8 @@ count_a_job(JobQueueJob* job, const JOB_ID_KEY& /*jid*/, void*)
 	if ( job == NULL ) {  
 		return 0;
 	}
+
+	job->ownerdata = NULL; // we will set this later when we fetch the ownerdata
 
 	if (job->LookupInteger(ATTR_JOB_STATUS, status) == 0) {
 		dprintf(D_ALWAYS, "Job has no %s attribute.  Ignoring...\n",
@@ -2580,6 +2590,16 @@ count_a_job(JobQueueJob* job, const JOB_ID_KEY& /*jid*/, void*)
 	}
 	
 
+#if 1 // cache ownerdata pointer in job object
+	// because we set job->ownerdata to NULL above, this will refresh
+	// the job->ownerdata pointer. we do this in case the accounting group
+	// or niceness has been queue-edited or otherwise changed.
+	OwnerData * Owner = scheduler.get_ownerdata(job);
+	if ( ! Owner) {
+		dprintf(D_ALWAYS, "Job has no %s attribute.  Ignoring...\n", ATTR_OWNER);
+		return 0;
+	}
+#else
 	// Sometimes we need the read username owner, not the accounting group
 	MyString real_owner;
 	if( ! job->LookupString(ATTR_OWNER,real_owner) ) {
@@ -2607,6 +2627,7 @@ count_a_job(JobQueueJob* job, const JOB_ID_KEY& /*jid*/, void*)
 		owner_buf.formatstr("%s.%s",NiceUserName, tmp.c_str());
 		owner = owner_buf.Value();
 	}
+#endif
 
 	// increment our count of the number of job ads in the queue
 	scheduler.JobsTotalAds++;
@@ -2661,9 +2682,13 @@ count_a_job(JobQueueJob* job, const JOB_ID_KEY& /*jid*/, void*)
     }
     #undef OTHER
 
+#if 1  // cache ownerdata pointer in job object
+#else
 	// insert owner even if REMOVED or HELD for condor_q -{global|sub}
 	// this function makes its own copies of the memory passed in 
 	OwnerData * Owner = scheduler.insert_owner(owner);
+	job->ownerdata = Owner;
+#endif
 	OwnerCounters * Counters = &Owner->num;
 
 	Counters->Hits += 1;
@@ -2753,10 +2778,15 @@ count_a_job(JobQueueJob* job, const JOB_ID_KEY& /*jid*/, void*)
 			}
 		}
 
+#if 1   // cache ownerdata pointer in job object
+		std::string real_owner, domain;
+		job->LookupString(ATTR_OWNER,real_owner); // we can't get here if the job has no ATTR_OWNER
+		job->LookupString(ATTR_NT_DOMAIN, domain);
+#endif
 		// Don't count HELD jobs that aren't externally (gridmanager) managed
 		// Don't count jobs that the gridmanager has said it's completely
 		// done with.
-		UserIdentity userident(real_owner.Value(),domain.Value(),job);
+		UserIdentity userident(real_owner.c_str(),domain.c_str(),job);
 		if ( ( status != HELD || job_managed != false ) &&
 			 job_managed_done == false ) 
 		{
@@ -2930,6 +2960,43 @@ Scheduler::insert_owner(const char * owner)
 	Owner->name = owner;
 	return Owner;
 }
+
+// lookup (and cache) pointer to the jobs submitter instance data (aka the OwnerData)
+OwnerData *
+Scheduler::get_ownerdata(JobQueueJob * job)
+{
+	if ( ! job) return NULL;
+	if (job->ownerdata) return job->ownerdata;
+
+	// Sometimes we need the read username owner, not the accounting group
+	std::string real_owner;
+	if ( ! job->LookupString(ATTR_OWNER,real_owner) ) {
+		return NULL;
+	}
+	const char *owner = real_owner.c_str();
+
+	// calculate owner for per submittor information.
+	std::string owner_alias;
+	job->LookupString(ATTR_ACCOUNTING_GROUP,owner_alias); // TODDCORE
+	if ( ! owner_alias.empty()) {
+		owner = owner_alias.c_str();
+	}
+
+	// With NiceUsers, the number of owners is
+	// not the same as the number of submittors.  So, we first
+	// check if this job is being submitted by a NiceUser, and
+	// if so, insert it as a new entry in the "Owner" table
+	int niceUser = 0;
+	if (job->LookupInteger(ATTR_NICE_USER, niceUser) && niceUser) {
+		MyString tmp(owner); // use a tmp copy of owner in case it already refers to owner_buf
+		formatstr(owner_alias, "%s.%s", NiceUserName, tmp.c_str());
+		owner = owner_alias.c_str();
+	}
+
+	job->ownerdata = scheduler.insert_owner(owner);
+	return job->ownerdata;
+}
+
 
 void
 Scheduler::remove_unused_owners()
@@ -7457,13 +7524,15 @@ find_idle_local_jobs( JobQueueJob *job, const JOB_ID_KEY&, void* )
 			}
 		}
 
-		if ( ! requirementsMet ) {
-			char *exp = sPrintExpr( scheddAd, universeExp );
-			if ( exp ) {
-				dprintf( D_FULLDEBUG, "Failed expression '%s'\n", exp );
-				free( exp );
+		if ( ! requirementsMet) {
+			if (IsDebugVerbose(D_ALWAYS)) {
+				char *exp = sPrintExpr( scheddAd, universeExp );
+				if ( exp ) {
+					dprintf( D_FULLDEBUG, "Failed expression '%s'\n", exp );
+					free( exp );
+				}
 			}
-			return ( 0 );
+			return 0;
 		}
 			//
 			// Job Requirements Evaluation
@@ -7489,18 +7558,20 @@ find_idle_local_jobs( JobQueueJob *job, const JOB_ID_KEY&, void* )
 			// If the job's requirements failed up above, we will want to 
 			// print the expression to the user and return
 			//
-		if ( ! requirementsMet ) {
-			char *exp = sPrintExpr( *job, ATTR_REQUIREMENTS );
-			if ( exp ) {
-				dprintf( D_FULLDEBUG, "Failed expression '%s'\n", exp );
-				free( exp );
+		if ( ! requirementsMet) {
+			if (IsDebugVerbose(D_ALWAYS)) {
+				char *exp = sPrintExpr( *job, ATTR_REQUIREMENTS );
+				if ( exp ) {
+					dprintf( D_FULLDEBUG, "Failed expression '%s'\n", exp );
+					free( exp );
+				// This is too verbose.
+				//dprintf(D_FULLDEBUG,"Schedd ad that failed to match:\n");
+				//dPrintAd(D_FULLDEBUG, scheddAd);
+				//dprintf(D_FULLDEBUG,"Job ad that failed to match:\n");
+				//dPrintAd(D_FULLDEBUG, *job);
+				}
 			}
-			// This is too verbose.
-			//dprintf(D_FULLDEBUG,"Schedd ad that failed to match:\n");
-			//dPrintAd(D_FULLDEBUG, scheddAd);
-			//dprintf(D_FULLDEBUG,"Job ad that failed to match:\n");
-			//dPrintAd(D_FULLDEBUG, *job);
-			return ( 0 );
+			return 0;
 		}
 
 			//
@@ -7511,6 +7582,22 @@ find_idle_local_jobs( JobQueueJob *job, const JOB_ID_KEY&, void* )
 					 id.cluster, id.proc );
 			scheduler.start_local_universe_job( &id );
 		} else {
+			// if there is a per-owner scheduler job limit that is smaller than the per-owner job limit
+			if (scheduler.MaxRunningSchedulerJobsPerOwner > 0 &&
+			    scheduler.MaxRunningSchedulerJobsPerOwner < scheduler.MaxJobsPerOwner) {
+				OwnerData * owndat = scheduler.get_ownerdata(job);
+				if (owndat->num.SchedulerJobsRunning >= scheduler.MaxRunningSchedulerJobsPerOwner) {
+					dprintf( D_FULLDEBUG,
+							 "Skipping idle scheduler universe job %d.%d because %s already has %d Scheduler jobs running\n",
+							 id.cluster, id.proc, owndat->Name(), owndat->num.SchedulerJobsRunning );
+					return 0;
+				}
+			} else if (scheduler.MaxRunningSchedulerJobsPerOwner == 0) {
+				dprintf( D_FULLDEBUG,
+						 "Skipping idle scheduler universe job %d.%d because Scheduler Universe is disabled by MaxRunningSchedulerJobsPerOwner==0 \n",
+						 id.cluster, id.proc );
+				return 0;
+			}
 			dprintf( D_FULLDEBUG,
 					 "Found idle scheduler universe job %d.%d\n",
 					 id.cluster, id.proc );
@@ -9099,7 +9186,6 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	int		pid;
 	StatInfo* filestat;
 	bool is_executable;
-	ClassAd *userJob = NULL;
 	shadow_rec *retval = NULL;
 	Env envobject;
 	MyString env_error_msg;
@@ -9126,7 +9212,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	dprintf( D_FULLDEBUG, "Starting sched universe job %d.%d\n",
 		job_id->cluster, job_id->proc );
 
-	userJob = GetJobAd(job_id->cluster,job_id->proc);
+	JobQueueJob * userJob = GetJobAd(job_id->cluster,job_id->proc);
 	ASSERT(userJob);
 
 	if (GetAttributeString(job_id->cluster, job_id->proc, ATTR_JOB_IWD,
@@ -9485,6 +9571,18 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 		SchedUniverseJobsIdle--;
 	}
 	SchedUniverseJobsRunning++;
+
+	// if we have a per-user scheduler jobs limit.  then also keep the
+	//  per-user count of idle and running scheduler jobs up-to-date
+	if (MaxRunningSchedulerJobsPerOwner >= 0 && MaxRunningSchedulerJobsPerOwner < MaxJobsPerOwner) {
+		OwnerData * owndat = get_ownerdata(userJob);
+		if (owndat) {
+			if (owndat->num.SchedulerJobsIdle > 0) {
+				owndat->num.SchedulerJobsIdle--;
+			}
+			owndat->num.SchedulerJobsRunning++;
+		}
+	}
 
 	retval =  add_shadow_rec( pid, job_id, CONDOR_UNIVERSE_SCHEDULER, NULL, -1 );
 
@@ -12031,6 +12129,7 @@ Scheduler::Init()
 	}
 	free( tmp );
 
+	MaxRunningSchedulerJobsPerOwner = param_integer("MAX_RUNNING_SCHEDULER_JOBS_PER_OWNER", INT_MAX);
 	MaxJobsSubmitted = param_integer("MAX_JOBS_SUBMITTED",INT_MAX);
 	MaxJobsPerOwner = param_integer( "MAX_JOBS_PER_OWNER", INT_MAX );
 	MaxJobsPerSubmission = param_integer( "MAX_JOBS_PER_SUBMISSION", INT_MAX );
@@ -13854,6 +13953,9 @@ Scheduler::publish( ClassAd *cad ) {
 	cad->Assign( "MaxJobsRunning", MaxJobsRunning );
 	cad->Assign( "MaxJobsSubmitted", MaxJobsSubmitted );
 	cad->Assign( "MaxJobsPerOwner", MaxJobsPerOwner );
+	if (MaxRunningSchedulerJobsPerOwner >= 0 && MaxRunningSchedulerJobsPerOwner < MaxJobsPerOwner) {
+		cad->Assign( "MaxRunningSchedulerJobsPerOwner", MaxRunningSchedulerJobsPerOwner );
+	}
 	cad->Assign( "MaxJobsPerSubmission", MaxJobsPerSubmission );
 	cad->Assign( "JobsStarted", JobsStarted );
 	cad->Assign( "SwapSpace", SwapSpace );

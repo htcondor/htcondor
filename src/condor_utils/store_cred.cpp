@@ -92,6 +92,7 @@ ZKM_UNIX_STORE_CRED(const char *user, const char *pw, const int len, int mode)
 
 	if (rawlen <= 0) {
 		dprintf(D_ALWAYS, "ZKM: failed to decode credential!\n");
+		free(rawbuf);
 		return false;
 	}
 

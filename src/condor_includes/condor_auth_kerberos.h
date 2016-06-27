@@ -61,6 +61,7 @@ class Condor_Auth_Kerberos : public Condor_Auth_Base {
     // kerberos libs on linux. Returns true on success, false on failure.
 
     int authenticate(const char * remoteHost, CondorError* errstack, bool non_blocking);
+    int authenticate_continue(CondorError*, bool);
     //------------------------------------------
     // PURPOSE: authenticate with the other side 
     // REQUIRE: hostAddr -- host to authenticate
@@ -110,6 +111,28 @@ class Condor_Auth_Kerberos : public Condor_Auth_Base {
 	static bool m_initTried;
 	static bool m_initSuccess;
 
+    // states, return vals, and drivers for non-blocking authentication
+    enum CondorAuthKerberosState {
+        ServerReceiveClientReadiness = 100,
+        ServerAuthenticate,
+        ServerReceiveClientSuccessCode
+    };
+
+    enum CondorAuthKerberosRetval {
+        Fail = 0,
+        Success,
+        WouldBlock,
+        Continue
+    };
+
+    CondorAuthKerberosState m_state;
+    krb5_ticket *     ticket_;
+
+    CondorAuthKerberosRetval doServerReceiveClientReadiness(CondorError* errstack, bool non_blocking);
+    CondorAuthKerberosRetval doServerAuthenticate(CondorError* errstack, bool non_blocking);
+    CondorAuthKerberosRetval doServerReceiveClientSuccessCode(CondorError* errstack, bool non_blocking);
+
+
     int init_user();
     //------------------------------------------
     // PURPOSE : initiailze user info for authentication
@@ -134,7 +157,9 @@ class Condor_Auth_Kerberos : public Condor_Auth_Base {
     // RETURNS : TRUE -- success; FALSE failure
     //------------------------------------------
     
-    int authenticate_server_kerberos();
+    int authenticate_server_kerberos_0();
+    int authenticate_server_kerberos_1();
+    int authenticate_server_kerberos_2();
     //------------------------------------------
     // PURPOSE : Server's authentication method
     // REQUIRE : None
@@ -157,6 +182,7 @@ class Condor_Auth_Kerberos : public Condor_Auth_Base {
     //------------------------------------------
     
     int send_request(krb5_data * request);
+    int send_request_and_receive_reply(krb5_data * request);
     //------------------------------------------
     // PURPOSE: Send an authentication request 
     // REQUIRE: None

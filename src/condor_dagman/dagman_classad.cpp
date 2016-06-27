@@ -157,6 +157,34 @@ DagmanClassad::GetSetBatchName( const MyString &primaryDagFile,
 
 //---------------------------------------------------------------------------
 void
+DagmanClassad::GetAcctInfo( MyString &group, MyString &user )
+{
+	if ( !_valid ) {
+		debug_printf( DEBUG_VERBOSE,
+					"Skipping ClassAd query -- DagmanClassad object is invalid\n" );
+		return;
+	}
+
+	Qmgr_connection *queue = OpenConnection();
+	if ( !queue ) {
+		return;
+	}
+
+	GetDagAttribute( ATTR_ACCT_GROUP, group, false );
+	debug_printf( DEBUG_VERBOSE, "Workflow accounting_group: <%s>\n",
+				group.Value() );
+
+	GetDagAttribute( ATTR_ACCT_GROUP_USER, user, false );
+	debug_printf( DEBUG_VERBOSE, "Workflow accounting_group_user: <%s>\n",
+				user.Value() );
+
+	CloseConnection( queue );
+
+	return;
+}
+
+//---------------------------------------------------------------------------
+void
 DagmanClassad::InitializeMetrics()
 {
 
@@ -242,7 +270,7 @@ DagmanClassad::GetDagAttribute( const char *attrName, MyString &attrVal,
 {
 	char *val;
 	if ( GetAttributeStringNew( _dagmanId._cluster, _dagmanId._proc,
-				attrName, &val ) != 0 ) {
+				attrName, &val ) == -1 ) {
 		if ( printWarning ) {
 			debug_printf( DEBUG_QUIET,
 					  	"Warning: failed to get attribute %s\n", attrName );

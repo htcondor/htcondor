@@ -377,6 +377,7 @@ public:
 	int submit_param_bool(const char* name, const char * alt_name, bool def_value, bool * pexists=NULL);
 	MyString submit_param_mystring( const char * name, const char * alt_name );
 	char * expand_macro(const char* value) { return ::expand_macro(value, SubmitMacroSet, mctx); }
+        const char * lookup(const char* name) { return lookup_macro(name, SubmitMacroSet, mctx); }
 
 	void set_submit_param( const char* name, const char* value);
 	void set_submit_param_used( const char* name);
@@ -433,7 +434,7 @@ public:
 	// delete the last job ClassAd returned by make_job_ad (if any)
 	void delete_job_ad();
 
-	int InsertJobExpr (const char *expr);
+	int InsertJobExpr (const char *expr, const char * source_label=NULL);
 	int InsertJobExpr (const MyString &expr);
 	int InsertJobExprInt(const char * name, int val);
 	int InsertJobExprString(const char * name, const char * val);
@@ -450,6 +451,7 @@ public:
 	const char * getScheddVersion() { return ScheddVersion.Value(); }
 	const char * getIWD() { return JobIwd.c_str(); }
 	const char * full_path(const char *name, bool use_iwd=true);
+	int check_and_universalize_path(MyString &path);
 
 protected:
 	MACRO_SET SubmitMacroSet;
@@ -518,6 +520,7 @@ protected:
 	MyString ScheddVersion; // target version of schedd, influences how jobad is filled in.
 	MyString MyProxyPassword; // set by command line or by submit file. command line wins
 	classad::References stringReqRes; // names of request_xxx submit variables that are string valued
+	classad::References forcedSubmitAttrs; // + and MY. attribute names from SUBMIT_ATTRS/EXPRS
 
 
 	// worker functions that build up the job from the hashtable
@@ -604,7 +607,10 @@ protected:
 	int FixupTransferInputFiles();
 	int SetForcedAttributes();	// set +Attrib (MY.Attrib) hashtable keys directly into the job ad.  this should be called last.
 
+
 	// private helper functions
+	void push_error(FILE * fh, const char* format, ... ) CHECK_PRINTF_FORMAT(3,4);
+	void push_warning(FILE * fh, const char* format, ... ) CHECK_PRINTF_FORMAT(3,4);
 private:
 	int64_t calc_image_size_kb( const char *name);
 

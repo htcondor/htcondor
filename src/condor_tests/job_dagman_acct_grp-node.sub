@@ -1,0 +1,6 @@
+universe = vanilla
+executable = ./x_echostring.pl
+arguments = group: $$([AcctGroup]) user: $$([AcctGroupUser])
+output = job_dagman_acct_grp-$(nodename).out
+error = job_dagman_acct_grp-$(nodename).err
+queue

@@ -67,6 +67,12 @@ class DagmanClassad {
 	void GetSetBatchName( const MyString &primaryDagFile,
 				MyString &batchName );
 
+		/** Get the AcctGroup and AcctGroupUser values from our ClassAd.
+			@param group: A MyString to receive the AcctGroup value
+			@param user: A MyString to receive the AcctGroupUser value
+		*/
+	void GetAcctInfo( MyString &group, MyString &user );
+
   private:
 		/** Initialize metrics information related to our classad.
 		*/
@@ -100,6 +106,7 @@ class DagmanClassad {
 			@param attrVal: A MyString to receive the attribute value.
 			@param printWarning: Whether to print a warning if we
 				can't get the requested attribute.
+			@return true if we got the requested attribute, false otherwise
 		*/
 	bool GetDagAttribute( const char *attrName, MyString &attrVal,
 				bool printWarning = true );

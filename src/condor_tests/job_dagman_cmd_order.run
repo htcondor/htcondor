@@ -21,19 +21,17 @@
 use CondorTest;
 use CondorUtils;
 
-$cmd = 'job_dagman_batch_name-upper.dag';
-$testdesc =  'Condor submit dag - setting & propagation of batch-name - scheduler U';
-$testname = "job_dagman_batch_name";
-$dagman_args = "-verbose -batch-name job_dagman_batch_name";
+$cmd = 'job_dagman_cmd_order.dag';
+$testdesc =  'Condor submit dag - test flexible command order - scheduler U';
+$testname = "job_dagman_cmd_order";
+$dagman_args = "-verbose";
 
-@outfiles = ("job_dagman_batch_name-upper.dag.dagman.out",
-	"job_dagman_batch_name-lower.dag.dagman.out",
-	"job_dagman_batch_name-NodeLA.out",
-	"job_dagman_batch_name-NodeLB.out",
-	"job_dagman_batch_name-NodeUA.out",
-	"job_dagman_batch_name-NodeUB.out");
-
-$expected_contents = "batch-name: job_dagman_batch_name ";
+@outfiles = ("job_dagman_cmd_order.dag.dagman.out",
+	"job_dagman_cmd_order-lower.dag.dagman.out",
+	"job_dagman_cmd_order-NodeLA.out",
+	"job_dagman_cmd_order-NodeLB.out",
+	"job_dagman_cmd_order-NodeA.out",
+	"job_dagman_cmd_order-NodeZ.out");
 
 my $killedchosen = 0;
 
@@ -86,26 +84,14 @@ $success = sub
 	CondorTest::debug("executed successfully\n",1);
 	CondorTest::debug("Verifying output\n",1);
 	$diditpass = 1;
-	shift @outfiles; # get rid of upper dagman.out
-	shift @outfiles; # get rid of lower dagman.out
 	foreach $file (@outfiles) {
 		CondorTest::debug("Checking $file\n",1);
 
-		$canopen = open(OUT, "<$file");
-		if (! (defined $canopen)) {
-			CondorTest::debug("Cannot open output file <$file>:$!\n",1);
+		if (! -e $file) {
+			CondorTest::debug("ERROR: Expected output file $file does not exist!\n",1);
 			$diditpass = 0;
-		} else {
-			$contents = do { local $/; <OUT>; };
-			chomp $contents;
-			if ($contents eq $expected_contents) {
-				CondorTest::debug("Found <$contents> in $file\n",1);
-			} else {
-				CondorTest::debug("ERROR: expected <$expected_contents> in file $file, but found <$contents>\n",1);
-				$diditpass = 0;
-			}
-			close(OUT);
 		}
+
 	}
 
 	if ($diditpass == 0) {

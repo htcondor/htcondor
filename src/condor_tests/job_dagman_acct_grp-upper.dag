@@ -1,0 +1,7 @@
+job NodeUA job_dagman_acct_grp-node.sub
+vars NodeUA nodename = "$(JOB)"
+
+job NodeUB job_dagman_acct_grp-node.sub
+vars NodeUB nodename = "$(JOB)"
+
+subdag external DagUC job_dagman_acct_grp-lower.dag
