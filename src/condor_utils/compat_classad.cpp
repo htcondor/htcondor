@@ -2635,14 +2635,11 @@ sPrintAdAsJson(std::string &output, const classad::ClassAd &ad, StringList *attr
 		attr_white_list->rewind();
 		while( (attr = attr_white_list->next()) ) {
 			if ( (expr = ad.Lookup( attr )) ) {
-				tmp_ad.Insert( attr, expr, false );
+				classad::ExprTree *new_expr = expr->Copy();
+				tmp_ad.Insert( attr, new_expr, false );
 			}
 		}
 		unparser.Unparse( output, &tmp_ad );
-		attr_white_list->rewind();
-		while( (attr = attr_white_list->next()) ) {
-			tmp_ad.Remove( attr );
-		}
 	} else {
 		unparser.Unparse( output, &ad );
 	}
