@@ -976,7 +976,7 @@ void EC2Job::doEvaluateState()
 					//
 					// According to Amazon's documentation, the stopped state
 					// only occurs for EBS-backed instances for which the
-					// parameter InstanceInstantiateShutdownBehavior is not
+					// parameter InstanceInitiatedShutdownBehavior is not
 					// set to terminated.  OpenStack blithely ignores either
 					// this parameter or this restriction, and so we can see
 					// the stopped state.  For the present, our users just
