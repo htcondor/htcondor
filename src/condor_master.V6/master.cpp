@@ -114,6 +114,7 @@ int		new_bin_delay;
 StopStateT new_bin_restart_mode = GRACEFUL;
 char	*MasterName = NULL;
 char	*shutdown_program = NULL;
+bool	skipMasterPreScript = false;
 
 int		master_backoff_constant = 9;
 int		master_backoff_ceiling = 3600;
@@ -335,6 +336,143 @@ DoCleanup(int,int,const char*)
 	}
 }
 
+// This function runs a script as HTCondor's idea of root, not (necessarily)
+// as the Linux uid 0 root (or its equivalent on other platforms).  This
+// allows us to use this to run the master pre script in personal condors.
+bool run_script_as_root( const std::string & script, const std::string & log, char const * action, uid_t desiredUID ) {
+	priv_state prev = set_root_priv();
+	int fd = safe_open_no_create( script.c_str(), O_RDONLY );
+	set_priv( prev );
+	if( -1 == fd ) {
+		dprintf( D_FULLDEBUG, "Not %s: can't open file '%s'\n", action, script.c_str() );
+		return false;
+	}
+
+	struct stat stats;
+	int rv = fstat( fd, & stats );
+	if( rv != 0 ) {
+		dprintf( D_FULLDEBUG, "Not %s: can't stat file '%s'\n", action, script.c_str() );
+		close( fd );
+		return false;
+	}
+	if( stats.st_uid != desiredUID ) {
+		dprintf( D_FULLDEBUG, "Not %s: file '%s' must be owned by UID %d.\n", action, script.c_str(), desiredUID );
+		close( fd );
+		return false;
+	}
+	if( (stats.st_mode & S_IWGRP) || (stats.st_mode & S_IWOTH) ) {
+		dprintf( D_FULLDEBUG, "Not %s: file '%s' is group or world -writeable\n", action, script.c_str() );
+		close( fd );
+		return false;
+	}
+	if(! (stats.st_mode & S_IXUSR)) {
+		dprintf( D_FULLDEBUG, "Not %s: file '%s' is not executable.\n", action, script.c_str() );
+		close( fd );
+		return false;
+	}
+	close( fd );
+
+	// Redirect the script's output into the log directory, in case anybody
+	// else cares about it.  This simplifies our code, since we don't.
+	// Do NOT block waiting for the script to exit -- shoot it in the head
+	// after twenty seconds and report an error.  Otherwise, use its exit
+	// code appropriately (may report an error).
+	pid_t childPID = fork();
+	if( childPID == 0 ) {
+		daemonCore->Forked_Child_Wants_Fast_Exit( true );
+		dprintf_init_fork_child();
+
+		priv_state prev = set_root_priv();
+
+		int fdIn = open( "/dev/null", O_RDONLY );
+		if( fdIn == -1 ) {
+			dprintf( D_FULLDEBUG, "Not %s: child failed to open /dev/null: %d.\n", action, errno );
+			exit( 1 );
+		}
+		if( dup2( fdIn, 0 ) == -1 ) {
+			dprintf( D_FULLDEBUG, "Not %s: child failed to dup /dev/null: %d.\n", action, errno );
+			exit( 1 );
+		}
+
+		int fdOut = open( log.c_str(), O_WRONLY | O_APPEND, 0644 );
+		if ((fdOut < 0) && (errno == ENOENT)) {
+			fdOut = open( log.c_str(), O_WRONLY | O_APPEND | O_CREAT, 0644 );
+		}
+		if( fdOut == -1 ) {
+			dprintf( D_FULLDEBUG, "Not %s: child failed to open '%s': %d.\n", action, log.c_str(), errno );
+			exit( 1 );
+		}
+		if( dup2( fdOut, 1 ) == -1 ) {
+			dprintf( D_FULLDEBUG, "Not %s: child failed to dup log file '%s' to stdout: %d.\n", action, log.c_str(), errno );
+			exit( 1 );
+		}
+		if( dup2( fdOut, 2 ) == -1 ) {
+			dprintf( D_FULLDEBUG, "Not %s: child failed to dup log file '%s' to stderr: %d.\n", action, log.c_str(), errno );
+			exit( 1 );
+		}
+
+		execl( script.c_str(), script.c_str(), (char *) NULL );
+
+		set_priv( prev );
+		dprintf( D_ALWAYS, "Not %s: execl() failed: %d.\n", action, errno );
+		exit( 1 );
+	} else {
+		int status = 0;
+		pid_t wait = 0;
+		unsigned timer = 20;
+
+		while( true ) {
+			wait = waitpid( childPID, & status, WNOHANG );
+			if( wait == childPID ) {
+				if( WIFEXITED(status) && WEXITSTATUS(status) == 0 ) {
+					dprintf( D_FULLDEBUG, "Completed %s.\n", action );
+					return true;
+				} else {
+					dprintf( D_FULLDEBUG, "Failed to %s, status code %d.\n", action, status );
+					return false;
+				}
+			} else if( wait == 0 ) {
+				if( --timer > 0 ) {
+					dprintf( D_FULLDEBUG, "Sleeping one second for %s (pid %d).\n", action, childPID );
+					sleep( 1 );
+				} else {
+					dprintf( D_FULLDEBUG, "Waited too long for %s, hard-killing script.\n", action );
+					kill( childPID, SIGKILL );
+					// Collect the zombie.
+					wait = waitpid( childPID, &status, WNOHANG );
+					ASSERT( wait != childPID );
+					return false;
+				}
+			} else {
+				dprintf( D_FULLDEBUG, "waitpid() failed while waiting for %s (%d).  Killing child %d.\n", action, errno, childPID );
+				kill( childPID, SIGKILL );
+				// Try again to collect the zombie?
+				waitpid( childPID, & status, WNOHANG );
+				return false;
+			}
+		}
+	}
+}
+
+void do_master_pre_script() {
+	std::string preScript;
+	if(! param( preScript, "MASTER_PRE_SCRIPT" )) {
+		dprintf( D_FULLDEBUG, "Not running root pre-script: MASTER_PRE_SCRIPT not defined.\n" );
+		return;
+	}
+
+	std::string preScriptLogFile;
+	param( preScriptLogFile, "MASTER_PRE_SCRIPT_LOG" );
+	if( preScriptLogFile.empty() ) {
+		preScriptLogFile = "/dev/null";
+	}
+
+	if( run_script_as_root( preScript, preScriptLogFile, "running root pre-script", get_my_uid() ) ) {
+		// Re-execute, passing the -s flag, since our configuration
+		// may have changed.  [TODO]
+	}
+}
+
 #if defined( LINUX )
 void do_linux_kernel_tuning() {
 	std::string kernelTuningScript;
@@ -354,118 +492,8 @@ void do_linux_kernel_tuning() {
 		return;
 	}
 
-	priv_state prev = set_root_priv();
-	int fd = safe_open_no_create( kernelTuningScript.c_str(), O_RDONLY );
-	set_priv( prev );
-	if( -1 == fd ) {
-		dprintf( D_FULLDEBUG, "Not tuning kernel parameters: can't open file '%s'\n", kernelTuningScript.c_str() );
-		return;
-	}
-
-	struct stat stats;
-	int rv = fstat( fd, & stats );
-	if( rv != 0 ) {
-		dprintf( D_FULLDEBUG, "Not tuning kernel parameters: can't stat file '%s'\n", kernelTuningScript.c_str() );
-		close( fd );
-		return;
-	}
-	if( stats.st_uid != 0 ) {
-		dprintf( D_FULLDEBUG, "Not tuning kernel parameters: file '%s' must be owned by root.\n", kernelTuningScript.c_str() );
-		close( fd );
-		return;
-	}
-	if( (stats.st_mode & S_IWGRP) || (stats.st_mode & S_IWOTH) ) {
-		dprintf( D_FULLDEBUG, "Not tuning kernel parameters: file '%s' is group or world -writeable\n", kernelTuningScript.c_str() );
-		close( fd );
-		return;
-	}
-	if(! (stats.st_mode & S_IXUSR)) {
-		dprintf( D_FULLDEBUG, "Not tuning kernel parameters: file '%s' is not executable.\n", kernelTuningScript.c_str() );
-		close( fd );
-		return;
-	}
-	close( fd );
-
-	// Redirect the script's output into the log directory, in case anybody
-	// else cares about it.  This simplifies our code, since we don't.
-	// Do NOT block waiting for the script to exit -- shoot it in the head
-	// after twenty seconds and report an error.  Otherwise, use its exit
-	// code appropriately (may report an error).
-	pid_t childPID = fork();
-	if( childPID == 0 ) {
-		daemonCore->Forked_Child_Wants_Fast_Exit( true );
-		dprintf_init_fork_child();
-
-		priv_state prev = set_root_priv();
-
-		int fd = open( "/dev/null", O_RDONLY );
-		if( fd == -1 ) {
-			dprintf( D_FULLDEBUG, "Not tuning kernel parameters: child failed to open /dev/null: %d.\n", errno );
-			exit( 1 );
-		}
-		if( dup2( fd, 0 ) == -1 ) {
-			dprintf( D_FULLDEBUG, "Not tuning kernel parameters: child failed to dup /dev/null: %d.\n", errno );
-			exit( 1 );
-		}
-		fd = open( kernelTuningLogFile.c_str(), O_WRONLY | O_APPEND, 0644 );
-		if ((fd < 0) && (errno == ENOENT)) {
-			fd = open( kernelTuningLogFile.c_str(), O_WRONLY | O_APPEND | O_CREAT, 0644 );
-		}
-		if( fd == -1 ) {
-			dprintf( D_FULLDEBUG, "Not tuning kernel parameters: child failed to open '%s': %d.\n", kernelTuningLogFile.c_str(), errno );
-			exit( 1 );
-		}
-		if( dup2( fd, 1 ) == -1 ) {
-			dprintf( D_FULLDEBUG, "Not tuning kernel parameters: child failed to dup log file '%s' to stdout: %d.\n", kernelTuningLogFile.c_str(), errno );
-			exit( 1 );
-		}
-		if( dup2( fd, 2 ) == -1 ) {
-			dprintf( D_FULLDEBUG, "Not tuning kernel parameters: child failed to dup log file '%s' to stderr: %d.\n", kernelTuningLogFile.c_str(), errno );
-			exit( 1 );
-		}
-
-		execl( kernelTuningScript.c_str(), kernelTuningScript.c_str(), (char *) NULL );
-
-		set_priv( prev );
-		dprintf( D_ALWAYS, "Did not tune kernel paramters: execl() failed: %d.\n", errno );
-		exit( 1 );
-	} else {
-		int status = 0;
-		pid_t wait = 0;
-		unsigned timer = 20;
-
-		while( true ) {
-			wait = waitpid( childPID, & status, WNOHANG );
-			if( wait == childPID ) {
-				if( WIFEXITED(status) && WEXITSTATUS(status) == 0 ) {
-					dprintf( D_FULLDEBUG, "Kernel parameters tuned.\n" );
-					return;
-				} else {
-					dprintf( D_FULLDEBUG, "Failed to tune kernel parameters, status code %d.\n", status );
-					return;
-				}
-			} else if( wait == 0 ) {
-				if( --timer > 0 ) {
-					dprintf( D_FULLDEBUG, "Sleeping one second for kernel parameter tuning (pid %d).\n", childPID );
-					sleep( 1 );
-				} else {
-					dprintf( D_FULLDEBUG, "Waited too long for kernel parameters to be tuned, hard-killing script.\n" );
-					kill( childPID, SIGKILL );
-					// Collect the zombie.
-					wait = waitpid( childPID, &status, WNOHANG );
-					ASSERT( wait != childPID );
-					return;
-				}
-			} else {
-				dprintf( D_FULLDEBUG, "waitpid() failed while waiting for kernel tuning (%d).  Killing child %d.\n", errno, childPID );
-				kill( childPID, SIGKILL );
-				// Try again to collect the zombie?
-				waitpid( childPID, & status, WNOHANG );
-				return;
-			}
-		}
-	}
-
+	run_script_as_root( kernelTuningScript, kernelTuningLogFile,
+		"tuning kernel parameters", 0 );
 }
 #endif
 
@@ -475,16 +503,20 @@ main_init( int argc, char* argv[] )
     extern int runfor;
 	char	**ptr;
 
-	if ( argc > 3 ) {
+	if ( argc > 4 ) {
 		usage( argv[0] );
 	}
-	
+
 	int argc_count = 1;
 	for( ptr=argv+1, argc_count = 1; argc_count<argc && *ptr; ptr++,argc_count++) {
 		if( ptr[0][0] != '-' ) {
 			usage( argv[0] );
 		}
 		switch( ptr[0][1] ) {
+		case 's':
+			dprintf( D_ALWAYS, "Skipping master pre-script.\n" );
+			skipMasterPreScript = true;
+			break;
 		case 'n':
 			ptr++;
 			if( !(ptr && *ptr) ) {
@@ -1623,6 +1655,11 @@ main_pre_command_sock_init()
 	lock_or_except( lock_file.Value() );
 	dprintf (D_FULLDEBUG, "Obtained lock on %s.\n", lock_file.Value() );
 #endif
+
+	// Unless the command-line says otherwise, run the pre-scipt.
+	if(! skipMasterPreScript) {
+		do_master_pre_script();
+	}
 
 	// Do any kernel tuning we've been configured to do.
 	if( param_boolean( "ENABLE_KERNEL_TUNING", false ) ) {

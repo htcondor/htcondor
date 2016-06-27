@@ -13,6 +13,16 @@ default=$(LIBEXEC)/linux_kernel_tuning
 type=path
 review=?
 
+[MASTER_PRE_SCRIPT_LOG]
+default=$(LOG)/MasterPreScript.log
+type=path
+review=?
+
+[MASTER_PRE_SCRIPT]
+default=$(LIBEXEC)/master_pre_script
+type=path
+review=?
+
 [COLLECTOR_ENVIRONMENT]
 # XXX follows pattern of %s_ENVIRONMENT
 default=
