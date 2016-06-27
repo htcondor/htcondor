@@ -45,8 +45,8 @@ class StartdCronJobMgr : public CronJobMgr
 	};
 
   protected:
-	StartdCronJobParams *CreateJobParams( const char *job_name );
-	StartdCronJob *CreateJob( CronJobParams *job_params );
+	virtual StartdCronJobParams *CreateJobParams( const char *job_name );
+	virtual StartdCronJob *CreateJob( CronJobParams *job_params );
 
   private:
 	bool m_shutting_down;
