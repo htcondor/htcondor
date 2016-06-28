@@ -60,6 +60,11 @@ daemon authenticating clients with Kerberos to handle more simultaneous
 incoming connections.
 \Ticket{5737}
 
+\item Simplified how job leases are handled for grid universe jobs.
+Now, all jobs going to the same remote resource share a single lease
+time.
+\Ticket{5625}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
