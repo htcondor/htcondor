@@ -428,7 +428,10 @@ class Dag {
     		@param whether to consider the final node, if any
 			@return true iff the DAG is finished but there is a cycle
 		*/
-	inline bool DoneCycle( bool includeFinalNode) const;
+	bool DoneCycle( bool includeFinalNode) const;
+		
+		//TEMPTEMP -- document
+	bool IsStuck() const;
 
 		/** Submit all ready jobs, provided they are not waiting on a
 			parent job or being throttled.
@@ -735,6 +738,7 @@ class Dag {
 		DAG_STATUS_RM = 4, // DAGMan job condor rm'ed
 		DAG_STATUS_CYCLE = 5, // A cycle in the DAG
 		DAG_STATUS_HALTED = 6, // DAG was halted and submitted jobs finished
+		DAG_STATUS_STUCK = 7, // All queued jobs on hold, etc.
 	};
 
 	dag_status _dagStatus;

@@ -1681,6 +1681,25 @@ void condor_event_timer () {
 		main_shutdown_rescue( EXIT_ERROR, dagStatus );
 		return;
     }
+
+	if ( dagman.dag->IsStuck() ) {
+		//TEMPTEMP -- should we do the timing out here or inside the IsStuck mehthod?
+		debug_printf( DEBUG_QUIET, "Warning: DAG is \"stuck\"\n" );//TEMPTEMP?
+		//TEMPTEMP -- what we should really do here is set a time if we've
+		//just transitioned to the "stuck" state, and check the time if
+		//we're in the stuck state
+		//if ( stuckTimestamp == 0 ) {
+			//stuckTimestamp = now
+		//}
+		//if ( now - stuckTimestamp > maxStuckTime ) {
+			debug_printf( DEBUG_QUIET,
+						"DAG has been \"stuck\" for %d minutes -- exiting\n",
+						0/*TEMPTEMP*/ );
+			Dag::dag_status dagStatus = Dag::DAG_STATUS_STUCK;
+			main_shutdown_rescue( EXIT_ERROR, dagStatus );
+			return;
+		//}
+	}
 }
 
 

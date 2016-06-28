@@ -1912,6 +1912,30 @@ Dag::DoneCycle( bool includeFinalNode) const
 }
 
 //---------------------------------------------------------------------------
+//TEMPTEMP -- where should this be checked?
+bool
+Dag::IsStuck() const
+{
+//TEMPTEMP -- need to deal with deferred scripts
+//TEMPTEMP -- need to deal with multi-proc clusters
+	if ( !_readyQ->IsEmpty() ) {
+debug_printf( DEBUG_QUIET, "DIAG 1010\n" );//TEMPTEMP
+		return false;
+	} else if ( NumHeldJobProcs() < NumJobsSubmitted() ) {//TEMPTEMP -- this is wrong!!!!!!
+debug_printf( DEBUG_QUIET, "DIAG 1020\n" );//TEMPTEMP
+		return false;
+	//TEMPTEMP? } else if ( NumScriptsRunning() > 0 ) {
+	} else if ( ScriptRunNodeCount() > 0 ) {//TEMPTEMP -- make sure this is right!
+debug_printf( DEBUG_QUIET, "DIAG 1030\n" );//TEMPTEMP
+		return false;
+	}
+	//TEMPTEMP -- are there other cases we have to check??
+
+debug_printf( DEBUG_QUIET, "DIAG 1040\n" );//TEMPTEMP
+	return true;
+}
+
+//---------------------------------------------------------------------------
 int
 Dag::NumNodes( bool includeFinal ) const
 {
