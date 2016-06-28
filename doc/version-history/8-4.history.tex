@@ -92,6 +92,19 @@ to run them.
 crash when the \Opt{-xml} option is used.
 \Ticket{5718}
 
+\item Fixed a bug that caused the \Condor{master} to stop responding after it
+restarted a child daemon when shared port is enabled on Windows. This bug could also
+result in a hang on shutdown.
+\Ticket{5713}
+
+\item Fixed a bug introduced in the 8.4.7 release that resulted in the remote
+\Condor{history} command failing unless the \Opt{-limit} argument is used.
+\Ticket{5735}
+
+\item Fixed a bug in \Condor{history} that caused it to treat all unrecognised arguments
+as user names
+\Ticket{5706}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
