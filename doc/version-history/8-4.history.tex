@@ -71,6 +71,14 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item The high-availability daemon now properly detects changes to the
+\MacroNI{HAD\_LIST} when reconfigured.
+\Ticket{5753}
+
+\item The high-availability daemon now properly internalizes the
+\MacroNI{HAD\_LIST} when reconfigured.
+\Ticket{5754}
+
 \item Fixed a memory leak in the condor\_q client code that impacted
 users of the Python API call htcondor.Schedd().query().
 \Ticket{5727}
