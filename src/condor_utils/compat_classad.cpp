@@ -555,9 +555,14 @@ bool userMap_func( const char * /*name*/,
 			// preferred item match is case-insensitive
 			std::string pref;
 			const char * selected_item = NULL;
-			if (prefVal.IsStringValue(pref)) { selected_item = items.find(pref.c_str(), true); }
+			const bool any_case = true;
+			if (prefVal.IsStringValue(pref)) { selected_item = items.find(pref.c_str(), any_case); }
+		#if 1
+			else if (prefVal.IsUndefinedValue()) { selected_item = items.first(); }
+		#else
 			// if preferred item is not in the list, use the first item
 			if ( ! selected_item) { selected_item = items.first(); }
+		#endif
 			if (selected_item) {
 				result.SetStringValue(selected_item);
 			} else if (cargs < 4) {

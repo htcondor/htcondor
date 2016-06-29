@@ -60,13 +60,22 @@ to the grid ads that the \Condor{gridmanager} sends to the \Condor{collector}:
   \item GahpCommandsQueued
   \item GahpCommandRuntime
   \end{itemize}
-
 \Ticket{5698}
 
 \item Kerberos authentication is now non-blocking, allowing an HTCondor
 daemon authenticating clients with Kerberos to handle more simultaneous
 incoming connections.
 \Ticket{5737}
+
+\item Simplified how job leases are handled for grid universe jobs.
+Now, all jobs going to the same remote resource share a single lease
+time.
+\Ticket{5625}
+
+\item The \Condor{shadow}, \Condor{starter} and \Condor{c-gahp} daemons
+now log TCP statistics for file transfers.  See ~\ref{dflag:stats} for
+more details.
+\Ticket{5663}
 
 \end{itemize}
 

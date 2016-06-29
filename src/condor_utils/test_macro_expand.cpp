@@ -30,6 +30,8 @@
 #include <vector>
 #include <string>
 
+// for testing the userMap classad function
+extern int add_user_mapping(const char * mapname, char * mapdata);
 
 //uncomment if   SUBSYS.LOCAL.KNOB is allowed.
 //#define ALLOW_SUBSYS_LOCAL_HEIRARCHY 1
@@ -231,12 +233,15 @@ static void insert_testing_macros(const char * local, const char * subsys)
 		{"Items5Quoted", "\"aa bb cc dd ee\""},
 		{"List6c", "aa,bb, cc,dd,ee,ff"},
 		{"MASTER.List6c", "JMK,Vvv,XX,YY,ZKM,ZA"},
-		{"List6cfq", "$Fq(list6c)"},
+		{"List6cq", "$Fq(list6c)"},
 
 		// for $INT and $REAL tests
 		{"DoubleVanilla", "$(VANILLA)*2"},
 		{"HalfVanilla", "$(VANILLA)/2.0"},
 		{"StandardMinusVM", "$(STANDARD)-$(VM)"},
+
+		// for $STRING and $EVAL tests
+		{"Version","\"$Version: 8.5.6 May 20 2016 998822 $\""},
 	};
 
 	MACRO_EVAL_CONTEXT ctx = { local, subsys, "/home/testing", false, 2 };
@@ -786,6 +791,35 @@ void testing_$SUBSTR_expand(bool verbose)
 	REQUIRE( expand_as("MASTER", "$SUBSTR(fileCompound,standard)") == "ur/der/base.ex" );
 }
 
+void testing_$STRING_expand(bool verbose)
+{
+	if (verbose) {
+		fprintf( stdout, "\n----- testing_$STRING_expand ----\n\n");
+	}
+
+	insert_macro("items6", "strcat($(Items5Quoted),\" ff\")", TestingMacroSet,  TestMacroSource, def_ctx);
+	insert_macro("VerNum", "split($(Version))[1]", TestingMacroSet,  TestMacroSource, def_ctx);
+	insert_macro("FullVerNum", "strcat(split($(Version))[1],\".\",split($(Version))[5])", TestingMacroSet,  TestMacroSource, def_ctx);
+
+	REQUIRE( expand("$STRING(ITEMS5quoted)") == "aa bb cc dd ee" );
+	REQUIRE( expand("$STRING(Items6)") == "aa bb cc dd ee ff" );
+	REQUIRE( expand("$STRING(VerNum)") == "8.5.6" );
+	REQUIRE( expand("$STRING(FullVerNum)") == "8.5.6.998822" );
+
+	REQUIRE( expand("$STRING(list6cq)") == "aa,bb, cc,dd,ee,ff" );
+	REQUIRE( expand_as("MASTER", "$STRING(list6cq)") == "JMK,Vvv,XX,YY,ZKM,ZA" );
+
+	// if param lookup fails, we parse as an expression, and a simple variable name
+	// will parse as an attribute reference and then round trip unchanged. it's 
+	// unclear that this is the correct thing to do.  but it's what happens right now.
+	REQUIRE( expand("$STRING(BAR)") == "BAR" );
+
+	// now do some formatting tests...
+	REQUIRE( expand("$STRING(Items6,%20s)") == "   aa bb cc dd ee ff" );
+	REQUIRE( expand("$STRING(Items6,%-20s)") == "aa bb cc dd ee ff   " );
+	REQUIRE( expand("$STRING(Items6,%10.10s)") == "aa bb cc d" );
+}
+
 void testing_$INT_expand(bool verbose)
 {
 	if (verbose) {
@@ -826,6 +860,51 @@ void testing_$REAL_expand(bool verbose)
 	REQUIRE( within(expand("$REAL(BackgroundLoad,%e)"), "3.000000e-0001", "3.000000e-01") );
 }
 
+void testing_$EVAL_expand(bool verbose)
+{
+	if (verbose) {
+		fprintf( stdout, "\n----- testing_$EVAL_expand ----\n\n");
+	}
+	REQUIRE( expand("$EVAL(4)") == "4" );
+	REQUIRE( expand("$EVAL(4+4)") == "8" );
+	REQUIRE( expand("$EVAL(bar)") == "undefined" );
+
+	insert_macro("SplitVer", "split($(Version))", TestingMacroSet,  TestMacroSource, def_ctx);
+	REQUIRE( expand("$EVAL(SplitVer)") == "{ \"$Version:\",\"8.5.6\",\"May\",\"20\",\"2016\",\"998822\",\"$\" }" );
+
+	add_user_mapping("grouptest", "* alice Security,MetalShop\n* bob Security,WoodShop\n");
+	insert_macro("BobsGroups", "userMap(\"grouptest\",\"bob\")", TestingMacroSet,  TestMacroSource, def_ctx);
+	insert_macro("BobsFirst", "userMap(\"grouptest\",\"bob\",undefined)", TestingMacroSet,  TestMacroSource, def_ctx);
+	insert_macro("BobsShop", "userMap(\"grouptest\",\"bob\",\"woodshop\")", TestingMacroSet,  TestMacroSource, def_ctx);
+	insert_macro("BobsUnshop", "userMap(\"grouptest\",\"bob\",\"shop\")", TestingMacroSet,  TestMacroSource, def_ctx);
+	REQUIRE( expand("$EVAL(BobsGroups)") == "Security,WoodShop" );
+	REQUIRE( expand("$EVAL(BobsFirst)") == "Security" );
+	REQUIRE( expand("$EVAL(BobsShop)") == "WoodShop" );
+	REQUIRE( expand("$EVAL(BobsUnShop)") == "undefined" );
+
+	insert_macro("AlicesGroups", "userMap(\"grouptest\",\"alice\")", TestingMacroSet,  TestMacroSource, def_ctx);
+	insert_macro("AlicesFirst", "userMap(\"grouptest\",\"alice\",undefined)", TestingMacroSet,  TestMacroSource, def_ctx);
+	insert_macro("AlicesShop", "userMap(\"grouptest\",\"alice\",\"metalshop\")", TestingMacroSet,  TestMacroSource, def_ctx);
+	insert_macro("AlicesUnshop", "userMap(\"grouptest\",\"alice\",\"shop\",\"AutoShop\")", TestingMacroSet,  TestMacroSource, def_ctx);
+	insert_macro("AlicesDefGroup", "userMap(\"grouptest\",\"alice\",undefined,\"AutoShop\")", TestingMacroSet,  TestMacroSource, def_ctx);
+	REQUIRE( expand("$EVAL(AlicesGroups)") == "Security,MetalShop" );
+	REQUIRE( expand("$EVAL(AlicesFirst)") == "Security" );
+	REQUIRE( expand("$EVAL(AlicesShop)") == "MetalShop" );
+	REQUIRE( expand("$EVAL(AlicesUnShop)") == "AutoShop" );
+	REQUIRE( expand("$EVAL(AlicesDefGroup)") == "Security" );
+
+	insert_macro("JohnsGroups", "userMap(\"grouptest\",\"john\")", TestingMacroSet,  TestMacroSource, def_ctx);
+	insert_macro("JohnsFirst", "userMap(\"grouptest\",\"john\",undefined)", TestingMacroSet,  TestMacroSource, def_ctx);
+	insert_macro("JohnsShop", "userMap(\"grouptest\",\"john\",\"metalshop\")", TestingMacroSet,  TestMacroSource, def_ctx);
+	insert_macro("JohnsUnShop", "userMap(\"grouptest\",\"john\",\"shop\",\"AutoShop\")", TestingMacroSet,  TestMacroSource, def_ctx);
+	insert_macro("JohnsDefGroup", "userMap(\"grouptest\",\"john\",undefined,\"AutoShop\")", TestingMacroSet,  TestMacroSource, def_ctx);
+	REQUIRE( expand("$EVAL(JohnsGroups)") == "undefined" );
+	REQUIRE( expand("$EVAL(JohnsFirst)") == "undefined" );
+	REQUIRE( expand("$EVAL(JohnsShop)") == "undefined" );
+	REQUIRE( expand("$EVAL(JohnsUnShop)") == "AutoShop" );
+	REQUIRE( expand("$EVAL(JohnsDefGroup)") == "AutoShop" );
+}
+
 // runs all of the tests in non-verbose mode by default (i.e. printing only failures)
 // individual groups of tests can be run by using the -t:<tests> option where <tests>
 // is one or more of 
@@ -861,11 +940,12 @@ int main( int /*argc*/, const char ** argv) {
 					case 'e': test_flags |= 0x0008; break; // $ENV
 					case 'F': test_flags |= 0x0010 | 0x0020; break;	 // $F
 					case 'c': test_flags |= 0x0040; break; // $CHOICE
-					case 's': test_flags |= 0x0080; break; // $SUBSTR
+					case 's': test_flags |= 0x0080; break; // $SUBSTR, $STRING
 					case 'i': test_flags |= 0x0100; break; // $INT
 					case 'f': test_flags |= 0x0200; break; // $REAL
 					case 'n': test_flags |= 0x0100 | 0x0200; break; // $INT, $REAL
-					case 'r': test_flags |= 0x0400; break; // $RANDOM_INTEGER and $RANDOM_CHOICE
+					case 'v': test_flags |= 0x0400; break; // $EVAL
+					case 'r': test_flags |= 0x0800; break; // $RANDOM_INTEGER and $RANDOM_CHOICE
 					case 'p': test_flags |= 0x1000; break; // parse
 					}
 				}
@@ -896,11 +976,13 @@ int main( int /*argc*/, const char ** argv) {
 
 	if (test_flags & 0x0040) testing_$CHOICE_expand(dash_verbose);
 	if (test_flags & 0x0080) testing_$SUBSTR_expand(dash_verbose);
+	if (test_flags & 0x0080) testing_$STRING_expand(dash_verbose);
 
 	if (test_flags & 0x0100) testing_$INT_expand(dash_verbose);
 	if (test_flags & 0x0200) testing_$REAL_expand(dash_verbose);
+	if (test_flags & 0x0400) testing_$EVAL_expand(dash_verbose);
 
-	if (test_flags & 0x0400) testing_$RAND_expand(dash_verbose);
+	if (test_flags & 0x0800) testing_$RAND_expand(dash_verbose);
 
 	if (test_flags & 0x1000) testing_parser(dash_verbose);
 
