@@ -108,7 +108,9 @@ bool init_local_hostname_impl()
 		local_fqdn_initialized = true;
 		if (!local_ipaddr_initialized) {
 			local_ipaddr = convert_hostname_to_ipaddr(local_hostname);
-			local_ipaddr_initialized = true;
+			if (local_ipaddr != condor_sockaddr::null) {
+				local_ipaddr_initialized = true;
+			}
 		}
 	}
 
@@ -308,8 +310,16 @@ int get_fqdn_and_ip_from_hostname(const MyString& hostname,
 	if (nodns_enabled()) {
 		// if nodns is enabled, convert hostname to ip address directly
 		ret_addr = convert_hostname_to_ipaddr(hostname);
-		found_ip = true;
-	} else {
+
+		// note that convert_hostname_to_ipaddr() could fail; if so,
+		// leave found_ip = false and fall through to the block below
+		// where we try to use the resolver.
+		if (ret_addr != condor_sockaddr::null) {
+			found_ip = true;
+		}
+	}
+
+	if (!found_ip) {
 		// we look through getaddrinfo and gethostbyname
 		// to further seek fully-qualified domain name and corresponding
 		// ip address
@@ -576,6 +586,7 @@ MyString convert_ipaddr_to_hostname(const condor_sockaddr& addr)
 	return ret;
 }
 
+// Upon failure, return condor_sockaddr::null
 condor_sockaddr convert_hostname_to_ipaddr(const MyString& fullname)
 {
 	MyString hostname;
