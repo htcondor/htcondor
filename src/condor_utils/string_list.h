@@ -51,7 +51,7 @@ public:
 											StringList *matches);
 
 	/** This doesn't have any side affects */
-	bool find( const char *str, bool anycase = false ) const;
+	const char * find( const char *str, bool anycase = false ) const;
 
 	void print (void);
 	void rewind (void) { m_strings.Rewind(); }

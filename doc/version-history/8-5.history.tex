@@ -12,6 +12,36 @@ This is the development release series of HTCondor.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-8-5-7}Version 8.5.7}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item HTCondor version 8.5.7 not yet released.
+%\item HTCondor version 8.5.7 released on Month Date, 2016.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-8-5-6}Version 8.5.6}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -59,6 +89,11 @@ daemon authenticating clients with Kerberos to handle more simultaneous
 incoming connections.
 \Ticket{5737}
 
+\item Simplified how job leases are handled for grid universe jobs.
+Now, all jobs going to the same remote resource share a single lease
+time.
+\Ticket{5625}
+
 \item The \Condor{shadow}, \Condor{starter} and \Condor{c-gahp} daemons
 now log TCP statistics for file transfers.  See ~\ref{dflag:stats} for
 more details.
@@ -81,6 +116,11 @@ any resources.
 \item No longer leak a file in the user's home directory each time a
 job is submitted to SLURM.
 \Ticket{5742}
+
+\item Fixed a bug when attempting to authenticate using multiple
+methods wherein if a method failed, the remaining methods were not
+always attempted.
+\Ticket{5673}
 
 \end{itemize}
 

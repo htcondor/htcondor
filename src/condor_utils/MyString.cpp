@@ -158,7 +158,8 @@ MyString::assign_str( const char *s, int s_len )
 			capacity = s_len;
 			Data = new char[capacity+1];
 		}
-		strcpy( Data, s );
+		strncpy( Data, s, s_len );
+		Data[s_len] = 0;
 		Len = s_len;
 	}
 }
@@ -275,13 +276,16 @@ MyString::append_str( const char *s, int s_len )
 
 	if (pCopy)
 	{
-		strcpy( Data + Len, pCopy); // b/c you invalided s w/reserve_at_least
+		strncpy( Data + Len, pCopy, s_len); // b/c you invalided s w/reserve_at_least
 		delete [] pCopy; 
 	}
 	else
-		strcpy( Data + Len, s);
+	{
+		strncpy( Data + Len, s, s_len);
+	}
 
 	Len += s_len;
+	Data[Len] = 0;
 }
 
 void
@@ -910,12 +914,70 @@ MyString::readLine( FILE* fp, bool append )
 		} else {
 			*this += buf;
 		}
-		if( Len && Data[Len-1] == '\n' ) {
+		if( Len && Data[Len-1] == '\n' )
+		{
 				// we found a newline, return success
 			return true;
 		}
 	}
 }
+
+// the MyStringFpSource can just use MyString::readLine
+bool
+MyStringFpSource::readLine(MyString & str, bool append /* = false*/)
+{
+	return str.readLine(fp, append);
+}
+
+bool
+MyStringFpSource::isEof()
+{
+	return feof(fp) != 0;
+}
+
+
+// the MyStringCharSource scans a string buffer returning
+// whenver it sees a \n
+bool
+MyStringCharSource::readLine(MyString & str, bool append /* = false*/)
+{
+	ASSERT(ptr);
+	char * p = ptr+ix;
+
+	// scan for the next \n and return it plus all the chars up until it
+	int cch = 0;
+	while (p[cch] && p[cch] != '\n') ++cch;
+	if (p[cch] == '\n') ++cch;
+
+	// if we did not advance, then we are at EOF
+	if ( ! cch) {
+		if ( ! append) str.clear();
+		return false;
+	}
+
+	if (append) {
+		str.append_str(p, cch);
+	} else {
+		str.assign_str(p, cch);
+	}
+
+	// advance the current position past what we returned.
+	ix += cch;
+	return true;
+}
+
+bool
+MyStringCharSource::isEof()
+{
+	return !ptr || !ptr[ix];
+}
+
+// populate a MyString from any MyStringSource
+//
+bool MyString::readLine( MyStringSource & src, bool append /*= false*/) {
+	return src.readLine(*this, append);
+}
+
 
 /*--------------------------------------------------------------------
  *

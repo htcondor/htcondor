@@ -1407,6 +1407,9 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 		}
 	}
 
+    jobAd->CopyAttribute(ATTR_NETWORK_IN, update_ad);
+    jobAd->CopyAttribute(ATTR_NETWORK_OUT, update_ad);
+
     jobAd->CopyAttribute(ATTR_BLOCK_READ_KBYTES, update_ad);
     jobAd->CopyAttribute(ATTR_BLOCK_WRITE_KBYTES, update_ad);
     jobAd->CopyAttribute("Recent" ATTR_BLOCK_READ_KBYTES, update_ad);

@@ -28,6 +28,13 @@
 #include "classad/classadCache.h"
 #include "env.h"
 #include "condor_arglist.h"
+#define CLASSAD_USER_MAP_RETURNS_STRINGLIST 1
+
+class MapFile;
+extern bool user_map_do_mapping(const char * mapname, const char * input, MyString & output);
+extern void clear_user_maps(StringList * keep_list);
+extern int add_user_map(const char * mapname, const char * filename, MapFile * mf /*=NULL*/);
+extern int add_user_mapping(const char * mapname, char * mapdata);
 
 #if defined(HAVE_DLOPEN)
 #include <dlfcn.h>
@@ -84,6 +91,32 @@ Reconfig()
 				}
 			}
 		}
+	}
+
+	auto_free_ptr user_map_names(param("CLASSAD_USER_MAP_NAMES"));
+	if (user_map_names) {
+		StringList names(user_map_names.ptr());
+
+		// clear user maps that are no long in the names list
+		clear_user_maps(&names);
+
+		// load/refresh the user maps that are in the list
+		auto_free_ptr user_map;
+		for (const char * name = names.first(); name != NULL; name = names.next()) {
+			MyString param_name("CLASSAD_USER_MAPFILE_"); param_name += name;
+			user_map.set(param(param_name.c_str()));
+			if (user_map) {
+				add_user_map(name, user_map.ptr(), NULL);
+			} else {
+				param_name.formatstr("CLASSAD_USER_MAPDATA_%s", name);
+				user_map.set(param(param_name.c_str()));
+				if (user_map) {
+					add_user_mapping(name, user_map.ptr());
+				}
+			}
+		}
+	} else {
+		clear_user_maps(NULL);
 	}
 
 	char *user_python_char = param("CLASSAD_USER_PYTHON_MODULES");
@@ -158,6 +191,7 @@ void releaseTheMatchAd()
 
 	the_match_ad_in_use = false;
 }
+
 
 static
 bool stringListSize_func( const char * /*name*/,
@@ -449,6 +483,97 @@ bool stringListRegexpMember_func( const char * /*name*/,
 
 	return true;
 }
+
+// map an input string using the given mapping set, this works using the
+// same mapping function that the security layer uses to map security principals
+// usage: 
+//           // the 2 argument form returns a list of groups
+//        userMap("user_to_groups", "user") -> {"group1","group2"}
+// 
+//           // the 3 argument form returns a single string. it will return the preferred group
+//           // if the user is in that group. otherwise it will return the first group
+//        userMap("user_to_groups", "user", "group2") -> "group2"
+//        userMap("user_to_groups", "user", "group3") -> "group1"
+
+//           // the 4 argument form return a single group. it will return the preferred group
+//           // if the user is in that group. otherwise it will return the first group.
+//           // If the user is not in any groups, it will return the 4th argument
+//        userMap("user_to_groups", "user", "group2", "defgroup") -> "group2"
+//        userMap("user_to_groups", "user", "group3", "defgroup") -> "group1"
+
+static
+bool userMap_func( const char * /*name*/,
+	const classad::ArgumentList & arg_list,
+	classad::EvalState & state,
+	classad::Value & result)
+{
+	classad::Value mapVal, userVal, prefVal;
+
+	int cargs = arg_list.size();
+	if (cargs < 2 || cargs > 4) {
+		result.SetErrorValue();
+		return true;
+	}
+	if ( ! arg_list[0]->Evaluate(state, mapVal) ||
+		 ! arg_list[1]->Evaluate(state, userVal) ||
+		 (cargs >= 3 && !arg_list[2]->Evaluate(state, prefVal)) ||
+		 (cargs >= 4 && !arg_list[3]->Evaluate(state, result))
+		) {
+		result.SetErrorValue();
+		return false; // propagate evaluation failure.
+	}
+
+	std::string mapName, userName;
+	if ( ! mapVal.IsStringValue(mapName) || ! userVal.IsStringValue(userName)) {
+		if (mapVal.IsErrorValue() || userVal.IsErrorValue()) {
+			result.SetErrorValue();
+		} else if (cargs < 4) {
+			result.SetUndefinedValue();
+		}
+		return true;
+	}
+
+	MyString output;
+	if (user_map_do_mapping(mapName.c_str(), userName.c_str(), output)) {
+		StringList items(output.Value());
+
+		if (cargs == 2) {
+			// 2 arg form, return a list.
+		#ifdef CLASSAD_USER_MAP_RETURNS_STRINGLIST
+			result.SetStringValue(output.c_str());
+		#else
+			classad_shared_ptr<classad::ExprList> lst( new classad::ExprList() );
+			ASSERT(lst);
+			for (const char * str = items.first(); str != NULL; str = items.next()) {
+				classad::Value val; val.SetStringValue(str);
+				lst->push_back(classad::Literal::MakeLiteral(val));
+			}
+			result.SetListValue(lst);
+		#endif
+		} else {
+			// 3 arg form, return a string either the preferred item, or the first item
+			// preferred item match is case-insensitive
+			std::string pref;
+			const char * selected_item = NULL;
+			if (prefVal.IsStringValue(pref)) { selected_item = items.find(pref.c_str(), true); }
+			// if preferred item is not in the list, use the first item
+			if ( ! selected_item) { selected_item = items.first(); }
+			if (selected_item) {
+				result.SetStringValue(selected_item);
+			} else if (cargs < 4) {
+				// if result has not been primed with the default value (i.e. this is the 3 arg form)
+				// set the result to undefined now.
+				result.SetUndefinedValue();
+			}
+		}
+	} else if (cargs < 4) {
+		// 2 or 3 arg form, and no mapping, return undefined.
+		result.SetUndefinedValue();
+	}
+
+	return true;
+}
+
 
 // split user@domain or slot@machine, result is always a list of 2 strings
 // if there is no @ in the input, then for user@domain the domain is empty
@@ -1063,6 +1188,9 @@ void registerClassadFunctions()
 	name = "userHome";
 	classad::FunctionCall::RegisterFunction(name, userHome_func);
 
+	name = "userMap";
+	classad::FunctionCall::RegisterFunction(name, userMap_func);
+
 	// user@domain, slot@machine & sinful string crackers.
 	name = "splitusername";
 	classad::FunctionCall::RegisterFunction( name, splitAt_func );
@@ -1140,6 +1268,7 @@ ClassAd( FILE *file, const char *delimitor, int &isEOF, int&error, int &empty )
 
 	int index;
 	MyString buffer;
+	MyStringFpSource myfs(file, false);
 	int			delimLen = strlen( delimitor );
 
 	empty = TRUE;
@@ -1147,7 +1276,7 @@ ClassAd( FILE *file, const char *delimitor, int &isEOF, int&error, int &empty )
 	while( 1 ) {
 
 			// get a line from the file
-		if ( buffer.readLine( file, false ) == false ) {
+		if ( buffer.readLine( myfs, false ) == false ) {
 			error = ( isEOF = feof( file ) ) ? 0 : errno;
 			return;
 		}
@@ -1183,7 +1312,7 @@ ClassAd( FILE *file, const char *delimitor, int &isEOF, int&error, int &empty )
 			buffer = "";
 			while ( strncmp( buffer.Value(), delimitor, delimLen ) &&
 					!feof( file ) ) {
-				buffer.readLine( file, false );
+				buffer.readLine( myfs, false );
 			}
 			isEOF = feof( file );
 			error = -1;
@@ -1998,9 +2127,11 @@ fPrintAd( FILE *file, const classad::ClassAd &ad, bool exclude_private, StringLi
 	MyString buffer;
 
 	sPrintAd( buffer, ad, exclude_private, attr_white_list );
-	fprintf( file, "%s", buffer.Value() );
-
-	return TRUE;
+	if ( fprintf(file, "%s", buffer.Value()) < 0 ) {
+		return FALSE;
+	} else {
+		return TRUE;
+	}
 }
 
 void
@@ -2504,14 +2635,11 @@ sPrintAdAsJson(std::string &output, const classad::ClassAd &ad, StringList *attr
 		attr_white_list->rewind();
 		while( (attr = attr_white_list->next()) ) {
 			if ( (expr = ad.Lookup( attr )) ) {
-				tmp_ad.Insert( attr, expr, false );
+				classad::ExprTree *new_expr = expr->Copy();
+				tmp_ad.Insert( attr, new_expr, false );
 			}
 		}
 		unparser.Unparse( output, &tmp_ad );
-		attr_white_list->rewind();
-		while( (attr = attr_white_list->next()) ) {
-			tmp_ad.Remove( attr );
-		}
 	} else {
 		unparser.Unparse( output, &ad );
 	}

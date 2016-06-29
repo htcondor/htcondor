@@ -895,11 +895,6 @@ int SubmitHash::InsertJobExpr (const char *expr, const char * source_label /*=NU
 	{
 		push_error(stderr, "Parse error in expression: \n\t%s\n\t", expr);
 		if ( ! SubmitMacroSet.errors) {
-			PRAGMA_REMIND("fix this to work with errorlist..")
-			while (pos--) {
-				fputc( ' ', stderr );
-			}
-			fprintf (stderr, "^^^\n");
 			fprintf(stderr,"Error in %s\n", source_label ? source_label : "submit file");
 		}
 		ABORT_AND_RETURN( 1 );
@@ -2052,7 +2047,9 @@ int SubmitHash::SetCoreSize()
 #else
 		struct rlimit rl;
 		if ( getrlimit( RLIMIT_CORE, &rl ) == -1) {
-			EXCEPT("getrlimit failed");
+			push_error(stderr, "getrlimit failed");
+			abort_code = 1;
+			return abort_code;
 		}
 
 		// this will effectively become the hard limit for core files when
@@ -6231,8 +6228,10 @@ int SubmitHash::InsertFileTransAttrs( FileTransferOutput_t when_output )
 	should += '"';
 	if( should_transfer != STF_NO ) {
 		if( ! when_output ) {
-			EXCEPT( "InsertFileTransAttrs() called we might transfer "
-					"files but when_output hasn't been set" );
+			push_error(stderr, "InsertFileTransAttrs() called we might transfer "
+					   "files but when_output hasn't been set" );
+			abort_code = 1;
+			return abort_code;
 		}
 		when += getFileTransferOutputString( when_output );
 		when += '"';
@@ -7706,6 +7705,7 @@ void SubmitHash::warn_unused(FILE* out, const char *app)
 		MACRO_META * pmeta = hash_iter_meta(it);
 		if (pmeta && !pmeta->use_count && !pmeta->ref_count) {
 			const char *key = hash_iter_key(it);
+                        if (*key && *key=='+') {continue;}
 			if (pmeta->source_id == LiveMacro.id) {
 				push_warning(out, "the Queue variable '%s' was unused by %s. Is it a typo?\n", key, app);
 			} else {

@@ -377,6 +377,7 @@ public:
 	int submit_param_bool(const char* name, const char * alt_name, bool def_value, bool * pexists=NULL);
 	MyString submit_param_mystring( const char * name, const char * alt_name );
 	char * expand_macro(const char* value) { return ::expand_macro(value, SubmitMacroSet, mctx); }
+        const char * lookup(const char* name) { return lookup_macro(name, SubmitMacroSet, mctx); }
 
 	void set_submit_param( const char* name, const char* value);
 	void set_submit_param_used( const char* name);
@@ -438,6 +439,7 @@ public:
 	int InsertJobExprInt(const char * name, int val);
 	int InsertJobExprString(const char * name, const char * val);
 	MACRO_ITEM* lookup_exact(const char * name) { return find_macro_item(name, NULL, SubmitMacroSet); }
+	CondorError* error_stack() const {return SubmitMacroSet.errors;}
 
 	void optimize() { if (SubmitMacroSet.sorted < SubmitMacroSet.size) optimize_macros(SubmitMacroSet); }
 	void dump(FILE* out, int flags);
