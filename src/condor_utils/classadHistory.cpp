@@ -301,6 +301,7 @@ OpenHistoryFile() {
 			dprintf(D_ALWAYS,"ERROR opening history file fp (%s): %s\n",
 					JobHistoryFileName, strerror(errno));
 			// return now, because we CANNOT increment the refcount below on failure.
+			close(fd);
 			return NULL;
 		}
 	}
