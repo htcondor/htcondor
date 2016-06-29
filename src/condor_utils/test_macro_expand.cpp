@@ -30,6 +30,8 @@
 #include <vector>
 #include <string>
 
+// for testing the userMap classad function
+extern int add_user_mapping(const char * mapname, char * mapdata);
 
 //uncomment if   SUBSYS.LOCAL.KNOB is allowed.
 //#define ALLOW_SUBSYS_LOCAL_HEIRARCHY 1
@@ -869,6 +871,38 @@ void testing_$EVAL_expand(bool verbose)
 
 	insert_macro("SplitVer", "split($(Version))", TestingMacroSet,  TestMacroSource, def_ctx);
 	REQUIRE( expand("$EVAL(SplitVer)") == "{ \"$Version:\",\"8.5.6\",\"May\",\"20\",\"2016\",\"998822\",\"$\" }" );
+
+	add_user_mapping("grouptest", "* alice Security,MetalShop\n* bob Security,WoodShop\n");
+	insert_macro("BobsGroups", "userMap(\"grouptest\",\"bob\")", TestingMacroSet,  TestMacroSource, def_ctx);
+	insert_macro("BobsFirst", "userMap(\"grouptest\",\"bob\",undefined)", TestingMacroSet,  TestMacroSource, def_ctx);
+	insert_macro("BobsShop", "userMap(\"grouptest\",\"bob\",\"woodshop\")", TestingMacroSet,  TestMacroSource, def_ctx);
+	insert_macro("BobsUnshop", "userMap(\"grouptest\",\"bob\",\"shop\")", TestingMacroSet,  TestMacroSource, def_ctx);
+	REQUIRE( expand("$EVAL(BobsGroups)") == "Security,WoodShop" );
+	REQUIRE( expand("$EVAL(BobsFirst)") == "Security" );
+	REQUIRE( expand("$EVAL(BobsShop)") == "WoodShop" );
+	REQUIRE( expand("$EVAL(BobsUnShop)") == "undefined" );
+
+	insert_macro("AlicesGroups", "userMap(\"grouptest\",\"alice\")", TestingMacroSet,  TestMacroSource, def_ctx);
+	insert_macro("AlicesFirst", "userMap(\"grouptest\",\"alice\",undefined)", TestingMacroSet,  TestMacroSource, def_ctx);
+	insert_macro("AlicesShop", "userMap(\"grouptest\",\"alice\",\"metalshop\")", TestingMacroSet,  TestMacroSource, def_ctx);
+	insert_macro("AlicesUnshop", "userMap(\"grouptest\",\"alice\",\"shop\",\"AutoShop\")", TestingMacroSet,  TestMacroSource, def_ctx);
+	insert_macro("AlicesDefGroup", "userMap(\"grouptest\",\"alice\",undefined,\"AutoShop\")", TestingMacroSet,  TestMacroSource, def_ctx);
+	REQUIRE( expand("$EVAL(AlicesGroups)") == "Security,MetalShop" );
+	REQUIRE( expand("$EVAL(AlicesFirst)") == "Security" );
+	REQUIRE( expand("$EVAL(AlicesShop)") == "MetalShop" );
+	REQUIRE( expand("$EVAL(AlicesUnShop)") == "AutoShop" );
+	REQUIRE( expand("$EVAL(AlicesDefGroup)") == "Security" );
+
+	insert_macro("JohnsGroups", "userMap(\"grouptest\",\"john\")", TestingMacroSet,  TestMacroSource, def_ctx);
+	insert_macro("JohnsFirst", "userMap(\"grouptest\",\"john\",undefined)", TestingMacroSet,  TestMacroSource, def_ctx);
+	insert_macro("JohnsShop", "userMap(\"grouptest\",\"john\",\"metalshop\")", TestingMacroSet,  TestMacroSource, def_ctx);
+	insert_macro("JohnsUnShop", "userMap(\"grouptest\",\"john\",\"shop\",\"AutoShop\")", TestingMacroSet,  TestMacroSource, def_ctx);
+	insert_macro("JohnsDefGroup", "userMap(\"grouptest\",\"john\",undefined,\"AutoShop\")", TestingMacroSet,  TestMacroSource, def_ctx);
+	REQUIRE( expand("$EVAL(JohnsGroups)") == "undefined" );
+	REQUIRE( expand("$EVAL(JohnsFirst)") == "undefined" );
+	REQUIRE( expand("$EVAL(JohnsShop)") == "undefined" );
+	REQUIRE( expand("$EVAL(JohnsUnShop)") == "AutoShop" );
+	REQUIRE( expand("$EVAL(JohnsDefGroup)") == "AutoShop" );
 }
 
 // runs all of the tests in non-verbose mode by default (i.e. printing only failures)

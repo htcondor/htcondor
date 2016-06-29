@@ -21,6 +21,12 @@ Here is a list of items that administrators should be aware of.
 
 \item Shared port is now enabled by default.
 
+\item As a result, if you are currently using HAD with replication, you must
+adjust your configuration.  In the usual case, merely unsetting
+\MacroNI{REPLICATION_SOCKET_NAME} will suffice to restore functionality.
+See \ref{sec:HA-configuration} for more details and how to configure HAD
+(with or without replication) to work with shared port.
+
 \item To mitigate performance problems, \MacroNI{LOWPORT} and
 \MacroNI{HIGHPORT} no longer restrict outbound port ranges on Windows.  To
 re-enable this functionality, set \MacroNI{OUT\_LOWPORT} and
