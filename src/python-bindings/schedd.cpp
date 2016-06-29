@@ -82,6 +82,28 @@ using namespace boost::python;
 
 
 void
+process_submit_errstack(CondorError *errstack)
+{
+    if (!errstack) {return;}
+    while (1)
+    {
+        int code = errstack->code();
+        std::string message = errstack->message();
+        if (message.size() && message[message.size()-1] == '\n') {message.erase(message.size()-1);}
+        bool realStack = errstack->pop();
+        if (!realStack) {return;}
+        if (code)
+        {
+            THROW_EX(RuntimeError, message.c_str())
+        }
+        else
+        {
+            PyErr_WarnEx(PyExc_UserWarning, message.c_str(), 0);
+        }
+    }
+}
+
+void
 make_spool_remap(classad::ClassAd& ad, const std::string &attr, const std::string &stream_attr, const std::string &working_name)
 {
     bool stream_stdout = false;
@@ -1873,8 +1895,10 @@ public:
 
         if (m_hash.init_cluster_ad(time(NULL), txn->owner().c_str()))
         {
+            process_submit_errstack(m_hash.error_stack());
             THROW_EX(RuntimeError, "Failed to create a cluster ad");
         }
+        process_submit_errstack(m_hash.error_stack());
 
         bool failed_copy = false;
         ClassAd addl_ad;
@@ -1918,6 +1942,11 @@ public:
             }
             JOB_ID_KEY jid(cluster, procid);
             ClassAd *proc_ad = m_hash.make_job_ad(jid, 0, idx, false, false, NULL, NULL);
+            process_submit_errstack(m_hash.error_stack());
+            if (!proc_ad)
+            {
+                THROW_EX(RuntimeError, "Failed to create new job ad");
+            }
             proc_ad->InsertAttr(ATTR_CLUSTER_ID, cluster);
             proc_ad->InsertAttr(ATTR_PROC_ID, procid);
 
@@ -1949,6 +1978,8 @@ public:
         {
             txn->reschedule();
         }
+        m_hash.warn_unused(stderr, "Submit object");
+        process_submit_errstack(m_hash.error_stack());
         return cluster;
     }
 
