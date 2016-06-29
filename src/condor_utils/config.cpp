@@ -2836,8 +2836,9 @@ static const char * evaluate_macro_func (
 
 			if (fmt) {
 				int cbuf = printf_length(fmt, mval);
-				tvalue = buf = (char*)malloc(cbuf+1);
-				snprintf(buf, cbuf, fmt, mval);
+				tvalue = buf = (char*)malloc(cbuf+2);
+				snprintf(buf, cbuf+1, fmt, mval);
+				buf[cbuf] = 0; // make sure of null termination
 			} else {
 				// no format, we just need to make an allocated copy into buf
 				if (tmp2) {
@@ -2872,28 +2873,22 @@ static const char * evaluate_macro_func (
 			if (0 == ParseClassAdRvalExpr(mval, tree, NULL)) {
 				ClassAd rhs;
 				classad::Value val;
-				tmp3 = "CondorValue";
-				if ( ! rhs.Insert(tmp3, tree, false)) {
-					delete tree; tree = NULL;
-				} else if(rhs.EvaluateAttr(tmp3, val)) {
+				if (EvalExprTree(tree, &rhs, NULL, val)) {
 					if ( ! val.IsStringValue(tmp3)) {
 						classad::ClassAdUnParser unp;
 						tmp3.clear(); // because Unparse appends.
 						unp.Unparse(tmp3, val);
 					}
-					mval = tmp3.c_str();
+					tvalue = buf = strdup(tmp3.c_str());
 				}
 			}
 
-			// no format, we just need to make an allocated copy into buf
-			if (tmp2) {
-				// no need to make another copy, just use the tmp2 allocation as the buf allocation
-				tvalue = buf = tmp2;
-				tmp2 = NULL;
-			} else {
-				tvalue = buf = strdup(mval);
+			// if we don't have a value, we can use the macro expanded buffer
+			// as the value, if we don't have one of those, use the literal ""
+			if ( ! tvalue) {
+				if (tmp2) { tvalue = buf = tmp2; tmp2 = NULL; }
+				else { tvalue = ""; }
 			}
-
 			if (tmp2) free(tmp2); tmp2 = NULL;
 		}
 		break;
