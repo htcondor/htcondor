@@ -110,9 +110,14 @@ result in a hang on shutdown.
 \Condor{history} command failing unless the \Opt{-limit} argument is used.
 \Ticket{5735}
 
+\item Fixed a bug introduced in the 8.4.7 release that resulted in a parse error from \Condor{submit}
+when \Attr{JobAdInformationAttrs} was set in the configuration variable \Macro{SUBMIT\_ATTRS}.
+\Ticket{5720}
+
 \item Fixed a bug in \Condor{history} that caused it to treat all unrecognised arguments
 as user names
 \Ticket{5706}
+
 
 \end{itemize}
 
