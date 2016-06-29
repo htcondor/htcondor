@@ -29,6 +29,14 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Job ads now include \Attr{NumJobCompletions}, which counts the
+number of times a job exited of its own accord (successfully or not) and
+then successfully completed file transfer (if any was requested).
+\Ticket{5705}
+
+\item The high-availability and replication daemons may now use shared port.
+\Ticket{5726}
+
 \item Monitoring the status of PBS and SLURM jobs is now much more efficient.
 Now, one query to the batch system is done for all jobs, instead of a
 separate query for each job.
@@ -65,6 +73,10 @@ incoming connections.
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item Fixed a bug preventing HTCondor from recognizing an address in Sinful
+format as its own address when operating in mixed (IPv4 and IPv6) mode.
+\Ticket{5728}
 
 \item \Condor{user\_prio} now more correctly shows information
 about submitters flocking to a pool, but who haven't used 
