@@ -872,7 +872,8 @@ void testing_$EVAL_expand(bool verbose)
 	insert_macro("SplitVer", "split($(Version))", TestingMacroSet,  TestMacroSource, def_ctx);
 	REQUIRE( expand("$EVAL(SplitVer)") == "{ \"$Version:\",\"8.5.6\",\"May\",\"20\",\"2016\",\"998822\",\"$\" }" );
 
-	add_user_mapping("grouptest", "* alice Security,MetalShop\n* bob Security,WoodShop\n");
+	auto_free_ptr mapping(strdup("* alice Security,MetalShop\n* bob Security,WoodShop\n"));
+	add_user_mapping("grouptest", mapping.ptr());
 	insert_macro("BobsGroups", "userMap(\"grouptest\",\"bob\")", TestingMacroSet,  TestMacroSource, def_ctx);
 	insert_macro("BobsFirst", "userMap(\"grouptest\",\"bob\",undefined)", TestingMacroSet,  TestMacroSource, def_ctx);
 	insert_macro("BobsShop", "userMap(\"grouptest\",\"bob\",\"woodshop\")", TestingMacroSet,  TestMacroSource, def_ctx);
