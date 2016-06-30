@@ -23,8 +23,7 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item HTCondor version 8.4.8 not yet released.
-%\item HTCondor version 8.4.8 released on Month Date, 2016.
+\item HTCondor version 8.4.8 released on July 5, 2016.
 
 \end{itemize}
 
@@ -41,23 +40,9 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item The high-availability daemon now properly detects changes to the
-\MacroNI{HAD\_LIST} when reconfigured.
-\Ticket{5753}
-
-\item The high-availability daemon now properly internalizes the
-\MacroNI{HAD\_LIST} when reconfigured.
-\Ticket{5754}
-
 \item Fixed a memory leak in the condor\_q client code that impacted
 users of the Python API call htcondor.Schedd().query().
 \Ticket{5727}
-
-\item The \Condor{schedd} now rejects job submissions when the job owner
-doesn't have a user account on the machine.
-Previously, the \Condor{schedd} would accept such jobs and then fail
-to run them.
-\Ticket{5734}
 
 \item Fixed a bug that caused file transfers to fail when using Bosco.
 \Ticket{5710}
@@ -66,27 +51,40 @@ to run them.
 \MacroNI{SCHEDD\_CRON\_JOBLIST}.
 \Ticket{5715}
 
-\item Fixed a bug that could cause \Condor{status} or \Condor{q} to
-crash when the \Opt{-xml} option is used.
-\Ticket{5718}
+\item The \Condor{schedd} now rejects job submissions when the job owner
+doesn't have a user account on the machine.
+Previously, the \Condor{schedd} would accept such jobs and then fail
+to run them.
+\Ticket{5734}
+
+\item Fixed a bug introduced in the 8.4.7 release that resulted in the remote
+\Condor{history} command failing unless the \Opt{-limit} argument is used.
+\Ticket{5735}
+
+\item Fixed a bug in \Condor{history} that caused it to treat all unrecognized arguments
+as user names
+\Ticket{5706}
+
+\item The high-availability daemon now properly detects changes to the
+\MacroNI{HAD\_LIST} when reconfigured.
+\Ticket{5753}
+
+\item The high-availability daemon now properly internalizes the
+\MacroNI{HAD\_LIST} when reconfigured.
+\Ticket{5754}
 
 \item Fixed a bug that caused the \Condor{master} to stop responding after it
 restarted a child daemon when shared port is enabled on Windows. This bug could also
 result in a hang on shutdown.
 \Ticket{5713}
 
-\item Fixed a bug introduced in the 8.4.7 release that resulted in the remote
-\Condor{history} command failing unless the \Opt{-limit} argument is used.
-\Ticket{5735}
+\item Fixed a bug that could cause \Condor{status} or \Condor{q} to
+crash when the \Opt{-xml} option is used.
+\Ticket{5718}
 
 \item Fixed a bug introduced in the 8.4.7 release that resulted in a parse error from \Condor{submit}
 when \Attr{JobAdInformationAttrs} was set in the configuration variable \Macro{SUBMIT\_ATTRS}.
 \Ticket{5720}
-
-\item Fixed a bug in \Condor{history} that caused it to treat all unrecognised arguments
-as user names
-\Ticket{5706}
-
 
 \end{itemize}
 
