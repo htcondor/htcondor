@@ -29,7 +29,8 @@ static int gc_image(const std::string &image);
 // remote image pull violates the principle of least astonishment).
 //
 int DockerAPI::run(
-	const ClassAd &machineAd,
+	ClassAd &machineAd,
+	ClassAd &jobAd,
 	const std::string & containerName,
 	const std::string & imageID,
 	const std::string & command,
@@ -87,7 +88,8 @@ int DockerAPI::run(
 	} 
 
 	// drop unneeded Linux capabilities
-	if (param_boolean("DOCKER_DROP_ALL_CAPABILITIES", true)) {
+	if (param_boolean("DOCKER_DROP_ALL_CAPABILITIES", true /*default*/,
+		true /*do_log*/, &machineAd, &jobAd)) {
 		runArgs.AppendArg("--cap-drop=all");
 			
 		// --no-new-privileges flag appears in docker 1.11
