@@ -310,8 +310,8 @@ the values of relevant attributes of the machine ClassAd are also displayed.
     but an attribute is still required.
     Include \Bs n to specify a line break. }
 
-  \OptItem{\OptArg{-autoformat[:tn,lVh]}{attr1 [attr2 ...]} 
-  or \OptArg{-af[:tn,lVh]}{attr1 [attr2 ...]}} {
+  \OptItem{\OptArg{-autoformat[:jlhVr,tng]}{attr1 [attr2 ...]} 
+  or \OptArg{-af[:jlhVr,tng]}{attr1 [attr2 ...]}} {
     (output option) Display attribute(s) or expression(s)
     formatted in a default way according to attribute types.  
     This option takes an arbitrary number of attribute names as arguments,
@@ -330,22 +330,34 @@ the values of relevant attributes of the machine ClassAd are also displayed.
     and formatting qualifiers to deviate the output formatting from
     the default:
 
-    \textbf{r} print unevaluated, or raw values,
+    \textbf{j} print the job ID as the first field,
+
+    \textbf{l} label each field,
+
+    \textbf{h} print column headings before the first line of output,
+
+    \textbf{V} use \%V rather than \%v for formatting (string values
+    are quoted),
+
+    \textbf{r} print "raw", or unevaluated values,
+
+    \textbf{,} add a comma character after each field,
 
     \textbf{t} add a tab character before each field instead of 
     the default space character,
 
     \textbf{n} add a newline character after each field,
 
-    \textbf{,} add a comma character after each field,
+    \textbf{g} add a newline character between ClassAds, and
+    suppress spaces before each field.
 
-    \textbf{l} label each field,
+    Use \textbf{-af:h} to get tabular values with headings.
 
-    \textbf{V} use \%V rather than \%v for formatting,
-
-    \textbf{h} print headings before the first line of output.
+    Use \textbf{-af:lrng} to get -long equivalent format.
 
     The newline and comma characters may \emph{not} be used together.
+    The \textbf{l} and \textbf{h} characters may \emph{not} be used
+    together.
     }
   \OptItem{\Opt{-analyze[:<qual>]}}{(analyze option) Perform a matchmaking 
     analysis on why the requested jobs are not running.

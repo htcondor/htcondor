@@ -116,9 +116,6 @@ specifying an Edit Option requires the ADMINISTRATOR level of access.
   {(Display option) Display information for users who have 
   some recorded accumulated usage since the specified date.  }
 
-\OptItem{\OptArg{-af[:rtgn,lVh]}{attr1 [attr2 ...]}} {
-  (Display option) The same as \Opt{-autoformat}. }
-
 \OptItem{\Opt{-all}}
   {(Display option) Display all available fields about each group or user.}
 
@@ -126,40 +123,50 @@ specifying an Edit Option requires the ADMINISTRATOR level of access.
   {(Display option) Display information for all the users 
   who have some recorded accumulated usage.}
 
-\OptItem{\OptArg{-autoformat[:rtgn,lVh]}{attr1 [attr2 ...]}} {
-  (Display option) Modifies the display of information when using the 
-  \Opt{-long} option. 
-  Implies use of the \Opt{-modular} option and displays ClassAd attribute 
-  values formatted in a default way according to their attribute types  
-  and with attribute names consistent with the \Opt{-modular} option.
-  This option takes an arbitrary number of attribute names as arguments,
-  and prints out their values.
-  It is assumed that no attribute names begin with a dash character,
-  so that the next word that begins with dash is the 
-  start of the next option.
-  Option \Opt{-autoformat:h} gives a tabular output with column headings.
-  The \Opt{-autoformat} option may be followed by a colon character
-  and formatting qualifiers:
+  \OptItem{\OptArg{-autoformat[:lhVr,tng]}{attr1 [attr2 ...]} 
+  or \OptArg{-af[:lhVr,tng]}{attr1 [attr2 ...]}} {
+    (Display option) Display attribute(s) or expression(s)
+    formatted in a default way according to attribute types.  
+    This option takes an arbitrary number of attribute names as arguments,
+    and prints out their values, 
+    with a space between each value and a newline character after 
+    the last value.  
+    It is like the \Opt{-format} option without format strings.
 
-  \textbf{r} print unevaluated, or raw values,
+    It is assumed that no attribute names begin with a dash character,
+    so that the next word that begins with dash is the 
+    start of the next option.
+    The \Opt{autoformat} option may be followed by a colon character
+    and formatting qualifiers to deviate the output formatting from
+    the default:
 
-  \textbf{t} add a tab character before each field instead of 
-  the default space character,
+    \textbf{l} label each field,
 
-  \textbf{g} inject a newline between ClassAds,
+    \textbf{h} print column headings before the first line of output,
 
-  \textbf{n} add a newline character after each field,
+    \textbf{V} use \%V rather than \%v for formatting (string values
+    are quoted),
 
-  \textbf{,} add a comma character after each field,
+    \textbf{r} print "raw", or unevaluated values,
 
-  \textbf{l} label each field,
+    \textbf{,} add a comma character after each field,
 
-  \textbf{V} use \%V formatting, where string values are quoted,
+    \textbf{t} add a tab character before each field instead of 
+    the default space character,
 
-  \textbf{h} print headings before the first line of output.
+    \textbf{n} add a newline character after each field,
 
-  The newline and comma characters may \emph{not} be used together.
-  }
+    \textbf{g} add a newline character between ClassAds, and
+    suppress spaces before each field.
+
+    Use \textbf{-af:h} to get tabular values with headings.
+
+    Use \textbf{-af:lrng} to get -long equivalent format.
+
+    The newline and comma characters may \emph{not} be used together.
+    The \textbf{l} and \textbf{h} characters may \emph{not} be used
+    together.
+    }
 
 \OptItem{\OptArg{-constraint}{<expr>}}
   {(Display option) To be used in conjunction with the \Opt{-long} 
