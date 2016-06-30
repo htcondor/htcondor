@@ -197,13 +197,21 @@ void usage(bool and_exit)
 		"\t-l[ong]\t\t\tDisplay entire classads\n"
 		"\t-w[ide]\t\t\tdon't truncate fields to fit the screen\n"
 		"\t-f[ormat] <fmt> <attr>\tPrint attribute with a format specifier\n"
-		"\t-a[uto]f[ormat]:[V,ntlh] <attr> [<attr2> [<attr3> [...]]\n\t\t\t\tPrint attr(s) with automatic formatting\n"
-		"\t\tV\tUse %%V formatting\n"
-		"\t\t,\tComma separated (default is space separated)\n"
-		"\t\tt\tTab separated\n"
-		"\t\tn\tNewline after each attribute\n"
-		"\t\tl\tLabel each value\n"
-		"\t\th\tHeadings\n"
+
+		"\t-autoformat[:lhVr,tng] <attr> [<attr2> [...]]\n"
+		"\t-af[:lhVr,tng] <attr> [attr2 [...]]\n"
+		"\t    Print attr(s) with automatic formatting\n"
+		"\t    the [lhVr,tng] options modify the formatting\n"
+		"\t        l   attribute labels\n"
+		"\t        h   attribute column headings\n"
+		"\t        V   %%V formatting (string values are quoted)\n"
+		"\t        r   %%r formatting (raw/unparsed values)\n"
+		"\t        ,   comma after each value\n"
+		"\t        t   tab before each value (default is space)\n"
+		"\t        n   newline after each value\n"
+		"\t        g   newline between ClassAds, no space before values\n"
+		"\t    use -af:h to get tabular values with headings\n"
+		"\t    use -af:lrng to get -long equivalent format\n"
 		, App.Name);
 	if (and_exit)
 		exit( 1 );

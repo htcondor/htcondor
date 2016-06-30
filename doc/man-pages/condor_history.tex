@@ -15,7 +15,7 @@
 \oOptArg{-file}{filename}
 \oOptArg{-userlog}{filename}
 \oOptArg{-format}{formatString AttributeName}
-\oOptArg{-autoformat[:tn,lVh]}{attr1 [attr2 ...]}
+\oOptArg{-autoformat[:lhVr,tng]}{attr1 [attr2 ...]}
 \oOpt{-l \Bar -long \Bar -xml} 
 \oOptArg{-match \Bar -limit}{number}
 \oOpt{cluster \Bar cluster.process \Bar owner}
@@ -78,12 +78,50 @@ file.
   \OptItem{\OptArg{-format}{formatString}{AttributeName}}{Display jobs
     with a custom format. See the \Condor{q} man page \Opt{-format} option
     for details.}
-  \OptItem{\OptArg{-autoformat[:tn,lVh]}{attr1 [attr2 ...]} 
-  or \OptArg{-af[:tn,lVh]}{attr1 [attr2 ...]}} {
-    Display attribute(s) or expression(s)
+  \OptItem{\OptArg{-autoformat[:lhVr,tng]}{attr1 [attr2 ...]} 
+  or \OptArg{-af[:lhVr,tng]}{attr1 [attr2 ...]}} {
+    (output option) Display attribute(s) or expression(s)
     formatted in a default way according to attribute types.  
-    See the \Condor{q} man page \Opt{-autoformat} option
-    for details.}
+    This option takes an arbitrary number of attribute names as arguments,
+    and prints out their values, 
+    with a space between each value and a newline character after 
+    the last value.  
+    It is like the \Opt{-format} option without format strings.
+
+    It is assumed that no attribute names begin with a dash character,
+    so that the next word that begins with dash is the 
+    start of the next option.
+    The \Opt{autoformat} option may be followed by a colon character
+    and formatting qualifiers to deviate the output formatting from
+    the default:
+
+    \textbf{l} label each field,
+
+    \textbf{h} print column headings before the first line of output,
+
+    \textbf{V} use \%V rather than \%v for formatting (string values
+    are quoted),
+
+    \textbf{r} print "raw", or unevaluated values,
+
+    \textbf{,} add a comma character after each field,
+
+    \textbf{t} add a tab character before each field instead of 
+    the default space character,
+
+    \textbf{n} add a newline character after each field,
+
+    \textbf{g} add a newline character between ClassAds, and
+    suppress spaces before each field.
+
+    Use \textbf{-af:h} to get tabular values with headings.
+
+    Use \textbf{-af:lrng} to get -long equivalent format.
+
+    The newline and comma characters may \emph{not} be used together.
+    The \textbf{l} and \textbf{h} characters may \emph{not} be used
+    together.
+    }
   \OptItem{\Opt{-l} or \Opt{-long}}{Display job ClassAds in long format.}
   \OptItem{\OptArg{-limit}{Number}}
     {Limit the number of jobs displayed to \Arg{Number}.  Same option as
