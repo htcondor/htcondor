@@ -288,7 +288,7 @@ class Matchmaker : public Service
 		static unsigned int HashFunc(const MyString &Key);
 		friend int comparisonFunction (AttrList *, AttrList *,
 										void *);
-		bool pslotMultiMatch(ClassAd *job, ClassAd *machine, double preemptPrio);
+		bool pslotMultiMatch(ClassAd *job, ClassAd *machine, double preemptPrio, string &dslot_claims);
 
 		/** trimStartdAds will throw out startd ads have no business being 
 			visible to the matchmaking engine, but were fetched from the 
@@ -413,6 +413,7 @@ class Matchmaker : public Service
 			double			PostJobRankValue;
 			double			PreemptRankValue;
 			PreemptState	PreemptStateValue;
+			string			DslotClaims;
 			ClassAd *ad;
 		};
 
@@ -433,7 +434,7 @@ class Matchmaker : public Service
 		{
 		public:
 
-			ClassAd* pop_candidate();
+			ClassAd* pop_candidate(string &dslot_claims);
 				// Return the previously-pop'd candidate back into the list.
 				// Note that this assumes there is empty space in the front of the list
 				// Also assume list was already sorted.
@@ -465,7 +466,8 @@ class Matchmaker : public Service
 					double candidatePreJobRankValue,
 					double candidatePostJobRankValue,
 					double candidatePreemptRankValue,
-					PreemptState candidatePreemptState);
+					PreemptState candidatePreemptState,
+					const string &candidateDslotClaims);
 			void sort();
 			int length() { return adListLen - adListHead; }
 

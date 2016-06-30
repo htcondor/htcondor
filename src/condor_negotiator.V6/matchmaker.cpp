@@ -4217,6 +4217,7 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 	double			candidatePostJobRankValue;
 	double			candidatePreemptRankValue;
 	PreemptState	candidatePreemptState;
+	string			candidateDslotClaims;
 		// to store the best candidate so far
 	ClassAd 		*bestSoFar = NULL;	
 	ClassAd 		*cached_bestSoFar = NULL;	
@@ -4225,6 +4226,7 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 	double			bestPostJobRankValue = -(FLT_MAX);
 	double			bestPreemptRankValue = -(FLT_MAX);
 	PreemptState	bestPreemptState = (PreemptState)-1;
+	string			bestDslotClaims;
 	bool			newBestFound;
 		// to store results of evaluations
 	string remoteUser;
@@ -4270,7 +4272,7 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 	{
 		// we can use cached information.  pop off the best
 		// candidate from our sorted list.
-		while( (cached_bestSoFar = MatchList->pop_candidate()) ) {
+		while( (cached_bestSoFar = MatchList->pop_candidate(candidateDslotClaims)) ) {
 			if (evaluate_limits_with_match) {
 				std::string limits;
 				if (request.EvalString(ATTR_CONCURRENCY_LIMITS, cached_bestSoFar, limits)) {
@@ -4307,6 +4309,9 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 				rejPreemptForPolicy,
 				rejPreemptForRank,
 				rejForSubmitterLimit);
+		}
+		if ( cached_bestSoFar && !candidateDslotClaims.empty() ) {
+			cached_bestSoFar->Assign("PreemptDslotClaims", candidateDslotClaims);
 		}
 			//  TODO  - compare results, reserve net bandwidth
 		return cached_bestSoFar;
@@ -4385,12 +4390,13 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
             cp_restore_requested(request, consumption);
         }
 
+		candidateDslotClaims.clear();
 		bool pslotRankMatch = false;
 		if (!is_a_match && ConsiderPreemption) {
 			bool jobWantsMultiMatch = false;
 			request.LookupBool(ATTR_WANT_PSLOT_PREEMPTION, jobWantsMultiMatch);
 			if (param_boolean("ALLOW_PSLOT_PREEMPTION", false) && jobWantsMultiMatch) {
-				is_a_match = pslotMultiMatch(&request, candidate, preemptPrio);
+				is_a_match = pslotMultiMatch(&request, candidate, preemptPrio, candidateDslotClaims);
 				pslotRankMatch = is_a_match;
 			}
 		}
@@ -4542,7 +4548,8 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 					candidatePreJobRankValue,
 					candidatePostJobRankValue,
 					candidatePreemptRankValue,
-					candidatePreemptState
+					candidatePreemptState,
+					candidateDslotClaims
 					);
 		}
 
@@ -4593,6 +4600,7 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 			bestPostJobRankValue = candidatePostJobRankValue;
 			bestPreemptState = candidatePreemptState;
 			bestPreemptRankValue = candidatePreemptRankValue;
+			bestDslotClaims = candidateDslotClaims;
 		}
 	}
 	startdAds.Close ();
@@ -4610,13 +4618,16 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 			dprintf(D_FULLDEBUG,"Finished sorting MatchList\n");
 		}
 		// Pop top candidate off the list to hand out as best match
-		bestSoFar = MatchList->pop_candidate();
+		bestSoFar = MatchList->pop_candidate(bestDslotClaims);
 	}
 
 	if(!bestSoFar)
 	{
 	/* Insert an entry into the rejects table only if no matches were found at all */
 		insert_into_rejects(scheddName,request);
+	}
+	if ( bestSoFar && !bestDslotClaims.empty() ) {
+		bestSoFar->Assign( "PreemptDslotClaims", bestDslotClaims );
 	}
 	// this is the best match
 	return bestSoFar;
@@ -5379,12 +5390,15 @@ peek_candidate()
 #endif
 
 ClassAd* Matchmaker::MatchListType::
-pop_candidate()
+pop_candidate(string &dslot_claims)
 {
 	ClassAd* candidate = NULL;
 
 	while ( adListHead < adListLen && !candidate ) {
 		candidate = AdListArray[adListHead].ad;
+		if ( candidate ) {
+			dslot_claims = AdListArray[adListHead].DslotClaims;
+		}
 		adListHead++;
 	}
 
@@ -5412,6 +5426,7 @@ insert_candidate(ClassAd * candidate,
 	new_entry.PostJobRankValue = candidatePostJobRankValue;
 	new_entry.PreemptRankValue = candidatePreemptRankValue;
 	new_entry.PreemptStateValue = candidatePreemptState;
+	new_entry.DslotClaims.clear();
 
 		// Hand-rolled insertion sort; as the list was previously sorted,
 		// we know this will be O(n).
@@ -5543,7 +5558,8 @@ add_candidate(ClassAd * candidate,
 					double candidatePreJobRankValue,
 					double candidatePostJobRankValue,
 					double candidatePreemptRankValue,
-					PreemptState candidatePreemptState)
+					PreemptState candidatePreemptState,
+					const string &candidateDslotClaims)
 {
 	ASSERT(AdListArray);
 	ASSERT(adListLen < adListMaxLen);  // don't write off end of array!
@@ -5554,6 +5570,7 @@ add_candidate(ClassAd * candidate,
 	AdListArray[adListLen].PostJobRankValue = candidatePostJobRankValue;
 	AdListArray[adListLen].PreemptRankValue = candidatePreemptRankValue;
 	AdListArray[adListLen].PreemptStateValue = candidatePreemptState;
+	AdListArray[adListLen].DslotClaims = candidateDslotClaims;
 
     // This hack allows me to avoid mucking with the pseudo-que-like semantics of MatchListType, 
     // which ought to be replaced with something cleaner like std::deque<AdListEntry>
@@ -6119,7 +6136,7 @@ bool rankPairCompare(std::pair<int,double> lhs, std::pair<int,double> rhs) {
 	// job with preempted resources from a dynamic slot.
 	// Only consider startd RANK for now.
 bool
-Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, double preemptPrio) {
+Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, double preemptPrio, string &dslot_claims) {
 	bool isPartitionable = false;
 
 	machine->LookupBool(ATTR_SLOT_PARTITIONABLE, isPartitionable);
@@ -6276,11 +6293,11 @@ Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, double preemptPrio) 
 
 		if (IsAMatch(&mutatedMachine, job)) {
 			dprintf(D_FULLDEBUG, "Matched pslot by rank preempting %d dynamic slots\n", slot + 1);
-			std::string claimsToPreempt;
+			dslot_claims.clear();
 
 			for (unsigned int child = 0; child < slot + 1; child++) {
-				claimsToPreempt += child_claims[ranks[child].first];
-				claimsToPreempt += " ";
+				dslot_claims += child_claims[ranks[child].first];
+				dslot_claims += " ";
 				// TODO Move this clearing of claim ids to
 				//   matchmakingProcotol(), after the match is successfully
 				//   sent to the schedd. That is where the claim id of the
@@ -6288,7 +6305,6 @@ Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, double preemptPrio) 
 				child_claims[ranks[child].first] = "";
 			}
 
-			machine->Assign("PreemptDslotClaims", claimsToPreempt.c_str());
 			return true;
 		} 
 	}
