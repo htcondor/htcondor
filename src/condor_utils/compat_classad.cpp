@@ -31,10 +31,8 @@
 #define CLASSAD_USER_MAP_RETURNS_STRINGLIST 1
 
 class MapFile;
+extern int reconfig_user_maps();
 extern bool user_map_do_mapping(const char * mapname, const char * input, MyString & output);
-extern void clear_user_maps(StringList * keep_list);
-extern int add_user_map(const char * mapname, const char * filename, MapFile * mf /*=NULL*/);
-extern int add_user_mapping(const char * mapname, char * mapdata);
 
 #if defined(HAVE_DLOPEN)
 #include <dlfcn.h>
@@ -93,31 +91,7 @@ Reconfig()
 		}
 	}
 
-	auto_free_ptr user_map_names(param("CLASSAD_USER_MAP_NAMES"));
-	if (user_map_names) {
-		StringList names(user_map_names.ptr());
-
-		// clear user maps that are no long in the names list
-		clear_user_maps(&names);
-
-		// load/refresh the user maps that are in the list
-		auto_free_ptr user_map;
-		for (const char * name = names.first(); name != NULL; name = names.next()) {
-			MyString param_name("CLASSAD_USER_MAPFILE_"); param_name += name;
-			user_map.set(param(param_name.c_str()));
-			if (user_map) {
-				add_user_map(name, user_map.ptr(), NULL);
-			} else {
-				param_name.formatstr("CLASSAD_USER_MAPDATA_%s", name);
-				user_map.set(param(param_name.c_str()));
-				if (user_map) {
-					add_user_mapping(name, user_map.ptr());
-				}
-			}
-		}
-	} else {
-		clear_user_maps(NULL);
-	}
+	reconfig_user_maps();
 
 	char *user_python_char = param("CLASSAD_USER_PYTHON_MODULES");
 	if (user_python_char)
