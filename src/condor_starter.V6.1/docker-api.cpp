@@ -22,6 +22,7 @@ static int run_simple_docker_command(	const std::string &command,
 					const std::string &container,
 					CondorError &e, bool ignore_output=false);
 static int gc_image(const std::string &image);
+static std::string makeHostname(ClassAd *machineAd, ClassAd *jobAd);
 
 //
 // Because we fork before calling docker, we don't actually
@@ -99,6 +100,10 @@ int DockerAPI::run(
 		}
 	}
 
+	// Give the container a useful name
+	std::string hname = makeHostname(&machineAd, &jobAd);
+	runArgs.AppendArg("--hostname");
+	runArgs.AppendArg(hname.c_str());
 
 		// Now the container name
 	runArgs.AppendArg( "--name" );
@@ -376,7 +381,7 @@ DockerAPI::stats(const std::string &container, uint64_t &memUsage, uint64_t &net
 	int written;
 
 	// read with 200 second timeout, no flags, nonblocking
-	while ((written = condor_read("Docker Socket", uds, buf, 1, 200, 0, false)) > 0) {
+	while ((written = condor_read("Docker Socket", uds, buf, 1, 5, 0, false)) > 0) {
 		response.append(buf, written);
 	} 
 
@@ -850,4 +855,27 @@ gc_image(const std::string & image) {
   lock.release();
 
   return 0;
+}
+
+std::string 
+makeHostname(ClassAd *machineAd, ClassAd *jobAd) {
+	std::string hostname;
+
+	std::string owner("unknown");
+	jobAd->LookupString(ATTR_OWNER, owner);
+	
+	hostname += owner;
+
+	int cluster = 1;
+	int proc = 1;
+	jobAd->LookupInteger(ATTR_CLUSTER_ID, cluster);
+	jobAd->LookupInteger(ATTR_PROC_ID, proc);
+	formatstr_cat(hostname, "-%d.%d-", cluster, proc);
+
+	std::string machine("host");
+	machineAd->LookupString(ATTR_MACHINE, machine);
+
+	hostname += machine;
+
+	return hostname;
 }
