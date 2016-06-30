@@ -27,7 +27,9 @@
 #include "condor_attributes.h"
 #include "condor_adtypes.h"
 #include "condor_config.h"
+#include "subsystem_info.h"
 #include "MapFile.h"
+
 
 // userMap stuff
 class MapHolder {
@@ -49,7 +51,8 @@ void clear_user_maps(StringList * keep_list) {
 	}
 	for (STRING_MAPS::iterator it = g_user_maps->begin(); it != g_user_maps->end(); /* advance in the loop */) {
 		STRING_MAPS::iterator tmp = it++;
-		if (keep_list->find(tmp->first.c_str(), true)) {
+		// remove the map if it is not in the keep list
+		if ( ! keep_list->find(tmp->first.c_str(), true)) {
 			g_user_maps->erase(tmp);
 		}
 	}
@@ -80,15 +83,16 @@ int add_user_map(const char * mapname, const char * filename, MapFile * mf /*=NU
 	}
 	STRING_MAPS::iterator found = g_user_maps->find(mapname);
 	if (found != g_user_maps->end()) {
-		// map exists, remove it if the filename does not match
-		// and a MapFile was not supplied as an argument
+		// map exists, and the new map is to be read from a file, and 
+		// the file timestamp is the same as when we originally read it
+		// then skip reloading the file.
 		MapHolder * pmh = &found->second;
 		if (filename && !mf && (pmh->filename == filename)) {
 			// if the filename is the same, and the modify time is also the same
 			// skip reloading the file. 
 			time_t ts = get_file_timestamp(filename);
 			if (ts && ts == pmh->file_timestamp) {
-				return 0;
+				return 0; // map already loaded.
 			}
 		}
 		// we have an entry, but we want to reload it. so delete the old one.
@@ -96,12 +100,19 @@ int add_user_map(const char * mapname, const char * filename, MapFile * mf /*=NU
 	}
 
 	// if mapfile was not supplied, load it now.
+	// note that this code assumes that either filename will be non-null or
+	// a MapFile class will be passed in.
 	time_t ts = filename ? get_file_timestamp(filename) : 0;
+	dprintf (D_ALWAYS, "Loading classad userMap '%s' ts=%lld from %s\n", mapname, (long long)ts, filename ? filename : "knob");
 	if ( ! mf) {
+		ASSERT(filename);
+
 		mf = new MapFile();
 		ASSERT(mf);
 		int rval = mf->ParseCanonicalizationFile(filename);
 		if (rval < 0) {
+			dprintf(D_ALWAYS, "PARSE ERROR %d in classad userMap '%s' from file %s\n", rval, mapname, filename);
+			delete mf;
 			return rval;
 		}
 	}
@@ -116,8 +127,14 @@ int add_user_mapping(const char * mapname, char * mapdata)
 {
 	MapFile * mf = new MapFile();
 	MyStringCharSource src(mapdata, false);
-	mf->ParseCanonicalization(src, mapname);
-	return add_user_map(mapname, NULL, mf);
+	int rval = mf->ParseCanonicalization(src, mapname);
+	if (rval < 0) {
+		dprintf(D_ALWAYS, "PARSE ERROR %d in classad userMap '%s' from knob\n", rval, mapname);
+	} else {
+		rval = add_user_map(mapname, NULL, mf);
+	}
+	if (rval < 0) { delete mf; }
+	return rval;
 }
 
 
@@ -131,6 +148,58 @@ int delete_user_map(const char * mapname)
 	}
 	return 0;
 }
+
+// load standard usermaps from standard configuration knobs
+// note that if a mapfile has already been loaded, then on 
+// reconfig this code will only reread the file if it's modify
+// time is more recent than the time it was last read.
+//
+int reconfig_user_maps()
+{
+	int cMaps = 0;
+
+	const char * subsys = get_mySubSystem()->getName();
+	if ( ! subsys) {
+		// no subsys? leave usermaps alone...
+		if (g_user_maps) {
+			return (int)g_user_maps->size();
+		}
+		return 0;
+	}
+
+	MyString param_name(subsys); param_name += "_CLASSAD_USER_MAP_NAMES";
+	auto_free_ptr user_map_names(param(param_name.c_str()));
+	if (user_map_names) {
+		StringList names(user_map_names.ptr());
+
+		// clear user maps that are no longer in the names list
+		clear_user_maps(&names);
+
+		// load/refresh the user maps that are in the list
+		auto_free_ptr user_map;
+		for (const char * name = names.first(); name != NULL; name = names.next()) {
+			param_name = "CLASSAD_USER_MAPFILE_"; param_name += name;
+			user_map.set(param(param_name.c_str()));
+			if (user_map) {
+				add_user_map(name, user_map.ptr(), NULL);
+			} else {
+				param_name = "CLASSAD_USER_MAPDATA_"; param_name += name;
+				user_map.set(param(param_name.c_str()));
+				if (user_map) {
+					add_user_mapping(name, user_map.ptr());
+				}
+			}
+		}
+
+		// we will return the number of active maps
+		if (g_user_maps) { cMaps = (int)g_user_maps->size(); }
+	} else {
+		clear_user_maps(NULL);
+		cMaps = 0;
+	}
+	return cMaps;
+}
+
 
 // map the input string using the given mapname
 // if the mapname contains a . it is treated as mapname.method

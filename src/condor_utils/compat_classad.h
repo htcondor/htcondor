@@ -390,14 +390,6 @@ class ClassAd : public classad::ClassAd
 	static bool m_initConfig;
 	static bool m_strictEvaluation;
 
-	// for the userMap classad function
-	/*
-	static int add_user_map(const char * mapname, const char * filename, MapFile * mf);
-	static int delete_user_map(const char * mapname);
-	static void clear_user_maps(StringList * keep_list=NULL);
-	static bool map_user(const char * mapname, const char * input, MyString & output);
-	*/
-
  private:
 	void evalFromEnvironment( const char *name, classad::Value val );
 
