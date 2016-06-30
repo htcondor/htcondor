@@ -490,7 +490,7 @@ CONDOR_HOST = $(CENTRAL_MANAGER1),$(CENTRAL_MANAGER2)
 ## arbitrary; make sure that there is no port number collision
 ## with other applications.
 HAD_PORT = 51450
-HAD_ARGS = -p $(HAD_PORT)
+HAD_ARGS = -f -p $(HAD_PORT)
 
 ## The following macro defines the port number condor_replication will listen
 ## on on this machine. This port should match the port number specified
@@ -500,9 +500,16 @@ HAD_ARGS = -p $(HAD_PORT)
 REPLICATION_PORT = 41450
 REPLICATION_ARGS = -p $(REPLICATION_PORT)
 
+## This probably isn't necessary, but it may be less confusing to unset it.
+HAD_SOCKET_NAME =
+
 ## Prevent the high-availability daemon from attempting to contact the
 ## replication daemon using shared port.
 REPLICATION_SOCKET_NAME =
+
+## For now, you /also/ have to turn off shared port explicitly.
+HAD.USE_SHARED_PORT = FALSE
+REPLICATION.USE_SHARED_PORT = FALSE
 
 ## The following list must contain the same addresses
 ## as HAD_LIST. In addition, for each hostname, it should specify 
