@@ -315,11 +315,11 @@ class HistoryHelperState
 {
 public:
 	HistoryHelperState(Stream &stream, const std::string &reqs, const std::string &since, const std::string &proj, const std::string &match)
-	 : m_stream_ptr(&stream), m_reqs(reqs), m_since(since), m_proj(proj), m_match(match)
+	 : m_streamresults(false), m_stream_ptr(&stream), m_reqs(reqs), m_since(since), m_proj(proj), m_match(match)
 	{}
 
 	HistoryHelperState(classad_shared_ptr<Stream> stream, const std::string &reqs, const std::string &since, const std::string &proj, const std::string &match)
-	 : m_stream_ptr(NULL), m_reqs(reqs), m_since(since), m_proj(proj), m_match(match), m_stream(stream)
+	 : m_streamresults(false), m_stream_ptr(NULL), m_reqs(reqs), m_since(since), m_proj(proj), m_match(match), m_stream(stream)
 	{}
 
 	~HistoryHelperState() { if (m_stream.get() && m_stream.unique()) daemonCore->Cancel_Socket(m_stream.get()); }
@@ -330,6 +330,7 @@ public:
 	const std::string & Since() const { return m_since; }
 	const std::string & Projection() const { return m_proj; }
 	const std::string & MatchCount() const { return m_match; }
+	bool m_streamresults;
 
 private:
 	Stream *m_stream_ptr;
