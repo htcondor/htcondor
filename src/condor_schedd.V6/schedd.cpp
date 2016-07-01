@@ -4532,6 +4532,9 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 			s->timeout( 10 ); // avoid hanging due to huge timeout
 			refuse(s);
 			s->timeout(old_timeout);
+			if ( xfer_priv == PRIV_USER ) {
+				uninit_user_ids();
+			}
 			return FALSE;
 		}
 		if ( peer_version != NULL ) {
@@ -4544,6 +4547,10 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 			result = ftrans.DownloadFiles();
 
 			if ( result ) {
+				TemporaryPrivSentry old_priv;
+				if ( xfer_priv == PRIV_USER ) {
+					set_user_priv();
+				}
 				AuditLogJobProxy( *rsock, ad );
 			}
 		} else {
