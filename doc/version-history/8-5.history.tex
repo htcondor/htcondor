@@ -104,6 +104,11 @@ methods wherein if a method failed, the remaining methods were not
 always attempted.
 \Ticket{5673}
 
+\item Fixed a bug that prevented the \condor{schedd} from reading the
+job's X.509 proxy file when writing information to the
+\MacroNI{SCHEDD\_AUDIT\_LOG}.
+\Ticket{5770}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
