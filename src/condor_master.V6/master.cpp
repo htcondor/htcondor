@@ -501,10 +501,10 @@ main_init( int argc, char* argv[] )
     extern int runfor;
 	char	**ptr;
 
-	if ( argc > 4 ) {
+	if ( argc > 3 ) {
 		usage( argv[0] );
 	}
-
+	
 	int argc_count = 1;
 	for( ptr=argv+1, argc_count = 1; argc_count<argc && *ptr; ptr++,argc_count++) {
 		if( ptr[0][0] != '-' ) {
@@ -1652,6 +1652,8 @@ main_pre_command_sock_init()
 
 	// Unless told otherwise, run the pre-scipt.
 	if( param_boolean( "SKIP_MASTER_PRE_SCRIPT", false ) ) {
+		dprintf( D_FULLDEBUG, "Skipping master pre-script.\n" );
+	} else {
 		do_master_pre_script();
 	}
 
