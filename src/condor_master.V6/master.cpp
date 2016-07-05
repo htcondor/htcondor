@@ -114,7 +114,6 @@ int		new_bin_delay;
 StopStateT new_bin_restart_mode = GRACEFUL;
 char	*MasterName = NULL;
 char	*shutdown_program = NULL;
-bool	skipMasterPreScript = false;
 
 int		master_backoff_constant = 9;
 int		master_backoff_ceiling = 3600;
@@ -468,8 +467,7 @@ void do_master_pre_script() {
 	}
 
 	if( run_script_as_root( preScript, preScriptLogFile, "running root pre-script", get_my_uid() ) ) {
-		// Re-execute, passing the -s flag, since our configuration
-		// may have changed.  [TODO]
+		restart_everyone();
 	}
 }
 
@@ -513,10 +511,6 @@ main_init( int argc, char* argv[] )
 			usage( argv[0] );
 		}
 		switch( ptr[0][1] ) {
-		case 's':
-			dprintf( D_ALWAYS, "Skipping master pre-script.\n" );
-			skipMasterPreScript = true;
-			break;
 		case 'n':
 			ptr++;
 			if( !(ptr && *ptr) ) {
@@ -1656,8 +1650,8 @@ main_pre_command_sock_init()
 	dprintf (D_FULLDEBUG, "Obtained lock on %s.\n", lock_file.Value() );
 #endif
 
-	// Unless the command-line says otherwise, run the pre-scipt.
-	if(! skipMasterPreScript) {
+	// Unless told otherwise, run the pre-scipt.
+	if( param_boolean( "SKIP_MASTER_PRE_SCRIPT", false ) ) {
 		do_master_pre_script();
 	}
 

@@ -23,6 +23,11 @@ default=$(LIBEXEC)/master_pre_script
 type=path
 review=?
 
+[SKIP_MASTER_PRE_SCRIPT]
+default=false
+type=bool
+review=?
+
 [COLLECTOR_ENVIRONMENT]
 # XXX follows pattern of %s_ENVIRONMENT
 default=

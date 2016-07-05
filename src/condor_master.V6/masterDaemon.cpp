@@ -2689,7 +2689,18 @@ Daemons::ExecMaster()
 	}
 	argv[i++] = NULL;
 
-	(void)execv(master->process_name, argv);
+	// Never re-run on the master pre-script on a re-exec.  If this abort
+	// ever becomes a problem for someone, we could maybe check to see if
+	// SKIP_MASTER_PRE_SCRIPT is set in the new config, instead...
+	if( 0 != setenv( "_CONDOR_SKIP_MASTER_PRE_SCRIPT", "TRUE", 1 ) ) {
+		EXCEPT( "Unable to disable pre-script before re-executing.\n" );
+	}
+
+	if( master && master->process_name ) {
+		(void)execv(master->process_name, argv);
+	} else {
+		(void)execv(param( "MASTER" ), argv);
+	}
 
 	free(argv);
 }
@@ -2731,8 +2742,12 @@ Daemons::FinalRestartMaster()
 				command.Value(), 0);
 #endif
 		} else {
-			dprintf( D_ALWAYS, "Doing exec( \"%s\" )\n", 
-				 master->process_name);
+			if( master && master->process_name ) {
+				dprintf( D_ALWAYS, "Doing exec( \"%s\" )\n",
+					master->process_name);
+			} else {
+				dprintf( D_ALWAYS, "Calling ExecMaster().\n" );
+			}
 
 				// It is important to switch to ROOT_PRIV, in case we are
 				// executing a master wrapper script that expects to be
