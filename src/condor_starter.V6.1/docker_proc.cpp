@@ -66,10 +66,12 @@ int DockerProc::StartJob() {
 	// introducing a version dependency -- assume the executable was
 	// transferred unless it was explicitly noted otherwise.
 	//
+	
 	bool transferExecutable = true;
 	JobAd->LookupBool( ATTR_TRANSFER_EXECUTABLE, transferExecutable );
 	if( transferExecutable ) {
-		command = sandboxPath + "/" + command;
+		// Transfered executables are still renamed (sadly)
+		command = "./condor_exec.exe";
 	}
 
 	ArgList args;
