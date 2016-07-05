@@ -2411,7 +2411,6 @@ SetExecutable()
 		buffer.formatstr("%s = \"%s\"", ATTR_DOCKER_IMAGE, image);
 		InsertJobExpr(buffer);
 		free(docker_image);
-		ignore_it = true; // we don't require an executable if we have a docker image.
 	}
 
 	ename = condor_param( Executable, ATTR_JOB_CMD );
@@ -2438,6 +2437,16 @@ SetExecutable()
 
 	if ( ignore_it ) {
 		if( transfer_it == true ) {
+			buffer.formatstr( "%s = FALSE", ATTR_TRANSFER_EXECUTABLE );
+			InsertJobExpr( buffer );
+			transfer_it = false;
+		}
+	}
+
+	// For Docker Universe, if xfer_exe not set at all, and we have an exe
+	// heuristically set xfer_exe to false if is a absolute path
+	if (IsDockerJob && (macro_value == NULL) && !ignore_it) {
+		if (ename[0] == '/') {
 			buffer.formatstr( "%s = FALSE", ATTR_TRANSFER_EXECUTABLE );
 			InsertJobExpr( buffer );
 			transfer_it = false;
