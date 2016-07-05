@@ -80,22 +80,8 @@ $failure = sub
 	CondorTest::debug("DAG failed as expected\n",1);
 };
 
-#TEMPTEMP -- because of test failures on Windows
-$evictedwithoutcheckpoint = sub
-{
-	CondorTest::debug("DAG evicted without checkpoint\n",1);
-};
-
-#TEMPTEMP -- because of test failures on Windows
-$evictedwithrequeue = sub
-{
-	CondorTest::debug("DAG evicted with requeue\n",1);
-};
-
 CondorTest::RegisterExitedSuccess( $testname, $success);
 CondorTest::RegisterExitedFailure( $testname, $failure );
-CondorTest::RegisterEvictedWithoutCheckpoint( $testname, $evictedwithoutcheckpoint );
-CondorTest::RegisterEvictedWithRequeue( $testname, $evictedwithrequeue );
 CondorTest::RegisterExecute($testname, $executed);
 CondorTest::RegisterExitedAbnormal( $testname, $abnormal );
 CondorTest::RegisterAbort( $testname, $aborted );
