@@ -2407,7 +2407,7 @@ render_cpu_util (double & cputime, AttrList *ad, Formatter & /*fmt*/)
 	double util = cputime/ckpt_time*100.0;
 	if (util > 100.0) util = 100.0;
 	else if (util < 0.0) return false;
-	util = cputime;
+	cputime = util;
 	// printf(result_format, "  %6.1f%%", util);
 	return true;
 }
