@@ -109,6 +109,8 @@ bool Condor_Auth_Kerberos::m_initSuccess = false;
 
 Condor_Auth_Kerberos :: Condor_Auth_Kerberos( ReliSock * sock )
     : Condor_Auth_Base ( sock, CAUTH_KERBEROS ),
+	  m_state		   ( ServerReceiveClientReadiness),
+	  ticket_          ( NULL),
       krb_context_     ( NULL ),
       auth_context_    ( NULL ),
       krb_principal_   ( NULL ),
