@@ -1011,6 +1011,7 @@ install -m 0755 src/condor_scripts/Condor.pm %{buildroot}%{_datadir}/condor/
 install -m 0755 src/condor_scripts/CondorPersonal.pm %{buildroot}%{_datadir}/condor/
 install -m 0755 src/condor_scripts/CondorTest.pm %{buildroot}%{_datadir}/condor/
 install -m 0755 src/condor_scripts/CondorUtils.pm %{buildroot}%{_datadir}/condor/
+install -m 0755 src/condor_scripts/CheckOutputFormats.pm %{buildroot}%{_datadir}/condor/
 
 # Install python-binding libs
 mkdir -p %{buildroot}%{python_sitearch}
@@ -1185,6 +1186,7 @@ rm -rf %{buildroot}
 %_datadir/condor/CondorPersonal.pm
 %_datadir/condor/CondorTest.pm
 %_datadir/condor/CondorUtils.pm
+%_datadir/condor/CheckOutputFormats.pm
 %if 0%{?rhel} >= 7
 %_datadir/condor/htcondor.pp
 %endif
@@ -1884,6 +1886,16 @@ fi
 %endif
 
 %changelog
+* Tue Jul 05 2016 Tim Theisen <tim@cs.wisc.edu> - 8.4.8-1
+- Fixed a memory leak triggered by the python htcondor.Schedd().query() call
+- Fixed a bug that could cause Bosco file transfers to fail
+- Fixed a bug that could cause the schedd to crash when using schedd cron jobs
+- condor_schedd now rejects jobs when owner has no account on the machine
+- Fixed a new bug in 8.4.7 where remote condor_history failed without -limit
+- Fixed bugs triggered by the reconfiguration of the high-availability daemon
+- Fixed a bug where condor_master could hang when using shared port on Windows 
+- Fixed a bug with the -xml option on condor_q and condor_status
+
 * Mon Jun 06 2016 Tim Theisen <tim@cs.wisc.edu> - 8.5.5-1
 - Improvements for scalability of EC2 grid universe jobs
 - Docker Universe jobs advertises remote user and system CPU time

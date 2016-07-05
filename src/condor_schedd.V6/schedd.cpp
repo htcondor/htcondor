@@ -1889,16 +1889,23 @@ int Scheduler::command_history(int, Stream* stream)
 	std::stringstream ss2;
 	ss2 << matchCount;
 
+	bool streamresults = false;
+	if (!queryAd.EvaluateAttrBool("StreamResults", streamresults)) {
+		streamresults = false;
+	}
+
 	if (m_history_helper_count >= m_history_helper_max) {
 		if (m_history_helper_queue.size() > 1000) {
 			return sendHistoryErrorAd(stream, 9, "Cowardly refusing to queue more than 1000 requests.");
 		}
 		classad_shared_ptr<Stream> stream_shared(stream);
 		HistoryHelperState state(stream_shared, requirements_str, since_str, ss.str(), ss2.str());
+		state.m_streamresults = streamresults;
 		m_history_helper_queue.push_back(state);
 		return KEEP_STREAM;
 	} else {
 		HistoryHelperState state(*stream, requirements_str, since_str, ss.str(), ss2.str());
+		state.m_streamresults = streamresults;
 		return history_helper_launcher(state);
 	}
 }
@@ -1932,14 +1939,19 @@ int Scheduler::history_helper_launcher(const HistoryHelperState &state) {
 		// NOTE: before 8.4.8 and 8.5.6 the argument order was: requirements projection match max
 		// starting with 8.4.8 and 8.5.6 the argument order was changed to: match max requirements projection
 		// this change was made so that projection could be empty without causing problems on Windows.
+		args.AppendArg(state.m_streamresults ? "true" : "false"); // new for 8.4.9
 		args.AppendArg(state.MatchCount());
 		args.AppendArg(param_integer("HISTORY_HELPER_MAX_HISTORY", 10000));
 		args.AppendArg(state.Requirements());
 		args.AppendArg(state.Projection());
+		MyString myargs;
+		args.GetArgsStringForLogging(&myargs);
+		dprintf(D_FULLDEBUG, "invoking %s %s\n", history_helper.ptr(), myargs.c_str());
 	} else {
 		// pass arguments in the format that condor_history wants
 		args.AppendArg("condor_history");
 		args.AppendArg("-inherit"); // tell it to write to an inherited socket
+		if (state.m_streamresults) { args.AppendArg("-stream-results"); }
 		if ( ! state.MatchCount().empty()) {
 			args.AppendArg("-match");
 			args.AppendArg(state.MatchCount());
@@ -4532,6 +4544,9 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 			s->timeout( 10 ); // avoid hanging due to huge timeout
 			refuse(s);
 			s->timeout(old_timeout);
+			if ( xfer_priv == PRIV_USER ) {
+				uninit_user_ids();
+			}
 			return FALSE;
 		}
 		if ( peer_version != NULL ) {
@@ -4544,6 +4559,10 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 			result = ftrans.DownloadFiles();
 
 			if ( result ) {
+				TemporaryPrivSentry old_priv;
+				if ( xfer_priv == PRIV_USER ) {
+					set_user_priv();
+				}
 				AuditLogJobProxy( *rsock, ad );
 			}
 		} else {

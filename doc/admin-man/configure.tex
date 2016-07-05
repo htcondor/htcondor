@@ -2535,6 +2535,18 @@ of the subsystem corresponding to the daemon.
     Enable debug messages relating to the protocol for HTCondor's matchmaking and
     resource claiming framework.
     
+  \label{dflag:stats}
+  \item[\Dflag{STATS}]
+    \index{SUBSYS\_DEBUG macro levels@\texttt{<SUBSYS>\_DEBUG} macro levels!D\_STATS@\texttt{D\_STATS}}
+    Enable debug messages relating to the TCP statistics for file
+    transfers.
+    Note that the shadow and starter, by default, log these statistics
+    to special log files (see \Macro{SHADOW\_STATS\_LOG}
+    section~\ref{param:ShadowStatsLog} and \Macro{STARTER\_STATS\_LOG},
+    section~\ref{param:StarterStatsLog}).
+    Note that, as of version 8.5.6, \Macro{C\_GAHP\_DEBUG} defaults
+    to \MacroNI{D\_STATS}.
+
   \label{dflag:pid}
   \item[\Dflag{PID}]
     \index{SUBSYS\_DEBUG macro levels@\texttt{<SUBSYS>\_DEBUG} macro levels!D\_PID@\texttt{D\_PID}}
@@ -7599,6 +7611,27 @@ These settings affect the \Condor{shadow}.
   When \Expr{True}, it allows the \Condor{shadow} daemon to run jobs 
   as user \Login{nobody} when remotely submitted and from
   users not in the local password file.
+
+\label{param:ShadowStatsLog}
+\item[\Macro{SHADOW\_STATS\_LOG}]
+  The full path and file name of a file that stores TCP statistics
+  for shadow file transfers.  (Note that the shadow logs TCP statistics
+  to this file by default.  Adding \MacroNI{D\_STATS} to the
+  \MacroNI{SHADOW\_DEBUG} value will cause TCP statistics to be logged
+  to the normal shadow log file (\MacroUNI{SHADOW\_LOG}).)
+  If not defined, \MacroNI{SHADOW\_STATS\_LOG}
+  defaults to \Expr{\$(LOG)/XferStatsLog}.
+  Setting \MacroNI{SHADOW\_STATS\_LOG} to \Expr{/dev/null} disables logging
+  of shadow TCP file transfer statistics.
+
+\label{param:MaxShadowStatsLog}
+\item[\Macro{MAX\_SHADOW\_STATS\_LOG}]
+  Controls the maximum size in bytes or amount of time that the shadow
+  TCP statistics log will be allowed to grow.  If not defined,
+  \MacroNI{MAX\_SHADOW\_STATS\_LOG} defaults to \MacroUNI{MAX\_DEFAULT\_LOG},
+  which currently defaults to 10 MiB in size.
+  Values are specified with the same syntax as \MacroNI{MAX\_DEFAULT\_LOG}.
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -8032,6 +8065,26 @@ REM Run the actual job now
   If set to \Expr{world},
   then the directory is created with permissions set to \emph{0755}.
 
+%TEMPTEMP-- check this
+\label{param:StarterStatsLog}
+\item[\Macro{STARTER\_STATS\_LOG}]
+  The full path and file name of a file that stores TCP statistics
+  for starter file transfers.  (Note that the starter logs TCP statistics
+  to this file by default.  Adding \MacroNI{D\_STATS} to the
+  \MacroNI{STARTER\_DEBUG} value will cause TCP statistics to be logged
+  to the normal starter log file (\MacroUNI{STARTER\_LOG}).)
+  If not defined, \MacroNI{STARTER\_STATS\_LOG}
+  defaults to \Expr{\$(LOG)/XferStatsLog}.
+  Setting \MacroNI{STARTER\_STATS\_LOG} to \Expr{/dev/null} disables
+  logging of starter TCP file transfer statistics.
+
+\label{param:MaxStarterStatsLog}
+\item[\Macro{MAX\_STARTER\_STATS\_LOG}]
+  Controls the maximum size in bytes or amount of time that the starter
+  TCP statistics log will be allowed to grow.  If not defined,
+  \MacroNI{MAX\_STARTER\_STATS\_LOG} defaults to \MacroUNI{MAX\_DEFAULT\_LOG},
+  which currently defaults to 10 MiB in size.
+  Values are specified with the same syntax as \MacroNI{MAX\_DEFAULT\_LOG}.
 
 \end{description}
 

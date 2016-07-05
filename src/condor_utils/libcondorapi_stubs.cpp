@@ -155,11 +155,8 @@ int param_integer_c(const char *, int default_value, int /*min_val*/, int /*max_
 }
 
 // stubs for classad_usermap.cpp functions needed by compat_classad
-void clear_user_maps(StringList *) {}
-int add_user_map(const char * , const char * , MapFile *) { return 0; }
-int add_user_mapping(const char *, char *) { return 0; }
+int reconfig_user_maps() { return 0; }
 bool user_map_do_mapping(const char *, const char *, MyString & output) { output.clear(); return false; }
-
 
 #ifdef HAVE_EXT_PCRE
 

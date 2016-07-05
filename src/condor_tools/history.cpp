@@ -61,10 +61,13 @@ void Usage(char* name, int iExitCode)
 	printf ("Usage: %s [source] [restriction-list] [options]\n"
 		"\n   where [source] is one of\n"
 		"\t-file <file>\t\tRead history data from specified file\n"
+		"\t-local\t\tRead history data from the configured files\n"
 		"\t-userlog <file>\t\tRead job data specified userlog file\n"
 		"\t-name <schedd-name>\tRemote schedd to read from\n"
 		"\t-pool <collector-name>\tPool remote schedd lives in.\n"
-		"   If neither -pool, -name, -userlog or -file is specified, then the local history file is used.\n"
+		"   If neither -file, -local, -userlog, or -name, is specified, then\n"
+		"   the SCHEDD configured by SCHEDD_HOST is queried.  If there\n"
+		"   is no configured SCHEDD (the default) the local history file(s) are read.\n"
 #ifdef HAVE_EXT_POSTGRESQL
 		"\t-dbname <schedd-name>\tRead history data from Quill database\n"
 #endif
@@ -80,26 +83,29 @@ void Usage(char* name, int iExitCode)
 		"\t-help\t\t\tDisplay this screen\n"
 		"\t-backwards\t\tList jobs in reverse chronological order\n"
 		"\t-forwards\t\tList jobs in chronological order\n"
-	//	"\t-inherit\t\tWrite results to a socket inherited from parent\n" // not for command line use...
+	//	"\t-inherit\t\tWrite results to a socket inherited from parent\n" // for use only by schedd when invoking HISTORY_HELPER
+	//  "\t-stream-results\tWrite an EOM into the socket after each result\n" // for use only by schedd when invoking HISTORY_HELPER
 		"\t-limit <number>\t\tLimit the number of jobs displayed\n"
 		"\t-match <number>\t\tOld name for -limit\n"
 		"\t-long\t\t\tDisplay entire classads\n"
 		"\t-attributes <attr-list>\tDisplay only the given attributes\n"
 		"\t-wide[:<width>]\tcon\tDon't truncate fields to fit into 80 columns\n"
 		"\t-format <fmt> <attr>\tDisplay attr using printf formatting\n"
-		"\t-autoformat[:lhVr,tng] <attr> [<attr2 ...]   Display attr(s) with automatic formatting\n"
-		"\t-af[:lhVr,tng] <attr> [<attr2 ...]\t    Same as -autoformat above\n"
-		"\t    where the [lhVr,tng] options influence the automatic formatting:\n"
-		"\t    j\tDisplay Job Id\n"
-		"\t    l\tattribute labels\n"
-		"\t    h\tattribute column headings\n"
-		"\t    V\t%%V formatting (string values are quoted)\n"
-		"\t    r\t%%r formatting (raw/unparsed values)\n"
-		"\t    t\ttab before each value (default is space)\n"
-		"\t    g\tnewline between ClassAds, no space before values\n"
-		"\t    ,\tcomma after each value\n"
-		"\t    n\tnewline after each value\n"
+		"\t-autoformat[:jlhVr,tng] <attr> [<attr2> [...]]\n"
+		"\t-af[:jlhVr,tng] <attr> [attr2 [...]]\n"
+		"\t    Print attr(s) with automatic formatting\n"
+		"\t    the [jlhVr,tng] options modify the formatting\n"
+		"\t        j   display Job Id\n"
+		"\t        l   attribute labels\n"
+		"\t        h   attribute column headings\n"
+		"\t        V   %%V formatting (string values are quoted)\n"
+		"\t        r   %%r formatting (raw/unparsed values)\n"
+		"\t        ,   comma after each value\n"
+		"\t        t   tab before each value (default is space)\n"
+		"\t        n   newline after each value\n"
+		"\t        g   newline between ClassAds, no space before values\n"
 		"\t    use -af:h to get tabular values with headings\n"
+		"\t    use -af:lrng to get -long equivalent format\n"
 		"\t-print-format <file>\tUse <file> to specify the attributes and formatting\n"
 		"\t\t\t\t(experimental, see htcondor-wiki for more information)\n"
 		, name);
@@ -119,7 +125,7 @@ static void readHistoryFromFileEx(const char *JobHistoryFileName, const char* co
 static void printJobAds(ClassAdList & jobs);
 static void printJob(ClassAd & ad);
 
-static int set_print_mask_from_stream(AttrListPrintMask & print_mask, std::string & constraint, const char * streamid, bool is_filename);
+static int set_print_mask_from_stream(AttrListPrintMask & print_mask, std::string & constraint, StringList & attrs, const char * streamid, bool is_filename);
 static int getDisplayWidth();
 
 
@@ -147,7 +153,10 @@ static int specifiedMatch = -1, maxAds = -1;
 static std::string g_name, g_pool;
 static Stream* socks[2] = { NULL, NULL };
 static bool writetosocket = false;
+static bool streamresults = false;
+static bool streamresults_specified = false; // set to true if -stream-results:<bool> argument is supplied
 static int writetosocket_failcount = 0;
+static bool abort_transfer = false;
 static StringList projection;
 static classad::References whitelist;
 static ExprTree *sinceExpr = NULL;
@@ -195,6 +204,7 @@ main(int argc, char* argv[])
   const char *owner=NULL;
   bool readfromfile = true;
   bool fileisuserlog = false;
+  bool dash_local = false; // set if -local is passed
 
   char* JobHistoryFileName=NULL;
   const char * pcolon=NULL;
@@ -209,6 +219,8 @@ main(int argc, char* argv[])
   myDistro->Init( argc, argv );
 
   config();
+
+  readfromfile = ! param_defined("SCHEDD_HOST");
 
 #ifdef HAVE_EXT_POSTGRESQL
   parameters = (void **) malloc(NUM_PARAMETERS * sizeof(void *));
@@ -318,6 +330,26 @@ main(int argc, char* argv[])
 		readfromfile = true;
 		fileisuserlog = true;
 	}
+	else if (is_dash_arg_prefix(argv[i],"local",2)) {
+		// -local overrides the existance of SCHEDD_HOST and forces a local query
+		if ( ! g_name.empty()) {
+			fprintf(stderr, "Error: Arguments -local and -name cannot be used together\n");
+			exit(1);
+		}
+		readfromfile = true;
+		dash_local = true;
+	}
+	else if (is_dash_arg_colon_prefix(argv[i],"stream-results", &pcolon, 6)) {
+		streamresults = true;
+		streamresults_specified = true;
+		if (pcolon) {
+			// permit optional -stream:false argument to force streaming off, but default to on unless it parses as a bool.
+			++pcolon;
+			if ( ! string_is_boolean_param(pcolon, streamresults)) {
+				streamresults = true;
+			}
+		}
+	}
 	else if (is_dash_arg_prefix(argv[i],"inherit",-1)) {
 
 		// Start writing to the ToolLog
@@ -338,6 +370,7 @@ main(int argc, char* argv[])
 			fprintf(stderr, "first inherited socket is not a ReliSock, aborting\n");
 			exit(1);
 		}
+		readfromfile = true;
 		writetosocket = true;
 		backwards = true;
 		longformat = true;
@@ -396,7 +429,7 @@ main(int argc, char* argv[])
 		customFormat = true;
 		++i;
 		std::string where_expr;
-		if (set_print_mask_from_stream(mask, where_expr, argv[i], true) < 0) {
+		if (set_print_mask_from_stream(mask, where_expr, projection, argv[i], true) < 0) {
 			fprintf(stderr, "Error: cannot execute print-format file %s\n", argv[i]);
 			exit (1);
 		}
@@ -517,6 +550,10 @@ main(int argc, char* argv[])
                 "\t\te.g. condor_history -name submit.example.com \n");
             exit(1);
         }
+        if (dash_local) {
+            fprintf(stderr, "Error: -local and -name cannot be used together\n");
+            exit(1);
+        }
         g_name = argv[i];
         readfromfile = false;
        #ifdef HAVE_EXT_POSTGRESQL
@@ -557,6 +594,12 @@ main(int argc, char* argv[])
   }
   if (i<argc) Usage(argv[0]);
   
+  // for remote queries, default to requesting streamed results
+  // unless the -stream-results flag was passed explicitly.
+  if ( ! readfromfile && ! writetosocket && ! streamresults_specified) {
+	streamresults = true;
+  }
+
 	// Since we only deal with one ad at a time, this doubles the speed of parsing
   classad::ClassAdSetExpressionCaching(false);
  
@@ -682,12 +725,23 @@ main(int argc, char* argv[])
   }
 #endif /* HAVE_EXT_POSTGRESQL */
 
-  // some output methods use a whitelist rather than a stringlist projection.
-	for (const char * attr = projection.first(); attr != NULL; attr = projection.next()) {
-		whitelist.insert(attr);
+  if (writetosocket && streamresults) {
+	compat_classad::ClassAd ad;
+	ad.InsertAttr(ATTR_OWNER, 1);
+	ad.InsertAttr("StreamResults", true);
+	dprintf(D_FULLDEBUG, "condor_history: sending streaming ACK header ad:\n");
+	dPrintAd(D_FULLDEBUG, ad, false);
+	if ( ! putClassAd(socks[0], ad) || ! socks[0]->end_of_message()) {
+		dprintf(D_ALWAYS, "condor_history: Failed to write streaming ACK header ad\n");
+		exit(1);
 	}
+  }
 
   if(readfromfile == true) {
+		// some output methods use a whitelist rather than a stringlist projection.
+		for (const char * attr = projection.first(); attr != NULL; attr = projection.next()) {
+			whitelist.insert(attr);
+		}
       readHistoryFromFiles(fileisuserlog, JobHistoryFileName, my_constraint.c_str(), constraintExpr);
   }
   else {
@@ -706,6 +760,9 @@ main(int argc, char* argv[])
 		dprintf(D_ALWAYS, "condor_history: Failed to write final ad to client\n");
 		exit(1);
 	}
+	// TJ: if I don't do this. the other end of the connection never gets the final ad....
+	ReliSock * sock = (ReliSock*)(socks[0]);
+	sock->close();
   }
 #ifdef HAVE_EXT_POSTGRESQL
   if(parameters) free(parameters);
@@ -898,6 +955,18 @@ static void init_default_custom_format()
 	AddPrintColumn("COMPLETED",  11,    0, ATTR_COMPLETION_DATE, format_int_date);
 	AddPrintColumn("CMD",       -15, FormatOptionLeftAlign | FormatOptionNoTruncate, ATTR_JOB_CMD, render_job_cmd_and_args);
 
+	static const char* const attrs[] = {
+		ATTR_CLUSTER_ID, ATTR_PROC_ID, ATTR_OWNER, ATTR_JOB_STATUS,
+		ATTR_JOB_REMOTE_WALL_CLOCK, ATTR_JOB_REMOTE_USER_CPU,
+		ATTR_JOB_CMD, ATTR_JOB_ARGUMENTS1, ATTR_JOB_ARGUMENTS2,
+		//ATTR_JOB_DESCRIPTION, "MATCH_EXP_" ATTR_JOB_DESCRIPTION,
+		ATTR_Q_DATE, ATTR_COMPLETION_DATE,
+	};
+	for (int ii = 0; ii < (int)COUNTOF(attrs); ++ii) {
+		const char * attr = attrs[ii];
+		if ( ! projection.contains_anycase(attr)) projection.append(attr);
+	}
+
 	customFormat = TRUE;
 }
 
@@ -1031,9 +1100,23 @@ static void printHeader()
 	if ( ! longformat) {
 		if ( ! customFormat) {
 			// hack to get backward-compatible formatting
-			if ( ! wide_format && 80 == wide_format_width)
+			if ( ! wide_format && 80 == wide_format_width) {
 				short_header();
-			else {
+				// for the legacy format output format, set the projection by hand.
+				const char * const attrs[] = {
+					ATTR_CLUSTER_ID, ATTR_PROC_ID,
+					ATTR_JOB_REMOTE_WALL_CLOCK, ATTR_JOB_REMOTE_USER_CPU,
+					ATTR_Q_DATE, ATTR_COMPLETION_DATE,
+					ATTR_JOB_STATUS, ATTR_JOB_PRIO,
+					ATTR_IMAGE_SIZE, ATTR_MEMORY_USAGE,
+					ATTR_OWNER,
+					ATTR_JOB_CMD, ATTR_JOB_ARGUMENTS1,
+				};
+				for (int ii = 0; ii < (int)COUNTOF(attrs); ++ii) {
+					const char * attr = attrs[ii];
+					if ( ! projection.contains_anycase(attr)) projection.append(attr);
+				}
+			} else {
 				init_default_custom_format();
 				if ( ! wide_format || 0 != wide_format_width) {
 					int console_width = wide_format_width;
@@ -1052,7 +1135,7 @@ static void printHeader()
 // Read history from a remote schedd
 static void readHistoryRemote(classad::ExprTree *constraintExpr)
 {
-	printHeader();
+	printHeader(); // this has the side effect of setting the projection for the default output
 	if(longformat && use_xml) {
 		std::string out;
 		AddClassAdXMLFileHeader(out);
@@ -1062,6 +1145,13 @@ static void readHistoryRemote(classad::ExprTree *constraintExpr)
 	compat_classad::ClassAd ad;
 	ad.Insert(ATTR_REQUIREMENTS, constraintExpr, false);
 	ad.InsertAttr(ATTR_NUM_MATCHES, specifiedMatch <= 0 ? -1 : specifiedMatch);
+	// in 8.5.6, we can request that the remote side stream the results back. othewise
+	// the 8.4 protocol will only send EOM after the last result, and thus we print nothing
+	// until all of the results have been recieved.
+	if (streamresults || streamresults_specified) {
+		bool want_streamresults = streamresults_specified ? streamresults : true;
+		ad.InsertAttr("StreamResults", want_streamresults);
+	}
 	// only 8.5.6 and later will honor this, older schedd's will just ignore it
 	if (sinceExpr) ad.Insert("Since", sinceExpr, false);
 
@@ -1093,33 +1183,47 @@ static void readHistoryRemote(classad::ExprTree *constraintExpr)
 		exit(1);
 	}
 
+	bool eom_after_each_ad = false;
 	while (true) {
 		compat_classad::ClassAd ad;
 		if (!getClassAd(sock, ad)) {
-			fprintf(stderr, "Failed to recieve remote ad.\n");
+			fprintf(stderr, "Failed to receive remote ad.\n");
 			exit(1);
 		}
 		long long intVal;
-		if (ad.EvaluateAttrInt(ATTR_OWNER, intVal) && (intVal == 0)) { // Last ad.
+		if (ad.EvaluateAttrInt(ATTR_OWNER, intVal)) {
+			//fprintf(stderr, "Got Owner=%d ad\n", (int)intVal);
 			if (!sock->end_of_message()) {
 				fprintf(stderr, "Unable to close remote socket.\n");
 			}
-			sock->close();
-			std::string errorMsg;
-			if (ad.EvaluateAttrInt(ATTR_ERROR_CODE, intVal) && intVal && ad.EvaluateAttrString(ATTR_ERROR_STRING, errorMsg)) {
-				fprintf(stderr, "Error %lld: %s\n", intVal, errorMsg.c_str());
-				exit(intVal);
-			}
-			if (ad.EvaluateAttrInt("MalformedAds", intVal) && intVal) {
-				fprintf(stderr, "Remote side had parse errors on history file");
-				exit(1);
-			}
-			if (!ad.EvaluateAttrInt(ATTR_NUM_MATCHES, intVal) || (intVal != matchCount)) {
-				fprintf(stderr, "Client and server do not agree on number of ads sent;\n"
-					"Indicates lost network packets or an internal error\n");
+			if (intVal == 1) { // first ad.
+				if ( ! ad.EvaluateAttrBool("StreamResults", eom_after_each_ad)) eom_after_each_ad = true;
+				continue;
+			} else if (intVal == 0) { // last ad
+				sock->close();
+				std::string errorMsg;
+				if (ad.EvaluateAttrInt(ATTR_ERROR_CODE, intVal) && intVal && ad.EvaluateAttrString(ATTR_ERROR_STRING, errorMsg)) {
+					fprintf(stderr, "Error %lld: %s\n", intVal, errorMsg.c_str());
+					exit(intVal);
+				}
+				if (ad.EvaluateAttrInt("MalformedAds", intVal) && intVal) {
+					fprintf(stderr, "Remote side had parse errors on history file");
+					exit(1);
+				}
+				if (!ad.EvaluateAttrInt(ATTR_NUM_MATCHES, intVal) || (intVal != matchCount)) {
+					fprintf(stderr, "Client and server do not agree on number of ads sent;\n"
+						"Indicates lost network packets or an internal error\n");
+					exit(1);
+				}
+			} else {
+				fprintf(stderr, "Error: Unexpected Owner=%d\n", (int)intVal);
 				exit(1);
 			}
 			break;
+		}
+		if (eom_after_each_ad && ! sock->end_of_message()) {
+			fprintf(stderr, "failed recieve EOM after ad\n");
+			exit(1);
 		}
 		matchCount++;
 		printJob(ad);
@@ -1471,6 +1575,10 @@ static void printJob(ClassAd & ad)
 	if (writetosocket) {
 		if ( ! putClassAd(socks[0], ad, 0, whitelist.empty() ? NULL : &whitelist)) {
 			++writetosocket_failcount;
+			abort_transfer = true;
+		} else if (streamresults && ! socks[0]->end_of_message()) {
+			++writetosocket_failcount;
+			abort_transfer = true;
 		}
 		return;
 	}
@@ -1543,6 +1651,7 @@ static void printJobAds(ClassAdList & jobs)
 	ClassAd	*job;
 	while (( job = jobs.Next())) {
 		printJob(*job);
+		if (abort_transfer) break;
 	}
 	jobs.Close();
 
@@ -1615,6 +1724,8 @@ static void readHistoryFromFileEx(const char *JobHistoryFileName, const char* co
 			banner_line = line;
 			if ((specifiedMatch > 0 && matchCount >= specifiedMatch) || (maxAds > 0 && adCount >= maxAds))
 				break;
+			if (abort_transfer)
+				break;
 
 		} else {
 
@@ -1668,10 +1779,10 @@ static const CustomFormatFnTable LocalPrintFormatsTable = SORTED_TOKENER_TABLE(L
 static int set_print_mask_from_stream(
 	AttrListPrintMask & print_mask,
 	std::string & constraint,
+	StringList & attrs,
 	const char * streamid,
 	bool is_filename)
 {
-	StringList attrs;  // used for projection, which we don't currently do. 
 	std::string messages;
 	printmask_aggregation_t aggregation;
 	printmask_headerfooter_t headFoot = STD_HEADFOOT;

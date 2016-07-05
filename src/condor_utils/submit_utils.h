@@ -439,6 +439,7 @@ public:
 	int InsertJobExprInt(const char * name, int val);
 	int InsertJobExprString(const char * name, const char * val);
 	MACRO_ITEM* lookup_exact(const char * name) { return find_macro_item(name, NULL, SubmitMacroSet); }
+	CondorError* error_stack() const {return SubmitMacroSet.errors;}
 
 	void optimize() { if (SubmitMacroSet.sorted < SubmitMacroSet.size) optimize_macros(SubmitMacroSet); }
 	void dump(FILE* out, int flags);
