@@ -342,18 +342,25 @@ parseExpression( ExprTree *&tree, bool full )
 		lexer.ConsumeToken();
 		treeL = tree;
 
-		parseExpression(treeM);
-		if( ( tt = lexer.ConsumeToken() ) != Lexer::LEX_COLON ) {
-			CondorErrno = ERR_PARSE_ERROR;
-			CondorErrMsg="expected LEX_COLON, but got "+
-				string(Lexer::strLexToken(tt));
-			if( treeL ) delete treeL; 
-			if( treeM ) delete treeM;
-			tree = NULL;
-			return false;
+		if (lexer.PeekToken() == Lexer::LEX_COLON) {
+			// middle expression is empty
+			lexer.ConsumeToken(); // consume the colon
+			treeM = NULL; // mean return the lhs
+		} else {
+			// we have a middle expression
+			parseExpression(treeM);
+			if( ( tt = lexer.ConsumeToken() ) != Lexer::LEX_COLON ) {
+				CondorErrno = ERR_PARSE_ERROR;
+				CondorErrMsg="expected LEX_COLON, but got "+
+					string(Lexer::strLexToken(tt));
+				if( treeL ) delete treeL; 
+				if( treeM ) delete treeM;
+				tree = NULL;
+				return false;
+			}
 		}
 		parseExpression(treeR);
-		if( treeL && treeM && treeR && ( newTree=Operation::MakeOperation( 
+		if( treeL && treeR && ( newTree=Operation::MakeOperation( 
 				Operation::TERNARY_OP, treeL, treeM, treeR ) ) ) {
 			tree = newTree;
 			return( true );
