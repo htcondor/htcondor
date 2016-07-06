@@ -83,9 +83,12 @@ more details.
 
 \begin{itemize}
 
-\item Fixed a bug preventing HTCondor from recognizing an address in Sinful
-format as its own address when operating in mixed (IPv4 and IPv6) mode.
+\item Fixed bugs preventing HTCondor daemons from recognizing an address in
+Sinful format as its own when operating in mixed (IPv4 and IPv6) mode.  One
+manifestation of this would be errors from the HAD daemon when specifying
+hosts by name in the \MacroNI{HAD\_LIST} or \MacroNI{REPLICATION\_LIST}.
 \Ticket{5728}
+\Ticket{5776}
 
 \item \Condor{user\_prio} now more correctly shows information
 about submitters flocking to a pool, but who haven't used 
