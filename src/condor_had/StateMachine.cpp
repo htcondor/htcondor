@@ -672,10 +672,11 @@ HADStateMachine::setReplicationDaemonSinfulString( void )
     replicationAddressList.rewind( );
 
     free( tmp );
-    char* host = getHostFromAddr( daemonCore->InfoCommandSinfulString( ) );
 
 	int replicationDaemonIndex = replicationAddressList.number() - 1;
 
+	const char * mySinfulString = daemonCore->InfoCommandSinfulString();
+	Sinful mySinful( mySinfulString );
     while( ( replicationAddress = replicationAddressList.next( ) ) ) {
         char* sinfulAddress     = utilToSinful( replicationAddress );
 
@@ -688,33 +689,33 @@ HADStateMachine::setReplicationDaemonSinfulString( void )
 
             //continue;
         }
-        char* sinfulAddressHost = getHostFromAddr( sinfulAddress );
 
-        if(  (replicationDaemonIndex == m_selfId)     &&
-			 (strcmp( sinfulAddressHost, host ) == 0)  ) {
+        // The replication daemon will have either a different port number
+        // or a different socket name than we do, so set both so that we
+        // can use the Sinful class to check if the IPs are the same
+        // (because there might be more than one).
+        mySinful.setSharedPortID( param( "REPLICATION_SOCKET_NAME" ) );
+        if( replicationDaemonIndex == m_selfId ) {
             Sinful s( sinfulAddress );
-            s.setSharedPortID( param( "REPLICATION_SOCKET_NAME" ) );
-            m_replicationDaemonSinfulString = strdup( s.getSinful() );
-            free( sinfulAddressHost );
-            free( sinfulAddress );
-			dprintf( D_ALWAYS,
-					"HADStateMachine::setReplicationDaemonSinfulString "
-					"corresponding replication daemon - %s\n",
-					 s.getSinful() );
-            break;
-        } else if( replicationDaemonIndex == m_selfId ) {
-			sprintf( buffer,
-					 "HADStateMachine::setReplicationDaemonSinfulString"
-					 "host names of machine and replication daemon do "
-					 "not match: %s vs. %s\n", host, sinfulAddressHost);
-			utilCrucialError( buffer );
-		}
+			mySinful.setPort( s.getPort() );
+            if( s.valid() && mySinful.addressPointsToMe( s ) ) {
+                m_replicationDaemonSinfulString = strdup( s.getSinful() );
+                dprintf( D_ALWAYS,
+                    "HADStateMachine::setReplicationDaemonSinfulString "
+                    "corresponding replication daemon - %s\n",
+                    s.getSinful() );
+            } else {
+                sprintf( buffer,
+                         "HADStateMachine::setReplicationDaemonSinfulString "
+                         "host names of machine and replication daemon do "
+                         "not match: %s vs. %s\n", mySinful.getSinful(), s.getSinful() );
+                utilCrucialError( buffer );
+            }
+        }
 
 		replicationDaemonIndex --;
-        free( sinfulAddressHost );
         free( sinfulAddress );
     }
-    free( host );
 
     // if failed to found the replication daemon in REPLICATION_LIST, just
     // switch off the replication feature
