@@ -1394,7 +1394,7 @@ Dag::StartNode( Job *node, bool isRetry )
 
 	// no PRE script exists or is done, so add job to the queue of ready jobs
 		//TEMPTEMP -- why do we call this right before we submit?  will we even need it with simplified scheme?
-#if 1 //TEMPTEMP
+#if 0 //TEMPTEMP
 	node->FixPriority(*this);
 #endif //TEMPTEMP
 
@@ -4475,7 +4475,7 @@ debug_printf( DEBUG_QUIET, "DIAG Dag::GetDefaultPriority(): %d\n", GetDefaultPri
 		Job* job;
 		_jobs.Rewind();
 		while( (job = _jobs.Next()) != NULL ) {
-#if 0 //TEMPTEMP
+#if 1 //TEMPTEMP
 			job->_hasNodePriority = true;//TEMPTEMP -- do we need this?
 			job->_nodePriority += GetDefaultPriority();
 #else //TEMPTEMP

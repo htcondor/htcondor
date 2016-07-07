@@ -1,3 +1,6 @@
-JOB nodeD job_dagman_propogate_priorities-D.cmd
+JOB nodeD job_dagman_propogate_priorities-node.cmd
 VARS nodeD jobname="job_dagman_propogate_priorities-D"
 PRIORITY nodeD 10
+
+JOB nodeE job_dagman_propogate_priorities-node.cmd
+VARS nodeE jobname="job_dagman_propogate_priorities-E"
