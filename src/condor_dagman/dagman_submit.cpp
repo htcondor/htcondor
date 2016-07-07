@@ -289,7 +289,7 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 		// Append the priority, if we have one.
 	if ( priority != 0 ) {
 		args.AppendArg( "-a" );
-		MyString prioStr = "priority=";//TEMPTEMP -- should this be a constant?
+		MyString prioStr = "priority=";
 		prioStr += priority;
 		args.AppendArg( prioStr.Value() );
 	}

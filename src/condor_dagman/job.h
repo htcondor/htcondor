@@ -391,9 +391,6 @@ class Job {
 	*/
 	time_t GetLastEventTime() { return _lastEventTime; }
 
-	//TEMPTEMP -- this needs to be documented!!
-	void FixPriority(Dag& dag);
-
 	bool HasPreSkip() const { return _preskip != PRE_SKIP_INVALID; }
 	int GetPreSkip() const;
 	
@@ -476,12 +473,14 @@ public:
 		// queue for this node.
 	int _queuedNodeJobProcs;
 
-		// Whether the _nodePriority value is meaningful.
-		//TEMPTEMP -- do we need this in simplified scheme?  maybe for rescue DAGs?
-	bool _hasNodePriority;
-
 		// Node priority.  Higher number is better priority (submit first).
-	int _nodePriority;
+		// Explicit priority is the priority actually set in the DAG
+		// file (0 if not set).
+	int _explicitPriority;
+		// Effective priority is the priority at which we're going to
+		// actually submit the job (explicit priority adjusted
+		// according to the DAG priority algorithm).
+	int _effectivePriority;
 
 		// The number of times this job has been held.  (Note: the current
 		// implementation counts holds for all procs in a multi-proc cluster

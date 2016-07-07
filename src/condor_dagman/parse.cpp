@@ -1604,16 +1604,16 @@ parse_priority(
 		return false;
 	}
 
-	if ( job->_hasNodePriority && job->_nodePriority != priorityVal ) {
+	if ( ( job->_explicitPriority != 0 )
+				&& ( job->_explicitPriority != priorityVal ) ) {
 		debug_printf( DEBUG_NORMAL, "Warning: new priority %d for node %s "
 					"overrides old value %d\n", priorityVal,
-					job->GetJobName(), job->_nodePriority );
+					job->GetJobName(), job->_explicitPriority );
 		check_warning_strictness( DAG_STRICT_2 );
 	}
-	//TEMPTEMP -- I don't like that these are public in the Job object...
-debug_printf( DEBUG_QUIET, "DIAG node %s priority %d\n", job->GetJobName(), priorityVal );//TEMPTEMP
-	job->_hasNodePriority = true;
-	job->_nodePriority = priorityVal;
+
+	job->_explicitPriority = priorityVal;
+	job->_effectivePriority = priorityVal;
 
 	return true;
 }

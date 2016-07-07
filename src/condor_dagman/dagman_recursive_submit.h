@@ -55,6 +55,7 @@ struct SubmitDagShallowOptions
 	bool doRecovery;
 	bool bPostRun;
 	bool bPostRunSet; // whether this was actually set on the command line
+	int priority;
 
 	// non-command line options
 	MyString strLibOut;
@@ -88,6 +89,7 @@ struct SubmitDagShallowOptions
 		doRecovery = false;
 		copyToSpool = param_boolean( "DAGMAN_COPY_TO_SPOOL", false );
 		iDebugLevel = DEBUG_UNSET;
+		priority = 0;
 	}
 };
 
@@ -113,7 +115,6 @@ struct SubmitDagDeepOptions
 	bool recurse; // whether to recursively run condor_submit_dag on nested DAGs
 	bool updateSubmit; // allow updating submit file w/o -force
 	bool importEnv; // explicitly import environment into .condor.sub file
-	int priority; // Priority of parent of DAG node
 
 	bool suppress_notification;
 	MyString acctGroup;
@@ -132,7 +133,6 @@ struct SubmitDagDeepOptions
 		recurse = false;
 		updateSubmit = false;
 		importEnv = false;
-		priority = 0;
 		suppress_notification = true;
 		acctGroup = "";
 		acctGroupUser = "";
@@ -145,10 +145,13 @@ extern "C" {
 	@param dagFile: the DAG file to process
 	@param directory: the directory from which the DAG file should
 		be processed (ignored if NULL)
+	@param priority: the priority of this DAG
+	@param isRetry: whether this is a retry
 	@return 0 if successful, 1 if failed
 */
 int runSubmitDag( const SubmitDagDeepOptions &deepOpts,
-			const char *dagFile, const char *directory, bool isRetry );
+			const char *dagFile, const char *directory, int priority,
+			bool isRetry );
 }
 
 #endif	// ifndef DAGMAN_RECURSIVE_SUBMIT_H

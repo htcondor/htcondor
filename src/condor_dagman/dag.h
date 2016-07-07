@@ -717,9 +717,16 @@ class Dag {
 	JobstateLog &GetJobstateLog() { return _jobstateLog; }
 	bool GetPostRun() const { return _alwaysRunPost; }
 	void SetPostRun(bool postRun) { _alwaysRunPost = postRun; }	
-	void SetDefaultPriorities();
-	void SetDefaultPriority(const int prio) { _defaultPriority = prio; }
-	int GetDefaultPriority() const { return _defaultPriority; }
+
+		// Set the overall priority for this DAG (set on command
+		// line (could be from higher-level DAG) or via config).
+	void SetDagPriority(const int prio) { _dagPriority = prio; }
+
+		// Get this DAG's overall priority.
+	int GetDagPriority() const { return _dagPriority; }
+		
+		// Set priorities for the individual nodes within this DAG.
+	void SetNodePriorities();
 
 	/** Determine whether the DAG is currently halted (waiting for
 		existing jobs to finish but not submitting any new ones).
@@ -1190,8 +1197,8 @@ private:
 	// Defaults to true
 	bool _alwaysRunPost;
 
-		// The default priority for nodes in this DAG. (defaults to 0)
-	int _defaultPriority;
+		// The priority for this DAG. (defaults to 0)
+	int _dagPriority;
 
 		// Whether the DAG is currently halted.
 	bool _dagIsHalted;
