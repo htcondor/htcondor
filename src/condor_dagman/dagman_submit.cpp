@@ -204,7 +204,7 @@ do_submit( ArgList &args, CondorID &condorID, bool prohibitMultiJobs )
 bool
 condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 			   const char* DAGNodeName, MyString &DAGParentNodeNames,
-			   List<Job::NodeVar> *vars, int retry,
+			   List<Job::NodeVar> *vars, int priority, int retry,
 			   const char* directory, const char *workflowLogFile,
 			   bool hold_claim, const MyString &batchName )
 {
@@ -285,6 +285,15 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 	dmask += eventMask;
 	dmask += "\"";
 	args.AppendArg( dmask.c_str() );
+
+		// Append the priority, if we have one.
+	if ( priority != 0 ) {
+		args.AppendArg( "-a" );
+		MyString prioStr = "priority=";//TEMPTEMP -- should this be a constant?
+		prioStr += priority;
+		args.AppendArg( prioStr.Value() );
+	}
+
 
 		// Suppress the job's log file if that option is enabled.
 	if ( dm._suppressJobLogs ) {

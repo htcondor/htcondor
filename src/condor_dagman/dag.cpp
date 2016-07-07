@@ -1397,32 +1397,10 @@ Dag::StartNode( Job *node, bool isRetry )
 #if 1 //TEMPTEMP
 	node->FixPriority(*this);
 #endif //TEMPTEMP
-		//
-		// If we have a node priority, stuff it into the vars for the
-		// node.
-		//TEMPTEMP -- is this even the right thing to do, or should the submit code just explicitly reference priority?
-		//TEMPTEMP -- yes -- we want to NOT put priority into the vars, because then it gets doubly-saved in a rescue DAG...
-	if ( !isRetry && node->_hasNodePriority ) {
-debug_printf( DEBUG_QUIET, "DIAG 1020\n" );//TEMPTEMP
-		Job::NodeVar *var = new Job::NodeVar();
-		var->_name = "priority";
-		var->_value = node->_nodePriority;
-		node->varsFromDag->Append( var );
-	}
 
 	if ( isRetry && m_retryNodeFirst ) {
 		_readyQ->Prepend( node, -node->_nodePriority );
 	} else {
-#if 0 //TEMPTEMP
-		if(node->_hasNodePriority){
-			//TEMPTEMP -- shit -- will this get called multiple times on retries??
-debug_printf( DEBUG_QUIET, "DIAG 1010\n" );//TEMPTEMP
-			Job::NodeVar *var = new Job::NodeVar();
-			var->_name = "priority";
-			var->_value = node->_nodePriority;
-			node->varsFromDag->Append( var );
-		}
-#endif //TEMPTEMP
 		if ( _submitDepthFirst ) {
 			_readyQ->Prepend( node, -node->_nodePriority );
 		} else {
@@ -4005,7 +3983,7 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 
    		submit_success = condor_submit( dm, node->GetCmdFile(), condorID,
 					node->GetJobName(), parents,
-					node->varsFromDag, node->GetRetries(),
+					node->varsFromDag, node->_nodePriority, node->GetRetries(),
 					node->GetDirectory(), _defaultNodeLog,
 					node->NumChildren() > 0 && dm._claim_hold_time > 0,
 					batchName );
