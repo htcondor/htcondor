@@ -1,0 +1,24 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+
+use CondorTest;
+use CondorUtils;
+use NetworkTestConfigs;
+
+#
+# The 'test_user_mapping' binary tests the MapFile.cpp parsing
+# and mapping
+#
+my $rv = system( 'test_user_mapping -v' );
+
+my $testName = "unit_test_user_mapping";
+if( $rv == 0 ) {
+	RegisterResult( 1, "test_name" => $testName );
+} else {
+	RegisterResult( 0, "test_name" => $testName );
+}
+
+EndTest();
+exit( 1 );

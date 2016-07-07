@@ -85,6 +85,12 @@ public:
 		 **/
 	bool isInitialized( );
 
+		/**
+		 * returns memory allocated by the pcre object
+		 *
+		 **/
+	size_t mem_used();
+
 private:
 
 	pcre * re;

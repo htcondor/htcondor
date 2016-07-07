@@ -25,6 +25,23 @@
 #include "extArray.h"
 #include "MyString.h"
 
+#define USE_MAPFILE_V2 1
+#ifdef USE_MAPFILE_V2
+#include "pool_allocator.h"
+class CanonicalMapList;
+typedef std::map<const YourSensitiveString, CanonicalMapList*, CaseIgnLTYourSensitiveString> METHOD_MAP;
+#endif
+
+typedef struct _MapFileUsage {
+	int cMethods;
+	int cRegex;
+	int cHash;
+	int cEntries;
+	int cAllocations;
+	int cbStrings;
+	int cbStructs;
+	int cbWaste;
+} MapFileUsage;
 
 class MapFile
 {
@@ -33,16 +50,16 @@ class MapFile
 	~MapFile();
 
 	int
-	ParseCanonicalizationFile(const MyString filename);
+	ParseCanonicalizationFile(const MyString filename, bool assume_hash=false);
 
 	int
-	ParseCanonicalization(MyStringSource & src, const char* srcname);
+	ParseCanonicalization(MyStringSource & src, const char* srcname, bool assume_hash=false);
 
 	int
-	ParseUsermapFile(const MyString filename);
+	ParseUsermapFile(const MyString filename, bool assume_hash=true);
 
 	int
-	ParseUsermap(MyStringSource & src, const char * srcname);
+	ParseUsermap(MyStringSource & src, const char * srcname, bool assume_hash=true);
 
 	int
 	GetCanonicalization(const MyString method,
@@ -53,7 +70,40 @@ class MapFile
 	GetUser(const MyString canonicalization,
 			MyString & user);
 
+#ifdef USE_MAPFILE_V2
+	bool empty() { return methods.empty(); }
+	void reserve(int cbReserve) { apool.reserve(cbReserve); } // reserve space in the allocation pool
+#else
+	bool empty() { return canonical_entries.length() == 0 && user_entries.length() == 0; }
+	void reserve(int /*cbReserve*/) { } // reserve space in the allocation pool
+#endif
+	int  size(MapFileUsage * pusage=NULL); // returns number of items in the map, and also usage information if pusage is non-null
+	void reset(); // remove all items, but do not free memory
+	void clear(); // clear all items and free memory
+
  private:
+#ifdef USE_MAPFILE_V2
+	ALLOCATION_POOL apool;
+	METHOD_MAP methods;
+
+	// find or create a CanonicalMapList for the given method.
+	// use NULL as the method value for for the usermap file
+	CanonicalMapList* GetMapList(const char * method);
+
+	// add CanonicalMapEntry of type regex or hash (if regex_opts==0) to the given list
+	void AddEntry(CanonicalMapList* list, int regex_opts, const char * principal, const char * canonicalization);
+
+	bool
+	FindMapping(CanonicalMapList* list,       // in: the mapping data set
+				const MyString & input,         // in: the input to be matched and mapped.
+				ExtArray<MyString> * groups,  // out: match groups from the input
+				const char ** pcanon);        // out: canonicalization pattern
+
+	void
+	PerformSubstitution(ExtArray<MyString> & groups, // in: match gropus (usually from FindMapping)
+						const char * pattern,        // in: canonicalization pattern
+						MyString & output);          // out: the input pattern with groups substituted is appended to this
+#else
 	struct CanonicalMapEntry {
 		MyString method;
 		MyString principal;
@@ -61,13 +111,13 @@ class MapFile
 		Regex regex;
 	};
 
+	ExtArray<CanonicalMapEntry> canonical_entries;
 	struct UserMapEntry {
 		MyString canonicalization;
 		MyString user;
 		Regex regex;
 	};
 
-	ExtArray<CanonicalMapEntry> canonical_entries;
 	ExtArray<UserMapEntry> user_entries;
 
 	bool
@@ -80,9 +130,10 @@ class MapFile
 	PerformSubstitution(ExtArray<MyString> & groups,
 						const MyString pattern,
 						MyString & output);
+#endif
 
 	int
-	ParseField(MyString & line, int offset, MyString & field);
+	ParseField(MyString & line, int offset, MyString & field, int * popts = NULL);
 };
 
 #endif

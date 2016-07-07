@@ -96,6 +96,7 @@ class MyString
 	int length() const { return Len; }
 	int size() const { return Len; }
 	void clear() { assign_str(NULL, 0); }
+	void set(const char* p, int len) { assign_str(p, len); }
 	bool empty() const { return (0 == Len); }
 	const char * c_str() const { return Value(); }
 
@@ -430,15 +431,15 @@ public:
 	YourSensitiveString(const YourSensitiveString &rhs) : m_str(rhs.m_str) {}
 
 	void operator =(const char *str) { m_str = str; }
-	const char * Value() { return m_str ? m_str : ""; }
-	const char * ptr() { return m_str; }
+	const char * Value() const { return m_str ? m_str : ""; }
+	const char * ptr() const { return m_str; }
 
-	bool operator ==(const YourSensitiveString &rhs) {
+	bool operator ==(const YourSensitiveString &rhs) const {
 		if (m_str == rhs.m_str) return true;
 		if ((!m_str) || (!rhs.m_str)) return false;
 		return strcmp(m_str,rhs.m_str) == 0;
 	}
-	bool operator ==(const char * str) {
+	bool operator ==(const char * str) const {
 		if (m_str == str) return true;
 		if ((!m_str) || (!str)) return false;
 		return strcmp(m_str,str) == 0;
@@ -474,11 +475,23 @@ public:
 		return hash;
 	}
 
-
 protected:
 	const char *m_str;
 };
 
+// this lets a make a case-insensitive std::map of YourSensitiveStrings
+struct CaseIgnLTYourSensitiveString {
+	inline bool operator( )( const YourSensitiveString &s1, const YourSensitiveString &s2 ) const {
+		const char * p1 = s1.ptr();
+		const char * p2 = s2.ptr();
+		if (p1 == p2) return 0; // p1 or p2 might be null
+		if ( ! p1) { return true; } if ( ! p2) { return false; }
+		return strcasecmp(p1, p2) < 0;
+	}
+};
+
+// these let us use MyString::readLine from file or string sources
+//
 class MyStringSource {
 public:
 	virtual ~MyStringSource() {};

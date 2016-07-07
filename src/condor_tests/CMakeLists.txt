@@ -478,6 +478,7 @@ if (BUILD_TESTING)
 	condor_pl_test(lib_param_completeness "minimal knobs" "core;quick;full")
 	condor_pl_test(lib_param_conditionals "config conditionals" "core;quick;full")
 	condor_pl_test(unit_test_macro_expand "config macro unit tests" "core;quick;full")
+	condor_pl_test(unit_test_user_mapping "MapFile parse and map unit tests" "core;quick;full")
 	#condor_pl_test(cmd_condor_ping_basic "Basic default test of condor_ping" "core;quick;full")
 	condor_pl_test(job_aggressive_flocking "Test aggressive flocking" "core;quick;full")
 	##### job tests
