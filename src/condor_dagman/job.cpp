@@ -831,12 +831,14 @@ Job::GetPreSkip() const
 void
 Job::FixPriority(Dag& dag)
 {
+debug_printf( DEBUG_QUIET, "DIAG Job(%s)::FixPriority()\n", GetJobName() );//TEMPTEMP
 	std::set<JobID_t> parents = GetQueueRef(Q_PARENTS);
 	for(std::set<JobID_t>::iterator p = parents.begin(); p != parents.end(); ++p){
 		Job* parent = dag.FindNodeByNodeID(*p);
 		if( parent->_hasNodePriority ) {
 			// Nothing to do if parent priority is small
 			if( parent->_nodePriority > _nodePriority ) {
+debug_printf( DEBUG_QUIET, "DIAG Setting node %s priority to %d\n", GetJobName(), parent->_nodePriority );//TEMPTEMP
 				_nodePriority = parent->_nodePriority;
 				_hasNodePriority = true;
 			}

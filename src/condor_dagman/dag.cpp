@@ -1391,17 +1391,38 @@ Dag::StartNode( Job *node, bool isRetry )
 		_preScriptQ->Run( node->_scriptPre );
 		return true;
     }
+
 	// no PRE script exists or is done, so add job to the queue of ready jobs
+		//TEMPTEMP -- why do we call this right before we submit?  will we even need it with simplified scheme?
+#if 1 //TEMPTEMP
 	node->FixPriority(*this);
+#endif //TEMPTEMP
+		//
+		// If we have a node priority, stuff it into the vars for the
+		// node.
+		//TEMPTEMP -- is this even the right thing to do, or should the submit code just explicitly reference priority?
+		//TEMPTEMP -- yes -- we want to NOT put priority into the vars, because then it gets doubly-saved in a rescue DAG...
+	if ( !isRetry && node->_hasNodePriority ) {
+debug_printf( DEBUG_QUIET, "DIAG 1020\n" );//TEMPTEMP
+		Job::NodeVar *var = new Job::NodeVar();
+		var->_name = "priority";
+		var->_value = node->_nodePriority;
+		node->varsFromDag->Append( var );
+	}
+
 	if ( isRetry && m_retryNodeFirst ) {
 		_readyQ->Prepend( node, -node->_nodePriority );
 	} else {
+#if 0 //TEMPTEMP
 		if(node->_hasNodePriority){
+			//TEMPTEMP -- shit -- will this get called multiple times on retries??
+debug_printf( DEBUG_QUIET, "DIAG 1010\n" );//TEMPTEMP
 			Job::NodeVar *var = new Job::NodeVar();
 			var->_name = "priority";
 			var->_value = node->_nodePriority;
 			node->varsFromDag->Append( var );
 		}
+#endif //TEMPTEMP
 		if ( _submitDepthFirst ) {
 			_readyQ->Prepend( node, -node->_nodePriority );
 		} else {
@@ -4469,10 +4490,17 @@ Dag::ResolveVarsInterpolations(void)
 // Iterate over the jobs and set the default priority
 void Dag::SetDefaultPriorities()
 {
+debug_printf( DEBUG_QUIET, "DIAG Dag::SetDefaultPriorities()\n" );//TEMPTEMP
+debug_printf( DEBUG_QUIET, "DIAG Dag::GetDefaultPriority(): %d\n", GetDefaultPriority() );//TEMPTEMP
+	//TEMPTEMP -- what is GetDefaultPriority?  the priority of the whole dag??
 	if(GetDefaultPriority() != 0) {
 		Job* job;
 		_jobs.Rewind();
 		while( (job = _jobs.Next()) != NULL ) {
+#if 0 //TEMPTEMP
+			job->_hasNodePriority = true;//TEMPTEMP -- do we need this?
+			job->_nodePriority += GetDefaultPriority();
+#else //TEMPTEMP
 			// If the DAG file has already assigned a priority
 			// Leave this job alone for now
 			if( !job->_hasNodePriority ) {
@@ -4481,6 +4509,7 @@ void Dag::SetDefaultPriorities()
 			} else if( GetDefaultPriority() > job->_nodePriority ) {
 				job->_nodePriority = GetDefaultPriority();
 			}
+#endif //TEMPTEMP
 		}
 	}
 }

@@ -390,6 +390,8 @@ class Job {
 		@return the last event time.
 	*/
 	time_t GetLastEventTime() { return _lastEventTime; }
+
+	//TEMPTEMP -- this needs to be documented!!
 	void FixPriority(Dag& dag);
 
 	bool HasPreSkip() const { return _preskip != PRE_SKIP_INVALID; }
@@ -475,6 +477,7 @@ public:
 	int _queuedNodeJobProcs;
 
 		// Whether the _nodePriority value is meaningful.
+		//TEMPTEMP -- do we need this in simplified scheme?  maybe for rescue DAGs?
 	bool _hasNodePriority;
 
 		// Node priority.  Higher number is better priority (submit first).

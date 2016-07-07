@@ -1610,6 +1610,8 @@ parse_priority(
 					job->GetJobName(), job->_nodePriority );
 		check_warning_strictness( DAG_STRICT_2 );
 	}
+	//TEMPTEMP -- I don't like that these are public in the Job object...
+debug_printf( DEBUG_QUIET, "DIAG node %s priority %d\n", job->GetJobName(), priorityVal );//TEMPTEMP
 	job->_hasNodePriority = true;
 	job->_nodePriority = priorityVal;
 
