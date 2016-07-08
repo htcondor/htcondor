@@ -405,6 +405,41 @@ void timed_lookups(bool verbose, const char * lookup_method, StringList & users)
 	fprintf(stdout, " %d Lookups, %d Failed %.3f ms\n", cLookups, cFailed, elapsed_time*1000);
 }
 
+void Usage(const char * appname, FILE * out)
+{
+	const char * p = appname;
+	while (*p) {
+		if (*p == '/' || *p == '\\') appname = p+1;
+		++p;
+	}
+	fprintf(out, "Usage: %s [<opts>] [-test[:<tests>] | <queryopts>]\n"
+		"  Where <opts> is one of\n"
+		"    -help\tPrint this message\n"
+		"    -verbose\tMore verbose output\n\n"
+		"  <tests> is one or more letters choosing specific subtests\n"
+		"    l  lookup tests\n"
+		"    p  parse tests\n"
+		"  If no arguments are given (or just -verbose) all tests are run.\n"
+		"  Unless -verbose is specified, only failed tests produce output.\n"
+		"  This program returns 0 if all tests succeed, 1 if any tests fails.\n\n"
+		"  Instead of running tests, this program can validate map files\n"
+		"  and map users againts them. Use the <queryopts> for this.\n\n"
+		"    -file <mapfile>\t Parse <mapfile> as a 3 field mapfile\n"
+		"    -gridfile <gridfile> Parse <gridfile> as a 2 field user map\n"
+		"        If <gridfile> or <mapfile> is -, read from stdin\n"
+		"    -hash\t\t Field 1 of 2 field file, or field 2 of a 3 field file\n"
+		"         \t\t is not a regex unless it starts and ends with /\n"
+		"    -user <name>\t Map user against <gridfile> or <mapfile> and print the result\n"
+		"        If <name> is -, read a list of users from stdin and map each of them\n"
+		"    -method <method>\t Map user against <mapfile> using <method>\n"
+		"        when mapping users against a 3 field <mapfile> this argument is required\n"
+		"        use # to get the default method for classad userMap lookups\n"
+		"    -timelist <file>\t Map each line from <file> against <mapfile> or <gridfile>\n"
+		"                         and report total time spent doing the mapping. This option does\n"
+		"                         not print the results, it is just a timing test\n"
+		, appname);
+}
+
 // runs all of the tests in non-verbose mode by default (i.e. printing only failures)
 // individual groups of tests can be run by using the -t:<tests> option where <tests>
 // is one or more of 
@@ -434,6 +469,9 @@ int main( int /*argc*/, const char ** argv) {
 		if (is_dash_arg_colon_prefix(arg, "verbose", &pcolon, 1)) {
 			dash_verbose = 1;
 			if (pcolon && pcolon[1]=='2') { show_failed_lookups = true; }
+		} else if (is_dash_arg_prefix(arg, "help", 1)) {
+			Usage(argv[0], stdout);
+			return 0;
 		} else if (is_dash_arg_colon_prefix(arg, "test", &pcolon, 1)) {
 			if (pcolon) {
 				while (*++pcolon) {
@@ -463,12 +501,12 @@ int main( int /*argc*/, const char ** argv) {
 				return 1;
 			}
 			other_arg = true;
-		} else if (is_dash_arg_prefix(arg, "userfile", 5)) {
+		} else if (is_dash_arg_prefix(arg, "timelist", 5)) {
 			userfile = argv[ii+1];
 			if (userfile && userfile[0] != '-') {
 				++ii;
 			} else {
-				fprintf(stderr, "-userfile requires a filename argument\n");
+				fprintf(stderr, "-timelist requires a filename argument\n");
 				return 1;
 			}
 		} else if (is_dash_arg_prefix(arg, "user", 1)) {
@@ -491,6 +529,7 @@ int main( int /*argc*/, const char ** argv) {
 			assume_hash = true;
 		} else {
 			fprintf(stderr, "unknown argument %s\n", arg);
+			Usage(argv[0], stderr);
 			return 1;
 		}
 	}
