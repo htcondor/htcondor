@@ -5,6 +5,9 @@
 #include <Python.h>
 
 #include "module_lock.h"
+#include "secman.h"
+
+#include "condor_config.h"
 
 #include "classad/classad.h"
 
@@ -56,6 +59,33 @@ ModuleLock::acquire()
         MODULE_LOCK_MUTEX_LOCK(&m_mutex);
         m_owned = true;
     }
+    // Apply "thread-local" settings - not actually thread-local, but we change them while we
+    // have an exclusive lock on HTCondor routines.
+    boost::shared_ptr<std::vector<std::pair<std::string,std::string> > > temp_param = SecManWrapper::getThreadLocalConfigOverrides();
+    if (temp_param.get())
+    {
+        m_config_orig.clear();
+        m_config_orig.reserve(temp_param->size());
+        std::vector<std::pair<std::string,std::string> >::const_iterator iter = temp_param->begin();
+        for (; iter != temp_param->end(); iter++)
+        {
+            MyString name_used;
+            const char *pdef_value;
+            const MACRO_META *pmeta;
+            const char * result_str = param_get_info(iter->first.c_str(), NULL, NULL, name_used, &pdef_value, &pmeta);
+            m_config_orig.push_back(std::make_pair(iter->first, result_str ? result_str : ""));
+            param_insert(iter->first.c_str(), iter->second.c_str());
+        }
+    }
+
+    m_tag_orig = SecMan::getTag();
+    SecMan::setTag(SecManWrapper::getThreadLocalTag());
+
+    m_password_orig = SecMan::getPoolPassword();
+    SecMan::setPoolPassword(SecManWrapper::getThreadLocalPoolPassword());
+
+    m_proxy_orig = getenv("X509_USER_PROXY");
+    setenv("X509_USER_PROXY", SecManWrapper::getThreadLocalGSICred().c_str(), 1);
 }
 
 ModuleLock::~ModuleLock()
@@ -66,6 +96,21 @@ ModuleLock::~ModuleLock()
 void
 ModuleLock::release()
 {
+    setenv("X509_USER_PROXY", m_proxy_orig, 1);
+    m_proxy_orig = NULL;
+
+    SecMan::setPoolPassword(m_password_orig);
+    m_password_orig = "";
+
+    SecMan::setTag(m_tag_orig);
+    m_tag_orig = "";
+
+    std::vector<std::pair<std::string,std::string> >::const_iterator it = m_config_orig.begin();
+    for (; it != m_config_orig.end(); it++)
+    {
+        param_insert(it->first.c_str(), it->second.c_str());
+    }
+    m_config_orig.clear();
     if (m_release_gil && m_owned)
     {
         MODULE_LOCK_MUTEX_UNLOCK(&m_mutex);

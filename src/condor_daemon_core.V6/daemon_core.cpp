@@ -9690,7 +9690,7 @@ int DaemonCore::HandleProcessExit(pid_t pid, int exit_status)
 	}
 	//Delete the session information.
 	if(pidentry->child_session_id)
-		getSecMan()->session_cache.remove(pidentry->child_session_id);
+		getSecMan()->session_cache->remove(pidentry->child_session_id);
 	// Now remove this pid from our tables ----
 		// remove from hash table
 	pidTable->remove(pid);
@@ -10779,7 +10779,7 @@ DaemonCore::InitSettableAttrsList( const char* /* subsys */, int i )
 
 KeyCache*
 DaemonCore::getKeyCache() {
-	return &sec_man->session_cache;
+	return sec_man->session_cache;
 }
 
 SecMan* DaemonCore :: getSecMan()
