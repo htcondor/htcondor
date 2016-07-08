@@ -62,6 +62,11 @@ fi
 
 bls_set_up_local_and_extra_args
 
+# Write SLURM directives according to command line options
+# Map the queue option to slurm's partition option
+# handle queue/partition overriding
+[ -z "$bls_opt_queue" ] || grep -q "^#SBATCH -p" $bls_tmp_file || echo "#SBATCH -p $bls_opt_queue" >> $bls_tmp_file
+
 # Simple support for multi-cpu attributes
 if [[ $bls_opt_mpinodes -gt 1 ]] ; then
   echo "#SBATCH -N $bls_opt_mpinodes" >> $bls_tmp_file
