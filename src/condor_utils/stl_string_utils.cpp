@@ -401,11 +401,41 @@ size_t filename_offset_from_path(std::string & pathname)
 	return ix;
 }
 
+// return the bounds of the next token or -1 if no tokens remain
+//
+int StringTokenIterator::next_token(int & length)
+{
+	length = 0;
+	if ( ! str) return -1;
+
+	int ix = ixNext;
+
+	// skip leading separators and whitespace
+	while (str[ix] && strchr(delims, str[ix])) ++ix;
+	ixNext = ix;
+
+	// scan for next delimiter or \0
+	while (str[ix] && !strchr(delims, str[ix])) ++ix;
+	if (ix <= ixNext)
+		return -1;
+
+	length = ix-ixNext;
+	int ixStart = ixNext;
+	ixNext = ix;
+	return ixStart;
+}
+
 // return the next string from the StringTokenIterator as a const std::string *
 // returns NULL when there is no next string.
 //
 const std::string * StringTokenIterator::next_string()
 {
+#if 1
+	int len;
+	int start = next_token(len);
+	if (start < 0) return NULL;
+	current.assign(str, start, len);
+#else
 	if ( ! str) return NULL;
 
 	int ix = ixNext;
@@ -421,6 +451,7 @@ const std::string * StringTokenIterator::next_string()
 
 	current.assign(str, ixNext, ix-ixNext);
 	ixNext = ix;
+#endif
 	return &current;
 }
 

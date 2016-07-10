@@ -1021,6 +1021,59 @@ void MACRO_SET::push_error(FILE * fh, int code, const char* preface, const char*
 	}
 }
 
+// used by the 'include into' config/submit command.
+FILE* Copy_macro_source_into (
+	MACRO_SOURCE& macro_source,
+	const char* source,
+	bool        source_is_command,
+	const char* dest,
+	MACRO_SET& macro_set,
+	int & exit_code,
+	std::string & errmsg);
+
+// parse keywords after 'include' and before ':' in config file
+// the expected input is:
+// [ifexist|ifexists][[output|command] [into <filename>]]
+//
+#define CONFIG_INCLUDE_OPTION_ISCOMMAND 0x02
+#define CONFIG_INCLUDE_OPTION_INTO      0x04
+#define CONFIG_INCLUDE_OPTION_IFEXISTS  0x10
+static bool parse_include_options(char * str, int & opts, char *& pinto, const char *& err)
+{
+	err = NULL;
+	pinto = NULL;
+	StringTokenIterator it(str, 100, " \t");
+	const std::string * tok = it.next_string();
+	if ( ! tok) return true;
+
+	if (*tok == "ifexist" || *tok == "ifexists") {
+		opts |= CONFIG_INCLUDE_OPTION_IFEXISTS;
+		tok = it.next_string();
+		if ( ! tok) return true;
+	}
+
+	if (*tok == "output" || *tok == "command") {
+		opts |= CONFIG_INCLUDE_OPTION_ISCOMMAND;
+		tok = it.next_string();
+		if ( ! tok) return true;
+		if (*tok == "into") {
+			int start, len;
+			start = it.next_token(len);
+			if (start < 0) {
+				err = "expected filename after keyword 'into'";
+				return false; // expected filename after keyword 'into'
+			}
+			opts |= CONFIG_INCLUDE_OPTION_INTO;
+			pinto = str + start;
+			tok = it.next_string();
+			str[start+len] = 0; // null terminate (but only after we advanced the iterator)
+			if ( ! tok) return true;
+		}
+	} else {
+		return false;
+	}
+	return true;
+}
 
 int
 Parse_macros(
@@ -1038,6 +1091,7 @@ Parse_macros(
 	char*	value = NULL;
 	char*	rhs = NULL;
 	char*	ptr = NULL;
+	char*	into_file = NULL; // holds <file> for "include command into <file> : <script>"
 	char	op, name_end_ch;
 	int		retval = 0;
 	bool	firstRead = true;
@@ -1245,6 +1299,8 @@ Parse_macros(
 		bool has_at = (*name == '@');
 		int is_include = (op == ':' && MATCH == strcasecmp(name + has_at, "include"));
 		bool is_meta = (op == ':' && MATCH == strcasecmp(name + has_at, "use"));
+		int is_error_keyword = (op == ':' && MATCH == strcasecmp(name + has_at, "error"));
+		int is_warn_keyword = (op == ':' && MATCH == strcasecmp(name + has_at, "warning"));
 
 		// if the name is 'use' then this is a metaknob, so the actual name
 		// is the word after 'use'. so we want to find that word and
@@ -1259,9 +1315,29 @@ Parse_macros(
 			} else {
 				name += has_at+3; // this will point at the null terminator of 'use'
 			}
+		} else if (is_error_keyword || is_warn_keyword) {
+			int code = 0;
+			if (is_error_keyword) {
+				// set name to point to the word after error, it will be an optional error code
+				if (name+has_at+5 < pop) {
+					char * pn = name + has_at+5;
+					while (isspace(*pn) && pn < pop) { ++pn; }
+					code = atoi(pn);
+				}
+				if ( ! code) code = -1;
+			}
+			auto_free_ptr msg(expand_macro(rhs, macro_set, *pctx));
+			macro_set.push_error(stderr, code, source_type,
+					"%s \"%s\", Line %d: %s\n",
+					is_error_keyword ? "Error" : "Warning",
+					source_file, FileSource.line, msg ? msg.ptr() : "");
+			if (code) {
+				retval = code;
+				goto cleanup;
+			}
 		} else if (is_include) {
 			// check for keywords after "include" and before the :
-			// these keywords will modifity the behavior of include
+			// these keywords will modify the behavior of include
 			if (name+has_at+8 < pop) {
 				name += has_at+8;
 				while (isspace(*name)) ++name; // skip whitespace
@@ -1269,13 +1345,16 @@ Parse_macros(
 				char * p = pop-1;
 				while (isspace(*p) && p > name) { *p-- = 0; }
 				if (*name) {
-					if (MATCH == strcasecmp(name, "output")) is_include = 2; // a value of 2 indicates a command rather than a filename.
-					else if (MATCH == strcasecmp(name, "command")) is_include = 2; // a value of 2 indicates a command rather than a filename.
-					else {
-						config_errmsg = "unexpected keyword '";
-						config_errmsg += name;
-						config_errmsg += "' after include";
-						return -1;
+					int include_opts = 0;
+					const char * err = NULL;
+					if (parse_include_options(name, include_opts, into_file, err)) {
+						is_include |= include_opts;
+					} else {
+						macro_set.push_error(stderr, -1, source_type,
+							"Error \"%s\", Line %d: unexpected keyword(s) '%s' after include %s\n",
+							source_file, FileSource.line, name, err ? err : "");
+						retval = -1;
+						goto cleanup;
 					}
 				}
 			}
@@ -1330,9 +1409,48 @@ Parse_macros(
 			}
 		} else if (is_include) {
 			MACRO_SOURCE InnerSource;
-			FILE* fp = Open_macro_source(InnerSource, name, (is_include > 1), macro_set, config_errmsg);
-			if ( ! fp) { retval = -1; }
-			else {
+			FILE* fp = NULL;
+			bool is_into    = 0 != (is_include & CONFIG_INCLUDE_OPTION_INTO);
+			bool is_command = 0 != (is_include & CONFIG_INCLUDE_OPTION_ISCOMMAND);
+			bool must_exist = 0 == (is_include & CONFIG_INCLUDE_OPTION_IFEXISTS);
+			const char * filename = name;
+			auto_free_ptr cached_filename;
+
+			if (is_into && into_file) {
+				if (is_valid_command(into_file)) {
+					macro_set.push_error( stderr, retval, source_type,
+								"Error \"%s\", Line %d, destination for 'include into' may not be a script\n",
+								source_file, FileSource.line);
+					retval = -1;
+					goto cleanup;
+				} else {
+					is_command = false;
+					cached_filename.set(expand_macro(into_file, macro_set, *pctx));
+					filename = cached_filename.ptr();
+					if ( ! filename || ! filename[0]) {
+						macro_set.push_error( stderr, retval, source_type,
+									"Error \"%s\", Line %d, destination for 'include into' expanded to ''\n",
+									source_file, FileSource.line);
+						retval = -1;
+						goto cleanup;
+					}
+				}
+			}
+
+			fp = Open_macro_source(InnerSource, filename, is_command, macro_set, config_errmsg);
+			if ( ! fp && is_into) {
+				std::string msg;
+				//must_exist = 0 == (is_include & CONFIG_INCLUDE_OPTION_IFEXISTS);
+				is_command = 0 != (is_include & CONFIG_INCLUDE_OPTION_ISCOMMAND);
+				int exit_code = 0;
+				fp = Copy_macro_source_into(InnerSource, name, is_command, filename, macro_set, exit_code, msg);
+				if (must_exist) {
+					if ( ! fp) config_errmsg = msg;
+				}
+			}
+			if ( ! fp) {
+				if (must_exist) retval = -1;
+			} else {
 				if (depth+1 >= CONFIG_MAX_NESTING_DEPTH) {
 					config_errmsg = "includes nested too deep";
 					retval = -2; // indicate that nesting depth has been exceeded.
@@ -1442,17 +1560,18 @@ Parse_macros(
 	return retval;
 }
 
-FILE* Open_macro_source (
-	MACRO_SOURCE& macro_source,
-	const char* source,
-	bool        source_is_command,
-	MACRO_SET& macro_set,
-	std::string & config_errmsg)
+// parse the source input and decide if it is a | command, if so
+// strip the trailing |
+// return value is source to display (i.e. to add to sources list)
+// on exit cmd will point to the command to execute (withou trailing |) if is_command is true on exit
+//
+static const char * fixup_pipe_source (
+	const char * source, // in: the raw source
+	bool & is_command,   // in/out: true on input if the input is a command regardless of trailing |, true only output IFF the source is a command
+	const char * &cmd,   // out: the command to execute (set only if is_command is true)
+	std::string & cmdbuf) // out: temporary buffer, return value may point to this.
 {
-	FILE*	fp = NULL;
-	std::string cmdbuf; // in case we have to produce a modified command
-	const char * cmd = NULL;
-
+	bool source_is_command = is_command;
 	bool is_pipe_cmd = is_piped_command(source);
 	if (source_is_command && ! is_pipe_cmd) {
 		is_pipe_cmd = true;
@@ -1467,6 +1586,40 @@ FILE* Open_macro_source (
 		}
 		cmd = cmdbuf.c_str();
 	}
+	is_command = is_pipe_cmd;
+	return source;
+}
+
+FILE* Open_macro_source (
+	MACRO_SOURCE& macro_source,
+	const char* source,
+	bool        source_is_command,
+	MACRO_SET& macro_set,
+	std::string & config_errmsg)
+{
+	FILE*	fp = NULL;
+	std::string cmdbuf; // in case we have to produce a modified command
+	const char * cmd = NULL;
+
+#if 1
+	bool is_pipe_cmd = source_is_command;
+	source = fixup_pipe_source(source, is_pipe_cmd, cmd, cmdbuf);
+#else
+	bool is_pipe_cmd = is_piped_command(source);
+	if (source_is_command && ! is_pipe_cmd) {
+		is_pipe_cmd = true;
+		cmd = source; // the input source is actually the command (without trailing |)
+		cmdbuf = source; cmdbuf += " |";
+		source = cmdbuf.c_str();
+	} else if (is_pipe_cmd) {
+		cmdbuf = source; // the input source is the command with trailing |
+		// remove trailing | and spaces
+		for (int ix = (int)cmdbuf.length()-1; ix > 0 && (cmdbuf[ix] == '|' || cmdbuf[ix] == ' '); --ix) {
+			cmdbuf[ix] = 0;
+		}
+		cmd = cmdbuf.c_str();
+	}
+#endif
 
 	// initialize a MACRO_SOURCE for this file
 	insert_source(source, macro_set, macro_source);
@@ -1518,6 +1671,100 @@ int Close_macro_source(FILE* conf_fp, MACRO_SOURCE& source, MACRO_SET& macro_set
 		}
 	}
 	return parsing_return_val;
+}
+
+FILE* Copy_macro_source_into (
+	MACRO_SOURCE& macro_source,
+	const char* source,
+	bool        source_is_command,
+	const char* dest,
+	MACRO_SET& macro_set,
+	int & exit_code,
+	std::string & errmsg)
+{
+	FILE*	fp = NULL;
+	std::string cmdbuf; // in case we have to produce a modified command
+	const char * cmd = NULL; // holds command to execute extracted from source
+	exit_code = 0;
+
+	source = fixup_pipe_source(source, source_is_command, cmd, cmdbuf);
+	if (source_is_command) {
+		ArgList argList;
+		MyString args_errors;
+		if(!argList.AppendArgsV1RawOrV2Quoted(cmd, &args_errors)) {
+			formatstr(errmsg, "Can't append args, %s", args_errors.Value());
+			return NULL;
+		}
+		fp = my_popen(argList, "rb", FALSE);
+		if ( ! fp) {
+			errmsg = "not a valid command";
+			return NULL;
+		}
+	} else {
+		fp = safe_fopen_wrapper_follow(source, "rb");
+		if ( ! fp) {
+			errmsg = "can't open input file";
+			return NULL;
+		}
+	}
+
+	FILE * fpo = safe_fopen_wrapper_follow(dest, "wb", 0644);
+	if ( ! fpo) {
+		if (source_is_command) {
+			my_pclose(fp);
+		} else {
+			fclose(fp);
+		}
+		errmsg = "can't open '";
+		errmsg += dest;
+		errmsg += "' for write";
+		return NULL;
+	}
+
+	int readerr = 0, writerr = 0;
+	const int bufsiz = 1024*16;
+	auto_free_ptr buf((char*)malloc(bufsiz));
+	for(;;) {
+		int cb = fread(buf.ptr(), 1, bufsiz, fp);
+		if (cb == 0) {
+			if ( ! feof(fp)) readerr = ferror(fp);
+			break;
+		}
+		if ( ! fwrite(buf.ptr(), cb, 1, fpo)) {
+			writerr = ferror(fpo);
+			break;
+		}
+	}
+
+	if (source_is_command) {
+		exit_code = my_pclose(fp);
+	} else {
+		fclose(fp);
+	}
+	fp = NULL;
+	fclose(fpo); fpo = NULL;
+
+	if (exit_code || readerr || writerr) {
+		unlink(dest);
+		if (readerr) {
+			formatstr(errmsg, "read error %d or write error %d during copy", readerr, writerr);
+		} else {
+			formatstr(errmsg, "exited with error %d", exit_code);
+		}
+		return NULL;
+	}
+
+
+	// finally, open the cache file that we just wrote. we will parse this file,
+	// but pretend that the original source is what we are reading when we generate error messages.
+	MACRO_SOURCE cache_source;
+	fp = Open_macro_source(cache_source, dest, false, macro_set, errmsg);
+	if (fp) {
+		// initialize a MACRO_SOURCE for the actual input if we succeed in opening the file.
+		insert_source(source, macro_set, macro_source);
+		macro_source.is_command = source_is_command;
+	}
+	return fp;
 }
 
 
