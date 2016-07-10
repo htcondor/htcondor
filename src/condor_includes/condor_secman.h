@@ -242,6 +242,8 @@ public:
 	bool SetSessionLingerFlag(char const *session_id);
 
  private:
+	void invalidateOneExpiredCache(KeyCache *session_cache);
+
     void                    remove_commands(KeyCacheEntry * keyEntry);
 
 	static char*		_my_unique_id;

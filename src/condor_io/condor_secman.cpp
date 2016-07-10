@@ -2771,10 +2771,10 @@ SecMan::invalidateAllCache() {
 }
 
 void 
-SecMan :: invalidateExpiredCache()
+SecMan::invalidateOneExpiredCache(KeyCache *cache)
 {
     // Go through all cache and invalide the ones that are expired
-    StringList * list = session_cache->getExpiredKeys();
+    StringList * list = cache->getExpiredKeys();
 
     // The current session cache, command map does not allow
     // easy random access based on host direcly. Therefore,
@@ -2788,6 +2788,22 @@ SecMan :: invalidateExpiredCache()
         invalidateKey(p);
     }
     delete list;
+}
+
+void
+SecMan::invalidateExpiredCache()
+{
+	invalidateOneExpiredCache(&m_default_session_cache);
+	if (!m_tagged_session_cache) {return;}
+	std::map<std::string,KeyCache*>::iterator session_cache_iter;
+	for (session_cache_iter = m_tagged_session_cache->begin();
+		session_cache_iter != m_tagged_session_cache->end();
+		session_cache_iter++)
+	{
+		if (session_cache_iter->second) {
+			invalidateOneExpiredCache(session_cache_iter->second);
+		}
+	}
 }
 
 /*
