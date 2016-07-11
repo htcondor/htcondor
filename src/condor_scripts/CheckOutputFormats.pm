@@ -89,6 +89,7 @@ sub dry_run {
 		$Attr{$i}{DiskUsage} = cal_from_raw($Attr{$i}{DiskUsage_RAW});
 		$Attr{$i}{ImageSize_RAW} = $Attr{$i}{ImageSize};
 		$Attr{$i}{ImageSize} = cal_from_raw($Attr{$i}{ImageSize_RAW});
+		$Attr{$i}{JobBatchName} = "\"CMD: $executable\"";
 	}
 	return %Attr;
 }
@@ -651,9 +652,10 @@ sub make_batch{
 			$job_ids = $k.'.'.$first_id.'-'.$last_id;
 		} else {
 			$job_ids = $k.'.'.$first_id;
-			$cluster_batch{$k}=$job_ids;
-			$user_batch{$k} = $first_user;
 		}
+		$cluster_batch{$k}=$job_ids;
+		$user_batch{$k} = $first_user;
+
 	}
 #foreach my $k (sort keys %cluster_batch){print "$k = $cluster_batch{$k}\n";}
 	return (\%cluster_batch,\%user_batch);
@@ -677,49 +679,86 @@ sub various_hold_reasons{
 	return %Attr;
 }
 
+sub check_if_same_cluster {
+	my %Attr = %{$_[0]};
+	for my $i (1.. (scalar keys %Attr)-1){
+		if ($Attr{$i}{ClusterId} ne $Attr{0}{ClusterId}){
+			return 0;
+		}
+	}
+	return 1;
+}
+
+sub find_real_heading {
+	my $command_arg = $_[0];
+	my $real_heading;
+
+	# no command arg -> -batch
+	if ($command_arg eq '') {
+		$real_heading = '-batch';
+	# if there are three command arguments, one has to be -nobatch andone has to be -wide
+	} elsif (defined $command_arg && $command_arg =~ /(.+)\s+(.+)\s+(.+)/){
+		if ($1 ne '-wide' && $1 ne '-nobatch'){
+			$real_heading = $1;
+		}
+		if ($2 ne '-wide' && $2 ne '-nobatch'){
+			$real_heading = $2;
+		}	
+		if ($3 ne '-wide' && $3 ne '-nobatch'){
+			$real_heading = $3;
+		}
+	# if there are two command arguments, one can be -wide or -nobatch
+	} elsif (defined $command_arg && $command_arg =~ /(.+)\s+(.+)/){
+		if (('-nobatch' eq $1 || '-nobatch' eq $2) && ('-wide' eq $1 || '-wide' eq $2)){
+			$real_heading = '-nobatch';
+		} elsif ($1 eq '-nobatch'){
+			$real_heading = $2;
+		} elsif ($2 eq '-nobatch'){
+			$real_heading = $1;
+		} elsif ($1 eq '-wide' && $2 ne '-dag' && $2 ne '-run'){
+			$real_heading = $2;
+		} elsif ($2 eq '-wide' && $1 ne '-dag' && $1 ne '-run'){
+			$real_heading = $1;
+		} else {
+			$real_heading = '-batch';
+		}	
+	# one command argument, -dag and -run same with -batch
+	} elsif (defined $command_arg){
+		if ($command_arg eq '-wide' || $command_arg eq '-run' || $command_arg eq '-dag'){
+			$real_heading = '-batch';
+		} else {
+			$real_heading = $command_arg;
+		}
+	}
+	return $real_heading;
+}
+
 sub check_heading {
 	my $command_arg = $_[0];
 	my %data = %{$_[1]};
-	my $real_heading;
+	my $real_heading = find_real_heading($command_arg);
 	my %rules_heading = (
-		'-nobatch' => sub {return $data{0} =~ /(\s*)ID(\s+)OWNER(\s+)SUBMITTED(\s+)RUN_TIME(\s+)ST(\s+)PRI(\s+)SIZE(\s+)CMD/},
-		'-run' => sub {return $data{0} =~ /(\s*)ID(\s+)OWNER(\s+)SUBMITTED(\s+)RUN_TIME(\s+)HOST\(S\)/},
-		'-hold' => sub {return $data{0} =~ /\s*ID\s+OWNER\s+HELD_SINCE\s+HOLD_REASON/},
-		'-dag' => sub {return $data{0} =~ /\s*ID\s+OWNER\/NODENAME\s+SUBMITTED\s+RUN_TIME\s+ST\s+PRI\s+SIZE\s+CMD/},
-		'-io' => sub {return $data{0} =~ /\s*ID\s+OWNER\s+RUNS\s+ST\s+INPUT\s+OUTPUT\s+/},
-		'-globus' => sub {return $data{0} =~ /\s*ID\s+OWNER\s+STATUS\s+MANAGER\s+HOST\s+EXECUTABLE/}
+		'-batch' => sub{ if ($command_arg =~ /-run/){
+			return $data{0} =~ /\s*OWNER\s+BATCH_NAME\s+SUBMITTED\s+DONE\s+RUN\s+IDLE\s+TOTAL\s/;} else {
+			return $data{0} =~ /\s*OWNER\s+BATCH_NAME\s+SUBMITTED\s+DONE\s+RUN\s+IDLE\s+HOLD\s+TOTAL\s/;}
+},
+		'-nobatch' => sub {return $data{0} =~ /(\s*)ID(\s+)OWNER(\s+)SUBMITTED(\s+)RUN_TIME(\s+)ST(\s+)PRI(\s+)SIZE(\s+)CMD/;},
+		'-run' => sub {return $data{0} =~ /(\s*)ID(\s+)OWNER(\s+)SUBMITTED(\s+)RUN_TIME(\s+)HOST\(S\)/;},
+		'-hold' => sub {return $data{0} =~ /\s*ID\s+OWNER\s+HELD_SINCE\s+HOLD_REASON/;},
+		'-dag' => sub {return $data{0} =~ /\s*ID\s+OWNER\/NODENAME\s+SUBMITTED\s+RUN_TIME\s+ST\s+PRI\s+SIZE\s+CMD/;},
+		'-io' => sub {return $data{0} =~ /\s*ID\s+OWNER\s+RUNS\s+ST\s+INPUT\s+OUTPUT\s+/;},
+		'-globus' => sub {return $data{0} =~ /\s*ID\s+OWNER\s+STATUS\s+MANAGER\s+HOST\s+EXECUTABLE/;},
+		'-tot' => sub {print "-tot does not have a heading\n";return 1;}
 	);
-	if (defined $command_arg && $command_arg =~ /(.*)\s+(.*)/){
-		if ($1 eq '-nobatch' || $1 eq '-batch'){
-			$real_heading = $2;
-		}
-		elsif ($2 eq '-nobatch' || $2 eq '-batch'){
-			$real_heading = $1;
-		}
-	} else {
-		$real_heading = $command_arg;
-	}
-	
-	TLOG("Checking heading format of the output file\n");
-	if (defined $real_heading && $real_heading ne '-batch'){
-		if ($rules_heading{$real_heading}()){
-			print "        PASSED: Headings are correct\n";
-			return 1;
-		} else{
-			print "        ERROR: Headings are not correct\n";
-			return 0;
-		}
-	}
-	else {
-		if ($data{0} =~ /\s*OWNER\s+BATCH_NAME\s+SUBMITTED\s+DONE\s+RUN\s+IDLE\s+HOLD\s+TOTAL\s/){
-			print "        PASSED: Headings are correct\n";
-			return 1;
-		} else {
-			print "        ERROR: Headings are not correct\n";
-			return 0;
-		}
-	}
 
+	TLOG("Checking heading format of the output file\n");
+	if ($rules_heading{$real_heading}()){
+		print "        PASSED: Headings are correct\n";
+		return 1;
+	} else{
+		print "        ERROR: Headings are not correct\n";
+		return 0;
+	}
 
 }
 
@@ -729,18 +768,9 @@ sub check_data {
 	my $command_arg = $_[2];
 	my %cluster_batch = %{$_[3]};
 	my %user_batch = %{$_[4]};
-	my $real_heading;
+	my $real_heading = find_real_heading($command_arg);
+	my $same_cluster = check_if_same_cluster(\%Attr);
 	my %st_num = (1 => 'I', 2=>'R', 3=>'X', 4=>'C', 5=> 'H', 6=>'>');
-	if (defined $command_arg && $command_arg =~ /(.*)\s+(.*)/){
-		if ($1 eq '-nobatch' || $1 eq '-batch'){
-			$real_heading = $2;
-		}
-		elsif ($2 eq '-nobatch' || $2 eq '-batch'){
-			$real_heading = $1;
-		}
-	} else {
-		$real_heading = $command_arg;
-	}
 	my %rules_data = (
 'ID' => sub {
 	if (defined $real_heading && $real_heading ne '-dag'){
@@ -815,63 +845,117 @@ sub check_data {
 },
 'HOST' => sub {return $_[1] eq substr($Attr{$_[0]}{RemoteHost},1, length($Attr{$_[0]}{RemoteHost})-2);},
 'HOST(S)' => sub {return $_[1] eq substr($Attr{$_[0]}{RemoteHost},1, length($Attr{$_[0]}{RemoteHost})-2);},
-'BATCH_NAME' => sub {return $_[1] eq "CMD: ".substr($Attr{$_[0]}{Cmd},1,length($Attr{$_[0]}{Cmd})-2);},
+'BATCH_NAME' => sub {
+if ($command_arg ne '-batch'){
+	return $_[1] eq substr($Attr{$_[0]}{JobBatchName},1,length($Attr{$_[0]}{JobBatchName})-2);
+} else {
+	return $_[1] eq "CMD: ".substr($Attr{$_[0]}{Cmd},1,length($Attr{$_[0]}{Cmd})-2);
+}
+},
 'DONE' => sub {
-	$fields[8][$_[0]+1] =~ /(.+)\.(.*)/;
+if ($command_arg =~ /-dag/ && !($command_arg =~ /-nobatch/)){
+	return $_[1] eq '_';
+} else {
+	my $batch_done = 0;
+	$fields[(scalar @fields)-1][$_[0]+1] =~ /(.+)\.(.*)/;
 	my $temp_id = $1;
-	for my $key (0..((scalar keys %Attr)-1)){
-		if ($Attr{$key}{ClusterId} eq $temp_id){
-			if ($Attr{$key}{JobStatus} == 4){
-		 		return $_[1] eq 1;
-			} else {
-				return $_[1] eq '_';
+	for my $i (0..((scalar keys %Attr)-1)){
+		if ($Attr{$i}{ClusterId} eq $temp_id){
+			if (substr($Attr{$i}{JobBatchName},1,length($Attr{$i}{JobBatchName})-2) eq $fields[1][$_[0]+1] && $Attr{$i}{JobStatus}==4){
+				$batch_done++;
 			}
 		}
 	}
+	if ($batch_done > 0){
+		return $batch_done eq $_[1];
+	} else {return $_[1] eq '_';}
+
+}
 },
 'RUN' => sub {
-	$fields[8][$_[0]+1] =~ /(.+)\.(.*)/;
+if ($command_arg =~ /-dag/ && !($command_arg =~ /-nobatch/)){
+	return $_[1] eq 1;
+} else {
+	my $batch_run = 0;
+	$fields[(scalar @fields)-1][$_[0]+1] =~ /(.+)\.(.*)/;
 	my $temp_id = $1;
-	for my $key (0..((scalar keys %Attr)-1)){
-		if ($Attr{$key}{ClusterId} eq $temp_id){
-			if ($Attr{$key}{JobStatus} eq 2){	
-				return $_[1] eq 1;
-			} else {
-				return $_[1] eq '_';
+	for my $i (0..((scalar keys %Attr)-1)){
+		if ($Attr{$i}{ClusterId} eq $temp_id){
+			if (substr($Attr{$i}{JobBatchName},1,length($Attr{$i}{JobBatchName})-2) eq $fields[1][$_[0]+1] && $Attr{$i}{JobStatus}==2){
+				$batch_run++;
 			}
 		}
 	}
+	if ($batch_run > 0){
+		return $batch_run eq $_[1];
+	} else {return $_[1] eq '_';}
+
+}
 },
 'IDLE' => sub {
-	$fields[8][$_[0]+1] =~ /(.+)\.(.*)/;
+if ($command_arg =~ /-dag/ && !($command_arg =~ /-nobatch/)){
+	return $_[1] eq '_';
+#} elsif ($same_cluster) {
+#	my $batch_idle = 0;
+#	for my $i (0..(scalar keys %Attr)-1){
+#		if (substr($Attr{$i}{JobBatchName},1,length($Attr{$i}{JobBatchName})-2) eq $fields[1][$_[0]+1] && $Attr{$i}{JobStatus}==1){
+#		$batch_idle++;
+#		}
+#	}
+#	if ($batch_idle > 0){
+#		return $batch_idle eq $_[1];
+#	} else {return $_[1] eq '_';}
+} else {
+	my $batch_idle = 0;
+	$fields[(scalar @fields)-1][$_[0]+1] =~ /(.+)\.(.*)/;
 	my $temp_id = $1;
-	for my $key (0..((scalar keys %Attr)-1)){
-		if ($Attr{$key}{ClusterId} eq $temp_id){
-			if ($Attr{$key}{JobStatus} eq 1){
-				return $_[1] eq 1;
-			} else {
-				return $_[1] eq '_';
+	for my $i (0..((scalar keys %Attr)-1)){
+		if ($Attr{$i}{ClusterId} eq $temp_id){
+			if (substr($Attr{$i}{JobBatchName},1,length($Attr{$i}{JobBatchName})-2) eq $fields[1][$_[0]+1] && $Attr{$i}{JobStatus}==1){
+				$batch_idle++;
 			}
 		}
 	}
+	if ($batch_idle > 0){
+		return $batch_idle eq $_[1];
+	} else {return $_[1] eq '_';}
+
+}
 },
 'HOLD' => sub {
-	$fields[8][$_[0]+1] =~ /(.+)\.(.*)/;
+if ($command_arg =~ /-dag/ && !($command_arg =~ /-nobatch/)){
+	return $_[1] eq 4;
+} else {
+	my $batch_hold = 0;
+	$fields[(scalar @fields)-1][$_[0]+1] =~ /(.+)\.(.*)/;
 	my $temp_id = $1;
-	for my $key (0..((scalar keys %Attr)-1)){
-		if ($Attr{$key}{ClusterId} eq $temp_id){
-			if ($Attr{$key}{JobStatus} eq 5){
-				return $_[1] eq 1;
-			} else {
-				return $_[1] eq '_';
+	for my $i (0..((scalar keys %Attr)-1)){
+		if ($Attr{$i}{ClusterId} eq $temp_id){
+			if (substr($Attr{$i}{JobBatchName},1,length($Attr{$i}{JobBatchName})-2) eq $fields[1][$_[0]+1] && $Attr{$i}{JobStatus}==5){
+				$batch_hold++;
 			}
 		}
 	}
+	if ($batch_hold > 0){
+		return $batch_hold eq $_[1];
+	} else {return $_[1] eq '_';}
+
+}
 },
-#'TOTAL' => sub {if ($total_cnt > 0){return $_[1] == $total_cnt;} else {return $_[1] eq '_';}},
-'JOB_IDS' => sub {if ($_[1] =~ /(.+)\.(.+)/){
+'TOTAL' => sub {
+if ($command_arg =~ /-dag/ && !($command_arg =~ /-nobatch/)){
+	return $_[1] eq 7;
+} else {
+	return $_[1] eq '_';
+}
+},
+'JOB_IDS' => sub {
+if ($command_arg =~ /-dag/ && !($command_arg =~ /-nobatch/)){
+	return $_[1] eq "49.0 ... 55.0";
+} elsif ($_[1] =~ /(.+)\.(.+)/){
 	my $temp = $1;
-	return $_[1] eq $cluster_batch{$temp};} else {return 0;}
+	return $_[1] eq $cluster_batch{$temp};
+} else { return 0; }
 },
 'HELD_SINCE' => sub {return $_[1] =~ /[0-9]+\/[0-9]+\s+[0-9]+:[0-9]+/;},
 'HOLD_REASON' => sub {return $_[1] eq substr($Attr{$_[0]}{HoldReason},1, length($Attr{$_[0]}{HoldReason})-2);},
@@ -968,19 +1052,9 @@ sub check_summary {
 	my $command_arg = $_[0];
 	my @summary = @{$_[1]};
 	my %num_of_jobs = %{$_[2]};
-	my $real_heading;
-	my %have_summary_line = ('-nobatch'=>1,'-batch'=>1,'-run'=>0,'-hold'=>1,'-grid'=>0,'-globus'=>0,'-io'=>0,'-tot'=>1,'-totals'=>1,'-dag'=>1);
-	if (defined $command_arg && $command_arg =~ /(.*)\s+(.*)/){
-		if ($1 eq '-nobatch' || $1 eq '-batch'){
-			$real_heading = $2;
-		}
-		elsif ($2 eq '-nobatch' || $2 eq '-batch'){
-			$real_heading = $1;
-		}
-	} else {
-		$real_heading = $command_arg;
-	}
-	if (!(defined $real_heading) || $have_summary_line{$real_heading} ){
+	my $real_heading = find_real_heading($command_arg); 
+	my %have_summary_line = ('-nobatch'=>1,'-batch'=>0,'-run'=>0,'-hold'=>1,'-grid'=>0,'-globus'=>0,'-io'=>0,'-tot'=>1,'-totals'=>1,'-dag'=>1);
+	if ($have_summary_line{$real_heading} ){
 		TLOG("Checking summary statement.\n");
 		if ($summary[0]!= $num_of_jobs{0} || $summary[2]!=$num_of_jobs{4} || $summary[4]!=$num_of_jobs{3} || $summary[6]!=$num_of_jobs{1} || $summary[8]!=$num_of_jobs{2} || $summary[10]!= $num_of_jobs{5} || $summary[12]!=$num_of_jobs{6}){
 			print "        ERROR: Some states don't add up correctly\n";

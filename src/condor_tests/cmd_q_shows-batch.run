@@ -1,0 +1,355 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+##
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+##
+##    http://www.apache.org/licenses/LICENSE-2.0
+##
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+use CondorTest;
+use CondorUtils;
+use Check::SimpleJob;
+use CheckOutputFormats;
+use strict;
+use warnings;
+
+my $testname = "cmd_q_shows-batch";
+
+# needs to specify every time before a check
+my $command_arg;
+my $ClusterId;
+my $pid;
+my $executable = "sleep.exe";
+my $arguments;
+my $submit_content;
+my $submitfile;
+
+# other variables, updated through each check
+my %Attr_RAW;
+my %Attr;
+my @fields;
+my %other;
+my %data;
+my @summary;
+my $other_ref;
+my $data_ref;
+my $summary_ref;
+my %cnt_num;
+my %cluster_batch;
+my %user_batch;
+my $cluster_batch_ref;
+my $user_batch_ref;
+
+##############################################################
+####################### only -wide ###########################
+##############################################################
+$command_arg = "-wide";
+$ClusterId = 100;
+$pid = $$;
+$arguments = 600;
+$submit_content = 
+"executable = $executable
+arguments = $arguments
+queue 8";
+$submitfile = "$testname$pid.sub";
+
+emit_dag_files($testname,$submit_content,$pid);
+
+%Attr_RAW = dry_run($testname,$pid,$ClusterId,$executable);
+
+# custom job states
+$Attr_RAW{0}{JobStatus} = 5;
+$Attr_RAW{1}{JobStatus} = 2;
+$Attr_RAW{2}{JobStatus} = 2;
+$Attr_RAW{3}{JobStatus} = 2;
+$Attr_RAW{4}{JobStatus} = 5;
+$Attr_RAW{5}{JobStatus} = 5;
+$Attr_RAW{6}{JobStatus} = 2;
+$Attr_RAW{7}{JobStatus} = 5;
+
+%Attr = various_hold_reasons(\%Attr_RAW);
+%Attr = add_status_ads(\%Attr);
+%Attr = change_clusterid(\%Attr,$ClusterId);
+%Attr = multi_owners(\%Attr);
+($other_ref,$data_ref,$summary_ref) = create_table(\%Attr,$testname,$command_arg);
+%other = %{$other_ref};
+%data = %{$data_ref};
+for my $i (0..(scalar keys %data) -1){print $data{$i},"\n";}
+@summary = @{$summary_ref};
+
+@fields = split_fields(\%data);
+%cnt_num = count_job_states(\%Attr);
+($cluster_batch_ref,$user_batch_ref) = make_batch(\%Attr);
+%cluster_batch = %{$cluster_batch_ref};
+%user_batch = %{$user_batch_ref};
+
+if (check_heading($command_arg,\%data) && check_data(\@fields,\%Attr,$command_arg,\%cluster_batch,\%user_batch)){
+	RegisterResult(check_summary($command_arg,\@summary,\%cnt_num),check_name => '-wide',test_name=>$testname);
+} else {
+	RegisterResult(0,check_name => '-wide', test_name => $testname);
+}
+
+##############################################################
+################## -dag (same BATCH_NAME)#####################
+##############################################################
+$command_arg = '-dag -wide';
+$ClusterId = 100;
+$pid = $$;
+$arguments = 600;
+$submit_content = 
+"executable = $executable
+arguments = $arguments
+queue 8";
+$submitfile = "$testname$pid.sub";
+
+emit_dag_files($testname,$submit_content,$pid);
+
+%Attr_RAW = dry_run($testname,$pid,$ClusterId,$executable);
+
+# custom job states
+$Attr_RAW{0}{JobStatus} = 5;
+$Attr_RAW{1}{JobStatus} = 2;
+$Attr_RAW{2}{JobStatus} = 2;
+$Attr_RAW{3}{JobStatus} = 2;
+$Attr_RAW{4}{JobStatus} = 5;
+$Attr_RAW{5}{JobStatus} = 5;
+$Attr_RAW{6}{JobStatus} = 2;
+$Attr_RAW{7}{JobStatus} = 5;
+
+%Attr = various_hold_reasons(\%Attr_RAW);
+%Attr = add_status_ads(\%Attr);
+%Attr = add_dag_ads(\%Attr,$testname);
+#%Attr = change_clusterid(\%Attr,$ClusterId);
+%Attr = multi_owners(\%Attr);
+($other_ref,$data_ref,$summary_ref) = create_table(\%Attr,$testname,$command_arg);
+%other = %{$other_ref};
+%data = %{$data_ref};
+for my $i (0..(scalar keys %data) -1){print $data{$i},"\n";}
+@summary = @{$summary_ref};
+
+@fields = split_fields(\%data);
+%cnt_num = count_job_states(\%Attr);
+($cluster_batch_ref,$user_batch_ref) = make_batch(\%Attr);
+%cluster_batch = %{$cluster_batch_ref};
+%user_batch = %{$user_batch_ref};
+
+if (check_heading($command_arg,\%data) && check_data(\@fields,\%Attr,$command_arg,\%cluster_batch,\%user_batch)){
+	RegisterResult(check_summary($command_arg,\@summary,\%cnt_num),check_name => '-dag -wide',test_name=>$testname);
+} else {
+	RegisterResult(0,check_name => '-dag -wide', test_name => $testname);
+}
+
+##############################################################
+########################## -run ##############################
+##############################################################
+$command_arg = '-run -wide';
+$ClusterId = 100;
+$pid = $$;
+$arguments = 600;
+$submit_content = 
+"executable = $executable
+arguments = $arguments
+queue 8";
+$submitfile = "$testname$pid.sub";
+
+emit_dag_files($testname,$submit_content,$pid);
+
+%Attr_RAW = dry_run($testname,$pid,$ClusterId,$executable);
+
+# custom job states
+$Attr_RAW{0}{JobStatus} = 5;
+$Attr_RAW{1}{JobStatus} = 2;
+$Attr_RAW{2}{JobStatus} = 2;
+$Attr_RAW{3}{JobStatus} = 2;
+$Attr_RAW{4}{JobStatus} = 5;
+$Attr_RAW{5}{JobStatus} = 5;
+$Attr_RAW{6}{JobStatus} = 2;
+$Attr_RAW{7}{JobStatus} = 5;
+
+%Attr = various_hold_reasons(\%Attr_RAW);
+%Attr = add_status_ads(\%Attr);
+%Attr = change_clusterid(\%Attr,$ClusterId);
+%Attr = multi_owners(\%Attr);
+($other_ref,$data_ref,$summary_ref) = create_table(\%Attr,$testname,$command_arg);
+%other = %{$other_ref};
+%data = %{$data_ref};
+for my $i (0..(scalar keys %data) -1){print $data{$i},"\n";}
+@summary = @{$summary_ref};
+
+@fields = split_fields(\%data);
+%cnt_num = count_job_states(\%Attr);
+($cluster_batch_ref,$user_batch_ref) = make_batch(\%Attr);
+%cluster_batch = %{$cluster_batch_ref};
+%user_batch = %{$user_batch_ref};
+
+if (check_heading($command_arg,\%data) && check_data(\@fields,\%Attr,$command_arg,\%cluster_batch,\%user_batch)){
+	RegisterResult(check_summary($command_arg,\@summary,\%cnt_num),check_name => '-run',test_name=>$testname);
+} else {
+	RegisterResult(0,check_name => '-run', test_name => $testname);
+}
+
+##############################################################
+########## -wide (same ClusterId different proc id) ##########
+##############################################################
+$command_arg = "-wide";
+$ClusterId = 100;
+$pid = $$;
+$arguments = 600;
+$submit_content = 
+"executable = $executable
+arguments = $arguments
+queue 8";
+$submitfile = "$testname$pid.sub";
+
+emit_dag_files($testname,$submit_content,$pid);
+
+%Attr_RAW = dry_run($testname,$pid,$ClusterId,$executable);
+
+# custom job states
+$Attr_RAW{0}{JobStatus} = 5;
+$Attr_RAW{1}{JobStatus} = 2;
+$Attr_RAW{2}{JobStatus} = 2;
+$Attr_RAW{3}{JobStatus} = 2;
+$Attr_RAW{4}{JobStatus} = 5;
+$Attr_RAW{5}{JobStatus} = 5;
+$Attr_RAW{6}{JobStatus} = 2;
+$Attr_RAW{7}{JobStatus} = 5;
+
+%Attr = various_hold_reasons(\%Attr_RAW);
+%Attr = add_status_ads(\%Attr);
+for my $i (0..(scalar keys %Attr)-1){
+	$Attr{$i}{ClusterId} = 100;
+}
+#%Attr = change_clusterid(\%Attr,$ClusterId);
+%Attr = multi_owners(\%Attr);
+($other_ref,$data_ref,$summary_ref) = create_table(\%Attr,$testname,$command_arg);
+%other = %{$other_ref};
+%data = %{$data_ref};
+for my $i (0..(scalar keys %data) -1){print $data{$i},"\n";}
+@summary = @{$summary_ref};
+
+@fields = split_fields(\%data);
+%cnt_num = count_job_states(\%Attr);
+($cluster_batch_ref,$user_batch_ref) = make_batch(\%Attr);
+%cluster_batch = %{$cluster_batch_ref};
+%user_batch = %{$user_batch_ref};
+
+if (check_heading($command_arg,\%data) && check_data(\@fields,\%Attr,$command_arg,\%cluster_batch,\%user_batch)){
+	print "          PASSED: first job verified.\n"
+} else {
+	RegisterResult(0,check_name => '-wide (same cluster id, different proc id)', test_name => $testname);
+}
+
+# submit a second job
+$submit_content = 
+"executable = $executable
+arguments = $arguments
+queue 2";
+$pid = $$;
+$submitfile = "$testname$pid.sub";
+
+emit_dag_files($testname,$submit_content,$pid);
+
+%Attr_RAW = dry_run($testname,$pid,100,$executable);
+$Attr_RAW{0}{JobStatus} = 5;
+$Attr_RAW{1}{JobStatus} = 2;
+$Attr_RAW{0}{ClusterId} = 100;
+$Attr_RAW{0}{ProcId} = 8;
+$Attr_RAW{1}{ProcId} = 9;
+$Attr_RAW{0}{GlobalJobId} =~ s/#[0-9]+\.[0-9]+/#100\.8/;
+$Attr_RAW{1}{GlobalJobId} =~ s/#[0-9]+\.[0-9]+/#100\.9/;
+$Attr_RAW{1}{ClusterId} = 100;
+%Attr_RAW = various_hold_reasons(\%Attr_RAW);
+%Attr_RAW = add_status_ads(\%Attr_RAW);
+%{$Attr{8}} = %{$Attr_RAW{0}};
+%{$Attr{9}} = %{$Attr_RAW{1}};
+
+($other_ref,$data_ref,$summary_ref) = create_table(\%Attr,$testname,$command_arg);
+%other = %{$other_ref};
+%data = %{$data_ref};
+for my $i (0..(scalar keys %data) -1){print $data{$i},"\n";}
+@summary = @{$summary_ref};
+
+@fields = split_fields(\%data);
+%cnt_num = count_job_states(\%Attr);
+($cluster_batch_ref,$user_batch_ref) = make_batch(\%Attr);
+%cluster_batch = %{$cluster_batch_ref};
+%user_batch = %{$user_batch_ref};
+
+if (check_heading($command_arg,\%data) && check_data(\@fields,\%Attr,$command_arg,\%cluster_batch,\%user_batch)){
+	RegisterResult(check_summary($command_arg,\@summary,\%cnt_num),check_name => '-wide (same ClusterIds different ProcIds)',test_name=>$testname);
+} else {
+	RegisterResult(0,check_name => '-wide (same cluster id, different proc id)', test_name => $testname);
+}
+
+##############################################################
+######### -wide (three ClusterIds different ProcIds) #########
+##############################################################
+$command_arg = "-wide";
+$ClusterId = 100;
+$pid = $$;
+$arguments = 600;
+$submit_content = 
+"executable = $executable
+arguments = $arguments
+queue 8";
+$submitfile = "$testname$pid.sub";
+
+emit_dag_files($testname,$submit_content,$pid);
+
+%Attr_RAW = dry_run($testname,$pid,$ClusterId,$executable);
+
+# custom job states
+$Attr_RAW{0}{JobStatus} = 5;
+$Attr_RAW{1}{JobStatus} = 2;
+$Attr_RAW{2}{JobStatus} = 2;
+$Attr_RAW{3}{JobStatus} = 2;
+$Attr_RAW{4}{JobStatus} = 5;
+$Attr_RAW{5}{JobStatus} = 5;
+$Attr_RAW{6}{JobStatus} = 2;
+$Attr_RAW{7}{JobStatus} = 5;
+
+%Attr = various_hold_reasons(\%Attr_RAW);
+%Attr = add_status_ads(\%Attr);
+for my $i (0..2){
+	$Attr{$i}{ClusterId} = 100;
+}
+for my $i (3..5){
+	$Attr{$i}{ClusterId} = 101;
+}
+for my $i (6..7){
+	$Attr{$i}{ClusterId} = 102;
+}
+#%Attr = change_clusterid(\%Attr,$ClusterId);
+%Attr = multi_owners(\%Attr);
+($other_ref,$data_ref,$summary_ref) = create_table(\%Attr,$testname,$command_arg);
+%other = %{$other_ref};
+%data = %{$data_ref};
+for my $i (0..(scalar keys %data) -1){print $data{$i},"\n";}
+@summary = @{$summary_ref};
+
+@fields = split_fields(\%data);
+%cnt_num = count_job_states(\%Attr);
+($cluster_batch_ref,$user_batch_ref) = make_batch(\%Attr);
+%cluster_batch = %{$cluster_batch_ref};
+%user_batch = %{$user_batch_ref};
+
+if (check_heading($command_arg,\%data) && check_data(\@fields,\%Attr,$command_arg,\%cluster_batch,\%user_batch)){
+	RegisterResult(check_summary($command_arg,\@summary,\%cnt_num),check_name => '-wide (three ClusterIds different ProcIds)',test_name=>$testname);
+} else {
+	RegisterResult(0,check_name => '-wide (three ClusterIds, different ProcIds)', test_name => $testname);
+}
+
+
