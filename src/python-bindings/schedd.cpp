@@ -1909,6 +1909,8 @@ public:
             const char *key = hash_iter_key(it);
             if (key && (*key == '+'))
             {
+                ss.str("");
+                ss.clear();
                 ss << (key + 1) << " = " << hash_iter_value(it) << "\n";
                 failed_copy = !addl_ad.Insert(ss.str());
             }

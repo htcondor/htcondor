@@ -519,7 +519,9 @@ class TestPythonBindings(WithDaemons):
         submit_obj = htcondor.Submit({"executable": "/bin/sh",
                                       "arguments":  "-c ps faux",
                                       "output":     "test.out.$(Cluster).$(Process)",
-                                      "+foo":       "true"})
+                                      "+foo":       "true",
+                                      "+baz_bar":   "false",
+                                      "+qux":       "1"})
         schedd = htcondor.Schedd()
         ads = []
         with schedd.transaction() as txn:
@@ -533,6 +535,8 @@ class TestPythonBindings(WithDaemons):
         outfile = "test.out.%d.0" % ad['ClusterId']
         self.assertEquals(ad['Out'], outfile)
         self.assertEquals(ad['foo'], True)
+        self.assertEquals(ad['baz_bar'], False)
+        self.assertEquals(ad['qux'], 1)
 
         finished = False
         for i in range(60):
