@@ -1651,7 +1651,7 @@ main_pre_command_sock_init()
 #endif
 
 	// Unless told otherwise, run the pre-scipt.
-	if( param_boolean( "SKIP_MASTER_PRE_SCRIPT", false ) ) {
+	if( param_boolean( "SKIP_MASTER_PRE_SCRIPT", true ) ) {
 		dprintf( D_FULLDEBUG, "Skipping master pre-script.\n" );
 	} else {
 		do_master_pre_script();

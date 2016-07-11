@@ -24,7 +24,7 @@ type=path
 review=?
 
 [SKIP_MASTER_PRE_SCRIPT]
-default=false
+default=true
 type=bool
 review=?
 
