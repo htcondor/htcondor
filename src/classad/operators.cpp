@@ -482,9 +482,23 @@ _doOperation (OpKind op, Value &val1, Value &val2, Value &val3,
 		bool b;
 
 		// if the selector is UNDEFINED, the result is undefined
-		if (vt1==Value::UNDEFINED_VALUE) {
+		// unless the middle is empty
+		if ((vt1==Value::UNDEFINED_VALUE) && valid2) {
 			result.SetUndefinedValue();
 			return SIG_CHLD1;
+		}
+
+			// if middle is empty
+		if (!valid2) {
+				// and selector is undefined, return rhs
+			if (vt1 == Value::UNDEFINED_VALUE) {
+				result.CopyFrom( val3 );
+				return( SIG_CHLD3 );
+			} else {
+				// if select not undefined, return it
+				result.CopyFrom(val1);
+				return (SIG_CHLD1);
+			}
 		}
 
 		if( !val1.IsBooleanValueEquiv(b) ) {
@@ -665,8 +679,13 @@ shortCircuit( EvalState &state, Value const &arg1, Value &result ) const
 			}
 		}
 		else {
-			if( child3 ) {
+			if( child3  && child2) {
 				return child3->Evaluate(state,result);
+			}
+				
+			if (!child2 && child1) {
+				// if middle is empty and lhs is defined, return it
+				return child1->Evaluate(state, result);
 			}
 		}
 	}
@@ -2259,13 +2278,17 @@ flatten( EvalState &state, Value &val, ExprTree *&tree ) const
 
 		// eval1 is either a real or an integer
 		if (bval) {
-			return child2->Flatten( state, val, tree );
+			if (child2) {
+				return child2->Flatten( state, val, tree );
+			} else {
+				return false;
+			}
 		} else {
 			return child3->Flatten( state, val, tree );
 		}
 	} else {
 		// Flatten arms of the if expression
-		if( !child2->Flatten( state, eval2, fChild2 ) ||
+		if( child2 && !child2->Flatten( state, eval2, fChild2 ) ||
 			!child3->Flatten( state, eval3, fChild3 ) ) {
 			// clean up
 			if( fChild1 ) delete fChild1;
