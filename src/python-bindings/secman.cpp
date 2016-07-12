@@ -1,7 +1,7 @@
-
-#include "secman.h"
-
-#include <boost/python/overloads.hpp>
+// Note - python_bindings_common.h must be included first so it can manage macro definition conflicts
+// between python and condor.
+#include "python_bindings_common.h"
+#include <Python.h>
 
 // Note - condor_secman.h can't be included directly.  The following headers must
 // be loaded first.  Sigh.
@@ -9,16 +9,22 @@
 #include "sock.h"
 #include "condor_secman.h"
 
+#include "classad_wrapper.h"
+#include "module_lock.h"
+#include "secman.h"
+
+#include <boost/python/overloads.hpp>
+
 #include "condor_attributes.h"
 #include "command_strings.h"
 #include "daemon.h"
 
 #include "old_boost.h"
-#include "module_lock.h"
 
 using namespace boost::python;
 
-pthread_key_t SecManWrapper::m_key;
+MODULE_LOCK_TLS_KEY SecManWrapper::m_key;
+bool SecManWrapper::m_key_allocated = false;
 
 static
 int getCommand(object command)
@@ -47,7 +53,11 @@ int getCommand(object command)
     return 0;
 }
 
-SecManWrapper::SecManWrapper() : m_secman() {}
+SecManWrapper::SecManWrapper() 
+	: m_secman()
+	, m_config_overrides(true)
+	, m_tag_set(false), m_pool_pass_set(false), m_cred_set(false)
+{}
 
 void
 SecManWrapper::invalidateAllCache()
@@ -139,14 +149,18 @@ SecManWrapper::getCommandString(int cmd)
 boost::shared_ptr<SecManWrapper>
 SecManWrapper::enter(boost::shared_ptr<SecManWrapper> obj)
 {
-    pthread_setspecific(m_key, obj.get());
+    if ( ! m_key_allocated) {
+        m_key_allocated = 0 == MODULE_LOCK_TLS_ALLOC(m_key);
+    }
+    MODULE_LOCK_TLS_SET(m_key, obj.get());
     return obj;
 }
 
 bool
 SecManWrapper::exit(boost::python::object obj1, boost::python::object /*obj2*/, boost::python::object /*obj3*/)
 {
-    pthread_setspecific(m_key, NULL);
+    MODULE_LOCK_TLS_SET(m_key, NULL);
+	PRAGMA_REMIND("should m_cred_set, etc be cleared here?")
     m_tag = "";
     m_pool_pass = "";
     m_cred = "";
@@ -155,49 +169,49 @@ SecManWrapper::exit(boost::python::object obj1, boost::python::object /*obj2*/, 
 }
 
 
-std::string
+const char *
 SecManWrapper::getThreadLocalTag()
 {
-    SecManWrapper *man = static_cast<SecManWrapper*>(pthread_getspecific(m_key));
-    return man ? man->m_tag : "";
+    SecManWrapper *man = static_cast<SecManWrapper*>(MODULE_LOCK_TLS_GET(m_key));
+    return (man && man->m_tag_set) ? man->m_tag.c_str() : NULL;
 }
 
 
-std::string
+const char *
 SecManWrapper::getThreadLocalPoolPassword()
 {
-        SecManWrapper *man = static_cast<SecManWrapper*>(pthread_getspecific(m_key));
-        return man ? man->m_pool_pass : "";
+        SecManWrapper *man = static_cast<SecManWrapper*>(MODULE_LOCK_TLS_GET(m_key));
+        return (man && man->m_pool_pass_set) ? man->m_pool_pass.c_str() : NULL;
 }
 
 
-std::string
+const char *
 SecManWrapper::getThreadLocalGSICred()
 {
-        SecManWrapper *man = static_cast<SecManWrapper*>(pthread_getspecific(m_key));
-        return man ? man->m_cred : "";
+        SecManWrapper *man = static_cast<SecManWrapper*>(MODULE_LOCK_TLS_GET(m_key));
+        return (man && man->m_cred_set) ? man->m_cred.c_str() : NULL;
 }
 
 
-boost::shared_ptr<std::vector<std::pair<std::string, std::string> > >
-SecManWrapper::getThreadLocalConfigOverrides()
+bool SecManWrapper::applyThreadLocalConfigOverrides(ConfigOverrides & old)
 {
-        SecManWrapper *man = static_cast<SecManWrapper*>(pthread_getspecific(m_key));
-        if (man) {return man->m_config_overrides;}
-        boost::shared_ptr<std::vector<std::pair<std::string, std::string> > > empty;
-        return empty;
+        SecManWrapper *man = static_cast<SecManWrapper*>(MODULE_LOCK_TLS_GET(m_key));
+        if (man) { man->m_config_overrides.apply(&old); return true; }
+        return false;
 }
 
 void
 SecManWrapper::setTag(const std::string &tag)
 {
         m_tag = tag;
+        m_tag_set = true;
 }
 
 void
 SecManWrapper::setPoolPassword(const std::string &pool_pass)
 {
         m_pool_pass = pool_pass;
+        m_pool_pass_set = true;
 }
 
 
@@ -205,16 +219,13 @@ void
 SecManWrapper::setGSICredential(const std::string &cred)
 {
         m_cred = cred;
+        m_cred_set = true;
 }
 
 void
 SecManWrapper::setConfig(const std::string &key, const std::string &val)
 {
-    if (!m_config_overrides.get())
-    {
-             m_config_overrides.reset(new std::vector<std::pair<std::string, std::string> >());
-    }
-    m_config_overrides->push_back(std::make_pair(key, val));
+    m_config_overrides.set(key, val.c_str());
 }
 
 
