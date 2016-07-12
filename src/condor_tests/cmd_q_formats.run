@@ -21,456 +21,483 @@
 use CondorTest;
 use CondorUtils;
 use Check::SimpleJob;
-use CheckOutputFormats;
+use POSIX ();
+use Sys::Hostname;
 use strict;
 use warnings;
 
 my $testname = "cmd_q_formats";
+my @submitfiles =();
 
-# needs to specify every time before a check
-my $command_arg;
-my $ClusterId;
-my $pid;
-my $executable = "sleep.exe";
-my $arguments;
-my $submit_content;
-my $submitfile;
+my $pid = $$;
+emit_dag_files();
+my $submitfile = "$testname$pid.sub";
+my $ClusterId = 100;
 
-# other variables, updated through each check
-my %Attr_RAW;
+my $host = hostname;
+my $time = time();
+my $index = 0;
 my %Attr;
-my @fields;
-my %other;
-my %data;
-my @summary;
-my $other_ref;
-my $data_ref;
-my $summary_ref;
-my %cnt_num;
-my %cluster_batch;
-my %user_batch;
-my $cluster_batch_ref;
-my $user_batch_ref;
+my $counter = 1;
+my @lines = `condor_submit -dry - $submitfile`;
+my $len = scalar @lines;
+my %all_keys;
+my $JobStatus = 1;
 
-################################################
-########### test -nobatch (all run) ############
-################################################
-$command_arg = '-nobatch';
-$arguments = 60;
-$ClusterId = 100;
-$pid = $$;
-$submit_content = 
-"executable = $executable
-arguments = $arguments;
-queue 4";
-$submitfile = "$testname$pid.sub";
+my @hold_reasons = {1, 15, 3, 21};
+my $command_arg = '-nobatch';
 
-emit_dag_files($testname,$submit_content,$pid);
+my $idle_cnt = 0;
+my $run_cnt = 0;
+my $hold_cnt = 0;
+my $cmplt_cnt = 0;
+my $rmd_cnt = 0;
+my $suspnd_cnt = 0;
 
-%Attr_RAW = dry_run($testname,$pid,$ClusterId,$executable);
-
-# custom job status
-for my $i (0..(scalar keys %Attr_RAW)-1){
-	$Attr_RAW{$i}{JobStatus} = 2;
-}
-
-%Attr = add_status_ads(\%Attr_RAW);
-%Attr = change_clusterid(\%Attr,$ClusterId);
-%Attr = multi_owners(\%Attr);
-($other_ref,$data_ref,$summary_ref) = create_table(\%Attr,$testname,$command_arg);
-%other = %{$other_ref};
-%data = %{$data_ref};
-@summary = @{$summary_ref};
-
-@fields = split_fields(\%data);
-%cnt_num = count_job_states(\%Attr);
-($cluster_batch_ref,$user_batch_ref) = make_batch(\%Attr);
-%cluster_batch = %{$cluster_batch_ref};
-%user_batch = %{$user_batch_ref};
-
-if (check_heading($command_arg,\%data) && check_data(\@fields,\%Attr,$command_arg,\%cluster_batch,\%user_batch)){
-	RegisterResult(check_summary($command_arg,\@summary,\%cnt_num),check_name => '-nobatch (run)',test_name=>$testname);
-} else {
-	RegisterResult(0,check_name => '-nobatch (run)', test_name => $testname);
-}
-
-#############################################################
-######## test -hold (different hold reasons) #############
-#############################################################
-$command_arg = '-hold';
-$ClusterId = 100;
-$arguments = 60;
-$pid = $$;
-$submit_content = 
-"executable = $executable
-arguments = $arguments
-queue 4";
-$submitfile = "$testname$pid.sub";
-
-emit_dag_files($testname,$submit_content,$pid);
-
-%Attr_RAW = dry_run($testname,$pid,$ClusterId,$executable);
-
-# custom job status
-for my $i (0..(scalar keys %Attr_RAW)-1){
-	$Attr_RAW{$i}{JobStatus} = 5;
-}
-
-%Attr = various_hold_reasons(\%Attr_RAW);
-%Attr = add_status_ads(\%Attr);
-%Attr = change_clusterid(\%Attr,$ClusterId);
-%Attr = multi_owners(\%Attr);
-($other_ref,$data_ref,$summary_ref) = create_table(\%Attr,$testname,$command_arg);
-%other = %{$other_ref};
-%data = %{$data_ref};
-@summary = @{$summary_ref};
-
-@fields = split_fields(\%data);
-%cnt_num = count_job_states(\%Attr);
-($cluster_batch_ref,$user_batch_ref) = make_batch(\%Attr);
-%cluster_batch = %{$cluster_batch_ref};
-%user_batch = %{$user_batch_ref};
-
-if (check_heading($command_arg,\%data) && check_data(\@fields,\%Attr,$command_arg,\%cluster_batch,\%user_batch)){
-	RegisterResult(check_summary($command_arg,\@summary,\%cnt_num),check_name => '-nobatch (run)',test_name=>$testname);
-} else {
-	RegisterResult(0,check_name => '-hold (different hold reasons)', test_name => $testname);
-}
-
-#################################################################
-########################## test -batch ##########################
-#################################################################
-$command_arg = '-batch';
-$ClusterId = 100;
-$pid = $$;
-$arguments = 60;
-$submit_content = 
-"executable = $executable
-arguments = $arguments
-queue";
-$submitfile = "$testname$pid.sub";
-emit_dag_files($testname,$submit_content,$pid);
-my %Attr_RAW1 = dry_run($testname,$pid,$ClusterId,$executable);
-$Attr_RAW1{0}{ClusterId} = $ClusterId;
-
-$ClusterId = 101;
-$submit_content = 
-"executable = $executable
-arguments = $arguments
-queue";
-emit_dag_files($testname,$submit_content,$pid);
-my %Attr_RAW2 = dry_run($testname,$pid,$ClusterId,$executable);
-$Attr_RAW2{0}{ClusterId} = $ClusterId;
-
-$submit_content = 
-"executable = $executable
-arguments = $arguments
-queue";
-$ClusterId = 102;
-emit_dag_files($testname,$submit_content,$pid);
-my %Attr_RAW3 = dry_run($testname,$pid,$ClusterId,$executable);
-$Attr_RAW3{0}{ClusterId} = $ClusterId;
-
-$submit_content =
-"executable = $executable
-arguments = $arguments
-queue";
-$ClusterId = 103;
-emit_dag_files($testname,$submit_content,$pid);
-my %Attr_RAW4 = dry_run($testname,$pid,$ClusterId,$executable);
-$Attr_RAW4{0}{ClusterId} = $ClusterId;
-
-# custom job status
-$Attr_RAW1{0}{JobStatus} = 1;
-$Attr_RAW2{0}{JobStatus} = 2;
-$Attr_RAW3{0}{JobStatus} = 2;
-$Attr_RAW4{0}{JobStatus} = 5;
-
-%{$Attr_RAW{0}} = %{$Attr_RAW1{0}};
-%{$Attr_RAW{1}} = %{$Attr_RAW2{0}};
-%{$Attr_RAW{2}} = %{$Attr_RAW3{0}};
-%{$Attr_RAW{3}} = %{$Attr_RAW4{0}};
-
-%Attr = various_hold_reasons(\%Attr_RAW);
-%Attr = add_status_ads(\%Attr);
-#%Attr = change_clusterid(\%Attr,100);
-%Attr = multi_owners(\%Attr);
-($other_ref,$data_ref,$summary_ref) = create_table(\%Attr,$testname,$command_arg);
-%other = %{$other_ref};
-%data = %{$data_ref};
-for my $i (0..3){print $data{$i},"\n";}
-@summary = @{$summary_ref};
-
-@fields = split_fields(\%data);
-%cnt_num = count_job_states(\%Attr);
-($cluster_batch_ref,$user_batch_ref) = make_batch(\%Attr);
-%cluster_batch = %{$cluster_batch_ref};
-%user_batch = %{$user_batch_ref};
-
-if (check_heading($command_arg,\%data) && check_data(\@fields,\%Attr,$command_arg,\%cluster_batch,\%user_batch)){
-	RegisterResult(check_summary($command_arg,\@summary,\%cnt_num),check_name => '-batch',test_name=>$testname);
-} else {
-	RegisterResult(0,check_name => '-batch', test_name => $testname);
-}
-
-########################################################
-#######  test -tot (multiple job states) ###############
-########################################################
-$command_arg = '-tot';
-$ClusterId = 100;
-$pid = $$;
-$arguments = 60;
-$submit_content = 
-"executable = $executable
-arguments = $arguments
-queue 4";
-$submitfile = "$testname$pid.sub";
-
-emit_dag_files($testname,$submit_content,$pid);
-
-%Attr_RAW = dry_run($testname,$pid,$ClusterId,$executable);
-
-# custom job status
-$Attr_RAW{0}{JobStatus} = 2;
-$Attr_RAW{1}{JobStatus} = 2;
-$Attr_RAW{2}{JobStatus} = 1;
-$Attr_RAW{3}{JobStatus} = 5;
-$Attr_RAW{3}{HoldReasonCode} = 1;
-
-%Attr = add_status_ads(\%Attr_RAW);
-%Attr = change_clusterid(\%Attr,$ClusterId);
-%Attr = multi_owners(\%Attr);
-($other_ref,$data_ref,$summary_ref) = create_table(\%Attr,$testname,$command_arg);
-%other = %{$other_ref};
-%data = %{$data_ref};
-@summary = @{$summary_ref};
-
-if (scalar keys %data > 0){
-	@fields = split_fields(\%data);
-	%cnt_num = count_job_states(\%Attr);
-	($cluster_batch_ref,$user_batch_ref) = make_batch(\%Attr);
-	%cluster_batch = %{$cluster_batch_ref};
-	%user_batch = %{$user_batch_ref};
-
-	if (check_heading($command_arg,\%data) && check_data(\@fields,\%Attr,$command_arg,\%cluster_batch,\%user_batch)){
-		RegisterResult(check_summary($command_arg,\@summary,\%cnt_num),check_name => '-tot (multiple states)',test_name=>$testname);
+##########################  Generate simulate_job.ads  ##########################################
+# construct a hash containing job ads from dry run
+while ($counter < $len){
+	if ($lines[$counter] =~ /^.$/){
+		$index++;
 	} else {
-		RegisterResult(0,check_name => '-tot (multiple job states)', test_name => $testname);
+		if ($lines[$counter] =~ /^([A-Za-z0-9_]+)\s*=\s*(.*)$/){
+			my $key = $1;
+			my $value = $2;
+			if (!defined $all_keys{$key}){
+				$all_keys{$key} = $key;
+			}
+			$Attr{$index}{$key} = $value;
+		}
 	}
+	$counter++;
+}
+
+# now combine
+for my $i (1..$index-1){
+	%{$Attr{$i}} = (%{ $Attr{0}}, %{$Attr{$i}});
+}
+
+# add the additional job ads that would appear in condor_q -long
+for my $i (0..$index-1){
+	my $owner = $Attr{$i}{Owner};
+	$owner = substr($owner,0,length($owner)-1);
+	my $FileSystemDomain = $Attr{$i}{FileSystemDomain};
+	$FileSystemDomain = substr($FileSystemDomain, 1, length($FileSystemDomain)-1);
+	$Attr{$i}{User} = $owner."@".$FileSystemDomain;
+	$Attr{$i}{NumCkpts_RAW} = 0;
+	my $QDate = $Attr{$i}{QDate};
+	$Attr{$i}{GlobalJobId} = "\"".$host."#".$ClusterId.".".$i."#".$QDate."\"";
+	$Attr{$i}{ServerTime} = $time;
+	$Attr{$i}{ExecutableSize_RAW} = $Attr{$i}{ExecutableSize};
+	$Attr{$i}{ExecutableSize} = cal_from_raw($Attr{$i}{ExecutableSize_RAW});
+	$Attr{$i}{DiskUsage_RAW} = $Attr{$i}{DiskUsage};
+	$Attr{$i}{DiskUsage} = cal_from_raw($Attr{$i}{DiskUsage_RAW});
+	$Attr{$i}{ImageSize_RAW} = $Attr{$i}{ImageSize};
+	$Attr{$i}{ImageSize} = cal_from_raw($Attr{$i}{ImageSize_RAW});
+}
+
+various_hold_reasons();
+add_status_ads();
+change_clusterid($ClusterId);
+multi_owners();
+
+# write the result of print hash to
+my $fname = "$testname.simulated.ads";
+open(FH, ">$fname") || print "ERROR writing to file $fname";
+foreach my $k1 (sort keys %Attr){
+	foreach my $k2 (keys %{ $Attr{$k1}}) {
+		print FH $k2," = ", $Attr{$k1}{$k2}, "\n";
+}
+	print FH "\n";
+}
+close(FH);
+
+
+
+############## generate an output from condor_q -job simulate_job.ads ###########################
+my @table = `condor_q -job $fname $command_arg`;
+
+
+# read everything before -- and store them to $other
+my %other;
+my $cnt = 0;
+until ($cnt == scalar @table || $table[$cnt] =~ /--/){
+	$other{$cnt} = $table[$cnt];
+	$cnt++;
+}
+my $head_pos = $cnt+1;
+
+# read everything before the blank line and store them to $data
+$cnt = 0;
+my %data;
+while($table[$head_pos+$cnt] =~ /\S/){
+	$data{$cnt} = $table[$head_pos+$cnt];
+	$cnt++;
+}
+
+my @fields = split_fields(\%data);
+
+# read another line of summary
+my $arg = $table[(scalar @table)-1];
+my @summary = split / /, $arg;
+
+#############################################################
+########################  RULES #############################
+#############################################################
+my %st_num;
+my %cnt_num;
+%st_num = (1 => 'I', 2=>'R', 3=>'X', 4=>'C', 5=> 'H', 6=>'>');
+%cnt_num = (1 => \$idle_cnt, 2 => \$run_cnt, 3 => \$rmd_cnt, 4 => \$cmplt_cnt, 5 => \$hold_cnt, 6 => \$suspnd_cnt);
+
+# rules for checking if DATA is correct
+my %rules_data = (
+	'ID' => sub {
+		if ($Attr{$_[0]}{GlobalJobId} =~ /.+#(.+)#.+/){
+			return $_[1] eq $1;
+		} else {
+			return 0;
+		}
+	},
+	'OWNER' => sub {return substr($Attr{$_[0]}{Owner},1, length($Attr{$_[0]}{Owner})-2) eq $_[1]},
+	'SUBMITTED' => sub{return $_[1]  =~ /[0-9]+\/[0-9]+\s+[0-9]+:[0-9]+/;},
+	'RUN_TIME' => sub{return $_[1] =~ /[0-9]\+[0-9][0-9]:[0-9][0-9]:[0-9][0-9]/;},
+	'ST' => sub{
+		if (defined $st_num{$Attr{$_[0]}{JobStatus}} && $_[1] eq $st_num{$Attr{$_[0]}{JobStatus}}){
+			${$cnt_num{$Attr{$_[0]}{JobStatus}}}++;
+			return 1;
+		} else {
+			print "        ERROR: JobStatus is $Attr{$_[0]}{JobStatus}, should be $_[1].\n";
+			return 0;
+		}
+	},
+	'HOST(S)' => sub {return $_[1] eq substr($Attr{$_[0]}{RemoteHost},1, length($Attr{$_[0]}{RemoteHost})-2);}
+
+);
+
+# rules for checking if HEADING is correct
+my %rules_heading = (
+	'-nobatch' => sub {return $data{0} =~ /(\s*)ID(\s+)OWNER(\s+)SUBMITTED(\s+)RUN_TIME(\s+)ST(\s+)PRI(\s+)SIZE(\s+)CMD/},
+	'-run' => sub {return $data{0} =~ /(\s*)ID(\s+)OWNER(\s+)SUBMITTED(\S+)RUN_TIME(\s+)HOST\(S\)/}
+);
+###################### check if the format of the output is correct #############################
+
+
+if (check_heading(\%rules_heading) && check_data(\%rules_data)){
+	RegisterResult(check_summary(), test_name=>$testname, check_name=>"condor_q formats");
 } else {
-	%cnt_num = count_job_states(\%Attr);
-	RegisterResult(check_summary($command_arg,\@summary,\%cnt_num),check_name => '-tot (multiple states)', testname=>$testname);
+	RegisterResult(0, test_name=>$testname, check_name=>"condor_q formats");
+}
+######################################   functions   ############################################
+
+# function to calculate from raw value to actual value
+# Usage: cal_from_raw(<RAW_VALUE>);
+sub cal_from_raw{
+	my $fvalue = shift;
+	my $magnitude = int(log(abs($fvalue/5))/log(10)+1);
+	$magnitude = int($magnitude);
+	my $roundto = (POSIX::pow(10,$magnitude))*0.25;
+	my $answer = (POSIX::ceil($fvalue/$roundto))*$roundto;
+	return $answer;
 }
 
-########################################################################
-##################### test  -nobatch -run ##############################
-########################################################################
-$command_arg = '-nobatch -run';
-$ClusterId = 100;
-$pid = $$;
-$arguments = 60;
-$submit_content = 
-"executable = $executable
-arguments = $arguments
-queue 4";
-$submitfile = "$testname$pid.sub";
-
-emit_dag_files($testname,$submit_content,$pid);
-
-%Attr_RAW = dry_run($testname,$pid,$ClusterId,$executable);
-
-# custom job states
-for my $i (0..(scalar keys %Attr_RAW)-1){
-	$Attr_RAW{$i}{JobStatus} = 2;
+sub various_hold_reasons{
+	if ($JobStatus == 5){
+		my $nn = 0;
+		for my $i (0..(scalar keys %Attr)-1){
+			if ($nn >= scalar(@hold_reasons)){
+				$Attr{$i}{HoldReasonCode} = $hold_reasons[$nn];
+				$nn++;
+			} else {
+				$Attr{$i}{HoldReasonCode} = $hold_reasons[0];
+				$nn = 0;
+			}
+		}
+	}
 }
 
-%Attr = add_status_ads(\%Attr_RAW);
-%Attr = change_clusterid(\%Attr,$ClusterId);
-%Attr = multi_owners(\%Attr);
-($other_ref,$data_ref,$summary_ref) = create_table(\%Attr,$testname,$command_arg);
-%other = %{$other_ref};
-%data = %{$data_ref};
-@summary = @{$summary_ref};
+# function to add additional job ads according to JobStatus
+sub add_status_ads{
+	for my $i (0..(scalar keys %Attr)-1){
 
-@fields = split_fields(\%data);
-%cnt_num = count_job_states(\%Attr);
-($cluster_batch_ref,$user_batch_ref) = make_batch(\%Attr);
-%cluster_batch = %{$cluster_batch_ref};
-%user_batch = %{$user_batch_ref};
+# HOLD
+		if ($JobStatus == 5){
 
-if (check_heading($command_arg,\%data) && check_data(\@fields,\%Attr,$command_arg,\%cluster_batch,\%user_batch)){
-	RegisterResult(check_summary($command_arg,\@summary,\%cnt_num),check_name => '-nobatch -run',test_name=>$testname);
-} else {
-	RegisterResult(0,check_name => '-nobatch -run', test_name => $testname);
+# been directly put on hold
+			if ($Attr{$i}{HoldReasonCode}==15){
+				$Attr{$i}{HoldReason} = "submitted on hold at user's request";
+				$Attr{$i}{JobStatus} = 5;
+			}
+
+# from run to hold
+			if ($Attr{$i}{HoldReasonCode} == 1){
+				my $extra_time = int(rand(4));
+				$Attr{$i}{AutoClusterAttrs} = "JobUniverse,LastCheckpointPlatform,NumCkpts,MachineLastMatchTime,ConcurrencyLimits,NiceUser,Rank,Requirements,DiskUsage,FileSystemDomain,ImageSize,MemoryUsage,RequestDisk,RequestMemory,ResidentSetSize";
+				$Attr{$i}{AutoClusterId} = 10;
+				$Attr{$i}{ByteRecvd} = 0.0;
+				$Attr{$i}{ByteSent} = 0.0;
+				$Attr{$i}{CumulativeSlotTime} = ($Attr{$i}{EnteredCurrentStatus} - $Attr{$i}{QDate} - $extra_time)."\."."0";
+				$Attr{$i}{HoldReason} = "\"via condor_hold (by user ".$Attr{$i}{Owner}.")\"";
+				$Attr{$i}{HoldReasonSubCode} = 0;
+				$Attr{$i}{ImageSize_RAW} = 4068;
+				$Attr{$i}{ImageSize} = cal_from_raw($Attr{$i}{ImageSize_RAW});
+				$Attr{$i}{JobStartDate} = $Attr{$i}{QDate}+$extra_time;
+				$Attr{$i}{JobCurrentExecutingDate} = $Attr{$i}{JobStartDate};
+				$Attr{$i}{JobCurrentStartDate} = $Attr{$i}{JobStartDate};
+				$Attr{$i}{JobStatus} = 5;
+				$Attr{$i}{LastJobLeaseRenewal} = $Attr{$i}{EnteredCurrentStatus};
+				$Attr{$i}{LastJobStatus} = 2;
+				$Attr{$i}{LastMatchTime} = $Attr{$i}{QDate} + $extra_time;
+				$Attr{$i}{LastPublicClaimId} = "\"<127.0.0.1:".int(rand(99999)).">#".int(rand(9999999999))."#".int(rand(99))."#...";
+				$Attr{$i}{LastRemoteHost} = "\""."slot".($i+1)."@".$host."\"";
+				$Attr{$i}{LastVacateTime} = $Attr{$i}{EnteredCurrentStatus};
+				$Attr{$i}{MachineAttrSlotWeight0} = 1;
+				$Attr{$i}{MemoryUsage} = "( ( ResidentSetSize + 1023 ) / 1024 )";
+				$Attr{$i}{NumJobMatches} = 1;
+				$Attr{$i}{NumJobStarts} = 1;
+				$Attr{$i}{NumShadowStarts} = 1;
+				$Attr{$i}{JobRunCount} = $Attr{$i}{NumShadowStarts};
+				$Attr{$i}{OrigMaxHosts} = 1;
+				$Attr{$i}{ResidentSetSize_RAW} = 488;
+				$Attr{$i}{ResidentSetSize} = cal_from_raw($Attr{$i}{ResidentSetSize_RAW});
+				$Attr{$i}{RemoteWallClock} = $Attr{$i}{CumulativeSlotTime};
+				$Attr{$i}{ServerTime} = $time;
+				$Attr{$i}{StartdPrincipal} = "\""."execute-side#matchsession/127.0.0.1"."\"";
+			}
+
+# RUN
+		} elsif ($JobStatus == 2){
+
+			my $ran_num_7 = int(rand(9999999));
+			my $ran_num_5 = int(rand(99999));
+			$Attr{$i}{AutoClusterAttrs} = "\""."JobUniverse,LastCheckpointPlatform,NumCkpts,MachineLastMatchTime,ConcurrencyLimits,NiceUser,Rank,Requirements,DiskUsage,FileSystemDomain,ImageSize,RequestDisk,RequestMemory"."\"";
+			$Attr{$i}{AutoClusterId} = 1;
+			$Attr{$i}{CurrentHosts} = 1;
+			$Attr{$i}{DiskUsage} = 2500000;
+			$Attr{$i}{JobCurrentStartDate} = $Attr{$i}{QDate};
+			$Attr{$i}{JobStartDate} = $Attr{$i}{QDate};
+			$Attr{$i}{JobStatus} = 2;
+			$Attr{$i}{LastJobLeaseRenewal} = $Attr{$i}{EnteredCurrentStatus};
+			$Attr{$i}{LastJobStatus} = 1;
+			$Attr{$i}{LastMatchTime} = $Attr{$i}{EnteredCurrentStatus};
+			$Attr{$i}{MachineAttrCpus0} = 1;
+			$Attr{$i}{MachineAttrSlotWeight0} = 1;
+			$Attr{$i}{MemoryUsage} = 12208;
+			$Attr{$i}{NumJobMatches} =1;
+			$Attr{$i}{NumShadowStarts} = 1;
+			$Attr{$i}{OrigMaxHosts} = 1;
+			$Attr{$i}{RemoteHost} = "\""."slot".($i+1)."@".$host."\"";
+			$Attr{$i}{RemoteSlotId} = $i+1;
+			$Attr{$i}{PublicClaimID} = "\""."<127.0.0.1:".$ran_num_5.">#".int(rand(9999999999))."#".int(rand(99))."#..."."\"";
+			$Attr{$i}{ShadowBday} = $Attr{$i}{QDate};
+			$Attr{$i}{StartdIpAddr} = "\""."<127.0.0.1:".$ran_num_5."?addrs=127.0.0.1-".$ran_num_5."&noUDP&sock=".$ran_num_7."_".rand(0xffff)."_".int(rand(10)).">"."\"";
+			$Attr{$i}{StartdPrincipal} = "\""."execute-side#matchsession/127.0.0.1"."\"";
+
+		}
+	}
 }
 
-##############################################################################
-################################## test -io ##################################
-##############################################################################
-$command_arg = '-io';
-$ClusterId = 100;
-$pid = $$;
-$arguments = "This is a test!";
-$submit_content = 
-"executable = $executable
-arguments = $arguments
-queue 4";
-$submitfile = "$testname$pid.sub";
-
-emit_dag_files($testname,$submit_content,$pid);
-
-%Attr_RAW = dry_run($testname,$pid,$ClusterId,$executable);
-
-# custom job states
-$Attr_RAW{0}{JobStatus} = 2;
-$Attr_RAW{1}{JobStatus} = 2;
-$Attr_RAW{2}{JobStatus} = 2;
-$Attr_RAW{3}{JobStatus} = 2;
-
-%Attr = add_status_ads(\%Attr_RAW);
-%Attr = add_io_ads(\%Attr,$arguments);
-%Attr = change_clusterid(\%Attr,$ClusterId);
-%Attr = multi_owners(\%Attr);
-($other_ref,$data_ref,$summary_ref) = create_table(\%Attr,$testname,$command_arg);
-%other = %{$other_ref};
-%data = %{$data_ref};
-@summary = @{$summary_ref};
-
-@fields = split_fields(\%data);
-%cnt_num = count_job_states(\%Attr);
-($cluster_batch_ref,$user_batch_ref) = make_batch(\%Attr);
-%cluster_batch = %{$cluster_batch_ref};
-%user_batch = %{$user_batch_ref};
-
-if (check_heading($command_arg,\%data) && check_data(\@fields,\%Attr,$command_arg,\%cluster_batch,\%user_batch)){
-	RegisterResult(check_summary($command_arg,\@summary,\%cnt_num),check_name => '-io',test_name=>$testname);
-} else {
-	RegisterResult(0,check_name => '-io', test_name => $testname);
+# function to change clusterId and GlobalJobId
+# Usage: change_clusterId(<NUMBER>)
+sub change_clusterid{
+	my $Id_num = shift;
+	for my $k (0..((scalar keys %Attr)-1)){
+		$Attr{$k}{ClusterId} = $Id_num;
+		$Attr{$k}{GlobalJobId} =~ s/#[0-9]+\./#$Id_num\./;
+		$Id_num++;
+	}
 }
 
-##############################################################################
-########################### test -nobatch -dag ###############################
-##############################################################################
-$command_arg = '-nobatch -dag';
-$ClusterId = 100;
-$pid = $$;
-$arguments = 600;
-$submit_content = 
-"executable = $executable
-arguments = $arguments
-queue 8";
-$submitfile = "$testname$pid.sub";
-
-emit_dag_files($testname,$submit_content,$pid);
-
-%Attr_RAW = dry_run($testname,$pid,$ClusterId,$executable);
-
-# custom job states
-$Attr_RAW{0}{JobStatus} = 5;
-$Attr_RAW{1}{JobStatus} = 2;
-$Attr_RAW{2}{JobStatus} = 2;
-$Attr_RAW{3}{JobStatus} = 2;
-$Attr_RAW{4}{JobStatus} = 5;
-$Attr_RAW{5}{JobStatus} = 5;
-$Attr_RAW{6}{JobStatus} = 2;
-$Attr_RAW{7}{JobStatus} = 5;
-
-%Attr = various_hold_reasons(\%Attr_RAW);
-%Attr = add_status_ads(\%Attr);
-%Attr = add_dag_ads(\%Attr,$testname);
-#%Attr = change_clusterid(\%Attr,$ClusterId);
-%Attr = multi_owners(\%Attr);
-($other_ref,$data_ref,$summary_ref) = create_table(\%Attr,$testname,$command_arg);
-%other = %{$other_ref};
-%data = %{$data_ref};
-@summary = @{$summary_ref};
-
-@fields = split_fields(\%data);
-%cnt_num = count_job_states(\%Attr);
-($cluster_batch_ref,$user_batch_ref) = make_batch(\%Attr);
-%cluster_batch = %{$cluster_batch_ref};
-%user_batch = %{$user_batch_ref};
-
-if (check_heading($command_arg,\%data) && check_data(\@fields,\%Attr,$command_arg,\%cluster_batch,\%user_batch)){
-	RegisterResult(check_summary($command_arg,\@summary,\%cnt_num),check_name => '-nobatch -dag',test_name=>$testname);
-} else {
-	RegisterResult(0,check_name => '-nobatch -dag', test_name => $testname);
+# function to mimic multiple owners, change owner
+# Usage:???
+sub multi_owners{
+	for my $k (0..((scalar keys %Attr)-1)){
+		$Attr{$k}{Owner} = substr($Attr{$k}{Owner}, 0, length($Attr{$k}{Owner})-1).$k."\"";
+	}
 }
 
 
-##############################################################################
-############################# test -globus ###################################
-##############################################################################
-#$command_arg = '-globus';
-#$ClusterId = 100;
-#$pid = $$;
-#$arguments = 600;
-#$submit_content =
-#"executable = $executable
-#arguments = $arguments
-#queue 8";
-#$submitfile = "$testname$pid.sub";
-#
-#emit_dag_files($testname,$submit_content,$pid);
-#
-#%Attr_RAW = dry_run($testname,$pid,$ClusterId,$executable);
-#
-## custom job states
-#$Attr_RAW{0}{JobStatus} = 5;                                                                      
-#$Attr_RAW{1}{JobStatus} = 2;                                                                      
-#$Attr_RAW{2}{JobStatus} = 2;                                                                      
-#$Attr_RAW{3}{JobStatus} = 2;                                                                      
-#$Attr_RAW{4}{JobStatus} = 5;                                                                      
-#$Attr_RAW{5}{JobStatus} = 5;                                                                      
-#$Attr_RAW{6}{JobStatus} = 2;                                                                      
-#$Attr_RAW{7}{JobStatus} = 5;                                                                      
+# function to trim white spaces at the begining and the end of the string
+# Reference: perlmaven.com/trim
+sub trim{
+	my $s = shift;
+	$s =~ s/^\s*|\s*$//g;
+	return $s;
+}
 
-#%Attr = various_hold_reasons(\%Attr_RAW);                                                         
-#%Attr = add_status_ads(\%Attr);
-#%Attr = add_globus_ads(\%Attr,$testname);
-#%Attr = change_clusterid(\%Attr,$ClusterId);                                                      
-#%Attr = multi_owners(\%Attr);
-#($other_ref,$data_ref,$summary_ref) = create_table(\%Attr,$testname,$command_arg);                
-#%other = %{$other_ref};                                                                           
-#%data = %{$data_ref};
-#for my $k (sort keys %data){print "$data{$k}\n";}                                                 
-#@summary = @{$summary_ref};                                                                       
-#
-#@fields = split_fields(\%data);
-#%cnt_num = count_job_states(\%Attr); 
-#($cluster_batch_ref,$user_batch_ref) = make_batch(\%Attr);                                        
-#%cluster_batch = %{$cluster_batch_ref};                                                           
-#%user_batch = %{$user_batch_ref};                                                                 
-#
-#if (check_heading($command_arg,\%data) && check_data(\@fields,\%Attr,$command_arg,\%cluster_batch,\%user_batch)){
-#        RegisterResult(check_summary($command_arg,\@summary,\%cnt_num),check_name => '-globus',test_name=>$testname);
-#} else {
-#        RegisterResult(0,check_name => '-globus', test_name => $testname);                        
-#}       
 
-###########################################################################
-############################## test -grid #################################
-###########################################################################
-#$command_arg = '-grid';
-#$ClusterId = 100;
-#$pid = $$;
-#$executable = "/bin/echo";
-#$arguements = "This is a test!";
-#submit_content =
-#"Universe = grid
-#grid_resource = condor condorce.example.com condorce.example.com:9619
-#arguments = $arguments
-#output = $testname$command_arg.out
-#error = $testname$comand_arg.err
-#log = $testname$command_arg.log
-#ShouldTransferFiles = YES
-#WhenToTransferOutput = ON_EXIT
-#queue";
-#$submitfile = "$testname$pid.sub";
-#
-#emit_dag_files($testname,$submit_content,$pid);
-#%Attr_RAW = dry_run($testname,$pid,$ClusterId,$executable);
-#
-#
+# function to find the blank column numbers from a hash
+# input: a hash
+# return: a hash of empty column numbers
+sub find_blank_columns{
+	my %lines = %{$_[0]};
+	my %blank_col;
+	my @head_chars = split ("", $lines{0});
+	for my $h (0..((scalar @head_chars)-1)){
+		if ($head_chars[$h] =~/\s/){
+			$blank_col{$h} = $h;           # all the blank column numbers from the FIRST line stored in %blank_col
+		}
+	}
+	for my $i (1..((scalar keys %lines)-1)){            # traverse the arrays and find out whether the following non-blank column number exists
+		my @chars = split "", $lines{$i};         # if so delete from %blank_col
+			for my $k (0..((scalar @chars)-1)){
+				if ($chars[$k] =~ /\S/ && defined $blank_col{$k}){
+					delete $blank_col{$k};
+				}
+			}
+	}
+	return %blank_col;
+}
+
+# function to find edges of columns from a hash, aka where the data starts and ends, and split the hash to fields
+# input: a hash
+# return: an array of arrays with fields and corresponding data
+sub split_fields {
+
+# find the column edges
+	my %lines = %{$_[0]};
+	my $end_num; # keep track of where the table ends
+		my %blank_col;
+	my @head_chars = split ("", $lines{0});
+	$end_num = (scalar @head_chars)-1;
+	my $head_end_num = $end_num; # index of where heading ends
+		for my $h (0..(($end_num)-1)){
+			if ($head_chars[$h] =~/\s/){
+				$blank_col{$h} = $h;           # all the blank column numbers from the FIRST line stored in %blank_col
+			}
+		}
+	for my $i (1..((scalar keys %lines)-1)){            # traverse the arrays and find out whether the following non-blank column number exists
+		my @chars = split "", $lines{$i};         # if so delete from %blank_col
+			$end_num = (scalar @chars)-1 > $end_num? (scalar @chars-1):$end_num;
+		for my $k (0..((scalar @chars)-1)){
+			if ($chars[$k] =~ /\S/ && defined $blank_col{$k}){
+				delete $blank_col{$k};
+			}
+		}
+	}
+	my @sorted_keys = sort {$a <=> $b} keys %blank_col;
+	my @edges;
+	my $index = 0;
+	for my $k (0..scalar @sorted_keys-2){
+		if ($sorted_keys[$k+1]-$sorted_keys[$k]!= 1){
+			$edges[$index][0] = $sorted_keys[$k]+1;
+			$edges[$index][1] = $sorted_keys[$k+1]-1;
+			$index++;
+		}
+	}
+	$edges[$index][0] = $sorted_keys[(scalar @sorted_keys)-1]+1;
+	$edges[$index][1] = $end_num;
+
+# start to split fields
+# two dimensional arrays $fields[$i][$j] where $i refers the column number and $j refers to data.
+# $j=0 --http://perlmaven.com/perl-hash> heading names. $j>0 --> corresponding data
+	my @fields;
+	for my $i (0..$index){
+		$fields[$i][0] = trim(join("",@head_chars[$edges[$i][0]..($edges[$i][1]<$head_end_num? $edges[$i][1]:$head_end_num)]));
+# to avoid the last edge go beyong where heading actually ends
+		for my $j (1..((scalar keys %lines)-1)){
+			my @chars = split "",$lines{$j};
+			$fields[$i][$j] = trim(join("", @chars[$edges[$i][0]..$edges[$i][1]]));
+		}
+	}
+#	for my $k (0..$index){
+#		for my $m (0..4){
+#			print $fields[$k][$m];
+#			print ",";
+#		}
+#		print "\n";
+#	}
+	return @fields;
+}
+
+sub check_heading{
+	my $succeeded;
+	my %heading_style = %{$_[0]};
+	TLOG("Checking heading format of the output file\n");
+	if (defined $command_arg){
+		if ($heading_style{$command_arg}()){
+			return $succeeded = 1;
+			print "        PASSED: Headings are correct\n";
+		} else{
+			print "        ERROR: Headings are not correct\n";
+			return $succeeded = 0;
+		}
+	}
+
+}
+
+# check if jobID, owner are correct, if date and time are in the correct format, and total job
+# number in respective state is correct;
+# Usage: check_data(\%rules_data);
+sub check_data {
+	my $succeeded;
+	my %ruless = %{$_[0]};
+	for my $i (0..(scalar @fields)-1){
+		TLOG("Checking ".$fields[$i][0]."\n");
+		if (defined $ruless{$fields[$i][0]}){
+			for my $k (1..(scalar @{$fields[$i]})-1){
+				if ($ruless{$fields[$i][0]}($k-1, $fields[$i][$k])){
+					$succeeded = 1;
+				} else {
+					print "        ERROR: $fields[$i][0] is not correct.\n";
+					return $succeeded = 0;
+				}
+
+			}
+			print "        PASSED: $fields[$i][0] is correct.\n";
+		} else {
+			next;
+		}
+	}
+	return $succeeded = 1;
+}
+
+sub check_summary {
+	TLOG("Checking summary statement.\n");
+	my $succeeded;
+	if ($summary[0]!=$cmplt_cnt+$rmd_cnt+$idle_cnt+$run_cnt+$hold_cnt+$suspnd_cnt || $summary[2]!=$cmplt_cnt || $summary[4]!=$rmd_cnt || $summary[6]!=$idle_cnt || $summary[8]!=$run_cnt || $summary[10]!= $hold_cnt || $summary[12]!=$suspnd_cnt){
+		print "        ERROR: Some states don't add up correctly\n";
+		return $succeeded = 0;
+	} else{
+		print "        PASSED: Summary statement correct\n";
+		return $succeeded = 1;
+	}
+}
+
+sub emit_dag_files {
+	my $dag_content = "JOBSTATE_LOG $testname.jobstate.log
+		Job A_A ${testname}_A.cmd
+		SCRIPT PRE A_A ${testname}_A_pre.sh
+		SCRIPT POST A_A ${testname}_A_post.sh
+		";
+
+	my $pre_script_sh_content = "#! /usr/bin/env sh\necho \"PRE A_A running\"\nexit 1\n";
+	my $pre_script_bat_content = "\@echo PRE A_A running\n\@exit /b 1\n";
+	my $post_script_sh_content = "#! /usr/bin/env sh\necho \"POST A_A running\"\nexit 1\n";
+	my $post_script_bat_content = "\@echo POST A_A running\n\@exit /b 1\n";
+
+	my $executable = "/bin/sleep";
+	my $arguments = 60;
+	my $queue_num  = 4;
+
+	my $submit_content =
+		"executable  = $executable
+		arguments = $arguments
+		queue $queue_num
+		";
+
+	emit_file(".dag",$dag_content);
+	emit_file("$pid.sub",$submit_content);
+}
+
+sub emit_file {
+	my $namex = shift;
+	my $content = shift;
+	my $fname = $testname . $namex;
+	open (FH, ">$fname") || print "error writing to $fname: $!\n";
+	print FH $content;
+	close(FH);
+	chmod(0755,$fname);
+}
+
 CondorTest::EndTest();
 exit(0);
