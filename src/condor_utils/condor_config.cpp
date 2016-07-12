@@ -1879,11 +1879,14 @@ param_insert(const char * name, const char * value)
 // before the value pointed to by live_value goes out of scope.
 const char * set_live_param_value(const char * name, const char * live_value)
 {
-	MACRO_ITEM * pitem = find_macro_item(name, ConfigMacroSet);
+	MACRO_EVAL_CONTEXT ctx;
+	init_macro_eval_context(ctx);
+
+	MACRO_ITEM * pitem = find_macro_item(name, NULL, ConfigMacroSet);
 	if ( ! pitem) {
 		if ( ! live_value) return NULL;
-		insert(name, "", ConfigMacroSet, WireMacro);
-		pitem = find_macro_item(name, ConfigMacroSet);
+		insert_macro(name, "", ConfigMacroSet, WireMacro, ctx);
+		pitem = find_macro_item(name, NULL, ConfigMacroSet);
 	}
 	ASSERT(pitem);
 	const char * old_value = pitem->raw_value;
