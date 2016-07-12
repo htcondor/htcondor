@@ -296,8 +296,12 @@ extern "C" {
 	int  set_runtime_config(char *admin, char *config);
 	int is_valid_param_name(const char *name);
 	char * is_valid_config_assignment(const char *config);
-	// this function allows tests to pretend that a param was set to a given value.	
+	// this function allows tests to pretend that a param was set to a given value. but it leaks memory if used frequently
     void  param_insert(const char * name, const char * value);
+	// this function allows tests to set the actual backend data for a param value and returns the old value.
+	// make sure that live_value stays in scope until you put the old value back
+	const char * set_live_param_value(const char * name, const char * live_value);
+
 } // end extern "C"
 
 

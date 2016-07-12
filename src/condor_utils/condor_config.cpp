@@ -1861,6 +1861,9 @@ check_domain_attributes()
 
 // Sometimes tests want to be able to pretend that params were set
 // to a certain value by the user.  This function lets them do that.
+// but it will copy the value (unless it equals the current value)
+// and never free the copy until a re-config. If you need to frequently
+// change the value of a single param, use set_live_param_value instead.
 //
 void 
 param_insert(const char * name, const char * value)
@@ -1869,6 +1872,34 @@ param_insert(const char * name, const char * value)
 	init_macro_eval_context(ctx);
 	insert_macro(name, value, ConfigMacroSet, WireMacro, ctx);
 }
+
+// set the value of a param equal to the given pointer. if the param is
+// not currently in the hash table, it is inserted. The old param value
+// is returned. It is your responsibility to put the old param value back
+// before the value pointed to by live_value goes out of scope.
+const char * set_live_param_value(const char * name, const char * live_value)
+{
+	MACRO_EVAL_CONTEXT ctx;
+	init_macro_eval_context(ctx);
+
+	MACRO_ITEM * pitem = find_macro_item(name, NULL, ConfigMacroSet);
+	if ( ! pitem) {
+		if ( ! live_value) return NULL;
+		insert_macro(name, "", ConfigMacroSet, WireMacro, ctx);
+		pitem = find_macro_item(name, NULL, ConfigMacroSet);
+	}
+	ASSERT(pitem);
+	const char * old_value = pitem->raw_value;
+	if ( ! live_value) {
+		PRAGMA_REMIND("need a param_remove function to implement this properly!")
+		// remove(name, ConfigMacroSet);
+		pitem->raw_value = "";
+	} else {
+		pitem->raw_value = live_value;
+	}
+	return old_value;
+}
+
 
 void
 init_config(int config_options)

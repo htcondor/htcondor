@@ -393,7 +393,7 @@ GahpServer::Reaper(Service *,int pid,int status)
 
 	if ( dead_server ) {
 		if ( !dead_server->m_sec_session_id.empty() ) {
-			daemonCore->getSecMan()->session_cache.remove( dead_server->m_sec_session_id.c_str() );
+			daemonCore->getSecMan()->session_cache->remove( dead_server->m_sec_session_id.c_str() );
 		}
 		formatstr_cat( buf, " unexpectedly" );
 		if ( dead_server->m_gahp_startup_failed ) {
@@ -1136,7 +1136,7 @@ GahpServer::CreateSecuritySession()
 			reason = "Unspecified error";
 		}
 		dprintf( D_ALWAYS, "GAHP command '%s' failed: %s\n", command, reason );
-		daemonCore->getSecMan()->session_cache.remove( claimId.secSessionId() );
+		daemonCore->getSecMan()->session_cache->remove( claimId.secSessionId() );
 		return false;
 	}
 

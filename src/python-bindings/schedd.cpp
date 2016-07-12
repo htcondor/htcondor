@@ -844,7 +844,7 @@ struct Schedd {
         }
 
         // IMPORTANT: this hashtable returns 1 on success!
-        ret = (SecMan::session_cache).lookup(session_id.Value(), k);
+        ret = (SecMan::session_cache)->lookup(session_id.Value(), k);
         if (!ret)
         {
             return false;

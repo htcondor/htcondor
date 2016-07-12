@@ -114,7 +114,7 @@ void SelfMonitorData::CollectData(void)
 
 	registered_socket_count = daemonCore->RegisteredSocketCount();
 
-	cached_security_sessions = daemonCore->getSecMan()->session_cache.count();
+	cached_security_sessions = daemonCore->getSecMan()->session_cache->count();
 
     // Collecting more info is yet to be done
     return;

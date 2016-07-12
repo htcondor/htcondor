@@ -393,6 +393,7 @@ if (BUILD_TESTING)
 	condor_pl_test(cmd_q_shows-cputime "Condor_q shows cputime" "core;quick;full;quicknolink")
 	condor_pl_test(cmd_q_shows-format "Condor_q shows format" "core;quick;full;quicknolink")
 	condor_pl_test(cmd_q_formats "Condor_q formats" "core;quick;full;quicknolink")
+	condor_pl_test(cmd_q_shows-batch "Condor_q shows batch" "core;quick;full;quicknolink")
 	condor_pl_test(file_transfer_submit "condor_submit file transfer" "core;quick;full;quicknolink")
 
 	if (LINUX)
