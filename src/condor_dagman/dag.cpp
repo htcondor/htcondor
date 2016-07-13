@@ -1454,6 +1454,8 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 {
 	debug_printf( DEBUG_DEBUG_1, "Dag::SubmitReadyJobs()\n" );
 
+	time_t cycleStart = time( NULL );
+
 		// Jobs deferred by category throttles.
 	PrioritySimpleList<Job*> deferredJobs;
 
@@ -1519,6 +1521,13 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 					  	_maxIdleJobProcs, _readyQ->Number(),
 					  	_readyQ->Number() == 1 ? "" : "s" );
 			_maxIdleDeferredCount += _readyQ->Number();
+			break; // break out of while loop
+		}
+
+		time_t now = time( NULL );
+		if ( (now - cycleStart) > 5/*TEMPTEMP*/ ) {
+				//TEMPTEMP -- not sure about verbosity
+        	debug_printf( DEBUG_NORMAL, "Hit max submit cycle time -- TEMPTEMP\n" );
 			break; // break out of while loop
 		}
 
