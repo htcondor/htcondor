@@ -29,6 +29,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item ClassAds can now be represented in JSON format.
+\condor{q}, \condor{status}, and \condor{history} have a \Arg{-json}
+command line option, which causes their output to be printed in JSON.
+\Ticket{5688}
+
 \item Job ads now include \Attr{NumJobCompletions}, which counts the
 number of times a job exited of its own accord (successfully or not) and
 then successfully completed file transfer (if any was requested).
