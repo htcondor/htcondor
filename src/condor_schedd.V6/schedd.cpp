@@ -3029,6 +3029,7 @@ static bool IsLocalUniverse( shadow_rec* srec );
 void
 abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold )
 {
+dprintf( D_ALWAYS, "DIAG abort_job_myself(%d.%d)\n", job_id.cluster, job_id.proc );//TEMPTEMP
 	shadow_rec *srec;
 	int mode;
 
@@ -3047,7 +3048,8 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold )
 	// If there is no shadow, then simply call DestroyProc() (if we
 	// are removing the job).
 
-    dprintf( D_FULLDEBUG, 
+    //TEMPTEMP dprintf( D_FULLDEBUG, 
+    dprintf( D_ALWAYS, //TEMPTEMP
 			 "abort_job_myself: %d.%d action:%s log_hold:%s\n",
 			 job_id.cluster, job_id.proc, getJobActionString(action),
 			 log_hold ? "true" : "false" );
@@ -5841,6 +5843,7 @@ Scheduler::enqueueActOnJobMyself( PROC_ID job_id, JobAction action, bool log )
 static bool
 removeOtherJobs( int cluster, int proc )
 {
+dprintf( D_ALWAYS, "DIAG removeOtherJobs()\n" );//TEMPTEMP
 	bool result = true;
 
 	MyString removeConstraint;
@@ -5848,6 +5851,7 @@ removeOtherJobs( int cluster, int proc )
 				ATTR_OTHER_JOB_REMOVE_REQUIREMENTS,
 				removeConstraint );
 	if ( attrResult == 0 && removeConstraint != "" ) {
+dprintf( D_ALWAYS, "DIAG 1310\n" );//TEMPTEMP
 		dprintf( D_ALWAYS,
 					"Constraint <%s = %s> fired because job (%d.%d) "
 					"was removed\n",
@@ -5904,6 +5908,7 @@ Scheduler::actOnJobMyselfHandler( ServiceData* data )
 			// are left running.
 			//
 		if ( action == JA_REMOVE_JOBS ) {
+dprintf( D_ALWAYS, "DIAG 1210\n" );//TEMPTEMP
 			(void)removeOtherJobs(job_id.cluster, job_id.proc);
 		}
 		break;
@@ -14576,6 +14581,7 @@ abortJob( int cluster, int proc, const char *reason, bool use_transaction )
 		// If we successfully removed the job, remove any jobs that
 		// match is OtherJobRemoveRequirements attribute, if it has one.
 	if ( result ) {
+dprintf( D_ALWAYS, "DIAG 1010\n" );//TEMPTEMP
 		// Ignoring return value because we're not sure what to do
 		// with it.
 		(void)removeOtherJobs( cluster, proc );
@@ -14652,8 +14658,10 @@ abortJobsByConstraint( const char *constraint,
 		// that have just been removed.  Note that this must be done
 		// *after* the transaction is committed.
 		//
+dprintf( D_ALWAYS, "DIAG 1110\n" );//TEMPTEMP
 	removedJobCount--;
 	while ( removedJobCount >= 0 ) {
+dprintf( D_ALWAYS, "DIAG 1120\n" );//TEMPTEMP
 		// Ignoring return value because we're not sure what to do
 		// with it.
 		(void)removeOtherJobs(

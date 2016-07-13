@@ -1540,7 +1540,10 @@ void condor_event_timer () {
 	dagman.dag->RunWaitingScripts();
 
 	int justSubmitted;
+	//TEMPTEMP -- maybe this is too much output -- keep track of time and just print if submit cycle was especially long?
+	debug_printf( DEBUG_VERBOSE, "Starting submit cycle\n" );//TEMPTEMP?
 	justSubmitted = dagman.dag->SubmitReadyJobs(dagman);
+	debug_printf( DEBUG_VERBOSE, "Finished submit cycle\n" );//TEMPTEMP?
 	if( justSubmitted ) {
 			// Note: it would be nice to also have the proc submit
 			// count here.  wenger, 2006-02-08.
