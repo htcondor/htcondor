@@ -72,6 +72,7 @@ ModuleLock::ModuleLock()
     : m_release_gil(ModuleLock::is_intialized() && !classad::ClassAdGetExpressionCaching()),
       m_owned(false), m_restore_orig_proxy(false), m_save(0)
     , m_config_orig(false) // backup config doesn't own it's pointers.
+    , m_proxy_orig(NULL)
 {
     acquire();
 }
