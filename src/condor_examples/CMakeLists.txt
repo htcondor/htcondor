@@ -18,6 +18,20 @@
 
 if (NOT WINDOWS)
 
+# For the condor-ec2 package.
+install(FILES	50ec2.config
+		DESTINATION	"${C_CONFIGD}"
+)
+install(FILES	49ec2-instance.sh
+		DESTINATION	"${C_CONFIGD}"
+		PERMISSIONS	${CONDOR_SCRIPT_PERMS}
+)
+install(FILES	master_shutdown_script.sh
+		DESTINATION	"${C_CONFIGD}/.."
+		PERMISSIONS	${CONDOR_SCRIPT_PERMS}
+)
+		
+
 install(FILES		condor.sysconfig
 		DESTINATION	"${C_SYSCONFIG}"
 		PERMISSIONS ${CONDOR_SCRIPT_PERMS}
