@@ -5723,6 +5723,12 @@ calculateNormalizationFactor (ClassAdListDoesNotDeleteAds &scheddAds,
 void Matchmaker::
 addRemoteUserPrios( ClassAdListDoesNotDeleteAds &cal )
 {
+	if ((!ConsiderPreemption ) || (!param_boolean("NEGOTIATOR_CROSS_SLOT_PRIOS", true))) {
+			// Hueristic - no need to take the time to populate ad with 
+			// accounting information if no preemption is to be considered.
+		return;
+	}
+
 	ClassAd *ad;
 	cal.Open();
 	while( ( ad = cal.Next() ) ) {
@@ -5744,12 +5750,6 @@ addRemoteUserPrios( ClassAd	*ad )
 	float     preemptingRank;
 	float temp_groupQuota, temp_groupUsage;
     string temp_groupName;
-
-	if ( !ConsiderPreemption ) {
-			// Hueristic - no need to take the time to populate ad with 
-			// accounting information if no preemption is to be considered.
-		return;
-	}
 
 		// If there is a preempting user, use that for computing remote user prio.
 		// Otherwise, use the current user.

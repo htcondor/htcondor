@@ -4478,6 +4478,15 @@ friendly_name=Replication Interval
 review=?
 tags=had,ReplicatorStateMachine
 
+[NEGOTIATOR_CROSS_SLOT_PRIOS]
+default=false
+type=bool
+reconfig=true
+customization=seldom
+friendly_name=Negotiator Advertise Cross Slot User Prios
+review=?
+tags=negotiator,matchmaker
+
 [NEGOTIATOR_INTERVAL]
 default=60
 type=int
