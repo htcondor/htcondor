@@ -246,6 +246,7 @@ Dag::~Dag()
 }
 
 //-------------------------------------------------------------------------
+//TEMPTEMP -- what if this takes a really long time?
 void
 Dag::RunWaitingScripts()
 {
@@ -1524,10 +1525,16 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 			break; // break out of while loop
 		}
 
+		//TEMPTEMP -- should we check this other places here, too?
+		//TEMPTEMP -- maybe make a utility function that does this test
 		time_t now = time( NULL );
-		if ( (now - cycleStart) > 5/*TEMPTEMP*/ ) {
+		time_t elapsed = now - cycleStart;
+		if ( elapsed > dm.m_user_log_scan_interval ) {
 				//TEMPTEMP -- not sure about verbosity
         	debug_printf( DEBUG_NORMAL, "Hit max submit cycle time -- TEMPTEMP\n" );
+        	debug_printf( DEBUG_QUIET,
+						"Warning: Submit cycle elapsed time (%d s) has exceeded log scan interval (%d s); bailing out of submit loop\n",
+						(int)elapsed, dm.m_user_log_scan_interval );
 			break; // break out of while loop
 		}
 

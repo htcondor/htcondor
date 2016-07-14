@@ -133,7 +133,9 @@ ScriptQ::RunWaitingScripts( bool justOne )
 
 		// Note:  We do NOT want to re-evaluate maxNum each time through
 		// the loop!
+		//TEMPTEMP -- what is maxNum referred to above?!?
 	int lastScriptNum = _waitingQueue->Length();
+	//TEMPTEMP -- should we have a limit here on the max number of script starts *per cycle*, the way we do for job submits?
 	for ( int curScriptNum = 0; curScriptNum < lastScriptNum;
 				++curScriptNum ) {
 		Script *script;
