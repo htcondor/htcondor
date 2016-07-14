@@ -113,7 +113,7 @@ SecManWrapper::ping(object locate_obj, object command_obj)
         ml.release();
 
         MyString cmd_map_ent;
-        const std::string &tag = SecMan::getTag();
+        const std::string &tag = m_tag_set ? m_tag : SecMan::getTag();
         if (tag.size()) {
                 cmd_map_ent.formatstr ("{%s,%s,<%i>}", tag.c_str(), addr.c_str(), num);
         } else {
@@ -129,11 +129,16 @@ SecManWrapper::ping(object locate_obj, object command_obj)
         {
             THROW_EX(RuntimeError, "No valid entry in command map hash table!");
         }
+        // Session cache lookup is tag-dependent; hence, we may need to temporarily override
+        std::string origTag = SecMan::getTag();
+        if (m_tag_set) {SecMan::setTag(tag);}
         // IMPORTANT: this hashtable returns 1 on success!
         if (!(SecMan::session_cache)->lookup(session_id.Value(), k))
         {
+            if (m_tag_set) {SecMan::setTag(origTag);}
             THROW_EX(RuntimeError, "No valid entry in session map hash table!");
         }
+        if (m_tag_set) {SecMan::setTag(origTag);}
         policy = k->policy();
         authz_ad->Update(*policy);
 

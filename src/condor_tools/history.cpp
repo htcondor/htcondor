@@ -139,6 +139,7 @@ static	ClassAdList	quillList;
 static  bool longformat=false;
 static  bool diagnostic = false;
 static  bool use_xml=false;
+static  bool use_json = false;
 static  bool wide_format=false;
 static  int  wide_format_width = 0;
 static  bool customFormat=false;
@@ -149,6 +150,7 @@ static  AttrListPrintMask mask;
 //static  List<const char> headings; // The list of headings for the mask entries
 static int cluster=-1, proc=-1;
 static int matchCount = 0, adCount = 0;
+static int printCount = 0;
 static int specifiedMatch = -1, maxAds = -1;
 static std::string g_name, g_pool;
 static Stream* socks[2] = { NULL, NULL };
@@ -238,6 +240,11 @@ main(int argc, char* argv[])
 		longformat = true;
 	}
     
+    else if (is_dash_arg_prefix(argv[i],"json",4)) {
+		use_json = true;
+		longformat = true;
+	}
+
     else if (is_dash_arg_prefix(argv[i],"backwards",1)) {
         backwards=TRUE;
     }
@@ -611,6 +618,11 @@ main(int argc, char* argv[])
   if ( ! my_constraint.empty() && ParseClassAdRvalExpr( my_constraint.c_str(), constraintExpr ) ) {
 	  fprintf( stderr, "Error:  could not parse constraint %s\n", my_constraint.c_str() );
 	  exit( 1 );
+  }
+
+  if ( use_xml && use_json ) {
+    fprintf( stderr, "Error: Cannot print as both XML and JSON\n" );
+    exit( 1 );
   }
 
 #ifdef HAVE_EXT_POSTGRESQL
@@ -1140,6 +1152,8 @@ static void readHistoryRemote(classad::ExprTree *constraintExpr)
 		std::string out;
 		AddClassAdXMLFileHeader(out);
 		printf("%s\n", out.c_str());
+	} else if( use_json ) {
+		printf( "[\n" );
 	}
 
 	compat_classad::ClassAd ad;
@@ -1233,6 +1247,8 @@ static void readHistoryRemote(classad::ExprTree *constraintExpr)
 		std::string out;
 		AddClassAdXMLFileFooter(out);
 		printf("%s\n", out.c_str());
+	} else if( use_json ) {
+		printf( "]\n" );
 	}
 }
 
@@ -1461,6 +1477,8 @@ static void readHistoryFromFileOld(const char *JobHistoryFileName, const char* c
 		std::string out;
 		AddClassAdXMLFileHeader(out);
 		printf("%s\n", out.c_str());
+	} else if( use_json ) {
+		printf( "[\n" );
 	}
 
     while(!EndFlag) {
@@ -1507,6 +1525,11 @@ static void readHistoryFromFileOld(const char *JobHistoryFileName, const char* c
             if (longformat) { 
 				if( use_xml ) {
 					fPrintAdAsXML(stdout, *ad);
+				} else if ( use_json ) {
+					if ( printCount != 0 ) {
+						printf(",\n");
+					}
+					fPrintAdAsJson(stdout, *ad);
 				}
 				else {
 					fPrintAd(stdout, *ad);
@@ -1520,6 +1543,7 @@ static void readHistoryFromFileOld(const char *JobHistoryFileName, const char* c
                 }
             }
 
+            printCount++;
             matchCount++; // if control reached here, match has occured
 
             if (specifiedMatch > 0) { // User specified a match number
@@ -1544,6 +1568,8 @@ static void readHistoryFromFileOld(const char *JobHistoryFileName, const char* c
 		std::string out;
 		AddClassAdXMLFileFooter(out);
 		printf("%s\n", out.c_str());
+	} else if( use_json ) {
+		printf( "]\n" );
 	}
     fclose(LogFile);
     return;
@@ -1590,6 +1616,11 @@ static void printJob(ClassAd & ad)
 	if (longformat) {
 		if (use_xml) {
 			fPrintAdAsXML(stdout, ad, projection.isEmpty() ? NULL : &projection);
+		} else if ( use_json ) {
+			if ( printCount != 0 ) {
+				printf(",\n");
+			}
+			fPrintAdAsJson(stdout, ad, projection.isEmpty() ? NULL : &projection);
 		} else {
 			fPrintAd(stdout, ad, false, projection.isEmpty() ? NULL : &projection);
 		}
@@ -1601,6 +1632,7 @@ static void printJob(ClassAd & ad)
 			displayJobShort(&ad);
 		}
 	}
+	printCount++;
 }
 
 // convert list of expressions into a classad
@@ -1645,6 +1677,8 @@ static void printJobAds(ClassAdList & jobs)
 		std::string out;
 		AddClassAdXMLFileHeader(out);
 		printf("%s\n", out.c_str());
+	} else if( use_json ) {
+		printf( "[\n" );
 	}
 
 	jobs.Open();
@@ -1659,6 +1693,8 @@ static void printJobAds(ClassAdList & jobs)
 		std::string out;
 		AddClassAdXMLFileFooter(out);
 		printf("%s\n", out.c_str());
+	} else if( use_json ) {
+		printf( "]\n" );
 	}
 }
 
@@ -1689,6 +1725,8 @@ static void readHistoryFromFileEx(const char *JobHistoryFileName, const char* co
 		std::string out;
 		AddClassAdXMLFileHeader(out);
 		printf("%s\n", out.c_str());
+	} else if( use_json ) {
+		printf( "[\n" );
 	}
 
 	std::string line;        // holds the current line from the log file.
@@ -1758,6 +1796,8 @@ static void readHistoryFromFileEx(const char *JobHistoryFileName, const char* co
 		std::string out;
 		AddClassAdXMLFileFooter(out);
 		printf("%s\n", out.c_str());
+	} else if( use_json ) {
+		printf( "]\n" );
 	}
 	reader.Close();
 }
