@@ -29,7 +29,12 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item The \Condor{negotiator} by default no longer cross advertises the
+user prio and resources in use from every slot in a machine ad to every
+other slot in that machine ad.  \Macro{NEGOTIATOR\_CROSS\_SLOT\_PRIOS} = true
+re-enables the old behaviour.  The accounting information for the current
+user of the slot remains advertised.
+\Ticket{5785}
 
 \end{itemize}
 
