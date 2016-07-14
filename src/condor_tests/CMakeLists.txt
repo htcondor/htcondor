@@ -34,6 +34,7 @@ if (BUILD_TESTING)
 			   CondorTest.pm
 			   CondorPersonal.pm
 			   CondorUtils.pm
+			   CheckOutputFormats.pm
 			   batch_test.pl)
 		configure_file(${CONDOR_SCRIPTS_DIR}/${scriptFile}
 				${TEST_TARGET_DIR}/${scriptFile} COPYONLY)
