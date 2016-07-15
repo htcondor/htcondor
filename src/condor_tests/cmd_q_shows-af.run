@@ -1,0 +1,282 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+##
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+##
+##    http://www.apache.org/licenses/LICENSE-2.0
+##
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+use CondorTest;
+use CondorUtils;
+use Check::SimpleJob;
+use CheckOutputFormats;
+use strict;
+use warnings;
+
+my $testname = "cmd_q_shows-af";
+
+my $command_arg;
+my $submit_content;
+my $submitfile;
+my $pid;
+my $executable;
+my $arguments;
+my $option;
+my %Attr;
+my %Attr_RAW;
+my $simulate_ads_file;
+my $sel0;
+my $sel1;
+my $sel2;
+my $sel3;
+my @table;
+
+##############################################
+################### -af ######################
+##############################################
+$command_arg = '-af';
+$option = '';
+$pid = $$;
+$executable = '/bin/sleep';
+$arguments = 100;
+$submit_content = 
+"executable = $executable
+arguments = $arguments
+queue";
+
+$submitfile = "$testname$pid.sub";
+
+emit_dag_files($testname,$submit_content,$pid);
+%Attr_RAW = dry_run($testname,$pid,100,$executable);
+
+for my $i (0..(scalar keys %Attr_RAW)-1){
+	$Attr_RAW{$i}{JobStatus} = 2;
+}
+
+%Attr_RAW = add_status_ads(\%Attr_RAW);
+foreach my $k (sort keys %{$Attr_RAW{0}}){
+	$Attr{$k} = $Attr_RAW{0}{$k};
+}
+$simulate_ads_file = write_ads_to_file($testname,\%Attr);
+delete $Attr{MemoryUsage};
+delete $Attr{RequestDisk};
+delete $Attr{RequestMemory};
+delete $Attr{Requirements};
+$sel0 = (keys %Attr)[rand keys %Attr];
+$sel1 = (keys %Attr)[rand keys %Attr];
+$sel2 = (keys %Attr)[rand keys %Attr];
+$sel3 = (keys %Attr)[rand keys %Attr];
+@table = `condor_q -job $simulate_ads_file $command_arg$option $sel0 $sel1 $sel2 $sel3`;
+RegisterResult(check_af(\%Attr,\@table,$option,$sel0,$sel1,$sel2,$sel3),check_name => "$command_arg$option",test_name=>$testname);
+
+# ==================================================================
+$option = ':,';
+$sel0 = (keys %Attr)[rand keys %Attr];
+$sel1 = (keys %Attr)[rand keys %Attr];
+$sel2 = (keys %Attr)[rand keys %Attr];
+$sel3 = (keys %Attr)[rand keys %Attr];
+@table = `condor_q -job $simulate_ads_file $command_arg$option $sel0 $sel1 $sel2 $sel3`;
+
+RegisterResult(check_af(\%Attr,\@table,$option,$sel0,$sel1,$sel2,$sel3),check_name => "$command_arg$option",test_name=>"$testname");
+
+# ==================================================================
+$option = ':h';
+$sel0 = (keys %Attr)[rand keys %Attr];
+$sel1 = (keys %Attr)[rand keys %Attr];
+$sel2 = (keys %Attr)[rand keys %Attr];
+$sel3 = (keys %Attr)[rand keys %Attr];
+@table = `condor_q -job $simulate_ads_file $command_arg$option $sel0 $sel1 $sel2 $sel3`;
+RegisterResult(check_af(\%Attr,\@table,$option,$sel0,$sel1,$sel2,$sel3),check_name => "$command_arg$option",test_name=>"$testname");
+
+# ==================================================================
+$option = ':ln';
+$sel0 = (keys %Attr)[rand keys %Attr];
+$sel1 = (keys %Attr)[rand keys %Attr];
+$sel2 = (keys %Attr)[rand keys %Attr];
+$sel3 = (keys %Attr)[rand keys %Attr];
+@table = `condor_q -job $simulate_ads_file $command_arg$option $sel0 $sel1 $sel2 $sel3`;
+RegisterResult(check_af(\%Attr,\@table,$option,$sel0,$sel1,$sel2,$sel3),check_name => "$command_arg$option",test_name=>"$testname");
+
+# ===================================================================
+$option = ':lrng';
+$sel0 = (keys %Attr)[rand keys %Attr];
+$sel1 = (keys %Attr)[rand keys %Attr];
+$sel2 = (keys %Attr)[rand keys %Attr];
+$sel3 = (keys %Attr)[rand keys %Attr];
+@table = `condor_q -job $simulate_ads_file $command_arg$option $sel0 $sel1 $sel2 $sel3`;
+print @table;
+RegisterResult(check_af(\%Attr,\@table,$option,$sel0,$sel1,$sel2,$sel3),check_name => "$command_arg$option",test_name=>"$testname");
+
+# ===================================================================
+$option = ':j';
+$sel0 = (keys %Attr)[rand keys %Attr];
+$sel1 = (keys %Attr)[rand keys %Attr];
+$sel2 = (keys %Attr)[rand keys %Attr];
+$sel3 = (keys %Attr)[rand keys %Attr];
+@table = `condor_q -job $simulate_ads_file $command_arg$option $sel0 $sel1 $sel2 $sel3`;
+print @table;
+RegisterResult(check_af(\%Attr,\@table,$option,$sel0,$sel1,$sel2,$sel3),check_name => "$command_arg$option",test_name=>"$testname");
+
+# ===================================================================
+$option = ':t';
+$sel0 = (keys %Attr)[rand keys %Attr];
+$sel1 = (keys %Attr)[rand keys %Attr];
+$sel2 = (keys %Attr)[rand keys %Attr];
+$sel3 = (keys %Attr)[rand keys %Attr];
+@table = `condor_q -job $simulate_ads_file $command_arg$option $sel0 $sel1 $sel2 $sel3`;
+print @table;
+RegisterResult(check_af(\%Attr,\@table,$option,$sel0,$sel1,$sel2,$sel3),check_name => "$command_arg$option",test_name=>"$testname");
+
+###############################################
+################# -format #####################
+###############################################
+$command_arg = '-format';
+$option = ' %v';
+$executable = '/bin/sleep';
+$arguments = 100;
+$submit_content = 
+"executable = $executable
+arguments = $arguments;
+queue";
+$submitfile = "$testname$pid.sub";
+emit_dag_files($testname,$submit_content,$pid);
+%Attr_RAW = dry_run($testname,$pid,100,$executable);
+
+for my $i (0..(scalar keys %Attr_RAW)-1){
+	$Attr_RAW{$i}{JobStatus} = 2;
+}
+%Attr_RAW = add_status_ads(\%Attr_RAW);
+foreach my $k (sort keys %{$Attr_RAW{0}}){
+	$Attr{$k} = $Attr_RAW{0}{$k};
+}
+$simulate_ads_file = write_ads_to_file($testname,\%Attr);
+delete $Attr{MemoryUsage};
+delete $Attr{RequestDisk};
+delete $Attr{RequestMemory};
+delete $Attr{Requirements};
+$sel0 = (keys %Attr)[rand keys %Attr];
+@table = `condor_q -job $simulate_ads_file $command_arg$option $sel0`;
+my $result0 = check_type(\%Attr,$option,\@table,$sel0);
+
+$sel1 = (keys %Attr)[rand keys %Attr];
+@table = `condor_q -job $simulate_ads_file $command_arg$option $sel1`;
+my $result1 = check_type(\%Attr,$option,\@table,$sel1);
+
+$sel2 = (keys %Attr)[rand keys %Attr];
+@table = `condor_q -job $simulate_ads_file $command_arg$option $sel2`;
+my $result2 = check_type(\%Attr,$option,\@table,$sel2);
+
+$sel3 = (keys %Attr)[rand keys %Attr];
+@table = `condor_q -job $simulate_ads_file $command_arg$option $sel3`;
+my $result3 = check_type(\%Attr,$option,\@table,$sel3);
+
+RegisterResult($result0&&$result1&&$result2&&$result3,check_name => "$command_arg$option",test_name=>"$testname");
+
+$option = ' %V';
+$sel0 = (keys %Attr)[rand keys %Attr];
+@table = `condor_q -job $simulate_ads_file $command_arg$option $sel0`;
+$result0 = check_type(\%Attr,$option,\@table,$sel0);
+
+$sel1 = (keys %Attr)[rand keys %Attr];
+@table = `condor_q -job $simulate_ads_file $command_arg$option $sel1`;
+$result1 = check_type(\%Attr,$option,\@table,$sel1);
+
+$sel2 = (keys %Attr)[rand keys %Attr];
+@table = `condor_q -job $simulate_ads_file $command_arg$option $sel2`;
+$result2 = check_type(\%Attr,$option,\@table,$sel2);
+
+$sel3 = (keys %Attr)[rand keys %Attr];
+@table = `condor_q -job $simulate_ads_file $command_arg$option $sel3`;
+$result3 = check_type(\%Attr,$option,\@table,$sel3);
+
+RegisterResult($result0&&$result1&&$result2&&$result3,check_name => "$command_arg$option",test_name=>"$testname");
+
+$option = ' %s';
+$sel0 = (keys %Attr)[rand keys %Attr];
+@table = `condor_q -job $simulate_ads_file $command_arg$option $sel0`;
+$result0 = check_type(\%Attr,$option,\@table,$sel0);
+
+$sel1 = (keys %Attr)[rand keys %Attr];
+@table = `condor_q -job $simulate_ads_file $command_arg$option $sel1`;
+$result1 = check_type(\%Attr,$option,\@table,$sel1);
+
+$sel2 = (keys %Attr)[rand keys %Attr];
+@table = `condor_q -job $simulate_ads_file $command_arg$option $sel2`;
+$result2 = check_type(\%Attr,$option,\@table,$sel2);
+
+$sel3 = (keys %Attr)[rand keys %Attr];
+@table = `condor_q -job $simulate_ads_file $command_arg$option $sel3`;
+$result3 = check_type(\%Attr,$option,\@table,$sel3);
+
+RegisterResult($result0&&$result1&&$result2&&$result3,check_name => "$command_arg$option",test_name=>"$testname");
+
+$option = ' %d';
+$sel0 = (keys %Attr)[rand keys %Attr];
+@table = `condor_q -job $simulate_ads_file $command_arg$option $sel0`;
+$result0 = check_type(\%Attr,$option,\@table,$sel0);
+
+$sel1 = (keys %Attr)[rand keys %Attr];
+@table = `condor_q -job $simulate_ads_file $command_arg$option $sel1`;
+$result1 = check_type(\%Attr,$option,\@table,$sel1);
+
+$sel2 = (keys %Attr)[rand keys %Attr];
+@table = `condor_q -job $simulate_ads_file $command_arg$option $sel2`;
+$result2 = check_type(\%Attr,$option,\@table,$sel2);
+
+$sel3 = (keys %Attr)[rand keys %Attr];
+@table = `condor_q -job $simulate_ads_file $command_arg$option $sel3`;
+$result3 = check_type(\%Attr,$option,\@table,$sel3);
+
+RegisterResult($result0&&$result1&&$result2&&$result3,check_name => "$command_arg$option",test_name=>"$testname");
+
+$option = ' %f';
+$sel0 = (keys %Attr)[rand keys %Attr];
+@table = `condor_q -job $simulate_ads_file $command_arg$option $sel0`;
+$result0 = check_type(\%Attr,$option,\@table,$sel0);
+
+$sel1 = (keys %Attr)[rand keys %Attr];
+@table = `condor_q -job $simulate_ads_file $command_arg$option $sel1`;
+$result1 = check_type(\%Attr,$option,\@table,$sel1);
+
+$sel2 = (keys %Attr)[rand keys %Attr];
+@table = `condor_q -job $simulate_ads_file $command_arg$option $sel2`;
+$result2 = check_type(\%Attr,$option,\@table,$sel2);
+
+$sel3 = (keys %Attr)[rand keys %Attr];
+@table = `condor_q -job $simulate_ads_file $command_arg$option $sel3`;
+$result3 = check_type(\%Attr,$option,\@table,$sel3);
+
+RegisterResult($result0&&$result1&&$result2&&$result3,check_name => "$command_arg$option",test_name=>"$testname");
+
+$option = ' %.2f';
+$sel0 = (keys %Attr)[rand keys %Attr];
+@table = `condor_q -job $simulate_ads_file $command_arg$option $sel0`;
+$result0 = check_type(\%Attr,$option,\@table,$sel0);
+
+$sel1 = (keys %Attr)[rand keys %Attr];
+@table = `condor_q -job $simulate_ads_file $command_arg$option $sel1`;
+$result1 = check_type(\%Attr,$option,\@table,$sel1);
+
+$sel2 = (keys %Attr)[rand keys %Attr];
+@table = `condor_q -job $simulate_ads_file $command_arg$option $sel2`;
+$result2 = check_type(\%Attr,$option,\@table,$sel2);
+
+$sel3 = (keys %Attr)[rand keys %Attr];
+@table = `condor_q -job $simulate_ads_file $command_arg$option $sel3`;
+$result3 = check_type(\%Attr,$option,\@table,$sel3);
+
+RegisterResult($result0&&$result1&&$result2&&$result3,check_name => "$command_arg$option",test_name=>"$testname");
+
+

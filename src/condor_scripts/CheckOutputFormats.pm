@@ -1089,39 +1089,233 @@ sub check_af{
 	for my $i (0..(scalar @table) -1){
 		$data{$i} = $table[$i];
 	}
+if (!(defined $Attr{$sel0})){ $Attr{$sel0} = "undefined"; }
+if (!(defined $Attr{$sel1})){ $Attr{$sel1} = "undefined"; }
+if (!(defined $Attr{$sel2})){ $Attr{$sel2} = "undefined"; }
+if (!(defined $Attr{$sel3})){ $Attr{$sel3} = "undefined"; }
 
 my %af_rules = (
 	':,' => sub{
 		my @words = split(", ",$table[0]);
-		return $words[0] eq unquote($Attr{$sel0}) && $words[1] eq unquote($Attr{$sel1}) && $words[2] eq unquote($Attr{$sel2}) && $words[3] eq unquote($Attr{$sel3})."\n";
+		if ($words[0] eq unquote($Attr{$sel0}) && $words[1] eq unquote($Attr{$sel1}) && $words[2] eq unquote($Attr{$sel2}) && $words[3] eq unquote($Attr{$sel3})."\n") {
+			return 1;
+		} else {
+			print "        ERROR: Incorrect output\n        $words[0]--". unquote($Attr{$sel0})."\n        $words[1]--".unquote($Attr{$sel1})."\n        $words[2]--".unquote($Attr{$sel2})."\n        $words[3]--".unquote($Attr{$sel3})."\n";
+			return 0;
+		}
 	},
 	':h' => sub{
-		my @fields = split_fields(\%data);
 		if ($data{0} =~ /$sel0\s+$sel1\s+$sel2\s+$sel3/){
-			return ($fields[0][1] eq unquote($Attr{$sel0}) && $fields[1][1] eq unquote($Attr{$sel1}) && $fields[2][1] eq unquote($Attr{$sel2}) && $fields[3][1] eq unquote($Attr{$sel3}));
+			my @head = split("",$data{0});
+			my @chars = split("",$data{1});
+			my %blank_col;
+			my @edges;
+			my @fields;
+			for my $h (0..scalar @head-1){
+				if ($head[$h] =~/\s/){
+					$blank_col{$h} = $h;
+				}
+			}
+			my @sorted_keys = sort {$a <=> $b} keys %blank_col;
+			my $index = 1;
+			$edges[0] = 0;
+			for my $k (0..scalar @sorted_keys-2){
+				if ($sorted_keys[$k+1]-$sorted_keys[$k]!= 1){
+					$edges[$index] = $sorted_keys[$k]+1;
+					$index++;
+				}
+			}
+			for my $i (0..(scalar @edges) -2){
+				$fields[$i] = trim(join("",@chars[$edges[$i]..($edges[$i+1]-1)]));
+			}
+			$fields[scalar @edges -1] = trim(join("",@chars[$edges[scalar @edges-1]..(scalar @chars -1)]));
+			if ($fields[0] eq unquote($Attr{$sel0}) && $fields[1] eq unquote($Attr{$sel1}) && $fields[2] eq unquote($Attr{$sel2}) && $fields[3] eq unquote($Attr{$sel3})){
+				return 1
+			} else {
+				print "        ERROR: Incorrect output\n        $fields[0]--".unquote($Attr{$sel0})."\n        $fields[1]--".unquote($Attr{$sel1})."\n        $fields[2]--".unquote($Attr{$sel2})."\n        $fields[3]--".unquote($Attr{$sel3})."\n";
+				return 0;
+			}
 		} else {
+			print "        ERROR: The heading is not correct\n";
 			return 0;
 		}
 	},
 	':ln' => sub{
-		return (trim($table[0]) eq "$sel0 = ".unquote($Attr{$sel0}) && trim($table[1]) eq "$sel1 = ".unquote($Attr{$sel1}) && trim($table[2]) eq "$sel2 = ".unquote($Attr{$sel2}) && trim($table[3]) eq "$sel3 = ".unquote($Attr{$sel3}));
+		if (trim($table[0]) eq trim("$sel0 = ".unquote($Attr{$sel0})) && trim($table[1]) eq trim("$sel1 = ".unquote($Attr{$sel1})) && trim($table[2]) eq trim("$sel2 = ".unquote($Attr{$sel2})) && trim($table[3]) eq trim("$sel3 = ".unquote($Attr{$sel3}))){
+		return 1;
+		} else {
+			print trim($table[0]),"\n",trim("$sel0 = ".unquote($Attr{$sel0})),"\n",trim($table[1]),"\n", trim("$sel1 = ".unquote($Attr{$sel1})),"\n",trim($table[2]),"\n",trim("$sel2 = ".unquote($Attr{$sel2})),"\n",trim($table[3]),"\n",trim("$sel3 = ".unquote($Attr{$sel3})),"\n";
+			return 0;
+		}
 	},
 	':lrng' => sub {
-		return ($table[0] eq "\n" && $table[1] eq "$sel0 = $Attr{$sel0}\n" && $table[2] eq "$sel1 = $Attr{$sel1}\n" && $table[3] eq "$sel2 = $Attr{$sel2}\n" && $table[4] eq "$sel3 = $Attr{$sel3}\n");
-	}	
+		if ($table[0] eq "\n" && $table[1] eq "$sel0 = $Attr{$sel0}\n" && $table[2] eq "$sel1 = $Attr{$sel1}\n" && $table[3] eq "$sel2 = $Attr{$sel2}\n" && $table[4] eq "$sel3 = $Attr{$sel3}\n") { return 1;} else {
+			print $table[0],"\n","\n",$table[1],"\n","$sel0 = $Attr{$sel0}\n", $table[2],"\n","$sel1 = $Attr{$sel1}\n",$table[3],"\n","$sel2 = $Attr{$sel2}\n",$table[4],"\n","$sel3 = $Attr{$sel3}\n";
+		}	
+	},
+	':j' => sub {
+		if ($table[0] eq $Attr{ClusterId}.".".$Attr{ProcId}." ".unquote($Attr{$sel0})." ".unquote($Attr{$sel1})." ".unquote($Attr{$sel2})." ".unquote($Attr{$sel3})."\n"){
+			return 1;
+		} else {
+			print $table[0],"\n",$Attr{ClusterId}.".".$Attr{ProcId}." ".unquote($Attr{$sel0})." ".unquote($Attr{$sel1})." ".unquote($Attr{$sel2})." ".unquote($Attr{$sel3})."\n"
+		}
+	},
+	':t' => sub {
+		if  (trim($table[0]) eq trim(unquote($Attr{$sel0})."\t".unquote($Attr{$sel1})."\t".unquote($Attr{$sel2})."\t".unquote($Attr{$sel3}))){
+			return 1;
+		} else {	
+			print trim($table[0]),"\n", trim(unquote($Attr{$sel0})."\t".unquote($Attr{$sel1})."\t".unquote($Attr{$sel2})."\t".unquote($Attr{$sel3}));
+		}
+	}
 );
 	TLOG("Checking condor_q -af$option\n");
 	if (defined $af_rules{$option}){
-		if ($af_rules{$option}()){
-			return 1;
-		}
-		else {
-			return 0;
-		}
+		return $af_rules{$option}();
 	} elsif (!defined $af_rules{$option}){
-print $table[0];
 		return $table[0] eq unquote($Attr{$sel0})." ".unquote($Attr{$sel1})." ".unquote($Attr{$sel2})." ".unquote($Attr{$sel3})."\n";
 	} else {
+		return 0;
+	}
+}
+
+sub check_type {
+	my %Attr = %{$_[0]};
+	my $option = $_[1];
+	my @table = @{$_[2]};
+	my $sel0 = $_[3];
+	my %format_rules;
+	my $regex = qr/^\s%\.([0-9])f$/;
+	%format_rules = (
+' %v' => sub{
+	if (defined $Attr{$sel0}){
+		if ($table[0] eq unquote($Attr{$sel0})){
+			return 1;
+		} else {
+			print $table[0],"\n",unquote($Attr{$sel0}),"\n";
+			return 0;
+		}
+	} else {
+		if ($table[0] eq "undefined"){
+			return 1;
+		} else {
+			print "Output is $table[0] where it should be undefined\n";
+			return 0;
+		}
+	}},
+' %V' => sub{
+	if (defined $Attr{$sel0}){	
+		if ($table[0] eq $Attr{$sel0}){
+			return 1;
+		} else {
+			print $table[0],"\n",$Attr{$sel0},"\n";
+			return 0;
+		}
+	} else {
+		if ($table[0] eq "undefined"){
+			return 1;
+		} else {
+			print "Output is $table[0] where it should be \"undefined\"\n";
+			return 0;
+		}
+	}},
+' %d' => sub{
+	if (defined $Attr{$sel0}){
+		if (defined $table[0] && unquote($Attr{$sel0}) =~ /^[0-9]+$/){
+			if ($table[0] eq unquote($Attr{$sel0})){return 1;}
+			else {print $table[0],"\n";return 0;}
+		} elsif (defined $table[0] && unquote($Attr{$sel0}) =~ /^([0-9]+)\.[0-9]+$/){
+			if ($table[0] eq $1){return 1;}
+			else {print $table[0],"\n";return 0;}
+		} elsif (defined $table[0] && unquote($Attr{$sel0}) eq "true"){
+			if ($table[0] eq 1){return 1;}
+			else {print $table[0],"\n";return 0;}
+		} elsif (defined $table[0] && unquote($Attr{$sel0}) eq "false"){
+			if ($table[0] eq 0) {return 1;}
+			else {print $table[0],"\n";return 0;}
+		} else {
+			if (!(defined $table[0])){return 1;}
+			else {print"Output is $table[0]. Should not have any output\n";return 0;}
+		}
+	} else { return !(defined $table[0]); }
+	},
+' %f' => sub{
+	if (defined $Attr{$sel0}){
+		if (defined $table[0] && unquote($Attr{$sel0}) =~ /^[0-9]+\.([0-9])+$/){
+			my $len = length($1);
+			if ($len<6){
+				if ($table[0] eq unquote($Attr{$sel0})."0"x(6-$len)){return 1;}
+				else {print $table[0],"\n";return 0;}
+			} elsif ($len > 6){
+				if ($table[0] eq substr(unquote($Attr{$sel0}),0,length(unquote($Attr{$sel0}))-$len + 6)){return 1;}
+				else {print $table[0],"\n";return 0;}
+			} else {
+				if ($table[0] eq unquote($Attr{$sel0})){return 1;}
+				else {print $table[0],"\n";return 0;}
+			}
+		} elsif (defined $table[0] && unquote($Attr{$sel0}) =~ /^[0-9]+$/){
+			if ($table[0] eq unquote($Attr{$sel0})."."."0"x6){return 1;}
+			else {print $table[0],"\n";return 0;}
+		} elsif (defined $table[0] && unquote($Attr{$sel0}) eq "true"){
+			if ($table[0] eq "1.000000"){return 1;}
+			else {print $table[0],"\n";return 0;}
+		} elsif (defined $table[0] && unquote($Attr{$sel0}) eq "false"){
+			if ($table[0] eq "0.000000"){return 1;}
+			else {print $table[0],"\n";return 0;}
+		} else {
+			if (!(defined $table[0])){return 1;}
+			else {print $table[0]," Should not have any output\n";return 0;}
+		}
+	} else {
+		if (!(defined $table[0])){return 1;}
+		else {print $table[0]," Should not have any output\n";return 0;}
+ 	}
+	},
+' %.2f' => sub {
+	if (defined $Attr{$sel0}){
+		if (defined $table[0] && unquote($Attr{$sel0}) =~ /^[0-9]+\.([0-9])+$/){
+			my $len = length($1);
+			if ($len<2){
+				if ($table[0] eq unquote($Attr{$sel0})."0"x(2-$len)){return 1;}
+				else {print $table[0],"\n";return 0;}
+			} elsif ($len > 2){
+				if ($table[0] eq substr(unquote($Attr{$sel0}),0,length(unquote($Attr{$sel0}))-$len + 2)){return 1;}
+				else {print $table[0],"\n";return 0;}
+			} else {
+				if ($table[0] eq unquote($Attr{$sel0})){return 1;}
+				else {print $table[0],"\n";return 0;}
+			}
+		} elsif (defined $table[0] && unquote($Attr{$sel0}) =~ /^[0-9]+$/){
+			if ($table[0] eq unquote($Attr{$sel0})."."."0"x2){return 1;}
+			else {print $table[0],"\n";return 0;}
+		} elsif (defined $table[0] && unquote($Attr{$sel0}) eq "true"){
+			if ($table[0] eq "1.00"){return 1;}
+			else {print $table[0],"\n";return 0;}
+		} elsif (defined $table[0] && unquote($Attr{$sel0}) eq "false"){
+			if ($table[0] eq "0.00"){return 1;}
+			else {print $table[0],"\n";return 0;}
+		} else {
+			if (!(defined $table[0])){return 1;}
+			else {print $table[0],"\n";return 0;}
+		}
+	} else {
+		if (!(defined $table[0])){return 1;}
+		else {print $table[0]," Should not have any output\n";return 0;}
+	}
+},
+' %s' => sub{
+	if (defined $Attr{$sel0}){
+		if ($table[0] eq unquote($Attr{$sel0})){return 1;}
+		else {print $table[0],"\n";return 0;}
+	} else {
+		if (!(defined $table[0])){return 1;}
+		else {print $table[0]," Should not have any output\n";return 0;}	
+	}}
+	);
+	TLOG("Checking condor_q -format$option\n");
+	if (defined $option && defined $format_rules{$option}){
+		return $format_rules{$option}();
+	} else {
+		print "Needs to have a format option and a class ad\n";
 		return 0;
 	}
 }
