@@ -19,7 +19,7 @@
 # OS pre mods
 if(${OS_NAME} STREQUAL "DARWIN")
   exec_program (sw_vers ARGS -productVersion OUTPUT_VARIABLE TEST_VER)
-  if(${TEST_VER} MATCHES "10.([6789]|10)" AND ${SYS_ARCH} MATCHES "I386")
+  if(${TEST_VER} MATCHES "10.([6789]|1[0-9])" AND ${SYS_ARCH} MATCHES "I386")
 	set (SYS_ARCH "X86_64")
   endif()
 elseif(${OS_NAME} MATCHES "WIN")
@@ -752,9 +752,10 @@ endif()
 ###########################################
 #if (NOT MSVC11) 
 #endif()
-add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/gsoap/2.7.10-p5)
 
 if (WINDOWS)
+
+  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/gsoap/2.7.10-p5)
 
   if (MSVC11)
     if (CMAKE_SIZEOF_VOID_P EQUAL 8 )
@@ -788,6 +789,7 @@ else ()
   add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/1.0.1e)
   add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre/7.6)
   add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/krb5/1.12)
+  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/gsoap/2.7.10-p5)
   add_subdirectory(${CONDOR_SOURCE_DIR}/src/classad)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/coredumper/2011.05.24-r31)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/unicoregahp/1.2.0)
@@ -844,6 +846,10 @@ else ()
 endif(WINDOWS)
 
 add_subdirectory(${CONDOR_SOURCE_DIR}/src/safefile)
+
+if (DARWIN)
+	include_directories( ${DARWIN_OPENSSL_INCLUDE} )
+endif()
 
 ### addition of a single externals target which allows you to
 if (CONDOR_EXTERNALS)
