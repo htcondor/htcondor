@@ -47,7 +47,7 @@ if (WITH_GSOAP)
 							  patch -N --binary -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/openssl_1_0.patch &&
 							  patch -N --binary -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/version.patch)
 			if(DARWIN AND cxx_11)
-				set (GSOAP_CONFIGURE ./configure --prefix=${GSOAP_INSTALL_LOC} --disable-dependency-tracking "CPPFLAGS=-I${OPENSSL_INSTALL_LOC}/include/ -DWITH_IPV6" "CXXFLAGS=-std=c++11 -stdlib=libc++ -DWITH_IPV6" "CFLAGS=-DWITH_IPV6" )
+				set (GSOAP_CONFIGURE ./configure --prefix=${GSOAP_INSTALL_LOC} --disable-dependency-tracking "CPPFLAGS=-I${DARWIN_OPENSSL_INCLUDE} -DWITH_IPV6" "CXXFLAGS=-std=c++11 -stdlib=libc++ -DWITH_IPV6" "CFLAGS=-DWITH_IPV6" )
 			else()
 				set (GSOAP_CONFIGURE ./configure --prefix=${GSOAP_INSTALL_LOC} --disable-dependency-tracking "CPPFLAGS=-I${OPENSSL_INSTALL_LOC}/include/ -DWITH_IPV6" "CXXFLAGS=-DWITH_IPV6" "CFLAGS=-DWITH_IPV6" )
 			endif()
