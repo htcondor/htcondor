@@ -177,6 +177,7 @@ SecManWrapper::exit(boost::python::object obj1, boost::python::object /*obj2*/, 
 const char *
 SecManWrapper::getThreadLocalTag()
 {
+    if ( ! m_key_allocated) return NULL;
     SecManWrapper *man = static_cast<SecManWrapper*>(MODULE_LOCK_TLS_GET(m_key));
     return (man && man->m_tag_set) ? man->m_tag.c_str() : NULL;
 }
@@ -185,6 +186,7 @@ SecManWrapper::getThreadLocalTag()
 const char *
 SecManWrapper::getThreadLocalPoolPassword()
 {
+    if ( ! m_key_allocated) return NULL;
         SecManWrapper *man = static_cast<SecManWrapper*>(MODULE_LOCK_TLS_GET(m_key));
         return (man && man->m_pool_pass_set) ? man->m_pool_pass.c_str() : NULL;
 }
@@ -193,6 +195,7 @@ SecManWrapper::getThreadLocalPoolPassword()
 const char *
 SecManWrapper::getThreadLocalGSICred()
 {
+    if ( ! m_key_allocated) return NULL;
         SecManWrapper *man = static_cast<SecManWrapper*>(MODULE_LOCK_TLS_GET(m_key));
         return (man && man->m_cred_set) ? man->m_cred.c_str() : NULL;
 }
@@ -200,6 +203,7 @@ SecManWrapper::getThreadLocalGSICred()
 
 bool SecManWrapper::applyThreadLocalConfigOverrides(ConfigOverrides & old)
 {
+    if ( ! m_key_allocated) return false;
         SecManWrapper *man = static_cast<SecManWrapper*>(MODULE_LOCK_TLS_GET(m_key));
         if (man) { man->m_config_overrides.apply(&old); return true; }
         return false;
