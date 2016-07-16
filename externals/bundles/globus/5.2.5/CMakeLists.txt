@@ -103,6 +103,7 @@ if (WITH_GLOBUS)
 			set ( GLOBUS_PATCH ${GLOBUS_PATCH} &&
 				cd ../../../../ &&
 				patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/xio-plugins-2.patch -p1 &&
+				ln -s ${DARWIN_OPENSSL_INCLUDE}/openssl ${GLOBUS_INSTALL_LOC}/include &&
 				ln -s ${LIBTOOL_INSTALL_LOC}/include/ltdl.h ${GLOBUS_INSTALL_LOC}/include &&
 				ln -s ${LIBTOOL_INSTALL_LOC}/include/libltdl ${GLOBUS_INSTALL_LOC}/include &&
 				cp -a ${LIBTOOL_INSTALL_LOC}/lib/libltdl.7.dylib ${GLOBUS_INSTALL_LOC}/lib &&
