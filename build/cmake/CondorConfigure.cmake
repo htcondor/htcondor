@@ -18,10 +18,10 @@
 
 # OS pre mods
 if(${OS_NAME} STREQUAL "DARWIN")
-  exec_program (sw_vers ARGS -productVersion OUTPUT_VARIABLE TEST_VER)
-  if(${TEST_VER} MATCHES "10.([6789]|1[0-9])" AND ${SYS_ARCH} MATCHES "I386")
+	# All recent versions of Mac OS X are 64-bit, but 'uname -p'
+	# (the source for SYS_ARCH) reports 'i386'.
+	# Override that to set the actual architecture.
 	set (SYS_ARCH "X86_64")
-  endif()
 elseif(${OS_NAME} MATCHES "WIN")
 	cmake_minimum_required(VERSION 2.8.3)
 	set(WINDOWS ON)
