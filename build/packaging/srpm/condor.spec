@@ -1979,7 +1979,7 @@ fi
 - a bug fix to prevent sending spurious data on a SOAP file transfer
 - a bug fix to always present jobs in order in condor_history
 
-* Thu Sep 14 2015 Tim Theisen <tim@cs.wisc.edu> - 8.4.0-1
+* Mon Sep 14 2015 Tim Theisen <tim@cs.wisc.edu> - 8.4.0-1
 - a Docker Universe to run a Docker container as an HTCondor job
 - the submit file can queue a job for each file found
 - the submit file can contain macros
