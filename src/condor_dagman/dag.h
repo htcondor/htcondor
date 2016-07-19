@@ -332,6 +332,7 @@ class Dag {
     inline int NumNodesFailed() const { return _numNodesFailed; }
 
     /** @return the number of jobs currently submitted to batch system(s)
+	 	Note: this counts *clusters*, not *procs*.
      */
     inline int NumJobsSubmitted() const { return _numJobsSubmitted; }
 
@@ -997,8 +998,12 @@ private:
     // Number of nodes that failed (job or PRE or POST script failed)
     int _numNodesFailed;
 
-    // Number of batch system jobs currently submitted
+    // Number of batch system jobs (clusters) currently submitted
     int _numJobsSubmitted;
+
+	//TEMPTEMP -- document this
+	//TEMPTEMP -- make sure this gets updated correctly when a cluster is removed!!
+	int _numProcsSubmitted;
 
     /*  Maximum number of jobs to submit at once.  Non-negative.  Zero means
         unlimited

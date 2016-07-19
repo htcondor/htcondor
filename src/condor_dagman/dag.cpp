@@ -107,6 +107,7 @@ Dag::Dag( /* const */ StringList &dagFiles,
     _numNodesDone         (0),
     _numNodesFailed       (0),
     _numJobsSubmitted     (0),
+    _numProcsSubmitted    (0),
     _maxJobsSubmitted     (maxJobsSubmitted),
 	_numIdleJobProcs		  (0),
 	_maxIdleJobProcs		  (maxIdleJobProcs),
@@ -1092,6 +1093,7 @@ Dag::ProcessSubmitEvent(Job *job, bool recovery, bool &submitEventIsSane) {
 		//
 	if ( submitEventIsSane || job->GetStatus() != Job::STATUS_SUBMITTED ) {
 		job->_queuedNodeJobProcs++;
+		_numProcsSubmitted++;
 	}
 
 		// Note:  in non-recovery mode, we increment _numJobsSubmitted
@@ -1918,10 +1920,11 @@ Dag::IsStuck() const
 {
 //TEMPTEMP -- need to deal with deferred scripts
 //TEMPTEMP -- need to deal with multi-proc clusters
+debug_printf( DEBUG_QUIET, "DIAG 1005 NumHeldJobProcs(): %d, _numProcsSubmitted: %d\n", NumHeldJobProcs(), _numProcsSubmitted );//TEMPTEMP
 	if ( !_readyQ->IsEmpty() ) {
 debug_printf( DEBUG_QUIET, "DIAG 1010\n" );//TEMPTEMP
 		return false;
-	} else if ( NumHeldJobProcs() < NumJobsSubmitted() ) {//TEMPTEMP -- this is wrong!!!!!!
+	} else if ( NumHeldJobProcs() < _numProcsSubmitted ) {//TEMPTEMP -- make sure this works right!
 debug_printf( DEBUG_QUIET, "DIAG 1020\n" );//TEMPTEMP
 		return false;
 	//TEMPTEMP? } else if ( NumScriptsRunning() > 0 ) {
@@ -1932,6 +1935,8 @@ debug_printf( DEBUG_QUIET, "DIAG 1030\n" );//TEMPTEMP
 	//TEMPTEMP -- are there other cases we have to check??
 
 debug_printf( DEBUG_QUIET, "DIAG 1040\n" );//TEMPTEMP
+	PrintPendingNodes();//TEMPTEMP
+
 	return true;
 }
 
@@ -4132,6 +4137,9 @@ Dag::DecrementProcCount( Job *node )
 	node->_queuedNodeJobProcs--;
 	ASSERT( node->_queuedNodeJobProcs >= 0 );
 
+	_numProcsSubmitted--;
+	ASSERT( _numProcsSubmitted >= 0 );
+
 	if( node->_queuedNodeJobProcs == 0 ) {
 		UpdateJobCounts( node, -1 );
 		node->Cleanup();
@@ -4144,6 +4152,7 @@ Dag::UpdateJobCounts( Job *node, int change )
 {
 	_numJobsSubmitted += change;
 	ASSERT( _numJobsSubmitted >= 0 );
+debug_printf( DEBUG_QUIET, "DIAG 1110 _numJobsSubmitted: %d\n", _numJobsSubmitted );//TEMPTEMP
 
 	if ( node->GetThrottleInfo() ) {
 		node->GetThrottleInfo()->_currentJobs += change;

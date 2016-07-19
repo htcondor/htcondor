@@ -1,0 +1,3 @@
+executable = /bin/sleep
+arguments = 120
+queue
