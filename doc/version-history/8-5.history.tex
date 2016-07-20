@@ -138,6 +138,17 @@ the \Macro{HISTORY\_HELPER} for remote \Condor{history}. The options are:
 can be defeated by passing the new \Opt{-local} argument.
 \Ticket{5765}
 
+\item The ability to send \Condor{drain} commands is now exposed through the python bindings.
+\Ticket{5507}
+
+\item Configuration files now support the declaration of multiline values, the is primarily of use when
+configuring the \Condor{job\_router}.
+\Ticket{5721}
+
+\item A new function has been added to the ClassAd language to facilitate the mapping of users to groups
+in the \Condor{schedd} and \Condor{job\_router}.
+\Ticket{5751}
+
 \item Configuration file metaknobs can now take arguments and pass them
 on the the metaknob to be expanded.
 \Ticket{5739}
@@ -179,6 +190,10 @@ job's X.509 proxy file when writing information to the
 
 \item Fixed a bug in \Condor{q} where the SIZE column would not grow as needed to fit the data.
 \Ticket{5667}
+
+\item Fixed a bug where the \Condor{schedd} did not treat a user as a queue superuser when it
+should have if the configuration included a map file, which is common for GSI authentication.
+\Ticket{5530}
 
 \end{itemize}
 
