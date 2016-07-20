@@ -2007,7 +2007,7 @@ fi
 - spooled job files are visible to only the user account by default
 - the condor_startd records when jobs are evicted by preemption or draining
 
-* Thu Sep 14 2015 Tim Theisen <tim@cs.wisc.edu> - 8.4.0-1
+* Mon Sep 14 2015 Tim Theisen <tim@cs.wisc.edu> - 8.4.0-1
 - a Docker Universe to run a Docker container as an HTCondor job
 - the submit file can queue a job for each file found
 - the submit file can contain macros
