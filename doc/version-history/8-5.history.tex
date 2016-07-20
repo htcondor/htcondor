@@ -35,6 +35,12 @@ true or false, but a classad expression evaluated in the context
 of the machine (my) and the job (target).
 \Ticket{5759}
 
+\item When running Docker Universe containers on docker version 1.11
+and newer, HTCondor now also sets --no-new-privs, to prevent
+setuid and setgid programs from running in containers, unless
+\Macro{DOCKER\_DROP\_ALL\_CAPABILITIES} evaluated to false.
+\Ticket{5680}
+
 \item The hostname of the container that Docker Universe jobs
 run in is now set to a more useful name.  Instead of a hash, it
 now contains the job's owner, the cluster and proc of the job,
