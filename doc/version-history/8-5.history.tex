@@ -122,6 +122,16 @@ a time.
 submit variable.
 \Ticket{5677}
 
+\item New options have been added to \Condor{history}, so that \Condor{history} can be used as the
+the \Macro{HISTORY\_HELPER} for remote \Condor{history}. The options are:
+  \begin{itemize}
+  \item \Opt{-since} Scanning of the history file stops when an expression becomes true or a job id is read.
+  \item \Opt{-completedsince} Scanning of the history file stops when a job completed earlier than this time is read.
+  \item \Opt{-scanlimit} Used by remote \Condor{history} to limit the number of jobs read from the history file.
+  \item \Opt{-attributes} Used by remote \Condor{history} to limit the attributes transferred back.
+  \item \Opt{-inherit} Used by remote \Condor{history} to define the socket to write results to.
+  \end{itemize}
+
 \item Configuration file metaknobs can now take arguments and pass them
 on the the metaknob to be expanded.
 \Ticket{5739}
