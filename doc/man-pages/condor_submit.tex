@@ -233,50 +233,38 @@ set the values of several automatic submit variables so that they can be referre
 submit file. With the exception of Cluster and Process, if these variables are set by the submit file, they will
 not be modified during \SubmitCmd{queue} processing.
 
-%TEMP \item[ClusterId]
-\Opt[ClusterId]
+\Item[ClusterId]
 Set to the integer value that the \Attr{ClusterId} attribute that the job ClassAd will have when the job is submitted.
 All jobs in a single submit will normally have the same value for the \Attr{ClusterId}.
 If the \Opt{-dry-run} argument is specified, The value will be 1.
-
-%TEMP \Item[Cluster]
-\Opt[Cluster]
+\Item[Cluster]
 Alternate name for the ClusterId submit variable.  Before HTCondor version 8.4 this was the only name.
 
-%TEMP \item[ProcId]
-\Opt[ProcId]
+\Item[ProcId]
 Set to the integer value that the \Attr{ProcId} attribute of the job ClassAd will have when the job is submitted.
 The value will start at 0 and increment by 1 for each job submitted.
-
-%TEMP \Item[Process]
-\Opt[Process]
+\Item[Process]
 Alternate name for the ProcId submit variable.  Before HTCondor version 8.4 this was the only name.
 
-%TEMP \item[Node]
-\Opt[Node]
-%TEMPTEMP For parallel universes, set to the value #pArAlLeLnOdE# or #MpInOdE# depending on the parallel universe type
+\Item[Node]
+For parallel universes, set to the value #pArAlLeLnOdE# or #MpInOdE# depending on the parallel universe type
 For other universes it is set to nothing.
 
-%TEMP \item[Step]
-\Opt[Step]
+\Item[Step]
 Set to the step value as it varies from 0 to N-1 where N is the number provided on the \SubmitCmd{queue} argument.
 This variable changes at the same rate as ProcId when it changes at all.
 For submit files that don't make use of the queue number option, Step will always be 0.
 For submit files that don't make use of any of the foreach options, Step and ProcId will always be the same.
 
-%TEMP \item[ItemIndex]
-\Opt[ItemIndex]
+\Item[ItemIndex]
 Set to the index within the item list being processed by the various queue foreach options.
 For submit files that don't make use of any queue foreach list, ItemIndex will always be 0
 For submit files that make use of a slice to select only some items in a foreach list, ItemIndex will only
 be set to selected values.
-
-%TEMP \item[Row]
-\Opt[Row]
+\Item[Row]
 Alternate name for ItemIndex.
 
-%TEMP \item[Item]
-\Opt[Item]
+\Item[Item]
 when a queue foreach option is used and no variable list is supplied, this variable will be set to the
 value of the current item.
 
@@ -284,43 +272,35 @@ value of the current item.
 The automatic variables below are set before parsing the submit file, and will not vary during processing
 unless the submit file itself sets them.
 
-%TEMP \item[ARCH]
-\Opt[ARCH]
+\Item[ARCH]
 Set to the CPU architecture of the machine running \Condor{submit}.
 The value will be the same as the automatic configuration variable of the same name.
 
-%TEMP \item[OPSYS]
-\Opt[OPSYS]
+\Item[OPSYS]
 Set to the name of the operating system on the machine running \Condor{submit}.
 The value will be the same as the automatic configuration variable of the same name.
 
-%TEMP \item[OPSYSANDVER]
-\Opt[OPSYSANDVER]
+\Item[OPSYSANDVER]
 Set to the name and major version of the operating system on the machine running \Condor{submit}.
 The value will be the same as the automatic configuration variable of the same name.
 
-%TEMP \item[OPSYSMAJORVER]
-\Opt[OPSYSMAJORVER]
+\Item[OPSYSMAJORVER]
 Set to the major version of the operating system on the machine running \Condor{submit}.
 The value will be the same as the automatic configuration variable of the same name.
 
-%TEMP \item[OPSYSVER]
-\Opt[OPSYSVER]
+\Item[OPSYSVER]
 Set to the version of the operating system on the machine running \Condor{submit}.
 The value will be the same as the automatic configuration variable of the same name.
 
-%TEMP \item[IsLinux]
-\Opt[IsLinux]
+\Item[IsLinux]
 Set to true if the operating system of the machine running \Condor{submit} is a Linux variant.
 Set to false otherwise.
 
-%TEMP \item[IsWindows]
-\Opt[IsWindows]
+\Item[IsWindows]
 Set to true if the operating system of the machine running \Condor{submit} is a Microsoft Windows variant.
 Set to false otherwise.
 
-%TEMP \item[SUBMIT\_FILE]
-\Opt[SUBMIT\_FILE]
+\Item[SUBMIT\_FILE]
 Set to the full pathname of the submit file being processed by \Condor{submit}. If submit statements
 are read from standard input, it is set to nothing.
 
