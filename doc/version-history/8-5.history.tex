@@ -47,6 +47,10 @@ now contains the job's owner, the cluster and proc of the job,
 and the hostname of the machine the container runs on.
 \Ticket{5760}
 
+\item Fixed a bug the prevented Docker universe jobs from reporting
+their network usage correctly.
+\Ticket{5750}
+
 \item ClassAds can now be represented in JSON format.
 \condor{q}, \condor{status}, and \condor{history} have a \Arg{-json}
 command line option, which causes their output to be printed in JSON.
