@@ -29,6 +29,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug in Docker universe that required the name
+of a transfered executable to begin with "./"
+\Ticket{5761}
+
 \item The value of the configuration parameter 
 \Macro{DOCKER\_DROP\_ALL\_CAPABILITIES} is now no longer just
 true or false, but a classad expression evaluated in the context
