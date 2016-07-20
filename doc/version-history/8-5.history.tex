@@ -141,6 +141,10 @@ can be defeated by passing the new \Opt{-local} argument.
 \item The ability to send \Condor{drain} commands is now exposed through the python bindings.
 \Ticket{5507}
 
+\item A new class - the Submit class - was added to the python bindings. It allows for the submission of HTCondor
+jobs via the python bindings using the same keywords and automatic behavior as \Condor{submit}.
+\Ticket{5666}
+
 \item Configuration files now support the declaration of multiline values, the is primarily of use when
 configuring the \Condor{job\_router}.
 \Ticket{5721}

@@ -380,6 +380,43 @@ back to the remote schedd based on a given resource request.
 \end{tabular}
 \end{flushleft}
 
+\textbf{The \texttt{Submit} class:}
+\begin{flushleft}
+\begin{tabular}{|p{16cm}|} \hline
+
+\texttt{\_\_init\_\_( (dict)submit = None ) }
+
+Create an instance of the \texttt{Submit} class.  
+
+Optional parameter \texttt{ad} is a python dictionary containing submit file key = value pairs.
+If omitted, the submit class is initially empty.
+\\ \hline
+\texttt{expand() }
+
+Expand all macros for a given attribute
+
+\\ \hline
+\texttt{queue((object)txn) }
+
+Submit the current object to a remote queue.
+return None. Throws a RuntimeError if the submission fails.
+
+parameter \texttt{txn} An active transaction object.
+\\ \hline
+\texttt{setdefault() }
+
+Set a default value for a command
+
+\\ \hline
+\texttt{update() }
+
+Copy the contents of a given Submit object into the current object
+
+\\ \hline
+\end{tabular}
+\end{flushleft}
+
+
 \textbf{The \texttt{Collector} class:}
 \begin{flushleft}
 \begin{tabular}{|p{16cm}|} \hline
@@ -557,6 +594,39 @@ Parameter \texttt{usage} is the usage to be set for the user.
 \\ \hline
 \end{tabular}
 \end{flushleft}
+
+\textbf{The \texttt{Startd} class:}
+\begin{flushleft}
+\begin{tabular}{|p{16cm}|} \hline
+
+\texttt{\_\_init\_\_( (ClassAd)ad = None ) }
+
+Create an instance of the \texttt{Startd} class.  
+
+Optional parameter \texttt{ad} is a ClassAd containing the location of 
+the \Condor{startd} daemon.
+If omitted, uses the local startd.
+\\ \hline
+\texttt{drainJobs( (int)drain_type, (bool)resume_on_completion, (expr)check ) }
+
+Begin draining jobs from the startd.
+Returns a draining request_id.
+
+Parameter \texttt{drain_type} type of drain to perform, from the DrainTypes enum either Fast, Graceful or Quick.
+Parameter \texttt{resume_on_completion} is true if the startd should start accepting jobs again once
+draining is complete, false if it should remain in the drained state.
+Parameter \texttt{constraint} An optional check expression which must be true on all slots for draining to begin.
+
+\\ \hline
+\texttt{cancelDrainJobs( (int)request_id ) }
+
+Cancel a draining request.
+
+Parameter \texttt{request_id} If specified, cancels only the drain command that returned the given request_id
+\\ \hline
+\end{tabular}
+\end{flushleft}
+
 
 \textbf{The \texttt{SecMan} class} accesses the internal security object.
 This class allows access to the security layer of HTCondor.
