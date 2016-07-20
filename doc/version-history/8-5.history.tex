@@ -29,6 +29,12 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item The hostname of the container that Docker Universe jobs
+run in is now set to a more useful name.  Instead of a hash, it
+now contains the job's owner, the cluster and proc of the job,
+and the hostname of the machine the container runs on.
+\Ticket{5760}
+
 \item ClassAds can now be represented in JSON format.
 \condor{q}, \condor{status}, and \condor{history} have a \Arg{-json}
 command line option, which causes their output to be printed in JSON.
