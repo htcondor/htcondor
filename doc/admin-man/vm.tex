@@ -366,3 +366,9 @@ The \Condor{startd} will advertise which docker volumes it has available
 for mounting with the machine attributes HasDockerVolumeSOME\_NAME = true
 so that jobs can match to machines with volumes they need.
 
+By default, Docker containers will be run with all rootly capabilties dropped,
+and with setuid and setgid binaries disabled, for security reasons. If  you
+need to run containers with root priviliged, you may set the configuration
+parameter \Macro{DOCKER\_DROP\_ALL\_CAPABILITIES} to an expression that
+evalutes to false.  This expression is evaluted in the context of the machine ad (my) and the job ad (target).
+

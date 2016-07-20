@@ -29,6 +29,12 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item The value of the configuration parameter 
+\Macro{DOCKER\_DROP\_ALL\_CAPABILITIES} is now no longer just
+true or false, but a classad expression evaluated in the context
+of the machine (my) and the job (target).
+\Ticket{5759}
+
 \item The hostname of the container that Docker Universe jobs
 run in is now set to a more useful name.  Instead of a hash, it
 now contains the job's owner, the cluster and proc of the job,
