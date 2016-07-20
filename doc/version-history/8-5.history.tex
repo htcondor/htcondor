@@ -29,7 +29,12 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Simplified the DAG node priority algorithm:  the "effective" priority
+of a node is now simply the sum of the explicit node priority and the
+overall DAG priority.  (See section ~\ref{sec:DAG-SetNodePriority} for
+more details.)
+sec:DAG-SetNodePriority
+\Ticket{5749}
 
 \end{itemize}
 
