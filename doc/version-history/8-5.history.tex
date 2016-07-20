@@ -130,7 +130,13 @@ the \Macro{HISTORY\_HELPER} for remote \Condor{history}. The options are:
   \item \Opt{-scanlimit} Used by remote \Condor{history} to limit the number of jobs read from the history file.
   \item \Opt{-attributes} Used by remote \Condor{history} to limit the attributes transferred back.
   \item \Opt{-inherit} Used by remote \Condor{history} to define the socket to write results to.
+  \item \Opt{-stream-results} Used by remote \Condor{history} so that results can be printed as they arrive.
   \end{itemize}
+\Ticket{5642}
+
+\item Condor{history} will default to doing a remote query if there is a \Macro{SCHEDD\_HOST} configured. This behavior
+can be defeated by passing the new \Opt{-local} argument.
+\Ticket{5765}
 
 \item Configuration file metaknobs can now take arguments and pass them
 on the the metaknob to be expanded.
