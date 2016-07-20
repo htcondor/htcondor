@@ -6285,6 +6285,13 @@ MAX_JOBS_RUNNING	= \
  \MacroNI{MAX\_JOBS\_SUBMITTED},
   to ensure that no one user can dominate the queue.
 
+\label{param:MaxRunningSchedulerJobsPerOwner}
+\item[\Macro{MAX\_RUNNING\_SCHEDULER\_JOBS\_PER\_OWNER}]
+  This integer value limits the number of scheduler universe jobs that any
+  given owner (user) can have running at one time.  This limit will affect
+  the number of running Dagman jobs, but not the number of nodes within a
+  DAG. The default is no limit
+
 \label{param:MaxJobsPerSubmission}
 \item[\Macro{MAX\_JOBS\_PER\_SUBMISSION}]
   This integer value limits the number of jobs any single submission
