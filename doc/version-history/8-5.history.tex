@@ -29,6 +29,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item The default output of \Condor{q} is now the \Opt{-batch} output. To change
+the default back to its pre 8.5.6 value, set the new configuration variable
+ \Macro{CONDOR\_Q\_DASH\_BATCH\_IS\_DEFAULT} to false.
+\Ticket{5708}
+
 \item Fixed a bug in Docker universe that required the name
 of a transfered executable to begin with "./"
 \Ticket{5761}
@@ -108,6 +113,14 @@ now log TCP statistics for file transfers.  See ~\ref{dflag:stats} for
 more details.
 \Ticket{5663}
 
+\item The full path to the submit file is now available as an automatic
+submit variable.
+\Ticket{5677}
+
+\item Configuration file metaknobs can now take arguments and pass them
+on the the metaknob to be expanded.
+\Ticket{5739}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -142,6 +155,9 @@ always attempted.
 job's X.509 proxy file when writing information to the
 \MacroNI{SCHEDD\_AUDIT\_LOG}.
 \Ticket{5770}
+
+\item Fixed a bug in \Condor{q} where the SIZE column would not grow as needed to fit the data.
+\Ticket{5667}
 
 \end{itemize}
 

@@ -6500,6 +6500,14 @@ MAX_JOBS_RUNNING	= \
   It instead handles the requests in a non-blocking way.
   The default value is \Expr{True}.
 
+\label{param:CondorQDashBatchIsDefault}
+\item[\Macro{CONDOR\_Q\_DASH\_BATCH\_IS\_DEFAULT}]
+  A boolean value that, when \Expr{True},
+  causes \Condor{q} to print the \Opt{-batch} output unless the
+  \Opt{-nobatch} option is used or the other arguments to \Condor{q} are
+  incompatible with batch mode.  For instance \Opt{-long} is incompatible with \Opt{-batch}.
+  The default value is \Expr{True}.
+
 \label{param:CondorQOnlyMyJobs}
 \item[\Macro{CONDOR\_Q\_ONLY\_MY\_JOBS}]
   A boolean value that, when \Expr{True},
