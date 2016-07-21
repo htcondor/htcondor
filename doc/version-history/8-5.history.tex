@@ -64,6 +64,11 @@ user of the slot remains advertised.
 
 \begin{itemize}
 
+\item The default output of \Condor{q} is now the \Opt{-batch} output. To change
+the default back to its pre 8.5.6 value, set the new configuration variable
+ \Macro{CONDOR\_Q\_DASH\_BATCH\_IS\_DEFAULT} to false.
+\Ticket{5708}
+
 \item Fixed a bug in Docker universe that required the name
 of a transfered executable to begin with "./"
 \Ticket{5761}
@@ -143,6 +148,50 @@ now log TCP statistics for file transfers.  See ~\ref{dflag:stats} for
 more details.
 \Ticket{5663}
 
+\item A new configuration variable \Macro{MAX\_RUNNING\_SCHEDULER\_JOBS\_PER\_OWNER}
+can be used to limit the number of DAGs that any single user can have running at
+a time.
+\Ticket{5568}
+
+\item The full path to the submit file is now available as an automatic
+submit variable.
+\Ticket{5677}
+
+\item New options have been added to \Condor{history}, so that \Condor{history} can be used as the
+the \Macro{HISTORY\_HELPER} for remote \Condor{history}. The options are:
+  \begin{itemize}
+  \item \Opt{-since} Scanning of the history file stops when an expression becomes true or a job id is read.
+  \item \Opt{-completedsince} Scanning of the history file stops when a job completed earlier than this time is read.
+  \item \Opt{-scanlimit} Used by remote \Condor{history} to limit the number of jobs read from the history file.
+  \item \Opt{-attributes} Used by remote \Condor{history} to limit the attributes transferred back.
+  \item \Opt{-inherit} Used by remote \Condor{history} to define the socket to write results to.
+  \item \Opt{-stream-results} Used by remote \Condor{history} so that results can be printed as they arrive.
+  \end{itemize}
+\Ticket{5642}
+
+\item Condor{history} will default to doing a remote query if there is a \Macro{SCHEDD\_HOST} configured. This behavior
+can be defeated by passing the new \Opt{-local} argument.
+\Ticket{5765}
+
+\item The ability to send \Condor{drain} commands is now exposed through the python bindings.
+\Ticket{5507}
+
+\item A new class - the Submit class - was added to the python bindings. It allows for the submission of HTCondor
+jobs via the python bindings using the same keywords and automatic behavior as \Condor{submit}.
+\Ticket{5666}
+
+\item Configuration files now support the declaration of multiline values, the is primarily of use when
+configuring the \Condor{job\_router}.
+\Ticket{5721}
+
+\item A new function has been added to the ClassAd language to facilitate the mapping of users to groups
+in the \Condor{schedd} and \Condor{job\_router}.
+\Ticket{5751}
+
+\item Configuration file metaknobs can now take arguments and pass them
+on the the metaknob to be expanded.
+\Ticket{5739}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -177,6 +226,13 @@ always attempted.
 job's X.509 proxy file when writing information to the
 \MacroNI{SCHEDD\_AUDIT\_LOG}.
 \Ticket{5770}
+
+\item Fixed a bug in \Condor{q} where the SIZE column would not grow as needed to fit the data.
+\Ticket{5667}
+
+\item Fixed a bug where the \Condor{schedd} did not treat a user as a queue superuser when it
+should have if the configuration included a map file, which is common for GSI authentication.
+\Ticket{5530}
 
 \end{itemize}
 

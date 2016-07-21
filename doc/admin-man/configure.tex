@@ -6285,6 +6285,13 @@ MAX_JOBS_RUNNING	= \
  \MacroNI{MAX\_JOBS\_SUBMITTED},
   to ensure that no one user can dominate the queue.
 
+\label{param:MaxRunningSchedulerJobsPerOwner}
+\item[\Macro{MAX\_RUNNING\_SCHEDULER\_JOBS\_PER\_OWNER}]
+  This integer value limits the number of scheduler universe jobs that any
+  given owner (user) can have running at one time.  This limit will affect
+  the number of running Dagman jobs, but not the number of nodes within a
+  DAG. The default is no limit
+
 \label{param:MaxJobsPerSubmission}
 \item[\Macro{MAX\_JOBS\_PER\_SUBMISSION}]
   This integer value limits the number of jobs any single submission
@@ -6498,6 +6505,14 @@ MAX_JOBS_RUNNING	= \
   causes the \Condor{schedd} to use an algorithm that responds to 
   \Condor{q} requests by \emph{not} forking itself to handle each request.
   It instead handles the requests in a non-blocking way.
+  The default value is \Expr{True}.
+
+\label{param:CondorQDashBatchIsDefault}
+\item[\Macro{CONDOR\_Q\_DASH\_BATCH\_IS\_DEFAULT}]
+  A boolean value that, when \Expr{True},
+  causes \Condor{q} to print the \Opt{-batch} output unless the
+  \Opt{-nobatch} option is used or the other arguments to \Condor{q} are
+  incompatible with batch mode.  For instance \Opt{-long} is incompatible with \Opt{-batch}.
   The default value is \Expr{True}.
 
 \label{param:CondorQOnlyMyJobs}
