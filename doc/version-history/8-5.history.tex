@@ -64,6 +64,11 @@ user of the slot remains advertised.
 
 \begin{itemize}
 
+\item Allow the second argument of the classad ternary operator (expr ? value1 : value2)
+to be ommitted.  This new syntax means:  evaluate the expr, and if it evaluated to
+a defined value or error, return it.  If undefined, return value2.
+\Ticket{5782}
+
 \item The default output of \Condor{q} is now the \Opt{-batch} output. To change
 the default back to its pre 8.5.6 value, set the new configuration variable
  \Macro{CONDOR\_Q\_DASH\_BATCH\_IS\_DEFAULT} to false.
