@@ -4856,6 +4856,8 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 	rejPreemptForRank = 0;
 	rejForSubmitterLimit = 0;
 
+	bool allow_pslot_preemption = param_boolean("ALLOW_PSLOT_PREEMPTION", false);
+
 	// scan the offer ads
 	startdAds.Open ();
 	while ((candidate = startdAds.Next ())) {
@@ -4865,7 +4867,7 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 			dPrintAd(D_MACHINE, *candidate);
 		}
 
-		if ( param_boolean( "ALLOW_PSLOT_PREEMPTION", false ) ) {
+		if ( allow_pslot_preemption ) {
 			bool is_dslot = false;
 			candidate->LookupBool( ATTR_SLOT_DYNAMIC, is_dslot );
 			if ( is_dslot ) {
