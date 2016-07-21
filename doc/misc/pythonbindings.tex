@@ -607,22 +607,22 @@ Optional parameter \texttt{ad} is a ClassAd containing the location of
 the \Condor{startd} daemon.
 If omitted, uses the local startd.
 \\ \hline
-\texttt{drainJobs( (int)drain_type, (bool)resume_on_completion, (expr)check ) }
+\texttt{drainJobs( (int)drain\_type, (bool)resume\_on\_completion, (expr)check ) }
 
 Begin draining jobs from the startd.
-Returns a draining request_id.
+Returns a draining request\_id.
 
-Parameter \texttt{drain_type} type of drain to perform, from the DrainTypes enum either Fast, Graceful or Quick.
-Parameter \texttt{resume_on_completion} is true if the startd should start accepting jobs again once
+Parameter \texttt{drain\_type} type of drain to perform, from the DrainTypes enum either Fast, Graceful or Quick.
+Parameter \texttt{resume\_on\_completion} is true if the startd should start accepting jobs again once
 draining is complete, false if it should remain in the drained state.
 Parameter \texttt{constraint} An optional check expression which must be true on all slots for draining to begin.
 
 \\ \hline
-\texttt{cancelDrainJobs( (int)request_id ) }
+\texttt{cancelDrainJobs( (int)request\_id ) }
 
 Cancel a draining request.
 
-Parameter \texttt{request_id} If specified, cancels only the drain command that returned the given request_id
+Parameter \texttt{request\_id} If specified, cancels only the drain command that returned the given request\_id
 \\ \hline
 \end{tabular}
 \end{flushleft}
