@@ -478,7 +478,12 @@ void ConvertDefaultIPToSocketIP(char const * attr_name, std::string & expr_strin
 	}
 
 	std::string adSinfulString = expr_string.substr( string_start_pos, string_len);
-	std::string commandPortSinfulString = daemonCore->InfoCommandSinfulString();
+	const char *cmd_sinful = daemonCore->InfoCommandSinfulString();
+	if ( cmd_sinful == NULL ) {
+		dprintf( D_NETWORK | D_VERBOSE, "Address rewriting: disabled: no command port sinful string.\n" );
+		return;
+	}
+	std::string commandPortSinfulString = cmd_sinful;
 
 	Sinful adSinful( adSinfulString.c_str() );
 	condor_sockaddr adSA;
