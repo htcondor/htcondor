@@ -1914,7 +1914,6 @@ Dag::DoneCycle( bool includeFinalNode) const
 }
 
 //---------------------------------------------------------------------------
-//TEMPTEMP -- where should this be checked?
 bool
 Dag::IsStuck() const
 {
@@ -1935,7 +1934,7 @@ debug_printf( DEBUG_QUIET, "DIAG 1030\n" );//TEMPTEMP
 	//TEMPTEMP -- are there other cases we have to check??
 
 debug_printf( DEBUG_QUIET, "DIAG 1040\n" );//TEMPTEMP
-	PrintPendingNodes();//TEMPTEMP
+	//PrintPendingNodes();//TEMPTEMP
 
 	return true;
 }
@@ -3241,9 +3240,10 @@ Dag::PrintPendingNodes() const
 		case Job::STATUS_PRERUN:
 		case Job::STATUS_SUBMITTED:
 		case Job::STATUS_POSTRUN:
-			dprintf( D_ALWAYS, "  Node %s, HTCondor ID %d, status %s\n",
+			dprintf( D_ALWAYS, "  Node %s, HTCondor ID %d, status %s (%d queued procs, %d held)\n",
 						node->GetJobName(), node->GetCluster(),
-						node->GetStatusName() );
+						node->GetStatusName(), node->_queuedNodeJobProcs,
+						node->_jobProcsOnHold );
 			break;
 
 		default:

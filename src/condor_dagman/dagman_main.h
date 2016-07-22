@@ -229,6 +229,12 @@ class Dagman {
 		// Batch-name for this workflow.
 	MyString _batchName;
 
+		//TEMPTEMP -- document (minutes; negative means unlimited)
+	int _maxStuckTime;
+
+		//TEMPTEMP -- document
+	time_t _stuckTimestamp;
+
 	DagmanClassad *_dagmanClassad;
 };
 

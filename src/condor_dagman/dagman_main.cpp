@@ -144,6 +144,8 @@ Dagman::Dagman() :
 	_doRecovery(false),
 	_suppressJobLogs(false),
 	_batchName(""),
+	_maxStuckTime(5),
+	_stuckTimestamp(0),
 	_dagmanClassad(NULL)
 {
     debug_level = DEBUG_VERBOSE;  // Default debug level is verbose output
@@ -452,6 +454,8 @@ Dagman::Config()
 				_suppressJobLogs );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_SUPPRESS_JOB_LOGS setting: %s\n",
 				_suppressJobLogs ? "True" : "False" );
+
+	//TEMPTEMP -- get DAGMAN_MAX_STUCK_TIME in here somewhere...
 
 	// enable up the debug cache if needed
 	if (debug_cache_enabled) {
@@ -1683,22 +1687,24 @@ void condor_event_timer () {
     }
 
 	if ( dagman.dag->IsStuck() ) {
-		//TEMPTEMP -- should we do the timing out here or inside the IsStuck mehthod?
-		debug_printf( DEBUG_QUIET, "Warning: DAG is \"stuck\"\n" );//TEMPTEMP?
-		//TEMPTEMP -- what we should really do here is set a time if we've
-		//just transitioned to the "stuck" state, and check the time if
-		//we're in the stuck state
-		//if ( stuckTimestamp == 0 ) {
-			//stuckTimestamp = now
-		//}
-		//if ( now - stuckTimestamp > maxStuckTime ) {
+		time_t now = time( NULL );
+		//TEMPTEMP -- reduce verbosity level here?
+		debug_printf( DEBUG_QUIET, "Warning: DAG is \"stuck\"\n" );
+		if ( dagman._stuckTimestamp == 0 ) {
+			dagman._stuckTimestamp = now;
+		}
+		//TEMPTEMP -- minutes!!
+		int stuckTime = (now - dagman._stuckTimestamp) / 60;
+		if ( ( dagman._maxStuckTime >= 0 ) &&
+					( stuckTime >= dagman._maxStuckTime ) ) {
 			debug_printf( DEBUG_QUIET,
 						"DAG has been \"stuck\" for %d minutes -- exiting\n",
-						0/*TEMPTEMP*/ );
+						stuckTime );
+			dagman.dag->PrintPendingNodes();
 			Dag::dag_status dagStatus = Dag::DAG_STATUS_STUCK;
 			main_shutdown_rescue( EXIT_ERROR, dagStatus );
 			return;
-		//}
+		}
 	}
 }
 
