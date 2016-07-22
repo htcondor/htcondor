@@ -1,4 +1,5 @@
 #/bin/sh
+
 # Acquire the public IP and instance ID of this from the metadata server.
 EC2PublicIP=$(/usr/bin/curl -s http://169.254.169.254/latest/meta-data/public-ipv4)
 EC2InstanceID=$(/usr/bin/curl -s http://169.254.169.254/latest/meta-data/instance-id)
@@ -8,27 +9,15 @@ if [ "${EC2InstanceID}"x == x ]; then
 	exit 1
 fi
 
-#
+# The config system will cache these in a file for us.
+echo "EC2PublicIP = ${EC2PublicIP}"
+echo "EC2InstanceID = \"${EC2InstanceID}\""
+
 # Configure iptables to deny any nonroot user access to the metadata server.
 # This will prevent them from using the credentials located there.
-#
 /sbin/iptables -A OUTPUT \
 	-m owner --destination 169.254.169.254 ! --uid-owner 0 \
 	-j REJECT
-
-# Set the EC2PublicIP and EC2InstanceID macros.  The example EC2 configuration
-# uses these values (advertises the latter and sets TCP_FORWARDING_HOST to
-# the former).
-# cat > /etc/condor/config.d/ec2.local <<EOF
-# 	EC2PublicIP = ${EC2PublicIP}
-# 	EC2InstanceID = "${EC2InstanceID}"
-# EOF
-# chmod a+r /etc/condor/config.d/ec2.local
-
-# If we're running as a config script, our desired config changes should be
-# sent to standard out.
-echo "EC2PublicIP = ${EC2PublicIP}"
-echo "EC2InstanceID = \"${EC2InstanceID}\""
 
 #
 # If we have read permission to a particular file in an S3 bucket,
@@ -36,6 +25,20 @@ echo "EC2InstanceID = \"${EC2InstanceID}\""
 # do so in /etc/condor.  Otherwise, exit non-zero, so that we don't
 # force the master to restart pointlessly.
 #
+function fetchAndExtract() {
+	cd /etc/condor
+	url=s3://$(echo ${1} | sed -e's/^arn:aws:s3::://')
+	if aws s3 cp ${url} . >& /dev/null; then
+		file=`basename ${url}`
+		echo "# Fetched '${file}' from '${url}'."
+		tarfile=`echo ${file} | awk '/.tar.gz$/{print $1}'`
+		if [ -n "${tarfile}" ]; then
+			tar --no-same-owner -C /etc/condor/config.d -x -z -f ${file}
+		fi
+		exit 0
+	fi
+}
+
 
 INSTANCE_PROFILE_ARN=`curl -s http://169.254.169.254/latest/meta-data/iam/info \
 	| awk '/InstanceProfileArn/{print $3}' | sed -e's/"//' | sed -e's/",//'`
@@ -56,7 +59,7 @@ for role in ${INSTANCE_PROFILE_ROLES}; do
 	inlinePolicyNames=`aws iam list-role-policies --role-name ${role} \
 		| grep -v '[]{}[]' \
 		| sed -e's/"//' | sed -e's/",//' | sed -e's/"//'`
-	
+
 	for policy in ${inlinePolicyNames}; do
 		echo "# Found inline policy '${policy}'."
 		lines=`aws iam get-role-policy --role-name ${role} --policy-name ${policy} \
@@ -76,7 +79,7 @@ for role in ${INSTANCE_PROFILE_ROLES}; do
 				inResourceList=1
 			fi
 		done
-		
+
 		for resource in ${resourceList}; do
 			echo "# Found resource: ${resource}"
 
@@ -84,12 +87,7 @@ for role in ${INSTANCE_PROFILE_ROLES}; do
 			# that file and exit.
 			arn=`echo ${resource} | awk '/^arn:aws:s3:::/{ print $0 }'`
 			if [ "${arn}"x != x ]; then
-				url=s3://$(echo ${arn} | sed -e's/^arn:aws:s3::://')
-				if aws s3 cp ${url} . >& /dev/null; then
-					file=`basename ${url}`
-					echo "# Fetched '${file}' from '${url}'."
-					exit 0
-				fi
+				fetchAndExtract ${arn}
 			fi
 		done
 	done
@@ -120,12 +118,7 @@ for role in ${INSTANCE_PROFILE_ROLES}; do
 		# that file and exit.
 		arn=`echo ${resource} | awk '/^arn:aws:s3:::/{ print $0 }'`
 		if [ "${arn}"x != x ]; then
-			url=s3://$(echo ${arn} | sed -e's/^arn:aws:s3::://')
-			if aws s3 cp ${url} . >& /dev/null; then
-				file=`basename ${url}`
-				echo "# Fetched '${file}' from '${url}'."
-				exit 0
-			fi
+			fetchAndExtract ${arn}
 		fi
 	done
 done
