@@ -1,0 +1,21 @@
+CONFIG job_dagman_stuck.config
+
+JOB NodeA job_dagman_stuck-node.sub
+VARS NodeA name="$(JOB)"
+VARS NodeA num_procs="1"
+VARS NodeA hold="-1"
+
+JOB NodeB job_dagman_stuck-node.sub
+VARS NodeB name="$(JOB)"
+VARS NodeB num_procs="1"
+VARS NodeB hold="0"
+
+JOB NodeC job_dagman_stuck-node.sub
+VARS NodeC name="$(JOB)"
+VARS NodeC num_procs="3"
+VARS NodeC hold="-1"
+
+JOB NodeD job_dagman_stuck-node.sub
+VARS NodeD name="$(JOB)"
+VARS NodeD num_procs="3"
+VARS NodeD hold="1"

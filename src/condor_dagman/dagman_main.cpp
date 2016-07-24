@@ -455,7 +455,10 @@ Dagman::Config()
 	debug_printf( DEBUG_NORMAL, "DAGMAN_SUPPRESS_JOB_LOGS setting: %s\n",
 				_suppressJobLogs ? "True" : "False" );
 
-	//TEMPTEMP -- get DAGMAN_MAX_STUCK_TIME in here somewhere...
+	_maxStuckTime = param_integer( "DAGMAN_MAX_STUCK_TIME",
+				_maxStuckTime, -1, 10000 );
+	debug_printf( DEBUG_NORMAL, "DAGMAN_MAX_STUCK_TIME setting: %d\n",
+				_maxStuckTime );
 
 	// enable up the debug cache if needed
 	if (debug_cache_enabled) {
