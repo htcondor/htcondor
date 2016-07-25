@@ -1221,7 +1221,7 @@ review=?
 tags=dagman,dagman_main
 
 [DAGMAN_MAX_STUCK_TIME]
-default=5
+default=60
 type=int
 reconfig=false
 customization=normal

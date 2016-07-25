@@ -51,7 +51,7 @@ foreach $name (@tmpfiles) {
 
 $abnormal = sub 
 {
-	die "Error: Want to see only submit, execute and successful completion\n";
+	die "Error: Want to see only submit, execute and abort\n";
 };
 
 $aborted = sub 

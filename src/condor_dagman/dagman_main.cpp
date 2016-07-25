@@ -144,7 +144,7 @@ Dagman::Dagman() :
 	_doRecovery(false),
 	_suppressJobLogs(false),
 	_batchName(""),
-	_maxStuckTime(5),
+	_maxStuckTime(60),
 	_stuckTimestamp(0),
 	_dagmanClassad(NULL)
 {

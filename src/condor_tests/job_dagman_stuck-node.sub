@@ -1,6 +1,6 @@
 universe = vanilla
 executable = job_dagman_stuck-node.pl
 arguments = $(name) $(ClusterId) $(ProcId) $(hold)
-output = job_dagman_stuck-node_$(name)$(ProcId).out
+output = job_dagman_stuck-$(name)$(ProcId).out
 getenv = true
 queue $(num_procs)
