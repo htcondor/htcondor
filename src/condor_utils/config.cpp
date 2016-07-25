@@ -691,6 +691,16 @@ static bool Evaluate_config_if(const char * expr, bool & result, std::string & e
 
 #if 1
 	// TODO: convert version & defined to booleans, and then evaluate the result as a ClassAd expression
+
+	if ((ec == CIFT_COMPLEX) && ctx.is_context_ex && reinterpret_cast<MACRO_EVAL_CONTEXT_EX&>(ctx).ad) {
+		classad::Value val;
+		if (reinterpret_cast<MACRO_EVAL_CONTEXT_EX&>(ctx).ad->EvaluateExpr(expr, val)) {
+			bool bval;
+			if (val.IsBooleanValueEquiv(bval)) {
+				return bval;
+			}
+		}
+	}
 #else // this code sort of works, but isn't necessarily the way we want to go
 	// the expression MAY be evaluatable by the classad library, if it is, then great
 	int ival;
@@ -1075,10 +1085,104 @@ static bool parse_include_options(char * str, int & opts, char *& pinto, const c
 	return true;
 }
 
+#ifdef USE_MACRO_STREAMS
+char * MacroStreamYourFile::getline(int gl_opt) {
+	return getline_implementation(fp, 128, gl_opt, src->line);
+}
+
+char * MacroStreamFile::getline(int gl_opt) {
+	return getline_implementation(fp, 128, gl_opt, src.line);
+}
+
+bool MacroStreamFile::open(const char * filename, bool is_command, MACRO_SET& set, std::string &errmsg) {
+	if (fp) fclose(fp);
+	fp = Open_macro_source (src, filename, is_command, set, errmsg);
+	return fp != NULL;
+}
+
+int MacroStreamFile::close(MACRO_SET&set, int parsing_return_val)
+{
+	return Close_macro_source(fp, src, set, parsing_return_val);
+}
+
+bool MacroStreamCharSource::open(const char * src_string, MACRO_SOURCE& _src)
+{
+	src = _src;
+	if (input) delete input;
+	input = new StringTokenIterator(src_string, 128, "\n");
+	return input != NULL;
+}
+
+int MacroStreamCharSource::close(MACRO_SET& /*set*/, int parsing_return_val)
+{
+	return parsing_return_val;
+}
+
+char * MacroStreamCharSource::getline(int /*gl_opt*/)
+{
+	if ( ! input) return NULL;
+	src.line += 1;
+	const std::string * line = input->next_string();
+	if ( ! line) return NULL;
+	// special entries that start with #opt:lineno are used to correct line numbers
+	// they were injected by load(), we don't actually return them to the caller.
+	if (starts_with(*line, "#opt:lineno:")) {
+		src.line = atoi(line->c_str()+12);
+		line = input->next_string();
+		if ( ! line) return NULL;
+	}
+	if ( ! line_buf || cbBufAlloc < (line->size()+1)) {
+		cbBufAlloc = line->size()+1;
+		line_buf.set((char*)malloc(cbBufAlloc));
+		if ( ! line_buf) return NULL;
+	}
+	strcpy(line_buf.ptr(), line->c_str());
+	return line_buf.ptr();
+}
+
+void MacroStreamCharSource::rewind()
+{
+	if (input) input->rewind();
+	src.line = 0;
+}
+
+int MacroStreamCharSource::load(FILE* fp, MACRO_SOURCE & FileSource, bool preserve_linenumbers /*=false*/)
+{
+	StringList lines;
+
+	if (preserve_linenumbers && (FileSource.line != 0)) {
+		// if we aren't starting at line zero, inject a comment indicating the starting line number
+		MyString buf; buf.formatstr("#opt:lineno:%d", FileSource.line);
+		lines.append(buf.c_str());
+	}
+	while (true) {
+		int lineno = FileSource.line;
+		char * line = getline_trim(fp, FileSource.line);
+		if ( ! line)
+			break;
+		lines.append(line);
+		if (preserve_linenumbers && (FileSource.line != lineno+1)) {
+			// if we read more than a single line, inject a comment indicating the new line number
+			MyString buf; buf.formatstr("#opt:lineno:%d", FileSource.line);
+			lines.append(buf.c_str());
+		}
+	}
+	file_string.set(lines.print_to_delimed_string("\n"));
+	open(file_string, FileSource);
+	rewind();
+	return lines.number();
+}
+
+#endif
+
 int
 Parse_macros(
+#ifdef USE_MACRO_STREAMS
+	MacroStream & ms,
+#else
 	FILE* conf_fp,
 	MACRO_SOURCE& FileSource,
+#endif
 	int depth, // a simple recursion detector
 	MACRO_SET& macro_set,
 	int options,
@@ -1104,15 +1208,22 @@ Parse_macros(
 	StringList    hereList; // used to accumulate @= multiline values
 	MyString      hereName;
 	MyString      hereTag;
-	MACRO_EVAL_CONTEXT defctx = { NULL, NULL, NULL, false, 2 };
+	MACRO_EVAL_CONTEXT defctx; defctx.init(NULL);
 	if ( ! pctx) pctx = &defctx;
 
 	bool is_submit = (fnSubmit != NULL);
+#ifdef USE_MACRO_STREAMS
+	MACRO_SOURCE& FileSource = ms.source();
+#endif
 	const char * source_file = macro_source_filename(FileSource, macro_set);
 	const char * source_type = is_submit ? "Submit file" : "Config source";
 
 	while (true) {
+#ifdef USE_MACRO_STREAMS
+		name = ms.getline(gl_opt);
+#else
 		name = getline_implementation(conf_fp, 128, gl_opt, FileSource.line);
+#endif
 		// If the file is empty the first time through, warn the user.
 		if (name == NULL) {
 			if (firstRead) {
@@ -1142,7 +1253,7 @@ Parse_macros(
 		}
 
 		// if we are processing a here @= knob, just accumulate lines until we see the closing @
-		// we we see the closing @, expand the value and stuff it into the given name.
+		// when we see the closing @, expand the value and stuff it into the given name.
 		if ( ! hereName.empty()) {
 			if (name[0] == '@' && hereTag == name+1) {
 				/* expand self references only */
@@ -1150,6 +1261,7 @@ Parse_macros(
 				value = expand_self_macro(rhs, hereName.c_str(), macro_set, *pctx);
 				if( value == NULL ) {
 					retval = -1;
+					name = NULL;
 					goto cleanup;
 				}
 				insert_macro(hereName.c_str(), value, macro_set, FileSource, *pctx);
@@ -1185,6 +1297,7 @@ Parse_macros(
 				dprintf(D_CONFIG | D_FAILURE, "Parse_config if error: '%s' line: %s\n", errmsg.c_str(), name);
 				config_errmsg = errmsg;
 				retval = -1;
+				name = NULL;
 				goto cleanup;
 			} else {
 				dprintf(D_CONFIG | D_VERBOSE, "config %s:%lld,%lld,%lld line: %s\n", name, ifstack.top, ifstack.state, ifstack.estate, name);
@@ -1231,11 +1344,12 @@ Parse_macros(
 			} else {
 				// No operator and no square bracket... bail.
 				retval = -1;
+				name = NULL;
 				goto cleanup;
 			}
 		}
 
-#if 1 // SUBMIT_USING_CONFIG_PARSER
+		char * word_before_op = NULL;
 		char * pop = ptr; // keep track of where we see the operator
 		op = *pop;
 		char * name_end = ptr; // keep track of where we null-terminate the name, so we can reverse it later
@@ -1243,6 +1357,8 @@ Parse_macros(
 		if (*ptr) { *ptr++ = '\0'; }
 		// scan for an operator character if we don't have one already. operator can be : = or @=
 		if ( ! ISOP(op)) {
+			while (isspace(*ptr)) ++ptr;
+			if (*ptr && ! ISOP(*ptr) && ! (*ptr == '@')) word_before_op = ptr;
 			while ( *ptr && ! ISOP(*ptr) && ! (*ptr == '@')) {
 				++ptr;
 			}
@@ -1261,29 +1377,9 @@ Parse_macros(
 		// (it *might* be a valid submit line however.)
 		if ( ! ISOP(op) && op != '@' && ! is_submit) {
 			retval = -1;
+			name = NULL;
 			goto cleanup;
 		}
-#else
-		char * pop = ptr; // keep track of where we see the operator
-		if( ISOP(*ptr) ) {
-			op = *ptr;
-			//op is now '=' in the above eg
-			*ptr++ = '\0';
-			// name is now 'OpSys' in the above eg
-		} else {
-			*ptr++ = '\0';
-			while( *ptr && !ISOP(*ptr) ) {
-				ptr++;
-			}
-			if( !*ptr  && ! is_submit) {
-				// Here we have determined the line has no operator at all
-				retval = -1;
-				goto cleanup;
-			}
-			pop = ptr;
-			op = *ptr++;
-		}
-#endif
 
 		/* Skip to next non-space character */
 		while( *ptr && isspace(*ptr) ) {
@@ -1333,6 +1429,7 @@ Parse_macros(
 					source_file, FileSource.line, msg ? msg.ptr() : "");
 			if (code) {
 				retval = code;
+				name = NULL;
 				goto cleanup;
 			}
 		} else if (is_include) {
@@ -1354,6 +1451,7 @@ Parse_macros(
 							"Error \"%s\", Line %d: unexpected keyword(s) '%s' after include %s\n",
 							source_file, FileSource.line, name, err ? err : "");
 						retval = -1;
+						name = NULL;
 						goto cleanup;
 					}
 				}
@@ -1361,6 +1459,15 @@ Parse_macros(
 			// set name to be the filename or command line.
 			name = pop+1;
 			while (isspace(*name)) ++name; // skip whitespace before the filename
+		} else if (is_submit && word_before_op) {
+			// extra words before the operator may be a QUEUE statement, so hand it off to the queue callback.
+			*name_end = name_end_ch;
+			retval = fnSubmit(pvSubmitData, FileSource, macro_set, name, config_errmsg);
+			if (retval != 0) {
+				name = NULL; // prevent cleanup from freeing name since it's owned by getline_implementation
+				goto cleanup;
+			}
+			continue;
 		} else if (op == ':' && ! is_submit) {
 		#ifdef WARN_COLON_FOR_PARAM_ASSIGN
 			if (opt_meta_colon < 2) { op = '='; } // change the op to = so that we don't "goto cleanup" below
@@ -1456,7 +1563,12 @@ Parse_macros(
 					retval = -2; // indicate that nesting depth has been exceeded.
 				} else {
 					if ( ! is_submit) local_config_sources.append(macro_source_filename(InnerSource, macro_set));
+#ifdef USE_MACRO_STREAMS
+					MacroStreamYourFile msInner(fp, InnerSource);
+					retval = Parse_macros(msInner, depth+1, macro_set, options, pctx, config_errmsg, fnSubmit, pvSubmitData);
+#else
 					retval = Parse_macros(fp, InnerSource, depth+1, macro_set, options, pctx, config_errmsg, fnSubmit, pvSubmitData);
+#endif
 				}
 			}
 			if (retval < 0) {
@@ -2666,13 +2778,28 @@ const char * lookup_macro(const char * name, MACRO_SET & macro_set, MACRO_EVAL_C
 	if (lval) return lval;
 
 	// if not found in the config file, lookup in the param table
-	// note that we do ALL of the param lookups last.  This means that
-	// if you have subsys.foo in the param table, a simple foo in
-	// the config file will take precedence.
 	if (macro_set.defaults && ! ctx.without_default) {
 		const MACRO_DEF_ITEM * p = find_macro_def_item(name, macro_set, ctx.use_mask);
 		if (p && p->def) lval = p->def->psz;
+		if (lval) return lval;
 	}
+
+	// lookup the macro in the given ad, but only if the name prefix matches
+	if (ctx.is_context_ex) {
+		MACRO_EVAL_CONTEXT_EX & ctxx = reinterpret_cast<MACRO_EVAL_CONTEXT_EX &>(ctx);
+		if (ctxx.ad && starts_with_ignore_case(name, ctxx.adname)) {
+			const char * attr = name + strlen(ctxx.adname);
+			ExprTree * expr = ctxx.ad->Lookup(attr);
+			if (expr) {
+				if (ExprTreeIsLiteralString(expr, ctxx.buffer)) {
+					lval = ctxx.buffer.c_str();
+				} else {
+					lval = ExprTreeToString(expr);
+				}
+			}
+		}
+	}
+
 	return lval;
 }
 
@@ -3118,15 +3245,29 @@ static const char * evaluate_macro_func (
 			std::string tmp3;
 			classad::ExprTree* tree = NULL;
 			if (0 == ParseClassAdRvalExpr(mval, tree, NULL)) {
-				ClassAd rhs;
-				classad::Value val;
-				if (EvalExprTree(tree, &rhs, NULL, val)) {
-					if ( ! val.IsStringValue(tmp3)) {
-						classad::ClassAdUnParser unp;
-						tmp3.clear(); // because Unparse appends.
-						unp.Unparse(tmp3, val);
+				if (ctx.is_context_ex && reinterpret_cast<MACRO_EVAL_CONTEXT_EX&>(ctx).ad) {
+					MACRO_EVAL_CONTEXT_EX &ctxx = reinterpret_cast<MACRO_EVAL_CONTEXT_EX&>(ctx);
+					classad::Value val;
+					ClassAd * ad = const_cast<ClassAd *>(ctxx.ad);
+					if (EvalExprTree(tree, ad, NULL, val)) {
+						if ( ! val.IsStringValue(tmp3)) {
+							classad::ClassAdUnParser unp;
+							tmp3.clear(); // because Unparse appends.
+							unp.Unparse(tmp3, val);
+						}
+						tvalue = buf = strdup(tmp3.c_str());
 					}
-					tvalue = buf = strdup(tmp3.c_str());
+				} else {
+					ClassAd rhs;
+					classad::Value val;
+					if (EvalExprTree(tree, &rhs, NULL, val)) {
+						if ( ! val.IsStringValue(tmp3)) {
+							classad::ClassAdUnParser unp;
+							tmp3.clear(); // because Unparse appends.
+							unp.Unparse(tmp3, val);
+						}
+						tvalue = buf = strdup(tmp3.c_str());
+					}
 				}
 			}
 

@@ -73,7 +73,7 @@ static MACRO_SET TestingMacroSet = {
 	CONFIG_OPT_WANT_META,
 	0, NULL, NULL, ALLOCATION_POOL(), std::vector<const char*>(), &TestingMacroDefaults, NULL };
 
-MACRO_EVAL_CONTEXT def_ctx = { NULL, "TOOL", "/home/testing", false, 2 };
+MACRO_EVAL_CONTEXT def_ctx = { NULL, "TOOL", "/home/testing", false, 2, 0, 0 };
 MACRO_SOURCE TestMacroSource = { false, false, 0, 0, -1, -2 };
 MACRO_SOURCE FileMacroSource = { false, false, 0, 0, -1, -2 };
 
@@ -244,7 +244,7 @@ static void insert_testing_macros(const char * local, const char * subsys)
 		{"Version","\"$Version: 8.5.6 May 20 2016 998822 $\""},
 	};
 
-	MACRO_EVAL_CONTEXT ctx = { local, subsys, "/home/testing", false, 2 };
+	MACRO_EVAL_CONTEXT ctx = { local, subsys, "/home/testing", false, 2, 0, 0 };
 
 	insert_source("Insert", TestingMacroSet, TestMacroSource);
 

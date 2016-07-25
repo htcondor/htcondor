@@ -309,9 +309,7 @@ SubmitHash::SubmitHash()
 	SubmitMacroSet.defaults = &SubmitMacroDefaultSet;
 #endif
 
-	memset(&mctx, 0, sizeof(mctx));
-	mctx.subsys = "SUBMIT";
-	mctx.use_mask = 3;
+	mctx.init("SUBMIT", 3);
 }
 
 
@@ -7642,8 +7640,9 @@ int SubmitHash::load_q_foreach_items (
 int SubmitHash::parse_file(FILE* fp, MACRO_SOURCE & source, std::string & errmsg, FNSUBMITPARSE parse_q /*=NULL*/, void* parse_pv /*=NULL*/)
 {
 	MACRO_EVAL_CONTEXT ctx = mctx; ctx.use_mask = 2;
+	MacroStreamYourFile ms(fp, source);
 
-	return Parse_macros(fp, source,
+	return Parse_macros(ms,
 		0, SubmitMacroSet, READ_MACROS_SUBMIT_SYNTAX,
 		&ctx, errmsg, parse_q, parse_pv);
 }
@@ -7679,8 +7678,9 @@ int SubmitHash::parse_file_up_to_q_line(FILE* fp, MACRO_SOURCE & source, std::st
 	*qline = NULL;
 
 	MACRO_EVAL_CONTEXT ctx = mctx; ctx.use_mask = 2;
+	MacroStreamYourFile ms(fp, source);
 
-	int err = Parse_macros(fp, source,
+	int err = Parse_macros(ms,
 		0, SubmitMacroSet, READ_MACROS_SUBMIT_SYNTAX,
 		&ctx, errmsg, parse_q_callback, &args);
 	if (err < 0)
