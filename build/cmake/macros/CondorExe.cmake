@@ -33,8 +33,8 @@ MACRO (CONDOR_EXE _CNDR_TARGET _SRCS_PARAM _INSTALL_LOC _LINK_LIBS _COPY_PDBS)
         STRING(REGEX REPLACE "^[0-9]+\\.[0-9]+\\.([0-9]+)" "\\1" CONDOR_BUILD_NUMBER  "${VERSION}")
         set(CONDOR_EXECUTABLE_NAME ${_CNDR_TARGET})
 
-        CONFIGURE_FILE(${CMAKE_SOURCE_DIR}/msconfig/versioninfo.rc.in ${CMAKE_CURRENT_BINARY_DIR}/versioninfo_exe.rc)
-        list(APPEND _SRCS ${CMAKE_CURRENT_BINARY_DIR}/versioninfo_exe.rc)
+        CONFIGURE_FILE(${CMAKE_SOURCE_DIR}/msconfig/versioninfo.rc.in ${CMAKE_CURRENT_BINARY_DIR}/versioninfo_${CONDOR_EXECUTABLE_NAME}.rc)
+        list(APPEND _SRCS ${CMAKE_CURRENT_BINARY_DIR}/versioninfo_${CONDOR_EXECUTABLE_NAME}.rc)
     endif( WINDOWS )
 
     add_executable( ${_CNDR_TARGET} ${_SRCS})
