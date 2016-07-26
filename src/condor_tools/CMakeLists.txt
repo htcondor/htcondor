@@ -28,8 +28,10 @@ condor_exe(condor_fetchlog "fetch_log.cpp" ${C_SBIN} "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_sos "sos.cpp" ${C_SBIN} "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_config_val "config_val.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_userprio "user_prio.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
+condor_exe(condor_transform_ads "transform_ads.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_findhost "give_interactive.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_qedit "qedit.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
+
 #condor_exe(condor_curlplugin "condor_curlplugin.c" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 
 if (CURL_FOUND)
