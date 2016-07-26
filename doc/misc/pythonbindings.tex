@@ -646,14 +646,14 @@ Optional parameter \texttt{ad} is a ClassAd describing the claim
 If omitted, the local startd is assumed.
 
 \\ \hline
-\texttt{drainJobs( (int)how\_fast = DRAIN\_GRACEFUL,
+\texttt{drainJobs( (int)how\_fast = Graceful,
 (bool)resume\_on\_completion = false, (expr)check\_expr = true ) }
 
 Begin draining jobs from the startd.
 
 Optional parameter \texttt{drain\_type} is how fast to drain the jobs
-(from the DrainTypes enum: DRAIN\_FAST, DRAIN\_GRACEFUL or DRAIN\_QUICK)
-(defaults to DRAIN\_GRACEFUL if not specified).
+(from the DrainTypes enum: \texttt{Fast}, \texttt{Graceful} or
+\texttt{Quick}) (defaults to \texttt{Graceful} if not specified).
 
 Parameter \texttt{resume\_on\_completion} is \Expr{True} if the startd
 should start accepting jobs again once draining is complete,
