@@ -457,6 +457,40 @@ result in the same value for \verb@A@:
 \end{verbatim}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:Multi-Line-Values}Multi-Line Values}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+As of version 8.5.6, the value for a macro can comprise multiple
+lines of text.
+The syntax for this is as follows:
+\begin{verbatim}
+<macro_name> @=<tag>
+<macro_definition lines>
+@<tag>
+\end{verbatim}
+
+For example:
+\begin{verbatim}
+JOB_ROUTER_DEFAULTS @=jrd
+  [
+    requirements=target.WantJobRouter is True;
+    MaxIdleJobs = 10;
+    MaxJobs = 200;
+
+    /* now modify routed job attributes */
+    /* remove routed job if it goes on hold or stays idle for over 6 hours */
+    set_PeriodicRemove = JobStatus == 5 ||
+                        (JobStatus == 1 && (time() - QDate) > 3600*6);
+    delete_WantJobRouter = true;
+    set_requirements = true;
+  ]
+  @jrd
+\end{verbatim}
+
+Note that in this example, the square brackets are part of the
+JOB\_ROUTER\_DEFAULTS value.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Program-Defined-Macros}Executing a Program to Produce Configuration Macros}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -8080,7 +8114,6 @@ REM Run the actual job now
   If set to \Expr{world},
   then the directory is created with permissions set to \emph{0755}.
 
-%TEMPTEMP-- check this
 \label{param:StarterStatsLog}
 \item[\Macro{STARTER\_STATS\_LOG}]
   The full path and file name of a file that stores TCP statistics
