@@ -41,6 +41,7 @@ for  job in  $@ ; do
         # treat it as successfully deleted.
         if echo "$cmdout" | grep -q 'Invalid job id specified' ; then
                 retcode=0
+        fi
         if [ "$retcode" == "0" ] ; then
                 if [ "$jnr" == "1" ]; then
                         echo " 0 No\\ error"
