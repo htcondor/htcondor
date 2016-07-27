@@ -83,10 +83,11 @@ namespace condor_params {
 // buffers used while processing the queue statement to inject $(Cluster), $(Process) and $(Step)
 // into the submit hash table.  Note that these buffers are also used BEFORE the queue
 // statement to set defaults for $(Cluster), $(Process) and $(Step).
-static char ProcessString[20]="0", StepString[20]="0", RowString[20]="0";
+static char ProcessString[20]="0", StepString[20]="0", RowString[20]="0", IteratingString[10] = "0";
 static condor_params::string_value ProcessMacroDef = { ProcessString, 0 };
 static condor_params::string_value StepMacroDef = { StepString, 0 };
 static condor_params::string_value RowMacroDef = { RowString, 0 };
+static condor_params::string_value IteratingMacroDef = { IteratingString, 0 };
 
 // values for submit hashtable defaults, these are declared as char rather than as const char to make g++ on fedora shut up.
 static char OneString[] = "1", ZeroString[] = "0";
@@ -120,6 +121,7 @@ static MACRO_DEF_ITEM LocalMacroDefaults[] = {
 	{ "IsLinux",   &IsLinuxMacroDef },
 	{ "IsWindows", &IsWinMacroDef },
 	{ "ItemIndex", &RowMacroDef },
+	{ "Iterating", &IteratingMacroDef },
 	{ "OPSYS",           &OpsysMacroDef },
 	{ "OPSYSANDVER",     &OpsysAndVerMacroDef },
 	{ "OPSYSMAJORVER",   &OpsysMajorVerMacroDef },
@@ -459,7 +461,8 @@ void rewind_macro_set(MACRO_SET & set, MACRO_SET_CHECKPOINT_HDR* phdr, bool and_
 class MacroStreamXFormSource : public MacroStreamCharSource
 {
 public:
-	MacroStreamXFormSource() : checkpoint(NULL), fp_iter(NULL), fp_lineno(0), step(0), row(0), has_iterate(false) {}
+	MacroStreamXFormSource() 
+		: checkpoint(NULL), fp_iter(NULL), fp_lineno(0), step(0), row(0), has_iterate(false), close_fp_when_done(false) {}
 	virtual ~MacroStreamXFormSource() {}
 	// returns:
 	//   < 0 = error, outmsg is error message
@@ -467,6 +470,7 @@ public:
 	// 
 	int load(FILE* fp, MACRO_SOURCE & source);
 	bool has_pending_fp() { return fp_iter != NULL; }
+	bool close_when_done(bool close) { close_fp_when_done = close; return has_pending_fp(); }
 	int  parse_iterate_args(char * pargs, int expand_options, MACRO_SET &set, std::string & errmsg);
 	int  first_iteration(MACRO_SET &set);
 	bool next_iteration(MACRO_SET &set);
@@ -479,6 +483,7 @@ protected:
 	int   step;
 	int   row;
 	bool  has_iterate;
+	bool  close_fp_when_done;
 	SubmitForeachArgs oa;
 	auto_free_ptr curr_item; // so we can destructively edit the current item from the items list
 
@@ -621,7 +626,9 @@ main( int argc, const char *argv[] )
 		insert_source(rules_file, LocalMacroSet, FileMacroSource);
 		RulesFileMacroDef.psz = const_cast<char*>(rules_file); // const_cast<char*>(LocalMacroSet.apool.insert(full_path(rules_file, false)));
 		rval = ms.load(file, FileMacroSource);
-		fclose(file);
+		if (rval < 0 || ! ms.close_when_done(true)) {
+			fclose(file);
+		}
 	}
 
 	if (rval < 0) {
@@ -698,6 +705,7 @@ void PrintRules(FILE* out)
 		"   RENAME  /<regex>/ <newattrs>\t- Rename attributes matching <regex> to <newattrs>\n"
 		"   DELETE  <attr> <newattr>\t- Delete <attr>\n"
 		"   DELETE  /<regex>/\t\t- Delete attributes matching <regex>\n"
+		"   EVALMACRO <key> <expr>\t- Evaluate <expr> and then insert it as a transform macro value\n"
 		"   ITERATE <N> [<vars>] [in <list> | from <file> | matching <pattern>] - Iterate the transform\n"
 		);
 
@@ -781,6 +789,7 @@ int MacroStreamXFormSource::parse_iterate_args(char * pargs, int expand_options,
 	int rval = oa.parse_queue_args(pargs);
 	if (rval < 0) {
 		formatstr(errmsg, "invalid ITERATE statement");
+		if (close_fp_when_done && fp) { fclose(fp); }
 		return rval;
 	}
 
@@ -809,6 +818,7 @@ int MacroStreamXFormSource::parse_iterate_args(char * pargs, int expand_options,
 					oa.items.initializeFromString(line);
 				}
 			}
+			if (close_fp_when_done) { fclose(fp); fp = NULL; }
 			if ( ! saw_close_brace) {
 				formatstr(errmsg, "Reached end of file without finding closing brace ')'"
 					" for ITERATE command on line %d", begin_lineno);
@@ -839,6 +849,8 @@ int MacroStreamXFormSource::parse_iterate_args(char * pargs, int expand_options,
 			rval = Close_macro_source(fp, ItemsSource, set, 0);
 		}
 	}
+
+	if (close_fp_when_done && fp) { fclose(fp); fp = NULL; }
 
 	// fill in the items array from a glob
 	//
@@ -976,6 +988,7 @@ int  MacroStreamXFormSource::first_iteration(MACRO_SET &set)
 	step = row = 0;
 	(void)sprintf(StepString, "%d", step);
 	(void)sprintf(RowString, "%d", row);
+	(void)sprintf(IteratingString, "%d", has_iterate);
 	set_iter_item(set, oa.items.first());
 	return 1;
 }
@@ -1325,6 +1338,7 @@ enum {
 	kw_COPY=1,
 	kw_DEFAULT,
 	kw_DELETE,
+	kw_EVALMACRO,
 	kw_EVALSET,
 	kw_ITERATE,
 	kw_NAME,
@@ -1340,6 +1354,7 @@ static const Keyword ActionKeywordItems[] = {
 	KW(COPY, 2 | kw_opt_regex),
 	KW(DEFAULT, 2),
 	KW(DELETE, 1 | kw_opt_regex),
+	KW(EVALMACRO, 2),
 	KW(EVALSET, 2),
 	KW(ITERATE, 0),
 	KW(NAME, 0),
@@ -1358,9 +1373,16 @@ struct _parse_rules_args {
 	MacroStreamXFormSource * xforms;
 };
 
-const char * substitute_regex_match(const char * input, const char * replacement, char tagChar, int ovector[], int cvec, std::string &output)
+// substitute regex groups into a string, appending the output to a std::string
+//
+const char * append_substituted_regex (
+	std::string &output,      // substituted regex will be appended to this
+	const char * input,       // original input passed to pcre_exec (ovector has offsets into this)
+	int ovector[], // output vector from pcre_exec
+	int cvec,      // output count from pcre_exec
+	const char * replacement, // replacement template string
+	char tagChar)  // char that introduces a subtitution in replacement string, usually \ or $
 {
-	output = "";
 	const char * p = replacement;
 	const char * lastp = p; // points to the start of the last point we copied from.
 	while (*p) {
@@ -1378,6 +1400,8 @@ const char * substitute_regex_match(const char * input, const char * replacement
 	return output.c_str();
 }
 
+// Handle kw_COPY, kw_RENAME and kw_DELETE when the first argument is a regex.
+// 
 int DoRegexAttrOp(int kw_value, ClassAd *ad, pcre* re, int re_options, const char * replacement)
 {
 	const int max_group_count = 11; // only \0 through \9 allowed.
@@ -1400,10 +1424,9 @@ int DoRegexAttrOp(int kw_value, ClassAd *ad, pcre* re, int re_options, const cha
 		if (cvec <= 0)
 			continue; // does not match
 
+		newAttr = "";
 		if (kw_value != kw_DELETE) {
-			substitute_regex_match(input, replacement, tagChar, ovector, cvec, newAttr);
-		} else {
-			newAttr = "";
+			append_substituted_regex(newAttr, input, ovector, cvec, replacement, tagChar);
 		}
 		matched[it->first] = newAttr;
 	}
@@ -1420,16 +1443,50 @@ int DoRegexAttrOp(int kw_value, ClassAd *ad, pcre* re, int re_options, const cha
 	return matched.size();
 }
 
+
+static const char * XFormValueToString(classad::Value & val, std::string & tmp)
+{
+	if ( ! val.IsStringValue(tmp)) {
+		classad::ClassAdUnParser unp;
+		tmp.clear(); // because Unparse appends.
+		unp.Unparse(tmp, val);
+	}
+	return tmp.c_str();
+}
+
+static ExprTree * XFormCopyValueToTree(classad::Value & val)
+{
+	ExprTree *tree = NULL;
+	classad::Value::ValueType vtyp = val.GetType();
+	if (vtyp == classad::Value::LIST_VALUE) {
+		classad::ExprList * list = NULL;
+		val.IsListValue(list);
+		tree = list->Copy();
+	} else if (vtyp == classad::Value::SLIST_VALUE) {
+		classad_shared_ptr<classad::ExprList> list;
+		val.IsSListValue(list);
+		tree = tree->Copy();
+	} else if (vtyp == classad::Value::CLASSAD_VALUE) {
+		classad::ClassAd* aval;
+		val.IsClassAdValue(aval);
+		tree = aval->Copy();
+	} else {
+		tree = classad::Literal::MakeLiteral(val);
+	}
+	return tree;
+}
+
 // this gets called while parsing the submit file to process lines
 // that don't look like valid key=value pairs.  
 // return 0 to keep scanning the file, ! 0 to stop scanning. non-zero return values will
 // be passed back out of Parse_macros
 //
-int ParseRulesCallback(void* pv, MACRO_SOURCE& /*source*/, MACRO_SET& macro_set, char * line, std::string & errmsg)
+int ParseRulesCallback(void* pv, MACRO_SOURCE& source, MACRO_SET& macro_set, char * line, std::string & errmsg)
 {
 	struct _parse_rules_args * pargs = (struct _parse_rules_args*)pv;
 	ClassAd * ad = pargs->ad;
 	classad::ClassAdParser parser;
+	std::string tmp3;
 
 	// give the line to our tokener so we can parse it.
 	tokener toke(line);
@@ -1533,7 +1590,7 @@ int ParseRulesCallback(void* pv, MACRO_SOURCE& /*source*/, MACRO_SET& macro_set,
 		} else {
 			ExprTree * expr = NULL;
 			if ( ! parser.ParseExpression(ConvertEscapingOldToNew(rhs.ptr()), expr, true)) {
-				fprintf(stderr, "ERROR: SET %s invalid expression : %s", attr.c_str(), rhs.ptr());
+				fprintf(stderr, "ERROR: SET %s invalid expression : %s\n", attr.c_str(), rhs.ptr());
 			} else {
 				const bool cache_it = false;
 				if ( ! ad->Insert(attr, expr, cache_it)) {
@@ -1551,14 +1608,33 @@ int ParseRulesCallback(void* pv, MACRO_SOURCE& /*source*/, MACRO_SET& macro_set,
 		} else {
 			classad::Value val;
 			if ( ! ad->EvaluateExpr(rhs.ptr(), val)) {
-				fprintf(stderr, "ERROR: EVALSET %s could not evaluate : %s", attr.c_str(), rhs.ptr());
+				fprintf(stderr, "ERROR: EVALSET %s could not evaluate : %s\n", attr.c_str(), rhs.ptr());
 			} else {
-				ExprTree *lit = classad::Literal::MakeLiteral(val);
+				ExprTree * tree = XFormCopyValueToTree(val);
 				const bool cache_it = false;
-				if ( ! ad->Insert(attr, lit, cache_it)) {
-					fprintf(stderr, "ERROR: could not set %s to %s\n", attr.c_str(), rhs.ptr());
-					delete lit;
+				if ( ! ad->Insert(attr, tree, cache_it)) {
+					fprintf(stderr, "ERROR: could not set %s to %s\n", attr.c_str(), XFormValueToString(val, tmp3));
+					delete tree;
+				} else if (dash_verbose) {
+					fprintf(stdout, "    SET %s to %s\n", attr.c_str(), XFormValueToString(val, tmp3));
 				}
+			}
+		}
+		break;
+
+	case kw_EVALMACRO:
+		if (dash_verbose) fprintf(stdout, "EVALMACRO %s from $EVAL( %s )\n", attr.c_str(), rhs.ptr());
+		if ( ! rhs) {
+			fprintf(stderr, "ERROR: EVALMACRO %s has no value", attr.c_str());
+		} else {
+			classad::Value val;
+			if ( ! ad->EvaluateExpr(rhs.ptr(), val)) {
+				fprintf(stderr, "ERROR: EVALMACRO %s could not evaluate : %s\n", attr.c_str(), rhs.ptr());
+			} else {
+				XFormValueToString(val, tmp3);
+				MACRO_EVAL_CONTEXT ctx; ctx.init("SUBMIT");
+				insert_macro(attr.c_str(), tmp3.c_str(), macro_set, source, ctx);
+				if (dash_verbose) { fprintf(stdout, "    TEMP %s = %s\n", attr.c_str(), tmp3.c_str()); }
 			}
 		}
 		break;
@@ -1602,6 +1678,9 @@ bool ApplyTransform (
 
 	LocalContext.ad = args.ad;
 	LocalContext.adname = "MY.";
+
+	// indicate that we are not yet iterating
+	(void)sprintf(IteratingString, "%d", 0);
 
 	// the first parse is a keeper only if there is no iterate statement. 
 	xforms.rewind();
