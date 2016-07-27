@@ -54,7 +54,7 @@ one to specify which subsystem to turn off.
 \texttt{read\_events( file\_obj, is\_xml = True ) }
 
 Read and parse an HTCondor event log file.
-Returns a python iterator of ClassAds.
+Returns a Python iterator of ClassAds.
 
 Parameter \texttt{file\_obj} is a file object corresponding to an HTCondor
 event log.
@@ -384,33 +384,71 @@ back to the remote schedd based on a given resource request.
 \begin{flushleft}
 \begin{tabular}{|p{16cm}|} \hline
 
-\texttt{\_\_init\_\_( (dict)submit = None ) }
+\texttt{\_\_init\_\_( (dict)input = None )}
 
 Create an instance of the \texttt{Submit} class.  
 
-Optional parameter \texttt{ad} is a python dictionary containing submit file key = value pairs.
+Optional parameter \texttt{input} is a Python dictionary containing
+submit file key = value pairs.
 If omitted, the submit class is initially empty.
-\\ \hline
-\texttt{expand() }
-
-Expand all macros for a given attribute
 
 \\ \hline
-\texttt{queue((object)txn) }
+\texttt{expand( (str)attr )}
+
+Expand all macros for the given attribute.
+
+Parameter \texttt{attr} is the name of the relevant attribute.
+
+Returns a string containing the value of the given attribute with
+all macros expanded.
+
+\\ \hline
+\texttt{ queue( (object)txn, (int)count = 1, (object)ad\_results = None )}
 
 Submit the current object to a remote queue.
-return None. Throws a RuntimeError if the submission fails.
+Parameter \texttt{txn} is an active transaction object (see
+\texttt{Schedd.transaction()}).
 
-parameter \texttt{txn} An active transaction object.
+Optional parameter \texttt{count} is the number of procs to create
+(defaults to 1 if not specified).
+
+Optional parameter \texttt{ad\_results} is an object to receive the
+ClassAd resulting from this submit.
+
+Returns the ClusterID of the submitted job(s).
+
+Throws a RuntimeError if the submission fails.
+
 \\ \hline
-\texttt{setdefault() }
+\texttt{get( (str)attr, (str)default = None )}
 
-Set a default value for a command
+Gets the value of the specified attribute.
+
+Parameter \texttt{attr} is the name of the relevant attribute.
+
+Optional parameter \texttt{default} is a default value to be returned
+if the attribute is not defined.
+
+Returns a string containing the value of the attribute.
 
 \\ \hline
-\texttt{update() }
+\texttt{setdefault( (str)attr, (str)default)}
 
-Copy the contents of a given Submit object into the current object
+Set a default value for an attribute.
+
+Parameter \texttt{attr} is the name of the relevant attribute.
+
+Parameter \texttt{default} is the value to which to set the given
+attribute if that attribute has not already been set.
+
+Returns a string containing the value of the attribute.
+
+\\ \hline
+\texttt{update( (object)submit )}
+
+Copy the contents of a given Submit object into the current object.
+
+Parameter \texttt{submit} is the Submit object to copy.
 
 \\ \hline
 \end{tabular}
@@ -603,26 +641,40 @@ Parameter \texttt{usage} is the usage to be set for the user.
 
 Create an instance of the \texttt{Startd} class.  
 
-Optional parameter \texttt{ad} is a ClassAd containing the location of 
-the \Condor{startd} daemon.
-If omitted, uses the local startd.
+Optional parameter \texttt{ad} is a ClassAd describing the claim
+(optional) and the startd location.
+If omitted, the local startd is assumed.
+
 \\ \hline
-\texttt{drainJobs( (int)drain\_type, (bool)resume\_on\_completion, (expr)check ) }
+\texttt{drainJobs( (int)how\_fast = Graceful,
+(bool)resume\_on\_completion = false, (expr)check\_expr = true ) }
 
 Begin draining jobs from the startd.
-Returns a draining request\_id.
 
-Parameter \texttt{drain\_type} type of drain to perform, from the DrainTypes enum either Fast, Graceful or Quick.
-Parameter \texttt{resume\_on\_completion} is true if the startd should start accepting jobs again once
-draining is complete, false if it should remain in the drained state.
-Parameter \texttt{constraint} An optional check expression which must be true on all slots for draining to begin.
+Optional parameter \texttt{drain\_type} is how fast to drain the jobs
+(from the DrainTypes enum: \texttt{Fast}, \texttt{Graceful} or
+\texttt{Quick}) (defaults to \texttt{Graceful} if not specified).
+
+Parameter \texttt{resume\_on\_completion} is \Expr{True} if the startd
+should start accepting jobs again once draining is complete,
+\Expr{False} if it should remain in the drained state (defaults to
+\Expr{False} if not specified).
+
+Optional parameter \texttt{check\_expr} is an expression that must
+be \Expr{True} for all slots for draining to begin (defaults to
+\Expr{True} if not specified).
+
+Returns a (string) \texttt{request\_id} that can be used to cancel draining.
 
 \\ \hline
-\texttt{cancelDrainJobs( (int)request\_id ) }
+\texttt{cancelDrainJobs( (object)request\_id = None ) }
 
 Cancel a draining request.
 
-Parameter \texttt{request\_id} If specified, cancels only the drain command that returned the given request\_id
+Optional parameter \texttt{request\_id} specifies a draining request
+to cancel; if not specified, all draining requests for this startd
+are canceled.
+
 \\ \hline
 \end{tabular}
 \end{flushleft}
