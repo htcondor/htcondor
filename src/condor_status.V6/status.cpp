@@ -1471,7 +1471,7 @@ usage ()
 
 	fprintf (stderr, "\n    and [custom-opts ...] are one or more of\n"
 		"\t-constraint <const>\tAdd constraint on classads\n"
-		"\t-compact\t\t\tShow compact form, rolling up slots into a single line\n"
+		"\t-compact\t\tShow compact form, rolling up slots into a single line\n"
 		"\t-statistics <set>:<n>\tDisplay statistics for <set> at level <n>\n"
 		"\t\t\t\tsee STATISTICS_TO_PUBLISH for valid <set> and level values\n"
 		"\t\t\t\tuse with -direct queries to STARTD and SCHEDD daemons\n"

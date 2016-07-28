@@ -1358,6 +1358,7 @@ rm -rf %{buildroot}
 %_bindir/condor_qsub
 %_bindir/condor_pool_job_report
 %_bindir/condor_job_router_info
+%_bindir/condor_transform_ads
 %_bindir/condor_update_machine_ad
 # reconfig_schedd, restart
 # sbin/condor is a link for master_off, off, on, reconfig,

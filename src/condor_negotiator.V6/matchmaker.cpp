@@ -4932,13 +4932,17 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 
 		candidatePreemptState = NO_PREEMPTION;
 
-		remoteUser = "";
+		remoteUser.clear();
 			// If there is already a preempting user, we need to preempt that user.
 			// Otherwise, we need to preempt the user who is running the job.
-		if (!candidate->LookupString(ATTR_PREEMPTING_ACCOUNTING_GROUP, remoteUser)) {
-			if (!candidate->LookupString(ATTR_PREEMPTING_USER, remoteUser)) {
-				if (!candidate->LookupString(ATTR_ACCOUNTING_GROUP, remoteUser)) {
-					candidate->LookupString(ATTR_REMOTE_USER, remoteUser);
+
+			// But don't bother with all these lookups if preemption is disabled.
+		if (ConsiderPreemption) {
+			if (!candidate->LookupString(ATTR_PREEMPTING_ACCOUNTING_GROUP, remoteUser)) {
+				if (!candidate->LookupString(ATTR_PREEMPTING_USER, remoteUser)) {
+					if (!candidate->LookupString(ATTR_ACCOUNTING_GROUP, remoteUser)) {
+						candidate->LookupString(ATTR_REMOTE_USER, remoteUser);
+					}
 				}
 			}
 		}
@@ -4949,7 +4953,7 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 		// not prefer it, just continue with the next offer ad....  we can
 		// skip all the below logic about preempt for user-priority, etc.
 		if ( only_for_startdrank ) {
-			if (( remoteUser == "" ) && (!pslotRankMatch)) {
+			if ( remoteUser.empty() && (!pslotRankMatch)) {
 					// offer does not have a remote user, thus we cannot eval
 					// startd rank yet because it does not make sense (the
 					// startd has nothing to compare against).  
@@ -4979,7 +4983,7 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 		// if there is a remote user, consider preemption ....
 		// Note: we skip this if only_for_startdrank is true since we already
 		//       tested above for the only condition we care about.
-		if ( (remoteUser != "") &&
+		if ( (!remoteUser.empty()) &&
 			 (!only_for_startdrank) ) {
 			if( EvalExprTree(rankCondStd, candidate, &request, result) && 
 				result.IsBooleanValue(val) && val ) {

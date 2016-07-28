@@ -402,13 +402,10 @@ MyString user_config_source; // which if the files in local_config_sources is th
 
 static void init_macro_eval_context(MACRO_EVAL_CONTEXT &ctx)
 {
-	ctx.use_mask = 2;
-	ctx.without_default = false;
+	ctx.init(get_mySubSystem()->getName(), 2);
+	if (ctx.subsys && ! ctx.subsys[0]) ctx.subsys = NULL;
 	ctx.localname = get_mySubSystem()->getLocalName();
 	if (ctx.localname && ! ctx.localname[0]) ctx.localname = NULL;
-	ctx.subsys = get_mySubSystem()->getName();
-	if (ctx.subsys && ! ctx.subsys[0]) ctx.subsys = NULL;
-	ctx.cwd = NULL;
 }
 
 bool config_continue_if_no_config(bool contin)
@@ -1198,7 +1195,12 @@ process_config_source( const char* file, int depth, const char* name,
 		if ( ! fp) { rval = -1; }
 		else {
 			MACRO_EVAL_CONTEXT ctx; init_macro_eval_context(ctx);
+#ifdef USE_MACRO_STREAMS
+			MacroStreamYourFile ms(fp, source);
+			rval = Parse_macros(ms, depth, ConfigMacroSet, 0, &ctx, errmsg, NULL, NULL);
+#else
 			rval = Parse_macros(fp, source, depth, ConfigMacroSet, 0, &ctx, errmsg, NULL, NULL);
+#endif
 			rval = Close_macro_source(fp, source, ConfigMacroSet, rval); fp = NULL;
 		}
 		if( rval < 0 ) {
@@ -2507,7 +2509,7 @@ expand_param( const char *str )
 char *
 expand_param(const char *str, const char * localname, const char *subsys, int use)
 {
-	MACRO_EVAL_CONTEXT ctx = { localname, subsys, NULL, false, use };
+	MACRO_EVAL_CONTEXT ctx = { localname, subsys, NULL, false, (char)use, 0, 0 };
 	if (ctx.localname && ! ctx.localname[0]) ctx.localname = NULL;
 	if (ctx.subsys && ! ctx.subsys[0]) ctx.subsys = NULL;
 	return expand_macro(str, ConfigMacroSet, ctx);
@@ -3269,7 +3271,12 @@ static void process_persistent_config_or_die (const char * source_file, bool top
 			rval = -1;
 		} else {
 			MACRO_EVAL_CONTEXT ctx; init_macro_eval_context(ctx);
+#ifdef USE_MACRO_STREAMS
+			MacroStreamYourFile ms(fp, source);
+			rval = Parse_macros(ms, 0, ConfigMacroSet, 0, &ctx, errmsg, NULL, NULL);
+#else
 			rval = Parse_macros(fp, source, 0, ConfigMacroSet, 0, &ctx, errmsg, NULL, NULL);
+#endif
 		}
 		fclose(fp); fp = NULL;
 	}
@@ -3519,7 +3526,8 @@ int write_config_file(const char* pathname, int options) {
 // so that condor_config_val can test config if expressions.
 bool config_test_if_expression(const char * expr, bool & result, const char * localname, const char * subsys, std::string & err_reason)
 {
-	MACRO_EVAL_CONTEXT ctx = { localname, subsys, NULL, false, 0 };
+	//PRAGMA_REMIND("add ad to config_test_if_expression")
+	MACRO_EVAL_CONTEXT ctx = { localname, subsys, NULL, false, 0, 0, 0 };
 	if (ctx.localname && !ctx.localname[0]) ctx.localname = NULL;
 	if (ctx.subsys && !ctx.subsys[0]) ctx.subsys = NULL;
 	return Test_config_if_expression(expr, result, err_reason, ConfigMacroSet, ctx);
