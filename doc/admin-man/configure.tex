@@ -3263,6 +3263,8 @@ subsystem-specific setting is unspecified, \MacroNI{MAX\_FILE\_DESCRIPTORS}
 is used.
 For the \Condor{collector} daemon, the value defaults to 10240, and
 for the \Condor{schedd} daemon, the value defaults to 4096.
+If the \Condor{shared\_port} daemon is in use, its value for this
+parameter should match the largest value set for the other daemons.
 
 \label{param:MaxFileDescriptors}
 \item[\Macro{MAX\_FILE\_DESCRIPTORS}] Under Unix, this specifies the
