@@ -37,7 +37,9 @@ $logfile = "job_dagman_propogate_priorities.dag.dagman.out";
 	'job_dagman_propogate_priorities-A.out',
 	'job_dagman_propogate_priorities-B.out',
 	'job_dagman_propogate_priorities-C.out',
-	'job_dagman_propogate_priorities-D.out');
+	'job_dagman_propogate_priorities-D.out',
+	'job_dagman_propogate_priorities-E.out',
+	'job_dagman_propogate_priorities-F.out');
 
 # truly const variables in perl
 sub IDLE{1};
@@ -101,28 +103,36 @@ $success = sub {
 	}
 
 	# Check node priorities...
-	foreach ('nodeA','nodeB','nodeC','nodeD') {
+	foreach ('nodeA','nodeB','nodeC','nodeD','nodeE','nodeF') {
 		if(! defined $priority{$_}){
 			CondorTest::debug("Did not see priority for $_\n");
 			$diditpass = 0;
 			die;
 		}
 	}
-	if ($priority{'nodeA'} != 60) {
+	if ($priority{'nodeA'} != 67) {
 		$diditpass = 0;
-		CondorTest::debug("nodeA priority was $priority{'nodeA'}; should be 60\n");
+		CondorTest::debug("nodeA priority was $priority{'nodeA'}; should be 67\n");
 	}
-	if ($priority{'nodeB'} != 60) {
+	if ($priority{'nodeB'} != 7) {
 		$diditpass = 0;
-		CondorTest::debug("nodeB priority was $priority{'nodeB'}; should be 60\n");
+		CondorTest::debug("nodeB priority was $priority{'nodeB'}; should be 7\n");
 	}
-	if ($priority{'nodeC'} != 5) {
+	if ($priority{'nodeC'} != 12) {
 		$diditpass = 0;
-		CondorTest::debug("nodeC priority was $priority{'nodeC'}; should be 5\n");
+		CondorTest::debug("nodeC priority was $priority{'nodeC'}; should be 12\n");
 	}
-	if ($priority{'nodeD'} != 100) {
+	if ($priority{'nodeD'} != 117) {
 		$diditpass = 0;
-		CondorTest::debug("nodeD priority was $priority{'nodeD'}; should be 100\n");
+		CondorTest::debug("nodeD priority was $priority{'nodeD'}; should be 117\n");
+	}
+	if ($priority{'nodeE'} != 107) {
+		$diditpass = 0;
+		CondorTest::debug("nodeE priority was $priority{'nodeE'}; should be 107\n");
+	}
+	if ($priority{'nodeF'} != 17) {
+		$diditpass = 0;
+		CondorTest::debug("nodeF priority was $priority{'nodeF'}; should be 17\n");
 	}
 
 	if($diditpass == 0) {

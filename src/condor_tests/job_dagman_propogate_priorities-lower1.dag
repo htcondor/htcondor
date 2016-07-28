@@ -1,0 +1,10 @@
+# Priority from parent DAG (via condor_submit_dag command line)
+# should override this.
+CONFIG job_dagman_propogate_priorities.config
+
+JOB nodeD job_dagman_propogate_priorities-node.cmd
+VARS nodeD jobname="job_dagman_propogate_priorities-D"
+PRIORITY nodeD 10
+
+JOB nodeE job_dagman_propogate_priorities-node.cmd
+VARS nodeE jobname="job_dagman_propogate_priorities-E"

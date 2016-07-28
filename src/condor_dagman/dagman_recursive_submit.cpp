@@ -25,17 +25,10 @@
 #include "my_popen.h"
 
 //---------------------------------------------------------------------------
-/** Run condor_submit_dag on the given DAG file.
-	@param opts: the condor_submit_dag options
-	@param dagFile: the DAG file to process
-	@param directory: the directory from which the DAG file should
-		be processed (ignored if NULL)
-	@param isRetry: whether this is a retry of a sub-DAG node
-	@return 0 if successful, 1 if failed
-*/
 int
 runSubmitDag( const SubmitDagDeepOptions &deepOpts,
-			const char *dagFile, const char *directory, bool isRetry )
+			const char *dagFile, const char *directory, int priority,
+			bool isRetry )
 {
 	int result = 0;
 
@@ -122,9 +115,9 @@ runSubmitDag( const SubmitDagDeepOptions &deepOpts,
 		args.AppendArg( "-update_submit" );
 	}
 
-	if( deepOpts.priority != 0) {
+	if( priority != 0) {
 		args.AppendArg( "-Priority" );
-		args.AppendArg( deepOpts.priority );
+		args.AppendArg( priority );
 	}
 
 	if( deepOpts.suppress_notification ) {

@@ -1,13 +1,23 @@
-JOB nodeA job_dagman_propogate_priorities-A.cmd
+CONFIG job_dagman_propogate_priorities.config
+
+JOB nodeA job_dagman_propogate_priorities-node.cmd
 VARS nodeA jobname="job_dagman_propogate_priorities-A"
-JOB nodeB job_dagman_propogate_priorities-B.cmd
+
+JOB nodeB job_dagman_propogate_priorities-node.cmd
 VARS nodeB jobname="job_dagman_propogate_priorities-B"
-JOB nodeC job_dagman_propogate_priorities-C.cmd
+
+JOB nodeC job_dagman_propogate_priorities-node.cmd
 VARS nodeC jobname="job_dagman_propogate_priorities-C"
-SUBDAG EXTERNAL subdagD job_dagman_propogate_priorities.subdag
+
+SUBDAG EXTERNAL subdagD job_dagman_propogate_priorities-lower1.dag
+
+SUBDAG EXTERNAL subdagE job_dagman_propogate_priorities-lower2.dag
+
 PARENT nodeA CHILD nodeB
-PARENT nodeC CHILD subdagD
+PARENT nodeC CHILD subdagD subdagE
+
 PRIORITY nodeA 60
-PRIORITY nodeB 0
+# PRIORITY nodeB 0
 PRIORITY nodeC 5
 PRIORITY subdagD 100
+PRIORITY subdagE -20

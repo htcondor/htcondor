@@ -131,9 +131,9 @@ Dag::Dag( /* const */ StringList &dagFiles,
 	_spliceScope		  (spliceScope),
 	_recoveryMaxfakeID	  (0),
 	_maxJobHolds		  (0),
-	_reject			  (false),
+	_reject				  (false),
 	_alwaysRunPost		  (true),
-	_defaultPriority	  (0),
+	_dagPriority		  (0),
 	_metrics			  (NULL)
 {
 
@@ -1391,21 +1391,15 @@ Dag::StartNode( Job *node, bool isRetry )
 		_preScriptQ->Run( node->_scriptPre );
 		return true;
     }
+
 	// no PRE script exists or is done, so add job to the queue of ready jobs
-	node->FixPriority(*this);
 	if ( isRetry && m_retryNodeFirst ) {
-		_readyQ->Prepend( node, -node->_nodePriority );
+		_readyQ->Prepend( node, -node->_effectivePriority );
 	} else {
-		if(node->_hasNodePriority){
-			Job::NodeVar *var = new Job::NodeVar();
-			var->_name = "priority";
-			var->_value = node->_nodePriority;
-			node->varsFromDag->Append( var );
-		}
 		if ( _submitDepthFirst ) {
-			_readyQ->Prepend( node, -node->_nodePriority );
+			_readyQ->Prepend( node, -node->_effectivePriority );
 		} else {
-			_readyQ->Append( node, -node->_nodePriority );
+			_readyQ->Append( node, -node->_effectivePriority );
 		}
 	}
 	return TRUE;
@@ -1546,7 +1540,7 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 						"Node %s deferred by category throttle (%s, %d)\n",
 						job->GetJobName(), catThrottle->_category->Value(),
 						catThrottle->_maxJobs );
-			deferredJobs.Prepend( job, -job->_nodePriority );
+			deferredJobs.Prepend( job, -job->_effectivePriority );
 			_catThrottleDeferredCount++;
 		} else {
 
@@ -1577,7 +1571,7 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 		debug_printf( DEBUG_DEBUG_1,
 					"Returning deferred node %s to the ready queue\n",
 					job->GetJobName() );
-		_readyQ->Prepend( job, -job->_nodePriority );
+		_readyQ->Prepend( job, -job->_effectivePriority );
 	}
 
 	return numSubmitsThisCycle;
@@ -1692,9 +1686,9 @@ Dag::PreScriptReaper( Job *job, int status )
 		job->retval = 0; // for safety on retries
 		job->SetStatus( Job::STATUS_READY );
 		if ( _submitDepthFirst ) {
-			_readyQ->Prepend( job, -job->_nodePriority );
+			_readyQ->Prepend( job, -job->_effectivePriority );
 		} else {
-			_readyQ->Append( job, -job->_nodePriority );
+			_readyQ->Append( job, -job->_effectivePriority );
 		}
 	}
 
@@ -2252,9 +2246,9 @@ Dag::WriteNodeToRescue( FILE *fp, Job *node, bool reset_retries_upon_rescue,
 			// Note: when gittrac #2167 gets merged, we need to think
 			// about how this code will interact with that code.
 			// wenger/nwp 2011-08-24
-		if ( node->_hasNodePriority ) {
+		if ( node->_explicitPriority != 0 ) {
 			fprintf( fp, "PRIORITY %s %d\n", node->GetJobName(),
-						node->_nodePriority );
+						node->_explicitPriority );
 		}
 
 			// Print the CATEGORY line, if any.
@@ -3884,35 +3878,6 @@ Dag::GetEventIDHash(bool isNoop) const
 // the higher level calling them to get right...
 //---------------------------------------------------------------------------
 
-// A RAII class to swap out the priorities below, then restore them
-// when we are done.
-class priority_swapper {
-public:
-	priority_swapper(bool nodepriority, int newprio, int& oldprio);
-	~priority_swapper();
-private:
-	priority_swapper(); // Not implemented
-	bool swapped;
-	int& oldp;
-	int oldp_value;
-};
-
-priority_swapper::priority_swapper(bool nodepriority, int newprio, int& oldprio) :
-	swapped(false), oldp(oldprio), oldp_value(oldprio)
-{
-	if( nodepriority && newprio > oldprio ) {
-		swapped = true;
-		oldp = newprio;
-	}
-}
-
-priority_swapper::~priority_swapper()
-{
-	if( swapped ) {
-		oldp = oldp_value;
-	}
-}
-
 Dag::submit_result_t
 Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 {
@@ -3942,9 +3907,9 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
    	if ( !node->GetNoop() &&
 				node->GetDagFile() != NULL && _generateSubdagSubmits ) {
 		bool isRetry = node->GetRetries() > 0;
-		priority_swapper ps( node->_hasNodePriority, node->_nodePriority, _submitDagDeepOpts->priority);
 		if ( runSubmitDag( *_submitDagDeepOpts, node->GetDagFile(),
-					node->GetDirectory(), isRetry ) != 0 ) {
+					node->GetDirectory(), node->_effectivePriority,
+					isRetry ) != 0 ) {
 			++node->_submitTries;
 			debug_printf( DEBUG_QUIET,
 						"ERROR: condor_submit_dag -no_submit failed "
@@ -3984,7 +3949,8 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 
    		submit_success = condor_submit( dm, node->GetCmdFile(), condorID,
 					node->GetJobName(), parents,
-					node->varsFromDag, node->GetRetries(),
+					node->varsFromDag, node->_effectivePriority,
+					node->GetRetries(),
 					node->GetDirectory(), _defaultNodeLog,
 					node->NumChildren() > 0 && dm._claim_hold_time > 0,
 					batchName );
@@ -4094,9 +4060,9 @@ Dag::ProcessFailedSubmit( Job *node, int max_submit_attempts )
 				thisSubmitDelay == 1 ? "" : "s" );
 
 		if ( m_retrySubmitFirst ) {
-			_readyQ->Prepend(node, -node->_nodePriority);
+			_readyQ->Prepend(node, -node->_effectivePriority);
 		} else {
-			_readyQ->Append(node, -node->_nodePriority);
+			_readyQ->Append(node, -node->_effectivePriority);
 		}
 	}
 }
@@ -4466,21 +4432,14 @@ Dag::ResolveVarsInterpolations(void)
 }
 
 //---------------------------------------------------------------------------
-// Iterate over the jobs and set the default priority
-void Dag::SetDefaultPriorities()
+// Iterate over the jobs and set the effective priorities for the nodes.
+void Dag::SetNodePriorities()
 {
-	if(GetDefaultPriority() != 0) {
+	if ( GetDagPriority() != 0 ) {
 		Job* job;
 		_jobs.Rewind();
 		while( (job = _jobs.Next()) != NULL ) {
-			// If the DAG file has already assigned a priority
-			// Leave this job alone for now
-			if( !job->_hasNodePriority ) {
-				job->_hasNodePriority = true;
-				job->_nodePriority = GetDefaultPriority();
-			} else if( GetDefaultPriority() > job->_nodePriority ) {
-				job->_nodePriority = GetDefaultPriority();
-			}
+			job->_effectivePriority += GetDagPriority();
 		}
 	}
 }
