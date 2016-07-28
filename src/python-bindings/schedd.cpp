@@ -1,9 +1,4 @@
 #include "python_bindings_common.h"
-
-// hack around the other brokenness where pyconfig.h
-// redefines _XOPEN_SOURCE and _POSIX_C_SOURCE.
-#undef _XOPEN_SOURCE
-#undef _POSIX_C_SOURCE
 #include "condor_common.h"
 #include "globus_utils.h"
 
