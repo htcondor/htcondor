@@ -3985,9 +3985,9 @@ static bool tokenize_empty_delimiter() {
 }
 
 static bool sensitive_string_string_constructor() {
-	emit_test("Test the YourSensitiveString constructor that assigns the "
+	emit_test("Test the YourString constructor that assigns the "
 		"sensitive string to the passed c string.");
-	YourSensitiveString a("foo");
+	YourString a("foo");
 	emit_output_expected_header();
 	emit_retval("%s", "foo");
 	if(!(a == "foo")) {
@@ -3999,7 +3999,7 @@ static bool sensitive_string_string_constructor() {
 static bool sensitive_string_equality_true() {
 	emit_test("Does the == operator return true when the sensitive string is "
 		"equal to the other string?");
-	YourSensitiveString a("foo");
+	YourString a("foo");
 	bool res = (a == "foo");
 	emit_input_header();
 	emit_param("STRING", "%s", "foo");
@@ -4016,7 +4016,7 @@ static bool sensitive_string_equality_true() {
 static bool sensitive_string_equality_false() {
 	emit_test("Does the == operator return false when the sensitive string is"
 		" not equal to the other string?");
-	YourSensitiveString a("foo");
+	YourString a("foo");
 	bool res = (a == "bar");
 	emit_input_header();
 	emit_param("STRING", "%s", "bar");
@@ -4032,9 +4032,9 @@ static bool sensitive_string_equality_false() {
 
 static bool sensitive_string_equality_default_constructor() {
 	emit_test("Does the == operator return false after using the default "
-		"YourSensitiveString constructor?");
+		"YourString constructor?");
 
-	YourSensitiveString a;
+	YourString a;
 	bool res = (a == "foo");
 	emit_input_header();
 	emit_param("STRING", "%s", "foo");
@@ -4052,7 +4052,7 @@ static bool sensitive_string_equality_default_constructor() {
 static bool sensitive_string_assignment_non_empty_empty() {
 	emit_test("Does the = operator assign the non-empty sensitive string to "
 		"an empty one?");
-	YourSensitiveString a("foo");
+	YourString a("foo");
 	a = "";
 	emit_input_header();
 	emit_param("STRING", "%s", "");
@@ -4067,7 +4067,7 @@ static bool sensitive_string_assignment_non_empty_empty() {
 static bool sensitive_string_assignment_empty_non_empty() {
 	emit_test("Does the = operator assign the empty sensitive string to a "
 		"non-empty one?");
-	YourSensitiveString a;
+	YourString a;
 	a = "foo";
 	emit_input_header();
 	emit_param("STRING", "%s", "foo");
@@ -4082,7 +4082,7 @@ static bool sensitive_string_assignment_empty_non_empty() {
 static bool sensitive_string_assignment_non_empty() {
 	emit_test("Does the = operator assign the non-empty sensitive string to a"
 		" different non-empty one of different length?");
-	YourSensitiveString a("foo");
+	YourString a("foo");
 	a = "b";
 	emit_input_header();
 	emit_param("STRING", "%s", "b");
@@ -4096,10 +4096,10 @@ static bool sensitive_string_assignment_non_empty() {
 
 static bool sensitive_string_hash_function_non_empty() {
 	emit_test("Test hashFunction() on a non-empty sensitive string.");
-	YourSensitiveString a("foo");
-	unsigned int hash = YourSensitiveString::hashFunction(a);
+	YourString a("foo");
+	unsigned int hash = YourString::hashFunction(a);
 	emit_input_header();
-	emit_param("YourSensitiveString", "%s", "foo");
+	emit_param("YourString", "%s", "foo");
 	emit_output_expected_header();
 	emit_retval("%s", "!=0");
 	emit_output_actual_header();
@@ -4112,10 +4112,10 @@ static bool sensitive_string_hash_function_non_empty() {
 
 static bool sensitive_string_hash_function_empty() {
 	emit_test("Test hashFunction() on an empty sensitive string.");
-	YourSensitiveString a;
-	unsigned int hash = YourSensitiveString::hashFunction(a);
+	YourString a;
+	unsigned int hash = YourString::hashFunction(a);
 	emit_input_header();
-	emit_param("YourSensitiveString", "%s", "foo");
+	emit_param("YourString", "%s", "foo");
 	emit_output_expected_header();
 	emit_retval("%s", "!=0");
 	emit_output_actual_header();

@@ -29,7 +29,7 @@
 #ifdef USE_MAPFILE_V2
 #include "pool_allocator.h"
 class CanonicalMapList;
-typedef std::map<const YourSensitiveString, CanonicalMapList*, CaseIgnLTYourSensitiveString> METHOD_MAP;
+typedef std::map<const YourString, CanonicalMapList*, CaseIgnLTYourString> METHOD_MAP;
 #endif
 
 typedef struct _MapFileUsage {
