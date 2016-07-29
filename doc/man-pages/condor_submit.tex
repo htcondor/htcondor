@@ -246,12 +246,14 @@ not be modified during \SubmitCmd{queue} processing.
 Set to the integer value that the \Attr{ClusterId} attribute that the job ClassAd will have when the job is submitted.
 All jobs in a single submit will normally have the same value for the \Attr{ClusterId}.
 If the \Opt{-dry-run} argument is specified, The value will be 1.
+
 \item[Cluster]
 Alternate name for the ClusterId submit variable.  Before HTCondor version 8.4 this was the only name.
 
 \item[ProcId]
 Set to the integer value that the \Attr{ProcId} attribute of the job ClassAd will have when the job is submitted.
 The value will start at 0 and increment by 1 for each job submitted.
+
 \item[Process]
 Alternate name for the ProcId submit variable.  Before HTCondor version 8.4 this was the only name.
 
@@ -270,6 +272,7 @@ Set to the index within the item list being processed by the various queue forea
 For submit files that don't make use of any queue foreach list, ItemIndex will always be 0
 For submit files that make use of a slice to select only some items in a foreach list, ItemIndex will only
 be set to selected values.
+
 \item[Row]
 Alternate name for ItemIndex.
 
@@ -279,8 +282,11 @@ value of the current item.
 \end{description}
 
 
-The automatic variables below are set before parsing the submit file, and will not vary during processing
-unless the submit file itself sets them.
+% Note:  I'm not sure bolding this is the best thing, but I wanted to
+% it stand out and not seem like part of Item...  (wenger 2016-07-29)
+\Bold{The automatic variables below are set before parsing the submit
+file, and will not vary during processing unless the submit file itself
+sets them.}
 
 \begin{description}
 \item[ARCH]
@@ -302,6 +308,11 @@ The value will be the same as the automatic configuration variable of the same n
 \item[OPSYSVER]
 Set to the version of the operating system on the machine running \Condor{submit}.
 The value will be the same as the automatic configuration variable of the same name.
+
+\item[SPOOL]
+Set to the full path of the HTCondor spool directory.
+The value will be the same as the automatic configuration variable of
+the same name.
 
 \item[IsLinux]
 Set to true if the operating system of the machine running \Condor{submit} is a Linux variant.
