@@ -245,6 +245,7 @@ operators, which are discussed in Section~\ref{ClassAd:evaluation-meta}.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{ClassAd!expression functions}
 \index{ClassAd functions}
+
 Any ClassAd expression may utilize predefined functions.
 Function names are case insensitive.
 Parameters to functions 
@@ -921,6 +922,43 @@ Inclusion of characters other than these as options are ignored.
     \Expr{list}.
     The return value is \Expr{ERROR}, if any of the arguments
     are not strings, or if \Expr{pattern} is not a valid regular expression.
+
+  \index{ClassAd functions!userHome()}
+  \item[\Code{String userHome(String userName \Lbr\ , String default \Rbr)}]
+    Returns the home directory of the given user as configured on the
+    current system (determined using the getpwdnam() call).  (Returns
+    \Expr{default} if the \Expr{default} argument is passed and the
+    home directory of the user is not defined.)
+
+  \index{ClassAd functions!userMap()}
+  \item[\Code{List userMap(String mapSetName, String userName)}]
+    Map an input string using the given mapping set.
+    Returns a list of groups to which the user belongs.
+
+  \index{ClassAd functions!userMap()}
+  \item[\Code{String userMap(String mapSetName, String userName,
+  String preferredGroup)}]
+    Map an input string using the given mapping set.
+    Returns a string, which is the preferred group if the user is in
+    that group; otherwise it is the first group to which the user
+    belongs, or undefined if the user belongs to no groups.
+
+  \index{ClassAd functions!userMap()}
+  \item[\Code{String userMap(String mapSetName, String userName,
+  String preferredGroup, String defaultGroup)}]
+    Map an input string using the given mapping set.
+    Returns a string, which is the preferred group if the user is
+    in that group; the first group to which the user belongs, if any;
+    and the default group if the user belongs to no groups.
+
+    The maps for the \Code{userMap()} function are defined by the
+    following configuration macros:
+    \MacroNI{<SUBSYS>\_CLASSAD\_USER\_MAP\_NAMES}
+    (see ~\ref{param:ClassAdUserMapNames}),
+    \MacroNI{CLASSAD\_USER\_MAPFILE\_<name>
+    (see ~\ref{param:ClassAdUserMapFile})}
+    and \MacroNI{CLASSAD\_USER\_MAPDATA\_<name>
+    (see ~\ref{param:ClassAdUserMapData})}.
 
 \end{description}
 
