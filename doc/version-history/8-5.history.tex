@@ -30,9 +30,9 @@ The details of each version are described below.
 \begin{itemize}
 
 \item The \Condor{negotiator} by default no longer cross advertises the
-user prio and resources in use from every slot in a machine ad to every
+user priority and resources in use from every slot in a machine ad to every
 other slot in that machine ad.  \Macro{NEGOTIATOR\_CROSS\_SLOT\_PRIOS} = true
-re-enables the old behaviour.  The accounting information for the current
+re-enables the old behavior.  The accounting information for the current
 user of the slot remains advertised.
 \Ticket{5785}
 
@@ -42,6 +42,11 @@ overall DAG priority.  (See section ~\ref{sec:DAG-SetNodePriority} for
 more details.)
 sec:DAG-SetNodePriority
 \Ticket{5749}
+
+\item Allow the second argument of the ClassAd ternary operator (expression ? value1 : value2)
+to be omitted.  This new syntax means: evaluate the expression, and if it evaluated to
+a defined value or error, return it.  If undefined, return value2.
+\Ticket{5782}
 
 \end{itemize}
 
@@ -70,11 +75,6 @@ sec:DAG-SetNodePriority
 \noindent New Features:
 
 \begin{itemize}
-
-\item Allow the second argument of the classad ternary operator (expr ? value1 : value2)
-to be ommitted.  This new syntax means:  evaluate the expr, and if it evaluated to
-a defined value or error, return it.  If undefined, return value2.
-\Ticket{5782}
 
 \item The default output of \Condor{q} is now the \Opt{-batch} output. To change
 the default back to its pre 8.5.6 value, set the new configuration variable
