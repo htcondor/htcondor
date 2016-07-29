@@ -108,6 +108,11 @@ daemon authenticating clients with Kerberos to handle more simultaneous
 incoming connections.
 \Ticket{5737}
 
+\item Password authentication is now non-blocking, allowing an HTCondor
+daemon authenticating clients with the PASSWORD method to handle more
+simultaneous incoming connections.
+\Ticket{5602}
+
 \item Simplified how job leases are handled for grid universe jobs.
 Now, all jobs going to the same remote resource share a single lease
 time.
