@@ -1729,6 +1729,43 @@ and not utilized by DaemonCore, yet are specified in a
 \Condor{dagman}-specific configuration file are ignored.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%TEMP -- is this the right place for this?
+\subsubsection{\label{sec:dagman_include_command}INCLUDE}
+\index{DAG input file!INCLUDE command}
+\index{DAGMan!DAG INCLUDE command}
+
+The \Arg{INCLUDE} command allows the contents of one DAG file to be
+parsed as if they were physically included in the referencing DAG
+file.  The syntax for \Arg{INCLUDE} is
+
+\Opt{INCLUDE} \Arg{FileName}
+
+For example, if we have two DAG files like this:
+\begin{verbatim}
+# File name: foo.dag
+#
+    JOB  A  A.sub
+    INCLUDE bar.dag
+
+# File name: bar.dag
+#
+    JOB  B  B.sub
+    JOB  C  C.sub
+\end{verbatim}
+
+this is equivalent to the single DAG file:
+\begin{verbatim}
+    JOB  A  A.sub
+    JOB  B  B.sub
+    JOB  C  C.sub
+\end{verbatim}
+
+Note that the included file must be in proper DAG syntax.  Also, there
+are many cases where a valid included DAG file will cause a parse error,
+such as the including and included files defining nodes with the same
+name.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:DAG-SetAttributes}Setting ClassAd attributes in the DAG file}
 \index{DAG input file!SET\_JOB\_ATTR command}
 \index{DAGMan!setting ClassAd attributes in a DAG}
@@ -2603,6 +2640,51 @@ and 10 for the \Expr{A+catX} category in splice.
 Note that non-global category names are
 prefixed with their splice name(s), so to refer to a non-global category 
 at a higher level, the splice name must be included.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:DAGSpliceConnections}DAG Splice Connections}
+\index{DAG input file!CONNECT command}
+\index{DAG input file!PIN\_IN command}
+\index{DAG input file!PIN\_OUT command}
+\index{DAGMan!connecting DAG splices}
+
+%TEMP -- add stuff here
+
+In the "default" usage of splices described above, when one splice is
+the parent of another splice, all "terminal" nodes of the parent splice
+are parents of all "initial" nodes of the child splice.  The CONNECT,
+PIN\_IN, and PIN\_OUT commands (added in version 8.5.7) allow more
+flexible dependencies between splices.
+
+The syntax for \Arg{CONNECT} is
+
+\Opt{CONNECT} \Arg{ParentSpliceName} \Arg{ChildSplice2Name}
+
+The syntax for \Arg{PIN\_IN} is
+
+\Opt{PIN\_IN} \Arg{NodeName} \Arg{PinNumber}
+
+The syntax for \Arg{PIN\_OUT} is
+
+\Opt{PIN\_OUT} \Arg{NodeName} \Arg{PinNumber}
+
+%TEMP -- need to add diagrams here
+
+%TEMP -- make a simple example
+
+Restrictions:
+%TEMP -- check these and make sure they are right
+\begin{itemize}
+\item Pin\_ins and pin\_outs must be numbered consecutively starting
+at 1.
+%TEMP -- should we call these parent and child splices???
+\item The pin\_outs of the parent splice in a connect command must
+match the pin\_ins of the child splice in the command.
+\item All "terminal" nodes (nodes with no children) of a parent
+splice must be connected to a pin\_out.
+\item All "initial" nodes (nodes with no parents) of a child splice
+must be connected to a pin\_in.
+\end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:DAGFinalNode}FINAL node}
