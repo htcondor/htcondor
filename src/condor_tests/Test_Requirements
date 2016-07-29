@@ -211,6 +211,13 @@ job_dagman_event_timestamp: personal
 job_dagman_batch_name: personal
 job_dagman_cmd_order: personal
 job_dagman_acct_grp: personal
+job_dagman_splice_connect-A: personal
+job_dagman_splice_connect-B: personal
+job_dagman_splice_connect-C: personal
+job_dagman_splice_connect-D: personal
+job_dagman_splice_connect-E: personal
+job_dagman_splice_connect-F: personal
+job_dagman_splice_connect-G: personal
 job_filexfer_base-input1_van: personal
 job_filexfer_base_van: personal
 job_filexfer_basic_van: personal

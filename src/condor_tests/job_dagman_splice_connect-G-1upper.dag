@@ -1,0 +1,5 @@
+# This is testing multiple independent DAGs with splice connections.
+
+splice Splice1A job_dagman_splice_connect-G-1lowerA.dag
+splice Splice1B job_dagman_splice_connect-G-1lowerB.dag
+connect Splice1A Splice1B

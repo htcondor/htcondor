@@ -1,0 +1,30 @@
+job Node0 job_dagman_splice_connect-C-node.sub
+job Node1 job_dagman_splice_connect-C-node.sub
+job Node2 job_dagman_splice_connect-C-node.sub
+job Node3 job_dagman_splice_connect-C-node.sub
+job Node4 job_dagman_splice_connect-C-node.sub
+job Node5 job_dagman_splice_connect-C-node.sub
+job Node6 job_dagman_splice_connect-C-node.sub
+
+vars Node0 name = "$(JOB)"
+vars Node1 name = "$(JOB)"
+vars Node2 name = "$(JOB)"
+vars Node3 name = "$(JOB)"
+vars Node4 name = "$(JOB)"
+vars Node5 name = "$(JOB)"
+vars Node6 name = "$(JOB)"
+
+parent Node0 child Node1
+parent Node0 child Node2
+parent Node0 child Node3
+parent Node0 child Node4
+parent Node0 child Node5
+parent Node0 child Node6
+
+pin_out Node1 1
+pin_out Node2 1
+pin_out Node3 1
+pin_out Node3 2
+pin_out Node4 2
+pin_out Node5 2
+pin_out Node6 2

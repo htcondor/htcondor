@@ -136,6 +136,7 @@ Dag::Dag( /* const */ StringList &dagFiles,
 	_dagPriority		  (0),
 	_metrics			  (NULL)
 {
+	debug_printf( DEBUG_DEBUG_1, "Dag(%s)::Dag()\n", _spliceScope.Value() );
 
 	// If this dag is a splice, then it may have been specified with a DIR
 	// directive. If so, then this records what it was so we can later
@@ -215,6 +216,8 @@ Dag::Dag( /* const */ StringList &dagFiles,
 //-------------------------------------------------------------------------
 Dag::~Dag()
 {
+	debug_printf( DEBUG_DEBUG_1, "Dag(%s)::~Dag()\n", _spliceScope.Value() );
+
 	if ( _condorLogRdr.activeLogFileCount() > 0 ) {
 		(void) UnmonitorLogFile();
 	}
@@ -225,7 +228,6 @@ Dag::~Dag()
     Job *job = NULL;
     _jobs.Rewind();
     while( (job = _jobs.Next()) ) {
-      ASSERT( job != NULL );
       delete job;
       _jobs.DeleteCurrent();
     }
@@ -241,6 +243,9 @@ Dag::~Dag()
 	delete[] _statusFileName;
 
 	delete _metrics;
+
+	DeletePinList( _pinIns );
+	DeletePinList( _pinOuts );
 
     return;
 }
@@ -3540,7 +3545,6 @@ Dag::RemoveNode( const char *name, MyString &whynot )
 	removed = false;
 	_jobs.Rewind();
 	while( _jobs.Next( candidate ) ) {
-		ASSERT( candidate );
         if( candidate == node ) {
 			_jobs.DeleteCurrent();
 			removed = true;
@@ -4110,7 +4114,7 @@ Dag::SetDirectory(char *dir)
 
 //---------------------------------------------------------------------------
 void
-Dag::PropogateDirectoryToAllNodes(void)
+Dag::PropagateDirectoryToAllNodes(void)
 {
 	Job *job = NULL;
 	MyString key;
@@ -4119,10 +4123,9 @@ Dag::PropogateDirectoryToAllNodes(void)
 		return;
 	}
 
-	// Propogate the directory setting to all nodes in the DAG.
+	// Propagate the directory setting to all nodes in the DAG.
 	_jobs.Rewind();
 	while( (job = _jobs.Next()) ) {
-		ASSERT( job != NULL );
 		job->PrefixDirectory(m_directory);
 	}
 
@@ -4131,6 +4134,213 @@ Dag::PropogateDirectoryToAllNodes(void)
 	// likely wrong.
 
 	m_directory = ".";
+}
+
+//-------------------------------------------------------------------------
+bool
+Dag::SetPinInOut( bool isPinIn, const char *nodeName, int pinNum )
+{
+	debug_printf( DEBUG_DEBUG_1, "Dag(%s)::SetPinInOut(%d, %s, %d)\n",
+				_spliceScope.Value(), isPinIn, nodeName, pinNum );
+
+	ASSERT( pinNum > 0 );
+
+	Job *node = FindNodeByName( nodeName );
+	if ( !node ) {
+		debug_printf( DEBUG_QUIET, "ERROR: node %s not found!\n", nodeName );
+		return false;
+	}
+
+	bool result = false;
+	if ( isPinIn ) {
+		result = SetPinInOut( _pinIns, node, pinNum );
+	} else {
+		result = SetPinInOut( _pinOuts, node, pinNum );
+	}
+
+	return result;
+}
+
+//---------------------------------------------------------------------------
+bool
+Dag::SetPinInOut( PinList &pinList, Job *node, int pinNum )
+{
+	--pinNum; // Pin numbers start with 1
+	if ( pinNum >= static_cast<int>( pinList.size() ) ) {
+		pinList.resize( pinNum+1, NULL );
+	}
+	PinNodes *pn = pinList[pinNum];
+	if ( !pn ) {
+		pinList[pinNum] = new PinNodes();
+		pn = pinList[pinNum];
+	}
+	pn->push_back( node );
+
+	return true;
+}
+
+//---------------------------------------------------------------------------
+const Dag::PinNodes *
+Dag::GetPinInOut( bool isPinIn, int pinNum ) const
+{
+	debug_printf( DEBUG_DEBUG_1, "Dag(%s)::GetPinInOut(%d, %d)\n",
+				_spliceScope.Value(), isPinIn, pinNum );
+
+	ASSERT( pinNum > 0 );
+
+	const PinNodes *pn;
+	if ( isPinIn ) {
+		pn = GetPinInOut( _pinIns, "in", pinNum );
+	} else {
+		pn = GetPinInOut( _pinOuts, "out", pinNum );
+	}
+
+	return pn;
+}
+
+//---------------------------------------------------------------------------
+const Dag::PinNodes *
+Dag::GetPinInOut( const PinList &pinList, const char *inOutStr,
+			int pinNum )
+{
+	--pinNum; // Pin numbers start with 1
+	if ( pinNum >= static_cast<int>( pinList.size() ) ) {
+		debug_printf( DEBUG_QUIET,
+					"ERROR: pin %s number %d specified; max is %d\n",
+					inOutStr, pinNum+1, static_cast<int>( pinList.size() ) );
+		return NULL;
+	} else {
+		return pinList[pinNum];
+	}
+}
+
+//---------------------------------------------------------------------------
+int
+Dag::GetPinCount( bool isPinIn )
+{
+	if ( isPinIn ) {
+		return _pinIns.size();
+	} else {
+		return _pinOuts.size();
+	}
+}
+
+//---------------------------------------------------------------------------
+bool
+Dag::ConnectSplices( Dag *parentSplice, Dag *childSplice )
+{
+	debug_printf( DEBUG_DEBUG_1, "Dag::ConnectSplices(%s, %s)\n",
+				parentSplice->_spliceScope.Value(),
+				childSplice->_spliceScope.Value() );
+
+	MyString parentName = parentSplice->_spliceScope;
+		// Trim trailing '+' from parentName.
+	int last = parentName.Length() - 1;
+	ASSERT( last >= 0 );
+	if ( parentName[last] == '+' ) {
+		parentName.setChar( last, '\0' );
+	}
+
+	MyString childName = childSplice->_spliceScope;
+		// Trim trailing '+' from childName.
+	last = childName.Length() - 1;
+	ASSERT( last >= 0 );
+	if ( childName[last] == '+' ) {
+		childName.setChar( last, '\0' );
+	}
+
+		// Make sure the parent and child splices have pin_ins/pin_outs
+		// as appropriate, and that the number of pin_ins and pin_outs
+		// matches.
+	int pinOutCount = parentSplice->GetPinCount( false );
+	if ( pinOutCount <= 0 ) {
+		debug_printf( DEBUG_QUIET,
+					"ERROR: parent splice %s has 0 pin_outs\n",
+					parentName.Value() );
+		return false;
+	}
+
+	int pinInCount = childSplice->GetPinCount( true );
+	if ( pinInCount <= 0 ) {
+		debug_printf( DEBUG_QUIET,
+					"ERROR: child splice %s has 0 pin_ins\n",
+					childName.Value() );
+		return false;
+	}
+
+	if ( pinOutCount != pinInCount ) {
+		debug_printf( DEBUG_QUIET,
+					"ERROR: pin_in/out mismatch:  parent splice %s has %d pin_outs; child splice %s has %d pin_ins\n",
+					parentName.Value(), pinOutCount,
+					childName.Value(), pinInCount );
+		return false;
+	}
+
+		// Go thru the pin_in/pin_out lists, and add parent/child
+		// dependencies between splices as appropriate.  (Note that
+		// we will catch any missing pin_in/pin_out numbers here.)
+	for (int pinNum = 1; pinNum <= pinOutCount; ++pinNum ) {
+		const PinNodes *parentPNs = parentSplice->GetPinInOut( false, pinNum );
+		if ( !parentPNs ) {
+			debug_printf( DEBUG_QUIET,
+						"ERROR: parent splice %s has no node for pin_out %d\n",
+						parentName.Value(), pinNum );
+			return false;
+		}
+
+		const PinNodes *childPNs = childSplice->GetPinInOut( true, pinNum );
+		if ( !childPNs ) {
+			debug_printf( DEBUG_QUIET,
+						"ERROR: child splice %s has no node for pin_in %d\n",
+						childName.Value(), pinNum );
+			return false;
+		}
+
+		for ( int parentNodeNum = 0;
+					parentNodeNum < static_cast<int>( parentPNs->size() );
+					++parentNodeNum ) {
+			Job *parentNode = parentPNs->at(parentNodeNum);
+			for ( int childNodeNum = 0;
+						childNodeNum < static_cast<int>( childPNs->size() );
+						++childNodeNum ) {
+				Job *childNode = childPNs->at(childNodeNum);
+
+				if ( !AddDependency( parentNode, childNode ) ) {
+					debug_printf( DEBUG_QUIET,
+								"ERROR: unable to add parent/child dependency for pin %d\n", pinNum );
+		
+					return false;
+				}
+			}
+		}
+	}
+
+		// Check for "orphan" nodes in the child splice -- nodes that
+		// don't have either a parent within the splice or a pin_in
+		// connection.
+	Job *childNode;
+	childSplice->_jobs.Rewind();
+	while( (childNode = childSplice->_jobs.Next()) ) {
+		if ( childNode->NumParents() < 1 ) {
+			debug_printf( DEBUG_QUIET,
+						"ERROR: child splice node %s has no parents after making pin connections; add pin_in or parent\n",
+						childNode->GetJobName() );
+			return false;
+		}
+	}
+
+	return true;
+}
+
+//---------------------------------------------------------------------------
+void
+Dag::DeletePinList( PinList &pinList )
+{
+	for ( int pinNum = 0; pinNum < static_cast<int>( pinList.size() );
+				++pinNum ) {
+		PinNodes *pn = pinList[pinNum];
+		delete pn;
+	}
 }
 
 //---------------------------------------------------------------------------
@@ -4145,7 +4355,6 @@ Dag::PrefixAllNodeNames(const MyString &prefix)
 
 	_jobs.Rewind();
 	while( (job = _jobs.Next()) ) {
-		ASSERT( job != NULL );
 		job->PrefixName(prefix);
 	}
 
@@ -4161,7 +4370,6 @@ Dag::PrefixAllNodeNames(const MyString &prefix)
 	// Then, reindex all the jobs keyed by their new name
 	_jobs.Rewind();
 	while( (job = _jobs.Next()) ) {
-		ASSERT( job != NULL );
 		key = job->GetJobName();
 		if (_nodeNameHash.insert(key, job) != 0) {
 			// I'm reinserting everything newly, so this should never happen
@@ -4290,7 +4498,7 @@ Dag::LiftSplices(SpliceLayer layer)
 	}
 
 	// and prefix them if there was a DIR for the dag.
-	PropogateDirectoryToAllNodes();
+	PropagateDirectoryToAllNodes();
 
 	// base case is above.
 	return NULL;

@@ -1,0 +1,15 @@
+job Node1 job_dagman_splice_connect-C-node.sub
+job Node2 job_dagman_splice_connect-C-node.sub
+job Node3 job_dagman_splice_connect-C-node.sub
+job Node4 job_dagman_splice_connect-C-node.sub
+
+vars Node1 name = "$(JOB)"
+vars Node2 name = "$(JOB)"
+vars Node3 name = "$(JOB)"
+vars Node4 name = "$(JOB)"
+
+pin_in Node1 1
+pin_in Node2 1
+pin_in Node2 2
+pin_in Node3 2
+pin_in Node4 2
