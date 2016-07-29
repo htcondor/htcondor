@@ -39,6 +39,7 @@ const int CAUTH_KERBEROS                = 64;
 const int CAUTH_ANONYMOUS               = 128;
 const int CAUTH_SSL                     = 256;
 const int CAUTH_PASSWORD                = 512;
+const int CAUTH_MUNGE                   = 1024;
 
 const char STR_DEFAULT_CONDOR_USER[]    = "condor";    // Default condor user
 const char STR_DEFAULT_CONDOR_SPOOL[]   = "SPOOL";

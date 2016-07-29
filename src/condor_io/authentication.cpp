@@ -25,6 +25,7 @@
 #include "condor_auth_claim.h"
 #include "condor_auth_anonymous.h"
 #include "condor_auth_fs.h"
+#include "condor_auth_munge.h"
 #include "condor_auth_sspi.h"
 #include "condor_auth_x509.h"
 #include "condor_auth_ssl.h"
@@ -262,6 +263,12 @@ int Authentication::authenticate_continue( CondorError* errstack, bool non_block
 				m_auth = new Condor_Auth_FS(mySock, 1);
 				m_method_name = "FS_REMOTE";
 				break;
+
+			case CAUTH_MUNGE:
+				m_auth = new Condor_Auth_MUNGE(mySock);
+				m_method_name = "MUNGE";
+				break;
+ 
 #endif /* !defined(WIN32) */
 			case CAUTH_CLAIMTOBE:
 				m_auth = new Condor_Auth_Claim(mySock);

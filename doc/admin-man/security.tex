@@ -791,6 +791,7 @@ the following list of defined values:
     FS        (not available on Windows platforms)
     FS_REMOTE (not available on Windows platforms)
     NTSSPI
+    MUNGE
     CLAIMTOBE
     ANONYMOUS
 \end{verbatim}
@@ -1445,6 +1446,12 @@ Unix, and probably should not be used for authentication between two
 computers. 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:MUNGE-Authentication}Ask MUNGE for Authentication}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+Ask the MUNGE service to validate both sides of the authentication.
+See: https://dun.github.io/munge/ for instructions on installing.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:CLAIM-Authentication}Claim To Be Authentication}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 Claim To Be authentication accepts any identity claimed by the client.
@@ -1496,6 +1503,7 @@ as repeated here:
     FS
     FS_REMOTE
     NTSSPI
+    MUNGE
     CLAIMTOBE
     ANONYMOUS
 \end{verbatim}
@@ -1522,6 +1530,7 @@ GSI (.*) GSS_ASSIST_GRIDMAP
 SSL (.*) ssl@unmapped
 KERBEROS ([^/]*)/?[^@]*@(.*) \1@\2
 NTSSPI (.*) \1
+MUNGE (.*) \1
 CLAIMTOBE (.*) \1
 PASSWORD (.*) \1
 \end{verbatim}
