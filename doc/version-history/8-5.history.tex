@@ -312,6 +312,11 @@ specify a default program to exec as root upon \Condor{master} exit.
 See Section~\ref{param:DefaultMasterShutdownScript} for details.
 \Ticket{5590}
 
+\item The python bindings now support a per-thread security context,
+allowing the modification of various parameters such as the pool password
+and the X509UserProxy location.
+\Ticket{5632}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
