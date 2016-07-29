@@ -43,7 +43,6 @@ using std::vector;
 using std::pair;
 using std::string;
 
-#define NULLSTRING "NULL"
 #define GAHP_PREFIX "GAHP:"
 #define GAHP_PREFIX_LEN 5
 
@@ -111,7 +110,7 @@ bool GahpOverloadError( const Gahp_Args &return_line )
 	return false;
 }
 
-void GahpClient::setErrorString( const std::string & newErrorString ) {
+void GenericGahpClient::setErrorString( const std::string & newErrorString ) {
     error_string = newErrorString;
 }
 
@@ -165,7 +164,7 @@ GahpServer::GahpServer(const char *id, const char *path, const ArgList *args)
 	next_reqid = 1;
 	rotated_reqids = false;
 
-	requestTable = new HashTable<int,GahpClient*>( 300, &hashFuncInt );
+	requestTable = new HashTable<int,GenericGahpClient*>( 300, &hashFuncInt );
 	ASSERT(requestTable);
 
 	globus_gass_server_url = NULL;
@@ -407,8 +406,10 @@ GahpServer::Reaper(Service *,int pid,int status)
 	}
 }
 
+GahpClient::GahpClient( const char * id, const char * path, const ArgList * args )
+	: GenericGahpClient( id, path, args ) { }
 
-GahpClient::GahpClient(const char *id, const char *path, const ArgList *args)
+GenericGahpClient::GenericGahpClient(const char *id, const char *path, const ArgList *args)
 {
 	server = GahpServer::FindOrCreateGahpServer(id,path,args);
 	m_timeout = 0;
@@ -430,7 +431,7 @@ GahpClient::GahpClient(const char *id, const char *path, const ArgList *args)
 	server->AddGahpClient();
 }
 
-GahpClient::~GahpClient()
+GenericGahpClient::~GenericGahpClient()
 {
 		// call clear_pending to remove this object from hash table,
 		// and deallocate any memory associated w/ a pending command.
@@ -446,6 +447,7 @@ GahpClient::~GahpClient()
 		// Don't refer to it below here!
 }
 
+GahpClient::~GahpClient() { }
 
 // This function has the same arguments as daemonCore->Read_Pipe() (which
 // it's meant to wrap), but the fd and count arguments are fixed. It's
@@ -678,7 +680,7 @@ int
 GahpServer::new_reqid()
 {
 	int starting_reqid;
-	GahpClient* unused;
+	GenericGahpClient* unused;
 
 	starting_reqid  = next_reqid;
 	
@@ -729,7 +731,7 @@ GahpServer::RemoveGahpClient()
 }
 
 bool
-GahpClient::Startup()
+GenericGahpClient::Startup()
 {
 	return server->Startup();
 }
@@ -1012,7 +1014,7 @@ GahpServer::Startup()
 }
 
 bool
-GahpClient::Initialize(Proxy *proxy)
+GenericGahpClient::Initialize(Proxy *proxy)
 {
 	return server->Initialize(proxy);
 }
@@ -1071,7 +1073,7 @@ GahpServer::Initialize( Proxy *proxy )
 }
 
 bool
-GahpClient::CreateSecuritySession()
+GenericGahpClient::CreateSecuritySession()
 {
 	return server->CreateSecuritySession();
 }
@@ -1568,7 +1570,7 @@ escapeGahpString(const char * input)
 }
 
 const char *
-GahpClient::getErrorString()
+GenericGahpClient::getErrorString()
 {
 	static std::string output;
 
@@ -1602,7 +1604,7 @@ GahpClient::getErrorString()
 }
 
 const char *
-GahpClient::getGahpStderr()
+GenericGahpClient::getGahpStderr()
 {
 	static std::string output;
 
@@ -1617,7 +1619,7 @@ GahpClient::getGahpStderr()
 	return output.c_str();
 }
 
-void GahpClient::PublishStats( ClassAd *ad )
+void GenericGahpClient::PublishStats( ClassAd *ad )
 {
 	ad->Assign( ATTR_GAHP_PID, server->m_gahp_pid );
 	server->m_stats.Publish( *ad );
@@ -1625,19 +1627,19 @@ void GahpClient::PublishStats( ClassAd *ad )
 
 
 const char *
-GahpClient::getVersion()
+GenericGahpClient::getVersion()
 {
 	return server->m_gahp_version;
 }
 
 const char *
-GahpClient::getCondorVersion()
+GenericGahpClient::getCondorVersion()
 {
 	return server->m_gahp_condor_version.c_str();
 }
 
 void
-GahpClient::setNormalProxy( Proxy *proxy )
+GenericGahpClient::setNormalProxy( Proxy *proxy )
 {
 	if ( !server->can_cache_proxies ) {
 		return;
@@ -1654,7 +1656,7 @@ GahpClient::setNormalProxy( Proxy *proxy )
 }
 
 void
-GahpClient::setDelegProxy( Proxy *proxy )
+GenericGahpClient::setDelegProxy( Proxy *proxy )
 {
 	if ( !server->can_cache_proxies ) {
 		return;
@@ -1679,7 +1681,7 @@ void GahpClient::setBoincResource( BoincResource *server )
 }
 
 Proxy *
-GahpClient::getMasterProxy()
+GenericGahpClient::getMasterProxy()
 {
 	return server->master_proxy->proxy;
 }
@@ -2515,7 +2517,7 @@ GahpClient::globus_gram_client_get_jobmanager_version(const char * resource_cont
 
 
 bool
-GahpClient::is_pending(const char *command, const char * /* buf */) 
+GenericGahpClient::is_pending(const char *command, const char * /* buf */) 
 {
 		// note: do _NOT_ check pending reqid here.
 // Some callers don't exactly recreate all the arguments when checking
@@ -2533,7 +2535,7 @@ GahpClient::is_pending(const char *command, const char * /* buf */)
 }
 
 void
-GahpClient::clear_pending()
+GenericGahpClient::clear_pending()
 {
 	if ( pending_reqid ) {
 			// remove from hashtable
@@ -2567,13 +2569,13 @@ GahpClient::clear_pending()
 }
 
 void
-GahpClient::reset_user_timer_alarm()
+GenericGahpClient::reset_user_timer_alarm()
 {
 	reset_user_timer(pending_timeout_tid);
 }
 
 int
-GahpClient::reset_user_timer(int tid)
+GenericGahpClient::reset_user_timer(int tid)
 {
 	int retval = TRUE;
 
@@ -2597,7 +2599,7 @@ GahpClient::reset_user_timer(int tid)
 }
 
 void
-GahpClient::now_pending(const char *command,const char *buf,
+GenericGahpClient::now_pending(const char *command,const char *buf,
 						GahpProxyInfo *cmd_proxy, PrioLevel prio_level )
 {
 
@@ -2684,14 +2686,14 @@ GahpClient::now_pending(const char *command,const char *buf,
 
 	if (pending_timeout) {
 		pending_timeout_tid = daemonCore->Register_Timer(pending_timeout + 1,
-			(TimerHandlercpp)&GahpClient::reset_user_timer_alarm,
+			(TimerHandlercpp)&GenericGahpClient::reset_user_timer_alarm,
 			"GahpClient::reset_user_timer_alarm",this);
 		pending_timeout += time(NULL);
 	}
 }
 
 Gahp_Args*
-GahpClient::get_pending_result(const char *,const char *)
+GenericGahpClient::get_pending_result(const char *,const char *)
 {
 	Gahp_Args* r = NULL;
 
@@ -2729,7 +2731,7 @@ GahpServer::poll()
 	Gahp_Args* result = NULL;
 	int num_results = 0;
 	int i, result_reqid;
-	GahpClient* entry;
+	GenericGahpClient* entry;
 	ExtArray<Gahp_Args*> result_lines;
 
 	m_in_results = true;
@@ -2893,7 +2895,7 @@ GahpServer::poll()
 }
 
 bool
-GahpClient::check_pending_timeout(const char *,const char *)
+GenericGahpClient::check_pending_timeout(const char *,const char *)
 {
 
 		// if no command is pending, there is no timeout
@@ -6355,16 +6357,11 @@ int GahpClient::ec2_vm_stop( std::string service_url,
 							 std::string privatekeyfile,
 							 std::string instance_id,
 							 std::string & error_code )
-{	
+{
 	// command line looks like:
 	// EC2_COMMAND_VM_STOP <req_id> <publickeyfile> <privatekeyfile> <instance-id>
 	static const char* command = "EC2_VM_STOP";
-	
-	// check if this command is supported
-	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
-		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
-	}
-	
+
 	// check input arguments
 	if ( service_url.empty() ||
 		 publickeyfile.empty() ||
@@ -6372,46 +6369,18 @@ int GahpClient::ec2_vm_stop( std::string service_url,
 		 instance_id.empty() ) {
 		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
 	}
-	
-	// Generate request line
-	std::string reqline;
-	
-	char* esc1 = strdup( escapeGahpString(service_url) );
-	char* esc2 = strdup( escapeGahpString(publickeyfile) );
-	char* esc3 = strdup( escapeGahpString(privatekeyfile) );
-	char* esc4 = strdup( escapeGahpString(instance_id) );
-	
-	int x = formatstr(reqline, "%s %s %s %s", esc1, esc2, esc3, esc4 );
-	
-	free( esc1 );
-	free( esc2 );
-	free( esc3 );
-	free( esc4 );
-	ASSERT( x > 0 );
-	
-	const char *buf = reqline.c_str();
-		
-	// Check if this request is currently pending. If not, make it the pending request.
-	if ( !is_pending(command,buf) ) {
-		// Command is not pending, so go ahead and submit a new one if our command mode permits.
-		if ( m_mode == results_only ) {
-			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
-		}
-		now_pending(command, buf, deleg_proxy, medium_prio);
-	}
-	
-	// If we made it here, command is pending.
 
-	// Check first if command completed.
-	Gahp_Args* result = get_pending_result(command, buf);
-	
-	// we expect the following return:
-	//		seq_id 0
-	//		seq_id 1 error_code error_string
-	//		seq_id 1 
-	
+	Gahp_Args * result = NULL;
+	std::vector< YourString > arguments;
+	arguments.push_back( service_url );
+	arguments.push_back( publickeyfile );
+	arguments.push_back( privatekeyfile );
+	arguments.push_back( instance_id );
+	int cgf = callGahpFunction( command, arguments, result, medium_prio );
+	if( cgf != 0 ) { return cgf; }
+
 	if ( result ) {
-		// command completed. 
+		// command completed.
 		int rc = 0;
 		if (result->argc == 2) {
 			rc = atoi(result->argv[1]);
@@ -6420,25 +6389,16 @@ int GahpClient::ec2_vm_stop( std::string service_url,
 			// get the error code
 			rc = atoi( result->argv[1] );
 			error_code = result->argv[2];
-			error_string = result->argv[3];			
+			error_string = result->argv[3];
 		} else {
 			EXCEPT( "Bad %s result", command );
 		}
 
 		delete result;
 		return rc;
+	} else {
+		EXCEPT( "callGahpFunction() succeeded but result was NULL." );
 	}
-
-	// Now check if pending command timed out.
-	if ( check_pending_timeout(command, buf) ) 
-	{
-		// pending command timed out.
-		formatstr( error_string, "%s timed out", command );
-		return GAHPCLIENT_COMMAND_TIMED_OUT;
-	}
-
-	// If we made it here, command is still pending...
-	return GAHPCLIENT_COMMAND_PENDING;
 }
 
 int GahpClient::ec2_gahp_statistics( StringList & returnStatistics ) {

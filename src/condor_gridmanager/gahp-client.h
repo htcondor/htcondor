@@ -36,6 +36,7 @@
 #include <string>
 #include <utility>
 
+#define NULLSTRING "NULL"
 
 struct GahpProxyInfo
 {
@@ -64,7 +65,7 @@ static const int GAHPCLIENT_COMMAND_TIMED_OUT = -103;
 
 void GahpReconfig();
 
-class GahpClient;
+class GenericGahpClient;
 
 class GahpServer : public Service {
  public:
@@ -192,7 +193,7 @@ class GahpServer : public Service {
 	bool rotated_reqids;
 
 	unsigned int m_reference_count;
-	HashTable<int,GahpClient*> *requestTable;
+	HashTable<int,GenericGahpClient*> *requestTable;
 	std::deque<int> waitingHighPrio;
 	std::deque<int> waitingMediumPrio;
 	std::deque<int> waitingLowPrio;
@@ -242,11 +243,104 @@ class GahpServer : public Service {
 	bool can_cache_proxies;
 	HashTable<HashKey,GahpProxyInfo*> *ProxiesByFilename;
 }; // end of class GahpServer
-	
-///
-class GahpClient : public Service {
-	
+
+class GenericGahpClient : public Service {
 	friend class GahpServer;
+
+	public:
+		GenericGahpClient(	const char * id = GAHPCLIENT_DEFAULT_SERVER_ID,
+							const char * path = GAHPCLIENT_DEFAULT_SERVER_PATH,
+							const ArgList * args = NULL );
+		virtual ~GenericGahpClient();
+
+		bool Startup();
+		bool Initialize( Proxy * proxy );
+		bool CreateSecuritySession();
+
+		void purgePendingRequests() { clear_pending(); }
+		bool pendingRequestIssued() { return pending_submitted_to_gahp || pending_result; }
+
+		enum mode {
+				/** */ normal,
+				/** */ results_only,
+				/** */ blocking
+		};
+
+		void setMode( mode m ) { m_mode = m; }
+		mode getMode() { return m_mode; }
+
+		void setTimeout( int t ) { m_timeout = t; }
+		unsigned int getTimeout() { return m_timeout; }
+
+		void setNotificationTimerId( int tid ) { user_timerid = tid; }
+		int getNotificationTimerId() { return user_timerid; }
+
+		void PublishStats( ClassAd * ad );
+
+		void setNormalProxy( Proxy * proxy );
+		void setDelegProxy( Proxy * proxy );
+		Proxy * getMasterProxy();
+
+		bool isStarted() { return server->m_gahp_pid != -1 && !server->m_gahp_startup_failed; }
+		bool isInitialized() { return server->is_initialized; }
+
+	    void setErrorString( const std::string & newErrorString );
+		const char * getErrorString();
+
+		const char * getGahpStderr();
+		const char * getVersion();
+		const char * getCondorVersion();
+
+		enum PrioLevel {
+			low_prio,
+			medium_prio,
+			high_prio
+		};
+
+		// The caller must delete 'result' if it isn't NULL.
+		int callGahpFunction(
+			const char * command,
+			const std::vector< YourString > & arguments,
+			Gahp_Args * & result,
+			PrioLevel priority = medium_prio );
+
+	protected:
+		void clear_pending();
+		bool is_pending( const char *command, const char *buf );
+		void now_pending (const char *command,const char *buf,
+						 GahpProxyInfo *proxy = NULL,
+						 PrioLevel prio_level = medium_prio );
+		Gahp_Args * get_pending_result( const char *, const char * );
+		bool check_pending_timeout( const char *, const char * );
+		int reset_user_timer( int tid );
+		void reset_user_timer_alarm();
+
+		unsigned int m_timeout;
+		mode m_mode;
+		char * pending_command;
+		char * pending_args;
+		int pending_reqid;
+		Gahp_Args * pending_result;
+		time_t pending_timeout;
+		int pending_timeout_tid;
+		time_t pending_submitted_to_gahp;
+		int user_timerid;
+		GahpProxyInfo * normal_proxy;
+		GahpProxyInfo * deleg_proxy;
+		GahpProxyInfo * pending_proxy;
+		std::string error_string;
+
+		// Used in now_pending(), not worth rewriting to get rid of for now.
+		BoincResource *m_boincResource;
+
+		GahpServer * server;
+};
+
+
+class GahpClient : public GenericGahpClient {
+	// Hopefully not necessary.
+	// friend class GahpServer;
+
 	public:
 		
 		/** @name Instantiation. 
@@ -262,108 +356,7 @@ class GahpClient : public Service {
 		
 		//@}
 
-		///
-		bool Startup();
-
-		///
-		bool Initialize(Proxy *proxy);
-
-		bool CreateSecuritySession();
-
-		///
-		void purgePendingRequests() { clear_pending(); }
-
-		// Return true if this GahpClient has a pending request that has
-		// been issued to the GAHP server (and possibly a result returned
-		// waiting to be collected).
-		bool pendingRequestIssued() { return pending_submitted_to_gahp || pending_result; }
-
-		/** @name Mode methods.
-		 * Methods to set/get the mode.
-		 */
-		//@{
-	
-		/// Enum used by setMode() method
-		enum mode {
-				/** */ normal,
-				/** */ results_only,
-				/** */ blocking
-		};
-
-		/**
-		*/
-		void setMode( mode m ) { m_mode = m; }
-
-		/**
-		*/
-		mode getMode() { return m_mode; }
-	
-		//@}
-
-		/** @name Timeout methods.
-		 * Methods to set/get the timeout on pending async commands.
-		 */
-		//@{
-	
-		/** Set the timeout.
-			@param t timeout in seconds, or zero to disable timeouts.
-			@see getTimeout
-		*/
-		void setTimeout(int t) { m_timeout = t; }
-
-		/** Get the currently timeout value.
-			@return timeout in seconds, or zero if no timeout set.
-			@see setTimeout
-		*/
-		unsigned int getTimeout() { return m_timeout; }
-	
-		//@}
-
-		/** @name Async results methods.
-		   Methods to control how to fetch and/or be notified about
-		   pending asynchronous results.
-		 */
-		//@{
-		
-		/** Reset the specified timer to go off immediately when a
-			pending command has completed.
-			@param tid The timer id to reset via DaemonCore's Reset_Timer 
-			method, or a -1 to disable.
-			@see Reset_Timer
-			@see getNotificationTimerId
-		*/
-		void setNotificationTimerId(int tid) { user_timerid = tid; }
-
-		/** Return the timer id previously set with method 
-			setNotificationTimerId.
-			@param tid The timer id which will be reset via DaemonCore's 
-			Reset_Timer method, or a -1 if deactivated.
-			@see setNotificationTimerId
-			@see Reset_Timer
-		*/
-		int getNotificationTimerId() { return user_timerid; }
-
-		//@}
-
-		void PublishStats( ClassAd *ad );
-
-		void setNormalProxy( Proxy *proxy );
-
-		void setDelegProxy( Proxy *proxy );
-
 		void setBoincResource( BoincResource *server );
-
-		Proxy *getMasterProxy();
-
-		bool isStarted() { return server->m_gahp_pid != -1 && !server->m_gahp_startup_failed; }
-		bool isInitialized() { return server->is_initialized; }
-
-		const char *getErrorString();
-		const char *getGahpStderr();
-
-		const char *getVersion();
-
-		const char *getCondorVersion();
 
 		int getSshForwardPort() { return server->m_ssh_forward_port; }
 
@@ -833,49 +826,7 @@ class GahpClient : public Service {
 
 		//@}
 
-    void setErrorString( const std::string & newErrorString );
-
 	private:
-
-	/// Enum used by now_pending for the waiting queues
-	enum PrioLevel {
-		/** */ low_prio,
-		/** */ medium_prio,
-		/** */ high_prio
-	};
-
-			// Various Private Methods
-		void clear_pending();
-		bool is_pending(const char *command, const char *buf);
-		void now_pending(const char *command,const char *buf,
-						 GahpProxyInfo *proxy = NULL,
-						 PrioLevel prio_level = medium_prio);
-		Gahp_Args* get_pending_result(const char *,const char *);
-		bool check_pending_timeout(const char *,const char *);
-		int reset_user_timer(int tid);
-		void reset_user_timer_alarm();
-
-			// Private Data Members
-		unsigned int m_timeout;
-		mode m_mode;
-		char *pending_command;
-		char *pending_args;
-		int pending_reqid;
-		Gahp_Args* pending_result;
-		time_t pending_timeout;
-		int pending_timeout_tid;
-		time_t pending_submitted_to_gahp;
-		int user_timerid;
-		GahpProxyInfo *normal_proxy;
-		GahpProxyInfo *deleg_proxy;
-		GahpProxyInfo *pending_proxy;
-		BoincResource *m_boincResource;
-		std::string error_string;
-
-			// These data members all deal with the GAHP
-			// server.  Since there is only one instance of the GAHP
-			// server, all the below data members are static.
-		GahpServer *server;
 
 };	// end of class GahpClient
 
