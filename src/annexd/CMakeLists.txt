@@ -1,10 +1,23 @@
-if( LIBUUID_FOUND AND HAVE_UUID_H )
+if( LINUX )
 
-	file( GLOB annexdSources *.cpp )
-	condor_daemon( annexd
-		"${annexdSources}"
-		"${CONDOR_LIBS}"
+	# This depedency is assumed via the dependency on the gahp client.
+	if( NOT LIBUUID_FOUND )
+		message( FATAL_ERROR "annexd requires uuid library" )
+	endif( NOT LIBUUID_FOUND )
+
+	# This depedency is assumed via the dependency on the gahp client.
+	if( NOT HAVE_UUID_UUID_H )
+		message( FATAL_ERROR "annexd required uuid header" )
+	endif( NOT HAVE_UUID_UUID_H )
+
+	SET( annexdSources "annexd.cpp" )
+	SET( gahpClientPrefix "${CMAKE_CURRENT_SOURCE_DIR}/../condor_gridmanager" )
+	SET( gahpClientSources "${gahpClientPrefix}/generic-gahp-client.cpp;${gahpClientPrefix}/gahp-client.cpp;${gahpClientPrefix}/proxymanager.cpp" )
+	include_directories( ${gahpClientPrefix} )
+	condor_exe( annexd
+		"${annexdSources};${gahpClientSources}"
 		"${C_SBIN}"
-		OFF )
+		"${CONDOR_LIBS}"
+		ON )
 
-endif( LIBUUID_FOUND AND HAVE_UUID_H )
+endif( LINUX )

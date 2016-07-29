@@ -4,12 +4,18 @@
 #include "condor_daemon_core.h"
 #include "subsystem_info.h"
 
+#include "gahp-client.h"
+
+// Required by GahpServer::Startup().
+char * GridmanagerScratchDir = NULL;
+
 void
 doPolling() {
 	dprintf( D_ALWAYS, "doPolling()\n" );
-	time_t pollingBegan = time( NULL );
 
 	/* TODO */
+	ArgList args;
+	GahpClient * gahp = new GahpClient( "x", "y", & args );
 }
 
 void

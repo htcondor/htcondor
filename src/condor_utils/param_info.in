@@ -5855,6 +5855,20 @@ friendly_name=Add Windows Firewall Exception
 review=?
 tags=master,master
 
+[ANNEXD]
+default=$(SBIN)/condor_annexd
+type=path
+reconfig=true
+customization=seldom
+tags=master,master
+
+[ANNEXD_LOG]
+default=$(LOG)/AnnexdLog
+type=path
+reconfig=true
+customization=seldom
+tags=annex,log
+
 [SCHEDD]
 default=$(SBIN)/condor_schedd
 win32_default=$(SBIN)\condor_schedd.exe
