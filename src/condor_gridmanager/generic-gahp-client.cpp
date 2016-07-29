@@ -5,10 +5,6 @@
 
 #include "gahp-client.h"
 
-// Presently defined in gahp-client.cpp.
-const char * escapeGahpString( const char * input );
-const char * escapeGahpString( const std::string & input );
-
 int
 GenericGahpClient::callGahpFunction(
 	const char * command,

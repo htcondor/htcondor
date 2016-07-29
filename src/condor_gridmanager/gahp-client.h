@@ -830,5 +830,8 @@ class GahpClient : public GenericGahpClient {
 
 };	// end of class GahpClient
 
+// Utility functions used all over the GAHP client code.
+const char * escapeGahpString( const char * input );
+const char * escapeGahpString( const std::string & input );
 
 #endif /* ifndef CONDOR_GAHP_CLIENT_H */
