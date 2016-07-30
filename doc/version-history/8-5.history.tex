@@ -217,6 +217,11 @@ job's X.509 proxy file when writing information to the
 should have if the configuration included a map file, which is common for GSI authentication.
 \Ticket{5530}
 
+\item Lengthen the watchdog timeout in the systemd service file to 1 minute.
+The previous value of 5 seconds has taken down HTCondor for a single slow DNS
+query.
+\Ticket{5819}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
