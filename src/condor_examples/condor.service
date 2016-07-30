@@ -12,7 +12,7 @@ ExecStart=/usr/sbin/condor_master -f
 ExecStop=/usr/sbin/condor_off -master
 ExecReload=/bin/kill -HUP $MAINPID
 Restart=always
-RestartSec=5
+RestartSec=10seconds
 WatchdogSec=5
 TimeoutStopSec=5
 StandardOutput=syslog
@@ -20,6 +20,8 @@ NotifyAccess=main
 KillSignal=SIGKILL
 LimitNOFILE=16384
 ControlGroup=/condor
+Wants=ypbind.service
+After=ypbind.service
 
 [Install]
 WantedBy=multi-user.target
