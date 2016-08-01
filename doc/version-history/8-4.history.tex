@@ -68,6 +68,12 @@ is set to True.
 started.
 \Ticket{5814}
 
+\item Fixed monitoring of memory and CPU usage of running jobs on Mac OS X.
+This monitoring didn't work for a personal installation of HTCondor.
+With Mac OS X 10.11 and above, this monitoring resulted in a flood of
+errors messages to the system logs for a root-based installation.
+\Ticket{5777}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
