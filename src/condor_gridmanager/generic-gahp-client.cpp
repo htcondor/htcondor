@@ -34,9 +34,7 @@ GenericGahpClient::callGahpFunction(
 		}
 		reqline += " ";
 	}
-dprintf( D_FULLDEBUG, "reqline = %s\n", reqline.c_str() );
 	reqline.erase( reqline.size() - 1 );
-dprintf( D_FULLDEBUG, "reqline = %s\n", reqline.c_str() );
 
 	// If the command is not currently pending, make it the pending request.
 	const char * buf = reqline.c_str();
