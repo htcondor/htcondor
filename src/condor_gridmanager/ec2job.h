@@ -105,7 +105,7 @@ public:
 	std::string remoteJobState;
 
 	EC2Resource *myResource;
-	GahpClient *gahp;
+	EC2GahpClient *gahp;
 
     void StatusUpdate( const char * instanceID,
                        const char * status,

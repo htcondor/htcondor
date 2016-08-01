@@ -53,7 +53,7 @@ doPolling() {
 		EXCEPT( "ANNEX_GAHP must be defined." );
 	}
 
-	GahpClient * gahp = new GahpClient( gahpName.c_str(), gahp_path, & args );
+	EC2GahpClient * gahp = new EC2GahpClient( gahpName.c_str(), gahp_path, & args );
 	free( gahp_path );
 
 	// gahp->setNotificationTimerId( );

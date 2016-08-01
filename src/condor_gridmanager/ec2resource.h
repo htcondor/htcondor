@@ -46,8 +46,8 @@ public:
 											  const char * public_key_file,
 											  const char * private_key_file );
 
-	GahpClient *gahp;
-	GahpClient *status_gahp;
+	EC2GahpClient *gahp;
+	EC2GahpClient *status_gahp;
 
 	EC2Resource(const char * resource_name,
 				const char * public_key_file,
@@ -75,7 +75,7 @@ public:
 
     BatchStatusResult StartBatchStatus();
     BatchStatusResult FinishBatchStatus();
-    GahpClient * BatchGahp() { return status_gahp; }
+    EC2GahpClient * BatchGahp() { return status_gahp; }
 
     HashTable< HashKey, EC2Job * > jobsByInstanceID;
     HashTable< HashKey, EC2Job * > spotJobsByRequestID;

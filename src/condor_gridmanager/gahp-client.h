@@ -603,155 +603,6 @@ class GahpClient : public GenericGahpClient {
 		
 		int cream_set_lease(const char *service, const char *lease_id, time_t &lease_expiry);
 
-		int ec2_vm_start( std::string service_url,
-						  std::string publickeyfile,
-						  std::string privatekeyfile,
-						  std::string ami_id,
-						  std::string keypair,
-						  std::string user_data,
-						  std::string user_data_file,
-						  std::string instance_type,
-						  std::string availability_zone,
-						  std::string vpc_subnet,
-						  std::string vpc_ip,
-						  std::string client_token,
-						  std::string block_device_mapping,
-						  std::string iam_profile_arn,
-						  std::string iam_profile_name,
-						  StringList & groupnames,
-						  StringList & groupids,
-						  StringList & parametersAndValues,
-						  std::string & instance_id,
-						  std::string & error_code );
-
-		int ec2_vm_stop( std::string service_url,
-						 std::string publickeyfile,
-						 std::string privatekeyfile,
-						 std::string instance_id,
-						 std::string & error_code );
-
-		int ec2_vm_status( std::string service_url,
-							  std::string publickeyfile,
-							  std::string privatekeyfile,
-							  std::string instance_id,
-							  StringList & returnStatus,
-							  std::string & error_code );
-
-		int ec2_vm_status_all( std::string service_url,
-							   std::string publickeyfile,
-							   std::string privatekeyfile,
-							   StringList & returnStatus,
-							   std::string & error_code );
-
-		int ec2_gahp_statistics( StringList & returnStatistics );
-
-		int ec2_ping( std::string service_url,
-					  std::string publickeyfile,
-					  std::string privatekeyfile,
-					  std::string & error_code );
-
-		int ec2_vm_server_type( std::string service_url,
-								std::string publickeyfile,
-								std::string privatekeyfile,
-								std::string & server_type,
-								std::string & error_code );
-
-		int ec2_vm_create_keypair( std::string service_url,
-								   std::string publickeyfile,
-								   std::string privatekeyfile,
-								   std::string keyname,
-								   std::string outputfile,
-								   std::string & error_code );
-
-		int ec2_vm_destroy_keypair( std::string service_url,
-									std::string publickeyfile,
-									std::string privatekeyfile,
-									std::string keyname,
-									std::string & error_code );
-
-        /**
-         * Used to associate an elastic ip with a running instance
-         */
-        int ec2_associate_address(std::string service_url,
-                                  std::string publickeyfile,
-                                  std::string privatekeyfile,
-                                  std::string instance_id, 
-                                  std::string elastic_ip,
-                                  StringList & returnStatus,
-                                  std::string & error_code );
-
-		// Used to associate a tag with an resource, like a running instance
-        int ec2_create_tags(std::string service_url,
-							std::string publickeyfile,
-							std::string privatekeyfile,
-							std::string instance_id, 
-							StringList & tags,
-							StringList & returnStatus,
-							std::string & error_code );
-		
-        /**
-         * Used to release an elastic ip from an instance
-         * leaving around in case we ever need this. 
-         * shutdown causes automatic disassociation
-        int ec2_disassociate_address( const char * service_url,
-                                      const char * publickeyfile,
-                                      const char * privatekeyfile,
-                                      const char * elastic_ip,
-                                      StringList & returnStatus,
-                                      std::string & error_code ); */
-
-		/**
-		 * Used to attach to an ecs volume(s).
-		 */
-		int ec2_attach_volume(std::string service_url,
-                              std::string publickeyfile,
-                              std::string privatekeyfile,
-                              std::string volume_id,
-							  std::string instance_id, 
-                              std::string device_id,
-                              StringList & returnStatus,
-                              std::string & error_code );
-
-        // Is there a particular reason these aren't const references?
-        int ec2_spot_start( std::string service_url,
-                            std::string publickeyfile,
-                            std::string privatekeyfile,
-                            std::string ami_id,
-                            std::string spot_price,
-                            std::string keypair,
-                            std::string user_data,
-                            std::string user_data_file,
-                            std::string instance_type,
-                            std::string availability_zone,
-                            std::string vpc_subnet,
-                            std::string vpc_ip,
-                            std::string client_token,
-                            std::string iam_profile_arn,
-                            std::string iam_profile_name,
-                            StringList & groupnames,
-                            std::string & request_id,
-                            std::string & error_code
-                          );
-        int ec2_spot_stop(  std::string service_url,
-                            std::string publickeyfile,
-                            std::string privatekeyfile,
-                            std::string request_id,
-                            std::string & error_code
-                         );
-        int ec2_spot_status(    std::string service_url,
-                                std::string publickeyfile,
-                                std::string privatekeyfile,
-                                std::string request_id,
-                                StringList & returnStatus,
-                                std::string & error_code
-                           );
-        int ec2_spot_status_all(    std::string service_url,
-                                    std::string publickeyfile,
-                                    std::string privatekeyfile,
-                                    StringList & returnStatus,
-                                    std::string & error_code
-                               );
-
 		int gce_ping( const std::string &service_url,
 					  const std::string &auth_file,
 					  const std::string &project,
@@ -829,6 +680,150 @@ class GahpClient : public GenericGahpClient {
 	private:
 
 };	// end of class GahpClient
+
+class EC2GahpClient : public GahpClient {
+	public:
+
+		EC2GahpClient(	const char * id, const char * path, const ArgList * args );
+		~EC2GahpClient();
+
+		int ec2_vm_start( std::string service_url,
+						  std::string publickeyfile,
+						  std::string privatekeyfile,
+						  std::string ami_id,
+						  std::string keypair,
+						  std::string user_data,
+						  std::string user_data_file,
+						  std::string instance_type,
+						  std::string availability_zone,
+						  std::string vpc_subnet,
+						  std::string vpc_ip,
+						  std::string client_token,
+						  std::string block_device_mapping,
+						  std::string iam_profile_arn,
+						  std::string iam_profile_name,
+						  StringList & groupnames,
+						  StringList & groupids,
+						  StringList & parametersAndValues,
+						  std::string & instance_id,
+						  std::string & error_code );
+
+		int ec2_vm_stop( std::string service_url,
+						 std::string publickeyfile,
+						 std::string privatekeyfile,
+						 std::string instance_id,
+						 std::string & error_code );
+
+		int ec2_vm_status( std::string service_url,
+							  std::string publickeyfile,
+							  std::string privatekeyfile,
+							  std::string instance_id,
+							  StringList & returnStatus,
+							  std::string & error_code );
+
+		int ec2_vm_status_all( std::string service_url,
+							   std::string publickeyfile,
+							   std::string privatekeyfile,
+							   StringList & returnStatus,
+							   std::string & error_code );
+
+		int ec2_gahp_statistics( StringList & returnStatistics );
+
+		int ec2_ping( std::string service_url,
+					  std::string publickeyfile,
+					  std::string privatekeyfile,
+					  std::string & error_code );
+
+		int ec2_vm_server_type( std::string service_url,
+								std::string publickeyfile,
+								std::string privatekeyfile,
+								std::string & server_type,
+								std::string & error_code );
+
+		int ec2_vm_create_keypair( std::string service_url,
+								   std::string publickeyfile,
+								   std::string privatekeyfile,
+								   std::string keyname,
+								   std::string outputfile,
+								   std::string & error_code );
+
+		int ec2_vm_destroy_keypair( std::string service_url,
+									std::string publickeyfile,
+									std::string privatekeyfile,
+									std::string keyname,
+									std::string & error_code );
+
+        /**
+         * Used to associate an elastic ip with a running instance
+         */
+        int ec2_associate_address( std::string service_url,
+                                   std::string publickeyfile,
+                                   std::string privatekeyfile,
+                                   std::string instance_id,
+                                   std::string elastic_ip,
+                                   StringList & returnStatus,
+                                   std::string & error_code );
+
+		// Used to associate a tag with an resource, like a running instance
+        int ec2_create_tags( std::string service_url,
+							 std::string publickeyfile,
+							 std::string privatekeyfile,
+							 std::string instance_id,
+							 StringList & tags,
+							 StringList & returnStatus,
+							 std::string & error_code );
+
+		/**
+		 * Used to attach to an EBS volume(s).
+		 */
+		int ec2_attach_volume( std::string service_url,
+                               std::string publickeyfile,
+                               std::string privatekeyfile,
+                               std::string volume_id,
+							   std::string instance_id,
+                               std::string device_id,
+                               StringList & returnStatus,
+                               std::string & error_code );
+
+        // Is there a particular reason these aren't const references?
+        int ec2_spot_start( std::string service_url,
+                            std::string publickeyfile,
+                            std::string privatekeyfile,
+                            std::string ami_id,
+                            std::string spot_price,
+                            std::string keypair,
+                            std::string user_data,
+                            std::string user_data_file,
+                            std::string instance_type,
+                            std::string availability_zone,
+                            std::string vpc_subnet,
+                            std::string vpc_ip,
+                            std::string client_token,
+                            std::string iam_profile_arn,
+                            std::string iam_profile_name,
+                            StringList & groupnames,
+                            std::string & request_id,
+                            std::string & error_code );
+
+        int ec2_spot_stop( std::string service_url,
+                           std::string publickeyfile,
+                           std::string privatekeyfile,
+                           std::string request_id,
+                           std::string & error_code );
+
+        int ec2_spot_status( std::string service_url,
+                             std::string publickeyfile,
+                             std::string privatekeyfile,
+                             std::string request_id,
+                             StringList & returnStatus,
+                             std::string & error_code );
+
+        int ec2_spot_status_all( std::string service_url,
+                                 std::string publickeyfile,
+                                 std::string privatekeyfile,
+                                 StringList & returnStatus,
+                                 std::string & error_code );
+};
 
 // Utility functions used all over the GAHP client code.
 const char * escapeGahpString( const char * input );

@@ -383,7 +383,7 @@ EC2Job::EC2Job( ClassAd *classad ) :
 	// here is the same as the gahp_name there.
 	formatstr( gahpName, "EC2-%s@%s", m_public_key_file.c_str(), m_serviceUrl.c_str() );
 	// dprintf( D_ALWAYS, "Using %s for GAHP name.\n", gahpName.c_str() );
-	gahp = new GahpClient( gahpName.c_str(), gahp_path, &args );
+	gahp = new EC2GahpClient( gahpName.c_str(), gahp_path, &args );
 	free(gahp_path);
 	gahp->setNotificationTimerId( evaluateStateTid );
 	gahp->setMode( GahpClient::normal );
