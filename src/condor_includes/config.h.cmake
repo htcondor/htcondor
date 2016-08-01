@@ -648,6 +648,9 @@
 /* Define to 1 if the X screen saver extension header file is available */
 #cmakedefine HAVE_XSS
 
+/* Define to 1 if proc_pid_rusage() exists (Darwin function) */
+#cmakedefine HAVE_PROC_PID_RUSAGE
+
 /* SO-versioned names for libraries that we may need to dlopen() */
 #cmakedefine LIBCOM_ERR_SO "${LIBCOM_ERR_SO}"
 #cmakedefine LIBKRB5SUPPORT_SO "${LIBKRB5SUPPORT_SO}"
