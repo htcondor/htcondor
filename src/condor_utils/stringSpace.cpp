@@ -23,15 +23,15 @@
 #include "stringSpace.h"
 #include "condor_debug.h"
 
-template class HashTable<YourSensitiveString,int>;
+template class HashTable<YourString,int>;
 
 StringSpace::
 StringSpace (int initial_size)
 {
 	SSStringEnt filler;
-	stringSpace = new HashTable<YourSensitiveString,int>(
+	stringSpace = new HashTable<YourString,int>(
 		(int) (1.25 * initial_size),
-		&YourSensitiveString::hashFunction );
+		&YourString::hashFunction );
 
 	// initiliaze the string table
 	filler.inUse     = false;
@@ -88,7 +88,7 @@ getCanonical (const char* &str)
 	// sanity check
 	if (!str) return -1;
 
-	YourSensitiveString yourStr(str);
+	YourString yourStr(str);
 	int index;
 
 	// case 1:  already exists in space
@@ -253,7 +253,7 @@ SSString::dispose ()
     // if it is a valid reference, decrement refcount and check it is zero
     if (context && (--context->strTable[index].refCount) == 0)
     {
-		YourSensitiveString str( context->strTable[index].string );
+		YourString str( context->strTable[index].string );
 		context->stringSpace->remove( str );
 
 		free (context->strTable[index].string);
@@ -317,7 +317,7 @@ int
 StringSpace::checkFor (char *str)		// check if string is in the space
 {
 	int canonical_index;
-	YourSensitiveString yourStr(str);
+	YourString yourStr(str);
 	if (stringSpace->lookup (yourStr, canonical_index) != 0) {
 		canonical_index = -1;
 	}

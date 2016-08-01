@@ -420,21 +420,18 @@ private:
 
 unsigned int MyStringHash( const MyString &str );
 
-
-// YourSensitiveString is a case-sensitive string class that holds a
-// string pointer (no copying or freeing) for use in a HashTable.
-
-class YourSensitiveString {
+class YourString {
 public:
-	YourSensitiveString() : m_str(0) {}
-	YourSensitiveString(const char *str) : m_str(str) {}
-	YourSensitiveString(const YourSensitiveString &rhs) : m_str(rhs.m_str) {}
+	YourString() : m_str(0) {}
+	YourString(const char *str) : m_str(str) {}
+	YourString(const std::string & s) : m_str(s.c_str()) {}
+	YourString(const YourString &rhs) : m_str(rhs.m_str) {}
 
 	void operator =(const char *str) { m_str = str; }
 	const char * Value() const { return m_str ? m_str : ""; }
 	const char * ptr() const { return m_str; }
 
-	bool operator ==(const YourSensitiveString &rhs) const {
+	bool operator ==(const YourString &rhs) const {
 		if (m_str == rhs.m_str) return true;
 		if ((!m_str) || (!rhs.m_str)) return false;
 		return strcmp(m_str,rhs.m_str) == 0;
@@ -452,7 +449,7 @@ public:
 		}
 		return strcmp(m_str, str);
 	}
-	bool operator<(const YourSensitiveString &rhs) const {
+	bool operator<(const YourString &rhs) const {
 		if ( ! m_str) {
 			 return rhs.m_str ? -1 : 0;
 		} else if ( ! rhs.m_str) {
@@ -460,7 +457,7 @@ public:
 		}
 		return strcmp(m_str, rhs.m_str);
 	}
-	static unsigned int hashFunction(const YourSensitiveString &s) {
+	static unsigned int hashFunction(const YourString &s) {
 		// hash function for strings
 		// Chris Torek's world famous hashing function
 		unsigned int hash = 0;
@@ -479,9 +476,9 @@ protected:
 	const char *m_str;
 };
 
-// this lets a make a case-insensitive std::map of YourSensitiveStrings
-struct CaseIgnLTYourSensitiveString {
-	inline bool operator( )( const YourSensitiveString &s1, const YourSensitiveString &s2 ) const {
+// this lets a make a case-insensitive std::map of YourStrings
+struct CaseIgnLTYourString {
+	inline bool operator( )( const YourString &s1, const YourString &s2 ) const {
 		const char * p1 = s1.ptr();
 		const char * p2 = s2.ptr();
 		if (p1 == p2) return 0; // p1 or p2 might be null

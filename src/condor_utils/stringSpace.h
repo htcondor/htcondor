@@ -25,7 +25,7 @@
 #include "extArray.h"
 
 template <class Key, class Value> class HashTable;
-class YourSensitiveString;
+class YourString;
 
 // forward decl
 class SSString;
@@ -153,7 +153,7 @@ class StringSpace
 		char  *string; 
 	};
 
-	class HashTable<YourSensitiveString,int>  *stringSpace;
+	class HashTable<YourString,int>  *stringSpace;
 	ExtArray<SSStringEnt>    strTable;
 	// The next couple of variables help us keep
 	// track of where we can put things into the strTable.

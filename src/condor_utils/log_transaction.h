@@ -54,7 +54,7 @@ public:
 	bool EmptyTransaction() { return m_EmptyTransaction; }
 	void InTransactionListKeysWithOpType( int op_type, std::list<std::string> &new_keys );
 private:
-	HashTable<YourSensitiveString,LogRecordList *> op_log;
+	HashTable<YourString,LogRecordList *> op_log;
 	LogRecordList ordered_op_log;
 	LogRecordList *op_log_iterating;
 	bool m_EmptyTransaction;
