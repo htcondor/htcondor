@@ -13,9 +13,67 @@ void
 doPolling() {
 	dprintf( D_ALWAYS, "doPolling()\n" );
 
-	/* TODO */
+	// Create an EC2 GAHP. [FIXME: in some other function, since we only need 1 for now)
+	std::string gahpName;
+	formatstr( gahpName, "annex-%s@%s", "publicKeyFile.c_str()", "m_serviceURL.c_str()" );
+
 	ArgList args;
-	GahpClient * gahp = new GahpClient( "x", "y", & args );
+
+	// FIXME: I think the EC2 GAHP ignores the -f flag, and it certainly
+	// won't otherwise grab the rigth set of parameters.  Maybe call it
+	// with the -localname flag for now?
+	char * gahp_log = param( "ANNEX_GAHP_LOG" );
+	if( gahp_log == NULL ) {
+		dprintf( D_ALWAYS, "Warning: ANNEX_GAHP_LOG not defined.\n" );
+	} else {
+		args.AppendArg( "-f" );
+		args.AppendArg( gahp_log );
+		free( gahp_log );
+	}
+
+	args.AppendArg( "-w" );
+	int minWorkerCount = param_integer( "ANNEX_GAHP_WORKER_MIN_NUM", 1 );
+	args.AppendArg( minWorkerCount );
+
+	args.AppendArg( "-m" );
+	int maxWorkerCount = param_integer( "ANNEX_GAHP_WORKER_MAX_NUM", 1 );
+	args.AppendArg( maxWorkerCount );
+
+	args.AppendArg( "-d" );
+	char * gahp_debug = param( "ANNEX_GAHP_DEBUG" );
+	if( gahp_debug == NULL ) {
+		args.AppendArg( "D_ALWAYS" );
+	} else {
+		args.AppendArg( gahp_debug );
+		free( gahp_debug );
+	}
+
+	char * gahp_path = param( "ANNEX_GAHP" );
+	if( gahp_path == NULL ) {
+		EXCEPT( "ANNEX_GAHP must be defined." );
+	}
+
+	GahpClient * gahp = new GahpClient( gahpName.c_str(), gahp_path, & args );
+	free( gahp_path );
+
+	// gahp->setNotificationTimerId( );
+	gahp->setMode( GahpClient::normal );
+
+	int gct = param_integer( "ANNEX_GAHP_CALL_TIMEOUT", 10 * 60 );
+	gahp->setTimeout( gct );
+
+	if( gahp->Startup() == false ) {
+		EXCEPT( "Failed to start GAHP." );
+	}
+
+	// HAX!
+	std::string m_serviceURL( "http://ec2.amazonaws.com" );
+	std::string m_public_key_file( "/home/tlmiller/condor/test/ec2/accessKeyFile" );
+	std::string m_private_key_file( "/home/tlmiller/condor/test/ec2/secretKeyFile" );
+	std::string m_remoteJobID( "i-12345678" );
+	std::string gahpErrorCode;
+	gahp->ec2_vm_stop(	m_serviceURL, m_public_key_file, m_private_key_file,
+						m_remoteJobID, gahpErrorCode );
 }
 
 void

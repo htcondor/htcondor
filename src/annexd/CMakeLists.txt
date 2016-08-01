@@ -14,7 +14,7 @@ if( LINUX )
 	SET( gahpClientPrefix "${CMAKE_CURRENT_SOURCE_DIR}/../condor_gridmanager" )
 	SET( gahpClientSources "${gahpClientPrefix}/generic-gahp-client.cpp;${gahpClientPrefix}/gahp-client.cpp;${gahpClientPrefix}/proxymanager.cpp" )
 	include_directories( ${gahpClientPrefix} )
-	condor_exe( annexd
+	condor_exe( condor_annexd
 		"${annexdSources};${gahpClientSources}"
 		"${C_SBIN}"
 		"${CONDOR_LIBS}"
