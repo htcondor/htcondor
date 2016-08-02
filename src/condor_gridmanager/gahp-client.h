@@ -687,6 +687,13 @@ class EC2GahpClient : public GahpClient {
 		EC2GahpClient(	const char * id, const char * path, const ArgList * args );
 		~EC2GahpClient();
 
+		int spot_fleet(	const std::string & service_url,
+						const std::string & publickeyfile,
+						const std::string & privatekeyfile,
+						/* ... */
+						std::string & spotFleetID,
+						std::string & error_code );
+
 		int ec2_vm_start( std::string service_url,
 						  std::string publickeyfile,
 						  std::string privatekeyfile,
@@ -713,13 +720,6 @@ class EC2GahpClient : public GahpClient {
 						 std::string privatekeyfile,
 						 std::string instance_id,
 						 std::string & error_code );
-
-		int ec2_vm_status( std::string service_url,
-							  std::string publickeyfile,
-							  std::string privatekeyfile,
-							  std::string instance_id,
-							  StringList & returnStatus,
-							  std::string & error_code );
 
 		int ec2_vm_status_all( std::string service_url,
 							   std::string publickeyfile,
@@ -802,6 +802,7 @@ class EC2GahpClient : public GahpClient {
                             std::string iam_profile_arn,
                             std::string iam_profile_name,
                             StringList & groupnames,
+                            StringList & groupids,
                             std::string & request_id,
                             std::string & error_code );
 
@@ -810,13 +811,6 @@ class EC2GahpClient : public GahpClient {
                            std::string privatekeyfile,
                            std::string request_id,
                            std::string & error_code );
-
-        int ec2_spot_status( std::string service_url,
-                             std::string publickeyfile,
-                             std::string privatekeyfile,
-                             std::string request_id,
-                             StringList & returnStatus,
-                             std::string & error_code );
 
         int ec2_spot_status_all( std::string service_url,
                                  std::string publickeyfile,

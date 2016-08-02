@@ -1401,10 +1401,22 @@ bool AmazonVMStartSpot::workerFunction( char ** argv, int argc, std::string & re
         vmSpotRequest.query_parameters[ "LaunchSpecification.IamInstanceProfile.Name" ] = argv[16];
     }
 
-    for( int i = 17; i < argc; ++i ) {
+	int i = 17;
+	int sgNum = 1;
+    for( ; i < argc; ++i ) {
+    	if( strcasecmp( argv[ i ], NULLSTRING ) == 0 ) { break; }
         std::ostringstream groupName;
-        groupName << "LaunchSpecification.SecurityGroup." << (i - 14 + 1);
+        groupName << "LaunchSpecification.SecurityGroup." << sgNum++;
         vmSpotRequest.query_parameters[ groupName.str() ] = argv[ i ];
+    }
+
+	++i;
+	int sgidNum = 1;
+    for( ; i < argc; ++i ) {
+    	if( strcasecmp( argv[ i ], NULLSTRING ) == 0 ) { break; }
+        std::ostringstream groupID;
+        groupID << "LaunchSpecification.SecurityGroupId." << sgidNum++;
+        vmSpotRequest.query_parameters[ groupID.str() ] = argv[ i ];
     }
 
     // Handle user data.
@@ -2394,19 +2406,17 @@ bool AmazonAssociateAddress::workerFunction(char **argv, int argc, std::string &
 AmazonCreateTags::~AmazonCreateTags() { }
 
 // Expecting:
-//   EC2_VM_CREATE_TAGS <req_id> <serviceurl> <accesskeyfile> <secretkeyfile> <instance-id> <tag name>=<tag value> ...
-// Expecting:EC2_VM_START <req_id> <serviceurl> <accesskeyfile> <secretkeyfile> <ami-id> <keypair> <userdata> <userdatafile> <instancetype> <availability_zone> <vpc_subnet> <vpc_ip> <groupname> <groupname> ..
-// <groupname> are optional ones.
-// we support multiple groupnames
+//   EC2_VM_CREATE_TAGS <req_id> <serviceurl> <accesskeyfile> <secretkeyfile> <instance-id> <tag name>=<tag value>* NULLSTRING
 bool AmazonCreateTags::ioCheck(char **argv, int argc)
 {
-    return verify_min_number_args(argc, 7) &&
+    return verify_min_number_args(argc, 8) &&
         verify_request_id(argv[1]) &&
         verify_string_name(argv[2]) &&
         verify_string_name(argv[3]) &&
         verify_string_name(argv[4]) &&
         verify_string_name(argv[5]) &&
-        verify_string_name(argv[6]);
+        verify_string_name(argv[6]) &&
+        verify_string_name(argv[7]);
 }
 
 // Expecting:
@@ -2443,7 +2453,7 @@ AmazonCreateTags::workerFunction(char **argv,
     asRequest.query_parameters["ResourceId.0"] = argv[5];
 
     std::string tag;
-    for (int i = 6; i < argc; i++) {
+    for (int i = 6; i < argc - 1; i++) {
         std::stringstream ss;
         ss << "Tag." << (i - 6);
         tag = argv[i];

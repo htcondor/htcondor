@@ -65,10 +65,11 @@ bool AmazonVMStart::ioCheck(char **argv, int argc)
 // <serviceurl> <accesskeyfile> <secretkeyfile>
 // <ami-id> <spot-price> <keypair> <userdata> <userdatafile>
 //          <instancetype> <availability_zone> <vpc_subnet> <vpc_ip>
-//          <client-token> <iam-profile-arn> <iam-profile-name> <groupname>*
+//          <client-token> <iam-profile-arn> <iam-profile-name>
+//			<groupname>* <NULLSTRING> <groupid>* <NULLSTRING>
 bool AmazonVMStartSpot::ioCheck(char **argv, int argc)
 {
-	return verify_min_number_args(argc, 17) &&
+	return verify_min_number_args(argc, 19) &&
 		verify_request_id(argv[1]) &&
 		verify_string_name(argv[2]) &&
 		verify_string_name(argv[3]) &&
@@ -77,14 +78,16 @@ bool AmazonVMStartSpot::ioCheck(char **argv, int argc)
 		verify_string_name(argv[6]) &&
 		verify_string_name(argv[7]) &&
 		verify_string_name(argv[8]) &&
-		verify_string_name(argv[9]) && 
+		verify_string_name(argv[9]) &&
 		verify_string_name(argv[10]) &&
 		verify_string_name(argv[11]) &&
 		verify_string_name(argv[12]) &&
 		verify_string_name(argv[13]) &&
 		verify_string_name(argv[14]) &&
 		verify_string_name(argv[15]) &&
-		verify_string_name(argv[16]);
+		verify_string_name(argv[16]) &&
+		verify_string_name(argv[17]) &&
+		verify_string_name(argv[18]);
 }
 
 // Expecting:EC2_VM_STOP <req_id> <serviceurl> <accesskeyfile> <secretkeyfile> <instance-id>

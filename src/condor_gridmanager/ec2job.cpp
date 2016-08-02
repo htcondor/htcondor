@@ -1546,6 +1546,7 @@ void EC2Job::doEvaluateState()
 											m_iam_profile_arn,
 											m_iam_profile_name,
 											* m_group_names,
+											* m_group_ids,
 											spot_request_id,
 											gahp_error_code );
 
