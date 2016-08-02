@@ -42,5 +42,9 @@
 
 #endif /* ! HPUX && Darwin && CONDOR_FREEBSD */
 
+#if defined(DARWIN)
+# include <libproc.h>
+#endif
+
 #endif /* ifndef WIN32 */
 #endif // PROCAPI_INTERNAL_H
