@@ -77,6 +77,19 @@ int sPrintAd( MyString &output, const classad::ClassAd &ad, bool exclude_private
 	*/
 int sPrintAd( std::string &output, const classad::ClassAd &ad, bool exclude_private = false, StringList *attr_white_list = NULL );
 
+	/** Get a sorted list of attributes that are in the given ad, and also match the given whitelist (if any)
+		@param attrs the set of attrs to insert into. This is set is NOT cleared first.
+		@return TRUE
+	*/
+int sGetAdAttrs( classad::References &attrs, const classad::ClassAd &ad, bool exclude_private = false, StringList *attr_white_list = NULL, bool ignore_parent = false );
+
+	/** Format the given attributes from the ClassAd as an old ClassAd into the given string
+		@param output The std::string to write into
+		@return TRUE
+	*/
+int sPrintAdAttrs( std::string &output, const classad::ClassAd &ad, const classad::References & attrs );
+int sPrintAdAttrs( MyString &output, const classad::ClassAd &ad, const classad::References & attrs );
+
 class ClassAd : public classad::ClassAd
 {
  public:

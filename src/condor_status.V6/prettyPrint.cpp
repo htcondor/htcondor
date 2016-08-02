@@ -60,11 +60,13 @@ static int prettyprint_ixCol_Machine = -1; // set by ppAdjustProjection, used by
 void printQuillNormal 	(ClassAd *);
 #endif /* HAVE_EXT_POSTGRESQL */
 
+const int cchReserveForPrintingAds = 16384;
+
 void printCOD    		(ClassAd *);
-void printVerbose   	(ClassAd *);
-void printXML       	(ClassAd *);
-void printJSON       	(ClassAd *, bool first_ad);
-void printNewClassad	(ClassAd *, bool first_ad);
+void printVerbose   	(ClassAd &, classad::References * attrs=NULL);
+void printXML       	(ClassAd &, classad::References * attrs=NULL);
+void printJSON       	(ClassAd &, bool first_ad, classad::References * attrs=NULL);
+void printNewClassad	(ClassAd &, bool first_ad, classad::References * attrs=NULL);
 void printCustom    	(ClassAd *);
 
 static bool renderActivityTime(long long & atime, AttrList* , Formatter &);
@@ -420,27 +422,37 @@ ppOption prettyPrintHeadings (bool any_ads)
 	return pps;
 }
 
-void prettyPrintAd(ppOption pps, ClassAd *ad, int output_index)
+void prettyPrintAd(ppOption pps, ClassAd *ad, int output_index, bool fHashOrder)
 {
+	if ( ! ad) return;
+
 	if (!wantOnlyTotals) {
+		classad::References attrs;
+		classad::References *proj = NULL;
+		if ( ! fHashOrder && PP_IS_LONGish(pps)) {
+			sGetAdAttrs(attrs, *ad);
+			proj = &attrs;
+		}
+
 		switch (pps) {
 		case PP_LONG:
-			printVerbose(ad);
+			printVerbose(*ad, proj);
 			break;
+		case PP_XML:
+			printXML (*ad, proj);
+			break;
+		case PP_JSON:
+			printJSON (*ad, output_index == 0, proj);
+			break;
+		case PP_NEWCLASSAD:
+			printNewClassad (*ad, output_index == 0, proj);
+			break;
+
 		case PP_STARTD_COD:
 			printCOD (ad);
 			break;
 		case PP_CUSTOM:
 			printCustom (ad);
-			break;
-		case PP_XML:
-			printXML (ad);
-			break;
-		case PP_JSON:
-			printJSON (ad, output_index == 0);
-			break;
-		case PP_NEWCLASSAD:
-			printNewClassad (ad, output_index == 0);
 			break;
 	#ifdef HAVE_EXT_POSTGRESQL
 		case PP_QUILL_NORMAL:
@@ -1087,64 +1099,88 @@ void ppSetAnyNormalCols (int /*width*/)
 
 
 void
-printVerbose (ClassAd *ad)
+printVerbose (ClassAd &ad, classad::References * attrs)
 {
-	fPrintAd (stdout, *ad);
-	fputc ('\n', stdout);	
+	MyString output;
+	output.reserve(cchReserveForPrintingAds);
+	if (attrs) {
+		sPrintAdAttrs(output, ad, *attrs);
+	} else {
+		sPrintAd(output, ad);
+	}
+
+	output += "\n";
+	fputs(output.c_str(), stdout);
 }
 
 void
-printXML (ClassAd *ad)
+printXML (ClassAd &ad, classad::References * attrs)
 {
 	classad::ClassAdXMLUnParser  unparser;
-	std::string            xml;
+	std::string output;
+	output.reserve(cchReserveForPrintingAds);
 
 	unparser.SetCompactSpacing(false);
-	if ( NULL != ad ) {
-		unparser.Unparse(xml, ad);
+	if (attrs) {
+		PRAGMA_REMIND("fix to call call Unparse with projection when it exists")
+		//unparser.Unparse(output, &ad, attrs);
+		unparser.Unparse(output, &ad);
+	} else {
+		unparser.Unparse(output, &ad);
 	}
 
-	printf("%s\n", xml.c_str());
+	output += "\n";
+	fputs(output.c_str(), stdout);
 	return;
 }
 
 void
-printJSON (ClassAd *ad, bool first_ad)
+printJSON (ClassAd &ad, bool first_ad, classad::References * attrs)
 {
 	classad::ClassAdJsonUnParser  unparser;
-	std::string            json;
+	std::string output;
+	output.reserve(cchReserveForPrintingAds);
 
-	if ( NULL != ad ) {
-		if ( first_ad ) {
-			json += "[\n";
-		} else {
-			json += ",\n";
-		}
-		unparser.Unparse( json, ad );
-		json += "\n";
+	if ( first_ad ) {
+		output += "[\n";
+	} else {
+		output += ",\n";
+	}
+	if (attrs) {
+		PRAGMA_REMIND("fix to call call Unparse with projection when it exists")
+		//unparser.Unparse(output, &ad, attrs);
+		unparser.Unparse(output, &ad);
+	} else {
+		unparser.Unparse(output, &ad);
 	}
 
-	fputs(json.c_str(), stdout);
+	output += "\n";
+	fputs(output.c_str(), stdout);
 	return;
 }
 
 void
-printNewClassad (ClassAd *ad, bool first_ad)
+printNewClassad (ClassAd &ad, bool first_ad, classad::References * attrs)
 {
 	classad::ClassAdUnParser  unparser;
-	std::string            lines;
+	std::string output;
+	output.reserve(cchReserveForPrintingAds);
 
-	if ( NULL != ad ) {
-		if ( first_ad ) {
-			lines += "{\n";
-		} else {
-			lines += ",\n";
-		}
-		unparser.Unparse( lines, ad );
-		lines += "\n";
+	if ( first_ad ) {
+		output += "{\n";
+	} else {
+		output += ",\n";
+	}
+	if (attrs) {
+		PRAGMA_REMIND("fix to call call Unparse with projection when it exists")
+		//unparser.Unparse(output, &ad, attrs);
+		unparser.Unparse(output, &ad);
+	} else {
+		unparser.Unparse(output, &ad);
 	}
 
-	fputs(lines.c_str(), stdout);
+	output += "\n";
+	fputs(output.c_str(), stdout);
 	return;
 }
 

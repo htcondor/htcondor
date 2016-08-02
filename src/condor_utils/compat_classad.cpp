@@ -2378,6 +2378,97 @@ sPrintAd( std::string &output, const classad::ClassAd &ad, bool exclude_private,
 	return rc;
 }
 
+/** Get a sorted list of attributes that are in the given ad, and also match the given whitelist (if any)
+	and privacy criteria.
+	@param attrs the set of attrs to insert into. This is set is NOT cleared first.
+	@return TRUE
+*/
+int
+sGetAdAttrs( classad::References &attrs, const classad::ClassAd &ad, bool exclude_private, StringList *attr_white_list, bool ignore_parent )
+{
+	classad::ClassAd::const_iterator itr;
+
+	for ( itr = ad.begin(); itr != ad.end(); itr++ ) {
+		if ( attr_white_list && !attr_white_list->contains_anycase(itr->first.c_str()) ) {
+			continue; // not in white-list
+		}
+		if ( !exclude_private ||
+			 !ClassAdAttributeIsPrivate( itr->first.c_str() ) ) {
+			attrs.insert(itr->first);
+		}
+	}
+
+	const classad::ClassAd *parent = ad.GetChainedParentAd();
+	if ( parent && ! ignore_parent) {
+		for ( itr = parent->begin(); itr != parent->end(); itr++ ) {
+			if ( attrs.find(itr->first) != attrs.end() ) {
+				continue; // we already inserted this into the attrs list.
+			}
+			if ( attr_white_list && !attr_white_list->contains_anycase(itr->first.c_str()) ) {
+				continue; // not in white-list
+			}
+			if ( !exclude_private ||
+				 !ClassAdAttributeIsPrivate( itr->first.c_str() ) ) {
+				attrs.insert(itr->first);
+			}
+		}
+	}
+
+	return TRUE;
+}
+
+/** Format the given attributes from the ClassAd as an old ClassAd into the given string
+	@param output The std::string to write into
+	@return TRUE
+	Note: this function and its sister that outputs to std::string do not call each other for reasons of efficiency...
+*/
+int
+sPrintAdAttrs( MyString &output, const classad::ClassAd &ad, const classad::References &attrs )
+{
+	classad::ClassAdUnParser unp;
+	unp.SetOldClassAd( true, true );
+	std::string line;
+
+	classad::References::const_iterator it;
+	for (it = attrs.begin(); it != attrs.end(); ++it) {
+		const ExprTree * tree = ad.Lookup(*it); // use Lookup rather than find in case we have a parent ad.
+		if (tree) {
+			line = *it;
+			line += " = ";
+			unp.Unparse( line, tree );
+			line += "\n";
+			output += line;
+		}
+	}
+
+	return TRUE;
+}
+
+/** Format the given attributes from the ClassAd as an old ClassAd into the given string
+	@param output The std::string to write into
+	@return TRUE
+	Note: this function and its sister the outputs to MyString do not call each other for reasons of efficiency...
+*/
+int
+sPrintAdAttrs( std::string &output, const classad::ClassAd &ad, const classad::References &attrs )
+{
+	classad::ClassAdUnParser unp;
+	unp.SetOldClassAd( true, true );
+
+	classad::References::const_iterator it;
+	for (it = attrs.begin(); it != attrs.end(); ++it) {
+		const ExprTree * tree = ad.Lookup(*it); // use Lookup rather than find in case we have a parent ad.
+		if (tree) {
+			output += *it;
+			output += " = ";
+			unp.Unparse( output, tree );
+			output += "\n";
+		}
+	}
+
+	return TRUE;
+}
+
 // Taken from the old classad's function. Got rid of incorrect documentation. 
 ////////////////////////////////////////////////////////////////////////////////// Print an expression with a certain name into a buffer. 
 // The returned buffer will be allocated with malloc(), and it needs

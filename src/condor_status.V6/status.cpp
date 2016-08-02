@@ -201,6 +201,7 @@ bool			compactMode = false;
 char 		*target = NULL;
 const char * ads_file = NULL; // read classads from this file instead of querying them from the collector
 ClassAdFileParseType::ParseType ads_file_format = ClassAdFileParseType::Parse_long;
+bool            print_attrs_in_hash_order = false;
 ClassAd		*targetAd = NULL;
 
 classad::References projList;
@@ -219,7 +220,7 @@ typedef bool (*FNPROCESS_ADS_CALLBACK)(void* pv, ClassAd * ad);
 static bool read_classad_file(const char *filename, ClassAdFileParseType::ParseType ads_file_format, FNPROCESS_ADS_CALLBACK callback, void* pv, const char * constr);
 //void prettyPrint(ROD_MAP_BY_KEY &, TrackTotals *);
 ppOption prettyPrintHeadings (bool any_ads);
-void prettyPrintAd(ppOption pps, ClassAd *ad, int output_index);
+void prettyPrintAd(ppOption pps, ClassAd *ad, int output_index, bool fHashOrder);
 int getDisplayWidth(bool * is_piped=NULL);
 const char* digest_state_and_activity(char * sa, State st, Activity ac); //  in prettyPrint.cpp
 
@@ -1137,7 +1138,7 @@ main (int argc, char *argv[])
 			pm.display(line, it->second.rov);
 			fputs(line.c_str(), stdout);
 		} else {
-			prettyPrintAd(pps, it->second.ad, output_index);
+			prettyPrintAd(pps, it->second.ad, output_index, print_attrs_in_hash_order);
 			if (it->second.ad) ++output_index;
 		}
 		it->second.flags |= SROD_PRINTED; // for debugging, keep track of what we already printed.
@@ -1409,8 +1410,14 @@ usage ()
 		"\t-license\t\tDisplay attributes of licenses\n"
 		"\t-master\t\t\tDisplay daemon master attributes\n"
 		"\t-pool <name>\t\tGet information from collector <name>\n"
-		"\t-ads <file>\t\tGet information from <file>\n"
-        "\t-grid\t\t\tDisplay grid resources\n"
+		"\t-ads[:<fmt>] <file>\tGet information from <file> in <fmt> format.\n"
+		"\t           where <fmt> choice is one of:\n"
+		"\t       long    The traditional -long form. This is the default\n"
+		"\t       xml     XML form, the same as -xml\n"
+		"\t       json    JSON classad form, the same as -json\n"
+		"\t       new     'new' classad form without newlines\n"
+		"\t       auto    Guess the format from reading the input stream\n"
+		"\t-grid\t\t\tDisplay grid resources\n"
 		"\t-run\t\t\tSame as -claimed [deprecated]\n"
 #ifdef HAVE_EXT_POSTGRESQL
 		"\t-quill\t\t\tDisplay attributes of quills\n"
@@ -1436,11 +1443,12 @@ usage ()
 		"\t\t\t\tuse with -direct queries to STARTD and SCHEDD daemons\n"
 		"\t-target <file>\t\tUse target classad with -format or -af evaluation\n"
 		"\n    and [display-opts] are one or more of\n"
-		"\t-long\t\t\tDisplay entire classads\n"
-		"\t-sort <expr>\t\tSort entries by expressions. 'no' disables sorting\n"
+		"\t-long[:<fmt>[,nosort]]\tDisplay entire classads in format <fmt>.\n"
+		"\t                      \tSee -ads for <fmt> options. Sorted by attribute name\n"
+		"\t                      \tunless nosort is specified.\n"
+		"\t-sort <expr>\t\tSort ClassAds by expressions. 'no' disables sorting\n"
 		"\t-natural[:off]\t\tUse natural sort order in default output (default=on)\n"
 		"\t-total\t\t\tDisplay totals only\n"
-//		"\t-verbose\t\tSame as -long\n"
 		"\t-expert\t\t\tDisplay shorter error messages\n"
 		"\t-wide[:<width>]\t\tDon't truncate data to fit in 80 columns.\n"
 		"\t\t\t\tTruncates to console width or <width> argument if specified.\n"
@@ -1662,7 +1670,14 @@ firstPass (int argc, char *argv[])
 		if (is_dash_arg_colon_prefix (argv[i], "long", &pcolon, 1)) {
 			ClassAdFileParseType::ParseType parse_type = ClassAdFileParseType::Parse_long;
 			if (pcolon) {
-				parse_type = parseAdsFileFormat(++pcolon, parse_type);
+				StringList opts(++pcolon);
+				for (const char * opt = opts.first(); opt; opt = opts.next()) {
+					if (YourString(opt) == "nosort") {
+						print_attrs_in_hash_order = true;
+					} else {
+						parse_type = parseAdsFileFormat(pcolon, parse_type);
+					}
+				}
 			}
 			switch (parse_type) {
 				default:
