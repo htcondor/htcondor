@@ -30,23 +30,33 @@ $dagman_args = "-verbose";
 
 @outfiles = ("job_dagman_stuck.dag.dagman.out",
 	"job_dagman_stuck-NodeA0.out",
+	"job_dagman_stuck-NodeAPost.out",
+	"job_dagman_stuck-NodeBPre.out",
 	"job_dagman_stuck-NodeB0.out",
 	"job_dagman_stuck-NodeC0.out",
 	"job_dagman_stuck-NodeC1.out",
 	"job_dagman_stuck-NodeC2.out",
+	"job_dagman_stuck-NodeCPost.out",
+	"job_dagman_stuck-NodeDPre.out",
 	"job_dagman_stuck-NodeD0.out",
 	"job_dagman_stuck-NodeD1.out",
-	"job_dagman_stuck-NodeD2.out");
+	"job_dagman_stuck-NodeD2.out",
+	"job_dagman_stuck-NodeZ0.out");
 
 @expected_contents = ("DAG has been \"stuck\" for 1 minutes -- exiting",
 	"Node NodeA is \\d+\\.0\nNode NodeA finishing",
+	"Script NodeA Post finishing",
+	"Script NodeB Pre finishing",
 	"Node NodeB is \\d+\\.0\nDoing condor_hold on \\d+\\.0\nJob \\d+\\.0 held",
 	"Node NodeC is \\d+\\.0\nNode NodeC finishing",
 	"Node NodeC is \\d+\\.1\nNode NodeC finishing",
 	"Node NodeC is \\d+\\.2\nNode NodeC finishing",
+	"Script NodeC Post finishing",
+	"Script NodeD Pre finishing",
 	"Node NodeD is \\d+\\.0\nNode NodeD finishing",
 	"Node NodeD is \\d+\\.1\nDoing condor_hold on \\d+\\.1\nJob \\d+\\.1 held",
-	"Node NodeD is \\d+\\.2\nNode NodeD finishing");
+	"Node NodeD is \\d+\\.2\nNode NodeD finishing",
+	"Node NodeZ is \\d+\\.0\nNode NodeZ finishing");
 
 my $killedchosen = 0;
 
@@ -103,7 +113,6 @@ $failure = sub
 	CondorTest::debug("DAG failed as expected\n",1);
 	CondorTest::debug("Verifying output\n",1);
 	$diditpass = 1;
-	#TEMPTEMP? shift @outfiles; # get rid of upper dagman.out
 	foreach $file (@outfiles) {
 		CondorTest::debug("Checking $file\n",1);
 

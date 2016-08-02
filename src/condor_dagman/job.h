@@ -396,6 +396,7 @@ class Job {
 	int GetPreSkip() const;
 	
 	int GetCluster() const { return _CondorID._cluster; }
+	//TEMPTEMP -- what does this mean for multi-proc clusters?!?
 	int GetProc() const { return _CondorID._proc; }
 	int GetSubProc() const { return _CondorID._subproc; }
 	bool SetCondorID(const CondorID& cid);

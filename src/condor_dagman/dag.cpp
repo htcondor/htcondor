@@ -1,3 +1,4 @@
+//TEMPTEMP -- test should probably include holding and releasing one of the jobs...
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -689,8 +690,10 @@ Dag::ProcessAbortEvent(const ULogEvent *event, Job *job,
 			// don't get a released event for that job.  This may not
 			// work exactly right if some procs of a cluster are held
 			// and some are not.  wenger 2010-08-26
+debug_printf( DEBUG_QUIET, "DIAG 1510\n" );//TEMPTEMP
 		if ( job->_jobProcsOnHold > 0 && job->Release( event->proc ) ) {
 			_numHeldJobProcs--;
+debug_printf( DEBUG_QUIET, "DIAG 1511 NumHeldJobProcs(): %d\n", NumHeldJobProcs() );//TEMPTEMP
 		}
 
 			// Only change the node status, error info,
@@ -1094,6 +1097,7 @@ Dag::ProcessSubmitEvent(Job *job, bool recovery, bool &submitEventIsSane) {
 	if ( submitEventIsSane || job->GetStatus() != Job::STATUS_SUBMITTED ) {
 		job->_queuedNodeJobProcs++;
 		_numProcsSubmitted++;
+debug_printf( DEBUG_QUIET, "DIAG 1210 _numProcsSubmitted: %d\n", _numProcsSubmitted );//TEMPTEMP
 	}
 
 		// Note:  in non-recovery mode, we increment _numJobsSubmitted
@@ -1231,6 +1235,7 @@ Dag::ProcessHeldEvent(Job *job, const ULogEvent *event) {
 
 	if( job->Hold( event->proc ) ) {
 		_numHeldJobProcs++;
+debug_printf( DEBUG_QUIET, "DIAG 1611 NumHeldJobProcs(): %d\n", NumHeldJobProcs() );//TEMPTEMP
 		if ( _maxJobHolds > 0 && job->_timesHeld >= _maxJobHolds ) {
 			debug_printf( DEBUG_VERBOSE, "Total hold count for job %d (node %s) "
 						"has reached DAGMAN_MAX_JOB_HOLDS (%d); all job "
@@ -1251,6 +1256,7 @@ Dag::ProcessReleasedEvent(Job *job,const ULogEvent* event) {
 	}
 	if( job->Release( event->proc ) ) {
 		_numHeldJobProcs--;
+debug_printf( DEBUG_QUIET, "DIAG 1711 NumHeldJobProcs(): %d\n", NumHeldJobProcs() );//TEMPTEMP
 	}
 }
 
@@ -1914,27 +1920,35 @@ Dag::DoneCycle( bool includeFinalNode) const
 }
 
 //---------------------------------------------------------------------------
+//TEMPTEMP -- this isn't working right w/ final node
+//TEMPTEMP -- hmm -- is the number of held procs not updated when jobs are removed?? -- I'll bet that's the case... -- okay, I'll bet we start the final node before we get all of the aborted events for the "regular" nodes...
+//TEMPTEMP -- hmm -- this is interesting:
+//08/02/16 15:03:06 DIAG 1310 _numProcsSubmitted: 1
+//08/02/16 15:03:06 DIAG 1110 _numJobsSubmitted: 2
+// seems like _numProcsSubmitted has been updated for jobs being removed, but _numJobsSubmitted hasn't
 bool
 Dag::IsStuck() const
 {
-//TEMPTEMP -- need to deal with deferred scripts
-//TEMPTEMP -- need to deal with multi-proc clusters
-debug_printf( DEBUG_QUIET, "DIAG 1005 NumHeldJobProcs(): %d, _numProcsSubmitted: %d\n", NumHeldJobProcs(), _numProcsSubmitted );//TEMPTEMP
-	if ( !_readyQ->IsEmpty() ) {
-debug_printf( DEBUG_QUIET, "DIAG 1010\n" );//TEMPTEMP
+	debug_printf( DEBUG_QUIET/*TEMPTEMP*/, "Dag::IsStuck()\n" );
+debug_printf( DEBUG_QUIET, "DIAG 1410 _numProcsSubmitted: %d\n", _numProcsSubmitted );//TEMPTEMP
+debug_printf( DEBUG_QUIET, "DIAG 1411 NumHeldJobProcs(): %d\n", NumHeldJobProcs() );//TEMPTEMP
+debug_printf( DEBUG_QUIET, "DIAG 1410 NumJobsSubmitted(): %d\n", NumJobsSubmitted() );//TEMPTEMP
+
+	//TEMPTEMP ASSERT( NumHeldJobProcs() <= _numProcsSubmitted );
+	//TEMPTEMP ASSERT( _numProcsSubmitted >= NumJobsSubmitted() );
+
+	if ( NumNodesReady() > 0 ) {
+		debug_printf( DEBUG_QUIET/*TEMPTEMP*/, "Ready queue is not empty\n" );
 		return false;
-	} else if ( NumHeldJobProcs() < _numProcsSubmitted ) {//TEMPTEMP -- make sure this works right!
-debug_printf( DEBUG_QUIET, "DIAG 1020\n" );//TEMPTEMP
+	} else if ( NumHeldJobProcs() < _numProcsSubmitted ) {
+		debug_printf( DEBUG_QUIET/*TEMPTEMP*/, "There are non-held jobs in the queue\n" );
 		return false;
-	//TEMPTEMP? } else if ( NumScriptsRunning() > 0 ) {
-	} else if ( ScriptRunNodeCount() > 0 ) {//TEMPTEMP -- make sure this is right!
-debug_printf( DEBUG_QUIET, "DIAG 1030\n" );//TEMPTEMP
+	} else if ( ScriptRunNodeCount() > 0 ) {
+		debug_printf( DEBUG_QUIET/*TEMPTEMP*/, "There are nodes running scripts\n" );
 		return false;
 	}
-	//TEMPTEMP -- are there other cases we have to check??
 
-debug_printf( DEBUG_QUIET, "DIAG 1040\n" );//TEMPTEMP
-	//PrintPendingNodes();//TEMPTEMP
+	debug_printf( DEBUG_QUIET/*TEMPTEMP*/, "DAG is stuck\n" );
 
 	return true;
 }
@@ -4138,6 +4152,7 @@ Dag::DecrementProcCount( Job *node )
 	ASSERT( node->_queuedNodeJobProcs >= 0 );
 
 	_numProcsSubmitted--;
+debug_printf( DEBUG_QUIET, "DIAG 1310 _numProcsSubmitted: %d\n", _numProcsSubmitted );//TEMPTEMP
 	ASSERT( _numProcsSubmitted >= 0 );
 
 	if( node->_queuedNodeJobProcs == 0 ) {

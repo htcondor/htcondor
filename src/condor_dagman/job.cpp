@@ -863,17 +863,22 @@ Job::SetCondorID(const CondorID& cid)
 bool
 Job::Hold(int proc) 
 {
+debug_printf( DEBUG_QUIET, "Job(%s)::Hold(%d)\n", GetJobName(), proc );//TEMPTEMP
 	if( proc >= static_cast<int>( _onHold.size() ) ) {
 		_onHold.resize( proc+1, 0 );
 	}
+debug_printf( DEBUG_QUIET, "DIAG 2010: %d\n", static_cast<int>( _onHold.size() ) );//TEMPTEMP
 	if( !_onHold[proc] ) {
+debug_printf( DEBUG_QUIET, "DIAG 2011\n" );//TEMPTEMP
 		_onHold[proc] = 1;
 		++_jobProcsOnHold;
 		++_timesHeld;
 		return true;
 	} else {
-		dprintf( D_FULLDEBUG, "Received hold event for node %s, and job %d.%d "
-			"is already on hold!\n", GetJobName(), GetCluster(), proc );
+		debug_printf( DEBUG_QUIET,
+					"Received hold event for node %s, and job %d.%d "
+					"is already on hold!\n", GetJobName(), GetCluster(),
+					proc );
 	}
 	return false;
 }
@@ -882,12 +887,19 @@ Job::Hold(int proc)
 bool
 Job::Release(int proc)
 {
+debug_printf( DEBUG_QUIET, "Job(%s)::Release(%d)\n", GetJobName(), proc );//TEMPTEMP
+//TEMPTEMP -- okay, this looks messed up...
+debug_printf( DEBUG_QUIET, "DIAG 2110: %d\n", static_cast<int>( _onHold.size() ) );//TEMPTEMP
 	if( proc >= static_cast<int>( _onHold.size() ) ) {
-		dprintf( D_FULLDEBUG, "Received release event for node %s, but job %d.%d "
-			"is not on hold\n", GetJobName(), GetCluster(), GetProc() );
+		//TEMPTEMP -- why is this dprintf instead of debug_printf??
+		debug_printf( DEBUG_QUIET,
+					"Received release event for node %s, but job %d.%d "
+					"is not on hold\n", GetJobName(), GetCluster(),
+					proc );
 		return false; // We never marked this as being on hold
 	}
 	if( _onHold[proc] ) {
+debug_printf( DEBUG_QUIET, "DIAG 2111\n" );//TEMPTEMP
 		_onHold[proc] = 0;
 		--_jobProcsOnHold;
 		return true;
@@ -942,11 +954,12 @@ Job::TermAbortMetrics( int proc, const struct tm &eventTime,
 // immediately, which was not correct.  I changed how this was called, but
 // we should probably put in code to make sure it's not called too soon,
 // but is called...  wenger 2015-11-05
+//TEMPTEMP -- this is getting called too soon...
 void
 Job::Cleanup()
 {
-	std::vector<unsigned char> s;
-	_onHold.swap(s); // Free memory in _onHold
+	//TEMPTEMP? std::vector<unsigned char> s;
+	//TEMPTEMP? _onHold.swap(s); // Free memory in _onHold
 
 	for ( int proc = 0; proc < static_cast<int>( _gotEvents.size() );
 				proc++ ) {
