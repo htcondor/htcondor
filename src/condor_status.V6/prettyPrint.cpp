@@ -27,8 +27,6 @@
 #include "string_list.h"
 #include "metric_units.h"
 
-#define USE_LATE_PROJECTION 1
-#define USE_QUERY_CALLBACKS 1
 
 extern ppOption				ppStyle;
 extern AttrListPrintMask 	pm;
@@ -64,8 +62,9 @@ void printQuillNormal 	(ClassAd *);
 
 void printCOD    		(ClassAd *);
 void printVerbose   	(ClassAd *);
-void printXML       	(ClassAd *, bool first_ad, bool last_ad);
-void printJSON       	(ClassAd *, bool first_ad, bool last_ad);
+void printXML       	(ClassAd *);
+void printJSON       	(ClassAd *, bool first_ad);
+void printNewClassad	(ClassAd *, bool first_ad);
 void printCustom    	(ClassAd *);
 
 static bool renderActivityTime(long long & atime, AttrList* , Formatter &);
@@ -287,7 +286,7 @@ static void ppDisplayHeadings(FILE* file, ClassAd *ad, const char * pszExtra)
 void prettyPrintInitMask(classad::References & proj)
 {
 	//bool old_headings = (ppStyle == PP_STARTD_COD) || (ppStyle == PP_QUILL_NORMAL);
-	bool long_form = (ppStyle == PP_VERBOSE) || (ppStyle == PP_XML) || ppStyle == PP_JSON;
+	bool long_form = PP_IS_LONGish(ppStyle);
 	bool custom = (ppStyle == PP_CUSTOM);
 	if ( ! using_print_format && ! wantOnlyTotals && ! custom && ! long_form) {
 		ppInitPrintMask(ppStyle, proj);
@@ -361,14 +360,13 @@ int ppFetchColumnWidths(void*pv, int /*index*/, Formatter * fmt, const char * /*
 	return 0;
 }
 
-#ifdef USE_QUERY_CALLBACKS
 
 ppOption prettyPrintHeadings (bool any_ads)
 {
 	ppOption pps = ppStyle;
 	bool no_headings = wantOnlyTotals || ! any_ads;
 	bool old_headings = (pps == PP_STARTD_COD) || (pps == PP_QUILL_NORMAL);
-	bool long_form = (pps == PP_VERBOSE) || (pps == PP_XML) || pps == PP_JSON;
+	bool long_form = PP_IS_LONGish(pps);
 	const char * newline_after_headings = "\n";
 	if ((pps == PP_CUSTOM) || using_print_format) {
 		pps = PP_CUSTOM;
@@ -422,11 +420,11 @@ ppOption prettyPrintHeadings (bool any_ads)
 	return pps;
 }
 
-void prettyPrintAd(ppOption pps, ClassAd *ad)
+void prettyPrintAd(ppOption pps, ClassAd *ad, int output_index)
 {
 	if (!wantOnlyTotals) {
 		switch (pps) {
-		case PP_VERBOSE:
+		case PP_LONG:
 			printVerbose(ad);
 			break;
 		case PP_STARTD_COD:
@@ -436,10 +434,13 @@ void prettyPrintAd(ppOption pps, ClassAd *ad)
 			printCustom (ad);
 			break;
 		case PP_XML:
-			printXML (ad, false, false);
+			printXML (ad);
 			break;
 		case PP_JSON:
-			printJSON (ad, false, false);
+			printJSON (ad, output_index == 0);
+			break;
+		case PP_NEWCLASSAD:
+			printNewClassad (ad, output_index == 0);
 			break;
 	#ifdef HAVE_EXT_POSTGRESQL
 		case PP_QUILL_NORMAL:
@@ -453,120 +454,6 @@ void prettyPrintAd(ppOption pps, ClassAd *ad)
 	}
 }
 
-#else
-
-void
-prettyPrint (ClassAdList &adList, TrackTotals *totals)
-{
-	ClassAd	*ad;
-	int     classad_index = 0;
-	int     num_ads = adList.Length();
-	int     last_classad_index = num_ads - 1;
-	int     totals_key_width = wide_display ? -1 : 20;
-
-	ppOption pps = ppStyle;
-	bool no_headings = wantOnlyTotals || (num_ads <= 0);
-	bool old_headings = (pps == PP_STARTD_COD) || (pps == PP_QUILL_NORMAL);
-	bool long_form = (pps == PP_VERBOSE) || (pps == PP_XML) || pps == PP_JSON;
-	const char * newline_after_headings = "\n";
-	if ((pps == PP_CUSTOM) || using_print_format) {
-		pps = PP_CUSTOM;
-		no_headings = true;
-		newline_after_headings = NULL;
-		if ( ! wantOnlyTotals) {
-			bool fHasHeadings = pm.has_headings() || (pm_head.Length() > 0);
-			if (fHasHeadings) {
-				no_headings = (pmHeadFoot & HF_NOHEADER);
-			}
-		}
-	} else if (old_headings || long_form) {
-		no_headings = true;
-	} else {
-		// before we print headings, adjust the width of the name column
-		if (num_ads > 0) {
-			struct _adjust_widths_info wid_info = { 0, 0, NULL };
-			adList.Rewind();
-			ad = adList.Next();
-			if (ad) {
-				std::string name;
-				do {
-					if (ad->LookupString(ATTR_NAME, name)) {
-						int width = name.length();
-						if (width > wid_info.name_width) wid_info.name_width = width;
-					}
-					if (ad->LookupString(ATTR_MACHINE, name)) {
-						int width = name.length();
-						if (width > wid_info.machine_width) wid_info.machine_width = width;
-					}
-				} while ((ad = adList.Next()));
-				if (wid_info.name_width && wid_info.name_width < 16) wid_info.name_width = 16;
-				if (wid_info.machine_width && wid_info.machine_width < 16) wid_info.machine_width = 10;
-			}
-			if ( ! wide_display && (wid_info.name_width > totals_key_width)) {
-				if (pps != PP_SCHEDD_NORMAL) { totals_key_width = wid_info.name_width; }
-			}
-			pm.adjust_formats(ppAdjustNameWidth, &wid_info);
-		}
-	}
-	if ( ! no_headings) {
-		adList.Rewind();
-		ad = adList.Next();
-		// we pass an ad into ppDisplayHeadings so that it can adjust column widths.
-		ppDisplayHeadings(stdout, ad, newline_after_headings);
-	}
-
-	adList.Open();
-	while ((ad = adList.Next())) {
-		if (!wantOnlyTotals) {
-			switch (pps) {
-			case PP_VERBOSE:
-				printVerbose(ad);
-				break;
-			case PP_STARTD_COD:
-				printCOD (ad);
-				break;
-			case PP_CUSTOM:
-				printCustom (ad);
-				break;
-			case PP_XML:
-				printXML (ad, (classad_index == 0), (classad_index == last_classad_index));
-				break;
-			case PP_JSON:
-				printJSON (ad, (classad_index == 0), (classad_index == last_classad_index));
-				break;
-		#ifdef HAVE_EXT_POSTGRESQL
-			case PP_QUILL_NORMAL:
-				printQuillNormal (ad);
-				break;
-		#endif /* HAVE_EXT_POSTGRESQL */
-			default:
-				pm.display(stdout, ad);
-				break;
-			}
-		}
-		classad_index++;
-		totals->update(ad);
-	}
-	adList.Close();
-
-	// if there are no ads to print, but the user wanted XML output,
-	// then print out the XML header and footer, so that naive XML
-	// parsers won't get confused.
-	if ( PP_XML == pps && 0 == classad_index ) {
-		printXML (NULL, true, true);
-	}
-	if ( PP_JSON == pps && 0 == classad_index ) {
-		printJSON (NULL, true, true);
-	}
-
-	// if totals are required, display totals
-	if (classad_index > 0 && totals && totals->haveTotals()) {
-		fprintf(stdout, "\n");
-		totals->displayTotals(stdout, totals_key_width);
-	}
-}
-
-#endif
 
 const char *
 formatStringsFromList( const classad::Value & value, Formatter & ) {
@@ -1207,22 +1094,14 @@ printVerbose (ClassAd *ad)
 }
 
 void
-printXML (ClassAd *ad, bool first_ad, bool last_ad)
+printXML (ClassAd *ad)
 {
 	classad::ClassAdXMLUnParser  unparser;
 	std::string            xml;
 
-	if (first_ad) {
-		AddClassAdXMLFileHeader(xml);
-	}
-
 	unparser.SetCompactSpacing(false);
 	if ( NULL != ad ) {
 		unparser.Unparse(xml, ad);
-	}
-
-	if (last_ad) {
-		AddClassAdXMLFileFooter(xml);
 	}
 
 	printf("%s\n", xml.c_str());
@@ -1230,28 +1109,42 @@ printXML (ClassAd *ad, bool first_ad, bool last_ad)
 }
 
 void
-printJSON (ClassAd *ad, bool first_ad, bool last_ad)
+printJSON (ClassAd *ad, bool first_ad)
 {
-	static bool first_time = true;
 	classad::ClassAdJsonUnParser  unparser;
 	std::string            json;
 
-	if ( first_ad ) {
-		json += "[\n";
-	}
 	if ( NULL != ad ) {
-		if ( !first_time ) {
+		if ( first_ad ) {
+			json += "[\n";
+		} else {
 			json += ",\n";
 		}
 		unparser.Unparse( json, ad );
-	}
-	if ( last_ad ) {
-		json += "\n]";
+		json += "\n";
 	}
 
-	printf("%s\n", json.c_str());
+	fputs(json.c_str(), stdout);
+	return;
+}
 
-	first_time = false;
+void
+printNewClassad (ClassAd *ad, bool first_ad)
+{
+	classad::ClassAdUnParser  unparser;
+	std::string            lines;
+
+	if ( NULL != ad ) {
+		if ( first_ad ) {
+			lines += "{\n";
+		} else {
+			lines += ",\n";
+		}
+		unparser.Unparse( lines, ad );
+		lines += "\n";
+	}
+
+	fputs(lines.c_str(), stdout);
 	return;
 }
 

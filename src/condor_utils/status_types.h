@@ -47,12 +47,14 @@ enum ppOption {
     PP_ANY_NORMAL,
     PP_GENERIC_NORMAL,
     PP_GENERIC,
-    PP_XML,
     PP_CUSTOM,
-
-    PP_VERBOSE,
-    PP_JSON
+    PP_LONG,
+    PP_XML,
+    PP_JSON,
+    PP_NEWCLASSAD, // output new classad format, ie [] around the ad and ; between attributes
 };
+
+#define PP_IS_LONGish(pp) ((pp) >= PP_LONG && (pp) <= PP_NEWCLASSAD)
 
 
 // display modes for condor_status
