@@ -45,6 +45,7 @@
 bool dash_verbose = false;
 bool dash_terse = false;
 int  DashOutOpts = 0;
+int  DashConvertOldRoutes = 0;
 bool DumpLocalHash = false;
 bool DumpClassAdToFile = false;
 bool DumpFileIsStdout = false;
@@ -69,10 +70,14 @@ int DoTransforms(const char * jobs_file, const char * constraint, MacroStreamXFo
 bool ApplyTransform(const ClassAd * job, MacroStreamXFormSource & xforms, MACRO_SET_CHECKPOINT_HDR* pvParamCheckpoint, FILE* outfile);
 bool ReportSuccess(const ClassAd * job, FILE* outfile);
 int ParseRulesCallback(void* pv, MACRO_SOURCE& source, MACRO_SET& macro_set, char * line);
+bool LoadJobRouterDefaultsAd(ClassAd & ad);
 char * local_param( const char* name, const char* alt_name );
 char * local_param( const char* name ); // call param with NULL as the alt
 void set_local_param( const char* name, const char* value);
 
+#define CONVERT_JRR_STYLE_1 0x0001
+#define CONVERT_JRR_STYLE_2 0x0001
+int ConvertJobRouterRoutes(int options);
 
 // declare enough of the condor_params structure definitions so that we can define submit hashtable defaults
 namespace condor_params {
@@ -567,13 +572,18 @@ main( int argc, const char *argv[] )
 					DashOutName = pfilearg;
 					++ixArg; ++ptr;
 				}
-			} else if (is_dash_arg_prefix(ptr[0], "help")) {
+			} else if (is_dash_arg_prefix(ptr[0], "help", 1)) {
 				if (ptr[1] && (MATCH == strcmp(ptr[1], "rules"))) {
 					PrintRules(stdout);
 					exit(0);
 				}
 				Usage(stdout);
 				exit(0);
+			} else if (is_dash_arg_colon_prefix(ptr[0], "convertoldroutes", &pcolon, 4)) {
+				if (pcolon) {
+					DashConvertOldRoutes = atoi(++pcolon);
+				}
+				if ( ! DashConvertOldRoutes) DashConvertOldRoutes = 1;
 			} else {
 				Usage(stderr);
 				exit(1);
@@ -601,8 +611,8 @@ main( int argc, const char *argv[] )
 		}
 	}
 
-	// In case we need to change our behaviour because jobs are coming from stdin.
-	//bool JobsFromStdin = jobs_file && ! strcmp(jobs_file, "-");
+	// the -convertoldroutes argument tells us to just read and
+	if (DashConvertOldRoutes) { exit(ConvertJobRouterRoutes(DashConvertOldRoutes)); }
 
 	// the -dry argument takes a qualifier that I'm hijacking to do queue parsing unit tests for now the 8.3 series.
 	if (DashOutOpts > 0x10) { exit(DoUnitTests(DashOutOpts)); }
@@ -1563,6 +1573,24 @@ int ParseRulesCallback(void* pv, MACRO_SOURCE& source, MACRO_SET& macro_set, cha
 		if (dash_verbose) fprintf(stdout, "REQUIREMENTS %s\n", rhs.ptr());
 		break;
 
+		// evaluate an expression, then set a value into the ad.
+	case kw_EVALMACRO:
+		if (dash_verbose) fprintf(stdout, "EVALMACRO %s from $EVAL( %s )\n", attr.c_str(), rhs.ptr());
+		if ( ! rhs) {
+			fprintf(stderr, "ERROR: EVALMACRO %s has no value", attr.c_str());
+		} else {
+			classad::Value val;
+			if ( ! ad->EvaluateExpr(rhs.ptr(), val)) {
+				fprintf(stderr, "ERROR: EVALMACRO %s could not evaluate : %s\n", attr.c_str(), rhs.ptr());
+			} else {
+				XFormValueToString(val, tmp3);
+				MACRO_EVAL_CONTEXT ctx; ctx.init("SUBMIT");
+				insert_macro(attr.c_str(), tmp3.c_str(), macro_set, source, ctx);
+				if (dash_verbose) { fprintf(stdout, "    TEMP %s = %s\n", attr.c_str(), tmp3.c_str()); }
+			}
+		}
+		break;
+
 	case kw_ITERATE:
 		if (pargs->xforms->has_pending_fp()) {
 			std::string errmsg;
@@ -1620,23 +1648,6 @@ int ParseRulesCallback(void* pv, MACRO_SOURCE& source, MACRO_SET& macro_set, cha
 				} else if (dash_verbose) {
 					fprintf(stdout, "    SET %s to %s\n", attr.c_str(), XFormValueToString(val, tmp3));
 				}
-			}
-		}
-		break;
-
-	case kw_EVALMACRO:
-		if (dash_verbose) fprintf(stdout, "EVALMACRO %s from $EVAL( %s )\n", attr.c_str(), rhs.ptr());
-		if ( ! rhs) {
-			fprintf(stderr, "ERROR: EVALMACRO %s has no value", attr.c_str());
-		} else {
-			classad::Value val;
-			if ( ! ad->EvaluateExpr(rhs.ptr(), val)) {
-				fprintf(stderr, "ERROR: EVALMACRO %s could not evaluate : %s\n", attr.c_str(), rhs.ptr());
-			} else {
-				XFormValueToString(val, tmp3);
-				MACRO_EVAL_CONTEXT ctx; ctx.init("SUBMIT");
-				insert_macro(attr.c_str(), tmp3.c_str(), macro_set, source, ctx);
-				if (dash_verbose) { fprintf(stdout, "    TEMP %s = %s\n", attr.c_str(), tmp3.c_str()); }
 			}
 		}
 		break;
@@ -1749,6 +1760,477 @@ int DoTransforms(const char * jobs_file, const char * constraint, MacroStreamXFo
 	return rval;
 }
 
+// attributes of interest to the code that converts old jobrouter routes
+enum {
+	atr_NAME=1,
+	atr_UNIVERSE,
+	atr_TARGETUNIVERSE,
+	atr_GRIDRESOURCE,
+	atr_REQUIREMENTS,
+	atr_ENVIRONMENT,
+	atr_OSG_ENVIRONMENT,
+	atr_ORIG_ENVIRONMENT,
+	atr_REQUESTMEMORY,
+	atr_REQUESTCPUS,
+	atr_ONEXITHOLD,
+	atr_ONEXITHOLDREASON,
+	atr_ONEXITHOLDSUBCODE,
+	atr_REMOTE_QUEUE,
+	atr_REMOTE_CEREQUIREMENTS,
+	atr_REMOTE_NODENUMBER,
+	atr_REMOTE_SMPGRANULARITY,
+	atr_INPUTRSL,
+	atr_GLOBUSRSL,
+	atr_XCOUNT,
+	atr_DEFAULT_XCOUNT,
+	atr_QUEUE,
+	atr_DEFAULT_QUEUE,
+	atr_MAXMEMORY,
+	atr_DEFAULT_MAXMEMORY,
+	atr_MAXWALLTIME,
+	atr_DEFAULT_MAXWALLTIME,
+	atr_MINWALLTIME,
+};
+
+// This must be declared in string sorted order, they do not have to be in enum order.
+#define ATR(a, f) { #a, atr_##a, f }
+static const Keyword RouterAttrItems[] = {
+	ATR(DEFAULT_MAXMEMORY, 0),
+	ATR(DEFAULT_MAXWALLTIME, 0),
+	ATR(DEFAULT_QUEUE, 0),
+	ATR(DEFAULT_XCOUNT, 0),
+	ATR(ENVIRONMENT, 0),
+	ATR(INPUTRSL, 0),
+	ATR(GLOBUSRSL, 0),
+	ATR(GRIDRESOURCE, 0),
+	ATR(MAXMEMORY, 0),
+	ATR(MAXWALLTIME, 0),
+	ATR(MINWALLTIME, 0),
+	ATR(NAME, 0),
+	ATR(ONEXITHOLD, 0),
+	ATR(ONEXITHOLDREASON, 0),
+	ATR(ONEXITHOLDSUBCODE, 0),
+	ATR(ORIG_ENVIRONMENT, 0),
+	ATR(OSG_ENVIRONMENT, 0),
+	ATR(QUEUE, 0),
+	ATR(REMOTE_CEREQUIREMENTS, 0),
+	ATR(REMOTE_NODENUMBER, 0),
+	ATR(REMOTE_QUEUE, 0),
+	ATR(REMOTE_SMPGRANULARITY, 0),
+	ATR(REQUESTCPUS, 0),
+	ATR(REQUESTMEMORY, 0),
+	ATR(REQUIREMENTS, 0),
+	ATR(TARGETUNIVERSE, 0),
+	ATR(UNIVERSE, 0),
+	ATR(XCOUNT, 0),
+};
+#undef KW
+static const KeywordTable RouterAttrs = SORTED_TOKENER_TABLE(RouterAttrItems);
+
+int is_interesting_route_attr(const std::string & attr) {
+	tokener toke(attr.c_str()); toke.next();
+	const Keyword * patr = RouterAttrs.find_match(toke);
+	if (patr) return patr->value;
+	return 0;
+}
+
+bool same_refs(StringList & refs, const char * check_str)
+{
+	if (refs.isEmpty()) return false;
+	StringList check(check_str);
+	return check.contains_list(refs, true);
+}
+
+typedef std::map<std::string, std::string, classad::CaseIgnLTStr> STRING_MAP;
+
+int ConvertNextJobRouterRoute(std::string & routing_string, int & offset, const ClassAd & default_route_ad, StringList & statements, int options)
+{
+	classad::ClassAdParser parser;
+	classad::ClassAdUnParser unparser;
+
+	bool style_2 = (options & 0x0F) == 2;
+	bool has_set_InputRSL = false;
+	int  has_set_xcount = 0, has_set_queue = 0, has_set_maxMemory = 0, has_set_maxWallTime = 0, has_set_minWallTime = 0;
+	bool has_def_RequestMemory = false, has_def_RequestCpus = false, has_def_onexithold = false, has_def_remote_queue = false;
+
+	classad::ClassAd ad;
+	if ( ! parser.ParseClassAd(routing_string, ad, offset)) {
+		return 0;
+	}
+	ClassAd route_ad(default_route_ad);
+	route_ad.Update(ad);
+
+	std::string name, grid_resource, requirements;
+	int target_universe = 0;
+
+
+	STRING_MAP assignments;
+	STRING_MAP copy_cmds;
+	STRING_MAP delete_cmds;
+	STRING_MAP set_cmds;
+	STRING_MAP defset_cmds;
+	STRING_MAP evalset_cmds;
+	classad::References evalset_myrefs;
+	classad::References string_assignments;
+
+	for (ClassAd::iterator it = route_ad.begin(); it != route_ad.end(); ++it) {
+		std::string rhs;
+		if (starts_with(it->first, "copy_")) {
+			std::string attr = it->first.substr(5);
+			if (route_ad.EvaluateAttrString(it->first, rhs)) {
+				copy_cmds[attr] = rhs;
+			}
+		} else if (starts_with(it->first, "delete_")) {
+			std::string attr = it->first.substr(7);
+			delete_cmds[attr] = "";
+		} else if (starts_with(it->first, "set_")) {
+			std::string attr = it->first.substr(4);
+			int atrid = is_interesting_route_attr(attr);
+			if (atrid == atr_INPUTRSL) {
+				has_set_InputRSL = true;
+				// just eat this.
+				continue;
+			}
+			rhs.clear();
+			ExprTree * tree = route_ad.Lookup(it->first);
+			if (tree) {
+				unparser.Unparse(rhs, tree);
+				if ( ! rhs.empty()) {
+					set_cmds[attr] = rhs;
+				}
+			}
+		} else if (starts_with(it->first, "eval_set_")) {
+			std::string attr = it->first.substr(9);
+			int atrid = is_interesting_route_attr(attr);
+			ExprTree * tree = route_ad.Lookup(it->first);
+			if (tree) {
+				rhs.clear();
+				unparser.Unparse(rhs, tree);
+				if ( ! rhs.empty()) {
+
+					StringList myrefs;
+					StringList target;
+					route_ad.GetExprReferences(rhs.c_str(), &myrefs, &target);
+					if (atrid == atr_REQUESTMEMORY || 
+						atrid == atr_REQUESTCPUS || atrid == atr_REMOTE_NODENUMBER || atrid == atr_REMOTE_SMPGRANULARITY ||
+						atrid == atr_ONEXITHOLD || atrid == atr_ONEXITHOLDREASON || atrid == atr_ONEXITHOLDSUBCODE ||
+						atrid == atr_REMOTE_QUEUE) {
+
+						ExprTree * def_tree = default_route_ad.Lookup(it->first);
+						bool is_def_expr = (def_tree && *tree == *def_tree);
+
+						/*
+						target.create_union(myrefs, true);
+						target.remove("null");
+						target.remove("InputRSL.maxMemory");
+						target.remove("InputRSL.xcount");
+						target.remove("InputRSL.queue");
+						target.remove("InputRSL");
+						*/
+
+						if (atrid == atr_REQUESTMEMORY && is_def_expr) {
+							has_def_RequestMemory = true;
+							set_cmds[attr] = "$(maxMemory:2000)";
+						} else if ((atrid == atr_REQUESTCPUS || atrid == atr_REMOTE_NODENUMBER || atrid == atr_REMOTE_SMPGRANULARITY) &&
+								   is_def_expr) {
+							has_def_RequestCpus = true;
+							set_cmds[attr] = "$(xcount:1)";
+						} else if ((atrid == atr_ONEXITHOLD || atrid == atr_ONEXITHOLDREASON || atrid == atr_ONEXITHOLDSUBCODE) && is_def_expr) {
+							has_def_onexithold = true;
+							//evalset_myrefs.insert("minWallTime");
+							//evalset_cmds[attr] = rhs;
+						} else if (atrid == atr_REMOTE_QUEUE && is_def_expr) {
+							has_def_remote_queue = true;
+							set_cmds[attr] = "$Fq(queue)";
+						} else {
+							evalset_cmds[attr] = rhs;
+							for (char* str = myrefs.first(); str; str = myrefs.next()) { evalset_myrefs.insert(str); }
+						}
+					} else {
+						evalset_cmds[attr] = rhs;
+						for (char* str = myrefs.first(); str; str = myrefs.next()) { evalset_myrefs.insert(str); }
+					}
+				}
+			}
+		} else {
+			int atrid = is_interesting_route_attr(it->first);
+			switch (atrid) {
+				case atr_NAME: route_ad.EvaluateAttrString( it->first, name ); break;
+				case atr_TARGETUNIVERSE: route_ad.EvaluateAttrInt( it->first, target_universe ); break;
+
+				case atr_GRIDRESOURCE: {
+					route_ad.EvaluateAttrString( it->first, grid_resource );
+					ExprTree * tree = route_ad.Lookup(it->first);
+					if (tree) {
+						rhs.clear();
+						unparser.Unparse(rhs, tree);
+						if ( ! rhs.empty()) { assignments[it->first] = rhs; string_assignments.insert(it->first); }
+					}
+				} break;
+
+				case atr_REQUIREMENTS: {
+					requirements.clear();
+					ExprTree * tree = route_ad.Lookup(it->first);
+					if (tree) { unparser.Unparse(requirements, tree); }
+				} break;
+
+				default: {
+					ExprTree * tree = route_ad.Lookup(it->first);
+					bool is_string = true;
+					if (tree) {
+						rhs.clear();
+						if ( ! ExprTreeIsLiteralString(tree, rhs)) {
+							is_string = false;
+							unparser.Unparse(rhs, tree);
+						}
+						if ( ! rhs.empty()) { assignments[it->first] = rhs; if (is_string) string_assignments.insert(it->first); }
+					}
+					switch (atrid) {
+						case atr_MAXMEMORY: has_set_maxMemory = 1; break;
+						case atr_DEFAULT_MAXMEMORY: if (!has_set_maxMemory) has_set_maxMemory = 2; break;
+
+						case atr_XCOUNT: has_set_xcount = 1; break;
+						case atr_DEFAULT_XCOUNT: if(!has_set_xcount) has_set_xcount = 2; break;
+
+						case atr_QUEUE: has_set_queue = 1; break;
+						case atr_DEFAULT_QUEUE: if (!has_set_queue) has_set_queue = 2; break;
+
+						case atr_MAXWALLTIME: has_set_maxWallTime = 1; break;
+						case atr_DEFAULT_MAXWALLTIME: if (!has_set_maxWallTime) has_set_maxWallTime = 2; break;
+
+						case atr_MINWALLTIME: has_set_minWallTime = 1; break;
+					}
+				} break;
+			}
+		}
+	}
+
+	// no need to manipulate the job's OnExitHold expression if a minWallTime was not set.
+	if (has_def_onexithold /*&& (assignments.find("minWallTime") == assignments.end())*/) {
+		// we won't be needing to copy the OnExitHold reason
+		copy_cmds.erase("OnExitHold"); evalset_cmds.erase("OnExitHold");
+		copy_cmds.erase("OnExitHoldReason"); evalset_cmds.erase("OnExitHoldReason");
+		copy_cmds.erase("OnExitHoldSubCode"); evalset_cmds.erase("OnExitHoldSubCode");
+	}
+
+	std::string buf;
+	formatstr(buf, "# autoconversion of route '%s' from new-classad syntax", name.empty() ? "" : name.c_str());
+	statements.append(buf.c_str());
+	if ( ! name.empty()) { 
+		formatstr(buf, "NAME %s", name.c_str());
+		statements.append(buf.c_str());
+	}
+	if (target_universe) { formatstr(buf, "UNIVERSE %d", target_universe); statements.append(buf.c_str()); }
+	if (requirements.empty()) { formatstr(buf, "REQUIREMENTS %s", requirements.c_str()); statements.append(buf.c_str()); }
+
+	statements.append("");
+	for (STRING_MAP::iterator it = assignments.begin(); it != assignments.end(); ++it) {
+		formatstr(buf, "%s = %s", it->first.c_str(), it->second.c_str());
+		statements.append(buf.c_str());
+	}
+
+// evaluation order of route rules:
+//1. copy_* 
+//2. delete_* 
+//3. set_* 
+//4. eval_set_* 
+	statements.append("");
+	statements.append("# copy_* rules");
+	for (STRING_MAP::iterator it = copy_cmds.begin(); it != copy_cmds.end(); ++it) {
+		formatstr(buf, "COPY %s %s", it->first.c_str(), it->second.c_str());
+		statements.append(buf.c_str());
+	}
+
+	statements.append("");
+	statements.append("# delete_* rules");
+	for (STRING_MAP::iterator it = delete_cmds.begin(); it != delete_cmds.end(); ++it) {
+		formatstr(buf, "DELETE %s", it->first.c_str());
+		statements.append(buf.c_str());
+	}
+
+	statements.append("");
+	statements.append("# set_* rules");
+	for (STRING_MAP::iterator it = set_cmds.begin(); it != set_cmds.end(); ++it) {
+		formatstr(buf, "SET %s %s", it->first.c_str(), it->second.c_str());
+		statements.append(buf.c_str());
+	}
+
+	if (has_def_onexithold) {
+		// emit new boilerplate on_exit_hold
+		if (has_set_minWallTime) {
+			statements.append("");
+			statements.append("# modify OnExitHold for minWallTime");
+			statements.append("if defined MY.OnExitHold");
+			statements.append("  COPY OnExitHold orig_OnExitHold");
+			statements.append("  COPY OnExitHoldSubCode orig_OnExitHoldSubCode");
+			statements.append("  COPY OnExitHoldReason orig_OnExitHoldReason");
+			statements.append("  DEFAULT orig_OnExitHoldReason strcat(\"The on_exit_hold expression (\", unparse(orig_OnExitHold), \") evaluated to TRUE.\")");
+			statements.append("  SET OnExitHoldMinWallTime ifThenElse(RemoteWallClockTime isnt undefined, RemoteWallClockTime < 60*$(minWallTime), false)");
+			statements.append("  SET OnExitHoldReasonMinWallTime strcat(\"The job's wall clock time\", int(RemoteWallClockTime/60), \"min, is is less than the minimum specified by the job ($(minWallTime))\")");
+			statements.append("  SET OnExitHold orig_OnExitHold || OnExitHoldMinWallTime");
+			statements.append("  SET OnExitHoldSubCode ifThenElse(orig_OnExitHold, $(My.orig_OnExitHoldSubCode:1), 42)");
+			statements.append("  SET OnExitHoldReason ifThenElse(orig_OnExitHold, orig_OnExitHoldReason, ifThenElse(OnExitHoldMinWallTime, OnExitHoldReasonMinWallTime, \"Job held for unknown reason.\"))");
+			statements.append("else");
+			statements.append("  SET OnExitHold ifThenElse(RemoteWallClockTime isnt undefined, RemoteWallClockTime < 60*$(minWallTime), false)");
+			statements.append("  SET OnExitHoldSubCode 42");
+			statements.append("  SET OnExitHoldReason strcat(\"The job's wall clock time\", int(RemoteWallClockTime/60), \"min, is is less than the minimum specified by the job ($(minWallTime))\")");
+			statements.append("endif");
+		}
+	}
+
+	// we can only do this after we have read the entire input ad.
+	int cSpecial = 0;
+	for (classad::References::const_iterator it = evalset_myrefs.begin(); it != evalset_myrefs.end(); ++it) {
+		if (assignments.find(*it) != assignments.end() && set_cmds.find(*it) == set_cmds.end()) {
+			if ( ! cSpecial) { statements.append(""); statements.append("# temporarily SET attrs because eval_set_ rules refer to them"); }
+			++cSpecial;
+			if (string_assignments.find(*it) != string_assignments.end()) {
+				formatstr(buf, "SET %s \"$(%s)\"", it->c_str(), it->c_str());
+			} else {
+				formatstr(buf, "SET %s $(%s)", it->c_str(), it->c_str());
+			}
+			statements.append(buf.c_str());
+		}
+	}
+
+	statements.append("");
+	statements.append("# eval_set_* rules");
+	for (STRING_MAP::iterator it = evalset_cmds.begin(); it != evalset_cmds.end(); ++it) {
+		formatstr(buf, "EVALSET %s %s", it->first.c_str(), it->second.c_str());
+		statements.append(buf.c_str());
+	}
+
+	if (cSpecial) {
+		statements.append("");
+		statements.append("# remove temporary attrs");
+		for (classad::References::const_iterator it = evalset_myrefs.begin(); it != evalset_myrefs.end(); ++it) {
+			if (assignments.find(*it) != assignments.end() && set_cmds.find(*it) == set_cmds.end()) {
+				formatstr(buf, "DELETE %s", it->c_str());
+				statements.append(buf.c_str());
+			}
+		}
+	}
+
+	return 1;
+}
+
+bool LoadJobRouterDefaultsAd(ClassAd & ad)
+{
+	bool merge_defaults = param_boolean("MERGE_JOB_ROUTER_DEFAULT_ADS", false);
+	bool routing_enabled = false;
+
+	classad::ClassAd router_defaults_ad;
+	std::string router_defaults;
+	if (param(router_defaults, "JOB_ROUTER_DEFAULTS") && ! router_defaults.empty()) {
+		// if the param doesn't start with [, then wrap it in [] before parsing, so that the parser knows to expect new classad syntax.
+		if (router_defaults[0] != '[') {
+			router_defaults.insert(0, "[ ");
+			router_defaults.append(" ]");
+			merge_defaults = false;
+		}
+		int length = (int)router_defaults.size();
+		classad::ClassAdParser parser;
+		int offset = 0;
+		if ( ! parser.ParseClassAd(router_defaults, router_defaults_ad, offset)) {
+			dprintf(D_ALWAYS|D_ERROR,"JobRouter CONFIGURATION ERROR: Disabling job routing, failed to parse at offset %d in %s classad:\n%s\n",
+				offset, "JOB_ROUTER_DEFAULTS", router_defaults.c_str());
+			routing_enabled = false;
+		} else if (merge_defaults && (offset < length)) {
+			// whoh! we appear to have received multiple classads as a hacky way to append to the defaults ad
+			// so go ahead and parse the remaining ads and merge them into the defaults ad.
+			do {
+				// skip trailing whitespace and ] and look for an open [
+				bool parse_err = false;
+				for ( ; offset < length; ++offset) {
+					int ch = router_defaults[offset];
+					if (ch == '[') break;
+					if ( ! isspace(router_defaults[offset]) && ch != ']') {
+						parse_err = true;
+						break;
+					}
+					// TODO: skip comments?
+				}
+
+				if (offset < length && ! parse_err) {
+					classad::ClassAd other_ad;
+					if ( ! parser.ParseClassAd(router_defaults, other_ad, offset)) {
+						parse_err = true;
+					} else {
+						router_defaults_ad.Update(other_ad);
+					}
+				}
+
+				if (parse_err) {
+					routing_enabled = false;
+					dprintf(D_ALWAYS|D_ERROR,"JobRouter CONFIGURATION ERROR: Disabling job routing, failed to parse at offset %d in %s ad : \n%s\n",
+							offset, "JOB_ROUTER_DEFAULTS", router_defaults.substr(offset).c_str());
+					break;
+				}
+			} while (offset < length);
+		}
+	}
+	ad.CopyFrom(router_defaults_ad);
+	return routing_enabled;
+}
+
+int ConvertJobRouterRoutes(int options)
+{
+	ClassAd default_route_ad;
+	std::string routes_string;
+
+	LoadJobRouterDefaultsAd(default_route_ad);
+
+	auto_free_ptr routing(param("JOB_ROUTER_ENTRIES"));
+	if (routing) {
+		routes_string = routing.ptr();
+		int offset = 0;
+		int route_index = 0;
+		while (offset < (int)routes_string.size()) {
+			StringList lines;
+			++route_index;
+			if (ConvertNextJobRouterRoute(routes_string, offset, default_route_ad, lines, options)) {
+				fprintf(stdout, "##### JOB_ROUTER_ENTRIES [%d] #####\n", route_index);
+				for (char * line = lines.first(); line; line = lines.next()) {
+					fprintf(stdout, "%s\n", line);
+				}
+				fprintf(stdout, "\n");
+			}
+		}
+	}
+
+	routing.set(param("JOB_ROUTER_ENTRIES_FILE"));
+	if (routing) {
+		FILE *fp = safe_fopen_wrapper_follow(routing.ptr(),"r");
+		if( !fp ) {
+			fprintf(stderr, "Failed to open '%s' file specified for JOB_ROUTER_ENTRIES_FILE", routing.ptr());
+		} else {
+			routes_string.clear();
+			char buf[200];
+			int n;
+			while( (n=fread(buf,1,sizeof(buf)-1,fp)) > 0 ) {
+				buf[n] = '\0';
+				routes_string += buf;
+			}
+			fclose( fp );
+
+			int offset = 0;
+			int route_index = 0;
+			while (offset < (int)routes_string.size()) {
+				StringList lines;
+				++route_index;
+				if (ConvertNextJobRouterRoute(routes_string, offset, default_route_ad, lines, options)) {
+					fprintf(stdout, "##### JOB_ROUTER_ENTRIES_FILE [%d] #####\n", route_index);
+					for (char * line = lines.first(); line; line = lines.next()) {
+						fprintf(stdout, "%s\n", line);
+					}
+					fprintf(stdout, "\n");
+				}
+			}
+		}
+	}
+
+	return 0;
+}
 
 int DoUnitTests(int /*options*/)
 {
