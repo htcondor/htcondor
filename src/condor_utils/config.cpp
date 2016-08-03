@@ -2174,7 +2174,7 @@ static const char * evaluate_macro_func (
 				EXCEPT( "$CHOICE() config macro: index %d is out of range!", (int)index );
 			}
 
-			if (tmp2) free(tmp2); tmp2 = NULL;
+			if (tmp2) {free(tmp2);} tmp2 = NULL;
 		}
 		break;
 
@@ -2209,7 +2209,7 @@ static const char * evaluate_macro_func (
 					EXCEPT( "$SUBSTR() macro: %s is invalid start index!", arg );
 				}
 				start_pos = (int)index;
-				if (tmp3) free(tmp3); tmp3 = NULL;
+				if (tmp3) {free(tmp3);} tmp3 = NULL;
 			}
 
 			int sub_len = INT_MAX/2;
@@ -2228,7 +2228,7 @@ static const char * evaluate_macro_func (
 					EXCEPT( "$SUBSTR() macro: %s is invalid length !", arg );
 				}
 				sub_len = (int)index;
-				if (tmp3) free(tmp3); tmp3 = NULL;
+				if (tmp3) {free(tmp3);} tmp3 = NULL;
 			}
 
 			const char * mval = lookup_macro(name, macro_set, ctx);
@@ -2314,7 +2314,7 @@ static const char * evaluate_macro_func (
 				if (fmt && ! strchr(buf, '.')) { strcat(buf, ".0"); } // force it to look like a real
 			}
 
-			if (tmp2) free(tmp2); tmp2 = NULL;
+			if (tmp2) {free(tmp2);} tmp2 = NULL;
 		}
 		break;
 
