@@ -474,6 +474,11 @@ to order his/her own jobs,
 and this will have no effect on whether or
 not these jobs will run ahead of another user's jobs.
 
+Note that the priority setting in an HTCondor submit file will
+be overridden by \Condor{dagman} if the submit file is used
+for a node in a DAG, and the priority of the node within the
+DAG is non-zero (see ~\ref{sec:DAG-SetNodePriority} for more details).
+
 %%%%%%%%%%%%%%%%%%%
 %% queue
 %%%%%%%%%%%%%%%%%%%
