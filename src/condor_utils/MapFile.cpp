@@ -54,25 +54,13 @@
 // when the map is populated with regex entries.  When it is populated with simple
 // literal keys, the memory usage is 1/3 of that of the V1 version.
 
-
-/* this doesn't work on rhel6
-namespace std {
-	template <> class hash<const YourSensitiveString> {
-	public:
-		size_t operator()(const YourSensitiveString & str) const {
-			return (size_t) YourSensitiveString::hashFunction(str);
-		}
-	};
-};
-*/
-
 struct hash_yourstring {
-	size_t operator()(const YourSensitiveString & str) const {
-		return (size_t) YourSensitiveString::hashFunction(str);
+	size_t operator()(const YourString & str) const {
+		return (size_t) YourString::hashFunction(str);
 	}
 };
 
-typedef _unordered_map<const YourSensitiveString, const char *, hash_yourstring> LITERAL_HASH;
+typedef _unordered_map<const YourString, const char *, hash_yourstring> LITERAL_HASH;
 
 class CanonicalMapRegexEntry;
 class CanonicalMapHashEntry;
@@ -681,8 +669,8 @@ CanonicalMapList* MapFile::GetMapList(const char * method) // method is NULL for
 	if (it != methods.end()) {
 		list = it->second;
 	} else {
-		YourSensitiveString key(method ? apool.insert(method) : NULL);
-		std::pair<METHOD_MAP::iterator, bool> pp = methods.insert(std::pair<YourSensitiveString, CanonicalMapList*>(key, NULL));
+		YourString key(method ? apool.insert(method) : NULL);
+		std::pair<METHOD_MAP::iterator, bool> pp = methods.insert(std::pair<YourString, CanonicalMapList*>(key, NULL));
 		if (pp.second) {
 			// insert succeeded
 			// it = pp.first;

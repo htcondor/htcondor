@@ -49,7 +49,7 @@ my @table;
 $command_arg = '-af';
 $option = '';
 $pid = $$;
-$executable = '/bin/sleep';
+$executable = 'sleep.exe';
 $arguments = 100;
 $submit_content = 
 "executable = $executable
@@ -279,4 +279,5 @@ $result3 = check_type(\%Attr,$option,\@table,$sel3);
 
 RegisterResult($result0&&$result1&&$result2&&$result3,check_name => "$command_arg$option",test_name=>"$testname");
 
-
+CondorTest::EndTest();
+exit(0);

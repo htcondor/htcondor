@@ -210,6 +210,7 @@ class Lexer
 		// the 'extract token' functions
 		TokenType PeekToken( TokenValue* = 0 );
 		TokenType ConsumeToken( TokenValue* = 0 );
+		TokenType getLastTokenType() { return tokenType; } // return the type last token the lexer saw when it stopped.
 
 		// internal buffer for token accumulation
 		std::string lexBuffer;					    // the buffer itselfw

@@ -90,6 +90,8 @@ sub dry_run {
 		$Attr{$i}{ImageSize_RAW} = $Attr{$i}{ImageSize};
 		$Attr{$i}{ImageSize} = cal_from_raw($Attr{$i}{ImageSize_RAW});
 		$Attr{$i}{JobBatchName} = "\"CMD: $executable\"";
+		$Attr{$i}{CumulativeSlotTime} = ($Attr{$i}{EnteredCurrentStatus} - $Attr{$i}{QDate})."\."."0";
+		$Attr{$i}{RemoteWallClockTime} = $Attr{$i}{CumulativeSlotTime};
 	}
 	return %Attr;
 }
@@ -110,7 +112,6 @@ sub add_status_ads{
 			$Attr{$i}{BytesRecvd} = "0.0";
 			$Attr{$i}{BytesSent} = "0.0";
 			$Attr{$i}{CondorVersion} = "\"\$CondorVerison: 8.5.6 Jun 13 2016 BuildID: UW_development PRE-RELEASE-UWCS \$\"";
-			$Attr{$i}{CumulativeSlotTime} = ($Attr{$i}{EnteredCurrentStatus} - $Attr{$i}{QDate})."\."."0";
 			$Attr{$i}{DiskUsage_RAW} = 50;
 			$Attr{$i}{DiskUsage} = cal_from_raw($Attr{$i}{DiskUsage_RAW});
 			$Attr{$i}{ExecutableSize_RAW} = 50;
@@ -136,7 +137,6 @@ sub add_status_ads{
 			$Attr{$i}{OrigMaxHosts} = 1;
 			$Attr{$i}{ResidentSetSize_RAW} = 488;
 			$Attr{$i}{ResidentSetSize} = cal_from_raw($Attr{$i}{ResidentSetSize_RAW});
-			$Attr{$i}{RemoteWallClockTime} = $Attr{$i}{CumulativeSlotTime};
 			$Attr{$i}{StartdPrincipal} = "\""."execute-side\@matchsession/127.0.0.1"."\"";
 
 			if ($Attr{$i}{HoldReasonCode}==15){
@@ -161,9 +161,9 @@ sub add_status_ads{
 
 			my $ran_num_7 = int(rand(9999999));
 			my $ran_num_5 = int(rand(99999));
-			$Attr{$i}{AutoClusterAttrs} = "\""."JobUniverse,LastCheckpointPlatform,NumCkpts,MachineLastMatchTime,ConcurrencyLimits,NiceUser,Rank,Requirements,DiskUsage,FileSystemDomain,ImageSize,RequestDisk,RequestMemory"."\"";
+			$Attr{$i}{AutoClusterAttrs} = "\""."JobUniverse,LastCheckpointPlatform,NumCkpts,MachineLastMatchTime,ConcurrencyLimits,NiceUser,Rank,Requirements,DiskUsage,FileSystemDomain,ImageSize,MemoryUsage,RequestDisk,RequestMemory,ResidentSetSize"."\"";
 			$Attr{$i}{AutoClusterId} = 1;
-			$Attr{$i}{CurrentHosts} = 1;
+			$Attr{$i}{CurrentHosts} = 0;
 			$Attr{$i}{DiskUsage} = 2500000;
 			$Attr{$i}{JobCurrentStartDate} = $Attr{$i}{QDate};
 			$Attr{$i}{JobStartDate} = $Attr{$i}{QDate};
@@ -425,10 +425,9 @@ sub multi_owners{
 	return %Attr;
 }
 
-sub create_table {
+sub write_ads {
 	my %Attr = %{$_[0]};
 	my $testname = $_[1];
-	my $command_arg = $_[2];
 	# write the result of print hash to
 	my $fname = "$testname.simulated.ads";
 	open(FH, ">$fname") || print "ERROR writing to file $fname";
@@ -439,9 +438,36 @@ sub create_table {
 		print FH "\n";
 	}
 	close(FH);
-	my @table = `condor_q -job $fname $command_arg`;
+	return $fname;
+}
 
-# read everything before -- and store them to $other
+sub create_table {
+	my %Attr = %{$_[0]};
+	my $testname = $_[1];
+	my $command_arg = $_[2];
+	my $format_file;
+	my @table;
+	if (defined $_[3]){
+		$format_file = $_[3];
+	}
+	# write the result of print hash to
+	my $fname = "$testname.simulated.ads";
+	open(FH, ">$fname") || print "ERROR writing to file $fname";
+	foreach my $k1 (sort keys %Attr){
+		foreach my $k2 (keys %{ $Attr{$k1}}) {
+			print FH $k2," = ", $Attr{$k1}{$k2}, "\n";
+		}
+		print FH "\n";
+	}
+	close(FH);
+
+	if ($command_arg eq "-pr"){
+		@table = `condor_q -job $fname $command_arg $format_file`;
+	} else {
+		@table = `condor_q -job $fname $command_arg`;
+	}
+
+	# read everything before -- and store them to $other
 	my %other;
 	my $cnt = 0;
 	until ($cnt == scalar @table || $table[$cnt] =~ /--/){
@@ -450,7 +476,7 @@ sub create_table {
 	}
 	my $head_pos = $cnt+1;
 
-# read everything before the blank line and store them to $data
+	# read everything before the blank line and store them to $data
 	$cnt = 0;
 	my %data;
 	while(defined $table[$head_pos+$cnt] && $table[$head_pos+$cnt]=~ /\S/){
@@ -458,11 +484,11 @@ sub create_table {
 		$cnt++;
 	}
 
-# read another line of summary
+	# read another line of summary
 	my $arg = $table[(scalar @table)-1];
 	my @summary = split / /, $arg;
-	return (\%other,\%data,\@summary);
-}	
+	return (\%other,\%data,\@summary);	
+}		
 
 # function to find the blank column numbers from a hash
 # input: a hash
@@ -602,7 +628,7 @@ sub trim{
 # stored in %cnt_num
 sub count_job_states {
 
-	defined $_[0] || die "USAGE of count_job_states: count_job_states(<LIST_OF_JOB_ADS>)\n";
+	defined $_[0] || print "USAGE of count_job_states: count_job_states(<LIST_OF_JOB_ADS>)\n";
 	my %Attr = %{$_[0]};
 	my $idle_cnt = 0;
 	my $run_cnt = 0;
@@ -1048,12 +1074,12 @@ if ($command_arg =~ /-dag/ && !($command_arg =~ /-nobatch/)){
 # check if summary statement is correct
 # input: command line arg, summary line from condor_q and result of count_job_states() 
 sub check_summary {
-	defined $_[2] || die "USAGE of check_summary: check_summary(<COMMAND_ARG>,\\<SUMMARY>,\\<NUMS_OF_JOBS>)\n"; 
+	defined $_[2] || print "USAGE of check_summary: check_summary(<COMMAND_ARG>,\\<SUMMARY>,\\<NUMS_OF_JOBS>)\n"; 
 	my $command_arg = $_[0];
 	my @summary = @{$_[1]};
 	my %num_of_jobs = %{$_[2]};
 	my $real_heading = find_real_heading($command_arg); 
-	my %have_summary_line = ('-nobatch'=>1,'-batch'=>0,'-run'=>0,'-hold'=>1,'-grid'=>0,'-globus'=>0,'-io'=>0,'-tot'=>1,'-totals'=>1,'-dag'=>1);
+	my %have_summary_line = ('have_sum'=>1,'-nobatch'=>1,'-batch'=>0,'-run'=>0,'-hold'=>1,'-grid'=>0,'-globus'=>0,'-io'=>0,'-tot'=>1,'-totals'=>1,'-dag'=>1);
 	if ($have_summary_line{$real_heading} ){
 		TLOG("Checking summary statement.\n");
 		if ($summary[0]!= $num_of_jobs{0} || $summary[2]!=$num_of_jobs{4} || $summary[4]!=$num_of_jobs{3} || $summary[6]!=$num_of_jobs{1} || $summary[8]!=$num_of_jobs{2} || $summary[10]!= $num_of_jobs{5} || $summary[12]!=$num_of_jobs{6}){
@@ -1320,11 +1346,80 @@ sub check_type {
 	}
 }
 
+sub check_pr {
+	my %data = %{$_[0]};
+	my $option = $_[1];
+	my %Attr;
+	if (defined $_[2]){
+		%Attr = %{$_[2]};
+	}
+	TLOG("Checking the print format\n");
+	if ($option eq 'normal'){
+		if (!($data{0} =~ /ID\s+OWNER\s+SUBMITTED\s+RUN_TIME\s+ST\s+PRI\s+SIZE\s+CMD/) || length($data{0}) > 80){ 
+			print "        FAILED: heading is not correct\n";
+			return 0;
+		} else {
+			return 1;
+		}
+	}
+	if ($option eq 'random'){
+		if (length($data{0}) > 89){
+			print "        FAILED: length is not correct\n";
+			return 0;
+		} else {
+			return 1;
+		}
+	}
+	if ($option eq 'short'){
+		my @fields = split_fields(\%data);
+		for my $i (1..8){
+			if (length($fields[0][$i]) > 5 || length($fields[1][$i]) > 2 || length($fields[2][$i]) > 4 || length($fields[3][$i]) > 3){
+				print "        FAILED: length is not correct\n";
+				return 0;
+			}
+		}
+		return 1;
+	}
+	if ($option eq 'where2'){
+		my @fields = split_fields(\%data);
+		for my $i (1..4){
+			if ($fields[4][$i] ne 'H'){
+				print "        FAILED: selected incorrect jobs\n";
+				return 0;
+			}
+		}
+		return 1;
+	}
+	if ($option eq 'printf'){
+		if (length($data{0}) ne 16){
+			print "        FAILED: length is not correct\n";
+			return 0;
+		} else {
+			for my $i (1..8){
+				if ($data{$i} ne " $Attr{$i-1}{ClusterId}  $Attr{$i-1}{NumJobStarts}    $Attr{$i-1}{ProcId}\.00\n"){ 
+					print "        FAILED: Output is:  $data{$i}\n        Should be:          $Attr{$i-1}{ClusterId}  $Attr{$i-1}{NumJobStarts}    $Attr{$i-1}{ProcId}\.00\n";
+					return 0;
+				}
+			}
+			return 1;	
+		}
+	}
+	if ($option eq 'ifthenelse'){
+		for my $i (1..8){
+			my $string = substr($Attr{$i-1}{Owner}, 1, length($Attr{$i-1}{Owner})-2);
+			unless ($data{$i} =~ /0.0\s+$string/){
+				print "        FAILED: Output is: $data{$i}\n";
+				return 0;
+			}
+		}
+		return 1;
+	}
+}
 sub write_ads_to_file {
 	my $testname = $_[0];
 	my %Attr = %{$_[1]};
 	my $fname = "$testname.simulated.ads";
-	open(FH, ">$fname") || print "ERROR writing to file $fname";
+	open(FH, ">$fname") || print "FAILED writing to file $fname";
 	foreach my $k1 (sort keys %Attr){
 		print FH $k1," = ", $Attr{$k1}, "\n";
 	}
@@ -1334,7 +1429,7 @@ sub write_ads_to_file {
 
 sub emit_dag_files {
         my ($testname,$submit_content,$pid) = @_;                                                      
-        defined $pid || die "USAGE of emit_dag_files: emit_dag_files(<TESTNAME>,<SUBMIT_CONTENT>,<PROCESSID>)\n";
+        defined $pid || print "USAGE of emit_dag_files: emit_dag_files(<TESTNAME>,<SUBMIT_CONTENT>,<PROCESSID>)\n";
 	my $dag_content = "JOBSTATE_LOG $testname.jobstate.log                                    
                 Job A_A ${testname}_A.cmd
                 SCRIPT PRE A_A ${testname}_A_pre.sh                                               

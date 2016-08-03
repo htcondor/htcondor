@@ -77,6 +77,19 @@ int sPrintAd( MyString &output, const classad::ClassAd &ad, bool exclude_private
 	*/
 int sPrintAd( std::string &output, const classad::ClassAd &ad, bool exclude_private = false, StringList *attr_white_list = NULL );
 
+	/** Get a sorted list of attributes that are in the given ad, and also match the given whitelist (if any)
+		@param attrs the set of attrs to insert into. This is set is NOT cleared first.
+		@return TRUE
+	*/
+int sGetAdAttrs( classad::References &attrs, const classad::ClassAd &ad, bool exclude_private = false, StringList *attr_white_list = NULL, bool ignore_parent = false );
+
+	/** Format the given attributes from the ClassAd as an old ClassAd into the given string
+		@param output The std::string to write into
+		@return TRUE
+	*/
+int sPrintAdAttrs( std::string &output, const classad::ClassAd &ad, const classad::References & attrs );
+int sPrintAdAttrs( MyString &output, const classad::ClassAd &ad, const classad::References & attrs );
+
 class ClassAd : public classad::ClassAd
 {
  public:
@@ -430,6 +443,10 @@ class ClassAdFileParseHelper
 	virtual int PreParse(std::string & line, ClassAd & ad, FILE* file)=0;
 	// return 0 to skip and continue, 1 to re-parse line, 2 to quit parsing with success, -1 to abort parsing.
 	virtual int OnParseError(std::string & line, ClassAd & ad, FILE* FILE)=0;
+	// return non-zero if new parser, 0 if old (line oriented) parser, if parse type is auto
+	// it may return 0 and also set detected_long to indicate that errmsg should be parsed
+	// as a line from the file. we do this to avoid having to backtrack the FILE*
+	virtual int NewParser(ClassAd & ad, FILE* file, bool & detected_long, std::string & errmsg)=0;
 };
 
 // this implements a classad file parse helper that
@@ -440,15 +457,33 @@ class CondorClassAdFileParseHelper : public ClassAdFileParseHelper
  public:
 	// Some compilers whine when you have virtual methods but not an
 	// explicit virtual destructor
-	virtual ~CondorClassAdFileParseHelper() {}
+	virtual ~CondorClassAdFileParseHelper();
 	// return 0 to skip (is_comment), 1 to parse line, 2 for end-of-classad, -1 for abort
 	virtual int PreParse(std::string & line, ClassAd & ad, FILE* file);
 	// return 0 to skip and continue, 1 to re-parse line, 2 to quit parsing with success, -1 to abort parsing.
 	virtual int OnParseError(std::string & line, ClassAd & ad, FILE* FILE);
-	CondorClassAdFileParseHelper(std::string delim) : ad_delimitor(delim) {};
+	// return non-zero if new parser, 0 if old (line oriented) parser, if parse type is auto
+	// it may return 0 and also set detected_long to indicate that errmsg should be parsed
+	// as a line from the file. we do this to avoid having to backtrack the FILE*
+	virtual int NewParser(ClassAd & ad, FILE* file, bool & detected_long, std::string & errmsg);
+
+	enum ParseType {
+		Parse_long=0, // file is in the traditional -long form, possibly with a delimiter line between ads
+		Parse_xml,    // file is in -xml form
+		Parse_json,   // file is in -json form, usually begins with a line of "[" and has a with a line of "," between ads
+		Parse_new,    // file is in new classads form, may begin with a line of "{" and have a line of "," between ads, or may just begin with a line of [
+		Parse_auto,   // parse helper should figure out what the form is
+	};
+
+	CondorClassAdFileParseHelper(std::string delim, ParseType typ=Parse_long) 
+		: ad_delimitor(delim), parse_type(typ), new_parser(NULL), inside_list(false) {};
  private:
 	std::string ad_delimitor;
+	ParseType parse_type;
+	void*     new_parser; // a class whose type depends on the value of parse_type.
+	bool      inside_list;
 };
+
 
 /** Is this value valid for being written to the log?
  *  The value is a RHS of an expression. Only '\n' or '\r' are invalid.
@@ -576,5 +611,9 @@ typedef ClassAd AttrList;
 typedef classad::ExprTree ExprTree;
 
 } // namespace compat_classad
+
+//typedef compat_classad::CondorClassAdFileParseHelper::ParseType ClassAdFileParseType;
+typedef compat_classad::CondorClassAdFileParseHelper ClassAdFileParseType;
+
 
 #endif

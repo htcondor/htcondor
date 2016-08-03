@@ -347,7 +347,7 @@ fdatasync_with_status(stream_with_status_t* s)
   return 0;
 }
 
-Transaction::Transaction(): op_log(TRANSACTION_HASH_LEN,YourSensitiveString::hashFunction,rejectDuplicateKeys)
+Transaction::Transaction(): op_log(TRANSACTION_HASH_LEN,YourString::hashFunction,rejectDuplicateKeys)
 {
 	m_EmptyTransaction = true;
 	op_log_iterating = NULL;
@@ -357,7 +357,7 @@ Transaction::~Transaction()
 {
 	LogRecordList *l;
 	LogRecord		*log;
-	YourSensitiveString key;
+	YourString key;
 
 	op_log.startIterations();
 	while( op_log.iterate(key,l) ) {
@@ -368,7 +368,7 @@ Transaction::~Transaction()
 		}
 		delete l;
 	}
-		// NOTE: the YourSensitiveString keys in this hash table now contain
+		// NOTE: the YourString keys in this hash table now contain
 		// pointers to deallocated memory, as do the LogRecordList pointers.
 		// No further lookups in this hash table should be performed.
 }
@@ -563,7 +563,7 @@ Transaction::AppendLog(LogRecord *log)
 {
 	m_EmptyTransaction = false;
 	char const *key = log->get_key();
-	YourSensitiveString key_obj = key ? key : "";
+	YourString key_obj = key ? key : "";
 
 	LogRecordList *l = NULL;
 	op_log.lookup(key_obj,l);
@@ -578,7 +578,7 @@ Transaction::AppendLog(LogRecord *log)
 LogRecord *
 Transaction::FirstEntry(char const *key)
 {
-	YourSensitiveString key_obj = key;
+	YourString key_obj = key;
 	op_log_iterating = NULL;
 	op_log.lookup(key_obj,op_log_iterating);
 

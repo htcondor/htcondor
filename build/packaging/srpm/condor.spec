@@ -1885,6 +1885,17 @@ fi
 %endif
 
 %changelog
+* Tue Aug 02 2016 Tim Theisen <tim@cs.wisc.edu> - 8.5.6-1
+- The -batch output for condor_q is now the default
+- Python bindings for job submission and machine draining
+- Numerous Docker usability changes
+- New options to limit condor_history results to jobs since last invocation
+- Shared port daemon can be used with high availability and replication
+- ClassAds can be written out in JSON format
+- More flexible ordering of DAGMan commands
+- Efficient PBS and SLURM job monitoring
+- Simplified leases for grid universe jobs
+
 * Tue Jul 05 2016 Tim Theisen <tim@cs.wisc.edu> - 8.4.8-1
 - Fixed a memory leak triggered by the python htcondor.Schedd().query() call
 - Fixed a bug that could cause Bosco file transfers to fail

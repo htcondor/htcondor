@@ -1302,7 +1302,31 @@ ClassAd( FILE *file, const char *delimitor, int &isEOF, int&error, int &empty )
 	}
 }
 
-// this method is called before each line is parsed. 
+CondorClassAdFileParseHelper::~CondorClassAdFileParseHelper()
+{
+	switch (parse_type) {
+		case Parse_xml: {
+			classad::ClassAdXMLParser * parser = (classad::ClassAdXMLParser *)new_parser;
+			delete parser;
+			new_parser = NULL;
+		} break;
+		case Parse_json: {
+			classad::ClassAdJsonParser * parser = (classad::ClassAdJsonParser *)new_parser;
+			delete parser;
+			new_parser = NULL;
+		} break;
+		case Parse_new: {
+			classad::ClassAdParser * parser = (classad::ClassAdParser *)new_parser;
+			delete parser;
+			new_parser = NULL;
+		} break;
+		default: break;
+	}
+	ASSERT( ! new_parser);
+}
+
+
+// this method is called before each line is parsed.
 // return 0 to skip (is_comment), 1 to parse line, 2 for end-of-classad, -1 for abort
 int CondorClassAdFileParseHelper::PreParse(std::string & line, ClassAd & /*ad*/, FILE* /*file*/)
 {
@@ -1317,7 +1341,7 @@ int CondorClassAdFileParseHelper::PreParse(std::string & line, ClassAd & /*ad*/,
 		if (line[ix] == '#' || line[ix] == '\n')
 			return 0; // skip this line, but don't stop parsing.
 		if (line[ix] != ' ' && line[ix] != '\t')
-			return 1; // parse this line
+			break;
 	}
 	return 1; // parse this line.
 }
@@ -1326,6 +1350,12 @@ int CondorClassAdFileParseHelper::PreParse(std::string & line, ClassAd & /*ad*/,
 // return 0 to skip and continue, 1 to re-parse line, 2 to quit parsing with success, -1 to abort parsing.
 int CondorClassAdFileParseHelper::OnParseError(std::string & line, ClassAd & /*ad*/, FILE* file)
 {
+	if (parse_type >= Parse_xml && parse_type < Parse_auto) {
+		// here line is actually errmsg.
+		PRAGMA_REMIND("report parse errors for new parsers?")
+		return -1;
+	}
+
 		// print out where we barfed to the log file
 	dprintf(D_ALWAYS,"failed to create classad; bad expr = '%s'\n",
 			line.c_str());
@@ -1341,12 +1371,180 @@ int CondorClassAdFileParseHelper::OnParseError(std::string & line, ClassAd & /*a
 	return -1; // abort
 }
 
+
+int CondorClassAdFileParseHelper::NewParser(ClassAd & ad, FILE* file, bool & detected_long, std::string & errmsg)
+{
+	detected_long = false;
+	if (parse_type < Parse_xml || parse_type > Parse_auto) {
+		// return 0 to indicate this is a -long form (line oriented) parse type
+		return 0;
+	}
+
+	int rval = 1;
+	switch(parse_type) {
+		case Parse_xml: {
+			classad::ClassAdXMLParser * parser = (classad::ClassAdXMLParser *)new_parser;
+			if ( ! parser) {
+				parser = new classad::ClassAdXMLParser();
+				new_parser = (void*)parser;
+			}
+			ASSERT(parser);
+			bool fok = parser->ParseClassAd(file, ad);
+			if (fok) {
+				rval = ad.size();
+			} else if (feof(file)) {
+				rval = -99;
+			} else {
+				rval = -1;
+			}
+		} break;
+
+		case Parse_json: {
+			classad::ClassAdJsonParser * parser = (classad::ClassAdJsonParser *)new_parser;
+			if ( ! parser) {
+				parser = new classad::ClassAdJsonParser();
+				new_parser = (void*)parser;
+			}
+			ASSERT(parser);
+			bool fok = parser->ParseClassAd(file, ad, false);
+			if ( ! fok) {
+				bool keep_going = false;
+				classad::Lexer::TokenType tt = parser->getLastTokenType();
+				if (inside_list) {
+					if (tt == classad::Lexer::LEX_COMMA) { keep_going = true; }
+					else if (tt == classad::Lexer::LEX_CLOSE_BOX) { keep_going = true; inside_list = false; }
+				} else {
+					if (tt == classad::Lexer::LEX_OPEN_BOX) { keep_going = true; inside_list = true; }
+				}
+				if (keep_going) {
+					fok = parser->ParseClassAd(file, ad, false); 
+				}
+			}
+			if (fok) {
+				rval = ad.size();
+			} else if (feof(file)) {
+				rval = -99;
+			} else {
+				rval = -1;
+			}
+		} break;
+
+		case Parse_new: {
+			classad::ClassAdParser * parser = (classad::ClassAdParser *)new_parser;
+			if ( ! parser) {
+				parser = new classad::ClassAdParser();
+				new_parser = (void*)parser;
+			}
+			ASSERT(parser);
+			bool fok = parser->ParseClassAd(file, ad);
+			if ( ! fok) {
+				bool keep_going = false;
+				classad::Lexer::TokenType tt = parser->getLastTokenType();
+				if (inside_list) {
+					if (tt == classad::Lexer::LEX_COMMA) { keep_going = true; }
+					else if (tt == classad::Lexer::LEX_CLOSE_BRACE) { keep_going = true; inside_list = false; }
+				} else {
+					if (tt == classad::Lexer::LEX_OPEN_BRACE) { keep_going = true; inside_list = true; }
+				}
+				if (keep_going) {
+					fok = parser->ParseClassAd(file, ad, false); 
+				}
+			}
+			if (fok) {
+				rval = ad.size();
+			} else if (feof(file)) {
+				rval = -99;
+			} else {
+				rval = -1;
+			}
+		} break;
+
+		case Parse_auto: { // parse line oriented until we figure out the parse type
+			// get a line from the file
+			std::string buffer;
+			for (;;) {
+				if ( ! readLine(buffer, file, false)) {
+					return feof(file) ? -99 : -1;
+				}
+
+				int ee = PreParse(buffer, ad, file);
+				if (ee == 1) {
+					// pre-parser says parse it. can we use it to figure out what type we are?
+					// if we are still scanning to decide what the parse type is, we should be able to figure it out now...
+					if (buffer == "<?xml version=\"1.0\"?>\n") {
+						parse_type = Parse_xml;
+						return NewParser(ad, file, detected_long, errmsg); // skip this line, but don't stop parsing, from now on
+					} else if (buffer == "[\n" || buffer == "{\n") {
+						char ch = buffer[0];
+						// could be json or new classads, read character to figure out which.
+						char ch2 = fgetc(file);
+						if (ch == '{' && ch2 == '[') {
+							inside_list = true;
+							ungetc('[', file);
+							parse_type = Parse_new;
+							return NewParser(ad, file, detected_long, errmsg);
+						} else if (ch == '[' && ch2 == '{') {
+							inside_list = true;
+							ungetc('{', file);
+							parse_type = Parse_json;
+							return NewParser(ad, file, detected_long, errmsg);
+						} else {
+							buffer = ""; buffer[0] = ch;
+							readLine(buffer, file, true);
+						}
+					}
+					// this doesn't look like a new classad prolog, so just parse it
+					// using the line oriented parser.
+					parse_type = Parse_long;
+					errmsg = buffer;
+					detected_long = true;
+					return 0;
+				}
+			}
+			
+		} break;
+
+		default: rval = -1; break;
+	}
+
+	return rval;
+}
+
+
 // returns number of attributes added to the ad
 int ClassAd::
 InsertFromFile(FILE* file, /*out*/ bool& is_eof, /*out*/ int& error, ClassAdFileParseHelper* phelp /*=NULL*/)
 {
+	int ee = 1;
 	int cAttrs = 0;
 	std::string buffer;
+
+	if (phelp) {
+		// new classad style parsers do all of the work in the NewParser callback
+		// they will return non-zero to indicate that they are new classad style parsers.
+		bool detected_long = false;
+		cAttrs = phelp->NewParser(*this, file, detected_long, buffer);
+		if (cAttrs > 0) {
+			error = 0;
+			is_eof = false;
+			return cAttrs;
+		} else if (cAttrs < 0) {
+			if (cAttrs == -99) {
+				error = 0;
+				is_eof = true;
+				return 0;
+			}
+			is_eof = feof(file);
+			error = cAttrs;
+			return phelp->OnParseError(buffer, *this, file);
+		}
+		// got a 0 from NewParser, fall down into the old (-long) style parser
+		if (detected_long && ! buffer.empty()) {
+			// buffer has the first line that we want to parse, jump into the
+			// middle of the line-oriented parse loop.
+			goto parse_line;
+		}
+	}
 
 	while( 1 ) {
 
@@ -1359,7 +1557,7 @@ InsertFromFile(FILE* file, /*out*/ bool& is_eof, /*out*/ int& error, ClassAdFile
 
 		// if there is a helper, give the helper first crack at the line
 		// otherwise set ee to decide what to do with this line.
-		int ee = 1;
+		ee = 1;
 		if (phelp) {
 			ee = phelp->PreParse(buffer, *this, file);
 		} else {
@@ -1385,6 +1583,7 @@ InsertFromFile(FILE* file, /*out*/ bool& is_eof, /*out*/ int& error, ClassAdFile
 			return cAttrs;
 		}
 
+parse_line:
 		// Insert the string into the classad
 		if (Insert(buffer.c_str()) !=  0) {
 			++cAttrs;
@@ -2177,6 +2376,97 @@ sPrintAd( std::string &output, const classad::ClassAd &ad, bool exclude_private,
 	int rc = sPrintAd( myout, ad, exclude_private, attr_white_list );
 	output += myout;
 	return rc;
+}
+
+/** Get a sorted list of attributes that are in the given ad, and also match the given whitelist (if any)
+	and privacy criteria.
+	@param attrs the set of attrs to insert into. This is set is NOT cleared first.
+	@return TRUE
+*/
+int
+sGetAdAttrs( classad::References &attrs, const classad::ClassAd &ad, bool exclude_private, StringList *attr_white_list, bool ignore_parent )
+{
+	classad::ClassAd::const_iterator itr;
+
+	for ( itr = ad.begin(); itr != ad.end(); itr++ ) {
+		if ( attr_white_list && !attr_white_list->contains_anycase(itr->first.c_str()) ) {
+			continue; // not in white-list
+		}
+		if ( !exclude_private ||
+			 !ClassAdAttributeIsPrivate( itr->first.c_str() ) ) {
+			attrs.insert(itr->first);
+		}
+	}
+
+	const classad::ClassAd *parent = ad.GetChainedParentAd();
+	if ( parent && ! ignore_parent) {
+		for ( itr = parent->begin(); itr != parent->end(); itr++ ) {
+			if ( attrs.find(itr->first) != attrs.end() ) {
+				continue; // we already inserted this into the attrs list.
+			}
+			if ( attr_white_list && !attr_white_list->contains_anycase(itr->first.c_str()) ) {
+				continue; // not in white-list
+			}
+			if ( !exclude_private ||
+				 !ClassAdAttributeIsPrivate( itr->first.c_str() ) ) {
+				attrs.insert(itr->first);
+			}
+		}
+	}
+
+	return TRUE;
+}
+
+/** Format the given attributes from the ClassAd as an old ClassAd into the given string
+	@param output The std::string to write into
+	@return TRUE
+	Note: this function and its sister that outputs to std::string do not call each other for reasons of efficiency...
+*/
+int
+sPrintAdAttrs( MyString &output, const classad::ClassAd &ad, const classad::References &attrs )
+{
+	classad::ClassAdUnParser unp;
+	unp.SetOldClassAd( true, true );
+	std::string line;
+
+	classad::References::const_iterator it;
+	for (it = attrs.begin(); it != attrs.end(); ++it) {
+		const ExprTree * tree = ad.Lookup(*it); // use Lookup rather than find in case we have a parent ad.
+		if (tree) {
+			line = *it;
+			line += " = ";
+			unp.Unparse( line, tree );
+			line += "\n";
+			output += line;
+		}
+	}
+
+	return TRUE;
+}
+
+/** Format the given attributes from the ClassAd as an old ClassAd into the given string
+	@param output The std::string to write into
+	@return TRUE
+	Note: this function and its sister the outputs to MyString do not call each other for reasons of efficiency...
+*/
+int
+sPrintAdAttrs( std::string &output, const classad::ClassAd &ad, const classad::References &attrs )
+{
+	classad::ClassAdUnParser unp;
+	unp.SetOldClassAd( true, true );
+
+	classad::References::const_iterator it;
+	for (it = attrs.begin(); it != attrs.end(); ++it) {
+		const ExprTree * tree = ad.Lookup(*it); // use Lookup rather than find in case we have a parent ad.
+		if (tree) {
+			output += *it;
+			output += " = ";
+			unp.Unparse( output, tree );
+			output += "\n";
+		}
+	}
+
+	return TRUE;
 }
 
 // Taken from the old classad's function. Got rid of incorrect documentation. 

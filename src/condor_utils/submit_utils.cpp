@@ -106,7 +106,7 @@ private:
 public:
 	YourCaseInsensitiveString(const char * str=NULL) : m_str(str) {}
 	YourCaseInsensitiveString(const YourCaseInsensitiveString &rhs) : m_str(rhs.m_str) {}
-	// YourCaseInsensitiveString(const YourSensitiveString &rhs) : m_str(rhs.m_str.ptr()) {}
+	// YourCaseInsensitiveString(const YourString &rhs) : m_str(rhs.m_str.ptr()) {}
 	void operator=(const char* str) { m_str = str; }
 	const char *ptr() { return m_str; }
 	bool operator ==(const char * str) {

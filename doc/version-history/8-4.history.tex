@@ -64,6 +64,16 @@ an error several times per hour if the configuration knob \Macro{NO\_DNS}
 is set to True.
 \Ticket{5762}
 
+\item Updated systemd configuration to start HTCondor after ypbind has
+started.
+\Ticket{5814}
+
+\item Fixed monitoring of memory and CPU usage of running jobs on Mac OS X.
+This monitoring didn't work for a personal installation of HTCondor.
+With Mac OS X 10.11 and above, this monitoring resulted in a flood of
+errors messages to the system logs for a root-based installation.
+\Ticket{5777}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

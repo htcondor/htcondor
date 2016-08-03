@@ -62,12 +62,12 @@ struct WinPerf_Query
 // HashTable needs operator==, which we define to be
 // case-insensitive for ClassAds
 
-class YourString 
+class YourInsensitiveString
 {
 	public:
-		YourString() : s(0) {}
-		YourString(const char *str) : s(str) {}
-		bool operator==(const YourString &rhs) { return (lstrcmpi(s,rhs.s) == 0); }
+		YourInsensitiveString() : s(0) {}
+		YourInsensitiveString(const char *str) : s(str) {}
+		bool operator==(const YourInsensitiveString &rhs) { return (lstrcmpi(s,rhs.s) == 0); }
 		const char *s; // Someone else owns this
 };
 
@@ -583,7 +583,7 @@ char * generate_reg_key_attr_name(const char * pszPrefix, const char * pszKeyNam
 
 // Chris Torek's world famous hashing function
 // Modified to be case-insensitive
-static unsigned int torekHash(const YourString &s) {
+static unsigned int torekHash(const YourInsensitiveString &s) {
 	unsigned int hash = 0;
 
 	const char *p = s.s;
@@ -843,7 +843,7 @@ static struct {
 	// the performance registry.  We keep that set of strings in pszzNames
 	// and we hash name->index and index->name in two hashtables. 
 	char * pszzNames; // holds all of the strings that the two hash tables refer to.
-	HashTable<YourString, const char *> * pPerfTable;
+	HashTable<YourInsensitiveString, const char *> * pPerfTable;
 	HashTable<DWORD, const char *> * pNameTable;
     HashTable<DWORD, WinPerf_QueryResult> * pQueries;
 } rl = {0};
@@ -882,7 +882,7 @@ static bool init_windows_performance_hashtable()
 	else if (REG_MULTI_SZ == vtype)
 	{
 		rl.pQueries   = new HashTable<DWORD, WinPerf_QueryResult>(2, DWORDHash, updateDuplicateKeys);
-		rl.pPerfTable = new HashTable<YourString, const char *>(4000, torekHash, allowDuplicateKeys);
+		rl.pPerfTable = new HashTable<YourInsensitiveString, const char *>(4000, torekHash, allowDuplicateKeys);
 		rl.pNameTable = new HashTable<DWORD, const char *>(4000, DWORDHash, rejectDuplicateKeys);
 		if (rl.pPerfTable)
 		{
