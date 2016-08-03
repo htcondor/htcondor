@@ -30,21 +30,21 @@ pushStringListBack( std::vector< YourString > & v, StringList & sl ) {
 #define CHECK_COMMON_ARGUMENTS if( service_url.empty() || publickeyfile.empty() || privatekeyfile.empty() ) { return GAHPCLIENT_COMMAND_NOT_SUPPORTED; }
 #define PUSH_COMMON_ARGUMENTS arguments.push_back( service_url ); arguments.push_back( publickeyfile ); arguments.push_back( privatekeyfile );
 
-int EC2GahpClient::ec2_vm_start( std::string service_url,
-								 std::string publickeyfile,
-								 std::string privatekeyfile,
-								 std::string ami_id,
-								 std::string keypair,
-								 std::string user_data,
-								 std::string user_data_file,
-								 std::string instance_type,
-								 std::string availability_zone,
-								 std::string vpc_subnet,
-								 std::string vpc_ip,
-								 std::string client_token,
-								 std::string block_device_mapping,
-								 std::string iam_profile_arn,
-								 std::string iam_profile_name,
+int EC2GahpClient::ec2_vm_start( const std::string & service_url,
+								 const std::string & publickeyfile,
+								 const std::string & privatekeyfile,
+								 const std::string & ami_id,
+								 const std::string & keypair,
+								 const std::string & user_data,
+								 const std::string & user_data_file,
+								 const std::string & instance_type,
+								 const std::string & availability_zone,
+								 const std::string & vpc_subnet,
+								 const std::string & vpc_ip,
+								 const std::string & client_token,
+								 const std::string & block_device_mapping,
+								 const std::string & iam_profile_arn,
+								 const std::string & iam_profile_name,
 								 StringList & groupnames,
 								 StringList & groupids,
 								 StringList & parametersAndValues,
@@ -117,10 +117,10 @@ int EC2GahpClient::ec2_vm_start( std::string service_url,
 	}
 }
 
-int EC2GahpClient::ec2_vm_stop(	std::string service_url,
-								std::string publickeyfile,
-								std::string privatekeyfile,
-								std::string instance_id,
+int EC2GahpClient::ec2_vm_stop(	const std::string & service_url,
+								const std::string & publickeyfile,
+								const std::string & privatekeyfile,
+								const std::string & instance_id,
 								std::string & error_code )
 {
 	// command line looks like:
@@ -180,9 +180,9 @@ int EC2GahpClient::ec2_gahp_statistics( StringList & returnStatistics ) {
 	return 0;
 }
 
-int EC2GahpClient::ec2_vm_status_all( std::string service_url,
-                                      std::string publickeyfile,
-                                      std::string privatekeyfile,
+int EC2GahpClient::ec2_vm_status_all( const std::string & service_url,
+                                      const std::string & publickeyfile,
+                                      const std::string & privatekeyfile,
                                       StringList & returnStatus,
                                       std::string & error_code )
 {
@@ -227,9 +227,9 @@ int EC2GahpClient::ec2_vm_status_all( std::string service_url,
 	}
 }
 
-int EC2GahpClient::ec2_ping(	std::string service_url,
-								std::string publickeyfile,
-								std::string privatekeyfile,
+int EC2GahpClient::ec2_ping(	const std::string & service_url,
+								const std::string & publickeyfile,
+								const std::string & privatekeyfile,
 								std::string & error_code )
 {
 	// we can use "Status All" command to make sure EC2 Server is alive.
@@ -259,9 +259,9 @@ int EC2GahpClient::ec2_ping(	std::string service_url,
 	}
 }
 
-int EC2GahpClient::ec2_vm_server_type(	std::string service_url,
-										std::string publickeyfile,
-										std::string privatekeyfile,
+int EC2GahpClient::ec2_vm_server_type(	const std::string & service_url,
+										const std::string & publickeyfile,
+										const std::string & privatekeyfile,
 										std::string & server_type,
 										std::string & error_code )
 {
@@ -310,11 +310,11 @@ int EC2GahpClient::ec2_vm_server_type(	std::string service_url,
 	}
 }
 
-int EC2GahpClient::ec2_vm_create_keypair(	std::string service_url,
-											std::string publickeyfile,
-											std::string privatekeyfile,
-											std::string keyname,
-											std::string outputfile,
+int EC2GahpClient::ec2_vm_create_keypair(	const std::string & service_url,
+											const std::string & publickeyfile,
+											const std::string & privatekeyfile,
+											const std::string & keyname,
+											const std::string & outputfile,
 											std::string & error_code)
 {
 	// command line looks like:
@@ -328,15 +328,15 @@ int EC2GahpClient::ec2_vm_create_keypair(	std::string service_url,
 		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
 	}
 
-	if ( outputfile.empty() ) {
-		outputfile = NULL_FILE;
-	}
-
 	Gahp_Args * result = NULL;
 	std::vector< YourString > arguments;
 	PUSH_COMMON_ARGUMENTS;
 	arguments.push_back( keyname );
-	arguments.push_back( outputfile );
+	if ( outputfile.empty() ) {
+		arguments.push_back( NULL_FILE );
+	} else {
+		arguments.push_back( outputfile );
+	}
 	int cgf = callGahpFunction( command, arguments, result, medium_prio );
 	if( cgf != 0 ) { return cgf; }
 
@@ -369,10 +369,10 @@ int EC2GahpClient::ec2_vm_create_keypair(	std::string service_url,
 	}
 }
 
-int EC2GahpClient::ec2_vm_destroy_keypair(	std::string service_url,
-											std::string publickeyfile,
-											std::string privatekeyfile,
-											std::string keyname,
+int EC2GahpClient::ec2_vm_destroy_keypair(	const std::string & service_url,
+											const std::string & publickeyfile,
+											const std::string & privatekeyfile,
+											const std::string & keyname,
 											std::string & error_code )
 {
 	// command line looks like:
@@ -423,11 +423,11 @@ int EC2GahpClient::ec2_vm_destroy_keypair(	std::string service_url,
 }
 
 // Not sure why this function always returns 0.
-int EC2GahpClient::ec2_associate_address( std::string service_url,
-                                          std::string publickeyfile,
-                                          std::string privatekeyfile,
-                                          std::string instance_id,
-                                          std::string elastic_ip,
+int EC2GahpClient::ec2_associate_address( const std::string & service_url,
+                                          const std::string & publickeyfile,
+                                          const std::string & privatekeyfile,
+                                          const std::string & instance_id,
+                                          const std::string & elastic_ip,
                                           StringList & returnStatus,
                                           std::string & error_code )
 {
@@ -484,10 +484,10 @@ int EC2GahpClient::ec2_associate_address( std::string service_url,
 }
 
 // Not sure why this function always returns 0.
-int EC2GahpClient::ec2_create_tags(	std::string service_url,
-									std::string publickeyfile,
-									std::string privatekeyfile,
-									std::string instance_id,
+int EC2GahpClient::ec2_create_tags(	const std::string & service_url,
+									const std::string & publickeyfile,
+									const std::string & privatekeyfile,
+									const std::string & instance_id,
 									StringList &tags,
 									StringList &returnStatus,
 									std::string &error_code)
@@ -540,12 +540,12 @@ int EC2GahpClient::ec2_create_tags(	std::string service_url,
 }
 
 // Not sure why this function always returns 0.
-int EC2GahpClient::ec2_attach_volume( std::string service_url,
-                                      std::string publickeyfile,
-                                      std::string privatekeyfile,
-                                      std::string volume_id,
-                                      std::string instance_id,
-                                      std::string device_id,
+int EC2GahpClient::ec2_attach_volume( const std::string & service_url,
+                                      const std::string & publickeyfile,
+                                      const std::string & privatekeyfile,
+                                      const std::string & volume_id,
+                                      const std::string & instance_id,
+                                      const std::string & device_id,
                                       StringList & returnStatus,
                                       std::string & error_code )
 {
@@ -604,21 +604,21 @@ int EC2GahpClient::ec2_attach_volume( std::string service_url,
 //
 // Spot instance support.
 //
-int EC2GahpClient::ec2_spot_start( std::string service_url,
-                                   std::string publickeyfile,
-                                   std::string privatekeyfile,
-                                   std::string ami_id,
-                                   std::string spot_price,
-                                   std::string keypair,
-                                   std::string user_data,
-                                   std::string user_data_file,
-                                   std::string instance_type,
-                                   std::string availability_zone,
-                                   std::string vpc_subnet,
-                                   std::string vpc_ip,
-                                   std::string client_token,
-                                   std::string iam_profile_arn,
-                                   std::string iam_profile_name,
+int EC2GahpClient::ec2_spot_start( const std::string & service_url,
+                                   const std::string & publickeyfile,
+                                   const std::string & privatekeyfile,
+                                   const std::string & ami_id,
+                                   const std::string & spot_price,
+                                   const std::string & keypair,
+                                   const std::string & user_data,
+                                   const std::string & user_data_file,
+                                   const std::string & instance_type,
+                                   const std::string & availability_zone,
+                                   const std::string & vpc_subnet,
+                                   const std::string & vpc_ip,
+                                   const std::string & client_token,
+                                   const std::string & iam_profile_arn,
+                                   const std::string & iam_profile_name,
                                    StringList & groupnames,
                                    StringList & groupids,
                                    std::string & request_id,
@@ -683,10 +683,10 @@ int EC2GahpClient::ec2_spot_start( std::string service_url,
 	}
 }
 
-int EC2GahpClient::ec2_spot_stop( std::string service_url,
-                                  std::string publickeyfile,
-                                  std::string privatekeyfile,
-                                  std::string request_id,
+int EC2GahpClient::ec2_spot_stop( const std::string & service_url,
+                                  const std::string & publickeyfile,
+                                  const std::string & privatekeyfile,
+                                  const std::string & request_id,
                                   std::string & error_code )
 {
     static const char * command = "EC2_VM_STOP_SPOT";
@@ -739,9 +739,9 @@ int EC2GahpClient::ec2_spot_stop( std::string service_url,
 	}
 }
 
-int EC2GahpClient::ec2_spot_status_all( std::string service_url,
-                                        std::string publickeyfile,
-                                        std::string privatekeyfile,
+int EC2GahpClient::ec2_spot_status_all( const std::string & service_url,
+                                        const std::string & publickeyfile,
+                                        const std::string & privatekeyfile,
                                         StringList & returnStatus,
                                         std::string & error_code )
 {
