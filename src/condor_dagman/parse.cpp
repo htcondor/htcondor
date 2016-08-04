@@ -1154,7 +1154,7 @@ parse_retry(
                           jobName, job->retry_abort_val );
         }
     }
-	
+
 	return true;
 }
 
@@ -1326,6 +1326,7 @@ static bool parse_dot(Dag *dag, const char *filename, int lineNumber)
 }
 
 
+//TEMPTEMP -- start implementing "all nodes" in here
 //-----------------------------------------------------------------------------
 // 
 // Function: parse_vars
@@ -1349,10 +1350,12 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber, std::list
 	MyString tmpJobName = munge_job_name(jobName);
 	jobName = tmpJobName.Value();
 
-	Job *job = dag->FindNodeByName( jobName );
+	//TEMPTEMP Job *job = dag->FindNodeByName( jobName );
+	Job *job = dag->FindAllNodesByName( jobName );//TEMPTEMP
 	if(job == NULL) {
 		debug_printf(DEBUG_QUIET, "%s (line %d): Unknown Job %s\n",
 					filename, lineNumber, jobNameOrig);
+		//TEMPTEMP -- get rid of this varq stuff???
 		if(varq) {
 			debug_printf(DEBUG_QUIET, "Queueing this line up to try later\n");
 			return true;
@@ -1511,6 +1514,8 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber, std::list
 		return false;
 	}
 
+	//TEMPTEMP -- move if job != NULL stuff to here?
+	
 	return true;
 }
 

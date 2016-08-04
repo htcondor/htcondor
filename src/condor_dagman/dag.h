@@ -296,6 +296,9 @@ class Dag {
     */
     Job * FindNodeByEventID ( const CondorID condorID ) const;
 
+	//TEMPTEMP -- document
+	Job * FindAllNodesByName( const char* nodeName ); //TEMPTEMP? const
+
     /** Ask whether a node name exists in the DAG
         @param nodeName the name of the node in the DAG
         @return true if the node exists, false otherwise
@@ -970,6 +973,10 @@ class Dag {
 protected:
     /// List of Job objects
     List<Job>     _jobs;
+
+	//TEMPTEMP -- probably move this to private
+	//TEMPTEMP? Job * _nextNode;
+	bool _allNodes; //TEMPTEMP -- rename?
 
 private:
 		// Note: the final node is in the _jobs list; this pointer is just

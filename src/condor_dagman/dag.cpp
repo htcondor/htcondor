@@ -209,6 +209,8 @@ Dag::Dag( /* const */ StringList &dagFiles,
 	_haltFile = HaltFileName( _dagFiles.next() );
 	_dagStatus = DAG_STATUS_OK;
 
+	_allNodes = false;//TEMPTEMP -- move?
+
 	return;
 }
 
@@ -1272,6 +1274,29 @@ Job * Dag::FindNodeByName (const char * jobName) const {
 	}
 
 	return job;
+}
+
+//---------------------------------------------------------------------------
+Job *
+Dag::FindAllNodesByName( const char* nodeName )
+{
+//TEMPTEMP -- probably use a distinct iterator here instead of interating directly on _jobs
+	if ( !nodeName ) {
+		if ( _allNodes ) {
+			//TEMPTEMP -- should we set _allNodes to false here if we've hit the last node?
+			return _jobs.Next();
+		} else {
+			return NULL;
+		}
+	}
+
+	if ( !strcasecmp( nodeName, "ALL_NODES" ) ) {
+		_allNodes = true;
+		return _jobs.Next();
+	} else {
+		_allNodes = false;
+		return FindNodeByName( nodeName );
+	}
 }
 
 //---------------------------------------------------------------------------
