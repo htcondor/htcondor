@@ -1,3 +1,4 @@
+%TEMTEMP -- gittrac #5714
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{\label{sec:Configuring-HTCondor}Configuration}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -13737,6 +13738,14 @@ discussion of \Condor{defrag} may be found in section~\ref{sec:SMP-defrag}.
   if specified by the policy.  
   The default is 600 seconds.  
   Very small intervals could create excessive load on the \Condor{collector}.
+
+\label{param:DefragUpdateInterval}
+\item[\Macro{DEFRAG\_UPDATE\_INTERVAL}] An integer that specifies
+  the number of seconds between times that the \Condor{defrag} daemon
+  sends updates to the collector.  (See 
+  section~\ref{sec:Defrag-ClassAd-Attributes} for information about the
+  attributes in these updates.)
+  The default is 300 seconds.  
 
 \label{param:DefragSchedule}
 \item[\Macro{DEFRAG\_SCHEDULE}] A setting that specifies the draining
