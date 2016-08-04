@@ -3224,7 +3224,7 @@ static const char * evaluate_macro_func (
 				}
 			}
 
-			if (tmp2) free(tmp2); tmp2 = NULL;
+			if (tmp2) {free(tmp2);} tmp2 = NULL;
 		}
 		break;
 
