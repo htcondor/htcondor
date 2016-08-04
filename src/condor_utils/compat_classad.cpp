@@ -2454,7 +2454,7 @@ EscapeAdStringValue(char const *val, std::string &buf)
     if(val == NULL)
         return NULL;
 
-	buf.clear();
+    buf.clear();
 
     classad::Value tmpValue;
     classad::ClassAdUnParser unparse;

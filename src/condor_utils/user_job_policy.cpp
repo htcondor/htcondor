@@ -399,9 +399,9 @@ void UserPolicy::Init()
 
 void UserPolicy::ClearConfig()
 {
-	if (m_sys_periodic_hold) delete m_sys_periodic_hold; m_sys_periodic_hold = NULL;
-	if (m_sys_periodic_release) delete m_sys_periodic_release; m_sys_periodic_release = NULL;
-	if (m_sys_periodic_remove) delete m_sys_periodic_remove; m_sys_periodic_remove = NULL;
+	delete m_sys_periodic_hold; m_sys_periodic_hold = NULL;
+	delete m_sys_periodic_release; m_sys_periodic_release = NULL;
+	delete m_sys_periodic_remove; m_sys_periodic_remove = NULL;
 }
 
 
