@@ -188,3 +188,23 @@ bool AmazonVMServerType::ioCheck(char **argv, int argc)
 		verify_string_name(argv[3]) &&
 		verify_string_name(argv[4]);
 }
+
+// Expecting:	EC2_BULK_START <req_id>
+//				<service_url> <accesskeyfile> <secretkeyfile>
+//				<client-token> <spot-price> <target-capacity>
+//				<iam-fleet-role> <allocation-strategy>
+//				<launch-configuration-json-blob>+ <NULLSTRING>
+bool AmazonBulkStart::ioCheck(char **argv, int argc) {
+	return verify_min_number_args( argc, 12 ) &&
+		verify_request_id( argv[1] ) &&
+		verify_string_name( argv[2] ) &&
+		verify_string_name( argv[3] ) &&
+		verify_string_name( argv[4] ) &&
+		verify_string_name( argv[5] ) &&
+		verify_string_name( argv[6] ) &&
+		verify_string_name( argv[7] ) &&
+		verify_string_name( argv[8] ) &&
+		verify_string_name( argv[9] ) &&
+		verify_string_name( argv[10] ) &&
+		verify_string_name( argv[11] );
+}

@@ -789,3 +789,111 @@ int EC2GahpClient::ec2_spot_status_all( const std::string & service_url,
 		EXCEPT( "callGahpFunction() succeeded but result was NULL." );
 	}
 }
+
+
+void
+setAttribute(	std::string & s,
+				const YourString & attribute,
+				const YourString & value,
+				bool addTrailingComma = true  ) {
+	if( attribute.ptr() == NULL || value.ptr() == NULL ) { return; }
+	s.append( "\"" ).append( attribute ).append( "\" : " );
+	s.append( "\"" ).append( value ).append( "\"" );
+	if( addTrailingComma ) {
+		s.append( ", " );
+	}
+}
+
+void
+setLastAttribute(	std::string & s,
+					const YourString & attribute,
+					const YourString & value ) {
+	setAttribute( s, attribute, value, false );
+}
+
+void EC2GahpClient::LaunchConfiguration::convertToJSON( std::string & s ) const {
+	s.append( "{ " );
+	setAttribute( s, "ImageId", ami_id );
+	setAttribute( s, "SpotPrice", spot_price );
+	setAttribute( s, "KeyName", keypair );
+
+	// FIXME: We (or the caller?) need to base-64 encode/etc the UserData.
+	setAttribute( s, "UserData", user_data );
+	setAttribute( s, "InstanceType", instance_type );
+	setAttribute( s, "SubnetId", vpc_subnet );
+
+	// Actually part of the 'Placement' subhash.
+	setAttribute( s, "AvailabilityZone", availability_zone );
+
+	// Actually part of the 'BlockDeviceMappings' subhash.
+	setAttribute( s, "BlockDeviceMapping", block_device_mapping );
+
+	// Actually part of the 'IamInstanceProfile' subhash.
+	setAttribute( s, "IAMProfileARN", iam_profile_arn );
+	setAttribute( s, "IAMProfileName", iam_profile_name );
+
+	// Actually part of the 'SecurityGroup's subhash.
+	char * tmp = groupnames->print_to_delimed_string( ", " );
+	setAttribute( s, "SecurityGroupNames", tmp );
+	free( tmp );
+	tmp = groupids->print_to_delimed_string( ", " );
+	setAttribute( s, "SecurityGroupIDs", tmp );
+	free( tmp );
+
+	setLastAttribute( s, "WeightedCapacity", weighted_capacity );
+	s.append( " }" );
+}
+
+int EC2GahpClient::bulk_start(	const std::string & service_url,
+								const std::string & publickeyfile,
+								const std::string & privatekeyfile,
+
+								const std::string & client_token,
+								const std::string & spot_price,
+								const std::string & target_capacity,
+								const std::string & iam_fleet_role,
+								const std::string & allocation_strategy,
+
+								const std::vector< LaunchConfiguration > & launch_configurations,
+
+								std::string & bulkRequestID,
+								std::string & error_code ) {
+	static const char * command = "EC2_BULK_START";
+
+	// callGahpFunction() checks if this command is supported.
+	CHECK_COMMON_ARGUMENTS;
+
+	Gahp_Args * result = NULL;
+	std::vector< YourString > arguments;
+	PUSH_COMMON_ARGUMENTS;
+	arguments.push_back( client_token );
+	arguments.push_back( spot_price );
+	arguments.push_back( target_capacity );
+	arguments.push_back( iam_fleet_role );
+	arguments.push_back( allocation_strategy );
+
+	// One big copy is cheaper than a bunch of small reallocations,
+	// so convert the launch configuration(s) to JSON in the large buffer
+	// and copy it over to the vector (since YourString doesn't own the
+	// JSON, some local in this function must instead).
+	std::string buffer( 1024, '\0' );
+	std::vector< std::string > lcStrings( launch_configurations.size() );
+	if( launch_configurations.size() <= 0 ) { return GAHPCLIENT_COMMAND_NOT_SUPPORTED; }
+	for( unsigned i = 0; i < launch_configurations.size(); ++i ) {
+		buffer.clear();
+		launch_configurations[i].convertToJSON( buffer );
+		lcStrings[i] = buffer;
+		arguments.push_back( lcStrings[i] );
+	}
+	arguments.push_back( NULLSTRING );
+
+	int cgf = callGahpFunction( command, arguments, result, high_prio );
+	if( cgf != 0 ) { return cgf; }
+
+	if( result ) {
+		// FIXME
+		return 0;
+	} else {
+		EXCEPT( "callGahpFunction() succeeded but result was NULL." );
+	}
+}

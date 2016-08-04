@@ -56,6 +56,8 @@
 #define AMAZON_COMMAND_VM_STATUS_SPOT       "EC2_VM_STATUS_SPOT"
 #define AMAZON_COMMAND_VM_STATUS_ALL_SPOT   "EC2_VM_STATUS_ALL_SPOT"
 
+#define AMAZON_COMMAND_BULK_START			"EC2_BULK_START"
+
 // S3 Commands
 #define AMAZON_COMMAND_S3_ALL_BUCKETS       "AMAZON_S3_ALL_BUCKETS"
 #define AMAZON_COMMAND_S3_CREATE_BUCKET     "AMAZON_S3_CREATE_BUCKET"
@@ -300,5 +302,21 @@ class AmazonVMServerType : public AmazonRequest {
 	protected:
 		std::string serverType;
 };
+
+// Spot Fleet commands
+class AmazonBulkStart : public AmazonRequest {
+	public:
+		AmazonBulkStart( int i, const char * c ) : AmazonRequest( i, c ) { }
+		virtual ~AmazonBulkStart();
+
+        virtual bool SendRequest();
+
+		static bool ioCheck(char **argv, int argc);
+		static bool workerFunction(char **argv, int argc, std::string &result_string);
+
+    protected:
+    	void setLaunchConfigurationAttribute( int, std::map< std::string, std::string > &, const char *, const char * = NULL );
+};
+
 
 #endif

@@ -431,6 +431,8 @@ public:
 	const char * Value() const { return m_str ? m_str : ""; }
 	const char * ptr() const { return m_str; }
 
+	operator const char * () const { return m_str; }
+
 	bool operator ==(const YourString &rhs) const {
 		if (m_str == rhs.m_str) return true;
 		if ((!m_str) || (!rhs.m_str)) return false;

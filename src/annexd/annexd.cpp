@@ -20,7 +20,7 @@ doPolling() {
 	ArgList args;
 
 	// FIXME: I think the EC2 GAHP ignores the -f flag, and it certainly
-	// won't otherwise grab the rigth set of parameters.  Maybe call it
+	// won't otherwise grab the right set of parameters.  Maybe call it
 	// with the -localname flag for now?
 	char * gahp_log = param( "ANNEX_GAHP_LOG" );
 	if( gahp_log == NULL ) {
@@ -66,7 +66,8 @@ doPolling() {
 		EXCEPT( "Failed to start GAHP." );
 	}
 
-	// HAX!
+
+#if defined(PROOF_OF_HAX)
 	std::string m_serviceURL( "http://ec2.amazonaws.com" );
 	std::string m_public_key_file( "/home/tlmiller/condor/test/ec2/accessKeyFile" );
 	std::string m_private_key_file( "/home/tlmiller/condor/test/ec2/secretKeyFile" );
@@ -74,6 +75,39 @@ doPolling() {
 	std::string gahpErrorCode;
 	gahp->ec2_vm_stop(	m_serviceURL, m_public_key_file, m_private_key_file,
 						m_remoteJobID, gahpErrorCode );
+#endif /* defined(PROOF_OF_HAX) */
+
+	std::string serviceURL( "http://ec2.amazonaws.com" );
+	std::string public_key_file( "/home/tlmiller/condor/test/ec2/accessKeyFile" );
+	std::string private_key_file( "/home/tlmiller/condor/test/ec2/secretKeyFile" );
+
+	std::string client_token( "" );
+	std::string spot_price( "0.10" );
+	std::string target_capacity( "10" );
+	std::string iam_fleet_role( "AmazonEC2SpotFleetFole" );
+	std::string allocation_strategy( "lowestPrice" );
+
+	StringList groupIDs( "sg-c06c16a7" );
+	StringList groupNames( "" );
+	std::vector< EC2GahpClient::LaunchConfiguration > launch_configurations;
+	launch_configurations.push_back( EC2GahpClient::LaunchConfiguration(
+			"ami-7638b661", "", "HTCondorAnnex", "",
+			"m3.medium", "", "", "", "arn:aws:iam::844603466475:instance-profile/configurationFetch", "",
+			& groupNames, & groupIDs, "1"
+		) );
+	launch_configurations.push_back( EC2GahpClient::LaunchConfiguration(
+			"ami-7638b661", "", "HTCondorAnnex", "",
+			"m4.large", "", "", "", "arn:aws:iam::844603466475:instance-profile/configurationFetch", "",
+			& groupNames, & groupIDs, "2"
+		) );
+
+	std::string errorCode;
+	std::string bulkRequestID;
+	gahp->bulk_start( 	serviceURL, public_key_file, private_key_file,
+						client_token, spot_price, target_capacity,
+						iam_fleet_role, allocation_strategy,
+						launch_configurations,
+						bulkRequestID, errorCode );
 }
 
 void

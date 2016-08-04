@@ -2642,3 +2642,187 @@ bool AmazonVMServerType::workerFunction(char **argv, int argc, std::string &resu
 
     return true;
 }
+
+// ---------------------------------------------------------------------------
+
+AmazonBulkStart::~AmazonBulkStart() { }
+
+bool AmazonBulkStart::SendRequest() {
+	bool result = AmazonRequest::SendRequest();
+	if( result ) {
+		// FIXME.
+	}
+	return result;
+}
+
+bool parseJSON( char * s, std::map< std::string, std::string > & m ) {
+	if( s[0] != '{' ) { return false; }
+
+	enum STATE { ATTR_OPEN, ATTR_CLOSE, COLON, VALUE_OPEN, VALUE_CLOSE, COMMA };
+
+	STATE state = ATTR_OPEN;
+	std::string attribute;
+	unsigned stringBegan = 0;
+	for( unsigned i = 1; s[i] != '\0'; ++i ) {
+		switch( state ) {
+			case ATTR_OPEN:
+				if( s[i] == ' ' ) { continue; }
+				if( s[i] == '"' ) {
+					stringBegan = i + 1;
+					state = ATTR_CLOSE;
+					continue;
+				}
+				return false;
+
+			case ATTR_CLOSE:
+				if( s[i] == '"' && s[i-1] != '\\' ) {
+					attribute = std::string( & s[stringBegan], i - stringBegan );
+				  	// dprintf( D_ALWAYS, "Found attribute '%s'.\n", attribute.c_str() );
+					state = COLON;
+				}
+				continue;
+
+			case COLON:
+				if( s[i] == ' ' ) { continue; }
+				if( s[i] == ':' ) { state = VALUE_OPEN; continue; }
+				return false;
+
+			case VALUE_OPEN:
+				if( s[i] == ' ' ) { continue; }
+				if( s[i] == '"' ) {
+					stringBegan = i + 1;
+					state = VALUE_CLOSE;
+					continue;
+				}
+				return false;
+
+			case VALUE_CLOSE:
+				if( s[i] == '"' && s[i-1] != '\\' ) {
+					std::string value( & s[stringBegan], i - stringBegan );
+				  	// dprintf( D_ALWAYS, "Found value '%s'.\n", value.c_str() );
+				  	m[ attribute ] = value;
+					state = COMMA;
+				}
+				continue;
+
+			case COMMA:
+				if( s[i] == ' ' ) { continue; }
+				if( s[i] == ',' ) { state = ATTR_OPEN; continue; }
+				if( s[i] == '}' ) { return true; }
+				return false;
+		}
+	}
+
+	return false;
+}
+
+void AmazonBulkStart::setLaunchConfigurationAttribute(
+		int lcIndex, std::map< std::string, std::string > & blob,
+		const char * lcAttributeName,
+		const char * blobAttributeName ) {
+	std::ostringstream ss;
+	ss << "SpotFleetRequestConfig.LaunchConfigurations.";
+	ss << lcIndex << "." << lcAttributeName;
+
+	std::string & value = blob[ ( blobAttributeName == NULL ? lcAttributeName : blobAttributeName ) ];
+	if(! value.empty()) {
+		query_parameters[ ss.str() ] = value;
+	}
+}
+
+bool AmazonBulkStart::workerFunction( char ** argv, int argc, std::string & result_string ) {
+	assert( strcasecmp( argv[0], "EC2_BULK_START" ) == 0 );
+
+	int requestID;
+	get_int( argv[1], & requestID );
+	dprintf( D_PERF_TRACE, "request #%d (%s): work begins\n",
+		requestID, argv[0] );
+
+	if( ! verify_min_number_args( argc, 12 ) ) {
+		result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
+		dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n",
+			argc, 12, argv[0] );
+		return false;
+	}
+
+	// Fill in required attributes.
+	AmazonBulkStart request = AmazonBulkStart( requestID, argv[0] );
+	request.serviceURL = argv[2];
+	request.accessKeyFile = argv[3];
+	request.secretKeyFile = argv[4];
+
+	// Fill in required parameters.
+	request.query_parameters[ "Action" ] = "RequestSpotFleet";
+
+	request.query_parameters[ "SpotFleetRequestConfig."
+		"ClientToken" ] = argv[5];
+	request.query_parameters[ "SpotFleetRequestConfig."
+		"SpotPrice" ] = argv[6];
+	request.query_parameters[ "SpotFleetRequestConfig."
+		"TargetCapacity" ] = argv[7];
+	request.query_parameters[ "SpotFleetRequestConfig."
+		"IamFleetRole" ] = argv[8];
+	request.query_parameters[ "SpotFleetRequestConfig."
+		"AllocationStrategy" ] = argv[9];
+
+	request.query_parameters[ "SpotFleetRequestConfig."
+		"ExcessCapacityTerminationPolicy" ] = "noTermination";
+	request.query_parameters[ "SpotFleetRequestConfig."
+		"TerminateInstancesWithExpiration" ] = "false";
+	request.query_parameters[ "SpotFleetRequestConfig."
+		"Type" ] = "request";
+	// FIXME: Should validity period be chosen by annexd?
+	// request.query_parameters[ "SpotFleetRequestConfig."
+	//	"ValidUntil" ] = "request";
+
+	for( int i = 10; i < argc; ++i ) {
+		if( strcmp( argv[i], NULLSTRING ) == 0 ) { break; }
+
+		int lcIndex = i - 10;
+
+		// argv[i] is a JSON blob, because otherwise things got complicated.
+		// Luckily, we don't have handle generic JSON, just the single-level
+		// string-to-string stuff the annexd sends us.
+		std::map< std::string, std::string > blob;
+		if(! parseJSON( argv[i], blob )) {
+			dprintf( D_ALWAYS, "Got bogus launch configuration.\n" );
+			// FIXME
+			return false;
+		}
+
+		request.setLaunchConfigurationAttribute( lcIndex, blob, "ImageId" );
+		request.setLaunchConfigurationAttribute( lcIndex, blob, "SpotPrice" );
+		request.setLaunchConfigurationAttribute( lcIndex, blob, "KeyName" );
+
+		request.setLaunchConfigurationAttribute( lcIndex, blob, "UserData" );
+		request.setLaunchConfigurationAttribute( lcIndex, blob, "InstanceType" );
+		request.setLaunchConfigurationAttribute( lcIndex, blob, "SubnetId" );
+
+		request.setLaunchConfigurationAttribute( lcIndex, blob, "WeightedCapacity" );
+
+		request.setLaunchConfigurationAttribute( lcIndex, blob, "IamInstanceProfile.Arn", "IAMProfileARN" );
+		request.setLaunchConfigurationAttribute( lcIndex, blob, "IamInstanceProfile.Name", "IAMProfileName" );
+
+
+
+#if 0
+		// request.query_parameters[ parameterName.str() +
+		//	"" ] = AvailabilityZone
+		// request.query_parameters[ parameterName.str() +
+		//	"" ] = BlockDeviceMapping
+		// request.query_parameters[ parameterName.str() +
+		//	"" ] = SecurityGroupNames;
+		// request.query_parameters[ parameterName.str() +
+		//	"" ] = SecurityGroupIDs;
+#endif
+	}
+
+	AttributeValueMap::const_iterator i;
+	for( i = request.query_parameters.begin(); i != request.query_parameters.end(); ++i ) {
+		std::string name = amazonURLEncode( i->first );
+		std::string value = amazonURLEncode( i->second );
+		dprintf( D_ALWAYS, "Found query parameter '%s' = '%s'.\n", name.c_str(), value.c_str() );
+	}
+
+	return true;
+}

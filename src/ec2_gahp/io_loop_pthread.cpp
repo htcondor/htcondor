@@ -119,14 +119,18 @@ registerAllAmazonCommands(void)
     registerAmazonGahpCommand(AMAZON_COMMAND_VM_ASSOCIATE_ADDRESS,
             AmazonAssociateAddress::ioCheck, AmazonAssociateAddress::workerFunction);
 
-	 registerAmazonGahpCommand(AMAZON_COMMAND_VM_ATTACH_VOLUME,
+	registerAmazonGahpCommand(AMAZON_COMMAND_VM_ATTACH_VOLUME,
             AmazonAttachVolume::ioCheck, AmazonAttachVolume::workerFunction);
 
-	 registerAmazonGahpCommand(AMAZON_COMMAND_VM_CREATE_TAGS,
+	registerAmazonGahpCommand(AMAZON_COMMAND_VM_CREATE_TAGS,
             AmazonCreateTags::ioCheck, AmazonCreateTags::workerFunction);
 
-	 registerAmazonGahpCommand(AMAZON_COMMAND_VM_SERVER_TYPE,
+	registerAmazonGahpCommand(AMAZON_COMMAND_VM_SERVER_TYPE,
             AmazonVMServerType::ioCheck, AmazonVMServerType::workerFunction);
+
+	// Spot Fleet commands
+	registerAmazonGahpCommand( AMAZON_COMMAND_BULK_START,
+			AmazonBulkStart::ioCheck, AmazonBulkStart::workerFunction );
 
 	return true;
 }
