@@ -477,6 +477,7 @@ class CondorClassAdFileParseHelper : public ClassAdFileParseHelper
 
 	CondorClassAdFileParseHelper(std::string delim, ParseType typ=Parse_long) 
 		: ad_delimitor(delim), parse_type(typ), new_parser(NULL), inside_list(false) {};
+	ParseType getParseType() { return parse_type; }
  private:
 	std::string ad_delimitor;
 	ParseType parse_type;
