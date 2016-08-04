@@ -392,11 +392,12 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 		// Handle a Vars spec
 		// Example syntax is: Vars JobName var1="val1" var2="val2"
 		else if(strcasecmp(token, "VARS") == 0) {
-			vars_to_save.push_back(varline);	
+			//TEMPTEMP vars_to_save.push_back(varline);	
 			// Note that we pop this line inside parse_vars() if we
 			// parse it successfully, so that we don't re-parse it at
 			// the end.
-			parsed_line_successfully = parse_vars(dag, filename, lineNumber, &vars_to_save);
+			//TEMPTEMP parsed_line_successfully = parse_vars(dag, filename, lineNumber, &vars_to_save);
+			parsed_line_successfully = parse_vars(dag, filename, lineNumber, NULL);
 		}
 
 		// Handle a Priority spec
@@ -494,6 +495,7 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 	dag->LiftSplices(SELF);
 	dag->RecordInitialAndFinalNodes();
 	
+#if 0 //TEMPTEMP
 	// Okay, here we re-parse any VARS lines that didn't have corresponding
 	// node when we first read them.
 	for ( std::list<std::string>::iterator p = vars_to_save.begin();
@@ -508,6 +510,7 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 		}
 		delete[] varline;
 	}	
+#endif //TEMPTEMP
 
 	if ( useDagDir ) {
 		MyString	errMsg;
