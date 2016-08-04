@@ -42,15 +42,21 @@
 #include <string>
 #include <set>
 
+#define UNSPECIFIED_PARSE_TYPE (ClassAdFileParseType::ParseType)-1
+
 bool dash_verbose = false;
 bool dash_terse = false;
-int  DashOutOpts = 0;
+int  UnitTestOpts = 0;
 int  DashConvertOldRoutes = 0;
 bool DumpLocalHash = false;
 bool DumpClassAdToFile = false;
 bool DumpFileIsStdout = false;
+bool DashOutAttrsInHashOrder = false;
+ClassAdFileParseType::ParseType DashOutFormat = UNSPECIFIED_PARSE_TYPE;
 const char * DashOutName = NULL;
 const char * MyName = NULL; // set from argc
+const char * MySubsys = "XFORM";
+int cNonEmptyOutputAds = 0; // incremented when whenever we print a non-empty ad
 
 class CondorQClassAdFileParseHelper;
 class MacroStreamXFormSource;
@@ -62,21 +68,33 @@ typedef struct macro_set_checkpoint_hdr {
 	int spare;
 } MACRO_SET_CHECKPOINT_HDR;
 
+class input_file {
+public:
+	input_file() : filename(NULL), parse_format(ClassAdFileParseType::Parse_long) {}
+	input_file(const char * file, ClassAdFileParseType::ParseType format = ClassAdFileParseType::Parse_long)
+		: filename(file), parse_format(format) {}
+	const char * filename; // ptr to argv, not owned by this class
+	ClassAdFileParseType::ParseType parse_format;
+};
+
+class apply_transform_args;
+
 // forward function references
 void Usage(FILE*);
 void PrintRules(FILE*);
 int DoUnitTests(int options);
-int DoTransforms(const char * jobs_file, const char * constraint, MacroStreamXFormSource & xforms, FILE* outfile);
-bool ApplyTransform(const ClassAd * job, MacroStreamXFormSource & xforms, MACRO_SET_CHECKPOINT_HDR* pvParamCheckpoint, FILE* outfile);
-bool ReportSuccess(const ClassAd * job, FILE* outfile);
+int DoTransforms(input_file & input, const char * constraint, MacroStreamXFormSource & xforms, FILE* outfile);
+int ApplyTransform(void *pv, ClassAd * job);
+bool ReportSuccess(const ClassAd * job, apply_transform_args & xform_args);
 int ParseRulesCallback(void* pv, MACRO_SOURCE& source, MACRO_SET& macro_set, char * line);
 bool LoadJobRouterDefaultsAd(ClassAd & ad);
+void write_output_prolog(FILE* outfile, ClassAdFileParseType::ParseType out_format, int cNonEmptyOutputAds);
 char * local_param( const char* name, const char* alt_name );
 char * local_param( const char* name ); // call param with NULL as the alt
 void set_local_param( const char* name, const char* value);
 
-#define CONVERT_JRR_STYLE_1 0x0001
-#define CONVERT_JRR_STYLE_2 0x0001
+//#define CONVERT_JRR_STYLE_1 0x0001
+//#define CONVERT_JRR_STYLE_2 0x0002
 int ConvertJobRouterRoutes(int options);
 
 // declare enough of the condor_params structure definitions so that we can define submit hashtable defaults
@@ -234,8 +252,7 @@ local_param( const char* name, const char* alt_name )
 void
 set_local_param( const char *name, const char *value )
 {
-	MACRO_EVAL_CONTEXT ctx; ctx.init("SUBMIT");
-	insert_macro(name, value, LocalMacroSet, DefaultMacro, ctx);
+	insert_macro(name, value, LocalMacroSet, DefaultMacro, LocalContext);
 }
 
 
@@ -471,7 +488,7 @@ public:
 	virtual ~MacroStreamXFormSource() {}
 	// returns:
 	//   < 0 = error, outmsg is error message
-	//   > 0 = number of statements in MacroStreamCharSource, outmsg is ITERATE statement or empty
+	//   > 0 = number of statements in MacroStreamCharSource, outmsg is TRANSFORM statement or empty
 	// 
 	int load(FILE* fp, MACRO_SOURCE & source);
 	bool has_pending_fp() { return fp_iter != NULL; }
@@ -483,7 +500,7 @@ public:
 	void reset(MACRO_SET &set);
 protected:
 	MACRO_SET_CHECKPOINT_HDR * checkpoint;
-	FILE* fp_iter; // when load stops at an ITERATE line, this holds the fp until parse_iterate_args is called
+	FILE* fp_iter; // when load stops at an TRANSFORM line, this holds the fp until parse_iterate_args is called
 	int   fp_lineno;
 	int   step;
 	int   row;
@@ -497,17 +514,28 @@ protected:
 	int report_empty_items(MACRO_SET& set, std::string errmsg);
 };
 
+ClassAdFileParseType::ParseType parseAdsFileFormat(const char * arg, ClassAdFileParseType::ParseType def_parse_type)
+{
+	ClassAdFileParseType::ParseType parse_type = def_parse_type;
+	YourString fmt(arg);
+	if (fmt == "long") { parse_type = ClassAdFileParseType::Parse_long; }
+	else if (fmt == "json") { parse_type = ClassAdFileParseType::Parse_json; }
+	else if (fmt == "xml") { parse_type = ClassAdFileParseType::Parse_xml; }
+	else if (fmt == "new") { parse_type = ClassAdFileParseType::Parse_new; }
+	else if (fmt == "auto") { parse_type = ClassAdFileParseType::Parse_auto; }
+	return parse_type;
+}
 
 int
 main( int argc, const char *argv[] )
 {
 	const char *pcolon = NULL;
-	const char *jobs_file = NULL;
-	const char *rules_file = NULL;
+	ClassAdFileParseType::ParseType def_ads_format = UNSPECIFIED_PARSE_TYPE;
+	std::vector<input_file> inputs;
+	std::vector<const char *> rules;
 	const char *job_match_constraint = NULL;
-	bool rules_from_file = false;
 
-	LocalContext.init("SUBMIT", 3);
+	LocalContext.init(MySubsys, 3);
 
 	MyName = condor_basename(argv[0]);
 	if (argc == 1) {
@@ -517,7 +545,7 @@ main( int argc, const char *argv[] )
 
 	setbuf( stdout, NULL );
 
-	set_mySubSystem( "SUBMIT", SUBSYSTEM_TYPE_SUBMIT );
+	set_mySubSystem( MySubsys, SUBSYSTEM_TYPE_TOOL );
 
 	myDistro->Init( argc, argv );
 	config();
@@ -534,7 +562,7 @@ main( int argc, const char *argv[] )
 		const char ** ptr = argv+ixArg;
 		if( ptr[0][0] == '-' ) {
 			if (MATCH == strcmp(ptr[0], "-")) { // treat a bare - as a jobs filename, it means read from stdin.
-				jobs_file = ptr[0];
+				inputs.push_back(input_file(ptr[0], def_ads_format));
 			} else if (is_dash_arg_prefix(ptr[0], "verbose", 1)) {
 				dash_verbose = true; dash_terse = false;
 			} else if (is_dash_arg_prefix(ptr[0], "terse", 3)) {
@@ -548,29 +576,66 @@ main( int argc, const char *argv[] )
 					fprintf( stderr, "%s: -rules requires another argument\n", MyName );
 					exit(1);
 				}
-				rules_file = pfilearg;
-				rules_from_file = true;
+				rules.push_back(pfilearg);
 				++ixArg; ++ptr;
+			} else if (is_dash_arg_colon_prefix(ptr[0], "in", &pcolon, 1)) {
+				const char * pfilearg = ptr[1];
+				if ( ! pfilearg || (*pfilearg == '-' && (MATCH != strcmp(pfilearg,"-"))) ) {
+					fprintf( stderr, "%s: -in requires another argument\n", MyName );
+					exit(1);
+				}
+				++ixArg; ++ptr;
+				ClassAdFileParseType::ParseType in_format = def_ads_format;
+				if (pcolon) {
+					in_format = parseAdsFileFormat(pcolon, in_format);
+				}
+				inputs.push_back(input_file(pfilearg, in_format));
 			} else if (is_dash_arg_colon_prefix(ptr[0], "out", &pcolon, 1)) {
-				DashOutOpts = 1;
-				bool needs_file_arg = true;
-				if (pcolon) { 
-					needs_file_arg = false;
-					int opt = atoi(pcolon+1);
-					if (opt > 1) {  DashOutOpts =  opt; needs_file_arg = opt < 0x10; }
-					else if (MATCH == strcmp(pcolon+1, "hash")) {
-						DumpLocalHash = 1;
-						needs_file_arg = true;
+				const char * pfilearg = ptr[1];
+				if ( ! pfilearg || (*pfilearg == '-' && (MATCH != strcmp(pfilearg,"-"))) ) {
+					fprintf( stderr, "%s: -out requires another argument\n", MyName );
+					exit(1);
+				}
+				DashOutName = pfilearg;
+				++ixArg; ++ptr;
+
+				ClassAdFileParseType::ParseType out_format = DashOutFormat;
+				if (pcolon) {
+					StringList opts(++pcolon);
+					for (const char * opt = opts.first(); opt; opt = opts.next()) {
+						if (YourString(opt) == "nosort") {
+							DashOutAttrsInHashOrder = true;
+						} else {
+							out_format = parseAdsFileFormat(pcolon, out_format);
+						}
 					}
 				}
-				if (needs_file_arg) {
-					const char * pfilearg = ptr[1];
-					if ( ! pfilearg || (*pfilearg == '-' && (MATCH != strcmp(pfilearg,"-"))) ) {
-						fprintf( stderr, "%s: -out requires another argument\n", MyName );
-						exit(1);
+				DashOutFormat = out_format;
+			} else if (is_dash_arg_prefix(ptr[0], "long", 1)
+					|| is_dash_arg_prefix(ptr[0], "json", 2)
+					|| is_dash_arg_prefix(ptr[0], "xml", 3)) {
+				// Specify the default parse type for input files, this will also set the output format
+				// if it is Parse_auto at the time we begin writing to the file.
+				def_ads_format = ClassAdFileParseType::Parse_long;
+				if (is_dash_arg_prefix(ptr[0], "json", 2)) {
+					def_ads_format = ClassAdFileParseType::Parse_json;
+				} else if (is_dash_arg_prefix(ptr[0], "xml", 3)) {
+					def_ads_format = ClassAdFileParseType::Parse_xml;
+				}
+				// fixup parse format for inputs that have an unspecified parse type
+				for (size_t ii = 0; ii < inputs.size(); ++ii) {
+					if (inputs[ii].parse_format == UNSPECIFIED_PARSE_TYPE) {
+						inputs[ii].parse_format = def_ads_format;
 					}
-					DashOutName = pfilearg;
-					++ixArg; ++ptr;
+				}
+			} else if (is_dash_arg_colon_prefix(ptr[0], "unit-test", &pcolon, 4)) {
+				UnitTestOpts = 1;
+				if (pcolon) { 
+					int opt = atoi(pcolon+1);
+					if (opt > 1) {  UnitTestOpts =  opt; }
+					else if (MATCH == strcmp(pcolon+1, "hash")) {
+						DumpLocalHash = 1;
+					}
 				}
 			} else if (is_dash_arg_prefix(ptr[0], "help", 1)) {
 				if (ptr[1] && (MATCH == strcmp(ptr[1], "rules"))) {
@@ -604,10 +669,10 @@ main( int argc, const char *argv[] )
 				fprintf( stderr, "%s: invalid attribute name '%s' for attrib=value assigment\n", MyName, name.c_str() );
 				exit(1);
 			}
-			MACRO_EVAL_CONTEXT ctx; ctx.init("SUBMIT",0);
+			MACRO_EVAL_CONTEXT ctx; ctx.init(MySubsys,0);
 			insert_macro(name.c_str(), value.c_str(), LocalMacroSet, ArgumentMacro, ctx);
 		} else {
-			jobs_file = *ptr;
+			inputs.push_back(input_file(*ptr, def_ads_format));
 		}
 	}
 
@@ -615,26 +680,31 @@ main( int argc, const char *argv[] )
 	if (DashConvertOldRoutes) { exit(ConvertJobRouterRoutes(DashConvertOldRoutes)); }
 
 	// the -dry argument takes a qualifier that I'm hijacking to do queue parsing unit tests for now the 8.3 series.
-	if (DashOutOpts > 0x10) { exit(DoUnitTests(DashOutOpts)); }
+	if (UnitTestOpts > 0) { exit(DoUnitTests(UnitTestOpts)); }
 
 	// read the transform rules into the MacroStreamXFormSource
 	int rval = 0;
 	MacroStreamXFormSource ms;
-	if ( ! rules_file || ! rules_file[0]) {
+	if (rules.empty()) {
 		fprintf(stderr, "ERROR : no transform rules file specified.\n");
 		Usage(stderr);
 		exit(1);
-	} else if (MATCH == strcmp("-", rules_file)) {
+	} else if (rules.size() > 1) {
+		// TODO: allow multiple rules files?
+		fprintf(stderr, "ERROR : too many transform rules file specified.\n");
+		Usage(stderr);
+		exit(1);
+	} else if (MATCH == strcmp("-", rules[0])) {
 		insert_source("<stdin>", LocalMacroSet, FileMacroSource);
 		rval = ms.load(stdin, FileMacroSource);
-	} else if (rules_from_file) {
-		FILE *file = safe_fopen_wrapper_follow(rules_file, "r");
+	} else {
+		FILE *file = safe_fopen_wrapper_follow(rules[0], "r");
 		if (file == NULL) {
-			fprintf(stderr, "Can't open rules file: %s\n", rules_file);
+			fprintf(stderr, "Can't open rules file: %s\n", rules[0]);
 			return -1;
 		}
-		insert_source(rules_file, LocalMacroSet, FileMacroSource);
-		RulesFileMacroDef.psz = const_cast<char*>(rules_file); // const_cast<char*>(LocalMacroSet.apool.insert(full_path(rules_file, false)));
+		insert_source(rules[0], LocalMacroSet, FileMacroSource);
+		RulesFileMacroDef.psz = const_cast<char*>(rules[0]);
 		rval = ms.load(file, FileMacroSource);
 		if (rval < 0 || ! ms.close_when_done(true)) {
 			fclose(file);
@@ -647,26 +717,34 @@ main( int argc, const char *argv[] )
 		return rval;
 	}
 
-	if ( ! jobs_file || ! *jobs_file) {
+	if (inputs.empty()) {
 		fprintf(stderr, "Warning: no input file specified - nothing to transform.\n");
 		exit(1);
 	}
 
 	FILE* outfile = stdout;
 	bool  close_outfile = false;
-	if (DashOutName) {
-		if (MATCH != strcmp(DashOutName, "-")) {
-			outfile = safe_fopen_wrapper_follow(DashOutName,"w");
-			if ( ! outfile) {
-				fprintf( stderr, "ERROR: Failed to open output file (%s)\n", strerror(errno));
-				exit(1);
-			}
-			close_outfile = true;
+	if (DashOutName && ! (YourString(DashOutName) == "-")) {
+		outfile = safe_fopen_wrapper_follow(DashOutName,"w");
+		if ( ! outfile) {
+			fprintf( stderr, "ERROR: Failed to open output file (%s)\n", strerror(errno));
+			exit(1);
 		}
+		close_outfile = true;
 	}
 
-	rval = DoTransforms(jobs_file, job_match_constraint, ms, outfile);
+	// if no default parse format has been specified for the input files, choose auto
+	if (def_ads_format == UNSPECIFIED_PARSE_TYPE) { def_ads_format = ClassAdFileParseType::Parse_auto; }
+	// if no output parse format has been specified, choose long
+	if (DashOutFormat == UNSPECIFIED_PARSE_TYPE) { DashOutFormat = ClassAdFileParseType::Parse_long; }
 
+	for (size_t ixInput = 0; ixInput < inputs.size(); ++ixInput) {
+		// use default parse format if input file still has an unspecifed one.
+		if (inputs[ixInput].parse_format == UNSPECIFIED_PARSE_TYPE) { inputs[ixInput].parse_format = def_ads_format; }
+		rval = DoTransforms(inputs[ixInput], job_match_constraint, ms, outfile);
+	}
+
+	write_output_prolog(outfile, DashOutFormat, cNonEmptyOutputAds);
 	if (close_outfile) {
 		fclose(outfile);
 		outfile = NULL;
@@ -679,15 +757,26 @@ void
 Usage(FILE * out)
 {
 	fprintf(out,
-		"Usage: %s -rules <rules-file> [options] [<attrib>=<value>] <classads-file>\n" 
+		"Usage: %s -rules <rules-file> [options] [<attrib>=<value>] <infile>\n" 
 		"    Read ClassAd(s) from <classads-file> and transform based on rules from <rules-file>\n\n"
 		"    [options] are\n"
 		"\t-help [rules]\t\tDisplay this screen or rules documentation and exit\n"
-		"\t-out <outfile>\t\tWrite transformed ClassAd(s) to <outfile>\n"
+		"\t-in[:<fmt>] <infile>\t\tRead ClassAd(s) to transform from <infile> in format <fmt>\n"
+		"\t-out[:<fmt>,nosort] <outfile>\t\tWrite transformed ClassAd(s) to <outfile> in format <fmt>\n"
+		"\t           where <fmt> choice is one of:\n"
+		"\t       long    The traditional -long form. This is the default\n"
+		"\t       xml     XML form, the same as -xml\n"
+		"\t       json    JSON classad form, the same as -json\n"
+		"\t       new     'new' classad form without newlines\n"
+		"\t       auto    For input, guess the format from reading the input stream\n"
+		"\t               For output, use the same format as the first input\n"
+		"\t-long\t\tUse -long form for both input and output ClassAds\n"
+		"\t-json\t\tUse JSON classad form for both input and output\n"
+		"\t-xml \t\tUse XML form for both input and output\n"
 		"\t-verbose\t\tVerbose output, echo transform rules as they are executed\n"
 		//"\t-debug  \t\tDisplay debugging output\n"
 		"\t<attrib>=<value>\tSet <attrib>=<value> before reading the transform file.\n\n"
-		"    If <rules-file> is -, transform rules are read from stdin until an ITERATE rule\n"
+		"    If <rules-file> is -, transform rules are read from stdin until the TRANSFORM rule\n"
 		"    If <classads-file> is -, ClassAd(s) are read from stdin.\n"
 		"    Transformed ads are written to stdout unless a -out argument is given\n"
 		, MyName );
@@ -716,7 +805,7 @@ void PrintRules(FILE* out)
 		"   DELETE  <attr> <newattr>\t- Delete <attr>\n"
 		"   DELETE  /<regex>/\t\t- Delete attributes matching <regex>\n"
 		"   EVALMACRO <key> <expr>\t- Evaluate <expr> and then insert it as a transform macro value\n"
-		"   ITERATE <N> [<vars>] [in <list> | from <file> | matching <pattern>] - Iterate the transform\n"
+		"   TRANSFORM [<N>] [<vars>] [in <list> | from <file> | matching <pattern>] - Do the Tranform\n"
 		);
 
 	fprintf(out,
@@ -725,9 +814,9 @@ void PrintRules(FILE* out)
 		"<newattrs> before they are parsed as ClassAd expressions or attribute names.\n"
 		"\nWhen a COPY,RENAME or DELETE with regex is used, regex capture groups are substituted in\n"
 		"<newattrs> after $() expansion. \\0 will expand to the entire match, \\1 to the first capture, etc.\n"
-		"\nAn ITERATE command must be the last command in the rules file. It takes the same options as the\n"
-		"QUEUE statement from a HTCONDOR submit file. There is an implicit ITERATE 1 at the end of a rules file\n"
-		"that has no explicit ITERATE command.\n"
+		"\nA TRANSFORM command must be the last command in the rules file. It takes the same options as the\n"
+		"QUEUE statement from a HTCONDOR submit file. There is an implicit TRANSFORM 1 at the end of a rules file\n"
+		"that has no explicit TRANSFORM command.\n"
 		);
 
 	fprintf(out, "\n");
@@ -735,7 +824,7 @@ void PrintRules(FILE* out)
 
 
 
-// returns a pointer to the iteration args if this line is an iterate statement
+// returns a pointer to the iteration args if this line is an TRANSFORM statement
 // returns NULL if it is not.
 static char * is_transform_statement(char * line, const char * keyword)
 {
@@ -769,11 +858,11 @@ int MacroStreamXFormSource::load(FILE* fp, MACRO_SOURCE & FileSource)
 			lines.append(buf.c_str());
 		}
 
-		if (is_transform_statement(line, "iterate")) {
-			// if this is an ITERATE statement, then we don't read any more statements.
-			// because we can't expand the iterate yet, and we may need to treat
+		if (is_transform_statement(line, "transform")) {
+			// if this is an TRANSFORM statement, then we don't read any more statements.
+			// because we can't expand the TRANSFORM yet, and we may need to treat
 			// the rest of the file as the arguments list. so store the fp until we
-			// can later parse the expanded iterate args
+			// can later parse the expanded TRANSFORM args
 			fp_iter = fp;
 			fp_lineno = FileSource.line;
 			has_iterate = true;
@@ -798,7 +887,7 @@ int MacroStreamXFormSource::parse_iterate_args(char * pargs, int expand_options,
 	// parse it using the same parser that condor submit uses for queue statements
 	int rval = oa.parse_queue_args(pargs);
 	if (rval < 0) {
-		formatstr(errmsg, "invalid ITERATE statement");
+		formatstr(errmsg, "invalid TRANSFORM statement");
 		if (close_fp_when_done && fp) { fclose(fp); }
 		return rval;
 	}
@@ -811,7 +900,7 @@ int MacroStreamXFormSource::parse_iterate_args(char * pargs, int expand_options,
 		if (oa.items_filename == "<") {
 			// if reading iterate items from the input file, we have to read them now
 			if ( ! fp) {
-				errmsg = "unexpected error while attempting to read ITERATE items from xform file.";
+				errmsg = "unexpected error while attempting to read TRANSFORM items from xform file.";
 				return -1;
 			}
 
@@ -831,7 +920,7 @@ int MacroStreamXFormSource::parse_iterate_args(char * pargs, int expand_options,
 			if (close_fp_when_done) { fclose(fp); fp = NULL; }
 			if ( ! saw_close_brace) {
 				formatstr(errmsg, "Reached end of file without finding closing brace ')'"
-					" for ITERATE command on line %d", begin_lineno);
+					" for TRANSFORM command on line %d", begin_lineno);
 				return -1;
 			}
 		} else if (oa.items_filename == "-") {
@@ -907,8 +996,7 @@ void MacroStreamXFormSource::set_live_value(MACRO_SET &set, const char * name, c
 {
 	MACRO_ITEM * pitem = find_macro_item(name, NULL, set);
 	if ( ! pitem) {
-		MACRO_EVAL_CONTEXT ctx; ctx.init("SUBMIT");
-		insert_macro(name, "", set, WireMacro, ctx);
+		insert_macro(name, "", set, WireMacro, LocalContext);
 		pitem = find_macro_item(name, NULL, set);
 		if (set.metat) {
 			MACRO_META * pmeta = &set.metat[pitem - set.table];
@@ -1037,7 +1125,15 @@ void MacroStreamXFormSource::reset(MACRO_SET &set)
 	oa.clear();
 }
 
-static bool read_classad_file(const char *filename, ClassAdList &classads, ClassAdFileParseHelper* pparse_help, const char * constr)
+
+#define PROCESS_ADS_CALLBACK_IS_KEEPING_AD 0x7B8B9BAB
+typedef int (*FNPROCESS_ADS_CALLBACK)(void* pv, ClassAd * ad);
+
+static bool read_classad_file (
+	const char *filename,
+	ClassAdFileParseHelper& parse_help,
+	FNPROCESS_ADS_CALLBACK callback, void*pv,
+	const char * constr)
 {
 	bool success = false;
 	bool close_file = true;
@@ -1049,22 +1145,18 @@ static bool read_classad_file(const char *filename, ClassAdList &classads, Class
 	} else {
 		file = safe_fopen_wrapper_follow(filename, "r");
 		if (file == NULL) {
-			fprintf(stderr, "Can't open file of job ads: %s\n", filename);
+			fprintf(stderr, "Can't open file of ClassAds: %s\n", filename);
 			return false;
 		}
 		close_file = true;
 	}
-
-	CondorClassAdFileParseHelper generic_helper("\n");
-	if ( ! pparse_help)
-		pparse_help = &generic_helper;
 
 	for (;;) {
 		ClassAd* classad = new ClassAd();
 
 		int error;
 		bool is_eof;
-		int cAttrs = classad->InsertFromFile(file, is_eof, error, pparse_help);
+		int cAttrs = classad->InsertFromFile(file, is_eof, error, &parse_help);
 
 		bool include_classad = cAttrs > 0 && error >= 0;
 		if (include_classad && constr) {
@@ -1075,12 +1167,17 @@ static bool read_classad_file(const char *filename, ClassAdList &classads, Class
 				}
 			}
 		}
-		if (include_classad) {
-			classads.Insert(classad);
-		} else {
+
+		int result = 0;
+		if ( ! include_classad || ((result = callback(pv, classad)) != PROCESS_ADS_CALLBACK_IS_KEEPING_AD) ) {
+			// delete the classad if we didn't pass it to the callback, or if
+			// the callback didn't take ownership of it.
 			delete classad;
 		}
-
+		if (result < 0) {
+			success = false;
+			error = result;
+		}
 		if (is_eof) {
 			success = true;
 			break;
@@ -1097,14 +1194,15 @@ static bool read_classad_file(const char *filename, ClassAdList &classads, Class
 	return success;
 }
 
-class CondorQClassAdFileParseHelper : public compat_classad::ClassAdFileParseHelper
+class CondorQClassAdFileParseHelper : public compat_classad::CondorClassAdFileParseHelper
 {
  public:
-	CondorQClassAdFileParseHelper() : is_schedd(false), is_submitter(false) {}
+	CondorQClassAdFileParseHelper(ParseType typ=Parse_long)
+		: CondorClassAdFileParseHelper("\n", typ)
+		, is_schedd(false), is_submitter(false)
+	{}
 	virtual int PreParse(std::string & line, ClassAd & ad, FILE* file);
 	virtual int OnParseError(std::string & line, ClassAd & ad, FILE* file);
-	// return non-zero if new parser, o if old (line oriented) parser, non-zero is returned the above functions will never be called.
-	virtual int NewParser(ClassAd & /*ad*/, FILE* /*file*/, bool & detected_long, std::string & /*errmsg*/) { detected_long = false; return 0; }
 	std::string schedd_name;
 	std::string schedd_addr;
 	bool is_schedd;
@@ -1195,7 +1293,7 @@ int DoRenameAttr(ClassAd * ad, const std::string & attr, const char * attrNew)
 {
 	if (dash_verbose) fprintf(stdout, "RENAME %s to %s\n", attr.c_str(), attrNew);
 	if ( ! IsValidAttrName(attrNew)) {
-		fprintf(stderr, "ERROR: RENAME %s new name %s is not valid", attr.c_str(), attrNew);
+		fprintf(stderr, "ERROR: RENAME %s new name %s is not valid\n", attr.c_str(), attrNew);
 		return -1;
 	} else {
 		ExprTree * tree = ad->Remove(attr);
@@ -1221,7 +1319,7 @@ int DoCopyAttr(ClassAd * ad, const std::string & attr, const char * attrNew)
 {
 	if (dash_verbose) fprintf(stdout, "COPY %s to %s\n", attr.c_str(), attrNew);
 	if ( ! IsValidAttrName(attrNew)) {
-		fprintf(stderr, "ERROR: COPY %s new name %s is not valid", attr.c_str(), attrNew);
+		fprintf(stderr, "ERROR: COPY %s new name %s is not valid\n", attr.c_str(), attrNew);
 		return -1;
 	} else {
 		ExprTree * tree = ad->Lookup(attr);
@@ -1352,11 +1450,11 @@ enum {
 	kw_DELETE,
 	kw_EVALMACRO,
 	kw_EVALSET,
-	kw_ITERATE,
 	kw_NAME,
 	kw_RENAME,
 	kw_REQUIREMENTS,
 	kw_SET,
+	kw_TRANSFORM,
 	kw_UNIVERSE,
 };
 
@@ -1368,11 +1466,11 @@ static const Keyword ActionKeywordItems[] = {
 	KW(DELETE, 1 | kw_opt_regex),
 	KW(EVALMACRO, 2),
 	KW(EVALSET, 2),
-	KW(ITERATE, 0),
 	KW(NAME, 0),
 	KW(RENAME, 2 | kw_opt_regex),
 	KW(REQUIREMENTS, 0),
 	KW(SET, 2),
+	KW(TRANSFORM, 0),
 	KW(UNIVERSE, 1),
 };
 #undef KW
@@ -1409,6 +1507,7 @@ const char * append_substituted_regex (
 		}
 		++p;
 	}
+	if (p > lastp) { output.append(lastp, p-lastp); }
 	return output.c_str();
 }
 
@@ -1575,7 +1674,7 @@ int ParseRulesCallback(void* pv, MACRO_SOURCE& source, MACRO_SET& macro_set, cha
 
 		// evaluate an expression, then set a value into the ad.
 	case kw_EVALMACRO:
-		if (dash_verbose) fprintf(stdout, "EVALMACRO %s from $EVAL( %s )\n", attr.c_str(), rhs.ptr());
+		if (dash_verbose) fprintf(stdout, "EVALMACRO %s to %s\n", attr.c_str(), rhs.ptr());
 		if ( ! rhs) {
 			fprintf(stderr, "ERROR: EVALMACRO %s has no value", attr.c_str());
 		} else {
@@ -1584,14 +1683,13 @@ int ParseRulesCallback(void* pv, MACRO_SOURCE& source, MACRO_SET& macro_set, cha
 				fprintf(stderr, "ERROR: EVALMACRO %s could not evaluate : %s\n", attr.c_str(), rhs.ptr());
 			} else {
 				XFormValueToString(val, tmp3);
-				MACRO_EVAL_CONTEXT ctx; ctx.init("SUBMIT");
-				insert_macro(attr.c_str(), tmp3.c_str(), macro_set, source, ctx);
-				if (dash_verbose) { fprintf(stdout, "    TEMP %s = %s\n", attr.c_str(), tmp3.c_str()); }
+				insert_macro(attr.c_str(), tmp3.c_str(), macro_set, source, LocalContext);
+				if (dash_verbose) { fprintf(stdout, "          %s = %s\n", attr.c_str(), tmp3.c_str()); }
 			}
 		}
 		break;
 
-	case kw_ITERATE:
+	case kw_TRANSFORM:
 		if (pargs->xforms->has_pending_fp()) {
 			std::string errmsg;
 			// EXPAND_GLOBS_TO_FILES | EXPAND_GLOBS_TO_DIRS
@@ -1632,7 +1730,7 @@ int ParseRulesCallback(void* pv, MACRO_SOURCE& source, MACRO_SET& macro_set, cha
 		break;
 
 	case kw_EVALSET:
-		if (dash_verbose) fprintf(stdout, "EVALSET %s to $EVAL( %s )\n", attr.c_str(), rhs.ptr());
+		if (dash_verbose) fprintf(stdout, "EVALSET %s to %s\n", attr.c_str(), rhs.ptr());
 		if ( ! rhs) {
 			fprintf(stderr, "ERROR: EVALSET %s has no value", attr.c_str());
 		} else {
@@ -1677,13 +1775,30 @@ int ParseRulesCallback(void* pv, MACRO_SOURCE& source, MACRO_SET& macro_set, cha
 	return 0; // line handled, keep scanning.
 }
 
-bool ApplyTransform (
-	const ClassAd * job,
-	MacroStreamXFormSource & xforms,
-	MACRO_SET_CHECKPOINT_HDR* pvParamCheckpoint,
-	FILE* outfile)
-{
+class apply_transform_args {
+public:
+	apply_transform_args(MacroStreamXFormSource& xfm, MACRO_SET_CHECKPOINT_HDR* check, FILE* out)
+		: xforms(xfm), checkpoint(check), outfile(out), input_helper(NULL) {}
+	MacroStreamXFormSource & xforms;
+	MACRO_SET_CHECKPOINT_HDR* checkpoint;
+	FILE* outfile;
+	compat_classad::CondorClassAdFileParseHelper *input_helper;
 	std::string errmsg;
+};
+
+// return true from the transform if no longer care about the job ad
+// return false to take ownership of the job ad
+int ApplyTransform (
+	void* pv,
+	ClassAd * input_ad)
+{
+	if ( ! pv) return 1;
+	apply_transform_args & xform_args = *(apply_transform_args*)pv;
+	const ClassAd * job = input_ad;
+
+	MacroStreamXFormSource & xforms = xform_args.xforms;
+	MACRO_SET_CHECKPOINT_HDR* pvParamCheckpoint = xform_args.checkpoint;
+	//FILE* outfile = xform_args.outfile;
 
 	_parse_rules_args args = { NULL, NULL, &xforms };
 
@@ -1695,29 +1810,29 @@ bool ApplyTransform (
 	// indicate that we are not yet iterating
 	(void)sprintf(IteratingString, "%d", 0);
 
-	// the first parse is a keeper only if there is no iterate statement. 
+	// the first parse is a keeper only if there is no TRANSFORM statement.
 	xforms.rewind();
-	int rval = Parse_macros(xforms, 0, LocalMacroSet, READ_MACROS_SUBMIT_SYNTAX, &LocalContext, errmsg, ParseRulesCallback, &args);
+	int rval = Parse_macros(xforms, 0, LocalMacroSet, READ_MACROS_SUBMIT_SYNTAX, &LocalContext, xform_args.errmsg, ParseRulesCallback, &args);
 	if (rval) {
 		fprintf(stderr, "Transform of ad %s failed!\n", "");
-		return false;
+		return rval;
 	}
 
-	// if there is an iterate, then we want to reparse again with the iterator variables set. 
+	// if there is an TRANSFORM, then we want to reparse again with the iterator variables set.
 	bool iterating = xforms.first_iteration(LocalMacroSet);
 	if ( ! iterating) {
-		ReportSuccess(args.ad, outfile);
+		ReportSuccess(args.ad, xform_args);
 	} else {
 		while (iterating) {
 			delete args.ad;
 			LocalContext.ad = args.ad = new ClassAd(*job);
 
 			xforms.rewind();
-			rval = Parse_macros(xforms, 0, LocalMacroSet, READ_MACROS_SUBMIT_SYNTAX, &LocalContext, errmsg, ParseRulesCallback, &args);
+			rval = Parse_macros(xforms, 0, LocalMacroSet, READ_MACROS_SUBMIT_SYNTAX, &LocalContext, xform_args.errmsg, ParseRulesCallback, &args);
 			if (rval < 0)
 				break;
 
-			ReportSuccess(args.ad, outfile);
+			ReportSuccess(args.ad, xform_args);
 			iterating = xforms.next_iteration(LocalMacroSet);
 		}
 	}
@@ -1726,36 +1841,147 @@ bool ApplyTransform (
 	LocalContext.ad = NULL;
 	rewind_macro_set(LocalMacroSet, pvParamCheckpoint, false);
 
-	return true;
+	return rval ? rval : 1; // we return non-zero to allow the job to be deleted
 }
 
-bool ReportSuccess(const ClassAd * job, FILE* out)
+void write_output_prolog(
+	FILE* outfile,
+	ClassAdFileParseType::ParseType out_format,
+	int cNonEmptyOutputAds)
 {
-	fprintf(out, "\n");
-	fPrintAd(out, *job);
+	std::string output;
+	switch (out_format) {
+	case ClassAdFileParseType::Parse_xml:
+		AddClassAdXMLFileFooter(output);
+		break;
+	case ClassAdFileParseType::Parse_new:
+		if (cNonEmptyOutputAds) output = "}\n";
+		break;
+	case ClassAdFileParseType::Parse_json:
+		if (cNonEmptyOutputAds) output = "]\n";
+	default:
+		// nothing to do.
+		break;
+	}
+	if ( ! output.empty()) { fputs(output.c_str(), outfile); }
+}
+
+static int cchReserveForPrintingAds = 16384;
+bool ReportSuccess(const ClassAd * job, apply_transform_args & xform_args)
+{
+	if ( ! job) return false;
+
+	StringList * whitelist = NULL;
+
+	// if we have not yet picked and output format, do that now.
+	if (DashOutFormat == ClassAdFileParseType::Parse_auto) {
+		if (xform_args.input_helper) {
+			fprintf(stderr, "input file format is %d\n", xform_args.input_helper->getParseType());
+			DashOutFormat = xform_args.input_helper->getParseType();
+		}
+	}
+	if (DashOutFormat < ClassAdFileParseType::Parse_long || DashOutFormat > ClassAdFileParseType::Parse_new) {
+		DashOutFormat = ClassAdFileParseType::Parse_long;
+	}
+
+	std::string output;
+	output.reserve(cchReserveForPrintingAds);
+
+	classad::References attrs;
+	classad::References *print_order = NULL;
+	if ( ! DashOutAttrsInHashOrder) {
+		sGetAdAttrs(attrs, *job, false, whitelist);
+		print_order = &attrs;
+	}
+	switch (DashOutFormat) {
+	default:
+	case ClassAdFileParseType::Parse_long: {
+			if (print_order) {
+				sPrintAdAttrs(output, *job, *print_order);
+			} else {
+				sPrintAd(output, *job);
+			}
+			if ( ! output.empty()) { output += "\n"; }
+		} break;
+
+	case ClassAdFileParseType::Parse_json: {
+			classad::ClassAdJsonUnParser  unparser;
+			output = cNonEmptyOutputAds ? ",\n" : "[\n";
+			if (print_order) {
+				PRAGMA_REMIND("fix to call call Unparse with projection when it exists")
+				//unparser.Unparse(output, job, print_order);
+				unparser.Unparse(output, job);
+			} else {
+				unparser.Unparse(output, job);
+			}
+			if (output.size() > 2) {
+				output += "\n";
+			} else {
+				output.clear();
+			}
+		} break;
+
+	case ClassAdFileParseType::Parse_new: {
+			classad::ClassAdUnParser  unparser;
+			output = cNonEmptyOutputAds ? ",\n" : "{\n";
+			if (print_order) {
+				PRAGMA_REMIND("fix to call call Unparse with projection when it exists")
+				//unparser.Unparse(output, job, print_order);
+				unparser.Unparse(output, job);
+			} else {
+				unparser.Unparse(output, job);
+			}
+			if (output.size() > 2) {
+				output += "\n";
+			} else {
+				output.clear();
+			}
+		} break;
+
+	case ClassAdFileParseType::Parse_xml: {
+			classad::ClassAdXMLUnParser  unparser;
+			unparser.SetCompactSpacing(false);
+			if (0 == cNonEmptyOutputAds) {
+				AddClassAdXMLFileHeader(output);
+			}
+			if (print_order) {
+				PRAGMA_REMIND("fix to call call Unparse with projection when it exists")
+				//unparser.Unparse(output, job, print_order);
+				unparser.Unparse(output, job);
+			} else {
+				unparser.Unparse(output, job);
+			}
+			// no extra newlines for xml
+			// if ( ! output.empty()) { output += "\n"; }
+		} break;
+	}
+
+	if ( ! output.empty()) {
+		fputs(output.c_str(), xform_args.outfile);
+		++cNonEmptyOutputAds;
+		cchReserveForPrintingAds = MAX(cchReserveForPrintingAds, (int)output.size());
+	}
 	return true;
 }
 
 
-int DoTransforms(const char * jobs_file, const char * constraint, MacroStreamXFormSource & xforms, FILE* outfile)
+int DoTransforms(input_file & input, const char * constraint, MacroStreamXFormSource & xforms, FILE* outfile)
 {
 	int rval = 0;
 
 	ClassAdList jobs;
 
-	/* get the "q" from the job ads file */
-	CondorQClassAdFileParseHelper jobads_file_parse_helper;
-	if ( ! read_classad_file(jobs_file, jobs, &jobads_file_parse_helper, constraint)) {
+	apply_transform_args args(xforms, NULL, outfile);
+	args.checkpoint = checkpoint_macro_set(LocalMacroSet);
+
+	// TODO: add code to pass arguments between transforms?
+
+	CondorQClassAdFileParseHelper jobads_file_parse_helper(input.parse_format);
+	args.input_helper = &jobads_file_parse_helper;
+
+	if ( ! read_classad_file(input.filename, jobads_file_parse_helper, ApplyTransform, &args, constraint)) {
 		return -1;
 	}
-
-	MACRO_SET_CHECKPOINT_HDR*checkpoint = checkpoint_macro_set(LocalMacroSet);
-
-	jobs.Open();
-	while(ClassAd *job = jobs.Next()) {
-		ApplyTransform(job, xforms, checkpoint, outfile);
-	}
-	jobs.Close();
 
 	return rval;
 }
@@ -1843,15 +2069,15 @@ bool same_refs(StringList & refs, const char * check_str)
 
 typedef std::map<std::string, std::string, classad::CaseIgnLTStr> STRING_MAP;
 
-int ConvertNextJobRouterRoute(std::string & routing_string, int & offset, const ClassAd & default_route_ad, StringList & statements, int options)
+int ConvertNextJobRouterRoute(std::string & routing_string, int & offset, const ClassAd & default_route_ad, StringList & statements, int /*options*/)
 {
 	classad::ClassAdParser parser;
 	classad::ClassAdUnParser unparser;
 
-	bool style_2 = (options & 0x0F) == 2;
-	bool has_set_InputRSL = false;
+	//bool style_2 = (options & 0x0F) == 2;
 	int  has_set_xcount = 0, has_set_queue = 0, has_set_maxMemory = 0, has_set_maxWallTime = 0, has_set_minWallTime = 0;
-	bool has_def_RequestMemory = false, has_def_RequestCpus = false, has_def_onexithold = false, has_def_remote_queue = false;
+	//bool has_def_RequestMemory = false, has_def_RequestCpus = false, has_def_remote_queue = false;
+	bool has_def_onexithold = false;
 
 	classad::ClassAd ad;
 	if ( ! parser.ParseClassAd(routing_string, ad, offset)) {
@@ -1887,7 +2113,6 @@ int ConvertNextJobRouterRoute(std::string & routing_string, int & offset, const 
 			std::string attr = it->first.substr(4);
 			int atrid = is_interesting_route_attr(attr);
 			if (atrid == atr_INPUTRSL) {
-				has_set_InputRSL = true;
 				// just eat this.
 				continue;
 			}
@@ -1929,18 +2154,18 @@ int ConvertNextJobRouterRoute(std::string & routing_string, int & offset, const 
 						*/
 
 						if (atrid == atr_REQUESTMEMORY && is_def_expr) {
-							has_def_RequestMemory = true;
+							//has_def_RequestMemory = true;
 							set_cmds[attr] = "$(maxMemory:2000)";
 						} else if ((atrid == atr_REQUESTCPUS || atrid == atr_REMOTE_NODENUMBER || atrid == atr_REMOTE_SMPGRANULARITY) &&
 								   is_def_expr) {
-							has_def_RequestCpus = true;
+							//has_def_RequestCpus = true;
 							set_cmds[attr] = "$(xcount:1)";
 						} else if ((atrid == atr_ONEXITHOLD || atrid == atr_ONEXITHOLDREASON || atrid == atr_ONEXITHOLDSUBCODE) && is_def_expr) {
 							has_def_onexithold = true;
 							//evalset_myrefs.insert("minWallTime");
 							//evalset_cmds[attr] = rhs;
 						} else if (atrid == atr_REMOTE_QUEUE && is_def_expr) {
-							has_def_remote_queue = true;
+							//has_def_remote_queue = true;
 							set_cmds[attr] = "$Fq(queue)";
 						} else {
 							evalset_cmds[attr] = rhs;

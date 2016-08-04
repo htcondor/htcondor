@@ -1244,7 +1244,7 @@ static bool read_classad_file(const char *filename, ClassAdFileParseType::ParseT
 		close_file = true;
 	}
 	if (file == NULL) {
-		fprintf(stderr, "Can't open file of job ads: %s\n", filename);
+		fprintf(stderr, "Can't open file of ClassAds: %s\n", filename);
 		return false;
 	} else if (ads_file_format == ClassAdFileParseType::Parse_long ||
 	           ads_file_format == ClassAdFileParseType::Parse_json ||
