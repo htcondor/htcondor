@@ -74,8 +74,7 @@ static bool parse_abort(Dag *dag,
 static bool parse_dot(Dag *dag, 
 		const char *filename, int lineNumber);
 static bool parse_vars(Dag *dag,
-		const char *filename, int lineNumber,
-		std::list<std::string>* varq);
+		const char *filename, int lineNumber);
 static bool parse_priority(Dag *dag, 
 		const char *filename, int lineNumber);
 static bool parse_category(Dag *dag, const char *filename, int lineNumber);
@@ -176,16 +175,6 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 
 	char *line;
 	int lineNumber = 0;
-
-	// Here we have a list to save VARS lines for which the corresponding
-	// node has not yet been defined when we first encounter the VARS
-	// line; such lines are saved and re-parsed at the end of the parsing
-	// process.  (This is for gittrac #1780: VARS values in top-level DAG
-	// should be able to be applied to splices; job_dagman_splice-R tests
-	// this functionality.)  Nathan Panike says that saving *all* of the
-	// VARS lines and parsing them at the end also causes problems.
-	// wenger 2014-09-21
-	std::list<std::string> vars_to_save;
 
 	//
 	// We now parse in two passes, so that commands such as PARENT..CHILD
@@ -392,12 +381,7 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 		// Handle a Vars spec
 		// Example syntax is: Vars JobName var1="val1" var2="val2"
 		else if(strcasecmp(token, "VARS") == 0) {
-			//TEMPTEMP vars_to_save.push_back(varline);	
-			// Note that we pop this line inside parse_vars() if we
-			// parse it successfully, so that we don't re-parse it at
-			// the end.
-			//TEMPTEMP parsed_line_successfully = parse_vars(dag, filename, lineNumber, &vars_to_save);
-			parsed_line_successfully = parse_vars(dag, filename, lineNumber, NULL);
+			parsed_line_successfully = parse_vars(dag, filename, lineNumber);
 		}
 
 		// Handle a Priority spec
@@ -495,23 +479,6 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 	dag->LiftSplices(SELF);
 	dag->RecordInitialAndFinalNodes();
 	
-#if 0 //TEMPTEMP
-	// Okay, here we re-parse any VARS lines that didn't have corresponding
-	// node when we first read them.
-	for ( std::list<std::string>::iterator p = vars_to_save.begin();
-				p != vars_to_save.end(); ++p ) {
-		char* varline = strnewp( p->c_str() );
-		char * token = strtok( varline, DELIMITERS ); // Drop the VARS token
-		ASSERT( token );
-		bool parsed_line_successfully = parse_vars( dag,filename, 0, 0 );
-		if ( !parsed_line_successfully ) {
-			delete[] varline;
-			return false;
-		}
-		delete[] varline;
-	}	
-#endif //TEMPTEMP
-
 	if ( useDagDir ) {
 		MyString	errMsg;
 		if ( !dagDir.Cd2MainDir( errMsg ) ) {
@@ -1339,7 +1306,8 @@ static bool parse_dot(Dag *dag, const char *filename, int lineNumber)
 //           Vars JobName VarName1="value1" VarName2="value2" etc
 //           Whitespace surrounding the = sign is permissible
 //-----------------------------------------------------------------------------
-static bool parse_vars(Dag *dag, const char *filename, int lineNumber, std::list<std::string>* varq) {
+static bool parse_vars(Dag *dag, const char *filename, int lineNumber)
+{
 	const char* example = "Vars JobName VarName1=\"value1\" VarName2=\"value2\"";
 	const char *jobName = strtok( NULL, DELIMITERS );
 	if ( jobName == NULL ) {
@@ -1358,19 +1326,7 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber, std::list
 	if(job == NULL) {
 		debug_printf(DEBUG_QUIET, "%s (line %d): Unknown Job %s\n",
 					filename, lineNumber, jobNameOrig);
-		//TEMPTEMP -- get rid of this varq stuff???
-		if(varq) {
-			debug_printf(DEBUG_QUIET, "Queueing this line up to try later\n");
-			return true;
-		} else {
-			return false;
-		}
-	} else {
-			// The line we are searching for should be at the back of the list
-			// unless we have lifted, in which case it is empty
-		if(varq && !varq->empty()) {
-			varq->pop_back();
-		}
+		return false;
 	}
 
 	char *str = strtok( NULL, "\n" ); // just get all the rest -- we'll be doing this by hand
@@ -1490,6 +1446,7 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber, std::list
 		job->varsFromDag->Rewind();
 		while(Job::NodeVar *var = job->varsFromDag->Next()){
 			if ( varName == var->_name ) {
+				//TEMPTEMP -- do we want to get rid of this warning or change the strictness?
 				debug_printf(DEBUG_NORMAL,"Warning: VAR \"%s\" "
 					"is already defined in job \"%s\" "
 					"(Discovered at file \"%s\", line %d)\n",
