@@ -9,6 +9,11 @@ Vars NodeA first="Cadel_Evans"
 Job NodeB job_dagman_vars-B-node.sub
 Vars NodeB second="Andy_Schleck"
 
+# Note:  change this to use include for part of the
+# DAG once we merge to master (include isn't implemented
+# on V8_5_gittrac_5729-branch).
+#Include job_dagman_vars-B-inc.dag
+
 Job NodeC job_dagman_vars-B-node.sub
 Vars NodeC third="Frank_Schleck"
 

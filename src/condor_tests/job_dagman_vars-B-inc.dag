@@ -1,0 +1,5 @@
+Job NodeC job_dagman_vars-B-node.sub
+Vars NodeC third="Frank_Schleck"
+
+Job NodeD job_dagman_vars-B-node.sub
+Vars NodeD misc="that's_all"
