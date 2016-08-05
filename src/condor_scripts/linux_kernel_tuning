@@ -54,7 +54,7 @@ TCP_LISTEN_QUEUE=1024
 # Likewise, the central manager (collector) needs have large UDP buffers.
 # Increase the maximum allowed size of networks receive buffers.
 #
-MAX_RECEIVE_BUFFER=10383360
+MAX_RECEIVE_BUFFER=10485760
 
 # Maximum amount of dirty filesystem bytes to buffer in the kernel
 # before processes writing to the filesystem are blocked, and made 
