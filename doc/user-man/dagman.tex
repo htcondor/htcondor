@@ -612,7 +612,7 @@ and the node will be marked as successful.
 %	  we're inside of a math section and will draw things more nicely
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:DAG-command_order}Command Order}
+\subsection{\label{sec:DAG-command_order}Command Order}
 \label{dagman:command order}
 \index{DAG input file!command order}
 \index{DAGMan!command order}
@@ -1756,43 +1756,6 @@ and not utilized by DaemonCore, yet are specified in a
 \Condor{dagman}-specific configuration file are ignored.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%TEMP -- is this the right place for this?
-\subsubsection{\label{sec:dagman_include_command}INCLUDE}
-\index{DAG input file!INCLUDE command}
-\index{DAGMan!DAG INCLUDE command}
-
-The \Arg{INCLUDE} command allows the contents of one DAG file to be
-parsed as if they were physically included in the referencing DAG
-file.  The syntax for \Arg{INCLUDE} is
-
-\Opt{INCLUDE} \Arg{FileName}
-
-For example, if we have two DAG files like this:
-\begin{verbatim}
-# File name: foo.dag
-#
-    JOB  A  A.sub
-    INCLUDE bar.dag
-
-# File name: bar.dag
-#
-    JOB  B  B.sub
-    JOB  C  C.sub
-\end{verbatim}
-
-this is equivalent to the single DAG file:
-\begin{verbatim}
-    JOB  A  A.sub
-    JOB  B  B.sub
-    JOB  C  C.sub
-\end{verbatim}
-
-Note that the included file must be in proper DAG syntax.  Also, there
-are many cases where a valid included DAG file will cause a parse error,
-such as the including and included files defining nodes with the same
-name.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:DAG-SetAttributes}Setting ClassAd attributes in the DAG file}
 \index{DAG input file!SET\_JOB\_ATTR command}
 \index{DAGMan!setting ClassAd attributes in a DAG}
@@ -1913,6 +1876,92 @@ the renaming of nodes may be disabled by
 setting the configuration variable \Macro{DAGMAN\_MUNGE\_NODE\_NAMES}
 to \Expr{False} (see ~\ref{param:DAGManMungeNodeNames}).
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:DAG-configuration}INCLUDE}
+\index{DAG input file!INCLUDE command}
+\index{DAGMan!DAG INCLUDE command}
+
+The \Arg{INCLUDE} command allows the contents of one DAG file to be
+parsed as if they were physically included in the referencing DAG
+file.  The syntax for \Arg{INCLUDE} is
+
+\Opt{INCLUDE} \Arg{FileName}
+
+For example, if we have two DAG files like this:
+\begin{verbatim}
+# File name: foo.dag
+#
+    JOB  A  A.sub
+    INCLUDE bar.dag
+
+# File name: bar.dag
+#
+    JOB  B  B.sub
+    JOB  C  C.sub
+\end{verbatim}
+
+this is equivalent to the single DAG file:
+\begin{verbatim}
+    JOB  A  A.sub
+    JOB  B  B.sub
+    JOB  C  C.sub
+\end{verbatim}
+
+Note that the included file must be in proper DAG syntax.  Also, there
+are many cases where a valid included DAG file will cause a parse error,
+such as the including and included files defining nodes with the same
+name.
+
+INCLUDEs can be nested to any depth (be sure not to create a cycle
+of includes!).
+
+% Note: this is an alternative to subsubsubsection, which we don't have.
+\begin{description}
+\item[Example: Using INCLUDE to simplify multiple similar workflows]
+\end{description}
+
+One use of the INCLUDE command is to simplify the DAG files when we
+have a single workflow that we want to run on a number of data sets.
+In that case, we can do something like this:
+
+\begin{verbatim}
+# File name: workflow.dag
+# Defines the structure of the workflow
+    JOB Split split.sub
+    JOB Process00 process.sub
+    ...
+    JOB Process99 process.sub
+    JOB Combine combine.sub
+    PARENT Split CHILD Process00 ... Process99
+    PARENT Process00 ... Process99 CHILD Combine
+
+# File name: split.sub
+    executable = my_split
+    input = $(dataset).phase1
+    output = $(dataset).phase2
+    ...
+
+# File name: data57.vars
+    VARS Split dataset="data57"
+    VARS Process00 dataset="data57"
+    ...
+    VARS Process99 dataset="data57"
+    VARS Combine dataset="data57"
+
+# File name: run_dataset57.dag
+    INCLUDE workflow.dag
+    INCLUDE data57.vars
+\end{verbatim}
+
+This avoids having to duplicate the JOB and PARENT/CHILD commands
+for every dataset -- we can just re-use the \File{workflow.dag} file.
+
+Then, to run our workflow on dataset 57, we run the following
+command:
+
+\begin{verbatim}
+    condor_submit_dag run_dataset57.dag
+\end{verbatim}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:DAGsinDAGs}A DAG Within a DAG Is a SUBDAG}
