@@ -1281,19 +1281,26 @@ Job *
 Dag::FindAllNodesByName( const char* nodeName )
 {
 //TEMPTEMP -- probably use a distinct iterator here instead of interating directly on _jobs
+debug_printf( DEBUG_QUIET, "DIAG 3010\n" );//TEMPTEMP
 	if ( !nodeName ) {
 		if ( _allNodes ) {
+debug_printf( DEBUG_QUIET, "DIAG 3012\n" );//TEMPTEMP
 			//TEMPTEMP -- should we set _allNodes to false here if we've hit the last node?
 			return _jobs.Next();
 		} else {
+debug_printf( DEBUG_QUIET, "DIAG 3014\n" );//TEMPTEMP
 			return NULL;
 		}
 	}
 
+debug_printf( DEBUG_QUIET, "DIAG 3020\n" );//TEMPTEMP
 	if ( !strcasecmp( nodeName, "ALL_NODES" ) ) {
+debug_printf( DEBUG_QUIET, "DIAG 3022\n" );//TEMPTEMP
 		_allNodes = true;
+		_jobs.Rewind();
 		return _jobs.Next();
 	} else {
+debug_printf( DEBUG_QUIET, "DIAG 3024\n" );//TEMPTEMP
 		_allNodes = false;
 		return FindNodeByName( nodeName );
 	}

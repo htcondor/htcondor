@@ -202,7 +202,8 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 		if (line[0] == 0)       continue;  // Ignore blank lines
 		if (line[0] == COMMENT) continue;  // Ignore comments
 
-		debug_printf( DEBUG_DEBUG_3, "Parsing line <%s>\n", line );
+		//TEMPTEMP debug_printf( DEBUG_DEBUG_3, "Parsing line <%s>\n", line );
+		debug_printf( DEBUG_QUIET, "Parsing line <%s>\n", line );//TEMPTEMP
 
 			// Note: strtok() could be replaced by MyString::Tokenize(),
 			// which is much safer, but I don't want to deal with that
@@ -302,7 +303,8 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 		if (line[0] == 0)       continue;  // Ignore blank lines
 		if (line[0] == COMMENT) continue;  // Ignore comments
 
-		debug_printf( DEBUG_DEBUG_3, "Parsing line <%s>\n", line );
+		//TEMPTEMP debug_printf( DEBUG_DEBUG_3, "Parsing line <%s>\n", line );
+		debug_printf( DEBUG_QUIET, "Parsing line <%s>\n", line );//TEMPTEMP
 
 			// Note: strtok() could be replaced by MyString::Tokenize(),
 			// which is much safer, but I don't want to deal with that
@@ -1297,6 +1299,7 @@ static bool parse_dot(Dag *dag, const char *filename, int lineNumber)
 
 
 //TEMPTEMP -- start implementing "all nodes" in here
+//TEMPTEMP -- split some of this into separate functions?
 //-----------------------------------------------------------------------------
 // 
 // Function: parse_vars
@@ -1322,14 +1325,20 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber)
 	jobName = tmpJobName.Value();
 
 	//TEMPTEMP Job *job = dag->FindNodeByName( jobName );
-	Job *job = dag->FindAllNodesByName( jobName );//TEMPTEMP
-	if(job == NULL) {
-		debug_printf(DEBUG_QUIET, "%s (line %d): Unknown Job %s\n",
-					filename, lineNumber, jobNameOrig);
-		return false;
-	}
+	Job *job;
+	char *varsStr = NULL;//TEMPTEMP
+	while ( ( job = dag->FindAllNodesByName( jobName ) ) ) {
+	//TEMPTEMP -- fix indentation
+	jobName = NULL;
 
-	char *str = strtok( NULL, "\n" ); // just get all the rest -- we'll be doing this by hand
+	//TEMPTEMP -- reduce verbosity
+	debug_printf( DEBUG_QUIET, "parse_vars(): found job %s\n",
+				job->GetJobName() );
+
+	if ( !varsStr ) {//TEMPTEMP
+		varsStr = strtok( NULL, "\n" ); // just get all the rest -- we'll be doing this by hand
+	}
+	char *str = varsStr;//TEMPTEMP
 
 	int numPairs;
 	for ( numPairs = 0; ; numPairs++ ) {  // for each name="value" pair
@@ -1473,8 +1482,13 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber)
 		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): No valid name-value pairs\n", filename, lineNumber);
 		return false;
 	}
+	}
 
-	//TEMPTEMP -- move if job != NULL stuff to here?
+	if ( jobName ) {
+		debug_printf(DEBUG_QUIET, "%s (line %d): Unknown Job %s\n",
+					filename, lineNumber, jobNameOrig);
+		return false;
+	}
 	
 	return true;
 }
@@ -2045,6 +2059,7 @@ parse_reject(
 	return true;
 }
 
+//TEMPTEMP -- disallow "ALL_NODES" for a node name...
 //-----------------------------------------------------------------------------
 // 
 // Function: parse_jobstate_log
