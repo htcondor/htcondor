@@ -209,7 +209,7 @@ Dag::Dag( /* const */ StringList &dagFiles,
 	_haltFile = HaltFileName( _dagFiles.next() );
 	_dagStatus = DAG_STATUS_OK;
 
-	_allNodes = false;//TEMPTEMP -- move?
+	_allNodesIt = NULL;//TEMPTEMP -- move?
 
 	return;
 }
@@ -1280,28 +1280,23 @@ Job * Dag::FindNodeByName (const char * jobName) const {
 Job *
 Dag::FindAllNodesByName( const char* nodeName )
 {
-//TEMPTEMP -- probably use a distinct iterator here instead of interating directly on _jobs
-debug_printf( DEBUG_QUIET, "DIAG 3010\n" );//TEMPTEMP
 	if ( !nodeName ) {
-		if ( _allNodes ) {
-debug_printf( DEBUG_QUIET, "DIAG 3012\n" );//TEMPTEMP
-			//TEMPTEMP -- should we set _allNodes to false here if we've hit the last node?
-			return _jobs.Next();
+		if ( _allNodesIt ) {
+			//TEMPTEMP -- should we set _allNodesIt to NULL here if we've hit the last node?
+			return _allNodesIt->Next();
 		} else {
-debug_printf( DEBUG_QUIET, "DIAG 3014\n" );//TEMPTEMP
 			return NULL;
 		}
 	}
 
-debug_printf( DEBUG_QUIET, "DIAG 3020\n" );//TEMPTEMP
 	if ( !strcasecmp( nodeName, "ALL_NODES" ) ) {
-debug_printf( DEBUG_QUIET, "DIAG 3022\n" );//TEMPTEMP
-		_allNodes = true;
-		_jobs.Rewind();
-		return _jobs.Next();
+		delete _allNodesIt; // just to be safe
+		_allNodesIt = new ListIterator<Job>( _jobs );
+		_allNodesIt->ToBeforeFirst();
+		return _allNodesIt->Next();
 	} else {
-debug_printf( DEBUG_QUIET, "DIAG 3024\n" );//TEMPTEMP
-		_allNodes = false;
+		delete _allNodesIt;
+		_allNodesIt = NULL;
 		return FindNodeByName( nodeName );
 	}
 }

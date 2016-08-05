@@ -1297,8 +1297,6 @@ static bool parse_dot(Dag *dag, const char *filename, int lineNumber)
 	return true;
 }
 
-
-//TEMPTEMP -- start implementing "all nodes" in here
 //TEMPTEMP -- split some of this into separate functions?
 //-----------------------------------------------------------------------------
 // 
@@ -1324,9 +1322,9 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber)
 	MyString tmpJobName = munge_job_name(jobName);
 	jobName = tmpJobName.Value();
 
-	//TEMPTEMP Job *job = dag->FindNodeByName( jobName );
+	//TEMPTEMP -- probably change this...
+	char *varsStr = strtok( NULL, "\n" ); // just get all the rest -- we'll be doing this by hand
 	Job *job;
-	char *varsStr = NULL;//TEMPTEMP
 	while ( ( job = dag->FindAllNodesByName( jobName ) ) ) {
 	//TEMPTEMP -- fix indentation
 	jobName = NULL;
@@ -1335,9 +1333,7 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber)
 	debug_printf( DEBUG_QUIET, "parse_vars(): found job %s\n",
 				job->GetJobName() );
 
-	if ( !varsStr ) {//TEMPTEMP
-		varsStr = strtok( NULL, "\n" ); // just get all the rest -- we'll be doing this by hand
-	}
+	//TEMPTEMP -- put a bunch of this into its own function?
 	char *str = varsStr;//TEMPTEMP
 
 	int numPairs;

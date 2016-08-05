@@ -975,8 +975,7 @@ protected:
     List<Job>     _jobs;
 
 	//TEMPTEMP -- probably move this to private
-	//TEMPTEMP? Job * _nextNode;
-	bool _allNodes; //TEMPTEMP -- rename?
+	ListIterator<Job> *_allNodesIt;
 
 private:
 		// Note: the final node is in the _jobs list; this pointer is just
