@@ -217,7 +217,7 @@ bool is_required_request_resource(const char * name) {
 }
 
 
-char* allocate_live_default_string(MACRO_SET &set, const condor_params::string_value & Def, int cch)
+condor_params::string_value * allocate_live_default_string(MACRO_SET &set, const condor_params::string_value & Def, int cch)
 {
 	condor_params::string_value * NewDef = (condor_params::string_value*)set.apool.consume(sizeof(condor_params::string_value), sizeof(void*));
 	NewDef->flags = Def.flags;
@@ -232,7 +232,7 @@ char* allocate_live_default_string(MACRO_SET &set, const condor_params::string_v
 	}
 
 	// return the live string
-	return NewDef->psz;
+	return NewDef;
 }
 
 // setup a MACRO_DEFAULTS table for the macro set, we have to re-do this each time we clear
@@ -249,11 +249,11 @@ void SubmitHash::setup_macro_defaults()
 	SubmitMacroSet.defaults->metat = NULL;
 
 	// allocate space for the 'live' macro default string_values and for the strings themselves.
-	LiveNodeString = allocate_live_default_string(SubmitMacroSet, UnliveNodeMacroDef, 24);
-	LiveClusterString = allocate_live_default_string(SubmitMacroSet, UnliveClusterMacroDef, 24);
-	LiveProcessString = allocate_live_default_string(SubmitMacroSet, UnliveProcessMacroDef, 24);
-	LiveRowString = allocate_live_default_string(SubmitMacroSet, UnliveRowMacroDef, 24);
-	LiveStepString = allocate_live_default_string(SubmitMacroSet, UnliveStepMacroDef, 24);
+	LiveNodeString = allocate_live_default_string(SubmitMacroSet, UnliveNodeMacroDef, 24)->psz;
+	LiveClusterString = allocate_live_default_string(SubmitMacroSet, UnliveClusterMacroDef, 24)->psz;
+	LiveProcessString = allocate_live_default_string(SubmitMacroSet, UnliveProcessMacroDef, 24)->psz;
+	LiveRowString = allocate_live_default_string(SubmitMacroSet, UnliveRowMacroDef, 24)->psz;
+	LiveStepString = allocate_live_default_string(SubmitMacroSet, UnliveStepMacroDef, 24)->psz;
 }
 
 

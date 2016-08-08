@@ -38,9 +38,12 @@
 #include "ad_printmask.h"
 #include "Regex.h"
 #include <submit_utils.h>
+#include <xform_utils.h>
 
 #include <string>
 #include <set>
+
+#define USE_XFORM_UTILS
 
 #define UNSPECIFIED_PARSE_TYPE (ClassAdFileParseType::ParseType)-1
 
@@ -57,16 +60,14 @@ const char * DashOutName = NULL;
 const char * MyName = NULL; // set from argc
 const char * MySubsys = "XFORM";
 int cNonEmptyOutputAds = 0; // incremented when whenever we print a non-empty ad
+static struct _testing_options {
+	int repeat_count;
+	bool no_output;
+	bool enabled;
+} testing = {0, false, false};
 
 class CondorQClassAdFileParseHelper;
 class MacroStreamXFormSource;
-
-typedef struct macro_set_checkpoint_hdr {
-	int cSources;
-	int cTable;
-	int cMetaTable;
-	int spare;
-} MACRO_SET_CHECKPOINT_HDR;
 
 class input_file {
 public:
@@ -77,25 +78,55 @@ public:
 	ClassAdFileParseType::ParseType parse_format;
 };
 
-class apply_transform_args;
+class apply_transform_args {
+public:
+#ifdef USE_XFORM_UTILS
+	apply_transform_args(MacroStreamXFormSource& xfm, XFormHash & ms, FILE* out)
+		: xforms(xfm), mset(ms), checkpoint(NULL), outfile(out), input_helper(NULL) {}
+#else
+	apply_transform_args(MacroStreamXFormSource& xfm, MACRO_SET_CHECKPOINT_HDR* check, FILE* out)
+		: xforms(xfm), checkpoint(check), outfile(out), input_helper(NULL) {}
+#endif
+	MacroStreamXFormSource & xforms;
+#ifdef USE_XFORM_UTILS
+	XFormHash & mset;
+#endif
+	MACRO_SET_CHECKPOINT_HDR* checkpoint;
+	FILE* outfile;
+	compat_classad::CondorClassAdFileParseHelper *input_helper;
+	std::string errmsg;
+};
+
+
 
 // forward function references
 void Usage(FILE*);
 void PrintRules(FILE*);
 int DoUnitTests(int options);
-int DoTransforms(input_file & input, const char * constraint, MacroStreamXFormSource & xforms, FILE* outfile);
 int ApplyTransform(void *pv, ClassAd * job);
 bool ReportSuccess(const ClassAd * job, apply_transform_args & xform_args);
+#ifdef USE_XFORM_UTILS
+int DoTransforms(input_file & input, const char * constraint, MacroStreamXFormSource & xforms, XFormHash & mset, FILE* outfile);
+#else
+int DoTransforms(input_file & input, const char * constraint, MacroStreamXFormSource & xforms, FILE* outfile);
 int ParseRulesCallback(void* pv, MACRO_SOURCE& source, MACRO_SET& macro_set, char * line);
+#endif
 bool LoadJobRouterDefaultsAd(ClassAd & ad);
 void write_output_prolog(FILE* outfile, ClassAdFileParseType::ParseType out_format, int cNonEmptyOutputAds);
+
+#if 0
 char * local_param( const char* name, const char* alt_name );
 char * local_param( const char* name ); // call param with NULL as the alt
 void set_local_param( const char* name, const char* value);
+#endif
 
 //#define CONVERT_JRR_STYLE_1 0x0001
 //#define CONVERT_JRR_STYLE_2 0x0002
 int ConvertJobRouterRoutes(int options);
+
+#ifdef USE_XFORM_UTILS
+MACRO_SOURCE FileMacroSource = { false, false, 0, 0, -1, -2 };
+#else
 
 // declare enough of the condor_params structure definitions so that we can define submit hashtable defaults
 namespace condor_params {
@@ -176,8 +207,10 @@ const MACRO_SOURCE ArgumentMacro = { true, false, 2, -2, -1, -2 }; // for macros
 const MACRO_SOURCE LiveMacro = { true, false, 3, -2, -1, -2 };    // for macros use as queue loop variables
 MACRO_SOURCE FileMacroSource = { false, false, 0, 0, -1, -2 };
 
+#if 0
 
 extern DLL_IMPORT_MAGIC char **environ;
+
 
 extern "C" {
 int SetSyscalls( int foo );
@@ -201,6 +234,7 @@ struct LocalErrContext {
 	const char * macro_name; // set to macro name during submit hashtable lookup/expansion
 	const char * raw_macro_val; // set to raw macro value during submit hashtable expansion
 } ErrContext = { PHASE_INIT, -1, -1, NULL, NULL };
+
 
 
 char *
@@ -301,6 +335,7 @@ int local_param_bool(const char* name, const char * alt_name, bool def_value)
 	return value;
 }
 
+#endif
 
 /** Given a universe in string form, return the number
 
@@ -364,121 +399,11 @@ init_local_params()
 	insert_macro("CondorVersion", CondorVersion(), LocalMacroSet, DetectedMacro, LocalContext);
 }
 
-// create a checkpoint of the current params
-// and store it in the param pool
-MACRO_SET_CHECKPOINT_HDR* checkpoint_macro_set(MACRO_SET & set)
-{
-	optimize_macros(set);
-
-	// calcuate a size for the checkpoint
-	// we want to save macro table, meta table and sources table in it.
-	// we don't have to save the defaults metadata, because we know that defaults
-	// cannot be added.
-	int cbCheckpoint = sizeof(MACRO_SET_CHECKPOINT_HDR);
-	cbCheckpoint += set.size * (sizeof(set.metat[0]) + sizeof(set.table[0]));
-	cbCheckpoint += set.sources.size() * sizeof(const char *);
-
-	// Now we build a compact string pool that has only a single hunk.
-	// and has room for the checkpoint plus extra items.
-	int cbFree, cHunks, cb = set.apool.usage(cHunks, cbFree);
-	if (cHunks > 1 || cbFree < (1024 + cbCheckpoint)) {
-		ALLOCATION_POOL tmp;
-		int cbAlloc = MAX(cb*2, cb+4096+cbCheckpoint);
-		tmp.reserve(cbAlloc);
-		set.apool.swap(tmp);
-
-		for (int ii = 0; ii < set.size; ++ii) {
-			MACRO_ITEM * pi = &set.table[ii];
-			if (tmp.contains(pi->key)) pi->key = set.apool.insert(pi->key);
-			if (tmp.contains(pi->raw_value)) pi->raw_value = set.apool.insert(pi->raw_value);
-		}
-
-		for (int ii = 0; ii < (int)set.sources.size(); ++ii) {
-			if (tmp.contains(set.sources[ii])) set.sources[ii] = set.apool.insert(set.sources[ii]);
-		}
-
-		tmp.clear();
-		cb = set.apool.usage(cHunks, cbFree);
-	}
-
-	// if there is metadata, mark all current items as checkpointed.
-	if (set.metat) {
-		for (int ii = 0; ii < set.size; ++ii) {
-			set.metat[ii].checkpointed = true;
-		}
-	}
-
-	// now claim space in the pool for the checkpoint
-	char * pchka = set.apool.consume(cbCheckpoint + sizeof(void*), sizeof(void*));
-	// make sure that the pointer is aligned
-	pchka += sizeof(void*) - (((size_t)pchka) & (sizeof(void*)-1));
-
-	// write the checkpoint into it.
-	MACRO_SET_CHECKPOINT_HDR * phdr = (MACRO_SET_CHECKPOINT_HDR *)pchka;
-	pchka = (char*)(phdr+1);
-	phdr->cSources = set.sources.size();
-	if (phdr->cSources) {
-		const char ** psrc = (const char**)pchka;
-		for (int ii = 0; ii < phdr->cSources; ++ii) {
-			*psrc++ = set.sources[ii];
-		}
-		pchka = (char*)psrc;
-	}
-	if (set.table) {
-		phdr->cTable = set.size;
-		int cbTable = sizeof(set.table[0]) * phdr->cTable;
-		memcpy(pchka, set.table, cbTable);
-		pchka += cbTable;
-	}
-	if (set.metat) {
-		phdr->cMetaTable = set.size;
-		int cbMeta = sizeof(set.metat[0]) * phdr->cMetaTable;
-		memcpy(pchka, set.metat, cbMeta);
-		pchka += cbMeta;
-	}
-
-	// return the checkpoint
-	return phdr;
-}
+#endif
 
 
-// rewind local params to the given checkpoint.
-//
-void rewind_macro_set(MACRO_SET & set, MACRO_SET_CHECKPOINT_HDR* phdr, bool and_delete_checkpoint)
-{
-	char * pchka = (char*)(phdr+1);
-	ASSERT(set.apool.contains(pchka));
-
-	set.sources.clear();
-	if (phdr->cSources > 0) {
-		const char ** psrc = (const char **)pchka;
-		for (int ii = 0; ii < phdr->cSources; ++ii) {
-			set.sources.push_back(*psrc++);
-		}
-		pchka = (char*)psrc;
-	}
-	if (phdr->cTable > 0) {
-		ASSERT(set.allocation_size >= phdr->cTable);
-		ASSERT(set.table);
-		set.sorted = set.size = phdr->cTable;
-		int cbTable = sizeof(set.table[0]) * phdr->cTable;
-		memcpy(set.table, pchka, cbTable);
-		pchka += cbTable;
-	}
-	if (phdr->cMetaTable > 0) {
-		ASSERT(set.allocation_size >= phdr->cMetaTable);
-		ASSERT(set.metat);
-		int cbMeta = sizeof(set.metat[0]) * phdr->cMetaTable;
-		memcpy(set.metat, pchka, cbMeta);
-		pchka += cbMeta;
-	}
-
-	if (and_delete_checkpoint) {
-		set.apool.free_everything_after((char*)phdr);
-	} else {
-		set.apool.free_everything_after(pchka);
-	}
-}
+#ifdef USE_XFORM_UTILS
+#else
 
 class MacroStreamXFormSource : public MacroStreamCharSource
 {
@@ -494,6 +419,7 @@ public:
 	bool has_pending_fp() { return fp_iter != NULL; }
 	bool close_when_done(bool close) { close_fp_when_done = close; return has_pending_fp(); }
 	int  parse_iterate_args(char * pargs, int expand_options, MACRO_SET &set, std::string & errmsg);
+	bool will_iterate() { return has_iterate; }
 	int  first_iteration(MACRO_SET &set);
 	bool next_iteration(MACRO_SET &set);
 	void revert_to_checkpoint(MACRO_SET &set);
@@ -513,6 +439,8 @@ protected:
 	int set_iter_item(MACRO_SET &set, const char* item);
 	int report_empty_items(MACRO_SET& set, std::string errmsg);
 };
+
+#endif
 
 ClassAdFileParseType::ParseType parseAdsFileFormat(const char * arg, ClassAdFileParseType::ParseType def_parse_type)
 {
@@ -535,7 +463,10 @@ main( int argc, const char *argv[] )
 	std::vector<const char *> rules;
 	const char *job_match_constraint = NULL;
 
+#ifdef USE_XFORM_UTILS
+#else
 	LocalContext.init(MySubsys, 3);
+#endif
 
 	MyName = condor_basename(argv[0]);
 	if (argc == 1) {
@@ -550,7 +481,12 @@ main( int argc, const char *argv[] )
 	myDistro->Init( argc, argv );
 	config();
 
+#ifdef USE_XFORM_UTILS
+	XFormHash xform_hash;
+	xform_hash.init();
+#else
 	init_local_params();
+#endif
 
 	set_debug_flags(NULL, D_EXPR);
 
@@ -637,6 +573,18 @@ main( int argc, const char *argv[] )
 						DumpLocalHash = 1;
 					}
 				}
+			} else if (is_dash_arg_colon_prefix(ptr[0], "testing", &pcolon, 4)) {
+				testing.enabled = true;
+				if (pcolon) { 
+					StringList opts(++pcolon);
+					for (const char * opt = opts.first(); opt; opt = opts.next()) {
+						if (is_arg_colon_prefix(opt, "repeat", &pcolon, 3)) {
+							testing.repeat_count = (pcolon) ? atoi(++pcolon) : 100;
+						} else if (is_arg_prefix(opt, "nooutput", 5)) {
+							testing.no_output = true;
+						}
+					}
+				}
 			} else if (is_dash_arg_prefix(ptr[0], "help", 1)) {
 				if (ptr[1] && (MATCH == strcmp(ptr[1], "rules"))) {
 					PrintRules(stdout);
@@ -669,8 +617,13 @@ main( int argc, const char *argv[] )
 				fprintf( stderr, "%s: invalid attribute name '%s' for attrib=value assigment\n", MyName, name.c_str() );
 				exit(1);
 			}
+#ifdef USE_XFORM_UTILS
+			MACRO_EVAL_CONTEXT ctx; ctx.init(MySubsys,0);
+			xform_hash.set_arg_variable(name.c_str(), value.c_str(), ctx);
+#else
 			MACRO_EVAL_CONTEXT ctx; ctx.init(MySubsys,0);
 			insert_macro(name.c_str(), value.c_str(), LocalMacroSet, ArgumentMacro, ctx);
+#endif
 		} else {
 			inputs.push_back(input_file(*ptr, def_ads_format));
 		}
@@ -695,7 +648,11 @@ main( int argc, const char *argv[] )
 		Usage(stderr);
 		exit(1);
 	} else if (MATCH == strcmp("-", rules[0])) {
+#ifdef USE_XFORM_UTILS
+		xform_hash.set_RulesFile("<stdin>", FileMacroSource);
+#else
 		insert_source("<stdin>", LocalMacroSet, FileMacroSource);
+#endif
 		rval = ms.load(stdin, FileMacroSource);
 	} else {
 		FILE *file = safe_fopen_wrapper_follow(rules[0], "r");
@@ -703,8 +660,12 @@ main( int argc, const char *argv[] )
 			fprintf(stderr, "Can't open rules file: %s\n", rules[0]);
 			return -1;
 		}
+#ifdef USE_XFORM_UTILS
+		xform_hash.set_RulesFile(rules[0], FileMacroSource);
+#else
 		insert_source(rules[0], LocalMacroSet, FileMacroSource);
 		RulesFileMacroDef.psz = const_cast<char*>(rules[0]);
+#endif
 		rval = ms.load(file, FileMacroSource);
 		if (rval < 0 || ! ms.close_when_done(true)) {
 			fclose(file);
@@ -713,7 +674,12 @@ main( int argc, const char *argv[] )
 
 	if (rval < 0) {
 		fprintf(stderr, "ERROR reading transform rules from %s : %s\n",
-			macro_source_filename(FileMacroSource, LocalMacroSet), strerror(errno));
+#ifdef USE_XFORM_UTILS
+			xform_hash.get_RulesFilename(),
+#else
+			macro_source_filename(FileMacroSource, LocalMacroSet),
+#endif
+			strerror(errno));
 		return rval;
 	}
 
@@ -741,7 +707,11 @@ main( int argc, const char *argv[] )
 	for (size_t ixInput = 0; ixInput < inputs.size(); ++ixInput) {
 		// use default parse format if input file still has an unspecifed one.
 		if (inputs[ixInput].parse_format == UNSPECIFIED_PARSE_TYPE) { inputs[ixInput].parse_format = def_ads_format; }
+#ifdef USE_XFORM_UTILS
+		rval = DoTransforms(inputs[ixInput], job_match_constraint, ms, xform_hash, outfile);
+#else
 		rval = DoTransforms(inputs[ixInput], job_match_constraint, ms, outfile);
+#endif
 	}
 
 	write_output_prolog(outfile, DashOutFormat, cNonEmptyOutputAds);
@@ -822,7 +792,8 @@ void PrintRules(FILE* out)
 	fprintf(out, "\n");
 }
 
-
+#ifdef USE_XFORM_UTILS
+#else
 
 // returns a pointer to the iteration args if this line is an TRANSFORM statement
 // returns NULL if it is not.
@@ -851,12 +822,20 @@ int MacroStreamXFormSource::load(FILE* fp, MACRO_SOURCE & FileSource)
 			break;
 		}
 
-		lines.append(line);
+		/*
+		// discard comment lines
+		if (testing.enabled) {
+			if (*line == '#') continue;
+			lineno = FileSource.line-1; // disable linenumber corrections
+		}
+		*/
+
 		if (FileSource.line != lineno+1) {
 			// if we read more than a single line, comment the new linenumber
-			MyString buf; buf.formatstr("#opt:lineno:%d", FileSource.line);
+			MyString buf; buf.formatstr("#opt:lineno:%d", FileSource.line-1);
 			lines.append(buf.c_str());
 		}
+		lines.append(line);
 
 		if (is_transform_statement(line, "transform")) {
 			// if this is an TRANSFORM statement, then we don't read any more statements.
@@ -1125,6 +1104,27 @@ void MacroStreamXFormSource::reset(MACRO_SET &set)
 	oa.clear();
 }
 
+#endif
+
+class CondorClassAdStreamReadIterator
+{
+	CondorClassAdStreamReadIterator(ClassAdFileParseHelper * _parse_help, const char * constr=NULL);
+	~CondorClassAdStreamReadIterator() {
+		delete constraint; constraint = NULL;
+		parse_help = NULL;
+	}
+
+	bool open(FILE* fh, bool close_when_done);
+	bool next(ClassAd & out);
+
+protected:
+	FILE* file;
+	ClassAdFileParseHelper* parse_help;
+	classad::ExprTree * constraint;
+	int  error;
+	bool at_eof;
+	bool close_file_at_eof;
+};
 
 #define PROCESS_ADS_CALLBACK_IS_KEEPING_AD 0x7B8B9BAB
 typedef int (*FNPROCESS_ADS_CALLBACK)(void* pv, ClassAd * ad);
@@ -1169,6 +1169,20 @@ static bool read_classad_file (
 		}
 
 		int result = 0;
+		if (include_classad && testing.enabled) {
+			ClassAdList ads;
+			int num_iters = MAX(1,testing.repeat_count);
+			for (int ii = 0; ii < num_iters; ++ii) { ads.Insert(new ClassAd(*classad)); }
+			ads.Open();
+			double tmBegin = _condor_debug_get_time_double();
+			while(ClassAd *ad = ads.Next()) { callback(pv, ad); }
+			double elapsed = _condor_debug_get_time_double() - tmBegin;
+			fprintf(stderr, "%d repetitions of the transform took %.3f ms (output %s)\n",
+				num_iters, elapsed*1000.0, testing.no_output ? "disabled" : "enabled");
+			ads.Close();
+			ads.Clear();
+			include_classad = false;
+		}
 		if ( ! include_classad || ((result = callback(pv, classad)) != PROCESS_ADS_CALLBACK_IS_KEEPING_AD) ) {
 			// delete the classad if we didn't pass it to the callback, or if
 			// the callback didn't take ownership of it.
@@ -1275,6 +1289,89 @@ int CondorQClassAdFileParseHelper::OnParseError(std::string & line, ClassAd & ad
 	}
 	return ee;
 }
+
+#define TRANSFORM_IN_PLACE 1
+
+#ifdef USE_XFORM_UTILS
+
+// return true from the transform if no longer care about the job ad
+// return false to take ownership of the job ad
+int ApplyTransform (
+	void* pv,
+	ClassAd * input_ad)
+{
+	if ( ! pv) return 1;
+	apply_transform_args & args = *(apply_transform_args*)pv;
+	//const ClassAd * job = input_ad;
+
+	int rval = 0;
+	bool will_iterate = args.xforms.will_iterate();
+	auto_free_ptr rhs(args.mset.expand_macro(args.xforms.getIterateArgs(), args.xforms.context()));
+	if ( ! rhs) will_iterate = false;
+	if (will_iterate) {
+
+		// EXPAND_GLOBS_TO_FILES | EXPAND_GLOBS_TO_DIRS
+		// EXPAND_GLOBS_WARN_EMPTY | EXPAND_GLOBS_FAIL_EMPTY
+		// EXPAND_GLOBS_WARN_DUPS | EXPAND_GLOBS_ALLOW_DUPS 
+		int expand_options = EXPAND_GLOBS_WARN_EMPTY;
+		int rval = args.xforms.parse_iterate_args(rhs.ptr(), expand_options, args.mset, args.errmsg);
+		if (rval < 0) {
+			fprintf(stderr, "ERROR: %s\n", args.errmsg.c_str()); return -1;
+		}
+
+		bool iterating = args.xforms.first_iteration(args.mset);
+		if ( ! iterating) will_iterate = false;
+	}
+	PRAGMA_REMIND("fix this to defer expansion of iteration line until the first SET,etc")
+	if (will_iterate) {
+		bool iterating = true;
+		while (iterating) {
+			ClassAd * ad_to_transform = new ClassAd(*input_ad);
+			rval = TransformClassAd(ad_to_transform, args.xforms, args.mset, args.errmsg, 3);
+			if (rval >= 0) {
+				ReportSuccess(ad_to_transform, args);
+				iterating = args.xforms.next_iteration(args.mset);
+			} else {
+				iterating = false;
+			}
+			delete ad_to_transform;
+		}
+		
+		return 1;
+	} else {
+		rval = TransformClassAd(input_ad, args.xforms, args.mset, args.errmsg, 3);
+		if (rval) {
+			return rval;
+		}
+		ReportSuccess(input_ad, args);
+	}
+
+#if 0
+	// if there is an TRANSFORM, then we want to reparse again with the iterator variables set.
+	bool iterating = args.xforms.first_iteration(args.mset);
+	if ( ! iterating) {
+	} else {
+		while (iterating) {
+			delete ad_to_transform;
+			ad_to_transform = new ClassAd(*input_ad);
+
+			rval = TransformClassAd(ad_to_transform, args.xforms, args.mset, args.errmsg, 3);
+			if (rval < 0)
+				break;
+
+			ReportSuccess(ad_to_transform, args);
+			iterating = args.xforms.next_iteration(args.mset);
+		}
+	}
+
+	if (args.xforms.will_iterate()) { delete ad_to_transform; }
+#endif
+	args.mset.rewind_to_state(args.checkpoint, false);
+
+	return rval ? rval : 1; // we return non-zero to allow the job to be deleted
+}
+
+#else
 
 // delete an attribute of the given classad.
 // returns 0  if the delete did not happen
@@ -1649,7 +1746,7 @@ int ParseRulesCallback(void* pv, MACRO_SOURCE& source, MACRO_SET& macro_set, cha
 	auto_free_ptr rhs(NULL);
 	if (off > 0) {
 		if (toke.is_quoted_string()) --off;
-		rhs.set(expand_macro(line + off, LocalMacroSet, LocalContext));
+		rhs.set(expand_macro(line + off, macro_set, LocalContext));
 	}
 
 	// at this point
@@ -1775,16 +1872,6 @@ int ParseRulesCallback(void* pv, MACRO_SOURCE& source, MACRO_SET& macro_set, cha
 	return 0; // line handled, keep scanning.
 }
 
-class apply_transform_args {
-public:
-	apply_transform_args(MacroStreamXFormSource& xfm, MACRO_SET_CHECKPOINT_HDR* check, FILE* out)
-		: xforms(xfm), checkpoint(check), outfile(out), input_helper(NULL) {}
-	MacroStreamXFormSource & xforms;
-	MACRO_SET_CHECKPOINT_HDR* checkpoint;
-	FILE* outfile;
-	compat_classad::CondorClassAdFileParseHelper *input_helper;
-	std::string errmsg;
-};
 
 // return true from the transform if no longer care about the job ad
 // return false to take ownership of the job ad
@@ -1802,7 +1889,12 @@ int ApplyTransform (
 
 	_parse_rules_args args = { NULL, NULL, &xforms };
 
+#ifdef TRANSFORM_IN_PLACE
+	args.ad = input_ad;
+	if (xforms.will_iterate()) { args.ad = new ClassAd(*job); }
+#else
 	args.ad = new ClassAd(*job);
+#endif
 
 	LocalContext.ad = args.ad;
 	LocalContext.adname = "MY.";
@@ -1837,12 +1929,16 @@ int ApplyTransform (
 		}
 	}
 
-	delete args.ad;
+#ifdef TRANSFORM_IN_PLACE
+	if (xforms.will_iterate()) { delete args.ad; }
+#endif
 	LocalContext.ad = NULL;
 	rewind_macro_set(LocalMacroSet, pvParamCheckpoint, false);
 
 	return rval ? rval : 1; // we return non-zero to allow the job to be deleted
 }
+
+#endif // USE_XFORM_UTILS
 
 void write_output_prolog(
 	FILE* outfile,
@@ -1870,6 +1966,7 @@ static int cchReserveForPrintingAds = 16384;
 bool ReportSuccess(const ClassAd * job, apply_transform_args & xform_args)
 {
 	if ( ! job) return false;
+	if (testing.no_output) return true;
 
 	StringList * whitelist = NULL;
 
@@ -1965,11 +2062,29 @@ bool ReportSuccess(const ClassAd * job, apply_transform_args & xform_args)
 }
 
 
-int DoTransforms(input_file & input, const char * constraint, MacroStreamXFormSource & xforms, FILE* outfile)
+#ifdef USE_XFORM_UTILS
+int DoTransforms(input_file & input, const char * constraint, MacroStreamXFormSource & xforms, XFormHash & mset, FILE* outfile)
 {
 	int rval = 0;
 
-	ClassAdList jobs;
+	apply_transform_args args(xforms, mset, outfile);
+	args.checkpoint = mset.save_state();
+
+	// TODO: add code to pass arguments between transforms?
+
+	CondorQClassAdFileParseHelper jobads_file_parse_helper(input.parse_format);
+	args.input_helper = &jobads_file_parse_helper;
+
+	if ( ! read_classad_file(input.filename, jobads_file_parse_helper, ApplyTransform, &args, constraint)) {
+		return -1;
+	}
+
+	return rval;
+}
+#else
+int DoTransforms(input_file & input, const char * constraint, MacroStreamXFormSource & xforms, FILE* outfile)
+{
+	int rval = 0;
 
 	apply_transform_args args(xforms, NULL, outfile);
 	args.checkpoint = checkpoint_macro_set(LocalMacroSet);
@@ -1985,7 +2100,10 @@ int DoTransforms(input_file & input, const char * constraint, MacroStreamXFormSo
 
 	return rval;
 }
+#endif
 
+#ifdef USE_XFORM_UTILS
+#else
 // attributes of interest to the code that converts old jobrouter routes
 enum {
 	atr_NAME=1,
@@ -2339,6 +2457,8 @@ int ConvertNextJobRouterRoute(std::string & routing_string, int & offset, const 
 	return 1;
 }
 
+#endif
+
 bool LoadJobRouterDefaultsAd(ClassAd & ad)
 {
 	bool merge_defaults = param_boolean("MERGE_JOB_ROUTER_DEFAULT_ADS", false);
@@ -2411,13 +2531,20 @@ int ConvertJobRouterRoutes(int options)
 		int offset = 0;
 		int route_index = 0;
 		while (offset < (int)routes_string.size()) {
-			StringList lines;
 			++route_index;
-			if (ConvertNextJobRouterRoute(routes_string, offset, default_route_ad, lines, options)) {
+#ifdef USE_XFORM_UTILS
+			MacroStreamXFormSource xfm;
+			if (XFormLoadFromJobRouterRoute(xfm, routes_string, offset, default_route_ad, options)) {
+				fprintf(stdout, "##### JOB_ROUTER_ENTRIES [%d] #####\n", route_index);
+				fputs(xfm.getText(), stdout);
+#else
+			StringList lines;
+			if (XFormLoadFromJobRouterRoute(routes_string, offset, default_route_ad, lines, options)) {
 				fprintf(stdout, "##### JOB_ROUTER_ENTRIES [%d] #####\n", route_index);
 				for (char * line = lines.first(); line; line = lines.next()) {
 					fprintf(stdout, "%s\n", line);
 				}
+#endif
 				fprintf(stdout, "\n");
 			}
 		}
@@ -2441,13 +2568,20 @@ int ConvertJobRouterRoutes(int options)
 			int offset = 0;
 			int route_index = 0;
 			while (offset < (int)routes_string.size()) {
-				StringList lines;
 				++route_index;
-				if (ConvertNextJobRouterRoute(routes_string, offset, default_route_ad, lines, options)) {
+#ifdef USE_XFORM_UTILS
+				MacroStreamXFormSource xfm;
+				if (XFormLoadFromJobRouterRoute(xfm, routes_string, offset, default_route_ad, options)) {
+					fprintf(stdout, "##### JOB_ROUTER_ENTRIES_FILE [%d] #####\n", route_index);
+					fputs(xfm.getText(), stdout);
+#else
+				StringList lines;
+				if (XFormLoadFromJobRouterRoute(routes_string, offset, default_route_ad, lines, options)) {
 					fprintf(stdout, "##### JOB_ROUTER_ENTRIES_FILE [%d] #####\n", route_index);
 					for (char * line = lines.first(); line; line = lines.next()) {
 						fprintf(stdout, "%s\n", line);
 					}
+#endif
 					fprintf(stdout, "\n");
 				}
 			}

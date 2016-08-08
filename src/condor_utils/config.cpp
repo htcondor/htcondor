@@ -1105,7 +1105,7 @@ int MacroStreamFile::close(MACRO_SET&set, int parsing_return_val)
 	return Close_macro_source(fp, src, set, parsing_return_val);
 }
 
-bool MacroStreamCharSource::open(const char * src_string, MACRO_SOURCE& _src)
+bool MacroStreamCharSource::open(const char * src_string, const MACRO_SOURCE& _src)
 {
 	src = _src;
 	if (input) delete input;

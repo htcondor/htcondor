@@ -613,6 +613,7 @@ protected:
 	void push_error(FILE * fh, const char* format, ... ) CHECK_PRINTF_FORMAT(3,4);
 	void push_warning(FILE * fh, const char* format, ... ) CHECK_PRINTF_FORMAT(3,4);
 private:
+
 	int64_t calc_image_size_kb( const char *name);
 
 	void process_input_file_list(StringList * input_list, MyString *input_files, bool * files_specified, long long & accumulate_size_kb);

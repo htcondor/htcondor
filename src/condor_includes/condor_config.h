@@ -107,6 +107,14 @@ typedef struct macro_set {
 #endif
 } MACRO_SET;
 
+// Used as the header for a MACRO_SET checkpoint, the actual allocation is larger than this.
+typedef struct macro_set_checkpoint_hdr {
+	int cSources;
+	int cTable;
+	int cMetaTable;
+	int spare;
+} MACRO_SET_CHECKPOINT_HDR;
+
 // this holds context during macro lookup/expansion
 typedef struct macro_eval_context {
 	const char *localname;
@@ -152,6 +160,9 @@ typedef struct macro_eval_context_ex : macro_eval_context {
 	class auto_free_ptr {
 	public:
 		auto_free_ptr(char* str=NULL) : p(str) {}
+		friend void swap(auto_free_ptr& first, auto_free_ptr& second) { char*t = first.p; first.p = second.p; second.p = t; }
+		auto_free_ptr(const auto_free_ptr& that) { if (that.p) set(strdup(that.p)); else set(NULL); }
+		auto_free_ptr & operator=(auto_free_ptr that) { swap(*this, that); return *this; } // swap on assigment.
 		~auto_free_ptr() { clear(); }
 		void set(char*str) { clear(); p = str; }   // set a new pointer, freeing the old pointer (if any)
 		void clear() { if (p) free(p); p = NULL; } // free the pointer if any
@@ -524,7 +535,7 @@ BEGIN_C_DECLS
 		virtual ~MacroStreamCharSource() { if (input) delete input; input = NULL; }
 		virtual char * getline(int gl_opt);
 		virtual MACRO_SOURCE& source() { return src; }
-		bool open(const char * src_string, MACRO_SOURCE & _src);
+		bool open(const char * src_string, const MACRO_SOURCE & _src);
 		int  close(MACRO_SET& set, int parsing_return_val);
 		int  load(FILE* fp, MACRO_SOURCE & _src, bool preserve_linenumbers = false);
 		void rewind();
