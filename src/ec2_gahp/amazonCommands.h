@@ -315,7 +315,7 @@ class AmazonBulkStart : public AmazonRequest {
 		static bool workerFunction(char **argv, int argc, std::string &result_string);
 
     protected:
-    	void setLaunchConfigurationAttribute( int, std::map< std::string, std::string > &, const char *, const char * = NULL );
+    	void setLaunchSpecificationAttribute( int, std::map< std::string, std::string > &, const char *, const char * = NULL );
 };
 
 

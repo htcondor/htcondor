@@ -1189,6 +1189,7 @@ bool AmazonVMStart::workerFunction(char **argv, int argc, std::string &result_st
             pair.rewind();
             if( pair.number() != 2 ) {
                 dprintf( D_ALWAYS, "Ignoring invalid block device mapping '%s'.\n", mapping );
+                continue;
             }
 
             std::ostringstream virtualName;
@@ -2650,7 +2651,7 @@ AmazonBulkStart::~AmazonBulkStart() { }
 bool AmazonBulkStart::SendRequest() {
 	bool result = AmazonRequest::SendRequest();
 	if( result ) {
-		// FIXME.
+		/* FIXME */
 	}
 	return result;
 }
@@ -2716,12 +2717,12 @@ bool parseJSON( char * s, std::map< std::string, std::string > & m ) {
 	return false;
 }
 
-void AmazonBulkStart::setLaunchConfigurationAttribute(
+void AmazonBulkStart::setLaunchSpecificationAttribute(
 		int lcIndex, std::map< std::string, std::string > & blob,
 		const char * lcAttributeName,
 		const char * blobAttributeName ) {
 	std::ostringstream ss;
-	ss << "SpotFleetRequestConfig.LaunchConfigurations.";
+	ss << "SpotFleetRequestConfig.LaunchSpecifications.";
 	ss << lcIndex << "." << lcAttributeName;
 
 	std::string & value = blob[ ( blobAttributeName == NULL ? lcAttributeName : blobAttributeName ) ];
@@ -2753,6 +2754,12 @@ bool AmazonBulkStart::workerFunction( char ** argv, int argc, std::string & resu
 
 	// Fill in required parameters.
 	request.query_parameters[ "Action" ] = "RequestSpotFleet";
+	// The Spot Fleet API is relatively new.  Set the version here, rather
+	// than update the minimum necessary, in case somebody wants to use the
+	// non-annex functionality with an older-interface service.  2015-04-15
+	// is the oldest API with Spot Fleet, but this code was implemented
+	// against the 2016-04-01 documentation.
+    request.query_parameters[ "Version" ] = "2016-04-01";
 
 	request.query_parameters[ "SpotFleetRequestConfig."
 		"ClientToken" ] = argv[5];
@@ -2786,42 +2793,102 @@ bool AmazonBulkStart::workerFunction( char ** argv, int argc, std::string & resu
 		std::map< std::string, std::string > blob;
 		if(! parseJSON( argv[i], blob )) {
 			dprintf( D_ALWAYS, "Got bogus launch configuration.\n" );
-			// FIXME
+			/* FIXME */
 			return false;
 		}
 
-		request.setLaunchConfigurationAttribute( lcIndex, blob, "ImageId" );
-		request.setLaunchConfigurationAttribute( lcIndex, blob, "SpotPrice" );
-		request.setLaunchConfigurationAttribute( lcIndex, blob, "KeyName" );
+		request.setLaunchSpecificationAttribute( lcIndex, blob,
+			"ImageId" );
+		request.setLaunchSpecificationAttribute( lcIndex, blob,
+			"SpotPrice" );
+		request.setLaunchSpecificationAttribute( lcIndex, blob,
+			"KeyName" );
 
-		request.setLaunchConfigurationAttribute( lcIndex, blob, "UserData" );
-		request.setLaunchConfigurationAttribute( lcIndex, blob, "InstanceType" );
-		request.setLaunchConfigurationAttribute( lcIndex, blob, "SubnetId" );
+		// FIXME: need make sure this is base64 encoded somewhere.
+		request.setLaunchSpecificationAttribute( lcIndex, blob,
+			"UserData" );
 
-		request.setLaunchConfigurationAttribute( lcIndex, blob, "WeightedCapacity" );
+		request.setLaunchSpecificationAttribute( lcIndex, blob,
+			"InstanceType" );
+		request.setLaunchSpecificationAttribute( lcIndex, blob,
+			"SubnetId" );
 
-		request.setLaunchConfigurationAttribute( lcIndex, blob, "IamInstanceProfile.Arn", "IAMProfileARN" );
-		request.setLaunchConfigurationAttribute( lcIndex, blob, "IamInstanceProfile.Name", "IAMProfileName" );
+		request.setLaunchSpecificationAttribute( lcIndex, blob,
+			"WeightedCapacity" );
 
+		request.setLaunchSpecificationAttribute( lcIndex, blob,
+			"IamInstanceProfile.Arn", "IAMProfileARN" );
+		request.setLaunchSpecificationAttribute( lcIndex, blob,
+			"IamInstanceProfile.Name", "IAMProfileName" );
 
+		request.setLaunchSpecificationAttribute( lcIndex, blob,
+			"SpotPlacement.AvailabilityZone", "AvailabilityZone" );
 
-#if 0
-		// request.query_parameters[ parameterName.str() +
-		//	"" ] = AvailabilityZone
-		// request.query_parameters[ parameterName.str() +
-		//	"" ] = BlockDeviceMapping
-		// request.query_parameters[ parameterName.str() +
-		//	"" ] = SecurityGroupNames;
-		// request.query_parameters[ parameterName.str() +
-		//	"" ] = SecurityGroupIDs;
-#endif
+		if(! blob[ "SecurityGroupNames" ].empty()) {
+			StringList sl( blob[ "SecurityGroupNames" ].c_str() );
+			sl.rewind();
+			char * groupName = NULL;
+			for( unsigned i = 0; (groupName = sl.next()) != NULL; ++i ) {
+				std::ostringstream ss;
+				ss << "SpotFleetRequestConfig.LaunchSpecifications.";
+				ss << lcIndex << ".";
+				ss << "SecurityGroups." << i << ".GroupName";
+				request.query_parameters[ ss.str() ] = groupName;
+			}
+		}
+
+		if(! blob[ "SecurityGroupIDs" ].empty()) {
+			StringList sl( blob[ "SecurityGroupIDs" ].c_str() );
+			sl.rewind();
+			char * groupID = NULL;
+			for( unsigned i = 0; (groupID = sl.next()) != NULL; ++i ) {
+				std::ostringstream ss;
+				ss << "SpotFleetRequestConfig.LaunchSpecifications.";
+				ss << lcIndex << ".";
+				ss << "SecurityGroups." << i << ".GroupId";
+				request.query_parameters[ ss.str() ] = groupID;
+			}
+		}
+
+		if(! blob[ "BlockDeviceMapping" ].empty() ) {
+			StringList sl( blob[ "BlockDeviceMapping" ].c_str() );
+			sl.rewind();
+			char * mapping = NULL;
+			for( unsigned i = 0; (mapping = sl.next()) != NULL; ++i ) {
+				StringList pair( mapping, ":" );
+				pair.rewind();
+				if( pair.number() != 2 ) {
+					dprintf( D_ALWAYS, "Ignoring invalid block device mapping '%s'.\n", mapping );
+					continue;
+				}
+
+				std::ostringstream ss;
+				ss << "SpotFleetRequestConfig.LaunchSpecifications.";
+				ss << lcIndex << ".";
+				ss << "BlockDeviceMappings." << i;
+				std::string virtualName = ss.str() + ".VirtualName";
+				request.query_parameters[ virtualName ] = pair.next();
+				std::string deviceName = ss.str() + ".DeviceName";
+				request.query_parameters[ deviceName ] = pair.next();
+			}
+		}
 	}
 
+#if 0
 	AttributeValueMap::const_iterator i;
 	for( i = request.query_parameters.begin(); i != request.query_parameters.end(); ++i ) {
 		std::string name = amazonURLEncode( i->first );
 		std::string value = amazonURLEncode( i->second );
 		dprintf( D_ALWAYS, "Found query parameter '%s' = '%s'.\n", name.c_str(), value.c_str() );
+	}
+#endif /* 0 */
+
+	if( ! request.SendRequest() ) {
+		result_string = create_failure_result( requestID,
+			request.errorMessage.c_str(),
+			request.errorCode.c_str() );
+	} else {
+		/* FIXME */
 	}
 
 	return true;
