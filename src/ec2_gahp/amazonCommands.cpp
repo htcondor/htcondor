@@ -2761,8 +2761,10 @@ bool AmazonBulkStart::workerFunction( char ** argv, int argc, std::string & resu
 	// against the 2016-04-01 documentation.
     request.query_parameters[ "Version" ] = "2016-04-01";
 
-	request.query_parameters[ "SpotFleetRequestConfig."
-		"ClientToken" ] = argv[5];
+	if( strcasecmp( argv[5], NULLSTRING ) ) {
+		request.query_parameters[ "SpotFleetRequestConfig."
+			"ClientToken" ] = argv[5];
+	}
 	request.query_parameters[ "SpotFleetRequestConfig."
 		"SpotPrice" ] = argv[6];
 	request.query_parameters[ "SpotFleetRequestConfig."
@@ -2855,21 +2857,54 @@ bool AmazonBulkStart::workerFunction( char ** argv, int argc, std::string & resu
 			sl.rewind();
 			char * mapping = NULL;
 			for( unsigned i = 0; (mapping = sl.next()) != NULL; ++i ) {
-				StringList pair( mapping, ":" );
-				pair.rewind();
-				if( pair.number() != 2 ) {
-					dprintf( D_ALWAYS, "Ignoring invalid block device mapping '%s'.\n", mapping );
-					continue;
-				}
-
 				std::ostringstream ss;
 				ss << "SpotFleetRequestConfig.LaunchSpecifications.";
 				ss << lcIndex << ".";
 				ss << "BlockDeviceMappings." << i;
-				std::string virtualName = ss.str() + ".VirtualName";
-				request.query_parameters[ virtualName ] = pair.next();
-				std::string deviceName = ss.str() + ".DeviceName";
-				request.query_parameters[ deviceName ] = pair.next();
+
+				if( strchr( mapping, '=' ) != NULL ) {
+					// New-style mapping (copied from AWS web console).
+					StringList pair( mapping, "=" );
+					pair.rewind();
+
+					if( pair.number() != 2 ) {
+						dprintf( D_ALWAYS, "Ignoring invalid block device mapping '%s'.\n", mapping );
+						continue;
+					}
+
+					std::string deviceName = ss.str() + ".DeviceName";
+					request.query_parameters[ deviceName ] = pair.next();
+
+					StringList quad( pair.next(), ":" );
+					quad.rewind();
+					if( quad.number() != 4 ) {
+						dprintf( D_ALWAYS, "Ignoring invalid block device mapping '%s'.\n", mapping );
+						continue;
+					}
+
+					ss << ".Ebs.";
+					std::string sid = ss.str() + "SnapshotId";
+					request.query_parameters[ sid ] = quad.next();
+					std::string vs = ss.str() + "VolumeSize";
+					request.query_parameters[ vs ] = quad.next();
+					std::string dot = ss.str() + "DeleteOnTermination";
+					request.query_parameters[ dot ] = quad.next();
+					std::string vt = ss.str() + "VolumeType";
+					request.query_parameters[ vt ] = quad.next();
+				} else {
+					// Handle old-style mapping.
+					StringList pair( mapping, ":" );
+					pair.rewind();
+					if( pair.number() != 2 ) {
+						dprintf( D_ALWAYS, "Ignoring invalid block device mapping '%s'.\n", mapping );
+						continue;
+					}
+
+					std::string virtualName = ss.str() + ".VirtualName";
+					request.query_parameters[ virtualName ] = pair.next();
+					std::string deviceName = ss.str() + ".DeviceName";
+					request.query_parameters[ deviceName ] = pair.next();
+				}
 			}
 		}
 	}

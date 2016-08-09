@@ -66,17 +66,6 @@ doPolling() {
 		EXCEPT( "Failed to start GAHP." );
 	}
 
-
-#if defined(PROOF_OF_HAX)
-	std::string m_serviceURL( "https://ec2.us-east-1.amazonaws.com" );
-	std::string m_public_key_file( "/home/tlmiller/condor/test/ec2/accessKeyFile" );
-	std::string m_private_key_file( "/home/tlmiller/condor/test/ec2/secretKeyFile" );
-	std::string m_remoteJobID( "i-12345678" );
-	std::string gahpErrorCode;
-	gahp->ec2_vm_stop(	m_serviceURL, m_public_key_file, m_private_key_file,
-						m_remoteJobID, gahpErrorCode );
-#endif /* defined(PROOF_OF_HAX) */
-
 	std::string serviceURL( "https://ec2.us-east-1.amazonaws.com" );
 	std::string public_key_file( "/home/tlmiller/condor/test/ec2/accessKeyFile" );
 	std::string private_key_file( "/home/tlmiller/condor/test/ec2/secretKeyFile" );
@@ -84,7 +73,6 @@ doPolling() {
 	std::string client_token( "" );
 	std::string spot_price( "0.10" );
 	std::string target_capacity( "10" );
-	// std::string iam_fleet_role( "AmazonEC2SpotFleetRole" );
 	std::string iam_fleet_role( "arn:aws:iam::844603466475:role/aws-ec2-spot-fleet-role" );
 	std::string allocation_strategy( "lowestPrice" );
 
@@ -92,15 +80,13 @@ doPolling() {
 	StringList groupNames( "" );
 	std::vector< EC2GahpClient::LaunchConfiguration > launch_configurations;
 	launch_configurations.push_back( EC2GahpClient::LaunchConfiguration(
-//			"ami-7638b661", "", "HTCondorAnnex", "",
-			"ami-05887768", "", "HTCondorAnnex", "",
-			"c3.large", "", "", "", "arn:aws:iam::844603466475:instance-profile/configurationFetch", "",
+			"ami-7638b661", "", "HTCondorAnnex", "",
+			"c3.large", "", "", "/dev/xvda=snap-8989b38b:8:true:gp2", "arn:aws:iam::844603466475:instance-profile/configurationFetch", "",
 			& groupNames, & groupIDs, "1"
 		) );
 	launch_configurations.push_back( EC2GahpClient::LaunchConfiguration(
-//			"ami-7638b661", "", "HTCondorAnnex", "",
-			"ami-05887768", "", "HTCondorAnnex", "",
-			"c3.xlarge", "", "", "", "arn:aws:iam::844603466475:instance-profile/configurationFetch", "",
+			"ami-7638b661", "", "HTCondorAnnex", "",
+			"c3.xlarge", "", "", "/dev/xvda=snap-8989b38b:8:true:gp2", "arn:aws:iam::844603466475:instance-profile/configurationFetch", "",
 			& groupNames, & groupIDs, "2"
 		) );
 
