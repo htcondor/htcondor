@@ -1117,6 +1117,11 @@ else(MSVC)
 	endif(c_Wdeprecated_declarations)
 	endif()
 
+	check_c_compiler_flag(-Wnonnull-compare c_Wnonnull_compare)
+	if (c_Wnonnull_compare)
+		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-nonnull-compare -Wno-error=nonnull-compare")
+	endif(c_Wnonnull_compare)
+
 	# gcc on our AIX machines recognizes -fstack-protector, but lacks
 	# the requisite library.
 	if (NOT AIX)
