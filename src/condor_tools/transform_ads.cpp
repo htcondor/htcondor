@@ -43,7 +43,8 @@
 #include <string>
 #include <set>
 
-#define USE_XFORM_UTILS
+#define USE_XFORM_UTILS 1
+#define USE_CLASSAD_ITERATOR 1
 
 #define UNSPECIFIED_PARSE_TYPE (ClassAdFileParseType::ParseType)-1
 
@@ -207,136 +208,6 @@ const MACRO_SOURCE ArgumentMacro = { true, false, 2, -2, -1, -2 }; // for macros
 const MACRO_SOURCE LiveMacro = { true, false, 3, -2, -1, -2 };    // for macros use as queue loop variables
 MACRO_SOURCE FileMacroSource = { false, false, 0, 0, -1, -2 };
 
-#if 0
-
-extern DLL_IMPORT_MAGIC char **environ;
-
-
-extern "C" {
-int SetSyscalls( int foo );
-int DoCleanup(int,int,const char*);
-}
-
-// global struct that we use to keep track of where we are so we
-// can give useful error messages.
-enum {
-	PHASE_INIT=0,       // before we begin reading from the submit file
-	PHASE_READ_XFORM,   // while reading the transform file, and not on a Queue line
-	PHASE_DASH_APPEND,  // while processing -a arguments (happens when we see the Queue line)
-	PHASE_READ_JOB,     // while reading the job file
-	PHASE_XFORM,        // while applying the transform
-	PHASE_COMMIT,       // after processing the submit file/arguments
-};
-struct LocalErrContext {
-	int phase;          // one of PHASE_xxx enum
-	int step;           // set to Step loop variable during queue iteration
-	int item_index;     // set to itemIndex/Row loop variable during queue iteration
-	const char * macro_name; // set to macro name during submit hashtable lookup/expansion
-	const char * raw_macro_val; // set to raw macro value during submit hashtable expansion
-} ErrContext = { PHASE_INIT, -1, -1, NULL, NULL };
-
-
-
-char *
-local_param( const char* name)
-{
-	return local_param(name, NULL);
-}
-
-void param_and_insert_unique_items(const char * param_name, classad::References & attrs)
-{
-	auto_free_ptr value(param(param_name));
-	if (value) {
-		StringTokenIterator it(value);
-		const std::string * item;
-		while ((item = it.next_string())) {
-			attrs.insert(*item);
-		}
-	}
-}
-
-char *
-local_param( const char* name, const char* alt_name )
-{
-
-	bool used_alt = false;
-	const char *pval = lookup_macro(name, LocalMacroSet, LocalContext);
-	char * pval_expanded = NULL;
-
-	if( ! pval && alt_name ) {
-		pval = lookup_macro(alt_name, LocalMacroSet, LocalContext);
-		used_alt = true;
-	}
-
-	if( ! pval ) {
-		return NULL;
-	}
-
-	ErrContext.macro_name = used_alt ? alt_name : name;
-	ErrContext.raw_macro_val = pval;
-	pval_expanded = expand_macro(pval, LocalMacroSet, LocalContext);
-
-	ErrContext.macro_name = NULL;
-	ErrContext.raw_macro_val = NULL;
-
-	return  pval_expanded;
-}
-
-
-void
-set_local_param( const char *name, const char *value )
-{
-	insert_macro(name, value, LocalMacroSet, DefaultMacro, LocalContext);
-}
-
-
-MyString 
-local_param_mystring( const char * name, const char * alt_name )
-{
-	char * result = local_param(name, alt_name);
-	MyString ret = result;
-	free(result);
-	return ret;
-}
-
-int local_param_int(const char* name, const char * alt_name, int def_value)
-{
-	char * result = local_param(name, alt_name);
-	if ( ! result)
-		return def_value;
-
-	long long value = def_value;
-	if (*result) {
-		if ( ! string_is_long_param(result, value) || value < INT_MIN || value >= INT_MAX) {
-			fprintf(stderr, "\nERROR: %s=%s is invalid, must eval to an integer.\n", name, result);
-			DoCleanup(0,0,NULL);
-			exit(1);
-		}
-	}
-	free(result);
-	return (int)value;
-}
-
-int local_param_bool(const char* name, const char * alt_name, bool def_value)
-{
-	char * result = local_param(name, alt_name);
-	if ( ! result)
-		return def_value;
-
-	bool value = def_value;
-	if (*result) {
-		if ( ! string_is_boolean_param(result, value)) {
-			fprintf(stderr, "\nERROR: %s=%s is invalid, must eval to a boolean.\n", name, result);
-			DoCleanup(0,0,NULL);
-			exit(1);
-		}
-	}
-	free(result);
-	return value;
-}
-
-#endif
-
 /** Given a universe in string form, return the number
 
 Passing a universe in as a null terminated string in univ.  This can be
@@ -399,11 +270,6 @@ init_local_params()
 	insert_macro("CondorVersion", CondorVersion(), LocalMacroSet, DetectedMacro, LocalContext);
 }
 
-#endif
-
-
-#ifdef USE_XFORM_UTILS
-#else
 
 class MacroStreamXFormSource : public MacroStreamCharSource
 {
@@ -1106,25 +972,12 @@ void MacroStreamXFormSource::reset(MACRO_SET &set)
 
 #endif
 
-class CondorClassAdStreamReadIterator
-{
-	CondorClassAdStreamReadIterator(ClassAdFileParseHelper * _parse_help, const char * constr=NULL);
-	~CondorClassAdStreamReadIterator() {
-		delete constraint; constraint = NULL;
-		parse_help = NULL;
-	}
+#ifdef USE_CLASSAD_ITERATOR
 
-	bool open(FILE* fh, bool close_when_done);
-	bool next(ClassAd & out);
 
-protected:
-	FILE* file;
-	ClassAdFileParseHelper* parse_help;
-	classad::ExprTree * constraint;
-	int  error;
-	bool at_eof;
-	bool close_file_at_eof;
-};
+
+
+#else
 
 #define PROCESS_ADS_CALLBACK_IS_KEEPING_AD 0x7B8B9BAB
 typedef int (*FNPROCESS_ADS_CALLBACK)(void* pv, ClassAd * ad);
@@ -1290,6 +1143,8 @@ int CondorQClassAdFileParseHelper::OnParseError(std::string & line, ClassAd & ad
 	return ee;
 }
 
+#endif
+
 #define TRANSFORM_IN_PLACE 1
 
 #ifdef USE_XFORM_UTILS
@@ -1322,6 +1177,7 @@ int ApplyTransform (
 		bool iterating = args.xforms.first_iteration(args.mset);
 		if ( ! iterating) will_iterate = false;
 	}
+
 	PRAGMA_REMIND("fix this to defer expansion of iteration line until the first SET,etc")
 	if (will_iterate) {
 		bool iterating = true;
@@ -1336,8 +1192,7 @@ int ApplyTransform (
 			}
 			delete ad_to_transform;
 		}
-		
-		return 1;
+		args.xforms.clear_iteration(args.mset);
 	} else {
 		rval = TransformClassAd(input_ad, args.xforms, args.mset, args.errmsg, 3);
 		if (rval) {
@@ -1346,26 +1201,6 @@ int ApplyTransform (
 		ReportSuccess(input_ad, args);
 	}
 
-#if 0
-	// if there is an TRANSFORM, then we want to reparse again with the iterator variables set.
-	bool iterating = args.xforms.first_iteration(args.mset);
-	if ( ! iterating) {
-	} else {
-		while (iterating) {
-			delete ad_to_transform;
-			ad_to_transform = new ClassAd(*input_ad);
-
-			rval = TransformClassAd(ad_to_transform, args.xforms, args.mset, args.errmsg, 3);
-			if (rval < 0)
-				break;
-
-			ReportSuccess(ad_to_transform, args);
-			iterating = args.xforms.next_iteration(args.mset);
-		}
-	}
-
-	if (args.xforms.will_iterate()) { delete ad_to_transform; }
-#endif
 	args.mset.rewind_to_state(args.checkpoint, false);
 
 	return rval ? rval : 1; // we return non-zero to allow the job to be deleted
@@ -2063,6 +1898,58 @@ bool ReportSuccess(const ClassAd * job, apply_transform_args & xform_args)
 
 
 #ifdef USE_XFORM_UTILS
+#ifdef USE_CLASSAD_ITERATOR
+int DoTransforms(input_file & input, const char * constr, MacroStreamXFormSource & xforms, XFormHash & mset, FILE* outfile)
+{
+	int rval = 0;
+
+	classad::ExprTree * constraint = NULL;
+	if (constr) {
+		if (ParseClassAdRvalExpr(constr, constraint, 0)) {
+			fprintf (stderr, "Error parsing constraint expression: %s", constr);
+			return -1;
+		}
+	}
+
+	FILE* file;
+	bool close_file = false;
+	if (MATCH == strcmp(input.filename, "-")) {
+		file = stdin;
+		close_file = false;
+	} else {
+		file = safe_fopen_wrapper_follow(input.filename, "r");
+		if (file == NULL) {
+			fprintf(stderr, "Can't open file of ClassAds: %s\n", input.filename);
+			return false;
+		}
+		close_file = true;
+	}
+
+	apply_transform_args args(xforms, mset, outfile);
+	args.checkpoint = mset.save_state();
+
+	// TODO: add code to pass arguments between transforms?
+
+	rval = 0;
+	CondorClassAdFileIterator adIter;
+	if ( ! adIter.begin(file, close_file, input.parse_format)) {
+		rval = -1; // unexpected error.
+		if (close_file) { fclose(file); file = NULL; }
+	} else {
+		ClassAd * ad;
+		while ((ad = adIter.next(constraint))) {
+			rval = ApplyTransform(&args, ad);
+			delete ad;
+			if (rval < 0)
+				break;
+		}
+	}
+	file = NULL;
+
+	mset.rewind_to_state(args.checkpoint, true);
+	return rval;
+}
+#else
 int DoTransforms(input_file & input, const char * constraint, MacroStreamXFormSource & xforms, XFormHash & mset, FILE* outfile)
 {
 	int rval = 0;
@@ -2081,6 +1968,7 @@ int DoTransforms(input_file & input, const char * constraint, MacroStreamXFormSo
 
 	return rval;
 }
+#endif
 #else
 int DoTransforms(input_file & input, const char * constraint, MacroStreamXFormSource & xforms, FILE* outfile)
 {

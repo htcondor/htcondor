@@ -478,11 +478,52 @@ class CondorClassAdFileParseHelper : public ClassAdFileParseHelper
 	CondorClassAdFileParseHelper(std::string delim, ParseType typ=Parse_long) 
 		: ad_delimitor(delim), parse_type(typ), new_parser(NULL), inside_list(false) {};
 	ParseType getParseType() { return parse_type; }
+	bool configure(const char * delim, ParseType typ) {
+		if (new_parser) return false;
+		if (delim) { ad_delimitor = delim; }
+		parse_type = typ;
+		inside_list = false;
+		return true;
+	}
  private:
+	CondorClassAdFileParseHelper(const CondorClassAdFileParseHelper & that); // no copy construction
+	CondorClassAdFileParseHelper & operator=(const CondorClassAdFileParseHelper & that); // no assignment
+
 	std::string ad_delimitor;
 	ParseType parse_type;
 	void*     new_parser; // a class whose type depends on the value of parse_type.
 	bool      inside_list;
+};
+
+// This implements a generic classad FILE* reader that can be used as an iterator
+//
+class CondorClassAdFileIterator
+{
+public:
+	CondorClassAdFileIterator() 
+		: parse_help(NULL)
+		, file(NULL)
+		, error(0), at_eof(false)
+		, close_file_at_eof(false)
+		, free_parse_help(false)
+	{}
+	~CondorClassAdFileIterator() {
+		if (file && close_file_at_eof) { fclose(file); file = NULL; }
+		if (parse_help && free_parse_help) { delete parse_help; parse_help = NULL; }
+	}
+
+	bool begin(FILE* fh, bool close_when_done, CondorClassAdFileParseHelper & helper);
+	bool begin(FILE* fh, bool close_when_done, CondorClassAdFileParseHelper::ParseType type);
+	int  next(ClassAd & out, bool merge=false);
+	ClassAd * next(classad::ExprTree * constraint);
+
+protected:
+	CondorClassAdFileParseHelper * parse_help;
+	FILE* file;
+	int  error;
+	bool at_eof;
+	bool close_file_at_eof;
+	bool free_parse_help;
 };
 
 

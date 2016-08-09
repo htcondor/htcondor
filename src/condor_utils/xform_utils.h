@@ -47,7 +47,7 @@ Load a transform source
   MacroStreamXFormSource xfm;
   xfm.load(FILE*, source)
 or
-  xfm.open(const char *, source) (or XFormLoadFromJobRouterRoute() which calls this)
+  xfm.open(StringList & statements, source) (or XFormLoadFromJobRouterRoute() which calls this)
  
 Save the hashtable state (so we can revert changes before each time we transform)
   chkpt = mset.save_state();
@@ -100,9 +100,10 @@ public:
 	bool close_when_done(bool close) { close_fp_when_done = close; return has_pending_fp(); }
 	int  parse_iterate_args(char * pargs, int expand_options, XFormHash &mset, std::string & errmsg);
 	bool will_iterate() { return iterate_args; }
-	int  first_iteration(XFormHash &mset);
-	bool next_iteration(XFormHash &mset);
-	void reset(XFormHash & mset); // reset the iterator
+	bool first_iteration(XFormHash &mset); // returns true if next_iteration should be called
+	bool next_iteration(XFormHash &mset);  // returns true if there was a next
+	void clear_iteration(XFormHash &mset); // clean up iteration variables in the hashtable
+	void reset(XFormHash & mset); // reset the iterator variables
 
 	MACRO_EVAL_CONTEXT_EX& context() { return ctx; }
 	const char * getText() { return file_string.ptr(); } // return full (active) text of the transform, \n delimited.
@@ -159,6 +160,7 @@ public:
 	void set_live_variable(const char* name, const char* live_value, MACRO_EVAL_CONTEXT & ctx);
 	void set_iterate_step(int step, int proc);
 	void set_iterate_row(int row, bool iterating);
+	void clear_live_variables();
 
 	const char * get_RulesFilename();
 	MACRO_ITEM* lookup_exact(const char * name) { return find_macro_item(name, NULL, LocalMacroSet); }

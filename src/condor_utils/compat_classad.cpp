@@ -1618,6 +1618,79 @@ parse_line:
 }
 
 
+bool CondorClassAdFileIterator::begin(
+	FILE* fh,
+	bool close_when_done,
+	CondorClassAdFileParseHelper::ParseType type)
+{
+	parse_help = new CondorClassAdFileParseHelper("\n", type);
+	free_parse_help = true;
+	file = fh;
+	close_file_at_eof = close_when_done;
+	error = 0;
+	at_eof = false;
+	return true;
+}
+
+bool CondorClassAdFileIterator::begin(
+	FILE* fh,
+	bool close_when_done,
+	CondorClassAdFileParseHelper & helper)
+{
+	parse_help = &helper;
+	free_parse_help = false;
+	file = fh;
+	close_file_at_eof = close_when_done;
+	error = 0;
+	at_eof = false;
+	return true;
+}
+
+int CondorClassAdFileIterator::next(ClassAd & classad, bool merge /*=false*/)
+{
+	if ( ! merge) classad.Clear();
+	if (at_eof) return 0;
+	if ( ! file) return -1;
+
+	int cAttrs = classad.InsertFromFile(file, at_eof, error, parse_help);
+	if (cAttrs > 0) return cAttrs;
+	if (at_eof) {
+		if (file && close_file_at_eof) { fclose(file); file = NULL; }
+		return 0;
+	}
+	if (error < 0)
+		return error;
+	return 0;
+}
+
+ClassAd * CondorClassAdFileIterator::next(classad::ExprTree * constraint)
+{
+	if (at_eof) return NULL;
+
+	for (;;) {
+		ClassAd * ad = new ClassAd();
+		int cAttrs = this->next(*ad, true);
+		bool include_classad = cAttrs > 0 && error >= 0;
+		if (include_classad && constraint) {
+			classad::Value val;
+			if (ad->EvaluateExpr(constraint,val)) {
+				if ( ! val.IsBooleanValueEquiv(include_classad)) {
+					include_classad = false;
+				}
+			}
+		}
+		if (include_classad) {
+			return ad;
+		}
+		delete ad;
+		ad = NULL;
+
+		if (at_eof || error < 0) break;
+	}
+	return NULL;
+}
+
+
 bool
 ClassAdAttributeIsPrivate( char const *name )
 {

@@ -174,6 +174,7 @@ MACRO_SET_CHECKPOINT_HDR* checkpoint_macro_set(MACRO_SET& set)
 	// write the checkpoint into it.
 	MACRO_SET_CHECKPOINT_HDR * phdr = (MACRO_SET_CHECKPOINT_HDR *)pchka;
 	pchka = (char*)(phdr+1);
+	phdr->cTable = phdr->cMetaTable = 0;
 	phdr->cSources = set.sources.size();
 	if (phdr->cSources) {
 		const char ** psrc = (const char**)pchka;
@@ -215,19 +216,19 @@ void rewind_macro_set(MACRO_SET& set, MACRO_SET_CHECKPOINT_HDR* phdr, bool and_d
 		}
 		pchka = (char*)psrc;
 	}
-	if (phdr->cTable > 0) {
+	if (phdr->cTable >= 0) {
 		ASSERT(set.allocation_size >= phdr->cTable);
-		ASSERT(set.table);
+		ASSERT(set.table || ! phdr->cTable);
 		set.sorted = set.size = phdr->cTable;
 		int cbTable = sizeof(set.table[0]) * phdr->cTable;
-		memcpy(set.table, pchka, cbTable);
+		if (cbTable > 0) memcpy(set.table, pchka, cbTable);
 		pchka += cbTable;
 	}
-	if (phdr->cMetaTable > 0) {
+	if (phdr->cMetaTable >= 0) {
 		ASSERT(set.allocation_size >= phdr->cMetaTable);
-		ASSERT(set.metat);
+		ASSERT(set.metat || ! phdr->cMetaTable);
 		int cbMeta = sizeof(set.metat[0]) * phdr->cMetaTable;
-		memcpy(set.metat, pchka, cbMeta);
+		if (cbMeta > 0) memcpy(set.metat, pchka, cbMeta);
 		pchka += cbMeta;
 	}
 
@@ -393,8 +394,22 @@ void XFormHash::set_live_variable(const char *name, const char *live_value, MACR
 	if (LocalMacroSet.metat && force_used) {
 		MACRO_META* pmeta = &LocalMacroSet.metat[pitem - LocalMacroSet.table];
 		pmeta->use_count += 1;
+		pmeta->live = true;
 	}
 }
+
+void XFormHash::clear_live_variables()
+{
+	if (LocalMacroSet.metat) {
+		LocalMacroSet.table;
+		for (int ii = 0; ii < LocalMacroSet.size; ++ii) {
+			if (LocalMacroSet.metat[ii].live) {
+				LocalMacroSet.table[ii].raw_value = "";
+			}
+		}
+	}
+}
+
 
 void XFormHash::set_iterate_step(int step, int proc)
 {
@@ -867,29 +882,29 @@ int MacroStreamXFormSource::set_iter_item(XFormHash &set, const char* item)
 }
 
 
-int  MacroStreamXFormSource::first_iteration(XFormHash &set)
+bool  MacroStreamXFormSource::first_iteration(XFormHash &set)
 {
+	step = row = proc = 0;
+	set.set_iterate_step(step, proc);
+
 	// if there is no iterator, or it is trivial, there is no need to go again.
 	if ( ! iterate_args || (oa.foreach_mode == foreach_not && oa.queue_num == 1)) {
-		return 0;
+		set.set_iterate_row(row, false);
+		return false;
 	}
 
-	oa.items.rewind();
-	for (char* var = oa.vars.first(); var; var = oa.vars.next()) {
-		set.set_live_variable(var, "", ctx);
-	}
+	set.set_iterate_row(row, true);
 
+	ASSERT( ! checkpoint);
 	checkpoint = set.save_state();
 
-	step = row = proc = 0;
-	set.set_iterate_row(row, true);
-	set.set_iterate_step(step, proc);
-	return 1;
+	// prime the iteration variables
+	oa.items.rewind();
+	return set_iter_item(set, oa.items.next());
 }
 
 bool MacroStreamXFormSource::next_iteration(XFormHash &set)
 {
-	if (checkpoint) { set.rewind_to_state(checkpoint, false); }
 	++proc;
 
 	bool has_next_item = false;
@@ -899,17 +914,28 @@ bool MacroStreamXFormSource::next_iteration(XFormHash &set)
 	} else {
 		step = 0;
 		++row;
-		set.set_iterate_row(row, true);
+		if (checkpoint) { set.rewind_to_state(checkpoint, false); }
 		has_next_item = set_iter_item(set, oa.items.next());
+		set.set_iterate_row(row, true);
 	}
 	set.set_iterate_step(step, proc);
 	return has_next_item;
 }
 
+// at the end of iteration, rewind the iterator and clear live variables.
+void MacroStreamXFormSource::clear_iteration(XFormHash &set)
+{
+	if (checkpoint) { set.rewind_to_state(checkpoint, true);
+		checkpoint = NULL;
+	}
+	set.clear_live_variables();
+	curr_item.clear();
+	oa.items.rewind();
+}
+
 void MacroStreamXFormSource::reset(XFormHash &set)
 {
-	if (checkpoint) { set.rewind_to_state(checkpoint, true); checkpoint = NULL; }
-	curr_item.clear();
+	clear_iteration(set);
 	oa.clear();
 }
 
