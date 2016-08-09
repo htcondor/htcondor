@@ -401,7 +401,6 @@ void XFormHash::set_live_variable(const char *name, const char *live_value, MACR
 void XFormHash::clear_live_variables()
 {
 	if (LocalMacroSet.metat) {
-		LocalMacroSet.table;
 		for (int ii = 0; ii < LocalMacroSet.size; ++ii) {
 			if (LocalMacroSet.metat[ii].live) {
 				LocalMacroSet.table[ii].raw_value = "";
@@ -613,6 +612,7 @@ MacroStreamXFormSource::MacroStreamXFormSource(const char *nam)
 	, fp_iter(NULL), fp_lineno(0)
 	, step(0), row(0), proc(0)
 	, close_fp_when_done(false)
+	, iterate_init_state(0)
 	, iterate_args(NULL)
 	, curr_item(NULL)
 {
@@ -636,16 +636,16 @@ int MacroStreamXFormSource::open(StringList & lines, const MACRO_SOURCE & FileSo
 		if (NULL != (p = is_xform_statement(line, "name"))) {
 			std::string tmp(p); trim(tmp);
 			if ( ! tmp.empty()) name = tmp;
-			//lines.deleteCurrent();
+			lines.deleteCurrent();
 		} else if (NULL != (p = is_xform_statement(line, "requirements"))) {
 			setRequirements(p);
-			//lines.deleteCurrent();
+			lines.deleteCurrent();
 		} else if (NULL != (p = is_xform_statement(line, "transform"))) {
 			if ( ! iterate_args) {
 				p = is_non_trivial_iterate(p);
-				if (p) { iterate_args.set(strdup(p)); }
-				lines.deleteCurrent();
+				if (p) { iterate_args.set(strdup(p)); iterate_init_state = 2; }
 			}
+			lines.deleteCurrent();
 		}
 	}
 
@@ -692,6 +692,7 @@ int MacroStreamXFormSource::load(FILE* fp, MACRO_SOURCE & FileSource)
 			// there is no need to save the transform args, ust quit parsing the input file.
 			if (iter_args) {
 				iterate_args.set(strdup(iter_args));
+				iterate_init_state = 2;
 				// also store the fp until we can later parse the expanded TRANSFORM args
 				fp_iter = fp;
 				fp_lineno = FileSource.line;
@@ -839,6 +840,36 @@ int MacroStreamXFormSource::parse_iterate_args(char * pargs, int expand_options,
 	return citems;
 }
 
+static char * trim_in_place(char * str)
+{
+	char * p = str;
+	while (isspace(*p)) ++p;
+	char * pe = p + strlen(p);
+	while (pe > p && isspace(pe[-1])) --pe;
+	*pe = 0;
+	return p;
+}
+
+
+int MacroStreamXFormSource::init_iterator(XFormHash &mset, std::string & errmsg)
+{
+	if (iterate_init_state <= 1) return iterate_init_state;
+	if (iterate_args) {
+		auto_free_ptr rhs(mset.expand_macro(iterate_args.ptr(), ctx));
+		char * ptr = trim_in_place(rhs.ptr());
+		if (*ptr) {
+			iterate_init_state = this->parse_iterate_args(ptr, EXPAND_GLOBS_WARN_EMPTY, mset, errmsg);
+		} else {
+			oa.clear();
+		}
+		iterate_args.clear();
+	}
+	if (iterate_init_state >= 0) {
+		iterate_init_state = ((oa.foreach_mode == foreach_not) && oa.queue_num == 1) ? 0 : 1;
+	}
+	return iterate_init_state;
+}
+
 static char EmptyItemString[] = "";
 
 int MacroStreamXFormSource::set_iter_item(XFormHash &set, const char* item)
@@ -884,11 +915,12 @@ int MacroStreamXFormSource::set_iter_item(XFormHash &set, const char* item)
 
 bool  MacroStreamXFormSource::first_iteration(XFormHash &set)
 {
+	ASSERT(iterate_init_state <= 1);
 	step = row = proc = 0;
 	set.set_iterate_step(step, proc);
 
 	// if there is no iterator, or it is trivial, there is no need to go again.
-	if ( ! iterate_args || (oa.foreach_mode == foreach_not && oa.queue_num == 1)) {
+	if (oa.foreach_mode == foreach_not && oa.queue_num == 1) {
 		set.set_iterate_row(row, false);
 		return false;
 	}
@@ -900,7 +932,7 @@ bool  MacroStreamXFormSource::first_iteration(XFormHash &set)
 
 	// prime the iteration variables
 	oa.items.rewind();
-	return set_iter_item(set, oa.items.next());
+	return set_iter_item(set, oa.items.next()) || (oa.queue_num > 1);
 }
 
 bool MacroStreamXFormSource::next_iteration(XFormHash &set)

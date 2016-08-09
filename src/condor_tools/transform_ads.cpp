@@ -1159,31 +1159,25 @@ int ApplyTransform (
 	apply_transform_args & args = *(apply_transform_args*)pv;
 	//const ClassAd * job = input_ad;
 
-	int rval = 0;
-	bool will_iterate = args.xforms.will_iterate();
-	auto_free_ptr rhs(args.mset.expand_macro(args.xforms.getIterateArgs(), args.xforms.context()));
-	if ( ! rhs) will_iterate = false;
+	unsigned int flags = 1 | (dash_verbose ? 2 : 0);
+
+	// TODO: defer expansion of iterate args until the first SET statement?
+
+	int rval = args.xforms.will_iterate(args.mset, args.errmsg);
+	if (rval < 0) {
+		fprintf(stderr, "ERROR: %s\n", args.errmsg.c_str()); return -1;
+		return 1;
+	}
+	bool will_iterate = rval != 0;
 	if (will_iterate) {
-
-		// EXPAND_GLOBS_TO_FILES | EXPAND_GLOBS_TO_DIRS
-		// EXPAND_GLOBS_WARN_EMPTY | EXPAND_GLOBS_FAIL_EMPTY
-		// EXPAND_GLOBS_WARN_DUPS | EXPAND_GLOBS_ALLOW_DUPS 
-		int expand_options = EXPAND_GLOBS_WARN_EMPTY;
-		int rval = args.xforms.parse_iterate_args(rhs.ptr(), expand_options, args.mset, args.errmsg);
-		if (rval < 0) {
-			fprintf(stderr, "ERROR: %s\n", args.errmsg.c_str()); return -1;
-		}
-
-		bool iterating = args.xforms.first_iteration(args.mset);
-		if ( ! iterating) will_iterate = false;
+		will_iterate = args.xforms.first_iteration(args.mset);
 	}
 
-	PRAGMA_REMIND("fix this to defer expansion of iteration line until the first SET,etc")
 	if (will_iterate) {
 		bool iterating = true;
 		while (iterating) {
 			ClassAd * ad_to_transform = new ClassAd(*input_ad);
-			rval = TransformClassAd(ad_to_transform, args.xforms, args.mset, args.errmsg, 3);
+			rval = TransformClassAd(ad_to_transform, args.xforms, args.mset, args.errmsg, flags);
 			if (rval >= 0) {
 				ReportSuccess(ad_to_transform, args);
 				iterating = args.xforms.next_iteration(args.mset);
@@ -1194,7 +1188,7 @@ int ApplyTransform (
 		}
 		args.xforms.clear_iteration(args.mset);
 	} else {
-		rval = TransformClassAd(input_ad, args.xforms, args.mset, args.errmsg, 3);
+		rval = TransformClassAd(input_ad, args.xforms, args.mset, args.errmsg, flags);
 		if (rval) {
 			return rval;
 		}

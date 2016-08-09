@@ -99,7 +99,11 @@ public:
 	bool has_pending_fp() { return fp_iter != NULL; }
 	bool close_when_done(bool close) { close_fp_when_done = close; return has_pending_fp(); }
 	int  parse_iterate_args(char * pargs, int expand_options, XFormHash &mset, std::string & errmsg);
-	bool will_iterate() { return iterate_args; }
+	int will_iterate(XFormHash &mset, std::string & errmsg) {
+		if (iterate_init_state <= 1) return iterate_init_state;
+		return init_iterator(mset, errmsg);
+	}
+	bool iterate_init_pending() { return iterate_init_state > 1; }
 	bool first_iteration(XFormHash &mset); // returns true if next_iteration should be called
 	bool next_iteration(XFormHash &mset);  // returns true if there was a next
 	void clear_iteration(XFormHash &mset); // clean up iteration variables in the hashtable
@@ -121,11 +125,13 @@ protected:
 	int   row;
 	int   proc;
 	bool  close_fp_when_done;
+	char  iterate_init_state;
 	SubmitForeachArgs oa;
 	auto_free_ptr iterate_args; // copy of the arguments from the ITERATE line, set by load()
 	auto_free_ptr curr_item; // so we can destructively edit the current item from the items list
 
 	int set_iter_item(XFormHash &mset, const char* item);
+	int init_iterator(XFormHash &mset, std::string & errmsg);
 	//int report_empty_items(XFormHash& mset, std::string errmsg);
 };
 
