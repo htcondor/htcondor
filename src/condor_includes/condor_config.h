@@ -138,7 +138,6 @@ typedef struct macro_eval_context_ex : macro_eval_context {
 	// to do lookups of last resort into the given Ad, set these. they are useually null.
 	const char *adname; // name prefix for lookups into the ad
 	const ClassAd * ad; // classad for lookups
-	std::string buffer; // temporary buffer used by lookup_macro when necessary
 	void init(const char * sub, char mask=2) {
 		memset(this, 0, sizeof(*this));
 		this->subsys = sub;

@@ -2791,8 +2791,8 @@ const char * lookup_macro(const char * name, MACRO_SET & macro_set, MACRO_EVAL_C
 			const char * attr = name + strlen(ctxx.adname);
 			ExprTree * expr = ctxx.ad->Lookup(attr);
 			if (expr) {
-				if (ExprTreeIsLiteralString(expr, ctxx.buffer)) {
-					lval = ctxx.buffer.c_str();
+				if (ExprTreeIsLiteralString(expr, lval)) {
+					// lval is already the string value
 				} else {
 					lval = ExprTreeToString(expr);
 				}
