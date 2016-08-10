@@ -2834,7 +2834,8 @@ bool AmazonBulkStart::workerFunction( char ** argv, int argc, std::string & resu
 				std::ostringstream ss;
 				ss << "SpotFleetRequestConfig.LaunchSpecifications.";
 				ss << lcIndex << ".";
-				ss << "SecurityGroups." << i << ".GroupName";
+				// AWS' documentation is wrong, claims this is 'SecurityGroups'.
+				ss << "groupSet." << i << ".GroupName";
 				request.query_parameters[ ss.str() ] = groupName;
 			}
 		}
@@ -2847,7 +2848,8 @@ bool AmazonBulkStart::workerFunction( char ** argv, int argc, std::string & resu
 				std::ostringstream ss;
 				ss << "SpotFleetRequestConfig.LaunchSpecifications.";
 				ss << lcIndex << ".";
-				ss << "SecurityGroups." << i << ".GroupId";
+				// AWS' documentation is wrong, claims this is 'SecurityGroups'.
+				ss << "groupSet." << i << ".GroupId";
 				request.query_parameters[ ss.str() ] = groupID;
 			}
 		}
@@ -2860,7 +2862,8 @@ bool AmazonBulkStart::workerFunction( char ** argv, int argc, std::string & resu
 				std::ostringstream ss;
 				ss << "SpotFleetRequestConfig.LaunchSpecifications.";
 				ss << lcIndex << ".";
-				ss << "BlockDeviceMappings." << i;
+				// AWS' documentation is wrong, claims this is plural.
+				ss << "BlockDeviceMapping." << i;
 
 				if( strchr( mapping, '=' ) != NULL ) {
 					// New-style mapping (copied from AWS web console).
