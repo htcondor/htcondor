@@ -316,6 +316,8 @@ class AmazonBulkStart : public AmazonRequest {
 
     protected:
     	void setLaunchSpecificationAttribute( int, std::map< std::string, std::string > &, const char *, const char * = NULL );
+
+		std::string bulkRequestID;
 };
 
 

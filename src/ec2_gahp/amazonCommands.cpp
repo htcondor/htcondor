@@ -2648,9 +2648,46 @@ bool AmazonVMServerType::workerFunction(char **argv, int argc, std::string &resu
 
 AmazonBulkStart::~AmazonBulkStart() { }
 
+struct bulkStartUD_t {
+    bool inRequestId;
+    std::string & requestID;
+
+    bulkStartUD_t( std::string & rid ) : inRequestId( false ), requestID( rid ) { }
+};
+typedef struct bulkStartUD_t bulkStartUD;
+
+void bulkStartESH( void * vUserData, const XML_Char * name, const XML_Char ** ) {
+    bulkStartUD * bsud = (bulkStartUD *)vUserData;
+    if( strcasecmp( ignoringNameSpace( name ), "spotFleetRequestId" ) == 0 ) {
+        bsud->inRequestId = true;
+    }
+}
+
+void bulkStartCDH( void * vUserData, const XML_Char * cdata, int len ) {
+    bulkStartUD * bsud = (bulkStartUD *)vUserData;
+    if( bsud->inRequestId ) {
+        appendToString( (const void *)cdata, len, 1, (void *) & bsud->requestID );
+    }
+}
+
+void bulkStartEEH( void * vUserData, const XML_Char * name ) {
+    bulkStartUD * bsud = (bulkStartUD *)vUserData;
+    if( strcasecmp( ignoringNameSpace( name ), "spotFleetRequestId" ) == 0 ) {
+        bsud->inRequestId = false;
+    }
+}
+
 bool AmazonBulkStart::SendRequest() {
 	bool result = AmazonRequest::SendRequest();
 	if( result ) {
+        bulkStartUD bsud( this->bulkRequestID );
+        XML_Parser xp = XML_ParserCreate( NULL );
+        XML_SetElementHandler( xp, & bulkStartESH, & bulkStartEEH );
+        XML_SetCharacterDataHandler( xp, & bulkStartCDH );
+        XML_SetUserData( xp, & bsud );
+        XML_Parse( xp, this->resultString.c_str(), this->resultString.length(), 1 );
+        XML_ParserFree( xp );
+	} else {
 		/* FIXME */
 	}
 	return result;
@@ -2926,7 +2963,12 @@ bool AmazonBulkStart::workerFunction( char ** argv, int argc, std::string & resu
 			request.errorMessage.c_str(),
 			request.errorCode.c_str() );
 	} else {
-		/* FIXME */
+		if( request.bulkRequestID.empty() ) {
+			result_string = create_failure_result( requestID, "Could not find bulk request ID in response from server.  Check the EC2 GAHP log for details.", "E_NO_BULK_REQUEST_ID" );
+		} else {
+			StringList sl; sl.append( request.bulkRequestID.c_str() );
+			result_string = create_success_result( requestID, & sl );
+		}
 	}
 
 	return true;

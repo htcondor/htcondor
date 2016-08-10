@@ -11,11 +11,17 @@
 // Required by GahpServer::Startup().
 char * GridmanagerScratchDir = NULL;
 
-void
-doPolling() {
-	dprintf( D_ALWAYS, "doPolling()\n" );
+// Start a GAHP client.  Each GAHP client can only have one request outstanding
+// at a time, and it distinguishes between them based only on the name of the
+// command.  As a result, we want each annex (or bulk request) to have its own
+// GAHP client, to make sure that the requests don't collide.  If two GAHP
+// clients shared a 'name' parameter, they will share a GAHP server process;
+// to make the RequestLimitExceeded stuff work right, we start a GAHP server
+// for each {public key file, service URL} tuple.
+EC2GahpClient *
+startOneGahpClient() {
+	dprintf( D_ALWAYS, "startOneGahpClient()\n" );
 
-	// Create an EC2 GAHP. [FIXME: in some other function, since we only need 1 for now)
 	std::string gahpName;
 	formatstr( gahpName, "annex-%s@%s", "publicKeyFile.c_str()", "m_serviceURL.c_str()" );
 
@@ -58,7 +64,6 @@ doPolling() {
 	EC2GahpClient * gahp = new EC2GahpClient( gahpName.c_str(), gahp_path, & args );
 	free( gahp_path );
 
-	// gahp->setNotificationTimerId( );
 	gahp->setMode( GahpClient::normal );
 
 	int gct = param_integer( "ANNEX_GAHP_CALL_TIMEOUT", 10 * 60 );
@@ -68,31 +73,30 @@ doPolling() {
 		EXCEPT( "Failed to start GAHP." );
 	}
 
-#if 0
-	std::string serviceURL( "https://ec2.us-east-1.amazonaws.com" );
-	std::string public_key_file( "/home/tlmiller/condor/test/ec2/accessKeyFile" );
-	std::string secret_key_file( "/home/tlmiller/condor/test/ec2/secretKeyFile" );
+	return gahp;
+}
 
-	std::string client_token( "" );
-	std::string spot_price( "0.10" );
-	std::string target_capacity( "10" );
-	std::string iam_fleet_role( "arn:aws:iam::844603466475:role/aws-ec2-spot-fleet-role" );
-	std::string allocation_strategy( "lowestPrice" );
+// Implement the demo hack.  In the future, we would probably want to
+// record the arguments we passed to bulk_start(), rather than assume
+// that the ones fetched from configuration haven't changed since the
+// last time we looked them up.
+class BulkRequest : public Service {
+	public:
+		BulkRequest( EC2GahpClient * egc ) : gahp( egc ) { };
+		virtual ~BulkRequest() { }
 
-	StringList groupIDs( "sg-c06c16a7" );
-	StringList groupNames( "" );
-	std::vector< EC2GahpClient::LaunchConfiguration > launch_configurations;
-	launch_configurations.push_back( EC2GahpClient::LaunchConfiguration(
-			"ami-7638b661", "", "HTCondorAnnex", "",
-			"c3.large", "", "", "/dev/xvda=snap-8989b38b:8:true:gp2", "arn:aws:iam::844603466475:instance-profile/configurationFetch", "",
-			& groupNames, & groupIDs, "1"
-		) );
-	launch_configurations.push_back( EC2GahpClient::LaunchConfiguration(
-			"ami-7638b661", "", "HTCondorAnnex", "",
-			"c3.xlarge", "", "", "/dev/xvda=snap-8989b38b:8:true:gp2", "arn:aws:iam::844603466475:instance-profile/configurationFetch", "",
-			& groupNames, & groupIDs, "2"
-		) );
-#endif /* 0 */
+		void operator() () const;
+
+	protected:
+		EC2GahpClient * gahp;
+};
+
+// Implement the demo hack.  Based on the way the GAHP client detects new
+// commands, we probably don't need to recreate the whole set of arguments
+// each time, but that's an optimization / simplification that can wait.
+void
+BulkRequest::operator() () const {
+	dprintf( D_ALWAYS, "BulkRequest::operator()()\n" );
 
 	std::string serviceURL, public_key_file, secret_key_file;
 	param( serviceURL, "ANNEX_DEFAULT_SERVICE_URL" );
@@ -119,30 +123,58 @@ doPolling() {
 		launch_configurations.push_back( lc );
 	}
 
+	int rc;
 	std::string errorCode;
 	std::string bulkRequestID;
-	gahp->bulk_start( 	serviceURL, public_key_file, secret_key_file,
-						client_token, spot_price, target_capacity,
-						iam_fleet_role, allocation_strategy,
-						launch_configurations,
-						bulkRequestID, errorCode );
+
+	dprintf( D_ALWAYS, "Calling bulk_start()...\n" );
+	rc = gahp->bulk_start(
+				serviceURL, public_key_file, secret_key_file,
+				client_token, spot_price, target_capacity,
+				iam_fleet_role, allocation_strategy,
+				launch_configurations,
+				bulkRequestID, errorCode );
+	if( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED || rc == GAHPCLIENT_COMMAND_PENDING ) {
+		// We should exit here the first time.
+		return;
+	}
+
+	if( rc == 0 ) {
+		dprintf( D_ALWAYS, "Bulk start request ID: %s\n", bulkRequestID.c_str() );
+	} else {
+		std::string gahpErrorString = gahp->getErrorString();
+		dprintf( D_ALWAYS, "Bulk start request failed: '%s' (%d): '%s'.\n", errorCode.c_str(), rc, gahpErrorString.c_str() );
+	}
+}
+
+// Implement the demo hack.
+void
+createOneAnnex() {
+	dprintf( D_ALWAYS, "createOneAnnex()\n" );
+
+	// Create the GAHP client.  The first time we call a GAHP client function,
+	// it will send that command to the GAHP server, but the GAHP server may
+	// take some time to get the result.  The GAHP client will fire the
+	// notification timer when the result is ready, and we can get it by
+	// calling the GAHP client function a second time with the same arguments.
+	EC2GahpClient * gahp = startOneGahpClient();
+
+	// Create a timer for the gahp to fire when it gets a result.  Use it,
+	// as long as we have to create it anyway, to make the initial bulk
+	// request.  We must use TIMER_NEVER to ensure that the timer hasn't
+	// been reaped when the GAHP client needs to fire it.
+	BulkRequest * br = new BulkRequest( gahp );
+	int gahpNotificationTimer = daemonCore->Register_Timer( 0, TIMER_NEVER,
+		(void (Service::*)()) & BulkRequest::operator(),
+		"BulkRequest::operator()()", br );
+	gahp->setNotificationTimerId( gahpNotificationTimer );
 }
 
 void
 main_init( int /* argc */, char ** /* argv */ ) {
 	dprintf( D_ALWAYS, "main_init()\n" );
 
-	// For use by the command-line tool.
-	// daemonCore->RegisterCommand... ( ... )
-
-	// Load our hard state and register timer(s) as appropriate.
-	// ...
-
-	// For now, just poll AWS regularly.
-	// Units appear are seconds.
-	unsigned delay = 0;
-	unsigned period = param_integer( "ANNEX_POLL_INTERVAL", 300 );
-	daemonCore->Register_Timer( delay, period, & doPolling, "poll the cloud" );
+	daemonCore->Register_Timer( 0, 0, & createOneAnnex, "createOneAnnex()" );
 }
 
 void
