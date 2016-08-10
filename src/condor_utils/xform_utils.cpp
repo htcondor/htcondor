@@ -1319,7 +1319,7 @@ static int ParseRulesCallback(void* pv, MACRO_SOURCE& source, MACRO_SET& /*mset*
 		return -1;
 	}
 	// there must be something after the keyword
-	if ( ! toke.next()) return -1;
+	if ( ! toke.next()) { return (pkw->value == kw_TRANSFORM) ? 0 : -1; }
 
 	toke.mark_after(); // in case we want to capture the remainder of the line.
 
