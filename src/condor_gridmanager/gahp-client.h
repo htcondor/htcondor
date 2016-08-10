@@ -737,6 +737,21 @@ class EC2GahpClient : public GahpClient {
 						std::string & bulkRequestID,
 						std::string & error_code );
 
+		int bulk_start(	const std::string & service_url,
+						const std::string & publickeyfile,
+						const std::string & privatekeyfile,
+
+						const std::string & client_token,
+						const std::string & spot_price,
+						const std::string & target_capacity,
+						const std::string & iam_fleet_role,
+						const std::string & allocation_strategy,
+
+						const std::vector< std::string > & launch_configurations,
+
+						std::string & bulkRequestID,
+						std::string & error_code );
+
 		int ec2_vm_start( const std::string & service_url,
 						  const std::string & publickeyfile,
 						  const std::string & privatekeyfile,

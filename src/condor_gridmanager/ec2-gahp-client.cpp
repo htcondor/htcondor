@@ -858,6 +858,39 @@ int EC2GahpClient::bulk_start(	const std::string & service_url,
 
 								std::string & bulkRequestID,
 								std::string & error_code ) {
+	// One big copy is cheaper than a bunch of small reallocations,
+	// so convert the launch configuration(s) to JSON in the large buffer
+	// and copy it over to the vector (since YourString doesn't own the
+	// JSON, some local in this function must instead).
+	std::string buffer( 1024, '\0' );
+	std::vector< std::string > lcStrings( launch_configurations.size() );
+	if( launch_configurations.size() <= 0 ) { return GAHPCLIENT_COMMAND_NOT_SUPPORTED; }
+	for( unsigned i = 0; i < launch_configurations.size(); ++i ) {
+		buffer.clear();
+		launch_configurations[i].convertToJSON( buffer );
+		lcStrings[i] = buffer;
+	}
+
+	return bulk_start(	service_url, publickeyfile, privatekeyfile,
+						client_token, spot_price, target_capacity,
+						iam_fleet_role, allocation_strategy,
+						lcStrings, bulkRequestID, error_code );
+}
+
+int EC2GahpClient::bulk_start(	const std::string & service_url,
+								const std::string & publickeyfile,
+								const std::string & privatekeyfile,
+
+								const std::string & client_token,
+								const std::string & spot_price,
+								const std::string & target_capacity,
+								const std::string & iam_fleet_role,
+								const std::string & allocation_strategy,
+
+								const std::vector< std::string > & launch_configurations,
+
+								std::string & bulkRequestID,
+								std::string & error_code ) {
 	static const char * command = "EC2_BULK_START";
 
 	// callGahpFunction() checks if this command is supported.
@@ -872,18 +905,8 @@ int EC2GahpClient::bulk_start(	const std::string & service_url,
 	arguments.push_back( iam_fleet_role );
 	arguments.push_back( allocation_strategy );
 
-	// One big copy is cheaper than a bunch of small reallocations,
-	// so convert the launch configuration(s) to JSON in the large buffer
-	// and copy it over to the vector (since YourString doesn't own the
-	// JSON, some local in this function must instead).
-	std::string buffer( 1024, '\0' );
-	std::vector< std::string > lcStrings( launch_configurations.size() );
-	if( launch_configurations.size() <= 0 ) { return GAHPCLIENT_COMMAND_NOT_SUPPORTED; }
 	for( unsigned i = 0; i < launch_configurations.size(); ++i ) {
-		buffer.clear();
-		launch_configurations[i].convertToJSON( buffer );
-		lcStrings[i] = buffer;
-		arguments.push_back( lcStrings[i] );
+		arguments.push_back( launch_configurations[i] );
 	}
 	arguments.push_back( NULLSTRING );
 

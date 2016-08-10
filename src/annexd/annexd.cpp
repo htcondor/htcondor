@@ -6,6 +6,8 @@
 
 #include "gahp-client.h"
 
+#include <algorithm>
+
 // Required by GahpServer::Startup().
 char * GridmanagerScratchDir = NULL;
 
@@ -66,9 +68,10 @@ doPolling() {
 		EXCEPT( "Failed to start GAHP." );
 	}
 
+#if 0
 	std::string serviceURL( "https://ec2.us-east-1.amazonaws.com" );
 	std::string public_key_file( "/home/tlmiller/condor/test/ec2/accessKeyFile" );
-	std::string private_key_file( "/home/tlmiller/condor/test/ec2/secretKeyFile" );
+	std::string secret_key_file( "/home/tlmiller/condor/test/ec2/secretKeyFile" );
 
 	std::string client_token( "" );
 	std::string spot_price( "0.10" );
@@ -89,10 +92,36 @@ doPolling() {
 			"c3.xlarge", "", "", "/dev/xvda=snap-8989b38b:8:true:gp2", "arn:aws:iam::844603466475:instance-profile/configurationFetch", "",
 			& groupNames, & groupIDs, "2"
 		) );
+#endif /* 0 */
+
+	std::string serviceURL, public_key_file, secret_key_file;
+	param( serviceURL, "ANNEX_DEFAULT_SERVICE_URL" );
+	param( public_key_file, "ANNEX_DEFAULT_PUBLIC_KEY_FILE" );
+	param( secret_key_file, "ANNEX_DEFAULT_SECRET_KEY_FILE" );
+
+	std::string client_token, spot_price, target_capacity;
+	std::string iam_fleet_role, allocation_strategy;
+	param( spot_price, "ANNEX_DEFAULT_SPOT_PRICE" );
+	param( target_capacity, "ANNEX_DEFAULT_TARGET_CAPACITY" );
+	param( iam_fleet_role, "ANNEX_DEFAULT_IAM_FLEET_ROLE" );
+	param( allocation_strategy, "ANNEX_DEFAULT_ALLOCATION_STRATEGY" );
+
+	std::vector< std::string> launch_configurations;
+	std::string lc;
+	std::string adlci;
+	std::string adlc = "ANNEX_DEFAULT_LAUNCH_CONFIGURATION_";
+	for( int i = 0; ; ++i ) {
+		lc.clear();
+		formatstr( adlci, "%s%d", adlc.c_str(), i );
+		if(! param( lc, adlci.c_str() )) { break; }
+		lc.erase( std::remove( lc.begin(), lc.end(), '\r' ), lc.end() );
+		lc.erase( std::remove( lc.begin(), lc.end(), '\n' ), lc.end() );
+		launch_configurations.push_back( lc );
+	}
 
 	std::string errorCode;
 	std::string bulkRequestID;
-	gahp->bulk_start( 	serviceURL, public_key_file, private_key_file,
+	gahp->bulk_start( 	serviceURL, public_key_file, secret_key_file,
 						client_token, spot_price, target_capacity,
 						iam_fleet_role, allocation_strategy,
 						launch_configurations,
