@@ -1247,9 +1247,8 @@ void CollectorDaemon::reportToDevelopers (void)
             dprintf (D_ALWAYS, "Error counting machines in devel report \n");
     }
 
-    // If we don't have any machines reporting to us, bail out early
-    if(machinesTotal == 0)
-        return;
+	// If we don't have any machines reporting to us, bail out early
+	if (machinesTotal == 0) return;
 
 	if( ( normalTotals = new TrackTotals( PP_STARTD_NORMAL ) ) == NULL ) {
 		dprintf( D_ALWAYS, "Didn't send monthly report (failed totals)\n" );

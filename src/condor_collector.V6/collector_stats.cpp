@@ -291,30 +291,36 @@ void stats_entry_lost_updates::Publish(ClassAd & ad, const char * pattr, int fla
 	if ( ! flags) flags = PubDefault;
 	if ((flags & IF_NONZERO) && stats_entry_is_zero(this->value)) return;
 
-	MyString rattr("Recent"); rattr += pattr;
+	std::string rattr("Recent"); rattr += pattr;
 
 	// for Loss, publish the Sum without a suffix, the Avg is called Ratio
 	// and Max is called max.
 	// this sort of probe is useful for counting lost updates
 	if (flags & PubValue) {
-		ad.Assign(rattr.c_str()+6, (long long)value.Sum);
+		ad.Assign(pattr, (long long)value.Sum);
 		ad.Assign(rattr.c_str(), (long long)recent.Sum);
 	}
 	if (flags & PubRatio) {
 		double avg = value.Avg();
 		if ( ! (flags & IF_NONZERO) || avg > 0.0 || avg < 0.0) {
-			rattr.formatstr("Recent%sRatio", pattr);
-			ad.Assign(rattr.c_str()+6, avg);
-			ad.Assign(rattr.c_str(), recent.Avg());
+			size_t ix = rattr.size();
+			rattr += "Ratio";
+			const char * p = rattr.c_str();
+			ad.Assign(p+6, avg);
+			ad.Assign(p, recent.Avg());
+			rattr.erase(ix);
 		}
 	}
 	if (flags & PubMax) {
 		int val = MAX(0.0, (int)value.Max);
 		if ( ! (flags & IF_NONZERO) || val != 0) {
-			rattr.formatstr("Recent%sMax", pattr);
-			ad.Assign(rattr.c_str()+6, val);
+			size_t ix = rattr.size();
+			rattr += "Max";
+			const char * p = rattr.c_str();
+			ad.Assign(p+6, val);
 			val = MAX(0, (int)recent.Max);
-			ad.Assign(rattr.c_str(), val);
+			ad.Assign(p, val);
+			rattr.erase(ix);
 		}
 	}
 }
