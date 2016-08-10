@@ -123,6 +123,8 @@ cmd_q_shows-format
 cmd_q_formats
 cmd_q_shows-batch
 cmd_q_shows-af
+cmd_q_format_file
+cmd_transform_ads
 file_transfer_submit
 cmd_ssh_to_job_van
 cmd_drain

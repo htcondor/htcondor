@@ -397,6 +397,7 @@ if (BUILD_TESTING)
 	condor_pl_test(cmd_q_shows-batch "Condor_q shows batch" "core;quick;full;quicknolink")
 	condor_pl_test(cmd_q_shows-af "Condor_q_shows af" "core;quick;full;quicknolink")
 	condor_pl_test(cmd_q_format_file "Condor_q format_file" "core;quick;full;quicknolink")
+	condor_pl_test(cmd_transform_ads "Condor_transform_ads" "core;quick;full;quicknolink")
 	condor_pl_test(file_transfer_submit "condor_submit file transfer" "core;quick;full;quicknolink")
 
 	if (LINUX)

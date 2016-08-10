@@ -10,6 +10,7 @@ cmd_q_formats: personal
 cmd_q_shows-batch: personal
 cmd_q_shows-af: personal
 cmd_q_format_file: personal
+cmd_transform_ads: personal
 cmd_wait_shows-all: personal
 cmd_wait_shows-base: personal
 cmd_wait_shows-notimeout: personal

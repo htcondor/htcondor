@@ -1415,6 +1415,125 @@ sub check_pr {
 		return 1;
 	}
 }
+
+sub check_transform {
+	my $out_file = $_[0];
+	my $option = $_[1];
+	my %Attr;
+	my $index = 0;
+	my $result = 0;
+	open (my $HANDLER, $out_file) or die "ERROR OPENING THE FILE $out_file";
+	while (<$HANDLER>){
+		if ($_ =~ /\S/){
+			$_ =~ /^([A-Za-z0-9_]+)\s*=\s*(.*)$/;
+	               	my $key = $1;
+	                my $value = $2;
+               		$Attr{$index}{$key} = $value;
+        	} else {                
+                	$index++;
+        	}
+	}
+	TLOG("checking $option\n");	
+	if ($index<1){
+		print "ERROR, output nothing. Might be a seg fault\n";
+		return 0;
+	} else {
+	if ($option eq 'general'){
+		for my $i (0..$index-1){
+			if ($Attr{$i}{ClusterId} ne 200 || $Attr{$i}{Fooo} ne "\"test\"" || $Attr{$i}{TransferIn} ne $Attr{$i}{OnExitRemove} || defined $Attr{$i}{TransferInputSizeMB} || defined $Attr{$i}{TransferErr} || !(defined $Attr{$i}{Err})){
+				return 0;
+			}
+		}
+		return 1;
+	}
+	if ($option eq 'EVAL'){
+		for my $i (0..$index-1){
+			my $temp = $Attr{$i}{DiskUsage}*2;
+			if ($Attr{$i}{MemoryUsage} ne 5 || $Attr{$i}{RequestDisk} ne "( $temp / 1024 )"){
+				print "MemoryUsage is $Attr{$i}{MemoryUsage}. should be 5\n";
+				print "RequestDisk is $Attr{$i}{RequestDisk}. should be ( $temp / 1024 )";
+				return 0;
+			}
+		}
+		return 1;
+	}
+	if ($option eq "transform_num"){
+		return scalar keys %Attr eq 40;
+	}
+	if ($option eq 'regex'){
+		for my $i (0..$index-1){
+			if ($Attr{$i}{TotalSuspensions} ne $Attr{$i}{MaxHosts} || defined $Attr{$i}{LocalUser} || defined $Attr{$i}{NiceUser} || defined $Attr{$i}{RemoteUser} || defined $Attr{$i}{PeriodicHold} || defined $Attr{$i}{PeriodicRelease} || defined $Attr{$i}{PeriodicRemove}){
+				return 0;
+			} elsif (defined $Attr{$i}{User} && defined $Attr{$i}{TestLocalUser} && defined $Attr{$i}{TestNiceUser} && defined $Attr{$i}{TestRemoteUser} && defined $Attr{$i}{TimeHold} && defined $Attr{$i}{TimeRelease} && defined $Attr{$i}{TimeRemove}){
+				return 1;
+			} else {return 0;}
+		}
+	}
+	if ($option eq 'transform_in1'){
+		for my $i (0..$index-1){
+			if ((($i % 3) == 0 && $Attr{$i}{ARG1} ne '2.0') || (($i % 3) ==1 && $Attr{$i}{ARG1} ne 100) || (($i % 3) ==2 && $Attr{$i}{ARG1} ne "\"test\"")){
+				if ($i%3 == 0){
+					print "Index is $i, output is $Attr{$i}{ARG1}, should be 2.0\n";
+				}
+				if ($i%3 == 1){
+					print "Index is $i, output is $Attr{$i}{ARG1}, should be 100\n";
+				}
+				if ($i%3 == 2){
+					print "Index is $i, output is $Attr{$i}{ARG1}, should be \"test\"\n";
+				}
+				return 0;
+			}
+		}
+		return 1;
+	}
+	if ($option eq 'transform_in2'){
+		for my $i (0..$index-1){
+			if ((($i % 6 == 0 || $i%6==1) && ($Attr{$i}{ARG1} ne '2.0')) || (($i % 6==2||$i%6==3) && ($Attr{$i}{ARG1} ne 100)) || (($i %6==4 || $i %6==5) && ($Attr{$i}{ARG1} ne "\"test\""))){
+				if ($i%6 == 0 || $i%6==1){
+					print "Index is $i, output is $Attr{$i}{ARG1}, should be 2.0\n";
+				}
+				if ($i%6 == 2 || $i%6 == 3){
+					print "Index is $i, output is $Attr{$i}{ARG1}, should be 100\n";
+				}
+				if ($i%6 == 4 || $i%6==5){
+					print "Index is $i, output is $Attr{$i}{ARG1}, should be \"test\"\n";
+				}
+				return 0;
+			}
+		}
+		return 1;
+	}
+	if ($option eq 'transform_from1'|| $option eq 'transform_from2'){
+		for my $i (0..$index-1){
+			if ((($i % 2) ==0 && $Attr{$i}{SIZE_IMAGE} ne 1000) || (($i % 2) ==0 && $Attr{$i}{SIZE_DISK} ne '120.0') || (($i % 2) ==1 && $Attr{$i}{SIZE_IMAGE} ne 2000) || (($i % 2) ==1 && $Attr{$i}{SIZE_DISK} ne '128.0')){
+				if ($i%2 == 0){
+					print "Index is $i, SIZE_IMAGE is $Attr{$i}{SIZE_IMAGE}, should be 1000; SIZE_DISK is $Attr{$i}{SIZE_IMAGE}, should be 120.0\n";
+				}
+				if ($i%2 == 1){
+					print "Index is $i, SIZE_IMAGE is $Attr{$i}{SIZE_IMAGE}, should be 2000; SIZE_DISK is $Attr{$i}{SIZE_IMAGE}, should be 128.0\n";
+				}
+				return 0;
+			}
+		}
+		return 1;
+	}
+	if ($option eq 'transform_from3'){
+		for my $i (0..$index-1){
+			if ((($i % 4 ==0 || $i%4==1) && ($Attr{$i}{SIZE_IMAGE} ne 1000)) || (($i % 4 ==0 || $i%4==1) && ($Attr{$i}{SIZE_DISK} ne '120.0')) || (($i % 4 ==2 || $i%4==3) && ($Attr{$i}{SIZE_IMAGE} ne 2000)) || (($i % 4 ==2 || $i%4==3) && ($Attr{$i}{SIZE_DISK} ne '128.0'))){
+				if ($i%4 == 0 || $i%4==1){
+					print "Index is $i, SIZE_IMAGE is $Attr{$i}{SIZE_IMAGE}, should be 1000; SIZE_DISK is $Attr{$i}{SIZE_IMAGE}, should be 120.0\n";
+				}
+				if ($i%4 == 2 || $i%4==3){
+					print "Index is $i, SIZE_IMAGE is $Attr{$i}{SIZE_IMAGE}, should be 2000; SIZE_DISK is $Attr{$i}{SIZE_IMAGE}, should be 128.0\n";
+				}
+				return 0;
+			}
+		}
+		return 1;
+	}
+}	
+}
+
 sub write_ads_to_file {
 	my $testname = $_[0];
 	my %Attr = %{$_[1]};
