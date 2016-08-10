@@ -784,16 +784,16 @@ int MacroStreamXFormSource::parse_iterate_args(char * pargs, int expand_options,
 			}
 		} else {
 			MACRO_SOURCE ItemsSource;
-			fp = Open_macro_source(ItemsSource, oa.items_filename.Value(), false, set.macros(), errmsg);
-			if ( ! fp) {
+			FILE *fpItems = Open_macro_source(ItemsSource, oa.items_filename.Value(), false, set.macros(), errmsg);
+			if ( ! fpItems) {
 				return -1;
 			}
 			for (char* line=NULL;;) {
-				line = getline_trim(fp, ItemsSource.line);
+				line = getline_trim(fpItems, ItemsSource.line);
 				if ( ! line) break;
 				oa.items.append(line);
 			}
-			rval = Close_macro_source(fp, ItemsSource, set.macros(), 0);
+			rval = Close_macro_source(fpItems, ItemsSource, set.macros(), 0);
 		}
 	}
 
