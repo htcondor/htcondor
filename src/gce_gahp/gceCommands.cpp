@@ -786,18 +786,19 @@ GceInstanceInsert::GceInstanceInsert() { }
 
 GceInstanceInsert::~GceInstanceInsert() { }
 
-// Expecting:GCE_INSTACE_INSERT <req_id> <serviceurl> <authfile> <project> <zone>
+// Expecting:GCE_INSTANCE_INSERT <req_id> <serviceurl> <authfile> <project> <zone>
 //     <instance_name> <machine_type> <image> <metadata> <metadata_file>
+//     <preemptible>
 bool GceInstanceInsert::workerFunction(char **argv, int argc, string &result_string) {
 	assert( strcasecmp( argv[0], "GCE_INSTANCE_INSERT" ) == 0 );
 
 	int requestID;
 	get_int( argv[1], & requestID );
 
-	if( ! verify_number_args( argc, 11 ) ) {
+	if( ! verify_number_args( argc, 12 ) ) {
 		result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
 		dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n",
-				 argc, 6, argv[0] );
+				 argc, 12, argv[0] );
 		return false;
 	}
 
@@ -841,6 +842,11 @@ bool GceInstanceInsert::workerFunction(char **argv, int argc, string &result_str
 	insert_request.requestBody += " \"name\": \"";
 	insert_request.requestBody += argv[6];
 	insert_request.requestBody += "\",\n";
+	insert_request.requestBody += "  \"scheduling\":\n";
+	insert_request.requestBody += "  {\n";
+	insert_request.requestBody += "    \"preemptible\": ";
+	insert_request.requestBody += argv[11];
+	insert_request.requestBody += "\n  },\n";
 	insert_request.requestBody += " \"disks\": [\n  {\n";
 	insert_request.requestBody += "   \"boot\": true,\n";
 	insert_request.requestBody += "   \"initializeParams\": {\n";

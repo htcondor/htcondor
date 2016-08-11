@@ -634,6 +634,7 @@ const char* GceAuthFile = "gce_auth_file";
 const char* GceMachineType = "gce_machine_type";
 const char* GceMetadata = "gce_metadata";
 const char* GceMetadataFile = "gce_metadata_file";
+const char* GcePreemptible = "gce_preemptible";
 
 char const *next_job_start_delay = "next_job_start_delay";
 char const *next_job_start_delay2 = "NextJobStartDelay";
@@ -6643,6 +6644,12 @@ SetGridParams()
 		InsertJobExpr( buffer.Value() );
 	}
 
+	// GcePreemptible is not a necessary parameter
+	if( (tmp = condor_param( GcePreemptible, ATTR_GCE_PREEMPTIBLE )) ) {
+		buffer.formatstr( "%s = %s", ATTR_GCE_PREEMPTIBLE, isTrue(tmp) ? "True" : "False" );
+		InsertJobExpr( buffer.Value() );
+		free( tmp );
+	}
 
 	// CREAM clients support an alternate representation for resources:
 	//   host.edu:8443/cream-batchname-queuename
