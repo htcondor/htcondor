@@ -64,9 +64,16 @@ an error several times per hour if the configuration knob \Macro{NO\_DNS}
 is set to True.
 \Ticket{5762}
 
-\item Updated systemd configuration to start HTCondor after ypbind has
-started.
+\item Updated systemd configuration to start HTCondor after NIS has started.
 \Ticket{5814}
+
+\item Updated systemd configuration to start HTCondor after local LDAP name
+service daemon has started.
+\Ticket{5836}
+
+\item Updated systemd configuration to attempt restart of HTCondor daemons
+after 1 minute.
+\Ticket{5836}
 
 \item Fixed monitoring of memory and CPU usage of running jobs on Mac OS X.
 This monitoring didn't work for a personal installation of HTCondor.
