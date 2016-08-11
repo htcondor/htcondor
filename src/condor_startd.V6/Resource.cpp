@@ -434,7 +434,7 @@ Resource::~Resource()
 	delete r_load_queue; r_load_queue = NULL;
 	free( r_name ); r_name = NULL;
 	free( r_id_str ); r_id_str = NULL;
-	if (r_pair_name) free( r_pair_name ); r_pair_name = NULL;
+	free( r_pair_name ); r_pair_name = NULL;
 
 }
 
