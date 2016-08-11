@@ -3534,6 +3534,15 @@ int SubmitHash::SetGridParams()
 		InsertJobExpr( buffer.Value() );
 	}
 
+	// GcePreemptible is not a necessary parameter
+	bool exists = false;
+	bool bool_val = submit_param_bool( SUBMIT_KEY_GcePreemptible, ATTR_GCE_PREEMPTIBLE, false, &exists );
+	if( exists ) {
+		buffer.formatstr( "%s = %s", ATTR_GCE_PREEMPTIBLE, bool_val ? "True" : "False" );
+		InsertJobExpr( buffer.Value() );
+		free( tmp );
+	}
+
 
 	// CREAM clients support an alternate representation for resources:
 	//   host.edu:8443/cream-batchname-queuename

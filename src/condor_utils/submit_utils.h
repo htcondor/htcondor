@@ -251,6 +251,7 @@
 #define SUBMIT_KEY_GceMachineType "gce_machine_type"
 #define SUBMIT_KEY_GceMetadata "gce_metadata"
 #define SUBMIT_KEY_GceMetadataFile "gce_metadata_file"
+#define SUBMIT_KEY_GcePreemptible "gce_preemptible"
 
 #define SUBMIT_KEY_NextJobStartDelay "next_job_start_delay"
 #define SUBMIT_KEY_WantGracefulRemoval "want_graceful_removal"
