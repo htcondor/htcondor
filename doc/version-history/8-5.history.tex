@@ -67,7 +67,9 @@ Also added support for service accounts with GCE.
 
 \begin{itemize}
 
-\item None.
+\item Lengthened the watchdog timeout in the systemd service file to 20 minutes.
+Also, ping systemd at a third of the watchdog interval.
+\Ticket{5837}
 
 \end{itemize}
 
