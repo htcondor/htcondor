@@ -55,6 +55,12 @@ evaluate the expression, and if it evaluated to a defined value or
 error, return it.  If undefined, return value2.
 \Ticket{5782}
 
+\item New submit attribute \SubmitCmd{gce\_preemptible} allows the
+creation of preemptible Google Compute Engine (GCE) instances.
+These instances have a lower price, but can be interrupted at any time.
+Also added support for service accounts with GCE.
+\Ticket{5821}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
