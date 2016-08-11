@@ -159,9 +159,8 @@ public:
 	config()
 	{
 		const condor_utils::SystemdManager & sd = condor_utils::SystemdManager::GetInstance();
-		int watchdog_secs = sd.GetWatchdogUsecs() / 1e6 / 2;
+		int watchdog_secs = sd.GetWatchdogUsecs() / 1e6 / 3;
 		if (watchdog_secs <= 0) { watchdog_secs = 1; }
-		if (watchdog_secs > 20) { watchdog_secs = 10; }
 		Timeslice ts;
 		ts.setDefaultInterval(watchdog_secs);
 		m_watchdog_timer = daemonCore->Register_Timer(ts, static_cast<TimerHandlercpp>(&SystemdNotifier::status_handler),
