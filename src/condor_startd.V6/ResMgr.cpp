@@ -1305,7 +1305,7 @@ ResMgr::updateExtrasClassAd( ClassAd * cap ) {
 		int universeOnline = 0;
 		ASSERT( cap->LookupBool( attr, universeOnline ) );
 		if( ! universeOnline ) {
-			offlineUniverses.insert( universeName ).second;
+			offlineUniverses.insert( universeName );
 			extras_classad->Assign( reasonTime.c_str(), time( NULL ) );
 
 			std::string reason = "[unknown reason]";
@@ -1580,8 +1580,8 @@ ResMgr::addResource( Resource *rip )
 			if (ripT->type() == slot_type) {
 				if ( ! ripT->r_pair_name || ripT->r_pair_name[0] == '#') {
 					// ok pair these two.
-					if (rip->r_pair_name) free(rip->r_pair_name); rip->r_pair_name = NULL;
-					if (ripT->r_pair_name) free(ripT->r_pair_name); ripT->r_pair_name = NULL;
+					free(rip->r_pair_name);
+					free(ripT->r_pair_name);
 					rip->r_pair_name = strdup(ripT->r_name);
 					ripT->r_pair_name = strdup(rip->r_name);
 					break;
