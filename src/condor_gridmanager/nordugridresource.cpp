@@ -251,10 +251,12 @@ void NordugridResource::DoJobStatus()
 					// If we don't have the attributes we expect, skip it.
 				if ( next_job_id && next_status ) {
 					int rc2;
-					formatstr( key, "nordugrid %s %s", resourceName,
-							 strrchr( next_job_id, '/' ) + 1 );
+					const char *id;
 					BaseJob *base_job = NULL;
 					NordugridJob *job = NULL;
+					id = strrchr( next_job_id, '/' );
+					id = (id != NULL) ? (id + 1) : "";
+					formatstr( key, "nordugrid %s %s", resourceName, id );
 					rc2 = BaseJob::JobsByRemoteId.lookup( HashKey( key.c_str() ),
 														  base_job );
 					if ( rc2 == 0 && (job = dynamic_cast<NordugridJob*>(base_job)) ) {
