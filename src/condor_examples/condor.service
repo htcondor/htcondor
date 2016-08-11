@@ -10,10 +10,12 @@ ExecStart=/usr/sbin/condor_master -f
 ExecStop=/usr/sbin/condor_off -master
 ExecReload=/bin/kill -HUP $MAINPID
 Restart=always
-RestartSec=10seconds
+RestartSec=1minute
 StandardOutput=syslog
 LimitNOFILE=16384
 ControlGroup=/condor
+Wants=nslcd.service
+After=nslcd.service
 Wants=ypbind.service
 After=ypbind.service
 
