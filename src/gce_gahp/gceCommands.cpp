@@ -349,10 +349,12 @@ bool GetAccessToken( const string &auth_file, string &access_token,
 		string client_id;
 		string client_secret;
 		string refresh_token;
+		string access_token;
 		string key;
 		string value;
 		int nesting = 0;
 		int expires_in = 0;
+		long int expiration_timestamp = 0;
 		const char *pos;
 		if ( !readShortFile( auth_file, auth_file_contents ) ) {
 			auth_entry.m_err_msg = "Failed to read auth file";
@@ -367,10 +369,33 @@ bool GetAccessToken( const string &auth_file, string &access_token,
 				client_id = value;
 			} else if ( key == "client_secret" ) {
 				client_secret = value;
+			} else if ( key == "access_token" ) {
+				access_token = value;
+			} else if ( key == "expires_in" ) {
+				expires_in = atoi(value.c_str());
+			} else if ( key == "token_expiry") {
+				// Parse token expiry time in (UTC) format
+				// ""2016-07-27T18:44:12Z"
+				struct tm expiration_tm;
+				if ( strptime(value.c_str(), "%Y-%m-%dT%TZ", &expiration_tm ) != NULL) {
+					expiration_timestamp = timegm(&expiration_tm);
+				}
 			}
 		}
 		if ( refresh_token.empty() ) {
-			auth_entry.m_err_msg = "Failed to find refresh_token in auth file";
+			if ( expiration_timestamp > 0 ) {
+				expires_in = expiration_timestamp - time(NULL);
+			}
+			if ( access_token.empty() ) {
+				auth_entry.m_err_msg = "Failed to find refresh_token or access_token in auth file";
+				goto done;
+			}
+			if ( expires_in <= 0 ) {
+				auth_entry.m_err_msg = "Access_token is expired, please re-login.";
+				goto done;
+			}
+			auth_entry.m_access_token = access_token;
+			auth_entry.m_expiration = time(NULL) + expires_in;
 			goto done;
 		}
 		if ( client_id.empty() ) {
