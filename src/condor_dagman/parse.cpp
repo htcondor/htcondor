@@ -202,8 +202,7 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 		if (line[0] == 0)       continue;  // Ignore blank lines
 		if (line[0] == COMMENT) continue;  // Ignore comments
 
-		//TEMPTEMP debug_printf( DEBUG_DEBUG_3, "Parsing line <%s>\n", line );
-		debug_printf( DEBUG_QUIET, "Parsing line <%s>\n", line );//TEMPTEMP
+		debug_printf( DEBUG_DEBUG_3, "Parsing line <%s>\n", line );
 
 			// Note: strtok() could be replaced by MyString::Tokenize(),
 			// which is much safer, but I don't want to deal with that
@@ -303,8 +302,7 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 		if (line[0] == 0)       continue;  // Ignore blank lines
 		if (line[0] == COMMENT) continue;  // Ignore comments
 
-		//TEMPTEMP debug_printf( DEBUG_DEBUG_3, "Parsing line <%s>\n", line );
-		debug_printf( DEBUG_QUIET, "Parsing line <%s>\n", line );//TEMPTEMP
+		debug_printf( DEBUG_DEBUG_3, "Parsing line <%s>\n", line );
 
 			// Note: strtok() could be replaced by MyString::Tokenize(),
 			// which is much safer, but I don't want to deal with that
@@ -515,6 +513,7 @@ parse_subdag( Dag *dag,
 	return false;
 }
 
+//-----------------------------------------------------------------------------
 static bool 
 parse_node( Dag *dag, 
 			const char* nodeTypeKeyword,
@@ -540,6 +539,13 @@ parse_node( Dag *dag,
 		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): no node name "
 					"specified\n", dagFile, lineNum );
 		debug_printf( DEBUG_QUIET, "%s\n", expectedSyntax.Value() );
+		return false;
+	}
+
+	if ( !strcasecmp( nodeName, Dag::ALL_NODES ) ) {
+		debug_printf( DEBUG_QUIET,
+					"ERROR: %s (line %d): ALL_NODES (any case) is not allowed for a node name\n", 
+					dagFile, lineNum );
 		return false;
 	}
 
@@ -699,8 +705,6 @@ parse_script(
 	int  lineNumber)
 {
 	const char * example = "SCRIPT [DEFER status time] (PRE|POST) JobName Script Args ...";
-	Job * job = NULL;
-	MyString whynot;
 
 	//
 	// Second keyword is either PRE, POST or DEFER
@@ -799,20 +803,12 @@ parse_script(
 					  filename, lineNumber );
 		exampleSyntax (example);
 		return false;
-	} else {
-		debug_printf(DEBUG_DEBUG_1, "jobName: %s\n", jobName);
-		MyString tmpJobName = munge_job_name(jobName);
-		jobName = tmpJobName.Value();
-
-		job = dag->FindNodeByName( jobName );
-		if (job == NULL) {
-			debug_printf( DEBUG_QUIET, 
-						  "ERROR: %s (line %d): Unknown Job %s\n",
-						  filename, lineNumber, jobNameOrig );
-			return false;
-		}
 	}
-	
+
+	debug_printf(DEBUG_DEBUG_1, "jobName: %s\n", jobName);
+	MyString tmpJobName = munge_job_name(jobName);
+	jobName = tmpJobName.Value();
+
 	//
 	// The rest of the line is the script and args
 	//
@@ -858,12 +854,32 @@ parse_script(
 		exampleSyntax( example );
 		return false;
 	}
-	
+
+
+//TEMPTEMP -- loop here...
+	Job *job;
+		//TEMPTEMP -- loop here...
+	while ( ( job = dag->FindAllNodesByName( jobName ) ) ) {
+		jobName = NULL;
+
+
+	//TEMPTEMP -- fix indentation
+	MyString whynot;
+	//TEMPTEMP -- this fails if we already have a script...
 	if( !job->AddScript( post, rest, defer_status, defer_time, whynot ) ) {
 		debug_printf( DEBUG_SILENT, "ERROR: %s (line %d): "
 					  "failed to add %s script to node %s: %s\n",
 					  filename, lineNumber, post ? "POST" : "PRE",
 					  jobNameOrig, whynot.Value() );
+		return false;
+	}
+
+	}
+
+	if ( jobName ) {
+		debug_printf( DEBUG_QUIET, 
+					  "ERROR: %s (line %d): Unknown Job %s\n",
+					  filename, lineNumber, jobNameOrig );
 		return false;
 	}
 
@@ -1298,6 +1314,7 @@ static bool parse_dot(Dag *dag, const char *filename, int lineNumber)
 }
 
 //TEMPTEMP -- split some of this into separate functions?
+//TEMPTEMP -- need to check ALL_NODES with multiple DAGs -- doesn't work
 //-----------------------------------------------------------------------------
 // 
 // Function: parse_vars
@@ -1446,6 +1463,7 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber)
 						"names cannot begin with \"queue\"\n", varName.Value() );
 			return false;
 		}
+
 		// This will be inefficient for jobs with lots of variables
 		// As in O(N^2)
 		job->varsFromDag->Rewind();
@@ -2055,7 +2073,6 @@ parse_reject(
 	return true;
 }
 
-//TEMPTEMP -- disallow "ALL_NODES" for a node name...
 //-----------------------------------------------------------------------------
 // 
 // Function: parse_jobstate_log

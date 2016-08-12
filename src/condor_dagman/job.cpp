@@ -517,7 +517,8 @@ Job::AddScript( bool post, const char *cmd, int defer_status, time_t defer_time,
 	if( post ? _scriptPost : _scriptPre ) {
 		whynot.formatstr( "%s script already assigned (%s)",
 						post ? "POST" : "PRE", GetPreScriptName() );
-		return false;
+		//TEMPTEMP return false;
+		delete (post ? _scriptPost : _scriptPre);//TEMPTEMP
 	}
 	Script* script = new Script( post, cmd, defer_status, defer_time, this );
 	if( !script ) {

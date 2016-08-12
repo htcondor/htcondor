@@ -32,12 +32,16 @@ $dagman_args = "-verbose";
 	"job_dagman_vars-B-XNodeA.out",
 	"job_dagman_vars-B-XNodeB.out",
 	"job_dagman_vars-B-XNodeC.out",
-	"job_dagman_vars-B-XNodeD.out");
+	"job_dagman_vars-B-XNodeD.out",
+	"job_dagman_vars-B-XNodeZ+NodeZ1.out",
+	"job_dagman_vars-B-XNodeZ+NodeZ2.out");
 
 @outlines = ('<XNodeA> <Cadel_Evans> <Romain_Bardet> <Nairo_Quintana> <!@#$%^&*()_-=+=[]{}?> ',
 	'<XNodeB> <Chris_Froome> <Andy_Schleck> <Nairo_Quintana> <!@#$%^&*()_-=+=[]{}?> ',
 	'<XNodeC> <Chris_Froome> <Romain_Bardet> <Frank_Schleck> <!@#$%^&*()_-=+=[]{}?> ',
-	'<XNodeD> <Chris_Froome> <Romain_Bardet> <Nairo_Quintana> <that\'s_all> ');
+	'<XNodeD> <Chris_Froome> <Romain_Bardet> <Nairo_Quintana> <that\'s_all> ',
+	'<XNodeZ+NodeZ1> <Vincenzo_Nibali> <J-C_Peraud> <Thibaut_Pinot> <!@#$%^&*()_-=+=[]{}?> ',
+	'<XNodeZ+NodeZ2> <Vincenzo_Nibali> <J-C_Peraud> <Bryan_Coquard> <!@#$%^&*()_-=+=[]{}?> ');
 
 # truly const variables in perl
 sub IDLE{1};

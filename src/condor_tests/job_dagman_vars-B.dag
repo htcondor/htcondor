@@ -19,3 +19,5 @@ Vars NodeC third="Frank_Schleck"
 
 Job NodeD job_dagman_vars-B-node.sub
 Vars NodeD misc="that's_all"
+
+Splice NodeZ job_dagman_vars-B.lower.dag

@@ -748,6 +748,8 @@ class Dag {
 	const char *GetStatusName() const {
 				return _dag_status_names[_dagStatus]; }
 
+	static const char *ALL_NODES;
+
 	/** Determine whether this DAG has a final node.
 		@return true iff the DAG has a final node.
 	*/

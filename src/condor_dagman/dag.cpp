@@ -70,6 +70,8 @@ const char * Dag::_dag_status_names[] = {
     "DAG_STATUS_HALTED"
 };
 
+const char *Dag::ALL_NODES = "ALL_NODES";
+
 //---------------------------------------------------------------------------
 void touch (const char * filename) {
     int fd = safe_open_wrapper_follow(filename, O_RDWR | O_CREAT, 0600);
@@ -1289,7 +1291,7 @@ Dag::FindAllNodesByName( const char* nodeName )
 		}
 	}
 
-	if ( !strcasecmp( nodeName, "ALL_NODES" ) ) {
+	if ( !strcasecmp( nodeName, ALL_NODES ) ) {
 		delete _allNodesIt; // just to be safe
 		_allNodesIt = new ListIterator<Job>( _jobs );
 		_allNodesIt->ToBeforeFirst();
