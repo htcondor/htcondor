@@ -954,7 +954,7 @@ int DaemonCore::Register_Timer (const Timeslice &timeslice,TimerHandlercpp handl
 
 int	DaemonCore::Cancel_Timer( int id )
 {
-	if ( this == NULL ) {
+	if ( daemonCore == NULL ) {
 		return 0;
 	}
 	return( t.CancelTimer(id) );
@@ -1073,7 +1073,7 @@ int DaemonCore::Register_Command(int command, const char* command_descrip,
 
 int DaemonCore::Cancel_Command( int command )
 {
-	if ( this == NULL ) {
+	if ( daemonCore == NULL ) {
 		return TRUE;
 	}
 
@@ -1573,7 +1573,7 @@ int DaemonCore::Cancel_Signal( int sig )
 {
 	int found = -1;
 
-	if ( this == NULL ) {
+	if ( daemonCore == NULL ) {
 		return TRUE;
 	}
 
@@ -1816,7 +1816,7 @@ int DaemonCore::Cancel_Socket( Stream* insock, void *prev_entry)
 {
 	int i,j;
 
-	if ( this == NULL ) {
+	if ( daemonCore == NULL ) {
 		return TRUE;
 	}
 
@@ -2213,7 +2213,7 @@ int DaemonCore::Register_Pipe(int pipe_end, const char* pipe_descrip,
 
 int DaemonCore::Cancel_Pipe( int pipe_end )
 {
-	if ( this == NULL ) {
+	if ( daemonCore == NULL ) {
 		return TRUE;
 	}
 
@@ -2330,7 +2330,7 @@ unsigned __stdcall pipe_close_thread(void *arg)
 
 int DaemonCore::Close_Pipe( int pipe_end )
 {
-	if ( this == NULL ) {
+	if ( daemonCore == NULL ) {
 		return TRUE;
 	}
 
@@ -2398,7 +2398,7 @@ int DaemonCore::Close_Pipe( int pipe_end )
 int
 DaemonCore::Cancel_And_Close_All_Pipes(void)
 {
-	if ( this == NULL ) {
+	if ( daemonCore == NULL ) {
 		return 0;
 	}
 
@@ -2477,7 +2477,7 @@ DaemonCore::Get_Pipe_FD(int pipe_end, int* fd)
 int
 DaemonCore::Close_FD(int fd)
 {
-	if ( this == NULL ) {
+	if ( daemonCore == NULL ) {
 		return 0;
 	}
 	int retval = -1;  
@@ -2528,7 +2528,7 @@ DaemonCore::Write_Stdin_Pipe(int pid, const void* buffer, int /* len */ ) {
 
 bool
 DaemonCore::Close_Stdin_Pipe(int pid) {
-	if ( this == NULL ) {
+	if ( daemonCore == NULL ) {
 		return true;
 	}
 	PidEntry *pidinfo = NULL;
@@ -2645,7 +2645,7 @@ int DaemonCore::Lookup_Socket( Stream *insock )
 
 int DaemonCore::Cancel_Reaper( int rid )
 {
-	if ( this == NULL ) {
+	if ( daemonCore == NULL ) {
 		return TRUE;
 	}
 
@@ -10913,7 +10913,7 @@ DaemonCore::RegisterTimeSkipCallback(TimeSkipFunc fnc, void * data)
 void 
 DaemonCore::UnregisterTimeSkipCallback(TimeSkipFunc fnc, void * data)
 {
-	if ( this == NULL ) {
+	if ( daemonCore == NULL ) {
 		return;
 	}
 	m_TimeSkipWatchers.Rewind();
