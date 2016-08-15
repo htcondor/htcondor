@@ -43,8 +43,6 @@ my $ads_file;
 my $out_file;
 
 #######################################################################
-$option = "general";
-$out_file = "$testname"."_$option.out";
 $submit_content = 
 "executable = $executable
 arguments = $arguments
@@ -63,6 +61,13 @@ for my $i (0..3){
 %Attr = change_clusterid(\%Attr,$ClusterId);
 %Attr = multi_owners(\%Attr);
 $ads_file = write_ads(\%Attr,$testname);
+
+TLOG("$testname : Created $ads_file to use as input for transform tests\n");
+
+
+#######################################################################
+$option = "general";
+$out_file = "$testname"."_$option.out";
 $rules_file = "$option.rules";
 $rules_content = 
 "SET ClusterId 200

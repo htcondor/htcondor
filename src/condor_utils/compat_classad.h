@@ -516,6 +516,7 @@ public:
 	bool begin(FILE* fh, bool close_when_done, CondorClassAdFileParseHelper::ParseType type);
 	int  next(ClassAd & out, bool merge=false);
 	ClassAd * next(classad::ExprTree * constraint);
+	CondorClassAdFileParseHelper::ParseType getParseType();
 
 protected:
 	CondorClassAdFileParseHelper * parse_help;
@@ -524,6 +525,38 @@ protected:
 	bool at_eof;
 	bool close_file_at_eof;
 	bool free_parse_help;
+};
+
+
+// This implements a generic classad list writer. This class keeps track of
+// whether it has written any non-empty ads, and writes the appropriate xml/list header
+// before the first ad. When writeFooter or appendFooter is called, the appropriate footer
+// is written only if a header was previously written.
+class CondorClassAdListWriter
+{
+public:
+	CondorClassAdListWriter(CondorClassAdFileParseHelper::ParseType typ=CondorClassAdFileParseHelper::Parse_long)
+		: out_format(typ), cNonEmptyOutputAds(0), wrote_header(false), needs_footer(false) {}
+
+	CondorClassAdFileParseHelper::ParseType setFormat(CondorClassAdFileParseHelper::ParseType typ);
+	CondorClassAdFileParseHelper::ParseType autoSetFormat(CondorClassAdFileParseHelper & parse_help);
+
+	// these return < 0 on failure, 0 if nothing written, 1 if non-empty ad is written.
+	int writeAd(const ClassAd & ad, FILE * out, bool hash_order=false);
+	int appendAd(const ClassAd & ad, std::string & buf, bool hash_order=false);
+	// write the footer if one is needed. 
+	int writeFooter(FILE* out, bool xml_always_write_header_footer=true);
+	int appendFooter(std::string & buf, bool xml_always_write_header_footer=true);
+
+	int getNumAds() { return cNonEmptyOutputAds; } // returns number of ads in output list.
+	bool needsFooter() { return needs_footer; } // returns true if a header was previously written and footer has not yet been.
+
+protected:
+	std::string buffer; // internal buffer used by writeAd & writeFooter
+	CondorClassAdFileParseHelper::ParseType out_format;
+	int cNonEmptyOutputAds; // count of number of non-empty ads written, used to trigger header/footer
+	bool wrote_header;      // keep track of whether header/footer have been written
+	bool needs_footer;
 };
 
 
@@ -654,7 +687,6 @@ typedef classad::ExprTree ExprTree;
 
 } // namespace compat_classad
 
-//typedef compat_classad::CondorClassAdFileParseHelper::ParseType ClassAdFileParseType;
 typedef compat_classad::CondorClassAdFileParseHelper ClassAdFileParseType;
 
 
