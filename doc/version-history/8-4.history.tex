@@ -41,12 +41,50 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Fixed a bug whereby the \Condor{collector} process would exit with an error several times per hour if config knob \Macro{NO\_DNS} is set to True.
-\Ticket{5762}
+\item Fixed a bug that could cause the \Condor{master} to crash after
+restarting the \Condor{shared\_port} daemon.
+\Ticket{5801}
 
 \item Fixed a bug that could cause the wrong dynamic slots to be preempted
 for a match when \MacroNI{ALLOW\_PSLOT\_PREEMPTION} is set to \Expr{True}.
 \Ticket{5748}
+
+\item Fixed a bug in \Prog{cream\_gahp} that caused it to delegate
+RFC-format X.509 proxies incorrectly to the CREAM service.
+\Ticket{5773}
+
+\item Fixed a bug where the Windows version information was set to
+a single value for multiple programs.
+This resulted in crash boxes for most of the HTCondor tools being reported
+as a crash of \Condor{gpu\_discovery}
+\Ticket{5795}
+
+\item Fixed a bug whereby the \Condor{collector} process would exit with
+an error several times per hour if the configuration knob \Macro{NO\_DNS}
+is set to True.
+\Ticket{5762}
+
+\item Updated systemd configuration to start HTCondor after NIS has started.
+\Ticket{5814}
+
+\item Updated systemd configuration to start HTCondor after local LDAP name
+service daemon has started.
+\Ticket{5836}
+
+\item Updated systemd configuration to attempt restart of HTCondor daemons
+after 1 minute.
+\Ticket{5836}
+
+\item Fixed monitoring of memory and CPU usage of running jobs on Mac OS X.
+This monitoring didn't work for a personal installation of HTCondor.
+With Mac OS X 10.11 and above, this monitoring resulted in a flood of
+errors messages to the system logs for a root-based installation.
+\Ticket{5777}
+
+\item Fixed a bug when attempting to authenticate using multiple
+methods wherein if a method failed, the remaining methods were not
+always attempted.
+\Ticket{5674}
 
 \end{itemize}
 

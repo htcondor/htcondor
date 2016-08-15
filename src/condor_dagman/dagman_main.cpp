@@ -139,7 +139,7 @@ Dagman::Dagman() :
 	_generateSubdagSubmits(true),
 	_maxJobHolds(100),
 	_runPost(false),
-	_defaultPriority(0),
+	_priority(0), // from config or command line
 	_claim_hold_time(20),
 	_doRecovery(false),
 	_suppressJobLogs(false),
@@ -238,10 +238,10 @@ Dagman::Config()
 	debug_printf( DEBUG_NORMAL, "DAGMAN_USER_LOG_SCAN_INTERVAL setting: %d\n",
 				m_user_log_scan_interval );
 
-	_defaultPriority = param_integer( "DAGMAN_DEFAULT_PRIORITY",
-				_defaultPriority, INT_MIN, INT_MAX, false );
+	_priority = param_integer( "DAGMAN_DEFAULT_PRIORITY",
+				_priority, INT_MIN, INT_MAX, false );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_DEFAULT_PRIORITY setting: %d\n",
-				_defaultPriority );
+				_priority );
 
 	if ( !param_boolean( "DAGMAN_ALWAYS_USE_NODE_LOG", true ) ) {
        	debug_printf( DEBUG_QUIET,
@@ -843,7 +843,7 @@ void main_init (int argc, char ** const argv) {
 				debug_printf( DEBUG_NORMAL, "No priority value specified\n");
 				Usage();
 			}
-			dagman._submitDagDeepOpts.priority = atoi(argv[i]);
+			dagman._priority = atoi(argv[i]);
 
 		} else if( !strcasecmp( "-dont_use_default_node_log", argv[i] ) ) {
        		debug_printf( DEBUG_QUIET,
@@ -1130,11 +1130,8 @@ void main_init (int argc, char ** const argv) {
 	dagman.dag->SetConfigFile( dagman._dagmanConfigFile );
 	dagman.dag->SetMaxJobHolds( dagman._maxJobHolds );
 	dagman.dag->SetPostRun(dagman._runPost);
-	if( dagman._submitDagDeepOpts.priority != 0 ) { // From command line
-		dagman.dag->SetDefaultPriority(dagman._submitDagDeepOpts.priority);
-	} else if( dagman._defaultPriority != 0 ) { // From config file
-		dagman.dag->SetDefaultPriority(dagman._defaultPriority);
-		dagman._submitDagDeepOpts.priority = dagman._defaultPriority;
+	if( dagman._priority != 0 ) {
+		dagman.dag->SetDagPriority(dagman._priority);
 	}
 
     //
@@ -1181,8 +1178,8 @@ void main_init (int argc, char ** const argv) {
 					 	dagFile );
     	}
 	}
-	if( dagman.dag->GetDefaultPriority() != 0 ) {
-		dagman.dag->SetDefaultPriorities(); // Applies to the nodes of the dag
+	if( dagman.dag->GetDagPriority() != 0 ) {
+		dagman.dag->SetNodePriorities(); // Applies to the nodes of the dag
 	}
 	dagman.dag->GetJobstateLog().WriteDagmanStarted( dagman.DAGManJobId );
 	if ( rescueDagNum > 0 ) {

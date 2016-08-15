@@ -1,14 +1,20 @@
-Each submit description file describes one cluster of jobs to be
+Each submit description file describes one or more clusters of jobs to be
 placed in the HTCondor execution pool. All jobs in a cluster must share
 the same executable, but they may have different input and output files,
 and different program arguments. The submit description file is
-the only command-line argument to \Condor{submit}. If the submit description
+generally the last command-line argument to \Condor{submit}. If the
+submit description
 file argument is omitted, \Condor{submit} will read the submit description
 from standard input.
 
-The submit description file must contain 
+The submit description file must contain at least
 one \Arg{executable} command and at least one \Arg{queue} command.
 All of the other commands have default actions.
+
+\Bold{Note that a submit file that contains more than one executable
+command will produce multiple clusters when submitted.  This is not
+generally recommended, and is not allowed for submit files that
+are run as DAG node jobs by \Condor{dagman}.}
 
 The commands which can appear in the submit description file are
 numerous.  They are listed here in alphabetical order by category.
@@ -467,6 +473,11 @@ One user with many jobs may use this command
 to order his/her own jobs,
 and this will have no effect on whether or
 not these jobs will run ahead of another user's jobs.
+
+Note that the priority setting in an HTCondor submit file will
+be overridden by \Condor{dagman} if the submit file is used
+for a node in a DAG, and the priority of the node within the
+DAG is non-zero (see ~\ref{sec:DAG-SetNodePriority} for more details).
 
 %%%%%%%%%%%%%%%%%%%
 %% queue
@@ -2148,9 +2159,9 @@ There is no default value when not specified.
 
 \index{submit commands!gce\_image}
 \label{condor-submit-gce-image}
-\item[gce\_image = $<$URL$>$]
+\item[gce\_image = $<$image id$>$]
 For grid type \SubmitCmdNI{gce} jobs,
-the URL of the virtual machine image representing the HTCondor job to
+the identifier of the virtual machine image representing the HTCondor job to
 be run.  This virtual machine image must already be register with GCE
 and reside in Google's Cloud Storage service.
 
@@ -2188,6 +2199,17 @@ specifies a path and file name of the file that contains metadata
 for a virtual machine instance that is an HTCondor job.
 Within the file, each name and value pair is on its own line;
 so, the pairs are separated by the newline character.
+
+%%%%%%%%%%%%%%%%%%%
+%% gce_preemptible
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!gce\_preemptible}
+\label{condor-submit-gce-preemptible}
+\item[gce\_preemptible = $<$True \Bar\ False$>$]
+For grid type \SubmitCmdNI{gce} jobs,
+specifies whether the virtual machine instance should be preemptible.
+The default is for the instance to not be preemptible.
 
 %%%%%%%%%%%%%%%%%%%
 %% globus_rematch

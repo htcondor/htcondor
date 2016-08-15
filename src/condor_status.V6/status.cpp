@@ -36,18 +36,16 @@
 #include "condor_distribution.h"
 #include "condor_version.h"
 #include "natural_cmp.h"
+#include "classad/jsonSource.h"
 
 #include <vector>
 #include <sstream>
 #include <iostream>
 
-#define USE_LATE_PROJECTION 1
-#define USE_QUERY_CALLBACKS 1
 
 // if enabled, use natural_cmp for numerical sorting of hosts/slots
 #define STRVCMP (naturalSort ? natural_cmp : strcmp)
 
-#ifdef USE_QUERY_CALLBACKS
 
 // the condor q strategy will be to ingest ads and print them into MyRowOfValues structures
 // then insert those into a map which is indexed (and thus ordered) by job id.
@@ -163,46 +161,6 @@ protected:
 	std::vector<classad::ExprTree*> key_exprs;
 };
 
-#else
-
-using std::vector;
-using std::string;
-using std::stringstream;
-
-struct SortSpec {
-    string arg;
-    string keyAttr;
-    string keyExprAttr;
-    ExprTree* expr;
-    ExprTree* exprLT;
-    ExprTree* exprEQ;
-
-    SortSpec(): arg(), keyAttr(), keyExprAttr(), expr(NULL), exprLT(NULL), exprEQ(NULL) {}
-    ~SortSpec() {
-        if (NULL != expr) delete expr;
-        if (NULL != exprLT) delete exprLT;
-        if (NULL != exprEQ) delete exprEQ;
-    }
-
-    SortSpec(const SortSpec& src): expr(NULL), exprLT(NULL), exprEQ(NULL) { *this = src; }
-    SortSpec& operator=(const SortSpec& src) {
-        if (this == &src) return *this;
-
-        arg = src.arg;
-        keyAttr = src.keyAttr;
-        keyExprAttr = src.keyExprAttr;
-        if (NULL != expr) delete expr;
-        expr = src.expr->Copy();
-        if (NULL != exprLT) delete exprLT;
-        exprLT = src.exprLT->Copy();
-        if (NULL != exprEQ) delete exprEQ;
-        exprEQ = src.exprEQ->Copy();
-
-        return *this;
-    }
-};
-
-#endif
 
 // global variables
 AttrListPrintMask pm;
@@ -232,11 +190,7 @@ const char*	genericType = NULL;
 CondorQuery *query;
 char		buffer[1024];
 char		*myName;
-#ifdef USE_QUERY_CALLBACKS
 ClassadSortSpecs sortSpecs;
-#else
-vector<SortSpec> sortSpecs;
-#endif
 bool            noSort = false; // set to true to disable sorting entirely
 bool            naturalSort = true;
 bool            javaMode = false;
@@ -246,6 +200,8 @@ bool			offlineMode = false;
 bool			compactMode = false;
 char 		*target = NULL;
 const char * ads_file = NULL; // read classads from this file instead of querying them from the collector
+ClassAdFileParseType::ParseType ads_file_format = ClassAdFileParseType::Parse_long;
+bool            print_attrs_in_hash_order = false;
 ClassAd		*targetAd = NULL;
 
 classad::References projList;
@@ -257,40 +213,26 @@ StringList dashAttributes; // Attributes specifically requested via the -attribu
 void usage 		();
 void firstPass  (int, char *[]);
 void secondPass (int, char *[]);
-#ifdef USE_QUERY_CALLBACKS
 // prototype for CollectorList:query, CondorQuery::processAds,
 // and CondorQ::fetchQueueFromHostAndProcess callbacks.
 // callback should return false to take ownership of the ad
 typedef bool (*FNPROCESS_ADS_CALLBACK)(void* pv, ClassAd * ad);
-static bool read_classad_file(const char *filename, FNPROCESS_ADS_CALLBACK callback, void* pv, const char * constr);
+static bool read_classad_file(const char *filename, ClassAdFileParseType::ParseType ads_file_format, FNPROCESS_ADS_CALLBACK callback, void* pv, const char * constr);
 //void prettyPrint(ROD_MAP_BY_KEY &, TrackTotals *);
 ppOption prettyPrintHeadings (bool any_ads);
-void prettyPrintAd(ppOption pps, ClassAd *ad);
+void prettyPrintAd(ppOption pps, ClassAd *ad, int output_index, bool fHashOrder);
 int getDisplayWidth(bool * is_piped=NULL);
 const char* digest_state_and_activity(char * sa, State st, Activity ac); //  in prettyPrint.cpp
-#else
-void prettyPrint(ClassAdList &, TrackTotals *);
-int  lessThanFunc(AttrList*,AttrList*,void*);
-int  customLessThanFunc(AttrList*,AttrList*,void*);
-static bool read_classad_file(const char *filename, ClassAdList &classads, const char * constr);
-#endif
 
 extern "C" int SetSyscalls (int) {return 0;}
 extern	int setPPstyle (ppOption, int, const char *);
 extern  void setPPwidth ();
 extern  void dumpPPMode(FILE* out);
 extern const char * getPPStyleStr (ppOption pps);
-#ifdef USE_LATE_PROJECTION
 extern void prettyPrintInitMask(classad::References & proj);
 extern AdTypes setMode(int sdo_mode, int arg_index, const char * arg);
-#else
-extern	void setType    (const char *, int, const char *);
-extern	void setMode 	(Mode, int, const char *);
-extern	void dumpPPMask (std::string & out, AttrListPrintMask & mask);
-#endif
 extern  int  forced_display_width;
 
-#ifdef USE_QUERY_CALLBACKS
 
 #if 0 // not currently used.
 // callback for CollectorList::query to build a classad list.
@@ -712,7 +654,6 @@ void reduce_slot_results(ROD_MAP_BY_KEY & rmap)
 	}
 }
 
-#endif // USE_QUERY_CALLBACKS
 
 int
 main (int argc, char *argv[])
@@ -953,7 +894,7 @@ main (int argc, char *argv[])
 	// fetch the query
 	QueryResult q;
 
-	if( ppStyle == PP_VERBOSE || ppStyle == PP_XML || ppStyle == PP_JSON ) {
+	if (PP_IS_LONGish(ppStyle)) {
 		// Remove everything from the projection list if we're displaying
 		// the "long form" of the ads.
 		projList.clear();
@@ -969,12 +910,10 @@ main (int argc, char *argv[])
 		pmHeadFoot = HF_BARE;
 	}
 
-#ifdef USE_LATE_PROJECTION
 	// Setup the pretty printer for the given mode.
-	if (ppStyle != PP_VERBOSE && ppStyle != PP_XML && ppStyle != PP_JSON && ppStyle != PP_CUSTOM) {
+	if ( ! PP_IS_LONGish(ppStyle) && ppStyle != PP_CUSTOM) {
 		prettyPrintInitMask(projList);
 	}
-#endif
 
 	// if diagnose was requested, just print the query ad
 	if (diagnose) {
@@ -998,16 +937,12 @@ main (int argc, char *argv[])
 		fprintf(fout, "Sort: [ %s<ord> ]\n", style_text.c_str());
 
 		style_text = "";
-	#ifdef USE_LATE_PROJECTION
 		const CustomFormatFnTable * getCondorStatusPrintFormats();
 		List<const char> * pheadings = NULL;
 		if ( ! pm.has_headings()) {
 			if (pm_head.Length() > 0) pheadings = &pm_head;
 		}
 		pm.dump(style_text, getCondorStatusPrintFormats(), pheadings);
-	#else
-		dumpPPMask (style_text, pm);
-	#endif
 		fprintf(fout, "\nPrintMask:\n%s\n", style_text.c_str());
 
 		ClassAd queryAd;
@@ -1086,7 +1021,6 @@ main (int argc, char *argv[])
 		}
 	}
 
-#ifdef USE_QUERY_CALLBACKS
 	CondorError errstack;
 	ROD_MAP_BY_KEY admap;
 	struct _process_ads_info ai = {
@@ -1118,7 +1052,7 @@ main (int argc, char *argv[])
 		MyString req; // query requirements
 		q = query->getRequirements(req);
 		const char * constraint = req.empty() ? NULL : req.c_str();
-		if (read_classad_file(ads_file, process_ads_callback, &ai, constraint)) {
+		if (read_classad_file(ads_file, ads_file_format, process_ads_callback, &ai, constraint)) {
 			q = Q_OK;
 		}
 	} else if (NULL != addr) {
@@ -1147,29 +1081,6 @@ main (int argc, char *argv[])
 		default: break;
 		}
 	}
-#else
-	ClassAdList result;
-	CondorError errstack;
-	if (NULL != ads_file) {
-		MyString req; // query requirements
-		q = query->getRequirements(req);
-		const char * constraint = req.empty() ? NULL : req.c_str();
-		if (read_classad_file(ads_file, result, constraint)) {
-			q = Q_OK;
-		}
-	} else if (NULL != addr) {
-			// this case executes if pool was provided, or if in "direct" mode with
-			// subsystem that corresponds to a daemon (above).
-			// Here 'addr' represents either the host:port of requested pool, or
-			// alternatively the host:port of daemon associated with requested subsystem (direct mode)
-		q = query->fetchAds (result, addr, &errstack);
-	} else {
-			// otherwise obtain list of collectors and submit query that way
-		CollectorList * collectors = CollectorList::create();
-		q = collectors->query (*query, result, &errstack);
-		delete collectors;
-	}
-#endif
 
 	// if any error was encountered during the query, report it and exit 
 	if (Q_OK != q) {
@@ -1204,7 +1115,6 @@ main (int argc, char *argv[])
 		exit (1);
 	}
 
-#ifdef USE_QUERY_CALLBACKS
 	bool any_ads = ! admap.empty();
 	ppOption pps = prettyPrintHeadings (any_ads);
 
@@ -1214,14 +1124,12 @@ main (int argc, char *argv[])
 
 	// for XML output, print the xml header even if there are no ads.
 	if (PP_XML == pps) {
-		std::string line;
+		line.clear();
 		AddClassAdXMLFileHeader(line);
 		fputs(line.c_str(), stdout); // xml string already ends in a newline.
 	}
-	if (PP_JSON == pps) {
-		printf("[\n");
-	}
 
+	int output_index = 0;
 	for (ROD_MAP_BY_KEY::iterator it = admap.begin(); it != admap.end(); ++it) {
 		if (it->second.flags & (SROD_FOLDED | SROD_SKIP))
 			continue;
@@ -1230,19 +1138,22 @@ main (int argc, char *argv[])
 			pm.display(line, it->second.rov);
 			fputs(line.c_str(), stdout);
 		} else {
-			prettyPrintAd(pps, it->second.ad);
+			prettyPrintAd(pps, it->second.ad, output_index, print_attrs_in_hash_order);
+			if (it->second.ad) ++output_index;
 		}
 		it->second.flags |= SROD_PRINTED; // for debugging, keep track of what we already printed.
 	}
 	
 	// for XML output, print the xml footer even if there are no ads.
 	if (PP_XML == pps) {
+		line.clear();
 		AddClassAdXMLFileFooter(line);
 		fputs(line.c_str(), stdout);
 		// PRAGMA_REMIND("tj: XML output used to have an extra trailing newline, do we need to preserve that?")
-	}
-	if (PP_JSON == pps) {
-		printf("]\n");
+	} else if (output_index > 0 && (PP_JSON == pps || PP_NEWCLASSAD == pps)) {
+		// if we wrote any ads IN JSON or new classad format, then we need a closing list operator
+		line = (PP_JSON == pps) ? "]\n" : "}\n";
+		fputs(line.c_str(), stdout);
 	}
 
 	// if totals are required, display totals
@@ -1252,43 +1163,8 @@ main (int argc, char *argv[])
 		int totals_key_width = (wide_display || auto_width) ? -1 : MAX(20, max_totals_subkey);
 		totals.displayTotals(stdout, totals_key_width);
 	}
-#else
-	//ClassAdList & result = adlist;
-	if (noSort) {
-		// do nothing 
-	} else if (sortSpecs.empty()) {
-        // default classad sorting
-		result.Sort((SortFunctionType)lessThanFunc);
-	} else {
-        // User requested custom sorting expressions:
-        // insert attributes related to custom sorting
-        result.Open();
-        while (ClassAd* ad = result.Next()) {
-            for (vector<SortSpec>::iterator ss(sortSpecs.begin());  ss != sortSpecs.end();  ++ss) {
-                ss->expr->SetParentScope(ad);
-                classad::Value v;
-                ss->expr->Evaluate(v);
-                stringstream vs;
-                // This will properly render all supported value types,
-                // including undefined and error, although current semantic
-                // pre-filters classads where sort expressions are undef/err:
-                vs << ((v.IsStringValue())?"\"":"") << v << ((v.IsStringValue())?"\"":"");
-                ad->AssignExpr(ss->keyAttr.c_str(), vs.str().c_str());
-                // Save the full expr in case user wants to examine on output:
-                ad->AssignExpr(ss->keyExprAttr.c_str(), ss->arg.c_str());
-            }
-        }
-        
-        result.Open();
-		result.Sort((SortFunctionType)customLessThanFunc);
-	}
 
-	
-	// output result
-	prettyPrint (result, &totals);
-#endif
-
-    delete query;
+	delete query;
 
 	return 0;
 }
@@ -1354,11 +1230,7 @@ int set_status_print_mask_from_stream (
 	return err;
 }
 
-#ifdef USE_QUERY_CALLBACKS
-static bool read_classad_file(const char *filename, FNPROCESS_ADS_CALLBACK callback, void* pv, const char * constr)
-#else
-static bool read_classad_file(const char *filename, ClassAdList &classads, const char * constr)
-#endif
+static bool read_classad_file(const char *filename, ClassAdFileParseType::ParseType ads_file_format, FNPROCESS_ADS_CALLBACK callback, void* pv, const char * constr)
 {
 	bool success = false;
 
@@ -1372,10 +1244,14 @@ static bool read_classad_file(const char *filename, ClassAdList &classads, const
 		close_file = true;
 	}
 	if (file == NULL) {
-		fprintf(stderr, "Can't open file of job ads: %s\n", filename);
+		fprintf(stderr, "Can't open file of ClassAds: %s\n", filename);
 		return false;
-	} else {
-		CondorClassAdFileParseHelper parse_helper("\n");
+	} else if (ads_file_format == ClassAdFileParseType::Parse_long ||
+	           ads_file_format == ClassAdFileParseType::Parse_json ||
+	           ads_file_format == ClassAdFileParseType::Parse_xml ||
+	           ads_file_format == ClassAdFileParseType::Parse_new ||
+	           ads_file_format == ClassAdFileParseType::Parse_auto) {
+		CondorClassAdFileParseHelper parse_helper("\n", ads_file_format);
 
 		for (;;) {
 			ClassAd* classad = new ClassAd();
@@ -1393,19 +1269,12 @@ static bool read_classad_file(const char *filename, ClassAdList &classads, const
 					}
 				}
 			}
-#ifdef USE_QUERY_CALLBACKS
+
 			if ( ! include_classad || callback(pv, classad)) {
 				// delete the classad if we didn't pass it to the callback, or if
 				// the callback didn't take ownership of it.
 				delete classad;
 			}
-#else
-			if (include_classad) {
-				classads.Insert(classad);
-			} else {
-				delete classad;
-			}
-#endif
 
 			if (is_eof) {
 				success = true;
@@ -1416,7 +1285,98 @@ static bool read_classad_file(const char *filename, ClassAdList &classads, const
 				break;
 			}
 		}
+		if (close_file) fclose(file);
+		file = NULL;
+	}
+#if 0
+	else if (ads_file_format == ClassAdFileParseType::Parse_json) {
+		CondorClassAdFileParseHelper parse_helper("\n", ads_file_format);
 
+		for (;;) {
+			ClassAd* classad = new ClassAd();
+
+			int error;
+			bool is_eof;
+			int cAttrs = classad->InsertFromFile(file, is_eof, error, &parse_helper);
+
+			bool include_classad = cAttrs > 0 && error >= 0;
+			if (include_classad && constr) {
+				classad::Value val;
+				if (classad->EvaluateExpr(constr,val)) {
+					if ( ! val.IsBooleanValueEquiv(include_classad)) {
+						include_classad = false;
+					}
+				}
+			}
+
+			if ( ! include_classad || callback(pv, classad)) {
+				// delete the classad if we didn't pass it to the callback, or if
+				// the callback didn't take ownership of it.
+				delete classad;
+			}
+			if (is_eof) {
+				success = true;
+				break;
+			}
+			if (error < 0) {
+				success = false;
+				break;
+			}
+		}
+		if (close_file) fclose(file);
+		file = NULL;
+	}
+#elif 0
+	else if (ads_file_format == ClassAdFileParseType::Parse_json) {
+		classad::ClassAdJsonParser jsonparse;
+		bool inside_json_list = false;
+		for (;;) {
+			ClassAd* classad = new ClassAd();
+			bool fok = jsonparse.ParseClassAd(file, *classad, false);
+			if ( ! fok ) {
+				classad::Lexer::TokenType tt = jsonparse.getLastTokenType();
+				bool keep_going = false;
+				if (inside_json_list) {
+					if (tt == classad::Lexer::TokenType::LEX_COMMA) { keep_going = true; }
+					else if (tt == classad::Lexer::TokenType::LEX_CLOSE_BOX) { keep_going = true; inside_json_list = false; }
+				} else {
+					if (tt == classad::Lexer::TokenType::LEX_OPEN_BOX) { keep_going = true; inside_json_list = true; }
+				}
+				if (keep_going) {
+					fok = jsonparse.ParseClassAd(file, *classad, false); 
+				}
+			}
+			bool include_classad = fok;
+
+			if (include_classad && constr) {
+				classad::Value val;
+				if (classad->EvaluateExpr(constr,val)) {
+					if ( ! val.IsBooleanValueEquiv(include_classad)) {
+						include_classad = false;
+					}
+				}
+			}
+
+			if ( ! include_classad || callback(pv, classad)) {
+				// delete the classad if we didn't pass it to the callback, or if
+				// the callback didn't take ownership of it.
+				delete classad;
+			}
+			if (feof(file)) {
+				success = true;
+				break;
+			} else if ( ! fok) {
+				success = false;
+				break;
+			}
+		}
+		if (close_file) fclose(file);
+		file = NULL;
+	}
+#endif
+	else
+	{
+		fprintf(stderr, "unsupported ClassAd input format %d\n", ads_file_format);
 		if (close_file) fclose(file);
 		file = NULL;
 	}
@@ -1450,8 +1410,14 @@ usage ()
 		"\t-license\t\tDisplay attributes of licenses\n"
 		"\t-master\t\t\tDisplay daemon master attributes\n"
 		"\t-pool <name>\t\tGet information from collector <name>\n"
-		"\t-ads <file>\t\tGet information from <file>\n"
-        "\t-grid\t\t\tDisplay grid resources\n"
+		"\t-ads[:<fmt>] <file>\tGet information from <file> in <fmt> format.\n"
+		"\t           where <fmt> choice is one of:\n"
+		"\t       long    The traditional -long form. This is the default\n"
+		"\t       xml     XML form, the same as -xml\n"
+		"\t       json    JSON classad form, the same as -json\n"
+		"\t       new     'new' classad form without newlines\n"
+		"\t       auto    Guess the format from reading the input stream\n"
+		"\t-grid\t\t\tDisplay grid resources\n"
 		"\t-run\t\t\tSame as -claimed [deprecated]\n"
 #ifdef HAVE_EXT_POSTGRESQL
 		"\t-quill\t\t\tDisplay attributes of quills\n"
@@ -1471,17 +1437,18 @@ usage ()
 
 	fprintf (stderr, "\n    and [custom-opts ...] are one or more of\n"
 		"\t-constraint <const>\tAdd constraint on classads\n"
-		"\t-compact\t\t\tShow compact form, rolling up slots into a single line\n"
+		"\t-compact\t\tShow compact form, rolling up slots into a single line\n"
 		"\t-statistics <set>:<n>\tDisplay statistics for <set> at level <n>\n"
 		"\t\t\t\tsee STATISTICS_TO_PUBLISH for valid <set> and level values\n"
 		"\t\t\t\tuse with -direct queries to STARTD and SCHEDD daemons\n"
 		"\t-target <file>\t\tUse target classad with -format or -af evaluation\n"
 		"\n    and [display-opts] are one or more of\n"
-		"\t-long\t\t\tDisplay entire classads\n"
-		"\t-sort <expr>\t\tSort entries by expressions. 'no' disables sorting\n"
+		"\t-long[:<fmt>[,nosort]]\tDisplay entire classads in format <fmt>.\n"
+		"\t                      \tSee -ads for <fmt> options. Sorted by attribute name\n"
+		"\t                      \tunless nosort is specified.\n"
+		"\t-sort <expr>\t\tSort ClassAds by expressions. 'no' disables sorting\n"
 		"\t-natural[:off]\t\tUse natural sort order in default output (default=on)\n"
 		"\t-total\t\t\tDisplay totals only\n"
-//		"\t-verbose\t\tSame as -long\n"
 		"\t-expert\t\t\tDisplay shorter error messages\n"
 		"\t-wide[:<width>]\t\tDon't truncate data to fit in 80 columns.\n"
 		"\t\t\t\tTruncates to console width or <width> argument if specified.\n"
@@ -1507,6 +1474,18 @@ usage ()
 		"\t-print-format <file>\tUse <file> to set display attributes and formatting\n"
 		"\t\t\t(experimental, see htcondor-wiki for more information)\n"
 		);
+}
+
+ClassAdFileParseType::ParseType parseAdsFileFormat(const char * arg, ClassAdFileParseType::ParseType def_parse_type)
+{
+	ClassAdFileParseType::ParseType parse_type = def_parse_type;
+	YourString fmt(arg);
+	if (fmt == "long") { parse_type = ClassAdFileParseType::Parse_long; }
+	else if (fmt == "json") { parse_type = ClassAdFileParseType::Parse_json; }
+	else if (fmt == "xml") { parse_type = ClassAdFileParseType::Parse_xml; }
+	else if (fmt == "new") { parse_type = ClassAdFileParseType::Parse_new; }
+	else if (fmt == "auto") { parse_type = ClassAdFileParseType::Parse_auto; }
+	return parse_type;
 }
 
 void
@@ -1563,7 +1542,7 @@ firstPass (int argc, char *argv[])
 				exit( 1 );
 			}
 		} else
-		if (is_dash_arg_prefix (argv[i], "ads", 2)) {
+		if (is_dash_arg_colon_prefix (argv[i], "ads", &pcolon, 2)) {
 			if( !argv[i+1] ) {
 				fprintf( stderr, "%s: -ads requires a filename argument\n",
 						 myName );
@@ -1572,6 +1551,9 @@ firstPass (int argc, char *argv[])
 			}
 			i += 1;
 			ads_file = argv[i];
+			if (pcolon) {
+				ads_file_format = parseAdsFileFormat(++pcolon, ClassAdFileParseType::Parse_long);
+			}
 		} else
 		if (is_dash_arg_prefix (argv[i], "format", 1)) {
 			setPPstyle (PP_CUSTOM, i, argv[i]);
@@ -1685,9 +1667,25 @@ firstPass (int argc, char *argv[])
 			usage ();
 			exit (0);
 		} else
-		if (is_dash_arg_prefix (argv[i], "long", 1) /* || matchPrefix (argv[i],"-verbose", 3)*/) {
-			//PRAGMA_REMIND("tj: remove -verbose as a synonym for -long")
-			setPPstyle (PP_VERBOSE, i, argv[i]);
+		if (is_dash_arg_colon_prefix (argv[i], "long", &pcolon, 1)) {
+			ClassAdFileParseType::ParseType parse_type = ClassAdFileParseType::Parse_long;
+			if (pcolon) {
+				StringList opts(++pcolon);
+				for (const char * opt = opts.first(); opt; opt = opts.next()) {
+					if (YourString(opt) == "nosort") {
+						print_attrs_in_hash_order = true;
+					} else {
+						parse_type = parseAdsFileFormat(pcolon, parse_type);
+					}
+				}
+			}
+			switch (parse_type) {
+				default:
+				case ClassAdFileParseType::Parse_long: setPPstyle (PP_LONG, i, argv[i]); break;
+				case ClassAdFileParseType::Parse_xml: setPPstyle (PP_XML, i, argv[i]); break;
+				case ClassAdFileParseType::Parse_json: setPPstyle (PP_JSON, i, argv[i]); break;
+				case ClassAdFileParseType::Parse_new: setPPstyle (PP_NEWCLASSAD, i, argv[i]); break;
+			}
 		} else
 		if (is_dash_arg_prefix (argv[i],"xml", 1)){
 			setPPstyle (PP_XML, i, argv[i]);
@@ -1837,44 +1835,10 @@ firstPass (int argc, char *argv[])
 				continue;
 			}
 
-#ifdef USE_QUERY_CALLBACKS
 			if ( ! sortSpecs.Add(argv[i])) {
 				fprintf(stderr, "Error:  Parse error of: %s\n", argv[i]);
 				exit(1);
 			}
-#else
-            int jsort = sortSpecs.size();
-            SortSpec ss;
-			ExprTree* sortExpr = NULL;
-			if (ParseClassAdRvalExpr(argv[i], sortExpr)) {
-				fprintf(stderr, "Error:  Parse error of: %s\n", argv[i]);
-				exit(1);
-			}
-            ss.expr = sortExpr;
-
-            ss.arg = argv[i];
-            formatstr(ss.keyAttr, "CondorStatusSortKey%d", jsort);
-            formatstr(ss.keyExprAttr, "CondorStatusSortKeyExpr%d", jsort);
-
-			string exprString;
-			formatstr(exprString, "MY.%s < TARGET.%s", ss.keyAttr.c_str(), ss.keyAttr.c_str());
-			if (ParseClassAdRvalExpr(exprString.c_str(), sortExpr)) {
-                fprintf(stderr, "Error:  Parse error of: %s\n", exprString.c_str());
-                exit(1);
-			}
-			ss.exprLT = sortExpr;
-
-			formatstr(exprString, "MY.%s == TARGET.%s", ss.keyAttr.c_str(), ss.keyAttr.c_str());
-			if (ParseClassAdRvalExpr(exprString.c_str(), sortExpr)) {
-                fprintf(stderr, "Error:  Parse error of: %s\n", exprString.c_str());
-                exit(1);
-			}
-			ss.exprEQ = sortExpr;
-
-            sortSpecs.push_back(ss);
-				// the silent constraint TARGET.%s =!= UNDEFINED is added
-				// as a customAND constraint on the second pass
-#endif
 		} else
 		if (is_dash_arg_prefix (argv[i], "submitters", 4)) {
 			setMode (SDO_Submitters, i, argv[i]);
@@ -2066,7 +2030,7 @@ secondPass (int argc, char *argv[])
 			i++;
 			continue;
 		}
-		if (is_dash_arg_prefix(argv[i], "ads", 2)) {
+		if (is_dash_arg_colon_prefix(argv[i], "ads", &pcolon, 2)) {
 			++i;
 			continue;
 		}
@@ -2151,76 +2115,3 @@ secondPass (int argc, char *argv[])
 	}
 }
 
-
-#ifdef USE_QUERY_CALLBACKS
-#else
-
-int
-lessThanFunc(AttrList *ad1, AttrList *ad2, void *)
-{
-	MyString  buf1;
-	MyString  buf2;
-	int       val;
-
-	if( !ad1->LookupString(ATTR_OPSYS, buf1) ||
-		!ad2->LookupString(ATTR_OPSYS, buf2) ) {
-		buf1 = "";
-		buf2 = "";
-	}
-	val = strcmp( buf1.Value(), buf2.Value() );
-	if( val ) {
-		return (val < 0);
-	}
-
-	if( !ad1->LookupString(ATTR_ARCH, buf1) ||
-		!ad2->LookupString(ATTR_ARCH, buf2) ) {
-		buf1 = "";
-		buf2 = "";
-	}
-	val = strcmp( buf1.Value(), buf2.Value() );
-	if( val ) {
-		return (val < 0);
-	}
-
-	if( !ad1->LookupString(ATTR_MACHINE, buf1) ||
-		!ad2->LookupString(ATTR_MACHINE, buf2) ) {
-		buf1 = "";
-		buf2 = "";
-	}
-	val = STRVCMP( buf1.Value(), buf2.Value() );
-	if( val ) {
-		return (val < 0);
-	}
-
-	if (!ad1->LookupString(ATTR_NAME, buf1) ||
-		!ad2->LookupString(ATTR_NAME, buf2))
-		return 0;
-	return ( STRVCMP( buf1.Value(), buf2.Value() ) < 0 );
-}
-
-
-int
-customLessThanFunc( AttrList *ad1, AttrList *ad2, void *)
-{
-	classad::Value lt_result;
-	bool val;
-
-	for (unsigned i = 0;  i < sortSpecs.size();  ++i) {
-		if (EvalExprTree(sortSpecs[i].exprLT, ad1, ad2, lt_result)
-			&& lt_result.IsBooleanValue(val) ) {
-			if( val ) {
-				return 1;
-			} else {
-				if (EvalExprTree( sortSpecs[i].exprEQ, ad1,
-					ad2, lt_result ) &&
-					( !lt_result.IsBooleanValue(val) || !val )){
-					return 0;
-				}
-			}
-		} else {
-			return 0;
-		}
-	}
-	return 0;
-}
-#endif

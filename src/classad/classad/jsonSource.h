@@ -113,6 +113,7 @@ class ClassAdJsonParser
 
 		Lexer::TokenType PeekToken(void);
 		Lexer::TokenType ConsumeToken(void);
+		Lexer::TokenType getLastTokenType() { return lexer.getLastTokenType(); }
 
 	private:
 		// lexical analyser for parser

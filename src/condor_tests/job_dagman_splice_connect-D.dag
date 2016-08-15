@@ -1,0 +1,7 @@
+# Test missing pin in/outs -- this should fail.
+
+splice Splice1 job_dagman_splice_connect-D-1.dag
+splice Splice2 job_dagman_splice_connect-D-2.dag
+
+connect Splice1 Splice2
+

@@ -349,10 +349,12 @@ bool GetAccessToken( const string &auth_file, string &access_token,
 		string client_id;
 		string client_secret;
 		string refresh_token;
+		string access_token;
 		string key;
 		string value;
 		int nesting = 0;
 		int expires_in = 0;
+		long int expiration_timestamp = 0;
 		const char *pos;
 		if ( !readShortFile( auth_file, auth_file_contents ) ) {
 			auth_entry.m_err_msg = "Failed to read auth file";
@@ -367,10 +369,33 @@ bool GetAccessToken( const string &auth_file, string &access_token,
 				client_id = value;
 			} else if ( key == "client_secret" ) {
 				client_secret = value;
+			} else if ( key == "access_token" ) {
+				access_token = value;
+			} else if ( key == "expires_in" ) {
+				expires_in = atoi(value.c_str());
+			} else if ( key == "token_expiry") {
+				// Parse token expiry time in (UTC) format
+				// ""2016-07-27T18:44:12Z"
+				struct tm expiration_tm;
+				if ( strptime(value.c_str(), "%Y-%m-%dT%TZ", &expiration_tm ) != NULL) {
+					expiration_timestamp = timegm(&expiration_tm);
+				}
 			}
 		}
 		if ( refresh_token.empty() ) {
-			auth_entry.m_err_msg = "Failed to find refresh_token in auth file";
+			if ( expiration_timestamp > 0 ) {
+				expires_in = expiration_timestamp - time(NULL);
+			}
+			if ( access_token.empty() ) {
+				auth_entry.m_err_msg = "Failed to find refresh_token or access_token in auth file";
+				goto done;
+			}
+			if ( expires_in <= 0 ) {
+				auth_entry.m_err_msg = "Access_token is expired, please re-login.";
+				goto done;
+			}
+			auth_entry.m_access_token = access_token;
+			auth_entry.m_expiration = time(NULL) + expires_in;
 			goto done;
 		}
 		if ( client_id.empty() ) {
@@ -786,18 +811,19 @@ GceInstanceInsert::GceInstanceInsert() { }
 
 GceInstanceInsert::~GceInstanceInsert() { }
 
-// Expecting:GCE_INSTACE_INSERT <req_id> <serviceurl> <authfile> <project> <zone>
+// Expecting:GCE_INSTANCE_INSERT <req_id> <serviceurl> <authfile> <project> <zone>
 //     <instance_name> <machine_type> <image> <metadata> <metadata_file>
+//     <preemptible>
 bool GceInstanceInsert::workerFunction(char **argv, int argc, string &result_string) {
 	assert( strcasecmp( argv[0], "GCE_INSTANCE_INSERT" ) == 0 );
 
 	int requestID;
 	get_int( argv[1], & requestID );
 
-	if( ! verify_number_args( argc, 11 ) ) {
+	if( ! verify_number_args( argc, 12 ) ) {
 		result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
 		dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n",
-				 argc, 6, argv[0] );
+				 argc, 12, argv[0] );
 		return false;
 	}
 
@@ -841,6 +867,11 @@ bool GceInstanceInsert::workerFunction(char **argv, int argc, string &result_str
 	insert_request.requestBody += " \"name\": \"";
 	insert_request.requestBody += argv[6];
 	insert_request.requestBody += "\",\n";
+	insert_request.requestBody += "  \"scheduling\":\n";
+	insert_request.requestBody += "  {\n";
+	insert_request.requestBody += "    \"preemptible\": ";
+	insert_request.requestBody += argv[11];
+	insert_request.requestBody += "\n  },\n";
 	insert_request.requestBody += " \"disks\": [\n  {\n";
 	insert_request.requestBody += "   \"boot\": true,\n";
 	insert_request.requestBody += "   \"initializeParams\": {\n";

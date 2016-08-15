@@ -35,8 +35,12 @@ void parseSetDoNameMunge(bool doit);
  * @param The Dag object we'll be adding nodes to.
  * @param The name of the DAG file.
  * @param Run DAGs in directories from DAG file paths if true
+ * @param Whether to increment the DAG number (should be true for
+ *     "normal" DAG files (on the command line), false for splices
+ *     and includes)
  */
-bool parse (Dag *dag, const char * filename, bool useDagDir);
+bool parse (Dag *dag, const char * filename, bool useDagDir,
+			bool incrementDagNum = true );
 
 /**
  * Determine whether the given token is a DAGMan reserved word.

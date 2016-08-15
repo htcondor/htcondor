@@ -742,9 +742,6 @@ int Authentication::setOwner( const char *owner )
 #if defined(SKIP_AUTHENTICATION)
 	return 0;
 #else
-	if ( !this ) {
-            return 0;
-	}
 	if ( authenticator_ ) {
             authenticator_->setRemoteUser(owner);
             return 1;

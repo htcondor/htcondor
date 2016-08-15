@@ -171,7 +171,7 @@ void Defrag::config()
 		}
 	}
 
-	int update_interval = param_integer("DEFRAG_UPDATE_INTERVAL", 600);
+	int update_interval = param_integer("DEFRAG_UPDATE_INTERVAL", 300);
 	if(m_public_ad_update_interval != update_interval) {
 		m_public_ad_update_interval = update_interval;
 

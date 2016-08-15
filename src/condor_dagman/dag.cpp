@@ -131,11 +131,12 @@ Dag::Dag( /* const */ StringList &dagFiles,
 	_spliceScope		  (spliceScope),
 	_recoveryMaxfakeID	  (0),
 	_maxJobHolds		  (0),
-	_reject			  (false),
+	_reject				  (false),
 	_alwaysRunPost		  (true),
-	_defaultPriority	  (0),
+	_dagPriority		  (0),
 	_metrics			  (NULL)
 {
+	debug_printf( DEBUG_DEBUG_1, "Dag(%s)::Dag()\n", _spliceScope.Value() );
 
 	// If this dag is a splice, then it may have been specified with a DIR
 	// directive. If so, then this records what it was so we can later
@@ -215,6 +216,8 @@ Dag::Dag( /* const */ StringList &dagFiles,
 //-------------------------------------------------------------------------
 Dag::~Dag()
 {
+	debug_printf( DEBUG_DEBUG_1, "Dag(%s)::~Dag()\n", _spliceScope.Value() );
+
 	if ( _condorLogRdr.activeLogFileCount() > 0 ) {
 		(void) UnmonitorLogFile();
 	}
@@ -225,7 +228,6 @@ Dag::~Dag()
     Job *job = NULL;
     _jobs.Rewind();
     while( (job = _jobs.Next()) ) {
-      ASSERT( job != NULL );
       delete job;
       _jobs.DeleteCurrent();
     }
@@ -241,6 +243,9 @@ Dag::~Dag()
 	delete[] _statusFileName;
 
 	delete _metrics;
+
+	DeletePinList( _pinIns );
+	DeletePinList( _pinOuts );
 
     return;
 }
@@ -1391,21 +1396,15 @@ Dag::StartNode( Job *node, bool isRetry )
 		_preScriptQ->Run( node->_scriptPre );
 		return true;
     }
+
 	// no PRE script exists or is done, so add job to the queue of ready jobs
-	node->FixPriority(*this);
 	if ( isRetry && m_retryNodeFirst ) {
-		_readyQ->Prepend( node, -node->_nodePriority );
+		_readyQ->Prepend( node, -node->_effectivePriority );
 	} else {
-		if(node->_hasNodePriority){
-			Job::NodeVar *var = new Job::NodeVar();
-			var->_name = "priority";
-			var->_value = node->_nodePriority;
-			node->varsFromDag->Append( var );
-		}
 		if ( _submitDepthFirst ) {
-			_readyQ->Prepend( node, -node->_nodePriority );
+			_readyQ->Prepend( node, -node->_effectivePriority );
 		} else {
-			_readyQ->Append( node, -node->_nodePriority );
+			_readyQ->Append( node, -node->_effectivePriority );
 		}
 	}
 	return TRUE;
@@ -1546,7 +1545,7 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 						"Node %s deferred by category throttle (%s, %d)\n",
 						job->GetJobName(), catThrottle->_category->Value(),
 						catThrottle->_maxJobs );
-			deferredJobs.Prepend( job, -job->_nodePriority );
+			deferredJobs.Prepend( job, -job->_effectivePriority );
 			_catThrottleDeferredCount++;
 		} else {
 
@@ -1577,7 +1576,7 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 		debug_printf( DEBUG_DEBUG_1,
 					"Returning deferred node %s to the ready queue\n",
 					job->GetJobName() );
-		_readyQ->Prepend( job, -job->_nodePriority );
+		_readyQ->Prepend( job, -job->_effectivePriority );
 	}
 
 	return numSubmitsThisCycle;
@@ -1692,9 +1691,9 @@ Dag::PreScriptReaper( Job *job, int status )
 		job->retval = 0; // for safety on retries
 		job->SetStatus( Job::STATUS_READY );
 		if ( _submitDepthFirst ) {
-			_readyQ->Prepend( job, -job->_nodePriority );
+			_readyQ->Prepend( job, -job->_effectivePriority );
 		} else {
-			_readyQ->Append( job, -job->_nodePriority );
+			_readyQ->Append( job, -job->_effectivePriority );
 		}
 	}
 
@@ -2252,9 +2251,9 @@ Dag::WriteNodeToRescue( FILE *fp, Job *node, bool reset_retries_upon_rescue,
 			// Note: when gittrac #2167 gets merged, we need to think
 			// about how this code will interact with that code.
 			// wenger/nwp 2011-08-24
-		if ( node->_hasNodePriority ) {
+		if ( node->_explicitPriority != 0 ) {
 			fprintf( fp, "PRIORITY %s %d\n", node->GetJobName(),
-						node->_nodePriority );
+						node->_explicitPriority );
 		}
 
 			// Print the CATEGORY line, if any.
@@ -3546,7 +3545,6 @@ Dag::RemoveNode( const char *name, MyString &whynot )
 	removed = false;
 	_jobs.Rewind();
 	while( _jobs.Next( candidate ) ) {
-		ASSERT( candidate );
         if( candidate == node ) {
 			_jobs.DeleteCurrent();
 			removed = true;
@@ -3884,35 +3882,6 @@ Dag::GetEventIDHash(bool isNoop) const
 // the higher level calling them to get right...
 //---------------------------------------------------------------------------
 
-// A RAII class to swap out the priorities below, then restore them
-// when we are done.
-class priority_swapper {
-public:
-	priority_swapper(bool nodepriority, int newprio, int& oldprio);
-	~priority_swapper();
-private:
-	priority_swapper(); // Not implemented
-	bool swapped;
-	int& oldp;
-	int oldp_value;
-};
-
-priority_swapper::priority_swapper(bool nodepriority, int newprio, int& oldprio) :
-	swapped(false), oldp(oldprio), oldp_value(oldprio)
-{
-	if( nodepriority && newprio > oldprio ) {
-		swapped = true;
-		oldp = newprio;
-	}
-}
-
-priority_swapper::~priority_swapper()
-{
-	if( swapped ) {
-		oldp = oldp_value;
-	}
-}
-
 Dag::submit_result_t
 Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 {
@@ -3942,9 +3911,9 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
    	if ( !node->GetNoop() &&
 				node->GetDagFile() != NULL && _generateSubdagSubmits ) {
 		bool isRetry = node->GetRetries() > 0;
-		priority_swapper ps( node->_hasNodePriority, node->_nodePriority, _submitDagDeepOpts->priority);
 		if ( runSubmitDag( *_submitDagDeepOpts, node->GetDagFile(),
-					node->GetDirectory(), isRetry ) != 0 ) {
+					node->GetDirectory(), node->_effectivePriority,
+					isRetry ) != 0 ) {
 			++node->_submitTries;
 			debug_printf( DEBUG_QUIET,
 						"ERROR: condor_submit_dag -no_submit failed "
@@ -3984,7 +3953,8 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 
    		submit_success = condor_submit( dm, node->GetCmdFile(), condorID,
 					node->GetJobName(), parents,
-					node->varsFromDag, node->GetRetries(),
+					node->varsFromDag, node->_effectivePriority,
+					node->GetRetries(),
 					node->GetDirectory(), _defaultNodeLog,
 					node->NumChildren() > 0 && dm._claim_hold_time > 0,
 					batchName );
@@ -4094,9 +4064,9 @@ Dag::ProcessFailedSubmit( Job *node, int max_submit_attempts )
 				thisSubmitDelay == 1 ? "" : "s" );
 
 		if ( m_retrySubmitFirst ) {
-			_readyQ->Prepend(node, -node->_nodePriority);
+			_readyQ->Prepend(node, -node->_effectivePriority);
 		} else {
-			_readyQ->Append(node, -node->_nodePriority);
+			_readyQ->Append(node, -node->_effectivePriority);
 		}
 	}
 }
@@ -4144,7 +4114,7 @@ Dag::SetDirectory(char *dir)
 
 //---------------------------------------------------------------------------
 void
-Dag::PropogateDirectoryToAllNodes(void)
+Dag::PropagateDirectoryToAllNodes(void)
 {
 	Job *job = NULL;
 	MyString key;
@@ -4153,10 +4123,9 @@ Dag::PropogateDirectoryToAllNodes(void)
 		return;
 	}
 
-	// Propogate the directory setting to all nodes in the DAG.
+	// Propagate the directory setting to all nodes in the DAG.
 	_jobs.Rewind();
 	while( (job = _jobs.Next()) ) {
-		ASSERT( job != NULL );
 		job->PrefixDirectory(m_directory);
 	}
 
@@ -4165,6 +4134,213 @@ Dag::PropogateDirectoryToAllNodes(void)
 	// likely wrong.
 
 	m_directory = ".";
+}
+
+//-------------------------------------------------------------------------
+bool
+Dag::SetPinInOut( bool isPinIn, const char *nodeName, int pinNum )
+{
+	debug_printf( DEBUG_DEBUG_1, "Dag(%s)::SetPinInOut(%d, %s, %d)\n",
+				_spliceScope.Value(), isPinIn, nodeName, pinNum );
+
+	ASSERT( pinNum > 0 );
+
+	Job *node = FindNodeByName( nodeName );
+	if ( !node ) {
+		debug_printf( DEBUG_QUIET, "ERROR: node %s not found!\n", nodeName );
+		return false;
+	}
+
+	bool result = false;
+	if ( isPinIn ) {
+		result = SetPinInOut( _pinIns, node, pinNum );
+	} else {
+		result = SetPinInOut( _pinOuts, node, pinNum );
+	}
+
+	return result;
+}
+
+//---------------------------------------------------------------------------
+bool
+Dag::SetPinInOut( PinList &pinList, Job *node, int pinNum )
+{
+	--pinNum; // Pin numbers start with 1
+	if ( pinNum >= static_cast<int>( pinList.size() ) ) {
+		pinList.resize( pinNum+1, NULL );
+	}
+	PinNodes *pn = pinList[pinNum];
+	if ( !pn ) {
+		pinList[pinNum] = new PinNodes();
+		pn = pinList[pinNum];
+	}
+	pn->push_back( node );
+
+	return true;
+}
+
+//---------------------------------------------------------------------------
+const Dag::PinNodes *
+Dag::GetPinInOut( bool isPinIn, int pinNum ) const
+{
+	debug_printf( DEBUG_DEBUG_1, "Dag(%s)::GetPinInOut(%d, %d)\n",
+				_spliceScope.Value(), isPinIn, pinNum );
+
+	ASSERT( pinNum > 0 );
+
+	const PinNodes *pn;
+	if ( isPinIn ) {
+		pn = GetPinInOut( _pinIns, "in", pinNum );
+	} else {
+		pn = GetPinInOut( _pinOuts, "out", pinNum );
+	}
+
+	return pn;
+}
+
+//---------------------------------------------------------------------------
+const Dag::PinNodes *
+Dag::GetPinInOut( const PinList &pinList, const char *inOutStr,
+			int pinNum )
+{
+	--pinNum; // Pin numbers start with 1
+	if ( pinNum >= static_cast<int>( pinList.size() ) ) {
+		debug_printf( DEBUG_QUIET,
+					"ERROR: pin %s number %d specified; max is %d\n",
+					inOutStr, pinNum+1, static_cast<int>( pinList.size() ) );
+		return NULL;
+	} else {
+		return pinList[pinNum];
+	}
+}
+
+//---------------------------------------------------------------------------
+int
+Dag::GetPinCount( bool isPinIn )
+{
+	if ( isPinIn ) {
+		return _pinIns.size();
+	} else {
+		return _pinOuts.size();
+	}
+}
+
+//---------------------------------------------------------------------------
+bool
+Dag::ConnectSplices( Dag *parentSplice, Dag *childSplice )
+{
+	debug_printf( DEBUG_DEBUG_1, "Dag::ConnectSplices(%s, %s)\n",
+				parentSplice->_spliceScope.Value(),
+				childSplice->_spliceScope.Value() );
+
+	MyString parentName = parentSplice->_spliceScope;
+		// Trim trailing '+' from parentName.
+	int last = parentName.Length() - 1;
+	ASSERT( last >= 0 );
+	if ( parentName[last] == '+' ) {
+		parentName.setChar( last, '\0' );
+	}
+
+	MyString childName = childSplice->_spliceScope;
+		// Trim trailing '+' from childName.
+	last = childName.Length() - 1;
+	ASSERT( last >= 0 );
+	if ( childName[last] == '+' ) {
+		childName.setChar( last, '\0' );
+	}
+
+		// Make sure the parent and child splices have pin_ins/pin_outs
+		// as appropriate, and that the number of pin_ins and pin_outs
+		// matches.
+	int pinOutCount = parentSplice->GetPinCount( false );
+	if ( pinOutCount <= 0 ) {
+		debug_printf( DEBUG_QUIET,
+					"ERROR: parent splice %s has 0 pin_outs\n",
+					parentName.Value() );
+		return false;
+	}
+
+	int pinInCount = childSplice->GetPinCount( true );
+	if ( pinInCount <= 0 ) {
+		debug_printf( DEBUG_QUIET,
+					"ERROR: child splice %s has 0 pin_ins\n",
+					childName.Value() );
+		return false;
+	}
+
+	if ( pinOutCount != pinInCount ) {
+		debug_printf( DEBUG_QUIET,
+					"ERROR: pin_in/out mismatch:  parent splice %s has %d pin_outs; child splice %s has %d pin_ins\n",
+					parentName.Value(), pinOutCount,
+					childName.Value(), pinInCount );
+		return false;
+	}
+
+		// Go thru the pin_in/pin_out lists, and add parent/child
+		// dependencies between splices as appropriate.  (Note that
+		// we will catch any missing pin_in/pin_out numbers here.)
+	for (int pinNum = 1; pinNum <= pinOutCount; ++pinNum ) {
+		const PinNodes *parentPNs = parentSplice->GetPinInOut( false, pinNum );
+		if ( !parentPNs ) {
+			debug_printf( DEBUG_QUIET,
+						"ERROR: parent splice %s has no node for pin_out %d\n",
+						parentName.Value(), pinNum );
+			return false;
+		}
+
+		const PinNodes *childPNs = childSplice->GetPinInOut( true, pinNum );
+		if ( !childPNs ) {
+			debug_printf( DEBUG_QUIET,
+						"ERROR: child splice %s has no node for pin_in %d\n",
+						childName.Value(), pinNum );
+			return false;
+		}
+
+		for ( int parentNodeNum = 0;
+					parentNodeNum < static_cast<int>( parentPNs->size() );
+					++parentNodeNum ) {
+			Job *parentNode = parentPNs->at(parentNodeNum);
+			for ( int childNodeNum = 0;
+						childNodeNum < static_cast<int>( childPNs->size() );
+						++childNodeNum ) {
+				Job *childNode = childPNs->at(childNodeNum);
+
+				if ( !AddDependency( parentNode, childNode ) ) {
+					debug_printf( DEBUG_QUIET,
+								"ERROR: unable to add parent/child dependency for pin %d\n", pinNum );
+		
+					return false;
+				}
+			}
+		}
+	}
+
+		// Check for "orphan" nodes in the child splice -- nodes that
+		// don't have either a parent within the splice or a pin_in
+		// connection.
+	Job *childNode;
+	childSplice->_jobs.Rewind();
+	while( (childNode = childSplice->_jobs.Next()) ) {
+		if ( childNode->NumParents() < 1 ) {
+			debug_printf( DEBUG_QUIET,
+						"ERROR: child splice node %s has no parents after making pin connections; add pin_in or parent\n",
+						childNode->GetJobName() );
+			return false;
+		}
+	}
+
+	return true;
+}
+
+//---------------------------------------------------------------------------
+void
+Dag::DeletePinList( PinList &pinList )
+{
+	for ( int pinNum = 0; pinNum < static_cast<int>( pinList.size() );
+				++pinNum ) {
+		PinNodes *pn = pinList[pinNum];
+		delete pn;
+	}
 }
 
 //---------------------------------------------------------------------------
@@ -4179,7 +4355,6 @@ Dag::PrefixAllNodeNames(const MyString &prefix)
 
 	_jobs.Rewind();
 	while( (job = _jobs.Next()) ) {
-		ASSERT( job != NULL );
 		job->PrefixName(prefix);
 	}
 
@@ -4195,7 +4370,6 @@ Dag::PrefixAllNodeNames(const MyString &prefix)
 	// Then, reindex all the jobs keyed by their new name
 	_jobs.Rewind();
 	while( (job = _jobs.Next()) ) {
-		ASSERT( job != NULL );
 		key = job->GetJobName();
 		if (_nodeNameHash.insert(key, job) != 0) {
 			// I'm reinserting everything newly, so this should never happen
@@ -4324,7 +4498,7 @@ Dag::LiftSplices(SpliceLayer layer)
 	}
 
 	// and prefix them if there was a DIR for the dag.
-	PropogateDirectoryToAllNodes();
+	PropagateDirectoryToAllNodes();
 
 	// base case is above.
 	return NULL;
@@ -4466,21 +4640,14 @@ Dag::ResolveVarsInterpolations(void)
 }
 
 //---------------------------------------------------------------------------
-// Iterate over the jobs and set the default priority
-void Dag::SetDefaultPriorities()
+// Iterate over the jobs and set the effective priorities for the nodes.
+void Dag::SetNodePriorities()
 {
-	if(GetDefaultPriority() != 0) {
+	if ( GetDagPriority() != 0 ) {
 		Job* job;
 		_jobs.Rewind();
 		while( (job = _jobs.Next()) != NULL ) {
-			// If the DAG file has already assigned a priority
-			// Leave this job alone for now
-			if( !job->_hasNodePriority ) {
-				job->_hasNodePriority = true;
-				job->_nodePriority = GetDefaultPriority();
-			} else if( GetDefaultPriority() > job->_nodePriority ) {
-				job->_nodePriority = GetDefaultPriority();
-			}
+			job->_effectivePriority += GetDagPriority();
 		}
 	}
 }

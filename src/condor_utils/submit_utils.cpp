@@ -106,7 +106,7 @@ private:
 public:
 	YourCaseInsensitiveString(const char * str=NULL) : m_str(str) {}
 	YourCaseInsensitiveString(const YourCaseInsensitiveString &rhs) : m_str(rhs.m_str) {}
-	// YourCaseInsensitiveString(const YourSensitiveString &rhs) : m_str(rhs.m_str.ptr()) {}
+	// YourCaseInsensitiveString(const YourString &rhs) : m_str(rhs.m_str.ptr()) {}
 	void operator=(const char* str) { m_str = str; }
 	const char *ptr() { return m_str; }
 	bool operator ==(const char * str) {
@@ -217,7 +217,7 @@ bool is_required_request_resource(const char * name) {
 }
 
 
-char* allocate_live_default_string(MACRO_SET &set, const condor_params::string_value & Def, int cch)
+condor_params::string_value * allocate_live_default_string(MACRO_SET &set, const condor_params::string_value & Def, int cch)
 {
 	condor_params::string_value * NewDef = (condor_params::string_value*)set.apool.consume(sizeof(condor_params::string_value), sizeof(void*));
 	NewDef->flags = Def.flags;
@@ -232,7 +232,7 @@ char* allocate_live_default_string(MACRO_SET &set, const condor_params::string_v
 	}
 
 	// return the live string
-	return NewDef->psz;
+	return NewDef;
 }
 
 // setup a MACRO_DEFAULTS table for the macro set, we have to re-do this each time we clear
@@ -249,11 +249,11 @@ void SubmitHash::setup_macro_defaults()
 	SubmitMacroSet.defaults->metat = NULL;
 
 	// allocate space for the 'live' macro default string_values and for the strings themselves.
-	LiveNodeString = allocate_live_default_string(SubmitMacroSet, UnliveNodeMacroDef, 24);
-	LiveClusterString = allocate_live_default_string(SubmitMacroSet, UnliveClusterMacroDef, 24);
-	LiveProcessString = allocate_live_default_string(SubmitMacroSet, UnliveProcessMacroDef, 24);
-	LiveRowString = allocate_live_default_string(SubmitMacroSet, UnliveRowMacroDef, 24);
-	LiveStepString = allocate_live_default_string(SubmitMacroSet, UnliveStepMacroDef, 24);
+	LiveNodeString = allocate_live_default_string(SubmitMacroSet, UnliveNodeMacroDef, 24)->psz;
+	LiveClusterString = allocate_live_default_string(SubmitMacroSet, UnliveClusterMacroDef, 24)->psz;
+	LiveProcessString = allocate_live_default_string(SubmitMacroSet, UnliveProcessMacroDef, 24)->psz;
+	LiveRowString = allocate_live_default_string(SubmitMacroSet, UnliveRowMacroDef, 24)->psz;
+	LiveStepString = allocate_live_default_string(SubmitMacroSet, UnliveStepMacroDef, 24)->psz;
 }
 
 
@@ -309,9 +309,7 @@ SubmitHash::SubmitHash()
 	SubmitMacroSet.defaults = &SubmitMacroDefaultSet;
 #endif
 
-	memset(&mctx, 0, sizeof(mctx));
-	mctx.subsys = "SUBMIT";
-	mctx.use_mask = 3;
+	mctx.init("SUBMIT", 3);
 }
 
 
@@ -3534,6 +3532,15 @@ int SubmitHash::SetGridParams()
 				full_path(tmp) );
 		free( tmp );
 		InsertJobExpr( buffer.Value() );
+	}
+
+	// GcePreemptible is not a necessary parameter
+	bool exists = false;
+	bool bool_val = submit_param_bool( SUBMIT_KEY_GcePreemptible, ATTR_GCE_PREEMPTIBLE, false, &exists );
+	if( exists ) {
+		buffer.formatstr( "%s = %s", ATTR_GCE_PREEMPTIBLE, bool_val ? "True" : "False" );
+		InsertJobExpr( buffer.Value() );
+		free( tmp );
 	}
 
 
@@ -7642,8 +7649,9 @@ int SubmitHash::load_q_foreach_items (
 int SubmitHash::parse_file(FILE* fp, MACRO_SOURCE & source, std::string & errmsg, FNSUBMITPARSE parse_q /*=NULL*/, void* parse_pv /*=NULL*/)
 {
 	MACRO_EVAL_CONTEXT ctx = mctx; ctx.use_mask = 2;
+	MacroStreamYourFile ms(fp, source);
 
-	return Parse_macros(fp, source,
+	return Parse_macros(ms,
 		0, SubmitMacroSet, READ_MACROS_SUBMIT_SYNTAX,
 		&ctx, errmsg, parse_q, parse_pv);
 }
@@ -7679,8 +7687,9 @@ int SubmitHash::parse_file_up_to_q_line(FILE* fp, MACRO_SOURCE & source, std::st
 	*qline = NULL;
 
 	MACRO_EVAL_CONTEXT ctx = mctx; ctx.use_mask = 2;
+	MacroStreamYourFile ms(fp, source);
 
-	int err = Parse_macros(fp, source,
+	int err = Parse_macros(ms,
 		0, SubmitMacroSet, READ_MACROS_SUBMIT_SYNTAX,
 		&ctx, errmsg, parse_q_callback, &args);
 	if (err < 0)

@@ -1,0 +1,3 @@
+splice Splice2A job_dagman_splice_connect-G-2lowerA.dag
+splice Splice2B job_dagman_splice_connect-G-2lowerB.dag
+connect Splice2A Splice2B

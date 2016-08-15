@@ -90,6 +90,8 @@ sub dry_run {
 		$Attr{$i}{ImageSize_RAW} = $Attr{$i}{ImageSize};
 		$Attr{$i}{ImageSize} = cal_from_raw($Attr{$i}{ImageSize_RAW});
 		$Attr{$i}{JobBatchName} = "\"CMD: $executable\"";
+		$Attr{$i}{CumulativeSlotTime} = ($Attr{$i}{EnteredCurrentStatus} - $Attr{$i}{QDate})."\."."0";
+		$Attr{$i}{RemoteWallClockTime} = $Attr{$i}{CumulativeSlotTime};
 	}
 	return %Attr;
 }
@@ -110,7 +112,6 @@ sub add_status_ads{
 			$Attr{$i}{BytesRecvd} = "0.0";
 			$Attr{$i}{BytesSent} = "0.0";
 			$Attr{$i}{CondorVersion} = "\"\$CondorVerison: 8.5.6 Jun 13 2016 BuildID: UW_development PRE-RELEASE-UWCS \$\"";
-			$Attr{$i}{CumulativeSlotTime} = ($Attr{$i}{EnteredCurrentStatus} - $Attr{$i}{QDate})."\."."0";
 			$Attr{$i}{DiskUsage_RAW} = 50;
 			$Attr{$i}{DiskUsage} = cal_from_raw($Attr{$i}{DiskUsage_RAW});
 			$Attr{$i}{ExecutableSize_RAW} = 50;
@@ -136,7 +137,6 @@ sub add_status_ads{
 			$Attr{$i}{OrigMaxHosts} = 1;
 			$Attr{$i}{ResidentSetSize_RAW} = 488;
 			$Attr{$i}{ResidentSetSize} = cal_from_raw($Attr{$i}{ResidentSetSize_RAW});
-			$Attr{$i}{RemoteWallClockTime} = $Attr{$i}{CumulativeSlotTime};
 			$Attr{$i}{StartdPrincipal} = "\""."execute-side\@matchsession/127.0.0.1"."\"";
 
 			if ($Attr{$i}{HoldReasonCode}==15){
@@ -161,9 +161,9 @@ sub add_status_ads{
 
 			my $ran_num_7 = int(rand(9999999));
 			my $ran_num_5 = int(rand(99999));
-			$Attr{$i}{AutoClusterAttrs} = "\""."JobUniverse,LastCheckpointPlatform,NumCkpts,MachineLastMatchTime,ConcurrencyLimits,NiceUser,Rank,Requirements,DiskUsage,FileSystemDomain,ImageSize,RequestDisk,RequestMemory"."\"";
+			$Attr{$i}{AutoClusterAttrs} = "\""."JobUniverse,LastCheckpointPlatform,NumCkpts,MachineLastMatchTime,ConcurrencyLimits,NiceUser,Rank,Requirements,DiskUsage,FileSystemDomain,ImageSize,MemoryUsage,RequestDisk,RequestMemory,ResidentSetSize"."\"";
 			$Attr{$i}{AutoClusterId} = 1;
-			$Attr{$i}{CurrentHosts} = 1;
+			$Attr{$i}{CurrentHosts} = 0;
 			$Attr{$i}{DiskUsage} = 2500000;
 			$Attr{$i}{JobCurrentStartDate} = $Attr{$i}{QDate};
 			$Attr{$i}{JobStartDate} = $Attr{$i}{QDate};
@@ -425,10 +425,9 @@ sub multi_owners{
 	return %Attr;
 }
 
-sub create_table {
+sub write_ads {
 	my %Attr = %{$_[0]};
 	my $testname = $_[1];
-	my $command_arg = $_[2];
 	# write the result of print hash to
 	my $fname = "$testname.simulated.ads";
 	open(FH, ">$fname") || print "ERROR writing to file $fname";
@@ -439,9 +438,36 @@ sub create_table {
 		print FH "\n";
 	}
 	close(FH);
-	my @table = `condor_q -job $fname $command_arg`;
+	return $fname;
+}
 
-# read everything before -- and store them to $other
+sub create_table {
+	my %Attr = %{$_[0]};
+	my $testname = $_[1];
+	my $command_arg = $_[2];
+	my $format_file;
+	my @table;
+	if (defined $_[3]){
+		$format_file = $_[3];
+	}
+	# write the result of print hash to
+	my $fname = "$testname.simulated.ads";
+	open(FH, ">$fname") || print "ERROR writing to file $fname";
+	foreach my $k1 (sort keys %Attr){
+		foreach my $k2 (keys %{ $Attr{$k1}}) {
+			print FH $k2," = ", $Attr{$k1}{$k2}, "\n";
+		}
+		print FH "\n";
+	}
+	close(FH);
+
+	if ($command_arg eq "-pr"){
+		@table = `condor_q -job $fname $command_arg $format_file`;
+	} else {
+		@table = `condor_q -job $fname $command_arg`;
+	}
+
+	# read everything before -- and store them to $other
 	my %other;
 	my $cnt = 0;
 	until ($cnt == scalar @table || $table[$cnt] =~ /--/){
@@ -450,7 +476,7 @@ sub create_table {
 	}
 	my $head_pos = $cnt+1;
 
-# read everything before the blank line and store them to $data
+	# read everything before the blank line and store them to $data
 	$cnt = 0;
 	my %data;
 	while(defined $table[$head_pos+$cnt] && $table[$head_pos+$cnt]=~ /\S/){
@@ -458,11 +484,11 @@ sub create_table {
 		$cnt++;
 	}
 
-# read another line of summary
+	# read another line of summary
 	my $arg = $table[(scalar @table)-1];
 	my @summary = split / /, $arg;
-	return (\%other,\%data,\@summary);
-}	
+	return (\%other,\%data,\@summary);	
+}		
 
 # function to find the blank column numbers from a hash
 # input: a hash
@@ -602,7 +628,7 @@ sub trim{
 # stored in %cnt_num
 sub count_job_states {
 
-	defined $_[0] || die "USAGE of count_job_states: count_job_states(<LIST_OF_JOB_ADS>)\n";
+	defined $_[0] || print "USAGE of count_job_states: count_job_states(<LIST_OF_JOB_ADS>)\n";
 	my %Attr = %{$_[0]};
 	my $idle_cnt = 0;
 	my $run_cnt = 0;
@@ -1048,12 +1074,12 @@ if ($command_arg =~ /-dag/ && !($command_arg =~ /-nobatch/)){
 # check if summary statement is correct
 # input: command line arg, summary line from condor_q and result of count_job_states() 
 sub check_summary {
-	defined $_[2] || die "USAGE of check_summary: check_summary(<COMMAND_ARG>,\\<SUMMARY>,\\<NUMS_OF_JOBS>)\n"; 
+	defined $_[2] || print "USAGE of check_summary: check_summary(<COMMAND_ARG>,\\<SUMMARY>,\\<NUMS_OF_JOBS>)\n"; 
 	my $command_arg = $_[0];
 	my @summary = @{$_[1]};
 	my %num_of_jobs = %{$_[2]};
 	my $real_heading = find_real_heading($command_arg); 
-	my %have_summary_line = ('-nobatch'=>1,'-batch'=>0,'-run'=>0,'-hold'=>1,'-grid'=>0,'-globus'=>0,'-io'=>0,'-tot'=>1,'-totals'=>1,'-dag'=>1);
+	my %have_summary_line = ('have_sum'=>1,'-nobatch'=>1,'-batch'=>0,'-run'=>0,'-hold'=>1,'-grid'=>0,'-globus'=>0,'-io'=>0,'-tot'=>1,'-totals'=>1,'-dag'=>1);
 	if ($have_summary_line{$real_heading} ){
 		TLOG("Checking summary statement.\n");
 		if ($summary[0]!= $num_of_jobs{0} || $summary[2]!=$num_of_jobs{4} || $summary[4]!=$num_of_jobs{3} || $summary[6]!=$num_of_jobs{1} || $summary[8]!=$num_of_jobs{2} || $summary[10]!= $num_of_jobs{5} || $summary[12]!=$num_of_jobs{6}){
@@ -1089,48 +1115,430 @@ sub check_af{
 	for my $i (0..(scalar @table) -1){
 		$data{$i} = $table[$i];
 	}
+if (!(defined $Attr{$sel0})){ $Attr{$sel0} = "undefined"; }
+if (!(defined $Attr{$sel1})){ $Attr{$sel1} = "undefined"; }
+if (!(defined $Attr{$sel2})){ $Attr{$sel2} = "undefined"; }
+if (!(defined $Attr{$sel3})){ $Attr{$sel3} = "undefined"; }
 
 my %af_rules = (
 	':,' => sub{
 		my @words = split(", ",$table[0]);
-		return $words[0] eq unquote($Attr{$sel0}) && $words[1] eq unquote($Attr{$sel1}) && $words[2] eq unquote($Attr{$sel2}) && $words[3] eq unquote($Attr{$sel3})."\n";
+		if ($words[0] eq unquote($Attr{$sel0}) && $words[1] eq unquote($Attr{$sel1}) && $words[2] eq unquote($Attr{$sel2}) && $words[3] eq unquote($Attr{$sel3})."\n") {
+			return 1;
+		} else {
+			print "        ERROR: Incorrect output\n        $words[0]--". unquote($Attr{$sel0})."\n        $words[1]--".unquote($Attr{$sel1})."\n        $words[2]--".unquote($Attr{$sel2})."\n        $words[3]--".unquote($Attr{$sel3})."\n";
+			return 0;
+		}
 	},
 	':h' => sub{
-		my @fields = split_fields(\%data);
 		if ($data{0} =~ /$sel0\s+$sel1\s+$sel2\s+$sel3/){
-			return ($fields[0][1] eq unquote($Attr{$sel0}) && $fields[1][1] eq unquote($Attr{$sel1}) && $fields[2][1] eq unquote($Attr{$sel2}) && $fields[3][1] eq unquote($Attr{$sel3}));
+			my @head = split("",$data{0});
+			my @chars = split("",$data{1});
+			my %blank_col;
+			my @edges;
+			my @fields;
+			for my $h (0..scalar @head-1){
+				if ($head[$h] =~/\s/){
+					$blank_col{$h} = $h;
+				}
+			}
+			my @sorted_keys = sort {$a <=> $b} keys %blank_col;
+			my $index = 1;
+			$edges[0] = 0;
+			for my $k (0..scalar @sorted_keys-2){
+				if ($sorted_keys[$k+1]-$sorted_keys[$k]!= 1){
+					$edges[$index] = $sorted_keys[$k]+1;
+					$index++;
+				}
+			}
+			for my $i (0..(scalar @edges) -2){
+				$fields[$i] = trim(join("",@chars[$edges[$i]..($edges[$i+1]-1)]));
+			}
+			$fields[scalar @edges -1] = trim(join("",@chars[$edges[scalar @edges-1]..(scalar @chars -1)]));
+			if ($fields[0] eq unquote($Attr{$sel0}) && $fields[1] eq unquote($Attr{$sel1}) && $fields[2] eq unquote($Attr{$sel2}) && $fields[3] eq unquote($Attr{$sel3})){
+				return 1
+			} else {
+				print "        ERROR: Incorrect output\n        $fields[0]--".unquote($Attr{$sel0})."\n        $fields[1]--".unquote($Attr{$sel1})."\n        $fields[2]--".unquote($Attr{$sel2})."\n        $fields[3]--".unquote($Attr{$sel3})."\n";
+				return 0;
+			}
 		} else {
+			print "        ERROR: The heading is not correct\n";
 			return 0;
 		}
 	},
 	':ln' => sub{
-		return (trim($table[0]) eq "$sel0 = ".unquote($Attr{$sel0}) && trim($table[1]) eq "$sel1 = ".unquote($Attr{$sel1}) && trim($table[2]) eq "$sel2 = ".unquote($Attr{$sel2}) && trim($table[3]) eq "$sel3 = ".unquote($Attr{$sel3}));
+		if (trim($table[0]) eq trim("$sel0 = ".unquote($Attr{$sel0})) && trim($table[1]) eq trim("$sel1 = ".unquote($Attr{$sel1})) && trim($table[2]) eq trim("$sel2 = ".unquote($Attr{$sel2})) && trim($table[3]) eq trim("$sel3 = ".unquote($Attr{$sel3}))){
+		return 1;
+		} else {
+			print trim($table[0]),"\n",trim("$sel0 = ".unquote($Attr{$sel0})),"\n",trim($table[1]),"\n", trim("$sel1 = ".unquote($Attr{$sel1})),"\n",trim($table[2]),"\n",trim("$sel2 = ".unquote($Attr{$sel2})),"\n",trim($table[3]),"\n",trim("$sel3 = ".unquote($Attr{$sel3})),"\n";
+			return 0;
+		}
 	},
 	':lrng' => sub {
-		return ($table[0] eq "\n" && $table[1] eq "$sel0 = $Attr{$sel0}\n" && $table[2] eq "$sel1 = $Attr{$sel1}\n" && $table[3] eq "$sel2 = $Attr{$sel2}\n" && $table[4] eq "$sel3 = $Attr{$sel3}\n");
-	}	
+		if ($table[0] eq "\n" && $table[1] eq "$sel0 = $Attr{$sel0}\n" && $table[2] eq "$sel1 = $Attr{$sel1}\n" && $table[3] eq "$sel2 = $Attr{$sel2}\n" && $table[4] eq "$sel3 = $Attr{$sel3}\n") { return 1;} else {
+			print $table[0],"\n","\n",$table[1],"\n","$sel0 = $Attr{$sel0}\n", $table[2],"\n","$sel1 = $Attr{$sel1}\n",$table[3],"\n","$sel2 = $Attr{$sel2}\n",$table[4],"\n","$sel3 = $Attr{$sel3}\n";
+		}	
+	},
+	':j' => sub {
+		if ($table[0] eq $Attr{ClusterId}.".".$Attr{ProcId}." ".unquote($Attr{$sel0})." ".unquote($Attr{$sel1})." ".unquote($Attr{$sel2})." ".unquote($Attr{$sel3})."\n"){
+			return 1;
+		} else {
+			print $table[0],"\n",$Attr{ClusterId}.".".$Attr{ProcId}." ".unquote($Attr{$sel0})." ".unquote($Attr{$sel1})." ".unquote($Attr{$sel2})." ".unquote($Attr{$sel3})."\n"
+		}
+	},
+	':t' => sub {
+		if  (trim($table[0]) eq trim(unquote($Attr{$sel0})."\t".unquote($Attr{$sel1})."\t".unquote($Attr{$sel2})."\t".unquote($Attr{$sel3}))){
+			return 1;
+		} else {	
+			print trim($table[0]),"\n", trim(unquote($Attr{$sel0})."\t".unquote($Attr{$sel1})."\t".unquote($Attr{$sel2})."\t".unquote($Attr{$sel3}));
+		}
+	}
 );
 	TLOG("Checking condor_q -af$option\n");
 	if (defined $af_rules{$option}){
-		if ($af_rules{$option}()){
-			return 1;
-		}
-		else {
-			return 0;
-		}
+		return $af_rules{$option}();
 	} elsif (!defined $af_rules{$option}){
-print $table[0];
 		return $table[0] eq unquote($Attr{$sel0})." ".unquote($Attr{$sel1})." ".unquote($Attr{$sel2})." ".unquote($Attr{$sel3})."\n";
 	} else {
 		return 0;
 	}
 }
 
+sub check_type {
+	my %Attr = %{$_[0]};
+	my $option = $_[1];
+	my @table = @{$_[2]};
+	my $sel0 = $_[3];
+	my %format_rules;
+	my $regex = qr/^\s%\.([0-9])f$/;
+	%format_rules = (
+' %v' => sub{
+	if (defined $Attr{$sel0}){
+		if ($table[0] eq unquote($Attr{$sel0})){
+			return 1;
+		} else {
+			print $table[0],"\n",unquote($Attr{$sel0}),"\n";
+			return 0;
+		}
+	} else {
+		if ($table[0] eq "undefined"){
+			return 1;
+		} else {
+			print "Output is $table[0] where it should be undefined\n";
+			return 0;
+		}
+	}},
+' %V' => sub{
+	if (defined $Attr{$sel0}){	
+		if ($table[0] eq $Attr{$sel0}){
+			return 1;
+		} else {
+			print $table[0],"\n",$Attr{$sel0},"\n";
+			return 0;
+		}
+	} else {
+		if ($table[0] eq "undefined"){
+			return 1;
+		} else {
+			print "Output is $table[0] where it should be \"undefined\"\n";
+			return 0;
+		}
+	}},
+' %d' => sub{
+	if (defined $Attr{$sel0}){
+		if (defined $table[0] && unquote($Attr{$sel0}) =~ /^[0-9]+$/){
+			if ($table[0] eq unquote($Attr{$sel0})){return 1;}
+			else {print $table[0],"\n";return 0;}
+		} elsif (defined $table[0] && unquote($Attr{$sel0}) =~ /^([0-9]+)\.[0-9]+$/){
+			if ($table[0] eq $1){return 1;}
+			else {print $table[0],"\n";return 0;}
+		} elsif (defined $table[0] && unquote($Attr{$sel0}) eq "true"){
+			if ($table[0] eq 1){return 1;}
+			else {print $table[0],"\n";return 0;}
+		} elsif (defined $table[0] && unquote($Attr{$sel0}) eq "false"){
+			if ($table[0] eq 0) {return 1;}
+			else {print $table[0],"\n";return 0;}
+		} else {
+			if (!(defined $table[0])){return 1;}
+			else {print"Output is $table[0]. Should not have any output\n";return 0;}
+		}
+	} else { return !(defined $table[0]); }
+	},
+' %f' => sub{
+	if (defined $Attr{$sel0}){
+		if (defined $table[0] && unquote($Attr{$sel0}) =~ /^[0-9]+\.([0-9])+$/){
+			my $len = length($1);
+			if ($len<6){
+				if ($table[0] eq unquote($Attr{$sel0})."0"x(6-$len)){return 1;}
+				else {print $table[0],"\n";return 0;}
+			} elsif ($len > 6){
+				if ($table[0] eq substr(unquote($Attr{$sel0}),0,length(unquote($Attr{$sel0}))-$len + 6)){return 1;}
+				else {print $table[0],"\n";return 0;}
+			} else {
+				if ($table[0] eq unquote($Attr{$sel0})){return 1;}
+				else {print $table[0],"\n";return 0;}
+			}
+		} elsif (defined $table[0] && unquote($Attr{$sel0}) =~ /^[0-9]+$/){
+			if ($table[0] eq unquote($Attr{$sel0})."."."0"x6){return 1;}
+			else {print $table[0],"\n";return 0;}
+		} elsif (defined $table[0] && unquote($Attr{$sel0}) eq "true"){
+			if ($table[0] eq "1.000000"){return 1;}
+			else {print $table[0],"\n";return 0;}
+		} elsif (defined $table[0] && unquote($Attr{$sel0}) eq "false"){
+			if ($table[0] eq "0.000000"){return 1;}
+			else {print $table[0],"\n";return 0;}
+		} else {
+			if (!(defined $table[0])){return 1;}
+			else {print $table[0]," Should not have any output\n";return 0;}
+		}
+	} else {
+		if (!(defined $table[0])){return 1;}
+		else {print $table[0]," Should not have any output\n";return 0;}
+ 	}
+	},
+' %.2f' => sub {
+	if (defined $Attr{$sel0}){
+		if (defined $table[0] && unquote($Attr{$sel0}) =~ /^[0-9]+\.([0-9])+$/){
+			my $len = length($1);
+			if ($len<2){
+				if ($table[0] eq unquote($Attr{$sel0})."0"x(2-$len)){return 1;}
+				else {print $table[0],"\n";return 0;}
+			} elsif ($len > 2){
+				if ($table[0] eq substr(unquote($Attr{$sel0}),0,length(unquote($Attr{$sel0}))-$len + 2)){return 1;}
+				else {print $table[0],"\n";return 0;}
+			} else {
+				if ($table[0] eq unquote($Attr{$sel0})){return 1;}
+				else {print $table[0],"\n";return 0;}
+			}
+		} elsif (defined $table[0] && unquote($Attr{$sel0}) =~ /^[0-9]+$/){
+			if ($table[0] eq unquote($Attr{$sel0})."."."0"x2){return 1;}
+			else {print $table[0],"\n";return 0;}
+		} elsif (defined $table[0] && unquote($Attr{$sel0}) eq "true"){
+			if ($table[0] eq "1.00"){return 1;}
+			else {print $table[0],"\n";return 0;}
+		} elsif (defined $table[0] && unquote($Attr{$sel0}) eq "false"){
+			if ($table[0] eq "0.00"){return 1;}
+			else {print $table[0],"\n";return 0;}
+		} else {
+			if (!(defined $table[0])){return 1;}
+			else {print $table[0],"\n";return 0;}
+		}
+	} else {
+		if (!(defined $table[0])){return 1;}
+		else {print $table[0]," Should not have any output\n";return 0;}
+	}
+},
+' %s' => sub{
+	if (defined $Attr{$sel0}){
+		if ($table[0] eq unquote($Attr{$sel0})){return 1;}
+		else {print $table[0],"\n";return 0;}
+	} else {
+		if (!(defined $table[0])){return 1;}
+		else {print $table[0]," Should not have any output\n";return 0;}	
+	}}
+	);
+	TLOG("Checking condor_q -format$option\n");
+	if (defined $option && defined $format_rules{$option}){
+		return $format_rules{$option}();
+	} else {
+		print "Needs to have a format option and a class ad\n";
+		return 0;
+	}
+}
+
+sub check_pr {
+	my %data = %{$_[0]};
+	my $option = $_[1];
+	my %Attr;
+	if (defined $_[2]){
+		%Attr = %{$_[2]};
+	}
+	TLOG("Checking the print format\n");
+	if ($option eq 'normal'){
+		if (!($data{0} =~ /ID\s+OWNER\s+SUBMITTED\s+RUN_TIME\s+ST\s+PRI\s+SIZE\s+CMD/) || length($data{0}) > 80){ 
+			print "        FAILED: heading is not correct\n";
+			return 0;
+		} else {
+			return 1;
+		}
+	}
+	if ($option eq 'random'){
+		if (length($data{0}) > 89){
+			print "        FAILED: length is not correct\n";
+			return 0;
+		} else {
+			return 1;
+		}
+	}
+	if ($option eq 'short'){
+		my @fields = split_fields(\%data);
+		for my $i (1..8){
+			if (length($fields[0][$i]) > 5 || length($fields[1][$i]) > 2 || length($fields[2][$i]) > 4 || length($fields[3][$i]) > 3){
+				print "        FAILED: length is not correct\n";
+				return 0;
+			}
+		}
+		return 1;
+	}
+	if ($option eq 'where2'){
+		my @fields = split_fields(\%data);
+		for my $i (1..4){
+			if ($fields[4][$i] ne 'H'){
+				print "        FAILED: selected incorrect jobs\n";
+				return 0;
+			}
+		}
+		return 1;
+	}
+	if ($option eq 'printf'){
+		if (length($data{0}) ne 16){
+			print "        FAILED: length is not correct\n";
+			return 0;
+		} else {
+			for my $i (1..8){
+				if ($data{$i} ne " $Attr{$i-1}{ClusterId}  $Attr{$i-1}{NumJobStarts}    $Attr{$i-1}{ProcId}\.00\n"){ 
+					print "        FAILED: Output is:  $data{$i}\n        Should be:          $Attr{$i-1}{ClusterId}  $Attr{$i-1}{NumJobStarts}    $Attr{$i-1}{ProcId}\.00\n";
+					return 0;
+				}
+			}
+			return 1;	
+		}
+	}
+	if ($option eq 'ifthenelse'){
+		for my $i (1..8){
+			my $string = substr($Attr{$i-1}{Owner}, 1, length($Attr{$i-1}{Owner})-2);
+			unless ($data{$i} =~ /0.0\s+$string/){
+				print "        FAILED: Output is: $data{$i}\n";
+				return 0;
+			}
+		}
+		return 1;
+	}
+}
+
+sub check_transform {
+	my $out_file = $_[0];
+	my $option = $_[1];
+	my %Attr;
+	my $index = 0;
+	my $result = 0;
+	open (my $HANDLER, $out_file) or die "ERROR OPENING THE FILE $out_file";
+	while (<$HANDLER>){
+		if ($_ =~ /\S/){
+			$_ =~ /^([A-Za-z0-9_]+)\s*=\s*(.*)$/;
+	               	my $key = $1;
+	                my $value = $2;
+               		$Attr{$index}{$key} = $value;
+        	} else {                
+                	$index++;
+        	}
+	}
+	TLOG("checking $option\n");	
+	if ($index<1){
+		print "ERROR, output nothing. Might be a seg fault\n";
+		return 0;
+	} else {
+	if ($option eq 'general'){
+		for my $i (0..$index-1){
+			if ($Attr{$i}{ClusterId} ne 200 || $Attr{$i}{Fooo} ne "\"test\"" || $Attr{$i}{TransferIn} ne $Attr{$i}{OnExitRemove} || defined $Attr{$i}{TransferInputSizeMB} || defined $Attr{$i}{TransferErr} || !(defined $Attr{$i}{Err})){
+				return 0;
+			}
+		}
+		return 1;
+	}
+	if ($option eq 'EVAL'){
+		for my $i (0..$index-1){
+			my $temp = $Attr{$i}{DiskUsage}*2;
+			if ($Attr{$i}{MemoryUsage} ne 5 || $Attr{$i}{RequestDisk} ne "( $temp / 1024 )"){
+				print "MemoryUsage is $Attr{$i}{MemoryUsage}. should be 5\n";
+				print "RequestDisk is $Attr{$i}{RequestDisk}. should be ( $temp / 1024 )";
+				return 0;
+			}
+		}
+		return 1;
+	}
+	if ($option eq "transform_num"){
+		return scalar keys %Attr eq 40;
+	}
+	if ($option eq 'regex'){
+		for my $i (0..$index-1){
+			if ($Attr{$i}{TotalSuspensions} ne $Attr{$i}{MaxHosts} || defined $Attr{$i}{LocalUser} || defined $Attr{$i}{NiceUser} || defined $Attr{$i}{RemoteUser} || defined $Attr{$i}{PeriodicHold} || defined $Attr{$i}{PeriodicRelease} || defined $Attr{$i}{PeriodicRemove}){
+				return 0;
+			} elsif (defined $Attr{$i}{User} && defined $Attr{$i}{TestLocalUser} && defined $Attr{$i}{TestNiceUser} && defined $Attr{$i}{TestRemoteUser} && defined $Attr{$i}{TimeHold} && defined $Attr{$i}{TimeRelease} && defined $Attr{$i}{TimeRemove}){
+				return 1;
+			} else {return 0;}
+		}
+	}
+	if ($option eq 'transform_in1'){
+		for my $i (0..$index-1){
+			if ((($i % 3) == 0 && $Attr{$i}{ARG1} ne '2.0') || (($i % 3) ==1 && $Attr{$i}{ARG1} ne 100) || (($i % 3) ==2 && $Attr{$i}{ARG1} ne "\"test\"")){
+				if ($i%3 == 0){
+					print "Index is $i, output is $Attr{$i}{ARG1}, should be 2.0\n";
+				}
+				if ($i%3 == 1){
+					print "Index is $i, output is $Attr{$i}{ARG1}, should be 100\n";
+				}
+				if ($i%3 == 2){
+					print "Index is $i, output is $Attr{$i}{ARG1}, should be \"test\"\n";
+				}
+				return 0;
+			}
+		}
+		return 1;
+	}
+	if ($option eq 'transform_in2'){
+		for my $i (0..$index-1){
+			if ((($i % 6 == 0 || $i%6==1) && ($Attr{$i}{ARG1} ne '2.0')) || (($i % 6==2||$i%6==3) && ($Attr{$i}{ARG1} ne 100)) || (($i %6==4 || $i %6==5) && ($Attr{$i}{ARG1} ne "\"test\""))){
+				if ($i%6 == 0 || $i%6==1){
+					print "Index is $i, output is $Attr{$i}{ARG1}, should be 2.0\n";
+				}
+				if ($i%6 == 2 || $i%6 == 3){
+					print "Index is $i, output is $Attr{$i}{ARG1}, should be 100\n";
+				}
+				if ($i%6 == 4 || $i%6==5){
+					print "Index is $i, output is $Attr{$i}{ARG1}, should be \"test\"\n";
+				}
+				return 0;
+			}
+		}
+		return 1;
+	}
+	if ($option eq 'transform_from1'|| $option eq 'transform_from2'){
+		for my $i (0..$index-1){
+			if ((($i % 2) ==0 && $Attr{$i}{SIZE_IMAGE} ne 1000) || (($i % 2) ==0 && $Attr{$i}{SIZE_DISK} ne '120.0') || (($i % 2) ==1 && $Attr{$i}{SIZE_IMAGE} ne 2000) || (($i % 2) ==1 && $Attr{$i}{SIZE_DISK} ne '128.0')){
+				if ($i%2 == 0){
+					print "Index is $i, SIZE_IMAGE is $Attr{$i}{SIZE_IMAGE}, should be 1000; SIZE_DISK is $Attr{$i}{SIZE_IMAGE}, should be 120.0\n";
+				}
+				if ($i%2 == 1){
+					print "Index is $i, SIZE_IMAGE is $Attr{$i}{SIZE_IMAGE}, should be 2000; SIZE_DISK is $Attr{$i}{SIZE_IMAGE}, should be 128.0\n";
+				}
+				return 0;
+			}
+		}
+		return 1;
+	}
+	if ($option eq 'transform_from3'){
+		for my $i (0..$index-1){
+			if ((($i % 4 ==0 || $i%4==1) && ($Attr{$i}{SIZE_IMAGE} ne 1000)) || (($i % 4 ==0 || $i%4==1) && ($Attr{$i}{SIZE_DISK} ne '120.0')) || (($i % 4 ==2 || $i%4==3) && ($Attr{$i}{SIZE_IMAGE} ne 2000)) || (($i % 4 ==2 || $i%4==3) && ($Attr{$i}{SIZE_DISK} ne '128.0'))){
+				if ($i%4 == 0 || $i%4==1){
+					print "Index is $i, SIZE_IMAGE is $Attr{$i}{SIZE_IMAGE}, should be 1000; SIZE_DISK is $Attr{$i}{SIZE_IMAGE}, should be 120.0\n";
+				}
+				if ($i%4 == 2 || $i%4==3){
+					print "Index is $i, SIZE_IMAGE is $Attr{$i}{SIZE_IMAGE}, should be 2000; SIZE_DISK is $Attr{$i}{SIZE_IMAGE}, should be 128.0\n";
+				}
+				return 0;
+			}
+		}
+		return 1;
+	}
+}	
+}
+
 sub write_ads_to_file {
 	my $testname = $_[0];
 	my %Attr = %{$_[1]};
 	my $fname = "$testname.simulated.ads";
-	open(FH, ">$fname") || print "ERROR writing to file $fname";
+	open(FH, ">$fname") || print "FAILED writing to file $fname";
 	foreach my $k1 (sort keys %Attr){
 		print FH $k1," = ", $Attr{$k1}, "\n";
 	}
@@ -1140,7 +1548,7 @@ sub write_ads_to_file {
 
 sub emit_dag_files {
         my ($testname,$submit_content,$pid) = @_;                                                      
-        defined $pid || die "USAGE of emit_dag_files: emit_dag_files(<TESTNAME>,<SUBMIT_CONTENT>,<PROCESSID>)\n";
+        defined $pid || print "USAGE of emit_dag_files: emit_dag_files(<TESTNAME>,<SUBMIT_CONTENT>,<PROCESSID>)\n";
 	my $dag_content = "JOBSTATE_LOG $testname.jobstate.log                                    
                 Job A_A ${testname}_A.cmd
                 SCRIPT PRE A_A ${testname}_A_pre.sh                                               

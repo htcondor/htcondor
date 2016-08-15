@@ -38,7 +38,7 @@ extern int add_user_mapping(const char * mapname, char * mapdata);
 
 extern const MACRO_SOURCE DefaultMacro;
 
-class YourSensitiveString ystr; // most recent lookup
+class YourString ystr; // most recent lookup
 auto_free_ptr gstr;    // holds a pointer from the most recent lookup that should be freed
 MyString gmstr;   // holds a formatted string that results from dumping a macro set
 
@@ -46,15 +46,15 @@ bool dash_verbose = false;
 int fail_count;
 
 template <class c>
-bool within(YourSensitiveString ys, c lb, c hb) { return false; }
+bool within(YourString ys, c lb, c hb) { return false; }
 
-template <> bool within(YourSensitiveString ys, int lb, int hb) {
+template <> bool within(YourString ys, int lb, int hb) {
 	int v = atoi(ys.Value());
 	//fprintf(stderr, "within '%s' -> %d\n", ys.Value(), v);
 	return v >= lb && v <= hb;
 }
 
-template <> bool within(YourSensitiveString ys, const char* lb, const char* hb) {
+template <> bool within(YourString ys, const char* lb, const char* hb) {
 	return strcmp(ys.Value(),lb) >= 0 && strcmp(ys.Value(),hb) <= 0;
 }
 
@@ -73,36 +73,36 @@ static MACRO_SET TestingMacroSet = {
 	CONFIG_OPT_WANT_META,
 	0, NULL, NULL, ALLOCATION_POOL(), std::vector<const char*>(), &TestingMacroDefaults, NULL };
 
-MACRO_EVAL_CONTEXT def_ctx = { NULL, "TOOL", "/home/testing", false, 2 };
+MACRO_EVAL_CONTEXT def_ctx = { NULL, "TOOL", "/home/testing", false, 2, 0, 0 };
 MACRO_SOURCE TestMacroSource = { false, false, 0, 0, -1, -2 };
 MACRO_SOURCE FileMacroSource = { false, false, 0, 0, -1, -2 };
 
 // helper functions for use within the REQUIRE macro
 // these call various MACRO_SET functions that we wish to test
-// and return a YourSensitiveString so that the result can be easily
+// and return a YourString so that the result can be easily
 // compared to a string literal.
 
 //
-YourSensitiveString & lookup(const char * name) {
+YourString & lookup(const char * name) {
 	ystr = lookup_macro(name, TestingMacroSet, def_ctx);
 	return ystr;
 }
 
-YourSensitiveString & lookup_as(const char * prefix, const char * name) {
+YourString & lookup_as(const char * prefix, const char * name) {
 	MACRO_EVAL_CONTEXT ctx = def_ctx;
 	ctx.subsys = prefix;
 	ystr = lookup_macro(name, TestingMacroSet, ctx);
 	return ystr;
 }
 
-YourSensitiveString & lookup_lcl(const char * local, const char * name) {
+YourString & lookup_lcl(const char * local, const char * name) {
 	MACRO_EVAL_CONTEXT ctx = def_ctx;
 	ctx.localname = local;
 	ystr = lookup_macro(name, TestingMacroSet, ctx);
 	return ystr;
 }
 
-YourSensitiveString & lookup_lcl_as(const char * local, const char * prefix, const char * name) {
+YourString & lookup_lcl_as(const char * local, const char * prefix, const char * name) {
 	MACRO_EVAL_CONTEXT ctx = def_ctx;
 	ctx.subsys = prefix;
 	ctx.localname = local;
@@ -113,13 +113,13 @@ YourSensitiveString & lookup_lcl_as(const char * local, const char * prefix, con
 // The expand helpers return a ystr, and also store the malloc'ed return value
 // in an auto_free_ptr so that the will be automatically freed by the next REQUIRE
 //
-YourSensitiveString expand(const char * value) {
+YourString expand(const char * value) {
 	gstr.set(expand_macro(value, TestingMacroSet, def_ctx));
 	ystr = gstr.ptr();
 	return ystr;
 }
 
-YourSensitiveString expand_as(const char * prefix, const char * value) {
+YourString expand_as(const char * prefix, const char * value) {
 	MACRO_EVAL_CONTEXT ctx = def_ctx;
 	ctx.subsys = prefix;
 	gstr.set(expand_macro(value, TestingMacroSet, ctx));
@@ -127,7 +127,7 @@ YourSensitiveString expand_as(const char * prefix, const char * value) {
 	return ystr;
 }
 
-YourSensitiveString expand_lcl(const char * local, const char * value) {
+YourString expand_lcl(const char * local, const char * value) {
 	MACRO_EVAL_CONTEXT ctx = def_ctx;
 	ctx.localname = local;
 	gstr.set(expand_macro(value, TestingMacroSet, ctx));
@@ -135,7 +135,7 @@ YourSensitiveString expand_lcl(const char * local, const char * value) {
 	return ystr;
 }
 
-YourSensitiveString expand_lcl_as(const char * local, const char * prefix, const char * value) {
+YourString expand_lcl_as(const char * local, const char * prefix, const char * value) {
 	MACRO_EVAL_CONTEXT ctx = def_ctx;
 	ctx.subsys = prefix;
 	ctx.localname = local;
@@ -144,7 +144,7 @@ YourSensitiveString expand_lcl_as(const char * local, const char * prefix, const
 	return ystr;
 }
 
-YourSensitiveString next$$(const char * value, int pos) {
+YourString next$$(const char * value, int pos) {
 	gstr.set(strdup(value));
 	char* left, *name, *right;
 	if (next_dollardollar_macro(gstr.ptr(), pos, &left, &name, &right)) {
@@ -155,7 +155,7 @@ YourSensitiveString next$$(const char * value, int pos) {
 	return ystr;
 }
 
-YourSensitiveString next$$_left(const char * value, int pos) {
+YourString next$$_left(const char * value, int pos) {
 	gstr.set(strdup(value));
 	char* left, *name, *right;
 	if (next_dollardollar_macro(gstr.ptr(), pos, &left, &name, &right)) {
@@ -166,7 +166,7 @@ YourSensitiveString next$$_left(const char * value, int pos) {
 	return ystr;
 }
 
-YourSensitiveString next$$_right(const char * value, int pos) {
+YourString next$$_right(const char * value, int pos) {
 	gstr.set(strdup(value));
 	char* left, *name, *right;
 	if (next_dollardollar_macro(gstr.ptr(), pos, &left, &name, &right)) {
@@ -244,7 +244,7 @@ static void insert_testing_macros(const char * local, const char * subsys)
 		{"Version","\"$Version: 8.5.6 May 20 2016 998822 $\""},
 	};
 
-	MACRO_EVAL_CONTEXT ctx = { local, subsys, "/home/testing", false, 2 };
+	MACRO_EVAL_CONTEXT ctx = { local, subsys, "/home/testing", false, 2, 0, 0 };
 
 	insert_source("Insert", TestingMacroSet, TestMacroSource);
 

@@ -352,4 +352,5 @@ if (check_heading($command_arg,\%data) && check_data(\@fields,\%Attr,$command_ar
 	RegisterResult(0,check_name => '-wide (three ClusterIds, different ProcIds)', test_name => $testname);
 }
 
-
+CondorTest::EndTest();
+exit(0);

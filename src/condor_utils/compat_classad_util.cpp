@@ -204,6 +204,34 @@ bool ExprTreeIsLiteral(classad::ExprTree * expr, classad::Value & value)
 	return false;
 }
 
+bool ExprTreeIsLiteralString(classad::ExprTree * expr, const char * & cstr)
+{
+	if ( ! expr) return false;
+
+	classad::ExprTree::NodeKind kind = expr->GetKind();
+	if (kind == classad::ExprTree::EXPR_ENVELOPE) {
+		expr = ((classad::CachedExprEnvelope*)expr)->get();
+		if ( ! expr) return false;
+		kind = expr->GetKind();
+	}
+
+	// dive into parens
+	while (kind == classad::ExprTree::OP_NODE) {
+		classad::ExprTree *e2, *e3;
+		classad::Operation::OpKind op;
+		((classad::Operation*)expr)->GetComponents(op, expr, e2, e3);
+		if ( ! expr || op != classad::Operation::PARENTHESES_OP) return false;
+
+		kind = expr->GetKind();
+	}
+
+	if (kind == classad::ExprTree::LITERAL_NODE) {
+		return ((classad::Literal*)expr)->GetStringValue(cstr);
+	}
+
+	return false;
+}
+
 bool ExprTreeIsLiteralNumber(classad::ExprTree * expr, long long & ival)
 {
 	classad::Value val;
@@ -234,7 +262,6 @@ bool ExprTreeIsLiteralString(classad::ExprTree * expr, std::string & sval)
 	if ( ! ExprTreeIsLiteral(expr, val)) return false;
 	return val.IsStringValue(sval);
 }
-
 
 #define IS_DOUBLE_TRUE(val) (bool)(int)((val)*100000)
 

@@ -18,10 +18,10 @@
 
 # OS pre mods
 if(${OS_NAME} STREQUAL "DARWIN")
-  exec_program (sw_vers ARGS -productVersion OUTPUT_VARIABLE TEST_VER)
-  if(${TEST_VER} MATCHES "10.([6789]|10)" AND ${SYS_ARCH} MATCHES "I386")
+	# All recent versions of Mac OS X are 64-bit, but 'uname -p'
+	# (the source for SYS_ARCH) reports 'i386'.
+	# Override that to set the actual architecture.
 	set (SYS_ARCH "X86_64")
-  endif()
 elseif(${OS_NAME} MATCHES "WIN")
 	cmake_minimum_required(VERSION 2.8.3)
 	set(WINDOWS ON)
@@ -332,6 +332,7 @@ if( NOT WINDOWS)
 	check_function_exists("readdir64" HAVE_READDIR64)
 	check_function_exists("backtrace" HAVE_BACKTRACE)
 	check_function_exists("unshare" HAVE_UNSHARE)
+	check_function_exists("proc_pid_rusage" HAVE_PROC_PID_RUSAGE)
 
 	# we can likely put many of the checks below in here.
 	check_include_files("dlfcn.h" HAVE_DLFCN_H)
@@ -766,9 +767,10 @@ endif()
 ###########################################
 #if (NOT MSVC11) 
 #endif()
-add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/gsoap/2.7.10-p5)
 
 if (WINDOWS)
+
+  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/gsoap/2.7.10-p5)
 
   if (MSVC11)
     if (CMAKE_SIZEOF_VOID_P EQUAL 8 )
@@ -802,6 +804,7 @@ else ()
   add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/1.0.1e)
   add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre/7.6)
   add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/krb5/1.12)
+  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/gsoap/2.7.10-p5)
   add_subdirectory(${CONDOR_SOURCE_DIR}/src/classad)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/coredumper/2011.05.24-r31)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/unicoregahp/1.2.0)
@@ -816,7 +819,7 @@ else ()
 		add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/globus/5.2.5)
 	endif()
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/blahp/1.16.5.1)
-	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/voms/2.0.6)
+	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/voms/2.0.13)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/cream/1.15.4)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/wso2/2.1.0)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boinc/devel)
@@ -861,6 +864,10 @@ else ()
 endif(WINDOWS)
 
 add_subdirectory(${CONDOR_SOURCE_DIR}/src/safefile)
+
+if (DARWIN)
+	include_directories( ${DARWIN_OPENSSL_INCLUDE} )
+endif()
 
 ### addition of a single externals target which allows you to
 if (CONDOR_EXTERNALS)
@@ -1109,6 +1116,11 @@ else(MSVC)
 		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wdeprecated-declarations -Wno-error=deprecated-declarations")
 	endif(c_Wdeprecated_declarations)
 	endif()
+
+	check_c_compiler_flag(-Wnonnull-compare c_Wnonnull_compare)
+	if (c_Wnonnull_compare)
+		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-nonnull-compare -Wno-error=nonnull-compare")
+	endif(c_Wnonnull_compare)
 
 	# gcc on our AIX machines recognizes -fstack-protector, but lacks
 	# the requisite library.

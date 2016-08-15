@@ -69,6 +69,8 @@ typedef struct macro_meta {
 	    unsigned matches_default :1;
 	    unsigned inside          :1;
 	    unsigned param_table     :1;
+	    unsigned live            :1; // future
+	    unsigned checkpointed    :1; // future
 	  };
 	};
 	short int    source_id;    // index into MACRO_SOURCES table
@@ -105,14 +107,45 @@ typedef struct macro_set {
 #endif
 } MACRO_SET;
 
+// Used as the header for a MACRO_SET checkpoint, the actual allocation is larger than this.
+typedef struct macro_set_checkpoint_hdr {
+	int cSources;
+	int cTable;
+	int cMetaTable;
+	int spare;
+} MACRO_SET_CHECKPOINT_HDR;
+
 // this holds context during macro lookup/expansion
 typedef struct macro_eval_context {
 	const char *localname;
-	const char *subsys;
-	const char *cwd; // current working directory, used for $F macro expansion
-	int without_default;
-	int use_mask;
+	const char *subsys;  // default subsys prefix
+	const char *cwd;     // current working directory, used for $F macro expansion
+	char without_default;
+	char use_mask;
+	char also_in_config; // also do lookups in the config hashtable (used by submit)
+	char is_context_ex;
+#if defined(__cplusplus)
+	void init(const char * sub, char mask=2) {
+		memset(this, 0, sizeof(*this));
+		this->subsys = sub;
+		this->use_mask = mask;
+	}
+#endif
 } MACRO_EVAL_CONTEXT;
+
+#if defined(__cplusplus)
+typedef struct macro_eval_context_ex : macro_eval_context {
+	// to do lookups of last resort into the given Ad, set these. they are useually null.
+	const char *adname; // name prefix for lookups into the ad
+	const ClassAd * ad; // classad for lookups
+	void init(const char * sub, char mask=2) {
+		memset(this, 0, sizeof(*this));
+		this->subsys = sub;
+		this->use_mask = mask;
+		this->is_context_ex = true;
+	}
+} MACRO_EVAL_CONTEXT_EX;
+#endif
 
 
 #if defined(__cplusplus)
@@ -126,6 +159,9 @@ typedef struct macro_eval_context {
 	class auto_free_ptr {
 	public:
 		auto_free_ptr(char* str=NULL) : p(str) {}
+		friend void swap(auto_free_ptr& first, auto_free_ptr& second) { char*t = first.p; first.p = second.p; second.p = t; }
+		auto_free_ptr(const auto_free_ptr& that) { if (that.p) set(strdup(that.p)); else set(NULL); }
+		auto_free_ptr & operator=(auto_free_ptr that) { swap(*this, that); return *this; } // swap on assigment.
 		~auto_free_ptr() { clear(); }
 		void set(char*str) { clear(); p = str; }   // set a new pointer, freeing the old pointer (if any)
 		void clear() { if (p) free(p); p = NULL; } // free the pointer if any
@@ -447,6 +483,72 @@ BEGIN_C_DECLS
 	int get_macro_ref_count (const char *name, MACRO_SET& macro_set);
 	bool config_test_if_expression(const char * expr, bool & result, const char * localname, const char * subsys, std::string & err_reason);
 
+	// macro stream class wraps up an fp or string so that the macro parser can read from either.
+	//
+#define USE_MACRO_STREAMS 1
+#ifdef USE_MACRO_STREAMS
+	class MacroStream {
+	public:
+		virtual ~MacroStream() {};
+		virtual char * getline(int gl_opt) = 0;
+		virtual MACRO_SOURCE& source() = 0;
+	};
+
+	// A MacroStream that uses, but does not own a FILE* and MACRO_SOURCE
+	class MacroStreamYourFile : public MacroStream {
+	public:
+		MacroStreamYourFile(FILE * _fp, MACRO_SOURCE& _src) : fp(_fp), src(&_src) {}
+		virtual ~MacroStreamYourFile() { fp = NULL; src = NULL; }
+		virtual char * getline(int gl_opt);
+		virtual MACRO_SOURCE& source() { return *src; }
+		void set(FILE* _fp, MACRO_SOURCE& _src) { fp =  _fp; src = &_src; }
+		void reset() { fp = NULL; src = NULL; }
+	protected:
+		FILE * fp;
+		MACRO_SOURCE * src;
+	};
+
+	// A MacroStream that owns the FILE* and MACRO_SOURCE
+	class MacroStreamFile : public MacroStream {
+	public:
+		MacroStreamFile() : fp(NULL) { memset(&src, 0, sizeof(src)); }
+		virtual ~MacroStreamFile() { if (fp) fclose(fp); fp = NULL; memset(&src, 0, sizeof(src)); }
+		virtual char * getline(int gl_opt);
+		virtual MACRO_SOURCE& source() { return src; }
+		bool open(const char * filename, bool is_command, MACRO_SET& set, std::string &errmsg);
+		int  close(MACRO_SET& set, int parsing_return_val);
+	protected:
+		FILE * fp;
+		MACRO_SOURCE src;
+	};
+
+	class MacroStreamCharSource : public MacroStream {
+	public:
+		MacroStreamCharSource() 
+			: input(NULL)
+			, cbBufAlloc(0)
+			, file_string(NULL)
+		{
+			memset(&src, 0, sizeof(src));
+		}
+		virtual ~MacroStreamCharSource() { if (input) delete input; input = NULL; }
+		virtual char * getline(int gl_opt);
+		virtual MACRO_SOURCE& source() { return src; }
+		bool open(const char * src_string, const MACRO_SOURCE & _src);
+		int  close(MACRO_SET& set, int parsing_return_val);
+		int  load(FILE* fp, MACRO_SOURCE & _src, bool preserve_linenumbers = false);
+		void rewind();
+	protected:
+		StringTokenIterator * input;
+		MACRO_SOURCE src;
+		size_t cbBufAlloc;
+		auto_free_ptr line_buf;
+		auto_free_ptr file_string; // holds file content when load is called.
+	};
+
+
+#endif // USE_MACRO_STREAMS
+
 	// populate a MACRO_SET from either a config file or a submit file.
 	#define READ_MACROS_SUBMIT_SYNTAX           0x01
 	#define READ_MACROS_EXPAND_IMMEDIATE        0x02
@@ -474,8 +576,12 @@ BEGIN_C_DECLS
 
 	int
 	Parse_macros(
+#ifdef USE_MACRO_STREAMS
+		MacroStream& ms,
+#else
 		FILE* conf_fp,
 		MACRO_SOURCE& FileMacro,
+#endif
 		int depth, // a simple recursion detector
 		MACRO_SET& macro_set,
 		int options,

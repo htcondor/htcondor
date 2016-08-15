@@ -1,0 +1,7 @@
+job 1B_A no_file noop
+job 1B_B no_file noop
+job 1B_C no_file noop
+
+pin_in 1B_A 1
+pin_in 1B_B 2
+pin_in 1B_C 3

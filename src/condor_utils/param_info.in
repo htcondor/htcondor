@@ -6702,7 +6702,7 @@ default=300
 type=int
 reconfig=true
 customization=seldom
-friendly_name=Job Queue Log file
+friendly_name=Defrag Update Interval
 review=?
 tags=defrag
 

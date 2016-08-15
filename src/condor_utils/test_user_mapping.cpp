@@ -39,7 +39,7 @@ extern int add_user_mapping(const char * mapname, char * mapdata);
 extern void get_mapfile_re_info(size_t *info); // pass an array of 4 elements
 extern void clear_mapfile_re_info();
 
-class YourSensitiveString ystr; // most recent lookup
+class YourString ystr; // most recent lookup
 MyString gmstr;   // holds the result of a mapfile lookup
 MapFile* gmf = NULL;  // global mapfile used for lookup testing.
 bool   grequire_failed;
@@ -50,15 +50,15 @@ bool dash_verbose = false;
 int fail_count;
 
 template <class c>
-bool within(YourSensitiveString ys, c lb, c hb) { return false; }
+bool within(YourString ys, c lb, c hb) { return false; }
 
-template <> bool within(YourSensitiveString ys, int lb, int hb) {
+template <> bool within(YourString ys, int lb, int hb) {
 	int v = atoi(ys.Value());
 	//fprintf(stderr, "within '%s' -> %d\n", ys.Value(), v);
 	return v >= lb && v <= hb;
 }
 
-template <> bool within(YourSensitiveString ys, const char* lb, const char* hb) {
+template <> bool within(YourString ys, const char* lb, const char* hb) {
 	return strcmp(ys.Value(),lb) >= 0 && strcmp(ys.Value(),hb) <= 0;
 }
 
@@ -75,14 +75,14 @@ template <> bool within(YourSensitiveString ys, const char* lb, const char* hb) 
 	}
 
 //
-YourSensitiveString & lookup(const char * method, const char * input) {
+YourString & lookup(const char * method, const char * input) {
 	gmstr.clear();
 	gmf->GetCanonicalization(method, input, gmstr);
 	ystr = gmstr.c_str();
 	return ystr;
 }
 
-YourSensitiveString & lookup_user(const char * input) {
+YourString & lookup_user(const char * input) {
 	gmstr.clear();
 	gmf->GetUser(input, gmstr);
 	ystr = gmstr.c_str();
@@ -148,7 +148,7 @@ void print_usage(FILE * out, MapFile * mf, double elapsed_time)
 
 void testing_parser(bool verbose, const char * mode)
 {
-	YourSensitiveString m(mode);
+	YourString m(mode);
 #ifdef USE_MAPFILE_V2
 #else
 	mode = "v1";
@@ -189,7 +189,7 @@ void testing_parser(bool verbose, const char * mode)
 
 void testing_lookups(bool verbose, const char * mode)
 {
-	YourSensitiveString m(mode);
+	YourString m(mode);
 #ifdef USE_MAPFILE_V2
 #else
 	mode = "v1";
@@ -251,7 +251,7 @@ int read_mapfile(const char * mapfile, bool assume_hash, const char * lookup_met
 
 	delete gmf; gmf = NULL;
 	gmf = new MapFile;
-	if (YourSensitiveString(mapfile) == "-") {
+	if (YourString(mapfile) == "-") {
 		MyStringFpSource mystdin(stdin, false);
 		if (dash_verbose) { fprintf(stdout, "Loading mapping data (%s) from stdin\n", mode); }
 		dstart = _condor_debug_get_time_double();
@@ -267,10 +267,10 @@ int read_mapfile(const char * mapfile, bool assume_hash, const char * lookup_met
 	}
 
 	if (user) {
-		YourSensitiveString m(lookup_method);
+		YourString m(lookup_method);
 		if (m == "#") lookup_method = "*"; // because * is onconvenient to put on the command line in *nix
 
-		YourSensitiveString u(user);
+		YourString u(user);
 		if (u == "-") {
 			if (u == mapfile) {
 				fprintf(stderr, "ERROR: Cannot read both map and user from stdin\n");
@@ -321,7 +321,7 @@ int read_gridmap(const char * mapfile, bool assume_hash, const char * user)
 
 	delete gmf; gmf = NULL;
 	gmf = new MapFile;
-	if (YourSensitiveString(mapfile) == "-") {
+	if (YourString(mapfile) == "-") {
 		MyStringFpSource mystdin(stdin, false);
 		if (dash_verbose) { fprintf(stdout, "Loading grid-mapping data (%s) from stdin\n", mode); }
 		dstart = _condor_debug_get_time_double();
@@ -337,7 +337,7 @@ int read_gridmap(const char * mapfile, bool assume_hash, const char * user)
 	}
 
 	if (user) {
-		YourSensitiveString u(user);
+		YourString u(user);
 		if (u == "-") {
 			if (u == mapfile) {
 				fprintf(stderr, "ERROR: Cannot read both grid-map and user list from stdin\n");

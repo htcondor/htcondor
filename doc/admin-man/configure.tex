@@ -1,3 +1,4 @@
+%TEMTEMP -- gittrac #5714
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{\label{sec:Configuring-HTCondor}Configuration}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -455,6 +456,40 @@ result in the same value for \verb@A@:
 \begin{verbatim}
   A = $(B) $(D)
 \end{verbatim}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:Multi-Line-Values}Multi-Line Values}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+As of version 8.5.6, the value for a macro can comprise multiple
+lines of text.
+The syntax for this is as follows:
+\begin{verbatim}
+<macro_name> @=<tag>
+<macro_definition lines>
+@<tag>
+\end{verbatim}
+
+For example:
+\begin{verbatim}
+JOB_ROUTER_DEFAULTS @=jrd
+  [
+    requirements=target.WantJobRouter is True;
+    MaxIdleJobs = 10;
+    MaxJobs = 200;
+
+    /* now modify routed job attributes */
+    /* remove routed job if it goes on hold or stays idle for over 6 hours */
+    set_PeriodicRemove = JobStatus == 5 ||
+                        (JobStatus == 1 && (time() - QDate) > 3600*6);
+    delete_WantJobRouter = true;
+    set_requirements = true;
+  ]
+  @jrd
+\end{verbatim}
+
+Note that in this example, the square brackets are part of the
+JOB\_ROUTER\_DEFAULTS value.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Program-Defined-Macros}Executing a Program to Produce Configuration Macros}
@@ -2077,6 +2112,58 @@ the default \\ \hline
   A boolean which will cause HTCondor to prefer IPv4 when it is able
   to choose.  HTCondor will otherwise prefer IPv6.
 
+\label{param:ClassAdUserMapNames}
+\item[\Macro{<SUBSYS>\_CLASSAD\_USER\_MAP\_NAMES}]
+  A string defining a list of names for username-to-accounting group
+  mappings for the specified daemon.
+  Names must be separated by spaces or commas.
+
+\label{param:ClassAdUserMapFile}
+\item[\Macro{CLASSAD\_USER\_MAPFILE\_<name>}]
+  A string giving the name of a file to parse to initialize the
+  map for the given username.
+  Note that this macro is only used if
+  \MacroNI{<SUBSYS>\_CLASSAD\_USER\_MAP\_NAMES} is defined for
+  the relevant daemon.
+
+\label{param:ClassAdUserMapData}
+\item[\Macro{CLASSAD\_USER\_MAPDATA\_<name>}]
+  A string containing data to be used to initialize the map for the
+  given username.
+  Note that this macro is only used if
+  \MacroNI{<SUBSYS>\_CLASSAD\_USER\_MAP\_NAMES} is defined for
+  the relevant daemon, and \Macro{CLASSAD\_USER\_MAPFILE\_<name>}
+  is \emph{not} defined for the given name.
+
+  The format for the map file and map data is the same as the
+  format for the security unified map file (see
+  ~\ref{sec:Security-Unified-Map-File} for details).
+
+  The first field must be * (or a subset name - see below), the second
+  field is a regex that we will match against the input, and the third
+  field will be the output if the regex matches, the 3 and 4 argument
+  form of the ClassAd userMap() function (see ~\ref{sec:classadFunctions})
+  expect that the third field will be a comma separated
+  list of values. for example:
+\begin{verbatim}
+# file: groups.mapdata
+* John  chemistry,physics,glassblowing
+* Juan  physics,chemistry
+* Bob   security
+* Alice security,math
+\end{verbatim}
+
+\Bold{Optional submaps:} If the first field of the mapfile contains
+something other than *, then a submap is defined. To select a submap
+for lookup, the first argument for userMap() should be "mapname.submap".
+For example:
+\begin{verbatim}
+# mapdata 'groups' with submaps
+*   Bob   security
+*   Alice security,math
+alt Alice math,hacking
+\end{verbatim}
+
 \end{description}
 
 
@@ -3229,6 +3316,8 @@ subsystem-specific setting is unspecified, \MacroNI{MAX\_FILE\_DESCRIPTORS}
 is used.
 For the \Condor{collector} daemon, the value defaults to 10240, and
 for the \Condor{schedd} daemon, the value defaults to 4096.
+If the \Condor{shared\_port} daemon is in use, its value for this
+parameter should match the largest value set for the other daemons.
 
 \label{param:MaxFileDescriptors}
 \item[\Macro{MAX\_FILE\_DESCRIPTORS}] Under Unix, this specifies the
@@ -6285,6 +6374,13 @@ MAX_JOBS_RUNNING	= \
  \MacroNI{MAX\_JOBS\_SUBMITTED},
   to ensure that no one user can dominate the queue.
 
+\label{param:MaxRunningSchedulerJobsPerOwner}
+\item[\Macro{MAX\_RUNNING\_SCHEDULER\_JOBS\_PER\_OWNER}]
+  This integer value limits the number of scheduler universe jobs that any
+  given owner (user) can have running at one time.  This limit will affect
+  the number of running Dagman jobs, but not the number of nodes within a
+  DAG. The default is no limit
+
 \label{param:MaxJobsPerSubmission}
 \item[\Macro{MAX\_JOBS\_PER\_SUBMISSION}]
   This integer value limits the number of jobs any single submission
@@ -6498,6 +6594,14 @@ MAX_JOBS_RUNNING	= \
   causes the \Condor{schedd} to use an algorithm that responds to 
   \Condor{q} requests by \emph{not} forking itself to handle each request.
   It instead handles the requests in a non-blocking way.
+  The default value is \Expr{True}.
+
+\label{param:CondorQDashBatchIsDefault}
+\item[\Macro{CONDOR\_Q\_DASH\_BATCH\_IS\_DEFAULT}]
+  A boolean value that, when \Expr{True},
+  causes \Condor{q} to print the \Opt{-batch} output unless the
+  \Opt{-nobatch} option is used or the other arguments to \Condor{q} are
+  incompatible with batch mode.  For instance \Opt{-long} is incompatible with \Opt{-batch}.
   The default value is \Expr{True}.
 
 \label{param:CondorQOnlyMyJobs}
@@ -8065,7 +8169,6 @@ REM Run the actual job now
   If set to \Expr{world},
   then the directory is created with permissions set to \emph{0755}.
 
-%TEMPTEMP-- check this
 \label{param:StarterStatsLog}
 \item[\Macro{STARTER\_STATS\_LOG}]
   The full path and file name of a file that stores TCP statistics
@@ -13635,6 +13738,14 @@ discussion of \Condor{defrag} may be found in section~\ref{sec:SMP-defrag}.
   if specified by the policy.  
   The default is 600 seconds.  
   Very small intervals could create excessive load on the \Condor{collector}.
+
+\label{param:DefragUpdateInterval}
+\item[\Macro{DEFRAG\_UPDATE\_INTERVAL}] An integer that specifies
+  the number of seconds between times that the \Condor{defrag} daemon
+  sends updates to the collector.  (See 
+  section~\ref{sec:Defrag-ClassAd-Attributes} for information about the
+  attributes in these updates.)
+  The default is 300 seconds.  
 
 \label{param:DefragSchedule}
 \item[\Macro{DEFRAG\_SCHEDULE}] A setting that specifies the draining

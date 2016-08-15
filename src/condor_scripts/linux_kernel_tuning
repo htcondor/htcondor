@@ -54,7 +54,7 @@ TCP_LISTEN_QUEUE=1024
 # Likewise, the central manager (collector) needs have large UDP buffers.
 # Increase the maximum allowed size of networks receive buffers.
 #
-MAX_RECEIVE_BUFFER=10383360
+MAX_RECEIVE_BUFFER=10485760
 
 # Maximum amount of dirty filesystem bytes to buffer in the kernel
 # before processes writing to the filesystem are blocked, and made 
@@ -109,14 +109,14 @@ increaseKernelParameter() {
 	if [ -n "${NEW}" ]; then
 		OLD=`cat ${FILE}`
 		if [ ${NEW} -gt ${OLD} ]; then
-			echo "Changing ${PARAMETER} from ${OLD} to ${NEW}"
-			echo "# Changing ${PARAMETER} from ${OLD} to ${NEW}" >> ${LOG}
-			echo "Changing ${PARAMETER} from ${OLD} to ${NEW}" | ${LOGGER}
+			echo "Changing ${PARAMETER} (${FILE}) from ${OLD} to ${NEW}"
+			echo "# Changing ${PARAMETER} (${FILE}) from ${OLD} to ${NEW}" >> ${LOG}
+			echo "Changing ${PARAMETER} (${FILE}) from ${OLD} to ${NEW}" | ${LOGGER}
 			echo ${NEW} > ${FILE}
 		else
-			echo "Not changing ${PARAMETER}: new value (${NEW}) <= old value (${OLD})."
-			echo "# Not changing ${PARAMETER}: new value (${NEW}) <= old value (${OLD})." >> ${LOG}
-			echo "Not changing ${PARAMETER}: new value (${NEW}) <= old value (${OLD})." | ${LOGGER}
+			echo "Not changing ${PARAMETER} (${FILE}): new value (${NEW}) <= old value (${OLD})."
+			echo "# Not changing ${PARAMETER} (${FILE}): new value (${NEW}) <= old value (${OLD})." >> ${LOG}
+			echo "Not changing ${PARAMETER} (${FILE}): new value (${NEW}) <= old value (${OLD})." | ${LOGGER}
 		fi
 	fi
 }
@@ -128,9 +128,9 @@ setKernelParameter() {
 
 	if [ -n "${NEW}" ]; then
 		OLD=`cat ${FILE}`
-		echo "Changing ${PARAMETER} from ${OLD} to ${NEW}"
-		echo "# Changing ${PARAMETER} from ${OLD} to ${NEW}" >> ${LOG}
-		echo "Changing ${PARAMETER} from ${OLD} to ${NEW}" | ${LOGGER}
+		echo "Changing ${PARAMETER} (${FILE}) from ${OLD} to ${NEW}"
+		echo "# Changing ${PARAMETER} (${FILE}) from ${OLD} to ${NEW}" >> ${LOG}
+		echo "Changing ${PARAMETER} (${FILE}) from ${OLD} to ${NEW}" | ${LOGGER}
 		echo ${NEW} > ${FILE}
 	fi
 }

@@ -634,6 +634,7 @@ const char* GceAuthFile = "gce_auth_file";
 const char* GceMachineType = "gce_machine_type";
 const char* GceMetadata = "gce_metadata";
 const char* GceMetadataFile = "gce_metadata_file";
+const char* GcePreemptible = "gce_preemptible";
 
 char const *next_job_start_delay = "next_job_start_delay";
 char const *next_job_start_delay2 = "NextJobStartDelay";
@@ -1541,7 +1542,7 @@ main( int argc, const char *argv[] )
 #ifdef USE_SUBMIT_UTILS
 			submit_hash.set_arg_variable(name.c_str(), value.c_str());
 #else
-			MACRO_EVAL_CONTEXT ctx = { NULL, "SUBMIT", NULL, false, 0 };
+			MACRO_EVAL_CONTEXT ctx; ctx.init("SUBMIT",0);
 			insert_macro(name.c_str(), value.c_str(), SubmitMacroSet, ArgumentMacro, ctx);
 #endif
 		} else {
@@ -6643,6 +6644,12 @@ SetGridParams()
 		InsertJobExpr( buffer.Value() );
 	}
 
+	// GcePreemptible is not a necessary parameter
+	if( (tmp = condor_param( GcePreemptible, ATTR_GCE_PREEMPTIBLE )) ) {
+		buffer.formatstr( "%s = %s", ATTR_GCE_PREEMPTIBLE, isTrue(tmp) ? "True" : "False" );
+		InsertJobExpr( buffer.Value() );
+		free( tmp );
+	}
 
 	// CREAM clients support an alternate representation for resources:
 	//   host.edu:8443/cream-batchname-queuename
@@ -7473,7 +7480,7 @@ MyString last_submit_cmd;
 
 int SpecialSubmitPreQueue(const char* queue_args, bool from_file, MACRO_SOURCE& source, MACRO_SET& macro_set, std::string & errmsg)
 {
-	MACRO_EVAL_CONTEXT ctx = { NULL, "SUBMIT", NULL, false, 2 };
+	MACRO_EVAL_CONTEXT ctx; ctx.init("SUBMIT");
 	int rval = 0;
 
 	GotQueueCommand = true;
@@ -7549,7 +7556,7 @@ int SpecialSubmitParse(void* pv, MACRO_SOURCE& source, MACRO_SET& macro_set, cha
 {
 	FILE* fp_submit = (FILE*)pv;
 	int rval = 0;
-	MACRO_EVAL_CONTEXT ctx = { NULL, "SUBMIT", NULL, false, 2 };
+	MACRO_EVAL_CONTEXT ctx; ctx.init("SUBMIT");
 
 	// Check to see if this is a queue statement.
 	//
@@ -7932,9 +7939,14 @@ int read_submit_file(FILE * fp)
 	int rval = submit_hash.parse_file(fp, FileMacroSource, errmsg, SpecialSubmitParse, fp);
   #endif
 #else
-	MACRO_EVAL_CONTEXT ctx = { NULL, "SUBMIT", NULL, false, 2 };
+	MACRO_EVAL_CONTEXT ctx; ctx.init("SUBMIT");
 
+#ifdef USE_MACRO_STREAMS
+	MacroStreamYourFile ms(fp, FileMacroSource);
+	int rval = Parse_macros(ms,
+#else
 	int rval = Parse_macros(fp, FileMacroSource,
+#endif
 		0, SubmitMacroSet, READ_MACROS_SUBMIT_SYNTAX,
 		&ctx, errmsg,
 		SpecialSubmitParse, fp);
@@ -7992,7 +8004,7 @@ void param_and_insert_unique_items(const char * param_name, classad::References 
 char *
 condor_param( const char* name, const char* alt_name )
 {
-	MACRO_EVAL_CONTEXT ctx = { NULL, "SUBMIT", NULL, false, 3 };
+	MACRO_EVAL_CONTEXT ctx; ctx.init("SUBMIT",3);
 
 	bool used_alt = false;
 	const char *pval = lookup_macro(name, SubmitMacroSet, ctx);
@@ -8051,7 +8063,7 @@ condor_param( const char* name, const char* alt_name )
 void
 set_condor_param( const char *name, const char *value )
 {
-	MACRO_EVAL_CONTEXT ctx = { NULL, "SUBMIT", NULL, false, 2 };
+	MACRO_EVAL_CONTEXT ctx; ctx.init("SUBMIT");
 	insert_macro(name, value, SubmitMacroSet, DefaultMacro, ctx);
 }
 #endif
@@ -8096,7 +8108,7 @@ void SetNoClusterAttr(const char * name)
 void
 set_live_submit_variable( const char *name, const char *live_value, bool force_used /*=true*/ )
 {
-	static MACRO_EVAL_CONTEXT ctx = { NULL, "SUBMIT", NULL, false, 2 };
+	MACRO_EVAL_CONTEXT ctx; ctx.init("SUBMIT");
 	MACRO_ITEM* pitem = find_macro_item(name, NULL, SubmitMacroSet);
 	if ( ! pitem) {
 		insert_macro(name, "", SubmitMacroSet, LiveMacro, ctx);

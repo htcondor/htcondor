@@ -30,11 +30,36 @@ The details of each version are described below.
 \begin{itemize}
 
 \item The \Condor{negotiator} by default no longer cross advertises the
-user prio and resources in use from every slot in a machine ad to every
+user priority and resources in use from every slot in a machine ad to every
 other slot in that machine ad.  \Macro{NEGOTIATOR\_CROSS\_SLOT\_PRIOS} = true
-re-enables the old behaviour.  The accounting information for the current
+re-enables the old behavior.  The accounting information for the current
 user of the slot remains advertised.
 \Ticket{5785}
+
+\item Simplified the DAG node priority algorithm:  the "effective" priority
+of a node is now simply the sum of the explicit node priority and the
+overall DAG priority.  (See section ~\ref{sec:DAG-SetNodePriority} for
+more details.)
+sec:DAG-SetNodePriority
+\Ticket{5749}
+
+\item Added the capability for more flexible connections between
+splices in DAGs (see ~\ref{sec:DAGSpliceConnections} for details).
+Also added an INCLUDE command to the DAG language (see
+~\ref{sec:dagman_include_command} for details).
+\Ticket{5213}
+
+\item Allow the second argument of the ClassAd ternary operator
+(expression ? value1 : value2) to be omitted.  This new syntax means:
+evaluate the expression, and if it evaluated to a defined value or
+error, return it.  If undefined, return value2.
+\Ticket{5782}
+
+\item New submit attribute \SubmitCmd{gce\_preemptible} allows the
+creation of preemptible Google Compute Engine (GCE) instances.
+These instances have a lower price, but can be interrupted at any time.
+Also added support for service accounts with GCE.
+\Ticket{5821}
 
 \end{itemize}
 
@@ -42,7 +67,9 @@ user of the slot remains advertised.
 
 \begin{itemize}
 
-\item None.
+\item Lengthened the watchdog timeout in the systemd service file to 20 minutes.
+Also, ping systemd at a third of the watchdog interval.
+\Ticket{5837}
 
 \end{itemize}
 
@@ -54,8 +81,7 @@ user of the slot remains advertised.
 
 \begin{itemize}
 
-\item HTCondor version 8.5.6 not yet released.
-%\item HTCondor version 8.5.6 released on Month Date, 2016.
+\item HTCondor version 8.5.6 released on August 2, 2016.
 
 \end{itemize}
 
@@ -64,23 +90,64 @@ user of the slot remains advertised.
 
 \begin{itemize}
 
-\item ClassAds can now be represented in JSON format.
-\condor{q}, \condor{status}, and \condor{history} have a \Arg{-json}
-command line option, which causes their output to be printed in JSON.
-\Ticket{5688}
+\item The default output of \Condor{q} is now the \Opt{-batch} output. To change
+the default back to its pre 8.5.6 value, set the new configuration variable
+ \Macro{CONDOR\_Q\_DASH\_BATCH\_IS\_DEFAULT} to false.
+\Ticket{5708}
 
-\item Job ads now include \Attr{NumJobCompletions}, which counts the
-number of times a job exited of its own accord (successfully or not) and
-then successfully completed file transfer (if any was requested).
-\Ticket{5705}
+\item A new class -- the Submit class -- was added to the Python
+bindings. It allows for the submission of HTCondor jobs via the
+Python bindings using the same keywords and automatic behavior as
+\Condor{submit}.
+See section~\ref{Python-OtherModule} for details.
+\Ticket{5666}
+
+\item The ability to send \Condor{drain} commands is now exposed
+through the Python bindings.
+See section~\ref{Python-OtherModule} for details.
+\Ticket{5507}
+
+\item The value of the configuration parameter 
+\Macro{DOCKER\_DROP\_ALL\_CAPABILITIES} is now no longer just
+true or false, but a ClassAd expression evaluated in the context
+of the machine (my) and the job (target).
+\Ticket{5759}
+
+\item When running Docker Universe containers on docker version 1.11
+and newer, HTCondor now also sets --no-new-privs, to prevent
+setuid and setgid programs from running in containers, unless
+\Macro{DOCKER\_DROP\_ALL\_CAPABILITIES} evaluated to false.
+\Ticket{5680}
+
+\item The hostname of the container that Docker Universe jobs
+run in is now set to a more useful name.  Instead of a hash, it
+now contains the job's owner, the cluster and proc of the job,
+and the hostname of the machine the container runs on.
+\Ticket{5760}
+
+\item New options have been added to \Condor{history}, so that \Condor{history} can be used as the
+the \Macro{HISTORY\_HELPER} for remote \Condor{history}. The options are:
+  \begin{itemize}
+  \item \Opt{-since} Scanning of the history file stops when an expression becomes true or a job id is read.
+  \item \Opt{-completedsince} Scanning of the history file stops when a job completed earlier than this time is read.
+  \item \Opt{-scanlimit} Used by remote \Condor{history} to limit the number of jobs read from the history file.
+  \item \Opt{-attributes} Used by remote \Condor{history} to limit the attributes transferred back.
+  \item \Opt{-inherit} Used by remote \Condor{history} to define the socket to write results to.
+  \item \Opt{-stream-results} Used by remote \Condor{history} so that results can be printed as they arrive.
+  \end{itemize}
+\Ticket{5642}
+
+\item Condor{history} will default to doing a remote query if there is a \Macro{SCHEDD\_HOST} configured. This behavior
+can be defeated by passing the new \Opt{-local} argument.
+\Ticket{5765}
 
 \item The high-availability and replication daemons may now use shared port.
 \Ticket{5726}
 
-\item Monitoring the status of PBS and SLURM jobs is now much more efficient.
-Now, one query to the batch system is done for all jobs, instead of a
-separate query for each job.
-\Ticket{5722}
+\item ClassAds can now be represented in JSON format.
+\condor{q}, \condor{status}, and \condor{history} have a \Arg{-json}
+command line option, which causes their output to be printed in JSON.
+\Ticket{5688}
 
 \item \Condor{dagman} now allows commands to be more flexibly ordered
 within a DAG file.  (See section~\ref{dagman:command order} for details.)
@@ -90,6 +157,21 @@ within a DAG file.  (See section~\ref{dagman:command order} for details.)
 \SubmitCmd{accounting\_group\_user} values specified for a
 DAG are now propagated to all jobs of the workflow, including sub-DAGs.
 \Ticket{5077}
+
+\item A new configuration variable \Macro{MAX\_RUNNING\_SCHEDULER\_JOBS\_PER\_OWNER}
+can be used to limit the number of DAGs that any single user can have running at
+a time.
+\Ticket{5568}
+
+\item Monitoring the status of PBS and SLURM jobs is now much more efficient.
+Now, one query to the batch system is done for all jobs, instead of a
+separate query for each job.
+\Ticket{5722}
+
+\item Simplified how job leases are handled for grid universe jobs.
+Now, all jobs going to the same remote resource share a single lease
+time.
+\Ticket{5625}
 
 \item Added several statistics about commands issued to the GAHP server
 to the grid ads that the \Condor{gridmanager} sends to the \Condor{collector}:
@@ -102,26 +184,64 @@ to the grid ads that the \Condor{gridmanager} sends to the \Condor{collector}:
   \end{itemize}
 \Ticket{5698}
 
+\item The \Condor{shadow}, \Condor{starter} and \Condor{c-gahp} daemons
+now log TCP statistics for file transfers.  See ~\ref{dflag:stats} for
+more details.
+\Ticket{5663}
+
+\item Job ads now include \Attr{NumJobCompletions}, which counts the
+number of times a job exited of its own accord (successfully or not) and
+then successfully completed file transfer (if any was requested).
+\Ticket{5705}
+
 \item Kerberos authentication is now non-blocking, allowing an HTCondor
 daemon authenticating clients with Kerberos to handle more simultaneous
 incoming connections.
 \Ticket{5737}
 
-\item Simplified how job leases are handled for grid universe jobs.
-Now, all jobs going to the same remote resource share a single lease
-time.
-\Ticket{5625}
+\item Password authentication is now non-blocking, allowing an HTCondor
+daemon authenticating clients with the PASSWORD method to handle more
+simultaneous incoming connections.
+\Ticket{5602}
 
-\item The \Condor{shadow}, \Condor{starter} and \Condor{c-gahp} daemons
-now log TCP statistics for file transfers.  See ~\ref{dflag:stats} for
-more details.
-\Ticket{5663}
+\item The full path to the submit file is now available as an automatic
+submit variable.
+\Ticket{5677}
+
+\item A new function \Code{userMap()} has been added to the ClassAd language
+to facilitate the mapping of users to groups in the \Condor{schedd} and
+\Condor{job\_router} (see ~\ref{sec:classadFunctions} for details).
+\Ticket{5751}
+
+\item Configuration files now support the declaration of multi-line values, the is primarily of use when
+configuring the \Condor{job\_router}.
+\Ticket{5721}
+
+\item Configuration file metaknobs can now take arguments and pass them
+on the the metaknob to be expanded.
+\Ticket{5739}
+
+\item Improved the performance of the \Condor{negotiator} when running
+with a large number of users or groups.  The accounting data is only
+written to disk when it changes, not unconditionally.
+\Ticket{5719}
 
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item Fixed a bug in Docker universe that required the name
+of a transferred executable to begin with "./"
+\Ticket{5761}
+
+\item Fixed a bug the prevented Docker universe jobs from reporting
+their network usage correctly.
+\Ticket{5750}
+
+\item \Condor{who} now reports docker universe jobs more completely.
+\Ticket{5740}
 
 \item Fixed bugs preventing HTCondor daemons from recognizing an address in
 Sinful format as its own when operating in mixed (IPv4 and IPv6) mode.  One
@@ -135,12 +255,12 @@ about submitters flocking to a pool, but who haven't used
 any resources.
 \Ticket{5743}
 
-\item \Condor{who} now reports docker universe jobs more completely.
-\Ticket{5740}
-
 \item No longer leak a file in the user's home directory each time a
 job is submitted to SLURM.
 \Ticket{5742}
+
+\item Fix a bug that prevented HTCondor from removing jobs from SLURM.
+\Ticket{5804}
 
 \item Fixed a bug when attempting to authenticate using multiple
 methods wherein if a method failed, the remaining methods were not
@@ -151,6 +271,18 @@ always attempted.
 job's X.509 proxy file when writing information to the
 \MacroNI{SCHEDD\_AUDIT\_LOG}.
 \Ticket{5770}
+
+\item Fixed a bug in \Condor{q} where the SIZE column would not grow as needed to fit the data.
+\Ticket{5667}
+
+\item Fixed a bug where the \Condor{schedd} did not treat a user as a queue superuser when it
+should have if the configuration included a map file, which is common for GSI authentication.
+\Ticket{5530}
+
+\item Lengthen the watchdog timeout in the systemd service file to 1 minute.
+The previous value of 5 seconds has taken down HTCondor for a single slow DNS
+query.
+\Ticket{5819}
 
 \end{itemize}
 
@@ -170,11 +302,6 @@ job's X.509 proxy file when writing information to the
 \noindent New Features:
 
 \begin{itemize}
-
-\item Improved the performance of the \Condor{negotiator} when running
-with a large number of users or groups.  The accounting data is only
-written to disk when it changes, not unconditionally.
-\Ticket{5719}
 
 \item The EC2 GAHP now rate-limits its requests, and responds to overload
 warnings with an exponential back-off.  Additionally, fewer operations are
@@ -245,6 +372,11 @@ prepared to properly handle the socket passed in from outside HTCondor.
 specify a default program to exec as root upon \Condor{master} exit.
 See Section~\ref{param:DefaultMasterShutdownScript} for details.
 \Ticket{5590}
+
+\item The python bindings now support a per-thread security context,
+allowing the modification of various parameters such as the pool password
+and the X509UserProxy location.
+\Ticket{5632}
 
 \end{itemize}
 

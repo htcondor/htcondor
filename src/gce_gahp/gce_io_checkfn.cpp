@@ -36,9 +36,10 @@ bool GcePing::ioCheck(char **argv, int argc)
 
 // Expecting:GCE_INSTACE_INSERT <req_id> <serviceurl> <authfile> <project> <zone>
 //     <instance_name> <machine_type> <image> <metadata> <metadata_file>
+//     <preemptible>
 bool GceInstanceInsert::ioCheck(char **argv, int argc)
 {
-	return verify_number_args(argc, 11) &&
+	return verify_number_args(argc, 12) &&
 		verify_request_id(argv[1]) &&
 		verify_string_name(argv[2]) &&
 		verify_string_name(argv[3]) &&
@@ -48,7 +49,8 @@ bool GceInstanceInsert::ioCheck(char **argv, int argc)
 		verify_string_name(argv[7]) &&
 		verify_string_name(argv[8]) &&
 		verify_string_name(argv[9]) &&
-		verify_string_name(argv[10]);
+		verify_string_name(argv[10]) &&
+		verify_string_name(argv[11]);
 }
 
 // Expecting:GCE_INSTACE_DELETE <req_id> <serviceurl> <authfile> <project> <zone> <instance_name>

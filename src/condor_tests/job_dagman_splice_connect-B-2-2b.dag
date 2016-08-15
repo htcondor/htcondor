@@ -1,0 +1,18 @@
+job Node2-2b-A job_dagman_splice_connect-B-node.sub
+vars Node2-2b-A sleep = "0"
+vars Node2-2b-A file = "job_dagman_splice_connect-B-skewer2.out"
+vars Node2-2b-A name = "$(JOB)"
+
+job Node2-2b-B job_dagman_splice_connect-B-node.sub
+vars Node2-2b-B sleep = "0"
+vars Node2-2b-B file = "job_dagman_splice_connect-B-skewer5.out"
+vars Node2-2b-B name = "$(JOB)"
+
+job Node2-2b-C job_dagman_splice_connect-B-node.sub
+vars Node2-2b-C sleep = "0"
+vars Node2-2b-C file = "job_dagman_splice_connect-B-skewer6.out"
+vars Node2-2b-C name = "$(JOB)"
+
+pin_in Node2-2b-A 1
+pin_in Node2-2b-B 2
+pin_in Node2-2b-C 3

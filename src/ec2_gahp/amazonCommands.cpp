@@ -272,6 +272,20 @@ class Throttle {
         static long difference( const struct timespec * s, const struct timespec * t ) {
             long secondsDiff = t->tv_sec - s->tv_sec;
             long millisDiff = ((t->tv_nsec - s->tv_nsec) + 500000)/1000000;
+			// If secondsDiff is too large (as when, for instance, the
+			// the liveline is 0 because the limit has never been exceeded
+			// and the deadline based on the monotonic clock of a mchine
+			// up for more than ~27 days), converting secondsDiff into
+			// milliseconds will overflow on 32-bit machines.
+			//
+			// Since difference() is only called for debugging purposes
+			// and to compare against zero, we only care about making
+			// sure the sign doesn't change.
+			long secondsDiffInMillis = secondsDiff * 1000;
+			if( (secondsDiffInMillis < 0 && secondsDiff > 0)
+			   || (secondsDiffInMillis > 0 && secondsDiff < 0) ) {
+				return secondsDiff;
+			}
             millisDiff += (secondsDiff * 1000);
             return millisDiff;
         }

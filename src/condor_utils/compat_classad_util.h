@@ -35,6 +35,7 @@ bool ExprTreeIsLiteral(classad::ExprTree * expr, classad::Value & value);
 bool ExprTreeIsLiteralNumber(classad::ExprTree * expr, long long & ival);
 bool ExprTreeIsLiteralNumber(classad::ExprTree * expr, double & rval);
 bool ExprTreeIsLiteralString(classad::ExprTree * expr, std::string & sval);
+bool ExprTreeIsLiteralString(classad::ExprTree * expr, const char* & cstr);
 bool ExprTreeIsLiteralBool(classad::ExprTree * expr, bool & bval);
 classad::ExprTree * SkipExprEnvelope(classad::ExprTree * tree);
 classad::ExprTree * SkipExprParens(classad::ExprTree * tree);

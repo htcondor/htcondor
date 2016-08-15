@@ -54,7 +54,7 @@ one to specify which subsystem to turn off.
 \texttt{read\_events( file\_obj, is\_xml = True ) }
 
 Read and parse an HTCondor event log file.
-Returns a python iterator of ClassAds.
+Returns a Python iterator of ClassAds.
 
 Parameter \texttt{file\_obj} is a file object corresponding to an HTCondor
 event log.
@@ -380,6 +380,81 @@ back to the remote schedd based on a given resource request.
 \end{tabular}
 \end{flushleft}
 
+\textbf{The \texttt{Submit} class:}
+\begin{flushleft}
+\begin{tabular}{|p{16cm}|} \hline
+
+\texttt{\_\_init\_\_( (dict)input = None )}
+
+Create an instance of the \texttt{Submit} class.  
+
+Optional parameter \texttt{input} is a Python dictionary containing
+submit file key = value pairs.
+If omitted, the submit class is initially empty.
+
+\\ \hline
+\texttt{expand( (str)attr )}
+
+Expand all macros for the given attribute.
+
+Parameter \texttt{attr} is the name of the relevant attribute.
+
+Returns a string containing the value of the given attribute with
+all macros expanded.
+
+\\ \hline
+\texttt{ queue( (object)txn, (int)count = 1, (object)ad\_results = None )}
+
+Submit the current object to a remote queue.
+Parameter \texttt{txn} is an active transaction object (see
+\texttt{Schedd.transaction()}).
+
+Optional parameter \texttt{count} is the number of procs to create
+(defaults to 1 if not specified).
+
+Optional parameter \texttt{ad\_results} is an object to receive the
+ClassAd resulting from this submit.
+
+Returns the ClusterID of the submitted job(s).
+
+Throws a RuntimeError if the submission fails.
+
+\\ \hline
+\texttt{get( (str)attr, (str)default = None )}
+
+Gets the value of the specified attribute.
+
+Parameter \texttt{attr} is the name of the relevant attribute.
+
+Optional parameter \texttt{default} is a default value to be returned
+if the attribute is not defined.
+
+Returns a string containing the value of the attribute.
+
+\\ \hline
+\texttt{setdefault( (str)attr, (str)default)}
+
+Set a default value for an attribute.
+
+Parameter \texttt{attr} is the name of the relevant attribute.
+
+Parameter \texttt{default} is the value to which to set the given
+attribute if that attribute has not already been set.
+
+Returns a string containing the value of the attribute.
+
+\\ \hline
+\texttt{update( (object)submit )}
+
+Copy the contents of a given Submit object into the current object.
+
+Parameter \texttt{submit} is the Submit object to copy.
+
+\\ \hline
+\end{tabular}
+\end{flushleft}
+
+
 \textbf{The \texttt{Collector} class:}
 \begin{flushleft}
 \begin{tabular}{|p{16cm}|} \hline
@@ -557,6 +632,53 @@ Parameter \texttt{usage} is the usage to be set for the user.
 \\ \hline
 \end{tabular}
 \end{flushleft}
+
+\textbf{The \texttt{Startd} class:}
+\begin{flushleft}
+\begin{tabular}{|p{16cm}|} \hline
+
+\texttt{\_\_init\_\_( (ClassAd)ad = None ) }
+
+Create an instance of the \texttt{Startd} class.  
+
+Optional parameter \texttt{ad} is a ClassAd describing the claim
+(optional) and the startd location.
+If omitted, the local startd is assumed.
+
+\\ \hline
+\texttt{drainJobs( (int)how\_fast = Graceful,
+(bool)resume\_on\_completion = false, (expr)check\_expr = true ) }
+
+Begin draining jobs from the startd.
+
+Optional parameter \texttt{drain\_type} is how fast to drain the jobs
+(from the DrainTypes enum: \texttt{Fast}, \texttt{Graceful} or
+\texttt{Quick}) (defaults to \texttt{Graceful} if not specified).
+
+Parameter \texttt{resume\_on\_completion} is \Expr{True} if the startd
+should start accepting jobs again once draining is complete,
+\Expr{False} if it should remain in the drained state (defaults to
+\Expr{False} if not specified).
+
+Optional parameter \texttt{check\_expr} is an expression that must
+be \Expr{True} for all slots for draining to begin (defaults to
+\Expr{True} if not specified).
+
+Returns a (string) \texttt{request\_id} that can be used to cancel draining.
+
+\\ \hline
+\texttt{cancelDrainJobs( (object)request\_id = None ) }
+
+Cancel a draining request.
+
+Optional parameter \texttt{request\_id} specifies a draining request
+to cancel; if not specified, all draining requests for this startd
+are canceled.
+
+\\ \hline
+\end{tabular}
+\end{flushleft}
+
 
 \textbf{The \texttt{SecMan} class} accesses the internal security object.
 This class allows access to the security layer of HTCondor.

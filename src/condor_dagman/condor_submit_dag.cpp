@@ -208,7 +208,8 @@ doRecursionNew( SubmitDagDeepOptions &deepOpts,
 
 						// Now run condor_submit_dag on the DAG file.
 					if ( runSubmitDag( deepOpts, submitFile.Value(),
-								directory, false ) != 0 ) {
+								directory, shallowOpts.priority,
+								false ) != 0 ) {
 						result = 1;
 					}
 				}
@@ -233,7 +234,7 @@ doRecursionNew( SubmitDagDeepOptions &deepOpts,
 
 					// Now run condor_submit_dag on the DAG file.
 				if ( runSubmitDag( deepOpts, nestedDagFile, directory,
-							false ) != 0 ) {
+							shallowOpts.priority, false ) != 0 ) {
 					result = 1;
 				}
 			}
@@ -862,9 +863,9 @@ void writeSubmitFile( /* const */ SubmitDagDeepOptions &deepOpts,
 		args.AppendArg("-Import_env");
 	}
 
-	if( deepOpts.priority != 0 ) {
+	if( shallowOpts.priority != 0 ) {
 		args.AppendArg("-Priority");
-		args.AppendArg(deepOpts.priority);
+		args.AppendArg(shallowOpts.priority);
 	}
 
 	MyString arg_str,args_error;
@@ -1212,7 +1213,7 @@ parseCommandLine(SubmitDagDeepOptions &deepOpts,
 					fprintf(stderr, "-priority argument needs a value\n");
 					printUsage();
 				}
-				deepOpts.priority = atoi(argv[++iArg]);
+				shallowOpts.priority = atoi(argv[++iArg]);
 			}
 			else if ( (strArg.find("-dorecov") != -1) )
 			{

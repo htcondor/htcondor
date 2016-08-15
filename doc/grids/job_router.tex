@@ -266,40 +266,46 @@ The VDT (\URL{http://vdt.cs.wisc.edu}) project provides
 a convenient way to set up and install a trusted CA,
 if needed.
 
+Note that, as of version 8.5.6, the configuration language supports
+multi-line values, as shown in the example below (see section
+~\ref{sec:Multi-Line-Values} for more details).
+
 \footnotesize
 \begin{verbatim}
 
 # These settings become the default settings for all routes
-JOB_ROUTER_DEFAULTS = \
-  [ \
-    requirements=target.WantJobRouter is True; \
-    MaxIdleJobs = 10; \
-    MaxJobs = 200; \
-\
-    /* now modify routed job attributes */ \
-    /* remove routed job if it goes on hold or stays idle for over 6 hours */ \
-    set_PeriodicRemove = JobStatus == 5 || \
-                        (JobStatus == 1 && (time() - QDate) > 3600*6); \
-    delete_WantJobRouter = true; \
-    set_requirements = true; \
+JOB_ROUTER_DEFAULTS @=jrd
+  [
+    requirements=target.WantJobRouter is True;
+    MaxIdleJobs = 10;
+    MaxJobs = 200;
+
+    /* now modify routed job attributes */
+    /* remove routed job if it goes on hold or stays idle for over 6 hours */
+    set_PeriodicRemove = JobStatus == 5 ||
+                        (JobStatus == 1 && (time() - QDate) > 3600*6);
+    delete_WantJobRouter = true;
+    set_requirements = true;
   ]
+  @jrd
 
 # This could be made an attribute of the job, rather than being hard-coded
 ROUTED_JOB_MAX_TIME = 1440
 
 # Now we define each of the routes to send jobs on
-JOB_ROUTER_ENTRIES = \
-   [ GridResource = "gt2 site1.edu/jobmanager-condor"; \
-     name = "Site 1"; \
-   ] \
-   [ GridResource = "gt2 site2.edu/jobmanager-pbs"; \
-     name = "Site 2"; \
-     set_GlobusRSL = "(maxwalltime=$(ROUTED_JOB_MAX_TIME))(jobType=single)"; \
-   ] \
-   [ GridResource = "condor submit.site3.edu condor.site3.edu"; \
-     name = "Site 3"; \
-     set_remote_jobuniverse = 5; \
-   ]
+JOB_ROUTER_ENTRIES @=jre
+  [ GridResource = "gt2 site1.edu/jobmanager-condor";
+    name = "Site 1";
+  ]
+  [ GridResource = "gt2 site2.edu/jobmanager-pbs";
+    name = "Site 2";
+    set_GlobusRSL = "(maxwalltime=$(ROUTED_JOB_MAX_TIME))(jobType=single)";
+  ]
+  [ GridResource = "condor submit.site3.edu condor.site3.edu";
+    name = "Site 3";
+    set_remote_jobuniverse = 5;
+  ]
+  @jre
 
 
 # Reminder: you must restart HTCondor for changes to DAEMON_LIST to take effect.
