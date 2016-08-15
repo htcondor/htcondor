@@ -1690,6 +1690,197 @@ ClassAd * CondorClassAdFileIterator::next(classad::ExprTree * constraint)
 	return NULL;
 }
 
+CondorClassAdFileParseHelper::ParseType CondorClassAdFileIterator::getParseType()
+{
+	if (parse_help) return parse_help->getParseType();
+	return (CondorClassAdFileParseHelper::ParseType)-1;
+}
+
+CondorClassAdFileParseHelper::ParseType CondorClassAdListWriter::setFormat(CondorClassAdFileParseHelper::ParseType typ)
+{
+	if ( ! wrote_header && ! cNonEmptyOutputAds) out_format = typ;
+	return out_format;
+}
+
+CondorClassAdFileParseHelper::ParseType CondorClassAdListWriter::autoSetFormat(CondorClassAdFileParseHelper & parse_help)
+{
+	if (out_format != CondorClassAdFileParseHelper::Parse_auto) return out_format;
+	return setFormat(parse_help.getParseType());
+}
+
+// append a classad into the given output buffer, writing list header or separator as needed.
+// return:
+//    < 0 failure,
+//    0   nothing written
+//    1   non-empty ad appended
+int CondorClassAdListWriter::appendAd(const ClassAd & ad, std::string & output, bool hash_order)
+{
+	if (ad.size() == 0) return 0;
+	size_t cchBegin = output.size();
+
+	// TODO: add whitelist support?
+
+	classad::References attrs;
+	classad::References *print_order = NULL;
+	if ( ! hash_order) {
+		StringList * whitelist = NULL;
+		sGetAdAttrs(attrs, ad, false, whitelist);
+		print_order = &attrs;
+	}
+
+	// if we havn't picked a format yet, pick long.
+	if (out_format < ClassAdFileParseType::Parse_long || out_format > ClassAdFileParseType::Parse_new) {
+		out_format = ClassAdFileParseType::Parse_long;
+	}
+
+	switch (out_format) {
+	default:
+	case ClassAdFileParseType::Parse_long: {
+			if (print_order) {
+				sPrintAdAttrs(output, ad, *print_order);
+			} else {
+				sPrintAd(output, ad);
+			}
+			if (output.size() > cchBegin) { output += "\n"; }
+		} break;
+
+	case ClassAdFileParseType::Parse_json: {
+			classad::ClassAdJsonUnParser  unparser;
+			output += cNonEmptyOutputAds ? ",\n" : "[\n";
+			if (print_order) {
+				PRAGMA_REMIND("fix to call call Unparse with projection when it exists")
+				//unparser.Unparse(output, job, print_order);
+				unparser.Unparse(output, &ad);
+			} else {
+				unparser.Unparse(output, &ad);
+			}
+			if (output.size() > cchBegin+2) {
+				needs_footer = wrote_header = true;
+				output += "\n";
+			} else {
+				output.erase(cchBegin);
+			}
+		} break;
+
+	case ClassAdFileParseType::Parse_new: {
+			classad::ClassAdUnParser  unparser;
+			output += cNonEmptyOutputAds ? ",\n" : "{\n";
+			if (print_order) {
+				PRAGMA_REMIND("fix to call call Unparse with projection when it exists")
+				//unparser.Unparse(output, job, print_order);
+				unparser.Unparse(output, &ad);
+			} else {
+				unparser.Unparse(output, &ad);
+			}
+			if (output.size() > cchBegin+2) {
+				needs_footer = wrote_header = true;
+				output += "\n";
+			} else {
+				output.erase(cchBegin);
+			}
+		} break;
+
+	case ClassAdFileParseType::Parse_xml: {
+			classad::ClassAdXMLUnParser  unparser;
+			unparser.SetCompactSpacing(false);
+			size_t cchTmp = cchBegin;
+			if (0 == cNonEmptyOutputAds) {
+				AddClassAdXMLFileHeader(output);
+				cchTmp = output.size();
+			}
+			if (print_order) {
+				PRAGMA_REMIND("fix to call call Unparse with projection when it exists")
+				//unparser.Unparse(output, job, print_order);
+				unparser.Unparse(output, &ad);
+			} else {
+				unparser.Unparse(output, &ad);
+			}
+			if (output.size() > cchTmp) {
+				needs_footer = wrote_header = true;
+				//no extra newlines for xml
+				// output += "\n";
+			} else {
+				output.erase(cchBegin);
+			}
+		} break;
+	}
+
+	if (output.size() > cchBegin) {
+		++cNonEmptyOutputAds;
+		return 1;
+	}
+	return 0;
+}
+
+// append a classad list footer into the given output buffer if needed
+// return:
+//    < 0 failure,
+//    0   nothing written
+//    1   non-empty ad appended
+int CondorClassAdListWriter::appendFooter(std::string & buf, bool xml_always_write_header_footer)
+{
+	int rval = 0;
+	switch (out_format) {
+	case ClassAdFileParseType::Parse_xml:
+		if ( ! wrote_header) {
+			if (xml_always_write_header_footer) {
+				// for XML output, we ALWAYS write the header and footer, even if there were no ads.
+				AddClassAdXMLFileHeader(buf);
+			} else {
+				break;
+			}
+		}
+		AddClassAdXMLFileFooter(buf);
+		rval = 1;
+		break;
+	case ClassAdFileParseType::Parse_new:
+		if (cNonEmptyOutputAds) { buf += "}\n"; rval = 1; }
+		break;
+	case ClassAdFileParseType::Parse_json:
+		if (cNonEmptyOutputAds) { buf += "]\n"; rval = 1; }
+	default:
+		// nothing to do.
+		break;
+	}
+	needs_footer = false;
+	return rval;
+}
+
+// write a classad into the given output stream attributes are sorted unless hash_order is true
+// return:
+//    < 0 failure,
+//    0   nothing written
+//    1   non-empty ad written
+static const int cchReserveForPrintingAds = 16384;
+int CondorClassAdListWriter::writeAd(const ClassAd & ad, FILE * out, bool hash_order)
+{
+	buffer.clear();
+	if ( ! cNonEmptyOutputAds) buffer.reserve(cchReserveForPrintingAds);
+
+	int rval = appendAd(ad, buffer, hash_order);
+	if (rval < 0) return rval;
+
+	if ( ! buffer.empty()) {
+		fputs(buffer.c_str(), out);
+	}
+	return rval;
+}
+
+// write a classad list footer into the given output stream if needed
+// return:
+//    < 0 failure,
+//    0   nothing written
+//    1   non-empty ad written
+int CondorClassAdListWriter::writeFooter(FILE* out, bool xml_always_write_header_footer)
+{
+	buffer.clear();
+	appendFooter(buffer, xml_always_write_header_footer);
+	if ( ! buffer.empty()) {
+		int rval = fputs(buffer.c_str(), out);
+		return (rval < 0) ? rval : 1;
+	}
+	return 0;
+}
 
 bool
 ClassAdAttributeIsPrivate( char const *name )
