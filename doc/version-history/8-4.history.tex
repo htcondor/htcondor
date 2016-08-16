@@ -41,6 +41,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a typo in the desired value of `rmem\_max' in the Linux kernel
+tuning script.  Improved logging of Linux kernel tuning script by including
+the name of the file (not) being changed.
+\Ticket{5829}
+
 \item Fixed a bug that could cause the \Condor{master} to crash after
 restarting the \Condor{shared\_port} daemon.
 \Ticket{5801}
