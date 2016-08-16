@@ -185,22 +185,9 @@ Unparse( string &buffer, const ExprTree *tree )
 
 		case ExprTree::CLASSAD_NODE: {
 			vector< pair<string, ExprTree*> > attrs;
-			vector< pair<string, ExprTree*> >::iterator	itr;
 			((ClassAd*)tree)->GetComponents( attrs );
 
-			buffer += "{";
-			m_indentLevel += m_indentIncrement;
-			for( itr=attrs.begin( ); itr!=attrs.end( ); itr++ ) {
-				if ( itr != attrs.begin() ) {
-					buffer += ",";
-				}
-				buffer += "\n" + string( m_indentLevel, ' ' ) + "\"";
-				UnparseAuxEscapeString( buffer, itr->first );
-				buffer += "\": ";
-				Unparse( buffer, itr->second );
-			}
-			m_indentLevel -= m_indentIncrement;
-			buffer += "\n" + string( m_indentLevel, ' ' ) + "}";
+			UnparseAuxClassAd( buffer, attrs );
 			return;
 		}
 
@@ -241,6 +228,20 @@ Unparse( string &buffer, const ExprTree *tree )
 	}
 }
 				
+void ClassAdJsonUnParser::
+Unparse( string &buffer, const ClassAd *ad, const References &whitelist )
+{
+	if( !ad ) {
+		buffer = "<error:null expr>";
+		return;
+	}
+
+	vector< pair<string, ExprTree*> > attrs;
+	ad->GetComponents( attrs, whitelist );
+
+	UnparseAuxClassAd( buffer, attrs );
+}
+
 void ClassAdJsonUnParser::
 UnparseAuxQuoteExpr( std::string &buffer, const ExprTree *expr )
 {
@@ -292,5 +293,25 @@ UnparseAuxEscapeString( std::string &buffer, const std::string &value )
 	}
 }
 
+void ClassAdJsonUnParser::
+UnparseAuxClassAd( std::string &buffer,
+	const std::vector< std::pair< std::string, ExprTree*> >& attrs )
+{
+	vector< pair<string, ExprTree*> >::const_iterator itr;
+
+	buffer += "{";
+	m_indentLevel += m_indentIncrement;
+	for( itr=attrs.begin( ); itr!=attrs.end( ); itr++ ) {
+		if ( itr != attrs.begin() ) {
+			buffer += ",";
+		}
+		buffer += "\n" + string( m_indentLevel, ' ' ) + "\"";
+		UnparseAuxEscapeString( buffer, itr->first );
+		buffer += "\": ";
+		Unparse( buffer, itr->second );
+	}
+	m_indentLevel -= m_indentIncrement;
+	buffer += "\n" + string( m_indentLevel, ' ' ) + "}";
+}
 
 } // classad

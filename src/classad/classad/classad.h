@@ -550,6 +550,7 @@ class ClassAd : public ExprTree
 		 * 		attributes of the classad
 		 */
 		void GetComponents( std::vector< std::pair< std::string, ExprTree *> > &vec ) const;
+		void GetComponents( std::vector< std::pair< std::string, ExprTree *> > &vec, const References &whitelist ) const;
 
         /** Make sure everything in the ad is in this ClassAd.
          *  This is different than CopyFrom() because we may have many 

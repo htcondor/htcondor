@@ -1748,9 +1748,7 @@ int CondorClassAdListWriter::appendAd(const ClassAd & ad, std::string & output, 
 			classad::ClassAdJsonUnParser  unparser;
 			output += cNonEmptyOutputAds ? ",\n" : "[\n";
 			if (print_order) {
-				PRAGMA_REMIND("fix to call call Unparse with projection when it exists")
-				//unparser.Unparse(output, job, print_order);
-				unparser.Unparse(output, &ad);
+				unparser.Unparse(output, &ad, *print_order);
 			} else {
 				unparser.Unparse(output, &ad);
 			}
@@ -1766,9 +1764,7 @@ int CondorClassAdListWriter::appendAd(const ClassAd & ad, std::string & output, 
 			classad::ClassAdUnParser  unparser;
 			output += cNonEmptyOutputAds ? ",\n" : "{\n";
 			if (print_order) {
-				PRAGMA_REMIND("fix to call call Unparse with projection when it exists")
-				//unparser.Unparse(output, job, print_order);
-				unparser.Unparse(output, &ad);
+				unparser.Unparse(output, &ad, *print_order);
 			} else {
 				unparser.Unparse(output, &ad);
 			}
@@ -1789,9 +1785,7 @@ int CondorClassAdListWriter::appendAd(const ClassAd & ad, std::string & output, 
 				cchTmp = output.size();
 			}
 			if (print_order) {
-				PRAGMA_REMIND("fix to call call Unparse with projection when it exists")
-				//unparser.Unparse(output, job, print_order);
-				unparser.Unparse(output, &ad);
+				unparser.Unparse(output, &ad, *print_order);
 			} else {
 				unparser.Unparse(output, &ad);
 			}

@@ -69,6 +69,21 @@ void ClassAdXMLUnParser::Unparse(
 }
 
 void ClassAdXMLUnParser::
+Unparse( std::string &buffer,
+	const ClassAd *ad,
+	const References &whitelist )
+{
+	if( !ad ) {
+		buffer = "<error:null expr>";
+		return;
+	}
+
+	vector< pair<string, ExprTree*> > attrs;
+	ad->GetComponents(attrs, whitelist);
+	UnparseAux(buffer, attrs, 0);
+}
+
+void ClassAdXMLUnParser::
 Unparse(
 	string   &buffer, 
 	const ExprTree *tree, 
