@@ -4313,14 +4313,17 @@ NEGOTIATOR_USERID = condor
 
 \label{param:StartMaster}
 \item[\Macro{START\_MASTER}]
-  If this setting is defined and set to \Expr{False}
-  when the \Condor{master} starts up, the first
-  thing it will do is exit.  This appears strange, but perhaps you
+  If this setting is defined and set to \Expr{False} the \Condor{master}
+  will immediately exit upon startup.
+  This appears strange, but perhaps you
   do not want HTCondor to run on certain machines in your pool, yet
   the boot scripts for your entire pool are handled by a centralized
-  This is
+  set of files -- setting \MacroNI{START\_MASTER} to \Expr{False}
+  for those machines would allow this.
+  Note that \MacroNI{START\_MASTER} is
   an entry you would most likely find in a local configuration file,
   not a global configuration file.
+  If not defined, \MacroNI{START\_MASTER} defaults to \Expr{True}.
 
 \label{param:StartDaemons}
 \item[\Macro{START\_DAEMONS}]

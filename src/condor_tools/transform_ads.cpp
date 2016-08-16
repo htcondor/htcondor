@@ -45,6 +45,7 @@
 
 #define USE_XFORM_UTILS 1
 #define USE_CLASSAD_ITERATOR 1
+#define USE_CLASSAD_LIST_WRITER 1
 
 #define UNSPECIFIED_PARSE_TYPE (ClassAdFileParseType::ParseType)-1
 
@@ -82,8 +83,13 @@ public:
 class apply_transform_args {
 public:
 #ifdef USE_XFORM_UTILS
+#ifdef USE_CLASSAD_LIST_WRITER
+	apply_transform_args(MacroStreamXFormSource& xfm, XFormHash & ms, FILE* out, CondorClassAdListWriter & writ)
+		: xforms(xfm), mset(ms), checkpoint(NULL), outfile(out), writer(writ), input_helper(NULL) {}
+#else
 	apply_transform_args(MacroStreamXFormSource& xfm, XFormHash & ms, FILE* out)
 		: xforms(xfm), mset(ms), checkpoint(NULL), outfile(out), input_helper(NULL) {}
+#endif
 #else
 	apply_transform_args(MacroStreamXFormSource& xfm, MACRO_SET_CHECKPOINT_HDR* check, FILE* out)
 		: xforms(xfm), checkpoint(check), outfile(out), input_helper(NULL) {}
@@ -94,6 +100,9 @@ public:
 #endif
 	MACRO_SET_CHECKPOINT_HDR* checkpoint;
 	FILE* outfile;
+#ifdef USE_CLASSAD_LIST_WRITER
+	CondorClassAdListWriter & writer;
+#endif
 	compat_classad::CondorClassAdFileParseHelper *input_helper;
 	std::string errmsg;
 };
@@ -107,13 +116,20 @@ int DoUnitTests(int options);
 int ApplyTransform(void *pv, ClassAd * job);
 bool ReportSuccess(const ClassAd * job, apply_transform_args & xform_args);
 #ifdef USE_XFORM_UTILS
+#ifdef USE_CLASSAD_LIST_WRITER
+int DoTransforms(input_file & input, const char * constr, MacroStreamXFormSource & xforms, XFormHash & mset, FILE* outfile, CondorClassAdListWriter &writer);
+#else
 int DoTransforms(input_file & input, const char * constraint, MacroStreamXFormSource & xforms, XFormHash & mset, FILE* outfile);
+#endif
 #else
 int DoTransforms(input_file & input, const char * constraint, MacroStreamXFormSource & xforms, FILE* outfile);
 int ParseRulesCallback(void* pv, MACRO_SOURCE& source, MACRO_SET& macro_set, char * line);
 #endif
 bool LoadJobRouterDefaultsAd(ClassAd & ad);
-void write_output_prolog(FILE* outfile, ClassAdFileParseType::ParseType out_format, int cNonEmptyOutputAds);
+#ifdef USE_CLASSAD_LIST_WRITER
+#else
+void write_output_epilog(FILE* outfile, ClassAdFileParseType::ParseType out_format, int cNonEmptyOutputAds);
+#endif
 
 #if 0
 char * local_param( const char* name, const char* alt_name );
@@ -570,17 +586,29 @@ main( int argc, const char *argv[] )
 	// if no output parse format has been specified, choose long
 	if (DashOutFormat == UNSPECIFIED_PARSE_TYPE) { DashOutFormat = ClassAdFileParseType::Parse_long; }
 
+#ifdef USE_CLASSAD_LIST_WRITER
+	CondorClassAdListWriter writer(DashOutFormat);
+#endif
+
 	for (size_t ixInput = 0; ixInput < inputs.size(); ++ixInput) {
 		// use default parse format if input file still has an unspecifed one.
 		if (inputs[ixInput].parse_format == UNSPECIFIED_PARSE_TYPE) { inputs[ixInput].parse_format = def_ads_format; }
 #ifdef USE_XFORM_UTILS
+#ifdef USE_CLASSAD_LIST_WRITER
+		rval = DoTransforms(inputs[ixInput], job_match_constraint, ms, xform_hash, outfile, writer);
+#else
 		rval = DoTransforms(inputs[ixInput], job_match_constraint, ms, xform_hash, outfile);
+#endif
 #else
 		rval = DoTransforms(inputs[ixInput], job_match_constraint, ms, outfile);
 #endif
 	}
 
-	write_output_prolog(outfile, DashOutFormat, cNonEmptyOutputAds);
+#ifdef USE_CLASSAD_LIST_WRITER
+	writer.writeFooter(outfile);
+#else
+	write_output_epilog(outfile, DashOutFormat, cNonEmptyOutputAds);
+#endif
 	if (close_outfile) {
 		fclose(outfile);
 		outfile = NULL;
@@ -1769,7 +1797,25 @@ int ApplyTransform (
 
 #endif // USE_XFORM_UTILS
 
-void write_output_prolog(
+#ifdef USE_CLASSAD_LIST_WRITER
+bool ReportSuccess(const ClassAd * job, apply_transform_args & xform_args)
+{
+	if ( ! job) return false;
+	if (testing.no_output) return true;
+
+	// if we have not yet picked and output format, do that now.
+	if (DashOutFormat == ClassAdFileParseType::Parse_auto) {
+		if (xform_args.input_helper) {
+			fprintf(stderr, "input file format is %d\n", xform_args.input_helper->getParseType());
+			DashOutFormat = xform_args.writer.autoSetFormat(*xform_args.input_helper);
+		}
+	}
+
+	xform_args.writer.writeAd(*job, xform_args.outfile, DashOutAttrsInHashOrder);
+	return true;
+}
+#else
+void write_output_epilog(
 	FILE* outfile,
 	ClassAdFileParseType::ParseType out_format,
 	int cNonEmptyOutputAds)
@@ -1889,11 +1935,16 @@ bool ReportSuccess(const ClassAd * job, apply_transform_args & xform_args)
 	}
 	return true;
 }
+#endif
 
 
 #ifdef USE_XFORM_UTILS
 #ifdef USE_CLASSAD_ITERATOR
+#ifdef USE_CLASSAD_LIST_WRITER
+int DoTransforms(input_file & input, const char * constr, MacroStreamXFormSource & xforms, XFormHash & mset, FILE* outfile, CondorClassAdListWriter &writer)
+#else
 int DoTransforms(input_file & input, const char * constr, MacroStreamXFormSource & xforms, XFormHash & mset, FILE* outfile)
+#endif
 {
 	int rval = 0;
 
@@ -1919,7 +1970,11 @@ int DoTransforms(input_file & input, const char * constr, MacroStreamXFormSource
 		close_file = true;
 	}
 
+#ifdef USE_CLASSAD_LIST_WRITER
+	apply_transform_args args(xforms, mset, outfile, writer);
+#else
 	apply_transform_args args(xforms, mset, outfile);
+#endif
 	args.checkpoint = mset.save_state();
 
 	// TODO: add code to pass arguments between transforms?
