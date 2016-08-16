@@ -1122,9 +1122,7 @@ printXML (ClassAd &ad, classad::References * attrs)
 
 	unparser.SetCompactSpacing(false);
 	if (attrs) {
-		PRAGMA_REMIND("fix to call call Unparse with projection when it exists")
-		//unparser.Unparse(output, &ad, attrs);
-		unparser.Unparse(output, &ad);
+		unparser.Unparse(output, &ad, *attrs);
 	} else {
 		unparser.Unparse(output, &ad);
 	}
@@ -1147,9 +1145,7 @@ printJSON (ClassAd &ad, bool first_ad, classad::References * attrs)
 		output += ",\n";
 	}
 	if (attrs) {
-		PRAGMA_REMIND("fix to call call Unparse with projection when it exists")
-		//unparser.Unparse(output, &ad, attrs);
-		unparser.Unparse(output, &ad);
+		unparser.Unparse(output, &ad, *attrs);
 	} else {
 		unparser.Unparse(output, &ad);
 	}
@@ -1172,9 +1168,7 @@ printNewClassad (ClassAd &ad, bool first_ad, classad::References * attrs)
 		output += ",\n";
 	}
 	if (attrs) {
-		PRAGMA_REMIND("fix to call call Unparse with projection when it exists")
-		//unparser.Unparse(output, &ad, attrs);
-		unparser.Unparse(output, &ad);
+		unparser.Unparse(output, &ad, *attrs);
 	} else {
 		unparser.Unparse(output, &ad);
 	}
