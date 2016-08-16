@@ -67,6 +67,11 @@ Also added support for service accounts with GCE.
 
 \begin{itemize}
 
+\item The EC2 GAHP now handles integer overflows when checking deadlines.
+This prevents spurious time-outs on 32-bit systems which have been up for
+more than 28 days.
+\Ticket{5824}
+
 \item Lengthened the watchdog timeout in the systemd service file to 20 minutes.
 Also, ping systemd at a third of the watchdog interval.
 \Ticket{5837}
