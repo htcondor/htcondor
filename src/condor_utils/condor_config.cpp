@@ -90,6 +90,7 @@
 #include "which.h"
 #include "classad_helpers.h"
 #include <algorithm> // for std::sort
+#include "CondorError.h"
 
 #ifdef WIN32
 // Note inversion of argument order...
