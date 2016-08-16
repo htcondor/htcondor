@@ -59,6 +59,7 @@ class ClassAdUnParser
 		 * 	@param expr The expression to unparse
 		 */
 		void Unparse( std::string &buffer, const ExprTree *expr );
+		void Unparse( std::string &buffer, const ClassAd *ad, const References &whitelist );
 
 			//	for backcompatibility only - NAC
 			// In old ClassAd syntax, nested ads should be delimited in
