@@ -29,6 +29,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item HTCondor no longer gives up if a bad networking configuration is
+detected while running a tool.  This allows \Condor{config\_val} to be
+used to debug the problem.
+\Ticket{5532}
+
 \item The \Condor{negotiator} by default no longer cross advertises the
 user priority and resources in use from every slot in a machine ad to every
 other slot in that machine ad.  \Macro{NEGOTIATOR\_CROSS\_SLOT\_PRIOS} = true
