@@ -1713,17 +1713,14 @@ CondorClassAdFileParseHelper::ParseType CondorClassAdListWriter::autoSetFormat(C
 //    < 0 failure,
 //    0   nothing written
 //    1   non-empty ad appended
-int CondorClassAdListWriter::appendAd(const ClassAd & ad, std::string & output, bool hash_order)
+int CondorClassAdListWriter::appendAd(const ClassAd & ad, std::string & output, StringList * whitelist, bool hash_order)
 {
 	if (ad.size() == 0) return 0;
 	size_t cchBegin = output.size();
 
-	// TODO: add whitelist support?
-
 	classad::References attrs;
 	classad::References *print_order = NULL;
-	if ( ! hash_order) {
-		StringList * whitelist = NULL;
+	if ( ! hash_order || whitelist) {
 		sGetAdAttrs(attrs, ad, false, whitelist);
 		print_order = &attrs;
 	}
@@ -1846,12 +1843,12 @@ int CondorClassAdListWriter::appendFooter(std::string & buf, bool xml_always_wri
 //    0   nothing written
 //    1   non-empty ad written
 static const int cchReserveForPrintingAds = 16384;
-int CondorClassAdListWriter::writeAd(const ClassAd & ad, FILE * out, bool hash_order)
+int CondorClassAdListWriter::writeAd(const ClassAd & ad, FILE * out, StringList * whitelist, bool hash_order)
 {
 	buffer.clear();
 	if ( ! cNonEmptyOutputAds) buffer.reserve(cchReserveForPrintingAds);
 
-	int rval = appendAd(ad, buffer, hash_order);
+	int rval = appendAd(ad, buffer, whitelist, hash_order);
 	if (rval < 0) return rval;
 
 	if ( ! buffer.empty()) {

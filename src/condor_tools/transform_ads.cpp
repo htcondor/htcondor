@@ -1811,7 +1811,7 @@ bool ReportSuccess(const ClassAd * job, apply_transform_args & xform_args)
 		}
 	}
 
-	xform_args.writer.writeAd(*job, xform_args.outfile, DashOutAttrsInHashOrder);
+	xform_args.writer.writeAd(*job, xform_args.outfile, NULL, DashOutAttrsInHashOrder);
 	return true;
 }
 #else

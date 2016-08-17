@@ -66,8 +66,6 @@ static int cleanup_globals(int exit_code); // called on exit to do necessary cle
 #include "sqlquery.h"
 #endif /* HAVE_EXT_POSTGRESQL */
 
-#define USE_LATE_PROJECTION 1
-
 /* Since this enum can have conditional compilation applied to it, I'm
 	specifying the values for it to keep their actual integral values
 	constant in case someone decides to write this information to disk to
@@ -160,10 +158,7 @@ int max_batch_name = 0; // width of longest batch name
 //int max_cluster_id = 0; // future
 //int max_proc_id = 0;    // future
 
-static bool read_classad_file(const char *filename, ClassAdList &classads, ClassAdFileParseHelper* pparse_help, const char * constr);
 static int read_userprio_file(const char *filename, ExtArray<PrioEntry> & prios);
-
-
 
 /* convert the -direct aqrgument prameter into an enum */
 unsigned int process_direct_argument(char *arg);
@@ -205,8 +200,8 @@ static unsigned int direct = DIRECT_ALL;
 
 static 	int dash_long = 0, summarize = 1, global = 0, show_io = 0, dash_dag = 0, show_held = 0;
 static  int dash_batch = 0, dash_batch_specified = 0, dash_batch_is_default = 1;
-static  int use_xml = 0;
-static  bool use_json = false;
+static ClassAdFileParseType::ParseType dash_long_format = ClassAdFileParseType::Parse_auto;
+static bool print_attrs_in_hash_order = false;
 static  int dash_autocluster = 0; // can be 0, or CondorQ::fetch_DefaultAutoCluster or CondorQ::fetch_GroupBy
 static  int default_fetch_opts = CondorQ::fetch_MyJobs;
 static  bool widescreen = false;
@@ -219,7 +214,9 @@ static 	int malformed, running, idle, held, suspended, completed, removed;
 
 static char dash_progress_alt_char = 0;
 static  const char *jobads_file = NULL; // NULL, or points to jobads filename from argv
+static ClassAdFileParseType::ParseType jobads_file_format = ClassAdFileParseType::Parse_auto;
 static  const char *machineads_file = NULL; // NULL, or points to machineads filename from argv
+static ClassAdFileParseType::ParseType machineads_file_format = ClassAdFileParseType::Parse_auto;
 static  const char *userprios_file = NULL; // NULL, or points to userprios filename from argv
 static  const char *userlog_file = NULL; // NULL, or points to userlog filename from argv
 static  bool analyze_with_userprio = false;
@@ -227,6 +224,7 @@ static  char * analyze_memory_usage = NULL;
 static  bool dash_profile = false;
 //static  bool analyze_dslots = false;
 static  bool disable_user_print_files = false;
+const bool always_write_xml_footer = true;
 
 
 // Constraint on JobIDs for faster filtering
@@ -433,14 +431,16 @@ int SlotSort(ClassAd *ad1, ClassAd *ad2, void *  /*data*/)
 	return 0;
 }
 
-class CondorQClassAdFileParseHelper : public compat_classad::ClassAdFileParseHelper
+
+class CondorQClassAdFileParseHelper : public compat_classad::CondorClassAdFileParseHelper
 {
  public:
-	CondorQClassAdFileParseHelper() : is_schedd(false), is_submitter(false) {}
+	CondorQClassAdFileParseHelper(ParseType typ=Parse_long)
+		: CondorClassAdFileParseHelper("\n", typ)
+		, is_schedd(false), is_submitter(false)
+	{}
 	virtual int PreParse(std::string & line, ClassAd & ad, FILE* file);
 	virtual int OnParseError(std::string & line, ClassAd & ad, FILE* file);
-	// return non-zero if new parser, o if old (line oriented) parser, non-zero is returned the above functions will never be called.
-	virtual int NewParser(ClassAd & /*ad*/, FILE* /*file*/, bool & detected_long, std::string & /*errmsg*/) { detected_long = false; return 0; }
 	std::string schedd_name;
 	std::string schedd_addr;
 	bool is_schedd;
@@ -513,6 +513,21 @@ int CondorQClassAdFileParseHelper::OnParseError(std::string & line, ClassAd & ad
 	}
 	return ee;
 }
+
+
+int GetQueueConstraint(CondorQ & q, ConstraintHolder & constr) {
+	int err = 0;
+	MyString query;
+	q.rawQuery(query);
+	if (query.empty()) {
+		constr.clear();
+	} else {
+		constr.set(query.StrDup());
+	}
+	constr.Expr(&err);
+	return err;
+}
+
 
 static void
 profile_print(size_t & cbBefore, double & tmBefore, int cAds, bool fCacheStats=true)
@@ -1162,6 +1177,19 @@ parse_analyze_detail(const char * pch, int current_details)
 	return current_details | details | flg;
 }
 
+ClassAdFileParseType::ParseType parseAdsFileFormat(const char * arg, ClassAdFileParseType::ParseType def_parse_type)
+{
+	ClassAdFileParseType::ParseType parse_type = def_parse_type;
+	YourString fmt(arg);
+	if (fmt == "long") { parse_type = ClassAdFileParseType::Parse_long; }
+	else if (fmt == "json") { parse_type = ClassAdFileParseType::Parse_json; }
+	else if (fmt == "xml") { parse_type = ClassAdFileParseType::Parse_xml; }
+	else if (fmt == "new") { parse_type = ClassAdFileParseType::Parse_new; }
+	else if (fmt == "auto") { parse_type = ClassAdFileParseType::Parse_auto; }
+	return parse_type;
+}
+
+
 // this enum encodes the user choice of the various reports that condor_q can show
 // The first few are mutually exclusive, the last are flags
 enum {
@@ -1240,22 +1268,42 @@ processCommandLineArguments (int argc, char *argv[])
 			}
 			continue;
 		}
-		if (is_dash_arg_prefix (dash_arg, "long", 1)) {
+		if (is_dash_arg_colon_prefix (dash_arg, "long", &pcolon, 1)) {
 			dash_long = 1;
 			summarize = 0;
 			customHeadFoot = HF_BARE;
+			if (pcolon) {
+				StringList opts(++pcolon);
+				for (const char * opt = opts.first(); opt; opt = opts.next()) {
+					if (YourString(opt) == "nosort") {
+						print_attrs_in_hash_order = true;
+					} else {
+						dash_long_format = parseAdsFileFormat(pcolon, ClassAdFileParseType::Parse_auto);
+					}
+				}
+			}
 		} 
 		else
 		if (is_dash_arg_prefix (dash_arg, "xml", 3)) {
-			use_xml = 1;
+			//use_xml = 1;
 			dash_long = 1;
+			if (dash_long_format == ClassAdFileParseType::Parse_json) {
+				fprintf( stderr, "Error: Cannot print as both XML and JSON\n" );
+				exit( 1 );
+			}
+			dash_long_format = ClassAdFileParseType::Parse_xml;
 			summarize = 0;
 			customHeadFoot = HF_BARE;
 		}
 		else
 		if (is_dash_arg_prefix (dash_arg, "json", 2)) {
-			use_json = true;
+			//use_json = true;
 			dash_long = 1;
+			if (dash_long_format == ClassAdFileParseType::Parse_xml) {
+				fprintf( stderr, "Error: Cannot print as both XML and JSON\n" );
+				exit( 1 );
+			}
+			dash_long_format = ClassAdFileParseType::Parse_json;
 			summarize = 0;
 			customHeadFoot = HF_BARE;
 		}
@@ -1907,13 +1955,16 @@ processCommandLineArguments (int argc, char *argv[])
 			expert = true;
 			/// fix me
 		}
-		else if (is_dash_arg_prefix(dash_arg, "jobads", 1)) {
+		else if (is_dash_arg_colon_prefix(dash_arg, "jobads", &pcolon, 1)) {
 			if (argc <= i+1) {
 				fprintf( stderr, "Error: -jobads requires a filename\n");
 				exit(1);
 			} else {
 				i++;
 				jobads_file = argv[i];
+			}
+			if (pcolon) {
+				jobads_file_format = parseAdsFileFormat(++pcolon, jobads_file_format);
 			}
 		}
 		else if (is_dash_arg_prefix(dash_arg, "userlog", 1)) {
@@ -1925,13 +1976,16 @@ processCommandLineArguments (int argc, char *argv[])
 				userlog_file = argv[i];
 			}
 		}
-		else if (is_dash_arg_prefix(dash_arg, "slotads", 1)) {
+		else if (is_dash_arg_colon_prefix(dash_arg, "slotads", &pcolon, 1)) {
 			if (argc <= i+1) {
 				fprintf( stderr, "Error: -slotads requires a filename\n");
 				exit(1);
 			} else {
 				i++;
 				machineads_file = argv[i];
+			}
+			if (pcolon) {
+				machineads_file_format = parseAdsFileFormat(++pcolon, machineads_file_format);
 			}
 		}
 		else if (is_dash_arg_colon_prefix(dash_arg, "userprios", &pcolon, 5)) {
@@ -1990,11 +2044,6 @@ processCommandLineArguments (int argc, char *argv[])
 
 	// when we get to here, the command line arguments have been processed
 	// now we can work out some of the implications
-
-	if (use_xml && use_json) {
-		fprintf( stderr, "Error: Cannot print as both XML and JSON\n" );
-		exit( 1 );
-	}
 
 	// default batch mode to on if appropriate
 	if ( ! dash_batch_specified && ! dash_long && ! show_held) {
@@ -2836,52 +2885,58 @@ usage (const char *myName, int other)
 {
 	printf ("Usage: %s [general-opts] [restriction-list] [output-opts | analyze-opts]\n", myName);
 	printf ("\n    [general-opts] are\n"
-		"\t-global\t\t\tQuery all Schedulers in this pool\n"
-		"\t-schedd-constraint\tQuery all Schedulers matching this constraint\n"
-		"\t-submitter <submitter>\tGet queue of specific submitter\n"
-		"\t-name <name>\t\tName of Scheduler\n"
-		"\t-pool <host>\t\tUse host as the central manager to query\n"
+		"\t-global\t\t\t Query all Schedulers in this pool\n"
+		"\t-schedd-constraint\t Query all Schedulers matching this constraint\n"
+		"\t-submitter <submitter>\t Get queue of specific submitter\n"
+		"\t-name <name>\t\t Name of Scheduler\n"
+		"\t-pool <host>\t\t Use host as the central manager to query\n"
 #ifdef HAVE_EXT_POSTGRESQL
 		"\t-direct <rdbms | schedd>\n"
 		"\t\tPerform a direct query to the rdbms\n"
 		"\t\tor to the schedd without falling back to the queue\n"
 		"\t\tlocation discovery algortihm, even in case of error\n"
-		"\t-avgqueuetime\t\tAverage queue time for uncompleted jobs\n"
+		"\t-avgqueuetime\t\t Average queue time for uncompleted jobs\n"
 #endif
-		"\t-jobads <file>\t\tRead queue from a file of job ClassAds\n"
-		"\t-userlog <file>\t\tRead queue from a user log file\n"
+		"\t-jobads[:<form>] <file>\t Read queue from a file of job ClassAds\n"
+		"\t           where <form> is one of:\n"
+		"\t       auto    default, guess the format from reading the input stream\n"
+		"\t       long    The traditional -long form\n"
+		"\t       xml     XML form, the same as -xml\n"
+		"\t       json    JSON classad form, the same as -json\n"
+		"\t       new     'new' classad form without newlines\n"
+		"\t-userlog <file>\t\t Read queue from a user log file\n"
 		);
 
 	printf ("\n    [restriction-list] each restriction may be one of\n"
-		"\t<cluster>\t\tGet information about specific cluster\n"
-		"\t<cluster>.<proc>\tGet information about specific job\n"
-		"\t<owner>\t\t\tInformation about jobs owned by <owner>\n"
-		"\t-autocluster\t\tGet information about the SCHEDD's autoclusters\n"
-		"\t-constraint <expr>\tGet information about jobs that match <expr>\n"
-		"\t-allusers\t\tConsider jobs from all users\n"
+		"\t<cluster>\t\t Get information about specific cluster\n"
+		"\t<cluster>.<proc>\t Get information about specific job\n"
+		"\t<owner>\t\t\t Information about jobs owned by <owner>\n"
+		"\t-autocluster\t\t Get information about the SCHEDD's autoclusters\n"
+		"\t-constraint <expr>\t Get information about jobs that match <expr>\n"
+		"\t-allusers\t\t Consider jobs from all users\n"
 		);
 
 	printf ("\n    [output-opts] are\n"
-		"\t-limit <num>\t\tLimit the number of results to <num>\n"
-		"\t-cputime\t\tDisplay CPU_TIME instead of RUN_TIME\n"
-		"\t-currentrun\t\tDisplay times only for current run\n"
-		"\t-debug\t\t\tDisplay debugging info to console\n"
-		"\t-dag\t\t\tSort DAG jobs under their DAGMan\n"
-		"\t-expert\t\t\tDisplay shorter error messages\n"
-		"\t-globus\t\t\tGet information about jobs of type globus\n"
-		"\t-goodput\t\tDisplay job goodput statistics\n"	
-		"\t-help [Universe|State]\tDisplay this screen, JobUniverses, JobStates\n"
-		"\t-hold\t\t\tGet information about jobs on hold\n"
-		"\t-io\t\t\tDisplay information regarding I/O\n"
-		"\t-batch\t\t\tDisplay DAGs or batches of similar jobs as a single line\n"
-		"\t-nobatch\t\tDisplay one line per job, rather than one line per batch\n"
-//FUTURE		"\t-transfer\t\tDisplay information for jobs that are doing file transfer\n"
-		"\t-run\t\t\tGet information about running jobs\n"
-		"\t-totals\t\t\tDisplay only job totals\n"
-		"\t-stream-results \tProduce output as jobs are fetched\n"
-		"\t-version\t\tPrint the HTCondor version and exit\n"
-		"\t-wide[:<width>]\t\tDon't truncate data to fit in 80 columns.\n"
-		"\t\t\t\tTruncates to console width or <width> argument.\n"
+		"\t-limit <num>\t\t Limit the number of results to <num>\n"
+		"\t-cputime\t\t Display CPU_TIME instead of RUN_TIME\n"
+		"\t-currentrun\t\t Display times only for current run\n"
+		"\t-debug\t\t\t Display debugging info to console\n"
+		"\t-dag\t\t\t Sort DAG jobs under their DAGMan\n"
+		"\t-expert\t\t\t Display shorter error messages\n"
+		"\t-globus\t\t\t Get information about jobs of type globus\n"
+		"\t-goodput\t\t Display job goodput statistics\n"
+		"\t-help [Universe|State]\t Display this screen, JobUniverses, JobStates\n"
+		"\t-hold\t\t\t Get information about jobs on hold\n"
+		"\t-io\t\t\t Display information regarding I/O\n"
+		"\t-batch\t\t\t Display DAGs or batches of similar jobs as a single line\n"
+		"\t-nobatch\t\t Display one line per job, rather than one line per batch\n"
+//FUTURE		"\t-transfer\t\t Display information for jobs that are doing file transfer\n"
+		"\t-run\t\t\t Get information about running jobs\n"
+		"\t-totals\t\t\t Display only job totals\n"
+		"\t-stream-results \t Produce output as jobs are fetched\n"
+		"\t-version\t\t Print the HTCondor version and exit\n"
+		"\t-wide[:<width>]\t\t Don't truncate data to fit in 80 columns.\n"
+		"\t\t\t\t Truncates to console width or <width> argument.\n"
 		"\t-autoformat[:jlhVr,tng] <attr> [<attr2> [...]]\n"
 		"\t-af[:jlhVr,tng] <attr> [attr2 [...]]\n"
 		"\t    Print attr(s) with automatic formatting\n"
@@ -2897,31 +2952,32 @@ usage (const char *myName, int other)
 		"\t        g   newline between ClassAds, no space before values\n"
 		"\t    use -af:h to get tabular values with headings\n"
 		"\t    use -af:lrng to get -long equivalent format\n"
-		"\t-format <fmt> <attr>\tPrint attribute attr using format fmt\n"
-		"\t-print-format <file>\tUse <file> to set display attributes and formatting\n"
-		"\t\t\t\t(experimental, see htcondor-wiki for more information)\n"
-		"\t-long\t\t\tDisplay entire ClassAds\n"
-		"\t-xml\t\t\tDisplay entire ClassAds, but in XML\n"
-		"\t-json\t\t\tDisplay entire ClassAds, but in JSON\n"
-		"\t-attributes X,Y,...\tAttributes to show in -xml, -json, and -long\n"
+		"\t-format <fmt> <attr>\t Print attribute attr using format fmt\n"
+		"\t-print-format <file>\t Use <file> to set display attributes and formatting\n"
+		"\t\t\t\t (experimental, see htcondor-wiki for more information)\n"
+		"\t-long[:<form>]\t\t Display entire ClassAds in <form> format\n"
+		"\t\t\t\t See -jobads for <form> choices\n"
+		"\t-xml\t\t\t Display entire ClassAds in XML form\n"
+		"\t-json\t\t\t Display entire ClassAds in JSON form\n"
+		"\t-attributes X,Y,...\t Attributes to show in -xml, -json, and -long\n"
 		);
 
 	printf ("\n    [analyze-opts] are\n"
-		"\t-analyze[:<qual>]\tPerform matchmaking analysis on jobs\n"
-		"\t-better-analyze[:<qual>]\tPerform more detailed match analysis\n"
+		"\t-analyze[:<qual>]\t Perform matchmaking analysis on jobs\n"
+		"\t-better-analyze[:<qual>] Perform more detailed match analysis\n"
 		"\t    <qual> is a comma separated list of one or more of\n"
 		"\t    priority\tConsider user priority during analysis\n"
 		"\t    summary\tShow a one-line summary for each job or machine\n"
 		"\t    reverse\tAnalyze machines rather than jobs\n"
-		"\t-machine <name>\t\tMachine name or slot name for analysis\n"
-		"\t-mconstraint <expr>\tMachine constraint for analysis\n"
-		"\t-slotads <file>\t\tRead Machine ClassAds for analysis from <file>\n"
-		"\t\t\t\t<file> can be the output of condor_status -long\n"
-		"\t-userprios <file>\tRead user priorities for analysis from <file>\n"
-		"\t\t\t\t<file> can be the output of condor_userprio -l\n"
-		"\t-nouserprios\t\tDon't consider user priority during analysis\n"
-		"\t-reverse\t\tAnalyze Machine requirements against jobs\n"
-		"\t-verbose\t\tShow progress and machine names in results\n"
+		"\t-machine <name>\t\t Machine name or slot name for analysis\n"
+		"\t-mconstraint <expr>\t Machine constraint for analysis\n"
+		"\t-slotads[:<form>] <file> Read Machine ClassAds for analysis from <file>\n"
+		"\t\t\t\t <file> can be the output of condor_status -long\n"
+		"\t-userprios <file>\t Read user priorities for analysis from <file>\n"
+		"\t\t\t\t <file> can be the output of condor_userprio -l\n"
+		"\t-nouserprios\t\t Don't consider user priority during analysis (default)\n"
+		"\t-reverse\t\t Analyze Machine requirements against jobs\n"
+		"\t-verbose\t\t Show progress and machine names in results\n"
 		"\n"
 		);
 
@@ -2949,30 +3005,6 @@ usage (const char *myName, int other)
 			printf("\t%2d %c %s\n", st, encode_status(st), getJobStatusString(st));
 		}
 		printf("\n");
-	}
-}
-
-static void print_xml_footer()
-{
-	if( use_xml ) {
-			// keep this consistent with AttrListList::fPrintAttrListList()
-		std::string line;
-		AddClassAdXMLFileFooter(line);
-		fputs(line.c_str(), stdout);
-	} else if( use_json ) {
-		printf( "]\n" );
-	}
-}
-
-static void print_xml_header(const char * /*source_label*/)
-{
-	if( use_xml ) {
-			// keep this consistent with AttrListList::fPrintAttrListList()
-		std::string line;
-		AddClassAdXMLFileHeader(line);
-		fputs(line.c_str(), stdout);
-	} else if( use_json ) {
-		printf( "[\n" );
 	}
 }
 
@@ -3862,30 +3894,38 @@ void clear_results(ROD_MAP_BY_ID & results, KeyToIdMap & order)
 }
 
 static bool
-streaming_print_job(void *, ClassAd *job)
+streaming_print_job(void * pv, ClassAd *job)
 {
 	count_job(job);
 
 	std::string result_text;
-	const char * fmt = "%s";
-	if (use_json) {
-		static bool first_time = true;
-		if (!first_time) {
-			result_text = ",\n";
-		} else {
-			first_time = false;
-		}
-		sPrintAdAsJson(result_text, *job, app.attrs.isEmpty() ? NULL : &app.attrs);
-		fmt = "%s\n";
-	} else if (use_xml) {
-		sPrintAdAsXML(result_text, *job, app.attrs.isEmpty() ? NULL : &app.attrs);
-	} else if (dash_long) {
-		sPrintAd(result_text, *job, false, (dash_autocluster || app.attrs.isEmpty()) ? NULL : &app.attrs);
-		fmt = "%s\n";
-	} else {
+
+	if ( ! dash_long) {
 		if (app.mask.ColCount() > 0) { app.mask.display(result_text, job); }
+	} else {
+		StringList * proj = (dash_autocluster || app.attrs.isEmpty()) ? NULL : &app.attrs;
+		CondorClassAdListWriter & writer = *(CondorClassAdListWriter*)pv;
+		result_text.clear();
+		if (proj && print_attrs_in_hash_order
+			&& (dash_long_format <= ClassAdFileParseType::Parse_long || dash_long_format >= ClassAdFileParseType::Parse_auto)) {
+			// special case for debugging, if we have a projection, but also a request not to sort the attributes
+			// make a special effort to print attributes in hashtable order for -long output.
+			classad::ClassAdUnParser unp;
+			unp.SetOldClassAd( true, true );
+			for (classad::ClassAd::const_iterator itr = job->begin(); itr != job->end(); ++itr) {
+				if (proj->contains_anycase(itr->first.c_str())) {
+					result_text += itr->first.c_str();
+					result_text += " = ";
+					unp.Unparse(result_text, itr->second);
+					result_text += "\n";
+				}
+			}
+			if ( ! result_text.empty()) { result_text += "\n"; }
+		} else {
+			writer.appendAd(*job, result_text, proj, print_attrs_in_hash_order);
+		}
 	}
-	if ( ! result_text.empty()) { printf(fmt, result_text.c_str()); }
+	if ( ! result_text.empty()) { fputs(result_text.c_str(), stdout); }
 	return true;
 }
 
@@ -4463,8 +4503,7 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 	ClassAdList jobs;  // this will get filled in for -long -json -xml and -analyze
 	CondorError errstack;
 
-	// for xml output, we want to get the header out first, and print it even if there are no jobs.
-	print_xml_header(source_label.c_str());
+	CondorClassAdListWriter writer(dash_long_format);
 
 	// choose a processing option for jobad's as the come off the wire.
 	// for -long -json -xml and -analyze, we need to save off the ad in a ClassAdList
@@ -4474,10 +4513,12 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 	buffer_line_processor pfnProcess = NULL;
 	void *                pvProcess = NULL;
 	if (better_analyze || (dash_long && ! g_stream_results)) {
+		//PRAGMA_REMIND("render classads to text rather than keeping whole ads for long format here...")
 		pfnProcess = AddToClassAdList;
 		pvProcess = &jobs;
 	} else if (g_stream_results) {
 		pfnProcess = streaming_print_job;
+		pvProcess = &writer;
 		// we are about to print out the jobads, so print an output header now.
 		print_full_header(source_label.c_str());
 	} else {
@@ -4526,7 +4567,7 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 	// we just need to write the footer/summary
 	if (g_stream_results) {
 		print_full_footer();
-		print_xml_footer();
+		if (dash_long) { writer.writeFooter(stdout, always_write_xml_footer); }
 		return true;
 	}
 
@@ -4558,7 +4599,7 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 		jobs.Open();
 		while(ClassAd *job = jobs.Next()) {
 			if (dash_long) {
-				streaming_print_job(NULL, job);
+				streaming_print_job(&writer, job);
 			} else {
 				process_job_to_rod_per_ad_map(&rod_result_map, job);
 			}
@@ -4591,7 +4632,7 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 	if ( ! global || cResults > 0 || jobs.Length() > 0) {
 		print_full_footer();
 	}
-	print_xml_footer();
+	if (dash_long) { writer.writeFooter(stdout, always_write_xml_footer); }
 
 	return true;
 }
@@ -4604,18 +4645,13 @@ dryFetchQueue(const char * file, StringList & proj, int fetch_opts, int limit, b
 	fprintf(stderr, "\nDryRun v%d from %s\n", ver, file ? file : "<null>");
 
 	// get the constraint as a string
-	const char * constr = NULL;
-	std::string constr_string; // to hold the return from ExprTreeToString()
-	ExprTree *tree = NULL;
-	Q.rawQuery(tree);
-	if (tree) {
-		constr_string = ExprTreeToString(tree);
-		constr = constr_string.c_str();
-		delete tree;
+	ConstraintHolder constr;
+	if (GetQueueConstraint(Q, constr) < 0) {
+		fprintf(stderr, "Invalid constraint: %s\n", constr.c_str());
 	}
-
 	// print constraint
-	fprintf(stderr, "Constraint: %s\n", constr ? constr : "<null>");
+	const char * constr_str = constr.Str();
+	fprintf(stderr, "Constraint: %s\n", constr_str ? constr_str : "<null>");
 	fprintf(stderr, "Opts: fetch=%d limit=%d HF=%x\n", fetch_opts, limit, customHeadFoot);
 
 	// print projection
@@ -4637,23 +4673,69 @@ dryFetchQueue(const char * file, StringList & proj, int fetch_opts, int limit, b
 		return Q_OK;
 	}
 
-	ClassAdList jobs;
-
-	/* get the "q" from the job ads file */
-	CondorQClassAdFileParseHelper jobads_file_parse_helper;
-	if ( ! read_classad_file(file, jobs, &jobads_file_parse_helper, constr)) {
-		return Q_COMMUNICATION_ERROR;
+	FILE* fh;
+	bool close_file = false;
+	if (MATCH == strcmp(file, "-")) {
+		fh = stdin;
+		close_file = false;
+	} else {
+		fh = safe_fopen_wrapper_follow(file, "r");
+		if (fh == NULL) {
+			fprintf(stderr, "Can't open file of ClassAds: %s\n", file);
+			return Q_COMMUNICATION_ERROR;
+		}
+		close_file = true;
 	}
 
-	jobs.Open();
-	while(ClassAd *job = jobs.Next()) {
-		if ( ! pfnProcess(pvProcess, job)) {
-			jobs.Remove(job);
+	CondorQClassAdFileParseHelper jobads_file_parse_helper(jobads_file_format);
+
+	CondorClassAdFileIterator adIter;
+	if ( ! adIter.begin(fh, close_file, jobads_file_parse_helper)) {
+		if (close_file) { fclose(fh); fh = NULL; }
+		return Q_COMMUNICATION_ERROR;
+	} else {
+		ClassAd * job;
+		while ((job = adIter.next(constr.Expr()))) {
+			if ( ! pfnProcess(pvProcess, job)) {
+				delete job; job = NULL;
+			}
 		}
 	}
-	jobs.Close();
+	fh = NULL;
 
 	return Q_OK;
+}
+
+// Read ads from a file in classad format
+static bool
+load_ads_from_file(const char *filename, ClassAdList &classads, CondorClassAdFileParseHelper & parse_helper, ExprTree * constraint)
+{
+	FILE* fh;
+	bool close_file = false;
+	if (MATCH == strcmp(filename, "-")) {
+		fh = stdin;
+		close_file = false;
+	} else {
+		fh = safe_fopen_wrapper_follow(filename, "r");
+		if (fh == NULL) {
+			fprintf(stderr, "Can't open file of ClassAds: %s\n", filename);
+			return false;
+		}
+		close_file = true;
+	}
+
+	CondorClassAdFileIterator adIter;
+	if ( ! adIter.begin(fh, close_file, parse_helper)) {
+		if (close_file) { fclose(fh); fh = NULL; }
+		return false;
+	} else {
+		ClassAd * ad;
+		while ((ad = adIter.next(constraint))) {
+			classads.Insert(ad);
+		}
+	}
+	fh = NULL;
+	return true;
 }
 
 // Read ads from a file, either in classad format, or userlog format.
@@ -4664,15 +4746,9 @@ show_file_queue(const char* jobads, const char* userlog)
 	// initialize counters
 	malformed = idle = running = held = completed = suspended = 0;
 
-	// setup constraint variables to use in some of the later code.
-	const char * constr = NULL;
-	std::string constr_string; // to hold the return from ExprTreeToString()
-	ExprTree *tree = NULL;
-	Q.rawQuery(tree);
-	if (tree) {
-		constr_string = ExprTreeToString(tree);
-		constr = constr_string.c_str();
-		delete tree;
+	ConstraintHolder constr;
+	if (GetQueueConstraint(Q, constr) < 0) {
+		fprintf(stderr, "Invalid constraint: %s\n", constr.c_str());
 	}
 
 	if (verbose || dash_profile) {
@@ -4688,10 +4764,11 @@ show_file_queue(const char* jobads, const char* userlog)
 
 	if (jobads != NULL) {
 		/* get the "q" from the job ads file */
-		CondorQClassAdFileParseHelper jobads_file_parse_helper;
-		if (!read_classad_file(jobads, jobs, &jobads_file_parse_helper, constr)) {
+		CondorQClassAdFileParseHelper jobads_file_parse_helper(jobads_file_format);
+		if ( ! load_ads_from_file(jobads, jobs, jobads_file_parse_helper, constr.Expr())) {
 			return false;
 		}
+
 		// if we are doing analysis, print out the schedd name and address
 		// that we got from the classad file.
 		if (better_analyze && ! jobads_file_parse_helper.schedd_name.empty()) {
@@ -4709,7 +4786,7 @@ show_file_queue(const char* jobads, const char* userlog)
 		int cJobIds = constrID.size();
 		if (cJobIds > 0) JobIds = &constrID[0];
 
-		if (!userlog_to_classads(userlog, jobs, JobIds, cJobIds, constr)) {
+		if ( ! userlog_to_classads(userlog, jobs, JobIds, cJobIds, constr.Str())) {
 			fprintf(stderr, "\nCan't open user log: %s\n", userlog);
 			return false;
 		}
@@ -4741,8 +4818,7 @@ show_file_queue(const char* jobads, const char* userlog)
 		return print_jobs_analysis(jobs, source_label.c_str(), NULL);
 	}
 
-	// for xml output, we want to get the header out first, and print it even if there are no jobs.
-	print_xml_header(source_label.c_str());
+	CondorClassAdListWriter writer(dash_long_format);
 
 	// TJ: copied this from the top of init_output_mask
 	if ( dash_run || dash_goodput || dash_globus || dash_grid )
@@ -4756,14 +4832,17 @@ show_file_queue(const char* jobads, const char* userlog)
 		jobs.Open();
 		while(ClassAd *job = jobs.Next()) {
 			if (dash_long) {
-				streaming_print_job(NULL, job);
+				streaming_print_job(&writer, job);
 			} else {
 				process_job_to_rod_per_ad_map(&rod_result_map, job);
 			}
 		}
 		jobs.Close();
 
-		if (dash_long) return true;
+		if (dash_long) {
+			writer.writeFooter(stdout, always_write_xml_footer);
+			return true;
+		}
 
 		int cResults = (int)rod_result_map.size();
 		if (cResults > 0) {
@@ -4781,7 +4860,7 @@ show_file_queue(const char* jobads, const char* userlog)
 
 		print_full_footer();
 	}
-	print_xml_footer();
+	if (dash_long) { writer.writeFooter(stdout, always_write_xml_footer); }
 
 	return true;
 }
@@ -4820,11 +4899,12 @@ setupAnalysis()
 	if (dash_profile) { cbBefore = ProcAPI::getBasicUsage(getpid(), &tmBefore); }
 
 	// fetch startd ads
-    if (machineads_file != NULL) {
-        if (!read_classad_file(machineads_file, startdAds, NULL, NULL)) {
-            exit ( 1 );
-        }
-    } else {
+	if (machineads_file != NULL) {
+		CondorClassAdFileParseHelper parse_helper("\n", machineads_file_format);
+		if ( ! load_ads_from_file(machineads_file, startdAds, parse_helper, NULL)) {
+			exit (1);
+		}
+	} else {
 		if (user_slot_constraint) {
 			if (is_slot_name(user_slot_constraint)) {
 				std::string str;
@@ -4836,12 +4916,12 @@ setupAnalysis()
 				query.addANDConstraint (user_slot_constraint);
 			}
 		}
-        rval = Collectors->query (query, startdAds);
-        if( rval != Q_OK ) {
-            fprintf( stderr , "Error:  Could not fetch startd ads\n" );
-            exit( 1 );
-        }
-    }
+		rval = Collectors->query (query, startdAds);
+		if( rval != Q_OK ) {
+			fprintf( stderr , "Error:  Could not fetch startd ads\n" );
+			exit( 1 );
+		}
+	}
 
 	if (dash_profile) {
 		profile_print(cbBefore, tmBefore, startdAds.Length());
@@ -5833,57 +5913,6 @@ fixSubmittorName( const char *name, int niceUser )
 	}
 
 	return NULL;
-}
-
-
-static bool read_classad_file(const char *filename, ClassAdList &classads, ClassAdFileParseHelper* pparse_help, const char * constr)
-{
-	bool success = false;
-
-	FILE* file = safe_fopen_wrapper_follow(filename, "r");
-	if (file == NULL) {
-		fprintf(stderr, "Can't open file of job ads: %s\n", filename);
-		return false;
-	} else {
-		CondorClassAdFileParseHelper generic_helper("\n");
-		if ( ! pparse_help)
-			pparse_help = &generic_helper;
-
-		for (;;) {
-			ClassAd* classad = new ClassAd();
-
-			int error;
-			bool is_eof;
-			int cAttrs = classad->InsertFromFile(file, is_eof, error, pparse_help);
-
-			bool include_classad = cAttrs > 0 && error >= 0;
-			if (include_classad && constr) {
-				classad::Value val;
-				if (classad->EvaluateExpr(constr,val)) {
-					if ( ! val.IsBooleanValueEquiv(include_classad)) {
-						include_classad = false;
-					}
-				}
-			}
-			if (include_classad) {
-				classads.Insert(classad);
-			} else {
-				delete classad;
-			}
-
-			if (is_eof) {
-				success = true;
-				break;
-			}
-			if (error < 0) {
-				success = false;
-				break;
-			}
-		}
-
-		fclose(file);
-	}
-	return success;
 }
 
 

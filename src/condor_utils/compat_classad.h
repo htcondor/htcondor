@@ -542,8 +542,8 @@ public:
 	CondorClassAdFileParseHelper::ParseType autoSetFormat(CondorClassAdFileParseHelper & parse_help);
 
 	// these return < 0 on failure, 0 if nothing written, 1 if non-empty ad is written.
-	int writeAd(const ClassAd & ad, FILE * out, bool hash_order=false);
-	int appendAd(const ClassAd & ad, std::string & buf, bool hash_order=false);
+	int writeAd(const ClassAd & ad, FILE * out, StringList * whitelist=NULL, bool hash_order=false);
+	int appendAd(const ClassAd & ad, std::string & buf, StringList * whitelist=NULL, bool hash_order=false);
 	// write the footer if one is needed. 
 	int writeFooter(FILE* out, bool xml_always_write_header_footer=true);
 	int appendFooter(std::string & buf, bool xml_always_write_header_footer=true);
