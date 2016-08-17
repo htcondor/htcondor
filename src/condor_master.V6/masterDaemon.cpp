@@ -2082,6 +2082,30 @@ Daemons::InitParams()
 	for( iter = daemon_ptr.begin(); iter != daemon_ptr.end(); iter++ ) {
 		iter->second->InitParams();
 	}
+
+	// As long as we change the daemon objects before anyone calls
+	// RealStart() on them, we should be good.
+	for( iter = daemon_ptr.begin(); iter != daemon_ptr.end(); iter++ ) {
+		if( ! iter->second->isDC ) {
+			std::map<std::string, class daemon*>::iterator jter;
+			for( jter = daemon_ptr.begin(); jter != daemon_ptr.end(); ++jter ) {
+				if( jter->second->isDC &&
+				  (strcmp( jter->second->name_in_config_file, iter->second->name_in_config_file ) != 0) &&
+				  // FIXME: This path to a binary should be canonicalized.
+				  (strcmp( jter->second->process_name, iter->second->process_name ) == 0) ) {
+					dprintf( D_ALWAYS, "Declaring that %s, "
+						"since it shares %s with %s, "
+						"is also a DaemonCore daemon.\n",
+						iter->second->name_in_config_file,
+						iter->second->process_name,
+						jter->second->name_in_config_file );
+					// TODO: Ensure that we set the -localname flag when we
+					// start this daemon, since it's a clone of some other one.
+					iter->second->isDC = true;
+				}
+			}
+		}
+	}
 }
 
 
