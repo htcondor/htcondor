@@ -1961,7 +1961,7 @@ Dag::NumNodesDone( bool includeFinal ) const
 // where we need to condor_rm any running node jobs, and the schedd
 // won't do it for us.  wenger 2014-10-29.
 void Dag::RemoveRunningJobs ( const CondorID &dmJobId, bool removeCondorJobs,
-			bool bForce) const
+			bool bForce ) const
 {
 	if ( bForce ) removeCondorJobs = true;
 

@@ -10773,6 +10773,18 @@ not changed by doing a \Condor{reconfig}.
   in \File{.condor.sub} are considered nested DAGs.
   The default value if not defined is \Expr{True}.
 
+\label{param:DAGManRemoveNodeJobs}
+\item[\Macro{DAGMAN\_REMOVE\_NODE\_JOBS}]
+  A boolean value that controls whether \Condor{dagman} removes its
+  node jobs itself when it is removed (in addition to the schedd
+  removing them).
+  TEMPTEMP -- need more explanation here
+  Note that even if \MacroNI{DAGMAN\_REMOVE\_NODE\_JOBS} is set
+  to \Expr{False}, \Condor{dagman} will remove its node jobs in
+  some cases, such as a DAG abort triggered by an \Arg{ABORT-DAG-ON}
+  command.
+  Defaults to \Expr{False}.
+
 \label{param:DAGManMungeNodeNames}
 \item[\Macro{DAGMAN\_MUNGE\_NODE\_NAMES}]
   A boolean value that controls whether \Condor{dagman} automatically

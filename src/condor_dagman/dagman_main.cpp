@@ -144,7 +144,8 @@ Dagman::Dagman() :
 	_doRecovery(false),
 	_suppressJobLogs(false),
 	_batchName(""),
-	_dagmanClassad(NULL)
+	_dagmanClassad(NULL),
+	_removeNodeJobs(false)
 {
     debug_level = DEBUG_VERBOSE;  // Default debug level is verbose output
 }
@@ -453,6 +454,11 @@ Dagman::Config()
 	debug_printf( DEBUG_NORMAL, "DAGMAN_SUPPRESS_JOB_LOGS setting: %s\n",
 				_suppressJobLogs ? "True" : "False" );
 
+	_removeNodeJobs = param_boolean( "DAGMAN_REMOVE_NODE_JOBS",
+				_removeNodeJobs );
+	debug_printf( DEBUG_NORMAL, "DAGMAN_REMOVE_NODE_JOBS setting: %s\n",
+				_removeNodeJobs ? "True" : "False" );
+
 	// enable up the debug cache if needed
 	if (debug_cache_enabled) {
 		debug_cache_set_size(debug_cache_size);
@@ -571,7 +577,8 @@ int main_shutdown_remove(Service *, int) {
     debug_printf( DEBUG_QUIET, "Received SIGUSR1\n" );
 	// We don't remove Condor node jobs here because the schedd will
 	// automatically remove them itself.
-	main_shutdown_rescue( EXIT_ABORT, Dag::DAG_STATUS_RM, false );
+	main_shutdown_rescue( EXIT_ABORT, Dag::DAG_STATUS_RM,
+				dagman._removeNodeJobs );
 	return FALSE;
 }
 
