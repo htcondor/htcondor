@@ -2090,8 +2090,14 @@ Daemons::InitParams()
 			std::map<std::string, class daemon*>::iterator jter;
 			for( jter = daemon_ptr.begin(); jter != daemon_ptr.end(); ++jter ) {
 				if( jter->second->isDC &&
-				  (strcmp( jter->second->name_in_config_file, iter->second->name_in_config_file ) != 0) &&
-				  // FIXME: This path to a binary should be canonicalized.
+				  (strcasecmp( jter->second->name_in_config_file, iter->second->name_in_config_file ) != 0) &&
+				  // In practice, all we'll ever see is
+				  // 	DAEMON_NAME = $(DC_DAEMON)
+				  // so we don't need to canonicalize the filename.  Arguably,
+				  // this allows users force a DC daemon to be treated as
+				  // non-DC (not that you'd ever want that to happen) by
+				  // changing "dirname/" to "dirname/../dirname/" somewhere
+				  // in the path, and flexibility is good.
 				  (strcmp( jter->second->process_name, iter->second->process_name ) == 0) ) {
 					dprintf( D_ALWAYS, "Declaring that %s, "
 						"since it shares %s with %s, "
@@ -2099,8 +2105,9 @@ Daemons::InitParams()
 						iter->second->name_in_config_file,
 						iter->second->process_name,
 						jter->second->name_in_config_file );
-					// TODO: Ensure that we set the -localname flag when we
-					// start this daemon, since it's a clone of some other one.
+					// We'll make sure this is launch with -localname elsewhere
+					// in the master by checking if a daemon we're starting is
+					// both a DC daemon and not in the list of DC daemons.
 					iter->second->isDC = true;
 				}
 			}
