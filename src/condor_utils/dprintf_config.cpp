@@ -31,6 +31,8 @@
 #include "condor_config.h"
 #include "dprintf_internal.h"
 
+#include "subsystem_info.h"
+
 #include <string>
 using std::string;
 
@@ -403,11 +405,22 @@ dprintf_config( const char *subsys, struct dprintf_output_settings *p_info /* = 
 		if(debug_level == D_ALWAYS)
 		{
 
-			logPathParam = param(pname);//dprintf_param_funcs->param(pname);
+			logPathParam = param(pname);
+
+			const char * localName = get_mySubSystem()->getLocalName();
+			if( localName != NULL ) {
+				std::string lln( localName );
+				lln += "."; lln += pname;
+				logPathParam = param( lln.c_str() );
+			}
+
 			if (to_syslog) {
 				logPath = "SYSLOG";
 			} else if (logPathParam) {
 				logPath = logPathParam;
+			} else if (localName) {
+				std::string ln( localName ); title_case( ln );
+				formatstr(logPath, "%s%c%sLog", DebugLogDir, DIR_DELIM_CHAR, ln.c_str() );
 			} else {
 				// No default value found, so use $(LOG)/$(SUBSYSTEM)Log
 				char *lsubsys = param("SUBSYSTEM");//dprintf_param_funcs->param("SUBSYSTEM");

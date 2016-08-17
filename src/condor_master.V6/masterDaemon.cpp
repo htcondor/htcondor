@@ -785,6 +785,9 @@ int daemon::RealStart( )
 		if(! hardcodedDCDaemonNames.contains_anycase( name_in_config_file )) {
 			args.AppendArg( "-local-name" );
 			args.AppendArg( name_in_config_file );
+
+			// GT#5768: The master should look for the localname-specific
+			// version of any param()s it does while doing this start-up.
 		}
 	}
 
@@ -1527,11 +1530,10 @@ daemon::InitParams()
 		if( log_name ) {
 			free( log_name );
 		}
-		log_name = param(log_filename_in_config_file);
-		if ( log_name == NULL && runs_here ) {
-			dprintf(D_ALWAYS, "Log file not found in config file: %s\n", 
-					log_filename_in_config_file);
-		}
+		// We now set a sane default for <DAEMON_NAME>_LOG, so don't bother
+		// to warn if it's unset -- especially since that's not the right
+		// name for <DAEMON_NAME>.<SUBSYS>_LOG, which is what they'll
+		// actually be looking for.
 	}
 }
 
