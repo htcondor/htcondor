@@ -1233,7 +1233,12 @@ void Accountant::ReportGroups(GroupEntry* group, ClassAd* ad, bool rollup, map<s
     ad->Assign(tmp.c_str(), Priority);
     
     float PriorityFactor = 0;
-    if (!rollup && CustomerAd->LookupFloat(PriorityFactorAttr,PriorityFactor)==0) PriorityFactor=0;
+	if (!rollup && cgrp) {
+		PriorityFactor = getGroupPriorityFactor( cgrp->name );
+	}
+	else if (!rollup && CustomerAd->LookupFloat(PriorityFactorAttr,PriorityFactor)==0) {
+		PriorityFactor=0;
+	}
     formatstr(tmp, "PriorityFactor%d", gnum);
     ad->Assign(tmp.c_str(), PriorityFactor);
     
