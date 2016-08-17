@@ -422,15 +422,36 @@ ppOption prettyPrintHeadings (bool any_ads)
 	return pps;
 }
 
-void prettyPrintAd(ppOption pps, ClassAd *ad, int output_index, bool fHashOrder)
+void prettyPrintAd(ppOption pps, ClassAd *ad, int output_index, StringList * whitelist, bool fHashOrder)
 {
 	if ( ! ad) return;
 
 	if (!wantOnlyTotals) {
+
+		// as a special case to aid in some bug repro scenarios, honor the fHashOrder flag for
+		// -long form classads even when there is a whitelist.
+		if (pps == PP_LONG && fHashOrder && whitelist && ! whitelist->isEmpty()) {
+			classad::ClassAdUnParser unp;
+			unp.SetOldClassAd( true, true );
+			std::string line;
+			for (classad::ClassAd::const_iterator itr = ad->begin(); itr != ad->end(); ++itr) {
+				if (whitelist->contains_anycase(itr->first.c_str())) {
+					line = itr->first.c_str();
+					line += " = ";
+					unp.Unparse(line, itr->second);
+					line += "\n";
+					fputs(line.c_str(), stdout);
+				}
+			}
+			if ( ! line.empty()) { fputs("\n", stdout); }
+			return;
+		}
+
+		// get a sorted list of attributes to print for long form output or when there is a whitelist
 		classad::References attrs;
 		classad::References *proj = NULL;
-		if ( ! fHashOrder && PP_IS_LONGish(pps)) {
-			sGetAdAttrs(attrs, *ad);
+		if (PP_IS_LONGish(pps) && ( ! fHashOrder || whitelist)) {
+			sGetAdAttrs(attrs, *ad, false, whitelist);
 			proj = &attrs;
 		}
 
@@ -1101,7 +1122,7 @@ void ppSetAnyNormalCols (int /*width*/)
 void
 printVerbose (ClassAd &ad, classad::References * attrs)
 {
-	MyString output;
+	std::string output;
 	output.reserve(cchReserveForPrintingAds);
 	if (attrs) {
 		sPrintAdAttrs(output, ad, *attrs);
