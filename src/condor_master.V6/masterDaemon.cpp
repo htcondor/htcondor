@@ -65,6 +65,7 @@ extern StopStateT new_bin_restart_mode;
 extern char*	FS_Preen;
 extern			ClassAd* ad;
 extern int		NT_ServiceFlag; // TRUE if running on NT as an NT Service
+extern char		default_dc_daemon_list[];
 
 extern time_t	GetTimeStamp(char* file);
 extern int 	   	NewExecutable(char* file, time_t* tsp);
@@ -776,6 +777,15 @@ int daemon::RealStart( )
 	args.AppendArg(shortname);
 	if(isDC) {
 		args.AppendArg("-f");
+	}
+
+	// Automatically set -localname if appropriate.
+	if( isDC ) {
+		StringList hardcodedDCDaemonNames( default_dc_daemon_list );
+		if(! hardcodedDCDaemonNames.contains_anycase( name_in_config_file )) {
+			args.AppendArg( "-local-name" );
+			args.AppendArg( name_in_config_file );
+		}
 	}
 
 	snprintf( buf, sizeof( buf ), "%s_ARGS", name_in_config_file );
