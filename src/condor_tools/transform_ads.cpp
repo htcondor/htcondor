@@ -424,7 +424,7 @@ main( int argc, const char *argv[] )
 						if (YourString(opt) == "nosort") {
 							DashOutAttrsInHashOrder = true;
 						} else {
-							out_format = parseAdsFileFormat(pcolon, out_format);
+							out_format = parseAdsFileFormat(opt, out_format);
 						}
 					}
 				}
@@ -621,29 +621,33 @@ void
 Usage(FILE * out)
 {
 	fprintf(out,
-		"Usage: %s -rules <rules-file> [options] [<attrib>=<value>] <infile>\n" 
-		"    Read ClassAd(s) from <classads-file> and transform based on rules from <rules-file>\n\n"
+		"Usage: %s -rules <rules-file> [options] [<key>=<value>] <infile> [<infile>]\n"
+		"    Read ClassAd(s) from <infile> and transform based on rules from <rules-file>\n\n", MyName);
+	fprintf(out,
 		"    [options] are\n"
-		"\t-help [rules]\t\tDisplay this screen or rules documentation and exit\n"
-		"\t-in[:<fmt>] <infile>\t\tRead ClassAd(s) to transform from <infile> in format <fmt>\n"
-		"\t-out[:<fmt>,nosort] <outfile>\t\tWrite transformed ClassAd(s) to <outfile> in format <fmt>\n"
-		"\t           where <fmt> choice is one of:\n"
+		"\t-help [rules]\t\t Display this screen or rules documentation and exit\n"
+		"\t-out[:<form>,nosort] <outfile>\n"
+		"\t\t\t\t Write transformed ClassAd(s) to <outfile> in format <form>\n"
+		"\t           ClassAd(s) are sorted by attribute unless nosort is specified\n"
+		"\t           <form> can be is one of:\n"
 		"\t       long    The traditional -long form. This is the default\n"
 		"\t       xml     XML form, the same as -xml\n"
 		"\t       json    JSON classad form, the same as -json\n"
 		"\t       new     'new' classad form without newlines\n"
 		"\t       auto    For input, guess the format from reading the input stream\n"
 		"\t               For output, use the same format as the first input\n"
-		"\t-long\t\tUse -long form for both input and output ClassAds\n"
-		"\t-json\t\tUse JSON classad form for both input and output\n"
-		"\t-xml \t\tUse XML form for both input and output\n"
-		"\t-verbose\t\tVerbose output, echo transform rules as they are executed\n"
+		"\t-in[:<form>] <infile>\t Read ClassAd(s) to transform from <infile> in format <form>\n"
+		"\t-long\t\t\t Use long form for both input and output ClassAd(s)\n"
+		"\t-json\t\t\t Use JSON form for both input and output ClassAd(s)\n"
+		"\t-xml \t\t\t Use XML form for both input and output ClassAd(s)\n"
+		"\t-verbose\t\t Verbose mode, echo transform rules as they are executed\n"
 		//"\t-debug  \t\tDisplay debugging output\n"
-		"\t<attrib>=<value>\tSet <attrib>=<value> before reading the transform file.\n\n"
+		"\n    <key>=<value> Arguments are assigned before the rules file is parsed and can be used\n"
+		"                  to pass arguments or enable optional behavior in the rules\n\n"
 		"    If <rules-file> is -, transform rules are read from stdin until the TRANSFORM rule\n"
-		"    If <classads-file> is -, ClassAd(s) are read from stdin.\n"
-		"    Transformed ads are written to stdout unless a -out argument is given\n"
-		, MyName );
+		"    If <infile> is -, ClassAd(s) are read from stdin.\n"
+		"    Transformed ads are written to stdout unless an -out argument is provided\n"
+		);
 }
 
 void PrintRules(FILE* out)
@@ -651,9 +655,9 @@ void PrintRules(FILE* out)
 	fprintf(out, "\ncondor_transform_ads rules:\n"
 		"\nTransform rules files consist of lines containing key=value pairs or\n"
 		"transform commands such as SET, RENAME, etc. Transform commands execute\n"
-		"as they are read and can make use of values set up until that point\n"
-		"using the $(key) macro substitution commands that HTCondor configuration files\n"
-		"and condor_submit files use. Most constructs that work in these files will also\n"
+		"as they are read and can make use of values set up until that point using\n"
+		"the $(key) macro substitution commands that HTCondor configuration files and\n"
+		"condor_submit files use. Most constructs that work in these files will also\n"
 		"work in rules files such as if/else. Macro substitution will fetch attributes of\n"
 		"the ClassAd to be transformed when $(MY.attr) is used.\n"
 		"\nThe transform commands are:\n\n");
@@ -680,7 +684,7 @@ void PrintRules(FILE* out)
 		"<newattrs> after $() expansion. \\0 will expand to the entire match, \\1 to the first capture, etc.\n"
 		"\nA TRANSFORM command must be the last command in the rules file. It takes the same options as the\n"
 		"QUEUE statement from a HTCONDOR submit file. There is an implicit TRANSFORM 1 at the end of a rules file\n"
-		"that has no explicit TRANSFORM command.\n"
+		"if there is no explicit TRANSFORM command.\n"
 		);
 
 	fprintf(out, "\n");

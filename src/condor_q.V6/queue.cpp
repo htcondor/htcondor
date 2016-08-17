@@ -1278,7 +1278,7 @@ processCommandLineArguments (int argc, char *argv[])
 					if (YourString(opt) == "nosort") {
 						print_attrs_in_hash_order = true;
 					} else {
-						dash_long_format = parseAdsFileFormat(pcolon, ClassAdFileParseType::Parse_auto);
+						dash_long_format = parseAdsFileFormat(opt, dash_long_format);
 					}
 				}
 			}

@@ -220,7 +220,7 @@ typedef bool (*FNPROCESS_ADS_CALLBACK)(void* pv, ClassAd * ad);
 static bool read_classad_file(const char *filename, ClassAdFileParseType::ParseType ads_file_format, FNPROCESS_ADS_CALLBACK callback, void* pv, const char * constr);
 //void prettyPrint(ROD_MAP_BY_KEY &, TrackTotals *);
 ppOption prettyPrintHeadings (bool any_ads);
-void prettyPrintAd(ppOption pps, ClassAd *ad, int output_index, bool fHashOrder);
+void prettyPrintAd(ppOption pps, ClassAd *ad, int output_index, StringList * whitelist, bool fHashOrder);
 int getDisplayWidth(bool * is_piped=NULL);
 const char* digest_state_and_activity(char * sa, State st, Activity ac); //  in prettyPrint.cpp
 
@@ -1138,7 +1138,8 @@ main (int argc, char *argv[])
 			pm.display(line, it->second.rov);
 			fputs(line.c_str(), stdout);
 		} else {
-			prettyPrintAd(pps, it->second.ad, output_index, print_attrs_in_hash_order);
+			StringList * whitelist = dashAttributes.isEmpty() ? NULL : &dashAttributes;
+			prettyPrintAd(pps, it->second.ad, output_index, whitelist, print_attrs_in_hash_order);
 			if (it->second.ad) ++output_index;
 		}
 		it->second.flags |= SROD_PRINTED; // for debugging, keep track of what we already printed.
@@ -1233,6 +1234,10 @@ int set_status_print_mask_from_stream (
 static bool read_classad_file(const char *filename, ClassAdFileParseType::ParseType ads_file_format, FNPROCESS_ADS_CALLBACK callback, void* pv, const char * constr)
 {
 	bool success = false;
+	if (ads_file_format < ClassAdFileParseType::Parse_long || ads_file_format > ClassAdFileParseType::Parse_auto) {
+		fprintf(stderr, "unsupported ClassAd input format %d\n", ads_file_format);
+		return false;
+	}
 
 	FILE* file = NULL;
 	bool close_file = false;
@@ -1243,141 +1248,36 @@ static bool read_classad_file(const char *filename, ClassAdFileParseType::ParseT
 		file = safe_fopen_wrapper_follow(filename, "r");
 		close_file = true;
 	}
+
 	if (file == NULL) {
 		fprintf(stderr, "Can't open file of ClassAds: %s\n", filename);
 		return false;
-	} else if (ads_file_format == ClassAdFileParseType::Parse_long ||
-	           ads_file_format == ClassAdFileParseType::Parse_json ||
-	           ads_file_format == ClassAdFileParseType::Parse_xml ||
-	           ads_file_format == ClassAdFileParseType::Parse_new ||
-	           ads_file_format == ClassAdFileParseType::Parse_auto) {
-		CondorClassAdFileParseHelper parse_helper("\n", ads_file_format);
-
-		for (;;) {
-			ClassAd* classad = new ClassAd();
-
-			int error;
-			bool is_eof;
-			int cAttrs = classad->InsertFromFile(file, is_eof, error, &parse_helper);
-
-			bool include_classad = cAttrs > 0 && error >= 0;
-			if (include_classad && constr) {
-				classad::Value val;
-				if (classad->EvaluateExpr(constr,val)) {
-					if ( ! val.IsBooleanValueEquiv(include_classad)) {
-						include_classad = false;
-					}
-				}
-			}
-
-			if ( ! include_classad || callback(pv, classad)) {
-				// delete the classad if we didn't pass it to the callback, or if
-				// the callback didn't take ownership of it.
-				delete classad;
-			}
-
-			if (is_eof) {
-				success = true;
-				break;
-			}
-			if (error < 0) {
-				success = false;
-				break;
+	} else {
+		ConstraintHolder constraint;
+		if (constr) {
+			constraint.set(strdup(constr));
+			int err = 0;
+			constraint.Expr(&err);
+			if (err) {
+				fprintf(stderr, "Invalid constraint expression : %s\n", constr);
+				return false;
 			}
 		}
-		if (close_file) fclose(file);
-		file = NULL;
-	}
-#if 0
-	else if (ads_file_format == ClassAdFileParseType::Parse_json) {
-		CondorClassAdFileParseHelper parse_helper("\n", ads_file_format);
 
-		for (;;) {
-			ClassAd* classad = new ClassAd();
-
-			int error;
-			bool is_eof;
-			int cAttrs = classad->InsertFromFile(file, is_eof, error, &parse_helper);
-
-			bool include_classad = cAttrs > 0 && error >= 0;
-			if (include_classad && constr) {
-				classad::Value val;
-				if (classad->EvaluateExpr(constr,val)) {
-					if ( ! val.IsBooleanValueEquiv(include_classad)) {
-						include_classad = false;
-					}
+		CondorClassAdFileIterator adIter;
+		if ( ! adIter.begin(file, close_file, ads_file_format)) {
+			fprintf(stderr, "Unexpected error reading file of ClassAds: %s\n", filename);
+			if (close_file) { fclose(file); file = NULL; }
+			return false;
+		} else {
+			success = true;
+			ClassAd * classad;
+			while ((classad = adIter.next(constraint.Expr()))) {
+				if (callback(pv, classad)) {
+					delete classad; // delete unless the callback took ownership.
 				}
-			}
-
-			if ( ! include_classad || callback(pv, classad)) {
-				// delete the classad if we didn't pass it to the callback, or if
-				// the callback didn't take ownership of it.
-				delete classad;
-			}
-			if (is_eof) {
-				success = true;
-				break;
-			}
-			if (error < 0) {
-				success = false;
-				break;
 			}
 		}
-		if (close_file) fclose(file);
-		file = NULL;
-	}
-#elif 0
-	else if (ads_file_format == ClassAdFileParseType::Parse_json) {
-		classad::ClassAdJsonParser jsonparse;
-		bool inside_json_list = false;
-		for (;;) {
-			ClassAd* classad = new ClassAd();
-			bool fok = jsonparse.ParseClassAd(file, *classad, false);
-			if ( ! fok ) {
-				classad::Lexer::TokenType tt = jsonparse.getLastTokenType();
-				bool keep_going = false;
-				if (inside_json_list) {
-					if (tt == classad::Lexer::TokenType::LEX_COMMA) { keep_going = true; }
-					else if (tt == classad::Lexer::TokenType::LEX_CLOSE_BOX) { keep_going = true; inside_json_list = false; }
-				} else {
-					if (tt == classad::Lexer::TokenType::LEX_OPEN_BOX) { keep_going = true; inside_json_list = true; }
-				}
-				if (keep_going) {
-					fok = jsonparse.ParseClassAd(file, *classad, false); 
-				}
-			}
-			bool include_classad = fok;
-
-			if (include_classad && constr) {
-				classad::Value val;
-				if (classad->EvaluateExpr(constr,val)) {
-					if ( ! val.IsBooleanValueEquiv(include_classad)) {
-						include_classad = false;
-					}
-				}
-			}
-
-			if ( ! include_classad || callback(pv, classad)) {
-				// delete the classad if we didn't pass it to the callback, or if
-				// the callback didn't take ownership of it.
-				delete classad;
-			}
-			if (feof(file)) {
-				success = true;
-				break;
-			} else if ( ! fok) {
-				success = false;
-				break;
-			}
-		}
-		if (close_file) fclose(file);
-		file = NULL;
-	}
-#endif
-	else
-	{
-		fprintf(stderr, "unsupported ClassAd input format %d\n", ads_file_format);
-		if (close_file) fclose(file);
 		file = NULL;
 	}
 	return success;
@@ -1410,8 +1310,8 @@ usage ()
 		"\t-license\t\tDisplay attributes of licenses\n"
 		"\t-master\t\t\tDisplay daemon master attributes\n"
 		"\t-pool <name>\t\tGet information from collector <name>\n"
-		"\t-ads[:<fmt>] <file>\tGet information from <file> in <fmt> format.\n"
-		"\t           where <fmt> choice is one of:\n"
+		"\t-ads[:<form>] <file>\tGet information from <file> in <form> format.\n"
+		"\t           where <form> choice is one of:\n"
 		"\t       long    The traditional -long form. This is the default\n"
 		"\t       xml     XML form, the same as -xml\n"
 		"\t       json    JSON classad form, the same as -json\n"
@@ -1443,9 +1343,7 @@ usage ()
 		"\t\t\t\tuse with -direct queries to STARTD and SCHEDD daemons\n"
 		"\t-target <file>\t\tUse target classad with -format or -af evaluation\n"
 		"\n    and [display-opts] are one or more of\n"
-		"\t-long[:<fmt>[,nosort]]\tDisplay entire classads in format <fmt>.\n"
-		"\t                      \tSee -ads for <fmt> options. Sorted by attribute name\n"
-		"\t                      \tunless nosort is specified.\n"
+		"\t-long[:<form>]\t\tDisplay entire classads in format <form>. See -ads\n"
 		"\t-sort <expr>\t\tSort ClassAds by expressions. 'no' disables sorting\n"
 		"\t-natural[:off]\t\tUse natural sort order in default output (default=on)\n"
 		"\t-total\t\t\tDisplay totals only\n"
@@ -1472,7 +1370,7 @@ usage ()
 		"\t    use -af:h to get tabular values with headings\n"
 		"\t    use -af:lrng to get -long equivalent format\n"
 		"\t-print-format <file>\tUse <file> to set display attributes and formatting\n"
-		"\t\t\t(experimental, see htcondor-wiki for more information)\n"
+		"\t\t\t\t(experimental, see htcondor-wiki for more information)\n"
 		);
 }
 
@@ -1673,9 +1571,10 @@ firstPass (int argc, char *argv[])
 				StringList opts(++pcolon);
 				for (const char * opt = opts.first(); opt; opt = opts.next()) {
 					if (YourString(opt) == "nosort") {
+						// Note: -attributes quietly disables -long:nosort unless output is long form
 						print_attrs_in_hash_order = true;
 					} else {
-						parse_type = parseAdsFileFormat(pcolon, parse_type);
+						parse_type = parseAdsFileFormat(opt, parse_type);
 					}
 				}
 			}
