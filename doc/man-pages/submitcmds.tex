@@ -2964,8 +2964,15 @@ precisely the same executable that created the checkpoint.
 a core file, \SubmitCmdNI{coresize} specifies the maximum size in bytes of the
 core file which the user wishes to keep. If \SubmitCmdNI{coresize} is not
 specified in the command file, the system's user resource limit
-\Env{coredumpsize} is used.
+\Env{coredumpsize} is used (note that \Env{coredumpsize} is not an
+HTCondor parameter -- it is an operating system parameter that can
+be viewed with the \Arg{limit} or \Arg{ulimit} command on Unix and
+in the Registry on Windows).
 A value of -1 results in no limits being applied to the core file size.
+If HTCondor is running as root, a \SubmitCmdNI{coresize} setting
+greater than the system \Env{coredumpsize} limit will override
+the system setting; if HTCondor is \emph{not} running as root, 
+the system \Env{coredumpsize} limit will override \SubmitCmdNI{coresize}.
 
 %%%%%%%%%%%%%%%%%%
 % cron_day_of_month
