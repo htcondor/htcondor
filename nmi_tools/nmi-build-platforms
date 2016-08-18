@@ -20,5 +20,4 @@ x86_64_Fedora23
 x86_64_Fedora24
 
 # We might as well build on SL
-x86_64_SL6
 x86_64_SL7
