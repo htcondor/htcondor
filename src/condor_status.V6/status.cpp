@@ -229,8 +229,9 @@ extern	int setPPstyle (ppOption, int, const char *);
 extern  void setPPwidth ();
 extern  void dumpPPMode(FILE* out);
 extern const char * getPPStyleStr (ppOption pps);
-extern void prettyPrintInitMask(classad::References & proj);
+extern void prettyPrintInitMask(classad::References & proj, const char * &constr);
 extern AdTypes setMode(int sdo_mode, int arg_index, const char * arg);
+extern AdTypes resetMode(int sdo_mode, int arg_index, const char * arg);
 extern  int  forced_display_width;
 
 
@@ -415,7 +416,9 @@ static bool process_ads_callback(void * pv,  ClassAd* ad)
 				const char * subtot_key = keybuf;
 				switch(ppTotalStyle) {
 					case PP_SUBMITTER_NORMAL: srod.getString(0, keybuf, sizeof(keybuf)); break;
-					case PP_SCHEDD_NORMAL: subtot_key = NULL; break;
+					case PP_SCHEDD_NORMAL:
+					case PP_SCHEDD_DATA:
+					case PP_SCHEDD_RUN: subtot_key = NULL; break;
 					case PP_STARTD_STATE: subtot_key = NULL; break; /* use activity as key */
 					default: srod.getString(startdCompact_ixCol_Platform, keybuf, sizeof(keybuf)); break;
 				}
@@ -715,8 +718,8 @@ main (int argc, char *argv[])
 		if (diagnose) { printf ("Adding OR constraint [%s]\n", buffer); }
 		query->addORConstraint (buffer);
 	}
-	else if (sdo_mode == SDO_Startd_Run && ! compactMode) {
-		// -run shows claimed slots
+	else if (sdo_mode == SDO_Startd_Claimed && ! compactMode) {
+		// -claimed shows claimed slots
 		sprintf (buffer, "%s == \"%s\"", ATTR_STATE, state_to_string(claimed_state));
 		if (diagnose) { printf ("Adding OR constraint [%s]\n", buffer); }
 		query->addORConstraint (buffer);
@@ -791,7 +794,7 @@ main (int argc, char *argv[])
 		if (sdo_mode == SDO_Startd_Avail) {
 			// State==Unclaimed picks up partitionable and unclaimed static, Cpus > 0 picks up only partitionable that have free memory
 			sprintf(buffer, "State == \"%s\" && Cpus > 0 && Memory > 0", state_to_string(unclaimed_state));
-		} else if (sdo_mode == SDO_Startd_Run) {
+		} else if (sdo_mode == SDO_Startd_Claimed) {
 			// State==Claimed picks up static slots, NumDynamicSlots picks up partitionable slots that are partly claimed.
 			sprintf(buffer, "(State == \"%s\" && DynamicSlot =!= true) || (NumDynamicSlots isnt undefined && NumDynamicSlots > 0)", state_to_string(claimed_state));
 		} else {
@@ -912,7 +915,9 @@ main (int argc, char *argv[])
 
 	// Setup the pretty printer for the given mode.
 	if ( ! PP_IS_LONGish(ppStyle) && ppStyle != PP_CUSTOM) {
-		prettyPrintInitMask(projList);
+		const char * constr = NULL;
+		prettyPrintInitMask(projList, constr);
+		if (constr) { query->addANDConstraint(constr); }
 	}
 
 	// if diagnose was requested, just print the query ad
@@ -1302,6 +1307,7 @@ usage ()
 		"\t-claimed\t\tPrint information about claimed resources\n"
 		"\t-cod\t\t\tDisplay Computing On Demand (COD) jobs\n"
 		"\t-collector\t\tDisplay collector daemon attributes\n"
+		"\t-data\t\t\tDisplay data transfer information\n"
 		"\t-debug\t\t\tDisplay debugging info to console\n"
 		"\t-defrag\t\t\tDisplay status of defrag daemon\n"
 		"\t-direct <host>\t\tGet attributes directly from the given daemon\n"
@@ -1318,7 +1324,7 @@ usage ()
 		"\t       new     'new' classad form without newlines\n"
 		"\t       auto    Guess the format from reading the input stream\n"
 		"\t-grid\t\t\tDisplay grid resources\n"
-		"\t-run\t\t\tSame as -claimed [deprecated]\n"
+		"\t-run\t\t\tDisplay running job stats\n"
 #ifdef HAVE_EXT_POSTGRESQL
 		"\t-quill\t\t\tDisplay attributes of quills\n"
 #endif /* HAVE_EXT_POSTGRESQL */
@@ -1374,17 +1380,6 @@ usage ()
 		);
 }
 
-ClassAdFileParseType::ParseType parseAdsFileFormat(const char * arg, ClassAdFileParseType::ParseType def_parse_type)
-{
-	ClassAdFileParseType::ParseType parse_type = def_parse_type;
-	YourString fmt(arg);
-	if (fmt == "long") { parse_type = ClassAdFileParseType::Parse_long; }
-	else if (fmt == "json") { parse_type = ClassAdFileParseType::Parse_json; }
-	else if (fmt == "xml") { parse_type = ClassAdFileParseType::Parse_xml; }
-	else if (fmt == "new") { parse_type = ClassAdFileParseType::Parse_new; }
-	else if (fmt == "auto") { parse_type = ClassAdFileParseType::Parse_auto; }
-	return parse_type;
-}
 
 void
 firstPass (int argc, char *argv[])
@@ -1601,8 +1596,27 @@ firstPass (int argc, char *argv[])
 			}
 			i++;
 		} else	
-		if (is_dash_arg_prefix(argv[i], "claimed", 2) || is_dash_arg_prefix (argv[i], "run", 1)) {
-			setMode (SDO_Startd_Run, i, argv[i]);
+		if (is_dash_arg_prefix(argv[i], "claimed", 2)) {
+			setMode (SDO_Startd_Claimed, i, argv[i]);
+		} else
+		if (is_dash_arg_prefix(argv[i], "data", 2)) {
+			if (sdo_mode >= SDO_Schedd && sdo_mode < SDO_Schedd_Run) {
+				resetMode (SDO_Schedd_Data, i, argv[i]);
+			} else {
+				setMode (SDO_Schedd_Data, i, argv[i]);
+			}
+		} else
+		if (is_dash_arg_prefix (argv[i], "run", 1)) {
+			// NOTE: default for bare -run changed from SDO_Startd_Claimed to SDO_Schedd_Run in 8.5.7
+			if (sdo_mode == SDO_Startd || sdo_mode == SDO_Startd_Claimed) {
+				resetMode (SDO_Startd_Claimed, i, argv[i]);
+			} else {
+				if (sdo_mode == SDO_Schedd) {
+					resetMode (SDO_Schedd_Run, i, argv[i]);
+				} else {
+					setMode (SDO_Schedd_Run, i, argv[i]);
+				}
+			}
 		} else
 		if( is_dash_arg_prefix (argv[i], "cod", 3) ) {
 			setMode (SDO_Startd_Cod, i, argv[i]);
@@ -1655,7 +1669,13 @@ firstPass (int argc, char *argv[])
 			setMode (SDO_Startd,i, argv[i]);
 		} else
 		if (is_dash_arg_prefix (argv[i], "schedd", 2)) {
-			setMode (SDO_Schedd, i, argv[i]);
+			if (sdo_mode == SDO_Startd_Claimed) {
+				resetMode (SDO_Schedd_Run, i, argv[i]);
+			} else if (sdo_mode >= SDO_Schedd && sdo_mode <= SDO_Schedd_Run) {
+				// Do nothing.
+			} else {
+				setMode (SDO_Schedd, i, argv[i]);
+			}
 		} else
 		if (is_dash_arg_prefix (argv[i], "grid", 1)) {
 			setMode (SDO_Grid, i, argv[i]);
@@ -1994,7 +2014,7 @@ secondPass (int argc, char *argv[])
 				name = daemonname;
 			}
 
-			if (sdo_mode == SDO_Startd_Run) {
+			if (sdo_mode == SDO_Startd_Claimed) {
 				sprintf (buffer, ATTR_REMOTE_USER " == \"%s\"", argv[i]);
 				if (diagnose) { printf ("[%s]\n", buffer); }
 				query->addORConstraint (buffer);

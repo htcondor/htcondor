@@ -49,7 +49,7 @@ extern int set_status_print_mask_from_stream (const char * streamid, bool is_fil
 
 static int stashed_now = 0;
 
-void ppInitPrintMask(ppOption pps, classad::References & proj);
+void ppInitPrintMask(ppOption pps, classad::References & proj, const char * & constr);
 const CustomFormatFnTable * getCondorStatusPrintFormats();
 
 static int width_of_fixed_cols = -1;       // set when using ppAdjustNameWidth
@@ -285,13 +285,13 @@ static void ppDisplayHeadings(FILE* file, ClassAd *ad, const char * pszExtra)
 		printf("%s", pszExtra);
 }
 
-void prettyPrintInitMask(classad::References & proj)
+void prettyPrintInitMask(classad::References & proj, const char * & constr)
 {
 	//bool old_headings = (ppStyle == PP_STARTD_COD) || (ppStyle == PP_QUILL_NORMAL);
 	bool long_form = PP_IS_LONGish(ppStyle);
 	bool custom = (ppStyle == PP_CUSTOM);
 	if ( ! using_print_format && ! wantOnlyTotals && ! custom && ! long_form) {
-		ppInitPrintMask(ppStyle, proj);
+		ppInitPrintMask(ppStyle, proj, constr);
 	}
 }
 
@@ -610,11 +610,10 @@ int startdCompact_ixCol_ActCode = -9;
 int startdCompact_ixCol_JobStarts = -10; // double
 int startdCompact_ixCol_MaxSlotMem = -11; // double
 
-int ppSetStartdCompactCols (int /*width*/, int & mach_width)
+int ppSetStartdCompactCols (int /*width*/, int & mach_width, const char * & constr)
 {
 	const char * tag = "StartdCompact";
 	const char * fmt = startdCompact_PrintFormat;
-	const char * constr = NULL;
 	if (set_status_print_mask_from_stream(fmt, false, &constr) < 0) {
 		fprintf(stderr, "Internal error: default %s print-format is invalid !\n", tag);
 	}
@@ -686,12 +685,11 @@ const char * const serverCompact_PrintFormat = "SELECT\n"
 "GROUP BY Machine\n"
 "SUMMARY STANDARD\n";
 
-void ppSetServerCols (int width)
+void ppSetServerCols (int width, const char * & constr)
 {
 	if (compactMode) {
 		const char * tag = "ServerCompact";
 		const char * fmt = serverCompact_PrintFormat;
-		const char * constr = NULL;
 		if (set_status_print_mask_from_stream(fmt, false, &constr) < 0) {
 			fprintf(stderr, "Internal error: default %s print-format is invalid !\n", tag);
 		}
@@ -939,6 +937,55 @@ int ppSetScheddNormalCols (int width, int & mach_width)
 
 	// set a minimum size for name and machine columns
 	mach_width = width ? 12 : 12;
+	int name_width = 15;
+	return name_width;
+}
+
+const char * const scheddData_PrintFormat = "SELECT\n"
+	"Name           AS Name         WIDTH AUTO\n"
+	"TransferQueueNumDownloading AS 'Download'  PRINTF %8d\n"
+	"FileTransferDownloadBytesPerSecond_5m/1024.0 AS 'KB/sec(5m)' PRINTF %9.2f\n"
+	"TransferQueueNumWaitingToDownload AS Waiting PRINTF %7d\n"
+	"FileTransferMBWaitingToDownload AS WaitingMB PRINTF %9.2f\n"
+	"TransferQueueNumUploading   AS '      Upload' PRINTF %12d\n"
+	"FileTransferUploadBytesPerSecond_5m/1024.0 AS 'KB/sec(5m)' PRINTF %9.2f\n"
+	"TransferQueueNumWaitingToUpload AS Waiting PRINTF %7d\n"
+	"FileTransferMBWaitingToUpload AS WaitingMB PRINTF %9.2f\n"
+"WHERE TransferQueueMaxUploading isnt undefined\n"
+//"WHERE (TransferQueueNumDownloading+TransferQueueNumWaitingToDownload+TransferQueueNumUploading+TransferQueueNumWaitingToUpload) >= 0\n"
+"SUMMARY NONE\n";
+
+int ppSetScheddDataCols (int /*width*/, const char * & constr)
+{
+	const char * tag = "ScheddData";
+	const char * fmt = scheddData_PrintFormat;
+	if (set_status_print_mask_from_stream(fmt, false, &constr) < 0) {
+		fprintf(stderr, "Internal error: default %s print-format is invalid !\n", tag);
+	}
+
+	int name_width = 15;
+	return name_width;
+}
+
+const char * const scheddRun_PrintFormat = "SELECT\n"
+	"Name           AS Name         WIDTH AUTO\n"
+	"TotalJobAds    AS TotalJobs PRINTF %9d\n"
+	"ShadowsRunning AS Shadows PRINTF %7d\n"
+	"TotalSchedulerJobsRunning AS ActiveDAGs PRINTF %10d\n"
+	"TotalSchedulerJobsIdle AS IdleDAGs PRINTF %8d\n"
+	"RecentJobsCompleted AS RcntDone  PRINTF %8d\n"
+	"RecentJobsStarted AS RcntStart PRINTF %9d\n"
+"WHERE (ShadowsRunning+TotalSchedulerJobsRunning) > 0\n"
+"SUMMARY NONE\n";
+
+int ppSetScheddRunCols (int /*width*/, const char * & constr)
+{
+	const char * tag = "ScheddRun";
+	const char * fmt = scheddRun_PrintFormat;
+	if (set_status_print_mask_from_stream(fmt, false, &constr) < 0) {
+		fprintf(stderr, "Internal error: default %s print-format is invalid !\n", tag);
+	}
+
 	int name_width = 15;
 	return name_width;
 }
@@ -1259,7 +1306,7 @@ int ppAdjustProjection(void*pv, int index, Formatter * fmt, const char * attr)
 	return 0;
 }
 
-void ppInitPrintMask(ppOption pps, classad::References & proj)
+void ppInitPrintMask(ppOption pps, classad::References & proj, const char * & constr)
 {
 	if (using_print_format) {
 		return;
@@ -1285,7 +1332,7 @@ void ppInitPrintMask(ppOption pps, classad::References & proj)
 		} else if(offlineMode) {
 			ppSetStartdOfflineCols(display_width);
 		} else if (compactMode && ! (vmMode || javaMode)) {
-			ppSetStartdCompactCols(display_width, machine_width);
+			ppSetStartdCompactCols(display_width, machine_width, constr);
 			machine_flags = FormatOptionAutoWidth;
 		} else {
 			ppSetStartdNormalCols(display_width);
@@ -1293,7 +1340,7 @@ void ppInitPrintMask(ppOption pps, classad::References & proj)
 		break;
 
 		case PP_STARTD_SERVER:
-		ppSetServerCols(display_width);
+		ppSetServerCols(display_width, constr);
 		break;
 
 		case PP_STARTD_RUN:
@@ -1319,6 +1366,18 @@ void ppInitPrintMask(ppOption pps, classad::References & proj)
 		case PP_SCHEDD_NORMAL:
 		name_width = ppSetScheddNormalCols(display_width, machine_width);
 		machine_flags = name_flags = FormatOptionAutoWidth;
+		width_of_fixed_cols = 35;
+		break;
+
+		case PP_SCHEDD_DATA:
+		name_width = ppSetScheddDataCols(display_width, constr);
+		name_flags = FormatOptionAutoWidth;
+		width_of_fixed_cols = 8+9+7+12+8+9+5;
+		break;
+
+		case PP_SCHEDD_RUN:
+		name_width = ppSetScheddRunCols(display_width, constr);
+		name_flags = FormatOptionAutoWidth;
 		width_of_fixed_cols = 35;
 		break;
 
