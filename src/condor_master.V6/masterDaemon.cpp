@@ -791,6 +791,27 @@ int daemon::RealStart( )
 		}
 	}
 
+	// If the daemon shares a binary with the HAD or REPLICATION daemons,
+	// respect the setting of the corresponding <SUBSYS>_USE_SHARED_PORT.
+	if( isDC ) {
+		// We param() for the HAD and REPLICATION daemon binaries explicitly,
+		// because it's totally valid for the user to have neither of them
+		// in their DAEMON_LIST and yet be using each under some other name.
+		// For instance, 'DAEMON_LIST = $(DAEMON_LIST) FIRST_HAD SECOND_HAD'.
+
+		std::string hadDaemonBinary;
+		param( hadDaemonBinary, "HAD" );
+		if( hadDaemonBinary == process_name ) {
+			m_never_use_shared_port = ! param_boolean( "HAD_USE_SHARED_PORT", false );
+		}
+
+		std::string replicationDaemonBinary;
+		param( replicationDaemonBinary, "REPLICATION" );
+		if( replicationDaemonBinary == process_name ) {
+			m_never_use_shared_port = ! param_boolean( "REPLICATION_USE_SHARED_PORT", false );
+		}
+	}
+
 	snprintf( buf, sizeof( buf ), "%s_ARGS", name_in_config_file );
 	char *daemon_args = param( buf );
 

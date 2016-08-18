@@ -1227,7 +1227,14 @@ SharedPortEndpoint::UseSharedPort(MyString *why_not,bool already_open)
 		return false;
 	}
 
-	if( !param_boolean("USE_SHARED_PORT",false) ) {
+	std::string uspParameterName;
+	const char * subsystem = get_mySubSystem()->getName();
+	formatstr( uspParameterName, "%s_USE_SHARED_PORT", subsystem );
+	if( param( uspParameterName.c_str() ) == NULL ) {
+		uspParameterName = "USE_SHARED_PORT";
+	}
+
+	if( !param_boolean(uspParameterName.c_str(),false) ) {
 		if( why_not ) {
 			*why_not = "USE_SHARED_PORT=false";
 		}
