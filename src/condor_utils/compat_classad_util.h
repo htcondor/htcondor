@@ -139,6 +139,9 @@ protected:
 	mutable char * exprstr;
 };
 
-#endif
+typedef compat_classad::CondorClassAdFileParseHelper ClassAdFileParseType;
+ClassAdFileParseType::ParseType parseAdsFileFormat(const char * arg, ClassAdFileParseType::ParseType def_parse_type);
+
+#endif // __cplusplus
 
 #endif

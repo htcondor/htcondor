@@ -484,3 +484,16 @@ void AddClassAdXMLFileFooter(std::string &buffer)
 	return;
 
 }
+
+ClassAdFileParseType::ParseType parseAdsFileFormat(const char * arg, ClassAdFileParseType::ParseType def_parse_type)
+{
+	ClassAdFileParseType::ParseType parse_type = def_parse_type;
+	YourString fmt(arg);
+	if (fmt == "long") { parse_type = ClassAdFileParseType::Parse_long; }
+	else if (fmt == "json") { parse_type = ClassAdFileParseType::Parse_json; }
+	else if (fmt == "xml") { parse_type = ClassAdFileParseType::Parse_xml; }
+	else if (fmt == "new") { parse_type = ClassAdFileParseType::Parse_new; }
+	else if (fmt == "auto") { parse_type = ClassAdFileParseType::Parse_auto; }
+	return parse_type;
+}
+
