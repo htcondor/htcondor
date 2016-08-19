@@ -687,7 +687,4 @@ typedef classad::ExprTree ExprTree;
 
 } // namespace compat_classad
 
-typedef compat_classad::CondorClassAdFileParseHelper ClassAdFileParseType;
-
-
 #endif

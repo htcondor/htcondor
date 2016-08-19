@@ -234,6 +234,18 @@ SEC_CONFIG_ENCRYPTION = REQUIRED
 SEC_CONFIG_INTEGRITY = REQUIRED
 \end{verbatim}
 
+The example above can be modified to meet the needs of your pool,
+providing the following conditions are met:
+\begin{enumerate}
+  \item The requesting client must use an authenticated connection
+  \item The requesting client must have an encrypted connection
+  \item The requesting client must be authorized for \Expr{DAEMON} level access.
+\end{enumerate}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:poolpassword-windows}Using a pool password on Windows}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 In order for \Expr{PASSWORD} authenticated communication to work,
 a \Term{pool password} must be chosen and distributed.
 The chosen pool password must be stored identically for each machine.

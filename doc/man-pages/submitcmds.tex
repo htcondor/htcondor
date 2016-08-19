@@ -2964,8 +2964,15 @@ precisely the same executable that created the checkpoint.
 a core file, \SubmitCmdNI{coresize} specifies the maximum size in bytes of the
 core file which the user wishes to keep. If \SubmitCmdNI{coresize} is not
 specified in the command file, the system's user resource limit
-\Env{coredumpsize} is used.
+\Env{coredumpsize} is used (note that \Env{coredumpsize} is not an
+HTCondor parameter -- it is an operating system parameter that can
+be viewed with the \Arg{limit} or \Arg{ulimit} command on Unix and
+in the Registry on Windows).
 A value of -1 results in no limits being applied to the core file size.
+If HTCondor is running as root, a \SubmitCmdNI{coresize} setting
+greater than the system \Env{coredumpsize} limit will override
+the system setting; if HTCondor is \emph{not} running as root, 
+the system \Env{coredumpsize} limit will override \SubmitCmdNI{coresize}.
 
 %%%%%%%%%%%%%%%%%%
 % cron_day_of_month
@@ -3223,12 +3230,14 @@ but it applies to the job event log, instead of the system event log.
 %%%%%%%%%%%%%%%%%%%
 \index{submit commands!job\_lease\_duration}
 \label{condor-submit-job-lease-duration}
-\item[job\_lease\_duration = $<$number-of-seconds$>$] For vanilla
-and java universe jobs only, the duration (in seconds) of a
+\item[job\_lease\_duration = $<$number-of-seconds$>$] For vanilla,
+parallel, VM,
+and java universe jobs only, the duration in seconds of a
 job lease.
-The default value is twenty minutes for universes that support it.
+The default value is 2,400, or forty minutes.
 If a job lease is not desired, the value can be explicitly set to 0 to
-disable the job lease semantics.
+disable the job lease semantics. The value can also be a ClassAd
+expression that evaluates to an integer.
 The HTCondor User's manual section on Special Environment Considerations
 has further details.
 
