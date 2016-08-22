@@ -288,6 +288,38 @@ bool dslotLookupFloat( const classad::ClassAd *ad, const char *name, int idx, do
 	return val.IsNumber( value );
 }
 
+static int rankSorter(ClassAd *left, ClassAd *right, void * that) {
+	double lhscandidateRankValue, lhscandidatePreJobRankValue, lhscandidatePostJobRankValue, lhscandidatePreemptRankValue;
+	double rhscandidateRankValue, rhscandidatePreJobRankValue, rhscandidatePostJobRankValue, rhscandidatePreemptRankValue;
+
+	ClassAd dummyRequest;
+
+	Matchmaker *mm = (Matchmaker *)that;
+	mm->calculateRanks(dummyRequest, left, Matchmaker::NO_PREEMPTION, lhscandidateRankValue, lhscandidatePreJobRankValue, lhscandidatePostJobRankValue, lhscandidatePreemptRankValue);
+	mm->calculateRanks(dummyRequest, right, Matchmaker::NO_PREEMPTION, rhscandidateRankValue, rhscandidatePreJobRankValue, rhscandidatePostJobRankValue, rhscandidatePreemptRankValue);
+
+	if (lhscandidatePreJobRankValue < rhscandidatePreJobRankValue) {
+		return 1;
+	} 
+
+	if (rhscandidatePreJobRankValue > lhscandidatePreJobRankValue) {
+		return 0;
+	} 
+
+	// We are intentially skipping the job rank, as we assume it is constant
+	if (lhscandidatePostJobRankValue < rhscandidatePostJobRankValue) {
+		return 1;
+	} 
+
+	if (rhscandidatePostJobRankValue > lhscandidatePostJobRankValue) {
+		return 0;
+	} 
+
+	return left < right;
+
+
+}
+
 Matchmaker::
 Matchmaker ()
    : strSlotConstraint(NULL)
@@ -774,6 +806,8 @@ reinitialize ()
 
 	num_negotiation_cycle_stats = param_integer("NEGOTIATION_CYCLE_STATS_LENGTH",3,0,MAX_NEGOTIATION_CYCLE_STATS);
 	ASSERT( num_negotiation_cycle_stats <= MAX_NEGOTIATION_CYCLE_STATS );
+
+	m_staticRanks = param_boolean("NEGOTIATOR_IGNORE_JOB_RANKS", false);
 
 	if( first_time ) {
 		first_time = false;
@@ -1270,6 +1304,8 @@ negotiationTime ()
 	std::set<std::string> accountingNames; // set of active submitter names to publish
 	ClassAdListDoesNotDeleteAds scheddAds; // ptrs to schedd ads in allAds
 
+	ranksMap.clear();
+
 	/**
 		Check if we just finished a cycle less than NEGOTIATOR_CYCLE_DELAY 
 		seconds ago.  If we did, reset our timer so at least 
@@ -1394,6 +1430,13 @@ negotiationTime ()
 	// any of the claimed machines!).
 
 	trimStartdAds(startdAds);
+
+	if (m_staticRanks) {
+		dprintf(D_FULLDEBUG, "About to sort machine ads by rank\n");
+		startdAds.Sort(rankSorter, this);
+		dprintf(D_FULLDEBUG, "Done sorting machine ads by rank\n");
+	}
+
     negotiation_cycle_stats[0]->trimmed_slots = startdAds.MyLength();
     negotiation_cycle_stats[0]->candidate_slots = startdAds.MyLength();
 
@@ -4857,6 +4900,7 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 	rejForSubmitterLimit = 0;
 
 	bool allow_pslot_preemption = param_boolean("ALLOW_PSLOT_PREEMPTION", false);
+	double allocatedWeight = 0.0;
 
 	// scan the offer ads
 	startdAds.Open ();
@@ -5117,6 +5161,15 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 			bestPreemptRankValue = candidatePreemptRankValue;
 			bestDslotClaims = candidateDslotClaims;
 		}
+
+		if (m_staticRanks) {
+			double weight = 1.0;
+			//candidate->LookupFloat(ATTR_SLOT_WEIGHT, weight);
+			allocatedWeight += weight;
+			if (allocatedWeight > submitterLimit) {
+				break;
+			}
+		}
 	}
 	startdAds.Close ();
 
@@ -5268,6 +5321,20 @@ calculateRanks(ClassAd &request,
                double &candidatePreemptRankValue
               )
 {
+	if (m_staticRanks) {
+		RanksMapType::iterator it = ranksMap.find(candidate);
+
+		// if we have it, return it
+		if (it != ranksMap.end()) {
+			struct JobRanks ranks = (*it).second;
+			candidatePreJobRankValue = ranks.PreJobRankValue;
+			candidatePostJobRankValue = ranks.PostJobRankValue;
+			candidatePreemptRankValue = ranks.PreemptRankValue;
+			candidateRankValue = 1.0; // Assume fixed
+			return;
+		} 
+	}
+
 	candidatePreJobRankValue = EvalNegotiatorMatchRank(
 		"NEGOTIATOR_PRE_JOB_RANK",NegotiatorPreJobRank,
 		request, candidate);
@@ -5288,6 +5355,12 @@ calculateRanks(ClassAd &request,
 		candidatePreemptRankValue = EvalNegotiatorMatchRank(
 			"PREEMPTION_RANK",PreemptionRank,
 			request, candidate);
+	}
+
+	if (m_staticRanks) {
+		// only get here on cache miss
+		struct JobRanks ranks;
+		ranksMap.insert(std::make_pair(candidate, ranks));
 	}
 }
 

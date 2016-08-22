@@ -148,6 +148,8 @@ class Matchmaker : public Service
 		void forwardAccountingData(std::set<std::string> &names);
 		void forwardGroupAccounting(DCCollector &collector, GroupEntry *ge);
 
+		void calculateRanks(ClassAd &request, ClassAd *offer, PreemptState candidatePreemptState, double &candidateRankValue, double &candidatePreJobRankValue, double &candidatePostJobRankValue, double &candidatePreemptRankValue);
+
     protected:
 		char * NegotiatorName;
 		int update_interval;
@@ -183,6 +185,15 @@ class Matchmaker : public Service
 		void prefetchResourceRequestLists(ClassAdListDoesNotDeleteAds &scheddAds);
 		typedef std::map<std::string, classad_shared_ptr<ResourceRequestList> > RRLHash;
 		RRLHash m_cachedRRLs;
+
+		struct JobRanks {
+               double PreJobRankValue;
+               double PostJobRankValue;
+               double PreemptRankValue;
+		};
+
+		typedef std::map<ClassAd *, JobRanks> RanksMapType;
+		RanksMapType ranksMap;
 
 		/** Negotiate w/ one schedd for one user, for one 'pie spin'.
             @param groupName name of group negotiating under (or NULL)
@@ -337,7 +348,6 @@ class Matchmaker : public Service
 			// Recalculates ranks and re-sorts match list.
 			// ASSUMES NO_PREEMPTION for pslots.
 		bool returnPslotToMatchList(ClassAd &request, ClassAd *offer);
-		void calculateRanks(ClassAd &request, ClassAd *offer, PreemptState candidatePreemptState, double &candidateRankValue, double &candidatePreJobRankValue, double &candidatePostJobRankValue, double &candidatePreemptRankValue);
 
 
 		void RegisterAttemptedOfflineMatch( ClassAd *job_ad, ClassAd *startd_ad );
@@ -369,6 +379,8 @@ class Matchmaker : public Service
         ExprTree *SlotPoolsizeConstraint;   // Filter machineAds by this
                                          // constraint before calculating quotas
                                          // formerly DynQuotaMachConstraint Added for CDF.
+
+		bool m_staticRanks;
 
 		StringList NegotiatorMatchExprNames;
 		StringList NegotiatorMatchExprValues;
