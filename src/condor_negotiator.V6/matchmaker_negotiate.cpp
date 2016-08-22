@@ -175,8 +175,8 @@ ResourceRequestList::getRequest(ClassAd &request, int &cluster, int &proc, int &
 	}
 	autocluster = current_autocluster;
 
-	dprintf(D_ALWAYS, "    Request %05d.%05d:  (request count %d of %d)\n", cluster, proc,
-		resource_request_offers+1,resource_request_count);
+	dprintf(D_ALWAYS, "    Request %05d.%05d: autocluster %d (request count %d of %d)\n", cluster, proc,
+		autocluster, resource_request_offers+1,resource_request_count);
 
 	return true;
 }
