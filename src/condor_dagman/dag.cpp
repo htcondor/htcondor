@@ -1525,6 +1525,7 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 			break; // break out of while loop
 		}
 
+#if 0 //TEMPTEMP
 		//TEMPTEMP -- should we check this other places here, too?
 		//TEMPTEMP -- maybe make a utility function that does this test
 		time_t now = time( NULL );
@@ -1537,6 +1538,7 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 						(int)elapsed, dm.m_user_log_scan_interval );
 			break; // break out of while loop
 		}
+#endif //TEMPTEMP
 
 			// remove & submit first job from ready queue
 		Job* job;

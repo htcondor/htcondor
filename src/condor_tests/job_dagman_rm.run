@@ -1,4 +1,6 @@
 #! /usr/bin/env perl
+#TEMPTEMP -- this test should fail without fixes to DAGMan!
+#TEMPTEMP -- do condor_q -constraint batch_name... -total -- should have 0 jobs!!
 ##**************************************************************
 ##
 ## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -29,10 +31,12 @@ $testdesc =  'Condor submit dag - basic condor_rm test - scheduler U';
 $testname = "job_dagman_rm";
 $dagman_args = "-verbose";
 
+#TEMPTEMP -- okay, have "extra" jobs use another single log file...
 @tmpfiles = ("job_dagman_rm.dag.dagman.out",
 	"job_dagman_rm-nodeA.log",
 	"job_dagman_rm-nodeD.log",
 	"job_dagman_rm-nodeE.log",
+	"job_dagman_rm-nodeF.log",
 	"job_dagman_rm.dag.rescue001");
 
 my $killedchosen = 0;
@@ -58,6 +62,8 @@ $aborted = sub
 {
 	CondorTest::debug("DAG aborted as expected\n",1);
 
+	#TEMPTEMP -- ideal would be if condor_wait failed if jobs are still in the queue, as opposed to not returning -- is there a way to do that with condor_q?
+	#TEMPTEMP -- or just do condor_q with batch name...
 	CondorTest::debug("Making sure node jobs have exited from queue\n",1);
 	runcmd("condor_wait job_dagman_rm-nodeA.log");
 	CondorTest::debug("NodeA exited\n",1);
@@ -65,6 +71,10 @@ $aborted = sub
 	CondorTest::debug("NodeD exited\n",1);
 	runcmd("condor_wait job_dagman_rm-nodeE.log");
 	CondorTest::debug("NodeE exited\n",1);
+	runcmd("condor_wait job_dagman_rm-nodeF.log");
+	CondorTest::debug("NodeF exited\n",1);
+	runcmd("condor_wait job_dagman_rm-nodeZ.log");
+	CondorTest::debug("NodeZ exited\n",1);
 
 	CondorTest::debug("Verifying output\n",1);
 	$diditpass = 1;
@@ -84,8 +94,13 @@ $aborted = sub
 		$diditpass = 0;
 	}
 
-	if (-e "job_dagman_rm-NodeE-job.finished") {
-		CondorTest::debug("Error: file NodeE-job.finished exists; NodeE job should have been condor_rm'ed\n",1);
+	if (-e "job_dagman_rm-NodeF-job.finished") {
+		CondorTest::debug("Error: file NodeF-job.finished exists; NodeF job should have been condor_rm'ed\n",1);
+		$diditpass = 0;
+	}
+
+	if (-e "job_dagman_rm-NodeZ-job.finished") {
+		CondorTest::debug("Error: file NodeZ-job.finished exists; NodeZ job should have been condor_rm'ed\n",1);
 		$diditpass = 0;
 	}
 
