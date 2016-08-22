@@ -96,6 +96,11 @@ int DockerProc::StartJob() {
 		Starter->getMySlotName().c_str(), // note: this can be "" for single slot machines.
 		getpid() );
 
+	ClassAd recoveryAd;
+	recoveryAd.Assign("DockerContainerName", containerName.c_str());
+	Starter->WriteRecoveryFile(&recoveryAd);
+
+
 
 	//
 	// Do I/O redirection (includes streaming).

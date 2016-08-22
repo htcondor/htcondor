@@ -25,6 +25,7 @@
 #include "daemon.h"
 #include "../condor_privsep/condor_privsep.h"
 #include "filesystem_remap.h"
+#include "docker-api.h"
 
 // helper method to determine whether the given execute directory
 // is root-squashed. this function assumes that the given directory
@@ -221,7 +222,7 @@ check_recovery_file( const char *execute_dir )
 		fclose( recovery_fp );
 		if (unlink(recovery_file.Value()) < 0) {
 			dprintf( D_FULLDEBUG, "check_recovery_file: Failed to remove file '%s'\n", recovery_file.Value() );
-		}
+		} 
 		return;
 	}
 
@@ -234,6 +235,15 @@ check_recovery_file( const char *execute_dir )
 			resmgr->m_vmuniverse_mgr.killVM( vm_id.Value() );
 		}
 	}
+
+	// Check if it is a lost Docker container, and remove it if so
+	std::string containerId;
+	recovery_ad->LookupString("DockerContainerName", containerId);
+	if ( !containerId.empty() ) {
+		CondorError err;
+		dprintf(D_ALWAYS, "Removing orphaned docker container %s\n", containerId.c_str());
+		DockerAPI::rm(containerId, err);
+	} 
 
 	delete recovery_ad;
 	fclose( recovery_fp );
