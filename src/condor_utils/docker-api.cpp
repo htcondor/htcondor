@@ -193,6 +193,7 @@ int DockerAPI::rm( const std::string & containerID, CondorError & /* err */ ) {
 	if ( ! add_docker_arg(rmArgs))
 		return -1;
 	rmArgs.AppendArg( "rm" );
+	rmArgs.AppendArg( "-f" );  // if for some reason still running, kill first
 	rmArgs.AppendArg( "-v" );  // also remove the volume
 	rmArgs.AppendArg( containerID.c_str() );
 
