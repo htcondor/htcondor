@@ -779,12 +779,30 @@ int daemon::RealStart( )
 		args.AppendArg("-f");
 	}
 
+	snprintf( buf, sizeof( buf ), "%s_ARGS", name_in_config_file );
+	char *daemon_args = param( buf );
+
 	// Automatically set -localname if appropriate.
 	if( isDC ) {
 		StringList hardcodedDCDaemonNames( default_dc_daemon_list );
 		if(! hardcodedDCDaemonNames.contains_anycase( name_in_config_file )) {
-			args.AppendArg( "-local-name" );
-			args.AppendArg( name_in_config_file );
+			// Since the config's args are appended after this, they should
+			// win, but we might as well do it right.
+			bool foundLocalName = false;
+			ArgList configArgs;
+			MyString configError;
+			if( configArgs.AppendArgsV1RawOrV2Quoted( daemon_args, & configError ) ) {
+				for( int i = 0; i < configArgs.Count(); ++i ) {
+					char const * configArg = configArgs.GetArg( i );
+					if( strcmp( configArg, "-local-name" ) == 0 ) {
+						foundLocalName = true; break;
+					}
+				}
+				if(! foundLocalName) {
+					args.AppendArg( "-local-name" );
+					args.AppendArg( name_in_config_file );
+				}
+			}
 
 			// GT#5768: The master should look for the localname-specific
 			// version of any param()s it does while doing this start-up.
@@ -811,9 +829,6 @@ int daemon::RealStart( )
 			m_never_use_shared_port = ! param_boolean( "REPLICATION_USE_SHARED_PORT", false );
 		}
 	}
-
-	snprintf( buf, sizeof( buf ), "%s_ARGS", name_in_config_file );
-	char *daemon_args = param( buf );
 
 	MyString args_error;
 	if(!args.AppendArgsV1RawOrV2Quoted(daemon_args,&args_error)) {
