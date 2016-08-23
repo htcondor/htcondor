@@ -407,10 +407,18 @@ dprintf_config( const char *subsys, struct dprintf_output_settings *p_info /* = 
 
 			logPathParam = param(pname);
 
+			// See ticket #5849: daemons started with a local name should
+			// not by default share logs with other daemons of the same
+			// subsystem.  If this daemon has a local name, then, we check
+			// <LOCALNAME>.<SUBSYS>_LOG explicitly, to make sure we don't
+			// "inherit" the value of <SUBSYS>_LOG.  Likewise, if the daemon
+			// has a local name but no log path, we default to <Localname>Log
+			// instead of <SUBSYS>Log (below).
 			const char * localName = get_mySubSystem()->getLocalName();
 			if( localName != NULL ) {
 				std::string lln( localName );
 				lln += "."; lln += pname;
+				if( logPathParam ) { free( logPathParam ); }
 				logPathParam = param( lln.c_str() );
 			}
 
