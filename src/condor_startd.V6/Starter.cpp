@@ -922,7 +922,7 @@ Starter::execDCStarter( ArgList const &args, Env const *env,
 	// If admin desires encrypted exec dir in config, do it
 	bool encrypt_execdir = param_boolean_crufty("ENCRYPT_EXECUTE_DIRECTORY",false);
 	// Or if user wants encrypted exec in job ad, do it
-	if (!encrypt_execdir && s_claim->ad()) {
+	if (!encrypt_execdir && s_claim && s_claim->ad()) {
 		s_claim->ad()->LookupBool(ATTR_ENCRYPT_EXECUTE_DIRECTORY,encrypt_execdir);
 	}
 	if ( encrypt_execdir ) {
