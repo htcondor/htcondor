@@ -205,7 +205,7 @@ if ($ENV{NMI_PLATFORM} =~ /_win/i) {
     # build.win.bat uses BASE_DIR to setup some things.
     $ENV{BASE_DIR} = "$BaseDir";
 
-    # get the build id out of the cmake args, we have to
+    # get the build id and bitness out of the cmake args, we have to
     # pass it to the ZIP and MSI building steps
     #
     my $cmake_args = get_cmake_args();

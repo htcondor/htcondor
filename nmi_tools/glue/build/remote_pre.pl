@@ -56,8 +56,13 @@ $| = 1;
 
 if ($ENV{NMI_PLATFORM} =~ /_win/i) {
 	my $enable_vs9 = 0;
-	#uncomment to use vs9 on Win7 platform# if ($ENV{NMI_PLATFORM} =~ /Windows7/i) { $enable_vs9 = 1; }
-	my $enable_x64 = 0; ##### if ($ENV{NMI_PLATFORM} =~ /Windows10/i) { $enable_x64 = 1; }
+	my $enable_x64 = 0;
+
+	#uncomment to use vs9 on Win7 platform
+	#if ($ENV{NMI_PLATFORM} =~ /Windows7/i) { $enable_vs9 = 1; }
+	#uncomment to build x64 on Win10 platform (the rest of the build will follow this)
+	#if ($ENV{NMI_PLATFORM} =~ /Windows10/i) { $enable_x64 = 1; }
+
 	if ($enable_vs9 && $ENV{VS90COMNTOOLS} =~ /common7/i) {
 		$defines{visualstudio} = '-G "Visual Studio 9 2008"';
 		$ENV{PATH} = "$ENV{VS90COMNTOOLS}..\\IDE;$ENV{VS90COMNTOOLS}..\\..\\VC\\BIN;$ENV{PATH}";
