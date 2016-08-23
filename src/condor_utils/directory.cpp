@@ -866,10 +866,18 @@ Directory::Next()
 	// is not "." or ".." or until there are no more files.
 	do {
 		if ( dirp == -1 ) {
+#ifdef _M_X64
+			dirp = _findfirst64(path.Value(),&filedata);
+#else
 			dirp = _findfirst(path.Value(),&filedata);
+#endif
 			result = dirp;
 		} else {
+#ifdef _M_X64
+			result = _findnext64(dirp,&filedata);
+#else
 			result = _findnext(dirp,&filedata);
+#endif
 		}
 	} while ( (result != -1) && 
 		( strcmp(filedata.name,".") == MATCH ||

@@ -138,7 +138,7 @@ CondorAppendDirectoryToPath (
     PCWSTR w_path, 
     PCWSTR w_directory ) {
     
-    DWORD length = 0;
+    SSIZE_T length = 0;
     PWSTR w_new  = NULL;
     
     length = wcslen ( w_path ) 

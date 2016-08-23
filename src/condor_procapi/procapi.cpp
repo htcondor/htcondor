@@ -1921,7 +1921,7 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
     PPERF_OBJECT_TYPE pThisObject;
     PPERF_INSTANCE_DEFINITION pThisInstance;
     long instanceNum;
-    DWORD ctrblk;
+    ULONG_PTR ctrblk;
 
     pThisObject = firstObject (pDataBlock);
   
@@ -1941,8 +1941,8 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
     pid_t thispid;
 
     while( (!found) && (instanceNum < pThisObject->NumInstances) ) {
-        ctrblk = ((DWORD)pThisInstance) + pThisInstance->ByteLength;
-        thispid = (long) *((long*)(ctrblk + offsets->procid));
+        ctrblk = ((ULONG_PTR)pThisInstance) + pThisInstance->ByteLength;
+        thispid = (pid_t) *((long*)(ctrblk + offsets->procid));
         if( thispid == pid ) {
             found = true;
         } else {
@@ -1968,7 +1968,7 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
     LARGE_INTEGER imgsz = (LARGE_INTEGER) 
         *((LARGE_INTEGER*)(ctrblk + offsets->imgsize));
 
-    procRaw.pid       = (long) *((long*)(ctrblk + offsets->procid  ));
+    procRaw.pid       = (pid_t) *((long*)(ctrblk + offsets->procid  ));
     procRaw.ppid      = ntSysInfo.GetParentPID(pid);
     procRaw.imgsize   = imgsz.QuadPart;
 
@@ -2027,13 +2027,13 @@ ProcAPI::buildProcInfoList()
 
     // loop through each instance in data
 	//
-	DWORD ctrblk;
+	ULONG_PTR ctrblk;
     int instanceNum = 0;
     while( instanceNum < pThisObject->NumInstances ) {
 
 		procInfo* pi;
 
-        ctrblk = ((DWORD)pThisInstance) + pThisInstance->ByteLength;
+        ctrblk = ((ULONG_PTR)pThisInstance) + pThisInstance->ByteLength;
 
 		LARGE_INTEGER elt = *(LARGE_INTEGER*)(ctrblk + offsets->elapsed);
         LARGE_INTEGER pt = *(LARGE_INTEGER*)(ctrblk + offsets->pctcpu);

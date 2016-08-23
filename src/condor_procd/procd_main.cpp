@@ -436,6 +436,9 @@ main(int argc, char* argv[])
 #if defined(WIN32)
 		dprintf(D_ALWAYS, "* PID = %lu\n", 
 			(unsigned long)::GetCurrentProcessId());
+#if defined _M_X64
+		dprintf(D_ALWAYS, "* ARCH = x64\n");
+#endif
 #else
 		dprintf(D_ALWAYS, "* PID = %lu\n", (unsigned long)getpid());
 		dprintf(D_ALWAYS, "* UID = %lu\n", (unsigned long)getuid());

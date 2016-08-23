@@ -541,7 +541,7 @@ class ClassAd : public ExprTree
 
         /** Return the number of attributes at the root level of this ClassAd.
          */
-        int size(void) const { return attrList.size(); }
+        int size(void) const { return (int)attrList.size(); }
 		//@}
 
 		void rehash(size_t s) { attrList.rehash(s);}

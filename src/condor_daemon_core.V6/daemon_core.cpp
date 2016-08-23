@@ -7290,8 +7290,8 @@ int DaemonCore::Create_Process(
 	if (map_and_load_result)
 		UnMapAndLoad(&loaded);
 
-	// Define a some short-hand variables for use bellow
-	namelen				= strlen(executable);
+	// Define a some short-hand variables for use below
+	namelen				= (int)strlen(executable);
 	extension			= namelen > 3 ? &(executable[namelen-4]) : NULL;
 	batch_file			= ( extension && 
 							( MATCH == strcasecmp ( ".bat", extension ) || 
@@ -7506,7 +7506,7 @@ int DaemonCore::Create_Process(
 
 		goto wrapup;
 	} else {
-		dprintf(D_FULLDEBUG, "GetBinaryType() returned %d\n", binType);
+		dprintf(D_FULLDEBUG, "Create_Process(): BinaryType is %d : arguments '%s'\n", binType, strArgs.Value());
 	}
 
 	// if we want to create a process family for this new process, we
@@ -7612,7 +7612,7 @@ int DaemonCore::Create_Process(
 		/* build the Win32 affinity mask ... */
 		DWORD_PTR mask = 0;
 		for ( int i = 1; i < affinity_mask[0]; ++i ) {
-			mask |= ( 1 << affinity_mask[i] );
+			mask |= ( (DWORD_PTR)1 << affinity_mask[i] );
 		}
 
 		dprintf ( 

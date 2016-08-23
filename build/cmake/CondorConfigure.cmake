@@ -96,16 +96,21 @@ else()
 		#only for Visual Studio 2012
 		if(NOT (MSVC_VERSION LESS 1700))
 			message(STATUS "=======================================================")
-			message(STATUS "Searching for python installation") 
-			#look at registry for 32-bit view of 64-bit registry first	
+			message(STATUS "Searching for python installation")
+			#look at registry for 32-bit view of 64-bit registry first
+			message(STATUS "  Looking in HKLM\\Software\\Wow3264Node")
 			get_filename_component(PYTHON_INSTALL_DIR "[HKEY_LOCAL_MACHINE\\SOFTWARE\\Wow6432Node\\Python\\PythonCore\\2.7\\InstallPath;]" REALPATH)
 			#when registry reading fails cmake returns with c:\registry
+			message(STATUS "  Got ${PYTHON_INSTALL_DIR}")
 
-			if("${PYTHON_INSTALL_DIR}" MATCHES "registry") #look at native 32bit path if not found
+			#look at native registry if not found
+			if("${PYTHON_INSTALL_DIR}" MATCHES "registry" OR ( CMAKE_SIZEOF_VOID_P EQUAL 8 AND "${PYTHON_INSTALL_DIR}" MATCHES "32" ) )
+				message(STATUS "  Looking in HKLM\\Software")
 				get_filename_component(PYTHON_INSTALL_DIR "[HKEY_LOCAL_MACHINE\\SOFTWARE\\Python\\PythonCore\\2.7\\InstallPath;]" REALPATH)
+				message(STATUS "  Got ${PYTHON_INSTALL_DIR}")
 			endif()
 		
-			if("${PYTHON_INSTALL_DIR}" MATCHES "registry")				
+			if("${PYTHON_INSTALL_DIR}" MATCHES "registry")
 				message(STATUS "Suppored python installation not found on this system")
 				unset(PYTHONINTERP_FOUND)
 			else()
@@ -774,7 +779,7 @@ if (WINDOWS)
 
   if (MSVC11)
     if (CMAKE_SIZEOF_VOID_P EQUAL 8 )
-      set(BOOST_DOWNLOAD_WIN boost-1.54.0-VC11-Win32_V4.tar.gz)
+      set(BOOST_DOWNLOAD_WIN boost-1.54.0-VC11-Win64_V4.tar.gz)
     else()
       set(BOOST_DOWNLOAD_WIN boost-1.54.0-VC11-Win32_V4.tar.gz)
     endif()

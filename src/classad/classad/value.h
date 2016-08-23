@@ -496,7 +496,7 @@ inline bool Value::
 IsStringValue( int &size ) const
 {
     if (valueType == STRING_VALUE) {
-        size = strValue->size();
+        size = (int)strValue->size();
         return true;
     } else {
         size = -1;

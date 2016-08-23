@@ -240,8 +240,12 @@ private:
 	bool rmdirAttempt( const char* path, priv_state priv );
 
 #ifdef WIN32
-	long dirp;
+	LONG_PTR dirp;
+#ifdef _M_X64
+	struct _finddatai64_t filedata;
+#else
 	struct _finddata_t filedata;
+#endif
 #else
 	condor_DIR *dirp;
 	priv_state setOwnerPriv( const char* path, si_error_t &err );
