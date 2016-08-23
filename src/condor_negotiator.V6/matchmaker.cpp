@@ -4901,6 +4901,20 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 
 	bool allow_pslot_preemption = param_boolean("ALLOW_PSLOT_PREEMPTION", false);
 	double allocatedWeight = 0.0;
+		// Set up for parallel matchmaking, if enabled
+	std::vector<compat_classad::ClassAd *> par_candidates;
+	std::vector<compat_classad::ClassAd *> par_matches;
+
+	int num_threads =  param_integer("NEGOTIATOR_NUM_THREADS", 1);
+	if (num_threads > 1) {
+		startdAds.Open();
+		par_candidates.reserve(startdAds.Length());
+		while ((candidate = startdAds.Next())) {
+			par_candidates.push_back(candidate);
+		}
+		startdAds.Close();
+		ParallelIsAMatch(&request, par_candidates, par_matches, num_threads, false);
+	}
 
 	// scan the offer ads
 	startdAds.Open ();
@@ -4938,7 +4952,14 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
         // When candidate supports a consumption policy, then resources
         // requested via consumption policy must also be available from
         // the resource
-		bool is_a_match = cp_sufficient && IsAMatch(&request, candidate);
+		bool is_a_match = false;
+		if (num_threads > 1) {
+			is_a_match = cp_sufficient && 
+				(par_matches.end() != 
+					std::find(par_matches.begin(), par_matches.end(), candidate));
+		} else {
+			is_a_match = cp_sufficient && IsAMatch(&request, candidate);
+		}
 
         if (has_cp) {
             // put original values back for RequestXxx attributes
