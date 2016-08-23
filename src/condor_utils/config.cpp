@@ -1895,7 +1895,7 @@ int strjoincasecmp(const char * key, const char * prefix, const char * name, cha
 		while (*k && tolower(*k) == tolower(*p)) { ++k; ++p; }
 		if ( ! *k) { // ran out of key
 			if ( ! *p) return name ? -1 : 0;
-			else return *p;
+			else return -1; // because tolower(*p) > tolower(*k) must be true here..
 		} else if (*p) { // still have prefix, but does not match
 			return tolower(*p) > tolower(*k) ? -1 : 1;
 		} else if (sep) {
