@@ -1477,7 +1477,7 @@ int CondorClassAdFileParseHelper::NewParser(ClassAd & ad, FILE* file, bool & det
 					} else if (buffer == "[\n" || buffer == "{\n") {
 						char ch = buffer[0];
 						// could be json or new classads, read character to figure out which.
-						char ch2 = fgetc(file);
+						int ch2 = fgetc(file);
 						if (ch == '{' && ch2 == '[') {
 							inside_list = true;
 							ungetc('[', file);
