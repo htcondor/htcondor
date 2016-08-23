@@ -29,6 +29,27 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Old HAD configurations, with or without replication, should now work
+by default (without shared port).
+\Ticket{5769}
+
+\item HTCondor daemons now respect \MacroNI{<LOCALNAME>.<SUBSYSTEM>\_LOG}
+if passed a -local-name parameter, and default to using
+\MacroNI{\$(LOG)/<Localname>Log} if the former is not set.
+\Ticket{5768}
+
+\item HTCondor now automatically passes the -local-name parameter to a
+DC daemon if its entry in the \MacroNI{DAEMON\_LIST} is not in the default
+\MacroNI{DC\_DAEMON\_LIST}.  This should result in simpler and less
+error-prone configuration.
+\Ticket{5768}
+
+\item HTCondor now detects if an entry in \MacroNI{DAEMON\_LIST} shares a
+binary with an entry in \MacroNI{DC\_DAEMON\_LIST} and marks the former as
+a DC daemon if so.  This should result in simpler and less error-prone
+configuration.
+\Ticket{5767}
+
 \item HTCondor no longer gives up if a bad networking configuration is
 detected while running a tool.  This allows \Condor{config\_val} to be
 used to debug the problem.
@@ -71,6 +92,10 @@ Also added support for service accounts with GCE.
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item Fixed a bug in how the HAD daemon checks to see if it and its
+corresponding replication daemon were configured to be on the same host.
+\Ticket{5769}
 
 \item The EC2 GAHP now handles integer overflows when checking deadlines.
 This prevents spurious time-outs on 32-bit systems which have been up for
