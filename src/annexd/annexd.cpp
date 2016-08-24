@@ -27,13 +27,16 @@ startOneGahpClient() {
 
 	ArgList args;
 
-	// FIXME: I think the EC2 GAHP ignores the -f flag, and it certainly
-	// won't otherwise grab the right set of parameters.  Maybe call it
-	// with the -localname flag for now?
+	// FIXME: Think more generally about configuring the EC2 GAHP for use
+	// by the annex.  Is the proper place for the annex GAHP log in /tmp
+	// like it is for other users?  I think the only place we param() for
+	// something in the EC2 GAHP is for EC2_GAHP_RATE_LIMIT; we may want
+	// to convert that to a command-line argument as well.
 	char * gahp_log = param( "ANNEX_GAHP_LOG" );
 	if( gahp_log == NULL ) {
 		dprintf( D_ALWAYS, "Warning: ANNEX_GAHP_LOG not defined.\n" );
 	} else {
+		// FIXME: Add support for the '-f' flag to the EC2 GAHP.
 		args.AppendArg( "-f" );
 		args.AppendArg( gahp_log );
 		free( gahp_log );
@@ -141,6 +144,9 @@ BulkRequest::operator() () const {
 
 	if( rc == 0 ) {
 		dprintf( D_ALWAYS, "Bulk start request ID: %s\n", bulkRequestID.c_str() );
+	} else if( errorCode == "NEED_CHECK_BULK_START" ) {
+		// FIXME: We should probably retry, instead.
+		dprintf( D_ALWAYS, "Bulk start request failed but may have left a Spot Fleet behind.\n" );
 	} else {
 		std::string gahpErrorString = gahp->getErrorString();
 		dprintf( D_ALWAYS, "Bulk start request failed: '%s' (%d): '%s'.\n", errorCode.c_str(), rc, gahpErrorString.c_str() );

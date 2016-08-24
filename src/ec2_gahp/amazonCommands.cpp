@@ -2688,12 +2688,17 @@ bool AmazonBulkStart::SendRequest() {
         XML_Parse( xp, this->resultString.c_str(), this->resultString.length(), 1 );
         XML_ParserFree( xp );
 	} else {
-		/* FIXME */
+		if( this->errorCode == "E_CURL_IO" ) {
+			// To be on the safe side, if the I/O failed, the annexd should
+			// check to see the Spot Fleet was started or not.
+			this->errorCode = "NEED_CHECK_BULK_START";
+			return false;
+		}
 	}
 	return result;
 }
 
-bool parseJSON( char * s, std::map< std::string, std::string > & m ) {
+bool parseJSON( char * s, std::map< std::string, std::string > & m, unsigned & i ) {
 	if( s[0] != '{' ) { return false; }
 
 	enum STATE { ATTR_OPEN, ATTR_CLOSE, COLON, VALUE_OPEN, VALUE_CLOSE, COMMA };
@@ -2701,7 +2706,7 @@ bool parseJSON( char * s, std::map< std::string, std::string > & m ) {
 	STATE state = ATTR_OPEN;
 	std::string attribute;
 	unsigned stringBegan = 0;
-	for( unsigned i = 1; s[i] != '\0'; ++i ) {
+	for( i = 1; s[i] != '\0'; ++i ) {
 		switch( state ) {
 			case ATTR_OPEN:
 				if( s[i] == ' ' ) { continue; }
@@ -2796,7 +2801,7 @@ bool AmazonBulkStart::workerFunction( char ** argv, int argc, std::string & resu
 	// non-annex functionality with an older-interface service.  2015-04-15
 	// is the oldest API with Spot Fleet, but this code was implemented
 	// against the 2016-04-01 documentation.
-    request.query_parameters[ "Version" ] = "2016-04-01";
+	request.query_parameters[ "Version" ] = "2016-04-01";
 
 	if( strcasecmp( argv[5], NULLSTRING ) ) {
 		request.query_parameters[ "SpotFleetRequestConfig."
@@ -2819,7 +2824,7 @@ bool AmazonBulkStart::workerFunction( char ** argv, int argc, std::string & resu
 		"Type" ] = "request";
 	// FIXME: Should validity period be chosen by annexd?
 	// request.query_parameters[ "SpotFleetRequestConfig."
-	//	"ValidUntil" ] = "request";
+	//	"ValidUntil" ] = "...";
 
 	for( int i = 10; i < argc; ++i ) {
 		if( strcmp( argv[i], NULLSTRING ) == 0 ) { break; }
@@ -2829,10 +2834,13 @@ bool AmazonBulkStart::workerFunction( char ** argv, int argc, std::string & resu
 		// argv[i] is a JSON blob, because otherwise things got complicated.
 		// Luckily, we don't have handle generic JSON, just the single-level
 		// string-to-string stuff the annexd sends us.
+		unsigned errChar = 0;
 		std::map< std::string, std::string > blob;
-		if(! parseJSON( argv[i], blob )) {
-			dprintf( D_ALWAYS, "Got bogus launch configuration.\n" );
-			/* FIXME */
+		if(! parseJSON( argv[i], blob, errChar )) {
+			dprintf( D_ALWAYS, "Got bogus launch configuration, noticed around character %u.\n", errChar );
+			dprintf( D_ALWAYS, "%s\n", argv[i] );
+			std::string spaces; spaces.replace( 0, std::string::npos, errChar, ' ' );
+			dprintf( D_ALWAYS, "%s^\n", spaces.c_str() );
 			return false;
 		}
 
@@ -2843,9 +2851,20 @@ bool AmazonBulkStart::workerFunction( char ** argv, int argc, std::string & resu
 		request.setLaunchSpecificationAttribute( lcIndex, blob,
 			"KeyName" );
 
-		// FIXME: need make sure this is base64 encoded somewhere.
-		request.setLaunchSpecificationAttribute( lcIndex, blob,
-			"UserData" );
+		// Handle user data.
+		{
+			std::ostringstream ss;
+			ss << "SpotFleetRequestConfig.LaunchSpecifications.";
+			// Another mistake in the documentation.
+			ss << lcIndex << "." << "userData";
+
+			std::string & value = blob[ "UserData" ];
+			if(! value.empty()) {
+				char * base64Encoded = condor_base64_encode( (const unsigned char *)value.c_str(), value.length() );
+				request.query_parameters[ ss.str() ] = base64Encoded;
+				free( base64Encoded );
+			}
+		}
 
 		request.setLaunchSpecificationAttribute( lcIndex, blob,
 			"InstanceType" );
