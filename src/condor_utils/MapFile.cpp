@@ -670,7 +670,7 @@ CanonicalMapList* MapFile::GetMapList(const char * method) // method is NULL for
 		list = it->second;
 	} else {
 		YourString key(method ? apool.insert(method) : NULL);
-		std::pair<METHOD_MAP::iterator, bool> pp = methods.insert(std::pair<YourString, CanonicalMapList*>(key, NULL));
+		std::pair<METHOD_MAP::iterator, bool> pp = methods.insert(std::pair<YourString, CanonicalMapList*>(key, (CanonicalMapList *)NULL));
 		if (pp.second) {
 			// insert succeeded
 			// it = pp.first;

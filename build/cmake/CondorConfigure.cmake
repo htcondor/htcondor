@@ -410,6 +410,7 @@ if( NOT WINDOWS)
 	dprint ("TJ && TSTCLAIR We need this check in MSVC") 
 
 	check_cxx_compiler_flag(-std=c++11 cxx_11)
+	check_cxx_compiler_flag(-std=c++0x cxx_0x)
 	if (cxx_11)
 
 		# Some versions of Clang require an additional C++11 flag, as the default stdlib
@@ -429,8 +430,13 @@ if( NOT WINDOWS)
 			return 0;
 		}
 		" PREFER_CPP11 )
+	elseif(cxx_0x)
+		# older g++s support some of c++11 with the c++0x flag
+		# which we should try to enable, if they do not have
+		# the c++11 flag.  This at least gets us std::unique_ptr
 
-	endif (cxx_11)
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
+	endif()
 
 	if (NOT PREFER_CPP11)
 
