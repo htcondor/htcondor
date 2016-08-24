@@ -8698,6 +8698,7 @@ Scheduler::spawnLocalStarter( shadow_rec* srec )
 				 "No condor_starter installed that supports local universe",
 				 CONDOR_HOLD_CODE_NoCompatibleShadow, 0,
 				 false, notify_admin, true );
+		delete srec;
 		notify_admin = false;
 		return;
 	}
@@ -8760,6 +8761,7 @@ Scheduler::spawnLocalStarter( shadow_rec* srec )
 		mark_job_stopped( job_id );
 			// TODO: we're definitely leaking shadow recs in this case
 			// (and have been for a while).  must fix ASAP.
+		delete srec;
 		return;
 	}
 
