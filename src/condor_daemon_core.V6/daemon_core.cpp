@@ -7830,6 +7830,9 @@ int DaemonCore::Create_Process(
 						 "failed because it failed to register itself "
 						 "with the ProcD\n",
 						 executable );
+				Register_Timer(0,
+					(TimerHandlercpp)&DaemonCore::CheckProcInterface,
+					"DaemonCore::CheckProcInterface", this );
 				break;
 
 			case ERRNO_EXIT:
@@ -9902,6 +9905,14 @@ int DaemonCore::SendAliveToParent()
 	}
 
 	return TRUE;
+}
+
+int DaemonCore::CheckProcInterface()
+{
+	dprintf( D_FULLDEBUG, "DaemonCore: Checking health of the proc interface\n" );
+	ProcFamilyUsage usage;
+	ASSERT(m_proc_family != NULL);
+	return m_proc_family->get_usage(mypid, usage, false);
 }
 
 #ifndef WIN32

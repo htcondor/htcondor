@@ -2048,6 +2048,10 @@ class DaemonCore : public Service
     int send_child_alive_timer;
 	bool m_want_send_child_alive;
 
+	// Method to check on and possibly recover from a bad connection
+	// to the procd. Suitable to be registered as a one-shot timer.
+	int CheckProcInterface();
+
 	// misc helper functions
 	void CheckPrivState( void );
 
