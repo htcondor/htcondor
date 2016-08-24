@@ -19,14 +19,13 @@ Here is a list of items that administrators should be aware of.
 
 \begin{itemize}
 
-\item Shared port is now enabled by default.
-
-\item As a result, if you are currently using HAD, you must adjust your
-configuration.  See \ref{sec:HA-configuration} for more details and how
-to configure HAD (with or without replication) to work with shared port.
-Usually, \MacroNI{REPLICATION\_SOCKET\_NAME} will need to be
-unset (set to blank) and \MacroNI{HAD.USE\_SHARED\_PORT} and
-\MacroNI{REPLICATION.USE\_SHARED\_PORT} each set to false.
+\item Shared port is now enabled by default.  Set \MacroNI{USE\_SHARED\_PORT}
+to false to disable.  This configuration macro does not control the HAD or
+replication daemon's use of shared port; use \MacroNI{HAD\_USE\_SHARED\_PORT}
+or \MacroNI{REPLICATION\_USE\_SHARED\_PORT} instead.  See
+\ref{sec:HA-configuration} for more details on how to configure HAD (and/or
+the replication daemon) to work with shared port, since just activating
+shared port without any other configuration change will not work.
 
 \item To mitigate performance problems, \MacroNI{LOWPORT} and
 \MacroNI{HIGHPORT} no longer restrict outbound port ranges on Windows.  To
@@ -35,7 +34,7 @@ re-enable this functionality, set \MacroNI{OUT\_LOWPORT} and
 
 \item By default, \Condor{q} queries only the current user's jobs,
 unless the current user is a queue superuser or the
-MacroNI{CONDOR\_Q\_ONLY\_MY\_JOBS} configuration macro is set to
+\MacroNI{CONDOR\_Q\_ONLY\_MY\_JOBS} configuration macro is set to
 \Expr{False}.
 
 % \item By default, \Condor{q} is now invoked with the \Opt{-batch}
