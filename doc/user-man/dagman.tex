@@ -1912,7 +1912,7 @@ are many cases where a valid included DAG file will cause a parse error,
 such as the including and included files defining nodes with the same
 name.
 
-INCLUDEs can be nested to any depth (be sure not to create a cycle
+\Arg{INCLUDE}s can be nested to any depth (be sure not to create a cycle
 of includes!).
 
 % Note: this is an alternative to subsubsubsection, which we don't have.
@@ -1920,7 +1920,9 @@ of includes!).
 \item[Example: Using INCLUDE to simplify multiple similar workflows]
 \end{description}
 
-One use of the INCLUDE command is to simplify the DAG files when we
+% Note: this example could be further simplified once the "all nodes"
+% option is implemented.
+One use of the \Arg{INCLUDE} command is to simplify the DAG files when we
 have a single workflow that we want to run on a number of data sets.
 In that case, we can do something like this:
 
@@ -1953,15 +1955,16 @@ In that case, we can do something like this:
     INCLUDE data57.vars
 \end{verbatim}
 
-This avoids having to duplicate the JOB and PARENT/CHILD commands
-for every dataset -- we can just re-use the \File{workflow.dag} file.
-
 Then, to run our workflow on dataset 57, we run the following
 command:
 
 \begin{verbatim}
     condor_submit_dag run_dataset57.dag
 \end{verbatim}
+
+This avoids having to duplicate the \Arg{JOB} and \Arg{PARENT/CHILD}
+commands for every dataset -- we can just re-use the \File{workflow.dag} file,
+in combination with a dataset-specific vars file.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:DAGsinDAGs}A DAG Within a DAG Is a SUBDAG}
@@ -2520,7 +2523,7 @@ will contain DIR specifications, so the Rescue DAG must be run
 \item[Limitation: Splices and PRE or POST Scripts]
 \end{description}
 
-A splice may not specify a PRE or POST script.
+A PRE or POST script may not be specified for a splice.
 The nodes of a splice are incorporated into a top level DAG;
 these nodes are scoped and named.
 Therefore, after incorporation, the node name given to the splice
@@ -2726,6 +2729,8 @@ at a higher level, the splice name must be included.
 
 %TEMP -- add stuff here
 
+%TEMP -- analogy with hardware
+
 In the "default" usage of splices described above, when one splice is
 the parent of another splice, all "terminal" nodes of the parent splice
 are parents of all "initial" nodes of the child splice.  The CONNECT,
@@ -2734,7 +2739,8 @@ flexible dependencies between splices.
 
 The syntax for \Arg{CONNECT} is
 
-\Opt{CONNECT} \Arg{ParentSpliceName} \Arg{ChildSplice2Name}
+%TEMP -- better names instead of parent and child??
+\Opt{CONNECT} \Arg{ParentSpliceName} \Arg{ChildSpliceName}
 
 The syntax for \Arg{PIN\_IN} is
 
@@ -2744,23 +2750,92 @@ The syntax for \Arg{PIN\_OUT} is
 
 \Opt{PIN\_OUT} \Arg{NodeName} \Arg{PinNumber}
 
-%TEMP -- need to add diagrams here
+All parent splice nodes connected to a given pin\_out will become
+parents of all child splice nodes connected to the corresponding
+pin\_in.  (The pin\_ins and pin\_outs exist only to create the
+correct parent/child dependencies between nodes.  Once the
+DAG is parsed, there are no actual DAG objects corresponding
+to the pin\_ins and pin\_outs.)
 
-%TEMP -- make a simple example
+Any given splice can contain both PIN\_IN and PIN\_OUT definitions.
+It is \emph{not} an error for a splice to have PIN\_IN or PIN\_OUT
+definitions that are not associated with a CONNECT command.
+%TEMP -- find a better way to say this
+
+Note that the pin\_ins and pin\_outs must be defined \emph{within}
+the relevant splices (this can be done with \Arg{INCLUDE} commands), not
+in the DAG that connects the splices.
+
+%TEMP -- need to add diagrams here
 
 Restrictions:
 %TEMP -- check these and make sure they are right
 \begin{itemize}
 \item Pin\_ins and pin\_outs must be numbered consecutively starting
 at 1.
-%TEMP -- should we call these parent and child splices???
 \item The pin\_outs of the parent splice in a connect command must
 match the pin\_ins of the child splice in the command.
-\item All "terminal" nodes (nodes with no children) of a parent
-splice must be connected to a pin\_out.
 \item All "initial" nodes (nodes with no parents) of a child splice
 must be connected to a pin\_in.
 \end{itemize}
+
+Note:  it is probably desireable for any "terminal" node (a
+node with no children) in the parent splice to be connected to
+a pin\_out -- but this is not required.
+
+Here is a simple example:
+\begin{verbatim}
+# File: top.dag
+    SPLICE A spliceA.dag
+    SPLICE B spliceB.dag
+    SPLICE C spliceC.dag
+
+    CONNECT A B
+    CONNECT B c
+
+# File: spliceA.dag
+    JOB A1 A1.sub
+    JOB A2 A2.sub
+
+    PIN_OUT A1 1
+    PIN_OUT A2 2
+
+# File: spliceB.dag
+    JOB B1 B1.sub
+    JOB B2 B2.sub
+    JOB B3 B3.sub
+    JOB B4 B4.sub
+
+    PIN_IN B1 1
+    PIN_IN B2 1
+    PIN_IN B3 2
+    PIN_IN B4 2
+
+    PIN_OUT B1 1
+    PIN_OUT B2 2
+    PIN_OUT B3 3
+    PIN_OUT B4 4
+
+# File: spliceC.dag
+    JOB C1 C1.sub
+
+    PIN_IN C1 1 
+    PIN_IN C1 2 
+    PIN_IN C1 3
+    PIN_IN C1 4
+
+\end{verbatim}
+In this example, node A1 will be the parent of B1 and B2; node
+A2 will be the parent of B3 and B4; and nodes B1, B2, B3 and B4 will all
+be parents of C1.
+
+A diagram of the above example:
+
+\begin{figure}[hbt]
+\centering
+\includegraphics{user-man/dagman-connect.eps}
+\caption{\label{fig:dagman-connect}Diagram of the splice connect example}
+\end{figure}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:DAGFinalNode}FINAL node}
