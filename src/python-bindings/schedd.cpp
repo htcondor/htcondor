@@ -753,14 +753,16 @@ struct Schedd {
         list retval;
         int fetchResult;
         {
-        condor::ModuleLock ml;
         query_process_helper helper;
-        helper.ml = &ml;
         helper.callable = callback;
         helper.output_list = retval;
         void *helper_ptr = static_cast<void *>(&helper);
 
-        fetchResult = q.fetchQueueFromHostAndProcess(m_addr.c_str(), attrs_list, fetch_opts, match_limit, query_process_callback, helper_ptr, true, NULL);
+        {
+            condor::ModuleLock ml;
+            helper.ml = &ml;
+            fetchResult = q.fetchQueueFromHostAndProcess(m_addr.c_str(), attrs_list, fetch_opts, match_limit, query_process_callback, helper_ptr, true, NULL);
+        }
         }
 
         if (PyErr_Occurred())
