@@ -632,6 +632,10 @@ ProcFamilyProxy::recover_from_procd_error()
 	m_client = NULL;
 	int ntries = 5;
 
+	// if we were the one to bring up the ProcD, then we'll be the one
+	// to restart it
+	bool try_restart = m_procd_pid != -1;
+
 	while (ntries > 0 && m_client == NULL) {
 	
 		ntries--;
@@ -639,15 +643,15 @@ ProcFamilyProxy::recover_from_procd_error()
 		// the ProcD has failed. we know this either because communication
 		// has failed or the ProcD's reaper has fired
 		//
-		if (m_procd_pid != -1) {
+		if (try_restart) {
 
-			// we were the one to bring up the ProcD, so we'll be the one
-			// to restart it
-			//
 			dprintf(D_ALWAYS, "attempting to restart the Procd\n");
 			m_procd_pid = -1;
 			if (!start_procd()) {
-				EXCEPT("unable to start the ProcD");
+				dprintf(D_ALWAYS, "restarting the Procd failed\n");
+				// We failed to restart the procd, don't bother trying
+				// to create a ProcFamilyClient
+				continue;
 			}
 		}
 		else {
