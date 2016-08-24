@@ -498,9 +498,9 @@ dynuser::get_accountname() {
 }
 
 void InitString( UNICODE_STRING &us, wchar_t *psz ) {
-	USHORT cch = wcslen( psz );
-	us.Length = cch * sizeof(wchar_t);
-	us.MaximumLength = (cch + 1) * sizeof (wchar_t);
+	size_t cch = wcslen( psz );
+	us.Length = (USHORT)(cch * sizeof(wchar_t));
+	us.MaximumLength = (USHORT)((cch + 1) * sizeof (wchar_t));
 	us.Buffer = psz;
 }
 

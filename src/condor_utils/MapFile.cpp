@@ -190,7 +190,7 @@ void clear_mapfile_re_info() { min_re_size = max_re_size =  num_re = num_zero_re
 #ifdef USE_MAPFILE_V2
 int MapFile::size(MapFileUsage * pusage) // returns number of items in the map
 {
-	int cRegex = 0, cHash = 0, cEntries = 0, cAllocs=0, cbStructs=0;
+	size_t cRegex = 0, cHash = 0, cEntries = 0, cAllocs=0, cbStructs=0;
 	for (METHOD_MAP::iterator it = methods.begin(); it != methods.end(); ++it) {
 		CanonicalMapList * list = it->second;
 		CanonicalMapEntry * item = list->first;
@@ -201,7 +201,7 @@ int MapFile::size(MapFileUsage * pusage) // returns number of items in the map
 				CanonicalMapHashEntry* hitem = reinterpret_cast<CanonicalMapHashEntry*>(item);
 				++cAllocs; cbStructs += sizeof(*hitem);
 				if (hitem->hm) {
-					int chm = hitem->hm->size();
+					size_t chm = hitem->hm->size();
 					cHash += chm;
 					++cAllocs; cbStructs += sizeof(*hitem->hm);
 					cAllocs += chm; cbStructs += chm*sizeof(void*)*4; // key and value are each pointers, + hash entries need a next pointer and the hash value
@@ -224,17 +224,17 @@ int MapFile::size(MapFileUsage * pusage) // returns number of items in the map
 		int cb = 0, cHunks = 0, cbFree = 0;
 		cb = apool.usage(cHunks, cbFree);
 
-		pusage->cRegex = cRegex;
-		pusage->cHash = cHash;
-		pusage->cEntries = cEntries;
-		pusage->cMethods = methods.size();
+		pusage->cRegex = (int)cRegex;
+		pusage->cHash = (int)cHash;
+		pusage->cEntries = (int)cEntries;
+		pusage->cMethods = (int)methods.size();
 		pusage->cbStrings = cb;
-		pusage->cbStructs = cbStructs;
+		pusage->cbStructs = (int)cbStructs;
 		pusage->cbWaste = cbFree;
-		pusage->cAllocations = cHunks + cAllocs;
+		pusage->cAllocations = (int)(cHunks + cAllocs);
 	}
 
-	return cRegex + cHash;
+	return (int)(cRegex + cHash);
 }
 void MapFile::reset() // remove all items, but do not free the allocation pool
 {
