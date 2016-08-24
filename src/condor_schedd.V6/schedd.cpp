@@ -8759,8 +8759,6 @@ Scheduler::spawnLocalStarter( shadow_rec* srec )
 		dprintf( D_ALWAYS|D_FAILURE, "Can't spawn local starter for "
 				 "job %d.%d\n", job_id->cluster, job_id->proc );
 		mark_job_stopped( job_id );
-			// TODO: we're definitely leaking shadow recs in this case
-			// (and have been for a while).  must fix ASAP.
 		delete srec;
 		return;
 	}
