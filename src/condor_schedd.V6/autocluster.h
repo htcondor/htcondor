@@ -143,7 +143,7 @@ public:
 
 	/** Return number of active autoclusters
 	  */
-	int getNumAutoclusters() const { return cluster_in_use.size(); }
+	int getNumAutoclusters() const { return (int)cluster_in_use.size(); }
 
 
 protected:

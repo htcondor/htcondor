@@ -1230,7 +1230,7 @@ int SubmitHash::check_open(_submit_file_role role,  const char *name, int flags 
 	strPathname = full_path(name);
 
 	// is the last character a path separator?
-	int namelen = strlen(name);
+	int namelen = (int)strlen(name);
 	bool trailing_slash = namelen > 0 && IS_ANY_DIR_DELIM_CHAR(name[namelen-1]);
 
 		/* This is only for MPI.  We test for our string that
@@ -3319,7 +3319,7 @@ int SubmitHash::SetGridParams()
 		free( tmp );
 	}
 
-	unsigned prefixLength = strlen( SUBMIT_KEY_EC2ParamPrefix );
+	unsigned int prefixLength = (unsigned int)strlen( SUBMIT_KEY_EC2ParamPrefix );
 	HASHITER smsIter = hash_iter_begin( SubmitMacroSet );
 	for( ; ! hash_iter_done( smsIter ); hash_iter_next( smsIter ) ) {
 		const char * key = hash_iter_key( smsIter );
@@ -3381,7 +3381,7 @@ int SubmitHash::SetGridParams()
 	}
 
 	HASHITER it = hash_iter_begin(SubmitMacroSet);
-	int prefix_len = strlen(ATTR_EC2_TAG_PREFIX);
+	int prefix_len = (int)strlen(ATTR_EC2_TAG_PREFIX);
 	for (;!hash_iter_done(it); hash_iter_next(it)) {
 		const char *key = hash_iter_key(it);
 		const char *name = NULL;
@@ -4127,7 +4127,7 @@ static int CondorUniverseNumberEx(const char * univ)
 int SubmitHash::SetRemoteAttrs()
 {
 	RETURN_IF_ABORT();
-	const int REMOTE_PREFIX_LEN = strlen(SUBMIT_KEY_REMOTE_PREFIX);
+	const int REMOTE_PREFIX_LEN = (int)strlen(SUBMIT_KEY_REMOTE_PREFIX);
 
 	struct ExprItem {
 		const char * submit_expr;
@@ -7396,7 +7396,7 @@ int SubmitForeachArgs::parse_queue_args (
 		char * plist = p;
 		bool one_line_list = false;
 		if (*plist == '(') {
-			int cch = strlen(plist);
+			int cch = (int)strlen(plist);
 			if (plist[cch-1] == ')') { plist[cch-1] = 0; ++plist; one_line_list = true; }
 		}
 		if (*plist == '(') {

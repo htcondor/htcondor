@@ -6175,6 +6175,14 @@ customization=seldom
 friendly_name=Use Shared Port
 review=?
 
+[HAD_USE_SHARED_PORT]
+default=false
+type=bool
+
+[REPLICATION_USE_SHARED_PORT]
+default=$(HAD_USE_SHARED_PORT)
+type=bool
+
 [SHARED_PORT_PORT]
 default=$(COLLECTOR_PORT)
 type=int
