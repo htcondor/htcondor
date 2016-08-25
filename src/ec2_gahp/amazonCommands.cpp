@@ -717,7 +717,6 @@ bool AmazonRequest::SendRequest() {
         }
     }
 
-    // FIXME: Update documentation to reflect no hardcoded default.
     if( ! CAPath.empty() ) {
         dprintf( D_FULLDEBUG, "Setting CA path to '%s'\n", CAPath.c_str() );
         SET_CURL_SECURITY_OPTION( curl, CURLOPT_CAPATH, CAPath.c_str() );

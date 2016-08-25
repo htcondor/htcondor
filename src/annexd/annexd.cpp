@@ -27,20 +27,12 @@ startOneGahpClient() {
 
 	ArgList args;
 
-	// FIXME: Think more generally about configuring the EC2 GAHP for use
-	// by the annex.  Is the proper place for the annex GAHP log in /tmp
-	// like it is for other users?  I think the only place we param() for
-	// something in the EC2 GAHP is for EC2_GAHP_RATE_LIMIT; we may want
-	// to convert that to a command-line argument as well.
-	char * gahp_log = param( "ANNEX_GAHP_LOG" );
-	if( gahp_log == NULL ) {
-		dprintf( D_ALWAYS, "Warning: ANNEX_GAHP_LOG not defined.\n" );
-	} else {
-		// FIXME: Add support for the '-f' flag to the EC2 GAHP.
-		args.AppendArg( "-f" );
-		args.AppendArg( gahp_log );
-		free( gahp_log );
-	}
+	// Configure dprintf using this name.
+	args.AppendArg( "-l" );
+	args.AppendArg( "ANNEX_GAHP" );
+
+	// FIXME: The EC2 GAHP should accept a command-line argument from us
+	// instead of looking up EC2_GAHP_RATE_LIMIT.
 
 	args.AppendArg( "-w" );
 	int minWorkerCount = param_integer( "ANNEX_GAHP_WORKER_MIN_NUM", 1 );
