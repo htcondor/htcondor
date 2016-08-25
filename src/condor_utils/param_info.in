@@ -5869,6 +5869,13 @@ reconfig=true
 customization=seldom
 tags=annex,log
 
+[ANNEXD_NAME]
+default=Annex Daemon@$(FULL_HOSTNAME)
+type=string
+reconfig=true
+customization=seldom
+tags=annex
+
 [SCHEDD]
 default=$(SBIN)/condor_schedd
 win32_default=$(SBIN)\condor_schedd.exe

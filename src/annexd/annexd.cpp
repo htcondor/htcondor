@@ -3,7 +3,7 @@
 #include "condor_config.h"
 #include "condor_daemon_core.h"
 #include "subsystem_info.h"
-
+#include "get_daemon_name.h"
 #include "gahp-client.h"
 
 #include <algorithm>
@@ -168,38 +168,73 @@ createOneAnnex() {
 	gahp->setNotificationTimerId( gahpNotificationTimer );
 }
 
-void
-main_init( int /* argc */, char ** /* argv */ ) {
-	dprintf( D_ALWAYS, "main_init()\n" );
+int updateTimerID;
+int updateInterval;
+ClassAd annexDaemonAd;
 
-	daemonCore->Register_Timer( 0, 0, & createOneAnnex, "createOneAnnex()" );
+void
+updateCollectors() {
+	dprintf( D_FULLDEBUG, "Entering updateCollectors()...\n" );
+
+	daemonCore->publish( & annexDaemonAd );
+	daemonCore->dc_stats.Publish( annexDaemonAd );
+	daemonCore->monitor_data.ExportData( & annexDaemonAd );
+	daemonCore->sendUpdates( UPDATE_AD_GENERIC, & annexDaemonAd, NULL, true );
+
+	daemonCore->Reset_Timer( updateTimerID, updateInterval, updateInterval );
+
+	dprintf( D_FULLDEBUG, "... exiting updateCollectors().\n" );
 }
 
 void
 main_config() {
-	dprintf( D_ALWAYS, "main_config()\n" );
+	// Update param() globals.
+	updateInterval = param_integer( "ANNEXD_UPDATE_INTERVAL", 5 * MINUTE );
+
+	// Reset our classAd.
+	annexDaemonAd = ClassAd();
+	SetMyTypeName( annexDaemonAd, GENERIC_ADTYPE );
+	SetTargetTypeName( annexDaemonAd, "Cloud" );
+
+	char * adn = NULL;
+	std::string annexDaemonName;
+	param( annexDaemonName, "ANNEXD_NAME" );
+	if( annexDaemonName.empty() ) {
+		adn = default_daemon_name();
+	} else {
+		adn = build_valid_daemon_name( annexDaemonName.c_str() );
+	}
+	annexDaemonAd.Assign( ATTR_NAME, adn );
+	delete [] adn;
+}
+
+void
+main_init( int /* argc */, char ** /* argv */ ) {
+	// Make sure that, e.g., updateInterval is set.
+	main_config();
+
+	// Make sure the command-line tool can find us.
+	updateTimerID = daemonCore->Register_Timer( 0, updateInterval, & updateCollectors, "updateCollectors()" );
+
+	// daemonCore->Register_Timer( 0, 0, & createOneAnnex, "createOneAnnex()" );
 }
 
 void
 main_shutdown_fast() {
-	dprintf( D_ALWAYS, "main_shutdown_fast()\n" );
 	DC_Exit( 0 );
 }
 
 void
 main_shutdown_graceful() {
-	dprintf( D_ALWAYS, "main_shutdown_graceful()\n" );
 	DC_Exit( 0 );
 }
 
 void
 main_pre_dc_init( int /* argc */, char ** /* argv */ ) {
-	dprintf( D_ALWAYS, "main_pre_dc_init()\n" );
 }
 
 void
 main_pre_command_sock_init() {
-	dprintf( D_ALWAYS, "main_pre_command_sock_init()\n" );
 }
 
 int
