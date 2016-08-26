@@ -1170,7 +1170,7 @@ SharedPortEndpoint::deserialize(const char *inherit_buf)
 {
 	YourStringDeserializer in(inherit_buf);
 	if ( ! in.deserialize_string(m_full_name, "*") || ! in.deserialize_sep("*") ) {
-		EXCEPT("Failed to parse serialized shared-port information at offset %d: '%s'", in.offset(), inherit_buf);
+		EXCEPT("Failed to parse serialized shared-port information at offset %d: '%s'", (int)in.offset(), inherit_buf);
 	}
 
 	m_local_id = condor_basename(m_full_name.c_str());
