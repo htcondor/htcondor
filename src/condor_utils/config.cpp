@@ -3358,7 +3358,7 @@ static const char * evaluate_macro_func (
 				default:
 					// ixn is 0 if no dir.
 					if (ixn > 0) {
-						PRAGMA_REMIND("handle multiple d's")
+						//PRAGMA_REMIND("handle multiple d's")
 						char ch = buf[ixn-1]; buf[ixn-1] = 0; // truncate filename saving the old character
 						tvalue = condor_basename(buf); // tvalue now points to the start of the first directory
 						buf[ixn-1] = ch; // put back the dir/filename separator

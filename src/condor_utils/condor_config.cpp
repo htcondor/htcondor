@@ -1902,7 +1902,7 @@ const char * set_live_param_value(const char * name, const char * live_value)
 	ASSERT(pitem);
 	const char * old_value = pitem->raw_value;
 	if ( ! live_value) {
-		PRAGMA_REMIND("need a param_remove function to implement this properly!")
+		//PRAGMA_REMIND("need a param_remove function to implement this properly!")
 		// remove(name, ConfigMacroSet);
 		pitem->raw_value = "";
 	} else {

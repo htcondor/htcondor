@@ -1398,7 +1398,7 @@ static int ParseRulesCallback(void* pv, MACRO_SOURCE& source, MACRO_SET& /*mset*
 
 	case kw_TRANSFORM:
 #if 1
-		PRAGMA_REMIND("tj move this out of the parser callback.")
+		//PRAGMA_REMIND("tj move this out of the parser callback.")
 #else
 		if (pargs->xforms->has_pending_fp()) {
 			std::string errmsg;
