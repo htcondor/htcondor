@@ -24,6 +24,11 @@
 #include "condor_adtypes.h"
 #include "classad/classadCache.h" // for CachedExprEnvelope
 
+#include "compat_classad_list.h"
+#ifdef _OPENMP
+#include <omp.h>
+#endif
+
 /* TODO This function needs to be tested.
  */
 int Parse(const char*str, MyString &name, classad::ExprTree*& tree, int*pos)
@@ -204,6 +209,34 @@ bool ExprTreeIsLiteral(classad::ExprTree * expr, classad::Value & value)
 	return false;
 }
 
+bool ExprTreeIsLiteralString(classad::ExprTree * expr, const char * & cstr)
+{
+	if ( ! expr) return false;
+
+	classad::ExprTree::NodeKind kind = expr->GetKind();
+	if (kind == classad::ExprTree::EXPR_ENVELOPE) {
+		expr = ((classad::CachedExprEnvelope*)expr)->get();
+		if ( ! expr) return false;
+		kind = expr->GetKind();
+	}
+
+	// dive into parens
+	while (kind == classad::ExprTree::OP_NODE) {
+		classad::ExprTree *e2, *e3;
+		classad::Operation::OpKind op;
+		((classad::Operation*)expr)->GetComponents(op, expr, e2, e3);
+		if ( ! expr || op != classad::Operation::PARENTHESES_OP) return false;
+
+		kind = expr->GetKind();
+	}
+
+	if (kind == classad::ExprTree::LITERAL_NODE) {
+		return ((classad::Literal*)expr)->GetStringValue(cstr);
+	}
+
+	return false;
+}
+
 bool ExprTreeIsLiteralNumber(classad::ExprTree * expr, long long & ival)
 {
 	classad::Value val;
@@ -234,7 +267,6 @@ bool ExprTreeIsLiteralString(classad::ExprTree * expr, std::string & sval)
 	if ( ! ExprTreeIsLiteral(expr, val)) return false;
 	return val.IsStringValue(sval);
 }
-
 
 #define IS_DOUBLE_TRUE(val) (bool)(int)((val)*100000)
 
@@ -396,6 +428,137 @@ bool IsAMatch( compat_classad::ClassAd *ad1, compat_classad::ClassAd *ad2 )
 	return result;
 }
 
+static classad::MatchClassAd *match_pool = NULL;
+static compat_classad::ClassAd *target_pool = NULL;
+static std::vector<compat_classad::ClassAd*> *matched_ads = NULL;
+
+bool ParallelIsAMatch(compat_classad::ClassAd *ad1, std::vector<compat_classad::ClassAd*> &candidates, std::vector<compat_classad::ClassAd*> &matches, int threads, bool halfMatch)
+{
+	int adCount = candidates.size();
+	static int cpu_count = 0;
+	int current_cpu_count = threads;
+	int iterations = 0;
+	size_t matched = 0;
+
+	if(cpu_count != current_cpu_count)
+	{
+		cpu_count = current_cpu_count;
+		if(match_pool)
+		{
+			delete[] match_pool;
+			match_pool = NULL;
+		}
+		if(target_pool)
+		{
+			delete[] target_pool;
+			target_pool = NULL;
+		}
+		if(matched_ads)
+		{
+			delete[] matched_ads;
+			matched_ads = NULL;
+		}
+	}
+
+	if(!match_pool)
+		match_pool = new classad::MatchClassAd[cpu_count];
+	if(!target_pool)
+		target_pool = new compat_classad::ClassAd[cpu_count];
+	if(!matched_ads)
+		matched_ads = new std::vector<compat_classad::ClassAd*>[cpu_count];
+
+	if(!candidates.size())
+		return false;
+
+	for(int index = 0; index < cpu_count; index++)
+	{
+		target_pool[index].CopyFrom(*ad1);
+		match_pool[index].ReplaceLeftAd(&(target_pool[index]));
+		matched_ads[index].clear();
+	}
+
+	iterations = ((candidates.size() - 1) / cpu_count) + 1;
+
+#ifdef _OPENMP
+	omp_set_num_threads(cpu_count);
+#endif
+
+#pragma omp parallel
+	{
+
+#ifdef _OPENMP
+		int omp_id = omp_get_thread_num();
+#else
+		int omp_id = 0;
+#endif
+		for(int index = 0; index < iterations; index++)
+		{
+			bool result = false;
+			int offset = omp_id + index * cpu_count;
+			if(offset >= adCount)
+				break;
+			compat_classad::ClassAd *ad2 = candidates[offset];
+
+/*
+			if(halfMatch)
+			{
+				char const *my_target_type = target_pool[omp_id].GetTargetTypeName();
+				char const *target_type = ad2->GetMyTypeName();
+				if( !my_target_type ) {
+					my_target_type = "";
+				}
+				if( !target_type ) {
+					target_type = "";
+				}
+				if( strcasecmp(target_type,my_target_type) &&
+					strcasecmp(my_target_type,ANY_ADTYPE) )
+				{
+					result = false;
+					continue;
+				}
+			}
+*/
+
+
+			match_pool[omp_id].ReplaceRightAd(ad2);
+			if ( !compat_classad::ClassAd::m_strictEvaluation )
+			{
+				target_pool[omp_id].alternateScope = ad2;
+				ad2->alternateScope = &(target_pool[omp_id]);
+			}
+		
+			if(halfMatch)
+				result = match_pool[omp_id].rightMatchesLeft();
+			else
+				result = match_pool[omp_id].symmetricMatch();
+
+			match_pool[omp_id].RemoveRightAd();
+
+			if(result)
+			{
+				matched_ads[omp_id].push_back(ad2);
+			}
+		}
+	}
+
+	for(int index = 0; index < cpu_count; index++)
+	{
+		match_pool[index].RemoveLeftAd();
+		matched += matched_ads[index].size();
+	}
+
+	if(matches.capacity() < matched)
+		matches.reserve(matched);
+
+	for(int index = 0; index < cpu_count; index++)
+	{
+		if(matched_ads[index].size())
+			matches.insert(matches.end(), matched_ads[index].begin(), matched_ads[index].end());
+	}
+
+	return matches.size() > 0;
+}
+
 bool IsAHalfMatch( compat_classad::ClassAd *my, compat_classad::ClassAd *target )
 {
 		// The collector relies on this function to check the target type.
@@ -457,3 +620,16 @@ void AddClassAdXMLFileFooter(std::string &buffer)
 	return;
 
 }
+
+ClassAdFileParseType::ParseType parseAdsFileFormat(const char * arg, ClassAdFileParseType::ParseType def_parse_type)
+{
+	ClassAdFileParseType::ParseType parse_type = def_parse_type;
+	YourString fmt(arg);
+	if (fmt == "long") { parse_type = ClassAdFileParseType::Parse_long; }
+	else if (fmt == "json") { parse_type = ClassAdFileParseType::Parse_json; }
+	else if (fmt == "xml") { parse_type = ClassAdFileParseType::Parse_xml; }
+	else if (fmt == "new") { parse_type = ClassAdFileParseType::Parse_new; }
+	else if (fmt == "auto") { parse_type = ClassAdFileParseType::Parse_auto; }
+	return parse_type;
+}
+

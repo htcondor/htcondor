@@ -93,7 +93,7 @@ public:
 		// view interrogation
 	inline ViewName GetViewName( ) const { return( viewName ); }
 	inline View	*GetParent( ) const { return parent; }
-	inline int	Size( ) const { return( viewMembers.size( ) ); }
+	inline int	Size( ) const { return( (int)viewMembers.size( ) ); }
 	ExprTree	*GetConstraintExpr( );
 	ExprTree 	*GetRankExpr( );
 	ExprList	*GetPartitionAttributes( );

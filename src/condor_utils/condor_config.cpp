@@ -90,6 +90,7 @@
 #include "which.h"
 #include "classad_helpers.h"
 #include <algorithm> // for std::sort
+#include "CondorError.h"
 
 #ifdef WIN32
 // Note inversion of argument order...
@@ -441,7 +442,7 @@ void config_dump_string_pool(FILE * fh, const char * sep)
 		const char * psz = ph->pb;
 		const char * pszEnd = ph->pb + ph->ixFree;
 		while (psz < pszEnd) {
-			int cch = strlen(psz);
+			int cch = (int)strlen(psz);
 			if (cch > 0) {
 				fprintf(fh, "%s%s", psz, sep);
 			} else {
@@ -728,14 +729,14 @@ int param_names_matching(Regex & re, ExtArray<const char *>& names)
 }
 
 int param_names_matching(Regex& re, std::vector<std::string>& names) {
-    const int s0 = names.size();
+    const int s0 = (int)names.size();
     HASHITER it = hash_iter_begin(ConfigMacroSet);
     for (;  !hash_iter_done(it);  hash_iter_next(it)) {
 		const char *name = hash_iter_key(it);
 		if (re.match(name)) names.push_back(name);
 	}
     hash_iter_delete(&it);
-    return names.size() - s0;
+    return (int)names.size() - s0;
 }
 
 // the generic config entry point for most call sites
@@ -1062,7 +1063,7 @@ real_config(const char* host, int wantsQuiet, int config_options)
 		strcpy( magic_prefix, "_" );
 		strcat( magic_prefix, myDistro->Get() );
 		strcat( magic_prefix, "_" );
-		int prefix_len = strlen( magic_prefix );
+		int prefix_len = (int)strlen( magic_prefix );
 
 		// proceed only if we see the magic prefix
 		if( strncasecmp( my_environ[i], magic_prefix, prefix_len ) != 0 ) {
@@ -1114,7 +1115,15 @@ real_config(const char* host, int wantsQuiet, int config_options)
 	}
 
 	// init_ipaddr and init_full_hostname is now obsolete
-	init_network_interfaces(TRUE);
+	CondorError errorStack;
+	if(! init_network_interfaces( & errorStack )) {
+		const char * subsysName = get_mySubSystem()->getName();
+		if( 0 == strcmp( subsysName, "TOOL" ) ) {
+			fprintf( stderr, "%s\n", errorStack.getFullText().c_str() );
+		} else {
+			EXCEPT( "%s", errorStack.getFullText().c_str() );
+		}
+	}
 
 		// Now that we're done reading files, if DEFAULT_DOMAIN_NAME
 		// is set, we need to re-initialize out hostname information.
@@ -3051,7 +3060,7 @@ set_persistent_config(char *admin, char *config)
 					 fd, strerror(errno), errno );
 			ABORT;
 		}
-		if (write(fd, config, strlen(config)) != (ssize_t)strlen(config)) {
+		if (write(fd, config, (unsigned int)strlen(config)) != (ssize_t)strlen(config)) {
 			dprintf( D_ALWAYS, "write() failed with '%s' (errno %d) in "
 					 "set_persistent_config()\n", strerror(errno), errno );
 			close(fd);
@@ -3106,7 +3115,7 @@ set_persistent_config(char *admin, char *config)
 		ABORT;
 	}
 	const char param[] = "RUNTIME_CONFIG_ADMIN = ";
-	if (write(fd, param, strlen(param)) != (ssize_t)strlen(param)) {
+	if (write(fd, param, (unsigned int)strlen(param)) != (ssize_t)strlen(param)) {
 		dprintf( D_ALWAYS, "write() failed with '%s' (errno %d) in "
 				 "set_persistent_config()\n", strerror(errno), errno );
 		close(fd);
@@ -3125,7 +3134,7 @@ set_persistent_config(char *admin, char *config)
 		} else {
 			first_time = false;
 		}
-		if (write(fd, tmp, strlen(tmp)) != (ssize_t)strlen(tmp)) {
+		if (write(fd, tmp, (unsigned int)strlen(tmp)) != (ssize_t)strlen(tmp)) {
 			dprintf( D_ALWAYS, "write() failed with '%s' (errno %d) in "
 					 "set_persistent_config()\n", strerror(errno), errno );
 			close(fd);

@@ -276,6 +276,19 @@ GetComponents( vector< pair< string, ExprTree* > > &attrs ) const
 	}
 }
 
+void ClassAd::
+GetComponents( vector< pair< string, ExprTree* > > &attrs,
+	const References &whitelist ) const
+{
+	attrs.clear( );
+	for ( References::const_iterator wl_itr = whitelist.begin(); wl_itr != whitelist.end(); wl_itr++ ) {
+		AttrList::const_iterator attr_itr = attrList.find( *wl_itr );
+		if ( attr_itr != attrList.end() ) {
+			attrs.push_back( make_pair( attr_itr->first, attr_itr->second ) );
+		}
+	}
+}
+
 
 // --- begin integer attribute insertion ----
 bool ClassAd::

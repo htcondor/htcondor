@@ -251,11 +251,11 @@ static int getConsoleWindowSize(int * pHeight = NULL) {
 // if ppEnd is not NULL, return a pointer to the start of the end of p1
 bool ends_with(const char * p1, const char * p2, const char ** ppEnd)
 {
-	int cch2 = p2 ? strlen(p2) : 0;
+	size_t cch2 = p2 ? strlen(p2) : 0;
 	if ( ! cch2)
 		return false;
 
-	int cch1 = p1 ? strlen(p1) : 0;
+	size_t cch1 = p1 ? strlen(p1) : 0;
 	if (cch2 >= cch1)
 		return false;
 
@@ -306,7 +306,7 @@ void AddPrintColumn(const char * heading, int width, const char * expr)
 
 	App.print_head.Append(heading);
 
-	int wid = width ? width : strlen(heading);
+	int wid = (int)(width ? width : strlen(heading));
 	int opts = FormatOptionNoTruncate | FormatOptionAutoWidth;
 	App.print_mask.registerFormat("%v", wid, opts, expr);
 }
@@ -655,7 +655,7 @@ int get_field_from_stream(FILE * stream, int parse_type, const char * fld_name, 
 						} else {
 							outstr = data.substr(ixd, ixd2-ixd);
 						}
-						cch = outstr.size();
+						cch = (int)outstr.size();
 						break;
 					}
 					ixh = ixh2;
@@ -683,7 +683,7 @@ int get_field_from_stream(FILE * stream, int parse_type, const char * fld_name, 
 							outstr = data.substr(ixh, ixh2-ixh);
 						else
 							outstr = data.substr(ixh);
-						cch = outstr.size();
+						cch = (int)outstr.size();
 						break;
 					}
 
@@ -997,7 +997,7 @@ void AddPrintColumn(const char * heading, int width, const char * attr, const Cu
 	App.projection.AppendArg(attr);
 	App.print_head.Append(heading);
 
-	int wid = width ? width : strlen(heading);
+	int wid = width ? width : (int)strlen(heading);
 	int opts = FormatOptionNoTruncate | FormatOptionAutoWidth;
 	if ( ! width && ! fmt.IsNumber()) opts |= FormatOptionLeftAlign; // strings default to left align.
 	App.print_mask.registerFormat(NULL, wid, opts, fmt, attr);

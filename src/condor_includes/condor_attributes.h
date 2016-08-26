@@ -196,6 +196,7 @@
 #define ATTR_GCE_MACHINE_TYPE  "GceMachineType"
 #define ATTR_GCE_METADATA  "GceMetadata"
 #define ATTR_GCE_METADATA_FILE  "GceMetadataFile"
+#define ATTR_GCE_PREEMPTIBLE  "GcePreemptible"
 #define ATTR_GCE_PROJECT  "GceProject"
 #define ATTR_GCE_ZONE  "GceZone"
 #define ATTR_GID  "Gid"

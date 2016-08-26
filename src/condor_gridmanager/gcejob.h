@@ -96,6 +96,7 @@ private:
 	std::string m_metadata;
 	std::string m_metadataFile;
 	std::string m_machineType;
+	bool m_preemptible;
 
 	int m_retry_times;
 	
@@ -106,7 +107,7 @@ private:
 	
 	std::string m_state_reason_code;
 	
-    bool probeNow;
+	bool probeNow;
 };
 
 #endif

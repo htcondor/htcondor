@@ -474,6 +474,11 @@ to order his/her own jobs,
 and this will have no effect on whether or
 not these jobs will run ahead of another user's jobs.
 
+Note that the priority setting in an HTCondor submit file will
+be overridden by \Condor{dagman} if the submit file is used
+for a node in a DAG, and the priority of the node within the
+DAG is non-zero (see ~\ref{sec:DAG-SetNodePriority} for more details).
+
 %%%%%%%%%%%%%%%%%%%
 %% queue
 %%%%%%%%%%%%%%%%%%%
@@ -2154,9 +2159,9 @@ There is no default value when not specified.
 
 \index{submit commands!gce\_image}
 \label{condor-submit-gce-image}
-\item[gce\_image = $<$URL$>$]
+\item[gce\_image = $<$image id$>$]
 For grid type \SubmitCmdNI{gce} jobs,
-the URL of the virtual machine image representing the HTCondor job to
+the identifier of the virtual machine image representing the HTCondor job to
 be run.  This virtual machine image must already be register with GCE
 and reside in Google's Cloud Storage service.
 
@@ -2194,6 +2199,17 @@ specifies a path and file name of the file that contains metadata
 for a virtual machine instance that is an HTCondor job.
 Within the file, each name and value pair is on its own line;
 so, the pairs are separated by the newline character.
+
+%%%%%%%%%%%%%%%%%%%
+%% gce_preemptible
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!gce\_preemptible}
+\label{condor-submit-gce-preemptible}
+\item[gce\_preemptible = $<$True \Bar\ False$>$]
+For grid type \SubmitCmdNI{gce} jobs,
+specifies whether the virtual machine instance should be preemptible.
+The default is for the instance to not be preemptible.
 
 %%%%%%%%%%%%%%%%%%%
 %% globus_rematch
@@ -2948,8 +2964,15 @@ precisely the same executable that created the checkpoint.
 a core file, \SubmitCmdNI{coresize} specifies the maximum size in bytes of the
 core file which the user wishes to keep. If \SubmitCmdNI{coresize} is not
 specified in the command file, the system's user resource limit
-\Env{coredumpsize} is used.
+\Env{coredumpsize} is used (note that \Env{coredumpsize} is not an
+HTCondor parameter -- it is an operating system parameter that can
+be viewed with the \Arg{limit} or \Arg{ulimit} command on Unix and
+in the Registry on Windows).
 A value of -1 results in no limits being applied to the core file size.
+If HTCondor is running as root, a \SubmitCmdNI{coresize} setting
+greater than the system \Env{coredumpsize} limit will override
+the system setting; if HTCondor is \emph{not} running as root, 
+the system \Env{coredumpsize} limit will override \SubmitCmdNI{coresize}.
 
 %%%%%%%%%%%%%%%%%%
 % cron_day_of_month
@@ -3207,12 +3230,14 @@ but it applies to the job event log, instead of the system event log.
 %%%%%%%%%%%%%%%%%%%
 \index{submit commands!job\_lease\_duration}
 \label{condor-submit-job-lease-duration}
-\item[job\_lease\_duration = $<$number-of-seconds$>$] For vanilla
-and java universe jobs only, the duration (in seconds) of a
+\item[job\_lease\_duration = $<$number-of-seconds$>$] For vanilla,
+parallel, VM,
+and java universe jobs only, the duration in seconds of a
 job lease.
-The default value is twenty minutes for universes that support it.
+The default value is 2,400, or forty minutes.
 If a job lease is not desired, the value can be explicitly set to 0 to
-disable the job lease semantics.
+disable the job lease semantics. The value can also be a ClassAd
+expression that evaluates to an integer.
 The HTCondor User's manual section on Special Environment Considerations
 has further details.
 

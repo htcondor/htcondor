@@ -595,7 +595,8 @@
         GCE_INSTANCE_INSERT <SP> <request-ID> <SP> <service-URL>
             <SP> <cred-file> <SP> <project> <SP> <zone>
             <SP> <instance-name> <SP> <machine-type>
-            <SP> <image> <SP> <metadata> <SP> <metadata-file> <CRLF>
+            <SP> <image> <SP> <metadata> <SP> <metadata-file>
+            <SP> <gce_preemptible> <CRLF>
 
         The following attributes are required.
 
@@ -607,9 +608,11 @@
         * image = a value for the 'image' property
         * metadata = a set of metadata name/value pairs of the form
             <name>=<value>,<name>=<value>...
-        * metadate-file = the full path to a file containing metadata
+        * metadata-file = the full path to a file containing metadata
             name/value pairs of the form
             <name>=<value>\n<name>=<value>\n...
+	* gce_preemptible = 'true' or 'false', which will determine
+	    whether the instance submitted can be preempted
 
     + Result Line:
 

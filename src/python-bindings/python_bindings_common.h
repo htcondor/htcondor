@@ -44,4 +44,7 @@
  #if defined(__FreeBSD__)
   #undef getline
  #endif
+ // On Debian 7, pyconfig.h sets this macro. Globus assumes it refers
+ // to the Windows-only <io.h>.
+ #undef HAVE_IO_H
 #endif // _MSC_VER

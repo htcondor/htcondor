@@ -27,6 +27,7 @@
 #include "condor_netdb.h"
 #include "ipv6_hostname.h"
 #include "condor_sinful.h"
+#include "CondorError.h"
 
 static bool enable_convert_default_IP_to_socket_IP = false;
 static std::set< std::string > configured_network_interface_ips;
@@ -202,25 +203,20 @@ network_interface_to_ip(char const *interface_param_name,char const *interface_p
 	return true;
 }
 
-void
-init_network_interfaces( int config_done )
+
+bool
+init_network_interfaces( CondorError * errorStack )
 {
-	dprintf( D_HOSTNAME, "Trying to getting network interface informations (%s)\n",
-		 config_done ? "after reading config" : "config file not read" );
+	dprintf( D_HOSTNAME, "Trying to getting network interface information after reading config\n" );
 
 	std::string network_interface;
-
-	if( config_done ) {
-		param(network_interface,"NETWORK_INTERFACE");
-	}
-	if( network_interface.empty() ) {
-		network_interface = "*";
-	}
+	param( network_interface, "NETWORK_INTERFACE" );
 
 	network_interface_matches_all = (network_interface == "*");
 
 	if( param_false( "ENABLE_IPV4" ) && param_false( "ENABLE_IPV6" ) ) {
-		EXCEPT( "ENABLE_IPV4 and ENABLE_IPV6 are both false." );
+		errorStack->pushf( "init_network_interfaces", 1, "ENABLE_IPV4 and ENABLE_IPV6 are both false." );
+		return false;
 	}
 
 	std::string network_interface_ipv4;
@@ -236,41 +232,50 @@ init_network_interfaces( int config_done )
 		&configured_network_interface_ips);
 
 	if( !ok ) {
-		EXCEPT("Failed to determine my IP address using NETWORK_INTERFACE=%s",
-			   network_interface.c_str());
+		errorStack->pushf( "init_network_interfaces", 2,
+				"Failed to determine my IP address using NETWORK_INTERFACE=%s",
+				network_interface.c_str());
+		return false;
 	}
 
 	//
 	// Check the validity of the configuration.
 	//
 	if( network_interface_ipv4.empty() && param_true( "ENABLE_IPV4" ) ) {
-		EXCEPT( "ENABLE_IPV4 is TRUE, but no IPv4 address was detected.  Ensure that your NETWORK_INTERFACE parameter is not set to an IPv6 address." );
+		errorStack->pushf( "init_network_interfaces", 3, "ENABLE_IPV4 is TRUE, but no IPv4 address was detected.  Ensure that your NETWORK_INTERFACE parameter is not set to an IPv6 address." );
+		return false;
 	}
 	// We don't have an enum type in the param system (yet), so check.
 	if( (!param_true( "ENABLE_IPV4" )) && (!param_false( "ENABLE_IPV4" )) ) {
 		if( strcasecmp( param( "ENABLE_IPV4" ), "AUTO" ) ) {
-			EXCEPT( "ENABLE_IPV4 is '%s', must be 'true', 'false', or 'auto'.", param( "ENABLE_IPV4" ) );
+			errorStack->pushf( "init_network_interfaces", 4, "ENABLE_IPV4 is '%s', must be 'true', 'false', or 'auto'.", param( "ENABLE_IPV4" ) );
+			return false;
 		}
 	}
 
 	if( network_interface_ipv6.empty() && param_true( "ENABLE_IPV6" ) ) {
-		EXCEPT( "ENABLE_IPV6 is TRUE, but no IPv6 address was detected.  Ensure that your NETWORK_INTERFACE parameter is not set to an IPv4 address." );
+		errorStack->pushf( "init_network_interfaces", 5, "ENABLE_IPV6 is TRUE, but no IPv6 address was detected.  Ensure that your NETWORK_INTERFACE parameter is not set to an IPv4 address." );
+		return false;
 	}
 	// We don't have an enum type in the param system (yet), so check.
 	if( (!param_true( "ENABLE_IPV6" )) && (!param_false( "ENABLE_IPV6" )) ) {
 		if( strcasecmp( param( "ENABLE_IPV6" ), "AUTO" ) ) {
-			EXCEPT( "ENABLE_IPV6 is '%s', must be 'true', 'false', or 'auto'.", param( "ENABLE_IPV6" ) );
+			errorStack->pushf( "init_network_interfaces", 6, "ENABLE_IPV6 is '%s', must be 'true', 'false', or 'auto'.", param( "ENABLE_IPV6" ) );
+			return false;
 		}
 	}
 
 	if( (!network_interface_ipv4.empty()) && param_false( "ENABLE_IPV4" ) ) {
-		EXCEPT( "ENABLE_IPV4 is false, yet we found an IPv4 address.  Ensure that NETWORK_INTERFACE is set appropriately." );
+		errorStack->pushf( "init_network_interfaces", 7, "ENABLE_IPV4 is false, yet we found an IPv4 address.  Ensure that NETWORK_INTERFACE is set appropriately." );
+		return false;
 	}
 
 	if( (!network_interface_ipv6.empty()) && param_false( "ENABLE_IPV6" ) ) {
-		EXCEPT( "ENABLE_IPV6 is false, yet we found an IPv6 address.  Ensure that NETWORK_INTERFACE is set appropriately." );
+		errorStack->pushf( "init_network_interfaces", 8, "ENABLE_IPV6 is false, yet we found an IPv6 address.  Ensure that NETWORK_INTERFACE is set appropriately." );
+		return false;
 	}
 
+	return true;
 }
 
 static bool is_sender_ip_attr(char const *attr_name)

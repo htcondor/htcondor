@@ -214,8 +214,8 @@ class Dagman {
 		// script for the node fails.
 	bool _runPost;
 
-		// Default priority that DAGman uses for nodes.
-	int _defaultPriority;
+		// Priority for this DAG.
+	int _priority;
 
 	int _claim_hold_time;
 

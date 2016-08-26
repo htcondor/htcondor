@@ -65,6 +65,7 @@ extern StopStateT new_bin_restart_mode;
 extern char*	FS_Preen;
 extern			ClassAd* ad;
 extern int		NT_ServiceFlag; // TRUE if running on NT as an NT Service
+extern char		default_dc_daemon_list[];
 
 extern time_t	GetTimeStamp(char* file);
 extern int 	   	NewExecutable(char* file, time_t* tsp);
@@ -780,6 +781,54 @@ int daemon::RealStart( )
 
 	snprintf( buf, sizeof( buf ), "%s_ARGS", name_in_config_file );
 	char *daemon_args = param( buf );
+
+	// Automatically set -localname if appropriate.
+	if( isDC ) {
+		StringList hardcodedDCDaemonNames( default_dc_daemon_list );
+		if(! hardcodedDCDaemonNames.contains_anycase( name_in_config_file )) {
+			// Since the config's args are appended after this, they should
+			// win, but we might as well do it right.
+			bool foundLocalName = false;
+			ArgList configArgs;
+			MyString configError;
+			if( configArgs.AppendArgsV1RawOrV2Quoted( daemon_args, & configError ) ) {
+				for( int i = 0; i < configArgs.Count(); ++i ) {
+					char const * configArg = configArgs.GetArg( i );
+					if( strcmp( configArg, "-local-name" ) == 0 ) {
+						foundLocalName = true; break;
+					}
+				}
+				if(! foundLocalName) {
+					args.AppendArg( "-local-name" );
+					args.AppendArg( name_in_config_file );
+				}
+			}
+
+			// GT#5768: The master should look for the localname-specific
+			// version of any param()s it does while doing this start-up.
+		}
+	}
+
+	// If the daemon shares a binary with the HAD or REPLICATION daemons,
+	// respect the setting of the corresponding <SUBSYS>_USE_SHARED_PORT.
+	if( isDC ) {
+		// We param() for the HAD and REPLICATION daemon binaries explicitly,
+		// because it's totally valid for the user to have neither of them
+		// in their DAEMON_LIST and yet be using each under some other name.
+		// For instance, 'DAEMON_LIST = $(DAEMON_LIST) FIRST_HAD SECOND_HAD'.
+
+		std::string hadDaemonBinary;
+		param( hadDaemonBinary, "HAD" );
+		if( hadDaemonBinary == process_name ) {
+			m_never_use_shared_port = ! param_boolean( "HAD_USE_SHARED_PORT", false );
+		}
+
+		std::string replicationDaemonBinary;
+		param( replicationDaemonBinary, "REPLICATION" );
+		if( replicationDaemonBinary == process_name ) {
+			m_never_use_shared_port = ! param_boolean( "REPLICATION_USE_SHARED_PORT", false );
+		}
+	}
 
 	MyString args_error;
 	if(!args.AppendArgsV1RawOrV2Quoted(daemon_args,&args_error)) {
@@ -1517,11 +1566,10 @@ daemon::InitParams()
 		if( log_name ) {
 			free( log_name );
 		}
-		log_name = param(log_filename_in_config_file);
-		if ( log_name == NULL && runs_here ) {
-			dprintf(D_ALWAYS, "Log file not found in config file: %s\n", 
-					log_filename_in_config_file);
-		}
+		// We now set a sane default for <DAEMON_NAME>_LOG, so don't bother
+		// to warn if it's unset -- especially since that's not the right
+		// name for <DAEMON_NAME>.<SUBSYS>_LOG, which is what they'll
+		// actually be looking for.
 	}
 }
 
@@ -2081,6 +2129,37 @@ Daemons::InitParams()
 
 	for( iter = daemon_ptr.begin(); iter != daemon_ptr.end(); iter++ ) {
 		iter->second->InitParams();
+	}
+
+	// As long as we change the daemon objects before anyone calls
+	// RealStart() on them, we should be good.
+	for( iter = daemon_ptr.begin(); iter != daemon_ptr.end(); iter++ ) {
+		if( ! iter->second->isDC ) {
+			std::map<std::string, class daemon*>::iterator jter;
+			for( jter = daemon_ptr.begin(); jter != daemon_ptr.end(); ++jter ) {
+				if( jter->second->isDC &&
+				  (strcasecmp( jter->second->name_in_config_file, iter->second->name_in_config_file ) != 0) &&
+				  // In practice, all we'll ever see is
+				  // 	DAEMON_NAME = $(DC_DAEMON)
+				  // so we don't need to canonicalize the filename.  Arguably,
+				  // this allows users force a DC daemon to be treated as
+				  // non-DC (not that you'd ever want that to happen) by
+				  // changing "dirname/" to "dirname/../dirname/" somewhere
+				  // in the path, and flexibility is good.
+				  (strcmp( jter->second->process_name, iter->second->process_name ) == 0) ) {
+					dprintf( D_ALWAYS, "Declaring that %s, "
+						"since it shares %s with %s, "
+						"is also a DaemonCore daemon.\n",
+						iter->second->name_in_config_file,
+						iter->second->process_name,
+						jter->second->name_in_config_file );
+					// We'll make sure this is launch with -localname elsewhere
+					// in the master by checking if a daemon we're starting is
+					// both a DC daemon and not in the list of DC daemons.
+					iter->second->isDC = true;
+				}
+			}
+		}
 	}
 }
 

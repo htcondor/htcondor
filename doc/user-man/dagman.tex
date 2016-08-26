@@ -612,7 +612,7 @@ and the node will be marked as successful.
 %	  we're inside of a math section and will draw things more nicely
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:DAG-command_order}Command Order}
+\subsection{\label{sec:DAG-command_order}Command Order}
 \label{dagman:command order}
 \index{DAG input file!command order}
 \index{DAGMan!command order}
@@ -1504,29 +1504,64 @@ which is the first retry and the value 1.
 \index{DAG input file!PRIORITY command}
 \index{DAGMan!node priorities}
 
-The \Arg{PRIORITY} command assigns a priority to a DAG node.
+The \Arg{PRIORITY} command assigns a priority to a DAG node
+(and to the HTCondor job(s) associated with the node).
 The syntax for \Arg{PRIORITY} is
 
 \Opt{PRIORITY} \Arg{JobName} \Arg{PriorityValue}
 
-The node priority affects the order in which nodes that are ready
-at the same time will be submitted.  Note that node priority does
-\emph{not} override the DAG dependencies.
+The priority value is an integer (which can be negative).  A larger
+numerical priority is better.  The default priority is 0.
 
-Node priority is mainly relevant if
-node submission is throttled via the \Arg{-maxjobs} or \Arg{-maxidle}
-command-line arguments or the \MacroNI{DAGMAN\_MAX\_JOBS\_SUBMITTED} or
-\MacroNI{DAGMAN\_MAX\_JOBS\_IDLE} configuration variables.  Note that PRE
-scripts can affect the order in which jobs run, so DAGs containing
-PRE scripts may not run the nodes in exact priority order, even if
+The node priority affects the order in which nodes that are ready
+(all of their parent nodes have finished successfully)
+at the same time will be submitted.  The node priority also sets
+the node job's priority in the queue (that is, its \Attr{JobPrio}
+attribute), which affects the order in which jobs will be run once
+they are submitted (see ~\ref{sec:JobPriority} for more information
+about job priority).
+The node priority only affects the order of job submission
+\emph{within a given DAG}; but once jobs are submitted, their
+\Attr{JobPrio} value affects the order in which they will be run
+relative to all jobs submitted by the same user.
+
+Sub-DAGs can have priorities, just as "regular" nodes can.  (The
+priority of a sub-DAG will affect the priorities of its nodes:
+see "effective node priorities" below.)
+Splices cannot be assigned a priority, but individual nodes within
+a splice \emph{can} be assigned priorities.
+
+Note that node priority does \emph{not} override the DAG dependencies.
+Also note that node priorities are not \emph{guarantees}
+of the relative order in which nodes will be run, even among nodes that
+become ready at the same time -- so node priorities
+should not be used as a substitute for parent/child dependencies.
+In other words, priorities should be used when it is preferable, but
+not required, that some jobs run before others.  (The order in which
+jobs are run once they are submitted can be affected by many things
+other than the job's priority; for example, whether there are machines
+available in the pool that match the job's requirements.)
+
+PRE scripts can affect the order in which jobs run, so DAGs containing
+PRE scripts may not submit the nodes in exact priority order, even if
 doing so would satisfy the DAG dependencies.
 
-The priority value is an integer (which can be negative).  A larger
-numerical priority is better (will be run before a smaller numerical
-value).  The default priority is 0.
+Node priority is most relevant if
+node submission is throttled (via the \Arg{-maxjobs} or \Arg{-maxidle}
+command-line arguments or the \MacroNI{DAGMAN\_MAX\_JOBS\_SUBMITTED} or
+\MacroNI{DAGMAN\_MAX\_JOBS\_IDLE} configuration variables), or if
+there are not enough resources in the pool to immediately run all
+submitted node jobs.  This is often the case for DAGs with
+large numbers of "sibling" nodes, or DAGs running on heavily-loaded
+pools.
+
+% Note: this is an alternative to subsubsubsection, which we don't have.
+\begin{description}
+\item[Example]
+\end{description}
 
 Adding \Arg{PRIORITY} for node C in the diamond-shaped
-DAG
+DAG:
 \footnotesize
 \begin{verbatim}
     # File name: diamond.dag
@@ -1542,55 +1577,64 @@ DAG
 \end{verbatim}
 \normalsize
 
-This will cause node C to be submitted before node B.
-Without this priority setting for node C, node B would be submitted first.
+This will cause node C to be submitted (and, mostly likely, run) before
+node B.
+Without this priority setting for node C, node B would be submitted first
+because the "JOB" statement for node B comes earlier in the DAG file
+than the "JOB" statement for node C.
 
-Priorities are propagated to children, to SUBDAGs, 
-and to the HTCondor job itself,
-via the \Attr{JobPrio} attribute in the job's ClassAd. 
-The priority is defined to be the maximum of the DAG PRIORITY directive 
-for the job itself and the PRIORITYs of all its parents. 
+% Note: this is an alternative to subsubsubsection, which we don't have.
+\begin{description}
+\item[Effective node priorities]
+\end{description}
+
+\Bold{The "effective" priority for a node (the priority
+controlling the order in which nodes are actually submitted, and which
+is assigned to \Attr{JobPrio}) is the sum of the
+explicit priority (specified in the DAG file) and the priority of
+the DAG itself.}  DAG priorities also default to 0, so they
+are most relevant for sub-DAGs (although a top-level DAG can
+be submitted with a non-zero priority by specifying a \Opt{-priority}
+value on the \Condor{submit\_dag} command line).
+\Bold{This algorithm for
+calculating effective priorities is a simplification introduced in
+version 8.5.7 (a node's effective priority is no longer dependent on
+the priorities of its parents).}
+
 Here is an example to clarify:
 
 \footnotesize
 \begin{verbatim}
     # File name: priorities.dag
     #
-JOB A A.condor
-JOB B B.condor
-JOB C C.condor
-SUBDAG EXTERNAL D SD.subdag
-PARENT A C CHILD B
-PARENT C CHILD D
+JOB A A.sub
+SUBDAG EXTERNAL B SD.dag
+PARENT A CHILD B
 PRIORITY A 60
-PRIORITY B 0
-PRIORITY C 5
-PRIORITY D 100
+PRIORITY B 100
+
+    # File name: SD.dag
+    #
+JOB SA SA.sub
+JOB SB SB.sub
+PARENT SA CHILD SB
+PRIORITY SA 10
+PRIORITY SB 20
 \end{verbatim}
 \normalsize
 
-In this example, node B is a child of nodes A and C. 
-Node B's priority is initially set to 0,
-but its priority becomes 60,
-because that is the maximum of its initial priority of 0,
-and the priorities of its parents
-A with priority 60 and C with priority 5.
-Node D has only parent node C.
-Since the priority of node D will become at least as big as that of 
-its parent node C,
-node D is assigned a priority of 100.
-And, all nodes in the D SUBDAG will have priority at least 100.
-This priority is assigned by DAGMan.
+In this example (assuming that priorities.dag is submitted with the
+default priority of 0), the effective priority of node A will be 60,
+and the effective priority of sub-DAG B will be 100.  Therefore, the
+effective priority of node SA will be 110 and the effective priority
+of node SB will be 120.
+
+The effective priorities listed above are assigned by DAGMan.
 There is no way to change the priority in the submit description file for a job,
 as DAGMan will override any \SubmitCmd{priority} command placed
-in a submit description file.
-The implication of this priority propagation is
-that for DAGs with a large number of edges (representing dependencies), 
-the priorities of child nodes far from the root nodes 
-will tend to be the same.
-The priorities of the leaf nodes of a tree-shaped DAG,
-or of DAGs with a relatively small number of dependencies,
-will \emph{not} tend to be the same.
+in a submit description file (unless the effective node priority is
+0; in this case, any priority specified in the submit file will
+take effect).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:DAG-node-category}Throttling Nodes by Category}
@@ -1832,6 +1876,95 @@ the renaming of nodes may be disabled by
 setting the configuration variable \Macro{DAGMAN\_MUNGE\_NODE\_NAMES}
 to \Expr{False} (see ~\ref{param:DAGManMungeNodeNames}).
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:DAG-configuration}INCLUDE}
+\index{DAG input file!INCLUDE command}
+\index{DAGMan!DAG INCLUDE command}
+
+The \Arg{INCLUDE} command allows the contents of one DAG file to be
+parsed as if they were physically included in the referencing DAG
+file.  The syntax for \Arg{INCLUDE} is
+
+\Opt{INCLUDE} \Arg{FileName}
+
+For example, if we have two DAG files like this:
+\begin{verbatim}
+# File name: foo.dag
+#
+    JOB  A  A.sub
+    INCLUDE bar.dag
+
+# File name: bar.dag
+#
+    JOB  B  B.sub
+    JOB  C  C.sub
+\end{verbatim}
+
+this is equivalent to the single DAG file:
+\begin{verbatim}
+    JOB  A  A.sub
+    JOB  B  B.sub
+    JOB  C  C.sub
+\end{verbatim}
+
+Note that the included file must be in proper DAG syntax.  Also, there
+are many cases where a valid included DAG file will cause a parse error,
+such as the including and included files defining nodes with the same
+name.
+
+\Arg{INCLUDE}s can be nested to any depth (be sure not to create a cycle
+of includes!).
+
+% Note: this is an alternative to subsubsubsection, which we don't have.
+\begin{description}
+\item[Example: Using INCLUDE to simplify multiple similar workflows]
+\end{description}
+
+% Note: this example could be further simplified once the "all nodes"
+% option is implemented.
+One use of the \Arg{INCLUDE} command is to simplify the DAG files when we
+have a single workflow that we want to run on a number of data sets.
+In that case, we can do something like this:
+
+\begin{verbatim}
+# File name: workflow.dag
+# Defines the structure of the workflow
+    JOB Split split.sub
+    JOB Process00 process.sub
+    ...
+    JOB Process99 process.sub
+    JOB Combine combine.sub
+    PARENT Split CHILD Process00 ... Process99
+    PARENT Process00 ... Process99 CHILD Combine
+
+# File name: split.sub
+    executable = my_split
+    input = $(dataset).phase1
+    output = $(dataset).phase2
+    ...
+
+# File name: data57.vars
+    VARS Split dataset="data57"
+    VARS Process00 dataset="data57"
+    ...
+    VARS Process99 dataset="data57"
+    VARS Combine dataset="data57"
+
+# File name: run_dataset57.dag
+    INCLUDE workflow.dag
+    INCLUDE data57.vars
+\end{verbatim}
+
+Then, to run our workflow on dataset 57, we run the following
+command:
+
+\begin{verbatim}
+    condor_submit_dag run_dataset57.dag
+\end{verbatim}
+
+This avoids having to duplicate the \Arg{JOB} and \Arg{PARENT/CHILD}
+commands for every dataset -- we can just re-use the \File{workflow.dag} file,
+in combination with a dataset-specific vars file.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:DAGsinDAGs}A DAG Within a DAG Is a SUBDAG}
@@ -2390,7 +2523,7 @@ will contain DIR specifications, so the Rescue DAG must be run
 \item[Limitation: Splices and PRE or POST Scripts]
 \end{description}
 
-A splice may not specify a PRE or POST script.
+A PRE or POST script may not be specified for a splice.
 The nodes of a splice are incorporated into a top level DAG;
 these nodes are scoped and named.
 Therefore, after incorporation, the node name given to the splice
@@ -2586,6 +2719,123 @@ and 10 for the \Expr{A+catX} category in splice.
 Note that non-global category names are
 prefixed with their splice name(s), so to refer to a non-global category 
 at a higher level, the splice name must be included.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:DAGSpliceConnections}DAG Splice Connections}
+\index{DAG input file!CONNECT command}
+\index{DAG input file!PIN\_IN command}
+\index{DAG input file!PIN\_OUT command}
+\index{DAGMan!connecting DAG splices}
+
+%TEMP -- add stuff here
+
+%TEMP -- analogy with hardware
+
+In the "default" usage of splices described above, when one splice is
+the parent of another splice, all "terminal" nodes of the parent splice
+are parents of all "initial" nodes of the child splice.  The CONNECT,
+PIN\_IN, and PIN\_OUT commands (added in version 8.5.7) allow more
+flexible dependencies between splices.
+
+The syntax for \Arg{CONNECT} is
+
+%TEMP -- better names instead of parent and child??
+\Opt{CONNECT} \Arg{ParentSpliceName} \Arg{ChildSpliceName}
+
+The syntax for \Arg{PIN\_IN} is
+
+\Opt{PIN\_IN} \Arg{NodeName} \Arg{PinNumber}
+
+The syntax for \Arg{PIN\_OUT} is
+
+\Opt{PIN\_OUT} \Arg{NodeName} \Arg{PinNumber}
+
+All parent splice nodes connected to a given pin\_out will become
+parents of all child splice nodes connected to the corresponding
+pin\_in.  (The pin\_ins and pin\_outs exist only to create the
+correct parent/child dependencies between nodes.  Once the
+DAG is parsed, there are no actual DAG objects corresponding
+to the pin\_ins and pin\_outs.)
+
+Any given splice can contain both PIN\_IN and PIN\_OUT definitions.
+It is \emph{not} an error for a splice to have PIN\_IN or PIN\_OUT
+definitions that are not associated with a CONNECT command.
+%TEMP -- find a better way to say this
+
+Note that the pin\_ins and pin\_outs must be defined \emph{within}
+the relevant splices (this can be done with \Arg{INCLUDE} commands), not
+in the DAG that connects the splices.
+
+%TEMP -- need to add diagrams here
+
+Restrictions:
+%TEMP -- check these and make sure they are right
+\begin{itemize}
+\item Pin\_ins and pin\_outs must be numbered consecutively starting
+at 1.
+\item The pin\_outs of the parent splice in a connect command must
+match the pin\_ins of the child splice in the command.
+\item All "initial" nodes (nodes with no parents) of a child splice
+must be connected to a pin\_in.
+\end{itemize}
+
+Note:  it is probably desireable for any "terminal" node (a
+node with no children) in the parent splice to be connected to
+a pin\_out -- but this is not required.
+
+Here is a simple example:
+\begin{verbatim}
+# File: top.dag
+    SPLICE A spliceA.dag
+    SPLICE B spliceB.dag
+    SPLICE C spliceC.dag
+
+    CONNECT A B
+    CONNECT B c
+
+# File: spliceA.dag
+    JOB A1 A1.sub
+    JOB A2 A2.sub
+
+    PIN_OUT A1 1
+    PIN_OUT A2 2
+
+# File: spliceB.dag
+    JOB B1 B1.sub
+    JOB B2 B2.sub
+    JOB B3 B3.sub
+    JOB B4 B4.sub
+
+    PIN_IN B1 1
+    PIN_IN B2 1
+    PIN_IN B3 2
+    PIN_IN B4 2
+
+    PIN_OUT B1 1
+    PIN_OUT B2 2
+    PIN_OUT B3 3
+    PIN_OUT B4 4
+
+# File: spliceC.dag
+    JOB C1 C1.sub
+
+    PIN_IN C1 1 
+    PIN_IN C1 2 
+    PIN_IN C1 3
+    PIN_IN C1 4
+
+\end{verbatim}
+In this example, node A1 will be the parent of B1 and B2; node
+A2 will be the parent of B3 and B4; and nodes B1, B2, B3 and B4 will all
+be parents of C1.
+
+A diagram of the above example:
+
+\begin{figure}[hbt]
+\centering
+\includegraphics{user-man/dagman-connect.eps}
+\caption{\label{fig:dagman-connect}Diagram of the splice connect example}
+\end{figure}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:DAGFinalNode}FINAL node}

@@ -131,6 +131,7 @@ int GCEJob::maxRetryTimes = 3;
 
 GCEJob::GCEJob( ClassAd *classad ) :
 	BaseJob( classad ),
+	m_preemptible( false ),
 	m_retry_times( 0 ),
 	probeNow( false )
 {
@@ -173,6 +174,8 @@ GCEJob::GCEJob( ClassAd *classad ) :
 	jobAd->LookupString( ATTR_GCE_METADATA_FILE, m_metadataFile );
 
 	jobAd->LookupString( ATTR_GCE_METADATA, m_metadata );
+
+	jobAd->LookupBool( ATTR_GCE_PREEMPTIBLE, m_preemptible );
 
 	// get VM machine type
 	jobAd->LookupString( ATTR_GCE_MACHINE_TYPE, m_machineType );
@@ -553,6 +556,7 @@ void GCEJob::doEvaluateState()
 													m_image,
 													m_metadata,
 													m_metadataFile,
+													m_preemptible,
 													instance_id );
 
 					if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||

@@ -630,6 +630,16 @@ a string taken from the definition of the submit description file command
 Specifies a path and file name of a file containing 
 a set of name/value pairs that can be accessed by the virtual machine.
 
+%%% ClassAd attribute: GcePreemptible
+\index{ClassAd job attribute!GcePreemptible}
+\index{GcePreemptible!job ClassAd attribute}
+\item[\AdAttr{GcePreemptible}:]
+Used for grid type gce jobs;
+a boolean taken from the definition of the submit description file command
+\SubmitCmd{gce\_preemptible}.
+Specifies whether the virtual machine instance created in GCE should
+be preemptible.
+
 %%% ClassAd attribute: GlobalJobId
 \index{ClassAd job attribute!GlobalJobId}
 \index{GlobalJobId!job ClassAd attribute}
@@ -1258,6 +1268,10 @@ checkpoint attempted by this job during its lifetime.
   a \Condor{starter} rather than a \Condor{shadow}.  
   This keeps the management of the
   local universe and other universes as similar as possible.
+  \Bold{Note that this attribute is incremented every time the job
+  is matched, even if the match is rejected by the execute machine;
+  in other words, the value of this attribute may be greater than
+  the number of times the job actually ran.}
 
 %%% ClassAd attribute: NumSystemHolds
 \index{ClassAd job attribute!NumSystemHolds}

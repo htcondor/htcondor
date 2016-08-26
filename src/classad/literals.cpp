@@ -471,6 +471,11 @@ GetValue( Value &val ) const
 	}
 }
 
+bool Literal::
+GetStringValue( const char* & cstr ) const 
+{
+	return value.IsStringValue(cstr);
+}
 
 void Literal::
 GetComponents( Value &val, Value::NumberFactor &f ) const

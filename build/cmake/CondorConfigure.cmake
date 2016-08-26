@@ -96,16 +96,21 @@ else()
 		#only for Visual Studio 2012
 		if(NOT (MSVC_VERSION LESS 1700))
 			message(STATUS "=======================================================")
-			message(STATUS "Searching for python installation") 
-			#look at registry for 32-bit view of 64-bit registry first	
+			message(STATUS "Searching for python installation")
+			#look at registry for 32-bit view of 64-bit registry first
+			message(STATUS "  Looking in HKLM\\Software\\Wow3264Node")
 			get_filename_component(PYTHON_INSTALL_DIR "[HKEY_LOCAL_MACHINE\\SOFTWARE\\Wow6432Node\\Python\\PythonCore\\2.7\\InstallPath;]" REALPATH)
 			#when registry reading fails cmake returns with c:\registry
+			message(STATUS "  Got ${PYTHON_INSTALL_DIR}")
 
-			if("${PYTHON_INSTALL_DIR}" MATCHES "registry") #look at native 32bit path if not found
+			#look at native registry if not found
+			if("${PYTHON_INSTALL_DIR}" MATCHES "registry" OR ( CMAKE_SIZEOF_VOID_P EQUAL 8 AND "${PYTHON_INSTALL_DIR}" MATCHES "32" ) )
+				message(STATUS "  Looking in HKLM\\Software")
 				get_filename_component(PYTHON_INSTALL_DIR "[HKEY_LOCAL_MACHINE\\SOFTWARE\\Python\\PythonCore\\2.7\\InstallPath;]" REALPATH)
+				message(STATUS "  Got ${PYTHON_INSTALL_DIR}")
 			endif()
 		
-			if("${PYTHON_INSTALL_DIR}" MATCHES "registry")				
+			if("${PYTHON_INSTALL_DIR}" MATCHES "registry")
 				message(STATUS "Suppored python installation not found on this system")
 				unset(PYTHONINTERP_FOUND)
 			else()
@@ -177,6 +182,7 @@ else()
 endif()
 include (FindThreads)
 include (GlibcDetect)
+find_package (OpenMP)
 
 add_definitions(-D${OS_NAME}="${OS_NAME}_${OS_VER}")
 if (CONDOR_PLATFORM)
@@ -332,6 +338,7 @@ if( NOT WINDOWS)
 	check_function_exists("readdir64" HAVE_READDIR64)
 	check_function_exists("backtrace" HAVE_BACKTRACE)
 	check_function_exists("unshare" HAVE_UNSHARE)
+	check_function_exists("proc_pid_rusage" HAVE_PROC_PID_RUSAGE)
 
 	# we can likely put many of the checks below in here.
 	check_include_files("dlfcn.h" HAVE_DLFCN_H)
@@ -403,6 +410,7 @@ if( NOT WINDOWS)
 	dprint ("TJ && TSTCLAIR We need this check in MSVC") 
 
 	check_cxx_compiler_flag(-std=c++11 cxx_11)
+	check_cxx_compiler_flag(-std=c++0x cxx_0x)
 	if (cxx_11)
 
 		# Some versions of Clang require an additional C++11 flag, as the default stdlib
@@ -422,8 +430,13 @@ if( NOT WINDOWS)
 			return 0;
 		}
 		" PREFER_CPP11 )
+	elseif(cxx_0x)
+		# older g++s support some of c++11 with the c++0x flag
+		# which we should try to enable, if they do not have
+		# the c++11 flag.  This at least gets us std::unique_ptr
 
-	endif (cxx_11)
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
+	endif()
 
 	if (NOT PREFER_CPP11)
 
@@ -773,7 +786,7 @@ if (WINDOWS)
 
   if (MSVC11)
     if (CMAKE_SIZEOF_VOID_P EQUAL 8 )
-      set(BOOST_DOWNLOAD_WIN boost-1.54.0-VC11-Win32_V4.tar.gz)
+      set(BOOST_DOWNLOAD_WIN boost-1.54.0-VC11-Win64_V4.tar.gz)
     else()
       set(BOOST_DOWNLOAD_WIN boost-1.54.0-VC11-Win32_V4.tar.gz)
     endif()
@@ -818,7 +831,7 @@ else ()
 		add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/globus/5.2.5)
 	endif()
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/blahp/1.16.5.1)
-	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/voms/2.0.6)
+	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/voms/2.0.13)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/cream/1.15.4)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/wso2/2.1.0)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boinc/devel)
@@ -994,6 +1007,12 @@ if (CONDOR_CXX_FLAGS)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CONDOR_CXX_FLAGS}")
 endif()
 
+if (OPENMP_FOUND)
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
+endif()
+
 if(MSVC)
 	#disable autolink settings 
 	add_definitions(-DBOOST_ALL_NO_LIB)
@@ -1115,6 +1134,11 @@ else(MSVC)
 		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wdeprecated-declarations -Wno-error=deprecated-declarations")
 	endif(c_Wdeprecated_declarations)
 	endif()
+
+	check_c_compiler_flag(-Wnonnull-compare c_Wnonnull_compare)
+	if (c_Wnonnull_compare)
+		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-nonnull-compare -Wno-error=nonnull-compare")
+	endif(c_Wnonnull_compare)
 
 	# gcc on our AIX machines recognizes -fstack-protector, but lacks
 	# the requisite library.

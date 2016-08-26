@@ -1,0 +1,34 @@
+splice Splice2Aa job_dagman_splice_connect-B-2-1a.dag
+splice Splice2Ab job_dagman_splice_connect-B-2-1b.dag
+splice Splice2Ba job_dagman_splice_connect-B-2-2a.dag
+splice Splice2Bb job_dagman_splice_connect-B-2-2b.dag
+
+connect Splice2Aa Splice2Ab
+connect Splice2Ba Splice2Bb
+
+# These are commented out because pins can't connect to splices
+# right now.
+# pin_in Splice2Aa 1
+# pin_in Splice2Ba 2
+
+# pin_out Splice2Ab 1
+# pin_out Splice2Bb 2
+
+# "Manual" socket nodes to allow this to work -- remove them once
+# pins can connect to splices.  (Probably once we implement socket
+# nodes!)
+job SocketPreA foo NOOP
+job SocketPreB foo NOOP
+job SocketPostA foo NOOP
+job SocketPostB foo NOOP
+
+parent SocketPreA child Splice2Aa
+parent SocketPreB child Splice2Ba
+parent Splice2Ab child SocketPostA
+parent Splice2Bb child SocketPostB
+
+pin_in SocketPreA 1
+pin_in SocketPreB 2
+
+pin_out SocketPostA 1
+pin_out SocketPostB 2

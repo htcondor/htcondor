@@ -682,6 +682,20 @@ Includes the libraries for external packages built when UW_BUILD is enabled
 
 %endif
 
+
+%package ec2
+Summary: Configuration and scripts for using HTCondor on EC2.
+Group: Applications/System
+Requires: %name = %version-%release
+
+%description ec2
+Configures HTCondor for use on EC2.
+
+%files ec2
+%config(noreplace) %_sysconfdir/condor/config.d/50ec2.config
+%config(noreplace) %_sysconfdir/condor/config.d/49ec2-instance.sh
+%config(noreplace) %_sysconfdir/condor/master_shutdown_script.sh
+
 %package all
 Summary: All condor packages in a typical installation
 Group: Applications/System
@@ -877,6 +891,11 @@ make install DESTDIR=%{buildroot}
 # The install target puts etc/ under usr/, let's fix that.
 mv %{buildroot}/usr/etc %{buildroot}/%{_sysconfdir}
 
+# I fixed this in condor_examples/CMakeLists.txt, instead.
+# populate %_sysconfdir/condor/config.d %{buildroot}/%{_sysconfdir}/condor/config.d/50ec2.config
+# populate %_sysconfdir/condor/config.d %{buildroot}/%{_sysconfdir}/condor/config.d/49ec2-instance.sh
+# populate %_sysconfdir/condor %{buildroot}/${_sysconfdir}/master_shutdown_script.sh
+
 populate %_sysconfdir/condor %{buildroot}/%{_usr}/lib/condor_ssh_to_job_sshd_config_template
 
 # Things in /usr/lib really belong in /usr/share/condor
@@ -914,7 +933,7 @@ sed -e "s:^LIB\s*=.*:LIB = \$(RELEASE_DIR)/$LIB/condor:" \
 
 # Install the basic configuration, a Personal HTCondor config. Allows for
 # yum install condor + service condor start and go.
-mkdir -m0755 %{buildroot}/%{_sysconfdir}/condor/config.d
+mkdir -p -m0755 %{buildroot}/%{_sysconfdir}/condor/config.d
 %if %parallel_setup
 cp %{SOURCE5} %{buildroot}/%{_sysconfdir}/condor/config.d/20dedicated_scheduler_condor.config
 %endif
@@ -1885,6 +1904,17 @@ fi
 %endif
 
 %changelog
+* Tue Aug 02 2016 Tim Theisen <tim@cs.wisc.edu> - 8.5.6-1
+- The -batch output for condor_q is now the default
+- Python bindings for job submission and machine draining
+- Numerous Docker usability changes
+- New options to limit condor_history results to jobs since last invocation
+- Shared port daemon can be used with high availability and replication
+- ClassAds can be written out in JSON format
+- More flexible ordering of DAGMan commands
+- Efficient PBS and SLURM job monitoring
+- Simplified leases for grid universe jobs
+
 * Tue Jul 05 2016 Tim Theisen <tim@cs.wisc.edu> - 8.4.8-1
 - Fixed a memory leak triggered by the python htcondor.Schedd().query() call
 - Fixed a bug that could cause Bosco file transfers to fail

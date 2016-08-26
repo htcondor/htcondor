@@ -617,6 +617,7 @@ class GahpClient : public GenericGahpClient {
 								 const std::string &image,
 								 const std::string &metadata,
 								 const std::string &metadata_file,
+								 bool preemptible,
 								 std::string &instance_id );
 
 		int gce_instance_delete( std::string service_url,

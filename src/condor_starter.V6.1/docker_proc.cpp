@@ -27,7 +27,7 @@
 
 extern CStarter *Starter;
 
-static void buildExtraVolumes(std::list<std::string> &extras);
+static void buildExtraVolumes(std::list<std::string> &extras, ClassAd &machAd, ClassAd &jobAd);
 
 //
 // TODO: Allow the use of HTCondor file-transfer to provide the image.
@@ -98,6 +98,11 @@ int DockerProc::StartJob() {
 		Starter->getMySlotName().c_str(), // note: this can be "" for single slot machines.
 		getpid() );
 
+	ClassAd recoveryAd;
+	recoveryAd.Assign("DockerContainerName", containerName.c_str());
+	Starter->WriteRecoveryFile(&recoveryAd);
+
+
 
 	//
 	// Do I/O redirection (includes streaming).
@@ -136,7 +141,7 @@ int DockerProc::StartJob() {
 	ClassAd *machineAd = Starter->jic->machClassAd();
 
 	std::list<std::string> extras;
-	buildExtraVolumes(extras);
+	buildExtraVolumes(extras, *machineAd, *JobAd);
 
 	// The following line is for condor_who to parse
 	dprintf( D_ALWAYS, "About to exec docker:%s\n", command.c_str());
@@ -544,7 +549,7 @@ bool DockerProc::Version( std::string & version ) {
 
 // Generate a list of strings that are suitable arguments to
 // docker run --volume
-static void buildExtraVolumes(std::list<std::string> &extras) {
+static void buildExtraVolumes(std::list<std::string> &extras, ClassAd &machAd, ClassAd &jobAd) {
 	// These are the ones the administrator wants unconditionally mounted
 	char *volumeNames = param("DOCKER_MOUNT_VOLUMES");
 	if (!volumeNames) {
@@ -571,9 +576,30 @@ static void buildExtraVolumes(std::list<std::string> &extras) {
 				free(volumePath);
 				volumePath = volumePath2;
 			}
-			extras.push_back(volumePath);
-			dprintf(D_ALWAYS, "Adding %s as a docker volume to mount\n", volumePath);
+
+			// If there's a DOCKER_VOLUME_DIR_XXX_MOUNT_IF
+			// param, and it evals to true, add it to the list
+			// if there's no param, still add it
+			// If the param exists, but doesn't eval to true, don't
+			std::string paramNameConst = paramName + "_MOUNT_IF";
+			char *mountIfValue = param(paramNameConst.c_str());
+
+			if (mountIfValue == NULL) {
+				// there's no MOUNT_IF, assume true
+				extras.push_back(volumePath);
+				dprintf(D_ALWAYS, "Adding %s as a docker volume to mount\n", volumePath);
+			} else if (param_boolean(paramNameConst.c_str(), false /*deflt*/,
+				false /*do_log*/, &machAd, &jobAd)) {
+
+				// There is a MOUNT_IF, and it is true
+				extras.push_back(volumePath);
+				dprintf(D_ALWAYS, "Adding %s as a docker volume to mount\n", volumePath);
+			} else {
+				// There is a MOUNT_IF, and it is false/undef
+				dprintf(D_ALWAYS, "Not adding %s as a docker volume to mount -- ...MOUNT_IF evaled to false.\n", volumePath);
+			}
 			free(volumePath);
+			free(mountIfValue);
 		} else {
 			dprintf(D_ALWAYS, "WARNING: DOCKER_VOLUME_DIR_%s is missing in config file.\n", volumeName);
 		}

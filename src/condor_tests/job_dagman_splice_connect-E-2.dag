@@ -1,0 +1,6 @@
+job Node2A - noop
+job Node2B - noop
+job Node2C - noop
+
+pin_in Node2A 1
+pin_in Node2B 2

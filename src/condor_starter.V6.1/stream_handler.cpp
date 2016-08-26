@@ -79,7 +79,7 @@ bool StreamHandler::Init( const char *fn, const char *sn, bool io, int f )
 			dprintf( D_ALWAYS, "Couldn't seek to end of %s for stream %s when append mode was requested: %s\n", filename.Value(), streamname.Value(), strerror( errno ) );
 			return false;
 		}
-	dprintf( D_SYSCALLS, "StreamHandler: Sought to %lu as a result of append request.\n", offset );
+		dprintf( D_SYSCALLS, "StreamHandler: Sought to %ld as a result of append request.\n", (long)offset );
 	}
 
 	// create a DaemonCore pipe
@@ -156,7 +156,7 @@ int StreamHandler::Handler( int  /* fd */)
 		result = daemonCore->Read_Pipe(handler_pipe,buffer,STREAM_BUFFER_SIZE);
 
 		if(result>0) {
-			dprintf(D_SYSCALLS,"StreamHandler: %s: %d bytes available, seeking to offset %lu\n",streamname.Value(),result,offset);
+			dprintf(D_SYSCALLS,"StreamHandler: %s: %d bytes available, seeking to offset %ld\n",streamname.Value(),result,(long)offset);
 			errno = 0;
 			pending = result;
 			REMOTE_CONDOR_lseek(remote_fd,offset,SEEK_SET);
@@ -308,7 +308,7 @@ StreamHandler::Reconnect() {
 		// and always doing it makes it easier to test
 
 		errno = 0;
-		dprintf(D_ALWAYS, "Retrying streaming write to %s of %d bytes at %lu after reconnect\n", filename.Value(), pending, offset);
+		dprintf(D_ALWAYS, "Retrying streaming write to %s of %d bytes at %ld after reconnect\n", filename.Value(), pending, (long)offset);
 		REMOTE_CONDOR_lseek(remote_fd,offset,SEEK_SET);
 		if (errno == ETIMEDOUT) {
 			Disconnect();

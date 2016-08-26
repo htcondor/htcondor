@@ -1149,7 +1149,7 @@ SharedPortEndpoint::serialize(MyString &inherit_buf,int &inherit_fd)
 		dprintf(D_ALWAYS, "SharedPortEndpoint: Failed to duplicate named pipe for inheritance.\n");
 		return false;
 	}
-	inherit_buf.formatstr_cat("%d", inheritable_to_child);
+	inherit_buf.serialize_int((LONG_PTR)inheritable_to_child);
 #else
 	inherit_fd = m_listener_sock.get_file_desc();
 	ASSERT( inherit_fd != -1 );
@@ -1181,7 +1181,8 @@ SharedPortEndpoint::deserialize(const char *inherit_buf)
 	Deserializing requires getting the handles out of the buffer and getting the pid pipe name
 	stored.  Registering the pipe is handled by StartListener().
 	*/
-	sscanf_s(inherit_buf, "%d", (int*)&pipe_end);
+	YourStringDeserializer in(inherit_buf);
+	in.deserialize_int((LONG_PTR*)&pipe_end);
 
 	//m_pipe_out = daemonCore->Inherit_Pipe_Handle(out_pipe, false, true, true, 4096);
 #else
@@ -1227,7 +1228,14 @@ SharedPortEndpoint::UseSharedPort(MyString *why_not,bool already_open)
 		return false;
 	}
 
-	if( !param_boolean("USE_SHARED_PORT",false) ) {
+	std::string uspParameterName;
+	const char * subsystem = get_mySubSystem()->getName();
+	formatstr( uspParameterName, "%s_USE_SHARED_PORT", subsystem );
+	if( param( uspParameterName.c_str() ) == NULL ) {
+		uspParameterName = "USE_SHARED_PORT";
+	}
+
+	if( !param_boolean(uspParameterName.c_str(),false) ) {
 		if( why_not ) {
 			*why_not = "USE_SHARED_PORT=false";
 		}

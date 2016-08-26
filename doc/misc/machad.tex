@@ -211,6 +211,16 @@ universe jobs.
 \item[\AdAttr{HasEncryptExecuteDirectory}:] A boolean value 
 set to \Expr{True} if the machine is capable of encrypting execute directories.
 %
+\index{ClassAd machine attribute!HasFileTransfer}
+\item[\AdAttr{HasFileTransfer}:] A boolean value that when \Expr{True}
+identifies that the machine can use the file transfer mechanism.
+%
+\index{ClassAd machine attribute!HasFileTransferPluginMethods}
+\item[\AdAttr{HasFileTransferPluginMethods}:] A string of comma-separated file
+transfer protocols that the machine can support. The value can be modified
+with \Macro{FILETRANSFER\_PLUGINS} as defined at
+~\ref{param:FiletransferPlugins}.
+%
 \index{ClassAd machine attribute!Has\_sse4\_1}
 \item[\AdAttr{Has\_sse4\_1}:] A boolean value set to \Expr{True}
  if the machine being advertised supports

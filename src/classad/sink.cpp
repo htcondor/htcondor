@@ -333,6 +333,18 @@ Unparse( string &buffer, const ExprTree *tree )
 	}
 }
 				
+void ClassAdUnParser::
+Unparse( string &buffer, const ClassAd *ad, const References &whitelist )
+{
+	if( !ad ) {
+		buffer = "<error:null expr>";
+		return;
+	}
+
+	vector< pair<string, ExprTree*> > attrs;
+	ad->GetComponents( attrs, whitelist );
+	UnparseAux( buffer, attrs );
+}
 
 
 void ClassAdUnParser::

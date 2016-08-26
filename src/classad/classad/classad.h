@@ -541,7 +541,7 @@ class ClassAd : public ExprTree
 
         /** Return the number of attributes at the root level of this ClassAd.
          */
-        int size(void) const { return attrList.size(); }
+        int size(void) const { return (int)attrList.size(); }
 		//@}
 
 		void rehash(size_t s) { attrList.rehash(s);}
@@ -550,6 +550,7 @@ class ClassAd : public ExprTree
 		 * 		attributes of the classad
 		 */
 		void GetComponents( std::vector< std::pair< std::string, ExprTree *> > &vec ) const;
+		void GetComponents( std::vector< std::pair< std::string, ExprTree *> > &vec, const References &whitelist ) const;
 
         /** Make sure everything in the ad is in this ClassAd.
          *  This is different than CopyFrom() because we may have many 

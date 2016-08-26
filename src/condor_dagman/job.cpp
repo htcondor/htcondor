@@ -124,8 +124,8 @@ Job::Job( const char* jobName,
 
 	_queuedNodeJobProcs = 0;
 
-	_hasNodePriority = false;
-	_nodePriority = 0;
+	_explicitPriority = 0;
+	_effectivePriority = _explicitPriority;
 
 	_noop = false;
 
@@ -813,35 +813,6 @@ Job::GetPreSkip() const
 			"Evaluating PRE_SKIP... It is not defined.\n" );
 	}
 	return _preskip;
-}
-
-//---------------------------------------------------------------------------
-// If there is a cycle, could this enter an infinite loop?
-// No: If there is a cycle, there will be equality, and recursion will stop
-// It makes no sense to insert job priorities on linear DAGs;
-
-// The scheme here is to copy the priority from parent nodes, if a parent node
-// has priority higher than the job priority currently assigned to the node, or
-// use the default priority of the DAG; otherwise, we use the priority from the
-// DAG file. Priorities calculated by DAGman will ignore and override job
-// priorities set in the submit file.
-
-// DAGman fixes the default priorities in Dag::SetDefaultPriorities
-
-void
-Job::FixPriority(Dag& dag)
-{
-	std::set<JobID_t> parents = GetQueueRef(Q_PARENTS);
-	for(std::set<JobID_t>::iterator p = parents.begin(); p != parents.end(); ++p){
-		Job* parent = dag.FindNodeByNodeID(*p);
-		if( parent->_hasNodePriority ) {
-			// Nothing to do if parent priority is small
-			if( parent->_nodePriority > _nodePriority ) {
-				_nodePriority = parent->_nodePriority;
-				_hasNodePriority = true;
-			}
-		}
-	}
 }
 
 //---------------------------------------------------------------------------

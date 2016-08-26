@@ -317,6 +317,27 @@ class MyString
 	*/
 	void compressSpaces( void );
 
+	// ----------------------------------------
+	//           Serialization helpers
+	// ----------------------------------------
+	// (see YourStringDeserializer for corresponding deserialization)
+
+	// append an integer for serialization
+	template <class T> bool serialize_int(T val);
+	//template <class T> bool serialize_float(T val); // future?
+	// append a null-terminated string for serialization
+	bool serialize_string(const char * val) { if (val) {*this += val;} return true; }
+	// append a separator token for serialization
+	bool serialize_sep(const char * sep) { if (sep) {*this += sep;} return true; }
+	// detach internal mystring buffer and return it, caller should free the buffer by calling delete[]
+	char * detach_buffer(int * length=NULL, int * alloc_size=NULL) {
+		if (length) *length = Len;
+		if (alloc_size) *alloc_size = capacity;
+		char * rval = Data;
+		init();
+		return rval;
+	}
+
 	//@}
 
 	// ----------------------------------------
@@ -476,6 +497,42 @@ public:
 
 protected:
 	const char *m_str;
+};
+
+// deserialization helper functions
+//
+class YourStringDeserializer : public YourString {
+public:
+	YourStringDeserializer() : YourString(), m_p(NULL) {}
+	YourStringDeserializer(const char * str) : YourString(str), m_p(str) {}
+	YourStringDeserializer(const std::string & s) : YourString(s), m_p(m_str) { m_p = m_str; }
+	YourStringDeserializer(const YourStringDeserializer &rhs) : YourString(reinterpret_cast<const YourString&>(rhs)), m_p(rhs.m_p) {}
+	void operator =(const char *str) { m_str = str; m_p = str; }
+
+	// deserialize an int into the given value, and return true if a value was found
+	// if true is returned, the internal buffer pointer is advanced past the parsed int
+	template <class T> bool deserialize_int(T* val);
+	//template <> bool deserialize_int<bool>(bool* val);
+
+	// check for a constant separator at the current deserialize position in the buffer
+	// return true and advances the internal buffer pointer if it is there.
+	bool deserialize_sep(const char * sep);
+	// return pointer and length of the string between the current deserialize position
+	// and the next instance of the given separator character.
+	// returns true if the separator was found, false if not.
+	// if separator occurrs at current position, returned length will be 0.
+	bool deserialize_string(const char *& start, size_t & len, const char * sep);
+	// Copy a string from the current deserialize position to the next separator
+	// returns true if the separator was found, false if not.
+	// if return value is true, the val will be set to the string, if false val is unchanged.
+	bool deserialize_string(MyString & val, const char * sep);
+	// return the current deserialize offset from the start of the string
+	size_t offset() { return (m_str && m_p) ? (m_p - m_str) : 0; }
+	// return the current deserialization pointer into the string.
+	const char * next_pos() { if ( ! m_str) return NULL; if ( ! m_p) { m_p = m_str; } return m_p; }
+
+protected:
+	const char * m_p;
 };
 
 // this lets a make a case-insensitive std::map of YourStrings

@@ -33,6 +33,8 @@ enum ppOption {
     PP_QUILL_NORMAL,
 
     PP_SCHEDD_NORMAL,
+    PP_SCHEDD_DATA,
+    PP_SCHEDD_RUN,
     PP_SUBMITTER_NORMAL,
 
     PP_MASTER_NORMAL,
@@ -47,12 +49,14 @@ enum ppOption {
     PP_ANY_NORMAL,
     PP_GENERIC_NORMAL,
     PP_GENERIC,
-    PP_XML,
     PP_CUSTOM,
-
-    PP_VERBOSE,
-    PP_JSON
+    PP_LONG,
+    PP_XML,
+    PP_JSON,
+    PP_NEWCLASSAD, // output new classad format, ie [] around the ad and ; between attributes
 };
+
+#define PP_IS_LONGish(pp) ((pp) >= PP_LONG && (pp) <= PP_NEWCLASSAD)
 
 
 // display modes for condor_status
@@ -60,10 +64,12 @@ enum {
 	SDO_NotSet,			//  MODE_NOTSET,
 	SDO_Startd,			//  MODE_STARTD_NORMAL,
 	SDO_Startd_Avail,	//  MODE_STARTD_AVAIL,
-	SDO_Startd_Run,		//  MODE_STARTD_RUN,
+	SDO_Startd_Claimed,	//  MODE_STARTD_RUN,
 	SDO_Startd_Cod,		//  MODE_STARTD_COD,
 	SDO_Quill,			//  MODE_QUILL_NORMAL,
 	SDO_Schedd,			//  MODE_SCHEDD_NORMAL,
+	SDO_Schedd_Data,	//  MODE_SCHEDD_DATA,
+	SDO_Schedd_Run,		//  MODE_SCHEDD_RUN,
 	SDO_Submitters,		//  MODE_SCHEDD_SUBMITTORS,
 	SDO_Master,			//  MODE_MASTER_NORMAL,
 	SDO_Collector,		//  MODE_COLLECTOR_NORMAL,

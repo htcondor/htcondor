@@ -100,6 +100,7 @@ if "%~2"=="VC14" (
         set VS_GEN="Visual Studio 14"
     )
 )
+if "%~3"=="x64" set VS_GEN="%VS_GEN:~1,-1% Win64"
 echo VS_DIR is now [%VS_DIR%] %VS_GEN%
 set VC_DIR=%VS_DIR%\VC
 set VC_BIN=%VC_DIR%\bin
@@ -186,7 +187,7 @@ set INCLUDE=%BUILD_ROOT%\src\condor_utils
 :: if its a full version number than use it. (we look for the "." after X)
 :: if it's a buildid, get the version number from the cmake files and then append it.
 set BUILDID=%2
-if "%BUILDID:~0,2%"=="VC" set BUILDID=%3
+if "%BUILDID:~0,2%"=="VC" set BUILDID=%4
 if "%BUILDID:~1,1%"=="." (
    set BUILD_VERSION=%BUILDID%
    set BUILDID=
@@ -201,10 +202,13 @@ if NOT "%BUILD_VERSION%"=="" (
 set BUILD_WIN_TAG=
 if "%NMI_PLATFORM%"=="x86_64_Windows10" set BUILD_WIN_TAG=10
 if "%NMI_PLATFORM%"=="x86_64_Windows7" set BUILD_WIN_TAG=7
-if "%2"=="VC9" set BUILD_WIN_TAG=XP
+if "%~2"=="VC9" set BUILD_WIN_TAG=XP
+set BUILD_ARCH_TAG=x86
+if "%~3"=="x64" set BUILD_ARCH_TAG=x64
 @echo BUILDID=%BUILDID%
 @echo BUILD_VERSION=%BUILD_VERSION%
-@echo BUILD_WIN_TAG==%BUILD_WIN_TAG%
+@echo BUILD_WIN_TAG=%BUILD_WIN_TAG%
+@echo BUILD_ARCH_TAG=%BUILD_ARCH_TAG%
 
 @echo ----  build.win.bat ENVIRONMENT --------------------------------
 set
@@ -244,7 +248,7 @@ goto finis
 izip -r build_products.zip * -i *.cmake -i *.txt -i *.htm -i *.map -i *.vcproj -i *.sln -i *.log -i *.stamp* -i param_info* 
 @echo ZIPPING up release directory %BUILD_ROOT%\release_dir
 pushd %BUILD_ROOT%\release_dir
-izip -r ..\condor-%BUILD_VERSION%-Windows%BUILD_WIN_TAG%-x86.zip *
+izip -r ..\condor-%BUILD_VERSION%-Windows%BUILD_WIN_TAG%-%BUILD_ARCH_TAG%.zip *
 dir .
 popd
 goto finis
@@ -267,14 +271,14 @@ goto finis
 :MSI
 :MAKE_MSI
 :NATIVE
-@echo %BUILD_ROOT%\release_dir\etc\WiX\do_wix %BUILD_ROOT%\release_dir %BUILD_ROOT%\condor-%BUILD_VERSION%-Windows%BUILD_WIN_TAG%-x86.msi
+@echo %BUILD_ROOT%\release_dir\etc\WiX\do_wix %BUILD_ROOT%\release_dir %BUILD_ROOT%\condor-%BUILD_VERSION%-Windows%BUILD_WIN_TAG%-%BUILD_ARCH_TAG%.msi %BUILD_ARCH_TAG%
 ::@echo on
 ::dir %BUILD_ROOT%\release_dir
 ::dir %BUILD_ROOT%
 ::@echo off
 :: verify forces ERRORLEVEL to 0
 verify >NUL
-call %BUILD_ROOT%\release_dir\etc\WiX\do_wix.bat %BUILD_ROOT%\release_dir %BUILD_ROOT%\condor-%BUILD_VERSION%-Windows%BUILD_WIN_TAG%-x86.msi
+call %BUILD_ROOT%\release_dir\etc\WiX\do_wix.bat %BUILD_ROOT%\release_dir %BUILD_ROOT%\condor-%BUILD_VERSION%-Windows%BUILD_WIN_TAG%-%BUILD_ARCH_TAG%.msi %BUILD_ARCH_TAG%
 @echo ERRORLEVEL=%ERRORLEVEL%
 :: verify forces ERORLEVEL to 0
 verify >NUL

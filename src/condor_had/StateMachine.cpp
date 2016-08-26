@@ -690,15 +690,26 @@ HADStateMachine::setReplicationDaemonSinfulString( void )
             //continue;
         }
 
-        // The replication daemon will have either a different port number
-        // or a different socket name than we do, so set both so that we
-        // can use the Sinful class to check if the IPs are the same
-        // (because there might be more than one).
-        mySinful.setSharedPortID( param( "REPLICATION_SOCKET_NAME" ) );
+		// We're checking if the replication daemon listed in the position
+		// corresponding to ours in the HAD list refers to the same machine
+		// or not.  We want to end up with 's' having the replication daemon's
+		// shared port ID and port number, while ignoring the shared port
+		// ID and port number in our comparison.  We temporarily set the
+		// replication daemon's shared port ID to our own (to make sure
+		// they match) and set (this sinful's copy of ) our own port number
+		// to the replication daemon's port number (to make sure they match).
+		// If the sinfuls do point to the same address, we change the
+		// replication daemon's socket name to REPLICATION_SOCKET_NAME
+		// (for backwards compatability, we can't just set the replication
+		// daemon's socket name in the replication daemon list).
         if( replicationDaemonIndex == m_selfId ) {
             Sinful s( sinfulAddress );
-			mySinful.setPort( s.getPort() );
+            mySinful.setPort( s.getPort() );
+            s.setSharedPortID( mySinful.getSharedPortID() );
             if( s.valid() && mySinful.addressPointsToMe( s ) ) {
+            	if( s.getSharedPortID() ) {
+            		s.setSharedPortID( param( "REPLICATION_SOCKET_NAME" ) );
+            	}
                 m_replicationDaemonSinfulString = strdup( s.getSinful() );
                 dprintf( D_ALWAYS,
                     "HADStateMachine::setReplicationDaemonSinfulString "

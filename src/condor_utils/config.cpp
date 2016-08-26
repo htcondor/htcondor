@@ -1105,7 +1105,7 @@ int MacroStreamFile::close(MACRO_SET&set, int parsing_return_val)
 	return Close_macro_source(fp, src, set, parsing_return_val);
 }
 
-bool MacroStreamCharSource::open(const char * src_string, MACRO_SOURCE& _src)
+bool MacroStreamCharSource::open(const char * src_string, const MACRO_SOURCE& _src)
 {
 	src = _src;
 	if (input) delete input;
@@ -1895,7 +1895,7 @@ int strjoincasecmp(const char * key, const char * prefix, const char * name, cha
 		while (*k && tolower(*k) == tolower(*p)) { ++k; ++p; }
 		if ( ! *k) { // ran out of key
 			if ( ! *p) return name ? -1 : 0;
-			else return *p;
+			else return -1; // because tolower(*p) > tolower(*k) must be true here..
 		} else if (*p) { // still have prefix, but does not match
 			return tolower(*p) > tolower(*k) ? -1 : 1;
 		} else if (sep) {
@@ -2791,8 +2791,8 @@ const char * lookup_macro(const char * name, MACRO_SET & macro_set, MACRO_EVAL_C
 			const char * attr = name + strlen(ctxx.adname);
 			ExprTree * expr = ctxx.ad->Lookup(attr);
 			if (expr) {
-				if (ExprTreeIsLiteralString(expr, ctxx.buffer)) {
-					lval = ctxx.buffer.c_str();
+				if (ExprTreeIsLiteralString(expr, lval)) {
+					// lval is already the string value
 				} else {
 					lval = ExprTreeToString(expr);
 				}
@@ -3022,7 +3022,7 @@ static const char * evaluate_macro_func (
 				EXCEPT( "$CHOICE() config macro: index %d is out of range!", (int)index );
 			}
 
-			if (tmp2) free(tmp2); tmp2 = NULL;
+			if (tmp2) {free(tmp2);} tmp2 = NULL;
 		}
 		break;
 
@@ -3057,7 +3057,7 @@ static const char * evaluate_macro_func (
 					EXCEPT( "$SUBSTR() macro: %s is invalid start index!", arg );
 				}
 				start_pos = (int)index;
-				if (tmp3) free(tmp3); tmp3 = NULL;
+				if (tmp3) {free(tmp3);} tmp3 = NULL;
 			}
 
 			int sub_len = INT_MAX/2;
@@ -3076,7 +3076,7 @@ static const char * evaluate_macro_func (
 					EXCEPT( "$SUBSTR() macro: %s is invalid length !", arg );
 				}
 				sub_len = (int)index;
-				if (tmp3) free(tmp3); tmp3 = NULL;
+				if (tmp3) {free(tmp3);} tmp3 = NULL;
 			}
 
 			const char * mval = lookup_macro(name, macro_set, ctx);
@@ -3162,7 +3162,7 @@ static const char * evaluate_macro_func (
 				if (fmt && ! strchr(buf, '.')) { strcat(buf, ".0"); } // force it to look like a real
 			}
 
-			if (tmp2) free(tmp2); tmp2 = NULL;
+			if (tmp2) {free(tmp2);} tmp2 = NULL;
 		}
 		break;
 
@@ -3224,7 +3224,7 @@ static const char * evaluate_macro_func (
 				}
 			}
 
-			if (tmp2) free(tmp2); tmp2 = NULL;
+			if (tmp2) {free(tmp2);} tmp2 = NULL;
 		}
 		break;
 
@@ -3277,7 +3277,7 @@ static const char * evaluate_macro_func (
 				if (tmp2) { tvalue = buf = tmp2; tmp2 = NULL; }
 				else { tvalue = ""; }
 			}
-			if (tmp2) free(tmp2); tmp2 = NULL;
+			if (tmp2) { free(tmp2); } tmp2 = NULL;
 		}
 		break;
 

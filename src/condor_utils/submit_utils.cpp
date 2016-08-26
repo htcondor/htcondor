@@ -217,7 +217,7 @@ bool is_required_request_resource(const char * name) {
 }
 
 
-char* allocate_live_default_string(MACRO_SET &set, const condor_params::string_value & Def, int cch)
+condor_params::string_value * allocate_live_default_string(MACRO_SET &set, const condor_params::string_value & Def, int cch)
 {
 	condor_params::string_value * NewDef = (condor_params::string_value*)set.apool.consume(sizeof(condor_params::string_value), sizeof(void*));
 	NewDef->flags = Def.flags;
@@ -232,7 +232,7 @@ char* allocate_live_default_string(MACRO_SET &set, const condor_params::string_v
 	}
 
 	// return the live string
-	return NewDef->psz;
+	return NewDef;
 }
 
 // setup a MACRO_DEFAULTS table for the macro set, we have to re-do this each time we clear
@@ -249,11 +249,11 @@ void SubmitHash::setup_macro_defaults()
 	SubmitMacroSet.defaults->metat = NULL;
 
 	// allocate space for the 'live' macro default string_values and for the strings themselves.
-	LiveNodeString = allocate_live_default_string(SubmitMacroSet, UnliveNodeMacroDef, 24);
-	LiveClusterString = allocate_live_default_string(SubmitMacroSet, UnliveClusterMacroDef, 24);
-	LiveProcessString = allocate_live_default_string(SubmitMacroSet, UnliveProcessMacroDef, 24);
-	LiveRowString = allocate_live_default_string(SubmitMacroSet, UnliveRowMacroDef, 24);
-	LiveStepString = allocate_live_default_string(SubmitMacroSet, UnliveStepMacroDef, 24);
+	LiveNodeString = allocate_live_default_string(SubmitMacroSet, UnliveNodeMacroDef, 24)->psz;
+	LiveClusterString = allocate_live_default_string(SubmitMacroSet, UnliveClusterMacroDef, 24)->psz;
+	LiveProcessString = allocate_live_default_string(SubmitMacroSet, UnliveProcessMacroDef, 24)->psz;
+	LiveRowString = allocate_live_default_string(SubmitMacroSet, UnliveRowMacroDef, 24)->psz;
+	LiveStepString = allocate_live_default_string(SubmitMacroSet, UnliveStepMacroDef, 24)->psz;
 }
 
 
@@ -1230,7 +1230,7 @@ int SubmitHash::check_open(_submit_file_role role,  const char *name, int flags 
 	strPathname = full_path(name);
 
 	// is the last character a path separator?
-	int namelen = strlen(name);
+	int namelen = (int)strlen(name);
 	bool trailing_slash = namelen > 0 && IS_ANY_DIR_DELIM_CHAR(name[namelen-1]);
 
 		/* This is only for MPI.  We test for our string that
@@ -3319,7 +3319,7 @@ int SubmitHash::SetGridParams()
 		free( tmp );
 	}
 
-	unsigned prefixLength = strlen( SUBMIT_KEY_EC2ParamPrefix );
+	unsigned int prefixLength = (unsigned int)strlen( SUBMIT_KEY_EC2ParamPrefix );
 	HASHITER smsIter = hash_iter_begin( SubmitMacroSet );
 	for( ; ! hash_iter_done( smsIter ); hash_iter_next( smsIter ) ) {
 		const char * key = hash_iter_key( smsIter );
@@ -3381,7 +3381,7 @@ int SubmitHash::SetGridParams()
 	}
 
 	HASHITER it = hash_iter_begin(SubmitMacroSet);
-	int prefix_len = strlen(ATTR_EC2_TAG_PREFIX);
+	int prefix_len = (int)strlen(ATTR_EC2_TAG_PREFIX);
 	for (;!hash_iter_done(it); hash_iter_next(it)) {
 		const char *key = hash_iter_key(it);
 		const char *name = NULL;
@@ -3532,6 +3532,15 @@ int SubmitHash::SetGridParams()
 				full_path(tmp) );
 		free( tmp );
 		InsertJobExpr( buffer.Value() );
+	}
+
+	// GcePreemptible is not a necessary parameter
+	bool exists = false;
+	bool bool_val = submit_param_bool( SUBMIT_KEY_GcePreemptible, ATTR_GCE_PREEMPTIBLE, false, &exists );
+	if( exists ) {
+		buffer.formatstr( "%s = %s", ATTR_GCE_PREEMPTIBLE, bool_val ? "True" : "False" );
+		InsertJobExpr( buffer.Value() );
+		free( tmp );
 	}
 
 
@@ -4118,7 +4127,7 @@ static int CondorUniverseNumberEx(const char * univ)
 int SubmitHash::SetRemoteAttrs()
 {
 	RETURN_IF_ABORT();
-	const int REMOTE_PREFIX_LEN = strlen(SUBMIT_KEY_REMOTE_PREFIX);
+	const int REMOTE_PREFIX_LEN = (int)strlen(SUBMIT_KEY_REMOTE_PREFIX);
 
 	struct ExprItem {
 		const char * submit_expr;
@@ -7387,7 +7396,7 @@ int SubmitForeachArgs::parse_queue_args (
 		char * plist = p;
 		bool one_line_list = false;
 		if (*plist == '(') {
-			int cch = strlen(plist);
+			int cch = (int)strlen(plist);
 			if (plist[cch-1] == ')') { plist[cch-1] = 0; ++plist; one_line_list = true; }
 		}
 		if (*plist == '(') {

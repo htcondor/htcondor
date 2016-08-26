@@ -1367,7 +1367,6 @@ handle_config_val( Service*, int idCmd, Stream* stream )
 	if (idCmd == DC_CONFIG_VAL) {
 		int retval = TRUE; // assume success
 
-#if 1
 		MyString name_used, value;
 		const char * def_val = NULL;
 		const MACRO_META * pmet = NULL;
@@ -1392,7 +1391,7 @@ handle_config_val( Service*, int idCmd, Stream* stream )
 				dprintf( D_ALWAYS, "Can't send reply for DC_CONFIG_VAL\n" );
 				retval = FALSE;
 			}
-			if (tmp) free(tmp); tmp = NULL;
+			if (tmp) {free(tmp);} tmp = NULL;
 
 			name_used.upper_case();
 			name_used += " = ";
@@ -1413,56 +1412,6 @@ handle_config_val( Service*, int idCmd, Stream* stream )
 				dprintf( D_ALWAYS, "Can't send use count reply for DC_CONFIG_VAL\n" );
 			}
 		}
-#else
-		MyString value, name_used, filename;
-		int line_number, use_count, ref_count;
-		const char * subsys = get_mySubSystem()->getName();
-		const char * local_name  = get_mySubSystem()->getLocalName();
-		if (subsys && !subsys[0]) subsys = NULL;
-		if (local_name && !local_name[0]) local_name = NULL;
-		const char * def_val = NULL;
-		const char * val = param_get_info(param_name, subsys, local_name,
-							&def_val, name_used, use_count, ref_count, filename, line_number);
-		if (val || ! filename.empty()) {
-			dprintf(D_CONFIG | D_FULLDEBUG, "DC_CONFIG_VAL(%s) def: %s = %s\n", param_name, name_used.Value(), def_val ? def_val : "NULL");
-
-			if (val) { tmp = expand_param(val, local_name, subsys, 0); } else { tmp = NULL; }
-			if( ! stream->code(tmp) ) {
-				dprintf( D_ALWAYS, "Can't send reply for DC_CONFIG_VAL\n" );
-				retval = FALSE;
-			}
-			if (tmp) free(tmp); tmp = NULL;
-
-			name_used.upper_case();
-			name_used += " = ";
-			if (val) name_used += val;
-			if ( ! stream->code(name_used)) {
-				dprintf( D_ALWAYS, "Can't send raw reply for DC_CONFIG_VAL\n" );
-			}
-			if (line_number >= 0)
-				filename.formatstr_cat(", line %d", line_number);
-			if ( ! stream->code(filename)) {
-				dprintf( D_ALWAYS, "Can't send filename reply for DC_CONFIG_VAL\n" );
-			}
-			if ( ! stream->code(const_cast<char*&>(def_val))) {
-				dprintf( D_ALWAYS, "Can't send default reply for DC_CONFIG_VAL\n" );
-			}
-			if (ref_count) { value.formatstr("%d / %d", use_count, ref_count);
-			} else  { value.formatstr("%d", use_count); }
-			if ( ! stream->code(value)) {
-				dprintf( D_ALWAYS, "Can't send use count reply for DC_CONFIG_VAL\n" );
-			}
-		} else {
-			dprintf( D_FULLDEBUG,
-					 "Got DC_CONFIG_VAL request for unknown parameter (%s)\n",
-					 param_name );
-			// send a NULL to indicate undefined. (val is NULL here)
-			if( ! stream->code(const_cast<char*&>(val)) ) {
-				dprintf( D_ALWAYS, "Can't send reply for DC_CONFIG_VAL\n" );
-				retval = FALSE;
-			}
-		}
-#endif
 		if( ! stream->end_of_message() ) {
 			dprintf( D_ALWAYS, "Can't send end of message for DC_CONFIG_VAL\n" );
 			retval = FALSE;

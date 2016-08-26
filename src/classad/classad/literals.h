@@ -116,6 +116,11 @@ class Literal : public ExprTree
 		 */
 		void GetValue( Value& v ) const;
 		
+		/** Special case fetch of the c_str() within a literal string
+		 *  to avoid copying it into a new literal
+		 */
+		bool GetStringValue( const char * & cstr ) const;
+
 		/* Takes the number of seconds since the epoch as argument - epochsecs, 
 		 *and returns the timezone offset(relative to GMT) in the currect locality
 		 */

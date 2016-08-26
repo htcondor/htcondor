@@ -3904,7 +3904,7 @@ FileTransfer::addOutputFile( const char* filename )
 }
 
 bool
-FileTransfer::addFileToExeptionList( const char* filename )
+FileTransfer::addFileToExceptionList( const char* filename )
 {
 	if ( !ExceptionFiles ) {
 		ExceptionFiles = new StringList;

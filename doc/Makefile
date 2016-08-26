@@ -140,7 +140,11 @@ user-man/dagman-diamond.eps: user-man/dagman-diamond.fig
 	rm -f $@
 	fig2dev -L eps -m .6 $< > $@
 
-figures: admin-man/states.eps admin-man/activities.eps admin-man/pool-arch.eps user-man/dagman-diamond.eps 
+user-man/dagman-connect.eps: user-man/dagman-connect.fig
+	rm -f $@
+	fig2dev -L eps -m .6 $< > $@
+
+figures: admin-man/states.eps admin-man/activities.eps admin-man/pool-arch.eps user-man/dagman-diamond.eps user-man/dagman-connect.eps
 
 
 $(TARGETDIR):

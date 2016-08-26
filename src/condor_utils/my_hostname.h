@@ -27,7 +27,8 @@ extern	const char*	my_ip_string( void );
 #include <string>
 #include <set>
 
-void init_network_interfaces(int config_done);
+class CondorError;
+bool init_network_interfaces( CondorError * errorStack );
 
 // If the specified attribute name is recognized as an attribute used
 // to publish a daemon IP address, this function replaces any

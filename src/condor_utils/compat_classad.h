@@ -77,6 +77,19 @@ int sPrintAd( MyString &output, const classad::ClassAd &ad, bool exclude_private
 	*/
 int sPrintAd( std::string &output, const classad::ClassAd &ad, bool exclude_private = false, StringList *attr_white_list = NULL );
 
+	/** Get a sorted list of attributes that are in the given ad, and also match the given whitelist (if any)
+		@param attrs the set of attrs to insert into. This is set is NOT cleared first.
+		@return TRUE
+	*/
+int sGetAdAttrs( classad::References &attrs, const classad::ClassAd &ad, bool exclude_private = false, StringList *attr_white_list = NULL, bool ignore_parent = false );
+
+	/** Format the given attributes from the ClassAd as an old ClassAd into the given string
+		@param output The std::string to write into
+		@return TRUE
+	*/
+int sPrintAdAttrs( std::string &output, const classad::ClassAd &ad, const classad::References & attrs );
+int sPrintAdAttrs( MyString &output, const classad::ClassAd &ad, const classad::References & attrs );
+
 class ClassAd : public classad::ClassAd
 {
  public:
@@ -430,6 +443,10 @@ class ClassAdFileParseHelper
 	virtual int PreParse(std::string & line, ClassAd & ad, FILE* file)=0;
 	// return 0 to skip and continue, 1 to re-parse line, 2 to quit parsing with success, -1 to abort parsing.
 	virtual int OnParseError(std::string & line, ClassAd & ad, FILE* FILE)=0;
+	// return non-zero if new parser, 0 if old (line oriented) parser, if parse type is auto
+	// it may return 0 and also set detected_long to indicate that errmsg should be parsed
+	// as a line from the file. we do this to avoid having to backtrack the FILE*
+	virtual int NewParser(ClassAd & ad, FILE* file, bool & detected_long, std::string & errmsg)=0;
 };
 
 // this implements a classad file parse helper that
@@ -440,15 +457,108 @@ class CondorClassAdFileParseHelper : public ClassAdFileParseHelper
  public:
 	// Some compilers whine when you have virtual methods but not an
 	// explicit virtual destructor
-	virtual ~CondorClassAdFileParseHelper() {}
+	virtual ~CondorClassAdFileParseHelper();
 	// return 0 to skip (is_comment), 1 to parse line, 2 for end-of-classad, -1 for abort
 	virtual int PreParse(std::string & line, ClassAd & ad, FILE* file);
 	// return 0 to skip and continue, 1 to re-parse line, 2 to quit parsing with success, -1 to abort parsing.
 	virtual int OnParseError(std::string & line, ClassAd & ad, FILE* FILE);
-	CondorClassAdFileParseHelper(std::string delim) : ad_delimitor(delim) {};
+	// return non-zero if new parser, 0 if old (line oriented) parser, if parse type is auto
+	// it may return 0 and also set detected_long to indicate that errmsg should be parsed
+	// as a line from the file. we do this to avoid having to backtrack the FILE*
+	virtual int NewParser(ClassAd & ad, FILE* file, bool & detected_long, std::string & errmsg);
+
+	enum ParseType {
+		Parse_long=0, // file is in the traditional -long form, possibly with a delimiter line between ads
+		Parse_xml,    // file is in -xml form
+		Parse_json,   // file is in -json form, usually begins with a line of "[" and has a with a line of "," between ads
+		Parse_new,    // file is in new classads form, may begin with a line of "{" and have a line of "," between ads, or may just begin with a line of [
+		Parse_auto,   // parse helper should figure out what the form is
+	};
+
+	CondorClassAdFileParseHelper(std::string delim, ParseType typ=Parse_long) 
+		: ad_delimitor(delim), parse_type(typ), new_parser(NULL), inside_list(false) {};
+	ParseType getParseType() { return parse_type; }
+	bool configure(const char * delim, ParseType typ) {
+		if (new_parser) return false;
+		if (delim) { ad_delimitor = delim; }
+		parse_type = typ;
+		inside_list = false;
+		return true;
+	}
  private:
+	CondorClassAdFileParseHelper(const CondorClassAdFileParseHelper & that); // no copy construction
+	CondorClassAdFileParseHelper & operator=(const CondorClassAdFileParseHelper & that); // no assignment
+
 	std::string ad_delimitor;
+	ParseType parse_type;
+	void*     new_parser; // a class whose type depends on the value of parse_type.
+	bool      inside_list;
 };
+
+// This implements a generic classad FILE* reader that can be used as an iterator
+//
+class CondorClassAdFileIterator
+{
+public:
+	CondorClassAdFileIterator() 
+		: parse_help(NULL)
+		, file(NULL)
+		, error(0), at_eof(false)
+		, close_file_at_eof(false)
+		, free_parse_help(false)
+	{}
+	~CondorClassAdFileIterator() {
+		if (file && close_file_at_eof) { fclose(file); file = NULL; }
+		if (parse_help && free_parse_help) { delete parse_help; parse_help = NULL; }
+	}
+
+	bool begin(FILE* fh, bool close_when_done, CondorClassAdFileParseHelper & helper);
+	bool begin(FILE* fh, bool close_when_done, CondorClassAdFileParseHelper::ParseType type);
+	int  next(ClassAd & out, bool merge=false);
+	ClassAd * next(classad::ExprTree * constraint);
+	CondorClassAdFileParseHelper::ParseType getParseType();
+
+protected:
+	CondorClassAdFileParseHelper * parse_help;
+	FILE* file;
+	int  error;
+	bool at_eof;
+	bool close_file_at_eof;
+	bool free_parse_help;
+};
+
+
+// This implements a generic classad list writer. This class keeps track of
+// whether it has written any non-empty ads, and writes the appropriate xml/list header
+// before the first ad. When writeFooter or appendFooter is called, the appropriate footer
+// is written only if a header was previously written.
+class CondorClassAdListWriter
+{
+public:
+	CondorClassAdListWriter(CondorClassAdFileParseHelper::ParseType typ=CondorClassAdFileParseHelper::Parse_long)
+		: out_format(typ), cNonEmptyOutputAds(0), wrote_header(false), needs_footer(false) {}
+
+	CondorClassAdFileParseHelper::ParseType setFormat(CondorClassAdFileParseHelper::ParseType typ);
+	CondorClassAdFileParseHelper::ParseType autoSetFormat(CondorClassAdFileParseHelper & parse_help);
+
+	// these return < 0 on failure, 0 if nothing written, 1 if non-empty ad is written.
+	int writeAd(const ClassAd & ad, FILE * out, StringList * whitelist=NULL, bool hash_order=false);
+	int appendAd(const ClassAd & ad, std::string & buf, StringList * whitelist=NULL, bool hash_order=false);
+	// write the footer if one is needed. 
+	int writeFooter(FILE* out, bool xml_always_write_header_footer=true);
+	int appendFooter(std::string & buf, bool xml_always_write_header_footer=true);
+
+	int getNumAds() { return cNonEmptyOutputAds; } // returns number of ads in output list.
+	bool needsFooter() { return needs_footer; } // returns true if a header was previously written and footer has not yet been.
+
+protected:
+	std::string buffer; // internal buffer used by writeAd & writeFooter
+	CondorClassAdFileParseHelper::ParseType out_format;
+	int cNonEmptyOutputAds; // count of number of non-empty ads written, used to trigger header/footer
+	bool wrote_header;      // keep track of whether header/footer have been written
+	bool needs_footer;
+};
+
 
 /** Is this value valid for being written to the log?
  *  The value is a RHS of an expression. Only '\n' or '\r' are invalid.

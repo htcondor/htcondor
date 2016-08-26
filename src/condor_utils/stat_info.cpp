@@ -275,7 +275,7 @@ StatInfo::make_dirpath( const char* dir )
 	ASSERT(dir);
 
 	char* rval;
-	int dirlen = strlen(dir);
+	int dirlen = (int)strlen(dir);
 	if( dir[dirlen - 1] == DIR_DELIM_CHAR ) {
 			// We've already got the delim, just return a copy of what
 			// we were passed in:

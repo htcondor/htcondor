@@ -2184,6 +2184,7 @@ const char * Sock::serializeMdInfo(const char * buf)
 	return ptmp;
 }
 
+
 char * Sock::serialize() const
 {
 	// here we want to save our state into a buffer
@@ -2204,14 +2205,25 @@ char * Sock::serialize() const
 		}
 	}
 
-	char * outbuf = new char[500];
-    if (outbuf) {
-        memset(outbuf, 0, 500);
-        sprintf(outbuf,"%u*%d*%d*%d*%lu*%lu*%s*%s*",_sock,_state,_timeout,triedAuthentication(),(unsigned long)fqu_len,(unsigned long)verstring_len,_fqu ? _fqu : "",verstring ? verstring : "");
-    }
-    else {
-        dprintf(D_ALWAYS, "Out of memory!\n");
-    }
+	MyString out;
+	char * outbuf = NULL;
+	// must overallocate because other people will append to this buffer!!!
+	out.reserve(500); //(int)(verstring_len+fqu_len+8+(6*10)));
+	if (out.serialize_int(_sock)                 && out.serialize_sep("*") &&
+		out.serialize_int((int)_state)           && out.serialize_sep("*") &&
+		out.serialize_int(_timeout)              && out.serialize_sep("*") &&
+		out.serialize_int(triedAuthentication()) && out.serialize_sep("*") &&
+		out.serialize_int(fqu_len)               && out.serialize_sep("*") &&
+		out.serialize_int(verstring_len)         && out.serialize_sep("*") &&
+		out.serialize_string(_fqu)               && out.serialize_sep("*") &&
+		out.serialize_string(verstring)          && out.serialize_sep("*"))
+	{
+		outbuf = out.detach_buffer();
+	}
+	else 
+	{
+		dprintf(D_ALWAYS, "Sock::serialize failed - Out of memory?\n");
+	}
 	free( verstring );
 	return( outbuf );
 }
@@ -2227,58 +2239,48 @@ Sock::close_serialized_socket(char const *buf)
 	::close(passed_sock);
 }
 
+
 const char * Sock::serialize(const char *buf)
 {
-	int i;
 	SOCKET passed_sock;
 	size_t fqulen = 0;
 	size_t verstring_len = 0;
-	int pos;
 	int tried_authentication = 0;
 
 	ASSERT(buf);
 
 	// here we want to restore our state from the incoming buffer
-	i = sscanf(buf,"%u*%d*%d*%d*%lu*%lu*%n",&passed_sock,(int*)&_state,&_timeout,&tried_authentication,(unsigned long *)&fqulen,(unsigned long *)&verstring_len,&pos);
-	if (i!=6) {
-		EXCEPT("Failed to parse serialized socket information (%d,%d): '%s'",i,pos,buf);
+	YourStringDeserializer in(buf);
+	if ( ! in.deserialize_int(&passed_sock)          || ! in.deserialize_sep("*") ||
+		 ! in.deserialize_int((int*)&_state)         || ! in.deserialize_sep("*") || // int* cast because std::numeric_limits<sock_state>::max() returns 0
+		 ! in.deserialize_int(&_timeout)             || ! in.deserialize_sep("*") ||
+		 ! in.deserialize_int(&tried_authentication) || ! in.deserialize_sep("*") ||
+		 ! in.deserialize_int(&fqulen)               || ! in.deserialize_sep("*") ||
+		 ! in.deserialize_int(&verstring_len)        || ! in.deserialize_sep("*")
+		 )
+	{
+		EXCEPT("Failed to parse serialized socket information at offset %d: '%s'",(int)in.offset(),buf);
 	}
-	buf += pos;
 
 	setTriedAuthentication(tried_authentication);
 
-	char *fqubuf = (char *)malloc(fqulen+1);
-	ASSERT(fqubuf);
-	memset(fqubuf,0,fqulen+1);
-	strncpy(fqubuf,buf,fqulen);
-	setFullyQualifiedUser(fqubuf);
-	free(fqubuf);
-	buf += fqulen;
-	if( *buf != '*' ) {
-		EXCEPT("Failed to parse serialized socket fqu (%lu): '%s'",(unsigned long)fqulen,buf);
+	MyString str;
+	if ( ! in.deserialize_string(str, "*") || ! in.deserialize_sep("*")) {
+		EXCEPT("Failed to parse serialized socket FullyQualifiedUser at offset %d: '%s'",(int)in.offset(),buf);
 	}
-	buf++;
+	setFullyQualifiedUser(str.c_str());
 
-	char *verstring = (char *)malloc(verstring_len+1);
-	ASSERT(verstring);
-	memset(verstring,0,verstring_len+1);
-	strncpy(verstring,buf,verstring_len);
-	verstring[verstring_len] = 0;
-	if( verstring_len ) {
-			// daemoncore does not like spaces in our serialized string
-		char *s;
-		while( (s=strchr(verstring,'_')) ) {
-			*s = ' ';
-		}
-		CondorVersionInfo peer_version(verstring);
+	str.clear();
+	if ( ! in.deserialize_string(str, "*") || ! in.deserialize_sep("*")) {
+		EXCEPT("Failed to parse serialized peer version string at offset %d: '%s'",(int)in.offset(),buf);
+	}
+	if ( ! str.empty()) {
+		// daemoncore does not like spaces in our serialized string so they were changed to _
+		// we need to put them back now.
+		str.replaceString("_"," ");
+		CondorVersionInfo peer_version(str.c_str());
 		set_peer_version( &peer_version );
 	}
-	free( verstring );
-	buf += verstring_len;
-	if( *buf != '*' ) {
-		EXCEPT("Failed to parse serialized peer version string (%lu): '%s'",(unsigned long)verstring_len,buf);
-	}
-	buf++;
 
 	// replace _sock with the one from the buffer _only_ if _sock
 	// is currently invalid.  if it is not invalid, it has already
@@ -2313,7 +2315,8 @@ const char * Sock::serialize(const char *buf)
 	// setsockopt() and/or ioctl() is restored.
 	timeout_no_timeout_multiplier(_timeout);
 
-	return buf;
+	// return the point at which we stopped deserializing
+	return in.next_pos();
 }
 
 void

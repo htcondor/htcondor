@@ -169,13 +169,14 @@ class Dag {
 
     /// Add a job to the collection of jobs managed by this Dag.
     bool Add( Job& job );
+
     /** Specify a dependency between two jobs. The child job will only
         run after the parent job has finished.
         @param parent The parent job
         @param child The child job (depends on the parent)
         @return true: successful, false: failure
     */
-    bool AddDependency (Job * parent, Job * child);
+    static bool AddDependency (Job * parent, Job * child);
 
 	/** Run waiting/deferred scripts that are ready to run.  Note: scripts
 	    are also limited by halt status and maxpre/maxpost.
@@ -706,7 +707,26 @@ class Dag {
 	// After the nodes in the dag have been made, we take our DIR setting,
 	// and if it isn't ".", we prefix it to the directory setting for each
 	// node, unless it is an absolute path, in which case we ignore it.
-	void PropogateDirectoryToAllNodes(void);
+	void PropagateDirectoryToAllNodes(void);
+
+	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	// Splice connections.
+
+	/** Set a pin in or pin out connection for this DAG.
+		@param isPinIn: true if this is for a pin in, false for pin out
+		@param nodeName: the name of the node we're connecting
+		@param pinNum: the number of the pin we're connecting
+		@return: true on success, false otherwise
+	*/
+	bool SetPinInOut( bool isPinIn, const char *nodeName, int pinNum );
+
+	/** Connect two splices via pin outs/pin ins
+		@param parentSplice: the splice connected via its pin outs
+		@param childSplice: the splice connected via its pin ins
+		@return: true on success, false otherwise
+	*/
+	static bool ConnectSplices( Dag *parentSplice, Dag *childSplice );
+	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	/** Set the maximum number of job holds before a node is declared
 		a failure.
@@ -717,9 +737,16 @@ class Dag {
 	JobstateLog &GetJobstateLog() { return _jobstateLog; }
 	bool GetPostRun() const { return _alwaysRunPost; }
 	void SetPostRun(bool postRun) { _alwaysRunPost = postRun; }	
-	void SetDefaultPriorities();
-	void SetDefaultPriority(const int prio) { _defaultPriority = prio; }
-	int GetDefaultPriority() const { return _defaultPriority; }
+
+		// Set the overall priority for this DAG (set on command
+		// line (could be from higher-level DAG) or via config).
+	void SetDagPriority(const int prio) { _dagPriority = prio; }
+
+		// Get this DAG's overall priority.
+	int GetDagPriority() const { return _dagPriority; }
+		
+		// Set priorities for the individual nodes within this DAG.
+	void SetNodePriorities();
 
 	/** Determine whether the DAG is currently halted (waiting for
 		existing jobs to finish but not submitting any new ones).
@@ -1190,8 +1217,8 @@ private:
 	// Defaults to true
 	bool _alwaysRunPost;
 
-		// The default priority for nodes in this DAG. (defaults to 0)
-	int _defaultPriority;
+		// The priority for this DAG. (defaults to 0)
+	int _dagPriority;
 
 		// Whether the DAG is currently halted.
 	bool _dagIsHalted;
@@ -1207,6 +1234,59 @@ private:
 	
 		// Object to deal with reporting DAGMan metrics (to Pegasus).
 	DagmanMetrics *_metrics;
+
+	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	// Splice connections.
+
+		// This is the list of nodes connected to a given pin (in or out).
+	typedef std::vector<Job *> PinNodes;
+
+		// This is a list of pin ins or pin outs.
+	typedef std::vector<PinNodes *> PinList;
+
+		// The pin ins for this DAG.
+	PinList _pinIns;
+
+		// The pin outs for this DAG.
+	PinList _pinOuts;
+
+	/** Get the list of nodes connected to a pin in or pin out
+		@param isPinIn: true if this is for a pin in, false for pin out
+		@param pinNum: the number of the pin for which we're getting
+			nodes
+		@return: a list of nodes connected to this pin
+	*/
+	const PinNodes *GetPinInOut( bool isPinIn, int pinNum ) const;
+
+	/** Get the number of pin ins or pin outs we have in this DAG
+		@param isPinIn: true if this is for pin ins, false for pin outs
+		@return: the number of pin ins or pin outs
+	*/
+	int GetPinCount( bool isPinIn );
+
+	/** Set a pin in or pin out connection for this DAG.
+		@param pinList: the pin list to update
+		@param node: the node to connect
+		@param pinNum: the number of the pin we're connecting
+		@return: true on success, false otherwise
+	*/
+	bool SetPinInOut( PinList &pinList, Job *node, int pinNum );
+
+	/** Get the list of nodes connected to a pin in or pin out
+		@param pinList: the pin list to access
+		@param inOutStr: "in" or "out" as appropriate
+		@param pinNum: the number of the pin for which we're getting
+			nodes
+		@return: a list of nodes connected to this pin
+	*/
+	const static PinNodes *GetPinInOut( const PinList &pinList,
+				const char *inOutStr, int pinNum );
+
+	/** Delete memory allocated as part of this pin list
+		@param pinList: the pin list to delete
+	*/
+	static void DeletePinList( PinList &pinList );
+	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 };
 
 #endif /* #ifndef DAG_H */

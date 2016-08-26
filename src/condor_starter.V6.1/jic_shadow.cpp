@@ -448,15 +448,15 @@ JICShadow::transferOutput( bool &transient_failure )
 			// the ft's list (i.e. a renamed Windows script)
 		m_removed_output_files.rewind();
 		while ((filename = m_removed_output_files.next()) != NULL) {
-			filetrans->addFileToExeptionList(filename);
+			filetrans->addFileToExceptionList(filename);
 		}
 
 		// remove the job and machine classad files from the
 		// ft list
-		filetrans->addFileToExeptionList(JOB_AD_FILENAME);
-		filetrans->addFileToExeptionList(MACHINE_AD_FILENAME);
+		filetrans->addFileToExceptionList(JOB_AD_FILENAME);
+		filetrans->addFileToExceptionList(MACHINE_AD_FILENAME);
 		if (m_wrote_chirp_config) {
-			filetrans->addFileToExeptionList(CHIRP_CONFIG_FILENAME);
+			filetrans->addFileToExceptionList(CHIRP_CONFIG_FILENAME);
 		}
 	
 			// true if job exited on its own or if we are set to not spool

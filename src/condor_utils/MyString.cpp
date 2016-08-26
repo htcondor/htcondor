@@ -25,6 +25,7 @@
 #include "condor_random_num.h"
 #include "strupr.h"
 #include "simplelist.h"
+#include <limits>
 
 /*--------------------------------------------------------------------
  *
@@ -130,15 +131,15 @@ operator=(const MyString& S)
 MyString& MyString::
 operator=(const std::string& S) 
 {
-	assign_str(S.c_str(), S.length());
+	assign_str(S.c_str(), (int)S.length());
     return *this;
 }
 
 MyString& 
 MyString::operator=( const char *s ) 
 {
-	int s_len = s ? strlen(s) : 0;
-	assign_str(s, s_len);
+	size_t s_len = s ? strlen(s) : 0;
+	assign_str(s, (int)s_len);
     return *this;
 }
 
@@ -243,7 +244,7 @@ MyString&
 MyString::operator+=(const std::string& S) 
 {
 	
-    append_str( S.c_str(), S.length() );
+    append_str( S.c_str(), (int)S.length() );
     return *this;
 }
 
@@ -254,7 +255,7 @@ MyString::operator+=(const char *s)
     if( !s || *s == '\0' ) {
 		return *this;
 	}
-    append_str( s, strlen( s ) );
+    append_str( s, (int)strlen( s ) );
     return *this;
 }
 
@@ -332,7 +333,7 @@ MyString::operator+=( int i )
 	const int bufLen = 64;
 	char tmp[bufLen];
 	::snprintf( tmp, bufLen, "%d", i );
-    int s_len = strlen( tmp );
+    int s_len = (int)strlen( tmp );
 	ASSERT(s_len < bufLen);
 	append_str( tmp, s_len );
     return *this;
@@ -345,7 +346,7 @@ MyString::operator+=( unsigned int ui )
 	const int bufLen = 64;
 	char tmp[bufLen];
 	::snprintf( tmp, bufLen, "%u", ui );
-	int s_len = strlen( tmp );
+	int s_len = (int)strlen( tmp );
 	ASSERT(s_len < bufLen);
 	append_str( tmp, s_len );
 	return *this;
@@ -358,7 +359,7 @@ MyString::operator+=( long l )
 	const int bufLen = 64;
 	char tmp[bufLen];
 	::snprintf( tmp, bufLen, "%ld", l );
-	int s_len = strlen( tmp );
+	int s_len = (int)strlen( tmp );
 	ASSERT(s_len < bufLen);
 	append_str( tmp, s_len );
 	return *this;
@@ -368,13 +369,13 @@ MyString::operator+=( long l )
 MyString&
 MyString::operator+=( long long l )
 {
-        const int bufLen = 64;
-        char tmp[bufLen];
-        ::snprintf( tmp, bufLen, "%lld", l );
-        int s_len = strlen( tmp );
-        ASSERT(s_len < bufLen);
-        append_str( tmp, s_len );
-        return *this;
+	const int bufLen = 64;
+	char tmp[bufLen];
+	::snprintf( tmp, bufLen, "%lld", l );
+	int s_len = (int)strlen( tmp );
+	ASSERT(s_len < bufLen);
+	append_str( tmp, s_len );
+	return *this;
 }
 
 
@@ -384,13 +385,166 @@ MyString::operator+=( double d )
 	const int bufLen = 128;
 	char tmp[bufLen];
 	::snprintf( tmp, bufLen, "%f", d );
-    int s_len = strlen( tmp );
+	int s_len = (int)strlen( tmp );
 	ASSERT(s_len < bufLen);
 	append_str( tmp, s_len );
-    return *this;
+	return *this;
 }
 
+
+// ----------------------------------------
+//           Serialization helpers
+// ----------------------------------------
+// (see YourStringDeserializer for corresponding deserialization)
+
+// append an integer for serialization
+template <class T> bool MyString::serialize_int(T val) {
+	char buf[65];
+	if (std::numeric_limits<T>::is_signed) {
+		::snprintf(buf, COUNTOF(buf), "%lld", (long long)val);
+	} else {
+		::snprintf(buf, COUNTOF(buf), "%llu", (unsigned long long)val);
+	}
+	return serialize_string(buf);
+}
+
+// bool specialization of serialize_int
+template <> bool MyString::serialize_int<bool>(bool val) { append_str(val ? "1" : "0", 1); return true; }
+
+#ifdef WIN32
+#define strtoull _strtoui64
+#pragma push_macro("min")
+#pragma push_macro("max")
+#undef min
+#undef max
+#endif
+
+// deserialize an int into the given value, and advance the deserialization pointer.
+// returns true if a valid in-range int was found at the current deserialize position
+// if true is returned, the internal buffer pointer is advanced past the parsed int
+// returns false and does NOT advance the deserialization pointer if there is no int
+// at the current position, or the int is out of range.
+template <class T> bool YourStringDeserializer::deserialize_int(T* val)
+{
+	if ( ! m_p) m_p = m_str;
+	if ( ! m_p) return false;
+
+	char * endp = const_cast<char*>(m_p);
+	if (std::numeric_limits<T>::is_signed) {
+		long long tmp;
+		tmp = strtoll(m_p, &endp, 10);
+		if (tmp < (long long)std::numeric_limits<T>::min() || tmp > (long long)std::numeric_limits<T>::max()) return false;
+		if (endp == m_p) return false;
+		*val = (T)tmp;
+	} else {
+		unsigned long long tmp;
+		tmp = strtoull(m_p, &endp, 10);
+		if (tmp > (unsigned long long)std::numeric_limits<T>::max()) return false;
+		if (endp == m_p) return false;
+		*val = (T)tmp;
+	}
+	m_p = endp;
+	return true;
+}
+// bool specialization for deserialize_int
+template <> bool YourStringDeserializer::deserialize_int<bool>(bool* val)
+{
+	if ( ! m_p) m_p = m_str;
+	if ( ! m_p) return false;
+	if (*m_p == '0') { ++m_p; *val = false; return true; }
+	if (*m_p == '1') { ++m_p; *val = true; return true; }
+	return false;
+}
+
+// check for the given separator at the current position and advance past it if found
+// returns true if the current position has the given separator
+bool YourStringDeserializer::deserialize_sep(const char * sep)
+{
+	if ( ! m_p) m_p = m_str;
+	if ( ! m_p) return false;
+	const char * p1 = m_p;
+	const char * p2 = sep;
+	while (*p2 && (*p1 == *p2)) { ++p1; ++p2; }
+	if (!*p2) { m_p = p1; return true; }
+	return false;
+}
+
+// return pointer and length of the string between the current deserialize position
+// and the next instance of the given separator character.
+// returns true if the separator was found, false if not.
+// if separator occurrs at current position, returned length will be 0.
+bool YourStringDeserializer::deserialize_string(const char *& start, size_t & len, const char * sep)
+{
+	if ( ! m_p) m_p = m_str;
+	if ( ! m_p) return false;
+	const char * p = strstr(m_p, sep);
+	if (p) { start = m_p; len = (p - m_p); m_p = p; return true; }
+	return false;
+}
+
+// Copy a string from the current deserialize position to the next separator into the given MyString
+// returns true if the separator was found, false if not.
+// if return value is true, the val will be set to the string, if false val is unchanged.
+bool YourStringDeserializer::deserialize_string(MyString & val, const char * sep)
+{
+	const char * p; size_t len;
+	if ( ! deserialize_string(p, len, sep)) return false;
+	val.set(p, (int)len);
+	return true;
+}
+
+// force instantiation of the serialize and deserialize functions that users of condor_utils will need
+template bool MyString::serialize_int<int>(int val);
+template bool MyString::serialize_int<long>(long val);
+template bool MyString::serialize_int<long long>(long long val);
+template bool MyString::serialize_int<unsigned int>(unsigned int val);
+template bool MyString::serialize_int<unsigned long>(unsigned long val);
+template bool MyString::serialize_int<unsigned long long>(unsigned long long val);
+
+template bool YourStringDeserializer::deserialize_int<int>(int* val);
+template bool YourStringDeserializer::deserialize_int<long>(long* val);
+template bool YourStringDeserializer::deserialize_int<long long>(long long* val);
+template bool YourStringDeserializer::deserialize_int<unsigned int>(unsigned int* val);
+template bool YourStringDeserializer::deserialize_int<unsigned long>(unsigned long* val);
+template bool YourStringDeserializer::deserialize_int<unsigned long long>(unsigned long long* val);
+
+#if 0
+void force_mystring_templates() {
+	MyString str;
+	str.serialize_int(false);
+	//str.serialize_int((char)0);
+	//str.serialize_int((short)0);
+	str.serialize_int((int)0);
+	str.serialize_int((long)0);
+	str.serialize_int((long long)0);
+	//str.serialize_int((unsigned char)0);
+	//str.serialize_int((unsigned short)0);
+	str.serialize_int((unsigned int)0);
+	str.serialize_int((unsigned long)0);
+	str.serialize_int((unsigned long long)0);
+
+	YourStringDeserializer buf("0*0*0*");
+	bool b;
+	int i; long l; long long ll;
+	unsigned int ui; unsigned long ul; unsigned long long ull;
+	buf.deserialize_int(&b);
+	buf.deserialize_int(&i);
+	buf.deserialize_int(&l);
+	buf.deserialize_int(&ll);
+	buf.deserialize_int(&ui);
+	buf.deserialize_int(&ul);
+	buf.deserialize_int(&ull);
+}
+#endif
+
+#ifdef WIN32
+ #pragma pop_macro("min")
+ #pragma pop_macro("max")
+#endif
+
 MSC_RESTORE_WARNING(6052) // call to snprintf might not null terminate string.
+
+
 
 /*--------------------------------------------------------------------
  *
@@ -520,12 +674,12 @@ MyString::replaceString(
 {
 	SimpleList<int> listMatchesFound; 		
 	
-	int iToReplaceLen = strlen(pszToReplace);
+	int iToReplaceLen = (int)strlen(pszToReplace);
 	if (!iToReplaceLen) {
 		return false;
 	}
 	
-	int iWithLen = strlen(pszReplaceWith);
+	int iWithLen = (int)strlen(pszReplaceWith);
 	while (iStartFromPos <= Len){
 		iStartFromPos = find(pszToReplace, iStartFromPos);
 		if (iStartFromPos == -1)
@@ -750,7 +904,7 @@ MyString::randomlyGenerate(const char *set, int len)
 	Len = len;
 	capacity = len;
 
-	set_len = strlen(set);
+	set_len = (int)strlen(set);
 
 	// now pick randomly from the set and fill stuff in
 	for (i = 0; i < len ; i++) {

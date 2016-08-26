@@ -35,6 +35,7 @@ bool ExprTreeIsLiteral(classad::ExprTree * expr, classad::Value & value);
 bool ExprTreeIsLiteralNumber(classad::ExprTree * expr, long long & ival);
 bool ExprTreeIsLiteralNumber(classad::ExprTree * expr, double & rval);
 bool ExprTreeIsLiteralString(classad::ExprTree * expr, std::string & sval);
+bool ExprTreeIsLiteralString(classad::ExprTree * expr, const char* & cstr);
 bool ExprTreeIsLiteralBool(classad::ExprTree * expr, bool & bval);
 classad::ExprTree * SkipExprEnvelope(classad::ExprTree * tree);
 classad::ExprTree * SkipExprParens(classad::ExprTree * tree);
@@ -52,9 +53,12 @@ bool ClassAdsAreSame( compat_classad::ClassAd *ad1, compat_classad::ClassAd * ad
 int EvalExprTree( classad::ExprTree *expr, compat_classad::ClassAd *source,
 				  compat_classad::ClassAd *target, classad::Value &result );
 
+//ad2 treated as candidate to match against ad1, so we want to find a match for ad1
 bool IsAMatch( compat_classad::ClassAd *ad1, compat_classad::ClassAd *ad2 );
 
 bool IsAHalfMatch( compat_classad::ClassAd *my, compat_classad::ClassAd *target );
+
+bool ParallelIsAMatch(compat_classad::ClassAd *ad1, std::vector<compat_classad::ClassAd*> &candidates, std::vector<compat_classad::ClassAd*> &matches, int threads, bool halfMatch = false);
 
 void AttrList_setPublishServerTime( bool publish );
 
@@ -72,6 +76,75 @@ extern "C" {
 	bool user_map_do_mapping(const char * mapname, const char * input, MyString & output);
 #ifdef __cplusplus
 } // end extern "C"
-#endif
+
+// a class to hold (and delete) a constraint ExprTree
+// it can be initialized with either a string for a tree
+// and produce both string and tree on demand.
+class ConstraintHolder {
+public:
+	ConstraintHolder() : expr(NULL), exprstr(NULL) {}
+	ConstraintHolder(char * str) : expr(NULL), exprstr(str) {}
+	ConstraintHolder(classad::ExprTree * tree) : expr(tree), exprstr(NULL) {}
+	ConstraintHolder(const ConstraintHolder& that) {  // for copy constructor, we prefer the tree form
+		if (this == &that) return;
+		clear();
+		if (that.expr) { this->set(that.expr->Copy()); }
+		else if (that.exprstr) { set(strdup(that.exprstr)); }
+	}
+	ConstraintHolder & operator=(const ConstraintHolder& that) { // for assignment we deep copy
+		if (this != &that) {
+			clear();
+			if (that.expr) this->expr = that.expr->Copy();
+			if (that.exprstr) this->exprstr = strdup(that.exprstr);
+		}
+		return *this;
+	}
+	bool operator==(const ConstraintHolder & rhs) const { // for equality, we compare expressions (not strings)
+		classad::ExprTree *tree1 = Expr(), *tree2 = rhs.Expr();
+		if ( ! tree1 && ! tree2) return true;
+		if ( ! tree1 || ! tree2) return false;
+		return *tree1 == *tree2;
+	}
+	~ConstraintHolder() { clear(); }
+	void clear() { delete expr; expr = NULL; if (exprstr) { free(exprstr); exprstr = NULL; } }
+	// return true if there is no expression
+	bool empty() const { return ! expr && ( ! exprstr || ! exprstr[0]); }
+	// get a printable representation, will never return null
+	const char * c_str() const { const char * p = Str(); return p ? p : ""; }
+	// detach the ExprTree pointer and return it, then clear
+	classad::ExprTree * detach() { classad::ExprTree * t = Expr(); expr = NULL; clear(); return t; }
+	// change the expr tree, freeing the old pointer if needed.
+	void set(classad::ExprTree * tree) { if (tree && (tree != expr)) { clear(); expr = tree; } }
+	// change the expression using a string, freeing the old pointer if needed.
+	void set(char * str) { if (str && (exprstr != str)) { clear(); exprstr = str; } }
+	// get the constraint, parsing the string if needed to construct it.
+	// returns NULL if no constraint
+	classad::ExprTree * Expr(int * error=NULL) const {
+		int rval = 0;
+		if ( ! expr && ! empty()) {
+			if (ParseClassAdRvalExpr(exprstr, expr, NULL)) {
+				rval = -1;
+			}
+		}
+		if (error) { *error = rval; };
+		return expr;
+	}
+	// get the constraint as as string, unparsing the constraint expression if needed
+	// returns NULL if no constraint
+	const char * Str() const {
+		if (( ! exprstr || ! exprstr[0]) && expr) { exprstr = strdup(ExprTreeToString(expr)); }
+		return exprstr;
+	}
+protected:
+	// hold the constraint in either string or tree form. If both forms exist the tree is canonical
+	// mutable because we might construct one from the other in a const method.
+	mutable classad::ExprTree * expr;
+	mutable char * exprstr;
+};
+
+typedef compat_classad::CondorClassAdFileParseHelper ClassAdFileParseType;
+ClassAdFileParseType::ParseType parseAdsFileFormat(const char * arg, ClassAdFileParseType::ParseType def_parse_type);
+
+#endif // __cplusplus
 
 #endif

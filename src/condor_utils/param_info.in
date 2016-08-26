@@ -6196,6 +6196,14 @@ customization=seldom
 friendly_name=Use Shared Port
 review=?
 
+[HAD_USE_SHARED_PORT]
+default=false
+type=bool
+
+[REPLICATION_USE_SHARED_PORT]
+default=$(HAD_USE_SHARED_PORT)
+type=bool
+
 [SHARED_PORT_PORT]
 default=$(COLLECTOR_PORT)
 type=int
@@ -6723,7 +6731,7 @@ default=300
 type=int
 reconfig=true
 customization=seldom
-friendly_name=Job Queue Log file
+friendly_name=Defrag Update Interval
 review=?
 tags=defrag
 
@@ -8139,7 +8147,7 @@ customization=const
 default=60
 customization=const
 [HOUR]
-default=(60 * $(MINUTE))
+default=3600
 customization=const
 
 [STANDARD]
@@ -8147,63 +8155,42 @@ default=1
 customization=const
 [IsStandard]
 default=(TARGET.JobUniverse == $(STANDARD))
+customization=const
 
 [VANILLA]
 default=5
 customization=const
 [IsVanilla]
 default=(TARGET.JobUniverse == $(VANILLA))
+customization=const
 
 [MPI]
 default=8
 customization=const
 [IsMPI]
 default=(TARGET.JobUniverse == $(MPI))
+customization=const
 
 [VM]
 default=13
 customization=const
 [IsVM]
 default=(TARGET.JobUniverse == $(VM))
+customization=const
 
-[TESTINGMODE_WANT_SUSPEND]
-default=False
-[TESTINGMODE_WANT_VACATE]
-default=True
-[TESTINGMODE_START]
-default=True
-[TESTINGMODE_SUSPEND]
-default=False
-[TESTINGMODE_CONTINUE]
-default=True
-[TESTINGMODE_PREEMPT]
-default=False
-[TESTINGMODE_KILL]
-default=False
-[TESTINGMODE_PERIODIC_CHECKPOINT]
-default=False
-[TESTINGMODE_PREEMPTION_REQUIREMENTS]
-default=False
-[TESTINGMODE_PREEMPTION_RANK]
-default=0
-[TESTINGMODE_CLAIM_WORKLIFE]
-default=1200
+# simple policy expression fragments useful in creating a preemption policy
+[BigJob]
+default=(TARGET.ImageSize >= (50 * 1024))
+[MediumJob]
+default=(TARGET.ImageSize >= (15 * 1024) && TARGET.ImageSize < (50 * 1024))
+[SmallJob]
+default=(TARGET.ImageSize <  (15 * 1024))
 
-# simple policy expressions useful in creating the desktop preemption policy
-[StateTimer]
-default=(time() - EnteredCurrentState)
-[ActivityTimer]
-default=(time() - EnteredCurrentActivity)
-[ActivationTimer]
-default=ifThenElse(JobStart =!= UNDEFINED, (time() - JobStart), 0)
-[LastCkpt]
-default=(time() - LastPeriodicCheckpoint)
-[NonCondorLoadAvg]
-default=(LoadAvg - CondorLoadAvg)
 [BackgroundLoad]
 default=0.3
 [HighLoad]
 default=0.5
+
 [StartIdleTime]
 default=15 * $(MINUTE)
 [ContinueIdleTime]
@@ -8216,50 +8203,38 @@ default=10 * $(MINUTE)
 default=(KeyboardIdle < $(MINUTE))
 [ConsoleBusy]
 default=(ConsoleIdle  < $(MINUTE))
+
+# policy expression constants useful in creating the desktop preemption policy
+[StateTimer]
+default=(time() - EnteredCurrentState)
+customization=const
+[ActivityTimer]
+default=(time() - EnteredCurrentActivity)
+customization=const
+[ActivationTimer]
+default=ifThenElse(JobStart =!= UNDEFINED, (time() - JobStart), 0)
+customization=const
+[LastCkpt]
+default=(time() - LastPeriodicCheckpoint)
+customization=const
+[NonCondorLoadAvg]
+default=(LoadAvg - CondorLoadAvg)
+customization=const
 [CPUIdle]
 default=($(NonCondorLoadAvg) <= $(BackgroundLoad))
+customization=const
 [CPUBusy]
 default=($(NonCondorLoadAvg) >= $(HighLoad))
+customization=const
 [KeyboardNotBusy]
 default=($(KeyboardBusy) == False)
-[BigJob]
-default=(TARGET.ImageSize >= (50 * 1024))
-[MediumJob]
-default=(TARGET.ImageSize >= (15 * 1024) && TARGET.ImageSize < (50 * 1024))
-[SmallJob]
-default=(TARGET.ImageSize <  (15 * 1024))
+customization=const
 [JustCPU]
 default=($(CPUBusy) && ($(KeyboardBusy) == False))
+customization=const
 [MachineBusy]
 default=($(CPUBusy) || $(KeyboardBusy))
-
-# define UWCS_xxx desktop preemption policy that can be referenced in START, PREEMPT, etc
-[UWCS_WANT_SUSPEND]
-default=( $(SmallJob) || $(KeyboardNotBusy) || $(IsVanilla) ) && ( $(SUSPEND) )
-[UWCS_WANT_VACATE]
-default=( $(ActivationTimer) > 10 * $(MINUTE) || $(IsVanilla) )
-[UWCS_START]
-default=( (KeyboardIdle > $(StartIdleTime)) && ( $(CPUIdle) || (State != "Unclaimed" && State != "Owner")) )
-[UWCS_SUSPEND]
-default=( $(KeyboardBusy) || ( (CpuBusyTime > 2 * $(MINUTE)) && $(ActivationTimer) > 90 ) )
-[UWCS_CONTINUE]
-default=( $(CPUIdle) && ($(ActivityTimer) > 10) && (KeyboardIdle > $(ContinueIdleTime)) )
-[UWCS_PREEMPT]
-default=( ((Activity == "Suspended") && ($(ActivityTimer) > $(MaxSuspendTime))) || (SUSPEND && (WANT_SUSPEND == False)) )
-[UWCS_MaxJobRetirementTime]
-default=0
-[UWCS_KILL]
-default=false
-[UWCS_PERIODIC_CHECKPOINT]
-default=$(LastCkpt) > (3 * $(HOUR) + $RANDOM_INTEGER(-30,30,1) * $(MINUTE) )
-[UWCS_NEGOTIATOR_PRE_JOB_RANK]
-default=(10000000 * My.Rank) + (1000000 * (RemoteOwner =?= UNDEFINED)) - (100000 * Cpus) - Memory
-[UWCS_NEGOTIATOR_POST_JOB_RANK]
-default=(RemoteOwner =?= UNDEFINED) * (ifthenElse(isUndefined(KFlops), 1000, Kflops) - SlotID - 1.0e10*(Offline=?=True))
-[UWCS_PREEMPTION_REQUIREMENTS]
-default=((SubmitterGroup =?= RemoteGroup) && ($(StateTimer) > (1 * $(HOUR))) && (RemoteUserPrio > TARGET.SubmitterUserPrio * 1.2)) || (MY.NiceUser == True)
-[UWCS_PREEMPTION_RANK]
-default=(RemoteUserPrio * 1000000) - ifThenElse(isUndefined(TotalJobRuntime), 0, TotalJobRuntime)
+customization=const
 
 ######
 ## add metaknobs below this banner
@@ -8283,8 +8258,8 @@ default=(RemoteUserPrio * 1000000) - ifThenElse(isUndefined(TotalJobRuntime), 0,
 ######
 
 [$POLICY.DESKTOP]
-# use the UWCS desktop preemption policy
-friendly_name=Use the UWCS preemption policy
+# Use a preemption policy that does cycle scavenging for Desktop computers
+friendly_name=Use a preemption policy that does cycle scavenging for Desktop computers
 default : @end
 	WANT_SUSPEND=($(SmallJob) || $(KeyboardNotBusy) || $(IsVanilla) ) && ( $(SUSPEND))
 	WANT_VACATE=$(ActivationTimer) > 600 || $(IsVanilla)
@@ -8312,14 +8287,49 @@ default : @end
 	KILL=False
 	PREEMPTION_REQUIREMENTS=False
 	NEGOTIATOR_CONSIDER_PREEMPTION=False
-	MaxJobRetirementTime=0
+	MaxJobRetirementTime=2147483647
 	CLAIM_WORKLIFE=1200
 @end
 review=?
 
+[$FEATURE.TESTINGMODE_POLICY_VALUES]
+friendly_name=Configuration values used by the TESTINGMODE policy from HTCondor 7.x
+default : @end
+	TESTINGMODE_WANT_SUSPEND=False
+	TESTINGMODE_WANT_VACATE=True
+	TESTINGMODE_START=True
+	TESTINGMODE_SUSPEND=False
+	TESTINGMODE_CONTINUE=True
+	TESTINGMODE_PREEMPT=False
+	TESTINGMODE_KILL=False
+	TESTINGMODE_PERIODIC_CHECKPOINT=False
+	TESTINGMODE_PREEMPTION_REQUIREMENTS=False
+	TESTINGMODE_PREEMPTION_RANK=0
+	TESTINGMODE_CLAIM_WORKLIFE=1200
+@end
+
+[$FEATURE.UWCS_DESKTOP_POLICY_VALUES]
+friendly_name=Configuration values used UWCS_DESKTOP policy from HTCondor 7.x
+default : @end
+	UWCS_WANT_SUSPEND=( $(SmallJob) || $(KeyboardNotBusy) || $(IsVanilla) ) && ( $(SUSPEND) )
+	UWCS_WANT_VACATE=( $(ActivationTimer) > 10 * $(MINUTE) || $(IsVanilla) )
+	UWCS_START=( (KeyboardIdle > $(StartIdleTime)) && ( $(CPUIdle) || (State != "Unclaimed" && State != "Owner")) )
+	UWCS_SUSPEND=( $(KeyboardBusy) || ( (CpuBusyTime > 2 * $(MINUTE)) && $(ActivationTimer) > 90 ) )
+	UWCS_CONTINUE=( $(CPUIdle) && ($(ActivityTimer) > 10) && (KeyboardIdle > $(ContinueIdleTime)) )
+	UWCS_PREEMPT=( ((Activity == "Suspended") && ($(ActivityTimer) > $(MaxSuspendTime))) || (SUSPEND && (WANT_SUSPEND == False)) )
+	UWCS_MaxJobRetirementTime=0
+	UWCS_KILL=false
+	UWCS_PERIODIC_CHECKPOINT=$(LastCkpt) > (3 * $(HOUR) + $RANDOM_INTEGER(-30,30,1) * $(MINUTE) )
+	UWCS_NEGOTIATOR_PRE_JOB_RANK=(10000000 * My.Rank) + (1000000 * (RemoteOwner =?= UNDEFINED)) - (100000 * Cpus) - Memory
+	UWCS_NEGOTIATOR_POST_JOB_RANK=(RemoteOwner =?= UNDEFINED) * (ifthenElse(isUndefined(KFlops), 1000, Kflops) - SlotID - 1.0e10*(Offline=?=True))
+	UWCS_PREEMPTION_REQUIREMENTS=((SubmitterGroup =?= RemoteGroup) && ($(StateTimer) > (1 * $(HOUR))) && (RemoteUserPrio > TARGET.SubmitterUserPrio * 1.2)) || (MY.NiceUser == True)
+	UWCS_PREEMPTION_RANK=(RemoteUserPrio * 1000000) - ifThenElse(isUndefined(TotalJobRuntime), 0, TotalJobRuntime)
+@end
+
 [$POLICY.UWCS_DESKTOP]
 friendly_name=Run jobs only when the user is away from their machine
 default : @end
+	use FEATURE : UWCS_DESKTOP_POLICY_VALUES
 	WANT_SUSPEND=$(UWCS_WANT_SUSPEND)
 	WANT_VACATE=$(UWCS_WANT_VACATE)
 	SUSPEND=$(UWCS_SUSPEND)

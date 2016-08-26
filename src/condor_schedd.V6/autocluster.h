@@ -1,3 +1,4 @@
+
 /***************************************************************
  *
  * Copyright (C) 1990-2014, Condor Team, Computer Sciences Department,
@@ -142,7 +143,7 @@ public:
 
 	/** Return number of active autoclusters
 	  */
-	int getNumAutoclusters() const { return cluster_in_use.size(); }
+	int getNumAutoclusters() const { return (int)cluster_in_use.size(); }
 
 
 protected:
@@ -164,7 +165,7 @@ public:
 	}
 	~JobAggregationResults()
 	{
-		if (constraint) delete constraint; constraint = NULL;
+		delete constraint; constraint = NULL;
 	#ifdef ALLOW_ON_THE_FLY_AGGREGATION
 		if (!is_def_autocluster) delete &jc;
 	#endif

@@ -205,29 +205,31 @@ if ($ENV{NMI_PLATFORM} =~ /_win/i) {
     # build.win.bat uses BASE_DIR to setup some things.
     $ENV{BASE_DIR} = "$BaseDir";
 
-    # get the build id out of the cmake args, we have to
+    # get the build id and bitness out of the cmake args, we have to
     # pass it to the ZIP and MSI building steps
     #
     my $cmake_args = get_cmake_args();
     print "   cmake_args = $cmake_args\n";
     my $buildid = "";
+    my $win64 = "x86";
     if ($cmake_args =~ /-DBUILDID:STRING=([0-9]+)/) { $buildid = $1; }
     if ($cmake_args =~ /-G[ ]*"Visual Studio ([0-9]+)/i) {
-        print "cmake was invoked with a Visual Studio $1 generator\n";
         $VCVER = "VC$1"; 
+        if ($cmake_args =~ /-G[ ]*"Visual Studio [0-9]+ Win64/i) { $win64 = "x64"; }
+        print "cmake was invoked with a Visual Studio $VCVER $win64 generator\n";
     }
     if ($taskname eq $EXTERNALS_TASK) {
-        $execstr= "nmi_tools\\glue\\build\\build.win.bat EXTERNALS $VCVER";
+        $execstr= "nmi_tools\\glue\\build\\build.win.bat EXTERNALS $VCVER $win64 $buildid";
     } elsif ($taskname eq $BUILD_TASK) { # formerly $UNSTRIPPED_TASK
-        $execstr= "nmi_tools\\glue\\build\\build.win.bat BUILD $VCVER";
+        $execstr= "nmi_tools\\glue\\build\\build.win.bat BUILD $VCVER $win64 $buildid";
     } elsif ($taskname eq $BUILD_TESTS_TASK) {
-        $execstr= "nmi_tools\\glue\\build\\build.win.bat BLD_TESTS $VCVER";
+        $execstr= "nmi_tools\\glue\\build\\build.win.bat BLD_TESTS $VCVER $win64 $buildid";
     } elsif ($taskname eq $NATIVE_TASK) {
         print "Windows NATIVE (MSI) task\n";
-        $execstr= "nmi_tools\\glue\\build\\build.win.bat NATIVE $VCVER $buildid";
+        $execstr= "nmi_tools\\glue\\build\\build.win.bat NATIVE $VCVER $win64 $buildid";
     } elsif ($taskname eq $TAR_TASK) {
         print "Windows CREATE_TAR (ZIP) task\n";
-        $execstr= "nmi_tools\\glue\\build\\build.win.bat ZIP $VCVER $buildid";
+        $execstr= "nmi_tools\\glue\\build\\build.win.bat ZIP $VCVER $win64 $buildid";
     }
 }
 else {

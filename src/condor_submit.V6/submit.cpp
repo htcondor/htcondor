@@ -610,6 +610,8 @@ const char* EC2SecurityGroups = "ec2_security_groups";
 const char* EC2SecurityIDs = "ec2_security_ids";
 const char* EC2KeyPair = "ec2_keypair";
 const char* EC2KeyPairFile = "ec2_keypair_file";
+const char* EC2KeyPairAlt = "ec2_key_pair";
+const char* EC2KeyPairFileAlt = "ec2_key_pair_file";
 const char* EC2InstanceType = "ec2_instance_type";
 const char* EC2ElasticIP = "ec2_elastic_ip";
 const char* EC2EBSVolumes = "ec2_ebs_volumes";
@@ -634,6 +636,7 @@ const char* GceAuthFile = "gce_auth_file";
 const char* GceMachineType = "gce_machine_type";
 const char* GceMetadata = "gce_metadata";
 const char* GceMetadataFile = "gce_metadata_file";
+const char* GcePreemptible = "gce_preemptible";
 
 char const *next_job_start_delay = "next_job_start_delay";
 char const *next_job_start_delay2 = "NextJobStartDelay";
@@ -6241,19 +6244,21 @@ SetGridParams()
 		DoCleanup( 0, 0, NULL );
 		exit( 1 );
 	}
-	
+
 	bool bKeyPairPresent=false;
-	
+
 	// EC2KeyPair is not a necessary parameter
-	if( (tmp = condor_param( EC2KeyPair, ATTR_EC2_KEY_PAIR )) ) {
+	if( (tmp = condor_param( EC2KeyPair, ATTR_EC2_KEY_PAIR )) ||
+	    (tmp = condor_param( EC2KeyPairAlt, ATTR_EC2_KEY_PAIR )) ) {
 		buffer.formatstr( "%s = \"%s\"", ATTR_EC2_KEY_PAIR, tmp );
 		free( tmp );
 		InsertJobExpr( buffer.Value() );
 		bKeyPairPresent=true;
 	}
-	
+
 	// EC2KeyPairFile is not a necessary parameter
-	if( (tmp = condor_param( EC2KeyPairFile, ATTR_EC2_KEY_PAIR_FILE )) ) {
+	if( (tmp = condor_param( EC2KeyPairFile, ATTR_EC2_KEY_PAIR_FILE )) ||
+	    (tmp = condor_param( EC2KeyPairFileAlt, ATTR_EC2_KEY_PAIR_FILE )) ) {
 	    if (bKeyPairPresent)
 	    {
 	      fprintf(stderr, "\nWARNING: EC2 job(s) contain both ec2_keypair && ec2_keypair_file, ignoring ec2_keypair_file\n");
@@ -6643,6 +6648,12 @@ SetGridParams()
 		InsertJobExpr( buffer.Value() );
 	}
 
+	// GcePreemptible is not a necessary parameter
+	if( (tmp = condor_param( GcePreemptible, ATTR_GCE_PREEMPTIBLE )) ) {
+		buffer.formatstr( "%s = %s", ATTR_GCE_PREEMPTIBLE, isTrue(tmp) ? "True" : "False" );
+		InsertJobExpr( buffer.Value() );
+		free( tmp );
+	}
 
 	// CREAM clients support an alternate representation for resources:
 	//   host.edu:8443/cream-batchname-queuename

@@ -1,3 +1,4 @@
+%TEMTEMP -- gittrac #5714
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{\label{sec:Configuring-HTCondor}Configuration}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -2111,6 +2112,58 @@ the default \\ \hline
   A boolean which will cause HTCondor to prefer IPv4 when it is able
   to choose.  HTCondor will otherwise prefer IPv6.
 
+\label{param:ClassAdUserMapNames}
+\item[\Macro{<SUBSYS>\_CLASSAD\_USER\_MAP\_NAMES}]
+  A string defining a list of names for username-to-accounting group
+  mappings for the specified daemon.
+  Names must be separated by spaces or commas.
+
+\label{param:ClassAdUserMapFile}
+\item[\Macro{CLASSAD\_USER\_MAPFILE\_<name>}]
+  A string giving the name of a file to parse to initialize the
+  map for the given username.
+  Note that this macro is only used if
+  \MacroNI{<SUBSYS>\_CLASSAD\_USER\_MAP\_NAMES} is defined for
+  the relevant daemon.
+
+\label{param:ClassAdUserMapData}
+\item[\Macro{CLASSAD\_USER\_MAPDATA\_<name>}]
+  A string containing data to be used to initialize the map for the
+  given username.
+  Note that this macro is only used if
+  \MacroNI{<SUBSYS>\_CLASSAD\_USER\_MAP\_NAMES} is defined for
+  the relevant daemon, and \Macro{CLASSAD\_USER\_MAPFILE\_<name>}
+  is \emph{not} defined for the given name.
+
+  The format for the map file and map data is the same as the
+  format for the security unified map file (see
+  ~\ref{sec:Security-Unified-Map-File} for details).
+
+  The first field must be * (or a subset name - see below), the second
+  field is a regex that we will match against the input, and the third
+  field will be the output if the regex matches, the 3 and 4 argument
+  form of the ClassAd userMap() function (see ~\ref{sec:classadFunctions})
+  expect that the third field will be a comma separated
+  list of values. for example:
+\begin{verbatim}
+# file: groups.mapdata
+* John  chemistry,physics,glassblowing
+* Juan  physics,chemistry
+* Bob   security
+* Alice security,math
+\end{verbatim}
+
+\Bold{Optional submaps:} If the first field of the mapfile contains
+something other than *, then a submap is defined. To select a submap
+for lookup, the first argument for userMap() should be "mapname.submap".
+For example:
+\begin{verbatim}
+# mapdata 'groups' with submaps
+*   Bob   security
+*   Alice security,math
+alt Alice math,hacking
+\end{verbatim}
+
 \end{description}
 
 
@@ -3263,6 +3316,8 @@ subsystem-specific setting is unspecified, \MacroNI{MAX\_FILE\_DESCRIPTORS}
 is used.
 For the \Condor{collector} daemon, the value defaults to 10240, and
 for the \Condor{schedd} daemon, the value defaults to 4096.
+If the \Condor{shared\_port} daemon is in use, its value for this
+parameter should match the largest value set for the other daemons.
 
 \label{param:MaxFileDescriptors}
 \item[\Macro{MAX\_FILE\_DESCRIPTORS}] Under Unix, this specifies the
@@ -4258,14 +4313,17 @@ NEGOTIATOR_USERID = condor
 
 \label{param:StartMaster}
 \item[\Macro{START\_MASTER}]
-  If this setting is defined and set to \Expr{False}
-  when the \Condor{master} starts up, the first
-  thing it will do is exit.  This appears strange, but perhaps you
+  If this setting is defined and set to \Expr{False} the \Condor{master}
+  will immediately exit upon startup.
+  This appears strange, but perhaps you
   do not want HTCondor to run on certain machines in your pool, yet
   the boot scripts for your entire pool are handled by a centralized
-  This is
+  set of files -- setting \MacroNI{START\_MASTER} to \Expr{False}
+  for those machines would allow this.
+  Note that \MacroNI{START\_MASTER} is
   an entry you would most likely find in a local configuration file,
   not a global configuration file.
+  If not defined, \MacroNI{START\_MASTER} defaults to \Expr{True}.
 
 \label{param:StartDaemons}
 \item[\Macro{START\_DAEMONS}]
@@ -13683,6 +13741,14 @@ discussion of \Condor{defrag} may be found in section~\ref{sec:SMP-defrag}.
   if specified by the policy.  
   The default is 600 seconds.  
   Very small intervals could create excessive load on the \Condor{collector}.
+
+\label{param:DefragUpdateInterval}
+\item[\Macro{DEFRAG\_UPDATE\_INTERVAL}] An integer that specifies
+  the number of seconds between times that the \Condor{defrag} daemon
+  sends updates to the collector.  (See 
+  section~\ref{sec:Defrag-ClassAd-Attributes} for information about the
+  attributes in these updates.)
+  The default is 300 seconds.  
 
 \label{param:DefragSchedule}
 \item[\Macro{DEFRAG\_SCHEDULE}] A setting that specifies the draining

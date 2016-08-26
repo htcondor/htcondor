@@ -27,8 +27,6 @@
 #include "string_list.h"
 #include "metric_units.h"
 
-#define USE_LATE_PROJECTION 1
-#define USE_QUERY_CALLBACKS 1
 
 extern ppOption				ppStyle;
 extern AttrListPrintMask 	pm;
@@ -51,7 +49,7 @@ extern int set_status_print_mask_from_stream (const char * streamid, bool is_fil
 
 static int stashed_now = 0;
 
-void ppInitPrintMask(ppOption pps, classad::References & proj);
+void ppInitPrintMask(ppOption pps, classad::References & proj, const char * & constr);
 const CustomFormatFnTable * getCondorStatusPrintFormats();
 
 static int width_of_fixed_cols = -1;       // set when using ppAdjustNameWidth
@@ -62,10 +60,13 @@ static int prettyprint_ixCol_Machine = -1; // set by ppAdjustProjection, used by
 void printQuillNormal 	(ClassAd *);
 #endif /* HAVE_EXT_POSTGRESQL */
 
+const int cchReserveForPrintingAds = 16384;
+
 void printCOD    		(ClassAd *);
-void printVerbose   	(ClassAd *);
-void printXML       	(ClassAd *, bool first_ad, bool last_ad);
-void printJSON       	(ClassAd *, bool first_ad, bool last_ad);
+void printVerbose   	(ClassAd &, classad::References * attrs=NULL);
+void printXML       	(ClassAd &, classad::References * attrs=NULL);
+void printJSON       	(ClassAd &, bool first_ad, classad::References * attrs=NULL);
+void printNewClassad	(ClassAd &, bool first_ad, classad::References * attrs=NULL);
 void printCustom    	(ClassAd *);
 
 static bool renderActivityTime(long long & atime, AttrList* , Formatter &);
@@ -284,13 +285,13 @@ static void ppDisplayHeadings(FILE* file, ClassAd *ad, const char * pszExtra)
 		printf("%s", pszExtra);
 }
 
-void prettyPrintInitMask(classad::References & proj)
+void prettyPrintInitMask(classad::References & proj, const char * & constr)
 {
 	//bool old_headings = (ppStyle == PP_STARTD_COD) || (ppStyle == PP_QUILL_NORMAL);
-	bool long_form = (ppStyle == PP_VERBOSE) || (ppStyle == PP_XML) || ppStyle == PP_JSON;
+	bool long_form = PP_IS_LONGish(ppStyle);
 	bool custom = (ppStyle == PP_CUSTOM);
 	if ( ! using_print_format && ! wantOnlyTotals && ! custom && ! long_form) {
-		ppInitPrintMask(ppStyle, proj);
+		ppInitPrintMask(ppStyle, proj, constr);
 	}
 }
 
@@ -361,14 +362,13 @@ int ppFetchColumnWidths(void*pv, int /*index*/, Formatter * fmt, const char * /*
 	return 0;
 }
 
-#ifdef USE_QUERY_CALLBACKS
 
 ppOption prettyPrintHeadings (bool any_ads)
 {
 	ppOption pps = ppStyle;
 	bool no_headings = wantOnlyTotals || ! any_ads;
 	bool old_headings = (pps == PP_STARTD_COD) || (pps == PP_QUILL_NORMAL);
-	bool long_form = (pps == PP_VERBOSE) || (pps == PP_XML) || pps == PP_JSON;
+	bool long_form = PP_IS_LONGish(pps);
 	const char * newline_after_headings = "\n";
 	if ((pps == PP_CUSTOM) || using_print_format) {
 		pps = PP_CUSTOM;
@@ -422,24 +422,58 @@ ppOption prettyPrintHeadings (bool any_ads)
 	return pps;
 }
 
-void prettyPrintAd(ppOption pps, ClassAd *ad)
+void prettyPrintAd(ppOption pps, ClassAd *ad, int output_index, StringList * whitelist, bool fHashOrder)
 {
+	if ( ! ad) return;
+
 	if (!wantOnlyTotals) {
+
+		// as a special case to aid in some bug repro scenarios, honor the fHashOrder flag for
+		// -long form classads even when there is a whitelist.
+		if (pps == PP_LONG && fHashOrder && whitelist && ! whitelist->isEmpty()) {
+			classad::ClassAdUnParser unp;
+			unp.SetOldClassAd( true, true );
+			std::string line;
+			for (classad::ClassAd::const_iterator itr = ad->begin(); itr != ad->end(); ++itr) {
+				if (whitelist->contains_anycase(itr->first.c_str())) {
+					line = itr->first.c_str();
+					line += " = ";
+					unp.Unparse(line, itr->second);
+					line += "\n";
+					fputs(line.c_str(), stdout);
+				}
+			}
+			if ( ! line.empty()) { fputs("\n", stdout); }
+			return;
+		}
+
+		// get a sorted list of attributes to print for long form output or when there is a whitelist
+		classad::References attrs;
+		classad::References *proj = NULL;
+		if (PP_IS_LONGish(pps) && ( ! fHashOrder || whitelist)) {
+			sGetAdAttrs(attrs, *ad, false, whitelist);
+			proj = &attrs;
+		}
+
 		switch (pps) {
-		case PP_VERBOSE:
-			printVerbose(ad);
+		case PP_LONG:
+			printVerbose(*ad, proj);
 			break;
+		case PP_XML:
+			printXML (*ad, proj);
+			break;
+		case PP_JSON:
+			printJSON (*ad, output_index == 0, proj);
+			break;
+		case PP_NEWCLASSAD:
+			printNewClassad (*ad, output_index == 0, proj);
+			break;
+
 		case PP_STARTD_COD:
 			printCOD (ad);
 			break;
 		case PP_CUSTOM:
 			printCustom (ad);
-			break;
-		case PP_XML:
-			printXML (ad, false, false);
-			break;
-		case PP_JSON:
-			printJSON (ad, false, false);
 			break;
 	#ifdef HAVE_EXT_POSTGRESQL
 		case PP_QUILL_NORMAL:
@@ -453,120 +487,6 @@ void prettyPrintAd(ppOption pps, ClassAd *ad)
 	}
 }
 
-#else
-
-void
-prettyPrint (ClassAdList &adList, TrackTotals *totals)
-{
-	ClassAd	*ad;
-	int     classad_index = 0;
-	int     num_ads = adList.Length();
-	int     last_classad_index = num_ads - 1;
-	int     totals_key_width = wide_display ? -1 : 20;
-
-	ppOption pps = ppStyle;
-	bool no_headings = wantOnlyTotals || (num_ads <= 0);
-	bool old_headings = (pps == PP_STARTD_COD) || (pps == PP_QUILL_NORMAL);
-	bool long_form = (pps == PP_VERBOSE) || (pps == PP_XML) || pps == PP_JSON;
-	const char * newline_after_headings = "\n";
-	if ((pps == PP_CUSTOM) || using_print_format) {
-		pps = PP_CUSTOM;
-		no_headings = true;
-		newline_after_headings = NULL;
-		if ( ! wantOnlyTotals) {
-			bool fHasHeadings = pm.has_headings() || (pm_head.Length() > 0);
-			if (fHasHeadings) {
-				no_headings = (pmHeadFoot & HF_NOHEADER);
-			}
-		}
-	} else if (old_headings || long_form) {
-		no_headings = true;
-	} else {
-		// before we print headings, adjust the width of the name column
-		if (num_ads > 0) {
-			struct _adjust_widths_info wid_info = { 0, 0, NULL };
-			adList.Rewind();
-			ad = adList.Next();
-			if (ad) {
-				std::string name;
-				do {
-					if (ad->LookupString(ATTR_NAME, name)) {
-						int width = name.length();
-						if (width > wid_info.name_width) wid_info.name_width = width;
-					}
-					if (ad->LookupString(ATTR_MACHINE, name)) {
-						int width = name.length();
-						if (width > wid_info.machine_width) wid_info.machine_width = width;
-					}
-				} while ((ad = adList.Next()));
-				if (wid_info.name_width && wid_info.name_width < 16) wid_info.name_width = 16;
-				if (wid_info.machine_width && wid_info.machine_width < 16) wid_info.machine_width = 10;
-			}
-			if ( ! wide_display && (wid_info.name_width > totals_key_width)) {
-				if (pps != PP_SCHEDD_NORMAL) { totals_key_width = wid_info.name_width; }
-			}
-			pm.adjust_formats(ppAdjustNameWidth, &wid_info);
-		}
-	}
-	if ( ! no_headings) {
-		adList.Rewind();
-		ad = adList.Next();
-		// we pass an ad into ppDisplayHeadings so that it can adjust column widths.
-		ppDisplayHeadings(stdout, ad, newline_after_headings);
-	}
-
-	adList.Open();
-	while ((ad = adList.Next())) {
-		if (!wantOnlyTotals) {
-			switch (pps) {
-			case PP_VERBOSE:
-				printVerbose(ad);
-				break;
-			case PP_STARTD_COD:
-				printCOD (ad);
-				break;
-			case PP_CUSTOM:
-				printCustom (ad);
-				break;
-			case PP_XML:
-				printXML (ad, (classad_index == 0), (classad_index == last_classad_index));
-				break;
-			case PP_JSON:
-				printJSON (ad, (classad_index == 0), (classad_index == last_classad_index));
-				break;
-		#ifdef HAVE_EXT_POSTGRESQL
-			case PP_QUILL_NORMAL:
-				printQuillNormal (ad);
-				break;
-		#endif /* HAVE_EXT_POSTGRESQL */
-			default:
-				pm.display(stdout, ad);
-				break;
-			}
-		}
-		classad_index++;
-		totals->update(ad);
-	}
-	adList.Close();
-
-	// if there are no ads to print, but the user wanted XML output,
-	// then print out the XML header and footer, so that naive XML
-	// parsers won't get confused.
-	if ( PP_XML == pps && 0 == classad_index ) {
-		printXML (NULL, true, true);
-	}
-	if ( PP_JSON == pps && 0 == classad_index ) {
-		printJSON (NULL, true, true);
-	}
-
-	// if totals are required, display totals
-	if (classad_index > 0 && totals && totals->haveTotals()) {
-		fprintf(stdout, "\n");
-		totals->displayTotals(stdout, totals_key_width);
-	}
-}
-
-#endif
 
 const char *
 formatStringsFromList( const classad::Value & value, Formatter & ) {
@@ -690,11 +610,10 @@ int startdCompact_ixCol_ActCode = -9;
 int startdCompact_ixCol_JobStarts = -10; // double
 int startdCompact_ixCol_MaxSlotMem = -11; // double
 
-int ppSetStartdCompactCols (int /*width*/, int & mach_width)
+int ppSetStartdCompactCols (int /*width*/, int & mach_width, const char * & constr)
 {
 	const char * tag = "StartdCompact";
 	const char * fmt = startdCompact_PrintFormat;
-	const char * constr = NULL;
 	if (set_status_print_mask_from_stream(fmt, false, &constr) < 0) {
 		fprintf(stderr, "Internal error: default %s print-format is invalid !\n", tag);
 	}
@@ -766,12 +685,11 @@ const char * const serverCompact_PrintFormat = "SELECT\n"
 "GROUP BY Machine\n"
 "SUMMARY STANDARD\n";
 
-void ppSetServerCols (int width)
+void ppSetServerCols (int width, const char * & constr)
 {
 	if (compactMode) {
 		const char * tag = "ServerCompact";
 		const char * fmt = serverCompact_PrintFormat;
-		const char * constr = NULL;
 		if (set_status_print_mask_from_stream(fmt, false, &constr) < 0) {
 			fprintf(stderr, "Internal error: default %s print-format is invalid !\n", tag);
 		}
@@ -1023,6 +941,55 @@ int ppSetScheddNormalCols (int width, int & mach_width)
 	return name_width;
 }
 
+const char * const scheddData_PrintFormat = "SELECT\n"
+	"Name           AS Name         WIDTH AUTO\n"
+	"TransferQueueNumDownloading AS 'Download'  PRINTF %8d\n"
+	"FileTransferDownloadBytesPerSecond_5m/1024.0 AS 'KB/sec(5m)' PRINTF %9.2f\n"
+	"TransferQueueNumWaitingToDownload AS Waiting PRINTF %7d\n"
+	"FileTransferMBWaitingToDownload AS WaitingMB PRINTF %9.2f\n"
+	"TransferQueueNumUploading   AS '      Upload' PRINTF %12d\n"
+	"FileTransferUploadBytesPerSecond_5m/1024.0 AS 'KB/sec(5m)' PRINTF %9.2f\n"
+	"TransferQueueNumWaitingToUpload AS Waiting PRINTF %7d\n"
+	"FileTransferMBWaitingToUpload AS WaitingMB PRINTF %9.2f\n"
+"WHERE TransferQueueMaxUploading isnt undefined\n"
+//"WHERE (TransferQueueNumDownloading+TransferQueueNumWaitingToDownload+TransferQueueNumUploading+TransferQueueNumWaitingToUpload) >= 0\n"
+"SUMMARY NONE\n";
+
+int ppSetScheddDataCols (int /*width*/, const char * & constr)
+{
+	const char * tag = "ScheddData";
+	const char * fmt = scheddData_PrintFormat;
+	if (set_status_print_mask_from_stream(fmt, false, &constr) < 0) {
+		fprintf(stderr, "Internal error: default %s print-format is invalid !\n", tag);
+	}
+
+	int name_width = 15;
+	return name_width;
+}
+
+const char * const scheddRun_PrintFormat = "SELECT\n"
+	"Name           AS Name         WIDTH AUTO\n"
+	"TotalJobAds    AS TotalJobs PRINTF %9d\n"
+	"ShadowsRunning AS Shadows PRINTF %7d\n"
+	"TotalSchedulerJobsRunning AS ActiveDAGs PRINTF %10d\n"
+	"TotalSchedulerJobsIdle AS IdleDAGs PRINTF %8d\n"
+	"RecentJobsCompleted AS RcntDone  PRINTF %8d\n"
+	"RecentJobsStarted AS RcntStart PRINTF %9d\n"
+"WHERE (ShadowsRunning+TotalSchedulerJobsRunning) > 0\n"
+"SUMMARY NONE\n";
+
+int ppSetScheddRunCols (int /*width*/, const char * & constr)
+{
+	const char * tag = "ScheddRun";
+	const char * fmt = scheddRun_PrintFormat;
+	if (set_status_print_mask_from_stream(fmt, false, &constr) < 0) {
+		fprintf(stderr, "Internal error: default %s print-format is invalid !\n", tag);
+	}
+
+	int name_width = 15;
+	return name_width;
+}
+
 const char * const submitterNormal_PrintFormat = "SELECT\n"
 	"Name        AS Name         WIDTH AUTO\n"
 	"Machine     AS Machine      WIDTH AUTO\n"
@@ -1200,58 +1167,82 @@ void ppSetAnyNormalCols (int /*width*/)
 
 
 void
-printVerbose (ClassAd *ad)
+printVerbose (ClassAd &ad, classad::References * attrs)
 {
-	fPrintAd (stdout, *ad);
-	fputc ('\n', stdout);	
+	std::string output;
+	output.reserve(cchReserveForPrintingAds);
+	if (attrs) {
+		sPrintAdAttrs(output, ad, *attrs);
+	} else {
+		sPrintAd(output, ad);
+	}
+
+	output += "\n";
+	fputs(output.c_str(), stdout);
 }
 
 void
-printXML (ClassAd *ad, bool first_ad, bool last_ad)
+printXML (ClassAd &ad, classad::References * attrs)
 {
 	classad::ClassAdXMLUnParser  unparser;
-	std::string            xml;
-
-	if (first_ad) {
-		AddClassAdXMLFileHeader(xml);
-	}
+	std::string output;
+	output.reserve(cchReserveForPrintingAds);
 
 	unparser.SetCompactSpacing(false);
-	if ( NULL != ad ) {
-		unparser.Unparse(xml, ad);
+	if (attrs) {
+		unparser.Unparse(output, &ad, *attrs);
+	} else {
+		unparser.Unparse(output, &ad);
 	}
 
-	if (last_ad) {
-		AddClassAdXMLFileFooter(xml);
-	}
-
-	printf("%s\n", xml.c_str());
+	output += "\n";
+	fputs(output.c_str(), stdout);
 	return;
 }
 
 void
-printJSON (ClassAd *ad, bool first_ad, bool last_ad)
+printJSON (ClassAd &ad, bool first_ad, classad::References * attrs)
 {
-	static bool first_time = true;
 	classad::ClassAdJsonUnParser  unparser;
-	std::string            json;
+	std::string output;
+	output.reserve(cchReserveForPrintingAds);
 
 	if ( first_ad ) {
-		json += "[\n";
+		output += "[\n";
+	} else {
+		output += ",\n";
 	}
-	if ( NULL != ad ) {
-		if ( !first_time ) {
-			json += ",\n";
-		}
-		unparser.Unparse( json, ad );
-	}
-	if ( last_ad ) {
-		json += "\n]";
+	if (attrs) {
+		unparser.Unparse(output, &ad, *attrs);
+	} else {
+		unparser.Unparse(output, &ad);
 	}
 
-	printf("%s\n", json.c_str());
+	output += "\n";
+	fputs(output.c_str(), stdout);
+	return;
+}
 
-	first_time = false;
+void
+printNewClassad (ClassAd &ad, bool first_ad, classad::References * attrs)
+{
+	classad::ClassAdUnParser  unparser;
+	std::string output;
+	output.reserve(cchReserveForPrintingAds);
+
+	if ( first_ad ) {
+		output += "{\n";
+	} else {
+		output += ",\n";
+	}
+	if (attrs) {
+		unparser.Unparse(output, &ad, *attrs);
+	} else {
+		unparser.Unparse(output, &ad);
+	}
+
+	output += "\n";
+	fputs(output.c_str(), stdout);
 	return;
 }
 
@@ -1315,7 +1306,7 @@ int ppAdjustProjection(void*pv, int index, Formatter * fmt, const char * attr)
 	return 0;
 }
 
-void ppInitPrintMask(ppOption pps, classad::References & proj)
+void ppInitPrintMask(ppOption pps, classad::References & proj, const char * & constr)
 {
 	if (using_print_format) {
 		return;
@@ -1341,7 +1332,7 @@ void ppInitPrintMask(ppOption pps, classad::References & proj)
 		} else if(offlineMode) {
 			ppSetStartdOfflineCols(display_width);
 		} else if (compactMode && ! (vmMode || javaMode)) {
-			ppSetStartdCompactCols(display_width, machine_width);
+			ppSetStartdCompactCols(display_width, machine_width, constr);
 			machine_flags = FormatOptionAutoWidth;
 		} else {
 			ppSetStartdNormalCols(display_width);
@@ -1349,7 +1340,7 @@ void ppInitPrintMask(ppOption pps, classad::References & proj)
 		break;
 
 		case PP_STARTD_SERVER:
-		ppSetServerCols(display_width);
+		ppSetServerCols(display_width, constr);
 		break;
 
 		case PP_STARTD_RUN:
@@ -1375,6 +1366,18 @@ void ppInitPrintMask(ppOption pps, classad::References & proj)
 		case PP_SCHEDD_NORMAL:
 		name_width = ppSetScheddNormalCols(display_width, machine_width);
 		machine_flags = name_flags = FormatOptionAutoWidth;
+		width_of_fixed_cols = 35;
+		break;
+
+		case PP_SCHEDD_DATA:
+		name_width = ppSetScheddDataCols(display_width, constr);
+		name_flags = FormatOptionAutoWidth;
+		width_of_fixed_cols = 8+9+7+12+8+9+5;
+		break;
+
+		case PP_SCHEDD_RUN:
+		name_width = ppSetScheddRunCols(display_width, constr);
+		name_flags = FormatOptionAutoWidth;
 		width_of_fixed_cols = 35;
 		break;
 
