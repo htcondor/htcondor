@@ -3514,6 +3514,14 @@ friendly_name=Submit Send Reschedule
 review=?
 tags=submit,submit
 
+[SUBMIT_PUBLISH_WINDOWS_OSVERSIONINFO]
+friendly_name=Submit should put attributes into jobs that show the Windows OSVERSIONINFO
+default=false
+type=bool
+reconfig=false
+customization=seldom
+tags=submit
+
 [DEFAULT_UNIVERSE]
 default=
 type=string

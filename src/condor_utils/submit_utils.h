@@ -623,6 +623,9 @@ private:
 };
 
 const char * init_submit_default_macros();
+#ifdef WIN32
+void publishWindowsOSVersionInfo(ClassAd & ad);
+#endif
 
 #ifndef EXPAND_GLOBS_WARN_EMPTY
 // functions in submit_glob.cpp
