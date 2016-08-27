@@ -5131,7 +5131,7 @@ review=?
 tags=schedd,qmgmt,qedit
 
 [SYSTEM_IMMUTABLE_JOB_ATTRS]
-default=Owner ClusterId ProcId MyType TargetType
+default=Owner ClusterId ProcId TotalSubmitProcs MyType TargetType
 type=string
 reconfig=true
 customization=never

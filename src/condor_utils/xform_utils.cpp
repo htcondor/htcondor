@@ -21,42 +21,27 @@
 #include "condor_config.h"
 #include "condor_debug.h"
 #include "condor_string.h"
-//#include "spooled_job_files.h" // for gen_ckpt_name
 #include "basename.h"
 #include "condor_getcwd.h"
 #include "condor_classad.h"
 #include "condor_attributes.h"
 #include "condor_adtypes.h"
-//#include "domain_tools.h"
-//#include "sig_install.h"
 #include "daemon.h"
 
 #include "string_list.h"
-//#include "which.h"
-//#include "sig_name.h"
-//#include "print_wrapped_text.h"
 #include "my_username.h" // for my_domainname
-//#include "globus_utils.h" // for 
 #include "directory.h"
 #include "filename_tools.h"
 #include "fs_util.h"
 #include "ad_printmask.h"
-//#include "dc_transferd.h"  // for StdoutRemapName
-//#include "condor_crontab.h"
-//#include "file_transfer.h"
-//#include "condor_holdcodes.h"
-//#include "condor_url.h"
 #include "condor_version.h"
-//#include "NegotiationUtils.h"
 #include "submit_utils.h" // for queue iteration stuff
 #include "Regex.h"
 #include "xform_utils.h"
 
 #include "list.h"
-//#include "condor_md.h"
 #include "my_popen.h"
 
-//#include <algorithm>
 #include <string>
 #include <set>
 
@@ -547,7 +532,7 @@ void XFormHash::warn_unused(FILE* out, const char *app)
 		MACRO_META * pmeta = hash_iter_meta(it);
 		if (pmeta && !pmeta->use_count && !pmeta->ref_count) {
 			const char *key = hash_iter_key(it);
-                        if (*key && *key=='+') {continue;}
+			if (*key && *key=='+') {continue;}
 			if (pmeta->source_id == LiveMacro.id) {
 				push_warning(out, "the TRANSFORM variable '%s' was unused by %s. Is it a typo?\n", key, app);
 			} else {

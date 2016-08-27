@@ -3361,12 +3361,42 @@ CheckTransaction( SetAttributeFlags_t, CondorError * errorStack ) {
 	return 0;
 }
 
+// Call this just before committing a submit transaction, it will figure out
+// the number of procs in each new cluster and add the ATTR_TOTAL_SUBMIT_PROCS attribute to the commit.
+//
+void SetSubmitTotalProcs(std::list<std::string> & new_ad_keys)
+{
+	std::map<int, int> num_procs;
+
+	// figure out the max proc id for each cluster
+	JobQueueKeyBuf job_id;
+	for(std::list<std::string>::iterator it = new_ad_keys.begin(); it != new_ad_keys.end(); it++ ) {
+		job_id.set(it->c_str());
+		std::map<int, int>::iterator mit = num_procs.find(job_id.cluster);
+		if (mit == num_procs.end()) {
+			num_procs[job_id.cluster] = 1;
+		} else {
+			num_procs[job_id.cluster] += 1;
+		}
+	}
+
+	// add the ATTR_TOTAL_SUBMIT_PROCS attributes to the transaction
+	char number[10];
+	for (std::map<int, int>::iterator mit = num_procs.begin(); mit != num_procs.end(); ++mit) {
+		job_id.set(mit->first, -1);
+		sprintf(number, "%d", mit->second);
+		JobQueue->SetAttribute(job_id.c_str(), ATTR_TOTAL_SUBMIT_PROCS, number, false);
+	}
+}
+
+
 void
 CommitTransaction(SetAttributeFlags_t flags /* = 0 */)
 {
 	std::list<std::string> new_ad_keys;
 		// get a list of all new ads being created in this transaction
 	JobQueue->ListNewAdsInTransaction( new_ad_keys );
+	if ( ! new_ad_keys.empty()) { SetSubmitTotalProcs(new_ad_keys); }
 
 	if( flags & NONDURABLE ) {
 		JobQueue->CommitNondurableTransaction();
