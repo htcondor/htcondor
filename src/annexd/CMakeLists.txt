@@ -20,4 +20,5 @@ if( LINUX )
 		"${CONDOR_LIBS}"
 		ON )
 
+	condor_exe( condor_annex "annex.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF )
 endif( LINUX )

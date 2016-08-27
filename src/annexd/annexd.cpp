@@ -5,6 +5,7 @@
 #include "subsystem_info.h"
 #include "get_daemon_name.h"
 #include "gahp-client.h"
+#include "classad_command_util.h"
 
 #include <algorithm>
 
@@ -19,11 +20,11 @@ char * GridmanagerScratchDir = NULL;
 // to make the RequestLimitExceeded stuff work right, we start a GAHP server
 // for each {public key file, service URL} tuple.
 EC2GahpClient *
-startOneGahpClient() {
+startOneGahpClient( const std::string & publicKeyFile, const std::string & serviceURL ) {
 	dprintf( D_ALWAYS, "startOneGahpClient()\n" );
 
 	std::string gahpName;
-	formatstr( gahpName, "annex-%s@%s", "publicKeyFile.c_str()", "m_serviceURL.c_str()" );
+	formatstr( gahpName, "annex-%s@%s", publicKeyFile.c_str(), serviceURL.c_str() );
 
 	ArgList args;
 
@@ -77,46 +78,228 @@ startOneGahpClient() {
 // last time we looked them up.
 class BulkRequest : public Service {
 	public:
-		BulkRequest( EC2GahpClient * egc ) : gahp( egc ) { };
+		BulkRequest( EC2GahpClient * egc,
+		  const std::string & serviceURL,
+		  const std::string & publicKeyFile,
+		  const std::string & secretKeyFile
+		  ) : gahp( egc ),
+		      service_url( serviceURL ),
+		      public_key_file( publicKeyFile ),
+		      secret_key_file( secretKeyFile )
+		{ };
 		virtual ~BulkRequest() { }
 
+		bool validateAndStore( ClassAd const * command, std::string & validationError );
 		void operator() () const;
 
 	protected:
 		EC2GahpClient * gahp;
+
+		std::string service_url, public_key_file, secret_key_file;
+		std::string client_token, spot_price, target_capacity;
+		std::string iam_fleet_role, allocation_strategy;
+
+		std::vector< std::string > launch_specifications;
 };
 
-// Implement the demo hack.  Based on the way the GAHP client detects new
-// commands, we probably don't need to recreate the whole set of arguments
-// each time, but that's an optimization / simplification that can wait.
+bool BulkRequest::validateAndStore( ClassAd const * command, std::string & validationError ) {
+	command->LookupString( "SpotPrice", spot_price );
+	if( spot_price.empty() ) {
+		validationError = "Attribute 'SpotPrice' missing or not a string.";
+		return false;
+	}
+
+	int targetCapacity;
+	if(! command->LookupInteger( "TargetCapacity", targetCapacity )) {
+		validationError = "Attribute 'TargetCapacity' missing or not an integer.";
+		return false;
+	} else {
+		formatstr( target_capacity, "%d", targetCapacity );
+	}
+
+	command->LookupString( "IamFleetRole", iam_fleet_role );
+	if( iam_fleet_role.empty() ) {
+		validationError = "Attribute 'IamFleetRole' missing or not a string.";
+		return false;
+	}
+
+	command->LookupString( "AllocationStrategy", allocation_strategy );
+	if( allocation_strategy.empty() ) { allocation_strategy = "lowestPrice"; }
+
+
+	ExprTree * launchConfigurationsET = command->Lookup( "LaunchSpecifications" );
+	if(! launchConfigurationsET) {
+		validationError = "Attribute 'LaunchSpecifications' missing.";
+		return false;
+	}
+	classad::ExprList * launchConfigurations = dynamic_cast<classad::ExprList *>( launchConfigurationsET );
+	if(! launchConfigurations) {
+		validationError = "Attribute 'LaunchSpecifications' not a list.";
+		return false;
+	}
+
+	auto lcIterator = launchConfigurations->begin();
+	for( ; lcIterator != launchConfigurations->end(); ++lcIterator ) {
+		classad::ClassAd * ca = dynamic_cast<classad::ClassAd *>( * lcIterator );
+		if( ca == NULL ) {
+			validationError = "'LaunchSpecifications[x]' not a ClassAd.";
+			return false;
+		}
+		ClassAd launchConfiguration( * ca );
+
+		// Convert to the GAHP's single-level JSON.
+		std::map< std::string, std::string > blob;
+		launchConfiguration.LookupString( "ImageId", blob[ "ImageId" ] );
+		launchConfiguration.LookupString( "SpotPrice", blob[ "SpotPrice" ] );
+		launchConfiguration.LookupString( "KeyName", blob[ "KeyName" ] );
+		launchConfiguration.LookupString( "UserData", blob[ "UserData" ] );
+		launchConfiguration.LookupString( "InstanceType", blob[ "InstanceType" ] );
+		launchConfiguration.LookupString( "SubnetId", blob[ "SubnetId" ] );
+		launchConfiguration.LookupString( "WeightedCapacity", blob[ "WeightedCapacity" ] );
+
+		ExprTree * iipTree = launchConfiguration.Lookup( "IamInstanceProfile" );
+		if( iipTree != NULL ) {
+			classad::ClassAd * ca = dynamic_cast<classad::ClassAd *>( iipTree );
+			if( ca == NULL ) {
+				validationError = "Element 'LaunchSpecifications[x].IamInstanceProfile' is not a ClassAd.";
+				return false;
+			}
+			ClassAd iamInstanceProfile( * ca );
+
+			iamInstanceProfile.LookupString( "Arn", blob[ "IAMProfileARN" ] );
+			iamInstanceProfile.LookupString( "Name", blob[ "IAMProfileName" ] );
+		}
+
+		ExprTree * sgTree = launchConfiguration.Lookup( "SecurityGroups" );
+		if( sgTree != NULL ) {
+			classad::ExprList * sgList = dynamic_cast<classad::ExprList *>( sgTree );
+			if( sgList == NULL ) {
+				validationError = "Element 'LaunchSpecifications[x].SecurityGroups' is not a ClassAd.";
+				return false;
+			}
+
+			StringList sgIDList, sgNameList;
+			auto sgIterator = sgList->begin();
+			for( ; sgIterator != sgList->end(); ++sgIterator ) {
+				classad::ClassAd * ca = dynamic_cast<classad::ClassAd *>( * sgIterator );
+				if( ca == NULL ) {
+					validationError = "Element 'LaunchSpecifications[x].SecurityGroups[x]' is not a ClassAd.";
+					return false;
+				}
+				ClassAd securityGroup( * ca );
+
+				std::string groupID, groupName;
+				securityGroup.LookupString( "GroupId", groupID );
+				securityGroup.LookupString( "GroupName", groupName );
+				if(! groupID.empty()) { sgIDList.append( groupID.c_str() ); }
+				if(! groupName.empty()){ sgNameList.append( groupName.c_str() ); }
+			}
+
+			char * fail = sgIDList.print_to_delimed_string( ", " );
+			if( fail ) {
+				blob[ "SecurityGroupIDs" ] = fail;
+				free( fail );
+			}
+
+			char * suck = sgNameList.print_to_delimed_string( ", " );
+			if( suck ) {
+				blob[ "SecurityGroupNames" ] = suck;
+				free( suck );
+			}
+		}
+
+		ExprTree * bdmTree = launchConfiguration.Lookup( "BlockDeviceMappings" );
+		if( bdmTree != NULL ) {
+			classad::ExprList * blockDeviceMappings = dynamic_cast<classad::ExprList *>( bdmTree );
+			if(! blockDeviceMappings) {
+				validationError = "Attribute 'BlockDeviceMappings' not a list.";
+				return false;
+			}
+
+			StringList bdmList;
+			auto bdmIterator = blockDeviceMappings->begin();
+			for( ; bdmIterator != blockDeviceMappings->end(); ++bdmIterator ) {
+				classad::ClassAd * ca = dynamic_cast<classad::ClassAd *>( * bdmIterator );
+				if( ca == NULL ) {
+					validationError = "Attribute 'BlockDeviceMappings[x] not a ClassAd.";
+					return false;
+				}
+				ClassAd blockDeviceMapping( * ca );
+
+				std::string dn;
+				blockDeviceMapping.LookupString( "DeviceName", dn );
+				if( dn.empty() ) {
+					validationError = "Attribute 'BlockDeviceMappings[x].DeviceName not a string.";
+					return false;
+				}
+
+				ExprTree * ebsTree = blockDeviceMapping.Lookup( "Ebs" );
+				classad::ClassAd * cb = dynamic_cast< classad::ClassAd *>( ebsTree );
+				if( cb == NULL ) {
+					validationError = "Attribute 'BlockDeviceMappings[x].Ebs not a ClassAd.";
+					return false;
+				}
+				ClassAd ebs( * cb );
+
+				std::string si;
+				ebs.LookupString( "SnapshotId", si );
+				if( si.empty() ) {
+					validationError = "Attribute 'BlockDeviceMappings[x].Ebs.SnapshotId not a string.";
+					return false;
+				}
+
+				std::string vt;
+				ebs.LookupString( "VolumeType", vt );
+				if( vt.empty() ) {
+					validationError = "Attribute 'BlockDeviceMappings[x].Ebs.VolumeType not a string.";
+					return false;
+				}
+
+				int vs;
+				if(! ebs.LookupInteger( "VolumeSize", vs )) {
+					validationError = "Attribute 'BlockDeviceMappings[x].Ebs.VolumeSize not an integer.";
+					return false;
+				}
+
+				bool dot;
+				if(! ebs.LookupBool( "DeleteOnTermination", dot )) {
+					validationError = "Attribute 'BlockDeviceMappings[x].Ebs.DeleteOnTermination not a boolean.";
+					return false;
+				}
+
+				// <DeviceName>=<SnapshotId>:<VolumeSize>:<DeleteOnTermination>:<VolumeType>
+				std::string bdmString;
+				formatstr( bdmString, "%s=%s:%d:%s:%s",
+					dn.c_str(), si.c_str(), vs, dot ? "true" : "false", vt.c_str() );
+				bdmList.append( bdmString.c_str() );
+			}
+
+			char * fail = bdmList.print_to_delimed_string( ", " );
+			if( fail != NULL ) {
+				blob[ "BlockDeviceMapping" ] = fail;
+				free( fail );
+			}
+		}
+
+		std::string lcString = "{";
+		for( auto i = blob.begin(); i != blob.end(); ++i ) {
+			if( i->second.empty() ) { continue; }
+			formatstr( lcString, "%s \"%s\": \"%s\",",
+				lcString.c_str(), i->first.c_str(), i->second.c_str() );
+		}
+		lcString.erase( lcString.length() - 1 );
+		lcString += " }";
+
+		dprintf( D_ALWAYS, "Using launch specification string '%s'.\n", lcString.c_str() );
+		launch_specifications.push_back( lcString );
+	}
+
+	return true;
+}
+
 void
 BulkRequest::operator() () const {
 	dprintf( D_ALWAYS, "BulkRequest::operator()()\n" );
-
-	std::string serviceURL, public_key_file, secret_key_file;
-	param( serviceURL, "ANNEX_DEFAULT_SERVICE_URL" );
-	param( public_key_file, "ANNEX_DEFAULT_PUBLIC_KEY_FILE" );
-	param( secret_key_file, "ANNEX_DEFAULT_SECRET_KEY_FILE" );
-
-	std::string client_token, spot_price, target_capacity;
-	std::string iam_fleet_role, allocation_strategy;
-	param( spot_price, "ANNEX_DEFAULT_SPOT_PRICE" );
-	param( target_capacity, "ANNEX_DEFAULT_TARGET_CAPACITY" );
-	param( iam_fleet_role, "ANNEX_DEFAULT_IAM_FLEET_ROLE" );
-	param( allocation_strategy, "ANNEX_DEFAULT_ALLOCATION_STRATEGY" );
-
-	std::vector< std::string> launch_configurations;
-	std::string lc;
-	std::string adlci;
-	std::string adlc = "ANNEX_DEFAULT_LAUNCH_CONFIGURATION_";
-	for( int i = 0; ; ++i ) {
-		lc.clear();
-		formatstr( adlci, "%s%d", adlc.c_str(), i );
-		if(! param( lc, adlci.c_str() )) { break; }
-		lc.erase( std::remove( lc.begin(), lc.end(), '\r' ), lc.end() );
-		lc.erase( std::remove( lc.begin(), lc.end(), '\n' ), lc.end() );
-		launch_configurations.push_back( lc );
-	}
 
 	int rc;
 	std::string errorCode;
@@ -124,10 +307,10 @@ BulkRequest::operator() () const {
 
 	dprintf( D_ALWAYS, "Calling bulk_start()...\n" );
 	rc = gahp->bulk_start(
-				serviceURL, public_key_file, secret_key_file,
+				service_url, public_key_file, secret_key_file,
 				client_token, spot_price, target_capacity,
 				iam_fleet_role, allocation_strategy,
-				launch_configurations,
+				launch_specifications,
 				bulkRequestID, errorCode );
 	if( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED || rc == GAHPCLIENT_COMMAND_PENDING ) {
 		// We should exit here the first time.
@@ -145,23 +328,46 @@ BulkRequest::operator() () const {
 	}
 }
 
-// Implement the demo hack.
+
 void
-createOneAnnex() {
+createOneAnnex( ClassAd * command, ClassAd * reply ) {
 	dprintf( D_ALWAYS, "createOneAnnex()\n" );
+
+	// FIXME: Look up the service URL and keyfiles in the map, if they're
+	// not defined in the command.
+	std::string serviceURL = "https://ec2.us-east-1.amazonaws.com";
+	std::string publicKeyFile = "/home/tlmiller/condor/test/ec2/accessKeyFile";
+	std::string secretKeyFile = "/home/tlmiller/condor/test/ec2/secretKeyFile";
 
 	// Create the GAHP client.  The first time we call a GAHP client function,
 	// it will send that command to the GAHP server, but the GAHP server may
 	// take some time to get the result.  The GAHP client will fire the
 	// notification timer when the result is ready, and we can get it by
 	// calling the GAHP client function a second time with the same arguments.
-	EC2GahpClient * gahp = startOneGahpClient();
+	EC2GahpClient * gahp = startOneGahpClient( publicKeyFile, serviceURL );
 
 	// Create a timer for the gahp to fire when it gets a result.  Use it,
 	// as long as we have to create it anyway, to make the initial bulk
 	// request.  We must use TIMER_NEVER to ensure that the timer hasn't
 	// been reaped when the GAHP client needs to fire it.
-	BulkRequest * br = new BulkRequest( gahp );
+	BulkRequest * br = new BulkRequest( gahp, serviceURL, publicKeyFile, secretKeyFile );
+
+	std::string validationError;
+	if(! br->validateAndStore( command, validationError )) {
+		reply->Assign( ATTR_RESULT, getCAResultString( CA_INVALID_REQUEST ) );
+		reply->Assign( ATTR_ERROR_STRING, validationError );
+		return;
+	}
+
+	// FIXME: We may need to do something clever here.  Also, do NOT allow
+	// the user to specify the client token.
+	// br->setClientToken();
+
+	// FIXME: What's the idiom for delaying our reply until we hear back from
+	// the service?  Or do we just define success, from the command-line's
+	// POV, as having submitted a valid request?
+	reply->Assign( ATTR_RESULT, getCAResultString( CA_SUCCESS ) );
+
 	int gahpNotificationTimer = daemonCore->Register_Timer( 0, TIMER_NEVER,
 		(void (Service::*)()) & BulkRequest::operator(),
 		"BulkRequest::operator()()", br );
@@ -174,16 +380,12 @@ ClassAd annexDaemonAd;
 
 void
 updateCollectors() {
-	dprintf( D_FULLDEBUG, "Entering updateCollectors()...\n" );
-
 	daemonCore->publish( & annexDaemonAd );
 	daemonCore->dc_stats.Publish( annexDaemonAd );
 	daemonCore->monitor_data.ExportData( & annexDaemonAd );
 	daemonCore->sendUpdates( UPDATE_AD_GENERIC, & annexDaemonAd, NULL, true );
 
 	daemonCore->Reset_Timer( updateTimerID, updateInterval, updateInterval );
-
-	dprintf( D_FULLDEBUG, "... exiting updateCollectors().\n" );
 }
 
 void
@@ -209,14 +411,53 @@ main_config() {
 }
 
 void
+handleClassAdCommand( Service *, int dcCommandInt, Stream * s ) {
+	ASSERT( dcCommandInt == CA_AUTH_CMD );
+
+	ClassAd commandAd;
+	ReliSock * rsock = (ReliSock *)s;
+	int command = getCmdFromReliSock( rsock, & commandAd, true );
+
+	std::string commandString;
+	if(! commandAd.LookupString( ATTR_COMMAND, commandString ) ) {
+		commandString = "not found";
+	}
+
+	switch( command ) {
+		case CA_BULK_REQUEST: {
+			ClassAd reply;
+			reply.Assign( "RequestVersion", 1 );
+
+			createOneAnnex( & commandAd, & reply );
+			if(! sendCAReply( s, commandString.c_str(), & reply )) {
+				dprintf( D_ALWAYS, "Failed to reply to CA_BULK_REQUEST.\n" );
+			}
+		} break;
+
+		default:
+			dprintf( D_ALWAYS, "Unknown command (%s) in CA_AUTH_CMD ad, ignoring.\n", commandString.c_str() );
+			return;
+		break;
+	}
+}
+
+void
 main_init( int /* argc */, char ** /* argv */ ) {
 	// Make sure that, e.g., updateInterval is set.
 	main_config();
 
+	// All our commands are ClassAds.  At some point, we're going to want
+	// to know the authenticated identity of the requester, so make that
+	// happen here.  (Forcing authentication in getCmdFromReliSock() doesn't
+	// actually generate an authenticated identity for some reason -- I get
+	// 'unauthorized@unmapped', probably because host-based security has
+	// already happened.)
+	daemonCore->Register_Command( CA_AUTH_CMD, "CA_AUTH_CMD",
+		(CommandHandler)handleClassAdCommand, "handleClassAdCommand",
+		NULL, ADMINISTRATOR, D_COMMAND, true );
+
 	// Make sure the command-line tool can find us.
 	updateTimerID = daemonCore->Register_Timer( 0, updateInterval, & updateCollectors, "updateCollectors()" );
-
-	// daemonCore->Register_Timer( 0, 0, & createOneAnnex, "createOneAnnex()" );
 }
 
 void

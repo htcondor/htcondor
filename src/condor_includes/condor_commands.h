@@ -225,8 +225,11 @@ NAMETABLE_DIRECTIVE:TABLE:DCTranslation
 // other commands that use the ClassAd-only protocol
 // CA_LOCATE_STARTER used to be (CA_AUTH_CMD_BASE+7), but no more
 // CA_RECONNECT_JOB used to be  (CA_AUTH_CMD_BASE+8), but no more
+
 // Use the ClassAd-based protocol for updating the machine ClassAd.
 #define CA_UPDATE_MACHINE_AD	(CA_AUTH_CMD_BASE+9)
+// Use the ClassAd-based protocol for communicating with the annex daemon.
+#define CA_BULK_REQUEST			(CA_AUTH_CMD_BASE+10)
 
 #define CA_CMD                  (CA_CMD_BASE+0)
 #define CA_LOCATE_STARTER       (CA_CMD_BASE+1)
