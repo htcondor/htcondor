@@ -79,6 +79,7 @@ main( int argc, char ** argv ) {
 	std::string userData;
 	const char * userDataFileName = NULL;
 
+	int udSpecifications = 0;
 	const char * pool = NULL;
 	const char * name = NULL;
 	const char * fileName = NULL;
@@ -102,7 +103,7 @@ main( int argc, char ** argv ) {
 				return 1;
 			}
 		} else if( is_dash_arg_prefix( argv[i], "user-data-file", 10 ) ) {
-			++i;
+			++i; ++udSpecifications;
 			if( argv[i] != NULL ) {
 				userDataFileName = argv[i];
 				continue;
@@ -111,8 +112,28 @@ main( int argc, char ** argv ) {
 				return 1;
 			}
 		} else if( is_dash_arg_prefix( argv[i], "user-data", 9 ) ) {
-			++i;
+			++i; ++udSpecifications;
 			if( argv[i] != NULL ) {
+				userData = argv[i];
+				continue;
+			} else {
+				fprintf( stderr, "%s: -user-data requires an argument.\n", argv[0] );
+				return 1;
+			}
+		} else if( is_dash_arg_prefix( argv[i], "default-user-data-file", 18 ) ) {
+			++i; ++udSpecifications;
+			if( argv[i] != NULL ) {
+				clUserDataWins = false;
+				userDataFileName = argv[i];
+				continue;
+			} else {
+				fprintf( stderr, "%s: -user-data-file requires an argument.\n", argv[0] );
+				return 1;
+			}
+		} else if( is_dash_arg_prefix( argv[i], "default-user-data", 17 ) ) {
+			++i; ++udSpecifications;
+			if( argv[i] != NULL ) {
+				clUserDataWins = false;
 				userData = argv[i];
 				continue;
 			} else {
@@ -122,14 +143,17 @@ main( int argc, char ** argv ) {
 		} else if( is_dash_arg_prefix( argv[i], "debug", 1 ) ) {
 			dprintf_set_tool_debug( "TOOL", 0 );
 			continue;
+		} else if( argv[i][0] == '-' && argv[i][1] != '\0' ) {
+			fprintf( stderr, "%s: unrecognized option (%s).\n", argv[0], argv[i] );
+			return 1;
 		} else {
 			fileName = argv[i];
 			continue;
 		}
 	}
 
-	if( userDataFileName != NULL && (! userData.empty()) ) {
-		fprintf( stderr, "%s: you must specify at most one of -user-data-file and -user-data.\n", argv[0] );
+	if( udSpecifications > 1 ) {
+		fprintf( stderr, "%s: you may specify no more than one of -[default-]user-data[-file].\n", argv[0] );
 		return 1;
 	}
 
