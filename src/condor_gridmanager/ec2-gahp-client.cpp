@@ -817,7 +817,7 @@ void EC2GahpClient::LaunchConfiguration::convertToJSON( std::string & s ) const 
 	setAttribute( s, "SpotPrice", spot_price );
 	setAttribute( s, "KeyName", keypair );
 
-	// FIXME: We (or the caller?) need to base-64 encode/etc the UserData.
+	// The GAHP will base64-encode the user data.
 	setAttribute( s, "UserData", user_data );
 	setAttribute( s, "InstanceType", instance_type );
 	setAttribute( s, "SubnetId", vpc_subnet );
