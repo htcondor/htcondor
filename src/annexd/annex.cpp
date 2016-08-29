@@ -4,11 +4,80 @@
 #include "match_prefix.h"
 #include "daemon.h"
 #include "dc_annexd.h"
+#include "stat_wrapper.h"
+#include "condor_base64.h"
+
+// Modelled on BulkRequest::validateAndStore() from annexd/BulkRequest.cpp.
+bool
+assignUserData( ClassAd & command, const char * ud, bool replace, std::string & validationError ) {
+	ExprTree * launchConfigurationsTree = command.Lookup( "LaunchSpecifications" );
+	if(! launchConfigurationsTree) {
+		validationError = "Attribute 'LaunchSpecifications' missing.";
+		return false;
+	}
+	classad::ExprList * launchConfigurations = dynamic_cast<classad::ExprList *>( launchConfigurationsTree );
+	if(! launchConfigurations) {
+		validationError = "Attribute 'LaunchSpecifications' not a list.";
+		return false;
+	}
+
+	auto lcIterator = launchConfigurations->begin();
+	for( ; lcIterator != launchConfigurations->end(); ++lcIterator ) {
+		classad::ClassAd * ca = dynamic_cast<classad::ClassAd *>( * lcIterator );
+		if( ca == NULL ) {
+			validationError = "'LaunchSpecifications[x]' not a ClassAd.";
+			return false;
+		}
+		ClassAd launchConfiguration( * ca );
+
+		std::string userData;
+		launchConfiguration.LookupString( "UserData", userData );
+		if( userData.empty() || replace ) {
+			ca->InsertAttr( "UserData", ud );
+		}
+	}
+
+	return true;
+}
+
+// Modelled on readShortFile() from ec2_gahp/amazonCommands.cpp.
+bool
+readShortFile( const char * fileName, std::string & contents ) {
+    int fd = safe_open_wrapper_follow( fileName, O_RDONLY, 0600 );
+
+    if( fd < 0 ) {
+    	fprintf( stderr, "Failed to open file '%s' for reading: '%s' (%d).\n",
+            fileName, strerror( errno ), errno );
+        return false;
+    }
+
+    StatWrapper sw( fd );
+    unsigned long fileSize = sw.GetBuf()->st_size;
+
+    char * rawBuffer = (char *)malloc( fileSize + 1 );
+    assert( rawBuffer != NULL );
+    unsigned long totalRead = full_read( fd, rawBuffer, fileSize );
+    close( fd );
+    if( totalRead != fileSize ) {
+    	fprintf( stderr, "Failed to completely read file '%s'; needed %lu but got %lu.\n",
+            fileName, fileSize, totalRead );
+        free( rawBuffer );
+        return false;
+    }
+    contents.assign( rawBuffer, fileSize );
+    free( rawBuffer );
+
+    return true;
+}
 
 int
 main( int argc, char ** argv ) {
 	config();
 	set_mySubSystem( "TOOL", SUBSYSTEM_TYPE_TOOL );
+
+	bool clUserDataWins = true;
+	std::string userData;
+	const char * userDataFileName = NULL;
 
 	const char * pool = NULL;
 	const char * name = NULL;
@@ -32,16 +101,36 @@ main( int argc, char ** argv ) {
 				fprintf( stderr, "%s: -name requires an argument.\n", argv[0] );
 				return 1;
 			}
+		} else if( is_dash_arg_prefix( argv[i], "user-data-file", 10 ) ) {
+			++i;
+			if( argv[i] != NULL ) {
+				userDataFileName = argv[i];
+				continue;
+			} else {
+				fprintf( stderr, "%s: -user-data-file requires an argument.\n", argv[0] );
+				return 1;
+			}
+		} else if( is_dash_arg_prefix( argv[i], "user-data", 9 ) ) {
+			++i;
+			if( argv[i] != NULL ) {
+				userData = argv[i];
+				continue;
+			} else {
+				fprintf( stderr, "%s: -user-data requires an argument.\n", argv[0] );
+				return 1;
+			}
 		} else if( is_dash_arg_prefix( argv[i], "debug", 1 ) ) {
 			dprintf_set_tool_debug( "TOOL", 0 );
 			continue;
-		} else if( argv[i][0] == '-') {
-			fprintf( stderr, "%s: unrecognized option '%s'.\n", argv[0], argv[i] );
-			return 1;
 		} else {
 			fileName = argv[i];
 			continue;
 		}
+	}
+
+	if( userDataFileName != NULL && (! userData.empty()) ) {
+		fprintf( stderr, "%s: you must specify at most one of -user-data-file and -user-data.\n", argv[0] );
+		return 1;
 	}
 
 	if( fileName == NULL ) {
@@ -87,6 +176,25 @@ main( int argc, char ** argv ) {
 	}
 
 
+	// Handle user data.
+	if( userDataFileName != NULL ) {
+		if(! readShortFile( userDataFileName, userData ) ) {
+			return 2;
+		}
+	}
+
+	// condor_base64_encode() segfaults on the empty string.
+	if(! userData.empty()) {
+		std::string validationError;
+		char * base64Encoded = condor_base64_encode( (const unsigned char *)userData.c_str(), userData.length() );
+		if(! assignUserData( spotFleetRequest, base64Encoded, clUserDataWins, validationError )) {
+			fprintf( stderr, "Failed to set user data in request ad (%s).\n", validationError.c_str() );
+			return 6;
+		}
+		free( base64Encoded );
+	}
+
+
 	if(! annexd.locate( Daemon::LOCATE_FOR_LOOKUP )) {
 		char * error = annexd.error();
 		if( error && error[0] != '\0' ) {
@@ -96,7 +204,6 @@ main( int argc, char ** argv ) {
 		}
 		return 3;
 	}
-	dprintf( D_FULLDEBUG, "Found annex daemon at '%s'.\n", annexd.addr() );
 
 
 	ClassAd reply;

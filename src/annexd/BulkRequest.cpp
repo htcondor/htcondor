@@ -60,6 +60,8 @@ bool BulkRequest::validateAndStore( ClassAd const * command, std::string & valid
 		launchConfiguration.LookupString( "ImageId", blob[ "ImageId" ] );
 		launchConfiguration.LookupString( "SpotPrice", blob[ "SpotPrice" ] );
 		launchConfiguration.LookupString( "KeyName", blob[ "KeyName" ] );
+		// We assume that user data is converted to base 64 before it's
+		// sent on the wire.
 		launchConfiguration.LookupString( "UserData", blob[ "UserData" ] );
 		launchConfiguration.LookupString( "InstanceType", blob[ "InstanceType" ] );
 		launchConfiguration.LookupString( "SubnetId", blob[ "SubnetId" ] );

@@ -2865,21 +2865,9 @@ bool AmazonBulkStart::workerFunction( char ** argv, int argc, std::string & resu
 			"SpotPrice" );
 		request.setLaunchSpecificationAttribute( lcIndex, blob,
 			"KeyName" );
-
-		// Handle user data.
-		{
-			std::ostringstream ss;
-			ss << "SpotFleetRequestConfig.LaunchSpecifications.";
-			// Another mistake in the documentation.
-			ss << lcIndex << "." << "userData";
-
-			std::string & value = blob[ "UserData" ];
-			if(! value.empty()) {
-				char * base64Encoded = condor_base64_encode( (const unsigned char *)value.c_str(), value.length() );
-				request.query_parameters[ ss.str() ] = base64Encoded;
-				free( base64Encoded );
-			}
-		}
+		// AWS' documentation is wrong, claims this is 'UserData'.
+		request.setLaunchSpecificationAttribute( lcIndex, blob,
+			"userData", "UserData" );
 
 		request.setLaunchSpecificationAttribute( lcIndex, blob,
 			"InstanceType" );
