@@ -88,8 +88,21 @@ main( int argc, char ** argv ) {
 		return 3;
 	}
 
-	// FIXME: Print out the bulk request ID.
-	
+	int requestVersion = -1;
+	reply.LookupInteger( "RequestVersion", requestVersion );
+	if( requestVersion != 1 ) {
+		fprintf( stderr, "Daemon's reply had missing or unknown RequestVersion (%d).\n", requestVersion );
+		return 4;
+	}
+
+	std::string bulkRequestID;
+	reply.LookupString( "BulkRequestID", bulkRequestID );
+	if( bulkRequestID.empty() ) {
+		fprintf( stderr, "Daemon's reply did not include bulk request ID.\n" );
+		return 4;
+	} else {
+		fprintf( stdout, "%s\n", bulkRequestID.c_str() );
+	}
 
 	return 0;
 }
