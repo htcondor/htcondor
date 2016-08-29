@@ -281,7 +281,11 @@ typedef struct macro_eval_context_ex : macro_eval_context {
 	bool param(MyString &buf,char const *param_name,char const *default_value=NULL);
 
 	/* A convenience function that calls param() with a std::string buffer. */
-	bool param(std::string &buf,char const *param_name,char const *default_value=NULL);
+	bool param(std::string &buf, char const *param_name, char const *default_value=NULL);
+
+	/* A convenience function that evaluates a config parameter to a string. */
+	bool param_eval_string(std::string &buf, const char *param_name, const char *default_value=NULL,
+		classad::ClassAd *me=NULL, classad::ClassAd *target=NULL);
 
 	/* A convenience function that calls param() then inserts items from the value into the given StringList if they are not already there */
 	bool param_and_insert_unique_items(const char * param_name, StringList & items, bool case_sensitive=false);
