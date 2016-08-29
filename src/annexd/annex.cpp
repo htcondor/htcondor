@@ -12,6 +12,7 @@ main( int argc, char ** argv ) {
 
 	const char * pool = NULL;
 	const char * name = NULL;
+	const char * fileName = NULL;
 	for( int i = 1; i < argc; ++i ) {
 		if( is_dash_arg_prefix( argv[i], "pool", 1 ) ) {
 			++i;
@@ -20,7 +21,7 @@ main( int argc, char ** argv ) {
 				continue;
 			} else {
 				fprintf( stderr, "%s: -pool requires an argument.\n", argv[0] );
-				exit( 1 );
+				return 1;
 			}
 		} else if( is_dash_arg_prefix( argv[i], "name", 1 ) ) {
 			++i;
@@ -29,16 +30,38 @@ main( int argc, char ** argv ) {
 				continue;
 			} else {
 				fprintf( stderr, "%s: -name requires an argument.\n", argv[0] );
-				exit( 1 );
+				return 1;
 			}
 		} else if( is_dash_arg_prefix( argv[i], "debug", 1 ) ) {
 			dprintf_set_tool_debug( "TOOL", 0 );
 			continue;
-		} else {
+		} else if( argv[i][0] == '-') {
 			fprintf( stderr, "%s: unrecognized option '%s'.\n", argv[0], argv[i] );
-			exit( 1 );
+			return 1;
+		} else {
+			fileName = argv[i];
+			continue;
 		}
 	}
+
+	if( fileName == NULL ) {
+		fprintf( stderr, "%s: you must specify a file containing an annex specification.\n", argv[0] );
+		return 1;
+	}
+
+	FILE * file = NULL;
+	bool closeFile = true;
+	if( strcmp( fileName, "-" ) == 0 ) {
+		file = stdin;
+		closeFile = false;
+	} else {
+		file = safe_fopen_wrapper_follow( fileName, "r" );
+		if( file == NULL ) {
+			fprintf( stderr, "Unable to open annex specification file '%s'.\n", fileName );
+			return 1;
+		}
+	}
+
 
 	std::string annexDaemonName;
 	param( annexDaemonName, "ANNEXD_NAME" );
@@ -49,17 +72,17 @@ main( int argc, char ** argv ) {
 
 	ClassAd spotFleetRequest;
 	CondorClassAdFileIterator ccafi;
-	if(! ccafi.begin( stdin, false, CondorClassAdFileParseHelper::Parse_json )) {
+	if(! ccafi.begin( file, closeFile, CondorClassAdFileParseHelper::Parse_json )) {
 		fprintf( stderr, "Failed to start parsing spot fleet request.\n" );
-		return 1;
+		return 2;
 	} else {
 		int numAttrs = ccafi.next( spotFleetRequest );
 		if( numAttrs <= 0 ) {
 			fprintf( stderr, "Failed to parse spot fleet request, found no attributes.\n" );
-			return 1;
+			return 2;
 		} else if( numAttrs > 11 ) {
 			fprintf( stderr, "Failed to parse spot fleet reqeust, found too many attributes.\n" );
-			return 1;
+			return 2;
 		}
 	}
 
@@ -71,7 +94,7 @@ main( int argc, char ** argv ) {
 		} else {
 			fprintf( stderr, "%s: Can't locate annex daemon.\n", argv[0] );
 		}
-		return 2;
+		return 3;
 	}
 	dprintf( D_FULLDEBUG, "Found annex daemon at '%s'.\n", annexd.addr() );
 
@@ -85,21 +108,21 @@ main( int argc, char ** argv ) {
 		} else {
 			fprintf( stderr, "Failed to send bulk request to daemon.\n" );
 		}
-		return 3;
+		return 4;
 	}
 
 	int requestVersion = -1;
 	reply.LookupInteger( "RequestVersion", requestVersion );
 	if( requestVersion != 1 ) {
 		fprintf( stderr, "Daemon's reply had missing or unknown RequestVersion (%d).\n", requestVersion );
-		return 4;
+		return 5;
 	}
 
 	std::string bulkRequestID;
 	reply.LookupString( "BulkRequestID", bulkRequestID );
 	if( bulkRequestID.empty() ) {
 		fprintf( stderr, "Daemon's reply did not include bulk request ID.\n" );
-		return 4;
+		return 5;
 	} else {
 		fprintf( stdout, "%s\n", bulkRequestID.c_str() );
 	}
