@@ -21,8 +21,6 @@ char * GridmanagerScratchDir = NULL;
 // for each {public key file, service URL} tuple.
 EC2GahpClient *
 startOneGahpClient( const std::string & publicKeyFile, const std::string & serviceURL ) {
-	dprintf( D_ALWAYS, "startOneGahpClient()\n" );
-
 	std::string gahpName;
 	formatstr( gahpName, "annex-%s@%s", publicKeyFile.c_str(), serviceURL.c_str() );
 
@@ -127,12 +125,12 @@ bool BulkRequest::validateAndStore( ClassAd const * command, std::string & valid
 	if( allocation_strategy.empty() ) { allocation_strategy = "lowestPrice"; }
 
 
-	ExprTree * launchConfigurationsET = command->Lookup( "LaunchSpecifications" );
-	if(! launchConfigurationsET) {
+	ExprTree * launchConfigurationsTree = command->Lookup( "LaunchSpecifications" );
+	if(! launchConfigurationsTree) {
 		validationError = "Attribute 'LaunchSpecifications' missing.";
 		return false;
 	}
-	classad::ExprList * launchConfigurations = dynamic_cast<classad::ExprList *>( launchConfigurationsET );
+	classad::ExprList * launchConfigurations = dynamic_cast<classad::ExprList *>( launchConfigurationsTree );
 	if(! launchConfigurations) {
 		validationError = "Attribute 'LaunchSpecifications' not a list.";
 		return false;
@@ -183,7 +181,7 @@ bool BulkRequest::validateAndStore( ClassAd const * command, std::string & valid
 			for( ; sgIterator != sgList->end(); ++sgIterator ) {
 				classad::ClassAd * ca = dynamic_cast<classad::ClassAd *>( * sgIterator );
 				if( ca == NULL ) {
-					validationError = "Element 'LaunchSpecifications[x].SecurityGroups[x]' is not a ClassAd.";
+					validationError = "Element 'LaunchSpecifications[x].SecurityGroups[y]' is not a ClassAd.";
 					return false;
 				}
 				ClassAd securityGroup( * ca );
@@ -212,7 +210,7 @@ bool BulkRequest::validateAndStore( ClassAd const * command, std::string & valid
 		if( bdmTree != NULL ) {
 			classad::ExprList * blockDeviceMappings = dynamic_cast<classad::ExprList *>( bdmTree );
 			if(! blockDeviceMappings) {
-				validationError = "Attribute 'BlockDeviceMappings' not a list.";
+				validationError = "Attribute 'LaunchSpecifications[x].BlockDeviceMappings' not a list.";
 				return false;
 			}
 
@@ -221,7 +219,7 @@ bool BulkRequest::validateAndStore( ClassAd const * command, std::string & valid
 			for( ; bdmIterator != blockDeviceMappings->end(); ++bdmIterator ) {
 				classad::ClassAd * ca = dynamic_cast<classad::ClassAd *>( * bdmIterator );
 				if( ca == NULL ) {
-					validationError = "Attribute 'BlockDeviceMappings[x] not a ClassAd.";
+					validationError = "Attribute 'LaunchSpecifications[x].BlockDeviceMappings[y] not a ClassAd.";
 					return false;
 				}
 				ClassAd blockDeviceMapping( * ca );
@@ -229,14 +227,14 @@ bool BulkRequest::validateAndStore( ClassAd const * command, std::string & valid
 				std::string dn;
 				blockDeviceMapping.LookupString( "DeviceName", dn );
 				if( dn.empty() ) {
-					validationError = "Attribute 'BlockDeviceMappings[x].DeviceName not a string.";
+					validationError = "Attribute 'LaunchSpecifications[x].BlockDeviceMappings[y].DeviceName missing or not a string.";
 					return false;
 				}
 
 				ExprTree * ebsTree = blockDeviceMapping.Lookup( "Ebs" );
 				classad::ClassAd * cb = dynamic_cast< classad::ClassAd *>( ebsTree );
 				if( cb == NULL ) {
-					validationError = "Attribute 'BlockDeviceMappings[x].Ebs not a ClassAd.";
+					validationError = "Attribute 'LaunchSpecifications[x].BlockDeviceMappings[y].Ebs missing or not a ClassAd.";
 					return false;
 				}
 				ClassAd ebs( * cb );
@@ -244,26 +242,26 @@ bool BulkRequest::validateAndStore( ClassAd const * command, std::string & valid
 				std::string si;
 				ebs.LookupString( "SnapshotId", si );
 				if( si.empty() ) {
-					validationError = "Attribute 'BlockDeviceMappings[x].Ebs.SnapshotId not a string.";
+					validationError = "Attribute 'LaunchSpecifications[x].BlockDeviceMappings[y].Ebs.SnapshotId missing or not a string.";
 					return false;
 				}
 
 				std::string vt;
 				ebs.LookupString( "VolumeType", vt );
 				if( vt.empty() ) {
-					validationError = "Attribute 'BlockDeviceMappings[x].Ebs.VolumeType not a string.";
+					validationError = "Attribute 'LaunchSpecifications[x].BlockDeviceMappings[y].Ebs.VolumeType missing or not a string.";
 					return false;
 				}
 
 				int vs;
 				if(! ebs.LookupInteger( "VolumeSize", vs )) {
-					validationError = "Attribute 'BlockDeviceMappings[x].Ebs.VolumeSize not an integer.";
+					validationError = "Attribute 'LaunchSpecifications[x].BlockDeviceMappings[y].Ebs.VolumeSize missing or not an integer.";
 					return false;
 				}
 
 				bool dot;
 				if(! ebs.LookupBool( "DeleteOnTermination", dot )) {
-					validationError = "Attribute 'BlockDeviceMappings[x].Ebs.DeleteOnTermination not a boolean.";
+					validationError = "Attribute 'LaunchSpecifications[x].BlockDeviceMappings[y].Ebs.DeleteOnTermination missing or not a boolean.";
 					return false;
 				}
 
@@ -290,7 +288,7 @@ bool BulkRequest::validateAndStore( ClassAd const * command, std::string & valid
 		lcString.erase( lcString.length() - 1 );
 		lcString += " }";
 
-		dprintf( D_ALWAYS, "Using launch specification string '%s'.\n", lcString.c_str() );
+		dprintf( D_FULLDEBUG, "Using launch specification string '%s'.\n", lcString.c_str() );
 		launch_specifications.push_back( lcString );
 	}
 
@@ -299,13 +297,10 @@ bool BulkRequest::validateAndStore( ClassAd const * command, std::string & valid
 
 void
 BulkRequest::operator() () const {
-	dprintf( D_ALWAYS, "BulkRequest::operator()()\n" );
-
 	int rc;
 	std::string errorCode;
 	std::string bulkRequestID;
 
-	dprintf( D_ALWAYS, "Calling bulk_start()...\n" );
 	rc = gahp->bulk_start(
 				service_url, public_key_file, secret_key_file,
 				client_token, spot_price, target_capacity,
@@ -331,8 +326,6 @@ BulkRequest::operator() () const {
 
 void
 createOneAnnex( ClassAd * command, ClassAd * reply ) {
-	dprintf( D_ALWAYS, "createOneAnnex()\n" );
-
 	// FIXME: Look up the service URL and keyfiles in the map, if they're
 	// not defined in the command.
 	std::string serviceURL = "https://ec2.us-east-1.amazonaws.com";
