@@ -732,6 +732,7 @@ class EC2GahpClient : public GahpClient {
 						const std::string & target_capacity,
 						const std::string & iam_fleet_role,
 						const std::string & allocation_strategy,
+						const std::string & valid_until,
 
 						const std::vector< LaunchConfiguration > & launch_configurations,
 
@@ -747,6 +748,7 @@ class EC2GahpClient : public GahpClient {
 						const std::string & target_capacity,
 						const std::string & iam_fleet_role,
 						const std::string & allocation_strategy,
+						const std::string & valid_until,
 
 						const std::vector< std::string > & launch_configurations,
 

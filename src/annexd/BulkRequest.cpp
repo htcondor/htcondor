@@ -32,6 +32,8 @@ bool BulkRequest::validateAndStore( ClassAd const * command, std::string & valid
 	command->LookupString( "AllocationStrategy", allocation_strategy );
 	if( allocation_strategy.empty() ) { allocation_strategy = "lowestPrice"; }
 
+	// This attribute is optional but has no default.
+	command->LookupString( "ValidUntil", valid_until );
 
 	ExprTree * launchConfigurationsTree = command->Lookup( "LaunchSpecifications" );
 	if(! launchConfigurationsTree) {
@@ -212,7 +214,7 @@ BulkRequest::operator() () const {
 	rc = gahp->bulk_start(
 				service_url, public_key_file, secret_key_file,
 				client_token, spot_price, target_capacity,
-				iam_fleet_role, allocation_strategy,
+				iam_fleet_role, allocation_strategy, valid_until,
 				launch_specifications,
 				bulkRequestID, errorCode );
 	if( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED || rc == GAHPCLIENT_COMMAND_PENDING ) {

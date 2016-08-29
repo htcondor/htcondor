@@ -853,6 +853,7 @@ int EC2GahpClient::bulk_start(	const std::string & service_url,
 								const std::string & target_capacity,
 								const std::string & iam_fleet_role,
 								const std::string & allocation_strategy,
+								const std::string & valid_until,
 
 								const std::vector< LaunchConfiguration > & launch_configurations,
 
@@ -873,7 +874,7 @@ int EC2GahpClient::bulk_start(	const std::string & service_url,
 
 	return bulk_start(	service_url, publickeyfile, privatekeyfile,
 						client_token, spot_price, target_capacity,
-						iam_fleet_role, allocation_strategy,
+						iam_fleet_role, allocation_strategy, valid_until,
 						lcStrings, bulkRequestID, error_code );
 }
 
@@ -886,6 +887,7 @@ int EC2GahpClient::bulk_start(	const std::string & service_url,
 								const std::string & target_capacity,
 								const std::string & iam_fleet_role,
 								const std::string & allocation_strategy,
+								const std::string & valid_until,
 
 								const std::vector< std::string > & launch_configurations,
 
@@ -904,6 +906,7 @@ int EC2GahpClient::bulk_start(	const std::string & service_url,
 	arguments.push_back( target_capacity );
 	arguments.push_back( iam_fleet_role );
 	arguments.push_back( allocation_strategy );
+	arguments.push_back( valid_until );
 
 	for( unsigned i = 0; i < launch_configurations.size(); ++i ) {
 		arguments.push_back( launch_configurations[i] );

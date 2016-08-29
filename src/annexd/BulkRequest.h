@@ -22,6 +22,8 @@ class BulkRequest : public Service {
 
 		bool validateAndStore( ClassAd const * command, std::string & validationError );
 		void setReplyStream( Stream * s ) { replyStream = s; }
+		bool isValidUntilSet() { return (! valid_until.empty()); }
+		void setValidUntil( const std::string & vu ) { valid_until = vu; }
 		void operator() () const;
 
 	protected:
@@ -30,7 +32,7 @@ class BulkRequest : public Service {
 
 		std::string service_url, public_key_file, secret_key_file;
 		std::string client_token, spot_price, target_capacity;
-		std::string iam_fleet_role, allocation_strategy;
+		std::string iam_fleet_role, allocation_strategy, valid_until;
 
 		std::vector< std::string > launch_specifications;
 };

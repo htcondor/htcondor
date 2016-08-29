@@ -129,6 +129,16 @@ createOneAnnex( ClassAd * command, Stream * replyStream ) {
 		return FALSE;
 	}
 
+	if(! br->isValidUntilSet()) {
+		time_t now = time( NULL );
+		time_t fifteenMinutesFromNow = now + (15 * 60);
+		struct tm fMFN;
+		gmtime_r( & fifteenMinutesFromNow, & fMFN );
+		char buffer[ 4 + 1 + 2 + 1 + 2 + 1 /* T */ + 2 + 1 + 2 + 1 + 2 + 1 /* Z */ + 1];
+		strftime( buffer, sizeof(buffer), "%Y-%m-%dT%H:%M:%SZ", & fMFN );
+		br->setValidUntil( buffer );
+	}
+
 	// FIXME: We may need to do something clever here.  Also, do NOT allow
 	// the user to specify the client token.
 	// br->setClientToken();

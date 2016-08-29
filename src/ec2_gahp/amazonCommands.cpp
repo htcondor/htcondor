@@ -2835,14 +2835,16 @@ bool AmazonBulkStart::workerFunction( char ** argv, int argc, std::string & resu
 		"TerminateInstancesWithExpiration" ] = "false";
 	request.query_parameters[ "SpotFleetRequestConfig."
 		"Type" ] = "request";
-	// FIXME: Should validity period be chosen by annexd?
-	// request.query_parameters[ "SpotFleetRequestConfig."
-	//	"ValidUntil" ] = "...";
 
-	for( int i = 10; i < argc; ++i ) {
+	if( strcmp( argv[10], NULLSTRING ) ) {
+		request.query_parameters[ "SpotFleetRequestConfig."
+			"ValidUntil" ] = argv[10];
+	}
+
+	for( int i = 11; i < argc; ++i ) {
 		if( strcmp( argv[i], NULLSTRING ) == 0 ) { break; }
 
-		int lcIndex = i - 10;
+		int lcIndex = i - 11;
 
 		// argv[i] is a JSON blob, because otherwise things got complicated.
 		// Luckily, we don't have handle generic JSON, just the single-level
