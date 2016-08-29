@@ -1290,9 +1290,11 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector, LocateType method )
 				*/
 			formatstr( buf, "%s == \"%s\"", ATTR_MACHINE, _full_hostname ); 
 			query.addANDConstraint( buf.c_str() );
-		} else if ( _type == DT_GENERIC ) {
-			query.setGenericQueryType(_subsys);
 		} else if ( _name ) {
+			if ( _type == DT_GENERIC ) {
+				query.setGenericQueryType(_subsys);
+			}
+
 			formatstr( buf, "%s == \"%s\"", ATTR_NAME, _name ); 
 			query.addANDConstraint( buf.c_str() );
 			if (method == LOCATE_FOR_LOOKUP)
