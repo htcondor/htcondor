@@ -43,9 +43,6 @@ startOneGahpClient( const std::string & publicKeyFile, const std::string & servi
 	args.AppendArg( "-l" );
 	args.AppendArg( "ANNEX_GAHP" );
 
-	// FIXME: The EC2 GAHP should accept a command-line argument from us
-	// instead of looking up EC2_GAHP_RATE_LIMIT.
-
 	args.AppendArg( "-w" );
 	int minWorkerCount = param_integer( "ANNEX_GAHP_WORKER_MIN_NUM", 1 );
 	args.AppendArg( minWorkerCount );
