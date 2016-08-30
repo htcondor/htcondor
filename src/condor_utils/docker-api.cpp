@@ -797,7 +797,13 @@ gc_image(const std::string & image) {
   TemporaryPrivSentry sentry(PRIV_ROOT);
   imageFilename += "/.startd_docker_images";
 
-  FileLock lock(imageFilename.c_str());
+  int lockfd = safe_open_wrapper_follow(imageFilename.c_str(), O_WRONLY|O_CREAT, 0666);
+
+  if (lockfd < 0) {
+    dprintf(D_ALWAYS, "Can't open %s for locking: %s\n", imageFilename.c_str(), strerror(errno));
+    ASSERT(false);
+  }
+  FileLock lock(lockfd, NULL, imageFilename.c_str());
   lock.obtain(WRITE_LOCK); // blocking
 
   FILE *f = safe_fopen_wrapper_follow(imageFilename.c_str(), "r");
@@ -854,6 +860,7 @@ gc_image(const std::string & image) {
   }
 
   lock.release();
+  close(lockfd);
 
   return 0;
 }
