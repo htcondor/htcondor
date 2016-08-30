@@ -10,6 +10,18 @@
 #include "BulkRequest.h"
 #include <algorithm>
 
+// Stolen from EC2Job::build_client_token in condor_gridmanager/ec2job.cpp
+// and duplicated here because I espect to need to fiddle with it.
+#include <uuid/uuid.h>
+void generateClientToken( std::string & ct ) {
+	char uuid_str[37];
+	uuid_t uuid;
+	uuid_generate( uuid );
+	uuid_unparse( uuid, uuid_str );
+	uuid_str[36] = '\0';
+	ct.assign( uuid_str );
+}
+
 // Required by GahpServer::Startup().
 char * GridmanagerScratchDir = NULL;
 
@@ -139,9 +151,13 @@ createOneAnnex( ClassAd * command, Stream * replyStream ) {
 		br->setValidUntil( buffer );
 	}
 
-	// FIXME: We may need to do something clever here.  Also, do NOT allow
-	// the user to specify the client token.
-	// br->setClientToken();
+	// Ignore any user-specified client token.  Client token generation
+	// stolen from build_client_token() in condor_gridmanager/ec2job.cpp.
+	// We may need to use some of the remaining 28 ASCII characters for
+	// tracking purposes....
+	std::string clientToken;
+	generateClientToken( clientToken );
+	br->setClientToken( clientToken );
 
 	br->setReplyStream( replyStream );
 	int gahpNotificationTimer = daemonCore->Register_Timer( 0, TIMER_NEVER,

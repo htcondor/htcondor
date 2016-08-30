@@ -235,7 +235,7 @@ main( int argc, char ** argv ) {
 	if(! annexd.sendBulkRequest( & spotFleetRequest, & reply )) {
 		char * error = annexd.error();
 		if( error && error[0] != '\0' ) {
-			fprintf( stderr, "Failed to send bulk request to daemon: '%s'.\n", error );
+			fprintf( stderr, "%s\n", error );
 		} else {
 			fprintf( stderr, "Failed to send bulk request to daemon.\n" );
 		}

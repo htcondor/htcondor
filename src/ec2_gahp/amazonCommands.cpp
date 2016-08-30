@@ -1344,7 +1344,7 @@ bool AmazonVMStartSpot::SendRequest() {
         if( this->errorCode == "E_CURL_IO" ) {
             // To be on the safe side, if the I/O failed, make the gridmanager
             // check to see the VM was started or not.
-            this->errorCode = "NEED_CHECK_VM_START"; 
+            this->errorCode = "NEED_CHECK_VM_START";
             return false;
         }
     }

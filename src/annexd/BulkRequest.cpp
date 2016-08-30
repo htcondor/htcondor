@@ -224,23 +224,36 @@ BulkRequest::operator() () const {
 		return;
 	}
 
+	ClassAd reply;
+	reply.Assign( "RequestVersion", 1 );
+	reply.Assign( "ClientToken", client_token );
+
 	if( rc == 0 ) {
 		dprintf( D_ALWAYS, "Bulk start request ID: %s\n", bulkRequestID.c_str() );
 
-		ClassAd reply;
-		reply.Assign( "RequestVersion", 1 );
 		reply.Assign( ATTR_RESULT, getCAResultString( CA_SUCCESS ) );
 		reply.Assign( "BulkRequestID", bulkRequestID );
-
-		if(! sendCAReply( replyStream, "CA_BULK_REQUEST", & reply )) {
-			dprintf( D_ALWAYS, "Failed to reply to CA_BULK_REQUEST.\n" );
-		}
 	} else if( errorCode == "NEED_CHECK_BULK_START" ) {
-		// FIXME: We should probably retry, instead.
-		dprintf( D_ALWAYS, "Bulk start request failed but may have left a Spot Fleet behind.\n" );
+		std::string message;
+		formatstr( message, "Bulk start request failed (%s) "
+			"but may have left a Spot Fleet behind with client token '%s'.",
+			gahp->getErrorString(), client_token.c_str() );
+		dprintf( D_ALWAYS, "%s\n", message.c_str() );
+
+		reply.Assign( ATTR_RESULT, getCAResultString( CA_COMMUNICATION_ERROR ) );
+		reply.Assign( ATTR_ERROR_STRING, message );
 	} else {
-		std::string gahpErrorString = gahp->getErrorString();
-		dprintf( D_ALWAYS, "Bulk start request failed: '%s' (%d): '%s'.\n", errorCode.c_str(), rc, gahpErrorString.c_str() );
+		std::string message;
+		formatstr( message, "Bulk start request failed: '%s' (%d): '%s'.",
+			errorCode.c_str(), rc, gahp->getErrorString() );
+		dprintf( D_ALWAYS, "%s\n", message.c_str() );
+
+		reply.Assign( ATTR_RESULT, getCAResultString( CA_FAILURE ) );
+		reply.Assign( ATTR_ERROR_STRING, message );
+	}
+
+	if(! sendCAReply( replyStream, "CA_BULK_REQUEST", & reply )) {
+		dprintf( D_ALWAYS, "Failed to reply to CA_BULK_REQUEST.\n" );
 	}
 
 	// We're done replying, so clean the stream up.

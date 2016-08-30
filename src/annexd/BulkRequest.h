@@ -22,6 +22,7 @@ class BulkRequest : public Service {
 
 		bool validateAndStore( ClassAd const * command, std::string & validationError );
 		void setReplyStream( Stream * s ) { replyStream = s; }
+		void setClientToken( const std::string & s ) { client_token = s; }
 		bool isValidUntilSet() { return (! valid_until.empty()); }
 		void setValidUntil( const std::string & vu ) { valid_until = vu; }
 		void operator() () const;
