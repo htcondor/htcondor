@@ -108,11 +108,36 @@ createOneAnnex( ClassAd * command, Stream * replyStream ) {
 		return FALSE;
 	}
 
-	// FIXME: Look up the service URL and keyfiles in the map, if they're
-	// not defined in the command.
-	std::string serviceURL = "https://ec2.us-east-1.amazonaws.com";
-	std::string publicKeyFile = "/home/tlmiller/condor/test/ec2/accessKeyFile";
-	std::string secretKeyFile = "/home/tlmiller/condor/test/ec2/secretKeyFile";
+	std::string serviceURL, publicKeyFile, secretKeyFile;
+	param( serviceURL, "ANNEX_DEFAULT_SERVICE_URL" );
+	command->LookupString( "ServiceURL", serviceURL );
+	param( publicKeyFile, "ANNEX_DEFAULT_PUBLIC_KEY_FILE" );
+	param( secretKeyFile, "ANNEX_DEFAULT_SECRET_KEY_FILE" );
+
+	if( serviceURL.empty() || publicKeyFile.empty() || secretKeyFile.empty() ) {
+		std::string errorString;
+		if( serviceURL.empty() ) {
+			formatstr( errorString, "ServiceURL missing or empty in command ad and ANNEX_DEFAULT_SERVICE_URL not set or empty in configuration." );
+		}
+		if( publicKeyFile.empty() ) {
+			formatstr( errorString, "%s%sANNEX_DEFAULT_PUBLIC_KEY_FILE not set in configuration.", errorString.c_str(), errorString.empty() ? "" : "  " );
+		}
+		if( secretKeyFile.empty() ) {
+			formatstr( errorString, "%s%sANNEX_DEFAULT_SECRET_KEY_FILE not set in configuration.", errorString.c_str(), errorString.empty() ? "" : "  " );
+		}
+		dprintf( D_ALWAYS, "%s\n", errorString.c_str() );
+
+		ClassAd reply;
+		reply.Assign( "RequestVersion", 1 );
+		reply.Assign( ATTR_RESULT, getCAResultString( CA_INVALID_REQUEST ) );
+		reply.Assign( ATTR_ERROR_STRING, errorString );
+
+		if(! sendCAReply( replyStream, "CA_BULK_REQUEST", & reply )) {
+			dprintf( D_ALWAYS, "Failed to reply to CA_BULK_REQUEST.\n" );
+		}
+
+		return FALSE;
+	}
 
 	// Create the GAHP client.  The first time we call a GAHP client function,
 	// it will send that command to the GAHP server, but the GAHP server may
