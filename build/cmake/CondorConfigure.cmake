@@ -67,6 +67,11 @@ elseif(${OS_NAME} MATCHES "WIN")
 		set( CMAKE_INSTALL_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/release_dir")
 	endif()
 
+	# when building x64 on Windows, cmake's SYS_ARCH value is wrong... so fix it here before we use it to brand the binaries.
+	if ( ${CMAKE_SIZEOF_VOID_P} EQUAL 8 )
+		set(SYS_ARCH "X86_64")
+	endif()
+
 	dprint("TODO FEATURE-> Z:TANNENBA:TJ:TSTCLAIR Update registry + paths to use this prefixed debug loc (test_install)")
 
 endif()
