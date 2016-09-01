@@ -76,6 +76,13 @@ if ($ENV{NMI_PLATFORM} =~ /_win/i) {
     $externals_loc   = "c:/temp/condor";
 	$ENV{PATH} = "C:\\Program Files\\CMake 2.8\\bin;$ENV{PATH}";
     #$ENV{CONDOR_BLD_EXTERNAL_STAGE} = "$externals_loc";
+
+	# if not building Win64, change platform from x86_64_Windows to x86_Windows
+	if ( ! $enable_x64) {
+		print "Win64 not enabled and platform=$platform, fixing platform string...\n";
+		$platform =~ s/_64_/_/;
+		print "platform = $platform\n";
+	}
 } else {
 	$ENV{PATH} ="$ENV{PATH}:/sw/bin:/sw/sbin:/usr/kerberos/bin:/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:/usr/bin/X11:/usr/X11R6/bin:/usr/local/condor/bin:/usr/local/condor/sbin:/usr/local/bin:/bin:/usr/bin:/usr/X11R6/bin:/usr/ccs/bin:/usr/lib/java/bin";
 }
