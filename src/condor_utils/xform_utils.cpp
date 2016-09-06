@@ -1856,7 +1856,10 @@ int XFormLoadFromJobRouterRoute (
 		statements.append(buf.c_str());
 	}
 	if (target_universe) { formatstr(buf, "UNIVERSE %d", target_universe); statements.append(buf.c_str()); }
-	if (requirements.empty()) { formatstr(buf, "REQUIREMENTS %s", requirements.c_str()); statements.append(buf.c_str()); }
+	if (!requirements.empty()) {
+		formatstr(buf, "REQUIREMENTS %s", requirements.c_str());
+		statements.append(buf.c_str()); 
+	}
 
 	statements.append("");
 	for (STRING_MAP::iterator it = assignments.begin(); it != assignments.end(); ++it) {
