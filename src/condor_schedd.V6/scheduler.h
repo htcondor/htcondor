@@ -60,6 +60,7 @@
 #include "timed_queue.h"
 #include "schedd_stats.h"
 #include "condor_holdcodes.h"
+#include "job_transforms.h"
 
 extern  int         STARTD_CONTACT_TIMEOUT;
 const	int			NEGOTIATOR_CONTACT_TIMEOUT = 30;
@@ -383,6 +384,7 @@ class Scheduler : public Service
 	void			send_all_jobs(ReliSock*, struct sockaddr_in*);
 	void			send_all_jobs_prioritized(ReliSock*, struct sockaddr_in*);
 
+	JobTransforms	jobTransforms;
 	friend	int		NewProc(int cluster_id);
 	friend	int		count_a_job(JobQueueJob*, const JOB_ID_KEY&, void* );
 //	friend	void	job_prio(ClassAd *);

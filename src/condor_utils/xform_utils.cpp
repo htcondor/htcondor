@@ -969,7 +969,17 @@ void MacroStreamXFormSource::reset(XFormHash &set)
 static int DoDeleteAttr(ClassAd * ad, const std::string & attr, unsigned int flags)
 {
 	if (flags&2) fprintf(stdout, "DELETE %s\n", attr.c_str());
-	return ad->Delete(attr) ? 1 : 0;
+	if (ad->Delete(attr)) {
+		// Mark the attribute we just removed as dirty, since the schedd relies
+		// upon the ClassAd dirty attribute list to see what changed, and it must
+		// know about removed attributes.
+		// Supposedly classad::ClassAd library is supposed to add removed attrs to the
+		// dirty list all on its own, but this is currently not the case.
+		ad->MarkAttributeDirty(attr);
+		return 1;
+	} else {
+		return 0;
+	}
 }
 
 // rename an attribute of the given classad.
@@ -1710,6 +1720,12 @@ int XFormLoadFromJobRouterRoute (
 	classad::References evalset_myrefs;
 	classad::References string_assignments;
 
+	// Initialize name with name for this xform; note it may be overwritten below
+	// if ClassAd includes a Name attribute.
+	if ( xform.getName() ) {
+		name = xform.getName();
+	}
+
 	for (ClassAd::iterator it = route_ad.begin(); it != route_ad.end(); ++it) {
 		std::string rhs;
 		if (starts_with(it->first, "copy_")) {
@@ -1809,7 +1825,9 @@ int XFormLoadFromJobRouterRoute (
 				case atr_REQUIREMENTS: {
 					requirements.clear();
 					ExprTree * tree = route_ad.Lookup(it->first);
-					if (tree) { unparser.Unparse(requirements, tree); }
+					if (tree) {
+						unparser.Unparse(requirements, tree);
+					}
 				} break;
 
 				default: {

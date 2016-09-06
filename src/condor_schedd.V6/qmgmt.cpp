@@ -3339,8 +3339,18 @@ BeginTransaction()
 }
 
 int
-CheckTransaction( SetAttributeFlags_t, CondorError * errorStack ) {
-	if( ! scheduler.shouldCheckSubmitRequirements() ) { return 0; }
+CheckTransaction( SetAttributeFlags_t, CondorError * errorStack )
+{
+	int rval;
+
+	// If we don't need to perform any submit_requirement checks
+	// and we don't need to perform any job transforms, then we should
+	// bail out now and avoid all the expensive computation below.
+	if ( !scheduler.shouldCheckSubmitRequirements() &&
+		 !scheduler.jobTransforms.shouldTransform() )
+	{
+		return 0;
+	}
 
 	std::list< std::string > newAdKeys;
 	JobQueue->ListNewAdsInTransaction( newAdKeys );
@@ -3354,8 +3364,21 @@ CheckTransaction( SetAttributeFlags_t, CondorError * errorStack ) {
 		JobQueue->AddAttrsFromTransaction( cluster.c_str(), procAd );
 		JobQueue->AddAttrsFromTransaction( it->c_str(), procAd );
 
-		int rval = scheduler.checkSubmitRequirements( & procAd, errorStack );
-		if( rval != 0 ) { return rval; }
+		// Now that we created a procAd out of the transaction queue,
+		// apply job transforms to the procAd.
+		// If the transforms fail, bail on the transaction.
+		rval = scheduler.jobTransforms.transformJob(&procAd,errorStack);
+		if  (rval < 0) {
+			errorStack->push( "QMGMT", 30, "Failed to apply a required job transform.\n");
+			return rval;
+		}
+
+		// Now check that submit_requirements still hold on our (possibly transformed)
+		// job ad.
+		rval = scheduler.checkSubmitRequirements( & procAd, errorStack );
+		if( rval != 0 ) { 
+			return rval;
+		}
 	}
 
 	return 0;

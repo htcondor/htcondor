@@ -281,11 +281,13 @@ std::string queueCommandLine; // queue statement passed in via -q argument
 SubmitHash submit_hash;
 #else
 
+#if !defined(_XFORM_UTILS_H)
 // declare enough of the condor_params structure definitions so that we can define submit hashtable defaults
 namespace condor_params {
 	typedef struct string_value { char * psz; int flags; } string_value;
 	struct key_value_pair { const char * key; const string_value * def; };
 }
+#endif
 
 // buffers used while processing the queue statement to inject $(Cluster), $(Process) and $(Step)
 // into the submit hash table.  Note that these buffers are also used BEFORE the queue

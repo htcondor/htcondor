@@ -20,6 +20,7 @@
 #if !defined(_SUBMIT_UTILS_H)
 #define _SUBMIT_UTILS_H
 
+#include "condor_config.h" // for MACRO_SOURCE
 #include <dc_schedd.h> // for ShouldTransferFiles_t
 
 /*

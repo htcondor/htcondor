@@ -12730,6 +12730,9 @@ Scheduler::Init()
 		m_matchPasswordEnabled = new_match_password;
 	}
 
+	// Read config and initialize job transforms.
+	jobTransforms.initAndReconfig();
+
 	first_time_in_init = false;
 }
 

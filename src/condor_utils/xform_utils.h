@@ -20,6 +20,8 @@
 #if !defined(_XFORM_UTILS_H)
 #define _XFORM_UTILS_H
 
+#include "submit_utils.h"  // for class MacroStreamCharSource
+
 class MacroStreamXFormSource;
 class XFormHash;
 
