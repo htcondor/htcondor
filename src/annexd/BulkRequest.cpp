@@ -1,12 +1,8 @@
 #include "condor_common.h"
-
-#include <string>
-#include <vector>
-#include "condor_classad.h"
+#include "compat_classad.h"
 #include "gahp-client.h"
+#include "Functor.h"
 #include "BulkRequest.h"
-
-#include "classad_command_util.h"
 
 bool BulkRequest::validateAndStore( ClassAd const * command, std::string & validationError ) {
 	command->LookupString( "SpotPrice", spot_price );
@@ -207,8 +203,10 @@ bool BulkRequest::validateAndStore( ClassAd const * command, std::string & valid
 	return true;
 }
 
-void
-BulkRequest::operator() () const {
+int
+BulkRequest::operator() () {
+	dprintf( D_ALWAYS, "BulkRequest()\n" );
+
 	int rc;
 	std::string errorCode;
 	std::string bulkRequestID;
@@ -221,18 +219,21 @@ BulkRequest::operator() () const {
 				bulkRequestID, errorCode );
 	if( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED || rc == GAHPCLIENT_COMMAND_PENDING ) {
 		// We should exit here the first time.
-		return;
+		return KEEP_STREAM;
 	}
-
-	ClassAd reply;
-	reply.Assign( "RequestVersion", 1 );
-	reply.Assign( "ClientToken", client_token );
 
 	if( rc == 0 ) {
 		dprintf( D_ALWAYS, "Bulk start request ID: %s\n", bulkRequestID.c_str() );
 
-		reply.Assign( ATTR_RESULT, getCAResultString( CA_SUCCESS ) );
-		reply.Assign( "BulkRequestID", bulkRequestID );
+		reply->Assign( ATTR_RESULT, getCAResultString( CA_SUCCESS ) );
+		reply->Assign( "BulkRequestID", bulkRequestID );
+
+		// We may decide to omit the bulk request ID from the reply, but
+		// subsequent functors in this sequence may need to know the bulk
+		// request ID.
+		scratchpad->Assign( "BulkRequestID", bulkRequestID );
+
+		rc = PASS_STREAM;
 	} else if( errorCode == "NEED_CHECK_BULK_START" ) {
 		std::string message;
 		formatstr( message, "Bulk start request failed (%s) "
@@ -240,37 +241,24 @@ BulkRequest::operator() () const {
 			gahp->getErrorString(), client_token.c_str() );
 		dprintf( D_ALWAYS, "%s\n", message.c_str() );
 
-		reply.Assign( ATTR_RESULT, getCAResultString( CA_COMMUNICATION_ERROR ) );
-		reply.Assign( ATTR_ERROR_STRING, message );
+		reply->Assign( ATTR_RESULT, getCAResultString( CA_COMMUNICATION_ERROR ) );
+		reply->Assign( ATTR_ERROR_STRING, message );
+
+		rc = FALSE;
 	} else {
 		std::string message;
 		formatstr( message, "Bulk start request failed: '%s' (%d): '%s'.",
 			errorCode.c_str(), rc, gahp->getErrorString() );
 		dprintf( D_ALWAYS, "%s\n", message.c_str() );
 
-		reply.Assign( ATTR_RESULT, getCAResultString( CA_FAILURE ) );
-		reply.Assign( ATTR_ERROR_STRING, message );
+		reply->Assign( ATTR_RESULT, getCAResultString( CA_FAILURE ) );
+		reply->Assign( ATTR_ERROR_STRING, message );
+
+		rc = FALSE;
 	}
 
-	if(! sendCAReply( replyStream, "CA_BULK_REQUEST", & reply )) {
-		dprintf( D_ALWAYS, "Failed to reply to CA_BULK_REQUEST.\n" );
-	}
-
-	// We're done replying, so clean the stream up.
-	delete replyStream;
-
-	// Cancel the timer we registered.  That's not the gahp client's
-	// responsibility, but since it's keeping track of it ID for us...
-	daemonCore->Cancel_Timer( gahp->getNotificationTimerId() );
-
-	// We're done with this gahp, so clean it up.  The gahp server will
-	// shut itself (and the GAHP) down cleanly roughly ten seconds after
-	// the last corresponding gahp client is deleted.
-	delete gahp;
-
-	// Now that we've cancelled the timer, nobody else has a reference to
-	// use, and we're done.  This, of course, must be the last thing we
-	// do on the way out.
+	daemonCore->Reset_Timer( gahp->getNotificationTimerId(), 0, TIMER_NEVER );
 	delete this;
+	return rc;
 }
 

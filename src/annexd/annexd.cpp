@@ -1,14 +1,25 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_config.h"
+
 #include "condor_daemon_core.h"
 #include "subsystem_info.h"
 #include "get_daemon_name.h"
+
 #include "gahp-client.h"
+#include "compat_classad.h"
 #include "classad_command_util.h"
 
+// #include <algorithm>
+#include <queue>
+
+#include "Functor.h"
 #include "BulkRequest.h"
-#include <algorithm>
+#include "PutRule.h"
+#include "AddTarget.h"
+#include "ReplyAndClean.h"
+#include "FunctorSequence.h"
+
 
 // Stolen from EC2Job::build_client_token in condor_gridmanager/ec2job.cpp
 // and duplicated here because I espect to need to fiddle with it.
@@ -105,9 +116,11 @@ createOneAnnex( ClassAd * command, Stream * replyStream ) {
 		return FALSE;
 	}
 
-	std::string serviceURL, publicKeyFile, secretKeyFile;
-	param( serviceURL, "ANNEX_DEFAULT_SERVICE_URL" );
+	std::string serviceURL, eventsURL, publicKeyFile, secretKeyFile;
+	param( serviceURL, "ANNEX_DEFAULT_EC2_URL" );
 	command->LookupString( "ServiceURL", serviceURL );
+	param( eventsURL, "ANNEX_DEFAULT_CWE_URL" );
+	command->LookupString( "EventsURL", eventsURL );
 	param( publicKeyFile, "ANNEX_DEFAULT_PUBLIC_KEY_FILE" );
 	param( secretKeyFile, "ANNEX_DEFAULT_SECRET_KEY_FILE" );
 
@@ -143,22 +156,34 @@ createOneAnnex( ClassAd * command, Stream * replyStream ) {
 	// calling the GAHP client function a second time with the same arguments.
 	EC2GahpClient * gahp = startOneGahpClient( publicKeyFile, serviceURL );
 
-	// Create a timer for the gahp to fire when it gets a result.  Use it,
-	// as long as we have to create it anyway, to make the initial bulk
-	// request.  We must use TIMER_NEVER to ensure that the timer hasn't
-	// been reaped when the GAHP client needs to fire it.
-	BulkRequest * br = new BulkRequest( gahp, serviceURL, publicKeyFile, secretKeyFile );
+	// The lease requires a different endpoint to implement.
+	EC2GahpClient * eventsGahp = startOneGahpClient( publicKeyFile, eventsURL );
+
+
+	// Construct the bulk request, create rule, and add target functors,
+	// then register them as a sequence in a timer.  This lets us get back
+	// to DaemonCore more quickly and makes the code in operator() more
+	// familiar (in terms of the idiomatic usage of the gahp client
+	// interface established by the grid manager).
+	ClassAd * reply = new ClassAd();
+	reply->Assign( "RequestVersion", 1 );
+
+	ClassAd * scratchpad = new ClassAd();
+
+	BulkRequest * br = new BulkRequest( reply, gahp, scratchpad,
+		serviceURL, publicKeyFile, secretKeyFile );
 
 	std::string validationError;
 	if(! br->validateAndStore( command, validationError )) {
-		ClassAd reply;
-		reply.Assign( "RequestVersion", 1 );
-		reply.Assign( ATTR_RESULT, getCAResultString( CA_INVALID_REQUEST ) );
-		reply.Assign( ATTR_ERROR_STRING, validationError );
+		reply->Assign( ATTR_RESULT, getCAResultString( CA_INVALID_REQUEST ) );
+		reply->Assign( ATTR_ERROR_STRING, validationError );
 
-		if(! sendCAReply( replyStream, "CA_BULK_REQUEST", & reply )) {
+		if(! sendCAReply( replyStream, "CA_BULK_REQUEST", reply )) {
 			dprintf( D_ALWAYS, "Failed to reply to CA_BULK_REQUEST.\n" );
 		}
+
+		delete reply;
+		delete scratchpad;
 
 		return FALSE;
 	}
@@ -179,13 +204,25 @@ createOneAnnex( ClassAd * command, Stream * replyStream ) {
 	// tracking purposes....
 	std::string clientToken;
 	generateClientToken( clientToken );
+	reply->Assign( "ClientToken", clientToken );
 	br->setClientToken( clientToken );
 
-	br->setReplyStream( replyStream );
-	int gahpNotificationTimer = daemonCore->Register_Timer( 0, TIMER_NEVER,
-		(void (Service::*)()) & BulkRequest::operator(),
-		"BulkRequest::operator()()", br );
-	gahp->setNotificationTimerId( gahpNotificationTimer );
+	PutRule * cr = new PutRule( reply, eventsGahp, scratchpad,
+		eventsURL, publicKeyFile, secretKeyFile );
+	AddTarget * at = new AddTarget( reply, eventsGahp, scratchpad,
+		eventsURL, publicKeyFile, secretKeyFile );
+	ReplyAndClean * last = new ReplyAndClean( reply, replyStream, gahp, scratchpad );
+
+	FunctorSequence * fs = new FunctorSequence( { br, cr, at }, last );
+
+	// Create a timer for the gahp to fire when it gets a result.  We must
+	// use TIMER_NEVER to ensure that the timer hasn't been reaped when the
+	// GAHP client needs to fire it.
+	int functorSequenceTimer = daemonCore->Register_Timer( 0, TIMER_NEVER,
+		(void (Service::*)()) & FunctorSequence::operator(),
+		"BulkRequest, PutRule, AddTarget", fs );
+	gahp->setNotificationTimerId( functorSequenceTimer );
+    eventsGahp->setNotificationTimerId( functorSequenceTimer );
 
 	return KEEP_STREAM;
 }

@@ -84,6 +84,7 @@ main( int argc, char ** argv ) {
 	const char * name = NULL;
 	const char * fileName = NULL;
 	const char * serviceURL = NULL;
+	const char * eventsURL = NULL;
 	for( int i = 1; i < argc; ++i ) {
 		if( is_dash_arg_prefix( argv[i], "pool", 1 ) ) {
 			++i;
@@ -110,6 +111,15 @@ main( int argc, char ** argv ) {
 				continue;
 			} else {
 				fprintf( stderr, "%s: -service-url requires an argument.\n", argv[0] );
+				return 1;
+			}
+		} else if( is_dash_arg_prefix( argv[i], "events-url", 1 ) ) {
+			++i;
+			if( argv[i] != NULL ) {
+				eventsURL = argv[i];
+				continue;
+			} else {
+				fprintf( stderr, "%s: -events-url requires an argument.\n", argv[0] );
 				return 1;
 			}
 		} else if( is_dash_arg_prefix( argv[i], "user-data-file", 10 ) ) {
@@ -212,6 +222,10 @@ main( int argc, char ** argv ) {
 
 	if( serviceURL != NULL ) {
 		spotFleetRequest.Assign( "ServiceURL", serviceURL );
+	}
+
+	if( eventsURL != NULL ) {
+		spotFleetRequest.Assign( "EventsURL", eventsURL );
 	}
 
 	// Handle user data.

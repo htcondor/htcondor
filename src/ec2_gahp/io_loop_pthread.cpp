@@ -131,6 +131,8 @@ registerAllAmazonCommands(void)
 	// Spot Fleet commands
 	registerAmazonGahpCommand( AMAZON_COMMAND_BULK_START,
 			AmazonBulkStart::ioCheck, AmazonBulkStart::workerFunction );
+	registerAmazonGahpCommand( AMAZON_COMMAND_PUT_RULE,
+			AmazonPutRule::ioCheck, AmazonPutRule::workerFunction );
 
 	return true;
 }

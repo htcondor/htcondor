@@ -688,6 +688,17 @@ class EC2GahpClient : public GahpClient {
 		EC2GahpClient(	const char * id, const char * path, const ArgList * args );
 		~EC2GahpClient();
 
+		int put_rule(	const std::string & service_url,
+						const std::string & publickeyfile,
+						const std::string & privatekeyfile,
+
+						const std::string & ruleName,
+						const std::string & scheduleExpression,
+						const std::string & state,
+
+						std::string & ruleARN,
+						std::string & error_code );
+
 		struct LaunchConfiguration {
 			YourString ami_id;
 			YourString spot_price;

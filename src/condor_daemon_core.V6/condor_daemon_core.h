@@ -80,6 +80,7 @@ class Probe;
 
 static const int KEEP_STREAM = 100;
 static const int CLOSE_STREAM = 101;
+static const int PASS_STREAM = 102;
 static const int MAX_SOCKS_INHERITED = 4;
 
 /**

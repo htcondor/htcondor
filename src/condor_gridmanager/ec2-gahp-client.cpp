@@ -913,7 +913,7 @@ int EC2GahpClient::bulk_start(	const std::string & service_url,
 	}
 	arguments.push_back( NULLSTRING );
 
-	int cgf = callGahpFunction( command, arguments, result, high_prio );
+	int cgf = callGahpFunction( command, arguments, result, low_prio );
 	if( cgf != 0 ) { return cgf; }
 
 	if( result ) {
@@ -929,6 +929,58 @@ int EC2GahpClient::bulk_start(	const std::string & service_url,
 		} else if ( result->argc == 3 ) {
 			rc = atoi(result->argv[1]);
 			bulkRequestID = result->argv[2];
+		} else if ( result->argc == 4 ) {
+			// get the error code
+			rc = atoi( result->argv[1] );
+ 			error_code = result->argv[2];
+ 			error_string = result->argv[3];
+		} else {
+			EXCEPT( "Bad %s result", command );
+		}
+
+		delete result;
+		return rc;
+	} else {
+		EXCEPT( "callGahpFunction() succeeded but result was NULL." );
+	}
+}
+
+int EC2GahpClient::put_rule(	const std::string & service_url,
+								const std::string & publickeyfile,
+								const std::string & privatekeyfile,
+								const std::string & ruleName,
+								const std::string & scheduleExpression,
+								const std::string & state,
+								std::string & ruleARN,
+								std::string & error_code ) {
+	static const char * command = "EC2_PUT_RULE";
+
+	// callGahpFunction() checks if this command is supported.
+	CHECK_COMMON_ARGUMENTS;
+
+	Gahp_Args * result = NULL;
+	std::vector< YourString > arguments;
+	PUSH_COMMON_ARGUMENTS;
+	arguments.push_back( ruleName );
+	arguments.push_back( scheduleExpression );
+	arguments.push_back( state );
+
+	int cgf = callGahpFunction( command, arguments, result, high_prio );
+	if( cgf != 0 ) { return cgf; }
+
+	if( result ) {
+		int rc = 0;
+		if ( result->argc == 2 ) {
+			rc = atoi(result->argv[1]);
+			if ( rc == 0 ) {
+				EXCEPT( "Bad %s result", command );
+				rc = 1;
+			} else {
+				error_string = "";
+			}
+		} else if ( result->argc == 3 ) {
+			rc = atoi(result->argv[1]);
+			ruleARN = result->argv[2];
 		} else if ( result->argc == 4 ) {
 			// get the error code
 			rc = atoi( result->argv[1] );

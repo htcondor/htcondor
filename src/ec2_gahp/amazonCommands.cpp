@@ -2995,3 +2995,59 @@ bool AmazonBulkStart::workerFunction( char ** argv, int argc, std::string & resu
 
 	return true;
 }
+
+// ---------------------------------------------------------------------------
+
+AmazonPutRule::~AmazonPutRule() { }
+
+bool AmazonPutRule::SendRequest() {
+	signatureVersion = 4;
+	return AmazonRequest::SendRequest();
+}
+
+bool AmazonPutRule::workerFunction( char ** argv, int argc, std::string & result_string ) {
+	assert( strcasecmp( argv[0], "EC2_PUT_RULE" ) == 0 );
+	int requestID;
+	get_int( argv[1], & requestID );
+	dprintf( D_PERF_TRACE, "request #%d (%s): work begins\n",
+		requestID, argv[0] );
+
+	if( ! verify_min_number_args( argc, 8 ) ) {
+		result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
+		dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n",
+			argc, 8, argv[0] );
+		return false;
+	}
+
+	// Fill in required attributes.
+	AmazonPutRule request = AmazonPutRule( requestID, argv[0] );
+	request.serviceURL = argv[2];
+	request.accessKeyFile = argv[3];
+	request.secretKeyFile = argv[4];
+
+	// Fill in required parameters.
+	request.query_parameters[ "Action" ] = "PutRule";
+	// The CloudWatch Events API is relatively new.  Set the version here,
+	// rather than update the minimum necessary, in case somebody wants to
+	// use the non-annex functionality with an older-interface service.
+	request.query_parameters[ "Version" ] = "2016-04-01";
+
+	request.query_parameters[ "Name" ] = argv[5];
+	request.query_parameters[ "ScheduleExpression" ] = argv[6];
+	request.query_parameters[ "State" ] = argv[7];
+
+	if( ! request.SendRequest() ) {
+		result_string = create_failure_result( requestID,
+			request.errorMessage.c_str(),
+			request.errorCode.c_str() );
+	} else {
+		if( request.ruleARN.empty() ) {
+			result_string = create_failure_result( requestID, "Could not find name ARN in response from server.  Check the EC2 GAHP log for details.", "E_NO_NAME_ARN" );
+		} else {
+			StringList sl; sl.append( request.ruleARN.c_str() );
+			result_string = create_success_result( requestID, & sl );
+		}
+	}
+
+	return true;
+}

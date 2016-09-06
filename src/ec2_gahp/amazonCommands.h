@@ -46,17 +46,17 @@
 #define AMAZON_COMMAND_VM_REGISTER_IMAGE    "EC2_VM_REGISTER_IMAGE"
 #define AMAZON_COMMAND_VM_DEREGISTER_IMAGE  "EC2_VM_DEREGISTER_IMAGE"
 #define AMAZON_COMMAND_VM_ASSOCIATE_ADDRESS "EC2_VM_ASSOCIATE_ADDRESS"
-//#define AMAZON_COMMAND_VM_DISASSOCIATE_ADDRESS   "EC2_VM_DISASSOCIATE_ADDRESS"
-#define AMAZON_COMMAND_VM_ATTACH_VOLUME		"EC2_VM_ATTACH_VOLUME"
-#define AMAZON_COMMAND_VM_CREATE_TAGS		"EC2_VM_CREATE_TAGS"
-#define AMAZON_COMMAND_VM_SERVER_TYPE		"EC2_VM_SERVER_TYPE"
+#define AMAZON_COMMAND_VM_ATTACH_VOLUME     "EC2_VM_ATTACH_VOLUME"
+#define AMAZON_COMMAND_VM_CREATE_TAGS       "EC2_VM_CREATE_TAGS"
+#define AMAZON_COMMAND_VM_SERVER_TYPE       "EC2_VM_SERVER_TYPE"
 
 #define AMAZON_COMMAND_VM_START_SPOT        "EC2_VM_START_SPOT"
 #define AMAZON_COMMAND_VM_STOP_SPOT         "EC2_VM_STOP_SPOT"
 #define AMAZON_COMMAND_VM_STATUS_SPOT       "EC2_VM_STATUS_SPOT"
 #define AMAZON_COMMAND_VM_STATUS_ALL_SPOT   "EC2_VM_STATUS_ALL_SPOT"
 
-#define AMAZON_COMMAND_BULK_START			"EC2_BULK_START"
+#define AMAZON_COMMAND_BULK_START           "EC2_BULK_START"
+#define AMAZON_COMMAND_PUT_RULE             "EC2_PUT_RULE"
 
 // S3 Commands
 #define AMAZON_COMMAND_S3_ALL_BUCKETS       "AMAZON_S3_ALL_BUCKETS"
@@ -74,8 +74,9 @@
 
 class AmazonRequest {
     public:
-        AmazonRequest( int i, const char * c ) :
-        	includeResponseHeader(false), requestID(i), requestCommand(c) { }
+        AmazonRequest( int i, const char * c, int sv = 2 ) :
+            includeResponseHeader(false), requestID(i), requestCommand(c),
+            signatureVersion(sv) { }
         virtual ~AmazonRequest();
 
         virtual bool SendRequest();
@@ -107,6 +108,7 @@ class AmazonRequest {
 		struct timespec liveLine;
 		struct timespec sleepEnded;
 
+		int signatureVersion;
 };
 
 // EC2 Commands
@@ -318,6 +320,19 @@ class AmazonBulkStart : public AmazonRequest {
     	void setLaunchSpecificationAttribute( int, std::map< std::string, std::string > &, const char *, const char * = NULL );
 
 		std::string bulkRequestID;
+};
+
+class AmazonPutRule : public AmazonRequest {
+	public:
+		AmazonPutRule( int i, const char * c ) : AmazonRequest( i, c ) { }
+		virtual ~AmazonPutRule();
+        virtual bool SendRequest();
+
+		static bool ioCheck(char **argv, int argc);
+		static bool workerFunction(char **argv, int argc, std::string &result_string);
+
+    protected:
+		std::string ruleARN;
 };
 
 

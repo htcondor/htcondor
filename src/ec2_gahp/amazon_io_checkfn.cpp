@@ -209,3 +209,17 @@ bool AmazonBulkStart::ioCheck(char **argv, int argc) {
 		verify_string_name( argv[11] ) &&
 		verify_string_name( argv[12] );
 }
+
+// Expecting:	EC2_PUT_RULE <req_id>
+//				<service_url> <accesskeyfile> <secretkeyfile>
+//				<rule-name> <schedule-expression> <desired-stated>
+bool AmazonPutRule::ioCheck(char **argv, int argc) {
+	return verify_min_number_args( argc, 8 ) &&
+		verify_request_id( argv[1] ) &&
+		verify_string_name( argv[2] ) &&
+		verify_string_name( argv[3] ) &&
+		verify_string_name( argv[4] ) &&
+		verify_string_name( argv[5] ) &&
+		verify_string_name( argv[6] ) &&
+		verify_string_name( argv[7] );
+}
