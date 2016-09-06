@@ -76,15 +76,19 @@ ResourceRequestList::needsEndNegotiateNow()
 
 bool
 ResourceRequestList::getRequest(ClassAd &request, int &cluster, int &proc, int &autocluster,
-								ReliSock* const sock)
+								ReliSock* const sock, int skip_jobs)
 {
 	errcode = 0;	// clear errcode
 	cluster = -1;
 	proc = -1;
 	autocluster = -1;
 
-	// 2a.  ask for job information
-	if ( resource_request_count > ++resource_request_offers ) {
+	// If the previous slot we matched to was partitionable, and we
+	// estimate that the schedd will fit > 1 job in it, skip over
+	// those jobs, and assume the schedd will take care of them
+	resource_request_offers += skip_jobs;
+
+	if ( resource_request_count > resource_request_offers ) {
 		// No need to go to the schedd to ask for another resource request,
 		// since we have not yet handed out the number of requested matches
 		// for the request we already have cached.

@@ -65,6 +65,8 @@ static int comparisonFunction (AttrList *, AttrList *, void *);
 /* This extracts the machine name from the global job ID user@machine.name#timestamp#cluster.proc*/
 static int get_scheddname_from_gjid(const char * globaljobid, char * scheddname );
 
+static int jobsInSlot(ClassAd &job, ClassAd &offer, int cost);
+
 // possible outcomes of negotiating with a schedd
 enum { MM_ERROR, MM_DONE, MM_RESUME };
 
@@ -4305,6 +4307,8 @@ negotiate(char const* groupName, char const *scheddName, const ClassAd *scheddAd
 	std::string schedd_id;
 	formatstr(schedd_id, "%s (%s)", scheddName, scheddAddr.c_str());
 	
+	int schedd_will_match = 1; // number of extra jobs schedd will put into a partitionable slot
+
 	// 2.  negotiation loop with schedd
 	for (numMatched=0;true;numMatched++)
 	{
@@ -4351,7 +4355,7 @@ negotiate(char const* groupName, char const *scheddName, const ClassAd *scheddAd
 
 
 		// 2a.  ask for job information
-		if ( !request_list->getRequest(request,cluster,proc,autocluster,sock) ) {
+		if ( !request_list->getRequest(request,cluster,proc,autocluster,sock, schedd_will_match) ) {
 			// Failed to get a request.  Check to see if it is because
 			// of an error talking to the schedd.
 			if ( request_list->hadError() ) {
@@ -4362,6 +4366,7 @@ negotiate(char const* groupName, char const *scheddName, const ClassAd *scheddAd
 			if (request_list->needsEndNegotiate())
 			{
 				endNegotiate(scheddAddr);
+				schedd_will_match = 1;
 			} 
 			// Failed to get a request, and no error occured.  
 			// If we have negotiated above our submitterLimit, we have only
@@ -4562,6 +4567,7 @@ negotiate(char const* groupName, char const *scheddName, const ClassAd *scheddAd
 			numMatched--;		// haven't used any resources this cycle
 
 			request_list->noMatchFound(); // do not reuse any cached requests
+			schedd_will_match = 1;
 
             if (rejForSubmitterLimit && !ConsiderPreemption && !accountant.UsingWeightedSlots()) {
                 // If we aren't considering preemption and slots are unweighted, then we can
@@ -4609,6 +4615,10 @@ negotiate(char const* groupName, char const *scheddName, const ClassAd *scheddAd
             match_cost = accountant.GetSlotWeight(offer);
         }
         dprintf(D_FULLDEBUG, "Match completed, match cost= %g\n", match_cost);
+
+		if (param_boolean("NEGOTIATOR_DEPTH_FIRST", false)) {
+			schedd_will_match = jobsInSlot(request, *offer, match_cost);
+		}
 
 		limitUsed += match_cost;
         if (remoteUser == "") limitUsedUnclaimed += match_cost;
@@ -5185,7 +5195,7 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 
 		if (m_staticRanks) {
 			double weight = 1.0;
-			//candidate->LookupFloat(ATTR_SLOT_WEIGHT, weight);
+			candidate->LookupFloat(ATTR_SLOT_WEIGHT, weight);
 			allocatedWeight += weight;
 			if (allocatedWeight > submitterLimit) {
 				break;
@@ -6927,6 +6937,16 @@ Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, double preemptPrio, 
 	}
 
 	return false;
+}
+
+	// for CMS demo, just assume SLOT_WEIGHT = cpus
+static int jobsInSlot(ClassAd &request, ClassAd &offer, int match_cost) {
+	int requestCpus = 1;
+	if (match_cost < 1) match_cost = 1;
+	
+	request.EvalInteger(ATTR_REQUEST_CPUS, &offer, requestCpus);
+
+	return ceil((double)match_cost / (double)requestCpus);
 }
 
 GCC_DIAG_ON(float-equal)

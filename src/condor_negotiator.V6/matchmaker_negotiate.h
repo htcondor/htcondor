@@ -32,7 +32,7 @@ class ResourceRequestList : public ClassyCountedPtr {
 		// pass in a sock to use, function then returns request,
 		// cluster, proc, and autocluster.
 	bool getRequest(ClassAd &request, int &cluster, int &proc, 
-			int &autocluster, ReliSock* const sock);
+			int &autocluster, ReliSock* const sock, int skipJobs = 1);
 
 		//
 	bool hadError() { return errcode > 0; }
