@@ -110,13 +110,15 @@ public:
 	void reset(XFormHash & mset); // reset the iterator variables
 
 	MACRO_EVAL_CONTEXT_EX& context() { return ctx; }
-	const char * getText() { return file_string.ptr(); } // return full (active) text of the transform, \n delimited.
+	const char * getFullText(const char *delims) { return m_complete_xform_string.print_to_delimed_string(delims); } // return full rule, incl NAME and REQs, with no comments
+	const char * getText() { return file_string.ptr(); } // return active text of the transform, \n delimited.
 	const char * getIterateArgs() { return iterate_args.ptr(); }
 protected:
 	std::string name;
 	classad::ExprTree* requirements; // change to std::unique_ptr someday...
 	MACRO_SET_CHECKPOINT_HDR * checkpoint;
 	MACRO_EVAL_CONTEXT_EX ctx;
+	StringList m_complete_xform_string;
 
 	// these are used when the transform iterates
 	FILE* fp_iter; // when load stops at a TRANSFORM line, this holds the fp until parse_iterate_args is called

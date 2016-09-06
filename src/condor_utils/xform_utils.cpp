@@ -617,6 +617,9 @@ MacroStreamXFormSource::~MacroStreamXFormSource()
 int MacroStreamXFormSource::open(StringList & lines, const MACRO_SOURCE & FileSource)
 {
 	for (const char *line = lines.first(); line; line = lines.next()) {
+		if (line[0] && line[0] != '\n' && line[0] != '#') {
+			m_complete_xform_string.append(line);
+		}
 		const char * p;
 		if (NULL != (p = is_xform_statement(line, "name"))) {
 			std::string tmp(p); trim(tmp);
