@@ -412,8 +412,6 @@ if( NOT WINDOWS)
 		set(HAVE_SCHED_SETAFFINITY ON)
 	endif()
 
-	dprint ("TJ && TSTCLAIR We need this check in MSVC") 
-
 	check_cxx_compiler_flag(-std=c++11 cxx_11)
 	check_cxx_compiler_flag(-std=c++0x cxx_0x)
 	if (cxx_11)
