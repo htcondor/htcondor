@@ -84,6 +84,7 @@ class AmazonRequest {
     protected:
         typedef std::map< std::string, std::string > AttributeValueMap;
         AttributeValueMap query_parameters;
+        AttributeValueMap headers;
 
         std::string serviceURL;
         std::string accessKeyFile;
@@ -108,7 +109,25 @@ class AmazonRequest {
 		struct timespec liveLine;
 		struct timespec sleepEnded;
 
+		// So that we don't bother to send expired signatures.
+		struct timespec signatureTime;
+
 		int signatureVersion;
+
+		// For signature v4, in case we guess wrong (based on the URL).
+		std::string region;
+		std::string service;
+
+	private:
+		bool sendV2Request();
+		bool sendV4Request();
+
+		void canonicalizeQueryString( std::string & canonicalQueryString );
+		bool createV4Signature( std::string & payload, std::string & authorizationHeader );
+
+		bool sendPreparedRequest(	const std::string & protocol,
+									const std::string & uri,
+									const std::string & payload );
 };
 
 // EC2 Commands

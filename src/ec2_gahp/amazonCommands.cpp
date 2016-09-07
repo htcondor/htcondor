@@ -181,6 +181,7 @@ AmazonRequest::~AmazonRequest() { }
         this->errorMessage = "curl_easy_setopt( " #B " ) failed."; \
         dprintf( D_ALWAYS, "curl_easy_setopt( %s ) failed (%d): '%s', failing.\n", \
             #B, rv##B, curl_easy_strerror( rv##B ) ); \
+        curl_easy_cleanup( A ); \
         return false; \
     } \
 }
@@ -374,14 +375,360 @@ clockid_t Throttle::type;
 Throttle globalCurlThrottle;
 
 pthread_mutex_t globalCurlMutex = PTHREAD_MUTEX_INITIALIZER;
+
 bool AmazonRequest::SendRequest() {
-	static bool rateLimitInitialized = false;
-	if(! rateLimitInitialized) {
-		globalCurlThrottle.rateLimit = param_integer( "EC2_GAHP_RATE_LIMIT", 100 );
-		dprintf( D_PERF_TRACE, "rate limit = %u\n", globalCurlThrottle.rateLimit );
-		rateLimitInitialized = true;
+	switch( signatureVersion ) {
+		case 2:
+			return sendV2Request();
+		case 4:
+			return sendV4Request();
+		default:
+	        this->errorCode = "E_INTERNAL";
+    	    this->errorMessage = "Invalid signature version.";
+        	dprintf( D_ALWAYS, "Invalid signature version (%d), failing.\n", signatureVersion );
+			return false;
+	}
+}
+
+void AmazonRequest::canonicalizeQueryString( std::string & canonicalQueryString ) {
+    for( auto i = query_parameters.begin(); i != query_parameters.end(); ++i ) {
+        // Step 1A: The map sorts the query parameters for us.  Strictly
+        // speaking, we should encode into a different AttributeValueMap
+        // and then compose the string out of that, in case amazonURLEncode()
+        // changes the sort order, but we don't specify parameters like that.
+
+        // Step 1B: Encode the parameter names and values.
+        std::string name = amazonURLEncode( i->first );
+        std::string value = amazonURLEncode( i->second );
+
+        // Step 1C: Separate parameter names from values with '='.
+        canonicalQueryString += name + '=' + value;
+
+        // Step 1D: Separate name-value pairs with '&';
+        canonicalQueryString += '&';
+    }
+
+    // We'll always have a superflous trailing ampersand.
+    canonicalQueryString.erase( canonicalQueryString.end() - 1 );
+}
+
+bool parseURL(	const std::string & url,
+				std::string & protocol,
+				std::string & host,
+				std::string & path ) {
+    Regex r; int errCode = 0; const char * errString = 0;
+    bool patternOK = r.compile( "([^:]+)://(([^/]+)(/.*)?)", & errString, & errCode );
+    ASSERT( patternOK );
+    ExtArray<MyString> groups(5);
+    if(! r.match( url.c_str(), & groups )) { return false; }
+
+    protocol = groups[1];
+    host = groups[3];
+    path = groups[4];
+	return true;
+}
+
+void convertMessageDigestToLowercaseHex(
+		const unsigned char * messageDigest,
+		unsigned int mdLength,
+		std::string & hexEncoded ) {
+	char * buffer = (char *)malloc( (mdLength * 2) + 1 );
+	ASSERT( buffer );
+	char * ptr = buffer;
+	for( unsigned int i = 0; i < mdLength; ++i, ptr += 2 ) {
+		sprintf( ptr, "%02x", messageDigest[i] );
+	}
+	hexEncoded.assign( buffer, mdLength * 2 );
+}
+
+
+bool doSha256(	const std::string & payload,
+				unsigned char * messageDigest,
+				unsigned int * mdLength ) {
+	EVP_MD_CTX * mdctx = EVP_MD_CTX_create();
+	if( mdctx == NULL ) { return false; }
+
+	if(! EVP_DigestInit_ex( mdctx, EVP_sha256(), NULL )) {
+		EVP_MD_CTX_destroy( mdctx );
+		return false;
 	}
 
+	if(! EVP_DigestUpdate( mdctx, payload.c_str(), payload.length() )) {
+		EVP_MD_CTX_destroy( mdctx );
+		return false;
+	}
+
+	if(! EVP_DigestFinal_ex( mdctx, messageDigest, mdLength )) {
+		EVP_MD_CTX_destroy( mdctx );
+		return false;
+	}
+
+	EVP_MD_CTX_destroy( mdctx );
+	return true;
+}
+
+bool AmazonRequest::createV4Signature(	std::string & payload,
+										std::string & authorizationValue ) {
+	Throttle::now( & signatureTime );
+	time_t now; time( & now );
+	struct tm brokenDownTime; gmtime_r( & now, & brokenDownTime );
+	dprintf( D_PERF_TRACE, "request #%d (%s): signature\n", requestID, requestCommand.c_str() );
+
+	//
+	// Create task 1's inputs.
+	//
+
+	// The canonical URI is the absolute path component of the service URL,
+	// normalized according to RFC 3986 (removing redundant and relative
+	// path components), with each path segment being URI-encoded.
+	std::string protocol, host, canonicalURI;
+	if(! parseURL( serviceURL, protocol, host, canonicalURI )) {
+        this->errorCode = "E_INVALID_SERVICE_URL";
+        this->errorMessage = "Failed to parse service URL.";
+        dprintf( D_ALWAYS, "Failed to match regex against service URL '%s'.\n", serviceURL.c_str() );
+    	return false;
+	}
+	if( canonicalURI.empty() ) { canonicalURI = "/"; }
+
+	// But that sounds like a lot of work, so until something we do actually
+	// requires it, I'll just assume the path is '/', which doesn't need
+	// anything done to it.
+	if( canonicalURI != "/" ) {
+        this->errorCode = "E_INVALID_SERVICE_URL";
+        this->errorMessage = "Service URL must not have a path component.";
+        dprintf( D_ALWAYS, "Service URL '%s' has a path component.\n", serviceURL.c_str() );
+    	return false;
+	}
+
+
+	// The canonical query string is the alphabetically sorted list of
+	// URI-encoded parameter names '=' values, separated by '&'s.  Since
+	// we need the same thing for signature version 2, let's share code.
+	std::string canonicalQueryString;
+	// canonicalizeQueryString( canonicalQueryString );
+
+	// The canonical headers must include the Host header, so add that
+	// now if we don't have it.
+	if( headers.find( "Host" ) == headers.end() ) {
+		headers[ "Host" ] = host;
+	}
+
+	// The canonical list of headers is a sorted list of lowercase header
+	// names paired via ':' with the trimmed header value, each pair
+	// terminated with a newline.
+	AmazonRequest::AttributeValueMap transformedHeaders;
+	for( auto i = headers.begin(); i != headers.end(); ++i ) {
+		std::string header = i->first;
+		std::transform( header.begin(), header.end(), header.begin(), & tolower );
+
+		std::string value = i->second;
+
+		// Eliminate trailing spaces.
+		unsigned j = value.length();
+		while( value[j - 1] == ' ' ) { --j; }
+		if( j != value.length() ) { value.erase( j, value.length() - j ); }
+
+		// Eliminate leading spaces.
+		for( j = 0; value[j] == ' '; ++j ) { }
+		value.erase( 0, j );
+
+		// Convert internal runs of spaces into single spaces.
+		unsigned left = 1;
+		unsigned right = 1;
+		bool inSpaces = false;
+		while( right < value.length() ) {
+			if( value[right] == ' ' ) { inSpaces = true; ++right; continue; }
+			if(! inSpaces) { ++left; right = left; continue; }
+			value.erase( left, left - right );
+			inSpaces = false;
+			right = left + 1;
+		}
+
+		transformedHeaders[ header ] = value;
+	}
+
+	// The canonical list of signed headers is trivial to generate while
+	// generating the list of headers.
+	std::string signedHeaders;
+	std::string canonicalHeaders;
+	for( auto i = transformedHeaders.begin(); i != transformedHeaders.end(); ++i ) {
+		canonicalHeaders += i->first + ":" + i->second + "\n";
+		signedHeaders += i->first + ";";
+	}
+	signedHeaders.erase( signedHeaders.end() - 1 );
+	// dprintf( D_ALWAYS, "signedHeaders: '%s'\n", signedHeaders.c_str() );
+
+	// The canonical payload hash is the lowercase hexadecimal string of the
+	// (SHA256) hash value of the payload.
+	unsigned int mdLength = 0;
+	unsigned char messageDigest[EVP_MAX_MD_SIZE];
+	if(! doSha256( payload, messageDigest, & mdLength )) {
+		this->errorCode = "E_INTERNAL";
+		this->errorMessage = "Unable to hash payload.";
+		dprintf( D_ALWAYS, "Unable to hash payload, failing.\n" );
+		return false;
+	}
+	std::string payloadHash;
+	convertMessageDigestToLowercaseHex( messageDigest, mdLength, payloadHash );
+
+	// Task 1: create the canonical request.
+	std::string canonicalRequest = "POST\n"
+								 + canonicalURI + "\n"
+								 + canonicalQueryString + "\n"
+								 + canonicalHeaders + "\n"
+								 + signedHeaders + "\n"
+								 + payloadHash;
+	// dprintf( D_ALWAYS, "canonicalRequest:\n%s\n", canonicalRequest.c_str() );
+
+
+	//
+	// Create task 2's inputs.
+	//
+
+	// Hash the canonical request the way we did the payload.
+	if(! doSha256( canonicalRequest, messageDigest, & mdLength )) {
+		this->errorCode = "E_INTERNAL";
+		this->errorMessage = "Unable to hash canonical request.";
+		dprintf( D_ALWAYS, "Unable to hash canonical request, failing.\n" );
+		return false;
+	}
+	std::string canonicalRequestHash;
+	convertMessageDigestToLowercaseHex( messageDigest, mdLength, canonicalRequestHash );
+
+	char dt[] = "YYYYMMDDThhmmssZ";
+	strftime( dt, sizeof(dt), "%Y%m%dT%H%M%SZ", & brokenDownTime );
+	headers[ "X-Amz-Date" ] = dt;
+
+	char d[] = "YYYYMMDD";
+	strftime( d, sizeof(d), "%Y%m%d", & brokenDownTime );
+
+	std::string s = this->service;
+	if( s.empty() ) {
+		size_t i = host.find( "." );
+		if( i == std::string::npos ) {
+			this->errorCode = "E_INTERNAL";
+			this->errorMessage = "Unable to derive service from host.";
+			dprintf( D_ALWAYS, "Unable to derive service from host '%s', failing.\n", host.c_str() );
+			return false;
+		}
+		s = host.substr( 0, i );
+	}
+
+	std::string r = this->region;
+	if( r.empty() ) {
+		size_t i = host.find( "." );
+		size_t j = host.find( ".", i + 1 );
+		if( j == std::string::npos ) {
+			this->errorCode = "E_INTERNAL";
+			this->errorMessage = "Unable to derive region from host.";
+			dprintf( D_ALWAYS, "Unable to derive region from host '%s', failing.\n", host.c_str() );
+			return false;
+		}
+		r = host.substr( i + 1, j - i - 1 );
+	}
+
+
+	// Task 2: create the string to sign.
+	std::string credentialScope;
+	formatstr( credentialScope, "%s/%s/%s/aws4_request", d, r.c_str(), s.c_str() );
+	std::string stringToSign;
+	formatstr( stringToSign, "AWS4-HMAC-SHA256\n%s\n%s\n%s",
+		dt, credentialScope.c_str(), canonicalRequestHash.c_str() );
+	// dprintf( D_ALWAYS, "string to sign:\n'%s'\n", stringToSign.c_str() );
+
+
+	//
+	// Create task 3's inputs.
+	//
+	std::string saKey;
+	if( ! readShortFile( this->secretKeyFile, saKey ) ) {
+		this->errorCode = "E_FILE_IO";
+		this->errorMessage = "Unable to read from secretkey file '" + this->secretKeyFile + "'.";
+		dprintf( D_ALWAYS, "Unable to read secretkey file '%s', failing.\n", this->secretKeyFile.c_str() );
+		return false;
+	}
+	trim( saKey );
+
+	// Task 3: calculate the signature.
+	saKey = "AWS4" + saKey;
+	const unsigned char * hmac = HMAC( EVP_sha256(),
+		saKey.c_str(), saKey.length(), (unsigned char *)d, sizeof(d) - 1,
+		messageDigest, & mdLength );
+	if( hmac == NULL ) { return false; }
+
+	unsigned int md2Length = 0;
+	unsigned char messageDigest2[EVP_MAX_MD_SIZE];
+	hmac = HMAC( EVP_sha256(), messageDigest, mdLength,
+		(unsigned char *)r.c_str(), r.length(), messageDigest2, & md2Length );
+	if( hmac == NULL ) { return false; }
+
+	hmac = HMAC( EVP_sha256(), messageDigest2, md2Length,
+		(unsigned char *)s.c_str(), s.length(), messageDigest, & mdLength );
+	if( hmac == NULL ) { return false; }
+
+	const char c[] = "aws4_request";
+	hmac = HMAC( EVP_sha256(), messageDigest, mdLength,
+		(unsigned char *)c, sizeof(c) - 1, messageDigest2, & md2Length );
+	if( hmac == NULL ) { return false; }
+
+	hmac = HMAC( EVP_sha256(), messageDigest2, md2Length,
+		(unsigned char *)stringToSign.c_str(), stringToSign.length(),
+		messageDigest, & mdLength );
+	if( hmac == NULL ) { return false; }
+
+	std::string signature;
+	convertMessageDigestToLowercaseHex( messageDigest, mdLength, signature );
+
+	std::string keyID;
+	if( ! readShortFile( this->accessKeyFile, keyID ) ) {
+		this->errorCode = "E_FILE_IO";
+		this->errorMessage = "Unable to read from accesskey file '" + this->accessKeyFile + "'.";
+		dprintf( D_ALWAYS, "Unable to read accesskey file '%s', failing.\n", this->accessKeyFile.c_str() );
+		return false;
+	}
+	trim( keyID );
+
+	formatstr( authorizationValue, "AWS4-HMAC-SHA256 Credential=%s/%s,"
+				" SignedHeaders=%s, Signature=%s",
+				keyID.c_str(), credentialScope.c_str(),
+				signedHeaders.c_str(), signature.c_str() );
+	// dprintf( D_ALWAYS, "authorization value: '%s'\n", authorizationValue.c_str() );
+	return true;
+}
+
+bool AmazonRequest::sendV4Request() {
+	// If we're worried about the duplicate work here and in parsing the
+	// URL, we could just pass more arguments into createV4Signature().
+	std::string payload;
+	canonicalizeQueryString( payload );
+
+	std::string authorizationValue;
+	if(! createV4Signature( payload, authorizationValue )) {
+        this->errorCode = "E_INTERNAL";
+        this->errorMessage = "Failed to create v4 signature.";
+        dprintf( D_ALWAYS, "Failed to create v4 signature.\n" );
+		return false;
+	}
+	headers[ "Authorization" ] = authorizationValue;
+
+	std::string protocol, host, path;
+    if(! parseURL( serviceURL, protocol, host, path )) {
+        this->errorCode = "E_INVALID_SERVICE_URL";
+        this->errorMessage = "Failed to parse service URL.";
+        dprintf( D_ALWAYS, "Failed to match regex against service URL '%s'.\n", serviceURL.c_str() );
+    	return false;
+    }
+    if( (protocol != "http") && (protocol != "https") ) {
+        this->errorCode = "E_INVALID_SERVICE_URL";
+        this->errorMessage = "Service URL not of a known protocol (http[s]).";
+        dprintf( D_ALWAYS, "Service URL '%s' not of a known protocol (http[s]).\n", serviceURL.c_str() );
+        return false;
+    }
+
+    return sendPreparedRequest( protocol, serviceURL, payload );
+}
+
+bool AmazonRequest::sendV2Request() {
     //
     // Every request must have the following parameters:
     //
@@ -401,25 +748,22 @@ bool AmazonRequest::SendRequest() {
     // While we're at it, extract "the value of the Host header in lowercase"
     // and the "HTTP Request URI" from the service URL.  The service URL must
     // be of the form '[http[s]|x509|euca3[s]]://hostname[:port][/path]*'.
-    Regex r; int errCode = 0; const char * errString = 0;
-    bool patternOK = r.compile( "([^:]+)://(([^/]+)(/.*)?)", & errString, & errCode );
-    ASSERT( patternOK );
-    ExtArray<MyString> groups(5);
-    bool matchFound = r.match( this->serviceURL.c_str(), & groups );
-    if( (! matchFound) || (groups[1] != "http" && groups[1] != "https" && groups[1] != "x509" && groups[1] != "euca3" && groups[1] != "euca3s" ) ) {
+    std::string protocol, host, httpRequestURI;
+    if(! parseURL( serviceURL, protocol, host, httpRequestURI )) {
         this->errorCode = "E_INVALID_SERVICE_URL";
         this->errorMessage = "Failed to parse service URL.";
         dprintf( D_ALWAYS, "Failed to match regex against service URL '%s'.\n", serviceURL.c_str() );
+    	return false;
+    }
+
+    if( (protocol != "http" && protocol != "https" && protocol != "x509" && protocol != "euca3" && protocol != "euca3s" ) ) {
+        this->errorCode = "E_INVALID_SERVICE_URL";
+        this->errorMessage = "Service URL not of a known protocol (http[s]|x509|euca3[s]).";
+        dprintf( D_ALWAYS, "Service URL '%s' not of a known protocol (http[s]|x509|euca3[s]).\n", serviceURL.c_str() );
         return false;
     }
-    std::string protocol = groups[1];
-    std::string hostAndPath = groups[2];
-    std::string valueOfHostHeaderInLowercase = groups[3];
-    std::transform( valueOfHostHeaderInLowercase.begin(),
-                    valueOfHostHeaderInLowercase.end(),
-                    valueOfHostHeaderInLowercase.begin(),
-                    & tolower );
-    std::string httpRequestURI = groups[4];
+    std::string hostAndPath = host + httpRequestURI;
+    std::transform( host.begin(), host.end(), host.begin(), & tolower );
     if( httpRequestURI.empty() ) { httpRequestURI = "/"; }
 
     //
@@ -465,7 +809,6 @@ bool AmazonRequest::SendRequest() {
     //
     // We're calculating the signature now. [YYYY-MM-DDThh:mm:ssZ]
     //
-    struct timespec signatureTime;
     Throttle::now( & signatureTime );
     time_t now; time( & now );
     struct tm brokenDownTime; gmtime_r( & now, & brokenDownTime );
@@ -484,31 +827,14 @@ bool AmazonRequest::SendRequest() {
      */
 
     // Step 1: Create the canonicalized query string.
-    std::string canonicalizedQueryString;
-    AttributeValueMap encodedParameters;
-    AttributeValueMap::const_iterator i;
-    for( i = query_parameters.begin(); i != query_parameters.end(); ++i ) {
-        // Step 1A: The map sorts the query parameters for us.
-
-        // Step 1B: Encode the parameter names and values.
-        std::string name = amazonURLEncode( i->first );
-        std::string value = amazonURLEncode( i->second );
-        encodedParameters.insert( std::make_pair( name, value ) );
-
-        // Step 1C: Separate parameter names from values with '='.
-        canonicalizedQueryString += name + '=' + value;
-
-        // Step 1D: Separate name-value pairs with '&';
-        canonicalizedQueryString += '&';
-    }
-    // We'll always have a superflous trailing ampersand.
-    canonicalizedQueryString.erase( canonicalizedQueryString.end() - 1 );
+    std::string canonicalQueryString;
+    canonicalizeQueryString( canonicalQueryString );
 
     // Step 2: Create the string to sign.
     std::string stringToSign = "POST\n"
-                             + valueOfHostHeaderInLowercase + "\n"
+                             + host + "\n"
                              + httpRequestURI + "\n"
-                             + canonicalizedQueryString;
+                             + canonicalQueryString;
 
     // Step 3: "Calculate an RFC 2104-compliant HMAC with the string
     // you just created, your Secret Access Key as the key, and SHA256
@@ -548,7 +874,7 @@ bool AmazonRequest::SendRequest() {
     free( base64Encoded );
 
     // Generate the final URI.
-    canonicalizedQueryString += "&Signature=" + amazonURLEncode( signatureInBase64 );
+    canonicalQueryString += "&Signature=" + amazonURLEncode( signatureInBase64 );
     std::string postURI;
     if( protocol == "x509" ) {
         postURI = "https://" + hostAndPath;
@@ -559,7 +885,39 @@ bool AmazonRequest::SendRequest() {
     } else {
         postURI = this->serviceURL;
     }
-    std::string finalURI = postURI + "?" + canonicalizedQueryString;
+    dprintf( D_FULLDEBUG, "Request URI is '%s'\n", postURI.c_str() );
+
+    // The AWS docs now say that " " - > "%20", and that "+" is an error.
+    // dprintf( D_FULLDEBUG, "Post body is '%s'\n", canonicalQueryString.c_str() );
+    size_t index = canonicalQueryString.find( "AWSAccessKeyId=" );
+    if( index != std::string::npos ) {
+        size_t skipLast = canonicalQueryString.find( "&", index + 14 );
+        char swap = canonicalQueryString[ index + 15 ];
+        canonicalQueryString[ index + 15 ] = '\0';
+        char const * cqs = canonicalQueryString.c_str();
+        if( skipLast == std::string::npos ) {
+            dprintf( D_FULLDEBUG, "Post body is '%s...'\n", cqs );
+        } else {
+            dprintf( D_FULLDEBUG, "Post body is '%s...%s'\n", cqs, cqs + skipLast );
+        }
+        canonicalQueryString[ index + 15 ] = swap;
+    } else {
+        dprintf( D_FULLDEBUG, "Post body is '%s'\n", canonicalQueryString.c_str() );
+    }
+
+    return sendPreparedRequest( protocol, postURI, canonicalQueryString );
+}
+
+bool AmazonRequest::sendPreparedRequest(
+		const std::string & protocol,
+		const std::string & uri,
+		const std::string & payload ) {
+	static bool rateLimitInitialized = false;
+	if(! rateLimitInitialized) {
+		globalCurlThrottle.rateLimit = param_integer( "EC2_GAHP_RATE_LIMIT", 100 );
+		dprintf( D_PERF_TRACE, "rate limit = %u\n", globalCurlThrottle.rateLimit );
+		rateLimitInitialized = true;
+	}
 
     // curl_global_init() is not thread-safe.  However, it's safe to call
     // multiple times.  Therefore, we'll just call it before we drop the
@@ -604,9 +962,8 @@ bool AmazonRequest::SendRequest() {
     }
 */
 
-    dprintf( D_FULLDEBUG, "Request URI is '%s'\n", postURI.c_str() );
-    rv = curl_easy_setopt( curl, CURLOPT_URL, postURI.c_str() );
-
+dprintf( D_ALWAYS, "sendPreparedRequest(): CURLOPT_URL = '%s'\n", uri.c_str() );
+    rv = curl_easy_setopt( curl, CURLOPT_URL, uri.c_str() );
     if( rv != CURLE_OK ) {
         this->errorCode = "E_CURL_LIB";
         this->errorMessage = "curl_easy_setopt( CURLOPT_URL ) failed.";
@@ -625,25 +982,8 @@ bool AmazonRequest::SendRequest() {
         return false;
     }
 
-    // The AWS docs now say that " " - > "%20", and that "+" is an error.
-    // dprintf( D_FULLDEBUG, "Post body is '%s'\n", canonicalizedQueryString.c_str() );
-    size_t index = canonicalizedQueryString.find( "AWSAccessKeyId=" );
-    if( index != std::string::npos ) {
-        size_t skipLast = canonicalizedQueryString.find( "&", index + 14 );
-        char swap = canonicalizedQueryString[ index + 15 ];
-        canonicalizedQueryString[ index + 15 ] = '\0';
-        char const * cqs = canonicalizedQueryString.c_str();
-        if( skipLast == std::string::npos ) {
-            dprintf( D_FULLDEBUG, "Post body is '%s...'\n", cqs );
-        } else {
-            dprintf( D_FULLDEBUG, "Post body is '%s...%s'\n", cqs, cqs + skipLast );
-        }
-        canonicalizedQueryString[ index + 15 ] = swap;
-    } else {
-        dprintf( D_FULLDEBUG, "Post body is '%s'\n", canonicalizedQueryString.c_str() );
-    }
-
-    rv = curl_easy_setopt( curl, CURLOPT_POSTFIELDS, canonicalizedQueryString.c_str() );
+dprintf( D_ALWAYS, "sendPreparedRequest(): CURLOPT_POSTFIELDS = '%s'\n", payload.c_str() );
+    rv = curl_easy_setopt( curl, CURLOPT_POSTFIELDS, payload.c_str() );
     if( rv != CURLE_OK ) {
         this->errorCode = "E_CURL_LIB";
         this->errorMessage = "curl_easy_setopt( CURLOPT_POSTFIELDS ) failed.";
@@ -758,6 +1098,32 @@ bool AmazonRequest::SendRequest() {
         SET_CURL_SECURITY_OPTION( curl, CURLOPT_SSLCERT, this->accessKeyFile.c_str() );
     }
 
+
+	std::string headerPair;
+	struct curl_slist * header_slist = NULL;
+	for( auto i = headers.begin(); i != headers.end(); ++i ) {
+		formatstr( headerPair, "%s: %s", i->first.c_str(), i->second.c_str() );
+dprintf( D_ALWAYS, "sendPreparedRequest(): adding header = '%s: %s'\n", i->first.c_str(), i->second.c_str() );
+		header_slist = curl_slist_append( header_slist, headerPair.c_str() );
+		if( header_slist == NULL ) {
+	        this->errorCode = "E_CURL_LIB";
+    	    this->errorMessage = "curl_slist_append() failed.";
+        	dprintf( D_ALWAYS, "curl_slist_append() failed, failing.\n" );
+			return false;
+		}
+	}
+
+	rv = curl_easy_setopt( curl, CURLOPT_HTTPHEADER, header_slist );
+	if( rv != CURLE_OK ) {
+        this->errorCode = "E_CURL_LIB";
+        this->errorMessage = "curl_easy_setopt( CURLOPT_HTTPHEADER ) failed.";
+        dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_HTTPHEADER ) failed (%d): '%s', failing.\n",
+            rv, curl_easy_strerror( rv ) );
+        if( header_slist ) { curl_slist_free_all( header_slist ); }
+		return false;
+	}
+
+
     static unsigned failureCount = 0;
     const char * failureMode = getenv( "EC2_GAHP_FAILURE_MODE" );
 
@@ -783,6 +1149,7 @@ bool AmazonRequest::SendRequest() {
 
         this->errorCode = "E_DEADLINE_WOULD_BE_EXCEEDED";
         this->errorMessage = "Signature would have expired before next permissible time to use it.";
+        if( header_slist ) { curl_slist_free_all( header_slist ); }
         curl_easy_cleanup( curl );
 
         pthread_mutex_unlock( & globalCurlMutex );
@@ -880,6 +1247,7 @@ retry:
         this->errorMessage = error.str();
         dprintf( D_ALWAYS, "%s\n", this->errorMessage.c_str() );
         dprintf( D_FULLDEBUG, "%s\n", errorBuffer );
+        if( header_slist ) { curl_slist_free_all( header_slist ); }
         curl_easy_cleanup( curl );
 
         pthread_mutex_unlock( & globalCurlMutex );
@@ -899,6 +1267,7 @@ retry:
         this->errorMessage = "curl_easy_getinfo() failed.";
         dprintf( D_ALWAYS, "curl_easy_getinfo( CURLINFO_RESPONSE_CODE ) failed (%d): '%s', failing.\n",
             rv, curl_easy_strerror( rv ) );
+        if( header_slist ) { curl_slist_free_all( header_slist ); }
         curl_easy_cleanup( curl );
 
         pthread_mutex_unlock( & globalCurlMutex );
@@ -952,6 +1321,7 @@ retry:
             // we did before we recongized it.
             formatstr( this->errorCode, "E_HTTP_RESPONSE_NOT_200 (%lu)", responseCode );
             this->errorMessage = resultString;
+	        if( header_slist ) { curl_slist_free_all( header_slist ); }
             curl_easy_cleanup( curl );
 
             pthread_mutex_unlock( & globalCurlMutex );
@@ -966,6 +1336,7 @@ retry:
         globalCurlThrottle.limitNotExceeded();
     }
 
+    if( header_slist ) { curl_slist_free_all( header_slist ); }
     curl_easy_cleanup( curl );
 
     if( responseCode != 200 ) {
@@ -2691,6 +3062,8 @@ void bulkStartEEH( void * vUserData, const XML_Char * name ) {
 }
 
 bool AmazonBulkStart::SendRequest() {
+	// FIXME: V4 is not actually required; this is only for testing.
+	signatureVersion = 4;
 	bool result = AmazonRequest::SendRequest();
 	if( result ) {
         bulkStartUD bsud( this->bulkRequestID );
@@ -3001,7 +3374,8 @@ bool AmazonBulkStart::workerFunction( char ** argv, int argc, std::string & resu
 AmazonPutRule::~AmazonPutRule() { }
 
 bool AmazonPutRule::SendRequest() {
-	signatureVersion = 4;
+	// FIXME: V2 is actually forbidden; this is only for testing.
+	signatureVersion = 2;
 	return AmazonRequest::SendRequest();
 }
 
