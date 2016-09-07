@@ -34,7 +34,7 @@
 ssize_t
 _condor_full_read(int fd, void *ptr, size_t nbytes)
 {
-	int nleft, nread;
+	ssize_t nleft, nread;
 
 	nleft = nbytes;
 	while (nleft > 0) {
@@ -73,7 +73,7 @@ _condor_full_read(int fd, void *ptr, size_t nbytes)
 ssize_t
 _condor_full_write(int fd, const void *ptr, size_t nbytes)
 {
-	int nleft, nwritten;
+	ssize_t nleft, nwritten;
 
 	nleft = nbytes;
 	while (nleft > 0) {
