@@ -2800,6 +2800,11 @@ const char * lookup_macro(const char * name, MACRO_SET & macro_set, MACRO_EVAL_C
 		}
 	}
 
+	// if still nothing, do a final lookup in the config file.
+	if ( ! lval && ctx.also_in_config) {
+		lval = param_unexpanded(name);
+	}
+
 	return lval;
 }
 

@@ -178,6 +178,7 @@ typedef struct macro_eval_context_ex : macro_eval_context {
 	int param_names_matching(Regex& re, std::vector<std::string>& names);
 
     bool param_defined(const char* name);
+	const char * param_unexpanded(const char *name);
 	char* param_or_except( const char *name );
     int param_integer( const char *name, int default_value = 0,
 					   int min_value = INT_MIN, int max_value = INT_MAX, bool use_param_table = true );
@@ -224,6 +225,8 @@ typedef struct macro_eval_context_ex : macro_eval_context {
 								MyString &name_used,
 								const char ** pdef_value,
 								const MACRO_META **ppmet);
+
+	MACRO_SET * param_get_macro_set();
 
 	// lookup "name" in ALL of relevant tables as indicated by the MACRO_EVAL_CONTEXT.
 	// as soon as an item is found (even an empty item) lookup stops.  the lookup order is
