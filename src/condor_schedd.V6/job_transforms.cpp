@@ -139,9 +139,10 @@ JobTransforms::initAndReconfig()
 
 		// Finally, append the xfm to the end our list (order is important here!)
 		transforms_list.Append(xfm);
+		std::string xfm_text;
 		dprintf(D_ALWAYS, 
-			"JOB_TRANSFORM_%s setup as transform rule #%d :\n\t%s\n",
-			name, transforms_list.Number(), xfm->getFullText("\n\t") );
+			"JOB_TRANSFORM_%s setup as transform rule #%d :\n%s\n",
+			name, transforms_list.Number(), xfm->getFormattedText(xfm_text, "\t") );
 		xfm = NULL;  // we handed the xfm pointer off to our list
 
 	} // end of while loop thru job transform names	

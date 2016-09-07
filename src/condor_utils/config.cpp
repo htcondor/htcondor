@@ -1570,6 +1570,7 @@ Parse_macros(
 					retval = Parse_macros(fp, InnerSource, depth+1, macro_set, options, pctx, config_errmsg, fnSubmit, pvSubmitData);
 #endif
 				}
+				fclose(fp); fp = NULL;
 			}
 			if (retval < 0) {
 				macro_set.push_error( stderr, retval, source_type,
