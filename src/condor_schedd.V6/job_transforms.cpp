@@ -74,13 +74,16 @@ JobTransforms::initAndReconfig()
 		std::string attributeName;
 		formatstr( attributeName, "JOB_TRANSFORM_%s", name );
 
-		std::string transform;
-		if( !param( transform, attributeName.c_str() ) ) {
+		// fetch unexpanded param, we will only expand it now for the old (classad) style transforms.
+		// this pointer does not need to be freed.
+		const char * raw_transform_text = param_unexpanded( attributeName.c_str() );
+		if( !raw_transform_text ) {
 			dprintf( D_ALWAYS, "JOB_TRANSFORM_%s not defined, ignoring.\n", name );
 			continue;
 		}
-		trim( transform );
-		if ( transform.empty() ) {
+		// skip leading whitespace (I think the param code does this, but...)
+		while (isspace(*raw_transform_text)) { ++raw_transform_text; }
+		if ( !raw_transform_text[0] ) {
 			dprintf( D_ALWAYS, "JOB_TRANSFORM_%s definition is empty, ignoring.\n", name );
 			continue;
 		}
@@ -97,8 +100,12 @@ JobTransforms::initAndReconfig()
 
 		// Load transform rule from the config param into the xfm object.  If
 		// the config param starts with a '[' (after trimming out leading whitespace above)
-		// then assume the rule is in the form of a classad.
-		if ( transform[0] == '[' ) {
+		// then assume the rule is in the form of a new classad.
+		if ( raw_transform_text[0] == '[' ) {
+			// Fetch transform with macro expansion
+			std::string transform;
+			param( transform, attributeName.c_str() );
+
 			// Transform rule is in the form of a job_router style ClassAd, so
 			// call the helper XFormLoadFromJobRouterRoute() to convert it.
 			std::string empty;
@@ -115,9 +122,9 @@ JobTransforms::initAndReconfig()
 			}
 		} else {
 			// Transform rule is in the native xform macro stream style, so load it
-			// in that way.
+			// in that way without macro expanding at this time.
 			const MACRO_SOURCE ArgumentMacro = { true, false, 2, -2, -1, -2 };
-			StringList statements( transform.c_str(), "\n\r" );
+			StringList statements( raw_transform_text, "\n\r" );
 			if ( (rval=xfm->open(statements, ArgumentMacro)) < 0 ) {
 				dprintf( D_ALWAYS, "JOB_TRANSFORM_%s macro stream malformed, ignoring. (err=%d)\n",
 					name, rval );

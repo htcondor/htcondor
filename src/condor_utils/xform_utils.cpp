@@ -1499,6 +1499,7 @@ int TransformClassAd (
 	MACRO_EVAL_CONTEXT_EX & ctx = xfm.context();
 	ctx.ad = input_ad;
 	ctx.adname = "MY.";
+	ctx.also_in_config = true;
 
 	_parse_rules_args args = { xfm, mset, input_ad, flags };
 

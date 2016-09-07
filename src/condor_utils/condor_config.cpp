@@ -1979,12 +1979,23 @@ clear_config()
 	return;
 }
 
+MACRO_SET * param_get_macro_set()
+{
+	return &ConfigMacroSet;
+}
 
-bool param_defined(const char* name) {
+const char * param_unexpanded(const char *name)
+{
 	MACRO_EVAL_CONTEXT ctx;
 	init_macro_eval_context(ctx);
 	const char * pval = lookup_macro(name, ConfigMacroSet, ctx);
-	return pval && pval[0];
+	if (pval && ! pval[0]) return NULL;
+	return pval;
+}
+
+bool param_defined(const char* name) {
+	const char * pval = param_unexpanded(name);
+	return pval != NULL;
 }
 
 char*
