@@ -80,6 +80,7 @@ class AmazonRequest {
         virtual ~AmazonRequest();
 
         virtual bool SendRequest();
+        virtual bool SendJSONRequest( const std::string & payload );
 
     protected:
         typedef std::map< std::string, std::string > AttributeValueMap;
@@ -123,7 +124,7 @@ class AmazonRequest {
 		bool sendV4Request();
 
 		void canonicalizeQueryString( std::string & canonicalQueryString );
-		bool createV4Signature( std::string & payload, std::string & authorizationHeader );
+		bool createV4Signature( const std::string & payload, std::string & authorizationHeader );
 
 		bool sendPreparedRequest(	const std::string & protocol,
 									const std::string & uri,
@@ -345,7 +346,8 @@ class AmazonPutRule : public AmazonRequest {
 	public:
 		AmazonPutRule( int i, const char * c ) : AmazonRequest( i, c ) { }
 		virtual ~AmazonPutRule();
-        virtual bool SendRequest();
+
+		virtual bool SendJSONRequest( const std::string & payload );
 
 		static bool ioCheck(char **argv, int argc);
 		static bool workerFunction(char **argv, int argc, std::string &result_string);

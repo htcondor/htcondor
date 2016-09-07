@@ -467,7 +467,7 @@ bool doSha256(	const std::string & payload,
 	return true;
 }
 
-bool AmazonRequest::createV4Signature(	std::string & payload,
+bool AmazonRequest::createV4Signature(	const std::string & payload,
 										std::string & authorizationValue ) {
 	Throttle::now( & signatureTime );
 	time_t now; time( & now );
@@ -524,9 +524,9 @@ bool AmazonRequest::createV4Signature(	std::string & payload,
 		std::string value = i->second;
 
 		// Eliminate trailing spaces.
-		unsigned j = value.length();
-		while( value[j - 1] == ' ' ) { --j; }
-		if( j != value.length() ) { value.erase( j, value.length() - j ); }
+		unsigned j = value.length() - 1;
+		while( value[j] == ' ' ) { --j; }
+		if( j != value.length() - 1 ) { value.erase( j + 1 ); }
 
 		// Eliminate leading spaces.
 		for( j = 0; value[j] == ' '; ++j ) { }
@@ -537,11 +537,23 @@ bool AmazonRequest::createV4Signature(	std::string & payload,
 		unsigned right = 1;
 		bool inSpaces = false;
 		while( right < value.length() ) {
-			if( value[right] == ' ' ) { inSpaces = true; ++right; continue; }
-			if(! inSpaces) { ++left; right = left; continue; }
-			value.erase( left, left - right );
-			inSpaces = false;
-			right = left + 1;
+			if(! inSpaces) {
+				if( value[right] == ' ' ) {
+					inSpaces = true;
+					left = right;
+					++right;
+				} else {
+					++right;
+				}
+			} else {
+				if( value[right] == ' ' ) {
+					++right;
+				} else {
+					inSpaces = false;
+					value.erase( left, right - left - 1 );
+					right = left + 1;
+				}
+			}
 		}
 
 		transformedHeaders[ header ] = value;
@@ -557,6 +569,7 @@ bool AmazonRequest::createV4Signature(	std::string & payload,
 	}
 	signedHeaders.erase( signedHeaders.end() - 1 );
 	// dprintf( D_ALWAYS, "signedHeaders: '%s'\n", signedHeaders.c_str() );
+	// dprintf( D_ALWAYS, "canonicalHeaders: '%s'.\n", canonicalHeaders.c_str() );
 
 	// The canonical payload hash is the lowercase hexadecimal string of the
 	// (SHA256) hash value of the payload.
@@ -634,7 +647,7 @@ bool AmazonRequest::createV4Signature(	std::string & payload,
 	std::string stringToSign;
 	formatstr( stringToSign, "AWS4-HMAC-SHA256\n%s\n%s\n%s",
 		dt, credentialScope.c_str(), canonicalRequestHash.c_str() );
-	// dprintf( D_ALWAYS, "string to sign:\n'%s'\n", stringToSign.c_str() );
+	// dprintf( D_ALWAYS, "string to sign:\n%s\n", stringToSign.c_str() );
 
 
 	//
@@ -909,6 +922,38 @@ bool AmazonRequest::sendV2Request() {
     return sendPreparedRequest( protocol, postURI, canonicalQueryString );
 }
 
+bool AmazonRequest::SendJSONRequest( const std::string & payload ) {
+    headers[ "Content-Type" ] = "application/x-amz-json-1.1";
+
+    std::string protocol, host, path;
+    if(! parseURL( serviceURL, protocol, host, path )) {
+        this->errorCode = "E_INVALID_SERVICE_URL";
+        this->errorMessage = "Failed to parse service URL.";
+        dprintf( D_ALWAYS, "Failed to match regex against service URL '%s'.\n", serviceURL.c_str() );
+        return false;
+    }
+    if( (protocol != "http") && (protocol != "https") ) {
+        this->errorCode = "E_INVALID_SERVICE_URL";
+        this->errorMessage = "Service URL not of a known protocol (http[s]).";
+        dprintf( D_ALWAYS, "Service URL '%s' not of a known protocol (http[s]).\n", serviceURL.c_str() );
+        return false;
+    }
+    dprintf( D_FULLDEBUG, "Request URI is '%s'\n", serviceURL.c_str() );
+
+    dprintf( D_FULLDEBUG, "Post body is '%s'\n", payload.c_str() );
+
+    std::string authorizationValue;
+    if(! createV4Signature( payload, authorizationValue )) {
+        this->errorCode = "E_INTERNAL";
+        this->errorMessage = "Failed to create v4 signature.";
+        dprintf( D_ALWAYS, "Failed to create v4 signature.\n" );
+        return false;
+    }
+    headers[ "Authorization" ] = authorizationValue;
+
+    return sendPreparedRequest( protocol, serviceURL, payload );
+}
+
 bool AmazonRequest::sendPreparedRequest(
         const std::string & protocol,
         const std::string & uri,
@@ -963,7 +1008,7 @@ bool AmazonRequest::sendPreparedRequest(
     }
 */
 
-dprintf( D_ALWAYS, "sendPreparedRequest(): CURLOPT_URL = '%s'\n", uri.c_str() );
+	// dprintf( D_ALWAYS, "sendPreparedRequest(): CURLOPT_URL = '%s'\n", uri.c_str() );
     rv = curl_easy_setopt( curl, CURLOPT_URL, uri.c_str() );
     if( rv != CURLE_OK ) {
         this->errorCode = "E_CURL_LIB";
@@ -983,7 +1028,7 @@ dprintf( D_ALWAYS, "sendPreparedRequest(): CURLOPT_URL = '%s'\n", uri.c_str() );
         return false;
     }
 
-dprintf( D_ALWAYS, "sendPreparedRequest(): CURLOPT_POSTFIELDS = '%s'\n", payload.c_str() );
+	// dprintf( D_ALWAYS, "sendPreparedRequest(): CURLOPT_POSTFIELDS = '%s'\n", payload.c_str() );
     rv = curl_easy_setopt( curl, CURLOPT_POSTFIELDS, payload.c_str() );
     if( rv != CURLE_OK ) {
         this->errorCode = "E_CURL_LIB";
@@ -1104,7 +1149,7 @@ dprintf( D_ALWAYS, "sendPreparedRequest(): CURLOPT_POSTFIELDS = '%s'\n", payload
 	struct curl_slist * header_slist = NULL;
 	for( auto i = headers.begin(); i != headers.end(); ++i ) {
 		formatstr( headerPair, "%s: %s", i->first.c_str(), i->second.c_str() );
-dprintf( D_ALWAYS, "sendPreparedRequest(): adding header = '%s: %s'\n", i->first.c_str(), i->second.c_str() );
+		// dprintf( D_ALWAYS, "sendPreparedRequest(): adding header = '%s: %s'\n", i->first.c_str(), i->second.c_str() );
 		header_slist = curl_slist_append( header_slist, headerPair.c_str() );
 		if( header_slist == NULL ) {
 			this->errorCode = "E_CURL_LIB";
@@ -3372,9 +3417,27 @@ bool AmazonBulkStart::workerFunction( char ** argv, int argc, std::string & resu
 
 AmazonPutRule::~AmazonPutRule() { }
 
-bool AmazonPutRule::SendRequest() {
-	signatureVersion = 4;
-	return AmazonRequest::SendRequest();
+bool AmazonPutRule::SendJSONRequest( const std::string & payload ) {
+	bool result = AmazonRequest::SendJSONRequest( payload );
+	if( result ) {
+		// We could use a dedicated JSON parser, but its API is annoying,
+		// and the ClassAd converter is good enough.
+		ClassAd reply;
+		classad::ClassAdJsonParser cajp;
+		if(! cajp.ParseClassAd( this->resultString, reply, true )) {
+			dprintf( D_ALWAYS, "Failed to parse reply '%s' as JSON.\n", this->resultString.c_str() );
+			return false;
+		}
+		reply.LookupString( "RuleArn", this->ruleARN );
+	} else {
+		if( this->errorCode == "E_CURL_IO" ) {
+			// To be on the safe side, if the I/O failed, the annexd should
+			// check to see the Spot Fleet was started or not.
+			this->errorCode = "NEED_CHECK_BULK_START";
+			return false;
+		}
+	}
+	return result;
 }
 
 bool AmazonPutRule::workerFunction( char ** argv, int argc, std::string & result_string ) {
@@ -3397,18 +3460,20 @@ bool AmazonPutRule::workerFunction( char ** argv, int argc, std::string & result
 	request.accessKeyFile = argv[3];
 	request.secretKeyFile = argv[4];
 
-	// Fill in required parameters.
-	request.query_parameters[ "Action" ] = "PutRule";
-	// The CloudWatch Events API is relatively new.  Set the version here,
-	// rather than update the minimum necessary, in case somebody wants to
-	// use the non-annex functionality with an older-interface service.
-	request.query_parameters[ "Version" ] = "2016-04-01";
+	// Set the required headers.  (SendJSONRequest() sets the content-type.)
+	request.headers[ "X-Amz-Target" ] = "AWSEvents.PutRule";
 
-	request.query_parameters[ "Name" ] = argv[5];
-	request.query_parameters[ "ScheduleExpression" ] = argv[6];
-	request.query_parameters[ "State" ] = argv[7];
+	// Construct the JSON payload.
+	std::string payload;
+	// FIXME: properly escape the JSON values.
+	formatstr( payload, "{\n"
+				"\"Name\": \"%s\",\n"
+				"\"ScheduleExpression\": \"%s\",\n"
+				"\"State\": \"%s\"\n"
+				"}\n",
+				argv[5], argv[6], argv[7] );
 
-	if( ! request.SendRequest() ) {
+	if( ! request.SendJSONRequest( payload ) ) {
 		result_string = create_failure_result( requestID,
 			request.errorMessage.c_str(),
 			request.errorCode.c_str() );
