@@ -23,6 +23,7 @@
 ######################################################################
 use strict;
 use warnings;
+use Cwd;
 
 use Getopt::Long;
 use vars qw/ $opt_coverity_analysis /;
@@ -45,6 +46,53 @@ my $COVERITY_ANALYSIS     = "remote_task.coverity_analysis";
 
 # autoflush our STDOUT
 $| = 1;
+
+my $boos = 1; # build out of source
+if ($boos) {
+    # rewrite the directory structures so we can do out of source builds.
+	# we start in dir_nnn/userdir, which is the git clone
+	# we want to move most of the content of that to dir_nnn/sources
+	# leaving dir_nnn/userdir to hold the build products
+	# Because of some stupididity in the tests, we also have to duplicate parts of the source tree into userdir
+	chdir '..';
+	my $nmi_dir = cwd;
+	print "Converting to out-of-source builds by moving most of $nmi_dir/userdir to $nmi_dir/sources\n";
+
+	# we create scripts to do the moving of files because we want to tar some stuff
+	# and because perl's move doesn't work for directories on all platforms....
+
+	mkdir 'sources';
+	open(FH, '>', 'swap_userdir.cmd') or print "Cant open swap_userdir.cmd for writing: $!\n";
+	if ($ENV{NMI_PLATFORM} =~ /_win/i) {
+		print FH '"userdir\msconfig\tar.exe" -czf swap_userdir.tgz userdir/BUILD-ID userdir/msconfig userdir/nmi_tools userdir/src/condor_examples userdir/src/condor_tests userdir/src/classad/tests/testdata.txt' . "\n";
+		print FH 'move userdir\* sources' . "\n";
+		print FH 'move userdir\src sources\src' . "\n";
+		print FH 'move userdir\doc sources\doc' . "\n";
+		print FH 'move userdir\view sources\view' . "\n";
+		print FH 'move userdir\build sources\build' . "\n";
+		print FH 'move userdir\externals sources\externals' . "\n";
+		print FH 'move userdir\msconfig sources\msconfig' . "\n";
+		print FH 'move userdir\nmi_tools sources\nmi_tools' . "\n";
+		print FH '"sources\msconfig\tar.exe" -xvf swap_userdir.tgz' . "\n";
+	} else {
+		print FH '#!/bin/sh' . "\n";
+		print FH 'tar czf swap_userdir.tgz userdir/BUILD-ID userdir/nmi_tools userdir/src/condor_examples userdir/src/condor_tests userdir/src/classad/tests/testdata.txt' . "\n";
+		print FH 'for file in userdir/*; do if [ -f "$file" ]; then mv "$file" sources; fi; done' . "\n";
+		print FH 'mv userdir/src sources' . "\n";
+		print FH 'mv userdir/doc sources' . "\n";
+		print FH 'mv userdir/view sources' . "\n";
+		print FH 'mv userdir/build sources' . "\n";
+		print FH 'mv userdir/externals sources' . "\n";
+		print FH 'mv userdir/msconfig sources' . "\n";
+		print FH 'mv userdir/nmi_tools sources' . "\n";
+		print FH 'tar xvf swap_userdir.tgz' . "\n";
+	}
+	close(FH);
+	chmod(0777,'swap_userdir.cmd');
+	system ("$nmi_dir/swap_userdir.cmd");
+	chdir 'userdir';
+}
+
 
 my $tasklist_file = "tasklist.nmi";
 
@@ -96,4 +144,21 @@ while(<TASKFILE>) {
     print "\t$_";
 }
 close (TASKFILE);
+
+print "Initial directory content:\n";
+open(FH, '>', 'probe.cmd') or print "Cant open probe.cmd for writing: $!\n";
+if ($ENV{NMI_PLATFORM} =~ /_win/i) {
+	print FH 'dir' . "\n";
+	print FH 'dir ..' . "\n";
+	print FH 'dir ..\sources' . "\n";
+	close(FH);
+} else {
+	print FH '#!/bin/sh' . "\n";
+	print FH 'pwd && ls -l' . "\n";
+	print FH 'ls -l ..' . "\n";
+	print FH 'ls -l ../sources' . "\n";
+	close(FH);
+	chmod(0777,'probe.cmd');
+}
+system("probe.cmd");
 exit 0;

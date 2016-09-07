@@ -40,7 +40,7 @@ GetOptions(
 my $installcmakecmd = "./nmi_tools/glue/build/install_cmake";
 my $cmake = undef;
 my $BaseDir = getcwd();
-my $SrcDir = "$BaseDir/src";
+#my $SrcDir = "$BaseDir/src";
 my $buildid_file = "BUILD-ID";
 my $buildid;
 my $externals_loc="/scratch/condor_externals";
@@ -53,6 +53,10 @@ my %defines = (
 
 # autoflush our STDOUT
 $| = 1;
+
+my $boos = 1; # build out of source
+my $CloneDir = $BaseDir;
+if ($boos) { $CloneDir =~ s/userdir/sources/; }
 
 if ($ENV{NMI_PLATFORM} =~ /_win/i) {
 	my $enable_vs9 = 0;
@@ -112,7 +116,7 @@ print "Configure args: " . join(' ', @ARGV) . "\n";
 # Save source tree for native redhat RPM builds
 ######################################################################
 if ($ENV{NMI_PLATFORM} =~ /(x86_RedHat6|x86_64_RedHat6|x86_64_RedHat7)/) {
-    system("tar cfz $ENV{TMP}/condor.tar.gz *");
+    system("cd $CloneDir && tar cfz $ENV{TMP}/condor.tar.gz *");
 }
 
 ######################################################################
@@ -261,11 +265,23 @@ if($platform =~ /Fedora1[789]$/) {
 # on the machine, or in a prereq, or downloaded and built by our
 # invocation of $installcmakecmd above.
 ######################################################################
-my @command = ( $cmake,
-		".",
-		join(" ", values(%defines)),
-		join(' ', @ARGV)
-    );
+if ($boos) {
+	print "Doing out-of-source build, sources are at '$CloneDir'\n";
+	if ($platform =~ /_win/i) {
+		print "Converting '$CloneDir' to Windows style\n";
+		$CloneDir =~ s/\//\\/g;
+		print "Result: '$CloneDir'\n";
+	} else {
+	}
+} else {
+	$CloneDir = ".";
+}
+
+my @command = ( $cmake, "CMakeLists.txt",
+	join(' ', values(%defines)),
+	join(' ', @ARGV),
+	$CloneDir
+);
 my $configexecstr = join( " ", @command );
 
 print "$configexecstr\n";
@@ -282,3 +298,4 @@ if( $exit_status ) {
 }
 
 exit 0;
+
