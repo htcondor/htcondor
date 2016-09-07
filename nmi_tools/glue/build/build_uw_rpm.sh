@@ -57,9 +57,9 @@ trap 'rm -rf "$tmpd"' EXIT
 cd "$tmpd"
 mkdir SOURCES BUILD BUILDROOT RPMS SPECS SRPMS
 
-# untar the condor sources into a directory with the name that RPM needs
-mkdir "condor-$condor_version"
-cd "condor-$condor_version"
+# untar the condor sources into a temporary directory
+mkdir "condor_src"
+cd "condor_src"
 tar xfpz "$TMP"/condor.tar.gz
 
 # get the version and build id out of the sources
@@ -69,11 +69,16 @@ condor_version=$(awk -F\" '/^set\(VERSION / {print $2}' CMakeLists.txt)
 [[ $condor_version ]] || fail "Condor version string not found"
 check_version_string  condor_version
 
+# copy srpm files from condor sources into the SOURCES directory
 cd ..
-cp -p "condor-$condor_version"/build/packaging/srpm/* SOURCES
+cp -p condor_src/build/packaging/srpm/* SOURCES
+
+# rename the condor_src directory to have the version number in it, then tar that up
+mv "condor_src" "condor-$condor_version"
 tar cfz SOURCES/condor-$condor_version.tar.gz "condor-$condor_version"
 rm -rf "condor-$condor_version"
 
+# inject the version and build id into the spec file
 update_spec_define () {
   sed -i "s|^ *%define * $1 .*|%define $1 $2|" SOURCES/condor.spec
 }

@@ -94,8 +94,9 @@ public:
 	const char * getName() { return name.c_str(); }
 	const char * setName(const char * nam) { name = nam; return getName(); }
 
-	classad::ExprTree* getRequirements() { return requirements; }
+	classad::ExprTree* getRequirements() { return requirements.Expr(); }
 	classad::ExprTree* setRequirements(const char * require);
+	const char * getRequirementsStr() { return requirements.c_str(); }
 
 	// these are used only when the source has an iterating TRANSFORM command
 	bool has_pending_fp() { return fp_iter != NULL; }
@@ -112,15 +113,14 @@ public:
 	void reset(XFormHash & mset); // reset the iterator variables
 
 	MACRO_EVAL_CONTEXT_EX& context() { return ctx; }
-	const char * getFullText(const char *delims) { return m_complete_xform_string.print_to_delimed_string(delims); } // return full rule, incl NAME and REQs, with no comments
+	const char * getFormattedText(std::string & buf, const char *prefix="", bool include_comments=false); // return full rule, incl NAME and REQs
 	const char * getText() { return file_string.ptr(); } // return active text of the transform, \n delimited.
 	const char * getIterateArgs() { return iterate_args.ptr(); }
 protected:
 	std::string name;
-	classad::ExprTree* requirements; // change to std::unique_ptr someday...
+	ConstraintHolder requirements;
 	MACRO_SET_CHECKPOINT_HDR * checkpoint;
 	MACRO_EVAL_CONTEXT_EX ctx;
-	StringList m_complete_xform_string;
 
 	// these are used when the transform iterates
 	FILE* fp_iter; // when load stops at a TRANSFORM line, this holds the fp until parse_iterate_args is called

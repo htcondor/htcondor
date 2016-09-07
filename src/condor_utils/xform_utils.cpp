@@ -593,7 +593,7 @@ static const char * is_non_trivial_iterate(const char * is_transform)
 
 MacroStreamXFormSource::MacroStreamXFormSource(const char *nam)
 	: MacroStreamCharSource()
-	, requirements(NULL), checkpoint(NULL)
+	, requirements(), checkpoint(NULL)
 	, fp_iter(NULL), fp_lineno(0)
 	, step(0), row(0), proc(0)
 	, close_fp_when_done(false)
@@ -609,17 +609,12 @@ MacroStreamXFormSource::~MacroStreamXFormSource()
 {
 	// we don't free the checkpoint, since it points into the LocalMacroSet allocation pool...
 	checkpoint = NULL;
-	delete requirements;
-	requirements = NULL;
 }
 
 
 int MacroStreamXFormSource::open(StringList & lines, const MACRO_SOURCE & FileSource)
 {
 	for (const char *line = lines.first(); line; line = lines.next()) {
-		if (line[0] && line[0] != '\n' && line[0] != '#') {
-			m_complete_xform_string.append(line);
-		}
 		const char * p;
 		if (NULL != (p = is_xform_statement(line, "name"))) {
 			std::string tmp(p); trim(tmp);
@@ -634,6 +629,10 @@ int MacroStreamXFormSource::open(StringList & lines, const MACRO_SOURCE & FileSo
 				if (p) { iterate_args.set(strdup(p)); iterate_init_state = 2; }
 			}
 			lines.deleteCurrent();
+		} else {
+			// strip blank lines and comments
+			//while (*p && isspace(*line)) ++p;
+			//if ( ! *p || *p == '#') { lines.deleteCurrent(); }
 		}
 	}
 
@@ -692,18 +691,48 @@ int MacroStreamXFormSource::load(FILE* fp, MACRO_SOURCE & FileSource)
 	return open(lines, FileSource);
 }
 
+const char * MacroStreamXFormSource::getFormattedText(std::string & buf, const char *prefix /*=""*/, bool include_comments /*=false*/)
+{
+	buf = "";
+	if ( ! name.empty()) {
+		buf += prefix;
+		buf += "NAME ";
+		buf += name;
+	}
+	if ( ! requirements.empty()) {
+		if ( ! buf.empty()) buf += "\n";
+		buf += prefix;
+		buf += "REQUIREMENTS ";
+		buf += requirements.c_str();
+	}
+	if (file_string) {
+		StringTokenIterator lines(file_string.ptr(), 128, "\n");
+		for (const char * line = lines.first(); line; line = lines.next()) {
+			if ( ! include_comments) {
+				while (*line && isspace(*line)) ++line;
+				if (*line == 0 || *line == '#') continue;
+			}
+			if ( ! buf.empty()) buf += "\n";
+			buf += prefix;
+			buf += line;
+		}
+	}
+	return buf.c_str();
+}
+
 classad::ExprTree* MacroStreamXFormSource::setRequirements(const char * require)
 {
-	delete requirements; requirements = NULL;
-	ParseClassAdRvalExpr(require, requirements);
-	return requirements;
+	requirements.set(require ? strdup(require) : NULL);
+	return requirements.Expr();
 }
 
 bool MacroStreamXFormSource::matches(ClassAd * candidate_ad)
 {
-	if ( ! requirements) return true;
+	classad::ExprTree* expr = requirements.Expr();
+	if ( ! expr) return true;
+
 	classad::Value val;
-	if (candidate_ad->EvaluateExpr(requirements, val)) {
+	if (candidate_ad->EvaluateExpr(expr, val)) {
 		bool matches = true;
 		if (val.IsBooleanValueEquiv(matches)) return matches;
 		return false;
@@ -1499,6 +1528,7 @@ int TransformClassAd (
 	MACRO_EVAL_CONTEXT_EX & ctx = xfm.context();
 	ctx.ad = input_ad;
 	ctx.adname = "MY.";
+	ctx.also_in_config = true;
 
 	_parse_rules_args args = { xfm, mset, input_ad, flags };
 

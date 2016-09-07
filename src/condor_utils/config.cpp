@@ -1570,6 +1570,7 @@ Parse_macros(
 					retval = Parse_macros(fp, InnerSource, depth+1, macro_set, options, pctx, config_errmsg, fnSubmit, pvSubmitData);
 #endif
 				}
+				fclose(fp); fp = NULL;
 			}
 			if (retval < 0) {
 				macro_set.push_error( stderr, retval, source_type,
@@ -2798,6 +2799,11 @@ const char * lookup_macro(const char * name, MACRO_SET & macro_set, MACRO_EVAL_C
 				}
 			}
 		}
+	}
+
+	// if still nothing, do a final lookup in the config file.
+	if ( ! lval && ctx.also_in_config) {
+		lval = param_unexpanded(name);
 	}
 
 	return lval;
