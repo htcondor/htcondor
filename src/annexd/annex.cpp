@@ -286,5 +286,14 @@ main( int argc, char ** argv ) {
 		fprintf( stdout, "%s\n", bulkRequestID.c_str() );
 	}
 
+	std::string ruleARN;
+	reply.LookupString( "ruleARN", ruleARN );
+	if( ruleARN.empty() ) {
+		fprintf( stderr, "Daemon's reply did not include rule ARN.\n" );
+		return 5;
+	} else {
+		fprintf( stdout, "%s\n", ruleARN.c_str() );
+	}
+
 	return 0;
 }
