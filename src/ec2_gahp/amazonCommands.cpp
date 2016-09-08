@@ -3529,8 +3529,13 @@ bool AmazonPutTargets::workerFunction( char ** argv, int argc, std::string & res
 	request.headers[ "X-Amz-Target" ] = "AWSEvents.PutTargets";
 
 	// Construct the JSON payload.
+	std::string ruleName, targetID, functionARN, inputString;
+	classad::ClassAdJsonUnParser::UnparseAuxEscapeString( ruleName, argv[5] );
+	classad::ClassAdJsonUnParser::UnparseAuxEscapeString( targetID, argv[6] );
+	classad::ClassAdJsonUnParser::UnparseAuxEscapeString( functionARN, argv[7] );
+	classad::ClassAdJsonUnParser::UnparseAuxEscapeString( inputString, argv[8] );
+
 	std::string payload;
-	// FIXME: properly escape the JSON values.
 	formatstr( payload, "{\n"
 				"\"Rule\": \"%s\",\n"
 				"\"Targets\": [\n"
@@ -3541,7 +3546,8 @@ bool AmazonPutTargets::workerFunction( char ** argv, int argc, std::string & res
 				"    }\n"
 				"]\n"
 				"}\n",
-				argv[5], argv[6], argv[7], argv[8] );
+				ruleName.c_str(), targetID.c_str(),
+				functionARN.c_str(), inputString.c_str() );
 
 	if( ! request.SendJSONRequest( payload ) ) {
 		result_string = create_failure_result( requestID,

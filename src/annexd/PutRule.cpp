@@ -9,7 +9,15 @@ int
 PutRule::operator() () {
 	dprintf( D_ALWAYS, "PutRule()\n" );
 
-	std::string ruleName = "FIXME";
+	// The default account limit for rules is 50.  We should try to be
+	// clever and use all five targets per rule, but that would require
+	// checking to see if the rule has a target left, and that gets into
+	// some nasty race conditions, since the logic for picking a new
+	// rule if PutTargets() failed couldn't be here, where the name was
+	// initially chosen.  Therefore, just use the bulk request ID for
+	// which we're creating this lease to uniquify the name.
+	std::string ruleName;
+	scratchpad->LookupString( "BulkRequestID", ruleName );
 
 	int rc;
 	std::string errorCode;
@@ -25,13 +33,13 @@ PutRule::operator() () {
 
 	if( rc == 0 ) {
 		reply->Assign( ATTR_RESULT, getCAResultString( CA_SUCCESS ) );
-		reply->Assign( "ruleARN", ruleARN );
-		reply->Assign( "ruleName", ruleName );
+		reply->Assign( "RuleARN", ruleARN );
+		reply->Assign( "RuleName", ruleName );
 
 		// We could omit ruleARN and ruleName from the reply, but subsequent
 		// functors in this sequence may need to know them.
-		scratchpad->Assign( "ruleARN", ruleARN );
-		scratchpad->Assign( "ruleName", ruleName );
+		scratchpad->Assign( "RuleARN", ruleARN );
+		scratchpad->Assign( "RuleName", ruleName );
 
 		rc = PASS_STREAM;
 	} else {

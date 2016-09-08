@@ -188,11 +188,11 @@ createOneAnnex( ClassAd * command, Stream * replyStream ) {
 		return FALSE;
 	}
 
+	time_t now = time( NULL );
 	if(! br->isValidUntilSet()) {
-		time_t now = time( NULL );
-		time_t fifteenMinutesFromNow = now + (15 * 60);
+		time_t fiveMinutesFromNow = now + (5 * 60);
 		struct tm fMFN;
-		gmtime_r( & fifteenMinutesFromNow, & fMFN );
+		gmtime_r( & fiveMinutesFromNow, & fMFN );
 		char buffer[ 4 + 1 + 2 + 1 + 2 + 1 /* T */ + 2 + 1 + 2 + 1 + 2 + 1 /* Z */ + 1];
 		strftime( buffer, sizeof(buffer), "%Y-%m-%dT%H:%M:%SZ", & fMFN );
 		br->setValidUntil( buffer );
@@ -210,7 +210,7 @@ createOneAnnex( ClassAd * command, Stream * replyStream ) {
 	PutRule * cr = new PutRule( reply, eventsGahp, scratchpad,
 		eventsURL, publicKeyFile, secretKeyFile );
 	PutTargets * pt = new PutTargets( reply, eventsGahp, scratchpad,
-		eventsURL, publicKeyFile, secretKeyFile );
+		eventsURL, publicKeyFile, secretKeyFile, now + (15 * 60) );
 	ReplyAndClean * last = new ReplyAndClean( reply, replyStream, gahp, scratchpad, eventsGahp );
 
 	FunctorSequence * fs = new FunctorSequence( { br, cr, pt }, last );

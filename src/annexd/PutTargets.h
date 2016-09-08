@@ -10,9 +10,11 @@
 class PutTargets : public Functor {
 	public:
 		PutTargets( ClassAd * r, EC2GahpClient * g, ClassAd * s,
-			const std::string & su, const std::string & pkf, const std::string & skf ) :
+			const std::string & su, const std::string & pkf, const std::string & skf,
+			time_t l ) :
 			reply( r ), gahp( g ), scratchpad( s ),
-            service_url( su ), public_key_file( pkf ), secret_key_file( skf )
+            service_url( su ), public_key_file( pkf ), secret_key_file( skf ),
+            leaseExpiration( l )
 		{ }
 
 		virtual ~PutTargets() { }
@@ -25,6 +27,8 @@ class PutTargets : public Functor {
 		ClassAd * scratchpad;
 
 		std::string service_url, public_key_file, secret_key_file;
+
+		time_t leaseExpiration;
 };
 
 #endif /* _CONDOR_PUT_TARGETS_H */

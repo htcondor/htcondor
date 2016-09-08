@@ -14,20 +14,37 @@ PutTargets::operator() () {
 	scratchpad->LookupString( "ruleName", ruleName );
 	ASSERT(! ruleName.empty());
 
-	std::string id = "FIXME-targetID";
+	// To make sure the rule ID is unique, make it the ID of the spot fleet
+	// request that the lease will be deleting.  Including the alias for
+	// clarity at the call to the gahp.
+	std::string spotFleetRequestID;
+	scratchpad->LookupString( "BulkRequestID", spotFleetRequestID );
+	ASSERT(! spotFleetRequestID.empty());
+	std::string targetID = spotFleetRequestID;
 
-	std::string arn;
-	param( arn, "ANNEX_DEFAULT_LEASE_FUNCTION_ARN" );
-	ASSERT(! arn.empty());
+	std::string functionARN;
+	param( functionARN, "ANNEX_DEFAULT_LEASE_FUNCTION_ARN" );
+	ASSERT(! functionARN.empty());
 
-	// Escaping escaped JSON.  Lovely.  See the FIXME in amazonCommands.cpp.
-	std::string input = "{ \\\"FIXME\\\": \\\"FIXME-function-input-data\\\" }";
+	//
+	// Construct the input JSON string.
+	//
+	ClassAd input;
+	input.Assign( "SpotFleetRequestID", spotFleetRequestID );
+	input.Assign( "RuleID", ruleName );
+	input.Assign( "TargetID", targetID );
+	input.Assign( "LeaseExpiration", this->leaseExpiration );
+
+	std::string inputString;
+	classad::ClassAdJsonUnParser cajup;
+	cajup.Unparse( inputString, & input );
+
 
 	int rc;
 	std::string errorCode;
 	rc = gahp->put_targets(
 				service_url, public_key_file, secret_key_file,
-				ruleName, id, arn, input, errorCode );
+				ruleName, targetID, functionARN, inputString, errorCode );
 	if( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED || rc == GAHPCLIENT_COMMAND_PENDING ) {
 		// We expect to exit here the first time.
 		return KEEP_STREAM;

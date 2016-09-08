@@ -52,12 +52,12 @@ class ClassAdJsonUnParser
 	void Unparse( std::string &buffer, const ExprTree *expr );
 	void Unparse( std::string &buffer, const ClassAd *ad, const References &whitelist );
 
+	static void UnparseAuxEscapeString( std::string &buffer, const std::string &value );
+
  protected:
 	void UnparseAuxQuoteExpr( std::string &buffer, const ExprTree *expr );
 
 	void UnparseAuxQuoteExpr( std::string &buffer, const std::string &expr );
-
-	void UnparseAuxEscapeString( std::string &buffer, const std::string &value );
 
 	void UnparseAuxClassAd( std::string &buffer,
 			const std::vector< std::pair< std::string, ExprTree*> >& attrs );
