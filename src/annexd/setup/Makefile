@@ -4,7 +4,8 @@
 
 VERSION = 3
 FUNCTIONS = lease-$(VERSION).zip
-S3TARGETS = $(FUNCTIONS:%=.upload/%)
+TEMPLATES = template-$(VERSION).json
+S3TARGETS = $(FUNCTIONS:%=.upload/%) $(TEMPLATES:%=.upload/%)
 
 all : s3upload
 
@@ -32,9 +33,12 @@ lease-$(VERSION).zip : lease.js
 	@zip $@ $^
 
 #
+# Build the template upload from its source.
+#
+template-$(VERSION).json : generate-template
+	@./generate-template -pretty-print > $@
+
+#
 # Run the template generator (for distribution).
 #
 template : template-$(VERSION).json
-
-template-$(VERSION).json : generate-template
-	@./generate-template -pretty-print > $@

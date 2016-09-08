@@ -133,6 +133,8 @@ registerAllAmazonCommands(void)
 			AmazonBulkStart::ioCheck, AmazonBulkStart::workerFunction );
 	registerAmazonGahpCommand( AMAZON_COMMAND_PUT_RULE,
 			AmazonPutRule::ioCheck, AmazonPutRule::workerFunction );
+	registerAmazonGahpCommand( AMAZON_COMMAND_PUT_TARGETS,
+			AmazonPutTargets::ioCheck, AmazonPutTargets::workerFunction );
 
 	return true;
 }

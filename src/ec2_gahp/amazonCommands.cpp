@@ -3429,13 +3429,6 @@ bool AmazonPutRule::SendJSONRequest( const std::string & payload ) {
 			return false;
 		}
 		reply.LookupString( "RuleArn", this->ruleARN );
-	} else {
-		if( this->errorCode == "E_CURL_IO" ) {
-			// To be on the safe side, if the I/O failed, the annexd should
-			// check to see the Spot Fleet was started or not.
-			this->errorCode = "NEED_CHECK_BULK_START";
-			return false;
-		}
 	}
 	return result;
 }
@@ -3465,7 +3458,9 @@ bool AmazonPutRule::workerFunction( char ** argv, int argc, std::string & result
 
 	// Construct the JSON payload.
 	std::string payload;
-	// FIXME: properly escape the JSON values.
+	// FIXME: properly escape the JSON values.  This may be most-easily
+	// accomplished by constructing a classad like this and exporting it
+	// as JSON.
 	formatstr( payload, "{\n"
 				"\"Name\": \"%s\",\n"
 				"\"ScheduleExpression\": \"%s\",\n"
@@ -3484,6 +3479,76 @@ bool AmazonPutRule::workerFunction( char ** argv, int argc, std::string & result
 			StringList sl; sl.append( request.ruleARN.c_str() );
 			result_string = create_success_result( requestID, & sl );
 		}
+	}
+
+	return true;
+}
+
+// ---------------------------------------------------------------------------
+
+AmazonPutTargets::~AmazonPutTargets() { }
+
+bool AmazonPutTargets::SendJSONRequest( const std::string & payload ) {
+	bool result = AmazonRequest::SendJSONRequest( payload );
+	if( result ) {
+		// We could use a dedicated JSON parser, but its API is annoying,
+		// and the ClassAd converter is good enough.
+		ClassAd reply;
+		classad::ClassAdJsonParser cajp;
+		if(! cajp.ParseClassAd( this->resultString, reply, true )) {
+			dprintf( D_ALWAYS, "Failed to parse reply '%s' as JSON.\n", this->resultString.c_str() );
+			return false;
+		}
+
+		// FIXME: We should verify that FailedEntryCount is 0.
+	}
+	return result;
+}
+
+bool AmazonPutTargets::workerFunction( char ** argv, int argc, std::string & result_string ) {
+	assert( strcasecmp( argv[0], "EC2_PUT_TARGETS" ) == 0 );
+	int requestID;
+	get_int( argv[1], & requestID );
+	dprintf( D_PERF_TRACE, "request #%d (%s): work begins\n",
+		requestID, argv[0] );
+
+	if( ! verify_min_number_args( argc, 9 ) ) {
+		result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
+		dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n",
+			argc, 9, argv[0] );
+		return false;
+	}
+
+	// Fill in required attributes.
+	AmazonPutTargets request = AmazonPutTargets( requestID, argv[0] );
+	request.serviceURL = argv[2];
+	request.accessKeyFile = argv[3];
+	request.secretKeyFile = argv[4];
+
+	// Set the required headers.  (SendJSONRequest() sets the content-type.)
+	request.headers[ "X-Amz-Target" ] = "AWSEvents.PutTargets";
+
+	// Construct the JSON payload.
+	std::string payload;
+	// FIXME: properly escape the JSON values.
+	formatstr( payload, "{\n"
+				"\"Rule\": \"%s\",\n"
+				"\"Targets\": [\n"
+				"    {\n"
+				"    \"Id\": \"%s\",\n"
+				"    \"Arn\": \"%s\",\n"
+				"    \"Input\": \"%s\"\n"
+				"    }\n"
+				"]\n"
+				"}\n",
+				argv[5], argv[6], argv[7], argv[8] );
+
+	if( ! request.SendJSONRequest( payload ) ) {
+		result_string = create_failure_result( requestID,
+			request.errorMessage.c_str(),
+			request.errorCode.c_str() );
+	} else {
+		result_string = create_success_result( requestID, NULL );
 	}
 
 	return true;

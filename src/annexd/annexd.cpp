@@ -16,7 +16,7 @@
 #include "Functor.h"
 #include "BulkRequest.h"
 #include "PutRule.h"
-#include "AddTarget.h"
+#include "PutTargets.h"
 #include "ReplyAndClean.h"
 #include "FunctorSequence.h"
 
@@ -209,11 +209,11 @@ createOneAnnex( ClassAd * command, Stream * replyStream ) {
 
 	PutRule * cr = new PutRule( reply, eventsGahp, scratchpad,
 		eventsURL, publicKeyFile, secretKeyFile );
-	AddTarget * at = new AddTarget( reply, eventsGahp, scratchpad,
+	PutTargets * pt = new PutTargets( reply, eventsGahp, scratchpad,
 		eventsURL, publicKeyFile, secretKeyFile );
-	ReplyAndClean * last = new ReplyAndClean( reply, replyStream, gahp, scratchpad );
+	ReplyAndClean * last = new ReplyAndClean( reply, replyStream, gahp, scratchpad, eventsGahp );
 
-	FunctorSequence * fs = new FunctorSequence( { br, cr, at }, last );
+	FunctorSequence * fs = new FunctorSequence( { br, cr, pt }, last );
 
 	// Create a timer for the gahp to fire when it gets a result.  We must
 	// use TIMER_NEVER to ensure that the timer hasn't been reaped when the

@@ -92,6 +92,16 @@ if(! $s3Key) { $s3Key = "lease-${VERSION}.zip"; }
 		}
 	};
 
+	$template->{ Resources }->{ LeaseFunctionPermissions } = {
+		Type => "AWS::Lambda::Permission",
+		DependsOn => "LeaseFunction",
+		Properties => {
+			Action => "lambda:InvokeFunction",
+			FunctionName => { "Fn::GetAtt" => [ "LeaseFunction", "Arn" ] },
+			Principal => "events.amazonaws.com",
+			SourceArn => { "Fn::Join" => [ ":", [ "arn:aws:events", { "Ref" => "AWS::Region" }, { "Ref" => "AWS::AccountId" }, "*" ] ] }
+		}
+	};
 
 if( defined( $prettyPrint ) ) {
 	print( to_json( $template, { utf8 => 1, pretty => 1 } ) . "\n" );

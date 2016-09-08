@@ -1,21 +1,21 @@
-#ifndef _CONDOR_ADD_TARGET_H
-#define _CONDOR_ADD_TARGET_H
+#ifndef _CONDOR_PUT_TARGETS_H
+#define _CONDOR_PUT_TARGETS_H
 
 // #include "condor_common.h"
 // #include "compat_classad.h"
 // #include "gahp-client.h"
 // #include "Functor.h"
-// #include "AddTarget.h"
+// #include "PutTargets.h"
 
-class AddTarget : public Functor {
+class PutTargets : public Functor {
 	public:
-		AddTarget( ClassAd * r, EC2GahpClient * g, ClassAd * s,
+		PutTargets( ClassAd * r, EC2GahpClient * g, ClassAd * s,
 			const std::string & su, const std::string & pkf, const std::string & skf ) :
 			reply( r ), gahp( g ), scratchpad( s ),
             service_url( su ), public_key_file( pkf ), secret_key_file( skf )
 		{ }
 
-		virtual ~AddTarget() { }
+		virtual ~PutTargets() { }
 
 		int operator() ();
 
@@ -27,4 +27,4 @@ class AddTarget : public Functor {
 		std::string service_url, public_key_file, secret_key_file;
 };
 
-#endif /* _CONDOR_CREATE_RULE_H */
+#endif /* _CONDOR_PUT_TARGETS_H */

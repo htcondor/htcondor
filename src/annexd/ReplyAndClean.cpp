@@ -31,6 +31,7 @@ ReplyAndClean::operator() () {
 	// shut itself (and the GAHP) down cleanly roughly ten seconds after
 	// the last corresponding gahp client is deleted.
 	delete gahp;
+	delete eventsGahp;
 
 	delete scratchpad;
 
