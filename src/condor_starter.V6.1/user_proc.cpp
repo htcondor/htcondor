@@ -170,6 +170,7 @@ UserProc::PublishUpdateAd( ClassAd* ad )
 	if( job_start_time.seconds() > 0 ) {
 		sprintf( buf, "%s%s=%ld", name ? name : "", ATTR_JOB_START_DATE,
 				 job_start_time.seconds() );
+		dprintf( D_ALWAYS, "DIAG in UserProc::PublishUpdateAd() -- %s\n", buf );//TEMPTEMP
 		ad->Insert( buf );
 	}
 

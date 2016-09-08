@@ -4313,6 +4313,7 @@ DaemonCore::CallCommandHandler(int req,Stream *stream,bool delete_stream,bool ch
 	char const *user = NULL;
 	Sock *sock = (Sock *)stream;
 
+	//dprintf( D_ALWAYS, "DIAG DaemonCore::CallCommandHandler(%d)\n", req );//TEMPTEMP
 	if ( reqFound ) {
 
 		if( stream  && stream->type() == Stream::reli_sock && \
@@ -4337,6 +4338,7 @@ DaemonCore::CallCommandHandler(int req,Stream *stream,bool delete_stream,bool ch
 					if( rc >= 0 ) {
 						CallCommandHandlerInfo *callback_info = new CallCommandHandlerInfo(req,old_deadline,time_spent_on_sec);
 						Register_DataPtr((void *)callback_info);
+						dprintf( D_ALWAYS, "DIAG done 1 with DaemonCore::CallCommandHandler(%d)\n", req );//TEMPTEMP
 						return KEEP_STREAM;
 					}
 
@@ -4351,8 +4353,10 @@ DaemonCore::CallCommandHandler(int req,Stream *stream,bool delete_stream,bool ch
 		if( !user ) {
 			user = "";
 		}
-		if (IsDebugLevel(D_COMMAND)) {
-			dprintf(D_COMMAND, "Calling HandleReq <%s> (%d) for command %d (%s) from %s %s\n",
+		//TEMPTEMP if (IsDebugLevel(D_COMMAND)) {
+		if (true) {//TEMPTEMP
+			//TEMPTEMP dprintf(D_COMMAND, "DIAG Calling HandleReq <%s> (%d) for command %d (%s) from %s %s\n",
+			dprintf(D_ALWAYS, "Calling HandleReq <%s> (%d) for command %d (%s) from %s %s\n",//TEMPTEMP
 					comTable[index].handler_descrip,
 					inServiceCommandSocket_flag,
 					req,
@@ -4390,6 +4394,7 @@ DaemonCore::CallCommandHandler(int req,Stream *stream,bool delete_stream,bool ch
 		delete stream;
 	}
 
+	dprintf( D_ALWAYS, "DIAG done 2 with DaemonCore::CallCommandHandler(%d)\n", req );//TEMPTEMP
 	return result;
 }
 

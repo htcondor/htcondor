@@ -496,6 +496,7 @@ const char *rsl_stringify( const char *string )
 
 static bool merge_file_into_classad(const char * filename, ClassAd * ad)
 {
+	dprintf( D_ALWAYS, "DIAG merge_file_into_classad()\n" );//TEMPTEMP
 	if( ! ad ) {
 		// TODO dprintf?
 		dprintf(D_ALWAYS, "Internal error: "
