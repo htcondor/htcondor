@@ -116,6 +116,13 @@ Also, ping systemd at a third of the watchdog interval.
 program.
 \Ticket{5854}
 
+\item For grid-type \Expr{batch} jobs, improved handling of command
+line arguments and environment variables that contain characters that
+have meaning to the shell.
+Previously, the presence of these characters would cause job execution
+to fail.
+\Ticket{5747}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
