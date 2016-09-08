@@ -1758,15 +1758,15 @@ int XFormLoadFromJobRouterRoute (
 
 	for (ClassAd::iterator it = route_ad.begin(); it != route_ad.end(); ++it) {
 		std::string rhs;
-		if (starts_with(it->first, "copy_")) {
+		if (starts_with_ignore_case(it->first, "copy_")) {
 			std::string attr = it->first.substr(5);
 			if (route_ad.EvaluateAttrString(it->first, rhs)) {
 				copy_cmds[attr] = rhs;
 			}
-		} else if (starts_with(it->first, "delete_")) {
+		} else if (starts_with_ignore_case(it->first, "delete_")) {
 			std::string attr = it->first.substr(7);
 			delete_cmds[attr] = "";
-		} else if (starts_with(it->first, "set_")) {
+		} else if (starts_with_ignore_case(it->first, "set_")) {
 			std::string attr = it->first.substr(4);
 			int atrid = is_interesting_route_attr(attr);
 			if ((atrid == atr_INPUTRSL) && (options & XForm_ConvertJobRouter_Remove_InputRSL)) {
@@ -1781,7 +1781,7 @@ int XFormLoadFromJobRouterRoute (
 					set_cmds[attr] = rhs;
 				}
 			}
-		} else if (starts_with(it->first, "eval_set_")) {
+		} else if (starts_with_ignore_case(it->first, "eval_set_")) {
 			std::string attr = it->first.substr(9);
 			int atrid = is_interesting_route_attr(attr);
 			ExprTree * tree = route_ad.Lookup(it->first);

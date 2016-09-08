@@ -861,6 +861,15 @@ ProcAPI::fillProcInfoEnv(piPTR pi)
 			}
 
 			bytes_read = full_read(fd, env_buffer+bytes_read_so_far, read_size);
+			// We have seen cases where read() returns a value in the 1GB
+			// range. Retrying after a lseek() and/or reopening the file
+			// gave the same result. So just give up in that case.
+			if ( bytes_read < 0 || bytes_read > read_size ) {
+				close( fd );
+				free( env_buffer );
+				return PROCAPI_SUCCESS;
+			}
+
 			bytes_read_so_far += bytes_read;
 
 			// if I read right up to the end of the buffer size, assume more...
