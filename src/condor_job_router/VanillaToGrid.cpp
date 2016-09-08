@@ -278,6 +278,7 @@ static void set_job_status_held(classad::ClassAd const &orig,classad::ClassAd &u
 
 bool update_job_status( classad::ClassAd const & orig, classad::ClassAd & newgrid, classad::ClassAd & update, char* custom_attrs)
 {
+	dprintf( D_ALWAYS, "DIAG update_job_status()\n" );//TEMPTEMP
 	// List courtesy of condor_gridmanager/condorjob.C CondorJob::ProcessRemoteAd
 	// Added ATTR_SHADOW_BIRTHDATE so condor_q shows current run time
 

@@ -1270,6 +1270,7 @@ void CondorJob::NotifyNewRemoteStatus( ClassAd *update_ad )
 
 void CondorJob::ProcessRemoteAd( ClassAd *remote_ad )
 {
+	dprintf( D_ALWAYS, "DIAG CondorJob::ProcessRemoteAd()\n" );//TEMPTEMP
 	int new_remote_state;
 	ExprTree *new_expr, *old_expr;
 

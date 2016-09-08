@@ -186,6 +186,29 @@ int STARTD_CONTACT_TIMEOUT = 45;  // how long to potentially block
 struct shadow_rec *find_shadow_by_cluster( PROC_ID * );
 #endif
 
+//TEMPTEMP>>>
+void printJobStartDate( const PROC_ID &job_id )
+{
+	JobQueueJob *job_ad = GetJobAd( job_id );
+	if ( !job_ad ) {
+		dprintf( D_ALWAYS, "  DIAG No ad found for (%d.%d)\n", job_id.cluster,
+					job_id.proc );
+		return;
+	}
+	int job_start_date;
+	job_ad->LookupInteger(ATTR_JOB_START_DATE, job_start_date);
+	dprintf( D_ALWAYS, "  DIAG (%d.%d) JobStartDate: %d\n", job_id.cluster,
+				job_id.proc, job_start_date );
+}
+
+void printJobStartDate2( ExtArray<PROC_ID> &jobs )
+{
+	for ( int i = 0; i < jobs.length(); ++i ) {
+		printJobStartDate( jobs[i] );
+	}
+}
+//<<<TEMPTEMP
+
 void AuditLogNewConnection( int cmd, Sock &sock, bool failure )
 {
 	// Quickly determine if we're writing to the audit log and if this
@@ -827,6 +850,7 @@ Scheduler::~Scheduler()
 // So we kill this job
 int check_for_spool_zombies(JobQueueJob *job, const JOB_ID_KEY & /*jid*/, void *)
 {
+	dprintf( D_ALWAYS, "DIAG check_for_spool_zombies()\n" );//TEMPTEMP
 	int cluster = job->jid.cluster;
 	int proc = job->jid.proc;
 
@@ -2477,8 +2501,10 @@ count_a_job(JobQueueJob* job, const JOB_ID_KEY& /*jid*/, void*)
 
             int job_start_date = 0;
             int job_running_time = 0;
-            if (job->LookupInteger(ATTR_JOB_START_DATE, job_start_date))
+            if (job->LookupInteger(ATTR_JOB_START_DATE, job_start_date)) {
+				dprintf( D_ALWAYS, "DIAG in count_a_job -- JobStartDate: %d\n", job_start_date );//TEMPTEMP
                 job_running_time = (now - job_start_date);
+			}
             scheduler.stats.JobsRunningRuntimes += job_running_time;
             OTHER.JobsRunningRuntimes += job_running_time;
         }
@@ -2774,6 +2800,8 @@ static bool IsLocalUniverse( shadow_rec* srec );
 void
 abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold )
 {
+	dprintf( D_ALWAYS, "DIAG abort_job_myself(%d.%d)\n", job_id.cluster, job_id.proc );//TEMPTEMP
+	printJobStartDate( job_id );//TEMPTEMP
 	shadow_rec *srec;
 	int mode;
 
@@ -2804,6 +2832,8 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold )
 	if ( !job_ad ) {
         dprintf ( D_ALWAYS, "tried to abort %d.%d; not found.\n", 
                   job_id.cluster, job_id.proc );
+		dprintf( D_ALWAYS, "DIAG done 1 with abort_job_myself(%d.%d)\n", job_id.cluster, job_id.proc );//TEMPTEMP
+		printJobStartDate( job_id );//TEMPTEMP
         return;
 	}
 
@@ -2827,6 +2857,8 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold )
 	if ( job_universe != CONDOR_UNIVERSE_GRID &&
 		 jobExternallyManaged( job_ad ) ) {
 
+		dprintf( D_ALWAYS, "DIAG done 2 with abort_job_myself(%d.%d)\n", job_id.cluster, job_id.proc );//TEMPTEMP
+		printJobStartDate( job_id );//TEMPTEMP
 		return;
 	}
 
@@ -2866,6 +2898,8 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold )
 					userident.auxid().Value(),
 					scheduler.getGridUnparsedSelectionExpr(),
 					0,0);
+			dprintf( D_ALWAYS, "DIAG done 3 with abort_job_myself(%d.%d)\n", job_id.cluster, job_id.proc );//TEMPTEMP
+			printJobStartDate( job_id );//TEMPTEMP
 			return;
 		}
 	}
@@ -2886,12 +2920,16 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold )
 				// $$() attribute in the job, and put the job on hold
 				// before we exec the shadow.
 			dprintf ( D_ALWAYS, "abort_job_myself() - No shadow record found\n");
+			dprintf( D_ALWAYS, "DIAG done 4 with abort_job_myself(%d.%d)\n", job_id.cluster, job_id.proc );//TEMPTEMP
+			printJobStartDate( job_id );//TEMPTEMP
 			return;
 		}
 
 		// if we have already preempted this shadow, we're done.
 		if ( srec->preempted ) {
 			dprintf ( D_ALWAYS, "abort_job_myself() - already preempted\n");
+			dprintf( D_ALWAYS, "DIAG done 5 with abort_job_myself(%d.%d)\n", job_id.cluster, job_id.proc );//TEMPTEMP
+			printJobStartDate( job_id );//TEMPTEMP
 			return;
 		}
 
@@ -2909,6 +2947,8 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold )
 			int handler_sig=0;
 			switch( action ) {
 			case JA_HOLD_JOBS:
+				dprintf( D_ALWAYS, "DIAG JA_HOLD_JOBS 1\n" );//TEMPTEMP
+				printJobStartDate( job_id );//TEMPTEMP
 				handler_sig = SIGUSR1;
 				break;
 			case JA_REMOVE_JOBS:
@@ -2925,6 +2965,8 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold )
 				dprintf( D_ALWAYS,
 						 "Local universe: Ignoring unsupported action (%d %s)\n",
 						 action, getJobActionString(action) );
+				dprintf( D_ALWAYS, "DIAG done 6 with abort_job_myself(%d.%d)\n", job_id.cluster, job_id.proc );//TEMPTEMP
+				printJobStartDate( job_id );//TEMPTEMP
 				return;
 				break;
 			default:
@@ -2950,6 +2992,8 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold )
 			const char* shadow_sig_str = "UNKNOWN";
 			switch( action ) {
 			case JA_HOLD_JOBS:
+				dprintf( D_ALWAYS, "DIAG JA_HOLD_JOBS 2\n" );//TEMPTEMP
+				printJobStartDate( job_id );//TEMPTEMP
 					// for now, use the same as remove
 			case JA_REMOVE_JOBS:
 				shadow_sig = SIGUSR1;
@@ -3001,12 +3045,16 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold )
 				holdJob(job_id.cluster, job_id.proc, msg.Value(), 
 						CONDOR_HOLD_CODE_FailedToAccessUserAccount, 0,
 					false, true, false, false);
+				dprintf( D_ALWAYS, "DIAG done 7 with abort_job_myself(%d.%d)\n", job_id.cluster, job_id.proc );//TEMPTEMP
+				printJobStartDate( job_id );//TEMPTEMP
 				return;
 			}
 			int kill_sig = -1;
 			switch( action ) {
 
 			case JA_HOLD_JOBS:
+				dprintf( D_ALWAYS, "DIAG JA_HOLD_JOBS 3\n" );//TEMPTEMP
+				printJobStartDate( job_id );//TEMPTEMP
 				kill_sig = findHoldKillSig( job_ad );
 				break;
 
@@ -3028,6 +3076,8 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold )
 						 "Scheduler universe: Ignoring unsupported action (%d %s)\n",
 						 action, getJobActionString(action) );
 				uninit_user_ids();
+				dprintf( D_ALWAYS, "DIAG done 8 with abort_job_myself(%d.%d)\n", job_id.cluster, job_id.proc );//TEMPTEMP
+				printJobStartDate( job_id );//TEMPTEMP
 				return;
 				break;
 
@@ -3067,6 +3117,8 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold )
 			srec->removed = TRUE;
 		}
 
+		dprintf( D_ALWAYS, "DIAG done 9 with abort_job_myself(%d.%d)\n", job_id.cluster, job_id.proc );//TEMPTEMP
+		printJobStartDate( job_id );//TEMPTEMP
 		return;
     }
 
@@ -3087,11 +3139,14 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold )
 		DestroyProc( job_id.cluster, job_id.proc );
 	}
 	if( mode == HELD ) {
+		dprintf( D_ALWAYS, "DIAG writing held event\n" );//TEMPTEMP
 		if( log_hold && !scheduler.WriteHoldToUserLog(job_id) ) {
 			dprintf( D_ALWAYS, 
 					 "Failed to write hold event to the user log\n" ); 
 		}
 	}
+	dprintf( D_ALWAYS, "DIAG done 10 with abort_job_myself(%d.%d)\n", job_id.cluster, job_id.proc );//TEMPTEMP
+	printJobStartDate( job_id );//TEMPTEMP
 }
 
 /*
@@ -3207,6 +3262,7 @@ PeriodicExprEval(JobQueueJob *jobad, const JOB_ID_KEY & /*jid*/, void *)
 			}
 			break;
 		case HOLD_IN_QUEUE:
+			dprintf( D_ALWAYS, "DIAG HOLD_IN_QUEUE\n" );//TEMPTEMP
 			if(status!=HELD) {
 				holdJob(cluster, proc, reason.Value(),
 						reason_code, reason_subcode,
@@ -3802,6 +3858,8 @@ Scheduler::WriteAbortToUserLog( PROC_ID job_id )
 bool
 Scheduler::WriteHoldToUserLog( PROC_ID job_id )
 {
+	dprintf( D_ALWAYS, "DIAG Scheduler::WriteHoldToUserLog()\n" );//TEMPTEMP
+	printJobStartDate( job_id );//TEMPTEMP
 	WriteUserLog* ULog = this->InitializeUserLog( job_id );
 	if( ! ULog ) {
 			// User didn't want log
@@ -3845,6 +3903,8 @@ Scheduler::WriteHoldToUserLog( PROC_ID job_id )
 				 job_id.cluster, job_id.proc );
 		return false;
 	}
+	dprintf( D_ALWAYS, "DIAG done with Scheduler::WriteHoldToUserLog()\n" );//TEMPTEMP
+	printJobStartDate( job_id );//TEMPTEMP
 	return true;
 }
 
@@ -4030,6 +4090,7 @@ Scheduler::WriteAttrChangeToUserLog( const char* job_id_str, const char* attr,
 					 const char* attr_value,
 					 const char* old_value)
 {
+	dprintf( D_ALWAYS, "DIAg Scheduler::WriteAttrChangeToUserLog(%s, %s, %s)\n", job_id_str, attr, attr_value );//TEMPTEMP
 	PROC_ID job_id;
 	StrToProcIdFixMe(job_id_str, job_id);
 	WriteUserLog* ULog = this->InitializeUserLog( job_id );
@@ -4860,6 +4921,7 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 int
 Scheduler::actOnJobs(int, Stream* s)
 {
+	dprintf( D_ALWAYS, "DIAG Scheduler::actOnJobs()\n" );//TEMPTEMP
 	ClassAd command_ad;
 	int action_num = -1;
 	JobAction action = JA_ERROR;
@@ -4899,6 +4961,8 @@ Scheduler::actOnJobs(int, Stream* s)
 			dprintf( D_AUDIT | D_FAILURE, *rsock, "actOnJobs() aborting: %s\n",
 					 errstack.getFullText().c_str() );
 			refuse( s );
+			dprintf( D_ALWAYS, "DIAG done 1 with Scheduler::actOnJobs()\n" );//TEMPTEMP
+			printJobStartDate2( jobs );//TEMPTEMP
 			return FALSE;
 		}
 	}
@@ -4907,6 +4971,8 @@ Scheduler::actOnJobs(int, Stream* s)
 	if( ! (getClassAd(rsock, command_ad) && rsock->end_of_message()) ) {
 		dprintf( D_AUDIT | D_FAILURE, *rsock, "Can't read command ad from tool\n" );
 		refuse( s );
+		dprintf( D_ALWAYS, "DIAG done 2 with Scheduler::actOnJobs()\n" );//TEMPTEMP
+		printJobStartDate2( jobs );//TEMPTEMP
 		return FALSE;
 	}
 
@@ -4938,6 +5004,8 @@ Scheduler::actOnJobs(int, Stream* s)
 				 "actOnJobs(): ClassAd does not contain %s, aborting\n", 
 				 ATTR_JOB_ACTION );
 		refuse( s );
+		dprintf( D_ALWAYS, "DIAG done 3 with Scheduler::actOnJobs()\n" );//TEMPTEMP
+		printJobStartDate2( jobs );//TEMPTEMP
 		return FALSE;
 	}
 	action = (JobAction)action_num;
@@ -4945,10 +5013,14 @@ Scheduler::actOnJobs(int, Stream* s)
 		// Make sure we understand the action they requested
 	switch( action ) {
 	case JA_HOLD_JOBS:
+		dprintf( D_ALWAYS, "DIAG JA_HOLD_JOBS 4\n" );//TEMPTEMP
+		printJobStartDate2( jobs );//TEMPTEMP
 		new_status = HELD;
 		reason_attr_name = ATTR_HOLD_REASON;
 		break;
 	case JA_RELEASE_JOBS:
+		dprintf( D_ALWAYS, "DIAG JA_RELEASE_JOBS 1\n" );//TEMPTEMP
+		printJobStartDate2( jobs );//TEMPTEMP
 		new_status = IDLE;
 		reason_attr_name = ATTR_RELEASE_REASON;
 		break;
@@ -4974,6 +5046,8 @@ Scheduler::actOnJobs(int, Stream* s)
 		dprintf( D_AUDIT | D_FAILURE, *rsock, "actOnJobs(): ClassAd contains invalid "
 				 "%s (%d), aborting\n", ATTR_JOB_ACTION, action_num );
 		refuse( s );
+		dprintf( D_ALWAYS, "DIAG done 4 with Scheduler::actOnJobs()\n" );//TEMPTEMP
+		printJobStartDate2( jobs );//TEMPTEMP
 		return FALSE;
 	}
 		// Grab the reason string if the command ad gave it to us
@@ -4998,6 +5072,8 @@ Scheduler::actOnJobs(int, Stream* s)
 	}
 
 	if( action == JA_HOLD_JOBS ) {
+		dprintf( D_ALWAYS, "DIAG JA_HOLD_JOBS 5\n" );//TEMPTEMP
+		printJobStartDate2( jobs );//TEMPTEMP
 		command_ad.LookupInteger(ATTR_HOLD_REASON_SUBCODE,hold_reason_subcode);
 	}
 
@@ -5026,6 +5102,8 @@ Scheduler::actOnJobs(int, Stream* s)
 		if( ! value ) {
 				// TODO: deal with this kind of error
 			free(reason);
+			dprintf( D_ALWAYS, "DIAG done 5 with Scheduler::actOnJobs()\n" );//TEMPTEMP
+			printJobStartDate2( jobs );//TEMPTEMP
 			return false;
 		}
 
@@ -5046,9 +5124,13 @@ Scheduler::actOnJobs(int, Stream* s)
 			break;
 		case JA_HOLD_JOBS:
 				// Don't hold held jobs
+			dprintf( D_ALWAYS, "DIAG JA_HOLD_JOBS 6\n" );//TEMPTEMP
+			printJobStartDate2( jobs );//TEMPTEMP
 			snprintf( buf, 256, "(%s!=%d) && (", ATTR_JOB_STATUS, HELD );
 			break;
 		case JA_RELEASE_JOBS:
+			dprintf( D_ALWAYS, "DIAG JA_RELEASE_JOBS 2\n" );//TEMPTEMP
+			printJobStartDate2( jobs );//TEMPTEMP
 				// Only release held jobs which aren't waiting for
 				// input files to be spooled
 			snprintf( buf, 256, "(%s==%d && %s=!=%d) && (", ATTR_JOB_STATUS,
@@ -5104,6 +5186,8 @@ Scheduler::actOnJobs(int, Stream* s)
 			free( tmp );
 			free( constraint );
 			if( reason ) { free( reason ); }
+			dprintf( D_ALWAYS, "DIAG done 6 with Scheduler::actOnJobs()\n" );//TEMPTEMP
+			printJobStartDate2( jobs );//TEMPTEMP
 			return FALSE;
 		}
 		job_ids.initializeFromString( tmp );
@@ -5222,6 +5306,8 @@ Scheduler::actOnJobs(int, Stream* s)
 			}
 			break;
 		case JA_RELEASE_JOBS:
+			dprintf( D_ALWAYS, "DIAG JA_RELEASE_JOBS 3\n" );//TEMPTEMP
+			printJobStartDate2( jobs );//TEMPTEMP
 			GetAttributeInt(tmp_id.cluster, tmp_id.proc,
 							ATTR_HOLD_REASON_CODE, &hold_reason_code);
 			if( status != HELD || hold_reason_code == CONDOR_HOLD_CODE_SpoolingInput ) {
@@ -5261,6 +5347,10 @@ Scheduler::actOnJobs(int, Stream* s)
 			}
 			break;
 		case JA_HOLD_JOBS:
+			//TEMPTEMP -- this might be the first place that we're down to a single job...
+			dprintf( D_ALWAYS, "DIAG JA_HOLD_JOBS 7\n" );//TEMPTEMP
+			printJobStartDate2( jobs );//TEMPTEMP
+			printJobStartDate( jobs[i] );//TEMPTEMP
 			if( status == HELD ) {
 				results.record( tmp_id, AR_ALREADY_DONE );
 				jobs[i].cluster = -1;
@@ -5379,6 +5469,8 @@ Scheduler::actOnJobs(int, Stream* s)
 			AbortTransaction();
 		}
 		unsetQSock();
+		dprintf( D_ALWAYS, "DIAG done 7 with Scheduler::actOnJobs()\n" );//TEMPTEMP
+		printJobStartDate2( jobs );//TEMPTEMP
 		return FALSE;
 	}
 
@@ -5390,6 +5482,8 @@ Scheduler::actOnJobs(int, Stream* s)
 			AbortTransaction();
 		}
 		unsetQSock();
+		dprintf( D_ALWAYS, "DIAG done 8 with Scheduler::actOnJobs()\n" );//TEMPTEMP
+		printJobStartDate2( jobs );//TEMPTEMP
 		return FALSE;
 	}
 
@@ -5403,6 +5497,8 @@ Scheduler::actOnJobs(int, Stream* s)
 			AbortTransaction();
 		}
 		unsetQSock();
+		dprintf( D_ALWAYS, "DIAG done 9 with Scheduler::actOnJobs()\n" );//TEMPTEMP
+		printJobStartDate2( jobs );//TEMPTEMP
 		return FALSE;
 	}
 
@@ -5451,6 +5547,8 @@ Scheduler::actOnJobs(int, Stream* s)
 				 getJobActionString(action), job_ids_string.c_str());
 	}
 
+	dprintf( D_ALWAYS, "DIAG done 10 with Scheduler::actOnJobs()\n" );//TEMPTEMP
+	printJobStartDate2( jobs );//TEMPTEMP
 	return TRUE;
 }
 
@@ -5502,6 +5600,8 @@ Scheduler::enqueueActOnJobMyself( PROC_ID job_id, JobAction action, bool log )
 	    action == JA_SUSPEND_JOBS ||
 		action == JA_CONTINUE_JOBS )
 	{
+		dprintf( D_ALWAYS, "DIAG JA_HOLD_JOBS?\n" );//TEMPTEMP
+		printJobStartDate( job_id );//TEMPTEMP
 		if( scheduler.FindSrecByProcID(job_id) ) {
 				// currently, only jobs with shadows are intended
 				// to be handled specially
@@ -5566,6 +5666,8 @@ Scheduler::actOnJobMyselfHandler( ServiceData* data )
 	PROC_ID job_id;
 	job_id.cluster = act_rec->m_job_id._cluster;
 	job_id.proc = act_rec->m_job_id._proc;
+	dprintf( D_ALWAYS, "DIAG Scheduler::actOnJobMyselfHandler()\n" );//TEMPTEMP
+	printJobStartDate( job_id );//TEMPTEMP
 
 	delete act_rec;
 
@@ -5577,6 +5679,8 @@ Scheduler::actOnJobMyselfHandler( ServiceData* data )
 		// because we are sending an action through to a matching 
 		// shadow TSTCLAIR (tstclair@redhat.com) 
 	case JA_HOLD_JOBS:
+		dprintf( D_ALWAYS, "DIAG JA_HOLD_JOBS 8\n" );//TEMPTEMP
+		printJobStartDate( job_id );//TEMPTEMP
 	case JA_REMOVE_JOBS:
 	case JA_VACATE_JOBS:
 	case JA_VACATE_FAST_JOBS: {
@@ -5600,6 +5704,8 @@ Scheduler::actOnJobMyselfHandler( ServiceData* data )
 		break;
     }
 	case JA_RELEASE_JOBS: {
+		dprintf( D_ALWAYS, "DIAG JA_RELEASE_JOBS 4\n" );//TEMPTEMP
+		printJobStartDate( job_id );//TEMPTEMP
 		WriteReleaseToUserLog( job_id );
 		needReschedule();
 		break;
@@ -5634,10 +5740,12 @@ Scheduler::actOnJobMyselfHandler( ServiceData* data )
 		break;
 	case JA_ERROR:
 	default:
-		EXCEPT( "impossible: unknown action (%d) at the end of actOnJobs()",
+		EXCEPT( "impossible: unknown action (%d) at the end of actOnJobMyself()",
 				(int)action );
 		break;
 	}
+	dprintf( D_ALWAYS, "DIAG done with Scheduler::actOnJobMyselfHandler()\n" );//TEMPTEMP
+	printJobStartDate( job_id );//TEMPTEMP
 	return TRUE;
 }
 
@@ -8590,6 +8698,7 @@ Scheduler::noShadowForJob( shadow_rec* srec, NoShadowFailure_t why )
 
 		// hold the job, since we won't be able to run it without
 		// human intervention
+	dprintf( D_ALWAYS, "DIAG calling holdJob()\n" );//TEMPTEMP
 	holdJob( job_id.cluster, job_id.proc, hold_reason, 
 			 CONDOR_HOLD_CODE_NoCompatibleShadow, 0,
 			 true, true, *notify_admin );
@@ -8694,6 +8803,7 @@ Scheduler::spawnLocalStarter( shadow_rec* srec )
 		dprintf( D_ALWAYS, "Can't start local universe job %d.%d: "
 				 "STARTER_LOCAL not defined!\n", job_id->cluster,
 				 job_id->proc );
+		dprintf( D_ALWAYS, "DIAG calling holdJob()\n" );//TEMPTEMP
 		holdJob( job_id->cluster, job_id->proc,
 				 "No condor_starter installed that supports local universe",
 				 CONDOR_HOLD_CODE_NoCompatibleShadow, 0,
@@ -8937,6 +9047,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 #else
 		tmpstr.formatstr("Unable to switch to user: %s", owner.Value());
 #endif
+		dprintf( D_ALWAYS, "DIAG calling holdJob()\n" );//TEMPTEMP
 		holdJob(job_id->cluster, job_id->proc, tmpstr.Value(),
 				CONDOR_HOLD_CODE_FailedToAccessUserAccount, 0,
 				false, true, false, false);
@@ -8965,6 +9076,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 			// on hold.
 			set_priv( priv );  // back to regular privs...
 
+			dprintf( D_ALWAYS, "DIAG calling holdJob()\n" );//TEMPTEMP
 			holdJob(job_id->cluster, job_id->proc, 
 				"Spooled executable is not executable!",
 					CONDOR_HOLD_CODE_FailedToCreateProcess, EACCES,
@@ -8990,6 +9102,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 		userJob->LookupString(ATTR_JOB_CMD,a_out_name);
 		if (a_out_name.Length()==0) {
 			set_priv( priv );  // back to regular privs...
+			dprintf( D_ALWAYS, "DIAG calling holdJob()\n" );//TEMPTEMP
 			holdJob(job_id->cluster, job_id->proc, 
 				"Executable unknown - not specified in job ad!",
 					CONDOR_HOLD_CODE_FailedToCreateProcess, ENOENT,
@@ -9015,6 +9128,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 			MyString tmpstr;
 			tmpstr.formatstr( "File '%s' is missing or not executable", a_out_name.Value() );
 			set_priv( priv );  // back to regular privs...
+			dprintf( D_ALWAYS, "DIAG calling holdJob()\n" );//TEMPTEMP
 			holdJob(job_id->cluster, job_id->proc, tmpstr.Value(),
 					CONDOR_HOLD_CODE_FailedToCreateProcess, EACCES,
 					false, true, false, false);
@@ -9349,8 +9463,10 @@ void add_shadow_birthdate(int cluster, int proc, bool is_reconnect)
 	SetAttributeInt(cluster, proc, ATTR_SHADOW_BIRTHDATE, current_time);
 	if (GetAttributeInt(cluster, proc,
 						ATTR_JOB_START_DATE, &job_start_date) < 0) {
+		dprintf( D_ALWAYS, "DIAG job has not run before\n" );//TEMPTEMP
 		// this is the first time the job has ever run, so set JobStartDate
 		SetAttributeInt(cluster, proc, ATTR_JOB_START_DATE, current_time);
+		dprintf( D_ALWAYS, "DIAG set JobStartDate to %d\n", current_time );//TEMPTEMP
         
         int qdate = 0;
         GetAttributeInt(cluster, proc, ATTR_Q_DATE, &qdate);
@@ -9374,6 +9490,11 @@ void add_shadow_birthdate(int cluster, int proc, bool is_reconnect)
 			scheduler.OtherPoolStats.Tick(now);
 		}
 	}
+//TEMPTEMP>>>
+	else {
+		dprintf( D_ALWAYS, "  DIAG JobStartDate: %d\n", job_start_date );//TEMPTEMP
+	}
+//<<<TEMPTEMP
 
 	// If we're reconnecting, the old ATTR_JOB_CURRENT_START_DATE is still
 	// correct
@@ -9472,6 +9593,7 @@ RotateAttributeList( int cluster, int proc, char const *attrname, int start_inde
 void
 Scheduler::InsertMachineAttrs( int cluster, int proc, ClassAd *machine_ad )
 {
+	dprintf( D_ALWAYS, "DIAG Scheduler::InsertMachineAttrs()\n" );//TEMPTEMP
 	ASSERT( machine_ad );
 
 	classad::ClassAdUnParser unparser;
@@ -9573,6 +9695,7 @@ Scheduler::InsertMachineAttrs( int cluster, int proc, ClassAd *machine_ad )
 struct shadow_rec *
 Scheduler::add_shadow_rec( shadow_rec* new_rec )
 {
+	dprintf( D_ALWAYS, "DIAG Scheduler::add_shadow_rec()\n" );//TEMPTEMP
 	if ( new_rec->universe != CONDOR_UNIVERSE_SCHEDULER &&
 		 new_rec->universe != CONDOR_UNIVERSE_LOCAL ) {
 
@@ -9677,6 +9800,7 @@ Scheduler::add_shadow_rec( shadow_rec* new_rec )
 void
 Scheduler::add_shadow_rec_pid( shadow_rec* new_rec )
 {
+	//dprintf( D_ALWAYS, "DIAG Scheduler::add_shadow_rec_pid()\n" );//TEMPTEMP
 	if( ! new_rec->pid ) {
 		EXCEPT( "add_shadow_rec_pid() called on an srec without a pid!" );
 	}
@@ -9805,6 +9929,7 @@ update_remote_wall_clock(int cluster, int proc)
 void
 Scheduler::delete_shadow_rec(int pid)
 {
+	//dprintf( D_ALWAYS, "DIAG Scheduler::delete_shadow_rec()\n" );//TEMPTEMP
 	shadow_rec *rec;
 	if( shadowsByPid->lookup(pid, rec) == 0 ) {
 		delete_shadow_rec( rec );
@@ -9818,6 +9943,7 @@ Scheduler::delete_shadow_rec(int pid)
 void
 Scheduler::delete_shadow_rec( shadow_rec *rec )
 {
+	dprintf( D_ALWAYS, "DIAG Scheduler::delete_shadow_rec()\n" );//TEMPTEMP
 
 	int cluster = rec->job_id.cluster;
 	int proc = rec->job_id.proc;
@@ -9933,6 +10059,7 @@ Scheduler::delete_shadow_rec( shadow_rec *rec )
 			// from a job for later reconnect, because check_zombie
 			// does stuff that should only happen if the shadow actually
 			// exited, such as setting CurrentHosts=0.
+		dprintf( D_ALWAYS, "DIAG calling 1 check_zombie()\n" );//TEMPTEMP
 		check_zombie( pid, &(rec->job_id) );
 	}
 
@@ -10524,6 +10651,7 @@ IsLocalUniverse( shadow_rec* srec )
 void
 set_job_status(int cluster, int proc, int status)
 {
+	dprintf( D_ALWAYS, "DIAG set_job_status()\n" );//TEMPTEMP
 	int universe = CONDOR_UNIVERSE_STANDARD;
 	GetAttributeInt(cluster, proc, ATTR_JOB_UNIVERSE, &universe);
 
@@ -11023,6 +11151,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 				// no break, fall through and do the action
 
 		case JOB_SHOULD_HOLD: {
+			dprintf( D_ALWAYS, "DIAG JOB_SHOULD_HOLD\n" );//TEMPTEMP
 				// Regardless of the state that the job currently
 				// is in, we'll put it on HOLD
 				// But let a REMOVED job stay that way.
@@ -11301,6 +11430,7 @@ Scheduler::scheduler_univ_job_exit(int pid, int status, shadow_rec * srec)
 			break;
 
 		case HOLD_IN_QUEUE:
+			dprintf( D_ALWAYS, "DIAG HOLD_IN_QUEUE\n" );//TEMPTEMP
 				// passing "false" to write_user_log, as
 				// delete_shadow_rec will do that later
 			holdJob(job_id.cluster, job_id.proc, reason.Value(),
@@ -11321,6 +11451,7 @@ Scheduler::scheduler_univ_job_exit(int pid, int status, shadow_rec * srec)
 				"(%d.%d) Problem parsing user policy for job: %s.  "
 				"Putting job on hold.\n",
 				 job_id.cluster, job_id.proc, reason.Value());
+			dprintf( D_ALWAYS, "DIAG Calling holdJob() 1\n" );//TEMPTEMP
 			holdJob(job_id.cluster, job_id.proc, reason.Value(),
 					reason_code, reason_subcode,
 				true,false,false,true);
@@ -11335,6 +11466,7 @@ Scheduler::scheduler_univ_job_exit(int pid, int status, shadow_rec * srec)
 			reason2 += action;
 			reason2 += ") ";
 			reason2 += reason;
+			dprintf( D_ALWAYS, "DIAG Calling holdJob() 2\n" );//TEMPTEMP
 			holdJob(job_id.cluster, job_id.proc, reason2.Value(),
 					CONDOR_HOLD_CODE_JobPolicyUndefined, 0,
 				true,false,false,true);
@@ -11373,7 +11505,9 @@ Scheduler::kill_zombie(int, PROC_ID* job_id )
 void
 Scheduler::check_zombie(int pid, PROC_ID* job_id)
 {
- 
+	dprintf( D_ALWAYS, "DIAG Scheduler::check_zombie()\n" );//TEMPTEMP
+	printJobStartDate( *job_id );//TEMPTEMP
+
 	int	  status;
 	
 	if( GetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_STATUS,
@@ -11381,6 +11515,8 @@ Scheduler::check_zombie(int pid, PROC_ID* job_id)
 		dprintf(D_ALWAYS,"ERROR fetching job (%d.%d) status in check_zombie !\n",
 				job_id->cluster,
 				job_id->proc);
+		dprintf( D_ALWAYS, "DIAG done 1 with Scheduler::check_zombie()\n" );//TEMPTEMP
+		printJobStartDate( *job_id );//TEMPTEMP
 		return;
 	}
 
@@ -11416,6 +11552,8 @@ Scheduler::check_zombie(int pid, PROC_ID* job_id)
 		break;
 	}
 	case HELD:
+		dprintf( D_ALWAYS, "DIAG HELD\n" );//TEMPTEMP
+		printJobStartDate( *job_id );//TEMPTEMP
 		if( !scheduler.WriteHoldToUserLog(*job_id)) {
 			dprintf( D_ALWAYS, 
 					 "Failed to write hold event to the user log for job %d.%d\n",
@@ -11448,10 +11586,13 @@ Scheduler::check_zombie(int pid, PROC_ID* job_id)
 			// Set the force flag to true so it will always 
 			// calculate the next execution time
 			//
+		//TEMPTEMP -- could this be doing something weird?
 		ClassAd *job_ad = GetJobAd( job_id->cluster, job_id->proc );
 		this->calculateCronTabSchedule( job_ad, true );
 	}
 	
+	dprintf( D_ALWAYS, "DIAG done 2 with Scheduler::check_zombie()\n" );//TEMPTEMP
+	printJobStartDate( *job_id );//TEMPTEMP
 	dprintf( D_FULLDEBUG, "Exited check_zombie( %d, 0x%p )\n", pid,
 			 job_id );
 }
@@ -13183,6 +13324,12 @@ Scheduler::DelMrec(match_rec* match)
 
 	dprintf( D_ALWAYS, "Match record (%s, %d.%d) deleted\n",
 			 match->description(), match->cluster, match->proc ); 
+//TEMPTEMP>>>
+	PROC_ID job_id;
+	job_id.cluster = match->cluster;
+	job_id.proc = 0;
+	printJobStartDate( job_id );
+//<<<TEMPTEMP
 
 	HashKey key(match->claimId());
 	matches->remove(key);
@@ -14028,11 +14175,16 @@ fixReasonAttrs( PROC_ID job_id, JobAction action )
 	switch( action ) {
 
 	case JA_HOLD_JOBS:
+		dprintf( D_ALWAYS, "DIAG JA_HOLD_JOBS 9\n" );//TEMPTEMP
+		printJobStartDate( job_id );//TEMPTEMP
 		moveStrAttr( job_id, ATTR_RELEASE_REASON, 
 					 ATTR_LAST_RELEASE_REASON, false );
+		printJobStartDate( job_id );//TEMPTEMP
 		break;
 
 	case JA_RELEASE_JOBS:
+		dprintf( D_ALWAYS, "DIAG JA_RELEASE_JOBS 5\n" );//TEMPTEMP
+		printJobStartDate( job_id );//TEMPTEMP
 		moveStrAttr( job_id, ATTR_HOLD_REASON, ATTR_LAST_HOLD_REASON,
 					 true );
 		moveIntAttr( job_id, ATTR_HOLD_REASON_CODE, 
@@ -14041,6 +14193,7 @@ fixReasonAttrs( PROC_ID job_id, JobAction action )
 					 ATTR_LAST_HOLD_REASON_SUBCODE, true );
 		DeleteAttribute(job_id.cluster,job_id.proc,
 					 ATTR_JOB_STATUS_ON_RELEASE);
+		printJobStartDate( job_id );//TEMPTEMP
 		break;
 
 	case JA_REMOVE_JOBS:
@@ -14301,6 +14454,7 @@ holdJobRaw( int cluster, int proc, const char* reason,
 		 bool email_user,
 		 bool email_admin, bool system_hold )
 {
+	dprintf( D_ALWAYS, "DIAG holdJobRaw(%d.%d)\n", cluster, proc );//TEMPTEMP
 	int status;
 	PROC_ID tmp_id;
 	tmp_id.cluster = cluster;
@@ -14427,6 +14581,7 @@ holdJob( int cluster, int proc, const char* reason,
 		 bool use_transaction, bool email_user,
 		 bool email_admin, bool system_hold, bool write_to_user_log )
 {
+	dprintf( D_ALWAYS, "DIAG holdJob(%d.%d)\n", cluster, proc );//TEMPTEMP
 	bool result;
 
 	if(use_transaction) {
@@ -14466,6 +14621,7 @@ releaseJobRaw( int cluster, int proc, const char* reason,
 		 bool email_user,
 		 bool email_admin, bool write_to_user_log )
 {
+	dprintf( D_ALWAYS, "DIAG releaseJobRaw()\n" );//TEMPTEMP
 	int status;
 	PROC_ID tmp_id;
 	tmp_id.cluster = cluster;
@@ -14565,6 +14721,7 @@ releaseJob( int cluster, int proc, const char* reason,
 		 bool use_transaction, bool email_user,
 		 bool email_admin, bool write_to_user_log )
 {
+	dprintf( D_ALWAYS, "DIAG releaseJob()\n" );//TEMPTEMP
 	bool result;
 
 	if(use_transaction) {
@@ -15221,6 +15378,7 @@ Scheduler::calculateCronTabSchedule( ClassAd *jobAd, bool calculate )
 			//	email_admin		- false
 			//	system_hold		- false
 			//
+		dprintf( D_ALWAYS, "DIAG Calling holdJob() 3\n" );//TEMPTEMP
 		holdJob( id.cluster, id.proc, reason.Value(),
 				 CONDOR_HOLD_CODE_InvalidCronSettings, 0,
 				 true, true, false, false );

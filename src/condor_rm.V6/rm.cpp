@@ -201,6 +201,7 @@ main( int argc, char *argv[] )
 	// for condor_hold.
 
 	if (cmd_str && strncasecmp( cmd_str, "_hold", strlen("_hold") ) == MATCH) { 
+		printf( "DIAG JA_HOLD_JOBS\n" );//TEMPTEMP
 		mode = JA_HOLD_JOBS;
 	} else if ( cmd_str && 
 			strncasecmp( cmd_str, "_release", strlen("_release") ) == MATCH ) {

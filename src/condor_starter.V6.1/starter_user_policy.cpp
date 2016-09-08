@@ -80,6 +80,7 @@ StarterUserPolicy::getJobBirthday( )
 			// the JobStartDate attribute instead
 			//
 		this->job_ad->LookupInteger( ATTR_JOB_START_DATE, bday );
+		dprintf( D_ALWAYS, "DIAG in StarterUserPolicy::getJobBirthday() -- JobStartDate: %d\n", bday );//TEMPTEMP
 	}
 	return ( bday );
 }

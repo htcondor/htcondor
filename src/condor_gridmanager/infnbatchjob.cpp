@@ -1195,6 +1195,7 @@ void INFNBatchJob::SetRemoteIds( const char *sandbox_id, const char *job_id )
 
 void INFNBatchJob::ProcessRemoteAd( ClassAd *remote_ad )
 {
+	dprintf( D_ALWAYS, "DIAG INFNBatchJob::ProcessRemoteAd()\n" );//TEMPTEMP
 	int new_remote_state;
 	ExprTree *new_expr, *old_expr;
 
