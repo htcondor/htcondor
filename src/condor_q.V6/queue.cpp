@@ -2034,7 +2034,7 @@ processCommandLineArguments (int argc, char *argv[])
 	// now we can work out some of the implications
 
 	// default batch mode to on if appropriate
-	if ( ! dash_batch_specified && ! dash_long && ! show_held) {
+	if ( ! dash_batch_specified && ! dash_long && ! dash_autocluster && ! show_held) {
 		int mode = qdo_mode & QDO_BaseMask;
 		if (mode == QDO_NotSet ||
 			mode == QDO_JobNormal ||
@@ -2042,6 +2042,16 @@ processCommandLineArguments (int argc, char *argv[])
 			mode == QDO_DAG) { // DAG and batch go naturally together
 			dash_batch = dash_batch_is_default;
 		}
+	}
+
+	// for now, can't use both -batch and one of the aggregation modes.
+	if (dash_autocluster && dash_batch) {
+		if (dash_batch_specified) {
+			fprintf( stderr, "Error: -batch conflicts with %s\n",
+				(dash_autocluster == CondorQ::fetch_GroupBy) ? "-group-by" : "-autocluster" );
+			exit( 1 );
+		}
+		dash_batch = false;
 	}
 
 	if (dash_dry_run) {
