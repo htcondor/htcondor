@@ -117,6 +117,11 @@ These instances have a lower price, but can be interrupted at any time.
 Also added support for service accounts with GCE.
 \Ticket{5821}
 
+\item When submitting jobs to SLURM via the grid universe, the SLURM
+partition can now be specified using the \SubmitCmdNI{batch\_queue}
+submit command.
+\Ticket{5780}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -140,6 +145,13 @@ Also, ping systemd at a third of the watchdog interval.
 \File{dprintf\_failure.SUBSYS} if they failed to find the \Prog{mail}
 program.
 \Ticket{5854}
+
+\item For grid-type \Expr{batch} jobs, improved handling of command
+line arguments and environment variables that contain characters that
+have meaning to the shell.
+Previously, the presence of these characters would cause job execution
+to fail.
+\Ticket{5747}
 
 \end{itemize}
 
