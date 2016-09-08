@@ -6987,6 +6987,16 @@ friendly_name=Determines the required prefix for remote updates from the running
 review=?
 tags=starter,shadow
 
+[CHIRP_DELAYED_UPDATE_MAX_ATTRS]
+default=100
+range=0,
+type=int
+reconfig=true
+customization=seldom
+friendly_name=Maximum number of pending chirp delayed updates
+review=?
+tags=starter
+
 [ENABLE_CHIRP_IO]
 default=true
 version=8.1.0
