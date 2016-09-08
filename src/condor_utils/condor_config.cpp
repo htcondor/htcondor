@@ -2504,6 +2504,7 @@ bool
 param_true( const char * name ) {
 	bool value;
 	char * string = param( name );
+	if ( ! string) return false;
 	bool valid = string_is_boolean_param( string, value );
 	free( string );
 	return valid && value;
@@ -2513,6 +2514,7 @@ bool
 param_false( const char * name ) {
 	bool value;
 	char * string = param( name );
+	if ( ! string) return false;
 	bool valid = string_is_boolean_param( string, value );
 	free( string );
 	return valid && (!value);

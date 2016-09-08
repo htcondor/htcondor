@@ -531,7 +531,7 @@ main( int argc, const char* argv[] )
 		} else if (is_arg_prefix(arg, "name", 1)) {
 			const char * tmp = use_next_arg("name", argv, i);
 			name = get_daemon_name(tmp);
-			if ( ! name) {
+			if ( ! name || ! name[0]) {
 				fprintf(stderr, "%s: unknown host %s\n", MyName, get_host_part(tmp));
 				my_exit(1);
 			}
