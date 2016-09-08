@@ -101,6 +101,10 @@ Fixed a bug that prevented other daemons from talking to the
 \Condor{procd} when it is restarted after a crash.
 \Ticket{5863}
 
+\item If the \Condor{procd} crashes, the \Condor{master} now tries to
+restart it several times. Previously only one restart attempt was done.
+\Ticket{3655}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
