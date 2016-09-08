@@ -3395,6 +3395,7 @@ void SetSubmitTotalProcs(std::list<std::string> & new_ad_keys)
 	JobQueueKeyBuf job_id;
 	for(std::list<std::string>::iterator it = new_ad_keys.begin(); it != new_ad_keys.end(); it++ ) {
 		job_id.set(it->c_str());
+		if (job_id.proc < 0) continue; // ignore the cluster ad.
 		std::map<int, int>::iterator mit = num_procs.find(job_id.cluster);
 		if (mit == num_procs.end()) {
 			num_procs[job_id.cluster] = 1;

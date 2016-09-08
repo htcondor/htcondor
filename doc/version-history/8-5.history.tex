@@ -136,6 +136,11 @@ more than 28 days.
 Also, ping systemd at a third of the watchdog interval.
 \Ticket{5837}
 
+\item Fixed a bug that could cause daemons to create a file named
+\File{dprintf\_failure.SUBSYS} if they failed to find the \Prog{mail}
+program.
+\Ticket{5854}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
