@@ -3457,16 +3457,18 @@ bool AmazonPutRule::workerFunction( char ** argv, int argc, std::string & result
 	request.headers[ "X-Amz-Target" ] = "AWSEvents.PutRule";
 
 	// Construct the JSON payload.
+	std::string name, scheduleExpression, state;
+	classad::ClassAdJsonUnParser::UnparseAuxEscapeString( name, argv[5] );
+	classad::ClassAdJsonUnParser::UnparseAuxEscapeString( scheduleExpression, argv[6] );
+	classad::ClassAdJsonUnParser::UnparseAuxEscapeString( state, argv[7] );
+
 	std::string payload;
-	// FIXME: properly escape the JSON values.  This may be most-easily
-	// accomplished by constructing a classad like this and exporting it
-	// as JSON.
 	formatstr( payload, "{\n"
 				"\"Name\": \"%s\",\n"
 				"\"ScheduleExpression\": \"%s\",\n"
 				"\"State\": \"%s\"\n"
 				"}\n",
-				argv[5], argv[6], argv[7] );
+				name.c_str(), scheduleExpression.c_str(), state.c_str() );
 
 	if( ! request.SendJSONRequest( payload ) ) {
 		result_string = create_failure_result( requestID,
