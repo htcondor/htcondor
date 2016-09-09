@@ -1894,7 +1894,7 @@ JICShadow::recordDelayedUpdate( const std::string &name, const classad::ExprTree
 			m_delayed_update_attrs.end(), name);
 		if (it == m_delayed_update_attrs.end())
 		{
-			int max_attrs = param_integer("CHIRP_DELAYED_UPDATE_MAX_ATTRS",100);
+			unsigned int max_attrs = param_integer("CHIRP_DELAYED_UPDATE_MAX_ATTRS",100);
 			if (m_delayed_update_attrs.size() >= max_attrs)
 			{
 				dprintf(D_ALWAYS, "Ignoring update for %s because %d attributes have already been set.\n",
