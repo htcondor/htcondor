@@ -33,7 +33,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Increased the maximum number of unique attributes that can be 
+set by the \Condor{chirp} command \Opt{set\_job\_attr\_delayed} from
+50 to 100, and added config knob \MacroNI{CHIRP\_DELAYED\_UPDATE\_MAX\_ATTRS}.
+See section~\ref{param:ChirpDelayedUpdateMaxAttrs} for more information.
+\Ticket{5891}
 
 \end{itemize}
 
@@ -95,6 +99,15 @@ always attempted.
 the correct priority factor value for a user associated
 with a group.
 \Ticket{5848}
+
+\item Fixed a bug that can cause the \Condor{procd} to crash.
+Fixed a bug that prevented other daemons from talking to the
+\Condor{procd} when it is restarted after a crash.
+\Ticket{5863}
+
+\item If the \Condor{procd} crashes, the \Condor{master} now tries to
+restart it several times. Previously only one restart attempt was done.
+\Ticket{3655}
 
 \end{itemize}
 
