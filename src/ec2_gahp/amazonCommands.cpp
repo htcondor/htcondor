@@ -3502,7 +3502,15 @@ bool AmazonPutTargets::SendJSONRequest( const std::string & payload ) {
 			return false;
 		}
 
-		// FIXME: We should verify that FailedEntryCount is 0.
+		int failedEntryCount;
+		if(! reply.LookupInteger( "FailedEntryCount", failedEntryCount ) ) {
+			dprintf( D_ALWAYS, "Reply '%s' did contain FailedEntryCount attribute.\n", this->resultString.c_str() );
+			return false;
+		}
+		if( failedEntryCount != 0 ) {
+			dprintf( D_ALWAYS, "Reply '%s' indicates a failure.\n", this->resultString.c_str() );
+			return false;
+		}
 	}
 	return result;
 }
