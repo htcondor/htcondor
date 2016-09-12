@@ -856,12 +856,9 @@ parse_script(
 	}
 
 
-//TEMPTEMP -- loop here...
 	Job *job;
-		//TEMPTEMP -- loop here...
 	while ( ( job = dag->FindAllNodesByName( jobName ) ) ) {
 		jobName = NULL;
-
 
 	//TEMPTEMP -- fix indentation
 	MyString whynot;
@@ -1069,21 +1066,6 @@ parse_retry(
 	MyString tmpJobName = munge_job_name(jobName);
 	jobName = tmpJobName.Value();
 	
-	Job *job = dag->FindNodeByName( jobName );
-	if( job == NULL ) {
-		debug_printf( DEBUG_QUIET, 
-					  "ERROR: %s (line %d): Unknown Job %s\n",
-					  filename, lineNumber, jobNameOrig );
-		return false;
-	}
-
-	if ( job->GetFinal() ) {
-		debug_printf( DEBUG_QUIET, 
-					  "ERROR: %s (line %d): Final job %s cannot have retries\n",
-					  filename, lineNumber, jobNameOrig );
-		return false;
-	}
-	
 	char *token = strtok( NULL, DELIMITERS );
 	if( token == NULL ) {
 		debug_printf( DEBUG_QUIET, 
@@ -1094,7 +1076,7 @@ parse_retry(
 	}
 	
 	char *tmp;
-	job->retry_max = (int)strtol( token, &tmp, 10 );
+	int retryMax = (int)strtol( token, &tmp, 10 );
 	if( tmp == token ) {
 		debug_printf( DEBUG_QUIET,
 					  "ERROR: %s (line %d): Invalid Retry value \"%s\"\n",
@@ -1102,16 +1084,17 @@ parse_retry(
 		exampleSyntax( example );
 		return false;
 	}
-	if ( job->retry_max < 0 ) {
+	if ( retryMax < 0 ) {
 		debug_printf( DEBUG_QUIET,
 					  "ERROR: %s (line %d): Invalid Retry value \"%d\" "
 					  "(cannot be negative)\n",
-					  filename, lineNumber, job->retry_max );
+					  filename, lineNumber, retryMax );
 		exampleSyntax( example );
 		return false;
 	}
 
     // Check for optional retry-abort value
+	int unless_exit = 0;
     token = strtok( NULL, DELIMITERS );
     if ( token != NULL ) {
         if ( strcasecmp ( token, "UNLESS-EXIT" ) != 0 ) {
@@ -1129,19 +1112,39 @@ parse_retry(
                 return false;
             } 
             char *unless_exit_end;
-            int unless_exit = strtol( token, &unless_exit_end, 10 );
+            unless_exit = strtol( token, &unless_exit_end, 10 );
             if (*unless_exit_end != 0) {
                 debug_printf( DEBUG_QUIET, "ERROR: %s (line %d) Bad parameter for UNLESS-EXIT: %s\n",
                               filename, lineNumber, token );
                 exampleSyntax( example );
                 return false;
             }
-            job->have_retry_abort_val = true;
-            job->retry_abort_val = unless_exit;
-            debug_printf( DEBUG_DEBUG_1, "Retry Abort Value for %s is %d\n", 
-                          jobName, job->retry_abort_val );
         }
     }
+
+	Job *job;
+	while ( ( job = dag->FindAllNodesByName( jobName ) ) ) {
+		jobName = NULL;
+
+		debug_printf( DEBUG_DEBUG_3, "parse_retry(): found job %s\n",
+					job->GetJobName() );
+
+			job->retry_max = retryMax;
+			if ( unless_exit != 0 ) {
+            	job->have_retry_abort_val = true;
+            	job->retry_abort_val = unless_exit;
+			}
+            debug_printf( DEBUG_DEBUG_1, "Retry Abort Value for %s is %d\n", 
+                          jobName, job->retry_abort_val );
+
+
+	}
+
+	if ( jobName ) {
+		debug_printf(DEBUG_QUIET, "%s (line %d): Unknown Job %s\n",
+					filename, lineNumber, jobNameOrig);
+		return false;
+	}
 
 	return true;
 }
@@ -1342,12 +1345,12 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber)
 	//TEMPTEMP -- probably change this...
 	char *varsStr = strtok( NULL, "\n" ); // just get all the rest -- we'll be doing this by hand
 	Job *job;
+	//TEMPTEMP -- hmm -- can this loop get moved down??
 	while ( ( job = dag->FindAllNodesByName( jobName ) ) ) {
 	//TEMPTEMP -- fix indentation
 	jobName = NULL;
 
-	//TEMPTEMP -- reduce verbosity
-	debug_printf( DEBUG_QUIET, "parse_vars(): found job %s\n",
+	debug_printf( DEBUG_DEBUG_3, "parse_vars(): found job %s\n",
 				job->GetJobName() );
 
 	//TEMPTEMP -- put a bunch of this into its own function?

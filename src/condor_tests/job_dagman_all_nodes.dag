@@ -1,0 +1,8 @@
+job NodeA /var/null noop
+job NodeB /var/null noop
+job NodeC /var/null noop
+
+script pre ALL_NODES /var/null $JOB $RETRY
+script post ALL_NODES /var/null $JOB $RETURN
+vars ALL_NODES nodename="$(JOB)"
+retry ALL_NODES 2 UNLESS-EXIT 5
