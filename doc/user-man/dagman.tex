@@ -2732,8 +2732,9 @@ at a higher level, the splice name must be included.
 %TEMP -- analogy with hardware
 
 In the "default" usage of splices described above, when one splice is
-the parent of another splice, all "terminal" nodes of the parent splice
-are parents of all "initial" nodes of the child splice.  The CONNECT,
+the parent of another splice, all "terminal" nodes (nodes with no
+children) of the parent splice become parents of all "initial" nodes
+(nodes with no parents) of the child splice.  The CONNECT,
 PIN\_IN, and PIN\_OUT commands (added in version 8.5.7) allow more
 flexible dependencies between splices.
 
@@ -2766,17 +2767,17 @@ Note that the pin\_ins and pin\_outs must be defined \emph{within}
 the relevant splices (this can be done with \Arg{INCLUDE} commands), not
 in the DAG that connects the splices.
 
-%TEMP -- need to add diagrams here
 
 Restrictions:
-%TEMP -- check these and make sure they are right
 \begin{itemize}
+\item Connections can be made only between two splices; "regular"
+nodes or sub-DAGs cannot be used in a CONNECT command.
 \item Pin\_ins and pin\_outs must be numbered consecutively starting
 at 1.
 \item The pin\_outs of the parent splice in a connect command must
 match the pin\_ins of the child splice in the command.
 \item All "initial" nodes (nodes with no parents) of a child splice
-must be connected to a pin\_in.
+used in a connect command must be connected to a pin\_in.
 \end{itemize}
 
 Note:  it is probably desireable for any "terminal" node (a
@@ -2791,7 +2792,7 @@ Here is a simple example:
     SPLICE C spliceC.dag
 
     CONNECT A B
-    CONNECT B c
+    CONNECT B C
 
 # File: spliceA.dag
     JOB A1 A1.sub

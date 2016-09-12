@@ -463,7 +463,11 @@ command_release_claim( Service*, int cmd, Stream* stream )
 	State s = rip->state();
 
 	// stash current user
-	MyString curuser = rip->r_cur->client()->user();
+	MyString curuser;
+
+	if (rip->r_cur && rip->r_cur->client()) {
+		curuser = rip->r_cur->client()->user();
+	}
 
 	//There are two cases: claim id is the current or the preempting claim
 	if( rip->r_pre && rip->r_pre->idMatches(id) ) {

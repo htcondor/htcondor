@@ -3514,6 +3514,14 @@ friendly_name=Submit Send Reschedule
 review=?
 tags=submit,submit
 
+[SUBMIT_PUBLISH_WINDOWS_OSVERSIONINFO]
+friendly_name=Submit should put attributes into jobs that show the Windows OSVERSIONINFO
+default=false
+type=bool
+reconfig=false
+customization=seldom
+tags=submit
+
 [DEFAULT_UNIVERSE]
 default=
 type=string
@@ -5123,7 +5131,7 @@ review=?
 tags=schedd,qmgmt,qedit
 
 [SYSTEM_IMMUTABLE_JOB_ATTRS]
-default=Owner ClusterId ProcId MyType TargetType
+default=Owner ClusterId ProcId TotalSubmitProcs MyType TargetType
 type=string
 reconfig=true
 customization=never
@@ -7128,6 +7136,16 @@ friendly_name=Determines the required prefix for remote updates from the running
 review=?
 tags=starter,shadow
 
+[CHIRP_DELAYED_UPDATE_MAX_ATTRS]
+default=100
+range=0,
+type=int
+reconfig=true
+customization=seldom
+friendly_name=Maximum number of pending chirp delayed updates
+review=?
+tags=starter
+
 [ENABLE_CHIRP_IO]
 default=true
 version=8.1.0
@@ -8470,9 +8488,9 @@ review=?
 friendly_name=Default (host based) Authorization policy based on IPs and DNS names
 default : @end
 	ALLOW_ADMINISTRATOR=$(CONDOR_HOST)
-	ALLOW_OWNER=$(FULL_HOSTNAME) $(IP_ADDRESS)
+	ALLOW_OWNER=$(FULL_HOSTNAME) $(IP_ADDRESS) $(IPV6_ADDRESS)
 	ALLOW_READ=*
-	ALLOW_WRITE=$(FULL_HOSTNAME) $(IP_ADDRESS)
+	ALLOW_WRITE=$(FULL_HOSTNAME) $(IP_ADDRESS) $(IPV6_ADDRESS)
 	ALLOW_NEGOTIATOR=$(CONDOR_HOST)
 	ALLOW_NEGOTIATOR_SCHEDD=$(ALLOW_NEGOTIATOR) $(FLOCK_NEGOTIATOR_HOSTS)
 	ALLOW_WRITE_COLLECTOR=$(ALLOW_WRITE) $(FLOCK_FROM)

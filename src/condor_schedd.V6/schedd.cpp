@@ -9035,6 +9035,7 @@ Scheduler::spawnLocalStarter( shadow_rec* srec )
 				 "No condor_starter installed that supports local universe",
 				 CONDOR_HOLD_CODE_NoCompatibleShadow, 0,
 				 false, notify_admin, true );
+		delete srec;
 		notify_admin = false;
 		return;
 	}
@@ -9095,8 +9096,7 @@ Scheduler::spawnLocalStarter( shadow_rec* srec )
 		dprintf( D_ALWAYS|D_FAILURE, "Can't spawn local starter for "
 				 "job %d.%d\n", job_id->cluster, job_id->proc );
 		mark_job_stopped( job_id );
-			// TODO: we're definitely leaking shadow recs in this case
-			// (and have been for a while).  must fix ASAP.
+		delete srec;
 		return;
 	}
 
@@ -12729,6 +12729,9 @@ Scheduler::Init()
 		}
 		m_matchPasswordEnabled = new_match_password;
 	}
+
+	// Read config and initialize job transforms.
+	jobTransforms.initAndReconfig();
 
 	first_time_in_init = false;
 }

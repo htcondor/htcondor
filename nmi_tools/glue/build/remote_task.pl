@@ -305,7 +305,7 @@ sub create_rpm {
     my $is_debug = $_[0];
     if ($ENV{NMI_PLATFORM} =~ /(x86_RedHat6|x86_64_RedHat6|x86_64_RedHat7)/) {
         # Use native packaging tool
-        return "build/packaging/srpm/nmibuilduwrpm.sh";
+        return dirname($0) . "/build_uw_rpm.sh";
     } else {
         # Reconfigure cmake variables for native package build   
         my $command = get_cmake_args();

@@ -1902,7 +1902,7 @@ const char * set_live_param_value(const char * name, const char * live_value)
 	ASSERT(pitem);
 	const char * old_value = pitem->raw_value;
 	if ( ! live_value) {
-		PRAGMA_REMIND("need a param_remove function to implement this properly!")
+		//PRAGMA_REMIND("need a param_remove function to implement this properly!")
 		// remove(name, ConfigMacroSet);
 		pitem->raw_value = "";
 	} else {
@@ -1979,12 +1979,23 @@ clear_config()
 	return;
 }
 
+MACRO_SET * param_get_macro_set()
+{
+	return &ConfigMacroSet;
+}
 
-bool param_defined(const char* name) {
+const char * param_unexpanded(const char *name)
+{
 	MACRO_EVAL_CONTEXT ctx;
 	init_macro_eval_context(ctx);
 	const char * pval = lookup_macro(name, ConfigMacroSet, ctx);
-	return pval && pval[0];
+	if (pval && ! pval[0]) return NULL;
+	return pval;
+}
+
+bool param_defined(const char* name) {
+	const char * pval = param_unexpanded(name);
+	return pval != NULL;
 }
 
 char*
@@ -2493,6 +2504,7 @@ bool
 param_true( const char * name ) {
 	bool value;
 	char * string = param( name );
+	if ( ! string) return false;
 	bool valid = string_is_boolean_param( string, value );
 	free( string );
 	return valid && value;
@@ -2502,6 +2514,7 @@ bool
 param_false( const char * name ) {
 	bool value;
 	char * string = param( name );
+	if ( ! string) return false;
 	bool valid = string_is_boolean_param( string, value );
 	free( string );
 	return valid && (!value);

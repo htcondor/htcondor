@@ -67,6 +67,11 @@ elseif(${OS_NAME} MATCHES "WIN")
 		set( CMAKE_INSTALL_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/release_dir")
 	endif()
 
+	# when building x64 on Windows, cmake's SYS_ARCH value is wrong... so fix it here before we use it to brand the binaries.
+	if ( ${CMAKE_SIZEOF_VOID_P} EQUAL 8 )
+		set(SYS_ARCH "X86_64")
+	endif()
+
 	dprint("TODO FEATURE-> Z:TANNENBA:TJ:TSTCLAIR Update registry + paths to use this prefixed debug loc (test_install)")
 
 endif()
@@ -406,8 +411,6 @@ if( NOT WINDOWS)
 	if(HAVE_SCHED_SETAFFINITY_2ARG)
 		set(HAVE_SCHED_SETAFFINITY ON)
 	endif()
-
-	dprint ("TJ && TSTCLAIR We need this check in MSVC") 
 
 	check_cxx_compiler_flag(-std=c++11 cxx_11)
 	check_cxx_compiler_flag(-std=c++0x cxx_0x)

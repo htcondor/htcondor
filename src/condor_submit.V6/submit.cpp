@@ -281,11 +281,13 @@ std::string queueCommandLine; // queue statement passed in via -q argument
 SubmitHash submit_hash;
 #else
 
+#if !defined(_XFORM_UTILS_H)
 // declare enough of the condor_params structure definitions so that we can define submit hashtable defaults
 namespace condor_params {
 	typedef struct string_value { char * psz; int flags; } string_value;
 	struct key_value_pair { const char * key; const string_value * def; };
 }
+#endif
 
 // buffers used while processing the queue statement to inject $(Cluster), $(Process) and $(Step)
 // into the submit hash table.  Note that these buffers are also used BEFORE the queue
@@ -1097,46 +1099,8 @@ init_job_ad()
 	InsertJobExpr (buffer);
 
 	// Publish the version of Windows we are running
-	OSVERSIONINFOEX os_version_info;
-	ZeroMemory ( &os_version_info, sizeof ( OSVERSIONINFOEX ) );
-	os_version_info.dwOSVersionInfoSize = sizeof ( OSVERSIONINFOEX );
-	BOOL ok = GetVersionEx ( (OSVERSIONINFO*) &os_version_info );
-	if ( !ok ) {
-		os_version_info.dwOSVersionInfoSize =
-			sizeof ( OSVERSIONINFO );
-		ok = GetVersionEx ( (OSVERSIONINFO*) &os_version_info );
-		if ( !ok ) {
-			dprintf ( D_ALWAYS, "Submit: failed to "
-				"get Windows version information\n" );
-		}
-	}
-	if ( ok ) {
-		buffer.formatstr( "%s = %u", ATTR_WINDOWS_MAJOR_VERSION, 
-			os_version_info.dwMajorVersion );
-		InsertJobExpr ( buffer );
-		buffer.formatstr( "%s = %u", ATTR_WINDOWS_MINOR_VERSION, 
-			os_version_info.dwMinorVersion );
-		InsertJobExpr ( buffer );
-		buffer.formatstr( "%s = %u", ATTR_WINDOWS_BUILD_NUMBER, 
-			os_version_info.dwBuildNumber );
-		InsertJobExpr ( buffer );
-		// publish the extended Windows version information if we
-		// have it at our disposal
-		if ( sizeof ( OSVERSIONINFOEX ) ==
-			os_version_info.dwOSVersionInfoSize ) {
-			buffer.formatstr ( "%s = %lu",
-				ATTR_WINDOWS_SERVICE_PACK_MAJOR,
-				os_version_info.wServicePackMajor );
-			InsertJobExpr ( buffer );
-			buffer.formatstr ( "%s = %lu",
-				ATTR_WINDOWS_SERVICE_PACK_MINOR,
-				os_version_info.wServicePackMinor );
-			InsertJobExpr ( buffer );
-			buffer.formatstr ( "%s = %lu",
-				ATTR_WINDOWS_PRODUCT_TYPE,
-				os_version_info.wProductType );
-			InsertJobExpr ( buffer );
-		}
+	if (param_boolean("SUBMIT_PUBLISH_WINDOWS_OSVERSIONINFO", false)) {
+		publishWindowsOSVersionInfo(*job);
 	}
 #endif
 

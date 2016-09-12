@@ -20,6 +20,7 @@
 #if !defined(_SUBMIT_UTILS_H)
 #define _SUBMIT_UTILS_H
 
+#include "condor_config.h" // for MACRO_SOURCE
 #include <dc_schedd.h> // for ShouldTransferFiles_t
 
 /*
@@ -623,6 +624,9 @@ private:
 };
 
 const char * init_submit_default_macros();
+#ifdef WIN32
+void publishWindowsOSVersionInfo(ClassAd & ad);
+#endif
 
 #ifndef EXPAND_GLOBS_WARN_EMPTY
 // functions in submit_glob.cpp

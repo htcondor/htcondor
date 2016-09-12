@@ -1911,9 +1911,11 @@ JICShadow::recordDelayedUpdate( const std::string &name, const classad::ExprTree
 			m_delayed_update_attrs.end(), name);
 		if (it == m_delayed_update_attrs.end())
 		{
-			if (m_delayed_update_attrs.size() >= 50)
+			unsigned int max_attrs = param_integer("CHIRP_DELAYED_UPDATE_MAX_ATTRS",100);
+			if (m_delayed_update_attrs.size() >= max_attrs)
 			{
-				dprintf(D_ALWAYS, "Ignoring update for %s because 50 attributes have already been set.\n", name.c_str());
+				dprintf(D_ALWAYS, "Ignoring update for %s because %d attributes have already been set.\n",
+					name.c_str(),max_attrs);
 				return false;
 			}
 			m_delayed_update_attrs.push_back(name);

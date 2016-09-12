@@ -1570,6 +1570,7 @@ Parse_macros(
 					retval = Parse_macros(fp, InnerSource, depth+1, macro_set, options, pctx, config_errmsg, fnSubmit, pvSubmitData);
 #endif
 				}
+				fclose(fp); fp = NULL;
 			}
 			if (retval < 0) {
 				macro_set.push_error( stderr, retval, source_type,
@@ -2800,6 +2801,11 @@ const char * lookup_macro(const char * name, MACRO_SET & macro_set, MACRO_EVAL_C
 		}
 	}
 
+	// if still nothing, do a final lookup in the config file.
+	if ( ! lval && ctx.also_in_config) {
+		lval = param_unexpanded(name);
+	}
+
 	return lval;
 }
 
@@ -3358,7 +3364,7 @@ static const char * evaluate_macro_func (
 				default:
 					// ixn is 0 if no dir.
 					if (ixn > 0) {
-						PRAGMA_REMIND("handle multiple d's")
+						//PRAGMA_REMIND("handle multiple d's")
 						char ch = buf[ixn-1]; buf[ixn-1] = 0; // truncate filename saving the old character
 						tvalue = condor_basename(buf); // tvalue now points to the start of the first directory
 						buf[ixn-1] = ch; // put back the dir/filename separator

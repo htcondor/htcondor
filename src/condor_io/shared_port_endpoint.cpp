@@ -1132,7 +1132,8 @@ SharedPortEndpoint::ReceiveSocket( ReliSock *named_sock, ReliSock *return_remote
 bool
 SharedPortEndpoint::serialize(MyString &inherit_buf,int &inherit_fd)
 {
-	inherit_buf.formatstr_cat("%s*",m_full_name.Value());
+	inherit_buf.serialize_string(m_full_name.c_str());
+	inherit_buf.serialize_sep("*");
 #ifdef WIN32
 	/*
 	Serializing requires acquiring the handles of the respective pipes and seeding them into
@@ -1150,6 +1151,7 @@ SharedPortEndpoint::serialize(MyString &inherit_buf,int &inherit_fd)
 		return false;
 	}
 	inherit_buf.serialize_int((LONG_PTR)inheritable_to_child);
+	inherit_buf.serialize_sep("*");
 #else
 	inherit_fd = m_listener_sock.get_file_desc();
 	ASSERT( inherit_fd != -1 );
@@ -1166,27 +1168,24 @@ SharedPortEndpoint::serialize(MyString &inherit_buf,int &inherit_fd)
 const char *
 SharedPortEndpoint::deserialize(const char *inherit_buf)
 {
-	const char *ptr;
-	ptr = strchr(inherit_buf,'*');
-	ASSERT( ptr );
-	m_full_name.formatstr("%.*s",(int)(ptr-inherit_buf),inherit_buf);
-	inherit_buf = ptr+1;
+	YourStringDeserializer in(inherit_buf);
+	if ( ! in.deserialize_string(m_full_name, "*") || ! in.deserialize_sep("*") ) {
+		EXCEPT("Failed to parse serialized shared-port information at offset %d: '%s'", (int)in.offset(), inherit_buf);
+	}
 
-	m_local_id = condor_basename( m_full_name.Value() );
-	char *socket_dir = condor_dirname( m_full_name.Value() );
-	m_socket_dir = socket_dir;
-	free( socket_dir );
+	m_local_id = condor_basename(m_full_name.c_str());
+	auto_free_ptr socket_dir(condor_dirname(m_full_name.c_str()));
+	m_socket_dir = socket_dir.ptr();
 #ifdef WIN32
 	/*
 	Deserializing requires getting the handles out of the buffer and getting the pid pipe name
 	stored.  Registering the pipe is handled by StartListener().
 	*/
-	YourStringDeserializer in(inherit_buf);
 	in.deserialize_int((LONG_PTR*)&pipe_end);
-
-	//m_pipe_out = daemonCore->Inherit_Pipe_Handle(out_pipe, false, true, true, 4096);
+	in.deserialize_sep("*"); // note: terminator is missing from HTCondor prior to 8.5.7 so it is optional here...
+	inherit_buf = in.next_pos();
 #else
-	inherit_buf = m_listener_sock.serialize(inherit_buf);
+	inherit_buf = m_listener_sock.serialize(in.next_pos());
 #endif
 	m_listening = true;
 

@@ -21,42 +21,27 @@
 #include "condor_config.h"
 #include "condor_debug.h"
 #include "condor_string.h"
-//#include "spooled_job_files.h" // for gen_ckpt_name
 #include "basename.h"
 #include "condor_getcwd.h"
 #include "condor_classad.h"
 #include "condor_attributes.h"
 #include "condor_adtypes.h"
-//#include "domain_tools.h"
-//#include "sig_install.h"
 #include "daemon.h"
 
 #include "string_list.h"
-//#include "which.h"
-//#include "sig_name.h"
-//#include "print_wrapped_text.h"
 #include "my_username.h" // for my_domainname
-//#include "globus_utils.h" // for 
 #include "directory.h"
 #include "filename_tools.h"
 #include "fs_util.h"
 #include "ad_printmask.h"
-//#include "dc_transferd.h"  // for StdoutRemapName
-//#include "condor_crontab.h"
-//#include "file_transfer.h"
-//#include "condor_holdcodes.h"
-//#include "condor_url.h"
 #include "condor_version.h"
-//#include "NegotiationUtils.h"
 #include "submit_utils.h" // for queue iteration stuff
 #include "Regex.h"
 #include "xform_utils.h"
 
 #include "list.h"
-//#include "condor_md.h"
 #include "my_popen.h"
 
-//#include <algorithm>
 #include <string>
 #include <set>
 
@@ -547,7 +532,7 @@ void XFormHash::warn_unused(FILE* out, const char *app)
 		MACRO_META * pmeta = hash_iter_meta(it);
 		if (pmeta && !pmeta->use_count && !pmeta->ref_count) {
 			const char *key = hash_iter_key(it);
-                        if (*key && *key=='+') {continue;}
+			if (*key && *key=='+') {continue;}
 			if (pmeta->source_id == LiveMacro.id) {
 				push_warning(out, "the TRANSFORM variable '%s' was unused by %s. Is it a typo?\n", key, app);
 			} else {
@@ -608,7 +593,7 @@ static const char * is_non_trivial_iterate(const char * is_transform)
 
 MacroStreamXFormSource::MacroStreamXFormSource(const char *nam)
 	: MacroStreamCharSource()
-	, requirements(NULL), checkpoint(NULL)
+	, requirements(), checkpoint(NULL)
 	, fp_iter(NULL), fp_lineno(0)
 	, step(0), row(0), proc(0)
 	, close_fp_when_done(false)
@@ -624,8 +609,6 @@ MacroStreamXFormSource::~MacroStreamXFormSource()
 {
 	// we don't free the checkpoint, since it points into the LocalMacroSet allocation pool...
 	checkpoint = NULL;
-	delete requirements;
-	requirements = NULL;
 }
 
 
@@ -646,6 +629,10 @@ int MacroStreamXFormSource::open(StringList & lines, const MACRO_SOURCE & FileSo
 				if (p) { iterate_args.set(strdup(p)); iterate_init_state = 2; }
 			}
 			lines.deleteCurrent();
+		} else {
+			// strip blank lines and comments
+			//while (*p && isspace(*line)) ++p;
+			//if ( ! *p || *p == '#') { lines.deleteCurrent(); }
 		}
 	}
 
@@ -704,18 +691,48 @@ int MacroStreamXFormSource::load(FILE* fp, MACRO_SOURCE & FileSource)
 	return open(lines, FileSource);
 }
 
+const char * MacroStreamXFormSource::getFormattedText(std::string & buf, const char *prefix /*=""*/, bool include_comments /*=false*/)
+{
+	buf = "";
+	if ( ! name.empty()) {
+		buf += prefix;
+		buf += "NAME ";
+		buf += name;
+	}
+	if ( ! requirements.empty()) {
+		if ( ! buf.empty()) buf += "\n";
+		buf += prefix;
+		buf += "REQUIREMENTS ";
+		buf += requirements.c_str();
+	}
+	if (file_string) {
+		StringTokenIterator lines(file_string.ptr(), 128, "\n");
+		for (const char * line = lines.first(); line; line = lines.next()) {
+			if ( ! include_comments) {
+				while (*line && isspace(*line)) ++line;
+				if (*line == 0 || *line == '#') continue;
+			}
+			if ( ! buf.empty()) buf += "\n";
+			buf += prefix;
+			buf += line;
+		}
+	}
+	return buf.c_str();
+}
+
 classad::ExprTree* MacroStreamXFormSource::setRequirements(const char * require)
 {
-	delete requirements; requirements = NULL;
-	ParseClassAdRvalExpr(require, requirements);
-	return requirements;
+	requirements.set(require ? strdup(require) : NULL);
+	return requirements.Expr();
 }
 
 bool MacroStreamXFormSource::matches(ClassAd * candidate_ad)
 {
-	if ( ! requirements) return true;
+	classad::ExprTree* expr = requirements.Expr();
+	if ( ! expr) return true;
+
 	classad::Value val;
-	if (candidate_ad->EvaluateExpr(requirements, val)) {
+	if (candidate_ad->EvaluateExpr(expr, val)) {
 		bool matches = true;
 		if (val.IsBooleanValueEquiv(matches)) return matches;
 		return false;
@@ -981,7 +998,17 @@ void MacroStreamXFormSource::reset(XFormHash &set)
 static int DoDeleteAttr(ClassAd * ad, const std::string & attr, unsigned int flags)
 {
 	if (flags&2) fprintf(stdout, "DELETE %s\n", attr.c_str());
-	return ad->Delete(attr) ? 1 : 0;
+	if (ad->Delete(attr)) {
+		// Mark the attribute we just removed as dirty, since the schedd relies
+		// upon the ClassAd dirty attribute list to see what changed, and it must
+		// know about removed attributes.
+		// Supposedly classad::ClassAd library is supposed to add removed attrs to the
+		// dirty list all on its own, but this is currently not the case.
+		ad->MarkAttributeDirty(attr);
+		return 1;
+	} else {
+		return 0;
+	}
 }
 
 // rename an attribute of the given classad.
@@ -1398,7 +1425,7 @@ static int ParseRulesCallback(void* pv, MACRO_SOURCE& source, MACRO_SET& /*mset*
 
 	case kw_TRANSFORM:
 #if 1
-		PRAGMA_REMIND("tj move this out of the parser callback.")
+		//PRAGMA_REMIND("tj move this out of the parser callback.")
 #else
 		if (pargs->xforms->has_pending_fp()) {
 			std::string errmsg;
@@ -1501,6 +1528,7 @@ int TransformClassAd (
 	MACRO_EVAL_CONTEXT_EX & ctx = xfm.context();
 	ctx.ad = input_ad;
 	ctx.adname = "MY.";
+	ctx.also_in_config = true;
 
 	_parse_rules_args args = { xfm, mset, input_ad, flags };
 
@@ -1722,17 +1750,23 @@ int XFormLoadFromJobRouterRoute (
 	classad::References evalset_myrefs;
 	classad::References string_assignments;
 
+	// Initialize name with name for this xform; note it may be overwritten below
+	// if ClassAd includes a Name attribute.
+	if ( xform.getName() ) {
+		name = xform.getName();
+	}
+
 	for (ClassAd::iterator it = route_ad.begin(); it != route_ad.end(); ++it) {
 		std::string rhs;
-		if (starts_with(it->first, "copy_")) {
+		if (starts_with_ignore_case(it->first, "copy_")) {
 			std::string attr = it->first.substr(5);
 			if (route_ad.EvaluateAttrString(it->first, rhs)) {
 				copy_cmds[attr] = rhs;
 			}
-		} else if (starts_with(it->first, "delete_")) {
+		} else if (starts_with_ignore_case(it->first, "delete_")) {
 			std::string attr = it->first.substr(7);
 			delete_cmds[attr] = "";
-		} else if (starts_with(it->first, "set_")) {
+		} else if (starts_with_ignore_case(it->first, "set_")) {
 			std::string attr = it->first.substr(4);
 			int atrid = is_interesting_route_attr(attr);
 			if ((atrid == atr_INPUTRSL) && (options & XForm_ConvertJobRouter_Remove_InputRSL)) {
@@ -1747,7 +1781,7 @@ int XFormLoadFromJobRouterRoute (
 					set_cmds[attr] = rhs;
 				}
 			}
-		} else if (starts_with(it->first, "eval_set_")) {
+		} else if (starts_with_ignore_case(it->first, "eval_set_")) {
 			std::string attr = it->first.substr(9);
 			int atrid = is_interesting_route_attr(attr);
 			ExprTree * tree = route_ad.Lookup(it->first);
@@ -1821,7 +1855,9 @@ int XFormLoadFromJobRouterRoute (
 				case atr_REQUIREMENTS: {
 					requirements.clear();
 					ExprTree * tree = route_ad.Lookup(it->first);
-					if (tree) { unparser.Unparse(requirements, tree); }
+					if (tree) {
+						unparser.Unparse(requirements, tree);
+					}
 				} break;
 
 				default: {
@@ -1871,7 +1907,10 @@ int XFormLoadFromJobRouterRoute (
 		statements.append(buf.c_str());
 	}
 	if (target_universe) { formatstr(buf, "UNIVERSE %d", target_universe); statements.append(buf.c_str()); }
-	if (requirements.empty()) { formatstr(buf, "REQUIREMENTS %s", requirements.c_str()); statements.append(buf.c_str()); }
+	if (!requirements.empty()) {
+		formatstr(buf, "REQUIREMENTS %s", requirements.c_str());
+		statements.append(buf.c_str()); 
+	}
 
 	statements.append("");
 	for (STRING_MAP::iterator it = assignments.begin(); it != assignments.end(); ++it) {

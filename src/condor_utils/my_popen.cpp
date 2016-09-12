@@ -570,6 +570,8 @@ my_popenv_impl( const char *const args[],
 			/* NOOP */
 		}
 
+		dprintf(D_ALWAYS, "my_popenv: Failed to exec in child, errno=%d (%s)\n",
+				exit_code, strerror(exit_code));
 		errno = exit_code;
 		return NULL;
 	}

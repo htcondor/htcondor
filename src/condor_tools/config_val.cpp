@@ -447,8 +447,9 @@ main( int argc, const char* argv[] )
 	char	*value = NULL, *tmp = NULL;
 	const char * pcolon;
 	const char *host = NULL;
+	const char *name_arg = NULL; // raw argument from -name (before get_daemon_name lookup)
 	const char *addr = NULL;
-	const char *name = NULL;
+	const char *name = NULL;     // cooked -name argument after get_daemon_name lookup
 	const char *pool = NULL;
 	const char *local_name = NULL;
 	const char *subsys = "TOOL";
@@ -501,7 +502,6 @@ main( int argc, const char* argv[] )
 	myDistro->Init( argc, argv );
 
 	for (int i = 1; i < argc; ++i) {
-#if 1
 		// arguments that don't begin with "-" are params to be looked up.
 		if (*argv[i] != '-') {
 			// allow "use category:value" syntax to query meta-params
@@ -529,12 +529,7 @@ main( int argc, const char* argv[] )
 		if (is_arg_prefix(arg, "host", 1)) { // as of 8/27/2013 -host is a secret option used by condor_init
 			host = use_next_arg("host", argv, i);
 		} else if (is_arg_prefix(arg, "name", 1)) {
-			const char * tmp = use_next_arg("name", argv, i);
-			name = get_daemon_name(tmp);
-			if ( ! name) {
-				fprintf(stderr, "%s: unknown host %s\n", MyName, get_host_part(tmp));
-				my_exit(1);
-			}
+			name_arg = use_next_arg("name", argv, i);
 		} else if (is_arg_prefix(arg, "address", 1)) {
 			addr = use_next_arg("address", argv, i);
 			if ( ! is_valid_sinful(addr)) {
@@ -700,107 +695,6 @@ main( int argc, const char* argv[] )
 			fprintf(stderr, "%s is not valid argument\n", argv[i]);
 			usage();
 		}
-#else
-		if( match_prefix( argv[i], "-host" ) ) {
-			if( argv[i + 1] ) {
-				host = strdup( argv[++i] );
-			} else {
-				usage();
-			}
-		} else if( match_prefix( argv[i], "-name" ) ) {
-			if( argv[i + 1] ) {
-				i++;
-				name = get_daemon_name( argv[i] );
-				if( ! name ) {
-					fprintf( stderr, "%s: unknown host %s\n", MyName, 
-							 get_host_part(argv[i]) );
-					my_exit( 1 );
-				}
-			} else {
-				usage();
-			}
-		} else if( match_prefix( argv[i], "-address" ) ) {
-			if( argv[i + 1] ) {
-				i++;
-				if( is_valid_sinful(argv[i]) ) {
-					addr = strdup( argv[i] );
-				} else {
-					fprintf( stderr, "%s: invalid address %s\n"
-						 "Address must be of the form \"<111.222.333.444:555>\n"
-						 "   where 111.222.333.444 is the ip address and 555 is the port\n"
-						 "   you wish to connect to (the punctuation is important).\n", 
-						 MyName, argv[i] );
-					my_exit( 1 );
-				}
-			} else {
-				usage();
-			}
-		} else if( match_prefix( argv[i], "-pool" ) ) {
-			if( argv[i + 1] ) {
-				i++;
-				pool = argv[i];
-			} else {
-				usage();
-			}
-		} else if( match_prefix( argv[i], "-local-name" ) ) {
-			if( argv[i + 1] ) {
-				i++;
-				local_name = argv[i];
-			} else {
-				usage();
-			}
-		} else if( match_prefix( argv[i], "-owner" ) ) {
-			pt = CONDOR_OWNER;
-		} else if( match_prefix( argv[i], "-tilde" ) ) {
-			pt = CONDOR_TILDE;
-		} else if( match_prefix( argv[i], "-master" ) ) {
-			dt = DT_MASTER;
-			ask_a_daemon = true;
-		} else if( match_prefix( argv[i], "-schedd" ) ) {
-			dt = DT_SCHEDD;
-		} else if( match_prefix( argv[i], "-startd" ) ) {
-			dt = DT_STARTD;
-		} else if( match_prefix( argv[i], "-collector" ) ) {
-			dt = DT_COLLECTOR;
-		} else if( match_prefix( argv[i], "-negotiator" ) ) {
-			dt = DT_NEGOTIATOR;
-		} else if( match_prefix( argv[i], "-set" ) ) {
-			mt = CONDOR_SET;
-		} else if( match_prefix( argv[i], "-unset" ) ) {
-			mt = CONDOR_UNSET;
-		} else if( match_prefix( argv[i], "-rset" ) ) {
-			mt = CONDOR_RUNTIME_SET;
-		} else if( match_prefix( argv[i], "-runset" ) ) {
-			mt = CONDOR_RUNTIME_UNSET;
-		} else if( match_prefix( argv[i], "-mixedcase" ) ) {
-			mixedcase = true;
-		} else if( match_prefix( argv[i], "-config" ) ) {
-			print_config_sources = true;
-		} else if( match_prefix( argv[i], "-verbose" ) ) {
-			verbose = true;
-		} else if( match_prefix( argv[i], "-dump" ) ) {
-			dump_all_variables = true;
-		} else if( match_prefix( argv[i], "-expand" ) ) {
-			expand_dumped_variables = true;
-		} else if( match_prefix( argv[i], "-evaluate" ) ) {
-			evaluate_daemon_vars = true;
-		} else if( match_prefix( argv[i], "-writeconfig" ) ) {
-			write_config = true;
-		} else if( match_prefix( argv[i], "-debug" ) ) {
-				// dprintf to console
-			debug = true;
-		} else if( match_prefix( argv[i], "-" ) ) {
-			usage();
-		} else {
-			MyString str;
-			str = argv[i];
-			// remove any case sensitivity, this is done mostly so output
-			// later can look nice. The param() subsystem inherently assumes
-			// case insensitivity, so this is perfectly fine to do here.
-			str.upper_case();
-			params.append( str.Value() ) ;
-		}
-#endif
 	}
 
 	// Set subsystem to tool, and subsystem name to either "TOOL" or what was 
@@ -895,6 +789,15 @@ main( int argc, const char* argv[] )
 		}
 	}
 	
+	// now that we have loaded config, we can safely get do daemon name lookup
+	if (name_arg) {
+		name = get_daemon_name(name_arg);
+		if ( ! name || ! name[0]) {
+			fprintf(stderr, "%s: unknown host %s\n", MyName, get_host_part(name_arg));
+			my_exit(1);
+		}
+	}
+
 	if( pool && ! name ) {
 		fprintf( stderr, "Error: you must specify -name with -pool\n" );
 		my_exit( 1 );

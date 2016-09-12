@@ -302,6 +302,7 @@ goto finis
 devenv CONDOR.sln /Build RelWithDebInfo /project BLD_TESTS
 move src\condor_tests\RelWithDebInfo\*.exe src\condor_tests
 move src\condor_tests\RelWithDebInfo\*.pdb src\condor_tests
+::for /F %%I in ('findstr /S /M ADD_TEST CTestTestfile.cmake') do move %%~pIRelWithDebInfo\*.exe src\condor_tests
 move src\classad\RelWithDebInfo\*.exe src\condor_tests
 move src\classad\RelWithDebInfo\*.pdb src\condor_tests
 move src\classad\tests\RelWithDebInfo\*.exe src\condor_tests

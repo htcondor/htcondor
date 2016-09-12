@@ -2034,7 +2034,7 @@ processCommandLineArguments (int argc, char *argv[])
 	// now we can work out some of the implications
 
 	// default batch mode to on if appropriate
-	if ( ! dash_batch_specified && ! dash_long && ! show_held) {
+	if ( ! dash_batch_specified && ! dash_long && ! dash_autocluster && ! show_held) {
 		int mode = qdo_mode & QDO_BaseMask;
 		if (mode == QDO_NotSet ||
 			mode == QDO_JobNormal ||
@@ -2042,6 +2042,16 @@ processCommandLineArguments (int argc, char *argv[])
 			mode == QDO_DAG) { // DAG and batch go naturally together
 			dash_batch = dash_batch_is_default;
 		}
+	}
+
+	// for now, can't use both -batch and one of the aggregation modes.
+	if (dash_autocluster && dash_batch) {
+		if (dash_batch_specified) {
+			fprintf( stderr, "Error: -batch conflicts with %s\n",
+				(dash_autocluster == CondorQ::fetch_GroupBy) ? "-group-by" : "-autocluster" );
+			exit( 1 );
+		}
+		dash_batch = false;
 	}
 
 	if (dash_dry_run) {
@@ -3320,6 +3330,7 @@ static void initOutputMask(AttrListPrintMask & prmask, int qdo_mode, bool wide_m
 	if (set_print_mask_from_stream(prmask, fmt, false, app.attrs) < 0) {
 		fprintf(stderr, "Internal error: default %s print-format is invalid !\n", tag);
 	}
+
 	customHeadFoot = (printmask_headerfooter_t)(customHeadFoot & ~HF_CUSTOM);
 	if (customHeadFoot&HF_NOSUMMARY) summarize = false;
 }
@@ -4130,7 +4141,7 @@ const char * const jobProgress_PrintFormat = "SELECT\n"
 	ATTR_JOB_UNIVERSE        " AS '  RUN ' WIDTH 6 PRINTF %6d OR _\n"  // Active // 4
 	ATTR_DAG_NODES_QUEUED    " AS '  IDLE' WIDTH 6 PRINTF %6d OR _\n"  // Idle   // 5
 	ATTR_DAG_NODES_DONE      " AS '  HOLD' WIDTH 6 PRINTF %6d OR _\n"  // Held   // 6
-	ATTR_DAG_NODES_TOTAL     " AS ' TOTAL' WIDTH 6 PRINTF %6d OR _\n"  // Total  // 7
+	ATTR_DAG_NODES_TOTAL "?:" ATTR_TOTAL_SUBMIT_PROCS " AS ' TOTAL' WIDTH 6 PRINTF %6d OR _\n"  // Total  // 7
 	ATTR_JOB_STATUS          " AS JOB_IDS WIDTH 0 PRINTAS JOB_STATUS\n"     // 8
 //	ATTR_JOB_REMOTE_USER_CPU " AS '    RUN_TIME'  WIDTH 12   PRINTAS CPU_TIME\n"
 //	ATTR_IMAGE_SIZE          " AS SIZE        WIDTH 4    PRINTAS MEMORY_USAGE\n"
@@ -4143,13 +4154,14 @@ public:
 	int count;   // number of rows counted
 	int jobs;    // number of job rows (i.e. non-dag rows)
 	int dags;    // number of dag rows
-	int nodes_total; // accumulation of ATTR_DAG_NODES_TOTAL for dag jobs, and of ProcIds for non-dag jobs
+	int nodes_total; // accumulation of ATTR_DAG_NODES_TOTAL for dag jobs, and of ATTR_TOTAL_SUBMIT_PROCS for non-dag jobs
 	int nodes_done;  // accumulation of ATTR_DAG_NODES_DONE for dag jobs, and a guess of completed procs for non-dag jobs
+	int unknown_total; // number of clusters that have neither ATTR_DAG_NODES_TOTAL nor ATTR_TOTAL_SUBMIT_PROCS
 	int cluster;
 	int min_proc;
 	int max_proc;
 	int states[JOB_STATUS_MAX+1];
-	cluster_progress() : count(0), jobs(0), dags(0), nodes_total(0), nodes_done(0),
+	cluster_progress() : count(0), jobs(0), dags(0), nodes_total(0), nodes_done(0), unknown_total(0),
 		cluster(0), min_proc(INT_MAX), max_proc(0) {
 		memset(states, 0, sizeof(states));
 	}
@@ -4162,13 +4174,16 @@ public:
 	child_progress() : min_jobid(0), max_jobid(0) {}
 };
 
+// roll up all of the procs in a cluster, calculating totals for the job states and how many jobs are done.
+//
 static void reduce_procs(cluster_progress & prog, JobRowOfData & jr)
 {
 	// these refer to column indexes in the jobProgress_PrintFormat declaration
 	const int ixJobStatusCol = 3;
 	const int ixUniverseCol  = 4;
 	const int ixDagNodesDone = 6;
-	const int ixDagNodesTotal = 7;
+	const int ixDagNodesTotal = 7; // ATTR_DAG_NODES_TOTAL ?: ATTR_TOTAL_SUBMIT_PROCS
+	int total_submit_procs = 0;
 
 	prog.count += 1;
 
@@ -4186,6 +4201,11 @@ static void reduce_procs(cluster_progress & prog, JobRowOfData & jr)
 	} else {
 		prog.jobs += 1;
 
+		int num_procs = 0;
+		// as of 8.5.7 the schedd will inject ATTR_TOTAL_SUBMIT_PROCS into the cluster ad
+		// and we will have fetched it in the ixDagNodesTotal field.
+		// We don't add it to the total unless this cluster is NOT a node of a dag.
+		if (jr.getNumber(ixDagNodesTotal, num_procs)) { total_submit_procs = num_procs; }
 		jr.getNumber(ixJobStatusCol, status);
 		if (status < 0 || status > JOB_STATUS_MAX) status = 0;
 		prog.states[status] += 1;
@@ -4211,16 +4231,23 @@ static void reduce_procs(cluster_progress & prog, JobRowOfData & jr)
 		jrod2 = jrod2->next_proc;
 	}
 
-	// for non-dagman jobs, we can extrapolate the total number of jobs and the number of 
-	// number of completed jobs by looking at the max procid.
-	// by counting procids that have left the queue.
+	// for non-dagman jobs, we can use the (new for 8.5.7 TotalSubmitProcs attribute) or
+	// we can extrapolate the total number of jobs looking at the max procid.
+	// We can then assume that completed jobs are jobs that have left the queue.
 	if ( ! (jr.flags & (JROD_SCHEDUNIV | JROD_ISDAGNODE))) {
 		const bool guess_at_jobs_done_per_cluster = (dash_batch & 0x10);
-		if (guess_at_jobs_done_per_cluster) {
-			int total = prog.max_proc+1;
+		int total = 0;
+		if (total_submit_procs) {
+			total = total_submit_procs;
+		} else if (guess_at_jobs_done_per_cluster) {
+			total = prog.max_proc+1;
+		}
+		if (total) {
 			int done = total - prog.jobs;
 			prog.nodes_total += total;
 			prog.nodes_done += done;
+		} else {
+			prog.unknown_total += 1;
 		}
 	}
 }
@@ -4322,25 +4349,17 @@ reduce_results(ROD_MAP_BY_ID & results) {
 		if (jr.flags & (JROD_FOLDED | JROD_SKIP | JROD_COOKED))
 			continue;
 
-#if 1
 		//{ union _jobid jidt; jidt.id = jr.id; fprintf(stderr, "reducing %d.%d\n", jidt.cluster, jidt.proc); }
 		child_progress prog;
 		int depth = 0;
 		reduce_children(prog, &jr, depth);
-#else
-		child_progress prog;
-		reduce_procs(prog, jr);
-		if ( ! (jr.flags & JROD_SCHEDUNIV)) { prog.min_cluster = prog.max_cluster = prog.cluster; }
-		// also fold up dag child nodes
-		if (jr.children) { reduce_children(prog, jr.children); }
-#endif
 		// now write baked results into this row and mark it as cooked
 		jr.flags |= JROD_COOKED;
 
 		// rewrite the values in the counter columns with the values
 		// we got by summing all of the peers and children
-		int num_done    = prog.nodes_done;
-		int num_total   = prog.nodes_total;
+		int num_done    = prog.unknown_total ? 0 : prog.nodes_done;
+		int num_total   = prog.unknown_total ? 0 : prog.nodes_total;
 		//int num_jobs    = prog.jobs;
 		int num_idle    = prog.states[IDLE] + prog.states[SUSPENDED];
 		int num_active  = prog.states[RUNNING] + prog.states[TRANSFERRING_OUTPUT];

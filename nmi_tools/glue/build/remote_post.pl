@@ -27,6 +27,8 @@
 # autoflush our STDOUT
 $| = 1;
 
+my $boos = 1; # build out of source
+
 use strict;
 use warnings;
 use Cwd;
@@ -34,10 +36,12 @@ use File::Basename;
 use File::Copy;
 
 my $BaseDir = getcwd();
-my $SrcDir = "$BaseDir/src";
+my $BldDir = "$BaseDir/src";  # directory for build products
+my $SrcDir = $BldDir;         # directory of sources (git clone/unpacked source tarball)
+if ($boos) { $SrcDir =~ s/userdir/sources/; }
 my $pub_dir = "$BaseDir/public";
-my $pub_logs = "$pub_dir/logs";
-my $pub_testbin = "$pub_dir/testbin";
+#my $pub_logs = "$pub_dir/logs";
+#my $pub_testbin = "$pub_dir/testbin";
 
 if( defined $ENV{_NMI_STEP_FAILED} ) { 
     my $exit_status = 1;
@@ -104,15 +108,15 @@ if( $ENV{NMI_PLATFORM} =~ /_win/i ) {
 			my $zips = ""; if ( <$BaseDir/*.zip> ) { $zips = '*.zip'; }
 			my $msis = ""; if ( <$BaseDir/*.msi> ) { $msis = '*.msi'; }
 			my $reldir = ""; if ( -d "$BaseDir/release_dir" ) { $reldir = "release_dir"; }
-			print "Is param_info_tables.h here: $SrcDir/condor_utils?\n";
-			if ( -f "$SrcDir/condor_utils/param_info_tables.h") {
-				print "copying $SrcDir/condor_utils/param_info_tables.h, $SrcDir/condor_tests/param_info_tables.h\n";
-				copy("$SrcDir/condor_utils/param_info_tables.h", "$SrcDir/condor_tests/param_info_tables.h");
-				print "copying $SrcDir/condor_utils/param_info.in, $SrcDir/condor_tests/param_info.in\n";
-				copy("$SrcDir/condor_utils/param_info.in", "$SrcDir/condor_tests/param_info.in");
+			print "Is param_info_tables.h here: $BldDir/condor_utils?\n";
+			if ( -f "$BldDir/condor_utils/param_info_tables.h") {
+				print "copying $BldDir/condor_utils/param_info_tables.h, $BldDir/condor_tests/param_info_tables.h\n";
+				copy("$BldDir/condor_utils/param_info_tables.h", "$BldDir/condor_tests/param_info_tables.h");
+				print "copying $SrcDir/condor_utils/param_info.in, $BldDir/condor_tests/param_info.in\n";
+				copy("$SrcDir/condor_utils/param_info.in", "$BldDir/condor_tests/param_info.in");
 			} else {
 				print "looks like no...\n";
-				system("dir $SrcDir/condor_utils");
+				system("dir $BldDir/condor_utils");
 			}
 			print "Is msconfig here: $BaseDir?\n";
 			if ( -d "$BaseDir/msconfig") {
@@ -121,12 +125,16 @@ if( $ENV{NMI_PLATFORM} =~ /_win/i ) {
 				system("dir $BaseDir");
 			}
 			if (1) {
+				if ($boos) {
+					#system("xcopy /s/e $SrcDir\\condor_tests\\* $BldDir\\condor_tests");
+					#system("xcopy /s/e $SrcDir\\condor_examples\\* $BldDir\\condor_examples");
+				}
 			} else {
 				$_ = $BaseDir;
 				s/\//\\\\/g;
 				my $winbasedir = $_;
 				$winbasedir = $winbasedir . "\\msconfig";
-				$_ = $SrcDir;
+				$_ = $BldDir;
 				s/\//\\\\/g;
 				my $winsrcdir = $_;
 				my $wintestloc = $winsrcdir . "\\condor_tests";
@@ -142,11 +150,11 @@ if( $ENV{NMI_PLATFORM} =~ /_win/i ) {
 				my $xcopy3 = "xcopy  $winutilloc2 $wintestloc /E /y";
 				print "get param_info.in into test folder:$xcopy3\n";
 				system("$xcopy3");
-				print "$SrcDir now:\n";
-				system("dir $SrcDir");
+				print "$BldDir now:\n";
+				system("dir $BldDir");
 			}
 			print "Tarring up results and tests ($zips $msis $reldir)\n";
-			open( TAR, "$bsdtar -czvf results.tar.gz -C $BaseDir $zips $msis $reldir msconfig -C $SrcDir condor_tests condor_examples |" ) || 
+			open( TAR, "$bsdtar -czvf results.tar.gz -C $BaseDir $zips $msis $reldir msconfig -C $BldDir condor_tests condor_examples |" ) || 
 				die "Can't open tar as a pipe: $!\n";
 			while( <TAR> ) { 
 				print;
@@ -178,14 +186,18 @@ else {
 
 
 # copy all the bits in which are required to run batch_test (omg what a cf) 
-system("cp -r $SrcDir/condor_tests $pub_dir");
-system("cp -r $SrcDir/condor_examples $pub_dir");
+if ($boos) {
+#	system("cp -r $SrcDir/condor_tests $pub_dir");
+#	system("cp -r $SrcDir/condor_examples $pub_dir");
+}
+system("cp -r $BldDir/condor_tests $pub_dir");
+system("cp -r $BldDir/condor_examples $pub_dir");
 # copy src/condor_utils/param_info_tables.h to condor_tests for parsing in param completeness test
 # ticket #3877 for param system completeness test.
 # We take the latest of this file, parse with a c program which
 # drops the current into an easy format for testing for completeness
 # in our framework.
-system("cp  $SrcDir/condor_utils/param_info_tables.h $pub_dir/condor_tests");
+system("cp  $BldDir/condor_utils/param_info_tables.h $pub_dir/condor_tests");
 system("cp  $SrcDir/condor_utils/param_info.in $pub_dir/condor_tests");
 
 ######################################################################
