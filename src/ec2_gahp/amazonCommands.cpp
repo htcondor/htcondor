@@ -676,16 +676,16 @@ bool AmazonRequest::createV4Signature(	const std::string & payload,
 	if( hmac == NULL ) { return false; }
 
 	hmac = HMAC( EVP_sha256(), messageDigest2, md2Length,
-		(unsigned char *)s.c_str(), s.length(), messageDigest, & mdLength );
+		(const unsigned char *)s.c_str(), s.length(), messageDigest, & mdLength );
 	if( hmac == NULL ) { return false; }
 
 	const char c[] = "aws4_request";
 	hmac = HMAC( EVP_sha256(), messageDigest, mdLength,
-		(unsigned char *)c, sizeof(c) - 1, messageDigest2, & md2Length );
+		(const unsigned char *)c, sizeof(c) - 1, messageDigest2, & md2Length );
 	if( hmac == NULL ) { return false; }
 
 	hmac = HMAC( EVP_sha256(), messageDigest2, md2Length,
-		(unsigned char *)stringToSign.c_str(), stringToSign.length(),
+		(const unsigned char *)stringToSign.c_str(), stringToSign.length(),
 		messageDigest, & mdLength );
 	if( hmac == NULL ) { return false; }
 
