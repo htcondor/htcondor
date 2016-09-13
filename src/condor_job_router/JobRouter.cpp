@@ -1808,7 +1808,11 @@ JobRouter::CheckSubmittedJobStatus(RoutedJob *job) {
 	if(job->state != RoutedJob::SUBMITTED) return;
 
 #if HAVE_JOB_HOOKS
-	if (NULL != m_hook_mgr)
+	// Until we see the job in the job queue mirror, don't invoke the hook.
+	// There's nothing new, and our copy of the job ad doesn't have the
+	// job id, needed to push any attributes returned by the hook to the
+	// schedd.
+	if (NULL != m_hook_mgr && job->SawDestJob())
 	{
 		int rval = m_hook_mgr->hookUpdateJobInfo(job);
 		switch (rval)
