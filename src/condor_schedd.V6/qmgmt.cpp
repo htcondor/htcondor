@@ -2399,24 +2399,75 @@ int DestroyCluster(int cluster_id, const char* reason)
 }
 
 int
-SetAttributeByConstraint(const char *constraint, const char *attr_name,
+SetAttributeByConstraint(const char *constraint_str, const char *attr_name,
 						 const char *attr_value,
 						 SetAttributeFlags_t flags)
 {
 	ClassAd	*ad;
-	int cluster_num, proc_num;
-	int found_one = 0, had_error = 0;
+	int match_count = 0;
+	int had_error = 0;
 	JobQueueKey key;
 
+	if ( Q_SOCK && !(Q_SOCK->isAuthenticated()) ) {
+		return -1;
+	}
+
+	// if the only-my-jobs knob is off, strip the onlymyjobs flag and
+	// just let the transaction fail if they try and change something that they shouldn't
+	if ( ! param_boolean("CONDOR_Q_ONLY_MY_JOBS", true)) {
+		flags &= ~SetAttribute_OnlyMyJobs;
+	}
+
+	// setup an owner_expr expression if the OnlyMyJobs flag is set.
+	// and fixup and replace the constraint_str pointer if we have 
+	// both an input constraint and OnlyMyJobs is set.
+	YourString owner;
+	MyString owner_expr;
+	if (flags & SetAttribute_OnlyMyJobs) {
+		owner = Q_SOCK->getOwner();
+		if (owner == "unauthenticated") {
+			// no job will be owned by "unauthenticated" so just quit now.
+			return -1;
+		}
+		bool is_super = isQueueSuperUser(owner.Value());
+		dprintf(D_COMMAND | D_VERBOSE, "SetAttributeByConstraint w/ OnlyMyJobs owner = \"%s\" (isQueueSuperUser = %d)\n", owner.Value(), is_super);
+		if (is_super) {
+			// for queue superusers, disable the OnlyMyJobs flag - they get to act on all jobs.
+			flags &= ~SetAttribute_OnlyMyJobs;
+		} else {
+			owner_expr.formatstr("(Owner == \"%s\")", owner.Value());
+			if (constraint_str) {
+				owner_expr += " && ";
+				owner_expr += constraint_str;
+			}
+			constraint_str = owner_expr.c_str();
+		}
+		flags &= ~SetAttribute_OnlyMyJobs; // don't pass this flag to the inner SetAttribute call
+	}
+
+	// parse the constraint into an expression, ConstraintHolder will free it in it's destructor
+	ConstraintHolder constraint;
+	if (constraint_str ) {
+		ExprTree * tree;
+		if (0 != ParseClassAdRvalExpr(constraint_str, tree)) {
+			dprintf( D_ALWAYS, "can't parse constraint: %s\n", constraint_str );
+			return -1;
+		}
+		constraint.set(tree); // so tree will get freed if RemoveExplicitTargetRefs copies it.
+		constraint.set(compat_classad::RemoveExplicitTargetRefs(tree));
+	}
+
+	// loop through the job queue, setting attribute on jobs that match
 	JobQueue->StartIterateAllClassAds();
 	while(JobQueue->IterateAllClassAds(ad,key)) {
-		// check for CLUSTER_ID>0 and proc_id >= 0 to avoid header ad/cluster ads
-		KeyToId(key,cluster_num,proc_num);
-		if ( (cluster_num > 0) &&
-			 (proc_num > -1) &&
-			 EvalBool(ad, constraint)) {
-			found_one = 1;
-			if( SetAttribute(cluster_num,proc_num,attr_name,attr_value,flags) < 0 ) {
+		JobQueueJob * job = static_cast<JobQueueJob*>(ad);
+		// ignore header and cluster ads.
+		if (job->IsHeader() || job->IsCluster())
+			continue;
+
+		if (EvalBool(ad, constraint.Expr())) {
+			match_count += 1;
+			if (SetAttribute(key.cluster, key.proc, attr_name, attr_value, flags) < 0) {
 				had_error = 1;
 			}
 			FreeJobAd(ad);	// a no-op on the server side
@@ -2427,10 +2478,16 @@ SetAttributeByConstraint(const char *constraint, const char *attr_name,
 		// or we could set the attribute on any of the ones we did
 		// find, return error (-1).
 	// failure (-1)
-	if ( had_error || !found_one )
+	if (had_error)
 		return -1;
-	else
-		return 0;
+
+	// if this is a queryonly call, return the match count
+	if (flags & SetAttribute_QueryOnly) {
+		return match_count;
+	}
+
+	// for non-query calls treat 'no jobs matched' the same as failure.
+	return match_count ? 0 : -1;
 }
 
 // Set up an efficient lookup table for attributes that need special processing in SetAttribute
@@ -2452,6 +2509,7 @@ enum {
 	idATTR_OWNER,
 	idATTR_RANK,
 	idATTR_REQUIREMENTS,
+	idATTR_NUM_JOB_RECONNECTS,
 };
 
 enum {
@@ -2490,6 +2548,7 @@ static const ATTR_IDENT_PAIR aSpecialSetAttrs[] = {
 	FILL(ATTR_JOB_STATUS,         catJobObj),
 	FILL(ATTR_JOB_UNIVERSE,       catJobObj),
 	FILL(ATTR_NICE_USER,          0),
+	FILL(ATTR_NUM_JOB_RECONNECTS, 0),
 	FILL(ATTR_OWNER,              0),
 	FILL(ATTR_PROC_ID,            catJobId),
 	FILL(ATTR_RANK,               catTargetScope),
@@ -2499,7 +2558,7 @@ static const ATTR_IDENT_PAIR aSpecialSetAttrs[] = {
 
 // returns non-zero attribute id and optional category flags for attributes
 // that require special handling during SetAttribute.
-static int IsSepecialSetAttribute(const char *attr, int* set_cat=NULL)
+static int IsSpecialSetAttribute(const char *attr, int* set_cat=NULL)
 {
 	const ATTR_IDENT_PAIR* found = NULL;
 	found = BinaryLookup<ATTR_IDENT_PAIR>(
@@ -2522,6 +2581,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 	JOB_ID_KEY_BUF key;
 	JobQueueJob    *job = NULL;
 	MyString		new_value;
+	bool query_can_change_only = (flags & SetAttribute_QueryOnly) != 0; // flag for 'just query if we are allowed to change this'
 
 	// Only an authenticated user or the schedd itself can set an attribute.
 	if ( Q_SOCK && !(Q_SOCK->isAuthenticated()) ) {
@@ -2629,7 +2689,18 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 	}
 
 	int attr_category;
-	int attr_id = IsSepecialSetAttribute(attr_name, &attr_category);
+	int attr_id = IsSpecialSetAttribute(attr_name, &attr_category);
+
+	// A few special attributes have additional access checks
+	// but for most, we have already decided whether or not we can change this attribute
+	if (query_can_change_only) {
+		if (attr_id == idATTR_OWNER || (attr_category & catJobId) || (attr_id == idATTR_JOB_STATUS)) {
+			// we have more validation to do.
+		} else {
+			// access check is ok, but we don't actually want to make the change so return now.
+			return 0;
+		}
+	}
 
 	// check for security violations.
 	// first, make certain ATTR_OWNER can only be set to who they really are.
@@ -2727,6 +2798,10 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		}
 #endif
 
+		if (query_can_change_only) {
+			return 0;
+		}
+
 			// If we got this far, we're allowing the given value for
 			// ATTR_OWNER to be set.  However, now, we should try to
 			// insert a value for ATTR_USER, too, so that's always in
@@ -2794,7 +2869,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		//
 		//PRAGMA_REMIND("tj: move this into the cluster job object?")
 		scheduler.addCronTabClusterId( cluster_id );
-	} else if ( strcasecmp( attr_name, ATTR_NUM_JOB_RECONNECTS ) == 0 ) {
+	} else if (attr_id == idATTR_NUM_JOB_RECONNECTS) {
 		int curr_cnt = 0;
 		int new_cnt = (int)strtol( attr_value, NULL, 10 );
 		PROC_ID job_id = { cluster_id, proc_id };
@@ -2829,6 +2904,9 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 					 ATTR_JOB_STATUS, cluster_id, proc_id, new_status );
 			return -1;
 		}
+		if (query_can_change_only) {
+			return 0;
+		}
 		if ( curr_status == REMOVED && new_status == HELD &&
 			 release_status != REMOVED ) {
 			SetAttributeInt( cluster_id, proc_id, ATTR_JOB_STATUS_ON_RELEASE, REMOVED, flags );
@@ -2853,6 +2931,12 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 	}
 */
 #endif
+
+	// All of the checking and validation is done, if we are only querying whether we
+	// can change the value, then return now with success.
+	if (query_can_change_only) {
+		return 0;
+	}
 
 	// give the autocluster code a chance to invalidate (or rebuild)
 	// based on the changed attribute.
