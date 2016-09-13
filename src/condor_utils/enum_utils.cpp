@@ -51,7 +51,8 @@ const struct Translation HookTypeTranslation[] = {
 	{ "JOB_EXIT", HOOK_JOB_EXIT },
 	{ "EVICT_JOB", HOOK_EVICT_JOB },
 	{ "TRANSLATE_JOB", HOOK_TRANSLATE_JOB },
-	{ "JOB_CLEANUP", HOOK_JOB_CLEANUP }
+	{ "JOB_CLEANUP", HOOK_JOB_CLEANUP },
+	{ "JOB_FINALIZE", HOOK_JOB_FINALIZE },
 };
 
 
