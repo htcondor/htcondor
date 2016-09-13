@@ -41,14 +41,17 @@ JobRouterHookMgr::JobRouterHookMgr()
 	  m_warn_update(true),
 	  m_warn_translate(true),
 	  m_warn_exit(true),
-	  NUM_HOOKS(4),
+	  NUM_HOOKS(5),
 	  UNDEFINED("UNDEFINED"),
 	  m_hook_paths(MyStringHash)
 {
+	// JOB_EXIT is an old name for JOB_FINALIZE.
+	// Keep both for anyone still using the old name.
 	m_hook_maps[HOOK_TRANSLATE_JOB] = 1;
 	m_hook_maps[HOOK_UPDATE_JOB_INFO] = 2;
 	m_hook_maps[HOOK_JOB_EXIT] = 3;
 	m_hook_maps[HOOK_JOB_CLEANUP] = 4;
+	m_hook_maps[HOOK_JOB_FINALIZE] = 5;
 	m_default_hook_keyword = NULL;
 
 	dprintf(D_FULLDEBUG, "Instantiating a JobRouterHookMgr\n");
@@ -334,13 +337,18 @@ int
 JobRouterHookMgr::hookJobExit(RoutedJob* r_job)
 {
 	ClassAd temp_ad;
-	char* hook_job_exit = getHookPath(HOOK_JOB_EXIT, r_job->src_ad);
+	char* hook_job_exit = getHookPath(HOOK_JOB_FINALIZE, r_job->src_ad);
 
+	// JOB_EXIT is an old name for the JOB_FINALIZE hook.
+	// CRUFT Remove this check of the old name in a future release.
+	if ( NULL == hook_job_exit ) {
+		hook_job_exit = getHookPath(HOOK_JOB_EXIT, r_job->src_ad);
+	}
 	if (NULL == hook_job_exit)
 	{
 		// hook not defined
 		if (m_warn_exit) {
-			dprintf(D_FULLDEBUG, "HOOK_JOB_EXIT not configured.\n");
+			dprintf(D_FULLDEBUG, "HOOK_JOB_FINALIZE not configured.\n");
 			m_warn_exit = false;
 		}
 		return 0;
@@ -349,7 +357,7 @@ JobRouterHookMgr::hookJobExit(RoutedJob* r_job)
 	// Verify the exit hook hasn't already been spawned and that
 	// we're not waiting for it to return.
 	std::string key = r_job->dest_key;
-	if (true == JobRouterHookMgr::checkHookKnown(key.c_str(),HOOK_JOB_EXIT))
+	if (true == JobRouterHookMgr::checkHookKnown(key.c_str(),HOOK_JOB_FINALIZE))
 	{
 		dprintf(D_FULLDEBUG, "JobRouterHookMgr::hookJobExit "
 			"retried while still waiting for exit hook to return "
@@ -384,21 +392,21 @@ JobRouterHookMgr::hookJobExit(RoutedJob* r_job)
 	{
 		dprintf(D_ALWAYS|D_FAILURE,
 				"ERROR in JobRouterHookMgr::hookJobExit: "
-				"failed to spawn HOOK_JOB_EXIT (%s)\n", hook_job_exit);
+				"failed to spawn HOOK_JOB_FINALIZE (%s)\n", hook_job_exit);
 		delete exit_client;
 		return -1;
 
 	}
 	
 	// Add our info to the list of hooks currently running for this job.
-	if (false == JobRouterHookMgr::addKnownHook(key.c_str(), HOOK_JOB_EXIT))
+	if (false == JobRouterHookMgr::addKnownHook(key.c_str(), HOOK_JOB_FINALIZE))
 	{
 		dprintf(D_ALWAYS, "ERROR in JobRouterHookMgr::hookJobExit: "
-				"failed to add HOOK_JOB_EXIT to list of "
+				"failed to add HOOK_JOB_FINALIZE to list of "
 				"hooks running for job key %s\n", key.c_str());
 	}
 
-	dprintf(D_FULLDEBUG, "HOOK_JOB_EXIT (%s) invoked.\n", hook_job_exit);
+	dprintf(D_FULLDEBUG, "HOOK_JOB_FINALIZE (%s) invoked.\n", hook_job_exit);
 	return 1;
 }
 
@@ -736,7 +744,7 @@ StatusClient::hookExited(int exit_status)
 // // // // // // // // // // // // 
 
 ExitClient::ExitClient(const char* hook_path, RoutedJob* r_job)
-	: HookClient(HOOK_JOB_EXIT, hook_path, true)
+	: HookClient(HOOK_JOB_FINALIZE, hook_path, true)
 {
 	m_routed_job = r_job;
 }
@@ -745,7 +753,7 @@ ExitClient::ExitClient(const char* hook_path, RoutedJob* r_job)
 void
 ExitClient::hookExited(int exit_status) {
 	std::string key = m_routed_job->dest_key;
-	if (false == JobRouterHookMgr::removeKnownHook(key.c_str(), HOOK_JOB_EXIT))
+	if (false == JobRouterHookMgr::removeKnownHook(key.c_str(), HOOK_JOB_FINALIZE))
 	{
 		dprintf(D_ALWAYS|D_FAILURE, "ExitClient::hookExited (%s): "
 			"Failed to remove hook info for job key %s.\n",
