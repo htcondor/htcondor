@@ -664,15 +664,15 @@ bool AmazonRequest::createV4Signature(	const std::string & payload,
 
 	// Task 3: calculate the signature.
 	saKey = "AWS4" + saKey;
-	const unsigned char * hmac = HMAC( EVP_sha256(),
-		saKey.c_str(), saKey.length(), (unsigned char *)d, sizeof(d) - 1,
+	const unsigned char * hmac = HMAC( EVP_sha256(), saKey.c_str(), saKey.length(),
+		(unsigned char *)d, sizeof(d) - 1,
 		messageDigest, & mdLength );
 	if( hmac == NULL ) { return false; }
 
 	unsigned int md2Length = 0;
 	unsigned char messageDigest2[EVP_MAX_MD_SIZE];
 	hmac = HMAC( EVP_sha256(), messageDigest, mdLength,
-		(unsigned char *)r.c_str(), r.length(), messageDigest2, & md2Length );
+		(const unsigned char *)r.c_str(), r.length(), messageDigest2, & md2Length );
 	if( hmac == NULL ) { return false; }
 
 	hmac = HMAC( EVP_sha256(), messageDigest2, md2Length,
