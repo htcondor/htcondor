@@ -1788,7 +1788,7 @@ JobRouter::UpdateRoutedJobStatus(RoutedJob *job, const classad::ClassAd &update)
 	}
 
 	// Send the updates to the job queue
-	if (false == PushUpdatedAttributes(job->dest_ad))
+	if (false == PushUpdatedAttributes(job->dest_ad, true))
 	{
 		dprintf(D_ALWAYS, "JobRouter failure (%s): Failed to update "
 				"routed job status.\n", job->JobDesc().c_str());
@@ -1997,14 +1997,16 @@ JobRouter::SetJobIdle(RoutedJob *job) {
 }
 
 bool
-JobRouter::PushUpdatedAttributes(classad::ClassAd& src) {
-	if(false == push_dirty_attributes(src,m_schedd1_name,m_schedd1_pool))
+JobRouter::PushUpdatedAttributes(classad::ClassAd& ad, bool routed_job) {
+	if(false == push_dirty_attributes(ad,
+						routed_job ? m_schedd2_name : m_schedd1_name,
+						routed_job ? m_schedd2_pool : m_schedd1_pool))
 	{
 		return false;
 	}
 	else
 	{
-		src.ClearAllDirtyFlags();
+		ad.ClearAllDirtyFlags();
 	}
 	return true;
 }
