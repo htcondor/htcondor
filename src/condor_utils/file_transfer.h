@@ -295,16 +295,16 @@ class FileTransfer: public Service {
 	int GetUploadTimestamps(time_t * pStart, time_t * pEnd = NULL) {
 		if (uploadStartTime < 0)
 			return false;
-		if (pEnd) *pEnd = uploadEndTime;
-		if (pStart) *pStart = uploadStartTime;
+		if (pEnd) *pEnd = (time_t)uploadEndTime;
+		if (pStart) *pStart = (time_t)uploadStartTime;
 		return true;
 	}
 
 	bool GetDownloadTimestamps(time_t * pStart, time_t * pEnd = NULL) {
 		if (downloadStartTime < 0)
 			return false;
-		if (pEnd) *pEnd = downloadEndTime;
-		if (pStart) *pStart = downloadStartTime;
+		if (pEnd) *pEnd = (time_t)downloadEndTime;
+		if (pStart) *pStart = (time_t)downloadStartTime;
 		return true;
 	}
 
@@ -328,8 +328,8 @@ class FileTransfer: public Service {
 	int DoDownload( filesize_t *total_bytes, ReliSock *s);
 	int DoUpload( filesize_t *total_bytes, ReliSock *s);
 
-	time_t uploadStartTime, uploadEndTime;
-	time_t downloadStartTime, downloadEndTime;
+	double uploadStartTime, uploadEndTime;
+	double downloadStartTime, downloadEndTime;
 
 	void CommitFiles();
 	void ComputeFilesToSend();
