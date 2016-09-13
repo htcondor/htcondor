@@ -162,7 +162,7 @@ FileTransfer::FileTransfer()
 	last_download_time = 0;
 	ActiveTransferTid = -1;
 	TransferStart = 0;
-	uploadStartTime = uploadEndTime = downloadStartTime = downloadEndTime = (time_t)-1;
+	uploadStartTime = uploadEndTime = downloadStartTime = downloadEndTime = -1.0;
 	ClientCallback = 0;
 	ClientCallbackCpp = 0;
 	ClientCallbackClass = NULL;
@@ -1440,9 +1440,11 @@ FileTransfer::Reaper(Service *, int pid, int exit_status)
 
 	if ( transobject->Info.success ) {
 		if ( transobject->Info.type == DownloadFilesType ) {
-			transobject->downloadEndTime = time(NULL);
+			transobject->downloadEndTime = _condor_debug_get_time_double();
+
 		} else if ( transobject->Info.type == UploadFilesType ) {
-			transobject->uploadEndTime = time(NULL);
+			transobject->uploadEndTime = _condor_debug_get_time_double();
+
 		}
 	}
 
@@ -1700,7 +1702,8 @@ FileTransfer::Download(ReliSock *s, bool blocking)
 		// daemonCore will free(info) when the thread exits
 		TransThreadTable->insert(ActiveTransferTid, this);
 
-		downloadStartTime = time(NULL);
+		downloadStartTime = _condor_debug_get_time_double();
+
 	}
 	
 	return 1;
@@ -1780,7 +1783,8 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 	priv_state saved_priv = PRIV_UNKNOWN;
 	*total_bytes = 0;
 
-	downloadStartTime = time(NULL);
+	downloadStartTime = _condor_debug_get_time_double();
+
 
 	// we want to tell get_file() to perform an fsync (i.e. flush to disk)
 	// the files we download if we are the client & we will need to upload
@@ -2420,7 +2424,8 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 
 	}
 
-	downloadEndTime = (int)time(NULL);
+	downloadEndTime = _condor_debug_get_time_double();
+
 	download_success = true;
 	SendTransferAck(s,download_success,try_again,hold_code,hold_subcode,NULL);
 
@@ -2432,8 +2437,8 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 		jobAd.LookupInteger(ATTR_CLUSTER_ID, cluster);
 		jobAd.LookupInteger(ATTR_PROC_ID, proc);
 
-		dprintf(D_STATS, "File Transfer Download: JobId: %d.%d files: %d bytes: %lld seconds: %.1f dest: %s %s\n", 
-			cluster, proc, numFiles, (long long)*total_bytes, (double)(downloadEndTime - downloadStartTime), s->peer_ip_str(), (stats ? stats : "") );
+		dprintf(D_STATS, "File Transfer Download: JobId: %d.%d files: %d bytes: %lld seconds: %.2f dest: %s %s\n", 
+			cluster, proc, numFiles, (long long)*total_bytes, (downloadEndTime - downloadStartTime), s->peer_ip_str(), (stats ? stats : "") );
 	}
 
 
@@ -2834,7 +2839,8 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 	MyString first_failed_error_desc;
 	int first_failed_line_number;
 
-	uploadStartTime = time(NULL);
+	uploadStartTime = _condor_debug_get_time_double();
+
 	*total_bytes = 0;
 	dprintf(D_FULLDEBUG,"entering FileTransfer::DoUpload\n");
 
@@ -3381,7 +3387,8 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 			first_failed_line_number);
 	} 
 
-	uploadEndTime = (int)time(NULL);
+	uploadEndTime = _condor_debug_get_time_double();
+
 	upload_success = true;
 	return ExitDoUpload(total_bytes,numFiles, s,saved_priv,socket_default_crypto,
 	                    upload_success,do_upload_ack,do_download_ack,
@@ -3822,8 +3829,8 @@ FileTransfer::ExitDoUpload(filesize_t *total_bytes, int numFiles, ReliSock *s, p
 		jobAd.LookupInteger(ATTR_PROC_ID, proc);
 
 		char *stats = s->get_statistics();
-		dprintf(D_STATS, "File Transfer Upload: JobId: %d.%d files: %d bytes: %lld seconds: %.1f dest: %s %s\n", 
-			cluster, proc, numFiles, (long long)*total_bytes, (double) (uploadEndTime - uploadStartTime), s->peer_ip_str(), (stats ? stats : "") );
+		dprintf(D_STATS, "File Transfer Upload: JobId: %d.%d files: %d bytes: %lld seconds: %.2f dest: %s %s\n", 
+			cluster, proc, numFiles, (long long)*total_bytes, (uploadEndTime - uploadStartTime), s->peer_ip_str(), (stats ? stats : "") );
 	}
 
 	return rc;
