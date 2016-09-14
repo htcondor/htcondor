@@ -2134,8 +2134,7 @@ int Scheduler::command_query_job_ads(int cmd, Stream* stream)
 		return command_query_job_aggregates(queryAd, stream);
 	}
 
-	PRAGMA_REMIND("reduce dpf_level for CONDOR_Q_ONLY_MY_JOBS feature before it goes into stable.")
-	int dpf_level = D_ALWAYS; // D_COMMAND | D_FULLDEBUG
+	int dpf_level = D_COMMAND | D_VERBOSE;
 
 	// If the query request that only the querier's jobs be returned
 	// we have to figure out who the quierier is and add a clause to the requirements expression

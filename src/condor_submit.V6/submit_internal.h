@@ -64,6 +64,8 @@ const SetAttributeFlags_t NONDURABLE = (1<<0); // do not fsync
 const SetAttributeFlags_t SetAttribute_NoAck = (1<<1);
 const SetAttributeFlags_t SETDIRTY = (1<<2);
 const SetAttributeFlags_t SHOULDLOG = (1<<3);
+const SetAttributeFlags_t SetAttribute_OnlyMyJobs = (1<<4);
+const SetAttributeFlags_t SetAttribute_QueryOnly = (1<<5); // check if change is allowed, but don't actually change.
 #endif
 
 // Abstract the schedd's queue protocol so we can NOT call it when simulating
