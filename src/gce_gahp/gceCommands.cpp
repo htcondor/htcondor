@@ -813,17 +813,17 @@ GceInstanceInsert::~GceInstanceInsert() { }
 
 // Expecting:GCE_INSTANCE_INSERT <req_id> <serviceurl> <authfile> <project> <zone>
 //     <instance_name> <machine_type> <image> <metadata> <metadata_file>
-//     <preemptible>
+//     <preemptible> <json_file>
 bool GceInstanceInsert::workerFunction(char **argv, int argc, string &result_string) {
 	assert( strcasecmp( argv[0], "GCE_INSTANCE_INSERT" ) == 0 );
 
 	int requestID;
 	get_int( argv[1], & requestID );
 
-	if( ! verify_number_args( argc, 12 ) ) {
+	if( ! verify_number_args( argc, 13 ) ) {
 		result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
 		dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n",
-				 argc, 12, argv[0] );
+				 argc, 13, argv[0] );
 		return false;
 	}
 
@@ -857,6 +857,13 @@ bool GceInstanceInsert::workerFunction(char **argv, int argc, string &result_str
 		const char *pos = file_contents.c_str();
 		while( ParseMetadataLine( pos, key, value, '\n' ) ) {
 			metadata[key] = value;
+		}
+	}
+	string json_file_contents;
+	if ( strcasecmp( argv[12], NULLSTRING ) ) {
+		if ( !readShortFile( argv[12], json_file_contents ) ) {
+			result_string = create_failure_result( requestID, "Failed to open additional JSON file" );
+			return true;
 		}
 	}
 
@@ -908,8 +915,12 @@ bool GceInstanceInsert::workerFunction(char **argv, int argc, string &result_str
 	insert_request.requestBody += "     \"name\": \"External NAT\",\n";
 	insert_request.requestBody += "     \"type\": \"ONE_TO_ONE_NAT\"\n";
 	insert_request.requestBody += "    }\n   ]\n";
-	insert_request.requestBody += "  }\n ]\n";
-	insert_request.requestBody += "}\n";
+	insert_request.requestBody += "  }\n ]";
+	if ( !json_file_contents.empty() ) {
+		insert_request.requestBody += ",\n";
+		insert_request.requestBody += json_file_contents;
+	}
+	insert_request.requestBody += "\n}\n";
 
 	string auth_file = argv[3];
 	if ( !GetAccessToken( auth_file, insert_request.accessToken,

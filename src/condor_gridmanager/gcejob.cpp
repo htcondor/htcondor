@@ -177,6 +177,8 @@ GCEJob::GCEJob( ClassAd *classad ) :
 
 	jobAd->LookupBool( ATTR_GCE_PREEMPTIBLE, m_preemptible );
 
+	jobAd->LookupString( ATTR_GCE_JSON_FILE, m_jsonFile );
+
 	// get VM machine type
 	jobAd->LookupString( ATTR_GCE_MACHINE_TYPE, m_machineType );
 
@@ -557,6 +559,7 @@ void GCEJob::doEvaluateState()
 													m_metadata,
 													m_metadataFile,
 													m_preemptible,
+													m_jsonFile,
 													instance_id );
 
 					if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||

@@ -596,7 +596,7 @@
             <SP> <cred-file> <SP> <project> <SP> <zone>
             <SP> <instance-name> <SP> <machine-type>
             <SP> <image> <SP> <metadata> <SP> <metadata-file>
-            <SP> <gce_preemptible> <CRLF>
+            <SP> <preemptible> <SP> <json-file> <CRLF>
 
         The following attributes are required.
 
@@ -611,8 +611,10 @@
         * metadata-file = the full path to a file containing metadata
             name/value pairs of the form
             <name>=<value>\n<name>=<value>\n...
-	* gce_preemptible = 'true' or 'false', which will determine
-	    whether the instance submitted can be preempted
+        * preemptible = 'true' or 'false', which will determine
+            whether the instance submitted can be preempted
+        * json-file = the full path to a file containing additional
+            JSON that will be added to the GCE instance insert request
 
     + Result Line:
 

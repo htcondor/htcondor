@@ -639,6 +639,7 @@ const char* GceMachineType = "gce_machine_type";
 const char* GceMetadata = "gce_metadata";
 const char* GceMetadataFile = "gce_metadata_file";
 const char* GcePreemptible = "gce_preemptible";
+const char* GceJsonFile = "gce_json_file";
 
 char const *next_job_start_delay = "next_job_start_delay";
 char const *next_job_start_delay2 = "NextJobStartDelay";
@@ -6616,6 +6617,21 @@ SetGridParams()
 	if( (tmp = condor_param( GcePreemptible, ATTR_GCE_PREEMPTIBLE )) ) {
 		buffer.formatstr( "%s = %s", ATTR_GCE_PREEMPTIBLE, isTrue(tmp) ? "True" : "False" );
 		InsertJobExpr( buffer.Value() );
+		free( tmp );
+	}
+
+	// GceJsonFile is not a necessary parameter
+	if( (tmp = condor_param( GceJsonFile, ATTR_GCE_JSON_FILE )) ) {
+		// check json file can be opened
+		if ( !DisableFileChecks ) {
+			if( ( fp=safe_fopen_wrapper_follow(full_path(tmp),"r") ) == NULL ) {
+				fprintf( stderr, "\nERROR: Failed to open json file %s (%s)\n",
+								 full_path(tmp), strerror(errno));
+				exit(1);
+			}
+			fclose(fp);
+		}
+		InsertJobExprString( ATTR_GCE_JSON_FILE, tmp );
 		free( tmp );
 	}
 
