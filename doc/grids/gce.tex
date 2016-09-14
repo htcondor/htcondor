@@ -94,6 +94,24 @@ separates entries.
 Both options can be used at the same time, 
 but do not use the same metadata name in both places.
 
+HTCondor sets the following elements when describing the instance
+to the GCE server: \SubmitCmdNI{machineType}, \SubmitCmdNI{name},
+\SubmitCmdNI{scheduling}, \SubmitCmdNI{disks}, \SubmitCmdNI{metadata},
+and \SubmitCmdNI{networkInterfaces}.
+You can provide additional elements to be included in the instance
+description as a block of JSON.
+Write the additional elements to a file, and specify the filename
+in your submit file with the \SubmitCmd{gce\_json\_file} command.
+The contents of the file are inserted into HTCondor's JSON description
+of the instance, between a comma and the closing brace.
+
+Here's a sample JSON file that sets two additional elements:
+
+\begin{verbatim}
+"canIpForward": True,
+"description": "My first instance"
+\end{verbatim}
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Gce-config}GCE Configuration Variables}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
