@@ -1013,8 +1013,6 @@ install -m 0644 %{buildroot}/etc/examples/condor-tmpfiles.conf %{buildroot}%{_tm
 
 mkdir -p %{buildroot}%{_unitdir}
 install -m 0644 %{buildroot}/etc/examples/condor.service %{buildroot}%{_unitdir}/condor.service
-# Disabled until HTCondor security fixed.
-# install -m 0644 %{buildroot}/etc/examples/condor.socket %{buildroot}%{_unitdir}/condor.socket
 %else
 # install the lsb init script
 install -Dp -m0755 %{buildroot}/etc/examples/condor.init %{buildroot}%{_initrddir}/condor
@@ -1189,8 +1187,6 @@ rm -rf %{buildroot}
 %if %systemd
 %{_tmpfilesdir}/%{name}.conf
 %{_unitdir}/condor.service
-# Disabled until HTCondor security fixed.
-# %{_unitdir}/condor.socket
 %else
 %_initrddir/condor
 %if 0%{?osg} || 0%{?hcc}

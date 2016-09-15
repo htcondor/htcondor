@@ -45,7 +45,6 @@ install (FILES
 		condor.plist
 		condor_config.annotated
 		condor.service
-		condor.socket
 		condor-tmpfiles.conf
 		DESTINATION ${C_ETC_EXAMPLES})
 
