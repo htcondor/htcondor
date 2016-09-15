@@ -1788,7 +1788,7 @@ JobRouter::UpdateRoutedJobStatus(RoutedJob *job, const classad::ClassAd &update)
 	}
 
 	// Send the updates to the job queue
-	if (false == PushUpdatedAttributes(job->dest_ad))
+	if (false == PushUpdatedAttributes(job->dest_ad, true))
 	{
 		dprintf(D_ALWAYS, "JobRouter failure (%s): Failed to update "
 				"routed job status.\n", job->JobDesc().c_str());
@@ -1808,7 +1808,11 @@ JobRouter::CheckSubmittedJobStatus(RoutedJob *job) {
 	if(job->state != RoutedJob::SUBMITTED) return;
 
 #if HAVE_JOB_HOOKS
-	if (NULL != m_hook_mgr)
+	// Until we see the job in the job queue mirror, don't invoke the hook.
+	// There's nothing new, and our copy of the job ad doesn't have the
+	// job id, needed to push any attributes returned by the hook to the
+	// schedd.
+	if (NULL != m_hook_mgr && job->SawDestJob())
 	{
 		int rval = m_hook_mgr->hookUpdateJobInfo(job);
 		switch (rval)
@@ -1997,14 +2001,16 @@ JobRouter::SetJobIdle(RoutedJob *job) {
 }
 
 bool
-JobRouter::PushUpdatedAttributes(classad::ClassAd& src) {
-	if(false == push_dirty_attributes(src,m_schedd1_name,m_schedd1_pool))
+JobRouter::PushUpdatedAttributes(classad::ClassAd& ad, bool routed_job) {
+	if(false == push_dirty_attributes(ad,
+						routed_job ? m_schedd2_name : m_schedd1_name,
+						routed_job ? m_schedd2_pool : m_schedd1_pool))
 	{
 		return false;
 	}
 	else
 	{
-		src.ClearAllDirtyFlags();
+		ad.ClearAllDirtyFlags();
 	}
 	return true;
 }

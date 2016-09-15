@@ -503,6 +503,8 @@ static bool submit_job_with_current_priv( ClassAd & src, const char * schedd_nam
 		}
 	}
 
+	schedd.reschedule();
+
 	if(cluster_out) { *cluster_out = cluster; }
 	if(proc_out) { *proc_out = proc; }
 
