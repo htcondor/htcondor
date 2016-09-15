@@ -301,7 +301,7 @@ DCSchedd::clearDirtyAttrs( StringList* ids, CondorError * errstack,
 bool
 DCSchedd::reschedule()
 {
-	return sendCommand(RESCHEDULE, Stream::safe_sock, 0);
+	return sendCommand(RESCHEDULE, hasUDPCommandPort() ? Stream::safe_sock : Stream::reli_sock, 0);
 }
 
 bool 

@@ -105,7 +105,7 @@ class JobRouter: public Service {
 	void RerouteJob(RoutedJob *job);
 
 	// Push the updated attributes to the job queue.
-	bool PushUpdatedAttributes(classad::ClassAd& src);
+	bool PushUpdatedAttributes(classad::ClassAd& ad, bool routed_job = false);
 
 		// Provide access to the Scheduler, which holds the
 		// ClassAdCollection
