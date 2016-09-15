@@ -109,6 +109,15 @@ Fixed a bug that prevented other daemons from talking to the
 restart it several times. Previously only one restart attempt was done.
 \Ticket{3655}
 
+\item Fixed bugs in the Job Router that could cause a routed job to be
+aborted if the UPDATE\_JOB\_INFO hook printed attributes to be set in
+the job ad.
+\Ticket{5899}
+
+\item The Job Router and HTCondor-C now properly send a RESCHEDULE
+command to the \Condor{schedd} after submitting a job.
+\Ticket{5903}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
