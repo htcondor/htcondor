@@ -169,6 +169,7 @@ void SSHToJob::printUsage()
 	fprintf(stderr," -ssh <alt ssh command>    (e.g. sftp or scp)\n");
 	fprintf(stderr," -keygen-options <keygen options>\n");
 	fprintf(stderr," -X                        (enable X11 forwarding)\n");
+	fprintf(stderr," -x                        (disable X11 forwarding)\n");
 }
 
 bool SSHToJob::parseArgs(int argc,char **argv)
@@ -237,6 +238,8 @@ bool SSHToJob::parseArgs(int argc,char **argv)
 			}
 		} else if( !strcmp( argv[nextarg], "-X" ) ) {
 			m_x_forwarding = true;
+		} else if( !strcmp( argv[nextarg], "-x" ) ) {
+			m_x_forwarding = false;
 		} else if( !strcmp( argv[nextarg], "--" ) ) {
 			++nextarg;
 			break;
