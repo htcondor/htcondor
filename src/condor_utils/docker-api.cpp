@@ -164,7 +164,7 @@ int DockerAPI::run(
 
 	MyString displayString;
 	runArgs.GetArgsStringForLogging( & displayString );
-	dprintf( D_FULLDEBUG, "Attempting to run: %s\n", displayString.c_str() );
+	dprintf( D_ALWAYS, "Attempting to run: %s\n", displayString.c_str() );
 
 	//
 	// If we run Docker attached, we avoid a race condition where
