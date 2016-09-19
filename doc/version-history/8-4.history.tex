@@ -45,6 +45,12 @@ See section~\ref{param:ChirpDelayedUpdateMaxAttrs} for more information.
 
 \begin{itemize}
 
+\item Fixed a bug where if the \Condor{startd} crashed while running a
+Docker universe job, the job would be left running and not removed when
+the \Condor{startd} restarted.  The \Condor{startd} now removes any
+orphaned Docker universe jobs on restart.
+\Ticket{5858}
+
 \item Fixed a typo in the desired value of `rmem\_max' in the Linux kernel
 tuning script.  Improved logging of Linux kernel tuning script by including
 the name of the file (not) being changed.
