@@ -97,7 +97,6 @@
 %if 0%{?osg} && 0%{?rhel} == 7
 %define aviary 0
 %define std_univ 0
-%define cream 0
 %endif
 
 %define glexec 1
