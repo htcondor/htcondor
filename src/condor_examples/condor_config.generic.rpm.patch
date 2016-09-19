@@ -1,5 +1,5 @@
---- condor_config.generic	2015-04-27 16:29:51.000000003 -0500
-+++ condor_config.patched	2015-05-29 15:41:47.208533029 -0500
+--- condor_config.generic	2016-09-15 16:20:28.110363550 -0500
++++ condor_config.patched	2016-09-15 15:36:52.916227570 -0500
 @@ -19,25 +19,23 @@
  ######################################################################
  
@@ -31,7 +31,7 @@
  #LOCAL_CONFIG_DIR_EXCLUDE_REGEXP = ^((\..*)|(.*~)|(#.*)|(.*\.rpmsave)|(.*\.rpmnew))$
  
  ##  Use a host-based security policy. By default CONDOR_HOST and the local machine will be allowed
-@@ -50,5 +48,35 @@
+@@ -50,5 +48,37 @@
  #FLOCK_TO = condor.cs.wisc.edu, cm.example.edu
  
  ##--------------------------------------------------------------------
@@ -59,6 +59,8 @@
 +PROCD_ADDRESS = $(RUN)/procd_pipe
 +
 +JAVA_CLASSPATH_DEFAULT = $(SHARE) $(SHARE)/scimark2lib.jar .
++
++SSH_TO_JOB_SSHD_CONFIG_TEMPLATE = /etc/condor/condor_ssh_to_job_sshd_config_template
 +
 +##  What machine is your central manager?
 +
