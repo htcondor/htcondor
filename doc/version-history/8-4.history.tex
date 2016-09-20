@@ -75,6 +75,20 @@ See section~\ref{param:ChirpDelayedUpdateMaxAttrs} for more information.
 
 \begin{itemize}
 
+\item Fixed a bug introduced in 8.4.5 that caused configuration variables starting with
+STARTD. or STARTER. to be ignored.
+\Ticket{5861}
+
+\item Fixed a bug that printed spurious locking-related warnings to
+the StarterLog when running Docker universe jobs.
+\Ticket{5876}
+
+\item Fixed a bug where if the \Condor{startd} crashed while running a
+Docker universe job, the job would be left running and not removed when
+the \Condor{startd} restarted.  The \Condor{startd} now removes any
+orphaned Docker universe jobs on restart.
+\Ticket{5858}
+
 \item Fixed a typo in the desired value of `rmem\_max' in the Linux kernel
 tuning script.  Improved logging of Linux kernel tuning script by including
 the name of the file (not) being changed.
@@ -147,6 +161,20 @@ the job ad.
 \item The Job Router and HTCondor-C now properly send a RESCHEDULE
 command to the \Condor{schedd} after submitting a job.
 \Ticket{5903}
+
+\item The Job Router now uses the correct name for the configuration
+parameter for the JOB\_FINALIZE hook.
+Previously, the Job Router used the name JOB\_EXIT, counter to what was
+documented.
+\Ticket{5802}
+
+\item Executables on Windows now have the correct appname in their version
+resource.  Before this change, all tools had the appname condor\_gpu\_discovery.
+\Ticket{5795}
+
+\item Fixed a bug that resulted in the \Condor{starter} crashing when
+attempting to run a BOINC backfill job.
+\Ticket{5862}
 
 \end{itemize}
 
