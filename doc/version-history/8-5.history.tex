@@ -104,6 +104,16 @@ submit command.
 in the banner of \Condor{q} output.
 \Ticket{5895}
 
+\item \Condor{status} and \Condor{q} now support reading and writing ClassAds
+in xml, json, and "new ClassAd" form as well as the traditional long form.
+\Ticket{5844}
+\Ticket{5820}
+
+\item \Condor{status} has a new \Opt{-data} option that, when used with \Opt{-schedd}
+will show data transfer information; and \Opt{-run} will show information about running
+jobs when used with \Opt{-schedd}.
+\Ticket{5938}
+
 \item Some old STARTD policy helper configuration variables were moved
 into two new metaknobs - \Macro{FEATURE \: UWCS\_DESKTOP\_POLICY\_VALUES}
 and \Macro{FEATURE \: UWCS\_DESKTOP\_POLICY\_VALUES}
