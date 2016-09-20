@@ -112,7 +112,11 @@ in xml, json, and "new ClassAd" form as well as the traditional long form.
 \item \Condor{status} has a new \Opt{-data} option that, when used with \Opt{-schedd}
 will show data transfer information; and \Opt{-run} will show information about running
 jobs when used with \Opt{-schedd}.
-\Ticket{5938}
+\Ticket{3938}
+
+\item \Condor{q} \Opt{-batch} will now show Total and Completed counts for non-DAG jobs
+when querying a scheduler that is at least version 8.5.7
+\Ticket{5874}
 
 \item Some old STARTD policy helper configuration variables were moved
 into two new metaknobs - \Macro{FEATURE \: UWCS\_DESKTOP\_POLICY\_VALUES}
