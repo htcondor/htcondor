@@ -1,8 +1,8 @@
 
 [Unit]
 Description=Condor Distributed High-Throughput-Computing
-After=syslog.target network.target
-Wants=network.target
+After=syslog.target network-online.target nslcd.service ypbind.service
+Wants=network-online.target
 # Disabled until HTCondor security fixed.
 # Requires=condor.socket
 
@@ -20,10 +20,6 @@ NotifyAccess=main
 KillSignal=SIGKILL
 LimitNOFILE=16384
 ControlGroup=/condor
-Wants=nslcd.service
-After=nslcd.service
-Wants=ypbind.service
-After=ypbind.service
 
 [Install]
 WantedBy=multi-user.target
