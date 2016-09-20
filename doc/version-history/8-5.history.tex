@@ -104,6 +104,18 @@ submit command.
 in the banner of \Condor{q} output.
 \Ticket{5895}
 
+\item Some old STARTD policy helper configuration variables were moved
+into two new metaknobs - \Macro{FEATURE \: UWCS\_DESKTOP\_POLICY\_VALUES}
+and \Macro{FEATURE \: UWCS\_DESKTOP\_POLICY\_VALUES}
+\Ticket{5871}
+
+\item \Condor{submit} on Windows will no longer insert the OSVERSIONINFO
+fields like \Attr{WindowsMajorVersion} into each job automatically. This
+is controlled by a new configuration variable \Macro{SUBMIT\_PUBLISH\_WINDOWS\_OSVERSIONINFO}
+which defaults to false.
+\Ticket{5873}
+
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -134,6 +146,14 @@ have meaning to the shell.
 Previously, the presence of these characters would cause job execution
 to fail.
 \Ticket{5747}
+
+\item Fixed a bug that caused \Condor{config\_val} to segfault when the \Opt{-name}
+argument was used and the machine did not exist
+\Ticket{5818}
+
+\item Fixed a bug that caused \Condor{q} \Opt{-autocluster} to crash unless the \Opt{-nobatch}
+option was also used.
+\Ticket{5839}
 
 \end{itemize}
 
