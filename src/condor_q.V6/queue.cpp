@@ -151,6 +151,8 @@ bool is_standard_format = false;
 bool first_col_is_job_id = false;
 bool has_owner_column = false;
 int  max_name_column_width = 14;
+bool append_time_to_source_label = true;
+time_t queue_time = 0; // will be set from the time on the server if possible
 
 double max_mem_used = 0.0; // largest value of MEMORY_USAGE
 int max_owner_name = 0; // width of longest owner name, from calls to render_owner or render_dag_owner
@@ -3027,7 +3029,12 @@ print_full_header(const char * source_label)
 		// print the source label.
 		if ( ! (customHeadFoot&HF_NOTITLE)) {
 			static bool first_time = false;
-			printf ("%s-- %s\n", (first_time ? "" : "\n\n"), source_label);
+			char time_str[80]; time_str[0] = 0;
+			if (append_time_to_source_label) {
+				if ( ! queue_time) { queue_time = time(NULL); }
+				strftime(time_str, 80, " @ %m/%d/%y %H:%M:%S", localtime(&queue_time));
+			}
+			printf ("%s-- %s%s\n", (first_time ? "" : "\n\n"), source_label, time_str);
 			first_time = false;
 		}
 		if ( ! (customHeadFoot&HF_NOHEADER)) {
@@ -3786,6 +3793,10 @@ static bool process_job_to_rod_per_ad_map(void * pv,  ClassAd* job)
 	} else {
 		job->LookupInteger( ATTR_CLUSTER_ID, jobid.cluster );
 		job->LookupInteger( ATTR_PROC_ID, jobid.proc );
+	}
+
+	if (append_time_to_source_label && ! queue_time) {
+		job->LookupInteger( ATTR_SERVER_TIME, queue_time );
 	}
 
 	int columns = app.mask.ColCount();
