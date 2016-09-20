@@ -2923,7 +2923,7 @@ usage (const char *myName, int other)
 		"\t-debug\t\t\t Display debugging info to console\n"
 		"\t-dag\t\t\t Sort DAG jobs under their DAGMan\n"
 		"\t-expert\t\t\t Display shorter error messages\n"
-		"\t-globus\t\t\t Get information about jobs of type globus\n"
+		"\t-grid\t\t\t Get information about grid jobs (includes globus)\n"
 		"\t-goodput\t\t Display job goodput statistics\n"
 		"\t-help [Universe|State]\t Display this screen, JobUniverses, JobStates\n"
 		"\t-hold\t\t\t Get information about jobs on hold\n"
