@@ -388,7 +388,7 @@ static bool process_ads_callback(void * pv,  ClassAd* ad)
 	} else {
 
 		// we can do normal totals now. but compact mode totals we have to do after checking the slot type
-		if (totals && ! compactMode) { totals->update(ad); }
+		if (totals && ( ! pi->columns || ! compactMode)) { totals->update(ad); }
 
 		if (pi->columns) {
 			StatusRowOfData & srod = pp.first->second;
@@ -618,7 +618,7 @@ void fold_slot_result(StatusRowOfData & aa, StatusRowOfData * pbb)
 
 	// Sum the number of job starts
 	double astarts, bstarts;
-	if (startdCompact_ixCol_JobStarts) {
+	if (startdCompact_ixCol_JobStarts >= 0) {
 		aa.getNumber(startdCompact_ixCol_JobStarts, astarts);
 		bb.getNumber(startdCompact_ixCol_JobStarts, bstarts);
 		aa.rov.Column(startdCompact_ixCol_JobStarts)->SetRealValue(astarts + bstarts);
@@ -1082,7 +1082,13 @@ main (int argc, char *argv[])
 
 	if (compactMode) {
 		switch (adType) {
-		case STARTD_AD: reduce_slot_results(admap); break;
+		case STARTD_AD: {
+			if (wantOnlyTotals) {
+				fprintf(stderr, "Warning: ignoring -compact option because -total option is also set\n");
+			} else {
+				reduce_slot_results(admap);
+			}
+		} break;
 		default: break;
 		}
 	}
