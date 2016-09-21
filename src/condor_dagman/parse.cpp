@@ -1601,24 +1601,24 @@ parse_priority(
 	while ( ( job = dag->FindAllNodesByName( jobName ) ) ) {
 		jobName = NULL;
 
-		debug_printf( DEBUG_DEBUG_3, "parse_TEMPTEMP(): found job %s\n",
+		debug_printf( DEBUG_DEBUG_3, "parse_priority(): found job %s\n",
 					job->GetJobName() );
 
-			if ( job->GetFinal() ) {
-				debug_printf( DEBUG_QUIET, 
-					  		"ERROR: %s (line %d): Final job %s cannot have priority\n",
-					  		filename, lineNumber, jobNameOrig );
-				return false;
-			}
+		if ( job->GetFinal() ) {
+			debug_printf( DEBUG_QUIET, 
+				  		"ERROR: %s (line %d): Final job %s cannot have priority\n",
+				  		filename, lineNumber, jobNameOrig );
+			return false;
+		}
 
-			if ( job->_hasNodePriority && job->_nodePriority != priorityVal ) {
-				debug_printf( DEBUG_NORMAL, "Warning: new priority %d for node %s overrides old value %d\n",
-							priorityVal, job->GetJobName(),
-							job->_nodePriority );
-				check_warning_strictness( DAG_STRICT_2 );
-			}
-			job->_hasNodePriority = true;
-			job->_nodePriority = priorityVal;
+		if ( job->_hasNodePriority && job->_nodePriority != priorityVal ) {
+			debug_printf( DEBUG_NORMAL, "Warning: new priority %d for node %s overrides old value %d\n",
+						priorityVal, job->GetJobName(),
+						job->_nodePriority );
+			check_warning_strictness( DAG_STRICT_2 );
+		}
+		job->_hasNodePriority = true;
+		job->_nodePriority = priorityVal;
 	}
 
 	if ( jobName ) {
@@ -1645,7 +1645,6 @@ parse_category(
 	int  lineNumber)
 {
 	const char * example = "CATEGORY JobName TypeName";
-	Job * job = NULL;
 
 	//
 	// Next token is the JobName
@@ -1658,33 +1657,18 @@ parse_category(
 		return false;
 	}
 
-	const char *jobNameOrig = jobName; // for error output
 	if (isReservedWord(jobName)) {
 		debug_printf( DEBUG_QUIET,
 					  "ERROR: %s (line %d): JobName cannot be a reserved word\n",
 					  filename, lineNumber );
 		exampleSyntax (example);
 		return false;
-	} else {
-		debug_printf(DEBUG_DEBUG_1, "jobName: %s\n", jobName);
-		MyString tmpJobName = munge_job_name(jobName);
-		jobName = tmpJobName.Value();
-
-		job = dag->FindNodeByName( jobName );
-		if (job == NULL) {
-			debug_printf( DEBUG_QUIET, 
-						  "ERROR: %s (line %d): Unknown Job %s\n",
-						  filename, lineNumber, jobNameOrig );
-			return false;
-		}
 	}
 
-	if ( job->GetFinal() ) {
-		debug_printf( DEBUG_QUIET, 
-					  "ERROR: %s (line %d): Final job %s cannot have category\n",
-					  filename, lineNumber, jobNameOrig );
-		return false;
-	}
+	const char *jobNameOrig = jobName; // for error output
+	debug_printf(DEBUG_DEBUG_1, "jobName: %s\n", jobName);
+	MyString tmpJobName = munge_job_name(jobName);
+	jobName = tmpJobName.Value();
 
 	//
 	// Next token is the category name.
@@ -1710,7 +1694,31 @@ parse_category(
 		return false;
 	}
 
-	job->SetCategory( categoryName, dag->_catThrottles );
+	//
+	// Actually assign categories to the relevant node(s).
+	//
+	Job *job;
+	while ( ( job = dag->FindAllNodesByName( jobName ) ) ) {
+		jobName = NULL;
+
+		debug_printf( DEBUG_DEBUG_3, "parse_category(): found job %s\n",
+					job->GetJobName() );
+
+		if ( job->GetFinal() ) {
+			debug_printf( DEBUG_QUIET, 
+				  		"ERROR: %s (line %d): Final job %s cannot have category\n",
+				  		filename, lineNumber, jobNameOrig );
+			return false;
+		}
+
+		job->SetCategory( categoryName, dag->_catThrottles );
+	}
+
+	if ( jobName ) {
+		debug_printf(DEBUG_QUIET, "%s (line %d): Unknown Job %s\n",
+					filename, lineNumber, jobNameOrig);
+		return false;
+	}
 
 	return true;
 }

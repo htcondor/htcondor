@@ -1280,11 +1280,11 @@ Job * Dag::FindNodeByName (const char * jobName) const {
 
 //---------------------------------------------------------------------------
 Job *
-Dag::FindAllNodesByName( const char* nodeName )
+Dag::FindAllNodesByName( const char* nodeName ) const
 {
 	if ( !nodeName ) {
 		if ( _allNodesIt ) {
-			//TEMPTEMP -- should we set _allNodesIt to NULL here if we've hit the last node?
+			//TEMPTEMP -- should we delete _allNodesIt here if we've hit the last node?
 			return _allNodesIt->Next();
 		} else {
 			return NULL;

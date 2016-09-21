@@ -8,3 +8,5 @@ vars ALL_NODES nodename="$(JOB)"
 retry ALL_NODES 3 UNLESS-EXIT 6
 abort-dag-on ALL_NODES 4 return 5
 priority ALL_NODES 20
+category ALL_NODES lower
+maxjobs lower 2

@@ -6,6 +6,10 @@
 \index{Directed Acyclic Graph Manager (DAGMan)}
 \index{job!dependencies within}
 
+%TEMPTEMP -- add a section explaining ALL_NODES -- doesn't work with
+% multiple DAGs on command line, etc.; how it interacts w/ splices;
+% how it interacts w/ INCLUDE; especially useful in splices
+
 A directed acyclic graph (DAG) can be used to represent a set of computations
 where the input, output, or execution of one or more computations
 is dependent on one or more other computations.
@@ -285,10 +289,10 @@ an HTCondor job.
 The syntax used for each \Arg{PRE} or \Arg{POST} entry is
 
 \Opt{SCRIPT} \oOptArg{DEFER}{status time}
-\Opt{PRE} \Arg{JobName} \Arg{ExecutableName} \oArg{arguments}
+\Opt{PRE} \Arg{JobName}|ALL\_NODES \Arg{ExecutableName} \oArg{arguments}
 
 \Opt{SCRIPT} \oOptArg{DEFER}{status time}
-\Opt{POST}  \Arg{JobName} \Arg{ExecutableName} \oArg{arguments}
+\Opt{POST}  \Arg{JobName}|ALL\_NODES \Arg{ExecutableName} \oArg{arguments}
 
 The \Arg{SCRIPT} command uses
 the \Arg{PRE} or \Arg{POST} keyword,
@@ -1059,7 +1063,7 @@ with the \Arg{RETRY} command.
 The use of retry is optional.
 The syntax for retry is
 
-\Opt{RETRY} \Arg{JobName} \Arg{NumberOfRetries} \oOptArg{UNLESS-EXIT}{value}
+\Opt{RETRY} \Arg{JobName}|ALL\_NODES \Arg{NumberOfRetries} \oOptArg{UNLESS-EXIT}{value}
 
 where \Arg{JobName} identifies the node.
 \Arg{NumberOfRetries} is an integer
@@ -1113,7 +1117,7 @@ The \Arg{ABORT-DAG-ON} command provides a way
 to abort the entire DAG if a given node returns a specific exit
 code.  The syntax for \Arg{ABORT-DAG-ON} is
 
-\Opt{ABORT-DAG-ON} \Arg{JobName} \Arg{AbortExitValue}
+\Opt{ABORT-DAG-ON} \Arg{JobName}|ALL\_NODES \Arg{AbortExitValue}
 \oOptArg{RETURN}{DAGReturnValue}
 
 If the return value of the node specified by \Arg{JobName}
@@ -1184,7 +1188,7 @@ file of the node job.
 The \Arg{VARS} command provides a method for defining a macro.
 Macros are defined on a per-node basis, using the syntax
 
-\Opt{VARS} \Arg{JobName} \Arg{macroname=}\Arg{"string"} [\Arg{macroname=}\Arg{"string"\Dots}]
+\Opt{VARS} \Arg{JobName}|ALL\_NODES \Arg{macroname=}\Arg{"string"} [\Arg{macroname=}\Arg{"string"\Dots}]
 
 The macro may be used within the
 submit description file of the relevant node.  
@@ -1507,7 +1511,7 @@ which is the first retry and the value 1.
 The \Arg{PRIORITY} command assigns a priority to a DAG node.
 The syntax for \Arg{PRIORITY} is
 
-\Opt{PRIORITY} \Arg{JobName} \Arg{PriorityValue}
+\Opt{PRIORITY} \Arg{JobName}|ALL\_NODES \Arg{PriorityValue}
 
 The node priority affects the order in which nodes that are ready
 at the same time will be submitted.  Note that node priority does
@@ -1606,7 +1610,7 @@ for each category.
 The \Arg{CATEGORY} command assigns a category name to a DAG node.
 The syntax for \Arg{CATEGORY} is
 
-\Opt{CATEGORY} \Arg{JobName} \Arg{CategoryName}
+\Opt{CATEGORY} \Arg{JobName}|ALL\_NODES \Arg{CategoryName}
 
 Category names cannot contain white space.
 
@@ -2450,6 +2454,8 @@ and attach the POST script to the NOOP node.
 \begin{description}
 \item[Limitation: Splices and the RETRY of a Node, use of VARS, or use of PRIORITY]
 \end{description}
+%TEMPTEMP -- RETRY B+X doesn't work; ALL_NODES changes will break
+% VARS B+X
 
 The nodes of a splice are incorporated into a top level DAG;
 these nodes are scoped and named.

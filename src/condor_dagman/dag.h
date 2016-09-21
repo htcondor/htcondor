@@ -297,7 +297,7 @@ class Dag {
     Job * FindNodeByEventID ( const CondorID condorID ) const;
 
 	//TEMPTEMP -- document
-	Job * FindAllNodesByName( const char* nodeName ); //TEMPTEMP? const
+	Job * FindAllNodesByName( const char* nodeName ) const;
 
     /** Ask whether a node name exists in the DAG
         @param nodeName the name of the node in the DAG
@@ -977,7 +977,7 @@ protected:
     List<Job>     _jobs;
 
 	//TEMPTEMP -- probably move this to private
-	ListIterator<Job> *_allNodesIt;
+	mutable ListIterator<Job> *_allNodesIt;
 
 private:
 		// Note: the final node is in the _jobs list; this pointer is just
