@@ -52,7 +52,6 @@ if (-e $rescuedag) {
 
 $abnormal = sub 
 {
-
 	die "Want to see only submit, execute and successful completion\n";
 };
 
@@ -114,20 +113,46 @@ $success = sub
 	# it, and then print the remaining stuff at the end if it's not all
 	# found.  wenger 2009-03-05.
 	@checklines = ("JOB NodeA /var/null NOOP ",
-		"SCRIPT PRE NodeA /var/null \$JOB \$RETRY",
-		"SCRIPT POST NodeA /var/null \$JOB \$RETURN",
+		"SCRIPT PRE NodeA /var/null A \$JOB \$RETRY",
+		"SCRIPT POST NodeA /var/null A \$JOB \$RETURN",
 		"VARS NodeA nodename=\"NodeA\"",
+		"ABORT-DAG-ON NodeA 3 RETURN 4",
 		"RETRY NodeA 2 UNLESS-EXIT 5",
+
 		"JOB NodeB /var/null NOOP ",
-		"SCRIPT PRE NodeB /var/null \$JOB \$RETRY",
-		"SCRIPT POST NodeB /var/null \$JOB \$RETURN",
+		"SCRIPT PRE NodeB /var/null A \$JOB \$RETRY",
+		"SCRIPT POST NodeB /var/null A \$JOB \$RETURN",
 		"VARS NodeB nodename=\"NodeB\"",
+		"ABORT-DAG-ON NodeB 3 RETURN 4",
 		"RETRY NodeB 2 UNLESS-EXIT 5",
+
 		"JOB NodeC /var/null NOOP ",
-		"SCRIPT PRE NodeC /var/null \$JOB \$RETRY",
-		"SCRIPT POST NodeC /var/null \$JOB \$RETURN",
+		"SCRIPT PRE NodeC /var/null A \$JOB \$RETRY",
+		"SCRIPT POST NodeC /var/null A \$JOB \$RETURN",
 		"VARS NodeC nodename=\"NodeC\"",
+		"ABORT-DAG-ON NodeC 3 RETURN 4",
 		"RETRY NodeC 2 UNLESS-EXIT 5",
+
+		"JOB SpliceA+NodeX /var/null NOOP ",
+		"SCRIPT PRE SpliceA+NodeX /var/null B \$JOB \$RETRY",
+		"SCRIPT POST SpliceA+NodeX /var/null B \$JOB \$RETURN",
+		"VARS SpliceA+NodeX nodename=\"SpliceA+NodeX\"",
+		"ABORT-DAG-ON SpliceA+NodeX 4 RETURN 5",
+		"RETRY SpliceA+NodeX 3 UNLESS-EXIT 6",
+
+		"JOB SpliceA+NodeY /var/null NOOP ",
+		"SCRIPT PRE SpliceA+NodeY /var/null B \$JOB \$RETRY",
+		"SCRIPT POST SpliceA+NodeY /var/null B \$JOB \$RETURN",
+		"VARS SpliceA+NodeY nodename=\"SpliceA+NodeY\"",
+		"ABORT-DAG-ON SpliceA+NodeY 4 RETURN 5",
+		"RETRY SpliceA+NodeY 3 UNLESS-EXIT 6",
+
+		"JOB SpliceA+NodeZ /var/null NOOP ",
+		"SCRIPT PRE SpliceA+NodeZ /var/null B \$JOB \$RETRY",
+		"SCRIPT POST SpliceA+NodeZ /var/null B \$JOB \$RETURN",
+		"VARS SpliceA+NodeZ nodename=\"SpliceA+NodeZ\"",
+		"ABORT-DAG-ON SpliceA+NodeZ 4 RETURN 5",
+		"RETRY SpliceA+NodeZ 3 UNLESS-EXIT 6",
 	);
 
 	foreach $check (@checklines) {

@@ -1,0 +1,10 @@
+job NodeX /var/null noop
+job NodeY /var/null noop
+job NodeZ /var/null noop
+
+script pre ALL_NODES /var/null B $JOB $RETRY
+script post ALL_NODES /var/null B $JOB $RETURN
+vars ALL_NODES nodename="$(JOB)"
+retry ALL_NODES 3 UNLESS-EXIT 6
+abort-dag-on ALL_NODES 4 return 5
+priority ALL_NODES 20

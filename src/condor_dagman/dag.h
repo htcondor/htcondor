@@ -679,9 +679,9 @@ class Dag {
 	ExtArray<Job*>* FinalRecordedNodes(void);
 
 	// called just after a parse of a dag, this will keep track of the
-	// original intial and final nodes of a dag (after all parent and
+	// original intial and terminal nodes of a dag (after all parent and
 	// child dependencies have been added or course).
-	void RecordInitialAndFinalNodes(void);
+	void RecordInitialAndTerminalNodes(void);
 
 	// Recursively lift all splices into each other and then me
 	OwnedMaterials* LiftSplices(SpliceLayer layer);
@@ -780,7 +780,7 @@ class Dag {
 	// dag as a parent or a child, we can always reference the correct nodes
 	// even in the face of AddDependency().
 	ExtArray<Job*> _splice_initial_nodes;
-	ExtArray<Job*> _splice_final_nodes;
+	ExtArray<Job*> _splice_terminal_nodes;
 
   	// A hash table with key of a splice name and value of the dag parse 
 	// associated with the splice.

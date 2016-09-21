@@ -4270,15 +4270,15 @@ Dag::InitialRecordedNodes(void)
 ExtArray<Job*>*
 Dag::FinalRecordedNodes(void)
 {
-	return &_splice_final_nodes;
+	return &_splice_terminal_nodes;
 }
 
 
 //---------------------------------------------------------------------------
 // After we parse the dag, let's remember which ones were the initial and 
-// final nodes in the dag (in case this dag was used as a splice).
+// terminal nodes in the dag (in case this dag was used as a splice).
 void
-Dag::RecordInitialAndFinalNodes(void)
+Dag::RecordInitialAndTerminalNodes(void)
 {
 	Job *job = NULL;
 
@@ -4292,7 +4292,7 @@ Dag::RecordInitialAndFinalNodes(void)
 
 		// record the final nodes
 		if (job->NumChildren() == 0) {
-			_splice_final_nodes.add(job);
+			_splice_terminal_nodes.add(job);
 		}
 	}
 }
@@ -4413,7 +4413,7 @@ Dag::AssumeOwnershipofNodes(const MyString &spliceName, OwnedMaterials *om)
 			continue;
 		}
 		if ((*nodes)[i]->NumChildren() == 0) {
-			_splice_final_nodes.add((*nodes)[i]);
+			_splice_terminal_nodes.add((*nodes)[i]);
 		}
 	}
 

@@ -2,7 +2,11 @@ job NodeA /var/null noop
 job NodeB /var/null noop
 job NodeC /var/null noop
 
-script pre ALL_NODES /var/null $JOB $RETRY
-script post ALL_NODES /var/null $JOB $RETURN
+splice SpliceA job_dagman_all_nodes-splice.dag
+
+script pre ALL_NODES /var/null A $JOB $RETRY
+script post ALL_NODES /var/null A $JOB $RETURN
 vars ALL_NODES nodename="$(JOB)"
 retry ALL_NODES 2 UNLESS-EXIT 5
+abort-dag-on ALL_NODES 3 return 4
+priority ALL_NODES 10

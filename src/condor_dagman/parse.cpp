@@ -477,7 +477,7 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 	// If this dag is used as a splice, then this information is very
 	// important to preserve when building dependancy links.
 	dag->LiftSplices(SELF);
-	dag->RecordInitialAndFinalNodes();
+	dag->RecordInitialAndTerminalNodes();
 	
 	if ( useDagDir ) {
 		MyString	errMsg;
@@ -1178,21 +1178,6 @@ parse_abort(
 	MyString tmpJobName = munge_job_name(jobName);
 	jobName = tmpJobName.Value();
 	
-	Job *job = dag->FindNodeByName( jobName );
-	if( job == NULL ) {
-		debug_printf( DEBUG_QUIET, 
-					  "ERROR: %s (line %d): Unknown Job %s\n",
-					  filename, lineNumber, jobNameOrig );
-		return false;
-	}
-
-	if ( job->GetFinal() ) {
-		debug_printf( DEBUG_QUIET, 
-					  "ERROR: %s (line %d): Final job %s cannot have ABORT-DAG-ON specification\n",
-					  filename, lineNumber, jobNameOrig );
-		return false;
-	}
-	
 		// Node abort value.
 	char *abortValStr = strtok( NULL, DELIMITERS );
 	if ( abortValStr == NULL ) {
@@ -1255,11 +1240,34 @@ parse_abort(
 		}
 	}
 
-	job->abort_dag_val = abortVal;
-	job->have_abort_dag_val = true;
+	Job *job;
+	while ( ( job = dag->FindAllNodesByName( jobName ) ) ) {
+		jobName = NULL;
 
-	job->abort_dag_return_val = returnVal;
-	job->have_abort_dag_return_val = haveReturnVal;
+		debug_printf( DEBUG_DEBUG_3, "parse_abort(): found job %s\n",
+					job->GetJobName() );
+
+			//TEMPTEMP -- should this be a warning instead of an error
+			// if ALL_NODES is the node name??
+			if ( job->GetFinal() ) {
+				debug_printf( DEBUG_QUIET, 
+					  		"ERROR: %s (line %d): Final job %s cannot have ABORT-DAG-ON specification\n",
+					  		filename, lineNumber, job->GetJobName() );
+				return false;
+			}
+
+			job->abort_dag_val = abortVal;
+			job->have_abort_dag_val = true;
+
+			job->abort_dag_return_val = returnVal;
+			job->have_abort_dag_return_val = haveReturnVal;
+	}
+
+	if ( jobName ) {
+		debug_printf(DEBUG_QUIET, "%s (line %d): Unknown Job %s\n",
+					filename, lineNumber, jobNameOrig);
+		return false;
+	}
 
 	return true;
 }
@@ -1344,6 +1352,7 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber)
 
 	//TEMPTEMP -- probably change this...
 	char *varsStr = strtok( NULL, "\n" ); // just get all the rest -- we'll be doing this by hand
+
 	Job *job;
 	//TEMPTEMP -- hmm -- can this loop get moved down??
 	while ( ( job = dag->FindAllNodesByName( jobName ) ) ) {
@@ -1524,7 +1533,6 @@ parse_priority(
 	int  lineNumber)
 {
 	const char * example = "PRIORITY JobName Value";
-	Job * job = NULL;
 
 	//
 	// Next token is the JobName
@@ -1537,33 +1545,19 @@ parse_priority(
 		return false;
 	}
 
-	const char *jobNameOrig = jobName; // for error output
+	//TEMPTEMP -- do all functions check for name being a reserved word?
 	if ( isReservedWord( jobName ) ) {
 		debug_printf( DEBUG_QUIET,
 					  "ERROR: %s (line %d): JobName cannot be a reserved word\n",
 					  filename, lineNumber );
 		exampleSyntax( example );
 		return false;
-	} else {
-		debug_printf(DEBUG_DEBUG_1, "jobName: %s\n", jobName);
-		MyString tmpJobName = munge_job_name(jobName);
-		jobName = tmpJobName.Value();
-
-		job = dag->FindNodeByName( jobName );
-		if (job == NULL) {
-			debug_printf( DEBUG_QUIET, 
-						  "ERROR: %s (line %d): Unknown Job %s\n",
-						  filename, lineNumber, jobNameOrig );
-			return false;
-		}
 	}
 
-	if ( job->GetFinal() ) {
-		debug_printf( DEBUG_QUIET, 
-					  "ERROR: %s (line %d): Final job %s cannot have priority\n",
-					  filename, lineNumber, jobNameOrig );
-		return false;
-	}
+	debug_printf(DEBUG_DEBUG_1, "jobName: %s\n", jobName);
+	const char *jobNameOrig = jobName; // for error output
+	MyString tmpJobName = munge_job_name(jobName);
+	jobName = tmpJobName.Value();
 
 	//
 	// Next token is the priority value.
@@ -1600,14 +1594,38 @@ parse_priority(
 		return false;
 	}
 
-	if ( job->_hasNodePriority && job->_nodePriority != priorityVal ) {
-		debug_printf( DEBUG_NORMAL, "Warning: new priority %d for node %s "
-					"overrides old value %d\n", priorityVal,
-					job->GetJobName(), job->_nodePriority );
-		check_warning_strictness( DAG_STRICT_2 );
+	//
+	// Actually assign priorities to the relevant node(s).
+	//
+	Job *job;
+	while ( ( job = dag->FindAllNodesByName( jobName ) ) ) {
+		jobName = NULL;
+
+		debug_printf( DEBUG_DEBUG_3, "parse_TEMPTEMP(): found job %s\n",
+					job->GetJobName() );
+
+			if ( job->GetFinal() ) {
+				debug_printf( DEBUG_QUIET, 
+					  		"ERROR: %s (line %d): Final job %s cannot have priority\n",
+					  		filename, lineNumber, jobNameOrig );
+				return false;
+			}
+
+			if ( job->_hasNodePriority && job->_nodePriority != priorityVal ) {
+				debug_printf( DEBUG_NORMAL, "Warning: new priority %d for node %s overrides old value %d\n",
+							priorityVal, job->GetJobName(),
+							job->_nodePriority );
+				check_warning_strictness( DAG_STRICT_2 );
+			}
+			job->_hasNodePriority = true;
+			job->_nodePriority = priorityVal;
 	}
-	job->_hasNodePriority = true;
-	job->_nodePriority = priorityVal;
+
+	if ( jobName ) {
+		debug_printf(DEBUG_QUIET, "%s (line %d): Unknown Job %s\n",
+					filename, lineNumber, jobNameOrig);
+		return false;
+	}
 
 	return true;
 }
