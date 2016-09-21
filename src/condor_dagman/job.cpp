@@ -688,6 +688,8 @@ Job::NumChildren() const
 void
 Job::SetCategory( const char *categoryName, ThrottleByCategory &catThrottles )
 {
+	ASSERT( !_final );
+
 	MyString	tmpName( categoryName );
 
 	if ( (_throttleInfo != NULL) &&

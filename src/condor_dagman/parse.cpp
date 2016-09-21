@@ -857,19 +857,29 @@ parse_script(
 
 
 	Job *job;
+	bool isAllNodes = !strcasecmp( jobName, Dag::ALL_NODES);
 	while ( ( job = dag->FindAllNodesByName( jobName ) ) ) {
 		jobName = NULL;
 
-	//TEMPTEMP -- fix indentation
-	MyString whynot;
-	//TEMPTEMP -- this fails if we already have a script...
-	if( !job->AddScript( post, rest, defer_status, defer_time, whynot ) ) {
-		debug_printf( DEBUG_SILENT, "ERROR: %s (line %d): "
-					  "failed to add %s script to node %s: %s\n",
-					  filename, lineNumber, post ? "POST" : "PRE",
-					  jobNameOrig, whynot.Value() );
-		return false;
-	}
+		if ( job->GetFinal() ) {
+			if ( isAllNodes ) {
+				debug_printf( DEBUG_QUIET,
+							"In parse_script(): skipping node %s because final nodes must have script set explicitly\n",
+							job->GetJobName() );
+				continue;
+			}
+		}
+
+		MyString whynot;
+			// This fails if the node already has a script.
+		if( !job->AddScript( post, rest, defer_status, defer_time, whynot ) ) {
+			debug_printf( DEBUG_SILENT, "ERROR: %s (line %d): "
+					  	"failed to add %s script to node %s: %s\n",
+					  	filename, lineNumber, post ? "POST" : "PRE",
+						//TEMPTEMP -- jobNameOrig may not be good here if we have ALL_NODES; but what if we have name munging on?
+					  	jobNameOrig, whynot.Value() );
+			return false;
+		}
 
 	}
 
@@ -1123,21 +1133,34 @@ parse_retry(
     }
 
 	Job *job;
+	bool isAllNodes = !strcasecmp( jobName, Dag::ALL_NODES);
 	while ( ( job = dag->FindAllNodesByName( jobName ) ) ) {
 		jobName = NULL;
 
 		debug_printf( DEBUG_DEBUG_3, "parse_retry(): found job %s\n",
 					job->GetJobName() );
 
-			job->retry_max = retryMax;
-			if ( unless_exit != 0 ) {
-            	job->have_retry_abort_val = true;
-            	job->retry_abort_val = unless_exit;
+		if ( job->GetFinal() ) {
+			if ( isAllNodes ) {
+				debug_printf( DEBUG_QUIET,
+							"In parse_retry(): skipping node %s because final nodes cannot have RETRY specifications\n",
+							job->GetJobName() );
+				continue;
+			} else {
+				debug_printf( DEBUG_QUIET, 
+				  			"ERROR: %s (line %d): Final job %s cannot have RETRY specification\n",
+				  			filename, lineNumber, job->GetJobName() );
+				return false;
 			}
-            debug_printf( DEBUG_DEBUG_1, "Retry Abort Value for %s is %d\n", 
-                          jobName, job->retry_abort_val );
+		}
 
-
+		job->retry_max = retryMax;
+		if ( unless_exit != 0 ) {
+           	job->have_retry_abort_val = true;
+           	job->retry_abort_val = unless_exit;
+		}
+           debug_printf( DEBUG_DEBUG_1, "Retry Abort Value for %s is %d\n",
+		   			jobName, job->retry_abort_val );
 	}
 
 	if ( jobName ) {
@@ -1241,26 +1264,32 @@ parse_abort(
 	}
 
 	Job *job;
+	bool isAllNodes = !strcasecmp( jobName, Dag::ALL_NODES);
 	while ( ( job = dag->FindAllNodesByName( jobName ) ) ) {
 		jobName = NULL;
 
 		debug_printf( DEBUG_DEBUG_3, "parse_abort(): found job %s\n",
 					job->GetJobName() );
 
-			//TEMPTEMP -- should this be a warning instead of an error
-			// if ALL_NODES is the node name??
-			if ( job->GetFinal() ) {
+		if ( job->GetFinal() ) {
+			if ( isAllNodes ) {
+				debug_printf( DEBUG_QUIET,
+							"In parse_abort(): skipping node %s because final nodes cannot have ABORT-DAG-ON specifications\n",
+							job->GetJobName() );
+				continue;
+			} else {
 				debug_printf( DEBUG_QUIET, 
-					  		"ERROR: %s (line %d): Final job %s cannot have ABORT-DAG-ON specification\n",
-					  		filename, lineNumber, job->GetJobName() );
+				  			"ERROR: %s (line %d): Final job %s cannot have ABORT-DAG-ON specification\n",
+				  			filename, lineNumber, job->GetJobName() );
 				return false;
 			}
+		}
 
-			job->abort_dag_val = abortVal;
-			job->have_abort_dag_val = true;
+		job->abort_dag_val = abortVal;
+		job->have_abort_dag_val = true;
 
-			job->abort_dag_return_val = returnVal;
-			job->have_abort_dag_return_val = haveReturnVal;
+		job->abort_dag_return_val = returnVal;
+		job->have_abort_dag_return_val = haveReturnVal;
 	}
 
 	if ( jobName ) {
@@ -1325,7 +1354,6 @@ static bool parse_dot(Dag *dag, const char *filename, int lineNumber)
 }
 
 //TEMPTEMP -- split some of this into separate functions?
-//TEMPTEMP -- need to check ALL_NODES with multiple DAGs -- doesn't work
 //-----------------------------------------------------------------------------
 // 
 // Function: parse_vars
@@ -1355,12 +1383,22 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber)
 
 	Job *job;
 	//TEMPTEMP -- hmm -- can this loop get moved down??
+	bool isAllNodes = !strcasecmp( jobName, Dag::ALL_NODES);
 	while ( ( job = dag->FindAllNodesByName( jobName ) ) ) {
 	//TEMPTEMP -- fix indentation
 	jobName = NULL;
 
 	debug_printf( DEBUG_DEBUG_3, "parse_vars(): found job %s\n",
 				job->GetJobName() );
+
+	if ( job->GetFinal() ) {
+		if ( isAllNodes ) {
+			debug_printf( DEBUG_QUIET,
+						"In parse_vars(): skipping node %s because final nodes must have VARS set explicitly\n",
+						job->GetJobName() );
+			continue;
+		}
+	}
 
 	//TEMPTEMP -- put a bunch of this into its own function?
 	char *str = varsStr;//TEMPTEMP
@@ -1598,6 +1636,7 @@ parse_priority(
 	// Actually assign priorities to the relevant node(s).
 	//
 	Job *job;
+	bool isAllNodes = !strcasecmp( jobName, Dag::ALL_NODES);
 	while ( ( job = dag->FindAllNodesByName( jobName ) ) ) {
 		jobName = NULL;
 
@@ -1605,10 +1644,17 @@ parse_priority(
 					job->GetJobName() );
 
 		if ( job->GetFinal() ) {
-			debug_printf( DEBUG_QUIET, 
-				  		"ERROR: %s (line %d): Final job %s cannot have priority\n",
-				  		filename, lineNumber, jobNameOrig );
-			return false;
+			if ( isAllNodes ) {
+				debug_printf( DEBUG_QUIET,
+							"In parse_priority(): skipping node %s because final nodes cannot have PRIORITY specifications\n",
+							job->GetJobName() );
+				continue;
+			} else {
+				debug_printf( DEBUG_QUIET, 
+				  			"ERROR: %s (line %d): Final job %s cannot have PRIORITY specification\n",
+				  			filename, lineNumber, job->GetJobName() );
+				return false;
+			}
 		}
 
 		if ( job->_hasNodePriority && job->_nodePriority != priorityVal ) {
@@ -1698,6 +1744,7 @@ parse_category(
 	// Actually assign categories to the relevant node(s).
 	//
 	Job *job;
+	bool isAllNodes = !strcasecmp( jobName, Dag::ALL_NODES);
 	while ( ( job = dag->FindAllNodesByName( jobName ) ) ) {
 		jobName = NULL;
 
@@ -1705,10 +1752,17 @@ parse_category(
 					job->GetJobName() );
 
 		if ( job->GetFinal() ) {
-			debug_printf( DEBUG_QUIET, 
-				  		"ERROR: %s (line %d): Final job %s cannot have category\n",
-				  		filename, lineNumber, jobNameOrig );
-			return false;
+			if ( isAllNodes ) {
+				debug_printf( DEBUG_QUIET,
+							"In parse_category(): skipping node %s because final nodes cannot have CATEGORY specifications\n",
+							job->GetJobName() );
+				continue;
+			} else {
+				debug_printf( DEBUG_QUIET, 
+				  			"ERROR: %s (line %d): Final job %s cannot have CATEGORY specification\n",
+				  			filename, lineNumber, job->GetJobName() );
+				return false;
+			}
 		}
 
 		job->SetCategory( categoryName, dag->_catThrottles );

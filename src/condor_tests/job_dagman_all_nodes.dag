@@ -2,6 +2,11 @@ job NodeA /var/null noop
 job NodeB /var/null noop
 job NodeC /var/null noop
 
+final NodeF /var/null noop
+script pre NodeF /var/null F $JOB $RETRY
+script post NodeF /var/null F $JOB $RETURN
+vars NodeF nodename="final"
+
 splice SpliceA job_dagman_all_nodes-splice.dag
 
 script pre ALL_NODES /var/null A $JOB $RETRY

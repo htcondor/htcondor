@@ -136,6 +136,11 @@ $success = sub
 		"CATEGORY NodeC upper",
 		"RETRY NodeC 2 UNLESS-EXIT 5",
 
+		"FINAL NodeF /var/null NOOP ",
+		"SCRIPT PRE NodeF /var/null F \$JOB \$RETRY",
+		"SCRIPT POST NodeF /var/null F \$JOB \$RETURN",
+		"VARS NodeF nodename=\"final\"",
+
 		"JOB SpliceA+NodeX /var/null NOOP ",
 		"SCRIPT PRE SpliceA+NodeX /var/null B \$JOB \$RETRY",
 		"SCRIPT POST SpliceA+NodeX /var/null B \$JOB \$RETURN",
