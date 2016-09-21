@@ -93,6 +93,9 @@ static MyString munge_job_name(const char *jobName);
 
 static MyString current_splice_scope(void);
 
+static bool get_next_var( const char *filename, int lineNumber, char *&str,
+			MyString &varName, MyString &varValue );
+
 void exampleSyntax (const char * example) {
     debug_printf( DEBUG_QUIET, "Example syntax is: %s\n", example);
 }
@@ -1386,166 +1389,75 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber)
 	bool isAllNodes = !strcasecmp( jobName, Dag::ALL_NODES);
 	while ( ( job = dag->FindAllNodesByName( jobName ) ) ) {
 	//TEMPTEMP -- fix indentation
-	jobName = NULL;
+		jobName = NULL;
 
-	debug_printf( DEBUG_DEBUG_3, "parse_vars(): found job %s\n",
-				job->GetJobName() );
+		debug_printf( DEBUG_DEBUG_3, "parse_vars(): found job %s\n",
+					job->GetJobName() );
 
-	if ( job->GetFinal() ) {
-		if ( isAllNodes ) {
-			debug_printf( DEBUG_QUIET,
-						"In parse_vars(): skipping node %s because final nodes must have VARS set explicitly\n",
-						job->GetJobName() );
-			continue;
-		}
-	}
-
-	//TEMPTEMP -- put a bunch of this into its own function?
-	char *str = varsStr;//TEMPTEMP
-
-	int numPairs;
-	for ( numPairs = 0; ; numPairs++ ) {  // for each name="value" pair
-		if ( str == NULL ) { // this happens when the above strtok returns NULL
-			break;
-		}
-
-			// Fix PR 854 (multiple macronames per VARS line don't work).
-		MyString varName( "" );
-		MyString varValue( "" );
-
-		while ( isspace( *str ) ) {
-			str++;
-		}
-
-		if ( *str == '\0' ) {
-			break;
-		}
-
-		// copy name char-by-char until we hit a symbol or whitespace
-		// names are limited to alphanumerics and underscores (except
-		// that '+' is legal as the first character)
-		int varnamestate = 0; // 0 means not within a varname
-		while( isalnum(*str) || *str == '_' || *str == '+' ) {
-			if (*str == '+' ) {
-				if ( varnamestate != 0 ) {
-					debug_printf( DEBUG_QUIET,
-							"ERROR: %s (line %d): '+' can only be first character of macroname (%s)\n",
-							filename, lineNumber, varName.Value() );
-					return false;
-				}
+		if ( job->GetFinal() ) {
+			if ( isAllNodes ) {
+				debug_printf( DEBUG_QUIET,
+							"In parse_vars(): skipping node %s because final nodes must have VARS set explicitly\n",
+							job->GetJobName() );
+				continue;
 			}
-			varnamestate = 1;
-			varName += *str++;
 		}
 
-		if(varName.Length() == '\0') { // no alphanumeric symbols at all were written into name,
-		                      // just something weird, which we'll print
-			debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Unexpected symbol: \"%c\"\n", filename,
-				lineNumber, *str);
-			return false;
-		}
+//TEMPTEMP -- note -- this re-parses most of the VARS line for every node...
+		char *str = varsStr;//TEMPTEMP
 
-		if ( varName == "+" ) {
-			debug_printf(DEBUG_QUIET,
-				"ERROR: %s (line %d): macroname (%s) must contain at least one alphanumeric character\n",
-				filename, lineNumber, varName.Value() );
-			return false;
-		}
-		
-		// burn through any whitespace there may be afterwards
-		while(isspace(*str))
-			str++;
-		if(*str != '=') {
-			debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): Illegal character (%c) in or after macroname %s\n", filename, lineNumber, *str, varName.Value() );
-			return false;
-		}
-		str++;
-		while(isspace(*str))
-			str++;
-		
-		if(*str != '"') {
-			debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): %s's value must be quoted\n", filename,
-				lineNumber, varName.Value());
-			return false;
-		}
+		int numPairs;
+		for ( numPairs = 0; ; numPairs++ ) {  // for each name="value" pair
+			if ( str == NULL ) { // this happens when the above strtok returns NULL
+				break;
+			}
 
-		// now it's time to read in all the data until the next double quote, while handling
-		// the two escape sequences: \\ and \"
-		bool stillInQuotes = true;
-		bool escaped       = false;
-		do {
-			varValue += *(++str);
-			
-			if(*str == '\0') {
-				debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Missing end quote\n", filename,
-					lineNumber);
+				// Fix PR 854 (multiple macronames per VARS line don't work).
+			MyString varName( "" );
+			MyString varValue( "" );
+
+			if ( !get_next_var( filename, lineNumber, str, varName,
+						varValue ) ) {
 				return false;
 			}
-			
-			if(!escaped) {
-				if(*str == '"') {
-					// we don't want that last " in the string
-					varValue.setChar( varValue.Length() - 1, '\0' );
-					stillInQuotes = false;
-				} else if(*str == '\\') {
-					// on the next pass it will be filled in appropriately
-					varValue.setChar( varValue.Length() - 1, '\0' );
-					escaped = true;
-					continue;
-				}
-			} else {
-				if(*str != '\\' && *str != '"') {
-					debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Unknown escape sequence "
-						"\"\\%c\"\n", filename, lineNumber, *str);
-					return false;
-				}
-				escaped = false; // being escaped only lasts for one character
+			if ( varName == "" ) {
+				break;
 			}
-		} while(stillInQuotes);
 
-		str++;
+			// This will be inefficient for jobs with lots of variables
+			// As in O(N^2)
+			job->varsFromDag->Rewind();
+			while(Job::NodeVar *var = job->varsFromDag->Next()){
+				if ( varName == var->_name ) {
+					//TEMPTEMP -- do we want to get rid of this warning or change the strictness?
+					debug_printf(DEBUG_NORMAL,"Warning: VAR \"%s\" "
+						"is already defined in job \"%s\" "
+						"(Discovered at file \"%s\", line %d)\n",
+						varName.Value(), job->GetJobName(), filename,
+						lineNumber);
+					check_warning_strictness( DAG_STRICT_2 );
+					debug_printf(DEBUG_NORMAL,"Warning: Setting VAR \"%s\" "
+						"= \"%s\"\n", varName.Value(), varValue.Value());
+					job->varsFromDag->DeleteCurrent();
+				}
+			}
+			debug_printf(DEBUG_DEBUG_1,
+						"Argument added, Name=\"%s\"\tValue=\"%s\"\n",
+						varName.Value(), varValue.Value());
+			Job::NodeVar *var = new Job::NodeVar();
+			var->_name = varName;
+			var->_value = varValue;
+			bool appendResult;
+			appendResult = job->varsFromDag->Append( var );
+			ASSERT( appendResult );
+		}
 
-			// Check for illegal variable name.
-		MyString tmpName(varName);
-		tmpName.lower_case();
-		if ( tmpName.find( "queue" ) == 0 ) {
-			debug_printf(DEBUG_QUIET, "ERROR: Illegal variable name: %s; variable "
-						"names cannot begin with \"queue\"\n", varName.Value() );
+		if ( numPairs == 0 ) {
+			debug_printf(DEBUG_QUIET,
+						"ERROR: %s (line %d): No valid name-value pairs\n",
+						filename, lineNumber);
 			return false;
 		}
-
-		// This will be inefficient for jobs with lots of variables
-		// As in O(N^2)
-		job->varsFromDag->Rewind();
-		while(Job::NodeVar *var = job->varsFromDag->Next()){
-			if ( varName == var->_name ) {
-				//TEMPTEMP -- do we want to get rid of this warning or change the strictness?
-				debug_printf(DEBUG_NORMAL,"Warning: VAR \"%s\" "
-					"is already defined in job \"%s\" "
-					"(Discovered at file \"%s\", line %d)\n",
-					varName.Value(), job->GetJobName(), filename,
-					lineNumber);
-				check_warning_strictness( DAG_STRICT_2 );
-				debug_printf(DEBUG_NORMAL,"Warning: Setting VAR \"%s\" "
-					"= \"%s\"\n", varName.Value(), varValue.Value());
-				job->varsFromDag->DeleteCurrent();
-			}
-		}
-		debug_printf(DEBUG_DEBUG_1,
-					"Argument added, Name=\"%s\"\tValue=\"%s\"\n",
-					varName.Value(), varValue.Value());
-		Job::NodeVar *var = new Job::NodeVar();
-		var->_name = varName;
-		var->_value = varValue;
-		bool appendResult;
-		appendResult = job->varsFromDag->Append( var );
-		ASSERT( appendResult );
-	}
-
-	if(numPairs == 0) {
-		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): No valid name-value pairs\n", filename, lineNumber);
-		return false;
-	}
 	}
 
 	if ( jobName ) {
@@ -2375,4 +2287,122 @@ static MyString current_splice_scope(void)
 		scope = tmp + "+";
 	}
 	return scope;
+}
+
+
+//TEMPTEMP -- crap -- we probably need three returns:
+// 1) got a var
+// 2) end of vars
+// 3) error
+//TEMPTEMP -- or false means error; no var name means end of vars
+static bool
+get_next_var( const char *filename, int lineNumber, char *&str,
+			MyString &varName, MyString &varValue ) {
+	while ( isspace( *str ) ) {
+		str++;
+	}
+
+	if ( *str == '\0' ) {
+		return true;
+	}
+
+	// copy name char-by-char until we hit a symbol or whitespace
+	// names are limited to alphanumerics and underscores (except
+	// that '+' is legal as the first character)
+	int varnamestate = 0; // 0 means not within a varname
+	while ( isalnum( *str ) || *str == '_' || *str == '+' ) {
+		if ( *str == '+' ) {
+			if ( varnamestate != 0 ) {
+				debug_printf( DEBUG_QUIET,
+						"ERROR: %s (line %d): '+' can only be first character of macroname (%s)\n",
+						filename, lineNumber, varName.Value() );
+				return false;
+			}
+		}
+		varnamestate = 1;
+		varName += *str++;
+	}
+
+	if ( varName.Length() == '\0' ) { // no alphanumeric symbols at all were written into name,
+	                      // just something weird, which we'll print
+		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Unexpected symbol: \"%c\"\n", filename,
+			lineNumber, *str);
+		return false;
+	}
+
+	if ( varName == "+" ) {
+		debug_printf(DEBUG_QUIET,
+			"ERROR: %s (line %d): macroname (%s) must contain at least one alphanumeric character\n",
+			filename, lineNumber, varName.Value() );
+		return false;
+	}
+		
+	// Burn through any whitespace between var name and "=".
+	while ( isspace( *str ) ) {
+		str++;
+	}
+
+	if ( *str != '=' ) {
+		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): Illegal character (%c) in or after macroname %s\n", filename, lineNumber, *str, varName.Value() );
+		return false;
+	}
+	str++;
+
+	// Burn through any whitespace between "=" and var value.
+	while ( isspace( *str ) ) {
+		str++;
+	}
+	
+	if ( *str != '"' ) {
+		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): %s's value must be quoted\n", filename,
+			lineNumber, varName.Value());
+		return false;
+	}
+
+	// now it's time to read in all the data until the next double quote, while handling
+	// the two escape sequences: \\ and \"
+	bool stillInQuotes = true;
+	bool escaped       = false;
+	do {
+		varValue += *(++str);
+		
+		if ( *str == '\0' ) {
+			debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): Missing end quote\n", filename,
+				lineNumber );
+			return false;
+		}
+			
+		if ( !escaped ) {
+			if ( *str == '"' ) {
+				// we don't want that last " in the string
+				varValue.setChar( varValue.Length() - 1, '\0' );
+				stillInQuotes = false;
+			} else if ( *str == '\\' ) {
+				// on the next pass it will be filled in appropriately
+				varValue.setChar( varValue.Length() - 1, '\0' );
+				escaped = true;
+				continue;
+			}
+		} else {
+			if ( *str != '\\' && *str != '"' ) {
+				debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): Unknown escape sequence "
+					"\"\\%c\"\n", filename, lineNumber, *str );
+				return false;
+			}
+			escaped = false; // being escaped only lasts for one character
+		}
+	} while ( stillInQuotes );
+
+	str++;
+
+		// Check for illegal variable name.
+	MyString tmpName( varName );
+	tmpName.lower_case();
+	if ( tmpName.find( "queue" ) == 0 ) {
+		debug_printf( DEBUG_QUIET, "ERROR: Illegal variable name: %s; variable "
+					"names cannot begin with \"queue\"\n", varName.Value() );
+		return false;
+	}
+
+	return true;
 }
