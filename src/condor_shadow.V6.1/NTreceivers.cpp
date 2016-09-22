@@ -125,6 +125,7 @@ static const char * shadow_syscall_name(int condor_sysnum)
         case CONDOR_set_job_attr: return "set_job_attr";
         case CONDOR_constrain: return "constrain";
         case CONDOR_get_sec_session_info: return "get_sec_session_info";
+		case CONDOR_dprintf_stats: return "dprintf_stats";
 #ifdef WIN32
 #else
         case CONDOR_pread: return "pread";
@@ -2111,6 +2112,30 @@ case CONDOR_getdir:
 		ASSERT( result );
 		return 0;
 	}
+	case CONDOR_dprintf_stats:
+	{
+		char *message = NULL;
+
+		result = ( syscall_sock->code(message) );
+		ASSERT( result );
+
+		result = ( syscall_sock->end_of_message() );
+		ASSERT( result );
+
+		dprintf(D_STATS, message);
+		rval = 0; // don't check return value from dprintf
+		free(message);
+
+		syscall_sock->encode();
+		result = ( syscall_sock->code(rval) );
+		ASSERT( result );
+
+
+		result = ( syscall_sock->end_of_message() );
+		ASSERT( result );
+		return 0;
+	}
+
 	default:
 	{
 		dprintf(D_ALWAYS, "ERROR: unknown syscall %d received\n", condor_sysnum );

@@ -2437,8 +2437,11 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 		jobAd.LookupInteger(ATTR_CLUSTER_ID, cluster);
 		jobAd.LookupInteger(ATTR_PROC_ID, proc);
 
-		dprintf(D_STATS, "File Transfer Download: JobId: %d.%d files: %d bytes: %lld seconds: %.2f dest: %s %s\n", 
-			cluster, proc, numFiles, (long long)*total_bytes, (downloadEndTime - downloadStartTime), s->peer_ip_str(), (stats ? stats : "") );
+		std::string full_stats;
+		formatstr(full_stats, "File Transfer Download: JobId: %d.%d files: %d bytes: %lld seconds: %.2f dest: %s %s\n", 
+			cluster, proc, numFiles, (long long)*total_bytes, (downloadEndTime - downloadStartTime), s->peer_ip_str(), (stats ? stats : ""));
+		Info.tcp_stats = full_stats.c_str();
+		dprintf(D_STATS, full_stats.c_str());
 	}
 
 
@@ -3829,8 +3832,11 @@ FileTransfer::ExitDoUpload(filesize_t *total_bytes, int numFiles, ReliSock *s, p
 		jobAd.LookupInteger(ATTR_PROC_ID, proc);
 
 		char *stats = s->get_statistics();
-		dprintf(D_STATS, "File Transfer Upload: JobId: %d.%d files: %d bytes: %lld seconds: %.2f dest: %s %s\n", 
-			cluster, proc, numFiles, (long long)*total_bytes, (uploadEndTime - uploadStartTime), s->peer_ip_str(), (stats ? stats : "") );
+		std::string full_stats;
+		formatstr(full_stats, "File Transfer Upload: JobId: %d.%d files: %d bytes: %lld seconds: %.2f dest: %s %s\n", 
+			cluster, proc, numFiles, (long long)*total_bytes, (downloadEndTime - downloadStartTime), s->peer_ip_str(), (stats ? stats : ""));
+		Info.tcp_stats = full_stats.c_str();
+		dprintf(D_STATS, full_stats.c_str());
 	}
 
 	return rc;
