@@ -2577,6 +2577,46 @@ static int IsSpecialSetAttribute(const char *attr, int* set_cat=NULL)
 
 
 int
+SetSecureAttributeInt(int cluster_id, int proc_id, const char *attr_name, int attr_value, SetAttributeFlags_t flags)
+{
+	if (attr_name == NULL ) {return -1;}
+
+	char buf[100];
+	snprintf(buf,100,"%d",attr_value);
+
+	// lookup job and set attribute
+	JOB_ID_KEY_BUF key;
+	IdToKey(cluster_id,proc_id,key);
+	JobQueue->SetAttribute(key.c_str(), attr_name, buf, flags & SETDIRTY);
+
+	return 0;
+}
+
+
+int
+SetSecureAttributeRawString(int cluster_id, int proc_id, const char *attr_name, const char *attr_value, SetAttributeFlags_t flags)
+{
+	if (attr_name == NULL || attr_value == NULL) {return -1;}
+
+	// do quoting using oldclassad syntax
+	classad::Value tmpValue;
+	classad::ClassAdUnParser unparse;
+	unparse.SetOldClassAd( true, true );
+
+	tmpValue.SetStringValue(attr_value);
+	std::string buf;
+	unparse.Unparse(buf, tmpValue);
+
+	// lookup job and set attribute to quoted string
+	JOB_ID_KEY_BUF key;
+	IdToKey(cluster_id,proc_id,key);
+	JobQueue->SetAttribute(key.c_str(), attr_name, buf.c_str(), flags & SETDIRTY);
+
+	return 0;
+}
+
+
+int
 SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			 const char *attr_value, SetAttributeFlags_t flags)
 {
@@ -2940,15 +2980,15 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 
 		char *proxy_subject = x509_proxy_subject_name( proxy_handle );
 		dprintf (D_SECURITY, "ATTRS: %s = %s\n", ATTR_X509_USER_PROXY_SUBJECT, proxy_subject?proxy_subject:"NULL");
-		SetAttributeRawString(cluster_id, proc_id, ATTR_X509_USER_PROXY_SUBJECT, proxy_subject?proxy_subject:"");
+		SetSecureAttributeRawString(cluster_id, proc_id, ATTR_X509_USER_PROXY_SUBJECT, proxy_subject?proxy_subject:"", flags );
 
 		time_t proxy_expiration = x509_proxy_expiration_time( proxy_handle );
 		dprintf (D_SECURITY, "ATTRS: %s = %li\n", ATTR_X509_USER_PROXY_EXPIRATION, proxy_expiration);
-		SetAttributeInt( cluster_id, proc_id, ATTR_X509_USER_PROXY_EXPIRATION, proxy_expiration, flags );
+		SetSecureAttributeInt( cluster_id, proc_id, ATTR_X509_USER_PROXY_EXPIRATION, proxy_expiration, flags );
 
 		char *proxy_email = x509_proxy_email( proxy_handle );
 		dprintf (D_SECURITY, "ATTRS: %s = %s\n", ATTR_X509_USER_PROXY_EMAIL, proxy_email?proxy_email:"NULL");
-		SetAttributeRawString(cluster_id, proc_id, ATTR_X509_USER_PROXY_EMAIL, proxy_email?proxy_email:"");
+		SetSecureAttributeRawString(cluster_id, proc_id, ATTR_X509_USER_PROXY_EMAIL, proxy_email?proxy_email:"", flags );
 
 		// set VOMS attrs regardless of if they are present -- we need to explicitly clear them if not
 		char* voname = NULL;
@@ -2959,13 +2999,13 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		extract_VOMS_info( proxy_handle, 0, &voname, &firstfqan, &fullfqan);
 
 		dprintf( D_SECURITY, "ATTRS: %s = %s\n", ATTR_X509_USER_PROXY_VONAME, voname?voname:"NULL");
-		SetAttributeRawString(cluster_id, proc_id, ATTR_X509_USER_PROXY_VONAME, voname?voname:"");
+		SetSecureAttributeRawString(cluster_id, proc_id, ATTR_X509_USER_PROXY_VONAME, voname?voname:"", flags );
 
 		dprintf( D_SECURITY, "ATTRS: %s = %s\n", ATTR_X509_USER_PROXY_FIRST_FQAN, firstfqan?firstfqan:"NULL");
-		SetAttributeRawString(cluster_id, proc_id, ATTR_X509_USER_PROXY_FIRST_FQAN, firstfqan?firstfqan:"");
+		SetSecureAttributeRawString(cluster_id, proc_id, ATTR_X509_USER_PROXY_FIRST_FQAN, firstfqan?firstfqan:"", flags );
 
 		dprintf( D_SECURITY, "ATTRS: %s = %s\n", ATTR_X509_USER_PROXY_FQAN, fullfqan?fullfqan:"NULL");
-		SetAttributeRawString(cluster_id, proc_id, ATTR_X509_USER_PROXY_FQAN, fullfqan?fullfqan:"");
+		SetSecureAttributeRawString(cluster_id, proc_id, ATTR_X509_USER_PROXY_FQAN, fullfqan?fullfqan:"", flags );
 
 		// clean up
 		free( proxy_subject );
