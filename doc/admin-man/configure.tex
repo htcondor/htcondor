@@ -1,4 +1,3 @@
-%TEMTEMP -- gittrac #5714
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{\label{sec:Configuring-HTCondor}Configuration}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -5383,9 +5382,10 @@ WANT_HOLD_REASON = \
   It is only visible to the job and the job's child processes.
   As an example:
 \begin{verbatim}
-  MOUNT_UNDER_SCRATCH = /tmp,/var/tmp
+  MOUNT_UNDER_SCRATCH = ifThenElse(TARGET.UtsnameSysname ? "Linux", "/tmp,/var/tmp", "")
 \end{verbatim}
-  The job will see the usual \File{/tmp} and \File{/var/tmp}
+  If the job is running on a Linux system, it will see the usual
+  \File{/tmp} and \File{/var/tmp}
   directories, but when accessing files via these paths, the
   system will redirect the access. 
   The resultant files will actually end up in directories named 
@@ -5400,9 +5400,23 @@ WANT_HOLD_REASON = \
   The default value if not defined will be that no directories are mounted in
   the job's temporary scratch directory.
 
+  If the job's execute directory is encrypted, \File{/tmp} and
+  \File{/var/tmp} are automatically added to
+  \MacroNI{MOUNT\_UNDER\_SCRATCH} when the job is run (they
+  will not show up if \MacroNI{MOUNT\_UNDER\_SCRATCH} is
+  examined with \Condor{config\_val}).
+
+  \Bold{Note that the \MacroNI{MOUNT\_UNDER\_SCRATCH} mounts do not
+  take place until the PreCmd of the job, if any, completes.}
+  (See~\ref{man-condor-submit-prescript} for information on PreCmd.)
+
+  Also note that, if \MacroNI{MOUNT\_UNDER\_SCRATCH} is defined, it
+  must either be a string or an expression that evaluates to a
+  string.
+
 \end{description}
 
-These macros control if the \Condor{startd} daemon should perform
+The following macros control if the \Condor{startd} daemon should perform
 backfill computations whenever resources would otherwise be idle.  
 See section~\ref{sec:Backfill} on page~\pageref{sec:Backfill} on
 Configuring HTCondor for Running Backfill Jobs for details.
@@ -5469,8 +5483,8 @@ Configuring HTCondor for Running Backfill Jobs for details.
 \end{description}
 
 
-These macros only apply to the \Condor{startd} daemon when it is running on 
-a multi-core machine. 
+The following macros only apply to the \Condor{startd} daemon when it
+is running on a multi-core machine. 
 See section~\ref{sec:Configuring-SMP} on
 page~\pageref{sec:Configuring-SMP} for details.
 
