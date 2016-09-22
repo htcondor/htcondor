@@ -3210,7 +3210,7 @@ bool
 SecMan::getSessionPolicy(const char *session_id, classad::ClassAd &policy_ad)
 {
 	KeyCacheEntry *session_key = NULL;
-	if (!session_cache.lookup(session_id, session_key)) {return false;}
+	if (!session_cache->lookup(session_id, session_key)) {return false;}
 	ClassAd *policy = session_key->policy();
 	if (!policy) {return false;}
 

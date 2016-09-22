@@ -154,6 +154,14 @@ extern prio_rec *PrioRec;
 extern int N_PrioRecs;
 extern int grow_prio_recs(int);
 
+// These functions are defined in qmgmt.cpp.
+// We don't have a good schedd-internal header file, so we declare them
+// here for use in this file.
+int
+SetSecureAttributeInt(int cluster_id, int proc_id, const char *attr_name, int attr_value, SetAttributeFlags_t flags);
+int
+SetSecureAttributeString(int cluster_id, int proc_id, const char *attr_name, const char *attr_value, SetAttributeFlags_t flags);
+
 void cleanup_ckpt_files(int , int , char*);
 void send_vacate(match_rec*, int);
 void mark_job_stopped(PROC_ID*);
@@ -276,22 +284,22 @@ void AuditLogJobProxy( Sock &sock, PROC_ID job_id, const char *proxy_file )
 	SetSecureAttributeInt(job_id.cluster, job_id.proc, ATTR_X509_USER_PROXY_EXPIRATION, expire_time, 0);
 	dprintf( D_AUDIT, sock, "proxy identity: %s\n", proxy_identity );
 	dprintf( D_AUDIT, sock, "proxy subject: %s\n", proxy_subject );
-	SetSecureAttributeRawString(job_id.cluster, job_id.proc, ATTR_X509_USER_PROXY_SUBJECT, proxy_identity, 0);
+	SetSecureAttributeString(job_id.cluster, job_id.proc, ATTR_X509_USER_PROXY_SUBJECT, proxy_identity?proxy_identity:"", 0);
 	if ( proxy_email ) {
 		dprintf( D_AUDIT, sock, "proxy email: %s\n", proxy_email );
-		SetSecureAttributeRawString(job_id.cluster, job_id.proc, ATTR_X509_USER_PROXY_EMAIL, proxy_email, 0);
+		SetSecureAttributeString(job_id.cluster, job_id.proc, ATTR_X509_USER_PROXY_EMAIL, proxy_email?proxy_email:"", 0);
 	}
 	if ( voname ) {
 		dprintf( D_AUDIT, sock, "proxy vo name: %s\n", voname );
-		SetSecureAttributeRawString(job_id.cluster, job_id.proc, ATTR_X509_USER_PROXY_VONAME, voname, 0);
+		SetSecureAttributeString(job_id.cluster, job_id.proc, ATTR_X509_USER_PROXY_VONAME, voname?voname:"", 0);
 	}
 	if ( firstfqan ) {
 		dprintf( D_AUDIT, sock, "proxy first fqan: %s\n", firstfqan );
-		SetSecureAttributeRawString(job_id.cluster, job_id.proc, ATTR_X509_USER_PROXY_FIRST_FQAN, firstfqan, 0);
+		SetSecureAttributeString(job_id.cluster, job_id.proc, ATTR_X509_USER_PROXY_FIRST_FQAN, firstfqan?firstfqan:"", 0);
 	}
 	if ( fullfqan ) {
 		dprintf( D_AUDIT, sock, "proxy full fqan: %s\n", fullfqan );
-		SetSecureAttributeRawString(job_id.cluster, job_id.proc, ATTR_X509_USER_PROXY_FQAN, fullfqan, 0);
+		SetSecureAttributeString(job_id.cluster, job_id.proc, ATTR_X509_USER_PROXY_FQAN, fullfqan?fullfqan:"", 0);
 	}
 
 	free( proxy_subject );

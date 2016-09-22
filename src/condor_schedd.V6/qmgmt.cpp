@@ -2594,7 +2594,7 @@ SetSecureAttributeInt(int cluster_id, int proc_id, const char *attr_name, int at
 
 
 int
-SetSecureAttributeRawString(int cluster_id, int proc_id, const char *attr_name, const char *attr_value, SetAttributeFlags_t flags)
+SetSecureAttributeString(int cluster_id, int proc_id, const char *attr_name, const char *attr_value, SetAttributeFlags_t flags)
 {
 	if (attr_name == NULL || attr_value == NULL) {return -1;}
 
@@ -2989,7 +2989,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 
 		char *proxy_subject = x509_proxy_subject_name( proxy_handle );
 		dprintf (D_SECURITY, "ATTRS: %s = %s\n", ATTR_X509_USER_PROXY_SUBJECT, proxy_subject?proxy_subject:"NULL");
-		SetSecureAttributeRawString(cluster_id, proc_id, ATTR_X509_USER_PROXY_SUBJECT, proxy_subject?proxy_subject:"", flags );
+		SetSecureAttributeString(cluster_id, proc_id, ATTR_X509_USER_PROXY_SUBJECT, proxy_subject?proxy_subject:"", flags );
 
 		time_t proxy_expiration = x509_proxy_expiration_time( proxy_handle );
 		dprintf (D_SECURITY, "ATTRS: %s = %li\n", ATTR_X509_USER_PROXY_EXPIRATION, proxy_expiration);
@@ -2997,7 +2997,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 
 		char *proxy_email = x509_proxy_email( proxy_handle );
 		dprintf (D_SECURITY, "ATTRS: %s = %s\n", ATTR_X509_USER_PROXY_EMAIL, proxy_email?proxy_email:"NULL");
-		SetSecureAttributeRawString(cluster_id, proc_id, ATTR_X509_USER_PROXY_EMAIL, proxy_email?proxy_email:"", flags );
+		SetSecureAttributeString(cluster_id, proc_id, ATTR_X509_USER_PROXY_EMAIL, proxy_email?proxy_email:"", flags );
 
 		// set VOMS attrs regardless of if they are present -- we need to explicitly clear them if not
 		char* voname = NULL;
@@ -3008,13 +3008,13 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		extract_VOMS_info( proxy_handle, 0, &voname, &firstfqan, &fullfqan);
 
 		dprintf( D_SECURITY, "ATTRS: %s = %s\n", ATTR_X509_USER_PROXY_VONAME, voname?voname:"NULL");
-		SetSecureAttributeRawString(cluster_id, proc_id, ATTR_X509_USER_PROXY_VONAME, voname?voname:"", flags );
+		SetSecureAttributeString(cluster_id, proc_id, ATTR_X509_USER_PROXY_VONAME, voname?voname:"", flags );
 
 		dprintf( D_SECURITY, "ATTRS: %s = %s\n", ATTR_X509_USER_PROXY_FIRST_FQAN, firstfqan?firstfqan:"NULL");
-		SetSecureAttributeRawString(cluster_id, proc_id, ATTR_X509_USER_PROXY_FIRST_FQAN, firstfqan?firstfqan:"", flags );
+		SetSecureAttributeString(cluster_id, proc_id, ATTR_X509_USER_PROXY_FIRST_FQAN, firstfqan?firstfqan:"", flags );
 
 		dprintf( D_SECURITY, "ATTRS: %s = %s\n", ATTR_X509_USER_PROXY_FQAN, fullfqan?fullfqan:"NULL");
-		SetSecureAttributeRawString(cluster_id, proc_id, ATTR_X509_USER_PROXY_FQAN, fullfqan?fullfqan:"", flags );
+		SetSecureAttributeString(cluster_id, proc_id, ATTR_X509_USER_PROXY_FQAN, fullfqan?fullfqan:"", flags );
 
 		// clean up
 		free( proxy_subject );
@@ -3612,13 +3612,14 @@ static void
 AddSessionAttributes(const std::list<std::string> new_ad_keys)
 {
 	if (!Q_SOCK || !Q_SOCK->getReliSock()) {return;}
+	if (new_ad_keys.empty()) {return;}
+
 	const std::string &sess_id = Q_SOCK->getReliSock()->getSessionID();
 	ClassAd policy_ad;
 	if (!daemonCore || !daemonCore->getSecMan()) {return;}
 	daemonCore->getSecMan()->getSessionPolicy(sess_id.c_str(), policy_ad);
 
 	if (!policy_ad.size()) {return;}
-	if (new_ad_keys.begin() == new_ad_keys.end()) {return;}
 
 	classad::ClassAdUnParser unparse;
 	unparse.SetOldClassAd(true, true);
