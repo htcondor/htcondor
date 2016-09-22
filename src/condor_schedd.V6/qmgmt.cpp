@@ -2653,13 +2653,19 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 	if (secure_attrs.find(attr_name) != secure_attrs.end())
 	{
 		errno = EACCES;
-		dprintf(D_ALWAYS,
-				"SetAttribute attempt to edit secure attribute %s in job %d.%d\n",
-				attr_name, cluster_id, proc_id);
 		// should we fail or silently succeed?  (old submits set secure attrs)
-		if(param_boolean("SECURE_JOB_ATTRS_SET_FAIL", true)) {
+		const CondorVersionInfo *vers = Q_SOCK->get_peer_version();
+		if (vers->built_since_version( 8, 5, 4 ) ) {
+			// new versions should know better!  fail!
+			dprintf(D_ALWAYS,
+				"SetAttribute attempt to edit secure attribute %s in job %d.%d. Failing!\n",
+				attr_name, cluster_id, proc_id);
 			return -1;
 		} else {
+			// old versions get a pass.  succeed (but do nothing).
+			dprintf(D_ALWAYS,
+				"SetAttribute attempt to edit secure attribute %s in job %d.%d. Ignoring!\n",
+				attr_name, cluster_id, proc_id);
 			return 0;
 		}
 	}
