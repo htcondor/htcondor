@@ -248,11 +248,6 @@ void AuditLogNewConnection( int cmd, Sock &sock, bool failure )
 
 void AuditLogJobProxy( Sock &sock, PROC_ID job_id, const char *proxy_file )
 {
-	// Quickly determine if we're writing to the audit log.
-	if ( !IsDebugCategory( D_AUDIT ) ) {
-		return;
-	}
-
 	dprintf( D_AUDIT, sock, "Received proxy for job %d.%d\n",
 			 job_id.cluster, job_id.proc );
 	dprintf( D_AUDIT, sock, "proxy path: %s\n", proxy_file );
@@ -278,19 +273,25 @@ void AuditLogJobProxy( Sock &sock, PROC_ID job_id, const char *proxy_file )
 	x509_proxy_free( proxy_handle );
 
 	dprintf( D_AUDIT, sock, "proxy expiration: %d\n", (int)expire_time );
+	SetAttributeInt(job_id.cluster, job_id.proc, ATTR_X509_USER_PROXY_EXPIRATION, expire_time);
 	dprintf( D_AUDIT, sock, "proxy identity: %s\n", proxy_identity );
 	dprintf( D_AUDIT, sock, "proxy subject: %s\n", proxy_subject );
+	SetAttributeRawString(job_id.cluster, job_id.proc, ATTR_X509_USER_PROXY_SUBJECT, proxy_identity);
 	if ( proxy_email ) {
 		dprintf( D_AUDIT, sock, "proxy email: %s\n", proxy_email );
+		SetAttributeRawString(job_id.cluster, job_id.proc, ATTR_X509_USER_PROXY_EMAIL, proxy_email);
 	}
 	if ( voname ) {
 		dprintf( D_AUDIT, sock, "proxy vo name: %s\n", voname );
+		SetAttributeRawString(job_id.cluster, job_id.proc, ATTR_X509_USER_PROXY_VONAME, voname);
 	}
 	if ( firstfqan ) {
 		dprintf( D_AUDIT, sock, "proxy first fqan: %s\n", firstfqan );
+		SetAttributeRawString(job_id.cluster, job_id.proc, ATTR_X509_USER_PROXY_FIRST_FQAN, firstfqan);
 	}
 	if ( fullfqan ) {
 		dprintf( D_AUDIT, sock, "proxy full fqan: %s\n", fullfqan );
+		SetAttributeRawString(job_id.cluster, job_id.proc, ATTR_X509_USER_PROXY_FQAN, fullfqan);
 	}
 
 	free( proxy_subject );
