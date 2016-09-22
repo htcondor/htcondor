@@ -86,7 +86,7 @@ if (WITH_GLOBUS)
 							BUILD_IN_SOURCE 1
 							#--install Step ----------
 							INSTALL_DIR ${GLOBUS_INSTALL_LOC}
-							INSTALL_COMMAND make install )
+							INSTALL_COMMAND make install && touch ${GLOBUS_INSTALL_LOC}/done )
 
 		## Set all the config information
 		if ( LINUX )
