@@ -2833,21 +2833,7 @@ static const char * evaluate_macro_func (
 		{
 			char * pcolon = strchr(body, ':');
 			if (pcolon) { *pcolon++ = 0; }
-#if 1
 			tvalue = lookup_macro(name, macro_set, ctx);
-#else
-			tvalue = lookup_macro(name, subsys, macro_set, use);
-			if (subsys && ! tvalue)
-				tvalue = lookup_macro(name, NULL, macro_set, use);
-
-				// Note that if 'name' has been explicitly set to nothing,
-				// tvalue will _not_ be NULL so we will not call
-				// lookup_macro_def().  See gittrack #1302
-			if ( ! tvalue) {
-				if (use_default_param_table) tvalue = param_default_string(name, subsys);
-				else tvalue = lookup_macro_def(name, subsys, macro_set, use);
-			}
-#endif
 			if (pcolon && ( ! tvalue || ! tvalue[0])) {
 				tvalue = pcolon;
 			}
@@ -2857,10 +2843,11 @@ static const char * evaluate_macro_func (
 
 		case SPECIAL_MACRO_ID_ENV:
 		{
+			char * pcolon = strchr(body, ':');
+			if (pcolon) { *pcolon++ = 0; }
 			tvalue = getenv(name);
 			if( tvalue == NULL ) {
-				//EXCEPT("Can't find %s in environment!",name);
-				tvalue = "UNDEFINED";
+				tvalue = pcolon ? pcolon : "UNDEFINED";
 			}
 		}
 		break;
@@ -3766,7 +3753,7 @@ tryagain:
 							// skip to the close )
 							char * ptr = strchr(value, ')');
 							if (ptr) value = ptr+1;
-						} else if (strchr("$ ,\\", c)) {
+						} else if (strchr("$ ,\\:", c)) {
 							// allow some characters after the : that we don't allow in param names
 							continue;
 						}
