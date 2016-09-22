@@ -45,6 +45,10 @@ See section~\ref{param:ChirpDelayedUpdateMaxAttrs} for more information.
 
 \begin{itemize}
 
+\item Fixed a bug introduced in 8.4.5 that caused configuration variables starting with
+STARTD. or STARTER. to be ignored.
+\Ticket{5861}
+
 \item Fixed a bug that printed spurious locking-related warnings to
 the StarterLog when running Docker universe jobs.
 \Ticket{5876}
@@ -133,6 +137,14 @@ parameter for the JOB\_FINALIZE hook.
 Previously, the Job Router used the name JOB\_EXIT, counter to what was
 documented.
 \Ticket{5802}
+
+\item Fixed a bug that resulted in the \Condor{starter} crashing when
+attempting to run a BOINC backfill job.
+\Ticket{5862}
+
+\item Fixed a bug in the configuration language where an if defined
+test would reject a valid variable name when it had both an underscore and a digit.
+\Ticket{5914}
 
 \end{itemize}
 
