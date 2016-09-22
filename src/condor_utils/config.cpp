@@ -555,7 +555,9 @@ static expr_character_t Characterize_config_if_expression(const char * expr, boo
 		case ct_alpha|ct_space|ct_ident:
 		case ct_alpha|ct_space|ct_ident|ct_colon:
 		case ct_alpha|ct_space|ct_digit:
+		case ct_alpha|ct_space|ct_digit|ct_ident:
 		case ct_alpha|ct_space|ct_digit|ct_float:
+		case ct_alpha|ct_space|ct_digit|ct_ident|ct_float:
 			if (keyword_check && matches_literal_ignore_case(begin, "defined", false))
 				return CIFT_IFDEF; // identify bare defined to insure a reasonable error message
 			return CIFT_COMPLEX;
