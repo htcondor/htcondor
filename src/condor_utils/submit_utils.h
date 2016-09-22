@@ -176,6 +176,11 @@
 #define SUBMIT_KEY_DeferralWindow "deferral_window"
 #define SUBMIT_KEY_DeferralPrepTime "deferral_prep_time"
 
+// Job Retry Parameters
+#define SUBMIT_KEY_MaxRetries "max_retries"
+#define SUBMIT_KEY_RetryUntil "retry_until"
+#define SUBMIT_KEY_SuccessExitCode "success_exit_code"
+
 //
 // CronTab Parameters
 // The index value below should be the # of parameters
@@ -375,6 +380,8 @@ public:
 
 	char * submit_param( const char* name, const char* alt_name );
 	char * submit_param( const char* name ); // call param with NULL as the alt
+	bool submit_param_exists(const char* name, const char * alt_name, std::string & value);
+	bool submit_param_long_exists(const char* name, const char * alt_name, long long & value, bool int_range=false);
 	int submit_param_int(const char* name, const char * alt_name, int def_value);
 	int submit_param_bool(const char* name, const char * alt_name, bool def_value, bool * pexists=NULL);
 	MyString submit_param_mystring( const char * name, const char * alt_name );
@@ -557,6 +564,7 @@ protected:
 	int SetGSICredentials();
 	int SetSendCredential();
 	int SetJobDeferral();
+	int SetJobRetries();
 	int SetEnvironment();
 	#if !defined(WIN32)
 	int ComputeRootDir();
@@ -589,8 +597,6 @@ protected:
 
 	int SetPeriodicHoldCheck();
 	int SetPeriodicRemoveCheck();
-	int SetExitHoldCheck();
-	int SetExitRemoveCheck();
 	int SetNoopJob();
 	int SetLeaveInQueue();
 	int SetDAGNodeName();

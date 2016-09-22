@@ -560,6 +560,11 @@ const char	*DeferralTime	= "deferral_time";
 const char	*DeferralWindow 	= "deferral_window";
 const char	*DeferralPrepTime	= "deferral_prep_time";
 
+// Job Retry Parameters
+const char *MaxRetries = "max_retries";
+const char *RetryUntil = "retry_until";
+const char *SuccessExitCode = "success_exit_code";
+
 //
 // CronTab Parameters
 // The index value below should be the # of parameters
@@ -679,6 +684,7 @@ void	SetExitRequirements();
 void	SetOutputDestination();
 void 	SetArguments();
 void 	SetJobDeferral();
+void	SetJobRetries();
 void 	SetEnvironment();
 #if !defined(WIN32)
 void 	ComputeRootDir();
@@ -739,8 +745,6 @@ void	check_umask();
 void setupAuthentication();
 void	SetPeriodicHoldCheck(void);
 void	SetPeriodicRemoveCheck(void);
-void	SetExitHoldCheck(void);
-void	SetExitRemoveCheck(void);
 void	SetNoopJob(void);
 void	SetNoopJobExitSignal(void);
 void	SetNoopJobExitCode(void);
@@ -858,6 +862,15 @@ int JobAdsArrayLastClusterIndex = 0;
 #else
 
 // explicit template instantiations
+bool condor_param_exists(const char* name, const char * alt_name, std::string & value)
+{
+	auto_free_ptr result(condor_param(name, alt_name));
+	if ( ! result)
+		return false;
+
+	value = result.ptr();
+	return true;
+}
 
 MyString 
 condor_param_mystring( const char * name, const char * alt_name )
@@ -868,21 +881,28 @@ condor_param_mystring( const char * name, const char * alt_name )
 	return ret;
 }
 
+bool condor_param_long_exists(const char* name, const char * alt_name, long long & value, bool int_range=false)
+{
+	auto_free_ptr result(condor_param(name, alt_name));
+	if ( ! result)
+		return false;
+
+	if ( ! string_is_long_param(result.ptr(), value) ||
+		(int_range && (value < INT_MIN || value >= INT_MAX)) ) {
+		fprintf(stderr, "\nERROR: %s=%s is invalid, must eval to an integer.\n", name, result.ptr());
+		DoCleanup(0,0,NULL);
+		exit(1);
+	}
+
+	return true;
+}
+
 int condor_param_int(const char* name, const char * alt_name, int def_value)
 {
-	char * result = condor_param(name, alt_name);
-	if ( ! result)
-		return def_value;
-
 	long long value = def_value;
-	if (*result) {
-		if ( ! string_is_long_param(result, value) || value < INT_MIN || value >= INT_MAX) {
-			fprintf(stderr, "\nERROR: %s=%s is invalid, must eval to an integer.\n", name, result);
-			DoCleanup(0,0,NULL);
-			exit(1);
-		}
+	if ( ! condor_param_long_exists(name, alt_name, value, true)) {
+		value = def_value;
 	}
-	free(result);
 	return (int)value;
 }
 
@@ -4454,6 +4474,7 @@ SetPeriodicRemoveCheck(void)
 	InsertJobExpr( buffer );
 }
 
+#if 0 
 void
 SetExitHoldCheck(void)
 {
@@ -4474,6 +4495,7 @@ SetExitHoldCheck(void)
 
 	InsertJobExpr( buffer );
 }
+#endif
 
 void
 SetLeaveInQueue()
@@ -4512,7 +4534,7 @@ SetLeaveInQueue()
 	InsertJobExpr( buffer );
 }
 
-
+#if 0
 void
 SetExitRemoveCheck(void)
 {
@@ -4533,6 +4555,7 @@ SetExitRemoveCheck(void)
 
 	InsertJobExpr( buffer );
 }
+#endif
 
 void
 SetNoopJob(void)
@@ -5136,6 +5159,110 @@ SetJobDeferral() {
 			fprintf( stderr, "Error in submit file\n" );
 			exit(1);
 		} // validation	
+	}
+}
+
+void SetJobRetries()
+{
+	std::string erc, ehc;
+	condor_param_exists(OnExitRemoveCheck, ATTR_ON_EXIT_REMOVE_CHECK, erc);
+	condor_param_exists(OnExitHoldCheck, ATTR_ON_EXIT_HOLD_CHECK, ehc);
+
+	long long num_retries = param_integer("DEFAULT_JOB_MAX_RETRIES", 10);
+	long long success_code = 0;
+	std::string retry_until;
+
+	bool enable_retries = false;
+	if (condor_param_long_exists(MaxRetries, ATTR_JOB_MAX_RETRIES, num_retries)) { enable_retries = true; }
+	if (condor_param_long_exists(SuccessExitCode, ATTR_JOB_SUCCESS_EXIT_CODE, success_code, true)) { enable_retries = true; }
+	if (condor_param_exists(RetryUntil, NULL, retry_until)) { enable_retries = true; }
+	if ( ! enable_retries)
+	{
+		// if none of these knobs are defined, then there are no retries.
+		// Just insert the default on-exit-hold and on-exit-remove expressions
+		if (erc.empty()) {
+			job->Assign (ATTR_ON_EXIT_REMOVE_CHECK, true);
+		} else {
+			erc.insert(0, ATTR_ON_EXIT_REMOVE_CHECK "=");
+			InsertJobExpr(erc.c_str());
+		}
+		if (ehc.empty()) {
+			job->Assign (ATTR_ON_EXIT_HOLD_CHECK, false);
+		} else {
+			ehc.insert(0, ATTR_ON_EXIT_HOLD_CHECK "=");
+			InsertJobExpr(ehc.c_str());
+		}
+		return;
+	}
+
+	// if there is a retry_until value, figure out of it is an fultility exit code or an expression
+	// and validate it.
+	long long futility_code = LLONG_MAX;
+	if ( ! retry_until.empty()) {
+		bool valid_retry_until = true;
+		if (string_is_long_param(retry_until.c_str(), futility_code)) {
+			if (futility_code < INT_MIN || futility_code > INT_MAX) {
+				valid_retry_until = false;
+			} else {
+				valid_retry_until = true;
+				retry_until.clear(); // just work with the fultility_code from now on.
+			}
+		} else {
+			ExprTree * tree = NULL;
+			valid_retry_until = (0 == ParseClassAdRvalExpr(retry_until.c_str(), tree));
+			delete tree;
+		}
+		if ( ! valid_retry_until) {
+			fprintf(stderr, "\nERROR: %s=%s is invalid, it must be an integer or a boolean expression.\n", RetryUntil, retry_until.c_str());
+			DoCleanup(0,0,NULL);
+			exit(1);
+		}
+	}
+
+	job->Assign(ATTR_JOB_MAX_RETRIES, num_retries);
+
+	// Build the appropriate OnExitRemove expression, we will fill in success exit status value and other clauses later.
+	const char * basic_exit_remove_expr = ATTR_ON_EXIT_REMOVE_CHECK " = "
+		ATTR_NUM_JOB_COMPLETIONS " > " ATTR_JOB_MAX_RETRIES " || " ATTR_ON_EXIT_CODE " == ";
+
+	// build the sub expression that checks for exit codes that should end retries
+	std::string code_check;
+	if (success_code != 0) {
+		job->Assign(ATTR_JOB_SUCCESS_EXIT_CODE, success_code);
+		code_check = ATTR_JOB_SUCCESS_EXIT_CODE;
+	} else {
+		formatstr(code_check, "%d", (int)success_code);
+	}
+	if ( ! retry_until.empty()) {
+		code_check += " || ";
+		if (retry_until.find("&&") != std::string::npos) {
+			code_check += "("; code_check += retry_until; code_check += ")";
+		} else {
+			code_check += retry_until;
+		}
+	} else if (futility_code != LLONG_MAX) {
+		formatstr_cat(code_check, " || " ATTR_ON_EXIT_CODE "== %d", (int)futility_code);
+	}
+
+	// paste up the final OnExitRemove expression and insert it into the job.
+	std::string onexitrm(basic_exit_remove_expr);
+	onexitrm += code_check;
+	if ( ! erc.empty()) {
+		onexitrm += " || ";
+		if (erc.find("&&") != std::string::npos) {
+			onexitrm += "("; onexitrm += erc;  onexitrm += ")";
+		} else {
+			onexitrm += erc;
+		}
+	}
+	InsertJobExpr(onexitrm.c_str());
+
+	// paste up the final OnExitHold expression and insert it into the job.
+	if (ehc.empty()) {
+		job->Assign (ATTR_ON_EXIT_HOLD_CHECK, false);
+	} else {
+		ehc.insert(0, ATTR_ON_EXIT_HOLD_CHECK "=");
+		InsertJobExpr(ehc.c_str());
 	}
 }
 
@@ -8506,6 +8633,7 @@ int queue_item(int num, StringList & vars, char * item, int item_index, int opti
 			//
 		SetCronTab();
 		SetJobDeferral();
+		SetJobRetries();
 		
 			//
 			// Must be called _after_ SetTransferFiles(), SetJobDeferral(),
@@ -8520,8 +8648,6 @@ int queue_item(int num, StringList & vars, char * item, int item_index, int opti
 
 		SetPeriodicHoldCheck();
 		SetPeriodicRemoveCheck();
-		SetExitHoldCheck();
-		SetExitRemoveCheck();
 		SetNoopJob();
 		SetNoopJobExitSignal();
 		SetNoopJobExitCode();

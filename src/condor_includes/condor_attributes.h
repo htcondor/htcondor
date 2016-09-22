@@ -354,6 +354,8 @@
 #define ATTR_JOB_REMOTE_WALL_CLOCK  "RemoteWallClockTime"
 #define ATTR_JOB_ROOT_DIR  "RootDir"
 #define ATTR_JOB_RUN_COUNT  "JobRunCount"
+#define ATTR_JOB_MAX_RETRIES "JobMaxRetries"
+#define ATTR_JOB_SUCCESS_EXIT_CODE "JobSuccessExitCode"
 #define ATTR_JOB_SANDBOX_JOBAD  "DropJobAdInSandbox"
 #define ATTR_JOB_SUBMISSION  "Submission"
 #define ATTR_JOB_SUBMISSION_ID  "SubmissionId"

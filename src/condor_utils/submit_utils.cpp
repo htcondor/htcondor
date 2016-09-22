@@ -95,7 +95,7 @@
 #define CLIPPED 1
 #endif
 
-#define ABORT_AND_RETURN(v) abort_code=v; return abort_code=v; return v
+#define ABORT_AND_RETURN(v) abort_code=v; return abort_code
 #define RETURN_IF_ABORT() if (abort_code) return abort_code
 
 #define exit(n)  poison_exit(n)
@@ -772,6 +772,15 @@ char * SubmitHash::submit_param( const char* name, const char* alt_name )
 	return  pval_expanded;
 }
 
+bool SubmitHash::submit_param_exists(const char* name, const char * alt_name, std::string & value)
+{
+	auto_free_ptr result(submit_param(name, alt_name));
+	if ( ! result)
+		return false;
+
+	value = result.ptr();
+	return true;
+}
 
 void SubmitHash::set_submit_param( const char *name, const char *value )
 {
@@ -787,20 +796,28 @@ MyString SubmitHash::submit_param_mystring( const char * name, const char * alt_
 	return ret;
 }
 
+bool SubmitHash::submit_param_long_exists(const char* name, const char * alt_name, long long & value, bool int_range /*=false*/)
+{
+	auto_free_ptr result(submit_param(name, alt_name));
+	if ( ! result)
+		return false;
+
+	if ( ! string_is_long_param(result.ptr(), value) ||
+		(int_range && (value < INT_MIN || value >= INT_MAX)) ) {
+		push_error(stderr, "%s=%s is invalid, must eval to an integer.\n", name, result.ptr());
+		abort_code = 1;
+		return false;
+	}
+
+	return true;
+}
+
 int SubmitHash::submit_param_int(const char* name, const char * alt_name, int def_value)
 {
-	char * result = submit_param(name, alt_name);
-	if ( ! result)
-		return def_value;
-
 	long long value = def_value;
-	if (*result) {
-		if ( ! string_is_long_param(result, value) || value < INT_MIN || value >= INT_MAX) {
-			push_error(stderr, "%s=%s is invalid, must eval to an integer.\n", name, result);
-			ABORT_AND_RETURN( 1 );
-		}
+	if ( ! submit_param_long_exists(name, alt_name, value, true)) {
+		value = def_value;
 	}
-	free(result);
 	return (int)value;
 }
 
@@ -2312,6 +2329,7 @@ int SubmitHash::SetPeriodicRemoveCheck()
 	return 0;
 }
 
+#if 0 
 int SubmitHash::SetExitHoldCheck()
 {
 	RETURN_IF_ABORT();
@@ -2336,6 +2354,7 @@ int SubmitHash::SetExitHoldCheck()
 
 	return 0;
 }
+#endif
 
 int SubmitHash::SetLeaveInQueue()
 {
@@ -2378,7 +2397,7 @@ int SubmitHash::SetLeaveInQueue()
 	return 0;
 }
 
-
+#if 0
 int SubmitHash::SetExitRemoveCheck()
 {
 	RETURN_IF_ABORT();
@@ -2403,6 +2422,7 @@ int SubmitHash::SetExitRemoveCheck()
 
 	return 0;
 }
+#endif
 
 int SubmitHash::SetNoopJob()
 {
@@ -4092,6 +4112,117 @@ int SubmitHash::SetJobDeferral()
 
 	return 0;
 }
+
+int SubmitHash::SetJobRetries()
+{
+	RETURN_IF_ABORT();
+
+	std::string erc, ehc;
+	submit_param_exists(SUBMIT_KEY_OnExitRemoveCheck, ATTR_ON_EXIT_REMOVE_CHECK, erc);
+	submit_param_exists(SUBMIT_KEY_OnExitHoldCheck, ATTR_ON_EXIT_HOLD_CHECK, ehc);
+
+	long long num_retries = param_integer("DEFAULT_JOB_MAX_RETRIES", 10);
+	long long success_code = 0;
+	std::string retry_until;
+
+	bool enable_retries = false;
+	if (submit_param_long_exists(SUBMIT_KEY_MaxRetries, ATTR_JOB_MAX_RETRIES, num_retries)) { enable_retries = true; }
+	if (submit_param_long_exists(SUBMIT_KEY_SuccessExitCode, ATTR_JOB_SUCCESS_EXIT_CODE, success_code, true)) { enable_retries = true; }
+	if (submit_param_exists(SUBMIT_KEY_RetryUntil, NULL, retry_until)) { enable_retries = true; }
+	if ( ! enable_retries)
+	{
+		// if none of these knobs are defined, then there are no retries.
+		// Just insert the default on-exit-hold and on-exit-remove expressions
+		if (erc.empty()) {
+			job->Assign (ATTR_ON_EXIT_REMOVE_CHECK, true);
+		} else {
+			erc.insert(0, ATTR_ON_EXIT_REMOVE_CHECK "=");
+			InsertJobExpr(erc.c_str());
+		}
+		if (ehc.empty()) {
+			job->Assign (ATTR_ON_EXIT_HOLD_CHECK, false);
+		} else {
+			ehc.insert(0, ATTR_ON_EXIT_HOLD_CHECK "=");
+			InsertJobExpr(ehc.c_str());
+		}
+		RETURN_IF_ABORT();
+		return 0;
+	}
+
+	// if there is a retry_until value, figure out of it is an fultility exit code or an expression
+	// and validate it.
+	long long futility_code = LLONG_MAX;
+	if ( ! retry_until.empty()) {
+		bool valid_retry_until = true;
+		if (string_is_long_param(retry_until.c_str(), futility_code)) {
+			if (futility_code < INT_MIN || futility_code > INT_MAX) {
+				valid_retry_until = false;
+			} else {
+				valid_retry_until = true;
+				retry_until.clear(); // just work with the fultility_code from now on.
+			}
+		} else {
+			ExprTree * tree = NULL;
+			valid_retry_until = (0 == ParseClassAdRvalExpr(retry_until.c_str(), tree));
+			delete tree;
+		}
+		if ( ! valid_retry_until) {
+			push_error(stderr, "%s=%s is invalid, it must be an integer or boolean expression.\n", SUBMIT_KEY_RetryUntil, retry_until.c_str());
+			ABORT_AND_RETURN( 1 );
+		}
+	}
+
+	job->Assign(ATTR_JOB_MAX_RETRIES, num_retries);
+
+	// Build the appropriate OnExitRemove expression, we will fill in success exit status value and other clauses later.
+	const char * basic_exit_remove_expr = ATTR_ON_EXIT_REMOVE_CHECK " = "
+		ATTR_NUM_JOB_COMPLETIONS " > " ATTR_JOB_MAX_RETRIES " || " ATTR_ON_EXIT_CODE " == ";
+
+	// build the sub expression that checks for exit codes that should end retries
+	std::string code_check;
+	if (success_code != 0) {
+		job->Assign(ATTR_JOB_SUCCESS_EXIT_CODE, success_code);
+		code_check = ATTR_JOB_SUCCESS_EXIT_CODE;
+	} else {
+		formatstr(code_check, "%d", (int)success_code);
+	}
+	if ( ! retry_until.empty()) {
+		code_check += " || ";
+		if (retry_until.find("&&") != std::string::npos) {
+			code_check += "("; code_check += retry_until; code_check += ")";
+		} else {
+			code_check += retry_until;
+		}
+	} else if (futility_code != LLONG_MAX) {
+		formatstr_cat(code_check, " || " ATTR_ON_EXIT_CODE "== %d", (int)futility_code);
+	}
+
+	// paste up the final OnExitRemove expression and insert it into the job.
+	std::string onexitrm(basic_exit_remove_expr);
+	onexitrm += code_check;
+	if ( ! erc.empty()) {
+		onexitrm += " || ";
+		if (erc.find("&&") != std::string::npos) {
+			onexitrm += "("; onexitrm += erc;  onexitrm += ")";
+		} else {
+			onexitrm += erc;
+		}
+	}
+	InsertJobExpr(onexitrm.c_str());
+	RETURN_IF_ABORT();
+
+	// paste up the final OnExitHold expression and insert it into the job.
+	if (ehc.empty()) {
+		job->Assign (ATTR_ON_EXIT_HOLD_CHECK, false);
+	} else {
+		ehc.insert(0, ATTR_ON_EXIT_HOLD_CHECK "=");
+		InsertJobExpr(ehc.c_str());
+	}
+
+	RETURN_IF_ABORT();
+	return 0;
+}
+
 
 /** Given a universe in string form, return the number
 
@@ -7092,6 +7223,7 @@ ClassAd* SubmitHash::make_job_ad (
 		//
 	SetCronTab();
 	SetJobDeferral();
+	SetJobRetries();
 		
 		//
 		// Must be called _after_ SetTransferFiles(), SetJobDeferral(),
@@ -7106,8 +7238,6 @@ ClassAd* SubmitHash::make_job_ad (
 
 	SetPeriodicHoldCheck();
 	SetPeriodicRemoveCheck();
-	SetExitHoldCheck();
-	SetExitRemoveCheck();
 	SetNoopJob();
 	SetLeaveInQueue();
 	SetArguments();
