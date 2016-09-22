@@ -431,11 +431,11 @@ static bool submit_job_with_current_priv( ClassAd & src, const char * schedd_nam
 		return false;
 	}
 
-	// Starting in 8.5.4, schedd clients can't set X509-related attributes
+	// Starting in 8.5.8, schedd clients can't set X509-related attributes
 	// other than the name of the proxy file.
 	std::set<std::string, classad::CaseIgnLTStr> filter_attrs;
 	CondorVersionInfo ver_info( schedd.version() );
-	if ( ver_info.built_since_version( 8, 5, 4 ) ) {
+	if ( ver_info.built_since_version( 8, 5, 8 ) ) {
 		 filter_attrs.insert( ATTR_X509_USER_PROXY_SUBJECT );
 		 filter_attrs.insert( ATTR_X509_USER_PROXY_EXPIRATION );
 		 filter_attrs.insert( ATTR_X509_USER_PROXY_EMAIL );
