@@ -35,7 +35,7 @@ The details of each version are described below.
 
 \item Increased the maximum number of unique attributes that can be 
 set by the \Condor{chirp} command \Opt{set\_job\_attr\_delayed} from
-50 to 100, and added config knob \MacroNI{CHIRP\_DELAYED\_UPDATE\_MAX\_ATTRS}.
+50 to 100, and added the configuration knob \MacroNI{CHIRP\_DELAYED\_UPDATE\_MAX\_ATTRS}.
 See section~\ref{param:ChirpDelayedUpdateMaxAttrs} for more information.
 \Ticket{5891}
 
@@ -124,7 +124,7 @@ restart it several times. Previously only one restart attempt was done.
 \Ticket{3655}
 
 \item Fixed bugs in the Job Router that could cause a routed job to be
-aborted if the UPDATE\_JOB\_INFO hook printed attributes to be set in
+aborted if the \MacroNI{UPDATE\_JOB\_INFO} hook printed attributes to be set in
 the job ad.
 \Ticket{5899}
 
@@ -145,6 +145,10 @@ attempting to run a BOINC backfill job.
 \item Fixed a bug in the configuration language where an if defined
 test would reject a valid variable name when it had both an underscore and a digit.
 \Ticket{5914}
+
+\item In the RPM packages, move the systemd tmpfiles configuration file to
+the recommended directory (/usr/lib/tmpfiles.d).
+\Ticket{5896}
 
 \end{itemize}
 
