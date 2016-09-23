@@ -248,6 +248,13 @@ typedef fd_set *SELECT_FDSET_PTR;
 
 #endif // !WIN32
 
+/* Declaration for Sleep(int milliseconds) in our util lib.  Note
+ * we don't do this on Win32, since Sleep() is native on Win32.
+ */
+#ifndef WIN32
+	unsigned int Sleep(unsigned int milliseconds);
+#endif
+
 /* This defines macros that can disable certain gcc warnings */
 /* If not using gcc, macros are null defines */
 #include "gcc_diag.h"
