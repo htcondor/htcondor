@@ -192,7 +192,8 @@ if "%BUILDID:~1,1%"=="." (
    set BUILD_VERSION=%BUILDID%
    set BUILDID=
 ) else (
-   for /f "tokens=2 delims=) " %%I in ('grep set.VERSION CMakeLists.txt') do set BUILD_VERSION=%%~I
+   if exist CMakeLists.txt for /f "tokens=2 delims=) " %%I in ('grep set.VERSION CMakeLists.txt') do set BUILD_VERSION=%%~I
+   if exist CPackConfig.cmake for /f "tokens=2 delims=) " %%I in ('grep "SET.CPACK_PACKAGE_VERSION " CPackConfig.cmake') do set BUILD_VERSION=%%~I
 )
 if NOT "%BUILD_VERSION%"=="" (
   if NOT "%BUILDID%"=="" set BUILD_VERSION=%BUILD_VERSION%-%BUILDID%
