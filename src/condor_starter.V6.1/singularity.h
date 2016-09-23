@@ -13,6 +13,7 @@ namespace classad {
 }
 class ArgList;
 class MyString;
+class Env;
 
 namespace htcondor {
 
@@ -37,7 +38,8 @@ public:
 			MyString &exec,
 			ArgList &args,
 			const std::string &job_iwd,
-			const std::string &execute_dir
+			const std::string &execute_dir,
+			Env &env
 			);
 
 private:

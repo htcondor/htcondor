@@ -120,7 +120,8 @@ Singularity::setup(ClassAd &machineAd,
 		MyString &exec,
 		ArgList &args,
 		const std::string &job_iwd,
-		const std::string &execute_dir)
+		const std::string &execute_dir,
+		Env &job_env)
 {
 	if (!param_boolean("SINGULARITY_JOB", false, false, &machineAd, &jobAd)) {return Singularity::DISABLE;}
 
@@ -139,7 +140,15 @@ Singularity::setup(ClassAd &machineAd,
 		return Singularity::FAILURE;
 	}
 
+	std::string target_dir;
+	bool has_target = param(target_dir, "SINGULARITY_TARGET_DIR") && !target_dir.empty();
+
 	args.RemoveArg(0);
+	std::string orig_exec_val = exec;
+	if (has_target && (orig_exec_val.compare(0, execute_dir.length(), execute_dir) == 0)) {
+		exec = target_dir + "/" + orig_exec_val.substr(execute_dir.length());
+		dprintf(D_FULLDEBUG, "Updated executable path to %s for target directory mode.\n", exec.Value());
+	}
 	args.InsertArg(exec.Value(), 0);
 	exec = exec_str;
 
@@ -150,6 +159,7 @@ Singularity::setup(ClassAd &machineAd,
 	std::string scratch;
 	if (param(scratch, "MOUNT_UNDER_SCRATCH")) {
 		StringList scratch_list(scratch.c_str());
+		scratch_list.rewind();
 		char *next_dir;
 		while ( (next_dir=scratch_list.next()) ) {
 			if (!*next_dir) {
@@ -160,12 +170,36 @@ Singularity::setup(ClassAd &machineAd,
 			args.InsertArg("-S", 0);
 		}
 	}
-	args.InsertArg(job_iwd.c_str(), 0);
-	args.InsertArg("-B", 0);
 	if (job_iwd != execute_dir) {
-		args.InsertArg(execute_dir.c_str(), 0);
+		args.InsertArg(job_iwd.c_str(), 0);
 		args.InsertArg("-B", 0);
 	}
+	// When overlayfs is unavailable, singularity cannot bind-mount a directory that
+	// does not exist in the container.  Hence, we allow a specific fixed target directory
+	// to be used instead.
+	std::string bind_spec = execute_dir;
+	if (has_target) {
+		bind_spec += ":";
+		bind_spec += target_dir;
+		// Only change PWD to our new target dir if that's where we should startup.
+		if (job_iwd == execute_dir) {
+			args.InsertArg(target_dir.c_str(), 0);
+			args.InsertArg("--pwd", 0);
+		}
+		// Update the environment variables
+		job_env.SetEnv("_CONDOR_SCRATCH_DIR", target_dir.c_str());
+		job_env.SetEnv("TEMP", target_dir.c_str());
+		job_env.SetEnv("TMP", target_dir.c_str());
+		std::string chirp = target_dir + "/.chirp.config";
+		std::string machine_ad = target_dir + "/.machine.ad";
+		std::string job_ad = target_dir + "/.job.ad";
+		job_env.SetEnv("_CONDOR_CHIRP_CONFIG", chirp.c_str());
+		job_env.SetEnv("_CONDOR_MACHINE_AD", machine_ad.c_str());
+		job_env.SetEnv("_CONDOR_JOB_AD", job_ad.c_str());
+	}
+	args.InsertArg(bind_spec.c_str(), 0);
+	args.InsertArg("-B", 0);
+
 	args.InsertArg("exec", 0);
 	args.InsertArg(exec.c_str(), 0);
 
