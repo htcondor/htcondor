@@ -176,6 +176,11 @@ attempting to run a BOINC backfill job.
 test would reject a valid variable name when it had both an underscore and a digit.
 \Ticket{5914}
 
+\item In the Python bindings, fixed bugs in the LogReader and EventIterator
+classes that could cause invocations of poll(), which should block
+indefinitely until an event occurs, to return prematurely with no event.
+\Ticket{5920}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
