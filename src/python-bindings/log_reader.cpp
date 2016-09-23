@@ -70,20 +70,15 @@ LogReader::wait_internal(int timeout_ms)
         struct pollfd fd;
         fd.fd = watch();
         fd.events = POLLIN;
+        if (time_remaining > -1 && time_remaining < 1000) {step = time_remaining;}
         if (fd.fd == -1)
         {
             Py_BEGIN_ALLOW_THREADS
             sleep(1);
             Py_END_ALLOW_THREADS
-            if (time_remaining >= 0 && time_remaining < 1000)
-            {
-                ++m_iter;
-                break;
-            }
         }
         else
         {
-            if (time_remaining != -1 && time_remaining < 1000) {step = time_remaining;}
             Py_BEGIN_ALLOW_THREADS
             ::poll(&fd, 1, step);
             Py_END_ALLOW_THREADS
