@@ -216,6 +216,23 @@ bool is_required_request_resource(const char * name) {
 		|| MATCH == strcasecmp(name, SUBMIT_KEY_RequestMemory);
 }
 
+// parse an expression string, and validate it, then wrap it in parens
+// if needed in preparation for appending another expression string with the given operator
+static bool check_expr_and_wrap_for_op(std::string &expr_str, classad::Operation::OpKind op)
+{
+	ExprTree * tree = NULL;
+	bool valid_expr = (0 == ParseClassAdRvalExpr(expr_str.c_str(), tree));
+	if (valid_expr && tree) { // figure out if we need to add parens
+		ExprTree * expr = WrapExprTreeInParensForOp(tree, op);
+		if (expr != tree) {
+			tree = expr;
+			expr_str.clear();
+			ExprTreeToString(tree, expr_str);
+		}
+	}
+	delete tree;
+	return valid_expr;
+}
 
 condor_params::string_value * allocate_live_default_string(MACRO_SET &set, const condor_params::string_value & Def, int cch)
 {
@@ -4113,6 +4130,7 @@ int SubmitHash::SetJobDeferral()
 	return 0;
 }
 
+
 int SubmitHash::SetJobRetries()
 {
 	RETURN_IF_ABORT();
@@ -4151,21 +4169,32 @@ int SubmitHash::SetJobRetries()
 
 	// if there is a retry_until value, figure out of it is an fultility exit code or an expression
 	// and validate it.
-	long long futility_code = LLONG_MAX;
 	if ( ! retry_until.empty()) {
-		bool valid_retry_until = true;
-		if (string_is_long_param(retry_until.c_str(), futility_code)) {
-			if (futility_code < INT_MIN || futility_code > INT_MAX) {
-				valid_retry_until = false;
+		ExprTree * tree = NULL;
+		bool valid_retry_until = (0 == ParseClassAdRvalExpr(retry_until.c_str(), tree));
+		if (valid_retry_until && tree) {
+			ClassAd tmp;
+			StringList refs;
+			tmp.GetExprReferences(retry_until.c_str(), &refs, &refs);
+			long long futility_code;
+			if (refs.isEmpty() && string_is_long_param(retry_until.c_str(), futility_code)) {
+				if (futility_code < INT_MIN || futility_code > INT_MAX) {
+					valid_retry_until = false;
+				} else {
+					retry_until.clear();
+					formatstr(retry_until, ATTR_ON_EXIT_CODE " == %d", (int)futility_code);
+				}
 			} else {
-				valid_retry_until = true;
-				retry_until.clear(); // just work with the fultility_code from now on.
+				ExprTree * expr = WrapExprTreeInParensForOp(tree, classad::Operation::LOGICAL_OR_OP);
+				if (expr != tree) {
+					tree = expr; // expr now owns tree
+					retry_until.clear();
+					ExprTreeToString(tree, retry_until);
+				}
 			}
-		} else {
-			ExprTree * tree = NULL;
-			valid_retry_until = (0 == ParseClassAdRvalExpr(retry_until.c_str(), tree));
-			delete tree;
 		}
+		delete tree;
+
 		if ( ! valid_retry_until) {
 			push_error(stderr, "%s=%s is invalid, it must be an integer or boolean expression.\n", SUBMIT_KEY_RetryUntil, retry_until.c_str());
 			ABORT_AND_RETURN( 1 );
@@ -4188,31 +4217,29 @@ int SubmitHash::SetJobRetries()
 	}
 	if ( ! retry_until.empty()) {
 		code_check += " || ";
-		if (retry_until.find("&&") != std::string::npos) {
-			code_check += "("; code_check += retry_until; code_check += ")";
-		} else {
-			code_check += retry_until;
-		}
-	} else if (futility_code != LLONG_MAX) {
-		formatstr_cat(code_check, " || " ATTR_ON_EXIT_CODE "== %d", (int)futility_code);
+		code_check += retry_until;
 	}
 
-	// paste up the final OnExitRemove expression and insert it into the job.
+	// paste up the final OnExitRemove expression
 	std::string onexitrm(basic_exit_remove_expr);
 	onexitrm += code_check;
+
+	// if the user supplied an on_exit_remove expression, || it in
 	if ( ! erc.empty()) {
-		onexitrm += " || ";
-		if (erc.find("&&") != std::string::npos) {
-			onexitrm += "("; onexitrm += erc;  onexitrm += ")";
-		} else {
-			onexitrm += erc;
+		if ( ! check_expr_and_wrap_for_op(erc, classad::Operation::LOGICAL_OR_OP)) {
+			push_error(stderr, "%s=%s is invalid, it must be a boolean expression.\n", SUBMIT_KEY_OnExitRemoveCheck, erc.c_str());
+			ABORT_AND_RETURN( 1 );
 		}
+		onexitrm += " || ";
+		onexitrm += erc;
 	}
+	// Insert the final OnExitRemove expression into the job
 	InsertJobExpr(onexitrm.c_str());
 	RETURN_IF_ABORT();
 
 	// paste up the final OnExitHold expression and insert it into the job.
 	if (ehc.empty()) {
+		// TODO: remove this trvial default when it is no longer needed
 		job->Assign (ATTR_ON_EXIT_HOLD_CHECK, false);
 	} else {
 		ehc.insert(0, ATTR_ON_EXIT_HOLD_CHECK "=");

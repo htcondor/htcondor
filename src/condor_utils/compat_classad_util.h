@@ -43,6 +43,9 @@ classad::ExprTree * SkipExprParens(classad::ExprTree * tree);
 // and it is clever enough to insert parentheses around the input expressions when needed to insure that the expression
 // will unparse correctly.
 classad::ExprTree * JoinExprTreeCopiesWithOp(classad::Operation::OpKind, classad::ExprTree * exp1, classad::ExprTree * exp2);
+// note: do NOT pass an envelope node to this function!! it's fine to pass the output of ParseClassAdRvalExpr
+classad::ExprTree * WrapExprTreeInParensForOp(classad::ExprTree * expr, classad::Operation::OpKind op);
+
 
 bool EvalBool(compat_classad::ClassAd *ad, const char *constraint);
 

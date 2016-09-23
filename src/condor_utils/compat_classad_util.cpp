@@ -147,8 +147,10 @@ classad::ExprTree * SkipExprParens(classad::ExprTree * tree) {
 	return tree;
 }
 
-
-static classad::ExprTree * wrap_in_parens_if_needed(classad::ExprTree * expr, classad::Operation::OpKind op)
+// wrap an expr tree with a new PARENTHESES_OP if it will be needed to preserve operator precedence
+// when used as the left or right hand side of the given op.
+// 
+classad::ExprTree * WrapExprTreeInParensForOp(classad::ExprTree * expr, classad::Operation::OpKind op)
 {
 	if ( ! expr) return expr;
 
@@ -169,11 +171,11 @@ classad::ExprTree * JoinExprTreeCopiesWithOp(classad::Operation::OpKind op, clas
 	// before we join these into a new tree, we want to skip over the envelope nodes (if any) and copy them.
 	if (exp1) {
 		exp1 = SkipExprEnvelope(exp1)->Copy();
-		exp1 = wrap_in_parens_if_needed(exp1, op);
+		exp1 = WrapExprTreeInParensForOp(exp1, op);
 	}
 	if (exp2) {
 		exp2 = SkipExprEnvelope(exp2)->Copy();
-		exp2 = wrap_in_parens_if_needed(exp2, op);
+		exp2 = WrapExprTreeInParensForOp(exp2, op);
 	}
 	
 	return classad::Operation::MakeOperation(op, exp1, exp2, NULL);
