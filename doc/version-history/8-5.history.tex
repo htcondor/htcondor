@@ -129,7 +129,7 @@ These instances have a lower price, but can be interrupted at any time.
 Also added support for service accounts with GCE.
 \Ticket{5821}
 
-\item When submitting jobs to SLURM via the grid universe, the SLURM
+\item When submitting jobs to Slurm via the grid universe, the Slurm
 partition can now be specified using the \SubmitCmdNI{batch\_queue}
 submit command.
 \Ticket{5780}
@@ -202,6 +202,10 @@ argument was used and the machine did not exist
 \item Fixed a bug that caused \Condor{q} \Opt{-autocluster} to crash unless the \Opt{-nobatch}
 option was also used.
 \Ticket{5839}
+
+\item Fixed a bug in the Python bindings where a thread executed python
+byte code without holding the global interpreter lock.
+\Ticket{5864}
 
 \end{itemize}
 
