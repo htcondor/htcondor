@@ -2510,7 +2510,6 @@ enum {
 	idATTR_RANK,
 	idATTR_REQUIREMENTS,
 	idATTR_NUM_JOB_RECONNECTS,
-	idATTR_X509_USER_PROXY,
 };
 
 enum {
@@ -2554,7 +2553,6 @@ static const ATTR_IDENT_PAIR aSpecialSetAttrs[] = {
 	FILL(ATTR_PROC_ID,            catJobId),
 	FILL(ATTR_RANK,               catTargetScope),
 	FILL(ATTR_REQUIREMENTS,       catTargetScope),
-	FILL(ATTR_X509_USER_PROXY,    0),
 };
 #undef FILL
 
@@ -2577,7 +2575,7 @@ static int IsSpecialSetAttribute(const char *attr, int* set_cat=NULL)
 
 
 int
-SetSecureAttributeInt(int cluster_id, int proc_id, const char *attr_name, int attr_value, SetAttributeFlags_t flags)
+SetSecureAttributeInt(int cluster_id, int proc_id, const char *attr_name, int attr_value, SetAttributeFlags_t flags = 0)
 {
 	if (attr_name == NULL ) {return -1;}
 
@@ -2594,7 +2592,7 @@ SetSecureAttributeInt(int cluster_id, int proc_id, const char *attr_name, int at
 
 
 int
-SetSecureAttributeString(int cluster_id, int proc_id, const char *attr_name, const char *attr_value, SetAttributeFlags_t flags)
+SetSecureAttributeString(int cluster_id, int proc_id, const char *attr_name, const char *attr_value, SetAttributeFlags_t flags = 0)
 {
 	if (attr_name == NULL || attr_value == NULL) {return -1;}
 
@@ -2615,6 +2613,18 @@ SetSecureAttributeString(int cluster_id, int proc_id, const char *attr_name, con
 	return 0;
 }
 
+int
+SetSecureAttribute(int cluster_id, int proc_id, const char *attr_name, const char *attr_value, SetAttributeFlags_t flags = 0)
+{
+	if (attr_name == NULL || attr_value == NULL) {return -1;}
+
+	// lookup job and set attribute to value
+	JOB_ID_KEY_BUF key;
+	IdToKey(cluster_id,proc_id,key);
+	JobQueue->SetAttribute(key.c_str(), attr_name, attr_value, flags & SETDIRTY);
+
+	return 0;
+}
 
 int
 SetAttribute(int cluster_id, int proc_id, const char *attr_name,
@@ -2965,65 +2975,6 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		if ( new_status != curr_status && curr_status > 0 ) {
 			SetAttributeInt( cluster_id, proc_id, ATTR_LAST_JOB_STATUS, curr_status, flags );
 		}
-	} else if (attr_id == idATTR_X509_USER_PROXY) {
-		dprintf (D_SECURITY, "ATTRS: setting x509userproxy for %i %i\n", cluster_id, proc_id);
-
-#if defined(HAVE_EXT_GLOBUS)
-			// We can't just use attr_value, since it contains '"'
-			// marks.  Carefully remove them here.
-		MyString proxy_buf;
-		char const *proxy = attr_value;
-		bool proxy_is_quoted = false;
-		if( *proxy == '"' ) {
-			proxy_buf = proxy+1;
-			if( proxy_buf.Length() && proxy_buf[proxy_buf.Length()-1] == '"' )
-			{
-				proxy_buf.setChar(proxy_buf.Length()-1,'\0');
-				proxy_is_quoted = true;
-			}
-			proxy = proxy_buf.Value();
-		}
-
-		// load the proxy so we can extract attrs
-		globus_gsi_cred_handle_t proxy_handle = x509_proxy_read( proxy );
-
-		char *proxy_subject = x509_proxy_subject_name( proxy_handle );
-		dprintf (D_SECURITY, "ATTRS: %s = %s\n", ATTR_X509_USER_PROXY_SUBJECT, proxy_subject?proxy_subject:"NULL");
-		SetSecureAttributeString(cluster_id, proc_id, ATTR_X509_USER_PROXY_SUBJECT, proxy_subject?proxy_subject:"", flags );
-
-		time_t proxy_expiration = x509_proxy_expiration_time( proxy_handle );
-		dprintf (D_SECURITY, "ATTRS: %s = %li\n", ATTR_X509_USER_PROXY_EXPIRATION, proxy_expiration);
-		SetSecureAttributeInt( cluster_id, proc_id, ATTR_X509_USER_PROXY_EXPIRATION, proxy_expiration, flags );
-
-		char *proxy_email = x509_proxy_email( proxy_handle );
-		dprintf (D_SECURITY, "ATTRS: %s = %s\n", ATTR_X509_USER_PROXY_EMAIL, proxy_email?proxy_email:"NULL");
-		SetSecureAttributeString(cluster_id, proc_id, ATTR_X509_USER_PROXY_EMAIL, proxy_email?proxy_email:"", flags );
-
-		// set VOMS attrs regardless of if they are present -- we need to explicitly clear them if not
-		char* voname = NULL;
-		char* firstfqan = NULL;
-		char* fullfqan = NULL;
-
-		// returns zero on success -- doesn't matter here.
-		extract_VOMS_info( proxy_handle, 0, &voname, &firstfqan, &fullfqan);
-
-		dprintf( D_SECURITY, "ATTRS: %s = %s\n", ATTR_X509_USER_PROXY_VONAME, voname?voname:"NULL");
-		SetSecureAttributeString(cluster_id, proc_id, ATTR_X509_USER_PROXY_VONAME, voname?voname:"", flags );
-
-		dprintf( D_SECURITY, "ATTRS: %s = %s\n", ATTR_X509_USER_PROXY_FIRST_FQAN, firstfqan?firstfqan:"NULL");
-		SetSecureAttributeString(cluster_id, proc_id, ATTR_X509_USER_PROXY_FIRST_FQAN, firstfqan?firstfqan:"", flags );
-
-		dprintf( D_SECURITY, "ATTRS: %s = %s\n", ATTR_X509_USER_PROXY_FQAN, fullfqan?fullfqan:"NULL");
-		SetSecureAttributeString(cluster_id, proc_id, ATTR_X509_USER_PROXY_FQAN, fullfqan?fullfqan:"", flags );
-
-		// clean up
-		free( proxy_subject );
-		free( proxy_email );
-		free( voname );
-		free( firstfqan );
-		free( fullfqan );
-		x509_proxy_free( proxy_handle );
-#endif
 	}
 #if defined(ADD_TARGET_SCOPING)
 /* Disable AddTargetRefs() for now
@@ -3608,6 +3559,62 @@ void SetSubmitTotalProcs(std::list<std::string> & new_ad_keys)
 }
 
 
+bool
+ReadProxyFileIntoAd( const char *file, const char *owner, ClassAd &x509_attrs )
+{
+	if ( !init_user_ids( owner, NULL ) ) {
+		dprintf( D_FAILURE, "ReadProxyFileIntoAd(%s): Failed to switch to user priv\n", owner );
+		return false;
+	}
+	TemporaryPrivSentry tps( PRIV_USER, true );
+
+	StatInfo si( file );
+	if ( si.Error() == SINoFile ) {
+		// If the file doesn't exist, it may be spooled later.
+		// Return without printing an error.
+		return false;
+	}
+
+	globus_gsi_cred_handle_t proxy_handle = x509_proxy_read( file );
+
+	if ( proxy_handle == NULL ) {
+		dprintf( D_FAILURE, "Failed to read job proxy: %s\n",
+				 x509_error_string() );
+		return false;
+	}
+
+	time_t expire_time = x509_proxy_expiration_time( proxy_handle );
+	char *proxy_identity = x509_proxy_identity_name( proxy_handle );
+	char *proxy_email = x509_proxy_email( proxy_handle );
+	char *voname = NULL;
+	char *firstfqan = NULL;
+	char *fullfqan = NULL;
+	extract_VOMS_info( proxy_handle, 0, &voname, &firstfqan, &fullfqan );
+
+	x509_proxy_free( proxy_handle );
+
+	x509_attrs.Assign( ATTR_X509_USER_PROXY_EXPIRATION, expire_time );
+	x509_attrs.Assign( ATTR_X509_USER_PROXY_SUBJECT, proxy_identity );
+	if ( proxy_email ) {
+		x509_attrs.Assign( ATTR_X509_USER_PROXY_EMAIL, proxy_email );
+	}
+	if ( voname ) {
+		x509_attrs.Assign( ATTR_X509_USER_PROXY_VONAME, voname );
+	}
+	if ( firstfqan ) {
+		x509_attrs.Assign( ATTR_X509_USER_PROXY_FIRST_FQAN, firstfqan );
+	}
+	if ( fullfqan ) {
+		x509_attrs.Assign( ATTR_X509_USER_PROXY_FQAN, fullfqan );
+	}
+	free( proxy_identity );
+	free( proxy_email );
+	free( voname );
+	free( firstfqan );
+	free( fullfqan );
+	return true;
+}
+
 static void
 AddSessionAttributes(const std::list<std::string> new_ad_keys)
 {
@@ -3619,33 +3626,59 @@ AddSessionAttributes(const std::list<std::string> new_ad_keys)
 	if (!daemonCore || !daemonCore->getSecMan()) {return;}
 	daemonCore->getSecMan()->getSessionPolicy(sess_id.c_str(), policy_ad);
 
-	if (!policy_ad.size()) {return;}
-
 	classad::ClassAdUnParser unparse;
 	unparse.SetOldClassAd(true, true);
 
 	// See if the values have already been set
-	char* x509up = NULL;
+	ClassAd *x509_attrs = &policy_ad;
+	string last_proxy_file;
+	ClassAd proxy_file_attrs;
 
 	for (std::list<std::string>::const_iterator it = new_ad_keys.begin(); it != new_ad_keys.end(); ++it)
 	{
+		MyString x509up;
 		JobQueueKey job( it->c_str() );
 			// Set attribute for process ads: prevents jobs from overriding these.
 		if (job.proc == -1) {continue;}
 
 		// check if x509up was defined for this job
-		int rc = GetAttributeExprNew(job.cluster, job.proc, "x509userproxy", &x509up);
-		if (rc != -1) {
-			// we don't need this value, but it was allocated for us
-			free(x509up);
-			continue;
+		if ( GetAttributeString(job.cluster, job.proc, ATTR_X509_USER_PROXY, x509up) == -1 ) {
+			GetAttributeString(job.cluster, -1, ATTR_X509_USER_PROXY, x509up);
+		}
+		if (x509up.IsEmpty()) {
+			x509_attrs = &policy_ad;
+		} else {
+			string full_path;
+			if ( x509up[0] == DIR_DELIM_CHAR ) {
+				full_path = x509up;
+			} else {
+				MyString iwd;
+				if ( GetAttributeString(job.cluster, job.proc, ATTR_JOB_IWD, iwd ) == -1 ) {
+					GetAttributeString(job.cluster, -1, ATTR_JOB_IWD, iwd );
+				}
+				formatstr( full_path, "%s%c%s", iwd.Value(), DIR_DELIM_CHAR, x509up.Value() );
+			}
+			if ( full_path != last_proxy_file ) {
+				MyString owner;
+				if ( GetAttributeString(job.cluster, job.proc, ATTR_OWNER, owner) == -1 ) {
+					GetAttributeString(job.cluster, -1, ATTR_OWNER, owner);
+				}
+				last_proxy_file = full_path;
+				proxy_file_attrs.Clear();
+				ReadProxyFileIntoAd( last_proxy_file.c_str(), owner.Value(), proxy_file_attrs );
+			}
+			if ( proxy_file_attrs.size() > 0 ) {
+				x509_attrs = &proxy_file_attrs;
+			} else {
+				x509_attrs = &policy_ad;
+			}
 		}
 
-		for (AttrList::const_iterator attr_it = policy_ad.begin(); attr_it != policy_ad.end(); ++attr_it)
+		for (AttrList::const_iterator attr_it = x509_attrs->begin(); attr_it != x509_attrs->end(); ++attr_it)
 		{
 			std::string attr_value_buf;
 			unparse.Unparse(attr_value_buf, attr_it->second);
-			SetAttribute(job.cluster, job.proc, attr_it->first.c_str(), attr_value_buf.c_str());
+			SetSecureAttribute(job.cluster, job.proc, attr_it->first.c_str(), attr_value_buf.c_str());
 			dprintf(D_SECURITY, "ATTRS: SetAttribute %i.%i %s=%s\n", job.cluster, job.proc, attr_it->first.c_str(), attr_value_buf.c_str());
 		}
 	}
