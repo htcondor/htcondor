@@ -194,11 +194,14 @@ QmgrJobUpdater::initJobQueueAttrLists( void )
 	checkpoint_job_queue_attrs->insert( ATTR_VM_CKPT_IP );
 
 	x509_job_queue_attrs = new StringList();
-	x509_job_queue_attrs->insert( ATTR_X509_USER_PROXY_SUBJECT );
 	x509_job_queue_attrs->insert( ATTR_X509_USER_PROXY_EXPIRATION );
+	/* These are secure attributes, only settable by the schedd.
+	 * Assume they won't change during job execution.
+	x509_job_queue_attrs->insert( ATTR_X509_USER_PROXY_SUBJECT );
 	x509_job_queue_attrs->insert( ATTR_X509_USER_PROXY_VONAME );
 	x509_job_queue_attrs->insert( ATTR_X509_USER_PROXY_FIRST_FQAN );
 	x509_job_queue_attrs->insert( ATTR_X509_USER_PROXY_FQAN );
+	*/
 
 	m_pull_attrs = new StringList();
 	if ( job_ad->LookupExpr( ATTR_TIMER_REMOVE_CHECK ) ) {
