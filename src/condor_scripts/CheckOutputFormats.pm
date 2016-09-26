@@ -28,6 +28,7 @@ use Check::SimpleJob;
 use POSIX ();
 use Sys::Hostname;
 use Cwd;
+use List::Util;
 
 use Exporter qw(import);
 our @EXPORT_OK = qw(dry_run add_status_ads change_clusterid multi_owners create_table various_hold_reasons find_blank_columns split_fields cal_from_raw trim count_job_states make_batch check_heading check_data check_summary emit_dag_files emit_file);                                                    
@@ -490,6 +491,344 @@ sub create_table {
 	return (\%other,\%data,\@summary);	
 }		
 
+sub read_status_output {
+	my @content = @{$_[0]};
+	my %table1;
+	my %table2;
+	my $index = 0;
+	my $index1 = 0;
+	my $num_blank = 0;
+	for my $i (0..scalar @content -1){
+		if ($num_blank < 2){
+			if ($content[$i] =~ /\S/){
+				$table1{$index} = $content[$i];
+				$index++;
+			} else {
+				$num_blank++;
+			}
+		} else {
+			last;
+		}
+	}
+	for my $k (($index+$num_blank)..scalar @content-1){
+		if ($content[$k] =~/\S/){
+			$table2{$index1} = $content[$k];
+			$index1++;
+		}
+	}
+	return (\%table1,\%table2);
+}
+
+sub check_status {
+	my @machine_info = @{$_[0]};
+	my @summary = @{$_[1]};
+	my $option = $_[2];
+	my %Attr_old = %{$_[3]};
+	my %Attr_new = %{$_[4]};
+	my %rules_machine;
+	my $result = 0;
+	
+	if ($option eq 'to_multi_platform' || $option eq 'xml' || $option eq 'json'){
+		%rules_machine = 
+(
+# $i is $_[0]
+'Name' => sub{
+	my $machine_name = unquote($Attr_new{$_[0]-1}{Machine});
+	if ($_[1] =~ /slot[0-9]+\@$machine_name/){
+		return 1;
+	} else {
+		print "Output is $_[1]\nshould be slotxx\@$machine_name\n";
+		return 0;
+	}
+},
+'OpSys' => sub{
+	my $machine_name = unquote($Attr_new{$_[0]-1}{Machine});
+	if ($machine_name =~ /0[0-8]|1[6-9]/){
+		return $_[1] eq 'LINUX';
+	} elsif ($machine_name =~ /09|10|11/){
+		return $_[1] eq 'WINDOWS';
+	} elsif ($machine_name =~ /1[2-5]/){
+		return $_[1] eq 'OSX';
+	} else {
+		return $_[1] eq "FREEBSD";
+	}
+},
+'Arch' => sub{
+	my $machine_name = unquote($Attr_new{$_[0]-1}{Machine});
+	if ($machine_name =~ /07/){
+		return $_[1] eq 'INTEL';
+	} else {
+		return $_[1] eq 'X86_64';
+	}
+},
+'State' => sub{return $_[1] eq 'Unclaimed';},
+'Activity' => sub{return $_[1] eq 'Idle';},
+'LoadAv' => sub{
+	my $loadavg = sprintf "%.3f",$Attr_new{$_[0]-1}{LoadAvg};
+	if ($_[1] eq $loadavg){
+		return 1;
+	} else {
+		print "        ERROR: Output is $_[1], should be $loadavg";
+		return 0;
+	}
+},
+'Mem' => sub{
+	if ($_[1] eq $Attr_new{$_[0]-1}{Memory}){
+		return 1;
+	} else {
+		print "        ERROR: Output is $_[1], should be $Attr_old{($_[0]-1)%4}{Memory}";
+		return 0;
+	}
+},
+'ActvtyTime' => sub{
+	my $convert_time;
+	if (defined $Attr_new{$_[0]-1}{MyCurrentTime}){
+		$convert_time = convert_unix_time($Attr_new{$_[0]-1}{MyCurrentTime}-$Attr_new{$_[0]-1}{EnteredCurrentActivity});
+	} else {
+		$convert_time = convert_unix_time($Attr_new{$_[0]-1}{LastHeardFrom}-$Attr_new{$_[0]-1}{EnteredCurrentActivity});
+	}
+	if ($_[1] eq $convert_time){
+		return 1;
+	} else {
+		print "output is $_[1], should be $convert_time\n";
+	}
+}
+);
+		for my $i (0..(scalar @machine_info)-1){
+			if (defined $machine_info[$i][1]){
+				TLOG("Checking ".$machine_info[$i][0]."\n");
+				if (defined $rules_machine{$machine_info[$i][0]}){
+					for my $k (1..(scalar @{$machine_info[$i]})-1){
+						unless ($rules_machine{$machine_info[$i][0]}($k,$machine_info[$i][$k])){
+							return 0;
+						}
+					}
+					print "        PASSED: $machine_info[$i][0] is correct.\n";
+				}
+			}
+		}
+		my %table = count_status_state(\%Attr_new);
+		for my $i (1..scalar @{$summary[0]}-2){
+			unless ($summary[0][$i] eq (sort keys %table)[$i-1]){
+				print "         ERROR: output is $summary[0][$i], should be ".(sort keys %table)[$i-1]."\n";
+				return 0;
+			}
+		}
+		if ($summary[0][scalar @{$summary[0]}-1] ne 'Total'){
+			print "        ERROR: there should be a 'total' row";
+			return 0;
+		}
+		my $sum;
+		for my $i (1..(scalar @summary)-1){
+			if (defined $summary[$i][1]){
+				TLOG("Checking ".$summary[$i][0]."\n");
+				$sum = 0;
+				for my $k (1..(scalar @{$summary[0]})-2){
+					unless ($table{$summary[0][$k]}{"$summary[$i][0]"} eq $summary[$i][$k]){
+						print "       ERROR: output is $summary[$i][$k], should be ".$table{$summary[0][$k]}{"$summary[$i][0]"}."\n";
+						return 0;
+					} else {
+						$sum+=$summary[$i][$k];
+					}
+				}
+				if ($sum ne $summary[$i][scalar @{$summary[0]}-1]){
+					print "        ERROR: columns doesn't add upp correctly\n";
+					return 0;
+				}
+			}
+		}
+		return 1; 
+	}
+	if ($option eq 'states'){
+		TLOG("Checking if states are displayed correctly\n");
+		my $counter = 0;
+		my $machine_name;
+		for my $i (1..scalar @{$machine_info[0]}-1){
+			$machine_name = $Attr_new{$i-1}{Machine};
+			if ($machine_name =~ /01/){
+				$counter++; 
+				unless ($machine_info[3][$i] eq 'Unclaimed'){return 0;}}
+			if ($machine_name =~ /02/){unless ($machine_info[3][$i] eq 'Claimed'){return 0;}}
+			if ($machine_name =~ /03/){unless ($machine_info[3][$i] eq 'Matched'){return 0;}}
+			if ($machine_name =~ /04/){unless ($machine_info[3][$i] eq 'Preempting'){return 0;}}
+			if ($machine_name =~ /05/){unless ($machine_info[3][$i] eq 'Backfill'){return 0;}}
+		}		
+		if ($summary[1][1] eq scalar (@{$machine_info[0]})-1 && $summary[1][2] eq (@{$machine_info[0]})-1){
+			for my $i (3..7){
+				for my $j (1..2){
+					unless ($summary[$i][$j] eq $counter){return 0;}
+				}
+			}
+			return 1;
+		} else {
+			return 0;
+		}
+	}
+	if ($option eq 'avail'){
+		TLOG("Checking if unclaimed machines are displayed correctly\n");
+		my $counter = 0;
+		for my $i (1..(scalar @{$machine_info[0]})-1){
+			if (!($machine_info[0][$i] =~ /01|06/)){
+				return 0;
+			} else {$counter++;}
+		}
+		if ($summary[1][1] eq $counter && $summary[1][2] eq $counter){
+			for my $j (1..2){
+				unless ($summary[4][$j] eq $counter){return 0;}
+			}
+			return 1;
+		} else {
+			return 0;
+		}
+	}
+	if ($option eq 'claimed'){
+		TLOG("Checking if claimed machines are displayed correctly\n");
+		my %rules = (
+'Name' => sub {
+	return $_[1] =~ /02/;},
+'OpSys' => sub {return $_[1] eq 'LINUX';},
+'Arch' => sub {return $_[1] eq 'X86_64';},
+'LoadAv' => sub {
+	my $loadavg = sprintf "%.3f",$Attr_old{$_[0]-1}{LoadAvg};
+	return $_[1] eq $loadavg;},
+'RemoteUser' => sub {return $_[1] eq "foo\@cs.wisc.edu";},
+'ClientMachine' => sub {
+	my $machine_name = unquote($Attr_new{$_[0]-1}{Machine});
+	return ($_[1] eq $machine_name || $_[1] =~/exec02/);},
+'Machines' => sub {
+	my $num = (scalar @{$machine_info[0]})-1;
+	print "$num\n";
+	return $_[1] =~ /$num/},
+'MIPS' => sub {
+	if (defined $Attr_old{0}{Mips}){
+		return $_[1] eq $Attr_old{$_[0]-1}{Mips};
+	} else {
+		return $_[1] eq 0;
+	}
+},
+'KFLOPS' => sub {
+	if (defined $Attr_old{0}{KFlops}){
+		return $_[1] eq $Attr_old{$_[0]-1}{KFlops};
+	} else {
+		return $_[1] eq 0;
+	}
+},
+'AvgLoadAvg' => sub {
+	my $num = 0;
+	for my $i (1..(scalar @{$machine_info[0]})-1){$num += $machine_info[3][$i];}
+	$num = sprintf "%.3f", $num/((scalar @{$machine_info[0]})-1);
+	return $_[1] eq $num;}
+		);
+
+		for my $i (0..(scalar @machine_info)-1){
+			if (defined $machine_info[$i][1]){
+				TLOG("Checking $machine_info[$i][0]\n");
+				for my $k (1..(scalar @{$machine_info[$i]})-1){
+					unless ($rules{$machine_info[$i][0]}($k,$machine_info[$i][$k])){
+						print "        FAILED: output is $machine_info[$i][$k]\n";
+						return 0;
+					}
+				}
+				print "        PASSED: $machine_info[$i][0] is correct\n";
+			}
+		}
+		for my $i (0..3){
+			if ($summary[$i][0] ne ""){
+				TLOG("Checking $summary[$i][0]\n");
+				for my $k (1..2){				
+					unless ($rules{$summary[$i][0]}($k,$summary[$i][$k])){
+						return 0;
+					}
+				}
+				print "       PASSED: $summary[$i][0] is correct\n";
+			}
+		}
+		return 1;
+	}
+	if ($option eq "constraint"){
+		TLOG("Checking if only shows constriant output\n");
+		my $counter = 0;
+		for my $i (1..(scalar @{$machine_info[0]})-1){
+			if ($machine_info[4][$i] ne 'Busy'){
+				print "        FAILED: Output is $machine_info[3][$i], should be Busy\n";
+				return 0;
+			} else {$counter++;}
+		}
+		if ($summary[1][1] ne $counter || $summary[1][2] ne $counter){
+			print "        FAILED: Output is wrong, should be 12\n";
+			return 0;
+		} else {
+			return 1;
+		}
+	}
+	if ($option eq "sort"){
+		my $num1;
+		my $num2;
+		for my $i (1..(scalar @{$machine_info[0]})-2){
+			$num1 = ord(substr($machine_info[3][$i],0,1));
+			$num2 = ord(substr($machine_info[3][$i+1],0,1));
+			if ($num1 > $num2){
+				print "        FAILED: Sorting unsuccessful\n";
+				return 0;
+			}
+		}
+		return 1;
+	}
+	if ($option eq "total"){
+		TLOG("Checking the summary table\n");
+		if ($summary[1][1] ne (scalar keys %Attr_new) || $summary[1][2] ne (scalar keys %Attr_new)){
+			print "       FAILED: Total is not correct\n";
+			return 0;
+		} else {
+			for my $i (3..7){
+				if ($summary[$i][1] ne (scalar keys %Attr_new)/5 || $summary[$i][2] ne (scalar keys %Attr_new)/5){
+					print "        FAILED: Total of different state is incorrect\n";
+					return 0;
+				}
+			}
+		}
+		return 1;
+	}
+}
+
+sub count_status_state {
+	my %Attr = %{$_[0]};
+	my %Arch;
+	my $arch_os_pair;
+	for my $i (0.. (scalar keys %Attr) -1){
+		$arch_os_pair = substr($Attr{$i}{Arch},1,length($Attr{$i}{Arch})-2)."/".substr($Attr{$i}{OpSys},1,length($Attr{$i}{OpSys})-2);
+		unless (defined $Arch{$arch_os_pair}){
+			$Arch{$arch_os_pair} = 0;
+		}
+	}
+	my %table;
+	foreach my $key (sort keys %Arch){
+		$table{$key}{"Owner"} = 0;
+		$table{$key}{"Claimed"} = 0;
+		$table{$key}{"Unclaimed"} = 0;
+		$table{$key}{"Matched"} = 0;
+		$table{$key}{"Preempting"} = 0;
+		$table{$key}{"Backfill"} = 0;
+		$table{$key}{"Drain"} = 0;
+		for my $i (0..(scalar keys %Attr) -1){
+			if ($key eq substr($Attr{$i}{Arch},1,length($Attr{$i}{Arch})-2)."/".substr($Attr{$i}{OpSys},1,length($Attr{$i}{OpSys})-2)){
+				$table{$key}{substr($Attr{$i}{State},1,length($Attr{$i}{State})-2)}++;
+			}
+		}
+	$table{$key}{"Total"} = $table{$key}{"Owner"} + $table{$key}{"Claimed"} + $table{$key}{"Unclaimed"} + $table{$key}{"Matched"} + $table{$key}{"Preempting"} + $table{$key}{"Backfill"} + $table{$key}{"Drain"};		
+	}
+	return %table;
+}
+
+sub convert_unix_time {
+	my $total = $_[0];
+	my $days = int($total/86400);
+	my $hours = sprintf "%02d", int(($total-$days*86400)/3600);
+	my $minutes = sprintf "%02d", int(($total - $days*86400 - $hours*3600)/60);
+	my $seconds = sprintf "%02d", $total - $days*86400 - $hours*3600 - $minutes*60;
+	return "$days+$hours:$minutes:$seconds";
+}
+
 # function to find the blank column numbers from a hash
 # input: a hash
 # return: a hash of empty column numbers
@@ -774,7 +1113,11 @@ sub check_heading {
 		'-dag' => sub {return $data{0} =~ /\s*ID\s+OWNER\/NODENAME\s+SUBMITTED\s+RUN_TIME\s+ST\s+PRI\s+SIZE\s+CMD/;},
 		'-io' => sub {return $data{0} =~ /\s*ID\s+OWNER\s+RUNS\s+ST\s+INPUT\s+OUTPUT\s+/;},
 		'-globus' => sub {return $data{0} =~ /\s*ID\s+OWNER\s+STATUS\s+MANAGER\s+HOST\s+EXECUTABLE/;},
-		'-tot' => sub {print "-tot does not have a heading\n";return 1;}
+		'-tot' => sub {print "-tot does not have a heading\n";return 1;},
+		'status_machine' => sub {return $data{0} =~ /\s*Name\s+OpSys\s+Arch\s+State\s+Activity\s+LoadAv\s+Mem\s+ActvtyTime/;},
+		'status_summary' => sub {return $data{0} =~ /\s+Total\s+Owner\s+Claimed\s+Unclaimed\s+Matched\s+Preempting\s+Backfill\s+Drain/;},
+		'status_claimed_machine' => sub {return $data{0} =~ /\s*Name\s+OpSys\s+Arch\s+LoadAv\s+RemoteUser\s+ClientMachine/;},
+		'status_claimed_summary' => sub {return $data{0} =~ /\s*Machines\s+MIPS\s+KFLOPS\s+AvgLoadAvg/;}
 	);
 
 	TLOG("Checking heading format of the output file\n");
@@ -1115,25 +1458,34 @@ sub check_af{
 	for my $i (0..(scalar @table) -1){
 		$data{$i} = $table[$i];
 	}
-if (!(defined $Attr{$sel0})){ $Attr{$sel0} = "undefined"; }
-if (!(defined $Attr{$sel1})){ $Attr{$sel1} = "undefined"; }
-if (!(defined $Attr{$sel2})){ $Attr{$sel2} = "undefined"; }
-if (!(defined $Attr{$sel3})){ $Attr{$sel3} = "undefined"; }
+	my %Attr1;
+	if (!defined $Attr{0}){
+		%{$Attr1{0}} = %Attr;
+		%Attr = %Attr1;
+	}
+for my $i (0..(scalar keys %Attr)-1){
+	if (!(defined $Attr{$i}{$sel0})){ $Attr{$i}{$sel0} = "undefined"; }
+	if (!(defined $Attr{$i}{$sel1})){ $Attr{$i}{$sel1} = "undefined"; }
+	if (!(defined $Attr{$i}{$sel2})){ $Attr{$i}{$sel2} = "undefined"; }
+	if (!(defined $Attr{$i}{$sel3})){ $Attr{$i}{$sel3} = "undefined"; }
+}
 
 my %af_rules = (
 	':,' => sub{
-		my @words = split(", ",$table[0]);
-		if ($words[0] eq unquote($Attr{$sel0}) && $words[1] eq unquote($Attr{$sel1}) && $words[2] eq unquote($Attr{$sel2}) && $words[3] eq unquote($Attr{$sel3})."\n") {
-			return 1;
-		} else {
-			print "        ERROR: Incorrect output\n        $words[0]--". unquote($Attr{$sel0})."\n        $words[1]--".unquote($Attr{$sel1})."\n        $words[2]--".unquote($Attr{$sel2})."\n        $words[3]--".unquote($Attr{$sel3})."\n";
-			return 0;
+		my @words;
+		for my $i (0..(scalar @table)-1){
+			@words = split(", ",$table[$i]);
+			if ($words[0] ne unquote($Attr{$i}{$sel0}) || $words[1] ne unquote($Attr{$i}{$sel1}) || $words[2] ne unquote($Attr{$i}{$sel2}) || $words[3] ne unquote($Attr{$i}{$sel3})."\n") {
+				print "        ERROR: Incorrect output\n        $words[0]--". unquote($Attr{$i}{$sel0})."\n        $words[1]--".unquote($Attr{$i}{$sel1})."\n        $words[2]--".unquote($Attr{$i}{$sel2})."\n        $words[3]--".unquote($Attr{$i}{$sel3})."\n";
+				return 0;
+			}
 		}
+		return 1;
 	},
 	':h' => sub{
 		if ($data{0} =~ /$sel0\s+$sel1\s+$sel2\s+$sel3/){
 			my @head = split("",$data{0});
-			my @chars = split("",$data{1});
+			my @chars;
 			my %blank_col;
 			my @edges;
 			my @fields;
@@ -1151,54 +1503,73 @@ my %af_rules = (
 					$index++;
 				}
 			}
-			for my $i (0..(scalar @edges) -2){
-				$fields[$i] = trim(join("",@chars[$edges[$i]..($edges[$i+1]-1)]));
+			for my $k (0..(scalar @table)-1){
+				@chars = split("",$table[$k]);
+				for my $i (0..(scalar @edges) -2){
+					$fields[$i][$k] = trim(join("",@chars[$edges[$i]..($edges[$i+1]-1)]));
+				}
+				$fields[scalar @edges -1][$k] = trim(join("",@chars[$edges[scalar @edges-1]..(scalar @chars -1)]));
 			}
-			$fields[scalar @edges -1] = trim(join("",@chars[$edges[scalar @edges-1]..(scalar @chars -1)]));
-			if ($fields[0] eq unquote($Attr{$sel0}) && $fields[1] eq unquote($Attr{$sel1}) && $fields[2] eq unquote($Attr{$sel2}) && $fields[3] eq unquote($Attr{$sel3})){
-				return 1
-			} else {
-				print "        ERROR: Incorrect output\n        $fields[0]--".unquote($Attr{$sel0})."\n        $fields[1]--".unquote($Attr{$sel1})."\n        $fields[2]--".unquote($Attr{$sel2})."\n        $fields[3]--".unquote($Attr{$sel3})."\n";
-				return 0;
+			
+			for my $i (1..(scalar @{$fields[0]})-1){
+				if ($fields[0][$i] ne unquote($Attr{$i-1}{$sel0}) || $fields[1][$i] ne unquote($Attr{$i-1}{$sel1}) || $fields[2][$i] ne unquote($Attr{$i-1}{$sel2}) || $fields[3][$i] ne unquote($Attr{$i-1}{$sel3})){
+					print "$fields[0][$i]--".unquote($Attr{$i-1}{$sel0})."\n$fields[1][$i]--".unquote($Attr{$i-1}{$sel1})."\n$fields[2][$i]--".unquote($Attr{$i-1}{$sel2})."\n$fields[3][$i]--".unquote($Attr{$i-1}{$sel3});
+					return 0;
+				}
 			}
+			return 1;
 		} else {
 			print "        ERROR: The heading is not correct\n";
 			return 0;
 		}
 	},
 	':ln' => sub{
-		if (trim($table[0]) eq trim("$sel0 = ".unquote($Attr{$sel0})) && trim($table[1]) eq trim("$sel1 = ".unquote($Attr{$sel1})) && trim($table[2]) eq trim("$sel2 = ".unquote($Attr{$sel2})) && trim($table[3]) eq trim("$sel3 = ".unquote($Attr{$sel3}))){
-		return 1;
-		} else {
-			print trim($table[0]),"\n",trim("$sel0 = ".unquote($Attr{$sel0})),"\n",trim($table[1]),"\n", trim("$sel1 = ".unquote($Attr{$sel1})),"\n",trim($table[2]),"\n",trim("$sel2 = ".unquote($Attr{$sel2})),"\n",trim($table[3]),"\n",trim("$sel3 = ".unquote($Attr{$sel3})),"\n";
-			return 0;
+		for my $i (0..(scalar keys %Attr)-1){
+			print scalar keys %Attr;
+			if (trim($table[$i*4]) ne trim("$sel0 = ".unquote($Attr{$i}{$sel0})) || trim($table[($i*4)+1]) ne trim("$sel1 = ".unquote($Attr{$i}{$sel1})) || trim($table[$i*4+2]) ne trim("$sel2 = ".unquote($Attr{$i}{$sel2})) || trim($table[$i*4+3]) ne trim("$sel3 = ".unquote($Attr{$i}{$sel3}))){
+				print trim($table[$i*4]),"\n",trim("$sel0 = ".unquote($Attr{$i}{$sel0})),"\n",trim($table[$i*4+1]),"\n", trim("$sel1 = ".unquote($Attr{$i}{$sel1})),"\n",trim($table[$i*4+2]),"\n",trim("$sel2 = ".unquote($Attr{$i}{$sel2})),"\n",trim($table[$i*4+3]),"\n",trim("$sel3 = ".unquote($Attr{$i}{$sel3})),"\n";
+				return 0;
+			}
 		}
+		return 1;
 	},
 	':lrng' => sub {
-		if ($table[0] eq "\n" && $table[1] eq "$sel0 = $Attr{$sel0}\n" && $table[2] eq "$sel1 = $Attr{$sel1}\n" && $table[3] eq "$sel2 = $Attr{$sel2}\n" && $table[4] eq "$sel3 = $Attr{$sel3}\n") { return 1;} else {
-			print $table[0],"\n","\n",$table[1],"\n","$sel0 = $Attr{$sel0}\n", $table[2],"\n","$sel1 = $Attr{$sel1}\n",$table[3],"\n","$sel2 = $Attr{$sel2}\n",$table[4],"\n","$sel3 = $Attr{$sel3}\n";
-		}	
+		for my $i (0..(scalar keys %Attr)-1){
+			if ($table[$i*5] ne "\n" || $table[$i*5+1] ne "$sel0 = $Attr{$i}{$sel0}\n" || $table[$i*5+2] ne "$sel1 = $Attr{$i}{$sel1}\n" || $table[$i*5+3] ne "$sel2 = $Attr{$i}{$sel2}\n" || $table[$i*5+4] ne "$sel3 = $Attr{$i}{$sel3}\n") { 
+				print $table[$i*5+1],"\n","$sel0 = $Attr{$i}{$sel0}\n", $table[$i*5+2],"\n","$sel1 = $Attr{$i}{$sel1}\n",$table[$i*5+3],"\n","$sel2 = $Attr{$i}{$sel2}\n",$table[$i*5+4],"\n","$sel3 = $Attr{$i}{$sel3}\n";
+				return 0;
+			}
+		}
+		return 1;	
 	},
 	':j' => sub {
-		if ($table[0] eq $Attr{ClusterId}.".".$Attr{ProcId}." ".unquote($Attr{$sel0})." ".unquote($Attr{$sel1})." ".unquote($Attr{$sel2})." ".unquote($Attr{$sel3})."\n"){
+		if ($table[0] eq $Attr{0}{ClusterId}.".".$Attr{0}{ProcId}." ".unquote($Attr{0}{$sel0})." ".unquote($Attr{0}{$sel1})." ".unquote($Attr{0}{$sel2})." ".unquote($Attr{0}{$sel3})."\n"){
 			return 1;
 		} else {
-			print $table[0],"\n",$Attr{ClusterId}.".".$Attr{ProcId}." ".unquote($Attr{$sel0})." ".unquote($Attr{$sel1})." ".unquote($Attr{$sel2})." ".unquote($Attr{$sel3})."\n"
+			print $table[0],"\n",$Attr{0}{ClusterId}.".".$Attr{0}{ProcId}." ".unquote($Attr{0}{$sel0})." ".unquote($Attr{0}{$sel1})." ".unquote($Attr{0}{$sel2})." ".unquote($Attr{0}{$sel3})."\n"
 		}
 	},
 	':t' => sub {
-		if  (trim($table[0]) eq trim(unquote($Attr{$sel0})."\t".unquote($Attr{$sel1})."\t".unquote($Attr{$sel2})."\t".unquote($Attr{$sel3}))){
-			return 1;
-		} else {	
-			print trim($table[0]),"\n", trim(unquote($Attr{$sel0})."\t".unquote($Attr{$sel1})."\t".unquote($Attr{$sel2})."\t".unquote($Attr{$sel3}));
+		for my $i (0..(scalar @table)-1){
+			if  (trim($table[$i]) ne trim(unquote($Attr{$i}{$sel0})."\t".unquote($Attr{$i}{$sel1})."\t".unquote($Attr{$i}{$sel2})."\t".unquote($Attr{$i}{$sel3}))){
+				print trim($table[$i]),"\n", trim(unquote($Attr{$i}{$sel0})."\t".unquote($Attr{$i}{$sel1})."\t".unquote($Attr{$i}{$sel2})."\t".unquote($Attr{$i}{$sel3}));
+				return 0;
+			}
 		}
+		return 1;
 	}
 );
-	TLOG("Checking condor_q -af$option\n");
+	TLOG("Checking -af$option\n");
 	if (defined $af_rules{$option}){
 		return $af_rules{$option}();
 	} elsif (!defined $af_rules{$option}){
-		return $table[0] eq unquote($Attr{$sel0})." ".unquote($Attr{$sel1})." ".unquote($Attr{$sel2})." ".unquote($Attr{$sel3})."\n";
+		for my $i (0..(scalar @table)-1){
+print $i;
+			if ($table[$i] ne unquote($Attr{$i}{$sel0})." ".unquote($Attr{$i}{$sel1})." ".unquote($Attr{$i}{$sel2})." ".unquote($Attr{$i}{$sel3})."\n"){
+				return 0;
+			}
+		}
+		return 1;
 	} else {
 		return 0;
 	}
@@ -1210,134 +1581,161 @@ sub check_type {
 	my @table = @{$_[2]};
 	my $sel0 = $_[3];
 	my %format_rules;
-	my $regex = qr/^\s%\.([0-9])f$/;
+	my %Attr1;
+	if (!(defined $Attr{0})){
+		%{$Attr1{0}} = %Attr;
+		%Attr = %Attr1;
+	}
 	%format_rules = (
 ' %v' => sub{
-	if (defined $Attr{$sel0}){
-		if ($table[0] eq unquote($Attr{$sel0})){
+		my $line = "";
+		for my $i (0..(scalar keys %Attr)-1){
+			if (!(defined $Attr{$i}{$sel0})){
+				$line .= "undefined";
+			} else {
+				$line.= unquote($Attr{$i}{$sel0});
+			}
+		}
+		if ($table[0] eq $line){
 			return 1;
 		} else {
-			print $table[0],"\n",unquote($Attr{$sel0}),"\n";
+			print "Output is $table[0], shoule be $line\n";
 			return 0;
 		}
-	} else {
-		if ($table[0] eq "undefined"){
-			return 1;
-		} else {
-			print "Output is $table[0] where it should be undefined\n";
-			return 0;
-		}
-	}},
+},
 ' %V' => sub{
-	if (defined $Attr{$sel0}){	
-		if ($table[0] eq $Attr{$sel0}){
+		my $line = "";
+		for my $i (0..(scalar keys %Attr)-1){
+			if (defined $Attr{$i}{$sel0}){
+				$line.= $Attr{$i}{$sel0};
+			} else {
+				$line .= "undefined";
+			}
+		}
+		if ($table[0] eq $line){
 			return 1;
 		} else {
-			print $table[0],"\n",$Attr{$sel0},"\n";
+			print "Output is $table[0], shoule be $line\n";
 			return 0;
 		}
-	} else {
-		if ($table[0] eq "undefined"){
-			return 1;
-		} else {
-			print "Output is $table[0] where it should be \"undefined\"\n";
-			return 0;
-		}
-	}},
+},
 ' %d' => sub{
-	if (defined $Attr{$sel0}){
-		if (defined $table[0] && unquote($Attr{$sel0}) =~ /^[0-9]+$/){
-			if ($table[0] eq unquote($Attr{$sel0})){return 1;}
-			else {print $table[0],"\n";return 0;}
-		} elsif (defined $table[0] && unquote($Attr{$sel0}) =~ /^([0-9]+)\.[0-9]+$/){
-			if ($table[0] eq $1){return 1;}
-			else {print $table[0],"\n";return 0;}
-		} elsif (defined $table[0] && unquote($Attr{$sel0}) eq "true"){
-			if ($table[0] eq 1){return 1;}
-			else {print $table[0],"\n";return 0;}
-		} elsif (defined $table[0] && unquote($Attr{$sel0}) eq "false"){
-			if ($table[0] eq 0) {return 1;}
-			else {print $table[0],"\n";return 0;}
-		} else {
-			if (!(defined $table[0])){return 1;}
-			else {print"Output is $table[0]. Should not have any output\n";return 0;}
+		my $line = "";
+		for my $i (0..(scalar keys %Attr)-1){
+			if (defined $table[0] && unquote($Attr{$i}{$sel0}) =~ /([0-9])\.[0-9]+E(.+)/){
+				my $integer = $1;
+				my $multi = $2;
+				if ($multi < 0){
+					$line .= 0;
+				} else {
+					$line .= $integer;
+				}
+			} elsif (defined $table[0] && unquote($Attr{$i}{$sel0}) =~ /^[0-9]+$/){
+				$line .= unquote($Attr{$i}{$sel0});
+			} elsif (defined $table[0] && unquote($Attr{$i}{$sel0}) =~ /^-([0-9]+)/){
+				$line .= unquote($Attr{$i}{$sel0});
+			} elsif (defined $table[0] && unquote($Attr{$i}{$sel0}) =~ /^([0-9]+)\.[0-9]+$/){
+				unquote($Attr{$i}{$sel0}) =~ /^([0-9]+)\.[0-9]+$/;
+				$line .= $1;
+			} elsif (defined $table[0] && unquote($Attr{$i}{$sel0}) eq "true"){
+				$line .= 1;
+			} elsif (defined $table[0] && unquote($Attr{$i}{$sel0}) eq "false"){
+				$line .= 0;
+			} elsif (!(defined $Attr{$i}{$sel0})){
+				$line = $line;
+			} elsif (!(defined $table[0])){
+				return 1;
+			}
 		}
-	} else { return !(defined $table[0]); }
-	},
+		if ($table[0] eq $line){return 1;}
+		else {print $table[0],"\n$line\n";return 0;}
+},
 ' %f' => sub{
-	if (defined $Attr{$sel0}){
-		if (defined $table[0] && unquote($Attr{$sel0}) =~ /^[0-9]+\.([0-9])+$/){
-			my $len = length($1);
-			if ($len<6){
-				if ($table[0] eq unquote($Attr{$sel0})."0"x(6-$len)){return 1;}
-				else {print $table[0],"\n";return 0;}
-			} elsif ($len > 6){
-				if ($table[0] eq substr(unquote($Attr{$sel0}),0,length(unquote($Attr{$sel0}))-$len + 6)){return 1;}
-				else {print $table[0],"\n";return 0;}
+		my $line = "";
+		for my $i (0..(scalar keys %Attr)-1){
+			if (defined $table[0] && unquote($Attr{$i}{$sel0}) =~ /([0-9])\.[0-9]+E(.+)/){
+				my $integer = $1;
+				my $multi = $2;
+					if ($multi < -6){
+						$line .= "0.000000";
+					} else {
+						$line .= sprintf("%.6f",unquote($Attr{$i}{$sel0}));
+					}
+			} elsif (defined $table[0] && unquote($Attr{$i}{$sel0}) =~ /^[0-9]+\.([0-9]+)$/){
+				my $len = length($1);
+				if ($len<6){
+					$line .= unquote($Attr{$i}{$sel0})."0"x(6-$len);
+				} elsif ($len > 6){		
+					$line .= sprintf("%.6f",unquote($Attr{$i}{$sel0}));
+				} else {
+					$line .= unquote($Attr{$i}{$sel0});
+				}
+			} elsif (defined $table[0] && unquote($Attr{$i}{$sel0}) =~ /^[0-9]+$/){
+				$line .= unquote($Attr{$i}{$sel0})."."."0"x6;
+			} elsif (defined $table[0] && unquote($Attr{$i}{$sel0}) =~ /^-[0-9]+.*/){
+				$line .= unquote($Attr{$i}{$sel0})."."."0"x6;
+			} elsif (defined $table[0] && unquote($Attr{$i}{$sel0}) eq "true"){
+				$line .= "1.000000";
+			} elsif (defined $table[0] && unquote($Attr{$i}{$sel0}) eq "false"){
+				$line .= "0.000000";
 			} else {
-				if ($table[0] eq unquote($Attr{$sel0})){return 1;}
-				else {print $table[0],"\n";return 0;}
+				if (!(defined $table[0])){return 1;}
+				else {print $table[0]," Should not have any output\n";return 0;}
 			}
-		} elsif (defined $table[0] && unquote($Attr{$sel0}) =~ /^[0-9]+$/){
-			if ($table[0] eq unquote($Attr{$sel0})."."."0"x6){return 1;}
-			else {print $table[0],"\n";return 0;}
-		} elsif (defined $table[0] && unquote($Attr{$sel0}) eq "true"){
-			if ($table[0] eq "1.000000"){return 1;}
-			else {print $table[0],"\n";return 0;}
-		} elsif (defined $table[0] && unquote($Attr{$sel0}) eq "false"){
-			if ($table[0] eq "0.000000"){return 1;}
-			else {print $table[0],"\n";return 0;}
-		} else {
-			if (!(defined $table[0])){return 1;}
-			else {print $table[0]," Should not have any output\n";return 0;}
 		}
-	} else {
-		if (!(defined $table[0])){return 1;}
-		else {print $table[0]," Should not have any output\n";return 0;}
- 	}
-	},
+		if ($line eq $table[0]){return 1;}
+		else {print $table[0], "\n$line\n"; return 0;}
+},
 ' %.2f' => sub {
-	if (defined $Attr{$sel0}){
-		if (defined $table[0] && unquote($Attr{$sel0}) =~ /^[0-9]+\.([0-9])+$/){
-			my $len = length($1);
-			if ($len<2){
-				if ($table[0] eq unquote($Attr{$sel0})."0"x(2-$len)){return 1;}
-				else {print $table[0],"\n";return 0;}
-			} elsif ($len > 2){
-				if ($table[0] eq substr(unquote($Attr{$sel0}),0,length(unquote($Attr{$sel0}))-$len + 2)){return 1;}
-				else {print $table[0],"\n";return 0;}
+		my $line = "";
+		for my $i (0..(scalar keys %Attr)-1){
+			if (defined $table[0] && unquote($Attr{$i}{$sel0}) =~ /([0-9])\.[0-9]+E(.+)/){
+				my $integer = $1;
+				my $multi = $2;
+					if ($multi < -2){
+						$line .= "0.00";
+					} else {
+						$line .= sprintf("%.2f",unquote($Attr{$i}{$sel0}));
+					}
+			} elsif (defined $table[0] && unquote($Attr{$i}{$sel0}) =~ /^[0-9]+\.([0-9]+)$/){
+				my $len = length($1);
+				if ($len<2){
+					$line .= unquote($Attr{$i}{$sel0})."0"x(2-$len);
+				} elsif ($len > 2){		
+					$line .= sprintf("%.2f",unquote($Attr{$i}{$sel0}));
+				} else {
+					$line .= unquote($Attr{$i}{$sel0});
+				}
+			} elsif (defined $table[0] && unquote($Attr{$i}{$sel0}) =~ /^[0-9]+$/){
+				$line .= unquote($Attr{$i}{$sel0})."."."0"x2;
+			} elsif (defined $table[0] && unquote($Attr{$i}{$sel0}) =~ /^-[0-9]+.*/){
+				$line .= unquote($Attr{$i}{$sel0})."."."0"x2;
+			} elsif (defined $table[0] && unquote($Attr{$i}{$sel0}) eq "true"){
+				$line .= "1.00";
+			} elsif (defined $table[0] && unquote($Attr{$i}{$sel0}) eq "false"){
+				$line .= "0.00";
 			} else {
-				if ($table[0] eq unquote($Attr{$sel0})){return 1;}
-				else {print $table[0],"\n";return 0;}
+				if (!(defined $table[0])){return 1;}
+				else {print $table[0]," Should not have any output\n";return 0;}
 			}
-		} elsif (defined $table[0] && unquote($Attr{$sel0}) =~ /^[0-9]+$/){
-			if ($table[0] eq unquote($Attr{$sel0})."."."0"x2){return 1;}
-			else {print $table[0],"\n";return 0;}
-		} elsif (defined $table[0] && unquote($Attr{$sel0}) eq "true"){
-			if ($table[0] eq "1.00"){return 1;}
-			else {print $table[0],"\n";return 0;}
-		} elsif (defined $table[0] && unquote($Attr{$sel0}) eq "false"){
-			if ($table[0] eq "0.00"){return 1;}
-			else {print $table[0],"\n";return 0;}
-		} else {
-			if (!(defined $table[0])){return 1;}
-			else {print $table[0],"\n";return 0;}
 		}
-	} else {
-		if (!(defined $table[0])){return 1;}
-		else {print $table[0]," Should not have any output\n";return 0;}
-	}
+		if ($line eq $table[0]){return 1;}
+		else {print $table[0], "\n$line\n"; return 0;}
 },
 ' %s' => sub{
-	if (defined $Attr{$sel0}){
-		if ($table[0] eq unquote($Attr{$sel0})){return 1;}
-		else {print $table[0],"\n";return 0;}
-	} else {
-		if (!(defined $table[0])){return 1;}
-		else {print $table[0]," Should not have any output\n";return 0;}	
-	}}
+		my $line = "";
+		for my $i (0..(scalar keys %Attr)-1){
+			$line .= unquote($Attr{$i}{$sel0});
+		}
+		if ($line eq $table[0]){
+			return 1;
+		} else {
+			print "Output is $table[0], should be $line\n";
+			return 0;
+		}
+}
 	);
-	TLOG("Checking condor_q -format$option\n");
+	TLOG("Checking -format$option\n");
 	if (defined $option && defined $format_rules{$option}){
 		return $format_rules{$option}();
 	} else {
@@ -1532,6 +1930,24 @@ sub check_transform {
 		return 1;
 	}
 }	
+}
+
+sub read_attr {
+	my $filename = $_[0];
+	my %Attr;
+	my $index = 0;
+	open (my $HANDLER, $filename) or die "ERROR OPENING THE FILE $filename";
+	while (<$HANDLER>){
+        	if ($_ =~ /\S/){
+	               	$_ =~ /^([A-Za-z0-9_]+)\s*=\s*(.*)$/;
+	                my $key = $1;
+	                my $value = $2;
+	                $Attr{$index}{$key} = $value;
+        	} else {
+                	$index++;
+        	}
+	}
+	return %Attr;
 }
 
 sub write_ads_to_file {
