@@ -123,7 +123,7 @@
     The following commands are specific to OpenStack and must be implemented
     by an OpenStack GAHP server:
 
-        NOVA_SERVICE
+        KEYSTONE_SERVICE
         NOVA_PING
         NOVA_SERVER_CREATE
         NOVA_SERVER_DELETE
