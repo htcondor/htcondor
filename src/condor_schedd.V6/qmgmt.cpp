@@ -3562,6 +3562,7 @@ void SetSubmitTotalProcs(std::list<std::string> & new_ad_keys)
 bool
 ReadProxyFileIntoAd( const char *file, const char *owner, ClassAd &x509_attrs )
 {
+#if defined(HAVE_EXT_GLOBUS)
 	if ( !init_user_ids( owner, NULL ) ) {
 		dprintf( D_FAILURE, "ReadProxyFileIntoAd(%s): Failed to switch to user priv\n", owner );
 		return false;
@@ -3612,6 +3613,7 @@ ReadProxyFileIntoAd( const char *file, const char *owner, ClassAd &x509_attrs )
 	free( voname );
 	free( firstfqan );
 	free( fullfqan );
+#endif
 	return true;
 }
 
