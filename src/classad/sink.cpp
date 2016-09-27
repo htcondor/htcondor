@@ -395,11 +395,13 @@ UnparseAux(string &buffer, Operation::OpKind op, ExprTree *t1, ExprTree *t2,
 		// case 2: check for ternary op
 	if( op==Operation::TERNARY_OP ) {
 		Unparse( buffer, t1 );
-		buffer += " ? ";
 		if (t2) {
+			buffer += " ? ";
 			Unparse( buffer, t2 );
+			buffer += " : ";
+		} else {
+			buffer += " ?: ";
 		}
-		buffer += " : ";
 		Unparse( buffer, t3 );
 		return;
 	}
