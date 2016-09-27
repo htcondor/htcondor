@@ -2800,21 +2800,17 @@ at a higher level, the splice name must be included.
 \index{DAG input file!PIN\_OUT command}
 \index{DAGMan!connecting DAG splices}
 
-%TEMP -- add stuff here
-
-%TEMP -- analogy with hardware
-
 In the "default" usage of splices described above, when one splice is
 the parent of another splice, all "terminal" nodes (nodes with no
 children) of the parent splice become parents of all "initial" nodes
 (nodes with no parents) of the child splice.  The CONNECT,
 PIN\_IN, and PIN\_OUT commands (added in version 8.5.7) allow more
-flexible dependencies between splices.
+flexible dependencies between splices.  (The terms PIN\_IN and PIN\_OUT
+were chosen because of the hardware analogy.)
 
 The syntax for \Arg{CONNECT} is
 
-%TEMP -- better names instead of parent and child??
-\Opt{CONNECT} \Arg{ParentSpliceName} \Arg{ChildSpliceName}
+\Opt{CONNECT} \Arg{OutputSpliceName} \Arg{InputSpliceName}
 
 The syntax for \Arg{PIN\_IN} is
 
@@ -2824,40 +2820,46 @@ The syntax for \Arg{PIN\_OUT} is
 
 \Opt{PIN\_OUT} \Arg{NodeName} \Arg{PinNumber}
 
-All parent splice nodes connected to a given pin\_out will become
-parents of all child splice nodes connected to the corresponding
+All output splice nodes connected to a given pin\_out will become
+parents of all input splice nodes connected to the corresponding
 pin\_in.  (The pin\_ins and pin\_outs exist only to create the
 correct parent/child dependencies between nodes.  Once the
 DAG is parsed, there are no actual DAG objects corresponding
 to the pin\_ins and pin\_outs.)
 
-Any given splice can contain both PIN\_IN and PIN\_OUT definitions.
+Any given splice can contain both PIN\_IN and PIN\_OUT definitions,
+and can be both an input and output splice in different CONNECT
+commands.  Furthermore, a splice can appear in any number of
+CONNECT commands (for example, a given splice could be the output
+splice in two CONNECT commands that have different input splices).
 It is \emph{not} an error for a splice to have PIN\_IN or PIN\_OUT
-definitions that are not associated with a CONNECT command.
-%TEMP -- find a better way to say this
+definitions that are not associated with a CONNECT command -- such
+PIN\_IN and PIN\_OUT commands are simply ignored.
 
 Note that the pin\_ins and pin\_outs must be defined \emph{within}
 the relevant splices (this can be done with \Arg{INCLUDE} commands), not
 in the DAG that connects the splices.
 
 
-Restrictions:
+\Bold{There are a number of restrictions on splice connections:}
 \begin{itemize}
 \item Connections can be made only between two splices; "regular"
 nodes or sub-DAGs cannot be used in a CONNECT command.
 \item Pin\_ins and pin\_outs must be numbered consecutively starting
 at 1.
-\item The pin\_outs of the parent splice in a connect command must
-match the pin\_ins of the child splice in the command.
-\item All "initial" nodes (nodes with no parents) of a child splice
-used in a connect command must be connected to a pin\_in.
+\item The pin\_outs of the output splice in a connect command must
+match the pin\_ins of the input splice in the command.
+\item All "initial" nodes (nodes with no parents) of an input splice
+used in a CONNECT command must be connected to a pin\_in.
 \end{itemize}
+Violating any of these restrictions will result in an error during
+the parsing of the DAG files.
 
 Note:  it is probably desireable for any "terminal" node (a
-node with no children) in the parent splice to be connected to
+node with no children) in the output splice to be connected to
 a pin\_out -- but this is not required.
 
-Here is a simple example:
+\Bold{Here is a simple example:}
 \begin{verbatim}
 # File: top.dag
     SPLICE A spliceA.dag
