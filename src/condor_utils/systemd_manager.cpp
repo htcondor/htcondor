@@ -66,9 +66,9 @@ SystemdManager::SystemdManager()
 		return;
 	}
 #endif
-	*(void**)(&m_notify_handle) = GetHandle("sd_notify");
-	*(void **) (&m_listen_fds_handle) = GetHandle("sd_listen_fds");
-	*(void **) (&m_is_socket_handle) = GetHandle("sd_is_socket");
+	m_notify_handle = (notify_handle_t)GetHandle("sd_notify");
+	m_listen_fds_handle = (listen_fds_t)GetHandle("sd_listen_fds");
+	m_is_socket_handle = (is_socket_t)GetHandle("sd_is_socket");
 
 	InitializeFDs();
 #endif // LINUX
