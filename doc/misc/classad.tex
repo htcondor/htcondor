@@ -1105,6 +1105,19 @@ if either of their operands have these exceptional values.
 		for a logical operator.  In other words,
 		\verb@TRUE && "foobar"@ evaluates to \Expr{ERROR}.
 	\end{enumerate}
+	\item\textbf{The Ternary operator:}
+	\begin{enumerate}
+		\item The Ternary operator (\Expr{expr1} ? \Expr{expr2} : \Expr{expr3})
+		operate with expressions.  If all three expressions are given, the operation
+		is strict.
+
+		\item However, if the middle expression is missing, eg. \Expr{expr1} ?: \Expr{expr3},
+		then, when expr1 is defined, that defined value is returned.  Otherwise, when expr1
+		evaluated to \Expr{UNDEFINED}, the value of expr3 is evaluated and returned.  This
+		can be a convenient shortcut for writing what would otherwise be a much longer
+		classad expression.
+	\end{enumerate}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
