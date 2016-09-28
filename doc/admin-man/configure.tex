@@ -530,17 +530,49 @@ so only one may be specified.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{configuration!INCLUDE syntax}
 \index{INCLUDE configuration syntax}
-Externally defined configuration can be incorporated using the syntax
+
+%TEMP -- $(IsMaster), $(CondorIsAdmin) are not documented (see gittrac #5781)
+% Note: I can't find IsMaster in the code (wenger 2016-09-28)
+
+Externally defined configuration can be incorporated using the following
+syntax:
 \begin{verbatim}
-  include : <what-to-include>
+  include [ifexist] : <file>
+  include : <cmdline>|
+  include [ifexist] command [into <cache-file>] : <cmdline>
 \end{verbatim}
 
-The \verb@<what-to-include>@ specification may describe a single file,
-where the contents of the file will be parsed and incorporated
-into the configuration.
-Or, \verb@<what-to-include>@  may cause a program to be executed,
-where the output of the program is parsed and incorporated
-into the configuration.
+(Note that the \verb@ifexist@ and \verb@into@ options were
+added in version 8.5.7.  Also note that the \verb@command@ option
+must be specified in order to use the \verb@into@ option -- just
+using the bar after \verb@<cmdline>@ will not work.)
+
+In the file form of the \MacroNI{include} command, the \verb@<file>@
+specification must describe a single file, the contents of which
+will be parsed and incorporated into the configuration.
+Unless the \verb@ifexist@ option is specified, the non-existence
+of the file is a fatal error.
+
+In the command line form of the \MacroNI{include} command (specified with
+either the \verb@command@ option or by appending a bar (|) character
+after the \verb@<cmdline>@ specification), the
+\verb@<cmdline>@ specification must describe a command line
+(program and arguments); the command line will be executed,
+and the output will be parsed and incorporated into the configuration.
+
+If the \verb@into@ option is not used, the command line
+will be executed every time the configuration file is referenced.
+This may well be undesirable, and can be avoided by using the
+\verb@into@ option.
+The \verb@into@ keyword must be followed by the full pathname of a file
+into which to write the output of the command line. If that file exists, it
+will be read and the command line will not be executed. If that file
+does not exist, the output of the command line will be written into it
+and then the cache file will be read and incorporated into the
+configuration. If the command line produces no
+output, a zero length file will be created. If the command line returns
+a non-zero exit code, configuration will abort and the cache file will
+not be created unless the \verb@ifexist@ keyword is also specified. 
 
 The \MacroNI{include} key word is case insensitive.
 There are \emph{no} requirements for white space characters surrounding
@@ -581,8 +613,8 @@ For pools that are transitioning to using this new syntax in configuration,
 while still having some tools and daemons with HTCondor versions 
 earlier than 8.1.6,
 special syntax in the configuration will cause those daemons to
-fail upon start up,
-rather than use the new, but misinterpreted, syntax. 
+fail upon startup,
+rather than continuing, but incorrectly parsing the new syntax.
 Newer daemons will ignore the extra syntax.
 Placing the \verb|@| character before the \MacroNI{include} key word
 causes the older daemons to fail when they attempt to
@@ -594,15 +626,54 @@ to fail when reading it.
   FILE = config.$(FULL_HOSTNAME)
   @include : $(LOCAL_DIR)/$(FILE)
 \end{verbatim}
-A daemon previous to HTCondor version 8.1.6 fails to start.
+A daemon older than version 8.1.6 will fail to start.
 Running an older \Condor{config\_val} identifies the \Expr{@include}
 line as being bad.
-A daemon of HTCondor version 8.1.6 or more recent sees
+A daemon of HTCondor version 8.1.6 or more recent sees:
 \begin{verbatim}
   FILE = config.$(FULL_HOSTNAME)
   include : $(LOCAL_DIR)/$(FILE)
 \end{verbatim}
+and starts up successfully.
 
+Here is an example using the new \verb@ifexist@ and \verb@into@ options:
+\begin{verbatim}
+  # stuff.pl writes "STUFF=1" to stdout
+  include ifexist command into $(LOCAL_DIR)/stuff.config : perl $(LOCAL_DIR)/stuff.pl
+\end{verbatim}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:Config-Error_Warn}Reporting Errors and Warnings}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{configuration!Error and warning syntax}
+\index{Error and warning configuration syntax}
+
+As of version 8.5.7, warning and error messages can be included
+in HTCondor configuration files.
+
+The syntax for warning and error messages is as follows:
+\begin{verbatim}
+  warning : <warning message>
+  error : <error message>
+\end{verbatim}
+
+The warning and error messages will be printed when the configuration
+file is used (when almost any HTCondor command is run, for example).
+Error messages (unlike warnings) will prevent the
+successful use of the configuration file.  This will, for example,
+prevent a daemon from starting, and prevent \Condor{config\_val}
+from returning a value.
+
+Here's an example of using an error message in a configuration
+file (combined with some of the new include features documented
+above):
+\begin{verbatim}
+# stuff.pl writes "STUFF=1" to stdout
+include command into $(LOCAL_DIR)/stuff.config : perl $(LOCAL_DIR)/stuff.pl
+if ! defined stuff
+  error : stuff is needed!
+endif
+\end{verbatim}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Config-Metaknobs}Metaknobs: Using Predefined Sets of Configuration}
