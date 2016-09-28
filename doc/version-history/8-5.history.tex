@@ -75,6 +75,7 @@ of a node is now simply the sum of the explicit node priority and the
 overall DAG priority.  (See section ~\ref{sec:DAG-SetNodePriority} for
 more details.)
 sec:DAG-SetNodePriority
+\Ticket{4024}
 \Ticket{5749}
 
 \item Added the capability for more flexible connections between
@@ -148,7 +149,7 @@ for details).
 
 \item Fixed a bug in how the HAD daemon checks to see if it and its
 corresponding replication daemon were configured to be on the same host.
-\Ticket{5769}
+\Ticket{5849}
 
 \item The EC2 GAHP now handles integer overflows when checking deadlines.
 This prevents spurious time-outs on 32-bit systems which have been up for
