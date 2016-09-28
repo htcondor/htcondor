@@ -158,6 +158,51 @@ _condor_config_val()
   esac
 }
 
+_condor_act()
+{
+  local cur prev_idx prev pool
+  COMPREPLY=()
+  cur="${COMP_WORDS[COMP_CWORD]}"
+  prev_idx=$(( $COMP_CWORD - 1))
+  prev="${COMP_WORDS[$prev_idx]}"
+
+  __get_condor_pool_name
+
+  case "${prev}" in
+    -po*)
+      _known_hosts_real -- "${cur}"
+      return 0
+      ;;
+    -n*)
+      # Suggest one of the available schedds
+      COMPREPLY=( $(compgen -W "$(condor_status -pool $pool -schedd -af Name 2>/dev/null)" -- "${cur}") )
+      return 0
+      ;;
+    -a*|-r*|-c*|-s*)
+      return 0
+      ;;
+  esac
+  case "${cur}" in
+    -*)
+      COMPREPLY=( $(compgen -W "-help -version -long -totals -name -pool -addr -constraint -all" -- "${cur}") )
+      case "${COMP_WORDS[0]}" in
+        condor_hold)
+          COMPREPLY+=( $(compgen -W "-subcode -reason" -- "${cur}" ) )
+          ;;
+        condor_rm)
+          COMPREPLY+=( $(compgen -W "-forcex -reason" -- "${cur}" ) )
+          ;;
+        condor_release)
+          COMPREPLY+=( $(compgen -W "-reason" -- "${cur}" ) )
+          ;;
+      esac
+      ;;
+    *)
+      COMPREPLY=( $(compgen -W "$(condor_status -pool $pool -const 'IdleJobs+RunningJobs+HeldJobs>0' -submitter -af Name 2>/dev/null | tr '@' ' ' | awk '{print $1;}' | tr '.' ' ' | awk '{print $NF;}' | sort | uniq)" -- "${cur}") )
+      COMPREPLY+=( $(compgen -W "$(condor_q -format '%d.' ClusterId -format '%d\n' ProcId)" -- "${cur}" ) )
+  esac
+}
+
 _condor_history()
 {
   local cur prev_idx prev pool
@@ -313,6 +358,7 @@ _condor_q()
       if [ $allusers -eq 1 ]; then
         COMPREPLY=( $(compgen -W "$(condor_status -pool $pool -const 'IdleJobs+RunningJobs+HeldJobs>0' -submitter -af Name 2>/dev/null | tr '@' ' ' | awk '{print $1;}' | tr '.' ' ' | awk '{print $NF;}' | sort | uniq)" -- "${cur}") )
       fi
+      COMPREPLY+=( $(compgen -W "$(condor_q -format '%d.' ClusterId -format '%d\n' ProcId)" -- "${cur}" ) )
       return 0
       ;;
   esac
@@ -323,4 +369,9 @@ complete -F _condor_status condor_status
 complete -F _condor_history condor_history
 complete -F _condor_submit condor_submit
 complete -F _condor_config_val condor_config_val
+complete -F _condor_act condor_rm
+complete -F _condor_act condor_hold
+complete -F _condor_act condor_release
+complete -F _condor_act condor_suspend
+complete -F _condor_act condor_continue
 
