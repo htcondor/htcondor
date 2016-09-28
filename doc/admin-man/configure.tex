@@ -7598,15 +7598,17 @@ SYSTEM_PERIODIC_REMOVE = \
   Each name in the list will be used in the name of
   configuration variable \MacroNI{JOB\_TRANSFORM\_<Name>}.
   Transforms are applied in the order in which names appear in this list.
+  Names are not case-sensitive.
   There is no default value.
 
 \label{param:JobTransformName}
 \item[\Macro{JOB\_TRANSFORM\_<Name>}]
   A single job transform specified as a set of transform rules in new classad syntax.
   The transform rules are applied to jobs that match the transform's
-  \Attr{Requirements} expression as they are submittted.
+  \Attr{Requirements} expression as they are submitted.
   \MacroNI{<Name>} corresponds to a name listed in
   \MacroNI{JOB\_TRANSFORM\_NAMES}.
+  Names are not case-sensitive.
   There is no default value.
 
 
