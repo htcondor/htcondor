@@ -150,6 +150,10 @@ test would reject a valid variable name when it had both an underscore and a dig
 the recommended directory (/usr/lib/tmpfiles.d).
 \Ticket{5896}
 
+\item Fixed a bug that caused the condor\_ssh\_to\_job command to fail
+when using the HTCondor RPM installation.
+\Ticket{5591}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -222,10 +226,6 @@ crash when the \Opt{-xml} option is used.
 \item Fixed a bug introduced in the 8.4.7 release that resulted in a parse error from \Condor{submit}
 when \Attr{JobAdInformationAttrs} was set in the configuration variable \Macro{SUBMIT\_ATTRS}.
 \Ticket{5720}
-
-\item Fixed a bug that caused the condor\_ssh\_to\_job command to fail
-when using the HTCondor RPM installation.
-\Ticket{5591}
 
 \end{itemize}
 
