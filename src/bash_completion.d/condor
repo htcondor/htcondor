@@ -76,6 +76,46 @@ __get_status_query_type()
   #echo "Query type is ${query_type}"
 }
 
+_condor_submit()
+{
+  local cur prev_idx prev pool
+  COMPREPLY=()
+  cur="${COMP_WORDS[COMP_CWORD]}"
+  prev_idx=$(( $COMP_CWORD - 1))
+  prev="${COMP_WORDS[$prev_idx]}"
+
+  __get_condor_pool_name
+  
+  case "${prev}" in
+    -ap*|-q*|-b*|-m*|-ad*|-pa*)
+      return 0
+      ;;
+    -d*)
+      _filedir
+      return 0
+      ;;
+    -n*|-r*)
+      COMPREPLY=( $(compgen -W "$(condor_status -pool $pool -schedd -af Name 2>/dev/null)" -- "${cur}") )
+      return 0
+      ;;
+    -po*)
+      _known_hosts_real -- "${cur}"
+      return 0
+      ;;
+    # I doubt this option is actually functional...
+    -st*)
+      COMPREPLY=( $(compgen -W "stm_use_schedd_only stm_use_transferd" -- "${cur}") )
+      return 0
+      ;;
+  esac
+  case "${cur}" in
+    -*)
+      COMPREPLY=( $(compgen -W "-terse -verbose -debug -help -append -queue -batch-name -disable -dry-run -maxjobs -single-cluster -unused -dump -interactive -name -remote -addr -spool -password -pool -stm" -- "${cur}") )
+      ;;
+  esac
+  _filedir
+}
+
 _condor_history()
 {
   local cur prev_idx prev pool
@@ -238,4 +278,5 @@ _condor_q()
 complete -F _condor_q condor_q
 complete -F _condor_status condor_status
 complete -F _condor_history condor_history
+complete -F _condor_submit condor_submit
 
