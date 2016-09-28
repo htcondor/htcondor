@@ -109,12 +109,13 @@ of a node is now simply the sum of the explicit node priority and the
 overall DAG priority.  (See section ~\ref{sec:DAG-SetNodePriority} for
 more details.)
 sec:DAG-SetNodePriority
+\Ticket{4024}
 \Ticket{5749}
 
 \item Added the capability for more flexible connections between
 splices in DAGs (see ~\ref{sec:DAGSpliceConnections} for details).
 Also added an INCLUDE command to the DAG language (see
-~\ref{sec:dagman_include_command} for details).
+~\ref{sec:DAG-include} for details).
 \Ticket{5213}
 
 \item Allow the second argument of the ClassAd ternary operator
@@ -169,6 +170,11 @@ configuration file is referenced.  Also added error and warning keywords
 to allow configuration files to report errors and warnings.
 \Ticket{5781}
 
+\item Added the capability for the schedd to perform job ClassAd
+transformations upon job submission (see~\ref{sec:Schedd-Config}
+for details).
+\Ticket{5885}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -177,7 +183,7 @@ to allow configuration files to report errors and warnings.
 
 \item Fixed a bug in how the HAD daemon checks to see if it and its
 corresponding replication daemon were configured to be on the same host.
-\Ticket{5769}
+\Ticket{5849}
 
 \item The EC2 GAHP now handles integer overflows when checking deadlines.
 This prevents spurious time-outs on 32-bit systems which have been up for

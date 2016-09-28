@@ -2085,6 +2085,76 @@ START = ( (MY.SlotID == 1) && (TARGET.InteractiveJob =?= True) )
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{configuration!condor\_schedd policy}
 \index{submit host!policy configuration}
+
+There are two types of schedd policy: job transforms (which change
+the ClassAd of a job at submission) and submit requirements (which
+prevent some jobs from entering the queue).  These policies are
+explained below.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:Schedd-Config-Job-Transforms}Job Transforms}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{job transforms}
+
+The \Condor{schedd} can transform jobs as they are submitted.
+Transformations can be used to guarantee the presence of required
+job attributes, to set defaults for job attributes the user does not supply,
+or to modify job attributes so that they conform to schedd policy; an
+example of this might be to automatically set accounting attributes
+based on the owner of the job while letting the job owner indicate a
+preference.
+
+There can be multiple job transforms. Each transform can have a
+Requirements expression to indicate which jobs it should transform
+and which it should ignore. Transforms
+without a Requirements expression apply to all jobs.
+Job transforms are applied in order.  The set of transforms and their
+order are configured using the Configuration variable
+\Macro{JOB\_TRANSFORM\_NAMES}.
+
+For each entry in this list there must be a corresponding
+\Macro{JOB\_TRANSFORM\_<name>}
+configuration variable that specifies the transform rules. Transforms
+use the same syntax as \Condor{job\_router} transforms; although
+unlike the \Condor{job\_router} there is no default transform, and
+all matching transforms are applied - not just the first one.
+(See~\ref{sec:JobRouter} for information on the \Condor{job\_router}.)
+
+The following example shows a set of two transforms: one that
+automatically assigns an accounting group
+to jobs based on the submitting user, and one that shows one possible
+way to transform Vanilla jobs to Docker jobs.
+
+\footnotesize
+\begin{verbatim}
+JOB_TRANSFORM_NAMES = AssignGroup, SL6ToDocker
+
+JOB_TRANSFORM_AssignGroup = [ eval_set_AccountingGroup = userMap("Groups",Owner,AccountingGroup); ]
+
+JOB_TRANSFORM_SL6ToDocker @=end
+[
+   Requirements = JobUniverse==5 && WantSL6 && DockerImage =?= undefined;
+   set_WantDocker = true;
+   set_DockerImage = "SL6";
+   copy_Requirements = "VanillaRequrements";
+   set_Requirements = TARGET.HasDocker && VanillaRequirements
+]
+@end
+\end{verbatim}
+\normalsize
+
+The \verb@AssignGroup@ transform above assumes that a mapfile that can
+map an owner to one or more accounting groups has been configured
+via \MacroNI{SCHEDD\_CLASSAD\_USER\_MAP\_NAMES}, and given the name
+"Groups".
+
+The \verb@SL6ToDocker@ transform above is most likely incomplete, as it
+assumes some custom attributes (\Attr{WantSL6} and \Attr{WantDocker} and
+\Attr{HasDocker}) that your pool may or may not use.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:Schedd-Config-Submit-Requirements}Submit Requirements}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{submit requirements}
 
 The \Condor{schedd} may reject job submissions,
