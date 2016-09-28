@@ -116,6 +116,48 @@ _condor_submit()
   _filedir
 }
 
+_condor_config_val()
+{
+  local cur prev_idx prev pool
+  COMPREPLY=()
+  cur="${COMP_WORDS[COMP_CWORD]}"
+  prev_idx=$(( $COMP_CWORD - 1))
+  prev="${COMP_WORDS[$prev_idx]}"
+
+  __get_condor_pool_name
+  __get_status_query_type
+  
+  case "${prev}" in
+    -po*)
+      _known_hosts_real -- "${cur}"
+      return 0
+      ;;
+    -n*)
+      COMPREPLY=( $(compgen -W "$(condor_status -pool $pool $query_type -af Name 2>/dev/null)" -- "${cur}") )
+      return 0
+      ;;
+    -w*)
+      _filedir
+      return 0
+      ;;
+    -su*)
+      COMPREPLY=( $(compgen -W "TOOL SCHEDD NEGOTIATOR STARTD MASTER SHADOW STARTER GAHP DAGMAN SHARED_PORT SUBMIT JOB DAEMON" -- "${cur}") )
+      return 0
+      ;;
+    -a*|-l*|-se*|-uns*|-rs*|-ru*)
+      return 0
+      ;;
+  esac 
+  case "${cur}" in
+    -*)
+      COMPREPLY=( $(compgen -W "-help -version -negotiator -collector -startd -master -schedd -name -pool -address -subsystem -local-name -mixedcase -writeconfig -config -unused -used -evaluate -debug -verbose -raw -expand -default -dump -runset -rset -unset -set" -- "${cur}") )
+      ;;
+    *)
+      COMPREPLY=( $(compgen -W "$(condor_config_val -dump 2>/dev/null | grep -v '^#' | awk '{print $1;}')" -- "${cur}") )
+      ;;
+  esac
+}
+
 _condor_history()
 {
   local cur prev_idx prev pool
@@ -152,6 +194,7 @@ _condor_history()
   case "${cur}" in
     -*)
       COMPREPLY=( $(compgen -W "-file -userlog -name -pool -help -backwards -forwards -limit -match -long -wide -format -autoformat -print-format" -- "${cur}") )
+      return 0
       ;;
   esac
 }
@@ -174,7 +217,7 @@ _condor_status()
 
   case "${prev}" in
     -dir*)
-      COMPREPLY=( $(compgen -W "$(condor_status -pool $pool $query_type -af Name)" -- "${cur}") )
+      COMPREPLY=( $(compgen -W "$(condor_status -pool $pool $query_type -af Name 2>/dev/null)" -- "${cur}") )
       return 0
       ;;
     -po*)
@@ -200,7 +243,7 @@ _condor_status()
       ;;
     *)
       # Suggest one of the available slots
-      COMPREPLY=( $(compgen -W "$(condor_status -pool $pool $query_type -af Name)" -- "${cur}") )
+      COMPREPLY=( $(compgen -W "$(condor_status -pool $pool $query_type -af Name 2>/dev/null)" -- "${cur}") )
       return 0
       ;;
   esac
@@ -248,7 +291,7 @@ _condor_q()
       return 0
       ;;
     -su*)
-      COMPREPLY=( $(compgen -W "$(condor_status -pool $pool -const 'IdleJobs+RunningJobs+HeldJobs>0' -submitter -af Name | tr '@' ' ' | awk '{print $1;}' | tr '.' ' ' | awk '{print $NF;}' | sort | uniq)" -- "${cur}") )
+      COMPREPLY=( $(compgen -W "$(condor_status -pool $pool -const 'IdleJobs+RunningJobs+HeldJobs>0' -submitter -af Name 2>/dev/null | tr '@' ' ' | awk '{print $1;}' | tr '.' ' ' | awk '{print $NF;}' | sort | uniq)" -- "${cur}") )
       return 0
       ;;
     -u*|-slot*|-job*|-print-format)
@@ -268,7 +311,7 @@ _condor_q()
     *)
       # Suggest one of the available users
       if [ $allusers -eq 1 ]; then
-        COMPREPLY=( $(compgen -W "$(condor_status -pool $pool -const 'IdleJobs+RunningJobs+HeldJobs>0' -submitter -af Name | tr '@' ' ' | awk '{print $1;}' | tr '.' ' ' | awk '{print $NF;}' | sort | uniq)" -- "${cur}") )
+        COMPREPLY=( $(compgen -W "$(condor_status -pool $pool -const 'IdleJobs+RunningJobs+HeldJobs>0' -submitter -af Name 2>/dev/null | tr '@' ' ' | awk '{print $1;}' | tr '.' ' ' | awk '{print $NF;}' | sort | uniq)" -- "${cur}") )
       fi
       return 0
       ;;
@@ -279,4 +322,5 @@ complete -F _condor_q condor_q
 complete -F _condor_status condor_status
 complete -F _condor_history condor_history
 complete -F _condor_submit condor_submit
+complete -F _condor_config_val condor_config_val
 
