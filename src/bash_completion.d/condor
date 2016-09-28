@@ -1,0 +1,72 @@
+
+
+_condor_q()
+{
+  local cur prev_idx prev pool opts pool_idx
+  COMPREPLY=()
+  cur="${COMP_WORDS[COMP_CWORD]}"
+  prev_idx=$(( $COMP_CWORD - 1))
+  prev="${COMP_WORDS[$prev_idx]}"
+
+  # Find the pool name.
+  pool_idx=1
+  while [ $pool_idx -le $prev_idx ]; do
+    if [[ "${COMP_WORDS[$pool_idx]}" == -p* ]] ; then
+      pool=${COMP_WORDS[$(($pool_idx+1))]}
+      break
+    fi
+    pool_idx=$(( $pool_idx + 1 ))
+  done
+  if [ $pool_idx -ge $COMP_CWORD ]; then
+    pool=`condor_config_val COLLECTOR_HOST`
+  fi
+  #echo "Detected pool name ${pool} at idx $pool_idx (comp cword $COMP_CWORD)"
+
+  # Find out if we requested all users.
+  allusers=1
+  if [ "`condor_config_val CONDOR_Q_ONLY_MY_JOBS`" = true ]; then
+    idx=1
+    allusers=0
+    while [ $idx -lt $COMP_CWORD ]; do
+      arg="${COMP_WORDS[$idx]}"
+      idx=$(( $idx + 1 ))
+      if [[ ${arg} == -all* ]] ; then
+        allusers=1
+      fi
+    done
+  fi
+  #echo "Value of allusers: $allusers"
+
+  # Handle cases where we are in an option's argument
+  case "${prev}" in
+    -p*)
+      return 0
+      ;;
+    -n*)
+      # Suggest one of the available schedds
+      COMPREPLY=( $(compgen -W "$(condor_status -pool $pool -schedd -af Name 2>/dev/null)" -- "${cur}") )
+      return 0
+      ;;
+    -u*)
+      # Suggest a filename for the -userlog argument.
+      _filedir
+      return 0
+      ;;
+  esac
+  case "${cur}" in
+    -*)
+      COMPREPLY=( $(compgen -W "-global -schedd-constraint -submitter -name -pool -jobads -userlog -autocluster -allusers" -- "${cur}") )
+      return 0
+      ;;
+    *)
+      # Suggest one of the available users
+      if [ $allusers -eq 1 ]; then
+        COMPREPLY=( $(compgen -W "$(condor_status -pool $pool -const 'IdleJobs+RunningJobs+HeldJobs>0' -submitter -af Name | tr '@' ' ' | awk '{print $1;}' | tr '.' ' ' | awk '{print $NF;}' | sort | uniq)" -- "${cur}") )
+      fi
+      return 0
+      ;;
+  esac
+}
+
+complete -F _condor_q condor_q
+
