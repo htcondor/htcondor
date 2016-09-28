@@ -76,6 +76,46 @@ __get_status_query_type()
   #echo "Query type is ${query_type}"
 }
 
+_condor_history()
+{
+  local cur prev_idx prev pool
+  COMPREPLY=()
+  cur="${COMP_WORDS[COMP_CWORD]}"
+  prev_idx=$(( $COMP_CWORD - 1))
+  prev="${COMP_WORDS[$prev_idx]}"
+
+  __is_autoformat
+  if [ $? -eq 1 ]; then
+    return 0
+  fi
+
+  __get_condor_pool_name
+
+  case "${prev}" in
+    -po*)
+      _known_hosts_real -- "${cur}"
+      return 0
+      ;;
+    -n*)
+      # Suggest one of the available schedds
+      COMPREPLY=( $(compgen -W "$(condor_status -pool $pool -schedd -af Name 2>/dev/null)" -- "${cur}") )
+      return 0
+      ;;
+    -fi*|-u*|-print-format)
+      _filedir
+      return 0
+      ;;
+    -li*|-m*|-f*)
+      return 0
+      ;;
+  esac
+  case "${cur}" in
+    -*)
+      COMPREPLY=( $(compgen -W "-file -userlog -name -pool -help -backwards -forwards -limit -match -long -wide -format -autoformat -print-format" -- "${cur}") )
+      ;;
+  esac
+}
+
 _condor_status()
 {
   local cur prev_idx prev pool
@@ -197,4 +237,5 @@ _condor_q()
 
 complete -F _condor_q condor_q
 complete -F _condor_status condor_status
+complete -F _condor_history condor_history
 
