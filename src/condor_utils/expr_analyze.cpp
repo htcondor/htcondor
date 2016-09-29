@@ -132,7 +132,7 @@ public:
 			if (logic_op < 2)
 				formatstr(lbl, " ! [%d]", ix_left);
 			else if (logic_op > 3)
-				formatstr(lbl, "[%d] ? [%d] : [%d]", ix_left, ix_right, ix_grip);
+				formatstr(lbl, (logic_op==4) ? "[%d] ? [%d] : [%d]" : "ifThenElse([%d],[%d],[%d])", ix_left, ix_right, ix_grip);
 			else
 				formatstr(lbl, "[%d] %s [%d]", ix_left, (logic_op==2) ? "||" : "&&", ix_right);
 			return true;
@@ -170,12 +170,19 @@ static const char * GetIndentPrefix(int) { return ""; }
 static std::string s_strStep;
 #define StepLbl(ii) subs[ii].StepLabel(s_strStep, ii, 3)
 
-int AnalyzeThisSubExpr(ClassAd *myad, classad::ExprTree* expr, std::vector<AnalSubExpr> & clauses, bool & varres, bool must_store, int depth, const anaFormattingOptions & fmt)
+int AnalyzeThisSubExpr(
+	ClassAd *myad,
+	classad::ExprTree* expr,
+	classad::References & inline_attrs, // expand attrs with these names inline
+	std::vector<AnalSubExpr> & clauses,
+	bool & varres, bool must_store, int depth,
+	const anaFormattingOptions & fmt)
 {
 	classad::ExprTree::NodeKind kind = expr->GetKind( );
 	classad::ClassAdUnParser unparser;
 
 	bool show_work = fmt.detail_mask & detail_diagnostic;
+	bool show_ifthenelse = fmt.detail_mask & detail_show_ifthenelse;
 	bool evaluate_logical = false;
 	int  child_depth = depth;
 	int  logic_op = 0;
@@ -214,8 +221,8 @@ int AnalyzeThisSubExpr(ClassAd *myad, classad::ExprTree* expr, std::vector<AnalS
 			}
 			if (absolute) {
 				left = NULL;
-			} else if ( ! left && strAttr == "START") {
-				// special case for START and CurrentTime expressions, we want behave as if the *value* of the
+			} else if ( ! left && inline_attrs.find(strAttr) != inline_attrs.end()) {
+				// special case for inline_attrs and CurrentTime expressions, we want behave as if the *value* of the
 				// attribute were here rather than just the attr reference.
 				left = myad->LookupExpr(strAttr.c_str());
 			}
@@ -245,6 +252,11 @@ int AnalyzeThisSubExpr(ClassAd *myad, classad::ExprTree* expr, std::vector<AnalS
 				push_it = false;
 				evaluate_logical = true;
 				child_depth += 1;
+			} else if (op == classad::Operation::TERNARY_OP && ! right) {
+				// when the right op of the ?: operator is NULL, this is the defaulting operator
+				//logic_op = 4; 
+				push_it = false;
+				//evaluate_logical = true;
 			} else {
 				//show_work = false;
 			}
@@ -257,6 +269,13 @@ int AnalyzeThisSubExpr(ClassAd *myad, classad::ExprTree* expr, std::vector<AnalS
 			if ( ! args.size() && MATCH == strcasecmp(strLabel.c_str(),"time")) {
 				is_time = true;
 				varres = true;
+			} else if (show_ifthenelse && args.size() == 3 && MATCH == strcasecmp(strLabel.c_str(), "ifthenelse")) {
+				push_it = true;
+				evaluate_logical = true;
+				logic_op = 5;
+				left = args[0];
+				right = args[1];
+				gripping = args[2];
 			}
 			strLabel += "()";
 			if (chatty) {
@@ -300,14 +319,14 @@ int AnalyzeThisSubExpr(ClassAd *myad, classad::ExprTree* expr, std::vector<AnalS
 
 	bool vr_left = false, vr_right = false, vr_grip = false;
 
-	if (left) ix_left = AnalyzeThisSubExpr(myad, left, clauses, vr_left, evaluate_logical, child_depth, fmt);
-	if (right) ix_right = AnalyzeThisSubExpr(myad, right, clauses, vr_right, evaluate_logical, child_depth, fmt);
-	if (gripping) ix_grip = AnalyzeThisSubExpr(myad, gripping, clauses, vr_grip, evaluate_logical, child_depth, fmt);
+	if (left) ix_left = AnalyzeThisSubExpr(myad, left, inline_attrs, clauses, vr_left, evaluate_logical, child_depth, fmt);
+	if (right) ix_right = AnalyzeThisSubExpr(myad, right, inline_attrs, clauses, vr_right, evaluate_logical, child_depth, fmt);
+	if (gripping) ix_grip = AnalyzeThisSubExpr(myad, gripping, inline_attrs, clauses, vr_grip, evaluate_logical, child_depth, fmt);
 
 	varres = varres || vr_left || vr_right || vr_grip;
 
 	if (push_it) {
-		if (left && ! right && ix_left >= 0) {
+		if (left && ! right && ! gripping && ix_left >= 0) {
 			ix_me = ix_left;
 		} else {
 			ix_me = (int)clauses.size();
@@ -318,7 +337,7 @@ int AnalyzeThisSubExpr(ClassAd *myad, classad::ExprTree* expr, std::vector<AnalS
 			sub.ix_grip = ix_grip;
 			clauses.push_back(sub);
 		}
-	} else if (left && ! right) {
+	} else if (left && ! right && ! gripping) {
 		ix_me = ix_left;
 	}
 
@@ -327,7 +346,7 @@ int AnalyzeThisSubExpr(ClassAd *myad, classad::ExprTree* expr, std::vector<AnalS
 		std::string strExpr;
 		unparser.Unparse(strExpr, expr);
 		if (push_it) {
-			if (left && ! right && ix_left >= 0) {
+			if (left && ! right && ! gripping && ix_left >= 0) {
 				printf("(---):");
 			} else {
 				printf("(%3d):", (int)clauses.size()-1);
@@ -478,7 +497,8 @@ static void AnalyzePropagateConstants(std::vector<AnalSubExpr> & subs, bool show
 					          subs[ix].ix_right, truthy[hard_right+1+(soft_right*6)]);
 					break;
 				}
-				case 4: { // ?:
+				case 4: // ?:
+				case 5: { // ifthenelse
 					if (hard_left == 0 || hard_left == 1) {
 						ix_effective = hard_left ? subs[ix].ix_right : subs[ix].ix_grip; 
 						subs[ix].ix_effective = ix_effective;
@@ -491,7 +511,7 @@ static void AnalyzePropagateConstants(std::vector<AnalSubExpr> & subs, bool show
 						ix_irrelevant = hard_left ? subs[ix].ix_grip : subs[ix].ix_right;
 						soft_irrelevant = soft_left;
 					}
-					formatstr(subs[ix].label, "[%d]%s ? [%d]%s : [%d]%s", 
+					formatstr(subs[ix].label, (subs[ix].logic_op==4) ? "[%d]%s ? [%d]%s : [%d]%s" : "ifThenElse([%d]%s, [%d]%s, [%d]%s)",
 					          subs[ix].ix_left, truthy[hard_left+1+(soft_left*6)], 
 					          subs[ix].ix_right, truthy[hard_right+1+(soft_right*6)], 
 					          subs[ix].ix_grip, truthy[hard_grip+1+(soft_grip*6)]);
@@ -634,6 +654,7 @@ const char * PrettyPrintExprTree(classad::ExprTree *tree, std::string & temp_buf
 void AnalyzeRequirementsForEachTarget(
 	ClassAd *request,
 	const char * attrConstraint, // must be an attribute in the request ad
+	classad::References & inline_attrs, // expand these attrs inline
 	ClassAdList & targets,
 	std::string & return_buf,
 	const anaFormattingOptions & fmt)
@@ -662,7 +683,7 @@ void AnalyzeRequirementsForEachTarget(
 	if (show_work) { printf("\nDump ExprTree in evaluation order\n"); }
 
 	bool variable_result = false;
-	AnalyzeThisSubExpr(request, exprReq, subs, variable_result, true, 0, fmt);
+	AnalyzeThisSubExpr(request, exprReq, inline_attrs, subs, variable_result, true, 0, fmt);
 
 	if (fmt.detail_mask & detail_dump_intermediates) {
 		printf("\nDump subs %s\n", variable_result ? "(variable)" : "");
@@ -1260,7 +1281,9 @@ static void EvalRequirementsExpr(ClassAd *request, ClassAdList & offers, std::st
 void AddReferencedAttribsToBuffer(
 	ClassAd * request,
 	const char * expr_string, // expression string or attribute name
+	classad::References & hidden_refs, // don't print these even if they appear in the trefs list
 	StringList & trefs, // out, returns target refs
+	bool raw_values, // unparse referenced values if true, print evaluated referenced values if false
 	const char * pindent,
 	std::string & return_buf)
 {
@@ -1278,10 +1301,10 @@ void AddReferencedAttribsToBuffer(
 	AttrListPrintMask pm;
 	pm.SetAutoSep(NULL, "", "\n", "\n");
 	while(const char *attr = refs.next()) {
-		std::string label;
-		formatstr(label, "%s%s = %%V", pindent, attr);
-		if (0 == strcasecmp(attr, ATTR_REQUIREMENTS) || 0 == strcasecmp(attr, ATTR_START))
+		if (hidden_refs.find(attr) != hidden_refs.end())
 			continue;
+		std::string label;
+		formatstr(label, raw_values ? "%s%s = %%r" : "%s%s = %%V", pindent, attr);
 		pm.registerFormat(label.c_str(), 0, FormatOptionNoTruncate, attr);
 	}
 	if ( ! pm.IsEmpty()) {
@@ -1293,6 +1316,7 @@ void AddReferencedAttribsToBuffer(
 	StringList & trefs, // in, target refs (probably returned by AddReferencedAttribsToBuffer)
 	ClassAd * request,
 	ClassAd * target,
+	bool raw_values, // unparse referenced values if true, print evaluated referenced values if false
 	const char * pindent,
 	std::string & return_buf)
 {
@@ -1302,7 +1326,7 @@ void AddReferencedAttribsToBuffer(
 	pm.SetAutoSep(NULL, "", "\n", "\n");
 	while(const char *attr = trefs.next()) {
 		std::string label;
-		formatstr(label, "%sTARGET.%s = %%V", pindent, attr);
+		formatstr(label, raw_values ? "%sTARGET.%s = %%r" : "%sTARGET.%s = %%V", pindent, attr);
 		if (target->LookupExpr(attr)) {
 			pm.registerFormat(label.c_str(), 0, FormatOptionNoTruncate, attr);
 		}
