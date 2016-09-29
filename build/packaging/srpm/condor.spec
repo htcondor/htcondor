@@ -1895,6 +1895,14 @@ fi
 %endif
 
 %changelog
+* Thu Sep 29 2016 Tim Theisen <tim@cs.wisc.edu> - 8.4.9-1
+- The condor_startd removes orphaned Docker containers on restart
+- Job Router and HTCondor-C job job submission prompts schedd reschedule
+- Fixed bugs in the Job Router's hooks
+- Improved systemd integration on Enterprise Linux 7
+- Upped default number of Chirp attributes to 100, and made it configurable
+- Fixed a bug where variables starting with STARTD. or STARTER. were ignored
+
 * Tue Jul 05 2016 Tim Theisen <tim@cs.wisc.edu> - 8.4.8-1
 - Fixed a memory leak triggered by the python htcondor.Schedd().query() call
 - Fixed a bug that could cause Bosco file transfers to fail
