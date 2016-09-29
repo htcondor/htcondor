@@ -1208,6 +1208,7 @@ rm -rf %{buildroot}
 %endif
 %dir %_sysconfdir/condor/config.d/
 %_sysconfdir/condor/condor_ssh_to_job_sshd_config_template
+%_sysconfdir/bash_completion.d/condor
 %if %gsoap || %uw_build
 %dir %_datadir/condor/webservice/
 %_datadir/condor/webservice/condorCollector.wsdl
