@@ -414,7 +414,22 @@ bool SSHToJob::execute_ssh()
 	//
 
 	if( m_could_be_ec2_job ) {
-		Qmgr_connection * q = ConnectQ( m_schedd_name.IsEmpty() ? NULL : m_schedd_name.Value(), 0, true );
+		std::string location;
+		if(! m_schedd_name.IsEmpty()) {
+			location = m_schedd_name.Value();
+		}
+
+		if(! m_pool_name.IsEmpty()) {
+			DCSchedd schedd( m_schedd_name.IsEmpty() ? NULL : m_schedd_name.Value(),
+							m_pool_name.IsEmpty() ? NULL : m_pool_name.Value() );
+			if( schedd.locate() == false ) {
+				logError( "Unable to locate specified schedd in the given pool\n" );
+				return false;
+			}
+			location = schedd.addr();
+		}
+
+		Qmgr_connection * q = ConnectQ( location.c_str(), 0, true );
 		if( ! q ) {
 			logError( "Can't connect to schedd\n" );
 			return false;
