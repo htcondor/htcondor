@@ -301,25 +301,23 @@ static int rankSorter(ClassAd *left, ClassAd *right, void * that) {
 	mm->calculateRanks(dummyRequest, right, Matchmaker::NO_PREEMPTION, rhscandidateRankValue, rhscandidatePreJobRankValue, rhscandidatePostJobRankValue, rhscandidatePreemptRankValue);
 
 	if (lhscandidatePreJobRankValue < rhscandidatePreJobRankValue) {
-		return 1;
+		return 0;
 	} 
 
-	if (rhscandidatePreJobRankValue > lhscandidatePreJobRankValue) {
-		return 0;
+	if (lhscandidatePreJobRankValue > rhscandidatePreJobRankValue) {
+		return 1;
 	} 
 
 	// We are intentially skipping the job rank, as we assume it is constant
 	if (lhscandidatePostJobRankValue < rhscandidatePostJobRankValue) {
-		return 1;
-	} 
-
-	if (rhscandidatePostJobRankValue > lhscandidatePostJobRankValue) {
 		return 0;
 	} 
 
+	if (lhscandidatePostJobRankValue > rhscandidatePostJobRankValue) {
+		return 1;
+	} 
+
 	return left < right;
-
-
 }
 
 Matchmaker::
@@ -5391,6 +5389,9 @@ calculateRanks(ClassAd &request,
 	if (m_staticRanks) {
 		// only get here on cache miss
 		struct JobRanks ranks;
+		ranks.PreJobRankValue = candidatePreJobRankValue;
+		ranks.PostJobRankValue = candidatePostJobRankValue;
+		ranks.PreemptRankValue = candidatePreemptRankValue;
 		ranksMap.insert(std::make_pair(candidate, ranks));
 	}
 }
