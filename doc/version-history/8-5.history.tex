@@ -19,8 +19,7 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item HTCondor version 8.5.7 not yet released.
-%\item HTCondor version 8.5.7 released on Month Date, 2016.
+\item HTCondor version 8.5.7 released on September 29, 2016.
 
 \end{itemize}
 
@@ -29,17 +28,48 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Increase the resolution of file transfer timing statistics in
-the XferStatsLog to hundreds of a second.
-\Ticket{5898}
+\item Added the capability for the schedd to perform job ClassAd
+transformations upon job submission (see~\ref{sec:Schedd-Config}
+for details).
+\Ticket{5885}
 
-\item The default host based security meta-knob now works in IPv6
-only networks out of the box.
-\Ticket{5894}
+\item Added the capability for more flexible connections between
+splices in DAGs (see ~\ref{sec:DAGSpliceConnections} for details).
+Also added an INCLUDE command to the DAG language (see
+~\ref{sec:DAG-include} for details).
+\Ticket{5213}
 
-\item Old HAD configurations, with or without replication, should now work
-by default (without shared port).
-\Ticket{5769}
+\item Simplified the DAG node priority algorithm:  the "effective" priority
+of a node is now simply the sum of the explicit node priority and the
+overall DAG priority.  (See section ~\ref{sec:DAG-SetNodePriority} for
+more details.)
+sec:DAG-SetNodePriority
+\Ticket{4024}
+\Ticket{5749}
+
+\item Allow the second argument of the ClassAd ternary operator
+(expression ? value1 : value2) to be omitted.  This new syntax means:
+evaluate the expression, and if it evaluated to a defined value or
+error, return it.  If undefined, return value2.
+\Ticket{5782}
+
+\item The time is now included after the SCHEDD or SUBMITTER name
+in the banner of \Condor{q} output.
+\Ticket{5895}
+
+\item \Condor{status} has a new \Opt{-data} option that, when used with \Opt{-schedd}
+will show data transfer information; and \Opt{-run} will show information about running
+jobs when used with \Opt{-schedd}.
+\Ticket{3938}
+
+\item \Condor{q} \Opt{-batch} will now show Total and Completed counts for non-DAG jobs
+when querying a scheduler that is at least version 8.5.7
+\Ticket{5874}
+
+\item \Condor{status} and \Condor{q} now support reading and writing ClassAds
+in xml, json, and "new ClassAd" form as well as the traditional long form.
+\Ticket{5844}
+\Ticket{5820}
 
 \item HTCondor daemons now respect \MacroNI{<LOCALNAME>.<SUBSYSTEM>\_LOG}
 if passed a -local-name parameter, and default to using
@@ -58,6 +88,18 @@ a DC daemon if so.  This should result in simpler and less error-prone
 configuration.
 \Ticket{5767}
 
+\item Increase the resolution of file transfer timing statistics in
+the XferStatsLog to hundreds of a second.
+\Ticket{5898}
+
+\item The default host based security meta-knob now works in IPv6
+only networks out of the box.
+\Ticket{5894}
+
+\item Old HAD configurations, with or without replication, should now work
+by default (without shared port).
+\Ticket{5769}
+
 \item HTCondor no longer gives up if a bad networking configuration is
 detected while running a tool.  This allows \Condor{config\_val} to be
 used to debug the problem.
@@ -70,26 +112,6 @@ re-enables the old behavior.  The accounting information for the current
 user of the slot remains advertised.
 \Ticket{5785}
 
-\item Simplified the DAG node priority algorithm:  the "effective" priority
-of a node is now simply the sum of the explicit node priority and the
-overall DAG priority.  (See section ~\ref{sec:DAG-SetNodePriority} for
-more details.)
-sec:DAG-SetNodePriority
-\Ticket{4024}
-\Ticket{5749}
-
-\item Added the capability for more flexible connections between
-splices in DAGs (see ~\ref{sec:DAGSpliceConnections} for details).
-Also added an INCLUDE command to the DAG language (see
-~\ref{sec:DAG-include} for details).
-\Ticket{5213}
-
-\item Allow the second argument of the ClassAd ternary operator
-(expression ? value1 : value2) to be omitted.  This new syntax means:
-evaluate the expression, and if it evaluated to a defined value or
-error, return it.  If undefined, return value2.
-\Ticket{5782}
-
 \item New submit attribute \SubmitCmd{gce\_preemptible} allows the
 creation of preemptible Google Compute Engine (GCE) instances.
 These instances have a lower price, but can be interrupted at any time.
@@ -100,24 +122,6 @@ Also added support for service accounts with GCE.
 partition can now be specified using the \SubmitCmdNI{batch\_queue}
 submit command.
 \Ticket{5780}
-
-\item The time is now included after the SCHEDD or SUBMITTER name
-in the banner of \Condor{q} output.
-\Ticket{5895}
-
-\item \Condor{status} and \Condor{q} now support reading and writing ClassAds
-in xml, json, and "new ClassAd" form as well as the traditional long form.
-\Ticket{5844}
-\Ticket{5820}
-
-\item \Condor{status} has a new \Opt{-data} option that, when used with \Opt{-schedd}
-will show data transfer information; and \Opt{-run} will show information about running
-jobs when used with \Opt{-schedd}.
-\Ticket{3938}
-
-\item \Condor{q} \Opt{-batch} will now show Total and Completed counts for non-DAG jobs
-when querying a scheduler that is at least version 8.5.7
-\Ticket{5874}
 
 \item Some old STARTD policy helper configuration variables were moved
 into two new metaknobs - \Macro{FEATURE : UWCS\_DESKTOP\_POLICY\_VALUES}
@@ -135,11 +139,6 @@ files, so that the command doesn't have to be re-run every time the
 configuration file is referenced.  Also added error and warning keywords
 to allow configuration files to report errors and warnings.
 \Ticket{5781}
-
-\item Added the capability for the schedd to perform job ClassAd
-transformations upon job submission (see~\ref{sec:Schedd-Config}
-for details).
-\Ticket{5885}
 
 \end{itemize}
 

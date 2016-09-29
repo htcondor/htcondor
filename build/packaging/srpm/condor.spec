@@ -1897,6 +1897,15 @@ fi
 %endif
 
 %changelog
+* Thu Sep 29 2016 Tim Theisen <tim@cs.wisc.edu> - 8.5.7-1
+- The schedd can perform job ClassAd transformations
+- Specifying dependencies between DAGMan splices is much more flexible
+- The second argument of the ClassAd ? : operator may be omitted
+- Many usability improvements in condor_q and condor_status
+- condor_q and condor_status can produce JSON, XML, and new ClassAd output
+- To prepare for a 64-bit Windows release, HTCondor identifies itself as X86
+- Automatically detect Daemon Core daemons and pass localname to them
+
 * Thu Sep 29 2016 Tim Theisen <tim@cs.wisc.edu> - 8.4.9-1
 - The condor_startd removes orphaned Docker containers on restart
 - Job Router and HTCondor-C job job submission prompts schedd reschedule
