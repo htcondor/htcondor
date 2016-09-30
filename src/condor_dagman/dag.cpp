@@ -246,6 +246,8 @@ Dag::~Dag()
 
 	delete _metrics;
 
+	delete _allNodesIt;
+
     return;
 }
 
@@ -1280,27 +1282,57 @@ Job * Dag::FindNodeByName (const char * jobName) const {
 
 //---------------------------------------------------------------------------
 Job *
-Dag::FindAllNodesByName( const char* nodeName ) const
+Dag::FindAllNodesByName( const char* nodeName,
+			const char *file, int line, const char *finalSkipMsg ) const
 {
-	if ( !nodeName ) {
-		if ( _allNodesIt ) {
-			//TEMPTEMP -- should we delete _allNodesIt here if we've hit the last node?
-			return _allNodesIt->Next();
+	Job *node = NULL;
+
+	if ( nodeName ) {
+		if ( strcasecmp( nodeName, ALL_NODES ) ) {
+				// Looking for a specific node.
+
+			delete _allNodesIt; // just to be safe
+			_allNodesIt = NULL;
+
+			node =  FindNodeByName( nodeName );
+
 		} else {
-			return NULL;
+				// First call when looking for ALL_NODES.
+
+			delete _allNodesIt; // just to be safe
+			_allNodesIt = new ListIterator<Job>( _jobs );
+			_allNodesIt->ToBeforeFirst();
+	
+			node =  _allNodesIt->Next();
+		}
+
+	} else {
+			// Second or subsequent call when looking for ALL_NODES.
+
+		if ( _allNodesIt ) {
+			node =  _allNodesIt->Next();
+		} else {
+				//TEMPTEMP -- should this be an error?
+			node =  NULL;
 		}
 	}
 
-	if ( !strcasecmp( nodeName, ALL_NODES ) ) {
-		delete _allNodesIt; // just to be safe
-		_allNodesIt = new ListIterator<Job>( _jobs );
-		_allNodesIt->ToBeforeFirst();
-		return _allNodesIt->Next();
-	} else {
+		// We want to skip final nodes if we're in ALL_NODES mode.
+	if ( node && node->GetFinal() && _allNodesIt ) {
+		debug_printf( DEBUG_QUIET, finalSkipMsg, node->GetJobName(),
+					file, line );
+			// We know there can only be one FINAL node.
+		node = _allNodesIt->Next();
+		ASSERT( !node || !node->GetFinal() );
+	}
+
+		// Delete the ALL_NODES iterator if we've hit the last node.
+	if ( !node && _allNodesIt ) {
 		delete _allNodesIt;
 		_allNodesIt = NULL;
-		return FindNodeByName( nodeName );
 	}
+
+	return node;
 }
 
 //---------------------------------------------------------------------------

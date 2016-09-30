@@ -297,7 +297,9 @@ class Dag {
     Job * FindNodeByEventID ( const CondorID condorID ) const;
 
 	//TEMPTEMP -- document
-	Job * FindAllNodesByName( const char* nodeName ) const;
+	Job * FindAllNodesByName( const char* nodeName,
+				const char *file, int line,
+				const char *finalSkipMsg ) const;
 
     /** Ask whether a node name exists in the DAG
         @param nodeName the name of the node in the DAG

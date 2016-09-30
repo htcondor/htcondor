@@ -100,16 +100,20 @@ void exampleSyntax (const char * example) {
     debug_printf( DEBUG_QUIET, "Example syntax is: %s\n", example);
 }
 
-
 bool
 isReservedWord( const char *token )
 {
-    static const char * keywords[] = { "PARENT", "CHILD" };
+    static const char * keywords[] = { "PARENT", "CHILD", Dag::ALL_NODES };
     static const unsigned int numKeyWords = sizeof(keywords) / 
 		                                    sizeof(const char *);
 
     for (unsigned int i = 0 ; i < numKeyWords ; i++) {
-        if (!strcasecmp (token, keywords[i])) return true;
+        if (!strcasecmp (token, keywords[i])) {
+    		debug_printf( DEBUG_QUIET,
+						"ERROR: token (%s) is a reserved word\n", token );
+			//TEMPTEMP -- print all reserved words?
+			return true;
+		}
     }
     return false;
 }
@@ -523,13 +527,15 @@ parse_node( Dag *dag,
 			const char* dagFile, int lineNum, const char *directory,
 			const char *inlineOrExt, const char *submitOrDagFile)
 {
-	MyString example;
+	//TEMPTEMP MyString example;//TEMPTEMP -- is this even used?
 	MyString whynot;
 	bool done = false;
 	Dag *tmp = NULL;
 
+	//TEMPTEMP -- why is this different from other commands?
 	MyString expectedSyntax;
-	expectedSyntax.formatstr( "Expected syntax: %s%s nodename %s "
+	//TEMPTEMP -- check this for commands other than JOB
+	expectedSyntax.formatstr( "Expected syntax: %s%s <nodename> <%s> "
 				"[DIR directory] [NOOP] [DONE]", nodeTypeKeyword, inlineOrExt,
 				submitOrDagFile );
 
@@ -545,10 +551,13 @@ parse_node( Dag *dag,
 		return false;
 	}
 
-	if ( !strcasecmp( nodeName, Dag::ALL_NODES ) ) {
+	//TEMPTEMP -- we should probably also disallow "." and "+" in node names
+	if ( isReservedWord( nodeName ) ) {
 		debug_printf( DEBUG_QUIET,
-					"ERROR: %s (line %d): ALL_NODES (any case) is not allowed for a node name\n", 
-					dagFile, lineNum );
+					  "ERROR: %s (line %d): JobName cannot be a reserved word\n",
+					  dagFile, lineNum );
+		//TEMPTEMP? exampleSyntax( expectedSyntax.Value() );
+		debug_printf( DEBUG_QUIET, "%s\n", expectedSyntax.Value() );
 		return false;
 	}
 
@@ -800,14 +809,6 @@ parse_script(
 	const char *jobNameOrig = jobName; // for error output
 	const char *rest = jobName; // For subsequent tokens
 
-	if ( isReservedWord( jobName ) ) {
-		debug_printf( DEBUG_QUIET,
-					  "ERROR: %s (line %d): JobName cannot be a reserved word\n",
-					  filename, lineNumber );
-		exampleSyntax (example);
-		return false;
-	}
-
 	debug_printf(DEBUG_DEBUG_1, "jobName: %s\n", jobName);
 	MyString tmpJobName = munge_job_name(jobName);
 	jobName = tmpJobName.Value();
@@ -817,6 +818,7 @@ parse_script(
 	//
 	
 	// first, skip over the token we already read...
+	//TEMPTEMP -- man, this is ugly -- why don't we call strtok() again?
 	while (*rest != '\0') rest++;
 	
 	// if we're not at the end of the line, move forward
@@ -860,18 +862,10 @@ parse_script(
 
 
 	Job *job;
-	bool isAllNodes = !strcasecmp( jobName, Dag::ALL_NODES);
-	while ( ( job = dag->FindAllNodesByName( jobName ) ) ) {
+	while ( ( job = dag->FindAllNodesByName( jobName,
+				filename, lineNumber,
+				"In parse_script(): skipping node %s because final nodes must have SCRIPT set explicitly (%s: %d)\n" ) ) ) {
 		jobName = NULL;
-
-		if ( job->GetFinal() ) {
-			if ( isAllNodes ) {
-				debug_printf( DEBUG_QUIET,
-							"In parse_script(): skipping node %s because final nodes must have script set explicitly\n",
-							job->GetJobName() );
-				continue;
-			}
-		}
 
 		MyString whynot;
 			// This fails if the node already has a script.
@@ -1136,25 +1130,19 @@ parse_retry(
     }
 
 	Job *job;
-	bool isAllNodes = !strcasecmp( jobName, Dag::ALL_NODES);
-	while ( ( job = dag->FindAllNodesByName( jobName ) ) ) {
+	while ( ( job = dag->FindAllNodesByName( jobName,
+				filename, lineNumber,
+				"In parse_retry(): skipping node %s because final nodes cannot have RETRY specifications (%s: %d)\n" ) ) ) {
 		jobName = NULL;
 
 		debug_printf( DEBUG_DEBUG_3, "parse_retry(): found job %s\n",
 					job->GetJobName() );
 
 		if ( job->GetFinal() ) {
-			if ( isAllNodes ) {
-				debug_printf( DEBUG_QUIET,
-							"In parse_retry(): skipping node %s because final nodes cannot have RETRY specifications\n",
-							job->GetJobName() );
-				continue;
-			} else {
-				debug_printf( DEBUG_QUIET, 
-				  			"ERROR: %s (line %d): Final job %s cannot have RETRY specification\n",
-				  			filename, lineNumber, job->GetJobName() );
-				return false;
-			}
+			debug_printf( DEBUG_QUIET, 
+			  			"ERROR: %s (line %d): Final job %s cannot have RETRY specification\n",
+			  			filename, lineNumber, job->GetJobName() );
+			return false;
 		}
 
 		job->retry_max = retryMax;
@@ -1267,25 +1255,19 @@ parse_abort(
 	}
 
 	Job *job;
-	bool isAllNodes = !strcasecmp( jobName, Dag::ALL_NODES);
-	while ( ( job = dag->FindAllNodesByName( jobName ) ) ) {
+	while ( ( job = dag->FindAllNodesByName( jobName,
+				filename, lineNumber,
+				"In parse_abort(): skipping node %s because final nodes cannot have ABORT-DAG-ON specification (%s: %d)s\n" ) ) ) {
 		jobName = NULL;
 
 		debug_printf( DEBUG_DEBUG_3, "parse_abort(): found job %s\n",
 					job->GetJobName() );
 
 		if ( job->GetFinal() ) {
-			if ( isAllNodes ) {
-				debug_printf( DEBUG_QUIET,
-							"In parse_abort(): skipping node %s because final nodes cannot have ABORT-DAG-ON specifications\n",
-							job->GetJobName() );
-				continue;
-			} else {
-				debug_printf( DEBUG_QUIET, 
-				  			"ERROR: %s (line %d): Final job %s cannot have ABORT-DAG-ON specification\n",
-				  			filename, lineNumber, job->GetJobName() );
-				return false;
-			}
+			debug_printf( DEBUG_QUIET, 
+			  			"ERROR: %s (line %d): Final job %s cannot have ABORT-DAG-ON specification\n",
+			  			filename, lineNumber, job->GetJobName() );
+			return false;
 		}
 
 		job->abort_dag_val = abortVal;
@@ -1386,22 +1368,14 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber)
 
 	Job *job;
 	//TEMPTEMP -- hmm -- can this loop get moved down??
-	bool isAllNodes = !strcasecmp( jobName, Dag::ALL_NODES);
-	while ( ( job = dag->FindAllNodesByName( jobName ) ) ) {
+	while ( ( job = dag->FindAllNodesByName( jobName,
+				filename, lineNumber,
+				"In parse_vars(): skipping node %s because final nodes must have VARS set explicitly (%s: %d)\n" ) ) ) {
 	//TEMPTEMP -- fix indentation
 		jobName = NULL;
 
 		debug_printf( DEBUG_DEBUG_3, "parse_vars(): found job %s\n",
 					job->GetJobName() );
-
-		if ( job->GetFinal() ) {
-			if ( isAllNodes ) {
-				debug_printf( DEBUG_QUIET,
-							"In parse_vars(): skipping node %s because final nodes must have VARS set explicitly\n",
-							job->GetJobName() );
-				continue;
-			}
-		}
 
 //TEMPTEMP -- note -- this re-parses most of the VARS line for every node...
 		char *str = varsStr;//TEMPTEMP
@@ -1495,15 +1469,6 @@ parse_priority(
 		return false;
 	}
 
-	//TEMPTEMP -- do all functions check for name being a reserved word?
-	if ( isReservedWord( jobName ) ) {
-		debug_printf( DEBUG_QUIET,
-					  "ERROR: %s (line %d): JobName cannot be a reserved word\n",
-					  filename, lineNumber );
-		exampleSyntax( example );
-		return false;
-	}
-
 	debug_printf(DEBUG_DEBUG_1, "jobName: %s\n", jobName);
 	const char *jobNameOrig = jobName; // for error output
 	MyString tmpJobName = munge_job_name(jobName);
@@ -1548,25 +1513,19 @@ parse_priority(
 	// Actually assign priorities to the relevant node(s).
 	//
 	Job *job;
-	bool isAllNodes = !strcasecmp( jobName, Dag::ALL_NODES);
-	while ( ( job = dag->FindAllNodesByName( jobName ) ) ) {
+	while ( ( job = dag->FindAllNodesByName( jobName,
+				filename, lineNumber,
+				"In parse_priority(): skipping node %s because final nodes cannot have PRIORITY specifications (%s: %d)\n" ) ) ) {
 		jobName = NULL;
 
 		debug_printf( DEBUG_DEBUG_3, "parse_priority(): found job %s\n",
 					job->GetJobName() );
 
 		if ( job->GetFinal() ) {
-			if ( isAllNodes ) {
-				debug_printf( DEBUG_QUIET,
-							"In parse_priority(): skipping node %s because final nodes cannot have PRIORITY specifications\n",
-							job->GetJobName() );
-				continue;
-			} else {
-				debug_printf( DEBUG_QUIET, 
-				  			"ERROR: %s (line %d): Final job %s cannot have PRIORITY specification\n",
-				  			filename, lineNumber, job->GetJobName() );
-				return false;
-			}
+			debug_printf( DEBUG_QUIET, 
+			  			"ERROR: %s (line %d): Final job %s cannot have PRIORITY specification\n",
+			  			filename, lineNumber, job->GetJobName() );
+			return false;
 		}
 
 		if ( job->_hasNodePriority && job->_nodePriority != priorityVal ) {
@@ -1615,14 +1574,6 @@ parse_category(
 		return false;
 	}
 
-	if (isReservedWord(jobName)) {
-		debug_printf( DEBUG_QUIET,
-					  "ERROR: %s (line %d): JobName cannot be a reserved word\n",
-					  filename, lineNumber );
-		exampleSyntax (example);
-		return false;
-	}
-
 	const char *jobNameOrig = jobName; // for error output
 	debug_printf(DEBUG_DEBUG_1, "jobName: %s\n", jobName);
 	MyString tmpJobName = munge_job_name(jobName);
@@ -1656,25 +1607,19 @@ parse_category(
 	// Actually assign categories to the relevant node(s).
 	//
 	Job *job;
-	bool isAllNodes = !strcasecmp( jobName, Dag::ALL_NODES);
-	while ( ( job = dag->FindAllNodesByName( jobName ) ) ) {
+	while ( ( job = dag->FindAllNodesByName( jobName,
+				filename, lineNumber,
+				"In parse_category(): skipping node %s because final nodes cannot have CATEGORY specifications (%s: %d)\n" ) ) ) {
 		jobName = NULL;
 
 		debug_printf( DEBUG_DEBUG_3, "parse_category(): found job %s\n",
 					job->GetJobName() );
 
 		if ( job->GetFinal() ) {
-			if ( isAllNodes ) {
-				debug_printf( DEBUG_QUIET,
-							"In parse_category(): skipping node %s because final nodes cannot have CATEGORY specifications\n",
-							job->GetJobName() );
-				continue;
-			} else {
-				debug_printf( DEBUG_QUIET, 
-				  			"ERROR: %s (line %d): Final job %s cannot have CATEGORY specification\n",
-				  			filename, lineNumber, job->GetJobName() );
-				return false;
-			}
+			debug_printf( DEBUG_QUIET, 
+			  			"ERROR: %s (line %d): Final job %s cannot have CATEGORY specification\n",
+			  			filename, lineNumber, job->GetJobName() );
+			return false;
 		}
 
 		job->SetCategory( categoryName, dag->_catThrottles );
@@ -2290,10 +2235,6 @@ static MyString current_splice_scope(void)
 }
 
 
-//TEMPTEMP -- crap -- we probably need three returns:
-// 1) got a var
-// 2) end of vars
-// 3) error
 //TEMPTEMP -- or false means error; no var name means end of vars
 static bool
 get_next_var( const char *filename, int lineNumber, char *&str,

@@ -9,6 +9,8 @@
 %TEMPTEMP -- add a section explaining ALL_NODES -- doesn't work with
 % multiple DAGs on command line, etc.; how it interacts w/ splices;
 % how it interacts w/ INCLUDE; especially useful in splices
+%TEMPTEMP -- add ALL_NODES examples
+%TEMPTEMP -- VARS A.B ... will no longer work
 
 A directed acyclic graph (DAG) can be used to represent a set of computations
 where the input, output, or execution of one or more computations
@@ -2705,6 +2707,29 @@ specifications:
 As of HTCondor version 8.3.7, DAGMan allows at most two submit attempts
 of a FINAL node,
 if the DAG has been removed from the queue with \Condor{rm}.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:DAGFinalNode}ALL\_NODES option}
+\index{DAG input file!ALL\_NODES option}
+
+%TEMPTEMP -- format ALL_NODES
+In the following commands, a specific node name can be replaced by
+the option "ALL\_NODES":
+%TEMPTEMP -- add PRE_SKIP here if we implement that
+\begin{itemize}
+\item SCRIPT
+\item RETRY
+\item ABORT-DAG-ON
+\item VARS
+\item PRIORITY
+\item CATEGORY
+\end{itemize}
+
+TEMPTEMP -- list commands it applies to
+TEMPTEMP -- case insensitive
+TEMPTEMP -- does not apply to final nodes?
+TEMPTEMP -- explain how it works with splices
+TEMPTEMP -- give examples
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:DAGMan-rescue}The Rescue DAG}
