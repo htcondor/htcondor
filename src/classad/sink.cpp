@@ -23,6 +23,7 @@
 #include "classad/sink.h"
 #include "classad/util.h"
 #include "classad/classadCache.h"
+#include "classad/unparsedExpr.h"
 
 #include <math.h>
 
@@ -321,6 +322,13 @@ Unparse( string &buffer, const ExprTree *tree )
 			Unparse( buffer, ((CachedExprEnvelope*)tree)->get());
 			return;
 		}
+
+		case ExprTree::UNPARSED_EXPR:
+		{
+			buffer += ((UnparsedExpr *) tree)->getUnparsedStr();
+			return;
+		}
+
 
 		default:
 				// I really wonder whether we should except here, but I

@@ -23,6 +23,7 @@
 #include "classad/source.h"
 #include "classad/sink.h"
 #include "classad/classadCache.h"
+#include "classad/unparsedExpr.h"
 
 using namespace std;
 
@@ -45,6 +46,7 @@ bool _useOldClassAdSemantics = false;
 // Should parsed expressions be cached and shared between multiple ads.
 // The default is false.
 static bool doExpressionCaching = false;
+static bool doLazyParsing = true;
 
 void ClassAdSetExpressionCaching(bool do_caching) {
 	doExpressionCaching = do_caching;
@@ -53,6 +55,10 @@ void ClassAdSetExpressionCaching(bool do_caching) {
 bool ClassAdGetExpressionCaching()
 {
 	return doExpressionCaching;
+}
+
+void ClassAdSetLazyParsing( bool be_lazy) {
+	doLazyParsing = be_lazy;
 }
 
 // This is probably not the best place to put these. However, 
@@ -500,6 +506,11 @@ bool ClassAd::Insert( const std::string& serialized_nvp)
 		}
 	}
 
+    // 	GGT
+    if (doLazyParsing) {
+    	doExpressionCaching = false;
+    }
+
     // here is the special logic to check
     CachedExprEnvelope * cache_check = NULL;
 	if ( doExpressionCaching ) {
@@ -512,11 +523,16 @@ bool ClassAd::Insert( const std::string& serialized_nvp)
     }
     else
     {
-      ClassAdParser parser;
       ExprTree * newTree=0;
 
       // we did not hit in the cache... parse the expression
-      newTree = parser.ParseExpression(szValue);
+
+	  if (doLazyParsing) {
+		newTree = new UnparsedExpr(szValue);
+      } else {
+      	ClassAdParser parser;
+      	newTree = parser.ParseExpression(szValue);
+      }
 
       if ( newTree )
       {
@@ -568,6 +584,8 @@ bool ClassAd::Insert( const std::string& attrName, ExprTree *& pRef, bool cache 
 		return( false );
 	}
 
+	// GGT
+	//doExpressionCaching = false;
 	if (doExpressionCaching && cache)
 	{
 	  std::string empty; // an empty string to tell the cache to unparse the pRef
@@ -591,7 +609,7 @@ bool ClassAd::Insert( const std::string& attrName, ExprTree *& pRef, bool cache 
 		tree->SetParentScope( this );
 				
 		pair<AttrList::iterator,bool> insert_result =
-			attrList.insert( AttrList::value_type(*pstrAttr,tree) );
+			attrList.insert( std::make_pair(*pstrAttr,tree));
 
 		if( !insert_result.second ) {
 				// replace existing value
@@ -1417,6 +1435,15 @@ _GetExternalReferences( const ExprTree *expr, const ClassAd *ad,
 			return _GetExternalReferences( ((CachedExprEnvelope*)expr)->get(), ad, state, refs, fullNames );
 		}
 
+		case UNPARSED_EXPR: {
+			ExprTree *et = ((UnparsedExpr *)expr)->getParseTree();
+			if (et) {
+				return _GetExternalReferences(et, ad, state, refs, fullNames);
+			} else {
+				return false;
+			}
+		}
+
         default:
             return false;
     }
@@ -1461,7 +1488,9 @@ _GetExternalReferences( const ExprTree *expr, const ClassAd *ad,
 					return false;				// NAC
 				}								// NAC
             } else {
-                if( !tree->Evaluate( state, val ) ) return( false );
+                if( !tree->Evaluate( state, val ) ) {
+			return( false );
+		}
 
                     // if the tree evals to undefined, the external references
                     // are in the tree part
@@ -1470,7 +1499,9 @@ _GetExternalReferences( const ExprTree *expr, const ClassAd *ad,
                 }
                     // otherwise, if the tree didn't evaluate to a classad,
                     // we have a problem
-                if( !val.IsClassAdValue( start ) ) return( false );
+                if( !val.IsClassAdValue( start ) ) {
+			return( false );
+		}
 
 					// make sure that we are starting from a "valid" scope
 				if( ( pitr = refs.find( start ) ) == refs.end( ) && 
@@ -1569,6 +1600,14 @@ _GetExternalReferences( const ExprTree *expr, const ClassAd *ad,
 
 		case EXPR_ENVELOPE: {
 			return _GetExternalReferences( ( (CachedExprEnvelope*)expr )->get(), ad, state, refs );
+		}
+		case UNPARSED_EXPR: {
+			ExprTree *et = ((UnparsedExpr *)expr)->getParseTree();
+			if (et) {
+				return _GetExternalReferences(et, ad, state, refs);
+			} else {
+				return false;
+			}
 		}
 
         default:
@@ -1803,6 +1842,14 @@ _GetInternalReferences( const ExprTree *expr, const ClassAd *ad,
         
 		case EXPR_ENVELOPE: {
 			return _GetInternalReferences( ((CachedExprEnvelope*)expr)->get(), ad, state, refs,fullNames);
+		}
+		case UNPARSED_EXPR: {
+			ExprTree *et = ((UnparsedExpr *)expr)->getParseTree();
+			if (et) {
+				return _GetInternalReferences(et, ad, state, refs, fullNames);
+			} else {
+				return false;
+			}
 		}
            
 
