@@ -329,7 +329,7 @@ VanillaProc::StartJob()
 #if defined(HAVE_EXT_LIBCGROUP)
 	// Determine the cgroup
 	std::string cgroup_base;
-	param(cgroup_base, "BASE_CGROUP", "");
+	param(cgroup_base, "BASE_CGROUP", "htcondor");
 	MyString cgroup_str;
 	const char *cgroup = NULL;
 		/* Note on CONDOR_UNIVERSE_LOCAL - The cgroup setup code below
@@ -348,7 +348,7 @@ VanillaProc::StartJob()
 		 *  local universe and cgroups can be properly worked
 		 *  out. -matt 7 nov '12
 		 */
-	if (CONDOR_UNIVERSE_LOCAL != job_universe && cgroup_base.length()) {
+	if (CONDOR_UNIVERSE_LOCAL != job_universe && cgroup_base.length() && can_switch_ids()) {
 		MyString cgroup_uniq;
 		std::string starter_name, execute_str;
 		param(execute_str, "EXECUTE", "EXECUTE_UNKNOWN");
