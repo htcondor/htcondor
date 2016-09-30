@@ -327,12 +327,35 @@ x509_send_delegation( const char *source_file,
 					  int (*send_data_func)(void *, void *, size_t),
 					  void *send_data_ptr );
 
+/* Receive the delegation over set of send/recv functions.
+ *
+ * 0 - success.
+ * -1 - failure.
+ * 2 - continue.
+ *
+ * Continuations are only possible if the state_ptr is non-null.
+ */
 int
 x509_receive_delegation( const char *destination_file,
 						 int (*recv_data_func)(void *, void **, size_t *), 
 						 void *recv_data_ptr,
 						 int (*send_data_func)(void *, void *, size_t),
-						 void *send_data_ptr );
+						 void *send_data_ptr,
+						 void **state_ptr);
+
+/* The second half of receive delegation.
+ *
+ * 0 - success
+ * -1 - failure.
+ *
+ * state_ptr represents the memory status of the delegation, using an internal data structure.
+ * The function takes ownership of state_ptr and will call delete on it.
+ */
+int
+x509_receive_delegation_finish( int (*recv_data_func)(void *, void **, size_t *),
+                                void *recv_data_ptr,
+                                void *state_ptr);
+
 
 void parse_resource_manager_string( const char *string, char **host,
 									char **port, char **service,

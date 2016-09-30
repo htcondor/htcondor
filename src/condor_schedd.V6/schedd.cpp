@@ -4942,13 +4942,39 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 	return TRUE;
 }
 
+struct UpdateGSICredContinuation : Service {
+
+public:
+	UpdateGSICredContinuation(int cmd, const std::string &temp_path,
+	  const std::string &final_path, const char *job_owner, PROC_ID jobid,
+	  void *state)
+	:
+	  m_cmd(cmd),
+	  m_temp_path(temp_path),
+	  m_final_path(final_path),
+	  m_job_owner(job_owner ? strdup(job_owner) : NULL),
+	  m_jobid(jobid),
+	  m_state(state)
+	{}
+
+	int finish(Stream *);
+	int finish_update(ReliSock *, ReliSock::x509_delegation_result);
+
+private:
+	int m_cmd;
+	std::string m_temp_path;
+	std::string m_final_path;
+	char *m_job_owner;  // NULL job owner indicates we should use condor_priv.
+	PROC_ID m_jobid;
+	void *m_state;
+};
+
 int
 Scheduler::updateGSICred(int cmd, Stream* s)
 {
 	ReliSock* rsock = (ReliSock*)s;
 	PROC_ID jobid;
 	ClassAd *jobad;
-	int reply;
 
 		// make sure this connection is authenticated, and we know who
 		// the user is.  also, set a timeout, since we don't want to
@@ -5038,6 +5064,7 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 	temp_proxy_path += ".tmp";
 	free(proxy_path);
 
+	char *job_owner = NULL;
 #ifndef WIN32
 		// Check the ownership of the job's spool directory and switch
 		// our priv state if needed.
@@ -5059,7 +5086,6 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 	uid_t proxy_uid = si.GetOwner();
 	passwd_cache *p_cache = pcache();
 	uid_t job_uid;
-	char *job_owner = NULL;
 	jobad->LookupString( ATTR_OWNER, &job_owner );
 	if ( !job_owner ) {
 			// Maybe change EXCEPT to print to the audit log with D_AUDIT
@@ -5094,8 +5120,6 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 			// in the 'priv' variable.
 		priv = set_condor_priv();
 	}
-	free( job_owner );
-	job_owner = NULL;
 #endif
 
 	free(SpoolSpace);
@@ -5104,64 +5128,132 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 		// file temp_proxy_path, which is known to be in the SPOOL dir
 	rsock->decode();
 	filesize_t size = 0;
-	int rc;
+	void *state;
+	ReliSock::x509_delegation_result result;
 	if ( cmd == UPDATE_GSI_CRED ) {
-		rc = rsock->get_file(&size,temp_proxy_path.Value());
+		int rc = rsock->get_file(&size,temp_proxy_path.Value());
+		result = (rc == 0) ? ReliSock::delegation_ok : ReliSock::delegation_error;
 	} else if ( cmd == DELEGATE_GSI_CRED_SCHEDD ) {
-		rc = rsock->get_x509_delegation(&size,temp_proxy_path.Value());
+		result = rsock->get_x509_delegation(temp_proxy_path.Value(), false, &state);
 	} else {
 		dprintf( D_ALWAYS, "updateGSICred(%d): unknown CEDAR command %d\n",
 				 cmd, cmd );
-		rc = -1;
-	}
-	if ( rc < 0 ) {
-			// transfer failed
-		reply = 0;	// reply of 0 means failure
-	} else {
-			// transfer worked, now rename the file to final_proxy_path
-		if ( rotate_file(temp_proxy_path.Value(),
-						 final_proxy_path.Value()) < 0 ) 
-		{
-				// the rename failed!!?!?!
-			dprintf( D_ALWAYS, "updateGSICred(%d): failed, "
-				 "job %d.%d  - could not rename file\n",
-				 cmd, jobid.cluster,jobid.proc);
-			reply = 0;
-		} else {
-			reply = 1;	// reply of 1 means success
-
-			AuditLogJobProxy( *rsock, jobid, final_proxy_path.Value() );
-		}
+		result = ReliSock::delegation_error;
 	}
 
-	// Update the proxy expiration time in the job ad
-	time_t proxy_expiration;
-	proxy_expiration = x509_proxy_expiration_time( final_proxy_path.Value() );
-	if (proxy_expiration == -1) {
-		dprintf( D_ALWAYS, "updateGSICred(%d): failed to read expiration "
-				 "time of updated proxy for job %d.%d: %s\n", cmd,
-				 jobid.cluster, jobid.proc, x509_error_string() );
+	UpdateGSICredContinuation* continuation =
+		new UpdateGSICredContinuation(cmd,
+			temp_proxy_path.Value(),
+			final_proxy_path.Value(),
+			proxy_uid == job_uid ? job_owner : NULL,
+			jobid,
+			state);
+
+	free(job_owner);
+	job_owner = NULL;
+	int rc = 1;
+	if (result == ReliSock::delegation_continue) {
+		int retval = daemonCore->Register_Socket(rsock, "UpdateGSI Response",
+			(SocketHandlercpp)&UpdateGSICredContinuation::finish,
+			"UpdateGSI Response Continuation", continuation, ALLOW, HANDLE_READ);
+			// If we fail to register the socket, continue in blocking mode.
+		if (retval < 0) {
+			continuation->finish_update(rsock, result);
+			delete continuation;
+		} // else we have registered the continuation; the finish routine will
+		  // delete itself.
+		else { rc = KEEP_STREAM; }
 	} else {
-		SetAttributeInt( jobid.cluster, jobid.proc,
-						 ATTR_X509_USER_PROXY_EXPIRATION, proxy_expiration );
+		continuation->finish_update(rsock, result);
+		delete continuation;
 	}
 
 #ifndef WIN32
 		// Now switch back to our old priv state
 	set_priv( priv );
-
 	uninit_user_ids();
 #endif
+	return rc;
+}
+
+
+int
+UpdateGSICredContinuation::finish(Stream *stream)
+{
+	dprintf(D_SECURITY|D_FULLDEBUG, "Finishing X509 delegation.\n");
+	ReliSock *rsock = static_cast<ReliSock*>(stream);
+	priv_state priv;
+#ifndef WIN32
+	if (m_job_owner) {
+		if ( !init_user_ids(m_job_owner, NULL) ) {
+			dprintf(D_AUDIT | D_FAILURE, *rsock, "init_user_ids() failed for user %s!\n",
+				m_job_owner);
+			free(m_job_owner);
+			delete this;
+			return false;
+		}
+		priv = set_user_priv();
+	} else {
+		priv = set_condor_priv();
+	}
+#endif
+
+	ReliSock::x509_delegation_result result = rsock->get_x509_delegation_finish(m_temp_path.c_str(), false, m_state);
+	finish_update(rsock, result);
+
+#ifndef WIN32
+	set_priv( priv );
+	uninit_user_ids();
+#endif
+	delete this;
+	return true;
+}
+
+
+int
+UpdateGSICredContinuation::finish_update(ReliSock *rsock, ReliSock::x509_delegation_result result)
+{
+	int reply;
+	if ( result == ReliSock::delegation_error ) {
+			// transfer failed
+		reply = 0;	// reply of 0 means failure
+	} else {
+			// transfer worked, now rename the file to final_proxy_path
+		if ( rotate_file(m_temp_path.c_str(), m_final_path.c_str()) < 0 ) 
+		{
+				// the rename failed!!?!?!
+			dprintf( D_ALWAYS, "updateGSICred(%d): failed, "
+				 "job %d.%d  - could not rename file\n",
+				 m_cmd, m_jobid.cluster, m_jobid.proc);
+			reply = 0;
+		} else {
+			reply = 1;	// reply of 1 means success
+
+			AuditLogJobProxy( *rsock, m_jobid, m_final_path.c_str() );
+		}
+	}
+
+	// Update the proxy expiration time in the job ad
+	time_t proxy_expiration;
+	proxy_expiration = x509_proxy_expiration_time( m_final_path.c_str() );
+	if (proxy_expiration == -1) {
+		dprintf( D_ALWAYS, "updateGSICred(%d): failed to read expiration "
+				 "time of updated proxy for job %d.%d: %s\n", m_cmd,
+				 m_jobid.cluster, m_jobid.proc, x509_error_string() );
+	} else {
+		SetAttributeInt( m_jobid.cluster, m_jobid.proc,
+						 ATTR_X509_USER_PROXY_EXPIRATION, proxy_expiration );
+	}
 
 		// Send our reply back to the client
 	rsock->encode();
 	rsock->code(reply);
 	rsock->end_of_message();
 
-	dprintf( D_AUDIT | D_ALWAYS, *rsock,"Refresh GSI cred for job %d.%d %s\n",
-		jobid.cluster,jobid.proc,reply ? "suceeded" : "failed");
+	dprintf( D_AUDIT | D_ALWAYS, *rsock, "Refresh GSI cred for job %d.%d %s\n",
+		m_jobid.cluster, m_jobid.proc, reply ? "succeeded" : "failed");
 	
-	return TRUE;
+	return true;
 }
 
 
