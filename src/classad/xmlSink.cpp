@@ -25,6 +25,7 @@
 #include "classad/xmlLexer.h"
 #include "classad/util.h"
 #include "classad/classadCache.h"
+#include "classad/unparsedExpr.h"
 
 using namespace std;
 
@@ -130,6 +131,12 @@ Unparse(
 			Unparse( buffer, ((CachedExprEnvelope*)tree)->get(),indent );
 			break; 
 		}
+
+		case ExprTree::UNPARSED_EXPR: {
+			this->Unparse(buffer, ((UnparsedExpr *)tree)->getParseTree(), indent);
+			break; 
+		}
+		
 		
 		default:
 			buffer = "";

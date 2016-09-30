@@ -48,6 +48,7 @@ void ClassAdLibraryVersion(std::string &version_string);
 // The default is false.
 void ClassAdSetExpressionCaching(bool do_caching);
 bool ClassAdGetExpressionCaching();
+void ClassAdSetLazyParsing( bool be_lazy);
 
 // This flag is only meant for use in Condor, which is transitioning
 // from an older version of ClassAds with slightly different evaluation

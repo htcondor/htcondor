@@ -89,7 +89,9 @@ class ExprTree
 			/// Expression list node 
 			EXPR_LIST_NODE,
 			/// Expression envelope.
-			EXPR_ENVELOPE
+			EXPR_ENVELOPE,
+			/// Unparsed expression
+			UNPARSED_EXPR
 		};
 
 		/// Virtual destructor
@@ -211,6 +213,7 @@ class ExprTree
 		friend class ExprListIterator;
 		friend class ClassAd;
 		friend class CachedExprEnvelope;
+		friend class UnparsedExpr;
 
 		/// Copy constructor
         ExprTree(const ExprTree &tree);
@@ -225,6 +228,7 @@ class ExprTree
 
 		// To avoid making classads depend on a condor debug function,
 		// have the user set a function to call to debug classads
+public:
 		static void (*user_debug_function)(const char *);
 };
 
