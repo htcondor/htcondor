@@ -2010,6 +2010,10 @@ parse_maxjobs(
 //           NODE_STATUS_FILE <filename> [min update time]
 //			 No whitespace is allowed in the file name
 //-----------------------------------------------------------------------------
+
+// Defined in seconds...
+#define DEFAULT_MIN_NODE_STATUS_UPDATE_TIME 60
+
 static bool 
 parse_node_status_file(
 	Dag  *dag, 
@@ -2027,7 +2031,7 @@ parse_node_status_file(
 		return false;
 	}
 
-	int minUpdateTime = 0;
+	int minUpdateTime = DEFAULT_MIN_NODE_STATUS_UPDATE_TIME;
 	char *minUpdateStr = strtok(NULL, DELIMITERS);
 	if ( minUpdateStr != NULL ) {
 		char *tmp;

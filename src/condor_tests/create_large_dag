@@ -78,6 +78,10 @@ open(DAGFILE, ">$dagfile") or die "Can't open/create DAG file $dagfile $!\n";
 # Configuration file reference.
 print DAGFILE "CONFIG $configfile\n";
 
+# Node status file.
+my $statusfile = $testname . ".status";
+print DAGFILE "NODE_STATUS_FILE $statusfile\n";
+
 # Initial node.
 my $nodename = $testname . "-nodeA";
 my $submitfile = $nodename . ".cmd";
