@@ -31,6 +31,10 @@ ReplyAndClean::operator() () {
 	// shut itself (and the GAHP) down cleanly roughly ten seconds after
 	// the last corresponding gahp client is deleted.
 	delete gahp;
+
+	// Note that the annex daemon code happened to use the same timer
+	// for both GAHPs.  If it's safe to cancel a timer twice, we should
+	// probaly just cancel this gahp's timer as well.
 	delete eventsGahp;
 
 	delete scratchpad;

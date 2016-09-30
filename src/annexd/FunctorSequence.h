@@ -17,7 +17,7 @@
 //     description, fs );
 //
 // A FunctorSequence calls a sequence of functors on a timer, returning
-// to DaemonCore between calls.  Each functor is called (on the timer
+// to DaemonCore between calls.  Each functor is called (on each timer
 // firing) until it stops returning KEEP_STREAM.  If the functor return
 // PASS_STREAM, the next functor in the sequence will be called the next
 // time the timer fires.  After the last functor in the sequence returns
@@ -25,6 +25,9 @@
 // PASS_STREAM, the cleanup functor is called once (on the next timer
 // tick).  The cleanup functor must delete the stream and cancel the
 // timer if it so desires.
+//
+// Functors are responsible for ensuring that the timer is called at least
+// one more time while exiting, except for the special cleanup functor.
 //
 
 class FunctorSequence : public Service {
