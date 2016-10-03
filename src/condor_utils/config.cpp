@@ -2392,7 +2392,7 @@ static int is_special_config_macro(const char* prefix, int length, MACRO_BODY_CH
 		bool is_fname = true;
 		for (int ii = 2; ii < length; ++ii) {
 			int ch = prefix[ii] | 0x20; // convert to lowercase for comparision.
-			if (ch != 'p' && ch != 'n' && ch != 'x' && ch != 'd' && ch != 'q' && ch != 'a' && ch != 'b' && ch != 'f') {
+			if (ch != 'p' && ch != 'n' && ch != 'x' && ch != 'd' && ch != 'q' && ch != 'a' && ch != 'b' && ch != 'f' && ch != 'w' && ch != 'u') {
 				is_fname = false;
 				break;
 			}
@@ -2470,6 +2470,53 @@ char * strdup_quoted(const char* str, int cch, char quoted) {
 }
 #endif
 
+// return a pointer to the basename of a file + the given number of directories.
+// i.e. if the input is
+//     foo/bar/baz/file
+// and num_dirs is 2, the the return value will be
+//     bar/baz/file
+const char * condor_basename_plus_dirs(const char *path, int num_dirs)
+{
+	if ( ! path) { return ""; }
+
+    /* We need to initialize to make sure we return something real
+	   even if the path we're passed in has no directory delimiters. */
+	//const char *name = path;
+	std::vector<const char*> seps;
+
+	// for windows paths prefixed with \\ we have some special cases
+	// \\server\share and \\.\truly absolute path
+	const char *p = path;
+	if (p[0] == '\\' && p[1] == '\\') {
+		if (p[2] == '.' && p[3] == '\\') {
+			seps.push_back(p+4);
+			p += 4;
+		} else {
+			seps.push_back(p+2);
+			p += 2;
+		}
+	}
+	// walk the input, pushing the directories as we find them.
+	for (; *p; ++p) {
+		if (*p == '\\' || *p == '/') {
+			seps.push_back(p+1);
+		}
+	}
+
+	// now throw away separators from the end corresponding to the number of dirs we want to keep
+	while (num_dirs > 0) {
+		seps.pop_back();
+		--num_dirs;
+	}
+
+	size_t ix = seps.size();
+	if (ix > 0) {
+		return seps[ix-1];
+	}
+
+	return path;
+}
+
 // strdup a string with room to grow and an optional leading quote
 // and room for a trailing quote.
 char * strcpy_quoted(char* out, const char* str, int cch, char quoted) {
@@ -2503,8 +2550,24 @@ char * strdup_quoted(const char* str, int cch, char quoted) {
 	return strcpy_quoted(out, str, cch, quoted);
 }
 
+// strdup a string with room to grow and an optional leading quote
+// and room for a trailing quote, also canocalize windows path characters
+//
+char * strdup_path_quoted(const char* str, int cch, char quoted, char to_path_char) {
+	if (cch < 0) cch = (int)strlen(str);
 
-char * strdup_full_path_quoted(const char *name, int cch, MACRO_EVAL_CONTEXT & ctx, char quoted, bool win_path)
+	// malloc with room for quotes and a terminating 0
+	char * out = (char*)malloc(cch+3);
+	ASSERT(out);
+	strcpy_quoted(out, str, cch, quoted);
+	if (to_path_char) {
+		char path_char = (to_path_char == '/') ? '\\' : '/';
+		for (char * p = out; p <= out+cch; ++p) { if (*p == path_char) *p = to_path_char; }
+	}
+	return out;
+}
+
+char * strdup_full_path_quoted(const char *name, int cch, MACRO_EVAL_CONTEXT & ctx, char quoted, char to_path_char)
 {
 	if (
 #if defined(WIN32)
@@ -2512,35 +2575,40 @@ char * strdup_full_path_quoted(const char *name, int cch, MACRO_EVAL_CONTEXT & c
 #else
 		( name[0] == '/' ) /* absolute wrt whatever the root is */
 #endif
-		&& ctx.cwd && ctx.cwd[0]
+		|| !ctx.cwd || !ctx.cwd[0]
 	   )
 	{
-		return strdup_quoted(name, cch, quoted);
+		return strdup_path_quoted(name, cch, quoted, to_path_char);
 	}
 	else
 	{
 		int cch_cwd = strlen(ctx.cwd);
-		const char delim_char = win_path ? '\\' : '/';
+		const char delim_char = to_path_char ? to_path_char : '/';
 	#ifdef WIN32
 		bool has_dir_delim = ctx.cwd[cch_cwd-1] == '/' || ctx.cwd[cch_cwd-1] == '\\';
 	#else
-		bool has_dir_delim = ctx.cwd[cch_cwd-1] == '/' || (win_path && (ctx.cwd[cch_cwd-1] == '\\'));
+		bool has_dir_delim = ctx.cwd[cch_cwd-1] == '/' || (to_path_char && (ctx.cwd[cch_cwd-1] == to_path_char));
 	#endif
 		if (has_dir_delim) { cch_cwd -= 1; }
 		if (cch < 0) { name = strlen_unquote(name, cch); }
-		char * str = strdup_quoted(ctx.cwd, cch_cwd + cch + 1, quoted);
+		char * str = strdup_path_quoted(ctx.cwd, cch_cwd + cch + 1, quoted, to_path_char);
 		if (str) {
 			char * p = str + cch_cwd;
 			if (quoted) ++p;
 		#ifdef WIN32
 			if (cch > 2 && name[0] == '.' && (name[1] == '/' || name[1] == '\\')) {
 		#else
-			if (cch > 2 && name[0] == '.' && (name[1] == '/' || (win_path && (name[1] == '\\')))) {
+			if (cch > 2 && name[0] == '.' && (name[1] == '/' || (to_path_char && (name[1] == to_path_char)))) {
 		#endif
 				name += 2;
 				cch -= 2;
 			}
-			strcpy_quoted(p + (quoted ? 0 : 1), name, cch, quoted);
+			char * s = p + (quoted ? 0 : 1);
+			strcpy_quoted(s, name, cch, quoted);
+			if (to_path_char) {
+				char path_char = (to_path_char == '/') ? '\\' : '/';
+				for (int ix=0; ix <= cch; ++ix) { if (s[ix] == path_char) s[ix] = to_path_char; }
+			}
 			*p = delim_char;
 		}
 		return str;
@@ -3283,6 +3351,12 @@ static const char * evaluate_macro_func (
 			const char * mval = lookup_macro(name, macro_set, ctx);
 			tvalue = NULL;
 
+			auto_free_ptr tmp2;
+			if (strchr(mval, '$')) {
+				tmp2.set(expand_macro(mval, macro_set, ctx));
+				mval = tmp2.ptr();
+			}
+
 			// filename extraction macros, for expanding only parts of a filename in $(FILE).
 			// Any macro function of the form $Fqdpnx(FILE), where q,d,p,n,x are all optional
 			// and indicate which parts of the filename to keep.
@@ -3296,9 +3370,10 @@ static const char * evaluate_macro_func (
 			// b - bare - strip trailing / for p and d, leading . for x
 
 			int parts = 0;
+			int num_dirs = 0; // count number of 'd's
 			bool quoted = false;
 			bool full_path = false;
-			bool windows_path = false;
+			char to_path_char = 0; // paths should use only this path char
 			bool bare = false;
 			bool arg_quote = false;
 			if (special_id == SPECIAL_MACRO_ID_BASENAME) {
@@ -3313,11 +3388,12 @@ static const char * evaluate_macro_func (
 					case 'x': parts |= 0x1; break;
 					case 'n': parts |= 0x2; break;
 					case 'p': parts |= 0x4; break;
-					case 'd': parts |= 0x8; break;
+					case 'd': parts |= 0x8; ++num_dirs; break;
 					case 'a': arg_quote = true; break;
 					case 'b': bare = true; break;
 					case 'f': full_path = true; break;
-					case 'w': windows_path = true; break;
+					case 'w': to_path_char = '\\'; break;
+					case 'u': to_path_char = '/'; break;
 					case 'q': quoted = true; break;
 					}
 				}
@@ -3328,7 +3404,9 @@ static const char * evaluate_macro_func (
 				int cchum = 0;
 				const char * umval = strlen_unquote(mval, cchum);
 				if (full_path) {
-					buf = strdup_full_path_quoted(umval, cchum, ctx, quote_char, windows_path);
+					buf = strdup_full_path_quoted(umval, cchum, ctx, quote_char, to_path_char);
+				} else if (parts || to_path_char || bare) {
+					buf = strdup_path_quoted(umval, cchum, quote_char, to_path_char);  // copy the macro value with quotes add/removed as requested.
 				} else {
 					buf = strdup_quoted(umval, cchum, quote_char);  // copy the macro value with quotes add/removed as requested.
 				}
@@ -3353,13 +3431,16 @@ static const char * evaluate_macro_func (
 				default:
 					// ixn is 0 if no dir.
 					if (ixn > 0) {
-						//PRAGMA_REMIND("handle multiple d's")
+					#if 1
+						tvalue = condor_basename_plus_dirs(buf, num_dirs);
+					#else
 						char ch = buf[ixn-1]; buf[ixn-1] = 0; // truncate filename saving the old character
 						tvalue = condor_basename(buf); // tvalue now points to the start of the first directory
 						buf[ixn-1] = ch; // put back the dir/filename separator
-						if (2 == (parts&3)) { ixend = ixx; }
-						else if (0 == (parts&3)) { ixend = ixn; if (bare && ixn > 0) ixend = ixn-1; }
-						else if (1 == (parts&3)) { /* TODO: strip out filename part? */ }
+					#endif
+						if (2 == (parts&3)) { ixend = ixx; } // keep basename but not extension
+						else if (0 == (parts&3)) { ixend = ixn; if (bare && ixn > 0) ixend = ixn-1; } // return dirs only
+						else if (1 == (parts&3)) { /* TODO: strip out filename part? */ } // keep extension (and also basename)
 					} else {
 						// we get here when there is no dir, but only dir should be output
 						// so we pick a spot inside the buffer with room to quote

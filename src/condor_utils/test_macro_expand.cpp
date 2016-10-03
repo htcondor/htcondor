@@ -212,21 +212,28 @@ static void insert_testing_macros(const char * local, const char * subsys)
 		{"fileLong", "Now is the time for all good men."},
 		{"fileCompound", "$(fileDirs)/$(fileBase).$(FileExt)"},
 		{"fileAbs", "/one/two/three.for"},
+		{"fileAbsDeep", "/six/five/four/three/two/one/file.ext"},
+		{"dirDeep", "six/five/four/three/two/one/"},
 		{"urlAbs", "file:/one/two/three.for"},
 		{"fileAbsQuoted", "\"/one/two/three.for\""},
 		{"fileAbsSQuoted", "'/one/two/three.for'"},
 		{"fileRel", "ein/zwei/drei.fir"},
+		{"fileRelDeep", "a/b/c/d/e/f.x"},
 		{"fileRelSpaces", "\"ein/zw ei/dr ei.fir\""},
 		{"fileCurRel", "./here"},
+		{"fileUp1Rel", "../file"},
+		{"fileOver1Rel", "../peer/file.dat"},
 		{"fileCurRel2", "./uno/dos.tres"},
-#ifdef WIN32
 		{"wfileAbs", "c:\\one\\two\\three.for"},
+		{"wfileAbsDeep", "c:\\six\\five\\four\\three\\two\\one\\file.ext"},
+		{"wUNCfileAbs", "\\\\server\\share\\one\\two\\file.ext"},
 		{"wfileAbsQuoted", "\"c:\\one\\two\\three.for\""},
 		{"wfileRel", "ein\\zwei\\drei.fir"},
 		{"wfileRelSpaces", "\"ein\\zw ei\\dr ei.fir\""},
 		{"wfileCurRel", ".\\here"},
 		{"wfileCurRel2", ".\\uno\\dos.tres"},
-#endif
+		{"wfileUp1Rel", "..\\file"},
+		{"wfileOver1Rel", "..\\peer\\file.dat"},
 
 		// for $F regressions
 		{"Items5", "aa bb cc dd ee"},
@@ -519,8 +526,24 @@ void testing_$ENV_expand(bool verbose)
 	if (verbose) {
 		fprintf( stdout, "\n----- testing_$ENV_expand ----\n\n");
 	}
-	// regressions
-	// REQUIRE( expand("$ENV(username)") == "johnkn" );
+
+	// linux want's these to be char's
+	static char env1[] = "FOO=BAR";
+	static char env2[] = "Declaration=We the people, in order to form a more perfect union...";
+	// on Windows, putenv of this removes the environment var, but on *nix, it sets an empty var.
+	//static char env3[] = "EMPTY=";
+	putenv(env1);
+	putenv(env2);
+
+	// tests
+	REQUIRE( expand("$ENV(FOO)") == "BAR" );
+	REQUIRE( expand("$ENV(FOO:)") == "BAR" );
+	REQUIRE( expand("$ENV(FOO:BAZ)") == "BAR" );
+	REQUIRE( expand("$ENV(Declaration:)") == "We the people, in order to form a more perfect union..." );
+	REQUIRE( expand("$ENV(EMPTY)") == "UNDEFINED" );
+	REQUIRE( expand("$ENV(EMPTY:)") == "" );
+	REQUIRE( expand("$ENV(EMPTY:BAZ)") == "BAZ" );
+	REQUIRE( expand("$ENV(EMPTY:$(STUFF))") == "" );
 }
 
 void testing_$RAND_expand(bool verbose)
@@ -529,7 +552,7 @@ void testing_$RAND_expand(bool verbose)
 		fprintf( stdout, "\n----- testing_$RAND_expand ----\n\n");
 	}
 
-	// regressions
+	// tests
 	REQUIRE( within(expand("$RANDOM_INTEGER(-30,30,1)"), -30, 30) );
 	REQUIRE( within(expand("$RANDOM_INTEGER(2,2,1)"), 2, 2) );
 	REQUIRE( within(expand("$RANDOM_INTEGER(-10,0,2)"), -10, 0) );
@@ -564,7 +587,7 @@ void testing_$F_expand(bool verbose)
 	REQUIRE( expand("$Fn(fileDirs)") == "der" );
 	REQUIRE( expand("$Fpnx(fileDirs)") == "/dur/der" );
 
-	//REQUIRE( expand("$Fpnf(fileDirs)") == "/home/testing/dur/der" );
+	REQUIRE( expand("$Fpnf(fileDirs)") == "/dur/der" );
 	REQUIRE( expand("$Fdf(fileDirs)") == "dur/" );
 
 	REQUIRE( expand("$Fdnx(fileSimple)") == "simple.dat" );
@@ -580,13 +603,18 @@ void testing_$F_expand(bool verbose)
 	REQUIRE( expand("$Fx(fileLong)") == "." );
 	REQUIRE( expand("$Fnx(fileLong)") == "Now is the time for all good men." );
 
-	REQUIRE( expand("$Fdnx(fileCompound)") == "/dur/der/base.ex" );
-	REQUIRE( expand("$Fd(fileCompound)") == "/dur/der/" );
+	REQUIRE( expand("$F(fileCompound)") == "/dur/der/base.ex" );
+	REQUIRE( expand("$Fdnx(fileCompound)") == "der/base.ex" );
+	REQUIRE( expand("$Fd(fileCompound)") == "der/" );
+	REQUIRE( expand("$Fdb(fileCompound)") == "der" );
+	REQUIRE( expand("$Fddb(fileCompound)") == "dur/der" );
 	REQUIRE( expand("$Fp(fileCompound)") == "/dur/der/" );
+	REQUIRE( expand("$Fpw(fileCompound)") == "\\dur\\der\\" );
+	REQUIRE( expand("$Ffqaw(fileCompound)") == "'\\dur\\der\\base.ex'" );
 	REQUIRE( expand("$Fn(fileCompound)") == "base" );
 	REQUIRE( expand("$Fx(fileCompound)") == ".ex" );
 	REQUIRE( expand("$Fnx(fileCompound)") == "base.ex" );
-	//REQUIRE( expand("$Fpf(fileCompound)") == "/home/testing/dur/der/" );
+	REQUIRE( expand("$Fpf(fileCompound)") == "/dur/der/" );
 	REQUIRE( expand("$Fnf(fileCompound)") == "base" );
 	REQUIRE( expand("$Fxf(fileCompound)") == ".ex" );
 	REQUIRE( expand("$Fnxf(fileCompound)") == "base.ex" );
@@ -603,6 +631,18 @@ void testing_$F_expand(bool verbose)
 	REQUIRE( expand("$Fx(fileAbs)") == ".for" );
 	REQUIRE( expand("$Fnx(fileAbs)") == "three.for" );
 	REQUIRE( expand("$Fpnxf(fileAbs)") == "/one/two/three.for" );
+
+	REQUIRE( expand("$Fd(fileAbsDeep)") == "one/" );
+	REQUIRE( expand("$Fdd(fileAbsDeep)") == "two/one/" );
+	REQUIRE( expand("$Fddd(fileAbsDeep)") == "three/two/one/" );
+	REQUIRE( expand("$Fddddddd(fileAbsDeep)") == "/six/five/four/three/two/one/" );
+	REQUIRE( expand("$Fddb(fileAbsDeep)") == "two/one" );
+
+	REQUIRE( expand("$Fw(fileAbsDeep)") == "\\six\\five\\four\\three\\two\\one\\file.ext" );
+	REQUIRE( expand("$Ffw(fileAbsDeep)") == "\\six\\five\\four\\three\\two\\one\\file.ext" );
+	REQUIRE( expand("$Fpw(fileAbsDeep)") == "\\six\\five\\four\\three\\two\\one\\" );
+	REQUIRE( expand("$Fddxw(fileAbsDeep)") == "two\\one\\file.ext" );
+	REQUIRE( expand("$Fddnw(fileAbsDeep)") == "two\\one\\file" );
 
 	REQUIRE( expand("$Fdnx(urlAbs)") == "two/three.for" );
 	REQUIRE( expand("$Fpnx(urlAbs)") == "file:/one/two/three.for" );
@@ -624,7 +664,7 @@ void testing_$F_expand(bool verbose)
 	REQUIRE( expand("$Fnb(fileAbsQuoted)") == "three" );
 	REQUIRE( expand("$Fxb(fileAbsQuoted)") == "for" );
 	REQUIRE( expand("$Fnx(fileAbsQuoted)") == "three.for" );
-	//REQUIRE( expand("$Fpf(fileAbsQuoted)") == "/one/two/" );
+	REQUIRE( expand("$Fpf(fileAbsQuoted)") == "/one/two/" );
 	REQUIRE( expand("$Fqn(fileAbsQuoted)") == "\"three\"" );
 	REQUIRE( expand("$Fqan(fileAbsQuoted)") == "'three'" );
 
@@ -644,6 +684,17 @@ void testing_$F_expand(bool verbose)
 	REQUIRE( expand("$Fx(fileRel)") == ".fir" );
 	REQUIRE( expand("$Fnx(fileRel)") == "drei.fir" );
 
+	REQUIRE( expand("$Fnx(fileRelDeep)") == "f.x" );
+	REQUIRE( expand("$Fdb(fileRelDeep)") == "e" );
+	REQUIRE( expand("$Fddb(fileRelDeep)") == "d/e" );
+	REQUIRE( expand("$Ff(fileRelDeep)") == "/home/testing/a/b/c/d/e/f.x" );
+	REQUIRE( expand("$Ffq(fileRelDeep)") == "\"/home/testing/a/b/c/d/e/f.x\"" );
+	REQUIRE( expand("$Ffddddd(fileRelDeep)") == "a/b/c/d/e/" );
+	REQUIRE( expand("$Ffdddddd(fileRelDeep)") == "testing/a/b/c/d/e/" );
+	REQUIRE( expand("$Ffw(fileRelDeep)") == "\\home\\testing\\a\\b\\c\\d\\e\\f.x" );
+	REQUIRE( expand("$Ffwq(fileRelDeep)") == "\"\\home\\testing\\a\\b\\c\\d\\e\\f.x\"" );
+	REQUIRE( expand("$Ffwqa(fileRelDeep)") == "'\\home\\testing\\a\\b\\c\\d\\e\\f.x'" );
+
 	REQUIRE( expand("$Fdnx(fileRelSpaces)") == "zw ei/dr ei.fir" );
 	REQUIRE( expand("$Fd(fileRelSpaces)") == "zw ei/" );
 	REQUIRE( expand("$Fp(fileRelSpaces)") == "ein/zw ei/" );
@@ -657,6 +708,34 @@ void testing_$F_expand(bool verbose)
 	REQUIRE( expand("$Fn(fileCurRel)") == "here" );
 	REQUIRE( expand("$Fx(fileCurRel)") == "" );
 	REQUIRE( expand("$Fnx(fileCurRel)") == "here" );
+	REQUIRE( expand("$Ff(fileCurRel)") == "/home/testing/here" );
+
+	REQUIRE( expand("$Fdnx(fileUp1Rel)") == "../file" );
+	REQUIRE( expand("$Fd(fileUp1Rel)") == "../" );
+	REQUIRE( expand("$Fp(fileUp1Rel)") == "../" );
+	REQUIRE( expand("$Fn(fileUp1Rel)") == "file" );
+	REQUIRE( expand("$Fx(fileUp1Rel)") == "" );
+	REQUIRE( expand("$Fnx(fileUp1Rel)") == "file" );
+	REQUIRE( expand("$Ff(fileUp1Rel)") == "/home/testing/../file" );
+
+	REQUIRE( expand("$Fdnx(fileOver1Rel)") == "peer/file.dat" );
+	REQUIRE( expand("$Fd(fileOver1Rel)") == "peer/" );
+	REQUIRE( expand("$Fp(fileOver1Rel)") == "../peer/" );
+	REQUIRE( expand("$Fn(fileOver1Rel)") == "file" );
+	REQUIRE( expand("$Fx(fileOver1Rel)") == ".dat" );
+	REQUIRE( expand("$Fnx(fileOver1Rel)") == "file.dat" );
+	REQUIRE( expand("$Ff(fileOver1Rel)") == "/home/testing/../peer/file.dat" );
+
+#ifdef WIN32
+	REQUIRE( expand("$Ff(wfileCurRel)") == "/home/testing/here" );
+	REQUIRE( expand("$Ffu(wfileCurRel)") == "/home/testing/here" );
+#endif
+	REQUIRE( expand("$Ffw(wfileCurRel)") == "\\home\\testing\\here" );
+	REQUIRE( expand("$Ff(wfileUp1Rel)") == "/home/testing/..\\file" );
+	REQUIRE( expand("$Ffu(wfileUp1Rel)") == "/home/testing/../file" );
+	REQUIRE( expand("$Ffw(wfileUp1Rel)") == "\\home\\testing\\..\\file" );
+	REQUIRE( expand("$Ffu(wfileOver1Rel)") == "/home/testing/../peer/file.dat" );
+	REQUIRE( expand("$Ffw(wfileOver1Rel)") == "\\home\\testing\\..\\peer\\file.dat" );
 
 	REQUIRE( expand("$Fpnx(fileCurRel2)") == "./uno/dos.tres" );
 	REQUIRE( expand("$Fdnx(fileCurRel2)") == "uno/dos.tres" );
@@ -669,13 +748,48 @@ void testing_$F_expand(bool verbose)
 	REQUIRE( expand("$Fdnxf(fileCurRel2)") == "uno/dos.tres" );
 	REQUIRE( expand("$Fpf(fileCurRel2)") == "/home/testing/uno/" );
 
+	REQUIRE( expand("$Ff(wfileRel)") == "/home/testing/ein\\zwei\\drei.fir" );
+	REQUIRE( expand("$Ffw(wfileRel)") == "\\home\\testing\\ein\\zwei\\drei.fir" );
+	REQUIRE( expand("$Ffu(wfileRel)") == "/home/testing/ein/zwei/drei.fir" );
+
 #ifdef WIN32
 	REQUIRE( expand("$Fdnx(wfileAbs)") == "two\\three.for" );
 	REQUIRE( expand("$Fd(wfileAbs)") == "two\\" );
 	REQUIRE( expand("$Fp(wfileAbs)") == "c:\\one\\two\\" );
+	REQUIRE( expand("$Ff(wfileAbs)") == "c:\\one\\two\\three.for" );
 	REQUIRE( expand("$Fn(wfileAbs)") == "three" );
 	REQUIRE( expand("$Fx(wfileAbs)") == ".for" );
 	REQUIRE( expand("$Fnx(wfileAbs)") == "three.for" );
+
+	REQUIRE( expand("$Fdnx(wfileAbsDeep)") == "one\\file.ext" );
+	REQUIRE( expand("$Fddnx(wfileAbsDeep)") == "two\\one\\file.ext" );
+	REQUIRE( expand("$Fd(wfileAbsDeep)") == "one\\" );
+	REQUIRE( expand("$Fdd(wfileAbsDeep)") == "two\\one\\" );
+	REQUIRE( expand("$Fddd(wfileAbsDeep)") == "three\\two\\one\\" );
+	REQUIRE( expand("$Fdddp(wfileAbsDeep)") == "three\\two\\one\\" );
+	REQUIRE( expand("$Fp(wfileAbsDeep)") == "c:\\six\\five\\four\\three\\two\\one\\" );
+	REQUIRE( expand("$Fpb(wfileAbsDeep)") == "c:\\six\\five\\four\\three\\two\\one" );
+	REQUIRE( expand("$Fn(wfileAbsDeep)") == "file" );
+	REQUIRE( expand("$Fx(wfileAbsDeep)") == ".ext" );
+	REQUIRE( expand("$Fxb(wfileAbsDeep)") == "ext" );
+	REQUIRE( expand("$Fnx(wfileAbsDeep)") == "file.ext" );
+
+	REQUIRE( expand("$Fdnx(wUNCfileAbs)") == "two\\file.ext" );
+	REQUIRE( expand("$Fddnx(wUNCfileAbs)") == "one\\two\\file.ext" );
+	REQUIRE( expand("$Fd(wUNCfileAbs)") == "two\\" );
+	REQUIRE( expand("$Fdd(wUNCfileAbs)") == "one\\two\\" );
+	REQUIRE( expand("$Fddd(wUNCfileAbs)") == "share\\one\\two\\" );
+	REQUIRE( expand("$Fdddd(wUNCfileAbs)") == "server\\share\\one\\two\\" );
+	REQUIRE( expand("$Fddddd(wUNCfileAbs)") == "\\\\server\\share\\one\\two\\" );
+	REQUIRE( expand("$Fpn(wUNCfileAbs)") == "\\\\server\\share\\one\\two\\file" );
+
+	REQUIRE( expand("$Fdnxu(wUNCfileAbs)") == "two/file.ext" );
+	REQUIRE( expand("$Fddnxu(wUNCfileAbs)") == "one/two/file.ext" );
+	REQUIRE( expand("$Fdu(wUNCfileAbs)") == "two/" );
+	REQUIRE( expand("$Fdub(wUNCfileAbs)") == "two" );
+	REQUIRE( expand("$Fdb(wUNCfileAbs)") == "two" );
+	REQUIRE( expand("$Fddu(wUNCfileAbs)") == "one/two/" );
+	REQUIRE( expand("$Fu(wUNCfileAbs)") == "//server/share/one/two/file.ext" );
 
 	REQUIRE( expand("$Fdnx(wfileAbsQuoted)") == "two\\three.for" );
 	REQUIRE( expand("$Fd(wfileAbsQuoted)") == "two\\" );
@@ -955,6 +1069,26 @@ int main( int /*argc*/, const char ** argv) {
 			}
 		} else {
 			fprintf(stderr, "unknown argument %s\n", arg);
+			fprintf(stderr, "usage: %s [ -verbose ] [ -test[:<tests>] ]\n", argv[0]);
+			fprintf(stderr,
+				"   one or more single letters select individual tests:\n"
+				"      l param lookups\n"
+				"      $ $ expansion\n"
+				"      [ $$ expansion\n"
+				"      e $ENV expansion\n"
+				"      F $F expansion\n"
+				"      c $CHOICE expansion/evaluation\n"
+				"      s $SUBSTR, $STRING expansion/evaluation\n"
+				"      i $INT expansion/evaluation\n"
+				"      f $REAL expansion/evaluation\n"
+				"      n $INT, $REAL expansion/evaluation\n"
+				"      v $EVAL expansion/evaluation\n"
+				"      r $RANDOM_INTEGER and $RANDOM_CHOICE expansion/evaluation\n"
+				"      p config parsing\n"
+				"   default is to run all tests\n"
+				"   If -verbose is specified, all tests show output, otherwise\n"
+				"   only failed tests produce output\n"
+				);
 			return 1;
 		}
 	}
