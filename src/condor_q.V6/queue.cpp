@@ -3813,6 +3813,41 @@ long long resolve_first_use_of_batch_uid(int batch_uid, long long id)
 	}
 }
 
+// if we hold on to the previous ad until the next ad has been parse, we get a large
+// speedup in parsing the incoming classads because we get a much better (60% vs 0%)
+// hit rate in the classad cache.
+static struct _cache_optimizer {
+	ClassAd* previous_jobs[4];
+	buffer_line_processor pfn;
+	int ix;
+} cache_optimizer = { {NULL, NULL, NULL, NULL}, NULL, 0 };
+
+bool cache_optimized_process_job(void * pv,  ClassAd* job) {
+	bool done_with_job = cache_optimizer.pfn(pv, job);
+	if (done_with_job) {
+		delete cache_optimizer.previous_jobs[cache_optimizer.ix];
+		cache_optimizer.previous_jobs[cache_optimizer.ix] = job;
+		cache_optimizer.ix = (int)((cache_optimizer.ix+1) % COUNTOF(cache_optimizer.previous_jobs));
+		done_with_job = false;
+	}
+	return done_with_job;
+}
+
+buffer_line_processor init_cache_optimizer(buffer_line_processor pfn) {
+	cache_optimizer.pfn = pfn;
+	return cache_optimized_process_job;
+}
+
+void cleanup_cache_optimizer()
+{
+	for (size_t ix = 0; ix < COUNTOF(cache_optimizer.previous_jobs); ++ix) {
+		delete cache_optimizer.previous_jobs[ix];
+		cache_optimizer.previous_jobs[ix] = NULL;
+	}
+	cache_optimizer.pfn = NULL;
+	cache_optimizer.ix = 0;
+}
+
 static bool process_job_to_rod_per_ad_map(void * pv,  ClassAd* job)
 {
 	ROD_MAP_BY_ID * pmap = (ROD_MAP_BY_ID *)pv;
@@ -3844,7 +3879,7 @@ static bool process_job_to_rod_per_ad_map(void * pv,  ClassAd* job)
 		fprintf( stderr, "Error: Two results with the same ID.\n" );
 		//tj: 2013 -don't abort without printing jobs
 		// exit( 1 );
-		return false;
+		return true;
 	} else {
 		pp.first->second.id = jobid.id;
 		pp.first->second.rov.SetMaxCols(columns);
@@ -4577,7 +4612,7 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 		print_full_header(source_label.c_str());
 	} else {
 		// digest each job into a row of values and insert into the rod_result_map
-		pfnProcess = process_job_to_rod_per_ad_map;
+		pfnProcess = init_cache_optimizer(process_job_to_rod_per_ad_map);
 		pvProcess = &rod_result_map;
 	}
 
@@ -4599,6 +4634,7 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 	} else {
 		fetchResult = Q.fetchQueueFromHostAndProcess(scheddAddress, *pattrs, fetch_opts, g_match_limit, pfnProcess, pvProcess, useFastPath, &errstack);
 	}
+	cleanup_cache_optimizer();
 	if (fetchResult != Q_OK) {
 		// The parse + fetch failed, print out why
 		switch(fetchResult) {
@@ -4626,7 +4662,8 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 	}
 
 	if (dash_profile) {
-		profile_print(cbBefore, tmBefore, jobs.Length());
+		int cJobs = jobs.Length() + (int)rod_result_map.size();
+		profile_print(cbBefore, tmBefore, cJobs);
 	} else if (verbose) {
 		fprintf(stderr, " %d ads\n", jobs.Length());
 	}
