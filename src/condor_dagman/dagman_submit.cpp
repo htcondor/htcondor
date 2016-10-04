@@ -284,7 +284,7 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 	if ( dm._suppressJobLogs ) {
 		debug_printf( DEBUG_VERBOSE, "Suppressing node job log file\n" );
 		args.AppendArg( "-a" );
-		args.AppendArg( "log = ''" );
+		args.AppendArg( "log = " );
 	}
 
 	ArgList parentNameArgs;
