@@ -116,8 +116,18 @@ struct shadow_rec
 	~shadow_rec();
 }; 
 
+struct RealOwnerCounters {
+  int JobsCounted; // smaller than Hits by the number of match recs for this Owner.
+  int JobsRecentlyAdded; // zeroed on each sweep, incremented on submission.
+  void clear_counters() { memset(this, 0, sizeof(*this)); }
+  RealOwnerCounters()
+	: JobsCounted(0)
+	, JobsRecentlyAdded(0)
+  {}
+};
+
 // counters within the OwnerData struct that are cleared and re-computed by count_jobs.
-struct OwnerCounters {
+struct SubmitterCounters {
   int JobsRunning;
   int JobsIdle;
   int WeightedJobsRunning;
@@ -132,9 +142,9 @@ struct OwnerCounters {
   int LocalJobsIdle;    // Local universe
   int Hits;  // used in the mark/sweep algorithm of count_jobs to detect Owners that no longer have any jobs in the queue.
   int JobsCounted; // smaller than Hits by the number of match recs for this Owner.
-  int JobsRecentlyAdded; // zeroed on each sweep, incremented on submission.
+//  int JobsRecentlyAdded; // zeroed on each sweep, incremented on submission.
   void clear_job_counters() { memset(this, 0, sizeof(*this)); }
-  OwnerCounters()
+  SubmitterCounters()
 	: JobsRunning(0)
 	, JobsIdle(0)
 	, WeightedJobsRunning(0)
@@ -146,17 +156,22 @@ struct OwnerCounters {
 	, LocalJobsRunning(0), LocalJobsIdle(0)
 	, Hits(0)
 	, JobsCounted(0)
-	, JobsRecentlyAdded(0)
+//	, JobsRecentlyAdded(0)
   {}
 };
 
 #define USE_OWNERDATA_MAP 1
 
+// The schedd will have one of these records for each OWNER, and ALSO one for each SUBMITTER
+// When jobs are nice, or when the have an AccountingGroup attribute, the owner and the submitter
+// for the job will be different.  Some parts of the Schedd do lookup by OWNER attribute
+// but most parts, (especially count_jobs) do lookup by submitter name.
 struct OwnerData {
   std::string name;
   const char * Name() const { return name.empty() ? "" : name.c_str(); }
   bool empty() const { return name.empty(); }
-  OwnerCounters num;
+  SubmitterCounters num;
+  RealOwnerCounters owner_num; // counts by OWNER rather than by submitter
   time_t LastHitTime; // records the last time we incremented num.Hit, use to expire Owners
   // Time of most recent change in flocking level or
   // successful negotiation at highest current flocking
