@@ -993,7 +993,7 @@ bool
 Scheduler::fill_submitter_ad(ClassAd & pAd, const OwnerData & Owner, int flock_level, int dprint_level)
 {
 	const bool publish_stats_to_flockers = false;
-	const OwnerCounters & Counters = Owner.num;
+	const SubmitterCounters & Counters = Owner.num;
 	const bool want_dprintf = IsDebugCatAndVerbosity(dprint_level); // dprintf if not flocking
 
 	if (Owner.FlockLevel >= flock_level) {
@@ -1186,7 +1186,8 @@ Scheduler::count_jobs()
 
 	for (OwnerDataMap::iterator it = Owners.begin(); it != Owners.end(); ++it) {
 		OwnerData & Owner = it->second;
-		Owner.num.clear_job_counters();	// clear the jobs counters (including recently added)
+		Owner.num.clear_job_counters();	// clear the jobs counters 
+		Owner.owner_num.clear_counters(); // clear per-owner job counters (including recently added)
 		Owner.PrioSet.clear();
 	}
 
@@ -1197,7 +1198,7 @@ Scheduler::count_jobs()
 	dedicated_scheduler.clearDedicatedClusters();
 
 		// inserts/finds an entry in Owners for each job
-		// updates OwnerCounters: Hits, JobsIdle, WeightedJobsIdle & JobsHeld
+		// updates SubmitterCounters: Hits, JobsIdle, WeightedJobsIdle & JobsHeld
 	WalkJobQueue(count_a_job);
 
 	if( dedicated_scheduler.hasDedicatedClusters() ) {
@@ -2492,15 +2493,25 @@ count_a_job(JobQueueJob* job, const JOB_ID_KEY& /*jid*/, void*)
 	// insert owner even if REMOVED or HELD for condor_q -{global|sub}
 	// this function makes its own copies of the memory passed in 
 	OwnerData * Owner = scheduler.insert_owner(owner);
-	OwnerCounters * Counters = &Owner->num;
+	SubmitterCounters * Counters = &Owner->num;
+
+	RealOwnerCounters * RealOwnerCounts = &Owner->owner_num;
+	if (owner != real_owner) {
+		OwnerData * RealOwner = scheduler.insert_owner(real_owner.c_str());
+		RealOwner->LastHitTime = now;
+		RealOwnerCounts = &RealOwner->owner_num;
+	}
 
 	Counters->Hits += 1;
 	Owner->LastHitTime = now;
 	// Hits also counts matchrecs, which aren't jobs.
 	Counters->JobsCounted += 1;
+	RealOwnerCounts->JobsCounted += 1;
 	// This way we know we aren't resetting unless we've actually counted
 	// something during a sweep.
-	Counters->JobsRecentlyAdded = 0;
+	//Counters->JobsRecentlyAdded = 0;
+	RealOwnerCounts->JobsRecentlyAdded = 0;
+
 
 	if ( (universe != CONDOR_UNIVERSE_GRID) &&	// handle Globus below...
 		 (!service_this_universe(universe,job))  ) 
@@ -2727,7 +2738,7 @@ void
 Scheduler::incrementRecentlyAdded(const char * owner)
 {
 	OwnerData * ownerData = insert_owner( owner );
-	++(ownerData->num.JobsRecentlyAdded);
+	ownerData->owner_num.JobsRecentlyAdded += 1;
 }
 
 const OwnerData *

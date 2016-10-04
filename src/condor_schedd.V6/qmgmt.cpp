@@ -2046,8 +2046,8 @@ NewProc(int cluster_id)
 		} else {
 			const OwnerData * ownerData = scheduler.insert_owner_const( owner );
 			ASSERT( ownerData != NULL );
-			int ownerJobCount = ownerData->num.JobsCounted
-								+ ownerData->num.JobsRecentlyAdded
+			int ownerJobCount = ownerData->owner_num.JobsCounted
+								+ ownerData->owner_num.JobsRecentlyAdded
 								+ jobs_added_this_transaction;
 
 			int maxJobsPerOwner = scheduler.getMaxJobsPerOwner();
