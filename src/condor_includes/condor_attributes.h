@@ -484,6 +484,7 @@
 #define ATTR_NUM_SHADOW_STARTS  "NumShadowStarts"
 #define ATTR_NUM_SYSTEM_HOLDS  "NumSystemHolds"
 #define ATTR_NUM_USERS  "NumUsers"
+#define ATTR_NUM_OWNERS "NumOwners"
 #define ATTR_OFFLINE  "Offline"
 #define ATTR_OPSYS  "OpSys"
 #define ATTR_OPSYSVER  "OpSysVer"

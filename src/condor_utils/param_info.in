@@ -5437,6 +5437,14 @@ friendly_name=Max jobs in a single submit
 usage=Circuit breaker to prevent an excessive number of a jobs in a single submission. Use to reject one form of mistake
 tags=schedd,schedd
 
+[MAX_RUNNING_SCHEDULER_JOBS_PER_OWNER]
+default=
+reconfig=true
+customization=normal
+friendly_name=Max running DAGs for a single owner
+usage=Ensure that a single user does not monopolize the SCHEDD
+tags=schedd
+
 [NEGOTIATE_ALL_JOBS_IN_CLUSTER]
 default=
 type=string

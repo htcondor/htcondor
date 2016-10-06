@@ -116,17 +116,8 @@ struct shadow_rec
 	~shadow_rec();
 }; 
 
-struct RealOwnerCounters {
-  int JobsCounted; // smaller than Hits by the number of match recs for this Owner.
-  int JobsRecentlyAdded; // zeroed on each sweep, incremented on submission.
-  void clear_counters() { memset(this, 0, sizeof(*this)); }
-  RealOwnerCounters()
-	: JobsCounted(0)
-	, JobsRecentlyAdded(0)
-  {}
-};
 
-// counters within the OwnerData struct that are cleared and re-computed by count_jobs.
+// counters within the SubmitterData struct that are cleared and re-computed by count_jobs.
 struct SubmitterCounters {
   int JobsRunning;
   int JobsIdle;
@@ -160,18 +151,14 @@ struct SubmitterCounters {
   {}
 };
 
-#define USE_OWNERDATA_MAP 1
-
-// The schedd will have one of these records for each OWNER, and ALSO one for each SUBMITTER
-// When jobs are nice, or when the have an AccountingGroup attribute, the owner and the submitter
-// for the job will be different.  Some parts of the Schedd do lookup by OWNER attribute
-// but most parts, (especially count_jobs) do lookup by submitter name.
-struct OwnerData {
+// The schedd will have one of these records for each SUBMITTER, the submitter name is the
+// same as the owner name for jobs that have no NiceUser or AccountingGroup attribute.
+// This record is used to construct submitter ads. 
+struct SubmitterData {
   std::string name;
   const char * Name() const { return name.empty() ? "" : name.c_str(); }
   bool empty() const { return name.empty(); }
   SubmitterCounters num;
-  RealOwnerCounters owner_num; // counts by OWNER rather than by submitter
   time_t LastHitTime; // records the last time we incremented num.Hit, use to expire Owners
   // Time of most recent change in flocking level or
   // successful negotiation at highest current flocking
@@ -180,13 +167,61 @@ struct OwnerData {
   int OldFlockLevel;
   time_t NegotiationTimestamp;
   time_t lastUpdateTime; // the last time we sent updates to the collector
+  bool isOwnerName; // the name of this submitter record is the same as the name of an owner record.
   bool absentUpdateSent;
   std::set<int> PrioSet; // Set of job priorities, used for JobPrioArray attr
-  OwnerData() : LastHitTime(0), FlockLevel(0), OldFlockLevel(0), NegotiationTimestamp(0)
-      , lastUpdateTime(0), absentUpdateSent(false)  { }
+  SubmitterData() : LastHitTime(0), FlockLevel(0), OldFlockLevel(0), NegotiationTimestamp(0)
+      , lastUpdateTime(0), isOwnerName(false), absentUpdateSent(false)  { }
 };
 
-typedef std::map<std::string, OwnerData> OwnerDataMap;
+typedef std::map<std::string, SubmitterData> SubmitterDataMap;
+
+struct RealOwnerCounters {
+  int Hits;                 // counts (possibly overcounts) references to this class, used for mark/sweep expiration code
+  int JobsCounted;          // ALL jobs in the queue owned by this owner at the time count_jobs() was run
+  int JobsRecentlyAdded;    // ALL jobs owned by this owner that were added since count_jobs() was run
+  int JobsIdle;             // does not count Local or Scheduler universe jobs, or Grid jobs that are externally managed.
+  int JobsRunning;
+  int JobsHeld;
+  int LocalJobsIdle;
+  int LocalJobsRunning;
+  int LocalJobsHeld;
+  int SchedulerJobsIdle;
+  int SchedulerJobsRunning;
+  int SchedulerJobsHeld;
+  void clear_counters() { memset(this, 0, sizeof(*this)); }
+  RealOwnerCounters()
+	: Hits(0)
+	, JobsCounted(0)
+	, JobsRecentlyAdded(0)
+	, JobsIdle(0)
+	, JobsRunning(0)
+	, JobsHeld(0)
+	, LocalJobsIdle(0)
+	, LocalJobsRunning(0)
+	, LocalJobsHeld(0)
+	, SchedulerJobsIdle(0)
+	, SchedulerJobsRunning(0)
+	, SchedulerJobsHeld(0)
+  {}
+};
+
+// The schedd will have one of these records for each unique owner, it counts jobs that
+// have that Owner attribute even if the jobs also have an AccountingGroup or NiceUser
+// attribute and thus have a different SUBMITTER name than their OWNER name
+// The counts in this structure are used to enforce MAX_JOBS_PER_OWNER and other PER_OWNER
+// limits, they are NOT sent to the collector and are never seen by the accountant - the SubmitterData is used for accounting
+//
+struct OwnerInfo {
+  std::string name;
+  const char * Name() const { return name.empty() ? "" : name.c_str(); }
+  bool empty() const { return name.empty(); }
+  RealOwnerCounters num; // job counts by OWNER rather than by submitter
+  time_t LastHitTime; // records the last time we incremented num.Hit, use to expire OwnerInfo
+  OwnerInfo() : LastHitTime(0) { }
+};
+
+typedef std::map<std::string, OwnerInfo> OwnerInfoMap;
 
 class match_rec: public ClaimIdParser
 {
@@ -616,7 +651,7 @@ class Scheduler : public Service
 	ScheddStatistics stats;
 	ScheddOtherStatsMgr OtherPoolStats;
 
-	const OwnerData * insert_owner_const(const char*);
+	const OwnerInfo * insert_owner_const(const char*);
 	void incrementRecentlyAdded(const char *);
 
 private:
@@ -688,10 +723,12 @@ private:
 	char*			LocalUnivExecuteDir;
 	int				BadCluster;
 	int				BadProc;
-	OwnerDataMap    Owners;
+	int				NumSubmitters; // number of non-zero entries in Submitters map, set by count_jobs()
+	SubmitterDataMap Submitters;   // map of job counters by submitter, used to make SUBMITTER ads
+	int				NumUniqueOwners;
+	OwnerInfoMap    OwnersInfo;    // map of job counters by owner, used to enforce MAX_*_PER_OWNER limits
 	//JOB_ID_SET      LocalJobIds;  // set of jobid's of local and scheduler universe jobs.
 	HashTable<UserIdentity, GridJobCounts> GridJobOwners;
-	int				NumOwners;
 	time_t			NegotiationRequestTime;
 	int				ExitWhenDone;  // Flag set for graceful shutdown
 	Queue<shadow_rec*> RunnableJobQueue;
@@ -763,7 +800,7 @@ private:
 
 	// utility functions
 	int			count_jobs();
-	bool		fill_submitter_ad(ClassAd & pAd, const OwnerData & Owner, int flock_level, int debug_level);
+	bool		fill_submitter_ad(ClassAd & pAd, const SubmitterData & Owner, int flock_level, int debug_level);
     int			make_ad_list(ClassAdList & ads, ClassAd * pQueryAd=NULL);
     int			command_query_ads(int, Stream* stream);
 	int			command_history(int, Stream* stream);
@@ -772,9 +809,12 @@ private:
 	int			command_query_job_ads(int, Stream* stream);
 	int			command_query_job_aggregates(ClassAd & query, Stream* stream);
 	void   			check_claim_request_timeouts( void );
-	OwnerData * insert_owner(const char*);
-	OwnerData * find_owner(const char*);
-	OwnerData * get_ownerdata(JobQueueJob * job);
+	OwnerInfo     * find_ownerinfo(const char*);
+	OwnerInfo     * insert_ownerinfo(const char*);
+	SubmitterData * insert_submitter(const char*);
+	SubmitterData * find_submitter(const char*);
+	OwnerInfo * get_submitter_and_owner(JobQueueJob * job, SubmitterData * & submitterinfo);
+	OwnerInfo * get_ownerinfo(JobQueueJob * job);
 	void		remove_unused_owners();
 	void			child_exit(int, int);
 	void			scheduler_univ_job_exit(int pid, int status, shadow_rec * srec);

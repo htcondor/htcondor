@@ -631,7 +631,7 @@ Scheduler::Scheduler() :
 
 	ShadowSizeEstimate = 0;
 
-	NumOwners = 0;
+	NumSubmitters = 0;
 	NegotiationRequestTime = 0;
 
 		//gotiator = NULL;
@@ -797,7 +797,7 @@ Scheduler::~Scheduler()
 		daemonCore->Cancel_Timer(checkContactQueue_tid);
 	}
 
-	Owners.clear();
+	Submitters.clear();
 
 	if (_gridlogic) {
 		delete _gridlogic;
@@ -995,7 +995,7 @@ Scheduler::check_claim_request_timeouts()
   no longer flock and/or be advertised).
 */
 bool
-Scheduler::fill_submitter_ad(ClassAd & pAd, const OwnerData & Owner, int flock_level, int dprint_level)
+Scheduler::fill_submitter_ad(ClassAd & pAd, const SubmitterData & Owner, int flock_level, int dprint_level)
 {
 	const bool publish_stats_to_flockers = false;
 	const SubmitterCounters & Counters = Owner.num;
@@ -1208,11 +1208,15 @@ Scheduler::count_jobs()
 
 	time_t current_time = time(0);
 
-	for (OwnerDataMap::iterator it = Owners.begin(); it != Owners.end(); ++it) {
-		OwnerData & Owner = it->second;
-		Owner.num.clear_job_counters();	// clear the jobs counters 
-		Owner.owner_num.clear_counters(); // clear per-owner job counters (including recently added)
-		Owner.PrioSet.clear();
+	for (OwnerInfoMap::iterator it = OwnersInfo.begin(); it != OwnersInfo.end(); ++it) {
+		OwnerInfo & Owner = it->second;
+		Owner.num.clear_counters();	// clear the jobs counters 
+	}
+
+	for (SubmitterDataMap::iterator it = Submitters.begin(); it != Submitters.end(); ++it) {
+		SubmitterData & SubDat = it->second;
+		SubDat.num.clear_job_counters();	// clear the jobs counters 
+		SubDat.PrioSet.clear();
 	}
 
 	GridJobOwners.clear();
@@ -1238,9 +1242,9 @@ Scheduler::count_jobs()
 	while(matches->iterate(rec) == 1) {
 		char *at_sign = strchr(rec->user, '@');
 		if (at_sign) *at_sign = '\0';
-		OwnerData * Owner = insert_owner(rec->user);
-		Owner->num.Hits += 1;
-		Owner->LastHitTime = current_time;
+		SubmitterData * SubDat = insert_submitter(rec->user);
+		SubDat->num.Hits += 1;
+		SubDat->LastHitTime = current_time;
 		if (at_sign) *at_sign = '@';
 		if (rec->shadowRec && !rec->pool) {
 				// Sum up the # of cpus claimed by this user and advertise it as
@@ -1248,50 +1252,57 @@ Scheduler::count_jobs()
 
 			int job_weight = calcSlotWeight(rec);
 			
-			Owner->num.WeightedJobsRunning += job_weight;
-			Owner->num.JobsRunning++;
+			SubDat->num.WeightedJobsRunning += job_weight;
+			SubDat->num.JobsRunning++;
 		} else {				// in remote pool, so add to Flocked count
-			Owner->num.JobsFlocked++;
+			SubDat->num.JobsFlocked++;
 			JobsFlocked++;
 		}
 	}
 
-	// count the owners that have non-zero Hits count.  These are the owners that
+	// count the number of unique owners that have jobs in the queue.
+	NumUniqueOwners = 0;
+	for (OwnerInfoMap::iterator it = OwnersInfo.begin(); it != OwnersInfo.end(); ++it) {
+		const OwnerInfo & Owner = it->second;
+		if (Owner.num.Hits > 0) ++NumUniqueOwners;
+	}
+
+	// count the submitters that have non-zero Hits count.  These are the submitters that
 	// currently have jobs in the queue.
-	NumOwners = 0;
-	for (OwnerDataMap::iterator it = Owners.begin(); it != Owners.end(); ++it) {
-		const OwnerData & Owner = it->second;
-		if (Owner.num.Hits > 0) ++NumOwners;
+	NumSubmitters = 0;
+	for (SubmitterDataMap::iterator it = Submitters.begin(); it != Submitters.end(); ++it) {
+		const SubmitterData & SubDat = it->second;
+		if (SubDat.num.Hits > 0) ++NumSubmitters;
 	}
 
 	// set FlockLevel for owners
 	if (MaxFlockLevel) {
 		int flock_increment = param_integer("FLOCK_INCREMENT",1,1);
 
-		for (OwnerDataMap::iterator it = Owners.begin(); it != Owners.end(); ++it) {
-			OwnerData & Owner = it->second;
+		for (SubmitterDataMap::iterator it = Submitters.begin(); it != Submitters.end(); ++it) {
+			SubmitterData & SubDat = it->second;
 
 			// set negotiation timestamp to current time for owners that have no idle jobs.
-			if ( ! Owner.num.JobsIdle) {
+			if ( ! SubDat.num.JobsIdle) {
 				//PRAGMA_REMIND("tj: do we even need to do this?")
-				Owner.NegotiationTimestamp = current_time;
+				SubDat.NegotiationTimestamp = current_time;
 				continue;
 			}
 
 			// if this owner hasn't received a negotiation in a long time,
 			// then we should flock -- we need this case if the negotiator
 			// is down or simply ignoring us because our priority is so low
-			if ((current_time - Owner.NegotiationTimestamp >
-				 SchedDInterval.getDefaultInterval()*2) && (Owner.FlockLevel < MaxFlockLevel)) {
-				int old_flocklevel = Owner.FlockLevel;
+			if ((current_time - SubDat.NegotiationTimestamp >
+				 SchedDInterval.getDefaultInterval()*2) && (SubDat.FlockLevel < MaxFlockLevel)) {
+				int old_flocklevel = SubDat.FlockLevel;
 				int new_flock_level = MIN(old_flocklevel + flock_increment, MaxFlockLevel);
-				Owner.FlockLevel = new_flock_level;
-				Owner.NegotiationTimestamp = current_time;
+				SubDat.FlockLevel = new_flock_level;
+				SubDat.NegotiationTimestamp = current_time;
 				dprintf(D_ALWAYS,
 						"Increasing flock level for %s to %d from %d. (Due to lack of activity from negotiator)\n",
-						Owner.Name(), new_flock_level, old_flocklevel);
+						SubDat.Name(), new_flock_level, old_flocklevel);
 			}
-			FlockLevel = MAX(Owner.FlockLevel, FlockLevel);
+			FlockLevel = MAX(SubDat.FlockLevel, FlockLevel);
 		}
 	}
 
@@ -1307,7 +1318,7 @@ Scheduler::count_jobs()
 			SchedUniverseJobsRunning );
 	dprintf( D_FULLDEBUG, "SchedUniverseJobsIdle = %d\n",
 			SchedUniverseJobsIdle );
-	dprintf( D_FULLDEBUG, "N_Owners = %d\n", NumOwners );
+	dprintf( D_FULLDEBUG, "NumSubmitters = %d\n", NumSubmitters );
 	dprintf( D_FULLDEBUG, "MaxJobsRunning = %d\n", MaxJobsRunning );
 	dprintf( D_FULLDEBUG, "MaxRunningSchedulerJobsPerOwner = %d\n", MaxRunningSchedulerJobsPerOwner );
 
@@ -1318,7 +1329,8 @@ Scheduler::count_jobs()
 	// growing PrioRec... Add 5 just to be sure... :^) -Todd 8/97
 	grow_prio_recs( JobsRunning + JobsIdle + 5 );
 	
-	cad->Assign(ATTR_NUM_USERS, NumOwners);
+	cad->Assign(ATTR_NUM_USERS, NumSubmitters);
+	cad->Assign(ATTR_NUM_OWNERS, NumUniqueOwners);
 	cad->Assign(ATTR_MAX_JOBS_RUNNING, MaxJobsRunning);
 	if (MaxRunningSchedulerJobsPerOwner >= 0 && MaxRunningSchedulerJobsPerOwner < MaxJobsPerOwner) {
 		cad->Assign( "MaxRunningSchedulerJobsPerOwner", MaxRunningSchedulerJobsPerOwner );
@@ -1417,7 +1429,7 @@ Scheduler::count_jobs()
 	int num_updates = daemonCore->sendUpdates(UPDATE_SCHEDD_AD, cad, NULL, true);
 	dprintf( D_FULLDEBUG, 
 			 "Sent HEART BEAT ad to %d collectors. Number of active submittors=%d\n",
-			 num_updates, NumOwners );
+			 num_updates, NumSubmitters );
 
 	// send the schedd ad to our flock collectors too, so we will
 	// appear in condor_q -global and condor_status -schedd
@@ -1455,15 +1467,15 @@ Scheduler::count_jobs()
 	pAd.ChainToAd(m_adBase);
 	pAd.Assign(ATTR_SUBMITTER_TAG,HOME_POOL_SUBMITTER_TAG);
 
-	for (OwnerDataMap::iterator it = Owners.begin(); it != Owners.end(); ++it) {
-		OwnerData & Owner = it->second;
-		const char * owner_name = Owner.Name();
-		if (Owner.num.Hits == 0 && Owner.absentUpdateSent) {
+	for (SubmitterDataMap::iterator it = Submitters.begin(); it != Submitters.end(); ++it) {
+		SubmitterData & SubDat = it->second;
+		const char * owner_name = SubDat.Name();
+		if (SubDat.num.Hits == 0 && SubDat.absentUpdateSent) {
 			dprintf( D_FULLDEBUG, "Skipping send ad to collectors for %s@%s Hit=%d Tot=%d Idle=%d Run=%d\n",
-				owner_name, UidDomain, Owner.num.Hits, Owner.num.JobsCounted, Owner.num.JobsIdle, Owner.num.JobsRunning );
+				owner_name, UidDomain, SubDat.num.Hits, SubDat.num.JobsCounted, SubDat.num.JobsIdle, SubDat.num.JobsRunning );
 			continue;
 		}
-		if ( !fill_submitter_ad(pAd, Owner, -1, D_FULLDEBUG) ) continue;
+		if ( !fill_submitter_ad(pAd, SubDat, -1, D_FULLDEBUG) ) continue;
 
 #if defined(HAVE_DLOPEN)
 	  ScheddPluginManager::Update(UPDATE_SUBMITTOR_AD, &pAd);
@@ -1471,10 +1483,10 @@ Scheduler::count_jobs()
 
 		// Update non-flock collectors
 		num_updates = daemonCore->sendUpdates(UPDATE_SUBMITTOR_AD, &pAd, NULL, true);
-		Owner.lastUpdateTime = update_time;
-		Owner.absentUpdateSent = (Owner.num.Hits == 0);
+		SubDat.lastUpdateTime = update_time;
+		SubDat.absentUpdateSent = (SubDat.num.Hits == 0);
 		dprintf( D_FULLDEBUG, "Sent ad to %d collectors for %s@%s Hit=%d Tot=%d Idle=%d Run=%d\n",
-			num_updates, owner_name, UidDomain, Owner.num.Hits, Owner.num.JobsCounted, Owner.num.JobsIdle, Owner.num.JobsRunning );
+			num_updates, owner_name, UidDomain, SubDat.num.Hits, SubDat.num.JobsCounted, SubDat.num.JobsIdle, SubDat.num.JobsRunning );
 	}
 
 	// update collector of the pools with which we are flocking, if
@@ -1500,30 +1512,30 @@ Scheduler::count_jobs()
 			// and (JobsRunning + JobsFlocked) - JobsFlockedHere as JobsFlocked
 			// i.e. the JobsFlocked count for flocked pools is a count of
 			// 'jobs running elsewhere' including jobs running in the schedd's local pool.
-			for (OwnerDataMap::iterator it = Owners.begin(); it != Owners.end(); ++it) {
-				OwnerData & Owner = it->second;
-				Owner.num.JobsFlockedHere = 0;
-				Owner.num.WeightedJobsFlockedHere = 0;
+			for (SubmitterDataMap::iterator it = Submitters.begin(); it != Submitters.end(); ++it) {
+				SubmitterData & SubDat = it->second;
+				SubDat.num.JobsFlockedHere = 0;
+				SubDat.num.WeightedJobsFlockedHere = 0;
 			}
 			matches->startIterations();
 			match_rec *mRec;
 			while(matches->iterate(mRec) == 1) {
 				char *at_sign = strchr(mRec->user, '@');
 				if (at_sign) *at_sign = '\0';
-				OwnerData * Owner = insert_owner(mRec->user);
+				SubmitterData * SubDat = insert_submitter(mRec->user);
 				if (at_sign) *at_sign = '@';
 				if (mRec->shadowRec && mRec->pool &&
 					!strcmp(mRec->pool, flock_neg->pool())) {
-					Owner->num.JobsFlockedHere++;
+					SubDat->num.JobsFlockedHere++;
 
-					Owner->num.WeightedJobsFlockedHere += calcSlotWeight(mRec);
+					SubDat->num.WeightedJobsFlockedHere += calcSlotWeight(mRec);
 				}
 			}
 
 			// update submitter ad in this pool for each owner
-			for (OwnerDataMap::iterator it = Owners.begin(); it != Owners.end(); ++it) {
-				OwnerData & Owner = it->second;
-				if ( !fill_submitter_ad(pAd,Owner,flock_level,D_NEVER) ) {
+			for (SubmitterDataMap::iterator it = Submitters.begin(); it != Submitters.end(); ++it) {
+				SubmitterData & SubDat = it->second;
+				if ( !fill_submitter_ad(pAd,SubDat,flock_level,D_NEVER) ) {
 					// if we're no longer flocking with this pool and
 					// we're not running jobs in the pool, then don't send
 					// an update
@@ -1541,7 +1553,7 @@ Scheduler::count_jobs()
 
 	pAd.Delete(ATTR_SUBMITTER_TAG);
 
-	for (OwnerDataMap::iterator it = Owners.begin(); it != Owners.end(); ++it) {
+	for (SubmitterDataMap::iterator it = Submitters.begin(); it != Submitters.end(); ++it) {
 		it->second.OldFlockLevel = it->second.FlockLevel;
 	}
 
@@ -1588,31 +1600,31 @@ Scheduler::count_jobs()
 	// This is done by looking at the Hits counter that was set above.
 	// that are not in the current list (the current list has only owners w/ idle jobs)
 	MyString submitter_name;
-	for (OwnerDataMap::iterator it = Owners.begin(); it != Owners.end(); ++it) {
-		OwnerData & Owner = it->second;
+	for (SubmitterDataMap::iterator it = Submitters.begin(); it != Submitters.end(); ++it) {
+		SubmitterData & SubDat = it->second;
 		// If this Owner has any jobs in the queue or match records,
 		// we don't want to send the, so we continue to the next
-		if (Owner.num.Hits > 0) continue;
+		if (SubDat.num.Hits > 0) continue;
 
 #ifndef WIN32
 		// mark user creds for sweeping.
-		dprintf( D_ALWAYS, "ZKM: creating mark file for user %s\n", Owner.Name());
-		credmon_mark_creds_for_sweeping(Owner.Name());
+		dprintf( D_ALWAYS, "ZKM: creating mark file for user %s\n", SubDat.Name());
+		credmon_mark_creds_for_sweeping(SubDat.Name());
 #endif // WIN32
 
-		submitter_name.formatstr("%s@%s", Owner.Name(), UidDomain);
-		int old_flock_level = Owner.OldFlockLevel;
+		submitter_name.formatstr("%s@%s", SubDat.Name(), UidDomain);
+		int old_flock_level = SubDat.OldFlockLevel;
 
 		// expire and mark for removal Owners that have not had any hits (i.e jobs in the queue)
 		// for more than AbsentSubmitterLifetime. 
-		if ( ! Owner.LastHitTime) {
+		if ( ! SubDat.LastHitTime) {
 			// this is unxpected, we really should never get here with LastHitTime of 0, but in case
 			// we do. start the decay timer now.
-			Owner.LastHitTime = current_time;
-		} else if (AbsentSubmitterLifetime && (current_time - Owner.LastHitTime > AbsentSubmitterLifetime)) {
+			SubDat.LastHitTime = current_time;
+		} else if (AbsentSubmitterLifetime && (current_time - SubDat.LastHitTime > AbsentSubmitterLifetime)) {
 			// Now that we've finished using Owner.Name, we can
 			// free it.  this marks the entry as unused
-			Owner.name.clear();
+			SubDat.name.clear();
 		}
 
 		pAd.Assign(ATTR_NAME, submitter_name.Value());
@@ -1624,20 +1636,20 @@ Scheduler::count_jobs()
 	ScheddPluginManager::Update(UPDATE_SUBMITTOR_AD, &pAd);
 #endif
 
-		if (Owner.lastUpdateTime == update_time) continue; // if we already sent this owner, skip updating
-		if (Owner.lastUpdateTime + AbsentSubmitterUpdateRate > update_time) {
+		if (SubDat.lastUpdateTime == update_time) continue; // if we already sent this owner, skip updating
+		if (SubDat.lastUpdateTime + AbsentSubmitterUpdateRate > update_time) {
 			dprintf( D_FULLDEBUG, "Skipping absent submitter ad for %s. lastupdate=%d Hit=%d Tot=%d Idle=%d Run=%d\n",
-					submitter_name.c_str(), (int)(update_time - Owner.lastUpdateTime),
-					Owner.num.Hits, Owner.num.JobsCounted, Owner.num.JobsIdle, Owner.num.JobsRunning );
+					submitter_name.c_str(), (int)(update_time - SubDat.lastUpdateTime),
+					SubDat.num.Hits, SubDat.num.JobsCounted, SubDat.num.JobsIdle, SubDat.num.JobsRunning );
 			continue; // we updated this owner recently
 		}
 
 		// Update collectors
 		int num_udates = daemonCore->sendUpdates(UPDATE_SUBMITTOR_AD, &pAd, NULL, true);
 		dprintf(D_FULLDEBUG, "Sent absent submitter ad to %d collectors for %s. lastupdate=%d Hit=%d Tot=%d Idle=%d Run=%d\n",
-				num_udates, submitter_name.c_str(), (int)(update_time - Owner.lastUpdateTime),
-				Owner.num.Hits, Owner.num.JobsCounted, Owner.num.JobsIdle, Owner.num.JobsRunning );
-		Owner.lastUpdateTime = update_time;
+				num_udates, submitter_name.c_str(), (int)(update_time - SubDat.lastUpdateTime),
+				SubDat.num.Hits, SubDat.num.JobsCounted, SubDat.num.JobsIdle, SubDat.num.JobsRunning );
+		SubDat.lastUpdateTime = update_time;
 
 	  // also update all of the flock hosts
 	  Daemon *da;
@@ -1752,8 +1764,8 @@ int Scheduler::make_ad_list(
    // submitter ad, note that chained ad's dont delete the 
    // chain parent when they are deleted, so it's safe to 
    // put these ads into the list. 
-   for (OwnerDataMap::iterator it = Owners.begin(); it != Owners.end(); ++it) {
-      const OwnerData & Owner = it->second;
+   for (SubmitterDataMap::iterator it = Submitters.begin(); it != Submitters.end(); ++it) {
+      const SubmitterData & Owner = it->second;
       if (Owner.empty()) continue;
       cad = new ClassAd();
       cad->ChainToAd(m_adBase);
@@ -2548,8 +2560,6 @@ count_a_job(JobQueueJob* job, const JOB_ID_KEY& /*jid*/, void*)
 		return 0;
 	}
 
-	job->ownerdata = NULL; // we will set this later when we fetch the ownerdata
-
 	if (job->LookupInteger(ATTR_JOB_STATUS, status) == 0) {
 		dprintf(D_ALWAYS, "Job has no %s attribute.  Ignoring...\n",
 				ATTR_JOB_STATUS);
@@ -2602,49 +2612,23 @@ count_a_job(JobQueueJob* job, const JOB_ID_KEY& /*jid*/, void*)
 	}
 	
 
-#if 1 // cache ownerdata pointer in job object
 	// because we set job->ownerdata to NULL above, this will refresh
 	// the job->ownerdata pointer. we do this in case the accounting group
 	// or niceness has been queue-edited or otherwise changed.
-	OwnerData * Owner = scheduler.get_ownerdata(job);
-	if ( ! Owner) {
+	SubmitterData * SubData = NULL;
+	OwnerInfo * OwnInfo = scheduler.get_submitter_and_owner(job, SubData);
+	if ( ! OwnInfo) {
 		dprintf(D_ALWAYS, "Job has no %s attribute.  Ignoring...\n", ATTR_OWNER);
 		return 0;
 	}
-#else
-	// Sometimes we need the read username owner, not the accounting group
-	MyString real_owner;
-	if( ! job->LookupString(ATTR_OWNER,real_owner) ) {
-		dprintf(D_ALWAYS, "Job has no %s attribute.  Ignoring...\n",
-				ATTR_OWNER);
-		return 0;
-	}
-
-	// calculate owner for per submittor information.
-	job->LookupString(ATTR_ACCOUNTING_GROUP,owner_buf);	// TODDCORE
-	if ( owner_buf.Length() == 0 ) {
-		owner_buf = real_owner;
-	}
-	owner = owner_buf.Value();
-
-	// grab the domain too, if it exists
-	job->LookupString(ATTR_NT_DOMAIN, domain);
-	
-	// With NiceUsers, the number of owners is
-	// not the same as the number of submittors.  So, we first
-	// check if this job is being submitted by a NiceUser, and
-	// if so, insert it as a new entry in the "Owner" table
-	if( job->LookupInteger( ATTR_NICE_USER, niceUser ) && niceUser ) {
-		MyString tmp(owner); // use a tmp copy of owner in case it already refers to owner_buf
-		owner_buf.formatstr("%s.%s",NiceUserName, tmp.c_str());
-		owner = owner_buf.Value();
-	}
-#endif
 
 	// increment our count of the number of job ads in the queue
 	scheduler.JobsTotalAds++;
 
     time_t now = time(NULL);
+    OwnInfo->LastHitTime = now;
+    SubData->LastHitTime = now;
+
     ScheddOtherStats * other_stats = NULL;
     if (scheduler.OtherPoolStats.AnyEnabled()) {
         other_stats = scheduler.OtherPoolStats.Matches(*job, now);
@@ -2694,34 +2678,16 @@ count_a_job(JobQueueJob* job, const JOB_ID_KEY& /*jid*/, void*)
     }
     #undef OTHER
 
-#if 1  // cache ownerdata pointer in job object
-#else
-	// insert owner even if REMOVED or HELD for condor_q -{global|sub}
-	// this function makes its own copies of the memory passed in 
-	OwnerData * Owner = scheduler.insert_owner(owner);
-	job->ownerdata = Owner;
-#endif
-	SubmitterCounters * Counters = &Owner->num;
-	RealOwnerCounters * RealOwnerCounts = &Owner->owner_num;
+	// update per-submitter and per-owner counters
+	SubmitterCounters * Counters = &SubData->num;
+	RealOwnerCounters * OwnerCounts = &OwnInfo->num;
 
-	std::string realowner;
-	job->LookupString(ATTR_OWNER,realowner); // we can't get here if the job has no ATTR_OWNER
-	if (realowner != Owner->Name()) {
-		OwnerData * RealOwner = scheduler.insert_owner(realowner.c_str());
-		RealOwner->LastHitTime = now;
-		RealOwnerCounts = &RealOwner->owner_num;
-	}
-
+	// Hits also counts matchrecs, which aren't jobs. (hits is sort of a reference count)
 	Counters->Hits += 1;
-	Owner->LastHitTime = now;
-	// Hits also counts matchrecs, which aren't jobs.
 	Counters->JobsCounted += 1;
-	RealOwnerCounts->JobsCounted += 1;
-	// This way we know we aren't resetting unless we've actually counted
-	// something during a sweep.
-	//Counters->JobsRecentlyAdded = 0;
-	RealOwnerCounts->JobsRecentlyAdded = 0;
-
+	
+	OwnerCounts->Hits += 1;
+	OwnerCounts->JobsCounted += 1;
 
 	if ( (universe != CONDOR_UNIVERSE_GRID) &&	// handle Globus below...
 		 (!service_this_universe(universe,job))  )
@@ -2734,6 +2700,8 @@ count_a_job(JobQueueJob* job, const JOB_ID_KEY& /*jid*/, void*)
 			// killed. cur_hosts tells us which these are.
 			scheduler.SchedUniverseJobsRunning += cur_hosts;
 			scheduler.SchedUniverseJobsIdle += (max_hosts - cur_hosts);
+			OwnerCounts->SchedulerJobsRunning += cur_hosts;
+			OwnerCounts->SchedulerJobsIdle += (max_hosts - cur_hosts);
 			Counters->SchedulerJobsRunning += cur_hosts;
 			Counters->SchedulerJobsIdle += (max_hosts - cur_hosts);
 		}
@@ -2743,6 +2711,8 @@ count_a_job(JobQueueJob* job, const JOB_ID_KEY& /*jid*/, void*)
 			// killed. cur_hosts tells us which these are.
 			scheduler.LocalUniverseJobsRunning += cur_hosts;
 			scheduler.LocalUniverseJobsIdle += (max_hosts - cur_hosts);
+			OwnerCounts->LocalJobsRunning += cur_hosts;
+			OwnerCounts->LocalJobsIdle += (max_hosts - cur_hosts);
 			Counters->LocalJobsRunning += cur_hosts;
 			Counters->LocalJobsIdle += (max_hosts - cur_hosts);
 		}
@@ -2841,13 +2811,14 @@ count_a_job(JobQueueJob* job, const JOB_ID_KEY& /*jid*/, void*)
 		{
 			int job_prio;
 			if ( job->LookupInteger(ATTR_JOB_PRIO,job_prio) ) {
-				Owner->PrioSet.insert( job_prio );
+				SubData->PrioSet.insert( job_prio );
 			}
 		}
 			// Update Owners array JobsIdle
+		OwnerCounts->JobsIdle += (max_hosts - cur_hosts);
 		Counters->JobsIdle += (max_hosts - cur_hosts);
 
-		
+
 			// If we're biasing by slot weight, and the job is idle, and everything parsed...
 		if ((scheduler.m_use_slot_weights) && (cur_hosts == 0) && scheduler.slotWeightMapAd) {
 
@@ -2868,6 +2839,7 @@ count_a_job(JobQueueJob* job, const JOB_ID_KEY& /*jid*/, void*)
 			// We do it in Scheduler::count_jobs().
 
 	} else if (status == HELD) {
+		OwnerCounts->JobsHeld++;
 		Counters->JobsHeld++;
 	}
 
@@ -2956,79 +2928,136 @@ service_this_universe(int universe, ClassAd* job)
 void
 Scheduler::incrementRecentlyAdded(const char * owner)
 {
-	OwnerData * ownerData = insert_owner( owner );
-	ownerData->owner_num.JobsRecentlyAdded += 1;
+	OwnerInfo * ownerInfo = insert_ownerinfo( owner );
+	ownerInfo->num.Hits += 1;
+	ownerInfo->num.JobsRecentlyAdded += 1;
 }
 
-const OwnerData *
-Scheduler::insert_owner_const(const char * owner)
+SubmitterData *
+Scheduler::find_submitter(const char * name)
 {
-	return insert_owner(owner);
-}
-
-OwnerData *
-Scheduler::find_owner(const char * owner)
-{
-	OwnerDataMap::iterator found = Owners.find(owner);
-	if (found != Owners.end())
+	SubmitterDataMap::iterator found = Submitters.find(name);
+	if (found != Submitters.end())
 		return &found->second;
 	return NULL;
 }
 
-OwnerData *
-Scheduler::insert_owner(const char * owner)
+SubmitterData *
+Scheduler::insert_submitter(const char * name)
 {
-	OwnerData * Owner = find_owner(owner);
+	SubmitterData * Subdat = find_submitter(name);
+	if (Subdat) return Subdat;
+	Subdat = &Submitters[name];
+	Subdat->name = name;
+	return Subdat;
+}
+
+OwnerInfo *
+Scheduler::find_ownerinfo(const char * owner)
+{
+	OwnerInfoMap::iterator found = OwnersInfo.find(owner);
+	if (found != OwnersInfo.end())
+		return &found->second;
+	return NULL;
+}
+
+OwnerInfo *
+Scheduler::insert_ownerinfo(const char * owner)
+{
+	OwnerInfo * Owner = find_ownerinfo(owner);
 	if (Owner) return Owner;
-	Owner = &Owners[owner];
+	Owner = &OwnersInfo[owner];
 	Owner->name = owner;
 	return Owner;
 }
 
-// lookup (and cache) pointer to the jobs submitter instance data (aka the OwnerData)
-OwnerData *
-Scheduler::get_ownerdata(JobQueueJob * job)
+const OwnerInfo *
+Scheduler::insert_owner_const(const char * name)
+{
+	return insert_ownerinfo(name);
+}
+
+// lookup (and cache) pointer to the jobs owner instance data
+OwnerInfo *
+Scheduler::get_ownerinfo(JobQueueJob * job)
 {
 	if ( ! job) return NULL;
-	if (job->ownerdata) return job->ownerdata;
+	if ( ! job->ownerinfo) {
+		std::string real_owner;
+		if ( ! job->LookupString(ATTR_OWNER,real_owner) ) {
+			return NULL;
+		}
+		const char *owner = real_owner.c_str();
+		job->ownerinfo = scheduler.insert_ownerinfo(owner);
+	}
+	return job->ownerinfo;
+}
 
-	// Sometimes we need the read username owner, not the accounting group
+// lookup (and cache) pointer to the jobs submitter instance data (aka the OwnerData)
+OwnerInfo *
+Scheduler::get_submitter_and_owner(JobQueueJob * job, SubmitterData * & submitterdata)
+{
+	submitterdata = NULL;
+	if ( ! job) return NULL;
+
+	// if the cached submitterdata pointer is valid and non-null, we can just use it
+	if ( ! (job->dirty_flags & JQJ_CHACHE_DIRTY_SUBMITTERDATA)) {
+		submitterdata = job->submitterdata;
+	}
+	if (submitterdata && job->ownerinfo) {
+		return job->ownerinfo;
+	}
+
+	// otherwise, we need to get owner name and construct submitter name
+	// and update the cached pointers to ownerinfo and submitterdata
+
 	std::string real_owner;
 	if ( ! job->LookupString(ATTR_OWNER,real_owner) ) {
 		return NULL;
 	}
 	const char *owner = real_owner.c_str();
-
-	// calculate owner for per submittor information.
-	std::string owner_alias;
-	job->LookupString(ATTR_ACCOUNTING_GROUP,owner_alias); // TODDCORE
-	if ( ! owner_alias.empty()) {
-		owner = owner_alias.c_str();
+	if ( ! job->ownerinfo) {
+		job->ownerinfo = scheduler.insert_ownerinfo(owner);
 	}
 
-	// With NiceUsers, the number of owners is
-	// not the same as the number of submittors.  So, we first
-	// check if this job is being submitted by a NiceUser, and
-	// if so, insert it as a new entry in the "Owner" table
+	// in the simple case, owner name and submitter name are the same.
+	// we start by assuming that will be the case.
+	const char * submitter = owner;
+
+	// if there is an accounting group, then the submitter name will be that.
+	std::string alias;
+	job->LookupString(ATTR_ACCOUNTING_GROUP,alias); // TODDCORE
+	if ( ! alias.empty() && (alias != real_owner)) {
+		submitter = alias.c_str();
+	}
+
+	// With NiceUsers, we build a yet another submitter name
+	// so we can account for nice jobs independently of regular jobs
 	int niceUser = 0;
 	if (job->LookupInteger(ATTR_NICE_USER, niceUser) && niceUser) {
-		MyString tmp(owner); // use a tmp copy of owner in case it already refers to owner_buf
-		formatstr(owner_alias, "%s.%s", NiceUserName, tmp.c_str());
-		owner = owner_alias.c_str();
+		MyString tmp(submitter); // use a tmp copy of submitter name in case it already refers to alias
+		formatstr(alias, "%s.%s", NiceUserName, tmp.c_str());
+		submitter = alias.c_str();
 	}
 
-	job->ownerdata = scheduler.insert_owner(owner);
-	return job->ownerdata;
+	// lookup/insert a submitterdata record for this submitter name and cache the resulting pointer in the job object.
+	job->submitterdata = scheduler.insert_submitter(submitter);
+	if (job->submitterdata) {
+		job->dirty_flags &= ~JQJ_CHACHE_DIRTY_SUBMITTERDATA;
+		job->submitterdata->isOwnerName = (owner == submitter);
+		submitterdata = job->submitterdata;
+	}
+	return job->ownerinfo;
 }
 
 
 void
 Scheduler::remove_unused_owners()
 {
-	for (OwnerDataMap::iterator it = Owners.begin(); it != Owners.end(); ) {
-		OwnerDataMap::iterator prev = it++;
+	for (SubmitterDataMap::iterator it = Submitters.begin(); it != Submitters.end(); ) {
+		SubmitterDataMap::iterator prev = it++;
 		if (prev->second.empty()) {
-			Owners.erase(prev);
+			Submitters.erase(prev);
 		}
 	}
 }
@@ -6333,7 +6362,7 @@ MainScheddNegotiate::scheduler_handleNegotiationFinished( Sock *sock )
 void
 Scheduler::negotiationFinished( char const *owner, char const *remote_pool, bool satisfied )
 {
-	OwnerData * Owner = find_owner(owner);
+	SubmitterData * Owner = find_submitter(owner);
 	if ( ! Owner) {
 		dprintf(D_ALWAYS, "Can't find owner %s in Owners array!\n", owner);
 		return;
@@ -6700,7 +6729,7 @@ Scheduler::negotiate(int command, Stream* s)
 	// find owner in the Owners array
 	char *at_sign = strchr(owner, '@');
 	if (at_sign) *at_sign = '\0';
-	OwnerData * Owner = find_owner(owner);
+	SubmitterData * Owner = find_submitter(owner);
 	if ( ! Owner) {
 		dprintf(D_ALWAYS, "Can't find owner %s in Owners array!\n", owner);
 		jobs = 0;
@@ -7616,7 +7645,7 @@ find_idle_local_jobs( JobQueueJob *job, const JOB_ID_KEY&, void* )
 			// if there is a per-owner scheduler job limit that is smaller than the per-owner job limit
 			if (scheduler.MaxRunningSchedulerJobsPerOwner > 0 &&
 			    scheduler.MaxRunningSchedulerJobsPerOwner < scheduler.MaxJobsPerOwner) {
-				OwnerData * owndat = scheduler.get_ownerdata(job);
+				OwnerInfo * owndat = scheduler.get_ownerinfo(job);
 				if (owndat->num.SchedulerJobsRunning >= scheduler.MaxRunningSchedulerJobsPerOwner) {
 					dprintf( D_FULLDEBUG,
 							 "Skipping idle scheduler universe job %d.%d because %s already has %d Scheduler jobs running\n",
@@ -9606,12 +9635,19 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	// if we have a per-user scheduler jobs limit.  then also keep the
 	//  per-user count of idle and running scheduler jobs up-to-date
 	if (MaxRunningSchedulerJobsPerOwner >= 0 && MaxRunningSchedulerJobsPerOwner < MaxJobsPerOwner) {
-		OwnerData * owndat = get_ownerdata(userJob);
-		if (owndat) {
-			if (owndat->num.SchedulerJobsIdle > 0) {
-				owndat->num.SchedulerJobsIdle--;
+		SubmitterData * subdat = NULL;
+		OwnerInfo * owninfo = get_submitter_and_owner(userJob, subdat);
+		if (owninfo) {
+			if (owninfo->num.SchedulerJobsIdle > 0) {
+				owninfo->num.SchedulerJobsIdle--;
 			}
-			owndat->num.SchedulerJobsRunning++;
+			owninfo->num.SchedulerJobsRunning++;
+		}
+		if (subdat) {
+			if (subdat->num.SchedulerJobsIdle > 0) {
+				subdat->num.SchedulerJobsIdle--;
+			}
+			subdat->num.SchedulerJobsRunning++;
 		}
 	}
 
@@ -13297,7 +13333,7 @@ Scheduler::invalidate_ads()
 		// Update collectors
 	daemonCore->sendUpdates(INVALIDATE_SCHEDD_ADS, cad, NULL, false);
 
-	if (NumOwners == 0) {
+	if (NumSubmitters == 0) {
 		// no submitter ads to invalidate
 		delete cad;
 		return;
@@ -13308,8 +13344,8 @@ Scheduler::invalidate_ads()
 	cad->Assign( ATTR_SCHEDD_NAME, Name );
 	cad->Assign( ATTR_MY_ADDRESS, daemonCore->publicNetworkIpAddr() );
 
-	for (OwnerDataMap::iterator it = Owners.begin(); it != Owners.end(); ++it) {
-		const OwnerData & Owner = it->second;
+	for (SubmitterDataMap::iterator it = Submitters.begin(); it != Submitters.end(); ++it) {
+		const SubmitterData & Owner = it->second;
 		daemonCore->sendUpdates(INVALIDATE_SUBMITTOR_ADS, cad, NULL, false);
 		MyString submitter;
 		submitter.formatstr("%s@%s", Owner.Name(), UidDomain);
@@ -14000,7 +14036,8 @@ Scheduler::publish( ClassAd *cad ) {
 	cad->Assign( "JobsRunning", JobsRunning );
 	cad->Assign( "BadCluster", BadCluster );
 	cad->Assign( "BadProc", BadProc );
-	cad->Assign( "N_Owners", NumOwners );
+	cad->Assign( "NumOwners", NumUniqueOwners );
+	cad->Assign( "NumSubmitters", NumSubmitters );
 	cad->Assign( "NegotiationRequestTime", (int)NegotiationRequestTime  );
 	cad->Assign( "ExitWhenDone", ExitWhenDone );
 	cad->Assign( "StartJobTimer", StartJobTimer );

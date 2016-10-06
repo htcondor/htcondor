@@ -2080,10 +2080,10 @@ NewProc(int cluster_id)
 			// MAX_JOBS_PER_OWNER.
 			dprintf( D_FULLDEBUG, "Not enforcing MAX_JOBS_PER_OWNER for submit without owner of cluster %d.\n", cluster_id );
 		} else {
-			const OwnerData * ownerData = scheduler.insert_owner_const( owner );
-			ASSERT( ownerData != NULL );
-			int ownerJobCount = ownerData->owner_num.JobsCounted
-								+ ownerData->owner_num.JobsRecentlyAdded
+			const OwnerInfo * ownerInfo = scheduler.insert_owner_const( owner );
+			ASSERT( ownerInfo != NULL );
+			int ownerJobCount = ownerInfo->num.JobsCounted
+								+ ownerInfo->num.JobsRecentlyAdded
 								+ jobs_added_this_transaction;
 
 			int maxJobsPerOwner = scheduler.getMaxJobsPerOwner();
@@ -2520,6 +2520,7 @@ enum {
 	//catStatus       = 0x0008, //
 	catDirtyPrioRec = 0x0010,
 	catTargetScope  = 0x0020,
+	catSubmitterIdent = 0x0040,
 };
 
 typedef struct attr_ident_pair {
@@ -2537,17 +2538,17 @@ typedef struct attr_ident_pair {
 // NOTE: !!!
 #define FILL(attr,cat) { attr, id##attr, cat }
 static const ATTR_IDENT_PAIR aSpecialSetAttrs[] = {
-	FILL(ATTR_ACCOUNTING_GROUP,   catDirtyPrioRec),
+	FILL(ATTR_ACCOUNTING_GROUP,   catDirtyPrioRec | catSubmitterIdent),
 	FILL(ATTR_CLUSTER_ID,         catJobId),
 	FILL(ATTR_CRON_DAYS_OF_MONTH, catCron),
 	FILL(ATTR_CRON_DAYS_OF_WEEK,  catCron),
 	FILL(ATTR_CRON_HOURS,         catCron),
 	FILL(ATTR_CRON_MINUTES,       catCron),
 	FILL(ATTR_CRON_MONTHS,        catCron),
-	FILL(ATTR_JOB_PRIO,           catJobObj | catDirtyPrioRec),
+	FILL(ATTR_JOB_PRIO,           catDirtyPrioRec),
 	FILL(ATTR_JOB_STATUS,         catJobObj),
 	FILL(ATTR_JOB_UNIVERSE,       catJobObj),
-	FILL(ATTR_NICE_USER,          0),
+	FILL(ATTR_NICE_USER,          catSubmitterIdent),
 	FILL(ATTR_NUM_JOB_RECONNECTS, 0),
 	FILL(ATTR_OWNER,              0),
 	FILL(ATTR_PROC_ID,            catJobId),
@@ -2817,6 +2818,12 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 
 			// Also update the owner history hash table
 		AddOwnerHistory(owner);
+
+		if (job) {
+			// if editing (rather than creating) a job, update ownerinfo pointer, and mark submitterdata as dirty
+			job->ownerinfo = const_cast<OwnerInfo*>(scheduler.insert_owner_const(owner));
+			job->dirty_flags |= JQJ_CHACHE_DIRTY_SUBMITTERDATA;
+		}
 	}
 	else if (attr_id == idATTR_NICE_USER) {
 			// Because we're setting a new value for nice user, we
@@ -3068,6 +3075,9 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 					attr_name,attr_value);
 		}
 	}
+	if (attr_category & catSubmitterIdent) {
+		if (job) { job->dirty_flags |= JQJ_CHACHE_DIRTY_SUBMITTERDATA; }
+	}
 
 	int old_nondurable_level = 0;
 	if( flags & NONDURABLE ) {
@@ -3090,6 +3100,9 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 
 		ScheduleJobQueueLogFlush();
 	}
+
+	// future
+	//if (attr_category & catJobObj) { if (job) { job->dirty_flags |= JQJ_CHACHE_DIRTY_JOBOBJ; } }
 
 	// Get the job's status and only mark dirty if it is running
 	// Note: Dirty attribute notification could work for local and
