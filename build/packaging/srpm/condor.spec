@@ -1950,7 +1950,7 @@ fi
 - fixed a bug where subsystem specific configuration parameters were ignored
 - fixed bugs with history file processing on the Windows platform
 
-* Thu May 02 2016 Tim Theisen <tim@cs.wisc.edu> - 8.5.4-1
+* Mon May 02 2016 Tim Theisen <tim@cs.wisc.edu> - 8.5.4-1
 - Fixed a bug that delays schedd response when significant attributes change
 - Fixed a bug where the group ID was not set in Docker universe jobs
 - Limit update rate of various attributes to not overload the collector
