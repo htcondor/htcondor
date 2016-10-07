@@ -5947,10 +5947,11 @@ SetUserLog()
 			*p && *q; ++p, ++q) {
 		char *ulog_entry = condor_param( *p, *q );
 
-		if(ulog_entry) {
+		if ( ulog_entry && strcmp( ulog_entry, "" ) != 0 ) {
 			std::string buffer;
-			std::string current_userlog(ulog_entry);
-			const char* ulog_pcc = full_path(current_userlog.c_str());
+				// Note:  I don't think the return value here can ever
+				// be NULL.  wenger 2016-10-04
+			const char* ulog_pcc = full_path( ulog_entry );
 			if(ulog_pcc) {
 				std::string ulog(ulog_pcc);
 				if ( !DumpClassAdToFile && !DashDryRun ) {
