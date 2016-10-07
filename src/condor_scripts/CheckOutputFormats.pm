@@ -528,7 +528,7 @@ sub check_status {
 	my %rules_machine;
 	my $result = 0;
 	
-	if ($option eq 'to_multi_platform' || $option eq 'xml' || $option eq 'json'){
+	if ($option eq 'to_multi_platform' || $option eq 'xml' || $option eq 'json' || $option eq 'compact'){
 		%rules_machine = 
 (
 # $i is $_[0]
@@ -592,7 +592,63 @@ sub check_status {
 	} else {
 		print "output is $_[1], should be $convert_time\n";
 	}
+},
+'Platform' => sub {
+	my $platform = unquote($Attr_new{$_[0]-1}{OpSysShortName});
+	if ($_[1] =~ /$platform/) {
+		return 1;
+	} else {
+		print "Error: Output is $_[1], should be x64/$platform\n";
+		return 0;
+	}
+},
+'Slots' => sub {
+	return $_[1] eq $Attr_new{$_[0]-1}{NumDynamicSlots};
+},
+'Cpus' => sub {
+	my $num = sprintf("%d",$Attr_new{$_[0]-1}{TotalCpus});
+	if ($_[1] eq $num){return 1;}
+	else {
+		print "Error: output is $_[1], should be $num\n";
+		return 0;
+	}
+},
+'Gpus' => sub {
+	my $num = sprintf("%d",$Attr_new{$_[0]-1}{TotalGpus});
+	return $_[1] eq $num;
+},
+'TotalGb' => sub {
+	my $num = sprintf("%.2f",($Attr_new{$_[0]-1}{TotalMemory}/1024));
+	return $_[1] eq $num;
+},
+'FreCpu' => sub {
+	my $num = sprintf("%d",$Attr_new{$_[0]-1}{Cpus});
+	return $_[1] eq $num;
+},
+'FreeGb' => sub {
+	my $num = sprintf("%.2f",($Attr_new{$_[0]-1}{Memory}/1024));
+	return $_[1] eq $num;
+},
+'CpuLoad' => sub {
+	my $num = sprintf("%.2f",($Attr_new{$_[0]-1}{TotalLoadAvg} / $Attr_new{$_[0]-1}{TotalCpus}));
+	return $_[1] eq $num;
+},
+'ST' => sub {
+	my $st = substr($Attr_new{$_[0]-1}{State},1,1).lc(substr($Attr_new{$_[0]-1}{Activity},1,1));
+	return $_[1] eq $st;
+},
+'Jobs/Min' => sub {
+	my $num = sprintf("%.2f",$Attr_new{$_[0]-1}{RecentJobStarts}/20);
+	return $_[1] eq $num;
+},
+'MaxSlotGb' => sub {
+	if (defined $Attr_new{$_[0]-1}{'Max(ChildMemory)'}){
+		return $_[1] eq sprintf("%.2f",$Attr_new{$_[0]-1}{'Max(ChildMemory)'});
+	} else {
+		return $_[1] eq '*';
+	}
 }
+
 );
 		for my $i (0..(scalar @machine_info)-1){
 			if (defined $machine_info[$i][1]){
@@ -607,10 +663,18 @@ sub check_status {
 				}
 			}
 		}
-		my %table = count_status_state(\%Attr_new);
+		my %table = count_status_state(\%Attr_new, $option);
+		my %table1;
+		if ($option =~ /compact/){
+			for my $key (sort keys %table){
+				(my $new = $key) =~ s/X86_64/x64/;
+				$table1{$new} = $table{$key};
+			}		
+			%table = %table1;
+		}
 		for my $i (1..scalar @{$summary[0]}-2){
 			unless ($summary[0][$i] eq (sort keys %table)[$i-1]){
-				print "         ERROR: output is $summary[0][$i], should be ".(sort keys %table)[$i-1]."\n";
+				print "        ERROR: output is $summary[0][$i], should be ".(sort keys %table)[$i-1]."\n";
 				return 0;
 			}
 		}
@@ -717,8 +781,9 @@ sub check_status {
 	my $num = 0;
 	for my $i (1..(scalar @{$machine_info[0]})-1){$num += $machine_info[3][$i];}
 	$num = sprintf "%.3f", $num/((scalar @{$machine_info[0]})-1);
-	return $_[1] eq $num;}
-		);
+	return $_[1] eq $num;
+}	
+	);
 
 		for my $i (0..(scalar @machine_info)-1){
 			if (defined $machine_info[$i][1]){
@@ -789,16 +854,86 @@ sub check_status {
 		}
 		return 1;
 	}
+	if ($option eq 'run'){
+		for my $i (0..(scalar @{$machine_info[0]}-2)){unless ($machine_info[0][$i+1] eq unquote($Attr_new{$i}{Name})){
+			print "Error: output is $machine_info[0][$i+1], should be ".unquote($Attr_new{$i}{Name})."\n";
+			return 0;}}
+		for my $i (0..(scalar @{$machine_info[1]}-2)){unless ($machine_info[1][$i+1] eq unquote($Attr_new{$i}{TotalJobAds})){
+			print "Error: output is $machine_info[1][$i+1], should be ".unquote($Attr_new{$i}{TotalJobAds})."\n";
+			return 0;}}
+		for my $i (0..(scalar @{$machine_info[2]}-2)){unless ($machine_info[2][$i+1] eq unquote($Attr_new{$i}{ShadowsRunning})){
+			print "Error: output is $machine_info[2][$i+1], should be ".unquote($Attr_new{$i}{ShadowsRunning})."\n";
+			return 0;}}
+		for my $i (0..(scalar @{$machine_info[3]}-2)){unless ($machine_info[3][$i+1] eq unquote($Attr_new{$i}{TotalSchedulerJobsRunning})){
+			print "Error: output is $machine_info[3][$i+1], should be ".unquote($Attr_new{$i}{TotalSchedulerJobsRunning})."\n";
+			return 0;}}
+		for my $i (0..(scalar @{$machine_info[4]}-2)){unless ($machine_info[4][$i+1] eq unquote($Attr_new{$i}{TotalSchedulerJobsIdle})){
+			print "Error: output is $machine_info[4][$i+1], should be ".unquote($Attr_new{$i}{TotalSchedulerJobsIdle})."\n";
+			return 0;}}
+		for my $i (0..(scalar @{$machine_info[5]}-2)){unless ($machine_info[5][$i+1] eq unquote($Attr_new{$i}{RecentJobsCompleted})){
+			print "Error: output is $machine_info[5][$i+1], should be ".unquote($Attr_new{$i}{RecentJobsCompleted})."\n";
+			return 0;}}
+		for my $i (0..(scalar @{$machine_info[6]}-2)){unless ($machine_info[6][$i+1] eq unquote($Attr_new{$i}{RecentJobsStarted})){
+			print "Error: output is $machine_info[6][$i+1], should be ".unquote($Attr_new{$i}{RecentJobsStarted})."\n";
+			return 0;}}
+		print "        Display of $option is correct!\n";
+		return 1;
+	}
+	if ($option eq 'schedd'){
+		my $run_cnt = 0;
+		my $idle_cnt = 0;
+		my $held_cnt = 0;
+		for my $i (0..(scalar @{$machine_info[0]}-2)){unless ($machine_info[0][$i+1] eq unquote($Attr_new{$i}{Name})){
+			print "Error: output is $machine_info[0][$i+1], should be ".unquote($Attr_new{$i}{Name})."\n";
+			return 0;}}
+		for my $i (0..(scalar @{$machine_info[1]}-2)){unless ($machine_info[1][$i+1] eq unquote($Attr_new{$i}{Machine})){
+			print "Error: output is $machine_info[1][$i+1], should be ".unquote($Attr_new{$i}{Machine})."\n";
+			return 0;}}
+		for my $i (0..(scalar @{$machine_info[2]}-2)){unless ($machine_info[2][$i+1] eq unquote($Attr_new{$i}{TotalRunningJobs})){
+			print "Error: output is $machine_info[2][$i+1], should be ".unquote($Attr_new{$i}{TotalRunningJobs})."\n";
+			return 0;} else{$run_cnt += unquote($Attr_new{$i}{TotalRunningJobs})}}
+		for my $i (0..(scalar @{$machine_info[3]}-2)){unless ($machine_info[3][$i+1] eq unquote($Attr_new{$i}{TotalIdleJobs})){
+			print "Error: output is $machine_info[3][$i+1], should be ".unquote($Attr_new{$i}{TotalIdleJobs})."\n";
+			return 0;} else{$idle_cnt += unquote($Attr_new{$i}{TotalIdleJobs})}}
+		for my $i (0..(scalar @{$machine_info[4]}-2)){unless ($machine_info[4][$i+1] eq unquote($Attr_new{$i}{TotalHeldJobs})){
+			print "Error: output is $machine_info[4][$i+1], should be ".unquote($Attr_new{$i}{TotalHeldJobs})."\n";
+			return 0;} else{$held_cnt += unquote($Attr_new{$i}{TotalHeldJobs})}}
+		if ($summary[1][1] =~ /$run_cnt/ && $summary[2][1] eq $idle_cnt && $summary[3][1] eq $held_cnt){
+			print "        Display of $option is correct!\n";
+			return 1;
+		} else {
+			print "        Error: summary not correct\n";
+			return 0;}
+	}
+	if ($option eq 'negotiator'){
+		for my $i (1..(scalar @{$machine_info[0]})-1){
+			unless ($machine_info[0][$i] eq unquote($Attr_new{$i-1}{Name}) && $machine_info[1][$i] eq unquote($Attr_new{$i-1}{Machine})){
+				print "        Output is $machine_info[0][$i], $machine_info[1][$i]\n        should be ".unquote($Attr_new{$i-1}{Name}).", ".unquote($Attr_new{$i-1}{Machine})."\n";
+				return 0;
+			}
+		}
+		return 1;
+	}
 }
 
 sub count_status_state {
 	my %Attr = %{$_[0]};
+	my $option = $_[1];
 	my %Arch;
 	my $arch_os_pair;
-	for my $i (0.. (scalar keys %Attr) -1){
-		$arch_os_pair = substr($Attr{$i}{Arch},1,length($Attr{$i}{Arch})-2)."/".substr($Attr{$i}{OpSys},1,length($Attr{$i}{OpSys})-2);
-		unless (defined $Arch{$arch_os_pair}){
-			$Arch{$arch_os_pair} = 0;
+	if ($option =~ /compact/){
+		for my $i (0.. (scalar keys %Attr) -1){
+			$arch_os_pair = substr($Attr{$i}{Arch},1,length($Attr{$i}{Arch})-2)."/".substr($Attr{$i}{OpSysShortName},1,length($Attr{$i}{OpSysShortName})-2);
+			unless (defined $Arch{$arch_os_pair}){
+				$Arch{$arch_os_pair} = 0;
+			}
+		}
+	} else {
+		for my $i (0.. (scalar keys %Attr) -1){
+			$arch_os_pair = substr($Attr{$i}{Arch},1,length($Attr{$i}{Arch})-2)."/".substr($Attr{$i}{OpSys},1,length($Attr{$i}{OpSys})-2);
+			unless (defined $Arch{$arch_os_pair}){
+				$Arch{$arch_os_pair} = 0;
+			}
 		}
 	}
 	my %table;
@@ -811,7 +946,7 @@ sub count_status_state {
 		$table{$key}{"Backfill"} = 0;
 		$table{$key}{"Drain"} = 0;
 		for my $i (0..(scalar keys %Attr) -1){
-			if ($key eq substr($Attr{$i}{Arch},1,length($Attr{$i}{Arch})-2)."/".substr($Attr{$i}{OpSys},1,length($Attr{$i}{OpSys})-2)){
+			if ($key eq substr($Attr{$i}{Arch},1,length($Attr{$i}{Arch})-2)."/".substr($Attr{$i}{OpSysShortName},1,length($Attr{$i}{OpSysShortName})-2) || $key eq substr($Attr{$i}{Arch},1,length($Attr{$i}{Arch})-2)."/".substr($Attr{$i}{OpSys},1,length($Attr{$i}{OpSys})-2)){
 				$table{$key}{substr($Attr{$i}{State},1,length($Attr{$i}{State})-2)}++;
 			}
 		}
@@ -1117,7 +1252,14 @@ sub check_heading {
 		'status_machine' => sub {return $data{0} =~ /\s*Name\s+OpSys\s+Arch\s+State\s+Activity\s+LoadAv\s+Mem\s+ActvtyTime/;},
 		'status_summary' => sub {return $data{0} =~ /\s+Total\s+Owner\s+Claimed\s+Unclaimed\s+Matched\s+Preempting\s+Backfill\s+Drain/;},
 		'status_claimed_machine' => sub {return $data{0} =~ /\s*Name\s+OpSys\s+Arch\s+LoadAv\s+RemoteUser\s+ClientMachine/;},
-		'status_claimed_summary' => sub {return $data{0} =~ /\s*Machines\s+MIPS\s+KFLOPS\s+AvgLoadAvg/;}
+		'status_claimed_summary' => sub {return $data{0} =~ /\s*Machines\s+MIPS\s+KFLOPS\s+AvgLoadAvg/;},
+		'status_compact_machine' => sub {return $data{0} =~ /\s*Machine\s+Platform\s+Slots\s+Cpus\s+Gpus\s+TotalGb\s+FreCpu\s+FreeGb\s+CpuLoad\s+ST\s+Jobs\/Min\s+MaxSlotGb/;},
+		'status_run_machine' => sub {return $data{0} =~ /\s*Name\s+TotalJobs\s+Shadows\s+ActiveDAGs\s+IdleDAGs\s+RcntDone\s+RcntStart/;},
+		'status_schedd_machine' => sub {return $data{0} =~ /\s*Name\s+Machine\s+RunningJobs\s+IdleJobs\s+HeldJobs/;},
+		'status_schedd_summary' => sub {return $data{0} =~ /\s*TotalRunningJobs\s+TotalIdleJobs\s+TotalHeldJobs/;},
+		'status_negotiator' => sub {return $data{0} =~ /\s*Name\s+Machine/;},
+		'status_server_machine' => sub {return $data{0} =~ /\s*Machine\s+Platform\s+Slots\s+Cpus\s+Gpus\s+TotalGb\s+Mips\s+KFlops\s+CpuLoad\s+ST\s+Jobs\/Min/;},
+		'status_server_summary' => sub {return $data{0} =~ /\s*Machines\s+Avail\s+Memory\s+Disk\s+MIPS\s+KFLOPS/;}
 	);
 
 	TLOG("Checking heading format of the output file\n");
