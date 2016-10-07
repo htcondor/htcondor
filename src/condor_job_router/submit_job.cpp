@@ -533,9 +533,10 @@ bool submit_job(const std::string & owner, const std::string &domain, ClassAd & 
 
 	if (!init_user_ids(owner.c_str(), domain.c_str()))
 	{
-		EXCEPT("Failed in init_user_ids(%s,%s)",
+		dprintf(D_ALWAYS, "Failed in init_user_ids(%s,%s)\n",
 			owner.c_str(),
 			domain.c_str());
+		return false;
 	}
 	TemporaryPrivSentry sentry(PRIV_USER);
 
