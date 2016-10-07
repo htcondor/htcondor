@@ -75,8 +75,6 @@ enum { _MM_ERROR, MM_NO_MATCH, MM_GOOD_MATCH, MM_BAD_MATCH };
 
 typedef int (*lessThanFunc)(AttrList*, AttrList*, void*);
 
-MyString SlotWeightAttr = ATTR_SLOT_WEIGHT;
-
 char const *RESOURCES_IN_USE_BY_USER_FN_NAME = "ResourcesInUseByUser";
 char const *RESOURCES_IN_USE_BY_USERS_GROUP_FN_NAME = "ResourcesInUseByUsersGroup";
 
@@ -414,6 +412,7 @@ Matchmaker ()
 	name = RESOURCES_IN_USE_BY_USERS_GROUP_FN_NAME;
 	classad::FunctionCall::RegisterFunction( name,
 											 ResourcesInUseByUsersGroup_classad_func );
+	slotWeightStr = 0;
 }
 
 Matchmaker::
@@ -814,6 +813,13 @@ reinitialize ()
 	} else { 
 			// be sure to try to publish a new negotiator ad on reconfig
 		updateCollector();
+	}
+
+	if (slotWeightStr) free(slotWeightStr);
+
+	slotWeightStr = param("SLOT_WEIGHT");
+	if (!slotWeightStr) {
+		slotWeightStr = strdup("Cpus");
 	}
 
 
@@ -1464,7 +1470,7 @@ negotiationTime ()
 
         // Fill in latest usage/prio info for the groups.
         // While we're at it, reset fields prior to reloading from submitter ads.
-        for (vector<GroupEntry*>::iterator j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
+        for (auto j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
             GroupEntry* group = *j;
 
             group->quota = 0;
@@ -3563,6 +3569,12 @@ obtainAdsFromCollector (
                 // advertise a consumption policy
                 cp_resources = true;
             }
+
+			// If startd didn't set a slot weight expression, add in our own
+			double slot_weight;
+			if (!ad->LookupFloat(ATTR_SLOT_WEIGHT, slot_weight)) {
+				ad->AssignExpr(ATTR_SLOT_WEIGHT, slotWeightStr);
+			}
 
 			OptimizeMachineAdForMatchmaking( ad );
 

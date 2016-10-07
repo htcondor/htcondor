@@ -572,6 +572,8 @@ class Matchmaker : public Service
 
 		int prevLHF;
 
+		char *slotWeightStr;
+		
 		#define MAX_NEGOTIATION_CYCLE_STATS 100
 		class NegotiationCycleStats *negotiation_cycle_stats[MAX_NEGOTIATION_CYCLE_STATS];
 		int num_negotiation_cycle_stats;
