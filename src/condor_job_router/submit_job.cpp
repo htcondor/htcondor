@@ -431,6 +431,19 @@ static bool submit_job_with_current_priv( ClassAd & src, const char * schedd_nam
 		return false;
 	}
 
+	// Starting in 8.5.8, schedd clients can't set X509-related attributes
+	// other than the name of the proxy file.
+	std::set<std::string, classad::CaseIgnLTStr> filter_attrs;
+	CondorVersionInfo ver_info( schedd.version() );
+	if ( ver_info.built_since_version( 8, 5, 8 ) ) {
+		 filter_attrs.insert( ATTR_X509_USER_PROXY_SUBJECT );
+		 filter_attrs.insert( ATTR_X509_USER_PROXY_EXPIRATION );
+		 filter_attrs.insert( ATTR_X509_USER_PROXY_EMAIL );
+		 filter_attrs.insert( ATTR_X509_USER_PROXY_VONAME );
+		 filter_attrs.insert( ATTR_X509_USER_PROXY_FIRST_FQAN );
+		 filter_attrs.insert( ATTR_X509_USER_PROXY_FQAN );
+	}
+
 	int cluster = NewCluster();
 	if( cluster < 0 ) {
 		failobj.fail("Failed to create a new cluster (%d)\n", cluster);
@@ -476,6 +489,9 @@ static bool submit_job_with_current_priv( ClassAd & src, const char * schedd_nam
 	const char *rhstr = 0;
 	src.ResetExpr();
 	while( src.NextExpr(lhstr, tree) ) {
+		if ( filter_attrs.find( lhstr ) != filter_attrs.end() ) {
+			continue;
+		}
 		rhstr = ExprTreeToString( tree );
 		if( !lhstr || !rhstr) { 
 			failobj.fail("Problem processing classad\n");

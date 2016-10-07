@@ -6880,6 +6880,20 @@ SetGSICredentials()
 			free( proxy_file );
 			proxy_file = full_proxy_file;
 #if defined(HAVE_EXT_GLOBUS)
+// this code should get torn out at some point (8.7.0) since the SchedD now
+// manages these attributes securely and the values provided by submit should
+// not be trusted.  in the meantime, though, we try to provide some cross
+// compatibility between the old and new.  i also didn't indent this properly
+// so as not to churn the old code.  -zmiller
+
+		bool submit_sends_x509 = true;
+		CondorVersionInfo cvi(MySchedd->version());
+		if (cvi.built_since_version(8, 5, 8)) {
+			submit_sends_x509 = false;
+		}
+
+		if(submit_sends_x509) {
+
 			if ( check_x509_proxy(proxy_file) != 0 ) {
 				fprintf( stderr, "\nERROR: %s\n", x509_error_string() );
 				exit( 1 );
@@ -6948,6 +6962,11 @@ SetGSICredentials()
 			// When new classads arrive, all this should be replaced with a
 			// classad holding the VOMS atributes.  -zmiller
 
+		}
+// this is the end of the big, not-properly indented block (see above) that
+// causes submit to send the x509 attributes only when talking to older
+// schedds.  at some point, probably 8.7.0, this entire block should be ripped
+// out. -zmiller
 #endif
 
 			(void) buffer.formatstr( "%s=\"%s\"", ATTR_X509_USER_PROXY, 

@@ -2591,6 +2591,8 @@ RemoteResource::checkX509Proxy( void )
 				   &voname, &firstfqan, &quoted_DN_and_FQAN );
 
 	jobAd->Assign(ATTR_X509_USER_PROXY_EXPIRATION, proxy_expiration_time);
+	/* These are secure attributes, only settable by the schedd.
+	 * Assume they won't change during job execution.
 	if ( proxy_subject && *proxy_subject ) {
 		jobAd->Assign(ATTR_X509_USER_PROXY_SUBJECT, proxy_subject);
 	}
@@ -2603,6 +2605,7 @@ RemoteResource::checkX509Proxy( void )
 	if ( quoted_DN_and_FQAN && *quoted_DN_and_FQAN ) {
 		jobAd->Assign(ATTR_X509_USER_PROXY_FQAN, quoted_DN_and_FQAN);
 	}
+	*/
 	free( proxy_subject );
 	free( voname );
 	free( firstfqan );
@@ -2611,7 +2614,10 @@ RemoteResource::checkX509Proxy( void )
 	// first, do the DN and expiration time, which all proxies have
 	char* proxy_subject = x509_proxy_identity_name(proxy_path.Value());
 	time_t proxy_expiration_time = x509_proxy_expiration_time(proxy_path.Value());
+	/* This is a secure attribute, only settable by the schedd.
+	 * Assume it won't change during job execution.
 	jobAd->Assign(ATTR_X509_USER_PROXY_SUBJECT, proxy_subject);
+	*/
 	jobAd->Assign(ATTR_X509_USER_PROXY_EXPIRATION, proxy_expiration_time);
 	if (proxy_subject) {
 		free(proxy_subject);
@@ -2633,9 +2639,12 @@ RemoteResource::checkX509Proxy( void )
 		if (IsDebugVerbose(D_SECURITY)) {
 			dprintf(D_SECURITY, "VOMS attributes were found\n");
 		}
+		/* These are secure attributes, only settable by the schedd.
+		 * Assume they won't change during job execution.
 		jobAd->Assign(ATTR_X509_USER_PROXY_VONAME, voname);
 		jobAd->Assign(ATTR_X509_USER_PROXY_FIRST_FQAN, firstfqan);
 		jobAd->Assign(ATTR_X509_USER_PROXY_FQAN, quoted_DN_and_FQAN);
+		*/
 		free(voname);
 		free(firstfqan);
 		free(quoted_DN_and_FQAN);

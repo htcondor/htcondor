@@ -5113,7 +5113,7 @@ review=?
 tags=schedd,qmgmt
 
 [SYSTEM_SECURE_JOB_ATTRS]
-default=
+default=x509userProxySubject x509UserProxyEmail x509UserProxyVOName x509UserProxyFirstFQAN x509UserProxyFQAN
 type=string
 reconfig=true
 customization=never
