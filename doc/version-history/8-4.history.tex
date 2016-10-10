@@ -41,6 +41,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug that would cause a core dump when running the condor\_history
+command against a remote schedd.  The results would be returned correctly, but a 
+core file would appear in the log directory after the command exited.
+\Ticket{5956}
+
 \item In the Python bindings, fixed bugs in the LogReader and EventIterator
 classes that could cause invocations of poll(), which should block
 indefinitely until an event occurs, to return prematurely with no event.
