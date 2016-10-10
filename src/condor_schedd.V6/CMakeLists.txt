@@ -22,6 +22,11 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR})
 condor_selective_glob("qmgmt_send_stubs*;qmgr_lib_support*;qmgr_job_updater*;history_helper.cpp" qmgmtElements )
 file( GLOB scheddRmvElements Example* *.t.* ${qmgmtElements} )
 
+# The condor_history_help is daemon_core.  This hack builts up a list of all the file _EXCEPT_ history_helper.cpp
+# which is passwd to the condor_daemon macro, which removes all those files from the sources in the current dir.
+file( GLOB helperRmvElements "*.cpp" )
+list(REMOVE_ITEM helperRmvElements history_helper.cpp)
+
 if (NOT WIN_EXEC_NODE_ONLY)
 	if ( DLOPEN_SECURITY_LIBS )
 		condor_daemon( schedd "${scheddRmvElements}"
@@ -38,7 +43,7 @@ if (NOT WIN_EXEC_NODE_ONLY)
 		endif(UNIX)
 
 	endif(HAVE_EXT_GSOAP)
-	condor_exe(condor_history_helper "history_helper.cpp" ${C_LIBEXEC} "${CONDOR_TOOL_LIBS}" OFF)
+	condor_daemon(history_helper "${helperRmvElements}" "${CONDOR_LIBS}" "${C_LIBEXEC}" OFF)
 
 endif(NOT WIN_EXEC_NODE_ONLY)
 
