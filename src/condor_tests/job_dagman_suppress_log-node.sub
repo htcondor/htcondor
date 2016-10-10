@@ -1,0 +1,7 @@
+universe	= vanilla
+executable	= x_echostring.pl
+arguments	= log: $$([UserLog])
+log		= job_dagman_suppress_log-node.log
+output		= job_dagman_suppress_log-node.out
+error		= job_dagman_suppress_log-node.err
+queue
