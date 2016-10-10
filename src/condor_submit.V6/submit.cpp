@@ -6786,7 +6786,7 @@ SetGridParams()
 			}
 			fclose(fp);
 		}
-		InsertJobExprString( ATTR_GCE_JSON_FILE, tmp );
+		InsertJobExprString( ATTR_GCE_JSON_FILE, full_path( tmp ) );
 		free( tmp );
 	}
 
