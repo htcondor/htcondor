@@ -916,11 +916,32 @@ bool GceInstanceInsert::workerFunction(char **argv, int argc, string &result_str
 	insert_request.requestBody += "     \"type\": \"ONE_TO_ONE_NAT\"\n";
 	insert_request.requestBody += "    }\n   ]\n";
 	insert_request.requestBody += "  }\n ]";
-	if ( !json_file_contents.empty() ) {
-		insert_request.requestBody += ",\n";
-		insert_request.requestBody += json_file_contents;
-	}
 	insert_request.requestBody += "\n}\n";
+
+	if ( !json_file_contents.empty() ) {
+		classad::ClassAd instance_ad;
+		classad::ClassAd custom_ad;
+		classad::ClassAdJsonParser parser;
+		classad::ClassAdJsonUnParser unparser;
+		string wrap_custom_attrs = "{" + json_file_contents + "}";
+
+		if ( !parser.ParseClassAd( insert_request.requestBody, instance_ad, true ) ) {
+			result_string = create_failure_result( requestID,
+									"Failed to parse instance description" );
+			return true;
+		}
+
+		if ( !parser.ParseClassAd( wrap_custom_attrs, custom_ad, true ) ) {
+			result_string = create_failure_result( requestID,
+									"Failed to parse custom attributes" );
+			return true;
+		}
+
+		instance_ad.Update( custom_ad );
+
+		insert_request.requestBody.clear();
+		unparser.Unparse( insert_request.requestBody, &instance_ad );
+	}
 
 	string auth_file = argv[3];
 	if ( !GetAccessToken( auth_file, insert_request.accessToken,
