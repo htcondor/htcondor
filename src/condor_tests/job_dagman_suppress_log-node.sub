@@ -1,7 +1,11 @@
 universe	= vanilla
-executable	= x_echostring.pl
-arguments	= log: $$([UserLog])
+executable	= job_dagman_suppress_log-node.pl
+#TEMPTEMP arguments	= log: $$([UserLog])
+arguments	= $(cluster)
 log		= job_dagman_suppress_log-node.log
 output		= job_dagman_suppress_log-node.out
 error		= job_dagman_suppress_log-node.err
+# Job should get held because of UserLog not being defined...
+#TEMPTEMP periodic_remove	= (JobStatus == 5)
+getenv		= true
 queue
