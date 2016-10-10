@@ -51,6 +51,12 @@ classes that could cause invocations of poll(), which should block
 indefinitely until an event occurs, to return prematurely with no event.
 \Ticket{5920}
 
+\item Fixed a bug in \Condor{dagman} that caused a file named
+\File{''} (two single quotes) to be created if the
+\MacroNI{DAGMAN\_SUPPRESS\_JOB\_LOGS} configuration macro was set
+to \Expr{True}.
+\Ticket{5941}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
