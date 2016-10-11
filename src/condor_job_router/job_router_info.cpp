@@ -563,7 +563,7 @@ bool push_classad_diff(classad::ClassAd & src, classad::ClassAd & dest, const ch
 	return true;
 }
 
-bool finalize_job(classad::ClassAd const &ad,int cluster, int proc, const char * schedd_name, const char * pool_name, bool is_sandboxed)
+bool finalize_job(const std::string &owner, const std::string &domain, classad::ClassAd const &ad,int cluster, int proc, const char * schedd_name, const char * pool_name, bool is_sandboxed)
 {
 	return true;
 }

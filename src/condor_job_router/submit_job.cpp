@@ -796,14 +796,21 @@ static bool finalize_job_with_current_privs(classad::ClassAd const &job,int clus
 	return true;
 }
 
-bool finalize_job(classad::ClassAd const &ad,int cluster, int proc, const char * schedd_name, const char * pool_name, bool is_sandboxed)
+bool finalize_job(const std::string & owner, const std::string &domain, classad::ClassAd const &ad,int cluster, int proc, const char * schedd_name, const char * pool_name, bool is_sandboxed)
 {
 	bool success;
-	priv_state priv = set_user_priv_from_ad(ad);
+
+	if (!init_user_ids(owner.c_str(), domain.c_str()))
+	{
+		dprintf(D_ALWAYS, "Failed in init_user_ids(%s,%s)\n",
+			owner.c_str(),
+			domain.c_str());
+		return false;
+	}
+	TemporaryPrivSentry sentry(PRIV_USER);
 
 	success = finalize_job_with_current_privs(ad,cluster,proc,schedd_name,pool_name,is_sandboxed);
 
-	set_priv(priv);
 	uninit_user_ids();
 	return success;
 }

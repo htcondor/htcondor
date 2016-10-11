@@ -2025,7 +2025,15 @@ JobRouter::PushUpdatedAttributes(classad::ClassAd& ad, bool routed_job) {
 
 void
 JobRouter::FinishFinalizeJob(RoutedJob *job) {
-	if(!finalize_job(job->dest_ad,job->dest_proc_id.cluster,job->dest_proc_id.proc,m_schedd2_name,m_schedd2_pool,job->is_sandboxed)) {
+	std::string owner, domain;
+	if (!job->src_ad.EvaluateAttrString(ATTR_OWNER,  owner)) {
+		SetJobIdle(job);
+		GracefullyRemoveJob(job);
+		return;
+	}
+	job->src_ad.EvaluateAttrString(ATTR_NT_DOMAIN, domain);
+
+	if(!finalize_job(owner, domain, job->dest_ad,job->dest_proc_id.cluster,job->dest_proc_id.proc,m_schedd2_name,m_schedd2_pool,job->is_sandboxed)) {
 		dprintf(D_ALWAYS,"JobRouter failure (%s): failed to finalize job\n",job->JobDesc().c_str());
 
 			// Put the src job back in idle state to prevent it from
