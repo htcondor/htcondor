@@ -1525,7 +1525,7 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 			break; // break out of while loop
 		}
 
-#if 0 //TEMPTEMP
+#if 1 //TEMPTEMP
 		//TEMPTEMP -- should we check this other places here, too?
 		//TEMPTEMP -- maybe make a utility function that does this test
 		time_t now = time( NULL );

@@ -6,13 +6,11 @@ NODE_STATUS_FILE job_dagman_rm.status
 Job NodeA job_dagman_rm-nodeA.cmd
 
 # This node will wait in the PRE script.
-# TEMPTEMP -- this exits when dagman exits -- do we want that??
 Job NodeB /dev/null NOOP
 Script Pre NodeB ./job_dagman_rm-wait.pl job_dagman_rm-NodeB-pre
 Parent NodeA Child NodeB
 
 # This node will wait in the POST script.
-#TEMPTEMP -- this messes things up because we don't start the post script until we see the submitted event.
 Job NodeC /dev/null NOOP
 Script Post NodeC ./job_dagman_rm-wait.pl job_dagman_rm-NodeC-post
 Parent NodeA Child NodeC
@@ -33,8 +31,8 @@ Parent NodeE Child NodeF
 # Make sure this gets submitted before Z nodes.
 Priority NodeF 10
 
-
-#TEMPTEMP?
+# DAGMan should get condor_rm'ed while we're in the middle of
+# submitting these jobs.
 Job NodeZ00 job_dagman_rm-nodeZ.cmd
 Job NodeZ01 job_dagman_rm-nodeZ.cmd
 Job NodeZ02 job_dagman_rm-nodeZ.cmd
@@ -46,27 +44,3 @@ Job NodeZ07 job_dagman_rm-nodeZ.cmd
 Job NodeZ08 job_dagman_rm-nodeZ.cmd
 Job NodeZ09 job_dagman_rm-nodeZ.cmd
 Parent NodeE Child NodeZ00 NodeZ01 NodeZ02 NodeZ03 NodeZ04 NodeZ05 NodeZ06 NodeZ07 NodeZ08 NodeZ09
-
-#Job NodeZ10 job_dagman_rm-node.cmd
-#Job NodeZ11 job_dagman_rm-node.cmd
-#Job NodeZ12 job_dagman_rm-node.cmd
-#Job NodeZ13 job_dagman_rm-node.cmd
-#Job NodeZ14 job_dagman_rm-node.cmd
-#Job NodeZ15 job_dagman_rm-node.cmd
-#Job NodeZ16 job_dagman_rm-node.cmd
-#Job NodeZ17 job_dagman_rm-node.cmd
-#Job NodeZ18 job_dagman_rm-node.cmd
-#Job NodeZ19 job_dagman_rm-node.cmd
-#Parent NodeA Child NodeZ10 NodeZ11 NodeZ12 NodeZ13 NodeZ14 NodeZ15 NodeZ16 NodeZ17 NodeZ18 NodeZ19
-
-#Job NodeZ20 job_dagman_rm-node.cmd
-#Job NodeZ21 job_dagman_rm-node.cmd
-#Job NodeZ22 job_dagman_rm-node.cmd
-#Job NodeZ23 job_dagman_rm-node.cmd
-#Job NodeZ24 job_dagman_rm-node.cmd
-#Job NodeZ25 job_dagman_rm-node.cmd
-#Job NodeZ26 job_dagman_rm-node.cmd
-#Job NodeZ27 job_dagman_rm-node.cmd
-#Job NodeZ28 job_dagman_rm-node.cmd
-#Job NodeZ29 job_dagman_rm-node.cmd
-#Parent NodeA Child NodeZ20 NodeZ21 NodeZ22 NodeZ23 NodeZ24 NodeZ25 NodeZ26 NodeZ27 NodeZ28 NodeZ29

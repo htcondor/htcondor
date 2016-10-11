@@ -12,6 +12,7 @@ while (-e $lockfile) {
 	sleep(1);
 }
 
+# We should get condor_rm'ed before we get to here...
 runcmd("touch $ARGV[0].finished");
 print "$ARGV[0] finished\n";
 
