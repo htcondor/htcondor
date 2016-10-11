@@ -1602,12 +1602,12 @@ JobRouter::FinishSubmitJob(RoutedJob *job) {
 	int dest_proc_id = -1;
 	bool rc;
 
-        std::string owner, domain;
-        if (!job->src_ad.EvaluateAttrString(ATTR_OWNER,  owner)) {
+	std::string owner, domain;
+	if (!job->src_ad.EvaluateAttrString(ATTR_OWNER,  owner)) {
 		GracefullyRemoveJob(job);
-                return;
-        }
-        job->src_ad.EvaluateAttrString(ATTR_NT_DOMAIN, domain);
+		return;
+	}
+	job->src_ad.EvaluateAttrString(ATTR_NT_DOMAIN, domain);
 
 	rc = submit_job(owner, domain, job->dest_ad,m_schedd2_name,m_schedd2_pool,job->is_sandboxed,&dest_cluster_id,&dest_proc_id);
 
