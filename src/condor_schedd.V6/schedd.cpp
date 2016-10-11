@@ -4952,7 +4952,7 @@ public:
 	  m_cmd(cmd),
 	  m_temp_path(temp_path),
 	  m_final_path(final_path),
-	  m_job_owner(job_owner ? strdup(job_owner) : NULL),
+	  m_job_owner(job_owner ? job_owner : ""),
 	  m_jobid(jobid),
 	  m_state(state)
 	{}
@@ -4964,7 +4964,7 @@ private:
 	int m_cmd;
 	std::string m_temp_path;
 	std::string m_final_path;
-	char *m_job_owner;  // NULL job owner indicates we should use condor_priv.
+	std::string m_job_owner;  // empty job owner indicates we should use condor_priv.
 	PROC_ID m_jobid;
 	void *m_state;
 };
@@ -5184,11 +5184,10 @@ UpdateGSICredContinuation::finish(Stream *stream)
 	ReliSock *rsock = static_cast<ReliSock*>(stream);
 	priv_state priv;
 #ifndef WIN32
-	if (m_job_owner) {
-		if ( !init_user_ids(m_job_owner, NULL) ) {
+	if (!m_job_owner.empty()) {
+		if ( !init_user_ids(m_job_owner.c_str(), NULL) ) {
 			dprintf(D_AUDIT | D_FAILURE, *rsock, "init_user_ids() failed for user %s!\n",
-				m_job_owner);
-			free(m_job_owner);
+				m_job_owner.c_str());
 			delete this;
 			return false;
 		}
