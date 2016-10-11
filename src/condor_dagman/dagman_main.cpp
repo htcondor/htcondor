@@ -1544,14 +1544,12 @@ void condor_event_timer () {
     static int prevScriptRunNodes = 0;
     static int prevJobsHeld = 0;
 
-	//TEMPTEMP -- should we start the submit cycle elapsed time here?
 	dagman.dag->RunWaitingScripts();
 
 	int justSubmitted;
-	//TEMPTEMP -- maybe this is too much output -- keep track of time and just print if submit cycle was especially long?
-	debug_printf( DEBUG_VERBOSE, "Starting submit cycle\n" );//TEMPTEMP?
+	debug_printf( DEBUG_DEBUG_1, "Starting submit cycle\n" );
 	justSubmitted = dagman.dag->SubmitReadyJobs(dagman);
-	debug_printf( DEBUG_VERBOSE, "Finished submit cycle\n" );//TEMPTEMP?
+	debug_printf( DEBUG_DEBUG_1, "Finished submit cycle\n" );
 	if( justSubmitted ) {
 			// Note: it would be nice to also have the proc submit
 			// count here.  wenger, 2006-02-08.
@@ -1561,7 +1559,6 @@ void condor_event_timer () {
 
 	// If the log has grown
 	if( dagman.dag->DetectCondorLogGrowth() ) {
-		//TEMPTEMP -- what if we have a huge number of events to process?  should we also bail out early here?
 		if( dagman.dag->ProcessLogEvents() == false ) {
 			debug_printf( DEBUG_NORMAL,
 						"ProcessLogEvents() returned false\n" );
