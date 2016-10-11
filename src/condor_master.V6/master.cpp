@@ -1443,8 +1443,8 @@ invalidate_ads() {
 		default_name = default_daemon_name();
 	}
 	
-	EscapeAdStringValue( default_name, escaped_name );
-	line.formatstr( "( TARGET.%s == \"%s\" )", ATTR_NAME, escaped_name.c_str() );
+	QuoteAdStringValue( default_name, escaped_name );
+	line.formatstr( "( TARGET.%s == %s )", ATTR_NAME, escaped_name.c_str() );
 	cmd_ad.AssignExpr( ATTR_REQUIREMENTS, line.Value() );
 	cmd_ad.Assign( ATTR_NAME, default_name );
 	cmd_ad.Assign( ATTR_MY_ADDRESS, daemonCore->publicNetworkIpAddr());

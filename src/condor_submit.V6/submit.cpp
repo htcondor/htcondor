@@ -3065,8 +3065,8 @@ SetSimpleJobExprs()
 		MyString buffer;
 		if( i->quote_it ) {
 			std::string expr_buf;
-			EscapeAdStringValue( expr, expr_buf );
-			buffer.formatstr( "%s = \"%s\"", i->ad_attr_name, expr_buf.c_str());
+			QuoteAdStringValue( expr, expr_buf );
+			buffer.formatstr( "%s = %s", i->ad_attr_name, expr_buf.c_str());
 		}
 		else {
 			buffer.formatstr( "%s = %s", i->ad_attr_name, expr);
@@ -10127,7 +10127,7 @@ InsertJobExprString(const char * name, const char * val)
 	ASSERT(val);
 	MyString buf;
 	std::string esc;
-	buf.formatstr("%s = \"%s\"", name, EscapeAdStringValue(val, esc));
+	buf.formatstr("%s = %s", name, QuoteAdStringValue(val, esc));
 	InsertJobExpr(buf.Value());
 }
 #endif

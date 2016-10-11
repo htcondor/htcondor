@@ -632,11 +632,13 @@ int sPrintAdAsJson(std::string &output, const classad::ClassAd &ad,
  */
 char* sPrintExpr(const classad::ClassAd &ad, const char* name);
 
-/** Basically just calls an Unparser so we can escape strings
- *  @param val The string we're escaping stuff in. 
- *  @return The escaped string.
+/** Basically just calls an Unparser so we can escape strings.
+ *  The enclosing quote characters are included.
+ *  @param val The string to be escaped.
+ *  @param buf Buffer where the escaped form is written.
+ *  @return The escaped string (buf.c_str()).
  */
-char const *EscapeAdStringValue(char const *val, std::string &buf);
+char const *QuoteAdStringValue(char const *val, std::string &buf);
 
 	/** Set the MyType attribute */
 void SetMyTypeName(classad::ClassAd &ad, const char *);

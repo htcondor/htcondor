@@ -54,16 +54,12 @@ SetAttributeFloat(int cl, int pr, const char *name, float val, SetAttributeFlags
 int
 SetAttributeString(int cl, int pr, const char *name, const char *val, SetAttributeFlags_t flags )
 {
-	MyString buf;
-	std::string escape_buf;
+	std::string buf;
 	int rval;
 
-	val = EscapeAdStringValue(val,escape_buf);
+	QuoteAdStringValue(val,buf);
 
-	buf += '"';
-	buf +=  val;
-	buf += '"';
-	rval = SetAttribute(cl,pr,name,buf.Value(),flags);
+	rval = SetAttribute(cl,pr,name,buf.c_str(),flags);
 	return(rval);
 }
 
@@ -94,16 +90,12 @@ SetAttributeStringByConstraint(const char *con, const char *name,
 							 const char *val,
 							 SetAttributeFlags_t flags)
 {
-	MyString buf;
-	std::string escape_buf;
+	std::string buf;
 	int rval;
 
-	val = EscapeAdStringValue(val,escape_buf);
+	QuoteAdStringValue(val,buf);
 
-	buf += '"';
-	buf +=  val;
-	buf += '"';
-	rval = SetAttributeByConstraint(con,name,buf.Value(), flags);
+	rval = SetAttributeByConstraint(con,name,buf.c_str(), flags);
 	return(rval);
 }
 

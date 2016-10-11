@@ -3171,10 +3171,11 @@ sPrintAdAsJson(std::string &output, const classad::ClassAd &ad, StringList *attr
 }
 
 char const *
-EscapeAdStringValue(char const *val, std::string &buf)
+QuoteAdStringValue(char const *val, std::string &buf)
 {
-    if(val == NULL)
+    if(val == NULL) {
         return NULL;
+    }
 
     buf.clear();
 
@@ -3186,7 +3187,6 @@ EscapeAdStringValue(char const *val, std::string &buf)
     tmpValue.SetStringValue(val);
     unparse.Unparse(buf, tmpValue);
 
-	buf = buf.substr( 1, buf.length() - 2 );
     return buf.c_str();
 }
 

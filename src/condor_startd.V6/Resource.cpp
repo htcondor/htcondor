@@ -1358,8 +1358,8 @@ Resource::final_update( void )
 	 * if you change here you will need to CollectorEngine::remove (AdTypes t_AddType, const ClassAd & c_query)
 	 * the IP was added to allow the collector to create a hash key to delete in O(1).
      */
-	 EscapeAdStringValue( r_name, escaped_name );
-     line.formatstr( "( TARGET.%s == \"%s\" )", ATTR_NAME, escaped_name.c_str() );
+	 QuoteAdStringValue( r_name, escaped_name );
+     line.formatstr( "( TARGET.%s == %s )", ATTR_NAME, escaped_name.c_str() );
      invalidate_ad.AssignExpr( ATTR_REQUIREMENTS, line.Value() );
      invalidate_ad.Assign( ATTR_NAME, r_name );
      invalidate_ad.Assign( ATTR_MY_ADDRESS, daemonCore->publicNetworkIpAddr());
@@ -2453,17 +2453,11 @@ Resource::makeChildClaimIds() {
 			}
 			Resource *child = (*i);
 			if (child->r_pre_pre) {
-				attrValue += '"';
-				attrValue += EscapeAdStringValue( child->r_pre_pre->id(), buf );
-				attrValue += '"';
+				attrValue += QuoteAdStringValue( child->r_pre_pre->id(), buf );
 			} else if (child->r_pre) {
-				attrValue += '"';
-				attrValue += EscapeAdStringValue( child->r_pre->id(), buf );
-				attrValue += '"';
+				attrValue += QuoteAdStringValue( child->r_pre->id(), buf );
 			} else if (child->r_cur) {
-				attrValue += '"';
-				attrValue += EscapeAdStringValue( child->r_cur->id(), buf );
-				attrValue += '"';
+				attrValue += QuoteAdStringValue( child->r_cur->id(), buf );
 			}
 		}
 		attrValue += "}";
