@@ -10776,14 +10776,19 @@ not changed by doing a \Condor{reconfig}.
 \label{param:DAGManRemoveNodeJobs}
 \item[\Macro{DAGMAN\_REMOVE\_NODE\_JOBS}]
   A boolean value that controls whether \Condor{dagman} removes its
-  node jobs itself when it is removed (in addition to the schedd
+  node jobs itself when it is removed (in addition to the \Condor{schedd}
   removing them).
-  TEMPTEMP -- need more explanation here
+  Note that setting \MacroNI{DAGMAN\_REMOVE\_NODE\_JOBS} to
+  \Expr{True} is the safer option (setting it to \Expr{False}
+  means that there is some chance of endig up with "orphan"
+  node jobs).  Setting \MacroNI{DAGMAN\_REMOVE\_NODE\_JOBS} to
+  \Expr{False} is a performance optimization (decreasing the load
+  on the \Condor{schedd} when a \Condor{dagman} job is removed).
   Note that even if \MacroNI{DAGMAN\_REMOVE\_NODE\_JOBS} is set
   to \Expr{False}, \Condor{dagman} will remove its node jobs in
   some cases, such as a DAG abort triggered by an \Arg{ABORT-DAG-ON}
   command.
-  Defaults to \Expr{False}.
+  Defaults to \Expr{True}.
 
 \label{param:DAGManMungeNodeNames}
 \item[\Macro{DAGMAN\_MUNGE\_NODE\_NAMES}]

@@ -29,9 +29,15 @@ The details of each version are described below.
 
 \begin{itemize}
 
+%TEMP -- move to version 8.5.8!
+\item Fixed a bug that could result in "orphan" node jobs staying
+in the queue when an instance of \Condor{dagman} is removed.
+\Ticket{5702}
+
+%TEMP -- move to version 8.5.8!
 \item Added the new \MacroNI{DAGMAN\_REMOVE\_NODE\_JOBS} configuration
-macro, which allows users to enable the old behavior of \Condor{dagman}
-removing its node jobs itself when it is removed.
+macro, which allows users to configure whether \Condor{dagman}
+removes its node jobs when \Condor{dagman} itself is removed.
 \Ticket{5175}
 
 \end{itemize}

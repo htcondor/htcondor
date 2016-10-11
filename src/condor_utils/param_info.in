@@ -1158,7 +1158,7 @@ review=?
 tags=dagman,dagman_main
 
 [DAGMAN_REMOVE_NODE_JOBS]
-default=false
+default=true
 type=bool
 reconfig=false
 customization=normal
