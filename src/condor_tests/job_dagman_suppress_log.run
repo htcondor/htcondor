@@ -31,37 +31,6 @@ $dagman_args = "-verbose";
 
 $expected_output = "UserLog <undefined>\n";
 
-# Lines must be found in order.
-#TEMPTEMP -- change/remove
-@statuslines = ("DagStatus = 6;.*STATUS_ERROR \\(failed\\)",
-    "NodesTotal = 6;",
-    "NodesDone = 2;",
-    "NodesPre = 0;",
-    "NodesQueued = 0;",
-    "NodesPost = 0;",
-    "NodesReady = 0;",
-    "NodesUnready = 1;",
-    "NodesFailed = 3;",
-    "JobProcsHeld = 0;",
-    "JobProcsIdle = 0;",
-	"Node = \"A\";",
-	"NodeStatus = 5;.*STATUS_DONE",
-	"Node = \"B\";",
-	"NodeStatus = 5;.*STATUS_DONE",
-	"Node = \"C2\";",
-	"NodeStatus = 6;.*STATUS_ERROR",
-	"ULOG_JOB_ABORTED",
-	"Node = \"C\";",
-	"NodeStatus = 6;.*STATUS_ERROR",
-	"Node = \"D\";",
-	"NodeStatus = 0;.*STATUS_NOT_READY",
-	"Node = \"E\";",
-	"NodeStatus = 6;.*STATUS_ERROR");
-$finalfile = "job_dagman_abort-final-A-nodeE.out";
-@finallines = ("DAG_STATUS=0",
-	"FAILED_COUNT=1",
-	"E");
-
 my $killedchosen = 0;
 
 # truly const variables in perl
@@ -120,7 +89,6 @@ $success = sub
 			$diditpass = 0;
 		} else {
 			$contents = do { local $/; <OUT>; };
-			print "DIAG contents <$contents>\n";#TEMPTEMP
 			if ($contents ne $expected_output) {
 				CondorTest::debug("ERROR: for file <$file> expected <$expected_output>; found <$contents>\n");
 				$diditpass = 0;
