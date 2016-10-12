@@ -3778,6 +3778,10 @@ Matchmaker::MakeClaimIdHash(ClassAdList &startdPvtAdList, ClaimIdHash &claimIds)
 				// foreach entry in that vector
 			for (int kid = 0; kid < numKids; kid++) {
 				std::string child_claim = "";
+				// The startd sets this attribute under the name
+				// ATTR_CHILD_CLAIM_IDS.
+				// dslotLookupString() prepends "Child" to the given name,
+				// so we use ATTR_CLAIM_IDS for this call.
 				if ( dslotLookupString( ad, ATTR_CLAIM_IDS, kid, child_claim ) ) {
 					claims.push_back( child_claim );
 				} else {

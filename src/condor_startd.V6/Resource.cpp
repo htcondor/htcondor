@@ -2415,12 +2415,15 @@ Resource::publish_private( ClassAd *ad )
 		// claimid-specific logic elsewhere, such as the private
 		// attributes in ClassAds.
 	if( r_pre_pre ) {
-		ad->Assign( ATTR_CAPABILITY, r_pre_pre->id() );
+		ad->Assign( ATTR_CLAIM_ID, r_pre_pre->id() );
+		ad->AssignExpr( ATTR_CAPABILITY, ATTR_CLAIM_ID );
 	}
 	else if( r_pre ) {
-		ad->Assign( ATTR_CAPABILITY, r_pre->id() );
+		ad->Assign( ATTR_CLAIM_ID, r_pre->id() );
+		ad->AssignExpr( ATTR_CAPABILITY, ATTR_CLAIM_ID );
 	} else if( r_cur ) {
-		ad->Assign( ATTR_CAPABILITY, r_cur->id() );
+		ad->Assign( ATTR_CLAIM_ID, r_cur->id() );
+		ad->AssignExpr( ATTR_CAPABILITY, ATTR_CLAIM_ID );
 	}		
 
     if (r_has_cp) {
