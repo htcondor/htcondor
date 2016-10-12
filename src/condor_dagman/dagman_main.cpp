@@ -1465,6 +1465,9 @@ Dagman::ResolveDefaultLog()
 				debug_printf( DEBUG_QUIET, "Ignoring value of DAGMAN_LOG_ON_NFS_IS_ERROR because ENABLE_USERLOG_LOCKING and CREATE_LOCKS_ON_LOCAL_DISK are true.\n");
 				nfsLogIsError = false;
 			}
+		} else {
+			debug_printf( DEBUG_QUIET, "Ignoring value of DAGMAN_LOG_ON_NFS_IS_ERROR because ENABLE_USERLOG_LOCKING is false.\n");
+			nfsLogIsError = false;
 		}
 	}
 
