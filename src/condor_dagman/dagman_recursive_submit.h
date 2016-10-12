@@ -44,7 +44,6 @@ struct SubmitDagShallowOptions
 	int iMaxJobs;
 	int iMaxPre;
 	int iMaxPost;
-	bool bNoEventChecks;
 	MyString appendFile; // append to .condor.sub file before queue
 	StringList appendLines; // append to .condor.sub file before queue
 	MyString strConfigFile;
@@ -80,7 +79,6 @@ struct SubmitDagShallowOptions
 		iMaxJobs = 0;
 		iMaxPre = 0;
 		iMaxPost = 0;
-		bNoEventChecks = false;
 		appendFile = param( "DAGMAN_INSERT_SUB_FILE" );
 		strConfigFile = "";
 		dumpRescueDag = false;
@@ -104,7 +102,6 @@ struct SubmitDagDeepOptions
 	bool bVerbose;
 	bool bForce;
 	MyString strNotification;
-	bool bAllowLogError;
 	MyString strDagmanPath; // path to dagman binary
 	bool useDagDir;
 	MyString strOutfileDir;
@@ -125,7 +122,6 @@ struct SubmitDagDeepOptions
 		bVerbose = false;
 		bForce = false;
 		strNotification = "";
-		bAllowLogError = false;
 		useDagDir = false;
 		autoRescue = param_boolean( "DAGMAN_AUTO_RESCUE", true );
 		doRescueFrom = 0; // 0 means no rescue DAG specified

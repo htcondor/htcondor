@@ -128,7 +128,6 @@ class Dag {
     Dag( /* const */ StringList &dagFiles,
 		 const int maxJobsSubmitted,
 		 const int maxPreScripts, const int maxPostScripts, 
-		 bool allowLogError,
 		 bool useDagDir, int maxIdleJobProcs, bool retrySubmitFirst,
 		 bool retryNodeFirst, const char *condorRmExe,
 		 const CondorID *DAGManJobId,
@@ -616,8 +615,6 @@ class Dag {
 
 	int MaxJobsSubmitted(void) { return _maxJobsSubmitted; }
 
-	bool AllowLogError(void) { return _allowLogError; }
-
 	bool UseDagDir(void) { return _useDagDir; }
 
 	int MaxIdleJobProcs(void) { return _maxIdleJobProcs; }
@@ -1038,10 +1035,6 @@ private:
 
 		// The number of DAG job procs currently held.
 	int _numHeldJobProcs;
-
-		// Whether to allow the DAG to run even if we have an error
-		// determining the job log files.
-	bool		_allowLogError;
 
 		// If this is true, nodes for which the job submit fails are retried
 		// before any other ready nodes; otherwise a submit failure puts

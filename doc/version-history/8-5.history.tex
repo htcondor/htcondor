@@ -47,6 +47,11 @@ macro, which allows users to configure whether \Condor{dagman}
 removes its node jobs when \Condor{dagman} itself is removed.
 \Ticket{5175}
 
+\item The \Arg{-AllowLogError} argument to \Condor{submit\_dag} and
+\Condor{dagman}, and the DAGMAN\_ALLOW\_LOG\_ERROR configuration
+macro, are no longer supported, and generate warnings if used.
+\Ticket{5630}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
