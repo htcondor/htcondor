@@ -8214,12 +8214,7 @@ default : @end
   # be the average number of cores used by the job over the
   # past minute, sampling every 5 seconds, and rounded to two digits.
   #
-  CpusUsage = ifthenelse( \
-     TotalLoadAvg > 0.0 && Activity!="Idle", \
-     int(CondorLoadAvg / TotalLoadAvg * \
-        ifthenelse(TotalLoadAvg < $(DETECTED_CORES), TotalLoadAvg, $(DETECTED_CORES)) \
-        * 100) / 100.0, \
-     0)
+  CpusUsage = ifthenelse(TotalLoadAvg > 0.0 && Activity!="Idle",int(CondorLoadAvg / TotalLoadAvg * ifthenelse(TotalLoadAvg < $(DETECTED_CORES), TotalLoadAvg, $(DETECTED_CORES)) * 100) / 100.0, 0)
   STARTD_ATTRS = $(STARTD_ATTRS) CpusUsage
   #
   # If the startd sees the number of CPU cores used by the job exceed the
@@ -8242,12 +8237,8 @@ default : @end
   # of cores in the slot, put the job on hold.
   #
   WANT_HOLD = ($(WANT_HOLD:False)) || $(CPU_EXCEEDED)
-  WANT_HOLD_REASON = ifThenElse($(CPU_EXCEEDED), \
-     $(HOLD_REASON_CPU_EXCEEDED:"cpu usage exceeded request_cpus"), \
-     $(WANT_HOLD_REASON:UNDEFINED))
-  WANT_HOLD_SUBCODE = ifThenElse($(CPU_EXCEEDED), \
-     $(HOLD_SUBCODE_CPU_EXCEEDED:101), \
-     $(WANT_HOLD_SUBCODE:UNDEFINED))
+  WANT_HOLD_REASON = ifThenElse($(CPU_EXCEEDED), $(HOLD_REASON_CPU_EXCEEDED:"cpu usage exceeded request_cpus"), $(WANT_HOLD_REASON:UNDEFINED))
+  WANT_HOLD_SUBCODE = ifThenElse($(CPU_EXCEEDED), $(HOLD_SUBCODE_CPU_EXCEEDED:101), $(WANT_HOLD_SUBCODE:UNDEFINED))
 @end
 review=?
 
@@ -8274,12 +8265,8 @@ default : @end
   # of memory in the slot, put the job on hold.
   #
   WANT_HOLD = ($(WANT_HOLD:False)) || $(MEMORY_EXCEEDED)
-  WANT_HOLD_REASON = ifThenElse($(MEMORY_EXCEEDED), \
-     $(HOLD_REASON_MEMORY_EXCEEDED:"memory usage exceeded request_memory"), \
-     $(WANT_HOLD_REASON:UNDEFINED))
-  WANT_HOLD_SUBCODE = ifThenElse($(MEMORY_EXCEEDED), \
-     $(HOLD_SUBCODE_MEMORY_EXCEEDED:102), \
-     $(WANT_HOLD_SUBCODE:UNDEFINED))
+  WANT_HOLD_REASON = ifThenElse($(MEMORY_EXCEEDED), $(HOLD_REASON_MEMORY_EXCEEDED:"memory usage exceeded request_memory"), $(WANT_HOLD_REASON:UNDEFINED))
+  WANT_HOLD_SUBCODE = ifThenElse($(MEMORY_EXCEEDED),$(HOLD_SUBCODE_MEMORY_EXCEEDED:102), $(WANT_HOLD_SUBCODE:UNDEFINED))
 @end
 review=?
 
