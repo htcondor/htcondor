@@ -16018,8 +16018,12 @@ Scheduler::receive_startd_update(int /*cmd*/, Stream *stream) {
 		return TRUE;
 	}
 
+	// I'm pretty sure setting these attibutes in machineAd is unecessary.
 	char *claim_id = 0;
-	privateAd->LookupString(ATTR_CAPABILITY, &claim_id);
+	if ( !privateAd->LookupString(ATTR_CLAIM_ID, &claim_id) ) {
+		privateAd->LookupString(ATTR_CAPABILITY, &claim_id);
+	}
+	machineAd->Assign(ATTR_CLAIM_ID, claim_id);
 	machineAd->Assign(ATTR_CAPABILITY, claim_id);
 
 	char *name = 0;

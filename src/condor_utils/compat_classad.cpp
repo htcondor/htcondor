@@ -1896,8 +1896,13 @@ ClassAdAttributeIsPrivate( char const *name )
 			// This attribute contains the secret file transfer cookie
 		return true;
 	}
-	if (strcasecmp(name,"ChildClaimIds") == 0) {
+	if (strcasecmp(name,ATTR_CHILD_CLAIM_IDS) == 0) {
 			// In a partitionable slot, contains all the claim ids
+		return true;
+	}
+	if (strcasecmp(name,ATTR_CLAIM_ID_LIST) == 0) {
+			// In a partitionable slot with consumption policies,
+			// contains extra claim ids
 		return true;
 	}
 	return false;
