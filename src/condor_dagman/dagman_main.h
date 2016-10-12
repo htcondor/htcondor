@@ -230,6 +230,10 @@ class Dagman {
 	MyString _batchName;
 
 	DagmanClassad *_dagmanClassad;
+
+		// True iff we should remove node jobs ourself when we are
+		// condor_rm'ed.
+	bool _removeNodeJobs;
 };
 
 #endif	// ifndef DAGMAN_MAIN_H

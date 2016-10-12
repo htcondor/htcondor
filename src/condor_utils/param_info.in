@@ -1157,6 +1157,15 @@ friendly_name=Dagman Pegasus Report Timeout
 review=?
 tags=dagman,dagman_main
 
+[DAGMAN_REMOVE_NODE_JOBS]
+default=true
+type=bool
+reconfig=false
+customization=normal
+friendly_name=Dagman Remove Node Jobs
+review=?
+tags=dagman,dagman_main
+
 [DAGMAN_SUBMIT_DELAY]
 default=0
 type=int

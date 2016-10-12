@@ -1453,6 +1453,8 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 {
 	debug_printf( DEBUG_DEBUG_1, "Dag::SubmitReadyJobs()\n" );
 
+	time_t cycleStart = time( NULL );
+
 		// Jobs deferred by category throttles.
 	PrioritySimpleList<Job*> deferredJobs;
 
@@ -1518,6 +1520,16 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 					  	_maxIdleJobProcs, _readyQ->Number(),
 					  	_readyQ->Number() == 1 ? "" : "s" );
 			_maxIdleDeferredCount += _readyQ->Number();
+			break; // break out of while loop
+		}
+
+			// Check whether this submit cycle is taking too long.
+		time_t now = time( NULL );
+		time_t elapsed = now - cycleStart;
+		if ( elapsed > dm.m_user_log_scan_interval ) {
+       		debug_printf( DEBUG_QUIET,
+						"Warning: Submit cycle elapsed time (%d s) has exceeded log scan interval (%d s); bailing out of submit loop\n",
+						(int)elapsed, dm.m_user_log_scan_interval );
 			break; // break out of while loop
 		}
 
@@ -1944,7 +1956,7 @@ Dag::NumNodesDone( bool includeFinal ) const
 // where we need to condor_rm any running node jobs, and the schedd
 // won't do it for us.  wenger 2014-10-29.
 void Dag::RemoveRunningJobs ( const CondorID &dmJobId, bool removeCondorJobs,
-			bool bForce) const
+			bool bForce ) const
 {
 	if ( bForce ) removeCondorJobs = true;
 

@@ -42,6 +42,11 @@ service.
 now defaults to 60 seconds.
 \Ticket{5929}
 
+\item Added the new \MacroNI{DAGMAN\_REMOVE\_NODE\_JOBS} configuration
+macro, which allows users to configure whether \Condor{dagman}
+removes its node jobs when \Condor{dagman} itself is removed.
+\Ticket{5175}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -51,6 +56,10 @@ now defaults to 60 seconds.
 \item Fixed a bug that caused file transfer to fail when a job created
 by the Job Router has a different \Attr{Owner} than the original job.
 \Ticket{5348}
+
+\item Fixed a bug that could result in "orphan" node jobs staying
+in the queue when an instance of \Condor{dagman} is removed.
+\Ticket{5702}
 
 \end{itemize}
 
