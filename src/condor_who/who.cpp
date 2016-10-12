@@ -75,7 +75,7 @@ typedef std::map<std::string, std::vector<std::string> > TABULAR_MAP;
 typedef std::map<std::string, std::string> MAP_STRING_TO_STRING;
 
 //char	*param();
-static void query_log_dir(const char * log_dir, LOG_INFO_MAP & info);
+static void query_log_dir(const char * log_dir, LOG_INFO_MAP & info, bool chatty);
 static void print_log_info(LOG_INFO_MAP & info);
 static void print_daemon_info(LOG_INFO_MAP & info, bool fQuick);
 static void scan_logs_for_info(LOG_INFO_MAP & info, MAP_STRING_TO_PID & job_to_pid, bool fAddressesOnly);
@@ -84,7 +84,7 @@ static void scan_a_log_for_info(LOG_INFO_MAP & info, MAP_STRING_TO_PID & job_to_
 static void query_daemons_for_pids(LOG_INFO_MAP & info);
 static void ping_all_known_addrs(LOG_INFO_MAP & info);
 static char * get_daemon_param(const char * addr, const char * param_name);
-static char * get_daemon_ready(const char * addr, const char * requirements, time_t sec_to_wait);
+static bool get_daemon_ready(const char * addr, const char * requirements, time_t sec_to_wait, ClassAd & ready_ad);
 
 // app globals
 static struct {
@@ -99,7 +99,8 @@ static struct {
 	int    diagnostic; // output useful only to developers
 	bool   verbose;    // extra output useful to users
 	bool   wide;       // don't truncate to fit the screen
-	bool   show_daemons;
+	bool   show_daemons;    // print a a table of daemons pids and addresses
+	bool   daemon_mode;     // condor_who in 'daemon_mode' showing info about daemons rather than info about jobs.
 	bool   show_full_ads;
 	bool   show_job_ad;     // debugging
 	bool   scan_pids;       // query all schedds found via ps/tasklist
@@ -107,6 +108,7 @@ static struct {
 	bool   timed_scan;
 	bool   ping_all_addrs;	 //
 	int    query_ready_timeout;
+	int    poll_for_master_time; // time spent polling for the master
 	MyString query_ready_requirements;
 	int    test_backward;   // test backward reading code.
 	vector<pid_t> query_pids;
@@ -161,6 +163,7 @@ void InitAppGlobals(const char * argv0)
 	App.diagnostic = 0; // output useful only to developers
 	App.verbose = false;    // extra output useful to users
 	App.show_daemons = false; 
+	App.daemon_mode = false;
 	App.show_full_ads = false;
 	App.show_job_ad = false;     // debugging
 	App.scan_pids = false;
@@ -186,14 +189,15 @@ void InitAppGlobals(const char * argv0)
 	// Tell folks how to use this program
 void usage(bool and_exit)
 {
+	fprintf (stderr, "Usage: %s [help-opt] [addr-opt] [display-opt]\n", App.Name);
+	fprintf (stderr, "   or: %s -dae[mons] [daemon-opt]\n", App.Name);
 	fprintf (stderr,
-		"Usage: %s [help-opt] [addr-opt] [display-opt]\n"
 		"    where [help-opt] is one of\n"
-		"\t-h[elp]\t\t\tThis screen\n"
-		"\t-v[erbose]\t\tDisplay pids and addresses for daemons\n"
+		"\t-h[elp]\t\t\tDisplay this screen, then exit\n"
+		"\t-v[erbose]\t\tAlso display pids and addresses for daemons\n"
 		"\t-diag[nostic]\t\tDisplay extra information helpful for debugging\n"
 		"    and [addr-opt] is one of\n"
-		"\t-addr[ess] <host>\tSTARTD host address to query\n"
+		"\t-addr[ess] <host>\tlocal STARTD host address to query\n"
 		"\t-log[dir] <dir>\t\tDirectory to seach for STARTD address to query\n"
 		"\t-pid <pid>\t\tProcess ID of STARTD to query\n"
 		"\t-al[lpids]\t\tQuery all local STARTDs\n"
@@ -217,7 +221,35 @@ void usage(bool and_exit)
 		"\t        g   newline between ClassAds, no space before values\n"
 		"\t    use -af:h to get tabular values with headings\n"
 		"\t    use -af:lrng to get -long equivalent format\n"
+		);
+	fprintf (stderr,
+		"    where [daemon-opt] is one of\n"
+		"\t-dae[mons]\t\t Display pids and addressed for daemons then exit.\n"
+		"\t-quic[k]\t\t Display master exit code or daemon readyness ad then exit\n"
+		"\t-wait[-for-ready][:<time>] <expr> Query the MASTER for its daemon\n"
+		"\t    readyness ad and Wait up to <time> seconds for the <expr> to become true.\n"
+		);
+
+	fprintf (stderr,
+		"\n    In normal use, %s scans HTCondor log files to determine the adresse(s)\n"
+		"Of STARTD(s), and then sends a command to each STARTD to determine what jobs\n"
+		"are running on the local machine.  When the -pid or -allpids arguments are used\n"
+		"STARTDs are located by scanning system process information and lists of open sockets\n"
 		, App.Name);
+
+	fprintf (stderr,
+		"\n    When the -daemons, -quick, or -wait-for-ready arguments are used. %s only displays\n"
+		"information about HTCondor daemons. It does not attempt to determine what jobs are running.\n"
+		, App.Name);
+
+	fprintf (stderr,
+		"When the -quick or -wait-for-ready argument is used. %s scans the log directory to\n"
+		"determine the MASTER address. If the master is alive, it will query its readyness ad and\n"
+		"and display it. If the master is not alive it will report the master exit code and last\n"
+		"known address.\n"
+		, App.Name);
+
+
 	if (and_exit)
 		exit( 1 );
 }
@@ -1042,10 +1074,13 @@ void parse_args(int /*argc*/, char *argv[])
 				App.verbose = true;
 			} else if (IsArg(parg, "daemons", 3)) {
 				App.show_daemons = true;
+				App.daemon_mode = true;
 			} else if (IsArg(parg, "quick", 4)) {
 				App.quick_scan = true;
+				App.daemon_mode = true;
 			} else if (IsArgColon(parg, "wait-for-ready", &pcolon, 4)) {
 				App.quick_scan = true;
+				App.daemon_mode = true;
 				if (pcolon) App.query_ready_timeout = atoi(++pcolon);
 				if ( ! argv[ixArg+1] || *argv[ixArg+1] == '-') {
 					fprintf(stderr, "Error: Argument %s requires a requirements expression\n", argv[ixArg]);
@@ -1211,7 +1246,9 @@ void parse_args(int /*argc*/, char *argv[])
 
 	// if no output format has yet been specified, choose a default.
 	//
-	if ( ! App.show_full_ads && App.print_mask.IsEmpty() ) {
+	if (App.daemon_mode) {
+		// if no autoformat, leave the print mask empty
+	} else if ( ! App.show_full_ads && App.print_mask.IsEmpty() ) {
 		App.print_mask.SetAutoSep(NULL, " ", NULL, "\n");
 
 		if (App.show_job_ad) {
@@ -1328,6 +1365,52 @@ void init_condor_config()
 	config();
 }
 
+bool poll_log_dir_for_active_master(
+	const char * logdir,
+	LOG_INFO_MAP &info, 
+	time_t retry_timeout,
+	bool   print_dots)
+{
+	int sleep_time = 1;
+	time_t start_time = time(NULL);
+	for (int iter=0;;++iter) {
+		query_log_dir(logdir, info, App.diagnostic && (iter > 0));
+		LOG_INFO_MAP::const_iterator it = info.find("Master");
+		if (it != info.end()) {
+			scan_a_log_for_info(info, App.job_to_pid, it);
+			LOG_INFO * pli = it->second;
+			if ( ! pli->addr.empty() && pli->exit_code.empty()) {
+				// got a master address, we can quit scanning now...
+				time_t time_spent = time(NULL) - start_time;
+				App.poll_for_master_time = (int) MIN(retry_timeout, time_spent);
+				return true;
+			}
+		}
+
+		time_t now = time(NULL);
+		if ((now >= start_time + retry_timeout) || (now < start_time)) {
+			// if we exceeded the time limit, or time went backward, quit the loop.
+			break;
+		}
+		if (print_dots) { printf("."); }
+		sleep(sleep_time);
+		time_t max_sleep = MIN(10, start_time + retry_timeout - now - sleep_time);
+		sleep_time = MIN(sleep_time*2, max_sleep);
+		if (it != info.end()) {
+			// if we found an exited master, we should forget about it and scan again
+			// in case there is a new master starting.
+			LOG_INFO * pli = it->second;
+			if ( ! pli->exit_code.empty()) {
+				pli->exit_code.clear();
+				pli->addr.clear();
+				pli->pid.clear();
+			}
+		}
+	}
+
+	return false;
+}
+
 int
 main( int argc, char *argv[] )
 {
@@ -1346,7 +1429,7 @@ main( int argc, char *argv[] )
 
 	// parse command line arguments here.
 	parse_args(argc, argv);
-	bool fAddressesOnly = App.show_daemons && ! App.verbose;
+	bool fAddressesOnly = App.daemon_mode && ! App.verbose;
 
 	// setup initial config params from the default condor_config
 	// TODO: change config based on daemon that we are trying to query?
@@ -1371,18 +1454,70 @@ main( int argc, char *argv[] )
 			}
 		}
 
+
 		// scrape the log directory, scanning master, startd and slot logs
 		// to pick up addresses, pids & exit codes.
 		//
 		for (size_t ii = 0; ii < App.query_log_dirs.size(); ++ii) {
 			LOG_INFO_MAP info;
-			query_log_dir(App.query_log_dirs[ii], info);
+
 			if (App.quick_scan) {
-				LOG_INFO_MAP::const_iterator it = info.find("Master");
-				if (it != info.end()) { scan_a_log_for_info(info, App.job_to_pid, it); }
-			} else {
-				scan_logs_for_info(info, App.job_to_pid, fAddressesOnly);
+				bool chatty = App.diagnostic > 0;
+				if (chatty) { printf("\nScanning '%s' for address of Master", App.query_log_dirs[ii]); }
+				int poll_timeout = App.query_ready_timeout*2/3;
+				poll_log_dir_for_active_master(App.query_log_dirs[ii], info, poll_timeout, chatty);
+				if (chatty) { printf(" took %d seconds\n", (int)(time(NULL) - begin_time)); }
+
+				// if we found a master log then we know whether the master is alive or not.
+				// if it's alive, we can ask it about the readiness of its children
+ 				LOG_INFO_MAP::const_iterator it = info.find("Master");
+				if (it != info.end()) {
+					LOG_INFO * pli = it->second;
+					if ( ! pli->addr.empty() && pli->exit_code.empty()) {
+						if (App.query_ready_requirements.empty()) {
+							if (App.verbose) printf("\nQuerying Master %s for daemon states.\n", pli->addr.c_str());
+						} else {
+							if (App.verbose) printf("\nQuerying Master %s for daemon states and waiting for: %s\n", pli->addr.c_str(), App.query_ready_requirements.c_str());
+						}
+						ClassAd ready_ad;
+						// if we spent a significant amount of time waiting for the master to start up, but we have one now.
+						// we want to give a bit of extra time for things to become 'ready', so we adjust the timeouts a bit.
+						int remain_timeout = App.query_ready_timeout - App.poll_for_master_time;
+						bool got_ad = get_daemon_ready(pli->addr.c_str(), App.query_ready_requirements.c_str(), remain_timeout, ready_ad);
+						if (got_ad) {
+							std::string tmp;
+							if (App.print_mask.IsEmpty()) {
+								classad::References attrs;
+								sGetAdAttrs(attrs, ready_ad, false, NULL);
+								sPrintAdAttrs(tmp, ready_ad, attrs);
+							} else {
+								if (App.print_mask.has_headings()) {
+									// render once to calculate column widths.
+									App.print_mask.display(tmp, &ready_ad);
+									tmp.clear();
+									// now print headings
+									App.print_mask.display_Headings(stdout, App.print_head);
+								}
+								// and render the data for real.
+								App.print_mask.display(tmp, &ready_ad);
+							}
+							tmp += "\n";
+							fputs(tmp.c_str(), stdout);
+						}
+					} else {
+						const char * addr = pli->addr.empty() ? "NULL" : pli->addr.c_str();
+						const char * exit_code = pli->exit_code.empty() ? "" : pli->exit_code.c_str();
+						printf("\nMaster %s Exited with code=%s\n", addr, exit_code);
+					}
+				}
+				if ( ! App.show_daemons) {
+					// if we aren't printing the daemons table, just quit now.
+					continue;
+				}
 			}
+
+			query_log_dir(App.query_log_dirs[ii], info, false);
+			scan_logs_for_info(info, App.job_to_pid, fAddressesOnly);
 
 			// if we got a STARTD address, push it's address onto the list
 			// that we want to query.
@@ -1399,30 +1534,9 @@ main( int argc, char *argv[] )
 			if ( ! App.quick_scan) {
 				// fill in missing PIDS for daemons by sending them DC_CONFIG_VAL commands
 				query_daemons_for_pids(info);
-			} else {
-				LOG_INFO_MAP::const_iterator it = info.find("Master");
-				if (it != info.end()) {
-					LOG_INFO * pli = it->second;
-					if ( ! pli->addr.empty() && pli->exit_code.empty()) {
-						if (App.query_ready_requirements.empty()) {
-							printf("\nQuerying Master %s for daemon states.\n", pli->addr.c_str());
-						} else {
-							printf("\nQuerying Master %s for daemon states and waiting for %s\n", pli->addr.c_str(), App.query_ready_requirements.c_str());
-						}
-						char * states = get_daemon_ready(pli->addr.c_str(), App.query_ready_requirements.c_str(), App.query_ready_timeout);
-						if (states) {
-							printf("%s\n", states);
-							free(states);
-						}
-					} else {
-						const char * addr = pli->addr.empty() ? "NULL" : pli->addr.c_str();
-						const char * exit_code = pli->exit_code.empty() ? "" : pli->exit_code.c_str();
-						printf("\nMaster %s Exited with code=%s\n", addr, exit_code);
-					}
-				}
 			}
 
-			if (App.verbose || (App.diagnostic && ! App.show_daemons)) {
+			if (App.verbose || (App.diagnostic && ! App.daemon_mode)) {
 				printf("\nLOG directory \"%s\"\n", App.query_log_dirs[ii]);
 				print_log_info(info);
 			} else if (App.show_daemons) {
@@ -1432,7 +1546,7 @@ main( int argc, char *argv[] )
 		}
 	}
 
-	if (App.show_daemons && App.quick_scan) {
+	if (App.daemon_mode && App.quick_scan) {
 		if (App.timed_scan) { printf("%d seconds\n", (int)(time(NULL) - begin_time)); }
 		exit(0);
 	}
@@ -1483,10 +1597,10 @@ main( int argc, char *argv[] )
 							}
 
 							LOG_INFO_MAP info;
-							query_log_dir(logdir, info);
+							query_log_dir(logdir, info, false);
 							scan_logs_for_info(info, App.job_to_pid, fAddressesOnly);
 
-							if (App.verbose || (App.diagnostic && ! App.show_daemons)) {
+							if (App.verbose || (App.diagnostic && ! App.daemon_mode)) {
 								print_log_info(info);
 							} else if (App.show_daemons) {
 								print_daemon_info(info, false);
@@ -1499,7 +1613,7 @@ main( int argc, char *argv[] )
 		}
 	}
 
-	if (App.show_daemons) {
+	if (App.daemon_mode) {
 		if (App.timed_scan) { printf("%d seconds\n", (int)(time(NULL) - begin_time)); }
 		exit(0);
 	}
@@ -1596,10 +1710,16 @@ main( int argc, char *argv[] )
 
 		if (App.show_full_ads) {
 
+			std::string tmp;
+
 			result.Open();
 			while (ClassAd	*ad = result.Next()) {
-				fPrintAd(stdout, *ad);
-				printf("\n");
+				tmp.clear();
+				classad::References attrs;
+				sGetAdAttrs(attrs, *ad, false, NULL);
+				sPrintAdAttrs(tmp, *ad, attrs);
+				tmp += "\n";
+				fputs(tmp.c_str(), stdout);
 			}
 			result.Close();
 
@@ -1813,6 +1933,9 @@ static void scan_a_log_for_info(
 			if (pliDaemon->addr.empty()) {
 				if (App.diagnostic) { printf("storing %s addr : %s\n", pszDaemon, possible_daemon_addr.c_str()); }
 				pliDaemon->addr = possible_daemon_addr;
+			} else if (App.diagnostic) {
+				const char * poss = possible_daemon_addr.c_str();
+				printf("not storing %s addr : %s\n\tbecause addr = %s\n", pszDaemon, poss ? poss : "NULL", pliDaemon->addr.c_str());
 			}
 
 			bInsideBanner = false;
@@ -2073,7 +2196,7 @@ static void scan_logs_for_info(LOG_INFO_MAP & info, MAP_STRING_TO_PID & job_to_p
 	}
 }
 
-static void query_log_dir(const char * log_dir, LOG_INFO_MAP & info)
+static void query_log_dir(const char * log_dir, LOG_INFO_MAP & info, bool chatty)
 {
 
 	Directory dir(log_dir);
@@ -2089,7 +2212,7 @@ static void query_log_dir(const char * log_dir, LOG_INFO_MAP & info)
 			name.insert(0, file+1, pu - file-1);
 			name[0] = toupper(name[0]); // capitalize it.
 			filetype = 1; // address
-			//if (App.diagnostic) printf("\t\tAddress file: %s\n", name.c_str());
+			if (chatty) printf("\t\tAddress file: %s\n", name.c_str());
 		} else if (ends_with(file, "Log", &pu)) {
 			name.insert(0, file, pu-file);
 			MAP_STRING_TO_STRING::const_iterator alt = App.log_to_daemon.find(name);
@@ -2129,22 +2252,23 @@ static void query_log_dir(const char * log_dir, LOG_INFO_MAP & info)
 			continue;
 
 		const char * fullpath = dir.GetFullPath();
-		//if (App.diagnostic) printf("\t%d %-12s %s\n", filetype, name.c_str(), fullpath);
+		//if (chatty) printf("\t%d %-12s %s\n", filetype, name.c_str(), fullpath);
 
 		if (filetype > 0) {
 			LOG_INFO * pli = find_or_add_log_info(info, name, log_dir);
 			switch (filetype) {
 				case 1: // address file
 					read_address_file(fullpath, pli->addr);
-					//if (App.diagnostic) printf("\t\t%-12s addr = %s\n", name.c_str(), pli->addr.c_str());
+					if (chatty) printf("\t\t%-12s addr = %s\n", name.c_str(), pli->addr.c_str());
+					if (App.diagnostic) printf("storing %s addr : %s from address file\n", name.c_str(), pli->addr.c_str());
 					break;
 				case 2: // log file
 					pli->log = file;
-					//if (App.diagnostic) printf("\t\t%-12s log = %s\n", name.c_str(), pli->log.c_str());
+					//if (chatty) printf("\t\t%-12s log = %s\n", name.c_str(), pli->log.c_str());
 					break;
 				case 3: // old log file
 					pli->log_old = file;
-					//if (App.diagnostic) printf("\t\t%-12s old = %s\n", name.c_str(), pli->log_old.c_str());
+					//if (chatty) printf("\t\t%-12s old = %s\n", name.c_str(), pli->log_old.c_str());
 					break;
 			}
 		}
@@ -2224,9 +2348,9 @@ void print_daemon_info(LOG_INFO_MAP & info, bool fQuick)
 
 
 // make  DC_QUERY_READY query
-static char * get_daemon_ready(const char * addr, const char * requirements, time_t sec_to_wait)
+static bool get_daemon_ready(const char * addr, const char * requirements, time_t sec_to_wait, ClassAd & ready_ad)
 {
-	char * value = NULL;
+	bool got_ad = false;
 
 	Daemon dae(DT_ANY, addr, addr);
 
@@ -2237,7 +2361,7 @@ static char * get_daemon_ready(const char * addr, const char * requirements, tim
 	if ( ! dae.startCommand(DC_QUERY_READY, &sock, sec_to_wait + 2)) {
 		if (App.diagnostic > 1) { fprintf(stderr, "Can't startCommand DC_QUERY_READY to %s\n", addr); }
 		sock.close();
-		return value;
+		return false;
 	}
 
 	ClassAd ad;
@@ -2245,7 +2369,7 @@ static char * get_daemon_ready(const char * addr, const char * requirements, tim
 	if (requirements && *requirements) {
 		if ( ! ad.AssignExpr("ReadyRequirements", requirements)) {
 			fprintf(stderr, "invalid expression for DC_QUERY_READY ReadyRequirements.  Expr = '%s'\n", requirements);
-			return NULL;
+			return false;
 		}
 	}
 
@@ -2255,20 +2379,18 @@ static char * get_daemon_ready(const char * addr, const char * requirements, tim
 	} else if ( ! sock.end_of_message()) {
 		if (App.diagnostic > 1) { fprintf(stderr, "Can't send end of message to %s\n", addr); }
 	} else {
-		ad.Clear();
+		ready_ad.Clear();
 		sock.decode();
-		if ( ! getClassAd(&sock, ad)) {
+		if ( ! getClassAd(&sock, ready_ad)) {
 			if (App.diagnostic > 1) { fprintf(stderr, "Can't receive end of message from %s\n", addr); }
 		} else if ( ! sock.end_of_message()) {
 			if (App.diagnostic > 1) { fprintf(stderr, "Can't receive end of message from %s\n", addr); }
 		} else {
-			MyString states("\n");
-			sPrintAd(states, ad);
-			value = strdup(states.c_str());
+			got_ad = true;
 		}
 	}
 	sock.close();
-	return value;
+	return got_ad;
 }
 
 // make a DC config val query for a particular daemon.
