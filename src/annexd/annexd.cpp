@@ -9,29 +9,33 @@
 #include "gahp-client.h"
 #include "compat_classad.h"
 #include "classad_command_util.h"
+#include "classad_collection.h"
 
-// #include <algorithm>
 #include <queue>
 
 #include "Functor.h"
 #include "BulkRequest.h"
 #include "PutRule.h"
 #include "PutTargets.h"
+#include "UpdateCommandState.h"
 #include "ReplyAndClean.h"
 #include "FunctorSequence.h"
 
-
-// Stolen from EC2Job::build_client_token in condor_gridmanager/ec2job.cpp
-// and duplicated here because I espect to need to fiddle with it.
+// Stolen from EC2Job::build_client_token in condor_gridmanager/ec2job.cpp.
 #include <uuid/uuid.h>
-void generateClientToken( std::string & ct ) {
+void generateCommandID( std::string & commandID ) {
 	char uuid_str[37];
 	uuid_t uuid;
 	uuid_generate( uuid );
 	uuid_unparse( uuid, uuid_str );
 	uuid_str[36] = '\0';
-	ct.assign( uuid_str );
+	commandID.assign( uuid_str );
 }
+
+// Although the annex daemon uses a GAHP, it doesn't have a schedd managing
+// its hard state in an existing job ad; it has to do that job on its own.
+ClassAdCollection * hardState;
+ClassAdCollection * commandState;
 
 // Required by GahpServer::Startup().
 char * GridmanagerScratchDir = NULL;
@@ -91,8 +95,24 @@ startOneGahpClient( const std::string & publicKeyFile, const std::string & servi
 	return gahp;
 }
 
+void
+InsertOrUpdateAd( const std::string & id, ClassAd * command,
+  ClassAdCollection * log ) {
+	// We could call ListNewAdsInTransaction() and check to see if we've
+	// already inserted or updated an ad with this id, but this should work
+	// in either case, so let's keep things simple for now.
+	ClassAd * existing = NULL;
+	const char * key = id.c_str();
+	if( log->LookupClassAd( HashKey( key ), existing ) && existing != NULL ) {
+		log->DestroyClassAd( key );
+	}
+
+	log->NewClassAd( key, command );
+}
+
 int
 createOneAnnex( ClassAd * command, Stream * replyStream ) {
+	// Validate the request (basic).
 	int requestVersion = -1;
 	command->LookupInteger( "RequestVersion", requestVersion );
 	if( requestVersion != 1 ) {
@@ -116,14 +136,22 @@ createOneAnnex( ClassAd * command, Stream * replyStream ) {
 		return FALSE;
 	}
 
+	//
+	// Construct the GAHPs.  We do this before anything else because we
+	// need pointers the GAHPs to hand off to the nonblocking sequence
+	// implementation.
+	//
+
 	std::string serviceURL, eventsURL, publicKeyFile, secretKeyFile;
 	param( serviceURL, "ANNEX_DEFAULT_EC2_URL" );
 	command->LookupString( "ServiceURL", serviceURL );
 	param( eventsURL, "ANNEX_DEFAULT_CWE_URL" );
 	command->LookupString( "EventsURL", eventsURL );
+	// FIXME: These should come from the command ad or a map.
 	param( publicKeyFile, "ANNEX_DEFAULT_PUBLIC_KEY_FILE" );
 	param( secretKeyFile, "ANNEX_DEFAULT_SECRET_KEY_FILE" );
 
+	// Validate GAHP parameters.
 	if( serviceURL.empty() || publicKeyFile.empty() || secretKeyFile.empty() ) {
 		std::string errorString;
 		if( serviceURL.empty() ) {
@@ -160,19 +188,40 @@ createOneAnnex( ClassAd * command, Stream * replyStream ) {
 	EC2GahpClient * eventsGahp = startOneGahpClient( publicKeyFile, eventsURL );
 
 
+	//
 	// Construct the bulk request, create rule, and add target functors,
 	// then register them as a sequence in a timer.  This lets us get back
 	// to DaemonCore more quickly and makes the code in operator() more
 	// familiar (in terms of the idiomatic usage of the gahp client
 	// interface established by the grid manager).
+	//
+
+	// Each step in the sequence may add to the reply, and may need to pass
+	// information to the next step, so create those two ads first.
 	ClassAd * reply = new ClassAd();
 	reply->Assign( "RequestVersion", 1 );
 
 	ClassAd * scratchpad = new ClassAd();
 
-	BulkRequest * br = new BulkRequest( reply, gahp, scratchpad,
-		serviceURL, publicKeyFile, secretKeyFile );
+	// Each step in the sequence will handle its own logging for  fault
+	// recovery.  The command ad is indexed by the command ID, so
+	// look up or generate it now, so we can tell it to the steps.
+	std::string commandID;
+	command->LookupString( "CommandID", commandID );
+	if( commandID.empty() ) {
+		generateCommandID( commandID );
+		command->Assign( "CommandID", commandID );
+	}
+	scratchpad->Assign( "CommandID", commandID );
 
+	// Each step in the sequence handles its own de/serialization.
+	BulkRequest * br = new BulkRequest( reply, gahp, scratchpad,
+		serviceURL, publicKeyFile, secretKeyFile, commandState, commandID );
+
+	// Now that we've created the bulk request, it can fully validate the
+	// command ad, storing what it needs as it goes.  Really, each functor
+	// in sequence should have a validateAndStore() method, but the second
+	// two don't need one.
 	std::string validationError;
 	if(! br->validateAndStore( command, validationError )) {
 		reply->Assign( ATTR_RESULT, getCAResultString( CA_INVALID_REQUEST ) );
@@ -182,38 +231,53 @@ createOneAnnex( ClassAd * command, Stream * replyStream ) {
 			dprintf( D_ALWAYS, "Failed to reply to CA_BULK_REQUEST.\n" );
 		}
 
+		delete gahp;
+		delete eventsGahp;
+
 		delete reply;
 		delete scratchpad;
+
+		delete br;
 
 		return FALSE;
 	}
 
-	time_t now = time( NULL );
-	if(! br->isValidUntilSet()) {
-		time_t fiveMinutesFromNow = now + (5 * 60);
-		struct tm fMFN;
-		gmtime_r( & fiveMinutesFromNow, & fMFN );
-		char buffer[ 4 + 1 + 2 + 1 + 2 + 1 /* T */ + 2 + 1 + 2 + 1 + 2 + 1 /* Z */ + 1];
-		strftime( buffer, sizeof(buffer), "%Y-%m-%dT%H:%M:%SZ", & fMFN );
-		br->setValidUntil( buffer );
+	//
+	// After this point, we no longer exit because of an invalid request, so
+	// this is the first point at which we want to log the command ad.  Since
+	// none of the functors have run yet, we haven't made any changes to the
+	// cloud's state yet.  We'll pass responsibility off to the functors for
+	// logging their own individual cloud-state changes, which means now is
+	// the right time to log the command ad.
+	//
+	// Note that moving the retry/fault-tolerance code into the functors means
+	// that some of policy (not accepting user client tokens and the default
+	// validity period) has to move into the functors as well.
+	//
+
+	commandState->BeginTransaction();
+	{
+		InsertOrUpdateAd( commandID, command, commandState );
 	}
+	commandState->CommitTransaction();
 
-	// Ignore any user-specified client token.  Client token generation
-	// stolen from build_client_token() in condor_gridmanager/ec2job.cpp.
-	// We may need to use some of the remaining 28 ASCII characters for
-	// tracking purposes....
-	std::string clientToken;
-	generateClientToken( clientToken );
-	reply->Assign( "ClientToken", clientToken );
-	br->setClientToken( clientToken );
-
+	time_t now = time( NULL );
 	PutRule * cr = new PutRule( reply, eventsGahp, scratchpad,
-		eventsURL, publicKeyFile, secretKeyFile );
+		eventsURL, publicKeyFile, secretKeyFile,
+		commandState, commandID );
 	PutTargets * pt = new PutTargets( reply, eventsGahp, scratchpad,
-		eventsURL, publicKeyFile, secretKeyFile, now + (15 * 60) );
+		eventsURL, publicKeyFile, secretKeyFile, now + (15 * 60),
+		commandState, commandID );
+	// If we execute this functor, then each previous functor in the sequence
+	// has succeeded, and the "transaction" changing the state of the cloud
+	// service is complete.  We can therefore delete the command ad and
+	// the functor ad(s) in this functor, and ensure that the command isn't
+	// executed a second time.  Since we can't send the reply twice (the
+	// connection will be done), we don't need to record any state there.
+	UpdateCommandState * ucs = new UpdateCommandState( commandState, scratchpad, gahp );
 	ReplyAndClean * last = new ReplyAndClean( reply, replyStream, gahp, scratchpad, eventsGahp );
 
-	FunctorSequence * fs = new FunctorSequence( { br, cr, pt }, last );
+	FunctorSequence * fs = new FunctorSequence( { br, cr, pt, ucs }, last );
 
 	// Create a timer for the gahp to fire when it gets a result.  We must
 	// use TIMER_NEVER to ensure that the timer hasn't been reaped when the
@@ -241,10 +305,14 @@ updateCollectors() {
 	daemonCore->Reset_Timer( updateTimerID, updateInterval, updateInterval );
 }
 
+std::string commandStateFile;
+// std::string hardStateFile;
+
 void
 main_config() {
 	// Update param() globals.
 	updateInterval = param_integer( "ANNEXD_UPDATE_INTERVAL", 5 * MINUTE );
+	commandStateFile = param( "ANNEXD_COMMAND_STATE" );
 
 	// Reset our classAd.
 	annexDaemonAd = ClassAd();
@@ -278,6 +346,8 @@ handleClassAdCommand( Service *, int dcCommandInt, Stream * s ) {
 
 	switch( command ) {
 		case CA_BULK_REQUEST: {
+			// Do not allow users to provide their own command IDs.
+			commandAd.Assign( "CommandID", NULL );
 			return createOneAnnex( & commandAd, s );
 		} break;
 
@@ -291,10 +361,46 @@ handleClassAdCommand( Service *, int dcCommandInt, Stream * s ) {
 	return FALSE;
 }
 
+class IncompleteCommand : public Service {
+	public:
+		IncompleteCommand( ClassAd * c ) : commandAd( c ) { }
+
+		void operator() () {
+			// We know the command ad will validate, because we don't store
+			// invalid command ads.  createOneAnnex() will therefore return
+			// KEEP_STREAM (which isn't relevant without a stream), so we
+			// can ignore the return value.
+			createOneAnnex( commandAd, NULL );
+		}
+
+	protected:
+		ClassAd * commandAd;
+};
+
 void
 main_init( int /* argc */, char ** /* argv */ ) {
 	// Make sure that, e.g., updateInterval is set.
 	main_config();
+
+	HashKey currentKey;
+	ClassAd * currentAd;
+	commandState = new ClassAdCollection( NULL, commandStateFile.c_str() );
+	commandState->StartIterateAllClassAds();
+	while( commandState->IterateAllClassAds( currentAd, currentKey ) ) {
+		dprintf( D_ALWAYS, "Found command state ad '%s'.\n", currentKey.value() );
+
+		//
+		// Fire a timer for each interrupted command.
+		//
+		IncompleteCommand * ic = new IncompleteCommand( currentAd );
+		daemonCore->Register_Timer( 0, 0,
+			(void (Service::*)()) & IncompleteCommand::operator(),
+			currentKey.value(), ic );
+		// FIXME: write authuser information to state file
+		// FIXME: update cOA() to use that info if no replyStream available.
+	}
+
+	// hardState = new ClassAdCollection( NULL, hardStateFile.c_str() );
 
 	// All our commands are ClassAds.  At some point, we're going to want
 	// to know the authenticated identity of the requester, so make that

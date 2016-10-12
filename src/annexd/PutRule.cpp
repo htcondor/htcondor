@@ -1,6 +1,6 @@
 #include "condor_common.h"
-#include "condor_daemon_core.h"
 #include "compat_classad.h"
+#include "classad_collection.h"
 #include "gahp-client.h"
 #include "Functor.h"
 #include "PutRule.h"
@@ -9,13 +9,21 @@ int
 PutRule::operator() () {
 	dprintf( D_ALWAYS, "PutRule()\n" );
 
-	// The default account limit for rules is 50.  We should try to be
+	//
+	// The default account limit for rules is 50.  We would like to be
 	// clever and use all five targets per rule, but that would require
 	// checking to see if the rule has a target left, and that gets into
 	// some nasty race conditions, since the logic for picking a new
 	// rule if PutTargets() failed couldn't be here, where the name was
 	// initially chosen.  Therefore, just use the bulk request ID for
 	// which we're creating this lease to uniquify the name.
+	//
+	// Since the bulk request ID is unique and invariant (for each command,
+	// once established), and PutRule() is idempotent, we don't need to
+	// store any state for recovery; we can just do what we did last time
+	// and get the same result (and we don't currently even use the rule ARN).
+	//
+
 	std::string ruleName;
 	scratchpad->LookupString( "BulkRequestID", ruleName );
 

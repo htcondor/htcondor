@@ -1,8 +1,40 @@
 #include "condor_common.h"
 #include "compat_classad.h"
+#include "classad_collection.h"
 #include "gahp-client.h"
 #include "Functor.h"
 #include "BulkRequest.h"
+
+// Stolen from EC2Job::build_client_token in condor_gridmanager/ec2job.cpp
+// and duplicated here because I expect to need to fiddle with it.
+#include <uuid/uuid.h>
+void generateClientToken( std::string & ct ) {
+    char uuid_str[37];
+    uuid_t uuid;
+    uuid_generate( uuid );
+    uuid_unparse( uuid, uuid_str );
+    uuid_str[36] = '\0';
+    ct.assign( uuid_str );
+}
+
+BulkRequest::BulkRequest( ClassAd * r, EC2GahpClient * egc, ClassAd * s,
+	const std::string & su, const std::string & pkf, const std::string & skf,
+	ClassAdCollection * c, const std::string & cid ) :
+  gahp( egc ), reply( r ), scratchpad( s ),
+  service_url( su ), public_key_file( pkf ), secret_key_file( skf ),
+  commandID( cid), commandState( c ) {
+  	ClassAd * commandState;
+	if( c->Lookup( HashKey( commandID.c_str() ), commandState ) ) {
+		commandState->LookupString( "State_ClientToken", client_token );
+		commandState->LookupString( "State_BulkRequestID", bulkRequestID );
+	}
+
+	// Generate a client token if we didn't get one from the log.
+	if( client_token.empty() ) {
+		generateClientToken( client_token );
+		if( reply != NULL) { reply->Assign( "ClientToken", client_token ); }
+	}
+}
 
 bool BulkRequest::validateAndStore( ClassAd const * command, std::string & validationError ) {
 	command->LookupString( "SpotPrice", spot_price );
@@ -28,8 +60,16 @@ bool BulkRequest::validateAndStore( ClassAd const * command, std::string & valid
 	command->LookupString( "AllocationStrategy", allocation_strategy );
 	if( allocation_strategy.empty() ) { allocation_strategy = "lowestPrice"; }
 
-	// This attribute is optional but has no default.
 	command->LookupString( "ValidUntil", valid_until );
+	if( valid_until.empty() ) {
+		time_t now = time( NULL );
+		time_t fiveMinutesFromNow = now + (5 * 60);
+		struct tm fMFN;
+		gmtime_r( & fiveMinutesFromNow, & fMFN );
+		char buffer[ 4 + 1 + 2 + 1 + 2 + 1 /* T */ + 2 + 1 + 2 + 1 + 2 + 1 /* Z */ + 1];
+		strftime( buffer, sizeof(buffer), "%Y-%m-%dT%H:%M:%SZ", & fMFN );
+		valid_until = buffer;
+	}
 
 	ExprTree * launchConfigurationsTree = command->Lookup( "LaunchSpecifications" );
 	if(! launchConfigurationsTree) {
@@ -203,23 +243,73 @@ bool BulkRequest::validateAndStore( ClassAd const * command, std::string & valid
 	return true;
 }
 
+void
+BulkRequest::log() {
+	if( commandState == NULL ) {
+		dprintf( D_FULLDEBUG, "log() called without a log.\n" );
+		return;
+	}
+
+	if( commandID.empty() ) {
+		dprintf( D_FULLDEBUG, "log() called without a command ID.\n" );
+		return;
+	}
+
+	commandState->BeginTransaction();
+	{
+		if(! client_token.empty()) {
+			std::string quoted; formatstr( quoted, "\"%s\"", client_token.c_str() );
+			commandState->SetAttribute( commandID.c_str(),
+				"State_ClientToken", quoted.c_str() );
+		} else {
+			commandState->DeleteAttribute( commandID.c_str(),
+				"State_ClientToken" );
+		}
+
+		if(! bulkRequestID.empty()) {
+			std::string quoted; formatstr( quoted, "\"%s\"", bulkRequestID.c_str() );
+			commandState->SetAttribute( commandID.c_str(),
+				"State_BulkRequestID", quoted.c_str() );
+		} else {
+			commandState->DeleteAttribute( commandID.c_str(),
+				"State_BulkRequestID" );
+		}
+	}
+	commandState->CommitTransaction();
+}
+
 int
 BulkRequest::operator() () {
 	dprintf( D_ALWAYS, "BulkRequest()\n" );
 
 	int rc;
 	std::string errorCode;
-	std::string bulkRequestID;
 
-	rc = gahp->bulk_start(
-				service_url, public_key_file, secret_key_file,
-				client_token, spot_price, target_capacity,
-				iam_fleet_role, allocation_strategy, valid_until,
-				launch_specifications,
-				bulkRequestID, errorCode );
-	if( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED || rc == GAHPCLIENT_COMMAND_PENDING ) {
-		// We should exit here the first time.
-		return KEEP_STREAM;
+	// If we already know the BulkRequestID, we don't need to do anything.
+	if(! bulkRequestID.empty()) {
+		dprintf( D_FULLDEBUG, "BulkRequest: found existing bulk request id (%s), not making another requst.\n", bulkRequestID.c_str() );
+		rc = 0;
+	} else {
+		// Otherwise, continue as normal.  If the client token happens to be
+		// from a previous request, the idempotency of spot fleet requests
+		// means it both safe to repeat the request and that we'll get back
+		// the information we want (the spot fleet request ID).
+
+		// We have to call bulk_start() at least twice (once to issue the
+		// command, and at least once to get the result), so we should
+		// probably do something clever here and only log once.
+		this->log();
+		rc = gahp->bulk_start(
+					service_url, public_key_file, secret_key_file,
+					client_token, spot_price, target_capacity,
+					iam_fleet_role, allocation_strategy, valid_until,
+					launch_specifications,
+					bulkRequestID, errorCode );
+
+		if( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED || rc == GAHPCLIENT_COMMAND_PENDING ) {
+			// We should exit here the first time.
+			return KEEP_STREAM;
+		}
 	}
 
 	if( rc == 0 ) {
@@ -232,6 +322,8 @@ BulkRequest::operator() () {
 		// subsequent functors in this sequence may need to know the bulk
 		// request ID.
 		scratchpad->Assign( "BulkRequestID", bulkRequestID );
+
+		this->log();
 
 		rc = PASS_STREAM;
 	} else if( errorCode == "NEED_CHECK_BULK_START" ) {

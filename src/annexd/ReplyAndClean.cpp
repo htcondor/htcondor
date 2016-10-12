@@ -1,5 +1,4 @@
 #include "condor_common.h"
-#include "condor_daemon_core.h"
 #include "compat_classad.h"
 #include "gahp-client.h"
 #include "Functor.h"
@@ -12,7 +11,7 @@ ReplyAndClean::operator() () {
 	dprintf( D_ALWAYS, "ReplyAndClean()\n" );
 
 	// Send whatever reply we have, then clean it up.
-	if( reply ) {
+	if( reply && replyStream ) {
 		if(! sendCAReply( replyStream, "CA_BULK_REQUEST", reply )) {
 			dprintf( D_ALWAYS, "Failed to reply to CA_BULK_REQUEST.\n" );
 		}

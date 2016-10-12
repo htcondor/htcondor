@@ -1,7 +1,7 @@
 #include "condor_common.h"
 #include "condor_config.h"
-#include "condor_daemon_core.h"
 #include "compat_classad.h"
+#include "classad_collection.h"
 #include "gahp-client.h"
 #include "Functor.h"
 #include "PutTargets.h"
@@ -14,9 +14,16 @@ PutTargets::operator() () {
 	scratchpad->LookupString( "ruleName", ruleName );
 	ASSERT(! ruleName.empty());
 
+	//
 	// To make sure the rule ID is unique, make it the ID of the spot fleet
-	// request that the lease will be deleting.  Including the alias for
-	// clarity at the call to the gahp.
+	// request that the lease will be deleting.
+	//
+	// Since the bulk request ID is unique and invariant (for each command,
+	// once established), and PutTargets() is idempotent, we don't need to
+	// store any state for recovery; we can just do what we did last time
+	// and get the same result (which we ignore anyway).
+	//
+
 	std::string spotFleetRequestID;
 	scratchpad->LookupString( "BulkRequestID", spotFleetRequestID );
 	ASSERT(! spotFleetRequestID.empty());

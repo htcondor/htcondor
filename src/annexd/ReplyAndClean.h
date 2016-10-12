@@ -2,7 +2,6 @@
 #define _CONDOR_REPLY_AND_CLEAN_H
 
 // #include "condor_common.h"
-// #include "condor_daemon_core.h"
 // #include "compat_classad.h"
 // #include "gahp-client.h"
 // #include "Functor.h"

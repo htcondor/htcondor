@@ -4840,7 +4840,7 @@ review=?
 tags=tools,preen
 
 [SYSTEM_VALID_SPOOL_FILES]
-default=job_queue.log, job_queue.log.tmp, history, Accountant.log, Accountantnew.log, local_univ_execute, .quillwritepassword, .pgpass, .schedd_address, .schedd_address.super, .schedd_classad, OfflineLog
+default=annexd_command.state, job_queue.log, job_queue.log.tmp, history, Accountant.log, Accountantnew.log, local_univ_execute, .quillwritepassword, .pgpass, .schedd_address, .schedd_address.super, .schedd_classad, OfflineLog
 type=string
 reconfig=true
 customization=const
@@ -5872,6 +5872,13 @@ tags=master,master
 
 [ANNEXD_LOG]
 default=$(LOG)/AnnexdLog
+type=path
+reconfig=true
+customization=seldom
+tags=annex,log
+
+[ANNEXD_COMMAND_STATE]
+default=$(SPOOL)/annexd_command.state
 type=path
 reconfig=true
 customization=seldom
