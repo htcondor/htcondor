@@ -211,7 +211,7 @@ Dag::Dag( /* const */ StringList &dagFiles,
 	_haltFile = HaltFileName( _dagFiles.next() );
 	_dagStatus = DAG_STATUS_OK;
 
-	_allNodesIt = NULL;//TEMPTEMP -- move?
+	_allNodesIt = NULL;
 
 	return;
 }
@@ -1312,7 +1312,6 @@ Dag::FindAllNodesByName( const char* nodeName,
 		if ( _allNodesIt ) {
 			node =  _allNodesIt->Next();
 		} else {
-				//TEMPTEMP -- should this be an error?
 			node =  NULL;
 		}
 	}

@@ -517,6 +517,7 @@ Job::AddScript( bool post, const char *cmd, int defer_status, time_t defer_time,
 	if( post ? _scriptPost : _scriptPre ) {
 		whynot.formatstr( "%s script already assigned (%s)",
 						post ? "POST" : "PRE", GetPreScriptName() );
+//TEMPTEMP -- if you have multiple commands that assign a script, which should prevail?  I think with vars the last one does...
 		//TEMPTEMP return false;
 		delete (post ? _scriptPost : _scriptPre);//TEMPTEMP
 	}

@@ -296,7 +296,21 @@ class Dag {
     */
     Job * FindNodeByEventID ( const CondorID condorID ) const;
 
-	//TEMPTEMP -- document
+	/** Find all nodes by name -- either a specific node or all
+	 	nodes in the DAG.  To find all nodes in the DAG, pass
+		"ALL_NODES" as the node name on the first call; then NULL
+		in subsequent calls
+		@param nodeName the name of the node to find, or "ALL_NODES",
+			or NULL
+		@param file the name of the DAG file that is being parsed
+		@param line the line in the DAG file that is being parsed
+		@param finalSkipMsg the message to print when skipping final
+			nodes, in a form like this: "In parse_script(): skipping node
+			%s because final nodes must have SCRIPT set explicitly
+			(%s: %d)\n"
+	 	@return a pointer to a Job (node) object, or NULL if there are
+	 		no more node to be found
+	*/
 	Job * FindAllNodesByName( const char* nodeName,
 				const char *file, int line,
 				const char *finalSkipMsg ) const;
@@ -975,11 +989,8 @@ class Dag {
 	bool UnmonitorLogFile();
 
 protected:
-    /// List of Job objects
+    // List of Job objects
     List<Job>     _jobs;
-
-	//TEMPTEMP -- probably move this to private
-	mutable ListIterator<Job> *_allNodesIt;
 
 private:
 		// Note: the final node is in the _jobs list; this pointer is just
@@ -1217,6 +1228,9 @@ private:
 	
 		// Object to deal with reporting DAGMan metrics (to Pegasus).
 	DagmanMetrics *_metrics;
+
+		// Iterator for ALL_NODES implementation.
+	mutable ListIterator<Job> *_allNodesIt;
 };
 
 #endif /* #ifndef DAG_H */

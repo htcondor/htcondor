@@ -527,17 +527,13 @@ parse_node( Dag *dag,
 			const char* dagFile, int lineNum, const char *directory,
 			const char *inlineOrExt, const char *submitOrDagFile)
 {
-	//TEMPTEMP MyString example;//TEMPTEMP -- is this even used?
+	MyString example;
+	example.formatstr( "%s%s <nodename> <%s> "
+				"[DIR directory] [NOOP] [DONE]", nodeTypeKeyword, inlineOrExt,
+				submitOrDagFile );
 	MyString whynot;
 	bool done = false;
 	Dag *tmp = NULL;
-
-	//TEMPTEMP -- why is this different from other commands?
-	MyString expectedSyntax;
-	//TEMPTEMP -- check this for commands other than JOB
-	expectedSyntax.formatstr( "Expected syntax: %s%s <nodename> <%s> "
-				"[DIR directory] [NOOP] [DONE]", nodeTypeKeyword, inlineOrExt,
-				submitOrDagFile );
 
 		// NOTE: fear not -- any missing tokens resulting in NULL
 		// strings will be error-handled correctly by AddNode()
@@ -547,7 +543,7 @@ parse_node( Dag *dag,
 	if ( !nodeName ) {
 		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): no node name "
 					"specified\n", dagFile, lineNum );
-		debug_printf( DEBUG_QUIET, "%s\n", expectedSyntax.Value() );
+		exampleSyntax( example.Value() );
 		return false;
 	}
 
@@ -556,8 +552,7 @@ parse_node( Dag *dag,
 		debug_printf( DEBUG_QUIET,
 					  "ERROR: %s (line %d): JobName cannot be a reserved word\n",
 					  dagFile, lineNum );
-		//TEMPTEMP? exampleSyntax( expectedSyntax.Value() );
-		debug_printf( DEBUG_QUIET, "%s\n", expectedSyntax.Value() );
+		exampleSyntax( example.Value() );
 		return false;
 	}
 
@@ -569,7 +564,7 @@ parse_node( Dag *dag,
 	if ( !submitFile ) {
 		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): no submit file "
 					"specified\n", dagFile, lineNum );
-		debug_printf( DEBUG_QUIET, "%s\n", expectedSyntax.Value() );
+		exampleSyntax( example.Value() );
 		return false;
 	}
 
@@ -589,7 +584,7 @@ parse_node( Dag *dag,
 			if ( !directory ) {
 				debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): no directory "
 							"specified after DIR keyword\n", dagFile, lineNum );
-				debug_printf( DEBUG_QUIET, "%s\n", expectedSyntax.Value() );
+				exampleSyntax( example.Value() );
 				return false;
 			}
 
@@ -623,7 +618,7 @@ parse_node( Dag *dag,
 		} else {
 			debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): invalid "
 						  "parameter \"%s\"\n", dagFile, lineNum, nextTok );
-			debug_printf( DEBUG_QUIET, "%s\n", expectedSyntax.Value() );
+			exampleSyntax( example.Value() );
 			return false;
 		}
 		nextTok = strtok( NULL, DELIMITERS );
@@ -633,7 +628,7 @@ parse_node( Dag *dag,
 	if ( nextTok ) {
 			debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): invalid "
 						  "parameter \"%s\"\n", dagFile, lineNum, nextTok );
-			debug_printf( DEBUG_QUIET, "%s\n", expectedSyntax.Value() );
+			exampleSyntax( example.Value() );
 			return false;
 	}
 
@@ -678,7 +673,7 @@ parse_node( Dag *dag,
 	{
 		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): %s\n",
 					  dagFile, lineNum, whynot.Value() );
-		debug_printf( DEBUG_QUIET, "%s\n", expectedSyntax.Value() );
+		exampleSyntax( example.Value() );
 		return false;
 	}
 
@@ -2233,7 +2228,6 @@ static MyString current_splice_scope(void)
 	}
 	return scope;
 }
-
 
 //TEMPTEMP -- or false means error; no var name means end of vars
 static bool
