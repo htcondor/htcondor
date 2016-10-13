@@ -167,6 +167,8 @@ class CollectorEngine : public Service
 	bool m_forwardFilteringEnabled;
 	StringList m_forwardWatchList;
 	int m_forwardInterval;
+public: // so that the config code can set it.
+	bool m_allowOnlyOneNegotiator; // prior to 8.5.8, this was hard-coded to be true.
 };
 
 

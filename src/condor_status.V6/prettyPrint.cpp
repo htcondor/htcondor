@@ -1131,14 +1131,36 @@ void ppSetGridNormalCols (int width)
 	ppSetColumn(ATTR_IDLE_JOBS,    "%8d", true);
 }
 
+const char * const negotiatorNormal_PrintFormat = "SELECT\n"
+	"Name           AS Name         WIDTH AUTO\n"
+	"LastNegotiationCycleEnd0  AS LastCycleEnd WIDTH 12 PRINTAS DATE\n"
+	"LastNegotiationCycleDuration0 AS (Sec) PRINTF %5d\n"
+	"LastNegotiationCycleCandidateSlots0 AS '  Slots' PRINTF %7d\n"
+	"LastNegotiationCycleActiveSubmitterCount0 AS Submitrs PRINTF %8d\n"
+	"LastNegotiationCycleNumSchedulers0 AS Schedds PRINTF %7d\n"
+	"LastNegotiationCycleNumIdleJobs0 AS '   Jobs' PRINTF %7d\n"
+	"LastNegotiationCycleMatches0 AS Matches PRINTF %7d\n"
+	"LastNegotiationCycleRejections0 AS Rejections PRINTF %10d\n"
+"SUMMARY NONE\n";
 
-void ppSetNegotiatorNormalCols (int width)
+int ppSetNegotiatorNormalCols (int width)
 {
+#if 1
+	const char * tag = "Negotiator";
+	const char * fmt = negotiatorNormal_PrintFormat;
+	const char * constr = NULL;
+	if (set_status_print_mask_from_stream(fmt, false, &constr) < 0) {
+		fprintf(stderr, "Internal error: default %s print-format is invalid !\n", tag);
+	}
+	// set a minumum size for name column
+	return width ? 12 : 12;
+#else
 	int name_width = wide_display ? -32 : -20;
-	if (width > 79 && ! wide_display) { name_width = MAX(-40, width/3); }
+	if (width > 79 && ! wide_display) { name_width = MAX(-40, -width/3); }
 
 	ppSetColumn(ATTR_NAME, name_width, ! wide_display);
 	ppSetColumn(ATTR_MACHINE, name_width, ! wide_display);
+#endif
 }
 
 
@@ -1382,7 +1404,9 @@ void ppInitPrintMask(ppOption pps, classad::References & proj, const char * & co
 		break;
 
 		case PP_NEGOTIATOR_NORMAL:
-		ppSetNegotiatorNormalCols(display_width);
+		name_width = ppSetNegotiatorNormalCols(display_width);
+		name_flags = FormatOptionAutoWidth;
+		width_of_fixed_cols = 12+4+8+7+8+7;
 		break;
 
 		case PP_SUBMITTER_NORMAL:

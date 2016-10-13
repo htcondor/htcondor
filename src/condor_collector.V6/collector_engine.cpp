@@ -82,6 +82,8 @@ CollectorEngine::CollectorEngine (CollectorStats *stats ) :
 	m_forwardFilteringEnabled = false;
 	housekeeperTimerID = -1;
 
+	m_allowOnlyOneNegotiator = param_boolean("COLLECTOR_ALLOW_ONLY_ONE_NEGOTIATOR", false);
+
 	collectorStats = stats;
 	m_collector_requirements = NULL;
 }
@@ -759,10 +761,12 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 			break;
 		}
 		hashString.Build( hk );
+		if (m_allowOnlyOneNegotiator) {
 			// first, purge all the existing negotiator ads, since we
 			// want to enforce that *ONLY* 1 negotiator is in the
 			// collector any given time.
-		purgeHashTable( NegotiatorAds );
+			purgeHashTable( NegotiatorAds );
+		}
 		retVal=updateClassAd (NegotiatorAds, "NegotiatorAd  ", "Negotiator",
 							  clientAd, hk, hashString, insert, from );
 		break;

@@ -43,6 +43,7 @@
 #include "selector.h"
 #include "consumption_policy.h"
 #include "condor_classad.h"
+#include "subsystem_info.h"
 
 #include <vector>
 #include <string>
@@ -539,6 +540,10 @@ reinitialize ()
     // Initialize accountant params
     accountant.Initialize(hgq_root_group);
 
+	if (NegotiatorName) {
+		free(NegotiatorName);
+		NegotiatorName = NULL;
+	}
 	init_public_ad();
 
 	// get timeout values
@@ -6338,13 +6343,19 @@ init_public_ad()
 	SetTargetTypeName(*publicAd, "");
 
 	if( !NegotiatorName ) {
-		char* defaultName = NULL;
-		defaultName = default_daemon_name();
-		if( ! defaultName ) {
-			EXCEPT( "default_daemon_name() returned NULL" );
+		// optionally allow the negotiator name to be set, this is for unusual circumstances
+		// the default behavior will be to use the subsystem name as the negotiator name.
+		// we do this so that in a HAD configuration, the two negotiators will have the same name
+		// and thus overwrite each other's ad in the collector. 
+		NegotiatorName = param("NEGOTIATOR_NAME");
+		if ( ! NegotiatorName) {
+			const char * name = get_mySubSystem()->getLocalName();
+			if ( ! name) {
+				name = get_mySubSystem()->getName();
+				if ( ! name) { name = "NEGOTIATOR"; }
+			}
+			NegotiatorName = strdup(name);
 		}
-		NegotiatorName = strdup( defaultName );
-		delete [] defaultName;
 	}
 	publicAd->Assign(ATTR_NAME, NegotiatorName );
 
