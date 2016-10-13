@@ -1283,7 +1283,7 @@ Job * Dag::FindNodeByName (const char * jobName) const {
 //---------------------------------------------------------------------------
 Job *
 Dag::FindAllNodesByName( const char* nodeName,
-			const char *file, int line, const char *finalSkipMsg ) const
+			const char *finalSkipMsg, const char *file, int line ) const
 {
 	Job *node = NULL;
 

@@ -108,12 +108,9 @@ $success = sub
 	}
 
 	# Check for a bunch of lines in the rescue DAG.
-	# Hmm -- I'm not going to do this right now, but a nice way to do
-	# the checking would be to delete stuff from checklines as we find
-	# it, and then print the remaining stuff at the end if it's not all
-	# found.  wenger 2009-03-05.
 	@checklines = ("JOB NodeA /dev/null NOOP ",
 		"SCRIPT PRE NodeA /dev/null A \$JOB \$RETRY",
+		"PRE_SKIP NodeA 4",
 		"SCRIPT POST NodeA /dev/null A \$JOB \$RETURN",
 		"VARS NodeA nodename=\"NodeA\"",
 		"ABORT-DAG-ON NodeA 3 RETURN 4",
@@ -122,6 +119,7 @@ $success = sub
 
 		"JOB NodeB /dev/null NOOP ",
 		"SCRIPT PRE NodeB /dev/null A barfoo \$RETRY",
+		"PRE_SKIP NodeB 20",
 		"SCRIPT POST NodeB /dev/null A barfoo \$RETURN",
 		"VARS NodeB nodename=\"barfoo\"",
 		"ABORT-DAG-ON NodeB 30 RETURN 40",
@@ -130,6 +128,7 @@ $success = sub
 
 		"JOB NodeC /dev/null NOOP ",
 		"SCRIPT PRE NodeC /dev/null A \$JOB \$RETRY",
+		"PRE_SKIP NodeC 4",
 		"SCRIPT POST NodeC /dev/null A \$JOB \$RETURN",
 		"VARS NodeC nodename=\"NodeC\"",
 		"ABORT-DAG-ON NodeC 3 RETURN 4",
@@ -143,6 +142,7 @@ $success = sub
 
 		"JOB SpliceA+NodeX /dev/null NOOP ",
 		"SCRIPT PRE SpliceA+NodeX /dev/null B \$JOB \$RETRY",
+		"PRE_SKIP SpliceA+NodeX 5",
 		"SCRIPT POST SpliceA+NodeX /dev/null B \$JOB \$RETURN",
 		"VARS SpliceA+NodeX nodename=\"SpliceA+NodeX\"",
 		"ABORT-DAG-ON SpliceA+NodeX 4 RETURN 5",
@@ -151,6 +151,7 @@ $success = sub
 
 		"JOB SpliceA+NodeY /dev/null NOOP ",
 		"SCRIPT PRE SpliceA+NodeY /dev/null B \$JOB \$RETRY",
+		"PRE_SKIP SpliceA+NodeY 5",
 		"SCRIPT POST SpliceA+NodeY /dev/null B \$JOB \$RETURN",
 		"VARS SpliceA+NodeY nodename=\"SpliceA+NodeY\"",
 		"ABORT-DAG-ON SpliceA+NodeY 4 RETURN 5",
@@ -159,6 +160,7 @@ $success = sub
 
 		"JOB SpliceA+NodeZ /dev/null NOOP ",
 		"SCRIPT PRE SpliceA+NodeZ /dev/null B \$JOB \$RETRY",
+		"PRE_SKIP SpliceA+NodeZ 5",
 		"SCRIPT POST SpliceA+NodeZ /dev/null B \$JOB \$RETURN",
 		"VARS SpliceA+NodeZ nodename=\"SpliceA+NodeZ\"",
 		"ABORT-DAG-ON SpliceA+NodeZ 4 RETURN 5",

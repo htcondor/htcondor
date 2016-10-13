@@ -302,18 +302,18 @@ class Dag {
 		in subsequent calls
 		@param nodeName the name of the node to find, or "ALL_NODES",
 			or NULL
-		@param file the name of the DAG file that is being parsed
-		@param line the line in the DAG file that is being parsed
 		@param finalSkipMsg the message to print when skipping final
 			nodes, in a form like this: "In parse_script(): skipping node
 			%s because final nodes must have SCRIPT set explicitly
 			(%s: %d)\n"
+		@param file the name of the DAG file that is being parsed
+		@param line the line in the DAG file that is being parsed
 	 	@return a pointer to a Job (node) object, or NULL if there are
 	 		no more node to be found
 	*/
 	Job * FindAllNodesByName( const char* nodeName,
-				const char *file, int line,
-				const char *finalSkipMsg ) const;
+				const char *finalSkipMsg,
+				const char *file, int line) const;
 
     /** Ask whether a node name exists in the DAG
         @param nodeName the name of the node in the DAG

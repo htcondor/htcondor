@@ -111,7 +111,6 @@ isReservedWord( const char *token )
         if (!strcasecmp (token, keywords[i])) {
     		debug_printf( DEBUG_QUIET,
 						"ERROR: token (%s) is a reserved word\n", token );
-			//TEMPTEMP -- print all reserved words?
 			return true;
 		}
     }
@@ -547,7 +546,6 @@ parse_node( Dag *dag,
 		return false;
 	}
 
-	//TEMPTEMP -- we should probably also disallow "." and "+" in node names
 	if ( isReservedWord( nodeName ) ) {
 		debug_printf( DEBUG_QUIET,
 					  "ERROR: %s (line %d): JobName cannot be a reserved word\n",
@@ -813,7 +811,7 @@ parse_script(
 	//
 	
 	// first, skip over the token we already read...
-	//TEMPTEMP -- man, this is ugly -- why don't we call strtok() again?
+	// Why not just call strtok() again here? wenger 2016-10-13
 	while (*rest != '\0') rest++;
 	
 	// if we're not at the end of the line, move forward
@@ -858,8 +856,8 @@ parse_script(
 
 	Job *job;
 	while ( ( job = dag->FindAllNodesByName( jobName,
-				filename, lineNumber,
-				"In parse_script(): skipping node %s because final nodes must have SCRIPT set explicitly (%s: %d)\n" ) ) ) {
+				"In parse_script(): skipping node %s because final nodes must have SCRIPT set explicitly (%s: %d)\n",
+				filename, lineNumber ) ) ) {
 		jobName = NULL;
 
 		MyString whynot;
@@ -868,8 +866,7 @@ parse_script(
 			debug_printf( DEBUG_SILENT, "ERROR: %s (line %d): "
 					  	"failed to add %s script to node %s: %s\n",
 					  	filename, lineNumber, post ? "POST" : "PRE",
-						//TEMPTEMP -- jobNameOrig may not be good here if we have ALL_NODES; but what if we have name munging on?
-					  	jobNameOrig, whynot.Value() );
+					  	job->GetJobName(), whynot.Value() );
 			return false;
 		}
 
@@ -1126,8 +1123,8 @@ parse_retry(
 
 	Job *job;
 	while ( ( job = dag->FindAllNodesByName( jobName,
-				filename, lineNumber,
-				"In parse_retry(): skipping node %s because final nodes cannot have RETRY specifications (%s: %d)\n" ) ) ) {
+				"In parse_retry(): skipping node %s because final nodes cannot have RETRY specifications (%s: %d)\n",
+				filename, lineNumber ) ) ) {
 		jobName = NULL;
 
 		debug_printf( DEBUG_DEBUG_3, "parse_retry(): found job %s\n",
@@ -1150,8 +1147,8 @@ parse_retry(
 	}
 
 	if ( jobName ) {
-		debug_printf(DEBUG_QUIET, "%s (line %d): Unknown Job %s\n",
-					filename, lineNumber, jobNameOrig);
+		debug_printf( DEBUG_QUIET, "%s (line %d): Unknown Job %s\n",
+					filename, lineNumber, jobNameOrig );
 		return false;
 	}
 
@@ -1251,8 +1248,8 @@ parse_abort(
 
 	Job *job;
 	while ( ( job = dag->FindAllNodesByName( jobName,
-				filename, lineNumber,
-				"In parse_abort(): skipping node %s because final nodes cannot have ABORT-DAG-ON specification (%s: %d)s\n" ) ) ) {
+				"In parse_abort(): skipping node %s because final nodes cannot have ABORT-DAG-ON specification (%s: %d)s\n",
+				filename, lineNumber ) ) ) {
 		jobName = NULL;
 
 		debug_printf( DEBUG_DEBUG_3, "parse_abort(): found job %s\n",
@@ -1273,8 +1270,8 @@ parse_abort(
 	}
 
 	if ( jobName ) {
-		debug_printf(DEBUG_QUIET, "%s (line %d): Unknown Job %s\n",
-					filename, lineNumber, jobNameOrig);
+		debug_printf( DEBUG_QUIET, "%s (line %d): Unknown Job %s\n",
+					filename, lineNumber, jobNameOrig );
 		return false;
 	}
 
@@ -1333,7 +1330,6 @@ static bool parse_dot(Dag *dag, const char *filename, int lineNumber)
 	return true;
 }
 
-//TEMPTEMP -- split some of this into separate functions?
 //-----------------------------------------------------------------------------
 // 
 // Function: parse_vars
@@ -1358,22 +1354,20 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber)
 	MyString tmpJobName = munge_job_name(jobName);
 	jobName = tmpJobName.Value();
 
-	//TEMPTEMP -- probably change this...
 	char *varsStr = strtok( NULL, "\n" ); // just get all the rest -- we'll be doing this by hand
 
 	Job *job;
-	//TEMPTEMP -- hmm -- can this loop get moved down??
 	while ( ( job = dag->FindAllNodesByName( jobName,
-				filename, lineNumber,
-				"In parse_vars(): skipping node %s because final nodes must have VARS set explicitly (%s: %d)\n" ) ) ) {
-	//TEMPTEMP -- fix indentation
+				"In parse_vars(): skipping node %s because final nodes must have VARS set explicitly (%s: %d)\n",
+				filename, lineNumber ) ) ) {
 		jobName = NULL;
 
 		debug_printf( DEBUG_DEBUG_3, "parse_vars(): found job %s\n",
 					job->GetJobName() );
 
-//TEMPTEMP -- note -- this re-parses most of the VARS line for every node...
-		char *str = varsStr;//TEMPTEMP
+			// Note:  this re-parses most of the VARS line for every node...
+			// wenger 2016-10-13
+		char *str = varsStr;
 
 		int numPairs;
 		for ( numPairs = 0; ; numPairs++ ) {  // for each name="value" pair
@@ -1430,8 +1424,8 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber)
 	}
 
 	if ( jobName ) {
-		debug_printf(DEBUG_QUIET, "%s (line %d): Unknown Job %s\n",
-					filename, lineNumber, jobNameOrig);
+		debug_printf( DEBUG_QUIET, "%s (line %d): Unknown Job %s\n",
+					filename, lineNumber, jobNameOrig );
 		return false;
 	}
 	
@@ -1509,8 +1503,8 @@ parse_priority(
 	//
 	Job *job;
 	while ( ( job = dag->FindAllNodesByName( jobName,
-				filename, lineNumber,
-				"In parse_priority(): skipping node %s because final nodes cannot have PRIORITY specifications (%s: %d)\n" ) ) ) {
+				"In parse_priority(): skipping node %s because final nodes cannot have PRIORITY specifications (%s: %d)\n",
+				filename, lineNumber ) ) ) {
 		jobName = NULL;
 
 		debug_printf( DEBUG_DEBUG_3, "parse_priority(): found job %s\n",
@@ -1534,8 +1528,8 @@ parse_priority(
 	}
 
 	if ( jobName ) {
-		debug_printf(DEBUG_QUIET, "%s (line %d): Unknown Job %s\n",
-					filename, lineNumber, jobNameOrig);
+		debug_printf( DEBUG_QUIET, "%s (line %d): Unknown Job %s\n",
+					filename, lineNumber, jobNameOrig );
 		return false;
 	}
 
@@ -1603,8 +1597,8 @@ parse_category(
 	//
 	Job *job;
 	while ( ( job = dag->FindAllNodesByName( jobName,
-				filename, lineNumber,
-				"In parse_category(): skipping node %s because final nodes cannot have CATEGORY specifications (%s: %d)\n" ) ) ) {
+				"In parse_category(): skipping node %s because final nodes cannot have CATEGORY specifications (%s: %d)\n",
+				filename, lineNumber ) ) ) {
 		jobName = NULL;
 
 		debug_printf( DEBUG_DEBUG_3, "parse_category(): found job %s\n",
@@ -1621,8 +1615,8 @@ parse_category(
 	}
 
 	if ( jobName ) {
-		debug_printf(DEBUG_QUIET, "%s (line %d): Unknown Job %s\n",
-					filename, lineNumber, jobNameOrig);
+		debug_printf( DEBUG_QUIET, "%s (line %d): Unknown Job %s\n",
+					filename, lineNumber, jobNameOrig );
 		return false;
 	}
 
@@ -2061,7 +2055,6 @@ parse_pre_skip( Dag  *dag,
 	int  lineNumber)
 {
 	const char * example = "PRE_SKIP JobName Exitcode";
-	Job * job = NULL;
 	MyString whynot;
 
 		//
@@ -2076,25 +2069,9 @@ parse_pre_skip( Dag  *dag,
 	}
 
 	const char *jobNameOrig = jobName; // for error output
-	if ( isReservedWord(jobName) ) {
-		debug_printf( DEBUG_QUIET,
-				"ERROR: %s (line %d): JobName cannot be a reserved word\n",
-				filename, lineNumber );
-		exampleSyntax( example );
-		return false;
-	} else {
-		debug_printf( DEBUG_DEBUG_1, "jobName: %s\n", jobName );
-		MyString tmpJobName = munge_job_name( jobName );
-		jobName = tmpJobName.Value();
-
-		job = dag->FindNodeByName( jobName );
-		if (job == NULL) {
-			debug_printf( DEBUG_QUIET, 
-					"ERROR: %s (line %d): Unknown Job %s\n",
-					filename, lineNumber, jobNameOrig );
-			return false;
-		}
-	}
+	debug_printf( DEBUG_DEBUG_1, "jobName: %s\n", jobName );
+	MyString tmpJobName = munge_job_name( jobName );
+	jobName = tmpJobName.Value();
 
 		//
 		// The rest of the line consists of the exitcode
@@ -2128,13 +2105,29 @@ parse_pre_skip( Dag  *dag,
 		return false;
 	}
 
-	if ( !job->AddPreSkip( exitCode, whynot ) ) {
-		debug_printf( DEBUG_SILENT, "ERROR: %s (line %d): failed to add "
-				"PRE_SKIP note to node %s: %s\n",
-				filename, lineNumber, jobNameOrig,
-				whynot.Value() );
+	Job *job;
+	while ( ( job = dag->FindAllNodesByName( jobName,
+				"In parse_pre_skip(): skipping node %s because final nodes must have PRE_SKIP set explicitly (%s: %d)\n",
+				filename, lineNumber ) ) ) {
+		jobName = NULL;
+
+		MyString whynot;
+		if( !job->AddPreSkip( exitCode, whynot ) ) {
+			debug_printf( DEBUG_SILENT, "ERROR: %s (line %d): "
+					  	"failed to add PRE_SKIP to node %s: %s\n",
+					  	filename, lineNumber, job->GetJobName(),
+						whynot.Value() );
+			return false;
+		}
+	}
+
+	if ( jobName ) {
+		debug_printf( DEBUG_QUIET, 
+					  "ERROR: %s (line %d): Unknown Job %s\n",
+					  filename, lineNumber, jobNameOrig );
 		return false;
 	}
+
 	return true;
 }
 

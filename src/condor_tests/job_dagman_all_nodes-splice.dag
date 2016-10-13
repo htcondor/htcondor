@@ -3,6 +3,7 @@ job NodeY /dev/null noop
 job NodeZ /dev/null noop
 
 script pre ALL_NODES /dev/null B $JOB $RETRY
+pre_skip ALL_NODES 5
 script post ALL_NODES /dev/null B $JOB $RETURN
 vars ALL_NODES nodename="$(JOB)"
 retry ALL_NODES 3 UNLESS-EXIT 6
