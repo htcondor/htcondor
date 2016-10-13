@@ -1398,15 +1398,15 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber)
 			job->varsFromDag->Rewind();
 			while(Job::NodeVar *var = job->varsFromDag->Next()){
 				if ( varName == var->_name ) {
-					//TEMPTEMP -- do we want to get rid of this warning or change the strictness?
 					debug_printf(DEBUG_NORMAL,"Warning: VAR \"%s\" "
 						"is already defined in job \"%s\" "
 						"(Discovered at file \"%s\", line %d)\n",
 						varName.Value(), job->GetJobName(), filename,
 						lineNumber);
-					check_warning_strictness( DAG_STRICT_2 );
+					check_warning_strictness( DAG_STRICT_3 );
 					debug_printf(DEBUG_NORMAL,"Warning: Setting VAR \"%s\" "
 						"= \"%s\"\n", varName.Value(), varValue.Value());
+					delete var;
 					job->varsFromDag->DeleteCurrent();
 				}
 			}
@@ -2229,7 +2229,14 @@ static MyString current_splice_scope(void)
 	return scope;
 }
 
-//TEMPTEMP -- or false means error; no var name means end of vars
+/** Get the next variable name/value pair.
+	@param filename the name of the file we're parsing (for error messages)
+	@param lineNumber the line number we're parsing (for error messages)
+	@param varName (returned) the name of the variable ("" means no
+		more variables)
+	@param varValue (returned) the value of the variable
+	@return true means success; false means error
+ */
 static bool
 get_next_var( const char *filename, int lineNumber, char *&str,
 			MyString &varName, MyString &varValue ) {

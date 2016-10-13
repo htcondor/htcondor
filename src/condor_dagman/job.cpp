@@ -515,11 +515,13 @@ Job::AddScript( bool post, const char *cmd, int defer_status, time_t defer_time,
 		return false;
 	}
 	if( post ? _scriptPost : _scriptPre ) {
-		whynot.formatstr( "%s script already assigned (%s)",
-						post ? "POST" : "PRE", GetPreScriptName() );
-//TEMPTEMP -- if you have multiple commands that assign a script, which should prevail?  I think with vars the last one does...
-		//TEMPTEMP return false;
-		delete (post ? _scriptPost : _scriptPre);//TEMPTEMP
+		const char *prePost = post ? "POST" : "PRE";
+		const char *script = post ? GetPostScriptName() : GetPreScriptName();
+		debug_printf( DEBUG_NORMAL,
+					"Warning: node %s already has %s script <%s> assigned; changing to <%s>\n",
+					GetJobName(), prePost, script, cmd );
+		check_warning_strictness( DAG_STRICT_3 );
+		delete (post ? _scriptPost : _scriptPre);
 	}
 	Script* script = new Script( post, cmd, defer_status, defer_time, this );
 	if( !script ) {
