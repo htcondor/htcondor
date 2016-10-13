@@ -57,11 +57,148 @@ int get_credmon_pid() {
 }
 
 
+bool credmon_fill_watchfile_name(char* watchfilename, const char* user) {
+
+	// construct filename to poll for
+	char* cred_dir = param("SEC_CREDENTIAL_DIRECTORY");
+	if(!cred_dir) {
+		dprintf(D_ALWAYS, "CREDMON: ERROR: got credmon_poll() but SEC_CREDENTIAL_DIRECTORY not defined!\n");
+		return false;
+	}
+
+	// if user == NULL this is a special case.  we want the credd to
+	// refresh ALL credentials, which we know it has done when it writes
+	// the file CREDMON_COMPLETE in the cred_dir
+	if (user == NULL) {
+		// we will watch for the file that signifies ALL creds were processed
+		sprintf(watchfilename, "%s%cCREDMON_COMPLETE", cred_dir, DIR_DELIM_CHAR);
+	} else {
+		// get username (up to '@' if present, else whole thing)
+		char username[256];
+		const char *at = strchr(user, '@');
+		if(at) {
+			strncpy(username, user, (at-user));
+			username[at-user] = 0;
+		} else {
+			strncpy(username, user, 255);
+			username[255] = 0;
+		}
+		sprintf(watchfilename, "%s%c%s.cc", cred_dir, DIR_DELIM_CHAR, username);
+	}
+	free(cred_dir);
+
+	return true;
+}
+
+
 // takes a username, or NULL to refresh ALL credentials
 // if force_fresh, we delete the file we are polling first
 // if send_signal we SIGUP the credmon
 // (we allow it, but you probably shouldn't force_fresh and not send_signal)
+//
+// returns true if those operations completed succesfully.
+//
+bool credmon_poll_setup(const char* user, bool force_fresh, bool send_signal) {
+
+	// this will be the filename we poll for
+	char watchfilename[PATH_MAX];
+	if (credmon_fill_watchfile_name(const_cast<char*>(watchfilename), user) == false) {
+		return false;
+	}
+
+	if(force_fresh) {
+		// unlink it first so we know we got a fresh copy
+		priv_state priv = set_root_priv();
+		unlink(watchfilename);
+		set_priv(priv);
+	}
+
+	if(send_signal) {
+		// now signal the credmon
+		pid_t credmon_pid = get_credmon_pid();
+		if (credmon_pid == -1) {
+			dprintf(D_ALWAYS, "CREDMON: failed to get pid of credmon.\n");
+			return false;
+		}
+
+		dprintf(D_FULLDEBUG, "CREDMON: sending SIGHUP to credmon pid %i\n", credmon_pid);
+		int rc = kill(credmon_pid, SIGHUP);
+		if (rc == -1) {
+			dprintf(D_ALWAYS, "CREDMON: failed to signal credmon: %i\n", errno);
+			return false;
+		}
+	}
+	return true;
+}
+
+// do exactly one test for the existance of the .cc file.  this does not block,
+// just returns false right away and let's the caller decide what to do.
+int credmon_poll_continue(const char* user, int retry) {
+
+	// this will be the filename we poll for
+	char watchfilename[PATH_MAX];
+	if (credmon_fill_watchfile_name(watchfilename, user) == false) {
+		return false;
+	}
+
+	struct stat junk_buf;
+
+	int rc = stat(watchfilename, &junk_buf);
+	if (rc==-1) {
+		dprintf(D_FULLDEBUG, "CREDMON: warning, got errno %i, waiting for %s to appear (retry: %i)\n", errno, watchfilename, retry);
+		// DON'T BLOCK!  Just say we didn't find it and let the caller decide what to do.
+		return false;
+	}
+
+	dprintf(D_FULLDEBUG, "CREDMON: SUCCESS: file %s found after %i seconds\n", watchfilename, 20-retry);
+	return true;
+}
+
+
+// takes a username, or NULL to refresh ALL credentials
+// if force_fresh, we delete the file we are polling first
+// if send_signal we SIGUP the credmon
+// (we allow it, but you probably shouldn't force_fresh and not send_signal)
+//
+// THIS FUNCTION MAY BLOCK!  if you need non-blocking, use the combination
+// of credmon_poll_setup and credmon_poll_continue.
+//
 bool credmon_poll(const char* user, bool force_fresh, bool send_signal) {
+
+	// this will be the filename we poll for
+	char watchfilename[PATH_MAX];
+	if (credmon_fill_watchfile_name(watchfilename, user) == false) {
+		dprintf(D_ALWAYS, "CREDMON: FAILURE: unable to determine watchfile name for %s\n", user);
+		return false;
+	}
+
+	// update files and send signals as needed
+	if (!credmon_poll_setup(user, force_fresh, send_signal)) {
+		return false;
+	}
+
+	// now poll repeatedly for existence of watch file
+	int retries = 20;
+	while (retries > 0) {
+		if (credmon_poll_continue(user, retries)) {
+			dprintf(D_FULLDEBUG, "CREDMON: SUCCESS: file %s found after %i seconds\n", watchfilename, 20-retries);
+			return true;
+		} else {
+			sleep(1);
+		}
+	}
+
+	dprintf(D_ALWAYS, "CREDMON: FAILURE: credmon never created %s after 20 seconds!\n", watchfilename);
+	return false;
+}
+
+
+
+// takes a username, or NULL to refresh ALL credentials
+// if force_fresh, we delete the file we are polling first
+// if send_signal we SIGUP the credmon
+// (we allow it, but you probably shouldn't force_fresh and not send_signal)
+bool credmon_poll_obselete(const char* user, bool force_fresh, bool send_signal) {
 
 	// construct filename to poll for
 	char* cred_dir = param("SEC_CREDENTIAL_DIRECTORY");

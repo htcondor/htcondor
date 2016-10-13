@@ -22,6 +22,7 @@
 #include "condor_common.h"
 #include "condor_io.h"
 #include "condor_debug.h"
+#include "condor_daemon_core.h"
 #include "daemon.h"
 #include "condor_uid.h"
 #include "lsa_mgr.h"
@@ -551,6 +552,7 @@ get_cred_handler(void *, int /*i*/, Stream *s)
 	char * user = NULL;
 	char * domain = NULL;
 	char * password = NULL;
+	bool dcfound = (daemonCore != NULL);
 
 	/* Check our connection.  We must be very picky since we are talking
 	   about sending out passwords.  We want to make certain
@@ -583,6 +585,8 @@ get_cred_handler(void *, int /*i*/, Stream *s)
 	}
 
 		// Get the username and domain from the wire
+
+	dprintf (D_ALWAYS, "ZKM: First potential block in get_cred_handler, DC==%i\n", dcfound);
 
 	sock->decode();
 
@@ -651,6 +655,17 @@ bail_out:
 }
 
 
+// forward declare the non-blocking continuation function.
+void store_cred_handler_continue(void *, int /*i*/, Stream *s);
+
+// declare a simple data structure for holding the info needed
+// across non-blocking retries
+struct StoreCredState {
+	char *user;
+	int  retries;
+};
+
+
 /* NOW WORKS ON BOTH WINDOWS AND UNIX */
 void store_cred_handler(void *, int /*i*/, Stream *s)
 {
@@ -659,6 +674,9 @@ void store_cred_handler(void *, int /*i*/, Stream *s)
 	int mode;
 	int result;
 	int answer = FAILURE;
+	bool dcfound = daemonCore != NULL;
+
+	dprintf (D_ALWAYS, "ZKM: First potential block in store_cred_handler, DC==%i\n", dcfound);
 
 	s->decode();
 
@@ -690,12 +708,6 @@ void store_cred_handler(void *, int /*i*/, Stream *s)
 					pwlen = strlen(pw)+1;
 				}
 				answer = store_cred_service(user,pw,pwlen,mode);
-#ifndef WIN32  // no credmon on windows
-				if(answer == SUCCESS) {
-					// THIS WILL BLOCK
-					answer = credmon_poll(user, false, true);
-				}
-#endif // WIN32
 			}
 		}
 	}
@@ -707,6 +719,22 @@ void store_cred_handler(void *, int /*i*/, Stream *s)
 	if (user) {
 		free(user);
 	}
+
+#ifndef WIN32  // no credmon on windows
+	if(answer == SUCCESS) {
+		// good so far, but the real answer is determined by our ability
+		// to signal the credmon and have the .cc file appear.  we don't
+		// want this to block so we go back to daemoncore and set a timer
+		// for 0 seconds.  the timer will reset itself as needed.
+		answer = credmon_poll_setup(user, false, true);
+		if (answer == SUCCESS) {
+			// init retries to 20
+			// invoke below with (user, stream)
+			store_cred_handler_continue(user, 0, s);
+			return;
+		}
+	}
+#endif // WIN32
 
 	s->encode();
 	if( ! s->code(answer) ) {
@@ -722,6 +750,36 @@ void store_cred_handler(void *, int /*i*/, Stream *s)
 
 	return;
 }
+
+
+void store_cred_handler_continue(void * user, int /*i*/, Stream *s)
+{
+	int retry = 1;
+	int answer = credmon_poll_continue((char*)user, retry);
+
+	if (answer == FAILURE) {
+		// decrease retry
+		// re-register timer
+		return;
+	}
+
+	// SUCCESS! let's finish the wire protocol for STORE_CRED
+
+	s->encode();
+	if( ! s->code(answer) ) {
+		dprintf( D_ALWAYS,
+			"store_cred: Failed to send result.\n" );
+		return;
+	}
+
+	if( ! s->end_of_message() ) {
+		dprintf( D_ALWAYS,
+			"store_cred: Failed to send end of message.\n");
+	}
+
+	return;
+}
+
 
 static int code_store_cred(Stream *socket, char* &user, char* &pw, int &mode) {
 	
@@ -761,6 +819,7 @@ void store_pool_cred_handler(void *, int  /*i*/, Stream *s)
 	char *pw = NULL;
 	char *domain = NULL;
 	MyString username = POOL_PASSWORD_USERNAME "@";
+	bool dcfound = daemonCore != NULL;
 
 	if (s->type() != Stream::reli_sock) {
 		dprintf(D_ALWAYS, "ERROR: pool password set attempt via UDP\n");
@@ -794,6 +853,8 @@ void store_pool_cred_handler(void *, int  /*i*/, Stream *s)
 		}
 		free(credd_host);
 	}
+
+	dprintf (D_ALWAYS, "ZKM: First potential block in store_pool_cred_handler, DC==%i\n", dcfound);
 
 	s->decode();
 	if (!s->code(domain) || !s->code(pw) || !s->end_of_message()) {
@@ -838,6 +899,7 @@ store_cred(const char* user, const char* pw, int mode, Daemon* d, bool force) {
 	int result;
 	int return_val;
 	Sock* sock = NULL;
+	bool dcfound = daemonCore != NULL;
 
 		// to help future debugging, print out the mode we are in
 	static const int mode_offset = 100;
@@ -936,6 +998,8 @@ store_cred(const char* user, const char* pw, int mode, Daemon* d, bool force) {
 			}
 		}
 		
+		dprintf (D_ALWAYS, "ZKM: First potential block in store_cred, DC==%i\n", dcfound);
+
 		sock->decode();
 		
 		result = sock->code(return_val);
