@@ -3528,9 +3528,11 @@ public:
 	virtual bool skip(int func_id, const char * name, int namelen) {
 		if (func_id != MACRO_ID_NORMAL && func_id != SPECIAL_MACRO_ID_FILENAME)
 			return true;
-		if (namelen == selflen && MATCH == strncasecmp(name, self, namelen))
+		if ((namelen == selflen || (namelen > selflen && name[selflen] == ':')) && MATCH == strncasecmp(name, self, selflen))
 			return false;
-		if (namelen == selflen2 && MATCH == strncasecmp(name, self2, namelen))
+		if ( ! self2)
+			return true;
+		if ((namelen == selflen2 || (namelen > selflen2 && name[selflen2] == ':')) && MATCH == strncasecmp(name, self2, selflen2))
 			return false;
 		return true;
 	}

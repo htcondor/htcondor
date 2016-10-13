@@ -8399,9 +8399,9 @@ default : @end
   # Publish the number of CPU cores being used by the job into
   # to slot ad as attribute "CpusUsage". This value will
   # be the average number of cores used by the job over the
-  # past minute, sampling every 5 seconds, and rounded to two digits.
+  # past minute, sampling every 5 seconds
   #
-  CpusUsage = ifthenelse(TotalLoadAvg > 0.0 && Activity!="Idle",int(CondorLoadAvg / TotalLoadAvg * ifthenelse(TotalLoadAvg < $(DETECTED_CORES), TotalLoadAvg, $(DETECTED_CORES)) * 100) / 100.0, 0)
+  CpusUsage = ifthenelse(TotalLoadAvg > 0.0 && Activity!="Idle", CondorLoadAvg/TotalLoadAvg*MIN({TotalLoadAvg, $(DETECTED_CORES)}), 0)
   STARTD_ATTRS = $(STARTD_ATTRS) CpusUsage
   #
   # If the startd sees the number of CPU cores used by the job exceed the
@@ -8409,9 +8409,17 @@ default : @end
   # immediately ignoring any retirement time.
   #
   CPU_EXCEEDED = (CpusUsage > Cpus + 0.8)
-  PREEMPT = ($(PREEMPT:False)) || $(CPU_EXCEEDED)
+  if defined PREEMPT
+    PREEMPT = ($(PREEMPT)) || $(CPU_EXCEEDED)
+  else
+    PREEMPT = $(CPUS_EXCEEDED)
+  endif
   MAXJOBRETIREMENTTIME = ifthenelse($(CPU_EXCEEDED),0,$(MAXJOBRETIREMENTTIME:0))
-  WANT_SUSPEND = ($(WANT_SUSPEND:False)) && $(CPU_EXCEEDED) =!= TRUE
+  if defined WANT_SUSPEND
+    WANT_SUSPEND = ($(WANT_SUSPEND)) && $(CPU_EXCEEDED) =!= TRUE
+  else
+    WANT_SUSPEND = $(CPU_EXCEEDED) =!= TRUE
+  endif
 @end
 review=?
 
@@ -8423,8 +8431,12 @@ default : @end
   # If the startd preempted a job because CPU usage exceeded the number
   # of cores in the slot, put the job on hold.
   #
-  WANT_HOLD = ($(WANT_HOLD:False)) || $(CPU_EXCEEDED)
-  WANT_HOLD_REASON = ifThenElse($(CPU_EXCEEDED), $(HOLD_REASON_CPU_EXCEEDED:"cpu usage exceeded request_cpus"), $(WANT_HOLD_REASON:UNDEFINED))
+  if defined WANT_HOLD
+    WANT_HOLD = ($(WANT_HOLD)) || $(CPU_EXCEEDED)
+  else
+    WANT_HOLD = $(CPU_EXCEEDED)
+  endif
+  WANT_HOLD_REASON = ifThenElse($(CPU_EXCEEDED), "$(HOLD_REASON_CPU_EXCEEDED:CPU usage exceeded request_cpus)", $(WANT_HOLD_REASON:UNDEFINED))
   WANT_HOLD_SUBCODE = ifThenElse($(CPU_EXCEEDED), $(HOLD_SUBCODE_CPU_EXCEEDED:101), $(WANT_HOLD_SUBCODE:UNDEFINED))
 @end
 review=?
@@ -8437,9 +8449,17 @@ default : @end
   # memory in the slot, preempt the job immediately ignoring any retirement time.
   #
   MEMORY_EXCEEDED = (MemoryUsage =!= UNDEFINED && MemoryUsage > Memory)
-  PREEMPT = ($(PREEMPT:False)) || $(MEMORY_EXCEEDED)
+  if defined PREEMPT
+    PREEMPT = ($(PREEMPT)) || $(MEMORY_EXCEEDED)
+  else
+    PREEMPT = $(MEMORY_EXCEEDED)
+  endif
   MAXJOBRETIREMENTTIME = ifthenelse($(MEMORY_EXCEEDED),0,$(MAXJOBRETIREMENTTIME:0))
-  WANT_SUSPEND = ($(WANT_SUSPEND:False)) && $(MEMORY_EXCEEDED) =!= TRUE
+  if defined WANT_SUSPEND
+    WANT_SUSPEND = ($(WANT_SUSPEND)) && $(MEMORY_EXCEEDED) =!= TRUE
+  else
+    WANT_SUSPEND = $(MEMORY_EXCEEDED) =!= TRUE
+  endif
 @end
 review=?
 
@@ -8451,8 +8471,12 @@ default : @end
   # If the startd preempted a job because memory usage exceeded the amount
   # of memory in the slot, put the job on hold.
   #
-  WANT_HOLD = ($(WANT_HOLD:False)) || $(MEMORY_EXCEEDED)
-  WANT_HOLD_REASON = ifThenElse($(MEMORY_EXCEEDED), $(HOLD_REASON_MEMORY_EXCEEDED:"memory usage exceeded request_memory"), $(WANT_HOLD_REASON:UNDEFINED))
+  if defined WANT_HOLD
+    WANT_HOLD = ($(WANT_HOLD)) || $(MEMORY_EXCEEDED)
+  else
+    WANT_HOLD = $(MEMORY_EXCEEDED)
+  endif
+  WANT_HOLD_REASON = ifThenElse($(MEMORY_EXCEEDED), "$(HOLD_REASON_MEMORY_EXCEEDED:memory usage exceeded request_memory)", $(WANT_HOLD_REASON:UNDEFINED))
   WANT_HOLD_SUBCODE = ifThenElse($(MEMORY_EXCEEDED),$(HOLD_SUBCODE_MEMORY_EXCEEDED:102), $(WANT_HOLD_SUBCODE:UNDEFINED))
 @end
 review=?
