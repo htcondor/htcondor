@@ -52,6 +52,11 @@ removes its node jobs when \Condor{dagman} itself is removed.
 macro, are no longer supported, and generate warnings if used.
 \Ticket{5630}
 
+\item \Condor{dagman} now ignores the
+\MacroNI{DAGMAN\_LOG\_ON\_NFS\_IS\_ERROR} configuration setting if
+\MacroNI{ENABLE\_USERLOG\_LOCKING} is set to \Expr{False}.
+\Ticket{5641}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
