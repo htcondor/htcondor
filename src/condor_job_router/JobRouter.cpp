@@ -1536,16 +1536,19 @@ JobRouter::SubmitJob(RoutedJob *job) {
 	}
 #endif
 	job->dest_ad = job->src_ad;
-		// If we are not just editing the src job, then we need to do
-		// the standard transformations to create a new job now.
-	if(!job->edit_job_in_place) {
-		VanillaToGrid::vanillaToGrid(&job->dest_ad,job->target_universe,job->grid_resource.c_str(),job->is_sandboxed);
-	}
+
 	FinishSubmitJob(job);
 }
 
 void
 JobRouter::FinishSubmitJob(RoutedJob *job) {
+
+		// If we are not just editing the src job, then we need to do
+		// the standard transformations to create a new job now.
+	if(!job->edit_job_in_place) {
+		VanillaToGrid::vanillaToGrid(&job->dest_ad,job->target_universe,job->grid_resource.c_str(),job->is_sandboxed);
+	}
+
 	// Apply any edits to the job ClassAds as defined in the route ad.
 	JobRoute *route = GetRouteByName(job->route_name.c_str());
 	if(!route) {

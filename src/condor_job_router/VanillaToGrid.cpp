@@ -33,7 +33,6 @@
 bool VanillaToGrid::vanillaToGrid(classad::ClassAd * ad, int target_universe, const char * gridresource, bool is_sandboxed)
 {
 	ASSERT(ad);
-	ASSERT(gridresource);
 
 	/* TODO:
 		- If job fails to specify transfer_input_files but has some (relying on
