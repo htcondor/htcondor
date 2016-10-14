@@ -1,0 +1,23 @@
+Vars ALL_NODES nodename= "X$(JOB)"
+Vars ALL_NODES first="Chris_Froome" second="Romain_Bardet"
+Vars ALL_NODES third="Nairo_Quintana"
+Vars ALL_NODES misc="!@#$%^&*()_-=+=[]{}?"
+
+Job NodeA job_dagman_vars-B-node.sub
+Vars NodeA first="Cadel_Evans"
+
+Job NodeB job_dagman_vars-B-node.sub
+Vars NodeB second="Andy_Schleck"
+
+# Note:  change this to use include for part of the
+# DAG once we merge to master (include isn't implemented
+# on V8_5_gittrac_5729-branch).
+#Include job_dagman_vars-B-inc.dag
+
+Job NodeC job_dagman_vars-B-node.sub
+Vars NodeC third="Frank_Schleck"
+
+Job NodeD job_dagman_vars-B-node.sub
+Vars NodeD misc="that's_all"
+
+Splice NodeZ job_dagman_vars-B.lower.dag

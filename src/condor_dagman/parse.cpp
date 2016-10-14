@@ -76,8 +76,7 @@ static bool parse_abort(Dag *dag,
 static bool parse_dot(Dag *dag, 
 		const char *filename, int lineNumber);
 static bool parse_vars(Dag *dag,
-		const char *filename, int lineNumber,
-		std::list<std::string>* varq);
+		const char *filename, int lineNumber);
 static bool parse_priority(Dag *dag, 
 		const char *filename, int lineNumber);
 static bool parse_category(Dag *dag, const char *filename, int lineNumber);
@@ -100,20 +99,26 @@ static MyString munge_job_name(const char *jobName);
 
 static MyString current_splice_scope(void);
 
+static bool get_next_var( const char *filename, int lineNumber, char *&str,
+			MyString &varName, MyString &varValue );
+
 void exampleSyntax (const char * example) {
     debug_printf( DEBUG_QUIET, "Example syntax is: %s\n", example);
 }
 
-
 bool
 isReservedWord( const char *token )
 {
-    static const char * keywords[] = { "PARENT", "CHILD" };
+    static const char * keywords[] = { "PARENT", "CHILD", Dag::ALL_NODES };
     static const unsigned int numKeyWords = sizeof(keywords) / 
 		                                    sizeof(const char *);
 
     for (unsigned int i = 0 ; i < numKeyWords ; i++) {
-        if (!strcasecmp (token, keywords[i])) return true;
+        if (!strcasecmp (token, keywords[i])) {
+    		debug_printf( DEBUG_QUIET,
+						"ERROR: token (%s) is a reserved word\n", token );
+			return true;
+		}
     }
     return false;
 }
@@ -180,16 +185,6 @@ bool parse(Dag *dag, const char *filename, bool useDagDir,
 
 	char *line;
 	int lineNumber = 0;
-
-	// Here we have a list to save VARS lines for which the corresponding
-	// node has not yet been defined when we first encounter the VARS
-	// line; such lines are saved and re-parsed at the end of the parsing
-	// process.  (This is for gittrac #1780: VARS values in top-level DAG
-	// should be able to be applied to splices; job_dagman_splice-R tests
-	// this functionality.)  Nathan Panike says that saving *all* of the
-	// VARS lines and parsing them at the end also causes problems.
-	// wenger 2014-09-21
-	std::list<std::string> vars_to_save;
 
 	//
 	// We now parse in two passes, so that commands such as PARENT..CHILD
@@ -396,11 +391,7 @@ bool parse(Dag *dag, const char *filename, bool useDagDir,
 		// Handle a Vars spec
 		// Example syntax is: Vars JobName var1="val1" var2="val2"
 		else if(strcasecmp(token, "VARS") == 0) {
-			vars_to_save.push_back(varline);	
-			// Note that we pop this line inside parse_vars() if we
-			// parse it successfully, so that we don't re-parse it at
-			// the end.
-			parsed_line_successfully = parse_vars(dag, filename, lineNumber, &vars_to_save);
+			parsed_line_successfully = parse_vars(dag, filename, lineNumber);
 		}
 
 		// Handle a Priority spec
@@ -521,23 +512,8 @@ bool parse(Dag *dag, const char *filename, bool useDagDir,
 	// If this dag is used as a splice, then this information is very
 	// important to preserve when building dependancy links.
 	dag->LiftSplices(SELF);
-	dag->RecordInitialAndFinalNodes();
+	dag->RecordInitialAndTerminalNodes();
 	
-	// Okay, here we re-parse any VARS lines that didn't have corresponding
-	// node when we first read them.
-	for ( std::list<std::string>::iterator p = vars_to_save.begin();
-				p != vars_to_save.end(); ++p ) {
-		char* varline = strnewp( p->c_str() );
-		char * token = strtok( varline, DELIMITERS ); // Drop the VARS token
-		ASSERT( token );
-		bool parsed_line_successfully = parse_vars( dag,filename, 0, 0 );
-		if ( !parsed_line_successfully ) {
-			delete[] varline;
-			return false;
-		}
-		delete[] varline;
-	}	
-
 	if ( useDagDir ) {
 		MyString	errMsg;
 		if ( !dagDir.Cd2MainDir( errMsg ) ) {
@@ -572,6 +548,7 @@ parse_subdag( Dag *dag,
 	return false;
 }
 
+//-----------------------------------------------------------------------------
 static bool 
 parse_node( Dag *dag, 
 			const char* nodeTypeKeyword,
@@ -579,14 +556,12 @@ parse_node( Dag *dag,
 			const char *inlineOrExt, const char *submitOrDagFile)
 {
 	MyString example;
+	example.formatstr( "%s%s <nodename> <%s> "
+				"[DIR directory] [NOOP] [DONE]", nodeTypeKeyword, inlineOrExt,
+				submitOrDagFile );
 	MyString whynot;
 	bool done = false;
 	Dag *tmp = NULL;
-
-	MyString expectedSyntax;
-	expectedSyntax.formatstr( "Expected syntax: %s%s nodename %s "
-				"[DIR directory] [NOOP] [DONE]", nodeTypeKeyword, inlineOrExt,
-				submitOrDagFile );
 
 		// NOTE: fear not -- any missing tokens resulting in NULL
 		// strings will be error-handled correctly by AddNode()
@@ -596,7 +571,15 @@ parse_node( Dag *dag,
 	if ( !nodeName ) {
 		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): no node name "
 					"specified\n", dagFile, lineNum );
-		debug_printf( DEBUG_QUIET, "%s\n", expectedSyntax.Value() );
+		exampleSyntax( example.Value() );
+		return false;
+	}
+
+	if ( isReservedWord( nodeName ) ) {
+		debug_printf( DEBUG_QUIET,
+					  "ERROR: %s (line %d): JobName cannot be a reserved word\n",
+					  dagFile, lineNum );
+		exampleSyntax( example.Value() );
 		return false;
 	}
 
@@ -608,7 +591,7 @@ parse_node( Dag *dag,
 	if ( !submitFile ) {
 		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): no submit file "
 					"specified\n", dagFile, lineNum );
-		debug_printf( DEBUG_QUIET, "%s\n", expectedSyntax.Value() );
+		exampleSyntax( example.Value() );
 		return false;
 	}
 
@@ -628,7 +611,7 @@ parse_node( Dag *dag,
 			if ( !directory ) {
 				debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): no directory "
 							"specified after DIR keyword\n", dagFile, lineNum );
-				debug_printf( DEBUG_QUIET, "%s\n", expectedSyntax.Value() );
+				exampleSyntax( example.Value() );
 				return false;
 			}
 
@@ -662,7 +645,7 @@ parse_node( Dag *dag,
 		} else {
 			debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): invalid "
 						  "parameter \"%s\"\n", dagFile, lineNum, nextTok );
-			debug_printf( DEBUG_QUIET, "%s\n", expectedSyntax.Value() );
+			exampleSyntax( example.Value() );
 			return false;
 		}
 		nextTok = strtok( NULL, DELIMITERS );
@@ -672,7 +655,7 @@ parse_node( Dag *dag,
 	if ( nextTok ) {
 			debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): invalid "
 						  "parameter \"%s\"\n", dagFile, lineNum, nextTok );
-			debug_printf( DEBUG_QUIET, "%s\n", expectedSyntax.Value() );
+			exampleSyntax( example.Value() );
 			return false;
 	}
 
@@ -717,7 +700,7 @@ parse_node( Dag *dag,
 	{
 		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): %s\n",
 					  dagFile, lineNum, whynot.Value() );
-		debug_printf( DEBUG_QUIET, "%s\n", expectedSyntax.Value() );
+		exampleSyntax( example.Value() );
 		return false;
 	}
 
@@ -756,8 +739,6 @@ parse_script(
 	int  lineNumber)
 {
 	const char * example = "SCRIPT [DEFER status time] (PRE|POST) JobName Script Args ...";
-	Job * job = NULL;
-	MyString whynot;
 
 	//
 	// Second keyword is either PRE, POST or DEFER
@@ -850,31 +831,16 @@ parse_script(
 	const char *jobNameOrig = jobName; // for error output
 	const char *rest = jobName; // For subsequent tokens
 
-	if ( isReservedWord( jobName ) ) {
-		debug_printf( DEBUG_QUIET,
-					  "ERROR: %s (line %d): JobName cannot be a reserved word\n",
-					  filename, lineNumber );
-		exampleSyntax (example);
-		return false;
-	} else {
-		debug_printf(DEBUG_DEBUG_1, "jobName: %s\n", jobName);
-		MyString tmpJobName = munge_job_name(jobName);
-		jobName = tmpJobName.Value();
+	debug_printf(DEBUG_DEBUG_1, "jobName: %s\n", jobName);
+	MyString tmpJobName = munge_job_name(jobName);
+	jobName = tmpJobName.Value();
 
-		job = dag->FindNodeByName( jobName );
-		if (job == NULL) {
-			debug_printf( DEBUG_QUIET, 
-						  "ERROR: %s (line %d): Unknown Job %s\n",
-						  filename, lineNumber, jobNameOrig );
-			return false;
-		}
-	}
-	
 	//
 	// The rest of the line is the script and args
 	//
 	
 	// first, skip over the token we already read...
+	// Why not just call strtok() again here? wenger 2016-10-13
 	while (*rest != '\0') rest++;
 	
 	// if we're not at the end of the line, move forward
@@ -915,12 +881,30 @@ parse_script(
 		exampleSyntax( example );
 		return false;
 	}
-	
-	if( !job->AddScript( post, rest, defer_status, defer_time, whynot ) ) {
-		debug_printf( DEBUG_SILENT, "ERROR: %s (line %d): "
-					  "failed to add %s script to node %s: %s\n",
-					  filename, lineNumber, post ? "POST" : "PRE",
-					  jobNameOrig, whynot.Value() );
+
+
+	Job *job;
+	while ( ( job = dag->FindAllNodesByName( jobName,
+				"In parse_script(): skipping node %s because final nodes must have SCRIPT set explicitly (%s: %d)\n",
+				filename, lineNumber ) ) ) {
+		jobName = NULL;
+
+		MyString whynot;
+			// This fails if the node already has a script.
+		if( !job->AddScript( post, rest, defer_status, defer_time, whynot ) ) {
+			debug_printf( DEBUG_SILENT, "ERROR: %s (line %d): "
+					  	"failed to add %s script to node %s: %s\n",
+					  	filename, lineNumber, post ? "POST" : "PRE",
+					  	job->GetJobName(), whynot.Value() );
+			return false;
+		}
+
+	}
+
+	if ( jobName ) {
+		debug_printf( DEBUG_QUIET, 
+					  "ERROR: %s (line %d): Unknown Job %s\n",
+					  filename, lineNumber, jobNameOrig );
 		return false;
 	}
 
@@ -1108,21 +1092,6 @@ parse_retry(
 	MyString tmpJobName = munge_job_name(jobName);
 	jobName = tmpJobName.Value();
 	
-	Job *job = dag->FindNodeByName( jobName );
-	if( job == NULL ) {
-		debug_printf( DEBUG_QUIET, 
-					  "ERROR: %s (line %d): Unknown Job %s\n",
-					  filename, lineNumber, jobNameOrig );
-		return false;
-	}
-
-	if ( job->GetFinal() ) {
-		debug_printf( DEBUG_QUIET, 
-					  "ERROR: %s (line %d): Final job %s cannot have retries\n",
-					  filename, lineNumber, jobNameOrig );
-		return false;
-	}
-	
 	char *token = strtok( NULL, DELIMITERS );
 	if( token == NULL ) {
 		debug_printf( DEBUG_QUIET, 
@@ -1133,7 +1102,7 @@ parse_retry(
 	}
 	
 	char *tmp;
-	job->retry_max = (int)strtol( token, &tmp, 10 );
+	int retryMax = (int)strtol( token, &tmp, 10 );
 	if( tmp == token ) {
 		debug_printf( DEBUG_QUIET,
 					  "ERROR: %s (line %d): Invalid Retry value \"%s\"\n",
@@ -1141,16 +1110,17 @@ parse_retry(
 		exampleSyntax( example );
 		return false;
 	}
-	if ( job->retry_max < 0 ) {
+	if ( retryMax < 0 ) {
 		debug_printf( DEBUG_QUIET,
 					  "ERROR: %s (line %d): Invalid Retry value \"%d\" "
 					  "(cannot be negative)\n",
-					  filename, lineNumber, job->retry_max );
+					  filename, lineNumber, retryMax );
 		exampleSyntax( example );
 		return false;
 	}
 
     // Check for optional retry-abort value
+	int unless_exit = 0;
     token = strtok( NULL, DELIMITERS );
     if ( token != NULL ) {
         if ( strcasecmp ( token, "UNLESS-EXIT" ) != 0 ) {
@@ -1168,20 +1138,47 @@ parse_retry(
                 return false;
             } 
             char *unless_exit_end;
-            int unless_exit = strtol( token, &unless_exit_end, 10 );
+            unless_exit = strtol( token, &unless_exit_end, 10 );
             if (*unless_exit_end != 0) {
                 debug_printf( DEBUG_QUIET, "ERROR: %s (line %d) Bad parameter for UNLESS-EXIT: %s\n",
                               filename, lineNumber, token );
                 exampleSyntax( example );
                 return false;
             }
-            job->have_retry_abort_val = true;
-            job->retry_abort_val = unless_exit;
-            debug_printf( DEBUG_DEBUG_1, "Retry Abort Value for %s is %d\n", 
-                          jobName, job->retry_abort_val );
         }
     }
-	
+
+	Job *job;
+	while ( ( job = dag->FindAllNodesByName( jobName,
+				"In parse_retry(): skipping node %s because final nodes cannot have RETRY specifications (%s: %d)\n",
+				filename, lineNumber ) ) ) {
+		jobName = NULL;
+
+		debug_printf( DEBUG_DEBUG_3, "parse_retry(): found job %s\n",
+					job->GetJobName() );
+
+		if ( job->GetFinal() ) {
+			debug_printf( DEBUG_QUIET, 
+			  			"ERROR: %s (line %d): Final job %s cannot have RETRY specification\n",
+			  			filename, lineNumber, job->GetJobName() );
+			return false;
+		}
+
+		job->retry_max = retryMax;
+		if ( unless_exit != 0 ) {
+           	job->have_retry_abort_val = true;
+           	job->retry_abort_val = unless_exit;
+		}
+           debug_printf( DEBUG_DEBUG_1, "Retry Abort Value for %s is %d\n",
+		   			jobName, job->retry_abort_val );
+	}
+
+	if ( jobName ) {
+		debug_printf( DEBUG_QUIET, "%s (line %d): Unknown Job %s\n",
+					filename, lineNumber, jobNameOrig );
+		return false;
+	}
+
 	return true;
 }
 
@@ -1213,21 +1210,6 @@ parse_abort(
 	const char *jobNameOrig = jobName; // for error output
 	MyString tmpJobName = munge_job_name(jobName);
 	jobName = tmpJobName.Value();
-	
-	Job *job = dag->FindNodeByName( jobName );
-	if( job == NULL ) {
-		debug_printf( DEBUG_QUIET, 
-					  "ERROR: %s (line %d): Unknown Job %s\n",
-					  filename, lineNumber, jobNameOrig );
-		return false;
-	}
-
-	if ( job->GetFinal() ) {
-		debug_printf( DEBUG_QUIET, 
-					  "ERROR: %s (line %d): Final job %s cannot have ABORT-DAG-ON specification\n",
-					  filename, lineNumber, jobNameOrig );
-		return false;
-	}
 	
 		// Node abort value.
 	char *abortValStr = strtok( NULL, DELIMITERS );
@@ -1291,11 +1273,34 @@ parse_abort(
 		}
 	}
 
-	job->abort_dag_val = abortVal;
-	job->have_abort_dag_val = true;
+	Job *job;
+	while ( ( job = dag->FindAllNodesByName( jobName,
+				"In parse_abort(): skipping node %s because final nodes cannot have ABORT-DAG-ON specification (%s: %d)s\n",
+				filename, lineNumber ) ) ) {
+		jobName = NULL;
 
-	job->abort_dag_return_val = returnVal;
-	job->have_abort_dag_return_val = haveReturnVal;
+		debug_printf( DEBUG_DEBUG_3, "parse_abort(): found job %s\n",
+					job->GetJobName() );
+
+		if ( job->GetFinal() ) {
+			debug_printf( DEBUG_QUIET, 
+			  			"ERROR: %s (line %d): Final job %s cannot have ABORT-DAG-ON specification\n",
+			  			filename, lineNumber, job->GetJobName() );
+			return false;
+		}
+
+		job->abort_dag_val = abortVal;
+		job->have_abort_dag_val = true;
+
+		job->abort_dag_return_val = returnVal;
+		job->have_abort_dag_return_val = haveReturnVal;
+	}
+
+	if ( jobName ) {
+		debug_printf( DEBUG_QUIET, "%s (line %d): Unknown Job %s\n",
+					filename, lineNumber, jobNameOrig );
+		return false;
+	}
 
 	return true;
 }
@@ -1352,7 +1357,6 @@ static bool parse_dot(Dag *dag, const char *filename, int lineNumber)
 	return true;
 }
 
-
 //-----------------------------------------------------------------------------
 // 
 // Function: parse_vars
@@ -1362,7 +1366,8 @@ static bool parse_dot(Dag *dag, const char *filename, int lineNumber)
 //           Vars JobName VarName1="value1" VarName2="value2" etc
 //           Whitespace surrounding the = sign is permissible
 //-----------------------------------------------------------------------------
-static bool parse_vars(Dag *dag, const char *filename, int lineNumber, std::list<std::string>* varq) {
+static bool parse_vars(Dag *dag, const char *filename, int lineNumber)
+{
 	const char* example = "Vars JobName VarName1=\"value1\" VarName2=\"value2\"";
 	const char *jobName = strtok( NULL, DELIMITERS );
 	if ( jobName == NULL ) {
@@ -1376,168 +1381,81 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber, std::list
 	MyString tmpJobName = munge_job_name(jobName);
 	jobName = tmpJobName.Value();
 
-	Job *job = dag->FindNodeByName( jobName );
-	if(job == NULL) {
-		debug_printf(DEBUG_QUIET, "%s (line %d): Unknown Job %s\n",
-					filename, lineNumber, jobNameOrig);
-		if(varq) {
-			debug_printf(DEBUG_QUIET, "Queueing this line up to try later\n");
-			return true;
-		} else {
-			return false;
-		}
-	} else {
-			// The line we are searching for should be at the back of the list
-			// unless we have lifted, in which case it is empty
-		if(varq && !varq->empty()) {
-			varq->pop_back();
-		}
-	}
+	char *varsStr = strtok( NULL, "\n" ); // just get all the rest -- we'll be doing this by hand
 
-	char *str = strtok( NULL, "\n" ); // just get all the rest -- we'll be doing this by hand
+	Job *job;
+	while ( ( job = dag->FindAllNodesByName( jobName,
+				"In parse_vars(): skipping node %s because final nodes must have VARS set explicitly (%s: %d)\n",
+				filename, lineNumber ) ) ) {
+		jobName = NULL;
 
-	int numPairs;
-	for ( numPairs = 0; ; numPairs++ ) {  // for each name="value" pair
-		if ( str == NULL ) { // this happens when the above strtok returns NULL
-			break;
-		}
+		debug_printf( DEBUG_DEBUG_3, "parse_vars(): found job %s\n",
+					job->GetJobName() );
 
-			// Fix PR 854 (multiple macronames per VARS line don't work).
-		MyString varName( "" );
-		MyString varValue( "" );
+			// Note:  this re-parses most of the VARS line for every node...
+			// wenger 2016-10-13
+		char *str = varsStr;
 
-		while ( isspace( *str ) ) {
-			str++;
-		}
-
-		if ( *str == '\0' ) {
-			break;
-		}
-
-		// copy name char-by-char until we hit a symbol or whitespace
-		// names are limited to alphanumerics and underscores (except
-		// that '+' is legal as the first character)
-		int varnamestate = 0; // 0 means not within a varname
-		while( isalnum(*str) || *str == '_' || *str == '+' ) {
-			if (*str == '+' ) {
-				if ( varnamestate != 0 ) {
-					debug_printf( DEBUG_QUIET,
-							"ERROR: %s (line %d): '+' can only be first character of macroname (%s)\n",
-							filename, lineNumber, varName.Value() );
-					return false;
-				}
+		int numPairs;
+		for ( numPairs = 0; ; numPairs++ ) {  // for each name="value" pair
+			if ( str == NULL ) { // this happens when the above strtok returns NULL
+				break;
 			}
-			varnamestate = 1;
-			varName += *str++;
-		}
 
-		if(varName.Length() == '\0') { // no alphanumeric symbols at all were written into name,
-		                      // just something weird, which we'll print
-			debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Unexpected symbol: \"%c\"\n", filename,
-				lineNumber, *str);
-			return false;
-		}
+				// Fix PR 854 (multiple macronames per VARS line don't work).
+			MyString varName( "" );
+			MyString varValue( "" );
 
-		if ( varName == "+" ) {
-			debug_printf(DEBUG_QUIET,
-				"ERROR: %s (line %d): macroname (%s) must contain at least one alphanumeric character\n",
-				filename, lineNumber, varName.Value() );
-			return false;
-		}
-		
-		// burn through any whitespace there may be afterwards
-		while(isspace(*str))
-			str++;
-		if(*str != '=') {
-			debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): Illegal character (%c) in or after macroname %s\n", filename, lineNumber, *str, varName.Value() );
-			return false;
-		}
-		str++;
-		while(isspace(*str))
-			str++;
-		
-		if(*str != '"') {
-			debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): %s's value must be quoted\n", filename,
-				lineNumber, varName.Value());
-			return false;
-		}
-
-		// now it's time to read in all the data until the next double quote, while handling
-		// the two escape sequences: \\ and \"
-		bool stillInQuotes = true;
-		bool escaped       = false;
-		do {
-			varValue += *(++str);
-			
-			if(*str == '\0') {
-				debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Missing end quote\n", filename,
-					lineNumber);
+			if ( !get_next_var( filename, lineNumber, str, varName,
+						varValue ) ) {
 				return false;
 			}
-			
-			if(!escaped) {
-				if(*str == '"') {
-					// we don't want that last " in the string
-					varValue.setChar( varValue.Length() - 1, '\0' );
-					stillInQuotes = false;
-				} else if(*str == '\\') {
-					// on the next pass it will be filled in appropriately
-					varValue.setChar( varValue.Length() - 1, '\0' );
-					escaped = true;
-					continue;
-				}
-			} else {
-				if(*str != '\\' && *str != '"') {
-					debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Unknown escape sequence "
-						"\"\\%c\"\n", filename, lineNumber, *str);
-					return false;
-				}
-				escaped = false; // being escaped only lasts for one character
+			if ( varName == "" ) {
+				break;
 			}
-		} while(stillInQuotes);
 
-		str++;
+			// This will be inefficient for jobs with lots of variables
+			// As in O(N^2)
+			job->varsFromDag->Rewind();
+			while(Job::NodeVar *var = job->varsFromDag->Next()){
+				if ( varName == var->_name ) {
+					debug_printf(DEBUG_NORMAL,"Warning: VAR \"%s\" "
+						"is already defined in job \"%s\" "
+						"(Discovered at file \"%s\", line %d)\n",
+						varName.Value(), job->GetJobName(), filename,
+						lineNumber);
+					check_warning_strictness( DAG_STRICT_3 );
+					debug_printf(DEBUG_NORMAL,"Warning: Setting VAR \"%s\" "
+						"= \"%s\"\n", varName.Value(), varValue.Value());
+					delete var;
+					job->varsFromDag->DeleteCurrent();
+				}
+			}
+			debug_printf(DEBUG_DEBUG_1,
+						"Argument added, Name=\"%s\"\tValue=\"%s\"\n",
+						varName.Value(), varValue.Value());
+			Job::NodeVar *var = new Job::NodeVar();
+			var->_name = varName;
+			var->_value = varValue;
+			bool appendResult;
+			appendResult = job->varsFromDag->Append( var );
+			ASSERT( appendResult );
+		}
 
-			// Check for illegal variable name.
-		MyString tmpName(varName);
-		tmpName.lower_case();
-		if ( tmpName.find( "queue" ) == 0 ) {
-			debug_printf(DEBUG_QUIET, "ERROR: Illegal variable name: %s; variable "
-						"names cannot begin with \"queue\"\n", varName.Value() );
+		if ( numPairs == 0 ) {
+			debug_printf(DEBUG_QUIET,
+						"ERROR: %s (line %d): No valid name-value pairs\n",
+						filename, lineNumber);
 			return false;
 		}
-		// This will be inefficient for jobs with lots of variables
-		// As in O(N^2)
-		job->varsFromDag->Rewind();
-		while(Job::NodeVar *var = job->varsFromDag->Next()){
-			if ( varName == var->_name ) {
-				debug_printf(DEBUG_NORMAL,"Warning: VAR \"%s\" "
-					"is already defined in job \"%s\" "
-					"(Discovered at file \"%s\", line %d)\n",
-					varName.Value(), job->GetJobName(), filename,
-					lineNumber);
-				check_warning_strictness( DAG_STRICT_2 );
-				debug_printf(DEBUG_NORMAL,"Warning: Setting VAR \"%s\" "
-					"= \"%s\"\n", varName.Value(), varValue.Value());
-				job->varsFromDag->DeleteCurrent();
-			}
-		}
-		debug_printf(DEBUG_DEBUG_1,
-					"Argument added, Name=\"%s\"\tValue=\"%s\"\n",
-					varName.Value(), varValue.Value());
-		Job::NodeVar *var = new Job::NodeVar();
-		var->_name = varName;
-		var->_value = varValue;
-		bool appendResult;
-		appendResult = job->varsFromDag->Append( var );
-		ASSERT( appendResult );
 	}
 
-	if(numPairs == 0) {
-		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): No valid name-value pairs\n", filename, lineNumber);
+	if ( jobName ) {
+		debug_printf( DEBUG_QUIET, "%s (line %d): Unknown Job %s\n",
+					filename, lineNumber, jobNameOrig );
 		return false;
 	}
-
+	
 	return true;
 }
 
@@ -1555,7 +1473,6 @@ parse_priority(
 	int  lineNumber)
 {
 	const char * example = "PRIORITY JobName Value";
-	Job * job = NULL;
 
 	//
 	// Next token is the JobName
@@ -1568,33 +1485,10 @@ parse_priority(
 		return false;
 	}
 
+	debug_printf(DEBUG_DEBUG_1, "jobName: %s\n", jobName);
 	const char *jobNameOrig = jobName; // for error output
-	if ( isReservedWord( jobName ) ) {
-		debug_printf( DEBUG_QUIET,
-					  "ERROR: %s (line %d): JobName cannot be a reserved word\n",
-					  filename, lineNumber );
-		exampleSyntax( example );
-		return false;
-	} else {
-		debug_printf(DEBUG_DEBUG_1, "jobName: %s\n", jobName);
-		MyString tmpJobName = munge_job_name(jobName);
-		jobName = tmpJobName.Value();
-
-		job = dag->FindNodeByName( jobName );
-		if (job == NULL) {
-			debug_printf( DEBUG_QUIET, 
-						  "ERROR: %s (line %d): Unknown Job %s\n",
-						  filename, lineNumber, jobNameOrig );
-			return false;
-		}
-	}
-
-	if ( job->GetFinal() ) {
-		debug_printf( DEBUG_QUIET, 
-					  "ERROR: %s (line %d): Final job %s cannot have priority\n",
-					  filename, lineNumber, jobNameOrig );
-		return false;
-	}
+	MyString tmpJobName = munge_job_name(jobName);
+	jobName = tmpJobName.Value();
 
 	//
 	// Next token is the priority value.
@@ -1631,16 +1525,42 @@ parse_priority(
 		return false;
 	}
 
-	if ( ( job->_explicitPriority != 0 )
-				&& ( job->_explicitPriority != priorityVal ) ) {
-		debug_printf( DEBUG_NORMAL, "Warning: new priority %d for node %s "
-					"overrides old value %d\n", priorityVal,
-					job->GetJobName(), job->_explicitPriority );
-		check_warning_strictness( DAG_STRICT_2 );
+	//
+	// Actually assign priorities to the relevant node(s).
+	//
+	Job *job;
+	while ( ( job = dag->FindAllNodesByName( jobName,
+				"In parse_priority(): skipping node %s because final nodes cannot have PRIORITY specifications (%s: %d)\n",
+				filename, lineNumber ) ) ) {
+		jobName = NULL;
+
+		debug_printf( DEBUG_DEBUG_3, "parse_priority(): found job %s\n",
+					job->GetJobName() );
+
+		if ( job->GetFinal() ) {
+			debug_printf( DEBUG_QUIET, 
+			  			"ERROR: %s (line %d): Final job %s cannot have PRIORITY specification\n",
+			  			filename, lineNumber, job->GetJobName() );
+			return false;
+		}
+
+		if ( ( job->_explicitPriority != 0 )
+					&& ( job->_explicitPriority != priorityVal ) ) {
+			debug_printf( DEBUG_NORMAL, "Warning: new priority %d for node %s "
+						"overrides old value %d\n", priorityVal,
+						job->GetJobName(), job->_explicitPriority );
+			check_warning_strictness( DAG_STRICT_2 );
+		}
+
+		job->_explicitPriority = priorityVal;
+		job->_effectivePriority = priorityVal;
 	}
 
-	job->_explicitPriority = priorityVal;
-	job->_effectivePriority = priorityVal;
+	if ( jobName ) {
+		debug_printf( DEBUG_QUIET, "%s (line %d): Unknown Job %s\n",
+					filename, lineNumber, jobNameOrig );
+		return false;
+	}
 
 	return true;
 }
@@ -1660,7 +1580,6 @@ parse_category(
 	int  lineNumber)
 {
 	const char * example = "CATEGORY JobName TypeName";
-	Job * job = NULL;
 
 	//
 	// Next token is the JobName
@@ -1674,32 +1593,9 @@ parse_category(
 	}
 
 	const char *jobNameOrig = jobName; // for error output
-	if (isReservedWord(jobName)) {
-		debug_printf( DEBUG_QUIET,
-					  "ERROR: %s (line %d): JobName cannot be a reserved word\n",
-					  filename, lineNumber );
-		exampleSyntax (example);
-		return false;
-	} else {
-		debug_printf(DEBUG_DEBUG_1, "jobName: %s\n", jobName);
-		MyString tmpJobName = munge_job_name(jobName);
-		jobName = tmpJobName.Value();
-
-		job = dag->FindNodeByName( jobName );
-		if (job == NULL) {
-			debug_printf( DEBUG_QUIET, 
-						  "ERROR: %s (line %d): Unknown Job %s\n",
-						  filename, lineNumber, jobNameOrig );
-			return false;
-		}
-	}
-
-	if ( job->GetFinal() ) {
-		debug_printf( DEBUG_QUIET, 
-					  "ERROR: %s (line %d): Final job %s cannot have category\n",
-					  filename, lineNumber, jobNameOrig );
-		return false;
-	}
+	debug_printf(DEBUG_DEBUG_1, "jobName: %s\n", jobName);
+	MyString tmpJobName = munge_job_name(jobName);
+	jobName = tmpJobName.Value();
 
 	//
 	// Next token is the category name.
@@ -1725,7 +1621,33 @@ parse_category(
 		return false;
 	}
 
-	job->SetCategory( categoryName, dag->_catThrottles );
+	//
+	// Actually assign categories to the relevant node(s).
+	//
+	Job *job;
+	while ( ( job = dag->FindAllNodesByName( jobName,
+				"In parse_category(): skipping node %s because final nodes cannot have CATEGORY specifications (%s: %d)\n",
+				filename, lineNumber ) ) ) {
+		jobName = NULL;
+
+		debug_printf( DEBUG_DEBUG_3, "parse_category(): found job %s\n",
+					job->GetJobName() );
+
+		if ( job->GetFinal() ) {
+			debug_printf( DEBUG_QUIET, 
+			  			"ERROR: %s (line %d): Final job %s cannot have CATEGORY specification\n",
+			  			filename, lineNumber, job->GetJobName() );
+			return false;
+		}
+
+		job->SetCategory( categoryName, dag->_catThrottles );
+	}
+
+	if ( jobName ) {
+		debug_printf( DEBUG_QUIET, "%s (line %d): Unknown Job %s\n",
+					filename, lineNumber, jobNameOrig );
+		return false;
+	}
 
 	return true;
 }
@@ -2160,7 +2082,6 @@ parse_pre_skip( Dag  *dag,
 	int  lineNumber)
 {
 	const char * example = "PRE_SKIP JobName Exitcode";
-	Job * job = NULL;
 	MyString whynot;
 
 		//
@@ -2175,25 +2096,9 @@ parse_pre_skip( Dag  *dag,
 	}
 
 	const char *jobNameOrig = jobName; // for error output
-	if ( isReservedWord(jobName) ) {
-		debug_printf( DEBUG_QUIET,
-				"ERROR: %s (line %d): JobName cannot be a reserved word\n",
-				filename, lineNumber );
-		exampleSyntax( example );
-		return false;
-	} else {
-		debug_printf( DEBUG_DEBUG_1, "jobName: %s\n", jobName );
-		MyString tmpJobName = munge_job_name( jobName );
-		jobName = tmpJobName.Value();
-
-		job = dag->FindNodeByName( jobName );
-		if (job == NULL) {
-			debug_printf( DEBUG_QUIET, 
-					"ERROR: %s (line %d): Unknown Job %s\n",
-					filename, lineNumber, jobNameOrig );
-			return false;
-		}
-	}
+	debug_printf( DEBUG_DEBUG_1, "jobName: %s\n", jobName );
+	MyString tmpJobName = munge_job_name( jobName );
+	jobName = tmpJobName.Value();
 
 		//
 		// The rest of the line consists of the exitcode
@@ -2227,13 +2132,29 @@ parse_pre_skip( Dag  *dag,
 		return false;
 	}
 
-	if ( !job->AddPreSkip( exitCode, whynot ) ) {
-		debug_printf( DEBUG_SILENT, "ERROR: %s (line %d): failed to add "
-				"PRE_SKIP note to node %s: %s\n",
-				filename, lineNumber, jobNameOrig,
-				whynot.Value() );
+	Job *job;
+	while ( ( job = dag->FindAllNodesByName( jobName,
+				"In parse_pre_skip(): skipping node %s because final nodes must have PRE_SKIP set explicitly (%s: %d)\n",
+				filename, lineNumber ) ) ) {
+		jobName = NULL;
+
+		MyString whynot;
+		if( !job->AddPreSkip( exitCode, whynot ) ) {
+			debug_printf( DEBUG_SILENT, "ERROR: %s (line %d): "
+					  	"failed to add PRE_SKIP to node %s: %s\n",
+					  	filename, lineNumber, job->GetJobName(),
+						whynot.Value() );
+			return false;
+		}
+	}
+
+	if ( jobName ) {
+		debug_printf( DEBUG_QUIET, 
+					  "ERROR: %s (line %d): Unknown Job %s\n",
+					  filename, lineNumber, jobNameOrig );
 		return false;
 	}
+
 	return true;
 }
 
@@ -2519,4 +2440,124 @@ static MyString current_splice_scope(void)
 		scope = tmp + "+";
 	}
 	return scope;
+}
+
+/** Get the next variable name/value pair.
+	@param filename the name of the file we're parsing (for error messages)
+	@param lineNumber the line number we're parsing (for error messages)
+	@param varName (returned) the name of the variable ("" means no
+		more variables)
+	@param varValue (returned) the value of the variable
+	@return true means success; false means error
+ */
+static bool
+get_next_var( const char *filename, int lineNumber, char *&str,
+			MyString &varName, MyString &varValue ) {
+	while ( isspace( *str ) ) {
+		str++;
+	}
+
+	if ( *str == '\0' ) {
+		return true;
+	}
+
+	// copy name char-by-char until we hit a symbol or whitespace
+	// names are limited to alphanumerics and underscores (except
+	// that '+' is legal as the first character)
+	int varnamestate = 0; // 0 means not within a varname
+	while ( isalnum( *str ) || *str == '_' || *str == '+' ) {
+		if ( *str == '+' ) {
+			if ( varnamestate != 0 ) {
+				debug_printf( DEBUG_QUIET,
+						"ERROR: %s (line %d): '+' can only be first character of macroname (%s)\n",
+						filename, lineNumber, varName.Value() );
+				return false;
+			}
+		}
+		varnamestate = 1;
+		varName += *str++;
+	}
+
+	if ( varName.Length() == '\0' ) { // no alphanumeric symbols at all were written into name,
+	                      // just something weird, which we'll print
+		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Unexpected symbol: \"%c\"\n", filename,
+			lineNumber, *str);
+		return false;
+	}
+
+	if ( varName == "+" ) {
+		debug_printf(DEBUG_QUIET,
+			"ERROR: %s (line %d): macroname (%s) must contain at least one alphanumeric character\n",
+			filename, lineNumber, varName.Value() );
+		return false;
+	}
+		
+	// Burn through any whitespace between var name and "=".
+	while ( isspace( *str ) ) {
+		str++;
+	}
+
+	if ( *str != '=' ) {
+		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): Illegal character (%c) in or after macroname %s\n", filename, lineNumber, *str, varName.Value() );
+		return false;
+	}
+	str++;
+
+	// Burn through any whitespace between "=" and var value.
+	while ( isspace( *str ) ) {
+		str++;
+	}
+	
+	if ( *str != '"' ) {
+		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): %s's value must be quoted\n", filename,
+			lineNumber, varName.Value());
+		return false;
+	}
+
+	// now it's time to read in all the data until the next double quote, while handling
+	// the two escape sequences: \\ and \"
+	bool stillInQuotes = true;
+	bool escaped       = false;
+	do {
+		varValue += *(++str);
+		
+		if ( *str == '\0' ) {
+			debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): Missing end quote\n", filename,
+				lineNumber );
+			return false;
+		}
+			
+		if ( !escaped ) {
+			if ( *str == '"' ) {
+				// we don't want that last " in the string
+				varValue.setChar( varValue.Length() - 1, '\0' );
+				stillInQuotes = false;
+			} else if ( *str == '\\' ) {
+				// on the next pass it will be filled in appropriately
+				varValue.setChar( varValue.Length() - 1, '\0' );
+				escaped = true;
+				continue;
+			}
+		} else {
+			if ( *str != '\\' && *str != '"' ) {
+				debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): Unknown escape sequence "
+					"\"\\%c\"\n", filename, lineNumber, *str );
+				return false;
+			}
+			escaped = false; // being escaped only lasts for one character
+		}
+	} while ( stillInQuotes );
+
+	str++;
+
+		// Check for illegal variable name.
+	MyString tmpName( varName );
+	tmpName.lower_case();
+	if ( tmpName.find( "queue" ) == 0 ) {
+		debug_printf( DEBUG_QUIET, "ERROR: Illegal variable name: %s; variable "
+					"names cannot begin with \"queue\"\n", varName.Value() );
+		return false;
+	}
+
+	return true;
 }
