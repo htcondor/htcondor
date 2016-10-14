@@ -907,13 +907,55 @@ sub check_status {
 	}
 	if ($option eq 'negotiator'){
 		for my $i (1..(scalar @{$machine_info[0]})-1){
-			unless ($machine_info[0][$i] eq unquote($Attr_new{$i-1}{Name}) && $machine_info[1][$i] eq unquote($Attr_new{$i-1}{Machine})){
-				print "        Output is $machine_info[0][$i], $machine_info[1][$i]\n        should be ".unquote($Attr_new{$i-1}{Name}).", ".unquote($Attr_new{$i-1}{Machine})."\n";
+			unless ($machine_info[0][$i] eq unquote($Attr_new{$i-1}{Name})) {
+				print "        Output is $machine_info[0][$i]\n        should be ".unquote($Attr_new{$i-1}{Name})."\n";
+				return 0;
+			}
+			unless ($machine_info[1][$i] eq convert_timestamp_date_hour_min($Attr_new{$i-1}{LastNegotiationCycleEnd0})) {
+				print "        Output is $machine_info[1][$i]\n        should be ".convert_timestamp_date_hour_min($Attr_new{$i-1}{LastNegotiationCycleEnd0})."\n";
+				return 0;
+			}
+			unless ($machine_info[2][$i] eq unquote($Attr_new{$i-1}{LastNegotiationCycleDuration0})) {
+				print "        Output is $machine_info[2][$i]\n        should be ".unquote($Attr_new{$i-1}{LastNegotiationCycleDuration0 })."\n";
+				return 0;
+			}
+			unless ($machine_info[3][$i] eq unquote($Attr_new{$i-1}{LastNegotiationCycleCandidateSlots0})) {
+				print "        Output is $machine_info[3][$i]\n        should be ".unquote($Attr_new{$i-1}{LastNegotiationCycleCandidateSlots0})."\n";
+				return 0;
+			}
+			unless ($machine_info[4][$i] eq unquote($Attr_new{$i-1}{LastNegotiationCycleActiveSubmitterCount0})) {
+				print "        Output is $machine_info[4][$i]\n        should be ".unquote($Attr_new{$i-1}{LastNegotiationCycleActiveSubmitterCount0})."\n";
+				return 0;
+			}
+			unless ($machine_info[5][$i] eq unquote($Attr_new{$i-1}{LastNegotiationCycleNumSchedulers0})) {
+				print "        Output is $machine_info[5][$i]\n        should be ".unquote($Attr_new{$i-1}{LastNegotiationCycleNumSchedulers0})."\n";
+				return 0;
+			}
+			unless ($machine_info[6][$i] eq unquote($Attr_new{$i-1}{LastNegotiationCycleNumIdleJobs0})) {
+				print "        Output is $machine_info[6][$i]\n        should be ".unquote($Attr_new{$i-1}{LastNegotiationCycleNumIdleJobs0})."\n";
+				return 0;
+			}
+			unless ($machine_info[7][$i] eq unquote($Attr_new{$i-1}{LastNegotiationCycleMatches0})) {
+				print "        Output is $machine_info[7][$i]\n        should be ".unquote($Attr_new{$i-1}{LastNegotiationCycleMatches0})."\n";
+				return 0;
+			}
+			unless ($machine_info[8][$i] eq unquote($Attr_new{$i-1}{LastNegotiationCycleRejections0})) {
+				print "        Output is $machine_info[8][$i]\n        should be ".unquote($Attr_new{$i-1}{LastNegotiationCycleRejections0})."\n";
 				return 0;
 			}
 		}
 		return 1;
 	}
+}
+
+sub convert_timestamp_date_hour_min {
+	my $timestamp = $_[0];
+	my ($sec, $min, $hour, $mday, $mon, $year, $wday, $yday, $isdst) = localtime($timestamp);
+	$mon = sprintf("%2d",$mon + 1);
+	$mday = sprintf("%2d", $mday);
+	$hour = sprintf("%2d", $hour);
+	$min = sprintf("%2d", $min);
+	return "$mon/$mday $hour:$min";
 }
 
 sub count_status_state {
@@ -1257,7 +1299,7 @@ sub check_heading {
 		'status_run_machine' => sub {return $data{0} =~ /\s*Name\s+TotalJobs\s+Shadows\s+ActiveDAGs\s+IdleDAGs\s+RcntDone\s+RcntStart/;},
 		'status_schedd_machine' => sub {return $data{0} =~ /\s*Name\s+Machine\s+RunningJobs\s+IdleJobs\s+HeldJobs/;},
 		'status_schedd_summary' => sub {return $data{0} =~ /\s*TotalRunningJobs\s+TotalIdleJobs\s+TotalHeldJobs/;},
-		'status_negotiator' => sub {return $data{0} =~ /\s*Name\s+Machine/;},
+		'status_negotiator' => sub {return $data{0} =~ /\s*Name\s+LastCycleEnd\s+\(Sec\)\s+Slots\s+Submitrs\s+Schedds\s+Jobs\s+Matches\s+Rejections/;},
 		'status_server_machine' => sub {return $data{0} =~ /\s*Machine\s+Platform\s+Slots\s+Cpus\s+Gpus\s+TotalGb\s+Mips\s+KFlops\s+CpuLoad\s+ST\s+Jobs\/Min/;},
 		'status_server_summary' => sub {return $data{0} =~ /\s*Machines\s+Avail\s+Memory\s+Disk\s+MIPS\s+KFLOPS/;}
 	);

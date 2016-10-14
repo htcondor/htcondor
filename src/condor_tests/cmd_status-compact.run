@@ -259,11 +259,13 @@ for my $i (0..scalar @chars-1){
 	}
 	else {last;}
 }
-for my $i (0..(scalar keys %table)-1){
-	@chars = split("",$table{$i});
-	$machine_info[0][$i] = trim(join("",@chars[0..$index-1]));
-	$machine_info[1][$i] = trim(join("",@chars[$index..(scalar @chars -1)]));
-}
+@machine_info = split_fields(\%table);
+#for my $i (0..(scalar keys %table)-1){
+#	@chars = split("",$table{$i});
+#	$machine_info[0][$i] = trim(join("",@chars[0..$index-1]));
+#	$machine_info[1][$i] = trim(join("",@chars[$index..(scalar @chars -1)]));
+#}
+
 if (check_heading('status_negotiator',\%table)){
 	RegisterResult(check_status(\@machine_info,\@summary,$option,\%Attr_old,\%Attr_new,20),check_name =>$option,test_name =>$testname);
 } else {
