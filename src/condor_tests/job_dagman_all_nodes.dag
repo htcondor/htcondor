@@ -1,0 +1,41 @@
+job NodeA /dev/null noop
+# Make sure these get overridden.
+script pre NodeA /dev/null A foobar $RETRY
+pre_skip NodeA 2
+script post NodeA /dev/null A foobar $RETURN
+vars NodeA nodename="foobar"
+retry NodeA 5 UNLESS-EXIT 8
+abort-dag-on NodeA 5 return 10
+priority NodeA 20
+category NodeA foobar
+
+job NodeB /dev/null noop
+job NodeC /dev/null noop
+
+final NodeF /dev/null noop
+script pre NodeF /dev/null F $JOB $RETRY
+script post NodeF /dev/null F $JOB $RETURN
+vars NodeF nodename="final"
+
+splice SpliceA job_dagman_all_nodes-splice.dag
+
+#TEMP -- put this into an include file after merging to master
+script pre ALL_NODES /dev/null A $JOB $RETRY
+pre_skip ALL_NODES 4
+script post ALL_NODES /dev/null A $JOB $RETURN
+vars ALL_NODES nodename="$(JOB)"
+retry ALL_NODES 2 UNLESS-EXIT 5
+abort-dag-on ALL_NODES 3 return 4
+priority ALL_NODES 10
+category ALL_NODES upper
+maxjobs upper 1
+
+# These should override the ALL_NODES settings...
+script pre NodeB /dev/null A barfoo $RETRY
+pre_skip NodeB 20
+script post NodeB /dev/null A barfoo $RETURN
+vars NodeB nodename="barfoo"
+retry NodeB 20 UNLESS-EXIT 50
+abort-dag-on NodeB 30 return 40
+priority NodeB 100
+category NodeB barfoo

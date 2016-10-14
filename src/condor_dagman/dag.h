@@ -296,6 +296,25 @@ class Dag {
     */
     Job * FindNodeByEventID ( const CondorID condorID ) const;
 
+	/** Find all nodes by name -- either a specific node or all
+	 	nodes in the DAG.  To find all nodes in the DAG, pass
+		"ALL_NODES" as the node name on the first call; then NULL
+		in subsequent calls
+		@param nodeName the name of the node to find, or "ALL_NODES",
+			or NULL
+		@param finalSkipMsg the message to print when skipping final
+			nodes, in a form like this: "In parse_script(): skipping node
+			%s because final nodes must have SCRIPT set explicitly
+			(%s: %d)\n"
+		@param file the name of the DAG file that is being parsed
+		@param line the line in the DAG file that is being parsed
+	 	@return a pointer to a Job (node) object, or NULL if there are
+	 		no more node to be found
+	*/
+	Job * FindAllNodesByName( const char* nodeName,
+				const char *finalSkipMsg,
+				const char *file, int line) const;
+
     /** Ask whether a node name exists in the DAG
         @param nodeName the name of the node in the DAG
         @return true if the node exists, false otherwise
@@ -674,9 +693,9 @@ class Dag {
 	ExtArray<Job*>* FinalRecordedNodes(void);
 
 	// called just after a parse of a dag, this will keep track of the
-	// original intial and final nodes of a dag (after all parent and
+	// original intial and terminal nodes of a dag (after all parent and
 	// child dependencies have been added or course).
-	void RecordInitialAndFinalNodes(void);
+	void RecordInitialAndTerminalNodes(void);
 
 	// Recursively lift all splices into each other and then me
 	OwnedMaterials* LiftSplices(SpliceLayer layer);
@@ -769,6 +788,8 @@ class Dag {
 	const char *GetStatusName() const {
 				return _dag_status_names[_dagStatus]; }
 
+	static const char *ALL_NODES;
+
 	/** Determine whether this DAG has a final node.
 		@return true iff the DAG has a final node.
 	*/
@@ -799,7 +820,7 @@ class Dag {
 	// dag as a parent or a child, we can always reference the correct nodes
 	// even in the face of AddDependency().
 	ExtArray<Job*> _splice_initial_nodes;
-	ExtArray<Job*> _splice_final_nodes;
+	ExtArray<Job*> _splice_terminal_nodes;
 
   	// A hash table with key of a splice name and value of the dag parse 
 	// associated with the splice.
@@ -992,7 +1013,7 @@ class Dag {
 	bool UnmonitorLogFile();
 
 protected:
-    /// List of Job objects
+    // List of Job objects
     List<Job>     _jobs;
 
 private:
@@ -1280,6 +1301,8 @@ private:
 	*/
 	static void DeletePinList( PinList &pinList );
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		// Iterator for ALL_NODES implementation.
+	mutable ListIterator<Job> *_allNodesIt;
 };
 
 #endif /* #ifndef DAG_H */

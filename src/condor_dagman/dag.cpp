@@ -70,6 +70,8 @@ const char * Dag::_dag_status_names[] = {
     "DAG_STATUS_HALTED"
 };
 
+const char *Dag::ALL_NODES = "ALL_NODES";
+
 //---------------------------------------------------------------------------
 void touch (const char * filename) {
     int fd = safe_open_wrapper_follow(filename, O_RDWR | O_CREAT, 0600);
@@ -208,6 +210,8 @@ Dag::Dag( /* const */ StringList &dagFiles,
 	_haltFile = HaltFileName( _dagFiles.next() );
 	_dagStatus = DAG_STATUS_OK;
 
+	_allNodesIt = NULL;
+
 	return;
 }
 
@@ -244,6 +248,7 @@ Dag::~Dag()
 
 	DeletePinList( _pinIns );
 	DeletePinList( _pinOuts );
+	delete _allNodesIt;
 
     return;
 }
@@ -1275,6 +1280,60 @@ Job * Dag::FindNodeByName (const char * jobName) const {
 	}
 
 	return job;
+}
+
+//---------------------------------------------------------------------------
+Job *
+Dag::FindAllNodesByName( const char* nodeName,
+			const char *finalSkipMsg, const char *file, int line ) const
+{
+	Job *node = NULL;
+
+	if ( nodeName ) {
+		if ( strcasecmp( nodeName, ALL_NODES ) ) {
+				// Looking for a specific node.
+
+			delete _allNodesIt; // just to be safe
+			_allNodesIt = NULL;
+
+			node =  FindNodeByName( nodeName );
+
+		} else {
+				// First call when looking for ALL_NODES.
+
+			delete _allNodesIt; // just to be safe
+			_allNodesIt = new ListIterator<Job>( _jobs );
+			_allNodesIt->ToBeforeFirst();
+	
+			node =  _allNodesIt->Next();
+		}
+
+	} else {
+			// Second or subsequent call when looking for ALL_NODES.
+
+		if ( _allNodesIt ) {
+			node =  _allNodesIt->Next();
+		} else {
+			node =  NULL;
+		}
+	}
+
+		// We want to skip final nodes if we're in ALL_NODES mode.
+	if ( node && node->GetFinal() && _allNodesIt ) {
+		debug_printf( DEBUG_QUIET, finalSkipMsg, node->GetJobName(),
+					file, line );
+			// We know there can only be one FINAL node.
+		node = _allNodesIt->Next();
+		ASSERT( !node || !node->GetFinal() );
+	}
+
+		// Delete the ALL_NODES iterator if we've hit the last node.
+	if ( !node && _allNodesIt ) {
+		delete _allNodesIt;
+		_allNodesIt = NULL;
+	}
+
+	return node;
 }
 
 //---------------------------------------------------------------------------
@@ -4425,15 +4484,15 @@ Dag::InitialRecordedNodes(void)
 ExtArray<Job*>*
 Dag::FinalRecordedNodes(void)
 {
-	return &_splice_final_nodes;
+	return &_splice_terminal_nodes;
 }
 
 
 //---------------------------------------------------------------------------
 // After we parse the dag, let's remember which ones were the initial and 
-// final nodes in the dag (in case this dag was used as a splice).
+// terminal nodes in the dag (in case this dag was used as a splice).
 void
-Dag::RecordInitialAndFinalNodes(void)
+Dag::RecordInitialAndTerminalNodes(void)
 {
 	Job *job = NULL;
 
@@ -4447,7 +4506,7 @@ Dag::RecordInitialAndFinalNodes(void)
 
 		// record the final nodes
 		if (job->NumChildren() == 0) {
-			_splice_final_nodes.add(job);
+			_splice_terminal_nodes.add(job);
 		}
 	}
 }
@@ -4568,7 +4627,7 @@ Dag::AssumeOwnershipofNodes(const MyString &spliceName, OwnedMaterials *om)
 			continue;
 		}
 		if ((*nodes)[i]->NumChildren() == 0) {
-			_splice_final_nodes.add((*nodes)[i]);
+			_splice_terminal_nodes.add((*nodes)[i]);
 		}
 	}
 

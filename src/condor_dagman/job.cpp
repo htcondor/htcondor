@@ -515,9 +515,13 @@ Job::AddScript( bool post, const char *cmd, int defer_status, time_t defer_time,
 		return false;
 	}
 	if( post ? _scriptPost : _scriptPre ) {
-		whynot.formatstr( "%s script already assigned (%s)",
-						post ? "POST" : "PRE", GetPreScriptName() );
-		return false;
+		const char *prePost = post ? "POST" : "PRE";
+		const char *script = post ? GetPostScriptName() : GetPreScriptName();
+		debug_printf( DEBUG_NORMAL,
+					"Warning: node %s already has %s script <%s> assigned; changing to <%s>\n",
+					GetJobName(), prePost, script, cmd );
+		check_warning_strictness( DAG_STRICT_3 );
+		delete (post ? _scriptPost : _scriptPre);
 	}
 	Script* script = new Script( post, cmd, defer_status, defer_time, this );
 	if( !script ) {
@@ -540,24 +544,26 @@ Job::AddScript( bool post, const char *cmd, int defer_status, time_t defer_time,
 bool
 Job::AddPreSkip( int exitCode, MyString &whynot )
 {
-	if( exitCode < PRE_SKIP_MIN || exitCode > PRE_SKIP_MAX ) {
+	if ( exitCode < PRE_SKIP_MIN || exitCode > PRE_SKIP_MAX ) {
 		whynot.formatstr( "PRE_SKIP exit code must be between %d and %d\n",
 			PRE_SKIP_MIN, PRE_SKIP_MAX );
 		return false;
 	}
 
-	if( exitCode == 0 ) {
+	if ( exitCode == 0 ) {
 		debug_printf( DEBUG_NORMAL, "Warning: exit code 0 for a PRE_SKIP "
 			"value is weird.\n");
 	}
 
-	if( _preskip == PRE_SKIP_INVALID ) {
-		_preskip = exitCode;	
-	} else {
-		whynot = "Two definitions of PRE_SKIP for a node.\n";
-		return false;
+	if ( _preskip != PRE_SKIP_INVALID ) {
+		debug_printf( DEBUG_NORMAL,
+					"Warning: new PRE_SKIP value  %d for node %s overrides old value %d\n",
+					exitCode, GetJobName(), _preskip );
+		check_warning_strictness( DAG_STRICT_3 );
 	}
-	whynot = "n/a";
+	_preskip = exitCode;	
+
+	whynot = "";
 	return true;
 }
 
@@ -687,6 +693,8 @@ Job::NumChildren() const
 void
 Job::SetCategory( const char *categoryName, ThrottleByCategory &catThrottles )
 {
+	ASSERT( !_final );
+
 	MyString	tmpName( categoryName );
 
 	if ( (_throttleInfo != NULL) &&
