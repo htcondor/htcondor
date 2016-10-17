@@ -207,6 +207,7 @@ main_init(int argc, char* argv[])
 			if(!success) {
 				dprintf(D_ALWAYS, "SCHEDD: User credentials not up-to-date.  Start-up delayed.  Waiting 10 seconds and trying %i more times.\n", retries);
 				sleep(10);
+				retries--;
 			}
 		} while ((!success) && (retries > 0));
 
