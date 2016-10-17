@@ -1199,6 +1199,7 @@ Scheduler::count_jobs()
 	 // copy owner data to old-owners table
 	time_t AbsentSubmitterLifetime = param_integer("ABSENT_SUBMITTER_LIFETIME", 60*60*24*7); // 1 week.
 	time_t AbsentSubmitterUpdateRate = param_integer("ABSENT_SUBMITTER_UPDATE_RATE", 60*5); // 5 min
+	time_t AbsentOwnerLifetime = param_integer("ABSENT_OWNER_LIFETIME", 60*5);
 
 	JobsRunning = 0;
 	JobsIdle = 0;
@@ -1282,6 +1283,31 @@ Scheduler::count_jobs()
 	for (SubmitterDataMap::iterator it = Submitters.begin(); it != Submitters.end(); ++it) {
 		const SubmitterData & SubDat = it->second;
 		if (SubDat.num.Hits > 0) ++NumSubmitters;
+	}
+
+	// Look for owners with zero jobs and purge them
+	for (OwnerInfoMap::iterator it = OwnersInfo.begin(); it != OwnersInfo.end(); ++it) {
+		OwnerInfo & owner_info = it->second;
+		// If this Owner has any jobs in the queue or match records,
+		// we don't want to remove the entry.
+		if (owner_info.num.Hits > 0) continue;
+
+#ifndef WIN32
+		// mark user creds for sweeping.
+		dprintf( D_FULLDEBUG, "ZKM: creating mark file for user %s\n", owner_info.Name());
+		credmon_mark_creds_for_sweeping(owner_info.Name());
+#endif // WIN32
+
+		// expire and mark for removal Owners that have not had any hits (i.e jobs in the queue)
+		if ( ! owner_info.LastHitTime) {
+			// this is unxpected, we really should never get here with LastHitTime of 0, but in case
+			// we do. start the decay timer now.
+			owner_info.LastHitTime = current_time;
+		} else if ( current_time - owner_info.LastHitTime > AbsentOwnerLifetime ) {
+			// Now that we've finished using Owner.Name, we can
+			// free it.  this marks the entry as unused
+			owner_info.name.clear();
+		}
 	}
 
 	// set FlockLevel for owners
@@ -1614,12 +1640,6 @@ Scheduler::count_jobs()
 		// If this Owner has any jobs in the queue or match records,
 		// we don't want to send the, so we continue to the next
 		if (SubDat.num.Hits > 0) continue;
-
-#ifndef WIN32
-		// mark user creds for sweeping.
-		dprintf( D_ALWAYS, "ZKM: creating mark file for user %s\n", SubDat.Name());
-		credmon_mark_creds_for_sweeping(SubDat.Name());
-#endif // WIN32
 
 		submitter_name.formatstr("%s@%s", SubDat.Name(), UidDomain);
 		int old_flock_level = SubDat.OldFlockLevel;
@@ -3067,6 +3087,13 @@ Scheduler::remove_unused_owners()
 		SubmitterDataMap::iterator prev = it++;
 		if (prev->second.empty()) {
 			Submitters.erase(prev);
+		}
+	}
+
+	for (OwnerInfoMap::iterator it = OwnersInfo.begin(); it != OwnersInfo.end(); ) {
+		OwnerInfoMap::iterator prev = it++;
+		if (prev->second.empty()) {
+			OwnersInfo.erase(prev);
 		}
 	}
 }

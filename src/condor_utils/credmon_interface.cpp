@@ -143,7 +143,6 @@ bool credmon_mark_creds_for_sweeping(const char* user) {
 	// construct filename to create
 	char* cred_dir = param("SEC_CREDENTIAL_DIRECTORY");
 	if(!cred_dir) {
-		dprintf(D_ALWAYS, "CREDMON: ERROR: got mark_creds_for_sweeping but SEC_CREDENTIAL_DIRECTORY not defined!\n");
 		return false;
 	}
 
