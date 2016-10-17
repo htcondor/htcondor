@@ -362,13 +362,15 @@ int read_meta_config(MACRO_SOURCE & source, int depth, const char *name, const c
 #endif
 			int ret = Parse_config_string(source, depth, psz, macro_set, ctx);
 			if (ret < 0) {
-				const char * pre = "Internal Submit";
-				const char * msg = "Error: use %s: %s is invalid\n";
-				if (ret == -2) {
-					pre = "\n";
-					msg = "ERROR: use %s: %s nesting too deep\n"; 
+				if (ret == -1111 || ret == -2222) {
+					const char * pre = "Internal Submit";
+					const char * msg = "Error: use %s: %s is invalid\n";
+					if (ret == -2222) {
+						pre = "\n";
+						msg = "ERROR: use %s: %s nesting too deep\n"; 
+					}
+					macro_set.push_error(stderr, ret, pre, msg, name, item);
 				}
-				macro_set.push_error(stderr, ret, pre, msg, name, item);
 				return ret;
 			}
 		}
@@ -411,13 +413,15 @@ int read_meta_config(MACRO_SOURCE & source, int depth, const char *name, const c
 #endif
 		int ret = Parse_config_string(source, depth, value, macro_set, ctx);
 		if (ret < 0) {
-			const char * pre = "Internal Configuration";
-			const char * msg = "Error: use %s: %s is invalid\n";
-			if (ret == -2) {
-				pre = "Configuration";
-				msg = "Error: use %s: %s nesting too deep\n"; 
+			if (ret == -1111 || ret == -2222) {
+				const char * pre = "Internal Configuration";
+				const char * msg = "Error: use %s: %s is invalid\n";
+				if (ret == -2222) {
+					pre = "Configuration";
+					msg = "Error: use %s: %s nesting too deep\n"; 
+				}
+				macro_set.push_error(stderr, ret, pre, msg, name, item);
 			}
-			macro_set.push_error(stderr, ret, pre, msg, name, item);
 			return ret;
 		}
 	}
@@ -886,7 +890,7 @@ int Parse_config_string(MACRO_SOURCE & source, int depth, const char * config, M
 		if (ifstack.line_is_if(line, errmsg, macro_set, ctx)) {
 			if ( ! errmsg.empty()) {
 				dprintf(D_CONFIG | D_FAILURE, "Parse_config if error: '%s' line: %s\n", errmsg.c_str(), line);
-				return -1;
+				return -1111;
 			} else {
 				dprintf(D_CONFIG | D_VERBOSE, "config %lld,%lld,%lld line: %s\n", ifstack.top, ifstack.state, ifstack.estate, line);
 			}
@@ -898,6 +902,7 @@ int Parse_config_string(MACRO_SOURCE & source, int depth, const char * config, M
 		}
 
 		const char * name = line;
+		const char * pop = line;
 		char * ptr = line;
 		int op = 0;
 
@@ -911,6 +916,7 @@ int Parse_config_string(MACRO_SOURCE & source, int depth, const char * config, M
 		// parse to the end of the name and null terminate it
 		while (*ptr) {
 			if (isspace(*ptr) || ISOP(*ptr)) {
+				pop = ptr;
 				op = *ptr;  // capture the operator
 				*ptr++ = 0; // null terminate the name
 				break;
@@ -924,6 +930,7 @@ int Parse_config_string(MACRO_SOURCE & source, int depth, const char * config, M
 					op = 0; // more than one op is not allowed, so trigger a failure
 					break;
 				}
+				pop = ptr;
 				op = *ptr;
 			} else if ( ! isspace(*ptr)) {
 				break;
@@ -934,10 +941,34 @@ int Parse_config_string(MACRO_SOURCE & source, int depth, const char * config, M
 		if ( ! *ptr && ! ISOP(op)) {
 			// Here we have determined this line has no operator, or too many
 			//PRAGMA_REMIND("tj: should report parse error in meta knobs here.")
-			return -1;
+			return -1111;
 		}
 
 		while (*ptr && isspace(*ptr)) ++ptr;
+
+		if (op == ':') {
+			bool is_error_keyword = MATCH == strcasecmp(name, "error");
+			if (is_error_keyword || MATCH == strcasecmp(name, "warning")) {
+				int code = 0;
+				if (is_error_keyword) {
+					// set name to point to the word after error, it will be an optional error code
+					if (name+5 < pop) {
+						const char * pn = name+5;
+						while (isspace(*pn) && pn < pop) { ++pn; }
+						code = atoi(pn);
+						if (code > 0) code = -code;
+					}
+					if ( ! code) code = -1;
+				}
+				auto_free_ptr msg(expand_macro(ptr, macro_set, ctx));
+				macro_set.push_error(stderr, code, "",
+						"%s : %s\n", is_error_keyword ? "Error" : "Warning",
+						msg ? msg.ptr() : "");
+				if (code) {
+					return code;
+				}
+			}
+		}
 
 		// ptr now points to the first non-space character of the right hand side, it may point to a \0
 		const char * rhs = ptr;
@@ -947,7 +978,7 @@ int Parse_config_string(MACRO_SOURCE & source, int depth, const char * config, M
 		PRAGMA_REMIND("tj: allow macro expansion in knob names in meta_params?")
 		char* expanded_name = expand_macro(name, macro_set, ctx);
 		if (expanded_name == NULL) {
-			return -1;
+			return -1111;
 		}
 		name = expanded_name;
 		*/
@@ -956,7 +987,7 @@ int Parse_config_string(MACRO_SOURCE & source, int depth, const char * config, M
 		if (is_meta) {
 			if (depth >= CONFIG_MAX_NESTING_DEPTH) {
 				// looks like infinite recursion, give up and return an error instead.
-				return -2;
+				return -2222;
 			}
 			// for recursive metaknobs, we need to use a temp copy of the source info
 			// to avoid loosing the source id/offset info.
@@ -979,13 +1010,13 @@ int Parse_config_string(MACRO_SOURCE & source, int depth, const char * config, M
 			/* Check that "name" is a legal identifier : only
 			   alphanumeric characters and _ allowed*/
 			if ( ! is_valid_param_name(name) ) {
-				return -1;
+				return -1111;
 			}
 
 			/* expand self references only */
 			char * value = expand_self_macro(rhs, name, macro_set, ctx);
 			if (value == NULL) {
-				return -1;
+				return -1111;
 			}
 
 			insert_macro(name, value, macro_set, source, ctx);
@@ -2747,6 +2778,8 @@ char * expand_meta_args(const char *value, std::string & argstr)
 					while (pi && (ix < meta_only.index)) { ++ix; pi = it.next_string(); }
 					if (pi) {
 						buf = *pi;
+					} else if (meta_only.colon) {
+						buf = name + meta_only.colon;
 					}
 				}
 			}
@@ -3836,6 +3869,9 @@ tryagain:
 							// skip to the close )
 							char * ptr = strchr(value, ')');
 							if (ptr) value = ptr+1;
+						} else if (is_meta_arg_body) {
+							// for meta args, allow pretty much anything after the colon
+							continue;
 						} else if (strchr("$ ,\\:", c)) {
 							// allow some characters after the : that we don't allow in param names
 							continue;
