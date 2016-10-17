@@ -104,7 +104,6 @@ my_exit( int status )
 void
 usage(int retval = 1)
 {
-#if 1
 	fprintf(stderr, "Usage: %s <help>\n\n", MyName);
 	fprintf(stderr, "       %s [<location>] <edit> \n\n", MyName);
 	fprintf(stderr, "       %s [<location>] [<view>] <vars>\n\n", MyName);
@@ -162,46 +161,6 @@ usage(int retval = 1)
 		"\t-help\t\tPrint this screen and exit\n"
 		"\t-version\tPrint HTCondor version and exit\n"
 		);
-#else
-	fprintf( stderr, "Usage: %s [options] variable [variable] ...\n", MyName );
-	fprintf( stderr,
-			 "   or: %s [options] -set string [string] ...\n",
-			 MyName );
-	fprintf( stderr,
-			 "   or: %s [options] -rset string [string] ...\n",
-			 MyName );
-	fprintf( stderr, "   or: %s [options] -unset variable [variable] ...\n",
-			 MyName );
-	fprintf( stderr, "   or: %s [options] -runset variable [variable] ...\n",
-			 MyName );
-	fprintf( stderr, "   or: %s [options] -tilde\n", MyName );
-	fprintf( stderr, "   or: %s [options] -owner\n", MyName );
-	fprintf( stderr, "   or: %s -dump [-verbose] [-expand]\n", MyName );
-	fprintf( stderr, "\n   Valid options are:\n" );
-	fprintf( stderr, "   -name daemon_name\t(query the specified daemon for its configuration)\n" );
-	fprintf( stderr, "   -pool hostname\t(use the given central manager to find daemons)\n" );
-	fprintf( stderr, "   -address <ip:port>\t(connect to the given ip/port)\n" );
-	fprintf( stderr, "   -set\t\t\t(set a persistent config file expression)\n" );
-	fprintf( stderr, "   -rset\t\t(set a runtime config file expression\n" );
-
-	fprintf( stderr, "   -unset\t\t(unset a persistent config file expression)\n" );
-	fprintf( stderr, "   -runset\t\t(unset a runtime config file expression)\n" );
-
-	fprintf( stderr, "   -master\t\t(query the master)\n" );
-	fprintf( stderr, "   -schedd\t\t(query the schedd)\n" );
-	fprintf( stderr, "   -startd\t\t(query the startd)\n" );
-	fprintf( stderr, "   -collector\t\t(query the collector)\n" );
-	fprintf( stderr, "   -negotiator\t\t(query the negotiator)\n" );
-	fprintf( stderr, "   -tilde\t\t(return the path to the Condor home directory)\n" );
-	fprintf( stderr, "   -owner\t\t(return the owner of the condor_config_val process)\n" );
-	fprintf( stderr, "   -local-name name\t(Specify a local name for use with the config system)\n" );
-	fprintf( stderr, "   -verbose\t\t(print information about where variables are defined)\n" );
-	fprintf( stderr, "   -dump\t\t(print locally defined variables)\n" );
-	fprintf( stderr, "   -expand\t\t(with -dump, expand macros from config files)\n" );
-	fprintf( stderr, "   -evaluate\t\t(when querying <daemon>, evaluate param with respect to classad from <daemon>)\n" );
-	fprintf( stderr, "   -config\t\t(print the locations of found config files)\n" );
-	fprintf( stderr, "   -debug[:<flags>]\t\t(dprintf to stderr, optionally overiding the TOOL_DEBUG flags)\n" );
-#endif
 	my_exit(retval);
 }
 
@@ -240,6 +199,22 @@ static void do_dump_config_stats(FILE * fh, bool dump_sources, bool dump_strings
 static int do_write_config(const char* pathname, WRITE_CONFIG_OPTIONS opts);
 
 static const char * param_type_names[] = {"STRING","INT","BOOL","DOUBLE","LONG"};
+
+static classad::References standard_subsystems;
+bool is_known_subsys_prefix(const char * name) {
+	const char * pdot = strchr(name, '.');
+	if ( ! pdot)
+		return false;
+
+	if (standard_subsystems.empty()) {
+		StringTokenIterator it("MASTER COLLECTOR NEGOTIATOR HAD REPLICATION SCHEDD SHADOW STARTD STARTER");
+		const std::string * sub;
+		while ((sub = it.next_string())) { standard_subsystems.insert(*sub); }
+	}
+	
+	std::string tmp(name, pdot - name);
+	return (standard_subsystems.find(tmp) != standard_subsystems.end());
+}
 
 void print_as_type(const char * name, int as_type)
 {
@@ -396,6 +371,25 @@ bool dump_both_callback(void* pv, HASHITER & it)
 	return true;
 }
 
+//#define HAS_LAMBDA
+#ifdef HAS_LAMBDA
+#else
+bool report_obsolete_var(void* pv, HASHITER & it) {
+	MyString * pstr = (MyString*)pv;
+	const char * name = hash_iter_key(it);
+	if (is_known_subsys_prefix(name)) {
+		*pstr += "  ";
+		*pstr += name;
+		MACRO_META * pmet = hash_iter_meta(it);
+		if (pmet) {
+			*pstr += " at ";
+			param_append_location(pmet, *pstr);
+		}
+		*pstr += "\n";
+	}
+	return true; // keep iterating
+}
+#endif
 
 char* EvaluatedValue(char const* value, ClassAd const* ad) {
     classad::Value res;
@@ -474,6 +468,7 @@ main( int argc, const char* argv[] )
 	bool    stats_with_defaults = false;
 	const char * debug_flags = NULL;
 	const char * check_configif = NULL;
+	bool    check_config_for_obsolete_syntax = true;
 
 #ifdef WIN32
 	// enable this if you need to debug crashes.
@@ -737,7 +732,7 @@ main( int argc, const char* argv[] )
 		config_options |= CONFIG_OPT_KEEP_DEFAULTS;
 	}
 	config_host(host, config_options);
-	validate_config(false); // validate, but do not abort.
+	validate_config(false, 0); // validate, but do not abort.
 	if (print_config_sources) {
 		PrintConfigSources();
 	}
@@ -776,6 +771,53 @@ main( int argc, const char* argv[] )
 			check_configif, 
 			valid ? (bb ? "\ntrue" : "\nfalse") : err_reason.c_str());
 		exit(0);
+	}
+
+	// Check for obsolete syntax in config file
+	check_config_for_obsolete_syntax = param_boolean("ENABLE_DEPRECATION_WARNINGS", check_config_for_obsolete_syntax);
+	if (check_config_for_obsolete_syntax) {
+		Regex re; int err = 0; const char * pszMsg = 0;
+		// check for knobs of the form SUBSYS.LOCALNAME.*
+		ASSERT(re.compile("^[A-Za-z_]*\\.[A-Za-z_0-9]*\\.", &pszMsg, &err, PCRE_CASELESS));
+		MyString obsolete_vars;
+		foreach_param_matching(re, HASHITER_NO_DEFAULTS,
+#ifdef HAS_LAMBDA
+			[](void* pv, HASHITER & it) -> bool {
+				MyString * pstr = (MyString*)pv;
+				const char * name = hash_iter_key(it);
+				if (is_known_subsys_prefix(name)) {
+					*pstr += "  ";
+					*pstr += name;
+					MACRO_META * pmet = hash_iter_meta(it);
+					if (pmet) {
+						*pstr += " at ";
+						param_append_location(pmet, *pstr);
+					}
+					*pstr += "\n";
+				}
+				return true; // keep iterating
+			},
+#else
+			report_obsolete_var,
+#endif
+			&obsolete_vars // becomes pv
+		);
+		if ( ! obsolete_vars.empty()) {
+			fprintf(stderr, "WARNING: the following appear to be obsolete SUBSYS.LOCALNAME.* overrides\n%s", obsolete_vars.c_str());
+			fprintf(stderr, 
+				"\n    Use of both SUBSYS. and LOCALNAME. prefixes at the same time is not needed and not supported.\n"
+				  "    To override config for a class of daemons, or for a standard daemon use a SUBSYS. prefix.\n"
+				  "    To override config for a specific member of a class of daemons, just use a LOCALNAME. prefix like this:\n"
+				);
+			StringTokenIterator it(obsolete_vars.c_str(), 40, "\n");
+			for (const char * line = it.first(); line; line = it.next()) {
+				const char * p1 = strchr(line, '.');
+				if ( ! p1) continue;
+				const char * p2 = p1; while (p2[1] && !isspace(p2[1])) ++p2;
+				std::string name(p1+1, p2-p1);
+				fprintf(stderr, "  %s\n", name.c_str());
+			}
+		}
 	}
 
 	if (write_config) {

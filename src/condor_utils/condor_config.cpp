@@ -648,39 +648,63 @@ Output is via a giant EXCEPT string because the dprintf
 system probably isn't working yet.
 */
 const char * FORBIDDEN_CONFIG_VAL = "YOU_MUST_CHANGE_THIS_INVALID_CONDOR_CONFIGURATION_VALUE";
-bool validate_config(bool abort_if_invalid)
+bool validate_config(bool abort_if_invalid, int opt)
 {
-	HASHITER it = hash_iter_begin(ConfigMacroSet, HASHITER_NO_DEFAULTS);
+	bool deprecation_check = (opt & CONFIG_OPT_DEPRECATION_WARNINGS);
 	unsigned int invalid_entries = 0;
-	MyString tmp;
-	MyString output = "The following configuration macros appear to contain default values that must be changed before Condor will run.  These macros are:\n";
+	unsigned int deprecated_entries = 0;
+	MyString invalid_out = "The following configuration macros appear to contain default values that must be changed before Condor will run.  These macros are:\n";
+	MyString deprecated_out;
+	Regex re;
+	if (deprecation_check) {
+		int err = 0; const char * pszMsg = 0;
+		// check for knobs of the form SUBSYS.LOCALNAME.*
+		re.compile("^[A-Za-z_]*\\.[A-Za-z_0-9]*\\.", &pszMsg, &err, PCRE_CASELESS);
+	}
+
+	HASHITER it = hash_iter_begin(ConfigMacroSet, HASHITER_NO_DEFAULTS);
 	while( ! hash_iter_done(it) ) {
+		const char * name = hash_iter_key(it);
 		const char * val = hash_iter_value(it);
 		if (val && strstr(val, FORBIDDEN_CONFIG_VAL)) {
-			const char * name = hash_iter_key(it);
-#if 1
-			MyString filename;
-			param_get_location(hash_iter_meta(it), filename);
-			tmp.formatstr("   %s (found at %s)\n", name, filename.Value());
-#else
-			MyString filename;
-			int line_number;
-			param_get_location(name, filename, line_number);
-			tmp.formatstr("   %s (found on line %d of %s)\n", name, line_number, filename.Value());
-#endif
-			output += tmp;
+			invalid_out += "   ";
+			invalid_out += name;
+			MACRO_META * pmet = hash_iter_meta(it);
+			if (pmet) {
+				invalid_out += " at ";
+				param_append_location(pmet, invalid_out);
+			}
+			invalid_out += "\n";
 			invalid_entries++;
+		}
+		if (deprecation_check && re.match(name)) {
+			MyString filename;
+			deprecated_out += "   ";
+			deprecated_out += name;
+			MACRO_META * pmet = hash_iter_meta(it);
+			if (pmet) {
+				deprecated_out += " at ";
+				param_append_location(pmet, deprecated_out);
+			}
+			deprecated_out += "\n";
+			deprecated_entries++;
 		}
 		hash_iter_next(it);
 	}
 	hash_iter_delete(&it);
 	if(invalid_entries > 0) {
 		if (abort_if_invalid) {
-			EXCEPT("%s", output.Value());
+			EXCEPT("%s", invalid_out.Value());
 		} else {
-			dprintf(D_ALWAYS, "%s", output.Value());
+			dprintf(D_ALWAYS, "%s", invalid_out.Value());
 			return false;
 		}
+	}
+	if (deprecated_entries > 0) {
+		dprintf(D_ALWAYS,
+			"WARNING: Some configuration variables appear to be an unsupported form of SUBSYS.LOCALNAME.* override\n"
+			"       The supported form is just LOCALNAME.* Variables are:\n%s",
+			deprecated_out.Value());
 	}
 	return true;
 }
@@ -755,7 +779,8 @@ bool config_ex(int config_options)
 	bool wantsQuiet = config_options & CONFIG_OPT_WANT_QUIET;
 	bool result = real_config(NULL, wantsQuiet, config_options);
 	if (!result) { return result; }
-	return validate_config(!(config_options & CONFIG_OPT_NO_EXIT));
+	int validate_opt = config_options & (CONFIG_OPT_DEPRECATION_WARNINGS | CONFIG_OPT_WANT_QUIET);
+	return validate_config(!(config_options & CONFIG_OPT_NO_EXIT), validate_opt);
 }
 
 
@@ -2005,7 +2030,8 @@ param(const char* name)
 	init_macro_eval_context(ctx);
 	ctx.use_mask = 3;
 
-	//PRAGMA_REMIND("tj: remove subsys.local.knob support in the 8.5 devel series")
+#if 0
+	// hack to make SUBSYS.LOCALNAME work for direct param lookups.
 	if (ctx.localname && ctx.subsys) {
 		MyString lcl(ctx.subsys); lcl += "."; lcl += ctx.localname;
 		const char * lval = lookup_macro_exact_no_default(name, lcl.c_str(), ConfigMacroSet, ctx.use_mask);
@@ -2016,6 +2042,7 @@ param(const char* name)
 			return expanded_val;
 		}
 	}
+#endif
 
 	const char * pval = lookup_macro(name, ConfigMacroSet, ctx);
 	if ( ! pval || ! pval[0]) {
@@ -2551,9 +2578,9 @@ param_boolean_int( const char *name, int default_value ) {
     return param_boolean(name, default_bool) ? 1 : 0;
 }
 
-const char * param_get_location(const MACRO_META * pmet, MyString & value)
+const char * param_append_location(const MACRO_META * pmet, MyString & value)
 {
-	value = config_source_by_id(pmet->source_id);
+	value += config_source_by_id(pmet->source_id);
 	if (pmet->source_line >= 0) {
 		value.formatstr_cat(", line %d", pmet->source_line);
 		MACRO_DEF_ITEM * pmsi = param_meta_source_by_id(pmet->source_meta_id);
@@ -2562,6 +2589,12 @@ const char * param_get_location(const MACRO_META * pmet, MyString & value)
 		}
 	}
 	return value.c_str();
+}
+
+const char * param_get_location(const MACRO_META * pmet, MyString & value)
+{
+	value.clear();
+	return param_append_location(pmet, value);
 }
 
 
