@@ -7,7 +7,7 @@
 
 int
 PutRule::operator() () {
-	dprintf( D_FULLDEBUG, "PutRule()\n" );
+	dprintf( D_FULLDEBUG, "PutRule::operator()\n" );
 
 	//
 	// The default account limit for rules is 50.  We would like to be

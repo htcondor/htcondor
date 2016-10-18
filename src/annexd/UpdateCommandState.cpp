@@ -6,7 +6,7 @@
 
 int
 UpdateCommandState::operator() () {
-	dprintf( D_FULLDEBUG, "UpdateCommandState()\n" );
+	dprintf( D_FULLDEBUG, "UpdateCommandState()::operator()\n" );
 
 	commandState->BeginTransaction();
 	{

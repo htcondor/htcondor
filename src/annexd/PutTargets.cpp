@@ -8,7 +8,7 @@
 
 int
 PutTargets::operator() () {
-	dprintf( D_FULLDEBUG, "PutTargets()\n" );
+	dprintf( D_FULLDEBUG, "PutTargets::operator()\n" );
 
 	std::string ruleName;
 	scratchpad->LookupString( "ruleName", ruleName );

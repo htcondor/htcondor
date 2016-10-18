@@ -8,7 +8,7 @@
 
 int
 ReplyAndClean::operator() () {
-	dprintf( D_FULLDEBUG, "ReplyAndClean()\n" );
+	dprintf( D_FULLDEBUG, "ReplyAndClean::operator()\n" );
 
 	// Send whatever reply we have, then clean it up.
 	if( reply && replyStream ) {
@@ -46,8 +46,6 @@ ReplyAndClean::operator() () {
 
 int
 ReplyAndClean::rollback() {
-	dprintf( D_FULLDEBUG, "ReplyAndClean::rollback() - not doing anything.\n" );
-
-	daemonCore->Reset_Timer( gahp->getNotificationTimerId(), 0, TIMER_NEVER );
-	return PASS_STREAM;
+	dprintf( D_FULLDEBUG, "ReplyAndClean::rollback() - calling operator().\n" );
+	return (* this)();
 }

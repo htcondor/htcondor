@@ -282,7 +282,7 @@ BulkRequest::log() {
 
 int
 BulkRequest::operator() () {
-	dprintf( D_FULLDEBUG, "BulkRequest()\n" );
+	dprintf( D_FULLDEBUG, "BulkRequest::operator()\n" );
 
 	int rc;
 	std::string errorCode;
