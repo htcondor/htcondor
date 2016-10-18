@@ -32,17 +32,21 @@
 
 class FunctorSequence : public Service {
 	public:
-		FunctorSequence( const std::deque< Functor * > & s, Functor * l ) :
-			sequence(s), last(l), current(NULL) { }
+		FunctorSequence( const std::vector< Functor * > & s, Functor * l ) :
+			sequence(s), last(l), current(0), rollingBack(false) { }
 		virtual ~FunctorSequence() { }
 
 		void operator() ();
 
+	protected:
+		void deleteFunctors();
+
 	private:
-		std::queue< Functor * > sequence;
+		std::vector< Functor * > sequence;
 		Functor * last;
 
-		Functor * current;
+		int current;
+		bool rollingBack;
 };
 
 #endif /* _CONDOR_FUNCTOR_SEQUENCE_H */

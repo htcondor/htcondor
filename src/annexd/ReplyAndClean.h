@@ -13,7 +13,8 @@ class ReplyAndClean : public Functor {
 			reply(r), replyStream(rs), gahp(g), scratchpad(s), eventsGahp(eg) { }
 		virtual ~ReplyAndClean() { }
 
-		int operator() ();
+		virtual int operator() ();
+		virtual int rollback();
 
 	private:
 		ClassAd * reply;

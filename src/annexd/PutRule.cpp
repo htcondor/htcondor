@@ -7,7 +7,7 @@
 
 int
 PutRule::operator() () {
-	dprintf( D_ALWAYS, "PutRule()\n" );
+	dprintf( D_FULLDEBUG, "PutRule()\n" );
 
 	//
 	// The default account limit for rules is 50.  We would like to be
@@ -62,6 +62,16 @@ PutRule::operator() () {
 	}
 
 	daemonCore->Reset_Timer( gahp->getNotificationTimerId(), 0, TIMER_NEVER );
-	delete this;
 	return rc;
 }
+
+int
+PutRule::rollback() {
+	dprintf( D_FULLDEBUG, "PutRule::rollback()\n" );
+
+	// FIXME
+
+	daemonCore->Reset_Timer( gahp->getNotificationTimerId(), 0, TIMER_NEVER );
+	return PASS_STREAM;
+}
+

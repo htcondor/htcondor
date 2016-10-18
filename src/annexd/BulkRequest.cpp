@@ -8,7 +8,8 @@
 // Stolen from EC2Job::build_client_token in condor_gridmanager/ec2job.cpp
 // and duplicated here because I expect to need to fiddle with it.
 #include <uuid/uuid.h>
-void generateClientToken( std::string & ct ) {
+void
+generateClientToken( std::string & ct ) {
     char uuid_str[37];
     uuid_t uuid;
     uuid_generate( uuid );
@@ -36,7 +37,8 @@ BulkRequest::BulkRequest( ClassAd * r, EC2GahpClient * egc, ClassAd * s,
 	}
 }
 
-bool BulkRequest::validateAndStore( ClassAd const * command, std::string & validationError ) {
+bool
+BulkRequest::validateAndStore( ClassAd const * command, std::string & validationError ) {
 	command->LookupString( "SpotPrice", spot_price );
 	if( spot_price.empty() ) {
 		validationError = "Attribute 'SpotPrice' missing or not a string.";
@@ -280,7 +282,7 @@ BulkRequest::log() {
 
 int
 BulkRequest::operator() () {
-	dprintf( D_ALWAYS, "BulkRequest()\n" );
+	dprintf( D_FULLDEBUG, "BulkRequest()\n" );
 
 	int rc;
 	std::string errorCode;
@@ -350,7 +352,15 @@ BulkRequest::operator() () {
 	}
 
 	daemonCore->Reset_Timer( gahp->getNotificationTimerId(), 0, TIMER_NEVER );
-	delete this;
 	return rc;
 }
 
+int
+BulkRequest::rollback() {
+	dprintf( D_FULLDEBUG, "BulkRequest::rollback()\n" );
+
+	// FIXME
+
+	daemonCore->Reset_Timer( gahp->getNotificationTimerId(), 0, TIMER_NEVER );
+	return PASS_STREAM;
+}

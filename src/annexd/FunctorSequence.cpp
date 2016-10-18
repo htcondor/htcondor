@@ -6,29 +6,43 @@
 #include "Functor.h"
 #include "FunctorSequence.h"
 
-void FunctorSequence::operator() () {
-	if( current == NULL ) {
-		if(! sequence.empty()) {
-			current = sequence.front();
-			sequence.pop();
-		} else {
-			int r = (* last)();
-			if( r != KEEP_STREAM ) {
-				delete this;
-			}
-			return;
-		}
+void
+FunctorSequence::deleteFunctors() {
+	for( unsigned i = 0; i < sequence.size(); ++i ) {
+		Functor * f = sequence[i];
+		delete f;
+	}
+	if( last ) { delete last; }
+}
+
+void
+FunctorSequence::operator() () {
+	// If we've run past the end of the sequence, call the last functor.
+	if( current >= (int) sequence.size() ) {
+		int r = (* last)();
+		if( r != KEEP_STREAM ) { deleteFunctors(); delete this; }
+		return;
 	}
 
-	if( current != NULL ) {
-		int r = (*current)();
-		switch(r) {
-			default:
-				while(! sequence.empty()) { sequence.pop(); }
-			case PASS_STREAM:
-				current = NULL;
-			case KEEP_STREAM:
-				return;
-		}
+	// If we've run past the end of the rollback, call the last functor.
+	if( current < 0 ) {
+		int r = last->rollback();
+		if( r != KEEP_STREAM ) { deleteFunctors(); delete this; }
+		return;
+	}
+
+	// Otherwise, call the current functor.
+	Functor * f = sequence[ current ];
+
+	int r = rollingBack ? f->rollback() : (* f)();
+	switch( r ) {
+		case PASS_STREAM:
+			current += rollingBack ? -1 : 1;
+		case KEEP_STREAM:
+			return;
+		default:
+			rollingBack = true;
+			return;
 	}
 }
+

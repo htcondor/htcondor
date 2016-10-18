@@ -19,7 +19,8 @@ class PutRule : public Functor {
 		{ }
 		virtual ~PutRule() { }
 
-		int operator() ();
+		virtual int operator() ();
+		virtual int rollback();
 
 	private:
 		ClassAd * reply;

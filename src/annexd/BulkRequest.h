@@ -16,9 +16,12 @@ class BulkRequest : public Functor {
 			const std::string & commandID );
 		virtual ~BulkRequest() { }
 
+		virtual int operator() ();
+		virtual int rollback();
+
 		bool validateAndStore( ClassAd const * command, std::string & validationError );
 		void log();
-		int operator() ();
+
 
 	protected:
 		EC2GahpClient * gahp;

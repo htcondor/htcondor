@@ -6,6 +6,8 @@
 
 int
 UpdateCommandState::operator() () {
+	dprintf( D_FULLDEBUG, "UpdateCommandState()\n" );
+
 	commandState->BeginTransaction();
 	{
 		std::string commandID;
@@ -17,6 +19,15 @@ UpdateCommandState::operator() () {
 	commandState->CommitTransaction();
 
 	daemonCore->Reset_Timer( gahp->getNotificationTimerId(), 0, TIMER_NEVER );
-	delete this;
 	return PASS_STREAM;
+}
+
+int
+UpdateCommandState::rollback() {
+	dprintf( D_FULLDEBUG, "UpdateCommandState::rollback()\n" );
+
+	// FIXME
+
+	daemonCore->Reset_Timer( gahp->getNotificationTimerId(), 0, TIMER_NEVER );
+	return KEEP_STREAM;
 }

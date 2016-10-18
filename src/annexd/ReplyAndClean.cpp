@@ -8,7 +8,7 @@
 
 int
 ReplyAndClean::operator() () {
-	dprintf( D_ALWAYS, "ReplyAndClean()\n" );
+	dprintf( D_FULLDEBUG, "ReplyAndClean()\n" );
 
 	// Send whatever reply we have, then clean it up.
 	if( reply && replyStream ) {
@@ -36,12 +36,18 @@ ReplyAndClean::operator() () {
 	// probaly just cancel this gahp's timer as well.
 	delete eventsGahp;
 
+	// We're done with the scratchpad, too.
 	delete scratchpad;
-
-	// Clean ourselves up, since no one else can.
-	delete this;
 
 	// Anything other than KEEP_STREAM deletes the sequence, which is good,
 	// because we just cancelled the timer.
 	return TRUE;
+}
+
+int
+ReplyAndClean::rollback() {
+	dprintf( D_FULLDEBUG, "ReplyAndClean::rollback() - not doing anything.\n" );
+
+	daemonCore->Reset_Timer( gahp->getNotificationTimerId(), 0, TIMER_NEVER );
+	return PASS_STREAM;
 }

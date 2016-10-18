@@ -20,7 +20,8 @@ class PutTargets : public Functor {
 
 		virtual ~PutTargets() { }
 
-		int operator() ();
+		virtual int operator() ();
+		virtual int rollback();
 
 	private:
 		ClassAd * reply;

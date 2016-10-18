@@ -262,7 +262,7 @@ createOneAnnex( ClassAd * command, Stream * replyStream ) {
 	commandState->CommitTransaction();
 
 	time_t now = time( NULL );
-	PutRule * cr = new PutRule( reply, eventsGahp, scratchpad,
+	PutRule * pr = new PutRule( reply, eventsGahp, scratchpad,
 		eventsURL, publicKeyFile, secretKeyFile,
 		commandState, commandID );
 	PutTargets * pt = new PutTargets( reply, eventsGahp, scratchpad,
@@ -277,7 +277,11 @@ createOneAnnex( ClassAd * command, Stream * replyStream ) {
 	UpdateCommandState * ucs = new UpdateCommandState( commandState, scratchpad, gahp );
 	ReplyAndClean * last = new ReplyAndClean( reply, replyStream, gahp, scratchpad, eventsGahp );
 
-	FunctorSequence * fs = new FunctorSequence( { br, cr, pt, ucs }, last );
+	// Note that the functor sequence takes responsibility for deleting the
+	// functor objects; the functor objects would just delete themselves when
+	// they're done, but implementing rollback means the functors themselves
+	// can't know how long they should persist.
+	FunctorSequence * fs = new FunctorSequence( { br, pr, pt, ucs }, last );
 
 	// Create a timer for the gahp to fire when it gets a result.  We must
 	// use TIMER_NEVER to ensure that the timer hasn't been reaped when the

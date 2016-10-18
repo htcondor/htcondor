@@ -13,7 +13,8 @@ class UpdateCommandState : public Functor {
 			commandState( cac ), scratchpad( s ), gahp( g ) { }
 		virtual ~UpdateCommandState() { }
 
-		int operator() ();
+		virtual int operator() ();
+		virtual int rollback();
 
 	private:
 		ClassAdCollection * commandState;

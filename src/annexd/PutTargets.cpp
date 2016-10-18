@@ -8,7 +8,7 @@
 
 int
 PutTargets::operator() () {
-	dprintf( D_ALWAYS, "PutTargets()\n" );
+	dprintf( D_FULLDEBUG, "PutTargets()\n" );
 
 	std::string ruleName;
 	scratchpad->LookupString( "ruleName", ruleName );
@@ -72,6 +72,16 @@ PutTargets::operator() () {
 	}
 
 	daemonCore->Reset_Timer( gahp->getNotificationTimerId(), 0, TIMER_NEVER );
-	delete this;
 	return rc;
 }
+
+int
+PutTargets::rollback() {
+	dprintf( D_FULLDEBUG, "PutTargets::rollback()\n" );
+
+	// FIXME
+
+	daemonCore->Reset_Timer( gahp->getNotificationTimerId(), 0, TIMER_NEVER );
+	return PASS_STREAM;
+}
+
