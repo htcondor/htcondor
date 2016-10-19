@@ -5024,13 +5024,13 @@ struct UpdateGSICredContinuation : Service {
 
 public:
 	UpdateGSICredContinuation(int cmd, const std::string &temp_path,
-	  const std::string &final_path, const char *job_owner, PROC_ID jobid,
-	  void *state)
+		const std::string &final_path, const std::string &job_owner,
+		PROC_ID jobid, void *state)
 	:
 	  m_cmd(cmd),
 	  m_temp_path(temp_path),
 	  m_final_path(final_path),
-	  m_job_owner(job_owner ? job_owner : ""),
+	  m_job_owner(job_owner),
 	  m_jobid(jobid),
 	  m_state(state)
 	{}
@@ -5142,7 +5142,7 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 	temp_proxy_path += ".tmp";
 	free(proxy_path);
 
-	char *job_owner = NULL;
+	std::string job_owner;
 #ifndef WIN32
 		// Check the ownership of the job's spool directory and switch
 		// our priv state if needed.
@@ -5164,17 +5164,16 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 	uid_t proxy_uid = si.GetOwner();
 	passwd_cache *p_cache = pcache();
 	uid_t job_uid;
-	jobad->LookupString( ATTR_OWNER, &job_owner );
-	if ( !job_owner ) {
+	jobad->LookupString( ATTR_OWNER, job_owner );
+	if ( job_owner.empty() ) {
 			// Maybe change EXCEPT to print to the audit log with D_AUDIT
 		EXCEPT( "No %s for job %d.%d!", ATTR_OWNER, jobid.cluster,
 				jobid.proc );
 	}
-	if ( !p_cache->get_user_uid( job_owner, job_uid ) ) {
+	if ( !p_cache->get_user_uid( job_owner.c_str(), job_uid ) ) {
 			// Failed to find uid for this owner, badness.
 		dprintf( D_AUDIT | D_FAILURE, *rsock, "Failed to find uid for user %s (job %d.%d)\n",
-				 job_owner, jobid.cluster, jobid.proc );
-		free( job_owner );
+				 job_owner.c_str(), jobid.cluster, jobid.proc );
 		refuse(s);
 		free(SpoolSpace);
 		return FALSE;
@@ -5184,10 +5183,9 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 	priv_state priv;
 	if ( proxy_uid == job_uid ) {
 			// We're not Windows here, so we don't need the NT Domain
-		if ( !init_user_ids( job_owner, NULL ) ) {
+		if ( !init_user_ids( job_owner.c_str(), NULL ) ) {
 			dprintf( D_AUDIT | D_FAILURE, *rsock, "init_user_ids() failed for user %s!\n",
-					 job_owner );
-			free( job_owner );
+					 job_owner.c_str() );
 			refuse(s);
 			free(SpoolSpace);
 			return FALSE;
@@ -5197,6 +5195,9 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 			// We should already be in condor priv, but we want to save it
 			// in the 'priv' variable.
 		priv = set_condor_priv();
+			// In UpdateGSICredContinuation below, an empty job_owner
+			// means we should do file access as condor_priv.
+		job_owner.clear();
 	}
 #endif
 
@@ -5206,7 +5207,7 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 		// file temp_proxy_path, which is known to be in the SPOOL dir
 	rsock->decode();
 	filesize_t size = 0;
-	void *state;
+	void *state = NULL;
 	ReliSock::x509_delegation_result result;
 	if ( cmd == UPDATE_GSI_CRED ) {
 		int rc = rsock->get_file(&size,temp_proxy_path.Value());
@@ -5223,12 +5224,10 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 		new UpdateGSICredContinuation(cmd,
 			temp_proxy_path.Value(),
 			final_proxy_path.Value(),
-			proxy_uid == job_uid ? job_owner : NULL,
+			job_owner,
 			jobid,
 			state);
 
-	free(job_owner);
-	job_owner = NULL;
 	int rc = 1;
 	if (result == ReliSock::delegation_continue) {
 		int retval = daemonCore->Register_Socket(rsock, "UpdateGSI Response",
