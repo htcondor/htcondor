@@ -1,0 +1,127 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+##
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+##
+##    http://www.apache.org/licenses/LICENSE-2.0
+##
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+use CondorTest;
+use CondorUtils;
+use Check::SimpleJob;
+use CheckOutputFormats;
+use strict;
+use warnings;
+
+my $testname = "max_jobs_per_owner_test";
+my $path_to_file;   # path to config file
+my $path_to_dir;    # path to the dir of config file
+
+my $pid = $$;
+my $executable = "sleep.exe";
+my $arguments = 600;
+my $submit_content;
+my $submitfile;
+my @content;
+
+$path_to_dir = `condor_config_val LOCAL_DIR`;
+$path_to_dir =~ s/\n//;
+$path_to_file = "$path_to_dir/condor_config.local";
+$path_to_file =~ s/\n//;
+# write to config file
+open my $in, '<', $path_to_file or print "Can't read old file: $!\n";
+open my $out, ">$path_to_dir/condor_config_copy.local" or print "Can't write new file: $!\n";
+while (<$in>){
+	print $out $_;
+}
+print $out "MAX_JOBS_PER_OWNER=10\n";
+close $out;
+close $in;
+
+rename $path_to_file, "$path_to_dir/condor_config_orig.local";
+rename "$path_to_dir/condor_config_copy.local", $path_to_file;
+`condor_reconfig`;
+sleep 5;
+
+print "######################## test config knob MAX_JOBS_PER_OWNER ##########################\n";
+# submit 12 jobs
+$submit_content = 
+"executable = $executable
+arguments = $arguments
+queue 12";
+$submitfile = "$testname$pid.sub";
+emit_dag_files($testname, $submit_content, $pid);
+`condor_submit hold=true $submitfile`;
+sleep(10);
+@content = `condor_q -nobatch`;
+
+print @content;
+
+if (how_many_entries(\@content) eq 0){
+	RegisterResult(1, check_name => "submit 12 jobs", test_name => $testname);
+} else {
+	print "        ERROR: there shouldn't be any jobs in the queue\n";
+	RegisterResult(0, check_name => "submit 12 jobs", test_name => $testname);
+}
+
+`condor_rm -all`;
+
+# submit 8 jobs then submit 4 jobs
+$submit_content = 
+"executable = $executable
+arguments = $arguments
+queue 8";
+$submitfile = "$testname$pid.sub";
+emit_dag_files($testname, $submit_content, $pid);
+`condor_submit hold=true $submitfile`;
+sleep(10);
+@content = `condor_q -nobatch`;
+
+print @content;
+
+if (how_many_entries(\@content) eq 8){
+	RegisterResult(1, check_name => "submit 8 jobs", test_name => $testname);
+} else {
+	print "        ERROR: there should be 8 jobs in the queue\n";
+	RegisterResult(0, check_name => "submit 8 jobs", test_name => $testname);
+}
+
+# add another 4 jobs
+$submit_content = 
+"executable = $executable
+arguments = $arguments
+queue 4";
+$submitfile = "$testname$pid.sub";
+emit_dag_files($testname, $submit_content, $pid);
+`condor_submit hold=true $submitfile`;
+sleep(10);
+@content = `condor_q -nobatch`;
+
+print @content;
+
+if (how_many_entries(\@content) eq 8){
+	RegisterResult(1, check_name => "another 4 jobs", test_name => $testname);
+} else {
+	print "        ERROR: there should be 8 jobs in the queue\n";
+	RegisterResult(0, check_name => "another 4 jobs", test_name => $testname);
+}
+
+`condor_rm -all`;
+
+unlink $path_to_file;
+rename "$path_to_dir/condor_config_orig.local", $path_to_file;
+
+CondorTest::EndTest();
+exit(0);
