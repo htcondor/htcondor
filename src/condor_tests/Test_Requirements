@@ -14,6 +14,9 @@ cmd_q_format_file: personal
 cmd_transform_ads: personal
 cmd_status-transform: personal
 cmd_status-compact: personal
+max_jobs_per_owner_test: personal
+max_jobs_per_owner_test_group: personal
+job_transform_names_test: personal
 cmd_wait_shows-all: personal
 cmd_wait_shows-base: personal
 cmd_wait_shows-notimeout: personal
