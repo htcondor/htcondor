@@ -672,10 +672,11 @@ ReliSock::put_file_with_permissions( filesize_t *size, const char *source, files
 	return result;
 }
 
-int
-ReliSock::get_x509_delegation( filesize_t *size, const char *destination,
-							   bool flush_buffers )
+ReliSock::x509_delegation_result
+ReliSock::get_x509_delegation( const char *destination,
+                               bool flush_buffers, void **state_ptr )
 {
+	void *st;
 	int in_encode_mode;
 
 		// store if we are in encode or decode mode
@@ -685,14 +686,21 @@ ReliSock::get_x509_delegation( filesize_t *size, const char *destination,
 		 !end_of_message() ) {
 		dprintf( D_ALWAYS, "ReliSock::get_x509_delegation(): failed to "
 				 "flush buffers\n" );
-		return -1;
+		return delegation_error;
 	}
 
-	if ( x509_receive_delegation( destination, relisock_gsi_get, (void *) this,
-								  relisock_gsi_put, (void *) this ) != 0 ) {
+	int rc =  x509_receive_delegation( destination, relisock_gsi_get, (void *) this,
+	                                                relisock_gsi_put, (void *) this,
+	                                                &st );
+	if (rc == -1) {
 		dprintf( D_ALWAYS, "ReliSock::get_x509_delegation(): "
 				 "delegation failed: %s\n", x509_error_string() );
-		return -1;
+		return delegation_error;
+	}
+		// NOTE: if we provide a state pointer, x509_receive_delegation *must* either fail or continue.
+	else if (rc == 0) {
+		dprintf(D_ALWAYS, "Programmer error: x509_receive_delegation completed unexpectedy.\n");
+		return delegation_error;
 	}
 
 		// restore stream mode (either encode or decode)
@@ -701,11 +709,26 @@ ReliSock::get_x509_delegation( filesize_t *size, const char *destination,
 	} else if ( !in_encode_mode && is_encode() ) { 
 		decode();
 	}
-	if ( !prepare_for_nobuffering( stream_unknown ) ) {
-		dprintf( D_ALWAYS, "ReliSock::get_x509_delegation(): failed to "
-				 "flush buffers afterwards\n" );
-		return -1;
+
+	if (state_ptr) {
+		*state_ptr = st;
+		return delegation_continue;
 	}
+
+	return get_x509_delegation_finish( destination, flush_buffers, st );
+}
+
+ReliSock::x509_delegation_result
+ReliSock::get_x509_delegation_finish( const char *destination, bool flush_buffers, void *state_ptr )
+{
+                // store if we are in encode or decode mode
+        int in_encode_mode = is_encode();
+
+        if ( x509_receive_delegation_finish( relisock_gsi_get, (void *) this, state_ptr ) != 0 ) {
+                dprintf( D_ALWAYS, "ReliSock::get_x509_delegation_finish(): "
+                                 "delegation failed to complete: %s\n", x509_error_string() );
+                return delegation_error;
+        }
 
 	if ( flush_buffers ) {
 		int rc = 0;
@@ -723,10 +746,19 @@ ReliSock::get_x509_delegation( filesize_t *size, const char *destination,
 		}
 	}
 
-		// We should figure out how many bytes were sent
-	*size = 0;
+		// restore stream mode (either encode or decode)
+	if ( in_encode_mode && is_decode() ) {
+		encode();
+	} else if ( !in_encode_mode && is_encode() ) {
+		decode();
+	}
+	if ( !prepare_for_nobuffering( stream_unknown ) ) {
+		dprintf( D_ALWAYS, "ReliSock::get_x509_delegation(): failed to "
+			"flush buffers afterwards\n" );
+		return delegation_error;
+	}
 
-	return 0;
+	return delegation_ok;
 }
 
 int

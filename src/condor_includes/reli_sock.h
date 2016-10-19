@@ -191,9 +191,20 @@ public:
 	// returns -1 on failure, 0 for ok
 	int put_empty_file( filesize_t *size );
 
-	/// returns -1 on failure, 0 for ok
-	int get_x509_delegation( filesize_t *size, const char *destination,
-							 bool flush_buffers=false );
+	/// returns delegation_error on failure, delegation_ok on success,
+	/// and delegation_continue if the delegation is incomplete.
+	///
+	/// The continuations are allowed only if state_ptr is non-NULL.
+	/// When more data is available on the socket, the caller should call
+	/// get_x509_delegation_finish.
+	enum x509_delegation_result {delegation_ok, delegation_continue, delegation_error};
+	x509_delegation_result get_x509_delegation( const char *destination, bool flush_buffers, void **state_ptr );
+
+	/// The second half of get_x509_delegation.  If state_ptr was non-NULL to the original function call,
+	/// one must pass the same pointer here.  The function takes ownership of the value and will call delete
+	/// on it.
+	x509_delegation_result get_x509_delegation_finish( const char *destination, bool flush_buffers, void *state_ptr );
+
 	/// returns -1 on failure, 0 for ok
 	// expiration_time: 0 if none; o.w. timestamp of delegated proxy expiration
 	// result_expiration_time: if non-NULL will be set to actual expiration

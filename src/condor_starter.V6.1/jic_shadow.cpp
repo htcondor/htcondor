@@ -1731,7 +1731,7 @@ updateX509Proxy(int cmd, ReliSock * rsock, const char * path)
 	if ( cmd == UPDATE_GSI_CRED ) {
 		rc = rsock->get_file(&size,tmp_path.Value());
 	} else if ( cmd == DELEGATE_GSI_CRED_STARTER ) {
-		rc = rsock->get_x509_delegation(&size,tmp_path.Value());
+		rc = rsock->get_x509_delegation(tmp_path.Value(), false, NULL);
 	} else {
 		dprintf( D_ALWAYS,
 		         "unknown CEDAR command %d in updateX509Proxy\n",
