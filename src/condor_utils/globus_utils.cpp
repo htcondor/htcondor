@@ -1592,11 +1592,13 @@ x509_send_delegation( const char *source_file,
 }
 
 
+#if defined(HAVE_EXT_GLOBUS)
 struct x509_delegation_state
 {
 	char                           *m_dest;
 	globus_gsi_proxy_handle_t       m_request_handle;
 };
+#endif
 
 
 int
@@ -1772,6 +1774,7 @@ cleanup:
 
 	// Else, we block and finish up immediately.
 	return x509_receive_delegation_finish(recv_data_func, recv_data_ptr, &st);
+#endif
 }
 
 
@@ -1782,6 +1785,15 @@ int x509_receive_delegation_finish(int (*recv_data_func)(void *, void **, size_t
                                void *recv_data_ptr,
                                void *state_ptr_raw)
 {
+#if !defined(HAVE_EXT_GLOBUS)
+	(void) recv_data_func;			// Quiet compiler warnings
+	(void) recv_data_ptr;			// Quiet compiler warnings
+	(void) state_ptr_raw;			// Quiet compiler warnings
+	_globus_error_message =
+		strdup( NOT_SUPPORTED_MSG );
+	return -1;
+
+#else
 	x509_delegation_state *state_ptr = static_cast<x509_delegation_state*>(state_ptr_raw);
 	globus_result_t result = GLOBUS_SUCCESS;
 	globus_gsi_cred_handle_t proxy_handle =  NULL;
