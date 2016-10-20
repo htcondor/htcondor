@@ -69,7 +69,7 @@ JOB_TRANSFORM_ILLEGAL \@=end
 \@end
 JOB_TRANSFORM_ALWAYS \@=end
 [
-  REQUIREMENTS = True;
+  requirements = True;
   set_AlwaysThere = \"Please work!\";
   delete_NeverThere2 = true;
   eval_set_OnlyProcZero = ProcId == 0 ? \"Please work - proc zero\" : \"Please work - proc non-zero\"
@@ -77,7 +77,7 @@ JOB_TRANSFORM_ALWAYS \@=end
 \@end
 JOB_TRANSFORM_NEVER \@=end
 [
-  REQUIREMENTS = False;
+  Requirements = False;
   set_NeverThere1 = \"Please work!\";
 ]
 \@end
@@ -131,7 +131,7 @@ JOB_TRANSFORM_BAD \@=end
 \@end
 JOB_TRANSFORM_ALWAYS \@=end
 [
-  REQUIREMENTS = True;
+  Requirements = True;
   set_AlwaysThere = \"Please work!\";
   delete_NeverThere2 = true;
   eval_set_OnlyProcZero = ProcId == 0 ? \"Please work - proc zero\" : \"Please work - proc non-zero\"

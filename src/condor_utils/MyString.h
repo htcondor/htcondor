@@ -470,7 +470,7 @@ public:
 		} else if ( ! str) {
 			return 1;
 		}
-		return strcmp(m_str, str);
+		return strcmp(m_str, str) < 0;
 	}
 	bool operator<(const YourString &rhs) const {
 		if ( ! m_str) {
@@ -478,7 +478,7 @@ public:
 		} else if ( ! rhs.m_str) {
 			return 1;
 		}
-		return strcmp(m_str, rhs.m_str);
+		return strcmp(m_str, rhs.m_str) < 0;
 	}
 	static unsigned int hashFunction(const YourString &s) {
 		// hash function for strings

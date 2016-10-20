@@ -19,11 +19,9 @@
 
 #include "condor_common.h"
 #include "ad_printmask.h"
-//#include "escapes.h"
-//#include "MyString.h"
 #include "condor_string.h"	// for getline
+#include "tokener.h"
 #include <string>
-//#include "printf_format.h"
 
 const char * SimpleFileInputStream::nextline()
 {
@@ -33,163 +31,13 @@ const char * SimpleFileInputStream::nextline()
 	return line;
 }
 
-// collapse a c++ escapes in-place in a std::string
-bool collapse_escapes(std::string & str)
-{
-	const char *strp = str.c_str();
-	const char *cp = strp;
-
-	// skip over leading non escape characters
-	while (*cp && *cp != '\\') ++cp;
-	if ( ! *cp) return false;
-
-	size_t ix = cp - strp;
-	int cEscapes = 0;
-
-	while (*cp) {
-		// ASSERT: *cp == '\\'
-
-		// assume we found an escape
-		++cEscapes;
-
-		switch (*++cp) {
-			case 'a':	str[ix] = '\a'; break;
-			case 'b':	str[ix] = '\b'; break;
-			case 'f':	str[ix] = '\f'; break;
-			case 'n':	str[ix] = '\n'; break;
-			case 'r':	str[ix] = '\r'; break;
-			case 't':	str[ix] = '\t'; break;
-			case 'v':	str[ix] = '\v'; break;
-
-			case '\\':
-			case '\'':
-			case '"':
-			case '?':	str[ix] = *cp; break;
-
-			case 'X':
-			case 'x':	{ // hexadecimal sequence
-				int value = 0;
-				while (cp[1] && isxdigit(cp[1])) {
-					int ch = cp[1];
-					value += value*16 + isdigit(ch) ? (ch - '0') : (tolower(ch) - 'a' + 10);
-					++cp;
-				}
-				str[ix] = (char)value;
-			}
-			break;
-
-			default:
-				// octal sequence
-				if (isdigit(*cp) ) {
-					int value = *cp - '0';
-					while (cp[1] && isdigit(cp[1])) {
-						int ch = cp[1];
-						value += value*8 + (ch - '0');
-						++cp;
-					}
-					str[ix] = (char)value;
-				} else {
- 					// not really an escape, so copy both characters
-					--cEscapes;
-					str[ix] = '\\';
-					str[++ix] = *cp;
-				}
-			break;
-		}
-		// at this point cp points to the last char of the escape sequence
-		// and ix is the offset of the collapsed escape character that we just wrote.
-		if ( ! str[ix]) break;
-
-		// scan forward, copying characters until we get to next \ or copy the terminating null.
-		do { str[++ix] = *++cp; } while (*cp && *cp != '\\');
-	}
-
-	// ASSERT str[ix] == 0
-
-	// return true if there were escapes.
-	if ( ! cEscapes) {
-		return false;
-	}
-	str.resize(ix);
-	return true;
-}
-
-
-// this is a simple tokenizer class for parsing keywords out of a line of text
-// token separator defaults to whitespace, "" or '' can be used to have tokens
-// containing whitespace, but there is no way to escape " inside a "" string or
-// ' inside a '' string. outer "" and '' are not considered part of the token.
-// next() advances to the next token and returns false if there is no next token.
-// matches() can compare the current token to a string without having to extract it
-// copy_marked() returns all of the text from the most recent mark() to the start
-// of the current token. (may include leading and trailing whitespace).
-//
-class tokener {
-public:
-	tokener(const char * line_in) : line(line_in), ix_cur(0), cch(0), ix_next(0), ix_mk(0), sep(" \t\r\n") { }
-	bool set(const char * line_in) { if ( ! line_in) return false; line=line_in; ix_cur = ix_next = 0; return true; }
-	bool next() {
-		ix_cur = line.find_first_not_of(sep, ix_next);
-		if (ix_cur != std::string::npos && (line[ix_cur] == '"' || line[ix_cur] == '\'')) {
-			ix_next = line.find(line[ix_cur], ix_cur+1);
-			ix_cur += 1; // skip leading "
-			cch = ix_next - ix_cur;
-			if (ix_next != std::string::npos) { ix_next += 1; /* skip trailing " */}
-		} else {
-			ix_next = line.find_first_of(sep, ix_cur);
-			cch = ix_next - ix_cur;
-		}
-		return ix_cur != std::string::npos;
-	};
-	bool matches(const char * pat) const { return line.substr(ix_cur, cch) == pat; }
-	bool starts_with(const char * pat) const { size_t cpat = strlen(pat); return cpat >= cch && line.substr(ix_cur, cpat) == pat; }
-	bool less_than(const char * pat) const { return line.substr(ix_cur, cch) < pat; }
-	void copy_token(std::string & value) const { value = line.substr(ix_cur, cch); }
-	void copy_to_end(std::string & value) const { value = line.substr(ix_cur); }
-	bool at_end() const { return ix_next == std::string::npos; }
-	void mark() { ix_mk = ix_cur; }
-	void mark_after() { ix_mk = ix_next; }
-	void copy_marked(std::string & value) const { value = line.substr(ix_mk, ix_cur - ix_mk); }
-	std::string & content() { return line; }
-	size_t offset() { return ix_cur; }
-	bool is_quoted_string() const { return ix_cur > 0 && (line[ix_cur-1] == '"' || line[ix_cur-1] == '\''); }
-private:
-	std::string line;  // the line currently being tokenized
-	size_t ix_cur;     // start of the current token
-	size_t cch;        // length of the current token
-	size_t ix_next;    // start of the next token
-	size_t ix_mk;      // start of current 'marked' region
-	const char * sep;  // separator characters used to delimit tokens
-};
-
-template <class T>
-const T * tokener_lookup_table<T>::find_match(const tokener & toke) const {
-	if (cItems <= 0) return NULL;
-	if (is_sorted) {
-		for (int ixLower = 0, ixUpper = cItems-1; ixLower <= ixUpper;) {
-			int ix = (ixLower + ixUpper) / 2;
-			if (toke.matches(pTable[ix].key))
-				return &pTable[ix];
-			else if (toke.less_than(pTable[ix].key))
-				ixUpper = ix-1;
-			else
-				ixLower = ix+1;
-		}
-	} else {
-		for (int ix = 0; ix < (int)cItems; ++ix) {
-			if (toke.matches(pTable[ix].key))
-				return &pTable[ix];
-		}
-	}
-	return NULL;
-}
 
 typedef struct {
 	const char * key;
 	int          value;
 	int          options;
 } Keyword;
-typedef tokener_lookup_table<Keyword> KeywordTable;
+typedef case_sensitive_sorted_tokener_lookup_table<Keyword> KeywordTable;
 
 enum {
 	kw_AS=1,
@@ -370,7 +218,7 @@ int SetAttrListPrintMaskFromStream (
 
 			bool got_attr = false;
 			while (toke.next()) {
-				const Keyword * pkw = SelectKeywords.find_match(toke);
+				const Keyword * pkw = SelectKeywords.lookup_token(toke);
 				if ( ! pkw)
 					continue;
 
@@ -402,7 +250,7 @@ int SetAttrListPrintMaskFromStream (
 				} break;
 				case kw_PRINTAS: {
 					if (toke.next()) {
-						const CustomFormatFnTableItem * pcffi = FnTable.find_match(toke);
+						const CustomFormatFnTableItem * pcffi = FnTable.lookup_token(toke);
 						if (pcffi) {
 							cust = pcffi->cust;
 							fmt = pcffi->printfFmt;
@@ -557,7 +405,7 @@ int SetAttrListPrintMaskFromStream (
 			bool got_expr = false;
 
 			while (toke.next()) {
-				const Keyword * pgw = GroupKeywords.find_match(toke);
+				const Keyword * pgw = GroupKeywords.lookup_token(toke);
 				if ( ! pgw)
 					continue;
 
