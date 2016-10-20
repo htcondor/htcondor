@@ -69,7 +69,23 @@ int
 PutRule::rollback() {
 	dprintf( D_FULLDEBUG, "PutRule::rollback()\n" );
 
-	// FIXME
+	std::string ruleName;
+	scratchpad->LookupString( "BulkRequestID", ruleName );
+
+	int rc;
+	std::string errorCode;
+	rc = gahp->delete_rule(
+				service_url, public_key_file, secret_key_file,
+				ruleName, errorCode );
+	if( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED || rc == GAHPCLIENT_COMMAND_PENDING ) {
+		// We expect to exit here the first time.
+		return KEEP_STREAM;
+	}
+
+	if( rc != 0 ) {
+		// We're already rolling back, so the only thing we could do is retry.
+        dprintf( D_ALWAYS, "Failed to remove rule '%s' ('%s').\n", ruleName.c_str(), errorCode.c_str() );
+	}
 
 	daemonCore->Reset_Timer( gahp->getNotificationTimerId(), 0, TIMER_NEVER );
 	return PASS_STREAM;

@@ -945,6 +945,45 @@ int EC2GahpClient::bulk_start(	const std::string & service_url,
 	}
 }
 
+int EC2GahpClient::bulk_stop(	const std::string & service_url,
+								const std::string & publickeyfile,
+								const std::string & privatekeyfile,
+								const std::string & bulkRequestID,
+								std::string & error_code ) {
+	static const char * command = "EC2_BULK_STOP";
+
+	// callGahpFunction() checks if this command is supported.
+	CHECK_COMMON_ARGUMENTS;
+
+	Gahp_Args * result = NULL;
+	std::vector< YourString > arguments;
+	PUSH_COMMON_ARGUMENTS;
+	arguments.push_back( bulkRequestID );
+
+	int cgf = callGahpFunction( command, arguments, result, high_prio );
+	if( cgf != 0 ) { return cgf; }
+
+	if( result ) {
+		int rc = 0;
+		if ( result->argc == 2 ) {
+			rc = atoi(result->argv[1]);
+            if( rc == 1 ) { error_string = ""; }
+		} else if ( result->argc == 4 ) {
+			// get the error code
+			rc = atoi( result->argv[1] );
+ 			error_code = result->argv[2];
+ 			error_string = result->argv[3];
+		} else {
+			EXCEPT( "Bad %s result", command );
+		}
+
+		delete result;
+		return rc;
+	} else {
+		EXCEPT( "callGahpFunction() succeeded but result was NULL." );
+	}
+}
+
 int EC2GahpClient::put_rule(	const std::string & service_url,
 								const std::string & publickeyfile,
 								const std::string & privatekeyfile,
@@ -997,6 +1036,45 @@ int EC2GahpClient::put_rule(	const std::string & service_url,
 	}
 }
 
+int EC2GahpClient::delete_rule(	const std::string & service_url,
+								const std::string & publickeyfile,
+								const std::string & privatekeyfile,
+								const std::string & ruleName,
+								std::string & error_code ) {
+	static const char * command = "EC2_DELETE_RULE";
+
+	// callGahpFunction() checks if this command is supported.
+	CHECK_COMMON_ARGUMENTS;
+
+	Gahp_Args * result = NULL;
+	std::vector< YourString > arguments;
+	PUSH_COMMON_ARGUMENTS;
+	arguments.push_back( ruleName );
+
+	int cgf = callGahpFunction( command, arguments, result, high_prio );
+	if( cgf != 0 ) { return cgf; }
+
+	if( result ) {
+		int rc = 0;
+		if ( result->argc == 2 ) {
+			rc = atoi(result->argv[1]);
+            if( rc == 1 ) { error_string = ""; }
+		} else if ( result->argc == 4 ) {
+			// get the error code
+			rc = atoi( result->argv[1] );
+ 			error_code = result->argv[2];
+ 			error_string = result->argv[3];
+		} else {
+			EXCEPT( "Bad %s result", command );
+		}
+
+		delete result;
+		return rc;
+	} else {
+		EXCEPT( "callGahpFunction() succeeded but result was NULL." );
+	}
+}
+
 int EC2GahpClient::put_targets(	const std::string & service_url,
 								const std::string & publickeyfile,
 								const std::string & privatekeyfile,
@@ -1017,6 +1095,47 @@ int EC2GahpClient::put_targets(	const std::string & service_url,
 	arguments.push_back( id );
 	arguments.push_back( arn );
 	arguments.push_back( input );
+
+	int cgf = callGahpFunction( command, arguments, result, high_prio );
+	if( cgf != 0 ) { return cgf; }
+
+	if( result ) {
+		int rc = 0;
+		if ( result->argc == 2 ) {
+			rc = atoi(result->argv[1]);
+            if( rc == 1 ) { error_string = ""; }
+		} else if ( result->argc == 4 ) {
+			// get the error code
+			rc = atoi( result->argv[1] );
+ 			error_code = result->argv[2];
+ 			error_string = result->argv[3];
+		} else {
+			EXCEPT( "Bad %s result", command );
+		}
+
+		delete result;
+		return rc;
+	} else {
+		EXCEPT( "callGahpFunction() succeeded but result was NULL." );
+	}
+}
+
+int EC2GahpClient::remove_targets(	const std::string & service_url,
+									const std::string & publickeyfile,
+									const std::string & privatekeyfile,
+									const std::string & ruleName,
+									const std::string & id,
+									std::string & error_code ) {
+	static const char * command = "EC2_REMOVE_TARGETS";
+
+	// callGahpFunction() checks if this command is supported.
+	CHECK_COMMON_ARGUMENTS;
+
+	Gahp_Args * result = NULL;
+	std::vector< YourString > arguments;
+	PUSH_COMMON_ARGUMENTS;
+	arguments.push_back( ruleName );
+	arguments.push_back( id );
 
 	int cgf = callGahpFunction( command, arguments, result, high_prio );
 	if( cgf != 0 ) { return cgf; }

@@ -238,3 +238,40 @@ bool AmazonPutTargets::ioCheck(char **argv, int argc) {
 		verify_string_name( argv[7] ) &&
 		verify_string_name( argv[8] );
 }
+
+// Expecting:	EC2_BULK_STOP <req_id>
+//				<service_url> <accesskeyfile> <secretkeyfile>
+//				<bulk-request-id>
+bool AmazonBulkStop::ioCheck(char **argv, int argc) {
+	return verify_min_number_args( argc, 6 ) &&
+		verify_request_id( argv[1] ) &&
+		verify_string_name( argv[2] ) &&
+		verify_string_name( argv[3] ) &&
+		verify_string_name( argv[4] ) &&
+		verify_string_name( argv[5] );
+}
+
+// Expecting:	EC2_DELETE_RULE <req_id>
+//				<service_url> <accesskeyfile> <secretkeyfile>
+//				<rule-name>
+bool AmazonDeleteRule::ioCheck(char **argv, int argc) {
+	return verify_min_number_args( argc, 6 ) &&
+		verify_request_id( argv[1] ) &&
+		verify_string_name( argv[2] ) &&
+		verify_string_name( argv[3] ) &&
+		verify_string_name( argv[4] ) &&
+		verify_string_name( argv[5] );
+}
+
+// Expecting:	EC2_REMOVE_TARGETS <req_id>
+//				<service_url> <accesskeyfile> <secretkeyfile>
+//				<rule-name> <target-id>
+bool AmazonRemoveTargets::ioCheck(char **argv, int argc) {
+	return verify_min_number_args( argc, 7 ) &&
+		verify_request_id( argv[1] ) &&
+		verify_string_name( argv[2] ) &&
+		verify_string_name( argv[3] ) &&
+		verify_string_name( argv[4] ) &&
+		verify_string_name( argv[5] ) &&
+		verify_string_name( argv[6] );
+}

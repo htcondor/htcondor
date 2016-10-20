@@ -700,16 +700,33 @@ class EC2GahpClient : public GahpClient {
 
 							std::string & errorCode );
 
-		int put_rule(	const std::string & service_url,
-						const std::string & publickeyfile,
-						const std::string & privatekeyfile,
+		int remove_targets(	const std::string & service_url,
+							const std::string & publickeyfile,
+							const std::string & privatekeyfile,
 
-						const std::string & ruleName,
-						const std::string & scheduleExpression,
-						const std::string & state,
+							const std::string & ruleName,
+							const std::string & id,
 
-						std::string & ruleARN,
-						std::string & error_code );
+							std::string & errorCode );
+
+		int put_rule(		const std::string & service_url,
+							const std::string & publickeyfile,
+							const std::string & privatekeyfile,
+
+							const std::string & ruleName,
+							const std::string & scheduleExpression,
+							const std::string & state,
+
+							std::string & ruleARN,
+							std::string & error_code );
+
+		int delete_rule(	const std::string & service_url,
+							const std::string & publickeyfile,
+							const std::string & privatekeyfile,
+
+							const std::string & ruleName,
+
+							std::string & error_code );
 
 		struct LaunchConfiguration {
 			YourString ami_id;
@@ -777,6 +794,15 @@ class EC2GahpClient : public GahpClient {
 
 						std::string & bulkRequestID,
 						std::string & error_code );
+
+		int bulk_stop(	const std::string & service_url,
+						const std::string & publickeyfile,
+						const std::string & privatekeyfile,
+
+						const std::string & bulkRequestID,
+
+						std::string & error_code );
+
 
 		int ec2_vm_start( const std::string & service_url,
 						  const std::string & publickeyfile,

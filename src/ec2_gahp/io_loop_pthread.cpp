@@ -135,6 +135,12 @@ registerAllAmazonCommands(void)
 			AmazonPutRule::ioCheck, AmazonPutRule::workerFunction );
 	registerAmazonGahpCommand( AMAZON_COMMAND_PUT_TARGETS,
 			AmazonPutTargets::ioCheck, AmazonPutTargets::workerFunction );
+	registerAmazonGahpCommand( AMAZON_COMMAND_BULK_STOP,
+			AmazonBulkStop::ioCheck, AmazonBulkStop::workerFunction );
+	registerAmazonGahpCommand( AMAZON_COMMAND_DELETE_RULE,
+			AmazonDeleteRule::ioCheck, AmazonDeleteRule::workerFunction );
+	registerAmazonGahpCommand( AMAZON_COMMAND_REMOVE_TARGETS,
+			AmazonRemoveTargets::ioCheck, AmazonRemoveTargets::workerFunction );
 
 	return true;
 }

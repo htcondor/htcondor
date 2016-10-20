@@ -3569,3 +3569,241 @@ bool AmazonPutTargets::workerFunction( char ** argv, int argc, std::string & res
 
 	return true;
 }
+
+// ---------------------------------------------------------------------------
+
+AmazonRemoveTargets::~AmazonRemoveTargets() { }
+
+bool AmazonRemoveTargets::SendJSONRequest( const std::string & payload ) {
+	bool result = AmazonRequest::SendJSONRequest( payload );
+	if( result ) {
+		ClassAd reply;
+		classad::ClassAdJsonParser cajp;
+		if(! cajp.ParseClassAd( this->resultString, reply, true )) {
+			dprintf( D_ALWAYS, "Failed to parse reply '%s' as JSON.\n", this->resultString.c_str() );
+			return false;
+		}
+
+		int failedEntryCount;
+		if(! reply.LookupInteger( "FailedEntryCount", failedEntryCount ) ) {
+			dprintf( D_ALWAYS, "Reply '%s' did contain FailedEntryCount attribute.\n", this->resultString.c_str() );
+			return false;
+		}
+		if( failedEntryCount != 0 ) {
+			dprintf( D_ALWAYS, "Reply '%s' indicates a failure.\n", this->resultString.c_str() );
+			return false;
+		}
+	}
+	return result;
+}
+
+bool AmazonRemoveTargets::workerFunction( char ** argv, int argc, std::string & result_string ) {
+	assert( strcasecmp( argv[0], "EC2_REMOVE_TARGETS" ) == 0 );
+	int requestID;
+	get_int( argv[1], & requestID );
+	dprintf( D_PERF_TRACE, "request #%d (%s): work begins\n",
+		requestID, argv[0] );
+
+	if( ! verify_min_number_args( argc, 7 ) ) {
+		result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
+		dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n",
+			argc, 7, argv[0] );
+		return false;
+	}
+
+	// Fill in required attributes.
+	AmazonRemoveTargets request = AmazonRemoveTargets( requestID, argv[0] );
+	request.serviceURL = argv[2];
+	request.accessKeyFile = argv[3];
+	request.secretKeyFile = argv[4];
+
+	// Set the required headers.  (SendJSONRequest() sets the content-type.)
+	request.headers[ "X-Amz-Target" ] = "AWSEvents.RemoveTargets";
+
+	// Construct the JSON payload.
+	std::string ruleName, id;
+	classad::ClassAdJsonUnParser::UnparseAuxEscapeString( ruleName, argv[5] );
+	classad::ClassAdJsonUnParser::UnparseAuxEscapeString( id, argv[6] );
+
+	std::string payload;
+	formatstr( payload, "{\n"
+				"\"Ids\": [ \"%s\" ],\n"
+				"\"Rule\": \"%s\"\n"
+				"}\n",
+				ruleName.c_str(), id.c_str() );
+
+	if( ! request.SendJSONRequest( payload ) ) {
+		result_string = create_failure_result( requestID,
+			request.errorMessage.c_str(),
+			request.errorCode.c_str() );
+	} else {
+		result_string = create_success_result( requestID, NULL );
+	}
+
+	return true;
+}
+
+// ---------------------------------------------------------------------------
+
+AmazonDeleteRule::~AmazonDeleteRule() { }
+
+bool AmazonDeleteRule::SendJSONRequest( const std::string & payload ) {
+	bool result = AmazonRequest::SendJSONRequest( payload );
+	// Succesful results are defined to be empty.
+	return result;
+}
+
+bool AmazonDeleteRule::workerFunction( char ** argv, int argc, std::string & result_string ) {
+	assert( strcasecmp( argv[0], "EC2_DELETE_RULE" ) == 0 );
+	int requestID;
+	get_int( argv[1], & requestID );
+	dprintf( D_PERF_TRACE, "request #%d (%s): work begins\n",
+		requestID, argv[0] );
+
+	if( ! verify_min_number_args( argc, 6 ) ) {
+		result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
+		dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n",
+			argc, 6, argv[0] );
+		return false;
+	}
+
+	// Fill in required attributes.
+	AmazonDeleteRule request = AmazonDeleteRule( requestID, argv[0] );
+	request.serviceURL = argv[2];
+	request.accessKeyFile = argv[3];
+	request.secretKeyFile = argv[4];
+
+	// Set the required headers.  (SendJSONRequest() sets the content-type.)
+	request.headers[ "X-Amz-Target" ] = "AWSEvents.DeleteRule";
+
+	// Construct the JSON payload.
+	std::string ruleName;
+	classad::ClassAdJsonUnParser::UnparseAuxEscapeString( ruleName, argv[5] );
+
+	std::string payload;
+	formatstr( payload, "{\n"
+				"\"Name\": \"%s\"\n"
+				"}\n",
+				ruleName.c_str() );
+
+	if( ! request.SendJSONRequest( payload ) ) {
+		result_string = create_failure_result( requestID,
+			request.errorMessage.c_str(),
+			request.errorCode.c_str() );
+	} else {
+		result_string = create_success_result( requestID, NULL );
+	}
+
+	return true;
+}
+
+// ---------------------------------------------------------------------------
+
+AmazonBulkStop::~AmazonBulkStop() { }
+
+struct bulkStopUD_t {
+	bool inFailure;
+	bool & success;
+
+    bulkStopUD_t( bool & s ) : inFailure( false ), success( s ) { }
+};
+typedef struct bulkStopUD_t bulkStopUD;
+
+void bulkStopESH( void * vUserData, const XML_Char * name, const XML_Char ** ) {
+    bulkStopUD * bsud = (bulkStopUD *)vUserData;
+    if( strcasecmp( ignoringNameSpace( name ), "unsuccessfulFleetRequestSet" ) == 0 ) {
+    	bsud->inFailure = true;
+    }
+    if( bsud->inFailure && strcasecmp( ignoringNameSpace( name ), "spotFleetRequestId" ) == 0 ) {
+        bsud->success = false;
+    }
+}
+
+void bulkStopCDH( void *, const XML_Char *, int ) {
+}
+
+void bulkStopEEH( void * vUserData, const XML_Char * name ) {
+    bulkStopUD * bsud = (bulkStopUD *)vUserData;
+    if( strcasecmp( ignoringNameSpace( name ), "unsuccessfulFleetRequestSet" ) == 0 ) {
+        bsud->inFailure = false;
+    }
+}
+
+bool AmazonBulkStop::SendRequest() {
+	bool result = AmazonRequest::SendRequest();
+	if( result ) {
+        bulkStopUD bsud( this->success );
+        XML_Parser xp = XML_ParserCreate( NULL );
+        XML_SetElementHandler( xp, & bulkStopESH, & bulkStopEEH );
+        XML_SetCharacterDataHandler( xp, & bulkStopCDH );
+        XML_SetUserData( xp, & bsud );
+        XML_Parse( xp, this->resultString.c_str(), this->resultString.length(), 1 );
+        XML_ParserFree( xp );
+	} else {
+		if( this->errorCode == "E_CURL_IO" ) {
+			// To be on the safe side, if the I/O failed, the annexd should
+			// check to see the Spot Fleet was stopped or not.
+			this->errorCode = "NEED_CHECK_BULK_STOP";
+			return false;
+		}
+	}
+	return result;
+}
+
+bool AmazonBulkStop::workerFunction( char ** argv, int argc, std::string & result_string ) {
+	assert( strcasecmp( argv[0], "EC2_BULK_STOP" ) == 0 );
+	int requestID;
+	get_int( argv[1], & requestID );
+	dprintf( D_PERF_TRACE, "request #%d (%s): work begins\n",
+		requestID, argv[0] );
+
+	if( ! verify_min_number_args( argc, 6 ) ) {
+		result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
+		dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n",
+			argc, 6, argv[0] );
+		return false;
+	}
+
+	// Fill in required attributes.
+	AmazonBulkStop request = AmazonBulkStop( requestID, argv[0] );
+	request.serviceURL = argv[2];
+	request.accessKeyFile = argv[3];
+	request.secretKeyFile = argv[4];
+
+	// Fill in required parameters.
+	request.query_parameters[ "Action" ] = "CancelSpotFleetRequests";
+	// See comment in AmazonBulkStart::workerFunction().
+	request.query_parameters[ "Version" ] = "2016-04-01";
+	request.query_parameters[ "SpotTerminateInstances" ] = "true";
+
+	request.query_parameters[ "SpotFleetRequestId.1" ] = argv[5];
+
+	if( ! request.SendRequest() ) {
+		result_string = create_failure_result( requestID,
+			request.errorMessage.c_str(),
+			request.errorCode.c_str() );
+	} else {
+		if( request.success ) {
+			result_string = create_success_result( requestID, NULL );
+		} else {
+			// FIXME: Extract the error code and return success if it's
+			// 'fleetRequestIdDoesNotExist'.  It should never be, but if
+			// the user put it in 'fleetRequestNotInCancellableState',
+			// then we should wait a bit and retry (in the annex daemon,
+			// so maybe we should just return the error code in that field
+			// and let the daemon look at it, and maybe the message in
+			// the message field).  The 'unexpectedError' should also be
+			// retried, but 'fleetRequestIdMalformed' should probably
+			// cause an abort in the annex daemon.
+			std::string message;
+			formatstr( message, "Unexpected failure encountered while "
+				"cancelling spot fleet request '%s'.  Check the Annex GAHP "
+				"log for details.",
+				request.query_parameters[ "SpotFleetRequestId.1" ].c_str() );
+			result_string = create_failure_result( requestID, message.c_str(), "E_UNEXPECTED_ERROR" );
+		}
+	}
+
+	return true;
+}
+

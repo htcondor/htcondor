@@ -79,7 +79,29 @@ int
 PutTargets::rollback() {
 	dprintf( D_FULLDEBUG, "PutTargets::rollback()\n" );
 
-	// FIXME
+	std::string ruleName;
+	scratchpad->LookupString( "ruleName", ruleName );
+	ASSERT(! ruleName.empty());
+
+	std::string spotFleetRequestID;
+	scratchpad->LookupString( "BulkRequestID", spotFleetRequestID );
+	ASSERT(! spotFleetRequestID.empty());
+	std::string targetID = spotFleetRequestID;
+
+	int rc;
+	std::string errorCode;
+	rc = gahp->remove_targets(
+				service_url, public_key_file, secret_key_file,
+				ruleName, targetID, errorCode );
+	if( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED || rc == GAHPCLIENT_COMMAND_PENDING ) {
+		// We expect to exit here the first time.
+		return KEEP_STREAM;
+	}
+
+	if( rc != 0 ) {
+		// We're already rolling back, so the only thing we could do is retry.
+		dprintf( D_ALWAYS, "Failed to remove target '%s' from rule '%s' ('%s'); this will probably cause rule removal to fail.\n", targetID.c_str(), ruleName.c_str(), errorCode.c_str() );
+	}
 
 	daemonCore->Reset_Timer( gahp->getNotificationTimerId(), 0, TIMER_NEVER );
 	return PASS_STREAM;

@@ -26,8 +26,11 @@ int
 UpdateCommandState::rollback() {
 	dprintf( D_FULLDEBUG, "UpdateCommandState::rollback()\n" );
 
-	// FIXME
+	// This functor never returns anything except PASS_STREAM, and should
+	// also be the last functor in any given sequence.  Seeing the above
+	// message therefore indicates a bug.
+	EXCEPT( "UpdateCommandState::operator() can't fail and should be last functor in a sequence.  Its rollback() function should never be called." );
 
 	daemonCore->Reset_Timer( gahp->getNotificationTimerId(), 0, TIMER_NEVER );
-	return KEEP_STREAM;
+	return PASS_STREAM;
 }

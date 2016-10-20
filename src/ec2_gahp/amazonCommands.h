@@ -58,6 +58,9 @@
 #define AMAZON_COMMAND_BULK_START           "EC2_BULK_START"
 #define AMAZON_COMMAND_PUT_RULE             "EC2_PUT_RULE"
 #define AMAZON_COMMAND_PUT_TARGETS          "EC2_PUT_TARGETS"
+#define AMAZON_COMMAND_BULK_STOP            "EC2_BULK_STOP"
+#define AMAZON_COMMAND_DELETE_RULE          "EC2_DELETE_RULE"
+#define AMAZON_COMMAND_REMOVE_TARGETS       "EC2_REMOVE_TARGETS"
 
 // S3 Commands
 #define AMAZON_COMMAND_S3_ALL_BUCKETS       "AMAZON_S3_ALL_BUCKETS"
@@ -343,6 +346,20 @@ class AmazonBulkStart : public AmazonRequest {
 		std::string bulkRequestID;
 };
 
+class AmazonBulkStop : public AmazonRequest {
+	public:
+		AmazonBulkStop( int i, const char * c ) : AmazonRequest( i, c ), success( true ) { }
+		virtual ~AmazonBulkStop();
+
+        virtual bool SendRequest();
+
+		static bool ioCheck(char **argv, int argc);
+		static bool workerFunction(char **argv, int argc, std::string &result_string);
+
+	protected:
+		bool success;
+};
+
 class AmazonPutRule : public AmazonRequest {
 	public:
 		AmazonPutRule( int i, const char * c ) : AmazonRequest( i, c ) { }
@@ -357,10 +374,32 @@ class AmazonPutRule : public AmazonRequest {
 		std::string ruleARN;
 };
 
+class AmazonDeleteRule : public AmazonRequest {
+	public:
+		AmazonDeleteRule( int i, const char * c ) : AmazonRequest( i, c ) { }
+		virtual ~AmazonDeleteRule();
+
+		virtual bool SendJSONRequest( const std::string & payload );
+
+		static bool ioCheck(char **argv, int argc);
+		static bool workerFunction(char **argv, int argc, std::string &result_string);
+};
+
 class AmazonPutTargets : public AmazonRequest {
 	public:
 		AmazonPutTargets( int i, const char * c ) : AmazonRequest( i, c ) { }
 		virtual ~AmazonPutTargets();
+
+		virtual bool SendJSONRequest( const std::string & payload );
+
+		static bool ioCheck(char **argv, int argc);
+		static bool workerFunction(char **argv, int argc, std::string &result_string);
+};
+
+class AmazonRemoveTargets : public AmazonRequest {
+	public:
+		AmazonRemoveTargets( int i, const char * c ) : AmazonRequest( i, c ) { }
+		virtual ~AmazonRemoveTargets();
 
 		virtual bool SendJSONRequest( const std::string & payload );
 

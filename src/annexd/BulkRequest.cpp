@@ -359,7 +359,22 @@ int
 BulkRequest::rollback() {
 	dprintf( D_FULLDEBUG, "BulkRequest::rollback()\n" );
 
-	// FIXME
+	if(! bulkRequestID.empty()) {
+		int rc;
+		std::string errorCode;
+		rc = gahp->bulk_stop(
+					service_url, public_key_file, secret_key_file,
+					bulkRequestID,
+					errorCode );
+		if( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED || rc == GAHPCLIENT_COMMAND_PENDING ) {
+			// We should exit here the first time.
+			return KEEP_STREAM;
+		}
+
+		if( rc != 0 ) {
+			dprintf( D_ALWAYS, "Failed to cancel spot fleet request '%s' ('%s').\n", bulkRequestID.c_str(), errorCode.c_str() );
+		}
+	}
 
 	daemonCore->Reset_Timer( gahp->getNotificationTimerId(), 0, TIMER_NEVER );
 	return PASS_STREAM;
