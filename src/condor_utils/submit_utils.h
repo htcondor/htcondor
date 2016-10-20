@@ -562,7 +562,6 @@ protected:
 	int SetArguments();
 	int SetGridParams();
 	int SetGSICredentials();
-	int SetSendCredential();
 	int SetJobDeferral();
 	int SetJobRetries();
 	int SetEnvironment();

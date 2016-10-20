@@ -7031,12 +7031,7 @@ SetGSICredentials()
 void
 SetSendCredential()
 {
-#ifndef WIN32
-	// in theory, each queued job may have a different value for this, so first we
-	// process this attribute
-	bool send_credential = condor_param_bool( "SendCredential", SendCredential, false );
-
-	if (!send_credential) {
+	if (!sent_credential_to_credd) {
 		return;
 	}
 
@@ -7044,9 +7039,18 @@ SetSendCredential()
 	MyString buffer;
 	(void) buffer.formatstr( "%s = True", ATTR_JOB_SEND_CREDENTIAL);
 	InsertJobExpr(buffer);
-#endif // WIN32
 }
 
+void
+SetSendCredentialInAd( ClassAd *job_ad )
+{
+	if (!sent_credential_to_credd) {
+		return;
+	}
+
+	// add it to the job ad (starter needs to know this value)
+	job_ad->Assign( ATTR_JOB_SEND_CREDENTIAL, true );
+}
 
 #if !defined(WIN32)
 // this allocates memory, free() it when you're done.
@@ -8518,6 +8522,7 @@ int queue_item(int num, StringList & vars, char * item, int item_index, int opti
 
 		int JobUniverse = submit_hash.getUniverse();
 		SendLastExecutable(); // if spooling the exe, send it now.
+		SetSendCredentialInAd( job );
 		NewExecutable = false;
 		// write job ad to schedd or dump to file, depending on what type MyQ is
 		rval = SendJobAd(job, gClusterAd);
@@ -9666,11 +9671,10 @@ int SendJobCredential()
 				exit( 1 );
 			}
 		}
+
+		sent_credential_to_credd = true;
 	}
 
-	// this will prevent us from sending it a second time if multiple jobs
-	// are queued
-	sent_credential_to_credd = true;
 	return 0;
 }
 
