@@ -1,5 +1,4 @@
 #! /usr/bin/env perl
-#TEMPTEMP -- this test is failing on this branch for some reason, w/o any changes
 ##**************************************************************
 ##
 ## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,

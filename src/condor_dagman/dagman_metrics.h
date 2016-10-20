@@ -76,6 +76,11 @@ public:
 			@param exitCode The exit code of this DAGMan.
 			@param status The status of this DAGMan (see dag_status in
 					dag.h).
+		 	@return false if an error occurred, true otherwise (note
+				that a return value of true does not necessarily
+				meant that metrics were reported; for example, if
+				metrics reporting is disabled, metrics are not reported
+				but the return value is true)
 		*/
 	bool Report( int exitCode, Dag::dag_status status );
 
@@ -83,6 +88,7 @@ public:
 			@param exitCode The exit code of this DAGMan.
 			@param status The status of this DAGMan (see dag_status in
 					dag.h).
+			@return true if writing succeeded, false otherwise
 		*/
 	bool WriteMetricsFile( int exitCode, Dag::dag_status status );
 

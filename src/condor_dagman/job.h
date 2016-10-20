@@ -42,8 +42,6 @@ class DagmanMetrics;
 #include "debug.h"
 #include "script.h"
 
-#define JOB_ERROR_TEXT_MAXLEN 128
-
 typedef int JobID_t;
 
 /**  The job class represents a job in the DAG and its state in the HTCondor
@@ -144,7 +142,7 @@ class Job {
     static const char * status_t_names[];
 
 	// explanation text for errors
-	char error_text[JOB_ERROR_TEXT_MAXLEN];
+	MyString error_text;
 
 	static int NOOP_NODE_PROCID;
   

@@ -135,13 +135,14 @@ Job::Job( const char* jobName,
 
 	varsFromDag = new List<NodeVar>;
 
-	snprintf( error_text, JOB_ERROR_TEXT_MAXLEN, "unknown" );
+	error_text = "";
 
 	_timesHeld = 0;
 	_jobProcsOnHold = 0;
 
 	return;
 }
+
 //---------------------------------------------------------------------------
 void
 Job::PrefixDirectory(MyString &prefix)
@@ -188,7 +189,7 @@ void Job::Dump ( const Dag *dag ) const {
     dprintf( D_ALWAYS, "    Node Status: %s\n", GetStatusName() );
     dprintf( D_ALWAYS, "Node return val: %d\n", retval );
 	if( _Status == STATUS_ERROR ) {
-		dprintf( D_ALWAYS, "          Error: %s\n", error_text );
+		dprintf( D_ALWAYS, "          Error: %s\n", error_text.Value() );
 	}
     dprintf( D_ALWAYS, "Job Submit File: %s\n", _cmdFile );
 	if( _scriptPre ) {
