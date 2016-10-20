@@ -29,11 +29,15 @@
 #include <fnmatch.h>
 
 
+#define CREDMON_PID_FILE_READ_INTERVAL 20
 
 static int _static_credmon_pid = -1;
+static time_t _credmon_pid_timestamp = 0;
 
 int get_credmon_pid() {
-	if(_static_credmon_pid == -1) {
+	if(_static_credmon_pid == -1 ||
+	   time(NULL) > _credmon_pid_timestamp + CREDMON_PID_FILE_READ_INTERVAL) {
+
 		// get pid of credmon
 		MyString cred_dir;
 		param(cred_dir, "SEC_CREDENTIAL_DIRECTORY");
@@ -52,6 +56,7 @@ int get_credmon_pid() {
 			return -1;
 		}
 		dprintf(D_FULLDEBUG, "CREDMON: get_credmon_pid %s == %i\n", pid_path.c_str(), _static_credmon_pid);
+		_credmon_pid_timestamp = time(NULL);
 	}
 	return _static_credmon_pid;
 }
