@@ -17,7 +17,6 @@
 #include "BulkRequest.h"
 #include "PutRule.h"
 #include "PutTargets.h"
-#include "UpdateCommandState.h"
 #include "ReplyAndClean.h"
 #include "FunctorSequence.h"
 
@@ -268,20 +267,16 @@ createOneAnnex( ClassAd * command, Stream * replyStream ) {
 	PutTargets * pt = new PutTargets( reply, eventsGahp, scratchpad,
 		eventsURL, publicKeyFile, secretKeyFile, now + (15 * 60),
 		commandState, commandID );
-	// If we execute this functor, then each previous functor in the sequence
-	// has succeeded, and the "transaction" changing the state of the cloud
-	// service is complete.  We can therefore delete the command ad and
-	// the functor ad(s) in this functor, and ensure that the command isn't
-	// executed a second time.  Since we can't send the reply twice (the
-	// connection will be done), we don't need to record any state there.
-	UpdateCommandState * ucs = new UpdateCommandState( commandState, scratchpad, gahp );
-	ReplyAndClean * last = new ReplyAndClean( reply, replyStream, gahp, scratchpad, eventsGahp );
+	// We now only call last->operator() on success; otherwise, we roll back
+	// and call last->rollback() after we've given up.  We can therefore
+	// remove the command ad from the commandState in this functor.
+	ReplyAndClean * last = new ReplyAndClean( reply, replyStream, gahp, scratchpad, eventsGahp, commandState );
 
 	// Note that the functor sequence takes responsibility for deleting the
 	// functor objects; the functor objects would just delete themselves when
 	// they're done, but implementing rollback means the functors themselves
 	// can't know how long they should persist.
-	FunctorSequence * fs = new FunctorSequence( { br, pr, pt, ucs }, last );
+	FunctorSequence * fs = new FunctorSequence( { br, pr, pt }, last );
 
 	// Create a timer for the gahp to fire when it gets a result.  We must
 	// use TIMER_NEVER to ensure that the timer hasn't been reaped when the

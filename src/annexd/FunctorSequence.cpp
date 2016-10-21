@@ -41,7 +41,9 @@ FunctorSequence::operator() () {
 		case KEEP_STREAM:
 			return;
 		default:
-			rollingBack = true;
+			// We don't stop a rollback for errors.
+			if( rollingBack ) { current -= 1; }
+			else { rollingBack = true; }
 			return;
 	}
 }

@@ -1,5 +1,5 @@
 #include "condor_common.h"
-#include "compat_classad.h"
+#include "classad_collection.h"
 #include "gahp-client.h"
 #include "Functor.h"
 #include "ReplyAndClean.h"
@@ -19,6 +19,20 @@ ReplyAndClean::operator() () {
 		delete reply;
 	}
 
+	// Once we've sent the reply, forget about the command.  (We either
+	// succeed or roll back after retrying, so this is safe to do --
+	// we've either succeeded and can forget, or have given up and should
+	// forget.)
+	commandState->BeginTransaction();
+	{
+		std::string commandID;
+		scratchpad->LookupString( "CommandID", commandID );
+		if(! commandID.empty()) {
+			commandState->DestroyClassAd( commandID.c_str() );
+		}
+	}
+	commandState->CommitTransaction();
+
 	// We're done with the stream, now, so clean it up.
 	if( replyStream ) { delete replyStream; }
 
@@ -32,8 +46,10 @@ ReplyAndClean::operator() () {
 	delete gahp;
 
 	// Note that the annex daemon code happened to use the same timer
-	// for both GAHPs.  If it's safe to cancel a timer twice, we should
-	// probaly just cancel this gahp's timer as well.
+	// for both GAHPs.  Since it's safe to cancel a timer twice, we should
+	// probaly just cancel this gahp's timer as well.  This produces an
+	// ugly warning in the log, but that's not worth changing right now.
+	daemonCore->Cancel_Timer( eventsGahp->getNotificationTimerId() );
 	delete eventsGahp;
 
 	// We're done with the scratchpad, too.
