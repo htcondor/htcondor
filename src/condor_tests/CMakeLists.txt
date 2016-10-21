@@ -405,6 +405,7 @@ if (BUILD_TESTING)
 	condor_pl_test(max_jobs_per_owner_test "Max_jobs_per_owner_test" "core;qiuck;full;quicknolink")
 	condor_pl_test(max_jobs_per_owner_test_group "Max_jobs_per_owner_test -group" "core;quick;full;quicknolink")
 	condor_pl_test(job_transform_names_test "Job_transform_names_test" "core;quick;full;quicknolink")
+	condor_pl_test(cmd_submit-batchname "condor_submit -batch-name" "core;quick;full;quicknolink")
 	condor_pl_test(file_transfer_submit "condor_submit file transfer" "core;quick;full;quicknolink")
 
 	if (LINUX)
