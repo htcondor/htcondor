@@ -124,7 +124,7 @@ private:
 
 	// Configure OOM killer for this job
 	int m_memory_limit; // Memory limit, in MB.
-	int m_oom_fd; // The file descriptor which recieves events
+	int m_oom_fd; // The file descriptor which receives events
 	int m_oom_efd; // The event FD "pipe" to watch
 	int m_oom_efd2; // The other end of m_oom_efd.
 

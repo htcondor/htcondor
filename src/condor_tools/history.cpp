@@ -950,7 +950,7 @@ static void readHistoryRemote(classad::ExprTree *constraintExpr)
 	while (true) {
 		compat_classad::ClassAd ad;
 		if (!getClassAd(sock, ad)) {
-			fprintf(stderr, "Failed to recieve remote ad.\n");
+			fprintf(stderr, "Failed to receive remote ad.\n");
 			exit(1);
 		}
 		long long intVal;

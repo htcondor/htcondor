@@ -2577,7 +2577,7 @@ CStarter::Suspend( void ) {
 	
 		//
 		// We set a flag to let us know that if any other
-		// job tries to start after we recieved this Suspend call
+		// job tries to start after we received this Suspend call
 		// then they should also be suspended.
 		// This can happen if a job was being deferred and when
 		// the timer triggers we don't want to let it execute 
