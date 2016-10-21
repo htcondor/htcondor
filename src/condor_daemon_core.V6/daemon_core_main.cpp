@@ -2150,7 +2150,8 @@ int dc_main( int argc, char** argv )
 	// call config so we can call param.  
 	// Try to minimize shadow footprint by not loading the metadata from the config file
 	int config_options = get_mySubSystem()->isType(SUBSYSTEM_TYPE_SHADOW) ? 0 : CONFIG_OPT_WANT_META;
-        if (wantsQuiet) { config_options |= CONFIG_OPT_WANT_QUIET; }
+	//config_options |= get_mySubSystem()->isType(SUBSYSTEM_TYPE_MASTER) ? CONFIG_OPT_DEPRECATION_WARNINGS : 0;
+	if (wantsQuiet) { config_options |= CONFIG_OPT_WANT_QUIET; }
 	config_ex(config_options);
 
 

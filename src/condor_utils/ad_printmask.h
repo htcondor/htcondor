@@ -25,6 +25,7 @@
 #include "condor_classad.h"
 #include "condor_attributes.h"
 #include "pool_allocator.h"
+#include "tokener.h"
 
 // currently no-one uses the MyRowOfData version of the print mask
 //#define ALLOW_ROD_PRINTMASK
@@ -118,23 +119,14 @@ struct Formatter
 	};
 };
 
-class tokener;
 typedef struct {
 	const char * key;           // keyword, table should be sorted by this.
 	const char * default_attr;  // default attribute to fetch
 	const char * printfFmt;     // optional % printf formatting after custom function is called
 	CustomFormatFn cust;        // custom format callback function
 	const char * extra_attribs; // other attributes that the custom format needs
-	bool operator<(const tokener & toke) const;
 } CustomFormatFnTableItem;
-template <class T> struct tokener_lookup_table {
-	size_t cItems;
-	bool is_sorted;
-	const T * pTable;
-	const T * find_match(const tokener & toke) const;
-};
-typedef tokener_lookup_table<CustomFormatFnTableItem> CustomFormatFnTable;
-#define SORTED_TOKENER_TABLE(tbl) { sizeof(tbl)/sizeof(tbl[0]), true, tbl }
+typedef case_sensitive_sorted_tokener_lookup_table<CustomFormatFnTableItem> CustomFormatFnTable;
 
 #ifdef ALLOW_ROD_PRINTMASK
 class MyRowOfData; // forward ref
@@ -422,4 +414,4 @@ int SetAttrListPrintMaskFromStream (
 	std::string & error_message // out, if return is non-zero, this will be an error message
 	);
 
-#endif
+#endif // __AD_PRINT_MASK__

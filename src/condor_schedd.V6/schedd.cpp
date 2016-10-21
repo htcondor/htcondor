@@ -1199,6 +1199,7 @@ Scheduler::count_jobs()
 	 // copy owner data to old-owners table
 	time_t AbsentSubmitterLifetime = param_integer("ABSENT_SUBMITTER_LIFETIME", 60*60*24*7); // 1 week.
 	time_t AbsentSubmitterUpdateRate = param_integer("ABSENT_SUBMITTER_UPDATE_RATE", 60*5); // 5 min
+	time_t AbsentOwnerLifetime = param_integer("ABSENT_OWNER_LIFETIME", 60*5);
 
 	JobsRunning = 0;
 	JobsIdle = 0;
@@ -1282,6 +1283,31 @@ Scheduler::count_jobs()
 	for (SubmitterDataMap::iterator it = Submitters.begin(); it != Submitters.end(); ++it) {
 		const SubmitterData & SubDat = it->second;
 		if (SubDat.num.Hits > 0) ++NumSubmitters;
+	}
+
+	// Look for owners with zero jobs and purge them
+	for (OwnerInfoMap::iterator it = OwnersInfo.begin(); it != OwnersInfo.end(); ++it) {
+		OwnerInfo & owner_info = it->second;
+		// If this Owner has any jobs in the queue or match records,
+		// we don't want to remove the entry.
+		if (owner_info.num.Hits > 0) continue;
+
+#ifndef WIN32
+		// mark user creds for sweeping.
+		dprintf( D_FULLDEBUG, "ZKM: creating mark file for user %s\n", owner_info.Name());
+		credmon_mark_creds_for_sweeping(owner_info.Name());
+#endif // WIN32
+
+		// expire and mark for removal Owners that have not had any hits (i.e jobs in the queue)
+		if ( ! owner_info.LastHitTime) {
+			// this is unxpected, we really should never get here with LastHitTime of 0, but in case
+			// we do. start the decay timer now.
+			owner_info.LastHitTime = current_time;
+		} else if ( current_time - owner_info.LastHitTime > AbsentOwnerLifetime ) {
+			// Now that we've finished using Owner.Name, we can
+			// free it.  this marks the entry as unused
+			owner_info.name.clear();
+		}
 	}
 
 	// set FlockLevel for owners
@@ -1614,12 +1640,6 @@ Scheduler::count_jobs()
 		// If this Owner has any jobs in the queue or match records,
 		// we don't want to send the, so we continue to the next
 		if (SubDat.num.Hits > 0) continue;
-
-#ifndef WIN32
-		// mark user creds for sweeping.
-		dprintf( D_ALWAYS, "ZKM: creating mark file for user %s\n", SubDat.Name());
-		credmon_mark_creds_for_sweeping(SubDat.Name());
-#endif // WIN32
 
 		submitter_name.formatstr("%s@%s", SubDat.Name(), UidDomain);
 		int old_flock_level = SubDat.OldFlockLevel;
@@ -3067,6 +3087,13 @@ Scheduler::remove_unused_owners()
 		SubmitterDataMap::iterator prev = it++;
 		if (prev->second.empty()) {
 			Submitters.erase(prev);
+		}
+	}
+
+	for (OwnerInfoMap::iterator it = OwnersInfo.begin(); it != OwnersInfo.end(); ) {
+		OwnerInfoMap::iterator prev = it++;
+		if (prev->second.empty()) {
+			OwnersInfo.erase(prev);
 		}
 	}
 }
@@ -4993,13 +5020,39 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 	return TRUE;
 }
 
+struct UpdateGSICredContinuation : Service {
+
+public:
+	UpdateGSICredContinuation(int cmd, const std::string &temp_path,
+		const std::string &final_path, const std::string &job_owner,
+		PROC_ID jobid, void *state)
+	:
+	  m_cmd(cmd),
+	  m_temp_path(temp_path),
+	  m_final_path(final_path),
+	  m_job_owner(job_owner),
+	  m_jobid(jobid),
+	  m_state(state)
+	{}
+
+	int finish(Stream *);
+	int finish_update(ReliSock *, ReliSock::x509_delegation_result);
+
+private:
+	int m_cmd;
+	std::string m_temp_path;
+	std::string m_final_path;
+	std::string m_job_owner;  // empty job owner indicates we should use condor_priv.
+	PROC_ID m_jobid;
+	void *m_state;
+};
+
 int
 Scheduler::updateGSICred(int cmd, Stream* s)
 {
 	ReliSock* rsock = (ReliSock*)s;
 	PROC_ID jobid;
 	ClassAd *jobad;
-	int reply;
 
 		// make sure this connection is authenticated, and we know who
 		// the user is.  also, set a timeout, since we don't want to
@@ -5089,6 +5142,7 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 	temp_proxy_path += ".tmp";
 	free(proxy_path);
 
+	std::string job_owner;
 #ifndef WIN32
 		// Check the ownership of the job's spool directory and switch
 		// our priv state if needed.
@@ -5110,18 +5164,16 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 	uid_t proxy_uid = si.GetOwner();
 	passwd_cache *p_cache = pcache();
 	uid_t job_uid;
-	char *job_owner = NULL;
-	jobad->LookupString( ATTR_OWNER, &job_owner );
-	if ( !job_owner ) {
+	jobad->LookupString( ATTR_OWNER, job_owner );
+	if ( job_owner.empty() ) {
 			// Maybe change EXCEPT to print to the audit log with D_AUDIT
 		EXCEPT( "No %s for job %d.%d!", ATTR_OWNER, jobid.cluster,
 				jobid.proc );
 	}
-	if ( !p_cache->get_user_uid( job_owner, job_uid ) ) {
+	if ( !p_cache->get_user_uid( job_owner.c_str(), job_uid ) ) {
 			// Failed to find uid for this owner, badness.
 		dprintf( D_AUDIT | D_FAILURE, *rsock, "Failed to find uid for user %s (job %d.%d)\n",
-				 job_owner, jobid.cluster, jobid.proc );
-		free( job_owner );
+				 job_owner.c_str(), jobid.cluster, jobid.proc );
 		refuse(s);
 		free(SpoolSpace);
 		return FALSE;
@@ -5131,10 +5183,9 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 	priv_state priv;
 	if ( proxy_uid == job_uid ) {
 			// We're not Windows here, so we don't need the NT Domain
-		if ( !init_user_ids( job_owner, NULL ) ) {
+		if ( !init_user_ids( job_owner.c_str(), NULL ) ) {
 			dprintf( D_AUDIT | D_FAILURE, *rsock, "init_user_ids() failed for user %s!\n",
-					 job_owner );
-			free( job_owner );
+					 job_owner.c_str() );
 			refuse(s);
 			free(SpoolSpace);
 			return FALSE;
@@ -5144,9 +5195,10 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 			// We should already be in condor priv, but we want to save it
 			// in the 'priv' variable.
 		priv = set_condor_priv();
+			// In UpdateGSICredContinuation below, an empty job_owner
+			// means we should do file access as condor_priv.
+		job_owner.clear();
 	}
-	free( job_owner );
-	job_owner = NULL;
 #endif
 
 	free(SpoolSpace);
@@ -5155,64 +5207,129 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 		// file temp_proxy_path, which is known to be in the SPOOL dir
 	rsock->decode();
 	filesize_t size = 0;
-	int rc;
+	void *state = NULL;
+	ReliSock::x509_delegation_result result;
 	if ( cmd == UPDATE_GSI_CRED ) {
-		rc = rsock->get_file(&size,temp_proxy_path.Value());
+		int rc = rsock->get_file(&size,temp_proxy_path.Value());
+		result = (rc == 0) ? ReliSock::delegation_ok : ReliSock::delegation_error;
 	} else if ( cmd == DELEGATE_GSI_CRED_SCHEDD ) {
-		rc = rsock->get_x509_delegation(&size,temp_proxy_path.Value());
+		result = rsock->get_x509_delegation(temp_proxy_path.Value(), false, &state);
 	} else {
 		dprintf( D_ALWAYS, "updateGSICred(%d): unknown CEDAR command %d\n",
 				 cmd, cmd );
-		rc = -1;
-	}
-	if ( rc < 0 ) {
-			// transfer failed
-		reply = 0;	// reply of 0 means failure
-	} else {
-			// transfer worked, now rename the file to final_proxy_path
-		if ( rotate_file(temp_proxy_path.Value(),
-						 final_proxy_path.Value()) < 0 ) 
-		{
-				// the rename failed!!?!?!
-			dprintf( D_ALWAYS, "updateGSICred(%d): failed, "
-				 "job %d.%d  - could not rename file\n",
-				 cmd, jobid.cluster,jobid.proc);
-			reply = 0;
-		} else {
-			reply = 1;	// reply of 1 means success
-
-			AuditLogJobProxy( *rsock, jobid, final_proxy_path.Value() );
-		}
+		result = ReliSock::delegation_error;
 	}
 
-	// Update the proxy expiration time in the job ad
-	time_t proxy_expiration;
-	proxy_expiration = x509_proxy_expiration_time( final_proxy_path.Value() );
-	if (proxy_expiration == -1) {
-		dprintf( D_ALWAYS, "updateGSICred(%d): failed to read expiration "
-				 "time of updated proxy for job %d.%d: %s\n", cmd,
-				 jobid.cluster, jobid.proc, x509_error_string() );
+	UpdateGSICredContinuation* continuation =
+		new UpdateGSICredContinuation(cmd,
+			temp_proxy_path.Value(),
+			final_proxy_path.Value(),
+			job_owner,
+			jobid,
+			state);
+
+	int rc = 1;
+	if (result == ReliSock::delegation_continue) {
+		int retval = daemonCore->Register_Socket(rsock, "UpdateGSI Response",
+			(SocketHandlercpp)&UpdateGSICredContinuation::finish,
+			"UpdateGSI Response Continuation", continuation, ALLOW, HANDLE_READ);
+			// If we fail to register the socket, continue in blocking mode.
+		if (retval < 0) {
+			continuation->finish_update(rsock, result);
+			delete continuation;
+		} // else we have registered the continuation; the finish routine will
+		  // delete itself.
+		else { rc = KEEP_STREAM; }
 	} else {
-		SetAttributeInt( jobid.cluster, jobid.proc,
-						 ATTR_X509_USER_PROXY_EXPIRATION, proxy_expiration );
+		continuation->finish_update(rsock, result);
+		delete continuation;
 	}
 
 #ifndef WIN32
 		// Now switch back to our old priv state
 	set_priv( priv );
-
 	uninit_user_ids();
 #endif
+	return rc;
+}
+
+
+int
+UpdateGSICredContinuation::finish(Stream *stream)
+{
+	dprintf(D_SECURITY|D_FULLDEBUG, "Finishing X509 delegation.\n");
+	ReliSock *rsock = static_cast<ReliSock*>(stream);
+	priv_state priv;
+#ifndef WIN32
+	if (!m_job_owner.empty()) {
+		if ( !init_user_ids(m_job_owner.c_str(), NULL) ) {
+			dprintf(D_AUDIT | D_FAILURE, *rsock, "init_user_ids() failed for user %s!\n",
+				m_job_owner.c_str());
+			delete this;
+			return false;
+		}
+		priv = set_user_priv();
+	} else {
+		priv = set_condor_priv();
+	}
+#endif
+
+	ReliSock::x509_delegation_result result = rsock->get_x509_delegation_finish(m_temp_path.c_str(), false, m_state);
+	finish_update(rsock, result);
+
+#ifndef WIN32
+	set_priv( priv );
+	uninit_user_ids();
+#endif
+	delete this;
+	return true;
+}
+
+
+int
+UpdateGSICredContinuation::finish_update(ReliSock *rsock, ReliSock::x509_delegation_result result)
+{
+	int reply;
+	if ( result == ReliSock::delegation_error ) {
+			// transfer failed
+		reply = 0;	// reply of 0 means failure
+	} else {
+			// transfer worked, now rename the file to final_proxy_path
+		if ( rotate_file(m_temp_path.c_str(), m_final_path.c_str()) < 0 ) 
+		{
+				// the rename failed!!?!?!
+			dprintf( D_ALWAYS, "updateGSICred(%d): failed, "
+				 "job %d.%d  - could not rename file\n",
+				 m_cmd, m_jobid.cluster, m_jobid.proc);
+			reply = 0;
+		} else {
+			reply = 1;	// reply of 1 means success
+
+			AuditLogJobProxy( *rsock, m_jobid, m_final_path.c_str() );
+		}
+	}
+
+	// Update the proxy expiration time in the job ad
+	time_t proxy_expiration;
+	proxy_expiration = x509_proxy_expiration_time( m_final_path.c_str() );
+	if (proxy_expiration == -1) {
+		dprintf( D_ALWAYS, "updateGSICred(%d): failed to read expiration "
+				 "time of updated proxy for job %d.%d: %s\n", m_cmd,
+				 m_jobid.cluster, m_jobid.proc, x509_error_string() );
+	} else {
+		SetAttributeInt( m_jobid.cluster, m_jobid.proc,
+						 ATTR_X509_USER_PROXY_EXPIRATION, proxy_expiration );
+	}
 
 		// Send our reply back to the client
 	rsock->encode();
 	rsock->code(reply);
 	rsock->end_of_message();
 
-	dprintf( D_AUDIT | D_ALWAYS, *rsock,"Refresh GSI cred for job %d.%d %s\n",
-		jobid.cluster,jobid.proc,reply ? "suceeded" : "failed");
+	dprintf( D_AUDIT | D_ALWAYS, *rsock, "Refresh GSI cred for job %d.%d %s\n",
+		m_jobid.cluster, m_jobid.proc, reply ? "succeeded" : "failed");
 	
-	return TRUE;
+	return true;
 }
 
 

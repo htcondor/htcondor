@@ -8277,6 +8277,7 @@ customization=const
 ## as of 8.5.6 metaknobs can take arguments like this
 ##   use FEATURE : Knob(arg1, , arg3)
 ## where arg1 and arg2 are substituted in the knob definition where it has $(1) and $(2)
+## the :default syntax is permitted.  so $(1:3600) expands to meta arg1 or to 3600 if there is no meta arg1
 ## The permitted metaknob arg substitutions are
 ##   $(0)  all arguments. '$(0)' is replaced with 'arg1, , arg3' in the above example
 ##   $(0?) args are non-empty. '$(0?)' replaced with '1' in the above example. it would be '0' configuration had use FEATURE:Knob or use FEATURE:Knob()
@@ -8289,6 +8290,7 @@ customization=const
 ##   $(2+) args from second arg. '$(2+)' is replaced with ', arg3' in the above example
 ##   $(3) third arg. '$(3)' is replaced with 'arg3' in the above example
 ##   $(3?) third arg is non-empty '$(3?)' is replaced with '1' in the above example
+## Up to 9 meta arguments are allowed.
 ## When a metaknob is not passed any arguments, all '$(N)' macros expand to '', all '$(0#)' and '$(N?)' macros expand to '0'
 ######
 
@@ -8384,10 +8386,10 @@ default : @end
 review=?
 
 [$POLICY.LIMIT_JOB_RUNTIMES]
-friendly_name=Limit job runtimes to 24 hours
+friendly_name=Limit job runtimes. args: limit-in-seconds  default: 24 hours
 default : @end
-	MAX_JOB_RUNTIME=24*3600
-	MaxJobRetirementTime=(24*3600)+120
+	MAX_JOB_RUNTIME=$(1:24*3600)
+	MaxJobRetirementTime=$(MAX_JOB_RUNTIME)+120
 	PREEMPT=(Activity == "Busy") && ((time() - EnteredCurrentActivity) > $(MAX_JOB_RUNTIME))
 @end
 review=?
@@ -8478,6 +8480,43 @@ default : @end
   endif
   WANT_HOLD_REASON = ifThenElse($(MEMORY_EXCEEDED), "$(HOLD_REASON_MEMORY_EXCEEDED:memory usage exceeded request_memory)", $(WANT_HOLD_REASON:UNDEFINED))
   WANT_HOLD_SUBCODE = ifThenElse($(MEMORY_EXCEEDED),$(HOLD_SUBCODE_MEMORY_EXCEEDED:102), $(WANT_HOLD_SUBCODE:UNDEFINED))
+@end
+review=?
+
+[$POLICY.PREEMPT_IF]
+friendly_name=Configure a conditional PREEMPT expression. args: policy_knob
+default : @end
+  if !$(1?)
+    error : use POLICY : PREEMPT_IF requires an argument. It should be the name of a config variable that has the trigger expression.
+  endif
+  if defined PREEMPT
+    PREEMPT = $($(1)) || $(PREEMPT)
+  else
+    PREEMPT = $($(1))
+  endif
+  MAXJOBRETIREMENTTIME = ifthenelse($($(1)),0,$(MAXJOBRETIREMENTTIME:0))
+  if defined WANT_SUSPEND
+    WANT_SUSPEND = $($(1)) =!= true && $(WANT_SUSPEND)
+  else
+    WANT_SUSPEND = $($(1)) =!= true
+  endif
+@end
+review=?
+
+[$POLICY.WANT_HOLD_IF]
+friendly_name=Configure a conditional WANT_HOLD expression. args: policy_knob, subcode, reason_text
+default : @end
+  use Policy : PREEMPT_IF($(1))
+  if ! $(3?)
+    error : use POLICY : WANT_HOLD_IF requires 3 arguments: policy_knob, subcode, reason_text
+  endif
+  if defined WANT_HOLD
+    WANT_HOLD = $($(1)) || $(WANT_HOLD)
+  else
+    WANT_HOLD = $($(1))
+  endif
+  WANT_HOLD_REASON = ifThenElse($($(1)), "$(3+)", $(WANT_HOLD_REASON:UNDEFINED))
+  WANT_HOLD_SUBCODE = ifThenElse($($(1)), $(2) , $(WANT_HOLD_SUBCODE:UNDEFINED))
 @end
 review=?
 
@@ -8589,7 +8628,7 @@ review=?
 
 # note vm_vmware script is perl so it doesn't get a .exe extension on Windows.
 [$FEATURE.VMWARE]
-friendly_name=Settings for to use VMWARE with VM Universe
+friendly_name=Settings to use VMWARE with VM Universe
 default : @end
 	VM_TYPE=vmware
 	VM_MEMORY=$(DETECTED_MEMORY)/($(NUM_CPUS)+1)
@@ -8617,19 +8656,9 @@ review=?
 [$FEATURE.PartitionableSlot]
 friendly_name=Configure a partitionable slot, args: [type# [, allocation]]
 default : @end
-	if $(1?)
-	  NUM_SLOTS_TYPE_$(1)=1
-	  SLOT_TYPE_$(1)_PARTITIONABLE=true
-	  if $(2?)
-	     SLOT_TYPE_$(1)=$(2+)
-	  else
-	     SLOT_TYPE_$(1)=100%
-	  endif
-	else
-	  NUM_SLOTS_TYPE_1=1
-	  SLOT_TYPE_1_PARTITIONABLE=true
-	  SLOT_TYPE_1=100%
-	endif
+	NUM_SLOTS_TYPE_$(1:1)=1
+	SLOT_TYPE_$(1:1)_PARTITIONABLE=true
+	SLOT_TYPE_$(1:1)=$(2+:100%)
 @end
 review=?
 

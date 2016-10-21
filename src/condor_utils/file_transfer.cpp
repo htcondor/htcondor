@@ -2141,7 +2141,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 
 		} else if ( reply == 4 ) {
 			if ( PeerDoesGoAhead || s->end_of_message() ) {
-				rc = s->get_x509_delegation( &bytes, fullname.Value() );
+				rc = (s->get_x509_delegation( fullname.Value(), false, NULL ) == ReliSock::delegation_ok) ? 0 : -1;
 				dprintf( D_FULLDEBUG,
 				         "DoDownload: get_x509_delegation() returned %d\n",
 				         rc );
@@ -2317,6 +2317,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 			return_and_resetpriv( -1 );
 		}
 		*total_bytes += bytes;
+		bytes = 0;
 
 		numFiles++;
 

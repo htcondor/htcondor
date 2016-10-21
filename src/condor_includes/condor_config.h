@@ -217,6 +217,7 @@ typedef struct macro_eval_context_ex : macro_eval_context {
 	// A convenience function for use with trinary parameters.
 	bool param_false( const char * name );
 
+	const char * param_append_location(const MACRO_META * pmet, MyString & value);
 	const char * param_get_location(const MACRO_META * pmet, MyString & value);
 
 	const char * param_get_info(const char * name,
@@ -316,11 +317,12 @@ extern "C" {
 	#define CONFIG_OPT_DEFAULTS_ARE_PARAM_INFO 0x80 // the defaults table is the table defined in param_info.in.
 	#define CONFIG_OPT_NO_EXIT 0x100 // If a config file is missing or the config is invalid, do not abort/exit the process.
 	#define CONFIG_OPT_WANT_QUIET 0x200 // Keep printing to stdout/err to a minimum
+	#define CONFIG_OPT_DEPRECATION_WARNINGS 0x400 // warn about obsolete syntax/elements
 	#define CONFIG_OPT_SUBMIT_SYNTAX 0x1000 // allow +Attr and -Attr syntax like submit files do.
 	bool config();
 	bool config_ex(int opt);
 	bool config_host(const char* host, int config_options);
-	bool validate_config(bool abort_if_invalid);
+	bool validate_config(bool abort_if_invalid, int opt);
 	void config_dump_string_pool(FILE * fh, const char * sep);
 	void config_dump_sources(FILE * fh, const char * sep);
 	const char * config_source_by_id(int source_id);

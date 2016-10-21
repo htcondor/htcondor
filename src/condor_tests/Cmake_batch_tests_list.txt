@@ -158,6 +158,9 @@ lib_eventlog_rotation-reader_20_rotations_2_loops
 lib_eventlog_rotation-reader_20_rotations_20_loops
 lib_eventlog_rotation-reader_missed_1
 lib_eventlog_rotation-reader_missed_2
+max_jobs_per_owner_test-1
+max_jobs_per_owner_test_group-1
+job_transform_names-1
 negotiator_match_log_exists
 job_schedd_restart-check_reconnect
 soap_api_test_schedd
