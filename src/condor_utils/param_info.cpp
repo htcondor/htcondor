@@ -27,14 +27,6 @@
 #  include "pcre.h"
 #endif
 
-#define CUSTOMIZATION_SELDOM 	0
-
-#define RECONFIG_NORMAL 		0
-
-#define STATE_DEFAULT			0
-#define STATE_AUTODEFAULT		1
-#define STATE_USER				2
-#define STATE_RUNTIME			3
 
 //param_info_hash_t = bucket_t**
 //bucket_t** param_info;
@@ -290,6 +282,31 @@ bool param_default_ispath_by_id(int ix)
 		}
 	}
 	return false;
+}
+
+param_info_t_type_t param_default_range_by_id(int ix, const int *&imin, const double*&dmin, const long long*&lmin)
+{
+	imin = NULL; dmin = NULL; lmin = NULL;
+	if (ix >= 0 && ix < condor_params::defaults_count) {
+		const param_table_entry_t* p = &condor_params::defaults[ix];
+		if (p && p->def) {
+			int flags = reinterpret_cast<const condor_params::string_value *>(p->def)->flags;
+			if (flags & condor_params::PARAM_FLAGS_RANGED) {
+				switch (flags & condor_params::PARAM_FLAGS_TYPE_MASK) {
+				case PARAM_TYPE_INT:
+					imin = &(reinterpret_cast<const condor_params::ranged_int_value *>(p->def)->min);
+					return PARAM_TYPE_INT;
+				case PARAM_TYPE_LONG:
+					lmin = &(reinterpret_cast<const condor_params::ranged_long_value *>(p->def)->min);
+					return PARAM_TYPE_LONG;
+				case PARAM_TYPE_DOUBLE:
+					dmin = &(reinterpret_cast<const condor_params::ranged_double_value *>(p->def)->min);
+					return PARAM_TYPE_DOUBLE;
+				}
+			}
+		}
+	}
+	return PARAM_TYPE_STRING;
 }
 
 #endif // PARAM_DEFAULTS_SORTED

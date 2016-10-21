@@ -2614,8 +2614,9 @@ bool param_find_item (
 	it.is_def = false;
 
 	MACRO_ITEM * pi = NULL;
+#if 0
+	//PRAGMA_REMIND("tj: remove subsys.local.knob support in the 8.5 devel series")
 	if (subsys && local) {
-		//PRAGMA_REMIND("tj: remove subsys.local.knob support in the 8.5 devel series")
 		name_found.formatstr("%s.%s", subsys, local);
 		pi = find_macro_item(name, name_found.c_str(), ConfigMacroSet);
 		if (pi) {
@@ -2624,6 +2625,7 @@ bool param_find_item (
 			return true;
 		}
 	}
+#endif
 	if (local) {
 		pi = find_macro_item(name, local, ConfigMacroSet);
 		if (pi) {

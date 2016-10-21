@@ -26,6 +26,8 @@ no warnings 'closure';
 use Data::Dumper;
 use Getopt::Std;
 
+my $warn_missing_defaults = 0; # set to 1 to generate warnings for non-string params that have no default value
+
 # Global variables. The first three are used internally by &parse, 
 # and the %options is set immediately after execution with the command 
 # line options for easy access, as specified in &configure.
@@ -75,7 +77,7 @@ use constant { RECONSTITUTE_TEMPLATE_EMPTY_ORIG =>
 
 # this template emits a comment for the value of a param without a default value
 use constant { RECONSTITUTE_TEMPLATE_EMPTY =>
-'//static const nodef_value def_%parameter_var% = { %default% };
+'//static const %typequal%_value def_%parameter_var% = { %default%, PARAM_TYPE_%type%%range_valid%%cooked_values% };
 '};
 
 use constant { RECONSTITUTE_TEMPLATE => 
@@ -131,12 +133,12 @@ my $property_types = {
 	default 		=> { type => "char[]", required => 1, dont_trim => 1 },
 	win32_default	=> { type => "char[]", dont_trim => 1 },
 	range 			=> { type => "char[]" },
-	reconfig 		=> { type => "reconfig_type", def => 1 },
+	restart 		=> { type => "restart_type", def => 0 },
 	friendly_name 	=> { type => "char[]" },
 	usage 			=> { type => "char[]" },
 	tags 			=> { type => "char[]" },
 	aliases 		=> { type => "char[]" },
-#	customization	=> { type => "customization_type", def => "SELDOM" },
+	customization	=> { type => "customization_type", def => "SELDOM" },
 #	state 			=> { type => "state_type" },
 #	is_macro 		=> { type => "is_macro_type" },
 #	version 		=> { type => "char[]" },
@@ -169,7 +171,7 @@ my $type_subs = {
 	'long'  => sub { return $_[0]=~/^\d+$/?$_[0]:type_error($_[0], 'long'); },
 	'float'  => sub { return $_[0]=~/^\d+\.\d+$/?$_[0]:type_error($_[0], 'float'); },
 	'double'  => sub { return $_[0]=~/^\d+\.\d+$/?$_[0]: type_error($_[0], 'double');},
-	'char'  => sub { return $_[0]=~/^\d+$/ and $_[0]<256 ? $_[0]:type_error($_[0], 'char');},
+	'char'  => sub { return ($_[0]=~/^\d+$/ and $_[0]<256) ? $_[0] : type_error($_[0], 'char');},
 	'state_type'  => sub {
 		my $state = enum($_[0],'USER','AUTODEFAULT','DEFAULT', 'RUNTIME');
 		return "STATE_".$state;
@@ -186,12 +188,11 @@ my $type_subs = {
 		my $is_macro = enum($_[0],'true','false');
 		return ($is_macro =~ /true/) ? 1 : 0;
 	},
-	'reconfig_type' => sub {
-		my $reconfig = enum($_[0],'true', 'false');
-		return ($reconfig =~ /true/) ? 1 : 0;
+	'restart_type' => sub {
+		return enum($_[0],'false', 'true', 'never');
 	},
 	'customization_type' => sub {
-		my $customization = enum($_[0], 'CONST', 'NORMAL', 'SELDOM', 'EXPERT', 'DEVEL');
+		my $customization = enum($_[0], 'CONST', 'COMMON', 'NORMAL', 'SELDOM', 'EXPERT', 'DEVEL', 'NEVER');
 		return "CUSTOMIZATION_".$customization;
 	},
 };
@@ -309,7 +310,17 @@ sub reconstitute {
 		. "const int PARAM_FLAGS_TYPE_MASK = 0x0F;\n"
 		. "const int PARAM_FLAGS_RANGED = 0x10;\n"
 		. "const int PARAM_FLAGS_PATH = 0x20;\n"
-		. "typedef struct nodef_value { const char * psz; } nodef_value;\n"
+		. "const int PARAM_FLAGS_RESTART = 0x1000;\n"
+		. "const int PARAM_FLAGS_NORECONFIG = 0x2000;\n"
+		. "const int PARAM_FLAGS_CONST = 0x8000;\n"
+		. "const int PARAM_CUST_MASK   = 0xF0000;\n"
+		. "const int PARAM_CUST_SELDOM = 0x00000;\n"
+		. "const int PARAM_CUST_COMMON = 0x10000;\n"
+		. "const int PARAM_CUST_NORMAL = 0x20000;\n"
+		. "const int PARAM_CUST_EXPERT = 0x30000;\n"
+		. "const int PARAM_CUST_DEVEL  = 0x40000;\n"
+		. "const int PARAM_CUST_NEVER  = 0x50000;\n"
+		. "typedef struct nodef_value { const char * psz; int flags; } nodef_value;\n"
 		. "typedef struct string_value { const char * psz; int flags; } string_value;\n"
 		. "typedef struct bool_value { const char * psz; int flags; bool val; } bool_value;\n"
 		. "typedef struct int_value { const char * psz; int flags; int val; } int_value;\n"
@@ -329,6 +340,7 @@ sub reconstitute {
 	my %empty_vars=();
 	my %var_daemons=(); # hash of arrays of per-daemon/sybsystem parameters overrides.
 	my %var_metas=(); # hash of arrays of metaknobs
+	my %var_help=(); # hash of help info
 	
 	# Loop through each of the parameters in the structure passed as an argument
 	while(my ($param_name, $sub_structure) = each %{$structure}){
@@ -459,8 +471,7 @@ sub reconstitute {
 					}
 
 					if ($nix_default eq "") {
-						print "ERROR: Integer parameter $param_name needs " .
-								"a default!\n";
+						print "WARNING: Integer parameter $param_name has no default\n" if ($warn_missing_defaults);
 					}
 					# print "$var_name cooked is $cooked_values\n";
 				}
@@ -488,8 +499,7 @@ sub reconstitute {
 						}
 					}
 					if ($nix_default eq "") {
-						print "ERROR: Boolean parameter $param_name needs " .
-								"a default!\n";
+						print "WARNING: Boolean parameter $param_name has no default\n" if ($warn_missing_defaults);
 					}
 				}
 
@@ -517,8 +527,7 @@ sub reconstitute {
 						}				    
 					}
 					if ($nix_default eq "") {
-						print "ERROR: Double parameter $param_name needs " .
-								"a default!\n";
+						print "WARNING: Double parameter $param_name has no default.\n" if ($warn_missing_defaults);
 					}
 				}
 
@@ -564,9 +573,26 @@ sub reconstitute {
 					}
 				}
 			}
+
 		} # bake based on %property_types rules 
 		
-		# if cooked_range ends in a ,  then the max value is missing, so
+		if (exists $sub_structure->{'restart'}) {
+			if ($sub_structure->{'restart'} eq 'true') { $range_valid .= "|PARAM_FLAGS_RESTART"; }
+			elsif ($sub_structure->{'restart'} eq 'never') { $range_valid .= "|PARAM_FLAGS_NORECONFIG"; }
+		}
+		if (exists $sub_structure->{'customization'}) {
+			if ($sub_structure->{'customization'} eq 'const') {
+				$range_valid .= "|PARAM_FLAGS_CONST";
+			} elsif ($sub_structure->{'customization'} eq 'expert') {
+				$range_valid .= "|PARAM_CUST_EXPERT";
+			} elsif ($sub_structure->{'customization'} eq 'devel') {
+				$range_valid .= "|PARAM_CUST_DEVEL";
+			} elsif ($sub_structure->{'customization'} eq 'never') {
+				$range_valid .= "|PARAM_CUST_NEVER";
+			}
+		}
+
+		# if cooked_range ends in a , then the max value is missing, so
 		# append $range_max
 		#
 		if ($cooked_range =~ /,$/) {
@@ -615,6 +641,12 @@ sub reconstitute {
 			continue_output(replace_by_hash(\%replace, RECONSTITUTE_TEMPLATE_EMPTY));
 			$empty_vars{$var_name} = 1;
 		}
+
+		my $descrip = "";   if (exists $sub_structure->{'description'}) { $descrip .= $sub_structure->{'description'}; }
+		my $help_tags = ""; if (exists $sub_structure->{'tags'}) { $help_tags .= $sub_structure->{'tags'}; }
+		my $usage = ""; 	if (exists $sub_structure->{'usage'}) { $usage .= $sub_structure->{'usage'}; }
+		$replace{"%help_strings%"} = $descrip . '\0' . $help_tags . '\0' . $usage;
+		$var_help{$var_name} = replace_by_hash(\%replace, 'PARAM_TYPE_%type%%range_valid%, "%help_strings%\0"');
 	}
 
 	# output a sorted key/value table with param names and pointers to their default values
@@ -725,8 +757,31 @@ sub reconstitute {
 	}
 	continue_output("}; // param id's\n\n");
 
+	# meta info for params
+	#
+	continue_output("\n#ifdef PARAM_DECLARE_HELP_TABLES\n");
+	continue_output("\n/*==========================================\n"
+					. " * param help/usage information. indexed by param id.\n"
+					. " *==========================================*/\n");
+
+	continue_output("typedef struct paramhelp_entry { int flags; const char * strings; } paramhelp_entry;\n");
+
+	for(sort { lc($a) cmp lc($b) } @var_names) {
+		my $help = $var_help{$_};
+		continue_output("static const paramhelp_entry help_$_ = { $help };\n");
+	}
+
+	continue_output("const paramhelp_entry* paramhelp_table[] = {\n");
+	for(sort { lc($a) cmp lc($b) } @var_names) {
+		continue_output("\t&help_$_,\n");
+	}
+	continue_output("}; // paramhelp_table[]\n");
+	continue_output("const int paramhelp_table_size = sizeof(paramhelp_table)/sizeof(paramhelp_table[0]);\n\n");
+	continue_output("\n#endif // PARAM_DECLARE_HELP_TABLES\n");
+
+
 	# wrap things up. 
-	continue_output("} //namespace condor_params\n");
+	continue_output("\n} //namespace condor_params\n");
 	end_output();
 }
 
@@ -850,6 +905,10 @@ sub parse {
 	# Actual parser logic contained here...                         #
 	#################################################################
 	&ignore(WHITESPACE); # First, ignore all whitespace and comments
+	my $banner_charclass = ['\A\#\#+', 'banner'];
+	while (&next_is($banner_charclass)) {
+		&ignore(COMMENTS);
+	}
 	&ignore(COMMENTS);
 	&ignore(WHITESPACE);
 	while(length($remaining_text)>1){ ### Main loop, through the entire text

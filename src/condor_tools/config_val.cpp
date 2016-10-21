@@ -125,6 +125,7 @@ usage(int retval = 1)
 		"\t-raw\t\tPrint raw value as it appears in the file\n"
 		//"\t-stats\t\tPrint statistics of the configuration system\n"
 		"\t-verbose\tPrint source, raw, expanded, and default values\n"
+		//"\t-info\t\tPrint help and usage info for variables\n" // TODO: tj uncomment this for 8.7
 		"\t-debug[:<opts>] dprintf to stderr, optionally overiding TOOL_DEBUG\n"
 		//"\t-diagnostic\t\tPrint diagnostic information about condor_config_val operation\n"
 		"      these options apply when querying a daemon with a <location> argument\n"
@@ -193,12 +194,12 @@ char* GetRemoteParam( Daemon*, char* );
 char* GetRemoteParamRaw(Daemon*, const char* name, bool & raw_supported, MyString & raw_value, MyString & file_and_line, MyString & def_value, MyString & usage_report);
 int GetRemoteParamStats(Daemon* target, ClassAd & ad);
 int   GetRemoteParamNamesMatching(Daemon*, const char* name, std::vector<std::string> & names);
-void  SetRemoteParam( Daemon*, char*, ModeType );
+void  SetRemoteParam( Daemon*, const char*, ModeType );
 static void PrintConfigSources(void);
 static void do_dump_config_stats(FILE * fh, bool dump_sources, bool dump_strings);
 static int do_write_config(const char* pathname, WRITE_CONFIG_OPTIONS opts);
 
-static const char * param_type_names[] = {"STRING","INT","BOOL","DOUBLE","LONG"};
+static const char * param_type_names[] = {"STRING","INT","BOOL","DOUBLE","LONG","PATH","ENUM"};
 
 static classad::References standard_subsystems;
 bool is_known_subsys_prefix(const char * name) {
@@ -371,6 +372,62 @@ bool dump_both_callback(void* pv, HASHITER & it)
 	return true;
 }
 
+int fetch_param_table_info(int param_id, const char * & descrip, const char * & tags, const char * & used_for)
+{
+	int type_and_flags = param_default_help_by_id(param_id, descrip, tags, used_for);
+	return type_and_flags;
+}
+
+const char * format_range(MyString & range, int param_id)
+{
+	const int* irng;
+	const double *drng;
+	const long long *lrng;
+
+	switch(param_default_range_by_id(param_id, irng, drng, lrng)) {
+		case PARAM_TYPE_INT:
+			formatstr(range, " from %d to %d", irng[0], irng[1]);
+			break;
+		case PARAM_TYPE_LONG:
+			formatstr(range, " from %lld to %lld", lrng[0], lrng[1]);
+			break;
+		case PARAM_TYPE_DOUBLE:
+			formatstr(range, " from %g to %g", drng[0], drng[1]);
+			break;
+		default:
+			// default is only here to make g++ shut up...
+			break;
+	}
+	return range.c_str();
+}
+
+void print_param_table_info(FILE* out, int param_id, int type_and_flags, const char * used_for, const char * tags)
+{
+	if (used_for) { fprintf(out, " # use for : %s\n", used_for); }
+	if (type_and_flags) {
+		const int PARAM_FLAGS_RESTART = 0x1000;
+		const int PARAM_FLAGS_NORECONFIG = 0x2000;
+		if (type_and_flags & PARAM_FLAGS_RESTART) {
+			fprintf(out, " # restart required : true\n");
+		} else if (type_and_flags & PARAM_FLAGS_NORECONFIG) {
+			fprintf(out, " # restart required : loaded when job starts.\n");
+		}
+
+		const int PARAM_FLAGS_CONST = 0x8000;
+		const int PARAM_FLAGS_PATH = 0x20;
+		int type = type_and_flags&7; if (type_and_flags & PARAM_FLAGS_PATH) type = 5;
+		if (type_and_flags & PARAM_FLAGS_CONST) {
+			fprintf(out, " # constant : %s\n", type ? param_type_names[type] : "true");
+		} else {
+			MyString range;
+			format_range(range, param_id);
+			if (type || ! range.empty()) { fprintf(out, " # expected values : %s%s\n", param_type_names[type], range.c_str()); }
+		}
+	}
+	if (tags) { fprintf(out, " # used by: %s\n", tags); }
+}
+
+
 //#define HAS_LAMBDA
 #ifdef HAS_LAMBDA
 #else
@@ -455,6 +512,7 @@ main( int argc, const char* argv[] )
 	bool    dash_dump_both = false;
 	bool    dump_all_variables = false;
 	bool    dump_stats = false;
+	bool    show_param_info = false; // show info from param table
 	bool    expand_dumped_variables = false;
 	bool    show_by_usage = false;
 	bool    show_by_usage_unused = false;
@@ -619,6 +677,9 @@ main( int argc, const char* argv[] )
 			if (pcolon && is_arg_prefix(pcolon+1, "keep_defaults", 2)) {
 				stats_with_defaults = true;
 			}
+		} else if (is_arg_colon_prefix(arg, "info", &pcolon, 3)) {
+			show_param_info = true;
+			verbose = true;
 		} else if (is_arg_prefix(arg, "expanded", 2)) {
 			expand_dumped_variables = true;
 		} else if (is_arg_prefix(arg, "evaluate", 2)) {
@@ -920,6 +981,15 @@ main( int argc, const char* argv[] )
 								fprintf(stdout, "%s = %s\n", upname.Value(), rawval ? rawval : "");
 							}
 							if (verbose) {
+								MyString range;
+								const char * tags = NULL;
+								const char * descrip = NULL;
+								const char * used_for = NULL;
+								int type_and_flags = 0;
+								if (pmet && show_param_info) {
+									type_and_flags = param_default_help_by_id(pmet->param_id, descrip, tags, used_for);
+								}
+								if (descrip) { fprintf(stdout, " # description: %s\n", descrip); }
 								param_get_location(pmet, location);
 								fprintf(stdout, " # at: %s\n", location.c_str());
 								if (expand_dumped_variables) {
@@ -929,6 +999,9 @@ main( int argc, const char* argv[] )
 									fprintf(stdout, " # expanded: %s\n", val ? val : "");
 								}
 								if (def_val) { fprintf(stdout, " # default: %s\n", def_val); }
+								if (show_param_info) {
+									print_param_table_info(stdout, pmet->param_id, type_and_flags, used_for, tags);
+								}
 								if (dash_usage && pmet) {
 									if (pmet->ref_count) fprintf(stdout, " # use_count: %d / %d\n", pmet->use_count, pmet->ref_count);
 									else fprintf(stdout, " # use_count: %d\n", pmet->use_count);
@@ -1040,12 +1113,26 @@ main( int argc, const char* argv[] )
 		fprintf(stdout, "# Configuration from %s on %s %s\n", daemonString(dt), target->name(), target->addr());
 	}
 
+	// handle SET/RSET etc
+	if (mt != CONDOR_QUERY) {
+		for (const char * name = params.first(); name; name = params.next()) {
+			SetRemoteParam(target, name, mt);
+		}
+		my_exit(0);
+	}
+
+	// handle query
+	// 
+	int num_not_defined = 0;
 	while( (tmp = params.next()) ) {
-		if( mt == CONDOR_SET || mt == CONDOR_RUNTIME_SET ||
-			mt == CONDOR_UNSET || mt == CONDOR_RUNTIME_UNSET ) {
-			SetRemoteParam( target, tmp, mt );
-		} else {
+		// empty parens so that we don't have to change the brace level of ALL of the code below.
+		{
 			MyString name_used, raw_value, file_and_line, def_value, usage_report;
+			const char * tags = NULL;
+			const char * descrip = NULL;
+			const char * used_for = NULL;
+			int type_and_flags = 0;
+			int param_id = -1;
 			bool raw_supported = false;
 			//fprintf(stderr, "param = %s\n", tmp);
 			if (tmp[0] == '$') { // a leading '$' indicates a meta-param
@@ -1103,6 +1190,11 @@ main( int argc, const char* argv[] )
 								printf(" # remote HTCondor version does not support -verbose\n");
 							}
 							if (verbose) {
+								param_id = param_default_get_id(names[ii].c_str(), NULL);
+								if (show_param_info) {
+									param_default_help_by_id(param_id, descrip, tags, used_for);
+								}
+								if (descrip) { fprintf(stdout, " # description: %s\n", descrip); }
 								if ( ! file_and_line.IsEmpty()) {
 									printf(" # at: %s\n", file_and_line.Value());
 								}
@@ -1113,6 +1205,9 @@ main( int argc, const char* argv[] )
 								}
 								if ( ! def_value.IsEmpty()) {
 									printf(" # default: %s\n", def_value.Value());
+								}
+								if (show_param_info) {
+									print_param_table_info(stdout, param_id, type_and_flags, used_for, tags);
 								}
 								if (dash_usage && ! usage_report.IsEmpty()) {
 									printf(" # use_count: %s\n", usage_report.Value());
@@ -1147,6 +1242,10 @@ main( int argc, const char* argv[] )
 						free(value);
 						value = strdup(RemoteRawValuePart(raw_value));
 					}
+					if (verbose && show_param_info) {
+						param_id = param_default_get_id(tmp, NULL);
+						param_default_help_by_id(param_id, descrip, tags, used_for);
+					}
 				} else {
 					name_used = tmp;
 					name_used.upper_case();
@@ -1168,6 +1267,10 @@ main( int argc, const char* argv[] )
 										name_used, &def_val, &pmet);
 										//use_count, ref_count,
 										//file_and_line, line_number);
+				if (pmet && show_param_info) {
+					param_id = pmet->param_id;
+					type_and_flags = param_default_help_by_id(pmet->param_id, descrip, tags, used_for);
+				}
 				if ( ! name_used.empty()) {
 					raw_supported = true;
 					if (dash_raw) {
@@ -1193,7 +1296,7 @@ main( int argc, const char* argv[] )
 			}
 			if( value == NULL ) {
 				fprintf(stderr, "Not defined: %s\n", name_used.c_str());
-				my_exit( 1 );
+				++num_not_defined;
 			} else {
 				if (verbose) {
 					printf("%s = %s\n", name_used.c_str(), value);
@@ -1201,41 +1304,40 @@ main( int argc, const char* argv[] )
 					printf("%s\n", value);
 				}
 				free( value );
-				if ( ! raw_supported && (dash_raw || verbose)) {
-					printf(" # the remote HTCondor version does not support -raw or -verbose");
+			}
+			if ( ! raw_supported && (dash_raw || verbose)) {
+				printf(" # the remote HTCondor version does not support -raw or -verbose");
+			}
+			if (verbose) {
+				if (descrip) { fprintf(stdout, " # description: %s\n", descrip); }
+				if ( ! file_and_line.IsEmpty()) {
+					printf(" # at: %s\n", file_and_line.Value());
 				}
-				if (verbose) {
-#if 1
-					if ( ! file_and_line.IsEmpty()) {
-						printf(" # at: %s\n", file_and_line.Value());
-					}
-					if ( ! raw_value.IsEmpty()) {
-						printf(" # raw: %s\n", raw_value.Value());
-					}
-					if ( ! def_value.IsEmpty()) {
-						printf(" # default: %s\n", def_value.Value());
-					}
-					if (dump_both_only_type > 0) {
-						print_as_type(tmp, dump_both_only_type);
-					}
-					if (dash_usage && ! usage_report.IsEmpty()) {
-						printf(" # use_count: %s\n", usage_report.Value());
-					}
-					printf("\n");
-#else  // this is the old format, do we need to match this exactly?
-					if (line_number == -1) {
-						printf("  Defined in '%s'.\n\n", filename.Value());
-					} else {
-						printf("  Defined in '%s', line %d.\n\n",
-							   filename.Value(), line_number);
-					}
-#endif
+				if ( ! raw_value.IsEmpty()) {
+					printf(" # raw: %s\n", raw_value.Value());
 				}
+				if ( ! def_value.IsEmpty()) {
+					printf(" # default: %s\n", def_value.Value());
+				}
+				if (dump_both_only_type > 0) {
+					print_as_type(tmp, dump_both_only_type);
+				}
+				if (show_param_info) {
+					print_param_table_info(stdout, param_id, type_and_flags, used_for, tags);
+				}
+				if (dash_usage && ! usage_report.IsEmpty()) {
+					printf(" # use_count: %s\n", usage_report.Value());
+				}
+				printf("\n");
 			}
 		}
 	}
-	my_exit( 0 );
-	return 0;
+	int exitval = 0;
+	if (num_not_defined > 0 && ! show_param_info) {
+		exitval = 1;
+	}
+	my_exit(exitval);
+	return exitval;
 }
 
 
@@ -1579,7 +1681,7 @@ GetRemoteParamNamesMatching(Daemon* target, const char * param_pat, std::vector<
 }
 
 void
-SetRemoteParam( Daemon* target, char* param_value, ModeType mt )
+SetRemoteParam( Daemon* target, const char* param_value, ModeType mt )
 {
 	int cmd = DC_NOP, rval;
 	ReliSock s;
@@ -1624,10 +1726,10 @@ SetRemoteParam( Daemon* target, char* param_value, ModeType mt )
 	if (set || is_meta) {
 		config_name = is_valid_config_assignment(param_value);
 		if ( ! config_name) {
-			char * tmp = strchr(param_value, is_meta ? ':' : '=' );
+			const char * tmp = strchr(param_value, is_meta ? ':' : '=' );
 			#ifdef WARN_COLON_FOR_PARAM_ASSIGN
 			#else
-			char * tmp2 = strchr( param_name, ':' );
+			const char * tmp2 = strchr( param_name, ':' );
 			if ( ! tmp || (tmp2 && tmp2 < tmp)) tmp = tmp2;
 			#endif
 			std::string name;  name.append(param_value, 0, (int)(tmp - param_value));
@@ -1644,19 +1746,15 @@ SetRemoteParam( Daemon* target, char* param_value, ModeType mt )
 		}
 	} else {
 			// Want to do different sanity checking.
-		char * tmp;
-		if( (tmp = strchr(param_value, ':')) || 
-			(tmp = strchr(param_value, '=')) ) {
+		if (strchr(param_value, ':') || strchr(param_value, '=')) {
 			fprintf( stderr, "%s: Can't unset configuration value (\"%s\")\n"
 					 "To unset, you only specify the name of the attribute\n",
 					 MyName, param_value);
 			my_exit( 1 );
 		}
 		config_name = strdup(param_value);
-		tmp = strchr(config_name, ' ');
-		if( tmp ) {
-			*tmp = '\0';
-		}
+		char * tmp = strchr(config_name, ' ');
+		if (tmp) { *tmp = 0; }
 	}
 
 		// At this point, in either set or unset mode, param_name
@@ -1702,7 +1800,7 @@ SetRemoteParam( Daemon* target, char* param_value, ModeType mt )
 		my_exit(1);
 	}
 	if( set ) {
-		if( !s.code(param_value) ) {
+		if( !s.put(param_value) ) {
 			fprintf( stderr, "Can't send config setting (%s)\n", param_value );
 			my_exit(1);
 		}

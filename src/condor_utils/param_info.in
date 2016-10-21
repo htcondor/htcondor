@@ -1,434 +1,228 @@
+## Declarations for HTCondor params, each entry starts with
+##
+## [PARAM_NAME] and is followed by one or more keyword=value pairs. keywords are:
+## default=<default_value>  The default value for this knob.  maybe empty if there is no default value
+## win32_default=<winval>   The default value for windows if it is different from the normal default, may be empty if there is no default
+## type=<value_type>        <value_type> is one of [string, int, bool, double, long, path], default is string
+## range=<min>,<max>        either <min> or <max> may be blank, default is unbounded
+## description=One sentence description of the param (a.k.a friendly_name)
+## usage=One sentence description of the use of the param, should start with a verb
+## tags=list of daemons/tools that use the param
+## customization=<custtype> <custtype> is one of [const, common, normal, seldom, expert, devel, never], default is seldom
+##                          const - should never be changed, e.g. HOUR
+##                          common or normal - customization is likely.  code does not distinguish these two, e.g. DAEMON_LIST
+##                          seldom - param exists to customize HTCondor, but most pools will not (this is the majority of params)
+##                          expert - the default value will be likely to work for nearly all pools. e.g DC_DAEMON_LIST 
+##                          devel - only developers are expected to customize this one, e.g. SYSTEM_STARTD_ATTRS
+##                          never - proper operation depends on this, but it is not a constant
+## restart=true             value must one of [true, false, never]. default is false
+##                          true - if a restart is needed before the param takes effect
+##                          never - the param is loaded at (job) start and never reloaded (i.e DAG, Shadow & Starter knobs)
+##
+## the default keyword is required, all others are optional.
+## 
+## Multiline values may be declared by using : @tag instead of = like this
+## [PARAM_NAME]
+## default: @end
+##  <default_value_line1>
+##  <default_value_line2>
+## @end
+## type=string
+##
+## Metaknobs go at the bottom of this file, after the metaknob banner
+## metaknob names always start with $ and a category name.
+##
+
 [ENABLE_KERNEL_TUNING]
 default=true
 type=bool
-review=?
 
 [KERNEL_TUNING_LOG]
 default=$(LOG)/KernelTuning.log
 type=path
-review=?
 
 [LINUX_KERNEL_TUNING_SCRIPT]
 default=$(LIBEXEC)/linux_kernel_tuning
 type=path
-review=?
 
 [COLLECTOR_ENVIRONMENT]
 # XXX follows pattern of %s_ENVIRONMENT
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Collector Environment
-review=?
 
 [MASTER]
 default=$(SBIN)/condor_master
 win32_default=$(SBIN)\condor_master.exe
 type=path
-customization=seldom
-friendly_name=full path of the Master binary
-review=?
+description=full path of the Master binary
 
 [MASTER_ENVIRONMENT]
 # XXX follows pattern of %s_ENVIRONMENT
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Master Environment
-review=?
 
 [MASTER_FLAG]
 # XXX follows pattern of %s_FLAG
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Master Flag
-review=?
 
 [COLLECTOR_FLAG]
 # XXX follows pattern of %s_FLAG
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Collector Flag
-review=?
 
 [SHUTDOWN_FAST_TIMEOUT]
 default=300
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Shutdown Fast Timeout
-review=?
 
 [PREEN_INTERVAL]
 default=86400
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Preen Interval
-review=?
 
 [DEFAULT_MASTER_SHUTDOWN_SCRIPT]
 default=
 type=path
-reconfig=true
-customization=seldom
-friendly_name=Program to execute upon condor_master shutdown
-review=?
+description=Program to execute upon condor_master shutdown
 tags=master
 
 [MASTER_NEW_BINARY_DELAY]
 default=120
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Master New Binary Delay
-review=?
 
 [MASTER_NEW_BINARY_RESTART]
 default=GRACEFUL
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Master New Binary Restart Mode
-review=?
+description=Master New Binary Restart Mode
 
 [MASTER_CHECK_NEW_EXEC_INTERVAL]
 default=300
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Master Check New Exec Interval
-review=?
 
 [MASTER_UPDATE_INTERVAL]
 default=300
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Master Update Interval
-review=?
 
 [MASTER_RECOVER_FACTOR]
 default=300
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Master Recover Ceiling
-review=?
+description=Master Recover Ceiling
 
 [MASTER_BACKOFF_FACTOR]
 default=2.0
 type=double
-reconfig=true
-customization=seldom
-friendly_name=Master Backoff Factor
-review=?
 
 [MASTER_BACKOFF_CEILING]
 default=3600
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Master Backoff Ceiling
-review=?
 
 [MASTER_BACKOFF_CONSTANT]
 # XXX is this right?
 default=9
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Master Backoff Constant
-review=?
 
 [MASTER_SQLLOG]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Master SQL Log
-review=?
+description=Master SQL Log
 
 [CCB_ADDRESS]
 default=
 type=string
-reconfig=true
 customization=normal
-friendly_name=CCB Address
-review=?
-
-[SETTABLE_ATTRS_ADVERTISE_MASTER]
-# Eeewwww. This follows a form of SETTABLE_ATTRS_<PERM-LEVEL>
-default=
-type=string
-reconfig=true
-customization=seldom
-friendly_name=Settable Attribute Advertise Master
-review=?
-
-[SETTABLE_ATTRS_ADVERTISE_SCHEDD]
-# Eeewwww. This follows a form of SETTABLE_ATTRS_<PERM-LEVEL>
-default=
-type=string
-reconfig=true
-customization=seldom
-friendly_name=Settable Attribute Advertise Schedd
-review=?
-
-[SETTABLE_ATTRS_ADVERTISE_STARTD]
-# Eeewwww. This follows a form of SETTABLE_ATTRS_<PERM-LEVEL>
-default=
-type=string
-reconfig=true
-customization=seldom
-friendly_name=Settable Attribute Advertise Startd
-review=?
-
-[SETTABLE_ATTRS_CLIENT]
-# Eeewwww. This follows a form of SETTABLE_ATTRS_<PERM-LEVEL>
-default=
-type=string
-reconfig=true
-customization=seldom
-friendly_name=Settable Attribute Client
-review=?
-
-[SETTABLE_ATTRS_DEFAULT]
-# Eeewwww. This follows a form of SETTABLE_ATTRS_<PERM-LEVEL>
-default=
-type=string
-reconfig=true
-customization=seldom
-friendly_name=Settable Attribute Default
-review=?
-
-[SETTABLE_ATTRS_SOAP]
-# Eeewwww. This follows a form of SETTABLE_ATTRS_<PERM-LEVEL>
-default=
-type=string
-reconfig=true
-customization=seldom
-friendly_name=Settable Attribute Soap
-review=?
-
-[SETTABLE_ATTRS_DAEMON]
-# Eeewwww. This follows a form of SETTABLE_ATTRS_<PERM-LEVEL>
-default=
-type=string
-reconfig=true
-customization=seldom
-friendly_name=Settable Attribute Daemon
-review=?
 
 [SETTABLE_ATTRS_CONFIG]
-# Eeewwww. This follows a form of SETTABLE_ATTRS_<PERM-LEVEL>
+# This follows a form of SETTABLE_ATTRS_<PERM-LEVEL>, where CONFIG is the level most used for this feature
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Settable Attribute Config
-review=?
-
-[SETTABLE_ATTRS_OWNER]
-# Eeewwww. This follows a form of SETTABLE_ATTRS_<PERM-LEVEL>
-default=
-type=string
-reconfig=true
-customization=seldom
-friendly_name=Settable Attribute Owner
-review=?
-
-[SETTABLE_ATTRS_ADMINISTRATOR]
-# Eeewwww. This follows a form of SETTABLE_ATTRS_<PERM-LEVEL>
-default=
-type=string
-reconfig=true
-customization=seldom
-friendly_name=Settable Attribute Administrator
-review=?
-
-[SETTABLE_ATTRS_NEGOTIATOR]
-# Eeewwww. This follows a form of SETTABLE_ATTRS_<PERM-LEVEL>
-default=
-type=string
-reconfig=true
-customization=seldom
-friendly_name=Settable Attribute Negotiator
-review=?
-
-[SETTABLE_ATTRS_WRITE]
-# Eeewwww. This follows a form of SETTABLE_ATTRS_<PERM-LEVEL>
-default=
-type=string
-reconfig=true
-customization=seldom
-friendly_name=Settable Attribute Write
-review=?
-
-[SETTABLE_ATTRS_READ]
-# Eeewwww. This follows a form of SETTABLE_ATTRS_<PERM-LEVEL>
-default=
-type=string
-reconfig=true
-customization=seldom
-friendly_name=Settable Attribute Read
-review=?
+description=List of configuration variables that can be set by condor_config_val -set
+customization=normal
 
 [MASTER_TIMEOUT_MULTIPLIER]
 # This follows a form of <SUBSYS>_TIMEOUT_MULTIPLIER
 default=0
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Master Timeout Multiplier
-review=?
 
 [DNS_CACHE_REFRESH]
 default=28800
 type=int
-reconfig=true
-customization=seldom
-friendly_name=DNS Cache Refresh
-review=?
 
 [MASTER_INSTANCE_LOCK]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Instance Lock File
-review=?
+description=Path to instance lock file for the Master
 
 [MASTER_DAEMON_AD_FILE]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Daemon Ad File
-review=?
+description=Path to the daemon ad file for the Master
 
 [COLLECTOR_TCP_SOCKET_BUFSIZE]
 default=128*1024
 range=1024,
 type=int
-reconfig=false
-customization=seldom
-friendly_name=Outgoing traffic TCP write size for Collector
-review=?
+description=Outgoing traffic TCP write size for Collector
+restart=true
 
 [COLLECTOR_PORT]
 default=9618
 range=0,65535
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Default collector port
-review=?
+description=Default collector port
 
 [SOCKET_LISTEN_BACKLOG]
 default=500
 range=1,
 type=int
-reconfig=false
-customization=seldom
-friendly_name=Socket Listen Backlog
-review=?
+restart=true
 
 [SOAP_SSL_PORT]
 default=0
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Soap SSL Port
-review=?
 
 [CONDOR_CREDENTIAL_DIR]
 default=/tmp
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Condor Credential Directory
-review=?
+description=Directory for condor credentials
 
 [QUERY_TIMEOUT]
 default=60
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Query Timeout
-review=?
 
 [GSI_DAEMON_DIRECTORY]
 default=
 type=path
-reconfig=true
-customization=seldom
-friendly_name=GSI Daemon Directory
-review=?
 
 [GSI_DAEMON_PROXY]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=GSI Daemon Proxy
-review=?
 
 [GSI_DAEMON_CERT]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=GSI Daemon Cert
-review=?
 
 [GSI_DAEMON_KEY]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=GSI Daemon Key
-review=?
 
 [GSS_ASSIST_GRIDMAP_CACHE_EXPIRATION]
 default=0
 type=int
-reconfig=true
-customization=seldom
 
 [VMWARE_NETWORKING_TYPE]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Vmware Networking Type
-review=?
-tags=vm-gahp,vmware_type
+tags=vm-gahp,starter
 
 [VMWARE_PERL]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Vmware Perl
-review=?
-tags=vm-gahp,vmware_type
+tags=vm-gahp
 
 [VMWARE_SCRIPT]
 default=$(SBIN)/condor_vm_vmware
 # there is no win32 default for this item, we DON'T want it to have a .exe extension
-type=string
-reconfig=true
-customization=seldom
-friendly_name=Vmware Script
-review=?
-tags=vm-gahp,vmware_type
+type=path
+tags=vm-gahp
 
 [LIBVIRT_XML_SCRIPT]
 default=$(LIBEXEC)/libvirt_simple_script.awk
@@ -437,2151 +231,1295 @@ default=$(LIBEXEC)/libvirt_simple_script.awk
 default=$(SBIN)/condor_vm-gahp
 win32_default=$(SBIN)\condor_vm-gahp.exe
 type=path
-reconfig=true
-customization=seldom
-friendly_name=Vm Gahp Server
-review=?
 tags=vm-gahp,vmgahp
 
 [VM_GAHP_LOG]
 default=$(LOG)/VMGahpLog
 type=path
-reconfig=true
-customization=seldom
-friendly_name=Vm Gahp Log
 usage=$(LOG)/VMGahpLogs/VMGahpLog.$(USERNAME)
-review=?
-tags=vm-gahp,vmgahp_main
+tags=vm-gahp
 
 [MAX_VM_GAHP_LOG]
 default=$(MAX_DEFAULT_LOG)
-review=?
-tags=vm-gahp,vmgahp_main
+tags=vm-gahp
 
 [XEN_BRIDGE_SCRIPT]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Xen Bridge Script
-review=?
-tags=vm-gahp,xen_type
+tags=vm-gahp
 
 [XEN_BOOTLOADER]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Xen Bootloader
-review=?
-tags=vm-gahp,xen_type
+tags=vm-gahp
 
 [XEN_ALLOW_HARDWARE_VT_SUSPEND]
 default=false
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Xen Allow Hardware Vt Suspend
-review=?
-tags=vm-gahp,xen_type
+tags=vm-gahp
 
 [XEN_SCRIPT]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Xen Script
-review=?
-tags=vm-gahp,xen_type
+tags=vm-gahp
 
 [VM_TYPE]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Vm Type
-review=?
-tags=vm-gahp,vmgahp_config
+tags=vm-gahp
 
 [VM_MAX_MEMORY]
 default=0
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Vm Max Memory
-review=?
-tags=vm-gahp,vmgahp_config
+tags=vm-gahp
 
 [VM_NETWORKING]
 default=false
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Vm Networking
-review=?
-tags=vm-gahp,vmgahp_config
+tags=vm-gahp
 
 [VM_NETWORKING_TYPE]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Vm Networking Type
-review=?
-tags=vm-gahp,vmgahp_config
+tags=vm-gahp
 
 [VM_NETWORKING_DEFAULT_TYPE]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Vm Networking Default Type
-review=?
-tags=vm-gahp,vmgahp_config
+tags=vm-gahp
 
 [VM_NETWORKING_MAC_PREFIX]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Vm Networking Mac Prefix
-review=?
-tags=vm-gahp,vmgahp_config
+tags=vm-gahp
 
 [VM_HARDWARE_VT]
 default=false
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Vm Hardware Vt
-review=?
-tags=vm-gahp,vmgahp_config
+tags=vm-gahp
 
 [USE_SCRIPT_TO_CREATE_CONFIG]
 default=false
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Use Script To Create Config
-review=?
-tags=vm-gahp,vm_type
+tags=vm-gahp
 
 [PROCD_ADDRESS]
 default=$(LOCK)/procd_pipe
 win32_default=\\.\pipe\condor_procd_pipe
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Procd Address
-review=?
-tags=starter,user_proc
+tags=master,starter
 
 [BIND_ALL_INTERFACES]
 default=true
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Bind All Interfaces
-review=?
-tags=starter,user_proc
+tags=daemons
 
 [EXECUTE]
 default=$(LOCAL_DIR)/execute
 type=path
-reconfig=true
-customization=seldom
-friendly_name=Execute
-review=?
-tags=starter,starter
+tags=startd,starter
 
 [UID_DOMAIN]
 default=$(FULL_HOSTNAME)
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Uid Domain
 usage=to specify that each machine has its own UID space.
-review=?
-tags=starter,starter
+tags=starter
 
 [TRUST_UID_DOMAIN]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Trust Uid Domain
-review=?
-tags=starter,starter
+tags=starter
 
 [STARTER_LOCAL_LOGGING]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Starter Local Logging
-review=?
-tags=starter,starter
+tags=starter
 
 [FILESYSTEM_DOMAIN]
 default=$(FULL_HOSTNAME)
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Filesystem Domain
-usage=to specify that each machine has its own file system.
-review=?
-tags=starter,starter
+usage=Used to indicate a shared file system, or to specify that each machine has its own file system.
+tags=schedd,starter
 
 [CKPT_SERVER_HOST]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Ckpt Server Host
-review=?
-tags=starter,starter
+tags=starter
 
 [ARCH]
 default=
-type=string
-reconfig=true
-customization=seldom
-friendly_name=Arch
-review=?
-tags=starter,starter
+tags=starter,submit
+description=CPU architecture
 
 [OPSYS]
 default=
-type=string
-reconfig=true
-customization=seldom
-friendly_name=Opsys
-review=?
-tags=starter,starter
+tags=starter,submit
+description=Operating system
+
+[OPSYSANDVER]
+default=
+tags=starter,submit
+description=Operating system and major version number
 
 [STARTER_LOG]
 default=$(LOG)/StarterLog
 type=path
-reconfig=true
-customization=seldom
-friendly_name=Starter Log
-review=?
-tags=starter,starter_common
+tags=starter
 
 [STARTER_DEBUG]
 default=D_PID 
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Starter Debug
-review=?
-tags=starter,starter_common
+tags=starter
+description=Debug logging options for the starter
 
 [STARTER_LOG_NAME_APPEND]
-friendly_name=controls what to append StarterLog, may be: false, true, Slot, Cluster, or JobId, true or undef gives 8.0 compatible behavior.
+description=What to append StarterLog filename, may be: false, true, Slot, Cluster, or JobId, true or undef gives 8.0 compatible behavior.
 default=
 type=string
-reconfig=true
-customization=seldom
 tags=starter
 
 [USER_JOB_WRAPPER]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=User Job Wrapper
-review=?
-tags=starter,starter_common
+tags=starter
 
 [SOFT_UID_DOMAIN]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Soft Uid Domain
-review=?
-tags=starter,starter_common
+tags=starter
 
 [ALLOW_VM_CRUFT]
 default=false
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Allow Vm Cruft
-review=?
-tags=starter,starter_common
-
-[EVENT_LIST]
-default=
-type=string
-reconfig=true
-customization=seldom
-friendly_name=Event List
-review=?
-tags=eventd,eventd
-
-[EVENTD_INTERVAL]
-default=900
-type=int
-reconfig=true
-customization=seldom
-friendly_name=Eventd Interval
-review=?
-tags=eventd,eventd
-
-[EVENTD_MAX_PREPARATION]
-default=0
-type=int
-reconfig=true
-customization=seldom
-friendly_name=Eventd Max Preparation
-review=?
-tags=eventd,eventd
-
-[EVENTD_SHUTDOWN_SLOW_START_INTERVAL]
-default=0
-type=int
-reconfig=true
-customization=seldom
-friendly_name=Eventd Shutdown Slow Start Interval
-review=?
-tags=eventd,scheduled_event
-
-[EVENTD_ROUTING_INFO]
-default=
-type=string
-reconfig=true
-customization=seldom
-friendly_name=Eventd Routing Info
-review=?
-tags=eventd,scheduled_event
-
-[EVENTD_CAPACITY_INFO]
-default=
-type=string
-reconfig=true
-customization=seldom
-friendly_name=Eventd Capacity Info
-review=?
-tags=eventd,scheduled_event
-
-[EVENTD_SIMULATE_SHUTDOWNS]
-default=
-type=string
-reconfig=true
-customization=seldom
-friendly_name=Eventd Simulate Shutdowns
-review=?
-tags=eventd,scheduled_event
-
-[UPDATE_INTERVAL]
-default=300
-type=int
-reconfig=true
-customization=seldom
-friendly_name=Update Interval
-review=?
-tags=eventd,scheduled_event
-
-[EVENTD_MIN_RESCHEDULE_INTERVAL]
-default=60
-type=int
-reconfig=true
-customization=seldom
-friendly_name=Eventd Min Reschedule Interval
-review=?
-tags=eventd,scheduled_event
-
-[EVENTD_SHUTDOWN_CLEANUP_INTERVAL]
-default=3600
-type=int
-reconfig=true
-customization=seldom
-friendly_name=Eventd Shutdown Cleanup Interval
-review=?
-tags=eventd,scheduled_event
+tags=starter
 
 [DAGMAN_LOG_ON_NFS_IS_ERROR]
 default=false
 type=bool
-reconfig=false
-customization=seldom
-friendly_name=Dagman Log On Nfs Is Error
-review=?
 tags=dagman,dagman_multi_dag
+restart=never
 
 [DAGMAN_RESET_RETRIES_UPON_RESCUE]
 default=true
 type=bool
-reconfig=false
-customization=seldom
-friendly_name=Dagman Reset Retries Upon Rescue
-review=?
 tags=dagman,dag
+restart=never
 
 [DAGMAN_INSERT_SUB_FILE]
 default=
 type=path
-reconfig=false
-customization=seldom
-friendly_name=Dagman Insert Sub File
-review=?
 tags=dagman,condor_submit_dag
+restart=never
 
 [DAGMAN_AUTO_RESCUE]
 default=true
 type=bool
-reconfig=false
-customization=seldom
-friendly_name=Dagman Auto Rescue
-review=?
 tags=dagman,condor_submit_dag
+restart=never
 
 [DAGMAN_ON_EXIT_REMOVE]
 default=(ExitSignal =?= 11 || (ExitCode =!= UNDEFINED && ExitCode >=0 && ExitCode <= 2))
 type=string
-reconfig=false
-customization=seldom
-friendly_name=Dagman On Exit Remove
-review=?
 tags=dagman,condor_submit_dag
+restart=never
 
 [DAGMAN_CONFIG_FILE]
 default=
 type=path
-reconfig=false
 customization=normal
-friendly_name=Dagman Config File
-review=?
 tags=dagman,dagman_main,condor_submit_dag
+restart=never
 
 [DAGMAN_DEBUG_CACHE_ENABLE]
 default=false
 type=bool
-reconfig=false
-customization=seldom
-friendly_name=Dagman Debug Cache Enable
-review=?
 tags=dagman,dagman_main
+restart=never
 
 [DAGMAN_STARTUP_CYCLE_DETECT]
 default=false
 type=bool
-reconfig=false
-customization=seldom
-friendly_name=Dagman Startup Cycle Detect
-review=?
 tags=dagman,dagman_main
+restart=never
 
 [DAGMAN_ALLOW_EVENTS]
 # XXX 114 is really CheckEvents::ALLOW_TERM_ABORT | CheckEvents::ALLOW_EXEC_BEFORE_SUBMIT | CheckEvents::ALLOW_DOUBLE_TERMINATE | CheckEvents::ALLOW_DUPLICATE_EVENTS
 default=114
 type=int
-reconfig=false
 customization=expert
-friendly_name=Dagman Allow Events
-review=?
 tags=dagman,dagman_main
+restart=never
 
 [DAGMAN_RETRY_SUBMIT_FIRST]
 default=true
 type=bool
-reconfig=false
-customization=seldom
-friendly_name=Dagman Retry Submit First
-review=?
 tags=dagman,dagman_main
+restart=never
 
 [DAGMAN_RETRY_NODE_FIRST]
 default=false
 type=bool
-reconfig=false
-customization=seldom
-friendly_name=Dagman Retry Node First
-review=?
 tags=dagman,dagman_main
+restart=never
 
 [DAGMAN_MUNGE_NODE_NAMES]
 default=true
 type=bool
-reconfig=false
 customization=expert
-friendly_name=Dagman Munge Node Names
-review=?
 tags=dagman,dagman_main
+restart=never
 
 [DAGMAN_PROHIBIT_MULTI_JOBS]
 default=false
 type=bool
-reconfig=false
-customization=seldom
-friendly_name=Dagman Prohibit Multi Jobs
-review=?
 tags=dagman,dagman_main
+restart=never
 
 [DAGMAN_SUBMIT_DEPTH_FIRST]
 default=false
 type=bool
-reconfig=false
 customization=normal
-friendly_name=Dagman Submit Depth First
-review=?
 tags=dagman,dagman_main
+restart=never
 
 [DAGMAN_CONDOR_SUBMIT_EXE]
 default=$(BIN)/condor_submit
 win32_default=$(BIN)\condor_submit.exe
 type=path
-reconfig=false
 customization=expert
-friendly_name=Dagman Condor Submit Exe
-review=?
 tags=dagman,dagman_main
+restart=never
 
 [DAGMAN_CONDOR_RM_EXE]
 default=$(BIN)/condor_rm
 win32_default=$(BIN)\condor_rm.exe
 type=path
-reconfig=false
 customization=expert
-friendly_name=Dagman Condor Rm Exe
-review=?
 tags=dagman,dagman_main
+restart=never
 
 [DAGMAN_ABORT_DUPLICATES]
 default=true
 type=bool
-reconfig=false
 customization=expert
-friendly_name=Dagman Abort Duplicates
-review=?
 tags=dagman,dagman_main
+restart=never
 
 [DAGMAN_ABORT_ON_SCARY_SUBMIT]
 default=true
 type=bool
-reconfig=false
 customization=expert
-friendly_name=Dagman Abort On Scary Submit
-review=?
 tags=dagman,dagman_main
+restart=never
 
 [DAGMAN_PENDING_REPORT_INTERVAL]
 default=600
 type=int
-reconfig=false
-customization=seldom
-friendly_name=Dagman Pending Report Interval
-review=?
 tags=dagman,dagman_main
+restart=never
 
 [MAX_DAGMAN_LOG]
 default=0
 type=int
-reconfig=false
-customization=seldom
-friendly_name=Max Dagman Log
-review=?
 tags=dagman,dagman_main
+restart=never
 
 [DAGMAN_ALLOW_LOG_ERROR]
 default=false
 type=bool
-reconfig=false
 customization=never
-friendly_name=Dagman Allow Log Error
-review=?
 tags=dagman,dagman_main
+restart=never
 
 [DAGMAN_ALWAYS_RUN_POST]
 default=false
 type=bool
-reconfig=false
-customization=seldom
-friendly_name=Dagman Always Run Post
-review=?
 tags=dagman,dagman_main
+restart=never
 
 [DAGMAN_COPY_TO_SPOOL]
 default=false
 type=bool
-reconfig=false
 customization=expert
-friendly_name=Dagman Copy To Spool
-review=?
 tags=dagman,dagman_main
+restart=never
 
 [DAGMAN_DEBUG]
 default=
 type=string
-reconfig=false
 customization=normal
-friendly_name=Dagman Debug
-review=?
 tags=dagman,dagman_main
+restart=never
+description=Debug log options for dagman
 
 [DAGMAN_DEBUG_CACHE_SIZE]
 default=5*1024*1024
 type=int
-reconfig=false
-customization=seldom
-friendly_name=Dagman Debug Cache Size
-review=?
 tags=dagman,dagman_main
+restart=never
 
 [DAGMAN_DEFAULT_NODE_LOG]
 default=@(DAG_DIR)/@(DAG_FILE).nodes.log
 type=path
-reconfig=false
-customization=seldom
-friendly_name=Dagman Default Node Log
-review=?
 tags=dagman,dagman_main
+restart=never
 
 [DAGMAN_DEFAULT_PRIORITY]
 default=0
 type=int
-reconfig=false
 customization=normal
-friendly_name=Dagman Default Priority
-review=?
 tags=dagman,dagman_main
+restart=never
 
 [DAGMAN_GENERATE_SUBDAG_SUBMITS]
 default=true
 type=bool
-reconfig=false
-customization=seldom
-friendly_name=Dagman Generate SubDAG Submits
-review=?
 tags=dagman,dagman_main
+restart=never
 
 [DAGMAN_HOLD_CLAIM_TIME]
 default=20
 type=int
-reconfig=false
 customization=normal
-friendly_name=Dagman Claim Hold Time
-review=?
 tags=dagman,dagman_main
+restart=never
 
 [DAGMAN_MAX_JOB_HOLDS]
 default=100
 type=int
-reconfig=false
-customization=seldom
-friendly_name=Dagman Max Job Holds
-review=?
 tags=dagman,dagman_main
+restart=never
 
 [DAGMAN_MAX_JOBS_IDLE]
 default=1000
 type=int
-reconfig=false
 customization=normal
-friendly_name=Dagman Max Jobs Idle
-review=?
 tags=dagman,dagman_main
+restart=never
 
 [DAGMAN_MAX_JOBS_SUBMITTED]
 default=0
 type=int
-reconfig=false
 customization=normal
-friendly_name=Dagman Max Jobs Submitted
-review=?
 tags=dagman,dagman_main
+restart=never
 
 [DAGMAN_MAX_POST_SCRIPTS]
 default=20
 type=int
-reconfig=false
 customization=normal
-friendly_name=Dagman Max Post Scripts
-review=?
 tags=dagman,dagman_main
+restart=never
 
 [DAGMAN_MAX_PRE_SCRIPTS]
 default=20
 type=int
-reconfig=false
 customization=normal
-friendly_name=Dagman Max Pre Scripts
-review=?
 tags=dagman,dagman_main
+restart=never
 
 [DAGMAN_MAX_RESCUE_NUM]
 default=100
 type=int
-reconfig=false
-customization=seldom
-friendly_name=Dagman Max Rescue Num
-review=?
 tags=dagman,dagman_main
+restart=never
 
 [DAGMAN_MAX_SUBMIT_ATTEMPTS]
 default=6
 type=int
-reconfig=false
-customization=seldom
-friendly_name=Dagman Max Submit Attempts
-review=?
 tags=dagman,dagman_main
+restart=never
 
 [DAGMAN_MAX_SUBMITS_PER_INTERVAL]
 default=5
 type=int
-reconfig=false
-customization=seldom
-friendly_name=Dagman Max Submits Per Interval
-review=?
 tags=dagman,dagman_main
+restart=never
 
 [DAGMAN_PEGASUS_REPORT_METRICS]
 default=$(LIBEXEC)/condor_dagman_metrics_reporter
 win32_default=$(BIN)\condor_dagman_metrics_reporter.exe
 type=path
-reconfig=false
 customization=expert
-friendly_name=Dagman Pegasus Report Metrics
-review=?
 tags=dagman,dagman_main
+restart=never
 
 [DAGMAN_PEGASUS_REPORT_TIMEOUT]
 default=100
 type=int
-reconfig=false
-customization=seldom
-friendly_name=Dagman Pegasus Report Timeout
-review=?
 tags=dagman,dagman_main
+restart=never
 
 [DAGMAN_REMOVE_NODE_JOBS]
 default=true
 type=bool
-reconfig=false
 customization=normal
-friendly_name=Dagman Remove Node Jobs
-review=?
 tags=dagman,dagman_main
+restart=never
 
 [DAGMAN_SUBMIT_DELAY]
 default=0
 type=int
-reconfig=false
-customization=seldom
-friendly_name=Dagman Submit Delay
-review=?
 tags=dagman,dagman_main
+restart=never
 
 [DAGMAN_SUPPRESS_JOB_LOGS]
 default=false
 type=bool
-reconfig=false
 customization=normal
-friendly_name=Dagman Suppress Job Logs
-review=?
 tags=dagman,dagman_main
+restart=never
 
 [DAGMAN_SUPPRESS_NOTIFICATION]
 default=true
 type=bool
-reconfig=false
 customization=normal
-friendly_name=Dagman Suppress Notification
-review=?
 tags=dagman,dagman_main
+restart=never
 
 [DAGMAN_USER_LOG_SCAN_INTERVAL]
 default=5
 type=int
-reconfig=false
-customization=seldom
-friendly_name=Dagman User Log Scan Interval
-review=?
 tags=dagman,dagman_main
+restart=never
 
 [DAGMAN_USE_STRICT]
 default=1
 type=int
-reconfig=false
 customization=normal
-friendly_name=Dagman Use Strict
-review=?
 tags=dagman,dagman_main
+restart=never
 
 [DAGMAN_VERBOSITY]
 default=3
 type=int
-reconfig=false
 customization=normal
-friendly_name=Dagman Verbosity
-review=?
 tags=dagman,dagman_main
+restart=never
 
 [DAGMAN_WRITE_PARTIAL_RESCUE]
 default=true
 type=bool
-reconfig=false
 customization=expert
-friendly_name=Dagman Write Partial Rescue
-review=?
 tags=dagman,dagman_main
+restart=never
 
 [CKPT_SERVER_DIR]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Ckpt Server Dir
-review=?
-tags=ckpt_server,server2
+tags=ckpt_server
 
 [CKPT_SERVER_REPLICATION_LEVEL]
 default=0
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Ckpt Server Replication Level
-review=?
-tags=ckpt_server,server2
+tags=ckpt_server
 
 [CKPT_SERVER_INTERVAL]
 default=300
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Ckpt Server Interval
-review=?
-tags=ckpt_server,server2
+tags=ckpt_server
 
 [CKPT_SERVER_CLASSAD_FILE]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Ckpt Server Classad File
-review=?
-tags=ckpt_server,server2
+tags=ckpt_server
 
 [CKPT_SERVER_CLEAN_INTERVAL]
 default=86400
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Ckpt Server Clean Interval
-review=?
-tags=ckpt_server,server2
+tags=ckpt_server
 
 [CKPT_SERVER_CHECK_PARENT_INTERVAL]
 default=120
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Ckpt Server Check Parent Interval
-review=?
-tags=ckpt_server,server2
+tags=ckpt_server
 
 [CKPT_SERVER_SOCKET_BUFSIZE]
 default=65536
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Ckpt Server Socket Bufsize
-review=?
-tags=ckpt_server,server2
+tags=ckpt_server
 
 [CKPT_SERVER_MAX_PROCESSES]
 default=50
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Ckpt Server Max Processes
-review=?
-tags=ckpt_server,server2
+tags=ckpt_server
 
 [CKPT_SERVER_MAX_STORE_PROCESSES]
 default=50
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Ckpt Server Max Store Processes
-review=?
-tags=ckpt_server,server2
+tags=ckpt_server
 
 [CKPT_SERVER_MAX_RESTORE_PROCESSES]
 default=50
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Ckpt Server Max Restore Processes
-review=?
-tags=ckpt_server,server2
+tags=ckpt_server
 
 [CKPT_SERVER_HOSTS]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Ckpt Server Hosts
-review=?
-tags=ckpt_server,server2
+tags=ckpt_server
 
 [LIBEXEC]
 default=$(RELEASE_DIR)/libexec
 win32_default=$(BIN)
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Libexec
-review=?
+tags=daemons
 
 [LOG]
 default=$(LOCAL_DIR)/log
 type=path
-reconfig=true
-customization=seldom
-friendly_name=Location of Log directory
-review=?
+description=Location of Log directory, used by other params
+tags=daemons
 
 [INCLUDE]
 default=$(RELEASE_DIR)/include
 type=path
-review=?
 
 [ETC]
 default=$(RELEASE_DIR)/etc
 type=path
-friendly_name=etc
 
 [XAUTHORITY_USERS]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Xauthority Users
-review=?
 tags=kbdd,XInterface
 
 [GROUP_NAMES]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Group Names
-review=?
-tags=accountant,Accountant
+tags=accountant
 
 [PRIORITY_HALFLIFE]
 default=86400
 range=0.00001,
 type=double
-reconfig=true
-customization=seldom
-friendly_name=Priority Halflife
-review=?
-tags=accountant,Accountant
+tags=accountant
 
 [NICE_USER_PRIO_FACTOR]
 default=1e10
 type=double
-reconfig=true
-customization=seldom
-friendly_name=Nice User Prio Factor
-review=?
-tags=accountant,Accountant
+tags=accountant
 
 [REMOTE_PRIO_FACTOR]
 default=1e7
 type=double
-reconfig=true
-customization=seldom
-friendly_name=Remote Prio Factor
-review=?
-tags=accountant,Accountant
+tags=accountant
 
 [DEFAULT_PRIO_FACTOR]
 default=1000
 type=double
-reconfig=true
-customization=seldom
-friendly_name=Default Prio Factor
-review=?
-tags=accountant,Accountant
+tags=accountant
 
 [ACCOUNTANT_LOCAL_DOMAIN]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Accountant Local Domain
-review=?
-tags=accountant,Accountant
+tags=accountant
 
 [MAX_ACCOUNTANT_DATABASE_SIZE]
 default=1000000
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Max Accountant Database Size
-review=?
-tags=accountant,Accountant
+tags=accountant
 
 [SPOOL]
 default=$(LOCAL_DIR)/spool
 type=path
-reconfig=true
-customization=seldom
-friendly_name=Spool
-review=?
-tags=accountant,Accountant
+tags=schedd,accountant
 
 [NEGOTIATOR_DISCOUNT_SUSPENDED_RESOURCES]
 default=false
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Negotiator Discount Suspended Resources
-review=?
-tags=accountant,Accountant
+tags=accountant
 
 [CONCURRENCY_LIMIT_DEFAULT]
 default=2308032
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Concurrency Limit Default
-review=?
-tags=accountant,Accountant
+tags=accountant
 
 [QUILL_ENABLED]
 default=false
 type=bool
-reconfig=true
 customization=devel
-friendly_name=Quill Enabled
-review=?
 tags=q,queue
 
 [QUILL_NAME]
 default=
 type=string
-reconfig=true
 customization=devel
-friendly_name=Quill Name
-review=?
 tags=q,queue
 
 [QUILL_DB_IP_ADDR]
 default=
 type=string
-reconfig=true
 customization=devel
-friendly_name=Quill Db Ip Addr
-review=?
 tags=q,queue
 
 [QUILL_DB_NAME]
 default=
 type=string
-reconfig=true
 customization=devel
-friendly_name=Quill Db Name
-review=?
 tags=q,queue
 
 [QUILL_DB_QUERY_PASSWORD]
 default=
 type=string
-reconfig=true
 customization=devel
-friendly_name=Quill Db Query Password
-review=?
 tags=q,queue
 
 [REAL_TIME_JOB_SUSPEND_UPDATES]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Real Time Job Suspend Updates
-review=?
 tags=q,queue
 
 [PREEMPTION_REQUIREMENTS]
 default=False
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Preemption Requirements
-review=?
 usage=Restrict when slots can be preempted for user priority
-tags=q,queue
+tags=matchmaker
 
 [GLEXEC_STARTER]
 default=false
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Glexec Starter
-review=?
 tags=shadow,remoteresource
 
 [SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION]
 default=true
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Sec Enable Match Password Authentication
-review=?
 tags=shadow,remoteresource
 
 [DELEGATE_JOB_GSI_CREDENTIALS]
 default=true
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Delegate Job Gsi Credentials
-review=?
 tags=shadow,remoteresource
 
 [USE_AFS]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Use Afs
-review=?
 tags=shadow,pseudo_ops
 
 [USE_NFS]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Use Nfs
-review=?
 tags=shadow,pseudo_ops
 
 [USE_CKPT_SERVER]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Use Ckpt Server
-review=?
 tags=shadow,baseshadow
 
 [ALWAYS_USE_LOCAL_CKPT_SERVER]
 default=false
 type=bool
-reconfig=false
-customization=seldom
-friendly_name=Always Use local Ckpt Server
-review=?
 tags=shadow,baseshadow
+restart=true
 
 [RECONNECT_BACKOFF_CEILING]
 default=300
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Reconnect Backoff Ceiling
-review=?
 tags=shadow,baseshadow
 
 [SHADOW_MAX_JOB_CLEANUP_RETRIES]
 default=5
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Shadow Max Job Cleanup Retries
-review=?
 tags=shadow,baseshadow
 
 [SHADOW_JOB_CLEANUP_RETRY_DELAY]
 default=30
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Shadow Job Cleanup Retry Delay
-review=?
 tags=shadow,baseshadow
 
 [SHADOW_LAZY_QUEUE_UPDATE]
 default=true
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Shadow Lazy Queue Update
-review=?
 tags=shadow,baseshadow
 
 [RESERVED_SWAP]
 default=0
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Reserved Swap
-review=?
 tags=shadow,baseshadow
 
 [QUILL_MANAGE_VACUUM]
 default=false
 type=bool
-reconfig=true
 customization=devel
-friendly_name=Quill Manage Vacuum
-review=?
 tags=quill,jobqueuedbmanager
 
 [QUILL_POLLING_PERIOD]
 default=10
 type=int
-reconfig=true
 customization=devel
-friendly_name=Quill Polling Period
-review=?
 tags=quill,jobqueuedbmanager
 
 [QUILL_HISTORY_DURATION]
 default=180
 type=int
-reconfig=true
 customization=devel
-friendly_name=Quill History Duration
-review=?
 tags=quill,jobqueuedbmanager
 
 [QUILL_HISTORY_CLEANING_INTERVAL]
 default=24
 type=int
-reconfig=true
 customization=devel
-friendly_name=Quill History Cleaning Interval
-review=?
 tags=quill,jobqueuedbmanager
 
 [QUILL_SHOULD_REINDEX]
 default=true
 type=bool
-reconfig=true
 customization=devel
-friendly_name=Quill Should Reindex
-review=?
 tags=quill,jobqueuedbmanager
 
 [SCHEDD_NAME]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Schedd Name
-review=?
 tags=quill,jobqueuedbmanager
 
 [QUILL_IS_REMOTELY_QUERYABLE]
 default=true
 type=bool
-reconfig=true
 customization=devel
-friendly_name=Quill Is Remotely Queryable
-review=?
 tags=quill,jobqueuedbmanager
 
 [COUNT_HYPERTHREAD_CPUS]
 default=true
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Count Hyperthread Cpus
-review=?
-tags=sysapi,test
+tags=startd
+description=DETECTED_CPUS should count hyperthreads as CPUs
+customization=normal
 
 # we expect this to be overwritten by the config system, this is here just in case and to save space
 [DETECTED_CPUS]
 default=1
 type=int
-reconfig=false
-customization=devel
+customization=never
 usage=Number of detected cpus, includes hyperthreads if COUNT_HYPERTHREAD_CPUS
 tags=
 
 [DETECTED_PHYSICAL_CPUS]
 default=1
 type=int
-reconfig=false
-customization=devel
+customization=never
 usage=Number of detected cpus. does not include hyperthreads
 
 [DETECTED_CORES]
 default=1
 type=int
-reconfig=false
-customization=devel
+customization=never
 usage=Number of detected cpus. does not include hyperthreads
 
 [NUM_CPUS]
 default=$(DETECTED_CPUS)
 type=int
-reconfig=true
 customization=normal
 usage=Number of CPUs to provision in the startd
-tags=sysapi,reconfig
+tags=startd
 
 [CONSOLE_DEVICES]
 default=mouse, console
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Console Devices
-review=?
-usage="/dev/" portion of the pathname.
-tags=sysapi,reconfig
+usage='/dev/' portion of the pathname.
+tags=startd
 
 [SLOTS_CONNECTED_TO_CONSOLE]
 default=$(NUM_CPUS)
 type=string
-reconfig=false
-customization=seldom
-friendly_name=slots above this number do not have ConsoleIdle updated
+description=Slots above this number do not have ConsoleIdle updated
 tags=startd
+restart=true
 
 [SLOTS_CONNECTED_TO_KEYBOARD]
 default=$(NUM_CPUS)
 type=string
-reconfig=false
-customization=seldom
-friendly_name=slots above this number do not have KeyboardIdle updated
+description=Slots above this number do not have KeyboardIdle updated
 tags=startd
+restart=true
 
 [STARTD_HAS_BAD_UTMP]
 # XXX This should be a bool
 default=0
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Startd Has Bad Utmp
-review=?
 tags=sysapi,reconfig
 
 [RESERVE_AFS_CACHE]
 default=false
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Reserve Afs Cache
-review=?
 tags=sysapi,reconfig
 
 [CHECKPOINT_PLATFORM]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Checkpoint Platform
-review=?
 tags=sysapi,reconfig
 
 [SYSAPI_GET_LOADAVG]
 default=1
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Sysapi Get Loadavg
-review=?
 tags=sysapi,reconfig
 
 [CKPT_PROBE]
 default=$(LIBEXEC)/condor_ckpt_probe
 win32_default=$(LIBEXEC)\condor_ckpt_probe.exe
 type=path
-reconfig=true
-customization=seldom
-friendly_name=Ckpt Probe
-review=?
 
 [RELEASE_DIR]
 default=/tmp/condorinstall0
 win32_default=c:\condor
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Release Dir
 usage=Where have you installed the bin, sbin and lib condor directories?
-review=?
 
 [PRIVSEP_ENABLED]
 default=false
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Privsep Enabled
-review=?
 tags=privsep,privsep_client.WINDOWS
 
 [PRIVSEP_SWITCHBOARD]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Privsep Switchboard
-review=?
 tags=privsep,privsep_client.UNIX
 
 [HAD_USE_PRIMARY]
 default=false
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Had Use Primary
-review=?
 tags=had,StateMachine
 
 [HAD_LIST]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Had List
-review=?
 tags=had,StateMachine
 
 [HAD_STAND_ALONE_DEBUG]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Had Stand Alone Debug
-review=?
 tags=had,StateMachine
 
 [HAD_CONNECTION_TIMEOUT]
 default=5
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Had Connection Timeout
-review=?
 tags=had,StateMachine
 
 [HAD_USE_REPLICATION]
 default=false
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Had Use Replication
-review=?
 tags=had,StateMachine
 
 [HAD_UPDATE_INTERVAL]
 default=300
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Had Update Interval
-review=?
 tags=had,StateMachine
 
 [REPLICATION_LIST]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Replication List
-review=?
 tags=had,StateMachine
 
 [NEGOTIATOR_STATE_FILE]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Negotiator State File
-review=?
 tags=had,AbstractReplicatorStateMachine
 
 [MAX_TRANSFER_LIFETIME]
 default=300
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Max Transfer Lifetime
-review=?
 tags=had,BaseReplicaTransferer
 
 [STARTD_FACTORY_SCRIPT_AVAILABLE_PARTITIONS]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Startd Factory Script Available Partitions
-review=?
-tags=startd_factory,startd_factory
+tags=startd_factory
 
 [STARTD_FACTORY_SCRIPT_QUERY_WORK_LOADS]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Startd Factory Script Query Work Loads
-review=?
-tags=startd_factory,startd_factory
+tags=startd_factory
 
 [STARTD_FACTORY_SCRIPT_GENERATE_PARTITION]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Startd Factory Script Generate Partition
-review=?
-tags=startd_factory,startd_factory
+tags=startd_factory
 
 [STARTD_FACTORY_SCRIPT_DESTROY_PARTITION]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Startd Factory Script Destroy Partition
-review=?
-tags=startd_factory,startd_factory
+tags=startd_factory
 
 [STARTD_FACTORY_SCRIPT_BOOT_PARTITION]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Startd Factory Script Boot Partition
-review=?
-tags=startd_factory,startd_factory
+tags=startd_factory
 
 [STARTD_FACTORY_SCRIPT_SHUTDOWN_PARTITION]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Startd Factory Script Shutdown Partition
-review=?
-tags=startd_factory,startd_factory
+tags=startd_factory
 
 [STARTD_FACTORY_SCRIPT_BACK_PARTITION]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Startd Factory Script Back Partition
-review=?
-tags=startd_factory,startd_factory
+tags=startd_factory
 
 [MAX_TIME_SKIP]
 default=1200
 range=0,
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Max seconds system clock can skip without a restart
-review=?
+description=Max seconds system clock can skip without a restart
 tags=daemon_core
 
 [ENABLE_SOAP_SSL]
 default=false
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Enable Soap Ssl
-review=?
 tags=daemon_core,soap_core
 
 [SOAP_SSL_SERVER_KEYFILE]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Soap Ssl Server Keyfile
-review=?
 
 [SOAP_SSL_SERVER_KEYFILE_PASSWORD]
 default=96hoursofmattslife
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Soap Ssl Server Keyfile Password
-review=?
 tags=daemon_core,soap_core
 
 [SOAP_SSL_CA_FILE]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Soap Ssl Ca File
-review=?
 tags=daemon_core,soap_core
 
 [SOAP_SSL_CA_DIR]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Soap Ssl Ca Dir
-review=?
 tags=daemon_core,soap_core
 
 [SOAP_SSL_DH_FILE]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Soap Ssl Dh File
-review=?
 tags=daemon_core,soap_core
 
 [SOAP_SSL_SKIP_HOST_CHECK]
 default=false
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Soap Ssl Skip Host Check
-review=?
-tags=daemon_core,daemon_core
+tags=daemon_core
 
 [WEB_ROOT_DIR]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Web Root Dir
-review=?
 tags=daemon_core,soap_core
 
 [PID_SNAPSHOT_INTERVAL]
 default=15
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Pid Snapshot Interval
-review=?
 tags=daemon_core,HookClientMgr
 
 [MASTER.PID_SNAPSHOT_INTERVAL]
 default=60
 type=int
-friendly_name=Master Pid Snapshot Interval
+description=Pid Snapshot Interval for the Master
+tags=daemon_core
 
 [SEC_DEBUG_PRINT_KEYS]
 default=false
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Sec Debug Print Keys
-review=?
-tags=daemon_core,daemon_core
+tags=daemon_core
 
 [SEC_DEFAULT_AUTHENTICATION_TIMEOUT]
 default=20
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Default timeout for all authentication methods
+description=Default timeout for all authentication methods
 tags=daemon_core,security
 
 [WANT_UDP_COMMAND_SOCKET]
 default=true
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Want Udp Command Socket
-review=?
-tags=daemon_core,daemon_core
+tags=daemon_core
 
 [NETWORK_MAX_PENDING_CONNECTS]
 default=0
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Network Max Pending Connects
-review=?
-tags=daemon_core,daemon_core
+tags=daemon_core
 
 [TCP_FORWARDING_HOST]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Tcp Forwarding Host
-review=?
-tags=daemon_core,daemon_core
+tags=daemon_core
 
 [PRIVATE_NETWORK_INTERFACE]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Private Network Interface
-review=?
-tags=daemon_core,daemon_core
+tags=daemon_core
 
 [PRIVATE_NETWORK_NAME]
 default=$(FULL_HOSTNAME)
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Private Network Name
-review=?
-tags=daemon_core,daemon_core
+tags=daemon_core
 
 [USE_CLONE_TO_CREATE_PROCESSES]
 default=true
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Use Clone To Create Processes
-review=?
-tags=daemon_core,daemon_core
+tags=daemon_core
 
 [SEC_INVALIDATE_SESSIONS_VIA_TCP]
 default=true
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Sec Invalidate Sessions Via Tcp
-review=?
-tags=daemon_core,daemon_core
+tags=daemon_core
 
 [ENABLE_SOAP]
 default=false
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Enable Soap
-review=?
-tags=daemon_core,daemon_core
+tags=daemon_core
 
 [ENABLE_WEB_SERVER]
 default=false
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Enable Web Server
-review=?
-tags=daemon_core,daemon_core
+tags=daemon_core
 
 [CERTIFICATE_MAPFILE]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Certificate Mapfile
-review=?
-tags=daemon_core,daemon_core
+tags=daemon_core
 
 [USER_MAPFILE]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=User Mapfile
-review=?
-tags=daemon_core,daemon_core
+tags=daemon_core
 
 [NOT_RESPONDING_TIMEOUT]
 default=3600
 range=1,
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Not Responding Timeout
-review=?
-tags=daemon_core,daemon_core
+tags=daemon_core
 
 [ENABLE_STDOUT_TESTING]
 default=false
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Enable Stdout Testing
-review=?
-tags=daemon_core,daemon_core
+tags=daemon_core
 
 [EXCEPT_ON_ERROR]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Except On Error
-review=?
-tags=daemon_core,daemon_core
+tags=daemon_core
 
 [DISABLE_AUTHENTICATION_IP_CHECK]
 default=false
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Disable Authentication Ip Check
-review=?
-tags=daemon_core,daemon_core
+tags=daemon_core
 
 [SEC_SESSION_DURATION_SLOP]
 default=20
 range=0,
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Sec Session Duration Slop
-review=?
-tags=daemon_core,daemon_core
+tags=daemon_core
 
 [GLEXEC_JOB]
 default=false
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Glexec Job
-review=?
-tags=daemon_core,daemon_core
+tags=daemon_core
 
 [GLEXEC_HOLD_ON_INITIAL_FAILURE]
 default=true
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Glexec Hold on Initial Failure
-review=?
-tags=daemon_core,daemon_core
+tags=daemon_core
 
 [WINDOWS_SOFTKILL]
 default=
 win32_default=$(SBIN)\condor_softkill.exe
 type=path
-reconfig=true
-customization=seldom
-friendly_name=Windows Softkill
-review=?
-tags=daemon_core,daemon_core
+tags=daemon_core
 
 [WINDOWS_RMDIR]
 default=
 win32_default=$(SBIN)\condor_rmdir.exe
-friendly_name=Agressive directory removal for Windows
+description=Path to binary that does recursive directory removal for Windows
 type=path
 
 [USE_PROCESS_GROUPS]
 default=true
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Use Process Groups
-review=?
-tags=daemon_core,daemon_core
+tags=daemon_core
 
 [USE_VISIBLE_DESKTOP]
 default=false
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Use Visible Desktop
-review=?
-tags=daemon_core,daemon_core
+tags=daemon_core,Windows
 
 [MAX_PID_COLLISION_RETRY]
 default=9
 range=0,
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Max Pid Collision Retry
-review=?
-tags=daemon_core,daemon_core
+tags=daemon_core
 
 [COLLECTOR_SOCKET_BUFSIZE]
 default=10000*1024
 type=int
 range=1024,
-reconfig=false
-customization=seldom
-friendly_name=Collector read buffer size for incoming UDP traffic
-review=?
-tags=daemon_core,daemon_core,collector
+description=Collector read buffer size for incoming UDP traffic
+tags=daemon_core,collector
+restart=true
 
 [PIPE_BUFFER_MAX]
 default=10240
 type=int
-reconfig=false
-customization=seldom
-friendly_name=Maximum buffer size for stdout/err pipes
-tags=daemon_core,daemon_core
+description=Maximum buffer size for stdout/err pipes
+tags=daemon_core
+restart=true
 
 [TOUCH_LOG_INTERVAL]
 default=60
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Touch Log Interval
-review=?
-tags=daemon_core,daemon_core_main
+tags=daemon_core
 
 [BIN]
 default=$(RELEASE_DIR)/bin
 win32_default=$(RELEASE_DIR)\bin
 type=path
-reconfig=true
-customization=seldom
-friendly_name=Bin
-review=?
-tags=daemon_core,daemon_core_main
+description=Path to directory of HTCondor tools
+tags=daemons
 
 [CREATE_CORE_FILES]
 default=true
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Create Core Files
-review=?
-tags=daemon_core,daemon_core_main
+tags=daemons
 
 [CORE_FILE_NAME]
 default=core.$(SUBSYSTEM)
 win32_default=core.$(SUBSYSTEM).WIN32
 type=string
 usage=filename (not path) for daemon core files
-review=?
-tags=daemon_core
+tags=daemons
 
 [DROP_CORE_ON_RECONFIG]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Drop Core On Reconfig
-review=?
-tags=daemon_core,daemon_core_main
+tags=daemons
 
 [SHUTDOWN_GRACEFUL_TIMEOUT]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Shutdown Graceful Timeout
-review=?
-tags=daemon_core,daemon_core_main
+tags=daemons
 
 [QUILL_USE_SQL_LOG]
 default=false
 type=bool
-reconfig=true
 customization=devel
-friendly_name=Quill Use Sql Log
-review=?
-tags=daemon_core,daemon_core_main
+tags=daemon_core
 
 [COLLECTOR_NAME]
 default=My Pool - $(CONDOR_HOST)
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Collector Name
 usage=the UW-Madison Computer Science Condor Pool is ``UW-Madison CS''.
-review=?
-tags=collector,collector
+tags=collector
 
 [COLLECTOR_UPDATE_INTERVAL]
 default=900
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Collector Update Interval
-review=?
-tags=collector,collector
+tags=collector
 
 [CONDOR_VIEW_HOST]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Condor View Host
-review=?
-tags=collector,collector
+tags=collector
 
 [CONDOR_VIEW_CLASSAD_TYPES]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Condor View Classad Types
-review=?
-tags=collector,collector
+tags=collector
 
 [COLLECTOR_STATS_SWEEP]
 default=14400
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Collector Stats Sweep
-review=?
-tags=collector,collector
+tags=collector
 
 [CONDOR_ADMIN]
 default=root@$(FULL_HOSTNAME)
 type=string
-reconfig=true
 customization=normal
-friendly_name=HTCondor sends email to this address on pool failure
-review=?
-tags=collector,collector
+description=HTCondor sends email to this address on pool failure
+tags=collector
 
 [COLLECTOR_REPEAT_STARTD_ADS]
 default=0
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Collector Repeat Startd Ads
-review=?
-tags=collector,collector_engine
+tags=collector
 
 [KEEP_POOL_HISTORY]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Keep Pool History
-review=?
 tags=collector,view_server
 
 [POOL_HISTORY_SAMPLING_INTERVAL]
 default=60
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Pool History Sampling Interval
-review=?
 tags=collector,view_server
 
 [POOL_HISTORY_MAX_STORAGE]
 default=10000000
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Pool History Max Storage
-review=?
 tags=collector,view_server
 
 [POOL_HISTORY_DIR]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Pool History Dir
-review=?
 tags=collector,view_server
 
 [LOCAL_DIR]
 default=$(TILDE)
 win32_default=$(RELEASE_DIR)
 type=string
-reconfig=true
-customization=NORMAL
-friendly_name=Local Dir
-review=?
-tags=collector,view_server
+customization=normal
+tags=daemons
 
 [CRED_SUPER_USERS]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Cred Super Users
-review=?
-tags=credd,credd
+tags=credd
 
 [CREDD_HOST]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Credd Host
-review=?
 tags=credd,win_credd
 
-[STRING]
+[DEAD.STRING]
 default=input
 type=string
-reconfig=true
 customization=devel
-friendly_name=String
-review=?
 tags=unit_tests,FTEST_string_to_port
 
-[IP]
+[DEAD.IP]
 default=input
 type=string
-reconfig=true
 customization=devel
-friendly_name=Ip
-review=?
 tags=unit_tests,FTEST_string_to_ip
 
-[HOST]
+[DEAD.HOST]
 default=input_host
 type=string
-reconfig=true
 customization=devel
-friendly_name=Host
-review=?
 tags=unit_tests,FTEST_host_in_domain
 
-[DOMAIN]
+[DEAD.DOMAIN]
 default=input_domain
 type=string
-reconfig=true
 customization=devel
-friendly_name=Domain
-review=?
 tags=unit_tests,FTEST_host_in_domain
 
-[SINFUL]
+[DEAD.SINFUL]
 default=input
 type=string
-reconfig=true
 customization=devel
-friendly_name=Sinful
-review=?
 tags=unit_tests,FTEST_is_valid_sinful
 
 [GRIDMANAGER_GAHPCLIENT_DEBUG]
 default=true
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Gridmanager Gahpclient Debug
-review=?
 tags=gridmanager,gahp-client
 
 [GRIDMANAGER_GAHPCLIENT_DEBUG_SIZE]
 default=0
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Gridmanager Gahpclient Debug Size
-review=?
 tags=gridmanager,gahp-client
 
 [GAHP_DEBUG_HIDE_SENSITIVE_DATA]
 default=true
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Gahp Debug Hide Sensitive Data
-review=?
 tags=gridmanager,gahp-client
 
 [GRIDMANAGER_MAX_PENDING_REQUESTS]
 default=50
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Gridmanager Max Pending Requests
-review=?
 tags=gridmanager,gahp-client
 
 [GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE_EC2]
@@ -2591,408 +1529,235 @@ type=int
 [GAHP]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Gahp
-review=?
 tags=gridmanager,gahp-client
 
 [GAHP_ARGS]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Gahp Args
-review=?
 tags=gridmanager,gahp-client
 
 [GLITE_LOCATION]
 default=$(LIBEXEC)/glite
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Glite Location
-review=?
 tags=gridmanager,gahp-client
 
 [BATCH_GAHP]
 default=$(GLITE_LOCATION)/bin/batch_gahp
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Batch Gahp
-review=?
 tags=gridmanager,infnbatchjob
 
 [REMOTE_GAHP]
 default=$(SBIN)/remote_gahp
 win32_default=$(SBIN)\remote_gahp.exe
 type=path
-reconfig=true
-customization=seldom
-friendly_name=Remote Gahp
-review=?
 tags=gridmanager,infnbatchjob
 
 [NORDUGRID_GAHP]
 default=$(SBIN)/nordugrid_gahp
 win32_default=$(SBIN)\nordugrid_gahp.exe
 type=path
-reconfig=true
-customization=seldom
-friendly_name=Nordugrid Gahp
-review=?
 tags=gridmanager,nordugridjob
 
 [FULL_HOSTNAME]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Full Hostname
-review=?
 tags=gridmanager,nordugridjob
 
 [GRIDMANAGER_CONTACT_SCHEDD_DELAY]
 default=5
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Gridmanager Contact Schedd Delay
-review=?
 tags=gridmanager,gridmanager
 
 [JOB_PROXY_OVERRIDE_FILE]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Job Proxy Override File
-review=?
 tags=gridmanager,proxymanager
 
 [GRIDMANAGER_PROXY_REFRESH_TIME]
 default=21600
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Gridmanager Proxy Refresh Time
-review=?
 tags=gridmanager,proxymanager
 
 [CONDOR_GAHP]
 default=$(SBIN)/condor_c-gahp
 win32_default=$(SBIN)\condor_c-gahp.exe
 type=path
-reconfig=true
-customization=seldom
-friendly_name=Condor Gahp
-review=?
 tags=gridmanager,condorresource
 
 [JAVA_EXTRA_ARGUMENTS]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Java Extra Arguments
-review=?
 tags=gridmanager,unicore_gahp_wrapper
 
 [GRIDMANAGER_CONNECT_FAILURE_RETRY_COUNT]
 default=3
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Gridmanager Connect Failure Retry Count
-review=?
 tags=gridmanager,globusjob
 
 [PERIODIC_EXPR_INTERVAL]
 default=300
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Periodic Expr Interval
-review=?
 tags=gridmanager,basejob
 
 [ENABLE_GRID_MONITOR]
 default=true
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Enable Grid Monitor
-review=?
 tags=gridmanager,globusjob
 
 [GRIDMANAGER_JM_EXIT_LIMIT]
 default=30
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Gridmanager Jm Exit Limit
-review=?
 tags=gridmanager,globusjob
 
 [GRIDMANAGER_CONNECT_FAILURE_RETRY_INTERVAL]
 default=5
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Gridmanager Connect Failure Retry Interval
-review=?
 tags=gridmanager,globusjob
 
 [GRIDSHELL]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Gridshell
-review=?
 tags=gridmanager,globusjob
 
 [GRIDMANAGER_GLOBUS_COMMIT_TIMEOUT]
 default=600
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Gridmanager Globus Commit Timeout
-review=?
 tags=gridmanager,globusjob
 
 [GRIDMANAGER_MAX_PENDING_SUBMITS_PER_RESOURCE]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Gridmanager Max Pending Submits Per Resource
-review=?
 tags=gridmanager,baseresource
 
 [GRIDMANAGER_MAX_PENDING_SUBMITS]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Gridmanager Max Pending Submits
-review=?
 tags=gridmanager,baseresource
 
 [GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE]
 default=1000
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Gridmanager Max Submitted Jobs Per Resource
-review=?
 tags=gridmanager,baseresource
 
 [GRIDMANAGER_GAHP_CALL_TIMEOUT_CONDOR]
 default=28800
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Gridmanager Gahp Call Timeout Condor
-review=?
 tags=gridmanager,condorjob
 
 [GRIDMANAGER_GAHP_RESPONSE_TIMEOUT]
 default=20
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Gridmanager Gahp Response Timeout
-review=?
 tags=gridmanager,gahp-client
 
 [CONDORC_ATTRS_TO_COPY]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Condorc Attrs To Copy
-review=?
 tags=gridmanager,condorjob
 
 [CREAM_GAHP]
 default=$(SBIN)/cream_gahp
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Cream Gahp
-review=?
 tags=gridmanager,creamjob
 
 [COLLECTOR_HOST]
 default=$(CONDOR_HOST)
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Collector Host
-review=?
 tags=gridmanager
 
 # The STARTD_ATTRS entry allows you to have the startd advertise arbitrary attributes from the config file into it's ClassAd
 [STARTD_ATTRS]
 default=
-friendly_name=Attibutes from config file to insert into STARTD ads
-review=?
+description=Names of attibutes from config file to insert into STARTD ads
 
 # support the "$$(COLLECTOR_HOST)" syntax in the submit file
 [COLLECTOR_HOST_STRING]
 default="$(COLLECTOR_HOST)"
-review=?
 [SYSTEM_STARTD_ATTRS]
 default=COLLECTOR_HOST_STRING DedicatedScheduler
-friendly_name=configuration attibutes that HTCondor needs to insert into STARTD ads
-review=?
+description=Configuration attibutes that HTCondor needs to insert into STARTD ads
+customization=devel
 
 [UNICORE_GAHP]
 default=$(SBIN)/unicore_gahp
 win32_default=$(SBIN)\unicore_gahp.exe
 type=path
-reconfig=true
-customization=seldom
-friendly_name=Unicore Gahp
-review=?
 tags=gridmanager,unicorejob
 
 [GRIDMANAGER_MAX_JOBMANAGERS_PER_RESOURCE]
 default=10
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Gridmanager Max Jobmanagers Per Resource
-review=?
 tags=gridmanager,globusresource
 
 [GRID_MONITOR_HEARTBEAT_TIMEOUT]
 default=300
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Grid Monitor Heartbeat Timeout
-review=?
 tags=gridmanager,globusresource
 
 [GRID_MONITOR_RETRY_DURATION]
 default=900
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Grid Monitor Retry Duration
-review=?
 tags=gridmanager,globusresource
 
 [GRID_MONITOR]
 default=$(SBIN)/grid_monitor
 win32_default=$(SBIN)\grid_monitor.exe
 type=path
-reconfig=true
-customization=seldom
-friendly_name=Grid Monitor
-review=?
 tags=gridmanager,globusresource
 
 [NO_DNS]
 default=false
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=No Dns
-review=?
 
 [NETWORK_HOSTNAME]
 default=
 type=string
-reconfig=false
-customization=seldom
-friendly_name=Network Hostname
-review=?
+restart=true
 
 [NETWORK_INTERFACE]
 default=*
 type=string
-reconfig=false
-customization=seldom
-friendly_name=Network Interface
-review=?
+restart=true
 
 [DEFAULT_DOMAIN_NAME]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Default Domain Name
-review=?
 
 [OUT_LOWPORT]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Out Lowport
-review=?
 
 [IN_LOWPORT]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=In Lowport
-review=?
 
 [CRED_MIN_TIME_LEFT]
 default=120
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Cred Min Time Left
-review=?
 
 [ALL_DEBUG]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=All Debug
-review=?
+description=Options for all debug logs
+usage=Enable optional formatting or message categories for all debug logs
 
 [LOGS_USE_TIMESTAMP]
 default=false
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Logs Use Timestamp
-review=?
 
 [FILE_LOCK_VIA_MUTEX]
 default=true
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=File Lock Via Mutex
-review=?
 
 [IGNORE_NFS_LOCK_ERRORS]
 default=false
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Ignore Nfs Lock Errors
-review=?
 
 [SENDMAIL]
 # default location for mail on RHEL is /bin/mail, default on debian is /usr/bin/mail
 default=sendmail
 win32_default=
 type=path
-reconfig=true
-customization=seldom
-friendly_name=Path to sendmail
-review=?
+description=Path to sendmail
 tags=MAIL,
 
 [MAIL]
@@ -3000,452 +1765,268 @@ tags=MAIL,
 default=/bin/mail
 win32_default=$(BIN)\condor_mail.exe
 type=path
-reconfig=true
-customization=seldom
-friendly_name=Mail
-review=?
 tags=MAIL,
 
 [SMTP_SERVER]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Smtp Server
-review=?
 
 [CONDOR_SUPPORT_EMAIL]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Condor Support Email
-review=?
 
 [STARTD_RESOURCE_PREFIX]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Startd Resource Prefix
-review=?
 tags=startd,Resource
 
 [STARTD_JOB_HOOK_KEYWORD]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Startd Job Hook Keyword
-review=?
 tags=startd,Resource
 
 [STARTER_LIST]
 default=STARTER, STARTER_STANDARD
 win32_default=STARTER
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Starter List
-review=?
 tags=startd,starter_mgr
 
 [SBIN]
 default=$(RELEASE_DIR)/sbin
 win32_default=$(BIN)
-type=string
-reconfig=true
-customization=seldom
-friendly_name=Sbin
-review=?
+type=path
 tags=startd,starter_mgr
 
 [GLEXEC]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Glexec
-review=?
 tags=startd,glexec_starter
 
 [GLEXEC_USER_DIR]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Glexec User Dir
-review=?
 tags=startd,command
 
 [STARTD_SENDS_ALIVES]
 default=peer
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Startd Sends Alives
-review=?
 tags=startd,command
 
 [STARTER_HANDLES_ALIVES]
 default=true
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Startd should only send alives when slot idle
-review=?
+description=Startd should only send alives when slot idle
 tags=schedd,claim
 
 [VM_GAHP_CONFIG]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Vm Gahp Config
-review=?
 tags=startd,vmuniverse_mgr
 
 [VM_MAX_NUMBER]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Vm Max Number
-review=?
 tags=startd,vmuniverse_mgr
 
 [VM_MEMORY]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Vm Memory
-review=?
 tags=startd,vmuniverse_mgr
 
 [VM_RECHECK_INTERVAL]
 default=600
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Vm Recheck Interval
-review=?
 tags=startd,vmuniverse_mgr
 
 [LOCK]
 default=$(LOG)
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Lock
-review=?
 tags=startd,Starter
 
 [VM_KILLING_TIMEOUT]
 default=60
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Vm Killing Timeout
-review=?
 tags=startd,Starter
 
 [RunBenchmarks]
 default=LastBenchmark == 0
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Expression that when true, causes the STARTD to run benchmarks
-review=?
+description=Expression that when true, causes the STARTD to run benchmarks
 tags=startd,startd_main
 
 [POLLING_INTERVAL]
 default=5
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Polling Interval
-review=?
 tags=startd,startd_main
 
 [ACCOUNTANT_HOST]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Accountant Host
-review=?
 tags=startd,startd_main
 
 [MATCH_TIMEOUT]
 default=120
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Match Timeout
-review=?
 tags=startd,startd_main
 
 [KILLING_TIMEOUT]
 default=30
 range=0,
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Killing Timeout
-review=?
 tags=startd,startd_main
 
 [MAX_CLAIM_ALIVES_MISSED]
 default=6
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Max Claim Alives Missed
-review=?
 tags=startd,startd_main
 
 [SYSTEM_STARTD_JOB_ATTRS]
 default=ImageSize, ExecutableSize, JobUniverse, NiceUser
 type=string
-reconfig=true
-customization=never
-friendly_name=Job Attributes that must be copied into the STARTD ad for HTCondor to work correctly
-review=?
+customization=devel
+description=Job Attributes that must be copied into the STARTD ad for HTCondor to work correctly
 tags=startd,startd_main
 
 [STARTD_JOB_ATTRS]
 default=
 type=string
-reconfig=true
 customization=normal
-friendly_name=Job Attributes to copy into the STARTD ad
-review=?
+description=Job Attributes to copy into the STARTD ad
 tags=startd,startd_main
 
 [STARTD_SLOT_ATTRS]
 default=
 type=string
-reconfig=true
 customization=normal
-friendly_name=Startd Slot Attrs
-review=?
+description=Names of Attributes that should be cross-posted from each Startd slot to all of the other slots
 tags=startd,startd_main
 
 [SYSTEM_STARTD_SLOT_ATTRS]
 default=
 type=string
-reconfig=true
-customization=never
-friendly_name=Startd Slot Attrs needed by HTCondor
-review=?
+customization=devel
+description=Startd Slot Attrs needed by HTCondor
 tags=startd,startd_main
 
 [STARTD_SLOT_EXPRS]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Obsolete name for startd Slot Attrs
-review=?
+description=Obsolete name for startd Slot Attrs
 tags=startd,startd_main
 
 [KEYBOARD_CPUS]
 default=1
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Keyboard Cpus
-review=?
 tags=startd,startd_main
 
 [DISCONNECTED_KEYBOARD_IDLE_BOOST]
 default=1200
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Disconnected Keyboard Idle Boost
-review=?
 tags=startd,startd_main
 
 [STARTD_NOCLAIM_SHUTDOWN]
 default=0
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Startd Noclaim Shutdown
-review=?
 tags=startd,startd_main
 
 [STARTD_COMPUTE_AVAIL_STATS]
 default=false
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Startd Compute Avail Stats
-review=?
 tags=startd,startd_main
 
 [STARTD_NAME]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Startd Name
-review=?
 tags=startd,startd_main
 
 [VALID_COD_USERS]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Valid Cod Users
-review=?
 tags=startd,startd_main
 
 [VMP_HOST_MACHINE]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Vmp Host Machine
-review=?
 tags=startd,startd_main
 
 [VMP_VM_LIST]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Vmp Vm List
-review=?
 tags=startd,startd_main
 
 [STARTD_MAX_AVAIL_PERIOD_SAMPLES]
 default=100
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Startd Max Avail Period Samples
-review=?
 tags=startd,AvailStats
 
 [STARTD_SHOULD_WRITE_CLAIM_ID_FILE]
 default=true
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Startd Should Write Claim Id File
-review=?
 tags=startd,claim
 
 [START]
 default=True
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Start
-review=?
 tags=startd,Reqexp
 
 [IS_VALID_CHECKPOINT_PLATFORM]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Is Valid Checkpoint Platform
-review=?
 tags=startd,Reqexp
 
 [ENABLE_BACKFILL]
 default=false
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Enable Backfill
-review=?
 tags=startd,ResMgr
 
 [BACKFILL_SYSTEM]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Backfill System
-review=?
 tags=startd,ResMgr
 
 [MAX_VIRTUAL_MACHINE_TYPES]
 default=10
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Max Virtual Machine Types
-review=?
 tags=startd,ResMgr
 
 [MAX_SLOT_TYPES]
 default=10
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Max Slot Types
-review=?
 tags=startd,ResMgr
 
 [STARTD_CRON_NAME]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Obsolete Startd Cron Name
-review=?
+description=Obsolete Startd Cron Name
 tags=startd,startd_cronmgr
 
 [STARTD_CRON_AUTOPUBLISH]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Startd Cron Autopublish
-review=?
 tags=startd,startd_cronmgr
 
 [CLASSAD_USER_LIBS]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Classad Lib Path
-review=?
+description=Classad Lib Path
 tags=classad,ast
 
 [CLASSAD_USER_PYTHON_LIB]
 default=$(LIBEXEC)/libclassad_python_user.so
 type=string
-reconfig=true
-customization=seldom
-friendly_name=ClassAd python library path
-review=?
+description=ClassAd python library path
 tags=classad
 
 [CLASSAD_USER_PYTHON_MODULES]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=ClassAd python modules
-review=?
+description=ClassAd python modules
 tags=classad
 
 [ENABLE_CLASSAD_CACHING]
 default=true
 win32_default=true
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Enable ClassAd Caching
 tags=classad
 
 [MASTER.ENABLE_CLASSAD_CACHING]
@@ -3463,2763 +2044,1631 @@ default=false
 [QUILL_MAINTAIN_DB_CONN]
 default=true
 type=bool
-reconfig=true
 customization=devel
-friendly_name=Quill Maintain Db Conn
-review=?
 tags=tt,ttmanager
 
 [QUILL_MAINTAIN_SOFT_STATE]
 default=true
 type=bool
-reconfig=true
 customization=devel
-friendly_name=Quill Maintain Soft State
-review=?
 tags=tt,ttmanager
 
 [QUILL_USE_TEMP_TABLE]
 default=false
 type=bool
-reconfig=true
 customization=devel
-friendly_name=Quill Use Temp Table
-review=?
 tags=tt,ttmanager
 
 [WANT_XML_LOG]
 default=false
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Want Xml Log
-review=?
 tags=tt,ttmanager
 
 [QUILL_DB_USER]
 default=
 type=string
-reconfig=true
 customization=devel
-friendly_name=Quill Db User
-review=?
 tags=tt,jobqueuedbmanager
 
 [SUBMIT_SKIP_FILECHECKS]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Submit Skip Filechecks
-review=?
-tags=submit,submit
+tags=submit
 
 [SUBMIT_SEND_RESCHEDULE]
 default=true
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Submit Send Reschedule
-review=?
-tags=submit,submit
+tags=submit
 
 [SUBMIT_PUBLISH_WINDOWS_OSVERSIONINFO]
-friendly_name=Submit should put attributes into jobs that show the Windows OSVERSIONINFO
+description=Submit should put attributes into jobs that show the Windows OSVERSIONINFO
 default=false
 type=bool
-reconfig=false
-customization=seldom
 tags=submit
 
 [DEFAULT_UNIVERSE]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Default Universe
-review=?
-tags=submit,submit
+tags=submit
 
 [DEFAULT_IO_BUFFER_SIZE]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Default Io Buffer Size
-review=?
-tags=submit,submit
+tags=submit
 
 [DEFAULT_IO_BUFFER_BLOCK_SIZE]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Default Io Buffer Block Size
-review=?
-tags=submit,submit
+tags=submit
 
 [SCHEDD_INTERVAL]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Schedd Interval
-review=?
-tags=submit,submit
+tags=submit
 
 [DEFAULT_RANK_STANDARD]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Default Rank Standard
-review=?
-tags=submit,submit
+tags=submit
 
 [APPEND_RANK_STANDARD]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Append Rank Standard
-review=?
-tags=submit,submit
+tags=submit
 
 [DEFAULT_RANK_VANILLA]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Default Rank Vanilla
-review=?
-tags=submit,submit
+tags=submit
 
 [APPEND_RANK_VANILLA]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Append Rank Vanilla
-review=?
-tags=submit,submit
+tags=submit
 
 [DEFAULT_RANK]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Default Rank
-review=?
-tags=submit,submit
+tags=submit
 
 [APPEND_RANK]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Append Rank
-review=?
-tags=submit,submit
+tags=submit
 
 [LOG_ON_NFS_IS_ERROR]
 default=false
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Log On Nfs Is Error
-review=?
-tags=submit,submit
+tags=submit
 
 [SUBMIT_ATTRS]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Submit Attributes
-review=?
-tags=submit,submit
+description=Names of config attributes that should be automatically inserted into jobs by condor_submit
+tags=submit
 
 [SUBMIT_EXPRS]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Obsolete name for submit Attributes
-review=?
-tags=submit,submit
+description=Obsolete name for SUBMIT_ATTRS
+tags=submit
 
 [APPEND_REQ_VANILLA]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Append Req Vanilla
-review=?
-tags=submit,submit
+tags=submit
 
 [APPEND_REQ_STANDARD]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Append Req Standard
-review=?
-tags=submit,submit
+tags=submit
 
 [APPEND_REQ_VM]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Append Req Vm
-review=?
-tags=submit,submit
+tags=submit
 
 [APPEND_REQUIREMENTS]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Append Requirements
-review=?
-tags=submit,submit
+tags=submit
 
 [SANDBOX_TRANSFER_METHOD]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Sandbox Transfer Method
-review=?
-tags=submit,submit
+tags=submit
 
 [WARN_ON_UNUSED_SUBMIT_FILE_MACROS]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Warn On Unused Submit File Macros
-review=?
-tags=submit,submit
+tags=submit
 
 [MAX_XML_LOG]
 # XXX Um, how does this default work in terms of the emitted C?
 default=1900000000
 type=long
-reconfig=true
-customization=seldom
-friendly_name=Max Xml Log
-review=?
-tags=c++_util,file_xml
+tags=file_xml
 
 [QUILL_DB_TYPE]
 default=PGSQL
 type=string
-reconfig=true
 customization=devel
-friendly_name=Quill Db Type
-review=?
-tags=c++_util,jobqueuesnapshot
+tags=jobqueuesnapshot
 
 [WINDOWS_FIREWALL_FAILURE_RETRY]
 default=2
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Windows Firewall Failure Retry
-review=?
-tags=c++_util,windows_firewall
+tags=master,windows_firewall
 
 [CREDD_CACHE_LOCALLY]
 default=false
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Credd Cache Locally
-review=?
-tags=c++_util,uids
+tags=uids
 
 [Q_QUERY_TIMEOUT]
 default=20
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Q Query Timeout
-review=?
-tags=c++_util,condor_q
+tags=condor_q
 
 [PROCD_LOG]
 default=$(LOG)/ProcLog
 type=path
-reconfig=true
-customization=seldom
-friendly_name=Procd Log
-review=?
-tags=c++_util,proc_family_proxy
+tags=procd,proc_family_proxy
 
 [PROCD]
 default=$(SBIN)/condor_procd
 win32_default=$(SBIN)\condor_procd.exe
+description=Path to Procd binary
 type=path
-reconfig=true
-customization=seldom
-friendly_name=Procd
-review=?
-tags=c++_util,proc_family_proxy
+tags=master,procd
 
 [PROCD_MAX_SNAPSHOT_INTERVAL]
 default=60
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Procd Max Snapshot Interval
-review=?
-tags=c++_util,proc_family_proxy
+tags=procd,proc_family_proxy
 
 [PROCD_DEBUG]
 default=false
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Procd Debug
-review=?
-tags=c++_util,proc_family_proxy
+tags=procd
+description=Debug logging options for the procd
 
 [USE_GID_PROCESS_TRACKING]
 default=false
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Use Gid Process Tracking
-review=?
-tags=c++_util,proc_family_proxy
+tags=procd
 
 [MIN_TRACKING_GID]
 default=0
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Min Tracking Gid
-review=?
-tags=c++_util,proc_family_proxy
+tags=procd
 
 [MAX_TRACKING_GID]
 default=0
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Max Tracking Gid
-review=?
-tags=c++_util,proc_family_proxy
+tags=procd
 
 [RESTART_PROCD_ON_ERROR]
 default=true
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Restart Procd On Error
-review=?
-tags=c++_util,proc_family_proxy
+tags=master,procd
 
 [LOCAL_CONFIG_DIR]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Local Config Dir
-review=?
-tags=c++_util,condor_config
+tags=condor_config
 
 [ABORT_ON_EXCEPTION]
 default=false
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Abort On Exception
-review=?
-tags=c++_util,condor_config
+tags=condor_config
 
 [REQUIRE_LOCAL_CONFIG_FILE]
 default=true
 win32_default=false
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Require Local Config File
-review=?
-tags=c++_util,condor_config
+tags=condor_config
 
 [LOCAL_CONFIG_FILE]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Location of Local Config File
-review=?
-tags=c++_util,condor_config
+description=List of paths to local config files
+tags=condor_config
 
 [ENABLE_RUNTIME_CONFIG]
 default=false
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Enable Runtime Config
-review=?
-tags=c++_util,condor_config
+tags=condor_config
 
 [RUNTIME_CONFIG_ADMIN]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Runtime Config Admin
-review=?
-tags=c++_util,condor_config
+tags=condor_config
 
 [USER_CONFIG_FILE]
 default=user_config
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Name of User Config File
+description=Name of User Config File
 tags=condor_config
 
 [ENABLE_PERSISTENT_CONFIG]
 default=false
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Enable Persistent Config
-review=?
-tags=c++_util,condor_config
+tags=condor_config
 
 [PERSISTENT_CONFIG_DIR]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Persistent Config Dir
-review=?
-tags=c++_util,condor_config
+tags=condor_config
 
 [USE_PROCD]
 # All daemons want a procd (except for the master, defined above)
 default=true
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Use Procd
-review=?
-tags=c++_util,proc_family_interface
+tags=proc_family_interface
 
 [PLUGINS]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Plugins
-review=?
-tags=c++_util,LoadPlugins
+tags=LoadPlugins
 
 [PLUGIN_DIR]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Plugin Dir
-review=?
-tags=c++_util,LoadPlugins
+tags=LoadPlugins
 
 [JAVA]
 default=/usr/bin/java
 win32_default=java
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Java
-review=?
-tags=c++_util,java_config
+tags=java_config
 
 [JAVA_MAXHEAP_ARGUMENT]
 default=-Xmx
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Java Maxheap Argument
 usage=typically 64 MB.  The default (-Xmx) works with the Sun JVM.
-review=?
-tags=c++_util,java_config
+tags=java_config
 
 [JAVA_CLASSPATH_ARGUMENT]
 default=-classpath
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Java Classpath Argument
-review=?
-tags=c++_util,java_config
+tags=java_config
 
 [JAVA_CLASSPATH_SEPARATOR]
 default=:
 win32_default=;
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Java Classpath Separator
-review=?
-tags=c++_util,java_config
+tags=java_config
 
 [JAVA_CLASSPATH_DEFAULT]
 default=$(LIB) $(LIB)/scimark2lib.jar .
 win32_default=$(BIN) $(BIN)/scimark2lib.jar .
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Java Classpath Default
-review=?
-tags=c++_util,java_config
+tags=java_config
 
 [TMP_DIR]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Tmp Dir
-review=?
-tags=c++_util,directory
+tags=directory
 
 [TEMP_DIR]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Temp Dir
-review=?
-tags=c++_util,directory
+tags=directory
 
 [SSH_KEYGEN]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Ssh Keygen
-review=?
-tags=c++_util,sshd_wrapper
+tags=sshd_wrapper
 
 [SSH_KEYGEN_ARGS]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Ssh Keygen Args
-review=?
-tags=c++_util,sshd_wrapper
+tags=sshd_wrapper
 
 [SSHD]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Sshd
-review=?
-tags=c++_util,sshd_wrapper
+tags=sshd_wrapper
 
 [SSHD_ARGS]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Sshd Args
-review=?
-tags=c++_util,sshd_wrapper
+tags=sshd_wrapper
 
 [SCP]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Scp
-review=?
-tags=c++_util,sshd_wrapper
+tags=sshd_wrapper
 
 [ENABLE_USERLOG_LOCKING]
 default=false
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Enable Userlog Locking
-review=?
-tags=c++_util,read_user_log
+tags=read_user_log
 
 [ALWAYS_CLOSE_USERLOG]
 default=false
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Always Close Userlog
-review=?
-tags=c++_util,read_user_log
+tags=read_user_log
 
 [EVENT_LOG]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Event Log
-review=?
-tags=c++_util,user_log
+tags=user_log
 
 [EVENT_LOG_USE_XML]
 default=false
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Event Log Use Xml
-review=?
-tags=c++_util,user_log
+tags=user_log
 
 [EVENT_LOG_LOCKING]
 default=false
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Event Log Locking
-review=?
-tags=c++_util,user_log
+tags=user_log
 
 [EVENT_LOG_ROTATION_LOCK]
 default=$(LOCK)/EventLogLock
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Event Log Rotation Lock
-review=?
-tags=c++_util,user_log
+tags=user_log
 
 [EVENT_LOG_MAX_SIZE]
 default=1000000
 type=long
-reconfig=true
-customization=seldom
-friendly_name=Maximum size of the event log in bytes
-review=?
-tags=c++_util,user_log
+description=Maximum size of the event log in bytes
+tags=user_log
 
 [EVENT_LOG_MAX_ROTATIONS]
 default=1
 type=long
-reconfig=true
-customization=seldom
-friendly_name=Number of rotated event log files to keep
-review=?
-tags=c++_util,user_log
+description=Number of rotated event log files to keep
+tags=user_log
 
 [EVENT_LOG_FSYNC]
 default=false
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Event Log Fsync
-review=?
-tags=c++_util,user_log
+tags=user_log
 
 [EVENT_LOG_COUNT_EVENTS]
 default=false
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Event Log Count Events
-review=?
-tags=c++_util,user_log
+tags=user_log
 
 [EVENT_LOG_JOB_AD_INFORMATION_ATTRS]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Event Log Job Ad Information Attrs
-review=?
-tags=c++_util,user_log
+tags=user_log
 
 [REUSE_CONDOR_RUN_ACCOUNT]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Reuse Condor Run Account
-review=?
-tags=c++_util,dynuser
+tags=dynuser
 
 [PASSWD_CACHE_REFRESH]
 default=72000
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Passwd Cache Refresh
-review=?
-tags=c++_util,passwd_cache
+tags=passwd_cache
 
 [STARTD_CLAIM_ID_FILE]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Startd Claim Id File
-review=?
-tags=c++_util,misc_utils
+tags=misc_utils
 
 [SEC_PASSWORD_FILE]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Sec Password File
-review=?
-tags=c++_util,store_cred
+tags=store_cred
 
 [EMAIL_DOMAIN]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Email Domain
-review=?
-tags=c++_util,email
-
-[EVENTD_SHUTDOWN_TIME]
-default=
-type=string
-reconfig=true
-customization=seldom
-friendly_name=Eventd Shutdown Time
-review=?
-tags=eventd,admin_event
-
-[EVENTD_ADMIN_MEGABITS_SEC]
-default=
-type=string
-reconfig=true
-customization=seldom
-friendly_name=Eventd Admin Megabits Sec
-review=?
-tags=eventd,admin_event
-
-[EVENTD_SHUTDOWN_CONSTRAINT]
-default=
-type=string
-reconfig=true
-customization=seldom
-friendly_name=Eventd Shutdown Constraint
-review=?
-tags=eventd,admin_event
+tags=email
 
 [SEC_TCP_SESSION_TIMEOUT]
 default=20
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Sec Tcp Session Timeout
-review=?
 tags=io,condor_secman
 
 [SEC_CLAIMTOBE_USER]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Sec Claimtobe User
-review=?
 tags=io,condor_auth_claim
 
 [SEC_CLAIMTOBE_INCLUDE_DOMAIN]
 default=false
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Sec Claimtobe Include Domain
-review=?
 tags=io,condor_auth_claim
 
 [FS_REMOTE_DIR]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Fs Remote Dir
-review=?
 tags=io,condor_auth_fs
 
 [FS_LOCAL_DIR]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Fs Local Dir
-review=?
 tags=io,condor_auth_fs
 
 [FS_ALLOW_UNSAFE]
 default=false
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Fs Allow Unsafe
-review=?
 tags=io,condor_auth_fs
 
 [KERBEROS_MAP_FILE]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Kerberos Map File
-review=?
 tags=io,condor_auth_kerberos
 
 [ENCRYPT_SECRETS]
 default=true
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Encrypt Secrets
-review=?
 tags=io,cedar_no_ckpt
 
 [CONDOR_GATEKEEPER]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Condor Gatekeeper
-review=?
 tags=io,credential
 
 [GSI_DAEMON_NAME]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Gsi Daemon Name
-review=?
 tags=io,condor_auth_x509
 
 [STARTER_UPLOAD_TIMEOUT]
 default=300
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Starter Upload Timeout
-review=?
-tags=starter,jic_shadow
+tags=starter
 
 [ALWAYS_VM_UNIV_USE_NOBODY]
 default=false
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Always Vm Univ Use Nobody
-review=?
-tags=starter,jic_shadow
+tags=starter
 
 [VM_UNIV_NOBODY_USER]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Vm Univ Nobody User
-review=?
-tags=starter,jic_shadow
+tags=starter
 
 [VM_GAHP_SEND_ALL_CLASSAD]
 default=true
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Vm Gahp Send All Classad
-review=?
 tags=starter,vm_gahp_server
 
 [STARTER_INITIAL_UPDATE_INTERVAL]
 default=8
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Starter Initial Update Interval
-review=?
 tags=starter,job_info_communicator
 
 [ENCRYPT_EXECUTE_DIRECTORY]
 default=false
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Encrypt Execute Directory
-review=?
 tags=startd,starter
 
 [ENCRYPT_EXECUTE_DIRECTORY_FILENAMES]
 default=false
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Encrypt Filenames Inside Execute Directory
-review=?
+description=Encrypt filenames inside execute directory
 tags=startd,starter
 
 [STARTER_JOB_ENVIRONMENT]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Starter Job Environment
-review=?
-tags=starter,os_proc
+tags=starter
 
 [JOB_RENICE_INCREMENT]
 default=0
 win32_default=10
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Job Renice Increment
-review=?
-tags=starter,os_proc
+tags=starter
 
 [JOB_INHERITS_STARTER_ENVIRONMENT]
 default=false
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Job Inherits Starter Environment
-review=?
-tags=starter,os_proc
+tags=starter
 
 [MPI_CONDOR_RSH_PATH]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Mpi Condor Rsh Path
-review=?
-tags=starter,mpi_master_proc
+tags=starter
 
 [LOCAL_UNIVERSE_MAX_JOB_CLEANUP_RETRIES]
 default=5
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Local Universe Max Job Cleanup Retries
-review=?
-tags=starter,jic_local_schedd
+tags=schedd,starter
 
 [LOCAL_UNIVERSE_JOB_CLEANUP_RETRY_DELAY]
 default=30
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Local Universe Job Cleanup Retry Delay
-review=?
-tags=starter,jic_local_schedd
+tags=schedd,starter
 
 [STARTER_JOB_HOOK_KEYWORD]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Starter Job Hook Keyword
-review=?
 tags=starter,StarterHookMgr
 
 [JAVA_BENCHMARK_TIME]
 default=2
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Java Benchmark Time
 usage=If this time is zero or undefined, no Java benchmarks will be run.
-review=?
 tags=starter,java_detect
 
 [VM_STATUS_INTERVAL]
 default=60
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Vm Status Interval
-review=?
 tags=starter,vm_proc
 
 [VM_STATUS_MAX_ERROR]
 default=5
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Vm Status Max Error
-review=?
 tags=starter,vm_proc
 
 [VM_GAHP_REQ_TIMEOUT]
 default=300
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Vm Gahp Req Timeout
-review=?
 tags=starter,vm_proc
 
 [VM_SOFT_SUSPEND]
 default=false
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Vm Soft Suspend
-review=?
 tags=starter,vm_proc
 
 [CONDOR_GAHP_WORKER]
 default=$(SBIN)/condor_c-gahp_worker_thread
 win32_default=$(SBIN)\condor_c-gahp_worker_thread.exe
 type=path
-reconfig=true
-customization=seldom
-friendly_name=Condor Gahp Worker
-review=?
 tags=c-gahp,io_loop
 
 [REPLICATION_INTERVAL]
 default=300
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Replication Interval
-review=?
 tags=had,ReplicatorStateMachine
 
 [NEGOTIATOR_CROSS_SLOT_PRIOS]
 default=false
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Negotiator Advertise Cross Slot User Prios
-review=?
+description=Negotiator should advertise cross slot user prios
 tags=negotiator,matchmaker
 
 [NEGOTIATOR_INTERVAL]
 default=60
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Negotiator Interval
-review=?
 tags=negotiator,matchmaker
 
 [NEGOTIATOR_UPDATE_AFTER_CYCLE]
 default=false
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Negotiator Update After Cycle
-review=?
 tags=negotiator,matchmaker
 
 [NEGOTIATOR_UPDATE_INTERVAL]
 default=300
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Negotiator Update Interval
-review=?
 
 [NEGOTIATOR_TRIM_SHUTDOWN_THRESHOLD]
 default=0
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Negotiator Trim Shutdown Threshold
-review=?
 tags=negotiator,matchmaker
 
 [NEGOTIATOR_TIMEOUT]
 default=30
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Negotiator Timeout
-review=?
 tags=negotiator,matchmaker
 
 [NEGOTIATOR_MAX_TIME_PER_SUBMITTER]
 default=31536000
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Negotiator Max Time Per Submitter
-review=?
 tags=negotiator,matchmaker
 
 [NEGOTIATOR_MAX_TIME_PER_SCHEDD]
 default=31536000
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Negotiator Max Time Per Schedd
-review=?
 tags=negotiator,matchmaker
 
 [NEGOTIATOR_MAX_TIME_PER_PIESPIN]
 default=31536000
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Negotiator Max Time Per Piespin
-review=?
 tags=negotiator,matchmaker
 
 [NEGOTIATOR_MATCH_EXPRS]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Negotiator Match Exprs
-review=?
 tags=negotiator,matchmaker
 
 [PREEMPTION_RANK]
 default=(RemoteUserPrio * 1000000) - ifThenElse(isUndefined(TotalJobRuntime), 0, TotalJobRuntime)
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Preemption Rank
-review=?
 tags=negotiator,matchmaker
 
 [NEGOTIATOR_PRE_JOB_RANK]
 default=(10000000 * My.Rank) + (1000000 * (RemoteOwner =?= UNDEFINED)) - (100000 * Cpus) - Memory
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Negotiator Pre Job Rank
-review=?
 tags=negotiator,matchmaker
 
 [NEGOTIATOR_POST_JOB_RANK]
 default=(RemoteOwner =?= UNDEFINED) * (ifthenElse(isUndefined(KFlops), 1000, Kflops) - SlotID - 1.0e10*(Offline=?=True))
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Negotiator Post Job Rank
-review=?
 tags=negotiator,matchmaker
 
 [NEGOTIATOR_MATCHLIST_CACHING]
 default=true
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Negotiator Matchlist Caching
-review=?
 tags=negotiator,matchmaker
 
 [NEGOTIATOR_CONSIDER_PREEMPTION]
 default=true
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Negotiator Consider Preemption
-review=?
 tags=negotiator,matchmaker
 
 [NEGOTIATOR_CONSIDER_EARLY_PREEMPTION]
 default=false
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Negotiator Consider Early Preemption
-review=?
 tags=negotiator,matchmaker
 
 [NEGOTIATOR_INFORM_STARTD]
 default=false
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Negotiator Inform Startd
-review=?
 tags=negotiator,matchmaker
 
 [NEGOTIATOR_USE_NONBLOCKING_STARTD_CONTACT]
 default=true
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Negotiator Use Nonblocking Startd Contact
-review=?
 tags=negotiator,matchmaker
 
 [NEGOTIATOR_USE_WEIGHTED_DEMAND]
 default=true
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Negotiator Use Weighted Demand
-review=?
 tags=negotiator,matchmaker
 
 [NEGOTIATOR_SLOT_POOLSIZE_CONSTRAINT]
 aliases=GROUP_DYNAMIC_MACH_CONSTRAINT
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Group Dynamic Mach Constraint
-review=?
+description=
 tags=negotiator,matchmaker
 
 [NEGOTIATOR_SLOT_CONSTRAINT]
 aliases=GROUP_DYNAMIC_MACH_CONSTRAINT
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Constrain Negotiator Query for Startd Ads
-review=?
+description=Constrain Negotiator Query for Startd Ads
 tags=negotiator,matchmaker
 
 [GROUP_AUTOREGROUP]
 default=false
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Group Autoregroup
-review=?
 tags=negotiator,matchmaker
 
 [GROUP_ACCEPT_SURPLUS]
 default=false
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Group Accept Surplus
-review=?
 tags=negotiator,matchmaker
 
 [NEGOTIATOR_USE_SLOT_WEIGHTS]
 default=true
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Use Slot Weights
-review=?
+description=Negotiator should use slot weights
 tags=negotiator,matchmaker
 
 [NEGOTIATOR_ALLOW_QUOTA_OVERSUBSCRIPTION]
 default=true
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Allow Quota Oversubscription
-review=?
+description=Negotiator should allow quota oversubscription
 tags=negotiator,matchmaker
 
 [GROUP_QUOTA_MAX_ALLOCATION_ROUNDS]
 default=3
 range=1,1000000000
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Group Quota Maximum Allocation Rounds
-review=?
+description=
 tags=negotiator,matchmaker
 
 [GROUP_QUOTA_ROUND_ROBIN_RATE]
 default=1.0e100
 range=1.0,1.0e100
 type=double
-reconfig=true
-customization=seldom
-friendly_name=Group Quota Round Robin Rate
-review=?
 tags=negotiator,matchmaker
 
 [STARTD_AD_REEVAL_EXPR]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Startd Ad Reeval Expr
-review=?
 tags=negotiator,matchmaker
 
 [NEGOTIATOR_IGNORE_USER_PRIORITIES]
 default=false
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Negotiator Ignore User Priorities
-review=?
 tags=negotiator,matchmaker
 
 [RECEIVE_MSGS_DURATION]
 default=250
 type=int
-reconfig=true
 customization=devel
-friendly_name=DaemonCore Receive Messages Duration
+description=How long daemonCore should receive messages before checking the pump
 usage=how long to keep processing callback messages before returing to the pump. For the SCHEDD, how long to keep processing matches from the negotiator before checking for other work.
 tags=daemon_core,schedd
 
 [NONBLOCKING_COLLECTOR_UPDATE]
 default=true
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Nonblocking Collector Update
-review=?
 tags=daemon_client,dc_collector
 
 [TCP_UPDATE_COLLECTORS]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Tcp Update Collectors
-review=?
 tags=daemon_client,dc_collector
 
 [UPDATE_COLLECTOR_WITH_TCP]
 default=true
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Update Collector With Tcp
-review=?
 tags=daemon_client,dc_collector
 
 [UPDATE_VIEW_COLLECTOR_WITH_TCP]
 default=false
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Update View Collector With Tcp
-review=?
 tags=daemon_client,dc_collector
 
 [DEAD_COLLECTOR_MAX_AVOIDANCE_TIME]
 default=3600
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Dead Collector Max Avoidance Time
-review=?
 tags=daemon_client,dc_collector
 
 [CM_IP_ADDR]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Cm Ip Addr
-review=?
 tags=daemon_client,daemon
 
 [HISTORY]
 default=$(SPOOL)/history
 type=string
-reconfig=true
-customization=seldom
-friendly_name=History
-review=?
 tags=tools,preen
 
 [STARTD_HISTORY]
 default=$(LOG)/startd_history
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Startd History
-review=?
 
 [PREEN_ADMIN]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Preen Admin
-review=?
 tags=tools,preen
 
 [SYSTEM_VALID_SPOOL_FILES]
 default=job_queue.log, job_queue.log.tmp, history, Accountant.log, Accountantnew.log, local_univ_execute, .quillwritepassword, .pgpass, .schedd_address, .schedd_address.super, .schedd_classad, OfflineLog
 type=string
-reconfig=true
 customization=const
-friendly_name=System defined Valid Spool Files
-usage=What HTCondor created files should condor_preen leave in the spool directory?
+description=List of files in the SPOOL directory needed by HTCondor
+usage=Set what HTCondor created files should condor_preen leave in the spool directory
 review=tj
 tags=tools,preen
 
 [VALID_SPOOL_FILES]
 default=
-friendly_name=User defined Valid Spool Files
-reconfig=true
-customization=seldom
-usage=What user files should condor_preen leave in the spool directory?
+description=List of user files in the SPOOL directory that should not be deleted.
+usage=Set what user files should condor_preen leave in the spool directory?
 review=tj
 tags=tools,preen
 
 [INVALID_LOG_FILES]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Invalid Log Files
 usage=What files should condor_preen remove from the log directory?
-review=?
 tags=tools,preen
 
 [LIB]
 default=$(RELEASE_DIR)/lib
 type=path
-reconfig=true
-customization=seldom
-friendly_name=Lib
-review=?
 tags=tools,version
 
 [SEC_PASSWORD_DOMAIN]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Sec Password Domain
-review=?
 tags=tools,store_cred_main
 
 [STARTER_CHOOSES_CKPT_SERVER]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Starter Chooses Ckpt Server
-review=?
 tags=shadow,shadow
 
 [MAX_DISCARDED_RUN_TIME]
 default=3600
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Max Discarded Run Time
-review=?
 tags=shadow,shadow
 
 [COMPRESS_PERIODIC_CKPT]
 default=false
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Compress Periodic Ckpt
-review=?
 tags=shadow,shadow
 
 [PERIODIC_MEMORY_SYNC]
 default=false
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Periodic Memory Sync
-review=?
 tags=shadow,shadow
 
 [COMPRESS_VACATE_CKPT]
 default=false
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Compress Vacate Ckpt
-review=?
 tags=shadow,shadow
 
 [SLOW_CKPT_SPEED]
 default=0
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Slow Ckpt Speed
-review=?
 tags=shadow,shadow
 
 [SHADOW_ALLOW_UNSAFE_REMOTE_EXEC]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Shadow Allow Unsafe Remote Exec
-review=?
 tags=shadow,pseudo_ops
 
 [EMAIL_NOTIFICATION_CC]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Email Notification Cc
-review=?
 tags=shadow,shadow_common
 
 [DBMSMANAGER_NAME]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Dbmsmanager Name
-review=?
 tags=dbmsd,DBMSManager
 
 [DATABASE_PURGE_INTERVAL]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Database Purge Interval
-review=?
 tags=dbmsd,DBMSManager
 
 [DATABASE_REINDEX_INTERVAL]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Database Reindex Interval
-review=?
 tags=dbmsd,DBMSManager
 
 [QUILL_RESOURCE_HISTORY_DURATION]
 default=
 type=string
-reconfig=true
 customization=devel
-friendly_name=Quill Resource History Duration
-review=?
 tags=dbmsd,ManagedDatabase
 
 [QUILL_RUN_HISTORY_DURATION]
 default=
 type=string
-reconfig=true
 customization=devel
-friendly_name=Quill Run History Duration
-review=?
 tags=dbmsd,ManagedDatabase
 
 [QUILL_JOB_HISTORY_DURATION]
 default=
 type=string
-reconfig=true
 customization=devel
-friendly_name=Quill Job History Duration
-review=?
 tags=dbmsd,ManagedDatabase
 
 [QUILL_DBSIZE_LIMIT]
 default=
 type=string
-reconfig=true
 customization=devel
-friendly_name=Quill Dbsize Limit
-review=?
 tags=dbmsd,ManagedDatabase
 
 [JOB_ROUTER_SOURCE_JOB_CONSTRAINT]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Job Router Source Job Constraint
-review=?
 tags=schedd,JobRouter
 
 [MAX_JOB_MIRROR_UPDATE_LAG]
 default=600
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Max Job Mirror Update Lag
-review=?
 tags=schedd,JobRouter
 
 [JOB_ROUTER_POLLING_PERIOD]
 default=10
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Job Router Polling Period
-review=?
 tags=schedd,JobRouter
 
 [JOB_ROUTER_NAME]
 default=jobrouter
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Job Router Name
-review=?
 tags=schedd,JobRouter
 
 [JOB_ROUTER_LOCK]
 default=$(LOCK)/$(JOB_ROUTER_NAME)Lock
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Job Router Lock
-review=?
 tags=JobRouter
 
 [POLLING_PERIOD]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Polling Period
-review=?
-tags=schedd,Scheduler
+tags=schedd
 
 [TRANSFERD]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Transferd
-review=?
 tags=schedd,tdman
 
 [QUEUE_SUPER_USERS]
 default=root, condor
 win32_default=condor, SYSTEM
-type=string
-reconfig=true
-customization=seldom
-friendly_name=Queue Super Users
-review=?
 tags=schedd,qmgmt
+description=List of users that can edit other users jobs
 
 [QUEUE_SUPER_USER_MAY_IMPERSONATE]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Queue Super Users
-review=?
+description=
 tags=schedd,qmgmt
 
 [QUEUE_ALL_USERS_TRUSTED]
 default=false
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Queue All Users Trusted
-review=?
 tags=schedd,qmgmt
+description=All users can edit other users jobs
 
 [SYSTEM_SECURE_JOB_ATTRS]
 default=x509userProxySubject x509UserProxyEmail x509UserProxyVOName x509UserProxyFirstFQAN x509UserProxyFQAN
 type=string
-reconfig=true
-customization=never
-friendly_name=Job attributes that only the Schedd can change
-review=?
+customization=devel
+description=System defined list of job attributes that only the Schedd can change
 tags=schedd,qmgmt,qedit
 
 [SECURE_JOB_ATTRS]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Job attributes that only the Schedd can change
-review=?
+description=Admin defined list of job attributes that only the Schedd can change
 tags=schedd,qmgmt,qedit
 
 [SYSTEM_IMMUTABLE_JOB_ATTRS]
 default=Owner ClusterId ProcId TotalSubmitProcs MyType TargetType
 type=string
-reconfig=true
-customization=never
-friendly_name=Job attributes that may not change once set
-review=?
+customization=devel
+description=System defined list of job attributes that may not change once set
 tags=schedd,qmgmt,qedit
 
 [IMMUTABLE_JOB_ATTRS]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Job attributes that may not change once set
-review=?
+description=Admin defined list of job attributes that may not change once set
 tags=schedd,qmgmt,qedit
 
 [SYSTEM_PROTECTED_JOB_ATTRS]
 default=
 type=string
-reconfig=true
-customization=never
-friendly_name=Job attributes that may only be changed by a queue superuser once set
-review=?
+customization=devel
+description=System defined list of job attributes that may only be changed by a queue superuser once set
 tags=schedd,qmgmt,qedit
 
 [PROTECTED_JOB_ATTRS]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Job attributes that may only be changed by a queue superuser once set
-review=?
+description=Admin defined list of job attributes that may only be changed by a queue superuser once set
 tags=schedd,qmgmt,qedit
 
 
 [GLOBAL_JOB_ID_WITH_TIME]
 default=true
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Global Job Id With Time
-review=?
 tags=schedd,qmgmt
 
 [BIOTECH]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Biotech
-review=?
 tags=schedd,qmgmt
 
 [CLAIM_RECYCLING_CONSIDER_LIMITS]
 default=true
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Claim Recycling Consider Limits
-review=?
 tags=schedd,qmgmt
 
 [UNUSED_CLAIM_TIMEOUT]
 default=600
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Unused Claim Timeout
-review=?
 tags=schedd,dedicated_scheduler
 
 [SCHEDD_PREEMPTION_REQUIREMENTS]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Schedd Preemption Requirements
-review=?
 tags=schedd,dedicated_scheduler
 
 [SCHEDD_PREEMPTION_RANK]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Schedd Preemption Rank
-review=?
 tags=schedd,dedicated_scheduler
 
 [SCHEDD_RESTART_REPORT]
 default=$(LOG)/ScheddRestartReport
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Schedd Restart Report
-review=?
 tags=schedd,dedicated_scheduler
 
 [DEDICATED_SCHEDULER_USE_FIFO]
 default=true
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Dedicated Scheduler Use Fifo
-review=?
 tags=schedd,dedicated_scheduler
 
 [MPI_MASTER_IP]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Mpi Master Ip
-review=?
 tags=schedd,dedicated_scheduler
 
 [SHADOW_LIST]
 default=SHADOW, SHADOW_STANDARD
 win32_default=SHADOW
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Shadow List
-review=?
 tags=schedd,shadow_mgr
 
 [SOAP_LEAVE_IN_QUEUE]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Soap Leave In Queue
-review=?
 tags=schedd,soap_scheddStub
 
 [SHADOW]
 default=$(SBIN)/condor_shadow
 win32_default=$(SBIN)\condor_shadow.exe
+description=Path to vanilla shadow binary
 type=path
-reconfig=true
-customization=seldom
-friendly_name=Shadow
-review=?
-tags=schedd,schedd
+tags=schedd
 
 [SHADOW_STANDARD]
 default=$(SBIN)/condor_shadow.std
 win32_default=
+description=Path to standard universe shadow binary
 type=path
-tags=schedd,schedd
+tags=schedd
 
 [SHADOW_RENICE_INCREMENT]
 default=0
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Shadow Renice Increment
-review=?
-tags=schedd,schedd
+tags=schedd
 
 [STARTER_LOCAL]
 default=$(SBIN)/condor_starter
 win32_default=$(SBIN)\condor_starter.exe
 type=path
-reconfig=true
-customization=seldom
-friendly_name=Starter Local
-review=?
-tags=schedd,schedd
+tags=schedd
 
 [LOCAL_UNIV_EXECUTE]
 default=$(SPOOL)/local_univ_execute
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Local Univ Execute
-review=?
-tags=schedd,schedd
+tags=schedd
 
 [SCHED_UNIV_RENICE_INCREMENT]
 default=0
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Sched Univ Renice Increment
-review=?
-tags=schedd,schedd
+tags=schedd
 
 [SCHEDD_SEND_VACATE_VIA_TCP]
 default=true
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Schedd Send Vacate Via Tcp
-review=?
-tags=schedd,schedd
+tags=schedd
 
 [KEEP_OUTPUT_SANDBOX]
 default=false
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Keep Output Sandbox
-review=?
-tags=schedd,schedd
+tags=schedd
 
 [ENABLE_HISTORY_ROTATION]
 default=true
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Enable History Rotation
-review=?
-tags=schedd,schedd
+tags=schedd
 
 [PER_JOB_HISTORY_DIR]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Per Job History Dir
-review=?
-tags=schedd,schedd
+tags=schedd
 
 [SCHEDD_MIN_INTERVAL]
 default=5
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Schedd Min Interval
-review=?
-tags=schedd,schedd
+tags=schedd
 
 [JOB_START_DELAY]
 default=0
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Job Start Delay
-review=?
-tags=schedd,schedd
+tags=schedd
 
 [MAX_JOBS_RUNNING]
 default=MIN({$(DETECTED_MEMORY), 10000})
 win32_default=MIN({($(DETECTED_MEMORY)-200)/10, 2000})
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Max Jobs Running
-review=?
-tags=schedd,schedd
+tags=schedd
 
 [CURB_MATCHMAKING]
 default=false
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Curb Expression for Matchmaking
-tags=schedd,schedd
+description=Curb Expression for Matchmaking
+tags=schedd
 
 [START_LOCAL_UNIVERSE]
 default=TotalLocalJobsRunning < 200
+description=expression that, when TRUE allows a Local universe job to start
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Start Local Universe
-review=?
-tags=schedd,schedd
+tags=schedd
 
 [START_SCHEDULER_UNIVERSE]
 default=TotalSchedulerJobsRunning < 200
+description=expression that, when TRUE allows a Scheduler universe job to start
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Start Scheduler Universe
-review=?
-tags=schedd,schedd
+tags=schedd
 
 [MAX_JOBS_SUBMITTED]
 default=2147483647
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Max Jobs Submitted
-review=?
-tags=schedd,schedd
+description=Max jobs in the SCHEDD's queue
+tags=schedd
 
 [MAX_JOBS_PER_OWNER]
 default=100000
 type=int
-reconfig=true
 customization=normal
-friendly_name=Max jobs in the SCHEDD's queue from a single owner.
+description=Max jobs in the SCHEDD's queue from a single owner.
 usage=Ensure that a single user does not fill the SCHEDD
-tags=schedd,schedd
+tags=schedd
 
 [MAX_JOBS_PER_SUBMISSION]
 default=20000
 type=int
-reconfig=true
 customization=normal
-friendly_name=Max jobs in a single submit
+description=Max jobs in a single submit
 usage=Circuit breaker to prevent an excessive number of a jobs in a single submission. Use to reject one form of mistake
-tags=schedd,schedd
+tags=schedd
 
 [MAX_RUNNING_SCHEDULER_JOBS_PER_OWNER]
 default=
-reconfig=true
 customization=normal
-friendly_name=Max running DAGs for a single owner
+description=Max running DAGs for a single owner
 usage=Ensure that a single user does not monopolize the SCHEDD
 tags=schedd
 
 [NEGOTIATE_ALL_JOBS_IN_CLUSTER]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Negotiate All Jobs In Cluster
-review=?
-tags=schedd,schedd
+tags=schedd
 
 [STARTD_CONTACT_TIMEOUT]
 default=45
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Startd Contact Timeout
-review=?
-tags=schedd,schedd
+tags=schedd
 
 [FLOCK_COLLECTOR_HOSTS]
 default=$(FLOCK_TO)
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Flock Collector Hosts
-review=?
-tags=schedd,schedd
+tags=schedd
 
 [FLOCK_NEGOTIATOR_HOSTS]
 default=$(FLOCK_TO)
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Flock Negotiator Hosts
-review=?
-tags=schedd,schedd
+tags=schedd
 
 [SHADOW_SIZE_ESTIMATE]
 default=125
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Shadow Size Estimate
-review=?
-tags=schedd,schedd
+tags=schedd
 
 [MAX_SHADOW_EXCEPTIONS]
 default=5
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Max Shadow Exceptions
-review=?
-tags=schedd,schedd
+tags=schedd
 
 [GRIDMANAGER_PER_JOB]
 default=false
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Gridmanager Per Job
-review=?
-tags=schedd,schedd
+tags=schedd
 
 [MAX_JOB_QUEUE_LOG_ROTATIONS]
 default=1
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Max Job Queue Log Rotations
-review=?
-tags=schedd,schedd
+tags=schedd
 
 [GRIDMANAGER]
 default=$(SBIN)/condor_gridmanager
 win32_default=$(SBIN)\condor_gridmanager.exe
 type=path
-reconfig=true
-customization=seldom
-friendly_name=Gridmanager
-review=?
 tags=schedd,grid_universe
 
 [GRIDMANAGER_ARGS]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Gridmanager Args
-review=?
 tags=schedd,grid_universe
 
 [SCHEDD_CRON_NAME]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Schedd Cron Name
-review=?
 tags=schedd,schedd_cronmgr
 
 [SCHEDD_BACKUP_SPOOL]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Schedd Backup Spool
-review=?
-tags=schedd,schedd_main
+tags=schedd
 
 [CHOWN_JOB_SPOOL_FILES]
 default=False
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Chown Job Spool Files
-review=?
-tags=schedd,schedd_main
+tags=schedd
 
 [SCHEDD_QUERY_WORKERS]
 default=8
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Schedd forked workers
-review=?
+description=Maximum number of schedd forked workers
 tags=schedd
 
 [X_RUNS_HERE]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=X Runs Here
-review=?
 tags=master,daemon
 
 [HA_LOCK_URL]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Ha Lock Url
-review=?
 tags=master,daemon
 
 [HA_LOCK_HOLD_TIME]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Ha Lock Hold Time
-review=?
 tags=master,daemon
 
 [HA_POLL_PERIOD]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Ha Poll Period
-review=?
 tags=master,daemon
 
 [MASTER_NAME]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Master Name
-review=?
-tags=master,master
+tags=master
 
 [START_MASTER]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Start Master
-review=?
-tags=master,master
+tags=master
 
 [START_DAEMONS]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Start Daemons
-review=?
-tags=master,master
+tags=master
 
 [PUBLISH_OBITUARIES]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Publish Obituaries
-review=?
-tags=master,master
+tags=master
 
 [OBITUARY_LOG_LENGTH]
 default=20
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Obituary Log Length
-review=?
-tags=master,master
+tags=master
 
 [ALLOW_ADMIN_COMMANDS]
 default=true
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Allow Admin Commands
-review=?
-tags=master,master
+tags=master
 
 [PREEN]
 default=$(SBIN)/condor_preen
 win32_default=$(SBIN)\condor_preen.exe
 type=path
-reconfig=true
-customization=seldom
-friendly_name=Preen
-review=?
-tags=master,master
+description=Path to preen binary
+tags=master
 
 [DC_DAEMON_LIST]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Dc Daemon List
-review=?
-tags=master,master
+customization=expert
+tags=master
 
 [MASTER_HA_LIST]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Master Ha List
-review=?
-tags=master,master
+tags=master
 
 [DAEMON_LIST]
 default=MASTER
 type=string
-reconfig=true
 customization=normal
-friendly_name=Daemon List
-review=?
-tags=master,master
+tags=master
 
 [PREEN_ARGS]
 default=-m -r
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Preen Args
-review=?
-tags=master,master
+tags=master
 
 [COLLECTOR_LOG]
 default=$(LOG)/CollectorLog
 type=path
-reconfig=true
-customization=seldom
-friendly_name=Collector Log
-review=?
+description=Path to log file for the Collector
 tags=collector,log
 
 [KBDD_LOG]
 default=$(LOG)/KbdLog
 type=path
-reconfig=true
-customization=seldom
-friendly_name=Kbd Log
-review=?
+description=Path to log file for KBDD
 tags=kbdd,log
 
 [MASTER_LOG]
 default=$(LOG)/MasterLog
 type=path
-reconfig=true
-customization=seldom
-friendly_name=Master Log
-review=?
+description=Path to log file for the Master
 tags=master,log
 
 [NEGOTIATOR_LOG]
 default=$(LOG)/NegotiatorLog
 type=path
-reconfig=true
-customization=seldom
-friendly_name=Negotiator Log
-review=?
+description=Path to log file for the Negotiator
 tags=negotiator,log
 
 [NEGOTIATOR_MATCH_LOG]
 default=$(LOG)/MatchLog
 type=path
-friendly_name=Negotiator Log of Matches
-review=?
+description=Path to Negotiator log of matches
 tags=negotiator,log
 
 [SCHEDD_LOG]
 default=$(LOG)/SchedLog
 type=path
-reconfig=true
-customization=seldom
-friendly_name=Sched Log
-review=?
+description=Path to log file for the Schedd
 tags=sched,log
 
 [SHADOW_LOG]
 default=$(LOG)/ShadowLog
 type=path
-reconfig=true
-customization=seldom
-friendly_name=Shadow Log
-review=?
+description=Path to Log shared by Shadows
 tags=shadow,log
 
 [SHADOW_STATS_LOG]
 default=$(LOG)/XferStatsLog
 type=path
-friendly_name=Log file of Xfer stats
-review=?
+description=Log file of Xfer stats
 tags=shadow,log
 
 [STARTER_STATS_LOG]
 default=$(LOG)/XferStatsLog
 type=path
-friendly_name=Log file of Xfer stats
-review=?
+description=Log file of Xfer stats
 tags=starter,log
 
 [STARTD_LOG]
 default=$(LOG)/StartLog
 type=path
-reconfig=true
-customization=seldom
-friendly_name=Start Log
-review=?
+description=Path to log file for the Startd
 tags=startd,log
 
 [JOB_ROUTER_LOG]
 default=$(LOG)/JobRouterLog
 type=path
-reconfig=true
-customization=seldom
-friendly_name=Job Router Log
-review=?
-tags=job,router,log
+tags=job_router,log
 
 [ROOSTER_LOG]
 default=$(LOG)/RoosterLog
 type=path
-reconfig=true
-customization=seldom
-friendly_name=Rooster Log
-review=?
 tags=rooster,log
 
 [SHARED_PORT_LOG]
 default=$(LOG)/SharedPortLog
 type=path
-reconfig=true
-customization=seldom
-friendly_name=Shared Port Log
-review=?
-tags=shared,port,log
+description=Path to log file for shared_port
+tags=shared_port,log
 
 [HAD_LOG]
 default=$(LOG)/HADLog
 type=path
-reconfig=true
-customization=seldom
-friendly_name=HAD Log
-review=?
 tags=had,log
 
 [REPLICATION_LOG]
 default=$(LOG)/ReplicationLog
 type=path
-reconfig=true
-customization=seldom
-friendly_name=Replication Log
-review=?
 tags=replication,log
 
 [TRANSFERER_LOG]
 default=$(LOG)/TransfererLog
 type=path
-reconfig=true
-customization=seldom
-friendly_name=Transferer Log
-review=?
 tags=transferer,log
-
-[HDFS]
-default=$(SBIN)/condor_hdfs
-win32_default=$(SBIN)\condor_hdfs.exe
-type=path
-friendly_name=location of condor_hdfs binary
-review=?
-
-[HDFS_LOG]
-default=$(LOG)/HDFSLog
-type=path
-reconfig=true
-customization=seldom
-friendly_name=HDFS Log
-review=?
-tags=master,master
 
 [ADD_WINDOWS_FIREWALL_EXCEPTION]
 default=true
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Add Windows Firewall Exception
-review=?
-tags=master,master
+description=Master should automatically open ports in the Windows firewall for HTCondor daemons
+tags=master
 
 [ANNEXD]
 default=$(SBIN)/condor_annexd
 type=path
-reconfig=true
-customization=seldom
-tags=master,master
+description=Path to the HTCondor annex daemon binary
+customization=devel
+tags=annex
 
 [ANNEXD_LOG]
 default=$(LOG)/AnnexdLog
 type=path
-reconfig=true
-customization=seldom
 tags=annex,log
 
 [ANNEXD_NAME]
 default=Annex Daemon@$(FULL_HOSTNAME)
 type=string
-reconfig=true
-customization=seldom
 tags=annex
 
 [SCHEDD]
 default=$(SBIN)/condor_schedd
 win32_default=$(SBIN)\condor_schedd.exe
 type=path
-reconfig=true
-customization=seldom
-friendly_name=Schedd
-review=?
-tags=master,master
+customization=devel
+description=Path to the HTCondor scheduler daemon binary
+tags=master
 
 [STARTD]
 default=$(SBIN)/condor_startd
 win32_default=$(SBIN)\condor_startd.exe
 type=path
-reconfig=true
-customization=seldom
-friendly_name=Startd
-review=?
-tags=master,master
+customization=devel
+description=Path to the HTCondor startd daemon binary
+tags=master
 
 [QUILL]
 default=$(SBIN)/condor_quill
 win32_default=$(SBIN)\condor_quill.exe
 type=path
-reconfig=true
 customization=devel
-friendly_name=Quill
-review=?
-tags=master,master
+tags=master
 
 [DBMSD]
 default=$(SBIN)/condor_dbmsd
 win32_default=$(SBIN)\condor_dbmsd.exe
 type=path
-reconfig=true
 customization=devel
-friendly_name=Dbmsd
-review=?
-tags=master,master
+tags=master
 
 [CCB_POLLING_TIMESLICE]
 default=0.05
 type=double
-reconfig=true
-customization=seldom
-friendly_name=CCB Polling Timeslice
-review=?
-tags=ccb,ccb
+tags=ccb
 
 [CCB_POLLING_INTERVAL]
 default=20
 type=int
-reconfig=true
-customization=seldom
-friendly_name=CCB Polling Interval
-review=?
-tags=ccb,ccb
+tags=ccb
 
 [CCB_POLLING_MAX_INTERVAL]
 default=600
 type=int
-reconfig=true
-customization=seldom
-friendly_name=CCB Polling Maximum Interval
-review=?
-tags=ccb,ccb
+description=
+tags=ccb
 
 [CCB_SERVER_READ_BUFFER]
 default=2048
 type=int
-reconfig=true
-customization=seldom
-friendly_name=CCB Server Read Buffer
-review=?
-tags=ccb,ccb
+tags=ccb
 
 [CCB_SERVER_WRITE_BUFFER]
 default=2048
 type=int
-reconfig=true
-customization=seldom
-friendly_name=CCB Server Write Buffer
-review=?
-tags=ccb,ccb
+tags=ccb
 
 [CCB_SWEEP_INTERVAL]
 default=1200
 type=int
-reconfig=true
-customization=seldom
-friendly_name=CCB Sweep Interval
-review=?
-tags=ccb,ccb
+tags=ccb
 
 [CCB_RECONNECT_FILE]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=CCB Reconnect File
-review=?
-tags=ccb,ccb
+tags=ccb
 
 [GRIDMAP]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Gridmap file
-review=?
-tags=ccb,ccb
+description=Gridmap file
+tags=ccb
 
 [GSI_DAEMON_TRUSTED_CA_DIR]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=GSI Daemon Trusted Certificate Authority Directory
-usage=the directory that contains the public keys and signing policies of trusted certificate authorities
-review=?
-tags=ccb,ccb
+description=GSI Daemon Trusted Certificate Authority Directory
+usage=Set the directory that contains the public keys and signing policies of trusted certificate authorities
+tags=security
 
 [GSI_SKIP_HOST_CHECK_CERT_REGEX]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=GSI Skip Host Check Cert Regex
-review=?
-tags=ccb,ccb
+tags=security
 
 [GSI_SKIP_HOST_CHECK]
 default=false
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=GSI Skip Host Check
-review=?
-tags=ccb,ccb
+tags=security
 
 [TRUNC_MASTER_LOG_ON_OPEN]
 default=false
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Truncate Master Log on Open
-review=?
-tags=ccb,ccb
+tags=master
 
 [TRUNC_NEGOTIATOR_LOG_ON_OPEN]
 default=false
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Truncate Negotiator Log on Open
-review=?
-tags=ccb,ccb
+tags=negotiator
 
 [TRUNC_COLLECTOR_LOG_ON_OPEN]
 default=false
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Truncate Collector Log on Open
-review=?
-tags=ccb,ccb
+tags=collector
 
 [TRUNC_SCHED_LOG_ON_OPEN]
 default=false
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Truncate Sched Log on Open
-review=?
-tags=ccb,ccb
+tags=schedd
 
 [TRUNC_STARTER_LOG_ON_OPEN]
 default=false
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Truncate Starter Log on Open
-review=?
-tags=ccb,ccb
+tags=starter
 
 [TRUNC_SHADOW_LOG_ON_OPEN]
 default=false
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Truncate Shadow Log on Open
-review=?
-tags=ccb,ccb
+tags=shadow
 
 [TRUNC_MATCH_LOG_ON_OPEN]
 default=false
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Truncate Match Log on Open
-review=?
-tags=ccb,ccb
+tags=negotiator
 
 [SHADOW_LOCK]
 default=$(LOCK)/ShadowLock
 type=path
-reconfig=true
-customization=seldom
-friendly_name=Lock file for locking the shadow log file
-review=?
-tags=ccb,ccb
+description=Lock file for locking the shadow log file
+tags=shadow
 
 [DEBUG_TIME_FORMAT]
 # The default used to have a trailing space, it was removed in 8.3.2
 default=%m/%d/%y %H:%M:%S
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Debug Log Time Format
-review=?
-tags=ccb,ccb
+description=Time format for the Debug log files
+tags=daemons,log
 
 [MASTER_DEBUG_WAIT]
 default=false
 type=bool
-reconfig=true
 customization=devel
-friendly_name=Master Debug Wait
-review=?
-tags=ccb,ccb
+tags=master
 
 [SHADOW_DEBUG_WAIT]
 default=false
 type=bool
-reconfig=true
 customization=devel
-friendly_name=Shadow Debug Wait
-review=?
-tags=ccb,ccb
+tags=shadow
 
 [SCHED_DEBUG_WAIT]
 default=false
 type=bool
-reconfig=true
 customization=devel
-friendly_name=Sched Debug Wait
-review=?
-tags=ccb,ccb
+tags=schedd
 
 [STARTER_DEBUG_WAIT]
 default=false
 type=bool
-reconfig=true
 customization=devel
-friendly_name=Starter Debug Wait
-review=?
-tags=ccb,ccb
+tags=starter
 
 [COLLECTOR_DEBUG_WAIT]
 default=false
 type=bool
-reconfig=true
 customization=devel
-friendly_name=Collector Debug Wait
-review=?
-tags=ccb,ccb
+tags=collector
 
 [NEGOTIATOR_DEBUG_WAIT]
 default=false
 type=bool
-reconfig=true
 customization=devel
-friendly_name=Negotiator Debug Wait
-review=?
-tags=ccb,ccb
+tags=negotiator
 
 [NEGOTIATOR_READ_CONFIG_BEFORE_CYCLE]
 default=false
 type=bool
-reconfig=true
-customization=devel
-friendly_name=Negotiator Read Config Before Cycle
-review=?
+customization=expert
 tags=negotiator
 
 [SCHEDD_JOB_QUEUE_LOG_FLUSH_DELAY]
 default=5
 version=7.4.0
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Schedd Job Queue Log Flush Delay
-review=?
 tags=schedd
 
 [DAEMON_SOCKET_DIR]
 default=auto
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Daemon Socket Dir
-review=?
 
 [SHARED_PORT_DAEMON_AD_FILE]
 default=$(LOCK)/shared_port_ad
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Shared Port Daemon Ad File
-review=?
 
 [USE_SHARED_PORT]
 default=true
 version=7.5.0
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Use Shared Port
-review=?
+tags=master,shared_port
 
 [HAD_USE_SHARED_PORT]
 default=false
@@ -6232,31 +3681,24 @@ type=bool
 [SHARED_PORT_PORT]
 default=$(COLLECTOR_PORT)
 type=int
-reconfig=true
-customization=seldom
-friendly_name=TCP port used by condor_shared_port
+description=TCP port used by condor_shared_port
 
 [AUTO_INCLUDE_SHARED_PORT_IN_DAEMON_LIST]
 default=true
 version=8.1.1
 type=bool
-reconfig=true
 customization=expert
-friendly_name=Auto Include Shared Port In Daemon List
-review=?
 
 [COLLECTOR_USES_SHARED_PORT]
 default=true
 version=8.1.4
 type=bool
-reconfig=true
 customization=expert
 
 [SHARED_PORT_DEFAULT_ID]
 default=
 version=8.1.4
 type=string
-reconfig=true
 customization=expert
 
 [CCB_HEARTBEAT_INTERVAL]
@@ -6264,10 +3706,7 @@ default=300
 version=7.5.0
 range=0,
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Interval between CCB protocol heartbeats
-review=?
+description=Interval between CCB protocol heartbeats
 tags=ccb
 
 [ROOSTER_INTERVAL]
@@ -6275,28 +3714,17 @@ default=300
 version=7.4.0
 range=0,
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Rooster interval
-review=?
 tags=rooster
 
 [ROOSTER_UNHIBERNATE]
 default=Offline && Unhibernate
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Rooster unhibernate
-review=?
 tags=rooster
 
 [ROOSTER_WAKEUP_CMD]
 default="$(BIN)/condor_power -d -i"
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Rooster wakeup command
-review=?
+description=Rooster wakeup command
 tags=rooster
 
 [ROOSTER_MAX_UNHIBERNATE]
@@ -6304,65 +3732,42 @@ default=0
 version=7.5.3
 range=0,
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Rooster max unhibernate per cycle
-review=?
+description=Rooster max unhibernate per cycle
 tags=rooster
 
 [ROOSTER_UNHIBERNATE_RANK]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Rooster unhibernate rank
-review=?
 tags=rooster
 
 # the procd gets passed it's log size as an argument, so scale suffix like MB or time rotation is not allowed.
 [MAX_PROCD_LOG]
 default=1000000
-reconfig=true
-customization=seldom
-friendly_name=Max Procd Log (size rotation only, no scale suffix)
-review=?
-tags=c++_util,procd
+description=Max Procd Log (size rotation only, no scale suffix)
+tags=procd
 
 [ENABLE_ADDRESS_REWRITING]
 default=true
 version=7.4.3
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Enable Address Rewriting
-review=?
-tags=c++_util
+tags=daemons
 
 # This was an option "born deprecated"; it allows a single-host HTCondor instance (particularly, the HTCondor-CE) to provide a better dual-stack service by rewriting all ads in the collector.
 [SHARED_PORT_ADDRESS_REWRITING]
 default=false
 version=8.3.4
 type=bool
-reconfig=true
-customization=never
+customization=devel
 
 [SHADOW_WORKLIFE]
 default=3600
 version=7.5.3
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Shadow Worklife
-review=?
 tags=shadow
 
 [CLAIM_WORKLIFE]
 default=1200
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Claim Worklife
-review=?
 tags=startd
 
 [NEGOTIATION_CYCLE_STATS_LENGTH]
@@ -6370,256 +3775,172 @@ default=3
 version=7.5.3
 range=0,100
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Negotiation Cycle Stats Length
-review=?
 tags=negotiator
 
 [SYSTEM_JOB_MACHINE_ATTRS]
 default=Cpus,SlotWeight
 type=string
-reconfig=true
-customization=seldom
-friendly_name=System Job Machine Attrs
-review=?
 tags=schedd
 
 [SYSTEM_JOB_MACHINE_ATTRS_HISTORY_LENGTH]
 default=1
 range=0,
 type=int
-reconfig=true
-customization=seldom
-friendly_name=System Job Machine Attrs History Length
-review=?
 tags=schedd
 
 [GRAM_VERSION_DETECTION]
 default=true
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Gram Version Detection
 usage=true if gridmanager should automatically detect the version of GRAM servers, false otherwise
-review=?
 tags=gridmanager
 
 [CREATE_LOCKS_ON_LOCAL_DISK]
 default=true
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=
+description=
 usage=true if userlog file locks should be create in temp folder on local disk, false otherwise
-review=?
 
 [LOCAL_DISK_LOCK_DIR]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=
+description=
 usage=/tmp-like directory to store lock files, /tmp/condorLocks is used otherwise
-review=?
 
 [LOCK_DEBUG_LOG_TO_APPEND]
 default=false
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=
-review=?
+description=
 
 [LOG_TO_SYSLOG]
 default=false
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Send all logs to syslog instead of files
+description=Send all logs to syslog instead of files
 
 [LOCAL_CONFIG_DIR_EXCLUDE_REGEXP]
 default=^((\..*)|(.*\.pl)|(.*\.py)|(.*\.sh)|(.*~)|(#.*)|(.*\.rpmsave)|(.*\.rpmnew)|(.*\.dpkg-old)|(.*\.dpkg-dist)|(.*\.cfsaved))$
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Local Config Dir Exclude Regex
-review=?
-tags=c++_util,condor_config
+description=Regular expression matching filenames to ignore in the config directory
+tags=condor_config
 
 [PARROT]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Parrot
 usage=run job within parrot
-review=?
 tags=parrot
 
 [DELEGATE_JOB_GSI_CREDENTIALS_REFRESH]
 default=0.25
 range=0,1
 type=double
-reconfig=true
-customization=seldom
-friendly_name=Delegate Job GSI Credentials Refresh
-review=?
 
 [DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME]
 default=86400
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Delegate Job GSI Credentials Lifetime
-review=?
 
 [STATISTICS_WINDOW_QUANTUM]
 default=240
 range=1,1000000000
 type=int
-reconfig=true
 customization=expert
-friendly_name=Size of Internal Statistics Ring Buffer In Seconds
-review=?
-tags=scheduler
+description=Size of Internal Statistics Ring Buffer In Seconds
+tags=daemons
 
 [STATISTICS_WINDOW_QUANTUM_DC]
 default=
 type=string
-reconfig=true
 customization=expert
-friendly_name=Size of Internal Statistics Ring Buffer In Seconds for DaemonCore Stats
-review=?
-tags=scheduler
+description=Size of Internal Statistics Ring Buffer In Seconds for DaemonCore Stats
+tags=daemons
 
 [STATISTICS_WINDOW_QUANTUM_SCHEDD]
 default=
 type=string
-reconfig=true
 customization=expert
-friendly_name=Size of Internal Statistics Ring Buffer In Seconds for Scheduler Stats
-review=?
-tags=scheduler
+description=Size of Internal Statistics Ring Buffer In Seconds for Scheduler Stats
+tags=schedd
 
 [STATISTICS_WINDOW_SECONDS]
 default=1200
 range=1,1000000000
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Size of Recent Statistics Window
-review=?
-tags=scheduler
+description=Size of Recent Statistics Window
+tags=daemons
 
 [DCSTATISTICS_TIMESPANS]
 default=4m:240 20m:1200 4h:14400
 version=8.1.6
 type=string
-reconfig=true
-customization=seldom
-friendly_name=List of timespans for reporting DC exponential moving average statistics
-review=?
-tags=schedd
+description=List of timespans for reporting DC exponential moving average statistics
+tags=daemons
 
 [DCSTATISTICS_WINDOW_SECONDS]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Size of Recent Statistics Window for DaemonCore Stats
-review=?
-tags=scheduler
+description=Size of Recent Statistics Window for DaemonCore Stats
+tags=daemons
 
 [TCP_KEEPALIVE_INTERVAL]
 default=360
 range=-1,
 type=int
-reconfig=true
 customization=expert
-friendly_name=Setting for TCP keepalive probe interval
+description=Setting for TCP keepalive probe interval
 
 [SHADOW_CHECKPROXY_INTERVAL]
 default=600
 range=1,
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Shadow Check Proxy Interval
-review=?
+description=Shadow Check Proxy Interval
 
 [SHADOW_RUN_UNKNOWN_USER_JOBS]
 default=false
 type=bool
-reconfig=false
-customization=seldom
-friendly_name=Shadow Run Unknown User Jobs
-review=?
 tags=shadow
+restart=true
 
 [SCHEDD_ROUND_ATTR_ProportionalSetSizeKb]
 default=25%
-type=string
-reconfig=false
-customization=seldom
-friendly_name=
-review=?
 tags=schedd
+restart=true
+customization=expert
 
 [SCHEDD_ROUND_ATTR_ResidentSetSize]
 default=25%
-type=string
-reconfig=false
-customization=seldom
-friendly_name=
-review=?
 tags=schedd
+restart=true
+customization=expert
 
 [SCHEDD_ROUND_ATTR_ExecutableSize]
 default=25%
-type=string
-reconfig=false
-customization=seldom
-friendly_name=
-review=?
 tags=schedd
+restart=true
+customization=expert
 
 [SCHEDD_ROUND_ATTR_ImageSize]
 default=25%
-type=string
-reconfig=false
-customization=seldom
-friendly_name=
-review=?
 tags=schedd
+restart=true
+customization=expert
 
 [SCHEDD_ROUND_ATTR_DiskUsage]
 default=25%
-type=string
-reconfig=false
-customization=seldom
-friendly_name=
-review=?
 tags=schedd
+restart=true
+customization=expert
 
 [SCHEDD_ROUND_ATTR_NumCkpts]
 default=4
-type=string
-reconfig=false
-customization=seldom
-friendly_name=
-review=?
 tags=schedd
+restart=true
+customization=expert
 
 [ENABLE_VERSIONED_OPSYS]
 default=true
 win32_default=false
 type=bool
-reconfig=true
 customization=devel
-friendly_name=Append OS version to the value of OPSYS
-review=?
-tags=schedd
+description=Append OS version to the value of OPSYS
+tags=startd
 
 [WANT_SUSPEND]
 default=False
@@ -6637,415 +3958,282 @@ default=False
 [MachineMaxVacateTime]
 default=$(MaxVacateTime)
 type=int
-reconfig=true
-customization=seldom
-friendly_name=
-review=?
+description=
 tags=startd
 
 [PERIODIC_CHECKPOINT]
 default=((time() - LastPeriodicCheckpoint)/60.0) > (180.0 + $RANDOM_INTEGER(-30,30,1))
 type=string
-reconfig=true
 tags=startd
 
 [DEFRAG_REQUIREMENTS]
 default=PartitionableSlot && Offline=!=True
 type=string
-reconfig=true
-customization=seldom
-friendly_name=
-review=?
+description=
 tags=defrag
 
 [DEFRAG_CANCEL_REQUIREMENTS]
 default=$(DEFRAG_WHOLE_MACHINE_EXPR)
 type=string
-reconfig=true
-customization=seldom
-friendly_name=
-review=?
+description=
 tags=defrag
 
 [DEFRAG_WHOLE_MACHINE_EXPR]
 default=Cpus == TotalCpus && Offline=!=True
 type=string
-reconfig=true
 customization=normal
-friendly_name=
-review=?
+description=
 tags=defrag
 
 [DEFRAG_STATE_FILE]
 default=$(LOCK)/defrag_state
 type=string
-reconfig=true
-customization=seldom
-friendly_name=
-review=?
+description=
 tags=defrag
 
 [DEFRAG_LOG]
 default=$(LOG)/DefragLog
 type=path
-reconfig=true
-customization=seldom
-friendly_name=Collector Log
-review=?
+description=Path to Defrag daemon Log
 tags=defrag,log
 
 [DEFRAG_INTERVAL]
 default=600
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Collector Log
-review=?
-tags=defrag,log
+tags=defrag
 
 [DEFRAG_DRAINING_MACHINES_PER_HOUR]
 default=0
 range=0,
 type=int
-reconfig=true
 customization=normal
-friendly_name=Collector Log
-review=?
-tags=defrag,log
+tags=defrag
 
 [DEFRAG_MAX_CONCURRENT_DRAINING]
 default=-1
 range=-1,
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Collector Log
-review=?
-tags=defrag,log
+tags=defrag
 
 [DEFRAG_MAX_WHOLE_MACHINES]
 default=-1
 range=-1,
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Collector Log
-review=?
-tags=defrag,log
+tags=defrag
 
 [DEFRAG_RANK]
 default=-ExpectedMachineGracefulDrainingBadput
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Collector Log
-review=?
-tags=defrag,log
+tags=defrag
 
 [DEFRAG_DRAINING_SCHEDULE]
 default=graceful
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Collector Log
-review=?
-tags=defrag,log
+tags=defrag
 
 [DEFRAG_UPDATE_INTERVAL]
 default=300
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Defrag Update Interval
-review=?
 tags=defrag
 
 [DEFRAG_NAME]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=
-review=?
+description=Name of the defrag daemon
 tags=defrag
 
 [GROUP_SORT_EXPR]
 default=ifThenElse(AccountingGroup=?="<none>",3.4e+38,ifThenElse(GroupQuota>0,GroupResourcesInUse/GroupQuota,3.3e+38))
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Accounting Group Sorting Expression
-review=?
+description=Accounting Group Sorting Expression
 tags=negotiator
 
 [CLAIM_PARTITIONABLE_LEFTOVERS]
 default=$(NEGOTIATOR_USE_SLOT_WEIGHTS)
 version=7.7.5
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Claim Parititionable Leftovers
-review=?
 tags=schedd,startd,claim
 
 [MOUNT_UNDER_SCRATCH]
 default=
 version=7.7.5
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Mount Under Scratch
-review=?
 tags=starter
 
 [NAMED_CHROOT]
 default=
 version=7.7.5
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Named Chroot
-review=?
 tags=starter
 
 [MEMORY_USAGE_METRIC]
 default=((ResidentSetSize+1023)/1024)
 version=7.7.6
 type=string
-reconfig=true
 customization=expert
-friendly_name=MemoryUsage metric
-review=?
+description=Expression to set MemoryUsage
 tags=starter
 
 [MEMORY_USAGE_METRIC_VM]
 default=VM_Memory
 version=7.7.6
 type=string
-reconfig=true
 customization=expert
-friendly_name=MemoryUsage metric for VM Universe jobs
-review=?
+description=MemoryUsage metric for VM Universe jobs
 tags=starter
 
 [JOB_DEFAULT_REQUESTMEMORY]
 default=ifthenelse(MemoryUsage =!= UNDEFINED,MemoryUsage,(ImageSize+1023)/1024)
 version=7.7.6
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Default RequestMemory expression if not specified in submit file
-review=?
-tags=submit,submit
+description=Default RequestMemory expression if not specified in submit file
+tags=submit
 
 [JOB_DEFAULT_REQUESTDISK]
 default=DiskUsage
 version=7.7.6
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Default RequestDisk expression if not specified in submit file
-review=?
-tags=submit,submit
+description=Default RequestDisk expression if not specified in submit file
+tags=submit
 
 [JOB_DEFAULT_REQUESTCPUS]
 default=1
 version=7.7.6
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Default RequestCpus expression if not specified in submit file
-review=?
-tags=submit,submit
+description=Default RequestCpus expression if not specified in submit file
+tags=submit
 
 [MUST_MODIFY_REQUEST_EXPRS]
 default=false
 version=7.7.6
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Should startd modify request exprs even if it causes match failure
-review=?
+description=Should startd modify request exprs even if it causes match failure
 tags=startd
 
 [MODIFY_REQUEST_EXPR_REQUESTCPUS]
 default=quantize(RequestCpus,{1})
 version=7.7.6
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Default modification to a cpu resource request
-review=?
+description=Default modification to a cpu resource request
 tags=startd
 
 [MODIFY_REQUEST_EXPR_REQUESTMEMORY]
 default=quantize(RequestMemory,{128})
 version=7.7.6
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Default modification to a memory resource request
-review=?
+description=Default modification to a memory resource request
 tags=startd
 
 [MODIFY_REQUEST_EXPR_REQUESTDISK]
 default=quantize(RequestDisk,{1024})
 version=7.7.6
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Default modification to a disk resource request
-review=?
+description=Default modification to a disk resource request
 tags=startd
 
 [CONSUMPTION_POLICY]
 default=false
 version=7.7.6
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Does a slot ad support a consumption policy?
-review=?
+description=Does a slot ad support a consumption policy?
 tags=startd
 
 [CONSUMPTION_CPUS]
 default=quantize(target.RequestCpus,{1})
 version=7.7.6
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Consumption policy for cpu resource assets
-review=?
+description=Consumption policy for cpu resource assets
 tags=startd,negotiator
 
 [CONSUMPTION_MEMORY]
 default=quantize(target.RequestMemory,{128})
 version=7.7.6
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Consumption policy for memory resource assets
-review=?
+description=Consumption policy for memory resource assets
 tags=startd,negotiator
 
 [CONSUMPTION_DISK]
 default=quantize(target.RequestDisk,{1024})
 version=7.7.6
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Consumption policy for disk resource assets
-review=?
+description=Consumption policy for disk resource assets
 tags=startd,negotiator
 
 [SLOT_WEIGHT]
 default=Cpus
 version=7.7.6
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Slot weight expression, resides on SlotWeight attribute
-review=?
+description=Slot weight expression, resides on SlotWeight attribute
 tags=negotiator
 
 [ENABLE_DEPRECATION_WARNINGS]
 default=true
 version=7.7.6
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Enable warnings about the use of deprecated features
-review=?
+description=Enable warnings about the use of deprecated features
 tags=startd
 
 [CLASSAD_LOG_STRICT_PARSING]
 default=true
 version=7.9.0
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Enable strict parse checking of classad RHS expressions in classad log files
-review=?
+description=Enable strict parse checking of classad RHS expressions in classad log files
 tags=classad_log
 
 [CLASSAD_ENABLE_USER_HOME]
 default=true
 version=8.3.7
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Enable the user_home function that looks up a user's home directory
-review=?
+description=Enable the user_home function that looks up a user's home directory
 tags=classad
 
 [STARTER_RLIMIT_AS]
 default=0
 version=7.8.1
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Classad expression used to set virtual memory rlimit for job
-review=?
+description=Classad expression used to set virtual memory rlimit for job
 tags=starter
 
 [INTERACTIVE_SUBMIT_FILE]
 default=$(LIBEXEC)/interactive.sub
 version=7.9.0
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Location of default submit file for condor_submit -i
-review=?
+description=Location of default submit file for condor_submit -i
 tags=submit
 
 [MAX_GLOBAL_JOB_PRIOS]
 default=500
 version=7.9.1
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Maximum size of JobPrioArray in submitter ad
-review=?
+description=Maximum size of JobPrioArray in submitter ad
 tags=schedd
 
 [USE_GLOBAL_JOB_PRIOS]
 default=false
 version=7.9.1
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Consider job priorities across multiple schedds
-review=?
+description=Consider job priorities across multiple schedds
 tags=schedd
 
 [TRANSFER_QUEUE_USER_EXPR]
 default=strcat("Owner_",Owner)
 version=7.9.1
 type=string
-reconfig=true
-customization=seldom
-friendly_name=
-review=?
+description=
 tags=schedd
 
 [MAX_TRANSFER_INPUT_MB]
 default=-1
 version=7.9.2
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Maximum size of transferred input files
-review=?
+description=Maximum size of transferred input files
 tags=schedd
 
 [MAX_TRANSFER_OUTPUT_MB]
 default=-1
 version=7.9.2
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Maximum size of transferred output files
-review=?
+description=Maximum size of transferred output files
 tags=schedd
 
 [TRANSFER_IO_REPORT_INTERVAL]
@@ -7053,20 +4241,14 @@ default=10
 version=7.9.4
 range=0,
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Interval between reports from file transfer processes to the transfer queue manager
-review=?
+description=Interval between reports from file transfer processes to the transfer queue manager
 tags=schedd
 
 [TRANSFER_IO_REPORT_TIMESPANS]
 default=1m:60 5m:300 1h:3600 1d:86400
 version=7.9.4
 type=string
-reconfig=true
-customization=seldom
-friendly_name=List of timespans for reporting file transfer I/O statistics
-review=?
+description=List of timespans for reporting file transfer I/O statistics
 tags=schedd
 
 [GLEXEC_RETRIES]
@@ -7074,10 +4256,7 @@ default=3
 version=7.8.8
 range=0,
 type=int
-reconfig=true
-customization=seldom
-friendly_name=number of times to retry calls to glexec
-review=?
+description=Number of times to retry calls to glexec
 tags=startd
 
 [GLEXEC_RETRY_DELAY]
@@ -7085,30 +4264,21 @@ default=5
 version=7.8.8
 range=0,
 type=int
-reconfig=true
-customization=seldom
-friendly_name=minimum time delay in exponential backoff
-review=?
+description=Minimum time delay in exponential backoff for glexec retries
 tags=startd
 
 [GRACEFULLY_REMOVE_JOBS]
 default=true
 version=7.9.0
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Determines if jobs should be removed gracefully by default.
-review=?
+description=Determines if jobs should be removed gracefully by default.
 tags=shadow,baseshadow
 
 [BASE_CGROUP]
 default=
 version=7.9.0
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Enables and names the base kernel cgroup for job management
-review=?
+description=Enables and names the base kernel cgroup for job management
 tags=starter
 
 [CGROUP_MEMORY_LIMIT_POLICY]
@@ -7116,30 +4286,21 @@ aliases=
 default=soft
 version=7.9.0
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Determines whether cgroup base memory enforcement should happen
-review=?
+description=Determines whether cgroup base memory enforcement should happen
 tags=starter
 
 [BATCH_GAHP_CHECK_STATUS_ATTEMPTS]
 default=5
 version=7.9.5
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Determines how many failed check status attempts before failing an infn gahp job.
-review=?
+description=Determines how many failed check status attempts before failing an infn gahp job.
 tags=gridmanager,infnbatchjob
 
 [PER_JOB_NAMESPACES]
 default=true
 version=7.9.6
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Determines if job creates their own namespace
-review=?
+description=Determines if job creates their own namespace
 tags=starter
 
 [CHIRP_DELAYED_UPDATE_PREFIX]
@@ -7147,183 +4308,122 @@ default=Chirp*
 version=8.1.0
 type=string
 is_macro=true
-reconfig=true
-customization=seldom
-friendly_name=Determines the required prefix for remote updates from the running job
-review=?
+description=Determines the required prefix for remote updates from the running job
 tags=starter,shadow
 
 [CHIRP_DELAYED_UPDATE_MAX_ATTRS]
 default=100
 range=0,
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Maximum number of pending chirp delayed updates
-review=?
+description=Maximum number of pending chirp delayed updates
 tags=starter
 
 [ENABLE_CHIRP_IO]
 default=true
 version=8.1.0
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Enables IO from the running job back to the submitter machine
-review=?
+description=Enables IO from the running job back to the submitter machine
 tags=starter
 
 [ENABLE_CHIRP_UPDATES]
 default=true
 version=8.1.0
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Enables job updates (inserting values into the job log or qedits) from the running job back to the submitter machine
-review=?
+description=Enables job updates (inserting values into the job log or qedits) from the running job back to the submitter machine
 tags=starter
 
 [ENABLE_CHIRP_DELAYED]
 default=true
 version=8.1.0
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Enables delayed job updates (inserting qedits) with a required prefix at little resource cost from the running job back to the submitter machine.  The safest of the ENABLE_CHIRP_* settings
-review=?
+description=Enables delayed job updates (inserting qedits) with a required prefix at little resource cost from the running job back to the submitter machine.  The safest of the ENABLE_CHIRP_* settings
 tags=starter
 
 [GANGLIA_GMETRIC]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Ganglia gmetric Executable
-review=?
-tags=c++_util,condor_config
+description=Path to the Ganglia gmetric Executable
+tags=condor_config
 
 [GANGLIA_LIB]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Ganglia Library
-review=?
-tags=c++_util,condor_config
+description=Ganglia Library
+tags=condor_config
 
 [GANGLIA_LIB_PATH]
 default=/lib,/usr/lib,/usr/local/lib
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Ganglia Library Search Path
-review=?
-tags=c++_util,condor_config
+description=Ganglia Library Search Path
+tags=condor_config
 
 [GANGLIA_LIB64_PATH]
 default=/lib64,/usr/lib64,/usr/local/lib64
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Ganglia 64-bit Library Search Path
-review=?
-tags=c++_util,condor_config
+description=Ganglia 64-bit Library Search Path
+tags=condor_config
 
 [GANGLIA_CONFIG]
 default=/etc/ganglia/gmond.conf
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Ganglia Configuration
-review=?
-tags=c++_util,condor_config
+description=Path to the Ganglia Configuration file
+tags=condor_config
 
 [GANGLIA_GSTAT_COMMAND]
 default=gstat --all --mpifile --gmond_ip=localhost --gmond_port=8649
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Ganglia gstat Command
-review=?
-tags=c++_util,condor_config
+tags=condor_config
 
 [GANGLIAD_METRICS_CONFIG_DIR]
 default=/etc/condor/ganglia.d
 type=path
-reconfig=true
-customization=seldom
-friendly_name=Ganglia metric config dir
-review=?
-tags=c++_util,condor_config
+description=Ganglia metric config dir
+tags=condor_config
 
 [GANGLIAD_VERBOSITY]
 default=0
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Ganglia Verbosity
-review=?
-tags=c++_util,condor_config
+description=Ganglia Verbosity
+tags=condor_config
 
 [GANGLIAD_INTERVAL]
 default=60
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Ganglia Interval
-review=?
-tags=c++_util,condor_config
+description=Ganglia Interval
+tags=condor_config
 
 [GANGLIAD_LOG]
 default=$(LOG)/GangliadLog
 type=path
-reconfig=true
-customization=seldom
-friendly_name=Gangliad Log
-review=?
 tags=gangliad
 
 [MAX_GANGLIAD_LOG]
 default=$(MAX_DEFAULT_LOG)
-reconfig=true
-customization=seldom
-friendly_name=Max Gangliad Log
-review=?
-tags=c++_util,gangliad
+tags=gangliad
 
 [GANGLIAD_REQUIREMENTS]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Requirements to be met by all monitored ads
-review=?
-tags=c++_util,gangliad
+description=Requirements to be met by all ads monitored by Ganglia
+tags=gangliad
 
 [GANGLIAD_PER_EXECUTE_NODE_METRICS]
 default=true
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Publish metrics for individual execute nodes
-review=?
-tags=c++_util,gangliad
+description=Publish Ganglia metrics for individual execute nodes
+tags=gangliad
 
 [GANGLIA_SEND_DATA_FOR_ALL_HOSTS]
 default=false
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Send metrics for all hosts
-review=?
-tags=c++_util,gangliad
+description=Send Ganglia metrics for all hosts
+tags=gangliad
 
 [ECRYPTFS_ADD_PASSPHRASE]
 default=ecryptfs-add-passphrase
 type=path
-reconfig=true
 customization=expert
-friendly_name=Name of ecryptfs tool to add a passphrase
+description=Name of ecryptfs tool to add a passphrase
 review=toddt
 tags=ecryptfs
 
@@ -7331,208 +4431,154 @@ tags=ecryptfs
 default=3600
 range=600,86400
 type=int
-reconfig=true
 customization=expert
-friendly_name=Duration in seconds for key timeout
+description=Duration in seconds for ecryptfs key timeout
 review=toddt
 tags=ecryptfs
 
 [FILE_TRANSFER_DISK_LOAD_THROTTLE]
 default=
 type=string
-reconfig=true
-customization=seldom
-friendly_name=
-review=?
-tags=c++_util,schedd
+description=
+tags=schedd
 
 [FILE_TRANSFER_DISK_LOAD_THROTTLE_SHORT_HORIZON]
 default=1m
 type=string
-reconfig=true
-customization=seldom
-friendly_name=
-review=?
-tags=c++_util,schedd
+description=
+tags=schedd
 
 [FILE_TRANSFER_DISK_LOAD_THROTTLE_LONG_HORIZON]
 default=5m
 type=string
-reconfig=true
-customization=seldom
-friendly_name=
-review=?
-tags=c++_util,schedd
+description=
+tags=schedd
 
 [FILE_TRANSFER_DISK_LOAD_THROTTLE_WAIT_BETWEEN_INCREMENTS]
 default=60
 type=int
-reconfig=true
-customization=seldom
-friendly_name=
-review=?
-tags=c++_util,schedd
+description=
+tags=schedd
 
 [RUN_FILETRANSFER_PLUGINS_WITH_ROOT]
 default=false
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Whether to invoke file transfer plugins as user or as root
-review=?
+description=Whether to invoke file transfer plugins as user or as root
 
 [COLLECTOR_MAX_FILE_DESCRIPTORS]
 default=10240
 range=0,
 type=int
-reconfig=false
-customization=seldom
-friendly_name=Collector Max File Descriptors
 usage=Set the limit on file descriptor usage for the collector.
-review=?
+tags=collector
+restart=true
 
 [SCHEDD_MAX_FILE_DESCRIPTORS]
 default=4096
 range=0,
 type=int
-reconfig=false
-customization=seldom
-friendly_name=Schedd Max File Descriptors
 usage=Set the limit on file descriptor usage for the scheduler.
-review=?
+tags=schedd
+restart=true
 
 [SCHEDD_USE_SLOT_WEIGHT]
 default=true
 rant=
 type=bool
-reconfig=true
-constomization=seldom
-friendly_name=Should Schedd obey SLOT_WEIGHT
+description=Should Schedd obey SLOT_WEIGHT
+tags=schedd
 usage=
-review=?
 
 [SHARED_PORT_MAX_FILE_DESCRIPTORS]
 default=4096
 range=0,
 type=int
-reconfig=false
-customization=seldom
-friendly_name=Shared Port Max File Descriptors
 usage=Set the limit on file descriptor usage for condor_shared_port.
-review=?
+restart=true
+tags=shared_port
 
 [USE_RESOURCE_REQUEST_COUNTS]
 default=true
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Use Resource Request Counts
-review=?
 tags=negotiator,matchmaker
 
 [NEGOTIATOR_RESOURCE_REQUEST_LIST_SIZE]
 default=20
 range=1,
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Size of Resource Request List
-review=?
+description=Size of Resource Request List
 tags=negotiator,matchmaker
 
 [NEGOTIATOR_PREFETCH_REQUESTS]
 default=false
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Enable parallel prefetching of requests in the negotiator
-review=?
+description=Enable parallel prefetching of requests in the negotiator
 tags=negotiator,matchmaker
 
 [NEGOTIATOR_PREFETCH_REQUESTS_MAX_TIME]
 default=120
 range=0,
 type=int
-reconfig=true
-customization=seldom
-friendly_name=Timeout for prefetch requests lists phase of negotiator
-review=?
+description=Timeout for prefetch requests lists phase of negotiator
 tags=negotiator,matchmaker
 
 [HISTORY_HELPER]
 default=$(BIN)/condor_history
 win32_default=$(BIN)\condor_history.exe
 type=path
-reconfig=true
 customization=devel
-friendly_name=location of condor history helper executable used by remote condor_history
-review=?
+description=Path to condor helper executable used by remote condor_history
 tags=schedd
 
 [OLD.HISTORY_HELPER]
 default=$(LIBEXEC)/condor_history_helper
 win32_default=$(LIBEXEC)\condor_history_helper.exe
 type=path
-reconfig=true
 customization=devel
-friendly_name=location of history helper executable
-review=?
+description=Path to old history_helper executable
 tags=schedd
 
 [HISTORY_HELPER_MAX_HISTORY]
 default=10000
 range=0,
 type=int
-reconfig=true
-customization=seldom
-friendly_name=History Helper max number of history ads
+description=History Helper max number of history ads
 usage=Set the limit on the number of history ads remote history will consider
-review=?
 
 [HISTORY_HELPER_MAX_CONCURRENCY]
 default=2
 range=0,
 type=int
-reconfig=true
-customization=seldom
-friendly_name=History Helper max number of helper sub-processes
+description=History Helper max number of helper sub-processes
 usage=Set the limit on the number of condor_history_helper sub-processes
-review=?
 
 [CONDOR_Q_USE_V3_PROTOCOL]
 default=true
 type=bool
-reconfig=false
 customization=devel
-friendly_name=Control use of V3 query protocol for condor_q
+description=Control use of V3 query protocol for condor_q
 usage=Set to false to disable V3 query protocol for condor_q.
 
 [CONDOR_Q_ONLY_MY_JOBS]
 default=true
 type=bool
-reconfig=false
-friendly_Name=Whether condor_q will query all jobs, or only the current owners jobs by default
+description=Whether condor_q will query all jobs, or only the current owners jobs by default
 usage=Set to true to have condor_q query only the owners jobs by default
 
 [CONDOR_Q_DASH_BATCH_IS_DEFAULT]
 default=true
 type=bool
-reconfig=false
-friendly_Name=Whether condor_q will default to -batch display
+description=Whether condor_q will default to -batch display
 usage=Set to true to have condor_q defaulit to -batch display
 
 [ENABLE_IPV6]
 default=auto
-customization=seldom
-friendly_name=Enable IPv6
 usage=Should HTCondor use IPv6 interfaces?
 tags=daemon_core
 
 [ENABLE_IPV4]
 default=auto
 version=8.1.3
-customization=seldom
-friendly_name=Enable IPv4
 usage=Should HTCondor use IPv4 interfaces?
 tags=daemon_core
 
@@ -7540,222 +4586,188 @@ tags=daemon_core
 default=true
 version=8.5.3
 type=bool
-reconfig=false
-friendly_name=Prefer IPv4
 usage=Should HTCondor prefer IPv4 (over IPv6) when given the choice?
 tags=daemon_core
+restart=true
 
 [ADVERTISE_IPV4_FIRST]
 default=$(PREFER_IPV4)
 version=8.5.3
-reconfig=false
-friendly_name=Advertise IPv4 First
 usage=Should HTCondor list its IPv4 address(es) before its IPv6 addresses?
 tags=daemon_core
+restart=true
 
 [IGNORE_TARGET_PROTOCOL_PREFERENCE]
 default=$(PREFER_IPV4)
 version=8.5.3
-reconfig=false
-friendly_name=Ignore target protocol preference
 usage=Should HTCondor ignore the target's listed protocol preferences?
 tags=daemon_core
+restart=true
 
 [IGNORE_DNS_PROTOCOL_PREFERENCE]
 default=$(PREFER_IPV4)
 version=8.5.3
-reconfig=false
-friendly_name=Ignore target protocol preference
+description=Ignore DNS target protocol preference
 usage=Should HTCondor ignore the protocol order returned by DNS?
 tags=daemon_core
+restart=true
 
 [PREFER_OUTBOUND_IPV4]
 default=$(PREFER_IPV4)
 version=8.5.3
-reconfig=false
-friendly_name=Prefer to connect over IPv4
+description=Prefer to connect over IPv4
 usage=Should HTCondor prefer IPv4 when ignoring preferences?
 tags=daemon_core
+restart=true
 
 [JOB_EXECDIR_PERMISSIONS]
 default=user
 version=8.1.3
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Permissions on the job's execute directory
-review=?
+description=Permissions on the job's execute directory
 tags=starter
 
 [JOB_SPOOL_PERMISSIONS]
 default=user
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Permissions on the job's spool directory
-review=?
+description=Permissions on the job's spool directory
 
 [PANDAD]
 default=$(LIBEXEC)/condor_pandad
 win32_default=
 type=path
-customization=seldom
+description=Path to Panda damon binary
 review=tlmiller
-reconfig=false
+restart=true
 
 [PANDA_UPDATE_TIMEOUT]
 default=0
 type=int
 review=tlmiller
-reconfig=true
 
 [PANDA_QUEUE_SIZE]
 default=131072
 type=int
 review=tlmiller
-reconfig=true
 
 [PANDA_QUEUE_GRACE]
 default=3
 type=int
 reivew=tlmiller
-reconfig=false
+restart=true
 
 [PANDA_STATISTICS_LOG]
 default=/tmp/pandaStatisticsLog
 type=string
 review=tlmiller
-reconfig=true
 
 [DISCARD_SESSION_KEYRING_ON_STARTUP]
 default=true
 type=bool
-reconfig=false
 customization=expert
-friendly_name=Will master discard session keyring on startup
+description=Will master discard session keyring on startup
 review=toddt
 tags=ecryptfs,master
+restart=true
 
 [DOCKER]
 default=/usr/bin/docker
 win32_default=docker
+description=Path to docker binary
 type=string
-reconfig=true
-customization=seldom
-friendly_name=Docker
-review=?
+tags=starter
 
 [DOCKER_DROP_ALL_CAPABILITIES]
 default=true
 type=bool
-reconfig=true
-customization=seldom
-friendly_name=Docker drop all capabilities
 
 [SUBMIT_REQUIREMENT_NAMES]
 default=
 type=string
-reconfig=true
-friendly_name=Names of the submit requirements.
+description=Names of the submit requirements.
 review=tlmiller
+tags=schedd
 
 [IS_OWNER]
 default=(START =?= False)
 version=8.2.8
 type=string
-friendly_name=When a slot should be in Owner state
-review=?
+description=When a slot should be in Owner state
 
 [FILETRANSFER_PLUGINS]
 default=$(LIBEXEC)/curl_plugin, $(LIBEXEC)/data_plugin
 win32_default=$(LIBEXEC)\curl_plugin.exe, $(LIBEXEC)\data_plugin.exe
-customization=seldom
-friendly_name=List of installed file transfer plugins
+description=List of paths to installed file transfer plugins
 tags=startd
-review=?
 
 # daemons that run as user can't write to $(LOG) and there is no /tmp on windows
 [C_GAHP_LOG]
 default=/tmp/CGAHPLog.$(USERNAME)
 win32_default=NUL
-review=?
 
 [C_GAHP_DEBUG]
 default=D_STATS
-review=?
 
 [C_GAHP_LOCK]
 default=/tmp/CGAHPLock.$(USERNAME)
 win32_default=NUL
-review=?
 [C_GAHP_WORKER_THREAD_LOG]
 default=/tmp/CGAHPWorkerLog.$(USERNAME)
 win32_default=NUL
-review=?
 [C_GAHP_WORKER_THREAD_LOCK]
 default=/tmp/CGAHPWorkerLock.$(USERNAME)
 win32_default=NUL
-review=?
 
 [KBDD]
 default=$(SBIN)/condor_kbdd
 win32_default=$(SBIN)\condor_kbdd.exe
-friendly_name=Location of keyboard daemon binary
+description=Path to keyboard daemon binary
 type=path
-review=?
 [KBDD_ADDRESS_FILE]
 default=$(LOG)/.kbdd_address
 type=path
-review=?
 
 [NEGOTIATOR]
 default=$(SBIN)/condor_negotiator
 win32_default=$(SBIN)\condor_negotiator.exe
-friendly_name=Location of Negotiator daemon binary
+description=Path to Negotiator daemon binary
 type=path
-review=?
 
 [COLLECTOR]
 default=$(SBIN)/condor_collector
 win32_default=$(SBIN)\condor_collector.exe
-friendly_name=Location of Collector daemon binary
+description=Path to Collector daemon binary
 type=path
-review=?
 
 [CKPT_SERVER]
 default=$(SBIN)/condor_ckpt_server
 win32_default=$(SBIN)\condor_ckpt_server.exe
-friendly_name=Location of Checkpoint server binary
+description=Path to Checkpoint server binary
 type=path
-review=?
 
 [JOB_ROUTER]
 default=$(LIBEXEC)/condor_job_router
 win32_default=$(LIBEXEC)\condor_job_router.exe
-friendly_name=Location of Job Router binary
+description=Path to Job Router binary
 type=path
-review=?
 
 [ROOSTER]
 default=$(LIBEXEC)/condor_rooster
 win32_default=$(LIBEXEC)\condor_rooster.exe
-friendly_name=Location of the Machine Hybernation/Wake daemon
+description=Path to the Machine Hybernation/Wake daemon binary
 type=path
-review=?
 
 [SHARED_PORT]
 default=$(LIBEXEC)/condor_shared_port
 win32_default=$(LIBEXEC)\condor_shared_port.exe
-friendly_name=Location of the Shared Port daemon
+description=Path to the Shared Port daemon binary
 type=path
-review=?
 
 [HAD]
 default=$(SBIN)/condor_had
 win32_default=$(SBIN)\condor_had.exe
-friendly_name=Location of the High-Availability daemon
+description=Path to the High-Availability daemon binary
 type=path
-review=?
 
 [HAD_SOCKET_NAME]
 default=$(LOCALNAME:had)
@@ -7768,9 +4780,8 @@ type=string
 [REPLICATION]
 default=$(SBIN)/condor_replication
 win32_default=$(SBIN)\condor_replication.exe
-friendly_name=Location of the Replication daemon
+description=Path to the Replication daemon binary
 type=path
-review=?
 
 [REPLICATION_SOCKET_NAME]
 default=$(LOCALNAME:replication)
@@ -7783,297 +4794,240 @@ type=string
 [TRANSFERER]
 default=$(LIBEXEC)/condor_transferer
 win32_default=$(LIBEXEC)\condor_transferer.exe
-friendly_name=Location of the Transfer daemon
+description=Path to the Transfer daemon binary
 type=path
-review=?
 
 [DEFRAG]
 default=$(LIBEXEC)/condor_defrag
 win32_default=$(LIBEXEC)\condor_defrag.exe
-friendly_name=Location of the Machine Slot Defrag daemon
+description=Path to the Machine Slot Defrag daemon binary
 type=path
-review=?
 
 [GANGLIAD]
 default=$(LIBEXEC)/condor_gangliad
 win32_default=$(LIBEXEC)\condor_gangliad.exe
-friendly_name=Location of the Gangila daemon
+description=Path to the Gangila daemon binary
 type=path
-review=?
 
 [STARTER]
 default=$(SBIN)/condor_starter
 win32_default=$(SBIN)\condor_starter.exe
-friendly_name=Location of the Vanilla Starter
+description=Path to Vanilla Starter binary
 type=path
-review=?
 
 [STARTER_STANDARD]
 default=$(SBIN)/condor_starter.std
 win32_default=
-friendly_name=Location of the Standard Universe Starter
+description=Path to the Standard Universe Starter binary
 type=path
-review=?
 
 [MASTER_ADDRESS_FILE]
 default=$(LOG)/.master_address
-friendly_name=Location of the master_address file
+description=Path to the master address file
 type=path
-review=?
 
 [COLLECTOR_ADDRESS_FILE]
 default=$(LOG)/.collector_address
-friendly_name=Location of the collector_address file
+description=Path to the collector address file
 type=path
-review=?
 
 [COLLECTOR_SUPER_ADDRESS_FILE]
 default=$(LOG)/.collector_address.super
-friendly_name=Location of the collector super address file
+description=Path to the collector super address file
 type=path
-review=?
 
 [STARTD_ADDRESS_FILE]
 default=$(LOG)/.startd_address
-friendly_name=Location of the startd_address file
+description=Path to the startd address file
 type=path
-review=?
 
 [SCHEDD_ADDRESS_FILE]
 default=$(SPOOL)/.schedd_address
-friendly_name=Location of the schedd_address file
+description=Path to the schedd address file
 type=path
-review=?
 
 [SCHEDD_SUPER_ADDRESS_FILE]
 default=$(SPOOL)/.schedd_address.super
-friendly_name=Location of the schedd super address file
+description=Path to the schedd super address file
 type=path
-review=?
 
 [SCHEDD_DAEMON_AD_FILE]
 default=$(SPOOL)/.schedd_classad
-friendly_name=Location of the schedd_classad file
+description=Location of the schedd classad file
 type=string
-review=?
 
 # defaults for debug logs
 [MAX_DEFAULT_LOG]
 default=10 Mb
-friendly_name=Default max size of a daemon log
+description=Default max size of a daemon log, with units
 
 [COLLECTOR_DEBUG]
 default=
-review=?
+description=Debug logging options for the collector
 [MAX_COLLECTOR_LOG]
 default=$(MAX_DEFAULT_LOG)
-review=?
 
 [KBDD_DEBUG]
 default=
-review=?
+description=Debug logging options for the kbdd
 [MAX_KBDD_LOG]
 default=$(MAX_DEFAULT_LOG)
-review=?
 
 [NEGOTIATOR_DEBUG]
 default=D_MATCH
-review=?
+description=Debug logging options for the negotiator
 [MAX_NEGOTIATOR_LOG]
 default=$(MAX_DEFAULT_LOG)
-review=?
 
 [MAX_NEGOTIATOR_MATCH_LOG]
 default=$(MAX_DEFAULT_LOG)
-review=?
 
 [SCHEDD_DEBUG]
 default=D_PID
-review=?
+description=Debug logging options for the schedd
 [MAX_SCHEDD_LOG]
 default=$(MAX_DEFAULT_LOG)
-review=?
 
 [SHADOW_DEBUG]
 default=
-review=?
+description=Debug logging options for shadows
 [MAX_SHADOW_LOG]
 default=$(MAX_DEFAULT_LOG)
-review=?
 
 [STARTD_DEBUG]
 default=
-review=?
+description=Debug logging options for the startd
 [MAX_STARTD_LOG]
 default=$(MAX_DEFAULT_LOG)
-review=?
 
 [MAX_STARTER_LOG]
 default=$(MAX_DEFAULT_LOG)
-review=?
 
 [MASTER_DEBUG]
 default=
-review=?
+description=Debug logging options for the master
 [MAX_MASTER_LOG]
 default=$(MAX_DEFAULT_LOG)
-review=?
 
 [JOB_ROUTER_DEBUG]
 default=
-review=?
+description=Debug logging options for the job_router
 [MAX_JOB_ROUTER_LOG]
 default=$(MAX_DEFAULT_LOG)
-review=?
 
 [ROOSTER_DEBUG]
 default=
-review=?
+description=Debug logging options for the rooster
 [MAX_ROOSTER_LOG]
 default=$(MAX_DEFAULT_LOG)
-review=?
 
 [SHARED_PORT_DEBUG]
 default=
-review=?
+description=Debug logging options for the shared_port daemon
 [MAX_SHARED_PORT_LOG]
 default=$(MAX_DEFAULT_LOG)
-review=?
-
-[HDFS_DEBUG]
-default=
-review=?
-[MAX_HDFS_LOG]
-default=$(MAX_DEFAULT_LOG)
-review=?
 
 [HAD_DEBUG]
 default=
-review=?
+description=Debug logging options for the had daemons
 [MAX_HAD_LOG]
 default=$(MAX_DEFAULT_LOG)
-review=?
 
 [REPLICATION_DEBUG]
 default=
-review=?
+description=Debug logging options for the replication daemons
 [MAX_REPLICATION_LOG]
 default=$(MAX_DEFAULT_LOG)
-review=?
 
 [TRANSFERER_DEBUG]
 default=
-review=?
+description=Debug logging options for the transferer daemons
 [MAX_TRANSFERER_LOG]
 default=$(MAX_DEFAULT_LOG)
-review=?
 
 [GRIDMANAGER_DEBUG]
 default=
-review=?
+description=Debug logging options for the gridmanager
 [MAX_GRIDMANAGER_LOG]
 default=$(MAX_DEFAULT_LOG)
-review=?
 
 [GRIDMANAGER_LOG]
 default=$(LOG)/GridmanagerLog.$(USERNAME)
 type=path
-review=?
 
 [GRIDMANAGER_LOCK]
 default=$(LOCK)/GridmanagerLock.$(USERNAME)
 type=string
-review=?
 
 [MAX_C_GAHP_LOG]
 default=$(MAX_DEFAULT_LOG)
-review=?
 
 [EC2_GAHP_LOG]
 default=/tmp/EC2GahpLog.$(USERNAME)
 win32_default=NUL
-review=?
 
 [EC2_GAHP_DEBUG]
 default=D_PID
-review=?
+description=Debug logging options for the ec2_gahp
 
 [GT2_GAHP]
 default=$(SBIN)/gahp_server
-review=?
 
 [EC2_GAHP]
 default=$(SBIN)/ec2_gahp
-review=?
 
 [GCE_GAHP]
 default=$(SBIN)/gce_gahp
-review=?
 
 [GCE_GAHP_LOG]
 default=/tmp/GceGahpLog.$(USERNAME)
 win32_default=NUL
-review=?
 
 [CREDD]
 default=$(SBIN)/condor_credd
 win32_default=$(SBIN)\condor_credd.exe
 type=path
-review=?
 
 [CREDD_ADDRESS_FILE]
 default=$(LOG)/.credd_address
 type=path
-review=?
 
 [CREDD_PORT]
 default=9620
-review=?
 
 [CRED_STORE_DIR]
 default=$(LOCAL_DIR)/cred_dir
 type=path
-review=?
 [CREDD_ARGS]
 default=-p $(CREDD_PORT) -f
-review=?
 [CREDD_LOG]
 default=$(LOG)/CredLog
 type=path
-review=?
 [CREDD_DEBUG]
 default=D_FULLDEBUG
-review=?
+description=Debug logging options for the credd
 [MAX_CREDD_LOG]
 default=$(MAX_DEFAULT_LOG)
-review=?
 
 # benchmarking knobs
 [BenchmarkTimer]
 default=(time() - LastBenchmark)
-review=?
 [BENCHMARKS_JOBLIST]
 default=mips kflops
-review=?
 [BENCHMARKS_MAX_JOB_LOAD]
 default=1.0
-review=?
 [BENCHMARKS_MIPS_EXECUTABLE]
 default=$(LIBEXEC)/condor_mips
 win32_default=$(LIBEXEC)\condor_mips.exe
 type=path
-review=?
 [BENCHMARKS_MIPS_JOB_LOAD]
 default=1.0
-review=?
 [BENCHMARKS_KFLOPS_EXECUTABLE]
 default=$(LIBEXEC)/condor_kflops
 win32_default=$(LIBEXEC)\condor_kflops.exe
 type=path
-review=?
 [BENCHMARKS_KFLOPS_JOB_LOAD]
 default=1.0
-review=?
 
 # Useful constants
 [IsWindows]
@@ -8280,7 +5234,7 @@ customization=const
 ## the :default syntax is permitted.  so $(1:3600) expands to meta arg1 or to 3600 if there is no meta arg1
 ## The permitted metaknob arg substitutions are
 ##   $(0)  all arguments. '$(0)' is replaced with 'arg1, , arg3' in the above example
-##   $(0?) args are non-empty. '$(0?)' replaced with '1' in the above example. it would be '0' configuration had use FEATURE:Knob or use FEATURE:Knob()
+##   $(0?) args are non-empty. '$(0?)' replaced with '1' in the above example. it would be '0' if configuration had use FEATURE:Knob or use FEATURE:Knob()
 ##   $(0#) num args. '$(0#)' is replaced with '3' in the above example. it would be '0' if configuration had use FEATURE : Knob
 ##   $(1)  first arg. '$(1)' is replaced with 'arg1' in the above example
 ##   $(1?) first arg is non-empty. '$(1?)' is replaced with '1' in the above example
@@ -8296,7 +5250,7 @@ customization=const
 
 [$POLICY.DESKTOP]
 # Use a preemption policy that does cycle scavenging for Desktop computers
-friendly_name=Use a preemption policy that does cycle scavenging for Desktop computers
+description=Use a preemption policy that does cycle scavenging for Desktop computers
 default : @end
 	WANT_SUSPEND=($(SmallJob) || $(KeyboardNotBusy) || $(IsVanilla) ) && ( $(SUSPEND))
 	WANT_VACATE=$(ActivationTimer) > 600 || $(IsVanilla)
@@ -8309,11 +5263,10 @@ default : @end
 	CLAIM_WORKLIFE=
 	SLOTS_CONNECTED_TO_KEYBOARD=$(NUM_CPUS)
 @end
-review=?
 
 # no-preemption policy, formerly called TESTINGMODE_
 [$POLICY.ALWAYS_RUN_JOBS]
-friendly_name=Use a no-preemption policy
+description=Use a no-preemption policy
 default : @end
 	WANT_SUSPEND=False
 	WANT_VACATE=True
@@ -8327,10 +5280,9 @@ default : @end
 	MaxJobRetirementTime=2147483647
 	CLAIM_WORKLIFE=1200
 @end
-review=?
 
 [$FEATURE.TESTINGMODE_POLICY_VALUES]
-friendly_name=Configuration values used by the TESTINGMODE policy from HTCondor 7.x
+description=Configuration values used by the TESTINGMODE policy from HTCondor 7.x
 default : @end
 	TESTINGMODE_WANT_SUSPEND=False
 	TESTINGMODE_WANT_VACATE=True
@@ -8346,7 +5298,7 @@ default : @end
 @end
 
 [$FEATURE.UWCS_DESKTOP_POLICY_VALUES]
-friendly_name=Configuration values used UWCS_DESKTOP policy from HTCondor 7.x
+description=Configuration values used UWCS_DESKTOP policy from HTCondor 7.x
 default : @end
 	UWCS_WANT_SUSPEND=( $(SmallJob) || $(KeyboardNotBusy) || $(IsVanilla) ) && ( $(SUSPEND) )
 	UWCS_WANT_VACATE=( $(ActivationTimer) > 10 * $(MINUTE) || $(IsVanilla) )
@@ -8364,7 +5316,7 @@ default : @end
 @end
 
 [$POLICY.UWCS_DESKTOP]
-friendly_name=Run jobs only when the user is away from their machine
+description=The UWCS Policy to run jobs only when the user is away from their machine
 default : @end
 	use FEATURE : UWCS_DESKTOP_POLICY_VALUES
 	WANT_SUSPEND=$(UWCS_WANT_SUSPEND)
@@ -8383,19 +5335,17 @@ default : @end
 	CLAIM_WORKLIFE=$(UWCS_CLAIM_WORKLIFE)
 	SLOTS_CONNECTED_TO_KEYBOARD=$(NUM_CPUS)
 @end
-review=?
 
 [$POLICY.LIMIT_JOB_RUNTIMES]
-friendly_name=Limit job runtimes. args: limit-in-seconds  default: 24 hours
+description=Limit job runtimes. args([limit_in_seconds])  default: 24 hours
 default : @end
 	MAX_JOB_RUNTIME=$(1:24*3600)
 	MaxJobRetirementTime=$(MAX_JOB_RUNTIME)+120
 	PREEMPT=(Activity == "Busy") && ((time() - EnteredCurrentActivity) > $(MAX_JOB_RUNTIME))
 @end
-review=?
 
 [$POLICY.PREEMPT_IF_CPUS_EXCEEDED]
-friendly_name=Preempt jobs that use more cpu cores than in slot
+description=Preempt jobs that use more cpu cores than in slot
 default : @end
   #
   # Publish the number of CPU cores being used by the job into
@@ -8423,10 +5373,9 @@ default : @end
     WANT_SUSPEND = $(CPU_EXCEEDED) =!= TRUE
   endif
 @end
-review=?
 
 [$POLICY.HOLD_IF_CPUS_EXCEEDED]
-friendly_name=Hold jobs that use more cpu cores than in slot
+description=Hold jobs that use more cpu cores than in slot
 default : @end
   use policy: preempt_if_cpus_exceeded
   #
@@ -8441,10 +5390,9 @@ default : @end
   WANT_HOLD_REASON = ifThenElse($(CPU_EXCEEDED), "$(HOLD_REASON_CPU_EXCEEDED:CPU usage exceeded request_cpus)", $(WANT_HOLD_REASON:UNDEFINED))
   WANT_HOLD_SUBCODE = ifThenElse($(CPU_EXCEEDED), $(HOLD_SUBCODE_CPU_EXCEEDED:101), $(WANT_HOLD_SUBCODE:UNDEFINED))
 @end
-review=?
 
 [$POLICY.PREEMPT_IF_MEMORY_EXCEEDED]
-friendly_name=Preempt jobs that use more memory than in slot
+description=Preempt jobs that use more memory than in slot
 default : @end
   #
   # If the startd sees the memory usage of the job exceed the
@@ -8463,10 +5411,9 @@ default : @end
     WANT_SUSPEND = $(MEMORY_EXCEEDED) =!= TRUE
   endif
 @end
-review=?
 
 [$POLICY.HOLD_IF_MEMORY_EXCEEDED]
-friendly_name=Hold jobs that use more memory than in slot
+description=Hold jobs that use more memory than in slot
 default : @end
   use policy: preempt_if_memory_exceeded
   #
@@ -8481,10 +5428,9 @@ default : @end
   WANT_HOLD_REASON = ifThenElse($(MEMORY_EXCEEDED), "$(HOLD_REASON_MEMORY_EXCEEDED:memory usage exceeded request_memory)", $(WANT_HOLD_REASON:UNDEFINED))
   WANT_HOLD_SUBCODE = ifThenElse($(MEMORY_EXCEEDED),$(HOLD_SUBCODE_MEMORY_EXCEEDED:102), $(WANT_HOLD_SUBCODE:UNDEFINED))
 @end
-review=?
 
 [$POLICY.PREEMPT_IF]
-friendly_name=Configure a conditional PREEMPT expression. args: policy_knob
+description=Configure a conditional PREEMPT expression. args:(policy_variable)
 default : @end
   if !$(1?)
     error : use POLICY : PREEMPT_IF requires an argument. It should be the name of a config variable that has the trigger expression.
@@ -8501,14 +5447,13 @@ default : @end
     WANT_SUSPEND = $($(1)) =!= true
   endif
 @end
-review=?
 
 [$POLICY.WANT_HOLD_IF]
-friendly_name=Configure a conditional WANT_HOLD expression. args: policy_knob, subcode, reason_text
+description=Configure a conditional WANT_HOLD expression. args:(policy_variable, subcode, reason_text)
 default : @end
   use Policy : PREEMPT_IF($(1))
   if ! $(3?)
-    error : use POLICY : WANT_HOLD_IF requires 3 arguments: policy_knob, subcode, reason_text
+    error : use POLICY : WANT_HOLD_IF requires 3 arguments: policy_variable, subcode, reason_text
   endif
   if defined WANT_HOLD
     WANT_HOLD = $($(1)) || $(WANT_HOLD)
@@ -8518,42 +5463,37 @@ default : @end
   WANT_HOLD_REASON = ifThenElse($($(1)), "$(3+)", $(WANT_HOLD_REASON:UNDEFINED))
   WANT_HOLD_SUBCODE = ifThenElse($($(1)), $(2) , $(WANT_HOLD_SUBCODE:UNDEFINED))
 @end
-review=?
 
 [$ROLE.Personal]
-friendly_name=Settings for Personal HTCondor (i.e. the whole pool is on a single machine)
+description=Settings for Personal HTCondor (i.e. the whole pool is on a single machine)
 default : @end
 	CONDOR_HOST=127.0.0.1
 	COLLECTOR_HOST=$(CONDOR_HOST):0
 	DAEMON_LIST=MASTER COLLECTOR NEGOTIATOR STARTD SCHEDD
 	RunBenchmarks=0
 @end
-review=?
 
 [$ROLE.Execute]
-friendly_name=Settings for HTCondor Execute node
+description=Settings for HTCondor Execute node
 default : @end
 	DAEMON_LIST=$(DAEMON_LIST) STARTD
 @end
-review=?
 
 [$ROLE.Submit]
-friendly_name=Settings for HTCondor Submit node
+description=Settings for HTCondor Submit node
 default : @end
 	DAEMON_LIST=$(DAEMON_LIST) SCHEDD
 @end
-review=?
 
 [$ROLE.CentralManager]
-friendly_name=Settings for HTCondor Central Manager
+description=Settings for HTCondor Central Manager
 default : @end
 	DAEMON_LIST=$(DAEMON_LIST) COLLECTOR NEGOTIATOR
 @end
-review=?
 
 # default security policy
 [$SECURITY.HOST_BASED]
-friendly_name=Default (host based) Authorization policy based on IPs and DNS names
+description=Default (host based) Authorization policy based on IPs and DNS names
 default : @end
 	ALLOW_ADMINISTRATOR=$(CONDOR_HOST)
 	ALLOW_OWNER=$(FULL_HOSTNAME) $(IP_ADDRESS) $(IPV6_ADDRESS)
@@ -8566,27 +5506,24 @@ default : @end
 	ALLOW_READ_COLLECTOR=$(ALLOW_READ) $(FLOCK_FROM)
 	ALLOW_READ_STARTD=$(ALLOW_READ) $(FLOCK_FROM)
 @end
-review=?
 
 [$SECURITY.WITH_AUTHENTICATION]
-friendly_name=Enable
+description=Enable authentication and integrety as part of the security policy
 default : @end
 	SEC_DEFAULT_AUTHENTICATION=required
 	SEC_DEFAULT_INTEGRITY=required
 @end
-review=?
 
 [$SECURITY.STRONG]
-friendly_name=Enable
+description=Enable strong encryption as part of the security policy
 default : @end
 	SEC_DEFAULT_ENCRYPTION=required
 	SEC_DEFAULT_INTEGRITY=required
 	SEC_DEFAULT_AUTHENTICATION=required
 @end
-review=?
 
 [$SECURITY.USER_BASED]
-friendly_name=Enable
+description=Default (user-based) Authorization policy based on user accounts
 default : @end
 	if $(CondorIsAdmin)
 	  authuser=condor
@@ -8605,30 +5542,29 @@ default : @end
 	ALLOW_READ_STARTD=$(ALLOW_READ) $(FLOCK_FROM)
 	use SECURITY : WITH_AUTHENTICATION
 @end
-review=?
 
 [$FEATURE.REMOTE_RUNTIME_CONFIG]
-friendly_name=Enable runtime configuration of HTCondor daemons
+description=Enable runtime configuration of some variables in HTCondor daemons, args:([variable_names])
 default : @end
 	ENABLE_RUNTIME_CONFIG=True
 	ALLOW_CONFIG=$(ALLOW_ADMINISTRATOR)
 	# the value of this attribute defines which parameters can be set remotely
-	#SETTABLE_ATTRS_CONFIG=*
+	if $(0#)
+		SETTABLE_ATTRS_CONFIG=$(SETTABLE_ATTRS_CONFIG) $(0)
+	endif
 @end
-review=?
 
 [$FEATURE.REMOTE_CONFIG]
-friendly_name=Enable runtime and persistent configuration of HTCondor daemons
+description=Enable runtime and persistent configuration of HTCondor daemons, args:([variable_names])
 default : @end
 	ENABLE_PERSISTENT_CONFIG=True
 	PERSISTENT_CONFIG_DIR=$(SPOOL)
-	use FEATURE : REMOTE_RUNTIME_CONFIG
+	use FEATURE : REMOTE_RUNTIME_CONFIG($(0))
 @end
-review=?
 
 # note vm_vmware script is perl so it doesn't get a .exe extension on Windows.
 [$FEATURE.VMWARE]
-friendly_name=Settings to use VMWARE with VM Universe
+description=Settings to use VMWARE with VM Universe
 default : @end
 	VM_TYPE=vmware
 	VM_MEMORY=$(DETECTED_MEMORY)/($(NUM_CPUS)+1)
@@ -8642,28 +5578,25 @@ default : @end
 	VMWARE_NETWORKING_TYPE=nat
 	#VMWARE_LOCAL_SETTINGS_FILE=$(RELEASE_DIR)/condor_vmware_local_settings
 @end
-review=?
 
 [$FEATURE.GPUs]
-friendly_name=Settings for to detect and use GPUs as custom resources
+description=Settings to detect and use GPUs as custom resources
 default : @end
 	MACHINE_RESOURCE_INVENTORY_GPUs=$(LIBEXEC)/condor_gpu_discovery -properties $(GPU_DISCOVERY_EXTRA)
 	ENVIRONMENT_FOR_AssignedGPUs=GPU_DEVICE_ORDINAL=/(CUDA|OCL)//  CUDA_VISIBLE_DEVICES
 	ENVIRONMENT_VALUE_FOR_UnAssignedGPUs=10000
 @end
-review=?
 
 [$FEATURE.PartitionableSlot]
-friendly_name=Configure a partitionable slot, args: [type# [, allocation]]
+description=Configure a partitionable slot, args:([type# [, allocation]])  default: 1, 100%
 default : @end
 	NUM_SLOTS_TYPE_$(1:1)=1
 	SLOT_TYPE_$(1:1)_PARTITIONABLE=true
 	SLOT_TYPE_$(1:1)=$(2+:100%)
 @end
-review=?
 
 [$FEATURE.OneShotCronHook]
-friendly_name=Configure a OneShot Cron Hook, args: STARTD_CRON | SCHEDD_CRON, tag, exe [, hook_args]
+description=Configure a OneShot Cron Hook, args:(STARTD_CRON | SCHEDD_CRON, tag, exe [, hook_args])
 default : @end
    $(1)_JOBLIST=$($(1)_JOBLIST) $(2)
    $(1)_$(2)_MODE=OneShot
@@ -8676,7 +5609,7 @@ default : @end
 @end
 
 [$FEATURE.PeriodicCronHook]
-friendly_name=Configure a Periodic Cron Hook, args: STARTD_CRON | SCHEDD_CRON , tag, period, exe [,hook_args]
+description=Configure a Periodic Cron Hook, args:(STARTD_CRON | SCHEDD_CRON , tag, period, exe [,hook_args])
 default : @end
    $(1)_JOBLIST=$($(1)_JOBLIST) $(2)
    $(1)_$(2)_MODE=Periodic
@@ -8688,7 +5621,7 @@ default : @end
 @end
 
 [$FEATURE.ContinuousCronHook]
-friendly_name=Configure a Continuous Cron Hook, args: STARTD_CRON | SCHEDD_CRON , tag, exe [,hook_args]
+description=Configure a Continuous Cron Hook, args:(STARTD_CRON | SCHEDD_CRON , tag, exe [,hook_args])
 default : @end
    $(1)_JOBLIST=$($(1)_JOBLIST) $(2)
    $(1)_$(2)_MODE=WaitForExit
@@ -8700,24 +5633,24 @@ default : @end
 @end
 
 [$FEATURE.StartdCronPeriodic]
-friendly_name=Configure a STARTD Cron periodic Hook, args: tag, period, exe [, hook_args]
+description=Configure a STARTD Cron periodic Hook, args:(tag, period, exe [, hook_args])
 default = use FEATURE : PeriodicCronHook(STARTD_CRON, $(0))
 [$FEATURE.ScheddCronPeriodic]
-friendly_name=Configure a SCHEDD Cron periodic Hook, args: tag, period, exe [, hook_args]
+description=Configure a SCHEDD Cron periodic Hook, args:(tag, period, exe [, hook_args])
 default = use FEATURE : PeriodicCronHook(SCHEDD_CRON, $(0))
 
 [$FEATURE.StartdCronOneShot]
-friendly_name=Configure a STARTD Cron periodic Hook, args: tag, exe [, hook_args]
+description=Configure a STARTD Cron periodic Hook, args:(tag, exe [, hook_args])
 default = use FEATURE : OneShotCronHook(STARTD_CRON, $(0))
 [$FEATURE.ScheddCronOneShot]
-friendly_name=Configure a SCHEDD Cron periodic Hook, args: tag, exe [, hook_args]
+description=Configure a SCHEDD Cron periodic Hook, args:(tag, exe [, hook_args])
 default = use FEATURE : OneShotCronHook(SCHEDD_CRON, $(0))
 
 [$FEATURE.StartdCronContinuous]
-friendly_name=Configure a STARTD Cron continuous Hook, args: tag, exe [, hook_args]
+description=Configure a STARTD Cron continuous Hook, args:(tag, exe [, hook_args])
 default = use FEATURE : ContinuousCronHook(STARTD_CRON, $(0))
 [$FEATURE.ScheddCronContinuous]
-friendly_name=Configure a SCHEDD Cron continuous Hook, args: tag, exe [, hook_args]
+description=Configure a SCHEDD Cron continuous Hook, args: tag, exe [, hook_args]
 default = use FEATURE : ContinuousCronHook(SCHEDD_CRON, $(0))
 
 ##
@@ -8725,7 +5658,7 @@ default = use FEATURE : ContinuousCronHook(SCHEDD_CRON, $(0))
 ##
 
 [$EXPERIMENTAL.CollectorNode]
-friendly_name=One node of a Collector tree, args: id [,port]
+description=One node of a Collector tree, args:(id [,port])
 default: @end
    COLLECTOR$(1)=$(COLLECTOR)
    if $(2?)
@@ -8738,7 +5671,7 @@ default: @end
 @end
 
 [$EXPERIMENTAL.HAD]
-friendly_name=Shared port stuff for a HAD node. args: none
+description=Shared port stuff for a HAD node
 default: @end
    DAEMON_LIST = $(DAEMON_LIST) HAD REPLICATION
    HAD_USE_REPLICATION = TRUE
@@ -8746,13 +5679,13 @@ default: @end
 @end
 
 [$EXPERIMENTAL.HADSharedPort]
-friendly_name=Shared port stuff for a HAD node. args: controlee, ip/hostname
+description=Shared port stuff for a HAD node. args:(controlee, ip_or_hostname)
 default: @end
    use EXPERIMENTAL : HADReplication( $(1), $(2), $(SHARED_PORT_PORT), $(SHARED_PORT_PORT) )
 @end
 
 [$EXPERIMENTAL.HADFixedPort]
-friendly_name=Shared port stuff for a HAD node. args: controlee, ip/hostname, hadport, replport
+description=Shared port stuff for a HAD node. args(controlee, ip_or_hostname, hadport, replport)
 default: @end
    HAD_ARGS = -p $(3)
    REPLICATION_ARGS = -p $(4)
@@ -8760,7 +5693,7 @@ default: @end
 @end
 
 [$EXPERIMENTAL.HADReplication]
-friendly_name=Shared port stuff for a HAD node. args: controlee, ip/hostname, hadport, replport
+description=Shared port stuff for a HAD node. args:(controlee, ip_or_hostname, hadport, replport)
 default: @end
    HAD_LIST = $(HAD_LIST) $(2):$(3)
    REPLICATION_LIST = $(REPLICATION_LIST) $(2):$(4)
@@ -8769,7 +5702,7 @@ default: @end
 @end
 
 [$EXPERIMENTAL.ASYNC_STAGEOUT]
-friendly_name=Knobs to enable the async stage-out hack for CMS
+description=Knobs to enable the async stage-out hack for CMS
 default: @end
 	ALLOW_SLOT_PAIRING=true
 	# don't append slot name to StarterLog, may be: Cluster, JobId, false or true. true gives 8.0 compatible behavior.
@@ -8788,7 +5721,7 @@ default: @end
 
 # obsolete config file knobs to discard on upgrade
 [$UPGRADE.DISCARD]
-friendly_name=Config file knobs that should be ignored on upgrade
+description=Config file knobs that should be ignored on upgrade
 default : @end
 	LeaseManager
 	LeaseManger_ADDRESS_FILE
@@ -8814,7 +5747,7 @@ default : @end
 @end
 
 [$UPGRADE.DISCARDX]
-friendly_name=Platform specific file knobs that should be ignored on upgrade
+description=Platform specific file knobs that should be ignored on upgrade
 default=
 win32_default : @end
 	GT2_GAHP
@@ -8830,7 +5763,7 @@ win32_default : @end
 
 # use this table to detect knobs that have not been changed by the user when the default knob value HAS been changed since 8.0
 [$UPGRADE.DISCARDIF]
-friendly_name=Knobs that should be ignored on upgrade if they match the given value
+description=Knobs that should be ignored on upgrade if they match the given value
 default : @end
 	RESERVED_DISK=5
 	ALL_DEBUG=
@@ -8860,7 +5793,7 @@ default : @end
 
 # This table is for platform-specific knobs that fit the rules for $UPGRADE.DISCARDIF above
 [$UPGRADE.DISCARDIFX]
-friendly_name=Platform specific knobs that should be ignored on upgrade if they match the given value
+description=Platform specific knobs that should be ignored on upgrade if they match the given value
 default : @end
 	QUEUE_SUPER_USERS=root, condor
 @end
@@ -8884,7 +5817,7 @@ win32_default : @end
 @end
 
 [$UPGRADE.DISCARDIF_VMWARE]
-friendly_name=Platform specific file knobs that should be ignored on upgrade if they match the given value
+description=Platform specific file knobs that should be ignored on upgrade if they match the given value
 default=
 win32_default : @end
 	VM_MEMORY=128
