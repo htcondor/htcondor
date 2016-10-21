@@ -502,8 +502,7 @@ JICLocalSchedd::initLocalUserLog( void )
 		job_ad->Assign( ATTR_HOLD_REASON_CODE, CONDOR_HOLD_CODE_UnableToInitUserLog );
 		job_ad->Assign( ATTR_HOLD_REASON_SUBCODE, 0 );
 		job_updater->updateJob(U_HOLD);
-		Starter->FinalCleanup();
-		DC_Exit(JOB_SHOULD_HOLD);
+		Starter->StarterExit(JOB_SHOULD_HOLD);
 	}
 	return true;
 }

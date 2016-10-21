@@ -266,6 +266,9 @@ CStarter::StarterExit( int code )
 		exitAfterGlexec( code );
 	}
 #endif
+	// Once libc starts calling global destructors, we can't reliably
+	// notify anyone of an EXCEPT().
+	_EXCEPT_Cleanup = NULL;
 	DC_Exit( code );
 }
 
