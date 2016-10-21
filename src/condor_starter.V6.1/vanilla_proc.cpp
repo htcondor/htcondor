@@ -1315,7 +1315,7 @@ VanillaProc::setupOOMEvent(const std::string &cgroup_string)
 	m_oom_efd = pipes[0];
 	m_oom_efd2 = pipes[1];
 
-	// Inform DC we want to recieve notifications from this FD.
+	// Inform DC we want to receive notifications from this FD.
 	if (-1 == daemonCore->Register_Pipe(pipes[0],"OOM event fd", static_cast<PipeHandlercpp>(&VanillaProc::outOfMemoryEvent),"OOM Event Handler",this,HANDLE_READ))
 	{
 		dprintf(D_ALWAYS, "Failed to register OOM event FD pipe.\n");

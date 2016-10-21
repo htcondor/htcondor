@@ -2462,7 +2462,7 @@ static char * query_a_daemon2(const char * addr, const char * /*name*/)
 		} else if( ! sock.end_of_message()) {
 			if (App.diagnostic) fprintf(stderr, "Can't receive end of message from %s\n", addr);
 		} else if (App.diagnostic) {
-			printf("Recieved %s from %s for $(%s)\n", val, addr, param_name);
+			printf("Received %s from %s for $(%s)\n", val, addr, param_name);
 		}
 		if (val) {
 			value = strdup(val);

@@ -9185,7 +9185,7 @@ DaemonCore::HandleDC_SIGCHLD(int sig)
         }
 #if defined(LINUX) && defined(TDP)
 		if( WIFSIGNALED(status) && WTERMSIG(status) == SIGTRAP ) {
-				// This means the process has recieved a SIGTRAP to be
+				// This means the process has received a SIGTRAP to be
 				// stopped.  Oddly, on Linux, this generates a
 				// SIGCHLD.  So, we don't want to call the reaper for
 				// this process, since it hasn't really exited.  So,

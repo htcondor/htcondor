@@ -100,7 +100,7 @@ public:
 
 			/** Real the next "logical" line from the file.  (This means
 				lines are combined if they end with a continuation character.)
-				@param line: a MyString to recieve the line string
+				@param line: a MyString to receive the line string
 				@return: true iff we got any data
 			 */
 		bool NextLogicalLine( MyString &line );

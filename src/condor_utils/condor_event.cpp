@@ -2854,7 +2854,7 @@ TerminatedEvent::readEvent( FILE *file, const char* header )
 	for (;;) {
 		char sz[250];
 		char srun[sizeof("Total")];
-		char sdir[sizeof("Recieved")];
+		char sdir[sizeof("Received")];
 		char sjob[22];
 
 		// if we hit end of file or end of record "..." rewind the file pointer.

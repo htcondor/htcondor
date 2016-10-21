@@ -106,7 +106,7 @@ void Listener::prepareQueue(std::string queue, std::string exchange, std::string
 }
 
 
-//Function: for the recieved message from the queue susbscribed to
+//Function: for the received message from the queue susbscribed to
 //optional: the received message from the broker queue can be then sent to
 //external agents like skype IM's /write to file/send emails etc
 void Listener::received(Message& message) {

@@ -34,7 +34,7 @@
 
 /** 
 	This class is a base class for the various ways a starter can
-	recieve and send information about the underlying job.  For now,
+	receive and send information about the underlying job.  For now,
 	there are two main ways to do this: 1) to talk to a condor_shadow
 	and 2) the local filesystem, command line args, etc.
 */
