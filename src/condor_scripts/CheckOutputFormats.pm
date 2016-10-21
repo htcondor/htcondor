@@ -32,21 +32,14 @@ use List::Util;
 
 use Exporter qw(import);
 our @EXPORT_OK = qw(dry_run add_status_ads change_clusterid multi_owners create_table various_hold_reasons find_blank_columns split_fields cal_from_raw trim count_job_states make_batch check_heading check_data check_summary emit_dag_files emit_file);                                                    
-
-# construct a hash containing job ads from dry run
-sub dry_run {
-	my $testname = $_[0];
-	my $pid = $_[1];
-	my $ClusterId = $_[2];
-	my $executable = $_[3];
-	my $submit_file = "$testname$pid.sub";
-	my $host = hostname;
-	my $time = time();
+sub combine_dry_ads {
+	my $submit_file = $_[0];
+	my $command_arg = $_[1];
 	my $counter = 1;
 	my $index = 0;
 	my %all_keys;
 	my %Attr;
-	my @lines = `condor_submit -dry - $submit_file`;
+	my @lines = `condor_submit $command_arg -dry - $submit_file`;
 	my $len = scalar @lines;
 	while ($counter < $len){
 		if ($lines[$counter] =~ /^.$/){
@@ -69,6 +62,37 @@ sub dry_run {
 			%{$Attr{$i}} = (%{ $Attr{0}}, %{$Attr{$i}});
 		}
 	}
+	return %Attr;
+}
+
+sub dry_run_with_batchname {
+	my $testname = $_[0];
+	my $pid = $_[1];
+	my $executable = $_[2];
+	my $arguments = $_[3];
+	my $batchname = $_[4];
+	my $submit_content = 
+"executable = $executable
+arguments = $arguments
+queue 2";
+	my $submitfile = "$testname$pid.sub";
+	emit_dag_files($testname, $submit_content, $pid);
+	my %Attr = combine_dry_ads($submitfile, "-batch-name $batchname");
+	return %Attr;
+}
+
+# construct a hash containing job ads from dry run
+sub dry_run {
+	my $testname = $_[0];
+	my $pid = $_[1];
+	my $ClusterId = $_[2];
+	my $executable = $_[3];
+	my $submit_file = "$testname$pid.sub";
+	my $host = hostname;
+	my $time = time();
+	my %Attr = combine_dry_ads($submit_file, "");
+	my $index = scalar keys %Attr;
+	
 	# add the additional job ads that would appear in condor_q -long
 	for my $i (0..$index-1){
 		my $owner = $Attr{$i}{Owner};
@@ -442,6 +466,30 @@ sub write_ads {
 	return $fname;
 }
 
+sub read_array_content_to_table {
+	my @table = @{$_[0]};
+	my %other;
+	my $cnt = 0;
+	until ($cnt == scalar @table || $table[$cnt] =~ /--/){
+		$other{$cnt} = $table[$cnt];
+		$cnt++;
+	}
+	my $head_pos = $cnt+1;
+
+	# read everything before the blank line and store them to $data
+	$cnt = 0;
+	my %data;
+	while(defined $table[$head_pos+$cnt] && $table[$head_pos+$cnt]=~ /\S/){
+		$data{$cnt} = $table[$head_pos+$cnt];
+		$cnt++;
+	}
+
+	# read another line of summary
+	my $arg = $table[(scalar @table)-1];
+	my @summary = split / /, $arg;
+	return (\%other,\%data,\@summary);
+}
+
 sub create_table {
 	my %Attr = %{$_[0]};
 	my $testname = $_[1];
@@ -467,27 +515,11 @@ sub create_table {
 	} else {
 		@table = `condor_q -job $fname $command_arg`;
 	}
-
+	my ($other_ref, $data_ref, $summary_ref) = read_array_content_to_table(\@table);	
+	my %other = %{$other_ref};
+	my %data = %{$data_ref};
+	my @summary = @{$summary_ref};
 	# read everything before -- and store them to $other
-	my %other;
-	my $cnt = 0;
-	until ($cnt == scalar @table || $table[$cnt] =~ /--/){
-		$other{$cnt} = $table[$cnt];
-		$cnt++;
-	}
-	my $head_pos = $cnt+1;
-
-	# read everything before the blank line and store them to $data
-	$cnt = 0;
-	my %data;
-	while(defined $table[$head_pos+$cnt] && $table[$head_pos+$cnt]=~ /\S/){
-		$data{$cnt} = $table[$head_pos+$cnt];
-		$cnt++;
-	}
-
-	# read another line of summary
-	my $arg = $table[(scalar @table)-1];
-	my @summary = split / /, $arg;
 	return (\%other,\%data,\@summary);	
 }		
 
