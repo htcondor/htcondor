@@ -1161,7 +1161,7 @@ static void readHistoryRemote(classad::ExprTree *constraintExpr)
 	ad.InsertAttr(ATTR_NUM_MATCHES, specifiedMatch <= 0 ? -1 : specifiedMatch);
 	// in 8.5.6, we can request that the remote side stream the results back. othewise
 	// the 8.4 protocol will only send EOM after the last result, and thus we print nothing
-	// until all of the results have been recieved.
+	// until all of the results have been received.
 	if (streamresults || streamresults_specified) {
 		bool want_streamresults = streamresults_specified ? streamresults : true;
 		ad.InsertAttr("StreamResults", want_streamresults);
@@ -1236,7 +1236,7 @@ static void readHistoryRemote(classad::ExprTree *constraintExpr)
 			break;
 		}
 		if (eom_after_each_ad && ! sock->end_of_message()) {
-			fprintf(stderr, "failed recieve EOM after ad\n");
+			fprintf(stderr, "failed receive EOM after ad\n");
 			exit(1);
 		}
 		matchCount++;
