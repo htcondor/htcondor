@@ -6,8 +6,6 @@
 \index{Directed Acyclic Graph Manager (DAGMan)}
 \index{job!dependencies within}
 
-%TEMP -- VARS A.B ... will no longer work
-
 A directed acyclic graph (DAG) can be used to represent a set of computations
 where the input, output, or execution of one or more computations
 is dependent on one or more other computations.
@@ -2669,8 +2667,6 @@ and attach the POST script to the NOOP node.
 \begin{description}
 \item[Limitation: Splices and the RETRY of a Node, use of VARS, or use of PRIORITY]
 \end{description}
-%TEMP -- RETRY B+X doesn't work; ALL_NODES changes will break
-% VARS B+X
 
 A RETRY, VARS or PRIORITY command cannot be specified for a SPLICE;
 however, individual nodes within a spliced DAG can have a RETRY, VARS
@@ -2717,9 +2713,6 @@ and effecting RETRY on that SUBDAG.
 
   RETRY B 3
 \end{verbatim}
-
-%TEMP -- make an example of something like VARS B+X -- this will
-% work, because VARS is a special case.
 
 % Note: this is an alternative to subsubsubsection, which we don't have.
 \begin{description}
@@ -3033,30 +3026,84 @@ of a FINAL node,
 if the DAG has been removed from the queue with \Condor{rm}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:DAGFinalNode}ALL\_NODES option}
+\subsubsection{\label{sec:DAGAllNodes}The ALL\_NODES option}
 \index{DAG input file!ALL\_NODES option}
 
-%TEMP -- format ALL_NODES
 In the following commands, a specific node name can be replaced by
-the option "ALL\_NODES":
+the option \Arg{ALL\_NODES}:
 \begin{itemize}
-\item SCRIPT
-\item PRE\_SKIP
-\item RETRY
-\item ABORT-DAG-ON
-\item VARS
-\item PRIORITY
-\item CATEGORY
+\item \Opt{SCRIPT}
+\item \Opt{PRE\_SKIP}
+\item \Opt{RETRY}
+\item \Opt{ABORT-DAG-ON}
+\item \Opt{VARS}
+\item \Opt{PRIORITY}
+\item \Opt{CATEGORY}
 \end{itemize}
 
-%TEMP -- list commands it applies to
-%TEMP -- case insensitive
-%TEMP -- does not apply to final nodes
-%TEMP -- doesn't work with multiple DAGs on command line
-%TEMP -- explain how it works with splices
-%TEMP -- how it works with include
-%TEMP -- give examples
-%TEMP -- last command overrides previous commands
+This will cause the given command to apply to all nodes (except any
+FINAL node) in that DAG.
+
+The ALL\_NODES \emph{never} applies to a FINAL node.  (If the
+\Arg{ALL\_NODES} option is used in a DAG that has a FINAL node, the
+\File{dagman.out} file will contain messages noting that the FINAL
+node is skipped when parsing the relevant commands.)
+
+The \Arg{ALL\_NODES} option is case-insensitive.
+
+It is important to note that the \Arg{ALL\_NODES} option does \emph{not}
+apply across splices and sub-DAGs.  In other words, an \Arg{ALL\_NODES}
+option within a splice or sub-DAG will apply only to nodes within
+that splice or sub-DAG; also, an \Arg{ALL\_NODES} option in a parent
+DAG will not apply to any splices or sub-DAGs referenced by the
+parent DAG.
+
+The \Arg{ALL\_NODES} option \emph{does} work in combination with the
+\Arg{INCLUDE} command.  In other words, a command within an included
+file that uses the \Arg{ALL\_NODES} option will apply to all nodes
+in the including DAG (again, except any FINAL node).
+
+As of version 8.5.8, the \Arg{ALL\_NODES} option cannot be used when
+multiple DAG files are specified on the \Condor{submit\_dag} command
+line.  Hopefully this limitation will be fixed in a future release.
+
+When multiple commands (whether using the \Arg{ALL\_NODES} option or not)
+set a given property of a DAG node, the last relevant command overrides
+earlier commands, as shown in the following examples:
+
+For example, in this DAG:
+\begin{verbatim}
+    JOB A node.sub
+    VARS A name="A"
+    VARS ALL_NODES name="X"
+\end{verbatim}
+the value of \Arg{name} for node A will be "X".
+
+In this DAG:
+\begin{verbatim}
+    JOB A node.sub
+    VARS A name="A"
+    VARS ALL_NODES name="X"
+    VARS A name="foo"
+\end{verbatim}
+the value of \Arg{name} for node A will be "foo".
+
+Here is an example DAG using the \Arg{ALL\_NODES} option:
+\begin{verbatim}
+# File: all_ex.dag
+    JOB A node.sub
+    JOB B node.sub
+    JOB C node.sub
+
+    SCRIPT PRE ALL_NODES my_script $JOB
+
+    VARS ALL_NODES name="$(JOB)"
+
+    # This overrides the above VARS command for node B.
+    VARS B name="nodeB"
+
+    RETRY all_nodes 3
+\end{verbatim}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:DAGMan-rescue}The Rescue DAG}
