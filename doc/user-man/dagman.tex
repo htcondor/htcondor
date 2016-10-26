@@ -946,6 +946,9 @@ Using both will be detected and generate an error.
 \index{DAGMan!DAG monitoring}
 \index{DAGMan!DAG removal}
 
+%TEMP -- this section needs lots of improvement... (dagman.out, node
+% status file, jobstate.log file, halt file, etc.)
+
 After submission, the progress of the DAG can be monitored
 by looking at the job event log file(s),
 observing the e-mail that job submission to HTCondor causes,
@@ -968,6 +971,7 @@ To remove an entire DAG, consisting of the \Condor{dagman} job,
 plus any jobs submitted to HTCondor,
 remove the \Condor{dagman} job by running \Condor{rm}.
 For example,
+%TEMP -- example needs to be changed to match current condor_q
 \footnotesize
 \begin{verbatim}
 % condor_q
@@ -983,9 +987,24 @@ For example,
 \end{verbatim}
 \normalsize
 
-The \Condor{dagman} job uses \Condor{rm}
-to remove any jobs within the DAG that are running.
+When a \Condor{dagman} job is removed, all node jobs (including sub-DAGs)
+of that \Condor{dagman} will be removed by the \Condor{schedd}.  As of version
+8.5.8, the default is that \Condor{dagman} itself also removes the
+node jobs (to fix a race condition that could result in "orphaned"
+node jobs).  (The \Condor{schedd} has to remove the node jobs to deal with
+the case of removing a \Condor{dagman} job that has been held.)
 
+The previous behavior of \Condor{dagman} itself \emph{not} removing
+the node jobs can be restored by setting the
+\MacroNI{DAGMAN\_REMOVE\_NODE\_JOBS} configuration macro
+(see ~\ref{param:DAGManRemoveNodeJobs})
+to \Expr{False}.  This will decrease the load on the \Condor{schedd},
+at the cost of allowing the possibility of "orphaned" node jobs.
+
+A removed DAG will be considered failed unless the
+DAG has a FINAL node that succeeds.
+
+%TEMP -- this needs to be fixed/clarified
 In the case where a
 machine is scheduled to go down,
 DAGMan will clean up memory and exit.

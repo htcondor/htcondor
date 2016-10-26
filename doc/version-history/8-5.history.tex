@@ -42,8 +42,12 @@ now defaults to 60 seconds.
 \Ticket{5929}
 
 \item Added the new \MacroNI{DAGMAN\_REMOVE\_NODE\_JOBS} configuration
-macro, which allows users to configure whether \Condor{dagman}
-removes its node jobs when \Condor{dagman} itself is removed.
+macro, which allows users to configure whether \Condor{dagman} itself
+removes its node jobs when it is removed (note that the
+node jobs are also removed by the \Condor{schedd}).
+This configuration macro defaults to \Expr{True}, which represents
+a change in behavior compared to previous HTCondor versions.
+(See section~\ref{sec:DAGMonitoring} for more details.)
 \Ticket{5175}
 
 \item The \Arg{-AllowLogError} argument to \Condor{submit\_dag} and
