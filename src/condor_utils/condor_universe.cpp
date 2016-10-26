@@ -44,7 +44,7 @@ static const UniverseName names [] =
 	{ "PVMD", "PVMD" },
 	{ "SCHEDULER", "Scheduler" },
 	{ "MPI", "MPI" },
-	{ "GLOBUS", "Globus" },
+	{ "GRID", "Grid" },
 	{ "JAVA", "Java" },
 	{ "PARALLEL", "Parallel" },
 	{ "LOCAL", "Local" },
