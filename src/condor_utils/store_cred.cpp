@@ -724,14 +724,12 @@ void store_cred_handler(void *, int /*i*/, Stream *s)
 			StoreCredState* retry_state = (StoreCredState*)malloc(sizeof(StoreCredState));
 			retry_state->user = strdup(user);
 			retry_state->retries = 20;
-			retry_state->s = s;
+			retry_state->s = new ReliSock(*((ReliSock*)s));
 
 			dprintf( D_FULLDEBUG, "NBSTORECRED: retry_state: %lx, dptr->user: %s, dptr->retries: %i, dptr->s %lx\n",
 				(unsigned long)retry_state, retry_state->user, retry_state->retries, (unsigned long)(retry_state->s));
 			daemonCore->Register_Timer(0, store_cred_handler_continue, "Poll for existence of .cc file");
 			daemonCore->Register_DataPtr(retry_state);
-
-			return;
 		}
 	}
 #endif // WIN32
@@ -744,12 +742,14 @@ void store_cred_handler(void *, int /*i*/, Stream *s)
 		free(user);
 	}
 
+#ifndef WIN32  // no credmon on windows
 	// answer is SUCCESS only if we registered a timer to poll for the cred
 	// file, in which case we should return now instead of finishing the
 	// wire protocol.
 	if(answer == SUCCESS) {
 		return;
 	}
+#endif // WIN32
 
 	s->encode();
 	if( ! s->code(answer) ) {
@@ -803,8 +803,10 @@ void store_cred_handler_continue()
 			"store_cred: Failed to send end of message.\n");
 	}
 
-	// leaving the stream alone since we didn't create it (dptr->s)
 	dprintf( D_FULLDEBUG, "NBSTORECRED: freeing %lx\n", (unsigned long)dptr);
+
+	// we copied the stream and strdup'ed the user, so do a deep free of dptr
+	delete (dptr->s);
 	free(dptr->user);
 	free(dptr);
 
