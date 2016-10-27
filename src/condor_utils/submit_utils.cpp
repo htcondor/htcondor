@@ -2820,24 +2820,6 @@ int SubmitHash::SetGSICredentials()
 	return 0;
 }
 
-int SubmitHash::SetSendCredential()
-{
-	RETURN_IF_ABORT();
-
-#ifndef WIN32
-	// in theory, each queued job may have a different value for this, so first we
-	// process this attribute
-	bool send_credential = submit_param_bool( "SendCredential", SUBMIT_KEY_SendCredential, false );
-	if ( ! send_credential) {
-		return 0;
-	}
-
-	// add it to the job ad (starter needs to know this value)
-	job->Assign(ATTR_JOB_SEND_CREDENTIAL, true);
-#endif // WIN32
-	return 0;
-}
-
 
 #if !defined(WIN32)
 // this allocates memory, free() it when you're done.
@@ -7271,7 +7253,6 @@ ClassAd* SubmitHash::make_job_ad (
 	SetArguments();
 	SetGridParams();
 	SetGSICredentials();
-	SetSendCredential();
 	SetMatchListLen();
 	SetDAGNodeName();
 	SetDAGManJobId();

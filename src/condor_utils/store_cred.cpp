@@ -22,6 +22,7 @@
 #include "condor_common.h"
 #include "condor_io.h"
 #include "condor_debug.h"
+#include "condor_daemon_core.h"
 #include "daemon.h"
 #include "condor_uid.h"
 #include "lsa_mgr.h"
@@ -551,6 +552,7 @@ get_cred_handler(void *, int /*i*/, Stream *s)
 	char * user = NULL;
 	char * domain = NULL;
 	char * password = NULL;
+	bool dcfound = (daemonCore != NULL);
 
 	/* Check our connection.  We must be very picky since we are talking
 	   about sending out passwords.  We want to make certain
@@ -583,6 +585,8 @@ get_cred_handler(void *, int /*i*/, Stream *s)
 	}
 
 		// Get the username and domain from the wire
+
+	dprintf (D_ALWAYS, "ZKM: First potential block in get_cred_handler, DC==%i\n", dcfound);
 
 	sock->decode();
 
@@ -651,6 +655,18 @@ bail_out:
 }
 
 
+// forward declare the non-blocking continuation function.
+void store_cred_handler_continue();
+
+// declare a simple data structure for holding the info needed
+// across non-blocking retries
+struct StoreCredState {
+	char *user;
+	int  retries;
+	Stream *s;
+};
+
+
 /* NOW WORKS ON BOTH WINDOWS AND UNIX */
 void store_cred_handler(void *, int /*i*/, Stream *s)
 {
@@ -659,6 +675,9 @@ void store_cred_handler(void *, int /*i*/, Stream *s)
 	int mode;
 	int result;
 	int answer = FAILURE;
+	bool dcfound = daemonCore != NULL;
+
+	dprintf (D_ALWAYS, "ZKM: First potential block in store_cred_handler, DC==%i\n", dcfound);
 
 	s->decode();
 
@@ -690,15 +709,32 @@ void store_cred_handler(void *, int /*i*/, Stream *s)
 					pwlen = strlen(pw)+1;
 				}
 				answer = store_cred_service(user,pw,pwlen,mode);
-#ifndef WIN32  // no credmon on windows
-				if(answer == SUCCESS) {
-					// THIS WILL BLOCK
-					answer = credmon_poll(user, false, true);
-				}
-#endif // WIN32
 			}
 		}
 	}
+
+	// no credmon on windows
+#ifdef WIN32
+#else
+	if(answer == SUCCESS) {
+		// good so far, but the real answer is determined by our ability
+		// to signal the credmon and have the .cc file appear.  we don't
+		// want this to block so we go back to daemoncore and set a timer
+		// for 0 seconds.  the timer will reset itself as needed.
+		answer = credmon_poll_setup(user, false, true);
+		if (answer == SUCCESS) {
+			StoreCredState* retry_state = (StoreCredState*)malloc(sizeof(StoreCredState));
+			retry_state->user = strdup(user);
+			retry_state->retries = 20;
+			retry_state->s = new ReliSock(*((ReliSock*)s));
+
+			dprintf( D_FULLDEBUG, "NBSTORECRED: retry_state: %lx, dptr->user: %s, dptr->retries: %i, dptr->s %lx\n",
+				(unsigned long)retry_state, retry_state->user, retry_state->retries, (unsigned long)(retry_state->s));
+			daemonCore->Register_Timer(0, store_cred_handler_continue, "Poll for existence of .cc file");
+			daemonCore->Register_DataPtr(retry_state);
+		}
+	}
+#endif // WIN32
 
 	if (pw) {
 		SecureZeroMemory(pw, strlen(pw));
@@ -707,6 +743,15 @@ void store_cred_handler(void *, int /*i*/, Stream *s)
 	if (user) {
 		free(user);
 	}
+
+#ifndef WIN32  // no credmon on windows
+	// answer is SUCCESS only if we registered a timer to poll for the cred
+	// file, in which case we should return now instead of finishing the
+	// wire protocol.
+	if(answer == SUCCESS) {
+		return;
+	}
+#endif // WIN32
 
 	s->encode();
 	if( ! s->code(answer) ) {
@@ -722,6 +767,58 @@ void store_cred_handler(void *, int /*i*/, Stream *s)
 
 	return;
 }
+
+
+#ifdef WIN32
+#else
+void store_cred_handler_continue()
+{
+	// can only be called when daemonCore is non-null since otherwise
+	// there's no data
+	if(!daemonCore) return;
+
+	StoreCredState *dptr = (StoreCredState*)daemonCore->GetDataPtr();
+
+	dprintf( D_FULLDEBUG, "NBSTORECRED: dptr: %lx, dptr->user: %s, dptr->retries: %i, dptr->s: %lx\n", (unsigned long)dptr, dptr->user, dptr->retries, (unsigned long)(dptr->s));
+	int answer = credmon_poll_continue(dptr->user, dptr->retries);
+	dprintf( D_FULLDEBUG, "NBSTORECRED: answer: %i\n", answer);
+
+	if (answer == FAILURE) {
+		if (dptr->retries > 0) {
+			// re-register timer with one less retry
+			dprintf( D_FULLDEBUG, "NBSTORECRED: re-registering timer and dptr\n");
+			dptr->retries--;
+			daemonCore->Register_Timer(0, store_cred_handler_continue, "Poll for existence of .cc file");
+			daemonCore->Register_DataPtr(dptr);
+			return;
+		}
+	}
+
+	// regardless of SUCCESS or FAILURE, if we got here we need to finish
+	// the wire protocol for STORE_CRED
+
+	dprintf( D_FULLDEBUG, "NBSTORECRED: finishing wire protocol on stream %lx\n", (unsigned long)(dptr->s));
+	dptr->s->encode();
+	if( ! dptr->s->code(answer) ) {
+		dprintf( D_ALWAYS,
+			"store_cred: Failed to send result.\n" );
+	} else if( ! dptr->s->end_of_message() ) {
+		dprintf( D_ALWAYS,
+			"store_cred: Failed to send end of message.\n");
+	}
+
+	dprintf( D_FULLDEBUG, "NBSTORECRED: freeing %lx\n", (unsigned long)dptr);
+
+	// we copied the stream and strdup'ed the user, so do a deep free of dptr
+	delete (dptr->s);
+	free(dptr->user);
+	free(dptr);
+
+	dprintf( D_FULLDEBUG, "NBSTORECRED: done!\n");
+	return;
+}
+#endif
+
 
 static int code_store_cred(Stream *socket, char* &user, char* &pw, int &mode) {
 	
@@ -761,6 +858,7 @@ void store_pool_cred_handler(void *, int  /*i*/, Stream *s)
 	char *pw = NULL;
 	char *domain = NULL;
 	MyString username = POOL_PASSWORD_USERNAME "@";
+	bool dcfound = daemonCore != NULL;
 
 	if (s->type() != Stream::reli_sock) {
 		dprintf(D_ALWAYS, "ERROR: pool password set attempt via UDP\n");
@@ -794,6 +892,8 @@ void store_pool_cred_handler(void *, int  /*i*/, Stream *s)
 		}
 		free(credd_host);
 	}
+
+	dprintf (D_ALWAYS, "ZKM: First potential block in store_pool_cred_handler, DC==%i\n", dcfound);
 
 	s->decode();
 	if (!s->code(domain) || !s->code(pw) || !s->end_of_message()) {
@@ -838,6 +938,7 @@ store_cred(const char* user, const char* pw, int mode, Daemon* d, bool force) {
 	int result;
 	int return_val;
 	Sock* sock = NULL;
+	bool dcfound = daemonCore != NULL;
 
 		// to help future debugging, print out the mode we are in
 	static const int mode_offset = 100;
@@ -936,6 +1037,8 @@ store_cred(const char* user, const char* pw, int mode, Daemon* d, bool force) {
 			}
 		}
 		
+		dprintf (D_ALWAYS, "ZKM: First potential block in store_cred, DC==%i\n", dcfound);
+
 		sock->decode();
 		
 		result = sock->code(return_val);
@@ -1090,7 +1193,7 @@ read_from_keyboard(char* buf, int maxlength, bool echo) {
 	ReadConsoleW(hStdin, wbuffer, maxlength, (DWORD*)&cch, NULL);
 	SetConsoleMode(hStdin, oldMode);
 	//Zero terminate the input.
-	cch = min(cch, maxlength-1);
+	cch = MIN(cch, maxlength-1);
 	wbuffer[cch] = '\0';
 
 	--cch;
