@@ -726,6 +726,8 @@ void store_cred_handler(void *, int /*i*/, Stream *s)
 			retry_state->retries = 20;
 			retry_state->s = s;
 
+			dprintf( D_FULLDEBUG, "NBSTORECRED: retry_state: %lx, dptr->user: %s, dptr->retries: %i, dptr->s %lx\n",
+				(unsigned long)retry_state, retry_state->user, retry_state->retries, (unsigned long)(retry_state->s));
 			daemonCore->Register_Timer(0, store_cred_handler_continue, "Poll for existence of .cc file");
 			daemonCore->Register_DataPtr(retry_state);
 
@@ -773,13 +775,14 @@ void store_cred_handler_continue()
 
 	StoreCredState *dptr = (StoreCredState*)daemonCore->GetDataPtr();
 
-	dprintf( D_FULLDEBUG, "NBSTORECRED: dptr: %x, dptr->user: %s, dptr->retries: %i\n", dptr, dptr->user, dptr->retries);
+	dprintf( D_FULLDEBUG, "NBSTORECRED: dptr: %lx, dptr->user: %s, dptr->retries: %i, dptr->s: %lx\n", (unsigned long)dptr, dptr->user, dptr->retries, (unsigned long)(dptr->s));
 	int answer = credmon_poll_continue(dptr->user, dptr->retries);
 	dprintf( D_FULLDEBUG, "NBSTORECRED: answer: %i\n", answer);
 
 	if (answer == FAILURE) {
 		if (dptr->retries > 0) {
 			// re-register timer with one less retry
+			dprintf( D_FULLDEBUG, "NBSTORECRED: re-registering timer and dptr\n");
 			dptr->retries--;
 			daemonCore->Register_Timer(0, store_cred_handler_continue, "Poll for existence of .cc file");
 			daemonCore->Register_DataPtr(dptr);
@@ -790,7 +793,7 @@ void store_cred_handler_continue()
 	// regardless of SUCCESS or FAILURE, if we got here we need to finish
 	// the wire protocol for STORE_CRED
 
-	dprintf( D_FULLDEBUG, "NBSTORECRED: finishing wire protocol on stream %x\n", dptr->s);
+	dprintf( D_FULLDEBUG, "NBSTORECRED: finishing wire protocol on stream %lx\n", (unsigned long)(dptr->s));
 	dptr->s->encode();
 	if( ! dptr->s->code(answer) ) {
 		dprintf( D_ALWAYS,
@@ -801,6 +804,7 @@ void store_cred_handler_continue()
 	}
 
 	// leaving the stream alone since we didn't create it (dptr->s)
+	dprintf( D_FULLDEBUG, "NBSTORECRED: freeing %lx\n", (unsigned long)dptr);
 	free(dptr->user);
 	free(dptr);
 
