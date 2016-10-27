@@ -93,6 +93,9 @@ public:
 
 	const char * getName() { return name.c_str(); }
 	const char * setName(const char * nam) { name = nam; return getName(); }
+	int getUniverse() { return universe; }
+	int setUniverse(int uni) { universe=uni; return universe; }
+	int setUniverse(const char * uni);
 
 	classad::ExprTree* getRequirements() { return requirements.Expr(); }
 	classad::ExprTree* setRequirements(const char * require);
@@ -119,6 +122,7 @@ public:
 protected:
 	std::string name;
 	ConstraintHolder requirements;
+	int universe; 
 	MACRO_SET_CHECKPOINT_HDR * checkpoint;
 	MACRO_EVAL_CONTEXT_EX ctx;
 
@@ -155,6 +159,13 @@ public:
 	char * local_param(const char* name, MACRO_EVAL_CONTEXT & ctx) { return local_param(name, NULL, ctx); }
 	char * expand_macro(const char* value, MACRO_EVAL_CONTEXT & ctx) { return ::expand_macro(value, LocalMacroSet, ctx); }
 	const char * lookup(const char* name, MACRO_EVAL_CONTEXT & ctx) { return lookup_macro(name, LocalMacroSet, ctx); }
+
+	// type converting local params
+	bool local_param_string(const char * name, std::string & value, MACRO_EVAL_CONTEXT & ctx); // returns true if string exists
+	bool local_param_unquoted_string(const char * name, std::string & value, MACRO_EVAL_CONTEXT & ctx); // returns true if string exists
+	bool local_param_bool(const char * name, bool def_value, MACRO_EVAL_CONTEXT & ctx, bool * pfExist=NULL);
+	int local_param_int(const char * name, int def_value, MACRO_EVAL_CONTEXT & ctx, bool * pfExist=NULL);
+	double local_param_double(const char * name, double def_value, MACRO_EVAL_CONTEXT & ctx, bool * pfExist=NULL);
 
 	void insert_source(const char * filename, MACRO_SOURCE & source);
 	void set_RulesFile(const char * filename, MACRO_SOURCE & source);
@@ -208,13 +219,29 @@ private:
 // (in future maybe re-init after reconfig)
 const char * init_xform_default_macros();
 
+// validate the transform commands in xfm, and populate the mset with variable declarations
+bool ValidateXForm (
+	MacroStreamXFormSource & xfm,  // the set of transform rules
+	XFormHash & mset,              // the hashtable used as temporary storage
+	std::string & errmsg);          // holds parse errors on failure
 
 // load a MacroStreamXFormSource from a jobrouter style route.
 int XFormLoadFromJobRouterRoute (
 	MacroStreamXFormSource & xform,
-	std::string & routing_string,
+	const std::string & routing_string,
 	int & offset,
-	const ClassAd & base_route_ad,
+	const classad::ClassAd & base_route_ad,
+	int options);
+
+// load a MacroStreamXFormSource statements  from a jobrouter style route
+// use this function rather than the one above if you want to ammend the
+// statements before initializing the xform with them.
+int ConvertJobRouterRouteToXForm (
+	StringList & statements,
+	const char * config_name, // name from config
+	const std::string & routing_string,
+	int & offset,
+	const classad::ClassAd & base_route_ad,
 	int options);
 
 // pass these options to XFormLoadFromJobRouterRoute to have it fixup some

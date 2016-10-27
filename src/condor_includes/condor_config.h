@@ -549,6 +549,11 @@ BEGIN_C_DECLS
 		size_t cbBufAlloc;
 		auto_free_ptr line_buf;
 		auto_free_ptr file_string; // holds file content when load is called.
+	private:
+		// copy construction and assignment are not permitted.
+		MacroStreamCharSource(const MacroStreamCharSource&);
+		MacroStreamCharSource & operator=(MacroStreamCharSource that); 
+
 	};
 
 

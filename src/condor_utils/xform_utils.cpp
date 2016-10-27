@@ -500,6 +500,86 @@ static int CondorUniverseNumberEx(const char * univ)
 	return CondorUniverseNumber(univ);
 }
 
+bool XFormHash::local_param_bool(const char * name, bool def_value, MACRO_EVAL_CONTEXT & ctx, bool * pfExist)
+{
+	auto_free_ptr val(local_param(name, ctx));
+	bool exist = false;
+	bool value = def_value;
+	if ( val) {
+		exist = string_is_boolean_param(val, value);
+	}
+	if (pfExist) *pfExist = exist;
+	return value;
+}
+
+int XFormHash::local_param_int(const char * name, int def_value, MACRO_EVAL_CONTEXT & ctx, bool * pfExist)
+{
+	auto_free_ptr val(local_param(name, ctx));
+	bool exist = false;
+	int value = def_value;
+	if ( val) {
+		long long lvalue;
+		exist = string_is_long_param(val, lvalue);
+		if (exist) {
+			if (lvalue < INT_MIN) value = INT_MIN;
+			else if (lvalue > INT_MAX) value = INT_MAX;
+			else value = (int)lvalue;
+		}
+	}
+	if (pfExist) *pfExist = exist;
+	return value;
+}
+
+double XFormHash::local_param_double(const char * name, double def_value, MACRO_EVAL_CONTEXT & ctx, bool * pfExist)
+{
+	auto_free_ptr val(local_param(name, ctx));
+	bool exist = false;
+	double value = def_value;
+	if ( val) {
+		exist = string_is_double_param(val, value);
+	}
+	if (pfExist) *pfExist = exist;
+	return value;
+}
+
+bool XFormHash::local_param_string(const char * name, std::string & value, MACRO_EVAL_CONTEXT & ctx)
+{
+	auto_free_ptr val(local_param(name, ctx));
+	if (val) {
+		value = val.ptr();
+		return true;
+	}
+	return false;
+}
+
+static char * trim_and_strip_quotes_in_place(char * str)
+{
+	char * p = str;
+	while (isspace(*p)) ++p;
+	char * pe = p + strlen(p);
+	while (pe > p && isspace(pe[-1])) --pe;
+	*pe = 0;
+
+	if (*p == '"' && pe > p && pe[-1] == '"') {
+		// if we also had both leading and trailing quotes, strip them.
+		if (pe > p && pe[-1] == '"') {
+			*--pe = 0;
+			++p;
+		}
+	}
+	return p;
+}
+
+bool XFormHash::local_param_unquoted_string(const char * name, std::string & value, MACRO_EVAL_CONTEXT & ctx)
+{
+	auto_free_ptr val(local_param(name, ctx));
+	if (val) {
+		value = trim_and_strip_quotes_in_place(val.ptr());
+		return true;
+	}
+	return false;
+}
+
 
 void XFormHash::insert_source(const char * filename, MACRO_SOURCE & source)
 {
@@ -593,7 +673,7 @@ static const char * is_non_trivial_iterate(const char * is_transform)
 
 MacroStreamXFormSource::MacroStreamXFormSource(const char *nam)
 	: MacroStreamCharSource()
-	, requirements(), checkpoint(NULL)
+	, requirements(), universe(0), checkpoint(NULL)
 	, fp_iter(NULL), fp_lineno(0)
 	, step(0), row(0), proc(0)
 	, close_fp_when_done(false)
@@ -611,6 +691,10 @@ MacroStreamXFormSource::~MacroStreamXFormSource()
 	checkpoint = NULL;
 }
 
+int MacroStreamXFormSource::setUniverse(const char * uni) {
+	universe = CondorUniverseNumberEx(uni);
+	return universe;
+}
 
 int MacroStreamXFormSource::open(StringList & lines, const MACRO_SOURCE & FileSource)
 {
@@ -622,6 +706,9 @@ int MacroStreamXFormSource::open(StringList & lines, const MACRO_SOURCE & FileSo
 			lines.deleteCurrent();
 		} else if (NULL != (p = is_xform_statement(line, "requirements"))) {
 			setRequirements(p);
+			lines.deleteCurrent();
+		} else if (NULL != (p = is_xform_statement(line, "universe"))) {
+			setUniverse(p);
 			lines.deleteCurrent();
 		} else if (NULL != (p = is_xform_statement(line, "transform"))) {
 			if ( ! iterate_args) {
@@ -698,6 +785,12 @@ const char * MacroStreamXFormSource::getFormattedText(std::string & buf, const c
 		buf += prefix;
 		buf += "NAME ";
 		buf += name;
+	}
+	if (universe) {
+		if ( ! buf.empty()) buf += "\n";
+		buf += prefix;
+		buf += "UNIVERSE ";
+		buf += CondorUniverseName(universe);
 	}
 	if ( ! requirements.empty()) {
 		if ( ! buf.empty()) buf += "\n";
@@ -1191,6 +1284,7 @@ static const char * XFormValueToString(classad::Value & val, std::string & tmp)
 {
 	if ( ! val.IsStringValue(tmp)) {
 		classad::ClassAdUnParser unp;
+		unp.SetOldClassAd(true);
 		tmp.clear(); // because Unparse appends.
 		unp.Unparse(tmp, val);
 	}
@@ -1217,6 +1311,50 @@ static ExprTree * XFormCopyValueToTree(classad::Value & val)
 		tree = classad::Literal::MakeLiteral(val);
 	}
 	return tree;
+}
+
+static int ValidateRulesCallback(void* /*pv*/, MACRO_SOURCE& /*source*/, MACRO_SET& /*mset*/, char * line, std::string & errmsg)
+{
+	//struct _parse_rules_args * pargs = (struct _parse_rules_args*)pv;
+	//XFormHash & mset = pargs->mset;
+	//MacroStreamXFormSource & xform = pargs->xfm;
+
+	// give the line to our tokener so we can parse it.
+	tokener toke(line);
+	if ( ! toke.next()) return 0; // keep scanning
+	if (toke.matches("#")) return 0; // not expecting this, but in case...
+
+	// get keyword
+	const Keyword * pkw = ActionKeywords.lookup_token(toke);
+	if ( ! pkw) {
+		std::string tok; toke.copy_token(tok);
+		formatstr(errmsg, "%s is not a valid transform keyword\n", tok.c_str());
+		return -1;
+	}
+	// there must be something after the keyword
+	if ( ! toke.next()) { return (pkw->value == kw_TRANSFORM) ? 0 : -1; }
+
+	toke.mark_after(); // in case we want to capture the remainder of the line.
+
+	// the first argument will always be an attribute name
+	// in some cases, that attribute name is is allowed to be a regex,
+	// if it is a regex it will begin with a /
+	std::string attr;
+	int regex_flags = 0;
+	if ((pkw->options & kw_opt_regex) && toke.is_regex()) {
+		std::string opts;
+		if ( ! toke.copy_regex(attr, regex_flags)) {
+			errmsg = "invalid regex";
+			return -1;
+		}
+		regex_flags |= PCRE_CASELESS;
+	} else {
+		toke.copy_token(attr);
+		// if attr ends with , or =, just strip those off. the tokener only splits on whitespace, not other characters
+		if (attr.size() > 0 && (attr[attr.size()-1] == ',' || attr[attr.size()-1] == '=')) { attr[attr.size()-1] = 0; }
+	}
+
+	return 0; // line is valid, keep scanning.
 }
 
 // this gets called while parsing the submit file to process lines
@@ -1557,7 +1695,21 @@ enum {
 	atr_MAXWALLTIME,
 	atr_DEFAULT_MAXWALLTIME,
 	atr_MINWALLTIME,
+	atr_EDITJobInPlace,
+	atr_FailureRateThreshold,
+	atr_JobFailureTest,
+	atr_JobShouldBeSandboxed,
+	atr_OVERRIDERoutingEntry,
+	atr_USESharedX509UserProxy,
+	atr_SHAREDX509UserProxy,
 };
+
+#define atr_f_Bool     0x0002
+#define atr_f_String   0x0004
+#define atr_f_Number   0x0008
+#define atr_f_Flatten  0x0010
+#define atr_f_UnTarget 0x0020
+#define atr_f_MyTarget 0x0040
 
 // This must be declared in string sorted order, they do not have to be in enum order.
 #define ATR(a, f) { #a, atr_##a, f }
@@ -1566,10 +1718,14 @@ static const Keyword RouterAttrItems[] = {
 	ATR(DEFAULT_MAXWALLTIME, 0),
 	ATR(DEFAULT_QUEUE, 0),
 	ATR(DEFAULT_XCOUNT, 0),
+	ATR(EDITJobInPlace, atr_f_Flatten | atr_f_MyTarget | atr_f_Bool),
 	ATR(ENVIRONMENT, 0),
+	ATR(FailureRateThreshold, atr_f_Flatten | atr_f_MyTarget | atr_f_Number),
 	ATR(GLOBUSRSL, 0),
 	ATR(GRIDRESOURCE, 0),
 	ATR(INPUTRSL, 0),
+	ATR(JobFailureTest, atr_f_Flatten | atr_f_MyTarget | atr_f_Bool),
+	ATR(JobShouldBeSandboxed, atr_f_Flatten | atr_f_MyTarget | atr_f_Bool),
 	ATR(MAXMEMORY, 0),
 	ATR(MAXWALLTIME, 0),
 	ATR(MINWALLTIME, 0),
@@ -1579,6 +1735,7 @@ static const Keyword RouterAttrItems[] = {
 	ATR(ONEXITHOLDSUBCODE, 0),
 	ATR(ORIG_ENVIRONMENT, 0),
 	ATR(OSG_ENVIRONMENT, 0),
+	ATR(OVERRIDERoutingEntry, atr_f_Flatten | atr_f_MyTarget | atr_f_Bool),
 	ATR(QUEUE, 0),
 	ATR(REMOTE_CEREQUIREMENTS, 0),
 	ATR(REMOTE_NODENUMBER, 0),
@@ -1586,19 +1743,187 @@ static const Keyword RouterAttrItems[] = {
 	ATR(REMOTE_SMPGRANULARITY, 0),
 	ATR(REQUESTCPUS, 0),
 	ATR(REQUESTMEMORY, 0),
-	ATR(REQUIREMENTS, 0),
+	ATR(REQUIREMENTS, atr_f_Flatten | atr_f_UnTarget | atr_f_Bool),
+	ATR(SHAREDX509UserProxy, atr_f_Flatten | atr_f_MyTarget | atr_f_String),
 	ATR(TARGETUNIVERSE, 0),
 	ATR(UNIVERSE, 0),
+	ATR(USESharedX509UserProxy, atr_f_Flatten | atr_f_MyTarget | atr_f_Bool),
 	ATR(XCOUNT, 0),
 };
 #undef ATR
 static const KeywordTable RouterAttrs = SORTED_TOKENER_TABLE(RouterAttrItems);
 
-static int is_interesting_route_attr(const std::string & attr) {
+static int is_interesting_route_attr(const std::string & attr, int * popts=NULL) {
 	const Keyword * patr = RouterAttrs.lookup(attr.c_str());
+	if (popts) { *popts = patr ? patr->options : 0; }
 	if (patr) return patr->value;
 	return 0;
 }
+
+bool ExprTreeIsAttrRef(classad::ExprTree * expr, std::string & attr)
+{
+	if ( ! expr) return false;
+
+	classad::ExprTree::NodeKind kind = expr->GetKind();
+	while (kind == classad::ExprTree::ATTRREF_NODE) {
+		classad::ExprTree *e2=NULL;
+		bool absolute;
+		((classad::AttributeReference*)expr)->GetComponents(e2, attr, absolute);
+		return !e2;
+	}
+	return false;
+}
+
+
+typedef std::map<std::string, std::string, classad::CaseIgnLTStr> NOCASE_STRING_MAP;
+static int rewrite_attr_refs(classad::ExprTree * tree, const NOCASE_STRING_MAP & mapping)
+{
+	int iret = 0;
+	if ( ! tree) return 0;
+	switch (tree->GetKind()) {
+		case ExprTree::LITERAL_NODE: {
+			classad::ClassAd * ad;
+			classad::Value val;
+			classad::Value::NumberFactor	factor;
+			((classad::Literal*)tree)->GetComponents( val, factor );
+			if (val.IsClassAdValue(ad)) {
+				iret += rewrite_attr_refs(ad, mapping);
+			}
+		}
+		break;
+
+		case ExprTree::ATTRREF_NODE: {
+			classad::AttributeReference* atref = reinterpret_cast<classad::AttributeReference*>(tree);
+			classad::ExprTree *expr;
+			std::string ref;
+			std::string tmp;
+			bool absolute;
+			atref->GetComponents(expr, ref, absolute);
+			// if there is a non-trivial left hand side (something other than X from X.Y attrib ref)
+			// then recurse it.
+			if (expr && ! ExprTreeIsAttrRef(expr, tmp)) {
+				iret += rewrite_attr_refs(expr, mapping);
+			} else {
+				bool change_it = false;
+				if (expr) {
+					NOCASE_STRING_MAP::const_iterator found = mapping.find(tmp);
+					if (found != mapping.end()) {
+						if (found->second.empty()) {
+							expr = NULL; // the left hand side is a simple attr-ref. and we want to set it to EMPTY
+							change_it = true;
+						} else {
+							iret += rewrite_attr_refs(expr, mapping);
+						}
+					}
+				} else {
+					NOCASE_STRING_MAP::const_iterator found = mapping.find(ref);
+					if (found != mapping.end() && ! found->second.empty()) {
+						ref = found->second;
+						change_it = true;
+					}
+				}
+				if (change_it) {
+					atref->SetComponents(NULL, ref, absolute);
+					iret += 1;
+				}
+			}
+		}
+		break;
+
+		case ExprTree::OP_NODE: {
+			classad::Operation::OpKind	op;
+			classad::ExprTree *t1, *t2, *t3;
+			((classad::Operation*)tree)->GetComponents( op, t1, t2, t3 );
+			if (t1) iret += rewrite_attr_refs(t1, mapping);
+			if (t2) iret += rewrite_attr_refs(t2, mapping);
+			if (t3) iret += rewrite_attr_refs(t3, mapping);
+		}
+		break;
+
+		case ExprTree::FN_CALL_NODE: {
+			std::string fnName;
+			std::vector<classad::ExprTree*> args;
+			((classad::FunctionCall*)tree)->GetComponents( fnName, args );
+			for (std::vector<classad::ExprTree*>::iterator it = args.begin(); it != args.end(); ++it) {
+				iret += rewrite_attr_refs(*it, mapping);
+			}
+		}
+		break;
+
+		case ExprTree::CLASSAD_NODE: {
+			std::vector< std::pair<std::string, classad::ExprTree*> > attrs;
+			((classad::ClassAd*)tree)->GetComponents(attrs);
+			for (std::vector< std::pair<std::string, classad::ExprTree*> >::iterator it = attrs.begin(); it != attrs.end(); ++it) {
+				iret += rewrite_attr_refs(it->second, mapping);
+			}
+		}
+		break;
+
+		case ExprTree::EXPR_LIST_NODE: {
+			std::vector<classad::ExprTree*> exprs;
+			((classad::ExprList*)tree)->GetComponents( exprs );
+			for (std::vector<ExprTree*>::iterator it = exprs.begin(); it != exprs.end(); ++it) {
+				iret += rewrite_attr_refs(*it, mapping);
+			}
+		}
+		break;
+
+		case ExprTree::EXPR_ENVELOPE:
+		default:
+			// unknown or unallowed node.
+			ASSERT(0);
+		break;
+	}
+	return iret;
+}
+
+static int convert_target_to_my(classad::ExprTree * tree)
+{
+	NOCASE_STRING_MAP mapping;
+	mapping["TARGET"] = "MY";
+	return rewrite_attr_refs(tree, mapping);
+}
+
+static int strip_target_attr_ref(classad::ExprTree * tree)
+{
+	NOCASE_STRING_MAP mapping;
+	mapping["TARGET"] = "";
+	return rewrite_attr_refs(tree, mapping);
+}
+
+static void unparse_special (
+	classad::ClassAdUnParser & unparser,
+	std::string & rhs,
+	classad::ClassAd & ad,
+	ExprTree * tree,
+	int       options)
+{
+	bool untarget = options & atr_f_UnTarget;
+	bool mytarget = options & atr_f_MyTarget;
+	ExprTree * flat_tree = NULL;
+	classad::Value flat_val;
+	if (ad.FlattenAndInline(tree, flat_val, flat_tree)) {
+		if ( ! flat_tree) {
+			unparser.Unparse(rhs, flat_val);
+		} else {
+			if (untarget) { strip_target_attr_ref(flat_tree); }
+			if (mytarget) { convert_target_to_my(flat_tree); }
+			unparser.Unparse(rhs, flat_tree);
+			delete flat_tree;
+		}
+	} else {
+		if (untarget || mytarget) {
+			tree = SkipExprEnvelope(tree)->Copy();
+			if (untarget) { strip_target_attr_ref(tree); }
+			if (mytarget) { convert_target_to_my(tree); }
+			unparser.Unparse(rhs, tree);
+			delete tree;
+		} else {
+			unparser.Unparse(rhs, tree);
+		}
+	}
+}
+
 
 /*
 static bool same_refs(StringList & refs, const char * check_str)
@@ -1615,16 +1940,17 @@ typedef std::map<std::string, std::string, classad::CaseIgnLTStr> STRING_MAP;
 #define XForm_ConvertJobRouter_Remove_InputRSL 0x00001
 #define XForm_ConvertJobRouter_Fix_EvalSet     0x00002
 
-int XFormLoadFromJobRouterRoute (
-	MacroStreamXFormSource & xform,
-	std::string & routing_string,
+int ConvertJobRouterRouteToXForm (
+	StringList & statements,
+	const char * config_name, // name from config
+	const std::string & routing_string,
 	int & offset,
-	const ClassAd & base_route_ad,
+	const classad::ClassAd & base_route_ad,
 	int options)
 {
 	classad::ClassAdParser parser;
 	classad::ClassAdUnParser unparser;
-	StringList statements;
+	unparser.SetOldClassAd(true);
 
 	//bool style_2 = (options & 0x0F) == 2;
 	int  has_set_xcount = 0, has_set_queue = 0, has_set_maxMemory = 0, has_set_maxWallTime = 0, has_set_minWallTime = 0;
@@ -1654,9 +1980,7 @@ int XFormLoadFromJobRouterRoute (
 
 	// Initialize name with name for this xform; note it may be overwritten below
 	// if ClassAd includes a Name attribute.
-	if ( xform.getName() ) {
-		name = xform.getName();
-	}
+	if (config_name) { name = config_name; }
 
 	for (ClassAd::iterator it = route_ad.begin(); it != route_ad.end(); ++it) {
 		std::string rhs;
@@ -1712,6 +2036,14 @@ int XFormLoadFromJobRouterRoute (
 						target.remove("InputRSL");
 						*/
 						if (!(options & XForm_ConvertJobRouter_Fix_EvalSet)) {
+							// experimental flattening....
+							if ( ! myrefs.isEmpty()) {
+								rhs.clear();
+								unparse_special(unparser, rhs, route_ad, tree, atr_f_MyTarget | atr_f_Flatten);
+
+								myrefs.clearAll();
+								route_ad.GetExprReferences(rhs.c_str(), &myrefs, &target);
+							}
 							evalset_cmds[attr] = rhs;
 							for (char* str = myrefs.first(); str; str = myrefs.next()) { evalset_myrefs.insert(str); }
 						} else if (atrid == atr_REQUESTMEMORY && is_def_expr) {
@@ -1729,17 +2061,34 @@ int XFormLoadFromJobRouterRoute (
 							//has_def_remote_queue = true;
 							set_cmds[attr] = "$Fq(queue)";
 						} else {
+							// experimental flattening....
+							if ( ! myrefs.isEmpty()) {
+								rhs.clear();
+								unparse_special(unparser, rhs, route_ad, tree, atr_f_MyTarget | atr_f_Flatten);
+
+								myrefs.clearAll();
+								route_ad.GetExprReferences(rhs.c_str(), &myrefs, &target);
+							}
 							evalset_cmds[attr] = rhs;
 							for (char* str = myrefs.first(); str; str = myrefs.next()) { evalset_myrefs.insert(str); }
 						}
 					} else {
+						// experimental flattening....
+						if ( ! myrefs.isEmpty()) {
+							rhs.clear();
+							unparse_special(unparser, rhs, route_ad, tree, atr_f_MyTarget | atr_f_Flatten);
+
+							myrefs.clearAll();
+							route_ad.GetExprReferences(rhs.c_str(), &myrefs, &target);
+						}
 						evalset_cmds[attr] = rhs;
 						for (char* str = myrefs.first(); str; str = myrefs.next()) { evalset_myrefs.insert(str); }
 					}
 				}
 			}
 		} else {
-			int atrid = is_interesting_route_attr(it->first);
+			int atropts = 0;
+			int atrid = is_interesting_route_attr(it->first, &atropts);
 			switch (atrid) {
 				case atr_NAME: route_ad.EvaluateAttrString( it->first, name ); break;
 				case atr_TARGETUNIVERSE: route_ad.EvaluateAttrInt( it->first, target_universe ); break;
@@ -1758,7 +2107,7 @@ int XFormLoadFromJobRouterRoute (
 					requirements.clear();
 					ExprTree * tree = route_ad.Lookup(it->first);
 					if (tree) {
-						unparser.Unparse(requirements, tree);
+						unparse_special(unparser, requirements, route_ad, tree, atropts);
 					}
 				} break;
 
@@ -1767,7 +2116,9 @@ int XFormLoadFromJobRouterRoute (
 					bool is_string = true;
 					if (tree) {
 						rhs.clear();
-						if ( ! ExprTreeIsLiteralString(tree, rhs)) {
+						if (atropts) {
+							unparse_special(unparser, rhs, route_ad, tree, atropts);
+						} else if ( ! ExprTreeIsLiteralString(tree, rhs)) {
 							is_string = false;
 							unparser.Unparse(rhs, tree);
 						}
@@ -1905,7 +2256,38 @@ int XFormLoadFromJobRouterRoute (
 		}
 	}
 
-	xform.open(statements, ArgumentMacro);
 	return 1;
 }
 
+int XFormLoadFromJobRouterRoute (
+	MacroStreamXFormSource & xform,
+	const std::string & routing_string,
+	int & offset,
+	const classad::ClassAd & base_route_ad,
+	int options)
+{
+	StringList statements;
+	int rval = ConvertJobRouterRouteToXForm(statements, xform.getName(), routing_string, offset, base_route_ad, options);
+	if (rval == 1) {
+		xform.open(statements, ArgumentMacro);
+	}
+	return rval;
+}
+
+bool ValidateXForm (
+	MacroStreamXFormSource & xfm,  // the set of transform rules
+	XFormHash & mset,              // the hashtable used as temporary storage
+	std::string & errmsg)          // holds parse errors on failure
+{
+	MACRO_EVAL_CONTEXT_EX & ctx = xfm.context();
+	ctx.also_in_config = true;
+
+	const char * name = xfm.getName();
+	if ( ! name) name = "";
+
+	_parse_rules_args args = { xfm, mset, NULL, 0 };
+
+	xfm.rewind();
+	int rval = Parse_macros(xfm, 0, mset.macros(), READ_MACROS_SUBMIT_SYNTAX, &ctx, errmsg, ValidateRulesCallback, &args);
+	return rval == 0;
+}

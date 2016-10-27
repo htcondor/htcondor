@@ -2369,8 +2369,9 @@ int ConvertJobRouterRoutes(int options)
 #ifdef USE_XFORM_UTILS
 			MacroStreamXFormSource xfm;
 			if (XFormLoadFromJobRouterRoute(xfm, routes_string, offset, default_route_ad, options)) {
-				fprintf(stdout, "##### JOB_ROUTER_ENTRIES [%d] #####\n", route_index);
-				fputs(xfm.getText(), stdout);
+				fprintf(stdout, "\n##### JOB_ROUTER_ENTRIES [%d] #####\n", route_index);
+				std::string xfm_text;
+				fputs(xfm.getFormattedText(xfm_text,"", true), stdout);
 #else
 			StringList lines;
 			if (XFormLoadFromJobRouterRoute(routes_string, offset, default_route_ad, lines, options)) {
@@ -2406,8 +2407,9 @@ int ConvertJobRouterRoutes(int options)
 #ifdef USE_XFORM_UTILS
 				MacroStreamXFormSource xfm;
 				if (XFormLoadFromJobRouterRoute(xfm, routes_string, offset, default_route_ad, options)) {
-					fprintf(stdout, "##### JOB_ROUTER_ENTRIES_FILE [%d] #####\n", route_index);
-					fputs(xfm.getText(), stdout);
+					fprintf(stdout, "\n##### JOB_ROUTER_ENTRIES_FILE [%d] #####\n", route_index);
+					std::string xfm_text;
+					fputs(xfm.getFormattedText(xfm_text,"", true), stdout);
 #else
 				StringList lines;
 				if (XFormLoadFromJobRouterRoute(routes_string, offset, default_route_ad, lines, options)) {
