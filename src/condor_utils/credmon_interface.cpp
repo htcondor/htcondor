@@ -17,15 +17,11 @@
  *
  ***************************************************************/
 
-
-// none of this is intended for windows
-#if 1 // ndef WINDOWS
-
-
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_config.h"
 #include "condor_uid.h"
+#include "credmon_interface.h"
 #ifdef WIN32
 #else
 #include <fnmatch.h>
@@ -139,7 +135,7 @@ bool credmon_poll_setup(const char* user, bool force_fresh, bool send_signal) {
 
 // do exactly one test for the existance of the .cc file.  this does not block,
 // just returns false right away and let's the caller decide what to do.
-int credmon_poll_continue(const char* user, int retry) {
+bool credmon_poll_continue(const char* user, int retry) {
 
 	// this will be the filename we poll for
 	char watchfilename[PATH_MAX];
@@ -426,7 +422,3 @@ bool credmon_clear_mark(const char* user) {
 
 	return true;
 }
-
-
-#endif  // WINDOWS
-
