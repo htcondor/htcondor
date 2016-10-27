@@ -570,12 +570,18 @@ get_cred_handler(void *, int /*i*/, Stream *s)
 
 	ReliSock* sock = (ReliSock*)s;
 
-	if ( !sock->triedAuthentication() ) {
+	// Ensure authentication happened and succeeded
+	// Daemons should register this command with force_authentication = true
+	if ( !sock->isAuthenticated() ) {
 		dprintf(D_ALWAYS,
-			"WARNING - password fetch attempt without authentication from %s\n",
+				"WARNING - authentication failed for password fetch attempt from %s\n",
 				sock->peer_addr().to_sinful().Value());
 		goto bail_out;
 	}
+
+	// Enable encryption if available. If it's not available, the next
+	// call will fail and we'll abort the connection.
+	sock->set_crypto_mode(true);
 
 	if ( !sock->get_encryption() ) {
 		dprintf(D_ALWAYS,
@@ -668,7 +674,7 @@ struct StoreCredState {
 
 
 /* NOW WORKS ON BOTH WINDOWS AND UNIX */
-void store_cred_handler(void *, int /*i*/, Stream *s)
+int store_cred_handler(void *, int /*i*/, Stream *s)
 {
 	char *user = NULL;
 	char *pw = NULL;
@@ -679,13 +685,33 @@ void store_cred_handler(void *, int /*i*/, Stream *s)
 
 	dprintf (D_ALWAYS, "ZKM: First potential block in store_cred_handler, DC==%i\n", dcfound);
 
+	if ( s->type() != Stream::reli_sock ) {
+		dprintf(D_ALWAYS,
+			"WARNING - credential store attempt via UDP from %s\n",
+				((Sock*)s)->peer_addr().to_sinful().Value());
+		return FALSE;
+	}
+
+	ReliSock *sock = (ReliSock*)s;
+
+	// Ensure authentication happened and succeeded and enable encryption
+	// Daemons should register this command with force_authentication = true
+	if ( !sock->isAuthenticated() ) {
+		dprintf(D_ALWAYS,
+			"WARNING - authentication failed for credential store attempt from %s\n",
+			sock->peer_addr().to_sinful().Value());
+		return FALSE;
+	}
+
+	s->set_crypto_mode( true );
+
 	s->decode();
 
 	result = code_store_cred(s, user, pw, mode);
 
 	if( result == FALSE ) {
 		dprintf(D_ALWAYS, "store_cred: code_store_cred failed.\n");
-		return;
+		return FALSE;
 	}
 
 	if ( user ) {
@@ -749,7 +775,7 @@ void store_cred_handler(void *, int /*i*/, Stream *s)
 	// file, in which case we should return now instead of finishing the
 	// wire protocol.
 	if(answer == SUCCESS) {
-		return;
+		return FALSE;
 	}
 #endif // WIN32
 
@@ -757,7 +783,7 @@ void store_cred_handler(void *, int /*i*/, Stream *s)
 	if( ! s->code(answer) ) {
 		dprintf( D_ALWAYS,
 			"store_cred: Failed to send result.\n" );
-		return;
+		return FALSE;
 	}
 
 	if( ! s->end_of_message() ) {
@@ -765,7 +791,7 @@ void store_cred_handler(void *, int /*i*/, Stream *s)
 			"store_cred: Failed to send end of message.\n");
 	}
 
-	return;
+	return FALSE;
 }
 
 
@@ -788,7 +814,7 @@ void store_cred_handler_continue()
 			// re-register timer with one less retry
 			dprintf( D_FULLDEBUG, "NBSTORECRED: re-registering timer and dptr\n");
 			dptr->retries--;
-			daemonCore->Register_Timer(0, store_cred_handler_continue, "Poll for existence of .cc file");
+			daemonCore->Register_Timer(1, store_cred_handler_continue, "Poll for existence of .cc file");
 			daemonCore->Register_DataPtr(dptr);
 			return;
 		}
@@ -1010,7 +1036,12 @@ store_cred(const char* user, const char* pw, int mode, Daemon* d, bool force) {
 
 		// for remote updates (which send the password), verify we have a secure channel,
 		// unless "force" is specified
-		if (((mode == ADD_MODE) || (mode == DELETE_MODE)) && !force && (d != NULL) &&
+		// For STORE_CRED, enable encryption.
+		if ( cmd == STORE_CRED ) {
+			sock->set_crypto_mode( true );
+		}
+
+		if (!force && (d != NULL) &&
 			((sock->type() != Stream::reli_sock) || !((ReliSock*)sock)->triedAuthentication() || !sock->get_encryption())) {
 			dprintf(D_ALWAYS, "STORE_CRED: blocking attempt to update over insecure channel\n");
 			delete sock;

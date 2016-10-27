@@ -12993,7 +12993,7 @@ Scheduler::Register()
 	daemonCore->Register_CommandWithPayload( STORE_CRED, "STORE_CRED",
 								(CommandHandler)&store_cred_handler,
 								"cred_access_handler", NULL, WRITE,
-								D_FULLDEBUG );
+								D_FULLDEBUG, true /*force authentication*/);
 #endif
 
     // command handler in support of condor_status -direct query of our ads
