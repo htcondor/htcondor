@@ -19,16 +19,17 @@
 
 
 // none of this is intended for windows
-#ifndef WINDOWS
+#if 1 // ndef WINDOWS
 
 
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_config.h"
 #include "condor_uid.h"
+#ifdef WIN32
+#else
 #include <fnmatch.h>
-
-
+#endif
 
 static int _static_credmon_pid = -1;
 
@@ -38,7 +39,7 @@ int get_credmon_pid() {
 		MyString cred_dir;
 		param(cred_dir, "SEC_CREDENTIAL_DIRECTORY");
 		MyString pid_path;
-		pid_path.formatstr("%s/pid", cred_dir.c_str());
+		pid_path.formatstr("%s%cpid", cred_dir.c_str(), DIR_DELIM_CHAR);
 		FILE* credmon_pidfile = fopen(pid_path.c_str(), "r");
 		if(!credmon_pidfile) {
 			dprintf(D_FULLDEBUG, "CREDMON: unable to open %s (%i)\n", pid_path.c_str(), errno);
@@ -122,7 +123,12 @@ bool credmon_poll_setup(const char* user, bool force_fresh, bool send_signal) {
 		}
 
 		dprintf(D_FULLDEBUG, "CREDMON: sending SIGHUP to credmon pid %i\n", credmon_pid);
+#ifdef WIN32
+		//TODO: send reconfig signal to credmon
+		int rc = -1;
+#else
 		int rc = kill(credmon_pid, SIGHUP);
+#endif
 		if (rc == -1) {
 			dprintf(D_ALWAYS, "CREDMON: failed to signal credmon: %i\n", errno);
 			return false;
@@ -246,7 +252,12 @@ bool credmon_poll_obselete(const char* user, bool force_fresh, bool send_signal)
 		}
 
 		dprintf(D_FULLDEBUG, "CREDMON: sending SIGHUP to credmon pid %i\n", credmon_pid);
+#ifdef WIN32
+		//TODO: send reconfig signal to credmon
+		int rc = -1;
+#else
 		int rc = kill(credmon_pid, SIGHUP);
+#endif
 		if (rc == -1) {
 			dprintf(D_ALWAYS, "CREDMON: failed to signal credmon: %i\n", errno);
 			return false;
@@ -311,6 +322,8 @@ bool credmon_mark_creds_for_sweeping(const char* user) {
 	return true;
 }
 
+#ifdef WIN32
+#else
 // NOTE: some older platforms have a different signature for this function.
 // I have added a "custom" cmake attribute called HAVE_OLD_SCANDIR which is
 // currently set only for DARWIN 10.6 and 10.7.   -zmiller  2016-03-11
@@ -323,6 +336,7 @@ int markfilter(const dirent*d) {
   // printf("d: %s, %i\n", d->d_name, match);
   return match;
 }
+#endif
 
 void process_cred_file(const char *src) {
    //char * src = fname;
@@ -342,8 +356,6 @@ void process_cred_file(const char *src) {
 }
 
 void credmon_sweep_creds() {
-	struct dirent **namelist;
-	int n;
 
 	// construct filename to poll for
 	char* cred_dir = param("SEC_CREDENTIAL_DIRECTORY");
@@ -352,9 +364,13 @@ void credmon_sweep_creds() {
 		return;
 	}
 
+#ifdef WIN32
+	// TODO: implement this.
+#else
 	MyString fullpathname;
 	dprintf(D_FULLDEBUG, "CREDMON: scandir(%s)\n", cred_dir);
-	n = scandir(cred_dir, &namelist, &markfilter, alphasort);
+	struct dirent **namelist;
+	int n = scandir(cred_dir, &namelist, &markfilter, alphasort);
 	if (n >= 0) {
 		while (n--) {
 			fullpathname.formatstr("%s%c%s", cred_dir, DIR_DELIM_CHAR, namelist[n]->d_name);
@@ -367,6 +383,7 @@ void credmon_sweep_creds() {
 	} else {
 		dprintf(D_FULLDEBUG, "CREDMON: skipping sweep, scandir(%s) got errno %i\n", cred_dir, errno);
 	}
+#endif
 	free(cred_dir);
 }
 
