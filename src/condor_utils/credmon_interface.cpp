@@ -64,7 +64,7 @@ int get_credmon_pid() {
 bool credmon_fill_watchfile_name(char* watchfilename, const char* user) {
 
 	// construct filename to poll for
-	char* cred_dir = param("SEC_CREDENTIAL_DIRECTORY");
+	auto_free_ptr cred_dir(param("SEC_CREDENTIAL_DIRECTORY"));
 	if(!cred_dir) {
 		dprintf(D_ALWAYS, "CREDMON: ERROR: got credmon_poll() but SEC_CREDENTIAL_DIRECTORY not defined!\n");
 		return false;
@@ -75,7 +75,7 @@ bool credmon_fill_watchfile_name(char* watchfilename, const char* user) {
 	// the file CREDMON_COMPLETE in the cred_dir
 	if (user == NULL) {
 		// we will watch for the file that signifies ALL creds were processed
-		sprintf(watchfilename, "%s%cCREDMON_COMPLETE", cred_dir, DIR_DELIM_CHAR);
+		sprintf(watchfilename, "%s%cCREDMON_COMPLETE", cred_dir.ptr(), DIR_DELIM_CHAR);
 	} else {
 		// get username (up to '@' if present, else whole thing)
 		char username[256];
@@ -87,9 +87,8 @@ bool credmon_fill_watchfile_name(char* watchfilename, const char* user) {
 			strncpy(username, user, 255);
 			username[255] = 0;
 		}
-		sprintf(watchfilename, "%s%c%s.cc", cred_dir, DIR_DELIM_CHAR, username);
+		sprintf(watchfilename, "%s%c%s.cc", cred_dir.ptr(), DIR_DELIM_CHAR, username);
 	}
-	free(cred_dir);
 
 	return true;
 }
@@ -210,7 +209,7 @@ bool credmon_poll(const char* user, bool force_fresh, bool send_signal) {
 bool credmon_poll_obselete(const char* user, bool force_fresh, bool send_signal) {
 
 	// construct filename to poll for
-	char* cred_dir = param("SEC_CREDENTIAL_DIRECTORY");
+	auto_free_ptr cred_dir(param("SEC_CREDENTIAL_DIRECTORY"));
 	if(!cred_dir) {
 		dprintf(D_ALWAYS, "CREDMON: ERROR: got credmon_poll() but SEC_CREDENTIAL_DIRECTORY not defined!\n");
 		return false;
@@ -224,7 +223,7 @@ bool credmon_poll_obselete(const char* user, bool force_fresh, bool send_signal)
 	// the file CREDMON_COMPLETE in the cred_dir
 	if (user == NULL) {
 		// we will watch for the file that signifies ALL creds were processed
-		sprintf(watchfilename, "%s%cCREDMON_COMPLETE", cred_dir, DIR_DELIM_CHAR);
+		sprintf(watchfilename, "%s%cCREDMON_COMPLETE", cred_dir.ptr(), DIR_DELIM_CHAR);
 	} else {
 		// get username (up to '@' if present, else whole thing)
 		char username[256];
@@ -236,7 +235,7 @@ bool credmon_poll_obselete(const char* user, bool force_fresh, bool send_signal)
 			strncpy(username, user, 255);
 			username[255] = 0;
 		}
-		sprintf(watchfilename, "%s%c%s.cc", cred_dir, DIR_DELIM_CHAR, username);
+		sprintf(watchfilename, "%s%c%s.cc", cred_dir.ptr(), DIR_DELIM_CHAR, username);
 	}
 
 	if(force_fresh) {
@@ -292,7 +291,7 @@ bool credmon_poll_obselete(const char* user, bool force_fresh, bool send_signal)
 bool credmon_mark_creds_for_sweeping(const char* user) {
 
 	// construct filename to create
-	char* cred_dir = param("SEC_CREDENTIAL_DIRECTORY");
+	auto_free_ptr cred_dir(param("SEC_CREDENTIAL_DIRECTORY"));
 	if(!cred_dir) {
 		return false;
 	}
@@ -310,7 +309,7 @@ bool credmon_mark_creds_for_sweeping(const char* user) {
 
 	// check to see if .cc already exists
 	char markfilename[PATH_MAX];
-	sprintf(markfilename, "%s%c%s.mark", cred_dir, DIR_DELIM_CHAR, username);
+	sprintf(markfilename, "%s%c%s.mark", cred_dir.ptr(), DIR_DELIM_CHAR, username);
 
 	priv_state priv = set_root_priv();
 	FILE* f = safe_fcreate_replace_if_exists(markfilename, "w", 0600);
@@ -360,7 +359,7 @@ void process_cred_file(const char *src) {
 void credmon_sweep_creds() {
 
 	// construct filename to poll for
-	char* cred_dir = param("SEC_CREDENTIAL_DIRECTORY");
+	auto_free_ptr cred_dir(param("SEC_CREDENTIAL_DIRECTORY"));
 	if(!cred_dir) {
 		dprintf(D_FULLDEBUG, "CREDMON: skipping sweep, SEC_CREDENTIAL_DIRECTORY not defined!\n");
 		return;
@@ -370,12 +369,12 @@ void credmon_sweep_creds() {
 	// TODO: implement this.
 #else
 	MyString fullpathname;
-	dprintf(D_FULLDEBUG, "CREDMON: scandir(%s)\n", cred_dir);
+	dprintf(D_FULLDEBUG, "CREDMON: scandir(%s)\n", cred_dir.ptr());
 	struct dirent **namelist;
 	int n = scandir(cred_dir, &namelist, &markfilter, alphasort);
 	if (n >= 0) {
 		while (n--) {
-			fullpathname.formatstr("%s%c%s", cred_dir, DIR_DELIM_CHAR, namelist[n]->d_name);
+			fullpathname.formatstr("%s%c%s", cred_dir.ptr(), DIR_DELIM_CHAR, namelist[n]->d_name);
 			priv_state priv = set_root_priv();
 			process_cred_file(fullpathname.c_str());
 			set_priv(priv);
@@ -383,15 +382,14 @@ void credmon_sweep_creds() {
 		}
 		free(namelist);
 	} else {
-		dprintf(D_FULLDEBUG, "CREDMON: skipping sweep, scandir(%s) got errno %i\n", cred_dir, errno);
+		dprintf(D_FULLDEBUG, "CREDMON: skipping sweep, scandir(%s) got errno %i\n", cred_dir.ptr(), errno);
 	}
 #endif
-	free(cred_dir);
 }
 
 
 bool credmon_clear_mark(const char* user) {
-	char* cred_dir = param("SEC_CREDENTIAL_DIRECTORY");
+	auto_free_ptr cred_dir(param("SEC_CREDENTIAL_DIRECTORY"));
 	if(!cred_dir) {
 		dprintf(D_ALWAYS, "CREDMON: ERROR: got credmon_clear_mark() but SEC_CREDENTIAL_DIRECTORY not defined!\n");
 		return false;
@@ -410,7 +408,7 @@ bool credmon_clear_mark(const char* user) {
 
 	// unlink the "mark" file on every update
 	char markfilename[PATH_MAX];
-	sprintf(markfilename, "%s%c%s.mark", cred_dir, DIR_DELIM_CHAR, username);
+	sprintf(markfilename, "%s%c%s.mark", cred_dir.ptr(), DIR_DELIM_CHAR, username);
 
 	priv_state priv = set_root_priv();
 	int rc = unlink(markfilename);
