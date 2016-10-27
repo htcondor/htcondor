@@ -713,7 +713,9 @@ void store_cred_handler(void *, int /*i*/, Stream *s)
 		}
 	}
 
-#ifndef WIN32  // no credmon on windows
+	// no credmon on windows
+#ifdef WIN32
+#else
 	if(answer == SUCCESS) {
 		// good so far, but the real answer is determined by our ability
 		// to signal the credmon and have the .cc file appear.  we don't
@@ -767,6 +769,8 @@ void store_cred_handler(void *, int /*i*/, Stream *s)
 }
 
 
+#ifdef WIN32
+#else
 void store_cred_handler_continue()
 {
 	// can only be called when daemonCore is non-null since otherwise
@@ -813,6 +817,7 @@ void store_cred_handler_continue()
 	dprintf( D_FULLDEBUG, "NBSTORECRED: done!\n");
 	return;
 }
+#endif
 
 
 static int code_store_cred(Stream *socket, char* &user, char* &pw, int &mode) {
