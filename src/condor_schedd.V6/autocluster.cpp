@@ -355,6 +355,7 @@ bool AutoCluster::config(const char* significant_target_attrs)
 	bool sig_attrs_changed = false;
 	char *new_sig_attrs =  param ("SIGNIFICANT_ATTRIBUTES");
 	const std::string * attr; // used in various loops
+	std::string auto_target_attrs; // this is used when NULL is passed in and we want to fake up an "input" set of attrs
 
 	dprintf(D_FULLDEBUG,
 		"AutoCluster:config(%s) invoked\n",
@@ -375,7 +376,43 @@ bool AutoCluster::config(const char* significant_target_attrs)
 			sig_attrs_changed = true;
 		}
 		sig_attrs_came_from_config_file = true;
+	} else if ( ! significant_target_attrs && significant_attrs) {
+		// in this case, we have an cached lifetime set of significant attributes, but have been called with NULL
+		// (this happens on reconfig). What we need to do here is check to see if one of the banned attrs
+		// is in the cache, and if so, arrange for the cache to be cleaned.
+		char * rm_attrs = param("REMOVE_SIGNIFICANT_ATTRIBUTES");
+		if (rm_attrs) {
+			classad::References banned_attrs;
+			StringTokenIterator rt(rm_attrs);
+			while ((attr = rt.next_string())) { banned_attrs.insert(*attr); }
+			free(rm_attrs);
+
+			bool cache_needs_cleaning = false;
+
+			// determine if the current cached set of significant attrs contains a banned attr
+			// and if it does, set the cache_needs_cleaning flag
+			StringTokenIterator it(significant_attrs);
+			while ((attr = it.next_string())) {
+				if (banned_attrs.find(*attr) != banned_attrs.end()) {
+					cache_needs_cleaning = true;
+					break;
+				}
+			}
+
+			// if we need to clean banned attrs out of the cached significant attributues
+			// we will do that by copying the cache to a temp variable and pretending that it is the input list
+			// Then we delete the cache and fall down into the code below that will adjust the input list
+			// and merge it into the (now empty) cache.
+			if (cache_needs_cleaning) {
+				auto_target_attrs = significant_attrs;
+				significant_target_attrs = auto_target_attrs.c_str();
+				// delete the cache
+				free(const_cast<char*>(significant_attrs));
+				significant_attrs = NULL;
+			}
+		}
 	}
+
 
 		// Always use what the user specifies in the config file.
 		// If the user did not specify anything, then we want to use
