@@ -656,13 +656,14 @@ bail_out:
 
 
 // forward declare the non-blocking continuation function.
-void store_cred_handler_continue(void *, int /*i*/, Stream *s);
+void store_cred_handler_continue();
 
 // declare a simple data structure for holding the info needed
 // across non-blocking retries
 struct StoreCredState {
 	char *user;
 	int  retries;
+	Stream *s;
 };
 
 
@@ -712,14 +713,6 @@ void store_cred_handler(void *, int /*i*/, Stream *s)
 		}
 	}
 
-	if (pw) {
-		SecureZeroMemory(pw, strlen(pw));
-		free(pw);
-	}
-	if (user) {
-		free(user);
-	}
-
 #ifndef WIN32  // no credmon on windows
 	if(answer == SUCCESS) {
 		// good so far, but the real answer is determined by our ability
@@ -728,13 +721,33 @@ void store_cred_handler(void *, int /*i*/, Stream *s)
 		// for 0 seconds.  the timer will reset itself as needed.
 		answer = credmon_poll_setup(user, false, true);
 		if (answer == SUCCESS) {
-			// init retries to 20
-			// invoke below with (user, stream)
-			store_cred_handler_continue(user, 0, s);
+			StoreCredState* retry_state = (StoreCredState*)malloc(sizeof(StoreCredState));
+			retry_state->user = strdup(user);
+			retry_state->retries = 20;
+			retry_state->s = s;
+
+			daemonCore->Register_Timer(0, store_cred_handler_continue, "Poll for existence of .cc file");
+			daemonCore->Register_DataPtr(retry_state);
+
 			return;
 		}
 	}
 #endif // WIN32
+
+	if (pw) {
+		SecureZeroMemory(pw, strlen(pw));
+		free(pw);
+	}
+	if (user) {
+		free(user);
+	}
+
+	// answer is SUCCESS only if we registered a timer to poll for the cred
+	// file, in which case we should return now instead of finishing the
+	// wire protocol.
+	if(answer == SUCCESS) {
+		return;
+	}
 
 	s->encode();
 	if( ! s->code(answer) ) {
@@ -752,31 +765,46 @@ void store_cred_handler(void *, int /*i*/, Stream *s)
 }
 
 
-void store_cred_handler_continue(void * user, int /*i*/, Stream *s)
+void store_cred_handler_continue()
 {
-	int retry = 1;
-	int answer = credmon_poll_continue((char*)user, retry);
+	// can only be called when daemonCore is non-null since otherwise
+	// there's no data
+	if(!daemonCore) return;
+
+	StoreCredState *dptr = (StoreCredState*)daemonCore->GetDataPtr();
+
+	dprintf( D_FULLDEBUG, "NBSTORECRED: dptr: %x, dptr->user: %s, dptr->retries: %i\n", dptr, dptr->user, dptr->retries);
+	int answer = credmon_poll_continue(dptr->user, dptr->retries);
+	dprintf( D_FULLDEBUG, "NBSTORECRED: answer: %i\n", answer);
 
 	if (answer == FAILURE) {
-		// decrease retry
-		// re-register timer
-		return;
+		if (dptr->retries > 0) {
+			// re-register timer with one less retry
+			dptr->retries--;
+			daemonCore->Register_Timer(0, store_cred_handler_continue, "Poll for existence of .cc file");
+			daemonCore->Register_DataPtr(dptr);
+			return;
+		}
 	}
 
-	// SUCCESS! let's finish the wire protocol for STORE_CRED
+	// regardless of SUCCESS or FAILURE, if we got here we need to finish
+	// the wire protocol for STORE_CRED
 
-	s->encode();
-	if( ! s->code(answer) ) {
+	dprintf( D_FULLDEBUG, "NBSTORECRED: finishing wire protocol on stream %x\n", dptr->s);
+	dptr->s->encode();
+	if( ! dptr->s->code(answer) ) {
 		dprintf( D_ALWAYS,
 			"store_cred: Failed to send result.\n" );
-		return;
-	}
-
-	if( ! s->end_of_message() ) {
+	} else if( ! dptr->s->end_of_message() ) {
 		dprintf( D_ALWAYS,
 			"store_cred: Failed to send end of message.\n");
 	}
 
+	// leaving the stream alone since we didn't create it (dptr->s)
+	free(dptr->user);
+	free(dptr);
+
+	dprintf( D_FULLDEBUG, "NBSTORECRED: done!\n");
 	return;
 }
 
