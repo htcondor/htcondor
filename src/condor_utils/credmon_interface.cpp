@@ -25,10 +25,10 @@
 #ifdef WIN32
 #else
 #include <fnmatch.h>
+#endif
 
 
 #define CREDMON_PID_FILE_READ_INTERVAL 20
-#endif
 
 static int _static_credmon_pid = -1;
 static time_t _credmon_pid_timestamp = 0;
