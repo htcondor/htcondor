@@ -1819,6 +1819,7 @@ handle_q(Service *, int, Stream *sock)
 {
 	int	rval;
 	bool all_good;
+dprintf( D_ALWAYS, "DIAG handle_q()\n" );//TEMPTEMP
 
 	all_good = setQSock((ReliSock*)sock);
 

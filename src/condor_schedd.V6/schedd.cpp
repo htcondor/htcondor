@@ -4090,7 +4090,7 @@ Scheduler::WriteAttrChangeToUserLog( const char* job_id_str, const char* attr,
 					 const char* attr_value,
 					 const char* old_value)
 {
-	dprintf( D_ALWAYS, "DIAg Scheduler::WriteAttrChangeToUserLog(%s, %s, %s)\n", job_id_str, attr, attr_value );//TEMPTEMP
+	dprintf( D_ALWAYS, "DIAG Scheduler::WriteAttrChangeToUserLog(%s, %s, %s)\n", job_id_str, attr, attr_value );//TEMPTEMP
 	PROC_ID job_id;
 	StrToProcIdFixMe(job_id_str, job_id);
 	WriteUserLog* ULog = this->InitializeUserLog( job_id );
@@ -9948,6 +9948,12 @@ Scheduler::delete_shadow_rec( shadow_rec *rec )
 	int cluster = rec->job_id.cluster;
 	int proc = rec->job_id.proc;
 	int pid = rec->pid;
+//TEMPTEMP>>>
+	PROC_ID job_id;
+	job_id.cluster = cluster;
+	job_id.proc = proc;
+	printJobStartDate( job_id );
+//<<<TEMPTEMP
 
 	if( pid ) {
 		dprintf( D_FULLDEBUG,
@@ -10022,6 +10028,7 @@ Scheduler::delete_shadow_rec( shadow_rec *rec )
 		// flag is set. This means that we want this job to reconnect
 		// when the schedd comes back online.
 		//
+	//TEMPTEMP -- hmm -- I wonder which way my test goes here??
 	if ( ! rec->keepClaimAttributes ) {
 		DeleteAttribute( cluster, proc, ATTR_PAIRED_CLAIM_ID );
 		DeleteAttribute( cluster, proc, ATTR_CLAIM_ID );
@@ -10046,6 +10053,7 @@ Scheduler::delete_shadow_rec( shadow_rec *rec )
 					    cluster, proc, ATTR_CLAIM_ID, ATTR_REMOTE_HOST );
 	}
 
+	//TEMPTEMP -- shit -- is this it? no
 	DeleteAttribute( cluster, proc, ATTR_SHADOW_BIRTHDATE );
 
 		// we want to commit all of the above changes before we
@@ -10054,6 +10062,7 @@ Scheduler::delete_shadow_rec( shadow_rec *rec )
 		// Nothing written in this transaction requires immediate sync to disk.
 	CommitTransaction( NONDURABLE );
 
+//TEMPTEMP -- okay, by here JobStartDate has been changed...
 	if( ! rec->keepClaimAttributes ) {
 			// We do _not_ want to call check_zombie if we are detaching
 			// from a job for later reconnect, because check_zombie
@@ -10706,6 +10715,9 @@ Scheduler::child_exit(int pid, int status)
 	srec = FindSrecByPid(pid);
 	ASSERT(srec);
 
+	dprintf( D_ALWAYS, "DIAG Scheduler::child_exit()\n" );//TEMPTEMP
+	printJobStartDate( srec->job_id );//TEMPTEMP
+
 		if( srec->match ) {
 			match_rec *mrec = srec->match;
 
@@ -10805,6 +10817,7 @@ Scheduler::child_exit(int pid, int status)
 			//
 		if ( WIFEXITED(status) ) {
 			int wExitStatus = WEXITSTATUS( status );
+			//TEMPTEMP -- okay -- I think this is where the 'Shadow pid ... exited' message comes from 
 		    dprintf( D_ALWAYS,
 			 		"%s pid %d for job %d.%d exited with status %d\n",
 					 name, pid, srec->job_id.cluster, srec->job_id.proc,

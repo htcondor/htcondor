@@ -4313,7 +4313,7 @@ DaemonCore::CallCommandHandler(int req,Stream *stream,bool delete_stream,bool ch
 	char const *user = NULL;
 	Sock *sock = (Sock *)stream;
 
-	//dprintf( D_ALWAYS, "DIAG DaemonCore::CallCommandHandler(%d)\n", req );//TEMPTEMP
+	dprintf( D_ALWAYS, "DIAG DaemonCore::CallCommandHandler(%d)\n", req );//TEMPTEMP
 	if ( reqFound ) {
 
 		if( stream  && stream->type() == Stream::reli_sock && \

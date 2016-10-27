@@ -56,12 +56,14 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 {
 	int	request_num = -1;
 	int	rval;
+dprintf( D_ALWAYS, "DIAG do_Q_request()\n" );//TEMPTEMP
 
 	syscall_sock->decode();
 
 	assert( syscall_sock->code(request_num) );
 
 	dprintf(D_SYSCALLS, "Got request #%d\n", request_num);
+	dprintf(D_ALWAYS, "Got request #%d\n", request_num);//TEMPTEMP
 
 	switch( request_num ) {
 
