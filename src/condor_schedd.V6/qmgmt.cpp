@@ -2424,7 +2424,7 @@ SetAttributeByConstraint(const char *constraint_str, const char *attr_name,
 	YourString owner;
 	MyString owner_expr;
 	if (flags & SetAttribute_OnlyMyJobs) {
-		owner = Q_SOCK->getOwner();
+		owner = Q_SOCK ? Q_SOCK->getOwner() : "unauthenticated";
 		if (owner == "unauthenticated") {
 			// no job will be owned by "unauthenticated" so just quit now.
 			return -1;

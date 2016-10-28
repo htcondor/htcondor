@@ -4194,9 +4194,11 @@ format_name_column_for_dag_nodes(ROD_MAP_BY_ID & results, int name_column, int c
 	std::string buf;
 	for(ROD_MAP_BY_ID::iterator it = results.begin(); it != results.end(); ++it) {
 		if (it->second.flags & JROD_ISDAGNODE) {
-			const char * name = NULL;
 			classad::Value * pcolval = it->second.rov.Column(name_column);
-			if (pcolval) pcolval->IsStringValue(name);
+			if ( ! pcolval) continue;
+
+			const char * name = NULL;
+			pcolval->IsStringValue(name);
 			int cch = strlen(name);
 
 			buf.clear();

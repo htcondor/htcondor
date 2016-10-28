@@ -3560,7 +3560,6 @@ int SubmitHash::SetGridParams()
 	if( exists ) {
 		buffer.formatstr( "%s = %s", ATTR_GCE_PREEMPTIBLE, bool_val ? "True" : "False" );
 		InsertJobExpr( buffer.Value() );
-		free( tmp );
 	}
 
 
