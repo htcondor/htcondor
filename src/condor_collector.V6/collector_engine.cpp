@@ -160,7 +160,7 @@ scheduleHousekeeper (int timeout)
 {
 	// Are we filtering updates that we forward to the view collector?
 	std::string watch_list;
-	param(watch_list,"COLLECTOR_FORWARD_WATCH_LIST", "State,Cpus,Memory,IdleJobs");
+	param(watch_list,"COLLECTOR_FORWARD_WATCH_LIST", "State,Cpus,Memory,IdleJobs,ClaimId,Capability,ClaimIdList,ChildClaimIds");
 	m_forwardWatchList.clearAll();
 	m_forwardWatchList.initializeFromString(watch_list.c_str());
 
@@ -1054,7 +1054,7 @@ updateClassAd (CollectorHashTable &hashTable,
 		
 		insert = 1;
 		
-		if ( m_forwardFilteringEnabled && ( strcmp( label, "Start" ) == 0 || strcmp( label, "Submittor" ) == 0 ) ) {
+		if ( m_forwardFilteringEnabled && ( strcmp( label, "Start" ) == 0 || strcmp( label, "StartdPvt" ) == 0 || strcmp( label, "Submittor" ) == 0 ) ) {
 			new_ad->Assign( ATTR_LAST_FORWARDED, (int)time(NULL) );
 		}
 
@@ -1078,7 +1078,7 @@ updateClassAd (CollectorHashTable &hashTable,
 			EXCEPT( "Error inserting ad" );
 		}
 
-		if ( m_forwardFilteringEnabled && ( strcmp( label, "Start" ) == 0 || strcmp( label, "Submittor" ) == 0 ) ) {
+		if ( m_forwardFilteringEnabled && ( strcmp( label, "Start" ) == 0 || strcmp( label, "StartdPvt" ) == 0 || strcmp( label, "Submittor" ) == 0 ) ) {
 			bool forward = false;
 			int last_forwarded = 0;
 			old_ad->LookupInteger( "LastForwarded", last_forwarded );

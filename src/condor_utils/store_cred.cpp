@@ -722,8 +722,14 @@ int store_cred_handler(void *, int /*i*/, Stream *s)
 			answer = FAILURE;
 		}
 		else {
+				// We don't allow one user to set another user's credential
 				// we don't allow updates to the pool password through this interface
-			if ((mode != QUERY_MODE) &&
+			const char *sock_owner = sock->getOwner();
+			if ( sock_owner == NULL || strncmp( sock_owner, user, tmp-user ) ) {
+				dprintf( D_ALWAYS, "WARNING: store_cred() for user %s attempted by user %s, rejecting\n", user, sock_owner ? sock_owner : "<unknown>" );
+				answer = FAILURE;
+
+			} else if ((mode != QUERY_MODE) &&
 			    (tmp - user == strlen(POOL_PASSWORD_USERNAME)) &&
 			    (memcmp(user, POOL_PASSWORD_USERNAME, tmp - user) == 0))
 			{
