@@ -1753,8 +1753,22 @@ void CollectorDaemon::send_classad_to_sock(int cmd, ClassAd* theAd) {
         return;
     }
 
+	ClassAd *pvtAd = NULL;
+	if (cmd == UPDATE_STARTD_AD) {
+		// Forward the startd private ad as well.  This allows the
+		// target collector to act as an aggregator for multiple collectors
+		// that balance the load of authenticating connections from
+		// the rest of the pool.
+		AdNameHashKey hk;
+		ASSERT( makeStartdAdHashKey (hk, theAd) );
+		pvtAd = collector.lookup(STARTD_PVT_AD,hk);
+	}
+
 	bool should_forward = true;
 	theAd->LookupBool( ATTR_SHOULD_FORWARD, should_forward );
+	if ( !should_forward && pvtAd ) {
+		pvtAd->LookupBool( ATTR_SHOULD_FORWARD, should_forward );
+	}
 	if ( !should_forward ) {
 		// TODO Should we remove the ShouldForward attribute?
 		dprintf( D_FULLDEBUG, "Trying to forward ad on, but %s=False\n", ATTR_SHOULD_FORWARD );
@@ -1829,22 +1843,13 @@ void CollectorDaemon::send_classad_to_sock(int cmd, ClassAd* theAd) {
             }
         }
 
-        if (cmd == UPDATE_STARTD_AD) {
-            // Forward the startd private ad as well.  This allows the
-            // target collector to act as an aggregator for multiple collectors
-            // that balance the load of authenticating connections from
-            // the rest of the pool.
-            AdNameHashKey hk;
-            ClassAd *pvt_ad;
-            ASSERT( makeStartdAdHashKey (hk, theAd) );
-            pvt_ad = collector.lookup(STARTD_PVT_AD,hk);
-            if (pvt_ad) {
-                if (!putClassAd(view_sock, *pvt_ad)) {
-                    dprintf( D_ALWAYS, "Can't forward startd private classad to View Collector %s\n", view_name);
-                    view_sock->end_of_message();
-                    view_sock->close();
-                    continue;
-                }
+        // If there's a private startd ad, send that as well.
+        if (pvtAd) {
+            if (!putClassAd(view_sock, *pvtAd)) {
+                dprintf( D_ALWAYS, "Can't forward startd private classad to View Collector %s\n", view_name);
+                view_sock->end_of_message();
+                view_sock->close();
+                continue;
             }
         }
 
