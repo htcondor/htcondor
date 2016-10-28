@@ -282,9 +282,11 @@ BulkRequest::log() {
 
 int
 BulkRequest::operator() () {
+	static bool incrementTryCount = true;
 	dprintf( D_FULLDEBUG, "BulkRequest::operator()\n" );
 
 	int rc;
+	int tryCount = 0;
 	std::string errorCode;
 
 	// If we already know the BulkRequestID, we don't need to do anything.
@@ -296,6 +298,23 @@ BulkRequest::operator() () {
 		// from a previous request, the idempotency of spot fleet requests
 		// means it both safe to repeat the request and that we'll get back
 		// the information we want (the spot fleet request ID).
+
+		ClassAd * commandAd;
+		commandState->Lookup( HashKey( commandID.c_str() ), commandAd );
+		commandAd->LookupInteger( "State_TryCount", tryCount );
+		if( incrementTryCount ) {
+			++tryCount;
+
+			std::string value;
+			formatstr( value, "%d", tryCount );
+			commandState->BeginTransaction();
+			{
+				commandState->SetAttribute( commandID.c_str(), "State_TryCount", value.c_str() );
+			}
+			commandState->CommitTransaction();
+
+			incrementTryCount = false;
+		}
 
 		// We have to call bulk_start() at least twice (once to issue the
 		// command, and at least once to get the result), so we should
@@ -311,44 +330,44 @@ BulkRequest::operator() () {
 		if( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED || rc == GAHPCLIENT_COMMAND_PENDING ) {
 			// We should exit here the first time.
 			return KEEP_STREAM;
+		} else {
+			incrementTryCount = true;
 		}
 	}
 
 	if( rc == 0 ) {
 		dprintf( D_ALWAYS, "Bulk start request ID: %s\n", bulkRequestID.c_str() );
-
-		reply->Assign( ATTR_RESULT, getCAResultString( CA_SUCCESS ) );
 		reply->Assign( "BulkRequestID", bulkRequestID );
 
 		// We may decide to omit the bulk request ID from the reply, but
 		// subsequent functors in this sequence may need to know the bulk
 		// request ID.
 		scratchpad->Assign( "BulkRequestID", bulkRequestID );
-
 		this->log();
 
+		reply->Assign( ATTR_RESULT, getCAResultString( CA_SUCCESS ) );
+		commandState->BeginTransaction();
+		{
+			commandState->DeleteAttribute( commandID.c_str(), "State_TryCount" );
+		}
+		commandState->CommitTransaction();
 		rc = PASS_STREAM;
-	} else if( errorCode == "NEED_CHECK_BULK_START" ) {
-		std::string message;
-		formatstr( message, "Bulk start request failed (%s) "
-			"but may have left a Spot Fleet behind with client token '%s'.",
-			gahp->getErrorString(), client_token.c_str() );
-		dprintf( D_ALWAYS, "%s\n", message.c_str() );
-
-		reply->Assign( ATTR_RESULT, getCAResultString( CA_COMMUNICATION_ERROR ) );
-		reply->Assign( ATTR_ERROR_STRING, message );
-
-		rc = FALSE;
 	} else {
 		std::string message;
 		formatstr( message, "Bulk start request failed: '%s' (%d): '%s'.",
 			errorCode.c_str(), rc, gahp->getErrorString() );
 		dprintf( D_ALWAYS, "%s\n", message.c_str() );
 
-		reply->Assign( ATTR_RESULT, getCAResultString( CA_FAILURE ) );
-		reply->Assign( ATTR_ERROR_STRING, message );
-
-		rc = FALSE;
+		// We can't cancel the spot fleet request without its ID, so keep
+		// trying until we get one.
+		if( tryCount < 3 || errorCode == "NEED_CHECK_BULK_START" ) {
+			dprintf( D_ALWAYS, "Retrying, after %d attempt(s).\n", tryCount );
+			rc = KEEP_STREAM;
+		} else {
+			reply->Assign( ATTR_RESULT, getCAResultString( CA_FAILURE ) );
+			reply->Assign( ATTR_ERROR_STRING, message );
+			rc = FALSE;
+		}
 	}
 
 	daemonCore->Reset_Timer( gahp->getNotificationTimerId(), 0, TIMER_NEVER );
