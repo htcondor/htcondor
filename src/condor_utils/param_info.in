@@ -125,12 +125,49 @@ default=
 type=string
 description=Master SQL Log
 
+[FULL_HOSTNAME]
+default=
+type=string
+tags=config
+description=Fully qualified hostname of the machine
+customization=expert
+
+[HOSTNAME]
+default=
+type=string
+tags=config
+description=Detected name of the machine
+customization=const
+
+[SUBSYSTEM]
+default=
+type=string
+tags=config
+description=Type of the Daemon or tool
+usage=Set automatically to be MASTER, STARTD, SCHEDD, SUBMIT TOOL, etc. Used by the configuration.
+customization=const
+
+[LOCALNAME]
+default=
+type=string
+tags=config
+description=Instance name of the Dameon, usually the same as SUBSYSTEM
+usage=Set automatically to be MASTER, STARTD, SCHEDD, SUBMIT TOOL, etc. Used by the configuration.
+customization=const
+
 [CCB_ADDRESS]
 default=
 type=string
 customization=normal
 
 [SETTABLE_ATTRS_CONFIG]
+# This follows a form of SETTABLE_ATTRS_<PERM-LEVEL>, where CONFIG is the level most used for this feature
+default=
+type=string
+description=List of configuration variables that can be set by condor_config_val -set
+customization=normal
+
+[SETTABLE_ATTRS_ADMINSTRATOR]
 # This follows a form of SETTABLE_ATTRS_<PERM-LEVEL>, where CONFIG is the level most used for this feature
 default=
 type=string
@@ -1472,36 +1509,6 @@ default=
 type=string
 tags=credd,win_credd
 
-[DEAD.STRING]
-default=input
-type=string
-customization=devel
-tags=unit_tests,FTEST_string_to_port
-
-[DEAD.IP]
-default=input
-type=string
-customization=devel
-tags=unit_tests,FTEST_string_to_ip
-
-[DEAD.HOST]
-default=input_host
-type=string
-customization=devel
-tags=unit_tests,FTEST_host_in_domain
-
-[DEAD.DOMAIN]
-default=input_domain
-type=string
-customization=devel
-tags=unit_tests,FTEST_host_in_domain
-
-[DEAD.SINFUL]
-default=input
-type=string
-customization=devel
-tags=unit_tests,FTEST_is_valid_sinful
-
 [GRIDMANAGER_GAHPCLIENT_DEBUG]
 default=true
 type=bool
@@ -1556,11 +1563,6 @@ tags=gridmanager,infnbatchjob
 default=$(SBIN)/nordugrid_gahp
 win32_default=$(SBIN)\nordugrid_gahp.exe
 type=path
-tags=gridmanager,nordugridjob
-
-[FULL_HOSTNAME]
-default=
-type=string
 tags=gridmanager,nordugridjob
 
 [GRIDMANAGER_CONTACT_SCHEDD_DELAY]
@@ -5344,8 +5346,8 @@ default : @end
 	PREEMPT=(Activity == "Busy") && ((time() - EnteredCurrentActivity) > $(MAX_JOB_RUNTIME))
 @end
 
-[$POLICY.PREEMPT_IF_CPUS_EXCEEDED]
-description=Preempt jobs that use more cpu cores than in slot
+[$POLICY.STARTD_PUBLISH_CpusUsage]
+description=Publish a CpusUsage attribute in the STARTD
 default : @end
   #
   # Publish the number of CPU cores being used by the job into
@@ -5355,40 +5357,33 @@ default : @end
   #
   CpusUsage = ifthenelse(TotalLoadAvg > 0.0 && Activity!="Idle", CondorLoadAvg/TotalLoadAvg*MIN({TotalLoadAvg, $(DETECTED_CORES)}), 0)
   STARTD_ATTRS = $(STARTD_ATTRS) CpusUsage
+@end
+
+[$POLICY.PREEMPT_IF_CPUS_EXCEEDED]
+description=Preempt jobs that use more cpu cores than in slot
+default : @end
+  use POLICY : STARTD_PUBLISH_CpusUsage
   #
   # If the startd sees the number of CPU cores used by the job exceed the
   # number of cores in the slot by more than 0.8, preempt the job
   # immediately ignoring any retirement time.
   #
   CPU_EXCEEDED = (CpusUsage > Cpus + 0.8)
-  if defined PREEMPT
-    PREEMPT = ($(PREEMPT)) || $(CPU_EXCEEDED)
-  else
-    PREEMPT = $(CPUS_EXCEEDED)
-  endif
-  MAXJOBRETIREMENTTIME = ifthenelse($(CPU_EXCEEDED),0,$(MAXJOBRETIREMENTTIME:0))
-  if defined WANT_SUSPEND
-    WANT_SUSPEND = ($(WANT_SUSPEND)) && $(CPU_EXCEEDED) =!= TRUE
-  else
-    WANT_SUSPEND = $(CPU_EXCEEDED) =!= TRUE
-  endif
+  use POLICY : PREEMPT_IF(CPU_EXCEEDED)
 @end
 
 [$POLICY.HOLD_IF_CPUS_EXCEEDED]
 description=Hold jobs that use more cpu cores than in slot
 default : @end
-  use policy: preempt_if_cpus_exceeded
+  use POLICY : STARTD_PUBLISH_CpusUsage
   #
-  # If the startd preempted a job because CPU usage exceeded the number
-  # of cores in the slot, put the job on hold.
+  # If the startd sees the number of CPU cores used by the job exceed the
+  # number of cores in the slot by more than 0.8, preempt the job
+  # immediately ignoring any retirement time.
   #
-  if defined WANT_HOLD
-    WANT_HOLD = ($(WANT_HOLD)) || $(CPU_EXCEEDED)
-  else
-    WANT_HOLD = $(CPU_EXCEEDED)
-  endif
-  WANT_HOLD_REASON = ifThenElse($(CPU_EXCEEDED), "$(HOLD_REASON_CPU_EXCEEDED:CPU usage exceeded request_cpus)", $(WANT_HOLD_REASON:UNDEFINED))
-  WANT_HOLD_SUBCODE = ifThenElse($(CPU_EXCEEDED), $(HOLD_SUBCODE_CPU_EXCEEDED:101), $(WANT_HOLD_SUBCODE:UNDEFINED))
+  CPU_EXCEEDED = (CpusUsage > Cpus + 0.8)
+  HOLD_REASON_CPU_EXCEEDED = CPU usage exceeded request_cpus
+  use POLICY : WANT_HOLD_IF( CPU_EXCEEDED, $(HOLD_SUBCODE_CPU_EXCEEDED:101), $(HOLD_REASON_CPU_EXCEEDED) )
 @end
 
 [$POLICY.PREEMPT_IF_MEMORY_EXCEEDED]
@@ -5399,38 +5394,24 @@ default : @end
   # memory in the slot, preempt the job immediately ignoring any retirement time.
   #
   MEMORY_EXCEEDED = (MemoryUsage =!= UNDEFINED && MemoryUsage > Memory)
-  if defined PREEMPT
-    PREEMPT = ($(PREEMPT)) || $(MEMORY_EXCEEDED)
-  else
-    PREEMPT = $(MEMORY_EXCEEDED)
-  endif
-  MAXJOBRETIREMENTTIME = ifthenelse($(MEMORY_EXCEEDED),0,$(MAXJOBRETIREMENTTIME:0))
-  if defined WANT_SUSPEND
-    WANT_SUSPEND = ($(WANT_SUSPEND)) && $(MEMORY_EXCEEDED) =!= TRUE
-  else
-    WANT_SUSPEND = $(MEMORY_EXCEEDED) =!= TRUE
-  endif
+  use POLICY : PREEMPT_IF(MEMORY_EXCEEDED)
 @end
 
 [$POLICY.HOLD_IF_MEMORY_EXCEEDED]
 description=Hold jobs that use more memory than in slot
 default : @end
-  use policy: preempt_if_memory_exceeded
   #
   # If the startd preempted a job because memory usage exceeded the amount
   # of memory in the slot, put the job on hold.
   #
-  if defined WANT_HOLD
-    WANT_HOLD = ($(WANT_HOLD)) || $(MEMORY_EXCEEDED)
-  else
-    WANT_HOLD = $(MEMORY_EXCEEDED)
-  endif
-  WANT_HOLD_REASON = ifThenElse($(MEMORY_EXCEEDED), "$(HOLD_REASON_MEMORY_EXCEEDED:memory usage exceeded request_memory)", $(WANT_HOLD_REASON:UNDEFINED))
-  WANT_HOLD_SUBCODE = ifThenElse($(MEMORY_EXCEEDED),$(HOLD_SUBCODE_MEMORY_EXCEEDED:102), $(WANT_HOLD_SUBCODE:UNDEFINED))
+  MEMORY_EXCEEDED = (MemoryUsage =!= UNDEFINED && MemoryUsage > Memory)
+  HOLD_REASON_MEMORY_EXCEEDED = memory usage exceeded request_memory
+  use POLICY : WANT_HOLD_IF( MEMORY_EXCEEDED, $(HOLD_SUBCODE_MEMORY_EXCEEDED:102), $(HOLD_REASON_MEMORY_EXCEEDED) )
 @end
 
+
 [$POLICY.PREEMPT_IF]
-description=Configure a conditional PREEMPT expression. args:(policy_variable)
+description=Configure a PREEMPT expression args:(policy_variable)
 default : @end
   if !$(1?)
     error : use POLICY : PREEMPT_IF requires an argument. It should be the name of a config variable that has the trigger expression.
@@ -5447,11 +5428,17 @@ default : @end
     WANT_SUSPEND = $($(1)) =!= true
   endif
 @end
+usage : @end
+  set a variable with the trigger expression, then pass the variable name as an argument:
+  MEMORY_EXCEEDED = (isDefined(MemoryUsage) && MemoryUsage > Memory)
+  use POLICY : PREEMPT_IF(MEMORY_EXCEEDED)
+@end
+
 
 [$POLICY.WANT_HOLD_IF]
 description=Configure a conditional WANT_HOLD expression. args:(policy_variable, subcode, reason_text)
 default : @end
-  use Policy : PREEMPT_IF($(1))
+  use POLICY : PREEMPT_IF($(1))
   if ! $(3?)
     error : use POLICY : WANT_HOLD_IF requires 3 arguments: policy_variable, subcode, reason_text
   endif
@@ -5460,9 +5447,15 @@ default : @end
   else
     WANT_HOLD = $($(1))
   endif
-  WANT_HOLD_REASON = ifThenElse($($(1)), "$(3+)", $(WANT_HOLD_REASON:UNDEFINED))
   WANT_HOLD_SUBCODE = ifThenElse($($(1)), $(2) , $(WANT_HOLD_SUBCODE:UNDEFINED))
+  WANT_HOLD_REASON = ifThenElse($($(1)), "$(3+)", $(WANT_HOLD_REASON:UNDEFINED))
 @end
+usage : @end
+  set a variable with the trigger expression, then pass the variable name, a subcode, and reason text as arguments:
+  MEMORY_EXCEEDED = (isDefined(MemoryUsage) && MemoryUsage > Memory)
+  use POLICY : WANT_HOLD_IF(MEMORY_EXCEEDED, 102, memory usage exceeded request_memory)
+@end
+
 
 [$ROLE.Personal]
 description=Settings for Personal HTCondor (i.e. the whole pool is on a single machine)
@@ -5596,8 +5589,11 @@ default : @end
 @end
 
 [$FEATURE.OneShotCronHook]
-description=Configure a OneShot Cron Hook, args:(STARTD_CRON | SCHEDD_CRON, tag, exe [, hook_args])
+description=Configure a OneShot Cron Hook, args:(STARTD_CRON | SCHEDD_CRON, tag, hook_exe [,hook_args])
 default : @end
+   if ! $(3?)
+     error : use FEATURE : OneShotCronHook requires at least 3 arguments: STARTD_CRON | SCHEDD_CRON, tag, hook_exe [,hook_args]
+   endif
    $(1)_JOBLIST=$($(1)_JOBLIST) $(2)
    $(1)_$(2)_MODE=OneShot
    $(1)_$(2)_KILL=true
@@ -5609,8 +5605,11 @@ default : @end
 @end
 
 [$FEATURE.PeriodicCronHook]
-description=Configure a Periodic Cron Hook, args:(STARTD_CRON | SCHEDD_CRON , tag, period, exe [,hook_args])
+description=Configure a Periodic Cron Hook, args:(STARTD_CRON | SCHEDD_CRON , tag, period, hook_exe [,hook_args])
 default : @end
+   if ! $(4?)
+     error : use FEATURE : PeriodicCronHook requires at least 4 arguments: STARTD_CRON | SCHEDD_CRON, tag, period, hook_exe [,hook_args]
+   endif
    $(1)_JOBLIST=$($(1)_JOBLIST) $(2)
    $(1)_$(2)_MODE=Periodic
    $(1)_$(2)_PERIOD=$(3)
@@ -5621,8 +5620,11 @@ default : @end
 @end
 
 [$FEATURE.ContinuousCronHook]
-description=Configure a Continuous Cron Hook, args:(STARTD_CRON | SCHEDD_CRON , tag, exe [,hook_args])
+description=Configure a Continuous Cron Hook, args:(STARTD_CRON | SCHEDD_CRON , tag, hook_exe [,hook_args])
 default : @end
+   if ! $(3?)
+     error : use FEATURE : ContinuousCronHook requires at least 3 arguments: STARTD_CRON | SCHEDD_CRON, tag, hook_exe [,hook_args]
+   endif
    $(1)_JOBLIST=$($(1)_JOBLIST) $(2)
    $(1)_$(2)_MODE=WaitForExit
    $(1)_$(2)_PERIOD=0

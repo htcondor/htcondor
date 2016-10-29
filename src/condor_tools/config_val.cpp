@@ -81,7 +81,7 @@ enum PrintType {CONDOR_OWNER, CONDOR_TILDE, CONDOR_NONE};
 enum ModeType {CONDOR_QUERY, CONDOR_SET, CONDOR_UNSET,
 			   CONDOR_RUNTIME_SET, CONDOR_RUNTIME_UNSET};
 
-void PrintMetaParam(const char * name);
+void PrintMetaParam(const char * name, bool expand, bool verbose);
 
 // On some systems, the output from config_val sometimes doesn't show
 // up unless we explicitly flush before we exit.
@@ -1140,7 +1140,7 @@ main( int argc, const char* argv[] )
 					fprintf(stderr, "remote query not supported for use %s\n", tmp+1);
 					my_exit(1);
 				}
-				PrintMetaParam(tmp+1);
+				PrintMetaParam(tmp+1, expand_dumped_variables, verbose);
 				continue;
 			}
 			if (target) {
@@ -2043,7 +2043,54 @@ bool write_config_callback(void* user, HASHITER & it) {
 	return true;
 }
 
-void PrintMetaParam(const char * name)
+void PrintMetaKnob(const char * metaval, bool expand, bool verbose);
+void PrintExpandedMetaParams(const char * category, const char * rhs, bool verbose)
+{
+	if (verbose) printf(" #begin-expanding# use %s : %s\n", category, rhs);
+	MACRO_TABLE_PAIR* ptable = param_meta_table(category);
+	if ( ! ptable) {
+		printf ("error: %s is not a valid use category\n", category);
+		return;
+	}
+	MetaKnobAndArgs mag;
+	auto_free_ptr metaval;
+	const char * remain = rhs;
+	while (remain) {
+		const char * ep = mag.init_from_string(remain);
+		if ( ! ep || ep == remain) break;
+		remain = ep;
+
+		const char * pmeta = param_meta_table_string(ptable, mag.knob.c_str());
+		if (pmeta) {
+			metaval.set(expand_meta_args(pmeta, mag.args));
+			PrintMetaKnob(metaval.ptr(), true, verbose);
+		}
+	}
+	if (verbose) printf(" #end-expanding# use %s : %s\n", category, rhs);
+}
+
+// print the lines of a metaknob, optionally expanding the use statements within it.
+void PrintMetaKnob(const char * metaval, bool expand, bool verbose)
+{
+	if ( ! metaval) return;
+	bool print_use = verbose || ! expand;
+	StringTokenIterator lines(metaval, 120, "\n");
+	for (const char * line = lines.first(); line; line = lines.next()) {
+		StringTokenIterator toks(line, 40, " :");
+		bool is_use = YourString("use") == toks.first();
+		if ( ! is_use || print_use) {
+			printf("%s\n", line);
+		}
+		if (is_use && expand) {
+			MyString cat(toks.next()), remain;
+			int len, ix = toks.next_token(len);
+			if (ix > 0) { remain = line + ix; }
+			PrintExpandedMetaParams(cat.Value(), remain.Value(), verbose);
+		}
+	}
+}
+
+void PrintMetaParam(const char * name, bool expand, bool verbose)
 {
 	std::string temp(name);
 	char * tmp = &temp[0];
@@ -2067,6 +2114,8 @@ void PrintMetaParam(const char * name)
 		fprintf(stderr, "%s is not valid, assuming %s was intended\n", name, tmp);
 		*parm++ = 0;
 	}
+	// separate the metaknob name from the args (if any)
+	MetaKnobAndArgs mag(parm);
 
 	MACRO_TABLE_PAIR* ptable = param_meta_table(use);
 	MACRO_DEF_ITEM * pdef = NULL;
@@ -2082,11 +2131,19 @@ void PrintMetaParam(const char * name)
 			}
 			return;
 		}
+
 		// lookup the given metaknob name in that category
-		pdef = param_meta_table_lookup(ptable, parm);
+		pdef = param_meta_table_lookup(ptable, mag.knob.c_str());
 	}
 	if (pdef) {
-		printf("use %s:%s is\n%s\n", ptable->key, pdef->key, pdef->def->psz);
+		if (expand || ! mag.args.empty()) {
+			auto_free_ptr metaval(expand_meta_args(pdef->def->psz, mag.args));
+			printf("use %s:%s %s\n", ptable->key, parm, expand ? "expands to" : "is");
+			PrintMetaKnob(metaval.ptr(), expand, verbose);
+			printf("\n");
+		} else {
+			printf("use %s:%s is\n%s\n", ptable->key, pdef->key, pdef->def->psz);
+		}
 	} else {
 		MyString name_used(use);
 		if (ptable) { name_used.formatstr("%s:%s", use, parm); }

@@ -156,6 +156,15 @@ typedef struct macro_eval_context_ex : macro_eval_context {
 
 	// class that can be used to hold a malloc'd pointer such as the one returned by param
 	// it will free the pointer when this object is destroyed.
+	// The intended use is:
+	//   auto_free_ptr value(param("param_name"));
+	//   if (value) { dprintf(D_ALWAYS, "param_name has value %s\n", value.ptr()); }
+	//
+	// NOTE: it is NOT SAFE to use this class as a member of a class or struct that you intend to copy.
+	//   This class has minimal support for copy construction/assigment using the swap() idiom, which necessary
+	//   for populating STL containers. but it does NOT support deep copying or reference counting
+	//   which would be needed to support its use as a member in a class that you intend to copy and keep
+	//   both copies around. 
 	class auto_free_ptr {
 	public:
 		auto_free_ptr(char* str=NULL) : p(str) {}
@@ -487,6 +496,22 @@ BEGIN_C_DECLS
 	int get_macro_use_count (const char *name, MACRO_SET& macro_set);
 	int get_macro_ref_count (const char *name, MACRO_SET& macro_set);
 	bool config_test_if_expression(const char * expr, bool & result, const char * localname, const char * subsys, std::string & err_reason);
+
+	// simple class to split metaknob name from arguments and store the result in public member variables
+	class MetaKnobAndArgs {
+	public:
+		std::string knob;
+		std::string args;
+		std::string extra;
+		MetaKnobAndArgs(const char * p=NULL) { if (p) init_from_string(p); }
+		// set member variables by parsing p, returns pointer to the next metaknob name or NULL
+		// if there are no characters after. leading & trailing whitespace and , are skipped.
+		const char* init_from_string(const char * p);
+	};
+
+	// expand $(N) from value against arguments in argstr
+	// returns a malloc()'d ptr to expanded value, caller is responsible from freeing returned pointer.
+	char * expand_meta_args(const char *value, std::string & argstr);
 
 	// macro stream class wraps up an fp or string so that the macro parser can read from either.
 	//

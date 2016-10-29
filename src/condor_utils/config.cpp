@@ -241,48 +241,44 @@ const char * find_close_brace(const char * p, int depth, const char * recurse_se
 	return p;
 }
 
-class MetaKnobAndArgs {
-public:
-	std::string knob;
-	std::string args;
-	std::string extra;
-
-	MetaKnobAndArgs(const char * p=NULL) { if (p) init_from_string(p); }
-
-	const char* init_from_string(const char * p) {
-		// skip leading whitespace and ,
-		while (*p && (isspace(*p) || *p == ',')) ++p;
-		// parse knob name
-		const char * e = p;
-		while (*e && ( ! isspace(*e) && *e != ',' && *e != '(')) ++e;
-		if (e == p)
-			return e;
-		knob.assign (p, e-p);
-
-		p = e;
-		while (*p && isspace(*p)) ++p;
-
-		// knob MIGHT be followed by arguments in ()
-		// if there are arguments, capture them using a recursive scanner
-		// that handles nested () and [].
-		if (*p == '(') {
-			e = find_close_brace(p, 25, "([");
-			if (e && *e == ')') {
-				args.assign(p+1, (e-p)-1);
-				p = e;
-			}
-			++p;
-			while (*p && isspace(*p)) ++p;
-		}
-
-		// if there is non-whitespace after the knob/args and before the next ,
-		// capture it.
-		e = p;
-		while (*e && *e != ',') ++e;
-		if (e > p+1) { extra.assign(p, (e-p)-1); }
+// split metaknob name from arguments and store the result in public member variables
+// returns pointer to the next metaknob name or NULL
+// leading & trailing whitespace and , are skipped.
+// 
+const char* MetaKnobAndArgs::init_from_string(const char * p)
+{
+	// skip leading whitespace and ,
+	while (*p && (isspace(*p) || *p == ',')) ++p;
+	// parse knob name
+	const char * e = p;
+	while (*e && ( ! isspace(*e) && *e != ',' && *e != '(')) ++e;
+	if (e == p)
 		return e;
+	knob.assign (p, e-p);
+
+	p = e;
+	while (*p && isspace(*p)) ++p;
+
+	// knob MIGHT be followed by arguments in ()
+	// if there are arguments, capture them using a recursive scanner
+	// that handles nested () and [].
+	if (*p == '(') {
+		e = find_close_brace(p, 25, "([");
+		if (e && *e == ')') {
+			args.assign(p+1, (e-p)-1);
+			p = e;
+		}
+		++p;
+		while (*p && isspace(*p)) ++p;
 	}
-};
+
+	// if there is non-whitespace after the knob/args and before the next ,
+	// capture it.
+	e = p;
+	while (*e && *e != ',') ++e;
+	if (e > p+1) { extra.assign(p, (e-p)-1); }
+	return e;
+}
 
 
 int read_meta_config(MACRO_SOURCE & source, int depth, const char *name, const char * rhs, MACRO_SET& macro_set, MACRO_EVAL_CONTEXT & ctx)
