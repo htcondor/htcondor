@@ -1832,8 +1832,10 @@ fill_attributes()
 	insert_macro("CondorIsAdmin", can_switch_ids() ? "true" : "false", ConfigMacroSet, DetectedMacro, ctx);
 
 	insert_macro("SUBSYSTEM", get_mySubSystem()->getName(), ConfigMacroSet, DetectedMacro, ctx);
+	// insert $(LOCALNAME) macro as the value of LocalName OR the value of SubSystem if there is no local name.
 	const char * localname = get_mySubSystem()->getLocalName();
-	if (localname && localname[0]) { insert_macro("LOCALNAME", localname, ConfigMacroSet, DetectedMacro, ctx); }
+	if ( ! localname || !localname[0]) { localname = get_mySubSystem()->getName(); }
+	insert_macro("LOCALNAME", localname, ConfigMacroSet, DetectedMacro, ctx);
 
 	val.formatstr("%d",sysapi_phys_memory_raw_no_param());
 	insert_macro("DETECTED_MEMORY", val.Value(), ConfigMacroSet, DetectedMacro, ctx);
@@ -2767,8 +2769,10 @@ reinsert_specials( const char* host )
 	}
 	insert_macro("FULL_HOSTNAME", get_local_fqdn().Value(), ConfigMacroSet, DetectedMacro, ctx);
 	insert_macro("SUBSYSTEM", get_mySubSystem()->getName(), ConfigMacroSet, DetectedMacro, ctx);
+	// insert $(LOCALNAME) macro as the value of LocalName OR the value of SubSystem if there is no local name.
 	const char * localname = get_mySubSystem()->getLocalName();
-	if (localname && localname[0]) { insert_macro("LOCALNAME", localname, ConfigMacroSet, DetectedMacro, ctx); }
+	if ( ! localname || !localname[0]) { localname = get_mySubSystem()->getName(); }
+	insert_macro("LOCALNAME", localname, ConfigMacroSet, DetectedMacro, ctx);
 
 	// Insert login-name for our real uid as "username".  At the time
 	// we're reading in the config source, the priv state code is not
