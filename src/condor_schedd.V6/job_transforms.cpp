@@ -225,8 +225,8 @@ JobTransforms::transformJob(ClassAd *ad, CondorError * /* errorStack */ )
 		if ( rval < 0 ) {
 			// TODO errorStack?
 			dprintf(D_ALWAYS,
-				"(%d.%d) job_transforms: ERROR applying transform %s (err=-4,rval=%d)\n",
-				cluster, proc, xfm->getName(), rval);
+				"(%d.%d) job_transforms: ERROR applying transforms (err=-4,rval=%d)\n",
+				cluster, proc, rval);
 			return -4;
 		}
 	}
