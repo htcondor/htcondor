@@ -2682,7 +2682,7 @@ public:
 			num_args = empty_check = false;
 			if (*pend == '?') { ++pend; empty_check = true; }
 			else if (*pend == '#' || *pend == '+') { ++pend; num_args = true; }
-			else if (*pend == ':') { colon = (int)(pend - body)+1; }
+			if (*pend == ':') { colon = (int)(pend - body)+1; }
 		}
 		return false;
 	}
@@ -2762,12 +2762,15 @@ char * expand_meta_args(const char *value, std::string & argstr)
 				}
 			} else {
 				int ix = 1;
-				if (meta_only.num_args) {
+				if (meta_only.num_args) { // if suffix # or +
 					const char * remain = it.remain();
 					while (remain && (ix < meta_only.index)) { ++ix; it.next_string(); remain = it.remain(); }
 					if (remain) {
 						if (*remain == ',') ++remain; // skip leading comma
 						buf = remain;
+					}
+					if (meta_only.colon && buf.empty()) {
+						buf = name + meta_only.colon;
 					}
 				} else {
 					const std::string * pi = it.next_string();
