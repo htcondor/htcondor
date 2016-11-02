@@ -984,8 +984,8 @@ sub check_status {
 sub convert_timestamp_date_hour_min {
 	my $timestamp = $_[0];
 	my ($sec, $min, $hour, $mday, $mon, $year, $wday, $yday, $isdst) = localtime($timestamp);
-	$mon = sprintf("%02d",$mon + 1);
-	$mday = sprintf("%02d", $mday);
+	$mon = sprintf("%d",$mon + 1);
+	$mday = sprintf("%d", $mday);
 	$hour = sprintf("%02d", $hour);
 	$min = sprintf("%02d", $min);
 	return ("$mon/$mday", "$hour:$min");
