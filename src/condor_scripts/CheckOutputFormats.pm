@@ -943,8 +943,9 @@ sub check_status {
 				print "        Output is $machine_info[0][$i]\n        should be ".unquote($Attr_new{$i-1}{Name})."\n";
 				return 0;
 			}
-			unless ($machine_info[1][$i] eq convert_timestamp_date_hour_min($Attr_new{$i-1}{LastNegotiationCycleEnd0})) {
-				print "        Output is $machine_info[1][$i]\n        should be ".convert_timestamp_date_hour_min($Attr_new{$i-1}{LastNegotiationCycleEnd0})."\n";
+			my ($date, $hour) = convert_timestamp_date_hour_min($Attr_new{$i-1}{LastNegotiationCycleEnd0});
+			unless ($machine_info[1][$i] =~ /$date\s+$hour/) {
+				print "        Output is $machine_info[1][$i]\n        should be $date $hour\n";
 				return 0;
 			}
 			unless ($machine_info[2][$i] eq unquote($Attr_new{$i-1}{LastNegotiationCycleDuration0})) {
@@ -987,7 +988,7 @@ sub convert_timestamp_date_hour_min {
 	$mday = sprintf("%02d", $mday);
 	$hour = sprintf("%02d", $hour);
 	$min = sprintf("%02d", $min);
-	return "$mon/$mday $hour:$min";
+	return ("$mon/$mday", "$hour:$min");
 }
 
 sub how_many_entries {
