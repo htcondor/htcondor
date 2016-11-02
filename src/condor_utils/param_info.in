@@ -741,6 +741,13 @@ customization=expert
 tags=dagman,dagman_main
 restart=never
 
+[DAGMAN_RUN_AS_LOCAL_UNIV]
+default=false
+type=bool
+customization=expert
+tags=dagman,dagman_main
+restart=never
+
 [CKPT_SERVER_DIR]
 default=
 type=string

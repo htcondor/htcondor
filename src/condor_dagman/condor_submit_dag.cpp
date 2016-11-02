@@ -686,8 +686,14 @@ void writeSubmitFile( /* const */ SubmitDagDeepOptions &deepOpts,
 	}
     fprintf(pSubFile, "\n");
 
-    //TEMPTEMP!! fprintf(pSubFile, "universe\t= scheduler\n");
-    fprintf(pSubFile, "universe\t= local\n");//TEMPTEMP!!
+	//TEMPTEMP -- should this be in shallow or deep options?
+	//TEMPTEMP -- should make this work in a per-DAG config file...
+	bool runAsLocalU = param_boolean( "DAGMAN_RUN_AS_LOCAL_UNIV", false );
+	if ( runAsLocalU ) {
+    	fprintf(pSubFile, "universe\t= local\n");
+	} else {
+    	fprintf(pSubFile, "universe\t= scheduler\n");
+	}
     fprintf(pSubFile, "executable\t= %s\n", executable);
 	fprintf(pSubFile, "getenv\t\t= True\n");
 	fprintf(pSubFile, "output\t\t= %s\n", shallowOpts.strLibOut.Value());
@@ -699,6 +705,7 @@ void writeSubmitFile( /* const */ SubmitDagDeepOptions &deepOpts,
 	}
 #if !defined ( WIN32 )
     fprintf(pSubFile, "remove_kill_sig\t= SIGUSR1\n" );
+    fprintf(pSubFile, "hold_kill_sig\t= SIGTERM\n" );
 #endif
     fprintf(pSubFile, "+%s\t= \"%s =?= $(cluster)\"\n",
 				ATTR_OTHER_JOB_REMOVE_REQUIREMENTS, ATTR_DAGMAN_JOB_ID );
