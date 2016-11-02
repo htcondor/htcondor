@@ -813,7 +813,7 @@ main( int argc, const char** argv)
 			} else {
 				print_error(MODE_DIAGNOSTIC_ERR, "Error %d: Cant open library: %s\r\n", GetLastError(), cudart_library);
 				fprintf(stdout, "Detected%s=0\n", opt_tag);
-				if (opt_config) fprintf(stdout, "NUM_DETECTED_%s=0\n", opt_tag);
+				//if (opt_config) fprintf(stdout, "NUM_DETECTED_%s=0\n", opt_tag);
 				return 0;
 			}
 		}
@@ -848,7 +848,7 @@ main( int argc, const char** argv)
 			} else {
 				print_error(MODE_DIAGNOSTIC_ERR, "Error %s: Cant open library: %s\n", dlerror(), cudart_library);
 				fprintf(stdout, "Detected%s=0\n", opt_tag);
-				if (opt_config) fprintf(stdout, "NUM_DETECTED_%s=0\n", opt_tag);
+				//if (opt_config) fprintf(stdout, "NUM_DETECTED_%s=0\n", opt_tag);
 				return 0;
 			}
 		}
@@ -883,7 +883,7 @@ main( int argc, const char** argv)
 			print_error(MODE_ERROR, "Error %s: Cant find %s in library: %s\n", dlerror(), "cudaGetDeviceCount", cudart_library);
 			#endif
 			fprintf(stdout, "Detected%s=0\n", opt_tag);
-			if (opt_config) fprintf(stdout, "NUM_DETECTED_%s=0\n", opt_tag);
+			//if (opt_config) fprintf(stdout, "NUM_DETECTED_%s=0\n", opt_tag);
 			return 0;
 		}
 	}
@@ -912,7 +912,7 @@ main( int argc, const char** argv)
     if (deviceCount == 0) {
         // There is no device supporting CUDA
 		fprintf(stdout, "Detected%s=0\n", opt_tag);
-		if (opt_config) fprintf(stdout, "NUM_DETECTED_%s=0\n", opt_tag);
+		//if (opt_config) fprintf(stdout, "NUM_DETECTED_%s=0\n", opt_tag);
 		return 0;
 	}
 
