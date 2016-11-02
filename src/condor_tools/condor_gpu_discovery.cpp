@@ -278,6 +278,56 @@ nvmlReturn_t sim_nvmlDeviceGetTotalEccErrors(nvmlDevice_t /*dev*/, nvmlMemoryErr
 
 int g_verbose = 0;
 int g_diagnostic = 0;
+int g_config_syntax = 0;
+int g_config_fail_on_error = 0;
+
+#define MODE_ERROR          1
+#define MODE_VERBOSE        2
+#define MODE_DIAGNOSTIC_MSG 4 // diagnostic to stdout
+#define MODE_DIAGNOSTIC_ERR 5 // diagnostic to stderr
+int print_error(int mode, const char * fmt, ...) {
+	char temp[4096];
+	char * ptmp = temp;
+	int max_temp = (int)(sizeof(temp)/sizeof(temp[0]));
+
+	FILE * out = g_config_syntax ? stdout : stderr;
+	bool is_error = true;
+	switch (mode) {
+	case MODE_VERBOSE:
+		if ( ! g_verbose) return 0;
+		is_error = false;
+		out = stdout;
+		break;
+	case MODE_DIAGNOSTIC_MSG:
+		out = stdout;
+		is_error = false;
+		// fall through
+	case MODE_DIAGNOSTIC_ERR:
+		if ( ! g_diagnostic) return 0;
+		break;
+	}
+
+	// if config syntax is desired, turn error messages into comments
+	// unless g_config_fail_on_error is set.
+	if (g_config_syntax && ( !is_error || ! g_config_fail_on_error)) {
+		*ptmp++ = '#';
+		--max_temp;
+	}
+
+	va_list args;
+	va_start(args, fmt);
+	int cch = vsnprintf(ptmp, max_temp, fmt, args);
+	va_end (args);
+
+	if (cch < 0 || cch >= max_temp) {
+		fprintf(stderr, "internal error, %d is not enough space to format, value will be truncated.\n", max_temp);
+		temp[max_temp-1] = 0;
+	}
+
+	return fputs(temp, out);
+}
+
+
 void* g_cu_handle = NULL;
 // functions for runtime linking to nvcuda library
 typedef void * cudev;
@@ -298,7 +348,7 @@ cuda_int_t cuDeviceGetCount = NULL;
 
 bool cu_Init(void* cu_handle) {
 	g_cu_handle = cu_handle;
-	if (g_diagnostic) fprintf(stderr, "diag: simulating cudart using nvcuda\n");
+	print_error(MODE_DIAGNOSTIC_MSG, "diag: simulating cudart using nvcuda\n");
 	cuInit = (cuda_uint_t)dlsym(cu_handle, "cuInit");
 	if ( ! cuInit) return false;
 
@@ -310,7 +360,7 @@ bool cu_Init(void* cu_handle) {
 	cuDeviceGetCount = (cuda_int_t)dlsym(cu_handle, "cuDeviceGetCount");
 
 	cudaError ret = cuInit(0);
-	if (ret != cudaSuccess) fprintf(stderr, "Error: cuInit returned %d\n", ret);
+	if (ret != cudaSuccess) print_error(MODE_ERROR, "Error: cuInit returned %d\n", ret);
 	return ret == cudaSuccess;
 }
 
@@ -328,7 +378,7 @@ cudaError_t CUDACALL cu_cudaRuntimeGetVersion(int* pver) {
 	int bitness = KEY_WOW64_64KEY; //KEY_WOW64_32KEY; KEY_WOW64_64KEY
 	int res = RegOpenKeyEx(HKEY_LOCAL_MACHINE, reg_key, 0, KEY_READ | bitness, &hkey);
 	if (res != ERROR_SUCCESS) {
-		fprintf(stderr, "can't open %s\n", reg_key);
+		print_error(MODE_ERROR, "can't open %s\n", reg_key);
 		return ret;
 	}
 	char version[100];
@@ -419,14 +469,14 @@ clReturn oclGetInfo(cl_platform_id plid, cl_e_platform_info eInfo, std::string &
 		if (g_buffer) free (g_buffer);
 		if (cb < 120) cb = 120;
 		g_buffer = (char*)malloc(cb*2);
-		if ( ! g_buffer) { fprintf(stderr, "ERROR: failed to allocate %d bytes\n", (int)(cb*2)); exit(-1); }
+		if ( ! g_buffer) { print_error(MODE_ERROR, "ERROR: failed to allocate %d bytes\n", (int)(cb*2)); exit(-1); }
 		g_cBuffer = cb*2;
 		clr = ocl.GetPlatformInfo(plid, eInfo, g_cBuffer, g_buffer, &cb);
 	}
 	if (clr == CL_SUCCESS) {
 		g_buffer[g_cBuffer-1] = 0;
 		val = g_buffer;
-		if (ocl_log) { fprintf(stdout, "\t%s: \"%s\"\n", ocl_name(eInfo), val.c_str()); }
+		if (ocl_log) { print_error(MODE_VERBOSE, "\t%s: \"%s\"\n", ocl_name(eInfo), val.c_str()); }
 	}
 	return clr;
 }
@@ -439,14 +489,14 @@ clReturn oclGetInfo(cl_device_id did, cl_e_device_info eInfo, std::string & val)
 		if (g_buffer) free (g_buffer);
 		if (cb < 120) cb = 120;
 		g_buffer = (char*)malloc(cb*2);
-		if ( ! g_buffer) { fprintf(stderr, "ERROR: failed to allocate %d bytes\n", (int)(cb*2)); exit(-1); }
+		if ( ! g_buffer) { print_error(MODE_ERROR, "ERROR: failed to allocate %d bytes\n", (int)(cb*2)); exit(-1); }
 		g_cBuffer = cb*2;
 		clr = ocl.GetDeviceInfo(did, eInfo, g_cBuffer, g_buffer, &cb);
 	}
 	if (clr == CL_SUCCESS) {
 		g_buffer[g_cBuffer-1] = 0;
 		val = g_buffer;
-		if (ocl_log) { fprintf(stdout, "\t\t%s: \"%s\"\n", ocl_name(eInfo), val.c_str()); }
+		if (ocl_log) { print_error(MODE_VERBOSE, "\t\t%s: \"%s\"\n", ocl_name(eInfo), val.c_str()); }
 	}
 	return clr;
 }
@@ -461,7 +511,7 @@ template <class t>
 clReturn oclGetInfo(cl_device_id did, cl_e_device_info eInfo, t & val) {
 	clReturn clr = ocl.GetDeviceInfo(did, eInfo, sizeof(val), &val, NULL);
 	if (clr == CL_SUCCESS) {
-		if (ocl_log) { fprintf(stdout, "\t\t%s: %s\n", ocl_name(eInfo), ocl_value(val)); }
+		print_error(MODE_VERBOSE, "\t\t%s: %s\n", ocl_name(eInfo), ocl_value(val));
 	}
 	return clr;
 }
@@ -477,7 +527,7 @@ static int g_cl_cCuda = 0;
 
 int ocl_Init(void) {
 
-	if (g_diagnostic) fprintf(stderr, "diag: ocl_Init()\n");
+	print_error(MODE_DIAGNOSTIC_MSG, "diag: ocl_Init()\n");
 	if (ocl_was_initialized) {
 		return 0;
 	}
@@ -490,7 +540,7 @@ int ocl_Init(void) {
 	unsigned int cPlatforms = 0;
 	clReturn clr = ocl.GetPlatformIDs(0, NULL, &cPlatforms);
 	if (clr != CL_SUCCESS) {
-		fprintf(stderr, "ocl.GetPlatformIDs returned error=%d and %d platforms\n", clr, cPlatforms);
+		print_error(MODE_ERROR, "ocl.GetPlatformIDs returned error=%d and %d platforms\n", clr, cPlatforms);
 	}
 	if (cPlatforms > 0) {
 		cl_platforms.reserve(cPlatforms);
@@ -505,7 +555,7 @@ int ocl_Init(void) {
 
 	for (unsigned int ii = 0; ii < cPlatforms; ++ii) {
 		cl_platform_id plid = cl_platforms[ii];
-		if (g_diagnostic) { fprintf(stdout, "ocl platform %d = %x\n", ii, (int)(size_t)plid); }
+		print_error(MODE_DIAGNOSTIC_MSG, "ocl platform %d = %x\n", ii, (int)(size_t)plid);
 		std::string val;
 		clr = oclGetInfo(plid, CL_PLATFORM_NAME, val);
 		if (val == "NVIDIA CUDA") g_plidCuda = plid;
@@ -522,7 +572,7 @@ int ocl_Init(void) {
 		unsigned int cDevs = 0;
 		cl_device_type f_types = CL_DEVICE_TYPE_GPU;
 		clr = ocl.GetDeviceIDs(plid, f_types, 0, NULL, &cDevs);
-		if (g_verbose) { fprintf(stdout, "\tDEVICES = %d\n", cDevs); }
+		print_error(MODE_VERBOSE, "\tDEVICES = %d\n", cDevs);
 
 		if (CL_SUCCESS == clr && cDevs > 0) {
 			unsigned int ixFirst = cl_gpu_ids.size();
@@ -637,6 +687,7 @@ main( int argc, const char** argv)
 			g_diagnostic = 1;
 		}
 		else if (is_dash_arg_prefix(argv[i], "config", -1)) {
+			g_config_syntax = 1;
 			opt_config = 1;
 		}
 		else if (is_dash_arg_prefix(argv[i], "tag", 3)) {
@@ -746,7 +797,7 @@ main( int argc, const char** argv)
 			const char * opencl_library = "OpenCL.dll";
 			ocl_handle = LoadLibrary(opencl_library);
 			if ( ! ocl_handle && opt_opencl) {
-				fprintf(stderr, "Error %d: Cant open library: %s\r\n", GetLastError(), opencl_library);
+				print_error(MODE_ERROR, "Error %d: Cant open library: %s\r\n", GetLastError(), opencl_library);
 			}
 		}
 
@@ -756,12 +807,13 @@ main( int argc, const char** argv)
 			cuda_handle = LoadLibrary("nvcuda.dll");
 			if (cuda_handle && cu_Init(cuda_handle)) {
 				opt_nvcuda = 1;
-				if (g_diagnostic) { fprintf(stderr, "using nvcuda.dll to simulate cudart\n"); }
+				print_error(MODE_DIAGNOSTIC_ERR, "using nvcuda.dll to simulate cudart\n");
 			} else if (ocl_handle) {
 				// if no cuda, fall back to OpenCL detection
 			} else {
-				if (g_diagnostic) { fprintf(stderr, "Error %d: Cant open library: %s\r\n", GetLastError(), cudart_library); }
+				print_error(MODE_DIAGNOSTIC_ERR, "Error %d: Cant open library: %s\r\n", GetLastError(), cudart_library);
 				fprintf(stdout, "Detected%s=0\n", opt_tag);
+				if (opt_config) fprintf(stdout, "NUM_DETECTED_%s=0\n", opt_tag);
 				return 0;
 			}
 		}
@@ -771,7 +823,7 @@ main( int argc, const char** argv)
 		if (opt_dynamic) {
 			nvml_handle = LoadLibrary(nvml_library);
 			if ( ! nvml_handle) {
-				fprintf(stderr, "Error %d: Cant open library: %s\r\n", GetLastError(), nvml_library);
+				print_error(MODE_ERROR, "Error %d: Cant open library: %s\r\n", GetLastError(), nvml_library);
 			}
 		}
 	#else
@@ -779,7 +831,7 @@ main( int argc, const char** argv)
 			const char * opencl_library = "libOpenCL.so";
 			ocl_handle = dlopen(opencl_library, RTLD_LAZY);
 			if ( ! ocl_handle && opt_opencl) {
-				fprintf(stderr, "Error %s: Cant open library: %s\n", dlerror(), opencl_library);
+				print_error(MODE_ERROR, "Error %s: Cant open library: %s\n", dlerror(), opencl_library);
 			}
 			dlerror(); //Reset error
 		}
@@ -790,12 +842,13 @@ main( int argc, const char** argv)
 			cuda_handle = dlopen("libnvcuda.so", RTLD_LAZY);
 			if (cuda_handle && cu_Init(cuda_handle)) {
 				opt_nvcuda = 1;
-				if (g_diagnostic) { fprintf(stderr, "using libnvcuda.so to simulate libcudart\n"); }
+				print_error(MODE_DIAGNOSTIC_ERR, "using libnvcuda.so to simulate libcudart\n");
 			} else if (ocl_handle) {
 				// if no cuda, fall back to OpenCL detection
 			} else {
-				if (g_diagnostic) { fprintf(stderr, "Error %s: Cant open library: %s\n", dlerror(), cudart_library); }
+				print_error(MODE_DIAGNOSTIC_ERR, "Error %s: Cant open library: %s\n", dlerror(), cudart_library);
 				fprintf(stdout, "Detected%s=0\n", opt_tag);
+				if (opt_config) fprintf(stdout, "NUM_DETECTED_%s=0\n", opt_tag);
 				return 0;
 			}
 		}
@@ -804,7 +857,7 @@ main( int argc, const char** argv)
 		if (opt_dynamic) {
 			nvml_handle = dlopen(nvml_library, RTLD_LAZY);
 			if ( ! nvml_handle) {
-				fprintf(stderr, "Error %s: Cant open library: %s\n", dlerror(), nvml_library);
+				print_error(MODE_ERROR, "Error %s: Cant open library: %s\n", dlerror(), nvml_library);
 			}
 			dlerror(); //Reset error
 		}
@@ -825,11 +878,12 @@ main( int argc, const char** argv)
 		}
 		if ( ! cudaGetDeviceCount) {
 			#ifdef WIN32
-			fprintf(stderr, "Error %d: Cant find %s in library: %s\r\n", GetLastError(), "cudaGetDeviceCount", cudart_library);
+			print_error(MODE_ERROR, "Error %d: Cant find %s in library: %s\r\n", GetLastError(), "cudaGetDeviceCount", cudart_library);
 			#else
-			fprintf(stderr, "Error %s: Cant find %s in library: %s\n", dlerror(), "cudaGetDeviceCount", cudart_library);
+			print_error(MODE_ERROR, "Error %s: Cant find %s in library: %s\n", dlerror(), "cudaGetDeviceCount", cudart_library);
 			#endif
 			fprintf(stdout, "Detected%s=0\n", opt_tag);
+			if (opt_config) fprintf(stdout, "NUM_DETECTED_%s=0\n", opt_tag);
 			return 0;
 		}
 	}
@@ -858,6 +912,7 @@ main( int argc, const char** argv)
     if (deviceCount == 0) {
         // There is no device supporting CUDA
 		fprintf(stdout, "Detected%s=0\n", opt_tag);
+		if (opt_config) fprintf(stdout, "NUM_DETECTED_%s=0\n", opt_tag);
 		return 0;
 	}
 
@@ -904,7 +959,7 @@ main( int argc, const char** argv)
 		result = nvmlInit();
 		if (NVML_SUCCESS != result)
 		{
-			fprintf(stderr, "Warning: nvmlInit failed with error %d, dynamic information will not be available.\n", result);
+			print_error(MODE_ERROR, "Warning: nvmlInit failed with error %d, dynamic information will not be available.\n", result);
 			have_nvml = 0;
 		}
 	}
