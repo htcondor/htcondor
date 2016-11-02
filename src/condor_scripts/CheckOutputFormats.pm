@@ -1320,7 +1320,7 @@ sub find_real_heading {
 	return $real_heading;
 }
 
-sub rheck_heading {
+sub check_heading {
 	my $command_arg = $_[0];
 	my %data = %{$_[1]};
 	my $real_heading = find_real_heading($command_arg);
