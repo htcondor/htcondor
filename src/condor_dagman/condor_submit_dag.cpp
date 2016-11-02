@@ -686,7 +686,8 @@ void writeSubmitFile( /* const */ SubmitDagDeepOptions &deepOpts,
 	}
     fprintf(pSubFile, "\n");
 
-    fprintf(pSubFile, "universe\t= scheduler\n");
+    //TEMPTEMP!! fprintf(pSubFile, "universe\t= scheduler\n");
+    fprintf(pSubFile, "universe\t= local\n");//TEMPTEMP!!
     fprintf(pSubFile, "executable\t= %s\n", executable);
 	fprintf(pSubFile, "getenv\t\t= True\n");
 	fprintf(pSubFile, "output\t\t= %s\n", shallowOpts.strLibOut.Value());
