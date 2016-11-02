@@ -81,7 +81,7 @@ displayJobShort(AttrList* ad)
 
         shorten (owner, 14);
         if (ad->EvalString ("Args", NULL, &args)) {
-            int cmd_len = strlen(cmd);
+            int cmd_len = (int)strlen(cmd);
             int extra_len = 14 - cmd_len;
             if (extra_len > 0) {
                 void * pv = realloc(cmd, 16); ASSERT ( pv != NULL );

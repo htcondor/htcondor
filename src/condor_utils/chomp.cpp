@@ -23,7 +23,7 @@
 //strip off newline if exists
 char *
 chomp( char *buffer ) {
-	int size;
+	size_t size;
 
 	if( (size = strlen(buffer)) ) {
 		if ( buffer[size-1] == '\n' ) {

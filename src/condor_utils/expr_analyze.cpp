@@ -1051,7 +1051,7 @@ void AnalyzeRequirementsForEachTarget(
 		if (append_pretty) { 
 			std::string treebuf;
 			linebuf += " ( "; 
-			PrettyPrintExprTree(subs[ix].tree, treebuf, linebuf.size(), console_width); 
+			PrettyPrintExprTree(subs[ix].tree, treebuf, (int)linebuf.size(), console_width); 
 			linebuf += treebuf; 
 			linebuf += " )";
 		}
@@ -1354,7 +1354,7 @@ void AddReferencedAttribsToBuffer(
 	}
 }
 
-int AddClassadMemoryUse (const classad::ExprList* list, QuantizingAccumulator & accum, int & num_skipped)
+size_t AddClassadMemoryUse (const classad::ExprList* list, QuantizingAccumulator & accum, int & num_skipped)
 {
 	accum += sizeof(classad::ExprList);
 	classad::ExprList::const_iterator it;
@@ -1364,7 +1364,7 @@ int AddClassadMemoryUse (const classad::ExprList* list, QuantizingAccumulator & 
 	return accum.Value();
 }
 
-int AddClassadMemoryUse (const classad::ClassAd* cad, QuantizingAccumulator & accum, int & num_skipped)
+size_t AddClassadMemoryUse (const classad::ClassAd* cad, QuantizingAccumulator & accum, int & num_skipped)
 {
 	accum += sizeof(classad::ClassAd);
 	classad::ClassAd::const_iterator it;
@@ -1375,7 +1375,7 @@ int AddClassadMemoryUse (const classad::ClassAd* cad, QuantizingAccumulator & ac
 	return accum.Value();
 }
 
-int AddExprTreeMemoryUse (const classad::ExprTree* expr, QuantizingAccumulator & accum, int & num_skipped)
+size_t AddExprTreeMemoryUse (const classad::ExprTree* expr, QuantizingAccumulator & accum, int & num_skipped)
 {
 	classad::ExprTree::NodeKind kind = expr->GetKind( );
 

@@ -66,7 +66,7 @@ int BackwardFileReader::BWReaderBuffer::fread_at(FILE * file, off_t offset, int 
 
 	fseek(file, offset, SEEK_SET);
 
-	int ret = fread(data, 1, cb, file);
+	int ret = (int)fread(data, 1, cb, file);
 	cbData = ret;
 
 	if (ret <= 0) {

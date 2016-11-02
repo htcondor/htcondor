@@ -85,7 +85,7 @@ template <class T> struct nocase_sorted_tokener_lookup_table {
 	const T * lookup(const char * str) const {
 		if (cItems <= 0) return NULL;
 		CaseInsensitiveLiteral toke(str);
-		for (int ixLower = 0, ixUpper = cItems-1; ixLower <= ixUpper;) {
+		for (int ixLower = 0, ixUpper = (int)cItems-1; ixLower <= ixUpper;) {
 			int ix = (ixLower + ixUpper) / 2;
 			if (toke == pTable[ix].key)
 				return &pTable[ix];
@@ -98,7 +98,7 @@ template <class T> struct nocase_sorted_tokener_lookup_table {
 	}
 	const T * lookup_token(const tokener & toke) const {
 		if (cItems <= 0) return NULL;
-		for (int ixLower = 0, ixUpper = cItems-1; ixLower <= ixUpper;) {
+		for (int ixLower = 0, ixUpper = (int)cItems-1; ixLower <= ixUpper;) {
 			int ix = (ixLower + ixUpper) / 2;
 			int diff = toke.compare_nocase(pTable[ix].key);
 			if ( ! diff)
@@ -118,7 +118,7 @@ template <class T> struct case_sensitive_sorted_tokener_lookup_table {
 	const T * pTable;
 	const T * lookup_token(const tokener & toke) const {
 		if (cItems <= 0) return NULL;
-		for (int ixLower = 0, ixUpper = cItems-1; ixLower <= ixUpper;) {
+		for (int ixLower = 0, ixUpper = (int)cItems-1; ixLower <= ixUpper;) {
 			int ix = (ixLower + ixUpper) / 2;
 			if (toke.matches(pTable[ix].key))
 				return &pTable[ix];

@@ -483,7 +483,7 @@ bool userMap_func( const char * /*name*/,
 {
 	classad::Value mapVal, userVal, prefVal;
 
-	int cargs = arg_list.size();
+	size_t cargs = arg_list.size();
 	if (cargs < 2 || cargs > 4) {
 		result.SetErrorValue();
 		return true;
@@ -509,7 +509,7 @@ bool userMap_func( const char * /*name*/,
 
 	MyString output;
 	if (user_map_do_mapping(mapName.c_str(), userName.c_str(), output)) {
-		StringList items(output.Value());
+		StringList items(output.Value(), ",");
 
 		if (cargs == 2) {
 			// 2 arg form, return a list.
@@ -588,7 +588,7 @@ bool splitAt_func( const char * name,
 	classad::Value first;
 	classad::Value second;
 
-	unsigned int ix = str.find_first_of('@');
+	size_t ix = str.find_first_of('@');
 	if (ix >= str.size()) {
 		if (0 == strcasecmp(name, "splitslotname")) {
 			first.SetStringValue("");
@@ -665,10 +665,10 @@ bool splitArb_func( const char * /*name*/,
 	// but runs of a single separator are handled individually, thus
 	// "foo, bar" is the same as "foo ,bar" and "foo,bar".  But not the same as
 	// "foo,,bar", which produces a list of 3 items rather than 2.
-	unsigned int ixLast = 0;
+	size_t ixLast = 0;
 	classad::Value val;
 	if (seps.length() > 0) {
-		unsigned int ix = str.find_first_of(seps, ixLast);
+		size_t ix = str.find_first_of(seps, ixLast);
 		int      ch = -1;
 		while (ix < str.length()) {
 			if (ix - ixLast > 0) {
@@ -1248,7 +1248,7 @@ ClassAd( FILE *file, const char *delimitor, int &isEOF, int&error, int &empty )
 	int index;
 	MyString buffer;
 	MyStringFpSource myfs(file, false);
-	int			delimLen = strlen( delimitor );
+	size_t delimLen = strlen( delimitor );
 
 	empty = TRUE;
 
@@ -1352,7 +1352,7 @@ int CondorClassAdFileParseHelper::OnParseError(std::string & line, ClassAd & /*a
 {
 	if (parse_type >= Parse_xml && parse_type < Parse_auto) {
 		// here line is actually errmsg.
-		PRAGMA_REMIND("report parse errors for new parsers?")
+		//PRAGMA_REMIND("report parse errors for new parsers?")
 		return -1;
 	}
 
@@ -2738,7 +2738,7 @@ char*
 sPrintExpr(const classad::ClassAd &ad, const char* name)
 {
 	char *buffer = NULL;
-	int buffersize = 0;
+	size_t buffersize = 0;
 	classad::ClassAdUnParser unp;
     string parsedString;
 	classad::ExprTree* expr;

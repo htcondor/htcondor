@@ -30,7 +30,7 @@ ProduceWFromA(PCSTR as) {
 	PWSTR ws = new WCHAR[n];
 	ASSERT ( ws );
 	*ws	= NULL;
-	MultiByteToWideChar ( CP_ACP, 0, as, -1, ws, n );
+	MultiByteToWideChar ( CP_ACP, 0, as, -1, ws, (int)n );
 	return ws;
 }
 
@@ -42,7 +42,7 @@ ProduceAFromW(PCWSTR ws) {
 	PSTR as = new CHAR[n];
 	ASSERT ( as );
 	*as	= NULL;
-	WideCharToMultiByte ( CP_ACP, 0, ws, -1, as, n, NULL, NULL );
+	WideCharToMultiByte ( CP_ACP, 0, ws, -1, as, (int)n, NULL, NULL );
 	return as;
 }
 

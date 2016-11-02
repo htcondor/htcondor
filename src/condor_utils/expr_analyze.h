@@ -115,9 +115,9 @@ void AddTargetAttribsToBuffer(
 // this functions walk the given classad data structure and determines the memory consumed into
 // the given QuantizingAccumulator. The effects of classad caching/compression are ignored by these functions.
 // the return value is the same as accum.Value().
-int AddExprTreeMemoryUse (const classad::ExprTree* tree, QuantizingAccumulator & accum, int & num_skipped);
-int AddClassadMemoryUse (const classad::ClassAd* cad, QuantizingAccumulator & accum, int & num_skipped);
-int AddClassadMemoryUse (const classad::ExprList* list, QuantizingAccumulator & accum, int & num_skipped);
+size_t AddExprTreeMemoryUse (const classad::ExprTree* tree, QuantizingAccumulator & accum, int & num_skipped);
+size_t AddClassadMemoryUse (const classad::ClassAd* cad, QuantizingAccumulator & accum, int & num_skipped);
+size_t AddClassadMemoryUse (const classad::ExprList* list, QuantizingAccumulator & accum, int & num_skipped);
 
 
 #endif//__EXPR_ANALYZE_H__
