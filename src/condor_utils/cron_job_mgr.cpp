@@ -130,7 +130,7 @@ int CronJobMgr::SetParamBase( const char *param_base,
 	}
 
 	// Calc length & allocate
-	int		len = strlen( param_base ) + strlen( param_ext ) + 1;
+	size_t len = strlen( param_base ) + strlen( param_ext ) + 1;
 	char *tmp = (char * ) malloc( len );
 	if ( NULL == tmp ) {
 		return -1;

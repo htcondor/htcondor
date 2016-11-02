@@ -38,7 +38,7 @@ class CondorCronJobList
 	int HandleReconfig( void );
 	int DeleteAll( void );
 	int KillAll( bool force );
-	int NumJobs( void ) const { return m_job_list.size(); };
+	int NumJobs( void ) const { return (int)m_job_list.size(); };
 	int NumAliveJobs( void ) const;
 	int NumActiveJobs( void ) const;
 	bool GetStringList( StringList &sl ) const;

@@ -328,7 +328,7 @@ public:
 	virtual char const *get_key() { return key; }
 
 private:
-	virtual int WriteBody(FILE* fp) { int r=fwrite(key, sizeof(char), strlen(key), fp); return r < ((int)strlen(key)) ? -1 : r;}
+	virtual int WriteBody(FILE* fp) { size_t r=fwrite(key, sizeof(char), strlen(key), fp); return (r < strlen(key)) ? -1 : (int)r;}
 	virtual int ReadBody(FILE* fp);
 
 	const ConstructLogEntry & ctor;

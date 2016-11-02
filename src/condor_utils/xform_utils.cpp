@@ -117,16 +117,16 @@ MACRO_SET_CHECKPOINT_HDR* checkpoint_macro_set(MACRO_SET& set)
 	// we want to save macro table, meta table and sources table in it.
 	// we don't have to save the defaults metadata, because we know that defaults
 	// cannot be added.
-	int cbCheckpoint = sizeof(MACRO_SET_CHECKPOINT_HDR);
+	size_t cbCheckpoint = sizeof(MACRO_SET_CHECKPOINT_HDR);
 	cbCheckpoint += set.size * (sizeof(set.metat[0]) + sizeof(set.table[0]));
 	cbCheckpoint += set.sources.size() * sizeof(const char *);
 
 	// Now we build a compact string pool that has only a single hunk.
 	// and has room for the checkpoint plus extra items.
 	int cbFree, cHunks, cb = set.apool.usage(cHunks, cbFree);
-	if (cHunks > 1 || cbFree < (1024 + cbCheckpoint)) {
+	if (cHunks > 1 || cbFree < (int)(1024 + cbCheckpoint)) {
 		ALLOCATION_POOL tmp;
-		int cbAlloc = MAX(cb*2, cb+4096+cbCheckpoint);
+		int cbAlloc = (int)MAX(cb*2, cb+4096+cbCheckpoint);
 		tmp.reserve(cbAlloc);
 		set.apool.swap(tmp);
 
@@ -152,7 +152,7 @@ MACRO_SET_CHECKPOINT_HDR* checkpoint_macro_set(MACRO_SET& set)
 	}
 
 	// now claim space in the pool for the checkpoint
-	char * pchka = set.apool.consume(cbCheckpoint + sizeof(void*), sizeof(void*));
+	char * pchka = set.apool.consume((int)cbCheckpoint + sizeof(void*), sizeof(void*));
 	// make sure that the pointer is aligned
 	pchka += sizeof(void*) - (((size_t)pchka) & (sizeof(void*)-1));
 
@@ -160,7 +160,7 @@ MACRO_SET_CHECKPOINT_HDR* checkpoint_macro_set(MACRO_SET& set)
 	MACRO_SET_CHECKPOINT_HDR * phdr = (MACRO_SET_CHECKPOINT_HDR *)pchka;
 	pchka = (char*)(phdr+1);
 	phdr->cTable = phdr->cMetaTable = 0;
-	phdr->cSources = set.sources.size();
+	phdr->cSources = (int)set.sources.size();
 	if (phdr->cSources) {
 		const char ** psrc = (const char**)pchka;
 		for (int ii = 0; ii < phdr->cSources; ++ii) {
@@ -641,7 +641,7 @@ void XFormHash::dump(FILE* out, int flags)
 // returns NULL if it is not.
 static const char * is_xform_statement(const char * line, const char * keyword)
 {
-	const int cchKey = strlen(keyword);
+	const size_t cchKey = strlen(keyword);
 	while (*line && isspace(*line)) ++line;
 	if (starts_with_ignore_case(line, keyword) && isspace(line[cchKey])) {
 		const char * pargs = line+cchKey;
@@ -1255,7 +1255,7 @@ static int DoRegexAttrOp(int kw_value, ClassAd *ad, pcre* re, int re_options, co
 
 	for (ClassAd::iterator it = ad->begin(); it != ad->end(); ++it) {
 		const char * input = it->first.c_str();
-		int cchin = it->first.length();
+		int cchin = (int)it->first.length();
 		int cvec = pcre_exec(re, NULL, input, cchin, 0, re_options, ovector, (int)COUNTOF(ovector));
 		if (cvec <= 0)
 			continue; // does not match
@@ -1276,7 +1276,7 @@ static int DoRegexAttrOp(int kw_value, ClassAd *ad, pcre* re, int re_options, co
 		}
 	}
 
-	return matched.size();
+	return (int)matched.size();
 }
 
 
@@ -1420,7 +1420,7 @@ static int ParseRulesCallback(void* pv, MACRO_SOURCE& source, MACRO_SET& /*mset*
 	}
 
 	// if there is a remainder of the line, macro expand it.
-	int off = toke.offset(); // current pointer
+	size_t off = toke.offset(); // current pointer
 	auto_free_ptr rhs(NULL);
 	if (off > 0) {
 		if (toke.is_quoted_string()) --off;

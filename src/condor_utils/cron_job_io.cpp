@@ -64,7 +64,7 @@ CronJobOut::Output( const char *buf, int len )
 
 	// Build up the string
 	const char	*prefix = m_job.GetPrefix( );
-	int		fulllen = len;
+	size_t fulllen = len;
 	if ( prefix ) {
 		fulllen += strlen( prefix );
 	}
@@ -72,7 +72,7 @@ CronJobOut::Output( const char *buf, int len )
 	if ( NULL == line ) {
 		dprintf( D_ALWAYS,
 				 "cronjob: Unable to duplicate %d bytes\n",
-				 fulllen );
+				 (int)fulllen );
 		return -1;
 	}
 	if ( prefix ) {

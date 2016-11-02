@@ -736,7 +736,7 @@ int store_cred_handler(void *, int /*i*/, Stream *s)
 				dprintf(D_ALWAYS, "ERROR: attempt to set pool password via STORE_CRED! (must use STORE_POOL_CRED)\n");
 				answer = FAILURE;
 			} else {
-				int pwlen = 0;
+				size_t pwlen = 0;
 				if(pw) {
 					pwlen = strlen(pw)+1;
 				}
@@ -942,7 +942,7 @@ void store_pool_cred_handler(void *, int  /*i*/, Stream *s)
 
 	// do the real work
 	if (pw) {
-		int pwlen = strlen(pw)+1;
+		size_t pwlen = strlen(pw)+1;
 		result = store_cred_service(username.Value(), pw, pwlen, ADD_MODE);
 		SecureZeroMemory(pw, strlen(pw));
 	}
@@ -992,7 +992,7 @@ store_cred(const char* user, const char* pw, int mode, Daemon* d, bool force) {
 
 	if ( is_root() && d == NULL ) {
 			// do the work directly onto the local registry
-		int pwlen = 0;
+		size_t pwlen = 0;
 		if(pw) {
 			pwlen=strlen(pw)+1;
 		}

@@ -25,11 +25,8 @@
 char *
 strcasestr( const char *string, const char *pattern )
 {
-	char	*str;
-	int			n;
-
-	n = strlen( pattern );
-	for( str=(char *)string; *str; str++ ) {
+	size_t n = strlen( pattern );
+	for(char* str=(char *)string; *str; str++ ) {
 		if( strncasecmp(str,pattern,n) == 0 ) {
 			return str;
 		}

@@ -36,7 +36,7 @@ void print_wrapped_text(
 	token = strtok(text_copy, " \t");
 	while (token != NULL) {
 		int token_length;
-		token_length = strlen(token);
+		token_length = (int)strlen(token);
 		if (token_length < (chars_per_line - char_count)) {
 			fprintf(output, "%s", token);
 			char_count += token_length;

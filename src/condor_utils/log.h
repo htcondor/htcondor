@@ -100,7 +100,7 @@ class LogRecordError : public LogRecord {
             body = buf;
             free(buf);
         }
-        return body.size();
+        return (int)body.size();
     }
     string body;
 };

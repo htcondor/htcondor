@@ -770,7 +770,7 @@ typedef struct _deletepathdata {
 
 static int WINAPI DpdDeleteFile (
    LPCTSTR          pszPath,
-   int              ochName,
+   size_t           ochName,
    DeletePathData & dpd,
    DWORD            fdwVerbose,
    DWORD            fdwFlags)
@@ -798,7 +798,7 @@ static int WINAPI DpdDeleteFile (
          if ( ! dpd.fDirAlreadyTriedDACLRemove && (ochName > 1))
             {
             TCHAR szParent[MAX_PATH];
-            StrCopyN(szParent, NUMCHARS(szParent), pszPath, ochName);
+            StrCopyN(szParent, NUMCHARS(szParent), pszPath, (int)ochName);
             int errT = RemoveFileDACLs(szParent, fdwVerbose & (TDT_DIAGNOSTIC | TDT_USER_F_VERBOSE), dpd.pbp);
             if (errT)
                err = errT;
@@ -851,7 +851,7 @@ static int WINAPI DpdDeleteFile (
 
 static int WINAPI DpdRemoveDirectory (
    LPCTSTR          pszPath,
-   int              ochName,
+   size_t           ochName,
    DeletePathData & dpd,
    DWORD            fdwVerbose,
    DWORD            fdwFlags)
@@ -879,7 +879,7 @@ static int WINAPI DpdRemoveDirectory (
          if ( ! dpd.fDirAlreadyTriedDACLRemove && (ochName > 1))
             {
             TCHAR szParent[MAX_PATH];
-            StrCopyN(szParent, NUMCHARS(szParent), pszPath, ochName);
+            StrCopyN(szParent, NUMCHARS(szParent), pszPath, (int)ochName);
             int errT = RemoveFileDACLs(szParent, fdwVerbose & (TDT_DIAGNOSTIC | TDT_USER_F_VERBOSE), dpd.pbp);
             if (errT)
                err = errT;
@@ -933,7 +933,7 @@ static int WINAPI DpdRemoveDirectory (
 static bool WINAPI DeletePathCallback (
    VOID *  pvUser, 
    LPCTSTR pszPath,   // path and filename, may be absolute or relative.
-   int     ochName,   // offset from start of pszPath to first char of the file/dir name.
+   size_t  ochName,   // offset from start of pszPath to first char of the file/dir name.
    DWORD   fdwFlags,
    int     cDepth,
    int     ixItem,

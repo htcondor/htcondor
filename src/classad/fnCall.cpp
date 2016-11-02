@@ -1446,7 +1446,7 @@ formatTime(const char*, const ArgumentList &argList, EvalState &state,
 	struct  tm time_components;
     ClassAd    *splitClassAd;
     string     format;
-    int        number_of_args;
+    size_t     number_of_args;
     bool       did_eval;
 
     memset(&time_components, 0, sizeof(time_components));
@@ -1673,7 +1673,7 @@ changeCase(const char*name,const ArgumentList &argList,EvalState &state,
         }
 	}
 
-	len = str.size( );
+	len = (int)str.size( );
 	for( int i=0; i <= len; i++ ) {
 		str[i] = lower ? tolower( str[i] ) : toupper( str[i] );
 	}
@@ -1720,7 +1720,7 @@ subString( const char*, const ArgumentList &argList, EvalState &state,
 
 		// perl-like substr; negative offsets and lengths count from the end
 		// of the string
-	alen = buf.size( );
+	alen = (int)buf.size( );
 	if( offset < 0 ) { 
 		offset = alen + offset; 
 	} else if( offset >= alen ) {
@@ -2909,7 +2909,7 @@ static bool regexp_helper(
 		int * ovector = (int *) malloc(oveccount * sizeof(int));
 
 
-        status = pcre_exec(re, NULL, target, strlen(target),
+        status = pcre_exec(re, NULL, target, (int)strlen(target),
                            0, 0, ovector, oveccount);
         if (status >= 0) {
             result.SetBooleanValue( true );

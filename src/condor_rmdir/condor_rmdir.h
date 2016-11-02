@@ -36,7 +36,7 @@
 typedef bool (WINAPI *PFNTraverseDirectoryTreeCallback)(
    VOID *  pvUser, 
    LPCTSTR pszPath,    // path and filename, may be absolute or relative.
-   int     ochName,    // offset from start of pszPath to first char of the file/dir name.
+   size_t  ochName,    // offset from start of pszPath to first char of the file/dir name.
    DWORD   fdwFlags,
    int     nCurrentDepth,              
    int     ixCurrentItem,

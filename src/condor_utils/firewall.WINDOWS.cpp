@@ -334,7 +334,7 @@ WindowsFirewallHelper::removeByBasename( const char *name ) {
 
 	for (i=0; i<count; i++) {
 		BSTR str = NULL;
-		int len;
+		size_t len;
 		char *tmp;
 	    const char *bn;
 
@@ -418,7 +418,7 @@ WindowsFirewallHelper::charToBstr(const char* str) {
 	BSTR the_bstr;
 	HRESULT hr = S_OK;
 
-	int cch = MultiByteToWideChar(CP_ACP, 0, str, strlen(str), NULL, 0);
+	int cch = MultiByteToWideChar(CP_ACP, 0, str, (int)strlen(str), NULL, 0);
 	the_bstr = SysAllocStringLen(NULL, cch); // SysAllocateString adds +1 to allocation size
 	if ( ! the_bstr) {
         hr = E_OUTOFMEMORY;

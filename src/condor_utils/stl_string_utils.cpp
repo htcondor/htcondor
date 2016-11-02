@@ -196,7 +196,7 @@ void trim( std::string &str )
 		++begin;
 	}
 
-	int			end = str.length() - 1;
+	int			end = (int)str.length() - 1;
 	while ( end >= 0 && isspace(str[end]) ) {
 		--end;
 	}
