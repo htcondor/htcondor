@@ -625,7 +625,7 @@ VanillaProc::StartJob()
 	// See Note near setup of param(BASE_CGROUP)
 	if (CONDOR_UNIVERSE_LOCAL != job_universe && cgroup && retval) {
 		std::string mem_limit;
-		param(mem_limit, "CGROUP_MEMORY_LIMIT_POLICY", "soft");
+		param(mem_limit, "CGROUP_MEMORY_LIMIT_POLICY", "none");
 		bool mem_is_soft = mem_limit == "soft";
 		std::string cgroup_string = cgroup;
 		CgroupLimits climits(cgroup_string);

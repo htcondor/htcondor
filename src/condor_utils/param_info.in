@@ -4285,7 +4285,7 @@ tags=starter
 
 [CGROUP_MEMORY_LIMIT_POLICY]
 aliases=
-default=soft
+default=none
 version=7.9.0
 type=string
 description=Determines whether cgroup base memory enforcement should happen
