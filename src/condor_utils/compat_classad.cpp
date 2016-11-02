@@ -509,7 +509,7 @@ bool userMap_func( const char * /*name*/,
 
 	MyString output;
 	if (user_map_do_mapping(mapName.c_str(), userName.c_str(), output)) {
-		StringList items(output.Value());
+		StringList items(output.Value(), ",");
 
 		if (cargs == 2) {
 			// 2 arg form, return a list.
