@@ -983,8 +983,8 @@ sub check_status {
 sub convert_timestamp_date_hour_min {
 	my $timestamp = $_[0];
 	my ($sec, $min, $hour, $mday, $mon, $year, $wday, $yday, $isdst) = localtime($timestamp);
-	$mon = sprintf("%02d",$mon + 1);
-	$mday = sprintf("%02d", $mday);
+	$mon = sprintf("%2d",$mon + 1);
+	$mday = sprintf("%2d", $mday);
 	$hour = sprintf("%02d", $hour);
 	$min = sprintf("%02d", $min);
 	return "$mon/$mday $hour:$min";
@@ -1320,7 +1320,7 @@ sub find_real_heading {
 	return $real_heading;
 }
 
-sub check_heading {
+sub rheck_heading {
 	my $command_arg = $_[0];
 	my %data = %{$_[1]};
 	my $real_heading = find_real_heading($command_arg);
@@ -2218,4 +2218,29 @@ sub emit_file {
         print FH $content;
         close(FH);
         chmod(0755,$fname);                                                                       
+}
+
+sub wait_for_reconfig {
+	my $count = 120;
+	my $iswindows = CondorUtils::is_windows();
+	my $file = `condor_config_val log`;
+	$file =~ s/\n//;
+	if ($iswindows) {
+		$file = "$file\\SchedLog";
+	} else {
+		$file = "$file/SchedLog";
+	}
+	my @log;
+	while ($count > 0) {
+		@log = `tail -n --lines=20 $file`;
+		for my $i (0..(scalar @log)-1) {
+			if ($log[$i] =~ /SIGHUP/) {
+				return 1;
+			}
+		}
+		sleep(1);
+		$count--;
+		print $count;
+	}
+	return 0;
 }
