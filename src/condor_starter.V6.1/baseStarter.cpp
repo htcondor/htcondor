@@ -266,6 +266,9 @@ CStarter::StarterExit( int code )
 		exitAfterGlexec( code );
 	}
 #endif
+	// Once libc starts calling global destructors, we can't reliably
+	// notify anyone of an EXCEPT().
+	_EXCEPT_Cleanup = NULL;
 	DC_Exit( code );
 }
 
@@ -2574,7 +2577,7 @@ CStarter::Suspend( void ) {
 	
 		//
 		// We set a flag to let us know that if any other
-		// job tries to start after we recieved this Suspend call
+		// job tries to start after we received this Suspend call
 		// then they should also be suspended.
 		// This can happen if a job was being deferred and when
 		// the timer triggers we don't want to let it execute 

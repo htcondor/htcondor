@@ -66,7 +66,7 @@ class CollectorPlugin
 	virtual void update(int command, const ClassAd &) = 0;
 
 		/**
-		 * Recieve a ClassAd INVALIDATE_ command, command int
+		 * Receive a ClassAd INVALIDATE_ command, command int
 		 * provided.
 		 */
 	virtual void invalidate(int command, const ClassAd &) = 0;

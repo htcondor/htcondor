@@ -253,7 +253,7 @@ dprintf( D_ALWAYS, "m_reconnect_fname = %s\n", m_reconnect_fname.Value() );
 			close(m_epfd);
 			m_epfd = pipes[0];
 
-			// Inform DC we want to recieve notifications from this FD.
+			// Inform DC we want to receive notifications from this FD.
 			daemonCore->Register_Pipe(m_epfd,"CCB epoll FD", static_cast<PipeHandlercpp>(&CCBServer::EpollSockets),"CCB Epoll Handler", this, HANDLE_READ);
 		}
 	}

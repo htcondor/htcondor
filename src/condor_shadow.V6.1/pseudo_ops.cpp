@@ -234,7 +234,7 @@ pseudo_register_mpi_master_info( ClassAd* ad )
 		return -1;
 	}
 	if( ! Shadow->setMpiMasterInfo(addr) ) {
-		dprintf( D_ALWAYS, "ERROR: recieved "
+		dprintf( D_ALWAYS, "ERROR: received "
 				 "pseudo_register_mpi_master_info for a non-MPI job!\n" );
 		return -1;
 	}

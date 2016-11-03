@@ -744,7 +744,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 				using_cookie = true;
 			} else {
 				// bad cookie!!!
-				dprintf ( D_ALWAYS, "DC_AUTHENTICATE: recieved invalid cookie from %s!!!\n", m_sock->peer_description());
+				dprintf ( D_ALWAYS, "DC_AUTHENTICATE: received invalid cookie from %s!!!\n", m_sock->peer_description());
 				m_result = FALSE;
 				return CommandProtocolFinished;
 			}
