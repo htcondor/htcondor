@@ -2161,9 +2161,11 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 					// In this case, default to mode 0600, which is a
 					// conservative default, and matches what we do in
 					// ReliSock::get_file().
-					file_mode = 0600;
+					file_mode = (condor_mode_t) 0600;
 				}
-				rc = mkdir(fullname.Value(),file_mode);
+				mode_t old_umask = umask(0);
+				rc = mkdir(fullname.Value(),(mode_t)file_mode);
+				umask(old_umask);
 				if( rc == -1 && errno == EEXIST ) {
 						// The directory name already exists.  If it is a
 						// directory, just leave it alone, because the
@@ -2182,7 +2184,9 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 					}
 					else {
 						IGNORE_RETURN remove(fullname.Value());
-						rc = mkdir(fullname.Value(),file_mode);
+						old_umask = umask(0);
+						rc = mkdir(fullname.Value(),(mode_t)file_mode);
+						umask(old_umask);
 					}
 				}
 				if( rc == -1 ) {
