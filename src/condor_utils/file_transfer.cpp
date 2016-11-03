@@ -2162,7 +2162,19 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 				dprintf(D_ALWAYS,"DoDownload: failed to read mkdir mode.\n");
 			}
 			else {
-				rc = mkdir(fullname.Value(),file_mode);
+				if (file_mode == NULL_FILE_PERMISSIONS) {
+					// Don't create subdirectories with mode 0000!
+					// If file_mode is still NULL_FILE_PERMISSIONS here, it
+					// likely means that our peer is likely a Windows machine,
+					// since Windows will always claim a mode of 0000.
+					// In this case, default to mode 0600, which is a
+					// conservative default, and matches what we do in
+					// ReliSock::get_file().
+					file_mode = (condor_mode_t) 0600;
+				}
+				mode_t old_umask = umask(0);
+				rc = mkdir(fullname.Value(),(mode_t)file_mode);
+				umask(old_umask);
 				if( rc == -1 && errno == EEXIST ) {
 						// The directory name already exists.  If it is a
 						// directory, just leave it alone, because the
@@ -2181,7 +2193,9 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 					}
 					else {
 						IGNORE_RETURN remove(fullname.Value());
-						rc = mkdir(fullname.Value(),file_mode);
+						old_umask = umask(0);
+						rc = mkdir(fullname.Value(),(mode_t)file_mode);
+						umask(old_umask);
 					}
 				}
 				if( rc == -1 ) {

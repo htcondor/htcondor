@@ -251,7 +251,7 @@ here is HTCondor's priority calculation algorithm.
 
 The RUP of a user $u$ at time $t$, $\pi_r(u,t)$, is calculated 
 every time interval $\delta t$ using the formula 
-$$\pi_r(u,t) = \beta\times\pi(u,t-\delta t) + (1-\beta)\times\rho(u,t)$$
+$$\pi_r(u,t) = \beta\times\pi_r(u,t-\delta t) + (1-\beta)\times\rho(u,t)$$
 where $\rho(u,t)$ is the number of resources used by user $u$ at time $t$,
 and $\beta=0.5^{{\delta t}/h}$. $h$ is the half life period set by 
 \Macro{PRIORITY\_HALFLIFE}.
