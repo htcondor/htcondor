@@ -2808,8 +2808,8 @@ JobRoute::ParseNext(const std::string & routing_string,int &offset,const classad
 			dprintf(D_ALWAYS, "JobRouter: Missing or invalid %s in job route.\n",ATTR_NAME);
 			return false;
 		}
-		m_name = m_route.getName();
 	}
+	m_name = m_route.getName();
 
 	if ( ! m_route.getRequirements()) {
 		if( ! allow_empty_requirements) {
