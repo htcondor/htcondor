@@ -250,7 +250,7 @@ bool DockerProc::JobReaper( int pid, int status ) {
 			int memory;
 			machineAd->LookupInteger(ATTR_MEMORY, memory);
 			std::string message;
-			formatstr(message, "Docker job exhaused %d Mb memory", memory);
+			formatstr(message, "Docker job exceeded memory limit of %d Mb", memory);
 			dprintf(D_ALWAYS, "%s, going on hold\n", message.c_str());
 
 			
