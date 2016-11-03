@@ -663,7 +663,12 @@ sub check_status {
 },
 'CpuLoad' => sub {
 	my $num = sprintf("%.2f",($Attr_new{$_[0]-1}{TotalLoadAvg} / $Attr_new{$_[0]-1}{TotalCpus}));
-	return $_[1] eq $num;
+	if ($_[1] eq $num) {
+		return 1;
+	} else {
+		print "output is $_[1], should be $num\n";
+		return 0;
+	}
 },
 'ST' => sub {
 	my $st = substr($Attr_new{$_[0]-1}{State},1,1).lc(substr($Attr_new{$_[0]-1}{Activity},1,1));
@@ -2233,7 +2238,11 @@ sub wait_for_reconfig {
 	}
 	my @log;
 	while ($count > 0) {
-		@log = `tail -n --lines=20 $file`;
+		if (is_mac()) {
+			@log = `tail -n 40 $file`;
+		} else {
+			@log = `tail $file --lines=40`;
+		}
 		for my $i (0..(scalar @log)-1) {
 			if ($log[$i] =~ /SIGHUP/) {
 				return 1;
@@ -2241,7 +2250,14 @@ sub wait_for_reconfig {
 		}
 		sleep(1);
 		$count--;
-		print $count;
 	}
 	return 0;
+}
+
+sub is_mac {
+	if ($^O =~ /MacOS/i || $^O =~ /rhapsody/i || $^O =~ /darwin/i) {
+		return 1;
+	} else {
+		return 0;
+	}
 }

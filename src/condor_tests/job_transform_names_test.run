@@ -38,19 +38,17 @@ my @content;
 my $transform;
 my $result;
 
+my $iswindows = CondorUtils::is_windows();
+
 $path_to_dir = `condor_config_val LOCAL_DIR`;
 $path_to_dir =~ s/\n//;
-$path_to_file = "$path_to_dir/condor_config.local";
+if ($iswindows) {
+	$path_to_file = "$path_to_dir\\condor_config.local";
+} else {
+	$path_to_file = "$path_to_dir/condor_config.local";
+}
 $path_to_file =~ s/\n//;
-
-$submit_content = 
-"executable = $executable
-hold = true
-+NeverThere2 = \"Please work!\"
-+illegal = \$(ILLEGAL:false)
-queue 2";
-$submitfile = "$testname$pid.sub";
-emit_dag_files($testname, $submit_content, $pid);
+print "$path_to_file\n";
 
 $transform = 
 "JOB_TRANSFORM_NAMES = BAD ILLEGAL ALWAYS NEVER ALWAYS_NEWSCRIPT
@@ -88,7 +86,12 @@ JOB_TRANSFORM_ALWAYS_NEWSCRIPT \@=end
 
 # write to config file
 open my $in, '<', $path_to_file or print "Can't read old file: $!\n";
-open my $out, ">$path_to_dir/condor_config_copy.local" or print "Can't write new file: $!\n";
+my $out;
+if ($iswindows) {
+	open $out, ">$path_to_dir\\condor_config_copy.local" or print "Can't write new file: $!\n";
+} else {
+	open $out, ">$path_to_dir/condor_config_copy.local" or print "Can't write new file: $!\n";
+}
 while (<$in>){
 	print $out $_;
 }
@@ -96,14 +99,31 @@ print $out $transform;
 close $out;
 close $in;
 
-rename $path_to_file, "$path_to_dir/condor_config_orig.local";
-rename "$path_to_dir/condor_config_copy.local", $path_to_file;
+if ($iswindows) {
+	rename $path_to_file, "$path_to_dir\\condor_config_orig.local";
+	rename "$path_to_dir\\condor_config_copy.local", $path_to_file;
+} else {
+	rename $path_to_file, "$path_to_dir/condor_config_orig.local";
+	rename "$path_to_dir/condor_config_copy.local", $path_to_file;
+}
+
 
 `condor_reconfig`;
-sleep 5;
+if (wait_for_reconfig() eq 0) {
+	print "Waited too long!!\n";
+	exit(1);
+}
+
+$submit_content = 
+"executable = $executable
+hold = true
++NeverThere2 = \"Please work!\"
++illegal = \$(ILLEGAL:false)
+queue 2";
+$submitfile = "$testname$pid.sub";
+emit_dag_files($testname, $submit_content, $pid);
 
 `condor_submit hold=true illegal=true $submitfile`;
-sleep 10;
 @content = `condor_q -nobatch`;
 print @content;
 
@@ -114,7 +134,11 @@ if (how_many_entries(\@content) eq 0){
 	RegisterResult(0, check_name => "illegal", test_name => $testname);
 }
 unlink $path_to_file;
-rename "$path_to_dir/condor_config_orig.local", $path_to_file;
+if ($iswindows) {
+	rename "$path_to_dir\\condor_config_orig.local", $path_to_file;
+} else {
+	rename "$path_to_dir/condor_config_orig.local", $path_to_file;
+}
 
 `condor_rm -all`;
 
@@ -150,7 +174,12 @@ JOB_TRANSFORM_ALWAYS_NEWSCRIPT \@=end
 
 # write to config file
 open my $in1, '<', $path_to_file or print "Can't read old file: $!\n";
-open my $out1, ">$path_to_dir/condor_config_copy.local" or print "Can't write new file: $!\n";
+my $out1;
+if ($iswindows) {
+	open $out1, ">$path_to_dir\\condor_config_copy.local" or print "Can't write new file: $!\n";
+} else {	
+	open $out1, ">$path_to_dir/condor_config_copy.local" or print "Can't write new file: $!\n";
+}
 while (<$in1>){
 	print $out1 $_;
 }
@@ -158,14 +187,21 @@ print $out1 $transform;
 close $out1;
 close $in1;
 
-rename $path_to_file, "$path_to_dir/condor_config_orig.local";
-rename "$path_to_dir/condor_config_copy.local", $path_to_file;
+if ($iswindows) {
+	rename $path_to_file, "$path_to_dir\\condor_config_orig.local";
+	rename "$path_to_dir\\condor_config_copy.local", $path_to_file;
+} else {
+	rename $path_to_file, "$path_to_dir/condor_config_orig.local";
+	rename "$path_to_dir/condor_config_copy.local", $path_to_file;
+}
 
 `condor_reconfig`;
-sleep 5;
+#if (wait_for_reconfig() eq 0) {
+#	print "Waited too long!!\n";
+#	exit(1);
+#}
 
 `condor_submit $submitfile`;
-sleep 10;
 @content = `condor_q -nobatch`;
 print @content;
 my @q_content = `condor_q -l | grep Please`;
@@ -192,7 +228,13 @@ print ($q_content[5]);
 `condor_rm -all`;
 
 unlink $path_to_file;
-rename "$path_to_dir/condor_config_orig.local", $path_to_file;
+if ($iswindows) {
+	rename "$path_to_dir\\condor_config_orig.local", $path_to_file;
+} else {
+	rename "$path_to_dir/condor_config_orig.local", $path_to_file;
+}
+
+`condor_reconfig`;
 
 CondorTest::EndTest();
 exit(0);

@@ -53,8 +53,10 @@ close $in;
 rename $path_to_file, "$path_to_dir/condor_config_orig.local";
 rename "$path_to_dir/condor_config_copy.local", $path_to_file;
 `condor_reconfig`;
-sleep 5;
-
+if (wait_for_reconfig() eq 0) {
+	print "Waited too long!!\n";
+	exit(1);
+}
 print "############################# test with accounting group #############################\n";
 # submit 12 jobs
 $submit_content =
@@ -65,7 +67,6 @@ queue 12";
 $submitfile = "$testname$pid.sub";
 emit_dag_files($testname, $submit_content, $pid);
 `condor_submit hold=true $submitfile`;
-sleep(10);
 @content = `condor_q -nobatch`;
 
 print @content;
@@ -88,7 +89,6 @@ queue 8";
 $submitfile = "$testname$pid.sub";
 emit_dag_files($testname, $submit_content, $pid);
 `condor_submit hold=true $submitfile`;
-sleep(10);
 @content = `condor_q -nobatch`;
 
 print @content;
@@ -109,7 +109,6 @@ queue 4";
 $submitfile = "$testname$pid.sub";
 emit_dag_files($testname, $submit_content, $pid);
 `condor_submit hold=true $submitfile`;
-sleep(10);
 @content = `condor_q -nobatch`;
 
 print @content;
@@ -125,6 +124,8 @@ if (how_many_entries(\@content) eq 8){
 
 unlink $path_to_file;
 rename "$path_to_dir/condor_config_orig.local", $path_to_file;
+
+`condor_reconfig`;
 
 CondorTest::EndTest();
 exit(0);
