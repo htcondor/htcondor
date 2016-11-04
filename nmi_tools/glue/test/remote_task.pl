@@ -226,19 +226,15 @@ if ($ENV{NMI_PLATFORM} =~ /_win/i) {
     #out("PATH is now\n$newpath");
 }
 
-# alternative arguments for batch test...
-#system("$perl_exe batch_test.pl -d $compiler -t $testname -b --isolated -v");
-#system("$perl_exe batch_test.pl -d $compiler -t $testname -b --isolated");
-
-out("RUNNING batch_test.pl -t '$testname'\n---------");
-my $batchteststatus = system("$perl_exe batch_test.pl -d $compiler -t $testname");
+out("RUNNING run_test.pl '$testname'\n---------");
+my $batchteststatus = system("$perl_exe run_test.pl $testname");
 print "---------\n"; # we print here rather than using out() in order to bracket the batch test output with ----- above and below.
 my @returns = TestGlue::ProcessReturn($batchteststatus);
 
 $batchteststatus = $returns[0];
 my $signal = $returns[1];
 my $signalmsg = $signal ? " and signal $signal" : "";
-out("batch_test returned $batchteststatus" . $signalmsg);
+out("run_test returned $batchteststatus" . $signalmsg);
 
 # if we started a personal HTCondor, stop it now, if we can't, then fail the test.
 #
