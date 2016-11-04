@@ -623,6 +623,7 @@ sub check_status {
 		return 1;
 	} else {
 		print "output is $_[1], should be $convert_time\n";
+		return 0;
 	}
 },
 'Platform' => sub {
@@ -647,19 +648,40 @@ sub check_status {
 },
 'Gpus' => sub {
 	my $num = sprintf("%d",$Attr_new{$_[0]-1}{TotalGpus});
-	return $_[1] eq $num;
+	if ($_[1] eq $num) {
+		return 1;
+	} else {
+		print "        output is $_[1]\n        should be $num\n";
+		return 0;
+	}
 },
 'TotalGb' => sub {
 	my $num = sprintf("%.2f",($Attr_new{$_[0]-1}{TotalMemory}/1024));
-	return $_[1] eq $num;
+#	return $_[1] eq $num;
+	if ($_[1] eq $num) {
+		return 1;
+	} else {
+		print "        output is $_[1]\n        should be $num\n";
+		return 0;
+	}
 },
 'FreCpu' => sub {
 	my $num = sprintf("%d",$Attr_new{$_[0]-1}{Cpus});
-	return $_[1] eq $num;
+	if ($_[1] eq $num) {
+		return 1;
+	} else {
+		print "        output is $_[1]\n        should be $num\n";
+		return 0;
+	}
 },
 'FreeGb' => sub {
 	my $num = sprintf("%.2f",($Attr_new{$_[0]-1}{Memory}/1024));
-	return $_[1] eq $num;
+	if ($_[1] eq $num) {
+		return 1;
+	} else {
+		print "        output is $_[1]\n        should be $num\n";
+		return 0;
+	}
 },
 'CpuLoad' => sub {
 	my $num = sprintf("%.2f",($Attr_new{$_[0]-1}{TotalLoadAvg} / $Attr_new{$_[0]-1}{TotalCpus}));
@@ -672,17 +694,37 @@ sub check_status {
 },
 'ST' => sub {
 	my $st = substr($Attr_new{$_[0]-1}{State},1,1).lc(substr($Attr_new{$_[0]-1}{Activity},1,1));
-	return $_[1] eq $st;
+	if ($_[1] eq $st) {
+		return 1;
+	} else {
+		print "        output is $_[1]\n        should be $st\n";
+		return 0;
+	}
 },
 'Jobs/Min' => sub {
 	my $num = sprintf("%.2f",$Attr_new{$_[0]-1}{RecentJobStarts}/20);
-	return $_[1] eq $num;
+	if ($_[1] eq $num) {
+		return 1;
+	} else {
+		print "        output is $_[1]\n        should be $num\n";
+		return 0;
+	}
 },
 'MaxSlotGb' => sub {
 	if (defined $Attr_new{$_[0]-1}{'Max(ChildMemory)'}){
-		return $_[1] eq sprintf("%.2f",$Attr_new{$_[0]-1}{'Max(ChildMemory)'});
+		if ($_[1] eq sprintf("%.2f", $Attr_new{$_[0]-1}{'Max(ChildMemory)'})) {
+			return 1;
+		} else {
+			print "        output is $_[1]\n        should be ".sprintf("%.2f", $Attr_new{$_[0]-1}{'Max(ChildMemory)'})."\n";
+			return 0;
+		}	
 	} else {
-		return $_[1] eq '*';
+		if ($_[1] eq '*') {
+			return 1;
+		} else {
+			print "        output is $_[1]\n        should be *\n";
+			return 0;
+		}	
 	}
 }
 
