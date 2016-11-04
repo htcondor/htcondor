@@ -1,3 +1,5 @@
+%TEMPTEMP -- add "use" option
+%TEMPTEMP -- doesn't seem to list which options are location and which are view...
 \begin{ManPage}{\label{man-condor-config-val}\Condor{config\_val}}{1}
 {Query or set a given HTCondor configuration variable}
 \index{HTCondor commands!condor\_config\_val}
@@ -14,6 +16,14 @@
 \oOpt{<location options>}
 \oOpt{<view options>}
 \Arg{vars}
+
+%TEMPTEMP -- do location options work w/ use?
+\SynProg{\Condor{config\_val}}
+\Opt{use}
+%TEMPTEMP -- should these be Opt or Arg?
+\Opt{<category>}
+\oOpt{:<set name>}
+\oOpt{-expand}
 
 \Description
 
@@ -187,6 +197,16 @@ cause all the HTCondor daemons in the pool to exit.
   \OptItem{\Opt{-master \Bar -schedd \Bar -startd \Bar -collector 
            \Bar -negotiator}}
     {(location option) The specific daemon to query. }
+  \OptItem{\Opt{use} \Opt{<category>} \oOpt{:<set name>} \oOpt{-expand}}
+    {
+    TEMPTEMP -- note no dash before use
+    TEMPTEMP -- no spaces around ":"
+    TEMPTEMP -- see metaknob documentation
+    TEMPTEMP -- category only lists set names available for that category
+    TEMPTEMP -- category:set\_name shows the definition
+    TEMPTEMP -- category:set\_name -expand shows expanded definition
+    }
+    
 \end{Options}
 
 \ExitStatus
