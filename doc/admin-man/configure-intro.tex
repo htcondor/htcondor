@@ -1,15 +1,23 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{\label{sec:Configuring-HTCondor}Introduction to Configuration}
+\section{\label{sec:Configuring-HTCondor-Intro}Introduction to Configuration}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{HTCondor!configuration-intro}
 \index{configuration-intro}
 
 This section describes how to configure all parts of the HTCondor
-system.  General information about the configuration
-files and their syntax is followed by a description of
-settings that affect all
-HTCondor daemons and tools.
+system. 
+This section of the manual contains general information about HTCondor
+configuration.  If you're setting up an HTCondor pool, you should read
+this section before you read the other configuration-related sections.
+Section~\ref{sec:Configuring-HTCondor-Metaknobs} contains information
+about configuration metaknobs, which are now the preferred way to set
+many configuration options.
+Section~\ref{sec:Configuring-HTCondor-Macros} contains information
+about the hundreds of individual configuration options.  In general,
+it is best to try to achieve your desired configuration using metaknobs
+before resorting to setting individual configuration options, but it is
+sometimes necessary to set individual configuration options.
 The 
 settings that control the policy under which HTCondor will start,
 suspend, resume, vacate or kill jobs
@@ -17,14 +25,16 @@ are described in
 section~\ref{sec:Configuring-Policy} on Policy Configuration for the
 \Condor{startd}. 
 
+%TEMPTEMP -- do we want this subsection?
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Intro-to-Config-Files}Introduction to
+\subsection{\label{sec:Intro-to-Config-Files}HTCondor
 Configuration Files} 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 The HTCondor configuration files are used to customize how HTCondor
 operates at a given site.  The basic configuration as shipped with
-HTCondor works well for most sites.
+HTCondor can be used as a starting point, but most likely you will
+want to modify that configuration to some extent.
 
 Each HTCondor program will, as part of its initialization process,
 configure itself by calling a library routine which parses the
@@ -48,8 +58,11 @@ HOUR            = (60 * $(MINUTE))
 SHUTDOWN_GRACEFUL_TIMEOUT = ($(HOUR)*24)
 \end{verbatim}
 
+TEMPTEMP -- say something here about how to customize your configuration
+in a way that will be minimally impacted by HTCondor upgrades
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Ordering-Config-File}Ordered Evaluation to
+\subsection{\label{sec:Ordering-Config-File}Ordered Evaluation to
 Set the Configuration} 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{configuration file!evaluation order}
@@ -81,6 +94,7 @@ Windows platforms,
 parse file \verb@%USERPROFILE\.condor\user_config@ if it exists,
 or the file defined by configuration variable \Macro{USER\_CONFIG\_FILE}.
 
+%TEMPTEMP -- this is confusing because this isn't a config *file*
 \item specific environment variables whose names are
 prefixed with \MacroNI{\_CONDOR\_}
 \end{enumerate}
@@ -160,7 +174,7 @@ This may be useful for testing where the environment contains
 all needed information.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Config-File-Macros}Configuration File Macros} 
+\subsection{\label{sec:Config-File-Macros}Configuration File Macros} 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{macro!in configuration file}
@@ -412,7 +426,7 @@ the \Attr{XYZZY} \Condor{schedd} configuration variable
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Other-Syntax}Comments and Line Continuations}
+\subsection{\label{sec:Other-Syntax}Comments and Line Continuations}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 An HTCondor configuration file may contain comments and
@@ -457,7 +471,7 @@ result in the same value for \verb@A@:
 \end{verbatim}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Multi-Line-Values}Multi-Line Values}
+\subsection{\label{sec:Multi-Line-Values}Multi-Line Values}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 As of version 8.5.6, the value for a macro can comprise multiple
@@ -491,11 +505,11 @@ Note that in this example, the square brackets are part of the
 JOB\_ROUTER\_DEFAULTS value.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Program-Defined-Macros}Executing a Program to Produce Configuration Macros}
+\subsection{\label{sec:Program-Defined-Macros}Executing a Program to Produce Configuration Macros}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Instead of reading from a file,
-HTCondor may run a program to obtain configuration macros.
+HTCondor can run a program to obtain configuration macros.
 The vertical bar character (\Bar) as the last character defining
 a file name provides the syntax necessary to tell 
 HTCondor to run a program.
@@ -526,7 +540,7 @@ This syntax does not permit distinguishing one from the other,
 so only one may be specified.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Config-Include}Including Configuration from Elsewhere}
+\subsection{\label{sec:Config-Include}Including Configuration from Elsewhere}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{configuration!INCLUDE syntax}
 \index{INCLUDE configuration syntax}
@@ -643,7 +657,7 @@ Here is an example using the new \verb@ifexist@ and \verb@into@ options:
 \end{verbatim}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Config-Error_Warn}Reporting Errors and Warnings}
+\subsection{\label{sec:Config-Error_Warn}Reporting Errors and Warnings}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{configuration!Error and warning syntax}
 \index{Error and warning configuration syntax}
@@ -676,14 +690,14 @@ endif
 \end{verbatim}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Config-IfElse}Conditionals in Configuration}
+\subsection{\label{sec:Config-IfElse}Conditionals in Configuration}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{configuration!IF/ELSE syntax}
 \index{IF/ELSE configuration syntax}
 \input{admin-man/if-else.tex}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:admin-man-macros}Function Macros in Configuration}
+\subsection{\label{sec:admin-man-macros}Function Macros in Configuration}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{configuration!function macros}
 \input{admin-man/function-macros.tex}
@@ -693,8 +707,9 @@ configurations.
 However, they can sometimes be useful in custom configurations.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Macros-Requiring-Restart}Macros That Will Require a Restart When Changed}
+\subsection{\label{sec:Macros-Requiring-Restart}Macros That Will Require a Restart When Changed}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%TEMP -- we don't mention condor_reconfig before this...
 \index{configuration change requiring a restart of HTCondor}
 When any of the following listed configuration variables are changed,
 HTCondor must be restarted.
@@ -718,7 +733,7 @@ Reconfiguration using \Condor{reconfig} will not be enough.
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Pre-Defined-Macros}Pre-Defined Macros}
+\subsection{\label{sec:Pre-Defined-Macros}Pre-Defined Macros}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{configuration!pre-defined macros}

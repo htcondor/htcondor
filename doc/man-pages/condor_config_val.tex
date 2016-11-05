@@ -1,5 +1,3 @@
-%TEMPTEMP -- add "use" option
-%TEMPTEMP -- doesn't seem to list which options are location and which are view...
 \begin{ManPage}{\label{man-condor-config-val}\Condor{config\_val}}{1}
 {Query or set a given HTCondor configuration variable}
 \index{HTCondor commands!condor\_config\_val}
@@ -12,17 +10,15 @@
 \oOpt{<location options>}
 \Arg{<edit option>}
 
+%TEMP -- vars should be something like var1 [var2...]
 \SynProg{\Condor{config\_val}}
 \oOpt{<location options>}
 \oOpt{<view options>}
 \Arg{vars}
 
-%TEMPTEMP -- do location options work w/ use?
 \SynProg{\Condor{config\_val}}
 \Opt{use}
-%TEMPTEMP -- should these be Opt or Arg?
-\Opt{<category>}
-\oOpt{:<set name>}
+\Arg{category}\oArg{:set\_name}
 \oOpt{-expand}
 
 \Description
@@ -197,14 +193,19 @@ cause all the HTCondor daemons in the pool to exit.
   \OptItem{\Opt{-master \Bar -schedd \Bar -startd \Bar -collector 
            \Bar -negotiator}}
     {(location option) The specific daemon to query. }
-  \OptItem{\Opt{use} \Opt{<category>} \oOpt{:<set name>} \oOpt{-expand}}
-    {
-    TEMPTEMP -- note no dash before use
-    TEMPTEMP -- no spaces around ":"
-    TEMPTEMP -- see metaknob documentation
-    TEMPTEMP -- category only lists set names available for that category
-    TEMPTEMP -- category:set\_name shows the definition
-    TEMPTEMP -- category:set\_name -expand shows expanded definition
+  \OptItem{\Opt{use} \Arg{category}\oArg{:set name} \oOpt{-expand}}
+    {Display information about metaknobs (see
+    ~\ref{sec:Configuring-HTCondor-Metaknobs}).
+    Specifying only a \Arg{category} will list the \Arg{set\_names}
+    available for that category.
+    Specifying a \Arg{category} and a \Arg{set\_name} will display
+    the definition of that metaknob.
+    Adding the \Opt{-expand} option will display the expanded
+    definition (with macro substitutions).  (\Opt{-expand} has no
+    effect if a \Arg{set\_name} is not specified.)
+    Note that there is no dash before \Opt{use} and that spaces are not
+    allowed next to the colon character separating \Arg{category}
+    and \Arg{set\_name}.
     }
     
 \end{Options}
@@ -280,6 +281,30 @@ has gone back to is value before initial set of the variable:
 \begin{verbatim}
    % condor_config_val -name perdita -schedd MAX_JOBS_RUNNING
    500
+\end{verbatim}
+\normalsize
+
+Getting a list of set\_names for the \Opt{role} category:
+\footnotesize
+\begin{verbatim}
+   % condor_config_val use role
+   use ROLE accepts
+     CentralManager
+     Execute
+     Personal
+     Submit
+\end{verbatim}
+\normalsize
+
+Getting the definition of \Opt{role:personal} metaknob:
+\footnotesize
+\begin{verbatim}
+   % condor_config_val use role:personal
+   use ROLE:Personal is
+   	   CONDOR_HOST=127.0.0.1
+	   COLLECTOR_HOST=$(CONDOR_HOST):0
+	   DAEMON_LIST=MASTER COLLECTOR NEGOTIATOR STARTD SCHEDD
+	   RunBenchmarks=0
 \end{verbatim}
 \normalsize
 
