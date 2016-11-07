@@ -35,8 +35,8 @@ condor_exe(condor_kflops "kflops_main.cpp;clinpack.cpp;../condor_utils/utc_time.
 
 if (NOT WINDOWS)
     # compiling everything with -fPIC is needed to dynamically load libraries, but it messes up the benchmarks so turn it back off here
-    set_property(SOURCE clinpack.cpp APPEND_STRING PROPERTY COMPILE_FLAGS " -fno-PIC")
-    set_property(SOURCE dhry21a.cpp APPEND_STRING PROPERTY COMPILE_FLAGS " -fno-PIC")
+    set_property(SOURCE clinpack.cpp APPEND_STRING PROPERTY COMPILE_FLAGS " -fno-PIC -fPIE")
+    set_property(SOURCE dhry21a.cpp APPEND_STRING PROPERTY COMPILE_FLAGS " -fno-PIC -fPIE")
 endif (NOT WINDOWS)
 
 condor_exe(condor_mips "mips_main.cpp;dhry21a.cpp;../condor_utils/utc_time.cpp" ${C_LIBEXEC} "" OFF)
