@@ -2022,7 +2022,11 @@ const char * param_unexpanded(const char *name)
 
 bool param_defined(const char* name) {
 	const char * pval = param_unexpanded(name);
-	return pval != NULL;
+	if (pval) {
+		auto_free_ptr val(expand_param(pval));
+		return val;
+	}
+	return false;
 }
 
 char*
