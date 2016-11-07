@@ -1,40 +1,41 @@
 %TEMPTEMP -- say that part of why we have meta-knobs is because a lot of things require multiple knobs to be set in coordination with each other
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{\label{sec:Configuring-HTCondor-Metaknobs}Configuration Metaknobs}
+\section{\label{sec:Configuring-HTCondor-Templates}Configuration Templates}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\index{HTCondor!configuration-metaknobs}
-\index{configuration-metaknobs}
+\index{HTCondor!configuration-templates}
+\index{configuration: templates}
 
 TEMPTEMP -- often need to set a number of knobs in concert with each
-other; metaknobs do that automatically
+other; templates do that automatically
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Config-Metaknobs}Metaknobs: Using Predefined Sets of Configuration}
+\subsection{\label{sec:Config-Metaknobs}Configuration Templates: Using
+Predefined Sets of Configuration}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{configuration!USE syntax}
 \index{USE configuration syntax}
 Predefined sets of configuration may be identified and incorporated
 into the configuration using the syntax
 \begin{verbatim}
-  use <category id> : <name of set> 
+  use <category name> : <template name> 
 \end{verbatim}
 
 The \MacroNI{use} key word is case insensitive.
 There are \emph{no} requirements for white space characters surrounding
 the colon character.
-More than one \MacroNI{<name of set>} identifier may be placed within
+More than one \MacroNI{<template name>} identifier may be placed within
 a single \MacroNI{use} line. 
 Separate the names by a space character. 
 There is no mechanism by which the administrator may define their
-own custom \MacroNI{<category id>} or \MacroNI{<name of set>}.
+own custom \MacroNI{<category name>} or \MacroNI{<template name>}.
 
-Each predefined \MacroNI{<category id>} has a fixed, case insensitive
+Each predefined \MacroNI{<category name>} has a fixed, case insensitive
 name for the sets of configuration that are predefined. 
 Placement of a \MacroNI{use} line in the configuration brings in
 the predefined configuration it identifies.
 
-There are four \MacroNI{<category id>} values.
+There are four \MacroNI{<category name>} values.
 Within a category, a predefined, case insensitive name identifies
 the set of configuration it incorporates. 
 \begin{description}

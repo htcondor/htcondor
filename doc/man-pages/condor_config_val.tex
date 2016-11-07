@@ -18,7 +18,7 @@
 
 \SynProg{\Condor{config\_val}}
 \Opt{use}
-\Arg{category}\oArg{:set\_name}
+\Arg{category}\oArg{:template\_name}
 \oOpt{-expand}
 
 \Description
@@ -194,18 +194,18 @@ cause all the HTCondor daemons in the pool to exit.
            \Bar -negotiator}}
     {(location option) The specific daemon to query. }
   \OptItem{\Opt{use} \Arg{category}\oArg{:set name} \oOpt{-expand}}
-    {Display information about metaknobs (see
-    ~\ref{sec:Configuring-HTCondor-Metaknobs}).
-    Specifying only a \Arg{category} will list the \Arg{set\_names}
+    {Display information about configuration templates (see
+    ~\ref{sec:Configuring-HTCondor-Templates}).
+    Specifying only a \Arg{category} will list the \Arg{template\_names}
     available for that category.
-    Specifying a \Arg{category} and a \Arg{set\_name} will display
-    the definition of that metaknob.
+    Specifying a \Arg{category} and a \Arg{template\_name} will display
+    the definition of that configuration template.
     Adding the \Opt{-expand} option will display the expanded
     definition (with macro substitutions).  (\Opt{-expand} has no
-    effect if a \Arg{set\_name} is not specified.)
+    effect if a \Arg{template\_name} is not specified.)
     Note that there is no dash before \Opt{use} and that spaces are not
     allowed next to the colon character separating \Arg{category}
-    and \Arg{set\_name}.
+    and \Arg{template\_name}.
     }
     
 \end{Options}
@@ -284,7 +284,8 @@ has gone back to is value before initial set of the variable:
 \end{verbatim}
 \normalsize
 
-Getting a list of set\_names for the \Opt{role} category:
+%TEMPTEMP -- "configuration *template* category"?
+Getting a list of template\_names for the \Opt{role} configuration category:
 \footnotesize
 \begin{verbatim}
    % condor_config_val use role
@@ -296,7 +297,7 @@ Getting a list of set\_names for the \Opt{role} category:
 \end{verbatim}
 \normalsize
 
-Getting the definition of \Opt{role:personal} metaknob:
+Getting the definition of \Opt{role:personal} configuration template:
 \footnotesize
 \begin{verbatim}
    % condor_config_val use role:personal
