@@ -7245,6 +7245,9 @@ friendly_name=Should Schedd obey SLOT_WEIGHT
 usage=
 review=?
 
+[SCHEDD_SLOT_WEIGHT]
+default=RequestCpus
+
 [SHARED_PORT_MAX_FILE_DESCRIPTORS]
 default=4096
 range=0,
