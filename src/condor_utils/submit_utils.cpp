@@ -2669,9 +2669,11 @@ int SubmitHash::SetGSICredentials()
 // compatibility between the old and new.  i also didn't indent this properly
 // so as not to churn the old code.  -zmiller
 
+		// Starting in 8.5.8, schedd clients can't set X509-related attributes
+		// other than the name of the proxy file.
 		bool submit_sends_x509 = true;
 		CondorVersionInfo cvi(getScheddVersion());
-		if (cvi.built_since_version(8, 5, 4)) {
+		if (cvi.built_since_version(8, 5, 8)) {
 			submit_sends_x509 = false;
 		}
 
