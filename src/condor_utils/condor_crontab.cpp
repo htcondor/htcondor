@@ -488,8 +488,8 @@ CronTab::nextRunTime( long timestamp ) {
 			// may be rounded up to the next minute
 			//
 		if ( runtime < timestamp ) {
-			EXCEPT( "CronTab: Generated a runtime that is in the past (%d < %d)"
-				, (int)runtime, (int)timestamp );
+			dprintf( D_ALWAYS, "CronTab: Generated a runtime that is in the past (%d < %d), scheduling now\n" , (int)runtime, (int)timestamp );
+			runtime = time(0) + 120;
 		}
 		
 		//
