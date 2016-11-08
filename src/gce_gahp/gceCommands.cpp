@@ -843,6 +843,7 @@ bool GceInstanceInsert::workerFunction(char **argv, int argc, string &result_str
 	insert_request.requestBody += "\",\n";
 	insert_request.requestBody += " \"disks\": [\n  {\n";
 	insert_request.requestBody += "   \"boot\": true,\n";
+	insert_request.requestBody += "   \"autoDelete\": true,\n";
 	insert_request.requestBody += "   \"initializeParams\": {\n";
 	insert_request.requestBody += "    \"sourceImage\": \"";
 	insert_request.requestBody += argv[8];
