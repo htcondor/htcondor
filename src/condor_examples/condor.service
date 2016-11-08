@@ -13,7 +13,6 @@ Restart=always
 RestartSec=1minute
 StandardOutput=syslog
 LimitNOFILE=16384
-ControlGroup=/condor
 
 [Install]
 WantedBy=multi-user.target
