@@ -794,8 +794,7 @@ private:
 	struct sockaddr_in	From;
 	int					Len; 
 
-	ExprTree* slotWeight;
-	ClassAd*  slotWeightMapAd;
+	ExprTree* slotWeightOfJob;
 	bool			m_use_slot_weights;
 
 	// utility functions

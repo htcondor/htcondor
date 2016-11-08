@@ -19,7 +19,6 @@ StandardOutput=syslog
 NotifyAccess=main
 KillSignal=SIGKILL
 LimitNOFILE=16384
-ControlGroup=/condor
 
 [Install]
 WantedBy=multi-user.target

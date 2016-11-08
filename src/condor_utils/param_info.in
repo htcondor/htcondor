@@ -4498,6 +4498,9 @@ description=Should Schedd obey SLOT_WEIGHT
 tags=schedd
 usage=
 
+[SCHEDD_SLOT_WEIGHT]
+default=RequestCpus
+
 [SHARED_PORT_MAX_FILE_DESCRIPTORS]
 default=4096
 range=0,
