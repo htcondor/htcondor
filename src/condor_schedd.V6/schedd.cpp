@@ -586,8 +586,7 @@ Scheduler::Scheduler() :
 	stop_job_queue( "stop_job_queue" ),
 	act_on_job_myself_queue( "act_on_job_myself_queue" ),
 	job_is_finished_queue( "job_is_finished_queue", 1 ),
-	slotWeight(0),
-	slotWeightMapAd(0),
+	slotWeightOfJob(0),
 	m_use_slot_weights(false),
 	m_local_startd_pid(-1),
 	m_history_helper_count(0),
@@ -2534,28 +2533,28 @@ Scheduler::calcSlotWeight(match_rec *mrec) {
 		// machine may be null	
 	ClassAd *machine = mrec->my_match_ad;
 	int job_weight = 1;
-	if (m_use_slot_weights && slotWeight && machine) {
+	if (m_use_slot_weights && machine) {
 			// if the schedd slot weight expression is set and parses,
 			// evaluate it here
-		classad::Value result;
-		int rval = EvalExprTree( slotWeight, machine, NULL, result );
-		if( !rval || !result.IsNumber(job_weight)) {
-			job_weight = 1;
+		double weight = 1;
+		if ( ! machine->LookupFloat(ATTR_SLOT_WEIGHT, weight)) {
+			weight = 1;
 		}
+		// PRAGMA_REMIND("TJ: fix slot weight code to use double, not int")
+		job_weight = (int)(weight + 0.0001);
 	} else {
 			// slot weight isn't set, fall back to assuming cpus
 		if (machine) {
 			if(0 == machine->LookupInteger(ATTR_CPUS, job_weight)) {
 				job_weight = 1; // or fall back to one if CPUS isn't in the startds
 			}
-		} else {
+		} else if (scheduler.slotWeightOfJob) {
 			// machine == NULL, this happens on schedd restart and reconnect
 			// calculate using request_* attributes, as we do with idle
 			ClassAd *job = GetJobAd(mrec->cluster, mrec->proc);
-
 			if (job) {
 				classad::Value result;
-				int rval = EvalExprTree( scheduler.slotWeight, scheduler.slotWeightMapAd, job, result );
+				int rval = EvalExprTree( scheduler.slotWeightOfJob, job, NULL, result );
 
 				if( !rval || !result.IsNumber(job_weight)) {
 					job_weight = 1; // Fall back if it doesn't eval
@@ -2849,12 +2848,12 @@ count_a_job(JobQueueJob* job, const JOB_ID_KEY& /*jid*/, void*)
 
 
 			// If we're biasing by slot weight, and the job is idle, and everything parsed...
-		if ((scheduler.m_use_slot_weights) && (cur_hosts == 0) && scheduler.slotWeightMapAd) {
+		if ((scheduler.m_use_slot_weights) && scheduler.slotWeightOfJob && (cur_hosts == 0)) {
 
 				// if we're biasing idle jobs by SLOT_WEIGHT, eval that here
 			int job_weight;
 			classad::Value result;
-			int rval = EvalExprTree( scheduler.slotWeight, scheduler.slotWeightMapAd, job, result );
+			int rval = EvalExprTree( scheduler.slotWeightOfJob, job, NULL, result );
 
 			if( !rval || !result.IsNumber(job_weight)) {
 				job_weight = request_cpus * (max_hosts - cur_hosts); // fall back if slot weight doesn't evaluate
@@ -12824,24 +12823,30 @@ Scheduler::Init()
     m_userlog_file_cache_max = param_integer("USERLOG_FILE_CACHE_MAX", 0, 0);
     m_userlog_file_cache_clear_interval = param_integer("USERLOG_FILE_CACHE_CLEAR_INTERVAL", 60, 0);
 
-	char *sw = param("SLOT_WEIGHT");
+	m_use_slot_weights = param_boolean("SCHEDD_USE_SLOT_WEIGHT", true);
+	if (slotWeightOfJob) {
+		delete slotWeightOfJob;
+	}
+
+	char *sw = param("SCHEDD_SLOT_WEIGHT");
 	if (sw) {
-		if (slotWeight) {
-			delete slotWeight;
+		ParseClassAdRvalExpr(sw, slotWeightOfJob);
+
+		if (m_use_slot_weights && slotWeightOfJob) {
+			// Check for Cpus, Disk or Memory references in the SCHEDD_SLOT_WEIGHT expression
+			ClassAd ad;
+			classad::References refs;
+			ad.GetExternalReferences(slotWeightOfJob, refs, false);
+			if (refs.find(ATTR_CPUS) != refs.end() ||
+				refs.find(ATTR_DISK) != refs.end() ||
+				refs.find(ATTR_MEMORY) != refs.end() ||
+				refs.find("TARGET") != refs.end()) {
+				dprintf(D_ALWAYS, "Warning: the SCHEDD_SLOT_WEIGHT expression '%s' refers to TARGET, Cpus, Disk or Memory. It must refer only to job attributes like RequestCpus\n", sw);
+			}
+			slotWeightOfJob = ad.Remove(ATTR_SLOT_WEIGHT);
 		}
-		ParseClassAdRvalExpr(sw, slotWeight);
 		free(sw);
 	}
-
-	if (slotWeightMapAd) {
-		delete slotWeightMapAd;
-		slotWeightMapAd = 0;
-	}
-	m_use_slot_weights = param_boolean("SCHEDD_USE_SLOT_WEIGHT", true);
-
-	std::string sswma = "Memory = RequestMemory \n Disk = RequestDisk \n Cpus = RequestCpus";
-	slotWeightMapAd = new ClassAd;
-	slotWeightMapAd->initFromString(sswma.c_str());
 
 	//
 	// Handle submit requirements.
