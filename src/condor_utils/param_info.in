@@ -7246,7 +7246,7 @@ usage=
 review=?
 
 [SCHEDD_SLOT_WEIGHT]
-default=RequestCpus
+default=
 
 [SHARED_PORT_MAX_FILE_DESCRIPTORS]
 default=4096

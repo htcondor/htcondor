@@ -746,6 +746,7 @@ private:
 	int					Len; 
 
 	ExprTree* slotWeightOfJob;
+	ClassAd * slotWeightGuessAd;
 	bool			m_use_slot_weights;
 
 	// utility functions
@@ -775,6 +776,7 @@ private:
 	void	noShadowForJob( shadow_rec* srec, NoShadowFailure_t why );
 	bool			jobExitCode( PROC_ID job_id, int exit_code );
 	int			calcSlotWeight(match_rec *mrec);
+	int			guessJobSlotWeight(JobQueueJob * job);
 	
 	// -----------------------------------------------
 	// CronTab Jobs
