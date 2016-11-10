@@ -19,6 +19,7 @@ std::string Singularity::m_singularity_version;
 
 static bool find_singularity(std::string &exec)
 {
+#ifdef LINUX
 	std::string singularity;
 	if (!param(singularity, "SINGULARITY")) {
 		dprintf(D_ALWAYS | D_FAILURE, "SINGULARITY is undefined.\n");
@@ -26,6 +27,9 @@ static bool find_singularity(std::string &exec)
 	}
 	exec = singularity;
 	return true;
+#else
+	return false;
+#endif
 }
 
 
@@ -87,7 +91,7 @@ Singularity::detect(CondorError &/*err*/)
 	char buffer[1024];
 	std::vector< std::string > output;
 	while( fgets( buffer, 1024, singularityResults ) != NULL ) { 
-		unsigned end = std::min(strlen(buffer) - 1, 1023UL);
+		unsigned end = MIN(strlen(buffer) - 1, 1023UL);
 		if( buffer[end] == '\n' ) { buffer[end] = '\0'; } 
 		output.push_back(buffer);
 	}   
