@@ -37,6 +37,7 @@
 #include "subsystem_info.h"
 #include "cgroup_limits.h"
 #include "selector.h"
+#include "singularity.h"
 
 #ifdef WIN32
 #include "executable_scripts.WINDOWS.h"
@@ -552,7 +553,7 @@ VanillaProc::StartJob()
 #if defined(LINUX)
 	// On Linux kernel 2.6.24 and later, we can give each
 	// job its own PID namespace
-	if (param_boolean("USE_PID_NAMESPACES", false)) {
+	if (param_boolean("USE_PID_NAMESPACES", false) && !htcondor::Singularity::job_enabled(*Starter->jic->machClassAd(), *JobAd)) {
 		if (!can_switch_ids()) {
 			EXCEPT("USE_PID_NAMESPACES enabled, but can't perform this "
 				"call in Linux unless running as root.");

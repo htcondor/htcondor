@@ -3618,7 +3618,7 @@ bool param(MyString &buf,char const *param_name,char const *default_value)
 	return found;
 }
 
-bool param(std::string &buf,char const *param_name,char const *default_value)
+bool param(std::string &buf,char const *param_name, char const *default_value)
 {
 	bool found = false;
 	char *param_value = param(param_name);
@@ -3633,8 +3633,31 @@ bool param(std::string &buf,char const *param_name,char const *default_value)
 		buf = "";
 	}
 	free( param_value );
+
 	return found;
 }
+
+
+bool param_eval_string(std::string &buf, const char *param_name, const char *default_value,
+                       classad::ClassAd *me, classad::ClassAd *target)
+{
+	if (!param(buf, param_name, default_value)) {return false;}
+
+	compat_classad::ClassAd rhs;
+	if (me) {
+		rhs = *me;
+	}
+	classad::ClassAdParser parser;
+	classad::ExprTree *expr_raw = parser.ParseExpression(buf);
+
+	std::string result;
+	if( rhs.Insert( "_condor_bool", expr_raw) && rhs.EvalString("_condor_bool", target, result) ) {
+		buf = result;
+		return true;
+	}
+	return false;
+}
+
 
 /*
 PRAGMA_REMIND("tj: kill the param_functions code in 8.5 series.")
