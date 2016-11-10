@@ -341,7 +341,7 @@ bool GetAccessToken( const string &auth_file, string &access_token,
 		auth_entry.m_auth_file = auth_file;
 	}
 
-	if ( auth_entry.m_expiration < time(NULL) - (5 * 60) ) {
+	if ( auth_entry.m_expiration < time(NULL) + (5 * 60) ) {
 		auth_entry.m_refreshing = true;
 		auth_entry.m_err_msg.clear();
 
