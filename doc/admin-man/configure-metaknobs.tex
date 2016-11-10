@@ -1,4 +1,8 @@
 %TEMPTEMP -- say that part of why we have meta-knobs is because a lot of things require multiple knobs to be set in coordination with each other
+%TEMPTEMP -- later definition of individual macro overrides template
+%TEMPTEMP -- where are template *arguments* defined? (see [$POLICY.PREEMPT_IF]
+%description=Configure a PREEMPT expression args:(policy_variable), for example)
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{\label{sec:Configuring-HTCondor-Templates}Configuration Templates}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -6,8 +10,14 @@
 \index{HTCondor!configuration-templates}
 \index{configuration: templates}
 
-TEMPTEMP -- often need to set a number of knobs in concert with each
-other; templates do that automatically
+Achieving certain behaviors in an HTCondor pool often requires
+setting the values of a number of configuration macros in concert
+with each other.  We have added configuration templates as a way
+to do this more easily, at a higher level, without having to
+explicitly set each individual configuration macro.
+
+Configuration templates are pre-defined; users cannot define their
+own templates.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Config-Metaknobs}Configuration Templates: Using
@@ -15,7 +25,7 @@ Predefined Sets of Configuration}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{configuration!USE syntax}
 \index{USE configuration syntax}
-Predefined sets of configuration may be identified and incorporated
+Predefined sets of configuration can be identified and incorporated
 into the configuration using the syntax
 \begin{verbatim}
   use <category name> : <template name> 
@@ -35,62 +45,130 @@ name for the sets of configuration that are predefined.
 Placement of a \MacroNI{use} line in the configuration brings in
 the predefined configuration it identifies.
 
+As of version 8.5.6, some of the configuration templates take arguments
+(as described below).
+
 There are four \MacroNI{<category name>} values.
 Within a category, a predefined, case insensitive name identifies
 the set of configuration it incorporates. 
 \begin{description}
 
 \label{usecategory:ROLE}
-\item[\MacroNI{ROLE}]
+\item[\MacroNI{ROLE category}]
   Describes configuration for the various roles that a machine might
   play within an HTCondor pool. The configuration will identify which
   daemons are running on a machine.
   \begin{itemize}
     \item \texttt{Personal}
+
     Settings needed for when a single machine is the entire pool.
+
     \item \texttt{Submit}
+
     Settings needed to allow this machine to submit jobs to the pool.
     May be combined with \texttt{Execute} and \texttt{CentralManager} roles.
+
     \item \texttt{Execute}
+
     Settings needed to allow this machine to execute jobs.
     May be combined with \texttt{Submit} and \texttt{CentralManager} roles.
+
     \item \texttt{CentralManager}
+
     Settings needed to allow this machine to act as the central manager
     for the pool.
     May be combined with \texttt{Submit} and \texttt{Execute} roles.
   \end{itemize}
 
 \label{usecategory:FEATURE}
-\item[\MacroNI{FEATURE}]
+\item[\MacroNI{FEATURE category}]
   Describes configuration for implemented features. 
   \begin{itemize}
     \item \texttt{Remote\_Runtime\_Config}
+
     Enables the use of \Condor{config\_val} \Opt{-rset} to the machine with
     this configuration.
     Note that there are security implications for use of this configuration,
     as it potentially permits the arbitrary modification of configuration.
     Variable \Macro{SETTABLE\_ATTRS\_CONFIG} must also be defined.
+
     \item \texttt{Remote\_Config}
+
     Enables the use of \Condor{config\_val} \Opt{-set} to the machine with
     this configuration.
     Note that there are security implications for use of this configuration,
     as it potentially permits the arbitrary modification of configuration.
     Variable \Macro{SETTABLE\_ATTRS\_CONFIG} must also be defined.
+
     \item \texttt{VMware}
+
     Enables use of the vm universe with VMware virtual machines.
     Note that this feature depends on Perl. 
+
     \item \texttt{GPUs}
+
     Sets configuration based on detection with the \Condor{gpu\_discovery}
     tool, and defines a custom resource using the name \Expr{GPUs}.
     Supports both OpenCL and CUDA if detected. 
+
+    \item \texttt{PartitionableSlot}
+
+	TEMPTEMP
+	
+    \item \texttt{OneShotCronHook}
+
+	TEMPTEMP
+
+    \item \texttt{PeriodicCronHook}
+
+	TEMPTEMP
+
+    \item \texttt{ContinuousCronHook}
+
+	TEMPTEMP
+
+    \item \texttt{StartdCronOneShot}
+
+	TEMPTEMP
+
+    \item \texttt{StartdCronPeriodic}
+
+	TEMPTEMP
+
+    \item \texttt{ScheddCronOneShot}
+
+	TEMPTEMP
+
+    \item \texttt{StartdCronContinuous}
+
+	TEMPTEMP
+
+    \item \texttt{ScheddCronPeriodic}
+
+	TEMPTEMP
+
+    \item \texttt{ScheddCronContinuous}
+
+	TEMPTEMP
+
+	%TEMP -- not sure if we need to document this, because we don't
+	% seem to use it anymore. wenger 2016-11-10
+    % \item \texttt{TestingMode\_Policy\_Values}
+
+    \item \texttt{UWCS\_Desktop\_Policy\_Values}
+
+	Configuration values used in the \texttt{UWCS\_DESKTOP} policy.
   \end{itemize}
 
+%TEMPTEMP -- have some of these been removed because of generic preempt_if?
 \label{usecategory:POLICY}
-\item[\MacroNI{POLICY}]
+\item[\MacroNI{POLICY category}]
   Describes configuration for the circumstances under which
   machines choose to run jobs.
   \begin{itemize}
+
     \item \texttt{Always\_Run\_Jobs}
+
     Always start jobs and run them to completion, without consideration of
     \Condor{negotiator} generated preemption or suspension.
     This is the default policy, and it is intended to be used with dedicated
@@ -99,31 +177,36 @@ the set of configuration it incorporates.
     policy,
     order the specification by placing this \texttt{Always\_Run\_Jobs} 
     policy first. 
+
     \item \texttt{UWCS\_Desktop}
+
     This was the default policy before HTCondor version 8.1.6.
     It is intended to be used with desktop machines not exclusively running
     HTCondor jobs.
     It injects \Expr{UWCS} into the name of some configuration variables.
+
     \item \texttt{Desktop}
+
     An updated and reimplementation of the \texttt{UWCS\_Desktop} policy,
     but \emph{without} the \Expr{UWCS} naming of some configuration variables.
-    \item \texttt{Limit\_Job\_Runtimes}
-    Limits running jobs to a maximum of 24 hours using preemption.
-    To set the limit to a different amount of time, 
-    define configuration variable \MacroNI{MAX\_JOB\_RUNTIME}
-    with the desired limit in seconds;
-    place this definition of \MacroNI{MAX\_JOB\_RUNTIME} \emph{after} the
-    \Expr{use POLICY : Limit\_Job\_Runtimes} line within the configuration
-    file.  
+
+    \item \texttt{Limit\_Job\_Runtimes( limit\_in\_seconds )}
+
+    Limits running jobs to a maximum of the specified time using preemption.
+	(The default limit is 24 hours.)
     If this policy is used together with the \texttt{Always\_Run\_Jobs} policy,
     order the specification by placing this \texttt{Limit\_Job\_Runtimes} 
     policy second. 
+
 	\item \texttt{Preempt\_If\_Cpus\_Exceeded}
+
 	If the startd observes the number of CPU cores used by the job exceed
 	the number of cores in the slot by more than 0.8 on average over the past
 	minute, preempt the job immediately
 	ignoring any job retirement time.
+
 	\item \texttt{Hold\_If\_Cpus\_Exceeded}
+
 	If the startd observes the number of CPU cores used by the job exceed
 	the number of cores in the slot by more than 0.8 on average over the past
 	minute, immediately place the job on hold
@@ -132,11 +215,15 @@ the set of configuration it incorporates.
 	attribute \Attr{HoldReasonCode}.  The hold reason and code can be customized by
 	specifying \MacroNI{HOLD\_REASON\_CPU\_EXCEEDED} and
 	\MacroNI{HOLD\_SUBCODE\_CPU\_EXCEEDED} respectively.
+
 	\item \texttt{Preempt\_If\_Memory\_Exceeded}
+
 	If the startd observes the memory usage of the job exceed
 	the memory provisioned in the slot, preempt the job immediately
 	ignoring any job retirement time.
+
 	\item \texttt{Hold\_If\_Memory\_Exceeded}
+
 	If the startd observes the memory usage of the job exceed
 	the memory provisioned in the slot,
 	immediately place the job on hold
@@ -146,22 +233,67 @@ the set of configuration it incorporates.
 	attribute \Attr{HoldReasonCode}.  The hold reason and code can be customized by
 	specifying \MacroNI{HOLD\_REASON\_MEMORY\_EXCEEDED} and
 	\MacroNI{HOLD\_SUBCODE\_MEMORY\_EXCEEDED} respectively.
+
+	\item \texttt{Preempt\_If( policy\_variable )}
+
+	Preempt jobs according to the specified policy.
+	\texttt{policy\_variable} must be the name of a configuration macro
+	containing an expression that evaluates to \Expr{True} if the job
+	should be preempted.
+
+	For example:
+
+    \begin{verbatim}
+	MEMORY_EXCEEDED = (isDefined(MemoryUsage) && MemoryUsage > Memory)
+	use POLICY : PREEMPT_IF(MEMORY_EXCEEDED)
+    \end{verbatim}
+
+	\item \texttt{Want\_Hold\_If( policy\_variable, subcode, reason\_text)}
+
+	%TEMPTEMP -- fix font
+	Add the given policy to the WANT\_HOLD expression; if the WANT\_HOLD
+	expression is defined, policy\_variable is prepended to the existing
+	expression; otherwise WANT\_HOLD is simply set to the value of
+	the policy\_variable macro.
+	TEMPTEMP -- more info
+
+	For example:
+
+    \begin{verbatim}
+	MEMORY_EXCEEDED = (isDefined(MemoryUsage) && MemoryUsage > Memory)
+	use POLICY : WANT_HOLD_IF(MEMORY_EXCEEDED, 102, memory usage exceeded request_memory)
+    \end{verbatim}
+
+	\item \texttt{Startd\_Publish\_CpusUsage}
+
+	%TEMPTEMP -- change CpusUsage font
+	Publish the number of CPU cores being used by the job into
+	to slot ad as attribute "CpusUsage". This value will
+	be the average number of cores used by the job over the
+	past minute, sampling every 5 seconds.
   \end{itemize}
 
 \label{usecategory:SECURITY}
-\item[\MacroNI{SECURITY}]
+\item[\MacroNI{SECURITY category}]
   Describes configuration for an implemented security model.
   \begin{itemize}
     \item \texttt{Host\_Based}
-    The default security model used.
+
+    The default security model (based on IPs and DNS names).
     Do \emph{not} combine with \texttt{User\_Based} security.
+
     \item \texttt{User\_Based}
+
     Grants permissions to an administrator and uses 
     \texttt{With\_Authentication}.
     Do \emph{not} combine with \texttt{Host\_Based} security.
+
     \item \texttt{With\_Authentication}
+
     Requires both authentication and integrity checks.
+
     \item \texttt{Strong}
+
     Requires authentication, encryption, and integrity checks.
   \end{itemize}
 
@@ -190,3 +322,5 @@ A \Condor{startd} of HTCondor version 8.1.6 or more recent sees
 \begin{verbatim}
 use feature : GPUs
 \end{verbatim}
+
+%TEMPTEMP -- need more examples

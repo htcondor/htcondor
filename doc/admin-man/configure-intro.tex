@@ -5,28 +5,31 @@
 \index{HTCondor!configuration-intro}
 \index{configuration: introduction}
 
-This section describes how to configure all parts of the HTCondor
-system. 
 This section of the manual contains general information about HTCondor
-configuration.  If you're setting up an HTCondor pool, you should read
-this section before you read the other configuration-related sections.
-Section~\ref{sec:Configuring-HTCondor-Templates} contains information
+configuration, relating to all parts of the HTCondor system.
+If you're setting up an HTCondor pool, you should read
+this section before you read the other configuration-related sections:
+
+\begin{itemize}
+
+\item Section~\ref{sec:Configuring-HTCondor-Templates} contains information
 about configuration templates, which are now the preferred way to set
-many configuration options.
-Section~\ref{sec:Configuring-HTCondor-Macros} contains information
-about the hundreds of individual configuration options.  In general,
+many configuration macros.
+
+\item Section~\ref{sec:Configuring-HTCondor-Macros} contains information
+about the hundreds of individual configuration macros.  In general,
 it is best to try to achieve your desired configuration using
 configuration templates
-before resorting to setting individual configuration options, but it is
-sometimes necessary to set individual configuration options.
-The 
-settings that control the policy under which HTCondor will start,
+before resorting to setting individual configuration macros, but it is
+sometimes necessary to set individual configuration macros.
+
+\item The settings that control the policy under which HTCondor will start,
 suspend, resume, vacate or kill jobs
 are described in 
 section~\ref{sec:Configuring-Policy} on Policy Configuration for the
 \Condor{startd}. 
+\end{itemize}
 
-%TEMPTEMP -- do we want this subsection?
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Intro-to-Config-Files}HTCondor
 Configuration Files} 
@@ -50,7 +53,7 @@ that may utilize macro substitution (as defined below).
 Some configuration variables are evaluated by HTCondor as ClassAd
 expressions; some are not.  Consult the documentation for each specific
 case.  Unless otherwise noted, configuration values that are expected
-to be numeric or boolean constants may be any valid ClassAd expression
+to be numeric or boolean constants can be any valid ClassAd expression
 of operators on constants.  Example:
 
 \begin{verbatim}
@@ -59,52 +62,50 @@ HOUR            = (60 * $(MINUTE))
 SHUTDOWN_GRACEFUL_TIMEOUT = ($(HOUR)*24)
 \end{verbatim}
 
-TEMPTEMP -- say something here about how to customize your configuration
-in a way that will be minimally impacted by HTCondor upgrades
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Ordering-Config-File}Ordered Evaluation to
 Set the Configuration} 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{configuration file!evaluation order}
 
-Multiple files, as well as a program's environment variables
+Multiple files, as well as a program's environment variables,
 determine the configuration.
 The order in which attributes are defined is important, as later
-definitions override existing definitions.
+definitions override earlier definitions.
 The order in which the (multiple) configuration files are parsed 
 is designed to ensure the security of the system.
 Attributes which must be set a specific way 
 must appear in the last file to be parsed.
 This prevents both the naive and the malicious HTCondor user 
 from subverting the system through its configuration.
-The order in which items are parsed is
+The order in which items are parsed is:
 \begin{enumerate}
 \item a single initial configuration file, which has historically
-been known as the global configuration file
+been known as the global configuration file (see below);
 \item other configuration files that are referenced and parsed due 
-to specification within the single initial configuration file;
-these files have historically been known as local configuration files
-\item If HTCondor daemons are \emph{not} running as \Login{root} on
+to specification within the single initial configuration file
+(these files have historically been known as local configuration files);
+\item if HTCondor daemons are \emph{not} running as \Login{root} on
 Unix platforms,
-parse file \File{\$(HOME)/.condor/user\_config} if it exists,
-or the file defined by configuration variable \Macro{USER\_CONFIG\_FILE}.
+the file \File{\$(HOME)/.condor/user\_config} if it exists,
+or the file defined by configuration variable \Macro{USER\_CONFIG\_FILE};
 
-If HTCondor daemons are \emph{not} running as Local System on 
+if HTCondor daemons are \emph{not} running as Local System on 
 Windows platforms,
-parse file \verb@%USERPROFILE\.condor\user_config@ if it exists,
-or the file defined by configuration variable \Macro{USER\_CONFIG\_FILE}.
+the file \verb@%USERPROFILE\.condor\user_config@ if it exists,
+or the file defined by configuration variable \Macro{USER\_CONFIG\_FILE};
 
-%TEMPTEMP -- this is confusing because this isn't a config *file*
 \item specific environment variables whose names are
-prefixed with \MacroNI{\_CONDOR\_}
+prefixed with \MacroNI{\_CONDOR\_} (note that these environment variables
+directly define macro name/value pairs, not the names of configuration
+files).
 \end{enumerate}
 
 
 Some HTCondor tools utilize environment variables to set their
-configuration.
-These tools search for specifically-named environment variables.
-The variables are prefixed by the string \MacroNI{\_CONDOR\_}
+configuration;
+these tools search for specifically-named environment variables.
+The variable names are prefixed by the string \MacroNI{\_CONDOR\_}
 or \MacroNI{\_condor\_}.
 The tools strip off the prefix, and utilize what remains
 as configuration.
@@ -177,6 +178,7 @@ all needed information.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Config-File-Macros}Configuration File Macros} 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%TEMP -- give example with default value
 
 \index{macro!in configuration file}
 \index{configuration file!macro definitions}
@@ -194,7 +196,7 @@ The macro definition is a string literal that may utilize macro substitution.
 
 Macro invocations are of the form: 
 \begin{verbatim}
-$(macro_name:default if macro_name not defined)
+$(macro_name[:<default if macro_name not defined>])
 \end{verbatim}
 
 The colon and default are optional in a macro invocation.
@@ -539,6 +541,10 @@ if an executed program produces the configuration macros.
 Space characters would otherwise separate the list of files.
 This syntax does not permit distinguishing one from the other,
 so only one may be specified.
+
+(Note that the \Macro{include command} syntax (see below) is now
+the preferred way to execute a program to generate configuration
+macros.)
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Config-Include}Including Configuration from Elsewhere}
