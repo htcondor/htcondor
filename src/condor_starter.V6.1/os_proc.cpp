@@ -42,6 +42,7 @@
 #include "access_desktop.WINDOWS.h"
 #endif
 #include "classad_oldnew.h"
+#include "singularity.h"
 
 extern CStarter *Starter;
 extern const char* JOB_WRAPPER_FAILURE_FILE;
@@ -494,7 +495,26 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 
 		// While we are still in user priv, print out the username
 #if defined(LINUX)
-	if( Starter->glexecPrivSepHelper() ) {
+	std::stringstream ss2;
+	ss2 << Starter->GetExecuteDir() << DIR_DELIM_CHAR << "dir_" << getpid();
+	std::string execute_dir = ss2.str();
+	htcondor::Singularity::result sing_result = htcondor::Singularity::setup(*Starter->jic->machClassAd(), *JobAd, JobName, args, job_iwd, execute_dir, job_env);
+	if (sing_result == htcondor::Singularity::SUCCESS) {
+		dprintf(D_ALWAYS, "Running job via singularity.\n");
+		if (fs_remap) {
+			dprintf(D_ALWAYS, "Disabling filesystem remapping; singularity will perform these features.\n");
+			fs_remap = NULL;
+		}
+		if (family_info && family_info->want_pid_namespace) {
+			dprintf(D_FULLDEBUG, "PID namespaces cannot be enabled for singularity jobs.\n");
+			job_not_started = true;
+			return 0;
+		}
+	} else if (sing_result == htcondor::Singularity::FAILURE) {
+		dprintf(D_ALWAYS, "Singularity enabled but setup failed; failing job.\n");
+		job_not_started = true;
+		return 0;
+	} else if( Starter->glexecPrivSepHelper() ) {
 			// TODO: if there is some way to figure out the final username,
 			// print it out here or after starting the job.
 		dprintf(D_ALWAYS,"Running job via glexec\n");

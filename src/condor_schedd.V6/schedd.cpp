@@ -587,6 +587,7 @@ Scheduler::Scheduler() :
 	act_on_job_myself_queue( "act_on_job_myself_queue" ),
 	job_is_finished_queue( "job_is_finished_queue", 1 ),
 	slotWeightOfJob(0),
+	slotWeightGuessAd(0),
 	m_use_slot_weights(false),
 	m_local_startd_pid(-1),
 	m_history_helper_count(0),
@@ -2548,21 +2549,87 @@ Scheduler::calcSlotWeight(match_rec *mrec) {
 			if(0 == machine->LookupInteger(ATTR_CPUS, job_weight)) {
 				job_weight = 1; // or fall back to one if CPUS isn't in the startds
 			}
-		} else if (scheduler.slotWeightOfJob) {
+		} else if (scheduler.m_use_slot_weights) {
 			// machine == NULL, this happens on schedd restart and reconnect
 			// calculate using request_* attributes, as we do with idle
-			ClassAd *job = GetJobAd(mrec->cluster, mrec->proc);
+			JobQueueJob *job = GetJobAd(mrec->cluster, mrec->proc);
 			if (job) {
-				classad::Value result;
-				int rval = EvalExprTree( scheduler.slotWeightOfJob, job, NULL, result );
+				if (scheduler.slotWeightOfJob) {
+					classad::Value result;
+					int rval = EvalExprTree( scheduler.slotWeightOfJob, job, NULL, result );
 
-				if( !rval || !result.IsNumber(job_weight)) {
-					job_weight = 1; // Fall back if it doesn't eval
+					if( !rval || !result.IsNumber(job_weight)) {
+						job_weight = 1; // Fall back if it doesn't eval
+					}
+				} else {
+					job_weight = scheduler.guessJobSlotWeight(job);
 				}
 			}
 		}
 	}
 	
+	return job_weight;
+}
+
+// when there is no SCHEDD_SLOT_WIEGHT expression, try and guess the job weight
+// by building a fake STARTD ad and evaluating the startd's SLOT_WEIGHT expression
+//
+int Scheduler::guessJobSlotWeight(JobQueueJob * job)
+{
+	static bool failed_to_init_slot_weight_map_ad = false;
+	if ( ! this->slotWeightGuessAd) {
+		ClassAd * ad = new ClassAd();
+		failed_to_init_slot_weight_map_ad = false;
+		this->slotWeightGuessAd = ad;
+
+		auto_free_ptr sw(param("SLOT_WEIGHT"));
+		if ( ! sw || ! ad || ! ad->AssignExpr(ATTR_SLOT_WEIGHT, sw)) {
+			failed_to_init_slot_weight_map_ad = true;
+			dprintf(D_ALWAYS, "Failed to create slotWeightGuessAd SLOT_WEIGHT = %s\n", sw ? sw.ptr() : "NULL");
+		} else {
+			ad->Assign(ATTR_CPUS, 1);
+			ad->Assign(ATTR_MEMORY, 1024);
+			ad->Assign(ATTR_DISK, 1024);
+			dprintf(D_ALWAYS, "Creating slotWeightGuessAd as:\n");
+			dPrintAd(D_ALWAYS, *ad, false);
+		}
+	}
+
+	// If no SCHEDD_SLOT_WEIGHT, then push RequestCpus, RequestMemory & RequestDisk
+	// into our slotWeightGuessAd as Cpus, Memory & Disk and then evaluate SlotWeight
+	// This is wrong in general, but will work in the most common case of setting
+	// slot weight to Memory or Cpus + Memory/1024.  That is, it will work if 
+	// the job has constants for RequestCpus & RequestMemory. 
+
+	// If the job doesn't have constants, then this code most likely undercounts
+	// the job slot weight, so hopefully we can do away with this in the future
+	//
+	int req_cpus;
+	if ( ! job->LookupInteger(ATTR_REQUEST_CPUS, req_cpus)) {
+		req_cpus = 1;
+	}
+	if (failed_to_init_slot_weight_map_ad) {
+		return req_cpus;
+	}
+	ClassAd * ad = this->slotWeightGuessAd;
+
+	long long req_mem = (long long)req_cpus * 1024;
+	long long req_disk = (long long)req_cpus * 1024;
+	if ( ! job->LookupInteger(ATTR_REQUEST_MEMORY, req_mem)) {
+		req_mem = req_cpus * 1024;
+	}
+	if ( ! job->LookupInteger(ATTR_REQUEST_DISK, req_disk)) {
+		req_disk = req_cpus * 1024;
+	}
+
+	ad->Assign(ATTR_CPUS, req_cpus);
+	ad->Assign(ATTR_MEMORY, req_mem);
+	ad->Assign(ATTR_DISK, req_disk);
+
+	int job_weight = req_cpus;
+	if ( ! ad->LookupInteger(ATTR_SLOT_WEIGHT, job_weight)) {
+		job_weight = req_cpus;
+	}
 	return job_weight;
 }
 
@@ -2848,18 +2915,21 @@ count_a_job(JobQueueJob* job, const JOB_ID_KEY& /*jid*/, void*)
 
 
 			// If we're biasing by slot weight, and the job is idle, and everything parsed...
-		if ((scheduler.m_use_slot_weights) && scheduler.slotWeightOfJob && (cur_hosts == 0)) {
-
-				// if we're biasing idle jobs by SLOT_WEIGHT, eval that here
-			int job_weight;
-			classad::Value result;
-			int rval = EvalExprTree( scheduler.slotWeightOfJob, job, NULL, result );
-
-			if( !rval || !result.IsNumber(job_weight)) {
-				job_weight = request_cpus * (max_hosts - cur_hosts); // fall back if slot weight doesn't evaluate
+		if (scheduler.m_use_slot_weights && (max_hosts > cur_hosts)) {
+				// if we're biasing idle jobs by SCHEDD_SLOT_WEIGHT, eval that here
+			int job_weight = request_cpus;
+			if (scheduler.slotWeightOfJob) {
+				classad::Value value;
+				int rval = EvalExprTree(scheduler.slotWeightOfJob, job, NULL, value);
+				if ( ! rval || ! value.IsNumber(job_weight)) {
+					job_weight = request_cpus; // fall back if slot weight doesn't evaluate
+				}
+			} else {
+				job_weight = scheduler.guessJobSlotWeight(job);
 			}
-			Counters->WeightedJobsIdle += job_weight;
+			Counters->WeightedJobsIdle += job_weight * (max_hosts - cur_hosts);
 		} else {
+			// here: either max_hosts == cur_hosts || !scheduler.m_use_slot_weights
 			Counters->WeightedJobsIdle += request_cpus * (max_hosts - cur_hosts);
 		}
 
@@ -12823,10 +12893,16 @@ Scheduler::Init()
     m_userlog_file_cache_max = param_integer("USERLOG_FILE_CACHE_MAX", 0, 0);
     m_userlog_file_cache_clear_interval = param_integer("USERLOG_FILE_CACHE_CLEAR_INTERVAL", 60, 0);
 
-	m_use_slot_weights = param_boolean("SCHEDD_USE_SLOT_WEIGHT", true);
 	if (slotWeightOfJob) {
 		delete slotWeightOfJob;
+		slotWeightOfJob = NULL;
 	}
+	if (slotWeightGuessAd) {
+		delete slotWeightGuessAd;
+		slotWeightGuessAd = NULL;
+		// we will re-create this when/if  we need it.
+	}
+	m_use_slot_weights = param_boolean("SCHEDD_USE_SLOT_WEIGHT", true);
 
 	char *sw = param("SCHEDD_SLOT_WEIGHT");
 	if (sw) {
@@ -12843,9 +12919,19 @@ Scheduler::Init()
 				refs.find("TARGET") != refs.end()) {
 				dprintf(D_ALWAYS, "Warning: the SCHEDD_SLOT_WEIGHT expression '%s' refers to TARGET, Cpus, Disk or Memory. It must refer only to job attributes like RequestCpus\n", sw);
 			}
-			slotWeightOfJob = ad.Remove(ATTR_SLOT_WEIGHT);
 		}
 		free(sw);
+	} else {
+		// special case for trival slot SLOT_WEIGHT expressions. create a SCHEDD_SLOT_WEIGHT on the fly
+		sw = param("SLOT_WEIGHT");
+		if (sw) {
+			if (MATCH == strcasecmp(sw, "Cpus")) {
+				ParseClassAdRvalExpr("RequestCpus", slotWeightOfJob);
+			} else if (MATCH == strcasecmp(sw, "Memory")) {
+				ParseClassAdRvalExpr("RequestMemory", slotWeightOfJob);
+			}
+			free(sw);
+		}
 	}
 
 	//

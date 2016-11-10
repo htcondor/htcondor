@@ -1816,6 +1816,33 @@ default=
 type=string
 tags=startd,command
 
+[SINGULARITY]
+default=/usr/bin/singularity
+type=string
+reconfig=true
+customization=seldom
+friendly_name=Singularity location
+review=?
+tags=startd,command
+
+[SINGULARITY_JOB]
+default=false
+type=bool
+reconfig=true
+customization=seldom
+friendly_name=Enable Singularity for a job
+review=?
+tags=startd
+
+[SINGULARITY_IMAGE_EXPR]
+default=SingularityImage
+type=string
+reconfig=true
+customization=seldom
+friendly_name=Expression to determine Singularity image
+review=?
+tags=startd
+
 [STARTD_SENDS_ALIVES]
 default=peer
 type=string
@@ -4499,7 +4526,7 @@ tags=schedd
 usage=
 
 [SCHEDD_SLOT_WEIGHT]
-default=RequestCpus
+default=
 
 [SHARED_PORT_MAX_FILE_DESCRIPTORS]
 default=4096
