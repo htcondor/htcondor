@@ -25,8 +25,7 @@ macros they set) can be obtained using the \Condor{config\_val}
 \Condor{config\_val} command is a better way to obtain it.)
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%TEMPTEMP -- change label!
-\subsection{\label{sec:Config-Metaknobs}Configuration Templates: Using
+\subsection{\label{sec:Config-Templates}Configuration Templates: Using
 Predefined Sets of Configuration}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{configuration!USE syntax}
@@ -266,12 +265,7 @@ the set of configuration it incorporates.
 	containing an expression that evaluates to \Expr{True} if the job
 	should be preempted.
 
-	For example:
-
-    \begin{verbatim}
-	MEMORY_EXCEEDED = (isDefined(MemoryUsage) && MemoryUsage > Memory)
-	use POLICY : PREEMPT_IF(MEMORY_EXCEEDED)
-    \end{verbatim}
+	See an example here: ~\ref{sec:Config-Template-Examples}.
 
 	\item \texttt{Want\_Hold\_If( policy\_variable, subcode, reason\_text )}
 
@@ -281,12 +275,7 @@ the set of configuration it incorporates.
 	\MacroNI{WANT\_HOLD} is simply set to the value of the
 	texttt{policy\_variable} macro.
 
-	For example:
-
-    \begin{verbatim}
-	MEMORY_EXCEEDED = (isDefined(MemoryUsage) && MemoryUsage > Memory)
-	use POLICY : WANT_HOLD_IF(MEMORY_EXCEEDED, 102, memory usage exceeded request_memory)
-    \end{verbatim}
+	See an example here: ~\ref{sec:Config-Template-Examples}.
 
 	\item \texttt{Startd\_Publish\_CpusUsage}
 
@@ -356,4 +345,14 @@ use feature : GPUs
 Examples}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-TEMPTEMP -- add stuff here
+Preempt a job if its memory usage exceeds the requested memory:
+    \begin{verbatim}
+	MEMORY_EXCEEDED = (isDefined(MemoryUsage) && MemoryUsage > RequestMemory)
+	use POLICY : PREEMPT_IF(MEMORY_EXCEEDED)
+    \end{verbatim}
+
+Put a job on hold if its memory usage exceeds the requested memory:
+    \begin{verbatim}
+	MEMORY_EXCEEDED = (isDefined(MemoryUsage) && MemoryUsage > RequestMemory)
+	use POLICY : WANT_HOLD_IF(MEMORY_EXCEEDED, 102, memory usage exceeded request_memory)
+    \end{verbatim}
