@@ -1,8 +1,3 @@
-%TEMPTEMP -- say that part of why we have meta-knobs is because a lot of things require multiple knobs to be set in coordination with each other
-%TEMPTEMP -- later definition of individual macro overrides template
-%TEMPTEMP -- where are template *arguments* defined? (see [$POLICY.PREEMPT_IF]
-%description=Configure a PREEMPT expression args:(policy_variable), for example)
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{\label{sec:Configuring-HTCondor-Templates}Configuration Templates}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -19,7 +14,18 @@ explicitly set each individual configuration macro.
 Configuration templates are pre-defined; users cannot define their
 own templates.
 
+Note that the value of an individual configuration macro that is
+set by a configuration template can be overridden by setting that
+configuration macro later in the configuration.
+
+Detailed information about configuration templates (such as the
+macros they set) can be obtained using the \Condor{config\_val}
+\texttt{use} option (see~\ref{man-condor-config-val}).
+(This document does not contain such information because the
+\Condor{config\_val} command is a better way to obtain it.)
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%TEMPTEMP -- change label!
 \subsection{\label{sec:Config-Metaknobs}Configuration Templates: Using
 Predefined Sets of Configuration}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -47,6 +53,10 @@ the predefined configuration it identifies.
 
 As of version 8.5.6, some of the configuration templates take arguments
 (as described below).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Config-Templates-Available}Available
+Configuration Templates}
 
 There are four \MacroNI{<category name>} values.
 Within a category, a predefined, case insensitive name identifies
@@ -111,56 +121,71 @@ the set of configuration it incorporates.
     tool, and defines a custom resource using the name \Expr{GPUs}.
     Supports both OpenCL and CUDA if detected. 
 
-    \item \texttt{PartitionableSlot}
+    \item \texttt{PartitionableSlot( slot\_type\_num [, allocation] )}
 
-	TEMPTEMP
+   	Sets up a partitionable slot of the specified slot type number
+	and allocation (defaults for slot\_type\_num and allocation
+	are 1 and 100\% respectively).
+	See~\ref{sec:SMP-Divide} for information on partitionalble
+	slot policies.
 	
-    \item \texttt{OneShotCronHook}
+    \item \texttt{OneShotCronHook( STARTD\_CRON | SCHEDD\_CRON, job\_name,
+	hook\_exe [,hook\_args] )}
 
-	TEMPTEMP
+	Create a one-shot job hook.
+	(See~\ref{sec:daemon-classad-hooks} for more information about job hooks.)
 
-    \item \texttt{PeriodicCronHook}
+    \item \texttt{PeriodicCronHook( STARTD\_CRON | SCHEDD\_CRON , job\_name,
+	period, hook\_exe [,hook\_args] )}
 
-	TEMPTEMP
+	Create a periodic job hook.
+	(See~\ref{sec:daemon-classad-hooks} for more information about job hooks.)
 
-    \item \texttt{ContinuousCronHook}
+    \item \texttt{ContinuousCronHook( STARTD\_CRON | SCHEDD\_CRON ,
+	job\_name, hook\_exe [,hook\_args] )}
 
-	TEMPTEMP
+	Create a (nearly) continuous job hook.
+	(See~\ref{sec:daemon-classad-hooks} for more information about job hooks.)
 
-    \item \texttt{StartdCronOneShot}
+    \item \texttt{StartdCronOneShot( job\_name, exe [, hook\_args] )}
 
-	TEMPTEMP
+	Create a one-shot \Condor{startd} job hook.
+	(See~\ref{sec:daemon-classad-hooks} for more information about job hooks.)
 
-    \item \texttt{StartdCronPeriodic}
+    \item \texttt{StartdCronPeriodic( job\_name, period, exe [, hook\_args] )}
 
-	TEMPTEMP
+	Create a periodic-shot \Condor{startd} job hook.
+	(See~\ref{sec:daemon-classad-hooks} for more information about job hooks.)
 
-    \item \texttt{ScheddCronOneShot}
+    \item \texttt{StartdCronContinuous( job\_name, exe [, hook\_args] )}
 
-	TEMPTEMP
+	Create a (nearly) continuous \Condor{startd} job hook.
+	(See~\ref{sec:daemon-classad-hooks} for more information about job hooks.)
 
-    \item \texttt{StartdCronContinuous}
+    \item \texttt{ScheddCronOneShot( job\_name, exe [, hook\_args] )}
 
-	TEMPTEMP
+	Create a one-shot \Condor{schedd} job hook.
+	(See~\ref{sec:daemon-classad-hooks} for more information about job hooks.)
 
-    \item \texttt{ScheddCronPeriodic}
+    \item \texttt{ScheddCronPeriodic( job\_name, period, exe [, hook\_args] )}
 
-	TEMPTEMP
+	Create a periodic-shot \Condor{schedd} job hook.
+	(See~\ref{sec:daemon-classad-hooks} for more information about job hooks.)
 
-    \item \texttt{ScheddCronContinuous}
+    \item \texttt{ScheddCronContinuous( job\_name, exe [, hook\_args] )}
 
-	TEMPTEMP
+	Create a (nearly) continuous \Condor{schedd} job hook.
+	(See~\ref{sec:daemon-classad-hooks} for more information about job hooks.)
 
 	%TEMP -- not sure if we need to document this, because we don't
 	% seem to use it anymore. wenger 2016-11-10
     % \item \texttt{TestingMode\_Policy\_Values}
-
+\
     \item \texttt{UWCS\_Desktop\_Policy\_Values}
 
 	Configuration values used in the \texttt{UWCS\_DESKTOP} policy.
   \end{itemize}
 
-%TEMPTEMP -- have some of these been removed because of generic preempt_if?
 \label{usecategory:POLICY}
 \item[\MacroNI{POLICY category}]
   Describes configuration for the circumstances under which
@@ -248,14 +273,13 @@ the set of configuration it incorporates.
 	use POLICY : PREEMPT_IF(MEMORY_EXCEEDED)
     \end{verbatim}
 
-	\item \texttt{Want\_Hold\_If( policy\_variable, subcode, reason\_text)}
+	\item \texttt{Want\_Hold\_If( policy\_variable, subcode, reason\_text )}
 
-	%TEMPTEMP -- fix font
-	Add the given policy to the WANT\_HOLD expression; if the WANT\_HOLD
-	expression is defined, policy\_variable is prepended to the existing
-	expression; otherwise WANT\_HOLD is simply set to the value of
-	the policy\_variable macro.
-	TEMPTEMP -- more info
+	Add the given policy to the \MacroNI{WANT\_HOLD} expression; if the
+	\MacroNI{WANT\_HOLD} expression is defined, \texttt{policy\_variable}
+	is prepended to the existing expression; otherwise
+	\MacroNI{WANT\_HOLD} is simply set to the value of the
+	texttt{policy\_variable} macro.
 
 	For example:
 
@@ -266,9 +290,8 @@ the set of configuration it incorporates.
 
 	\item \texttt{Startd\_Publish\_CpusUsage}
 
-	%TEMPTEMP -- change CpusUsage font
 	Publish the number of CPU cores being used by the job into
-	to slot ad as attribute "CpusUsage". This value will
+	to slot ad as attribute \Attr{CpusUsage}. This value will
 	be the average number of cores used by the job over the
 	past minute, sampling every 5 seconds.
   \end{itemize}
@@ -299,6 +322,11 @@ the set of configuration it incorporates.
 
 \end{description}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Config-Template-Transition-Syntax}Configuration
+Template Transition Syntax}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 For pools that are transitioning to using this new syntax in configuration,
 while still having some tools and daemons with HTCondor versions 
 earlier than 8.1.6,
@@ -323,4 +351,9 @@ A \Condor{startd} of HTCondor version 8.1.6 or more recent sees
 use feature : GPUs
 \end{verbatim}
 
-%TEMPTEMP -- need more examples
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Config-Template-Examples}Configuration Template
+Examples}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+TEMPTEMP -- add stuff here
