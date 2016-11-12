@@ -204,6 +204,17 @@ Singularity::setup(ClassAd &machineAd,
 	args.InsertArg(bind_spec.c_str(), 0);
 	args.InsertArg("-B", 0);
 
+	if (param_eval_string(bind_spec, "SINGULARITY_BIND_EXPR", "SingularityBind", &machineAd, &jobAd)) {
+		dprintf(D_FULLDEBUG, "Parsing bind mount specification for singularity: %s\n", bind_spec.c_str());
+		StringList binds(bind_spec.c_str());
+		binds.rewind();
+		char *next_bind;
+		while ( (next_bind=binds.next()) ) {
+			args.InsertArg(next_bind, 0);
+			args.InsertArg("-B", 0);
+		}
+	}
+
 	args.InsertArg("exec", 0);
 	args.InsertArg(exec.c_str(), 0);
 
