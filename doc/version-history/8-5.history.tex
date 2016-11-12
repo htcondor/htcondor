@@ -94,6 +94,10 @@ macro, are no longer supported, and generate warnings if used.
 commands (see~\ref{sec:DAGAllNodes} for details).
 \Ticket{5729}
 
+\item Changed the previous term "metaknob" to "configuration template"
+and improved the configuration template documentation.
+\Ticket{5865}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -223,7 +227,8 @@ submit command.
 \Ticket{5780}
 
 \item Some old STARTD policy helper configuration variables were moved
-into two new metaknobs - \Macro{FEATURE : UWCS\_DESKTOP\_POLICY\_VALUES}
+into two new configuration templates --
+\Macro{FEATURE : UWCS\_DESKTOP\_POLICY\_VALUES}
 and \Macro{FEATURE : TESTINGMODE\_POLICY\_VALUES}
 \Ticket{5871}
 
@@ -429,8 +434,7 @@ to facilitate the mapping of users to groups in the \Condor{schedd} and
 configuring the \Condor{job\_router}.
 \Ticket{5721}
 
-\item Configuration file metaknobs can now take arguments and pass them
-on the the metaknob to be expanded.
+\item Configuration templates can now take arguments.
 \Ticket{5739}
 
 \item Improved the performance of the \Condor{negotiator} when running
