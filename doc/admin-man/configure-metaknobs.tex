@@ -128,24 +128,6 @@ the set of configuration it incorporates.
 	See~\ref{sec:SMP-Divide} for information on partitionalble
 	slot policies.
 	
-    \item \texttt{OneShotCronHook( STARTD\_CRON | SCHEDD\_CRON, job\_name,
-	hook\_exe [,hook\_args] )}
-
-	Create a one-shot job hook.
-	(See~\ref{sec:daemon-classad-hooks} for more information about job hooks.)
-
-    \item \texttt{PeriodicCronHook( STARTD\_CRON | SCHEDD\_CRON , job\_name,
-	period, hook\_exe [,hook\_args] )}
-
-	Create a periodic job hook.
-	(See~\ref{sec:daemon-classad-hooks} for more information about job hooks.)
-
-    \item \texttt{ContinuousCronHook( STARTD\_CRON | SCHEDD\_CRON ,
-	job\_name, hook\_exe [,hook\_args] )}
-
-	Create a (nearly) continuous job hook.
-	(See~\ref{sec:daemon-classad-hooks} for more information about job hooks.)
-
     \item \texttt{StartdCronOneShot( job\_name, exe [, hook\_args] )}
 
 	Create a one-shot \Condor{startd} job hook.
@@ -176,6 +158,24 @@ the set of configuration it incorporates.
 	Create a (nearly) continuous \Condor{schedd} job hook.
 	(See~\ref{sec:daemon-classad-hooks} for more information about job hooks.)
 
+    \item \texttt{OneShotCronHook( STARTD\_CRON | SCHEDD\_CRON, job\_name,
+	hook\_exe [,hook\_args] )}
+
+	Create a one-shot job hook.
+	(See~\ref{sec:daemon-classad-hooks} for more information about job hooks.)
+
+    \item \texttt{PeriodicCronHook( STARTD\_CRON | SCHEDD\_CRON , job\_name,
+	period, hook\_exe [,hook\_args] )}
+
+	Create a periodic job hook.
+	(See~\ref{sec:daemon-classad-hooks} for more information about job hooks.)
+
+    \item \texttt{ContinuousCronHook( STARTD\_CRON | SCHEDD\_CRON ,
+	job\_name, hook\_exe [,hook\_args] )}
+
+	Create a (nearly) continuous job hook.
+	(See~\ref{sec:daemon-classad-hooks} for more information about job hooks.)
+
 	%TEMP -- not sure if we need to document this, because we don't
 	% seem to use it anymore. wenger 2016-11-10
     % \item \texttt{TestingMode\_Policy\_Values}
@@ -183,6 +183,11 @@ the set of configuration it incorporates.
     \item \texttt{UWCS\_Desktop\_Policy\_Values}
 
 	Configuration values used in the \texttt{UWCS\_DESKTOP} policy.
+	(Note that these values were previously in the parameter table;
+	configuration that uses these values will have to use the
+	\texttt{UWCS\_Desktop\_Policy\_Values} template.  For example,
+	\texttt{POLICY : UWCS\_Desktop} uses the
+	\texttt{FEATURE : UWCS\_Desktop\_Policy\_Values} template.)
   \end{itemize}
 
 \label{usecategory:POLICY}
@@ -345,14 +350,34 @@ use feature : GPUs
 Examples}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Preempt a job if its memory usage exceeds the requested memory:
+\begin{itemize}
+\item Preempt a job if its memory usage exceeds the requested memory:
     \begin{verbatim}
 	MEMORY_EXCEEDED = (isDefined(MemoryUsage) && MemoryUsage > RequestMemory)
 	use POLICY : PREEMPT_IF(MEMORY_EXCEEDED)
     \end{verbatim}
 
-Put a job on hold if its memory usage exceeds the requested memory:
+\item Put a job on hold if its memory usage exceeds the requested memory:
     \begin{verbatim}
 	MEMORY_EXCEEDED = (isDefined(MemoryUsage) && MemoryUsage > RequestMemory)
 	use POLICY : WANT_HOLD_IF(MEMORY_EXCEEDED, 102, memory usage exceeded request_memory)
     \end{verbatim}
+
+\item Update dynamic GPU information every 15 minutes:
+
+    \begin{verbatim}
+	use FEATURE : StartdCronPeriodic(DYNGPU, 15*60, $(LOCAL_DIR)\dynamic_gpu_info.pl, $(LIBEXEC)\condor_gpu_discovery -dynamic)
+    \end{verbatim}
+
+where \texttt{dynamic\_gpu\_info.pl}  is a simple perl script that strips
+off the DetectedGPUs line from texttt{condor\_gpu\_discovery}:
+
+    \begin{verbatim}
+	#!/usr/bin/env perl
+	my @attrs = `@ARGV`;
+	for (@attrs) {
+		next if ($_ =~ /^Detected/i);
+		print $_;
+	}
+    \end{verbatim}
+\end{itemize}
