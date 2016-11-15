@@ -112,6 +112,12 @@ by the Job Router has a different \Attr{Owner} than the original job.
 in the queue when an instance of \Condor{dagman} is removed.
 \Ticket{5702}
 
+\item Fixed a regression introduced in v8.5.7 that prevents job preemption
+due to priority from occurring, because 
+user priority and resources in use information cannot be referenced in 
+\MacroNI{PREEMPTION\_REQUIREMENTS}.
+\Ticket{6014}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -126,6 +132,17 @@ in the queue when an instance of \Condor{dagman} is removed.
 
 \end{itemize}
 
+\noindent Known Issues:
+
+\begin{itemize}
+
+\item Preemption due to job priority is likely to fail if \MacroNI{PREEMPTION\_REQUIREMENTS}
+attempts to reference any resource usage or priority attributes. This issue has
+been fixed in v8.5.8.  If you cannot upgrade to v8.5.8, a work-around for v8.5.7
+is to set configuration macro \MacroNI{NEGOTIATOR\_CROSS\_SLOT\_PRIOS} to \Expr{True}.
+\Ticket{6014}
+
+\end{itemize}
 
 \noindent New Features:
 
