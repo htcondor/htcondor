@@ -369,6 +369,7 @@ class Matchmaker : public Service
 		ExprTree *NegotiatorPostJobRank; // rank applied after job rank
 		bool want_globaljobprio;	// cached value of config knob USE_GLOBAL_JOB_PRIOS
 		bool want_matchlist_caching;	// should we cache matches per autocluster?
+		bool PublishCrossSlotPrios; // value of knob NEGOTIATOR_CROSS_SLOT_PRIOS, default of false
 		bool ConsiderPreemption; // if false, negotiation is faster (default=true)
 		bool ConsiderEarlyPreemption; // if false, do not preempt slots that still have retirement time
 		/// Should the negotiator inform startds of matches?
