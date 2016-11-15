@@ -3041,6 +3041,13 @@ type=string
 description=Admin defined list of job attributes that only the Schedd can change
 tags=schedd,qmgmt,qedit
 
+[IGNORE_ATTEMPTS_TO_SET_SECURE_JOB_ATTRS]
+default=true
+type=bool
+tags=schedd,qmgmt
+description=Silently ignore attempts to set SECURE_JOB_ATTRS
+Usage=Set this to false if you want submits to fail rather than have attempts to set SECURE_JOB_ATTRS be ignored
+
 [SYSTEM_IMMUTABLE_JOB_ATTRS]
 default=Owner ClusterId ProcId TotalSubmitProcs MyType TargetType
 type=string
