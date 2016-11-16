@@ -1089,6 +1089,37 @@ the default \\ \hline
 \item[\Macro{PREFER\_IPV4}]
   A boolean which will cause HTCondor to prefer IPv4 when it is able
   to choose.  HTCondor will otherwise prefer IPv6.
+  The default is \Expr{True}.
+
+\label{param:AdvertiseIPv4First}
+\item[\Macro{ADVERTISE\_IPV4\_FIRST}]
+  A string (treated as a boolean).  If \MacroNI{ADVERTISE\_IPV4\_FIRST}
+  evaluates to \Expr{True}, HTCondor will advertise its IPv4 addresses
+  before its IPv6 addresses; otherwise the IPv6 addresses will come
+  first.  Defaults to \MacroUNI{PREFER\_IPV4}.
+
+\label{param:IgnoreTargetProtocolPreference}
+\item[\Macro{IGNORE\_TARGET\_PROTOCOL\_PREFERENCE}]
+  A string (treated as a boolean).  If
+  \MacroNI{IGNORE\_TARGET\_PROTOCOL\_PREFERENCE} evaluates to \Expr{True},
+  the target's listed protocol preferences will be ignored; othwerwise
+  they will not.
+  Defaults to \MacroUNI{PREFER\_IPV4}.
+
+\label{param:IgnoreDNSProtocolPreference}
+\item[\Macro{IGNORE\_DNS\_PROTOCOL\_PREFERENCE}]
+  A string (treated as a boolean).
+  \MacroNI{IGNORE\_DNS\_PROTOCOL\_PREFERENCE} evaluates to \Expr{True},
+  the protocol order returned by the DNS will be ignored; otherwise
+  it will not.
+  Defaults to \MacroUNI{PREFER\_IPV4}.
+
+\label{param:PreferOutboundIPv4}
+\item[\Macro{PREFER\_OUTBOUND\_IPV4}]
+  A string (treated as a boolean).
+  \MacroNI{PREFER\_OUTBOUND\_IPV4} evaluates to \Expr{True},
+  HTCondor will prefer IPv4; otherwise it will not.
+  Defaults to \MacroUNI{PREFER\_IPV4}.
 
 \label{param:ClassAdUserMapNames}
 \item[\Macro{<SUBSYS>\_CLASSAD\_USER\_MAP\_NAMES}]
