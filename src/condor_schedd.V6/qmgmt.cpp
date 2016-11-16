@@ -217,6 +217,9 @@ typedef HashTable<int, int> ClusterSizeHashTable_t;
 static ClusterSizeHashTable_t *ClusterSizeHashTable = 0;
 static int TotalJobsCount = 0;
 
+// if false, we version check and fail attempts by newer clients to set secure attrs via the SetAttribute function
+static bool Ignore_Secure_SetAttr_Attempts = true;
+
 static classad::References immutable_attrs, protected_attrs, secure_attrs;
 static int flush_job_queue_log_timer_id = -1;
 static int dirty_notice_timer_id = -1;
@@ -749,6 +752,8 @@ InitQmgmt()
 	secure_attrs.clear();
 	param_and_insert_attrs("SECURE_JOB_ATTRS", secure_attrs);
 	param_and_insert_attrs("SYSTEM_SECURE_JOB_ATTRS", secure_attrs);
+
+	Ignore_Secure_SetAttr_Attempts = param_boolean("IGNORE_ATTEMPTS_TO_SET_SECURE_JOB_ATTRS", true);
 
 	schedd_forker.Initialize();
 	int max_schedd_forkers = param_integer ("SCHEDD_QUERY_WORKERS",8,0);
@@ -2665,7 +2670,10 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 	{
 		errno = EACCES;
 		// should we fail or silently succeed?  (old submits set secure attrs)
-		const CondorVersionInfo *vers = Q_SOCK->get_peer_version();
+		const CondorVersionInfo *vers = NULL;
+		if ( ! Ignore_Secure_SetAttr_Attempts) {
+			vers = Q_SOCK->get_peer_version();
+		}
 		if (vers && vers->built_since_version( 8, 5, 8 ) ) {
 			// new versions should know better!  fail!
 			dprintf(D_ALWAYS,

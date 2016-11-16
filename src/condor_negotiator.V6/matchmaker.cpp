@@ -355,6 +355,7 @@ Matchmaker ()
 
 	want_globaljobprio = false;
 	want_matchlist_caching = false;
+	PublishCrossSlotPrios = false;
 	ConsiderPreemption = true;
 	ConsiderEarlyPreemption = false;
 	want_nonblocking_startd_contact = true;
@@ -756,6 +757,7 @@ reinitialize ()
 
 	want_globaljobprio = param_boolean("USE_GLOBAL_JOB_PRIOS",false);
 	want_matchlist_caching = param_boolean("NEGOTIATOR_MATCHLIST_CACHING",true);
+	PublishCrossSlotPrios = param_boolean("NEGOTIATOR_CROSS_SLOT_PRIOS", false);
 	ConsiderPreemption = param_boolean("NEGOTIATOR_CONSIDER_PREEMPTION",true);
 	ConsiderEarlyPreemption = param_boolean("NEGOTIATOR_CONSIDER_EARLY_PREEMPTION",false);
 	if( ConsiderEarlyPreemption && !ConsiderPreemption ) {
@@ -1475,7 +1477,7 @@ negotiationTime ()
 
         // Fill in latest usage/prio info for the groups.
         // While we're at it, reset fields prior to reloading from submitter ads.
-        for (auto j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
+        for (vector<GroupEntry*>::iterator j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
             GroupEntry* group = *j;
 
             group->quota = 0;
@@ -5855,7 +5857,7 @@ calculateNormalizationFactor (ClassAdListDoesNotDeleteAds &scheddAds,
 void Matchmaker::
 addRemoteUserPrios( ClassAdListDoesNotDeleteAds &cal )
 {
-	if ((!ConsiderPreemption ) || (!param_boolean("NEGOTIATOR_CROSS_SLOT_PRIOS", true))) {
+	if (!ConsiderPreemption) {
 			// Hueristic - no need to take the time to populate ad with 
 			// accounting information if no preemption is to be considered.
 		return;
@@ -5923,8 +5925,13 @@ addRemoteUserPrios( ClassAd	*ad )
 			total_slots = 0;
 		}
 	}
+		// The for-loop below publishes accounting information about each slot
+		// into each other slot.  This is relatively computationally expensive,
+		// especially for startds that manage a lot of slots, and 99% of the world
+		// doesn't care.  So we only do this if knob
+		// NEGOTIATOR_CROSS_SLOT_PRIOS is explicitly set to True.
 		// This won't fire if total_slots is still 0...
-	for(i = 1; i <= total_slots; i++) {
+	for(i = 1; PublishCrossSlotPrios && i <= total_slots; i++) {
 		slot_prefix.formatstr("%s%d_", resource_prefix, i);
 		buffer.formatstr("%s%s", slot_prefix.Value(), ATTR_PREEMPTING_ACCOUNTING_GROUP);
 		buffer1.formatstr("%s%s", slot_prefix.Value(), ATTR_PREEMPTING_USER);

@@ -162,6 +162,7 @@ SetSecureAttributeInt(int cluster_id, int proc_id, const char *attr_name, int at
 int
 SetSecureAttributeString(int cluster_id, int proc_id, const char *attr_name, const char *attr_value, SetAttributeFlags_t flags);
 
+
 void cleanup_ckpt_files(int , int , char*);
 void send_vacate(match_rec*, int);
 void mark_job_stopped(PROC_ID*);
