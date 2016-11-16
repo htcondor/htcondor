@@ -330,7 +330,7 @@ VanillaProc::StartJob()
 #if defined(HAVE_EXT_LIBCGROUP)
 	// Determine the cgroup
 	std::string cgroup_base;
-	param(cgroup_base, "BASE_CGROUP", "htcondor");
+	param(cgroup_base, "BASE_CGROUP", "");
 	MyString cgroup_str;
 	const char *cgroup = NULL;
 		/* Note on CONDOR_UNIVERSE_LOCAL - The cgroup setup code below
