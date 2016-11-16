@@ -4318,7 +4318,7 @@ description=Determines if jobs should be removed gracefully by default.
 tags=shadow,baseshadow
 
 [BASE_CGROUP]
-default=
+default=htcondor
 version=7.9.0
 type=string
 description=Enables and names the base kernel cgroup for job management
