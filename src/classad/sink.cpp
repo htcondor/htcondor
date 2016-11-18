@@ -380,9 +380,9 @@ UnparseAux(string &buffer, Operation::OpKind op, ExprTree *t1, ExprTree *t2,
 {
 		// case 0: parentheses op
 	if( op==Operation::PARENTHESES_OP ) {
-		buffer += "( ";
+		buffer += "(";
 		Unparse( buffer, t1 );
-		buffer += " )";
+		buffer += ")";
 		return;
 	}
 		// case 1: check for unary ops

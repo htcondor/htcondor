@@ -1272,12 +1272,12 @@ static bool test_expr_tree_to_string_short() {
 	emit_test("Test that ExprTreeToString() returns the correct string "
 		"representation of the ExprTree of the attribute in the classad when "
 		"the string is short.");
-    const char* classad_string = "\tRank = ( Memory >= 50 )";
+    const char* classad_string = "\tRank = (Memory >= 50)";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	const char* attribute_name = "Rank";
 	ExprTree* expr = classad.LookupExpr(attribute_name);
-	const char* expect = "( Memory >= 50 )";
+	const char* expect = "(Memory >= 50)";
 	const char* result = ExprTreeToString(expr);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
@@ -1339,10 +1339,10 @@ static bool test_expr_tree_to_string_long2() {
 	classad.initFromString(classad_string, NULL);
 	const char* attribute_name = "Requirements";
 	ExprTree* expr = classad.LookupExpr(attribute_name);
-    const char* expect = "( a > 3 ) && ( b >= 1.3 ) && "
-		"( c < MY.rank ) && ( ( d <= TARGET.RANK ) || ( g == \"alain\" ) || "
-		"( g != \"roy\" ) || ( h =?= 5 ) || ( i =!= 6 ) ) && "
-		"( ( a + b ) < ( c - d ) ) && ( ( e * false ) > ( g / h ) ) && "
+    const char* expect = "(a > 3) && (b >= 1.3) && "
+		"(c < MY.rank) && ((d <= TARGET.RANK) || (g == \"alain\") || "
+		"(g != \"roy\") || (h =?= 5) || (i =!= 6)) && "
+		"((a + b) < (c - d)) && ((e * false) > (g / h)) && "
 		"x == false && y == true && z == false && j == true";
 	const char* result = ExprTreeToString(expr);
 	emit_input_header();
