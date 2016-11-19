@@ -62,6 +62,13 @@ public:
 		*/
 	DCSchedd( const char* const name = NULL, const char* pool = NULL );
 
+		/** Constructor.  Same as a Daemon object.
+		  @param ad   gets all the info out of this ad
+		  @param pool The name of the pool, NULL if you want local
+		*/
+	DCSchedd( const ClassAd& ad, const char* pool = NULL );
+
+
 		/// Destructor
 	~DCSchedd();
 
