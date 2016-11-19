@@ -1650,7 +1650,7 @@ int CondorClassAdFileIterator::next(ClassAd & classad, bool merge /*=false*/)
 {
 	if ( ! merge) classad.Clear();
 	if (at_eof) return 0;
-	if ( ! file) return -1;
+	if ( ! file) { error = -1; return -1; }
 
 	int cAttrs = classad.InsertFromFile(file, at_eof, error, parse_help);
 	if (cAttrs > 0) return cAttrs;
