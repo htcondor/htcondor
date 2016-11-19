@@ -901,6 +901,8 @@ main (int argc, char *argv[])
 		// Remove everything from the projection list if we're displaying
 		// the "long form" of the ads.
 		projList.clear();
+		using_print_format = false;
+		pm.clearFormats();
 
 		// but if -attributes was supplied, show only those attributes
 		if ( ! dashAttributes.isEmpty()) {
