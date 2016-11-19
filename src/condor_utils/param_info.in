@@ -4785,6 +4785,12 @@ win32_default=$(SBIN)\condor_collector.exe
 description=Path to Collector daemon binary
 type=path
 
+[CLERK]
+default=$(SBIN)/condor_clerk
+win32_default=$(SBIN)\condor_clerk.exe
+description=Path to Clerk daemon binary
+type=path
+
 [CKPT_SERVER]
 default=$(SBIN)/condor_ckpt_server
 win32_default=$(SBIN)\condor_ckpt_server.exe
