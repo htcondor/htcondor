@@ -410,12 +410,39 @@ main( int argc, char *argv[] )
 
 		// We're done parsing args, now make sure we know how to
 		// contact the schedd. 
-	if( ! scheddAddr ) {
+	if (scheddAddr) {
+		schedd = new DCSchedd( scheddAddr );
+	} else if (scheddName && ! pool) {
+		// if there was a name specified, we always want to look that up in the collector
+		// because SCHEDD_NAME and SCHEDD_ADDRESS_FILE don't necessary refer to the same schedd
+		// which the DCSchedd constructor doesn't handle correctly if there is no pool
+		CollectorList * colist = CollectorList::create();
+
+		// construct a query for the given schedd name
+		char *daemonname = get_daemon_name(scheddName);
+		if ( ! daemonname) {
+			fprintf( stderr, "Error: unknown schedd %s\n", get_host_part(scheddName));
+			exit(1);
+		}
+		std::string constr(daemonname); constr.insert(0, ATTR_NAME " == \""); constr.append("\"");
+		delete[] daemonname;
+		CondorQuery query(SCHEDD_AD);
+		query.addORConstraint (constr.c_str());
+
+		ClassAdList schedList;
+		QueryResult qres = colist->query (query, schedList);
+		schedList.Rewind();
+		ClassAd * schedAd = schedList.Next();
+		if (qres != Q_OK || ! schedAd) {
+			fprintf( stderr, "Error: cannot get address of schedd %s\n", get_host_part(scheddName));
+			exit(1);
+		}
+
+		schedd = new DCSchedd(*schedAd, pool ? pool->addr() : NULL );
+	} else {
 			// This will always do the right thing, even if either or
 			// both of scheddName or pool are NULL.
 		schedd = new DCSchedd( scheddName, pool ? pool->addr() : NULL );
-	} else {
-		schedd = new DCSchedd( scheddAddr );
 	}
 	if( ! schedd->locate() ) {
 		fprintf( stderr, "%s: %s\n", MyName, schedd->error() ); 

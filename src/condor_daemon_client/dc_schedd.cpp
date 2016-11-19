@@ -41,6 +41,10 @@ DCSchedd::DCSchedd( const char* the_name, const char* the_pool )
 {
 }
 
+DCSchedd::DCSchedd( const ClassAd& ad, const char* the_pool )
+	: Daemon( &ad, DT_SCHEDD, the_pool )
+{
+}
 
 DCSchedd::~DCSchedd( void )
 {
