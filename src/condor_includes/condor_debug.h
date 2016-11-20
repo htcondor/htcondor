@@ -399,6 +399,12 @@ char    *mymalloc(), *myrealloc(), *mycalloc();
 # endif
 #endif // REMIND
 
+// disabled REMIND when building non-debug
+#if defined NDEBUG && ! defined ENABLE_PRAGMA_REMIND
+#  undef PRAGMA_REMIND
+#  define PRAGMA_REMIND(str)
+#endif
+
 #if defined _MSC_VER && defined _DEBUG // WIN32
 # ifdef _X86_
 #  define DEBUG_BREAK_INTO_DEBUGGER _asm {int 3}
