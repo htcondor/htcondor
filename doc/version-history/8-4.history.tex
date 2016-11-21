@@ -41,6 +41,13 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug in our support for Google Compute Engine which would
+cause authorization tokens to be renewed five minutes after the deadline
+instead of five minutes before.  Naturally, this led to ten minutes of
+interrupted service for jobs (or workloads) which lasted longer than the
+initial valid duration of the tokens.
+\Ticket{6009}
+
 \item Fixed a bug that would cause the \Condor{schedd} to crash when a
 condor cron job was scheduled to start during the one hour gap in daylight
 savings time when the clocks are moved backwards one hour.
