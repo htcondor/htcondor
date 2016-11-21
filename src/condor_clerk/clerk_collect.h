@@ -21,13 +21,22 @@
 #define _CLERK_COLLECT_H_
 
 // call this to reconfig the collection code
-void collect_config();
+void collect_config(int max_adtype);
+
+// this is called by collect_config, and also early in daemon init
+// to setup the tables for the known AdTypes
+// and reserve space for dynamic types to be added
+void config_standard_ads(int max_adtype);
+
+// this is called at the end of Config so that some things
+// about the ad tables can be finalized.
+void collect_finalize_ad_tables();
 
 // call this to register the collectors own ad
 int collect_self(ClassAd * ad);
 
 // the act of collection. 
-int collect(int operation, AdTypes adtype, ClassAd * ad, ClassAd * adPvt);
+int collect(int operation, AdTypes whichAds, ClassAd * ad, ClassAd * adPvt);
 // possible values for operation argument of collect
 #define COLLECT_OP_REPLACE   0
 #define COLLECT_OP_MERGE     1
@@ -35,7 +44,27 @@ int collect(int operation, AdTypes adtype, ClassAd * ad, ClassAd * adPvt);
 #define COLLECT_OP_DELETE    3
 
 // delete or exprire ads that match the delete_if constraint
-int collect_delete(int operation, AdTypes adtype, ConstraintHolder & delete_if);
+int collect_delete(int operation, AdTypes whichAds, ConstraintHolder & delete_if);
+// delete or exprire ads that match the key
+int collect_delete(int operation, AdTypes whichAds, const std::string & key);
+
+// register a new AdType or lookup the AdType for an existing type name
+AdTypes collect_register_adtype(const char * mytype);
+
+// adjust settings for an AdType, either new or dynamic
+void collect_set_adtype(AdTypes whichAds, const char * keylist, double lifetime, bool big_table);
+
+// Returns the private AdType associated with this ad. If The AdType is private, returns itself
+// if there is no private AdType, returns NO_AD
+AdTypes has_private_adtype(AdTypes whichAds);
+
+// Returns the public AdType for this ad, if the AdType is public, returns itself
+AdTypes has_public_adtype(AdTypes whichAds);
+
+// Returns true if the table is large for this adtype
+bool IsBigTable(AdTypes whichAds);
+
+const char * CollectOpName(int op);
 
 template<typename T> class CollectionIterFromCondorList : public CollectionIterator<T*>
 {
@@ -66,7 +95,65 @@ public:
 
 CollectionIterator<ClassAd*>* collect_get_iter(AdTypes whichAds);
 void collect_free_iter(CollectionIterator<ClassAd*> * it);
+bool collect_add_absent_clause(ConstraintHolder & filter_if);
 
+#define AC_ENT_PRIVATE 0x0001
+#define AC_ENT_OFFLINE 0x0002
+#define AC_ENT_EXPIRED 0x0004
+
+// This structure is what is actually stored in the collector tables
+// it is not a class, has no destructor, deep copy, or virtual methods on purpose
+// a bit more care is required to use it correctly, but that lowers the memory/copying cost
+// consider the additional memory/copy cost carefully before you turn this into a virtual class.
+typedef struct AdCollectionEntry {
+	AdTypes                  adType;
+	int                      flags;  // zero or more of AC_ENT_* flags
+	time_t                   updateTime; // value of ATTR_LAST_HEARD_FROM
+	time_t                   expireTime; // value of ATTR_LAST_HEARD_FROM + ATTR_CLASSAD_LIFETIME
+	compat_classad::ClassAd* ad;
+	AdCollectionEntry() : adType(NO_AD), flags(0), updateTime(0), expireTime(0), ad(NULL) {}
+	AdCollectionEntry(AdTypes t, int f, time_t u, time_t e, compat_classad::ClassAd* a);
+	int UpdateAd(AdTypes adtype, int new_flags, time_t now, time_t expire_time, compat_classad::ClassAd* new_ad, bool merge_it=false);
+	int DeleteAd(AdTypes adtype, int new_flags, time_t now, time_t expire_time, bool expire_it=false);
+	bool CheckAbsent(AdTypes adtype, const std::string & key);
+	bool PersistentRemoveAd(AdTypes adtype, const std::string & key);
+	bool PersistentStoreAd(AdTypes adtype, const std::string & key);
+} AdCollectionEntry;
+
+// walk the public collection, calling the callback for ads that match the call_if expression
+// the callback returns one of the WalkPostOp operations to control how iterations proceeds.
+//
+// if the callback returns a negative value, walk aborts and that value is returned
+//
+// if the callback returns a value with the Walk_Op_DeleteItem bit set, that entry will be deleted
+// and the associated private ad will also be also be deleted.
+//
+// unless the callback returns a value with the Walk_Op_NoMatch bit set, the callback is counted.
+//
+// if the callback returns a value with the Walk_Op_Break bit set, the walk is ended
+//
+// returns < 0   if the callback returns one of the Abort values
+//         >= 0  on success, value is the number of matches (i.e. callbacks that did not return NoMatch)
+enum WalkPostOp {
+	Walk_Op_Abort2   = -2, // stop iterating and return -2
+	Walk_Op_Abort1   = -1, // stop iterating and return -1
+	Walk_Op_Continue = 0, // keep iterating
+	Walk_Op_Break    = 1, // stop iterating
+
+	Walk_Op_NoMatch  = 0x10, // don't count this callback as a match
+	Walk_Op_NoMatchBreak = (Walk_Op_NoMatch | Walk_Op_Break),
+
+	Walk_Op_DeleteItem = 0x100, // remove this item from the collection
+	Walk_Op_DeleteItemAndContinue = (Walk_Op_DeleteItem | Walk_Op_Continue),
+	Walk_Op_DeleteItemAndBreak    = (Walk_Op_DeleteItem | Walk_Op_Break),
+	Walk_Op_DeleteItemAndAbort    = (Walk_Op_DeleteItem | Walk_Op_Abort1),
+};
+int collect_walk(AdTypes adType, ConstraintHolder & call_if, WalkPostOp (*callback)(void* pv, AdCollectionEntry& entry), void*pv);
+
+
+// brute force totaling of various ads in the collection
+// because we don't (yet) have to code to do this correctly as we go.
+//
 struct CollectionCounters {
 	int submitterNumAds;
 	int submitterRunningJobs;

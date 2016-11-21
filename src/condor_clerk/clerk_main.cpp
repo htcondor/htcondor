@@ -104,6 +104,7 @@ CmDaemon::CmDaemon()
 	, m_LOG_UPDATES(false)
 	, m_IGNORE_INVALIDATE(false)
 	, m_EXPIRE_INVALIDATED_ADS(false)
+	, m_HOUSEKEEPING_ON_INVALIDATE(true)
 {
 }
 
@@ -117,29 +118,6 @@ typedef struct {
 	int id;
 	AdTypes atype;
 } CmdAdTypePair;
-
-template <typename T>
-const T * BinaryLookup (const T aTable[], int cElms, int id)
-{
-	if (cElms <= 0)
-		return NULL;
-
-	int ixLower = 0;
-	int ixUpper = cElms-1;
-	for (;;) {
-		if (ixLower > ixUpper)
-			return NULL; // return null for "not found"
-
-		int ix = (ixLower + ixUpper) / 2;
-		int iMatch = aTable[ix].id - id;
-		if (iMatch < 0)
-			ixLower = ix+1;
-		else if (iMatch > 0)
-			ixUpper = ix-1;
-		else
-			return &aTable[ix];
-	}
-}
 
 // Table to allow quick lookup of adtype from command id.
 // THIS MUST BE SORTED BY COMMAND ID!
@@ -200,7 +178,7 @@ AdTypes CollectorCmdToAdType(int cmd) {
 }
 
 int CollectorAdTypeToCmd(AdTypes typ, int op) {
-	const char * type_str = AdTypeToString(typ);
+	const char * type_str = AdTypeName(typ);
 	if ( ! type_str) return -1;
 	const char * fmt = (op < 0) ? "QUERY_%sS" : ((op & 2) ? "INVALIDATE_%sS" : "UPDATE_%s");
 	char cmd_name[128];
@@ -208,41 +186,6 @@ int CollectorAdTypeToCmd(AdTypes typ, int op) {
 	return getCommandNum(cmd_name);
 }
 
-bool IsBigTable(AdTypes typ) {
-	const unsigned int bigtable = 1;
-	unsigned int ad_type_flags[] = {
-		0,       	// QUILL_AD,
-		bigtable,	// STARTD_AD,
-		0,       	// SCHEDD_AD,
-		bigtable,	// MASTER_AD,
-		0,       	// GATEWAY_AD,
-		0,       	// CKPT_SRVR_AD,
-		bigtable,	// STARTD_PVT_AD,
-		bigtable,	// SUBMITTOR_AD,
-		0,       	// COLLECTOR_AD,
-		0,       	// LICENSE_AD,
-		0,       	// STORAGE_AD,
-		bigtable,	// ANY_AD,
-		0,       	// BOGUS_AD,		// placeholder: NUM_AD_TYPES used wrongly to be here
-		0,       	// CLUSTER_AD,
-		0,       	// NEGOTIATOR_AD,
-		0,       	// HAD_AD,
-		bigtable,	// GENERIC_AD,
-		0,       	// CREDD_AD,
-		0,       	// DATABASE_AD,
-		0,       	// DBMSD_AD,
-		0,       	// TT_AD,
-		0,       	// GRID_AD,
-		0,       	// XFER_SERVICE_AD,
-		0,       	// LEASE_MANAGER_AD,
-		0,       	// DEFRAG_AD,
-		bigtable,	// ACCOUNTING_AD,
-	};
-	if (typ >= 0 && typ < (int)COUNTOF(ad_type_flags)) {
-		return (ad_type_flags[typ] & bigtable) != 0;
-	}
-	return false;
-}
 
 // tables of this struct can be used to register a set of commands id's that share a common handler.
 typedef struct {
@@ -404,8 +347,9 @@ void CmDaemon::Config()
 	m_LOG_UPDATES = param_boolean("LOG_UPDATES", false);
 	m_IGNORE_INVALIDATE = param_boolean("IGNORE_INVALIDATE", false);
 	m_EXPIRE_INVALIDATED_ADS = param_boolean( "EXPIRE_INVALIDATED_ADS", false);
+	m_HOUSEKEEPING_ON_INVALIDATE = param_boolean("HOUSEKEEPING_ON_INVALIDATE", true);
 
-	collect_config();
+	collect_config(param_integer("CLERK_MAX_ADTYPES", NUM_AD_TYPES + 100));
 
 	// we want to preserve the ad sequence counters even as we create a new collector list
 	// so that we don't end up thinking we have missed updates.
@@ -437,34 +381,54 @@ void CmDaemon::Config()
 		for (const char * tag = tags.first(); tag; tag = tags.next()) {
 			std::string param_name("CLERK_DYNAMIC_AD_"); param_name += tag;
 			NOCASE_STRING_MAP smap;
-			if ( ! param_and_populate_map(param_name.c_str(), smap)) {
+			if ( ! param_and_populate_smap(param_name.c_str(), smap)) {
 				dprintf(D_ALWAYS, "dynamic AD info for '%s' was empty\n", tag);
 				continue;
 			}
+
+			// get config variables that control populating from a file
+			//
 			AdTypes adtype = AdTypeFromString(tag);
-			auto_free_ptr filter;
-			auto_free_ptr remove_if;
+			const char * filter = NULL;
 			const char * file_or_script = NULL;
 			bool is_script = false;
 			int collect_op = COLLECT_OP_MERGE;
-			int cmd_id = 0;
 			dprintf(D_FULLDEBUG, "Loading dynamic AD configuration for adtype '%s' (%d)\n", tag, adtype);
-			if ( ! smap["File"].empty()) {
-				file_or_script = smap["File"].c_str();
+			file_or_script = smap_string("FILE", smap);
+			if (file_or_script) {
 				is_script = false;
-			} else if ( ! smap["Command"].empty()) {
-				file_or_script = smap["Command"].c_str();
-				is_script = true;
+			} else {
+				file_or_script = smap_string("Command", smap);
+				if (file_or_script) is_script = true;
 			}
-			if ( ! smap["Filter"].empty()) { filter = strdup(smap["Filter"].c_str()); }
-			if ( ! smap["Replace"].empty()) {
-				bool replace_it = false;
-				string_is_boolean_param(smap["Replace"].c_str(), replace_it);
-				collect_op = replace_it ? COLLECT_OP_REPLACE : COLLECT_OP_MERGE;
-			}
+			filter = smap_string("Filter", smap);
+			bool replace_it = smap_bool("Replace", smap, false);
+			collect_op = replace_it ? COLLECT_OP_REPLACE : COLLECT_OP_MERGE;
+
+			// config variables that set/change the way the table operates
+			//
+
+			bool has_override = false;
+			// override the key
+			const char * re_key = smap_string("ReKey", smap);
+			if (re_key) { has_override = true; }
+			
+			// override the default lifetime
+			double lifetime = 1;
+			if (smap_number("Lifetime", smap, lifetime)) { has_override = true; }
+
+			bool big_table = smap_bool("Fork", smap, IsBigTable(adtype));
+
 			if (adtype == NO_AD) {
 				// Got dynamic info for a new ad type, so we have to register a new ad type
+				adtype = collect_register_adtype(tag);
+				has_override = adtype != NO_AD;
 			}
+
+			if (has_override) {
+				collect_set_adtype(adtype, re_key, lifetime, big_table);
+			}
+
 			if ( ! smap["DeleteIf"].empty()) { 
 				ConstraintHolder delete_if(strdup(smap["DeleteIf"].c_str()));
 				if ( ! delete_if.Expr()) {
@@ -475,13 +439,22 @@ void CmDaemon::Config()
 				}
 			}
 			if (file_or_script && adtype != NO_AD) {
-				append_populate(new PopulateAdsInfo(collect_op, adtype, file_or_script, is_script, filter.detach()));
+				dprintf(D_FULLDEBUG, "Adding PopulateAd %s %s\n\t%s: %s\n\tFilter: %s\n",
+					CollectOpName(collect_op), AdTypeName(adtype),
+					is_script ? "Command" : "File", file_or_script,
+					filter ? filter : "");
+				append_populate(new PopulateAdsInfo(collect_op, adtype, file_or_script, is_script, filter));
 			}
 		}
 	}
 
+	// finalize (and log) the collector tables configuration
+	collect_finalize_ad_tables();
+
 	if (m_popList) {
-		int pop_interval = m_idTimerPopulate = daemonCore->Register_Timer(5, m_UPDATE_INTERVAL,
+		int pop_delay = 5;
+		int pop_interval = m_UPDATE_INTERVAL;
+		m_idTimerPopulate = daemonCore->Register_Timer(pop_delay, pop_interval,
 				(TimerHandlercpp)&CmDaemon::populate_collector, "populate_collector",
 				this);
 	}
@@ -550,7 +523,7 @@ int CmDaemon::receive_update(int command, Stream* stream)
 
 	stats.UpdatesReceived += 1;
 	dprintf(D_ALWAYS | (m_LOG_UPDATES ? 0 : D_VERBOSE),
-		"Got %s adtype=%s\n", getCommandString(command), AdTypeToString(CollectorCmdToAdType(command)));
+		"Got %s adtype=%s\n", getCommandString(command), AdTypeName(CollectorCmdToAdType(command)));
 
 		// Avoid lengthy blocking on communication with our peer.
 		// This command-handler should not get called until data
@@ -660,7 +633,7 @@ int CmDaemon::receive_invalidation(int command, Stream* stream)
 
 	stats.UpdatesReceived += 1;
 	dprintf(D_ALWAYS | (m_LOG_UPDATES ? 0 : D_VERBOSE),
-		"Got %s adtype=%s\n", getCommandString(command), AdTypeToString(whichAds));
+		"Got %s adtype=%s\n", getCommandString(command), AdTypeName(whichAds));
 
 		// Avoid lengthy blocking on communication with our peer.
 		// This command-handler should not get called until data
@@ -696,6 +669,16 @@ int CmDaemon::receive_invalidation(int command, Stream* stream)
 			// don't leak the ad(s)!
 			delete ad;
 			return FALSE;
+		}
+
+		int num_invalidate = rval;
+		dprintf (D_ALWAYS, "(Invalidated %d ads)\n", num_invalidate);
+
+			// Suppose lots of ads are getting invalidated and we have no clue
+			// why.  That is what the following block of code tries to solve.
+		if (num_invalidate > 2 || (num_invalidate > 1 && has_private_adtype(whichAds) == NO_AD)) {
+			dprintf(D_ALWAYS, "The invalidation query was this:\n");
+			dPrintAd(D_ALWAYS, *ad);
 		}
 	}
 
@@ -863,7 +846,7 @@ int CmDaemon::receive_query(int command, Stream* sock)
 
 	// Initial query handler
 	AdTypes whichAds = CollectorCmdToAdType(command);
-	dprintf(D_FULLDEBUG, "Got %s adtype=%s\n", getCommandString(command), AdTypeToString(whichAds));
+	dprintf(D_FULLDEBUG, "Got %s adtype=%s\n", getCommandString(command), AdTypeName(whichAds));
 
 	// when collector ads are queried, put the latest stats into the self ad before replying.
 	if (whichAds == COLLECTOR_AD) {
@@ -874,6 +857,7 @@ int CmDaemon::receive_query(int command, Stream* sock)
 
 	// Perform the query
 	int cTotalAds = 0;
+	ConstraintHolder fetch_if;
 	List<ClassAd> ads;
 	ForkStatus	fork_status = FORK_FAILED;
 	if (whichAds != (AdTypes)-1) {
@@ -885,9 +869,13 @@ int CmDaemon::receive_query(int command, Stream* sock)
 			}
 		}
 
+		ExprTree * filter = query.LookupExpr(ATTR_REQUIREMENTS);
+		ConstraintHolder fetch_if(filter ? filter->Copy() : NULL);
+		collect_add_absent_clause(fetch_if);
+
 		// small table query, We are the child or or the fork failed
 		// either way we want to actually perform the query now.
-		FetchAds (whichAds, query, ads, &cTotalAds);
+		FetchAds (whichAds, fetch_if, ads, &cTotalAds);
 	}
 
 	UtcTime end_write, end_query(true);
@@ -900,9 +888,6 @@ int CmDaemon::receive_query(int command, Stream* sock)
 	// declare this here so we can print it out later
 	int cAdsMatched = ads.Length();
 	int cAdsSkipped = cTotalAds - cAdsMatched;
-	ExprTree * filter_tree = query.Lookup(ATTR_REQUIREMENTS);
-
-	PRAGMA_REMIND("add code to filter absent ads based on ABSENT_REQUREMENTS knob")
 
 	std::string projection;
 	bool evaluate_projection = false;
@@ -921,7 +906,6 @@ int CmDaemon::receive_query(int command, Stream* sock)
 			if ( ! attrs.empty()) { whitelist = &attrs; }
 		}
 	}
-
 
 		// See if query ad asks for server-side projection
 	ClassAd *ad = NULL;
@@ -976,8 +960,8 @@ int CmDaemon::receive_query(int command, Stream* sock)
 			 cAdsSkipped,
 			 end_query.difference(begin),
 			 end_write.difference(end_query),
-			 AdTypeToString(whichAds),
-			 ExprTreeToString(filter_tree),
+			 AdTypeName(whichAds),
+			 fetch_if.c_str(),
 			 sock->peer_description(),
 			 projection.c_str());
 
@@ -1074,6 +1058,7 @@ int CmDaemon::populate_collector()
 	if (m_popList) {
 		int cItems = 0;
 		AdTypes whichAds = m_popList->WhichAds();
+		dprintf(D_FULLDEBUG, "Populating %s Ads\n", AdTypeName(whichAds));
 		const double max_reading_time = 10.0; // 10 sec max reading time before we go back to the pump.
 		double begin_time = _condor_debug_get_time_double();
 		double now = begin_time;
@@ -1118,30 +1103,26 @@ int CmDaemon::populate_collector()
 }
 
 
-int CmDaemon::FetchAds (AdTypes whichAds, ClassAd & query, List<ClassAd>& ads, int * pcTotalAds)
+int CmDaemon::FetchAds (AdTypes whichAds, ConstraintHolder & fetch_if, List<ClassAd>& ads, int * pcTotalAds)
 {
 	int rval = 0;
 	dprintf(D_FULLDEBUG, "Daemon::FetchAds(%d,...) called\n", whichAds);
 
 	int cTotalAds = 0;
-	bool collector_iter = true;
 	CollectionIterator<ClassAd*>* c_ads = collect_get_iter(whichAds);
 	if ( ! c_ads) {
 		return 0;
 	}
 
-	ExprTree * constraint = query.LookupExpr(ATTR_REQUIREMENTS);
+	ExprTree * filter = fetch_if.Expr();
 
-	// for collector or any querys, inject a fresh version of our own daemon ad.
+	// for COLLECTOR or ANY querys, inject a fresh version of our own daemon ad.
 	if (whichAds == COLLECTOR_AD || whichAds == ANY_AD || whichAds == NO_AD) {
 		++cTotalAds;
 		bool insert_self = true;
 		ClassAd * ad = &m_daemonAd;
-		if (constraint) {
-			classad::Value result;
-			if ( ! EvalExprTree(constraint, ad, NULL, result) || ! result.IsBooleanValueEquiv(insert_self)) {
-				insert_self = false;
-			}
+		if (filter && ! EvalBool(ad, filter)) {
+			insert_self = false;
 		}
 		if (insert_self) {
 			PRAGMA_REMIND("refresh the collector's self ad")
@@ -1153,21 +1134,13 @@ int CmDaemon::FetchAds (AdTypes whichAds, ClassAd & query, List<ClassAd>& ads, i
 	c_ads->Rewind();
 	while ((ad = c_ads->Next())) {
 		++cTotalAds;
-		if (constraint) {
-			bool val;
-			classad::Value result;
-			if ( ! EvalExprTree(constraint, ad, NULL, result) || ! result.IsBooleanValueEquiv(val) || ! val) {
-				continue; // no match - don't include this ad.
-			}
+		if (filter && ! EvalBool(ad, filter)) {
+			continue; // no match - don't include this ad.
 		}
 		ads.Append(ad);
 	}
 
-	if (collector_iter) {
-		collect_free_iter(c_ads);
-	} else {
-		delete c_ads;
-	}
+	collect_free_iter(c_ads);
 	if (pcTotalAds) { *pcTotalAds = cTotalAds; }
 
 	return rval;
@@ -1245,6 +1218,9 @@ void early_init(int argc, const char **argv)
 	if (ImTheCollector) { IsMainCollVarDef.psz = TrueString; }
 	MyExeVarDef.psz = const_cast<char*>(argv[0]);
 	insert_source(argv[0], ClerkVars, CmdLineSrc);
+
+	// setup configuration tables for standard collector ad types
+	config_standard_ads(NUM_AD_TYPES + 100);
 
 	// re-construct the command line and insert it into ClerkVar defaults
 	int cch = 0;

@@ -1384,6 +1384,7 @@ rm -rf %{buildroot}
 %_sbindir/condor_advertise
 %_sbindir/condor_c-gahp
 %_sbindir/condor_c-gahp_worker_thread
+%_sbindir/condor_clerk
 %_sbindir/condor_collector
 %_sbindir/condor_credd
 %_sbindir/condor_fetchlog

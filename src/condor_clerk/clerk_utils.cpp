@@ -108,7 +108,7 @@ void update_ads_from_file (
 	}
 
 	CondorClassAdFileIterator adIter;
-	if ( ! adIter.begin(fh, true, ftype)) {
+	if ( ! adIter.begin(fh, close_file, ftype)) {
 		fclose(fh); fh = NULL;
 		dprintf(D_ALWAYS, "Failed to create CondorClassAdFileIterator for %s\n", file);
 		return;
@@ -196,7 +196,7 @@ void collect_free_file_iter(CollectionIterator<ClassAd*> * it)
 }
 
 
-bool param_and_populate_map(const char * param_name, NOCASE_STRING_MAP & smap)
+bool param_and_populate_smap(const char * param_name, NOCASE_STRING_MAP & smap)
 {
 	char *lines = param(param_name);
 	if ( ! lines)
@@ -217,5 +217,146 @@ bool param_and_populate_map(const char * param_name, NOCASE_STRING_MAP & smap)
 		}
 	}
 	return cItems > 0;
+}
+
+const char * smap_string(const char * name, const NOCASE_STRING_MAP & smap) {
+	NOCASE_STRING_MAP::const_iterator found = smap.find(name);
+	if (found == smap.end()) return NULL;
+	return found->second.c_str();
+}
+bool smap_bool(const char * name, const NOCASE_STRING_MAP & smap, bool def_val) {
+	const char * str = smap_string(name, smap);
+	if ( ! str || ! str[0]) return def_val;
+	bool bval = def_val;
+	if ( ! string_is_boolean_param(str, bval)) bval = def_val;
+	return bval;
+}
+bool smap_number(const char * name, const NOCASE_STRING_MAP & smap, long long & lval) {
+	const char * str = smap_string(name, smap);
+	if ( ! str || ! str[0]) return false;
+	return string_is_long_param(str, lval);
+}
+bool smap_number(const char * name, const NOCASE_STRING_MAP & smap, double & dval) {
+	const char * str = smap_string(name, smap);
+	if ( ! str || ! str[0]) return false;
+	return string_is_double_param(str, dval);
+}
+
+
+static bool ExprTreeIsAttrRef(const classad::ExprTree * expr, std::string & attr)
+{
+	if ( ! expr) return false;
+
+	classad::ExprTree::NodeKind kind = expr->GetKind();
+	while (kind == classad::ExprTree::ATTRREF_NODE) {
+		classad::ExprTree *e2=NULL;
+		bool absolute;
+		((const classad::AttributeReference*)expr)->GetComponents(e2, attr, absolute);
+		return !e2;
+	}
+	return false;
+}
+
+// find (and optionally count) attribute references that match the given set
+int has_specific_attr_refs (
+	const classad::ExprTree * tree,
+	NOCASE_STRING_TO_INT_MAP & mapping,
+	bool stop_on_first_match)
+{
+	int iret = 0;
+	if ( ! tree) return 0;
+	switch (tree->GetKind()) {
+		case ExprTree::LITERAL_NODE: {
+			classad::ClassAd * ad;
+			classad::Value val;
+			classad::Value::NumberFactor	factor;
+			((const classad::Literal*)tree)->GetComponents( val, factor );
+			if (val.IsClassAdValue(ad)) {
+				iret += has_specific_attr_refs(ad, mapping, stop_on_first_match);
+			}
+		}
+		break;
+
+		case ExprTree::ATTRREF_NODE: {
+			const classad::AttributeReference* atref = reinterpret_cast<const classad::AttributeReference*>(tree);
+			classad::ExprTree *expr;
+			std::string ref;
+			std::string tmp;
+			bool absolute;
+			atref->GetComponents(expr, ref, absolute);
+			// if there is a non-trivial left hand side (something other than X from X.Y attrib ref)
+			// then recurse it.
+			if (expr && ! ExprTreeIsAttrRef(expr, tmp)) {
+				iret += has_specific_attr_refs(expr, mapping, stop_on_first_match);
+			} else {
+				NOCASE_STRING_TO_INT_MAP::iterator found;
+				if (expr) {
+					found = mapping.find(tmp);
+				} else {
+					found = mapping.find(ref);
+				}
+				if (found != mapping.end()) {
+					found->second += 1;
+					iret += 1;
+				}
+			}
+		}
+		break;
+
+		case ExprTree::OP_NODE: {
+			classad::Operation::OpKind	op;
+			classad::ExprTree *t1, *t2, *t3;
+			((const classad::Operation*)tree)->GetComponents( op, t1, t2, t3 );
+			if (t1) iret += has_specific_attr_refs(t1, mapping, stop_on_first_match);
+			if (iret && stop_on_first_match) return iret;
+			if (t2) iret += has_specific_attr_refs(t2, mapping, stop_on_first_match);
+			if (iret && stop_on_first_match) return iret;
+			if (t3) iret += has_specific_attr_refs(t3, mapping, stop_on_first_match);
+		}
+		break;
+
+		case ExprTree::FN_CALL_NODE: {
+			std::string fnName;
+			std::vector<classad::ExprTree*> args;
+			((const classad::FunctionCall*)tree)->GetComponents( fnName, args );
+			for (std::vector<classad::ExprTree*>::iterator it = args.begin(); it != args.end(); ++it) {
+				iret += has_specific_attr_refs(*it, mapping, stop_on_first_match);
+				if (iret && stop_on_first_match) return iret;
+			}
+		}
+		break;
+
+		case ExprTree::CLASSAD_NODE: {
+			std::vector< std::pair<std::string, classad::ExprTree*> > attrs;
+			((const classad::ClassAd*)tree)->GetComponents(attrs);
+			for (std::vector< std::pair<std::string, classad::ExprTree*> >::iterator it = attrs.begin(); it != attrs.end(); ++it) {
+				iret += has_specific_attr_refs(it->second, mapping, stop_on_first_match);
+				if (iret && stop_on_first_match) return iret;
+			}
+		}
+		break;
+
+		case ExprTree::EXPR_LIST_NODE: {
+			std::vector<classad::ExprTree*> exprs;
+			((const classad::ExprList*)tree)->GetComponents( exprs );
+			for (std::vector<ExprTree*>::iterator it = exprs.begin(); it != exprs.end(); ++it) {
+				iret += has_specific_attr_refs(*it, mapping, stop_on_first_match);
+				if (iret && stop_on_first_match) return iret;
+			}
+		}
+		break;
+
+		case ExprTree::EXPR_ENVELOPE: {
+			classad::ExprTree * expr = SkipExprEnvelope(const_cast<classad::ExprTree*>(tree));
+			if (expr) iret += has_specific_attr_refs(expr, mapping, stop_on_first_match);
+		}
+		break;
+
+		default:
+			// unknown or unallowed node.
+			ASSERT(0);
+		break;
+	}
+	return iret;
 }
 
