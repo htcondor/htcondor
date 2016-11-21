@@ -1326,12 +1326,22 @@ CondorClassAdFileParseHelper::~CondorClassAdFileParseHelper()
 }
 
 
+bool CondorClassAdFileParseHelper::line_is_ad_delimitor(const std::string & line)
+{
+	if (blank_line_is_ad_delimitor) {
+		const char * p = line.c_str();
+		while (*p && isspace(*p)) ++p;
+		return ( ! *p || *p == '\n');
+	}
+	return starts_with(line, ad_delimitor);
+}
+
 // this method is called before each line is parsed.
 // return 0 to skip (is_comment), 1 to parse line, 2 for end-of-classad, -1 for abort
 int CondorClassAdFileParseHelper::PreParse(std::string & line, ClassAd & /*ad*/, FILE* /*file*/)
 {
 	// if this line matches the ad delimitor, tell the parser to stop parsing
-	if (starts_with(line, ad_delimitor))
+	if (line_is_ad_delimitor(line))
 		return 2; //end-of-classad
 
 	// check for blank lines or lines whose first character is #
@@ -1361,8 +1371,8 @@ int CondorClassAdFileParseHelper::OnParseError(std::string & line, ClassAd & /*a
 			line.c_str());
 
 	// read until delimitor or EOF; whichever comes first
-	line = "";
-	while ( ! starts_with(line, ad_delimitor)) {
+	line = "NotADelim=1";
+	while ( ! line_is_ad_delimitor(line)) {
 		if (feof(file))
 			break;
 		if ( ! readLine(line, file, false))

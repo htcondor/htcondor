@@ -476,23 +476,27 @@ class CondorClassAdFileParseHelper : public ClassAdFileParseHelper
 	};
 
 	CondorClassAdFileParseHelper(std::string delim, ParseType typ=Parse_long) 
-		: ad_delimitor(delim), parse_type(typ), new_parser(NULL), inside_list(false) {};
+		: ad_delimitor(delim), parse_type(typ), new_parser(NULL), inside_list(false)
+		, blank_line_is_ad_delimitor(delim=="\n") {};
 	ParseType getParseType() { return parse_type; }
 	bool configure(const char * delim, ParseType typ) {
 		if (new_parser) return false;
 		if (delim) { ad_delimitor = delim; }
 		parse_type = typ;
 		inside_list = false;
+		blank_line_is_ad_delimitor = ad_delimitor=="\n";
 		return true;
 	}
  private:
 	CondorClassAdFileParseHelper(const CondorClassAdFileParseHelper & that); // no copy construction
 	CondorClassAdFileParseHelper & operator=(const CondorClassAdFileParseHelper & that); // no assignment
+	bool line_is_ad_delimitor(const std::string & line);
 
 	std::string ad_delimitor;
 	ParseType parse_type;
 	void*     new_parser; // a class whose type depends on the value of parse_type.
 	bool      inside_list;
+	bool      blank_line_is_ad_delimitor;
 };
 
 // This implements a generic classad FILE* reader that can be used as an iterator
