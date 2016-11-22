@@ -131,7 +131,7 @@ bool HideUsers  = false;            // set to true when it doesn't make sense to
 time_t MinLastUsageTime;
 
 enum {
-   SortByColumn1 = 0,  // sort by prio or by useage depending on which is in column 1 
+   SortByColumn1 = 0,  // sort by prio or by usage depending on which is in column 1 
    SortGroupsFirstByIndex,
    SortHierByGroupId,
    SortHierBySortKey,
@@ -954,7 +954,7 @@ static void ProcessInfo(AttrList* ad,bool GroupRollup,bool HierFlag)
      HideUsers = true;
   }
 
-  int order = SortByColumn1; // sort by prio or by useage depending on which is in column 1
+  int order = SortByColumn1; // sort by prio or by usage depending on which is in column 1
   bool none_last = false;
   if (HierFlag) {
      none_last = (GlobalSurplusPolicy == SurplusRegroup);
@@ -1617,7 +1617,7 @@ static void usage(char* name) {
      "\t-debug[:<opts>]\t\tSend debug output to stderr, <opts> overrides TOOL_DEBUG\n"
      "    where [edit-option] is one of\n"
      "\t-resetusage <user>\tReset usage data for <user>\n"
-     "\t-resetall\t\tReset all useage data\n"
+     "\t-resetall\t\tReset all usage data\n"
      "\t-delete <user>\t\tRemove a user record from the accountant\n"
      "\t-setprio <user> <val>\tSet priority for <user>\n"
      "\t-setfactor <user> <val>\tSet priority factor for <user>\n"
