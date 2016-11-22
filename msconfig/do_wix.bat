@@ -35,7 +35,7 @@ popd
 goto finis
 
 :useage
-@echo USEAGE: %O {condor_path} {msi_fullpath} [x86|x64]
+@echo USEAGE: %0 {condor_path} {msi_fullpath} [x86^|x64]
 @echo  {condor_path} is the location of a properly laid out condor installation.
 @echo  This can created by unzipping Condor-X.Y.Z.zip to {condor_path}.
 @echo  .
