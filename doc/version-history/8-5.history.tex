@@ -78,6 +78,19 @@ These are changes that should happen to all job ads being transformed
 by the Job Router.
 \Ticket{5235}
 
+\item The \verb@$F(VAR)@ configuration macro has new options to support
+converions of paths to Windows style path separators or to Unix style.
+When used in \Condor{submit} files it can do path completion as well.
+\Ticket{5938}
+
+\item A certificate mapfile can now use literal values rather than regular
+expressions for the second field. This is useful when only a single identity
+should be matched.  The use of a literal is both more secure and faster to
+search. The new configuration variable \Macro{CERTIFICATE\_MAPFILE\_ASSUME\_HASH\_KEYS}
+enables this behavior, it defaults to false. It will most likely default
+to true in a future version of HTCondor.
+\Ticket{5992}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -106,6 +119,16 @@ user priority and resources in use information cannot be referenced in
 \item Fixed \Macro{COLLECTOR\_FORWARD\_FILTERING} so that a startd ad
 update is always forwarded when any of the Claim IDs change.
 \Ticket{5913}
+
+\item Fixed a bug that made the Requirements keyword for job transforms
+in the \Condor{schedd} only work if it was all uppercase on Red Hat 7 and
+some other platforms that use a newer version of the C++ compiler.
+\Ticket{5973}
+
+\item Fixed a bug that allowed a user to bypass the \Macro{MAX\_RUNNING\_SCHEDULER\_JOBS\_PER\_OWNER}
+limit by specifying an accounting group or nice\_user in their submit file.
+\Ticket{5949}
+
 
 \end{itemize}
 
