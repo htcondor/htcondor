@@ -1632,6 +1632,19 @@ main_pre_command_sock_init()
 #endif
 	}
 
+	// If using CREDENTIAL_DIRECTORY, blow away the CREDMON_COMPLETE file
+	// to force the credmon to refresh everything and to prevent the schedd
+	// from starting up until credentials are ready.
+	p = param("SEC_CREDENTIAL_DIRECTORY");
+	if(p) {
+		MyString cred_file;
+		cred_file = p;
+		cred_file = cred_file + DIR_DELIM_CHAR + "CREDMON_COMPLETE";
+		dprintf(D_SECURITY, "CREDMON: unlinking %s.", cred_file.Value());
+		unlink(cred_file.Value());
+	}
+	free(p);
+
  	// in case a shared port address file got left behind by an
  	// unclean shutdown, clean it up now before we create our
  	// command socket to avoid confusion
