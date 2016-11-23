@@ -8203,7 +8203,7 @@ review=?
 friendly_name=Limit job runtimes to 24 hours
 default : @end
 	MAX_JOB_RUNTIME=24*3600
-	MaxJobRetirementTime=(24*3600)+120
+	MaxJobRetirementTime=$(MAX_JOB_RUNTIME) + 120
 	PREEMPT=(Activity == "Busy") && ((time() - EnteredCurrentActivity) > $(MAX_JOB_RUNTIME))
 @end
 review=?

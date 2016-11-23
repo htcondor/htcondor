@@ -171,7 +171,7 @@ static struct _app_globals {
          DWORD fNoUI                       : 1;
          DWORD fLogoCmd                    : 1;
          DWORD fExitWhenDone               : 1;
-         DWORD fUseage                     : 1;
+         DWORD fUsage                      : 1;
          DWORD fVerbose                    : 1;
          DWORD fDiagnostic                 : 1;
          DWORD fPassOnExceptions           : 1;
@@ -214,8 +214,8 @@ typedef HaryList<CMDSWITCH> * HCMDLIST;
 typedef const struct _cmdtable {
    LPCTSTR   pszName;
    CMDSWITCH cmd;             // command and default params (if any)
-   LPCTSTR   pszArgType;      // used for useage
-   LPCTSTR   pszUseage;       // used for useage
+   LPCTSTR   pszArgType;      // used for usage
+   LPCTSTR   pszUsage;        // used for usage
    } CMDTABLE, * PCMDTABLE;
 
 #define CMDF_GLOBAL           1 // global option. 
@@ -251,7 +251,7 @@ BOOL App_LookupCmdLineArg (
 #define APP_CMD_DEMO            4  // force demo mode
 #define APP_CMD_ARGFILE         5  // pull command line arguments from a file.
 #define APP_CMD_EXIT            6
-#define APP_CMD_USEAGE          7
+#define APP_CMD_USAGE           7
 #define APP_CMD_VERBOSE         8
 #define APP_CMD_DIAGNOSTIC      9
 #define APP_CMD_PATH           10
@@ -270,8 +270,8 @@ static const CMDTABLE g_aAppCommands[] = {
 
 // _UT("NOLOGO"),       APP_CMD_NOLOGO,       CMDF_GLOBAL, 0, NULL,     NULL,          _UT(""),
 // _UT("LOGO"),         APP_CMD_LOGO,         CMDF_GLOBAL, 0, NULL,     NULL,          _UT(""),
-   _UT("HELP"),         APP_CMD_USEAGE,       CMDF_GLOBAL, 0, NULL,     NULL,          _UT("Print useage"),
-   _UT("?"),            APP_CMD_USEAGE,       CMDF_GLOBAL, 0, NULL,     NULL,          _UT("Print useage"),
+   _UT("HELP"),         APP_CMD_USAGE,        CMDF_GLOBAL, 0, NULL,     NULL,          _UT("Print usage"),
+   _UT("?"),            APP_CMD_USAGE,        CMDF_GLOBAL, 0, NULL,     NULL,          _UT("Print usage"),
    _UT("VERBOSE"),      APP_CMD_VERBOSE,      CMDF_GLOBAL, 0, NULL,     NULL,          _UT("Print detailed output."),
    _UT("DIAGNOSTIC"),   APP_CMD_DIAGNOSTIC,   CMDF_GLOBAL, 0, NULL,     NULL,          _UT("Print out internal flow of control information."),
    _UT("PATH"),         APP_CMD_PATH,         CMDF_GLOBAL, 1, NULL,     _UT("path"),   _UT("delete <path>"),
@@ -435,7 +435,7 @@ HRESULT App_CookArgList (
       if ((cmd.cParams > 0) && (NULL == cmd.pszParams))
          {
          bprintfl("the %s argument requires parameters", pszArg);
-         g_app.fUseage = true;
+         g_app.fUsage = true;
          hr = E_INVALIDARG;
          goto bail;
          }
@@ -629,8 +629,8 @@ static HRESULT App_ExecuteCmds (
             g_app.fExitWhenDone = TRUE;
             break;
 
-         case APP_CMD_USEAGE:
-            g_app.fUseage = TRUE;
+         case APP_CMD_USAGE:
+            g_app.fUsage = TRUE;
             break;
 
          case APP_CMD_VERBOSE:
@@ -866,20 +866,20 @@ int __cdecl main()
       {
       hr = App_ExecuteCommandLine (GetCommandLine(), TRUE);
       if (FAILED(hr))
-         g_app.fUseage = TRUE;
+         g_app.fUsage = TRUE;
       }
 
-   if (g_app.fShowLogo || g_app.fUseage)
+   if (g_app.fShowLogo || g_app.fUsage)
       {
       LPCTSTR pszAppName = _pszModuleName;
       bprintfl("%s version 1.0.0 Built " __DATE__ __TIME__, pszAppName);
       }
 
-   if (g_app.fUseage)
+   if (g_app.fUsage)
       {
       LPCTSTR pszAppName = _pszModuleName;
 
-      bprintf("\nuseage: %s [/? | /HELP] [@{argfile}] [args] <dir>\n\n", pszAppName);
+      bprintf("\nusage: %s [/? | /HELP] [@{argfile}] [args] <dir>\n\n", pszAppName);
       bprintf("  remove directory <dir>, taking ownership and removing\n");
       bprintf("  ACLs as necessary. Where [args] is one or more of\n\n");
 
@@ -899,7 +899,7 @@ int __cdecl main()
             pszCmd = szCmd;
             }
          bprintf("  /%-16s", pszCmd);
-         bprintf("  %s\n", pCmd->pszUseage);
+         bprintf("  %s\n", pCmd->pszUsage);
          }
       }
 
