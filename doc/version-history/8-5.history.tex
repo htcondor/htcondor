@@ -74,6 +74,11 @@ and improved the configuration template documentation.
 
 \begin{itemize}
 
+\item When the Google Compute Engine breaks the results of a query into
+multiple pages, the \Prog{gce\_gahp} now retrieves all of the results,
+instead of just the first page.
+\Ticket{6010}
+
 \item Fixed a bug that caused file transfer to fail when a job created
 by the Job Router has a different \Attr{Owner} than the original job.
 \Ticket{5348}
