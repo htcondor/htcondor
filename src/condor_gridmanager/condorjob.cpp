@@ -1460,6 +1460,7 @@ ClassAd *CondorJob::buildSubmitAd()
 	submit_ad->Delete( ATTR_JOB_LEASE_EXPIRATION );
 	submit_ad->Delete( ATTR_AUTO_CLUSTER_ID );
 	submit_ad->Delete( ATTR_AUTO_CLUSTER_ATTRS );
+	submit_ad->Delete( ATTR_TOTAL_SUBMIT_PROCS );
 
 	submit_ad->Assign( ATTR_JOB_STATUS, HELD );
 	submit_ad->Assign( ATTR_HOLD_REASON, "Spooling input data files" );
