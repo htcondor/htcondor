@@ -116,6 +116,22 @@ to job transforms because the TARGET prefix is required in the \Condor{job\_rout
 in the job transform.
 \Ticket{5980}
 
+\item The \Opt{-better-analyze} option of \Condor{q} has been improved and the output reorganized.
+\Ticket{5290}
+
+\item A new tool - \Condor{transform\_ads} has been added.
+\Ticket{5805}
+
+\item A join function has been added to the ClassAd language.
+\Ticket{6018}
+
+\item \Condor{qedit} now defaults to editing only jobs owned by the current user in the same way that
+\Condor{q} does. It also honors the \Macro{CONDOR\_Q\_ONLY\_MY\_JOBS} configuration variable.
+\Ticket{5889}
+
+\item \Condor{who} has additional options for querying the state and readiness of the various daemons.
+It has a command that can be used to wait for the daemons to startup with a timeout.
+\Ticket{5416}
 
 \end{itemize}
 
