@@ -30,9 +30,10 @@ If the index is out of bounds for the list contents,
 an error occurs.
 
 
-\item [\Expr{\$ENV(environment-variable-name)}]
+\item [\Expr{\$ENV(environment-variable-name[:default-value])}]
 Evaluates to the value of environment variable 
-\Expr{environment-variable-name}.
+\Expr{environment-variable-name}. If there is no environment variable with that name, Evaluates
+to UNDEFINED unless the optional \Verb@:default-value@ is used; in which case it evaluates to default-value.
 For example, 
 \begin{verbatim}
   A = $ENV(HOME)

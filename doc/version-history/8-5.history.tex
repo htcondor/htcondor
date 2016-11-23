@@ -28,6 +28,13 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Configuration variables of the form \Verb@SUBSYS.LOCALNAME.VARIABLE@ no longer work.
+The use of the SUBSYS prefix before LOCALNAME never worked fully, and was only necessary for while
+as a workaround for a bug that was fixed many years ago. \Condor{config\_val} and the \Condor{master} will
+now produce warning messages when the configuration has variables that appear to of this form and
+begin with a known SUBSYS name like MASTER or COLLECTOR.
+\Ticket{5969}
+
 \item New submit command \SubmitCmdNI{gce\_json\_file} can be used with
 grid-type gce jobs to specify a file that contains JSON object members
 that should be added to the instance description submitted to the GCE
@@ -78,10 +85,13 @@ These are changes that should happen to all job ads being transformed
 by the Job Router.
 \Ticket{5235}
 
-\item The \verb@$F(VAR)@ configuration macro has new options to support
+\item The \verb@$F()@ configuration macro has new options to support
 converions of paths to Windows style path separators or to Unix style.
 When used in \Condor{submit} files it can do path completion as well.
 \Ticket{5938}
+
+\item The \verb@$ENV()@ configuration macro now supports default values.
+\Ticket{5882}
 
 \item A certificate mapfile can now use literal values rather than regular
 expressions for the second field. This is useful when only a single identity
@@ -90,6 +100,22 @@ search. The new configuration variable \Macro{CERTIFICATE\_MAPFILE\_ASSUME\_HASH
 enables this behavior, it defaults to false. It will most likely default
 to true in a future version of HTCondor.
 \Ticket{5992}
+
+\item The ClassAd \Code{userMap} function now uses only commas as the separator for the
+third field of the map file. This makes it possible to have values with spaces in them.
+\Ticket{5988}
+
+\item The \Condor{collector} will now allow more than one \Condor{negotiator} to be registered.
+And a new A new configuration variable \Macro{COLLECTOR\_ALLOW\_ONLY\_ONE\_NEGOTIATOR}, which defaults
+to false has been added so that the old behavior can still be configured.
+\Ticket{5967}
+
+\item The Requirements expression for Job transforms in the \Condor{schedd} will now ignore the TARGET
+prefix for attributes in the expression. This makes it easier to convert \Condor{job\_router} rules
+to job transforms because the TARGET prefix is required in the \Condor{job\_router} but refers to nothing
+in the job transform.
+\Ticket{5980}
+
 
 \end{itemize}
 
@@ -128,6 +154,10 @@ some other platforms that use a newer version of the C++ compiler.
 \item Fixed a bug that allowed a user to bypass the \Macro{MAX\_RUNNING\_SCHEDULER\_JOBS\_PER\_OWNER}
 limit by specifying an accounting group or nice\_user in their submit file.
 \Ticket{5949}
+
+\item Fixed a bug in \Condor{c} and the \Condor{job\_router} that could cause inaccurate
+job totals to be reported by \Condor{q} \Opt{-batch}.
+\Ticket{6020}
 
 
 \end{itemize}
