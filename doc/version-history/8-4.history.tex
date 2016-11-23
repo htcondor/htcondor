@@ -41,6 +41,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item When creating a Google Compute Engine instance, instruct the server
+to delete the auto-created disk image when the instance is removed.
+\Ticket{5999}
+
 \item Fixed a bug in our support for Google Compute Engine which would
 cause authorization tokens to be renewed five minutes after the deadline
 instead of five minutes before.  Naturally, this led to ten minutes of
