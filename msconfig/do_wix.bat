@@ -5,8 +5,8 @@ REM note this script only works if it is in the parent directory
 REM of the wix xml files.
 REM
 
-if "%~1"=="" goto useage
-if "%~2"=="" goto useage
+if "%~1"=="" goto usage
+if "%~2"=="" goto usage
 
 set _ARCH_ARG=
 if "%~3"=="x64" set _ARCH_ARG=-arch x64
@@ -34,8 +34,8 @@ light %RUNEVAL% -ext WixUIExtension -ext WixFirewallExtension -dWixUILicenseRtf=
 popd
 goto finis
 
-:useage
-@echo USEAGE: %0 {condor_path} {msi_fullpath} [x86^|x64]
+:usage
+@echo USAGE: %0 {condor_path} {msi_fullpath} [x86^|x64]
 @echo  {condor_path} is the location of a properly laid out condor installation.
 @echo  This can created by unzipping Condor-X.Y.Z.zip to {condor_path}.
 @echo  .

@@ -1480,7 +1480,7 @@ Each line contains 3 fields, separated by white space
 (space or tab characters):
 \begin{enumerate}
 \item{The name of the authentication method to which the mapping applies.}
-\item{A regular expression representing the authenticated name
+\item{A name or a regular expression representing the authenticated name
 to be mapped.}
 \item{The canonical HTCondor user name.}
 \end{enumerate}
@@ -1507,6 +1507,14 @@ Due to this, more than one line (mapping) within the unified
 map file may match.
 Look ups are therefore defined to use the first mapping that
 matches.
+
+For HTCondor version 8.5.8 and later, the authenticated name field will be interpreted as a
+regular expression or as a simple string based on the value of the
+\Macro{CERTIFICATE\_MAPFILE\_ASSUME\_HASH\_KEYS} configuration variable.
+If this configuration varible is true, then the authenticated name field
+is a regular expression only when it begins and ends with the / character.  If this
+configuration variable is false, or on HTCondor versions older than 8.5.8,
+the authenticated name field is always a regular expression.
 
 A regular expression may need to contain spaces, and in this case the
 entire expression can be surrounded by double quote marks. If a

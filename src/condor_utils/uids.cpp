@@ -216,7 +216,7 @@ can_switch_ids( void )
          static const LPCTSTR needed[] = {
             SE_INCREASE_QUOTA_NAME, //needed by CreateProcessAsUser
             //SE_TCB_NAME,            //needed on Win2k to CreateProcessAsUser
-            SE_PROF_SINGLE_PROCESS_NAME, //needed?? to get CPU% and Memory/Disk useage for our children
+            SE_PROF_SINGLE_PROCESS_NAME, //needed?? to get CPU% and Memory/Disk usage for our children
             SE_CREATE_GLOBAL_NAME,  //needed to create named shared memory
             SE_CHANGE_NOTIFY_NAME,  //needed by CreateProcessAsUser
             SE_SECURITY_NAME,       //needed to change file ACL's

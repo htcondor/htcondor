@@ -58,6 +58,13 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Configuration variables of the form \Verb@SUBSYS.LOCALNAME.VARIABLE@ no longer work.
+The use of the SUBSYS prefix before LOCALNAME never worked fully, and was only necessary for while
+as a workaround for a bug that was fixed many years ago. \Condor{config\_val} and the \Condor{master} will
+now produce warning messages when the configuration has variables that appear to of this form and
+begin with a known SUBSYS name like MASTER or COLLECTOR.
+\Ticket{5969}
+
 \item New submit command \SubmitCmdNI{gce\_json\_file} can be used with
 grid-type gce jobs to specify a file that contains JSON object members
 that should be added to the instance description submitted to the GCE
@@ -98,11 +105,74 @@ commands (see~\ref{sec:DAGAllNodes} for details).
 and improved the configuration template documentation.
 \Ticket{5865}
 
+\item The \Condor{schedd} receiving a refreshed X.509 proxy credential
+is now done in a non-blocking fashion.
+\Ticket{5930}
+
+\item The Job Router now performs its automatic job ad transformations
+when the TRANSLATE\_JOB hook is used.
+These are changes that should happen to all job ads being transformed
+by the Job Router.
+\Ticket{5235}
+
+\item The \verb@$F()@ configuration macro has new options to support
+converions of paths to Windows style path separators or to Unix style.
+When used in \Condor{submit} files it can do path completion as well.
+\Ticket{5938}
+
+\item The \verb@$ENV()@ configuration macro now supports default values.
+\Ticket{5882}
+
+\item A certificate mapfile can now use literal values rather than regular
+expressions for the second field. This is useful when only a single identity
+should be matched.  The use of a literal is both more secure and faster to
+search. The new configuration variable \Macro{CERTIFICATE\_MAPFILE\_ASSUME\_HASH\_KEYS}
+enables this behavior, it defaults to false. It will most likely default
+to true in a future version of HTCondor.
+\Ticket{5992}
+
+\item The ClassAd \Code{userMap} function now uses only commas as the separator for the
+third field of the map file. This makes it possible to have values with spaces in them.
+\Ticket{5988}
+
+\item The \Condor{collector} will now allow more than one \Condor{negotiator} to be registered.
+And a new A new configuration variable \Macro{COLLECTOR\_ALLOW\_ONLY\_ONE\_NEGOTIATOR}, which defaults
+to false has been added so that the old behavior can still be configured.
+\Ticket{5967}
+
+\item The Requirements expression for Job transforms in the \Condor{schedd} will now ignore the TARGET
+prefix for attributes in the expression. This makes it easier to convert \Condor{job\_router} rules
+to job transforms because the TARGET prefix is required in the \Condor{job\_router} but refers to nothing
+in the job transform.
+\Ticket{5980}
+
+\item The \Opt{-better-analyze} option of \Condor{q} has been improved and the output reorganized.
+\Ticket{5290}
+
+\item A new tool - \Condor{transform\_ads} has been added.
+\Ticket{5805}
+
+\item A join function has been added to the ClassAd language.
+\Ticket{6018}
+
+\item \Condor{qedit} now defaults to editing only jobs owned by the current user in the same way that
+\Condor{q} does. It also honors the \Macro{CONDOR\_Q\_ONLY\_MY\_JOBS} configuration variable.
+\Ticket{5889}
+
+\item \Condor{who} has additional options for querying the state and readiness of the various daemons.
+It has a command that can be used to wait for the daemons to startup with a timeout.
+\Ticket{5416}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item When the Google Compute Engine breaks the results of a query into
+multiple pages, the \Prog{gce\_gahp} now retrieves all of the results,
+instead of just the first page.
+\Ticket{6010}
 
 \item Fixed a bug that caused file transfer to fail when a job created
 by the Job Router has a different \Attr{Owner} than the original job.
@@ -117,6 +187,24 @@ due to priority from occurring, because
 user priority and resources in use information cannot be referenced in 
 \MacroNI{PREEMPTION\_REQUIREMENTS}.
 \Ticket{6014}
+
+\item Fixed \Macro{COLLECTOR\_FORWARD\_FILTERING} so that a startd ad
+update is always forwarded when any of the Claim IDs change.
+\Ticket{5913}
+
+\item Fixed a bug that made the Requirements keyword for job transforms
+in the \Condor{schedd} only work if it was all uppercase on Red Hat 7 and
+some other platforms that use a newer version of the C++ compiler.
+\Ticket{5973}
+
+\item Fixed a bug that allowed a user to bypass the \Macro{MAX\_RUNNING\_SCHEDULER\_JOBS\_PER\_OWNER}
+limit by specifying an accounting group or nice\_user in their submit file.
+\Ticket{5949}
+
+\item Fixed a bug in \Condor{c} and the \Condor{job\_router} that could cause inaccurate
+job totals to be reported by \Condor{q} \Opt{-batch}.
+\Ticket{6020}
+
 
 \end{itemize}
 

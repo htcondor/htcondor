@@ -1590,9 +1590,9 @@ void
 main_pre_command_sock_init()
 {
 	/* Make sure we are the only copy of condor_master running */
+	char*  p;
 #ifndef WIN32
 	MyString lock_file;
-	char*  p;
 
 	// see if a file is given explicitly
 	p = param ("MASTER_INSTANCE_LOCK");
@@ -1631,6 +1631,19 @@ main_pre_command_sock_init()
 		do_linux_kernel_tuning();
 #endif
 	}
+
+	// If using CREDENTIAL_DIRECTORY, blow away the CREDMON_COMPLETE file
+	// to force the credmon to refresh everything and to prevent the schedd
+	// from starting up until credentials are ready.
+	p = param("SEC_CREDENTIAL_DIRECTORY");
+	if(p) {
+		MyString cred_file;
+		cred_file = p;
+		cred_file = cred_file + DIR_DELIM_CHAR + "CREDMON_COMPLETE";
+		dprintf(D_SECURITY, "CREDMON: unlinking %s.", cred_file.Value());
+		unlink(cred_file.Value());
+	}
+	free(p);
 
  	// in case a shared port address file got left behind by an
  	// unclean shutdown, clean it up now before we create our

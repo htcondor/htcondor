@@ -543,6 +543,28 @@ Optional parameters are given within square brackets.
     converted to type \Expr{String} by function \Expr{string(Expr)}.
     Returns \Expr{ERROR} if any argument evaluates to \Expr{UNDEFINED} or \Expr{ERROR}.
 
+  \index{ClassAd functions!join()}
+  \item[\Code{String join(String sep, AnyType Expr1 \Lbr\ , AnyType Expr2 \Dots \Rbr)}]
+  \item[OR \Code{String join(String sep, List list}]
+  \item[OR \Code{String join(List list}]
+    Returns the string which is the concatenation of all arguments after the first one.
+    The first argument is the separator, and it is inserted between each of the other arguments
+    during concatenation.
+    All arguments are converted to type \Expr{String} by function \Expr{string(Expr)} before
+    concatenation. When there are exactly two arguments, If the second argument is a List,
+    all members of the list are converted to strings and then joined using the separator.
+    When there is only one argument, and the argument is a List, all members of the list
+    are converted to strings and then concatenated.
+
+    Returns \Expr{ERROR} if any argument evaluates to \Expr{UNDEFINED} or \Expr{ERROR}.
+
+    For example:
+\begin{verbatim}
+    "a, b, c" = join(", ", "a", "b", "c")
+    "abc"   = join(split("a b c"))
+    "a;b;c" = join(";", split("a b c"))
+\end{verbatim}
+
   \index{ClassAd functions!substr()}
   \item[\Code{String substr(String s, Integer offset \Lbr\ , Integer length  \Rbr)}]
     Returns the substring of \Expr{s}, from the position indicated by \Expr{offset},

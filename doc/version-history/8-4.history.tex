@@ -41,6 +41,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item When creating a Google Compute Engine instance, instruct the server
+to delete the auto-created disk image when the instance is removed.
+\Ticket{5999}
+
 \item Fixed a bug in our support for Google Compute Engine which would
 cause authorization tokens to be renewed five minutes after the deadline
 instead of five minutes before.  Naturally, this led to ten minutes of
@@ -68,6 +72,26 @@ indefinitely until an event occurs, to return prematurely with no event.
 \MacroNI{DAGMAN\_SUPPRESS\_JOB\_LOGS} configuration macro was set
 to \Expr{True}.
 \Ticket{5941}
+
+\item Fixed a bug that can cause the \Condor{starter} to crash if the
+connection to the \Condor{shadow} is lost during file transfer.
+\Ticket{5972}
+
+\item Fixed a bug that allowed a user to bypass the \Macro{MAX\_JOBS\_PER\_OWNER}
+limit by specifying an accounting group or nice\_user in their submit file.
+\Ticket{5946}
+
+\item Fixed a bug that made it so a restart of the \Condor{schedd} was required
+in order to change \Macro{REMOVE\_SIGNIFICANT\_ATTRIBUTES} to remove an attribute that
+the \Condor{schedd}s had already marked as significant.
+\Ticket{5983}
+
+\item When there are no GPUs on a machine, \Condor{gpu\_discovery} would write
+ to stderr in addition to its normal output, this made it hard to use the
+ \Opt{-config} option as intended.  \Condor{gpu\_discovery} has been changed so
+ that it will never write to stderr when the \Opt{-config} option is specified,
+ instead it will write error messages as configuration comments to stdout.
+ \Ticket{5989}
 
 \end{itemize}
 
