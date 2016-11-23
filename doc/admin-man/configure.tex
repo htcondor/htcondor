@@ -10907,6 +10907,13 @@ COLLECTOR.SEC_DEFAULT_SESSION_DURATION = 50000
 \item[\Macro{CERTIFICATE\_MAPFILE}]
   A path and file name of the unified map file.
 
+\label{param:CertificateMapfileAssumeHashKeys}
+\item[\Macro{CERTIFICATE\_MAPFILE\_ASSUME\_HASH\_KEYS}]
+  For HTCondor version 8.5.8 and later. When this is true, the second field of
+  the \Macro{CERTIFICATE\_MAPFILE} is not interpreted as a regular expression
+  unless it begins and ends with the slash / character.
+
+
 \label{param:SecEnableMatchPasswordAuthentication}
 \item[\Macro{SEC\_ENABLE\_MATCH\_PASSWORD\_AUTHENTICATION}]
   This is a special authentication mechanism designed to minimize
