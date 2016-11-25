@@ -117,6 +117,8 @@ QmgrJobUpdater::initJobQueueAttrLists( void )
 	common_job_queue_attrs->insert( ATTR_DISK_USAGE );
 	common_job_queue_attrs->insert( ATTR_JOB_REMOTE_SYS_CPU );
 	common_job_queue_attrs->insert( ATTR_JOB_REMOTE_USER_CPU );
+	common_job_queue_attrs->insert( ATTR_JOB_TOTAL_REMOTE_SYS_CPU );
+	common_job_queue_attrs->insert( ATTR_JOB_TOTAL_REMOTE_USER_CPU );
 	common_job_queue_attrs->insert( ATTR_TOTAL_SUSPENSIONS );
 	common_job_queue_attrs->insert( ATTR_CUMULATIVE_SUSPENSION_TIME );
 	common_job_queue_attrs->insert( ATTR_COMMITTED_SUSPENSION_TIME );

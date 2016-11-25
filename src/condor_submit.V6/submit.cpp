@@ -1140,6 +1140,12 @@ init_job_ad()
 	buffer.formatstr( "%s = 0.0", ATTR_JOB_REMOTE_SYS_CPU);
 	InsertJobExpr (buffer);
 
+	buffer.formatstr( "%s = 0.0", ATTR_JOB_TOTAL_REMOTE_USER_CPU);
+	InsertJobExpr (buffer);
+
+	buffer.formatstr( "%s = 0.0", ATTR_JOB_TOTAL_REMOTE_SYS_CPU);
+	InsertJobExpr (buffer);
+
 	buffer.formatstr( "%s = 0", ATTR_JOB_EXIT_STATUS);
 	InsertJobExpr (buffer);
 

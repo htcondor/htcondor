@@ -1289,14 +1289,14 @@ RemoteResource::setJobAd( ClassAd *jA )
 	int64_t int64_value;
 	double real_value;
 
-	if( jA->LookupFloat(ATTR_JOB_REMOTE_SYS_CPU, real_value) ) {
-		remote_rusage.ru_stime.tv_sec = (time_t) real_value;
-	}
+	// REMOTE_SYS_CPU and REMOTE_USER_CPU reflect usage for this execution only.
+	// reset to 0 on start or restart.
+	real_value = 0.0;
+	remote_rusage.ru_stime.tv_sec = (time_t) real_value;
+	remote_rusage.ru_utime.tv_sec = (time_t) real_value;
+	jA->Assign(ATTR_JOB_REMOTE_USER_CPU, real_value);
+	jA->Assign(ATTR_JOB_REMOTE_SYS_CPU, real_value);
 			
-	if( jA->LookupFloat(ATTR_JOB_REMOTE_USER_CPU, real_value) ) {
-		remote_rusage.ru_utime.tv_sec = (time_t) real_value;
-	}
-
 	if( jA->LookupInteger(ATTR_IMAGE_SIZE, int64_value) ) {
 		image_size_kb = int64_value;
 	}
@@ -1365,11 +1365,35 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 
 	double real_value;
 	if( update_ad->LookupFloat(ATTR_JOB_REMOTE_SYS_CPU, real_value) ) {
+		double prevUsage;
+		if (!jobAd->LookupFloat(ATTR_JOB_REMOTE_SYS_CPU, prevUsage)) {
+			prevUsage = 0.0;
+		}
+
+		// Remote cpu usage should be strictly increasing
+		if (real_value > prevUsage) {
+			double prevTotalUsage = 0.0;
+			jobAd->LookupFloat(ATTR_JOB_TOTAL_REMOTE_SYS_CPU, prevTotalUsage);
+			jobAd->Assign(ATTR_JOB_TOTAL_REMOTE_SYS_CPU, prevTotalUsage + (real_value - prevUsage));
+		}
+		
 		remote_rusage.ru_stime.tv_sec = (time_t) real_value;
 		jobAd->Assign(ATTR_JOB_REMOTE_SYS_CPU, real_value);
 	}
 
 	if( update_ad->LookupFloat(ATTR_JOB_REMOTE_USER_CPU, real_value) ) {
+		double prevUsage;
+		if (!jobAd->LookupFloat(ATTR_JOB_REMOTE_USER_CPU, prevUsage)) {
+			prevUsage = 0.0;
+		}
+
+		// Remote cpu usage should be strictly increasing
+		if (real_value > prevUsage) {
+			double prevTotalUsage = 0.0;
+			jobAd->LookupFloat(ATTR_JOB_TOTAL_REMOTE_USER_CPU, prevTotalUsage);
+			jobAd->Assign(ATTR_JOB_TOTAL_REMOTE_USER_CPU, prevTotalUsage + (real_value - prevUsage));
+		}
+		
 		remote_rusage.ru_utime.tv_sec = (time_t) real_value;
 		jobAd->Assign(ATTR_JOB_REMOTE_USER_CPU, real_value);
 	}

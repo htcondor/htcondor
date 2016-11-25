@@ -352,6 +352,8 @@
 #define ATTR_JOB_LEAVE_IN_QUEUE  "LeaveJobInQueue"
 #define ATTR_JOB_REMOTE_SYS_CPU  "RemoteSysCpu"
 #define ATTR_JOB_REMOTE_USER_CPU  "RemoteUserCpu"
+#define ATTR_JOB_TOTAL_REMOTE_SYS_CPU  "TotalRemoteSysCpu"
+#define ATTR_JOB_TOTAL_REMOTE_USER_CPU  "TotalRemoteUserCpu"
 #define ATTR_JOB_REMOTE_WALL_CLOCK  "RemoteWallClockTime"
 #define ATTR_JOB_ROOT_DIR  "RootDir"
 #define ATTR_JOB_RUN_COUNT  "JobRunCount"
