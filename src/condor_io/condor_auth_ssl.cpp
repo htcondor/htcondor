@@ -36,7 +36,9 @@
 #endif
 
 // Symbols from libssl
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
 static long (*SSL_CTX_ctrl_ptr)(SSL_CTX *, int, long, void *) = NULL;
+#endif
 static void (*SSL_CTX_free_ptr)(SSL_CTX *) = NULL;
 static int (*SSL_CTX_load_verify_locations_ptr)(SSL_CTX *, const char *, const char *) = NULL;
 #if OPENSSL_VERSION_NUMBER < 0x10000000L
@@ -55,8 +57,12 @@ static void (*SSL_free_ptr)(SSL *) = NULL;
 static int (*SSL_get_error_ptr)(const SSL *, int) = NULL;
 static X509 *(*SSL_get_peer_certificate_ptr)(const SSL *) = NULL;
 static long (*SSL_get_verify_result_ptr)(const SSL *) = NULL;
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
 static int (*SSL_library_init_ptr)() = NULL;
 static void (*SSL_load_error_strings_ptr)() = NULL;
+#else
+static int (*OPENSSL_init_ssl_ptr)(uint64_t, const OPENSSL_INIT_SETTINGS *) = NULL;
+#endif
 static SSL *(*SSL_new_ptr)(SSL_CTX *) = NULL;
 static int (*SSL_read_ptr)(SSL *, void *, int) = NULL;
 static void (*SSL_set_bio_ptr)(SSL *, BIO *, BIO *) = NULL;
@@ -79,7 +85,11 @@ Condor_Auth_SSL :: Condor_Auth_SSL(ReliSock * sock, int /* remote */)
 
 Condor_Auth_SSL :: ~Condor_Auth_SSL()
 {
+#if OPENSSL_VERSION_NUMBER < 0x10000000L
     ERR_remove_state( 0 );
+#elif OPENSSL_VERSION_NUMBER < 0x10100000L
+    ERR_remove_thread_state( 0 );
+#endif
 	if(m_crypto) delete(m_crypto);
 }
 
@@ -96,7 +106,9 @@ bool Condor_Auth_SSL::Initialize()
 
 	if ( Condor_Auth_Kerberos::Initialize() == false ||
 		 (dl_hdl = dlopen(LIBSSL_SO, RTLD_LAZY)) == NULL ||
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
 		 !(SSL_CTX_ctrl_ptr = (long (*)(SSL_CTX *, int, long, void *))dlsym(dl_hdl, "SSL_CTX_ctrl")) ||
+#endif
 		 !(SSL_CTX_free_ptr = (void (*)(SSL_CTX *))dlsym(dl_hdl, "SSL_CTX_free")) ||
 		 !(SSL_CTX_load_verify_locations_ptr = (int (*)(SSL_CTX *, const char *, const char *))dlsym(dl_hdl, "SSL_CTX_load_verify_locations")) ||
 #if OPENSSL_VERSION_NUMBER < 0x10000000L
@@ -115,8 +127,12 @@ bool Condor_Auth_SSL::Initialize()
 		 !(SSL_get_error_ptr = (int (*)(const SSL *, int))dlsym(dl_hdl, "SSL_get_error")) ||
 		 !(SSL_get_peer_certificate_ptr = (X509 *(*)(const SSL *))dlsym(dl_hdl, "SSL_get_peer_certificate")) ||
 		 !(SSL_get_verify_result_ptr = (long (*)(const SSL *))dlsym(dl_hdl, "SSL_get_verify_result")) ||
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
 		 !(SSL_library_init_ptr = (int (*)())dlsym(dl_hdl, "SSL_library_init")) ||
 		 !(SSL_load_error_strings_ptr = (void (*)())dlsym(dl_hdl, "SSL_load_error_strings")) ||
+#else
+		 !(OPENSSL_init_ssl_ptr = (int (*)(uint64_t, const OPENSSL_INIT_SETTINGS *))dlsym(dl_hdl, "OPENSSL_init_ssl")) ||
+#endif
 		 !(SSL_new_ptr = (SSL *(*)(SSL_CTX *))dlsym(dl_hdl, "SSL_new")) ||
 		 !(SSL_read_ptr = (int (*)(SSL *, void *, int))dlsym(dl_hdl, "SSL_read")) ||
 		 !(SSL_set_bio_ptr = (void (*)(SSL *, BIO *, BIO *))dlsym(dl_hdl, "SSL_set_bio")) ||
@@ -141,7 +157,9 @@ bool Condor_Auth_SSL::Initialize()
 		m_initSuccess = true;
 	}
 #else
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
 	SSL_CTX_ctrl_ptr = SSL_CTX_ctrl;
+#endif
 	SSL_CTX_free_ptr = SSL_CTX_free;
 	SSL_CTX_load_verify_locations_ptr = SSL_CTX_load_verify_locations;
 	SSL_CTX_new_ptr = SSL_CTX_new;
@@ -156,8 +174,12 @@ bool Condor_Auth_SSL::Initialize()
 	SSL_get_error_ptr = SSL_get_error;
 	SSL_get_peer_certificate_ptr = SSL_get_peer_certificate;
 	SSL_get_verify_result_ptr = SSL_get_verify_result;
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
 	SSL_library_init_ptr = SSL_library_init;
 	SSL_load_error_strings_ptr = SSL_load_error_strings;
+#else
+	OPENSSL_init_ssl_ptr = OPENSSL_init_ssl;
+#endif
 	SSL_new_ptr = SSL_new;
 	SSL_read_ptr = SSL_read;
 	SSL_set_bio_ptr = SSL_set_bio;
@@ -747,10 +769,17 @@ Condor_Auth_SSL::unwrap(char *   input,
 
 int Condor_Auth_SSL :: init_OpenSSL(void)
 {
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
     if (!(*SSL_library_init_ptr)()) {
         return AUTH_SSL_ERROR;
     }
     (*SSL_load_error_strings_ptr)();
+#else
+    if (!(*OPENSSL_init_ssl_ptr)(OPENSSL_INIT_LOAD_SSL_STRINGS \
+                               | OPENSSL_INIT_LOAD_CRYPTO_STRINGS, NULL)) {
+        return AUTH_SSL_ERROR;
+    }
+#endif
     // seed_pnrg(); TODO: 
     return AUTH_SSL_A_OK;
 }
@@ -1125,9 +1154,11 @@ SSL_CTX *Condor_Auth_SSL :: setup_ssl_ctx( bool is_server )
 		goto setup_server_ctx_err;
 	}
 
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
 	// disable SSLv2.  it has vulnerabilities.
 	//SSL_CTX_set_options( ctx, SSL_OP_NO_SSLv2 );
 	(*SSL_CTX_ctrl_ptr)( ctx, SSL_CTRL_OPTIONS, SSL_OP_NO_SSLv2, NULL );
+#endif
 
     if( (*SSL_CTX_load_verify_locations_ptr)( ctx, cafile, cadir ) != 1 ) {
         ouch( "Error loading CA file and/or directory\n" );
@@ -1147,8 +1178,10 @@ SSL_CTX *Condor_Auth_SSL :: setup_ssl_ctx( bool is_server )
 		// TODO where's this?
     (*SSL_CTX_set_verify_ptr)( ctx, SSL_VERIFY_PEER, verify_callback ); 
     (*SSL_CTX_set_verify_depth_ptr)( ctx, 4 ); // TODO arbitrary?
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
     //SSL_CTX_set_options( ctx, SSL_OP_ALL|SSL_OP_NO_SSLv2 );
     (*SSL_CTX_ctrl_ptr)( ctx, SSL_CTRL_OPTIONS, SSL_OP_ALL|SSL_OP_NO_SSLv2, NULL );
+#endif
     if((*SSL_CTX_set_cipher_list_ptr)( ctx, cipherlist ) != 1 ) {
         ouch( "Error setting cipher list (no valid ciphers)\n" );
         goto setup_server_ctx_err;
