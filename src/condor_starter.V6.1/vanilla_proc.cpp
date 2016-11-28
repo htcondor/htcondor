@@ -1081,6 +1081,7 @@ VanillaProc::outOfMemoryEvent(int /* fd */)
 	 */
 
 	// If we have no jobs left, prolly just cgroup removed, so do nothing and return
+	
 	if (num_pids == 0) {
 		dprintf(D_FULLDEBUG, "Closing event FD pipe %d.\n", m_oom_efd);
 		cleanupOOM();
@@ -1097,6 +1098,26 @@ VanillaProc::outOfMemoryEvent(int /* fd */)
 	int usage;
 	updateAd.LookupInteger(ATTR_MEMORY_USAGE, usage);
 
+		//
+	if (param_boolean("IGNORE_LEAF_OOM", false)) {
+		// if memory.use_hierarchy is 1, then hitting the limit at
+		// the parent notifies all children, even if those children
+		// are below their usage.  If we are below our usage, ignore
+		// the OOM, and continue running.  Hopefully, some process
+		// will be killed, and when it does, this job will get unfrozen
+		// and continue running.
+		if (usage < (0.9 * m_memory_limit)) {
+			long long oomData = 0xdeadbeef;
+			int efd;
+			daemonCore->Get_Pipe_FD(m_oom_efd, &efd);
+				// need to drain notification fd, or it will still
+				// be hot, and we'll come right back here again
+			int r = read(efd, &oomData, 8);
+
+			dprintf(D_ALWAYS, "Spurious OOM event, usage is %d, slot size is %d megabytes, ignoring OOM (read %d bytes)\n", usage, m_memory_limit, r);
+			return 0;
+		}
+	}
 	std::stringstream ss;
 	if (m_memory_limit >= 0) {
 		ss << "Job has gone over memory limit of " << m_memory_limit << " megabytes. Peak usage: " << usage << " megabytes.";
