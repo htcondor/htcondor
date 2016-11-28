@@ -41,6 +41,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug in the LIMIT_JOB_RUNTIMES configuration template metaknob
+so that it works in the face of a non-default MaxJobRuntime.
+\Ticket{5961}
+
 \item When creating a Google Compute Engine instance, instruct the server
 to delete the auto-created disk image when the instance is removed.
 \Ticket{5999}
