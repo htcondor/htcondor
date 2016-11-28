@@ -395,8 +395,15 @@ drop_addr_file()
 	char	addr_file[100];
 	const char* addr[2];
 
+	// build up a prefix as LOCALNAME.SUBSYSTEM or just SUBSYSTEM if no localname
+	// that way, daemons that have a localname will never stomp the address file of the
+	// primary daemon of that subsys unless explicitly told to do so.
+	MyString prefix(get_mySubSystem()->getLocalName());
+	if ( ! prefix.empty()) { prefix += "."; }
+	prefix += get_mySubSystem()->getName();
+
 	// Fill in addrFile[0] and addr[0] with info about regular command port
-	sprintf( addr_file, "%s_ADDRESS_FILE", get_mySubSystem()->getName() );
+	sprintf( addr_file, "%s_ADDRESS_FILE", prefix.Value() );
 	if( addrFile[0] ) {
 		free( addrFile[0] );
 	}
@@ -409,7 +416,7 @@ drop_addr_file()
 	}
 
 	// Fill in addrFile[1] and addr[1] with info about superuser command port
-	sprintf( addr_file, "%s_SUPER_ADDRESS_FILE", get_mySubSystem()->getName() );
+	sprintf( addr_file, "%s_SUPER_ADDRESS_FILE", prefix.Value() );
 	if( addrFile[1] ) {
 		free( addrFile[1] );
 	}

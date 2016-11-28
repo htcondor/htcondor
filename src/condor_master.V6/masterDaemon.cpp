@@ -787,8 +787,10 @@ int daemon::RealStart( )
 
 	// Automatically set -localname if appropriate.
 	if( isDC ) {
+		StringList viewServerDaemonNames("VIEW_COLLECTOR CONDOR_VIEW VIEW_SERVER");
 		StringList hardcodedDCDaemonNames( default_dc_daemon_list );
-		if(! hardcodedDCDaemonNames.contains_anycase( name_in_config_file )) {
+		if (viewServerDaemonNames.contains_anycase( name_in_config_file ) ||
+			! hardcodedDCDaemonNames.contains_anycase( name_in_config_file )) {
 			// Since the config's args are appended after this, they should
 			// win, but we might as well do it right.
 			bool foundLocalName = false;
