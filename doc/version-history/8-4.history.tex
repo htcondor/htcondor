@@ -41,7 +41,15 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Fixed a bug in the LIMIT_JOB_RUNTIMES configuration template metaknob
+\item Added new parameter SCHEDD\_USE\_SLOT\_WEIGHT, which may be needed
+if SLOT\_WEIGHT is not the default of Cpus, and refers to expressions
+in the job ad.
+\Ticket{5996}
+
+\item Fixed bug in the Hold if Cpus Exceeded configuration template metaknob.
+\Ticket{5933}
+
+\item Fixed a bug in the LIMIT\_JOB\_RUNTIMES configuration template metaknob
 so that it works in the face of a non-default MaxJobRuntime.
 \Ticket{5961}
 
