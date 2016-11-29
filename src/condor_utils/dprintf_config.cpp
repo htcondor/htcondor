@@ -454,8 +454,12 @@ dprintf_config( const char *subsys, struct dprintf_output_settings *p_info /* = 
 			} else {
 				// No default value found, so use $(LOG)/$(SUBSYSTEM)Log or $(LOG)/$(LOCALNAME)Log
 				std::string ln;
-				if (localName) { ln = localName; }
-				else { param(ln, "SUBSYSTEM"); }
+				if (localName) {
+					ln = localName;
+				} else {
+					char * lsubsys = param("SUBSYSTEM");
+					if (lsubsys) { ln = lsubsys; free(lsubsys); } else { ln = subsys; }
+				}
 				make_log_name_from_daemon_name( ln );
 				formatstr(logPath, "%s%c%sLog", DebugLogDir, DIR_DELIM_CHAR, ln.c_str() );
 			}
