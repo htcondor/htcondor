@@ -23,15 +23,13 @@ ReplyAndClean::operator() () {
 	// succeed or roll back after retrying, so this is safe to do --
 	// we've either succeeded and can forget, or have given up and should
 	// forget.)
-	commandState->BeginTransaction();
-	{
-		std::string commandID;
-		scratchpad->LookupString( "CommandID", commandID );
-		if(! commandID.empty()) {
+	if(! commandID.empty()) {
+		commandState->BeginTransaction();
+		{
 			commandState->DestroyClassAd( commandID.c_str() );
 		}
+		commandState->CommitTransaction();
 	}
-	commandState->CommitTransaction();
 
 	// We're done with the stream, now, so clean it up.
 	if( replyStream ) { delete replyStream; }

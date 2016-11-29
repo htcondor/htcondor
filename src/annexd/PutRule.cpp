@@ -97,6 +97,12 @@ PutRule::operator() () {
 	return rc;
 }
 
+// We assume here that delete_rule() succeeds if what it's trying to delete
+// is already gone (or never existed in the first place).  This means it's
+// OK to repeat a delete during rollback, and we don't have to keep track
+// of if we've already deleted it -- in the same way that operator() is
+// idempotent, so we'll repeat it if we retry in the forward direction.
+
 int
 PutRule::rollback() {
 	dprintf( D_FULLDEBUG, "PutRule::rollback()\n" );

@@ -23,7 +23,7 @@ BulkRequest::BulkRequest( ClassAd * r, EC2GahpClient * egc, ClassAd * s,
 	ClassAdCollection * c, const std::string & cid ) :
   gahp( egc ), reply( r ), scratchpad( s ),
   service_url( su ), public_key_file( pkf ), secret_key_file( skf ),
-  commandID( cid), commandState( c ) {
+  commandID( cid ), commandState( c ) {
   	ClassAd * commandState;
 	if( c->Lookup( HashKey( commandID.c_str() ), commandState ) ) {
 		commandState->LookupString( "State_ClientToken", client_token );

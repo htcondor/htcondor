@@ -106,6 +106,12 @@ PutTargets::operator() () {
 	return rc;
 }
 
+// We assume here that remove_targets() succeeds if what it's trying to delete
+// is already gone (or never existed in the first place).  This means it's
+// OK to repeat a delete during rollback, and we don't have to keep track
+// of if we've already deleted it -- in the same way that operator() is
+// idempotent, so we'll repeat it if we retry in the forward direction.
+
 int
 PutTargets::rollback() {
 	dprintf( D_FULLDEBUG, "PutTargets::rollback()\n" );

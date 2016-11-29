@@ -128,8 +128,10 @@ createOneAnnex( ClassAd * command, Stream * replyStream ) {
 		reply.Assign( ATTR_RESULT, getCAResultString( CA_INVALID_REQUEST ) );
 		reply.Assign( ATTR_ERROR_STRING, errorString );
 
-		if(! sendCAReply( replyStream, "CA_BULK_REQUEST", & reply )) {
-			dprintf( D_ALWAYS, "Failed to reply to CA_BULK_REQUEST.\n" );
+		if( replyStream ) {
+			if(! sendCAReply( replyStream, "CA_BULK_REQUEST", & reply )) {
+				dprintf( D_ALWAYS, "Failed to reply to CA_BULK_REQUEST.\n" );
+			}
 		}
 
 		return FALSE;
@@ -202,7 +204,7 @@ createOneAnnex( ClassAd * command, Stream * replyStream ) {
 
 	ClassAd * scratchpad = new ClassAd();
 
-	// Each step in the sequence will handle its own logging for  fault
+	// Each step in the sequence will handle its own logging for fault
 	// recovery.  The command ad is indexed by the command ID, so
 	// look up or generate it now, so we can tell it to the steps.
 	std::string commandID;
@@ -270,13 +272,16 @@ createOneAnnex( ClassAd * command, Stream * replyStream ) {
 	// We now only call last->operator() on success; otherwise, we roll back
 	// and call last->rollback() after we've given up.  We can therefore
 	// remove the command ad from the commandState in this functor.
-	ReplyAndClean * last = new ReplyAndClean( reply, replyStream, gahp, scratchpad, eventsGahp, commandState );
+	ReplyAndClean * last = new ReplyAndClean( reply, replyStream, gahp, scratchpad, eventsGahp, commandState, commandID );
 
 	// Note that the functor sequence takes responsibility for deleting the
 	// functor objects; the functor objects would just delete themselves when
 	// they're done, but implementing rollback means the functors themselves
 	// can't know how long they should persist.
-	FunctorSequence * fs = new FunctorSequence( { br, pr, pt }, last );
+	//
+	// The commandState, commandID, and scratchpad allow the functor sequence
+	// to restart a rollback, if that becomes necessary.
+	FunctorSequence * fs = new FunctorSequence( { br, pr, pt }, last, commandState, commandID, scratchpad );
 
 	// Create a timer for the gahp to fire when it gets a result.  We must
 	// use TIMER_NEVER to ensure that the timer hasn't been reaped when the
@@ -386,6 +391,7 @@ main_init( int /* argc */, char ** /* argv */ ) {
 	commandState = new ClassAdCollection( NULL, commandStateFile.c_str() );
 	commandState->StartIterateAllClassAds();
 	while( commandState->IterateAllClassAds( currentAd, currentKey ) ) {
+		if( strcmp( "Command", GetMyTypeName( * currentAd ) ) != 0 ) { continue; }
 		dprintf( D_ALWAYS, "Found command state ad '%s'.\n", currentKey.value() );
 
 		//

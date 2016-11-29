@@ -3,6 +3,7 @@
 
 // #include "condor_common.h"
 // #include "condor_daemon_core.h"
+// #include "classad_collection.h"
 //
 // #include <queue>
 //
@@ -32,11 +33,12 @@
 
 class FunctorSequence : public Service {
 	public:
-		FunctorSequence( const std::vector< Functor * > & s, Functor * l ) :
-			sequence(s), last(l), current(0), rollingBack(false) { }
+		FunctorSequence( const std::vector< Functor * > & s, Functor * l, ClassAdCollection * c, const std::string & cid, ClassAd * sp );
 		virtual ~FunctorSequence() { }
 
 		void operator() ();
+
+		void log();
 
 	protected:
 		void deleteFunctors();
@@ -47,6 +49,10 @@ class FunctorSequence : public Service {
 
 		int current;
 		bool rollingBack;
+
+		ClassAdCollection * commandState;
+		std::string commandID;
+		ClassAd * scratchpad;
 };
 
 #endif /* _CONDOR_FUNCTOR_SEQUENCE_H */
