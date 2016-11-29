@@ -148,9 +148,11 @@ createOneAnnex( ClassAd * command, Stream * replyStream ) {
 	command->LookupString( "ServiceURL", serviceURL );
 	param( eventsURL, "ANNEX_DEFAULT_CWE_URL" );
 	command->LookupString( "EventsURL", eventsURL );
-	// FIXME: These should come from the command ad or a map.
-	param( publicKeyFile, "ANNEX_DEFAULT_PUBLIC_KEY_FILE" );
-	param( secretKeyFile, "ANNEX_DEFAULT_SECRET_KEY_FILE" );
+
+	// FIXME: Look up the authenticated user who sent this command in a
+	// map, but prefer the command-line options.
+	command->LookupString( "PublicKeyFile", publicKeyFile );
+	command->LookupString( "SecretKeyFile", secretKeyFile );
 
 	// Validate GAHP parameters.
 	if( serviceURL.empty() || publicKeyFile.empty() || secretKeyFile.empty() ) {
@@ -159,10 +161,10 @@ createOneAnnex( ClassAd * command, Stream * replyStream ) {
 			formatstr( errorString, "ServiceURL missing or empty in command ad and ANNEX_DEFAULT_SERVICE_URL not set or empty in configuration." );
 		}
 		if( publicKeyFile.empty() ) {
-			formatstr( errorString, "%s%sANNEX_DEFAULT_PUBLIC_KEY_FILE not set in configuration.", errorString.c_str(), errorString.empty() ? "" : "  " );
+			formatstr( errorString, "%s%sPublic key file not specified in command or defaults.", errorString.c_str(), errorString.empty() ? "" : "  " );
 		}
 		if( secretKeyFile.empty() ) {
-			formatstr( errorString, "%s%sANNEX_DEFAULT_SECRET_KEY_FILE not set in configuration.", errorString.c_str(), errorString.empty() ? "" : "  " );
+			formatstr( errorString, "%s%sSecret key file not specified in command or defaults.", errorString.c_str(), errorString.empty() ? "" : "  " );
 		}
 		dprintf( D_ALWAYS, "%s\n", errorString.c_str() );
 
@@ -348,6 +350,9 @@ handleClassAdCommand( Service *, int dcCommandInt, Stream * s ) {
 		commandString = "command not found";
 	}
 
+	// FIXME: Record the authorized user in the command ad, so that'll
+	// be available when createOneAnnex() needs it during recovery.
+
 	switch( command ) {
 		case CA_BULK_REQUEST: {
 			// Do not allow users to provide their own command IDs.
@@ -401,8 +406,6 @@ main_init( int /* argc */, char ** /* argv */ ) {
 		daemonCore->Register_Timer( 0, 0,
 			(void (Service::*)()) & IncompleteCommand::operator(),
 			currentKey.value(), ic );
-		// FIXME: write authuser information to state file
-		// FIXME: update cOA() to use that info if no replyStream available.
 	}
 
 	// hardState = new ClassAdCollection( NULL, hardStateFile.c_str() );

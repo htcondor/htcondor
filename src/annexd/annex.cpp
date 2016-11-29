@@ -85,6 +85,8 @@ main( int argc, char ** argv ) {
 	const char * fileName = NULL;
 	const char * serviceURL = NULL;
 	const char * eventsURL = NULL;
+	const char * publicKeyFile = NULL;
+	const char * secretKeyFile = NULL;
 	for( int i = 1; i < argc; ++i ) {
 		if( is_dash_arg_prefix( argv[i], "pool", 1 ) ) {
 			++i;
@@ -163,6 +165,26 @@ main( int argc, char ** argv ) {
 		} else if( is_dash_arg_prefix( argv[i], "debug", 1 ) ) {
 			dprintf_set_tool_debug( "TOOL", 0 );
 			continue;
+		} else if( is_dash_arg_prefix( argv[i], "public-key-file", 1 ) ) {
+			++i;
+			if( argv[i] != NULL ) {
+				publicKeyFile = argv[i];
+				continue;
+			} else {
+				fprintf( stderr, "%s: -public-key-file requires an argument.\n", argv[0] );
+				return 1;
+			}
+			continue;
+		} else if( is_dash_arg_prefix( argv[i], "secret-key-file", 1 ) ) {
+			++i;
+			if( argv[i] != NULL ) {
+				secretKeyFile = argv[i];
+				continue;
+			} else {
+				fprintf( stderr, "%s: -secret-key-file requires an argument.\n", argv[0] );
+				return 1;
+			}
+			continue;
 		} else if( argv[i][0] == '-' && argv[i][1] != '\0' ) {
 			fprintf( stderr, "%s: unrecognized option (%s).\n", argv[0], argv[i] );
 			return 1;
@@ -226,6 +248,14 @@ main( int argc, char ** argv ) {
 
 	if( eventsURL != NULL ) {
 		spotFleetRequest.Assign( "EventsURL", eventsURL );
+	}
+
+	if( publicKeyFile != NULL ) {
+		spotFleetRequest.Assign( "PublicKeyFile", publicKeyFile );
+	}
+
+	if( secretKeyFile != NULL ) {
+		spotFleetRequest.Assign( "SecretKeyFile", secretKeyFile );
 	}
 
 	// Handle user data.
