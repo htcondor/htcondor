@@ -1099,6 +1099,7 @@ VanillaProc::outOfMemoryEvent(int /* fd */)
 	updateAd.LookupInteger(ATTR_MEMORY_USAGE, usage);
 
 		//
+#ifdef LINUX
 	if (param_boolean("IGNORE_LEAF_OOM", false)) {
 		// if memory.use_hierarchy is 1, then hitting the limit at
 		// the parent notifies all children, even if those children
@@ -1106,6 +1107,7 @@ VanillaProc::outOfMemoryEvent(int /* fd */)
 		// the OOM, and continue running.  Hopefully, some process
 		// will be killed, and when it does, this job will get unfrozen
 		// and continue running.
+
 		if (usage < (0.9 * m_memory_limit)) {
 			long long oomData = 0xdeadbeef;
 			int efd;
@@ -1118,6 +1120,8 @@ VanillaProc::outOfMemoryEvent(int /* fd */)
 			return 0;
 		}
 	}
+#endif
+
 	std::stringstream ss;
 	if (m_memory_limit >= 0) {
 		ss << "Job has gone over memory limit of " << m_memory_limit << " megabytes. Peak usage: " << usage << " megabytes.";
