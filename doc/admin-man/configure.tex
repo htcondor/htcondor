@@ -7307,6 +7307,16 @@ Configuration File Entries}
   If the job defines the value, then that value takes precedence. 
   If not set, then then the default is 1.
 
+\label{param:DefaultJobMaxRetries}
+\item[\Macro{DEFAULT\_JOB\_MAX\_RETRIES}]
+  The default value for the maximum number of job retries, if the
+  \Condor{submit} retry feature is used.  (Note that this value is
+  only relevant if either \SubmitCmdNI{retry\_until} or
+  \SubmitCmdNI{success\_exit\_code} is defined in the submit file,
+  and \SubmitCmdNI{max\_retries} is not.)
+  (See section~\ref{condor-submit-max-retries} for more information.)
+  The default value if not defined is 10.
+
 \end{description}
 
 If you want \Condor{submit} to automatically append an expression to
