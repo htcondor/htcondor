@@ -58,12 +58,22 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Configuration variables of the form \Verb@SUBSYS.LOCALNAME.VARIABLE@ no longer work.
+\item The XferStatsLog file on the submit side now contains TCP statistics for both the
+shadow point of view, and the starter point of view.  The starter side line is prefixed
+with the words "peer stats from starter".
+\Ticket{5917}
+
+\item Configuration variables of the form \verb@SUBSYS.LOCALNAME.VARIABLE@ no longer work.
 The use of the SUBSYS prefix before LOCALNAME never worked fully, and was only necessary for while
 as a workaround for a bug that was fixed many years ago. \Condor{config\_val} and the \Condor{master} will
 now produce warning messages when the configuration has variables that appear to of this form and
 begin with a known SUBSYS name like MASTER or COLLECTOR.
 \Ticket{5969}
+
+\item The \Macro{SLOT\_WEIGHT} parameter can now be set on the central manager,
+instead of all the execute nodes.  If the execute nodes set this parameter, it
+will override the central manager setting.
+\Ticket{5953}
 
 \item New submit command \SubmitCmdNI{gce\_json\_file} can be used with
 grid-type gce jobs to specify a file that contains JSON object members

@@ -33,7 +33,7 @@ an error occurs.
 \item [\Expr{\$ENV(environment-variable-name[:default-value])}]
 Evaluates to the value of environment variable 
 \Expr{environment-variable-name}. If there is no environment variable with that name, Evaluates
-to UNDEFINED unless the optional \Verb@:default-value@ is used; in which case it evaluates to default-value.
+to UNDEFINED unless the optional \verb@:default-value@ is used; in which case it evaluates to default-value.
 For example, 
 \begin{verbatim}
   A = $ENV(HOME)
@@ -63,7 +63,7 @@ either a slash or backslash will be recognized on Windows platforms,
 and the parser will use the same character specified unless u or w is used.
 if b is used the trailing slash or backslash will be omitted.
   \item \Expr{u} convert path separators to Unix style slash characters
-  \Item \Expr{w} convert path separators to Windows style backslash characters
+  \item \Expr{w} convert path separators to Windows style backslash characters
   \item \Expr{n} refers to the file name at the end of any path,
 but without any file name extension.
 As an  example, the return value from \Expr{\$Fn(/tmp/simulate.exe)}
