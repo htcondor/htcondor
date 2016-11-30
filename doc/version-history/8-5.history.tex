@@ -28,6 +28,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item On Linux, the starter now puts all jobs in a cgroup by default.  The default
+for CGROUP\_MEMORY\_LIMIT\_POLICY is now "none".  To disable cgroups, an admin
+can set the BASE\_CGROUP param to the empty string.
+\Ticket{5936}
+
 \item Added new param \Macro{DOCKER\_VOLUME\_DIR\_XXX\_MOUNT\_IF} which is an expression,
 evaluated in the context of the machine and job ad, which if it evaluates to a string,
 becomes a docker volume mount.  This allows admins to conditionally add docker volumes
