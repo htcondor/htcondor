@@ -67,7 +67,7 @@ then
 fi
 done
 
-host=$1
+proc=$1
 shift 
 
 # The option can also appear _after_ the host
@@ -100,6 +100,12 @@ then
 fi
 done
 
+# The HTCondor environment variables aren't always passed,
+# but this script should always execute from the scratch dir
+if [ -z ${_CONDOR_SCRATCH_DIR+x} ]
+then
+	_CONDOR_SCRATCH_DIR=`/bin/pwd`
+fi
 contact=$_CONDOR_SCRATCH_DIR/contact
 
 if [ ! -f $contact ]
@@ -110,35 +116,33 @@ fi
 
 
 # Note that the spaces in the grep are significant
-line=`grep "^[0-9]* $host " $contact`
+line=`grep "^$proc " $contact`
 
 if [ $? -ne 0 ]
 then
-	echo Host $host is not in contact file $contact
+	echo Proc $proc is not in contact file $contact
 	exit 1
 fi
 
-proc=`echo $line | awk '{print $1}'`
+#proc=`echo $line | awk '{print $1}'`
+host=`echo $line | awk '{print $2}'`
 port=`echo $line | awk '{print $3}'`
 username=`echo $line | awk '{print $4}'`
 dir=`echo $line | awk '{print $5}'`
 
 key=$_CONDOR_SCRATCH_DIR/tmp/$proc.key
 
-# MPICH assumes that you always have a shared filesystem, and
+# Open MPI/MPICH assumes that you always have a shared filesystem, and
 # sticks the pwd in front of all relative executable pathnames
 # This is no good.
 
-# So, if the program name begins with the pwd, remove it
+# So, if any argument contains the pwd, replace it with the scratch dir
 
-prog=$1
-shift
+ssh_args=$@
 p=`/bin/pwd`
-prog=${prog##$p/}
+ssh_args=`echo $ssh_args | sed s@${p}@${dir}@g`
 
-# with cd 
-/usr/bin/ssh -q $hasn -oStrictHostKeyChecking=no -oUserKnownHostsFile=.ssh_host_rsa_key.$cluster -i $key -l $username -p $port $host cd "$dir" \; PATH=$PATH \; $prog "$@"
-
-# this one without
-#/usr/bin/ssh -q -oStrictHostKeyChecking=no -oUserKnownHostsFile=.ssh_host_rsa_key.$cluster -i $key -l $username -p $port $host PATH=$PATH \; $prog "$@"
-
+# Now call ssh with the remaining arguments at the end.
+# Set the working directory and $HOME to the scratch dir
+# so that the worker processes look there for the user's executable.
+/usr/bin/ssh -q $hasn -oStrictHostKeyChecking=no -oUserKnownHostsFile=/dev/null -i $key -l $username -p $port $host cd "$dir" \; export HOME="$dir" \; "$ssh_args"

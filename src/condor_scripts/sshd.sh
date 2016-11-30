@@ -22,7 +22,7 @@
 
 
 sshd_cleanup() {
-	rm -f $hostkey ${hostkey}.pub ${idkey} ${idkey}.pub $_CONDOR_SCRATCH_DIR/tmp/sshd.out $_CONDOR_SCRATCH_DIR/contact
+	rm -f ${hostkey}.dsa ${hostkey}.rsa ${hostkey}.dsa.pub ${hostkey}.rsa.pub ${idkey} ${idkey}.pub $_CONDOR_SCRATCH_DIR/tmp/sshd.out $_CONDOR_SCRATCH_DIR/contact
 }
 
 trap sshd_cleanup 15
@@ -43,17 +43,20 @@ _CONDOR_NPROCS=$2
 # wont get transfered back
 mkdir $_CONDOR_SCRATCH_DIR/tmp
 
-# Create the host key. 
+# Create the host keys
 
 hostkey=$_CONDOR_SCRATCH_DIR/tmp/hostkey
-rm -f $hostkey $hostkey.pub
-$KEYGEN -q -f $hostkey -t rsa -N '' 
-_TEST=$?
-if [ $_TEST -ne 0 ]
-then
-	echo ssh keygenerator $KEYGEN returned error $_TEST exiting
-	exit 255
-fi
+for keytype in dsa rsa
+do
+	rm -f ${hostkey}.${keytype} ${hostkey}.${keytype}.pub
+	$KEYGEN -q -f ${hostkey}.${keytype} -t $keytype -N '' 
+	_TEST=$?
+	if [ $_TEST -ne 0 ]
+	then
+		echo ssh keygenerator $KEYGEN returned error $_TEST exiting
+		exit 255
+	fi
+done
 
 idkey=$_CONDOR_SCRATCH_DIR/tmp/$_CONDOR_PROCNO.key
 
@@ -83,7 +86,7 @@ while [ $done -eq 0 ]
 do
 
 # Try to launch sshd on this port
-$SSHD -p$PORT -oAuthorizedKeysFile=${idkey}.pub -h$hostkey -De -f/dev/null -oStrictModes=no -oPidFile=/dev/null -oAcceptEnv=_CONDOR < /dev/null > $_CONDOR_SCRATCH_DIR/tmp/sshd.out 2>&1 &
+$SSHD -p$PORT -oAuthorizedKeysFile=${idkey}.pub -oHostKey=${hostkey}.dsa -oHostKey=${hostkey}.rsa -De -f/dev/null -oStrictModes=no -oPidFile=/dev/null -oAcceptEnv=_CONDOR < /dev/null > $_CONDOR_SCRATCH_DIR/tmp/sshd.out 2>&1 &
 
 pid=$!
 
