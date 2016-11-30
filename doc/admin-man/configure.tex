@@ -6965,8 +6965,8 @@ REM Run the actual job now
 
 \label{param:CgroupMemoryLimitPolicy} 
 \item[\Macro{CGROUP\_MEMORY\_LIMIT\_POLICY}]
-  A string with possible values of \Expr{hard}, the default value
-  \Expr{soft} and \Expr{none}.
+  A string with possible values of \Expr{hard}, \Expr{soft} and \Expr{none}.
+  The default value is \Expr{none}.
   If set to \Expr{hard}, the cgroup-based limit on the total amount 
   of physical memory used by the sum of all processes in the job 
   will not be allowed to exceed the limit given by the cgroup memory
@@ -6979,6 +6979,8 @@ REM Run the actual job now
   of physical memory used by the sum of all processes in the job 
   will be allowed to go over the limit, 
   if there is free memory available on the system.
+  If set to \Expr{none}, no limit will be enforced, but the memory
+  usage of the job will be accurately measured by a cgroup.
 
 \label{param:UseVisibleDesktop} 
 \item[\Macro{USE\_VISIBLE\_DESKTOP}]
