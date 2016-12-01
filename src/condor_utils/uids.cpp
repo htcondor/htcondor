@@ -28,9 +28,6 @@
 #include "my_username.h"
 #include "daemon.h"
 #include "store_cred.h"
-#include "condor_daemon_core.h"
-
-#include <keyutils.h>
 #include <string.h>
 
 /* See condor_uid.h for description. */
@@ -1415,6 +1412,13 @@ set_file_owner_ids( uid_t uid, gid_t gid )
 	return TRUE;
 }
 
+
+// helper types and definitions to avoid importing keyutils.h
+typedef int32_t key_serial_t;
+#define KEYCTL_JOIN_SESSION_KEYRING     1       /* join or start named session keyring */
+#define KEYCTL_DESCRIBE                 6       /* describe a key */
+#define KEYCTL_LINK                     8       /* link a key into a keyring */
+#define KEYCTL_SEARCH                   10      /* search for a key in a keyring */
 
 // helper functions to avoid importing libkeyutils
 key_serial_t condor_keyctl_session(const char* n) {
