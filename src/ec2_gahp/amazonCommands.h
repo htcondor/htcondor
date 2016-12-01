@@ -78,7 +78,7 @@
 
 class AmazonRequest {
     public:
-        AmazonRequest( int i, const char * c, int sv = 2 ) :
+        AmazonRequest( int i, const char * c, int sv = 4 ) :
             includeResponseHeader(false), requestID(i), requestCommand(c),
             signatureVersion(sv) { }
         virtual ~AmazonRequest();
