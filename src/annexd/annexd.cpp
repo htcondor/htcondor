@@ -53,8 +53,9 @@ startOneGahpClient( const std::string & publicKeyFile, const std::string & servi
 
 	ArgList args;
 
-	// Configure dprintf using this name.
-	args.AppendArg( "-l" );
+	// A GAHP used by the annex daemon is configured as an annex GAHP,
+	// regardless of which GAHP it actually is.  This sets the subsystem.
+	args.AppendArg( "-s" );
 	args.AppendArg( "ANNEX_GAHP" );
 
 	args.AppendArg( "-w" );

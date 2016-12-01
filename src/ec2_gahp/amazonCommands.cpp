@@ -42,6 +42,7 @@
 #include "thread_control.h"
 #include <expat.h>
 #include "stl_string_utils.h"
+#include "subsystem_info.h"
 
 // Statistics of interest.
 int NumRequests = 0;
@@ -960,7 +961,10 @@ bool AmazonRequest::sendPreparedRequest(
         const std::string & payload ) {
     static bool rateLimitInitialized = false;
     if(! rateLimitInitialized) {
-        globalCurlThrottle.rateLimit = param_integer( "EC2_GAHP_RATE_LIMIT", 100 );
+        // FIXME: convert to the new form of param() when it becomes available.
+        std::string rateLimit;
+        formatstr( rateLimit, "%s_RATE_LIMIT", get_mySubSystem()->getName() );
+        globalCurlThrottle.rateLimit = param_integer( rateLimit.c_str(), 100 );
         dprintf( D_PERF_TRACE, "rate limit = %u\n", globalCurlThrottle.rateLimit );
         rateLimitInitialized = true;
     }

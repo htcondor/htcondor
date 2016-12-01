@@ -7791,6 +7791,10 @@ friendly_name=Location of the Gangila daemon
 type=path
 review=?
 
+[ANNEXD]
+default=$(SBIN)/condor_annexd
+type=path
+
 [STARTER]
 default=$(SBIN)/condor_starter
 win32_default=$(SBIN)\condor_starter.exe
@@ -8004,6 +8008,13 @@ review=?
 default=/tmp/GceGahpLog.$(USERNAME)
 win32_default=NUL
 review=?
+
+[ANNEX_GAHP]
+default=$(EC2_GAHP)
+type=path
+
+[ANNEX_GAHP_LOG]
+default=$(LOG)/AnnexGahpLog
 
 [CREDD]
 default=$(SBIN)/condor_credd
