@@ -137,7 +137,7 @@ by the Job Router.
 \Ticket{5235}
 
 \item The \verb@$F()@ configuration macro has new options to support
-converions of paths to Windows style path separators or to Unix style.
+conversions of paths to Windows style path separators or to Unix style.
 When used in \Condor{submit} files it can do path completion as well.
 \Ticket{5938}
 
@@ -171,6 +171,7 @@ in the job transform.
 \Ticket{5290}
 
 \item A new tool - \Condor{transform\_ads} has been added.
+(See section~\ref{man-condor-transform-ads} for details.)
 \Ticket{5805}
 
 \item A join function has been added to the ClassAd language.
@@ -183,6 +184,13 @@ in the job transform.
 \item \Condor{who} has additional options for querying the state and readiness of the various daemons.
 It has a command that can be used to wait for the daemons to startup with a timeout.
 \Ticket{5416}
+
+\item Added first-class \Condor{submit} commands supporting job retries.
+(See section~\ref{condor-submit-max-retries} for details.)
+\Ticket{5912}
+
+\item Added initial support for Singularity containers.
+\Ticket{5828}
 
 \end{itemize}
 
