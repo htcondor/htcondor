@@ -28,11 +28,17 @@
 #include "my_username.h"
 #include "daemon.h"
 #include "store_cred.h"
+#include "condor_daemon_core.h"
+
+#include <keyutils.h>
+#include <string.h>
 
 /* See condor_uid.h for description. */
 static char* CondorUserName = NULL;
 static char* RealUserName = NULL;
 static int SwitchIds = TRUE;
+static int UseKeyringSessions = FALSE;
+static int DidParamForKeyringSessions = FALSE;
 static int UserIdsInited = FALSE;
 static int OwnerIdsInited = FALSE;
 #ifdef WIN32
@@ -268,6 +274,15 @@ can_switch_ids( void )
 #endif
 
 	return SwitchIds;
+}
+
+
+int should_use_keyring_sessions() {
+	if(!DidParamForKeyringSessions) {
+		UseKeyringSessions = param_boolean("USE_KEYRING_SESSIONS", false);
+		DidParamForKeyringSessions = true;
+	}
+	return UseKeyringSessions;
 }
 
 
@@ -637,6 +652,7 @@ init_user_ids(const char username[], const char domain[])
 	}
 }
 
+// WINDOWS
 priv_state
 _set_priv(priv_state s, const char *file, int line, int dologging)
 {
@@ -1400,6 +1416,25 @@ set_file_owner_ids( uid_t uid, gid_t gid )
 }
 
 
+// helper functions to avoid importing libkeyutils
+key_serial_t condor_keyctl_session(const char* n) {
+  return syscall(__NR_keyctl, KEYCTL_JOIN_SESSION_KEYRING, n);
+}
+
+key_serial_t condor_keyctl_search(key_serial_t k, const char* t, const char* d, key_serial_t r) {
+  return syscall(__NR_keyctl, KEYCTL_SEARCH, k, t, d, r);
+}
+
+long condor_keyctl_link(key_serial_t k, key_serial_t r) {
+  return syscall(__NR_keyctl, KEYCTL_LINK, k, r);
+}
+
+long condor_keyctl_describe(key_serial_t k, char* b, long l) {
+  return syscall(__NR_keyctl, KEYCTL_DESCRIBE, k, b, l);
+}
+
+
+// UNIX
 priv_state
 _set_priv(priv_state s, const char *file, int line, int dologging)
 {
@@ -1427,6 +1462,14 @@ _set_priv(priv_state s, const char *file, int line, int dologging)
 			EXCEPT("Programmer Error: attempted switch to user privilege, "
 				   "but user ids are not initialized");
 		}
+
+		// ultimately, to be extra-paranoid all switches need a new
+		// session (to shed any old creds).  however, that means we can
+		// no longer dprintf in any of the below code since doing so
+		// switches to condor priv, creates a new session, and messes
+		// up the whole process below.  so for now, we only do it when
+		// switching to user priv.
+
 		switch (s) {
 		case PRIV_ROOT:
 			set_root_euid();
@@ -1438,19 +1481,79 @@ _set_priv(priv_state s, const char *file, int line, int dologging)
 			set_condor_euid();
 			break;
 		case PRIV_USER:
-			set_root_euid();	/* must be root to switch */
-			set_user_egid();
-			set_user_euid();
+		case PRIV_USER_FINAL:
+			{
+				if(should_use_keyring_sessions()) {
+
+
+					// TO DO:  Place us in a PAG with tokens for
+					// the requested user.  Steps to do this:
+					// 1) Create a brand new session
+					// 2) Find the users's credential on the HTCondor keyring.
+					// 3) Attach that key to our new session keyring
+
+					// all of this should be done as root.
+					set_root_euid();
+
+					// step 1, create a new session
+					condor_keyctl_session(NULL);
+					key_serial_t anon_keyring = -3;
+					dprintf(D_SECURITY, "KEYCTL: created new anonymous keyring\n");
+
+					// step 2a, locate the master keyring.
+					// -4 is the uid keyring for root.
+					key_serial_t htcondor_keyring = -4;
+
+					// step 2b, create the keyring name for user keyring
+					MyString ring_name = "htcondor_uid";
+					ring_name = ring_name + UserUid;
+
+					// step 2c, locate the user keyring
+					key_serial_t user_keyring = condor_keyctl_search(htcondor_keyring, "keyring", ring_name.Value(), 0);
+					if(user_keyring == -1) {
+						dprintf(D_ALWAYS, "KEYCTL: unable to find keyring '%s', error: %s\n", ring_name.Value(), strerror(errno));
+					} else {
+						dprintf(D_SECURITY, "KEYCTL: found user keyring %s (%li)\n", ring_name.Value(), (long)user_keyring);
+					}
+
+					// step 3, link the user keyring to our session keyring
+					long link_success = condor_keyctl_link(user_keyring, anon_keyring);
+					if(link_success == -1) {
+						dprintf(D_ALWAYS, "KEYCTL: link(%li,%li) error: %s\n",
+							(long)user_keyring, (long)anon_keyring, strerror(errno));
+					} else {
+						dprintf(D_SECURITY, "KEYCTL: linked key %li to %li\n",
+							(long)user_keyring, (long)anon_keyring);
+					}
+
+					/*
+					// dump some debug info
+					char keydesc[4096] = {0};
+					condor_keyctl_describe(htcondor_keyring, keydesc, 1024);
+					dprintf(D_ALWAYS, "KEYCTL: UID describe(%li) %s\n", htcondor_keyring, keydesc);
+					condor_keyctl_describe(anon_keyring, keydesc, 1024);
+					dprintf(D_ALWAYS, "KEYCTL: ANON describe(%li) %s\n", anon_keyring, keydesc);
+					condor_keyctl_describe(user_keyring, keydesc, 1024);
+					dprintf(D_ALWAYS, "KEYCTL: USER describe(%li) %s\n", user_keyring, keydesc);
+					*/
+				}
+
+				set_root_euid();
+				if(s == PRIV_USER) {
+					// PRIV_USER: change effective
+					set_user_egid();
+					set_user_euid();
+				} else {
+					// PRIV_USER_FINAL: change real
+					set_user_rgid();
+					set_user_ruid();
+				}
+			}
 			break;
 		case PRIV_FILE_OWNER:
 			set_root_euid();	/* must be root to switch */
 			set_owner_egid();
 			set_owner_euid();
-			break;
-		case PRIV_USER_FINAL:
-			set_root_euid();	/* must be root to switch */
-			set_user_rgid();
-			set_user_ruid();
 			break;
 		case PRIV_CONDOR_FINAL:
 			set_root_euid();	/* must be root to switch */
