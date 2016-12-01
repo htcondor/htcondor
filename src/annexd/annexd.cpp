@@ -144,16 +144,24 @@ createOneAnnex( ClassAd * command, Stream * replyStream ) {
 	// implementation.
 	//
 
-	std::string serviceURL, eventsURL, publicKeyFile, secretKeyFile;
+	std::string serviceURL, eventsURL, publicKeyFile, secretKeyFile, leaseFunctionARN;
 	param( serviceURL, "ANNEX_DEFAULT_EC2_URL" );
+	// FIXME: look up service URL from authorized user map.
 	command->LookupString( "ServiceURL", serviceURL );
+
 	param( eventsURL, "ANNEX_DEFAULT_CWE_URL" );
+	// FIXME: look up events URL from authorized user map.
 	command->LookupString( "EventsURL", eventsURL );
 
-	// FIXME: Look up the authenticated user who sent this command in a
-	// map, but prefer the command-line options.
+	// FIXME: look up public key file from authorized user map.
 	command->LookupString( "PublicKeyFile", publicKeyFile );
+
+	// FIXME: look up secret key file from authorized user map.
 	command->LookupString( "SecretKeyFile", secretKeyFile );
+
+	// FIXME: look up lease function ARN from authorized user map
+	// (from the endpoint-specific sub-map).
+	command->LookupString( "LeaseFunctionARN", leaseFunctionARN );
 
 	// Validate GAHP parameters.
 	if( serviceURL.empty() || publicKeyFile.empty() || secretKeyFile.empty() ) {
@@ -269,7 +277,8 @@ createOneAnnex( ClassAd * command, Stream * replyStream ) {
 	PutRule * pr = new PutRule( reply, eventsGahp, scratchpad,
 		eventsURL, publicKeyFile, secretKeyFile,
 		commandState, commandID );
-	PutTargets * pt = new PutTargets( reply, eventsGahp, scratchpad,
+	PutTargets * pt = new PutTargets( leaseFunctionARN,
+		reply, eventsGahp, scratchpad,
 		eventsURL, publicKeyFile, secretKeyFile, now + (15 * 60),
 		commandState, commandID );
 	// We now only call last->operator() on success; otherwise, we roll back

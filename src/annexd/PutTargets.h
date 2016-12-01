@@ -10,13 +10,13 @@
 
 class PutTargets : public Functor {
 	public:
-		PutTargets( ClassAd * r, EC2GahpClient * g, ClassAd * s,
+		PutTargets( const std::string & t, ClassAd * r, EC2GahpClient * g, ClassAd * s,
 			const std::string & su, const std::string & pkf, const std::string & skf,
 			time_t l, ClassAdCollection * c, const std::string & cid ) :
-			reply( r ), gahp( g ), scratchpad( s ),
+			target( t ), reply( r ), gahp( g ), scratchpad( s ),
             service_url( su ), public_key_file( pkf ), secret_key_file( skf ),
             leaseExpiration( l ), commandID( cid ), commandState( c )
-		{ }
+		{ ASSERT(! target.empty()); }
 
 		virtual ~PutTargets() { }
 
@@ -24,6 +24,8 @@ class PutTargets : public Functor {
 		virtual int rollback();
 
 	private:
+		std::string target;
+
 		ClassAd * reply;
 		EC2GahpClient * gahp;
 		ClassAd * scratchpad;

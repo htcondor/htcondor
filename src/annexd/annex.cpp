@@ -78,6 +78,7 @@ help( const char * argv0 ) {
 		"\t[-secret-key-file <secret-key-file>]\n"
 		"\t[-pool <pool>] [-name <name>]\n"
 		"\t[-service-url <service-url>] [-events-url <events-url>]\n"
+		"\t[-lease-function-arn <lease-function-arn>]\n"
 		"\t[-[default-]user-data[-file] <data|file> ]\n"
 		"\t[-debug] [-help]\n"
 		"\t<filename> <deadline>\n"
@@ -112,6 +113,7 @@ main( int argc, char ** argv ) {
 	const char * eventsURL = NULL;
 	const char * publicKeyFile = NULL;
 	const char * secretKeyFile = NULL;
+	const char * leaseFunctionARN = NULL;
 	for( int i = 1; i < argc; ++i ) {
 		if( is_dash_arg_prefix( argv[i], "pool", 1 ) ) {
 			++i;
@@ -213,6 +215,16 @@ main( int argc, char ** argv ) {
 				return 1;
 			}
 			continue;
+		} else if( is_dash_arg_prefix( argv[i], "lease-function-arn", 1 ) ) {
+			++i;
+			if( argv[i] != NULL ) {
+				leaseFunctionARN = argv[i];
+				continue;
+			} else {
+				fprintf( stderr, "%s: -lease-function-arn requires an argument.\n", argv[0] );
+				return 1;
+			}
+			continue;
 		} else if( argv[i][0] == '-' && argv[i][1] != '\0' ) {
 			fprintf( stderr, "%s: unrecognized option (%s).\n", argv[0], argv[i] );
 			return 1;
@@ -284,6 +296,10 @@ main( int argc, char ** argv ) {
 
 	if( secretKeyFile != NULL ) {
 		spotFleetRequest.Assign( "SecretKeyFile", secretKeyFile );
+	}
+
+	if( leaseFunctionARN != NULL ) {
+		spotFleetRequest.Assign( "LeaseFunctionARN", leaseFunctionARN );
 	}
 
 	// Handle user data.

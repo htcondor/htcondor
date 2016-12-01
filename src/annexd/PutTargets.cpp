@@ -30,10 +30,6 @@ PutTargets::operator() () {
 	ASSERT(! spotFleetRequestID.empty());
 	std::string targetID = spotFleetRequestID;
 
-	std::string functionARN;
-	param( functionARN, "ANNEX_DEFAULT_LEASE_FUNCTION_ARN" );
-	ASSERT(! functionARN.empty());
-
 	//
 	// Construct the input JSON string.
 	//
@@ -70,7 +66,7 @@ PutTargets::operator() () {
 	std::string errorCode;
 	rc = gahp->put_targets(
 				service_url, public_key_file, secret_key_file,
-				ruleName, targetID, functionARN, inputString, errorCode );
+				ruleName, targetID, target, inputString, errorCode );
 	if( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED || rc == GAHPCLIENT_COMMAND_PENDING ) {
 		// We expect to exit here the first time.
 		return KEEP_STREAM;
