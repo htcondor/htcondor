@@ -118,13 +118,18 @@ StringList::initializeFromString (const char *s)
 
 		// mark the beginning of this String in the list.
 		const char *begin_ptr = walk_ptr;
+		const char *end_ptr = begin_ptr;
 
 		// walk to the end of this string
-		while (!isSeparator (*walk_ptr) && *walk_ptr != '\0')
+		while (!isSeparator (*walk_ptr) && *walk_ptr != '\0') {
+			if ( !isspace(*walk_ptr) ) {
+				end_ptr = walk_ptr;
+			}
 			walk_ptr++;
+		}
 
 		// malloc new space for just this item
-		int len = (walk_ptr - begin_ptr);
+		int len = (end_ptr - begin_ptr) + 1;
 		char *tmp_string = (char*)malloc( 1 + len );
 		ASSERT( tmp_string );
 		strncpy (tmp_string, begin_ptr, len);
