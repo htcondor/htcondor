@@ -110,6 +110,16 @@ InsertOrUpdateAd( const std::string & id, ClassAd * command,
 	log->NewClassAd( key, command );
 }
 
+bool
+validateLease( time_t endOfLease, std::string & validationError ) {
+	time_t now = time( NULL );
+	if( endOfLease < now ) {
+		validationError = "The lease must end in the future.";
+		return false;
+	}
+	return true;
+}
+
 int
 createOneAnnex( ClassAd * command, Stream * replyStream ) {
 	// Validate the request (basic).
@@ -230,12 +240,17 @@ createOneAnnex( ClassAd * command, Stream * replyStream ) {
 	BulkRequest * br = new BulkRequest( reply, gahp, scratchpad,
 		serviceURL, publicKeyFile, secretKeyFile, commandState, commandID );
 
+	// Validate the lease time along with the bulk request, just to save
+	// some error-handling duplication.
+	time_t endOfLease = 0;
+	command->LookupInteger( "EndOfLease", endOfLease );
+
 	// Now that we've created the bulk request, it can fully validate the
 	// command ad, storing what it needs as it goes.  Really, each functor
 	// in sequence should have a validateAndStore() method, but the second
 	// two don't need one.
 	std::string validationError;
-	if(! br->validateAndStore( command, validationError )) {
+	if( (! br->validateAndStore( command, validationError )) || (! validateLease( endOfLease, validationError )) ) {
 		reply->Assign( ATTR_RESULT, getCAResultString( CA_INVALID_REQUEST ) );
 		reply->Assign( ATTR_ERROR_STRING, validationError );
 
@@ -273,13 +288,12 @@ createOneAnnex( ClassAd * command, Stream * replyStream ) {
 	}
 	commandState->CommitTransaction();
 
-	time_t now = time( NULL );
 	PutRule * pr = new PutRule( reply, eventsGahp, scratchpad,
 		eventsURL, publicKeyFile, secretKeyFile,
 		commandState, commandID );
 	PutTargets * pt = new PutTargets( leaseFunctionARN,
 		reply, eventsGahp, scratchpad,
-		eventsURL, publicKeyFile, secretKeyFile, now + (15 * 60),
+		eventsURL, publicKeyFile, secretKeyFile, endOfLease,
 		commandState, commandID );
 	// We now only call last->operator() on success; otherwise, we roll back
 	// and call last->rollback() after we've given up.  We can therefore

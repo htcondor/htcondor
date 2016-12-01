@@ -1,4 +1,5 @@
 #include "condor_common.h"
+#include "condor_config.h"
 #include "compat_classad.h"
 #include "classad_collection.h"
 #include "gahp-client.h"
@@ -65,7 +66,8 @@ BulkRequest::validateAndStore( ClassAd const * command, std::string & validation
 	command->LookupString( "ValidUntil", valid_until );
 	if( valid_until.empty() ) {
 		time_t now = time( NULL );
-		time_t fiveMinutesFromNow = now + (5 * 60);
+		time_t interval = param_integer( "ANNEX_PROVISIONING_DELAY", 5 * 60 );
+		time_t fiveMinutesFromNow = now + interval;
 		struct tm fMFN;
 		gmtime_r( & fiveMinutesFromNow, & fMFN );
 		char buffer[ 4 + 1 + 2 + 1 + 2 + 1 /* T */ + 2 + 1 + 2 + 1 + 2 + 1 /* Z */ + 1];

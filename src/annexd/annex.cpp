@@ -114,6 +114,7 @@ main( int argc, char ** argv ) {
 	const char * publicKeyFile = NULL;
 	const char * secretKeyFile = NULL;
 	const char * leaseFunctionARN = NULL;
+	long int leaseDuration = 0;
 	for( int i = 1; i < argc; ++i ) {
 		if( is_dash_arg_prefix( argv[i], "pool", 1 ) ) {
 			++i;
@@ -189,12 +190,6 @@ main( int argc, char ** argv ) {
 				fprintf( stderr, "%s: -user-data requires an argument.\n", argv[0] );
 				return 1;
 			}
-		} else if( is_dash_arg_prefix( argv[i], "debug", 1 ) ) {
-			dprintf_set_tool_debug( "TOOL", 0 );
-			continue;
-		} else if( is_dash_arg_prefix( argv[i], "help", 1 ) ) {
-			help( argv[0] );
-			return 1;
 		} else if( is_dash_arg_prefix( argv[i], "public-key-file", 1 ) ) {
 			++i;
 			if( argv[i] != NULL ) {
@@ -225,6 +220,32 @@ main( int argc, char ** argv ) {
 				return 1;
 			}
 			continue;
+		} else if( is_dash_arg_prefix( argv[i], "lease-duration", 1 ) ) {
+			++i;
+			if( argv[i] != NULL ) {
+				char * endptr = NULL;
+				const char * ld = argv[i];
+				leaseDuration = strtol( ld, & endptr, 0 );
+				if( * endptr != '\0' ) {
+					fprintf( stderr, "%s: -lease-duration requires an integer argument.\n", argv[0] );
+					return 1;
+				}
+				if( leaseDuration <= 0 ) {
+					fprintf( stderr, "%s: the lease duration must be greater than zero.\n", argv[0] );
+					return 1;
+				}
+				continue;
+			} else {
+				fprintf( stderr, "%s: -lease-duration requires an argument.\n", argv[0] );
+				return 1;
+			}
+			continue;
+		} else if( is_dash_arg_prefix( argv[i], "debug", 1 ) ) {
+			dprintf_set_tool_debug( "TOOL", 0 );
+			continue;
+		} else if( is_dash_arg_prefix( argv[i], "help", 1 ) ) {
+			help( argv[0] );
+			return 1;
 		} else if( argv[i][0] == '-' && argv[i][1] != '\0' ) {
 			fprintf( stderr, "%s: unrecognized option (%s).\n", argv[0], argv[i] );
 			return 1;
@@ -241,6 +262,14 @@ main( int argc, char ** argv ) {
 
 	if( fileName == NULL ) {
 		fprintf( stderr, "%s: you must specify a file containing an annex specification.\n", argv[0] );
+		return 1;
+	}
+
+	// FIXME: Switch from -lease-duration to a positional argument, where the
+	// positional argument accepts '+<number>' as "<number> of seconds from
+	// now."
+	if( leaseDuration == 0 ) {
+		fprintf( stderr, "%s: you must specify -lease-duration.\n", argv[0] );
 		return 1;
 	}
 
@@ -281,6 +310,8 @@ main( int argc, char ** argv ) {
 		}
 	}
 
+	time_t now = time( NULL );
+	spotFleetRequest.Assign( "EndOfLease", now + leaseDuration );
 
 	if( serviceURL != NULL ) {
 		spotFleetRequest.Assign( "ServiceURL", serviceURL );
