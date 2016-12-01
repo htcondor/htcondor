@@ -1413,6 +1413,10 @@ set_file_owner_ids( uid_t uid, gid_t gid )
 }
 
 
+// since this makes syscalls directly into linux kernel, don't compile
+// this code on non-linux unix. (e.g. OS X)
+#ifdef LINUX
+
 // helper types and definitions to avoid importing keyutils.h
 typedef int32_t key_serial_t;
 #define KEYCTL_JOIN_SESSION_KEYRING     1       /* join or start named session keyring */
@@ -1436,6 +1440,7 @@ long condor_keyctl_link(key_serial_t k, key_serial_t r) {
 long condor_keyctl_describe(key_serial_t k, char* b, long l) {
   return syscall(__NR_keyctl, KEYCTL_DESCRIBE, k, b, l);
 }
+#endif
 
 
 // UNIX
@@ -1487,6 +1492,8 @@ _set_priv(priv_state s, const char *file, int line, int dologging)
 		case PRIV_USER:
 		case PRIV_USER_FINAL:
 			{
+// we can only use linux-specific kernel keyrings
+#ifdef LINUX
 				if(should_use_keyring_sessions()) {
 
 
@@ -1541,6 +1548,7 @@ _set_priv(priv_state s, const char *file, int line, int dologging)
 					dprintf(D_ALWAYS, "KEYCTL: USER describe(%li) %s\n", user_keyring, keydesc);
 					*/
 				}
+#endif // LINUX
 
 				set_root_euid();
 				if(s == PRIV_USER) {
