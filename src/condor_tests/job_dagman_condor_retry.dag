@@ -1,0 +1,13 @@
+# Test jobs that get retried at the HTCondor level.
+
+# This job will succeed with an exit code of 3.
+job Node1 job_dagman_condor_retry-node1.sub
+
+# This job will exhaust all of its retries.
+job Node2 job_dagman_condor_retry-node2.sub
+retry Node2 2
+
+# This job will have retries short-circuited by the retry_until command.
+job Node3 job_dagman_condor_retry-node3.sub
+
+vars all_nodes name="$(JOB)"
