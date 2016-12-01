@@ -5,9 +5,12 @@ job Node1 job_dagman_condor_retry-node1.sub
 
 # This job will exhaust all of its retries.
 job Node2 job_dagman_condor_retry-node2.sub
+vars Node2 retryNum="$(RETRY)"
+script post Node2 job_dagman_condor_retry-post.pl 13 $RETURN
 retry Node2 2
 
 # This job will have retries short-circuited by the retry_until command.
 job Node3 job_dagman_condor_retry-node3.sub
+script post Node3 job_dagman_condor_retry-post.pl 5 $RETURN
 
 vars all_nodes name="$(JOB)"

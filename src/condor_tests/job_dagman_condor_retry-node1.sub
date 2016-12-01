@@ -1,6 +1,6 @@
 executable = ./job_dagman_condor_retry-node.pl
-arguments = $(name) $$([NumJobCompletions])
+arguments = $(name) $$([NumJobCompletions]) 0
 output = job_dagman_condor_retry_$(name).out
 max_retries = 5
-success_exit_code = 3
+success_exit_code = 2
 queue

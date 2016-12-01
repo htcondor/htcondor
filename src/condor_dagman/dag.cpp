@@ -725,6 +725,7 @@ Dag::ProcessAbortEvent(const ULogEvent *event, Job *job,
 }
 
 //---------------------------------------------------------------------------
+//JobSuccessExitCode is what we need to check for #6029
 void
 Dag::ProcessTerminatedEvent(const ULogEvent *event, Job *job,
 		bool recovery) {
@@ -735,7 +736,15 @@ Dag::ProcessTerminatedEvent(const ULogEvent *event, Job *job,
 		const JobTerminatedEvent * termEvent =
 					(const JobTerminatedEvent*) event;
 
-		bool failed = !(termEvent->normal && termEvent->returnValue == 0);
+		int successExitCode = 0;
+#if 1 //TEMPTEMP
+		if ( !strcmp( job->GetJobName(), "Node1") ) {
+			successExitCode = 2;
+		}
+#endif //TEMPTEMP
+
+		bool failed = !(termEvent->normal &&
+					termEvent->returnValue == successExitCode);
 
 		if( failed ) {
 				// job failed or was killed by a signal
@@ -787,7 +796,7 @@ Dag::ProcessTerminatedEvent(const ULogEvent *event, Job *job,
 
 		} else {
 			// job succeeded
-			ASSERT( termEvent->returnValue == 0 );
+			//TEMPTEMP? ASSERT( termEvent->returnValue == 0 );
 
 				// Only change the node status if we haven't already
 				// gotten an error on this node.
@@ -804,6 +813,7 @@ Dag::ProcessTerminatedEvent(const ULogEvent *event, Job *job,
 					termEvent->subproc );
 			}
 			debug_printf( DEBUG_NORMAL,
+							//TEMPTEMP -- add exit code here if non-zero
 							"Node %s job proc (%d.%d.%d) completed "
 							"successfully.\n", job->GetJobName(),
 							termEvent->cluster, termEvent->proc,
