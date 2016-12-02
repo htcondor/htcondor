@@ -49,16 +49,6 @@ use SECURITY : HOST_BASED
 ##  FLOCK_TO defines the central managers that your schedd will advertise itself to (i.e. these pools will give matches to your schedd).
 #FLOCK_TO = condor.cs.wisc.edu, cm.example.edu
 
-##
-## If you've installed the condor-ec2 package, this will set TCP_FORWARDING_HOST
-## to the instance's public IP and cause the startd to advertise that IP and
-## the instance ID.  It will also fetch and install additional config.d files
-## if the instance's IAM profile is configured correctly (pointing to a single
-## specific file in S3); see the manual for condor_annex for details.
-##
-include ifexist command into $(LOCAL_CONFIG_DIR)/49ec2-instance.config : \
-	/etc/condor/config.d/49ec2-instance.sh
-
 ##--------------------------------------------------------------------
 ## Values set by the condor_configure script:
 ##--------------------------------------------------------------------
