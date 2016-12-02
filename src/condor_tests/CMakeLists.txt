@@ -397,6 +397,7 @@ if (BUILD_TESTING)
 	condor_pl_test(cmd_q_shows-cputime "Condor_q shows cputime" "core;quick;full;quicknolink")
 	condor_pl_test(cmd_q_shows-format "Condor_q shows format" "core;quick;full;quicknolink")
 	condor_pl_test(file_transfer_submit "condor_submit file transfer" "core;quick;full;quicknolink")
+	condor_pl_test(config_validate_policy_templates "config_validate_policy_templates" "core;quick;full;quicknolink")
 
 	if (LINUX)
           condor_pl_test(cmd_ssh_to_job_van "condor_ssh_to_job" "core;quick;full;quicknolink")

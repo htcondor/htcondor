@@ -270,3 +270,4 @@ lib_procapi_pidtracking-byenv: personal
 lib_procapi_pidtracking-snapshot: personal
 lib_unit_tests: personal
 lib_userlog: personal
+config_validate_policy_templates: personal
