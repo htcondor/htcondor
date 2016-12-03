@@ -2167,10 +2167,10 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 					// If file_mode is still NULL_FILE_PERMISSIONS here, it
 					// likely means that our peer is likely a Windows machine,
 					// since Windows will always claim a mode of 0000.
-					// In this case, default to mode 0600, which is a
+					// In this case, default to mode 0700, which is a
 					// conservative default, and matches what we do in
 					// ReliSock::get_file().
-					file_mode = (condor_mode_t) 0600;
+					file_mode = (condor_mode_t) 0700;
 				}
 				mode_t old_umask = umask(0);
 				rc = mkdir(fullname.Value(),(mode_t)file_mode);

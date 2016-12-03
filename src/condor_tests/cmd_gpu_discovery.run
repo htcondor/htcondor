@@ -311,6 +311,30 @@ if($gpumiss == 0) {
 	RegisterResult(0,test_name,$testname);
 }
 
+printf "#################################### NEW TESTS ##########################################\n";
+my $lib_dir = `condor_config_val LIBEXEC`;
+$lib_dir =~ s/\n//;
+my $result1 = system("$lib_dir/condor_gpu_discovery -config 1> $testname.newtest.out 2> $testname.newtest.err");
+if ($result1 != 0) {
+	print "Something went wrong\nOutput of stderr is:\n";
+	open(FH, "$testname.newtest.err");
+	while (<FH>) {
+		print $_;
+	}
+	RegisterResult(0,test_name,$testname);
+} else {
+	my $size = (stat "$testname.newtests.err")[7];
+	if ($size != 0) {
+		print "printed stuff to stderr!\nOutput of stderr is:\n";
+		open(FH, "$testname.newtest.err");
+		while (<FH>) {
+			print $_;
+		}
+		RegisterResult(0,test_name,$testname);
+	} else {
+		RegisterResult(1,test_name,$testname);
+	}
+}
 
 CondorTest::EndTest();
 

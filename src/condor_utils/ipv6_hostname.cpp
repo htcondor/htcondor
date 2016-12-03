@@ -411,23 +411,27 @@ MyString get_hostname(const condor_sockaddr& addr) {
 
 bool verify_name_has_ip(MyString name, condor_sockaddr addr){
 	std::vector<condor_sockaddr> addrs;
-	bool found = false;
 
 	addrs = resolve_hostname(name);
-	dprintf(D_FULLDEBUG, "IPVERIFY: checking %s against %s\n", name.Value(), addr.to_ip_string().Value());
+	if (IsDebugVerbose(D_SECURITY)) {
+		// print the list of addrs that we are comparing against
+		MyString ips_str; ips_str.reserve_at_least(addrs.size()*40);
+		for(unsigned int i = 0; i < addrs.size(); i++) {
+			ips_str += "\n\t";
+			ips_str += addrs[i].to_ip_string().Value();
+		}
+		dprintf(D_SECURITY|D_VERBOSE, "IPVERIFY: checking %s against %s addrs are:%s\n",
+				name.Value(), addr.to_ip_string().Value(), ips_str.Value());
+	}
 	for(unsigned int i = 0; i < addrs.size(); i++) {
 		// compare MyStrings
 		// addr.to_ip_string
 		if(addrs[i].to_ip_string() == addr.to_ip_string()) {
-			dprintf(D_FULLDEBUG, "IPVERIFY: matched %s to %s\n", addrs[i].to_ip_string().Value(), addr.to_ip_string().Value());
-			found = true;
-		} else {
-			dprintf(D_FULLDEBUG, "IPVERIFY: comparing %s to %s\n", addrs[i].to_ip_string().Value(), addr.to_ip_string().Value());
+			dprintf(D_SECURITY, "IPVERIFY: for %s matched %s to %s\n", name.Value(), addrs[i].to_ip_string().Value(), addr.to_ip_string().Value());
+			return true;
 		}
 	}
-	dprintf(D_FULLDEBUG, "IPVERIFY: ip found is %i\n", found);
-
-	return found;
+	return false;
 }
 
 std::vector<MyString> get_hostname_with_alias(const condor_sockaddr& addr)

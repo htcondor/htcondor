@@ -58,12 +58,33 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Configuration variables of the form \Verb@SUBSYS.LOCALNAME.VARIABLE@ no longer work.
+\item On Linux, the starter now puts all jobs in a cgroup by default.  The default
+for CGROUP\_MEMORY\_LIMIT\_POLICY is now "none".  To disable cgroups, an admin
+can set the BASE\_CGROUP param to the empty string.
+\Ticket{5936}
+
+\item Added new param \Macro{DOCKER\_VOLUME\_DIR\_XXX\_MOUNT\_IF} which is an expression,
+evaluated in the context of the machine and job ad, which if it evaluates to a string,
+becomes a docker volume mount.  This allows admins to conditionally add docker volumes
+for certain types of jobs.
+\Ticket{5758}
+
+\item The XferStatsLog file on the submit side now contains TCP statistics for both the
+shadow point of view, and the starter point of view.  The starter side line is prefixed
+with the words "peer stats from starter".
+\Ticket{5917}
+
+\item Configuration variables of the form \verb@SUBSYS.LOCALNAME.VARIABLE@ no longer work.
 The use of the SUBSYS prefix before LOCALNAME never worked fully, and was only necessary for while
 as a workaround for a bug that was fixed many years ago. \Condor{config\_val} and the \Condor{master} will
 now produce warning messages when the configuration has variables that appear to of this form and
 begin with a known SUBSYS name like MASTER or COLLECTOR.
 \Ticket{5969}
+
+\item The \Macro{SLOT\_WEIGHT} parameter can now be set on the central manager,
+instead of all the execute nodes.  If the execute nodes set this parameter, it
+will override the central manager setting.
+\Ticket{5953}
 
 \item New submit command \SubmitCmdNI{gce\_json\_file} can be used with
 grid-type gce jobs to specify a file that contains JSON object members
@@ -116,7 +137,7 @@ by the Job Router.
 \Ticket{5235}
 
 \item The \verb@$F()@ configuration macro has new options to support
-converions of paths to Windows style path separators or to Unix style.
+conversions of paths to Windows style path separators or to Unix style.
 When used in \Condor{submit} files it can do path completion as well.
 \Ticket{5938}
 
@@ -150,6 +171,7 @@ in the job transform.
 \Ticket{5290}
 
 \item A new tool - \Condor{transform\_ads} has been added.
+(See section~\ref{man-condor-transform-ads} for details.)
 \Ticket{5805}
 
 \item A join function has been added to the ClassAd language.
@@ -162,6 +184,13 @@ in the job transform.
 \item \Condor{who} has additional options for querying the state and readiness of the various daemons.
 It has a command that can be used to wait for the daemons to startup with a timeout.
 \Ticket{5416}
+
+\item Added first-class \Condor{submit} commands supporting job retries.
+(See section~\ref{condor-submit-max-retries} for details.)
+\Ticket{5912}
+
+\item Added initial support for Singularity containers.
+\Ticket{5828}
 
 \end{itemize}
 
