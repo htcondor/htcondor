@@ -128,6 +128,7 @@ Daemon::Daemon( const ClassAd* tAd, daemon_t tType, const char* tPool )
 		_subsys = strnewp( "CLUSTERD" );
 		break;
 	case DT_COLLECTOR:
+	case DT_CLERK:
 		_subsys = strnewp( "COLLECTOR" );
 		break;
 	case DT_NEGOTIATOR:
@@ -1021,6 +1022,11 @@ Daemon::locate( Daemon::LocateType method )
 			rval = getCmInfo( "COLLECTOR" );
 		} while (rval == false && nextValidCm() == true);
 		break;
+	case DT_CLERK:
+		// do a collector lookup for child collector ads.
+		setSubsystem( "COLLECTOR" );
+		rval = getDaemonInfo( COLLECTOR_AD, true, method );
+		break;
 	case DT_QUILL:
 		setSubsystem( "QUILL" );
 		rval = getDaemonInfo( SCHEDD_AD, true, method );
@@ -1109,7 +1115,7 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector, LocateType method )
 		// config file for a subsystem_HOST, e.g. SCHEDD_HOST=XXXX
 	if( ! _name  && !_pool ) {
 		formatstr( buf, "%s_HOST", _subsys );
-		char *specified_host = param( buf.c_str() );
+		char *specified_host = param_with_context( buf.c_str(), get_mySubSystemName(), NULL, NULL );
 		if ( specified_host ) {
 				// Found an entry.  Use this name.
 			_name = strnewp( specified_host );
@@ -1776,16 +1782,26 @@ Daemon::readAddressFile( const char* subsys )
 	bool rval = false;
 	bool use_superuser = false;
 
+	// we want to avoid doing LOCALNAME.COLLECTOR_ADDRESS_FILE lookups when we are LOCALNAME.COLLECTOR
+	// so setup an explict context for the param lookups that does not contain localname
+	// when we are trying to lookup our own subsys_host
+	MACRO_EVAL_CONTEXT ctx;
+	ctx.init(get_mySubSystemName(),3);
+	if (MATCH != strcasecmp(subsys,ctx.subsys)) {
+		// set a localname only if the subsys name we are trying to lookup doesn't match our subsys.
+		ctx.localname = get_mySubSystem()->getLocalName();
+	}
+
 	if ( useSuperPort() )
 	{
 		formatstr( param_name, "%s_SUPER_ADDRESS_FILE", subsys );
 		use_superuser = true;
-		addr_file = param( param_name.c_str() );
+		addr_file = param_ctx( param_name.c_str(), ctx );
 	}
 	if ( ! addr_file ) {
 		formatstr( param_name, "%s_ADDRESS_FILE", subsys );
 		use_superuser = false;
-		addr_file = param( param_name.c_str() );
+		addr_file = param_ctx( param_name.c_str(), ctx );
 		if( ! addr_file ) {
 			return false;
 		}
@@ -1850,8 +1866,18 @@ Daemon::readLocalClassAd( const char* subsys )
 	ClassAd *adFromFile;
 	std::string param_name;
 
+	// we want to avoid doing LOCALNAME.SUBSYS_DAEMON_AD_FILE lookups when we are LOCALNAME.SUBSYS
+	// so setup an explict context for the param lookups that does not contain localname
+	// when we are trying to lookup our own subsys_host
+	MACRO_EVAL_CONTEXT ctx;
+	ctx.init(get_mySubSystemName(),3);
+	if (MATCH != strcasecmp(subsys,ctx.subsys)) {
+		// set a localname only if the subsys name we are trying to lookup doesn't match our subsys.
+		ctx.localname = get_mySubSystem()->getLocalName();
+	}
+
 	formatstr( param_name, "%s_DAEMON_AD_FILE", subsys );
-	addr_file = param( param_name.c_str() );
+	addr_file = param_ctx( param_name.c_str(), ctx );
 	if( ! addr_file ) {
 		return false;
 	}
@@ -2248,9 +2274,19 @@ getCmHostFromConfig( const char * subsys )
 	std::string buf;
 	char* host = NULL;
 
+	// we want to avoid doing LOCALNAME.COLLECTOR_HOST lookups when we are LOCALNAME.COLLECTOR
+	// so setup an explict context for the param lookups that does not contain localname
+	// when we are trying to lookup our own subsys_host
+	MACRO_EVAL_CONTEXT ctx;
+	ctx.init(get_mySubSystemName(),3);
+	if (MATCH != strcasecmp(subsys,ctx.subsys)) {
+		// set a localname only if the subsys name we are trying to lookup doesn't match our subsys.
+		ctx.localname = get_mySubSystem()->getLocalName();
+	}
+
 		// Try the config file for a subsys-specific hostname 
 	formatstr( buf, "%s_HOST", subsys );
-	host = param( buf.c_str() );
+	host = param_ctx( buf.c_str(), ctx );
 	if( host ) {
 		if( host[0] ) {
 			dprintf( D_HOSTNAME, "%s is set to \"%s\"\n", buf.c_str(), 
@@ -2266,7 +2302,7 @@ getCmHostFromConfig( const char * subsys )
 
 		// Try the config file for a subsys-specific IP addr 
 	formatstr( buf, "%s_IP_ADDR", subsys );
-	host = param( buf.c_str() );
+	host = param_ctx( buf.c_str(), ctx );
 	if( host ) {
 		if( host[0] ) {
 			dprintf( D_HOSTNAME, "%s is set to \"%s\"\n", buf.c_str(), host );
@@ -2277,7 +2313,7 @@ getCmHostFromConfig( const char * subsys )
 	}
 
 		// settings should take precedence over this). 
-	host = param( "CM_IP_ADDR" );
+	host = param_ctx( "CM_IP_ADDR", ctx );
 	if( host ) {
 		if(  host[0] ) {
 			dprintf( D_HOSTNAME, "%s is set to \"%s\"\n", buf.c_str(), 
