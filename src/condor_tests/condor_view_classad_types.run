@@ -33,6 +33,9 @@ my $append_condor_config = '
   DC_DAEMON_LIST = + VIEW_COLLECTOR
 
   CONDOR_VIEW_CLASSAD_TYPES = Negotiator
+  COLLECTOR_DEBUG = $(COLLECTOR_DEBUG) D_CAT D_ALWAYS:2 D_STATUS:1 D_COMMAND:1
+
+  use Feature : PartitionableSlot(1)
 
   SETTABLE_ATTRS_CONFIG = CONDOR_VIEW_CLASSAD_TYPES, CONDOR_VIEW_HOST
   ENABLE_RUNTIME_CONFIG = TRUE
@@ -50,7 +53,8 @@ CondorTest::StartCondorWithParams(
 # Sanity, the Negotiator showed up in the Collector
 CondorLog::RunCheck(
     daemon => "COLLECTOR",
-    match_regexp => "NegotiatorAd +: Inserting"
+    match_regexp => "(NegotiatorAd +: Inserting)|(Inserting Negotiator ad)",
+    num_retries => 120
 );
 
 # Figure out what port the view collector started with
@@ -83,9 +87,13 @@ if( $viewCollector =~ m/^[[][\d:]+]:\d+/ ) {
 	exit( 1 );
 }
 
+my $viewPool = quoteMyString("$viewCollector");
+CondorTest::runCondorTool("condor_status -any -pool $viewPool -af:h MyType Name MyAddress");
+
 # Note: you must run condor_reconfig after rset'ing a variable
 my $quote = quoteMyString("CONDOR_VIEW_HOST=$viewCollector");
-system("condor_config_val -collector -rset $quote");
+my $quote2 = quoteMyString("CONDOR_VIEW_CLASSAD_TYPES=Negotiator");
+CondorTest::runCondorTool("condor_config_val -collector -rset $quote $quote2");
 CondorTest::runCondorTool("condor_reconfig -collector");
 
 # Validate that we set this properly
@@ -95,19 +103,40 @@ print "\t" . `$cmd`;
 
 CondorLog::RunCheck(
     daemon => "COLLECTOR",
-    match_regexp => "Will forward ads on to View Server"
+    match_regexp => "Will forward ads on to View Server",
+    num_retries => 20,
+    echo => ">",
 );
+
+#CondorTest::runCondorTool("condor_status -any -af:h MyType Name MyAddress");
+#CondorTest::runCondorTool("condor_status -any -pool $viewPool -af:h MyType Name MyAddress");
 
 # After setting up the collector to forward ads, we need to reconfig the 
 # negotiator to get it to re-send its ad to the collector (and hence, on
 # to the View collector)
-system("condor_reconfig -negotiator");
+CondorTest::runCondorTool("condor_reconfig -negotiator");
+
+#sleep(5);
+#CondorTest::runCondorTool("condor_status -any -af:h MyType Name MyAddress");
+#CondorTest::runCondorTool("condor_status -any -pool $viewPool -af:h MyType Name MyAddress");
+
+TLOG "Searching CollectorLog for any mention of the Negotiator\n";
+my @lines = ();
+CondorLog::RunCheck(
+    daemon => "COLLECTOR",
+    match_regexp => "[Nn]egotiator|NEGOTIATOR",
+    num_retries => 10,
+    all => \@lines,
+);
+for (@lines) { print ">" . $_; }
 
 # The Negotiator got forwarded to the View Collector
+TLOG "Searching ViewCollectorLog for Negotiator ad insertion:\n";
 CondorLog::RunCheck(
     daemon => "VIEW_COLLECTOR.COLLECTOR",
-    match_regexp => "NegotiatorAd +: Inserting",
+    match_regexp => "(NegotiatorAd +: Inserting)|(Inserting Negotiator ad)|(Replacing Negotiator ad)",
     num_retries => 10,
+    echo => ">",
 );
 
 CondorTest::runCondorTool("condor_off -negotiator");
@@ -136,17 +165,22 @@ while( $done eq "no") {
 # Sanity, the Negotiator was removed from the Collector
 CondorLog::RunCheck(
     daemon => "COLLECTOR",
-    match_regexp => "Got INVALIDATE_NEGOTIATOR_ADS"
+    match_regexp => "Got INVALIDATE_NEGOTIATOR_ADS",
+    num_retries => 60,
+    echo => ">",
 );
 CondorLog::RunCheck(
     daemon => "COLLECTOR",
-    match_regexp => "Forwarding ad: type=Negotiator command=INVALIDATE_NEGOTIATOR_ADS"
+    match_regexp => "Forwarding ad: type=Negotiator command=INVALIDATE_NEGOTIATOR_ADS",
+    num_retries => 10,
+    echo => ">",
 );
 
 # The Negotiator was removed from the View Collector
 CondorLog::RunCheck(
     daemon => "VIEW_COLLECTOR.COLLECTOR",
-    match_regexp => "Got INVALIDATE_NEGOTIATOR_ADS"
+    match_regexp => "Got INVALIDATE_NEGOTIATOR_ADS",
+    num_retries => 10,
 );
 
 CondorTest::runCondorTool("condor_config_val -collector -rset \"CONDOR_VIEW_CLASSAD_TYPES=Negotiator,Machine\"");
@@ -175,11 +209,13 @@ while( $done eq "no") {
 # The Machine ads now get forwarded to the View Collector
 CondorLog::RunCheck(
     daemon => "COLLECTOR",
-    match_regexp => "Forwarding ad: type=Machine command=UPDATE_STARTD_AD"
+    match_regexp => "Forwarding ad: type=Machine command=UPDATE_STARTD_AD",
+    num_retries => 20,
 );
 CondorLog::RunCheck(
     daemon => "VIEW_COLLECTOR.COLLECTOR",
-    match_regexp => "StartdAd +: Inserting"
+    match_regexp => "(StartdAd +: Inserting)|(Inserting Machine ad)",
+    num_retries => 10,
 );
 
 
