@@ -70,8 +70,8 @@ public:
 		return ad;
 	}
 
-	int collect(ClassAd *ad) {
-		return ::collect(collect_op, adtype, ad, NULL);
+	int collect(ClassAd *ad, CollectStatus & status) {
+		return ::collect(collect_op, adtype, ad, NULL, status);
 	}
 
 	bool Idle() { return is_waiting; }
@@ -129,13 +129,14 @@ public:
 
 	// command handlers
 	int receive_update(int, Stream*);
-	int receive_update_expect_ack(int, Stream*);
+	//int receive_update_expect_ack(int, Stream*);
 	int receive_invalidation(int, Stream*);
 	int receive_query(int, Stream*);
 
 	// timer handlers
 	int update_collector(); // send normal daemon updates to the collector.  called when ! ImTheCollector
 	int send_collector_ad(); // send collector ad to upstream collectors, called when ImTheCollector
+	int housekeeping();      // housekeeping, expire ads
 	int populate_collector(); // populate the collectors tables from persist storage
 
 private:
@@ -146,16 +147,29 @@ private:
 	CollectorList* m_collectorsToUpdate;
 	int m_idTimerSendUpdates;  // the id of the timer for sending updates upstream.
 	int m_idTimerPopulate;     // the id of the timer for populating the collector from persist
+	int m_idTimerHousekeeping; // the id of the timer for housekeeping
 
 	// fields used by populate-from-file code
 	PopulateAdsInfo * m_popList;
 	void append_populate(PopulateAdsInfo * popAds) { if (m_popList) m_popList->push_back(popAds); else m_popList = popAds; }
+	void SetupAdTypes();
+	void CleanupAdTypes();
+
+	// forward the ad if one of these attributes changed,
+	// always forward if this list is empty and forwarding is enabled.
+	struct vc_entry { const char * name; DCCollector* collector; Sock* sock; };
+	std::vector<vc_entry> vc_list;
+	Timeslice view_sock_timeslice;
+	void SetupForwarding(); // called by Config to setup forwarding.
+	void CleanupForwarding();
 
 	// cached param values
 	int m_UPDATE_INTERVAL;      // the rate at which we sent daemon ad updates upstream
 	int m_CLIENT_TIMEOUT;
 	int m_QUERY_TIMEOUT;
 	int m_CLASSAD_LIFETIME;
+	int m_FORWARD_INTERVAL;
+	bool m_FORWARD_FILTERING;
 	bool m_LOG_UPDATES;
 	bool m_IGNORE_INVALIDATE;
 	bool m_EXPIRE_INVALIDATED_ADS;
@@ -166,6 +180,8 @@ private:
 	int put_ad_v2(ClassAd &ad, Stream* sock, ClassAd & query);
 	int put_ad_v3(ClassAd &ad, Stream* sock, const classad::References * projection);
 
+		// forward update/invalidate commands
+	int send_classad_to_sock(int command, ClassAd * ad, ClassAd * adPvt);
 		// register the socket to use with subsequent updates.
 	int StashSocket(ReliSock* sock);
 

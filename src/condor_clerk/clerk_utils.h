@@ -39,7 +39,7 @@ public:
 };
 
 
-void remove_self_from_collector_list(CollectorList * colist, bool ImTheCollector);
+void remove_self_from_collector_list(CollectorList * colist, bool check_default_id, bool im_the_collector);
 
 // check for, (and optionally count) referenced to specific attributes.
 typedef std::map<std::string, int, classad::CaseIgnLTStr> NOCASE_STRING_TO_INT_MAP;
@@ -94,5 +94,6 @@ const T * BinaryLookup (const T aTable[], int cElms, int id)
 	}
 }
 
+void ConvertStartdAdToOffline(ClassAd & ad);
 
 #endif

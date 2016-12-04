@@ -32,27 +32,28 @@ void config_standard_ads(int max_adtype);
 // about the ad tables can be finalized.
 void collect_finalize_ad_tables();
 
-// call this to register the collectors own ad
-int collect_self(ClassAd * ad);
-
-// the act of collection. 
-int collect(int operation, AdTypes whichAds, ClassAd * ad, ClassAd * adPvt);
-// possible values for operation argument of collect
-#define COLLECT_OP_REPLACE   0
-#define COLLECT_OP_MERGE     1
-#define COLLECT_OP_EXPIRE    2 // expire, but do not delete expired ads
-#define COLLECT_OP_DELETE    3
-
-// delete or exprire ads that match the delete_if constraint
-int collect_delete(int operation, AdTypes whichAds, ConstraintHolder & delete_if);
-// delete or exprire ads that match the key
-int collect_delete(int operation, AdTypes whichAds, const std::string & key);
-
 // register a new AdType or lookup the AdType for an existing type name
 AdTypes collect_register_adtype(const char * mytype);
+// just lookup the AdType for an existing type, returns NO_AD if the name does not match anything.
+AdTypes collect_lookup_mytype(const char * mytype);
 
 // adjust settings for an AdType, either new or dynamic
-void collect_set_adtype(AdTypes whichAds, const char * keylist, double lifetime, bool big_table);
+void collect_set_adtype(AdTypes whichAds, const char * keylist, double lifetime, unsigned int flags, const char * persist);
+#define COLL_F_FORK           0x01
+#define COLL_F_FORWARD        0x02
+#define COLL_F_ALWAYS_MERGE   0x04
+//#define COLL_F_SPARE3         0x08
+// these flag bits indicate which things collect_set_adtype should set.
+#define COLL_SET_FORK         (COLL_F_FORK << 16)
+#define COLL_SET_FORWARD      (COLL_F_FORWARD << 16)
+#define COLL_SET_ALWAYS_MERGE (COLL_F_ALWAYS_MERGE << 16)
+#define COLL_SET_LIFETIME     (0x10 << 16)
+
+// adjust which AdTypes will be forwarded.
+void collect_set_forwarding_adtypes(classad::References & viewAdTypes);
+
+void offline_ads_load(const char * logfile);
+void offline_ads_populate();
 
 // Returns the private AdType associated with this ad. If The AdType is private, returns itself
 // if there is no private AdType, returns NO_AD
@@ -101,6 +102,10 @@ bool collect_add_absent_clause(ConstraintHolder & filter_if);
 #define AC_ENT_OFFLINE 0x0002
 #define AC_ENT_EXPIRED 0x0004
 
+#define AC_DIRTY_TIME  0x0001 // a full update was recieved
+#define AC_DIRTY_MERGE 0x0001 // a merge update was recieved
+#define AC_DIRTY_WATCH 0x0008 // one of the watch attributes was dirtied
+
 // This structure is what is actually stored in the collector tables
 // it is not a class, has no destructor, deep copy, or virtual methods on purpose
 // a bit more care is required to use it correctly, but that lowers the memory/copying cost
@@ -108,17 +113,59 @@ bool collect_add_absent_clause(ConstraintHolder & filter_if);
 typedef struct AdCollectionEntry {
 	AdTypes                  adType;
 	int                      flags;  // zero or more of AC_ENT_* flags
+	int                      dirty;  // flags indicate ad was changed sinced last housekeeping/forwarding
 	time_t                   updateTime; // value of ATTR_LAST_HEARD_FROM
 	time_t                   expireTime; // value of ATTR_LAST_HEARD_FROM + ATTR_CLASSAD_LIFETIME
+	time_t                   forwardTime; // value of ATTR_LAST_FORWARDED
 	compat_classad::ClassAd* ad;
-	AdCollectionEntry() : adType(NO_AD), flags(0), updateTime(0), expireTime(0), ad(NULL) {}
+	AdCollectionEntry() : adType(NO_AD), flags(0), dirty(0), updateTime(0), expireTime(0), forwardTime(0), ad(NULL) {}
 	AdCollectionEntry(AdTypes t, int f, time_t u, time_t e, compat_classad::ClassAd* a);
 	int UpdateAd(AdTypes adtype, int new_flags, time_t now, time_t expire_time, compat_classad::ClassAd* new_ad, bool merge_it=false);
 	int DeleteAd(AdTypes adtype, int new_flags, time_t now, time_t expire_time, bool expire_it=false);
 	bool CheckAbsent(AdTypes adtype, const std::string & key);
+	bool CheckOffline(AdTypes adtype, const std::string key, bool force_offline);
 	bool PersistentRemoveAd(AdTypes adtype, const std::string & key);
 	bool PersistentStoreAd(AdTypes adtype, const std::string & key);
+	time_t ForwardBeforeTime(time_t now);
+	void Forwarded(time_t now);
 } AdCollectionEntry;
+
+typedef std::map<std::string, AdCollectionEntry> AdCollection;
+typedef std::pair<std::string, AdCollectionEntry> AdCollectionPair;
+
+// call this to register the collectors own ad
+int collect_self(ClassAd * ad);
+
+// this class is used return status information from a collect operation
+class CollectStatus {
+public:
+	CollectStatus() : entry(NULL), should_forward(false) {}
+	~CollectStatus() {}
+
+	AdCollectionEntry * entry;
+	std::string key;
+	bool should_forward;
+
+	void reset() { entry = NULL; key.clear(); should_forward = false; }
+};
+
+// the act of collection. 
+int collect(int operation, AdTypes whichAds, ClassAd * ad, ClassAd * adPvt, CollectStatus & status);
+// possible values for operation argument of collect
+#define COLLECT_OP_REPLACE   0
+#define COLLECT_OP_MERGE     1
+#define COLLECT_OP_EXPIRE    2 // expire, but do not delete expired ads
+#define COLLECT_OP_DELETE    3
+#define COLLECT_OP_OFFLINE    0x100 // this can be OR'ed with COLLECT_OP_REPLACE to force an ad offline. (used by UPDATE_STARTD_AD_WITH_ACK)
+#define COLLECT_OP_NO_OFFLINE 0x200 // this can be OR'ed with COLLECT_OP_REPLACE to disable updating of offline ads (used by offline_populate)
+
+// delete or exprire ads that match the delete_if constraint
+int collect_delete(int operation, AdTypes whichAds, ConstraintHolder & delete_if);
+// delete or exprire ads that match the key
+int collect_delete(int operation, AdTypes whichAds, const std::string & key);
+
+// called by the housekeeper to expire ads
+int collect_clean(time_t now);
 
 // walk the public collection, calling the callback for ads that match the call_if expression
 // the callback returns one of the WalkPostOp operations to control how iterations proceeds.
@@ -148,7 +195,7 @@ enum WalkPostOp {
 	Walk_Op_DeleteItemAndBreak    = (Walk_Op_DeleteItem | Walk_Op_Break),
 	Walk_Op_DeleteItemAndAbort    = (Walk_Op_DeleteItem | Walk_Op_Abort1),
 };
-int collect_walk(AdTypes adType, ConstraintHolder & call_if, WalkPostOp (*callback)(void* pv, AdCollectionEntry& entry), void*pv);
+int collect_walk(AdTypes adType, ConstraintHolder & call_if, WalkPostOp (*callback)(void* pv, AdCollection::iterator & it), void*pv);
 
 
 // brute force totaling of various ads in the collection

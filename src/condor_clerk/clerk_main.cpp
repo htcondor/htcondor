@@ -28,6 +28,8 @@
 #include "clerk_utils.h"
 #include "clerk.h"
 
+#include "ccb_server.h"
+
 #if !defined(_XFORM_UTILS_H)
 // declare enough of the condor_params structure definitions so that we can define submit hashtable defaults
 namespace condor_params {
@@ -38,6 +40,8 @@ namespace condor_params {
 
 // set this to true when this deamon is the collector (it turns off reporting to the collector ;)
 bool ImTheCollector = false;
+bool ImTheViewCollector = false;
+class CCBServer * g_ccb_server = NULL;
 
 // this holds varibles the clerk wants to keep track of
 static char ClerkString[] = "Clerk";
@@ -95,12 +99,15 @@ CmDaemon::CmDaemon()
 	, m_collectorsToUpdate(NULL)
 	, m_idTimerSendUpdates(-1)
 	, m_idTimerPopulate(-1)
+	, m_idTimerHousekeeping(-1)
 	, m_popList(NULL)
 		// cached param values
 	, m_UPDATE_INTERVAL(15*60)
 	, m_CLIENT_TIMEOUT(30)
 	, m_QUERY_TIMEOUT(60)
 	, m_CLASSAD_LIFETIME(900)
+	, m_FORWARD_INTERVAL(m_UPDATE_INTERVAL/3)
+	, m_FORWARD_FILTERING(false)
 	, m_LOG_UPDATES(false)
 	, m_IGNORE_INVALIDATE(false)
 	, m_EXPIRE_INVALIDATED_ADS(false)
@@ -112,6 +119,24 @@ CmDaemon::~CmDaemon()
 {
 	delete m_collectorsToUpdate;
 	m_collectorsToUpdate = NULL;
+}
+
+void CmDaemon::CleanupForwarding()
+{
+	for (std::vector<vc_entry>::iterator e(vc_list.begin());  e != vc_list.end();  ++e) {
+		delete e->collector;
+		delete e->sock;
+	}
+	vc_list.clear();
+}
+
+void CmDaemon::CleanupAdTypes()
+{
+	PopulateAdsInfo * pop;
+	while ((pop = PopulateAdsInfo::remove_head(m_popList))) {
+		pop->Close(-2);
+		delete pop;
+	}
 }
 
 typedef struct {
@@ -211,6 +236,7 @@ void CmDaemon::Init()
 
 	stats.Init();
 
+	const char * local_name = get_mySubSystem()->getLocalName();
 	if (param(m_daemonName, "COLLECTOR_NAME")) {
 		if ( ! strchr(m_daemonName.c_str(), '@')) {
 			m_daemonName += "@";
@@ -220,7 +246,8 @@ void CmDaemon::Init()
 		m_daemonName = get_local_fqdn();
 	}
 	if ( ! ImTheCollector) {
-		m_daemonName = MY_SUBSYSTEM; m_daemonName.lower_case();
+		m_daemonName = local_name ? local_name : MY_SUBSYSTEM;
+		m_daemonName.lower_case();
 		m_daemonName += "@";
 		m_daemonName += get_local_fqdn();
 	}
@@ -231,7 +258,7 @@ void CmDaemon::Init()
 	SetMyTypeName(*ad, COLLECTOR_ADTYPE);
 	SetTargetTypeName(*ad, "");
 	ad->Assign(ATTR_NAME, m_daemonName);
-	if (ImTheCollector) {
+	if (ImTheCollector || ImTheViewCollector) {
 		ad->Assign(ATTR_COLLECTOR_IP_ADDR, global_dc_sinful());
 	}
 
@@ -309,7 +336,19 @@ void CmDaemon::Init()
 			this, ADVERTISE_STARTD_PERM);
 		#endif
 
-		PRAGMA_REMIND("add code to reload persisted ads here") // offline_plugin_.rewind(); offline_plugin_.iterate();
+		// load the persistent ads
+		//
+		if ( ! ImTheViewCollector) {
+			auto_free_ptr offline_log(param(ImTheCollector ? "COLLECTOR_PERSISTENT_AD_LOG" : "CLERK_OFFLINE_AD_LOG"));
+			// if not found, try depreciated name OFFLINE_LOG
+			if ( ! offline_log && ImTheCollector) { offline_log.set(param("OFFLINE_LOG")); }
+			if (offline_log) {
+				// reload the offline ads. The readloading will happen right here, before we do anything else
+				// note that this does NOT populate the collector ads tables, we can't do that until
+				// after we config.
+				offline_ads_load(offline_log);
+			}
+		}
 
 		app.forker.Initialize( );
 	}
@@ -319,31 +358,205 @@ void CmDaemon::Init()
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+// load configuration for AdType customization
+// customization is
+//   CLERK_DYNAMIC_AD_NAMES = <MyType1> <MyType2> [...]
+//   CLERK_DYNAMIC_AD_<MyType1> @=end
+//     File = <filename>            # MyType1 ads will be populated by parsing this file
+//       or
+//     Command = <command-line>     # MyType1 ads will be populated by parsing the stdout of this command
+//
+//     # These variables influence the above file or command reading
+//     Filter = <filter-expression> # Only MyType1 ads that match this expression will be added
+//     Replace = true | false       # Replace or Merge ads with ads from the file or command
+//     DeleteIf = <expr>            # before populating, delete all MyType1 ads that match this expression
+//
+//     # these variable control storage and query behavior
+//     ReKey = <attr1> <attr2>      # Use these attrs as the keys for indexing MyType1 ads
+//     Lifetime = <seconds>         # Use <seconds> as the default lifetime for MyType1 ads if the ad has no lifetime attribute
+//     Fork = true | false          # fork before replying to queries of this adtype - set to true of there are lots of MyType1 ads
+//   @end
+//
+// If MyType1 is one of the known types, the the pre-defined AdTypes integer value will be used
+// If it is not one of the known types, a new AdType integer will be allocated and used
+// for the lifetime of the Clerk.
+//
+void CmDaemon::SetupAdTypes()
+{
+	CleanupAdTypes();
 
+	// load the dynamic AD table configuration
+	StringList tags;
+	if ( ! param_and_insert_unique_items ("CLERK_DYNAMIC_AD_NAMES", tags))
+		return;
+
+	for (const char * tag = tags.first(); tag; tag = tags.next()) {
+		std::string param_name("CLERK_DYNAMIC_AD_"); param_name += tag;
+		NOCASE_STRING_MAP smap;
+		if ( ! param_and_populate_smap(param_name.c_str(), smap)) {
+			dprintf(D_ALWAYS, "dynamic AD info for '%s' was empty\n", tag);
+			continue;
+		}
+
+		// get config variables that control populating from a file
+		//
+		AdTypes adtype = AdTypeFromString(tag);
+		if (adtype == NO_AD) {
+			// Got dynamic info for a new ad type, so we have to register a new ad type
+			adtype = collect_register_adtype(tag);
+			dprintf(D_FULLDEBUG, "Creating dynamic AD configuration for adtype '%s' (%d)\n", tag, adtype);
+		} else {
+			dprintf(D_FULLDEBUG, "Loading dynamic AD configuration for adtype '%s' (%d)\n", tag, adtype);
+		}
+
+		// config variables that set/change the way the table operates
+		//
+		bool def_replace = true;
+		unsigned int flags = 0;
+		if (smap_string("Fork", smap)) {
+			flags |= COLL_SET_FORK;
+			if (smap_bool("Fork", smap, IsBigTable(adtype))) { flags |= COLL_F_FORK; }
+		}
+		if (smap_string("Forward", smap)) {
+			flags |=  COLL_SET_FORWARD;
+			if (smap_bool("Forward", smap, false)) { flags |= COLL_F_FORWARD; }
+		}
+		if (smap_string("AlwaysMerge", smap)) {
+			flags |= COLL_SET_ALWAYS_MERGE;
+			if (smap_bool("AlwaysMerge", smap, false)) { flags |= COLL_F_ALWAYS_MERGE; }
+			def_replace = ! (flags & COLL_F_ALWAYS_MERGE);
+		}
+
+		// override the key
+		const char * re_key = smap_string("ReKey", smap);
+			
+		// override the default lifetime
+		double lifetime = 1;
+		if (smap_number("Lifetime", smap, lifetime)) { flags |= COLL_SET_LIFETIME; }
+
+		// set a persist log
+		const char * persist = smap_string("Persist", smap);
+
+		// These control populating the table by reading a file at startup
+		//
+		const char * filter = NULL;
+		const char * file_or_script = NULL;
+		bool is_script = false;
+		int collect_op = COLLECT_OP_MERGE;
+		file_or_script = smap_string("FILE", smap);
+		if (file_or_script) {
+			is_script = false;
+		} else {
+			file_or_script = smap_string("Command", smap);
+			if (file_or_script) is_script = true;
+		}
+		filter = smap_string("Filter", smap);
+		bool replace_it = smap_bool("Replace", smap, def_replace);
+		collect_op = replace_it ? COLLECT_OP_REPLACE : COLLECT_OP_MERGE;
+
+		// set or override settings by ad type
+		if (adtype != NO_AD && adtype != ANY_AD) {
+			collect_set_adtype(adtype, re_key, lifetime, flags, persist);
+		}
+
+		if ( ! smap["DeleteIf"].empty()) {
+			ConstraintHolder delete_if(strdup(smap["DeleteIf"].c_str()));
+			if ( ! delete_if.Expr()) {
+				dprintf(D_ALWAYS, "Invalid DeleteIf expression: %s\n", delete_if.c_str());
+			} else {
+				int cRemoved = collect_delete(COLLECT_OP_DELETE, adtype, delete_if);
+				dprintf(D_ALWAYS, "Removed %d '%s' ads because of DeleteIf expression\n", cRemoved, tag);
+			}
+		}
+
+		if (file_or_script && adtype != NO_AD) {
+			dprintf(D_FULLDEBUG, "Adding PopulateAd %s %s\n\t%s: %s\n\tFilter: %s\n",
+				CollectOpName(collect_op), AdTypeName(adtype),
+				is_script ? "Command" : "File", file_or_script,
+				filter ? filter : "");
+			append_populate(new PopulateAdsInfo(collect_op, adtype, file_or_script, is_script, filter));
+		}
+	}
+}
+
+void CmDaemon::SetupForwarding()
+{
+	// if we're not the View Collector, let's set something up to forward
+	// all of our ads to the view collector.
+	CleanupForwarding();
+
+	if (ImTheViewCollector)
+		return;
+
+	const char * forwardHostsParamName = ImTheCollector ? "CONDOR_VIEW_HOST" : "CLERK_FORWARD_TO_LIST";
+	const char * forwardAdtypesParamName = ImTheCollector ? "CONDOR_VIEW_CLASSAD_TYPES" : "CLERK_FORWARD_CLASSAD_TYPES";
+
+	StringList cvh;
+	if (param_and_insert_unique_items(forwardHostsParamName, cvh)) {
+		for (const char * vhost = cvh.first(); vhost; vhost = cvh.next()) {
+			DCCollector* vhd = new DCCollector(vhost, DCCollector::CONFIG_VIEW);
+			Sinful view_addr( vhd->addr() );
+			Sinful my_addr( daemonCore->publicNetworkIpAddr() );
+
+			if (my_addr.addressPointsToMe(view_addr)) {
+				dprintf(D_ALWAYS, "Not forwarding to View Server %s - self referential\n", vhost);
+				delete vhd;
+				continue;
+			}
+			dprintf(D_ALWAYS, "Will forward ads on to View Server %s\n", vhost);
+
+			Sock* vhsock = NULL;
+			if (vhd->useTCPForUpdates()) {
+				vhsock = new ReliSock();
+			} else {
+				vhsock = new SafeSock();
+			}
+
+			vc_list.push_back(vc_entry());
+			vc_list.back().name = ClerkVars.apool.insert(vhost);
+			vc_list.back().collector = vhd;
+			vc_list.back().sock = vhsock;
+		}
+	}
+
+	if ( ! vc_list.empty()) {
+		// protect against frequent time-consuming reconnect attempts
+		view_sock_timeslice.setTimeslice(0.05);
+		view_sock_timeslice.setMaxInterval(1200);
+
+		classad::References viewAdTypes;
+		if (param_and_insert_attrs(forwardAdtypesParamName, viewAdTypes)) {
+			std::string str; str.reserve(100); str = " ";
+			for (classad::References::iterator it = viewAdTypes.begin(); it != viewAdTypes.end(); ++it) {
+				str += *it;
+				str += " ";
+			}
+			dprintf(D_ALWAYS, "%s configured, will forward ad types: %s\n", forwardAdtypesParamName, str.c_str());
+			collect_set_forwarding_adtypes(viewAdTypes);
+		}
+	}
+}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void CmDaemon::Config()
 {
 	dprintf(D_FULLDEBUG, "CmDaemon::Config() called\n");
+	bool first_time_config = ! m_initialized;
 	if ( ! m_initialized) Init();
 	ClearClerkVars();
 
 	// handle params for upstream Collector updates
-	if (m_idTimerSendUpdates >= 0) {
-		daemonCore->Cancel_Timer(m_idTimerSendUpdates);
-		m_idTimerSendUpdates = -1;
-	}
-
-	if (m_idTimerPopulate >= 0) {
-		daemonCore->Cancel_Timer(m_idTimerPopulate);
-		m_idTimerPopulate = -1;
-	}
+	if (m_idTimerSendUpdates >= 0)  { daemonCore->Cancel_Timer(m_idTimerSendUpdates);  m_idTimerSendUpdates = -1; }
+	if (m_idTimerPopulate >= 0)     { daemonCore->Cancel_Timer(m_idTimerPopulate);     m_idTimerPopulate = -1; }
+	if (m_idTimerHousekeeping >= 0) { daemonCore->Cancel_Timer(m_idTimerHousekeeping); m_idTimerHousekeeping = -1; }
 
 	m_UPDATE_INTERVAL = param_integer("COLLECTOR_UPDATE_INTERVAL",15*60); // default 15 min
 	m_CLIENT_TIMEOUT = param_integer ("CLIENT_TIMEOUT",30);
 	m_QUERY_TIMEOUT = param_integer ("QUERY_TIMEOUT",60);
-	m_CLASSAD_LIFETIME = param_integer ("CLASSAD_LIFETIME",900);
+	m_CLASSAD_LIFETIME = param_integer ("CLASSAD_LIFETIME",15*60);
+	m_FORWARD_INTERVAL = param_integer("COLLECTOR_FORWARD_INTERVAL", m_CLASSAD_LIFETIME/3);
+	m_FORWARD_FILTERING = param_boolean("COLLECTOR_FORWARD_FILTERING", false);
 	m_LOG_UPDATES = param_boolean("LOG_UPDATES", false);
 	m_IGNORE_INVALIDATE = param_boolean("IGNORE_INVALIDATE", false);
 	m_EXPIRE_INVALIDATED_ADS = param_boolean( "EXPIRE_INVALIDATED_ADS", false);
@@ -359,97 +572,50 @@ void CmDaemon::Config()
 		delete m_collectorsToUpdate;
 		m_collectorsToUpdate = NULL;
 	}
+
 	m_collectorsToUpdate = CollectorList::create(NULL, adSeq);
 
-	// remove ourselves from the list of collectors to update, since update of ourself
-	// through shared port doesn't work anyway (and does cause us to hang until the attempt times out)
-	remove_self_from_collector_list(m_collectorsToUpdate, ImTheCollector);
+	const char * lsubsys = get_mySubSystem()->getName();
+	if (ImTheCollector || ImTheViewCollector) {
+		// gotta worry about maybe sending updates to myself.
+		// remove ourselves from the list of collectors to update, since update of ourself
+		// through shared port doesn't work anyway (and does cause us to hang until the attempt times out)
+		remove_self_from_collector_list(m_collectorsToUpdate, true, ImTheCollector);
+		if (ImTheViewCollector) {
+			dprintf(D_ALWAYS, "ImTheViewCollector - will not send a collector ad to anyone since I seem to hang when I try.\n");
+		} else {
+			dprintf(D_ALWAYS, "ImTheCollector=%d, ImTheViewCollector=%d, SUBSYSTEM=%s %d choosing send_collector_ad\n",
+				ImTheCollector, ImTheViewCollector, lsubsys, YourString("COLLECTOR")==lsubsys);
 
-	if ( ! ImTheCollector) { // just send updates to the collector like any other deamon
+			m_idTimerSendUpdates = daemonCore->Register_Timer(1, m_UPDATE_INTERVAL,
+				(TimerHandlercpp)&CmDaemon::send_collector_ad, "send_collector_ad",
+				this);
+		}
+	} else {
+		dprintf(D_ALWAYS, "Im a Clerk - SUBSYSTEM=%s chooing update_collector\n", lsubsys);
+		// just send updates to the collector like any other deamon
 		m_idTimerSendUpdates = daemonCore->Register_Timer(1, m_UPDATE_INTERVAL,
 			(TimerHandlercpp)&CmDaemon::update_collector, "update_collector",
 			this);
-	} else {
-		m_idTimerSendUpdates = daemonCore->Register_Timer(1, m_UPDATE_INTERVAL,
-			(TimerHandlercpp)&CmDaemon::send_collector_ad, "send_collector_ad",
+	}
+
+	m_idTimerHousekeeping = daemonCore->Register_Timer(m_CLASSAD_LIFETIME, m_CLASSAD_LIFETIME,
+			(TimerHandlercpp)&CmDaemon::housekeeping, "housekeeping",
 			this);
-	}
 
-	// load the dynamic AD table configuration
-	StringList tags;
-	if (param_and_insert_unique_items ("CLERK_DYNAMIC_AD_NAMES", tags)) {
-		for (const char * tag = tags.first(); tag; tag = tags.next()) {
-			std::string param_name("CLERK_DYNAMIC_AD_"); param_name += tag;
-			NOCASE_STRING_MAP smap;
-			if ( ! param_and_populate_smap(param_name.c_str(), smap)) {
-				dprintf(D_ALWAYS, "dynamic AD info for '%s' was empty\n", tag);
-				continue;
-			}
+	// configure/customize ad types
+	SetupAdTypes();
 
-			// get config variables that control populating from a file
-			//
-			AdTypes adtype = AdTypeFromString(tag);
-			const char * filter = NULL;
-			const char * file_or_script = NULL;
-			bool is_script = false;
-			int collect_op = COLLECT_OP_MERGE;
-			dprintf(D_FULLDEBUG, "Loading dynamic AD configuration for adtype '%s' (%d)\n", tag, adtype);
-			file_or_script = smap_string("FILE", smap);
-			if (file_or_script) {
-				is_script = false;
-			} else {
-				file_or_script = smap_string("Command", smap);
-				if (file_or_script) is_script = true;
-			}
-			filter = smap_string("Filter", smap);
-			bool replace_it = smap_bool("Replace", smap, false);
-			collect_op = replace_it ? COLLECT_OP_REPLACE : COLLECT_OP_MERGE;
-
-			// config variables that set/change the way the table operates
-			//
-
-			bool has_override = false;
-			// override the key
-			const char * re_key = smap_string("ReKey", smap);
-			if (re_key) { has_override = true; }
-			
-			// override the default lifetime
-			double lifetime = 1;
-			if (smap_number("Lifetime", smap, lifetime)) { has_override = true; }
-
-			bool big_table = smap_bool("Fork", smap, IsBigTable(adtype));
-
-			if (adtype == NO_AD) {
-				// Got dynamic info for a new ad type, so we have to register a new ad type
-				adtype = collect_register_adtype(tag);
-				has_override = adtype != NO_AD;
-			}
-
-			if (has_override) {
-				collect_set_adtype(adtype, re_key, lifetime, big_table);
-			}
-
-			if ( ! smap["DeleteIf"].empty()) { 
-				ConstraintHolder delete_if(strdup(smap["DeleteIf"].c_str()));
-				if ( ! delete_if.Expr()) {
-					dprintf(D_ALWAYS, "Invalid DeleteIf expression: %s\n", delete_if.c_str());
-				} else {
-					int cRemoved = collect_delete(COLLECT_OP_DELETE, adtype, delete_if);
-					dprintf(D_ALWAYS, "Removed %d '%s' ads because of DeleteIf expression\n", cRemoved, tag);
-				}
-			}
-			if (file_or_script && adtype != NO_AD) {
-				dprintf(D_FULLDEBUG, "Adding PopulateAd %s %s\n\t%s: %s\n\tFilter: %s\n",
-					CollectOpName(collect_op), AdTypeName(adtype),
-					is_script ? "Command" : "File", file_or_script,
-					filter ? filter : "");
-				append_populate(new PopulateAdsInfo(collect_op, adtype, file_or_script, is_script, filter));
-			}
-		}
-	}
+	// setup forward to view collector and parent collectors in the tree.
+	SetupForwarding();
 
 	// finalize (and log) the collector tables configuration
 	collect_finalize_ad_tables();
+
+	// now that we have configured the adtype tables, we can populate the absent ads
+	if (first_time_config) {
+		offline_ads_populate();
+	}
 
 	if (m_popList) {
 		int pop_delay = 5;
@@ -459,9 +625,23 @@ void CmDaemon::Config()
 				this);
 	}
 
+	if (ImTheCollector) {
+		if (param_boolean("ENABLE_CCB_SERVER",true)) {
+			if ( ! g_ccb_server) {
+				dprintf(D_ALWAYS, "Enabling CCB Server.\n");
+				g_ccb_server = new CCBServer;
+			}
+			g_ccb_server->InitAndReconfig();
+		}
+		else if (g_ccb_server) {
+			dprintf(D_ALWAYS, "Disabling CCB Server.\n");
+			delete g_ccb_server;
+			g_ccb_server = NULL;
+		}
+	}
+
 	int num = param_integer ("COLLECTOR_QUERY_WORKERS", 2);
 	app.forker.setMaxWorkers(num);
-
 }
 
 void CmDaemon::Shutdown(bool fast)
@@ -531,6 +711,7 @@ int CmDaemon::receive_update(int command, Stream* stream)
 	sock->timeout(1);
 
 	bool ack_requested = (command == UPDATE_STARTD_AD_WITH_ACK);
+	int  collect_op = (command == MERGE_STARTD_AD) ? COLLECT_OP_MERGE : COLLECT_OP_REPLACE;
 
 	// process the given command
 	ClassAd *ad = getClassAd(sock);
@@ -560,8 +741,24 @@ int CmDaemon::receive_update(int command, Stream* stream)
 		}
 	}
 
+	// get the end_of_message()
+	if ( ! sock->end_of_message()) {
+		dprintf(D_FULLDEBUG,"Warning: Command %d; maybe shedding data on eom\n", command);
+	}
+
+	CollectStatus status;
 	AdTypes whichAds = CollectorCmdToAdType(command);
-	int rval = collect(COLLECT_OP_REPLACE, whichAds, ad, adPvt);
+
+	// GENERIC OR ANY ads may involve adding new adtypes on the fly
+	if (whichAds == GENERIC_AD || whichAds == ANY_AD) {
+		std::string mytype;
+		if (ad->EvaluateAttrString(ATTR_MY_TYPE, mytype)) {
+			AdTypes adt = collect_lookup_mytype(mytype.c_str());
+			if (adt != NO_AD) whichAds = adt;
+		}
+	}
+
+	int rval = collect(collect_op, whichAds, ad, adPvt, status);
 	if (rval < 0) {
 		if (rval == -3)
 		{
@@ -578,11 +775,6 @@ int CmDaemon::receive_update(int command, Stream* stream)
 		return FALSE;
 	}
 
-	// get the end_of_message()
-	if ( ! sock->end_of_message()) {
-		dprintf(D_FULLDEBUG,"Warning: Command %d; maybe shedding data on eom\n", command);
-	}
-
 	// send acknowledgement if requested.
 	if (ack_requested) {
 		sock->encode();
@@ -596,18 +788,16 @@ int CmDaemon::receive_update(int command, Stream* stream)
 		}
 	}
 
-	PRAGMA_REMIND("collector has code to persist ads here") // offline_plugin_.update ( command, *ad );
 
-#if 0 // ad forwarding code copied from 8.5.8 collector
-	if (viewCollectorTypes) {
-		forward_classad_to_view_collector(command,
-			ATTR_MY_TYPE,
-			cad);
-	} else if ((command == UPDATE_STARTD_AD) || (command == UPDATE_SUBMITTOR_AD)) {
-		send_classad_to_sock(command, cad);
+	if (status.should_forward) {
+		time_t now = time(NULL);
+		if ( ! status.entry || status.entry->ForwardBeforeTime(now) < now) {
+			dprintf(D_FULLDEBUG, "Forwarding ad: type=%s command=%s\n", AdTypeName(whichAds), getCommandString(command));
+			if (send_classad_to_sock(command, ad, adPvt) >= 1) {
+				if (status.entry) { status.entry->Forwarded(now); }
+			}
+		}
 	}
-#endif
-
 
 	if( sock->type() == Stream::reli_sock ) {
 			// stash this socket for future updates...
@@ -618,11 +808,111 @@ int CmDaemon::receive_update(int command, Stream* stream)
 	return TRUE;
 }
 
+// forward update commands to parent collectors or view collector
+// returns the number of collectors we forwarded to, or 1 if there are no upstream collectors
+int CmDaemon::send_classad_to_sock(int command, ClassAd * ad, ClassAd * adPvt)
+{
+	if ( ! ad) return 0;
+	if (vc_list.empty()) return 1;
+
+	int cSent = 0;
+	for (std::vector<vc_entry>::iterator e(vc_list.begin());  e != vc_list.end();  ++e) {
+		DCCollector* view_coll = e->collector;
+		Sock* view_sock = e->sock;
+		const char* view_name = e->name;
+
+		bool raw_command = false;
+		if (!view_sock->is_connected()) {
+			// We must have gotten disconnected.  (Or this is the 1st time.)
+			// In case we keep getting disconnected or fail to connect,
+			// and each connection attempt takes a long time, restrict
+			// what fraction of our time we spend trying to reconnect.
+			if (view_sock_timeslice.isTimeToRun()) {
+				dprintf(D_ALWAYS,"Connecting to Forward HOST %s\n", view_name);
+
+				// Only run timeslice timer for TCP, since connect on UDP 
+				// is instantaneous.
+				if (view_sock->type() == Stream::reli_sock) {
+					view_sock_timeslice.setStartTimeNow();
+				}
+				view_coll->connectSock(view_sock,20);
+				if (view_sock->type() == Stream::reli_sock) {
+					view_sock_timeslice.setFinishTimeNow();
+				}
+
+				if (!view_sock->is_connected()) {
+					dprintf(D_ALWAYS,"Failed to connect to HOST %s so not forwarding ad.\n", view_name);
+					continue;
+				}
+			} else {
+				dprintf(D_FULLDEBUG,"Skipping forwarding of ad to HOST %s, because reconnect is delayed for %us.\n", view_name, view_sock_timeslice.getTimeToNextRun());
+				continue;
+			}
+		} else if (view_sock->type() == Stream::reli_sock) {
+			// we already did the security handshake the last time
+			// we sent a command on this socket, so just send a
+			// raw command this time to avoid reauthenticating
+			raw_command = true;
+		}
+
+		// Run timeslice timer if raw_command is false, since this means 
+		// startCommand() may need to initiate an authentication round trip 
+		// and thus could block if the remote view collector is unresponsive.
+		if ( raw_command == false ) {
+			view_sock_timeslice.setStartTimeNow();
+		}
+		bool start_command_result = 
+			view_coll->startCommand(command, view_sock, 20, NULL, NULL, raw_command);
+		if ( raw_command == false ) {
+			view_sock_timeslice.setFinishTimeNow();
+		}
+
+		if (! start_command_result ) {
+			dprintf( D_ALWAYS, "Can't send command %d to View Collector %s\n", 
+				command, view_name);
+			view_sock->end_of_message();
+			view_sock->close();
+			continue;
+		}
+
+		if (ad) {
+			if (!putClassAd(view_sock, *ad)) {
+				dprintf( D_ALWAYS, "Can't forward classad to View Collector %s\n", view_name);
+				view_sock->end_of_message();
+				view_sock->close();
+				continue;
+			}
+		}
+
+		// If there's a private startd ad, send that as well.
+		if (adPvt) {
+			if (!putClassAd(view_sock, *adPvt)) {
+				dprintf( D_ALWAYS, "Can't forward startd private classad to View Collector %s\n", view_name);
+				view_sock->end_of_message();
+				view_sock->close();
+				continue;
+			}
+		}
+
+		if (!view_sock->end_of_message()) {
+			dprintf(D_ALWAYS, "Can't send end_of_message to View Collector %s\n", view_name);
+			view_sock->close();
+			continue;
+		}
+
+		++cSent;
+	}
+
+	return cSent;
+}
+
+#if 0
 int CmDaemon::receive_update_expect_ack(int, Stream*)
 {
 	int rval = 0;
 	return rval;
 }
+#endif
 
 int CmDaemon::receive_invalidation(int command, Stream* stream)
 {
@@ -652,10 +942,11 @@ int CmDaemon::receive_invalidation(int command, Stream* stream)
 	// cancel timeout
 	sock->timeout(0);
 
+	CollectStatus status;
 	if (m_IGNORE_INVALIDATE) {
 		dprintf(D_ALWAYS, "Ignoring invalidate (IGNORE_INVALIDATE=TRUE)\n");
 	} else {
-		int rval = collect(m_EXPIRE_INVALIDATED_ADS ? COLLECT_OP_EXPIRE : COLLECT_OP_DELETE, whichAds, ad, NULL);
+		int rval = collect(m_EXPIRE_INVALIDATED_ADS ? COLLECT_OP_EXPIRE : COLLECT_OP_DELETE, whichAds, ad, NULL, status);
 		if (rval < 0) {
 			if (rval == -3)
 			{
@@ -691,6 +982,10 @@ int CmDaemon::receive_invalidation(int command, Stream* stream)
 		send_classad_to_sock(command, cad);
 	}
 #endif
+	if (status.should_forward) {
+		dprintf(D_FULLDEBUG, "Forwarding ad: type=%s command=%s\n", AdTypeName(whichAds), getCommandString(command));
+		send_classad_to_sock(command, ad, NULL);
+	}
 
 	if( sock->type() == Stream::reli_sock ) {
 			// stash this socket for future updates...
@@ -873,6 +1168,14 @@ int CmDaemon::receive_query(int command, Stream* sock)
 		ConstraintHolder fetch_if(filter ? filter->Copy() : NULL);
 		collect_add_absent_clause(fetch_if);
 
+		// for Generic or Any queries, there can be a target type in the request
+		if (whichAds == GENERIC_AD || whichAds == ANY_AD) {
+			std::string target;
+			if (query.LookupString(ATTR_TARGET_TYPE, target)) {
+				whichAds = collect_lookup_mytype(target.c_str());
+			}
+		}
+
 		// small table query, We are the child or or the fork failed
 		// either way we want to actually perform the query now.
 		FetchAds (whichAds, fetch_if, ads, &cTotalAds);
@@ -984,7 +1287,7 @@ int CmDaemon::update_collector()
 
 	ClassAd * ad = &m_daemonAd;
 
-    daemonCore->publish(ad);
+	daemonCore->publish(ad);
 	daemonCore->dc_stats.Publish(*ad);
 	daemonCore->monitor_data.ExportData(ad);
 	stats.Publish(*ad);
@@ -1043,6 +1346,25 @@ int CmDaemon::send_collector_ad()
 	return rval;
 }
 
+// housekeeping timer callback. expire ads
+//
+int CmDaemon::housekeeping()
+{
+	int rval = 0;
+	dprintf(D_FULLDEBUG, "Daemon::housekeeping() called\n");
+
+	time_t now = time(NULL);
+	if (now == (time_t) -1) {
+		dprintf (D_ALWAYS,
+				 "Housekeeper:  Error in reading system time --- aborting\n");
+		return 0;
+	}
+
+	rval = collect_clean(now);
+
+	return rval;
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
@@ -1057,6 +1379,7 @@ int CmDaemon::populate_collector()
 
 	if (m_popList) {
 		int cItems = 0;
+		CollectStatus status;
 		AdTypes whichAds = m_popList->WhichAds();
 		dprintf(D_FULLDEBUG, "Populating %s Ads\n", AdTypeName(whichAds));
 		const double max_reading_time = 10.0; // 10 sec max reading time before we go back to the pump.
@@ -1067,7 +1390,7 @@ int CmDaemon::populate_collector()
 			if ( ! ad) {
 				break;
 			}
-			rval = m_popList->collect(ad);
+			rval = m_popList->collect(ad, status);
 			if (rval < 0) {
 				if (rval == -3) {
 					dprintf (D_ALWAYS, "Ignoring malformed %s ad from %s\n", AdTypeName(whichAds), m_popList->Source());
@@ -1198,20 +1521,35 @@ void early_init(int argc, const char **argv)
 {
 	ImTheCollector = false;
 
-	const char * my_subsys = "CLERK";
-
-	// Figure out whether my subsys should be CLERK or COLLECTOR
-	// based on whether the master passed me a SHARED_PORT_DEFAULT_ID
-	// that starts with 'collector_' or not.
-	MyString port_id;
-	if (GetEnv("_condor_SHARED_PORT_DEFAULT_ID", port_id)) {
-		if (starts_with_ignore_case(port_id.Value(), "collector_")) {
-			my_subsys = "COLLECTOR";
-			ImTheCollector = true;
+	// Figure out whether my subsys should be CLERK or COLLECTOR based on commandline 
+	bool got_itc_arg = false;
+	bool verbose = false;
+	for (int ii = 0; ii < argc; ++ii) {
+		if (MATCH == strcmp(argv[ii],"-v")) { verbose = true; }
+		if (MATCH == strcmp(argv[ii],"-CLERK")) { ImTheCollector = false; got_itc_arg = true; break; }
+		if (MATCH == strcmp(argv[ii],"-COLLECTOR")) { ImTheCollector = true; got_itc_arg = true; break; }
+		if (MATCH == strcmp(argv[ii],"-local-name") && argv[ii+1]) {
+			StringList viewNames("VIEW_COLLECTOR CONDOR_VIEW VIEW_SERVER");
+			if (viewNames.contains_anycase(argv[ii+1])) { ImTheViewCollector = true; got_itc_arg = true; break; }
 		}
 	}
+
+	// If no command line, figure out whether my subsys should be CLERK or COLLECTOR
+	// based on whether the master passed me a SHARED_PORT_DEFAULT_ID
+	// that starts with 'collector_' or not.
+	if ( ! got_itc_arg) {
+		MyString port_id;
+		if (GetEnv("_condor_SHARED_PORT_DEFAULT_ID", port_id)) {
+			if (MATCH == strcasecmp(port_id.Value(),"collector") || starts_with_ignore_case(port_id.Value(), "collector_")) {
+				ImTheCollector = true;
+			}
+		}
+	}
+	const char * my_subsys = "CLERK";
+	if (ImTheCollector || ImTheViewCollector) { my_subsys = "COLLECTOR"; }
 	set_mySubSystem(my_subsys, SUBSYSTEM_TYPE_COLLECTOR);
 	ClerkEvalCtx.init(my_subsys);
+	if (verbose) { printf("ImTheCollector = %d, ImTheViewCollector=%d, my_subsys = %s\n", ImTheCollector, ImTheViewCollector, my_subsys); }
 
 	// setup the permanent ClerkVar defaults
 	SubSysVarDef.psz = const_cast<char*>(my_subsys);
