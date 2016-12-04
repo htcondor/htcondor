@@ -2029,12 +2029,24 @@ bool param_defined(const char* name) {
 	return false;
 }
 
-char*
-param(const char* name)
-{
+char *param(const char * name) {
 	MACRO_EVAL_CONTEXT ctx;
 	init_macro_eval_context(ctx);
 	ctx.use_mask = 3;
+	return param_ctx(name, ctx);
+}
+
+char *param_with_context(const char *name, const char *subsys, const char *localname, const char * cwd ) {
+	MACRO_EVAL_CONTEXT ctx;
+	ctx.init(subsys, 3);
+	ctx.localname = localname;
+	ctx.cwd = cwd;
+	return param_ctx(name, ctx);
+}
+
+char*
+param_ctx(const char* name, MACRO_EVAL_CONTEXT & ctx)
+{
 
 #if 0
 	// hack to make SUBSYS.LOCALNAME work for direct param lookups.
