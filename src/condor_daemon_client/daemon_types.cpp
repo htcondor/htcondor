@@ -32,7 +32,6 @@ static const char* daemon_names[] = {
 	"kbdd",
 	"dagman", 
 	"view_collector",
-	"clerk", // a bit like a view_collector, but found by querying COLLECTOR_AD's from the primary collector
 	"cluster_server",
 	"shadow",
 	"starter",

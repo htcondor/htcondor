@@ -476,14 +476,14 @@ BEGIN_C_DECLS
 
 	char * get_tilde(void);
 	char * param ( const char *name );
-	// do param lookup with explicit subsys and localname
-	char * param_with_context ( const char *name, const char *subsys, const char *localname, const char * cwd );
 
+	/** Insert a value into a hash table.
+
+	The value of 'value' is associated with the name 'name'.  This is
+	inserted into the table 'table' which is 'table_size' big.
+	insert keeps copies of the name and value.
+	*/
 #ifdef __cplusplus
-	// do param lookup with explicit subsys and localname
-	char * param_ctx (const char *name, MACRO_EVAL_CONTEXT & ctx);
-
-	// config source file info
 	typedef struct macro_source { bool is_inside; bool is_command; short int id; int line; short int meta_id; short int meta_off; } MACRO_SOURCE;
 	void insert_source(const char * filename, MACRO_SET& macro_set, MACRO_SOURCE & source);
 	extern const MACRO_SOURCE EnvMacro;
