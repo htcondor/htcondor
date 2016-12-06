@@ -208,7 +208,7 @@ else
 	  # for an afs_pag fails, create it via pagsh and link to our session.
 	  keyctl search @s afs_pag _pag >&/dev/null || \
 	    pagsh -c "keyctl link @s $uid_ring_id"
-	} 200<$lockfile || exitwitherr 50 "KRB5CCNAME file does not exist"
+    } 200<$lockfile || exitwitherr 50 "KRB5CCNAME file does not exist"
 
   # Finally, run aklog with whatever command-line args the user gave us.
   # Write the exit code returned by aklog onto stdout, which is read
