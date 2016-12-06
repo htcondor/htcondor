@@ -41,11 +41,12 @@ AdTypes collect_lookup_mytype(const char * mytype);
 void collect_set_adtype(AdTypes whichAds, const char * keylist, double lifetime, unsigned int flags, const char * persist);
 #define COLL_F_FORK           0x01
 #define COLL_F_FORWARD        0x02
-#define COLL_F_ALWAYS_MERGE   0x04
-//#define COLL_F_SPARE3         0x08
+#define COLL_F_INJECT_AUTH    0x04
+#define COLL_F_ALWAYS_MERGE   0x08
 // these flag bits indicate which things collect_set_adtype should set.
 #define COLL_SET_FORK         (COLL_F_FORK << 16)
 #define COLL_SET_FORWARD      (COLL_F_FORWARD << 16)
+#define COLL_SET_INJECT_AUTH  (COLL_F_INJECT_AUTH << 16)
 #define COLL_SET_ALWAYS_MERGE (COLL_F_ALWAYS_MERGE << 16)
 #define COLL_SET_LIFETIME     (0x10 << 16)
 
@@ -64,6 +65,10 @@ AdTypes has_public_adtype(AdTypes whichAds);
 
 // Returns true if the table is large for this adtype
 bool IsBigTable(AdTypes whichAds);
+// Returns true if we should be inject ATTR_AUTHENTICATED_IDENTITY into the ad
+bool ShouldInjectAuthId(AdTypes whichAds);
+// Returns name of the adype or null for types in the table that have no name, and Invalid for types not in the table.
+const char * NameOf(AdTypes typ);
 
 const char * CollectOpName(int op);
 

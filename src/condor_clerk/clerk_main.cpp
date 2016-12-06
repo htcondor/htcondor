@@ -421,6 +421,10 @@ void CmDaemon::SetupAdTypes()
 			flags |=  COLL_SET_FORWARD;
 			if (smap_bool("Forward", smap, false)) { flags |= COLL_F_FORWARD; }
 		}
+		if (smap_string("InjectAuth", smap)) {
+			flags |= COLL_SET_INJECT_AUTH;
+			if (smap_bool("InjectAuth", smap, true)) { flags |= COLL_F_INJECT_AUTH; }
+		}
 		if (smap_string("AlwaysMerge", smap)) {
 			flags |= COLL_SET_ALWAYS_MERGE;
 			if (smap_bool("AlwaysMerge", smap, false)) { flags |= COLL_F_ALWAYS_MERGE; }
@@ -592,7 +596,7 @@ void CmDaemon::Config()
 				this);
 		}
 	} else {
-		dprintf(D_ALWAYS, "Im a Clerk - SUBSYSTEM=%s chooing update_collector\n", lsubsys);
+		dprintf(D_ALWAYS, "Im a Clerk - SUBSYSTEM=%s choosing update_collector\n", lsubsys);
 		// just send updates to the collector like any other deamon
 		m_idTimerSendUpdates = daemonCore->Register_Timer(1, m_UPDATE_INTERVAL,
 			(TimerHandlercpp)&CmDaemon::update_collector, "update_collector",
@@ -723,15 +727,6 @@ int CmDaemon::receive_update(int command, Stream* stream)
 		return FALSE;
 	}
 
-	// insert the authenticated user into the ad itself
-	const char* username = sock->getFullyQualifiedUser();
-	if (username) {
-		ad->Assign("AuthenticatedIdentity", username);
-	} else {
-		// remove it from the ad if it's not authenticated.
-		ad->Delete("AuthenticatedIdentity");
-	}
-
 	// for these commands, there will also be a private ad.
 	ClassAd * adPvt = NULL;
 	if (command == UPDATE_STARTD_AD || command == UPDATE_STARTD_AD_WITH_ACK) {
@@ -756,6 +751,15 @@ int CmDaemon::receive_update(int command, Stream* stream)
 			AdTypes adt = collect_lookup_mytype(mytype.c_str());
 			if (adt != NO_AD) whichAds = adt;
 		}
+	}
+
+	// insert the authenticated user from the socket into the ad itself if the adtype wants it.
+	const char* username = sock->getFullyQualifiedUser();
+	if (username && ShouldInjectAuthId(whichAds)) {
+		ad->Assign(ATTR_AUTHENTICATED_IDENTITY, username);
+	} else {
+		// remove it from the ad if it's not authenticated.
+		ad->Delete(ATTR_AUTHENTICATED_IDENTITY);
 	}
 
 	int rval = collect(collect_op, whichAds, ad, adPvt, status);

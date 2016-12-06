@@ -204,7 +204,11 @@ typedef struct _settings_by_adtype {
 	bool         bigTable;
 	bool         forwarding;
 	bool         always_merge;
+	bool         inject_auth;
 	char         persist_log_id; // if non-zero indicates which persist log to use.
+	bool         spare1;
+	bool         spare2;
+	bool         spare3;
 } SettingsByAdType;
 
 int maxAdSettings = 200 + ((NUM_AD_TYPES/100)*100);
@@ -305,6 +309,13 @@ bool IsBigTable(AdTypes typ) {
 	return false;
 }
 
+bool ShouldInjectAuthId(AdTypes typ) {
+	if (typ >= 0 && typ < maxAdSettings) {
+		return AdSettings[typ].inject_auth;
+	}
+	return false;
+}
+
 bool IsForwarding(AdTypes typ) {
 	if (typ >= 0 && typ < maxAdSettings) {
 		return AdSettings[typ].forwarding;
@@ -390,6 +401,7 @@ void config_standard_ads(int max_adtype)
 		ASSERT(aty < (int)COUNTOF(StandardAdInfoX));
 		sat[aty].bigTable = StandardAdInfoX[aty].bigTable;
 		sat[aty].forwarding = StandardAdInfoX[aty].forwarding;
+		sat[aty].inject_auth = true;
 		sat[aty].keyAttrUse = StandardAdInfoX[aty].kfUse;
 		MyTypeToAdType[sat[aty].name] = aty;
 	}
@@ -404,6 +416,7 @@ void config_standard_ads(int max_adtype)
 		sat[aty].keyAttrUse = kfName;
 		sat[aty].forwarding = false;
 		sat[aty].always_merge = false;
+		sat[aty].inject_auth = true;
 	}
 }
 
@@ -527,11 +540,13 @@ void collect_set_adtype(AdTypes whichAds, const char * keylist, double lifetime,
 
 	bool big_table    = (flags & COLL_F_FORK) != 0;
 	bool forward      = (flags & COLL_F_FORWARD) != 0;
+	bool inject_auth  = (flags & COLL_F_INJECT_AUTH) != 0;
 	bool always_merge = (flags & COLL_F_ALWAYS_MERGE) != 0;
 
 	if (flags & COLL_SET_LIFETIME) mysat.lifetime = (time_t)lifetime;
 	if (flags & COLL_SET_FORK) mysat.bigTable = big_table;
 	if (flags & COLL_SET_FORWARD) mysat.forwarding = forward;
+	if (flags & COLL_SET_INJECT_AUTH) mysat.inject_auth = inject_auth;
 	if (flags & COLL_SET_ALWAYS_MERGE) mysat.always_merge = always_merge;
 
 	mysat.persist_log_id = 0;
@@ -563,6 +578,8 @@ void collect_set_adtype(AdTypes whichAds, const char * keylist, double lifetime,
 			usemask = mysat.keyAttrUse; // just preserve the existing keyset.
 		}
 
+		PRAGMA_REMIND("add expression keys")
+
 		// if all standard keys are used, set the key use mask
 		if ( ! (usemask & kfNotFound)) {
 			mysat.keyAttrUse = usemask;
@@ -581,7 +598,7 @@ void collect_set_adtype(AdTypes whichAds, const char * keylist, double lifetime,
 	}
 }
 
-// set forwarding flags based on the given adTypes
+// set forwarding flags based on the given adTypes, used by VIEW_COLLECTOR config
 void collect_set_forwarding_adtypes(classad::References & viewAdTypes)
 {
 	for (int ii = 0; ii < maxAdSettings; ++ii) {
@@ -608,6 +625,7 @@ typedef struct _settings_by_adtype {
 
 void collect_finalize_ad_tables()
 {
+	// LOG the final tables.
 	std::string buffer;
 	dprintf(D_FULLDEBUG, "Ad tables\n");
 	dprintf(D_FULLDEBUG, "_ID_ _____NAME_____ FLAGS LIFETIME KEYS\n");
@@ -615,7 +633,9 @@ void collect_finalize_ad_tables()
 		const SettingsByAdType &as = AdSettings[ii];
 		if ( ! as.name) continue;
 		buffer.clear();
-		formatstr(buffer, "[%2d] %-14s %c%c%c%d  ", ii, as.name, as.bigTable?'B':' ', as.forwarding?'F':' ', as.always_merge?'M':' ', as.persist_log_id);
+		formatstr(buffer, "[%2d] %-14s %c%c%c%c%d ", ii, as.name,
+			as.bigTable?'B':' ', as.forwarding?'F':' ', as.inject_auth?'A':' ', as.always_merge?'M':' ',
+			as.persist_log_id);
 		if (as.lifetime < 10000000 && as.lifetime > -10000000) {
 			formatstr_cat(buffer, "%8u", (unsigned int)as.lifetime);
 		} else {
@@ -626,6 +646,33 @@ void collect_finalize_ad_tables()
 			for (const char * p = as.zzkeys; (p && *p); p += strlen(p)+1) {
 				buffer += " ";
 				buffer += p;
+			}
+		} else {
+			int uses_key_fields = as.keyAttrUse;
+			if ( ! uses_key_fields)
+				uses_key_fields = kfName | kfHash;
+
+			if (uses_key_fields & kfHash) {
+				buffer += " " ATTR_HASH_NAME;
+				if (uses_key_fields & kfName) buffer += "|" ATTR_NAME;
+			} else if (uses_key_fields & kfName) {
+				buffer += " " ATTR_NAME;
+			}
+
+			if (uses_key_fields & kfMachine) {
+				buffer += " " ATTR_MACHINE;
+			}
+
+			if (uses_key_fields & kfSchedd) {
+				buffer += " " ATTR_SCHEDD_NAME;
+			}
+
+			if (uses_key_fields & (kfAddr|kfHost)) {
+				if (uses_key_fields & kfHost) {
+					buffer += " host(" ATTR_MY_ADDRESS ")";
+				} else {
+					buffer += " " ATTR_MY_ADDRESS;
+				}
 			}
 		}
 		dprintf(D_FULLDEBUG, "%s\n", buffer.c_str());
@@ -1207,7 +1254,7 @@ bool collect_make_key(AdTypes whichAds, const ClassAd* ad, ClassAd *adPvt, std::
 			attr_bit <<= 1;
 		}
 
-		// non of the attrs we need to build the key were found.
+		// return false if none of the attrs we need to build the key were found.
 		return (found_attrs != 0);
 	}
 
@@ -1669,7 +1716,10 @@ int collect(int op_and_flags, AdTypes whichAds, ClassAd * ad, ClassAd * adPvt, C
 	time(&now);
 	time_t expire_time = now + lifetime;
 
-	bool merge_ads = (operation == COLLECT_OP_MERGE) || always_merge(whichAds);
+	// a merge command should not insert, it should only merge
+	// but an always_merge adtype will insert if there is nothing there
+	bool merge_cmd = (operation == COLLECT_OP_MERGE);
+	bool merge_ads = merge_cmd || always_merge(whichAds);
 
 #if 1 // use map::lower_bound to find and hint at insertion point.
 	AdCollection::iterator lb;
@@ -1680,7 +1730,7 @@ int collect(int op_and_flags, AdTypes whichAds, ClassAd * ad, ClassAd * adPvt, C
 			// updating an ad
 			dprintf(D_STATUS, "%s %s ad key='%s'\n", merge_ads ? "**Merging" : "**Replacing", AdTypeName(pvtType), status.key.c_str());
 			lb->second.UpdateAd(pvtType, AC_ENT_PRIVATE, now, expire_time, adPvt, merge_ads);
-		} else if (merge_ads) {
+		} else if (merge_cmd) {
 			dprintf(D_STATUS, "**NOT Merging %s ad key='%s' was not found\n", AdTypeName(pvtType), status.key.c_str());
 		} else {
 			// inserting an ad
@@ -1699,7 +1749,7 @@ int collect(int op_and_flags, AdTypes whichAds, ClassAd * ad, ClassAd * adPvt, C
 		dprintf(D_STATUS, "%s %s ad key='%s'\n", merge_ads ? "**Merging" : "**Replacing", AdTypeName(whichAds), status.key.c_str());
 		lb->second.UpdateAd(whichAds, 0, now, expire_time, ad, merge_ads);
 		status.entry = &lb->second;
-	} else if (merge_ads) {
+	} else if (merge_cmd) {
 		dprintf(D_STATUS, "**NOT Merging %s ad key='%s' was not found\n", AdTypeName(whichAds), status.key.c_str());
 	} else {
 		// inserting an ad
