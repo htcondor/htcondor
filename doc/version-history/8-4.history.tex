@@ -105,6 +105,13 @@ the \Condor{schedd}s had already marked as significant.
  instead it will write error messages as configuration comments to stdout.
  \Ticket{5989}
 
+\item When transferring a job's sandbox, the permissions on subdirectories
+are now preserved in the same that they are for regular files.
+Previously, the permissions were modified by HTCondor daemon's umask,
+and directories transferred from a Windows machine to a unix machine had
+no permissions enabled.
+\Ticket{5948}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
