@@ -1,9 +1,11 @@
+%TEMPTEMP -- -stm missing; make sure attr=value is there; note about - for input implying verbose
 \begin{ManPage}{\label{man-condor-submit}\Condor{submit}}{1}
 {Queue jobs for execution under HTCondor}
 \index{HTCondor commands!condor\_submit}
 \index{condor\_submit command}
 
 \Synopsis \SynProg{\Condor{submit}}
+\oOpt{-terse}
 \oOpt{-verbose}
 \oOpt{-unused}
 \oOptArg{-name}{schedd\_name}
@@ -22,6 +24,7 @@
 \oOpt{-dry-run}
 \oOptArg{-maxjobs}{number-of-jobs}
 \oOpt{-single-cluster}
+\oOptArg{-stm}{method}
 \oOpt{<submit-variable>=<value>}
 \oArg{submit description file}
 \oOptArg{-queue}{queue\_arguments}
@@ -58,7 +61,9 @@ The job ClassAd attribute \Attr{ClusterId} identifies a cluster.
 The \Arg{submit description file} argument is the path and file name of 
 the submit description file. 
 If this optional argument is missing or is the dash character (\Expr{-}),
-then the commands are taken from standard input.
+then the commands are taken from standard input.  If \Expr{-} is
+specified for the \Arg{submit description file}, \Opt{-verbose} is
+implied; this can be overridden by specifying \Opt{-terse}.
 
 Note that submission of jobs from a Windows machine requires
 a stashed password to allow HTCondor to impersonate the user submitting
@@ -74,6 +79,8 @@ Submit description files may contain comments.
 A comment is any line beginning with a pound character (\verb@#@). 
 
 \begin{Options}
+
+\OptItem{\Opt{-terse}}{Terse output - display JobId ranges only.}
 
 \OptItem{\Opt{-verbose}}{Verbose output - display the created job ClassAd}
 
@@ -196,6 +203,10 @@ files for completed jobs need to be retrieved with \Condor{transfer\_data}.}
 \OptItem{\Opt{-single-cluster}}{If the jobs specified by the submit description
   file causes more than a single cluster value to be assigned,
   then no jobs are submitted for execution and an error message is generated. }
+
+\OptItem{\OptArg{-stm}{method}}{Specify the method use to move a sandbox
+  into HTCondor.  \Arg{method} is one of \Opt{stm\_use\_schedd\_only}
+  or \Opt{stm\_use\_transferd}.}
 
 \OptItem{\Opt{<submit-variable>=<value>}}{Defines a submit command or
   submit variable with a value, and parses it as if it was placed at
