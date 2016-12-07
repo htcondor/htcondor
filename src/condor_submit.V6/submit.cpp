@@ -322,6 +322,19 @@ static condor_params::string_value IsWinMacroDef = { ZeroString, 0 };
 #endif
 static condor_params::string_value SubmitFileMacroDef = { EmptyItemString, 0 };
 
+static char rc[] = "$(Request_CPUs)";
+static condor_params::string_value VMVCPUSMacroDef = { rc, 0 };
+static char rm[] = "$(Request_Memory)";
+static condor_params::string_value VMMemoryMacroDef = { rm, 0 };
+
+// Necessary so that the user who sets request_memory instead of
+// RequestMemory doesn't miss out on the default value for VM_MEMORY.
+static char rem[] = "$(RequestMemory)";
+static condor_params::string_value RequestMemoryMacroDef = { rem, 0 };
+// The same for CPUs.
+static char rec[] = "$(RequestCPUs)";
+static condor_params::string_value RequestCPUsMacroDef = { rec, 0 };
+
 static char StrictFalseMetaKnob[] = 
 	"SubmitWarnEmptyMatches=false\n"
 	"SubmitFailEmptyMatches=false\n"
@@ -365,10 +378,14 @@ static MACRO_DEF_ITEM SubmitMacroDefaults[] = {
 	{ "OPSYSVER",        &OpsysVerMacroDef },
 	{ "Process",   &ProcessMacroDef },
 	{ "ProcId",    &ProcessMacroDef },
+	{ "Request_CPUs", &RequestCPUsMacroDef },
+	{ "Request_Memory", &RequestMemoryMacroDef },
 	{ "Row",       &RowMacroDef },
 	{ "SPOOL",     &SpoolMacroDef },
 	{ "Step",      &StepMacroDef },
 	{ "SUBMIT_FILE", &SubmitFileMacroDef },
+	{ "VM_MEMORY", &VMMemoryMacroDef },
+	{ "VM_VCPUS",  &VMVCPUSMacroDef },
 };
 
 static MACRO_DEFAULTS SubmitMacroDefaultSet = {
@@ -3198,7 +3215,7 @@ SetImageSize()
 		}
 		free(tmp);
 		InsertJobExpr(buffer);
-	} else if ( (tmp = condor_param(VM_Memory, ATTR_JOB_VM_MEMORY)) ) {
+	} else if ( (tmp = condor_param(VM_Memory)) || (tmp = condor_param( ATTR_JOB_VM_MEMORY )) ) {
 		fprintf(stderr, "\nNOTE: '%s' was NOT specified.  Using %s = %s. \n", ATTR_REQUEST_MEMORY,ATTR_JOB_VM_MEMORY, tmp );
 		buffer.formatstr("%s = MY.%s", ATTR_REQUEST_MEMORY, ATTR_JOB_VM_MEMORY);
 		free(tmp);
@@ -8139,6 +8156,11 @@ condor_param( const char* name, const char* alt_name )
 		exit(1);
 	}
 
+	if( * pval_expanded == '\0' ) {
+		free( pval_expanded );
+		return NULL;
+	}
+
 	ErrContext.macro_name = NULL;
 	ErrContext.raw_macro_val = NULL;
 
@@ -10522,7 +10544,10 @@ SetVMParams()
 	}
 
 	// Set memory for virtual machine
-	tmp_ptr = condor_param(VM_Memory, ATTR_JOB_VM_MEMORY);
+	tmp_ptr = condor_param(VM_Memory);
+	if( !tmp_ptr ) {
+		tmp_ptr = condor_param(ATTR_JOB_VM_MEMORY);
+	}
 	if( !tmp_ptr ) {
 		fprintf( stderr, "\nERROR: '%s' cannot be found.\n"
 				"Please specify '%s' for vm universe "
