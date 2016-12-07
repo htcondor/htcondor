@@ -1252,6 +1252,18 @@ evaluating to \Expr{True} will cause retries to cease.
 The exit code that is considered successful for this job.
 Defaults to 0 if not defined.
 
+\Bold{Note:  non-zero values of \SubmitCmdNI{success\_exit\_code}
+should generally not be used for DAG node jobs.}
+At the present time, \Condor{dagman} does not take into account
+the value of \SubmitCmdNI{success\_exit\_code}.  This means that,
+if \SubmitCmdNI{success\_exit\_code} is set to a non-zero value,
+\Condor{dagman} will consider the job failed when it actually
+succeeds.  For single-proc DAG node jobs, this can be overcome by using
+a POST script that takes into account the value of
+\SubmitCmdNI{success\_exit\_code} (although this is not recommended).
+For multi-proc DAG node jobs, there is currently no way to overcome
+this limitation.
+
 %%%%%%%%%%%%%%%%%%%
 %% hold
 %%%%%%%%%%%%%%%%%%%
