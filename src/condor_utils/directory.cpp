@@ -79,7 +79,7 @@ Directory::Directory( const char *name, priv_state priv )
 	initialize( priv );
 
 	curr_dir = strnewp(name);
-	dprintf(D_FULLDEBUG, "Initializing Directory: curr_dir = %s\n",curr_dir?curr_dir:"NULL");
+	//dprintf(D_FULLDEBUG, "Initializing Directory: curr_dir = %s\n",curr_dir?curr_dir:"NULL");
 	ASSERT(curr_dir);
 
 #ifndef WIN32
