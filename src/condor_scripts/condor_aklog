@@ -207,7 +207,8 @@ else
 	  # order to guarantee an atomic test-and-set operation. If a search
 	  # for an afs_pag fails, create it via pagsh and link to our session.
 	  keyctl search @s afs_pag _pag >&/dev/null || \
-	    pagsh -c "keyctl link @s $uid_ring_id"
+	    pagsh -c "keyctl link @s $uid_ring_id" || \
+		  exitwitherr 50 "Failed to link PAG to htcondor_uid session"
     } 200<$lockfile || exitwitherr 50 "KRB5CCNAME file does not exist"
 
   # Finally, run aklog with whatever command-line args the user gave us.
