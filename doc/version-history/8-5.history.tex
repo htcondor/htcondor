@@ -162,6 +162,12 @@ It has a command that can be used to wait for the daemons to startup with a time
 \item Added initial support for Singularity containers.
 \Ticket{5828}
 
+\item When submitting a job that has an associated X.509 proxy, or when
+authenticating to the \Condor{schedd} using X.509, the X.509 and VOMS
+attributes are securely extracted and carried along in the job ClassAd.  This
+allows them to be used, for example, in matchmaking policy and job routing.
+\Ticket{5064}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
