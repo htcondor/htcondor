@@ -100,24 +100,24 @@ int ConvertSMVer2Cores(int major, int minor)
 const std::string & Format(const char * fmt, ...) {
 	static std::string buffer;
 	static char * temp = NULL;
-	int           max_temp = 0;
+	static int    max_temp = 0;
 
 	if ( ! temp) { max_temp = 4096; temp = (char*)malloc(max_temp+1); }
 
 	va_list args;
 	va_start(args, fmt);
 	int cch = vsnprintf(temp, max_temp, fmt, args);
-	if (cch < 0) {
-		temp[max_temp] = 0;
-	} else if (cch > max_temp) {
+	va_end (args);
+	if (cch > max_temp) {
 		free(temp);
 		max_temp = cch+100;
-		temp = (char*)malloc(max_temp+1);
+		temp = (char*)malloc(max_temp+1); temp[0] = 0;
+		va_start(args, fmt);
 		vsnprintf(temp, max_temp, fmt, args);
-		temp[max_temp] = 0;
+		va_end (args);
 	}
-	va_end (args);
 
+	temp[max_temp] = 0;
 	buffer = temp;
 	return buffer;
 }
