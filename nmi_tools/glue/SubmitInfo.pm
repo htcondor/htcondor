@@ -615,6 +615,22 @@ our %submit_info = (
 		},
 	},
 
+	# Only Ubuntu 16.04 has standard universe port.
+	'x86_64_Ubuntu16'	=> {
+		'build' => {
+			'configure_args' => { @default_build_configure_args,
+				'-DCLIPPED:BOOL' => 'OFF',
+			 },
+			'prereqs'	=> [ @default_prereqs ],
+		},
+
+		'test' => {
+			'configure_args' => { @default_test_configure_args },
+			'prereqs'	=> [ @default_prereqs ],
+			'testclass'	=> [ @default_testclass ],
+		},
+	},
+
 	# Add the SWAMP's (temporary) platform name
 	'swamp:ubuntu-12.04-64'					=> 'x86_64_Ubuntu12',
 

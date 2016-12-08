@@ -1799,6 +1799,7 @@ test -x /usr/sbin/selinuxenabled && /usr/sbin/selinuxenabled
 if [ $? = 0 ]; then
    restorecon -R -v /var/lock/condor
    setsebool -P condor_domain_can_network_connect 1
+   setsebool -P daemons_enable_cluster_mode 1
    semanage port -a -t condor_port_t -p tcp 12345
    # the number of extraneous SELinux warnings on f17 is very high
 fi
@@ -1807,6 +1808,7 @@ fi
 test -x /usr/sbin/selinuxenabled && /usr/sbin/selinuxenabled
 if [ $? = 0 ]; then
    /usr/sbin/setsebool -P condor_domain_can_network_connect 1
+   /usr/sbin/setsebool -P daemons_enable_cluster_mode 1
    /usr/sbin/semodule -i /usr/share/condor/htcondor.pp
 fi
 %endif

@@ -994,6 +994,7 @@ After placing the \Condor{dagman} job on hold,
 no new node jobs will be submitted,
 and no PRE or POST scripts will be run.
 Any node jobs already in the HTCondor queue will continue undisturbed.
+Any running PRE or POST scripts will be killed.
 If the \Condor{dagman} job is left on hold,
 it will remain in the HTCondor queue after all of the currently running
 node jobs are finished.
