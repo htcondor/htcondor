@@ -120,6 +120,14 @@ unit configuration file.
 Position Indepentdent Executables are a requirement for entry into Debian 9.
 \Ticket{5994}
 
+\item Fixed a denial of service attack when using the \Condor{credd} on the
+Windows platform.
+\Ticket{5984}
+
+\item Fixed a bug where the \Opt{-pool} argument would be ignored by
+\Condor{ssh\_to\_job} under certain circumstances.
+\Ticket{5919}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
