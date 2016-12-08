@@ -21,6 +21,12 @@ if(! $s3Key) { $s3Key = "lease-${VERSION}.zip"; }
 	$template->{ AWSTemplateFormatVersion } = "2010-09-09";
 	$template->{ Description } = "HTCondor Annex Lease Implementation";
 
+	$template->{ Outputs } = {
+		LeaseFunctionARN => {
+			Value => { "Fn::GetAtt" => [ "LeaseFunction", "Arn" ] }
+		}
+	};
+
 	my $lambdaBasicExecutionPolicy = {
 		PolicyName => "lambda_basic_execution",
 		PolicyDocument => {
