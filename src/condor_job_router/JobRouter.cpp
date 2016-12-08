@@ -959,6 +959,7 @@ RoutedJob::RoutedJob() {
 	is_done = false;
 	is_running = false;
 	is_success = false;
+	is_interrupted = false;
 	is_sandboxed = false;
 	submission_time = 0;
 	retirement_time = 0;
@@ -1879,6 +1880,7 @@ JobRouter::FinishCheckSubmittedJobStatus(RoutedJob *job) {
 
 	if(!src_ad) {
 		dprintf(D_ALWAYS,"JobRouter (%s): failed to find src ad in job collection mirror.\n",job->JobDesc().c_str());
+		job->is_interrupted = true;
 		GracefullyRemoveJob(job);
 		return;
 	}
@@ -1886,6 +1888,7 @@ JobRouter::FinishCheckSubmittedJobStatus(RoutedJob *job) {
 	int job_status = 0;
 	if( !src_ad->EvaluateAttrInt( ATTR_JOB_STATUS, job_status ) ) {
 		dprintf(D_ALWAYS, "JobRouter failure (%s): cannot evaluate JobStatus in src job\n",job->JobDesc().c_str());
+		job->is_interrupted = true;
 		GracefullyRemoveJob(job);
 		return;
 	}
@@ -1893,12 +1896,14 @@ JobRouter::FinishCheckSubmittedJobStatus(RoutedJob *job) {
 	if(job_status == REMOVED) {
 		dprintf(D_FULLDEBUG, "JobRouter (%s): found src job marked for removal\n",job->JobDesc().c_str());
 		WriteAbortEventToUserLog( *src_ad );
+		job->is_interrupted = true;
 		GracefullyRemoveJob(job);
 		return;
 	}
 
 	if(job_status == HELD && !hold_copied_from_target_job(*src_ad) ) {
 		dprintf(D_FULLDEBUG, "JobRouter (%s): found src job on hold\n",job->JobDesc().c_str());
+		job->is_interrupted = true;
 		GracefullyRemoveJob(job);
 		return;
 	}
@@ -2412,7 +2417,7 @@ JobRouter::FinishCleanupJob(RoutedJob *job) {
 			if(job->is_success) {
 				route->IncrementSuccesses();
 			}
-			else {
+			else if(!job->is_interrupted) {
 				route->IncrementFailures();
 			}
 		}

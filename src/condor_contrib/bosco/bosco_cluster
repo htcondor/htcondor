@@ -353,8 +353,8 @@ add_cluster_to_list () {
     check_cluster_list2 $remote_host
     if [ $? -eq 0 ]; then
         tmpfile=`mktemp -t tmpclusterlist.XXXXXX`
-        sed "/entry=$remote_host max_queued=.*/d" $CLUSTERLIST_LOCATION > tmpfile
-        mv tmpfile $CLUSTERLIST_LOCATION
+        sed "/entry=$remote_host max_queued=.*/d" $CLUSTERLIST_LOCATION > $tmpfile
+        mv $tmpfile $CLUSTERLIST_LOCATION
     fi
 
     echo "entry=$remote_host max_queued=$max_queued cluster_type=$cluster_type" >> $CLUSTERLIST_LOCATION

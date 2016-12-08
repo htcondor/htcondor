@@ -63,6 +63,9 @@ class RoutedJob {
 	bool is_done;     // true if src job should be marked finished
 	bool is_running;  // true if job status is RUNNING
 	bool is_success;  // true if job finished successfully
+	bool is_interrupted; // true if job aborted due to external conditions
+		// (e.g. source job removed)
+		// this job shouldn't be considered a success or a failure
 
 	bool is_sandboxed;// true if dest copy of job has a separate sandbox
 
