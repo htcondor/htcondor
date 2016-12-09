@@ -37,7 +37,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Fixed a bug in the virtual machine universe where \Attr{RequestMemory}
+and \Attr{RequestCPUs} were not changing the resources assigned to the VM
+created by HTCondor.  Now, \Attr{VM\_Memory} defaults to \Attr{RequestMemory},
+and the number of CPUs defaults to \Attr{RequestCPUs}.
+\Ticket{5998}
 
 \end{itemize}
 
@@ -191,6 +195,12 @@ It has a command that can be used to wait for the daemons to startup with a time
 
 \item Added initial support for Singularity containers.
 \Ticket{5828}
+
+\item When submitting a job that has an associated X.509 proxy, or when
+authenticating to the \Condor{schedd} using X.509, the X.509 and VOMS
+attributes are securely extracted and carried along in the job ClassAd.  This
+allows them to be used, for example, in matchmaking policy and job routing.
+\Ticket{5064}
 
 \end{itemize}
 

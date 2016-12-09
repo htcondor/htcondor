@@ -99,18 +99,25 @@ int ConvertSMVer2Cores(int major, int minor)
 // because we don't have access to condor_utils, make a limited local version
 const std::string & Format(const char * fmt, ...) {
 	static std::string buffer;
-	char temp[4096];
-	const int max_temp = (int)(sizeof(temp)/sizeof(temp[0]));
+	static char * temp = NULL;
+	static int    max_temp = 0;
+
+	if ( ! temp) { max_temp = 4096; temp = (char*)malloc(max_temp+1); }
 
 	va_list args;
 	va_start(args, fmt);
 	int cch = vsnprintf(temp, max_temp, fmt, args);
 	va_end (args);
-
-	if (cch < 0 || cch >= max_temp) {
-		fprintf(stderr, "internal error, %d is not enough space to format, value will be truncated.\n", max_temp);
-		temp[max_temp-1] = 0;
+	if (cch > max_temp) {
+		free(temp);
+		max_temp = cch+100;
+		temp = (char*)malloc(max_temp+1); temp[0] = 0;
+		va_start(args, fmt);
+		vsnprintf(temp, max_temp, fmt, args);
+		va_end (args);
 	}
+
+	temp[max_temp] = 0;
 	buffer = temp;
 	return buffer;
 }
@@ -320,7 +327,12 @@ int print_error(int mode, const char * fmt, ...) {
 	va_end (args);
 
 	if (cch < 0 || cch >= max_temp) {
-		fprintf(stderr, "internal error, %d is not enough space to format, value will be truncated.\n", max_temp);
+		// TJ: I don't think its possible to get where when g_config_syntax is on
+		// because all known inputs will be < 4k in size.
+		// but if we do, just suppress this error message
+		if ( ! g_config_syntax) {
+			fprintf(stderr, "internal error, %d is not enough space to format, value will be truncated.\n", max_temp);
+		}
 		temp[max_temp-1] = 0;
 	}
 

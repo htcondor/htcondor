@@ -155,6 +155,19 @@ static condor_params::string_value UnliveProcessMacroDef = { ZeroString, 0 };
 static condor_params::string_value UnliveStepMacroDef = { ZeroString, 0 };
 static condor_params::string_value UnliveRowMacroDef = { ZeroString, 0 };
 
+static char rc[] = "$(Request_CPUs)";
+static condor_params::string_value VMVCPUSMacroDef = { rc, 0 };
+static char rm[] = "$(Request_Memory)";
+static condor_params::string_value VMMemoryMacroDef = { rm, 0 };
+
+// Necessary so that the user who sets request_memory instead of
+// RequestMemory doesn't miss out on the default value for VM_MEMORY.
+static char rem[] = "$(RequestMemory)";
+static condor_params::string_value RequestMemoryMacroDef = { rem, 0 };
+// The same for CPUs.
+static char rec[] = "$(RequestCPUs)";
+static condor_params::string_value RequestCPUsMacroDef = { rec, 0 };
+
 static char StrictFalseMetaKnob[] = 
 	"SubmitWarnEmptyMatches=false\n"
 	"SubmitFailEmptyMatches=false\n"
@@ -198,9 +211,13 @@ static MACRO_DEF_ITEM SubmitMacroDefaults[] = {
 	{ "OPSYSVER",        &OpsysVerMacroDef },
 	{ "Process",   &UnliveProcessMacroDef },
 	{ "ProcId",    &UnliveProcessMacroDef },
+	{ "Request_CPUs", &RequestCPUsMacroDef },
+	{ "Request_Memory", &RequestMemoryMacroDef },
 	{ "Row",       &UnliveRowMacroDef },
 	{ "SPOOL",     &SpoolMacroDef },
 	{ "Step",      &UnliveStepMacroDef },
+	{ "VM_MEMORY", &VMMemoryMacroDef },
+	{ "VM_VCPUS",  &VMVCPUSMacroDef },
 };
 
 
@@ -780,6 +797,11 @@ char * SubmitHash::submit_param( const char* name, const char* alt_name )
 		push_error(stderr, "Failed to expand macros in: %s\n",
 				 used_alt ? alt_name : name );
 		abort_code = 1;
+		return NULL;
+	}
+
+	if( * pval_expanded == '\0' ) {
+		free( pval_expanded );
 		return NULL;
 	}
 
@@ -5136,7 +5158,7 @@ int SubmitHash::SetImageSize()
 		}
 		free(tmp);
 		InsertJobExpr(buffer);
-	} else if ( (tmp = submit_param(SUBMIT_KEY_VM_Memory, ATTR_JOB_VM_MEMORY)) ) {
+	} else if ( (tmp = submit_param(SUBMIT_KEY_VM_Memory)) || (tmp = submit_param(ATTR_JOB_VM_MEMORY)) ) {
 		push_warning(stderr, "'%s' was NOT specified.  Using %s = %s. \n", ATTR_REQUEST_MEMORY,ATTR_JOB_VM_MEMORY, tmp );
 		buffer.formatstr("%s = MY.%s", ATTR_REQUEST_MEMORY, ATTR_JOB_VM_MEMORY);
 		free(tmp);
@@ -6076,7 +6098,10 @@ int SubmitHash::SetVMParams()
 	}
 
 	// Set memory for virtual machine
-	tmp_ptr = submit_param(SUBMIT_KEY_VM_Memory, ATTR_JOB_VM_MEMORY);
+	tmp_ptr = submit_param(SUBMIT_KEY_VM_Memory);
+	if( !tmp_ptr ) {
+		tmp_ptr = submit_param(ATTR_JOB_VM_MEMORY);
+	}
 	if( !tmp_ptr ) {
 		push_error(stderr, "'%s' cannot be found.\n"
 				"Please specify '%s' for vm universe "

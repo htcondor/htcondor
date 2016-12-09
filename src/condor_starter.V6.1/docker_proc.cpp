@@ -24,10 +24,49 @@
 #include "starter.h"
 #include "condor_holdcodes.h"
 #include "docker-api.h"
+#include "condor_daemon_client.h"
 
 extern CStarter *Starter;
 
 static void buildExtraVolumes(std::list<std::string> &extras, ClassAd &machAd, ClassAd &jobAd);
+
+static bool handleFTL(int error) {
+	if (error != 0) {
+		// dprintf( D_ALWAYS, "Failed to launch Docker universe job (%s).\n", error );
+	}
+
+	//
+	// If we failed to launch the job (as opposed to aborted the takeoff
+	// because there was something wrong with the payload), we also need
+	// to force the startd to advertise this fact so other jobs can avoid
+	// this machine.
+	//
+	DCStartd startd( (const char * const)NULL, (const char * const)NULL );
+	if( ! startd.locate() ) {
+		dprintf( D_ALWAYS | D_FAILURE, "Unable to locate startd: %s\n", startd.error() );
+		return false;
+	}
+
+	//
+	// The startd will update the list 'OfflineUniverses' for us.
+	//
+	ClassAd update;
+	if (error) {
+		update.Assign( ATTR_HAS_DOCKER, false );
+		update.Assign( "DockerOfflineReason", error );
+	} else {
+		update.Assign( ATTR_HAS_DOCKER, true );
+	}
+
+	ClassAd reply;
+	if( ! startd.updateMachineAd( &update, &reply ) ) {
+		dprintf( D_ALWAYS | D_FAILURE, "Unable to update machine ad: %s\n", startd.error() );
+		return false;
+	}
+
+	return true;
+}
+
 
 //
 // TODO: Allow the use of HTCondor file-transfer to provide the image.
@@ -148,12 +187,14 @@ int DockerProc::StartJob() {
 	int rv = DockerAPI::run( *machineAd, *JobAd, containerName, imageID, command, args, job_env, sandboxPath, extras, JobPid, childFDs, err );
 	if( rv < 0 ) {
 		dprintf( D_ALWAYS | D_FAILURE, "DockerAPI::run( %s, %s, ... ) failed with return value %d\n", imageID.c_str(), command.c_str(), rv );
+		handleFTL(rv);
 		return FALSE;
 	}
 	dprintf( D_FULLDEBUG, "DockerAPI::run() returned pid %d\n", JobPid );
 	// The following line is for condor_who to parse
 	dprintf( D_ALWAYS, "Create_Process succeeded, pid=%d\n", JobPid);
-
+	// If we manage to start the Docker job, clear the offline state for docker universe
+	handleFTL(0);
 
 	// Start a timer to poll for job usage updates.
 	updateTid = daemonCore->Register_Timer(2, 

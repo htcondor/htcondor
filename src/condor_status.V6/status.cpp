@@ -746,17 +746,7 @@ main (int argc, char *argv[])
 
 	if(offlineMode) {
 		query->addANDConstraint( "size( OfflineUniverses ) != 0" );
-
 		projList.insert( "OfflineUniverses" );
-
-		//
-		// Since we can't add a regex to a projection, explicitly list all
-		// the attributes we know about.
-		//
-
-		projList.insert( "HasVM" );
-		projList.insert( "VMOfflineReason" );
-		projList.insert( "VMOfflineTime" );
 	}
 
 	if(absentMode) {

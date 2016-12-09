@@ -26,7 +26,13 @@ BEGIN_C_DECLS
 FILE *my_popenv( const char *const argv [],
                  const char * mode,
                  int want_stderr );
+
 int my_pclose( FILE *fp );
+int my_pclose_ex( FILE *fp, unsigned int timeout, bool kill_after_timeout );
+// special return values from my_pclose_ex that are not exit statuses
+#define MYPCLOSE_EX_NO_SUCH_FP     ((int)0x55555555)
+#define MYPCLOSE_EX_I_KILLED_IT    ((int)0x99099909)
+#define MYPCLOSE_EX_STATUS_UNKNOWN ((int)0xDEADBEEF)
 
 int my_systemv( const char *const argv[] );
 
@@ -63,6 +69,115 @@ FILE *privsep_popen( ArgList &args,
 					 Env *env_ptr = NULL);
 #endif
 
-#endif
+// run a command and return its output in a buffer
+// the program is killed if the timeout expires.
+// returns NULL and sets exit_status to errno if the timeout expires
+// returns a null-terminated malloc'd buffer and sets exit_status
+//   to the programs exit status if the program ran to completion
+#define RUN_COMMAND_OPT_WANT_STDERR       0x001
+#define RUN_COMMAND_OPT_USE_CURRENT_PRIVS 0x080
+char* run_command(time_t timeout, ArgList &args, int options, Env* env_ptr, int *exit_status);
+
+// Class to hold a my_popen stream can capture its output into a buffer
+// And also provide a time limit on how long the program runs.
+// aka "Backticks" (with timeout)
+//
+// Usage:
+// use start_program(...) to start the process (calls my_popen)
+// if start_program returns != 0, execution failed and the return value was the error
+//
+// use wait_for_output() or wait_for_exit() to buffer the output with a timeout
+// then use close_program() to close the my_popen handle (also calls my_pkill if needed)
+//
+// then use output(), error_code(), exit_status(), etc to get the result.
+// output is available only after the program exits.
+//
+// use clear() to reset the class so you can call start_program() again.
+//
+class MyPopenTimer {
+public:
+	static const int NOT_INTIALIZED=0xd01e;
+	MyPopenTimer() : fp(NULL), status(0), error(NOT_INTIALIZED), begin_time(0), src(NULL, true), bytes_read(0), run_time(0) {}
+	virtual ~MyPopenTimer();
+
+	// prepare class for destruction or re-use.
+	// rewinds output buffer but does not free it.
+	void clear();
+
+	// run a program and begin capturing it's output
+	// returns 0 if program starts successfully
+	// returns -1 if a program is already running
+	// returns errno from my_popen if program does not start
+	int start_program (
+		ArgList &args,
+		bool also_stderr,
+		Env* env_ptr=NULL,
+		bool drop_privs=true,
+		const char * stdin_data=NULL);
+
+	// Capture program output until the program exits or until timeout expires
+	// returns ouput if program runs to completion and output is captured
+	// returns NULL if there was an error or timeout.
+	// When NULL is returned the program may still be running. You can
+	//   use is_closed() to discover if it is still running
+	//   use close_program() to terminate it
+	// then use exit_status() and/or error_code() to find out what happened.
+	MyStringSource* wait_for_output(time_t timeout);
+
+	// capture program output until it exits or the timout expires
+	// returns true and the exit code if the program runs to completion.
+	// returns false if the timeout expired or there was an error reading the output.
+	// when false is returned, the program (might) still be running.
+	// use close_program to terminate it.
+	bool wait_for_exit(time_t timeout, int *exit_status);
+
+	// close the program if it is still running, sending a SIGTERM now and
+	// a SIGKILL after wait_for_term seconds if it still has not exited.
+	// return true if program exited on its own, false if it had be signaled.
+	bool close_program(time_t wait_for_term);
+
+	// a common use pattern, wait for output and then close the program, by force if necessary
+	MyStringSource* wait_and_close(time_t timeout, time_t wait_for_term=1) {
+		MyStringSource * ret = wait_for_output(timeout);
+		close_program(wait_for_term);
+		return ret;
+	}
+
+	// returns true if the program and FILE* handle have been closed, false if not.
+	bool is_closed() const { return !fp; }
+
+	// once is_closed() returns true, these can be used to query the final state.
+	time_t began_at() const { return begin_time; }
+	bool was_timeout() const { return error == ETIMEDOUT; }
+	int exit_status() const { return status; }
+	int error_code() const { return error; }
+	MyStringCharSource& output() { return src; }
+	int output_size() const { return bytes_read; }
+	int runtime() const { return run_time; }
+
+	// returns "" if no error, strerror() or some other short string
+	// if there was an error starting the program or reading output
+	const char * error_str() const;
+
+protected:
+	FILE * fp;
+	int    status;  // status value of the program
+	int    error;   // error code from reading
+	time_t begin_time;
+	MyStringCharSource src;
+
+	// returns 0 on success, error code on error
+	int read_until_eof(time_t timeout);
+
+private:
+	int   bytes_read; // number of bytes read for this program
+	int   run_time;   // time between start_program() and close_program()
+	// disallow assignment and copy construction
+	MyPopenTimer(const MyPopenTimer & that);
+	MyPopenTimer& operator=(const MyPopenTimer & that);
+};
+
+
+#endif // __cplusplus
 
 #endif

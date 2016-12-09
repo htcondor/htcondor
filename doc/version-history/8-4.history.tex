@@ -105,6 +105,29 @@ the \Condor{schedd}s had already marked as significant.
  instead it will write error messages as configuration comments to stdout.
  \Ticket{5989}
 
+\item When transferring a job's sandbox, the permissions on subdirectories
+are now preserved in the same that they are for regular files.
+Previously, the permissions were modified by HTCondor daemon's umask,
+and directories transferred from a Windows machine to a unix machine had
+no permissions enabled.
+\Ticket{5948}
+
+\item Removed obsolete ControlGroup option from HTCondor's systemd service
+unit configuration file.
+\Ticket{5997}
+
+\item Compiled benchmarking programs as a Position Indenpendent Executable.
+Position Indepentdent Executables are a requirement for entry into Debian 9.
+\Ticket{5994}
+
+\item Fixed a denial of service attack when using the \Condor{credd} on the
+Windows platform.
+\Ticket{5984}
+
+\item Fixed a bug where the \Opt{-pool} argument would be ignored by
+\Condor{ssh\_to\_job} under certain circumstances.
+\Ticket{5919}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

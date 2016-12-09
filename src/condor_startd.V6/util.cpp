@@ -242,7 +242,14 @@ check_recovery_file( const char *execute_dir )
 	if ( !containerId.empty() ) {
 		CondorError err;
 		dprintf(D_ALWAYS, "Removing orphaned docker container %s\n", containerId.c_str());
-		DockerAPI::rm(containerId, err);
+		int rval = DockerAPI::rm(containerId, err);
+		if (rval == DockerAPI::docker_hung) {
+			dprintf(D_ALWAYS, "DockerAPI::rm returned docker_hung. Taking Docker universe offline\n");
+			ClassAd update;
+			update.Assign( ATTR_HAS_DOCKER, false );
+			update.Assign( "DockerOfflineReason", "Docker hung trying to rm an orphaned container" );
+			resmgr->updateExtrasClassAd(&update);
+		}
 	} 
 
 	delete recovery_ad;

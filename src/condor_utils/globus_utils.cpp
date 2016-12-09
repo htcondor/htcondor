@@ -1633,6 +1633,8 @@ x509_receive_delegation( const char *destination_file,
 	BIO *bio = NULL;
 
 	if ( activate_globus_gsi() != 0 ) {
+		if ( st->m_dest ) { free(st->m_dest); }
+		delete st;
 		return -1;
 	}
 

@@ -4,6 +4,7 @@
 \index{condor\_submit command}
 
 \Synopsis \SynProg{\Condor{submit}}
+\oOpt{-terse}
 \oOpt{-verbose}
 \oOpt{-unused}
 \oOptArg{-name}{schedd\_name}
@@ -22,6 +23,7 @@
 \oOpt{-dry-run}
 \oOptArg{-maxjobs}{number-of-jobs}
 \oOpt{-single-cluster}
+\oOptArg{-stm}{method}
 \oOpt{<submit-variable>=<value>}
 \oArg{submit description file}
 \oOptArg{-queue}{queue\_arguments}
@@ -58,7 +60,9 @@ The job ClassAd attribute \Attr{ClusterId} identifies a cluster.
 The \Arg{submit description file} argument is the path and file name of 
 the submit description file. 
 If this optional argument is missing or is the dash character (\Expr{-}),
-then the commands are taken from standard input.
+then the commands are taken from standard input.  If \Expr{-} is
+specified for the \Arg{submit description file}, \Opt{-verbose} is
+implied; this can be overridden by specifying \Opt{-terse}.
 
 Note that submission of jobs from a Windows machine requires
 a stashed password to allow HTCondor to impersonate the user submitting
@@ -74,6 +78,8 @@ Submit description files may contain comments.
 A comment is any line beginning with a pound character (\verb@#@). 
 
 \begin{Options}
+
+\OptItem{\Opt{-terse}}{Terse output - display JobId ranges only.}
 
 \OptItem{\Opt{-verbose}}{Verbose output - display the created job ClassAd}
 
@@ -197,6 +203,10 @@ files for completed jobs need to be retrieved with \Condor{transfer\_data}.}
   file causes more than a single cluster value to be assigned,
   then no jobs are submitted for execution and an error message is generated. }
 
+\OptItem{\OptArg{-stm}{method}}{Specify the method use to move a sandbox
+  into HTCondor.  \Arg{method} is one of \Opt{stm\_use\_schedd\_only}
+  or \Opt{stm\_use\_transferd}.}
+
 \OptItem{\Opt{<submit-variable>=<value>}}{Defines a submit command or
   submit variable with a value, and parses it as if it was placed at
   the beginning of the submit description file.
@@ -221,7 +231,7 @@ files for completed jobs need to be retrieved with \Condor{transfer\_data}.}
 
 \end{Options}
 
-\subsection*{Submit Description File Commands}
+\subsection*{\label{condor-submit-commands}Submit Description File Commands}
 \index{submit commands}
 
 Note: more information on submitting HTCondor jobs can be found

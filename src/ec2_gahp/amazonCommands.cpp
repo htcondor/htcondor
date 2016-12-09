@@ -439,6 +439,7 @@ void convertMessageDigestToLowercaseHex(
 		sprintf( ptr, "%02x", messageDigest[i] );
 	}
 	hexEncoded.assign( buffer, mdLength * 2 );
+	free(buffer);
 }
 
 
