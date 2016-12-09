@@ -7247,6 +7247,35 @@ REM Run the actual job now
   which currently defaults to 10 MiB in size.
   Values are specified with the same syntax as \MacroNI{MAX\_DEFAULT\_LOG}.
 
+\label{param:Singularity}
+\item[\Macro{SINGULARITY}]
+  The path to the Singularity binary.
+  The default value is \File{/usr/bin/singularity}.
+
+\label{param:SingularityJob}
+\item[\Macro{SINGULARITY\_JOB}]
+  A boolean value specifying whether this startd should run jobs
+  under Singularity.
+  The default value is \Expr{False}.
+
+\label{param:SingularityImageExpr}
+\item[\Macro{SINGULARITY\_IMAGE\_EXPR}]
+  The path to the Singularity container image file.
+  The default value is \AdStr{SingularityImage}.
+
+\label{param:SingularityTargetDir}
+\item[\Macro{SINGULARITY\_TARGET\_DIR}]
+  A directory within the Singularity image to which
+  \MacroNI{\$\_CONDOR\_SCRATCH\_DIR}
+  on the host should be mapped.
+  The default value is \AdStr{}.
+
+\label{param:SingularityBindExpr}
+\item[\Macro{SINGULARITY\_BIND\_EXPR}]
+  A string value containing a list of bind mount specifications to
+  be passed to Singularity.
+  The default value is \AdStr{SingularityBind}.
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

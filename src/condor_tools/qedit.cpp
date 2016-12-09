@@ -286,7 +286,7 @@ main(int argc, const char *argv[])
 				exit(1);
 			}
 			ownername = argv[ixarg]; // remember this in case we need it later
-			MyString expr; expr.formatstr(ATTR_OWNER "=\"%s\"", ownername);
+			MyString expr; expr.formatstr(ATTR_OWNER "==\"%s\"", ownername);
 			gquery.addCustomAND(expr.c_str());
 			bare_arg_must_identify_jobs = false;
 			only_my_jobs = false;
@@ -363,7 +363,7 @@ main(int argc, const char *argv[])
 			} else {
 				// assume that this argument is an ownername
 				ownername = argv[ixarg];
-				MyString expr; expr.formatstr(ATTR_OWNER "=\"%s\"", ownername);
+				MyString expr; expr.formatstr(ATTR_OWNER "==\"%s\"", ownername);
 				gquery.addCustomAND(expr.c_str());
 			}
 		}
