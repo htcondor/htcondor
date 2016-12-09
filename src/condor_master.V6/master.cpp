@@ -1590,9 +1590,9 @@ void
 main_pre_command_sock_init()
 {
 	/* Make sure we are the only copy of condor_master running */
+	char*  p;
 #ifndef WIN32
 	MyString lock_file;
-	char*  p;
 
 	// see if a file is given explicitly
 	p = param ("MASTER_INSTANCE_LOCK");

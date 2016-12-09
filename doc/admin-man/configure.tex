@@ -6965,8 +6965,8 @@ REM Run the actual job now
 
 \label{param:CgroupMemoryLimitPolicy} 
 \item[\Macro{CGROUP\_MEMORY\_LIMIT\_POLICY}]
-  A string with possible values of \Expr{hard}, the default value
-  \Expr{soft} and \Expr{none}.
+  A string with possible values of \Expr{hard}, \Expr{soft} and \Expr{none}.
+  The default value is \Expr{none}.
   If set to \Expr{hard}, the cgroup-based limit on the total amount 
   of physical memory used by the sum of all processes in the job 
   will not be allowed to exceed the limit given by the cgroup memory
@@ -6979,6 +6979,8 @@ REM Run the actual job now
   of physical memory used by the sum of all processes in the job 
   will be allowed to go over the limit, 
   if there is free memory available on the system.
+  If set to \Expr{none}, no limit will be enforced, but the memory
+  usage of the job will be accurately measured by a cgroup.
 
 \label{param:UseVisibleDesktop} 
 \item[\Macro{USE\_VISIBLE\_DESKTOP}]
@@ -7306,6 +7308,16 @@ Configuration File Entries}
   \SubmitCmd{request\_cpus} submit command.
   If the job defines the value, then that value takes precedence. 
   If not set, then then the default is 1.
+
+\label{param:DefaultJobMaxRetries}
+\item[\Macro{DEFAULT\_JOB\_MAX\_RETRIES}]
+  The default value for the maximum number of job retries, if the
+  \Condor{submit} retry feature is used.  (Note that this value is
+  only relevant if either \SubmitCmdNI{retry\_until} or
+  \SubmitCmdNI{success\_exit\_code} is defined in the submit file,
+  and \SubmitCmdNI{max\_retries} is not.)
+  (See section~\ref{condor-submit-max-retries} for more information.)
+  The default value if not defined is 10.
 
 \end{description}
 
@@ -10906,6 +10918,13 @@ COLLECTOR.SEC_DEFAULT_SESSION_DURATION = 50000
 \label{param:CertificateMapfile}
 \item[\Macro{CERTIFICATE\_MAPFILE}]
   A path and file name of the unified map file.
+
+\label{param:CertificateMapfileAssumeHashKeys}
+\item[\Macro{CERTIFICATE\_MAPFILE\_ASSUME\_HASH\_KEYS}]
+  For HTCondor version 8.5.8 and later. When this is true, the second field of
+  the \Macro{CERTIFICATE\_MAPFILE} is not interpreted as a regular expression
+  unless it begins and ends with the slash / character.
+
 
 \label{param:SecEnableMatchPasswordAuthentication}
 \item[\Macro{SEC\_ENABLE\_MATCH\_PASSWORD\_AUTHENTICATION}]

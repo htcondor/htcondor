@@ -231,6 +231,31 @@ static bool parse_size_with_unit(
 	return !*p;
 }
 
+// make a log name from daemon name by Capitalizing each word
+// and removing _.  so SHARED_PORT becomes SharedPort
+static void make_log_name_from_daemon_name( std::string &str )
+{
+	if (str.length() == 0) return;
+	bool upper = true;
+	unsigned int j=0;
+	for (unsigned int i=0; i < str.length(); ++i) {
+		char ch = str[i];
+		if (isspace(ch) || ch == '_') {
+			upper = true;
+		} else {
+			if (ch >= 'a' && ch <= 'z' && upper) {
+				ch = _toupper(ch);
+			} else if (ch >= 'A' && ch <= 'Z' && ! upper) {
+				ch = _tolower(ch);
+			}
+			str[j++] = ch;
+			upper = false;
+		}
+	}
+	str[j] = 0;
+}
+
+
 int
 dprintf_config( const char *subsys, struct dprintf_output_settings *p_info /* = NULL*/, int c_info /*= 0*/)
 {
@@ -426,19 +451,17 @@ dprintf_config( const char *subsys, struct dprintf_output_settings *p_info /* = 
 				logPath = "SYSLOG";
 			} else if (logPathParam) {
 				logPath = logPathParam;
-			} else if (localName) {
-				std::string ln( localName ); title_case( ln );
-				formatstr(logPath, "%s%c%sLog", DebugLogDir, DIR_DELIM_CHAR, ln.c_str() );
 			} else {
-				// No default value found, so use $(LOG)/$(SUBSYSTEM)Log
-				char *lsubsys = param("SUBSYSTEM");//dprintf_param_funcs->param("SUBSYSTEM");
-				if ( ! DebugLogDir || ! lsubsys) {
-					EXCEPT("Unable to find LOG or SUBSYSTEM.");
+				// No default value found, so use $(LOG)/$(SUBSYSTEM)Log or $(LOG)/$(LOCALNAME)Log
+				std::string ln;
+				if (localName) {
+					ln = localName;
+				} else {
+					char * lsubsys = param("SUBSYSTEM");
+					if (lsubsys) { ln = lsubsys; free(lsubsys); } else { ln = subsys; }
 				}
-
-				formatstr(logPath, "%s%c%sLog", DebugLogDir, DIR_DELIM_CHAR, lsubsys);
-
-				free(lsubsys);
+				make_log_name_from_daemon_name( ln );
+				formatstr(logPath, "%s%c%sLog", DebugLogDir, DIR_DELIM_CHAR, ln.c_str() );
 			}
 
 			DebugParams[0].accepts_all = true;
