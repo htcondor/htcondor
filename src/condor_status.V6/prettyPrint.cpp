@@ -81,7 +81,8 @@ static const char *formatRealTime( long long , Formatter &);
 static const char *formatRealDate( long long , Formatter &);
 //static const char *formatFloat (double, AttrList *, Formatter &);
 static const char *formatLoadAvg (double, Formatter &);
-static const char *formatStringsFromList( const classad::Value &, Formatter & );
+static bool renderStringsFromList( classad::Value &, AttrList*, Formatter & );
+//static const char *formatStringsFromList( const classad::Value &, Formatter & );
 
 static const char *
 format_readable_mb(const classad::Value &val, Formatter &)
@@ -489,21 +490,21 @@ void prettyPrintAd(ppOption pps, ClassAd *ad, int output_index, StringList * whi
 
 
 const char *
-formatStringsFromList( const classad::Value & value, Formatter & ) {
+extractStringsFromList( const classad::Value & value, Formatter &, std::string &prettyList ) {
 	const classad::ExprList * list = NULL;
 	if( ! value.IsListValue( list ) ) {
 		return "[Attribute not a list.]";
 	}
 
-	static std::string prettyList;
 	prettyList.clear();
 	classad::ExprList::const_iterator i = list->begin();
 	for( ; i != list->end(); ++i ) {
-		std::string universeName;
+		std::string item;
 		if ((*i)->GetKind() != classad::ExprTree::LITERAL_NODE) continue;
-		classad::Value * pval = reinterpret_cast<classad::Value*>(*i);
-		if (pval->IsStringValue(universeName)) {
-			prettyList += universeName + ", ";
+		classad::Value val;
+		reinterpret_cast<classad::Literal*>(*i)->GetValue(val);
+		if (val.IsStringValue(item)) {
+			prettyList += item + ", ";
 		}
 	}
 	if( prettyList.length() > 0 ) {
@@ -513,10 +514,19 @@ formatStringsFromList( const classad::Value & value, Formatter & ) {
 	return prettyList.c_str();
 }
 
-// print the set of unique items from the given list.
+bool renderStringsFromList( classad::Value & value, AttrList*, Formatter & fmt )
+{
+	if( ! value.IsListValue() ) {
+		return false;
+	}
+	std::string prettyList;
+	value.SetStringValue(extractStringsFromList(value, fmt, prettyList));
+	return true;
+}
+
+// extract the set of unique items from the given list.
 const char *
-formatUniqueList( const classad::Value & value, Formatter & ) {
-	static std::string retval;
+extractUniqueStrings( const classad::Value & value, Formatter &, std::string &list_out ) {
 	std::set<std::string> uniq;
 
 	classad::ClassAdUnParser unparser;
@@ -538,37 +548,48 @@ formatUniqueList( const classad::Value & value, Formatter & ) {
 			}
 			uniq.insert(item);
 		}
-	} else if (value.IsStringValue(retval)) {
+	} else if (value.IsStringValue(list_out)) {
 		// for strings, parse as a string list, and add each unique item into the set
-		StringList lst(retval.c_str());
+		StringList lst(list_out.c_str());
 		for (const char * psz = lst.first(); psz; psz = lst.next()) {
 			uniq.insert(psz);
 		}
 	} else {
 		// for other types treat as a single item, no need to uniqify
-		retval.clear();
-		ClassAdValueToString(value, retval);
-		return retval.c_str();
+		list_out.clear();
+		ClassAdValueToString(value, list_out);
+		return list_out.c_str();
 	}
 
-	retval.clear();
+	list_out.clear();
 	for (std::set<std::string>::const_iterator it = uniq.begin(); it != uniq.end(); ++it) {
-		if (retval.empty()) retval = *it;
+		if (list_out.empty()) list_out = *it;
 		else {
-			retval += ", ";
-			retval += *it;
+			list_out += ", ";
+			list_out += *it;
 		}
 	}
 
-	return retval.c_str();
+	return list_out.c_str();
 }
+
+bool renderUniqueStrings( classad::Value & value, AttrList*, Formatter & fmt )
+{
+	if( ! value.IsListValue() ) {
+		return false;
+	}
+	std::string buffer;
+	value.SetStringValue(extractUniqueStrings(value, fmt, buffer));
+	return true;
+}
+
 
 void ppSetStartdOfflineCols (int /*width*/)
 {
 		ppSetColumn( ATTR_NAME, -34, ! wide_display );
 		// A custom printer for filtering out the ints would be handy.
 		ppSetColumn( "OfflineUniverses", Lbl( "Offline Universes" ),
-					 formatStringsFromList, -42, ! wide_display );
+					 renderStringsFromList, -42, ! wide_display );
 
 		// How should I print out the offline reasons and timestamps?
 
@@ -1741,9 +1762,9 @@ static const CustomFormatFnTableItem LocalPrintFormats[] = {
 	{ "PLATFORM",     ATTR_OPSYS, 0, renderPlatform, ATTR_ARCH "\0" ATTR_OPSYS_AND_VER "\0" ATTR_OPSYS_SHORT_NAME "\0" },
 	{ "READABLE_KB",  ATTR_DISK, 0, format_readable_kb, NULL },
 	{ "READABLE_MB",  ATTR_MEMORY, 0, format_readable_mb, NULL },
-	{ "STRINGS_FROM_LIST", NULL, 0, formatStringsFromList, NULL },
+	{ "STRINGS_FROM_LIST", NULL, 0, renderStringsFromList, NULL },
 	{ "TIME",         ATTR_KEYBOARD_IDLE, 0, formatRealTime, NULL },
-	{ "UNIQUE",       NULL, 0, formatUniqueList, NULL },
+	{ "UNIQUE",       NULL, 0, renderUniqueStrings, NULL },
 };
 static const CustomFormatFnTable LocalPrintFormatsTable = SORTED_TOKENER_TABLE(LocalPrintFormats);
 const CustomFormatFnTable * getCondorStatusPrintFormats() { return &LocalPrintFormatsTable; }

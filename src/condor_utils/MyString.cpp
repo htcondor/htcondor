@@ -1095,8 +1095,14 @@ MyStringFpSource::isEof()
 bool
 MyStringCharSource::readLine(MyString & str, bool append /* = false*/)
 {
-	ASSERT(ptr);
+	ASSERT(ptr || ! ix);
 	char * p = ptr+ix;
+
+	// if no buffer, we are at EOF
+	if ( ! p) {
+		if ( ! append) str.clear();
+		return false;
+	}
 
 	// scan for the next \n and return it plus all the chars up until it
 	int cch = 0;

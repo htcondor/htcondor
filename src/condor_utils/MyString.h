@@ -573,6 +573,7 @@ public:
 
 	char* Attach(char* src) { char* pOld = ptr; ptr = src; return pOld; }
 	char* Detach() { return Attach(NULL); }
+	void rewind() { ix = 0; }
 	virtual bool readLine(MyString & str, bool append = false);
 	virtual bool isEof();
 protected:
