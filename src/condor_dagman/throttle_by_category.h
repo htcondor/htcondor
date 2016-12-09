@@ -49,6 +49,10 @@ public:
 			_maxJobs = maxJobs;
 			_currentJobs = 0;
 		}
+
+		virtual ~ThrottleInfo() {
+			delete _category;
+		}
 	};
 
 	/** Constructor.
