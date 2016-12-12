@@ -1807,9 +1807,15 @@ fi
 %if 0%{?rhel} >= 7
 test -x /usr/sbin/selinuxenabled && /usr/sbin/selinuxenabled
 if [ $? = 0 ]; then
+   /usr/sbin/semodule -i /usr/share/condor/htcondor.pp
    /usr/sbin/setsebool -P condor_domain_can_network_connect 1
    /usr/sbin/setsebool -P daemons_enable_cluster_mode 1
-   /usr/sbin/semodule -i /usr/share/condor/htcondor.pp
+   /usr/sbin/semanage permissive -a condor_collector_t
+   /usr/sbin/semanage permissive -a condor_master_t
+   /usr/sbin/semanage permissive -a condor_negotiator_t
+   /usr/sbin/semanage permissive -a condor_procd_t
+   /usr/sbin/semanage permissive -a condor_schedd_t
+   /usr/sbin/semanage permissive -a condor_startd_t
 fi
 %endif
 if [ $1 -eq 1 ] ; then
