@@ -1903,6 +1903,13 @@ fi
 %endif
 
 %changelog
+* Tue Dec 13 2016 Tim Theisen <tim@cs.wisc.edu> - 8.4.10-1
+- Updated SELinux profile for Enterprise Linux
+- Fixed a performance problem in the schedd when RequestCpus was an expression
+- Preserve permissions when transferring sub-directories of the job's sandbox
+- Fixed HOLD_IF_CPUS_EXCEEDED and LIMIT_JOB_RUNTIMES metaknobs
+- Fixed a bug in handling REMOVE_SIGNIFICANT_ATTRIBUTES
+
 * Thu Sep 29 2016 Tim Theisen <tim@cs.wisc.edu> - 8.4.9-1
 - The condor_startd removes orphaned Docker containers on restart
 - Job Router and HTCondor-C job job submission prompts schedd reschedule
