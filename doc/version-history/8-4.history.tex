@@ -54,10 +54,10 @@ if \MacroNI{SLOT\_WEIGHT} is not the default value of "Cpus", and refers to
 expressions in the job ad.
 \Ticket{5996}
 
-\item When transferring a job's sandbox, the permissions on subdirectories
+\item When transferring a job's sandbox, the permissions on sub-directories
 are now preserved in the same that they are for regular files.
 Previously, the permissions were modified by HTCondor daemon's umask,
-and directories transferred from a Windows machine to a unix machine had
+and directories transferred from a Windows machine to a UNIX machine had
 no permissions enabled.
 \Ticket{5948}
 
@@ -124,12 +124,12 @@ limit by specifying an accounting group or nice\_user in their submit file.
 unit configuration file.
 \Ticket{5997}
 
-\item Compiled benchmarking programs as a Position Indenpendent Executable.
-Position Indepentdent Executables are a requirement for entry into Debian 9.
+\item Compiled benchmarking programs as a Position Independent Executable.
+Position Independent Executables are a requirement for entry into Debian 9.
 \Ticket{5994}
 
-\item Fixed a denial of service attack when using the \Condor{credd} on the
-Windows platform.
+\item Fixed a denial of service vulnerability when using the \Condor{credd}
+on the Windows platform.
 \Ticket{5984}
 
 \item Fixed a bug where the \Opt{-pool} argument would be ignored by
