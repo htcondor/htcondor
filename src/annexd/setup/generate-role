@@ -1,0 +1,98 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+
+use Getopt::Long;
+use JSON;
+
+my $VERSION = 1;
+
+my( $prettyPrint, $s3Bucket, $s3Key );
+GetOptions(
+	'pretty-print'	=> \$prettyPrint
+);
+
+my $bucketName = $ARGV[0];
+my $fileName = $ARGV[1];
+
+	my $template;
+	$template->{ AWSTemplateFormatVersion } = "2010-09-09";
+	$template->{ Description } = "Instance Configuration Role";
+
+	$template->{ Outputs } = {
+		ConfigurationProfile => {
+			Value => { "Ref" => "InstanceConfigurationProfile" }
+		}
+	};
+
+
+	my $resource = "arn:aws:s3:::${bucketName}/${fileName}";
+	my $configurationPolicy = {
+		PolicyName => "Configuration",
+		PolicyDocument => {
+			Version => "2012-10-17",
+			Statement => [ {
+				Effect => "Allow",
+				Action => [
+						"s3:GetObject"
+					],
+				Resource => $resource
+			} ]
+		}
+	};
+
+	my $assumeRoleFromEC2 = {
+		Version => "2012-10-17",
+		Statement => [ {
+			Effect => "Allow",
+			Action => [ "sts:AssumeRole" ],
+			Principal => { Service => [ "ec2.amazonaws.com" ] }
+		} ]
+	};
+
+	$template->{ Resources }->{ InstanceConfigurationRole } = {
+		Type => "AWS::IAM::Role",
+		Properties => {
+			AssumeRolePolicyDocument => $assumeRoleFromEC2,
+			Policies => [
+				$configurationPolicy,
+				{
+					PolicyName => "Introspection",
+					PolicyDocument => {
+						Version => "2012-10-17",
+						Statement => [
+							{
+								Effect => "Allow",
+								Action => [
+									"iam:GetRolePolicy",
+									"iam:GetInstanceProfile",
+									"iam:GetPolicy",
+									"iam:GetPolicyVersion",
+									"iam:ListAttachedRolePolicies",
+									"iam:ListRolePolicies"
+								],
+								Resource => "*"
+							}
+						]
+					}
+				}
+			]
+		}
+	};
+
+	$template->{ Resources }->{ InstanceConfigurationProfile } = {
+		Type => "AWS::IAM::InstanceProfile",
+		Properties => {
+			Path => "/",
+			Roles => [ { Ref => "InstanceConfigurationRole" } ]
+		}
+	};
+
+if( defined( $prettyPrint ) ) {
+	print( to_json( $template, { utf8 => 1, pretty => 1 } ) . "\n" );
+} else {
+	print( encode_json( $template ) . "\n" );
+}
+
+exit( 0 );
