@@ -9,15 +9,17 @@ if [ "${EC2InstanceID}"x == x ]; then
 	exit 1
 fi
 
-# The config system will cache these in a file for us.
-echo "EC2PublicIP = ${EC2PublicIP}"
-echo "EC2InstanceID = \"${EC2InstanceID}\""
-
 # Configure iptables to deny any nonroot user access to the metadata server.
 # This will prevent them from using the credentials located there.
 /sbin/iptables -A OUTPUT \
 	-m owner --destination 169.254.169.254 ! --uid-owner 0 \
 	-j REJECT
+
+# Set the EC2PublicIP and EC2InstanceID macros.  The example EC2 configuration
+# uses these values (advertises the latter and sets TCP_FORWARDING_HOST to
+# the former).
+echo "EC2PublicIP = ${EC2PublicIP}"
+echo "EC2InstanceID = \"${EC2InstanceID}\""
 
 #
 # If we have read permission to a particular file in an S3 bucket,
@@ -37,6 +39,7 @@ function fetchAndExtract() {
 		fi
 		exit 0
 	fi
+	echo "# Failed to download ${url}..."
 }
 
 
@@ -72,7 +75,7 @@ for role in ${INSTANCE_PROFILE_ROLES}; do
 				inResourceList=0
 			fi
 			if [ ${inResourceList} = 1 ]; then
-				line=`echo ${line} | sed -e's/"//g'`
+				line=`echo ${line} | sed -e's/^"//g' | sed -e's/".*$//g'`
 				resourceList="${resourceList} ${line}"
 			fi
 			if [ "${line}" = '"Resource":' ]; then
@@ -112,7 +115,7 @@ for role in ${INSTANCE_PROFILE_ROLES}; do
 			echo "found no unwildcarded resources."
 			continue
 		fi
-		echo "found resource: ${resource}"
+		echo "# Found resource: ${resource}"
 
 		# If resource is an S3 ARN and points to a single file, fetch
 		# that file and exit.
