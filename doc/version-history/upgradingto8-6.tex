@@ -6,9 +6,91 @@
 Upgrading from the 8.4 series of HTCondor to the 8.6 series
 will bring new features introduced in the 8.5 series of HTCondor.
 These new features include:
+
+%TEMPTEMP>>>
+\begin{verbatim}
+* 8.5.8:
+The starter puts all jobs in a cgroup by default;
+Added condor_submit commands that support job retries;
+condor_qedit defaults to the current user's jobs;
+Ability to add SCRIPTS, VARS, etc. to all nodes in a DAG with a single command;
+Able to conditionally add Docker volumes for certain jobs.
+Initial support for Singularity containers;
+A 64-bit Windows release.
+
+* 8.5.7:
+The schedd can perform job ClassAd transformations;
+Specifying dependencies between DAGMan splices is much more flexible;
+Simplification of DAG node priorities?;
+The second argument of the ClassAd ? : operator may be omitted;
+Many usability improvements in condor_q and condor_status;
+condor_q and condor_status can produce JSON, XML, and new ClassAd output;
+To prepare for a 64-bit Windows release, HTCondor identifies itself as X86;
+Automatically detect Daemon Core daemons and pass localname to them.
+
+* 8.5.6:
+The -batch output for condor_q is now the default;
+Python bindings for job submission and machine draining;
+Numerous Docker usability changes;
+New options to limit condor_history results to jobs since last invocation;
+Shared port daemon can be used with high availability and replication;
+ClassAds can be written out in JSON format;
+More flexible ordering of DAGMan commands;
+Efficient PBS and SLURM job monitoring;
+Simplified leases for grid universe jobs.
+
+* 8.5.5:
+Improvements for scalability of EC2 grid universe jobs;
+Docker Universe jobs advertises remote user and system CPU time;
+Improved systemd support;
+The master can now run an administrator defined script at shutdown;
+DAGMan includes better support for the batch name feature.
+
+* 8.5.4:
+Fixed a bug that delays schedd response when significant attributes change;
+Fixed a bug where the group ID was not set in Docker universe jobs;
+Limit update rate of various attributes to not overload the collector;
+To make job router configuration easier, added implicit "target" scoping;
+To make BOSCO work, the blahp does not generate limited proxies by default;
+condor_status can now display utilization per machine rather than per slot;
+Improve performance of condor_history and other tools.
+
+* 8.5.3:
+Use IPv6 (and IPv4) interfaces if they are detected;
+Prefer IPv4 addresses when both are available;
+Count Idle and Running jobs in Submitter Ads for Local and Scheduler universes;
+Can submit jobs to SLURM with the new "slurm" type in the Grid universe;
+HTCondor is built and linked with Globus 6.0.
+
+* 8.5.2:
+condor_q now defaults to showing only the current user's jobs;
+condor_q -batch produces a single line report for a batch of jobs;
+Docker Universe jobs now report and update memory and network usage;
+immutable and protected job attributes;
+improved performance when querying a HTCondor daemon's location;
+Added the ability to set ClassAd attributes within the DAG file;
+DAGMan now provides event timestamps in dagman.out.
+
+* 8.5.1:
+the shared port daemon is enabled by default;
+the condor_startd now records the peak memory usage instead of recent;
+the condor_startd advertises CPU submodel and cache size;
+authorizations are automatically setup when "Match Password" is enabled;
+added a schedd-constraint option to condor_q.
+With the shared port daemon enabled, all HTCondor daemons share a single
+inbound network port. This change makes it much easier to construct a
+firewall configuration that allows HTCondor use.
+
+* 8.5.0:
+multiple enhancements to the python bindings;
+the condor_schedd no longer changes the ownership of spooled job files;
+spooled job files are visible to only the user account by default;
+the condor_startd records when jobs are evicted by preemption or draining.
+\end{verbatim}
+%<<<TEMPTEMP
 \begin{itemize}
 
-\item None.
+\item (none)
 
 \end{itemize}
 
@@ -19,8 +101,9 @@ Here is a list of items that administrators should be aware of.
 
 \begin{itemize}
 
-\item Shared port is now enabled by default.  Set \MacroNI{USE\_SHARED\_PORT}
-to false to disable.  This configuration macro does not control the HAD or
+\item Shared port (see section~\ref{sec:shared-port-daemon}) is now
+enabled by default; set \MacroNI{USE\_SHARED\_PORT} to \Expr{False} to
+disable it.  Note that this configuration macro does not control the HAD or
 replication daemon's use of shared port; use \MacroNI{HAD\_USE\_SHARED\_PORT}
 or \MacroNI{REPLICATION\_USE\_SHARED\_PORT} instead.  See
 \ref{sec:HA-configuration} for more details on how to configure HAD (and/or
@@ -30,7 +113,11 @@ shared port without any other configuration change will not work.
 \item To mitigate performance problems, \MacroNI{LOWPORT} and
 \MacroNI{HIGHPORT} no longer restrict outbound port ranges on Windows.  To
 re-enable this functionality, set \MacroNI{OUT\_LOWPORT} and
-\MacroNI{OUT\_HIGHPORT}.  (\Ticket{4711})
+\MacroNI{OUT\_HIGHPORT}.  \Ticket{4711}
+
+\item Cgroups (see section~\ref{sec:CGroupTracking}) are now enabled by default.  This means that if you
+have partitionable slots, jobs need to get \SubmitCmd{request\_memory}
+correct.
 
 \item By default, \Condor{q} queries only the current user's jobs,
 unless the current user is a queue superuser or the
