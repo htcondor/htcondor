@@ -1792,9 +1792,15 @@ fi
 %if 0%{?rhel} >= 7
 test -x /usr/sbin/selinuxenabled && /usr/sbin/selinuxenabled
 if [ $? = 0 ]; then
+   /usr/sbin/semodule -i /usr/share/condor/htcondor.pp
    /usr/sbin/setsebool -P condor_domain_can_network_connect 1
    /usr/sbin/setsebool -P daemons_enable_cluster_mode 1
-   /usr/sbin/semodule -i /usr/share/condor/htcondor.pp
+   /usr/sbin/semanage permissive -a condor_collector_t
+   /usr/sbin/semanage permissive -a condor_master_t
+   /usr/sbin/semanage permissive -a condor_negotiator_t
+   /usr/sbin/semanage permissive -a condor_procd_t
+   /usr/sbin/semanage permissive -a condor_schedd_t
+   /usr/sbin/semanage permissive -a condor_startd_t
 fi
 %endif
 if [ $1 -eq 1 ] ; then
@@ -1882,6 +1888,22 @@ fi
 %endif
 
 %changelog
+* Tue Dec 13 2016 Tim Theisen <tim@cs.wisc.edu> - 8.5.8-1
+- The starter puts all jobs in a cgroup by default
+- Added condor_submit commands that support job retries
+- condor_qedit defaults to the current user's jobs
+- Ability to add SCRIPTS, VARS, etc. to all nodes in a DAG using one command
+- Able to conditionally add Docker volumes for certain jobs
+- Initial support for Singularity containers
+- A 64-bit Windows release
+
+* Tue Dec 13 2016 Tim Theisen <tim@cs.wisc.edu> - 8.4.10-1
+- Updated SELinux profile for Enterprise Linux
+- Fixed a performance problem in the schedd when RequestCpus was an expression
+- Preserve permissions when transferring sub-directories of the job's sandbox
+- Fixed HOLD_IF_CPUS_EXCEEDED and LIMIT_JOB_RUNTIMES metaknobs
+- Fixed a bug in handling REMOVE_SIGNIFICANT_ATTRIBUTES
+
 * Thu Sep 29 2016 Tim Theisen <tim@cs.wisc.edu> - 8.5.7-1
 - The schedd can perform job ClassAd transformations
 - Specifying dependencies between DAGMan splices is much more flexible
