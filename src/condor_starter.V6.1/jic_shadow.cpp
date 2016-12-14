@@ -788,6 +788,16 @@ JICShadow::notifyJobExit( int exit_status, int reason, UserProc*
 		}
 	}
 
+	// If shadow exits before the startd kills us, don't worry about
+	// getting notified that the syscall socket has closed.
+
+	if (syscall_sock) {
+		if (syscall_sock_registered) {
+			daemonCore->Cancel_Socket(syscall_sock);
+			syscall_sock_registered = false;
+		}
+	}
+
 	dprintf( D_FULLDEBUG, "Notifying exit status=%d reason=%d\n",exit_status,reason );
 	updateStartd(&ad, true);
 
