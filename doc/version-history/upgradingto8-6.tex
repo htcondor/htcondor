@@ -5,37 +5,29 @@
 \index{upgrading!items to be aware of}
 Upgrading from the 8.4 series of HTCondor to the 8.6 series
 will bring new features introduced in the 8.5 series of HTCondor.
-These new features include:
+These new features include (note that this list contains only
+the most significant changes; a full list of changes can be
+found in the version history:~\ref{sec:History-8-5}):
 
 %TEMPTEMP>>>
 \begin{verbatim}
 * 8.5.8:
-The starter puts all jobs in a cgroup by default;
-Added condor_submit commands that support job retries;
-condor_qedit defaults to the current user's jobs;
-Ability to add SCRIPTS, VARS, etc. to all nodes in a DAG with a single command;
 Able to conditionally add Docker volumes for certain jobs.
 Initial support for Singularity containers;
 A 64-bit Windows release.
 
 * 8.5.7:
-The schedd can perform job ClassAd transformations;
-Specifying dependencies between DAGMan splices is much more flexible;
-Simplification of DAG node priorities?;
-The second argument of the ClassAd ? : operator may be omitted;
 Many usability improvements in condor_q and condor_status;
 condor_q and condor_status can produce JSON, XML, and new ClassAd output;
 To prepare for a 64-bit Windows release, HTCondor identifies itself as X86;
 Automatically detect Daemon Core daemons and pass localname to them.
 
 * 8.5.6:
-The -batch output for condor_q is now the default;
 Python bindings for job submission and machine draining;
 Numerous Docker usability changes;
 New options to limit condor_history results to jobs since last invocation;
 Shared port daemon can be used with high availability and replication;
 ClassAds can be written out in JSON format;
-More flexible ordering of DAGMan commands;
 Efficient PBS and SLURM job monitoring;
 Simplified leases for grid universe jobs.
 
@@ -44,7 +36,6 @@ Improvements for scalability of EC2 grid universe jobs;
 Docker Universe jobs advertises remote user and system CPU time;
 Improved systemd support;
 The master can now run an administrator defined script at shutdown;
-DAGMan includes better support for the batch name feature.
 
 * 8.5.4:
 Fixed a bug that delays schedd response when significant attributes change;
@@ -56,8 +47,6 @@ condor_status can now display utilization per machine rather than per slot;
 Improve performance of condor_history and other tools.
 
 * 8.5.3:
-Use IPv6 (and IPv4) interfaces if they are detected;
-Prefer IPv4 addresses when both are available;
 Count Idle and Running jobs in Submitter Ads for Local and Scheduler universes;
 Can submit jobs to SLURM with the new "slurm" type in the Grid universe;
 HTCondor is built and linked with Globus 6.0.
@@ -68,8 +57,6 @@ condor_q -batch produces a single line report for a batch of jobs;
 Docker Universe jobs now report and update memory and network usage;
 immutable and protected job attributes;
 improved performance when querying a HTCondor daemon's location;
-Added the ability to set ClassAd attributes within the DAG file;
-DAGMan now provides event timestamps in dagman.out.
 
 * 8.5.1:
 the shared port daemon is enabled by default;
@@ -90,8 +77,51 @@ the condor_startd records when jobs are evicted by preemption or draining.
 %<<<TEMPTEMP
 \begin{itemize}
 
-\item (none)
+\item Job submission-related changes:
+  \begin{itemize}
 
+   \item Added the ability for the \Condor{schedd} to transform
+   job ClassAds upon job submission
+   (see section~\ref{sec:Schedd-Config-Job-Transforms}).
+
+   \item Added the ability to group jobs into batches, and assign
+   names to the batches, using the new \Opt{-batch} arguments to
+   \Condor{submit} and \Condor{submit\_dag}.
+
+   \item Added support in the submit language for retrying jobs
+   if they fail (see ~\pageref{condor-submit-max-retries}).
+
+  \end{itemize}
+
+\item \Condor{q}-related changes:
+  \begin{itemize}
+
+  \item \Condor{q} now defaults to showing only the current user's jobs.
+
+  \item \Condor{q} now defaults to batch mode, which produces a single
+  line of output summarizing a batch of jobs (see~\pageref{batches-of-jobs}).
+
+  \end{itemize}
+
+\item \Condor{dagman}-related changes:
+  \begin{itemize}
+
+  \item Added the ability to define SCRIPTS, VARS, etc., for all nodes
+  in a DAG with a single command (see~\ref{sec:DAGAllNodes}).
+
+  \item Simplified how DAG node priorities work
+  (see~\ref{sec:DAG-SetNodePriority}).
+  This means that existing DAGs that use the node priority feature
+  will run differently than they have in the past.
+
+  \item Added the new splice connect feature
+  (see~\ref{sec:DAGSpliceConnections}), which
+  allows more flexible dependencies between splices.
+
+  \end{itemize}
+
+  \item HTCondor can now use IPv6 interfaces; it prefers IPv4 if both
+  IPv4 and IPv6 are available.
 \end{itemize}
 
 Upgrading from the 8.4 series of HTCondor to the 8.6 series will
