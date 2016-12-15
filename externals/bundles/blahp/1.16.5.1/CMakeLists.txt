@@ -97,6 +97,7 @@ if ( WITH_BLAHP )
 							cp ${CMAKE_CURRENT_SOURCE_DIR}/pbs_status.py src/scripts/ &&
 							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/escape-args2.patch -p0 &&
 							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/condor-args.patch -p0 &&
+							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/condor-proxy.patch -p1 &&
 							mv config/blah.config.template config/batch_gahp.config.template
 						#--Configure step ----------
 						CONFIGURE_COMMAND export CPPFLAGS=${CPP11_FLAG} &&
