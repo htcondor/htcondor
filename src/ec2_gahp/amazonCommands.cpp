@@ -378,11 +378,13 @@ Throttle globalCurlThrottle;
 pthread_mutex_t globalCurlMutex = PTHREAD_MUTEX_INITIALIZER;
 
 bool AmazonRequest::SendRequest() {
+    query_parameters.insert( std::make_pair( "Version", "2012-10-01" ) );
+
 	switch( signatureVersion ) {
 		case 2:
 			return sendV2Request();
 		case 4:
-			return sendV4Request();
+			return sendV4Request( canonicalizeQueryString() );
 		default:
 			this->errorCode = "E_INTERNAL";
 			this->errorMessage = "Invalid signature version.";
@@ -391,7 +393,8 @@ bool AmazonRequest::SendRequest() {
 	}
 }
 
-void AmazonRequest::canonicalizeQueryString( std::string & canonicalQueryString ) {
+std::string AmazonRequest::canonicalizeQueryString() {
+    std::string canonicalQueryString;
     for( auto i = query_parameters.begin(); i != query_parameters.end(); ++i ) {
         // Step 1A: The map sorts the query parameters for us.  Strictly
         // speaking, we should encode into a different AttributeValueMap
@@ -411,6 +414,7 @@ void AmazonRequest::canonicalizeQueryString( std::string & canonicalQueryString 
 
     // We'll always have a superflous trailing ampersand.
     canonicalQueryString.erase( canonicalQueryString.end() - 1 );
+    return canonicalQueryString;
 }
 
 bool parseURL(	const std::string & url,
@@ -489,8 +493,7 @@ std::string pathEncode( const std::string & original ) {
 }
 
 bool AmazonRequest::createV4Signature(	const std::string & payload,
-										std::string & authorizationValue,
-										bool useGET ) {
+										std::string & authorizationValue ) {
 	Throttle::now( & signatureTime );
 	time_t now; time( & now );
 	struct tm brokenDownTime; gmtime_r( & now, & brokenDownTime );
@@ -727,7 +730,7 @@ bool AmazonRequest::createV4Signature(	const std::string & payload,
 	return true;
 }
 
-bool AmazonRequest::sendV4Request() {
+bool AmazonRequest::sendV4Request( const std::string & payload ) {
     std::string protocol, host, path;
     if(! parseURL( serviceURL, protocol, host, path )) {
         this->errorCode = "E_INVALID_SERVICE_URL";
@@ -741,12 +744,8 @@ bool AmazonRequest::sendV4Request() {
         dprintf( D_ALWAYS, "Service URL '%s' not of a known protocol (http[s]).\n", serviceURL.c_str() );
         return false;
     }
-    dprintf( D_FULLDEBUG, "Request URI is '%s'\n", serviceURL.c_str() );
 
-    // If we're worried about the duplicate work here and in parsing the
-    // URL, we could just pass more arguments into createV4Signature().
-    std::string payload;
-    canonicalizeQueryString( payload );
+    dprintf( D_FULLDEBUG, "Request URI is '%s'\n", serviceURL.c_str() );
     dprintf( D_FULLDEBUG, "Post body is '%s'\n", payload.c_str() );
 
     std::string authorizationValue;
@@ -830,16 +829,6 @@ bool AmazonRequest::sendV2Request() {
     query_parameters.insert( std::make_pair( "SignatureMethod", "HmacSHA256" ) );
 
     //
-    // This implementation was written against the 2010-11-15 documentation.
-    //
-    // query_parameters.insert( std::make_pair( "Version", "2010-11-15" ) );
-
-    // Upgrading (2012-10-01 is the oldest version that will work) allows us
-    // to report the Spot Instance 'status-code's, which are much more
-    // useful than the status codes.  *sigh*
-    query_parameters.insert( std::make_pair( "Version", "2012-10-01" ) );
-
-    //
     // We're calculating the signature now. [YYYY-MM-DDThh:mm:ssZ]
     //
     Throttle::now( & signatureTime );
@@ -860,8 +849,7 @@ bool AmazonRequest::sendV2Request() {
      */
 
     // Step 1: Create the canonicalized query string.
-    std::string canonicalQueryString;
-    canonicalizeQueryString( canonicalQueryString );
+    std::string canonicalQueryString = canonicalizeQueryString();
 
     // Step 2: Create the string to sign.
     std::string stringToSign = "POST\n"
@@ -941,74 +929,20 @@ bool AmazonRequest::sendV2Request() {
 }
 
 bool AmazonRequest::SendURIRequest() {
-	// Almost but not quite identical to AmazonRequest::SendJSONRequest(),
-	// which probably means I should share some code.
-
-    std::string protocol, host, path;
-    if(! parseURL( serviceURL, protocol, host, path )) {
-        this->errorCode = "E_INVALID_SERVICE_URL";
-        this->errorMessage = "Failed to parse service URL.";
-        dprintf( D_ALWAYS, "Failed to match regex against service URL '%s'.\n", serviceURL.c_str() );
-        return false;
-    }
-    if( (protocol != "http") && (protocol != "https") ) {
-        this->errorCode = "E_INVALID_SERVICE_URL";
-        this->errorMessage = "Service URL not of a known protocol (http[s]).";
-        dprintf( D_ALWAYS, "Service URL '%s' not of a known protocol (http[s]).\n", serviceURL.c_str() );
-        return false;
-    }
-    dprintf( D_FULLDEBUG, "Request URI is '%s'\n", serviceURL.c_str() );
-
+    useGET = true;
     std::string noPayloadAllowed;
-    std::string authorizationValue;
-    if(! createV4Signature( noPayloadAllowed, authorizationValue, true )) {
-        this->errorCode = "E_INTERNAL";
-        this->errorMessage = "Failed to create v4 signature.";
-        dprintf( D_ALWAYS, "Failed to create v4 signature.\n" );
-        return false;
-    }
-    headers[ "Authorization" ] = authorizationValue;
-
-    return sendPreparedRequest( protocol, serviceURL, noPayloadAllowed, true );
+    return sendV4Request( noPayloadAllowed );
 }
 
 bool AmazonRequest::SendJSONRequest( const std::string & payload ) {
     headers[ "Content-Type" ] = "application/x-amz-json-1.1";
-
-    std::string protocol, host, path;
-    if(! parseURL( serviceURL, protocol, host, path )) {
-        this->errorCode = "E_INVALID_SERVICE_URL";
-        this->errorMessage = "Failed to parse service URL.";
-        dprintf( D_ALWAYS, "Failed to match regex against service URL '%s'.\n", serviceURL.c_str() );
-        return false;
-    }
-    if( (protocol != "http") && (protocol != "https") ) {
-        this->errorCode = "E_INVALID_SERVICE_URL";
-        this->errorMessage = "Service URL not of a known protocol (http[s]).";
-        dprintf( D_ALWAYS, "Service URL '%s' not of a known protocol (http[s]).\n", serviceURL.c_str() );
-        return false;
-    }
-    dprintf( D_FULLDEBUG, "Request URI is '%s'\n", serviceURL.c_str() );
-
-    dprintf( D_FULLDEBUG, "Post body is '%s'\n", payload.c_str() );
-
-    std::string authorizationValue;
-    if(! createV4Signature( payload, authorizationValue )) {
-        this->errorCode = "E_INTERNAL";
-        this->errorMessage = "Failed to create v4 signature.";
-        dprintf( D_ALWAYS, "Failed to create v4 signature.\n" );
-        return false;
-    }
-    headers[ "Authorization" ] = authorizationValue;
-
-    return sendPreparedRequest( protocol, serviceURL, payload );
+    return sendV4Request( payload );
 }
 
 bool AmazonRequest::sendPreparedRequest(
         const std::string & protocol,
         const std::string & uri,
-        const std::string & payload,
-        bool useGET ) {
+        const std::string & payload ) {
     static bool rateLimitInitialized = false;
     if(! rateLimitInitialized) {
         // FIXME: convert to the new form of param() when it becomes available.
@@ -1205,7 +1139,7 @@ bool AmazonRequest::sendPreparedRequest(
 	struct curl_slist * header_slist = NULL;
 	for( auto i = headers.begin(); i != headers.end(); ++i ) {
 		formatstr( headerPair, "%s: %s", i->first.c_str(), i->second.c_str() );
-		// dprintf( D_ALWAYS, "sendPreparedRequest(): adding header = '%s: %s'\n", i->first.c_str(), i->second.c_str() );
+		// dprintf( D_FULLDEBUG, "sendPreparedRequest(): adding header = '%s: %s'\n", i->first.c_str(), i->second.c_str() );
 		header_slist = curl_slist_append( header_slist, headerPair.c_str() );
 		if( header_slist == NULL ) {
 			this->errorCode = "E_CURL_LIB";

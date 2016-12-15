@@ -81,7 +81,7 @@ class AmazonRequest {
     public:
         AmazonRequest( int i, const char * c, int sv = 4 ) :
             includeResponseHeader(false), requestID(i), requestCommand(c),
-            signatureVersion(sv) { }
+            signatureVersion(sv), useGET(false) { }
         virtual ~AmazonRequest();
 
         virtual bool SendRequest();
@@ -101,9 +101,9 @@ class AmazonRequest {
         std::string errorCode;
 
         std::string resultString;
-		unsigned long responseCode;
+        unsigned long responseCode;
 
-		bool includeResponseHeader;
+        bool includeResponseHeader;
 
 		// For tracing.
 		int requestID;
@@ -126,17 +126,19 @@ class AmazonRequest {
 		std::string region;
 		std::string service;
 
+		// Some odd services (Lambda) require the use of GET.
+		bool useGET;
+
 	private:
 		bool sendV2Request();
-		bool sendV4Request();
+		bool sendV4Request( const std::string & payload );
 
-		void canonicalizeQueryString( std::string & canonicalQueryString );
-		bool createV4Signature( const std::string & payload, std::string & authorizationHeader, bool useGET = false );
+		std::string canonicalizeQueryString();
+		bool createV4Signature( const std::string & payload, std::string & authorizationHeader );
 
 		bool sendPreparedRequest(	const std::string & protocol,
 									const std::string & uri,
-									const std::string & payload,
-									bool useGET = false );
+									const std::string & payload );
 };
 
 // EC2 Commands
