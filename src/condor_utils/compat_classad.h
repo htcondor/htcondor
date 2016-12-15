@@ -399,6 +399,10 @@ class ClassAd : public classad::ClassAd
                 StringList *internal_refs,
                 StringList *external_refs) const;
 
+    bool GetExprReferences(ExprTree * expr,
+                StringList *internal_refs,
+                StringList *external_refs) const;
+
 	static void Reconfig();
 	static bool m_initConfig;
 	static bool m_strictEvaluation;

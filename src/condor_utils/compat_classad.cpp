@@ -3275,6 +3275,15 @@ GetExprReferences(const char* expr,
 	return true;
 }
 
+bool ClassAd::
+GetExprReferences(classad::ExprTree *tree,
+				  StringList *internal_refs,
+				  StringList *external_refs) const
+{
+	_GetReferences( tree, internal_refs, external_refs );
+	return true;
+}
+
 static void AppendReference( StringList &reflist, char const *name )
 {
 	char const *end = strchr(name,'.');

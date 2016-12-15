@@ -37,6 +37,14 @@ bool ExprTreeIsLiteralNumber(classad::ExprTree * expr, double & rval);
 bool ExprTreeIsLiteralString(classad::ExprTree * expr, std::string & sval);
 bool ExprTreeIsLiteralString(classad::ExprTree * expr, const char* & cstr);
 bool ExprTreeIsLiteralBool(classad::ExprTree * expr, bool & bval);
+bool ExprTreeIsAttrRef(classad::ExprTree * expr, std::string & attr, bool * is_absolute=NULL);
+
+// check to see that a classad expression is valid
+// if attrs is not NULL, it also adds attribute references from the expression into the current set.
+bool IsValidClassAdExpression(const char * expr, classad::References * attrs=NULL);
+// add attribute references that are explicit in the given expr tree into the given set. returns the number of attributes added.
+int GetBareExprTreeReferences(classad::ExprTree * expr, classad::References & attrs);
+
 classad::ExprTree * SkipExprEnvelope(classad::ExprTree * tree);
 classad::ExprTree * SkipExprParens(classad::ExprTree * tree);
 // create an op node, using copies of the input expr trees. this function will not copy envelope nodes (it skips over them)

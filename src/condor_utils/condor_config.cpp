@@ -491,7 +491,7 @@ param_and_insert_attrs(const char * param_name, classad::References & attrs)
 #if 1
 	auto_free_ptr value(param(param_name));
 	if (value) {
-		insert_tokens_as_attrs(value, attrs);
+		add_attrs_from_string_tokens(attrs, value);
 		return true;
 	}
 #else

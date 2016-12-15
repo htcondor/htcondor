@@ -270,6 +270,53 @@ bool ExprTreeIsLiteralString(classad::ExprTree * expr, std::string & sval)
 	return val.IsStringValue(sval);
 }
 
+bool ExprTreeIsAttrRef(classad::ExprTree * expr, std::string & attr, bool * is_absolute /*=NULL*/)
+{
+	if ( ! expr) return false;
+
+	classad::ExprTree::NodeKind kind = expr->GetKind();
+	while (kind == classad::ExprTree::ATTRREF_NODE) {
+		classad::ExprTree *e2=NULL;
+		bool absolute=false;
+		((classad::AttributeReference*)expr)->GetComponents(e2, attr, absolute);
+		if (is_absolute) *is_absolute = absolute;
+		return !e2;
+	}
+	return false;
+}
+
+// check to see that a classad expression is valid, and optionally return the names of the attributes that it references
+bool IsValidClassAdExpression(const char * str, classad::References * attrs /*=NULL*/)
+{
+	if ( ! str || ! str[0]) return false;
+
+	classad::ExprTree * expr = NULL;
+	int rval = ParseClassAdRvalExpr(str, expr);
+	if (0 == rval) {
+		if (attrs) {
+			GetBareExprTreeReferences(expr, *attrs);
+		}
+		delete expr;
+	}
+	return rval == 0;
+}
+
+// return attribute references that are explicit in the given expr tree.
+int GetBareExprTreeReferences(classad::ExprTree * expr, classad::References & attrs)
+{
+	StringList list;
+	compat_classad::ClassAd ad;
+	ad.GetExprReferences(expr, NULL, &list);
+
+	int count = (int)attrs.size();
+	for (const char * attr = list.first(); attr != NULL; attr = list.next()) {
+		attrs.insert(attr);
+	}
+	return (int)attrs.size() - count;
+}
+
+
+
 #define IS_DOUBLE_TRUE(val) (bool)(int)((val)*100000)
 
 bool EvalBool(compat_classad::ClassAd *ad, const char *constraint)
