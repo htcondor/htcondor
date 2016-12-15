@@ -25,12 +25,14 @@ BEGIN_C_DECLS
 
 FILE *my_popenv( const char *const argv [],
                  const char * mode,
-                 int want_stderr );
+                 int options ); // zero or more of MY_POPEN_OPT_* bits
+#define MY_POPEN_OPT_WANT_STDERR  0x0001
+#define MY_POPEN_OPT_FAIL_QUIETLY 0x0002 // failure is an option, don't dprintf or write to stderr for common errors
 
 int my_pclose( FILE *fp );
 int my_pclose_ex( FILE *fp, unsigned int timeout, bool kill_after_timeout );
 // special return values from my_pclose_ex that are not exit statuses
-#define MYPCLOSE_EX_NO_SUCH_FP     ((int)0x55555555)
+#define MYPCLOSE_EX_NO_SUCH_FP     ((int)0xB4B4B4B4)
 #define MYPCLOSE_EX_I_KILLED_IT    ((int)0x99099909)
 #define MYPCLOSE_EX_STATUS_UNKNOWN ((int)0xDEADBEEF)
 
@@ -41,7 +43,7 @@ int my_spawnv( const char* cmd, const char *const argv[] );
 
 #if defined(WIN32)
 // on Windows, expose the ability to use a raw command line
-FILE *my_popen( const char *cmd, const char *mode, int want_stderr );
+FILE *my_popen( const char *cmd, const char *mode, int options );
 int my_system( const char *cmd );
 #endif
 
@@ -54,7 +56,7 @@ END_C_DECLS
 #include "env.h"
 FILE *my_popen( ArgList &args,
                 const char * mode,
-                int want_stderr,
+                int options, // see MY_POPEN_OPT_ flags above
                 Env *env_ptr = NULL,
                 bool drop_privs = true,
 				const char *write_data = NULL);

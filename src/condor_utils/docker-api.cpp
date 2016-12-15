@@ -607,8 +607,9 @@ int DockerAPI::detect( CondorError & err ) {
 	// FIXME: Remove ::version() as a public API and return it from here,
 	// because there's no point in doing this twice.
 	std::string version;
-	if( DockerAPI::version( version, err ) != 0 ) {
-		dprintf( D_ALWAYS | D_FAILURE, "DockerAPI::detect() failed to detect the Docker version; assuming absent.\n" );
+	int rval = DockerAPI::version( version, err );
+	if( rval  != 0 ) {
+		dprintf(D_ALWAYS, "DockerAPI::detect() failed to detect the Docker version; assuming absent.\n" );
 		return -4;
 	}
 
@@ -695,7 +696,9 @@ int DockerAPI::version( std::string & version, CondorError & /* err */ ) {
 #if 1
 	MyPopenTimer pgm;
 	if (pgm.start_program(versionArgs, true, NULL, false) < 0) {
-		dprintf( D_ALWAYS | D_FAILURE, "Failed to run '%s'.\n", displayString.c_str() );
+		// treat 'file not found' as not really error
+		int d_level = (pgm.error_code() == ENOENT) ? D_FULLDEBUG : (D_ALWAYS | D_FAILURE);
+		dprintf(d_level, "Failed to run '%s' errno=%d %s.\n", displayString.c_str(), pgm.error_code(), pgm.error_str() );
 		return -2;
 	}
 	MyStringSource * src = pgm.wait_and_close(default_timeout);

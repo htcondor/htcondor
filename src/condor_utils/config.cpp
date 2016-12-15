@@ -1777,7 +1777,7 @@ FILE* Open_macro_source (
 				formatstr(config_errmsg, "Can't append args, %s", args_errors.Value());
 				return NULL;
 			}
-			fp = my_popen(argList, "r", FALSE);
+			fp = my_popen(argList, "r", 0 | MY_POPEN_OPT_FAIL_QUIETLY);
 			if ( ! fp) {
 				config_errmsg = "not a valid command";
 				return NULL;
@@ -1837,7 +1837,7 @@ FILE* Copy_macro_source_into (
 			formatstr(errmsg, "Can't append args, %s", args_errors.Value());
 			return NULL;
 		}
-		fp = my_popen(argList, "rb", FALSE);
+		fp = my_popen(argList, "rb", MY_POPEN_OPT_FAIL_QUIETLY);
 		if ( ! fp) {
 			errmsg = "not a valid command";
 			return NULL;

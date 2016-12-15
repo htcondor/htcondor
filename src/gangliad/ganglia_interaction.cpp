@@ -128,7 +128,7 @@ ganglia_init_gmetric(char const *_gmetric_path)
 		NULL
 	};
 
-	FILE *fp = my_popenv(argv,"r",1);
+	FILE *fp = my_popenv(argv,"r",MY_POPEN_OPT_WANT_STDERR);
 	if( !fp ) {
 		dprintf(D_ALWAYS,"Failed to execute %s -h: %s\n",_gmetric_path,strerror(errno));
 		return false;
@@ -314,7 +314,7 @@ gmetric_send(const char *group, const char *name, const char *value, const char 
 	args.AppendArg("--dmax");
 	args.AppendArg(dmax);
 
-	FILE *fp = my_popen(args,"r",1);
+	FILE *fp = my_popen(args,"r",MY_POPEN_OPT_WANT_STDERR);
 	char line[1024];
 	std::string output;
 	if( !fp ) {
@@ -391,7 +391,7 @@ gmetric_send_heartbeat(const char *spoof_host)
 
 	args.AppendArg("--heartbeat");
 
-	FILE *fp = my_popen(args,"r",1);
+	FILE *fp = my_popen(args,"r",MY_POPEN_OPT_WANT_STDERR);
 	char line[1024];
 	std::string output;
 	if( !fp ) {

@@ -131,8 +131,10 @@ static struct popen_entry * find_child(FILE* fp)
 //////////////////////////////////////////////////////////////////////////
 
 extern "C" FILE *
-my_popen(const char *const_cmd, const char *mode, int want_stderr)
+my_popen(const char *const_cmd, const char *mode, int options)
 {
+	int want_stderr = (options & MY_POPEN_OPT_WANT_STDERR);
+	int fail_quietly = (options & MY_POPEN_OPT_FAIL_QUIETLY);
 	BOOL read_mode;
 	SECURITY_ATTRIBUTES saPipe;
 	HANDLE hReadPipe, hWritePipe;
@@ -207,7 +209,7 @@ my_popen(const char *const_cmd, const char *mode, int want_stderr)
 		DWORD err = GetLastError();
 		CloseHandle(hParentPipe);
 		CloseHandle(hChildPipe);
-		dprintf(D_ALWAYS, "my_popen: CreateProcess failed err=%d\n", err);
+		if ( ! fail_quietly) { dprintf(D_ALWAYS, "my_popen: CreateProcess failed err=%d\n", err); }
 		return NULL;
 	}
 
@@ -258,7 +260,7 @@ my_popen(ArgList &args, const char *mode, int want_stderr, Env *zkmENV, bool dro
 }
 
 extern "C" FILE *
-my_popenv(const char *const args[], const char *mode, int want_stderr)
+my_popenv(const char *const args[], const char *mode, int options)
 {
 	// build the argument list
 	ArgList arglist;
@@ -266,7 +268,7 @@ my_popenv(const char *const args[], const char *mode, int want_stderr)
 		arglist.AppendArg(args[i]);
 	}
 
-	return my_popen(arglist, mode, want_stderr);
+	return my_popen(arglist, mode, options);
 }
 
 extern "C" int
@@ -333,12 +335,14 @@ static int	WRITE_END = 1;
 static FILE *
 my_popenv_impl( const char *const args[],
                 const char * mode,
-                int want_stderr,
+                int options,
                 uid_t privsep_uid,
 		Env *env_ptr = 0,
 		bool drop_privs = true,
 		const char *write_data = NULL )
 {
+	int want_stderr = (options & MY_POPEN_OPT_WANT_STDERR);
+	int fail_quietly = (options & MY_POPEN_OPT_FAIL_QUIETLY);
 	int	pipe_d[2], pipe_d2[2];
 	int pipe_writedata[2];
 	int want_writedata = 0;
@@ -610,8 +614,10 @@ my_popenv_impl( const char *const args[],
 			/* NOOP */
 		}
 
-		dprintf(D_ALWAYS, "my_popenv: Failed to exec in child, errno=%d (%s)\n",
+		if ( ! fail_quietly) {
+			dprintf(D_ALWAYS, "my_popenv: Failed to exec in child, errno=%d (%s)\n",
 				exit_code, strerror(exit_code));
+		}
 		errno = exit_code;
 		return NULL;
 	}
@@ -669,22 +675,22 @@ my_popenv_impl( const char *const args[],
 extern "C" FILE *
 my_popenv( const char *const args[],
            const char * mode,
-           int want_stderr )
+           int options )
 {
-	return my_popenv_impl(args, mode, want_stderr, (uid_t)-1);
+	return my_popenv_impl(args, mode, options, (uid_t)-1);
 }
 
 static FILE *
 my_popen_impl(ArgList &args,
               const char *mode,
-              int want_stderr,
+              int options,
               uid_t privsep_uid,
               Env *env_ptr,
               bool drop_privs = true,
 			  const char *write_data = NULL)
 {
 	char **string_array = args.GetStringArray();
-	FILE *fp = my_popenv_impl(string_array, mode, want_stderr, privsep_uid,
+	FILE *fp = my_popenv_impl(string_array, mode, options, privsep_uid,
 			env_ptr, drop_privs, write_data);
 	deleteStringArray(string_array);
 
@@ -692,16 +698,16 @@ my_popen_impl(ArgList &args,
 }
 
 FILE*
-my_popen(ArgList &args, const char *mode, int want_stderr, Env *env_ptr, bool drop_privs,
+my_popen(ArgList &args, const char *mode, int options, Env *env_ptr, bool drop_privs,
 		 const char *write_data)
 {
-	return my_popen_impl(args, mode, want_stderr, (uid_t)-1, env_ptr, drop_privs, write_data);
+	return my_popen_impl(args, mode, options, (uid_t)-1, env_ptr, drop_privs, write_data);
 }
 
 FILE*
-privsep_popen(ArgList &args, const char *mode, int want_stderr, uid_t uid, Env *env_ptr)
+privsep_popen(ArgList &args, const char *mode, int options, uid_t uid, Env *env_ptr)
 {
-	return my_popen_impl(args, mode, want_stderr, uid, env_ptr);
+	return my_popen_impl(args, mode, options, uid, env_ptr);
 }
 
 // this is the backward compatible my_pclose function that NO CONDOR CODE SHOULD USE!
@@ -1002,9 +1008,19 @@ int MyPopenTimer::start_program (
 	const char * mode = "r";
 #endif
 
-	fp = my_popen(args, mode, also_stderr, env_ptr, drop_privs, stdin_data);
+	int options = MY_POPEN_OPT_FAIL_QUIETLY;
+	if (also_stderr) options |= MY_POPEN_OPT_WANT_STDERR;
+	fp = my_popen(args, mode, options, env_ptr, drop_privs, stdin_data);
 	if ( ! fp) {
 		error = errno;
+#ifdef WIN32
+		// do a little error translation for windows to make sure that the caller can reasonable
+		// distinguish 'the program does not exist' from other errors.
+		DWORD err = GetLastError();
+		if (err == ERROR_FILE_NOT_FOUND || err == ERROR_PATH_NOT_FOUND) {
+			error = ENOENT;
+		}
+#endif
 		return error;
 	}
 #ifdef WIN32

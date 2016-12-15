@@ -208,7 +208,7 @@ int DockerProc::StartJob() {
 
 bool DockerProc::JobReaper( int pid, int status ) {
 	TemporaryPrivSentry sentry(PRIV_ROOT);
-	dprintf( D_ALWAYS, "DockerProc::JobReaper()\n" );
+	dprintf( D_FULLDEBUG, "DockerProc::JobReaper()\n" );
 
 	daemonCore->Cancel_Timer(updateTid);
 
@@ -355,7 +355,7 @@ bool DockerProc::JobReaper( int pid, int status ) {
 // JobExit() is called after file transfer.
 //
 bool DockerProc::JobExit() {
-	dprintf( D_ALWAYS, "DockerProc::JobExit()\n" );
+	dprintf( D_ALWAYS, "DockerProc::JobExit() container '%s'\n", containerName.c_str() );
 
 	{
 	TemporaryPrivSentry sentry(PRIV_ROOT);
@@ -387,7 +387,7 @@ bool DockerProc::JobExit() {
 }
 
 void DockerProc::Suspend() {
-	dprintf( D_ALWAYS, "DockerProc::Suspend()\n" );
+	dprintf( D_ALWAYS, "DockerProc::Suspend() container '%s'\n", containerName.c_str() );
 	int rv = 0;
 
 	{
@@ -405,7 +405,7 @@ void DockerProc::Suspend() {
 
 
 void DockerProc::Continue() {
-	dprintf( D_ALWAYS, "DockerProc::Continue()\n" );
+	dprintf( D_ALWAYS, "DockerProc::Continue() container '%s'\n", containerName.c_str() );
 	int rv = 0;	
 
 	if( is_suspended ) {
@@ -429,7 +429,7 @@ void DockerProc::Continue() {
 //
 
 bool DockerProc::Remove() {
-	dprintf( D_ALWAYS, "DockerProc::Remove()\n" );
+	dprintf( D_ALWAYS, "DockerProc::Remove() container '%s'\n", containerName.c_str() );
 
 	if( is_suspended ) { Continue(); }
 	requested_exit = true;
@@ -448,7 +448,7 @@ bool DockerProc::Remove() {
 
 
 bool DockerProc::Hold() {
-	dprintf( D_ALWAYS, "DockerProc::Hold()\n" );
+	dprintf( D_ALWAYS, "DockerProc::Hold() container '%s'\n", containerName.c_str() );
 
 	if( is_suspended ) { Continue(); }
 	requested_exit = true;
@@ -467,7 +467,7 @@ bool DockerProc::Hold() {
 
 
 bool DockerProc::ShutdownGraceful() {
-	dprintf( D_ALWAYS, "DockerProc::ShutdownGraceful()\n" );
+	dprintf( D_ALWAYS, "DockerProc::ShutdownGraceful() container '%s'\n", containerName.c_str() );
 
 	if( containerName.empty() ) {
 		// We haven't started a Docker yet, probably because we're still
@@ -490,7 +490,7 @@ bool DockerProc::ShutdownGraceful() {
 
 
 bool DockerProc::ShutdownFast() {
-	dprintf( D_ALWAYS, "DockerProc::ShutdownFast()\n" );
+	dprintf( D_ALWAYS, "DockerProc::ShutdownFast() container '%s'\n", containerName.c_str() );
 
 	if( containerName.empty() ) {
 		// We haven't started a Docker yet, probably because we're still
@@ -522,7 +522,7 @@ DockerProc::getStats(int /*tid*/) {
 }
 
 bool DockerProc::PublishUpdateAd( ClassAd * ad ) {
-	dprintf( D_ALWAYS, "DockerProc::PublishUpdateAd()\n" );
+	dprintf( D_FULLDEBUG, "DockerProc::PublishUpdateAd() container '%s'\n", containerName.c_str() );
 
 	//
 	// If we want to use the existing reporting code (probably a good
@@ -555,13 +555,13 @@ bool DockerProc::PublishUpdateAd( ClassAd * ad ) {
 
 // TODO: Implement.
 void DockerProc::PublishToEnv( Env * /* env */ ) {
-	dprintf( D_ALWAYS, "DockerProc::PublishToEnv()\n" );
+	dprintf( D_FULLDEBUG, "DockerProc::PublishToEnv()\n" );
 	return;
 }
 
 
 bool DockerProc::Detect() {
-	dprintf( D_ALWAYS, "DockerProc::Detect()\n" );
+	dprintf( D_FULLDEBUG, "DockerProc::Detect()\n" );
 
 	//
 	// To turn off Docker, unset DOCKER.  DockerAPI::detect() will fail
@@ -575,7 +575,7 @@ bool DockerProc::Detect() {
 }
 
 bool DockerProc::Version( std::string & version ) {
-	dprintf( D_ALWAYS, "DockerProc::Version()\n" );
+	dprintf( D_FULLDEBUG, "DockerProc::Version()\n" );
 
 	//
 	// To turn off Docker, unset DOCKER.  DockerAPI::version() will fail
@@ -584,6 +584,9 @@ bool DockerProc::Version( std::string & version ) {
 
 	CondorError err;
 	bool foundVersion = DockerAPI::version( version, err ) == 0;
+	if (foundVersion) {
+		dprintf( D_ALWAYS, "DockerProc::Version() found version '%s'\n", version.c_str() );
+	}
 
 	return foundVersion;
 }
