@@ -50,7 +50,24 @@ char * GridmanagerScratchDir = NULL;
 EC2GahpClient *
 startOneGahpClient( const std::string & publicKeyFile, const std::string & serviceURL ) {
 	std::string gahpName;
-	formatstr( gahpName, "annex-%s@%s", publicKeyFile.c_str(), serviceURL.c_str() );
+
+	// This makes me sad, now that the annexd needs to use three endpoints, so
+	// let's ignore the technical limitation about RequestLimitExceeded for
+	// now, since we shouldn't encounter it and the only consequence is, I
+	// think, backoffs for endpoints that don't need them.  (If this becomes
+	// a problem, we should probably change this to configuration knob,
+	// because that means we probably want to split the load up among multiple
+	// GAHPs anyway.)
+	// formatstr( gahpName, "annex-%s@%s", publicKeyFile.c_str(), serviceURL.c_str() );
+
+	// The unfixable technical restriction is actually that all credentials
+	// passed to the same GAHP must be accessible by it.  Since the GAHP
+	// (will) run as a particular user for precisely this reason (not just
+	// isolation but also network filesystems), we could instead name the
+	// GAHP after the key into the authorized user map we used.  For now,
+	// since people aren't likely to have that many different credentials,
+	// just use the name of the credentials.
+	formatstr( gahpName, "annex-%s", publicKeyFile.c_str() );
 
 	ArgList args;
 
