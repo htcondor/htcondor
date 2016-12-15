@@ -2,7 +2,6 @@
 
 #include <condor_adtypes.h>
 #include <daemon_types.h>
-#include <boost/python.hpp>
 
 using namespace boost::python;
 
