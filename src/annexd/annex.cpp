@@ -77,7 +77,7 @@ help( const char * argv0 ) {
 		"\t[-public-key-file <public-key-file>]\n"
 		"\t[-secret-key-file <secret-key-file>]\n"
 		"\t[-pool <pool>] [-name <name>]\n"
-		"\t[-service-url <service-url>] [-events-url <events-url>]\n"
+		"\t[-service-url <service-url>] [-events-url <events-url>] [-lambda-url <lambda-url>\n"
 		"\t[-lease-function-arn <lease-function-arn>]\n"
 		"\t[-[default-]user-data[-file] <data|file> ]\n"
 		"\t[-debug] [-help]\n"
@@ -111,6 +111,7 @@ main( int argc, char ** argv ) {
 	const char * fileName = NULL;
 	const char * serviceURL = NULL;
 	const char * eventsURL = NULL;
+	const char * lambdaURL = NULL;
 	const char * publicKeyFile = NULL;
 	const char * secretKeyFile = NULL;
 	const char * leaseFunctionARN = NULL;
@@ -150,6 +151,15 @@ main( int argc, char ** argv ) {
 				continue;
 			} else {
 				fprintf( stderr, "%s: -events-url requires an argument.\n", argv[0] );
+				return 1;
+			}
+		} else if( is_dash_arg_prefix( argv[i], "lambda-url", 1 ) ) {
+			++i;
+			if( argv[i] != NULL ) {
+				lambdaURL = argv[i];
+				continue;
+			} else {
+				fprintf( stderr, "%s: -lambda-url requires an argument.\n", argv[0] );
 				return 1;
 			}
 		} else if( is_dash_arg_prefix( argv[i], "user-data-file", 10 ) ) {
@@ -319,6 +329,10 @@ main( int argc, char ** argv ) {
 
 	if( eventsURL != NULL ) {
 		spotFleetRequest.Assign( "EventsURL", eventsURL );
+	}
+
+	if( lambdaURL != NULL ) {
+		spotFleetRequest.Assign( "LambdaURL", lambdaURL );
 	}
 
 	if( publicKeyFile != NULL ) {

@@ -612,7 +612,7 @@ bool AmazonRequest::createV4Signature(	const std::string & payload,
 								 + canonicalHeaders + "\n"
 								 + signedHeaders + "\n"
 								 + payloadHash;
-	// dprintf( D_ALWAYS, "canonicalRequest:\n%s\n", canonicalRequest.c_str() );
+	dprintf( D_SECURITY | D_VERBOSE, "canonicalRequest:\n%s\n", canonicalRequest.c_str() );
 
 
 	//
@@ -668,7 +668,7 @@ bool AmazonRequest::createV4Signature(	const std::string & payload,
 	std::string stringToSign;
 	formatstr( stringToSign, "AWS4-HMAC-SHA256\n%s\n%s\n%s",
 		dt, credentialScope.c_str(), canonicalRequestHash.c_str() );
-	// dprintf( D_ALWAYS, "string to sign:\n%s\n", stringToSign.c_str() );
+	dprintf( D_SECURITY | D_VERBOSE, "string to sign:\n%s\n", stringToSign.c_str() );
 
 
 	//
@@ -3855,8 +3855,13 @@ bool AmazonGetFunction::workerFunction( char ** argv, int argc, std::string & re
 	AmazonGetFunction request = AmazonGetFunction( requestID, argv[0] );
 	request.accessKeyFile = argv[3];
 	request.secretKeyFile = argv[4];
-	formatstr( request.serviceURL, "%s/2015-03-31/functions/%s", argv[2],
-		amazonURLEncode( argv[5] ).c_str() );
+
+	const char * separator = "/";
+	if( argv[2][strlen( argv[2] ) - 1] == '/' ) {
+		separator = "";
+	}
+	formatstr( request.serviceURL, "%s%s2015-03-31/functions/%s", argv[2],
+		separator, amazonURLEncode( argv[5] ).c_str() );
 
 	if( ! request.SendURIRequest() ) {
 		result_string = create_failure_result( requestID,
