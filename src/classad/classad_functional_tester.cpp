@@ -1024,9 +1024,9 @@ void handle_readxml(
 
     if (get_variable_name(line, false, variable_name, state, parameters)) {
         if (get_file_name(line, file_name, state, parameters)) {
-            ifstream xml_file(file_name.c_str());
+            FILE *xml_file = fopen(file_name.c_str(), "r");
 
-            if (xml_file.bad()) {
+            if (!xml_file) {
                 string error;
                 error = "Can't read file: ";
                 error += file_name;
