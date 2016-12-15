@@ -32,9 +32,10 @@ FILE *my_popenv( const char *const argv [],
 int my_pclose( FILE *fp );
 int my_pclose_ex( FILE *fp, unsigned int timeout, bool kill_after_timeout );
 // special return values from my_pclose_ex that are not exit statuses
-#define MYPCLOSE_EX_NO_SUCH_FP     ((int)0xB4B4B4B4)
-#define MYPCLOSE_EX_I_KILLED_IT    ((int)0x99099909)
-#define MYPCLOSE_EX_STATUS_UNKNOWN ((int)0xDEADBEEF)
+#define MYPCLOSE_EX_NO_SUCH_FP     ((int)0xB4B4B4B4) // fp is not in my_popen tables mapping fp -> pid
+#define MYPCLOSE_EX_I_KILLED_IT    ((int)0x99099909) // process was hard killed by my_pclose_ex so process exit value is unknown
+#define MYPCLOSE_EX_STATUS_UNKNOWN ((int)0xDEADBEEF) // process was reaped by someone else, so exit status is unknown
+#define MYPCLOSE_EX_STILL_RUNNING  ((int)0xBAADDEED) // process is still running (can only happen if kill_after_timeout==false)
 
 int my_systemv( const char *const argv[] );
 
@@ -54,13 +55,13 @@ END_C_DECLS
 // ArgList and Env versions only available from C++
 #include "condor_arglist.h"
 #include "env.h"
-FILE *my_popen( ArgList &args,
+FILE *my_popen( const ArgList &args,
                 const char * mode,
                 int options, // see MY_POPEN_OPT_ flags above
-                Env *env_ptr = NULL,
+                const Env *env_ptr = NULL,
                 bool drop_privs = true,
 				const char *write_data = NULL);
-int my_system( ArgList &args, Env *env_ptr = NULL );
+int my_system( const ArgList &args, const Env *env_ptr = NULL );
 
 // PrivSep version
 #if !defined(WIN32)
@@ -78,7 +79,7 @@ FILE *privsep_popen( ArgList &args,
 //   to the programs exit status if the program ran to completion
 #define RUN_COMMAND_OPT_WANT_STDERR       0x001
 #define RUN_COMMAND_OPT_USE_CURRENT_PRIVS 0x080
-char* run_command(time_t timeout, ArgList &args, int options, Env* env_ptr, int *exit_status);
+char* run_command(time_t timeout, const ArgList &args, int options, const Env* env_ptr, int *exit_status);
 
 // Class to hold a my_popen stream can capture its output into a buffer
 // And also provide a time limit on how long the program runs.
@@ -111,19 +112,20 @@ public:
 	// returns -1 if a program is already running
 	// returns errno from my_popen if program does not start
 	int start_program (
-		ArgList &args,
+		const ArgList &args,
 		bool also_stderr,
-		Env* env_ptr=NULL,
+		const Env* env_ptr=NULL,
 		bool drop_privs=true,
 		const char * stdin_data=NULL);
 
 	// Capture program output until the program exits or until timeout expires
-	// returns ouput if program runs to completion and output is captured
+	// returns output if program runs to completion and output is captured
 	// returns NULL if there was an error or timeout.
 	// When NULL is returned the program may still be running. You can
 	//   use is_closed() to discover if it is still running
 	//   use close_program() to terminate it
 	// then use exit_status() and/or error_code() to find out what happened.
+	// at that point Output() can be used to get whatever output was returned.
 	MyStringSource* wait_for_output(time_t timeout);
 
 	// capture program output until it exits or the timout expires
@@ -131,6 +133,7 @@ public:
 	// returns false if the timeout expired or there was an error reading the output.
 	// when false is returned, the program (might) still be running.
 	// use close_program to terminate it.
+	// at that point Output() can be used to get whatever output was returned.
 	bool wait_for_exit(time_t timeout, int *exit_status);
 
 	// close the program if it is still running, sending a SIGTERM now and
@@ -153,7 +156,7 @@ public:
 	bool was_timeout() const { return error == ETIMEDOUT; }
 	int exit_status() const { return status; }
 	int error_code() const { return error; }
-	MyStringCharSource& output() { return src; }
+	MyStringCharSource& output() { return src; } // if you call this before is_close() is true, you must deal with truncated lines yourself.
 	int output_size() const { return bytes_read; }
 	int runtime() const { return run_time; }
 

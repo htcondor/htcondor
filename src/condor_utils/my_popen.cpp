@@ -241,7 +241,7 @@ my_popen(const char *const_cmd, const char *mode, int options)
 }
 
 FILE *
-my_popen(ArgList &args, const char *mode, int want_stderr, Env *zkmENV, bool drop_privs, const char *write_data)
+my_popen(const ArgList &args, const char *mode, int want_stderr, const Env *zkmENV, bool drop_privs, const char *write_data)
 {
 	/* drop_privs HAS NO EFFECT ON WINDOWS */
 	/* write_data IS NOT YET IMPLEMENTED ON WINDOWS - we can do so when we need it */
@@ -337,7 +337,7 @@ my_popenv_impl( const char *const args[],
                 const char * mode,
                 int options,
                 uid_t privsep_uid,
-		Env *env_ptr = 0,
+		const Env *env_ptr = 0,
 		bool drop_privs = true,
 		const char *write_data = NULL )
 {
@@ -681,11 +681,11 @@ my_popenv( const char *const args[],
 }
 
 static FILE *
-my_popen_impl(ArgList &args,
+my_popen_impl(const ArgList &args,
               const char *mode,
               int options,
               uid_t privsep_uid,
-              Env *env_ptr,
+              const Env *env_ptr,
               bool drop_privs = true,
 			  const char *write_data = NULL)
 {
@@ -698,7 +698,7 @@ my_popen_impl(ArgList &args,
 }
 
 FILE*
-my_popen(ArgList &args, const char *mode, int options, Env *env_ptr, bool drop_privs,
+my_popen(const ArgList &args, const char *mode, int options, const Env *env_ptr, bool drop_privs,
 		 const char *write_data)
 {
 	return my_popen_impl(args, mode, options, (uid_t)-1, env_ptr, drop_privs, write_data);
@@ -736,7 +736,8 @@ my_pclose(FILE *fp)
 }
 
 // returns true if waitpid succeed and status was set.
-// status will be set to the exit status of the pid if true is returned (or to -1 if exit status is not available)
+// status will be set to the exit status of the pid if true is returned
+// (or to MYPCLOSE_EX_STATUS_UNKNOWN if exit status is not available)
 static bool waitpid_with_timeout(pid_t pid, int *pstatus, time_t timeout)
 {
 	time_t begin_time = time(NULL);
@@ -747,7 +748,7 @@ static bool waitpid_with_timeout(pid_t pid, int *pstatus, time_t timeout)
 			return true;
 		}
 		if (rv < 0 && errno != EINTR) {
-			*pstatus = -1;
+			*pstatus = MYPCLOSE_EX_STATUS_UNKNOWN;
 			return true;
 		}
 		time_t now = time(NULL);
@@ -783,7 +784,7 @@ my_pclose_ex(FILE *fp, unsigned int timeout, bool kill_after_timeout)
 
 	// we get here if the wait pid timed out, in that case
 	// send a kill signal and wait for it to terminate
-	status = -1;
+	status = MYPCLOSE_EX_STILL_RUNNING;
 	if (kill_after_timeout) {
 		kill(pid,SIGKILL);
 		while (waitpid(pid,&status,0) < 0) {
@@ -809,7 +810,7 @@ my_systemv(const char *const args[])
 }
 
 int
-my_system(ArgList &args, Env *env_ptr)
+my_system(const ArgList &args, const Env *env_ptr)
 {
 	FILE* fp = my_popen(args, "w", FALSE, env_ptr);
 	return (fp != NULL) ? my_pclose(fp): -1;
@@ -946,7 +947,7 @@ my_spawnv( const char* cmd, const char *const argv[] )
 //
 // returns a null-terminated malloc'd buffer and sets exit_status to
 //   the programs exit status if the program ran to completion
-char* run_command(time_t timeout, ArgList &args, int options, Env* env_ptr, int *exit_status)
+char* run_command(time_t timeout, const ArgList &args, int options, const Env* env_ptr, int *exit_status)
 {
 	bool want_stderr = (options & RUN_COMMAND_OPT_WANT_STDERR) != 0;
 	bool drop_privs =  0 == (options & RUN_COMMAND_OPT_USE_CURRENT_PRIVS);
@@ -990,9 +991,9 @@ void MyPopenTimer::clear()
 
 // run a program and begin capturing it's output
 int MyPopenTimer::start_program (
-	ArgList &args,
+	const ArgList &args,
 	bool also_stderr,
-	Env* env_ptr /*=NULL*/,
+	const Env* env_ptr /*=NULL*/,
 	bool drop_privs /*=true*/,
 	const char * stdin_data /*=NULL*/)
 {
