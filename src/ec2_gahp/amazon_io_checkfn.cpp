@@ -210,7 +210,7 @@ bool AmazonBulkStart::ioCheck(char **argv, int argc) {
 		verify_string_name( argv[12] );
 }
 
-// Expecting:	EC2_PUT_RULE <req_id>
+// Expecting:	CWE_PUT_RULE <req_id>
 //				<service_url> <accesskeyfile> <secretkeyfile>
 //				<rule-name> <schedule-expression> <desired-state>
 bool AmazonPutRule::ioCheck(char **argv, int argc) {
@@ -224,7 +224,7 @@ bool AmazonPutRule::ioCheck(char **argv, int argc) {
 		verify_string_name( argv[7] );
 }
 
-// Expecting:	EC2_PUT_TARGETS <req_id>
+// Expecting:	CWE_PUT_TARGETS <req_id>
 //				<service_url> <accesskeyfile> <secretkeyfile>
 //				<rule-name> <target-id> <target-arn> <target-input>
 bool AmazonPutTargets::ioCheck(char **argv, int argc) {
@@ -251,7 +251,7 @@ bool AmazonBulkStop::ioCheck(char **argv, int argc) {
 		verify_string_name( argv[5] );
 }
 
-// Expecting:	EC2_DELETE_RULE <req_id>
+// Expecting:	CWE_DELETE_RULE <req_id>
 //				<service_url> <accesskeyfile> <secretkeyfile>
 //				<rule-name>
 bool AmazonDeleteRule::ioCheck(char **argv, int argc) {
@@ -263,7 +263,7 @@ bool AmazonDeleteRule::ioCheck(char **argv, int argc) {
 		verify_string_name( argv[5] );
 }
 
-// Expecting:	EC2_REMOVE_TARGETS <req_id>
+// Expecting:	CWE_REMOVE_TARGETS <req_id>
 //				<service_url> <accesskeyfile> <secretkeyfile>
 //				<rule-name> <target-id>
 bool AmazonRemoveTargets::ioCheck(char **argv, int argc) {
@@ -274,4 +274,16 @@ bool AmazonRemoveTargets::ioCheck(char **argv, int argc) {
 		verify_string_name( argv[4] ) &&
 		verify_string_name( argv[5] ) &&
 		verify_string_name( argv[6] );
+}
+
+// Expecting:	AWS_GET_FUNCTION <req_id>
+//				<service_url> <accesskeyfile> <secretkeyfile>
+//				<function-name-or-arn>
+bool AmazonGetFunction::ioCheck(char **argv, int argc) {
+	return verify_min_number_args( argc, 6 ) &&
+		verify_request_id( argv[1] ) &&
+		verify_string_name( argv[2] ) &&
+		verify_string_name( argv[3] ) &&
+		verify_string_name( argv[4] ) &&
+		verify_string_name( argv[5] );
 }

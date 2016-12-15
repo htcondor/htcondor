@@ -689,6 +689,15 @@ class EC2GahpClient : public GahpClient {
 		EC2GahpClient(	const char * id, const char * path, const ArgList * args );
 		~EC2GahpClient();
 
+		int get_function(	const std::string & service_url,
+							const std::string & publickeyfile,
+							const std::string & privatekeyfile,
+
+							const std::string & functionARN,
+
+							std::string & functionHash,
+							std::string & errorCode );
+
 		int put_targets(	const std::string & service_url,
 							const std::string & publickeyfile,
 							const std::string & privatekeyfile,

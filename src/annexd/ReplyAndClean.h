@@ -9,8 +9,8 @@
 
 class ReplyAndClean : public Functor {
 	public:
-		ReplyAndClean( ClassAd * r, Stream * rs, GahpClient * g, ClassAd * s, GahpClient * eg, ClassAdCollection * cac, const std::string & cid ) :
-			reply(r), replyStream(rs), gahp(g), scratchpad(s), eventsGahp(eg), commandState( cac ), commandID( cid ) { }
+		ReplyAndClean( ClassAd * r, Stream * rs, GahpClient * g, ClassAd * s, GahpClient * eg, ClassAdCollection * cac, const std::string & cid, GahpClient * lg ) :
+			reply(r), replyStream(rs), gahp(g), scratchpad(s), eventsGahp(eg), commandState(cac), commandID(cid), lambdaGahp(lg) { }
 		virtual ~ReplyAndClean() { }
 
 		virtual int operator() ();
@@ -24,6 +24,7 @@ class ReplyAndClean : public Functor {
 		GahpClient * eventsGahp;
 		ClassAdCollection * commandState;
 		std::string commandID;
+		GahpClient * lambdaGahp;
 };
 
 #endif /* _CONDOR_REPLY_AND_CLEAN_H */

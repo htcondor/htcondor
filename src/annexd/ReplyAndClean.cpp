@@ -50,6 +50,10 @@ ReplyAndClean::operator() () {
 	daemonCore->Cancel_Timer( eventsGahp->getNotificationTimerId() );
 	delete eventsGahp;
 
+	// See above.
+	daemonCore->Cancel_Timer( lambdaGahp->getNotificationTimerId() );
+	delete lambdaGahp;
+
 	// We're done with the scratchpad, too.
 	delete scratchpad;
 

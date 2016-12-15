@@ -15,6 +15,7 @@
 
 #include "Functor.h"
 #include "BulkRequest.h"
+#include "GetFunction.h"
 #include "PutRule.h"
 #include "PutTargets.h"
 #include "ReplyAndClean.h"
@@ -154,7 +155,8 @@ createOneAnnex( ClassAd * command, Stream * replyStream ) {
 	// implementation.
 	//
 
-	std::string serviceURL, eventsURL, publicKeyFile, secretKeyFile, leaseFunctionARN;
+	std::string serviceURL, eventsURL, lambdaURL;
+
 	param( serviceURL, "ANNEX_DEFAULT_EC2_URL" );
 	// FIXME: look up service URL from authorized user map.
 	command->LookupString( "ServiceURL", serviceURL );
@@ -162,6 +164,12 @@ createOneAnnex( ClassAd * command, Stream * replyStream ) {
 	param( eventsURL, "ANNEX_DEFAULT_CWE_URL" );
 	// FIXME: look up events URL from authorized user map.
 	command->LookupString( "EventsURL", eventsURL );
+
+	param( lambdaURL, "ANNEX_DEFAULT_LAMBDA_URL" );
+	// FIXME: look up lambda URL from authorized user map.
+	command->LookupString( "LambdaURL", lambdaURL );
+
+	std::string publicKeyFile, secretKeyFile, leaseFunctionARN;
 
 	// FIXME: look up public key file from authorized user map.
 	command->LookupString( "PublicKeyFile", publicKeyFile );
@@ -209,6 +217,10 @@ createOneAnnex( ClassAd * command, Stream * replyStream ) {
 	// The lease requires a different endpoint to implement.
 	EC2GahpClient * eventsGahp = startOneGahpClient( publicKeyFile, eventsURL );
 
+	// Checking for the existence of the lease function requires a different
+	// endpoint as well.  Maybe we should fiddle the GAHP to make it less
+	// traumatic to use different endpoints?
+	EC2GahpClient * lambdaGahp = startOneGahpClient( publicKeyFile, lambdaURL );
 
 	//
 	// Construct the bulk request, create rule, and add target functors,
@@ -260,6 +272,7 @@ createOneAnnex( ClassAd * command, Stream * replyStream ) {
 
 		delete gahp;
 		delete eventsGahp;
+		delete lambdaGahp;
 
 		delete reply;
 		delete scratchpad;
@@ -288,6 +301,12 @@ createOneAnnex( ClassAd * command, Stream * replyStream ) {
 	}
 	commandState->CommitTransaction();
 
+	// Verify the existence of the specified function before starting any
+	// instances.  Otherwise, the lease may not fire.
+	GetFunction * gf = new GetFunction( leaseFunctionARN,
+		reply, lambdaGahp, scratchpad,
+	    lambdaURL, publicKeyFile, secretKeyFile,
+		commandState, commandID );
 	PutRule * pr = new PutRule( reply, eventsGahp, scratchpad,
 		eventsURL, publicKeyFile, secretKeyFile,
 		commandState, commandID );
@@ -298,7 +317,7 @@ createOneAnnex( ClassAd * command, Stream * replyStream ) {
 	// We now only call last->operator() on success; otherwise, we roll back
 	// and call last->rollback() after we've given up.  We can therefore
 	// remove the command ad from the commandState in this functor.
-	ReplyAndClean * last = new ReplyAndClean( reply, replyStream, gahp, scratchpad, eventsGahp, commandState, commandID );
+	ReplyAndClean * last = new ReplyAndClean( reply, replyStream, gahp, scratchpad, eventsGahp, commandState, commandID, lambdaGahp );
 
 	// Note that the functor sequence takes responsibility for deleting the
 	// functor objects; the functor objects would just delete themselves when
@@ -307,7 +326,7 @@ createOneAnnex( ClassAd * command, Stream * replyStream ) {
 	//
 	// The commandState, commandID, and scratchpad allow the functor sequence
 	// to restart a rollback, if that becomes necessary.
-	FunctorSequence * fs = new FunctorSequence( { br, pr, pt }, last, commandState, commandID, scratchpad );
+	FunctorSequence * fs = new FunctorSequence( { gf, br, pr, pt }, last, commandState, commandID, scratchpad );
 
 	// Create a timer for the gahp to fire when it gets a result.  We must
 	// use TIMER_NEVER to ensure that the timer hasn't been reaped when the
@@ -317,6 +336,7 @@ createOneAnnex( ClassAd * command, Stream * replyStream ) {
 		"BulkRequest, PutRule, AddTarget", fs );
 	gahp->setNotificationTimerId( functorSequenceTimer );
     eventsGahp->setNotificationTimerId( functorSequenceTimer );
+    lambdaGahp->setNotificationTimerId( functorSequenceTimer );
 
 	return KEEP_STREAM;
 }

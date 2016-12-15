@@ -141,6 +141,8 @@ registerAllAmazonCommands(void)
 			AmazonDeleteRule::ioCheck, AmazonDeleteRule::workerFunction );
 	registerAmazonGahpCommand( AMAZON_COMMAND_REMOVE_TARGETS,
 			AmazonRemoveTargets::ioCheck, AmazonRemoveTargets::workerFunction );
+	registerAmazonGahpCommand( AMAZON_COMMAND_GET_FUNCTION,
+			AmazonGetFunction::ioCheck, AmazonGetFunction::workerFunction );
 
 	return true;
 }

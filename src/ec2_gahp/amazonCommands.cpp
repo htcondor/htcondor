@@ -468,8 +468,29 @@ bool doSha256(	const std::string & payload,
 	return true;
 }
 
+std::string pathEncode( const std::string & original ) {
+	std::string segment;
+	std::string encoded;
+	const char * o = original.c_str();
+
+	size_t next = 0;
+	size_t offset = 0;
+	size_t length = strlen( o );
+	while( offset < length ) {
+		next = strcspn( o + offset, "/" );
+		if( next == 0 ) { encoded += "/"; offset += 1; continue; }
+
+		segment = std::string( o + offset, next );
+		encoded += amazonURLEncode( segment );
+
+		offset += next;
+	}
+	return encoded;
+}
+
 bool AmazonRequest::createV4Signature(	const std::string & payload,
-										std::string & authorizationValue ) {
+										std::string & authorizationValue,
+										bool useGET ) {
 	Throttle::now( & signatureTime );
 	time_t now; time( & now );
 	struct tm brokenDownTime; gmtime_r( & now, & brokenDownTime );
@@ -492,21 +513,17 @@ bool AmazonRequest::createV4Signature(	const std::string & payload,
 	if( canonicalURI.empty() ) { canonicalURI = "/"; }
 
 	// But that sounds like a lot of work, so until something we do actually
-	// requires it, I'll just assume the path is '/', which doesn't need
-	// anything done to it.
-	if( canonicalURI != "/" ) {
-		this->errorCode = "E_INVALID_SERVICE_URL";
-		this->errorMessage = "Service URL must not have a path component.";
-		dprintf( D_ALWAYS, "Service URL '%s' has a path component.\n", serviceURL.c_str() );
-		return false;
-	}
-
+	// requires it, I'll just assume the path is already normalized.
+	canonicalURI = pathEncode( canonicalURI );
 
 	// The canonical query string is the alphabetically sorted list of
 	// URI-encoded parameter names '=' values, separated by '&'s.  That
 	// wouldn't be hard to do, but we don't need to, since we send
 	// everything in the POST body, instead.
 	std::string canonicalQueryString;
+
+	// ... that is, unless we're using the GET method.
+	ASSERT( (! useGET) || query_parameters.size() == 0 );
 
 	// The canonical headers must include the Host header, so add that
 	// now if we don't have it.
@@ -586,7 +603,7 @@ bool AmazonRequest::createV4Signature(	const std::string & payload,
 	convertMessageDigestToLowercaseHex( messageDigest, mdLength, payloadHash );
 
 	// Task 1: create the canonical request.
-	std::string canonicalRequest = "POST\n"
+	std::string canonicalRequest = (useGET ? "GET\n" : "POST\n")
 								 + canonicalURI + "\n"
 								 + canonicalQueryString + "\n"
 								 + canonicalHeaders + "\n"
@@ -734,8 +751,8 @@ bool AmazonRequest::sendV4Request() {
 
     std::string authorizationValue;
     if(! createV4Signature( payload, authorizationValue )) {
-        this->errorCode = "E_INTERNAL";
-        this->errorMessage = "Failed to create v4 signature.";
+        if( this->errorCode.empty() ) { this->errorCode = "E_INTERNAL"; }
+        if( this->errorMessage.empty() ) { this->errorMessage = "Failed to create v4 signature."; }
         dprintf( D_ALWAYS, "Failed to create v4 signature.\n" );
         return false;
     }
@@ -923,6 +940,38 @@ bool AmazonRequest::sendV2Request() {
     return sendPreparedRequest( protocol, postURI, canonicalQueryString );
 }
 
+bool AmazonRequest::SendURIRequest() {
+	// Almost but not quite identical to AmazonRequest::SendJSONRequest(),
+	// which probably means I should share some code.
+
+    std::string protocol, host, path;
+    if(! parseURL( serviceURL, protocol, host, path )) {
+        this->errorCode = "E_INVALID_SERVICE_URL";
+        this->errorMessage = "Failed to parse service URL.";
+        dprintf( D_ALWAYS, "Failed to match regex against service URL '%s'.\n", serviceURL.c_str() );
+        return false;
+    }
+    if( (protocol != "http") && (protocol != "https") ) {
+        this->errorCode = "E_INVALID_SERVICE_URL";
+        this->errorMessage = "Service URL not of a known protocol (http[s]).";
+        dprintf( D_ALWAYS, "Service URL '%s' not of a known protocol (http[s]).\n", serviceURL.c_str() );
+        return false;
+    }
+    dprintf( D_FULLDEBUG, "Request URI is '%s'\n", serviceURL.c_str() );
+
+    std::string noPayloadAllowed;
+    std::string authorizationValue;
+    if(! createV4Signature( noPayloadAllowed, authorizationValue, true )) {
+        this->errorCode = "E_INTERNAL";
+        this->errorMessage = "Failed to create v4 signature.";
+        dprintf( D_ALWAYS, "Failed to create v4 signature.\n" );
+        return false;
+    }
+    headers[ "Authorization" ] = authorizationValue;
+
+    return sendPreparedRequest( protocol, serviceURL, noPayloadAllowed, true );
+}
+
 bool AmazonRequest::SendJSONRequest( const std::string & payload ) {
     headers[ "Content-Type" ] = "application/x-amz-json-1.1";
 
@@ -958,7 +1007,8 @@ bool AmazonRequest::SendJSONRequest( const std::string & payload ) {
 bool AmazonRequest::sendPreparedRequest(
         const std::string & protocol,
         const std::string & uri,
-        const std::string & payload ) {
+        const std::string & payload,
+        bool useGET ) {
     static bool rateLimitInitialized = false;
     if(! rateLimitInitialized) {
         // FIXME: convert to the new form of param() when it becomes available.
@@ -1023,24 +1073,26 @@ bool AmazonRequest::sendPreparedRequest(
         return false;
     }
 
-    rv = curl_easy_setopt( curl, CURLOPT_POST, 1 );
-    if( rv != CURLE_OK ) {
-        this->errorCode = "E_CURL_LIB";
-        this->errorMessage = "curl_easy_setopt( CURLOPT_POST ) failed.";
-        dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_POST ) failed (%d): '%s', failing.\n",
-            rv, curl_easy_strerror( rv ) );
-        return false;
-    }
+	if(! useGET ) {
+		rv = curl_easy_setopt( curl, CURLOPT_POST, 1 );
+		if( rv != CURLE_OK ) {
+		this->errorCode = "E_CURL_LIB";
+			this->errorMessage = "curl_easy_setopt( CURLOPT_POST ) failed.";
+			dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_POST ) failed (%d): '%s', failing.\n",
+				rv, curl_easy_strerror( rv ) );
+			return false;
+		}
 
-	// dprintf( D_ALWAYS, "sendPreparedRequest(): CURLOPT_POSTFIELDS = '%s'\n", payload.c_str() );
-    rv = curl_easy_setopt( curl, CURLOPT_POSTFIELDS, payload.c_str() );
-    if( rv != CURLE_OK ) {
-        this->errorCode = "E_CURL_LIB";
-        this->errorMessage = "curl_easy_setopt( CURLOPT_POSTFIELDS ) failed.";
-        dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_POSTFIELDS ) failed (%d): '%s', failing.\n",
-            rv, curl_easy_strerror( rv ) );
-        return false;
-    }
+		// dprintf( D_ALWAYS, "sendPreparedRequest(): CURLOPT_POSTFIELDS = '%s'\n", payload.c_str() );
+		rv = curl_easy_setopt( curl, CURLOPT_POSTFIELDS, payload.c_str() );
+		if( rv != CURLE_OK ) {
+			this->errorCode = "E_CURL_LIB";
+			this->errorMessage = "curl_easy_setopt( CURLOPT_POSTFIELDS ) failed.";
+			dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_POSTFIELDS ) failed (%d): '%s', failing.\n",
+				rv, curl_easy_strerror( rv ) );
+			return false;
+		}
+	}
 
     rv = curl_easy_setopt( curl, CURLOPT_NOPROGRESS, 1 );
     if( rv != CURLE_OK ) {
@@ -1304,7 +1356,7 @@ retry:
         return false;
     }
 
-    unsigned long responseCode = 0;
+    responseCode = 0;
     rv = curl_easy_getinfo( curl, CURLINFO_RESPONSE_CODE, & responseCode );
     if( rv != CURLE_OK ) {
         // So we contacted the server but it returned such gibberish that
@@ -3438,7 +3490,7 @@ bool AmazonPutRule::SendJSONRequest( const std::string & payload ) {
 }
 
 bool AmazonPutRule::workerFunction( char ** argv, int argc, std::string & result_string ) {
-	assert( strcasecmp( argv[0], "EC2_PUT_RULE" ) == 0 );
+	assert( strcasecmp( argv[0], AMAZON_COMMAND_PUT_RULE ) == 0 );
 	int requestID;
 	get_int( argv[1], & requestID );
 	dprintf( D_PERF_TRACE, "request #%d (%s): work begins\n",
@@ -3520,7 +3572,7 @@ bool AmazonPutTargets::SendJSONRequest( const std::string & payload ) {
 }
 
 bool AmazonPutTargets::workerFunction( char ** argv, int argc, std::string & result_string ) {
-	assert( strcasecmp( argv[0], "EC2_PUT_TARGETS" ) == 0 );
+	assert( strcasecmp( argv[0], AMAZON_COMMAND_PUT_TARGETS ) == 0 );
 	int requestID;
 	get_int( argv[1], & requestID );
 	dprintf( D_PERF_TRACE, "request #%d (%s): work begins\n",
@@ -3602,7 +3654,7 @@ bool AmazonRemoveTargets::SendJSONRequest( const std::string & payload ) {
 }
 
 bool AmazonRemoveTargets::workerFunction( char ** argv, int argc, std::string & result_string ) {
-	assert( strcasecmp( argv[0], "EC2_REMOVE_TARGETS" ) == 0 );
+	assert( strcasecmp( argv[0], AMAZON_COMMAND_REMOVE_TARGETS ) == 0 );
 	int requestID;
 	get_int( argv[1], & requestID );
 	dprintf( D_PERF_TRACE, "request #%d (%s): work begins\n",
@@ -3658,7 +3710,7 @@ bool AmazonDeleteRule::SendJSONRequest( const std::string & payload ) {
 }
 
 bool AmazonDeleteRule::workerFunction( char ** argv, int argc, std::string & result_string ) {
-	assert( strcasecmp( argv[0], "EC2_DELETE_RULE" ) == 0 );
+	assert( strcasecmp( argv[0], AMAZON_COMMAND_DELETE_RULE ) == 0 );
 	int requestID;
 	get_int( argv[1], & requestID );
 	dprintf( D_PERF_TRACE, "request #%d (%s): work begins\n",
@@ -3811,3 +3863,75 @@ bool AmazonBulkStop::workerFunction( char ** argv, int argc, std::string & resul
 	return true;
 }
 
+// ---------------------------------------------------------------------------
+
+AmazonGetFunction::~AmazonGetFunction() { }
+
+bool AmazonGetFunction::SendURIRequest() {
+	bool result = AmazonRequest::SendURIRequest();
+	if( result ) {
+		ClassAd reply;
+		classad::ClassAdJsonParser cajp;
+		if(! cajp.ParseClassAd( this->resultString, reply, true )) {
+			dprintf( D_ALWAYS, "Failed to parse reply '%s' as JSON.\n", this->resultString.c_str() );
+			return false;
+		}
+
+		classad::ExprTree * c = reply.LookupExpr( "Configuration" );
+		classad::ClassAd * d = NULL;
+		if((! c) || (! c->isClassad( & d ))) {
+			dprintf( D_ALWAYS, "Failed to find JSON blob value 'Configuration' in reply.\n" );
+			return false;
+		}
+
+		ClassAd configuration( * d );
+		if(! configuration.LookupString( "CodeSha256", functionHash )) {
+			dprintf( D_ALWAYS, "Failed to find string value 'Configuration.CodeSha256' in reply.\n" );
+			return false;
+		}
+
+		return true;
+	} else {
+		if( responseCode == 404 &&
+		  errorMessage.find( "Function not found" ) != std::string::npos ) {
+		  	// This signals that our query successfully found nothing
+		  	// (so that we don't have to try again).
+		  	functionHash = "";
+			return true;
+		}
+	}
+	return result;
+}
+
+bool AmazonGetFunction::workerFunction( char ** argv, int argc, std::string & result_string ) {
+	assert( strcasecmp( argv[0], AMAZON_COMMAND_GET_FUNCTION ) == 0 );
+	int requestID;
+	get_int( argv[1], & requestID );
+	dprintf( D_PERF_TRACE, "request #%d (%s): work begins\n",
+		requestID, argv[0] );
+
+	if( ! verify_min_number_args( argc, 6 ) ) {
+		result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
+		dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n",
+			argc, 6, argv[0] );
+		return false;
+	}
+
+	// Fill in required attributes.
+	AmazonGetFunction request = AmazonGetFunction( requestID, argv[0] );
+	request.accessKeyFile = argv[3];
+	request.secretKeyFile = argv[4];
+	formatstr( request.serviceURL, "%s/2015-03-31/functions/%s", argv[2],
+		amazonURLEncode( argv[5] ).c_str() );
+
+	if( ! request.SendURIRequest() ) {
+		result_string = create_failure_result( requestID,
+			request.errorMessage.c_str(),
+			request.errorCode.c_str() );
+	} else {
+		StringList sl; sl.append( request.functionHash.c_str() );
+		result_string = create_success_result( requestID, & sl );
+	}
+
+	return true;
+}
