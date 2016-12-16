@@ -104,7 +104,10 @@ bool Condor_Auth_SSL::Initialize()
 
 	dlerror();
 
-	if ( Condor_Auth_Kerberos::Initialize() == false ||
+	if (
+#if defined(HAVE_EXT_KRB5)
+		Condor_Auth_Kerberos::Initialize() == false ||
+#endif
 		 (dl_hdl = dlopen(LIBSSL_SO, RTLD_LAZY)) == NULL ||
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
 		 !(SSL_CTX_ctrl_ptr = (long (*)(SSL_CTX *, int, long, void *))dlsym(dl_hdl, "SSL_CTX_ctrl")) ||

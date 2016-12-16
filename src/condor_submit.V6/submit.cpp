@@ -9643,7 +9643,7 @@ int SendJobCredential()
 		dprintf(D_ALWAYS, "CREDMON: invoking %s\n", producer.c_str());
 		ArgList args;
 		args.AppendArg(producer);
-		FILE* uber_file = my_popen(args, "r", false);
+		FILE* uber_file = my_popen(args, "r", 0);
 		unsigned char *uber_ticket = NULL;
 		if (!uber_file) {
 			fprintf(stderr, "\nERROR: (%i) invoking %s\n", errno, producer.c_str());

@@ -459,11 +459,13 @@ public:
 		if ((!m_str) || (!rhs.m_str)) return false;
 		return strcmp(m_str,rhs.m_str) == 0;
 	}
+	bool operator !=(const YourString &rhs) const { return !(operator==(rhs)); }
 	bool operator ==(const char * str) const {
 		if (m_str == str) return true;
 		if ((!m_str) || (!str)) return false;
 		return strcmp(m_str,str) == 0;
 	}
+	bool operator !=(const char * str) const { return !(operator==(str)); }
 	bool operator<(const char * str) const {
 		if ( ! m_str) {
 			 return str ? -1 : 0;

@@ -131,8 +131,10 @@ static struct popen_entry * find_child(FILE* fp)
 //////////////////////////////////////////////////////////////////////////
 
 extern "C" FILE *
-my_popen(const char *const_cmd, const char *mode, int want_stderr)
+my_popen(const char *const_cmd, const char *mode, int options)
 {
+	int want_stderr = (options & MY_POPEN_OPT_WANT_STDERR);
+	int fail_quietly = (options & MY_POPEN_OPT_FAIL_QUIETLY);
 	BOOL read_mode;
 	SECURITY_ATTRIBUTES saPipe;
 	HANDLE hReadPipe, hWritePipe;
@@ -207,7 +209,7 @@ my_popen(const char *const_cmd, const char *mode, int want_stderr)
 		DWORD err = GetLastError();
 		CloseHandle(hParentPipe);
 		CloseHandle(hChildPipe);
-		dprintf(D_ALWAYS, "my_popen: CreateProcess failed err=%d\n", err);
+		if ( ! fail_quietly) { dprintf(D_ALWAYS, "my_popen: CreateProcess failed err=%d\n", err); }
 		return NULL;
 	}
 
@@ -239,7 +241,7 @@ my_popen(const char *const_cmd, const char *mode, int want_stderr)
 }
 
 FILE *
-my_popen(ArgList &args, const char *mode, int want_stderr, Env *zkmENV, bool drop_privs, const char *write_data)
+my_popen(const ArgList &args, const char *mode, int want_stderr, const Env *zkmENV, bool drop_privs, const char *write_data)
 {
 	/* drop_privs HAS NO EFFECT ON WINDOWS */
 	/* write_data IS NOT YET IMPLEMENTED ON WINDOWS - we can do so when we need it */
@@ -258,7 +260,7 @@ my_popen(ArgList &args, const char *mode, int want_stderr, Env *zkmENV, bool dro
 }
 
 extern "C" FILE *
-my_popenv(const char *const args[], const char *mode, int want_stderr)
+my_popenv(const char *const args[], const char *mode, int options)
 {
 	// build the argument list
 	ArgList arglist;
@@ -266,7 +268,7 @@ my_popenv(const char *const args[], const char *mode, int want_stderr)
 		arglist.AppendArg(args[i]);
 	}
 
-	return my_popen(arglist, mode, want_stderr);
+	return my_popen(arglist, mode, options);
 }
 
 extern "C" int
@@ -333,12 +335,14 @@ static int	WRITE_END = 1;
 static FILE *
 my_popenv_impl( const char *const args[],
                 const char * mode,
-                int want_stderr,
+                int options,
                 uid_t privsep_uid,
-		Env *env_ptr = 0,
+		const Env *env_ptr = 0,
 		bool drop_privs = true,
 		const char *write_data = NULL )
 {
+	int want_stderr = (options & MY_POPEN_OPT_WANT_STDERR);
+	int fail_quietly = (options & MY_POPEN_OPT_FAIL_QUIETLY);
 	int	pipe_d[2], pipe_d2[2];
 	int pipe_writedata[2];
 	int want_writedata = 0;
@@ -610,8 +614,10 @@ my_popenv_impl( const char *const args[],
 			/* NOOP */
 		}
 
-		dprintf(D_ALWAYS, "my_popenv: Failed to exec in child, errno=%d (%s)\n",
+		if ( ! fail_quietly) {
+			dprintf(D_ALWAYS, "my_popenv: Failed to exec in child, errno=%d (%s)\n",
 				exit_code, strerror(exit_code));
+		}
 		errno = exit_code;
 		return NULL;
 	}
@@ -669,22 +675,22 @@ my_popenv_impl( const char *const args[],
 extern "C" FILE *
 my_popenv( const char *const args[],
            const char * mode,
-           int want_stderr )
+           int options )
 {
-	return my_popenv_impl(args, mode, want_stderr, (uid_t)-1);
+	return my_popenv_impl(args, mode, options, (uid_t)-1);
 }
 
 static FILE *
-my_popen_impl(ArgList &args,
+my_popen_impl(const ArgList &args,
               const char *mode,
-              int want_stderr,
+              int options,
               uid_t privsep_uid,
-              Env *env_ptr,
+              const Env *env_ptr,
               bool drop_privs = true,
 			  const char *write_data = NULL)
 {
 	char **string_array = args.GetStringArray();
-	FILE *fp = my_popenv_impl(string_array, mode, want_stderr, privsep_uid,
+	FILE *fp = my_popenv_impl(string_array, mode, options, privsep_uid,
 			env_ptr, drop_privs, write_data);
 	deleteStringArray(string_array);
 
@@ -692,16 +698,16 @@ my_popen_impl(ArgList &args,
 }
 
 FILE*
-my_popen(ArgList &args, const char *mode, int want_stderr, Env *env_ptr, bool drop_privs,
+my_popen(const ArgList &args, const char *mode, int options, const Env *env_ptr, bool drop_privs,
 		 const char *write_data)
 {
-	return my_popen_impl(args, mode, want_stderr, (uid_t)-1, env_ptr, drop_privs, write_data);
+	return my_popen_impl(args, mode, options, (uid_t)-1, env_ptr, drop_privs, write_data);
 }
 
 FILE*
-privsep_popen(ArgList &args, const char *mode, int want_stderr, uid_t uid, Env *env_ptr)
+privsep_popen(ArgList &args, const char *mode, int options, uid_t uid, Env *env_ptr)
 {
-	return my_popen_impl(args, mode, want_stderr, uid, env_ptr);
+	return my_popen_impl(args, mode, options, uid, env_ptr);
 }
 
 // this is the backward compatible my_pclose function that NO CONDOR CODE SHOULD USE!
@@ -730,7 +736,8 @@ my_pclose(FILE *fp)
 }
 
 // returns true if waitpid succeed and status was set.
-// status will be set to the exit status of the pid if true is returned (or to -1 if exit status is not available)
+// status will be set to the exit status of the pid if true is returned
+// (or to MYPCLOSE_EX_STATUS_UNKNOWN if exit status is not available)
 static bool waitpid_with_timeout(pid_t pid, int *pstatus, time_t timeout)
 {
 	time_t begin_time = time(NULL);
@@ -741,7 +748,7 @@ static bool waitpid_with_timeout(pid_t pid, int *pstatus, time_t timeout)
 			return true;
 		}
 		if (rv < 0 && errno != EINTR) {
-			*pstatus = -1;
+			*pstatus = MYPCLOSE_EX_STATUS_UNKNOWN;
 			return true;
 		}
 		time_t now = time(NULL);
@@ -777,7 +784,7 @@ my_pclose_ex(FILE *fp, unsigned int timeout, bool kill_after_timeout)
 
 	// we get here if the wait pid timed out, in that case
 	// send a kill signal and wait for it to terminate
-	status = -1;
+	status = MYPCLOSE_EX_STILL_RUNNING;
 	if (kill_after_timeout) {
 		kill(pid,SIGKILL);
 		while (waitpid(pid,&status,0) < 0) {
@@ -803,7 +810,7 @@ my_systemv(const char *const args[])
 }
 
 int
-my_system(ArgList &args, Env *env_ptr)
+my_system(const ArgList &args, const Env *env_ptr)
 {
 	FILE* fp = my_popen(args, "w", FALSE, env_ptr);
 	return (fp != NULL) ? my_pclose(fp): -1;
@@ -940,7 +947,7 @@ my_spawnv( const char* cmd, const char *const argv[] )
 //
 // returns a null-terminated malloc'd buffer and sets exit_status to
 //   the programs exit status if the program ran to completion
-char* run_command(time_t timeout, ArgList &args, int options, Env* env_ptr, int *exit_status)
+char* run_command(time_t timeout, const ArgList &args, int options, const Env* env_ptr, int *exit_status)
 {
 	bool want_stderr = (options & RUN_COMMAND_OPT_WANT_STDERR) != 0;
 	bool drop_privs =  0 == (options & RUN_COMMAND_OPT_USE_CURRENT_PRIVS);
@@ -984,9 +991,9 @@ void MyPopenTimer::clear()
 
 // run a program and begin capturing it's output
 int MyPopenTimer::start_program (
-	ArgList &args,
+	const ArgList &args,
 	bool also_stderr,
-	Env* env_ptr /*=NULL*/,
+	const Env* env_ptr /*=NULL*/,
 	bool drop_privs /*=true*/,
 	const char * stdin_data /*=NULL*/)
 {
@@ -1002,9 +1009,19 @@ int MyPopenTimer::start_program (
 	const char * mode = "r";
 #endif
 
-	fp = my_popen(args, mode, also_stderr, env_ptr, drop_privs, stdin_data);
+	int options = MY_POPEN_OPT_FAIL_QUIETLY;
+	if (also_stderr) options |= MY_POPEN_OPT_WANT_STDERR;
+	fp = my_popen(args, mode, options, env_ptr, drop_privs, stdin_data);
 	if ( ! fp) {
 		error = errno;
+#ifdef WIN32
+		// do a little error translation for windows to make sure that the caller can reasonable
+		// distinguish 'the program does not exist' from other errors.
+		DWORD err = GetLastError();
+		if (err == ERROR_FILE_NOT_FOUND || err == ERROR_PATH_NOT_FOUND) {
+			error = ENOENT;
+		}
+#endif
 		return error;
 	}
 #ifdef WIN32

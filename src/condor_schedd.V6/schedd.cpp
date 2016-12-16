@@ -1916,21 +1916,16 @@ int Scheduler::command_history(int, Stream* stream)
 		}
 		return sendHistoryErrorAd(stream, 3, "Unable to convert projection list to string list");
 	}
-	std::stringstream ss;
-	bool multiple = false;
-	for (classad::References::const_iterator it = projection.begin(); it != projection.end(); ++it) {
-		if (multiple) ss << ",";
-		multiple = true;
-		ss << *it;
-	}
+	std::string proj_str;
+	print_attrs(proj_str, false, projection, ",");
 
 	int matchCount = -1;
 	if (!queryAd.EvaluateAttr(ATTR_NUM_MATCHES, value) || !value.IsIntegerValue(matchCount))
 	{
 		matchCount = -1;
 	}
-	std::stringstream ss2;
-	ss2 << matchCount;
+	std::string match_limit;
+	formatstr(match_limit, "%d", matchCount);
 
 	bool streamresults = false;
 	if (!queryAd.EvaluateAttrBool("StreamResults", streamresults)) {
@@ -1942,12 +1937,12 @@ int Scheduler::command_history(int, Stream* stream)
 			return sendHistoryErrorAd(stream, 9, "Cowardly refusing to queue more than 1000 requests.");
 		}
 		classad_shared_ptr<Stream> stream_shared(stream);
-		HistoryHelperState state(stream_shared, requirements_str, since_str, ss.str(), ss2.str());
+		HistoryHelperState state(stream_shared, requirements_str, since_str, proj_str, match_limit);
 		state.m_streamresults = streamresults;
 		m_history_helper_queue.push_back(state);
 		return KEEP_STREAM;
 	} else {
-		HistoryHelperState state(*stream, requirements_str, since_str, ss.str(), ss2.str());
+		HistoryHelperState state(*stream, requirements_str, since_str, proj_str, match_limit);
 		state.m_streamresults = streamresults;
 		return history_helper_launcher(state);
 	}

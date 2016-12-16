@@ -2456,7 +2456,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 		formatstr(full_stats, "File Transfer Download: JobId: %d.%d files: %d bytes: %lld seconds: %.2f dest: %s %s\n", 
 			cluster, proc, numFiles, (long long)*total_bytes, (downloadEndTime - downloadStartTime), s->peer_ip_str(), (stats ? stats : ""));
 		Info.tcp_stats = full_stats.c_str();
-		dprintf(D_STATS, full_stats.c_str());
+		dprintf(D_STATS, "%s", full_stats.c_str());
 	}
 
 
@@ -3851,7 +3851,7 @@ FileTransfer::ExitDoUpload(filesize_t *total_bytes, int numFiles, ReliSock *s, p
 		formatstr(full_stats, "File Transfer Upload: JobId: %d.%d files: %d bytes: %lld seconds: %.2f dest: %s %s\n", 
 			cluster, proc, numFiles, (long long)*total_bytes, (downloadEndTime - downloadStartTime), s->peer_ip_str(), (stats ? stats : ""));
 		Info.tcp_stats = full_stats.c_str();
-		dprintf(D_STATS, full_stats.c_str());
+		dprintf(D_STATS, "%s", full_stats.c_str());
 	}
 
 	return rc;
