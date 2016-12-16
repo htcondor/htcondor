@@ -277,6 +277,34 @@ adjust_formats(int (*pfn)(void*pv, int index, Formatter * fmt, const char * attr
 	return ret;
 }
 
+int AttrListPrintMask::
+walk(int (*pfn)(void*pv, int index, Formatter * fmt, const char * attr, const char * head), void* pv, const List<const char> * pheadings /*=NULL*/) const
+{
+	Formatter *fmt;
+	char 	*attr;
+
+	List<const char> * phead = &headings;
+	if (pheadings) phead = const_cast< List<const char> * >(pheadings);
+
+
+	formats.Rewind();
+	attributes.Rewind();
+	phead->Rewind();
+
+	// for each item registered in the print mask, call pfn giving it a change to make adjustments.
+	int index = 0;
+	int ret = 0;
+	while ((fmt=formats.Next()) && (attr=attributes.Next()))
+	{
+		ret = pfn(pv, index, fmt, attr, phead->Next());
+		if (ret < 0) break;
+		++index;
+	}
+	return ret;
+}
+
+
+
 void AttrListPrintMask::set_heading(const char * heading)
 {
 	if (heading && heading[0]) {
@@ -2027,6 +2055,7 @@ display (std::string & out, AttrList *al, AttrList *target /* = NULL */)
 }
 
 #endif
+
 
 void AttrListPrintMask::
 dump(std::string & out, const CustomFormatFnTable * pFnTable, List<const char> * pheadings /*=NULL*/)
