@@ -1154,7 +1154,7 @@ WalkPostOp housekeep_tick(void * pv, AdCollection::iterator & it)
 			bool is_absent = entry.CheckAbsent(entry.adType, key);
 			if (is_absent) {
 				// don't delete this ad yet.
-				dprintf(D_STATUS, "**Absenting %s ad key='%s'\n", AdTypeName(entry.adType), key.c_str());
+				dprintf(D_STATUS, "**Absenting %s ad key='%s'\n", NameOf(entry.adType), key.c_str());
 				retval = Walk_Op_Continue;
 			} else {
 				dprintf (D_ALWAYS,"**Removing stale ad key='%s'\n", key.c_str());
@@ -1485,7 +1485,7 @@ int collect_walk (
 	WalkPostOp (*callback)(void* pv, AdCollection::iterator & it),
 	void*pv)
 {
-	dprintf(D_FULLDEBUG, "collect_walk(%s, %p) expr: %s\n", AdTypeName(whichAds), pv, call_if.c_str());
+	dprintf(D_FULLDEBUG, "collect_walk(%s, %p) expr: %s\n", NameOf(whichAds), pv, call_if.c_str());
 	if (whichAds == NO_AD)
 		return 0;
 
@@ -1511,7 +1511,7 @@ int collect_walk (
 			WalkPostOp post = callback(pv, it);
 			if (post < 0) {
 				// this is one of the abort returns
-				dprintf(D_ALWAYS, "collect_walk(%s, %p) ABORTED with %d expr: %s\n", AdTypeName(whichAds), pv, post, call_if.c_str());
+				dprintf(D_ALWAYS, "collect_walk(%s, %p) ABORTED with %d expr: %s\n", NameOf(whichAds), pv, post, call_if.c_str());
 				return post;
 			}
 			if ( ! (post & Walk_Op_NoMatch)) {
@@ -1535,7 +1535,7 @@ int collect_walk (
 		}
 	}
 
-	dprintf(D_FULLDEBUG, "collect_walk(%s, %p) matched %d ads, and %d Private ads\n", AdTypeName(whichAds), pv, cMatched, cPvtMatched);
+	dprintf(D_FULLDEBUG, "collect_walk(%s, %p) matched %d ads, and %d Private ads\n", NameOf(whichAds), pv, cMatched, cPvtMatched);
 	return cMatched;
 }
 
@@ -1551,7 +1551,7 @@ int collect_delete(int op_and_flags, AdTypes whichAds, const std::string & key)
 {
 	int operation = op_and_flags & 0xFF;
 	dprintf(D_FULLDEBUG, "collect_delete(%s, %s) key: %s\n",
-		CollectOpName(operation), AdTypeName(whichAds), key.c_str());
+		CollectOpName(operation), NameOf(whichAds), key.c_str());
 
 	if (whichAds == NO_AD)
 		return 0;
@@ -1572,7 +1572,7 @@ int collect_delete(int op_and_flags, AdTypes whichAds, const std::string & key)
 		}
 		if (IsDebugCategory(D_STATUS)) {
 			const char * opname = is_absent ? "**Absenting" : (expire_ads) ? "**Expiring" : "**Removing";
-			dprintf(D_STATUS, "%s %s ad key='%s'\n", opname, AdTypeName(whichAds), key.c_str());
+			dprintf(D_STATUS, "%s %s ad key='%s'\n", opname, NameOf(whichAds), key.c_str());
 		}
 		if ( ! is_absent) {
 			it->second.DeleteAd(whichAds, 0, 0, 0, expire_ads);
@@ -1588,7 +1588,7 @@ int collect_delete(int op_and_flags, AdTypes whichAds, const std::string & key)
 			AdTypes pvtType = (whichAds == STARTD_AD) ? STARTD_PVT_AD : whichAds;
 			if (IsDebugCategory(D_STATUS)) {
 				const char * opname = expire_ads ? "**Expiring" : "**Removing";
-				dprintf(D_STATUS, "%s %s ad key='%s'\n", opname, AdTypeName(pvtType), key.c_str());
+				dprintf(D_STATUS, "%s %s ad key='%s'\n", opname, NameOf(pvtType), key.c_str());
 			}
 			it->second.DeleteAd(whichAds, 0, 0, 0, expire_ads);
 			if ( ! expire_ads) Collections.Private.erase(it);
@@ -1603,7 +1603,7 @@ int collect_delete(int op_and_flags, AdTypes whichAds, ConstraintHolder & delete
 {
 	int operation = op_and_flags & 0xFF;
 	dprintf(D_FULLDEBUG, "collect_delete(%s, %s) expr: %s\n",
-		CollectOpName(operation), AdTypeName(whichAds), delete_if.c_str());
+		CollectOpName(operation), NameOf(whichAds), delete_if.c_str());
 
 	if (whichAds == NO_AD)
 		return 0;
@@ -1651,7 +1651,7 @@ int collect(int op_and_flags, AdTypes whichAds, ClassAd * ad, ClassAd * adPvt, C
 {
 	int operation = op_and_flags & 0xFF;
 	dprintf(D_FULLDEBUG, "collector::collect(%s, %s, %p, %p) %d\n",
-		CollectOpName(operation), AdTypeName(whichAds), ad, adPvt, whichAds);
+		CollectOpName(operation), NameOf(whichAds), ad, adPvt, whichAds);
 
 	status.reset();
 
@@ -1728,13 +1728,13 @@ int collect(int op_and_flags, AdTypes whichAds, ClassAd * ad, ClassAd * adPvt, C
 		lb = Collections.Private.lower_bound(status.key);
 		if (lb != Collections.Private.end() && !(Collections.Private.key_comp()(status.key, lb->first))) {
 			// updating an ad
-			dprintf(D_STATUS, "%s %s ad key='%s'\n", merge_ads ? "**Merging" : "**Replacing", AdTypeName(pvtType), status.key.c_str());
+			dprintf(D_STATUS, "%s %s ad key='%s'\n", merge_ads ? "**Merging" : "**Replacing", NameOf(pvtType), status.key.c_str());
 			lb->second.UpdateAd(pvtType, AC_ENT_PRIVATE, now, expire_time, adPvt, merge_ads);
 		} else if (merge_cmd) {
-			dprintf(D_STATUS, "**NOT Merging %s ad key='%s' was not found\n", AdTypeName(pvtType), status.key.c_str());
+			dprintf(D_STATUS, "**NOT Merging %s ad key='%s' was not found\n", NameOf(pvtType), status.key.c_str());
 		} else {
 			// inserting an ad
-			dprintf(D_STATUS, "**Inserting %s ad key='%s'\n",  AdTypeName(pvtType), status.key.c_str());
+			dprintf(D_STATUS, "**Inserting %s ad key='%s'\n",  NameOf(pvtType), status.key.c_str());
 			#ifdef HAS_EMPLACE_HINT // emplace is supported
 			Collections.Private.emplace_hint(lb, status.key, AdCollectionEntry(pvtType, AC_ENT_PRIVATE, now, expire_time, adPvt));
 			#else
@@ -1746,14 +1746,14 @@ int collect(int op_and_flags, AdTypes whichAds, ClassAd * ad, ClassAd * adPvt, C
 	lb = Collections.Public.lower_bound(status.key);
 	if (lb != Collections.Public.end() && !(Collections.Public.key_comp()(status.key, lb->first))) {
 		// updating an ad
-		dprintf(D_STATUS, "%s %s ad key='%s'\n", merge_ads ? "**Merging" : "**Replacing", AdTypeName(whichAds), status.key.c_str());
+		dprintf(D_STATUS, "%s %s ad key='%s'\n", merge_ads ? "**Merging" : "**Replacing", NameOf(whichAds), status.key.c_str());
 		lb->second.UpdateAd(whichAds, 0, now, expire_time, ad, merge_ads);
 		status.entry = &lb->second;
 	} else if (merge_cmd) {
-		dprintf(D_STATUS, "**NOT Merging %s ad key='%s' was not found\n", AdTypeName(whichAds), status.key.c_str());
+		dprintf(D_STATUS, "**NOT Merging %s ad key='%s' was not found\n", NameOf(whichAds), status.key.c_str());
 	} else {
 		// inserting an ad
-		dprintf(D_STATUS, "**Inserting %s ad key='%s'\n",  AdTypeName(whichAds), status.key.c_str());
+		dprintf(D_STATUS, "**Inserting %s ad key='%s'\n",  NameOf(whichAds), status.key.c_str());
 		#ifdef HAS_EMPLACE_HINT // emplace is supported
 		Collections.Public.emplace_hint(lb, status.key, AdCollectionEntry(whichAds, 0, now, expire_time, ad));
 		#else

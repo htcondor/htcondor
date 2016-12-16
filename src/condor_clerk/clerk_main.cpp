@@ -475,7 +475,7 @@ void CmDaemon::SetupAdTypes()
 
 		if (file_or_script && adtype != NO_AD) {
 			dprintf(D_FULLDEBUG, "Adding PopulateAd %s %s\n\t%s: %s\n\tFilter: %s\n",
-				CollectOpName(collect_op), AdTypeName(adtype),
+				CollectOpName(collect_op), NameOf(adtype),
 				is_script ? "Command" : "File", file_or_script,
 				filter ? filter : "");
 			append_populate(new PopulateAdsInfo(collect_op, adtype, file_or_script, is_script, filter));
@@ -1267,7 +1267,7 @@ int CmDaemon::receive_query(int command, Stream* sock)
 			 cAdsSkipped,
 			 end_query.difference(begin),
 			 end_write.difference(end_query),
-			 AdTypeName(whichAds),
+			 (whichAds>=0) ? NameOf(whichAds) : "-1",
 			 fetch_if.c_str(),
 			 sock->peer_description(),
 			 projection.c_str());
@@ -1385,7 +1385,7 @@ int CmDaemon::populate_collector()
 		int cItems = 0;
 		CollectStatus status;
 		AdTypes whichAds = m_popList->WhichAds();
-		dprintf(D_FULLDEBUG, "Populating %s Ads\n", AdTypeName(whichAds));
+		dprintf(D_FULLDEBUG, "Populating %s Ads\n", NameOf(whichAds));
 		const double max_reading_time = 10.0; // 10 sec max reading time before we go back to the pump.
 		double begin_time = _condor_debug_get_time_double();
 		double now = begin_time;
@@ -1397,7 +1397,7 @@ int CmDaemon::populate_collector()
 			rval = m_popList->collect(ad, status);
 			if (rval < 0) {
 				if (rval == -3) {
-					dprintf (D_ALWAYS, "Ignoring malformed %s ad from %s\n", AdTypeName(whichAds), m_popList->Source());
+					dprintf (D_ALWAYS, "Ignoring malformed %s ad from %s\n", NameOf(whichAds), m_popList->Source());
 				}
 				delete ad;
 			}
@@ -1408,13 +1408,13 @@ int CmDaemon::populate_collector()
 			}
 		}
 		if (m_popList->Failed()) {
-			dprintf(D_ALWAYS, "Failed to read %s ads from %s\n", AdTypeName(whichAds), m_popList->Source());
+			dprintf(D_ALWAYS, "Failed to read %s ads from %s\n", NameOf(whichAds), m_popList->Source());
 		}
 		if (m_popList->Done()) {
 			delete PopulateAdsInfo::remove_head(m_popList);
 		}
 		dprintf(D_FULLDEBUG, "Populated %d %s ads in %.3f seconds (so far), will resume in %d sec\n",
-			cItems, AdTypeName(whichAds), now - begin_time, 2);
+			cItems, NameOf(whichAds), now - begin_time, 2);
 		rval = 0;
 	}
 
