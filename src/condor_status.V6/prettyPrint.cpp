@@ -20,6 +20,7 @@
 #include "condor_common.h"
 #include "condor_api.h"
 #include "condor_adtypes.h"
+#include "condor_config.h"
 #include "condor_state.h"
 #include "status_types.h"
 #include "totals.h"
@@ -46,10 +47,12 @@ extern ClassAd *targetAd;
 
 extern char *format_time( int );
 extern int set_status_print_mask_from_stream (const char * streamid, bool is_filename, const char ** pconstraint);
+extern const char * paramNameFromPPMode(std::string &param_name);
+
 
 static int stashed_now = 0;
 
-void ppInitPrintMask(ppOption pps, classad::References & proj, const char * & constr);
+void ppInitPrintMask(ppOption pps, classad::References & proj, const char * & constr, bool no_pr_files);
 const CustomFormatFnTable * getCondorStatusPrintFormats();
 
 static int width_of_fixed_cols = -1;       // set when using ppAdjustNameWidth
@@ -82,7 +85,47 @@ static const char *formatRealDate( long long , Formatter &);
 //static const char *formatFloat (double, AttrList *, Formatter &);
 static const char *formatLoadAvg (double, Formatter &);
 static bool renderStringsFromList( classad::Value &, AttrList*, Formatter & );
-//static const char *formatStringsFromList( const classad::Value &, Formatter & );
+
+#if 0
+#include "printf_format.h"
+// set wid & wflags to indicate what should be passed to make_printmask
+// to produce the given fmt (hwid is an input because the default width is the width of the headings)
+void reverse_engineer_width(int &wid, int &wflags, const Formatter & fmt, int hwid)
+{
+	wid = fmt.width;
+	wflags = fmt.options & (FormatOptionAutoWidth | FormatOptionNoTruncate);
+	bool width_from_label = hwid && (fmt.width == hwid);
+
+	if (wid > 0 && (fmt.options & FormatOptionLeftAlign)) { wid = 0 - fmt.width; }
+
+	// The default for flags is autowidth + truncate with a format of %v
+	// in that case the column width will automatically grow to fit the data.
+	// from an initial (i.e. minimum) width specified in fmt.width
+	// where fmt.width is deduced from the width of the heading.
+
+	if (wflags == FormatOptionAutoWidth) {
+
+		const char* tmp_fmt = fmt.printfFmt;
+		struct printf_fmt_info info;
+		if ( ! fmt.printfFmt) {
+		} else if (parsePrintfFormat(&tmp_fmt, &info)) {
+			if (info.fmt_letter == 'v' && info.width == 0 && info.precision == -1) {
+				wflags |= FormatOptionNoTruncate;
+				if (width_from_label) {
+					// don't display the width, but also don't display AUTO flag
+					wflags &= ~FormatOptionAutoWidth;
+					wid = 0;
+				}
+			}
+		}
+		//if (width_from_label && !wid) { wflags &= ~FormatOptionAutoWidth; }
+	}
+
+	// cant display both a width and the AUTO keyword.
+	// so if we return a non-zero width here. we must turn off the AUTO flag
+	if (wid) wflags &= ~FormatOptionAutoWidth;
+}
+#endif
 
 static const char *
 format_readable_mb(const classad::Value &val, Formatter &)
@@ -185,6 +228,13 @@ static int ppWidthOpts(int width, int truncate)
 	return opts;
 }
 
+enum {
+	FormatOptionSpecial001 = FormatOptionSpecialBase,
+	FormatOptionSpecial002 = FormatOptionSpecialBase<<1,
+	FormatOptionSpecial004 = FormatOptionSpecialBase<<2,
+	FormatOptionSpecial008 = FormatOptionSpecialBase<<3,
+};
+
 static int ppAltOpts(ivfield alt_in)
 {
 	ivfield alt = (ivfield)(alt_in & 3);
@@ -198,8 +248,8 @@ static int ppAltOpts(ivfield alt_in)
 	} else if (alt != BlankInvalidField) {
 		//opts |= AltFixMe;
 	}
-	if (alt_in & FitToName) { opts |= FormatOptionSpecial001; }
-	if (alt_in & FitToMachine) { opts |= FormatOptionSpecial002; }
+	if (alt_in & FitToName) { opts |= FormatOptionFitToData | FormatOptionSpecial001; }
+	if (alt_in & FitToMachine) { opts |= FormatOptionFitToData | FormatOptionSpecial002; }
 	return opts;
 }
 
@@ -286,13 +336,13 @@ static void ppDisplayHeadings(FILE* file, ClassAd *ad, const char * pszExtra)
 		printf("%s", pszExtra);
 }
 
-void prettyPrintInitMask(classad::References & proj, const char * & constr)
+void prettyPrintInitMask(classad::References & proj, const char * & constr, bool no_pr_files)
 {
 	//bool old_headings = (ppStyle == PP_STARTD_COD) || (ppStyle == PP_QUILL_NORMAL);
 	bool long_form = PP_IS_LONGish(ppStyle);
 	bool custom = (ppStyle == PP_CUSTOM);
 	if ( ! using_print_format && ! wantOnlyTotals && ! custom && ! long_form) {
-		ppInitPrintMask(ppStyle, proj, constr);
+		ppInitPrintMask(ppStyle, proj, constr, no_pr_files);
 	}
 }
 
@@ -1349,7 +1399,7 @@ int ppAdjustProjection(void*pv, int index, Formatter * fmt, const char * attr)
 	return 0;
 }
 
-void ppInitPrintMask(ppOption pps, classad::References & proj, const char * & constr)
+void ppInitPrintMask(ppOption pps, classad::References & proj, const char * & constr, bool no_pr_files)
 {
 	if (using_print_format) {
 		return;
@@ -1362,6 +1412,25 @@ void ppInitPrintMask(ppOption pps, classad::References & proj, const char * & co
 	if (forced_display_width || ( ! wide_display && ! is_piped) ) {
 		pm.SetOverallWidth(display_width);
 	}
+
+#if 1
+	// If setting a 'normal' output, check to see if there is a user-defined normal output
+	if ( ! no_pr_files) {
+		std::string param_name;
+		auto_free_ptr pf_file(param(paramNameFromPPMode(param_name)));
+		if (pf_file) {
+			struct stat stat_buff;
+			if (0 != stat(pf_file.ptr(), &stat_buff)) {
+				// do nothing, this is not an error.
+			} else if (set_status_print_mask_from_stream(pf_file, true, &constr) < 0) {
+				fprintf(stderr, "Warning: default %s select file '%s' is invalid\n", param_name.c_str(), pf_file.ptr());
+			} else {
+				// we got the format already, just return.
+				return;
+			}
+		}
+	}
+#endif
 
 	int name_width = 0;
 	int machine_width = 0;

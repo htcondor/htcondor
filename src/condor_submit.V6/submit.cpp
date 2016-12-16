@@ -8044,12 +8044,8 @@ int read_submit_file(FILE * fp)
 #else
 	MACRO_EVAL_CONTEXT ctx; ctx.init("SUBMIT");
 
-#ifdef USE_MACRO_STREAMS
 	MacroStreamYourFile ms(fp, FileMacroSource);
 	int rval = Parse_macros(ms,
-#else
-	int rval = Parse_macros(fp, FileMacroSource,
-#endif
 		0, SubmitMacroSet, READ_MACROS_SUBMIT_SYNTAX,
 		&ctx, errmsg,
 		SpecialSubmitParse, fp);
@@ -9643,7 +9639,7 @@ int SendJobCredential()
 		dprintf(D_ALWAYS, "CREDMON: invoking %s\n", producer.c_str());
 		ArgList args;
 		args.AppendArg(producer);
-		FILE* uber_file = my_popen(args, "r", false);
+		FILE* uber_file = my_popen(args, "r", 0);
 		unsigned char *uber_ticket = NULL;
 		if (!uber_file) {
 			fprintf(stderr, "\nERROR: (%i) invoking %s\n", errno, producer.c_str());

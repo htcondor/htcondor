@@ -25,6 +25,7 @@
 #include "condor_constants.h"
 #include "list.h"
 
+
 /*
   This primitive class is used to contain and search arrays of strings.
 */
@@ -60,8 +61,8 @@ public:
 	void remove (const char* str);
 	void clearAll();
 	void remove_anycase (const char* str);
-	char *next (void) { return m_strings.Next(); }
-	char *first (void) { m_strings.Rewind(); return m_strings.Next(); }
+	char *next (void) const { return m_strings.Next(); }
+	char *first (void) const { m_strings.Rewind(); return m_strings.Next(); }
 	
 	/** This is invalid when "current" points to NULL as stated in list.h*/
 	void deleteCurrent();
@@ -113,7 +114,7 @@ protected:
     const char * contains_withwildcard( const char *string,
 										bool anycase,
 										StringList *matches=NULL) ;
-	List<char>	 m_strings;
+	mutable List<char>	 m_strings;
 	char		*m_delimiters;
 
 	int isSeparator( char x );

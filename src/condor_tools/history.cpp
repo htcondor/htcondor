@@ -43,6 +43,7 @@
 #include "setenv.h"
 #include "condor_daemon_core.h" // for extractInheritedSocks
 
+#include "classad_helpers.h" // for initStringListFromAttrs
 #include "history_utils.h"
 #include "backward_file_reader.h"
 #include <fcntl.h>  // for O_BINARY
@@ -1824,8 +1825,7 @@ static int set_print_mask_from_stream(
 	bool is_filename)
 {
 	std::string messages;
-	printmask_aggregation_t aggregation;
-	printmask_headerfooter_t headFoot = STD_HEADFOOT;
+	PrintMaskMakeSettings propt;
 	std::vector<GroupByKeyInfo> group_by_keys;
 	SimpleInputStream * pstream = NULL;
 
@@ -1848,15 +1848,13 @@ static int set_print_mask_from_stream(
 					*pstream,
 					LocalPrintFormatsTable,
 					print_mask,
-					headFoot,
-					aggregation,
+					propt,
 					group_by_keys,
-					constraint,
-					attrs,
 					messages);
 	delete pstream; pstream = NULL;
 	if ( ! err) {
 		customFormat = true;
+		constraint = propt.where_expression;
 		if ( ! constraint.empty()) {
 			ExprTree *constraintExpr=NULL;
 			if ( ! ParseClassAdRvalExpr(constraint.c_str(), constraintExpr)) {
@@ -1866,10 +1864,11 @@ static int set_print_mask_from_stream(
 				delete constraintExpr;
 			}
 		}
-		if (aggregation) {
-			formatstr_cat(messages, "AUTOCLUSTER or UNIQUE aggregation is not supported.\n");
+		if (propt.aggregate) {
+			formatstr_cat(messages, "UNIQUE aggregation is not supported.\n");
 			err = -1;
 		}
+		initStringListFromAttrs(attrs, false, propt.attrs);
 	}
 	if ( ! messages.empty()) { fprintf(stderr, "%s", messages.c_str()); }
 	return err;

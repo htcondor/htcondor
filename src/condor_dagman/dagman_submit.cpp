@@ -71,7 +71,7 @@ submit_try( ArgList &args, CondorID &condorID, bool prohibitMultiJobs )
   MyString cmd; // for debug output
   args.GetArgsStringForDisplay( &cmd );
 
-  FILE * fp = my_popen( args, "r", TRUE );
+  FILE * fp = my_popen( args, "r", MY_POPEN_OPT_WANT_STDERR );
   if (fp == NULL) {
     debug_printf( DEBUG_NORMAL, 
 		  "ERROR: my_popen(%s) in submit_try() failed!\n",

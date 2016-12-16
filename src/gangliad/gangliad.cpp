@@ -232,7 +232,7 @@ GangliaD::initializeHostList()
     m_need_heartbeat.clear();
     m_ganglia_metrics_sent = 0;
 
-	FILE *fp = my_popenv(m_gstat_argv,"r",1);
+	FILE *fp = my_popenv(m_gstat_argv,"r",MY_POPEN_OPT_WANT_STDERR);
 	if( !fp ) {
 		dprintf(D_ALWAYS,"Failed to execute %s: %s\n",m_gstat_command.c_str(),strerror(errno));
 		return;

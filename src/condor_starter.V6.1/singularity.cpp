@@ -80,7 +80,7 @@ Singularity::detect(CondorError &/*err*/)
 	infoArgs.GetArgsStringForLogging( & displayString );
 	dprintf(D_FULLDEBUG, "Attempting to run: '%s %s'.\n", exec.c_str(), displayString.c_str());
 
-	FILE * singularityResults = my_popen( infoArgs, "r", 1 , 0, false);
+	FILE * singularityResults = my_popen( infoArgs, "r", MY_POPEN_OPT_WANT_STDERR , 0, false);
 	if (singularityResults == NULL) { 
 		dprintf( D_ALWAYS | D_FAILURE, "Failed to run '%s'.\n", displayString.c_str() );
 		return false;

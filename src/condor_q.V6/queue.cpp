@@ -58,6 +58,7 @@
 //#include "pool_allocator.h"
 #include "expr_analyze.h"
 #include "classad/classadCache.h" // for CachedExprEnvelope stats
+#include "classad_helpers.h"
 
 static int cleanup_globals(int exit_code); // called on exit to do necessary cleanup
 #define exit(n) (exit)(cleanup_globals(n))
@@ -2071,7 +2072,7 @@ processCommandLineArguments (int argc, char *argv[])
 	}
 
 	if (dash_dry_run) {
-		const char * const amo[] = { "", "run", "goodput", "globus", "grid", "hold", "io", "dag", "totals", "autocluster", "custom", "analyze" };
+		const char * const amo[] = { "", "run", "goodput", "globus", "grid", "hold", "io", "dag", "totals", "batch", "autocluster", "custom", "analyze" };
 		fprintf(stderr, "\ncondor_q %s %s\n", amo[qdo_mode & QDO_BaseMask], dash_long ? "-long" : "");
 	}
 	if ( ! dash_long && ! (qdo_mode & QDO_Format) && (qdo_mode & QDO_BaseMask) < QDO_Custom) {
@@ -3904,7 +3905,7 @@ static bool process_job_to_rod_per_ad_map(void * pv,  ClassAd* job)
 		}
 		group_job(pp.first->second, job);
 	}
-	return true;
+	return true; // true means caller can delete the job, we are done with it.
 }
 
 static void print_a_result(std::string & buf, JobRowOfData & jrod)
@@ -4756,8 +4757,16 @@ dryFetchQueue(const char * file, StringList & proj, int fetch_opts, int limit, b
 		fprintf(stderr, "Projection:\n  %s\n",  projection.ptr());
 	}
 
-	// print output mask
+	// print the sort keys
 	std::string tmp("");
+	for (auto it = group_by_keys.begin(); it != group_by_keys.end(); ++it) {
+		if ( ! tmp.empty()) tmp += "] [";
+		tmp += it->expr;
+	}
+	fprintf(stderr, "Sort: [%s]\n", tmp.c_str());
+	tmp.clear();
+
+	// print output mask
 	dump_print_mask(tmp);
 	fprintf(stderr, "Mask:\n%s\n", tmp.c_str());
 
@@ -4789,7 +4798,7 @@ dryFetchQueue(const char * file, StringList & proj, int fetch_opts, int limit, b
 	} else {
 		ClassAd * job;
 		while ((job = adIter.next(constr.Expr()))) {
-			if ( ! pfnProcess(pvProcess, job)) {
+			if (pfnProcess(pvProcess, job)) {
 				delete job; job = NULL;
 			}
 		}
@@ -6435,11 +6444,11 @@ static int set_print_mask_from_stream(
 	bool is_filename,
 	StringList & attrs) // out
 {
-	std::string where_expr;
+	PrintMaskMakeSettings propt;
 	std::string messages;
-	printmask_aggregation_t aggregation;
 
 	SimpleInputStream * pstream = NULL;
+	propt.headfoot = customHeadFoot;
 
 	FILE *file = NULL;
 	if (MATCH == strcmp("-", streamid)) {
@@ -6460,33 +6469,33 @@ static int set_print_mask_from_stream(
 					*pstream,
 					LocalPrintFormatsTable,
 					prmask,
-					customHeadFoot,
-					aggregation,
+					propt,
 					group_by_keys,
-					where_expr,
-					attrs,
 					messages);
 	delete pstream; pstream = NULL;
 	if ( ! err) {
 		//usingPrintMask = true;
-		if ( ! where_expr.empty()) {
-			user_job_constraint = prmask.store(where_expr.c_str());
+		customHeadFoot = propt.headfoot;
+		if ( ! propt.where_expression.empty()) {
+			user_job_constraint = prmask.store(propt.where_expression.c_str());
 			if (Q.addAND (user_job_constraint) != Q_OK) {
 				formatstr_cat(messages, "WHERE expression is not valid: %s\n", user_job_constraint);
 			}
 		}
-		if (aggregation) {
-			if (aggregation == PR_COUNT_UNIQUE) {
+		if (propt.aggregate) {
+			if (propt.aggregate == PR_COUNT_UNIQUE) {
 				dash_autocluster = CondorQ::fetch_GroupBy;
-			} else if (aggregation == PR_FROM_AUTOCLUSTER) {
+			} else if (propt.aggregate == PR_FROM_AUTOCLUSTER) {
 				dash_autocluster = CondorQ::fetch_DefaultAutoCluster;
 			}
 		} else {
 			// make sure that the projection has ClusterId and ProcId.
-			if ( ! attrs.contains_anycase(ATTR_CLUSTER_ID)) attrs.append(ATTR_CLUSTER_ID);
-			if ( ! attrs.contains_anycase(ATTR_PROC_ID)) attrs.append(ATTR_PROC_ID);
+			propt.attrs.insert(ATTR_CLUSTER_ID);
+			propt.attrs.insert(ATTR_PROC_ID);
 			// if we are generating a summary line, make sure that we have JobStatus
-			if ( ! (customHeadFoot & HF_NOSUMMARY) && ! attrs.contains_anycase(ATTR_JOB_STATUS)) attrs.append(ATTR_JOB_STATUS);
+			if ( ! (propt.headfoot & HF_NOSUMMARY)) { propt.attrs.insert(ATTR_JOB_STATUS); }
+			// PRAGMA_REMIND("switch status to using References for projection")
+			initStringListFromAttrs(attrs, true, propt.attrs, true);
 		}
 	}
 	if ( ! messages.empty()) { fprintf(stderr, "%s", messages.c_str()); }

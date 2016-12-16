@@ -22,7 +22,6 @@
 #define __CLASSAD_LEXER_SOURCE_H__
 
 #include "classad/common.h"
-#include <iosfwd>
 
 namespace classad {
 
@@ -91,26 +90,6 @@ private:
 	FILE *_file;
     FileLexerSource(const FileLexerSource &) : LexerSource() { return;  }
     FileLexerSource &operator=(const FileLexerSource &) { return *this; }
-};
-
-// This source allows input from a C++ stream. Note that
-// the user passes in a pointer to the stream.
-class InputStreamLexerSource : public LexerSource
-{
-public:
-	InputStreamLexerSource(std::istream &stream);
-	virtual ~InputStreamLexerSource();
-
-	virtual void SetNewSource(std::istream &stream);
-	
-	virtual int ReadCharacter(void);
-	virtual void UnreadCharacter(void);
-	virtual bool AtEnd(void) const;
-
-private:
-	std::istream *_stream;
-    InputStreamLexerSource(const InputStreamLexerSource &) : LexerSource() { return;       }
-    InputStreamLexerSource &operator=(const InputStreamLexerSource &) { return *this; }
 };
 
 // This source allows input from a traditional C string.

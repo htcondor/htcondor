@@ -105,7 +105,7 @@ StartdHibernator::initialize( void )
 		// and grab the output as a ClassAd
 	m_ad.Clear();
 	char **args = argList.GetStringArray();
-	FILE *fp = my_popenv( args, "r", TRUE );
+	FILE *fp = my_popenv( args, "r", MY_POPEN_OPT_WANT_STDERR );
 	deleteStringArray( args );
 
 	MyString	cmd;

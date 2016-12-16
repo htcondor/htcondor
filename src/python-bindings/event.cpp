@@ -13,7 +13,6 @@
 #include <classad/operators.h>
 
 #include <memory>
-#include <boost/python.hpp>
 
 #include "old_boost.h"
 #include "event.h"

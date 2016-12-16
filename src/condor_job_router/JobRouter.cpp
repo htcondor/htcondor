@@ -334,7 +334,7 @@ JobRouter::config() {
 			// away stderr altogether.  What generally happens is that the
 			// stderr produces a parse error, and we skip to the next
 			// entry.
-		FILE *fp = my_popen(args, "r", 1);
+		FILE *fp = my_popen(args, "r", MY_POPEN_OPT_WANT_STDERR);
 
 		if( !fp ) {
 			EXCEPT("Failed to run command '%s' specified for %s.",

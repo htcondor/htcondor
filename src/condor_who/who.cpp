@@ -749,7 +749,7 @@ static void get_process_table(TABULAR_MAP & table)
 	cmdargs.AppendArg("-eF");
 #endif
 
-	FILE * stream = my_popen(cmdargs, "r", FALSE);
+	FILE * stream = my_popen(cmdargs, "r", 0);
 	if (stream) {
 		get_fields_from_tabular_stream(stream, table);
 		my_pclose(stream);
@@ -781,7 +781,7 @@ static void get_address_table(TABULAR_MAP & table)
 	cmdargs.AppendArg("-nPi");
 #endif
 
-	FILE * stream = my_popen(cmdargs, "r", FALSE);
+	FILE * stream = my_popen(cmdargs, "r", 0);
 	if (stream) {
 		bool fMultiWord = false; // output has multi-word headings.
 		#ifdef WIN32
@@ -979,7 +979,7 @@ static void init_program_for_pid(pid_t pid)
 	const  int    parse_type = 0;
 #endif
 
-	FILE * stream = my_popen(cmdargs, "r", FALSE);
+	FILE * stream = my_popen(cmdargs, "r", 0);
 	if (stream) {
 		std::string program;
 		if (get_field_from_stream(stream, parse_type, fld_name, program))

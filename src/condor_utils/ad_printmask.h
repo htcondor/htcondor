@@ -38,10 +38,10 @@ enum {
 	FormatOptionLeftAlign = 0x10,
 	FormatOptionAlwaysCall = 0x80,
 	FormatOptionHideMe    = 0x100,
+	FormatOptionFitToData = 0x200,	  // for use by the adjust_formats callback
 
-	FormatOptionSpecial001 = 0x1000, // for use by the adjust_formats callback
-	FormatOptionSpecial002 = 0x2000,
-	FormatOptionSpecial004 = 0x4000,
+	FormatOptionSpecialBase = 0x1000, // for use by the adjust_formats callback
+	FormatOptionSpecialMask = 0xF000, // for use by the adjust_formats callback
 
 	AltQuestion = 0x10000,     // alt text is ?
 	AltStar     = 0x20000,     // alt text is *
@@ -157,6 +157,8 @@ class AttrListPrintMask
 
 	// for debugging, dump the current config
 	void dump(std::string & out, const CustomFormatFnTable * pFnTable, List<const char> * pheadings=NULL);
+	// for debugging, walk the current config
+	int walk(int (*pfn)(void*pv, int index, Formatter * fmt, const char * attr, const char * head), void* pv, const List<const char> * pheadings=NULL) const;
 
 	// display functions
 	int   display (FILE *, AttrList *, AttrList *target=NULL);		// output to FILE *
@@ -182,10 +184,9 @@ class AttrListPrintMask
 	int adjust_formats(int (*pfn)(void*pv, int index, Formatter * fmt, const char * attr), void* pv);
 
   private:
-	List<Formatter> formats;
-	List<char> 		attributes;
-	//List<char> 		alternates;
-	List<const char> headings;
+	mutable List<Formatter> formats;
+	mutable List<char> 		attributes;
+	mutable List<const char> headings;
 
 	void clearList (List<Formatter> &);
 	void clearList (List<char> &);
@@ -398,6 +399,26 @@ public:
 	}
 };
 
+
+// this structure is used to hold custom print format details
+// it is used by SetAttrListPrintMaskFromStream and by PrintPrintMask
+typedef struct PrintMaskMakeSettings {
+	std::string select_from;           // out: adtype name from SELECT
+	printmask_headerfooter_t headfoot; // out, header and footer flags set in SELECT or SUMMARY
+	printmask_aggregation_t aggregate; // out: aggregation mode in SELECT
+	std::string where_expression;      // out: classad expression from WHERE
+	classad::References attrs;        // out: ClassAd attributes referenced in mask or group_by outputs
+
+	PrintMaskMakeSettings() : headfoot(STD_HEADFOOT), aggregate(PR_NO_AGGREGATION) {}
+	void reset() {
+		select_from.clear();
+		where_expression.clear();
+		attrs.clear();
+		headfoot = STD_HEADFOOT;
+		aggregate = PR_NO_AGGREGATION;
+	}
+} PrintMaskMakeSettings;
+
 // Read a stream a line at a time, and parse it to fill out the print mask,
 // header, group_by, where expression, and projection attributes.
 // return is 0 on success, non-zero error code on failure.
@@ -406,12 +427,20 @@ int SetAttrListPrintMaskFromStream (
 	SimpleInputStream & stream, // in: fetch lines from this stream until nextline() returns NULL
 	const CustomFormatFnTable & FnTable, // in: table of custom output functions for SELECT
 	AttrListPrintMask & mask, // out: columns and headers set in SELECT
-	printmask_headerfooter_t & headfoot, // out, header and footer flags set in SELECT or SUMMARY
-	printmask_aggregation_t & aggregate, // out: aggregation mode in SELECT
+	PrintMaskMakeSettings & settings, // in,out: modifed by parsing the stream. BUT NOT CLEARED FIRST! (so the caller can set defaults)
+	//printmask_headerfooter_t & headfoot, // out, header and footer flags set in SELECT or SUMMARY
+	//printmask_aggregation_t & aggregate, // out: aggregation mode in SELECT
 	std::vector<GroupByKeyInfo> & group_by, // out: ordered set of attributes/expressions in GROUP BY
-	std::string & where_expression, // out: classad expression from WHERE
-	StringList & attrs, // out ClassAd attributes referenced in mask or group_by outputs
+	//std::string & where_expression, // out: classad expression from WHERE
+	//StringList & attrs, // out ClassAd attributes referenced in mask or group_by outputs
 	std::string & error_message // out, if return is non-zero, this will be an error message
 	);
+
+int PrintPrintMask(std::string & output,
+	const CustomFormatFnTable & FnTable,  // in: table of custom output functions for SELECT
+	const AttrListPrintMask & mask,       // in: columns and headers set in SELECT
+	const List<const char> * pheadings,   // in: headings override
+	const PrintMaskMakeSettings & settings, // in: modifed by parsing the stream. BUT NOT CLEARED FIRST! (so the caller can set defaults)
+	const std::vector<GroupByKeyInfo> & group_by); // in: ordered set of attributes/expressions in GROUP BY
 
 #endif // __AD_PRINT_MASK__

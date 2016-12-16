@@ -1760,20 +1760,6 @@ static int is_interesting_route_attr(const std::string & attr, int * popts=NULL)
 	return 0;
 }
 
-bool ExprTreeIsAttrRef(classad::ExprTree * expr, std::string & attr)
-{
-	if ( ! expr) return false;
-
-	classad::ExprTree::NodeKind kind = expr->GetKind();
-	while (kind == classad::ExprTree::ATTRREF_NODE) {
-		classad::ExprTree *e2=NULL;
-		bool absolute;
-		((classad::AttributeReference*)expr)->GetComponents(e2, attr, absolute);
-		return !e2;
-	}
-	return false;
-}
-
 
 typedef std::map<std::string, std::string, classad::CaseIgnLTStr> NOCASE_STRING_MAP;
 static int rewrite_attr_refs(classad::ExprTree * tree, const NOCASE_STRING_MAP & mapping)

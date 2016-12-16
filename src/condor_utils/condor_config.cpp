@@ -488,21 +488,11 @@ bool param_and_insert_unique_items(const char * param_name, StringList & items, 
 bool
 param_and_insert_attrs(const char * param_name, classad::References & attrs)
 {
-#if 1
 	auto_free_ptr value(param(param_name));
 	if (value) {
-		insert_tokens_as_attrs(value, attrs);
+		add_attrs_from_string_tokens(attrs, value);
 		return true;
 	}
-#else
-	std::string value;
-	const std::string * attr;
-	if (param(value, param_name)) {
-		StringTokenIterator it(value);
-		while ((attr = it.next_string())) { attrs.insert(*attr); }
-		return true;
-	}
-#endif
 	return false;
 }
 
@@ -1229,12 +1219,8 @@ process_config_source( const char* file, int depth, const char* name,
 		if ( ! fp) { rval = -1; }
 		else {
 			MACRO_EVAL_CONTEXT ctx; init_macro_eval_context(ctx);
-#ifdef USE_MACRO_STREAMS
 			MacroStreamYourFile ms(fp, source);
 			rval = Parse_macros(ms, depth, ConfigMacroSet, 0, &ctx, errmsg, NULL, NULL);
-#else
-			rval = Parse_macros(fp, source, depth, ConfigMacroSet, 0, &ctx, errmsg, NULL, NULL);
-#endif
 			rval = Close_macro_source(fp, source, ConfigMacroSet, rval); fp = NULL;
 		}
 		if( rval < 0 ) {
@@ -2029,12 +2015,24 @@ bool param_defined(const char* name) {
 	return false;
 }
 
-char*
-param(const char* name)
-{
+char *param(const char * name) {
 	MACRO_EVAL_CONTEXT ctx;
 	init_macro_eval_context(ctx);
 	ctx.use_mask = 3;
+	return param_ctx(name, ctx);
+}
+
+char *param_with_context(const char *name, const char *subsys, const char *localname, const char * cwd ) {
+	MACRO_EVAL_CONTEXT ctx;
+	ctx.init(subsys, 3);
+	ctx.localname = localname;
+	ctx.cwd = cwd;
+	return param_ctx(name, ctx);
+}
+
+char*
+param_ctx(const char* name, MACRO_EVAL_CONTEXT & ctx)
+{
 
 #if 0
 	// hack to make SUBSYS.LOCALNAME work for direct param lookups.
@@ -3336,12 +3334,8 @@ static void process_persistent_config_or_die (const char * source_file, bool top
 			rval = -1;
 		} else {
 			MACRO_EVAL_CONTEXT ctx; init_macro_eval_context(ctx);
-#ifdef USE_MACRO_STREAMS
 			MacroStreamYourFile ms(fp, source);
 			rval = Parse_macros(ms, 0, ConfigMacroSet, 0, &ctx, errmsg, NULL, NULL);
-#else
-			rval = Parse_macros(fp, source, 0, ConfigMacroSet, 0, &ctx, errmsg, NULL, NULL);
-#endif
 		}
 		fclose(fp); fp = NULL;
 	}
@@ -3365,20 +3359,7 @@ process_persistent_configs()
 	{
 		processed = true;
 
-#if 1
 		process_persistent_config_or_die(toplevel_persistent_config.Value(), true);
-#else
-		std::string errmsg;
-		int rval = Read_macros(toplevel_persistent_config.Value(), 0, ConfigMacroSet,
-						READ_MACROS_CHECK_RUNTIME_SECURITY,
-						get_mySubSystem()->getName(), errmsg, NULL, NULL);
-		if (rval < 0) {
-			dprintf( D_ALWAYS | D_FAILURE, "Configuration Error Line %d %s while reading "
-					 "top-level persistent config source: %s\n",
-					 ConfigLineNo, errmsg.c_str(), toplevel_persistent_config.Value() );
-			exit(1);
-		}
-#endif
 
 		tmp = param ("RUNTIME_CONFIG_ADMIN");
 		if (tmp) {
@@ -3393,20 +3374,7 @@ process_persistent_configs()
 		MyString config_source;
 		config_source.formatstr( "%s.%s", toplevel_persistent_config.Value(),
 							   tmp );
-#if 1
 		process_persistent_config_or_die(config_source.Value(), false);
-#else
-		std::string errmsg;
-		int rval = Read_macros(config_source.Value(), 0, ConfigMacroSet,
-						READ_MACROS_CHECK_RUNTIME_SECURITY,
-						get_mySubSystem()->getName(), errmsg, NULL, NULL);
-		if (rval < 0) {
-			dprintf( D_ALWAYS, "Configuration Error Line %d %s"
-					 "while reading persistent config source: %s\n",
-					 ConfigLineNo, errmsg.c_str(), config_source.Value() );
-			exit(1);
-		}
-#endif
 	}
 	return (int)processed;
 }
@@ -3427,53 +3395,12 @@ process_runtime_configs()
 	for (i=0; i <= rArray.getlast(); i++) {
 		processed = true;
 		source.line = i;
-#if 1
 		rval = Parse_config_string(source, 0, rArray[i].config, ConfigMacroSet, ctx);
 		if (rval < 0) {
 			dprintf( D_ALWAYS | D_ERROR, "Configuration Error parsing runtime[%d] name '%s', at line %d in config: %s\n",
 					 i, rArray[i].admin, source.meta_off+1, rArray[i].config);
 			exit(1);
 		}
-#else
-		char* tmp_dir = temp_dir_path();
-		ASSERT(tmp_dir);
-		MyString tmp_file_tmpl = tmp_dir;
-		free(tmp_dir);
-		tmp_file_tmpl += "/cndrtmpXXXXXX";
-
-		char* tmp_file = strdup(tmp_file_tmpl.Value());
-		int fd = condor_mkstemp( tmp_file );
-		if (fd < 0) {
-			dprintf( D_ALWAYS, "condor_mkstemp(%s) returned %d, '%s' (errno %d) in "
-				 "process_dynamic_configs()\n", tmp_file, fd,
-				 strerror(errno), errno );
-			exit(1);
-		}
-
-		if (write(fd, rArray[i].config, strlen(rArray[i].config))
-			!= (ssize_t)strlen(rArray[i].config)) {
-			dprintf( D_ALWAYS, "write failed with errno %d in "
-					 "process_dynamic_configs\n", errno );
-			exit(1);
-		}
-		if (close(fd) < 0) {
-			dprintf( D_ALWAYS, "close failed with errno %d in "
-					 "process_dynamic_configs\n", errno );
-			exit(1);
-		}
-		std::string errmsg;
-		rval = Read_macros(tmp_file, 0, ConfigMacroSet,
-						0, get_mySubSystem()->getName(), errmsg, NULL, NULL);
-		if (rval < 0) {
-			dprintf( D_ALWAYS, "Configuration Error Line %d %s"
-					 "while reading %s, runtime config: %s\n",
-					 ConfigLineNo, errmsg.c_str(), tmp_file, rArray[i].admin );
-			exit(1);
-		}
-		MSC_SUPPRESS_WARNING_FIXME(6031) // warning: return value of 'unlink' ignored.
-		unlink(tmp_file);
-		free(tmp_file);
-#endif
 	}
 
 	return (int)processed;
