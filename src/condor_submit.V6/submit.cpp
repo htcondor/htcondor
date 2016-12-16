@@ -8044,12 +8044,8 @@ int read_submit_file(FILE * fp)
 #else
 	MACRO_EVAL_CONTEXT ctx; ctx.init("SUBMIT");
 
-#ifdef USE_MACRO_STREAMS
 	MacroStreamYourFile ms(fp, FileMacroSource);
 	int rval = Parse_macros(ms,
-#else
-	int rval = Parse_macros(fp, FileMacroSource,
-#endif
 		0, SubmitMacroSet, READ_MACROS_SUBMIT_SYNTAX,
 		&ctx, errmsg,
 		SpecialSubmitParse, fp);

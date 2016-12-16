@@ -1114,7 +1114,6 @@ static bool parse_include_options(char * str, int & opts, char *& pinto, const c
 	return true;
 }
 
-#ifdef USE_MACRO_STREAMS
 char * MacroStreamYourFile::getline(int gl_opt) {
 	return getline_implementation(fp, 128, gl_opt, src->line);
 }
@@ -1202,16 +1201,10 @@ int MacroStreamCharSource::load(FILE* fp, MACRO_SOURCE & FileSource, bool preser
 	return lines.number();
 }
 
-#endif
 
 int
 Parse_macros(
-#ifdef USE_MACRO_STREAMS
 	MacroStream & ms,
-#else
-	FILE* conf_fp,
-	MACRO_SOURCE& FileSource,
-#endif
 	int depth, // a simple recursion detector
 	MACRO_SET& macro_set,
 	int options,
@@ -1241,18 +1234,12 @@ Parse_macros(
 	if ( ! pctx) pctx = &defctx;
 
 	bool is_submit = (fnSubmit != NULL);
-#ifdef USE_MACRO_STREAMS
 	MACRO_SOURCE& FileSource = ms.source();
-#endif
 	const char * source_file = macro_source_filename(FileSource, macro_set);
 	const char * source_type = is_submit ? "Submit file" : "Config source";
 
 	while (true) {
-#ifdef USE_MACRO_STREAMS
 		name = ms.getline(gl_opt);
-#else
-		name = getline_implementation(conf_fp, 128, gl_opt, FileSource.line);
-#endif
 		// If the file is empty the first time through, warn the user.
 		if (name == NULL) {
 			if (firstRead) {
@@ -1592,12 +1579,8 @@ Parse_macros(
 					retval = -2; // indicate that nesting depth has been exceeded.
 				} else {
 					if ( ! is_submit) local_config_sources.append(macro_source_filename(InnerSource, macro_set));
-#ifdef USE_MACRO_STREAMS
 					MacroStreamYourFile msInner(fp, InnerSource);
 					retval = Parse_macros(msInner, depth+1, macro_set, options, pctx, config_errmsg, fnSubmit, pvSubmitData);
-#else
-					retval = Parse_macros(fp, InnerSource, depth+1, macro_set, options, pctx, config_errmsg, fnSubmit, pvSubmitData);
-#endif
 				}
 				fclose(fp); fp = NULL;
 			}
@@ -1743,25 +1726,8 @@ FILE* Open_macro_source (
 	std::string cmdbuf; // in case we have to produce a modified command
 	const char * cmd = NULL;
 
-#if 1
 	bool is_pipe_cmd = source_is_command;
 	source = fixup_pipe_source(source, is_pipe_cmd, cmd, cmdbuf);
-#else
-	bool is_pipe_cmd = is_piped_command(source);
-	if (source_is_command && ! is_pipe_cmd) {
-		is_pipe_cmd = true;
-		cmd = source; // the input source is actually the command (without trailing |)
-		cmdbuf = source; cmdbuf += " |";
-		source = cmdbuf.c_str();
-	} else if (is_pipe_cmd) {
-		cmdbuf = source; // the input source is the command with trailing |
-		// remove trailing | and spaces
-		for (int ix = (int)cmdbuf.length()-1; ix > 0 && (cmdbuf[ix] == '|' || cmdbuf[ix] == ' '); --ix) {
-			cmdbuf[ix] = 0;
-		}
-		cmd = cmdbuf.c_str();
-	}
-#endif
 
 	// initialize a MACRO_SOURCE for this file
 	insert_source(source, macro_set, macro_source);
@@ -3463,13 +3429,7 @@ static const char * evaluate_macro_func (
 				default:
 					// ixn is 0 if no dir.
 					if (ixn > 0) {
-					#if 1
 						tvalue = condor_basename_plus_dirs(buf, num_dirs);
-					#else
-						char ch = buf[ixn-1]; buf[ixn-1] = 0; // truncate filename saving the old character
-						tvalue = condor_basename(buf); // tvalue now points to the start of the first directory
-						buf[ixn-1] = ch; // put back the dir/filename separator
-					#endif
 						if (2 == (parts&3)) { ixend = ixx; } // keep basename but not extension
 						else if (0 == (parts&3)) { ixend = ixn; if (bare && ixn > 0) ixend = ixn-1; } // return dirs only
 						else if (1 == (parts&3)) { /* TODO: strip out filename part? */ } // keep extension (and also basename)
