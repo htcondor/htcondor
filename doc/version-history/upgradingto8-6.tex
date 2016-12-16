@@ -1,80 +1,13 @@
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{\label{sec:to-8.6}Upgrading from the 8.4 series to the 8.6 series of HTCondor}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{upgrading!items to be aware of}
 Upgrading from the 8.4 series of HTCondor to the 8.6 series
 will bring new features introduced in the 8.5 series of HTCondor.
-These new features include (note that this list contains only
-the most significant changes; a full list of changes can be
+These new features include the following (note that this list contains
+only the most significant changes; a full list of changes can be
 found in the version history:~\ref{sec:History-8-5}):
 
-%TEMPTEMP>>>
-\begin{verbatim}
-* 8.5.8:
-Able to conditionally add Docker volumes for certain jobs.
-Initial support for Singularity containers;
-A 64-bit Windows release.
-
-* 8.5.7:
-Many usability improvements in condor_q and condor_status;
-condor_q and condor_status can produce JSON, XML, and new ClassAd output;
-To prepare for a 64-bit Windows release, HTCondor identifies itself as X86;
-Automatically detect Daemon Core daemons and pass localname to them.
-
-* 8.5.6:
-Python bindings for job submission and machine draining;
-Numerous Docker usability changes;
-New options to limit condor_history results to jobs since last invocation;
-Shared port daemon can be used with high availability and replication;
-ClassAds can be written out in JSON format;
-Efficient PBS and SLURM job monitoring;
-Simplified leases for grid universe jobs.
-
-* 8.5.5:
-Improvements for scalability of EC2 grid universe jobs;
-Docker Universe jobs advertises remote user and system CPU time;
-Improved systemd support;
-The master can now run an administrator defined script at shutdown;
-
-* 8.5.4:
-Fixed a bug that delays schedd response when significant attributes change;
-Fixed a bug where the group ID was not set in Docker universe jobs;
-Limit update rate of various attributes to not overload the collector;
-To make job router configuration easier, added implicit "target" scoping;
-To make BOSCO work, the blahp does not generate limited proxies by default;
-condor_status can now display utilization per machine rather than per slot;
-Improve performance of condor_history and other tools.
-
-* 8.5.3:
-Count Idle and Running jobs in Submitter Ads for Local and Scheduler universes;
-Can submit jobs to SLURM with the new "slurm" type in the Grid universe;
-HTCondor is built and linked with Globus 6.0.
-
-* 8.5.2:
-condor_q now defaults to showing only the current user's jobs;
-condor_q -batch produces a single line report for a batch of jobs;
-Docker Universe jobs now report and update memory and network usage;
-immutable and protected job attributes;
-improved performance when querying a HTCondor daemon's location;
-
-* 8.5.1:
-the shared port daemon is enabled by default;
-the condor_startd now records the peak memory usage instead of recent;
-the condor_startd advertises CPU submodel and cache size;
-authorizations are automatically setup when "Match Password" is enabled;
-added a schedd-constraint option to condor_q.
-With the shared port daemon enabled, all HTCondor daemons share a single
-inbound network port. This change makes it much easier to construct a
-firewall configuration that allows HTCondor use.
-
-* 8.5.0:
-multiple enhancements to the python bindings;
-the condor_schedd no longer changes the ownership of spooled job files;
-spooled job files are visible to only the user account by default;
-the condor_startd records when jobs are evicted by preemption or draining.
-\end{verbatim}
-%<<<TEMPTEMP
 \begin{itemize}
 
 \item Job submission-related changes:
@@ -89,7 +22,7 @@ the condor_startd records when jobs are evicted by preemption or draining.
    \Condor{submit} and \Condor{submit\_dag}.
 
    \item Added support in the submit language for retrying jobs
-   if they fail (see ~\pageref{condor-submit-max-retries}).
+   if they fail (see~\pageref{condor-submit-max-retries}).
 
   \end{itemize}
 
@@ -97,9 +30,22 @@ the condor_startd records when jobs are evicted by preemption or draining.
   \begin{itemize}
 
   \item \Condor{q} now defaults to showing only the current user's jobs.
+  \Ticket{5271}
+  Similarly, \Condor{qedit} defaults to editing only jobs owned by the
+  current user.  
+  \Ticket{5889}
 
   \item \Condor{q} now defaults to batch mode, which produces a single
   line of output summarizing a batch of jobs (see~\pageref{batches-of-jobs}).
+  \Ticket{5708}
+
+  \item \Condor{q} (and \Condor{history} and \Condor{status}) can now
+  read and write JSON, XML, and new ClassAd formats
+  (see~\pageref{man-condor-q}, ~\pageref{man-condor-history},
+  and ~\pageref{man-condor-status}).
+  \Ticket{5688}
+  \Ticket{5844}
+  \Ticket{5820}
 
   \end{itemize}
 
@@ -107,26 +53,66 @@ the condor_startd records when jobs are evicted by preemption or draining.
   \begin{itemize}
 
   \item Added the ability to define SCRIPTS, VARS, etc., for all nodes
-  in a DAG with a single command (see~\ref{sec:DAGAllNodes}).
+  in a DAG with a single command (see section~\ref{sec:DAGAllNodes}).
+  \Ticket{5729}
 
   \item Simplified how DAG node priorities work
-  (see~\ref{sec:DAG-SetNodePriority}).
+  (see section~\ref{sec:DAG-SetNodePriority}).
   This means that existing DAGs that use the node priority feature
   will run differently than they have in the past.
+  \Ticket{4024}
+  \Ticket{5749}
 
-  \item Added the new splice connect feature
-  (see~\ref{sec:DAGSpliceConnections}), which
+  \item Added the new splice connection feature
+  (see section~\ref{sec:DAGSpliceConnections}), which
   allows more flexible dependencies between splices.
+  \Ticket{5213}
 
   \end{itemize}
 
-  \item HTCondor can now use IPv6 interfaces; it prefers IPv4 if both
-  IPv4 and IPv6 are available.
+\item HTCondor can now use IPv6 interfaces; it prefers IPv4 if both
+IPv4 and IPv6 are available.
+\Ticket{5104}
+
+\item HTCondor now has initial support for Singularity containers
+(see section~\ref{sec:singularity-support}).
+\Ticket{5828}
+
+\item \Condor{status} can now display a single line of output for
+each machine (rather than a line per slot).
+\Ticket{5596}
+
+\item A number of improvements to the Python bindings including: submission
+\Ticket{5666}
+\Ticket{4916};
+draining
+\Ticket{5507};
+per-thread security contexts
+\Ticket{5632};
+Computing-On-Demand support
+\Ticket{5130}; and
+multiple query support
+\Ticket{5187}
+
+\item Jobs can now be submitted to the SLURM batch scheduling system via
+the new \SubmitCmdNI{slurm} type in the grid universe.
+\Ticket{5515}
+
+Numerous improvements to Docker support, including
+\Ticket{5680};
+\Ticket{5760};
+\Ticket{5761};
+\Ticket{5750};
+\Ticket{5740};
+\Ticket{5609};
+\Ticket{5456}
+
+
 \end{itemize}
 
 Upgrading from the 8.4 series of HTCondor to the 8.6 series will
-also introduce changes that administrators and users of sites running from an older
-HTCondor version should be aware of when planning an upgrade.
+also introduce changes that administrators and users of sites running
+from an older HTCondor version should be aware of when planning an upgrade.
 Here is a list of items that administrators should be aware of.
 
 \begin{itemize}
@@ -135,28 +121,47 @@ Here is a list of items that administrators should be aware of.
 enabled by default; set \MacroNI{USE\_SHARED\_PORT} to \Expr{False} to
 disable it.  Note that this configuration macro does not control the HAD or
 replication daemon's use of shared port; use \MacroNI{HAD\_USE\_SHARED\_PORT}
-or \MacroNI{REPLICATION\_USE\_SHARED\_PORT} instead.  See
-\ref{sec:HA-configuration} for more details on how to configure HAD (and/or
+or \MacroNI{REPLICATION\_USE\_SHARED\_PORT} instead.  See section
+~\ref{sec:HA-configuration} for more details on how to configure HAD (and/or
 the replication daemon) to work with shared port, since just activating
 shared port without any other configuration change will not work.
+\Ticket{3813}
+\Ticket{5103}
 
 \item To mitigate performance problems, \MacroNI{LOWPORT} and
 \MacroNI{HIGHPORT} no longer restrict outbound port ranges on Windows.  To
 re-enable this functionality, set \MacroNI{OUT\_LOWPORT} and
-\MacroNI{OUT\_HIGHPORT}.  \Ticket{4711}
+\MacroNI{OUT\_HIGHPORT}.
+\Ticket{4711}
 
-\item Cgroups (see section~\ref{sec:CGroupTracking}) are now enabled by default.  This means that if you
+\item Cgroups (see section~\ref{sec:CGroupTracking}) are now enabled
+by default.  This means that if you
 have partitionable slots, jobs need to get \SubmitCmd{request\_memory}
 correct.
+\Ticket{5936}
 
 \item By default, \Condor{q} queries only the current user's jobs,
 unless the current user is a queue superuser or the
 \MacroNI{CONDOR\_Q\_ONLY\_MY\_JOBS} configuration macro is set to
 \Expr{False}.
+\Ticket{5271}
 
-% \item By default, \Condor{q} is now invoked with the \Opt{-batch}
-% option, which displays a single line for each batch of jobs,
-% rather than one line per job.
+\item Added support for immutable and protected job attributes, which
+makes SUBMIT\_REQUIREMENTS more useful
+(see section~\ref{param:ImmutableJobAttrs}).
+\Ticket{5065}
+
+\item By default, the \Condor{schedd} no longer changes the ownership
+of spooled job files (they remain owned by the submitting user).
+\Ticket{5226}
+
+\item When \MacroNI{SEC\_ENABLE\_MATCH\_PASSWORD\_AUTHENTICATION} is set
+to \Expr{True}, the related authorizations are now automatically enabled.
+\Ticket{5304}
+
+\item The master can now run an administrator-defined script at shutdown;
+see Section~\ref{param:DefaultMasterShutdownScript} for details.
+\Ticket{5590}
 
 \end{itemize}
 
