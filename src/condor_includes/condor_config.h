@@ -47,6 +47,7 @@ typedef const struct key_value_pair MACRO_DEF_ITEM;
 
 #define PARAM_USE_COUNTING
 #define CALL_VIA_MACRO_SET
+#define USE_MACRO_STREAMS 1
 #define MACRO_SET_KNOWS_DEFAULT
 #define COLON_DEFAULT_FOR_MACRO_EXPAND  // enable $(FOO:default-value) and $(FOO:$(OTHER)) for config
 #define WARN_COLON_FOR_PARAM_ASSIGN   0 // parameter assigment with : (instead of =) is disallowed, a value of 0 is warn, 1 is fail
@@ -412,7 +413,6 @@ int write_config_file(const char* pathname, int options);
 
 extern "C" {
 
-#if 1
 	/** Find next $$(MACRO) or $$([expression]) in value
 		search begins at pos and continues to terminating null
 
@@ -433,39 +433,6 @@ extern "C" {
 	returns non-zero if a $$() is found, zero if not found.
 	*/
 	int next_dollardollar_macro(char * value, int pos, char** left, char** name, char** right);
-#else
-
-	/** Find next $(MACRO) or $$(MACRO) in a string
-
-	The caller is expected to concatenate *leftp, the evaluated
-	*namep, then *rightp to get the expanded setting.
-
-	- value - The null-terminated string to scan. WILL BE MODIFIED!
-
-	- leftp - OUTPUT. *leftp will be set to value+search_pos.  It
-	  will be null terminated at the $ for the first $(MACRO) found.
-
-	- namep - OUTPUT. The name of the MACRO (the bit between the
-	  parenthesis).  Pointer into value.  Null terminated at the
-	  closing parenthesis.
-
-	- rightp - OUTPUT. Everything to the right of the $(MACRO).
-	  Pointer into value.
-
-	- self - Default to null. If non-null, only macros whose name is
-	  identical to self will be expanded. (Used for the special
-	  $(DOLLAR) case?)
-
-	- getdollardollar - Defaults false. If true, scans for $$(MACRO)
-	  and $$([expression]) instead of $(MACRO)
-
-	- search_pos - 0-indexed position in value to start scanning at.
-	  Defaults to 0.
-	*/
-	int find_config_macro( register char *value, register char **leftp,
-		register char **namep, register char **rightp,
-		const char *self=NULL, bool getdollardollar=false, int search_pos=0);
-#endif
 
 	void init_config (int options);
 }
@@ -476,14 +443,14 @@ BEGIN_C_DECLS
 
 	char * get_tilde(void);
 	char * param ( const char *name );
+	// do param lookup with explicit subsys and localname
+	char * param_with_context ( const char *name, const char *subsys, const char *localname, const char * cwd );
 
-	/** Insert a value into a hash table.
-
-	The value of 'value' is associated with the name 'name'.  This is
-	inserted into the table 'table' which is 'table_size' big.
-	insert keeps copies of the name and value.
-	*/
 #ifdef __cplusplus
+	// do param lookup with explicit subsys and localname
+	char * param_ctx (const char *name, MACRO_EVAL_CONTEXT & ctx);
+
+	// config source file info
 	typedef struct macro_source { bool is_inside; bool is_command; short int id; int line; short int meta_id; short int meta_off; } MACRO_SOURCE;
 	void insert_source(const char * filename, MACRO_SET& macro_set, MACRO_SOURCE & source);
 	extern const MACRO_SOURCE EnvMacro;
@@ -519,8 +486,6 @@ BEGIN_C_DECLS
 
 	// macro stream class wraps up an fp or string so that the macro parser can read from either.
 	//
-#define USE_MACRO_STREAMS 1
-#ifdef USE_MACRO_STREAMS
 	class MacroStream {
 	public:
 		virtual ~MacroStream() {};
@@ -586,8 +551,6 @@ BEGIN_C_DECLS
 	};
 
 
-#endif // USE_MACRO_STREAMS
-
 	// populate a MACRO_SET from either a config file or a submit file.
 	#define READ_MACROS_SUBMIT_SYNTAX           0x01
 	#define READ_MACROS_EXPAND_IMMEDIATE        0x02
@@ -615,12 +578,7 @@ BEGIN_C_DECLS
 
 	int
 	Parse_macros(
-#ifdef USE_MACRO_STREAMS
 		MacroStream& ms,
-#else
-		FILE* conf_fp,
-		MACRO_SOURCE& FileMacro,
-#endif
 		int depth, // a simple recursion detector
 		MACRO_SET& macro_set,
 		int options,

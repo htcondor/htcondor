@@ -622,6 +622,8 @@ ScheddNegotiate::readMsg( DCMessenger * /*messenger*/, Sock *sock )
 		if (space != std::string::npos) {
 			m_extra_claims = m_claim_id.substr(space + 1, std::string::npos);
 			m_claim_id = m_claim_id.substr(0, space);
+		} else {
+			m_extra_claims.clear();
 		}
 
 		m_match_ad.Clear();
