@@ -275,11 +275,11 @@ int DockerAPI::rm( const std::string & containerID, CondorError & /* err */ ) {
 		dprintf( D_ALWAYS | D_FAILURE, "Failed to run '%s'.\n", displayString.c_str() );
 		return -2;
 	}
-	MyStringSource * src = pgm.wait_and_close(default_timeout);
+	const char * got_output = pgm.wait_and_close(default_timeout);
 
 	// On a success, Docker writes the containerID back out.
 	MyString line;
-	if ( ! src || ! line.readLine(*src, false)) {
+	if ( ! got_output || ! line.readLine(pgm.output(), false)) {
 		int error = pgm.error_code();
 		if( error ) {
 			dprintf( D_ALWAYS | D_FAILURE, "Failed to read results from '%s': '%s' (%d)\n", displayString.c_str(), pgm.error_str(), error );
@@ -361,14 +361,16 @@ DockerAPI::rmi(const std::string &image, CondorError &err) {
 		dprintf( D_ALWAYS | D_FAILURE, "Failed to run '%s'.\n", displayString.c_str() );
 		return -2;
 	}
-	MyStringSource * src = pgm.wait_and_close(default_timeout);
-	int exitCode = pgm.exit_status();
-	if (exitCode != 0) {
+
+	int exitCode;
+	if ( ! pgm.wait_for_exit(default_timeout, &exitCode) || exitCode != 0) {
+		pgm.close_program(1);
 		MyString line;
-		if (src) { line.readLine(*src, false); line.chomp(); }
+		line.readLine(pgm.output(), false); line.chomp();
 		dprintf( D_ALWAYS, "'%s' did not exit successfully (code %d); the first line of output was '%s'.\n", displayString.c_str(), exitCode, line.c_str());
 		return -3;
 	}
+
 	return pgm.output_size() > 0;
 #else
 	FILE * dockerResults = my_popen( args, "r", 1 , 0, false);
@@ -628,28 +630,25 @@ int DockerAPI::detect( CondorError & err ) {
 		dprintf( D_ALWAYS | D_FAILURE, "Failed to run '%s'.\n", displayString.c_str() );
 		return -2;
 	}
-	MyStringSource * src = pgm.wait_and_close(default_timeout);
-	int exitCode = pgm.exit_status();
 
-	// Even if we don't care about the success output, the failure output
-	// can be handy for debugging...
-	MyString firstline("NULL");
-	if (src) {
-		firstline.readLine(*src,false); firstline.chomp();
-		if (IsFulldebug(D_ALWAYS)) {
-			dprintf( D_FULLDEBUG, "[docker info] %s\n", firstline.c_str() );
-			MyString line;
-			while (line.readLine(*src, false)) {
-				line.chomp();
-				dprintf( D_FULLDEBUG, "[docker info] %s\n", line.c_str() );
-			}
-		}
-	}
-
-	if (exitCode != 0) {
-		dprintf( D_ALWAYS, "'%s' did not exit successfully (code %d); the first line of output was '%s'.\n", displayString.c_str(), exitCode, firstline.c_str());
+	int exitCode;
+	if ( ! pgm.wait_for_exit(default_timeout, &exitCode) || exitCode != 0) {
+		pgm.close_program(1);
+		MyString line;
+		line.readLine(pgm.output(), false); line.chomp();
+		dprintf( D_ALWAYS, "'%s' did not exit successfully (code %d); the first line of output was '%s'.\n", displayString.c_str(), exitCode, line.c_str());
 		return -3;
 	}
+
+	if (IsFulldebug(D_ALWAYS)) {
+		MyString line;
+		do {
+			line.readLine(pgm.output(), false);
+			line.chomp();
+			dprintf( D_FULLDEBUG, "[docker info] %s\n", line.c_str() );
+		} while (line.readLine(pgm.output(), false));
+	}
+
 #else
 	FILE * dockerResults = my_popen( infoArgs, "r", 1 , 0, false);
 	if( dockerResults == NULL ) {
@@ -701,41 +700,45 @@ int DockerAPI::version( std::string & version, CondorError & /* err */ ) {
 		dprintf(d_level, "Failed to run '%s' errno=%d %s.\n", displayString.c_str(), pgm.error_code(), pgm.error_str() );
 		return -2;
 	}
-	MyStringSource * src = pgm.wait_and_close(default_timeout);
-	int exitCode = pgm.exit_status();
-	if ( ! src) {
-		dprintf( D_ALWAYS | D_FAILURE, "'%s' returned nothing.\n", displayString.c_str() );
-		return -3;
-	} else if (pgm.error_code()) {
+
+	int exitCode;
+	if ( ! pgm.wait_for_exit(default_timeout, &exitCode)) {
+		pgm.close_program(1);
 		dprintf( D_ALWAYS | D_FAILURE, "Failed to read results from '%s': '%s' (%d)\n", displayString.c_str(), pgm.error_str(), pgm.error_code() );
 		return -3;
-	} else {
-		MyString line;
-		if (line.readLine(*src, false)) {
-			line.chomp();
-			bool jansens = strstr( line.c_str(), "Jansens" ) != NULL;
-			bool bad_size = ! src->isEof() || line.size() > 1024 || line.size() < (int)sizeof("Docker version ");
-			if (bad_size && ! jansens) {
-				// check second line of output for the word Jansens also.
-				MyString tmp; tmp.readLine(*src, false);
-				jansens = strstr( tmp.c_str(), "Jansens" ) != NULL;
-			}
-			if (jansens) {
-				dprintf( D_ALWAYS | D_FAILURE, "The DOCKER configuration setting appears to point to OpenBox's docker.  If you want to use Docker.IO, please set DOCKER appropriately in your configuration.\n" );
-				return -5;
-			} else if (bad_size) {
-				dprintf( D_ALWAYS | D_FAILURE, "Read more than one line (or a very long line) from '%s', which we think means it's not Docker.  The (first line of the) trailing text was '%s'.\n", displayString.c_str(), line.c_str() );
-				return -5;
-			}
-		}
-
-		if( exitCode != 0 ) {
-			dprintf( D_ALWAYS, "'%s' did not exit successfully (code %d); the first line of output was '%s'.\n", displayString.c_str(), exitCode, line.c_str() );
-			return -4;
-		}
-
-		version = line.c_str();
 	}
+
+	if (pgm.output_size() <= 0) {
+		dprintf( D_ALWAYS | D_FAILURE, "'%s' returned nothing.\n", displayString.c_str() );
+		return -3;
+	}
+
+	MyStringSource * src = &pgm.output();
+	MyString line;
+	if (line.readLine(*src, false)) {
+		line.chomp();
+		bool jansens = strstr( line.c_str(), "Jansens" ) != NULL;
+		bool bad_size = ! src->isEof() || line.size() > 1024 || line.size() < (int)sizeof("Docker version ");
+		if (bad_size && ! jansens) {
+			// check second line of output for the word Jansens also.
+			MyString tmp; tmp.readLine(*src, false);
+			jansens = strstr( tmp.c_str(), "Jansens" ) != NULL;
+		}
+		if (jansens) {
+			dprintf( D_ALWAYS | D_FAILURE, "The DOCKER configuration setting appears to point to OpenBox's docker.  If you want to use Docker.IO, please set DOCKER appropriately in your configuration.\n" );
+			return -5;
+		} else if (bad_size) {
+			dprintf( D_ALWAYS | D_FAILURE, "Read more than one line (or a very long line) from '%s', which we think means it's not Docker.  The (first line of the) trailing text was '%s'.\n", displayString.c_str(), line.c_str() );
+			return -5;
+		}
+	}
+
+	if( exitCode != 0 ) {
+		dprintf( D_ALWAYS, "'%s' did not exit successfully (code %d); the first line of output was '%s'.\n", displayString.c_str(), exitCode, line.c_str() );
+		return -4;
+	}
+
+	version = line.c_str();
 
 #else
 	FILE * dockerResults = my_popen( versionArgs, "r", 1 , 0, false);
@@ -816,8 +819,11 @@ int DockerAPI::inspect( const std::string & containerID, ClassAd * dockerAd, Con
 		dprintf( D_ALWAYS | D_FAILURE, "Failed to run '%s'.\n", displayString.c_str() );
 		return -6;
 	}
-	MyStringSource * src = pgm.wait_and_close(default_timeout);
-	//int exitCode = pgm.exit_status();
+
+	MyStringSource * src = NULL;
+	if (pgm.wait_and_close(default_timeout)) {
+		src = &pgm.output();
+	}
 
 	int expected_rows = formatElements.number();
 	dprintf( D_FULLDEBUG, "exit_status=%d, error=%d, %d bytes. expecting %d lines\n",
@@ -980,11 +986,8 @@ run_simple_docker_command(const std::string &command, const std::string &contain
 		dprintf( D_ALWAYS | D_FAILURE, "Failed to run '%s'.\n", displayString.c_str() );
 		return -2;
 	}
-	MyStringSource * src = pgm.wait_and_close(timeout);
 
-	// On a success, Docker writes the containerID back out.
-	MyString line;
-	if ( ! src || ! line.readLine(*src, false)) {
+	if ( ! pgm.wait_and_close(timeout) || pgm.output_size() <= 0) {
 		int error = pgm.error_code();
 		if( error ) {
 			dprintf( D_ALWAYS | D_FAILURE, "Failed to read results from '%s': '%s' (%d)\n", displayString.c_str(), pgm.error_str(), error );
@@ -998,13 +1001,16 @@ run_simple_docker_command(const std::string &command, const std::string &contain
 		return -3;
 	}
 
+	// On a success, Docker writes the containerID back out.
+	MyString line;
+	line.readLine(pgm.output());
 	line.chomp(); line.trim();
 	if (!ignore_output && line != container.c_str()) {
 		// Didn't get back the result I expected, report the error and check to see if docker is hung.
 		dprintf( D_ALWAYS | D_FAILURE, "Docker %s failed, printing first few lines of output.\n", command.c_str());
 		for (int ii = 0; ii < 10; ++ii) {
+			if ( ! line.readLine(pgm.output(), false)) break;
 			dprintf( D_ALWAYS | D_FAILURE, "%s\n", line.c_str() );
-			if ( ! line.readLine(*src, false)) break;
 		}
 		return -4;
 	}

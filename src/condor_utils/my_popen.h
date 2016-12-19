@@ -126,7 +126,7 @@ public:
 	//   use close_program() to terminate it
 	// then use exit_status() and/or error_code() to find out what happened.
 	// at that point Output() can be used to get whatever output was returned.
-	MyStringSource* wait_for_output(time_t timeout);
+	const char* wait_for_output(time_t timeout);
 
 	// capture program output until it exits or the timout expires
 	// returns true and the exit code if the program runs to completion.
@@ -142,8 +142,8 @@ public:
 	bool close_program(time_t wait_for_term);
 
 	// a common use pattern, wait for output and then close the program, by force if necessary
-	MyStringSource* wait_and_close(time_t timeout, time_t wait_for_term=1) {
-		MyStringSource * ret = wait_for_output(timeout);
+	const char * wait_and_close(time_t timeout, time_t wait_for_term=1) {
+		const char* ret = wait_for_output(timeout);
 		close_program(wait_for_term);
 		return ret;
 	}
