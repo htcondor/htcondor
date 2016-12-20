@@ -116,6 +116,7 @@ protected:
 	CollectionIterator<ClassAd*>* iter;
 };
 
+
 class CmDaemon : public Service
 {
 public:
@@ -175,7 +176,7 @@ private:
 	bool m_EXPIRE_INVALIDATED_ADS;
 	bool m_HOUSEKEEPING_ON_INVALIDATE;
 
-	int FetchAds (AdTypes whichAds, ConstraintHolder & fetch_if, List<ClassAd>& ads, int * pcTotalAds);
+	int FetchAds (AdTypes whichAds, ConstraintHolder & fetch_if, Joinery & join, List<ClassAd>& ads, ClassAd* self_stats_ad, int * pcTotalAds);
 	int put_ad_v1(ClassAd *curr_ad, Stream* sock, ClassAd & query, bool v0);
 	int put_ad_v2(ClassAd &ad, Stream* sock, ClassAd & query);
 	int put_ad_v3(ClassAd &ad, Stream* sock, const classad::References * projection);

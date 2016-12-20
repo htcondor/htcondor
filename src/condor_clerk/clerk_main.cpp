@@ -203,7 +203,7 @@ AdTypes CollectorCmdToAdType(int cmd) {
 }
 
 int CollectorAdTypeToCmd(AdTypes typ, int op) {
-	const char * type_str = AdTypeName(typ);
+	const char * type_str = NameOf(typ);
 	if ( ! type_str) return -1;
 	const char * fmt = (op < 0) ? "QUERY_%sS" : ((op & 2) ? "INVALIDATE_%sS" : "UPDATE_%s");
 	char cmd_name[128];
@@ -707,7 +707,7 @@ int CmDaemon::receive_update(int command, Stream* stream)
 
 	stats.UpdatesReceived += 1;
 	dprintf(D_ALWAYS | (m_LOG_UPDATES ? 0 : D_VERBOSE),
-		"Got %s adtype=%s\n", getCommandString(command), AdTypeName(CollectorCmdToAdType(command)));
+		"Got %s adtype=%s\n", getCommandString(command), NameOf(CollectorCmdToAdType(command)));
 
 		// Avoid lengthy blocking on communication with our peer.
 		// This command-handler should not get called until data
@@ -796,7 +796,7 @@ int CmDaemon::receive_update(int command, Stream* stream)
 	if (status.should_forward) {
 		time_t now = time(NULL);
 		if ( ! status.entry || status.entry->ForwardBeforeTime(now) < now) {
-			dprintf(D_FULLDEBUG, "Forwarding ad: type=%s command=%s\n", AdTypeName(whichAds), getCommandString(command));
+			dprintf(D_FULLDEBUG, "Forwarding ad: type=%s command=%s\n", NameOf(whichAds), getCommandString(command));
 			if (send_classad_to_sock(command, ad, adPvt) >= 1) {
 				if (status.entry) { status.entry->Forwarded(now); }
 			}
@@ -927,7 +927,7 @@ int CmDaemon::receive_invalidation(int command, Stream* stream)
 
 	stats.UpdatesReceived += 1;
 	dprintf(D_ALWAYS | (m_LOG_UPDATES ? 0 : D_VERBOSE),
-		"Got %s adtype=%s\n", getCommandString(command), AdTypeName(whichAds));
+		"Got %s adtype=%s\n", getCommandString(command), NameOf(whichAds));
 
 		// Avoid lengthy blocking on communication with our peer.
 		// This command-handler should not get called until data
@@ -987,7 +987,7 @@ int CmDaemon::receive_invalidation(int command, Stream* stream)
 	}
 #endif
 	if (status.should_forward) {
-		dprintf(D_FULLDEBUG, "Forwarding ad: type=%s command=%s\n", AdTypeName(whichAds), getCommandString(command));
+		dprintf(D_FULLDEBUG, "Forwarding ad: type=%s command=%s\n", NameOf(whichAds), getCommandString(command));
 		send_classad_to_sock(command, ad, NULL);
 	}
 
@@ -1145,11 +1145,113 @@ int CmDaemon::receive_query(int command, Stream* sock)
 
 	// Initial query handler
 	AdTypes whichAds = CollectorCmdToAdType(command);
-	dprintf(D_FULLDEBUG, "Got %s adtype=%s\n", getCommandString(command), AdTypeName(whichAds));
+	Joinery join(whichAds);
+	// for Generic or Any queries, there can be a target type in the request
+	if (whichAds == GENERIC_AD || whichAds == ANY_AD) {
+		dprintf(D_FULLDEBUG, "Got %s adtype=%s getting target adtype from query:\n", getCommandString(command), NameOf(whichAds));
+		dPrintAd(D_FULLDEBUG, query, false);
+		std::string target;
+		if (query.LookupString(ATTR_TARGET_TYPE, target)) {
+			whichAds = collect_lookup_mytype(target.c_str());
+			join.targetAds = whichAds;
+		}
+		if (query.LookupString("LookupType", join.lookupType)) {
+			whichAds = collect_lookup_mytype(join.lookupType.c_str());
+		}
+
+		const classad::ClassAd* usingAd = ExprTreeIsClassAd(query.Lookup("Using"));
+		if (usingAd) {
+		#if 1
+			join.join_key_ad = new ClassAd();
+			ExprTree * jax = join.join_key_ad;
+			join.join_parent.Insert(join.lookupType, jax, false);
+			ClassAd * jad = join.join_key_ad;
+
+			// join.join_ad.Update(*usingAd);
+			bool has_each = false;
+			for (classad::ClassAd::const_iterator itr = usingAd->begin(); itr != usingAd->end(); ++itr) {
+				classad::ExprTree* tree = SkipExprEnvelope(itr->second);
+				std::string fnname;
+				std::vector<classad::ExprTree*> fnargs;
+				bool is_each = false;
+				if (ExprTreeIsFnCall(tree, fnname, fnargs) && (fnname == "each") && fnargs.size() == 1) {
+					has_each = is_each = true;
+					tree = fnargs[0];
+				}
+				std::string attr, scope;
+				if (ExprTreeIsScopedAttrRef(tree, attr, scope)) {
+					//if (scope.empty() || AttrMatch(scope, join.lookupType))
+					if (is_each) {
+						std::string oneof(attr); oneof += "[ix]";
+						jad->AssignExpr(itr->first.c_str(), oneof.c_str());
+						MyString foreach;
+						foreach.formatstr("size(%s)", attr.c_str());
+						join.foreach_size.set(foreach.StrDup());
+					} else if ( ! AttrMatch(itr->first, attr)) {
+						jad->AssignExpr(itr->first.c_str(), attr.c_str());
+					}
+				} else {
+					// has_key_exprs = true;
+					classad::ExprTree * tr = itr->second->Copy();
+					jad->Insert(itr->first, tr, false);
+				}
+			}
+
+			dprintf(D_ALWAYS, "join %susing: %s\n", has_each ? "each " : "", join.foreach_size.c_str());
+			if (join.join_key_ad) { dPrintAd(D_ALWAYS, *join.join_key_ad); }
+		#else
+			std::string keys;
+			bool has_each = false;
+			bool has_key_exprs = false;
+			bool has_odd_key_scope = false;
+			for (classad::ClassAd::const_iterator itr = usingAd->begin(); itr != usingAd->end(); ++itr) {
+				classad::ExprTree* tree = SkipExprEnvelope(itr->second);
+				std::string fnname;
+				std::vector<classad::ExprTree*> fnargs;
+				if (ExprTreeIsFnCall(tree, fnname, fnargs) && (fnname == "each") && fnargs.size() == 1) {
+					has_each = true;
+					tree = fnargs[0];
+				}
+				std::string attr, scope;
+				if (ExprTreeIsScopedAttrRef(tree, attr, scope)) {
+					if (has_each && join.foreach_size_attr.empty()) {
+						join.foreach_size_attr = attr;
+					}
+					if (scope.empty() || AttrMatch(scope, join.lookupType)) {
+						if ( ! keys.empty()) keys += ",";
+						keys += attr;
+					} else {
+						has_odd_key_scope = true;
+					}
+				} else {
+					has_key_exprs = true;
+				}
+			}
+			dprintf(D_ALWAYS, "join using %s'%s'%s\n", has_each ? "each " : "", keys.c_str(), has_key_exprs ? " exprs" : "");
+		#endif
+		}
+	}
+	dprintf(D_FULLDEBUG, "Got %s adtype=%s lookup=%s\n", getCommandString(command), NameOf(join.targetAds), NameOf(whichAds));
 
 	// when collector ads are queried, put the latest stats into the self ad before replying.
-	if (whichAds == COLLECTOR_AD) {
-		PRAGMA_REMIND("update stats in the self ad.")
+	ClassAd * self_stats_ad = NULL;
+	if (join.targetAds == COLLECTOR_AD) {
+		daemonCore->monitor_data.ExportData(&m_daemonAd);
+
+		// update stats in the collector ad before we return it, if an override for the stats
+		// was passed, then we update a copy rather than the real one.
+		MyString stats_config;
+		query.LookupString("STATISTICS_TO_PUBLISH",stats_config);
+		if (stats_config.empty()) {
+			// use the existing stats config, but refresh the values.
+			daemonCore->dc_stats.Publish(m_daemonAd, stats_config.Value());
+			stats.Publish(m_daemonAd, stats_config.Value());
+		} else if (stats_config != "stored") {
+			// populate a temporary ad with the stats override
+			self_stats_ad = new ClassAd(m_daemonAd);
+			daemonCore->dc_stats.Publish(*self_stats_ad, stats_config.Value());
+			stats.Publish(*self_stats_ad, stats_config.Value());
+		}
 	}
 
 	UtcTime begin(true);
@@ -1172,17 +1274,9 @@ int CmDaemon::receive_query(int command, Stream* sock)
 		ConstraintHolder fetch_if(filter ? filter->Copy() : NULL);
 		collect_add_absent_clause(fetch_if);
 
-		// for Generic or Any queries, there can be a target type in the request
-		if (whichAds == GENERIC_AD || whichAds == ANY_AD) {
-			std::string target;
-			if (query.LookupString(ATTR_TARGET_TYPE, target)) {
-				whichAds = collect_lookup_mytype(target.c_str());
-			}
-		}
-
 		// small table query, We are the child or or the fork failed
 		// either way we want to actually perform the query now.
-		FetchAds (whichAds, fetch_if, ads, &cTotalAds);
+		FetchAds (whichAds, fetch_if, join, ads, self_stats_ad, &cTotalAds);
 	}
 
 	UtcTime end_write, end_query(true);
@@ -1274,6 +1368,7 @@ int CmDaemon::receive_query(int command, Stream* sock)
 
 	// all done; let daemon core will clean up connection
 FINIS:
+	delete self_stats_ad; // don't need this anymore
 	if (FORK_CHILD == fork_status) {
 		app.forker.WorkerDone(); // Never returns
 	}
@@ -1342,7 +1437,7 @@ int CmDaemon::send_collector_ad()
 		dprintf(D_ALWAYS, "Unable to send UPDATE_COLLECTOR_AD to all configured collectors\n");
 	}
 
-	PRAGMA_REMIND("add code to update the world collector")
+	//PRAGMA_REMIND("add code to update the world collector")
 
 		// Reset the timer so we don't do another period update until 
 	daemonCore->Reset_Timer(m_idTimerSendUpdates, m_UPDATE_INTERVAL, m_UPDATE_INTERVAL);
@@ -1430,7 +1525,7 @@ int CmDaemon::populate_collector()
 }
 
 
-int CmDaemon::FetchAds (AdTypes whichAds, ConstraintHolder & fetch_if, List<ClassAd>& ads, int * pcTotalAds)
+int CmDaemon::FetchAds (AdTypes whichAds, ConstraintHolder & fetch_if, Joinery & join, List<ClassAd>& ads, ClassAd * self_stats_ad, int * pcTotalAds)
 {
 	int rval = 0;
 	dprintf(D_FULLDEBUG, "Daemon::FetchAds(%d,...) called\n", whichAds);
@@ -1447,13 +1542,18 @@ int CmDaemon::FetchAds (AdTypes whichAds, ConstraintHolder & fetch_if, List<Clas
 	if (whichAds == COLLECTOR_AD || whichAds == ANY_AD || whichAds == NO_AD) {
 		++cTotalAds;
 		bool insert_self = true;
-		ClassAd * ad = &m_daemonAd;
+
+		ClassAd * ad = self_stats_ad ? self_stats_ad : &m_daemonAd;
 		if (filter && ! EvalBool(ad, filter)) {
 			insert_self = false;
 		}
 		if (insert_self) {
-			PRAGMA_REMIND("refresh the collector's self ad")
-			ads.Append(ad);
+			if (join.targetAds != whichAds) {
+				ClassAd * ad2 = collect_lookup(join.targetAds, ad);
+				if (ad2) ads.Append(ad2);
+			} else {
+				ads.Append(ad);
+			}
 		}
 	}
 
@@ -1464,7 +1564,22 @@ int CmDaemon::FetchAds (AdTypes whichAds, ConstraintHolder & fetch_if, List<Clas
 		if (filter && ! EvalBool(ad, filter)) {
 			continue; // no match - don't include this ad.
 		}
-		ads.Append(ad);
+		if (join.targetAds != whichAds) {
+		#if 1
+			std::vector<std::string> keys;
+			if (collect_make_keys(join.targetAds, ad, join, keys)) {
+				for (std::vector<std::string>::iterator it = keys.begin(); it != keys.end(); ++it) {
+					ClassAd * ad2 = collect_lookup(*it);
+					if (ad2) ads.Append(ad2);
+				}
+			}
+		#else
+			ClassAd * ad2 = collect_lookup(join.targetAds, ad);
+			if (ad2) ads.Append(ad2);
+		#endif
+		} else {
+			ads.Append(ad);
+		}
 	}
 
 	collect_free_iter(c_ads);

@@ -20,6 +20,9 @@
 #ifndef _CLERK_COLLECT_H_
 #define _CLERK_COLLECT_H_
 
+//turning this off because it currently crashes the clerk.
+//#define WANT_UPDATE_HISTORY 1
+
 // call this to reconfig the collection code
 void collect_config(int max_adtype);
 
@@ -103,6 +106,34 @@ CollectionIterator<ClassAd*>* collect_get_iter(AdTypes whichAds);
 void collect_free_iter(CollectionIterator<ClassAd*> * it);
 bool collect_add_absent_clause(ConstraintHolder & filter_if);
 
+class Joinery {
+public:
+	Joinery(AdTypes adt) : targetAds(adt), join_key_ad(NULL) {};
+
+	AdTypes targetAds;
+	std::string lookupType; // name to use in the join_ad to refer to the key ad. i.e the lookup ad type name
+	ClassAd* join_key_ad;
+	ClassAd join_parent;
+	ConstraintHolder foreach_size;
+	//std::vector< std::pair<std::string, classad::ExprTree*> > keys;
+};
+
+// return a single ad (or null) using the keyAd to construct the lookup key
+ClassAd * collect_lookup(AdTypes whichAds, const ClassAd * keyAd);
+ClassAd * collect_lookup(const std::string & key);
+
+// return the keys we get from apply the given join to the given index ad.
+bool collect_make_keys(AdTypes whichAds, const ClassAd * keyAd, Joinery & join, std::vector<std::string> & keys);
+
+typedef struct AdUpdateCounters {
+	// counters of updates
+	int initial;
+	int total;
+	int sequenced;
+	int dropped;
+	AdUpdateCounters() : initial(0), total(0), sequenced(0), dropped(0) {}
+} AdUpdateCounters;
+
 #define AC_ENT_PRIVATE 0x0001
 #define AC_ENT_OFFLINE 0x0002
 #define AC_ENT_EXPIRED 0x0004
@@ -119,11 +150,18 @@ typedef struct AdCollectionEntry {
 	AdTypes                  adType;
 	int                      flags;  // zero or more of AC_ENT_* flags
 	int                      dirty;  // flags indicate ad was changed sinced last housekeeping/forwarding
+	int                      sequence; // last sequence number
+	time_t                   dstartTime; // daemon start time, used to recognise when we see a restarted daemon.
 	time_t                   updateTime; // value of ATTR_LAST_HEARD_FROM
 	time_t                   expireTime; // value of ATTR_LAST_HEARD_FROM + ATTR_CLASSAD_LIFETIME
 	time_t                   forwardTime; // value of ATTR_LAST_FORWARDED
 	compat_classad::ClassAd* ad;
-	AdCollectionEntry() : adType(NO_AD), flags(0), dirty(0), updateTime(0), expireTime(0), forwardTime(0), ad(NULL) {}
+	AdUpdateCounters         updates;
+#ifdef WANT_UPDATE_HISTORY
+	BarrelShifter<unsigned int, 4> history;
+#endif
+
+	AdCollectionEntry() : adType(NO_AD), flags(0), dirty(0), sequence(0), dstartTime(0), updateTime(0), expireTime(0), forwardTime(0), ad(NULL) {}
 	AdCollectionEntry(AdTypes t, int f, time_t u, time_t e, compat_classad::ClassAd* a);
 	int UpdateAd(AdTypes adtype, int new_flags, time_t now, time_t expire_time, compat_classad::ClassAd* new_ad, bool merge_it=false);
 	int DeleteAd(AdTypes adtype, int new_flags, time_t now, time_t expire_time, bool expire_it=false);
@@ -140,6 +178,24 @@ typedef std::pair<std::string, AdCollectionEntry> AdCollectionPair;
 
 // call this to register the collectors own ad
 int collect_self(ClassAd * ad);
+
+// this class holds stats by collection
+class CollectionStats {
+public:
+	CollectionStats() {};
+	~CollectionStats() {}
+	void resize(int max_adtype);
+	void Update(AdCollectionEntry& entry, bool initial, bool is_merge);
+protected:
+	AdUpdateCounters all;
+	std::vector<AdUpdateCounters> updates;
+	static const std::string AttrSeqNum;
+	static const std::string AttrDStartTime;
+	static const std::string AttrTotal;
+	static const std::string AttrSequenced;
+	static const std::string AttrLost;
+	static const std::string AttrHistory;
+};
 
 // this class is used return status information from a collect operation
 class CollectStatus {

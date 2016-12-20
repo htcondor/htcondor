@@ -223,6 +223,7 @@ struct {
 	AdCollection Public;
 	AdCollection Private;
 	SelfCollection Self;
+	CollectionStats Stats;
 	OfflineLogHolder Offline;
 	PersistLogHolder Persist;
 	ConstraintHolder AbsentReq; // requirements for turning ads into absent ads.
@@ -574,7 +575,7 @@ void collect_set_adtype(AdTypes whichAds, const char * keylist, double lifetime,
 
 		bool has_private = (has_private_adtype(whichAds) != NO_AD);
 		if (has_private && (usemask && kfNotFound)) {
-			dprintf(D_ALWAYS, "Non-standard ReKey of %s ads unsupported because of private ads. key: %s\n", AdTypeName(whichAds), keylist);
+			dprintf(D_ALWAYS, "Non-standard ReKey of %s ads unsupported because of private ads. key: %s\n", AdTypeToString(whichAds), keylist);
 			usemask = mysat.keyAttrUse; // just preserve the existing keyset.
 		}
 
@@ -603,7 +604,7 @@ void collect_set_forwarding_adtypes(classad::References & viewAdTypes)
 {
 	for (int ii = 0; ii < maxAdSettings; ++ii) {
 		const char * name = AdSettings[ii].name;
-		if ( ! name) name = AdTypeName((AdTypes)ii);
+		if ( ! name) name = NameOf((AdTypes)ii);
 		if ( ! name) continue;
 		AdSettings[ii].forwarding = viewAdTypes.find(name) != viewAdTypes.end();
 	}
@@ -625,6 +626,8 @@ typedef struct _settings_by_adtype {
 
 void collect_finalize_ad_tables()
 {
+	Collections.Stats.resize(maxAdSettings);
+
 	// LOG the final tables.
 	std::string buffer;
 	dprintf(D_FULLDEBUG, "Ad tables\n");
@@ -921,8 +924,12 @@ int PersistLogHolder::MergeAd (ClassAd &ad, const std::string & ad_key)
 AdCollectionEntry::AdCollectionEntry(AdTypes t, int f, time_t u, time_t e, compat_classad::ClassAd* a)
 	: adType(t)
 	, flags(f)
+	, dirty(0)
+	, sequence(0)
+	, dstartTime(0)
 	, updateTime(u)
 	, expireTime(e)
+	, forwardTime(0)
 	, ad(a)
 {
 	if ((this->expireTime == (time_t)-1) && ad) {
@@ -984,7 +991,7 @@ int AdCollectionEntry::UpdateAd(AdTypes atype, int new_flags, time_t now, time_t
 	} else {
 		this->adType = atype;
 		this->flags = new_flags; // something more complex needed here?
-		this->updateTime = now;
+		this->updateTime = now;  // this is equivalent to ATTR_LAST_HEARD_FROM
 		this->expireTime = expire_time;
 
 		this->dirty |= AC_DIRTY_TIME;
@@ -1168,7 +1175,7 @@ WalkPostOp housekeep_tick(void * pv, AdCollection::iterator & it)
 }
 
 
-PRAGMA_REMIND("move this optimized version of getHostFromAddr to the right place")
+//PRAGMA_REMIND("move this optimized version of getHostFromAddr to the right place")
 // Scan a const string containing the host address and return
 // a const char * that points to the start of the host name, and a length for the hostname.
 // This code accepts either ipv4 or ipv6 sinful strings. of the format
@@ -1216,7 +1223,7 @@ bool collect_make_key(AdTypes whichAds, const ClassAd* ad, ClassAd *adPvt, std::
 	if (private_inject_keys) {
 		// Queries of private ads depend on having the keys match the public ad
 		// TJ: do they really??
-		SetMyTypeName(*adPvt, AdTypeName(whichAds));
+		SetMyTypeName(*adPvt, AdTypeToString(whichAds));
 	}
 
 	key.reserve(key_length);
@@ -1446,6 +1453,83 @@ bool OLD_collect_make_key(AdTypes whichAds, const ClassAd* ad, ClassAd *adPvt, s
 }
 #endif // OLD_collect_make_key
 
+
+ClassAd * collect_lookup(AdTypes whichAds, const ClassAd * keyAd)
+{
+	std::string key;
+	if (collect_make_key(whichAds, keyAd, NULL, key)) {
+		AdCollection::iterator it = Collections.Public.find(key);
+		if (it != Collections.Public.end()) {
+			return it->second.ad;
+		}
+	}
+	return NULL;
+}
+
+ClassAd * collect_lookup(const std::string & key)
+{
+	AdCollection::iterator it = Collections.Public.find(key);
+	if (it != Collections.Public.end()) {
+		return it->second.ad;
+	}
+	return NULL;
+}
+
+bool collect_make_keys(AdTypes whichAds, const ClassAd * keyAd, Joinery & join, std::vector<std::string> & keys)
+{
+	const ClassAd * ad = keyAd;
+	if (join.foreach_size.empty()) {
+		std::string key;
+		if (collect_make_key(whichAds, ad, NULL, key)) {
+			keys.push_back(key);
+			return true;
+		}
+	} else if (join.join_key_ad) {
+		int count;
+		classad::Value val;
+		ExprTree * expr = join.foreach_size.Expr();
+		expr->SetParentScope(keyAd);
+		if ( ! keyAd->EvaluateExpr(expr, val) || ! val.IsNumber(count)) {
+			count = 0;
+		}
+		expr->SetParentScope(NULL);
+		if (count <= 0)
+			return false;
+
+		std::string indexAttr("ix");
+		std::string key;
+		// this little dance is required because of the wierdness of classad caching.
+#if 1
+		join.join_key_ad->ChainToAd(const_cast<ClassAd*>(keyAd));
+#else
+		classad::ExprTree* lookupAd = const_cast<ClassAd*>(keyAd);
+		join.join_ad.Insert(join.lookupType, lookupAd, false);
+		lookupAd->SetParentScope(&join.join_ad);
+#endif
+
+		int cKeysAdded = 0;
+		for (int ii = 0; ii < count; ++ii) {
+			join.join_key_ad->InsertAttr(indexAttr, ii);
+			if (collect_make_key(whichAds, join.join_key_ad, NULL, key)) {
+				keys.push_back(key);
+				++cKeysAdded;
+			}
+		}
+
+#if 1
+		join.join_key_ad->ChainToAd(NULL);
+#else
+		lookupAd->SetParentScope(NULL);
+		join.join_ad.Remove(join.lookupType);
+#endif
+		return cKeysAdded > 0;
+	} else {
+		dprintf(D_ALWAYS, "collect_make_keys called with join.join_key_ad==NULL, skipping this..\n");
+	}
+	return false;
+}
+
+
 int SelfCollection::update(ClassAd * cad)
 {
 	ad = cad;
@@ -1465,6 +1549,119 @@ int collect_self(ClassAd * ad)
 {
 	return Collections.Self.update(ad);
 }
+
+
+void CollectionStats::resize(int max_adtype)
+{
+	updates.resize(max_adtype);
+}
+
+const std::string CollectionStats::AttrSeqNum(ATTR_UPDATE_SEQUENCE_NUMBER);
+const std::string CollectionStats::AttrDStartTime(ATTR_DAEMON_START_TIME);
+const std::string CollectionStats::AttrTotal(ATTR_UPDATESTATS_TOTAL);
+const std::string CollectionStats::AttrSequenced(ATTR_UPDATESTATS_SEQUENCED);
+const std::string CollectionStats::AttrLost(ATTR_UPDATESTATS_LOST);
+const std::string CollectionStats::AttrHistory(ATTR_UPDATESTATS_HISTORY);
+
+void CollectionStats::Update(AdCollectionEntry& entry, bool initial, bool is_merge)
+{
+	if (is_merge) return;
+
+	// Check the sequence numbers to count dropped updates
+	int dropped = 0;
+	bool sequenced = false;
+
+	int new_seq;
+	time_t new_dstart;
+	if (entry.ad->LookupInteger(ATTR_UPDATE_SEQUENCE_NUMBER, new_seq) &&
+		entry.ad->LookupInteger(ATTR_DAEMON_START_TIME, new_dstart)) {
+		sequenced = true;
+		if ( ! initial && new_dstart == entry.dstartTime) {
+			int expected_seq = entry.sequence + 1;
+			if (expected_seq != new_seq) {
+				dropped = (new_seq < expected_seq) ? 1 : (new_seq - expected_seq);
+			}
+		} else {
+			entry.dstartTime = new_dstart;
+			entry.sequence = new_seq;
+		}
+	}
+
+	AdUpdateCounters * bytype = NULL;
+	if (entry.adType >= 0 && entry.adType < (int)updates.size()) {
+		bytype = &updates[entry.adType];
+	}
+
+	all.total += 1;
+	entry.updates.total += 1;
+	if (bytype) { bytype->total += 1; }
+	entry.ad->InsertAttr(AttrTotal, entry.updates.total);
+
+	if (initial) {
+		all.initial += 1;
+		entry.updates.initial += 1;
+		if (bytype) { bytype->initial += 1; }
+	}
+
+	if (sequenced) {
+		// for sequenced we count both dropped and non-dropped updates
+		all.sequenced += dropped + 1;
+		all.dropped += dropped;
+		entry.updates.sequenced += dropped + 1;
+		entry.updates.dropped += dropped;
+		if (bytype) {
+			bytype->sequenced += dropped + 1;
+			bytype->dropped += dropped;
+		}
+
+		entry.ad->InsertAttr(AttrSequenced, entry.updates.sequenced);
+		if (dropped) {
+			entry.ad->InsertAttr(AttrLost, entry.updates.dropped);
+		}
+
+#ifdef WANT_UPDATE_HISTORY
+		entry.history.pulse(dropped+1);
+		//char hist[entry.history.print_size+1];
+		//int cch = MIN(entry.history.print_size, (entry.updates.sequenced+3)/4);
+		//const char * history_str = entry.history.print(hist, cch+1);
+		//if (history_str) { entry.ad->InsertAttr(AttrHistory, history_str); }
+#endif
+	}
+
+	/* this is what the real collector does
+	if (is_merge) return;
+	if ( ! pad) {
+		global.Tick(now);
+		global.updateStats(className, false, 0 );
+		daemonList->updateStats( className, newAd, false, 0 );
+	}
+
+	// Check the sequence numbers..
+	int	new_seq, old_seq;
+	int	new_stime, old_stime;
+	int	dropped = 0;
+	bool	sequenced = false;
+
+	// Compare sequence numbers..
+	if ( newAd->LookupInteger( ATTR_UPDATE_SEQUENCE_NUMBER, new_seq ) &&
+		 oldAd->LookupInteger( ATTR_UPDATE_SEQUENCE_NUMBER, old_seq ) &&
+		 newAd->LookupInteger( ATTR_DAEMON_START_TIME, new_stime ) &&
+		 oldAd->LookupInteger( ATTR_DAEMON_START_TIME, old_stime ) )
+	{
+		sequenced = true;
+		int		expected = old_seq + 1;
+		if (  ( new_stime == old_stime ) && ( expected != new_seq ) ) {
+			dropped = ( new_seq < expected ) ? 1 : ( new_seq - expected );
+		}
+	}
+	global.Tick(now);
+	global.updateStats( className, sequenced, dropped );
+	daemonList->updateStats( className, newAd, sequenced, dropped );
+
+	*/
+
+}
+
 
 
 static AdCollection::iterator adtype_begins(AdTypes whichAds, AdCollection & lst)
@@ -1728,7 +1925,9 @@ int collect(int op_and_flags, AdTypes whichAds, ClassAd * ad, ClassAd * adPvt, C
 		lb = Collections.Private.lower_bound(status.key);
 		if (lb != Collections.Private.end() && !(Collections.Private.key_comp()(status.key, lb->first))) {
 			// updating an ad
-			dprintf(D_STATUS, "%s %s ad key='%s'\n", merge_ads ? "**Merging" : "**Replacing", NameOf(pvtType), status.key.c_str());
+			if (IsDebugVerbose(D_STATUS)) {
+				dprintf(D_STATUS | D_VERBOSE, "%s %s ad key='%s'\n", merge_ads ? "**Merging" : "**Replacing", NameOf(pvtType), status.key.c_str());
+			}
 			lb->second.UpdateAd(pvtType, AC_ENT_PRIVATE, now, expire_time, adPvt, merge_ads);
 		} else if (merge_cmd) {
 			dprintf(D_STATUS, "**NOT Merging %s ad key='%s' was not found\n", NameOf(pvtType), status.key.c_str());
@@ -1746,10 +1945,14 @@ int collect(int op_and_flags, AdTypes whichAds, ClassAd * ad, ClassAd * adPvt, C
 	lb = Collections.Public.lower_bound(status.key);
 	if (lb != Collections.Public.end() && !(Collections.Public.key_comp()(status.key, lb->first))) {
 		// updating an ad
-		dprintf(D_STATUS, "%s %s ad key='%s'\n", merge_ads ? "**Merging" : "**Replacing", NameOf(whichAds), status.key.c_str());
+		if (IsDebugVerbose(D_STATUS)) {
+			dprintf(D_STATUS | D_VERBOSE, "%s %s ad key='%s'\n", merge_ads ? "**Merging" : "**Replacing", NameOf(whichAds), status.key.c_str());
+		}
 		lb->second.UpdateAd(whichAds, 0, now, expire_time, ad, merge_ads);
 		status.entry = &lb->second;
+		Collections.Stats.Update(*status.entry, false, merge_ads);
 	} else if (merge_cmd) {
+		//Collections.Stats.UpdateMissedMerge(whichAds);
 		dprintf(D_STATUS, "**NOT Merging %s ad key='%s' was not found\n", NameOf(whichAds), status.key.c_str());
 	} else {
 		// inserting an ad
@@ -1760,6 +1963,7 @@ int collect(int op_and_flags, AdTypes whichAds, ClassAd * ad, ClassAd * adPvt, C
 		Collections.Public.insert(lb, AdCollectionPair(status.key, AdCollectionEntry(whichAds, 0, now, expire_time, ad)));
 		#endif
 		status.entry = &Collections.Public[status.key];
+		Collections.Stats.Update(*status.entry, true, false);
 	}
 #else
 	AdCollection::iterator found;
@@ -1946,8 +2150,8 @@ CollectionIterFromCollection::CollectionIterFromCollection(std::map<std::string,
 	, current(NULL)
 	, adtype(aty)
 {
-	dprintf(D_STATUS | D_VERBOSE, "Creating iterator for %s ads [%d]\n",  AdTypeName(adtype), adtype);
 	if (adtype == NO_AD) { adtype = ANY_AD; }
+	dprintf(D_STATUS | D_VERBOSE, "Creating iterator for %s ads [%d]\n",  NameOf(adtype), adtype);
 	if (adtype != ANY_AD) {
 		AdTypes key_aty = (adtype == STARTD_PVT_AD) ? STARTD_AD : adtype; // private ads are keyed the same as startd ads.
 		std::string key;

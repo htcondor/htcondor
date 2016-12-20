@@ -30,15 +30,56 @@
 #include "clerk_utils.h"
 #include "clerk_collect.h"
 
-const char * AdTypeName(AdTypes whichAds)
+const char * print_bits(char *buf, int cch, unsigned int bits[], int cbBits, int cbWord, int pos)
 {
-	return AdTypeToString(whichAds);
+	unsigned int outbit = 0; // Current bit # to output
+	unsigned int outword = 0x0; // Current word to ouput
+
+	// Calculate the "last" offset
+	int offset = pos; // History offset
+	if (--offset < 0) {
+		offset = cbBits*8;
+	}
+
+	char *p = buf;
+	if (cch < 1) return NULL;
+	if (cch < 2) { buf[0] = 0; return buf; }
+	char *pe = buf+cch-1;
+
+	// And, the starting "word" and bit numbers
+	int word_num = offset / cbWord;
+	int bit_num = offset % cbWord;
+
+	// Walk through 1 bit at a time...
+	for (int loop = 0; loop < cbBits*8;  loop++ ) {
+		unsigned int mask = (1 << bit_num);
+
+		if (bits[word_num] & mask) {
+			outword |= (0x8 >> outbit);
+		}
+		if (--bit_num < 0) {
+			bit_num = (cbWord - 1);
+			if (--word_num < 0) {
+				word_num = (cbWord - 1);
+			}
+		}
+
+		// Convert to a char
+		if (++outbit == 4) {
+			if (p+1 >= pe) break;
+			*p++ = outword + (outword < 10) ? '0' : ('A' - 10);
+			outbit = 0;
+			outword = 0x0;
+		}
+
+	}
+	if (outbit && p+1 < pe) {
+		*p++ = outword + (outword < 10) ? '0' : ('A' - 10);
+	}
+	*p = 0;
+	return buf;
 }
 
-AdTypes AdTypeByName(const char * name)
-{
-	return AdTypeFromString(name);
-}
 
 void remove_self_from_collector_list(CollectorList * colist, bool check_default_id, bool im_the_collector)
 {
@@ -253,20 +294,54 @@ bool smap_number(const char * name, const NOCASE_STRING_MAP & smap, double & dva
 	return string_is_double_param(str, dval);
 }
 
-
-static bool ExprTreeIsAttrRef(const classad::ExprTree * expr, std::string & attr)
+bool ExprTreeIsScopedAttrRef(classad::ExprTree * expr, std::string & attr, std::string & scope)
 {
 	if ( ! expr) return false;
 
 	classad::ExprTree::NodeKind kind = expr->GetKind();
-	while (kind == classad::ExprTree::ATTRREF_NODE) {
+	if (kind == classad::ExprTree::ATTRREF_NODE) {
 		classad::ExprTree *e2=NULL;
-		bool absolute;
-		((const classad::AttributeReference*)expr)->GetComponents(e2, attr, absolute);
-		return !e2;
+		bool absolute=false;
+		scope.clear();
+		((classad::AttributeReference*)expr)->GetComponents(e2, attr, absolute);
+		return !e2 || ExprTreeIsAttrRef(e2, scope, &absolute);
 	}
 	return false;
 }
+
+const classad::ClassAd* ExprTreeIsClassAd(classad::ExprTree * expr)
+{
+	if ( ! expr) return NULL;
+	classad::ExprTree::NodeKind kind = expr->GetKind();
+	if (kind == classad::ExprTree::CLASSAD_NODE) {
+		return dynamic_cast<const classad::ClassAd*>(expr);
+	}
+	return NULL;
+}
+
+bool ExprTreeIsFnCall(classad::ExprTree * expr, std::string &fnName, std::vector<classad::ExprTree*>& args)
+{
+	if ( ! expr) return NULL;
+	classad::ExprTree::NodeKind kind = expr->GetKind();
+	if (kind == classad::ExprTree::FN_CALL_NODE) {
+		((const classad::FunctionCall*)expr)->GetComponents(fnName, args);
+		return true;
+	}
+	return false;
+}
+
+
+/*
+bool ExprTreeIsClassad(classad::ExprTree * expr, std::vector< std::pair<std::string, classad::ExprTree*> > & attrs)
+{
+	const classad::ClassAd* ad = ExprTreeIsClassAd(expr);
+	if (ad) {
+		ad->GetComponents(attrs);
+		return true;
+	}
+	return false;
+}
+*/
 
 // find (and optionally count) attribute references that match the given set
 int has_specific_attr_refs (
