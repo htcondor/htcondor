@@ -44,19 +44,19 @@ $dagman_args = "-verbose";
 	"job_dagman_stuck-NodeZ0.out");
 
 @expected_contents = ("DAG has been \"stuck\" for 1 minutes -- exiting",
-	"Node NodeA is \\d+\\.0\nNode NodeA finishing",
+	"Node NodeA is \\d+\\.0\nDAG status: 0\nNode NodeA finishing",
 	"Script NodeA Post finishing",
 	"Script NodeB Pre finishing",
-	"Node NodeB is \\d+\\.0\nDoing condor_hold on \\d+\\.0\nJob \\d+\\.0 held",
-	"Node NodeC is \\d+\\.0\nNode NodeC finishing",
-	"Node NodeC is \\d+\\.1\nNode NodeC finishing",
-	"Node NodeC is \\d+\\.2\nNode NodeC finishing",
+	"Node NodeB is \\d+\\.0\nDAG status: 0\nDoing condor_hold on \\d+\\.0\nJob \\d+\\.0 held",
+	"Node NodeC is \\d+\\.0\nDAG status: 0\nNode NodeC finishing",
+	"Node NodeC is \\d+\\.1\nDAG status: 0\nNode NodeC finishing",
+	"Node NodeC is \\d+\\.2\nDAG status: 0\nNode NodeC finishing",
 	"Script NodeC Post finishing",
 	"Script NodeD Pre finishing",
-	"Node NodeD is \\d+\\.0\nNode NodeD finishing",
-	"Node NodeD is \\d+\\.1\nDoing condor_hold on \\d+\\.1\nJob \\d+\\.1 held",
-	"Node NodeD is \\d+\\.2\nNode NodeD finishing",
-	"Node NodeZ is \\d+\\.0\nNode NodeZ finishing");
+	"Node NodeD is \\d+\\.0\nDAG status: 0\nNode NodeD finishing",
+	"Node NodeD is \\d+\\.1\nDAG status: 0\nDoing condor_hold on \\d+\\.1\nJob \\d+\\.1 held",
+	"Node NodeD is \\d+\\.2\nDAG status: 0\nNode NodeD finishing",
+	"Node NodeZ is \\d+\\.0\nDAG status: 7\nNode NodeZ failing because DAG status is not DAG_STATUS_OK");
 
 my $killedchosen = 0;
 

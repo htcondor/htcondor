@@ -731,6 +731,7 @@ class Dag {
 	*/
 	bool IsHalted() const { return _dagIsHalted; }
 
+		// Must be kept in sync with _dag_status_names.
 	enum dag_status {
 		DAG_STATUS_OK = 0,
 		DAG_STATUS_ERROR = 1, // Error not enumerated below

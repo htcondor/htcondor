@@ -68,7 +68,8 @@ const char * Dag::_dag_status_names[] = {
     "DAG_STATUS_ABORT",
     "DAG_STATUS_RM",
     "DAG_STATUS_CYCLE",
-    "DAG_STATUS_HALTED"
+    "DAG_STATUS_HALTED",
+    "DAG_STATUS_STUCK"
 };
 
 //---------------------------------------------------------------------------

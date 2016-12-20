@@ -33,8 +33,9 @@ SCRIPT PRE NodeD job_dagman_stuck-script.pl $JOB Pre
 PARENT NodeA CHILD NodeB NodeC NodeD
 
 # This node has one proc, will not be held.
-#TEMPTEMP -- final node should fail... (or change test)
 FINAL NodeZ job_dagman_stuck-node.sub
 VARS NodeZ name="$(JOB)"
 VARS NodeZ num_procs="1"
 VARS NodeZ hold="-1"
+
+#TEMPTEMP -- should DAG status be STUCK or FAILED after final node runs?
