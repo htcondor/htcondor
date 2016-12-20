@@ -421,7 +421,7 @@ dprintf_config( const char *subsys, struct dprintf_output_settings *p_info /* = 
 			** index 1
 			*/
 			subsys_and_level += _condor_DebugCategoryNames[debug_level]+1;
-			param_index = DebugParams.size();
+			param_index = (int)DebugParams.size();
 		}
 
 		(void)sprintf(pname, "%s_LOG", subsys_and_level.c_str());
@@ -581,11 +581,11 @@ dprintf_config( const char *subsys, struct dprintf_output_settings *p_info /* = 
 			p_info[ii].VerboseCats   = DebugParams[ii].VerboseCats;
 		}
 		// return the NEEDED size of the p_info array, even if it is bigger than c_info
-		return DebugParams.size();
+		return (int)DebugParams.size();
 	}
 	else
 	{
-		dprintf_set_outputs(&DebugParams[0], DebugParams.size());
+		dprintf_set_outputs(&DebugParams[0], (int)DebugParams.size());
 	}
 	return 0;
 }

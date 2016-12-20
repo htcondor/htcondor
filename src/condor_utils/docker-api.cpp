@@ -382,8 +382,8 @@ DockerAPI::rmi(const std::string &image, CondorError &err) {
 	char buffer[1024];
 	std::vector< std::string > output;
 	while( fgets( buffer, 1024, dockerResults ) != NULL ) {
-		unsigned end = strlen(buffer) - 1;
-		if( buffer[end] == '\n' ) { buffer[end] = '\0'; }
+		size_t end = strlen(buffer);
+		if (end > 0 && buffer[end-1] == '\n') { buffer[end-1] = '\0'; }
 		output.push_back( buffer );
 	}
 
@@ -661,8 +661,8 @@ int DockerAPI::detect( CondorError & err ) {
 	char buffer[1024];
 	std::vector< std::string > output;
 	while( fgets( buffer, 1024, dockerResults ) != NULL ) {
-		unsigned end = strlen(buffer) - 1;
-		if( buffer[end] == '\n' ) { buffer[end] = '\0'; }
+		size_t end = strlen(buffer);
+		if (end > 0 && buffer[end-1] == '\n') { buffer[end-1] = '\0'; }
 		output.push_back( buffer );
 	}
 	for( unsigned i = 0; i < output.size(); ++i ) {
@@ -774,8 +774,8 @@ int DockerAPI::version( std::string & version, CondorError & /* err */ ) {
 		return -4;
 	}
 
-	unsigned end = strlen(buffer) - 1;
-	if( buffer[end] == '\n' ) { buffer[end] = '\0'; }
+	size_t end = strlen(buffer);
+	if (end > 0 && buffer[end-1] == '\n') { buffer[end-1] = '\0'; }
 	version = buffer;
 #endif
 	sscanf(version.c_str(), "Docker version %d.%d", &DockerAPI::majorVersion, &DockerAPI::minorVersion);
@@ -1035,7 +1035,7 @@ run_simple_docker_command(const std::string &command, const std::string &contain
     return -3;
   }
 
-  int length = strlen( buffer );
+  size_t length = strlen( buffer );
   if (!ignore_output) {
     if( length < 1 || strncmp( buffer, container.c_str(), length - 1 ) != 0 ) {
       dprintf( D_ALWAYS | D_FAILURE, "Docker %s failed, printing first few lines of output.\n", command.c_str() );
@@ -1103,7 +1103,7 @@ gc_image(const std::string & image) {
   dprintf(D_ALWAYS, "Found %lu entries in docker image cache.\n", images.size());
 
    std::list<std::string>::iterator iter;
-   int remove_count = images.size() - cache_size;
+   int remove_count = (int)images.size() - cache_size;
    if (remove_count < 0) remove_count = 0;
 
    for (iter = images.begin(); iter != images.end(); iter++) {

@@ -470,7 +470,7 @@ char * get_windows_reg_value(
 //
 char * generate_reg_key_attr_name(const char * pszPrefix, const char * pszKeyName)
 {
-	int cchPrefix = pszPrefix ? strlen(pszPrefix) : 0;
+	size_t cchPrefix = pszPrefix ? strlen(pszPrefix) : 0;
 
 	// is the input of the form attr_name=reg_path?  if so, then
 	// we want to return prefix + attr_name. 
@@ -511,7 +511,7 @@ char * generate_reg_key_attr_name(const char * pszPrefix, const char * pszKeyNam
 	// allocate space for prefix + key_part and copy
 	// both into the allocated buffer.
 	//
-	int cch = strlen(psz);
+	size_t cch = strlen(psz);
 	bool fPercent = false;
 	if (strchr(psz, '%'))
 	{
@@ -1509,7 +1509,7 @@ int WinPerf_CounterValue::Print(char * psz, int cchMax, bool fIncludeUnits) cons
 		{
 			//psz[cch++] = ' ';
 			strcpy(&psz[cch], pszUnits);
-			cch += strlen(pszUnits);
+			cch += (int)strlen(pszUnits);
 		}
 	}
 
