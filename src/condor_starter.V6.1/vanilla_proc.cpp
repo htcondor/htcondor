@@ -169,7 +169,7 @@ VanillaProc::StartJob()
 	CHAR		interpreter[MAX_PATH+1],
 				systemshell[MAX_PATH+1];    
 	const char* jobtmp				= Starter->jic->origJobName();
-	int			joblen				= strlen(jobtmp);
+	size_t		joblen				= strlen(jobtmp);
 	const char	*extension			= joblen > 0 ? &(jobtmp[joblen-4]) : NULL;
 	bool		binary_executable	= ( extension && 
 										( MATCH == strcasecmp ( ".exe", extension ) || 
