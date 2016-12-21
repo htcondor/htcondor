@@ -1,4 +1,5 @@
 //TEMPTEMP -- test should probably include holding and releasing one of the jobs...
+//TEMPTEMP -- even with post script succeeding, last DAG status output is DAG_STATUS_STUCK...
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -691,10 +692,10 @@ Dag::ProcessAbortEvent(const ULogEvent *event, Job *job,
 			// don't get a released event for that job.  This may not
 			// work exactly right if some procs of a cluster are held
 			// and some are not.  wenger 2010-08-26
-debug_printf( DEBUG_QUIET, "DIAG 1510\n" );//TEMPTEMP
+//debug_printf( DEBUG_QUIET, "DIAG 1510\n" );//TEMPTEMP
 		if ( job->_jobProcsOnHold > 0 && job->Release( event->proc ) ) {
 			_numHeldJobProcs--;
-debug_printf( DEBUG_QUIET, "DIAG 1511 NumHeldJobProcs(): %d\n", NumHeldJobProcs() );//TEMPTEMP
+//debug_printf( DEBUG_QUIET, "DIAG 1511 NumHeldJobProcs(): %d\n", NumHeldJobProcs() );//TEMPTEMP
 		}
 
 			// Only change the node status, error info,
@@ -890,6 +891,7 @@ Dag::ProcessJobProcEnd(Job *job, bool recovery, bool failed) {
 				_numNodesFailed++;
 				_metrics->NodeFinished( job->GetDagFile() != NULL, false );
 				if ( _dagStatus == DAG_STATUS_OK ) {
+debug_printf( DEBUG_QUIET, "DIAG 2010\n" );//TEMPTEMP
 					_dagStatus = DAG_STATUS_NODE_FAILED;
 				}
 			}
@@ -995,6 +997,7 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Job *job,
 				_numNodesFailed++;
 				_metrics->NodeFinished( job->GetDagFile() != NULL, false );
 				if ( _dagStatus == DAG_STATUS_OK ) {
+debug_printf( DEBUG_QUIET, "DIAG 2110\n" );//TEMPTEMP
 					_dagStatus = DAG_STATUS_NODE_FAILED;
 				}
 
@@ -1098,7 +1101,7 @@ Dag::ProcessSubmitEvent(Job *job, bool recovery, bool &submitEventIsSane) {
 	if ( submitEventIsSane || job->GetStatus() != Job::STATUS_SUBMITTED ) {
 		job->_queuedNodeJobProcs++;
 		_numProcsSubmitted++;
-debug_printf( DEBUG_QUIET, "DIAG 1210 _numProcsSubmitted: %d\n", _numProcsSubmitted );//TEMPTEMP
+//debug_printf( DEBUG_QUIET, "DIAG 1210 _numProcsSubmitted: %d\n", _numProcsSubmitted );//TEMPTEMP
 	}
 
 		// Note:  in non-recovery mode, we increment _numJobsSubmitted
@@ -1236,7 +1239,7 @@ Dag::ProcessHeldEvent(Job *job, const ULogEvent *event) {
 
 	if( job->Hold( event->proc ) ) {
 		_numHeldJobProcs++;
-debug_printf( DEBUG_QUIET, "DIAG 1611 NumHeldJobProcs(): %d\n", NumHeldJobProcs() );//TEMPTEMP
+//debug_printf( DEBUG_QUIET, "DIAG 1611 NumHeldJobProcs(): %d\n", NumHeldJobProcs() );//TEMPTEMP
 		if ( _maxJobHolds > 0 && job->_timesHeld >= _maxJobHolds ) {
 			debug_printf( DEBUG_VERBOSE, "Total hold count for job %d (node %s) "
 						"has reached DAGMAN_MAX_JOB_HOLDS (%d); all job "
@@ -1257,7 +1260,7 @@ Dag::ProcessReleasedEvent(Job *job,const ULogEvent* event) {
 	}
 	if( job->Release( event->proc ) ) {
 		_numHeldJobProcs--;
-debug_printf( DEBUG_QUIET, "DIAG 1711 NumHeldJobProcs(): %d\n", NumHeldJobProcs() );//TEMPTEMP
+//debug_printf( DEBUG_QUIET, "DIAG 1711 NumHeldJobProcs(): %d\n", NumHeldJobProcs() );//TEMPTEMP
 	}
 }
 
@@ -1683,6 +1686,7 @@ Dag::PreScriptReaper( Job *job, int status )
 			_numNodesFailed++;
 			_metrics->NodeFinished( job->GetDagFile() != NULL, false );
 			if ( _dagStatus == DAG_STATUS_OK ) {
+debug_printf( DEBUG_QUIET, "DIAG 2310\n" );//TEMPTEMP
 				_dagStatus = DAG_STATUS_NODE_FAILED;
 			}
 			if( job->GetRetryMax() > 0 ) {
@@ -1931,9 +1935,9 @@ bool
 Dag::IsStuck() const
 {
 	debug_printf( DEBUG_QUIET/*TEMPTEMP*/, "Dag::IsStuck()\n" );
-debug_printf( DEBUG_QUIET, "DIAG 1410 _numProcsSubmitted: %d\n", _numProcsSubmitted );//TEMPTEMP
-debug_printf( DEBUG_QUIET, "DIAG 1411 NumHeldJobProcs(): %d\n", NumHeldJobProcs() );//TEMPTEMP
-debug_printf( DEBUG_QUIET, "DIAG 1410 NumJobsSubmitted(): %d\n", NumJobsSubmitted() );//TEMPTEMP
+//debug_printf( DEBUG_QUIET, "DIAG 1410 _numProcsSubmitted: %d\n", _numProcsSubmitted );//TEMPTEMP
+//debug_printf( DEBUG_QUIET, "DIAG 1411 NumHeldJobProcs(): %d\n", NumHeldJobProcs() );//TEMPTEMP
+//debug_printf( DEBUG_QUIET, "DIAG 1410 NumJobsSubmitted(): %d\n", NumJobsSubmitted() );//TEMPTEMP
 
 	//TEMPTEMP ASSERT( NumHeldJobProcs() <= _numProcsSubmitted );
 	//TEMPTEMP ASSERT( _numProcsSubmitted >= NumJobsSubmitted() );
@@ -2464,6 +2468,7 @@ Dag::RestartNode( Job *node, bool recovery )
         _numNodesFailed++;
 		_metrics->NodeFinished( node->GetDagFile() != NULL, false );
 		if ( _dagStatus == DAG_STATUS_OK ) {
+debug_printf( DEBUG_QUIET, "DIAG 2410\n" );//TEMPTEMP
 			_dagStatus = DAG_STATUS_NODE_FAILED;
 		}
         return;
@@ -4126,6 +4131,7 @@ Dag::ProcessFailedSubmit( Job *node, int max_submit_attempts )
 			_numNodesFailed++;
 			_metrics->NodeFinished( node->GetDagFile() != NULL, false );
 			if ( _dagStatus == DAG_STATUS_OK ) {
+debug_printf( DEBUG_QUIET, "DIAG 2510\n" );//TEMPTEMP
 				_dagStatus = DAG_STATUS_NODE_FAILED;
 			}
 		}
@@ -4153,7 +4159,7 @@ Dag::DecrementProcCount( Job *node )
 	ASSERT( node->_queuedNodeJobProcs >= 0 );
 
 	_numProcsSubmitted--;
-debug_printf( DEBUG_QUIET, "DIAG 1310 _numProcsSubmitted: %d\n", _numProcsSubmitted );//TEMPTEMP
+//debug_printf( DEBUG_QUIET, "DIAG 1310 _numProcsSubmitted: %d\n", _numProcsSubmitted );//TEMPTEMP
 	ASSERT( _numProcsSubmitted >= 0 );
 
 	if( node->_queuedNodeJobProcs == 0 ) {
@@ -4168,7 +4174,7 @@ Dag::UpdateJobCounts( Job *node, int change )
 {
 	_numJobsSubmitted += change;
 	ASSERT( _numJobsSubmitted >= 0 );
-debug_printf( DEBUG_QUIET, "DIAG 1110 _numJobsSubmitted: %d\n", _numJobsSubmitted );//TEMPTEMP
+//debug_printf( DEBUG_QUIET, "DIAG 1110 _numJobsSubmitted: %d\n", _numJobsSubmitted );//TEMPTEMP
 
 	if ( node->GetThrottleInfo() ) {
 		node->GetThrottleInfo()->_currentJobs += change;

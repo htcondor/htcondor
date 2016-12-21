@@ -1,3 +1,5 @@
+NODE_STATUS_FILE job_dagman_stuck.status
+
 # Config shortens the default "stuck" timeout.
 CONFIG job_dagman_stuck.config
 
@@ -37,5 +39,8 @@ FINAL NodeZ job_dagman_stuck-node.sub
 VARS NodeZ name="$(JOB)"
 VARS NodeZ num_procs="1"
 VARS NodeZ hold="-1"
+#TEMPTEMP -- make sure this makes DAG succeed
+#TEMPTEMP -- understand where DAG status gets reset
+#script post NodeZ /bin/true
 
 #TEMPTEMP -- should DAG status be STUCK or FAILED after final node runs?

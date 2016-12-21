@@ -513,6 +513,7 @@ void main_shutdown_rescue( int exitVal, Dag::dag_status dagStatus,
 	inShutdownRescue = true;
 
 		// If is here in case we get an error during parsing...
+debug_printf( DEBUG_QUIET, "DIAG 1010\n" );//TEMPTEMP
 	if ( dagman.dag ) dagman.dag->_dagStatus = dagStatus;
 	debug_printf( DEBUG_QUIET, "Aborting DAG...\n" );
 		// Avoid writing two different rescue DAGs if the "main" DAG and
