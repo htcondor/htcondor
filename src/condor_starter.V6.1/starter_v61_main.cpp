@@ -162,10 +162,7 @@ printClassAd( void )
 	// Singularity support
 	if (htcondor::Singularity::enabled()) {
 		printf("%s = True\n", ATTR_HAS_SINGULARITY);
-		std::string singVersion;
-		if (htcondor::Singularity::version(singVersion)) {
-			printf("%s = \"%s\"\n", ATTR_SINGULARITY_VERSION, singVersion.c_str());
-		}
+		printf("%s = \"%s\"\n", ATTR_SINGULARITY_VERSION, htcondor::Singularity::version());
 	}
 
 	// Detect ability to encrypt execute directory

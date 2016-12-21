@@ -20,7 +20,7 @@ namespace htcondor {
 class Singularity {
 public:
   static bool enabled();
-  static bool version(std::string &);
+  static const char *version();
 
   static bool advertise(classad::ClassAd &daemonAd);
 
@@ -47,7 +47,8 @@ private:
 
   static bool m_enabled;
   static bool m_probed;
-  static std::string m_singularity_version;
+  static int m_default_timeout;
+  static MyString m_singularity_version;
 };
 
 }

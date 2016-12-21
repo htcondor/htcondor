@@ -1818,6 +1818,7 @@ tags=startd,command
 
 [SINGULARITY]
 default=/usr/bin/singularity
+win32_default=
 type=string
 reconfig=true
 customization=seldom
