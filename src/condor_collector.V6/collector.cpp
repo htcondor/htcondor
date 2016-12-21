@@ -420,7 +420,7 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 			if (stats_config != "stored") {
 				stats_ad = new ClassAd();
 				daemonCore->dc_stats.Publish(*stats_ad, stats_config.Value());
-				daemonCore->monitor_data.ExportData(stats_ad);
+				daemonCore->monitor_data.ExportData(stats_ad, true);
 				collectorStats.publishGlobal(stats_ad, stats_config.Value());
 				stats_ad->ChainToAd(curr_ad);
 				curr_ad = stats_ad; // send the stats ad instead of the self ad.

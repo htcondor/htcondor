@@ -314,11 +314,10 @@ bool
 StringList::substring( const char *st )
 {
 	char    *x;
-	int len;
 	
 	m_strings.Rewind ();
 	while( (x = m_strings.Next()) ) {
-		len = strlen(x);
+		size_t len = strlen(x);
 		if( strncmp(st, x, len) == MATCH ) {
 			return true;
 		}
@@ -357,7 +356,6 @@ StringList::contains_withwildcard(const char *string, bool anycase, StringList *
 	char *matchstart;
 	char *matchend;
 	char *asterisk;
-	int matchendlen, len;
     bool result;
 	int temp;
 	
@@ -453,8 +451,8 @@ StringList::contains_withwildcard(const char *string, bool anycase, StringList *
 				result = false;
 		}
 		if ( matchend && result == true) {
-			len = strlen(string);
-			matchendlen = strlen(matchend);
+			size_t len = strlen(string);
+			size_t matchendlen = strlen(matchend);
 			if ( matchendlen > len )	// make certain we do not SEGV below
 				result = false;
 			if ( result == true ) {
@@ -563,7 +561,7 @@ StringList::print_to_delimed_string(const char *delim) const
 
     iter.Initialize( m_strings );
     iter.ToBeforeFirst ();
-	int		len = 1;
+	size_t len = 1;
 	while ( iter.Next(tmp) ) {
 		len += ( strlen(tmp) + strlen(delim) );
 	}

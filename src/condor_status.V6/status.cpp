@@ -1504,6 +1504,7 @@ firstPass (int argc, char *argv[])
 				++i;
 			}
 			// if autoformat list ends in a '-' without any characters after it, just eat the arg and keep going.
+			MSC_SUPPRESS_WARNING(6011) // code analysis can't figure out that argc test protects us from de-refing a NULL in argv
 			if (i+1 < argc && '-' == (argv[i+1])[0] && 0 == (argv[i+1])[1]) {
 				++i;
 			}
@@ -1518,6 +1519,7 @@ firstPass (int argc, char *argv[])
 				disable_user_print_files = true;
 			} else {
 				explicit_format = true;
+				setPPstyle (PP_CUSTOM, i, argv[i]);
 			}
 			++i; // eat the next argument.
 			// we can't fully parse the print format argument until the second pass, so we are done for now.
@@ -1947,6 +1949,7 @@ secondPass (int argc, char *argv[])
 				pm.registerFormat(lbl.Value(), wid, opts, argv[i]);
 			}
 			// if autoformat list ends in a '-' without any characters after it, just eat the arg and keep going.
+			MSC_SUPPRESS_WARNING(6011) // code analysis can't figure out that argc test protects us from de-refing a NULL in argv
 			if (i+1 < argc && '-' == (argv[i+1])[0] && 0 == (argv[i+1])[1]) {
 				++i;
 			}

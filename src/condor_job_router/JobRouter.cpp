@@ -578,6 +578,7 @@ JobRouter::EvalAllSrcJobPeriodicExprs()
 		// evaluates to an integer, it will continue to do so throughout
 		// the job's life.
 		int timer_remove = -1;
+		MSC_SUPPRESS_WARNING(6011) // code analysis thinks orig_ad may be null, code analysis is wrong
 		if (orig_ad->EvaluateAttrInt(ATTR_TIMER_REMOVE_CHECK, timer_remove)) {
 			job->src_ad.InsertAttr(ATTR_TIMER_REMOVE_CHECK, timer_remove);
 			job->src_ad.MarkAttributeClean(ATTR_TIMER_REMOVE_CHECK);

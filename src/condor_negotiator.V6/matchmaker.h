@@ -448,7 +448,7 @@ class Matchmaker : public Service
 			double			PostJobRankValue;
 			double			PreemptRankValue;
 			PreemptState	PreemptStateValue;
-			string			DslotClaims;
+			MyString			DslotClaims;
 			ClassAd *ad;
 		};
 

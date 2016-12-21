@@ -9646,6 +9646,7 @@ int SendJobCredential()
 			exit( 1 );
 		} else {
 			uber_ticket = (unsigned char*)malloc(65536);
+			ASSERT(uber_ticket);
 			int bytes_read = fread(uber_ticket, 1, 65536, uber_file);
 			// what constitutes failure?
 			my_pclose(uber_file);

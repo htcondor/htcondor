@@ -432,7 +432,7 @@ is_valid_command(const char* cmdToExecute)
 {
 	bool retVal = false;
 
-	int cmdStrLength = strlen(cmdToExecute);
+	size_t cmdStrLength = strlen(cmdToExecute);
 	if ( cmdToExecute[cmdStrLength - 1] == '|' ) {
 		retVal = true;
 	}
@@ -1029,7 +1029,7 @@ int Parse_config_string(MACRO_SOURCE & source, int depth, const char * config, M
 // the preface is printed with fprintf but not with the errors stack.
 void MACRO_SET::push_error(FILE * fh, int code, const char* preface, const char* format, ... ) //CHECK_PRINTF_FORMAT(5,6);
 {
-	int cchPre = (this->errors || ! preface) ? 0 : strlen(preface)+1;
+	size_t cchPre = (this->errors || ! preface) ? 0 : strlen(preface)+1;
 
 	va_list ap;
 	va_start(ap, format);
@@ -1833,7 +1833,7 @@ FILE* Copy_macro_source_into (
 	const int bufsiz = 1024*16;
 	auto_free_ptr buf((char*)malloc(bufsiz));
 	for(;;) {
-		int cb = fread(buf.ptr(), 1, bufsiz, fp);
+		size_t cb = fread(buf.ptr(), 1, bufsiz, fp);
 		if (cb == 0) {
 			if ( ! feof(fp)) readerr = ferror(fp);
 			break;
@@ -2225,7 +2225,7 @@ getline_implementation( FILE *fp, int requested_bufsize, int options, int & line
 			continue;
 		}
 
-		int cch = strlen(end_ptr);
+		size_t cch = strlen(end_ptr);
 		if (end_ptr[cch-1] != '\n') {
 			// if we made it here, fgets() ran out of buffer space.
 			// move our read_ptr pointer forward so we concatenate the
@@ -2428,7 +2428,7 @@ static int is_meta_arg_macro(const char* /*prefix*/, int length, MACRO_BODY_CHAR
 }
 
 const char * strlen_unquote(const char * str, int & cch) {
-	cch = strlen(str);
+	cch = (int)strlen(str);
 	if (cch > 1 && str[0] == str[cch-1] && (str[0] == '"' || str[0] == '\'')) {
 		cch -= 2;
 		return str+1;
@@ -2575,7 +2575,7 @@ char * strdup_full_path_quoted(const char *name, int cch, MACRO_EVAL_CONTEXT & c
 	}
 	else
 	{
-		int cch_cwd = strlen(ctx.cwd);
+		int cch_cwd = (int)strlen(ctx.cwd);
 		const char delim_char = to_path_char ? to_path_char : '/';
 	#ifdef WIN32
 		bool has_dir_delim = ctx.cwd[cch_cwd-1] == '/' || ctx.cwd[cch_cwd-1] == '\\';
@@ -2661,7 +2661,7 @@ const char * trimmed_cstr(std::string &str)
 {
 	if (str.empty()) return "";
 
-	int len = str.length();
+	int len = (int)str.length();
 	int end = len - 1;
 	while (end > 0 && isspace(str[end])) --end;
 	if (end != (len - 1)) {
@@ -3152,7 +3152,7 @@ static const char * evaluate_macro_func (
 					buf = strdup(mval);
 				}
 
-				int cch = strlen(buf);
+				int cch = (int)strlen(buf);
 				// a negative starting pos means measure from the end
 				if (start_pos < 0) { start_pos = cch + start_pos; }
 				if (start_pos < 0) { start_pos = 0; }
@@ -3409,7 +3409,7 @@ static const char * evaluate_macro_func (
 					buf = strdup_quoted(umval, cchum, quote_char);  // copy the macro value with quotes add/removed as requested.
 				}
 
-				int ixend = strlen(buf); // this will be the end of what we wish to return
+				int ixend = (int)strlen(buf); // this will be the end of what we wish to return
 				int ixn = (int)(condor_basename(buf) - buf); // index of start of filename, ==0 if no path sep
 				int ixx = (int)(condor_basename_extension_ptr(buf+ixn) - buf); // index of . in extension, ==ixend if no ext
 				// if this is a bare filename, we can ignore the p & d flags if n or x is set
@@ -3555,7 +3555,7 @@ expand_self_macro(const char *value,
 
 	ASSERT(self != NULL && self[0] != 0);
 
-	SelfOnlyBody only_self(self, strlen(self));
+	SelfOnlyBody only_self(self, (int)strlen(self));
 
 	// to avoid infinite recursive expansion, we have to look for both "prefix.self" and "self"
 	// so we want to set selfless equal to the part of self after the prefix.
@@ -3569,7 +3569,7 @@ expand_self_macro(const char *value,
 		// if a now points to a 0, and b now points to ".", then self contains subsys as a prefix.
 		if (0 == a[0] && '.' == b[0] && b[1] != 0) {
 			const char *selfless = b+1;
-			only_self.set_self2(selfless, strlen(selfless));
+			only_self.set_self2(selfless, (int)strlen(selfless));
 			prefix = ctx.localname;
 		}
 	}
@@ -3582,7 +3582,7 @@ expand_self_macro(const char *value,
 		// if a now points to a 0, and b now points to ".", then self contains subsys as a prefix.
 		if (0 == a[0] && '.' == b[0] && b[1] != 0) {
 			const char *selfless = b+1;
-			only_self.set_self2(selfless, strlen(selfless));
+			only_self.set_self2(selfless, (int)strlen(selfless));
 			prefix = ctx.subsys;
 		}
 	}

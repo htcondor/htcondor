@@ -575,6 +575,8 @@ public:
 
 	char* Attach(char* src) { char* pOld = ptr; ptr = src; return pOld; }
 	char* Detach() { return Attach(NULL); }
+	const char * data() const { return ptr; }
+	int          pos() const { return ix; }
 	void rewind() { ix = 0; }
 	virtual bool readLine(MyString & str, bool append = false);
 	virtual bool isEof();
