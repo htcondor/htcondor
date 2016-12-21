@@ -280,6 +280,7 @@ AdTypes setMode (int sm, int i, const char *argv)
 			if (sdo_modes[ii].mode == sm) {
 				adType = sdo_modes[ii].adType;
 				pps = sdo_modes[ii].pps;
+				break;
 			}
 		}
 		// if not matching mode, print error

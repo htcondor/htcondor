@@ -127,11 +127,7 @@ int SetAttrListPrintMaskFromStream (
 	const CustomFormatFnTable & FnTable, // in: table of custom output functions for SELECT
 	AttrListPrintMask & mask, // out: columns and headers set in SELECT
 	PrintMaskMakeSettings & pmms,
-	//printmask_headerfooter_t & headfoot, // out: header and footer flags set in SELECT or SUMMARY
-	//printmask_aggregation_t & aggregate, // out: aggregation mode in SELECT
 	std::vector<GroupByKeyInfo> & group_by, // out: ordered set of attributes/expressions in GROUP BY
-	//std::string & where_expression, // out: classad expression from WHERE
-	//StringList & attrs, // out ClassAd attributes referenced in mask or group_by outputs
 	std::string & error_message) // out, if return is non-zero, this will be an error message
 {
 	//ClassAd ad; // so we can GetExprReferences
@@ -418,17 +414,28 @@ int SetAttrListPrintMaskFromStream (
 				mask.registerFormat(fmt, wid, opts, attr.c_str());
 			}
 
-			if ( ! IsValidClassAdExpression(attr.c_str(), &pmms.attrs)) {
-				// TODO: Report error?
+			if ( ! IsValidClassAdExpression(attr.c_str(), &pmms.attrs, &pmms.scopes)) {
+				formatstr_cat(error_message, "attribute or expression is not valid: %s\n", attr.c_str());
 			}
 		}
 		break;
 
 		case JOIN: {
 			/* future
-			toke.copy_to_end(pmms.where_expression);
-			trim(pmms.where_expression);
 			*/
+			if (toke.matches("ON") || toke.matches("USING")) {
+				expected_token(error_message, "data set name before ON or USING", "JOIN", stream, toke);
+			} else {
+				//std::string join_to; toke.copy_token(join_to);
+				toke.next();
+				if ( ! toke.matches("ON") || ! toke.matches("USING")) {
+					unexpected_token(error_message, "JOIN", stream, toke);
+				} else {
+					//toke.join_is_on = toke.matches("ON");
+					//toke.copy_to_end(pmms.join_expression);
+					//trim(pmms.join_expression);
+				}
+			}
 		}
 		break;
 
@@ -441,7 +448,7 @@ int SetAttrListPrintMaskFromStream (
 		case AND: {
 			/* future
 			toke.copy_to_end(pmms.and_expression);
-			trim(pmms.where_expression);
+			trim(pmms.and_expression);
 			*/
 		}
 		break;
@@ -493,7 +500,7 @@ int SetAttrListPrintMaskFromStream (
 			if (key.expr.empty() || key.expr[0] == '#')
 				continue;
 
-			if ( ! IsValidClassAdExpression(key.expr.c_str(), &pmms.attrs)) {
+			if ( ! IsValidClassAdExpression(key.expr.c_str(), &pmms.attrs, &pmms.scopes)) {
 				formatstr_cat(error_message, "GROUP BY expression is not valid: %s\n", key.expr.c_str());
 			} else {
 				group_by.push_back(key);

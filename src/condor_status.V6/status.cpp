@@ -1519,6 +1519,7 @@ firstPass (int argc, char *argv[])
 				disable_user_print_files = true;
 			} else {
 				explicit_format = true;
+				setPPstyle (PP_CUSTOM, i, argv[i]);
 			}
 			++i; // eat the next argument.
 			// we can't fully parse the print format argument until the second pass, so we are done for now.
