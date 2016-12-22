@@ -1844,6 +1844,12 @@ friendly_name=Expression to determine Singularity image
 review=?
 tags=startd
 
+[UPDATE_INTERVAL]
+default=300
+type=int
+tags=startd
+description=Rate at which the Startd sends updates to the Collector
+
 [STARTD_SENDS_ALIVES]
 default=peer
 type=string

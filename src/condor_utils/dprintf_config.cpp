@@ -280,23 +280,6 @@ dprintf_config( const char *subsys, struct dprintf_output_settings *p_info /* = 
 	DebugParams[0].accepts_all = true;
 
 	/*
-	 * The duplication of the param_function instance is to ensure no one else can change
-	 * the data structure out from under dprintf.  It is also to prevent transfer of ownership/
-	 * responsibility for the block of memory used to store the function pointers.
-	 */
-	/*
-	if(!dprintf_param_funcs)
-		dprintf_param_funcs = new param_functions();
-	if(p_funcs)
-	{
-		dprintf_param_funcs->set_param_func(p_funcs->get_param_func());
-		dprintf_param_funcs->set_param_bool_int_func(p_funcs->get_param_bool_int_func());
-		dprintf_param_funcs->set_param_wo_default_func(p_funcs->get_param_wo_default_func());
-		dprintf_param_funcs->set_param_int_func(p_funcs->get_param_int_func());
-	}
-	*/
-
-	/*
 	** First, add the debug flags that are shared by everyone.
 	*/
 	pval = param("ALL_DEBUG");//dprintf_param_funcs->param("ALL_DEBUG");

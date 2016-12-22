@@ -83,7 +83,7 @@ int main(int argc, char *argv[], char *envp[])
 	char **new_args;
 
 	//Termlog = 1;
-	//dprintf_config("TOOL", get_param_functions());
+	//dprintf_config("TOOL");
 	//set_debug_flags(NULL, D_ALWAYS | D_NOHEADER);
 
 	/* must supply at least some options */

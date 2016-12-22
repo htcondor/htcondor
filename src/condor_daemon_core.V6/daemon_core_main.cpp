@@ -38,7 +38,6 @@
 #include "file_lock.h"
 #include "directory.h"
 #include "exit.h"
-#include "param_functions.h"
 #include "match_prefix.h"
 #include "historyFileFinder.h"
 
