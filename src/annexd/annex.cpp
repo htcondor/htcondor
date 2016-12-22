@@ -135,7 +135,7 @@ main( int argc, char ** argv ) {
 				fprintf( stderr, "%s: -name requires an argument.\n", argv[0] );
 				return 1;
 			}
-		} else if( is_dash_arg_prefix( argv[i], "service-url", 1 ) ) {
+		} else if( is_dash_arg_prefix( argv[i], "service-url", 7 ) ) {
 			++i;
 			if( argv[i] != NULL ) {
 				serviceURL = argv[i];
@@ -144,7 +144,7 @@ main( int argc, char ** argv ) {
 				fprintf( stderr, "%s: -service-url requires an argument.\n", argv[0] );
 				return 1;
 			}
-		} else if( is_dash_arg_prefix( argv[i], "events-url", 1 ) ) {
+		} else if( is_dash_arg_prefix( argv[i], "events-url", 6 ) ) {
 			++i;
 			if( argv[i] != NULL ) {
 				eventsURL = argv[i];
@@ -153,7 +153,7 @@ main( int argc, char ** argv ) {
 				fprintf( stderr, "%s: -events-url requires an argument.\n", argv[0] );
 				return 1;
 			}
-		} else if( is_dash_arg_prefix( argv[i], "lambda-url", 1 ) ) {
+		} else if( is_dash_arg_prefix( argv[i], "lambda-url", 6 ) ) {
 			++i;
 			if( argv[i] != NULL ) {
 				lambdaURL = argv[i];
@@ -200,27 +200,29 @@ main( int argc, char ** argv ) {
 				fprintf( stderr, "%s: -user-data requires an argument.\n", argv[0] );
 				return 1;
 			}
-		} else if( is_dash_arg_prefix( argv[i], "public-key-file", 1 ) ) {
+		} else if( is_dash_arg_prefix( argv[i], "public-key-file", 6 ) ||
+					is_dash_arg_prefix( argv[1], "access-key-file", 6 ) ) {
 			++i;
 			if( argv[i] != NULL ) {
 				publicKeyFile = argv[i];
 				continue;
 			} else {
-				fprintf( stderr, "%s: -public-key-file requires an argument.\n", argv[0] );
+				fprintf( stderr, "%s: -{public|access}-key-file requires an argument.\n", argv[0] );
 				return 1;
 			}
 			continue;
-		} else if( is_dash_arg_prefix( argv[i], "secret-key-file", 1 ) ) {
+		} else if( is_dash_arg_prefix( argv[i], "secret-key-file", 6 ) ||
+					is_dash_arg_prefix( argv[i], "private-key-file", 7 ) ) {
 			++i;
 			if( argv[i] != NULL ) {
 				secretKeyFile = argv[i];
 				continue;
 			} else {
-				fprintf( stderr, "%s: -secret-key-file requires an argument.\n", argv[0] );
+				fprintf( stderr, "%s: -{secret|private}-key-file requires an argument.\n", argv[0] );
 				return 1;
 			}
 			continue;
-		} else if( is_dash_arg_prefix( argv[i], "lease-function-arn", 1 ) ) {
+		} else if( is_dash_arg_prefix( argv[i], "lease-function-arn", 7 ) ) {
 			++i;
 			if( argv[i] != NULL ) {
 				leaseFunctionARN = argv[i];
@@ -230,7 +232,7 @@ main( int argc, char ** argv ) {
 				return 1;
 			}
 			continue;
-		} else if( is_dash_arg_prefix( argv[i], "lease-duration", 1 ) ) {
+		} else if( is_dash_arg_prefix( argv[i], "lease-duration", 7 ) ) {
 			++i;
 			if( argv[i] != NULL ) {
 				char * endptr = NULL;
