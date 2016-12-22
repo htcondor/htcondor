@@ -1,0 +1,5 @@
+executable = ./x_dagman_retry-monitor.pl
+arguments = 0
+queue 2
+arguments = 1
+queue
