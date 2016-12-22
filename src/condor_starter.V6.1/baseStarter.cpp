@@ -88,6 +88,7 @@ CStarter::CStarter()
 	m_job_environment_is_ready = false;
 	m_all_jobs_done = false;
 	m_deferred_job_update = false;
+	m_shutdown_exit_code = STARTER_EXIT_NORMAL;
 }
 
 
@@ -2820,7 +2821,7 @@ CStarter::Reaper(int pid, int exit_status)
 
 	if ( ShuttingDown && (all_jobs - handled_jobs == 0) ) {
 		dprintf(D_ALWAYS,"Last process exited, now Starter is exiting\n");
-		StarterExit(STARTER_EXIT_NORMAL);
+		StarterExit(GetShutdownExitCode());
 	}
 
 	return 0;
@@ -3588,6 +3589,16 @@ CStarter::removeTempExecuteDir( void )
 		return true;
 	}
 #endif
+
+	if (glexecPrivSepHelper() != NULL && m_job_environment_is_ready == true &&
+		m_all_jobs_done == false) {
+
+		PrivSepError err;
+		if( !m_privsep_helper->chown_sandbox_to_condor(err) ) {
+			dprintf(D_ALWAYS, "Failed to chown glexec sandbox to condor on shutdown\n");
+			return false;
+		}
+	}
 
 		// Remove the directory from all possible chroots.
 	pair_strings_vector root_dirs = root_dir_list();
