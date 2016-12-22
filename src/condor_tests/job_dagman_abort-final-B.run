@@ -18,6 +18,9 @@
 ##
 ##**************************************************************
 
+# This tests aborting a DAG with a final node, where the final node
+# inverts the DAG outcome from failure to success.
+
 use CondorTest;
 use CondorUtils;
 
@@ -46,7 +49,7 @@ $statusfile = "job_dagman_abort-final-B.status";
 	"NodeStatus = 5;.*STATUS_DONE",
 	"Node = \"C\";",
 	"NodeStatus = 6;.*STATUS_ERROR",
-	"Node = \"D\";",
+"Node = \"D\";",
 	"NodeStatus = 0;.*STATUS_NOT_READY",
 	"Node = \"E\";",
 	"NodeStatus = 5;.*STATUS_DONE");

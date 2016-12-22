@@ -18,6 +18,9 @@
 ##
 ##**************************************************************
 
+# This tests aborting a DAG with a final node, where the final node
+# inverts the DAG outcome from success to failure.
+
 use CondorTest;
 use CondorUtils;
 
