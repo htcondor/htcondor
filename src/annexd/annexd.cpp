@@ -48,7 +48,7 @@ char * GridmanagerScratchDir = NULL;
 // to make the RequestLimitExceeded stuff work right, we start a GAHP server
 // for each {public key file, service URL} tuple.
 EC2GahpClient *
-startOneGahpClient( const std::string & publicKeyFile, const std::string & serviceURL ) {
+startOneGahpClient( const std::string & publicKeyFile, const std::string & /* serviceURL */ ) {
 	std::string gahpName;
 
 	// This makes me sad, now that the annexd needs to use three endpoints, so
@@ -198,17 +198,29 @@ createOneAnnex( ClassAd * command, Stream * replyStream ) {
 	// (from the endpoint-specific sub-map).
 	command->LookupString( "LeaseFunctionARN", leaseFunctionARN );
 
-	// Validate GAHP parameters.
-	if( serviceURL.empty() || publicKeyFile.empty() || secretKeyFile.empty() ) {
+	// Validate parameters.  We could have the functors do this, but that
+	// would mean adding invalid requests to the hard state, which is bad.
+	if( serviceURL.empty() || eventsURL.empty() || lambdaURL.empty() ||
+			publicKeyFile.empty() || secretKeyFile.empty() ||
+			leaseFunctionARN.empty() ) {
 		std::string errorString;
 		if( serviceURL.empty() ) {
-			formatstr( errorString, "ServiceURL missing or empty in command ad and ANNEX_DEFAULT_SERVICE_URL not set or empty in configuration." );
+			formatstr( errorString, "Service URL missing or empty in command ad and ANNEX_DEFAULT_EC2_URL not set or empty in configuration." );
+		}
+		if( eventsURL.empty() ) {
+			formatstr( errorString, "%s%sEvents URL missing or empty in command ad and ANNEX_DEFAULT_CWE_URL not set or empty in configuration.", errorString.c_str(), errorString.empty() ? "" : "  " );
+		}
+		if( lambdaURL.empty() ) {
+			formatstr( errorString, "%s%sLambda URL missing or empty in command ad and ANNEX_DEFAULT_LAMBDA_URL not set or empty in configuration.", errorString.c_str(), errorString.empty() ? "" : "  " );
 		}
 		if( publicKeyFile.empty() ) {
 			formatstr( errorString, "%s%sPublic key file not specified in command or defaults.", errorString.c_str(), errorString.empty() ? "" : "  " );
 		}
 		if( secretKeyFile.empty() ) {
 			formatstr( errorString, "%s%sSecret key file not specified in command or defaults.", errorString.c_str(), errorString.empty() ? "" : "  " );
+		}
+		if( leaseFunctionARN.empty() ) {
+			formatstr( errorString, "%s%sLease function ARN not specified in command or defaults.", errorString.c_str(), errorString.empty() ? "" : "  " );
 		}
 		dprintf( D_ALWAYS, "%s\n", errorString.c_str() );
 
