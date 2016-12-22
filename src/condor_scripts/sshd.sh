@@ -33,6 +33,13 @@ KEYGEN=`condor_config_val CONDOR_SSH_KEYGEN`
 CONDOR_CHIRP=`condor_config_val libexec`
 CONDOR_CHIRP=$CONDOR_CHIRP/condor_chirp
 
+if [ -z "$SSHD" -o -z "$KEYGEN" ]
+then
+	echo CONDOR_SSHD and/or CONDOR_SSH_KEYGEN are not configured, exiting
+	exit 255
+fi
+
+
 PORT=4444
 
 _CONDOR_REMOTE_SPOOL_DIR=$_CONDOR_REMOTE_SPOOL_DIR
