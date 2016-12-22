@@ -439,6 +439,8 @@ private:
 
 	bool refreshSandboxCredentials();
 
+	bool shadowDisconnected() { return syscall_sock_lost_time > 0; };
+
 		// // // // // // // //
 		// Private Data Members
 		// // // // // // // //

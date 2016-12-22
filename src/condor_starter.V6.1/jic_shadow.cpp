@@ -436,6 +436,17 @@ JICShadow::transferOutput( bool &transient_failure )
 		// short of a hardkill. 
 	if( filetrans && ((requested_exit == false) || transfer_at_vacate) ) {
 
+		if ( shadowDisconnected() ) {
+				// trigger retransfer on reconnect
+			job_cleanup_disconnected = true;
+
+				// inform our caller that transfer will be retried
+				// when the shadow reconnects
+			transient_failure = true;
+
+			return false;
+		}
+
 			// add any dynamically-added output files to the FT
 			// object's list
 		m_added_output_files.rewind();
@@ -2353,7 +2364,9 @@ JICShadow::transferCompleted( FileTransfer *ftrans )
 		const char *stats = m_ft_info.tcp_stats.c_str();
 		std::string full_stats = "(peer stats from starter): ";
 		full_stats += stats;
-		
+
+		ASSERT( !shadowDisconnected() );
+
 		REMOTE_CONDOR_dprintf_stats(const_cast<char *>(full_stats.c_str()));
 
 			// If we transferred the executable, make sure it
