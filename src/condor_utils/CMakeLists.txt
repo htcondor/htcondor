@@ -145,7 +145,6 @@ if(WINDOWS)
 else()
     condor_selective_glob("dprintf_syslog*" ApiSrcs)
 endif()
-add_subdirectory(tests)
 
 condor_static_lib( condorapi "${ApiSrcs}" )
 add_dependencies( condorapi condor_utils )

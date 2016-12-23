@@ -44,6 +44,4 @@ if (NOT WIN_EXEC_NODE_ONLY)
 		install ( FILES ${CMAKE_CURRENT_BINARY_DIR}/condorCollector.wsdl DESTINATION ${C_LIB}/webservice )
 	endif(HAVE_EXT_GSOAP)
 
-	add_subdirectory(tests)
-
 endif(NOT WIN_EXEC_NODE_ONLY)
