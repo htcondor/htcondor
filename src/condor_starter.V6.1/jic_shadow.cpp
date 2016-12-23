@@ -1961,10 +1961,10 @@ JICShadow::recordDelayedUpdate( const std::string &name, const classad::ExprTree
 
 
 
-std::auto_ptr<classad::ExprTree>
+std::unique_ptr<classad::ExprTree>
 JICShadow::getDelayedUpdate( const std::string &name )
 {
-	std::auto_ptr<classad::ExprTree> expr;
+	std::unique_ptr<classad::ExprTree> expr;
 	classad::ExprTree *borrowed_expr = NULL;
 	ClassAd *ad = jobClassAd();
 	dprintf(D_FULLDEBUG, "Looking up delayed attribute named %s.\n", name.c_str());
