@@ -3590,6 +3590,7 @@ CStarter::removeTempExecuteDir( void )
 	}
 #endif
 
+#if defined(LINUX)
 	if (glexecPrivSepHelper() != NULL && m_job_environment_is_ready == true &&
 		m_all_jobs_done == false) {
 
@@ -3599,6 +3600,7 @@ CStarter::removeTempExecuteDir( void )
 			return false;
 		}
 	}
+#endif
 
 		// Remove the directory from all possible chroots.
 	pair_strings_vector root_dirs = root_dir_list();
