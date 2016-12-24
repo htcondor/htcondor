@@ -64,7 +64,7 @@ if ($boos) {
 	mkdir 'sources';
 	open(FH, '>', 'swap_userdir.cmd') or print "Cant open swap_userdir.cmd for writing: $!\n";
 	if ($ENV{NMI_PLATFORM} =~ /_win/i) {
-		print FH '"userdir\msconfig\tar.exe" -czf swap_userdir.tgz userdir/BUILD-ID userdir/msconfig userdir/nmi_tools userdir/src/condor_examples userdir/src/condor_tests userdir/src/classad/tests/testdata.txt' . "\n";
+		print FH '"userdir\msconfig\tar.exe" -czf swap_userdir.tgz userdir/BUILD-ID userdir/msconfig userdir/nmi_tools userdir/src/condor_examples userdir/src/condor_tests' . "\n";
 		print FH 'move userdir\* sources' . "\n";
 		print FH 'move userdir\src sources\src' . "\n";
 		print FH 'move userdir\doc sources\doc' . "\n";
@@ -76,7 +76,7 @@ if ($boos) {
 		print FH '"sources\msconfig\tar.exe" -xvf swap_userdir.tgz' . "\n";
 	} else {
 		print FH '#!/bin/sh' . "\n";
-		print FH 'tar czf swap_userdir.tgz userdir/BUILD-ID userdir/nmi_tools userdir/src/condor_examples userdir/src/condor_tests userdir/src/classad/tests/testdata.txt' . "\n";
+		print FH 'tar czf swap_userdir.tgz userdir/BUILD-ID userdir/nmi_tools userdir/src/condor_examples userdir/src/condor_tests' . "\n";
 		print FH 'for file in userdir/*; do if [ -f "$file" ]; then mv "$file" sources; fi; done' . "\n";
 		print FH 'mv userdir/src sources' . "\n";
 		print FH 'mv userdir/doc sources' . "\n";

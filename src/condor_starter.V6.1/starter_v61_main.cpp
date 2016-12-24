@@ -162,10 +162,7 @@ printClassAd( void )
 	// Singularity support
 	if (htcondor::Singularity::enabled()) {
 		printf("%s = True\n", ATTR_HAS_SINGULARITY);
-		std::string singVersion;
-		if (htcondor::Singularity::version(singVersion)) {
-			printf("%s = \"%s\"\n", ATTR_SINGULARITY_VERSION, singVersion.c_str());
-		}
+		printf("%s = \"%s\"\n", ATTR_SINGULARITY_VERSION, htcondor::Singularity::version());
 	}
 
 	// Detect ability to encrypt execute directory
@@ -758,7 +755,7 @@ main_shutdown_fast()
 	if ( Starter->RemoteShutdownFast(0) ) {
 		// ShutdownFast says it is already finished, because there are
 		// no jobs to shutdown.  No need to stick around.
-		Starter->StarterExit(STARTER_EXIT_NORMAL);
+		Starter->StarterExit(Starter->GetShutdownExitCode());
 	}
 }
 
@@ -769,7 +766,7 @@ main_shutdown_graceful()
 	if ( Starter->RemoteShutdownGraceful(0) ) {
 		// ShutdownGraceful says it is already finished, because
 		// there are no jobs to shutdown.  No need to stick around.
-		Starter->StarterExit(STARTER_EXIT_NORMAL);
+		Starter->StarterExit(Starter->GetShutdownExitCode());
 	}
 }
 

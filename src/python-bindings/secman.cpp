@@ -165,7 +165,7 @@ bool
 SecManWrapper::exit(boost::python::object obj1, boost::python::object /*obj2*/, boost::python::object /*obj3*/)
 {
     MODULE_LOCK_TLS_SET(m_key, NULL);
-	PRAGMA_REMIND("should m_cred_set, etc be cleared here?")
+	//PRAGMA_REMIND("should m_cred_set, etc be cleared here?")
     m_tag = "";
     m_pool_pass = "";
     m_cred = "";

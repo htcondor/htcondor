@@ -147,6 +147,14 @@ StartdCronJob::Publish( const char *ad_name, const char *args, ClassAd *ad )
 	if( wants_update ) {
 		resmgr->update_all();
 	}
+
+	// Update our internal (policy) ads immediately.  Otherwise, this cron
+	// job's output won't effect anything until the next UPDATE_INTERVAL.
+	// The flag argument must be at least A_PUBLIC | A_UPDATE to pass the
+	// check in ResMgr::adlist_publish(), which is the (only) update we
+	// actually want.  (We can't call it directly, because we need to
+	// update the internal ad for each Resource.)
+	resmgr->walk( &Resource::refresh_classad, A_PUBLIC | A_UPDATE );
 	return rval;
 }
 

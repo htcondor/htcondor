@@ -262,7 +262,7 @@ struct Collector {
     {
         m_collectors->rewind();
         Daemon *collector;
-        std::auto_ptr<Sock> sock;
+        std::unique_ptr<Sock> sock;
 
         int command = getCollectorCommandNum(command_str.c_str());
         if (command == -1)

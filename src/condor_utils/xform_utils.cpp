@@ -126,7 +126,7 @@ MACRO_SET_CHECKPOINT_HDR* checkpoint_macro_set(MACRO_SET& set)
 	int cbFree, cHunks, cb = set.apool.usage(cHunks, cbFree);
 	if (cHunks > 1 || cbFree < (int)(1024 + cbCheckpoint)) {
 		ALLOCATION_POOL tmp;
-		int cbAlloc = (int)MAX(cb*2, cb+4096+cbCheckpoint);
+		int cbAlloc = (int)MAX(cb*2, cb+4096+(int)cbCheckpoint);
 		tmp.reserve(cbAlloc);
 		set.apool.swap(tmp);
 
