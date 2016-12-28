@@ -22,7 +22,7 @@
 
 #include <string>
 #include <vector>
-#include <sstream>
+//#include <sstream>
 #include "condor_header_features.h"
 #include "MyString.h"
 
@@ -96,18 +96,6 @@ inline char * filename_from_path(char * pathname) { return const_cast<char*>(fil
 size_t filename_offset_from_path(std::string & pathname);
 inline std::string filename_from_path(std::string & pathname) { return pathname.substr(filename_offset_from_path(pathname)); }
 
-// Returns true iff (s) casts to <T>, and all of (s) is consumed,
-// i.e. if (s) is an exact representation of a value of <T>, no more and
-// no less.
-template<typename T>
-bool lex_cast(const std::string& s, T& v) {
-    std::stringstream ss(s);
-    ss >> v;
-    if ( !ss.eof() ) {
-        ss >> std::ws;
-    }
-    return ss.eof() && (0 == (ss.rdstate() & std::stringstream::failbit));
-}
 
 // iterate a Null terminated string constant in the same way that StringList does in initializeFromString
 // Use this class instead of creating a throw-away StringList just so you can iterate the tokens in a string.
