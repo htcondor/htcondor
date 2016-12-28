@@ -100,26 +100,6 @@
 
 #define exit(n)  poison_exit(n)
 
-class YourCaseInsensitiveString {
-private:
-	const char * m_str;
-public:
-	YourCaseInsensitiveString(const char * str=NULL) : m_str(str) {}
-	YourCaseInsensitiveString(const YourCaseInsensitiveString &rhs) : m_str(rhs.m_str) {}
-	// YourCaseInsensitiveString(const YourString &rhs) : m_str(rhs.m_str.ptr()) {}
-	void operator=(const char* str) { m_str = str; }
-	const char *ptr() { return m_str; }
-	bool operator ==(const char * str) {
-		if (m_str == str) return true;
-		if ((!m_str) || (!str)) return false;
-		return strcasecmp(m_str,str) == 0;
-	}
-	bool operator ==(const YourCaseInsensitiveString &rhs) {
-		if (m_str == rhs.m_str) return true;
-		if ((!m_str) || (!rhs.m_str)) return false;
-		return strcasecmp(m_str,rhs.m_str) == 0;
-	}
-};
 
 // declare enough of the condor_params structure definitions so that we can define submit hashtable defaults
 namespace condor_params {
@@ -2650,7 +2630,7 @@ int SubmitHash::SetGSICredentials()
 	char *proxy_file = submit_param( SUBMIT_KEY_X509UserProxy );
 	bool use_proxy = submit_param_bool( SUBMIT_KEY_UseX509UserProxy, NULL, false );
 
-	YourCaseInsensitiveString gridType(JobGridType.Value());
+	YourStringNoCase gridType(JobGridType.Value());
 	if (JobUniverse == CONDOR_UNIVERSE_GRID &&
 		(gridType == "gt2" ||
 		 gridType == "gt5" ||
@@ -3035,7 +3015,7 @@ int SubmitHash::SetGridParams()
 		ABORT_AND_RETURN( 1 );
 	}
 
-	YourCaseInsensitiveString gridType(JobGridType.Value());
+	YourStringNoCase gridType(JobGridType.Value());
 	if ( gridType == NULL ||
 		 gridType == "gt2" ||
 		 gridType == "gt5" ||
@@ -4416,7 +4396,7 @@ int SubmitHash::SetExecutable()
 	MyString	full_ename;
 	MyString buffer;
 
-	YourCaseInsensitiveString gridType(JobGridType.Value());
+	YourStringNoCase gridType(JobGridType.Value());
 
 	// In vm universe and ec2/boinc grid jobs, 'Executable'
 	// parameter is not a real file but just the name of job.
@@ -4796,7 +4776,7 @@ int SubmitHash::SetUniverse()
 		}
 
 		if ( ! JobGridType.empty() ) {
-			YourCaseInsensitiveString gridType(JobGridType.Value());
+			YourStringNoCase gridType(JobGridType.Value());
 
 			// Validate
 			// Valid values are (as of 7.5.1): nordugrid, globus,

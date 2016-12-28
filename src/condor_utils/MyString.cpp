@@ -1198,3 +1198,83 @@ unsigned int MyStringHash( const MyString &str )
 }
 
 
+/*--------------------------------------------------------------------
+ *
+ * YourString
+ *
+ *--------------------------------------------------------------------*/
+
+// Note that the comparison operators here treat a NULL in YourString as valid
+// NULL is < than all other strings, equal to itself and NOT equal to ""
+//
+
+bool YourString::operator ==(const char * str) const {
+	if (m_str == str) return true;
+	if ((!m_str) || (!str)) return false;
+	return strcmp(m_str,str) == 0;
+}
+bool YourString::operator ==(const YourString &rhs) const {
+	if (m_str == rhs.m_str) return true;
+	if ((!m_str) || (!rhs.m_str)) return false;
+	return strcmp(m_str,rhs.m_str) == 0;
+}
+bool YourString::operator<(const char * str) const {
+	if ( ! m_str) { return str ? true : false; }
+	else if ( ! str) { return false; }
+	return strcmp(m_str, str) < 0;
+}
+bool YourString::operator<(const YourString &rhs) const {
+	if ( ! m_str) { return rhs.m_str ? true : false; }
+	else if ( ! rhs.m_str) { return false; }
+	return strcmp(m_str, rhs.m_str) < 0;
+}
+unsigned int YourString::hashFunction(const YourString &s) {
+	// hash function for strings
+	// Chris Torek's world famous hashing function
+	unsigned int hash = 0;
+	if (!s.m_str) return 7; // Least random number
+
+	const char *p = s.m_str;
+	while (*p) {
+		hash = (hash<<5)+hash + (unsigned char)*p;
+		p++;
+	}
+
+	return hash;
+}
+unsigned int YourString::hashFunctionNoCase(const YourString &s) {
+	// hash function for strings
+	// Chris Torek's world famous hashing function
+	unsigned int hash = 0;
+	if (!s.m_str) return 7; // Least random number
+
+	const char *p = s.m_str;
+	while (*p) {
+		hash = (hash<<5)+hash + (unsigned char)(*p & ~0x20);
+		p++;
+	}
+
+	return hash;
+}
+
+
+bool YourStringNoCase::operator ==(const char * str) const {
+	if (m_str == str) return true;
+	if ((!m_str) || (!str)) return false;
+	return strcasecmp(m_str,str) == 0;
+}
+bool YourStringNoCase::operator ==(const YourStringNoCase &rhs) const {
+	if (m_str == rhs.m_str) return true;
+	if ((!m_str) || (!rhs.m_str)) return false;
+	return strcasecmp(m_str,rhs.m_str) == 0;
+}
+bool YourStringNoCase::operator <(const char * str) const {
+	if ( ! m_str) { return str ? true : false; }
+	else if ( ! str) { return false; }
+	return strcasecmp(m_str, str) < 0;
+}
+
+
+
+
+
