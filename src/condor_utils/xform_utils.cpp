@@ -1761,120 +1761,18 @@ static int is_interesting_route_attr(const std::string & attr, int * popts=NULL)
 }
 
 
-typedef std::map<std::string, std::string, classad::CaseIgnLTStr> NOCASE_STRING_MAP;
-static int rewrite_attr_refs(classad::ExprTree * tree, const NOCASE_STRING_MAP & mapping)
-{
-	int iret = 0;
-	if ( ! tree) return 0;
-	switch (tree->GetKind()) {
-		case ExprTree::LITERAL_NODE: {
-			classad::ClassAd * ad;
-			classad::Value val;
-			classad::Value::NumberFactor	factor;
-			((classad::Literal*)tree)->GetComponents( val, factor );
-			if (val.IsClassAdValue(ad)) {
-				iret += rewrite_attr_refs(ad, mapping);
-			}
-		}
-		break;
-
-		case ExprTree::ATTRREF_NODE: {
-			classad::AttributeReference* atref = reinterpret_cast<classad::AttributeReference*>(tree);
-			classad::ExprTree *expr;
-			std::string ref;
-			std::string tmp;
-			bool absolute;
-			atref->GetComponents(expr, ref, absolute);
-			// if there is a non-trivial left hand side (something other than X from X.Y attrib ref)
-			// then recurse it.
-			if (expr && ! ExprTreeIsAttrRef(expr, tmp)) {
-				iret += rewrite_attr_refs(expr, mapping);
-			} else {
-				bool change_it = false;
-				if (expr) {
-					NOCASE_STRING_MAP::const_iterator found = mapping.find(tmp);
-					if (found != mapping.end()) {
-						if (found->second.empty()) {
-							expr = NULL; // the left hand side is a simple attr-ref. and we want to set it to EMPTY
-							change_it = true;
-						} else {
-							iret += rewrite_attr_refs(expr, mapping);
-						}
-					}
-				} else {
-					NOCASE_STRING_MAP::const_iterator found = mapping.find(ref);
-					if (found != mapping.end() && ! found->second.empty()) {
-						ref = found->second;
-						change_it = true;
-					}
-				}
-				if (change_it) {
-					atref->SetComponents(NULL, ref, absolute);
-					iret += 1;
-				}
-			}
-		}
-		break;
-
-		case ExprTree::OP_NODE: {
-			classad::Operation::OpKind	op;
-			classad::ExprTree *t1, *t2, *t3;
-			((classad::Operation*)tree)->GetComponents( op, t1, t2, t3 );
-			if (t1) iret += rewrite_attr_refs(t1, mapping);
-			if (t2) iret += rewrite_attr_refs(t2, mapping);
-			if (t3) iret += rewrite_attr_refs(t3, mapping);
-		}
-		break;
-
-		case ExprTree::FN_CALL_NODE: {
-			std::string fnName;
-			std::vector<classad::ExprTree*> args;
-			((classad::FunctionCall*)tree)->GetComponents( fnName, args );
-			for (std::vector<classad::ExprTree*>::iterator it = args.begin(); it != args.end(); ++it) {
-				iret += rewrite_attr_refs(*it, mapping);
-			}
-		}
-		break;
-
-		case ExprTree::CLASSAD_NODE: {
-			std::vector< std::pair<std::string, classad::ExprTree*> > attrs;
-			((classad::ClassAd*)tree)->GetComponents(attrs);
-			for (std::vector< std::pair<std::string, classad::ExprTree*> >::iterator it = attrs.begin(); it != attrs.end(); ++it) {
-				iret += rewrite_attr_refs(it->second, mapping);
-			}
-		}
-		break;
-
-		case ExprTree::EXPR_LIST_NODE: {
-			std::vector<classad::ExprTree*> exprs;
-			((classad::ExprList*)tree)->GetComponents( exprs );
-			for (std::vector<ExprTree*>::iterator it = exprs.begin(); it != exprs.end(); ++it) {
-				iret += rewrite_attr_refs(*it, mapping);
-			}
-		}
-		break;
-
-		case ExprTree::EXPR_ENVELOPE:
-		default:
-			// unknown or unallowed node.
-			ASSERT(0);
-		break;
-	}
-	return iret;
-}
-
 static int convert_target_to_my(classad::ExprTree * tree)
 {
 	NOCASE_STRING_MAP mapping;
 	mapping["TARGET"] = "MY";
-	return rewrite_attr_refs(tree, mapping);
+	return RewriteAttrRefs(tree, mapping);
 }
 
 static int strip_target_attr_ref(classad::ExprTree * tree)
 {
 	NOCASE_STRING_MAP mapping;
 	mapping["TARGET"] = "";
-	return rewrite_attr_refs(tree, mapping);
+	return RewriteAttrRefs(tree, mapping);
 }
 
 static void unparse_special (
