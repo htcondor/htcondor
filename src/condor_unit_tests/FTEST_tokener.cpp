@@ -101,7 +101,7 @@ static bool test_unsorted_table() {
 
 	MyString msg;
 
-	for (int ii = 0; ii < TestTbl.cItems; ++ii) {
+	for (size_t ii = 0; ii < TestTbl.cItems; ++ii) {
 		const char * key = TestTbl.pTable[ii].key;
 		const TestTableItem * tti = UnTestTbl.lookup(key);
 		if ( ! tti) {
@@ -136,7 +136,7 @@ static bool test_sorted_table() {
 	MyString msg;
 
 	// test the case sensitive sorted table
-	for (int ii = 0; ii < UnTestTbl.cItems; ++ii) {
+	for (size_t ii = 0; ii < UnTestTbl.cItems; ++ii) {
 		const char * key = UnTestTbl.pTable[ii].key;
 		int id = UnTestTbl.pTable[ii].id;
 		const TestTableItem * tti = TestTbl.lookup(key);
@@ -183,7 +183,7 @@ static bool test_nocase_sorted_table() {
 	MyString msg;
 
 	// test the case sensitive sorted table
-	for (int ii = 0; ii < UnTestTbl.cItems; ++ii) {
+	for (size_t ii = 0; ii < UnTestTbl.cItems; ++ii) {
 		const char * key = UnTestTbl.pTable[ii].key;
 		int id = UnTestTbl.pTable[ii].id;
 		if (id == item_aaa) { id = item_AAA; } //  This table has only the AAA item, not the aaa item.
