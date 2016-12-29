@@ -46,18 +46,10 @@ bool FTEST_your_string(void) {
 	return driver.do_all_functions();
 }
 
-#define REQUIRE( condition ) \
-	if(! ( condition )) { \
-		e.emit_problem( #condition ); \
-		e.emit_result_failure(__LINE__, __FILE__); \
-		++fail_count; \
-	}
 
 static bool test_your_string() {
     emit_test("Test YourString");
 	// YourString
-
-	int fail_count = 0;
 
 	const char * paaa = "aaa";
 	const char * paaaa = "aaaa";
@@ -166,13 +158,11 @@ static bool test_your_string() {
 	REQUIRE( ! (YourString("aaa") < myBBB));
 	REQUIRE( ! (YourString("aaa") < strBBB));
 
-	return fail_count == 0;
+	return REQUIRED_RESULT();
 }
 
 static bool test_your_string_no_case() {
     emit_test("Test YourStringNoCase");
-
-	int fail_count = 0;
 
 	const char * paaa = "aaa";
 	const char * paaaa = "aaaa";
@@ -287,5 +277,5 @@ static bool test_your_string_no_case() {
 	REQUIRE(YourStringNoCase("aaa") < myBBB);
 	REQUIRE(YourStringNoCase("aaa") < strBBB);
 
-	return fail_count == 0;
+	return REQUIRED_RESULT();
 }
