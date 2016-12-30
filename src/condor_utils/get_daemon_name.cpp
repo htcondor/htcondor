@@ -55,36 +55,24 @@ get_host_part( const char* name )
 char*
 get_daemon_name( const char* name )
 {
-	char *tmp, *tmpname, *daemon_name = NULL;
+	char * daemon_name = NULL;
+	dprintf( D_HOSTNAME, "Finding proper daemon name for \"%s\"\n", name );
 
-	dprintf( D_HOSTNAME, "Finding proper daemon name for \"%s\"\n",
-			 name ); 
-
-		// First, check for a '@' in the name. 
-	tmpname = strdup( name );
-	tmp = strrchr( tmpname, '@' );
-	if( tmp ) {
-			// There's a '@'.
+	const char * hasAt = strrchr( name, '@' );
+	if( hasAt ) {
 		dprintf( D_HOSTNAME, "Daemon name has an '@', we'll leave it alone\n" );
 		daemon_name = strnewp( name );
 	} else {
-			// There's no '@', just try to resolve the hostname.
 		dprintf( D_HOSTNAME, "Daemon name contains no '@', treating as a "
 				 "regular hostname\n" );
-
-		//MyString hostname(tmpname);
-		MyString fqdn = get_fqdn_from_hostname(tmpname);
-		//daemon_name = get_full_hostname( tmpname );
-		daemon_name = strnewp(fqdn.Value());
+		MyString fqdn = get_fqdn_from_hostname( name );
+		daemon_name = strnewp( fqdn.Value() );
 	}
-	free( tmpname );
 
-		// If there was an error, this will still be NULL.
-	if( daemon_name ) { 
+	if( daemon_name ) {
 		dprintf( D_HOSTNAME, "Returning daemon name: \"%s\"\n", daemon_name );
 	} else {
-		dprintf( D_HOSTNAME, "Failed to construct daemon name, "
-				 "returning NULL\n" );
+		dprintf( D_HOSTNAME, "Failed to construct daemon name, returning NULL\n" );
 	}
 	return daemon_name;
 }
@@ -97,54 +85,27 @@ get_daemon_name( const char* name )
 // name@get_local_fqdn().Value().  We return the answer in a string which
 // should be deallocated w/ delete [].
 char*
-build_valid_daemon_name( const char* name ) 
+build_valid_daemon_name( const char* name )
 {
-	char *tmp, *tmpname = NULL, *daemon_name = NULL;
-	int size;
-
-		// This flag determines if we want to just return a copy of
-		// get_local_fqdn().Value(), or if we want to append
-		// "@get_local_fqdn().Value" to the name we were given.  The name we
-		// were given might include an '@', in which case, we leave it
-		// alone.
-	bool just_host = false;
-
-	bool just_name = false;
-
+	char * daemon_name = NULL;
 	if( name && *name ) {
-		tmpname = strnewp( name );
-		tmp = strrchr( tmpname, '@' );
-		if( tmp ) {
-				// name we were passed has an '@', we just want to
-				// leave the name alone
-			just_name = true;
+		const char * hasAt = strrchr( name, '@' );
+		if( hasAt ) {
+			daemon_name = strnewp( name );
 		} else {
-				// no '@', see if what we have is our hostname
-			MyString fqdn = get_fqdn_from_hostname(name);
-			if( fqdn.Length() > 0 ) {
-				if( !strcasecmp( get_local_fqdn().Value(), fqdn.Value() ) ) {
-						// Yup, so just the full hostname.
-					just_host = true;
-				}					
+			MyString fqdn = get_fqdn_from_hostname( name );
+			if( fqdn.Length() > 0 && strcasecmp( get_local_fqdn().Value(), fqdn.Value() ) == 0 ) {
+				daemon_name = strnewp( get_local_fqdn().Value() );
+			} else {
+				int size = strlen(name) + get_local_fqdn().length() + 2;
+				daemon_name = new char[size];
+				sprintf( daemon_name, "%s@%s", name, get_local_fqdn().Value() );
 			}
 		}
 	} else {
-			// Passed NULL for the name.
-		just_host = true;
+		daemon_name = strnewp( get_local_fqdn().Value() );
 	}
 
-	if( just_host ) {
-		daemon_name = strnewp( get_local_fqdn().Value() );
-	} else {
-		if( just_name ) {
-			daemon_name = strnewp( name );
-		} else {
-			size = strlen(tmpname) + get_local_fqdn().length() + 2; 
-			daemon_name = new char[size];
-			sprintf( daemon_name, "%s@%s", tmpname, get_local_fqdn().Value() ); 
-		}
-	}
-	delete [] tmpname;
 	return daemon_name;
 }
 
@@ -184,3 +145,4 @@ default_daemon_name( void )
 	free(name);
 	return ans;
 }
+
