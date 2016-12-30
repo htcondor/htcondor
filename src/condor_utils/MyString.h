@@ -254,19 +254,19 @@ class MyString
 	 *  Assuming, of course, that you don't run out of memory. 
 	 *  The returns true if it succeeded, false otherwise.
 	 */
-	bool formatstr(const char *format, ...) CHECK_PRINTF_FORMAT(2,3);
+	const char * formatstr(const char *format, ...) CHECK_PRINTF_FORMAT(2,3);
 
 	/** Fills a MyString with what you would have gotten from vsprintf.
 	 *  This is handy if you define your own printf-like functions.
 	 */
 
-	bool vformatstr(const char *format, va_list args);
+	const char * vformatstr(const char *format, va_list args);
 
 	/** Like formatstr, but this appends to existing data. */
-	bool formatstr_cat(const char *format, ...) CHECK_PRINTF_FORMAT(2,3);
+	const char * formatstr_cat(const char *format, ...) CHECK_PRINTF_FORMAT(2,3);
 
 	/** Like vformatstr, but this appends to existing data. */
-	bool vformatstr_cat(const char *format, va_list args);
+	const char * vformatstr_cat(const char *format, va_list args);
 
 	/** Append str.  If we are non-empty, append delim before str.
 	if str is empty, do nothing.

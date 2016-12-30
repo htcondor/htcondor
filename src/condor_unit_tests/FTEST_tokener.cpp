@@ -105,25 +105,21 @@ static bool test_unsorted_table() {
 		const char * key = TestTbl.pTable[ii].key;
 		const TestTableItem * tti = UnTestTbl.lookup(key);
 		if ( ! tti) {
-			msg.formatstr("lookup('%s') returned NULL", key); 
-			emit_step_failure(__LINE__, msg.c_str());
+			emit_step_failure(__LINE__, msg.formatstr("lookup('%s') returned NULL", key));
 			continue;
 		}
 		if (tti->id != TestTbl.pTable[ii].id) {
-			msg.formatstr("lookup('%s') returned '%s'", key, tti->key); 
-			emit_step_failure(__LINE__, msg.c_str());
+			emit_step_failure(__LINE__, msg.formatstr("lookup('%s') returned '%s'", key, tti->key));
 		}
 
 		tokener toke(key); toke.next();
 		tti = UnTestTbl.lookup_token(toke);
 		if ( ! tti) {
-			msg.formatstr("lookup_token('%s') returned NULL", key); 
-			emit_step_failure(__LINE__, msg.c_str());
+			emit_step_failure(__LINE__, msg.formatstr("lookup_token('%s') returned NULL", key));
 			continue;
 		}
 		if (tti->id != TestTbl.pTable[ii].id) {
-			msg.formatstr("lookup_token('%s') returned '%s'", key, tti->key); 
-			emit_step_failure(__LINE__, msg.c_str());
+			emit_step_failure(__LINE__, msg.formatstr("lookup_token('%s') returned '%s'", key, tti->key));
 		}
 	}
 
@@ -141,25 +137,21 @@ static bool test_sorted_table() {
 		int id = UnTestTbl.pTable[ii].id;
 		const TestTableItem * tti = TestTbl.lookup(key);
 		if ( ! tti) {
-			msg.formatstr("lookup('%s') returned NULL", key); 
-			emit_step_failure(__LINE__, msg.c_str());
+			emit_step_failure(__LINE__, msg.formatstr("lookup('%s') returned NULL", key));
 			continue;
 		}
 		if (tti->id != id) {
-			msg.formatstr("lookup('%s') returned '%s'", key, tti->key); 
-			emit_step_failure(__LINE__, msg.c_str());
+			emit_step_failure(__LINE__, msg.formatstr("lookup('%s') returned '%s'", key, tti->key));
 		}
 
 		tokener toke(key); toke.next();
 		tti = TestTbl.lookup_token(toke);
 		if ( ! tti) {
-			msg.formatstr("lookup_token('%s') returned NULL", key); 
-			emit_step_failure(__LINE__, msg.c_str());
+			emit_step_failure(__LINE__, msg.formatstr("lookup_token('%s') returned NULL", key));
 			continue;
 		}
 		if (tti->id != id) {
-			msg.formatstr("lookup_token('%s') returned '%s'", key, tti->key); 
-			emit_step_failure(__LINE__, msg.c_str());
+			emit_step_failure(__LINE__, msg.formatstr("lookup_token('%s') returned '%s'", key, tti->key));
 		}
 	}
 
@@ -189,25 +181,21 @@ static bool test_nocase_sorted_table() {
 		if (id == item_aaa) { id = item_AAA; } //  This table has only the AAA item, not the aaa item.
 		const TestTableItem * tti = NcTestTbl.lookup(key);
 		if ( ! tti) {
-			msg.formatstr("lookup('%s') returned NULL", key); 
-			emit_step_failure(__LINE__, msg.c_str());
+			emit_step_failure(__LINE__, msg.formatstr("lookup('%s') returned NULL", key));
 			continue;
 		}
 		if (tti->id != id) {
-			msg.formatstr("lookup('%s') returned '%s'", key, tti->key); 
-			emit_step_failure(__LINE__, msg.c_str());
+			emit_step_failure(__LINE__, msg.formatstr("lookup('%s') returned '%s'", key, tti->key));
 		}
 
 		tokener toke(key); toke.next();
 		tti = NcTestTbl.lookup_token(toke);
 		if ( ! tti) {
-			msg.formatstr("lookup_token('%s') returned NULL", key); 
-			emit_step_failure(__LINE__, msg.c_str());
+			emit_step_failure(__LINE__, msg.formatstr("lookup_token('%s') returned NULL", key));
 			continue;
 		}
 		if (tti->id != id) {
-			msg.formatstr("lookup_token('%s') returned '%s'", key, tti->key); 
-			emit_step_failure(__LINE__, msg.c_str());
+			emit_step_failure(__LINE__, msg.formatstr("lookup_token('%s') returned '%s'", key, tti->key));
 		}
 	}
 
@@ -268,13 +256,11 @@ static bool test_tokener_parse_basic() {
 	toke.next();
 	toke.copy_marked(temp);
 	if (temp != " is 'the end'") {
-		msg.formatstr("toke.copy_marked() returned |%s| should be | is 'the end'|", temp.c_str()); 
-		emit_step_failure(__LINE__, msg.c_str());
+		emit_step_failure(__LINE__, msg.formatstr("toke.copy_marked() returned |%s| should be | is 'the end'|", temp.c_str()));
 	}
 	toke.copy_to_end(temp);
 	if (temp != ", really") {
-		msg.formatstr("toke.copy_marked() returned |%s| should be |, really|", temp.c_str()); 
-		emit_step_failure(__LINE__, msg.c_str());
+		emit_step_failure(__LINE__, msg.formatstr("toke.copy_marked() returned |%s| should be |, really|", temp.c_str()));
 	}
 
 
@@ -292,24 +278,21 @@ static bool test_tokener_parse_regex() {
 	REQUIRE(toke.next() && toke.is_regex());
 	REQUIRE(toke.copy_regex(temp,fl) && temp=="(.*)");
 	if (fl != 1) {
-		msg.formatstr("toke.copy_regex() returned pcre_flags==%d, should be 1", fl); 
-		emit_step_failure(__LINE__, msg.c_str());
+		emit_step_failure(__LINE__, msg.formatstr("toke.copy_regex() returned pcre_flags==%d, should be 1", fl));
 	}
 
 	toke.set(" /([\\d]*)/i ");
 	REQUIRE(toke.next() && toke.is_regex());
 	REQUIRE(toke.copy_regex(temp,fl) && temp=="([\\d]*)");
 	if (fl != 1) {
-		msg.formatstr("toke.copy_regex() returned pcre_flags==%d, should be 1", fl); 
-		emit_step_failure(__LINE__, msg.c_str());
+		emit_step_failure(__LINE__, msg.formatstr("toke.copy_regex() returned pcre_flags==%d, should be 1", fl));
 	}
 
 	toke.set(" /^Now is the|Time$/ ");
 	REQUIRE(toke.next() && toke.is_regex());
 	REQUIRE(toke.copy_regex(temp,fl) && temp=="^Now is the|Time$");
 	if (fl != 0) {
-		msg.formatstr("toke.copy_regex() returned pcre_flags==%d, should be 1", fl); 
-		emit_step_failure(__LINE__, msg.c_str());
+		emit_step_failure(__LINE__, msg.formatstr("toke.copy_regex() returned pcre_flags==%d, should be 1", fl));
 	}
 
 	return REQUIRED_RESULT();
@@ -457,16 +440,13 @@ static bool test_tokener_parse_realistic() {
 	REQUIRE(it == formats.end());
 	/*
 	for (it = attrs.begin(); it != attrs.end(); ++it) {
-		msg.formatstr("attr: '%s'", it->c_str());
-		emit_comment(msg.c_str());
+		emit_comment(msg.formatstr("attr: '%s'", it->c_str()));
 	}
 	for (it = labels.begin(); it != labels.end(); ++it) {
-		msg.formatstr("label: '%s'", it->c_str());
-		emit_comment(msg.c_str());
+		emit_comment(msg.formatstr("label: '%s'", it->c_str()));
 	}
 	for (it = formats.begin(); it != formats.end(); ++it) {
-		msg.formatstr("format: '%s'", it->c_str());
-		emit_comment(msg.c_str());
+		emit_comment(msg.formatstr("format: '%s'", it->c_str()));
 	}
 	*/
 

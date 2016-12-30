@@ -718,19 +718,19 @@ MyString::replaceString(
 	return true;
 }
 
-bool
+const char *
 MyString::vformatstr_cat(const char *format,va_list args) 
 {
 	char *buffer = NULL;
 	int s_len;
 
     if( !format || *format == '\0' ) {
-		return true;
+		return Value();
 	}
 #ifdef HAVE_VASPRINTF
 	s_len = vasprintf(&buffer, format, args);
 	if (-1 == s_len) { // if alloc not possible or other error
-		return false;
+		return NULL;
 	}
 #else
     s_len = vprintf_length(format,args);
@@ -738,7 +738,7 @@ MyString::vformatstr_cat(const char *format,va_list args)
     if( Len + s_len > capacity || !Data ) {
 		if(!reserve_at_least( Len + s_len )) {
 			free(buffer);
-			return false;
+			return NULL;
 		}
     }
 #ifdef HAVE_VASPRINTF
@@ -751,13 +751,13 @@ MyString::vformatstr_cat(const char *format,va_list args)
 	::vsprintf(Data + Len, format, args);
 #endif
 	Len += s_len;
-    return true;
+    return Value();
 }
 
-bool 
+const char *
 MyString::formatstr_cat(const char *format,...)
 {
-	bool    succeeded;
+	const char *succeeded;
 	va_list args;
 
 	va_start(args, format);
@@ -767,7 +767,7 @@ MyString::formatstr_cat(const char *format,...)
 	return succeeded;
 }
 
-bool
+const char *
 MyString::vformatstr(const char *format,va_list args)
 {
 	Len = 0;
@@ -775,10 +775,10 @@ MyString::vformatstr(const char *format,va_list args)
 	return vformatstr_cat(format,args);
 }
 
-bool
+const char *
 MyString::formatstr(const char *format,...)
 {
-	bool    succeeded;
+	const char *succeeded;
 	va_list args;
 
 	va_start(args, format);
