@@ -22,17 +22,9 @@
 
 #include "daemon_types.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-extern char* get_daemon_name(const char* name);
-extern const char* get_host_part(const char* name);
-extern char* build_valid_daemon_name(const char* name);
-extern char* default_daemon_name( void );
-
-#ifdef __cplusplus
-}
-#endif
+char * get_daemon_name( const char* name );
+const char * get_host_part( const char* name );
+char * build_valid_daemon_name( const char* name );
+char * default_daemon_name( void );
 
 #endif /* CONDOR_GET_DAEMON_NAME_H */

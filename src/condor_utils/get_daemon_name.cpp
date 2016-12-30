@@ -17,9 +17,6 @@
  *
  ***************************************************************/
 
-
- 
-
 //////////////////////////////////////////////////////////////////////
 // Methods to manipulate and manage daemon names
 //////////////////////////////////////////////////////////////////////
@@ -31,8 +28,6 @@
 #include "my_username.h"
 #include "condor_uid.h"
 #include "ipv6_hostname.h"
-
-extern "C" {
 
 // Return the host portion of a daemon name string.  Either the name
 // includes an "@" sign, in which case we return whatever is after it,
@@ -189,6 +184,3 @@ default_daemon_name( void )
 	free(name);
 	return ans;
 }
-
-
-} /* extern "C" */
