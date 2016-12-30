@@ -1,5 +1,6 @@
-# This DAG tests a final node with multiple procs, when the final
-# node succeeds and overrides the failure of a previous node.
+# This DAG tests a final node with multiple procs, when one of the
+# procs fails and the others succeed; the failure of the final
+# node should override the success of the previous node.
 
 NODE_STATUS_FILE job_dagman_final-M.status
 
