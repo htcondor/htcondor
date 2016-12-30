@@ -66,7 +66,14 @@ get_daemon_name( const char* name )
 		dprintf( D_HOSTNAME, "Daemon name contains no '@', treating as a "
 				 "regular hostname\n" );
 		MyString fqdn = get_fqdn_from_hostname( name );
-		daemon_name = strnewp( fqdn.Value() );
+		// Why was this ever different from build_valid_daemon_name()?
+		if( fqdn.Length() > 0 && strcasecmp( get_local_fqdn().Value(), fqdn.Value() ) == 0 ) {
+			daemon_name = strnewp( get_local_fqdn().Value() );
+		} else {
+			int size = strlen(name) + get_local_fqdn().length() + 2;
+			daemon_name = new char[size];
+			sprintf( daemon_name, "%s@%s", name, get_local_fqdn().Value() );
+		}
 	}
 
 	if( daemon_name ) {
