@@ -1010,6 +1010,7 @@ install -m 0755 src/condor_scripts/Condor.pm %{buildroot}%{_datadir}/condor/
 install -m 0755 src/condor_scripts/CondorPersonal.pm %{buildroot}%{_datadir}/condor/
 install -m 0755 src/condor_scripts/CondorTest.pm %{buildroot}%{_datadir}/condor/
 install -m 0755 src/condor_scripts/CondorUtils.pm %{buildroot}%{_datadir}/condor/
+install -m 0755 src/condor_scripts/CheckOutputFormats.pm %{buildroot}%{_datadir}/condor/
 
 # Install python-binding libs
 mkdir -p %{buildroot}%{python_sitearch}
@@ -1184,6 +1185,7 @@ rm -rf %{buildroot}
 %_datadir/condor/CondorPersonal.pm
 %_datadir/condor/CondorTest.pm
 %_datadir/condor/CondorUtils.pm
+%_datadir/condor/CheckOutputFormats.pm
 %if 0%{?rhel} >= 7
 %_datadir/condor/htcondor.pp
 %endif
