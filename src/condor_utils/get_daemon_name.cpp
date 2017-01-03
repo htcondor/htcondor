@@ -70,9 +70,14 @@ get_daemon_name( const char* name )
 		if( fqdn.Length() > 0 && strcasecmp( get_local_fqdn().Value(), fqdn.Value() ) == 0 ) {
 			daemon_name = strnewp( get_local_fqdn().Value() );
 		} else {
-			int size = strlen(name) + get_local_fqdn().length() + 2;
-			daemon_name = new char[size];
-			sprintf( daemon_name, "%s@%s", name, get_local_fqdn().Value() );
+			// This is inconsistent with build_valid_daemon_name(), but
+			// that's only called if you supply a daemon name... otherwise,
+			// default_daemon_name() doesn't include the '@' if it's started
+			// as root.  Since queries (usually) check both Machine and
+			// Name, and this query (hopefully) already checked for a given
+			// name (since it looked for '@'), let's just return the argument
+			// and hope that it's a Machine name.
+			daemon_name = strnewp( name );
 		}
 	}
 
