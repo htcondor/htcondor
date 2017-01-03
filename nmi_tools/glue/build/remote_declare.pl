@@ -34,6 +34,7 @@ GetOptions(
 my $EXTERNALS_TASK        = "remote_task.externals";
 my $BUILD_TASK            = "remote_task.build";
 my $TAR_TASK              = "remote_task.create_tar";
+my $TAR_TESTS_TASK        = "remote_task.create_tests_tar";
 my $CHECK_TAR_TASK        = "remote_task.check_tar";
 my $UNSTRIPPED_TASK       = "remote_task.create_unstripped_tar";
 my $CHECK_UNSTRIPPED_TASK = "remote_task.check_unstripped_tar";
@@ -127,6 +128,7 @@ else {
         print TASKLIST "$CHECK_NATIVE_TASK 4h\n";
     }
     print TASKLIST "$TAR_TASK 4h\n";
+    print TASKLIST "$TAR_TESTS_TASK 4h\n";
     print TASKLIST "$CHECK_TAR_TASK 4h\n";
     print TASKLIST "$RUN_UNIT_TESTS 4h\n";
 }

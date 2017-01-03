@@ -39,6 +39,7 @@ my $BaseDir = getcwd();
 my $EXTERNALS_TASK        = "remote_task.externals";
 my $BUILD_TASK            = "remote_task.build";
 my $TAR_TASK              = "remote_task.create_tar";
+my $TAR_TESTS_TASK        = "remote_task.create_tests_tar";
 my $CHECK_TAR_TASK        = "remote_task.check_tar";
 my $UNSTRIPPED_TASK       = "remote_task.create_unstripped_tar";
 my $CHECK_UNSTRIPPED_TASK = "remote_task.check_unstripped_tar";
@@ -134,6 +135,9 @@ elsif ($taskname eq $TAR_TASK) {
     #Reconfigure cmake variables for stripped tarball build
     $execstr = get_cmake_args();
     $execstr = $execstr . " ${werror} -DCONDOR_PACKAGE_BUILD:BOOL=OFF -DCONDOR_STRIP_PACKAGES:BOOL=ON && make VERBOSE=1 install/strip tests && make VERBOSE=1 targz";
+}
+elsif ($taskname eq $TAR_TESTS_TASK) {
+    $execstr = "make VERBOSE=1 tests-tar-pkg";
 }
 elsif ($taskname eq $CHECK_TAR_TASK) {
     my $tarball_check_script = get_tarball_check_script();
