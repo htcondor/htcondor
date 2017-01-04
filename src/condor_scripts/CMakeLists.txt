@@ -18,7 +18,7 @@
 
 
 install ( FILES condor_top.pl DESTINATION ${C_BIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
-install ( FILES Condor.pm CondorUtils.pm CondorTest.pm CondorPersonal.pm DESTINATION ${C_LIB} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
+install ( FILES Condor.pm CondorUtils.pm CondorTest.pm CondorPersonal.pm CheckOutputFormats.pm DESTINATION ${C_LIB} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
 
 if (NOT WINDOWS)
 

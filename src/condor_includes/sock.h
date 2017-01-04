@@ -568,7 +568,7 @@ private:
 
 	int _condor_read(SOCKET fd, char *buf, int sz, int timeout);
 	int _condor_write(SOCKET fd, const char *buf, int sz, int timeout);
-	int bindWithin(condor_protocol proto, const int low, const int high, bool outbound);
+	int bindWithin(condor_protocol proto, const int low, const int high);
 	///
 	// Buffer to hold the string version of our peer's IP address. 
 	char _peer_ip_buf[IP_STRING_BUF_SIZE];	
@@ -644,15 +644,6 @@ private:
 	   connection attempt.
 	 **/
 	void cancel_connect();
-
-	/**
-	   Private helper that sees if we're CCB enabled, if we're doing
-	   an outbound connection, and if so, uses CCB_local_bind() to
-	   avoid pounding the CCB broker for all outbound connections.
-	*/
-	//int _bind_helper(int fd, SOCKET_ADDR_CONST_BIND SOCKET_ADDR_TYPE addr,
-	//	SOCKET_LENGTH_TYPE len, bool outbound, bool loopback);
-	int _bind_helper(int fd, const condor_sockaddr& addr, bool outbound, bool loopback);
 };
 
 void dprintf ( int flags, Sock & sock, const char *fmt, ... ) CHECK_PRINTF_FORMAT(3,4);
