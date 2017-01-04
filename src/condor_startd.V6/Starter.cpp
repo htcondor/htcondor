@@ -1302,6 +1302,9 @@ Starter::percentCpuUsage( void )
 		
 		jobAd->LookupFloat(ATTR_JOB_VM_CPU_UTILIZATION, fPercentCPU);
 		jobAd->LookupInteger(ATTR_JOB_VM_VCPUS, iNumCPUs);
+		if( iNumCPUs == 0 ) {
+			jobAd->LookupInteger( ATTR_REQUEST_CPUS, iNumCPUs );
+		}
 		
 		// computations outside take cores into account.
 		fPercentCPU = fPercentCPU * iNumCPUs;

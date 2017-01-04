@@ -217,6 +217,9 @@ typedef HashTable<int, int> ClusterSizeHashTable_t;
 static ClusterSizeHashTable_t *ClusterSizeHashTable = 0;
 static int TotalJobsCount = 0;
 
+// if false, we version check and fail attempts by newer clients to set secure attrs via the SetAttribute function
+static bool Ignore_Secure_SetAttr_Attempts = true;
+
 static classad::References immutable_attrs, protected_attrs, secure_attrs;
 static int flush_job_queue_log_timer_id = -1;
 static int dirty_notice_timer_id = -1;
@@ -749,6 +752,8 @@ InitQmgmt()
 	secure_attrs.clear();
 	param_and_insert_attrs("SECURE_JOB_ATTRS", secure_attrs);
 	param_and_insert_attrs("SYSTEM_SECURE_JOB_ATTRS", secure_attrs);
+
+	Ignore_Secure_SetAttr_Attempts = param_boolean("IGNORE_ATTEMPTS_TO_SET_SECURE_JOB_ATTRS", true);
 
 	schedd_forker.Initialize();
 	int max_schedd_forkers = param_integer ("SCHEDD_QUERY_WORKERS",8,0);
@@ -2080,10 +2085,10 @@ NewProc(int cluster_id)
 			// MAX_JOBS_PER_OWNER.
 			dprintf( D_FULLDEBUG, "Not enforcing MAX_JOBS_PER_OWNER for submit without owner of cluster %d.\n", cluster_id );
 		} else {
-			const OwnerData * ownerData = scheduler.insert_owner_const( owner );
-			ASSERT( ownerData != NULL );
-			int ownerJobCount = ownerData->num.JobsCounted
-								+ ownerData->num.JobsRecentlyAdded
+			const OwnerInfo * ownerInfo = scheduler.insert_owner_const( owner );
+			ASSERT( ownerInfo != NULL );
+			int ownerJobCount = ownerInfo->num.JobsCounted
+								+ ownerInfo->num.JobsRecentlyAdded
 								+ jobs_added_this_transaction;
 
 			int maxJobsPerOwner = scheduler.getMaxJobsPerOwner();
@@ -2424,7 +2429,7 @@ SetAttributeByConstraint(const char *constraint_str, const char *attr_name,
 	YourString owner;
 	MyString owner_expr;
 	if (flags & SetAttribute_OnlyMyJobs) {
-		owner = Q_SOCK->getOwner();
+		owner = Q_SOCK ? Q_SOCK->getOwner() : "unauthenticated";
 		if (owner == "unauthenticated") {
 			// no job will be owned by "unauthenticated" so just quit now.
 			return -1;
@@ -2520,6 +2525,7 @@ enum {
 	//catStatus       = 0x0008, //
 	catDirtyPrioRec = 0x0010,
 	catTargetScope  = 0x0020,
+	catSubmitterIdent = 0x0040,
 };
 
 typedef struct attr_ident_pair {
@@ -2537,17 +2543,17 @@ typedef struct attr_ident_pair {
 // NOTE: !!!
 #define FILL(attr,cat) { attr, id##attr, cat }
 static const ATTR_IDENT_PAIR aSpecialSetAttrs[] = {
-	FILL(ATTR_ACCOUNTING_GROUP,   catDirtyPrioRec),
+	FILL(ATTR_ACCOUNTING_GROUP,   catDirtyPrioRec | catSubmitterIdent),
 	FILL(ATTR_CLUSTER_ID,         catJobId),
 	FILL(ATTR_CRON_DAYS_OF_MONTH, catCron),
 	FILL(ATTR_CRON_DAYS_OF_WEEK,  catCron),
 	FILL(ATTR_CRON_HOURS,         catCron),
 	FILL(ATTR_CRON_MINUTES,       catCron),
 	FILL(ATTR_CRON_MONTHS,        catCron),
-	FILL(ATTR_JOB_PRIO,           catJobObj | catDirtyPrioRec),
+	FILL(ATTR_JOB_PRIO,           catDirtyPrioRec),
 	FILL(ATTR_JOB_STATUS,         catJobObj),
 	FILL(ATTR_JOB_UNIVERSE,       catJobObj),
-	FILL(ATTR_NICE_USER,          0),
+	FILL(ATTR_NICE_USER,          catSubmitterIdent),
 	FILL(ATTR_NUM_JOB_RECONNECTS, 0),
 	FILL(ATTR_OWNER,              0),
 	FILL(ATTR_PROC_ID,            catJobId),
@@ -2573,6 +2579,58 @@ static int IsSpecialSetAttribute(const char *attr, int* set_cat=NULL)
 	return 0;
 }
 
+
+int
+SetSecureAttributeInt(int cluster_id, int proc_id, const char *attr_name, int attr_value, SetAttributeFlags_t flags = 0)
+{
+	if (attr_name == NULL ) {return -1;}
+
+	char buf[100];
+	snprintf(buf,100,"%d",attr_value);
+
+	// lookup job and set attribute
+	JOB_ID_KEY_BUF key;
+	IdToKey(cluster_id,proc_id,key);
+	JobQueue->SetAttribute(key.c_str(), attr_name, buf, flags & SETDIRTY);
+
+	return 0;
+}
+
+
+int
+SetSecureAttributeString(int cluster_id, int proc_id, const char *attr_name, const char *attr_value, SetAttributeFlags_t flags = 0)
+{
+	if (attr_name == NULL || attr_value == NULL) {return -1;}
+
+	// do quoting using oldclassad syntax
+	classad::Value tmpValue;
+	classad::ClassAdUnParser unparse;
+	unparse.SetOldClassAd( true, true );
+
+	tmpValue.SetStringValue(attr_value);
+	std::string buf;
+	unparse.Unparse(buf, tmpValue);
+
+	// lookup job and set attribute to quoted string
+	JOB_ID_KEY_BUF key;
+	IdToKey(cluster_id,proc_id,key);
+	JobQueue->SetAttribute(key.c_str(), attr_name, buf.c_str(), flags & SETDIRTY);
+
+	return 0;
+}
+
+int
+SetSecureAttribute(int cluster_id, int proc_id, const char *attr_name, const char *attr_value, SetAttributeFlags_t flags = 0)
+{
+	if (attr_name == NULL || attr_value == NULL) {return -1;}
+
+	// lookup job and set attribute to value
+	JOB_ID_KEY_BUF key;
+	IdToKey(cluster_id,proc_id,key);
+	JobQueue->SetAttribute(key.c_str(), attr_name, attr_value, flags & SETDIRTY);
+
+	return 0;
+}
 
 int
 SetAttribute(int cluster_id, int proc_id, const char *attr_name,
@@ -2611,13 +2669,25 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 	if (secure_attrs.find(attr_name) != secure_attrs.end())
 	{
 		errno = EACCES;
-		dprintf(D_ALWAYS,
-				"SetAttribute attempt to edit secure attribute %s in job %d.%d\n",
-				attr_name, cluster_id, proc_id);
 		// should we fail or silently succeed?  (old submits set secure attrs)
-		if(param_boolean("SECURE_JOB_ATTRS_SET_FAIL", true)) {
+		const CondorVersionInfo *vers = NULL;
+		if ( ! Ignore_Secure_SetAttr_Attempts) {
+			vers = Q_SOCK->get_peer_version();
+		}
+		if (vers && vers->built_since_version( 8, 5, 8 ) ) {
+			// new versions should know better!  fail!
+			dprintf(D_ALWAYS,
+				"SetAttribute attempt to edit secure attribute %s in job %d.%d. Failing!\n",
+				attr_name, cluster_id, proc_id);
 			return -1;
 		} else {
+			// old versions get a pass.  succeed (but do nothing).
+			// The idea here is we will not set the secure attributes, but we won't
+			// propagate the error back because we don't want old condor_submits to not
+			// be able to submit jobs.
+			dprintf(D_ALWAYS,
+				"SetAttribute attempt to edit secure attribute %s in job %d.%d. Ignoring!\n",
+				attr_name, cluster_id, proc_id);
 			return 0;
 		}
 	}
@@ -2817,6 +2887,12 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 
 			// Also update the owner history hash table
 		AddOwnerHistory(owner);
+
+		if (job) {
+			// if editing (rather than creating) a job, update ownerinfo pointer, and mark submitterdata as dirty
+			job->ownerinfo = const_cast<OwnerInfo*>(scheduler.insert_owner_const(owner));
+			job->dirty_flags |= JQJ_CHACHE_DIRTY_SUBMITTERDATA;
+		}
 	}
 	else if (attr_id == idATTR_NICE_USER) {
 			// Because we're setting a new value for nice user, we
@@ -3068,6 +3144,9 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 					attr_name,attr_value);
 		}
 	}
+	if (attr_category & catSubmitterIdent) {
+		if (job) { job->dirty_flags |= JQJ_CHACHE_DIRTY_SUBMITTERDATA; }
+	}
 
 	int old_nondurable_level = 0;
 	if( flags & NONDURABLE ) {
@@ -3090,6 +3169,9 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 
 		ScheduleJobQueueLogFlush();
 	}
+
+	// future
+	//if (attr_category & catJobObj) { if (job) { job->dirty_flags |= JQJ_CHACHE_DIRTY_JOBOBJ; } }
 
 	// Get the job's status and only mark dirty if it is running
 	// Note: Dirty attribute notification could work for local and
@@ -3498,6 +3580,138 @@ void SetSubmitTotalProcs(std::list<std::string> & new_ad_keys)
 }
 
 
+bool
+ReadProxyFileIntoAd( const char *file, const char *owner, ClassAd &x509_attrs )
+{
+#if !defined(HAVE_EXT_GLOBUS)
+	(void)file;
+	(void)owner;
+	(void)x509_attrs;
+	return false;
+#else
+	if ( !init_user_ids( owner, NULL ) ) {
+		dprintf( D_FAILURE, "ReadProxyFileIntoAd(%s): Failed to switch to user priv\n", owner );
+		return false;
+	}
+	TemporaryPrivSentry tps( PRIV_USER, true );
+
+	StatInfo si( file );
+	if ( si.Error() == SINoFile ) {
+		// If the file doesn't exist, it may be spooled later.
+		// Return without printing an error.
+		return false;
+	}
+
+	globus_gsi_cred_handle_t proxy_handle = x509_proxy_read( file );
+
+	if ( proxy_handle == NULL ) {
+		dprintf( D_FAILURE, "Failed to read job proxy: %s\n",
+				 x509_error_string() );
+		return false;
+	}
+
+	time_t expire_time = x509_proxy_expiration_time( proxy_handle );
+	char *proxy_identity = x509_proxy_identity_name( proxy_handle );
+	char *proxy_email = x509_proxy_email( proxy_handle );
+	char *voname = NULL;
+	char *firstfqan = NULL;
+	char *fullfqan = NULL;
+	extract_VOMS_info( proxy_handle, 0, &voname, &firstfqan, &fullfqan );
+
+	x509_proxy_free( proxy_handle );
+
+	x509_attrs.Assign( ATTR_X509_USER_PROXY_EXPIRATION, expire_time );
+	x509_attrs.Assign( ATTR_X509_USER_PROXY_SUBJECT, proxy_identity );
+	if ( proxy_email ) {
+		x509_attrs.Assign( ATTR_X509_USER_PROXY_EMAIL, proxy_email );
+	}
+	if ( voname ) {
+		x509_attrs.Assign( ATTR_X509_USER_PROXY_VONAME, voname );
+	}
+	if ( firstfqan ) {
+		x509_attrs.Assign( ATTR_X509_USER_PROXY_FIRST_FQAN, firstfqan );
+	}
+	if ( fullfqan ) {
+		x509_attrs.Assign( ATTR_X509_USER_PROXY_FQAN, fullfqan );
+	}
+	free( proxy_identity );
+	free( proxy_email );
+	free( voname );
+	free( firstfqan );
+	free( fullfqan );
+	return true;
+#endif
+}
+
+static void
+AddSessionAttributes(const std::list<std::string> new_ad_keys)
+{
+	if (!Q_SOCK || !Q_SOCK->getReliSock()) {return;}
+	if (new_ad_keys.empty()) {return;}
+
+	const std::string &sess_id = Q_SOCK->getReliSock()->getSessionID();
+	ClassAd policy_ad;
+	if (!daemonCore || !daemonCore->getSecMan()) {return;}
+	daemonCore->getSecMan()->getSessionPolicy(sess_id.c_str(), policy_ad);
+
+	classad::ClassAdUnParser unparse;
+	unparse.SetOldClassAd(true, true);
+
+	// See if the values have already been set
+	ClassAd *x509_attrs = &policy_ad;
+	string last_proxy_file;
+	ClassAd proxy_file_attrs;
+
+	for (std::list<std::string>::const_iterator it = new_ad_keys.begin(); it != new_ad_keys.end(); ++it)
+	{
+		MyString x509up;
+		JobQueueKey job( it->c_str() );
+			// Set attribute for process ads: prevents jobs from overriding these.
+		if (job.proc == -1) {continue;}
+
+		// check if x509up was defined for this job
+		if ( GetAttributeString(job.cluster, job.proc, ATTR_X509_USER_PROXY, x509up) == -1 ) {
+			GetAttributeString(job.cluster, -1, ATTR_X509_USER_PROXY, x509up);
+		}
+		if (x509up.IsEmpty()) {
+			x509_attrs = &policy_ad;
+		} else {
+			string full_path;
+			if ( x509up[0] == DIR_DELIM_CHAR ) {
+				full_path = x509up;
+			} else {
+				MyString iwd;
+				if ( GetAttributeString(job.cluster, job.proc, ATTR_JOB_IWD, iwd ) == -1 ) {
+					GetAttributeString(job.cluster, -1, ATTR_JOB_IWD, iwd );
+				}
+				formatstr( full_path, "%s%c%s", iwd.Value(), DIR_DELIM_CHAR, x509up.Value() );
+			}
+			if ( full_path != last_proxy_file ) {
+				MyString owner;
+				if ( GetAttributeString(job.cluster, job.proc, ATTR_OWNER, owner) == -1 ) {
+					GetAttributeString(job.cluster, -1, ATTR_OWNER, owner);
+				}
+				last_proxy_file = full_path;
+				proxy_file_attrs.Clear();
+				ReadProxyFileIntoAd( last_proxy_file.c_str(), owner.Value(), proxy_file_attrs );
+			}
+			if ( proxy_file_attrs.size() > 0 ) {
+				x509_attrs = &proxy_file_attrs;
+			} else {
+				x509_attrs = &policy_ad;
+			}
+		}
+
+		for (AttrList::const_iterator attr_it = x509_attrs->begin(); attr_it != x509_attrs->end(); ++attr_it)
+		{
+			std::string attr_value_buf;
+			unparse.Unparse(attr_value_buf, attr_it->second);
+			SetSecureAttribute(job.cluster, job.proc, attr_it->first.c_str(), attr_value_buf.c_str());
+			dprintf(D_SECURITY, "ATTRS: SetAttribute %i.%i %s=%s\n", job.cluster, job.proc, attr_it->first.c_str(), attr_value_buf.c_str());
+		}
+	}
+}
+
 void
 CommitTransaction(SetAttributeFlags_t flags /* = 0 */)
 {
@@ -3505,6 +3719,8 @@ CommitTransaction(SetAttributeFlags_t flags /* = 0 */)
 		// get a list of all new ads being created in this transaction
 	JobQueue->ListNewAdsInTransaction( new_ad_keys );
 	if ( ! new_ad_keys.empty()) { SetSubmitTotalProcs(new_ad_keys); }
+
+	AddSessionAttributes(new_ad_keys);
 
 	if( flags & NONDURABLE ) {
 		JobQueue->CommitNondurableTransaction();

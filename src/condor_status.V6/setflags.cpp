@@ -27,16 +27,15 @@
 // use old diagnostic names when comparing v8.3 to v8.5
 #define USE_OLD_DIAGNOSTIC_NAMES 1
 
-
-//extern AdTypes	type;
-//extern Mode		mode;
 extern int  sdo_mode;
 extern ppOption	ppStyle;
+#ifdef OLD_PF_SETUP
 extern bool explicit_format;
 extern bool using_print_format;
 extern bool disable_user_print_files; // allow command line to defeat use of default user print files.
 extern const char * mode_constraint; // constraint expression set by setMode
 extern int set_status_print_mask_from_stream (const char * streamid, bool is_filename, const char ** pconstraint);
+#endif
 
 static struct {
 	AdTypes      adType;
@@ -138,6 +137,7 @@ int setPPstyle (ppOption pps, int arg_index, const char * argv)
 		}
 	}
 
+#ifdef OLD_PF_SETUP // moving this code
 	// If setting a 'normal' output, check to see if there is a user-defined normal output
 	if ( ! disable_user_print_files && ! explicit_format
 		&& !PP_IS_LONGish(pps) && pps != PP_CUSTOM && pps != ppStyle) {
@@ -154,6 +154,7 @@ int setPPstyle (ppOption pps, int arg_index, const char * argv)
 			}
 		}
 	}
+#endif
 
 	if ( PP_IS_LONGish(pps) || (ppStyle <= pps || setby.ppArgIndex == 0) ) {
 		ppStyle = pps;
@@ -219,7 +220,6 @@ const char * getOldAdTypeStr (AdTypes type)
 }
 #endif
 
-
 // this table defines the default ad type and output format for each
 // of the command line arguments that defines such.
 // for instance  -schedd sets the
@@ -280,6 +280,7 @@ AdTypes setMode (int sm, int i, const char *argv)
 			if (sdo_modes[ii].mode == sm) {
 				adType = sdo_modes[ii].adType;
 				pps = sdo_modes[ii].pps;
+				break;
 			}
 		}
 		// if not matching mode, print error
@@ -322,5 +323,26 @@ void dumpPPMode(FILE* out)
 	fprintf (out, "Query type: %s   (Set by arg %d '%s')\n", adtype_str, setby.argIndex, setby.Arg);
 	fprintf (out, "PrettyPrint: %s   (Set by arg %d '%s')\n", style_str, setby.ppArgIndex, setby.ppArg ? setby.ppArg : "NULL");
 }
+
+const char * adtypeNameFromPPMode()
+{
+	return getAdTypeStr(setby.adType);
+}
+
+const char * paramNameFromPPMode(std::string &param_name)
+{
+	const char * p = getSDOModeStr(sdo_mode);
+	if ( ! p) {
+		formatstr(param_name, "mode %d", sdo_mode);
+		return param_name.c_str();
+	};
+
+	param_name = "STATUS_";
+	if ( ! strchr(p+4,'_')) { param_name += "DEFAULT_"; }
+	param_name += p+4;
+	param_name += "_PRINT_FORMAT_FILE";
+	return param_name.c_str();
+}
+
 
 

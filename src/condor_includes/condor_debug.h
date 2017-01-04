@@ -127,7 +127,6 @@ enum {
 #ifdef __cplusplus
 #include <string>
 #include <map>
-#include "param_functions.h"
 extern "C" {
 #endif
 
@@ -164,7 +163,7 @@ void dprintf ( int flags, const char *fmt, ... ) CHECK_PRINTF_FORMAT(2,3);
 }
 void dprintf ( int flags, DPF_IDENT ident, const char *fmt, ... ) CHECK_PRINTF_FORMAT(3,4);
 extern "C" {
-// parse config files (via param_functions) and use them to fill out the array of dprintf_output_settings
+// parse config files and use them to fill out the array of dprintf_output_settings
 // one for each output log file. returns the number of entries needed in p_info, (may be larger than c_info!)
 // if p_info is NULL, then dprintf_set_outputs is called with the dprintf_output_settings array.  if != NULL, then
 // the array is returned, calling dprintf_set_outputs is left to the caller.
@@ -398,6 +397,12 @@ char    *mymalloc(), *myrealloc(), *mycalloc();
 #  define DEPRECATE_GCC
 # endif
 #endif // REMIND
+
+// disabled REMIND when building non-debug
+#if defined NDEBUG && ! defined ENABLE_PRAGMA_REMIND
+#  undef PRAGMA_REMIND
+#  define PRAGMA_REMIND(str)
+#endif
 
 #if defined _MSC_VER && defined _DEBUG // WIN32
 # ifdef _X86_

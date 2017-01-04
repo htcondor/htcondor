@@ -146,7 +146,7 @@ make_spool(classad::ClassAd& ad)
     make_spool_remap(ad, ATTR_JOB_ERROR, ATTR_STREAM_ERROR, "_condor_stderr");
 }
 
-std::auto_ptr<ExprTree>
+std::unique_ptr<ExprTree>
 make_requirements(ExprTree *reqs, ShouldTransferFiles_t stf)
 {
     // Copied ideas from condor_submit.  Pretty lame.
@@ -162,7 +162,7 @@ make_requirements(ExprTree *reqs, ShouldTransferFiles_t stf)
         PyErr_SetString(PyExc_RuntimeError, "Unable to create copy of requirements expression.");
         throw_error_already_set();
     }
-    std::auto_ptr<ExprTree> result(reqs_copy);
+    std::unique_ptr<ExprTree> result(reqs_copy);
     ADD_PARAM(OPSYS);
     ADD_PARAM(ARCH);
     switch (stf)

@@ -47,7 +47,7 @@ bool test_EvalStringMyString(compat_classad::ClassAd *c1, compat_classad::ClassA
 bool test_EvalStringStdString(compat_classad::ClassAd *c1, compat_classad::ClassAd *c2, int verbose);
 
 bool test_NextDirtyExpr(compat_classad::ClassAd *c1, int verbose);
-bool test_EscapeAdStringValue(compat_classad::ClassAd *c1, int verbose);
+bool test_QuoteAdStringValue(compat_classad::ClassAd *c1, int verbose);
 
 bool test_EvalTree(compat_classad::ClassAd *c1, compat_classad::ClassAd *c2,int verbose);
 
@@ -805,13 +805,13 @@ bool test_NextDirtyExpr(compat_classad::ClassAd *c1, int verbose)
 }
 //}}}
 
-//{{{ test_EscapeAdStringValue
-bool test_EscapeAdStringValue(compat_classad::ClassAd *c1, int verbose)
+//{{{ test_QuoteAdStringValue
+bool test_QuoteAdStringValue(compat_classad::ClassAd *c1, int verbose)
 {
     bool passed = true;
 
-	const char *ans1 = "hello";
-	const char *ans2 = "abc\\\"\\efg\\";
+	const char *ans1 = "\"hello\"";
+	const char *ans2 = "\"abc\\\"\\efg\\\"";
 
     const char *tmp; 
     string tmpString;
@@ -819,7 +819,7 @@ bool test_EscapeAdStringValue(compat_classad::ClassAd *c1, int verbose)
     string msTmp;
     c1->EvaluateAttrString("A", tmpString);
 
-    tmp = EscapeAdStringValue(tmpString.c_str(), msTmp);
+    tmp = QuoteAdStringValue(tmpString.c_str(), msTmp);
 
     if(strcmp(tmp, ans1))
     {
@@ -827,10 +827,10 @@ bool test_EscapeAdStringValue(compat_classad::ClassAd *c1, int verbose)
     }
 
     if(verbose == 2)
-        printf("Expected %s and EscapeAdStringValue returned %s.\n", ans1, tmp); 
+        printf("Expected %s and QuoteAdStringValue returned %s.\n", ans1, tmp);
 
     c1->EvaluateAttrString("F", tmpString);
-    tmp = EscapeAdStringValue(tmpString.c_str(), msTmp);
+    tmp = QuoteAdStringValue(tmpString.c_str(), msTmp);
 
     if(strcmp(tmp, ans2))
     {
@@ -838,9 +838,9 @@ bool test_EscapeAdStringValue(compat_classad::ClassAd *c1, int verbose)
     }
 
     if(verbose == 2)
-        printf("Expected %s and EscapeAdStringValue returned %s.\n", ans2, tmp); 
+        printf("Expected %s and QuoteAdStringValue returned %s.\n", ans2, tmp);
 
-    tmp = EscapeAdStringValue(NULL, msTmp);
+    tmp = QuoteAdStringValue(NULL, msTmp);
     
     if(tmp != NULL)
     {
@@ -1480,9 +1480,9 @@ void setUpAndRun(int verbose)
     printf("-------------\n");
 
 
-    printf("Testing EscapeAdStringValue...\n");
-    passedTest[8] = test_EscapeAdStringValue(compC4, verbose);
-    printf("Escape String Value %s.\n", passedTest[9] ? "passed" : "failed");
+    printf("Testing QuoteAdStringValue...\n");
+    passedTest[8] = test_QuoteAdStringValue(compC4, verbose);
+    printf("Quote String Value %s.\n", passedTest[9] ? "passed" : "failed");
     printf("-------------\n");
 
 

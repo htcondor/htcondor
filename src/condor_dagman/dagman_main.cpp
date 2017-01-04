@@ -68,8 +68,8 @@ static void Usage() {
             "\t\t[-MaxJobs <int N>]\n"
             "\t\t[-MaxPre <int N>]\n"
             "\t\t[-MaxPost <int N>]\n"
-            "\t\t[-NoEventChecks]\n"
-            "\t\t[-AllowLogError]\n"
+            "\t\t(obsolete) [-NoEventChecks]\n"
+            "\t\t(obsolete) [-AllowLogError]\n"
             "\t\t[-DontAlwaysRunPost]\n"
             "\t\t[-AlwaysRunPost]\n"
             "\t\t[-WaitForDebug]\n"
@@ -117,7 +117,6 @@ Dagman::Dagman() :
 	primaryDagFile (""),
 	multiDags (false),
 	startup_cycle_detect (false), // so Coverity is happy
-	allowLogError (false),
 	useDagDir (false),
 	allow_events (CheckEvents::ALLOW_NONE), // so Coverity is happy
 	retrySubmitFirst (true), // so Coverity is happy
@@ -144,7 +143,8 @@ Dagman::Dagman() :
 	_doRecovery(false),
 	_suppressJobLogs(false),
 	_batchName(""),
-	_dagmanClassad(NULL)
+	_dagmanClassad(NULL),
+	_removeNodeJobs(true)
 {
     debug_level = DEBUG_VERBOSE;  // Default debug level is verbose output
 }
@@ -326,9 +326,12 @@ Dagman::Config()
 	debug_printf( DEBUG_NORMAL, "DAGMAN_MAX_POST_SCRIPTS setting: %d\n",
 				maxPostScripts );
 
-	allowLogError = param_boolean( "DAGMAN_ALLOW_LOG_ERROR", allowLogError );
-	debug_printf( DEBUG_NORMAL, "DAGMAN_ALLOW_LOG_ERROR setting: %s\n",
-				allowLogError ? "True" : "False" );
+	bool allowLogError = param_boolean( "DAGMAN_ALLOW_LOG_ERROR", false );
+	if ( allowLogError ) {
+		debug_printf( DEBUG_NORMAL, "Warning: DAGMAN_ALLOW_LOG_ERROR is "
+					"no longer supported\n" );
+		check_warning_strictness( DAG_STRICT_2 );
+	}
 
 	mungeNodeNames = param_boolean( "DAGMAN_MUNGE_NODE_NAMES",
 				mungeNodeNames );
@@ -453,6 +456,11 @@ Dagman::Config()
 	debug_printf( DEBUG_NORMAL, "DAGMAN_SUPPRESS_JOB_LOGS setting: %s\n",
 				_suppressJobLogs ? "True" : "False" );
 
+	_removeNodeJobs = param_boolean( "DAGMAN_REMOVE_NODE_JOBS",
+				_removeNodeJobs );
+	debug_printf( DEBUG_NORMAL, "DAGMAN_REMOVE_NODE_JOBS setting: %s\n",
+				_removeNodeJobs ? "True" : "False" );
+
 	// enable up the debug cache if needed
 	if (debug_cache_enabled) {
 		debug_cache_set_size(debug_cache_size);
@@ -571,7 +579,8 @@ int main_shutdown_remove(Service *, int) {
     debug_printf( DEBUG_QUIET, "Received SIGUSR1\n" );
 	// We don't remove Condor node jobs here because the schedd will
 	// automatically remove them itself.
-	main_shutdown_rescue( EXIT_ABORT, Dag::DAG_STATUS_RM, false );
+	main_shutdown_rescue( EXIT_ABORT, Dag::DAG_STATUS_RM,
+				dagman._removeNodeJobs );
 	return FALSE;
 }
 
@@ -740,7 +749,9 @@ void main_init (int argc, char ** const argv) {
 			check_warning_strictness( DAG_STRICT_2 );
 
         } else if( !strcasecmp( "-AllowLogError", argv[i] ) ) {
-			dagman.allowLogError = true;
+			debug_printf( DEBUG_QUIET, "Warning: -AllowLogError is "
+						"no longer supported\n" );
+			check_warning_strictness( DAG_STRICT_2 );
 
         } else if( !strcasecmp( "-DontAlwaysRunPost", argv[i] ) ) {
 			if ( alwaysRunPostSet && dagman._runPost ) {
@@ -1094,7 +1105,6 @@ void main_init (int argc, char ** const argv) {
 		// Fill in values in the deep submit options that we haven't
 		// already set.
 		//
-	dagman._submitDagDeepOpts.bAllowLogError = dagman.allowLogError;
 	dagman._submitDagDeepOpts.useDagDir = dagman.useDagDir;
 	dagman._submitDagDeepOpts.autoRescue = dagman.autoRescue;
 	dagman._submitDagDeepOpts.doRescueFrom = dagman.doRescueFrom;
@@ -1111,7 +1121,7 @@ void main_init (int argc, char ** const argv) {
 	// wenger 2010-03-25
     dagman.dag = new Dag( dagman.dagFiles, dagman.maxJobs,
 						  dagman.maxPreScripts, dagman.maxPostScripts,
-						  dagman.allowLogError, dagman.useDagDir,
+						  dagman.useDagDir,
 						  dagman.maxIdle, dagman.retrySubmitFirst,
 						  dagman.retryNodeFirst, dagman.condorRmExe,
 						  &dagman.DAGManJobId,
@@ -1455,6 +1465,9 @@ Dagman::ResolveDefaultLog()
 				debug_printf( DEBUG_QUIET, "Ignoring value of DAGMAN_LOG_ON_NFS_IS_ERROR because ENABLE_USERLOG_LOCKING and CREATE_LOCKS_ON_LOCAL_DISK are true.\n");
 				nfsLogIsError = false;
 			}
+		} else {
+			debug_printf( DEBUG_QUIET, "Ignoring value of DAGMAN_LOG_ON_NFS_IS_ERROR because ENABLE_USERLOG_LOCKING is false.\n");
+			nfsLogIsError = false;
 		}
 	}
 
@@ -1537,7 +1550,9 @@ void condor_event_timer () {
 	dagman.dag->RunWaitingScripts();
 
 	int justSubmitted;
+	debug_printf( DEBUG_DEBUG_1, "Starting submit cycle\n" );
 	justSubmitted = dagman.dag->SubmitReadyJobs(dagman);
+	debug_printf( DEBUG_DEBUG_1, "Finished submit cycle\n" );
 	if( justSubmitted ) {
 			// Note: it would be nice to also have the proc submit
 			// count here.  wenger, 2006-02-08.

@@ -61,6 +61,14 @@ class AttributeReference : public ExprTree
 		 */
 		void GetComponents( ExprTree *&expr,std::string &attr, bool &abs ) const;
 
+		/** Overwrite the components of an attribute reference
+		 * 	@param expr The expression part of the reference (NULL for
+		 * 		absolute or simple references)
+		 * 	@param attr The name of the attribute being referred to
+		 * 	@param abs  true iff the reference is absolute (i.e., .attr)
+		 */
+		bool SetComponents( ExprTree *expr, const std::string &attr, bool abs );
+
         /** Return a copy of this attribute reference.
          */
 		virtual ExprTree* Copy( ) const;

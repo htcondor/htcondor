@@ -6,8 +6,6 @@
 #include "condor_common.h"
 #include "condor_config.h"
 
-#include <boost/python.hpp>
-
 #include "old_boost.h"
 
 void enable_deprecation_warnings()

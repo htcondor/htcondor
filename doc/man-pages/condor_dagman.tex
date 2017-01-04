@@ -158,11 +158,8 @@ output DAG input file lines as they are parsed
     \OptItem{\Opt{-noeventchecks}}{This argument is no longer used;
        it is now ignored.  Its functionality is now implemented by
        the \MacroNI{DAGMAN\_ALLOW\_EVENTS} configuration variable.  }
-    \OptItem{\Opt{-allowlogerror}}{This optional argument has 
-       \Condor{dagman} try to run the specified DAG, even in the case
-       of detected errors in the job event log specification.
-       As of version 7.3.2, this argument has an effect only on
-       DAGs containing Stork job nodes.}
+    \OptItem{\Opt{-allowlogerror}}{As of verson 8.5.5 this argument is
+       no longer supported, and setting it will generate a warning.}
     \OptItem{\Opt{-usedagdir}}{This optional argument causes
        \Condor{dagman} to run each specified DAG as if the directory
        containing that DAG file was the current working directory.  This

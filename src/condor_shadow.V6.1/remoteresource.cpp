@@ -1289,14 +1289,14 @@ RemoteResource::setJobAd( ClassAd *jA )
 	int64_t int64_value;
 	double real_value;
 
-	if( jA->LookupFloat(ATTR_JOB_REMOTE_SYS_CPU, real_value) ) {
-		remote_rusage.ru_stime.tv_sec = (time_t) real_value;
-	}
+	// REMOTE_SYS_CPU and REMOTE_USER_CPU reflect usage for this execution only.
+	// reset to 0 on start or restart.
+	real_value = 0.0;
+	remote_rusage.ru_stime.tv_sec = (time_t) real_value;
+	remote_rusage.ru_utime.tv_sec = (time_t) real_value;
+	jA->Assign(ATTR_JOB_REMOTE_USER_CPU, real_value);
+	jA->Assign(ATTR_JOB_REMOTE_SYS_CPU, real_value);
 			
-	if( jA->LookupFloat(ATTR_JOB_REMOTE_USER_CPU, real_value) ) {
-		remote_rusage.ru_utime.tv_sec = (time_t) real_value;
-	}
-
 	if( jA->LookupInteger(ATTR_IMAGE_SIZE, int64_value) ) {
 		image_size_kb = int64_value;
 	}
@@ -1365,11 +1365,35 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 
 	double real_value;
 	if( update_ad->LookupFloat(ATTR_JOB_REMOTE_SYS_CPU, real_value) ) {
+		double prevUsage;
+		if (!jobAd->LookupFloat(ATTR_JOB_REMOTE_SYS_CPU, prevUsage)) {
+			prevUsage = 0.0;
+		}
+
+		// Remote cpu usage should be strictly increasing
+		if (real_value > prevUsage) {
+			double prevTotalUsage = 0.0;
+			jobAd->LookupFloat(ATTR_JOB_CUMULATIVE_REMOTE_SYS_CPU, prevTotalUsage);
+			jobAd->Assign(ATTR_JOB_CUMULATIVE_REMOTE_SYS_CPU, prevTotalUsage + (real_value - prevUsage));
+		}
+		
 		remote_rusage.ru_stime.tv_sec = (time_t) real_value;
 		jobAd->Assign(ATTR_JOB_REMOTE_SYS_CPU, real_value);
 	}
 
 	if( update_ad->LookupFloat(ATTR_JOB_REMOTE_USER_CPU, real_value) ) {
+		double prevUsage;
+		if (!jobAd->LookupFloat(ATTR_JOB_REMOTE_USER_CPU, prevUsage)) {
+			prevUsage = 0.0;
+		}
+
+		// Remote cpu usage should be strictly increasing
+		if (real_value > prevUsage) {
+			double prevTotalUsage = 0.0;
+			jobAd->LookupFloat(ATTR_JOB_CUMULATIVE_REMOTE_USER_CPU, prevTotalUsage);
+			jobAd->Assign(ATTR_JOB_CUMULATIVE_REMOTE_USER_CPU, prevTotalUsage + (real_value - prevUsage));
+		}
+		
 		remote_rusage.ru_utime.tv_sec = (time_t) real_value;
 		jobAd->Assign(ATTR_JOB_REMOTE_USER_CPU, real_value);
 	}
@@ -2591,6 +2615,8 @@ RemoteResource::checkX509Proxy( void )
 				   &voname, &firstfqan, &quoted_DN_and_FQAN );
 
 	jobAd->Assign(ATTR_X509_USER_PROXY_EXPIRATION, proxy_expiration_time);
+	/* These are secure attributes, only settable by the schedd.
+	 * Assume they won't change during job execution.
 	if ( proxy_subject && *proxy_subject ) {
 		jobAd->Assign(ATTR_X509_USER_PROXY_SUBJECT, proxy_subject);
 	}
@@ -2603,6 +2629,7 @@ RemoteResource::checkX509Proxy( void )
 	if ( quoted_DN_and_FQAN && *quoted_DN_and_FQAN ) {
 		jobAd->Assign(ATTR_X509_USER_PROXY_FQAN, quoted_DN_and_FQAN);
 	}
+	*/
 	free( proxy_subject );
 	free( voname );
 	free( firstfqan );
@@ -2611,7 +2638,10 @@ RemoteResource::checkX509Proxy( void )
 	// first, do the DN and expiration time, which all proxies have
 	char* proxy_subject = x509_proxy_identity_name(proxy_path.Value());
 	time_t proxy_expiration_time = x509_proxy_expiration_time(proxy_path.Value());
+	/* This is a secure attribute, only settable by the schedd.
+	 * Assume it won't change during job execution.
 	jobAd->Assign(ATTR_X509_USER_PROXY_SUBJECT, proxy_subject);
+	*/
 	jobAd->Assign(ATTR_X509_USER_PROXY_EXPIRATION, proxy_expiration_time);
 	if (proxy_subject) {
 		free(proxy_subject);
@@ -2633,9 +2663,12 @@ RemoteResource::checkX509Proxy( void )
 		if (IsDebugVerbose(D_SECURITY)) {
 			dprintf(D_SECURITY, "VOMS attributes were found\n");
 		}
+		/* These are secure attributes, only settable by the schedd.
+		 * Assume they won't change during job execution.
 		jobAd->Assign(ATTR_X509_USER_PROXY_VONAME, voname);
 		jobAd->Assign(ATTR_X509_USER_PROXY_FIRST_FQAN, firstfqan);
 		jobAd->Assign(ATTR_X509_USER_PROXY_FQAN, quoted_DN_and_FQAN);
+		*/
 		free(voname);
 		free(firstfqan);
 		free(quoted_DN_and_FQAN);

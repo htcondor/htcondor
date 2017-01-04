@@ -203,7 +203,7 @@ OwnerProfile::create () {
     dprintf ( D_FULLDEBUG, "In OwnerProfile::create()\n" );
 
     priv_state  priv                = PRIV_UNKNOWN;
-    int         length              = 0;
+    //int         length              = 0;
     BOOL        profile_loaded      = FALSE,
                 profile_unloaded    = FALSE,
                 profile_deleted     = FALSE,
@@ -846,7 +846,7 @@ OwnerProfile::backup () {
     dprintf ( D_FULLDEBUG, "In OwnerProfile::backup()\n" );
 
     priv_state  priv            = PRIV_UNKNOWN;
-    int         length          = 0;
+    size_t      length          = 0;
     BOOL        backup_created  = FALSE,
                 ok              = FALSE;
 
@@ -928,7 +928,7 @@ OwnerProfile::restore () {
     dprintf ( D_FULLDEBUG, "In OwnerProfile::restore()\n" );
 
     priv_state  priv            = PRIV_UNKNOWN;
-    int         length          = 0;
+    //int         length          = 0;
     HANDLE      directory       = NULL;
     BOOL        profile_deleted = FALSE,
                 backup_restored = FALSE,

@@ -13,7 +13,6 @@
 #include <classad/operators.h>
 
 #include <memory>
-#include <boost/python.hpp>
 
 #include "old_boost.h"
 #include "event.h"
@@ -76,13 +75,10 @@ EventIterator::wait_internal(int timeout_ms)
         fd.fd = watch();
         fd.events = POLLIN;
         Py_BEGIN_ALLOW_THREADS
-        if (time_remaining != -1 && time_remaining < 1000) {step = time_remaining;}
+        if (time_remaining > -1 && time_remaining < 1000) {step = time_remaining;}
         if (fd.fd == -1)
         {
-            struct timeval tv;
-            tv.tv_sec = step / 1000;
-            tv.tv_usec = 1000*(step % 1000);
-            select(1,NULL,NULL,NULL,&tv);
+            Sleep(step);
         }
         else
         {
@@ -94,7 +90,7 @@ EventIterator::wait_internal(int timeout_ms)
             boost::python::throw_error_already_set();
         }
         time_remaining -= step;
-        if (time_remaining <= 0)
+        if (time_remaining == 0)
         {
             errno = 0;
             break;

@@ -84,7 +84,7 @@ unsigned int
 AttrKeyHashFunction (const AttrKey &key)
 {
 	const char *str = key.value();
-	int i = strlen( str ) - 1;
+	ssize_t i = strlen( str ) - 1;
 	unsigned int hashVal = 0;
 	while (i >= 0) {
 		hashVal += (unsigned int)tolower(str[i]);

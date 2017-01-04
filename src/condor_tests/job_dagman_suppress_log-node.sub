@@ -1,0 +1,8 @@
+universe	= vanilla
+executable	= job_dagman_suppress_log-node.pl
+arguments	= $(cluster)
+log		= job_dagman_suppress_log-node.log
+output		= job_dagman_suppress_log-node.out
+error		= job_dagman_suppress_log-node.err
+getenv		= true
+queue

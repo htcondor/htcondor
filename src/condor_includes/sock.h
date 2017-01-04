@@ -62,6 +62,10 @@ We want to define a callback function to be invoked when certain actions happen 
 
 typedef void (CedarHandler) (Stream *s);
 
+namespace classad {
+class ClassAd;
+}
+
 /*
 **	B A S E    S O C K
 */
@@ -367,6 +371,12 @@ public:
 	void setCryptoMethodUsed(char const *crypto_method);
 	const char* getCryptoMethodUsed();
 
+	void setSessionID(const std::string &session_id) {_session = session_id;}
+	const std::string &getSessionID() const {return _session;}
+
+	void getPolicyAd(classad::ClassAd &ad) const;
+	void setPolicyAd(const classad::ClassAd &ad);
+
 		/// True if socket has tried to authenticate or socket is
 		/// using a security session that tried to authenticate.
 		/// Authentication may or may not have succeeded and
@@ -525,6 +535,8 @@ protected:
 	char *          _auth_methods;
 	char *          _auth_name;
 	char *          _crypto_method;
+	std::string     _session;
+	classad::ClassAd *_policy_ad;
 	bool            _tried_authentication;
 
 	bool ignore_connect_timeout;	// Used by HA Daemon
@@ -556,7 +568,7 @@ private:
 
 	int _condor_read(SOCKET fd, char *buf, int sz, int timeout);
 	int _condor_write(SOCKET fd, const char *buf, int sz, int timeout);
-	int bindWithin(condor_protocol proto, const int low, const int high, bool outbound);
+	int bindWithin(condor_protocol proto, const int low, const int high);
 	///
 	// Buffer to hold the string version of our peer's IP address. 
 	char _peer_ip_buf[IP_STRING_BUF_SIZE];	
@@ -632,15 +644,6 @@ private:
 	   connection attempt.
 	 **/
 	void cancel_connect();
-
-	/**
-	   Private helper that sees if we're CCB enabled, if we're doing
-	   an outbound connection, and if so, uses CCB_local_bind() to
-	   avoid pounding the CCB broker for all outbound connections.
-	*/
-	//int _bind_helper(int fd, SOCKET_ADDR_CONST_BIND SOCKET_ADDR_TYPE addr,
-	//	SOCKET_LENGTH_TYPE len, bool outbound, bool loopback);
-	int _bind_helper(int fd, const condor_sockaddr& addr, bool outbound, bool loopback);
 };
 
 void dprintf ( int flags, Sock & sock, const char *fmt, ... ) CHECK_PRINTF_FORMAT(3,4);

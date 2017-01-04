@@ -47,6 +47,7 @@ typedef const struct key_value_pair MACRO_DEF_ITEM;
 
 #define PARAM_USE_COUNTING
 #define CALL_VIA_MACRO_SET
+#define USE_MACRO_STREAMS 1
 #define MACRO_SET_KNOWS_DEFAULT
 #define COLON_DEFAULT_FOR_MACRO_EXPAND  // enable $(FOO:default-value) and $(FOO:$(OTHER)) for config
 #define WARN_COLON_FOR_PARAM_ASSIGN   0 // parameter assigment with : (instead of =) is disallowed, a value of 0 is warn, 1 is fail
@@ -156,6 +157,15 @@ typedef struct macro_eval_context_ex : macro_eval_context {
 
 	// class that can be used to hold a malloc'd pointer such as the one returned by param
 	// it will free the pointer when this object is destroyed.
+	// The intended use is:
+	//   auto_free_ptr value(param("param_name"));
+	//   if (value) { dprintf(D_ALWAYS, "param_name has value %s\n", value.ptr()); }
+	//
+	// NOTE: it is NOT SAFE to use this class as a member of a class or struct that you intend to copy.
+	//   This class has minimal support for copy construction/assigment using the swap() idiom, which necessary
+	//   for populating STL containers. but it does NOT support deep copying or reference counting
+	//   which would be needed to support its use as a member in a class that you intend to copy and keep
+	//   both copies around. 
 	class auto_free_ptr {
 	public:
 		auto_free_ptr(char* str=NULL) : p(str) {}
@@ -217,6 +227,7 @@ typedef struct macro_eval_context_ex : macro_eval_context {
 	// A convenience function for use with trinary parameters.
 	bool param_false( const char * name );
 
+	const char * param_append_location(const MACRO_META * pmet, MyString & value);
 	const char * param_get_location(const MACRO_META * pmet, MyString & value);
 
 	const char * param_get_info(const char * name,
@@ -284,7 +295,11 @@ typedef struct macro_eval_context_ex : macro_eval_context {
 	bool param(MyString &buf,char const *param_name,char const *default_value=NULL);
 
 	/* A convenience function that calls param() with a std::string buffer. */
-	bool param(std::string &buf,char const *param_name,char const *default_value=NULL);
+	bool param(std::string &buf, char const *param_name, char const *default_value=NULL);
+
+	/* A convenience function that evaluates a config parameter to a string. */
+	bool param_eval_string(std::string &buf, const char *param_name, const char *default_value=NULL,
+		classad::ClassAd *me=NULL, classad::ClassAd *target=NULL);
 
 	/* A convenience function that calls param() then inserts items from the value into the given StringList if they are not already there */
 	bool param_and_insert_unique_items(const char * param_name, StringList & items, bool case_sensitive=false);
@@ -316,11 +331,12 @@ extern "C" {
 	#define CONFIG_OPT_DEFAULTS_ARE_PARAM_INFO 0x80 // the defaults table is the table defined in param_info.in.
 	#define CONFIG_OPT_NO_EXIT 0x100 // If a config file is missing or the config is invalid, do not abort/exit the process.
 	#define CONFIG_OPT_WANT_QUIET 0x200 // Keep printing to stdout/err to a minimum
+	#define CONFIG_OPT_DEPRECATION_WARNINGS 0x400 // warn about obsolete syntax/elements
 	#define CONFIG_OPT_SUBMIT_SYNTAX 0x1000 // allow +Attr and -Attr syntax like submit files do.
 	bool config();
 	bool config_ex(int opt);
 	bool config_host(const char* host, int config_options);
-	bool validate_config(bool abort_if_invalid);
+	bool validate_config(bool abort_if_invalid, int opt);
 	void config_dump_string_pool(FILE * fh, const char * sep);
 	void config_dump_sources(FILE * fh, const char * sep);
 	const char * config_source_by_id(int source_id);
@@ -397,7 +413,6 @@ int write_config_file(const char* pathname, int options);
 
 extern "C" {
 
-#if 1
 	/** Find next $$(MACRO) or $$([expression]) in value
 		search begins at pos and continues to terminating null
 
@@ -418,39 +433,6 @@ extern "C" {
 	returns non-zero if a $$() is found, zero if not found.
 	*/
 	int next_dollardollar_macro(char * value, int pos, char** left, char** name, char** right);
-#else
-
-	/** Find next $(MACRO) or $$(MACRO) in a string
-
-	The caller is expected to concatenate *leftp, the evaluated
-	*namep, then *rightp to get the expanded setting.
-
-	- value - The null-terminated string to scan. WILL BE MODIFIED!
-
-	- leftp - OUTPUT. *leftp will be set to value+search_pos.  It
-	  will be null terminated at the $ for the first $(MACRO) found.
-
-	- namep - OUTPUT. The name of the MACRO (the bit between the
-	  parenthesis).  Pointer into value.  Null terminated at the
-	  closing parenthesis.
-
-	- rightp - OUTPUT. Everything to the right of the $(MACRO).
-	  Pointer into value.
-
-	- self - Default to null. If non-null, only macros whose name is
-	  identical to self will be expanded. (Used for the special
-	  $(DOLLAR) case?)
-
-	- getdollardollar - Defaults false. If true, scans for $$(MACRO)
-	  and $$([expression]) instead of $(MACRO)
-
-	- search_pos - 0-indexed position in value to start scanning at.
-	  Defaults to 0.
-	*/
-	int find_config_macro( register char *value, register char **leftp,
-		register char **namep, register char **rightp,
-		const char *self=NULL, bool getdollardollar=false, int search_pos=0);
-#endif
 
 	void init_config (int options);
 }
@@ -461,14 +443,14 @@ BEGIN_C_DECLS
 
 	char * get_tilde(void);
 	char * param ( const char *name );
+	// do param lookup with explicit subsys and localname
+	char * param_with_context ( const char *name, const char *subsys, const char *localname, const char * cwd );
 
-	/** Insert a value into a hash table.
-
-	The value of 'value' is associated with the name 'name'.  This is
-	inserted into the table 'table' which is 'table_size' big.
-	insert keeps copies of the name and value.
-	*/
 #ifdef __cplusplus
+	// do param lookup with explicit subsys and localname
+	char * param_ctx (const char *name, MACRO_EVAL_CONTEXT & ctx);
+
+	// config source file info
 	typedef struct macro_source { bool is_inside; bool is_command; short int id; int line; short int meta_id; short int meta_off; } MACRO_SOURCE;
 	void insert_source(const char * filename, MACRO_SET& macro_set, MACRO_SOURCE & source);
 	extern const MACRO_SOURCE EnvMacro;
@@ -486,10 +468,24 @@ BEGIN_C_DECLS
 	int get_macro_ref_count (const char *name, MACRO_SET& macro_set);
 	bool config_test_if_expression(const char * expr, bool & result, const char * localname, const char * subsys, std::string & err_reason);
 
+	// simple class to split metaknob name from arguments and store the result in public member variables
+	class MetaKnobAndArgs {
+	public:
+		std::string knob;
+		std::string args;
+		std::string extra;
+		MetaKnobAndArgs(const char * p=NULL) { if (p) init_from_string(p); }
+		// set member variables by parsing p, returns pointer to the next metaknob name or NULL
+		// if there are no characters after. leading & trailing whitespace and , are skipped.
+		const char* init_from_string(const char * p);
+	};
+
+	// expand $(N) from value against arguments in argstr
+	// returns a malloc()'d ptr to expanded value, caller is responsible from freeing returned pointer.
+	char * expand_meta_args(const char *value, std::string & argstr);
+
 	// macro stream class wraps up an fp or string so that the macro parser can read from either.
 	//
-#define USE_MACRO_STREAMS 1
-#ifdef USE_MACRO_STREAMS
 	class MacroStream {
 	public:
 		virtual ~MacroStream() {};
@@ -547,10 +543,13 @@ BEGIN_C_DECLS
 		size_t cbBufAlloc;
 		auto_free_ptr line_buf;
 		auto_free_ptr file_string; // holds file content when load is called.
+	private:
+		// copy construction and assignment are not permitted.
+		MacroStreamCharSource(const MacroStreamCharSource&);
+		MacroStreamCharSource & operator=(MacroStreamCharSource that); 
+
 	};
 
-
-#endif // USE_MACRO_STREAMS
 
 	// populate a MACRO_SET from either a config file or a submit file.
 	#define READ_MACROS_SUBMIT_SYNTAX           0x01
@@ -579,12 +578,7 @@ BEGIN_C_DECLS
 
 	int
 	Parse_macros(
-#ifdef USE_MACRO_STREAMS
 		MacroStream& ms,
-#else
-		FILE* conf_fp,
-		MACRO_SOURCE& FileMacro,
-#endif
 		int depth, // a simple recursion detector
 		MACRO_SET& macro_set,
 		int options,

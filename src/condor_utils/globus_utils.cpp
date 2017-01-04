@@ -1592,12 +1592,22 @@ x509_send_delegation( const char *source_file,
 }
 
 
+#if defined(HAVE_EXT_GLOBUS)
+struct x509_delegation_state
+{
+	char                           *m_dest;
+	globus_gsi_proxy_handle_t       m_request_handle;
+};
+#endif
+
+
 int
 x509_receive_delegation( const char *destination_file,
 						 int (*recv_data_func)(void *, void **, size_t *), 
 						 void *recv_data_ptr,
 						 int (*send_data_func)(void *, void *, size_t),
-						 void *send_data_ptr )
+						 void *send_data_ptr,
+						 void ** state_ptr )
 {
 #if !defined(HAVE_EXT_GLOBUS)
 	(void) destination_file;		// Quiet compiler warnings
@@ -1605,6 +1615,7 @@ x509_receive_delegation( const char *destination_file,
 	(void) recv_data_ptr;			// Quiet compiler warnings
 	(void) send_data_func;			// Quiet compiler warnings
 	(void) send_data_ptr;			// Quiet compiler warnings
+	(void) state_ptr;			// Quiet compiler warnings
 	_globus_error_message =
 		strdup( NOT_SUPPORTED_MSG );
 	return -1;
@@ -1612,16 +1623,18 @@ x509_receive_delegation( const char *destination_file,
 #else
 	int rc = 0;
 	int error_line = 0;
+	x509_delegation_state *st = new x509_delegation_state();
+	st->m_dest = strdup(destination_file);
 	globus_result_t result = GLOBUS_SUCCESS;
-	globus_gsi_cred_handle_t proxy_handle =  NULL;
-	globus_gsi_proxy_handle_t request_handle = NULL;
+	st->m_request_handle = NULL;
 	globus_gsi_proxy_handle_attrs_t handle_attrs = NULL;
 	char *buffer = NULL;
 	size_t buffer_len = 0;
-	char *destination_file_tmp = NULL;
 	BIO *bio = NULL;
 
 	if ( activate_globus_gsi() != 0 ) {
+		if ( st->m_dest ) { free(st->m_dest); }
+		delete st;
 		return -1;
 	}
 
@@ -1683,7 +1696,9 @@ x509_receive_delegation( const char *destination_file,
 		}
 	}
 
-	result = (*globus_gsi_proxy_handle_init_ptr)( &request_handle, handle_attrs );
+	// Note: inspecting the Globus implementation, globus_gsi_proxy_handle_init creates a copy
+	// of handle_attrs; hence, it's OK for handle_attrs to be destroyed before m_request_handle.
+	result = (*globus_gsi_proxy_handle_init_ptr)( &(st->m_request_handle), handle_attrs );
 	if ( result != GLOBUS_SUCCESS ) {
 		rc = -1;
 		error_line = __LINE__;
@@ -1697,7 +1712,7 @@ x509_receive_delegation( const char *destination_file,
 		goto cleanup;
 	}
 
-	result = (*globus_gsi_proxy_create_req_ptr)( request_handle, bio );
+	result = (*globus_gsi_proxy_create_req_ptr)( st->m_request_handle, bio );
 	if ( result != GLOBUS_SUCCESS ) {
 		rc = -1;
 		error_line = __LINE__;
@@ -1723,6 +1738,73 @@ x509_receive_delegation( const char *destination_file,
 	free( buffer );
 	buffer = NULL;
 
+cleanup:
+	/* TODO Extract Globus error message if result isn't GLOBUS_SUCCESS */
+	if ( error_line ) {
+		char buff[1024];
+		snprintf( buff, sizeof(buff), "x509_receive_delegation failed "
+			"at line %d", error_line );
+		buff[1023] = '\0';
+		set_error_string( buff );
+	}
+
+	if ( bio ) {
+		BIO_free( bio );
+	}
+	if ( buffer ) {
+		free( buffer );
+	}
+	if (handle_attrs) {
+		(*globus_gsi_proxy_handle_attrs_destroy_ptr)( handle_attrs );
+	}
+	// Error!  Cleanup memory immediately and return.
+	if ( rc && st ) {
+		if ( st->m_request_handle ) {
+			(*globus_gsi_proxy_handle_destroy_ptr)( st->m_request_handle );
+		}
+		if ( st->m_dest ) { free(st->m_dest); }
+		delete st;
+		return rc;
+	}
+
+	// We were given a state pointer - caller will take care of monitoring the
+	// socket for more data and call delegation_finish later.
+	if (state_ptr != NULL) {
+		*state_ptr = st;
+		return 2;
+	}
+
+	// Else, we block and finish up immediately.
+	return x509_receive_delegation_finish(recv_data_func, recv_data_ptr, &st);
+#endif
+}
+
+
+// Finish up the delegation operation, waiting for data on the socket if necessary.
+// NOTE: get_x509_delegation_finish will take ownership of state_ptr and free its
+// memory.
+int x509_receive_delegation_finish(int (*recv_data_func)(void *, void **, size_t *),
+                               void *recv_data_ptr,
+                               void *state_ptr_raw)
+{
+#if !defined(HAVE_EXT_GLOBUS)
+	(void) recv_data_func;			// Quiet compiler warnings
+	(void) recv_data_ptr;			// Quiet compiler warnings
+	(void) state_ptr_raw;			// Quiet compiler warnings
+	_globus_error_message =
+		strdup( NOT_SUPPORTED_MSG );
+	return -1;
+
+#else
+	x509_delegation_state *state_ptr = static_cast<x509_delegation_state*>(state_ptr_raw);
+	globus_result_t result = GLOBUS_SUCCESS;
+	globus_gsi_cred_handle_t proxy_handle =  NULL;
+	int rc = 0;
+	int error_line = 0;
+	char *buffer = NULL;
+	size_t buffer_len = 0;
+	BIO *bio = NULL;
+
 	if ( recv_data_func( recv_data_ptr, (void **)&buffer, &buffer_len ) != 0 ) {
 		rc = -1;
 		error_line = __LINE__;
@@ -1735,8 +1817,9 @@ x509_receive_delegation( const char *destination_file,
 		goto cleanup;
 	}
 
-	result = (*globus_gsi_proxy_assemble_cred_ptr)( request_handle, &proxy_handle,
-											 bio );
+	result = (*globus_gsi_proxy_assemble_cred_ptr)( state_ptr->m_request_handle, &proxy_handle,
+	                                                bio );
+
 	if ( result != GLOBUS_SUCCESS ) {
 		rc = -1;
 		error_line = __LINE__;
@@ -1746,10 +1829,7 @@ x509_receive_delegation( const char *destination_file,
 	/* globus_gsi_cred_write_proxy() declares its second argument non-const,
 	 * but never modifies it. The copy gets rid of compiler warnings.
 	 */
-	destination_file_tmp = new char[strlen(destination_file)+1];
-	strcpy(destination_file_tmp, destination_file);
-	result = (*globus_gsi_cred_write_proxy_ptr)( proxy_handle, destination_file_tmp );
-	delete[] destination_file_tmp;
+	result = (*globus_gsi_cred_write_proxy_ptr)( proxy_handle, state_ptr->m_dest );
 	if ( result != GLOBUS_SUCCESS ) {
 		rc = -1;
 		error_line = __LINE__;
@@ -1771,11 +1851,12 @@ x509_receive_delegation( const char *destination_file,
 	if ( buffer ) {
 		free( buffer );
 	}
-	if (handle_attrs) {
-		(*globus_gsi_proxy_handle_attrs_destroy_ptr)( handle_attrs );
-	}
-	if ( request_handle ) {
-		(*globus_gsi_proxy_handle_destroy_ptr)( request_handle );
+	if ( state_ptr ) {
+		if ( state_ptr->m_request_handle ) {
+			(*globus_gsi_proxy_handle_destroy_ptr)( state_ptr->m_request_handle );
+		}
+		if ( state_ptr->m_dest ) { free(state_ptr->m_dest); }
+		delete state_ptr;
 	}
 	if ( proxy_handle ) {
 		(*globus_gsi_cred_handle_destroy_ptr)( proxy_handle );

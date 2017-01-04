@@ -65,7 +65,7 @@ int perm::get_permissions( const char *file_name, ACCESS_MASK &AccessRights ) {
 			//	 thats will give us a permissions bitmask, or we run out of places
 			//	 to look (which shouldn't happen since c:\ should always give us
 			//	 SOMETHING...
-			int i = strlen( file_name ) - 1;
+			int i = (int)strlen( file_name ) - 1;
 			while ( i >= 0 && ( file_name[i] != '\\' && file_name[i] != '/' ) ) {
 				i--;
 			}
@@ -698,7 +698,7 @@ bool perm::volume_has_acls( const char *filename )
 		}
 		else {
 			// found no fourth backslash; copy the whole string and tack one on
-			int len_to_copy = strlen(filename);
+			int len_to_copy = (int)strlen(filename);
 			root_path = (char*)malloc(len_to_copy + 2);
 			if (root_path == NULL) {
 				EXCEPT("Out of memory!");

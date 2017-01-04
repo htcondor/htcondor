@@ -1,0 +1,2 @@
+Config job_dagman_suppress_log.config
+Job NodeA job_dagman_suppress_log-node.sub

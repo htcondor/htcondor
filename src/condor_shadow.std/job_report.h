@@ -45,7 +45,7 @@ to the currently open ClassAd Q.
 #define JOB_REPORT_RECORD_MAX 2048
 
 int  job_report_store_call( int call );
-int  job_report_store_error( const char *format, ... ) CHECK_PRINTF_FORMAT(1,2);
+int  job_report_store_error( const char *message, const char * context );
 void job_report_store_file_info( char *name, long long oc, long long rc, long long wc, long long sc, long long rb, long long wb );
 
 void job_report_display_calls( FILE *f );

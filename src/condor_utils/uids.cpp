@@ -216,7 +216,7 @@ can_switch_ids( void )
          static const LPCTSTR needed[] = {
             SE_INCREASE_QUOTA_NAME, //needed by CreateProcessAsUser
             //SE_TCB_NAME,            //needed on Win2k to CreateProcessAsUser
-            SE_PROF_SINGLE_PROCESS_NAME, //needed?? to get CPU% and Memory/Disk useage for our children
+            SE_PROF_SINGLE_PROCESS_NAME, //needed?? to get CPU% and Memory/Disk usage for our children
             SE_CREATE_GLOBAL_NAME,  //needed to create named shared memory
             SE_CHANGE_NOTIFY_NAME,  //needed by CreateProcessAsUser
             SE_SECURITY_NAME,       //needed to change file ACL's
@@ -507,6 +507,7 @@ init_user_ids(const char username[], const char domain[])
 			Daemon credd(DT_CREDD);
 			Sock * credd_sock = credd.startCommand(CREDD_GET_PASSWD,Stream::reli_sock,10);
 			if ( credd_sock ) {
+				credd_sock->set_crypto_mode(true);
 				credd_sock->put((char*)username);	// send user
 				credd_sock->put((char*)domain);		// send domain
 				credd_sock->end_of_message();

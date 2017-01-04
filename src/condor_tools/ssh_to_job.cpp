@@ -169,6 +169,7 @@ void SSHToJob::printUsage()
 	fprintf(stderr," -ssh <alt ssh command>    (e.g. sftp or scp)\n");
 	fprintf(stderr," -keygen-options <keygen options>\n");
 	fprintf(stderr," -X                        (enable X11 forwarding)\n");
+	fprintf(stderr," -x                        (disable X11 forwarding)\n");
 }
 
 bool SSHToJob::parseArgs(int argc,char **argv)
@@ -237,6 +238,8 @@ bool SSHToJob::parseArgs(int argc,char **argv)
 			}
 		} else if( !strcmp( argv[nextarg], "-X" ) ) {
 			m_x_forwarding = true;
+		} else if( !strcmp( argv[nextarg], "-x" ) ) {
+			m_x_forwarding = false;
 		} else if( !strcmp( argv[nextarg], "--" ) ) {
 			++nextarg;
 			break;
@@ -403,6 +406,24 @@ bool SSHToJob::execute_ssh_retry()
 
 bool SSHToJob::execute_ssh()
 {
+	DCSchedd schedd(m_schedd_name.IsEmpty() ? NULL : m_schedd_name.Value(),
+					m_pool_name.IsEmpty() ? NULL   : m_pool_name.Value());
+	if( schedd.locate() == false ) {
+		if( m_schedd_name.IsEmpty() ) {
+			logError("ERROR: Can't find address of local schedd\n");
+			return false;
+		}
+
+		if( m_pool_name.IsEmpty() ) {
+			logError("No such schedd named %s in local pool\n",
+					 m_schedd_name.Value() );
+		} else {
+			logError("No such schedd named %s in pool %s\n",
+					 m_schedd_name.Value(), m_pool_name.Value() );
+		}
+		return false;
+	}
+
 	//
 	// Handle EC2 jobs.
 	//
@@ -414,7 +435,7 @@ bool SSHToJob::execute_ssh()
 	//
 
 	if( m_could_be_ec2_job ) {
-		Qmgr_connection * q = ConnectQ( m_schedd_name.IsEmpty() ? NULL : m_schedd_name.Value(), 0, true );
+		Qmgr_connection * q = ConnectQ( schedd.addr(), 0, true );
 		if( ! q ) {
 			logError( "Can't connect to schedd\n" );
 			return false;
@@ -511,28 +532,7 @@ bool SSHToJob::execute_ssh()
 	//
 
 	MyString error_msg;
-
 	m_retry_sensible = false;
-
-	DCSchedd schedd(m_schedd_name.IsEmpty() ? NULL : m_schedd_name.Value(),
-					m_pool_name.IsEmpty() ? NULL   : m_pool_name.Value());
-	if( schedd.locate(Daemon::LOCATE_FOR_LOOKUP) == false ) {
-		if( m_schedd_name.IsEmpty() ) {
-			logError("ERROR: Can't find address of local schedd\n");
-			return false;
-		}
-
-		if( m_pool_name.IsEmpty() ) {
-			logError("No such schedd named %s in local pool\n",
-					 m_schedd_name.Value() );
-		} else {
-			logError("No such schedd named %s in pool %s\n",
-					 m_schedd_name.Value(), m_pool_name.Value() );
-		}
-		return false;
-	}
-
-
 	MyString starter_addr;
 	MyString starter_claim_id;
 	MyString starter_version;

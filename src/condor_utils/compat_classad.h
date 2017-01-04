@@ -399,6 +399,10 @@ class ClassAd : public classad::ClassAd
                 StringList *internal_refs,
                 StringList *external_refs) const;
 
+    bool GetExprReferences(ExprTree * expr,
+                StringList *internal_refs,
+                StringList *external_refs) const;
+
 	static void Reconfig();
 	static bool m_initConfig;
 	static bool m_strictEvaluation;
@@ -476,23 +480,27 @@ class CondorClassAdFileParseHelper : public ClassAdFileParseHelper
 	};
 
 	CondorClassAdFileParseHelper(std::string delim, ParseType typ=Parse_long) 
-		: ad_delimitor(delim), parse_type(typ), new_parser(NULL), inside_list(false) {};
+		: ad_delimitor(delim), parse_type(typ), new_parser(NULL), inside_list(false)
+		, blank_line_is_ad_delimitor(delim=="\n") {};
 	ParseType getParseType() { return parse_type; }
 	bool configure(const char * delim, ParseType typ) {
 		if (new_parser) return false;
 		if (delim) { ad_delimitor = delim; }
 		parse_type = typ;
 		inside_list = false;
+		blank_line_is_ad_delimitor = ad_delimitor=="\n";
 		return true;
 	}
  private:
 	CondorClassAdFileParseHelper(const CondorClassAdFileParseHelper & that); // no copy construction
 	CondorClassAdFileParseHelper & operator=(const CondorClassAdFileParseHelper & that); // no assignment
+	bool line_is_ad_delimitor(const std::string & line);
 
 	std::string ad_delimitor;
 	ParseType parse_type;
 	void*     new_parser; // a class whose type depends on the value of parse_type.
 	bool      inside_list;
+	bool      blank_line_is_ad_delimitor;
 };
 
 // This implements a generic classad FILE* reader that can be used as an iterator
@@ -632,11 +640,13 @@ int sPrintAdAsJson(std::string &output, const classad::ClassAd &ad,
  */
 char* sPrintExpr(const classad::ClassAd &ad, const char* name);
 
-/** Basically just calls an Unparser so we can escape strings
- *  @param val The string we're escaping stuff in. 
- *  @return The escaped string.
+/** Basically just calls an Unparser so we can escape strings.
+ *  The enclosing quote characters are included.
+ *  @param val The string to be escaped.
+ *  @param buf Buffer where the escaped form is written.
+ *  @return The escaped string (buf.c_str()).
  */
-char const *EscapeAdStringValue(char const *val, std::string &buf);
+char const *QuoteAdStringValue(char const *val, std::string &buf);
 
 	/** Set the MyType attribute */
 void SetMyTypeName(classad::ClassAd &ad, const char *);

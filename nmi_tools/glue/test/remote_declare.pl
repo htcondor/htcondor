@@ -147,7 +147,7 @@ my $wrote_count = 0;
 print "****************************************************\n";
 print "**** Writing out tests to tasklist.nmi\n";
 print "****************************************************\n";
-foreach my $task (sort keys %tasklist) {
+foreach my $task (sort prio_sort keys %tasklist) {
     my $skip = defined($SkipList{$task}) ? 1 : 0;
     if ($skip) {
         $skipped_count += 1;
@@ -167,6 +167,8 @@ foreach my $task (sort keys %tasklist) {
     if(grep $_ eq $ENV{NMI_PLATFORM}, @serial_test_platforms) {
         $prefix = "";
     }
+
+	print "\t$prefix$task\n";
 
     if(defined($CustomTimeouts{"$task"})) {
         print "CustomTimeout:$task $CustomTimeouts{$task}\n";
@@ -189,6 +191,15 @@ print "Wrote " . $wrote_count . " unique tests, skipped " . $skipped_count . ".\
 
 exit(0);
 
+# sort tests by the order in which we want them to run.
+# using the hash value as the primary sort key (reversed because we want higher prio to go first)
+# the task name (i.e the key) as will be the secondary sort key
+sub prio_sort {
+   my $ret = $tasklist{$b} <=> $tasklist{$a};
+   if ( ! $ret) { $ret = $a cmp $b; }
+   return $ret;
+}
+
 sub findTests {
     my( $classname, $dir_arg ) = @_;
     my ($ext, $dir);
@@ -208,6 +219,18 @@ sub findTests {
     open(LIST, '<', $list_target) || die "cannot open $list_target: $!\n";
     my %tasklist = map { chomp; "$_$ext" => 1 } <LIST>;
     close(LIST);
+
+    # set (rough) priorities for some of the tests.
+    foreach (keys %tasklist) {
+        if ($_ =~ /unit_test/) { $tasklist{$_} += 20; }
+        if ($_ =~ /basic/) { $tasklist{$_} += 7; }
+        if ($_ =~ /^config/) { $tasklist{$_} += 4; }
+        if ($_ =~ /^lib_/) { $tasklist{$_} += 3; }
+        if ($_ =~ /^cmd_/) { $tasklist{$_} += 2; }
+        if ($_ =~ /_core_/) { $tasklist{$_} += 2; }
+        if ($_ =~ /^job_f/) { $tasklist{$_} += 1; }
+        if ($_ =~ /concurrency/) { $tasklist{$_} -= 1; } # these are very slow tests.
+    }
 
     print join("\n", sort keys %tasklist) . "\n";
 

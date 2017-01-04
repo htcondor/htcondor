@@ -630,7 +630,7 @@ sub quoteMyString {
 		$_ = $stringtoquote;
 		s/%/\%/g;
 		s/"/\"/g;
-		if($stringtoquote =~ /\s+/) {
+		if($stringtoquote =~ /\s+|&/) {
 			$returnstr = "\"" . $_ . "\"";
 		} else {
 			$returnstr = $_;

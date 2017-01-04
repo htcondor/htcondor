@@ -150,4 +150,26 @@ fi
 # FIXME: Only on the collector.
 increaseKernelParameter "MAX_RECEIVE_BUFFER" "/proc/sys/net/core/rmem_max" ${MAX_RECEIVE_BUFFER}
 
+# Mount cgroups if not already mounted
+# Check to see if admin has enabled cgroups in condor
+if condor_config_val BASE_CGROUP > /dev/null 2>&1
+then
+    # Admin has requested them (or left the default on)
+
+    # Check to see if they are already mounted, assume if memory is, they all are
+    if ! grep -q memory /proc/self/cgroup
+    then
+	mkdir -p /cgroup/memory
+        mount -t cgroup -o memory memory /cgroup/memory
+	mkdir -p /cgroup/cpu
+        mount -t cgroup -o cpu cpu /cgroup/cpu
+	mkdir -p /cgroup/cpuacct
+        mount -t cgroup -o cpuacct cpuacct /cgroup/cpuacct
+	mkdir -p /cgroup/blkio
+        mount -t cgroup -o blkio blkio /cgroup/blkio
+	mkdir -p /cgroup/freezer
+        mount -t cgroup -o freezer freezer /cgroup/freezer
+    fi
+fi
+
 exit 0

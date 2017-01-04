@@ -22,6 +22,12 @@
 
 //#include "condor_common.h"
 
+//uncomment this to have the job router use the XFORM_UTILS library (i.e. the same code as schedd's job transforms)
+//#define USE_XFORM_UTILS 1
+#ifdef USE_XFORM_UTILS
+#include <xform_utils.h>
+#endif
+
 #include "classad/classad_distribution.h"
 
 class JobRoute;
@@ -57,6 +63,9 @@ class RoutedJob {
 	bool is_done;     // true if src job should be marked finished
 	bool is_running;  // true if job status is RUNNING
 	bool is_success;  // true if job finished successfully
+	bool is_interrupted; // true if job aborted due to external conditions
+		// (e.g. source job removed)
+		// this job shouldn't be considered a success or a failure
 
 	bool is_sandboxed;// true if dest copy of job has a separate sandbox
 
@@ -91,22 +100,53 @@ class JobRoute {
 	JobRoute();
 	virtual ~JobRoute();
 
+#ifdef USE_XFORM_UTILS
+	private:
+		JobRoute(const JobRoute&);
+	public:
+#else
 	classad::ClassAd *RouteAd() {return &m_route_ad;}
+#endif
 	char const *Name() {return m_name.c_str();}
 	int MaxJobs() {return m_max_jobs;}
 	int MaxIdleJobs() {return m_max_idle_jobs;}
 	int CurrentRoutedJobs() {return m_num_jobs;}
 	int TargetUniverse() {return m_target_universe;}
 	char const *GridResource() {return m_grid_resource.c_str();}
+#ifdef USE_XFORM_UTILS
+	classad::ExprTree *RouteRequirementExpr() { return m_route.getRequirements(); }
+	char const *RouteRequirementsString() { return m_route.getRequirementsStr(); }
+	std::string RouteString() {
+		std::string str;
+		if (m_route.getText()) { str = m_route.getText(); } else { str = ""; }
+		return str;
+	}
+	bool RouteStringPretty(std::string & str) { 
+		if (m_route.getText()) {
+			m_route.getFormattedText(str, "\t", true);
+			return true;
+		}
+		return false;
+	}
+	bool Matches(classad::ClassAd * job_ad) { return m_route.matches(reinterpret_cast<ClassAd*>(job_ad)); }
+	bool JobFailureTest(classad::ClassAd * job_ad); // evaluate JobFailureTest expression (if any), UNDEFINED is false
+	bool JobShouldBeSandboxed(classad::ClassAd * job_ad); // evaluate JobShouldBeSandboxed expression (if any), UNDEFINED is false
+	bool EditJobInPlace(classad::ClassAd * job_ad); // evaluate EditJobInPlace expression (if any), UNDEFINED is false
+#else
 	classad::ExprTree *RouteRequirementExpr() {return m_route_requirements;}
 	char const *RouteRequirementsString() {return m_route_requirements_str.c_str();}
 	std::string RouteString(); // returns a string describing the route
 	bool RouteStringPretty(std::string & str); // prints the route classad into str
+#endif
 
 	// copy state from another route
 	void CopyState(JobRoute *route);
 
+#ifdef USE_XFORM_UTILS
+	bool ParseNext(const std::string & routing_string,int &offset,classad::ClassAd const *router_defaults_ad,bool allow_empty_requirements);
+#else
 	bool ParseClassAd(std::string routing_string,int &offset,classad::ClassAd const *router_defaults_ad,bool allow_empty_requirements);
+#endif
 
 	// ApplyRoutingJobEdits() allows the router to edit the job ad before
 	// resubmitting it.  It does so by having attributes of the following form:
@@ -150,7 +190,11 @@ class JobRoute {
 	double m_failure_rate_threshold;// failures/sec --> throttling
 	double m_throttle;              // limit new jobs/sec (0 means no throttle)
 
+#ifdef USE_XFORM_UTILS
+	MacroStreamXFormSource m_route;
+#else
 	classad::ClassAd m_route_ad;   // ClassAd describing the route
+#endif
 
 	// stuff extracted from the route_ad:
 	std::string m_name;           // name distinguishing this route from others
@@ -158,15 +202,26 @@ class JobRoute {
 	std::string m_grid_resource;  // if routing to grid universe, the grid site
 	int m_max_jobs;               // maximum jobs to route
 	int m_max_idle_jobs;          // maximum jobs in the idle state (requirement for submitting more jobs)
+#ifdef USE_XFORM_UTILS
+	ConstraintHolder m_JobFailureTest;
+	ConstraintHolder m_JobShouldBeSandboxed;
+	ConstraintHolder m_EditJobInPlace;
+	ConstraintHolder m_UseSharedX509UserProxy;
+	ConstraintHolder m_SharedX509UserProxy;
+#else
 	classad::ExprTree *m_route_requirements; // jobs must match these requirements
 	std::string m_route_requirements_str;    // unparsed version of above
+#endif
 
 		// true if this entry is intended to override an entry with the
 		// same name further up in the routing table definition
 	int m_override_routing_entry;
 
+#ifdef USE_XFORM_UTILS
+#else
 	// Extract data from the route_ad into class variables.
 	bool DigestRouteAd(bool allow_empty_requirements);
+#endif
 };
 
 

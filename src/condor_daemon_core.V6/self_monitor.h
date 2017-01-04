@@ -50,7 +50,7 @@ public:
     /* If you want to put the monitoring ClassAd, just call this
        function with your ClassAd, and we'll drop in the data for
        you. */
-    bool ExportData(ClassAd *ad);
+    bool ExportData(ClassAd *ad, bool verbose=false);
 
     /* Below is the data that we collect. Feel free to look at it
        directly if you don't want to put it into a ClassAd wtih
@@ -65,6 +65,10 @@ public:
     unsigned long image_size;
     // How much actual RAM we are using (resident set size) (from ProcAPI)
     unsigned long rs_size;
+    // time (secs) in user mode (from ProcAPI)
+    long user_time;
+    // time (secs) in system mode (from ProcAPI)
+    long sys_time;
     // How long this program has been alive, in seconds (from ProcAPI)
     long          age;
 	// How many sockets are registered in daemonCore

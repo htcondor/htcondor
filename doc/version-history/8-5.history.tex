@@ -12,15 +12,15 @@ This is the development release series of HTCondor.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{\label{sec:New-8-5-8}Version 8.5.8}
+\subsection*{\label{sec:New-8-5-9}Version 8.5.9}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \noindent Release Notes:
 
 \begin{itemize}
 
-\item HTCondor version 8.5.8 not yet released.
-%\item HTCondor version 8.5.8 released on Month Date, 2016.
+\item HTCondor version 8.5.9 not yet released.
+%\item HTCondor version 8.5.9 released on Month Date, 2016.
 
 \end{itemize}
 
@@ -29,11 +29,7 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item New submit command \SubmitCmdNI{gce\_json\_file} can be used with
-grid-type gce jobs to specify a file that contains JSON object members
-that should be added to the instance description submitted to the GCE
-service.
-\Ticket{5893}
+\item None.
 
 \end{itemize}
 
@@ -41,7 +37,214 @@ service.
 
 \begin{itemize}
 
-\item None.
+\item Fixed a bug in the virtual machine universe where \Attr{RequestMemory}
+and \Attr{RequestCPUs} were not changing the resources assigned to the VM
+created by HTCondor.  Now, \Attr{VM\_Memory} defaults to \Attr{RequestMemory},
+and the number of CPUs defaults to \Attr{RequestCPUs}.
+\Ticket{5998}
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-8-5-8}Version 8.5.8}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item HTCondor version 8.5.8 released on December 13, 2016.
+
+\end{itemize}
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item On Linux, the starter now puts all jobs in a cgroup by default.  The default
+for CGROUP\_MEMORY\_LIMIT\_POLICY is now "none".  To disable cgroups, an admin
+can set the BASE\_CGROUP parameter to the empty string.
+\Ticket{5936}
+
+\item Added first-class \Condor{submit} commands supporting job retries.
+(See section~\ref{condor-submit-max-retries} for details.)
+\Ticket{5912}
+
+\item \Condor{qedit} now defaults to editing only jobs owned by the current user in the same way that
+\Condor{q} does. It also honors the \Macro{CONDOR\_Q\_ONLY\_MY\_JOBS} configuration variable.
+\Ticket{5889}
+
+\item Added new parameter \Macro{DOCKER\_VOLUME\_DIR\_XXX\_MOUNT\_IF} which is an expression,
+evaluated in the context of the machine and job ad, which if it evaluates to a string,
+becomes a docker volume mount.  This allows admins to conditionally add docker volumes
+for certain types of jobs.
+\Ticket{5758}
+
+\item Added initial support for Singularity containers.
+\Ticket{5828}
+
+\item The XferStatsLog file on the submit side now contains TCP statistics for both the
+shadow point of view, and the starter point of view.  The starter side line is prefixed
+with the words "peer stats from starter".
+\Ticket{5917}
+
+\item Configuration variables of the form \verb@SUBSYS.LOCALNAME.VARIABLE@ no longer work.
+The use of the SUBSYS prefix before LOCALNAME never worked fully, and was only necessary for while
+as a workaround for a bug that was fixed many years ago. \Condor{config\_val} and the \Condor{master} will
+now produce warning messages when the configuration has variables that appear to of this form and
+begin with a known SUBSYS name like MASTER or COLLECTOR.
+\Ticket{5969}
+
+\item The \Macro{SLOT\_WEIGHT} parameter can now be set on the central manager,
+instead of all the execute nodes.  If the execute nodes set this parameter, it
+will override the central manager setting.
+\Ticket{5953}
+
+\item New submit command \SubmitCmdNI{gce\_json\_file} can be used with
+grid-type gce jobs to specify a file that contains JSON object members
+that should be added to the instance description submitted to the GCE
+service.
+\Ticket{5893}
+
+\item A number of command-line tools now support bash auto-completion.
+\Ticket{5924}
+
+\item The minimum update time for \Condor{dagman} node status files
+now defaults to 60 seconds.
+\Ticket{5929}
+
+\item Added the new \MacroNI{DAGMAN\_REMOVE\_NODE\_JOBS} configuration
+macro, which allows users to configure whether \Condor{dagman} itself
+removes its node jobs when it is removed (note that the
+node jobs are also removed by the \Condor{schedd}).
+This configuration macro defaults to \Expr{True}, which represents
+a change in behavior compared to previous HTCondor versions.
+(See section~\ref{sec:DAGMonitoring} for more details.)
+\Ticket{5175}
+
+\item The \Arg{-AllowLogError} argument to \Condor{submit\_dag} and
+\Condor{dagman}, and the DAGMAN\_ALLOW\_LOG\_ERROR configuration
+macro, are no longer supported, and generate warnings if used.
+\Ticket{5630}
+
+\item \Condor{dagman} now ignores the
+\MacroNI{DAGMAN\_LOG\_ON\_NFS\_IS\_ERROR} configuration setting if
+\MacroNI{ENABLE\_USERLOG\_LOCKING} is set to \Expr{False}.
+\Ticket{5641}
+
+\item Added the \Arg{ALL\_NODES} option to a number of \Condor{dagman}
+commands (see~\ref{sec:DAGAllNodes} for details).
+\Ticket{5729}
+
+\item Changed the previous term "metaknob" to "configuration template"
+and improved the configuration template documentation.
+\Ticket{5865}
+
+\item The \Condor{schedd} receiving a refreshed X.509 proxy credential
+is now done in a non-blocking fashion.
+\Ticket{5930}
+
+\item The Job Router now performs its automatic job ad transformations
+when the TRANSLATE\_JOB hook is used.
+These are changes that should happen to all job ads being transformed
+by the Job Router.
+\Ticket{5235}
+
+\item The \verb@$F()@ configuration macro has new options to support
+conversions of paths to Windows style path separators or to Unix style.
+When used in \Condor{submit} files it can do path completion as well.
+\Ticket{5938}
+
+\item The \verb@$ENV()@ configuration macro now supports default values.
+\Ticket{5882}
+
+\item A certificate mapfile can now use literal values rather than regular
+expressions for the second field. This is useful when only a single identity
+should be matched.  The use of a literal is both more secure and faster to
+search. The new configuration variable \Macro{CERTIFICATE\_MAPFILE\_ASSUME\_HASH\_KEYS}
+enables this behavior, it defaults to false. It will most likely default
+to true in a future version of HTCondor.
+\Ticket{5992}
+
+\item The ClassAd \Code{userMap} function now uses only commas as the separator for the
+third field of the map file. This makes it possible to have values with spaces in them.
+\Ticket{5988}
+
+\item The \Condor{collector} will now allow more than one \Condor{negotiator} to be registered.
+And a new A new configuration variable \Macro{COLLECTOR\_ALLOW\_ONLY\_ONE\_NEGOTIATOR}, which defaults
+to false has been added so that the old behavior can still be configured.
+\Ticket{5967}
+
+\item The Requirements expression for Job transforms in the \Condor{schedd} will now ignore the TARGET
+prefix for attributes in the expression. This makes it easier to convert \Condor{job\_router} rules
+to job transforms because the TARGET prefix is required in the \Condor{job\_router} but refers to nothing
+in the job transform.
+\Ticket{5980}
+
+\item The \Opt{-better-analyze} option of \Condor{q} has been improved and the output reorganized.
+\Ticket{5290}
+
+\item A new tool - \Condor{transform\_ads} has been added.
+(See section~\ref{man-condor-transform-ads} for details.)
+\Ticket{5805}
+
+\item A join function has been added to the ClassAd language.
+\Ticket{6018}
+
+\item \Condor{who} has additional options for querying the state and readiness of the various daemons.
+It has a command that can be used to wait for the daemons to startup with a timeout.
+\Ticket{5416}
+
+\item When submitting a job that has an associated X.509 proxy, or when
+authenticating to the \Condor{schedd} using X.509, the X.509 and VOMS
+attributes are securely extracted and carried along in the job ClassAd.  This
+allows them to be used, for example, in matchmaking policy and job routing.
+\Ticket{5064}
+
+\item Made \Condor{credd} configuration easier by automatically configuring
+network connections to use encryption.
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item When the Google Compute Engine breaks the results of a query into
+multiple pages, the \Prog{gce\_gahp} now retrieves all of the results,
+instead of just the first page.
+\Ticket{6010}
+
+\item Fixed a bug that caused file transfer to fail when a job created
+by the Job Router has a different \Attr{Owner} than the original job.
+\Ticket{5348}
+
+\item Fixed a bug that could result in "orphan" node jobs staying
+in the queue when an instance of \Condor{dagman} is removed.
+\Ticket{5702}
+
+\item Fixed a regression introduced in v8.5.7 that prevents job preemption
+due to priority from occurring, because 
+user priority and resources in use information cannot be referenced in 
+\MacroNI{PREEMPTION\_REQUIREMENTS}.
+\Ticket{6014}
+
+\item Fixed \Macro{COLLECTOR\_FORWARD\_FILTERING} so that a startd ad
+update is always forwarded when any of the Claim IDs change.
+\Ticket{5913}
+
+\item Fixed a bug that made the Requirements keyword for job transforms
+in the \Condor{schedd} only work if it was all uppercase on Red Hat 7 and
+some other platforms that use a newer version of the C++ compiler.
+\Ticket{5973}
+
+\item Fixed a bug that allowed a user to bypass the \Macro{MAX\_RUNNING\_SCHEDULER\_JOBS\_PER\_OWNER}
+limit by specifying an accounting group or nice\_user in their submit file.
+\Ticket{5949}
+
+\item Fixed a bug in \Condor{c} and the \Condor{job\_router} that could cause inaccurate
+job totals to be reported by \Condor{q} \Opt{-batch}.
+\Ticket{6020}
+
 
 \end{itemize}
 
@@ -53,27 +256,67 @@ service.
 
 \begin{itemize}
 
-\item HTCondor version 8.5.7 not yet released.
-%\item HTCondor version 8.5.7 released on Month Date, 2016.
+\item HTCondor version 8.5.7 released on September 29, 2016.
 
 \end{itemize}
 
+\noindent Known Issues:
+
+\begin{itemize}
+
+\item Preemption due to job priority is likely to fail if \MacroNI{PREEMPTION\_REQUIREMENTS}
+attempts to reference any resource usage or priority attributes. This issue has
+been fixed in v8.5.8.  If you cannot upgrade to v8.5.8, a work-around for v8.5.7
+is to set configuration macro \MacroNI{NEGOTIATOR\_CROSS\_SLOT\_PERI'S} to \Expr{True}.
+\Ticket{6014}
+
+\end{itemize}
 
 \noindent New Features:
 
 \begin{itemize}
 
-\item Increase the resolution of file transfer timing statistics in
-the XferStatsLog to hundreds of a second.
-\Ticket{5898}
+\item Added the capability for the schedd to perform job ClassAd
+transformations upon job submission (see~\ref{sec:Schedd-Config}
+for details).
+\Ticket{5885}
 
-\item The default host based security meta-knob now works in IPv6
-only networks out of the box.
-\Ticket{5894}
+\item Added the capability for more flexible connections between
+splices in DAGs (see ~\ref{sec:DAGSpliceConnections} for details).
+Also added an INCLUDE command to the DAG language (see
+~\ref{sec:DAG-include} for details).
+\Ticket{5213}
 
-\item Old HAD configurations, with or without replication, should now work
-by default (without shared port).
-\Ticket{5769}
+\item Simplified the DAG node priority algorithm:  the "effective" priority
+of a node is now simply the sum of the explicit node priority and the
+overall DAG priority.  (See section ~\ref{sec:DAG-SetNodePriority} for
+more details.)
+\Ticket{4024}
+\Ticket{5749}
+
+\item Allow the second argument of the ClassAd ternary operator
+(expression ? value1 : value2) to be omitted.  This new syntax means:
+evaluate the expression, and if it evaluated to a defined value or
+error, return it.  If undefined, return value2.
+\Ticket{5782}
+
+\item The time is now included after the SCHEDD or SUBMITTER name
+in the banner of \Condor{q} output.
+\Ticket{5895}
+
+\item \Condor{status} has a new \Opt{-data} option that, when used with \Opt{-schedd}
+will show data transfer information; and \Opt{-run} will show information about running
+jobs when used with \Opt{-schedd}.
+\Ticket{3938}
+
+\item \Condor{q} \Opt{-batch} will now show Total and Completed counts for non-DAG jobs
+when querying a scheduler that is at least version 8.5.7
+\Ticket{5874}
+
+\item \Condor{status} and \Condor{q} now support reading and writing ClassAds
+in xml, json, and "new ClassAd" form as well as the traditional long form.
+\Ticket{5844}
+\Ticket{5820}
 
 \item HTCondor daemons now respect \MacroNI{<LOCALNAME>.<SUBSYSTEM>\_LOG}
 if passed a -local-name parameter, and default to using
@@ -92,6 +335,18 @@ a DC daemon if so.  This should result in simpler and less error-prone
 configuration.
 \Ticket{5767}
 
+\item Increase the resolution of file transfer timing statistics in
+the XferStatsLog to hundreds of a second.
+\Ticket{5898}
+
+\item The default host based security meta-knob now works in IPv6
+only networks out of the box.
+\Ticket{5894}
+
+\item Old HAD configurations, with or without replication, should now work
+by default (without shared port).
+\Ticket{5769}
+
 \item HTCondor no longer gives up if a bad networking configuration is
 detected while running a tool.  This allows \Condor{config\_val} to be
 used to debug the problem.
@@ -104,35 +359,34 @@ re-enables the old behavior.  The accounting information for the current
 user of the slot remains advertised.
 \Ticket{5785}
 
-\item Simplified the DAG node priority algorithm:  the "effective" priority
-of a node is now simply the sum of the explicit node priority and the
-overall DAG priority.  (See section ~\ref{sec:DAG-SetNodePriority} for
-more details.)
-sec:DAG-SetNodePriority
-\Ticket{5749}
-
-\item Added the capability for more flexible connections between
-splices in DAGs (see ~\ref{sec:DAGSpliceConnections} for details).
-Also added an INCLUDE command to the DAG language (see
-~\ref{sec:dagman_include_command} for details).
-\Ticket{5213}
-
-\item Allow the second argument of the ClassAd ternary operator
-(expression ? value1 : value2) to be omitted.  This new syntax means:
-evaluate the expression, and if it evaluated to a defined value or
-error, return it.  If undefined, return value2.
-\Ticket{5782}
-
 \item New submit attribute \SubmitCmd{gce\_preemptible} allows the
 creation of preemptible Google Compute Engine (GCE) instances.
 These instances have a lower price, but can be interrupted at any time.
 Also added support for service accounts with GCE.
 \Ticket{5821}
 
-\item When submitting jobs to SLURM via the grid universe, the SLURM
+\item When submitting jobs to Slurm via the grid universe, the Slurm
 partition can now be specified using the \SubmitCmdNI{batch\_queue}
 submit command.
 \Ticket{5780}
+
+\item Some old STARTD policy helper configuration variables were moved
+into two new configuration templates --
+\Macro{FEATURE : UWCS\_DESKTOP\_POLICY\_VALUES}
+and \Macro{FEATURE : TESTINGMODE\_POLICY\_VALUES}
+\Ticket{5871}
+
+\item \Condor{submit} on Windows will no longer insert the OSVERSIONINFO
+fields like \Attr{WindowsMajorVersion} into each job automatically. This
+is controlled by a new configuration variable \Macro{SUBMIT\_PUBLISH\_WINDOWS\_OSVERSIONINFO}
+which defaults to false.
+\Ticket{5873}
+
+\item Added the option to cache the output of commands used in configuration
+files, so that the command doesn't have to be re-run every time the
+configuration file is referenced.  Also added error and warning keywords
+to allow configuration files to report errors and warnings.
+\Ticket{5781}
 
 \end{itemize}
 
@@ -142,7 +396,7 @@ submit command.
 
 \item Fixed a bug in how the HAD daemon checks to see if it and its
 corresponding replication daemon were configured to be on the same host.
-\Ticket{5769}
+\Ticket{5849}
 
 \item The EC2 GAHP now handles integer overflows when checking deadlines.
 This prevents spurious time-outs on 32-bit systems which have been up for
@@ -165,6 +419,18 @@ Previously, the presence of these characters would cause job execution
 to fail.
 \Ticket{5747}
 
+\item Fixed a bug that caused \Condor{config\_val} to segfault when the \Opt{-name}
+argument was used and the machine did not exist
+\Ticket{5818}
+
+\item Fixed a bug that caused \Condor{q} \Opt{-autocluster} to crash unless the \Opt{-nobatch}
+option was also used.
+\Ticket{5839}
+
+\item Fixed a bug in the Python bindings where a thread executed python
+byte code without holding the global interpreter lock.
+\Ticket{5864}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -184,9 +450,10 @@ to fail.
 
 \begin{itemize}
 
-\item The default output of \Condor{q} is now the \Opt{-batch} output. To change
-the default back to its pre 8.5.6 value, set the new configuration variable
- \Macro{CONDOR\_Q\_DASH\_BATCH\_IS\_DEFAULT} to false.
+\item The default output of \Condor{q} is now the \Opt{-batch} output.
+To change the default back to its pre-8.5.6 value, set the new
+configuration variable \MacroNI{CONDOR\_Q\_DASH\_BATCH\_IS\_DEFAULT} to
+\Expr{False}.
 \Ticket{5708}
 
 \item A new class -- the Submit class -- was added to the Python
@@ -311,8 +578,7 @@ to facilitate the mapping of users to groups in the \Condor{schedd} and
 configuring the \Condor{job\_router}.
 \Ticket{5721}
 
-\item Configuration file metaknobs can now take arguments and pass them
-on the the metaknob to be expanded.
+\item Configuration templates can now take arguments.
 \Ticket{5739}
 
 \item Improved the performance of the \Condor{negotiator} when running

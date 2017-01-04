@@ -1,0 +1,10 @@
+Vars ALL_NODES nodename= "X$(JOB)"
+Vars ALL_NODES first="Vincenzo_Nibali" second="J-C_Peraud"
+Vars ALL_NODES third="Thibaut_Pinot"
+Vars ALL_NODES misc="!@#$%^&*()_-=+=[]{}?"
+
+Job NodeZ1 job_dagman_vars-B-node.sub
+
+Job NodeZ2 job_dagman_vars-B-node.sub
+Vars NodeZ2 third="Bryan_Coquard"
+

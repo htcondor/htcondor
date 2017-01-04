@@ -112,8 +112,16 @@ int vanilla2grid(int argc, char **argv)
 			break;
 	}
 
+	std::string owner, domain;
+	if (!jobad.EvaluateAttrString(ATTR_OWNER,  owner)) {
+		dPrintAd(D_ALWAYS, ad);
+		dprintf(D_ALWAYS, "Failed to find %s in job ad.\n", ATTR_OWNER);
+		return 1;
+	}
+	jobad.EvaluateAttrString(ATTR_NT_DOMAIN, domain);
+
 	int cluster,proc;
-	if( ! submit_job( jobad, 0, 0, &cluster, &proc ) ) {
+	if( ! submit_job( owner, domain, jobad, 0, 0, &cluster, &proc ) ) {
 		fprintf(stderr, "Failed to submit job\n");
 	}
 	printf("Successfully submitted %d.%d\n",cluster,proc);
@@ -193,8 +201,15 @@ int grid2vanilla(int argc, char **argv)
 	// Push the updates!
 	push_dirty_attributes(n_ad_van, 0, 0);
 
+	std::string owner, domain;
+	if (!n_ad_van.EvaluateAttrString(ATTR_OWNER,  owner)) {
+		dprintf(D_ALWAYS, "Failed to find %s in job ad.\n", ATTR_OWNER);
+		return 1;
+	}
+	n_ad_van.EvaluateAttrString(ATTR_NT_DOMAIN, domain);
+
 	// Put a fork in the grid job.
-	bool b = finalize_job(n_ad_van,cluster,proc,0,0);
+	bool b = finalize_job(owner, domain, n_ad_van,cluster,proc,0,0);
 	printf("Finalize attempt on %d.%d %s\n", cluster,proc,b?"succeeded":"failed");
 	if( ! b ) { return 1; }
 

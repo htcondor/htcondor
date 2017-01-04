@@ -322,6 +322,19 @@ static condor_params::string_value IsWinMacroDef = { ZeroString, 0 };
 #endif
 static condor_params::string_value SubmitFileMacroDef = { EmptyItemString, 0 };
 
+static char rc[] = "$(Request_CPUs)";
+static condor_params::string_value VMVCPUSMacroDef = { rc, 0 };
+static char rm[] = "$(Request_Memory)";
+static condor_params::string_value VMMemoryMacroDef = { rm, 0 };
+
+// Necessary so that the user who sets request_memory instead of
+// RequestMemory doesn't miss out on the default value for VM_MEMORY.
+static char rem[] = "$(RequestMemory)";
+static condor_params::string_value RequestMemoryMacroDef = { rem, 0 };
+// The same for CPUs.
+static char rec[] = "$(RequestCPUs)";
+static condor_params::string_value RequestCPUsMacroDef = { rec, 0 };
+
 static char StrictFalseMetaKnob[] = 
 	"SubmitWarnEmptyMatches=false\n"
 	"SubmitFailEmptyMatches=false\n"
@@ -365,10 +378,14 @@ static MACRO_DEF_ITEM SubmitMacroDefaults[] = {
 	{ "OPSYSVER",        &OpsysVerMacroDef },
 	{ "Process",   &ProcessMacroDef },
 	{ "ProcId",    &ProcessMacroDef },
+	{ "Request_CPUs", &RequestCPUsMacroDef },
+	{ "Request_Memory", &RequestMemoryMacroDef },
 	{ "Row",       &RowMacroDef },
 	{ "SPOOL",     &SpoolMacroDef },
 	{ "Step",      &StepMacroDef },
 	{ "SUBMIT_FILE", &SubmitFileMacroDef },
+	{ "VM_MEMORY", &VMMemoryMacroDef },
+	{ "VM_VCPUS",  &VMVCPUSMacroDef },
 };
 
 static MACRO_DEFAULTS SubmitMacroDefaultSet = {
@@ -560,6 +577,11 @@ const char	*DeferralTime	= "deferral_time";
 const char	*DeferralWindow 	= "deferral_window";
 const char	*DeferralPrepTime	= "deferral_prep_time";
 
+// Job Retry Parameters
+const char *MaxRetries = "max_retries";
+const char *RetryUntil = "retry_until";
+const char *SuccessExitCode = "success_exit_code";
+
 //
 // CronTab Parameters
 // The index value below should be the # of parameters
@@ -679,6 +701,7 @@ void	SetExitRequirements();
 void	SetOutputDestination();
 void 	SetArguments();
 void 	SetJobDeferral();
+void	SetJobRetries();
 void 	SetEnvironment();
 #if !defined(WIN32)
 void 	ComputeRootDir();
@@ -739,8 +762,6 @@ void	check_umask();
 void setupAuthentication();
 void	SetPeriodicHoldCheck(void);
 void	SetPeriodicRemoveCheck(void);
-void	SetExitHoldCheck(void);
-void	SetExitRemoveCheck(void);
 void	SetNoopJob(void);
 void	SetNoopJobExitSignal(void);
 void	SetNoopJobExitCode(void);
@@ -781,7 +802,6 @@ const char * is_queue_statement(const char * line); // return ptr to queue args 
 bool IsNoClusterAttr(const char * name);
 int  check_sub_file(void*pv, SubmitHash * sub, _submit_file_role role, const char * name, int flags);
 int  SendLastExecutable();
-int  SendJobCredential(ClassAd * job);
 int  SendJobAd (ClassAd * job, ClassAd * ClusterAd);
 int  DoUnitTests(int options);
 
@@ -789,6 +809,7 @@ char *owner = NULL;
 char *myproxy_password = NULL;
 #endif
 
+int  SendJobCredential();
 
 extern DLL_IMPORT_MAGIC char **environ;
 
@@ -858,6 +879,15 @@ int JobAdsArrayLastClusterIndex = 0;
 #else
 
 // explicit template instantiations
+bool condor_param_exists(const char* name, const char * alt_name, std::string & value)
+{
+	auto_free_ptr result(condor_param(name, alt_name));
+	if ( ! result)
+		return false;
+
+	value = result.ptr();
+	return true;
+}
 
 MyString 
 condor_param_mystring( const char * name, const char * alt_name )
@@ -868,21 +898,28 @@ condor_param_mystring( const char * name, const char * alt_name )
 	return ret;
 }
 
+bool condor_param_long_exists(const char* name, const char * alt_name, long long & value, bool int_range=false)
+{
+	auto_free_ptr result(condor_param(name, alt_name));
+	if ( ! result)
+		return false;
+
+	if ( ! string_is_long_param(result.ptr(), value) ||
+		(int_range && (value < INT_MIN || value >= INT_MAX)) ) {
+		fprintf(stderr, "\nERROR: %s=%s is invalid, must eval to an integer.\n", name, result.ptr());
+		DoCleanup(0,0,NULL);
+		exit(1);
+	}
+
+	return true;
+}
+
 int condor_param_int(const char* name, const char * alt_name, int def_value)
 {
-	char * result = condor_param(name, alt_name);
-	if ( ! result)
-		return def_value;
-
 	long long value = def_value;
-	if (*result) {
-		if ( ! string_is_long_param(result, value) || value < INT_MIN || value >= INT_MAX) {
-			fprintf(stderr, "\nERROR: %s=%s is invalid, must eval to an integer.\n", name, result);
-			DoCleanup(0,0,NULL);
-			exit(1);
-		}
+	if ( ! condor_param_long_exists(name, alt_name, value, true)) {
+		value = def_value;
 	}
-	free(result);
 	return (int)value;
 }
 
@@ -1120,6 +1157,12 @@ init_job_ad()
 	buffer.formatstr( "%s = 0.0", ATTR_JOB_REMOTE_SYS_CPU);
 	InsertJobExpr (buffer);
 
+	buffer.formatstr( "%s = 0.0", ATTR_JOB_CUMULATIVE_REMOTE_USER_CPU);
+	InsertJobExpr (buffer);
+
+	buffer.formatstr( "%s = 0.0", ATTR_JOB_CUMULATIVE_REMOTE_SYS_CPU);
+	InsertJobExpr (buffer);
+
 	buffer.formatstr( "%s = 0", ATTR_JOB_EXIT_STATUS);
 	InsertJobExpr (buffer);
 
@@ -1250,9 +1293,7 @@ main( int argc, const char *argv[] )
 	install_sig_handler(SIGPIPE, (SIG_HANDLER)SIG_IGN );
 #endif
 
-#if defined(WIN32)
 	bool query_credential = true;
-#endif
 
 	for( ptr=argv+1,argc--; argc > 0; argc--,ptr++ ) {
 		if( ptr[0][0] == '-' ) {
@@ -1324,9 +1365,7 @@ main( int argc, const char *argv[] )
 							 MyName, get_host_part(*ptr) );
 					exit(1);
 				}
-#if defined(WIN32)
 				query_credential = false;
-#endif
 			} else if (is_dash_arg_prefix(ptr[0], "name", 1)) {
 				if( !(--argc) || !(*(++ptr)) ) {
 					fprintf( stderr, "%s: -name requires another argument\n",
@@ -1341,9 +1380,7 @@ main( int argc, const char *argv[] )
 							 MyName, get_host_part(*ptr) );
 					exit(1);
 				}
-#if defined(WIN32)
 				query_credential = false;
-#endif
 			} else if (is_dash_arg_prefix(ptr[0], "append", 1)) {
 				if( !(--argc) || !(*(++ptr)) ) {
 					fprintf( stderr, "%s: -append requires another argument\n",
@@ -1472,11 +1509,9 @@ main( int argc, const char *argv[] )
 				// if we are dumping to a file, we never want to check file permissions
 				// as this would initiate some schedd communication
 				DisableFileChecks = 1;
-#if defined ( WIN32 )
 				// we don't really want to do this because there is no real 
 				// schedd to query the credentials from...
 				query_credential = false;
-#endif				
 			} else if (is_dash_arg_prefix(ptr[0], "force-mpi-universe", 7)) {
 				use_condor_mpi_universe = true;
 			} else if (is_dash_arg_prefix(ptr[0], "help")) {
@@ -1572,12 +1607,12 @@ main( int argc, const char *argv[] )
 		}
 	}
 
-#ifdef WIN32
 
 	// make sure our shadow will have access to our credential
 	// (check is disabled for "-n" and "-r" submits)
 	if (query_credential) {
 
+#ifdef WIN32
 		// setup the username to query
 		char userdom[256];
 		char* the_username = my_username();
@@ -1612,8 +1647,10 @@ main( int argc, const char *argv[] )
 					"\tcondor_store_cred add\n", userdom );
 			exit(1);
 		}
-	}
+#else
+		SendJobCredential();
 #endif
+	}
 
 	// if this is an interactive job, and no cmd_file was specified on the
 	// command line, use a default cmd file as specified in the config table.
@@ -3045,8 +3082,8 @@ SetSimpleJobExprs()
 		MyString buffer;
 		if( i->quote_it ) {
 			std::string expr_buf;
-			EscapeAdStringValue( expr, expr_buf );
-			buffer.formatstr( "%s = \"%s\"", i->ad_attr_name, expr_buf.c_str());
+			QuoteAdStringValue( expr, expr_buf );
+			buffer.formatstr( "%s = %s", i->ad_attr_name, expr_buf.c_str());
 		}
 		else {
 			buffer.formatstr( "%s = %s", i->ad_attr_name, expr);
@@ -3178,7 +3215,7 @@ SetImageSize()
 		}
 		free(tmp);
 		InsertJobExpr(buffer);
-	} else if ( (tmp = condor_param(VM_Memory, ATTR_JOB_VM_MEMORY)) ) {
+	} else if ( (tmp = condor_param(VM_Memory)) || (tmp = condor_param( ATTR_JOB_VM_MEMORY )) ) {
 		fprintf(stderr, "\nNOTE: '%s' was NOT specified.  Using %s = %s. \n", ATTR_REQUEST_MEMORY,ATTR_JOB_VM_MEMORY, tmp );
 		buffer.formatstr("%s = MY.%s", ATTR_REQUEST_MEMORY, ATTR_JOB_VM_MEMORY);
 		free(tmp);
@@ -4454,6 +4491,7 @@ SetPeriodicRemoveCheck(void)
 	InsertJobExpr( buffer );
 }
 
+#if 0 
 void
 SetExitHoldCheck(void)
 {
@@ -4474,6 +4512,7 @@ SetExitHoldCheck(void)
 
 	InsertJobExpr( buffer );
 }
+#endif
 
 void
 SetLeaveInQueue()
@@ -4512,7 +4551,7 @@ SetLeaveInQueue()
 	InsertJobExpr( buffer );
 }
 
-
+#if 0
 void
 SetExitRemoveCheck(void)
 {
@@ -4533,6 +4572,7 @@ SetExitRemoveCheck(void)
 
 	InsertJobExpr( buffer );
 }
+#endif
 
 void
 SetNoopJob(void)
@@ -5136,6 +5176,137 @@ SetJobDeferral() {
 			fprintf( stderr, "Error in submit file\n" );
 			exit(1);
 		} // validation	
+	}
+}
+
+// parse an expression string, and validate it, then wrap it in parens
+// if needed in preparation for appending another expression string with the given operator
+static bool check_expr_and_wrap_for_op(std::string &expr_str, classad::Operation::OpKind op)
+{
+	ExprTree * tree = NULL;
+	bool valid_expr = (0 == ParseClassAdRvalExpr(expr_str.c_str(), tree));
+	if (valid_expr && tree) { // figure out if we need to add parens
+		ExprTree * expr = WrapExprTreeInParensForOp(tree, op);
+		if (expr != tree) {
+			tree = expr;
+			expr_str.clear();
+			ExprTreeToString(tree, expr_str);
+		}
+	}
+	delete tree;
+	return valid_expr;
+}
+
+void SetJobRetries()
+{
+	std::string erc, ehc;
+	condor_param_exists(OnExitRemoveCheck, ATTR_ON_EXIT_REMOVE_CHECK, erc);
+	condor_param_exists(OnExitHoldCheck, ATTR_ON_EXIT_HOLD_CHECK, ehc);
+
+	long long num_retries = param_integer("DEFAULT_JOB_MAX_RETRIES", 10);
+	long long success_code = 0;
+	std::string retry_until;
+
+	bool enable_retries = false;
+	if (condor_param_long_exists(MaxRetries, ATTR_JOB_MAX_RETRIES, num_retries)) { enable_retries = true; }
+	if (condor_param_long_exists(SuccessExitCode, ATTR_JOB_SUCCESS_EXIT_CODE, success_code, true)) { enable_retries = true; }
+	if (condor_param_exists(RetryUntil, NULL, retry_until)) { enable_retries = true; }
+	if ( ! enable_retries)
+	{
+		// if none of these knobs are defined, then there are no retries.
+		// Just insert the default on-exit-hold and on-exit-remove expressions
+		if (erc.empty()) {
+			job->Assign (ATTR_ON_EXIT_REMOVE_CHECK, true);
+		} else {
+			erc.insert(0, ATTR_ON_EXIT_REMOVE_CHECK "=");
+			InsertJobExpr(erc.c_str());
+		}
+		if (ehc.empty()) {
+			job->Assign (ATTR_ON_EXIT_HOLD_CHECK, false);
+		} else {
+			ehc.insert(0, ATTR_ON_EXIT_HOLD_CHECK "=");
+			InsertJobExpr(ehc.c_str());
+		}
+		return;
+	}
+
+	// if there is a retry_until value, figure out of it is an fultility exit code or an expression
+	// and validate it.
+	if ( ! retry_until.empty()) {
+		ExprTree * tree = NULL;
+		bool valid_retry_until = (0 == ParseClassAdRvalExpr(retry_until.c_str(), tree));
+		if (valid_retry_until && tree) {
+			ClassAd tmp;
+			StringList refs;
+			tmp.GetExprReferences(retry_until.c_str(), &refs, &refs);
+			long long futility_code;
+			if (refs.isEmpty() && string_is_long_param(retry_until.c_str(), futility_code)) {
+				if (futility_code < INT_MIN || futility_code > INT_MAX) {
+					valid_retry_until = false;
+				} else {
+					retry_until.clear();
+					formatstr(retry_until, ATTR_ON_EXIT_CODE " == %d", (int)futility_code);
+				}
+			} else {
+				ExprTree * expr = WrapExprTreeInParensForOp(tree, classad::Operation::LOGICAL_OR_OP);
+				if (expr != tree) {
+					tree = expr;
+					retry_until.clear();
+					ExprTreeToString(tree, retry_until);
+				}
+			}
+		}
+		delete tree;
+
+		if ( ! valid_retry_until) {
+			fprintf(stderr, "\nERROR: %s=%s is invalid, it must be an integer or a boolean expression.\n", RetryUntil, retry_until.c_str());
+			DoCleanup(0,0,NULL);
+			exit(1);
+		}
+	}
+
+	job->Assign(ATTR_JOB_MAX_RETRIES, num_retries);
+
+	// Build the appropriate OnExitRemove expression, we will fill in success exit status value and other clauses later.
+	const char * basic_exit_remove_expr = ATTR_ON_EXIT_REMOVE_CHECK " = "
+		ATTR_NUM_JOB_COMPLETIONS " > " ATTR_JOB_MAX_RETRIES " || " ATTR_ON_EXIT_CODE " == ";
+
+	// build the sub expression that checks for exit codes that should end retries
+	std::string code_check;
+	if (success_code != 0) {
+		job->Assign(ATTR_JOB_SUCCESS_EXIT_CODE, success_code);
+		code_check = ATTR_JOB_SUCCESS_EXIT_CODE;
+	} else {
+		formatstr(code_check, "%d", (int)success_code);
+	}
+	if ( ! retry_until.empty()) {
+		code_check += " || ";
+		code_check += retry_until;
+	}
+
+	// paste up the final OnExitRemove expression and insert it into the job.
+	std::string onexitrm(basic_exit_remove_expr);
+	onexitrm += code_check;
+
+	// if the user also supplied an on_exit_remove expression, || it in.
+	if ( ! erc.empty()) {
+		if ( ! check_expr_and_wrap_for_op(erc, classad::Operation::LOGICAL_OR_OP)) {
+			fprintf(stderr, "\nERROR: %s=%s is invalid, it must be a boolean expression.\n", OnExitRemoveCheck, erc.c_str());
+			DoCleanup(0,0,NULL);
+			exit(1);
+		}
+		onexitrm += " || ";
+		onexitrm += erc;
+	}
+	// Insert the final OnExitRemove expression into the job
+	InsertJobExpr(onexitrm.c_str());
+
+	// paste up the final OnExitHold expression and insert it into the job.
+	if (ehc.empty()) {
+		job->Assign (ATTR_ON_EXIT_HOLD_CHECK, false);
+	} else {
+		ehc.insert(0, ATTR_ON_EXIT_HOLD_CHECK "=");
+		InsertJobExpr(ehc.c_str());
 	}
 }
 
@@ -5793,10 +5964,11 @@ SetUserLog()
 			*p && *q; ++p, ++q) {
 		char *ulog_entry = condor_param( *p, *q );
 
-		if(ulog_entry) {
+		if ( ulog_entry && strcmp( ulog_entry, "" ) != 0 ) {
 			std::string buffer;
-			std::string current_userlog(ulog_entry);
-			const char* ulog_pcc = full_path(current_userlog.c_str());
+				// Note:  I don't think the return value here can ever
+				// be NULL.  wenger 2016-10-04
+			const char* ulog_pcc = full_path( ulog_entry );
 			if(ulog_pcc) {
 				std::string ulog(ulog_pcc);
 				if ( !DumpClassAdToFile && !DashDryRun ) {
@@ -6631,7 +6803,7 @@ SetGridParams()
 			}
 			fclose(fp);
 		}
-		InsertJobExprString( ATTR_GCE_JSON_FILE, tmp );
+		InsertJobExprString( ATTR_GCE_JSON_FILE, full_path( tmp ) );
 		free( tmp );
 	}
 
@@ -6726,6 +6898,20 @@ SetGSICredentials()
 			free( proxy_file );
 			proxy_file = full_proxy_file;
 #if defined(HAVE_EXT_GLOBUS)
+// this code should get torn out at some point (8.7.0) since the SchedD now
+// manages these attributes securely and the values provided by submit should
+// not be trusted.  in the meantime, though, we try to provide some cross
+// compatibility between the old and new.  i also didn't indent this properly
+// so as not to churn the old code.  -zmiller
+
+		bool submit_sends_x509 = true;
+		CondorVersionInfo cvi(MySchedd->version());
+		if (cvi.built_since_version(8, 5, 8)) {
+			submit_sends_x509 = false;
+		}
+
+		if(submit_sends_x509) {
+
 			if ( check_x509_proxy(proxy_file) != 0 ) {
 				fprintf( stderr, "\nERROR: %s\n", x509_error_string() );
 				exit( 1 );
@@ -6794,6 +6980,11 @@ SetGSICredentials()
 			// When new classads arrive, all this should be replaced with a
 			// classad holding the VOMS atributes.  -zmiller
 
+		}
+// this is the end of the big, not-properly indented block (see above) that
+// causes submit to send the x509 attributes only when talking to older
+// schedds.  at some point, probably 8.7.0, this entire block should be ripped
+// out. -zmiller
 #endif
 
 			(void) buffer.formatstr( "%s=\"%s\"", ATTR_X509_USER_PROXY, 
@@ -6863,12 +7054,7 @@ SetGSICredentials()
 void
 SetSendCredential()
 {
-#ifndef WIN32
-	// in theory, each queued job may have a different value for this, so first we
-	// process this attribute
-	bool send_credential = condor_param_bool( "SendCredential", SendCredential, false );
-
-	if (!send_credential) {
+	if (!sent_credential_to_credd) {
 		return;
 	}
 
@@ -6876,85 +7062,18 @@ SetSendCredential()
 	MyString buffer;
 	(void) buffer.formatstr( "%s = True", ATTR_JOB_SEND_CREDENTIAL);
 	InsertJobExpr(buffer);
+}
 
-	// however, if we do need to send it for any job, we only need to do that once.
-	if (sent_credential_to_credd) {
+void
+SetSendCredentialInAd( ClassAd *job_ad )
+{
+	if (!sent_credential_to_credd) {
 		return;
 	}
 
-	// store credential with the credd
-	MyString producer;
-	if(param(producer, "SEC_CREDENTIAL_PRODUCER")) {
-		dprintf(D_ALWAYS, "CREDMON: invoking %s\n", producer.c_str());
-		ArgList args;
-		args.AppendArg(producer);
-		FILE* uber_file = my_popen(args, "r", false);
-		unsigned char *uber_ticket = NULL;
-		if (!uber_file) {
-			dprintf(D_ALWAYS, "CREDMON: ERROR (%i) invoking %s\n", errno, producer.c_str());
-			exit(1);
-		} else {
-			uber_ticket = (unsigned char*)malloc(65536);
-			int bytes_read = fread(uber_ticket, 1, 65536, uber_file);
-			// what constitutes failure?
-			my_pclose(uber_file);
-
-			if(bytes_read == 0) {
-				fprintf(stderr, "\nERROR: failed to read any data from %s!\n", producer.c_str());
-				exit(1);
-			}
-
-			// immediately convert to base64
-			char* ut64 = condor_base64_encode(uber_ticket, bytes_read);
-
-			// sanity check:  convert it back.
-			//unsigned char *zkmbuf = 0;
-			int zkmlen = -1;
-			unsigned char* zkmbuf = NULL;
-			zkm_base64_decode(ut64, &zkmbuf, &zkmlen);
-
-			dprintf(D_FULLDEBUG, "CREDMON: b64: %i %i\n", bytes_read, zkmlen);
-			dprintf(D_FULLDEBUG, "CREDMON: b64: %s %s\n", (char*)uber_ticket, (char*)zkmbuf);
-
-			char preview[64];
-			strncpy(preview,ut64, 63);
-			preview[63]=0;
-
-			dprintf(D_FULLDEBUG | D_SECURITY, "CREDMON: read %i bytes {%s...}\n", bytes_read, preview);
-
-			// setup the username to query
-			char userdom[256];
-			char* the_username = my_username();
-			char* the_domainname = my_domainname();
-			sprintf(userdom, "%s@%s", the_username, the_domainname);
-			free(the_username);
-			free(the_domainname);
-
-			dprintf(D_ALWAYS, "CREDMON: storing cred for user %s\n", userdom);
-			Daemon my_credd(DT_CREDD);
-			int store_cred_result;
-			if (my_credd.locate()) {
-				store_cred_result = store_cred(userdom, ut64, ADD_MODE, &my_credd);
-				if ( store_cred_result != SUCCESS ) {
-					fprintf( stderr, "\nERROR: store_cred failed!\n");
-					exit(1);
-				}
-			} else {
-				fprintf( stderr, "\nERROR: locate(credd) failed!\n");
-				exit(1);
-			}
-		}
-	} else {
-		fprintf( stderr, "\nERROR: Job requested SendCredential but SEC_CREDENTIAL_PRODUCER not defined!\n");
-		exit(1);
-	}
-
-	// this will prevent us from sending it a second time if multiple jobs
-	// are queued
-	sent_credential_to_credd = true;
-#endif // WIN32
+	// add it to the job ad (starter needs to know this value)
+	job_ad->Assign( ATTR_JOB_SEND_CREDENTIAL, true );
 }
-
 
 #if !defined(WIN32)
 // this allocates memory, free() it when you're done.
@@ -7925,12 +8044,8 @@ int read_submit_file(FILE * fp)
 #else
 	MACRO_EVAL_CONTEXT ctx; ctx.init("SUBMIT");
 
-#ifdef USE_MACRO_STREAMS
 	MacroStreamYourFile ms(fp, FileMacroSource);
 	int rval = Parse_macros(ms,
-#else
-	int rval = Parse_macros(fp, FileMacroSource,
-#endif
 		0, SubmitMacroSet, READ_MACROS_SUBMIT_SYNTAX,
 		&ctx, errmsg,
 		SpecialSubmitParse, fp);
@@ -8035,6 +8150,11 @@ condor_param( const char* name, const char* alt_name )
 		fprintf( stderr, "\nERROR: Failed to expand macros in: %s\n",
 				 used_alt ? alt_name : name );
 		exit(1);
+	}
+
+	if( * pval_expanded == '\0' ) {
+		free( pval_expanded );
+		return NULL;
 	}
 
 	ErrContext.macro_name = NULL;
@@ -8426,8 +8546,8 @@ int queue_item(int num, StringList & vars, char * item, int item_index, int opti
 
 		int JobUniverse = submit_hash.getUniverse();
 		SendLastExecutable(); // if spooling the exe, send it now.
+		SetSendCredentialInAd( job );
 		NewExecutable = false;
-		SendJobCredential(job); // if sending credentials, send them now.
 		// write job ad to schedd or dump to file, depending on what type MyQ is
 		rval = SendJobAd(job, gClusterAd);
 #else
@@ -8506,6 +8626,7 @@ int queue_item(int num, StringList & vars, char * item, int item_index, int opti
 			//
 		SetCronTab();
 		SetJobDeferral();
+		SetJobRetries();
 		
 			//
 			// Must be called _after_ SetTransferFiles(), SetJobDeferral(),
@@ -8520,8 +8641,6 @@ int queue_item(int num, StringList & vars, char * item, int item_index, int opti
 
 		SetPeriodicHoldCheck();
 		SetPeriodicRemoveCheck();
-		SetExitHoldCheck();
-		SetExitRemoveCheck();
 		SetNoopJob();
 		SetNoopJobExitSignal();
 		SetNoopJobExitCode();
@@ -9507,17 +9626,10 @@ int SetSyscalls( int foo ) { return foo; }
 }
 
 
-#ifdef USE_SUBMIT_UTILS
-
-int SendJobCredential(ClassAd * job)
+int SendJobCredential()
 {
 	// however, if we do need to send it for any job, we only need to do that once.
 	if (sent_credential_to_credd) {
-		return 0;
-	}
-
-	bool sendit = false;
-	if ( ! job->LookupBool(ATTR_JOB_SEND_CREDENTIAL, sendit) || ! sendit) {
 		return 0;
 	}
 
@@ -9527,21 +9639,20 @@ int SendJobCredential(ClassAd * job)
 		dprintf(D_ALWAYS, "CREDMON: invoking %s\n", producer.c_str());
 		ArgList args;
 		args.AppendArg(producer);
-		FILE* uber_file = my_popen(args, "r", false);
+		FILE* uber_file = my_popen(args, "r", 0);
 		unsigned char *uber_ticket = NULL;
 		if (!uber_file) {
-			dprintf(D_ALWAYS, "CREDMON: ERROR (%i) invoking %s\n", errno, producer.c_str());
-			DoCleanup(0,0,NULL);
+			fprintf(stderr, "\nERROR: (%i) invoking %s\n", errno, producer.c_str());
 			exit( 1 );
 		} else {
 			uber_ticket = (unsigned char*)malloc(65536);
+			ASSERT(uber_ticket);
 			int bytes_read = fread(uber_ticket, 1, 65536, uber_file);
 			// what constitutes failure?
 			my_pclose(uber_file);
 
 			if(bytes_read == 0) {
 				fprintf(stderr, "\nERROR: failed to read any data from %s!\n", producer.c_str());
-				DoCleanup(0,0,NULL);
 				exit( 1 );
 			}
 
@@ -9578,26 +9689,21 @@ int SendJobCredential(ClassAd * job)
 				store_cred_result = store_cred(userdom, ut64, ADD_MODE, &my_credd);
 				if ( store_cred_result != SUCCESS ) {
 					fprintf( stderr, "\nERROR: store_cred failed!\n");
-					DoCleanup(0,0,NULL);
 					exit( 1 );
 				}
 			} else {
 				fprintf( stderr, "\nERROR: locate(credd) failed!\n");
-				DoCleanup(0,0,NULL);
 				exit( 1 );
 			}
 		}
-	} else {
-		fprintf( stderr, "\nERROR: Job requested SendCredential but SEC_CREDENTIAL_PRODUCER not defined!\n");
-		DoCleanup(0,0,NULL);
-		exit( 1 );
+
+		sent_credential_to_credd = true;
 	}
 
-	// this will prevent us from sending it a second time if multiple jobs
-	// are queued
-	sent_credential_to_credd = true;
 	return 0;
 }
+
+#ifdef USE_SUBMIT_UTILS
 
 int SendLastExecutable()
 {
@@ -9954,7 +10060,7 @@ InsertJobExprString(const char * name, const char * val)
 	ASSERT(val);
 	MyString buf;
 	std::string esc;
-	buf.formatstr("%s = \"%s\"", name, EscapeAdStringValue(val, esc));
+	buf.formatstr("%s = %s", name, QuoteAdStringValue(val, esc));
 	InsertJobExpr(buf.Value());
 }
 #endif
@@ -10435,7 +10541,10 @@ SetVMParams()
 	}
 
 	// Set memory for virtual machine
-	tmp_ptr = condor_param(VM_Memory, ATTR_JOB_VM_MEMORY);
+	tmp_ptr = condor_param(VM_Memory);
+	if( !tmp_ptr ) {
+		tmp_ptr = condor_param(ATTR_JOB_VM_MEMORY);
+	}
 	if( !tmp_ptr ) {
 		fprintf( stderr, "\nERROR: '%s' cannot be found.\n"
 				"Please specify '%s' for vm universe "

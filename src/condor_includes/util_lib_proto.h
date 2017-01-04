@@ -30,8 +30,6 @@
 extern "C" {
 #endif
 
-int blankline ( const char *str );
-
 char * getline ( FILE *fp );
 
 char* getExecPath( void );

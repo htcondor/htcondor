@@ -38,6 +38,7 @@
 #include "vm_proc.h"
 #include "docker_proc.h"
 #include "condor_getcwd.h"
+#include "singularity.h"
 
 
 extern "C" int exception_cleanup(int,int,const char*);	/* Our function called by EXCEPT */
@@ -156,6 +157,12 @@ printClassAd( void )
 			// except with ATTR_DOCKER_VERSION in it.  *sigh*
 			printf( "%s = \"CondorVersion, IsDaemonCore\"\n", ATTR_STARTER_IGNORED_ATTRS );
 		}
+	}
+
+	// Singularity support
+	if (htcondor::Singularity::enabled()) {
+		printf("%s = True\n", ATTR_HAS_SINGULARITY);
+		printf("%s = \"%s\"\n", ATTR_SINGULARITY_VERSION, htcondor::Singularity::version());
 	}
 
 	// Detect ability to encrypt execute directory
@@ -748,7 +755,7 @@ main_shutdown_fast()
 	if ( Starter->RemoteShutdownFast(0) ) {
 		// ShutdownFast says it is already finished, because there are
 		// no jobs to shutdown.  No need to stick around.
-		Starter->StarterExit(STARTER_EXIT_NORMAL);
+		Starter->StarterExit(Starter->GetShutdownExitCode());
 	}
 }
 
@@ -759,7 +766,7 @@ main_shutdown_graceful()
 	if ( Starter->RemoteShutdownGraceful(0) ) {
 		// ShutdownGraceful says it is already finished, because
 		// there are no jobs to shutdown.  No need to stick around.
-		Starter->StarterExit(STARTER_EXIT_NORMAL);
+		Starter->StarterExit(Starter->GetShutdownExitCode());
 	}
 }
 

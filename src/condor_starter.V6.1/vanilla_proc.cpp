@@ -37,6 +37,7 @@
 #include "subsystem_info.h"
 #include "cgroup_limits.h"
 #include "selector.h"
+#include "singularity.h"
 
 #ifdef WIN32
 #include "executable_scripts.WINDOWS.h"
@@ -168,7 +169,7 @@ VanillaProc::StartJob()
 	CHAR		interpreter[MAX_PATH+1],
 				systemshell[MAX_PATH+1];    
 	const char* jobtmp				= Starter->jic->origJobName();
-	int			joblen				= strlen(jobtmp);
+	size_t		joblen				= strlen(jobtmp);
 	const char	*extension			= joblen > 0 ? &(jobtmp[joblen-4]) : NULL;
 	bool		binary_executable	= ( extension && 
 										( MATCH == strcasecmp ( ".exe", extension ) || 
@@ -348,7 +349,7 @@ VanillaProc::StartJob()
 		 *  local universe and cgroups can be properly worked
 		 *  out. -matt 7 nov '12
 		 */
-	if (CONDOR_UNIVERSE_LOCAL != job_universe && cgroup_base.length()) {
+	if (CONDOR_UNIVERSE_LOCAL != job_universe && cgroup_base.length() && can_switch_ids()) {
 		MyString cgroup_uniq;
 		std::string starter_name, execute_str;
 		param(execute_str, "EXECUTE", "EXECUTE_UNKNOWN");
@@ -552,7 +553,7 @@ VanillaProc::StartJob()
 #if defined(LINUX)
 	// On Linux kernel 2.6.24 and later, we can give each
 	// job its own PID namespace
-	if (param_boolean("USE_PID_NAMESPACES", false)) {
+	if (param_boolean("USE_PID_NAMESPACES", false) && !htcondor::Singularity::job_enabled(*Starter->jic->machClassAd(), *JobAd)) {
 		if (!can_switch_ids()) {
 			EXCEPT("USE_PID_NAMESPACES enabled, but can't perform this "
 				"call in Linux unless running as root.");
@@ -625,7 +626,7 @@ VanillaProc::StartJob()
 	// See Note near setup of param(BASE_CGROUP)
 	if (CONDOR_UNIVERSE_LOCAL != job_universe && cgroup && retval) {
 		std::string mem_limit;
-		param(mem_limit, "CGROUP_MEMORY_LIMIT_POLICY", "soft");
+		param(mem_limit, "CGROUP_MEMORY_LIMIT_POLICY", "none");
 		bool mem_is_soft = mem_limit == "soft";
 		std::string cgroup_string = cgroup;
 		CgroupLimits climits(cgroup_string);
@@ -1080,6 +1081,7 @@ VanillaProc::outOfMemoryEvent(int /* fd */)
 	 */
 
 	// If we have no jobs left, prolly just cgroup removed, so do nothing and return
+	
 	if (num_pids == 0) {
 		dprintf(D_FULLDEBUG, "Closing event FD pipe %d.\n", m_oom_efd);
 		cleanupOOM();
@@ -1095,6 +1097,30 @@ VanillaProc::outOfMemoryEvent(int /* fd */)
 	Starter->jic->periodicJobUpdate( &updateAd, true );
 	int usage;
 	updateAd.LookupInteger(ATTR_MEMORY_USAGE, usage);
+
+		//
+#ifdef LINUX
+	if (param_boolean("IGNORE_LEAF_OOM", false)) {
+		// if memory.use_hierarchy is 1, then hitting the limit at
+		// the parent notifies all children, even if those children
+		// are below their usage.  If we are below our usage, ignore
+		// the OOM, and continue running.  Hopefully, some process
+		// will be killed, and when it does, this job will get unfrozen
+		// and continue running.
+
+		if (usage < (0.9 * m_memory_limit)) {
+			long long oomData = 0xdeadbeef;
+			int efd;
+			daemonCore->Get_Pipe_FD(m_oom_efd, &efd);
+				// need to drain notification fd, or it will still
+				// be hot, and we'll come right back here again
+			int r = read(efd, &oomData, 8);
+
+			dprintf(D_ALWAYS, "Spurious OOM event, usage is %d, slot size is %d megabytes, ignoring OOM (read %d bytes)\n", usage, m_memory_limit, r);
+			return 0;
+		}
+	}
+#endif
 
 	std::stringstream ss;
 	if (m_memory_limit >= 0) {
@@ -1315,7 +1341,7 @@ VanillaProc::setupOOMEvent(const std::string &cgroup_string)
 	m_oom_efd = pipes[0];
 	m_oom_efd2 = pipes[1];
 
-	// Inform DC we want to recieve notifications from this FD.
+	// Inform DC we want to receive notifications from this FD.
 	if (-1 == daemonCore->Register_Pipe(pipes[0],"OOM event fd", static_cast<PipeHandlercpp>(&VanillaProc::outOfMemoryEvent),"OOM Event Handler",this,HANDLE_READ))
 	{
 		dprintf(D_ALWAYS, "Failed to register OOM event FD pipe.\n");

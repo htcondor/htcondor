@@ -212,7 +212,7 @@ ReadCheckPointFile(){
 	      string name="Time";
 	      cla->EvaluateAttrString(name,buf);
 	      
-	      int i_p=buf.find(".");
+	      size_t i_p=buf.find(".");
 	      string sec=buf.substr(0,i_p);
 	      string usec=buf.substr(i_p+1,buf.size()-i_p);
 	      
@@ -247,7 +247,7 @@ OperateInRecoveryMode( ClassAd *logRec )
 	    string buf;
 	    logRec->EvaluateAttrString("Time",buf);
 	    
-	    int i_p=buf.find(".");
+	    size_t i_p=buf.find(".");
 	    string sec=buf.substr(0,i_p);
 	    string usec=buf.substr(i_p+1,buf.size()-i_p);
 	    long temp_sec=atol(sec.c_str());

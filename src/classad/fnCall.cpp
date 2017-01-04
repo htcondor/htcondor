@@ -135,6 +135,7 @@ FunctionCall( )
 		
 			// string manipulation
 		functionTable["strcat"		] =	(void*)strCat;
+		functionTable["join"		] =	(void*)strCat;
 		functionTable["toupper"		] =	(void*)changeCase;
 		functionTable["tolower"		] =	(void*)changeCase;
 		functionTable["substr"		] =	(void*)subString;
@@ -1446,7 +1447,7 @@ formatTime(const char*, const ArgumentList &argList, EvalState &state,
 	struct  tm time_components;
     ClassAd    *splitClassAd;
     string     format;
-    int        number_of_args;
+    size_t     number_of_args;
     bool       did_eval;
 
     memset(&time_components, 0, sizeof(time_components));
@@ -1582,53 +1583,95 @@ inTimeUnits(const char*name,const ArgumentList &argList,EvalState &state,
 
 	// concatenate all arguments (expected to be strings)
 bool FunctionCall::
-strCat( const char*, const ArgumentList &argList, EvalState &state, 
+strCat( const char* name, const ArgumentList &argListIn, EvalState &state,
 	Value &result )
 {
 	ClassAdUnParser	unp;
-	string			buf, s;
+	string			buf, s, sep;
 	bool			errorFlag=false, undefFlag=false, rval=true;
+	bool			is_join = (0 == strcasecmp( name, "join" ));
+	int				num_args = (int)argListIn.size();
+	ArgumentList	argTemp; // in case we need it
+	Value			listVal; // in case we need it
+	Literal *		sepLit=NULL; // in case we need it
 
-	for( int i = 0 ; (unsigned)i < argList.size() ; i++ ) {
+	const ArgumentList * args = &argListIn;
+
+	// join has a special case for 1 or 2 args when the last argument is a list.
+	// for 1 arg, join the list items, for 2 args, join arg1 with arg0 as the separator
+	if (is_join && num_args > 0 && num_args <= 2) {
+		rval = argListIn[num_args-1]->Evaluate(state, listVal);
+		if (rval) {
+			ExprList *listToJoin;
+			if (listVal.IsListValue(listToJoin)) {
+				// cons up a new temporary argument list using the contents of the list
+				// and the (optional) separator arg.
+				listToJoin->GetComponents(argTemp);
+				if (num_args > 1) {
+					argTemp.insert(argTemp.begin(), argListIn[0]);
+				} else {
+					Value sep; sep.SetStringValue(""); // cons up a default separator as the first argument
+					sepLit = Literal::MakeLiteral(sep);
+					argTemp.insert(argTemp.begin(), sepLit);
+				}
+				// now use this as the input arguments
+				args = &argTemp;
+				num_args = (int)argTemp.size();
+			}
+		}
+	}
+
+	for( int i = 0 ; (unsigned)i < args->size() ; i++ ) {
 		Value  val;
-        Value  stringVal;
+		Value  stringVal;
 
 		s = "";
-		if( !( rval = argList[i]->Evaluate( state, val ) ) ) {
+		if( !( rval = (*args)[i]->Evaluate( state, val ) ) ) {
 			break;
 		}
 
-        if (val.IsStringValue(s)) {
-            buf += s;
-        } else {
-            convertValueToStringValue(val, stringVal);
-            if (stringVal.IsUndefinedValue()) {
-                undefFlag = true;
-                break;
-            } else if (stringVal.IsErrorValue()) {
-                errorFlag = true;
-                result.SetErrorValue();
-                break;
-            } else if (stringVal.IsStringValue(s)) {
-                buf += s;
-            } else {
-                errorFlag = true;
-                break;
-            }
-        }
-    }
-	
-    // failed evaluating some argument
+		if (!val.IsStringValue(s)) {
+			convertValueToStringValue(val, stringVal);
+			if (stringVal.IsUndefinedValue()) {
+				undefFlag = true;
+				break;
+			} else if (stringVal.IsErrorValue()) {
+				errorFlag = true;
+				result.SetErrorValue();
+				break;
+			} else if (!stringVal.IsStringValue(s)) {
+				errorFlag = true;
+				break;
+			}
+		}
+		// if we get here, s is the string value of the item
+		if (is_join) {
+			if (0 == i) {
+				sep = s;
+				continue;
+			}
+			if (i > 1) {
+				buf += sep;
+			}
+		}
+		buf += s;
+	}
+
+	// clean up the temporary arglist
+	while (argTemp.size() > 0) { argTemp.pop_back(); }
+	delete sepLit; sepLit = NULL;
+
+	// failed evaluating some argument
 	if( !rval ) {
 		result.SetErrorValue( );
 		return( false );
 	}
-		// type error
+	// type error
 	if( errorFlag ) {
 		result.SetErrorValue( );
 		return( true );
 	} 
-		// some argument was undefined
+	// some argument was undefined
 	if( undefFlag ) {
 		result.SetUndefinedValue( );
 		return( true );
@@ -1673,7 +1716,7 @@ changeCase(const char*name,const ArgumentList &argList,EvalState &state,
         }
 	}
 
-	len = str.size( );
+	len = (int)str.size( );
 	for( int i=0; i <= len; i++ ) {
 		str[i] = lower ? tolower( str[i] ) : toupper( str[i] );
 	}
@@ -1720,7 +1763,7 @@ subString( const char*, const ArgumentList &argList, EvalState &state,
 
 		// perl-like substr; negative offsets and lengths count from the end
 		// of the string
-	alen = buf.size( );
+	alen = (int)buf.size( );
 	if( offset < 0 ) { 
 		offset = alen + offset; 
 	} else if( offset >= alen ) {
@@ -2909,7 +2952,7 @@ static bool regexp_helper(
 		int * ovector = (int *) malloc(oveccount * sizeof(int));
 
 
-        status = pcre_exec(re, NULL, target, strlen(target),
+        status = pcre_exec(re, NULL, target, (int)strlen(target),
                            0, 0, ovector, oveccount);
         if (status >= 0) {
             result.SetBooleanValue( true );

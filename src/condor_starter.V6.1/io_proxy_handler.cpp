@@ -413,7 +413,7 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 	} else if(m_enable_delayed && sscanf_chirp(line,"get_job_attr_delayed %s",name)==1) {
 		std::string value;
 		classad::ClassAdUnParser unparser;
-		std::auto_ptr<classad::ExprTree> expr = m_shadow->getDelayedUpdate(name);
+		std::unique_ptr<classad::ExprTree> expr = m_shadow->getDelayedUpdate(name);
 		if (expr.get()) {
 			unparser.Unparse(value, expr.get());
 			sprintf(line,"%u",(unsigned int)value.size());

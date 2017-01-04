@@ -71,7 +71,7 @@ submit_try( ArgList &args, CondorID &condorID, bool prohibitMultiJobs )
   MyString cmd; // for debug output
   args.GetArgsStringForDisplay( &cmd );
 
-  FILE * fp = my_popen( args, "r", TRUE );
+  FILE * fp = my_popen( args, "r", MY_POPEN_OPT_WANT_STDERR );
   if (fp == NULL) {
     debug_printf( DEBUG_NORMAL, 
 		  "ERROR: my_popen(%s) in submit_try() failed!\n",
@@ -234,19 +234,19 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 
 	args.AppendArg( dm.condorSubmitExe );
 
-	args.AppendArg( "-a" );
+	args.AppendArg( "-a" ); // -a == -append; using -a to save chars
 	MyString nodeName = MyString(ATTR_DAG_NODE_NAME_ALT) + " = " + DAGNodeName;
 	args.AppendArg( nodeName.Value() );
 
 		// append a line adding the parent DAGMan's cluster ID to the job ad
-	args.AppendArg( "-a" );
+	args.AppendArg( "-a" ); // -a == -append; using -a to save chars
 	MyString dagJobId = MyString( "+" ) + ATTR_DAGMAN_JOB_ID + " = " +
 				dm.DAGManJobId._cluster;
 	args.AppendArg( dagJobId.Value() );
 
 		// now we append a line setting the same thing as a submit-file macro
 		// (this is necessary so the user can reference it in the priority)
-	args.AppendArg( "-a" );
+	args.AppendArg( "-a" ); // -a == -append; using -a to save chars
 	MyString dagJobIdMacro = MyString( "" ) + ATTR_DAGMAN_JOB_ID + " = " +
 				dm.DAGManJobId._cluster;
 	args.AppendArg( dagJobIdMacro.Value() );
@@ -257,7 +257,7 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 		args.AppendArg( batchName.Value() );
 	}
 
-	args.AppendArg( "-a" );
+	args.AppendArg( "-a" ); // -a == -append; using -a to save chars
 	MyString submitEventNotes = MyString(
 				"submit_event_notes = DAG Node: " ) + DAGNodeName;
 	args.AppendArg( submitEventNotes.Value() );
@@ -266,7 +266,7 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 
 		// We need to append the DAGman default log file to
 		// the log file list
-	args.AppendArg( "-a" );
+	args.AppendArg( "-a" ); // -a == -append; using -a to save chars
 	std::string dlog( "dagman_log = " );
 	dlog += workflowLogFile;
 	args.AppendArg( dlog.c_str() );
@@ -275,7 +275,7 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 
 		// Now append the mask
 	debug_printf( DEBUG_VERBOSE, "Masking the events recorded in the DAGMAN workflow log\n" );
-	args.AppendArg( "-a" );
+	args.AppendArg( "-a" ); // -a == -append; using -a to save chars
 	std::string dmask("+");
 	dmask += ATTR_DAGMAN_WORKFLOW_MASK;
 	dmask += " = \"";
@@ -288,7 +288,7 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 
 		// Append the priority, if we have one.
 	if ( priority != 0 ) {
-		args.AppendArg( "-a" );
+		args.AppendArg( "-a" ); // -a == -append; using -a to save chars
 		MyString prioStr = "priority=";
 		prioStr += priority;
 		args.AppendArg( prioStr.Value() );
@@ -298,12 +298,12 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 		// Suppress the job's log file if that option is enabled.
 	if ( dm._suppressJobLogs ) {
 		debug_printf( DEBUG_VERBOSE, "Suppressing node job log file\n" );
-		args.AppendArg( "-a" );
-		args.AppendArg( "log = ''" );
+		args.AppendArg( "-a" ); // -a == -append; using -a to save chars
+		args.AppendArg( "log=" );
 	}
 
 	ArgList parentNameArgs;
-	parentNameArgs.AppendArg( "-a" );
+	parentNameArgs.AppendArg( "-a" ); // -a == -append; using -a to save chars
 	MyString parentNodeNames = MyString( "+DAGParentNodeNames = " ) +
 	                        "\"" + DAGParentNodeNames + "\"";
 	parentNameArgs.AppendArg( parentNodeNames.Value() );
@@ -322,33 +322,33 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 		value.replaceString( "$(RETRY)", retryStr.Value() );
 		MyString varStr = nodeVar._name + " = " + value;
 
-		args.AppendArg( "-a" );
+		args.AppendArg( "-a" ); // -a == -append; using -a to save chars
 		args.AppendArg( varStr.Value() );
 	}
 
 		// Set the special DAG_STATUS variable (mainly for use by
 		// "final" nodes).
-	args.AppendArg( "-a" );
+	args.AppendArg( "-a" ); // -a == -append; using -a to save chars
 	MyString var = "DAG_STATUS = ";
 	var += dm.dag->_dagStatus;
 	args.AppendArg( var.Value() );
 
 		// Set the special FAILED_COUNT variable (mainly for use by
 		// "final" nodes).
-	args.AppendArg( "-a" );
+	args.AppendArg( "-a" ); // -a == -append; using -a to save chars
 	var = "FAILED_COUNT = ";
 	var += dm.dag->NumNodesFailed();
 	args.AppendArg( var.Value() );
 
 	if( hold_claim ){
-		args.AppendArg( "-a" );
+		args.AppendArg( "-a" ); // -a == -append; using -a to save chars
 		MyString holdit = MyString("+") + MyString(ATTR_JOB_KEEP_CLAIM_IDLE) + " = "
 			+ dm._claim_hold_time;
 		args.AppendArg( holdit.Value() );	
 	}
 	
 	if (dm._submitDagDeepOpts.suppress_notification) {
-		args.AppendArg( "-a" );
+		args.AppendArg( "-a" ); // -a == -append; using -a to save chars
 		MyString notify = MyString("notification = never");
 		args.AppendArg( notify.Value() );
 	}
@@ -357,14 +357,14 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 		// Add accounting group and user if we have them.
 		//
 	if ( dm._submitDagDeepOpts.acctGroup != "" ) {
-		args.AppendArg( "-a" );
+		args.AppendArg( "-a" ); // -a == -append; using -a to save chars
 		MyString arg = "accounting_group=";
 		arg += dm._submitDagDeepOpts.acctGroup;
 		args.AppendArg( arg );
 	}
 
 	if ( dm._submitDagDeepOpts.acctGroupUser != "" ) {
-		args.AppendArg( "-a" );
+		args.AppendArg( "-a" ); // -a == -append; using -a to save chars
 		MyString arg = "accounting_group_user=";
 		arg += dm._submitDagDeepOpts.acctGroupUser;
 		args.AppendArg( arg );

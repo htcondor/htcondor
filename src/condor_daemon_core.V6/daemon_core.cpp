@@ -3061,11 +3061,12 @@ DaemonCore::reconfig(void) {
 			EXCEPT("DaemonCore: No USER_MAPFILE defined, "
 				   "unable to identify users, required by ENABLE_SOAP_SSL");
 		}
+		bool assume_hash = param_boolean("CERTIFICATE_MAPFILE_ASSUME_HASH_KEYS", false);
 		int line;
-		if (0 != (line = mapfile->ParseCanonicalizationFile(credential_mapfile))) {
+		if (0 != (line = mapfile->ParseCanonicalizationFile(credential_mapfile, assume_hash))) {
 			EXCEPT("DaemonCore: Error parsing CERTIFICATE_MAPFILE at line %d",
 				   line);
-	}
+		}
 		if (0 != (line = mapfile->ParseUsermapFile(user_mapfile))) {
 			EXCEPT("DaemonCore: Error parsing USER_MAPFILE at line %d", line);
 		}
@@ -9185,7 +9186,7 @@ DaemonCore::HandleDC_SIGCHLD(int sig)
         }
 #if defined(LINUX) && defined(TDP)
 		if( WIFSIGNALED(status) && WTERMSIG(status) == SIGTRAP ) {
-				// This means the process has recieved a SIGTRAP to be
+				// This means the process has received a SIGTRAP to be
 				// stopped.  Oddly, on Linux, this generates a
 				// SIGCHLD.  So, we don't want to call the reaper for
 				// this process, since it hasn't really exited.  So,

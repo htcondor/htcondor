@@ -431,6 +431,19 @@ static bool submit_job_with_current_priv( ClassAd & src, const char * schedd_nam
 		return false;
 	}
 
+	// Starting in 8.5.8, schedd clients can't set X509-related attributes
+	// other than the name of the proxy file.
+	std::set<std::string, classad::CaseIgnLTStr> filter_attrs;
+	CondorVersionInfo ver_info( schedd.version() );
+	if ( ver_info.built_since_version( 8, 5, 8 ) ) {
+		 filter_attrs.insert( ATTR_X509_USER_PROXY_SUBJECT );
+		 filter_attrs.insert( ATTR_X509_USER_PROXY_EXPIRATION );
+		 filter_attrs.insert( ATTR_X509_USER_PROXY_EMAIL );
+		 filter_attrs.insert( ATTR_X509_USER_PROXY_VONAME );
+		 filter_attrs.insert( ATTR_X509_USER_PROXY_FIRST_FQAN );
+		 filter_attrs.insert( ATTR_X509_USER_PROXY_FQAN );
+	}
+
 	int cluster = NewCluster();
 	if( cluster < 0 ) {
 		failobj.fail("Failed to create a new cluster (%d)\n", cluster);
@@ -476,6 +489,9 @@ static bool submit_job_with_current_priv( ClassAd & src, const char * schedd_nam
 	const char *rhstr = 0;
 	src.ResetExpr();
 	while( src.NextExpr(lhstr, tree) ) {
+		if ( filter_attrs.find( lhstr ) != filter_attrs.end() ) {
+			continue;
+		}
 		rhstr = ExprTreeToString( tree );
 		if( !lhstr || !rhstr) { 
 			failobj.fail("Problem processing classad\n");
@@ -511,23 +527,30 @@ static bool submit_job_with_current_priv( ClassAd & src, const char * schedd_nam
 	return true;
 }
 
-bool submit_job( ClassAd & src, const char * schedd_name, const char * pool_name, bool is_sandboxed, int * cluster_out /*= 0*/, int * proc_out /*= 0 */)
+bool submit_job(const std::string & owner, const std::string &domain, ClassAd & src, const char * schedd_name, const char * pool_name, bool is_sandboxed, int * cluster_out /*= 0*/, int * proc_out /*= 0 */)
 {
 	bool success;
-	priv_state priv = set_user_priv_from_ad(src);
+
+	if (!init_user_ids(owner.c_str(), domain.c_str()))
+	{
+		dprintf(D_ALWAYS, "Failed in init_user_ids(%s,%s)\n",
+			owner.c_str(),
+			domain.c_str());
+		return false;
+	}
+	TemporaryPrivSentry sentry(PRIV_USER);
 
 	success = submit_job_with_current_priv(src,schedd_name,pool_name,is_sandboxed,cluster_out,proc_out);
 
-	set_priv(priv);
 	uninit_user_ids();
 
 	return success;
 }
 
-bool submit_job( classad::ClassAd & src, const char * schedd_name, const char * pool_name, bool is_sandboxed, int * cluster_out /*= 0*/, int * proc_out /*= 0 */)
+bool submit_job(const std::string & owner, const std::string &domain, classad::ClassAd & src, const char * schedd_name, const char * pool_name, bool is_sandboxed, int * cluster_out /*= 0*/, int * proc_out /*= 0 */)
 {
 	ClassAd src2 = src;
-	return submit_job(src2, schedd_name, pool_name, is_sandboxed, cluster_out, proc_out);
+	return submit_job(owner, domain, src2, schedd_name, pool_name, is_sandboxed, cluster_out, proc_out);
 }
 
 /*
@@ -773,14 +796,21 @@ static bool finalize_job_with_current_privs(classad::ClassAd const &job,int clus
 	return true;
 }
 
-bool finalize_job(classad::ClassAd const &ad,int cluster, int proc, const char * schedd_name, const char * pool_name, bool is_sandboxed)
+bool finalize_job(const std::string & owner, const std::string &domain, classad::ClassAd const &ad,int cluster, int proc, const char * schedd_name, const char * pool_name, bool is_sandboxed)
 {
 	bool success;
-	priv_state priv = set_user_priv_from_ad(ad);
+
+	if (!init_user_ids(owner.c_str(), domain.c_str()))
+	{
+		dprintf(D_ALWAYS, "Failed in init_user_ids(%s,%s)\n",
+			owner.c_str(),
+			domain.c_str());
+		return false;
+	}
+	TemporaryPrivSentry sentry(PRIV_USER);
 
 	success = finalize_job_with_current_privs(ad,cluster,proc,schedd_name,pool_name,is_sandboxed);
 
-	set_priv(priv);
 	uninit_user_ids();
 	return success;
 }

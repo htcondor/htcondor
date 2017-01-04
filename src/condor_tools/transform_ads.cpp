@@ -37,6 +37,7 @@
 #include "condor_version.h"
 #include "ad_printmask.h"
 #include "Regex.h"
+#include "tokener.h"
 #include <submit_utils.h>
 #include <xform_utils.h>
 
@@ -1283,110 +1284,13 @@ int DoCopyAttr(ClassAd * ad, const std::string & attr, const char * attrNew)
 	return 0;
 }
 
-// this is a simple tokenizer class for parsing keywords out of a line of text
-// token separator defaults to whitespace, "" or '' can be used to have tokens
-// containing whitespace, but there is no way to escape " inside a "" string or
-// ' inside a '' string. outer "" and '' are not considered part of the token.
-// next() advances to the next token and returns false if there is no next token.
-// matches() can compare the current token to a string without having to extract it
-// copy_marked() returns all of the text from the most recent mark() to the start
-// of the current token. (may include leading and trailing whitespace).
-//
-class tokener {
-public:
-	tokener(const char * line_in) : line(line_in), ix_cur(0), cch(0), ix_next(0), ix_mk(0), sep(" \t\r\n") { }
-	bool set(const char * line_in) { if ( ! line_in) return false; line=line_in; ix_cur = ix_next = 0; return true; }
-	bool next() {
-		ix_cur = line.find_first_not_of(sep, ix_next);
-		if (ix_cur != std::string::npos && (line[ix_cur] == '"' || line[ix_cur] == '\'')) {
-			ix_next = line.find(line[ix_cur], ix_cur+1);
-			ix_cur += 1; // skip leading "
-			cch = ix_next - ix_cur;
-			if (ix_next != std::string::npos) { ix_next += 1; /* skip trailing " */}
-		} else {
-			ix_next = line.find_first_of(sep, ix_cur);
-			cch = ix_next - ix_cur;
-		}
-		return ix_cur != std::string::npos;
-	};
-	bool matches(const char * pat) const { std::string tmp = line.substr(ix_cur, cch); upper_case(tmp); return tmp == pat; }
-	bool starts_with(const char * pat) const { size_t cpat = strlen(pat); return cpat >= cch && line.substr(ix_cur, cpat) == pat; }
-	bool less_than(const char * pat) const { std::string tmp = line.substr(ix_cur, cch); upper_case(tmp); return tmp < pat; }
-	void copy_token(std::string & value) const { value = line.substr(ix_cur, cch); }
-	void copy_to_end(std::string & value) const { value = line.substr(ix_cur); }
-	bool at_end() const { return ix_next == std::string::npos; }
-	void mark() { ix_mk = ix_cur; }
-	void mark_after() { ix_mk = ix_next; }
-	void copy_marked(std::string & value) const { value = line.substr(ix_mk, ix_cur - ix_mk); }
-	std::string & content() { return line; }
-	size_t offset() { return ix_cur; }
-	bool is_quoted_string() const { return ix_cur > 0 && (line[ix_cur-1] == '"' || line[ix_cur-1] == '\''); }
-	bool is_regex() const { return ix_cur > 0 && (line[ix_cur] == '/'); }
-	// NOTE: this version of copy_regex does not recognise \ as an escape, so it stops at the first /
-	bool copy_regex(std::string & value, int & pcre_flags) {
-		if ( ! is_regex()) return false;
-		size_t ix = line.find('/', ix_cur+1);
-		if (ix == std::string::npos)
-			return false;
-
-		ix_cur += 1; // skip leading /
-		cch = ix - ix_cur;
-		value = line.substr(ix_cur, cch); // return value between //'s
-		ix_next = ix+1; // skip trailing /
-		ix = line.find_first_of(sep, ix_next);
-
-		// regex options will follow right after, or they will not exist.
-		pcre_flags = 0;
-		if (ix != std::string::npos) {
-			while (ix_next < ix) {
-				switch (line[ix_next++]) {
-				case 'g': pcre_flags |= 0x80000000; break;
-				case 'm': pcre_flags |= PCRE_MULTILINE; break;
-				case 'i': pcre_flags |= PCRE_CASELESS; break;
-				case 'U': pcre_flags |= PCRE_UNGREEDY; break;
-				default: return false;
-				}
-			}
-		}
-		return true;
-	}
-private:
-	std::string line;  // the line currently being tokenized
-	size_t ix_cur;     // start of the current token
-	size_t cch;        // length of the current token
-	size_t ix_next;    // start of the next token
-	size_t ix_mk;      // start of current 'marked' region
-	const char * sep;  // separator characters used to delimit tokens
-};
-
-template <class T>
-const T * tokener_lookup_table<T>::find_match(const tokener & toke) const {
-	if (cItems <= 0) return NULL;
-	if (is_sorted) {
-		for (int ixLower = 0, ixUpper = cItems-1; ixLower <= ixUpper;) {
-			int ix = (ixLower + ixUpper) / 2;
-			if (toke.matches(pTable[ix].key))
-				return &pTable[ix];
-			else if (toke.less_than(pTable[ix].key))
-				ixUpper = ix-1;
-			else
-				ixLower = ix+1;
-		}
-	} else {
-		for (int ix = 0; ix < (int)cItems; ++ix) {
-			if (toke.matches(pTable[ix].key))
-				return &pTable[ix];
-		}
-	}
-	return NULL;
-}
 
 typedef struct {
 	const char * key;
 	int          value;
 	int          options;
 } Keyword;
-typedef tokener_lookup_table<Keyword> KeywordTable;
+typedef nocase_sorted_tokener_lookup_table<Keyword> KeywordTable;
 
 #define kw_opt_argcount_mask 0x0F
 #define kw_opt_regex         0x10
@@ -2465,8 +2369,9 @@ int ConvertJobRouterRoutes(int options)
 #ifdef USE_XFORM_UTILS
 			MacroStreamXFormSource xfm;
 			if (XFormLoadFromJobRouterRoute(xfm, routes_string, offset, default_route_ad, options)) {
-				fprintf(stdout, "##### JOB_ROUTER_ENTRIES [%d] #####\n", route_index);
-				fputs(xfm.getText(), stdout);
+				fprintf(stdout, "\n##### JOB_ROUTER_ENTRIES [%d] #####\n", route_index);
+				std::string xfm_text;
+				fputs(xfm.getFormattedText(xfm_text,"", true), stdout);
 #else
 			StringList lines;
 			if (XFormLoadFromJobRouterRoute(routes_string, offset, default_route_ad, lines, options)) {
@@ -2502,8 +2407,9 @@ int ConvertJobRouterRoutes(int options)
 #ifdef USE_XFORM_UTILS
 				MacroStreamXFormSource xfm;
 				if (XFormLoadFromJobRouterRoute(xfm, routes_string, offset, default_route_ad, options)) {
-					fprintf(stdout, "##### JOB_ROUTER_ENTRIES_FILE [%d] #####\n", route_index);
-					fputs(xfm.getText(), stdout);
+					fprintf(stdout, "\n##### JOB_ROUTER_ENTRIES_FILE [%d] #####\n", route_index);
+					std::string xfm_text;
+					fputs(xfm.getFormattedText(xfm_text,"", true), stdout);
 #else
 				StringList lines;
 				if (XFormLoadFromJobRouterRoute(routes_string, offset, default_route_ad, lines, options)) {

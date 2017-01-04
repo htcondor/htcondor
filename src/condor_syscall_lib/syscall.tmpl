@@ -46,7 +46,7 @@
   Receivers are the part of the code which runs on the submitting
   machine that matches with the sender.  The receiver reads all the
   arguments to the system call, performs the call, then sends back the
-  results.  We plan to eventually generate the recievers from this
+  results.  We plan to eventually generate the receivers from this
   template file, but the current code doesn't do it.
 
   The general format of this file is a function prototype for every
@@ -274,7 +274,7 @@ circumstances:
    fcntl's "cmd" argument, and open's "flags" argument both have to be 
    CEDARized so that we can deal with heterogeneous submits.  So, for
    the switch, we want to just use the regular int.  However, for the
-   sender and the reciever, we have to use CEDAR's special enum type
+   sender and the receiver, we have to use CEDAR's special enum type
    so that we send the thing across the wire in a platform-independent
    way.  -Derek Wright and Todd Tannenbaum 2/8/00
 */

@@ -1090,7 +1090,7 @@ command_delegate_gsi_cred( Service*, int, Stream* stream )
 	int rv;
 	filesize_t dont_care;
 	if( use_delegation ) {
-		rv = sock->get_x509_delegation( &dont_care, proxy_file.Value() );
+		rv = sock->get_x509_delegation( proxy_file.Value(), false, NULL );
 	}
 	else {
 		dprintf( D_FULLDEBUG,

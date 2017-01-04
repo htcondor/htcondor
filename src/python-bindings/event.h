@@ -1,8 +1,6 @@
 #ifndef __PYTHON_BINDINGS_EVENT_H_
 #define __PYTHON_BINDINGS_EVENT_H_
 
-#include <boost/python.hpp>
-
 #include "classad_wrapper.h"
 
 class InotifySentry;

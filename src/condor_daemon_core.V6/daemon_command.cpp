@@ -478,6 +478,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::AcceptUDPReq
 			bool tried_authentication = false;
 			session->policy()->LookupBool(ATTR_SEC_TRIED_AUTHENTICATION,tried_authentication);
 			m_sock->setTriedAuthentication(tried_authentication);
+			m_sock->setSessionID(sess_id);
 
 			free( sess_id );
 			if (return_address_ss) {
@@ -744,7 +745,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 				using_cookie = true;
 			} else {
 				// bad cookie!!!
-				dprintf ( D_ALWAYS, "DC_AUTHENTICATE: recieved invalid cookie from %s!!!\n", m_sock->peer_description());
+				dprintf ( D_ALWAYS, "DC_AUTHENTICATE: received invalid cookie from %s!!!\n", m_sock->peer_description());
 				m_result = FALSE;
 				return CommandProtocolFinished;
 			}
@@ -852,6 +853,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 					bool tried_authentication=false;
 					m_policy->LookupBool(ATTR_SEC_TRIED_AUTHENTICATION,tried_authentication);
 					m_sock->setTriedAuthentication(tried_authentication);
+					m_sock->setSessionID(session->id());
 				}
 				m_new_session = false;
 
@@ -1109,6 +1111,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::Authenticate
 
 	char *method_used = NULL;
 	int auth_success = m_sock->authenticate(m_key, auth_methods, m_errstack, auth_timeout, m_nonblocking, &method_used);
+	m_sock->getPolicyAd(*m_policy);
 	free( auth_methods );
 
 	if (auth_success == 2) {
@@ -1170,6 +1173,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::Authenticate
 
 	if( auth_success ) {
 		dprintf (D_SECURITY, "DC_AUTHENTICATE: authentication of %s complete.\n", m_sock->peer_ip_str());
+		m_sock->getPolicyAd(*m_policy);
 	}
 	else {
 		bool auth_required = true;
@@ -1531,6 +1535,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::SendResponse
 		m_sec_man->sec_copy_attribute( *m_policy, pa_ad, ATTR_SEC_USER );
 		m_sec_man->sec_copy_attribute( *m_policy, pa_ad, ATTR_SEC_SID );
 		m_sec_man->sec_copy_attribute( *m_policy, pa_ad, ATTR_SEC_VALID_COMMANDS );
+		m_sock->setSessionID(m_sid);
 
 		// extract the session duration
 		char *dur = NULL;

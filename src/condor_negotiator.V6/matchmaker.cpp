@@ -43,6 +43,7 @@
 #include "selector.h"
 #include "consumption_policy.h"
 #include "condor_classad.h"
+#include "subsystem_info.h"
 
 #include <vector>
 #include <string>
@@ -74,8 +75,6 @@ enum { MM_ERROR, MM_DONE, MM_RESUME };
 enum { _MM_ERROR, MM_NO_MATCH, MM_GOOD_MATCH, MM_BAD_MATCH };
 
 typedef int (*lessThanFunc)(AttrList*, AttrList*, void*);
-
-MyString SlotWeightAttr = ATTR_SLOT_WEIGHT;
 
 char const *RESOURCES_IN_USE_BY_USER_FN_NAME = "ResourcesInUseByUser";
 char const *RESOURCES_IN_USE_BY_USERS_GROUP_FN_NAME = "ResourcesInUseByUsersGroup";
@@ -301,25 +300,23 @@ static int rankSorter(ClassAd *left, ClassAd *right, void * that) {
 	mm->calculateRanks(dummyRequest, right, Matchmaker::NO_PREEMPTION, rhscandidateRankValue, rhscandidatePreJobRankValue, rhscandidatePostJobRankValue, rhscandidatePreemptRankValue);
 
 	if (lhscandidatePreJobRankValue < rhscandidatePreJobRankValue) {
-		return 1;
+		return 0;
 	} 
 
-	if (rhscandidatePreJobRankValue > lhscandidatePreJobRankValue) {
-		return 0;
+	if (lhscandidatePreJobRankValue > rhscandidatePreJobRankValue) {
+		return 1;
 	} 
 
 	// We are intentially skipping the job rank, as we assume it is constant
 	if (lhscandidatePostJobRankValue < rhscandidatePostJobRankValue) {
-		return 1;
-	} 
-
-	if (rhscandidatePostJobRankValue > lhscandidatePostJobRankValue) {
 		return 0;
 	} 
 
+	if (lhscandidatePostJobRankValue > rhscandidatePostJobRankValue) {
+		return 1;
+	} 
+
 	return left < right;
-
-
 }
 
 Matchmaker::
@@ -358,6 +355,7 @@ Matchmaker ()
 
 	want_globaljobprio = false;
 	want_matchlist_caching = false;
+	PublishCrossSlotPrios = false;
 	ConsiderPreemption = true;
 	ConsiderEarlyPreemption = false;
 	want_nonblocking_startd_contact = true;
@@ -416,6 +414,7 @@ Matchmaker ()
 	name = RESOURCES_IN_USE_BY_USERS_GROUP_FN_NAME;
 	classad::FunctionCall::RegisterFunction( name,
 											 ResourcesInUseByUsersGroup_classad_func );
+	slotWeightStr = 0;
 }
 
 Matchmaker::
@@ -542,6 +541,10 @@ reinitialize ()
     // Initialize accountant params
     accountant.Initialize(hgq_root_group);
 
+	if (NegotiatorName) {
+		free(NegotiatorName);
+		NegotiatorName = NULL;
+	}
 	init_public_ad();
 
 	// get timeout values
@@ -754,6 +757,7 @@ reinitialize ()
 
 	want_globaljobprio = param_boolean("USE_GLOBAL_JOB_PRIOS",false);
 	want_matchlist_caching = param_boolean("NEGOTIATOR_MATCHLIST_CACHING",true);
+	PublishCrossSlotPrios = param_boolean("NEGOTIATOR_CROSS_SLOT_PRIOS", false);
 	ConsiderPreemption = param_boolean("NEGOTIATOR_CONSIDER_PREEMPTION",true);
 	ConsiderEarlyPreemption = param_boolean("NEGOTIATOR_CONSIDER_EARLY_PREEMPTION",false);
 	if( ConsiderEarlyPreemption && !ConsiderPreemption ) {
@@ -816,6 +820,13 @@ reinitialize ()
 	} else { 
 			// be sure to try to publish a new negotiator ad on reconfig
 		updateCollector();
+	}
+
+	if (slotWeightStr) free(slotWeightStr);
+
+	slotWeightStr = param("SLOT_WEIGHT");
+	if (!slotWeightStr) {
+		slotWeightStr = strdup("Cpus");
 	}
 
 
@@ -3566,6 +3577,12 @@ obtainAdsFromCollector (
                 cp_resources = true;
             }
 
+			// If startd didn't set a slot weight expression, add in our own
+			double slot_weight;
+			if (!ad->LookupFloat(ATTR_SLOT_WEIGHT, slot_weight)) {
+				ad->AssignExpr(ATTR_SLOT_WEIGHT, slotWeightStr);
+			}
+
 			OptimizeMachineAdForMatchmaking( ad );
 
 			startdAds.Insert(ad);
@@ -3768,6 +3785,10 @@ Matchmaker::MakeClaimIdHash(ClassAdList &startdPvtAdList, ClaimIdHash &claimIds)
 				// foreach entry in that vector
 			for (int kid = 0; kid < numKids; kid++) {
 				std::string child_claim = "";
+				// The startd sets this attribute under the name
+				// ATTR_CHILD_CLAIM_IDS.
+				// dslotLookupString() prepends "Child" to the given name,
+				// so we use ATTR_CLAIM_IDS for this call.
 				if ( dslotLookupString( ad, ATTR_CLAIM_IDS, kid, child_claim ) ) {
 					claims.push_back( child_claim );
 				} else {
@@ -5391,6 +5412,9 @@ calculateRanks(ClassAd &request,
 	if (m_staticRanks) {
 		// only get here on cache miss
 		struct JobRanks ranks;
+		ranks.PreJobRankValue = candidatePreJobRankValue;
+		ranks.PostJobRankValue = candidatePostJobRankValue;
+		ranks.PreemptRankValue = candidatePreemptRankValue;
 		ranksMap.insert(std::make_pair(candidate, ranks));
 	}
 }
@@ -5833,7 +5857,7 @@ calculateNormalizationFactor (ClassAdListDoesNotDeleteAds &scheddAds,
 void Matchmaker::
 addRemoteUserPrios( ClassAdListDoesNotDeleteAds &cal )
 {
-	if ((!ConsiderPreemption ) || (!param_boolean("NEGOTIATOR_CROSS_SLOT_PRIOS", true))) {
+	if (!ConsiderPreemption) {
 			// Hueristic - no need to take the time to populate ad with 
 			// accounting information if no preemption is to be considered.
 		return;
@@ -5870,12 +5894,12 @@ addRemoteUserPrios( ClassAd	*ad )
 	{
 		prio = (float) accountant.GetPriority( remoteUser.Value() );
 		ad->Assign(ATTR_REMOTE_USER_PRIO, prio);
-		expr.formatstr("%s(\"%s\")",RESOURCES_IN_USE_BY_USER_FN_NAME,EscapeAdStringValue(remoteUser.Value(),expr_buffer));
+		expr.formatstr("%s(%s)",RESOURCES_IN_USE_BY_USER_FN_NAME,QuoteAdStringValue(remoteUser.Value(),expr_buffer));
 		ad->AssignExpr(ATTR_REMOTE_USER_RESOURCES_IN_USE,expr.Value());
 		if (getGroupInfoFromUserId(remoteUser.Value(), temp_groupName, temp_groupQuota, temp_groupUsage)) {
 			// this is a group, so enter group usage info
             ad->Assign(ATTR_REMOTE_GROUP, temp_groupName);
-			expr.formatstr("%s(\"%s\")",RESOURCES_IN_USE_BY_USERS_GROUP_FN_NAME,EscapeAdStringValue(remoteUser.Value(),expr_buffer));
+			expr.formatstr("%s(%s)",RESOURCES_IN_USE_BY_USERS_GROUP_FN_NAME,QuoteAdStringValue(remoteUser.Value(),expr_buffer));
 			ad->AssignExpr(ATTR_REMOTE_GROUP_RESOURCES_IN_USE,expr.Value());
 			ad->Assign(ATTR_REMOTE_GROUP_QUOTA,temp_groupQuota);
 		}
@@ -5901,8 +5925,13 @@ addRemoteUserPrios( ClassAd	*ad )
 			total_slots = 0;
 		}
 	}
+		// The for-loop below publishes accounting information about each slot
+		// into each other slot.  This is relatively computationally expensive,
+		// especially for startds that manage a lot of slots, and 99% of the world
+		// doesn't care.  So we only do this if knob
+		// NEGOTIATOR_CROSS_SLOT_PRIOS is explicitly set to True.
 		// This won't fire if total_slots is still 0...
-	for(i = 1; i <= total_slots; i++) {
+	for(i = 1; PublishCrossSlotPrios && i <= total_slots; i++) {
 		slot_prefix.formatstr("%s%d_", resource_prefix, i);
 		buffer.formatstr("%s%s", slot_prefix.Value(), ATTR_PREEMPTING_ACCOUNTING_GROUP);
 		buffer1.formatstr("%s%s", slot_prefix.Value(), ATTR_PREEMPTING_USER);
@@ -5922,14 +5951,14 @@ addRemoteUserPrios( ClassAd	*ad )
 			ad->Assign(buffer.Value(),prio);
 			buffer.formatstr("%s%s", slot_prefix.Value(), 
 					ATTR_REMOTE_USER_RESOURCES_IN_USE);
-			expr.formatstr("%s(\"%s\")",RESOURCES_IN_USE_BY_USER_FN_NAME,EscapeAdStringValue(remoteUser.Value(),expr_buffer));
+			expr.formatstr("%s(%s)",RESOURCES_IN_USE_BY_USER_FN_NAME,QuoteAdStringValue(remoteUser.Value(),expr_buffer));
 			ad->AssignExpr(buffer.Value(),expr.Value());
 			if (getGroupInfoFromUserId(remoteUser.Value(), temp_groupName, temp_groupQuota, temp_groupUsage)) {
 				// this is a group, so enter group usage info
 				buffer.formatstr("%s%s", slot_prefix.Value(), ATTR_REMOTE_GROUP);
 				ad->Assign( buffer.Value(), temp_groupName );
 				buffer.formatstr("%s%s", slot_prefix.Value(), ATTR_REMOTE_GROUP_RESOURCES_IN_USE);
-				expr.formatstr("%s(\"%s\")",RESOURCES_IN_USE_BY_USERS_GROUP_FN_NAME,EscapeAdStringValue(remoteUser.Value(),expr_buffer));
+				expr.formatstr("%s(%s)",RESOURCES_IN_USE_BY_USERS_GROUP_FN_NAME,QuoteAdStringValue(remoteUser.Value(),expr_buffer));
 				ad->AssignExpr( buffer.Value(), expr.Value() );
 				buffer.formatstr("%s%s", slot_prefix.Value(), ATTR_REMOTE_GROUP_QUOTA);
 				ad->Assign( buffer.Value(), temp_groupQuota );
@@ -6321,13 +6350,19 @@ init_public_ad()
 	SetTargetTypeName(*publicAd, "");
 
 	if( !NegotiatorName ) {
-		char* defaultName = NULL;
-		defaultName = default_daemon_name();
-		if( ! defaultName ) {
-			EXCEPT( "default_daemon_name() returned NULL" );
+		// optionally allow the negotiator name to be set, this is for unusual circumstances
+		// the default behavior will be to use the subsystem name as the negotiator name.
+		// we do this so that in a HAD configuration, the two negotiators will have the same name
+		// and thus overwrite each other's ad in the collector. 
+		NegotiatorName = param("NEGOTIATOR_NAME");
+		if ( ! NegotiatorName) {
+			const char * name = get_mySubSystem()->getLocalName();
+			if ( ! name) {
+				name = get_mySubSystem()->getName();
+				if ( ! name) { name = "NEGOTIATOR"; }
+			}
+			NegotiatorName = strdup(name);
 		}
-		NegotiatorName = strdup( defaultName );
-		delete [] defaultName;
 	}
 	publicAd->Assign(ATTR_NAME, NegotiatorName );
 

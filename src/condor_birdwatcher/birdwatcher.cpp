@@ -41,5 +41,5 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance,
 		}
 	}
 
-	return msg.wParam;
+	return (int)msg.wParam;
 }

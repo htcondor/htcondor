@@ -187,6 +187,7 @@ DagmanMetrics::Report( int exitCode, Dag::dag_status status )
 	if ( disabled ) {
 		debug_printf( DEBUG_NORMAL,
 					"Metrics reporting is not available on this platform.\n" );
+
 	} else if ( _sendMetrics ) {
 		MyString reporterPath;
 		const char* exe = param( "DAGMAN_PEGASUS_REPORT_METRICS" );	

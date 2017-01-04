@@ -553,6 +553,7 @@ main_init( int argc, char* argv[] )
 	
 		// Grab all parameters needed by the master.
 	init_params();
+	validate_config(0, CONFIG_OPT_DEPRECATION_WARNINGS);
 		// param() for DAEMON_LIST and initialize our daemons object.
 	init_daemon_list();
 	if ( daemons.SetupControllers() < 0 ) {
@@ -1304,6 +1305,7 @@ main_config()
 
 		// Reset our config values
 	init_params();
+	validate_config(0, CONFIG_OPT_DEPRECATION_WARNINGS);
 
 		// Reset the daemon list
 	init_daemon_list();
@@ -1443,8 +1445,8 @@ invalidate_ads() {
 		default_name = default_daemon_name();
 	}
 	
-	EscapeAdStringValue( default_name, escaped_name );
-	line.formatstr( "( TARGET.%s == \"%s\" )", ATTR_NAME, escaped_name.c_str() );
+	QuoteAdStringValue( default_name, escaped_name );
+	line.formatstr( "( TARGET.%s == %s )", ATTR_NAME, escaped_name.c_str() );
 	cmd_ad.AssignExpr( ATTR_REQUIREMENTS, line.Value() );
 	cmd_ad.Assign( ATTR_NAME, default_name );
 	cmd_ad.Assign( ATTR_MY_ADDRESS, daemonCore->publicNetworkIpAddr());
@@ -1588,9 +1590,9 @@ void
 main_pre_command_sock_init()
 {
 	/* Make sure we are the only copy of condor_master running */
+	char*  p;
 #ifndef WIN32
 	MyString lock_file;
-	char*  p;
 
 	// see if a file is given explicitly
 	p = param ("MASTER_INSTANCE_LOCK");
@@ -1629,6 +1631,19 @@ main_pre_command_sock_init()
 		do_linux_kernel_tuning();
 #endif
 	}
+
+	// If using CREDENTIAL_DIRECTORY, blow away the CREDMON_COMPLETE file
+	// to force the credmon to refresh everything and to prevent the schedd
+	// from starting up until credentials are ready.
+	p = param("SEC_CREDENTIAL_DIRECTORY");
+	if(p) {
+		MyString cred_file;
+		cred_file = p;
+		cred_file = cred_file + DIR_DELIM_CHAR + "CREDMON_COMPLETE";
+		dprintf(D_SECURITY, "CREDMON: unlinking %s.", cred_file.Value());
+		unlink(cred_file.Value());
+	}
+	free(p);
 
  	// in case a shared port address file got left behind by an
  	// unclean shutdown, clean it up now before we create our

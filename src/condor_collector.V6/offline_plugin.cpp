@@ -446,7 +446,7 @@ OfflineCollectorPlugin::expire (
 		type, an incompatibility between startd/negotiator would have to be dealt with.
 		So here we try to distinguish if this ad is really a STARTD_PVT_ADTYPE by seeing
 		if a Capability attr is present and a State attr is not present. */
-	if ( ad.Lookup(ATTR_CAPABILITY) && !ad.Lookup(ATTR_STATE) ) {
+	if ( (ad.Lookup(ATTR_CLAIM_ID) || ad.Lookup(ATTR_CAPABILITY)) && !ad.Lookup(ATTR_STATE) ) {
 		// looks like a private ad, we don't want to store these
 		return false;	// return false tells collector to delete this ad
 	}

@@ -88,6 +88,7 @@ CStarter::CStarter()
 	m_job_environment_is_ready = false;
 	m_all_jobs_done = false;
 	m_deferred_job_update = false;
+	m_shutdown_exit_code = STARTER_EXIT_NORMAL;
 }
 
 
@@ -266,6 +267,9 @@ CStarter::StarterExit( int code )
 		exitAfterGlexec( code );
 	}
 #endif
+	// Once libc starts calling global destructors, we can't reliably
+	// notify anyone of an EXCEPT().
+	_EXCEPT_Cleanup = NULL;
 	DC_Exit( code );
 }
 
@@ -2574,7 +2578,7 @@ CStarter::Suspend( void ) {
 	
 		//
 		// We set a flag to let us know that if any other
-		// job tries to start after we recieved this Suspend call
+		// job tries to start after we received this Suspend call
 		// then they should also be suspended.
 		// This can happen if a job was being deferred and when
 		// the timer triggers we don't want to let it execute 
@@ -2817,7 +2821,7 @@ CStarter::Reaper(int pid, int exit_status)
 
 	if ( ShuttingDown && (all_jobs - handled_jobs == 0) ) {
 		dprintf(D_ALWAYS,"Last process exited, now Starter is exiting\n");
-		StarterExit(STARTER_EXIT_NORMAL);
+		StarterExit(GetShutdownExitCode());
 	}
 
 	return 0;
@@ -3592,6 +3596,18 @@ CStarter::removeTempExecuteDir( void )
 			return false;
 		}
 		return true;
+	}
+#endif
+
+#if defined(LINUX)
+	if (glexecPrivSepHelper() != NULL && m_job_environment_is_ready == true &&
+		m_all_jobs_done == false) {
+
+		PrivSepError err;
+		if( !m_privsep_helper->chown_sandbox_to_condor(err) ) {
+			dprintf(D_ALWAYS, "Failed to chown glexec sandbox to condor on shutdown\n");
+			return false;
+		}
 	}
 #endif
 

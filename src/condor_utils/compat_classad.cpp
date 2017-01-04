@@ -483,7 +483,7 @@ bool userMap_func( const char * /*name*/,
 {
 	classad::Value mapVal, userVal, prefVal;
 
-	int cargs = arg_list.size();
+	size_t cargs = arg_list.size();
 	if (cargs < 2 || cargs > 4) {
 		result.SetErrorValue();
 		return true;
@@ -509,7 +509,7 @@ bool userMap_func( const char * /*name*/,
 
 	MyString output;
 	if (user_map_do_mapping(mapName.c_str(), userName.c_str(), output)) {
-		StringList items(output.Value());
+		StringList items(output.Value(), ",");
 
 		if (cargs == 2) {
 			// 2 arg form, return a list.
@@ -588,7 +588,7 @@ bool splitAt_func( const char * name,
 	classad::Value first;
 	classad::Value second;
 
-	unsigned int ix = str.find_first_of('@');
+	size_t ix = str.find_first_of('@');
 	if (ix >= str.size()) {
 		if (0 == strcasecmp(name, "splitslotname")) {
 			first.SetStringValue("");
@@ -665,10 +665,10 @@ bool splitArb_func( const char * /*name*/,
 	// but runs of a single separator are handled individually, thus
 	// "foo, bar" is the same as "foo ,bar" and "foo,bar".  But not the same as
 	// "foo,,bar", which produces a list of 3 items rather than 2.
-	unsigned int ixLast = 0;
+	size_t ixLast = 0;
 	classad::Value val;
 	if (seps.length() > 0) {
-		unsigned int ix = str.find_first_of(seps, ixLast);
+		size_t ix = str.find_first_of(seps, ixLast);
 		int      ch = -1;
 		while (ix < str.length()) {
 			if (ix - ixLast > 0) {
@@ -1248,7 +1248,7 @@ ClassAd( FILE *file, const char *delimitor, int &isEOF, int&error, int &empty )
 	int index;
 	MyString buffer;
 	MyStringFpSource myfs(file, false);
-	int			delimLen = strlen( delimitor );
+	size_t delimLen = strlen( delimitor );
 
 	empty = TRUE;
 
@@ -1326,12 +1326,22 @@ CondorClassAdFileParseHelper::~CondorClassAdFileParseHelper()
 }
 
 
+bool CondorClassAdFileParseHelper::line_is_ad_delimitor(const std::string & line)
+{
+	if (blank_line_is_ad_delimitor) {
+		const char * p = line.c_str();
+		while (*p && isspace(*p)) ++p;
+		return ( ! *p || *p == '\n');
+	}
+	return starts_with(line, ad_delimitor);
+}
+
 // this method is called before each line is parsed.
 // return 0 to skip (is_comment), 1 to parse line, 2 for end-of-classad, -1 for abort
 int CondorClassAdFileParseHelper::PreParse(std::string & line, ClassAd & /*ad*/, FILE* /*file*/)
 {
 	// if this line matches the ad delimitor, tell the parser to stop parsing
-	if (starts_with(line, ad_delimitor))
+	if (line_is_ad_delimitor(line))
 		return 2; //end-of-classad
 
 	// check for blank lines or lines whose first character is #
@@ -1352,7 +1362,7 @@ int CondorClassAdFileParseHelper::OnParseError(std::string & line, ClassAd & /*a
 {
 	if (parse_type >= Parse_xml && parse_type < Parse_auto) {
 		// here line is actually errmsg.
-		PRAGMA_REMIND("report parse errors for new parsers?")
+		//PRAGMA_REMIND("report parse errors for new parsers?")
 		return -1;
 	}
 
@@ -1361,8 +1371,8 @@ int CondorClassAdFileParseHelper::OnParseError(std::string & line, ClassAd & /*a
 			line.c_str());
 
 	// read until delimitor or EOF; whichever comes first
-	line = "";
-	while ( ! starts_with(line, ad_delimitor)) {
+	line = "NotADelim=1";
+	while ( ! line_is_ad_delimitor(line)) {
 		if (feof(file))
 			break;
 		if ( ! readLine(line, file, false))
@@ -1650,7 +1660,7 @@ int CondorClassAdFileIterator::next(ClassAd & classad, bool merge /*=false*/)
 {
 	if ( ! merge) classad.Clear();
 	if (at_eof) return 0;
-	if ( ! file) return -1;
+	if ( ! file) { error = -1; return -1; }
 
 	int cAttrs = classad.InsertFromFile(file, at_eof, error, parse_help);
 	if (cAttrs > 0) return cAttrs;
@@ -1896,8 +1906,13 @@ ClassAdAttributeIsPrivate( char const *name )
 			// This attribute contains the secret file transfer cookie
 		return true;
 	}
-	if (strcasecmp(name,"ChildClaimIds") == 0) {
+	if (strcasecmp(name,ATTR_CHILD_CLAIM_IDS) == 0) {
 			// In a partitionable slot, contains all the claim ids
+		return true;
+	}
+	if (strcasecmp(name,ATTR_CLAIM_ID_LIST) == 0) {
+			// In a partitionable slot with consumption policies,
+			// contains extra claim ids
 		return true;
 	}
 	return false;
@@ -2733,7 +2748,7 @@ char*
 sPrintExpr(const classad::ClassAd &ad, const char* name)
 {
 	char *buffer = NULL;
-	int buffersize = 0;
+	size_t buffersize = 0;
 	classad::ClassAdUnParser unp;
     string parsedString;
 	classad::ExprTree* expr;
@@ -3171,10 +3186,11 @@ sPrintAdAsJson(std::string &output, const classad::ClassAd &ad, StringList *attr
 }
 
 char const *
-EscapeAdStringValue(char const *val, std::string &buf)
+QuoteAdStringValue(char const *val, std::string &buf)
 {
-    if(val == NULL)
+    if(val == NULL) {
         return NULL;
+    }
 
     buf.clear();
 
@@ -3186,7 +3202,6 @@ EscapeAdStringValue(char const *val, std::string &buf)
     tmpValue.SetStringValue(val);
     unparse.Unparse(buf, tmpValue);
 
-	buf = buf.substr( 1, buf.length() - 2 );
     return buf.c_str();
 }
 
@@ -3257,6 +3272,15 @@ GetExprReferences(const char* expr,
 
 	delete tree;
 
+	return true;
+}
+
+bool ClassAd::
+GetExprReferences(classad::ExprTree *tree,
+				  StringList *internal_refs,
+				  StringList *external_refs) const
+{
+	_GetReferences( tree, internal_refs, external_refs );
 	return true;
 }
 

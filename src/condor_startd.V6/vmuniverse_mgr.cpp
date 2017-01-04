@@ -597,7 +597,8 @@ VMUniverseMgr::canCreateVM(ClassAd *jobAd)
 
 	// check free memory for VM
 	int int_value = 0;
-	if( jobAd->LookupInteger(ATTR_JOB_VM_MEMORY, int_value) != 1 ) {
+	if( (jobAd->LookupInteger(ATTR_JOB_VM_MEMORY, int_value) != 1) &&
+		(jobAd->LookupInteger(ATTR_REQUEST_MEMORY, int_value) != 1) ) {
 		dprintf(D_ALWAYS, "Can't find VM memory in Job ClassAd\n");
 		return false;
 	}
@@ -630,13 +631,15 @@ VMUniverseMgr::allocVM(pid_t s_pid, ClassAd &ad, char const *execute_dir)
 
 	// Find memory for VM
 	int vm_mem = 0;
-	if( ad.LookupInteger(ATTR_JOB_VM_MEMORY, vm_mem) != 1 ) {
+	if( (ad.LookupInteger(ATTR_JOB_VM_MEMORY, vm_mem) != 1) &&
+	    (ad.LookupInteger(ATTR_REQUEST_MEMORY, vm_mem) != 1) ) {
 		dprintf(D_ALWAYS, "Can't find VM memory in Job ClassAd\n");
 		return false;
 	}
 
 	int vcpus = 0;
-	if(ad.LookupInteger(ATTR_JOB_VM_VCPUS, vcpus) != 1)
+	if( (ad.LookupInteger(ATTR_JOB_VM_VCPUS, vcpus) != 1) &&
+	    (ad.LookupInteger(ATTR_REQUEST_CPUS, vcpus) != 1) )
 	  {
 	    dprintf(D_FULLDEBUG, "Defaulting to one CPU\n");
 	    vcpus = 1;

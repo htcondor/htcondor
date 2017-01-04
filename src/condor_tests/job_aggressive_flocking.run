@@ -36,14 +36,10 @@ my $firstappend_condor_config = '
     KILLING_TIMEOUT = 1
     MachineMaxVacateTime = 5
     NEGOTIATION_INTERVAL = 5
-	UPDATE_INTERVAL = 5
+    UPDATE_INTERVAL = 5
     KILL = FALSE
     START = TRUE
-	NUM_CPUS = 32
-	#C1=$(COLLECTOR)
-	#C1_ARGS = -local-name C1
-	#COLLECTOR.C1.COLLECTOR_NAME = C1
-    #DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD,C1
+    NUM_CPUS = 32
     DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
 ';
 
@@ -72,77 +68,77 @@ C2=$(COLLECTOR)
 C3=$(COLLECTOR)
 C4=$(COLLECTOR)
 C5=$(COLLECTOR)
-C1_ARGS = -local-name C1
-C2_ARGS = -local-name C2
-C3_ARGS = -local-name C3
-C4_ARGS = -local-name C4
-C5_ARGS = -local-name C5
-COLLECTOR.C1.COLLECTOR_NAME = C1
-COLLECTOR.C2.COLLECTOR_NAME = C2
-COLLECTOR.C3.COLLECTOR_NAME = C3
-COLLECTOR.C4.COLLECTOR_NAME = C4
-COLLECTOR.C5.COLLECTOR_NAME = C5
+C1_ARGS = $(COLLECTOR_ARGS)
+C2_ARGS = $(COLLECTOR_ARGS)
+C3_ARGS = $(COLLECTOR_ARGS)
+C4_ARGS = $(COLLECTOR_ARGS)
+C5_ARGS = $(COLLECTOR_ARGS)
+C1.COLLECTOR_NAME = C1
+C2.COLLECTOR_NAME = C2
+C3.COLLECTOR_NAME = C3
+C4.COLLECTOR_NAME = C4
+C5.COLLECTOR_NAME = C5
 N1=$(NEGOTIATOR)
 N2=$(NEGOTIATOR)
 N3=$(NEGOTIATOR)
 N4=$(NEGOTIATOR)
 N5=$(NEGOTIATOR)
-N1_ARGS = -local-name N1
-N2_ARGS = -local-name N2
-N3_ARGS = -local-name N3
-N4_ARGS = -local-name N4
-N5_ARGS = -local-name N5
-NEGOTIATOR.N1.NEGOTIATOR_LOG=$(LOG)/NegotiatorLog.N1
-NEGOTIATOR.N2.NEGOTIATOR_LOG=$(LOG)/NegotiatorLog.N2
-NEGOTIATOR.N3.NEGOTIATOR_LOG=$(LOG)/NegotiatorLog.N3
-NEGOTIATOR.N4.NEGOTIATOR_LOG=$(LOG)/NegotiatorLog.N4
-NEGOTIATOR.N5.NEGOTIATOR_LOG=$(LOG)/NegotiatorLog.N5
-NEGOTIATOR.N1.NEGOTIATOR_ADDRESS_FILE=$(LOG)/.negotiator_address.n1
-NEGOTIATOR.N2.NEGOTIATOR_ADDRESS_FILE=$(LOG)/.negotiator_address.n2
-NEGOTIATOR.N3.NEGOTIATOR_ADDRESS_FILE=$(LOG)/.negotiator_address.n3
-NEGOTIATOR.N4.NEGOTIATOR_ADDRESS_FILE=$(LOG)/.negotiator_address.n4
-NEGOTIATOR.N5.NEGOTIATOR_ADDRESS_FILE=$(LOG)/.negotiator_address.n5
-NEGOTIATOR.N1.SPOOL=$(SPOOL)/N1
-NEGOTIATOR.N2.SPOOL=$(SPOOL)/N2
-NEGOTIATOR.N3.SPOOL=$(SPOOL)/N3
-NEGOTIATOR.N4.SPOOL=$(SPOOL)/N4
-NEGOTIATOR.N5.SPOOL=$(SPOOL)/N5
-COLLECTOR.C1.COLLECTOR_LOG = $(LOG)/CollectorLog.C1
-COLLECTOR.C2.COLLECTOR_LOG = $(LOG)/CollectorLog.C2
-COLLECTOR.C3.COLLECTOR_LOG = $(LOG)/CollectorLog.C3
-COLLECTOR.C4.COLLECTOR_LOG = $(LOG)/CollectorLog.C4
-COLLECTOR.C5.COLLECTOR_LOG = $(LOG)/CollectorLog.C5
+#N1_ARGS = -local-name N1
+#N2_ARGS = -local-name N2
+#N3_ARGS = -local-name N3
+#N4_ARGS = -local-name N4
+#N5_ARGS = -local-name N5
+N1.NEGOTIATOR_LOG=$(LOG)/NegotiatorLog.N1
+N2.NEGOTIATOR_LOG=$(LOG)/NegotiatorLog.N2
+N3.NEGOTIATOR_LOG=$(LOG)/NegotiatorLog.N3
+N4.NEGOTIATOR_LOG=$(LOG)/NegotiatorLog.N4
+N5.NEGOTIATOR_LOG=$(LOG)/NegotiatorLog.N5
+N1.NEGOTIATOR_ADDRESS_FILE=$(LOG)/.negotiator_address.n1
+N2.NEGOTIATOR_ADDRESS_FILE=$(LOG)/.negotiator_address.n2
+N3.NEGOTIATOR_ADDRESS_FILE=$(LOG)/.negotiator_address.n3
+N4.NEGOTIATOR_ADDRESS_FILE=$(LOG)/.negotiator_address.n4
+N5.NEGOTIATOR_ADDRESS_FILE=$(LOG)/.negotiator_address.n5
+N1.SPOOL=$(SPOOL)/N1
+N2.SPOOL=$(SPOOL)/N2
+N3.SPOOL=$(SPOOL)/N3
+N4.SPOOL=$(SPOOL)/N4
+N5.SPOOL=$(SPOOL)/N5
+C1.COLLECTOR_LOG = $(LOG)/CollectorLog.C1
+C2.COLLECTOR_LOG = $(LOG)/CollectorLog.C2
+C3.COLLECTOR_LOG = $(LOG)/CollectorLog.C3
+C4.COLLECTOR_LOG = $(LOG)/CollectorLog.C4
+C5.COLLECTOR_LOG = $(LOG)/CollectorLog.C5
 FLOCK_COLLECTOR_HOSTS = $(FLOCK_TO)
 FLOCK_NEGOTIATOR_HOSTS = $(FLOCK_TO)
-DAEMON_LIST = $(DAEMON_LIST), C1, C2, C3, C4, C5
-COLLECTOR.C1.COLLECTOR_ADDRESS_FILE=$(LOG)/.collector_address.c1
-COLLECTOR.C2.COLLECTOR_ADDRESS_FILE=$(LOG)/.collector_address.c2
-COLLECTOR.C3.COLLECTOR_ADDRESS_FILE=$(LOG)/.collector_address.c3
-COLLECTOR.C4.COLLECTOR_ADDRESS_FILE=$(LOG)/.collector_address.c4
-COLLECTOR.C5.COLLECTOR_ADDRESS_FILE=$(LOG)/.collector_address.c5
+#DAEMON_LIST = $(DAEMON_LIST), C1, C2, C3, C4, C5
+C1.COLLECTOR_ADDRESS_FILE=$(LOG)/.collector_address.c1
+C2.COLLECTOR_ADDRESS_FILE=$(LOG)/.collector_address.c2
+C3.COLLECTOR_ADDRESS_FILE=$(LOG)/.collector_address.c3
+C4.COLLECTOR_ADDRESS_FILE=$(LOG)/.collector_address.c4
+C5.COLLECTOR_ADDRESS_FILE=$(LOG)/.collector_address.c5
 FLOCK_INCREMENT=2
 START1=$(STARTD)
 START2=$(STARTD)
 START3=$(STARTD)
 START4=$(STARTD)
 START5=$(STARTD)
-START1_ARGS= -local-name S1
-START2_ARGS= -local-name S2
-START3_ARGS= -local-name S3
-START4_ARGS= -local-name S4
-START5_ARGS= -local-name S5
-STARTD.S1.STARTD_ADDRESS_FILE=$(LOG)/.startd_address.start1
-STARTD.S2.STARTD_ADDRESS_FILE=$(LOG)/.startd_address.start2
-STARTD.S3.STARTD_ADDRESS_FILE=$(LOG)/.startd_address.start3
-STARTD.S4.STARTD_ADDRESS_FILE=$(LOG)/.startd_address.start4
-STARTD.S5.STARTD_ADDRESS_FILE=$(LOG)/.startd_address.start5
+#START1_ARGS= -local-name START1
+#START2_ARGS= -local-name START2
+#START3_ARGS= -local-name START3
+#START4_ARGS= -local-name START4
+#START5_ARGS= -local-name START5
+START1.STARTD_ADDRESS_FILE=$(LOG)/.startd_address.start1
+START2.STARTD_ADDRESS_FILE=$(LOG)/.startd_address.start2
+START3.STARTD_ADDRESS_FILE=$(LOG)/.startd_address.start3
+START4.STARTD_ADDRESS_FILE=$(LOG)/.startd_address.start4
+START5.STARTD_ADDRESS_FILE=$(LOG)/.startd_address.start5
 DAEMON_LIST = $(DAEMON_LIST), START1, START2, START3, START4, START5, N1, N2, N3, N4, N5, C1, C2, C3, C4, C5
-DC_DAEMON_LIST = + C1, C2, C3, C4, C5, START1, START2, START3, START4, START5, N1, N2, N3, N4, N5
-STARTD.S1.STARTD_LOG=$(LOG)/StartdLog.Start1
-STARTD.S2.STARTD_LOG=$(LOG)/StartdLog.Start2
-STARTD.S3.STARTD_LOG=$(LOG)/StartdLog.Start3
-STARTD.S4.STARTD_LOG=$(LOG)/StartdLog.Start4
-STARTD.S5.STARTD_LOG=$(LOG)/StartdLog.Start5
+#DC_DAEMON_LIST = + C1, C2, C3, C4, C5, START1, START2, START3, START4, START5, N1, N2, N3, N4, N5
+START1.STARTD_LOG=$(LOG)/StartdLog.Start1
+START2.STARTD_LOG=$(LOG)/StartdLog.Start2
+START3.STARTD_LOG=$(LOG)/StartdLog.Start3
+START4.STARTD_LOG=$(LOG)/StartdLog.Start4
+START5.STARTD_LOG=$(LOG)/StartdLog.Start5
 SCHEDD_DEBUG=D_FULLDEBUG
 ';
 
@@ -170,7 +166,7 @@ while ($count_failures > 0) {
 	$count_failures = 0;
 	foreach my $ii (1..5) {
 		$daemon_address_files->{$ii} = {};
-		my $neg_file = `condor_config_val NEGOTIATOR.N${ii}.NEGOTIATOR_ADDRESS_FILE`;
+		my $neg_file = `condor_config_val N${ii}.NEGOTIATOR_ADDRESS_FILE`;
 		chomp $neg_file;
 		CondorTest::debug("\$neg_file = $neg_file\n",3);
 		if(! -e $neg_file ) {
@@ -178,7 +174,7 @@ while ($count_failures > 0) {
 		} else {
 			$daemon_address_files->{$ii}->{negotiator} = $neg_file;
 		}
-		my $coll_file = `condor_config_val COLLECTOR.C${ii}.COLLECTOR_ADDRESS_FILE`;
+		my $coll_file = `condor_config_val C${ii}.COLLECTOR_ADDRESS_FILE`;
 		chomp $coll_file;
 		CondorTest::debug("\$coll_file = $coll_file\n",3);
 		if(! -e $coll_file ) {
@@ -186,7 +182,7 @@ while ($count_failures > 0) {
 		} else {
 			$daemon_address_files->{$ii}->{collector} = $coll_file;
 		}
-		my $startd_file = `condor_config_val STARTD.S${ii}.STARTD_ADDRESS_FILE`;
+		my $startd_file = `condor_config_val START${ii}.STARTD_ADDRESS_FILE`;
 		chomp $startd_file;
 		CondorTest::debug("\$startd_file = $startd_file\n",3);
 		if(! -e $startd_file ) {
@@ -216,8 +212,8 @@ foreach my $ii (1..5) {
 			my $line = $_;
 			$line =~ s/<|>//g;
 			$flock_string .= " $line";
-			$daemon_string .= "STARTD.S${ii}.COLLECTOR_HOST = $line\n";
-			$daemon_string .= "NEGOTIATOR.N${ii}.COLLECTOR_HOST = $line\n";
+			$daemon_string .= "START${ii}.COLLECTOR_HOST = $line\n";
+			$daemon_string .= "N${ii}.COLLECTOR_HOST = $line\n";
 		}
 	}
 	close COLL_ADDRESS_FILE;
@@ -287,7 +283,7 @@ foreach (@schedlog) {
 }
 
 my @extrastartdlog = ();
-my $result = runCondorTool("condor_config_val STARTD.S$flock_increment.STARTD_LOG",\@extrastartdlog,2,{emit_output=>0});
+my $result = runCondorTool("condor_config_val START$flock_increment.STARTD_LOG",\@extrastartdlog,2,{emit_output=>0});
 
 my $search = "Changing activity: Idle -> Busy";
 CondorUtils::fullchomp($extrastartdlog[0]);

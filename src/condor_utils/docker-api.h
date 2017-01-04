@@ -7,6 +7,8 @@
 
 class DockerAPI {
 	public:
+		static int default_timeout;
+		static const int docker_hung = -9; // this error code is returned when we timed out a command to docker.
 
 		/**
 		 * Runs command in the Docker identified by imageID.  The container

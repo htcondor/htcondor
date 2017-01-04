@@ -10,10 +10,16 @@
 \oOpt{<location options>}
 \Arg{<edit option>}
 
+%TEMP -- vars should be something like var1 [var2...]
 \SynProg{\Condor{config\_val}}
 \oOpt{<location options>}
 \oOpt{<view options>}
 \Arg{vars}
+
+\SynProg{\Condor{config\_val}}
+\Opt{use}
+\Arg{category}\oArg{:template\_name}
+\oOpt{-expand}
 
 \Description
 
@@ -187,6 +193,21 @@ cause all the HTCondor daemons in the pool to exit.
   \OptItem{\Opt{-master \Bar -schedd \Bar -startd \Bar -collector 
            \Bar -negotiator}}
     {(location option) The specific daemon to query. }
+  \OptItem{\Opt{use} \Arg{category}\oArg{:set name} \oOpt{-expand}}
+    {Display information about configuration templates (see
+    ~\ref{sec:Configuring-HTCondor-Templates}).
+    Specifying only a \Arg{category} will list the \Arg{template\_names}
+    available for that category.
+    Specifying a \Arg{category} and a \Arg{template\_name} will display
+    the definition of that configuration template.
+    Adding the \Opt{-expand} option will display the expanded
+    definition (with macro substitutions).  (\Opt{-expand} has no
+    effect if a \Arg{template\_name} is not specified.)
+    Note that there is no dash before \Opt{use} and that spaces are not
+    allowed next to the colon character separating \Arg{category}
+    and \Arg{template\_name}.
+    }
+    
 \end{Options}
 
 \ExitStatus
@@ -260,6 +281,31 @@ has gone back to is value before initial set of the variable:
 \begin{verbatim}
    % condor_config_val -name perdita -schedd MAX_JOBS_RUNNING
    500
+\end{verbatim}
+\normalsize
+
+Getting a list of template\_names for the \Opt{role} configuration
+template category:
+\footnotesize
+\begin{verbatim}
+   % condor_config_val use role
+   use ROLE accepts
+     CentralManager
+     Execute
+     Personal
+     Submit
+\end{verbatim}
+\normalsize
+
+Getting the definition of \Opt{role:personal} configuration template:
+\footnotesize
+\begin{verbatim}
+   % condor_config_val use role:personal
+   use ROLE:Personal is
+   	   CONDOR_HOST=127.0.0.1
+	   COLLECTOR_HOST=$(CONDOR_HOST):0
+	   DAEMON_LIST=MASTER COLLECTOR NEGOTIATOR STARTD SCHEDD
+	   RunBenchmarks=0
 \end{verbatim}
 \normalsize
 

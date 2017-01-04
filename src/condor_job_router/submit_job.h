@@ -96,7 +96,7 @@ bool yield_job(classad::ClassAd const &ad, const char * pool_name,
   condor_config file claims".
 
 */
-bool submit_job( ClassAd & src, const char * schedd_name, const char * pool_name, bool is_sandboxed, int * cluster_out = 0, int * proc_out = 0 );
+bool submit_job( const std::string &owner, const std::string &domain, ClassAd & src, const char * schedd_name, const char * pool_name, bool is_sandboxed, int * cluster_out = 0, int * proc_out = 0 );
 
 
 /* 
@@ -110,7 +110,7 @@ bool submit_job( ClassAd & src, const char * schedd_name, const char * pool_name
   condor_config file claims".
 
 */
-bool submit_job( classad::ClassAd & src, const char * schedd_name, const char * pool_name, bool is_sandboxed, int * cluster_out = 0, int * proc_out = 0 );
+bool submit_job( const std::string &owner, const std::string &domain, classad::ClassAd & src, const char * schedd_name, const char * pool_name, bool is_sandboxed, int * cluster_out = 0, int * proc_out = 0 );
 
 
 /*
@@ -155,7 +155,7 @@ cluster.proc - ID of the grid (transformed) job.
 schedd_name and pool_name can be NULL to indicate "local".
 
 */
-bool finalize_job(classad::ClassAd const &ad, int cluster, int proc, const char * schedd_name, const char * pool_name, bool is_sandboxed);
+bool finalize_job(const std::string &owner, const std::string &domain, classad::ClassAd const &ad, int cluster, int proc, const char * schedd_name, const char * pool_name, bool is_sandboxed);
 
 /*
 

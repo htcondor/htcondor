@@ -100,6 +100,18 @@ CopyFrom(const AttributeReference &ref)
     return success;
 }
 
+bool AttributeReference::SetComponents( ExprTree *tree, const std::string &attr, bool abs )
+{
+	if (tree != expr) {
+		if (expr) delete expr;
+		expr = tree;
+	}
+	attributeStr = attr;
+	absolute = abs;
+	return true;
+}
+
+
 bool AttributeReference::
 SameAs(const ExprTree *tree) const
 {

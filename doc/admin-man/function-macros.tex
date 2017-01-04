@@ -30,20 +30,23 @@ If the index is out of bounds for the list contents,
 an error occurs.
 
 
-\item [\Expr{\$ENV(environment-variable-name)}]
+\item [\Expr{\$ENV(environment-variable-name[:default-value])}]
 Evaluates to the value of environment variable 
-\Expr{environment-variable-name}.
+\Expr{environment-variable-name}. If there is no environment variable with that name, Evaluates
+to UNDEFINED unless the optional \verb@:default-value@ is used; in which case it evaluates to default-value.
 For example, 
 \begin{verbatim}
   A = $ENV(HOME)
 \end{verbatim}
 binds \MacroNI{A} to the value of the \Env{HOME} environment variable.
 
-\item [\Expr{\$F[pdnxq](filename)}]
+\item [\Expr{\$F[fpduwnxbqa](filename)}]
 One or more of the lower case letters may be combined to form the
 function name and thus, its functionality.
 Each letter operates on the \Expr{filename} in its own way.
 \begin{itemize}
+  \item \Expr{f} convert relative path to full path by prefixing the current working directory to it.
+This option works only in \Condor{submit} files.
   \item \Expr{p} refers to the entire directory portion of \Expr{filename},
 with a trailing slash or backslash character.
 Whether a slash or backslash is used depends on the platform of
@@ -57,7 +60,10 @@ It will have a trailing slash or backslash,
 as appropriate to the platform of the machine.
 The slash will be recognized on Linux platforms;
 either a slash or backslash will be recognized on Windows platforms,
-and the parser will use the same character specified.
+and the parser will use the same character specified unless u or w is used.
+if b is used the trailing slash or backslash will be omitted.
+  \item \Expr{u} convert path separators to Unix style slash characters
+  \item \Expr{w} convert path separators to Windows style backslash characters
   \item \Expr{n} refers to the file name at the end of any path,
 but without any file name extension.
 As an  example, the return value from \Expr{\$Fn(/tmp/simulate.exe)}
@@ -66,8 +72,11 @@ will be \Expr{simulate} (without the \File{.exe} extension).
 period (\Expr{.}).
 As an  example, the return value from \Expr{\$Fn(/tmp/simulate.exe)}
 will be \Expr{.exe}.
-  \item \Expr{q} causes the return value to be enclosed within double
-quote marks.
+  \item \Expr{b} when combined with the d option, causes the trailing slash or backslash to
+be omitted. When combined with the x option, causes the leading period (\Expr{.}) to be omitted.
+  \item \Expr{q} causes the return value to be enclosed within quotes. Double
+quote marks are used unless a is also specified.
+  \item \Expr{a} When combined with the q option, causes the return value to be enclosed within single quotes.
 \end{itemize}
 
 \item [\Expr{\$DIRNAME(filename)} is the same as \Expr{\$Fp(filename)}]

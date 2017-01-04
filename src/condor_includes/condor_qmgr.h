@@ -174,6 +174,23 @@ int SetAttributeFloat(int cluster, int proc, const char *attr, float value, SetA
 int SetAttributeString(int cluster, int proc, const char *attr,
 					   const char *value, SetAttributeFlags_t flags = 0);
 
+/** Set attr = value for a job with the specified cluster and proc.  The value
+ *  will be converted to a valid, quoted classad string
+ *  @return -1 on failure; 0 on success
+ */
+int SetAttributeRawString(int cluster, int proc, const char *attr,
+                          const char *value, SetAttributeFlags_t flags = 0);
+
+// Internal function for only the schedd to use.
+int SetSecureAttributeInt(int cluster_id, int proc_id,
+                          const char *attr_name, int attr_value,
+                          SetAttributeFlags_t flags);
+
+// Internal function for only the schedd to use.
+int SetSecureAttributeRawString(int cluster_id, int proc_id,
+                                const char *attr_name, const char *attr_value,
+                                SetAttributeFlags_t flags);
+
 /** Set LastJobLeaseRenewalReceived = <xact start time> and
     JobLeaseDurationReceived = dur for the specified cluster/proc.
 	@return -1 on failure; 0 on success

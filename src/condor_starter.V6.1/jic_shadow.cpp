@@ -436,6 +436,17 @@ JICShadow::transferOutput( bool &transient_failure )
 		// short of a hardkill. 
 	if( filetrans && ((requested_exit == false) || transfer_at_vacate) ) {
 
+		if ( shadowDisconnected() ) {
+				// trigger retransfer on reconnect
+			job_cleanup_disconnected = true;
+
+				// inform our caller that transfer will be retried
+				// when the shadow reconnects
+			transient_failure = true;
+
+			return false;
+		}
+
 			// add any dynamically-added output files to the FT
 			// object's list
 		m_added_output_files.rewind();
@@ -479,6 +490,11 @@ JICShadow::transferOutput( bool &transient_failure )
 		m_ft_rval = filetrans->UploadFiles( true, final_transfer );
 		m_ft_info = filetrans->GetInfo();
 		dprintf( D_FULLDEBUG, "End transfer of sandbox to shadow.\n");
+		const char *stats = m_ft_info.tcp_stats.c_str();
+		std::string full_stats = "(peer stats from starter): ";
+		full_stats += stats;
+		
+		REMOTE_CONDOR_dprintf_stats(const_cast<char *>(full_stats.c_str()));
 		set_priv(saved_priv);
 
 		if( m_ft_rval ) {
@@ -780,6 +796,16 @@ JICShadow::notifyJobExit( int exit_status, int reason, UserProc*
 	if( ! wrote_local_log_event ) {
 		if( u_log->logJobExit(&ad, reason) ) {
 			wrote_local_log_event = true;
+		}
+	}
+
+	// If shadow exits before the startd kills us, don't worry about
+	// getting notified that the syscall socket has closed.
+
+	if (syscall_sock) {
+		if (syscall_sock_registered) {
+			daemonCore->Cancel_Socket(syscall_sock);
+			syscall_sock_registered = false;
 		}
 	}
 
@@ -1726,7 +1752,7 @@ updateX509Proxy(int cmd, ReliSock * rsock, const char * path)
 	if ( cmd == UPDATE_GSI_CRED ) {
 		rc = rsock->get_file(&size,tmp_path.Value());
 	} else if ( cmd == DELEGATE_GSI_CRED_STARTER ) {
-		rc = rsock->get_x509_delegation(&size,tmp_path.Value());
+		rc = rsock->get_x509_delegation(tmp_path.Value(), false, NULL);
 	} else {
 		dprintf( D_ALWAYS,
 		         "unknown CEDAR command %d in updateX509Proxy\n",
@@ -1935,10 +1961,10 @@ JICShadow::recordDelayedUpdate( const std::string &name, const classad::ExprTree
 
 
 
-std::auto_ptr<classad::ExprTree>
+std::unique_ptr<classad::ExprTree>
 JICShadow::getDelayedUpdate( const std::string &name )
 {
-	std::auto_ptr<classad::ExprTree> expr;
+	std::unique_ptr<classad::ExprTree> expr;
 	classad::ExprTree *borrowed_expr = NULL;
 	ClassAd *ad = jobClassAd();
 	dprintf(D_FULLDEBUG, "Looking up delayed attribute named %s.\n", name.c_str());
@@ -2265,9 +2291,11 @@ JICShadow::job_lease_expired()
 		ASSERT( !syscall_sock->is_connected() );
 	}
 
-	// Exit telling the startd we lost the shadow, which
-	// will normally result in the This does not return.
-	Starter->StarterExit(STARTER_EXIT_LOST_SHADOW_CONNECTION);
+	// Exit telling the startd we lost the shadow
+	Starter->SetShutdownExitCode(STARTER_EXIT_LOST_SHADOW_CONNECTION);
+	if ( Starter->RemoteShutdownFast(0) ) {
+		Starter->StarterExit( Starter->GetShutdownExitCode() );
+	}
 }
 
 bool
@@ -2335,6 +2363,14 @@ JICShadow::transferCompleted( FileTransfer *ftrans )
 
 			EXCEPT( "Failed to transfer files" );
 		}
+		const char *stats = m_ft_info.tcp_stats.c_str();
+		std::string full_stats = "(peer stats from starter): ";
+		full_stats += stats;
+
+		ASSERT( !shadowDisconnected() );
+
+		REMOTE_CONDOR_dprintf_stats(const_cast<char *>(full_stats.c_str()));
+
 			// If we transferred the executable, make sure it
 			// has its execute bit set.
 		MyString cmd;

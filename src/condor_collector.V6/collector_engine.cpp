@@ -82,6 +82,8 @@ CollectorEngine::CollectorEngine (CollectorStats *stats ) :
 	m_forwardFilteringEnabled = false;
 	housekeeperTimerID = -1;
 
+	m_allowOnlyOneNegotiator = param_boolean("COLLECTOR_ALLOW_ONLY_ONE_NEGOTIATOR", false);
+
 	collectorStats = stats;
 	m_collector_requirements = NULL;
 }
@@ -158,7 +160,7 @@ scheduleHousekeeper (int timeout)
 {
 	// Are we filtering updates that we forward to the view collector?
 	std::string watch_list;
-	param(watch_list,"COLLECTOR_FORWARD_WATCH_LIST", "State,Cpus,Memory,IdleJobs");
+	param(watch_list,"COLLECTOR_FORWARD_WATCH_LIST", "State,Cpus,Memory,IdleJobs,ClaimId,Capability,ClaimIdList,ChildClaimIds");
 	m_forwardWatchList.clearAll();
 	m_forwardWatchList.initializeFromString(watch_list.c_str());
 
@@ -759,10 +761,12 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 			break;
 		}
 		hashString.Build( hk );
+		if (m_allowOnlyOneNegotiator) {
 			// first, purge all the existing negotiator ads, since we
 			// want to enforce that *ONLY* 1 negotiator is in the
 			// collector any given time.
-		purgeHashTable( NegotiatorAds );
+			purgeHashTable( NegotiatorAds );
+		}
 		retVal=updateClassAd (NegotiatorAds, "NegotiatorAd  ", "Negotiator",
 							  clientAd, hk, hashString, insert, from );
 		break;
@@ -1050,7 +1054,7 @@ updateClassAd (CollectorHashTable &hashTable,
 		
 		insert = 1;
 		
-		if ( m_forwardFilteringEnabled && ( strcmp( label, "Start" ) == 0 || strcmp( label, "Submittor" ) == 0 ) ) {
+		if ( m_forwardFilteringEnabled && ( strcmp( label, "Start" ) == 0 || strcmp( label, "StartdPvt" ) == 0 || strcmp( label, "Submittor" ) == 0 ) ) {
 			new_ad->Assign( ATTR_LAST_FORWARDED, (int)time(NULL) );
 		}
 
@@ -1074,7 +1078,7 @@ updateClassAd (CollectorHashTable &hashTable,
 			EXCEPT( "Error inserting ad" );
 		}
 
-		if ( m_forwardFilteringEnabled && ( strcmp( label, "Start" ) == 0 || strcmp( label, "Submittor" ) == 0 ) ) {
+		if ( m_forwardFilteringEnabled && ( strcmp( label, "Start" ) == 0 || strcmp( label, "StartdPvt" ) == 0 || strcmp( label, "Submittor" ) == 0 ) ) {
 			bool forward = false;
 			int last_forwarded = 0;
 			old_ad->LookupInteger( "LastForwarded", last_forwarded );

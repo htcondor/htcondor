@@ -150,11 +150,8 @@ as the value of \MacroNI{DAGMAN\_SUPPRESS\_NOTIFICATION} is enforced.
   \OptItem{\Opt{-noeventchecks}}{This argument is no longer used; it
      is now ignored.  Its functionality is now implemented by
      the \MacroNI{DAGMAN\_ALLOW\_EVENTS} configuration variable. }
-  \OptItem{\Opt{-allowlogerror}}{This optional argument has
-     \Condor{dagman} try to run the specified DAG, even in the case
-     of detected errors in the job event log specification.
-     As of version 7.3.2, this argument has an effect only on
-     DAGs containing Stork job nodes.}
+  \OptItem{\Opt{-allowlogerror}}{As of verson 8.5.5 this argument is
+     no longer supported, and setting it will generate a warning.}
   \OptItem{\OptArg{-r}{schedd\_name}}{
      Submit \Condor{dagman} to a remote machine, specifically the
      \Condor{schedd} daemon on that machine.
@@ -240,7 +237,7 @@ as the value of \MacroNI{DAGMAN\_SUPPRESS\_NOTIFICATION} is enforced.
     8.5.5, the batch name set with this argument is propagated to all
     node jobs of the given DAG (including sub-DAGs), overriding any
     batch names set in the individual submit files.  Note: set the
-    batch name to ' ' (space) to avoid overriding batch names specfied
+    batch name to ' ' (space) to avoid overriding batch names specified
     in node job submit files.  If no batch name is set, the batch
     name defaults to \Arg{DagFile}+\Arg{cluster} (where \Arg{DagFile}
     is the primary DAG file of the top-level DAGMan, and \Arg{cluster}

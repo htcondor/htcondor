@@ -33,7 +33,6 @@
 bool VanillaToGrid::vanillaToGrid(classad::ClassAd * ad, int target_universe, const char * gridresource, bool is_sandboxed)
 {
 	ASSERT(ad);
-	ASSERT(gridresource);
 
 	/* TODO:
 		- If job fails to specify transfer_input_files but has some (relying on
@@ -78,6 +77,7 @@ bool VanillaToGrid::vanillaToGrid(classad::ClassAd * ad, int target_universe, co
 	ad->Delete(ATTR_SERVER_TIME);
 	ad->Delete(ATTR_AUTO_CLUSTER_ID);
 	ad->Delete(ATTR_AUTO_CLUSTER_ATTRS);
+	ad->Delete(ATTR_TOTAL_SUBMIT_PROCS);
 	ad->Delete( ATTR_STAGE_IN_FINISH );
 	ad->Delete( ATTR_STAGE_IN_START );
 

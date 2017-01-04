@@ -488,21 +488,11 @@ bool param_and_insert_unique_items(const char * param_name, StringList & items, 
 bool
 param_and_insert_attrs(const char * param_name, classad::References & attrs)
 {
-#if 1
 	auto_free_ptr value(param(param_name));
 	if (value) {
-		insert_tokens_as_attrs(value, attrs);
+		add_attrs_from_string_tokens(attrs, value);
 		return true;
 	}
-#else
-	std::string value;
-	const std::string * attr;
-	if (param(value, param_name)) {
-		StringTokenIterator it(value);
-		while ((attr = it.next_string())) { attrs.insert(*attr); }
-		return true;
-	}
-#endif
 	return false;
 }
 
@@ -648,39 +638,63 @@ Output is via a giant EXCEPT string because the dprintf
 system probably isn't working yet.
 */
 const char * FORBIDDEN_CONFIG_VAL = "YOU_MUST_CHANGE_THIS_INVALID_CONDOR_CONFIGURATION_VALUE";
-bool validate_config(bool abort_if_invalid)
+bool validate_config(bool abort_if_invalid, int opt)
 {
-	HASHITER it = hash_iter_begin(ConfigMacroSet, HASHITER_NO_DEFAULTS);
+	bool deprecation_check = (opt & CONFIG_OPT_DEPRECATION_WARNINGS);
 	unsigned int invalid_entries = 0;
-	MyString tmp;
-	MyString output = "The following configuration macros appear to contain default values that must be changed before Condor will run.  These macros are:\n";
+	unsigned int deprecated_entries = 0;
+	MyString invalid_out = "The following configuration macros appear to contain default values that must be changed before Condor will run.  These macros are:\n";
+	MyString deprecated_out;
+	Regex re;
+	if (deprecation_check) {
+		int err = 0; const char * pszMsg = 0;
+		// check for knobs of the form SUBSYS.LOCALNAME.*
+		re.compile("^[A-Za-z_]*\\.[A-Za-z_0-9]*\\.", &pszMsg, &err, PCRE_CASELESS);
+	}
+
+	HASHITER it = hash_iter_begin(ConfigMacroSet, HASHITER_NO_DEFAULTS);
 	while( ! hash_iter_done(it) ) {
+		const char * name = hash_iter_key(it);
 		const char * val = hash_iter_value(it);
 		if (val && strstr(val, FORBIDDEN_CONFIG_VAL)) {
-			const char * name = hash_iter_key(it);
-#if 1
-			MyString filename;
-			param_get_location(hash_iter_meta(it), filename);
-			tmp.formatstr("   %s (found at %s)\n", name, filename.Value());
-#else
-			MyString filename;
-			int line_number;
-			param_get_location(name, filename, line_number);
-			tmp.formatstr("   %s (found on line %d of %s)\n", name, line_number, filename.Value());
-#endif
-			output += tmp;
+			invalid_out += "   ";
+			invalid_out += name;
+			MACRO_META * pmet = hash_iter_meta(it);
+			if (pmet) {
+				invalid_out += " at ";
+				param_append_location(pmet, invalid_out);
+			}
+			invalid_out += "\n";
 			invalid_entries++;
+		}
+		if (deprecation_check && re.match(name)) {
+			MyString filename;
+			deprecated_out += "   ";
+			deprecated_out += name;
+			MACRO_META * pmet = hash_iter_meta(it);
+			if (pmet) {
+				deprecated_out += " at ";
+				param_append_location(pmet, deprecated_out);
+			}
+			deprecated_out += "\n";
+			deprecated_entries++;
 		}
 		hash_iter_next(it);
 	}
 	hash_iter_delete(&it);
 	if(invalid_entries > 0) {
 		if (abort_if_invalid) {
-			EXCEPT("%s", output.Value());
+			EXCEPT("%s", invalid_out.Value());
 		} else {
-			dprintf(D_ALWAYS, "%s", output.Value());
+			dprintf(D_ALWAYS, "%s", invalid_out.Value());
 			return false;
 		}
+	}
+	if (deprecated_entries > 0) {
+		dprintf(D_ALWAYS,
+			"WARNING: Some configuration variables appear to be an unsupported form of SUBSYS.LOCALNAME.* override\n"
+			"       The supported form is just LOCALNAME.* Variables are:\n%s",
+			deprecated_out.Value());
 	}
 	return true;
 }
@@ -755,7 +769,8 @@ bool config_ex(int config_options)
 	bool wantsQuiet = config_options & CONFIG_OPT_WANT_QUIET;
 	bool result = real_config(NULL, wantsQuiet, config_options);
 	if (!result) { return result; }
-	return validate_config(!(config_options & CONFIG_OPT_NO_EXIT));
+	int validate_opt = config_options & (CONFIG_OPT_DEPRECATION_WARNINGS | CONFIG_OPT_WANT_QUIET);
+	return validate_config(!(config_options & CONFIG_OPT_NO_EXIT), validate_opt);
 }
 
 
@@ -1204,12 +1219,8 @@ process_config_source( const char* file, int depth, const char* name,
 		if ( ! fp) { rval = -1; }
 		else {
 			MACRO_EVAL_CONTEXT ctx; init_macro_eval_context(ctx);
-#ifdef USE_MACRO_STREAMS
 			MacroStreamYourFile ms(fp, source);
 			rval = Parse_macros(ms, depth, ConfigMacroSet, 0, &ctx, errmsg, NULL, NULL);
-#else
-			rval = Parse_macros(fp, source, depth, ConfigMacroSet, 0, &ctx, errmsg, NULL, NULL);
-#endif
 			rval = Close_macro_source(fp, source, ConfigMacroSet, rval); fp = NULL;
 		}
 		if( rval < 0 ) {
@@ -1807,8 +1818,10 @@ fill_attributes()
 	insert_macro("CondorIsAdmin", can_switch_ids() ? "true" : "false", ConfigMacroSet, DetectedMacro, ctx);
 
 	insert_macro("SUBSYSTEM", get_mySubSystem()->getName(), ConfigMacroSet, DetectedMacro, ctx);
+	// insert $(LOCALNAME) macro as the value of LocalName OR the value of SubSystem if there is no local name.
 	const char * localname = get_mySubSystem()->getLocalName();
-	if (localname && localname[0]) { insert_macro("LOCALNAME", localname, ConfigMacroSet, DetectedMacro, ctx); }
+	if ( ! localname || !localname[0]) { localname = get_mySubSystem()->getName(); }
+	insert_macro("LOCALNAME", localname, ConfigMacroSet, DetectedMacro, ctx);
 
 	val.formatstr("%d",sysapi_phys_memory_raw_no_param());
 	insert_macro("DETECTED_MEMORY", val.Value(), ConfigMacroSet, DetectedMacro, ctx);
@@ -1995,17 +2008,34 @@ const char * param_unexpanded(const char *name)
 
 bool param_defined(const char* name) {
 	const char * pval = param_unexpanded(name);
-	return pval != NULL;
+	if (pval) {
+		auto_free_ptr val(expand_param(pval));
+		return val;
+	}
+	return false;
 }
 
-char*
-param(const char* name)
-{
+char *param(const char * name) {
 	MACRO_EVAL_CONTEXT ctx;
 	init_macro_eval_context(ctx);
 	ctx.use_mask = 3;
+	return param_ctx(name, ctx);
+}
 
-	//PRAGMA_REMIND("tj: remove subsys.local.knob support in the 8.5 devel series")
+char *param_with_context(const char *name, const char *subsys, const char *localname, const char * cwd ) {
+	MACRO_EVAL_CONTEXT ctx;
+	ctx.init(subsys, 3);
+	ctx.localname = localname;
+	ctx.cwd = cwd;
+	return param_ctx(name, ctx);
+}
+
+char*
+param_ctx(const char* name, MACRO_EVAL_CONTEXT & ctx)
+{
+
+#if 0
+	// hack to make SUBSYS.LOCALNAME work for direct param lookups.
 	if (ctx.localname && ctx.subsys) {
 		MyString lcl(ctx.subsys); lcl += "."; lcl += ctx.localname;
 		const char * lval = lookup_macro_exact_no_default(name, lcl.c_str(), ConfigMacroSet, ctx.use_mask);
@@ -2016,6 +2046,7 @@ param(const char* name)
 			return expanded_val;
 		}
 	}
+#endif
 
 	const char * pval = lookup_macro(name, ConfigMacroSet, ctx);
 	if ( ! pval || ! pval[0]) {
@@ -2551,9 +2582,9 @@ param_boolean_int( const char *name, int default_value ) {
     return param_boolean(name, default_bool) ? 1 : 0;
 }
 
-const char * param_get_location(const MACRO_META * pmet, MyString & value)
+const char * param_append_location(const MACRO_META * pmet, MyString & value)
 {
-	value = config_source_by_id(pmet->source_id);
+	value += config_source_by_id(pmet->source_id);
 	if (pmet->source_line >= 0) {
 		value.formatstr_cat(", line %d", pmet->source_line);
 		MACRO_DEF_ITEM * pmsi = param_meta_source_by_id(pmet->source_meta_id);
@@ -2562,6 +2593,12 @@ const char * param_get_location(const MACRO_META * pmet, MyString & value)
 		}
 	}
 	return value.c_str();
+}
+
+const char * param_get_location(const MACRO_META * pmet, MyString & value)
+{
+	value.clear();
+	return param_append_location(pmet, value);
 }
 
 
@@ -2581,8 +2618,9 @@ bool param_find_item (
 	it.is_def = false;
 
 	MACRO_ITEM * pi = NULL;
+#if 0
+	//PRAGMA_REMIND("tj: remove subsys.local.knob support in the 8.5 devel series")
 	if (subsys && local) {
-		//PRAGMA_REMIND("tj: remove subsys.local.knob support in the 8.5 devel series")
 		name_found.formatstr("%s.%s", subsys, local);
 		pi = find_macro_item(name, name_found.c_str(), ConfigMacroSet);
 		if (pi) {
@@ -2591,6 +2629,7 @@ bool param_find_item (
 			return true;
 		}
 	}
+#endif
 	if (local) {
 		pi = find_macro_item(name, local, ConfigMacroSet);
 		if (pi) {
@@ -2732,8 +2771,10 @@ reinsert_specials( const char* host )
 	}
 	insert_macro("FULL_HOSTNAME", get_local_fqdn().Value(), ConfigMacroSet, DetectedMacro, ctx);
 	insert_macro("SUBSYSTEM", get_mySubSystem()->getName(), ConfigMacroSet, DetectedMacro, ctx);
+	// insert $(LOCALNAME) macro as the value of LocalName OR the value of SubSystem if there is no local name.
 	const char * localname = get_mySubSystem()->getLocalName();
-	if (localname && localname[0]) { insert_macro("LOCALNAME", localname, ConfigMacroSet, DetectedMacro, ctx); }
+	if ( ! localname || !localname[0]) { localname = get_mySubSystem()->getName(); }
+	insert_macro("LOCALNAME", localname, ConfigMacroSet, DetectedMacro, ctx);
 
 	// Insert login-name for our real uid as "username".  At the time
 	// we're reading in the config source, the priv state code is not
@@ -3293,12 +3334,8 @@ static void process_persistent_config_or_die (const char * source_file, bool top
 			rval = -1;
 		} else {
 			MACRO_EVAL_CONTEXT ctx; init_macro_eval_context(ctx);
-#ifdef USE_MACRO_STREAMS
 			MacroStreamYourFile ms(fp, source);
 			rval = Parse_macros(ms, 0, ConfigMacroSet, 0, &ctx, errmsg, NULL, NULL);
-#else
-			rval = Parse_macros(fp, source, 0, ConfigMacroSet, 0, &ctx, errmsg, NULL, NULL);
-#endif
 		}
 		fclose(fp); fp = NULL;
 	}
@@ -3322,20 +3359,7 @@ process_persistent_configs()
 	{
 		processed = true;
 
-#if 1
 		process_persistent_config_or_die(toplevel_persistent_config.Value(), true);
-#else
-		std::string errmsg;
-		int rval = Read_macros(toplevel_persistent_config.Value(), 0, ConfigMacroSet,
-						READ_MACROS_CHECK_RUNTIME_SECURITY,
-						get_mySubSystem()->getName(), errmsg, NULL, NULL);
-		if (rval < 0) {
-			dprintf( D_ALWAYS | D_FAILURE, "Configuration Error Line %d %s while reading "
-					 "top-level persistent config source: %s\n",
-					 ConfigLineNo, errmsg.c_str(), toplevel_persistent_config.Value() );
-			exit(1);
-		}
-#endif
 
 		tmp = param ("RUNTIME_CONFIG_ADMIN");
 		if (tmp) {
@@ -3350,20 +3374,7 @@ process_persistent_configs()
 		MyString config_source;
 		config_source.formatstr( "%s.%s", toplevel_persistent_config.Value(),
 							   tmp );
-#if 1
 		process_persistent_config_or_die(config_source.Value(), false);
-#else
-		std::string errmsg;
-		int rval = Read_macros(config_source.Value(), 0, ConfigMacroSet,
-						READ_MACROS_CHECK_RUNTIME_SECURITY,
-						get_mySubSystem()->getName(), errmsg, NULL, NULL);
-		if (rval < 0) {
-			dprintf( D_ALWAYS, "Configuration Error Line %d %s"
-					 "while reading persistent config source: %s\n",
-					 ConfigLineNo, errmsg.c_str(), config_source.Value() );
-			exit(1);
-		}
-#endif
 	}
 	return (int)processed;
 }
@@ -3384,53 +3395,12 @@ process_runtime_configs()
 	for (i=0; i <= rArray.getlast(); i++) {
 		processed = true;
 		source.line = i;
-#if 1
 		rval = Parse_config_string(source, 0, rArray[i].config, ConfigMacroSet, ctx);
 		if (rval < 0) {
 			dprintf( D_ALWAYS | D_ERROR, "Configuration Error parsing runtime[%d] name '%s', at line %d in config: %s\n",
 					 i, rArray[i].admin, source.meta_off+1, rArray[i].config);
 			exit(1);
 		}
-#else
-		char* tmp_dir = temp_dir_path();
-		ASSERT(tmp_dir);
-		MyString tmp_file_tmpl = tmp_dir;
-		free(tmp_dir);
-		tmp_file_tmpl += "/cndrtmpXXXXXX";
-
-		char* tmp_file = strdup(tmp_file_tmpl.Value());
-		int fd = condor_mkstemp( tmp_file );
-		if (fd < 0) {
-			dprintf( D_ALWAYS, "condor_mkstemp(%s) returned %d, '%s' (errno %d) in "
-				 "process_dynamic_configs()\n", tmp_file, fd,
-				 strerror(errno), errno );
-			exit(1);
-		}
-
-		if (write(fd, rArray[i].config, strlen(rArray[i].config))
-			!= (ssize_t)strlen(rArray[i].config)) {
-			dprintf( D_ALWAYS, "write failed with errno %d in "
-					 "process_dynamic_configs\n", errno );
-			exit(1);
-		}
-		if (close(fd) < 0) {
-			dprintf( D_ALWAYS, "close failed with errno %d in "
-					 "process_dynamic_configs\n", errno );
-			exit(1);
-		}
-		std::string errmsg;
-		rval = Read_macros(tmp_file, 0, ConfigMacroSet,
-						0, get_mySubSystem()->getName(), errmsg, NULL, NULL);
-		if (rval < 0) {
-			dprintf( D_ALWAYS, "Configuration Error Line %d %s"
-					 "while reading %s, runtime config: %s\n",
-					 ConfigLineNo, errmsg.c_str(), tmp_file, rArray[i].admin );
-			exit(1);
-		}
-		MSC_SUPPRESS_WARNING_FIXME(6031) // warning: return value of 'unlink' ignored.
-		unlink(tmp_file);
-		free(tmp_file);
-#endif
 	}
 
 	return (int)processed;
@@ -3575,7 +3545,7 @@ bool param(MyString &buf,char const *param_name,char const *default_value)
 	return found;
 }
 
-bool param(std::string &buf,char const *param_name,char const *default_value)
+bool param(std::string &buf,char const *param_name, char const *default_value)
 {
 	bool found = false;
 	char *param_value = param(param_name);
@@ -3590,22 +3560,31 @@ bool param(std::string &buf,char const *param_name,char const *default_value)
 		buf = "";
 	}
 	free( param_value );
+
 	return found;
 }
 
-/*
-PRAGMA_REMIND("tj: kill the param_functions code in 8.5 series.")
-param_functions config_p_funcs;
-param_functions* get_param_functions()
-{
-	config_p_funcs.set_param_func(&param);
-	config_p_funcs.set_param_bool_int_func(&param_boolean_int);
-	config_p_funcs.set_param_wo_default_func(&param_without_default);
-	config_p_funcs.set_param_int_func(&param_integer);
 
-	return &config_p_funcs;
+bool param_eval_string(std::string &buf, const char *param_name, const char *default_value,
+                       classad::ClassAd *me, classad::ClassAd *target)
+{
+	if (!param(buf, param_name, default_value)) {return false;}
+
+	compat_classad::ClassAd rhs;
+	if (me) {
+		rhs = *me;
+	}
+	classad::ClassAdParser parser;
+	classad::ExprTree *expr_raw = parser.ParseExpression(buf);
+
+	std::string result;
+	if( rhs.Insert( "_condor_bool", expr_raw) && rhs.EvalString("_condor_bool", target, result) ) {
+		buf = result;
+		return true;
+	}
+	return false;
 }
-*/
+
 
 /* Take a param which is the name of an executable, and safely expand it
  * if required to a full pathname by searching the PATH environment.

@@ -253,7 +253,7 @@ int
 pseudo_free_fs_blocks( const char *path )
 {
 	long long ck = sysapi_disk_space( path );
-	PRAGMA_REMIND("FIXME: disk_space truncation to INT_MAX here")
+	//PRAGMA_REMIND("FIXME: disk_space truncation to INT_MAX here")
 	return (int)MIN(INT_MAX, ck);
 }
 
@@ -348,7 +348,7 @@ int
 pseudo_report_error( const char *msg )
 {
 	dprintf(D_ALWAYS,"error: %s\n",msg);
-	return job_report_store_error( msg );
+	return job_report_store_error( msg, NULL );
 }
 
 int
@@ -695,6 +695,7 @@ void createListenPort( int & fd, condor_sockaddr & saFileServer ) {
 	// but that seems unnecessary.
 	int rv = _condor_local_bind( FALSE, fd );
 	assert( rv == TRUE );
+	if (rv) {} // shut up warnings...
 
 	rv = listen( fd, 1 );
 	assert( rv == 0 );
@@ -1005,9 +1006,9 @@ pseudo_put_file_stream(
 
 			/* Send status assuring peer that we got everything */
 		answer = htonl( bytes_read );
-		write( data_sock, &answer, sizeof(answer));
+		rval = write( data_sock, &answer, sizeof(answer));
 		dprintf( D_ALWAYS,
-			"\tSTREAM FILE RECEIVED OK (%d bytes)\n", bytes_read );
+			"\tSTREAM FILE RECEIVED OK (%d bytes) %d wrote\n", bytes_read, rval);
 
 		exit( 0 );
 	  default:	/* the parent */
@@ -1959,7 +1960,7 @@ simp_log( const char *msg )
 		}
 	}
 
-	fprintf( fp, msg );
+	fputs( msg, fp );
 	(void)umask( omask );
 }
 

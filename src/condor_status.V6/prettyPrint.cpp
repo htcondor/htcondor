@@ -20,6 +20,7 @@
 #include "condor_common.h"
 #include "condor_api.h"
 #include "condor_adtypes.h"
+#include "condor_config.h"
 #include "condor_state.h"
 #include "status_types.h"
 #include "totals.h"
@@ -46,10 +47,12 @@ extern ClassAd *targetAd;
 
 extern char *format_time( int );
 extern int set_status_print_mask_from_stream (const char * streamid, bool is_filename, const char ** pconstraint);
+extern const char * paramNameFromPPMode(std::string &param_name);
+
 
 static int stashed_now = 0;
 
-void ppInitPrintMask(ppOption pps, classad::References & proj, const char * & constr);
+void ppInitPrintMask(ppOption pps, classad::References & proj, const char * & constr, bool no_pr_files);
 const CustomFormatFnTable * getCondorStatusPrintFormats();
 
 static int width_of_fixed_cols = -1;       // set when using ppAdjustNameWidth
@@ -81,7 +84,48 @@ static const char *formatRealTime( long long , Formatter &);
 static const char *formatRealDate( long long , Formatter &);
 //static const char *formatFloat (double, AttrList *, Formatter &);
 static const char *formatLoadAvg (double, Formatter &);
-static const char *formatStringsFromList( const classad::Value &, Formatter & );
+static bool renderStringsFromList( classad::Value &, AttrList*, Formatter & );
+
+#if 0
+#include "printf_format.h"
+// set wid & wflags to indicate what should be passed to make_printmask
+// to produce the given fmt (hwid is an input because the default width is the width of the headings)
+void reverse_engineer_width(int &wid, int &wflags, const Formatter & fmt, int hwid)
+{
+	wid = fmt.width;
+	wflags = fmt.options & (FormatOptionAutoWidth | FormatOptionNoTruncate);
+	bool width_from_label = hwid && (fmt.width == hwid);
+
+	if (wid > 0 && (fmt.options & FormatOptionLeftAlign)) { wid = 0 - fmt.width; }
+
+	// The default for flags is autowidth + truncate with a format of %v
+	// in that case the column width will automatically grow to fit the data.
+	// from an initial (i.e. minimum) width specified in fmt.width
+	// where fmt.width is deduced from the width of the heading.
+
+	if (wflags == FormatOptionAutoWidth) {
+
+		const char* tmp_fmt = fmt.printfFmt;
+		struct printf_fmt_info info;
+		if ( ! fmt.printfFmt) {
+		} else if (parsePrintfFormat(&tmp_fmt, &info)) {
+			if (info.fmt_letter == 'v' && info.width == 0 && info.precision == -1) {
+				wflags |= FormatOptionNoTruncate;
+				if (width_from_label) {
+					// don't display the width, but also don't display AUTO flag
+					wflags &= ~FormatOptionAutoWidth;
+					wid = 0;
+				}
+			}
+		}
+		//if (width_from_label && !wid) { wflags &= ~FormatOptionAutoWidth; }
+	}
+
+	// cant display both a width and the AUTO keyword.
+	// so if we return a non-zero width here. we must turn off the AUTO flag
+	if (wid) wflags &= ~FormatOptionAutoWidth;
+}
+#endif
 
 static const char *
 format_readable_mb(const classad::Value &val, Formatter &)
@@ -184,6 +228,13 @@ static int ppWidthOpts(int width, int truncate)
 	return opts;
 }
 
+enum {
+	FormatOptionSpecial001 = FormatOptionSpecialBase,
+	FormatOptionSpecial002 = FormatOptionSpecialBase<<1,
+	FormatOptionSpecial004 = FormatOptionSpecialBase<<2,
+	FormatOptionSpecial008 = FormatOptionSpecialBase<<3,
+};
+
 static int ppAltOpts(ivfield alt_in)
 {
 	ivfield alt = (ivfield)(alt_in & 3);
@@ -197,8 +248,8 @@ static int ppAltOpts(ivfield alt_in)
 	} else if (alt != BlankInvalidField) {
 		//opts |= AltFixMe;
 	}
-	if (alt_in & FitToName) { opts |= FormatOptionSpecial001; }
-	if (alt_in & FitToMachine) { opts |= FormatOptionSpecial002; }
+	if (alt_in & FitToName) { opts |= FormatOptionFitToData | FormatOptionSpecial001; }
+	if (alt_in & FitToMachine) { opts |= FormatOptionFitToData | FormatOptionSpecial002; }
 	return opts;
 }
 
@@ -285,13 +336,13 @@ static void ppDisplayHeadings(FILE* file, ClassAd *ad, const char * pszExtra)
 		printf("%s", pszExtra);
 }
 
-void prettyPrintInitMask(classad::References & proj, const char * & constr)
+void prettyPrintInitMask(classad::References & proj, const char * & constr, bool no_pr_files)
 {
 	//bool old_headings = (ppStyle == PP_STARTD_COD) || (ppStyle == PP_QUILL_NORMAL);
 	bool long_form = PP_IS_LONGish(ppStyle);
 	bool custom = (ppStyle == PP_CUSTOM);
 	if ( ! using_print_format && ! wantOnlyTotals && ! custom && ! long_form) {
-		ppInitPrintMask(ppStyle, proj, constr);
+		ppInitPrintMask(ppStyle, proj, constr, no_pr_files);
 	}
 }
 
@@ -489,21 +540,21 @@ void prettyPrintAd(ppOption pps, ClassAd *ad, int output_index, StringList * whi
 
 
 const char *
-formatStringsFromList( const classad::Value & value, Formatter & ) {
+extractStringsFromList( const classad::Value & value, Formatter &, std::string &prettyList ) {
 	const classad::ExprList * list = NULL;
 	if( ! value.IsListValue( list ) ) {
 		return "[Attribute not a list.]";
 	}
 
-	static std::string prettyList;
 	prettyList.clear();
 	classad::ExprList::const_iterator i = list->begin();
 	for( ; i != list->end(); ++i ) {
-		std::string universeName;
+		std::string item;
 		if ((*i)->GetKind() != classad::ExprTree::LITERAL_NODE) continue;
-		classad::Value * pval = reinterpret_cast<classad::Value*>(*i);
-		if (pval->IsStringValue(universeName)) {
-			prettyList += universeName + ", ";
+		classad::Value val;
+		reinterpret_cast<classad::Literal*>(*i)->GetValue(val);
+		if (val.IsStringValue(item)) {
+			prettyList += item + ", ";
 		}
 	}
 	if( prettyList.length() > 0 ) {
@@ -513,10 +564,19 @@ formatStringsFromList( const classad::Value & value, Formatter & ) {
 	return prettyList.c_str();
 }
 
-// print the set of unique items from the given list.
+bool renderStringsFromList( classad::Value & value, AttrList*, Formatter & fmt )
+{
+	if( ! value.IsListValue() ) {
+		return false;
+	}
+	std::string prettyList;
+	value.SetStringValue(extractStringsFromList(value, fmt, prettyList));
+	return true;
+}
+
+// extract the set of unique items from the given list.
 const char *
-formatUniqueList( const classad::Value & value, Formatter & ) {
-	static std::string retval;
+extractUniqueStrings( const classad::Value & value, Formatter &, std::string &list_out ) {
 	std::set<std::string> uniq;
 
 	classad::ClassAdUnParser unparser;
@@ -538,37 +598,48 @@ formatUniqueList( const classad::Value & value, Formatter & ) {
 			}
 			uniq.insert(item);
 		}
-	} else if (value.IsStringValue(retval)) {
+	} else if (value.IsStringValue(list_out)) {
 		// for strings, parse as a string list, and add each unique item into the set
-		StringList lst(retval.c_str());
+		StringList lst(list_out.c_str());
 		for (const char * psz = lst.first(); psz; psz = lst.next()) {
 			uniq.insert(psz);
 		}
 	} else {
 		// for other types treat as a single item, no need to uniqify
-		retval.clear();
-		ClassAdValueToString(value, retval);
-		return retval.c_str();
+		list_out.clear();
+		ClassAdValueToString(value, list_out);
+		return list_out.c_str();
 	}
 
-	retval.clear();
+	list_out.clear();
 	for (std::set<std::string>::const_iterator it = uniq.begin(); it != uniq.end(); ++it) {
-		if (retval.empty()) retval = *it;
+		if (list_out.empty()) list_out = *it;
 		else {
-			retval += ", ";
-			retval += *it;
+			list_out += ", ";
+			list_out += *it;
 		}
 	}
 
-	return retval.c_str();
+	return list_out.c_str();
 }
+
+bool renderUniqueStrings( classad::Value & value, AttrList*, Formatter & fmt )
+{
+	if( ! value.IsListValue() ) {
+		return false;
+	}
+	std::string buffer;
+	value.SetStringValue(extractUniqueStrings(value, fmt, buffer));
+	return true;
+}
+
 
 void ppSetStartdOfflineCols (int /*width*/)
 {
 		ppSetColumn( ATTR_NAME, -34, ! wide_display );
 		// A custom printer for filtering out the ints would be handy.
 		ppSetColumn( "OfflineUniverses", Lbl( "Offline Universes" ),
-					 formatStringsFromList, -42, ! wide_display );
+					 renderStringsFromList, -42, ! wide_display );
 
 		// How should I print out the offline reasons and timestamps?
 
@@ -1131,14 +1202,36 @@ void ppSetGridNormalCols (int width)
 	ppSetColumn(ATTR_IDLE_JOBS,    "%8d", true);
 }
 
+const char * const negotiatorNormal_PrintFormat = "SELECT\n"
+	"Name           AS Name         WIDTH AUTO\n"
+	"LastNegotiationCycleEnd0  AS LastCycleEnd WIDTH 12 PRINTAS DATE\n"
+	"LastNegotiationCycleDuration0 AS (Sec) PRINTF %5d\n"
+	"LastNegotiationCycleCandidateSlots0 AS '  Slots' PRINTF %7d\n"
+	"LastNegotiationCycleActiveSubmitterCount0 AS Submitrs PRINTF %8d\n"
+	"LastNegotiationCycleNumSchedulers0 AS Schedds PRINTF %7d\n"
+	"LastNegotiationCycleNumIdleJobs0 AS '   Jobs' PRINTF %7d\n"
+	"LastNegotiationCycleMatches0 AS Matches PRINTF %7d\n"
+	"LastNegotiationCycleRejections0 AS Rejections PRINTF %10d\n"
+"SUMMARY NONE\n";
 
-void ppSetNegotiatorNormalCols (int width)
+int ppSetNegotiatorNormalCols (int width)
 {
+#if 1
+	const char * tag = "Negotiator";
+	const char * fmt = negotiatorNormal_PrintFormat;
+	const char * constr = NULL;
+	if (set_status_print_mask_from_stream(fmt, false, &constr) < 0) {
+		fprintf(stderr, "Internal error: default %s print-format is invalid !\n", tag);
+	}
+	// set a minumum size for name column
+	return width ? 12 : 12;
+#else
 	int name_width = wide_display ? -32 : -20;
-	if (width > 79 && ! wide_display) { name_width = MAX(-40, width/3); }
+	if (width > 79 && ! wide_display) { name_width = MAX(-40, -width/3); }
 
 	ppSetColumn(ATTR_NAME, name_width, ! wide_display);
 	ppSetColumn(ATTR_MACHINE, name_width, ! wide_display);
+#endif
 }
 
 
@@ -1306,7 +1399,7 @@ int ppAdjustProjection(void*pv, int index, Formatter * fmt, const char * attr)
 	return 0;
 }
 
-void ppInitPrintMask(ppOption pps, classad::References & proj, const char * & constr)
+void ppInitPrintMask(ppOption pps, classad::References & proj, const char * & constr, bool no_pr_files)
 {
 	if (using_print_format) {
 		return;
@@ -1319,6 +1412,25 @@ void ppInitPrintMask(ppOption pps, classad::References & proj, const char * & co
 	if (forced_display_width || ( ! wide_display && ! is_piped) ) {
 		pm.SetOverallWidth(display_width);
 	}
+
+#if 1
+	// If setting a 'normal' output, check to see if there is a user-defined normal output
+	if ( ! no_pr_files) {
+		std::string param_name;
+		auto_free_ptr pf_file(param(paramNameFromPPMode(param_name)));
+		if (pf_file) {
+			struct stat stat_buff;
+			if (0 != stat(pf_file.ptr(), &stat_buff)) {
+				// do nothing, this is not an error.
+			} else if (set_status_print_mask_from_stream(pf_file, true, &constr) < 0) {
+				fprintf(stderr, "Warning: default %s select file '%s' is invalid\n", param_name.c_str(), pf_file.ptr());
+			} else {
+				// we got the format already, just return.
+				return;
+			}
+		}
+	}
+#endif
 
 	int name_width = 0;
 	int machine_width = 0;
@@ -1382,7 +1494,9 @@ void ppInitPrintMask(ppOption pps, classad::References & proj, const char * & co
 		break;
 
 		case PP_NEGOTIATOR_NORMAL:
-		ppSetNegotiatorNormalCols(display_width);
+		name_width = ppSetNegotiatorNormalCols(display_width);
+		name_flags = FormatOptionAutoWidth;
+		width_of_fixed_cols = 12+4+8+7+8+7;
 		break;
 
 		case PP_SUBMITTER_NORMAL:
@@ -1717,9 +1831,9 @@ static const CustomFormatFnTableItem LocalPrintFormats[] = {
 	{ "PLATFORM",     ATTR_OPSYS, 0, renderPlatform, ATTR_ARCH "\0" ATTR_OPSYS_AND_VER "\0" ATTR_OPSYS_SHORT_NAME "\0" },
 	{ "READABLE_KB",  ATTR_DISK, 0, format_readable_kb, NULL },
 	{ "READABLE_MB",  ATTR_MEMORY, 0, format_readable_mb, NULL },
-	{ "STRINGS_FROM_LIST", NULL, 0, formatStringsFromList, NULL },
+	{ "STRINGS_FROM_LIST", NULL, 0, renderStringsFromList, NULL },
 	{ "TIME",         ATTR_KEYBOARD_IDLE, 0, formatRealTime, NULL },
-	{ "UNIQUE",       NULL, 0, formatUniqueList, NULL },
+	{ "UNIQUE",       NULL, 0, renderUniqueStrings, NULL },
 };
 static const CustomFormatFnTable LocalPrintFormatsTable = SORTED_TOKENER_TABLE(LocalPrintFormats);
 const CustomFormatFnTable * getCondorStatusPrintFormats() { return &LocalPrintFormatsTable; }

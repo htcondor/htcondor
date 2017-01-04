@@ -783,24 +783,12 @@ void writeSubmitFile( /* const */ SubmitDagDeepOptions &deepOpts,
 		args.AppendArg(shallowOpts.iMaxPost);
     }
 
-	if(shallowOpts.bNoEventChecks)
-	{
-		// strArgs += " -NoEventChecks";
-		printf( "Warning: -NoEventChecks is ignored; please use "
-					"the DAGMAN_ALLOW_EVENTS config parameter instead\n");
-	}
-
 	if ( shallowOpts.bPostRunSet ) {
 		if (shallowOpts.bPostRun) {
 			args.AppendArg("-AlwaysRunPost");
 		} else {
 			args.AppendArg("-DontAlwaysRunPost");
 		}
-	}
-
-	if(deepOpts.bAllowLogError)
-	{
-		args.AppendArg("-AllowLogError");
 	}
 
 	if(deepOpts.useDagDir)
@@ -1061,11 +1049,12 @@ parseCommandLine(SubmitDagDeepOptions &deepOpts,
 			}
 			else if (strArg.find("-noev") != -1) // -noeventchecks
 			{
-				shallowOpts.bNoEventChecks = true;
+				printf( "Warning: -NoEventChecks is ignored; please use "
+							"the DAGMAN_ALLOW_EVENTS config parameter instead\n");
 			}
 			else if (strArg.find("-allowlog") != -1) // -allowlogerror
 			{
-				deepOpts.bAllowLogError = true;
+				fprintf( stderr, "Warning: -AllowLogError is no longer supported\n" );
 			}
 			else if (strArg.find("-use") != -1) // -usedagdir
 			{
@@ -1329,8 +1318,9 @@ int printUsage(int iExitCode)
     printf("    -NoEventChecks      (Now ignored -- use DAGMAN_ALLOW_EVENTS)\n"); 
     printf("    -DontAlwaysRunPost  (Don't run POST script if PRE script fails)\n");
     printf("    -AlwaysRunPost      (Run POST script if PRE script fails)\n");
-    printf("    -AllowLogError      (Allows the DAG to attempt execution even if the log\n");
+	printf("    -AllowLogError      (Allows the DAG to attempt execution even if the log\n");
     printf("        reading code finds errors when parsing the submit files)\n"); 
+	printf("        (-AllowLogError is no longer supported as of 8.5.5)\n");
 	printf("    -UseDagDir          (Run DAGs in directories specified in DAG file paths)\n");
     printf("    -debug <number>     (Determines how verbosely DAGMan logs its work\n");
     printf("         about the life of the condor_dagman job.  'value' must be\n");

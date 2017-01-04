@@ -2336,7 +2336,7 @@ JobEvictedEvent::formatBody( std::string &out )
 
   }
 
-	// print out resource request/useage values.
+	// print out resource request/usage values.
 	//
 	if (pusageAd) {
 		formatUsageAd( out, pusageAd );
@@ -2758,7 +2758,7 @@ TerminatedEvent::formatBody( std::string &out, const char *header )
 					   total_recvd_bytes, header ) < 0)
 		return true;				// backwards compatibility
 
-	// print out resource request/useage values.
+	// print out resource request/usage values.
 	//
 	if (pusageAd) {
 		formatUsageAd( out, pusageAd );
@@ -2854,7 +2854,7 @@ TerminatedEvent::readEvent( FILE *file, const char* header )
 	for (;;) {
 		char sz[250];
 		char srun[sizeof("Total")];
-		char sdir[sizeof("Recieved")];
+		char sdir[sizeof("Received")];
 		char sjob[22];
 
 		// if we hit end of file or end of record "..." rewind the file pointer.
@@ -2892,7 +2892,7 @@ TerminatedEvent::readEvent( FILE *file, const char* header )
 			break;
 		}
 	}
-	// the useage ad is optional
+	// the usage ad is optional
 	readUsageAd(file, &pusageAd);
 #else
 

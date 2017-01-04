@@ -8,7 +8,6 @@
 #include "condor_version.h"
 
 #include <memory>
-#include <boost/python.hpp>
 
 #include "old_boost.h"
 #include "classad_wrapper.h"

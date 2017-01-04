@@ -241,6 +241,11 @@ the SSSE 3 instructions, and \Expr{Undefined} otherwise.
 if the machine being advertised supports
 the avx instructions, and \Expr{Undefined} otherwise.
 %
+\index{ClassAd machine attribute!HasSingularity}
+\item[\AdAttr{HasSingularity}:] A boolean value set to \Expr{True}
+if the machine being advertised supports running jobs within
+Singularity containers.
+%
 \index{ClassAd machine attribute!HasVM}
 \item[\AdAttr{HasVM}:] If the configuration triggers the detection of
 virtual machine software, a boolean value reporting the success thereof;
@@ -670,6 +675,12 @@ is the negotiated amount of time remaining for the current running
 job.  This may be less than the amount offered by the machine's
 \AdAttr{MaxJobRetirementTime} expression, because the job may
 ask for less.
+%
+\index{ClassAd machine attribute!SingularityVersion}
+\item[\AdAttr{SingularityVersion}:]
+A string containing the version of Singularity available, if the
+machine being advertised supports running jobs within a Singularity
+container (see \MacroNI{HasSingularity}).
 %
 \index{ClassAd machine attribute!SlotID}
 \item[\AdAttr{SlotID}:] For SMP machines, the integer

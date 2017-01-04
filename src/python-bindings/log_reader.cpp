@@ -9,7 +9,6 @@
 #include "ClassAdLogReader.h"
 
 #include <memory>
-#include <boost/python.hpp>
 
 #include "classad/value.h"
 #include "classad/source.h"
@@ -70,24 +69,17 @@ LogReader::wait_internal(int timeout_ms)
         struct pollfd fd;
         fd.fd = watch();
         fd.events = POLLIN;
+        if (time_remaining > -1 && time_remaining < 1000) {step = time_remaining;}
+        Py_BEGIN_ALLOW_THREADS
         if (fd.fd == -1)
         {
-            Py_BEGIN_ALLOW_THREADS
-            sleep(1);
-            Py_END_ALLOW_THREADS
-            if (time_remaining >= 0 && time_remaining < 1000)
-            {
-                ++m_iter;
-                break;
-            }
+            Sleep(step);
         }
         else
         {
-            if (time_remaining != -1 && time_remaining < 1000) {step = time_remaining;}
-            Py_BEGIN_ALLOW_THREADS
             ::poll(&fd, 1, step);
-            Py_END_ALLOW_THREADS
         }
+        Py_END_ALLOW_THREADS
         if (PyErr_CheckSignals() == -1)
         {
             boost::python::throw_error_already_set();

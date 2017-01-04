@@ -65,7 +65,7 @@ sysapi_vsyscall_gate_addr_raw(void)
 
 		/* exec probe */
 		const char *cmd[] = {tmp, "--vdso-addr", NULL};
-		fin = my_popenv(cmd, "r", TRUE);
+		fin = my_popenv(cmd, "r", MY_POPEN_OPT_WANT_STDERR);
 		free(tmp);
 		if (fin == NULL) {
 			dprintf(D_ALWAYS, "my_popenv failed\n");

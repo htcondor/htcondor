@@ -19,11 +19,26 @@
 
 #include "condor_common.h"
 #include "ad_printmask.h"
-//#include "escapes.h"
-//#include "MyString.h"
 #include "condor_string.h"	// for getline
+#include "tokener.h"
 #include <string>
-//#include "printf_format.h"
+
+/* Construct a PrintMask and query from a formatted file/string
+
+  The format is
+
+  SELECT [FROM AUTOCLUSTER | UNIQUE | <AdType>] [BARE | NOTITLE | NOHEADER | NOSUMMARY] [LABEL [SEPARATOR <string>]] [<record-sep>]
+    <expr> [AS <label>] [PRINTF <format-string> | PRINTAS <function-name> | WIDTH [AUTO | [-]<INT>] ] [TRUNCATE] [LEFT | RIGHT] [NOPREFIX] [NOSUFFIX]
+    ... repeat the above line as needed...
+  [JOIN AdType2 (ON <expr-with-adtype2> | USING <keyfield1>,<keyfield2>...)]
+  [WHERE <constraint-expr>] // AdType2 constraint if join.
+  [AND <constraint-expr>] // Adttype1 constraint if join
+  [GROUP BY <sort-expr> [ASCENDING | DECENDING] ]
+    [<sort-expr2> [ASCENDING | DECENDING]]
+    ... repeat the above line as needed...
+  [SUMMARY [STANDARD | NONE]]
+
+ *======================================================*/
 
 const char * SimpleFileInputStream::nextline()
 {
@@ -33,163 +48,13 @@ const char * SimpleFileInputStream::nextline()
 	return line;
 }
 
-// collapse a c++ escapes in-place in a std::string
-bool collapse_escapes(std::string & str)
-{
-	const char *strp = str.c_str();
-	const char *cp = strp;
-
-	// skip over leading non escape characters
-	while (*cp && *cp != '\\') ++cp;
-	if ( ! *cp) return false;
-
-	size_t ix = cp - strp;
-	int cEscapes = 0;
-
-	while (*cp) {
-		// ASSERT: *cp == '\\'
-
-		// assume we found an escape
-		++cEscapes;
-
-		switch (*++cp) {
-			case 'a':	str[ix] = '\a'; break;
-			case 'b':	str[ix] = '\b'; break;
-			case 'f':	str[ix] = '\f'; break;
-			case 'n':	str[ix] = '\n'; break;
-			case 'r':	str[ix] = '\r'; break;
-			case 't':	str[ix] = '\t'; break;
-			case 'v':	str[ix] = '\v'; break;
-
-			case '\\':
-			case '\'':
-			case '"':
-			case '?':	str[ix] = *cp; break;
-
-			case 'X':
-			case 'x':	{ // hexadecimal sequence
-				int value = 0;
-				while (cp[1] && isxdigit(cp[1])) {
-					int ch = cp[1];
-					value += value*16 + isdigit(ch) ? (ch - '0') : (tolower(ch) - 'a' + 10);
-					++cp;
-				}
-				str[ix] = (char)value;
-			}
-			break;
-
-			default:
-				// octal sequence
-				if (isdigit(*cp) ) {
-					int value = *cp - '0';
-					while (cp[1] && isdigit(cp[1])) {
-						int ch = cp[1];
-						value += value*8 + (ch - '0');
-						++cp;
-					}
-					str[ix] = (char)value;
-				} else {
- 					// not really an escape, so copy both characters
-					--cEscapes;
-					str[ix] = '\\';
-					str[++ix] = *cp;
-				}
-			break;
-		}
-		// at this point cp points to the last char of the escape sequence
-		// and ix is the offset of the collapsed escape character that we just wrote.
-		if ( ! str[ix]) break;
-
-		// scan forward, copying characters until we get to next \ or copy the terminating null.
-		do { str[++ix] = *++cp; } while (*cp && *cp != '\\');
-	}
-
-	// ASSERT str[ix] == 0
-
-	// return true if there were escapes.
-	if ( ! cEscapes) {
-		return false;
-	}
-	str.resize(ix);
-	return true;
-}
-
-
-// this is a simple tokenizer class for parsing keywords out of a line of text
-// token separator defaults to whitespace, "" or '' can be used to have tokens
-// containing whitespace, but there is no way to escape " inside a "" string or
-// ' inside a '' string. outer "" and '' are not considered part of the token.
-// next() advances to the next token and returns false if there is no next token.
-// matches() can compare the current token to a string without having to extract it
-// copy_marked() returns all of the text from the most recent mark() to the start
-// of the current token. (may include leading and trailing whitespace).
-//
-class tokener {
-public:
-	tokener(const char * line_in) : line(line_in), ix_cur(0), cch(0), ix_next(0), ix_mk(0), sep(" \t\r\n") { }
-	bool set(const char * line_in) { if ( ! line_in) return false; line=line_in; ix_cur = ix_next = 0; return true; }
-	bool next() {
-		ix_cur = line.find_first_not_of(sep, ix_next);
-		if (ix_cur != std::string::npos && (line[ix_cur] == '"' || line[ix_cur] == '\'')) {
-			ix_next = line.find(line[ix_cur], ix_cur+1);
-			ix_cur += 1; // skip leading "
-			cch = ix_next - ix_cur;
-			if (ix_next != std::string::npos) { ix_next += 1; /* skip trailing " */}
-		} else {
-			ix_next = line.find_first_of(sep, ix_cur);
-			cch = ix_next - ix_cur;
-		}
-		return ix_cur != std::string::npos;
-	};
-	bool matches(const char * pat) const { return line.substr(ix_cur, cch) == pat; }
-	bool starts_with(const char * pat) const { size_t cpat = strlen(pat); return cpat >= cch && line.substr(ix_cur, cpat) == pat; }
-	bool less_than(const char * pat) const { return line.substr(ix_cur, cch) < pat; }
-	void copy_token(std::string & value) const { value = line.substr(ix_cur, cch); }
-	void copy_to_end(std::string & value) const { value = line.substr(ix_cur); }
-	bool at_end() const { return ix_next == std::string::npos; }
-	void mark() { ix_mk = ix_cur; }
-	void mark_after() { ix_mk = ix_next; }
-	void copy_marked(std::string & value) const { value = line.substr(ix_mk, ix_cur - ix_mk); }
-	std::string & content() { return line; }
-	size_t offset() { return ix_cur; }
-	bool is_quoted_string() const { return ix_cur > 0 && (line[ix_cur-1] == '"' || line[ix_cur-1] == '\''); }
-private:
-	std::string line;  // the line currently being tokenized
-	size_t ix_cur;     // start of the current token
-	size_t cch;        // length of the current token
-	size_t ix_next;    // start of the next token
-	size_t ix_mk;      // start of current 'marked' region
-	const char * sep;  // separator characters used to delimit tokens
-};
-
-template <class T>
-const T * tokener_lookup_table<T>::find_match(const tokener & toke) const {
-	if (cItems <= 0) return NULL;
-	if (is_sorted) {
-		for (int ixLower = 0, ixUpper = cItems-1; ixLower <= ixUpper;) {
-			int ix = (ixLower + ixUpper) / 2;
-			if (toke.matches(pTable[ix].key))
-				return &pTable[ix];
-			else if (toke.less_than(pTable[ix].key))
-				ixUpper = ix-1;
-			else
-				ixLower = ix+1;
-		}
-	} else {
-		for (int ix = 0; ix < (int)cItems; ++ix) {
-			if (toke.matches(pTable[ix].key))
-				return &pTable[ix];
-		}
-	}
-	return NULL;
-}
 
 typedef struct {
 	const char * key;
 	int          value;
 	int          options;
 } Keyword;
-typedef tokener_lookup_table<Keyword> KeywordTable;
+typedef case_sensitive_sorted_tokener_lookup_table<Keyword> KeywordTable;
 
 enum {
 	kw_AS=1,
@@ -204,6 +69,7 @@ enum {
 	kw_RIGHT,
 	kw_OR,
 	kw_ALWAYS,
+	kw_FIT,
 };
 
 #define KW(a) { #a, kw_##a, 0 }
@@ -211,6 +77,7 @@ static const Keyword SelectKeywordItems[] = {
 	KW(ALWAYS),
 	KW(AS),
 	KW(AUTO),
+	KW(FIT),
 	KW(LEFT),
 	KW(NOPREFIX),
 	KW(NOSUFFIX),
@@ -259,15 +126,12 @@ int SetAttrListPrintMaskFromStream (
 	SimpleInputStream & stream, // in: fetch lines from this stream until nextline() returns NULL
 	const CustomFormatFnTable & FnTable, // in: table of custom output functions for SELECT
 	AttrListPrintMask & mask, // out: columns and headers set in SELECT
-	printmask_headerfooter_t & headfoot, // out: header and footer flags set in SELECT or SUMMARY
-	printmask_aggregation_t & aggregate, // out: aggregation mode in SELECT
+	PrintMaskMakeSettings & pmms,
 	std::vector<GroupByKeyInfo> & group_by, // out: ordered set of attributes/expressions in GROUP BY
-	std::string & where_expression, // out: classad expression from WHERE
-	StringList & attrs, // out ClassAd attributes referenced in mask or group_by outputs
 	std::string & error_message) // out, if return is non-zero, this will be an error message
 {
-	ClassAd ad; // so we can GetExprReferences
-	enum section_t { NOWHERE=0, SELECT, SUMMARY, WHERE, GROUP};
+	//ClassAd ad; // so we can GetExprReferences
+	enum section_t { NOWHERE=0, SELECT, SUMMARY, JOIN, WHERE, AND, GROUP};
 	enum cust_t { PRINTAS_STRING, PRINTAS_INT, PRINTAS_FLOAT };
 
 	bool label_fields = false;
@@ -279,7 +143,11 @@ int SetAttrListPrintMaskFromStream (
 	mask.SetAutoSep(prowpre, pcolpre, pcolsux, prowsux);
 
 	error_message.clear();
-	aggregate = PR_NO_AGGREGATION;
+
+	// dont reset the whole pmms
+	// we will leave untouched what the parser doesn't set.
+	//pmms.reset();
+	pmms.aggregate = PR_NO_AGGREGATION;
 
 	printmask_headerfooter_t usingHeadFoot = (printmask_headerfooter_t)(HF_CUSTOM | HF_NOSUMMARY);
 	section_t sect = SELECT;
@@ -294,17 +162,18 @@ int SetAttrListPrintMaskFromStream (
 			while (toke.next()) {
 				if (toke.matches("FROM")) {
 					if (toke.next()) {
+						toke.copy_token(pmms.select_from);
 						if (toke.matches("AUTOCLUSTER")) {
-							aggregate = PR_FROM_AUTOCLUSTER;
-						} else {
-							std::string aa; toke.copy_token(aa);
-							formatstr_cat(error_message, "Warning: Unknown header argument %s for SELECT FROM\n", aa.c_str());
-						}
+							pmms.aggregate = PR_FROM_AUTOCLUSTER;
+						}// else {
+						//	std::string aa; toke.copy_token(aa);
+						//	formatstr_cat(error_message, "Warning: Unknown header argument %s for SELECT FROM\n", aa.c_str());
+						//}
 					} else {
 						expected_token(error_message, "data set name after FROM", "SELECT", stream, toke);
 					}
 				} else if (toke.matches("UNIQUE")) {
-					aggregate = PR_COUNT_UNIQUE;
+					pmms.aggregate = PR_COUNT_UNIQUE;
 				} else if (toke.matches("BARE")) {
 					usingHeadFoot = HF_BARE;
 				} else if (toke.matches("NOTITLE")) {
@@ -333,8 +202,14 @@ int SetAttrListPrintMaskFromStream (
 			mask.SetAutoSep(prowpre, pcolpre, pcolsux, prowsux);
 			sect = SELECT;
 			continue;
+		} else if (toke.matches("JOIN")) {
+			sect = JOIN;
+			if ( ! toke.next()) continue;
 		} else if (toke.matches("WHERE")) {
 			sect = WHERE;
+			if ( ! toke.next()) continue;
+		} else if (toke.matches("AND")) {
+			sect = AND;
 			if ( ! toke.next()) continue;
 		} else if (toke.matches("GROUP")) {
 			sect = GROUP;
@@ -370,7 +245,7 @@ int SetAttrListPrintMaskFromStream (
 
 			bool got_attr = false;
 			while (toke.next()) {
-				const Keyword * pkw = SelectKeywords.find_match(toke);
+				const Keyword * pkw = SelectKeywords.lookup_token(toke);
 				if ( ! pkw)
 					continue;
 
@@ -402,7 +277,7 @@ int SetAttrListPrintMaskFromStream (
 				} break;
 				case kw_PRINTAS: {
 					if (toke.next()) {
-						const CustomFormatFnTableItem * pcffi = FnTable.find_match(toke);
+						const CustomFormatFnTableItem * pcffi = FnTable.lookup_token(toke);
 						if (pcffi) {
 							cust = pcffi->cust;
 							fmt = pcffi->printfFmt;
@@ -412,7 +287,8 @@ int SetAttrListPrintMaskFromStream (
 							if (pszz) {
 								size_t cch = strlen(pszz);
 								while (cch > 0) {
-									if ( ! attrs.contains_anycase(pszz)) attrs.insert(pszz);
+									//if ( ! attrs.contains_anycase(pszz)) attrs.insert(pszz);
+									pmms.attrs.insert(pszz);
 									pszz += cch+1; cch = strlen(pszz);
 								}
 							}
@@ -450,6 +326,9 @@ int SetAttrListPrintMaskFromStream (
 				} break;
 				case kw_RIGHT: {
 					opts &= ~FormatOptionLeftAlign;
+				} break;
+				case kw_FIT: {
+					opts &= ~FormatOptionFitToData;
 				} break;
 				case kw_TRUNCATE: {
 					opts &= ~FormatOptionNoTruncate;
@@ -534,13 +413,43 @@ int SetAttrListPrintMaskFromStream (
 			} else {
 				mask.registerFormat(fmt, wid, opts, attr.c_str());
 			}
-			ad.GetExprReferences(attr.c_str(), NULL, &attrs);
+
+			if ( ! IsValidClassAdExpression(attr.c_str(), &pmms.attrs, &pmms.scopes)) {
+				formatstr_cat(error_message, "attribute or expression is not valid: %s\n", attr.c_str());
+			}
+		}
+		break;
+
+		case JOIN: {
+			/* future
+			*/
+			if (toke.matches("ON") || toke.matches("USING")) {
+				expected_token(error_message, "data set name before ON or USING", "JOIN", stream, toke);
+			} else {
+				//std::string join_to; toke.copy_token(join_to);
+				toke.next();
+				if ( ! toke.matches("ON") || ! toke.matches("USING")) {
+					unexpected_token(error_message, "JOIN", stream, toke);
+				} else {
+					//toke.join_is_on = toke.matches("ON");
+					//toke.copy_to_end(pmms.join_expression);
+					//trim(pmms.join_expression);
+				}
+			}
 		}
 		break;
 
 		case WHERE: {
-			toke.copy_to_end(where_expression);
-			trim(where_expression);
+			toke.copy_to_end(pmms.where_expression);
+			trim(pmms.where_expression);
+		}
+		break;
+
+		case AND: {
+			/* future
+			toke.copy_to_end(pmms.and_expression);
+			trim(pmms.and_expression);
+			*/
 		}
 		break;
 
@@ -557,7 +466,7 @@ int SetAttrListPrintMaskFromStream (
 			bool got_expr = false;
 
 			while (toke.next()) {
-				const Keyword * pgw = GroupKeywords.find_match(toke);
+				const Keyword * pgw = GroupKeywords.lookup_token(toke);
 				if ( ! pgw)
 					continue;
 
@@ -591,7 +500,7 @@ int SetAttrListPrintMaskFromStream (
 			if (key.expr.empty() || key.expr[0] == '#')
 				continue;
 
-			if ( ! ad.GetExprReferences(key.expr.c_str(), NULL, &attrs)) {
+			if ( ! IsValidClassAdExpression(key.expr.c_str(), &pmms.attrs, &pmms.scopes)) {
 				formatstr_cat(error_message, "GROUP BY expression is not valid: %s\n", key.expr.c_str());
 			} else {
 				group_by.push_back(key);
@@ -604,7 +513,170 @@ int SetAttrListPrintMaskFromStream (
 		}
 	}
 
-	headfoot = usingHeadFoot;
+	pmms.headfoot = usingHeadFoot;
+
+	return 0;
+}
+
+#include "printf_format.h"
+static void reverse_engineer_width(int &wid, int &wflags, const Formatter & fmt, int hwid)
+{
+	wid = fmt.width;
+	wflags = fmt.options & (FormatOptionAutoWidth | FormatOptionNoTruncate);
+	bool width_from_label = hwid && (fmt.width == hwid);
+
+	if (wid > 0 && (fmt.options & FormatOptionLeftAlign)) { wid = 0 - fmt.width; }
+
+	// The default for flags is autowidth + truncate with a format of %v
+	// in that case the column width will automatically grow to fit the data.
+	// from an initial (i.e. minimum) width specified in fmt.width
+	// where fmt.width is deduced from the width of the heading.
+
+	if (wflags == FormatOptionAutoWidth) {
+
+		const char* tmp_fmt = fmt.printfFmt;
+		struct printf_fmt_info info;
+		if ( ! fmt.printfFmt) {
+		} else if (parsePrintfFormat(&tmp_fmt, &info)) {
+			if (info.fmt_letter == 'v' && info.width == 0 && info.precision == -1) {
+				wflags |= FormatOptionNoTruncate;
+				if (width_from_label) {
+					// don't display the width, but also don't display AUTO flag
+					wflags &= ~FormatOptionAutoWidth;
+					wid = 0;
+				}
+			}
+		}
+		//if (width_from_label && !wid) { wflags &= ~FormatOptionAutoWidth; }
+	}
+
+	// cant display both a width and the AUTO keyword.
+	// so if we return a non-zero width here. we must turn off the AUTO flag
+	if (wid) wflags &= ~FormatOptionAutoWidth;
+}
+
+struct PrintPrintMaskWalkArgs {
+	std::string & fout;
+	const CustomFormatFnTable & FnTable;
+};
+
+static int PrintPrintMaskWalkFunc(void*pv, int /*index*/, Formatter*fmt, const char *attr, const char * phead)
+{
+	struct PrintPrintMaskWalkArgs & args = *(struct PrintPrintMaskWalkArgs*)pv;
+	const CustomFormatFnTableItem * ptable = args.FnTable.pTable;
+	std::string & fout = args.fout;
+
+	std::string printas = "";
+	std::string head = "";
+	int wid=0, hwid=0, wflags=0;
+	if (phead && (YourString(phead) != attr)) {
+		if (strchr(phead,'\'')) { head += "AS \""; head += phead; head += "\""; }
+		else if (strpbrk(phead," \t\n\r\"")) { head += "AS '"; head += phead; head += "'"; }
+		else { head += "AS "; head += phead; }
+		hwid = strlen(phead);
+	}
+	if (fmt->sf) {
+		for (int ii = 0; ii < (int)args.FnTable.cItems; ++ii) {
+			if ((StringCustomFormat)ptable[ii].cust == fmt->sf) {
+				if (fmt->printfFmt) {
+					printas = "PRINTF "; printas += fmt->printfFmt;
+					printas += " RENDERAS ";
+				} else {
+					printas = "PRINTAS ";
+				}
+				printas += ptable[ii].key;
+				break;
+			}
+		}
+	} else if (fmt->printfFmt) {
+		printas = "PRINTF ";
+		if (strchr(fmt->printfFmt,'\'')) { printas += "\""; printas += fmt->printfFmt; printas += "\""; }
+		else if (strpbrk(fmt->printfFmt," \t\n\r\"")) { printas += "'"; printas += fmt->printfFmt; printas += "'"; }
+		else  { printas += fmt->printfFmt; }
+		if (YourString("%v") == fmt->printfFmt) { printas = ""; }
+	}
+	std::string width = "";
+	reverse_engineer_width(wid, wflags, *fmt, hwid);
+	if (wid) { formatstr(width, "WIDTH %3d", wid); }
+	else if (wflags & FormatOptionAutoWidth) { width = "WIDTH AUTO"; }
+	if (wflags & FormatOptionLeftAlign)  { width += " LEFT"; }
+	if (!(wflags & FormatOptionNoTruncate)) { width += " TRUNCATE"; }
+
+	int fit_mask = FormatOptionFitToData | FormatOptionSpecialMask;
+	if (fmt->options & fit_mask) { width += " FIT"; }
+
+	if ((fmt->options & FormatOptionNoPrefix))   { width += " NOPREFIX"; }
+	if ((fmt->options & FormatOptionNoSuffix))   { width += " NOSUFFIX"; }
+	if ((fmt->options & FormatOptionAlwaysCall)) { width += " ALWAYS"; }
+
+	if ((fmt->options & FormatOptionHideMe))     { width += " HIDDEN"; }
+
+	if (phead && (fmt->width == (int)strlen(phead))) {
+		// special case for width defaulting from the column heading
+		// PRAGMA_REMIND("figure out how to reduce decorations to the minimum")
+	}
+	trim(width); if ( ! width.empty()) { width += " "; }
+	printas.insert(0, width); trim(printas);
+	if (fmt->options & AltMask) {
+		printas += " OR ";
+		const char alt_chars[] = " ?*.-_#0";
+		char or_val[3] = {0,0,0};
+		or_val[0] = alt_chars[((fmt->options&AltMask)/AltQuestion)];
+		if (fmt->options & AltWide) { or_val[1] = or_val[0]; }
+		printas += or_val;
+	}
+
+	size_t pos = fout.size();
+	fout.append(3, ' ');
+	fout += attr?attr:"NULL";
+
+	if ( ! head.empty()) {
+		fout += " "; fout += head;
+	}
+	if ( ! printas.empty()) {
+		const int attr_width = 30;
+		size_t align = (fout.size() < pos + attr_width) ? pos+attr_width-fout.size() : 1;
+		fout.append(align, ' ');
+		fout += printas;
+	}
+	fout += "\n";
+	return 0;
+}
+
+int PrintPrintMask(std::string & fout,
+	const CustomFormatFnTable & FnTable,  // in: table of custom output functions for SELECT
+	const AttrListPrintMask & mask,       // in: columns and headers set in SELECT
+	const List<const char> * pheadings,   // in: headings override
+	const PrintMaskMakeSettings & mms, // in: modifed by parsing the stream. BUT NOT CLEARED FIRST! (so the caller can set defaults)
+	const std::vector<GroupByKeyInfo> & /*group_by*/) // in: ordered set of attributes/expressions in GROUP BY
+{
+	fout += "SELECT";
+	if ( ! mms.select_from.empty()) { fout += " FROM "; fout += mms.select_from; }
+	if (mms.headfoot == HF_BARE) { fout += " BARE"; }
+	else {
+		if (mms.headfoot & HF_NOTITLE) { fout += " NOTITLE"; }
+		if (mms.headfoot & HF_NOHEADER) { fout += " NOHEADER"; }
+		//if (mms.headfoot & HF_NOSUMMARY) { fout += " NOSUMMARY"; }
+	}
+	fout += "\n";
+
+	struct PrintPrintMaskWalkArgs args = {fout, FnTable};
+	mask.walk(PrintPrintMaskWalkFunc, &args, pheadings);
+
+	//PRAGMA_REMIND("print JOIN")
+
+	if ( ! mms.where_expression.empty()) {
+		fout += "WHERE "; fout += mms.where_expression;
+		fout += "\n";
+	}
+
+	//PRAGMA_REMIND("print AND")
+	//PRAGMA_REMIND("print GROUP BY")
+
+	if (mms.headfoot != HF_BARE) {
+		fout += "SUMMARY "; fout += (mms.headfoot&HF_NOSUMMARY) ? "NONE" : "STANDARD";
+		fout += "\n";
+	}
 
 	return 0;
 }

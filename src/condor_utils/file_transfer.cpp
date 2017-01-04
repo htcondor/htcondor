@@ -2141,7 +2141,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 
 		} else if ( reply == 4 ) {
 			if ( PeerDoesGoAhead || s->end_of_message() ) {
-				rc = s->get_x509_delegation( &bytes, fullname.Value() );
+				rc = (s->get_x509_delegation( fullname.Value(), false, NULL ) == ReliSock::delegation_ok) ? 0 : -1;
 				dprintf( D_FULLDEBUG,
 				         "DoDownload: get_x509_delegation() returned %d\n",
 				         rc );
@@ -2162,7 +2162,19 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 				dprintf(D_ALWAYS,"DoDownload: failed to read mkdir mode.\n");
 			}
 			else {
-				rc = mkdir(fullname.Value(),file_mode);
+				if (file_mode == NULL_FILE_PERMISSIONS) {
+					// Don't create subdirectories with mode 0000!
+					// If file_mode is still NULL_FILE_PERMISSIONS here, it
+					// likely means that our peer is likely a Windows machine,
+					// since Windows will always claim a mode of 0000.
+					// In this case, default to mode 0700, which is a
+					// conservative default, and matches what we do in
+					// ReliSock::get_file().
+					file_mode = (condor_mode_t) 0700;
+				}
+				mode_t old_umask = umask(0);
+				rc = mkdir(fullname.Value(),(mode_t)file_mode);
+				umask(old_umask);
 				if( rc == -1 && errno == EEXIST ) {
 						// The directory name already exists.  If it is a
 						// directory, just leave it alone, because the
@@ -2181,7 +2193,9 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 					}
 					else {
 						IGNORE_RETURN remove(fullname.Value());
-						rc = mkdir(fullname.Value(),file_mode);
+						old_umask = umask(0);
+						rc = mkdir(fullname.Value(),(mode_t)file_mode);
+						umask(old_umask);
 					}
 				}
 				if( rc == -1 ) {
@@ -2317,6 +2331,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 			return_and_resetpriv( -1 );
 		}
 		*total_bytes += bytes;
+		bytes = 0;
 
 		numFiles++;
 
@@ -2437,8 +2452,11 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 		jobAd.LookupInteger(ATTR_CLUSTER_ID, cluster);
 		jobAd.LookupInteger(ATTR_PROC_ID, proc);
 
-		dprintf(D_STATS, "File Transfer Download: JobId: %d.%d files: %d bytes: %lld seconds: %.2f dest: %s %s\n", 
-			cluster, proc, numFiles, (long long)*total_bytes, (downloadEndTime - downloadStartTime), s->peer_ip_str(), (stats ? stats : "") );
+		std::string full_stats;
+		formatstr(full_stats, "File Transfer Download: JobId: %d.%d files: %d bytes: %lld seconds: %.2f dest: %s %s\n", 
+			cluster, proc, numFiles, (long long)*total_bytes, (downloadEndTime - downloadStartTime), s->peer_ip_str(), (stats ? stats : ""));
+		Info.tcp_stats = full_stats.c_str();
+		dprintf(D_STATS, "%s", full_stats.c_str());
 	}
 
 
@@ -3829,8 +3847,11 @@ FileTransfer::ExitDoUpload(filesize_t *total_bytes, int numFiles, ReliSock *s, p
 		jobAd.LookupInteger(ATTR_PROC_ID, proc);
 
 		char *stats = s->get_statistics();
-		dprintf(D_STATS, "File Transfer Upload: JobId: %d.%d files: %d bytes: %lld seconds: %.2f dest: %s %s\n", 
-			cluster, proc, numFiles, (long long)*total_bytes, (uploadEndTime - uploadStartTime), s->peer_ip_str(), (stats ? stats : "") );
+		std::string full_stats;
+		formatstr(full_stats, "File Transfer Upload: JobId: %d.%d files: %d bytes: %lld seconds: %.2f dest: %s %s\n", 
+			cluster, proc, numFiles, (long long)*total_bytes, (downloadEndTime - downloadStartTime), s->peer_ip_str(), (stats ? stats : ""));
+		Info.tcp_stats = full_stats.c_str();
+		dprintf(D_STATS, "%s", full_stats.c_str());
 	}
 
 	return rc;

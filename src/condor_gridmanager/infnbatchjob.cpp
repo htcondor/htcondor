@@ -1453,10 +1453,13 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 			}
 		}
 
+		// Older versions of the blahp will fail if the x509userproxy
+		// attribute isn't a full path.
 		old_value = "";
 		submit_ad->LookupString( ATTR_X509_USER_PROXY, old_value );
 		if ( !old_value.empty() ) {
-			submit_ad->InsertAttr( ATTR_X509_USER_PROXY, condor_basename( old_value.c_str() ) );
+			new_value = m_sandboxPath + DIR_DELIM_CHAR + condor_basename( old_value.c_str() );
+			submit_ad->InsertAttr( ATTR_X509_USER_PROXY, new_value.c_str() );
 		}
 
 		old_value = "";

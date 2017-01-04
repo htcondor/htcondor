@@ -192,7 +192,8 @@ if "%BUILDID:~1,1%"=="." (
    set BUILD_VERSION=%BUILDID%
    set BUILDID=
 ) else (
-   for /f "tokens=2 delims=) " %%I in ('grep set.VERSION CMakeLists.txt') do set BUILD_VERSION=%%~I
+   if exist CMakeLists.txt for /f "tokens=2 delims=) " %%I in ('grep set.VERSION CMakeLists.txt') do set BUILD_VERSION=%%~I
+   if exist CPackConfig.cmake for /f "tokens=2 delims=) " %%I in ('grep "SET.CPACK_PACKAGE_VERSION " CPackConfig.cmake') do set BUILD_VERSION=%%~I
 )
 if NOT "%BUILD_VERSION%"=="" (
   if NOT "%BUILDID%"=="" set BUILD_VERSION=%BUILD_VERSION%-%BUILDID%
@@ -305,14 +306,13 @@ move src\condor_tests\RelWithDebInfo\*.pdb src\condor_tests
 ::for /F %%I in ('findstr /S /M ADD_TEST CTestTestfile.cmake') do move %%~pIRelWithDebInfo\*.exe src\condor_tests
 move src\classad\RelWithDebInfo\*.exe src\condor_tests
 move src\classad\RelWithDebInfo\*.pdb src\condor_tests
-move src\classad\tests\RelWithDebInfo\*.exe src\condor_tests
-move src\classad\tests\RelWithDebInfo\*.pdb src\condor_tests
-move src\condor_utils\tests\RelWithDebInfo\*.exe src\condor_tests
-move src\condor_utils\tests\RelWithDebInfo\*.pdb src\condor_tests
-move src\condor_collector.V6\tests\RelWithDebInfo\*.exe src\condor_tests
-move src\condor_collector.V6\tests\RelWithDebInfo\*.pdb src\condor_tests
+::move src\classad\tests\RelWithDebInfo\*.exe src\condor_tests
+::move src\classad\tests\RelWithDebInfo\*.pdb src\condor_tests
+::move src\condor_utils\tests\RelWithDebInfo\*.exe src\condor_tests
+::move src\condor_utils\tests\RelWithDebInfo\*.pdb src\condor_tests
+::move src\condor_collector.V6\tests\RelWithDebInfo\*.exe src\condor_tests
+::move src\condor_collector.V6\tests\RelWithDebInfo\*.pdb src\condor_tests
 copy bld_external\pcre-8.33\install\lib\pcre.dll src\condor_tests
-copy src\classad\tests\testdata.txt src\condor_tests
 goto finis
 
 REM common exit

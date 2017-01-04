@@ -9,8 +9,15 @@ cmd_q_shows-xml: personal
 cmd_q_formats: personal
 cmd_q_shows-batch: personal
 cmd_q_shows-af: personal
+cmd_status-af: personal
 cmd_q_format_file: personal
 cmd_transform_ads: personal
+cmd_status-transform: personal
+cmd_status-compact: personal
+max_jobs_per_owner_test: personal
+max_jobs_per_owner_test_group: personal
+job_transform_names_test: personal
+cmd_submit-batchname: personal
 cmd_wait_shows-all: personal
 cmd_wait_shows-base: personal
 cmd_wait_shows-notimeout: personal
@@ -133,6 +140,10 @@ job_dagman_final-F: personal
 job_dagman_final-G: personal
 job_dagman_final-H: personal
 job_dagman_final-I: personal
+job_dagman_final-J: personal
+job_dagman_final-K: personal
+job_dagman_final-L: personal
+job_dagman_final-M: personal
 job_dagman_fullremove: personal
 job_dagman_global_event_log-A: personal
 job_dagman_global_event_log-B: personal
@@ -204,6 +215,8 @@ job_dagman_unlessexit: personal
 job_dagman_usedagdir: personal
 job_dagman_use_hold_claim: personal
 job_dagman_vars: personal
+job_dagman_vars-B: personal
+job_dagman_all_nodes: personal
 job_dagman_rm: personal
 job_dagman_script_defer: personal
 job_dagman_submit_glob-A: personal
@@ -220,6 +233,7 @@ job_dagman_splice_connect-D: personal
 job_dagman_splice_connect-E: personal
 job_dagman_splice_connect-F: personal
 job_dagman_splice_connect-G: personal
+job_dagman_suppress_log: personal
 job_filexfer_base-input1_van: personal
 job_filexfer_base_van: personal
 job_filexfer_basic_van: personal
@@ -287,3 +301,4 @@ lib_procapi_pidtracking-byenv: personal
 lib_procapi_pidtracking-snapshot: personal
 lib_unit_tests: personal
 lib_userlog: personal
+config_validate_policy_templates: personal

@@ -511,7 +511,7 @@ int main( int /*argc*/, const char ** argv) {
 			}
 		} else if (is_dash_arg_prefix(arg, "user", 1)) {
 			user = argv[ii+1];
-			if (user && (user[0] != '-' || mapfile[1] != 0)) {
+			if (user && (user[0] != '-' || user[1] != 0)) {
 				++ii;
 			} else {
 				fprintf(stderr, "-user requires a username argument\n");

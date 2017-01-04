@@ -231,6 +231,31 @@ static bool parse_size_with_unit(
 	return !*p;
 }
 
+// make a log name from daemon name by Capitalizing each word
+// and removing _.  so SHARED_PORT becomes SharedPort
+static void make_log_name_from_daemon_name( std::string &str )
+{
+	if (str.length() == 0) return;
+	bool upper = true;
+	unsigned int j=0;
+	for (unsigned int i=0; i < str.length(); ++i) {
+		char ch = str[i];
+		if (isspace(ch) || ch == '_') {
+			upper = true;
+		} else {
+			if (ch >= 'a' && ch <= 'z' && upper) {
+				ch = _toupper(ch);
+			} else if (ch >= 'A' && ch <= 'Z' && ! upper) {
+				ch = _tolower(ch);
+			}
+			str[j++] = ch;
+			upper = false;
+		}
+	}
+	str[j] = 0;
+}
+
+
 int
 dprintf_config( const char *subsys, struct dprintf_output_settings *p_info /* = NULL*/, int c_info /*= 0*/)
 {
@@ -253,23 +278,6 @@ dprintf_config( const char *subsys, struct dprintf_output_settings *p_info /* = 
 	std::vector<struct dprintf_output_settings> DebugParams(1);
 	DebugParams[0].choice = 1<<D_ALWAYS | 1<<D_ERROR;
 	DebugParams[0].accepts_all = true;
-
-	/*
-	 * The duplication of the param_function instance is to ensure no one else can change
-	 * the data structure out from under dprintf.  It is also to prevent transfer of ownership/
-	 * responsibility for the block of memory used to store the function pointers.
-	 */
-	/*
-	if(!dprintf_param_funcs)
-		dprintf_param_funcs = new param_functions();
-	if(p_funcs)
-	{
-		dprintf_param_funcs->set_param_func(p_funcs->get_param_func());
-		dprintf_param_funcs->set_param_bool_int_func(p_funcs->get_param_bool_int_func());
-		dprintf_param_funcs->set_param_wo_default_func(p_funcs->get_param_wo_default_func());
-		dprintf_param_funcs->set_param_int_func(p_funcs->get_param_int_func());
-	}
-	*/
 
 	/*
 	** First, add the debug flags that are shared by everyone.
@@ -396,7 +404,7 @@ dprintf_config( const char *subsys, struct dprintf_output_settings *p_info /* = 
 			** index 1
 			*/
 			subsys_and_level += _condor_DebugCategoryNames[debug_level]+1;
-			param_index = DebugParams.size();
+			param_index = (int)DebugParams.size();
 		}
 
 		(void)sprintf(pname, "%s_LOG", subsys_and_level.c_str());
@@ -426,19 +434,17 @@ dprintf_config( const char *subsys, struct dprintf_output_settings *p_info /* = 
 				logPath = "SYSLOG";
 			} else if (logPathParam) {
 				logPath = logPathParam;
-			} else if (localName) {
-				std::string ln( localName ); title_case( ln );
-				formatstr(logPath, "%s%c%sLog", DebugLogDir, DIR_DELIM_CHAR, ln.c_str() );
 			} else {
-				// No default value found, so use $(LOG)/$(SUBSYSTEM)Log
-				char *lsubsys = param("SUBSYSTEM");//dprintf_param_funcs->param("SUBSYSTEM");
-				if ( ! DebugLogDir || ! lsubsys) {
-					EXCEPT("Unable to find LOG or SUBSYSTEM.");
+				// No default value found, so use $(LOG)/$(SUBSYSTEM)Log or $(LOG)/$(LOCALNAME)Log
+				std::string ln;
+				if (localName) {
+					ln = localName;
+				} else {
+					char * lsubsys = param("SUBSYSTEM");
+					if (lsubsys) { ln = lsubsys; free(lsubsys); } else { ln = subsys; }
 				}
-
-				formatstr(logPath, "%s%c%sLog", DebugLogDir, DIR_DELIM_CHAR, lsubsys);
-
-				free(lsubsys);
+				make_log_name_from_daemon_name( ln );
+				formatstr(logPath, "%s%c%sLog", DebugLogDir, DIR_DELIM_CHAR, ln.c_str() );
 			}
 
 			DebugParams[0].accepts_all = true;
@@ -558,11 +564,11 @@ dprintf_config( const char *subsys, struct dprintf_output_settings *p_info /* = 
 			p_info[ii].VerboseCats   = DebugParams[ii].VerboseCats;
 		}
 		// return the NEEDED size of the p_info array, even if it is bigger than c_info
-		return DebugParams.size();
+		return (int)DebugParams.size();
 	}
 	else
 	{
-		dprintf_set_outputs(&DebugParams[0], DebugParams.size());
+		dprintf_set_outputs(&DebugParams[0], (int)DebugParams.size());
 	}
 	return 0;
 }

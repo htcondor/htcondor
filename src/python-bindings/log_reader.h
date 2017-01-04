@@ -1,6 +1,4 @@
 
-#include <boost/python.hpp>
-
 #include "ClassAdLogReader.h"
 
 class InotifySentry;

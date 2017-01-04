@@ -6,7 +6,7 @@ if [ -f /etc/redhat-release ]; then
     date +'%Y%m%d%H%M%s' > BUILD-ID
     export TMP='/tmp'
     tar cfz "${TMP}/condor.tar.gz" *
-    build/packaging/srpm/nmibuilduwrpm.sh
+    nmi_tools/glue/build/build_uw_rpm.sh
     exit 0
 fi
 

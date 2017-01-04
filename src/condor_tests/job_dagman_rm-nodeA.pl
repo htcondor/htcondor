@@ -12,7 +12,13 @@ print "Job for node $ARGV[0]\n";
 	"job_dagman_rm-NodeD-job.started",
 	"job_dagman_rm-NodeD-job.finished",
 	"job_dagman_rm-NodeE-job.started",
-	"job_dagman_rm-NodeE-job.finished");
+	"job_dagman_rm-NodeE-job.finished",
+	"job_dagman_rm-NodeF-job.started",
+	"job_dagman_rm-NodeF-job.finished",
+	"job_dagman_rm-NodeZ-job.started",
+	"job_dagman_rm-NodeZ-job.finished");
+push(@tmpfiles, glob("job_dagman_rm-NodeZ-job.*.started"));
+push(@tmpfiles, glob("job_dagman_rm-NodeZ-job.*.finished"));
 
 foreach $fname (@tmpfiles) {
 	if (-e $fname) {

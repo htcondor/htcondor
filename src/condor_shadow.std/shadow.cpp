@@ -1523,7 +1523,7 @@ handle_sigusr1( int  /*unused */ )
 void
 handle_sigquit( int  /*unused*/ )
 {
-	dprintf( D_ALWAYS, "Shadow recieved SIGQUIT (fast shutdown)\n" ); 
+	dprintf( D_ALWAYS, "Shadow received SIGQUIT (fast shutdown)\n" ); 
 	check_static_policy = 0;
 	send_quit( ExecutingHost, GlobalCap );
 }
@@ -1537,7 +1537,7 @@ handle_sigquit( int  /*unused*/ )
 void
 handle_sigterm( int   /*unused*/ )
 {
-	dprintf( D_ALWAYS, "Shadow recieved SIGTERM (graceful shutdown)\n" ); 
+	dprintf( D_ALWAYS, "Shadow received SIGTERM (graceful shutdown)\n" ); 
 	check_static_policy = 0;
 	send_vacate( ExecutingHost, GlobalCap );
 }

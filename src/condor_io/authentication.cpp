@@ -416,12 +416,7 @@ int Authentication::authenticate_finish(CondorError *errstack)
 	// check to see if CERTIFICATE_MAPFILE was defined.  if so, use it.  if
 	// not, do nothing.  the user and domain have been filled in by the
 	// authentication method itself, so just leave that alone.
-	char * cert_map_file = param("CERTIFICATE_MAPFILE");
-	bool use_mapfile = (cert_map_file != NULL);
-	if (cert_map_file) {
-		free(cert_map_file);
-		cert_map_file = 0;
-	}
+	bool use_mapfile = param_defined("CERTIFICATE_MAPFILE");
 
 	// if successful so far, invoke the security MapFile.  the output of that
 	// is the "canonical user".  if that has an '@' sign, split it up on the
@@ -506,22 +501,24 @@ void Authentication::map_authentication_name_to_canonical_name(int authenticatio
 			global_map_file = NULL;
 		}
 
-		global_map_file = new MapFile();
-
 		dprintf (D_SECURITY, "ZKM: Parsing map file.\n");
-        char * credential_mapfile;
-        if (NULL == (credential_mapfile = param("CERTIFICATE_MAPFILE"))) {
-            dprintf(D_SECURITY, "ZKM: No CERTIFICATE_MAPFILE defined\n");
-			delete global_map_file;
-			global_map_file = NULL;
-        } else {
-        	int line;
-        	if (0 != (line = global_map_file->ParseCanonicalizationFile(credential_mapfile))) {
-            	dprintf(D_SECURITY, "ZKM: Error parsing %s at line %d", credential_mapfile, line);
+		auto_free_ptr credential_mapfile(param("CERTIFICATE_MAPFILE"));
+		if ( ! credential_mapfile) {
+			dprintf(D_SECURITY, "ZKM: No CERTIFICATE_MAPFILE defined\n");
+		} else {
+			global_map_file = new MapFile();
+
+			// prior to 8.5.8 all keys in CERTIFICATE_MAPFILE were assumed to be regexes
+			// this is both slower, and less secure, so it is now possible to opt in to a syntax where
+			// keys are assumed to be literals (i.e. hashable keys) unless the start and end with /
+			bool assume_hash = param_boolean("CERTIFICATE_MAPFILE_ASSUME_HASH_KEYS", false);
+
+			int line;
+			if (0 != (line = global_map_file->ParseCanonicalizationFile(credential_mapfile.ptr(), assume_hash))) {
+				dprintf(D_SECURITY, "ZKM: Error parsing %s at line %d", credential_mapfile.ptr(), line);
 				delete global_map_file;
 				global_map_file = NULL;
 			}
-			free( credential_mapfile );
 		}
 		global_map_file_load_attempted = true;
 	} else {

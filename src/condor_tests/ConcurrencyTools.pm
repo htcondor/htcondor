@@ -218,7 +218,7 @@ sub CountIdle
         # on a slow submit of the jobs. I'd rather fail on too many running
         # so the fist check gets a pass.
         # with sequential submits($burst = 0) submits happen much slower
-        # and t6olerance of only 1 not suffecient
+        # and tolerance of only 1 not sufficient
         #$allow_too_few_idle_once = 0;
         $allow_too_few_idle_once -= 1;
     } else {

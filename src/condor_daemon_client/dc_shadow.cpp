@@ -194,6 +194,10 @@ DCShadow::getUserCredential( const char* user, const char* domain, MyString& cre
 		return false;
 	}
 
+	// Enable encryption if available. If it's not available, our peer
+	// will close the connection.
+	reli_sock.set_crypto_mode(true);
+
 	MyString senduser = user;
 	MyString senddomain = domain;
 	MyString recvcredential;

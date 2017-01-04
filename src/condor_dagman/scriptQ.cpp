@@ -131,8 +131,6 @@ ScriptQ::RunWaitingScripts( bool justOne )
 	int scriptsRun = 0;
 	time_t now = time( NULL );
 
-		// Note:  We do NOT want to re-evaluate maxNum each time through
-		// the loop!
 	int lastScriptNum = _waitingQueue->Length();
 	for ( int curScriptNum = 0; curScriptNum < lastScriptNum;
 				++curScriptNum ) {

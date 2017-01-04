@@ -38,7 +38,6 @@
 #include "file_lock.h"
 #include "directory.h"
 #include "exit.h"
-#include "param_functions.h"
 #include "match_prefix.h"
 #include "historyFileFinder.h"
 
@@ -395,8 +394,15 @@ drop_addr_file()
 	char	addr_file[100];
 	const char* addr[2];
 
+	// build up a prefix as LOCALNAME.SUBSYSTEM or just SUBSYSTEM if no localname
+	// that way, daemons that have a localname will never stomp the address file of the
+	// primary daemon of that subsys unless explicitly told to do so.
+	MyString prefix(get_mySubSystem()->getLocalName());
+	if ( ! prefix.empty()) { prefix += "."; }
+	prefix += get_mySubSystem()->getName();
+
 	// Fill in addrFile[0] and addr[0] with info about regular command port
-	sprintf( addr_file, "%s_ADDRESS_FILE", get_mySubSystem()->getName() );
+	sprintf( addr_file, "%s_ADDRESS_FILE", prefix.Value() );
 	if( addrFile[0] ) {
 		free( addrFile[0] );
 	}
@@ -409,7 +415,7 @@ drop_addr_file()
 	}
 
 	// Fill in addrFile[1] and addr[1] with info about superuser command port
-	sprintf( addr_file, "%s_SUPER_ADDRESS_FILE", get_mySubSystem()->getName() );
+	sprintf( addr_file, "%s_SUPER_ADDRESS_FILE", prefix.Value() );
 	if( addrFile[1] ) {
 		free( addrFile[1] );
 	}
@@ -2150,7 +2156,8 @@ int dc_main( int argc, char** argv )
 	// call config so we can call param.  
 	// Try to minimize shadow footprint by not loading the metadata from the config file
 	int config_options = get_mySubSystem()->isType(SUBSYSTEM_TYPE_SHADOW) ? 0 : CONFIG_OPT_WANT_META;
-        if (wantsQuiet) { config_options |= CONFIG_OPT_WANT_QUIET; }
+	//config_options |= get_mySubSystem()->isType(SUBSYSTEM_TYPE_MASTER) ? CONFIG_OPT_DEPRECATION_WARNINGS : 0;
+	if (wantsQuiet) { config_options |= CONFIG_OPT_WANT_QUIET; }
 	config_ex(config_options);
 
 

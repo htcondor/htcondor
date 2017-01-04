@@ -446,7 +446,14 @@ if($expected ne $reply) {
 	$counter += 1;
 }
 
-$expected = "$lookups{SBIN}/condor_vm_vmware";
+# change here after VMWARE_SCRIPT knob change 10/24/16
+#$expected = "$lookups{SBIN}/condor_vm_vmware";
+my $iswindows = CondorUtils::is_windows(); 
+if ($iswindows) {
+	$expected = "$lookups{SBIN}\\condor_vm_vmware";
+} else {
+	$expected = "$lookups{SBIN}/condor_vm_vmware";
+}
 $reply = ccv_getval(VMWARE_SCRIPT);
 
 if($expected ne $reply) {

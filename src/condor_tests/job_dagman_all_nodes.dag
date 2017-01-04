@@ -1,0 +1,32 @@
+job NodeA /dev/null noop
+script pre NodeA /dev/null A foobar $RETRY
+pre_skip NodeA 2
+script post NodeA /dev/null A foobar $RETURN
+vars NodeA nodename="foobar"
+retry NodeA 5 UNLESS-EXIT 8
+abort-dag-on NodeA 5 return 10
+priority NodeA 20
+category NodeA foobar
+
+job NodeB /dev/null noop
+job NodeC /dev/null noop
+
+final NodeF /dev/null noop
+script pre NodeF /dev/null F $JOB $RETRY
+script post NodeF /dev/null F $JOB $RETURN
+vars NodeF nodename="final"
+
+splice SpliceA job_dagman_all_nodes-splice.dag
+
+# This has the commands using the ALL_NODES option.
+include job_dagman_all_nodes.inc
+
+# These should override the ALL_NODES settings...
+script pre NodeB /dev/null A barfoo $RETRY
+pre_skip NodeB 20
+script post NodeB /dev/null A barfoo $RETURN
+vars NodeB nodename="barfoo"
+retry NodeB 20 UNLESS-EXIT 50
+abort-dag-on NodeB 30 return 40
+priority NodeB 100
+category NodeB barfoo

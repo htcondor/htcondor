@@ -61,7 +61,7 @@ class Condor_Crypt_3des : public Condor_Crypt_Base {
     //------------------------------------------
     // Private constructor
     //------------------------------------------
-    des_key_schedule  keySchedule1_, keySchedule2_, keySchedule3_;
+    DES_key_schedule  keySchedule1_, keySchedule2_, keySchedule3_;
     unsigned char     ivec_[8];
     int               num_;
 };

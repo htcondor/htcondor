@@ -95,7 +95,6 @@
 %if 0%{?osg} && 0%{?rhel} == 7
 %define aviary 0
 %define std_univ 0
-%define cream 0
 %endif
 
 %define glexec 1
@@ -682,20 +681,6 @@ Includes the libraries for external packages built when UW_BUILD is enabled
 
 %endif
 
-
-%package ec2
-Summary: Configuration and scripts for using HTCondor on EC2.
-Group: Applications/System
-Requires: %name = %version-%release
-
-%description ec2
-Configures HTCondor for use on EC2.
-
-%files ec2
-%config(noreplace) %_sysconfdir/condor/config.d/50ec2.config
-%config(noreplace) %_sysconfdir/condor/config.d/49ec2-instance.sh
-%config(noreplace) %_sysconfdir/condor/master_shutdown_script.sh
-
 %package all
 Summary: All condor packages in a typical installation
 Group: Applications/System
@@ -891,11 +876,6 @@ make install DESTDIR=%{buildroot}
 # The install target puts etc/ under usr/, let's fix that.
 mv %{buildroot}/usr/etc %{buildroot}/%{_sysconfdir}
 
-# I fixed this in condor_examples/CMakeLists.txt, instead.
-# populate %_sysconfdir/condor/config.d %{buildroot}/%{_sysconfdir}/condor/config.d/50ec2.config
-# populate %_sysconfdir/condor/config.d %{buildroot}/%{_sysconfdir}/condor/config.d/49ec2-instance.sh
-# populate %_sysconfdir/condor %{buildroot}/${_sysconfdir}/master_shutdown_script.sh
-
 populate %_sysconfdir/condor %{buildroot}/%{_usr}/lib/condor_ssh_to_job_sshd_config_template
 
 # Things in /usr/lib really belong in /usr/share/condor
@@ -933,7 +913,7 @@ sed -e "s:^LIB\s*=.*:LIB = \$(RELEASE_DIR)/$LIB/condor:" \
 
 # Install the basic configuration, a Personal HTCondor config. Allows for
 # yum install condor + service condor start and go.
-mkdir -p -m0755 %{buildroot}/%{_sysconfdir}/condor/config.d
+mkdir -m0755 %{buildroot}/%{_sysconfdir}/condor/config.d
 %if %parallel_setup
 cp %{SOURCE5} %{buildroot}/%{_sysconfdir}/condor/config.d/20dedicated_scheduler_condor.config
 %endif
@@ -1030,6 +1010,7 @@ install -m 0755 src/condor_scripts/Condor.pm %{buildroot}%{_datadir}/condor/
 install -m 0755 src/condor_scripts/CondorPersonal.pm %{buildroot}%{_datadir}/condor/
 install -m 0755 src/condor_scripts/CondorTest.pm %{buildroot}%{_datadir}/condor/
 install -m 0755 src/condor_scripts/CondorUtils.pm %{buildroot}%{_datadir}/condor/
+install -m 0755 src/condor_scripts/CheckOutputFormats.pm %{buildroot}%{_datadir}/condor/
 
 # Install python-binding libs
 mkdir -p %{buildroot}%{python_sitearch}
@@ -1204,11 +1185,13 @@ rm -rf %{buildroot}
 %_datadir/condor/CondorPersonal.pm
 %_datadir/condor/CondorTest.pm
 %_datadir/condor/CondorUtils.pm
+%_datadir/condor/CheckOutputFormats.pm
 %if 0%{?rhel} >= 7
 %_datadir/condor/htcondor.pp
 %endif
 %dir %_sysconfdir/condor/config.d/
 %_sysconfdir/condor/condor_ssh_to_job_sshd_config_template
+%_sysconfdir/bash_completion.d/condor
 %if %gsoap || %uw_build
 %dir %_datadir/condor/webservice/
 %_datadir/condor/webservice/condorCollector.wsdl
@@ -1310,6 +1293,7 @@ rm -rf %{buildroot}
 %_mandir/man1/condor_submit.1.gz
 %_mandir/man1/condor_submit_dag.1.gz
 %_mandir/man1/condor_transfer_data.1.gz
+%_mandir/man1/condor_transform_ads.1.gz
 %_mandir/man1/condor_update_machine_ad.1.gz
 %_mandir/man1/condor_updates_stats.1.gz
 %_mandir/man1/condor_urlfetch.1.gz
@@ -1359,6 +1343,7 @@ rm -rf %{buildroot}
 %_bindir/condor_vacate_job
 %_bindir/condor_findhost
 %_bindir/condor_stats
+%_bindir/condor_top.pl
 %_bindir/condor_version
 %_bindir/condor_history
 %_bindir/condor_status
@@ -1804,6 +1789,7 @@ test -x /usr/sbin/selinuxenabled && /usr/sbin/selinuxenabled
 if [ $? = 0 ]; then
    restorecon -R -v /var/lock/condor
    setsebool -P condor_domain_can_network_connect 1
+   setsebool -P daemons_enable_cluster_mode 1
    semanage port -a -t condor_port_t -p tcp 12345
    # the number of extraneous SELinux warnings on f17 is very high
 fi
@@ -1811,8 +1797,15 @@ fi
 %if 0%{?rhel} >= 7
 test -x /usr/sbin/selinuxenabled && /usr/sbin/selinuxenabled
 if [ $? = 0 ]; then
-   /usr/sbin/setsebool -P condor_domain_can_network_connect 1
    /usr/sbin/semodule -i /usr/share/condor/htcondor.pp
+   /usr/sbin/setsebool -P condor_domain_can_network_connect 1
+   /usr/sbin/setsebool -P daemons_enable_cluster_mode 1
+   /usr/sbin/semanage permissive -a condor_collector_t
+   /usr/sbin/semanage permissive -a condor_master_t
+   /usr/sbin/semanage permissive -a condor_negotiator_t
+   /usr/sbin/semanage permissive -a condor_procd_t
+   /usr/sbin/semanage permissive -a condor_schedd_t
+   /usr/sbin/semanage permissive -a condor_startd_t
 fi
 %endif
 if [ $1 -eq 1 ] ; then
@@ -1900,6 +1893,39 @@ fi
 %endif
 
 %changelog
+* Tue Dec 13 2016 Tim Theisen <tim@cs.wisc.edu> - 8.5.8-1
+- The starter puts all jobs in a cgroup by default
+- Added condor_submit commands that support job retries
+- condor_qedit defaults to the current user's jobs
+- Ability to add SCRIPTS, VARS, etc. to all nodes in a DAG using one command
+- Able to conditionally add Docker volumes for certain jobs
+- Initial support for Singularity containers
+- A 64-bit Windows release
+
+* Tue Dec 13 2016 Tim Theisen <tim@cs.wisc.edu> - 8.4.10-1
+- Updated SELinux profile for Enterprise Linux
+- Fixed a performance problem in the schedd when RequestCpus was an expression
+- Preserve permissions when transferring sub-directories of the job's sandbox
+- Fixed HOLD_IF_CPUS_EXCEEDED and LIMIT_JOB_RUNTIMES metaknobs
+- Fixed a bug in handling REMOVE_SIGNIFICANT_ATTRIBUTES
+
+* Thu Sep 29 2016 Tim Theisen <tim@cs.wisc.edu> - 8.5.7-1
+- The schedd can perform job ClassAd transformations
+- Specifying dependencies between DAGMan splices is much more flexible
+- The second argument of the ClassAd ? : operator may be omitted
+- Many usability improvements in condor_q and condor_status
+- condor_q and condor_status can produce JSON, XML, and new ClassAd output
+- To prepare for a 64-bit Windows release, HTCondor identifies itself as X86
+- Automatically detect Daemon Core daemons and pass localname to them
+
+* Thu Sep 29 2016 Tim Theisen <tim@cs.wisc.edu> - 8.4.9-1
+- The condor_startd removes orphaned Docker containers on restart
+- Job Router and HTCondor-C job job submission prompts schedd reschedule
+- Fixed bugs in the Job Router's hooks
+- Improved systemd integration on Enterprise Linux 7
+- Upped default number of Chirp attributes to 100, and made it configurable
+- Fixed a bug where variables starting with STARTD. or STARTER. were ignored
+
 * Tue Aug 02 2016 Tim Theisen <tim@cs.wisc.edu> - 8.5.6-1
 - The -batch output for condor_q is now the default
 - Python bindings for job submission and machine draining
@@ -1935,7 +1961,7 @@ fi
 - fixed a bug where subsystem specific configuration parameters were ignored
 - fixed bugs with history file processing on the Windows platform
 
-* Thu May 02 2016 Tim Theisen <tim@cs.wisc.edu> - 8.5.4-1
+* Mon May 02 2016 Tim Theisen <tim@cs.wisc.edu> - 8.5.4-1
 - Fixed a bug that delays schedd response when significant attributes change
 - Fixed a bug where the group ID was not set in Docker universe jobs
 - Limit update rate of various attributes to not overload the collector

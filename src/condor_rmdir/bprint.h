@@ -229,7 +229,7 @@ int __cdecl bprintf(LPCSTR pszFormat, ...)
    va_list va;
    va_start(va, pszFormat);
 
-   // stack useage > 4k generate a reference to __chkstk which libctiny doesn't have.
+   // stack usage > 4k generate a reference to __chkstk which libctiny doesn't have.
   #ifdef USE_LIBCTINY
    TCHAR wszFormat[2000];
   #else
@@ -419,7 +419,7 @@ void __cdecl bprintfl(BPRINT_BUFFER & bp, LPCSTR pszFormat, ...)
    va_list va;
    va_start(va, pszFormat);
 
-   // stack useage > 4k generate a reference to __chkstk which libctiny doesn't have.
+   // stack usage > 4k generate a reference to __chkstk which libctiny doesn't have.
   #ifdef USE_LIBCTINY
    TCHAR wszFormat[2000];
   #else
@@ -439,7 +439,7 @@ void __cdecl bprintfl(LPCSTR pszFormat, ...)
    va_list va;
    va_start(va, pszFormat);
 
-   // stack useage > 4k generate a reference to __chkstk which libctiny doesn't have.
+   // stack usage > 4k generate a reference to __chkstk which libctiny doesn't have.
   #ifdef USE_LIBCTINY
    TCHAR wszFormat[2000];
   #else

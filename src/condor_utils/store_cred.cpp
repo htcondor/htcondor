@@ -22,6 +22,7 @@
 #include "condor_common.h"
 #include "condor_io.h"
 #include "condor_debug.h"
+#include "condor_daemon_core.h"
 #include "daemon.h"
 #include "condor_uid.h"
 #include "lsa_mgr.h"
@@ -551,6 +552,7 @@ get_cred_handler(void *, int /*i*/, Stream *s)
 	char * user = NULL;
 	char * domain = NULL;
 	char * password = NULL;
+	bool dcfound = (daemonCore != NULL);
 
 	/* Check our connection.  We must be very picky since we are talking
 	   about sending out passwords.  We want to make certain
@@ -568,12 +570,18 @@ get_cred_handler(void *, int /*i*/, Stream *s)
 
 	ReliSock* sock = (ReliSock*)s;
 
-	if ( !sock->triedAuthentication() ) {
+	// Ensure authentication happened and succeeded
+	// Daemons should register this command with force_authentication = true
+	if ( !sock->isAuthenticated() ) {
 		dprintf(D_ALWAYS,
-			"WARNING - password fetch attempt without authentication from %s\n",
+				"WARNING - authentication failed for password fetch attempt from %s\n",
 				sock->peer_addr().to_sinful().Value());
 		goto bail_out;
 	}
+
+	// Enable encryption if available. If it's not available, the next
+	// call will fail and we'll abort the connection.
+	sock->set_crypto_mode(true);
 
 	if ( !sock->get_encryption() ) {
 		dprintf(D_ALWAYS,
@@ -583,6 +591,8 @@ get_cred_handler(void *, int /*i*/, Stream *s)
 	}
 
 		// Get the username and domain from the wire
+
+	dprintf (D_ALWAYS, "ZKM: First potential block in get_cred_handler, DC==%i\n", dcfound);
 
 	sock->decode();
 
@@ -651,14 +661,49 @@ bail_out:
 }
 
 
+// forward declare the non-blocking continuation function.
+void store_cred_handler_continue();
+
+// declare a simple data structure for holding the info needed
+// across non-blocking retries
+struct StoreCredState {
+	char *user;
+	int  retries;
+	Stream *s;
+};
+
+
 /* NOW WORKS ON BOTH WINDOWS AND UNIX */
-void store_cred_handler(void *, int /*i*/, Stream *s)
+int store_cred_handler(void *, int /*i*/, Stream *s)
 {
 	char *user = NULL;
 	char *pw = NULL;
 	int mode;
 	int result;
 	int answer = FAILURE;
+	bool dcfound = daemonCore != NULL;
+
+	dprintf (D_ALWAYS, "ZKM: First potential block in store_cred_handler, DC==%i\n", dcfound);
+
+	if ( s->type() != Stream::reli_sock ) {
+		dprintf(D_ALWAYS,
+			"WARNING - credential store attempt via UDP from %s\n",
+				((Sock*)s)->peer_addr().to_sinful().Value());
+		return FALSE;
+	}
+
+	ReliSock *sock = (ReliSock*)s;
+
+	// Ensure authentication happened and succeeded and enable encryption
+	// Daemons should register this command with force_authentication = true
+	if ( !sock->isAuthenticated() ) {
+		dprintf(D_ALWAYS,
+			"WARNING - authentication failed for credential store attempt from %s\n",
+			sock->peer_addr().to_sinful().Value());
+		return FALSE;
+	}
+
+	s->set_crypto_mode( true );
 
 	s->decode();
 
@@ -666,7 +711,7 @@ void store_cred_handler(void *, int /*i*/, Stream *s)
 
 	if( result == FALSE ) {
 		dprintf(D_ALWAYS, "store_cred: code_store_cred failed.\n");
-		return;
+		return FALSE;
 	}
 
 	if ( user ) {
@@ -677,28 +722,51 @@ void store_cred_handler(void *, int /*i*/, Stream *s)
 			answer = FAILURE;
 		}
 		else {
+				// We don't allow one user to set another user's credential
 				// we don't allow updates to the pool password through this interface
-			if ((mode != QUERY_MODE) &&
+			const char *sock_owner = sock->getOwner();
+			if ( sock_owner == NULL || strncmp( sock_owner, user, tmp-user ) ) {
+				dprintf( D_ALWAYS, "WARNING: store_cred() for user %s attempted by user %s, rejecting\n", user, sock_owner ? sock_owner : "<unknown>" );
+				answer = FAILURE;
+
+			} else if ((mode != QUERY_MODE) &&
 			    (tmp - user == strlen(POOL_PASSWORD_USERNAME)) &&
 			    (memcmp(user, POOL_PASSWORD_USERNAME, tmp - user) == 0))
 			{
 				dprintf(D_ALWAYS, "ERROR: attempt to set pool password via STORE_CRED! (must use STORE_POOL_CRED)\n");
 				answer = FAILURE;
 			} else {
-				int pwlen = 0;
+				size_t pwlen = 0;
 				if(pw) {
 					pwlen = strlen(pw)+1;
 				}
 				answer = store_cred_service(user,pw,pwlen,mode);
-#ifndef WIN32  // no credmon on windows
-				if(answer == SUCCESS) {
-					// THIS WILL BLOCK
-					answer = credmon_poll(user, false, true);
-				}
-#endif // WIN32
 			}
 		}
 	}
+
+	// no credmon on windows
+#ifdef WIN32
+#else
+	if(answer == SUCCESS) {
+		// good so far, but the real answer is determined by our ability
+		// to signal the credmon and have the .cc file appear.  we don't
+		// want this to block so we go back to daemoncore and set a timer
+		// for 0 seconds.  the timer will reset itself as needed.
+		answer = credmon_poll_setup(user, false, true);
+		if (answer == SUCCESS) {
+			StoreCredState* retry_state = (StoreCredState*)malloc(sizeof(StoreCredState));
+			retry_state->user = strdup(user);
+			retry_state->retries = 20;
+			retry_state->s = new ReliSock(*((ReliSock*)s));
+
+			dprintf( D_FULLDEBUG, "NBSTORECRED: retry_state: %lx, dptr->user: %s, dptr->retries: %i, dptr->s %lx\n",
+				(unsigned long)retry_state, retry_state->user, retry_state->retries, (unsigned long)(retry_state->s));
+			daemonCore->Register_Timer(0, store_cred_handler_continue, "Poll for existence of .cc file");
+			daemonCore->Register_DataPtr(retry_state);
+		}
+	}
+#endif // WIN32
 
 	if (pw) {
 		SecureZeroMemory(pw, strlen(pw));
@@ -708,11 +776,20 @@ void store_cred_handler(void *, int /*i*/, Stream *s)
 		free(user);
 	}
 
+#ifndef WIN32  // no credmon on windows
+	// answer is SUCCESS only if we registered a timer to poll for the cred
+	// file, in which case we should return now instead of finishing the
+	// wire protocol.
+	if(answer == SUCCESS) {
+		return FALSE;
+	}
+#endif // WIN32
+
 	s->encode();
 	if( ! s->code(answer) ) {
 		dprintf( D_ALWAYS,
 			"store_cred: Failed to send result.\n" );
-		return;
+		return FALSE;
 	}
 
 	if( ! s->end_of_message() ) {
@@ -720,8 +797,60 @@ void store_cred_handler(void *, int /*i*/, Stream *s)
 			"store_cred: Failed to send end of message.\n");
 	}
 
+	return FALSE;
+}
+
+
+#ifdef WIN32
+#else
+void store_cred_handler_continue()
+{
+	// can only be called when daemonCore is non-null since otherwise
+	// there's no data
+	if(!daemonCore) return;
+
+	StoreCredState *dptr = (StoreCredState*)daemonCore->GetDataPtr();
+
+	dprintf( D_FULLDEBUG, "NBSTORECRED: dptr: %lx, dptr->user: %s, dptr->retries: %i, dptr->s: %lx\n", (unsigned long)dptr, dptr->user, dptr->retries, (unsigned long)(dptr->s));
+	int answer = credmon_poll_continue(dptr->user, dptr->retries);
+	dprintf( D_FULLDEBUG, "NBSTORECRED: answer: %i\n", answer);
+
+	if (answer == FAILURE) {
+		if (dptr->retries > 0) {
+			// re-register timer with one less retry
+			dprintf( D_FULLDEBUG, "NBSTORECRED: re-registering timer and dptr\n");
+			dptr->retries--;
+			daemonCore->Register_Timer(1, store_cred_handler_continue, "Poll for existence of .cc file");
+			daemonCore->Register_DataPtr(dptr);
+			return;
+		}
+	}
+
+	// regardless of SUCCESS or FAILURE, if we got here we need to finish
+	// the wire protocol for STORE_CRED
+
+	dprintf( D_FULLDEBUG, "NBSTORECRED: finishing wire protocol on stream %lx\n", (unsigned long)(dptr->s));
+	dptr->s->encode();
+	if( ! dptr->s->code(answer) ) {
+		dprintf( D_ALWAYS,
+			"store_cred: Failed to send result.\n" );
+	} else if( ! dptr->s->end_of_message() ) {
+		dprintf( D_ALWAYS,
+			"store_cred: Failed to send end of message.\n");
+	}
+
+	dprintf( D_FULLDEBUG, "NBSTORECRED: freeing %lx\n", (unsigned long)dptr);
+
+	// we copied the stream and strdup'ed the user, so do a deep free of dptr
+	delete (dptr->s);
+	free(dptr->user);
+	free(dptr);
+
+	dprintf( D_FULLDEBUG, "NBSTORECRED: done!\n");
 	return;
 }
+#endif
+
 
 static int code_store_cred(Stream *socket, char* &user, char* &pw, int &mode) {
 	
@@ -761,6 +890,7 @@ void store_pool_cred_handler(void *, int  /*i*/, Stream *s)
 	char *pw = NULL;
 	char *domain = NULL;
 	MyString username = POOL_PASSWORD_USERNAME "@";
+	bool dcfound = daemonCore != NULL;
 
 	if (s->type() != Stream::reli_sock) {
 		dprintf(D_ALWAYS, "ERROR: pool password set attempt via UDP\n");
@@ -795,6 +925,8 @@ void store_pool_cred_handler(void *, int  /*i*/, Stream *s)
 		free(credd_host);
 	}
 
+	dprintf (D_ALWAYS, "ZKM: First potential block in store_pool_cred_handler, DC==%i\n", dcfound);
+
 	s->decode();
 	if (!s->code(domain) || !s->code(pw) || !s->end_of_message()) {
 		dprintf(D_ALWAYS, "store_pool_cred: failed to receive all parameters\n");
@@ -810,7 +942,7 @@ void store_pool_cred_handler(void *, int  /*i*/, Stream *s)
 
 	// do the real work
 	if (pw) {
-		int pwlen = strlen(pw)+1;
+		size_t pwlen = strlen(pw)+1;
 		result = store_cred_service(username.Value(), pw, pwlen, ADD_MODE);
 		SecureZeroMemory(pw, strlen(pw));
 	}
@@ -838,6 +970,7 @@ store_cred(const char* user, const char* pw, int mode, Daemon* d, bool force) {
 	int result;
 	int return_val;
 	Sock* sock = NULL;
+	bool dcfound = daemonCore != NULL;
 
 		// to help future debugging, print out the mode we are in
 	static const int mode_offset = 100;
@@ -859,7 +992,7 @@ store_cred(const char* user, const char* pw, int mode, Daemon* d, bool force) {
 
 	if ( is_root() && d == NULL ) {
 			// do the work directly onto the local registry
-		int pwlen = 0;
+		size_t pwlen = 0;
 		if(pw) {
 			pwlen=strlen(pw)+1;
 		}
@@ -909,7 +1042,12 @@ store_cred(const char* user, const char* pw, int mode, Daemon* d, bool force) {
 
 		// for remote updates (which send the password), verify we have a secure channel,
 		// unless "force" is specified
-		if (((mode == ADD_MODE) || (mode == DELETE_MODE)) && !force && (d != NULL) &&
+		// For STORE_CRED, enable encryption.
+		if ( cmd == STORE_CRED ) {
+			sock->set_crypto_mode( true );
+		}
+
+		if (!force && (d != NULL) &&
 			((sock->type() != Stream::reli_sock) || !((ReliSock*)sock)->triedAuthentication() || !sock->get_encryption())) {
 			dprintf(D_ALWAYS, "STORE_CRED: blocking attempt to update over insecure channel\n");
 			delete sock;
@@ -936,6 +1074,8 @@ store_cred(const char* user, const char* pw, int mode, Daemon* d, bool force) {
 			}
 		}
 		
+		dprintf (D_ALWAYS, "ZKM: First potential block in store_cred, DC==%i\n", dcfound);
+
 		sock->decode();
 		
 		result = sock->code(return_val);
@@ -1090,7 +1230,7 @@ read_from_keyboard(char* buf, int maxlength, bool echo) {
 	ReadConsoleW(hStdin, wbuffer, maxlength, (DWORD*)&cch, NULL);
 	SetConsoleMode(hStdin, oldMode);
 	//Zero terminate the input.
-	cch = min(cch, maxlength-1);
+	cch = MIN(cch, maxlength-1);
 	wbuffer[cch] = '\0';
 
 	--cch;

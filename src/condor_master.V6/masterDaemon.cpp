@@ -321,6 +321,8 @@ int daemon::Restart()
 		restarts++;
 	}
 
+	SetReadyState(NULL); // Clear the "Ready" state
+
 	if( recover_tid != -1 ) {
 		dprintf( D_FULLDEBUG, 
 				 "Cancelling recovering timer (%d) for %s\n", 
@@ -497,6 +499,7 @@ daemon::DoConfig( bool init )
 void
 daemon::Hold( bool hold, bool never_forward )
 {
+	SetReadyState(NULL); // clear the ready whenever the hold state changes
 	if ( controller && !never_forward ) {
 		dprintf( D_FULLDEBUG, "Forwarding Hold to %s's controller (%s)\n",
 				 name_in_config_file, controller->name_in_config_file );
@@ -784,8 +787,10 @@ int daemon::RealStart( )
 
 	// Automatically set -localname if appropriate.
 	if( isDC ) {
+		StringList viewServerDaemonNames("VIEW_COLLECTOR CONDOR_VIEW VIEW_SERVER");
 		StringList hardcodedDCDaemonNames( default_dc_daemon_list );
-		if(! hardcodedDCDaemonNames.contains_anycase( name_in_config_file )) {
+		if (viewServerDaemonNames.contains_anycase( name_in_config_file ) ||
+			! hardcodedDCDaemonNames.contains_anycase( name_in_config_file )) {
 			// Since the config's args are appended after this, they should
 			// win, but we might as well do it right.
 			bool foundLocalName = false;
@@ -1287,6 +1292,7 @@ daemon::Exited( int status )
 
 		// Set flag saying if it exited cuz it was not responding
 	was_not_responding = daemonCore->Was_Not_Responding(pid);
+	SetReadyState(NULL); // Clear the "Ready" state
 
 		// Mark this daemon as gone.
 	pid = 0;
@@ -1883,9 +1889,12 @@ DeferredQuery::~DeferredQuery()
 bool Daemons::InitDaemonReadyAd(ClassAd & readyAd)
 {
 	bool all_daemons_alive = true;
+	int  num_alive = 0;
 	int  num_startup = 0;
 	int  num_hung = 0;
 	int  num_dead = 0;
+	int  num_held = 0;
+	int  num_daemons = 0;
 
 	std::map<std::string, class daemon*>::iterator it;
 	for (it = daemon_ptr.begin(); it != daemon_ptr.end(); it++ ) {
@@ -1893,6 +1902,7 @@ bool Daemons::InitDaemonReadyAd(ClassAd & readyAd)
 
 		std::string attr(dmn->name_in_config_file); attr += "_PID";
 		readyAd.Assign(attr.c_str(), dmn->pid);
+		++num_daemons;
 
 		if (dmn->ready_state) {
 			attr = dmn->name_in_config_file; attr += "_State";
@@ -1911,6 +1921,7 @@ bool Daemons::InitDaemonReadyAd(ClassAd & readyAd)
 				state = "Hung";
 			} else if (num_alive_msgs) {
 				state = "Alive";
+				++num_alive;
 			} else {
 				state = "Startup";
 				++num_startup;
@@ -1920,6 +1931,7 @@ bool Daemons::InitDaemonReadyAd(ClassAd & readyAd)
 			int hold = dmn->OnHold();
 			if (hold && (hold != 2)) { // hold value of 2 indicates a startup hold not a "real" hold.
 				state = "Hold";
+				++num_held;
 			} else {
 				all_daemons_alive = false;
 				if (dmn->WaitingforStartup(for_file)) {
@@ -1938,9 +1950,11 @@ bool Daemons::InitDaemonReadyAd(ClassAd & readyAd)
 		readyAd.Assign(dmn->name_in_config_file, state);
 	}
 
-	readyAd.Assign("AllAlive", all_daemons_alive);
+	readyAd.Assign("NumDaemons", num_daemons);
+	readyAd.Assign("NumAlive", num_alive);
 	readyAd.Assign("NumStartup", num_startup);
 	readyAd.Assign("NumHung", num_hung);
+	readyAd.Assign("NumHold", num_held);
 	readyAd.Assign("NumDead", num_dead);
 	readyAd.Assign("IsReady", all_daemons_alive && ! (num_hung || num_dead));
 

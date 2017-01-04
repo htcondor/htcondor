@@ -156,6 +156,8 @@ readHistoryFromFileEx(const char *filename, classad::ExprTree *constraintExpr)
 void
 main_init(int argc, char *argv[])
 {
+	daemonCore->Forked_Child_Wants_Fast_Exit(true);
+
 	int i=0;
 	for (char **ptr = argv + 1; *ptr && (i < argc - 1); ptr++,i++) {
 		if(ptr[0][0] == '-' && (ptr[0][1] == 'f' || ptr[0][1] == 't')) {

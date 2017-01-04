@@ -42,6 +42,7 @@ bool get_password_from_credd (
 	Daemon credd(DT_CREDD);
 	Sock * credd_sock = credd.startCommand(CREDD_GET_PASSWD,Stream::reli_sock,10);
 	if ( credd_sock ) {
+		credd_sock->set_crypto_mode(true);
 		credd_sock->put((char*)username);	// send user
 		credd_sock->put((char*)domain);		// send domain
 		credd_sock->end_of_message();

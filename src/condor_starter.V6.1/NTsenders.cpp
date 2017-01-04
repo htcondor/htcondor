@@ -2180,4 +2180,45 @@ REMOTE_CONDOR_utime(char *path, int actime, int modtime)
 	return rval;
 }
 
+int
+REMOTE_CONDOR_dprintf_stats(char *message) 
+{
+	int rval = -1, result = 0;
+	condor_errno_t terrno;
+
+	const CondorVersionInfo *shadowVer = syscall_sock->get_peer_version();
+	if (!shadowVer->built_since_version(8,5,8)) {
+		dprintf ( D_SYSCALLS, "NOT Doing CONDOR_dprintf_stats, shadow is too old\n" );
+		return 0;
+	}
+
+	dprintf ( D_SYSCALLS, "Doing CONDOR_dprintf_stats\n" );
+	
+	CurrentSysCall = CONDOR_dprintf_stats;
+
+	syscall_sock->encode();
+	result = ( syscall_sock->code(CurrentSysCall) );
+	ON_ERROR_RETURN( result );
+	result = ( syscall_sock->code(message));
+	ON_ERROR_RETURN( result );
+	result = ( syscall_sock->end_of_message() );
+	ON_ERROR_RETURN( result );
+	syscall_sock->decode();
+	result = ( syscall_sock->code(rval) );
+	ON_ERROR_RETURN( result );
+	if( rval < 0 ) {
+		result = ( syscall_sock->code(terrno) );
+		ON_ERROR_RETURN( result );
+		result = ( syscall_sock->end_of_message() );
+		ON_ERROR_RETURN( result );
+		errno = terrno;
+		dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
+		return rval;
+	}
+	result = ( syscall_sock->end_of_message() );
+	ON_ERROR_RETURN( result );
+	return rval;
+}
+
+
 } // extern "C"

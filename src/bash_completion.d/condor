@@ -1,0 +1,377 @@
+
+__get_condor_pool_name()
+{
+  local pool_idx
+  # Find the pool name.
+  pool_idx=1
+  while [ $pool_idx -le $prev_idx ]; do
+    if [[ "${COMP_WORDS[$pool_idx]}" == -p* ]] ; then
+      pool=${COMP_WORDS[$(($pool_idx+1))]}
+      break
+    fi
+    pool_idx=$(( $pool_idx + 1 ))
+  done
+  if [ $pool_idx -ge $COMP_CWORD ]; then
+    pool=`condor_config_val COLLECTOR_HOST 2>/dev/null`
+  fi
+  #echo "Detected pool name ${pool} at idx $pool_idx (comp cword $COMP_CWORD)"
+}
+
+__is_autoformat() {
+  local idx arg in_af
+  idx=1
+  in_af=0
+  while [ $idx -le $COMP_CWORD ]; do
+      arg="${COMP_WORDS[$idx]}"
+      if [ $in_af -eq 1 ]; then
+        if [[ "${arg}" == -* ]]; then
+          in_af=0
+        fi
+      fi
+      if [ "${arg}" == "-af" ] ; then
+        in_af=1
+      fi
+      if [ "${arg}" == "-autoformat" ] ; then
+        in_af=1
+      fi
+      idx=$(( $idx + 1 ))
+  done
+  return $in_af
+}
+
+__contains() {
+  local e
+  for e in "${@:2}"; do [[ "$1" == $e ]] && return 0; done
+  return 1
+}
+
+__get_status_query_type()
+{
+  local idx arg istype query_types
+  query_types=( "-sta*" "-sc*" "-subm*" "-gr*" "-ge*" "-col*" "-def*" "-ma*" "-ne*" "-sto" "-an*" )
+  idx=1
+  query_type=-startd
+  while [ $idx -lt $COMP_CWORD ]; do
+      arg="${COMP_WORDS[$idx]}"
+      __contains "${arg}" ${query_types[@]}
+      istype=$?
+      if [ $istype -eq 0 ] ; then
+        query_type=${arg}
+        #echo "Query type is ${arg}"
+        return 0
+      fi
+      idx=$(( $idx + 1 ))
+  done
+
+  idx=1
+  while [ $idx -le $prev_idx ]; do
+    if [[ "${COMP_WORDS[$idx]}" == -subs* ]] ; then
+      query_type="-subsystem ${COMP_WORDS[$(($idx+1))]}"
+      #echo "Subsystem query type is $query_type"
+      return 0
+    fi
+    idx=$(( $idx + 1 ))
+  done
+
+  #echo "Query type is ${query_type}"
+}
+
+_condor_submit()
+{
+  local cur prev_idx prev pool
+  COMPREPLY=()
+  cur="${COMP_WORDS[COMP_CWORD]}"
+  prev_idx=$(( $COMP_CWORD - 1))
+  prev="${COMP_WORDS[$prev_idx]}"
+
+  __get_condor_pool_name
+  
+  case "${prev}" in
+    -ap*|-q*|-b*|-m*|-ad*|-pa*)
+      return 0
+      ;;
+    -d*)
+      _filedir
+      return 0
+      ;;
+    -n*|-r*)
+      COMPREPLY=( $(compgen -W "$(condor_status -pool $pool -schedd -af Name 2>/dev/null)" -- "${cur}") )
+      return 0
+      ;;
+    -po*)
+      _known_hosts_real -- "${cur}"
+      return 0
+      ;;
+    # I doubt this option is actually functional...
+    -st*)
+      COMPREPLY=( $(compgen -W "stm_use_schedd_only stm_use_transferd" -- "${cur}") )
+      return 0
+      ;;
+  esac
+  case "${cur}" in
+    -*)
+      COMPREPLY=( $(compgen -W "-terse -verbose -debug -help -append -queue -batch-name -disable -dry-run -maxjobs -single-cluster -unused -dump -interactive -name -remote -addr -spool -password -pool -stm" -- "${cur}") )
+      ;;
+  esac
+  _filedir
+}
+
+_condor_config_val()
+{
+  local cur prev_idx prev pool
+  COMPREPLY=()
+  cur="${COMP_WORDS[COMP_CWORD]}"
+  prev_idx=$(( $COMP_CWORD - 1))
+  prev="${COMP_WORDS[$prev_idx]}"
+
+  __get_condor_pool_name
+  __get_status_query_type
+  
+  case "${prev}" in
+    -po*)
+      _known_hosts_real -- "${cur}"
+      return 0
+      ;;
+    -n*)
+      COMPREPLY=( $(compgen -W "$(condor_status -pool $pool $query_type -af Name 2>/dev/null)" -- "${cur}") )
+      return 0
+      ;;
+    -w*)
+      _filedir
+      return 0
+      ;;
+    -su*)
+      COMPREPLY=( $(compgen -W "TOOL SCHEDD NEGOTIATOR STARTD MASTER SHADOW STARTER GAHP DAGMAN SHARED_PORT SUBMIT JOB DAEMON" -- "${cur}") )
+      return 0
+      ;;
+    -a*|-l*|-se*|-uns*|-rs*|-ru*)
+      return 0
+      ;;
+  esac 
+  case "${cur}" in
+    -*)
+      COMPREPLY=( $(compgen -W "-help -version -negotiator -collector -startd -master -schedd -name -pool -address -subsystem -local-name -mixedcase -writeconfig -config -unused -used -evaluate -debug -verbose -raw -expand -default -dump -runset -rset -unset -set" -- "${cur}") )
+      ;;
+    *)
+      COMPREPLY=( $(compgen -W "$(condor_config_val -dump 2>/dev/null | grep -v '^#' | awk '{print $1;}')" -- "${cur}") )
+      ;;
+  esac
+}
+
+_condor_act()
+{
+  local cur prev_idx prev pool
+  COMPREPLY=()
+  cur="${COMP_WORDS[COMP_CWORD]}"
+  prev_idx=$(( $COMP_CWORD - 1))
+  prev="${COMP_WORDS[$prev_idx]}"
+
+  __get_condor_pool_name
+
+  case "${prev}" in
+    -po*)
+      _known_hosts_real -- "${cur}"
+      return 0
+      ;;
+    -n*)
+      # Suggest one of the available schedds
+      COMPREPLY=( $(compgen -W "$(condor_status -pool $pool -schedd -af Name 2>/dev/null)" -- "${cur}") )
+      return 0
+      ;;
+    -a*|-r*|-c*|-s*)
+      return 0
+      ;;
+  esac
+  case "${cur}" in
+    -*)
+      COMPREPLY=( $(compgen -W "-help -version -long -totals -name -pool -addr -constraint -all" -- "${cur}") )
+      case "${COMP_WORDS[0]}" in
+        condor_hold)
+          COMPREPLY+=( $(compgen -W "-subcode -reason" -- "${cur}" ) )
+          ;;
+        condor_rm)
+          COMPREPLY+=( $(compgen -W "-forcex -reason" -- "${cur}" ) )
+          ;;
+        condor_release)
+          COMPREPLY+=( $(compgen -W "-reason" -- "${cur}" ) )
+          ;;
+      esac
+      ;;
+    *)
+      COMPREPLY=( $(compgen -W "$(condor_status -pool $pool -const 'IdleJobs+RunningJobs+HeldJobs>0' -submitter -af Name 2>/dev/null | tr '@' ' ' | awk '{print $1;}' | tr '.' ' ' | awk '{print $NF;}' | sort | uniq)" -- "${cur}") )
+      COMPREPLY+=( $(compgen -W "$(condor_q -format '%d.' ClusterId -format '%d\n' ProcId)" -- "${cur}" ) )
+  esac
+}
+
+_condor_history()
+{
+  local cur prev_idx prev pool
+  COMPREPLY=()
+  cur="${COMP_WORDS[COMP_CWORD]}"
+  prev_idx=$(( $COMP_CWORD - 1))
+  prev="${COMP_WORDS[$prev_idx]}"
+
+  __is_autoformat
+  if [ $? -eq 1 ]; then
+    return 0
+  fi
+
+  __get_condor_pool_name
+
+  case "${prev}" in
+    -po*)
+      _known_hosts_real -- "${cur}"
+      return 0
+      ;;
+    -n*)
+      # Suggest one of the available schedds
+      COMPREPLY=( $(compgen -W "$(condor_status -pool $pool -schedd -af Name 2>/dev/null)" -- "${cur}") )
+      return 0
+      ;;
+    -fi*|-u*|-print-format)
+      _filedir
+      return 0
+      ;;
+    -li*|-m*|-f*)
+      return 0
+      ;;
+  esac
+  case "${cur}" in
+    -*)
+      COMPREPLY=( $(compgen -W "-file -userlog -name -pool -help -backwards -forwards -limit -match -long -wide -format -autoformat -print-format" -- "${cur}") )
+      return 0
+      ;;
+  esac
+}
+
+_condor_status()
+{
+  local cur prev_idx prev pool
+  COMPREPLY=()
+  cur="${COMP_WORDS[COMP_CWORD]}"
+  prev_idx=$(( $COMP_CWORD - 1))
+  prev="${COMP_WORDS[$prev_idx]}"
+
+  __is_autoformat
+  if [ $? -eq 1 ]; then
+    return 0
+  fi
+
+  __get_condor_pool_name
+  __get_status_query_type
+
+  case "${prev}" in
+    -dir*)
+      COMPREPLY=( $(compgen -W "$(condor_status -pool $pool $query_type -af Name 2>/dev/null)" -- "${cur}") )
+      return 0
+      ;;
+    -po*)
+      _known_hosts_real -- "${cur}"
+      return 0
+      ;;
+    -subs*)
+      COMPREPLY=( $(compgen -W "schedd collector negotiator startd master grid generic" -- "${cur}") )
+      return 0
+      ;;
+    -ad*|-print-format)
+      _filedir
+      return 0
+      ;;
+    -so*|-con*|stati*)
+      return 0
+      ;;
+  esac
+  case "${cur}" in
+    -*)
+      # Some days, it seems like there are too many flags for condor_status...
+      COMPREPLY=( $(compgen -W "-help -version -diagnose -absent -avail -ckptsrvr -claimed -cod -collector -debug -defrag -direct -java -vm -license -master -pool -ads -grid -run -schedd -server -startd -generic -subsystem -negotiator -storage -any -state -submitters -constraint -compact -statistics -target -long -xml -total -sort -natural -total -expert -wide -xml -attributes -format -autoformat -print-format" -- "${cur}") )
+      ;;
+    *)
+      # Suggest one of the available slots
+      COMPREPLY=( $(compgen -W "$(condor_status -pool $pool $query_type -af Name 2>/dev/null)" -- "${cur}") )
+      return 0
+      ;;
+  esac
+}
+
+_condor_q()
+{
+  local cur prev_idx prev pool
+  COMPREPLY=()
+  cur="${COMP_WORDS[COMP_CWORD]}"
+  prev_idx=$(( $COMP_CWORD - 1))
+  prev="${COMP_WORDS[$prev_idx]}"
+
+  __is_autoformat
+  if [ $? -eq 1 ]; then
+    return 0
+  fi
+
+  __get_condor_pool_name
+
+  # Find out if we requested all users.
+  allusers=1
+  if [ "`condor_config_val CONDOR_Q_ONLY_MY_JOBS`" = true ]; then
+    idx=1
+    allusers=0
+    while [ $idx -lt $COMP_CWORD ]; do
+      arg="${COMP_WORDS[$idx]}"
+      idx=$(( $idx + 1 ))
+      if [[ ${arg} == -all* ]] ; then
+        allusers=1
+      fi
+    done
+  fi
+  #echo "Value of allusers: $allusers"
+
+  # Handle cases where we are in an option's argument
+  case "${prev}" in
+    -p*)
+      _known_hosts_real -- "${cur}"
+      return 0
+      ;;
+    -n*)
+      # Suggest one of the available schedds
+      COMPREPLY=( $(compgen -W "$(condor_status -pool $pool -schedd -af Name 2>/dev/null)" -- "${cur}") )
+      return 0
+      ;;
+    -su*)
+      COMPREPLY=( $(compgen -W "$(condor_status -pool $pool -const 'IdleJobs+RunningJobs+HeldJobs>0' -submitter -af Name 2>/dev/null | tr '@' ' ' | awk '{print $1;}' | tr '.' ' ' | awk '{print $NF;}' | sort | uniq)" -- "${cur}") )
+      return 0
+      ;;
+    -u*|-slot*|-job*|-print-format)
+      # Suggest a filename for the -userlog argument.
+      _filedir
+      return 0
+      ;;
+    -co*|-mco*|-li*|-fo*|-at*|-schedd-constraint)
+      return 0
+      ;;
+  esac
+  case "${cur}" in
+    -*)
+      COMPREPLY=( $(compgen -W "-attributes -long -xml -constraint -cputime -currentrun -expert -globus -goodput -hold -io -batch -nobatch -run -stream-results -wide -autoformat -debug -help -version -global -schedd-constraint -submitter -name -pool -jobads -userlog -autocluster -allusers -totals -analyze -better-analyze -machine -mconstraint -slotads -userprios -nouserprios -reverse -verbose" -- "${cur}") )
+      return 0
+      ;;
+    *)
+      # Suggest one of the available users
+      if [ $allusers -eq 1 ]; then
+        COMPREPLY=( $(compgen -W "$(condor_status -pool $pool -const 'IdleJobs+RunningJobs+HeldJobs>0' -submitter -af Name 2>/dev/null | tr '@' ' ' | awk '{print $1;}' | tr '.' ' ' | awk '{print $NF;}' | sort | uniq)" -- "${cur}") )
+      fi
+      COMPREPLY+=( $(compgen -W "$(condor_q -format '%d.' ClusterId -format '%d\n' ProcId)" -- "${cur}" ) )
+      return 0
+      ;;
+  esac
+}
+
+complete -F _condor_q condor_q
+complete -F _condor_status condor_status
+complete -F _condor_history condor_history
+complete -F _condor_submit condor_submit
+complete -F _condor_config_val condor_config_val
+complete -F _condor_act condor_rm
+complete -F _condor_act condor_hold
+complete -F _condor_act condor_release
+complete -F _condor_act condor_suspend
+complete -F _condor_act condor_continue
+

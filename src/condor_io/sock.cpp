@@ -39,6 +39,7 @@
 #include "condor_sockfunc.h"
 #include "condor_config.h"
 #include "condor_sinful.h"
+#include <classad/classad.h>
 
 #if defined(WIN32)
 // <winsock2.h> already included...
@@ -67,7 +68,7 @@ void dprintf ( int flags, Sock & sock, const char *fmt, ... )
 
 unsigned int Sock::m_nextUniqueId = 1;
 
-Sock::Sock() : Stream() {
+Sock::Sock() : Stream(), _policy_ad(NULL) {
 	_sock = INVALID_SOCKET;
 	_state = sock_virgin;
 	_timeout = 0;
@@ -78,6 +79,7 @@ Sock::Sock() : Stream() {
 	_auth_methods = NULL;
 	_auth_name = NULL;
 	_crypto_method = NULL;
+	_policy_ad = NULL;
 	_tried_authentication = false;
 	ignore_connect_timeout = FALSE;		// Used by the HA Daemon
 	connect_state.connect_failed = false;
@@ -102,7 +104,7 @@ Sock::Sock() : Stream() {
     addr_changed();
 }
 
-Sock::Sock(const Sock & orig) : Stream() {
+Sock::Sock(const Sock & orig) : Stream(), _policy_ad(NULL) {
 
 	// initialize everything in the new sock
 	_sock = INVALID_SOCKET;
@@ -193,6 +195,7 @@ Sock::~Sock()
 		_auth_methods = NULL;
 	}
 	free(_auth_name);
+	free(_policy_ad);
 	if (_crypto_method) {
 		free(_crypto_method);
 		_crypto_method = NULL;
@@ -284,6 +287,24 @@ static SockInitializer _SockInitializer;
 /*
 **	Methods shared by all Socks
 */
+
+
+void
+Sock::setPolicyAd(const classad::ClassAd &ad)
+{
+	if (!_policy_ad) {_policy_ad = new classad::ClassAd();}
+	if (_policy_ad) {_policy_ad->CopyFrom(ad);}
+}
+
+
+void
+Sock::getPolicyAd(classad::ClassAd &ad) const
+{
+	if (_policy_ad)
+	{
+		ad.Update(*_policy_ad);
+	}
+}
 
 
 int Sock::getportbyserv(
@@ -656,7 +677,7 @@ int Sock::assignSocket( condor_protocol proto, SOCKET sockd ) {
 
 
 int
-Sock::bindWithin(condor_protocol proto, const int low_port, const int high_port, bool outbound)
+Sock::bindWithin(condor_protocol proto, const int low_port, const int high_port)
 {
 	bool bind_all = (bool)_condor_bind_all_interfaces();
 
@@ -706,7 +727,7 @@ Sock::bindWithin(condor_protocol proto, const int low_port, const int high_port,
 		}
 #endif
 
-		bind_return_val = _bind_helper(_sock, addr, outbound, false);
+		bind_return_val = condor_bind(_sock, addr);
 
         addr_changed();
 
@@ -764,6 +785,12 @@ int Sock::bind(condor_protocol proto, bool outbound, int port, bool loopback)
 		return FALSE;
 	}
 
+	static bool reuse = param_boolean("ALWAYS_REUSEADDR", false);
+	if (reuse) {	
+		int one = 1;
+    	this->setsockopt(SOL_SOCKET, SO_REUSEADDR, (char *)&one, sizeof(one));
+	}
+
 	// If 'port' equals 0 and if we have 'LOWPORT' and 'HIGHPORT' defined
 	// in the config file for security, we will bind this Sock to one of
 	// the port within the range defined by these variables rather than
@@ -796,7 +823,7 @@ int Sock::bind(condor_protocol proto, bool outbound, int port, bool loopback)
 	int lowPort, highPort;
 	if ( port == 0 && !loopback && get_port_range((int)outbound, &lowPort, &highPort) == TRUE ) {
 			// Bind in a specific port range.
-		if ( bindWithin(proto, lowPort, highPort, outbound) != TRUE ) {
+		if ( bindWithin(proto, lowPort, highPort) != TRUE ) {
 			return FALSE;
 		}
 	} else {
@@ -831,7 +858,7 @@ int Sock::bind(condor_protocol proto, bool outbound, int port, bool loopback)
 		}
 #endif
 
-		bind_return_value = _bind_helper(_sock, addr, outbound, loopback);
+		bind_return_value = condor_bind(_sock, addr);
 
         addr_changed();
 
@@ -2840,18 +2867,6 @@ bool Sock :: is_encrypt()
     return FALSE;
 }
 
-
-int
-Sock::_bind_helper(int fd, const condor_sockaddr& addr, bool outbound, bool loopback)
-{
-	int rval;
-
-	if (outbound) {} // To remove unused variable warning
-	if (loopback) {} // To remove unused variable warning
-		//rval = ::bind(fd, (SOCKET_ADDR_CONST_BIND SOCKET_ADDR_TYPE)addr, len);
-	rval = condor_bind(fd, addr);
-	return rval;
-}
 
 void
 Sock::set_connect_addr(char const *addr)

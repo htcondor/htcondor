@@ -341,7 +341,7 @@ bool GetAccessToken( const string &auth_file, string &access_token,
 		auth_entry.m_auth_file = auth_file;
 	}
 
-	if ( auth_entry.m_expiration < time(NULL) - (5 * 60) ) {
+	if ( auth_entry.m_expiration < time(NULL) + (5 * 60) ) {
 		auth_entry.m_refreshing = true;
 		auth_entry.m_err_msg.clear();
 
@@ -881,6 +881,7 @@ bool GceInstanceInsert::workerFunction(char **argv, int argc, string &result_str
 	insert_request.requestBody += "\n  },\n";
 	insert_request.requestBody += " \"disks\": [\n  {\n";
 	insert_request.requestBody += "   \"boot\": true,\n";
+	insert_request.requestBody += "   \"autoDelete\": true,\n";
 	insert_request.requestBody += "   \"initializeParams\": {\n";
 	insert_request.requestBody += "    \"sourceImage\": \"";
 	insert_request.requestBody += argv[8];
@@ -916,11 +917,32 @@ bool GceInstanceInsert::workerFunction(char **argv, int argc, string &result_str
 	insert_request.requestBody += "     \"type\": \"ONE_TO_ONE_NAT\"\n";
 	insert_request.requestBody += "    }\n   ]\n";
 	insert_request.requestBody += "  }\n ]";
-	if ( !json_file_contents.empty() ) {
-		insert_request.requestBody += ",\n";
-		insert_request.requestBody += json_file_contents;
-	}
 	insert_request.requestBody += "\n}\n";
+
+	if ( !json_file_contents.empty() ) {
+		classad::ClassAd instance_ad;
+		classad::ClassAd custom_ad;
+		classad::ClassAdJsonParser parser;
+		classad::ClassAdJsonUnParser unparser;
+		string wrap_custom_attrs = "{" + json_file_contents + "}";
+
+		if ( !parser.ParseClassAd( insert_request.requestBody, instance_ad, true ) ) {
+			result_string = create_failure_result( requestID,
+									"Failed to parse instance description" );
+			return true;
+		}
+
+		if ( !parser.ParseClassAd( wrap_custom_attrs, custom_ad, true ) ) {
+			result_string = create_failure_result( requestID,
+									"Failed to parse custom attributes" );
+			return true;
+		}
+
+		instance_ad.Update( custom_ad );
+
+		insert_request.requestBody.clear();
+		unparser.Unparse( insert_request.requestBody, &instance_ad );
+	}
 
 	string auth_file = argv[3];
 	if ( !GetAccessToken( auth_file, insert_request.accessToken,
@@ -1156,6 +1178,8 @@ bool GceInstanceList::workerFunction(char **argv, int argc, string &result_strin
 	assert( strcasecmp( argv[0], "GCE_INSTANCE_LIST" ) == 0 );
 
 	int requestID;
+	string next_page_token;
+	vector<string> results;
 	get_int( argv[1], & requestID );
 
 	if( ! verify_number_args( argc, 6 ) ) {
@@ -1165,87 +1189,98 @@ bool GceInstanceList::workerFunction(char **argv, int argc, string &result_strin
 		return false;
 	}
 
-	// Fill in required attributes & parameters.
-	GceInstanceList list_request;
-	list_request.serviceURL = argv[2];
-	list_request.serviceURL += "/projects/";
-	list_request.serviceURL += argv[4];
-	list_request.serviceURL += "/zones/";
-	list_request.serviceURL += argv[5];
-	list_request.serviceURL += "/instances";
-	list_request.requestMethod = "GET";
+	while( true ) {
+		// Fill in required attributes & parameters.
+		GceInstanceList list_request;
+		list_request.serviceURL = argv[2];
+		list_request.serviceURL += "/projects/";
+		list_request.serviceURL += argv[4];
+		list_request.serviceURL += "/zones/";
+		list_request.serviceURL += argv[5];
+		list_request.serviceURL += "/instances";
+		if (!next_page_token.empty() ) {
+			dprintf( D_ALWAYS, "Requesting page token %s\n", next_page_token.c_str() );
+			list_request.serviceURL += "?pageToken=";
+			list_request.serviceURL += next_page_token;
+			next_page_token="";
+		}
 
-	string auth_file = argv[3];
-	if ( !GetAccessToken( auth_file, list_request.accessToken,
-						  list_request.errorMessage ) ) {
-		result_string = create_failure_result( requestID,
-											   list_request.errorMessage.c_str() );
-		return true;
-	}
+		list_request.requestMethod = "GET";
 
-	// Send the request.
-	if( ! list_request.SendRequest() ) {
-		// TODO Fix construction of error message
-		result_string = create_failure_result( requestID,
-							list_request.errorMessage.c_str(),
-							list_request.errorCode.c_str() );
-	} else {
-		string next_id;
-		string next_name;
-		string next_status;
-		string next_status_msg;
-		vector<string> results;
-		string key;
-		string value;
-		int nesting = 0;
+		string auth_file = argv[3];
+		if ( !GetAccessToken( auth_file, list_request.accessToken,
+							  list_request.errorMessage ) ) {
+			result_string = create_failure_result( requestID,
+												   list_request.errorMessage.c_str() );
+			return true;
+		}
 
-		const char *pos = list_request.resultString.c_str();
-		while( ParseJSONLine( pos, key, value, nesting ) ) {
-			if ( nesting != 3 ) {
-				continue;
+		// Send the request.
+		if( ! list_request.SendRequest() ) {
+			// TODO Fix construction of error message
+			result_string = create_failure_result( requestID,
+								list_request.errorMessage.c_str(),
+								list_request.errorCode.c_str() );
+		} else {
+			string next_id;
+			string next_name;
+			string next_status;
+			string next_status_msg;
+			string key;
+			string value;
+			int nesting = 0;
+
+			const char *pos = list_request.resultString.c_str();
+			while( ParseJSONLine( pos, key, value, nesting ) ) {
+				if ( key == "nextPageToken") {
+					next_page_token = value;
+					dprintf( D_ALWAYS, "Found page token %s\n", next_page_token.c_str() );
+				}
+				if ( nesting != 3 ) {
+					continue;
+				}
+				if ( key == "id" ) {
+					if ( !next_id.empty() ) {
+						AddInstanceToResult( results, next_id, next_name,
+											 next_status, next_status_msg );
+					}
+					next_id = value;
+				} else if ( key == "name" ) {
+					if ( !next_name.empty() ) {
+						AddInstanceToResult( results, next_id, next_name,
+											 next_status, next_status_msg );
+					}
+					next_name = value;
+				} else if ( key == "status" ) {
+					if ( !next_status.empty() ) {
+						AddInstanceToResult( results, next_id, next_name,
+											 next_status, next_status_msg );
+					}
+					next_status = value;
+				} else if ( key == "statusMessage" ) {
+					if ( !next_status_msg.empty() ) {
+						AddInstanceToResult( results, next_id, next_name,
+											 next_status, next_status_msg );
+					}
+					next_status_msg = value;
+				}
 			}
-			if ( key == "id" ) {
-				if ( !next_id.empty() ) {
-					AddInstanceToResult( results, next_id, next_name,
-										 next_status, next_status_msg );
-				}
-				next_id = value;
-			} else if ( key == "name" ) {
-				if ( !next_name.empty() ) {
-					AddInstanceToResult( results, next_id, next_name,
-										 next_status, next_status_msg );
-				}
-				next_name = value;
-			} else if ( key == "status" ) {
-				if ( !next_status.empty() ) {
-					AddInstanceToResult( results, next_id, next_name,
-										 next_status, next_status_msg );
-				}
-				next_status = value;
-			} else if ( key == "statusMessage" ) {
-				if ( !next_status_msg.empty() ) {
-					AddInstanceToResult( results, next_id, next_name,
-										 next_status, next_status_msg );
-				}
-				next_status_msg = value;
+			if ( !next_name.empty() ) {
+				AddInstanceToResult( results, next_id, next_name,
+									 next_status, next_status_msg );
 			}
 		}
-		if ( !next_name.empty() ) {
-			AddInstanceToResult( results, next_id, next_name,
-								 next_status, next_status_msg );
+		if (next_page_token.empty()) {
+			char buff[16];
+			sprintf( buff, "%d", (int)(results.size() / 4) );
+
+			StringList response;
+			response.append( buff );
+			for ( vector<string>::iterator idx = results.begin(); idx != results.end(); idx++ ) {
+				response.append( idx->c_str() );
+			}
+			result_string = create_success_result( requestID, &response );
+			return true;
 		}
-
-		char buff[16];
-		sprintf( buff, "%d", (int)(results.size() / 4) );
-
-		StringList response;
-		response.append( buff );
-		for ( vector<string>::iterator idx = results.begin(); idx != results.end(); idx++ ) {
-			response.append( idx->c_str() );
-		}
-
-		result_string = create_success_result( requestID, &response );
 	}
-
-	return true;
 }
