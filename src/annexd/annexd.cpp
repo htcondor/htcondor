@@ -429,7 +429,7 @@ handleClassAdCommand( Service *, int dcCommandInt, Stream * s ) {
 	switch( command ) {
 		case CA_BULK_REQUEST: {
 			// Do not allow users to provide their own command IDs.
-			commandAd.Assign( "CommandID", NULL );
+			commandAd.Assign( "CommandID", (const char *)NULL );
 			return createOneAnnex( & commandAd, s );
 		} break;
 
