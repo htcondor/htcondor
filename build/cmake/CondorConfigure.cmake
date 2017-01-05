@@ -551,7 +551,11 @@ elseif(${OS_NAME} STREQUAL "LINUX")
 
     check_include_files("systemd/sd-daemon.h" HAVE_SD_DAEMON_H)
     if (HAVE_SD_DAEMON_H)
-        find_library(LIBSYSTEMD_DAEMON_PATH systemd-daemon)
+		# Since systemd-209, libsystemd-daemon.so has been deprecated
+		# and the symbols in that library now are in libsystemd.so.
+		# Since RHEL7 ships with systemd-219, it seems find for us to
+		# always use libsystemd and not worry about libsystemd-daemon.
+        find_library(LIBSYSTEMD_DAEMON_PATH systemd)
         find_so_name(LIBSYSTEMD_DAEMON_SO ${LIBSYSTEMD_DAEMON_PATH})
     endif()
 
