@@ -16,6 +16,42 @@ New features will be added in the 8.5.x development series.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-8-4-11}Version 8.4.11}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item HTCondor version 8.4.11 not yet released.
+%\item HTCondor version 8.4.11 released on Month Date, 2016.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item Fixed a bug where the effects of a startd cron job would not be used by
+the \Condor{startd} when making policy decisions (e.g., evaluating the
+\MacroNI{START} expression) until an \MacroNI{UPDATE\_INTERVAL} had passed.  This
+was generally only noticeable if you set \MacroNI{STARTD\_CRON\_AUTOPUBLISH}
+to a value other than \Expr{NEVER}, which could cause the startd to reject claims
+from the negotiator that had been made based on the cron-updated value(s).
+\Ticket{6057}
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-8-4-10}Version 8.4.10}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

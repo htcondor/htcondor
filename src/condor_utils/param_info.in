@@ -1818,6 +1818,7 @@ tags=startd,command
 
 [SINGULARITY]
 default=/usr/bin/singularity
+win32_default=
 type=string
 reconfig=true
 customization=seldom
@@ -1842,6 +1843,12 @@ customization=seldom
 friendly_name=Expression to determine Singularity image
 review=?
 tags=startd
+
+[UPDATE_INTERVAL]
+default=300
+type=int
+tags=startd
+description=Rate at which the Startd sends updates to the Collector
 
 [STARTD_SENDS_ALIVES]
 default=peer
@@ -1894,6 +1901,12 @@ tags=startd,startd_main
 default=5
 type=int
 tags=startd,startd_main
+
+[UPDATE_SPREAD_TIME]
+default=$(UPDATE_COLLECTOR_WITH_TCP:0) ? 0 : 8
+description=If nonzero, spreads the startd's updates to the collector over that many seconds.  8 used to be the default for both TCP and UDP.
+type=int
+tags=startd
 
 [ACCOUNTANT_HOST]
 default=

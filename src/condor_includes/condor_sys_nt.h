@@ -59,13 +59,16 @@
 //#define _WIN32_WINNT 0x0500
 //#define WINVER       0x0500
 
+// disable MSVC code analysis warnings for system headers
+#pragma warning(push)
+#pragma warning(disable : 6011 6031 6101 6386 6387 6509 28196 )
+
 // Make sure to define this *before* we include winsock2.h
 #define FD_SETSIZE 1024
 
 // the ordering of the two following header files 
 // is important! Starting with the new SDK, we want 
 // winsock2.h not winsock.h, so we include it first. 
-
 #include <winsock2.h>
 #include <windows.h>
 
@@ -149,6 +152,9 @@ DLL_IMPORT_MAGIC int __cdecl access(const char *, int);
 #include <float.h>   // for DBL_MAX and other constants
 #include <errno.h>
 #include <Mstcpip.h> // for Winsock SIO_KEEPALIVE_VALS support
+
+#pragma warning(pop) // restore code analysis warnings
+
 #include "file_lock.h"
 #include "condor_fix_assert.h"
 

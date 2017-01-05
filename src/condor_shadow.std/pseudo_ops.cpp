@@ -253,7 +253,7 @@ int
 pseudo_free_fs_blocks( const char *path )
 {
 	long long ck = sysapi_disk_space( path );
-	PRAGMA_REMIND("FIXME: disk_space truncation to INT_MAX here")
+	//PRAGMA_REMIND("FIXME: disk_space truncation to INT_MAX here")
 	return (int)MIN(INT_MAX, ck);
 }
 

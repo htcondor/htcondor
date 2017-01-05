@@ -1049,7 +1049,7 @@ const char * MyPopenTimer::error_str() const
 // returns false if the timeout expired or there was an error reading the output.
 bool MyPopenTimer::wait_for_exit(time_t timeout, int *exit_status)
 {
-	if (error)
+	if (error && (error != ETIMEDOUT)) // if error was not a previous timeout, assume we cannot continue
 		return false;
 	if (read_until_eof(timeout) != 0)
 		return false;
@@ -1078,13 +1078,13 @@ bool MyPopenTimer::close_program(time_t wait_for_term)
 // timeout is measured relative to the time that start_program was called.
 // returns true if program runs to completion and output is captured
 // false if error or timeout while reading the output.
-MyStringSource* MyPopenTimer::wait_for_output(time_t timeout)
+const char*  MyPopenTimer::wait_for_output(time_t timeout)
 {
-	if (error)
+	if (error && (error != ETIMEDOUT)) // if error was not a previous timeout, assume we cannot continue
 		return NULL;
 	if (read_until_eof(timeout) != 0)
 		return NULL;
-	return &src;
+	return src.data() ? src.data() : "";
 }
 
 // helper function for read_until_eof

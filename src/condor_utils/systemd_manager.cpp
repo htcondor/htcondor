@@ -1,5 +1,6 @@
 
 #include "condor_common.h"
+#include "condor_config.h"
 
 #ifdef HAVE_SD_DAEMON_H
 #include "systemd/sd-daemon.h"
@@ -40,9 +41,8 @@ SystemdManager::SystemdManager()
 	m_notify_socket = tmp_val ? tmp_val : "";
 	if ((tmp_val = getenv("WATCHDOG_USEC")))
 	{
-		std::istringstream ss(tmp_val);
-		ss >> m_watchdog_usecs;
-		if (ss.fail())
+		YourStringDeserializer tmp(tmp_val);
+		if ( ! tmp.deserialize_int(&m_watchdog_usecs))
 		{
 			m_watchdog_usecs = 1000;
 			dprintf(D_ALWAYS, "Unable to parse watchdog interval from systemd; assuming 1s\n");

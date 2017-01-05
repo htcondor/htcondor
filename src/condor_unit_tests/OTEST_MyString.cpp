@@ -226,15 +226,15 @@ static bool tokenize_multiple_calls(void);
 static bool tokenize_end(void);
 static bool tokenize_empty(void);
 static bool tokenize_empty_delimiter(void);
-static bool sensitive_string_string_constructor(void);
-static bool sensitive_string_equality_true(void);
-static bool sensitive_string_equality_false(void);
-static bool sensitive_string_equality_default_constructor(void);
-static bool sensitive_string_assignment_non_empty_empty(void);
-static bool sensitive_string_assignment_empty_non_empty(void);
-static bool sensitive_string_assignment_non_empty(void);
-static bool sensitive_string_hash_function_non_empty(void);
-static bool sensitive_string_hash_function_empty(void);
+static bool your_string_string_constructor(void);
+static bool your_string_equality_true(void);
+static bool your_string_equality_false(void);
+static bool your_string_equality_default_constructor(void);
+static bool your_string_assignment_non_empty_empty(void);
+static bool your_string_assignment_empty_non_empty(void);
+static bool your_string_assignment_non_empty(void);
+static bool your_string_hash_function_non_empty(void);
+static bool your_string_hash_function_empty(void);
 static bool test_stl_string_casting(void);
 
 bool OTEST_MyString(void) {
@@ -448,15 +448,15 @@ bool OTEST_MyString(void) {
 	driver.register_function(tokenize_end);
 	driver.register_function(tokenize_empty);
 	driver.register_function(tokenize_empty_delimiter);
-	driver.register_function(sensitive_string_string_constructor);
-	driver.register_function(sensitive_string_equality_true);
-	driver.register_function(sensitive_string_equality_false);
-	driver.register_function(sensitive_string_equality_default_constructor);
-	driver.register_function(sensitive_string_assignment_non_empty_empty);
-	driver.register_function(sensitive_string_assignment_empty_non_empty);
-	driver.register_function(sensitive_string_assignment_non_empty);
-	driver.register_function(sensitive_string_hash_function_non_empty);
-	driver.register_function(sensitive_string_hash_function_empty);
+	driver.register_function(your_string_string_constructor);
+	driver.register_function(your_string_equality_true);
+	driver.register_function(your_string_equality_false);
+	driver.register_function(your_string_equality_default_constructor);
+	driver.register_function(your_string_assignment_non_empty_empty);
+	driver.register_function(your_string_assignment_empty_non_empty);
+	driver.register_function(your_string_assignment_non_empty);
+	driver.register_function(your_string_hash_function_non_empty);
+	driver.register_function(your_string_hash_function_empty);
 	driver.register_function(test_stl_string_casting);
 		// run the tests
 	return driver.do_all_functions();
@@ -3984,7 +3984,7 @@ static bool tokenize_empty_delimiter() {
 	PASS;
 }
 
-static bool sensitive_string_string_constructor() {
+static bool your_string_string_constructor() {
 	emit_test("Test the YourString constructor that assigns the "
 		"sensitive string to the passed c string.");
 	YourString a("foo");
@@ -3996,7 +3996,7 @@ static bool sensitive_string_string_constructor() {
 	PASS;
 }
 
-static bool sensitive_string_equality_true() {
+static bool your_string_equality_true() {
 	emit_test("Does the == operator return true when the sensitive string is "
 		"equal to the other string?");
 	YourString a("foo");
@@ -4013,7 +4013,7 @@ static bool sensitive_string_equality_true() {
 	PASS;
 }
 
-static bool sensitive_string_equality_false() {
+static bool your_string_equality_false() {
 	emit_test("Does the == operator return false when the sensitive string is"
 		" not equal to the other string?");
 	YourString a("foo");
@@ -4030,7 +4030,7 @@ static bool sensitive_string_equality_false() {
 	PASS;
 }
 
-static bool sensitive_string_equality_default_constructor() {
+static bool your_string_equality_default_constructor() {
 	emit_test("Does the == operator return false after using the default "
 		"YourString constructor?");
 
@@ -4049,7 +4049,7 @@ static bool sensitive_string_equality_default_constructor() {
 }
 
 
-static bool sensitive_string_assignment_non_empty_empty() {
+static bool your_string_assignment_non_empty_empty() {
 	emit_test("Does the = operator assign the non-empty sensitive string to "
 		"an empty one?");
 	YourString a("foo");
@@ -4064,7 +4064,7 @@ static bool sensitive_string_assignment_non_empty_empty() {
 	PASS;
 }
 
-static bool sensitive_string_assignment_empty_non_empty() {
+static bool your_string_assignment_empty_non_empty() {
 	emit_test("Does the = operator assign the empty sensitive string to a "
 		"non-empty one?");
 	YourString a;
@@ -4079,7 +4079,7 @@ static bool sensitive_string_assignment_empty_non_empty() {
 	PASS;
 }
 
-static bool sensitive_string_assignment_non_empty() {
+static bool your_string_assignment_non_empty() {
 	emit_test("Does the = operator assign the non-empty sensitive string to a"
 		" different non-empty one of different length?");
 	YourString a("foo");
@@ -4094,7 +4094,7 @@ static bool sensitive_string_assignment_non_empty() {
 	PASS;
 }
 
-static bool sensitive_string_hash_function_non_empty() {
+static bool your_string_hash_function_non_empty() {
 	emit_test("Test hashFunction() on a non-empty sensitive string.");
 	YourString a("foo");
 	unsigned int hash = YourString::hashFunction(a);
@@ -4110,7 +4110,7 @@ static bool sensitive_string_hash_function_non_empty() {
 	PASS;
 }
 
-static bool sensitive_string_hash_function_empty() {
+static bool your_string_hash_function_empty() {
 	emit_test("Test hashFunction() on an empty sensitive string.");
 	YourString a;
 	unsigned int hash = YourString::hashFunction(a);

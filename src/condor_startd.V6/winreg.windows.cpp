@@ -56,6 +56,9 @@ struct WinPerf_Query
 
 #include <hashtable.h>
 
+#if 1
+//PRAGMA_REMIND("remove this dead code")
+#else
 // This is a simple wrapper class to enable char *'s
 // that we don't manage to be put into HashTables
 
@@ -70,6 +73,7 @@ class YourInsensitiveString
 		bool operator==(const YourInsensitiveString &rhs) { return (lstrcmpi(s,rhs.s) == 0); }
 		const char *s; // Someone else owns this
 };
+#endif
 
 // D_NORMAL can be set to D_ALWAYS to cause a LOT more output from the WinReg code
 #define D_NORMAL D_FULLDEBUG
@@ -470,7 +474,7 @@ char * get_windows_reg_value(
 //
 char * generate_reg_key_attr_name(const char * pszPrefix, const char * pszKeyName)
 {
-	int cchPrefix = pszPrefix ? strlen(pszPrefix) : 0;
+	size_t cchPrefix = pszPrefix ? strlen(pszPrefix) : 0;
 
 	// is the input of the form attr_name=reg_path?  if so, then
 	// we want to return prefix + attr_name. 
@@ -511,7 +515,7 @@ char * generate_reg_key_attr_name(const char * pszPrefix, const char * pszKeyNam
 	// allocate space for prefix + key_part and copy
 	// both into the allocated buffer.
 	//
-	int cch = strlen(psz);
+	size_t cch = strlen(psz);
 	bool fPercent = false;
 	if (strchr(psz, '%'))
 	{
@@ -579,7 +583,9 @@ char * generate_reg_key_attr_name(const char * pszPrefix, const char * pszKeyNam
 }
 
 
-
+#if 1
+//PRAGMA_REMIND("remove this dead code")
+#else
 
 // Chris Torek's world famous hashing function
 // Modified to be case-insensitive
@@ -594,6 +600,7 @@ static unsigned int torekHash(const YourInsensitiveString &s) {
 
 	return hash;
 }
+#endif
 
 static unsigned int
 DWORDHash( const DWORD & n )
@@ -843,7 +850,7 @@ static struct {
 	// the performance registry.  We keep that set of strings in pszzNames
 	// and we hash name->index and index->name in two hashtables. 
 	char * pszzNames; // holds all of the strings that the two hash tables refer to.
-	HashTable<YourInsensitiveString, const char *> * pPerfTable;
+	HashTable<YourStringNoCase, const char *> * pPerfTable;
 	HashTable<DWORD, const char *> * pNameTable;
     HashTable<DWORD, WinPerf_QueryResult> * pQueries;
 } rl = {0};
@@ -882,7 +889,7 @@ static bool init_windows_performance_hashtable()
 	else if (REG_MULTI_SZ == vtype)
 	{
 		rl.pQueries   = new HashTable<DWORD, WinPerf_QueryResult>(2, DWORDHash, updateDuplicateKeys);
-		rl.pPerfTable = new HashTable<YourInsensitiveString, const char *>(4000, torekHash, allowDuplicateKeys);
+		rl.pPerfTable = new HashTable<YourStringNoCase, const char *>(4000, YourStringNoCase::hashFunction, allowDuplicateKeys);
 		rl.pNameTable = new HashTable<DWORD, const char *>(4000, DWORDHash, rejectDuplicateKeys);
 		if (rl.pPerfTable)
 		{
@@ -1509,7 +1516,7 @@ int WinPerf_CounterValue::Print(char * psz, int cchMax, bool fIncludeUnits) cons
 		{
 			//psz[cch++] = ' ';
 			strcpy(&psz[cch], pszUnits);
-			cch += strlen(pszUnits);
+			cch += (int)strlen(pszUnits);
 		}
 	}
 

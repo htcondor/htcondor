@@ -677,7 +677,7 @@ int Sock::assignSocket( condor_protocol proto, SOCKET sockd ) {
 
 
 int
-Sock::bindWithin(condor_protocol proto, const int low_port, const int high_port, bool outbound)
+Sock::bindWithin(condor_protocol proto, const int low_port, const int high_port)
 {
 	bool bind_all = (bool)_condor_bind_all_interfaces();
 
@@ -727,7 +727,7 @@ Sock::bindWithin(condor_protocol proto, const int low_port, const int high_port,
 		}
 #endif
 
-		bind_return_val = _bind_helper(_sock, addr, outbound, false);
+		bind_return_val = condor_bind(_sock, addr);
 
         addr_changed();
 
@@ -823,7 +823,7 @@ int Sock::bind(condor_protocol proto, bool outbound, int port, bool loopback)
 	int lowPort, highPort;
 	if ( port == 0 && !loopback && get_port_range((int)outbound, &lowPort, &highPort) == TRUE ) {
 			// Bind in a specific port range.
-		if ( bindWithin(proto, lowPort, highPort, outbound) != TRUE ) {
+		if ( bindWithin(proto, lowPort, highPort) != TRUE ) {
 			return FALSE;
 		}
 	} else {
@@ -858,7 +858,7 @@ int Sock::bind(condor_protocol proto, bool outbound, int port, bool loopback)
 		}
 #endif
 
-		bind_return_value = _bind_helper(_sock, addr, outbound, loopback);
+		bind_return_value = condor_bind(_sock, addr);
 
         addr_changed();
 
@@ -2867,18 +2867,6 @@ bool Sock :: is_encrypt()
     return FALSE;
 }
 
-
-int
-Sock::_bind_helper(int fd, const condor_sockaddr& addr, bool outbound, bool loopback)
-{
-	int rval;
-
-	if (outbound) {} // To remove unused variable warning
-	if (loopback) {} // To remove unused variable warning
-		//rval = ::bind(fd, (SOCKET_ADDR_CONST_BIND SOCKET_ADDR_TYPE)addr, len);
-	rval = condor_bind(fd, addr);
-	return rval;
-}
 
 void
 Sock::set_connect_addr(char const *addr)

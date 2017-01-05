@@ -1282,11 +1282,13 @@ main( int argc, const char* argv[] )
 						raw_value += " = ";
 						raw_value += val;
 					}
-					param_get_location(pmet, file_and_line);
-					if (pmet->ref_count) {
-						usage_report.formatstr("%d / %d", pmet->use_count, pmet->ref_count);
-					} else {
-						usage_report.formatstr("%d", pmet->use_count);
+					if (pmet) {
+						param_get_location(pmet, file_and_line);
+						if (pmet->ref_count) {
+							usage_report.formatstr("%d / %d", pmet->use_count, pmet->ref_count);
+						} else {
+							usage_report.formatstr("%d", pmet->use_count);
+						}
 					}
 				} else {
 					name_used = tmp;

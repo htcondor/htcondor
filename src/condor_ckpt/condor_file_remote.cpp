@@ -30,7 +30,7 @@
 extern "C" int REMOTE_CONDOR_lseekread(int fd, off_t offset, int whence, 
 	void *buf, size_t len);
 extern "C" int REMOTE_CONDOR_lseekwrite(int fd, off_t offset, int whence, 
-	void *buf, size_t len);
+	const void *buf, size_t len);
 extern "C" int REMOTE_CONDOR_ftruncate(int fd, off_t length);
 
 
@@ -54,7 +54,7 @@ int CondorFileRemote::read(off_t pos, char *data, int length)
 
 /* A write results in a CONDOR_lseekwrite */
 
-int CondorFileRemote::write(off_t pos, char *data, int length)
+int CondorFileRemote::write(off_t pos, const char *data, int length)
 {
 	int result;
 	result = REMOTE_CONDOR_lseekwrite( fd, pos, SEEK_SET, data, length );

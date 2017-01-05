@@ -1260,24 +1260,23 @@ Resource::reconfig( void )
 void
 Resource::update( void )
 {
-	int timeout = 3;
-
 	if (r_no_collector_updates)
 		return;
 
-	if ( update_tid == -1 ) {
-			// Send no more than 16 ClassAds per second to help
-			// minimize the odds of overwhelming the collector
-			// on very large SMP machines.  So, we mod our resource num
-			// by 8 and add that to the timeout
-			// (why 8? since each update sends 2 ads).
-		if ( r_id > 0 ) {
-			timeout += r_id % 8;
+	// If we haven't already queued an update, queue one.  Wait three
+	// seconds before sending an update to allow the startd's state
+	// to quiesce; we'll implicitly coalesce the updates.
+	int delay = 3;
+	int updateSpreadTime = param_integer( "UPDATE_SPREAD_TIME", 0 );
+	if( update_tid == -1 ) {
+		if( r_id > 0 && updateSpreadTime > 0 ) {
+			// If we were doing rate limiting, this would be integer
+			// division, instead.
+			delay += (r_id - 1) % updateSpreadTime;
 		}
 
-		// set a timer for the update
 		update_tid = daemonCore->Register_Timer(
-						timeout,
+						delay,
 						(TimerHandlercpp)&Resource::do_update,
 						"do_update",
 						this );

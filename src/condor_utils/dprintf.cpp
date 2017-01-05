@@ -105,7 +105,6 @@ extern unsigned int DebugHeaderOptions;	// for D_FID, D_PID, D_NOHEADER & D_
 extern DebugOutputChoice AnyDebugBasicListener; /* Bits to look for in dprintf */
 extern DebugOutputChoice AnyDebugBasicListener; /* verbose bits for dprintf */
 //extern  int		DebugFlags;
-//extern param_functions *dprintf_param_funcs;
 
 /*
    This is a global flag that tells us if we've successfully ran

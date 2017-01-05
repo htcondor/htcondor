@@ -436,6 +436,17 @@ JICShadow::transferOutput( bool &transient_failure )
 		// short of a hardkill. 
 	if( filetrans && ((requested_exit == false) || transfer_at_vacate) ) {
 
+		if ( shadowDisconnected() ) {
+				// trigger retransfer on reconnect
+			job_cleanup_disconnected = true;
+
+				// inform our caller that transfer will be retried
+				// when the shadow reconnects
+			transient_failure = true;
+
+			return false;
+		}
+
 			// add any dynamically-added output files to the FT
 			// object's list
 		m_added_output_files.rewind();
@@ -1950,10 +1961,10 @@ JICShadow::recordDelayedUpdate( const std::string &name, const classad::ExprTree
 
 
 
-std::auto_ptr<classad::ExprTree>
+std::unique_ptr<classad::ExprTree>
 JICShadow::getDelayedUpdate( const std::string &name )
 {
-	std::auto_ptr<classad::ExprTree> expr;
+	std::unique_ptr<classad::ExprTree> expr;
 	classad::ExprTree *borrowed_expr = NULL;
 	ClassAd *ad = jobClassAd();
 	dprintf(D_FULLDEBUG, "Looking up delayed attribute named %s.\n", name.c_str());
@@ -2280,9 +2291,11 @@ JICShadow::job_lease_expired()
 		ASSERT( !syscall_sock->is_connected() );
 	}
 
-	// Exit telling the startd we lost the shadow, which
-	// will normally result in the This does not return.
-	Starter->StarterExit(STARTER_EXIT_LOST_SHADOW_CONNECTION);
+	// Exit telling the startd we lost the shadow
+	Starter->SetShutdownExitCode(STARTER_EXIT_LOST_SHADOW_CONNECTION);
+	if ( Starter->RemoteShutdownFast(0) ) {
+		Starter->StarterExit( Starter->GetShutdownExitCode() );
+	}
 }
 
 bool
@@ -2353,7 +2366,9 @@ JICShadow::transferCompleted( FileTransfer *ftrans )
 		const char *stats = m_ft_info.tcp_stats.c_str();
 		std::string full_stats = "(peer stats from starter): ";
 		full_stats += stats;
-		
+
+		ASSERT( !shadowDisconnected() );
+
 		REMOTE_CONDOR_dprintf_stats(const_cast<char *>(full_stats.c_str()));
 
 			// If we transferred the executable, make sure it

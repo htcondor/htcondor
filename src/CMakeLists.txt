@@ -35,6 +35,47 @@ if (BUILD_TESTING)
 		add_custom_target(tests)
 		add_dependencies(tests ${CONDOR_TESTS})
 	endif(WINDOWS)
+
+    # create the directory for copying the tests, and copy all the perl and binary tests
+    # currently we do not copy any payload required by the tests. Will need to figure out
+    # if the payload file names follow a particular format, so that it will be easy to
+    # copy all of them using regex/wildcards.
+    # TODO: remote `cp -r` command to make the code platform independent. there are 2
+    # ways to do this:
+    # - if we can gurantee all platforms use cmake > 3.5 we may be able to use wildcards
+    #   in cmake's copy command
+    # - glob all test files and then write a per file custom command to copy it to the
+    #   test package.
+    add_custom_target(tests-tar-pkg
+        DEPENDS tests
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${CPACK_TEST_PACKAGE_FILE_NAME}
+        COMMAND cp -r ${CMAKE_CURRENT_BINARY_DIR}/condor_tests/*.exe* ${CPACK_TEST_PACKAGE_FILE_NAME}
+        COMMAND cp -r ${CONDOR_SOURCE_DIR}/src/condor_tests/*.pl ${CONDOR_SOURCE_DIR}/src/condor_tests/*.pm ${CONDOR_SOURCE_DIR}/src/condor_tests/*.run ${CPACK_TEST_PACKAGE_FILE_NAME}
+    )
+
+	set(CONDOR_SCRIPTS_DIR ${CONDOR_SOURCE_DIR}/src/condor_scripts)
+	foreach(scriptFile Condor.pm
+			   CondorTest.pm
+			   CondorPersonal.pm
+			   CondorUtils.pm
+			   CheckOutputFormats.pm
+               run_test.pl)
+            add_custom_command(
+                TARGET tests-tar-pkg
+                POST_BUILD
+                COMMAND ${CMAKE_COMMAND} ARGS -E copy ${CONDOR_SCRIPTS_DIR}/${scriptFile} ${CPACK_TEST_PACKAGE_FILE_NAME}
+            )
+	endforeach(scriptFile)
+
+    add_custom_command(
+        TARGET tests-tar-pkg
+        POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E tar czf ${CPACK_TEST_PACKAGE_FILE_NAME}.tar.gz ${CPACK_TEST_PACKAGE_FILE_NAME}
+        COMMAND ${CMAKE_COMMAND} -E copy ${CPACK_TEST_PACKAGE_FILE_NAME}.tar.gz ${CMAKE_BINARY_DIR}
+        COMMAND ${CMAKE_COMMAND} -E remove -f ${CPACK_TEST_PACKAGE_FILE_NAME}.tar.gz
+        COMMAND ${CMAKE_COMMAND} -E remove_directory ${CPACK_TEST_PACKAGE_FILE_NAME}
+    )
+
 	dprint("CONDOR_TESTS=${CONDOR_TESTS}")
 endif()
 

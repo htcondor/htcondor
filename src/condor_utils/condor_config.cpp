@@ -3586,20 +3586,6 @@ bool param_eval_string(std::string &buf, const char *param_name, const char *def
 }
 
 
-/*
-PRAGMA_REMIND("tj: kill the param_functions code in 8.5 series.")
-param_functions config_p_funcs;
-param_functions* get_param_functions()
-{
-	config_p_funcs.set_param_func(&param);
-	config_p_funcs.set_param_bool_int_func(&param_boolean_int);
-	config_p_funcs.set_param_wo_default_func(&param_without_default);
-	config_p_funcs.set_param_int_func(&param_integer);
-
-	return &config_p_funcs;
-}
-*/
-
 /* Take a param which is the name of an executable, and safely expand it
  * if required to a full pathname by searching the PATH environment.
  * Useful for seting an entry in the param table like "MAIL=mailx", and

@@ -56,6 +56,7 @@ SelfMonitorData::SelfMonitorData()
     image_size       = 0;
     rs_size          = 0;
     age              = -1;
+	user_time = sys_time = -1;
 	registered_socket_count = 0;
 	cached_security_sessions = 0;
     return;
@@ -105,6 +106,8 @@ void SelfMonitorData::CollectData(void)
         cpu_usage  = my_process_info->cpuusage;
         image_size = my_process_info->imgsize;
         rs_size    = my_process_info->rssize;
+        user_time  = my_process_info->user_time;
+        sys_time   = my_process_info->sys_time;
         age        = my_process_info->age;
 
         delete my_process_info;
@@ -120,7 +123,7 @@ void SelfMonitorData::CollectData(void)
     return;
 }
 
-bool SelfMonitorData::ExportData(ClassAd *ad)
+bool SelfMonitorData::ExportData(ClassAd *ad, bool verbose /*=false*/)
 {
     bool      success;
     MyString  attribute;
@@ -137,7 +140,10 @@ bool SelfMonitorData::ExportData(ClassAd *ad)
         ad->Assign("MonitorSelfSecuritySessions", cached_security_sessions);
         ad->Assign(ATTR_DETECTED_CPUS, param_integer("DETECTED_CORES", 0));
         ad->Assign(ATTR_DETECTED_MEMORY, param_integer("DETECTED_MEMORY", 0));
-
+        if (verbose) {
+            ad->Assign("MonitorSelfSysCpuTime",         sys_time);
+            ad->Assign("MonitorSelfUserCpuTime",        user_time);
+        }
         success = true;
     }
 
