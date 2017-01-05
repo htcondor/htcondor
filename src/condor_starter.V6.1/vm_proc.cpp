@@ -691,6 +691,7 @@ VMProc::StartJob()
 
 	// Set job_start_time in user_proc.h
 	job_start_time.getTime();
+dprintf( D_ALWAYS, "DIAG job_start_time.getTime() 4: %ld\n", job_start_time.seconds() );//TEMPTEMP
 	dprintf( D_ALWAYS, "StartJob for VM succeeded\n");
 
 	// If we do manage to launch, clear the FTL attributes.

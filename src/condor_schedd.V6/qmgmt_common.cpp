@@ -32,6 +32,7 @@
 int
 SetAttributeInt(int cl, int pr, const char *name, int val, SetAttributeFlags_t flags )
 {
+dprintf( D_ALWAYS, "DIAG SetAttributeInt(%d.%d, %s, %d)\n", cl, pr, name, val );//TEMPTEMP
 	char buf[100];
 	int rval;
 
@@ -43,6 +44,7 @@ SetAttributeInt(int cl, int pr, const char *name, int val, SetAttributeFlags_t f
 int
 SetAttributeFloat(int cl, int pr, const char *name, float val, SetAttributeFlags_t flags )
 {
+dprintf( D_ALWAYS, "DIAG SetAttributeFloat(%d.%d, %s, %g)\n", cl, pr, name, val );//TEMPTEMP
 	char buf[100];
 	int rval;
 
@@ -54,6 +56,7 @@ SetAttributeFloat(int cl, int pr, const char *name, float val, SetAttributeFlags
 int
 SetAttributeString(int cl, int pr, const char *name, const char *val, SetAttributeFlags_t flags )
 {
+dprintf( D_ALWAYS, "DIAG SetAttributeString(%d.%d, %s, %s)\n", cl, pr, name, val );//TEMPTEMP
 	MyString buf;
 	std::string escape_buf;
 	int rval;

@@ -742,6 +742,7 @@ TreqAction
 Scheduler::treq_upload_update_callback(TransferRequest *treq, 
 	TransferDaemon *, ClassAd *)
 {
+dprintf( D_ALWAYS, "DIAG Scheduler::treq_upload_update_callback()\n" );//TEMPTEMP
 	int cluster,proc,index;
 	char new_attr_value[500];
 	char *buf = NULL;

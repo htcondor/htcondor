@@ -5666,6 +5666,7 @@ Scheduler::actOnJobMyselfHandler( ServiceData* data )
 	PROC_ID job_id;
 	job_id.cluster = act_rec->m_job_id._cluster;
 	job_id.proc = act_rec->m_job_id._proc;
+//TEMPTEMP -- 170104: start date not changed here
 	dprintf( D_ALWAYS, "DIAG Scheduler::actOnJobMyselfHandler()\n" );//TEMPTEMP
 	printJobStartDate( job_id );//TEMPTEMP
 
@@ -9573,6 +9574,7 @@ void add_shadow_birthdate(int cluster, int proc, bool is_reconnect)
 static void
 RotateAttributeList( int cluster, int proc, char const *attrname, int start_index, int history_len )
 {
+dprintf( D_ALWAYS, "DIAG RotateAttributeList(%d.%d, %s)\n", cluster, proc, attrname );//TEMPTEMP
 	int index;
 	for(index=start_index+history_len-1;
 		index>start_index;
@@ -10715,6 +10717,7 @@ Scheduler::child_exit(int pid, int status)
 	srec = FindSrecByPid(pid);
 	ASSERT(srec);
 
+//TEMPTEMP -- 170104: start date is changed here
 	dprintf( D_ALWAYS, "DIAG Scheduler::child_exit()\n" );//TEMPTEMP
 	printJobStartDate( srec->job_id );//TEMPTEMP
 

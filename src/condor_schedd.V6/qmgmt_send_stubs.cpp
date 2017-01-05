@@ -220,6 +220,7 @@ DestroyClusterByConstraint( char *constraint )
 int
 SetAttributeByConstraint( char const *constraint, char const *attr_name, char const *attr_value, SetAttributeFlags_t flags )
 {
+dprintf( D_ALWAYS, "DIAG SetAttributeByConstraint(%s, %s, %s)\n", constraint, attr_name, attr_value );//TEMPTEMP
 	int	rval = -1;
 
 		CurrentSysCall = CONDOR_SetAttributeByConstraint;
@@ -254,6 +255,7 @@ SetAttributeByConstraint( char const *constraint, char const *attr_name, char co
 int
 SetAttribute( int cluster_id, int proc_id, char const *attr_name, char const *attr_value, SetAttributeFlags_t flags )
 {
+dprintf( D_ALWAYS, "DIAG SetAttribute(%d.%d, %s, %s)\n", cluster_id, proc_id, attr_name, attr_value );//TEMPTEMP
 	int	rval;
 
 		CurrentSysCall = CONDOR_SetAttribute;

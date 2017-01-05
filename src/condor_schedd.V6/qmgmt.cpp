@@ -2368,6 +2368,7 @@ SetAttributeByConstraint(const char *constraint, const char *attr_name,
 						 const char *attr_value,
 						 SetAttributeFlags_t flags)
 {
+dprintf( D_ALWAYS, "DIAG SetAttributeByConstraint(qmgnt)(%s, %s, %s)\n", constraint, attr_name, attr_value );//TEMPTEMP
 	ClassAd	*ad;
 	int cluster_num, proc_num;
 	int found_one = 0, had_error = 0;
@@ -2484,6 +2485,7 @@ int
 SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			 const char *attr_value, SetAttributeFlags_t flags)
 {
+dprintf( D_ALWAYS, "DIAG SetAttribute(qmgmt)(%d.%d, %s, %s)\n", cluster_id, proc_id, attr_name, attr_value );//TEMPTEMP
 	JOB_ID_KEY_BUF key;
 	JobQueueJob    *job = NULL;
 	MyString		new_value;
@@ -3761,6 +3763,7 @@ MarkJobClean(int cluster_id, int proc_id)
 ClassAd *
 dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad, bool persist_expansions)
 {
+dprintf( D_ALWAYS, "DIAG dollarDollarExpand(%d.%d)\n", cluster_id, proc_id );//TEMPTEMP
 	// This is prepended to attributes that we've already expanded,
 	// making them available if the match ad is no longer available.
 	// So 
@@ -4357,6 +4360,7 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 bool
 rewriteSpooledJobAd(ClassAd *job_ad, int cluster, int proc, bool modify_ad)
 {
+dprintf( D_ALWAYS, "DIAG rewriteSpooledJobAd()\n" );//TEMPTEMP
 		// These three lists must be kept in sync!
 	static const int ATTR_ARRAY_SIZE = 5;
 	static const char *AttrsToModify[ATTR_ARRAY_SIZE] = {

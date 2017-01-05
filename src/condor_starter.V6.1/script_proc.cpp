@@ -304,6 +304,7 @@ ScriptProc::StartJob()
 	dprintf( D_ALWAYS, "Create_Process succeeded, pid=%d\n", JobPid );
 
 	job_start_time.getTime();
+dprintf( D_ALWAYS, "DIAG job_start_time.getTime() 2: %ld\n", job_start_time.seconds() );//TEMPTEMP
 
 	return 1;
 }

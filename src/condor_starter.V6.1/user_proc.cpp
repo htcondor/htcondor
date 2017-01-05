@@ -154,6 +154,7 @@ UserProc::JobReaper(int pid, int status)
 }
 
 
+//TEMPTEMP -- hmm -- also maybe get here on condor_hold (in starter)
 bool
 UserProc::PublishUpdateAd( ClassAd* ad )
 {

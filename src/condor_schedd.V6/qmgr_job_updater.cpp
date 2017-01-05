@@ -253,6 +253,7 @@ QmgrJobUpdater::resetUpdateTimer( void )
 bool
 QmgrJobUpdater::updateAttr( const char *name, const char *expr, bool updateMaster, bool log )
 {
+dprintf( D_ALWAYS, "DIAG QmgrJobUpdater::updateAttr(%s, %s)\n", name, expr );//TEMPTEMP
 	bool result;
 	MyString err_msg;
 	SetAttributeFlags_t flags=0;
@@ -450,9 +451,11 @@ QmgrJobUpdater::periodicUpdateQ( void )
 	updateJob( U_PERIODIC, NONDURABLE );
 }
 
+//TEMPTEMP -- hmm -- looks like we go thru here on condor_hold
 bool
 QmgrJobUpdater::updateExprTree( const char *name, ExprTree* tree )
 {
+dprintf( D_ALWAYS, "DIAG QmgrJobUpdater::updateExprTree(%s)\n", name );//TEMPTEMP
 	if( ! tree ) {
 		dprintf( D_ALWAYS, "QmgrJobUpdater::updateExprTree: tree is NULL!\n" );
 		return false;

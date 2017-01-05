@@ -336,6 +336,8 @@ dprintf( D_ALWAYS, "DIAG do_Q_request()\n" );//TEMPTEMP
 	}
 
 	case CONDOR_SetAttribute:
+	//TEMPTEMP -- we get a bunch of these on condor_hold
+	//TEMPTEMP -- where are they actually generated??
 	case CONDOR_SetAttribute2:
 	  {
 		int cluster_id = -1;
@@ -348,9 +350,9 @@ dprintf( D_ALWAYS, "DIAG do_Q_request()\n" );//TEMPTEMP
 		const char *condor_username;
 
 		assert( syscall_sock->code(cluster_id) );
-		dprintf( D_SYSCALLS, "	cluster_id = %d\n", cluster_id );
+		dprintf( D_ALWAYS/*TEMPTEMP*/, "	cluster_id = %d\n", cluster_id );
 		assert( syscall_sock->code(proc_id) );
-		dprintf( D_SYSCALLS, "	proc_id = %d\n", proc_id );
+		dprintf( D_ALWAYS/*TEMPTEMP*/, "	proc_id = %d\n", proc_id );
 		assert( syscall_sock->code(attr_value) );
 		assert( syscall_sock->code(attr_name) );
 		if( request_num == CONDOR_SetAttribute2 ) {
@@ -358,8 +360,8 @@ dprintf( D_ALWAYS, "DIAG do_Q_request()\n" );//TEMPTEMP
 		}
 		users_username = syscall_sock->getOwner();
 		condor_username = get_condor_username();
-		if (attr_name) dprintf(D_SYSCALLS,"\tattr_name = %s\n",attr_name);
-		if (attr_value) dprintf(D_SYSCALLS,"\tattr_value = %s\n",attr_value);		
+		if (attr_name) dprintf(D_ALWAYS/*TEMPTEMP*/,"\tattr_name = %s\n",attr_name);
+		if (attr_value) dprintf(D_ALWAYS/*TEMPTEMP*/,"\tattr_value = %s\n",attr_value);		
 		assert( syscall_sock->end_of_message() );;
 
 		// ckireyev:
@@ -378,7 +380,7 @@ dprintf( D_ALWAYS, "DIAG do_Q_request()\n" );//TEMPTEMP
 
 			rval = SetAttribute( cluster_id, proc_id, attr_name, attr_value, flags );
 			terrno = errno;
-			dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
+			dprintf( D_ALWAYS/*TEMPTEMP*/, "\trval = %d, errno = %d\n", rval, terrno );
 				// If we're modifying a previously-submitted job AND either
 				// the client's username is not HTCondor's (i.e. not a
 				// daemon) OR the client says we should log...

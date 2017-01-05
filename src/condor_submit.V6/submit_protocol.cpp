@@ -114,6 +114,7 @@ int ActualScheddQ::get_NewProc(int cluster_id) { return NewProc(cluster_id); }
 int ActualScheddQ::destroy_Cluster(int cluster_id, const char *reason) { return DestroyCluster(cluster_id, reason); }
 
 int ActualScheddQ::set_Attribute(int cluster, int proc, const char *attr, const char *value, SetAttributeFlags_t flags) {
+dprintf( D_ALWAYS, "DIAG ActualScheddQ::set_Attribute(%d.%d, %s, %s)\n", cluster, proc, attr, value );//TEMPTEMP
 	return SetAttribute(cluster, proc, attr, value, flags);
 }
 
