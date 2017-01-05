@@ -12,6 +12,8 @@ class Functor {
 	public:
 		virtual int operator() () = 0;
 		virtual int rollback() = 0;
+
+		virtual ~Functor() { }
 };
 
 #endif /* _CONDOR_FUNCTOR_H */
