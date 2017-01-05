@@ -788,21 +788,19 @@ else ()
 	set( MAKE make -j${NUM_PROCESSORS} )
 endif()
 
-###########################################
-#if (NOT MSVC11) 
-#endif()
-
 if (WINDOWS)
 
   add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/gsoap/2.7.10-p5)
 
-  if (MSVC11)
-    if (CMAKE_SIZEOF_VOID_P EQUAL 8 )
-      set(BOOST_DOWNLOAD_WIN boost-1.54.0-VC11-Win64_V4.tar.gz)
-    else()
-      set(BOOST_DOWNLOAD_WIN boost-1.54.0-VC11-Win32_V4.tar.gz)
-    endif()
-    add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.54.0)
+  if(NOT (MSVC_VERSION LESS 1700))
+	if (MSVC11)
+      if (CMAKE_SIZEOF_VOID_P EQUAL 8 )
+        set(BOOST_DOWNLOAD_WIN boost-1.54.0-VC11-Win64_V4.tar.gz)
+      else()
+        set(BOOST_DOWNLOAD_WIN boost-1.54.0-VC11-Win32_V4.tar.gz)
+	  endif()
+	endif()
+	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.54.0)
     add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/1.0.1j)
     add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre/8.33)
     add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/krb5/1.12)
@@ -1359,10 +1357,8 @@ dprint ( "BORLAND: ${BORLAND}" )
 
 if (WINDOWS)
 	dprint ( "MSVC: ${MSVC}" )
+	dprint ( "MSVC_VERSION: ${MSVC_VERSION}" )
 	dprint ( "MSVC_IDE: ${MSVC_IDE}" )
-	# only supported compilers for condor build
-	dprint ( "MSVC90: ${MSVC90}" )
-	dprint ( "MSVC10: ${MSVC10}" )
 endif(WINDOWS)
 
 # set this to true if you don't want to rebuild the object files if the rules have changed,

@@ -60,7 +60,7 @@ if(RAPIDJSON_BUILD_EXAMPLES)
 endif()
 
 if(RAPIDJSON_BUILD_TESTS)
-    if(MSVC11)
+	if(NOT (MSVC_VERSION LESS 1700))
         # required for VS2012 due to missing support for variadic templates
         add_definitions(-D_VARIADIC_MAX=10)
     endif(MSVC11)
