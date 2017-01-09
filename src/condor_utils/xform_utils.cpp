@@ -157,12 +157,12 @@ MACRO_SET_CHECKPOINT_HDR* checkpoint_macro_set(MACRO_SET& set)
 	pchka += sizeof(void*) - (((size_t)pchka) & (sizeof(void*)-1));
 
 	// write the checkpoint into it.
-	MACRO_SET_CHECKPOINT_HDR * phdr = (MACRO_SET_CHECKPOINT_HDR *)pchka;
+	MACRO_SET_CHECKPOINT_HDR * phdr = reinterpret_cast<MACRO_SET_CHECKPOINT_HDR *>(pchka);
 	pchka = (char*)(phdr+1);
 	phdr->cTable = phdr->cMetaTable = 0;
 	phdr->cSources = (int)set.sources.size();
 	if (phdr->cSources) {
-		const char ** psrc = (const char**)pchka;
+		const char ** psrc = reinterpret_cast<const char**>(pchka);
 		for (int ii = 0; ii < phdr->cSources; ++ii) {
 			*psrc++ = set.sources[ii];
 		}
@@ -195,7 +195,7 @@ void rewind_macro_set(MACRO_SET& set, MACRO_SET_CHECKPOINT_HDR* phdr, bool and_d
 
 	set.sources.clear();
 	if (phdr->cSources > 0) {
-		const char ** psrc = (const char **)pchka;
+		const char ** psrc = reinterpret_cast<const char **>(pchka);
 		for (int ii = 0; ii < phdr->cSources; ++ii) {
 			set.sources.push_back(*psrc++);
 		}
@@ -231,9 +231,9 @@ void XFormHash::setup_macro_defaults()
 {
 	// make an instance of the defaults table that is private to this function.
 	// we do this because of the 'live' keys in the 
-	struct condor_params::key_value_pair* pdi = (struct condor_params::key_value_pair*) LocalMacroSet.apool.consume(sizeof(XFormMacroDefaults), sizeof(void*));
+	struct condor_params::key_value_pair* pdi = reinterpret_cast<struct condor_params::key_value_pair*> (LocalMacroSet.apool.consume(sizeof(XFormMacroDefaults), sizeof(void*)));
 	memcpy((void*)pdi, XFormMacroDefaults, sizeof(XFormMacroDefaults));
-	LocalMacroSet.defaults = (MACRO_DEFAULTS*)LocalMacroSet.apool.consume(sizeof(MACRO_DEFAULTS), sizeof(void*));
+	LocalMacroSet.defaults = reinterpret_cast<MACRO_DEFAULTS*>(LocalMacroSet.apool.consume(sizeof(MACRO_DEFAULTS), sizeof(void*)));
 	LocalMacroSet.defaults->size = COUNTOF(XFormMacroDefaults);
 	LocalMacroSet.defaults->table = pdi;
 	LocalMacroSet.defaults->metat = NULL;
