@@ -154,7 +154,7 @@ sub add_status_ads{
 			$Attr{$i}{LastVacateTime} = $Attr{$i}{EnteredCurrentStatus};
 			$Attr{$i}{MachineAttrCpus0} = 1;
 			$Attr{$i}{MachineAttrSlotWeight0} = 1;
-			$Attr{$i}{MemoryUsage} = "( ( ResidentSetSize + 1023 ) / 1024 )";
+			$Attr{$i}{MemoryUsage} = "((ResidentSetSize + 1023 ) / 1024)";
 			$Attr{$i}{NumJobMatches} = 1;
 			$Attr{$i}{NumJobStarts} = 1;
 			$Attr{$i}{NumShadowStarts} = 1;
@@ -197,7 +197,7 @@ sub add_status_ads{
 			$Attr{$i}{LastMatchTime} = $Attr{$i}{EnteredCurrentStatus};
 			$Attr{$i}{MachineAttrCpus0} = 1;
 			$Attr{$i}{MachineAttrSlotWeight0} = 1;
-			$Attr{$i}{MemoryUsage} = "( ( ResidentSetSize + 1023 ) / 1024 )";
+			$Attr{$i}{MemoryUsage} = "((ResidentSetSize + 1023) / 1024)";
 			$Attr{$i}{NumJobMatches} =1;
 			$Attr{$i}{NumShadowStarts} = 1;
 			$Attr{$i}{OrigMaxHosts} = 1;
@@ -2124,9 +2124,9 @@ sub check_transform {
 	if ($option eq 'EVAL'){
 		for my $i (0..$index-1){
 			my $temp = $Attr{$i}{DiskUsage}*2;
-			if ($Attr{$i}{MemoryUsage} ne 5 || $Attr{$i}{RequestDisk} ne "( $temp / 1024 )"){
+			if ($Attr{$i}{MemoryUsage} ne 5 || $Attr{$i}{RequestDisk} ne "($temp / 1024)"){
 				print "MemoryUsage is $Attr{$i}{MemoryUsage}. should be 5\n";
-				print "RequestDisk is $Attr{$i}{RequestDisk}. should be ( $temp / 1024 )";
+				print "RequestDisk is $Attr{$i}{RequestDisk}. should be ($temp / 1024)";
 				return 0;
 			}
 		}
