@@ -720,7 +720,7 @@ it came from the heap.
 
 #if defined( LINUX  )
 #include "condor_mmap.h"
-extern "C" int REMOTE_CONDOR_mmap(MMAP_T, size_t, int, int,
+extern "C" void * REMOTE_CONDOR_mmap(MMAP_T, size_t, int, int,
 	int, off_t);
 MMAP_T
 mmap( MMAP_T a, size_t l, int p, int f, int fd, off_t o )

@@ -1670,7 +1670,6 @@ main( int argc, const char *argv[] )
 			extraLines.Append( "executable=/bin/sleep" );
 			extraLines.Append( "transfer_executable=false" );
 			extraLines.Append( "arguments=180" );
-			extraLines.Append( "universe=vanilla" );
 		}
 	}
 
@@ -2800,6 +2799,10 @@ SetUniverse()
 			// TODO: remove this when the docker starter no longer requires it.
 			InsertJobExpr("WantDocker=true");
 			IsDockerJob = true;
+			if (dash_interactive) {
+				fprintf(stderr, "\nERROR: Cannot run interactive docker jobs\n");
+				exit(1);
+			}
 		}
 		free(univ);
 		return;

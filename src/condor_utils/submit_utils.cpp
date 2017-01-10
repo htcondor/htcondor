@@ -233,7 +233,7 @@ static bool check_expr_and_wrap_for_op(std::string &expr_str, classad::Operation
 
 condor_params::string_value * allocate_live_default_string(MACRO_SET &set, const condor_params::string_value & Def, int cch)
 {
-	condor_params::string_value * NewDef = (condor_params::string_value*)set.apool.consume(sizeof(condor_params::string_value), sizeof(void*));
+	condor_params::string_value * NewDef = reinterpret_cast<condor_params::string_value*>(set.apool.consume(sizeof(condor_params::string_value), sizeof(void*)));
 	NewDef->flags = Def.flags;
 	NewDef->psz = set.apool.consume(cch, sizeof(void*));
 	memset(NewDef->psz, 0, cch);
@@ -255,9 +255,9 @@ void SubmitHash::setup_macro_defaults()
 {
 	// make an instance of the defaults table that is private to this function. 
 	// we do this because of the 'live' keys in the 
-	struct condor_params::key_value_pair* pdi = (struct condor_params::key_value_pair*) SubmitMacroSet.apool.consume(sizeof(SubmitMacroDefaults), sizeof(void*));
+	struct condor_params::key_value_pair* pdi = reinterpret_cast<struct condor_params::key_value_pair*> (SubmitMacroSet.apool.consume(sizeof(SubmitMacroDefaults), sizeof(void*)));
 	memcpy((void*)pdi, SubmitMacroDefaults, sizeof(SubmitMacroDefaults));
-	SubmitMacroSet.defaults = (MACRO_DEFAULTS*)SubmitMacroSet.apool.consume(sizeof(MACRO_DEFAULTS), sizeof(void*));
+	SubmitMacroSet.defaults = reinterpret_cast<MACRO_DEFAULTS*>(SubmitMacroSet.apool.consume(sizeof(MACRO_DEFAULTS), sizeof(void*)));
 	SubmitMacroSet.defaults->size = COUNTOF(SubmitMacroDefaults);
 	SubmitMacroSet.defaults->table = pdi;
 	SubmitMacroSet.defaults->metat = NULL;
