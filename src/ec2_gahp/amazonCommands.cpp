@@ -640,26 +640,24 @@ bool AmazonRequest::createV4Signature(	const std::string & payload,
 	std::string s = this->service;
 	if( s.empty() ) {
 		size_t i = host.find( "." );
-		if( i == std::string::npos ) {
-			this->errorCode = "E_INTERNAL";
-			this->errorMessage = "Unable to derive service from host.";
-			dprintf( D_ALWAYS, "Unable to derive service from host '%s', failing.\n", host.c_str() );
-			return false;
+		if( i != std::string::npos ) {
+			s = host.substr( 0, i );
+		} else {
+			dprintf( D_ALWAYS, "Could not derive service from host '%s'; using host name as service name for testing purposes.\n", host.c_str() );
+			s = host;
 		}
-		s = host.substr( 0, i );
 	}
 
 	std::string r = this->region;
 	if( r.empty() ) {
 		size_t i = host.find( "." );
 		size_t j = host.find( ".", i + 1 );
-		if( j == std::string::npos ) {
-			this->errorCode = "E_INTERNAL";
-			this->errorMessage = "Unable to derive region from host.";
-			dprintf( D_ALWAYS, "Unable to derive region from host '%s', failing.\n", host.c_str() );
-			return false;
+		if( j != std::string::npos ) {
+			r = host.substr( i + 1, j - i - 1 );
+		} else {
+			dprintf( D_ALWAYS, "Could not derive region from host '%s'; using host name as region name for testing purposes.\n", host.c_str() );
+			r = host;
 		}
-		r = host.substr( i + 1, j - i - 1 );
 	}
 
 
