@@ -1,0 +1,12 @@
+# This DAG tests a final node where all submit attempts for the
+# final node fail.
+
+# TEMP -- node status file is incorrect for this case!
+
+NODE_STATUS_FILE job_dagman_final-K.status
+
+# This will succeed.
+JOB K_A job_dagman_final-K-node.sub
+
+# All submit attempts will fail for this node.
+FINAL K_Z foobar

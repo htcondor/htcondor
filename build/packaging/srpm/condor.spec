@@ -348,6 +348,7 @@ BuildRequires: qpid-qmf-devel
 %if %systemd
 BuildRequires: systemd-devel
 BuildRequires: systemd-units
+Requires: systemd
 %endif
 
 BuildRequires: transfig
@@ -1791,6 +1792,7 @@ if [ $? = 0 ]; then
 fi
 %endif
 %if 0%{?rhel} >= 7
+Requires(post): policycoreutils-python
 test -x /usr/sbin/selinuxenabled && /usr/sbin/selinuxenabled
 if [ $? = 0 ]; then
    /usr/sbin/semodule -i /usr/share/condor/htcondor.pp

@@ -389,7 +389,9 @@ static  ExtArray<PrioEntry> prioTable;
 
 static	int			analyze_detail_level = 0; // one or more of detail_xxx enum values above.
 
+#ifdef INCLUDE_ANALYSIS_SUGGESTIONS
 const int SHORT_BUFFER_SIZE = 8192;
+#endif
 const int LONG_BUFFER_SIZE = 16384;	
 char return_buff[LONG_BUFFER_SIZE * 100];
 

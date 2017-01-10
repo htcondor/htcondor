@@ -34,6 +34,23 @@
 
 #include "log.h"
 #include "stl_string_utils.h"
+#include <sstream>
+
+
+// Returns true iff (s) casts to <T>, and all of (s) is consumed,
+// i.e. if (s) is an exact representation of a value of <T>, no more and
+// no less.
+/*
+template<typename T>
+bool lex_cast(const std::string& s, T& v) {
+    std::stringstream ss(s);
+    ss >> v;
+    if ( !ss.eof() ) {
+        ss >> std::ws;
+    }
+    return ss.eof() && (0 == (ss.rdstate() & std::stringstream::failbit));
+}
+*/
 
 bool valid_record_optype(int optype) {
     switch (optype) {
@@ -210,7 +227,8 @@ LogRecord::ReadHeader(FILE *fp)
     if (rval < 0) {
         return rval;
     }
-    if (!lex_cast(op, op_type) || !valid_record_optype(op_type)) {
+    YourStringDeserializer lex(op);
+    if (!lex.deserialize_int(&op_type) || !valid_record_optype(op_type)) {
         op_type = CondorLogOp_Error;
     }
     free(op);
@@ -233,7 +251,8 @@ ReadLogEntry(FILE *fp, unsigned long recnum, LogRecord* (*InstantiateLogEntry)(F
     int opcode = CondorLogOp_Error;
 	int rval = LogRecord::readword(fp, opword);
 	if (rval < 0) return NULL;
-    if (!lex_cast(opword, opcode) || !valid_record_optype(opcode)) {
+    YourStringDeserializer lex(opword);
+    if (!lex.deserialize_int(&opcode) || !valid_record_optype(opcode)) {
         opcode = CondorLogOp_Error;
     }
     free(opword);

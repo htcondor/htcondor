@@ -133,6 +133,7 @@ delete $Attr_new{0}{Unhibernate};
 delete $Attr_new{0}{MachineMaxVacateTime};
 delete $Attr_new{0}{CondorVersion};
 delete $Attr_new{0}{AddressV1};
+delete $Attr_new{0}{TotalTimeClaimedIdle};
 $sel0 = (keys %{$Attr_new{0}})[rand keys %{$Attr_new{0}}];
 $sel1 = (keys %{$Attr_new{0}})[rand keys %{$Attr_new{0}}];
 $sel2 = (keys %{$Attr_new{0}})[rand keys %{$Attr_new{0}}];
@@ -275,6 +276,7 @@ delete $Attr_new{0}{CondorVersion};
 delete $Attr_new{0}{AddressV1};
 delete $Attr_new{0}{RecentDaemonCoreDutyCycle};
 delete $Attr_new{0}{DaemonCoreDutyCycle};
+delete $Attr_new{0}{TotalTimeClaimedIdle};
 
 #$sel0 = "OpSys";
 #$sel1 = "CpuIsBusy";

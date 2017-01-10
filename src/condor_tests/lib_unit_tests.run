@@ -18,15 +18,17 @@
 ##
 ##**************************************************************
 
+use CondorUtils;
 
 my @got;
 $testdesc =  'lib_unit_tests - runs prebuilt unit tests';
 $testname = "lib_unit_tests";
 $test = "condor_unit_tests";
+if (CondorUtils::is_windows()) { $test .= ".exe"; }
 
 print scalar localtime() . "\n";
 
-open(ELOG,"$test 2>&1 |") || die "Could not run test<<$test>>: $!\n";
+open(ELOG,"$test -f 2>&1 |") || die "Could not run test<<$test>>: $!\n";
 while(<ELOG>) {
 	push  @got, $_;
 	print $_;

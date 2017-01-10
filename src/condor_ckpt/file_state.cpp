@@ -891,7 +891,7 @@ ssize_t CondorFileTable::write( int fd, const void *data, size_t nbyte )
 	// between that and the UNIX system API. It will take a pretty serious
 	// rewrite of the function signatures to make everything conform, and
 	// there is a chance there is no such conforming API.
-	int actual = f->write( fp->offset, (char*)data, nbyte );
+	int actual = f->write( fp->offset, (const char*)data, nbyte );
 	
 	// If there is an error, don't touch the offset.
 	if(actual<0) return -1;

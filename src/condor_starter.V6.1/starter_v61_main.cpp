@@ -755,7 +755,7 @@ main_shutdown_fast()
 	if ( Starter->RemoteShutdownFast(0) ) {
 		// ShutdownFast says it is already finished, because there are
 		// no jobs to shutdown.  No need to stick around.
-		Starter->StarterExit(STARTER_EXIT_NORMAL);
+		Starter->StarterExit(Starter->GetShutdownExitCode());
 	}
 }
 
@@ -766,7 +766,7 @@ main_shutdown_graceful()
 	if ( Starter->RemoteShutdownGraceful(0) ) {
 		// ShutdownGraceful says it is already finished, because
 		// there are no jobs to shutdown.  No need to stick around.
-		Starter->StarterExit(STARTER_EXIT_NORMAL);
+		Starter->StarterExit(Starter->GetShutdownExitCode());
 	}
 }
 

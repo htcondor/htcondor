@@ -5880,6 +5880,8 @@ pid_t CreateProcessForkit::fork(int flags) {
     return retval;
 
 #else
+    (void) m_clone_newpid_pid;
+    (void) m_clone_newpid_ppid;
 
     // Note we silently ignore flags if there's no clone on the platform.
     return ::fork();
@@ -6527,6 +6529,8 @@ void CreateProcessForkit::exec() {
 			dprintf(D_ALWAYS, "Error calling sched_setaffinity: %d\n", errno);
 		}
 	}
+#else
+	(void) m_affinity_mask;
 #endif
 
 	if( IsDebugLevel( D_DAEMONCORE ) ) {

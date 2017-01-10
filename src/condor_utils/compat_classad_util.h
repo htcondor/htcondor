@@ -43,6 +43,13 @@ bool ExprTreeIsAttrRef(classad::ExprTree * expr, std::string & attr, bool * is_a
 // if attrs is not NULL, it also adds attribute references from the expression into the current set.
 bool IsValidClassAdExpression(const char * expr, classad::References * attrs=NULL, classad::References *scopes=NULL);
 
+typedef std::map<std::string, std::string, classad::CaseIgnLTStr> NOCASE_STRING_MAP;
+// edit the given expr changing attribute references as the mapping indicates
+// for instance if mapping["TARGET"] = "My" it will change all instance of "TARGET" to "MY"
+// if mapping["TARGET"] = "", it will remove target prefixes.
+int RewriteAttrRefs(classad::ExprTree * expr, const NOCASE_STRING_MAP & mapping);
+
+
 classad::ExprTree * SkipExprEnvelope(classad::ExprTree * tree);
 classad::ExprTree * SkipExprParens(classad::ExprTree * tree);
 // create an op node, using copies of the input expr trees. this function will not copy envelope nodes (it skips over them)

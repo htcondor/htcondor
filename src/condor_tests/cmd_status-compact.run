@@ -172,7 +172,8 @@ if (check_heading('status_compact_machine',\%table1) && check_heading('status_su
 } else {
 	RegisterResult(0, check_name => $option, test_name => $testname);
 }
-
+unlink($new_ads);
+unlink($orig_ads);
 print "############################################################################\n";
 $option = "run";
 `condor_submit $submitfile`;
@@ -184,6 +185,7 @@ while ($counter ne 0){
 	} else {
 		`condor_status -schedd -long > $orig_ads`;
 		%Attr_old = read_attr($orig_ads);
+#		if (scalar keys %Attr_old == 0){
 		if ($Attr_old{0}{ShadowsRunning} == 0){
 			sleep(1);
 		} else {

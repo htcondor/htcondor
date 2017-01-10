@@ -384,7 +384,11 @@ public:
 		// skip over current end of line
 		const char* p = &lit[ix_eol];
 		if (*p == '\r') ++p;
-		if (*p == '\n') ++p;
+		if (*p == '\n') {
+			++p;
+			// If we hit end-of-file after skipping the current end of line, just return NULL.
+			if ( ! *p && ix_eol > 0) { ix_eol = p - lit; return NULL; }
+		}
 		++lines_read;
 
 		// remember this spot as the the start of line,
