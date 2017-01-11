@@ -34,8 +34,6 @@
 static char* CondorUserName = NULL;
 static char* RealUserName = NULL;
 static int SwitchIds = TRUE;
-static int UseKeyringSessions = FALSE;
-static int DidParamForKeyringSessions = FALSE;
 static int UserIdsInited = FALSE;
 static int OwnerIdsInited = FALSE;
 #ifdef WIN32
@@ -274,7 +272,10 @@ can_switch_ids( void )
 }
 
 
-int should_use_keyring_sessions() {
+static int should_use_keyring_sessions() {
+	static int UseKeyringSessions = FALSE;
+	static int DidParamForKeyringSessions = FALSE;
+
 	if(!DidParamForKeyringSessions) {
 		UseKeyringSessions = param_boolean("USE_KEYRING_SESSIONS", false);
 		DidParamForKeyringSessions = true;
@@ -1498,63 +1499,61 @@ _set_priv(priv_state s, const char *file, int line, int dologging)
 			break;
 		case PRIV_USER:
 		case PRIV_USER_FINAL:
-			{
 // we can only use linux-specific kernel keyrings
 #ifdef LINUX
-				if(should_use_keyring_sessions()) {
+			if(should_use_keyring_sessions()) {
 
-					// We need to place this process in a PAG with tokens for
-					// the requested user.  Steps to do this:
-					// 1) Create a brand new session
-					// 2) Find the users's credential on the HTCondor keyring.
-					// 3) Attach that key to our new session keyring
+				// We need to place this process in a PAG with tokens for
+				// the requested user.  Steps to do this:
+				// 1) Create a brand new session
+				// 2) Find the users's credential on the HTCondor keyring.
+				// 3) Attach that key to our new session keyring
 
-					// all of this should be done as root.
-					set_root_euid();
+				// all of this should be done as root.
+				set_root_euid();
 
-					// step 1, create a new session
-					condor_keyctl_session(NULL);
-					key_serial_t anon_keyring = -3;
-					if (dologging) dprintf(D_SECURITY, "KEYCTL: created new anonymous keyring\n");
+				// step 1, create a new session
+				condor_keyctl_session(NULL);
+				key_serial_t anon_keyring = -3;
+				if (dologging) dprintf(D_SECURITY, "KEYCTL: created new anonymous keyring\n");
 
-					// step 2a, locate the master keyring.
-					// -4 is the uid keyring for root.
-					key_serial_t htcondor_keyring = -4;
+				// step 2a, locate the master keyring.
+				// -4 is the uid keyring for root.
+				key_serial_t htcondor_keyring = -4;
 
-					// step 2b, create the keyring name for user keyring
-					MyString ring_name = "htcondor_uid";
-					ring_name = ring_name + UserUid;
+				// step 2b, create the keyring name for user keyring
+				MyString ring_name = "htcondor_uid";
+				ring_name = ring_name + UserUid;
 
-					// step 2c, locate the user keyring
-					key_serial_t user_keyring = condor_keyctl_search(htcondor_keyring, "keyring", ring_name.Value(), 0);
-					if(user_keyring == -1) {
-						if (dologging) dprintf(D_ALWAYS, "KEYCTL: unable to find keyring '%s', error: %s\n", ring_name.Value(), strerror(errno));
-					} else {
-						if (dologging) dprintf(D_SECURITY, "KEYCTL: found user keyring %s (%li)\n", ring_name.Value(), (long)user_keyring);
-					}
-
-					// step 3, link the user keyring to our session keyring
-					long link_success = condor_keyctl_link(user_keyring, anon_keyring);
-					if(link_success == -1) {
-						if (dologging) dprintf(D_ALWAYS, "KEYCTL: link(%li,%li) error: %s\n",
-							(long)user_keyring, (long)anon_keyring, strerror(errno));
-					} else {
-						if (dologging) dprintf(D_SECURITY, "KEYCTL: linked key %li to %li\n",
-							(long)user_keyring, (long)anon_keyring);
-					}
+				// step 2c, locate the user keyring
+				key_serial_t user_keyring = condor_keyctl_search(htcondor_keyring, "keyring", ring_name.Value(), 0);
+				if(user_keyring == -1) {
+					if (dologging) dprintf(D_ALWAYS, "KEYCTL: unable to find keyring '%s', error: %s\n", ring_name.Value(), strerror(errno));
+				} else {
+					if (dologging) dprintf(D_SECURITY, "KEYCTL: found user keyring %s (%li)\n", ring_name.Value(), (long)user_keyring);
 				}
+
+				// step 3, link the user keyring to our session keyring
+				long link_success = condor_keyctl_link(user_keyring, anon_keyring);
+				if(link_success == -1) {
+					if (dologging) dprintf(D_ALWAYS, "KEYCTL: link(%li,%li) error: %s\n",
+						(long)user_keyring, (long)anon_keyring, strerror(errno));
+				} else {
+					if (dologging) dprintf(D_SECURITY, "KEYCTL: linked key %li to %li\n",
+						(long)user_keyring, (long)anon_keyring);
+				}
+			}
 #endif // LINUX
 
-				set_root_euid();
-				if(s == PRIV_USER) {
-					// PRIV_USER: change effective
-					set_user_egid();
-					set_user_euid();
-				} else {
-					// PRIV_USER_FINAL: change real
-					set_user_rgid();
-					set_user_ruid();
-				}
+			set_root_euid();
+			if(s == PRIV_USER) {
+				// PRIV_USER: change effective
+				set_user_egid();
+				set_user_euid();
+			} else {
+				// PRIV_USER_FINAL: change real
+				set_user_rgid();
+				set_user_ruid();
 			}
 			break;
 		case PRIV_FILE_OWNER:
