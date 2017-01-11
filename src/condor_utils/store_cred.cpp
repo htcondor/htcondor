@@ -49,7 +49,7 @@ void SecureZeroMemory(void *p, size_t n)
 int
 ZKM_UNIX_STORE_CRED(const char *user, const char *pw, const int len, int mode)
 {
-	dprintf(D_ALWAYS, "ZKM: store cred user %s len %i mode %i contents: {%s}\n", user, len, mode, pw);
+	dprintf(D_ALWAYS, "ZKM: store cred user %s len %i mode %i\n", user, len, mode);
 
 	char* cred_dir = param("SEC_CREDENTIAL_DIRECTORY");
 	if(!cred_dir) {

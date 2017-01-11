@@ -42,6 +42,7 @@ if (NOT WINDOWS)
 
     if (LINUX)
         install ( FILES linux_kernel_tuning DESTINATION ${C_LIBEXEC} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
+        install ( FILES condor_aklog DESTINATION ${C_SBIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
     endif(LINUX)
 
 	if (STD_UNIVERSE)
