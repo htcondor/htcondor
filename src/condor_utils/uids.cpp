@@ -28,7 +28,6 @@
 #include "my_username.h"
 #include "daemon.h"
 #include "store_cred.h"
-#include <string.h>
 
 /* See condor_uid.h for description. */
 static char* CondorUserName = NULL;
@@ -1418,28 +1417,31 @@ set_file_owner_ids( uid_t uid, gid_t gid )
 // this code on non-linux unix. (e.g. OS X)
 #ifdef LINUX
 
-// helper types and definitions to avoid importing keyutils.h
-typedef int32_t key_serial_t;
-#define KEYCTL_JOIN_SESSION_KEYRING     1       /* join or start named session keyring */
-#define KEYCTL_DESCRIBE                 6       /* describe a key */
-#define KEYCTL_LINK                     8       /* link a key into a keyring */
-#define KEYCTL_SEARCH                   10      /* search for a key in a keyring */
+// Define some syscall keyring constants.  Normally these are in
+// <keyutils.h>, but we only need a few values that are not changing,
+// and by placing them here we do not require keyutils development
+// package from being installed at compile time.
+#ifndef KEYCTL_JOIN_SESSION_KEYRING   // don't redefine if keyutils.h included
+  typedef int32_t key_serial_t;
+  #define KEYCTL_JOIN_SESSION_KEYRING     1       /* join or start named session keyring */
+  #define KEYCTL_DESCRIBE                 6       /* describe a key */
+  #define KEYCTL_LINK                     8       /* link a key into a keyring */
+  #define KEYCTL_SEARCH                   10      /* search for a key in a keyring */
+  #define KEY_SPEC_SESSION_KEYRING        -3      /* - key ID for session-specific keyring */
+  #define KEY_SPEC_USER_KEYRING           -4      /* - key ID for UID-specific keyring */
+#endif  // of ifndef KEYCTL_JOIN_SESSION_KEYRING
 
 // helper functions to avoid importing libkeyutils
-key_serial_t condor_keyctl_session(const char* n) {
+static key_serial_t condor_keyctl_session(const char* n) {
   return syscall(__NR_keyctl, KEYCTL_JOIN_SESSION_KEYRING, n);
 }
 
-key_serial_t condor_keyctl_search(key_serial_t k, const char* t, const char* d, key_serial_t r) {
+static key_serial_t condor_keyctl_search(key_serial_t k, const char* t, const char* d, key_serial_t r) {
   return syscall(__NR_keyctl, KEYCTL_SEARCH, k, t, d, r);
 }
 
-long condor_keyctl_link(key_serial_t k, key_serial_t r) {
+static long condor_keyctl_link(key_serial_t k, key_serial_t r) {
   return syscall(__NR_keyctl, KEYCTL_LINK, k, r);
-}
-
-long condor_keyctl_describe(key_serial_t k, char* b, long l) {
-  return syscall(__NR_keyctl, KEYCTL_DESCRIBE, k, b, l);
 }
 #endif
 
@@ -1514,12 +1516,12 @@ _set_priv(priv_state s, const char *file, int line, int dologging)
 
 				// step 1, create a new session
 				condor_keyctl_session(NULL);
-				key_serial_t anon_keyring = -3;
+				key_serial_t anon_keyring = KEY_SPEC_SESSION_KEYRING;
 				if (dologging) dprintf(D_SECURITY, "KEYCTL: created new anonymous keyring\n");
 
 				// step 2a, locate the master keyring.
 				// -4 is the uid keyring for root.
-				key_serial_t htcondor_keyring = -4;
+				key_serial_t htcondor_keyring = KEY_SPEC_USER_KEYRING;
 
 				// step 2b, create the keyring name for user keyring
 				MyString ring_name = "htcondor_uid";
