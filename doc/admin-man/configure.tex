@@ -773,9 +773,12 @@ However, they can sometimes be useful in custom configurations.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{configuration change requiring a restart of HTCondor}
 When any of the following listed configuration variables are changed,
-HTCondor must be restarted.
-Reconfiguration using \Condor{reconfig} will not be enough.
+HTCondor must be restarted;
+reconfiguration using \Condor{reconfig} will not be enough
+to cause the new values to take effect.
 
+% It would be nice to have a note here (maybe just in a comment) as
+% to what version this list is correct for...
 \begin{itemize}
   \item \verb@BIND_ALL_INTERFACES@
   \item \verb@FetchWorkDelay@

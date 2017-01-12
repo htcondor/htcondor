@@ -20,12 +20,12 @@ file that can be further customized after the installation has completed.
 Be sure that the HTCondor tools are of the same version
 as the daemons installed.
 The HTCondor executable for distribution is packaged in
-a single file named similar to:
+a single file named similarly to:
 \begin{verbatim}
   condor-8.4.11-390598-Windows-x86.msi
 \end{verbatim}
 \index{Windows!installation!initial file size}
-This file is approximately 107 Mbytes in size, and it may be
+This file is approximately 107 Mbytes in size, and it can be
 removed once HTCondor is fully installed.
 
 %TEMP -- do we really need to have this (it's already in the "main"
@@ -193,7 +193,7 @@ and choosing options within the following steps.
 
 \item[STEP 3: This Machine's Roles.] 
 
-     Each machine within an HTCondor pool may either
+     Each machine within an HTCondor pool can either
      submit jobs or execute submitted jobs, or both
      submit and execute jobs.
      A check box determines if this machine will be a submit point for
@@ -241,8 +241,8 @@ the condition chosen for when to run jobs.]
 
      Enter the machine's accounting (or UID) domain.
      On this version of HTCondor for Windows, this setting is only used for user
-     priorities (see section~\ref{sec:UserPrio} on
-     page~\pageref{sec:UserPrio}) and to form a default e-mail address for
+     priorities (see section~\ref{sec:UserPrio})
+     and to form a default e-mail address for
      the user.
 
 \item[STEP 5: E-mail Settings.]
@@ -297,8 +297,7 @@ the condition chosen for when to run jobs.]
      For more details on these access permissions, and others that can be
      manually changed in your configuration file, please
      see the section titled Setting Up IP/Host-Based Security in HTCondor
-     in section section~\ref{sec:Host-Security}
-     on page~\pageref{sec:Host-Security}.
+     in section section~\ref{sec:Host-Security}.
 
 \item[STEP 8: VM Universe Setting.]
      A radio button determines whether 
@@ -307,7 +306,7 @@ the condition chosen for when to run jobs.]
      In addition to having the VMware Server installed, HTCondor also needs
      \Prog{Perl} installed.
      The resources available for \SubmitCmdNI{vm} universe jobs can be tuned 
-     with these settings, or the defaults listed may be used.
+     with these settings, or the defaults listed can be used.
 
      \begin{description}
      \item[Version]
@@ -407,7 +406,7 @@ are available.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:nt-unattended-install-procedure}
-Unattended Installation Procedure Using the Included Set Up Program}
+Unattended Installation Procedure Using the Included Setup Program}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{Windows!installation!unattended install}
@@ -492,20 +491,20 @@ an e-mail address or the empty string \verb@""@.
 is a list of host names that are allowed to issue READ commands to
 HTCondor daemons. This value should be set in accordance with the
 \Macro{HOSTALLOW\_READ} setting in the configuration file, as described in
-section~\ref{sec:Host-Security} on page~\pageref{sec:Host-Security}.
+section~\ref{sec:Host-Security}.
 
 \item[HOSTALLOWWRITE]
 is a list of host names that are allowed to issue WRITE commands to
 HTCondor daemons. This value should be set in accordance with the
 \Macro{HOSTALLOW\_WRITE} setting in the configuration file, as described in
-section~\ref{sec:Host-Security} on page~\pageref{sec:Host-Security}.
+section~\ref{sec:Host-Security}.
 
 \item[HOSTALLOWADMINISTRATOR]
 is a list of host names that are allowed to issue ADMINISTRATOR commands to
 HTCondor daemons. This value should be set in accordance with the
 \Macro{HOSTALLOW\_ADMINISTRATOR} setting in the configuration file, 
 as described in
-section~\ref{sec:Host-Security} on page~\pageref{sec:Host-Security}.
+section~\ref{sec:Host-Security}.
 
 \item[INSTALLDIR]
 defines the path to the directory where HTCondor will be installed. 
@@ -545,8 +544,8 @@ will cause the installer to enable VM Universe jobs on the target machine.
 
 \item[LOCALCONFIG]
 defines the location of the local configuration file.
-The value may be the path to a file on the local machine, 
-or it may be a URL beginning with \Expr{http}.
+The value can be the path to a file on the local machine, 
+or it can be a URL beginning with \Expr{http}.
 If the value is a URL, 
 then the \Condor{urlfetch} tool is invoked to fetch configuration
 whenever the configuration is read.
@@ -703,5 +702,4 @@ HTCondor is Running Under Windows ... Now What?}
 
 Once HTCondor services are running, try submitting test jobs.
 Example 2 within section~\ref{sec:sample-submit-files} 
-on page~\pageref{sec:sample-submit-files} presents a vanilla
-universe job.
+presents a vanilla universe job.
