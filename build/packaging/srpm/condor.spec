@@ -397,6 +397,10 @@ Requires(preun):/sbin/service
 Requires(postun):/sbin/service
 %endif
 
+%if 0%{?rhel} >= 7
+Requires(post): policycoreutils-python
+%endif
+
 #Provides: user(condor) = 43
 #Provides: group(condor) = 43
 
@@ -1805,7 +1809,6 @@ if [ $? = 0 ]; then
 fi
 %endif
 %if 0%{?rhel} >= 7
-Requires(post): policycoreutils-python
 test -x /usr/sbin/selinuxenabled && /usr/sbin/selinuxenabled
 if [ $? = 0 ]; then
    /usr/sbin/semodule -i /usr/share/condor/htcondor.pp
