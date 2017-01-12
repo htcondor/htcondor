@@ -7,31 +7,44 @@
 This section contains the instructions for 
 installing the Windows version of HTCondor.  
 The install program will set up a slightly customized configuration
-file that may be further customized after the installation has completed.
+file that can be further customized after the installation has completed.
 
-Please read the copyright and disclaimer information in 
-section~\ref{sec:license} on
-page~\pageref{sec:license} of the manual.
-Installation and
-use of HTCondor is acknowledgment that you have read and agree to the
-terms.
+%TEMP -- do we really need to have this (it's already in the "main"
+% installation section)?
+%Please read the copyright and disclaimer information in 
+%section~\ref{sec:license} of the manual.
+%Installation and
+%use of HTCondor is acknowledgment that you have read and agree to the
+%terms.
 
 Be sure that the HTCondor tools are of the same version
 as the daemons installed.
 The HTCondor executable for distribution is packaged in
 a single file named similar to:
 \begin{verbatim}
-  condor-7.9.6-122785-Windows-x86.msi
+  condor-8.4.11-390598-Windows-x86.msi
 \end{verbatim}
 \index{Windows!installation!initial file size}
-This file is approximately 87 Mbytes in size, and it may be
+This file is approximately 107 Mbytes in size, and it may be
 removed once HTCondor is fully installed.
 
-Before installing HTCondor, please consider joining the condor-world mailing
-list.  Traffic on this list is kept to an absolute minimum.  It is only
-used to announce new releases of HTCondor.
-To subscribe, follow the directions given at
-\URL{http://www.cs.wisc.edu/condor/mail-lists/}.
+%TEMP -- do we really need to have this (it's already in the "main"
+% installation section)?
+%Before installing HTCondor, please consider joining the condor-world mailing
+%list.  Traffic on this list is kept to an absolute minimum.  It is only
+%used to announce new releases of HTCondor.
+%To subscribe, follow the directions given at
+%\URL{http://www.cs.wisc.edu/condor/mail-lists/}.
+
+%TEMP -- do we really need to have this (it's already in the "main"
+% installation section)?
+%You might also want to con the htcondor-usrs mailing list.
+%This list is meant to be a forum for HTCondor users to learn from each
+%other and discuss using HTCondor. It is an excellent place to ask
+%the HTCondor community about using and configuring HTCondor.
+%To subscribe, go to
+%\URL{https://lists.cs.wisc.edu/mailman/listinfo/htcondor-users},
+%and fill out the online form.
 
 For any installation, HTCondor services are installed and run as the
 Local System account.
@@ -46,7 +59,7 @@ is not supported and could be problematic.
 or a more recent version.
 
 \item 300 megabytes of free disk space is recommended.  Significantly more 
-disk space could be desired to be able to run jobs with large data files.
+disk space could be necessary to be able to run jobs with large data files.
 
 \item HTCondor for Windows will operate on either an NTFS or FAT32 file system.  However, for security purposes, NTFS is preferred.
 
@@ -70,8 +83,7 @@ decisions to make about the basic layout of the pool.
 
 If the answers to these questions are already known,
 skip to the Windows Installation Procedure section below,
-section~\ref{sec:nt-install-procedure} on
-page~\pageref{sec:nt-install-procedure}.
+section~\ref{sec:nt-install-procedure}.
 If unsure, read on.
 
 \begin{itemize} 
@@ -97,6 +109,8 @@ manager.
 
 Install HTCondor on the central manager before installing
 on the other machines within the pool.
+
+Generally jobs should not be either submitted or run on the central manager machine.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \item{Is there enough disk space for HTCondor?}

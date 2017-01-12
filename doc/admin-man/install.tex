@@ -27,25 +27,17 @@ web site, \URL{http://research.cs.wisc.edu/htcondor/}.
 The downloads are available from the downloads page,
 at \URL{http://research.cs.wisc.edu/htcondor/downloads/}.
 
-The platform-dependent HTCondor files are currently available from two sites.
-The main site is at the University of Wisconsin--Madison,
-Madison, Wisconsin, USA.
-A second site is the Istituto Nazionale di Fisica Nucleare Sezione di
-Bologna, Bologna, Italy.
-Please choose the site nearest to you.
-
-Make note of the location of where you download the binary into.
-
 The HTCondor binary distribution is packaged in the following files
 and directories:
 
 \begin{description}
-\item[\File{LICENSE-2.0.TXT}] the licensing agreement.
+\item[\File{LICENSE-2.0.txt}] the licensing agreement.
                   By installing HTCondor, you agree to the contents of
 		  this file
 \item[\File{README}] general information
 \item[\File{bin}] directory which contains the distribution HTCondor
 		  user programs.
+\item[\File{bosco\_install}] the Perl script used to install Bosco.
 \item[\File{condor\_configure}] the Perl script used to install and
                   configure HTCondor.
 \item[\File{condor\_install}] the Perl script used to install HTCondor.
@@ -72,13 +64,24 @@ it is only used to announce new releases of HTCondor.
 To subscribe, go to
 \URL{https://lists.cs.wisc.edu/mailman/listinfo/htcondor-world},
 and fill out the online form.
+
+You might also want to con the htcondor-usrs mailing list.
+This list is meant to be a forum for HTCondor users to learn from each
+other and discuss using HTCondor. It is an excellent place to ask
+the HTCondor community about using and configuring HTCondor.
+To subscribe, go to
+\URL{https://lists.cs.wisc.edu/mailman/listinfo/htcondor-users},
+and fill out the online form.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Preparing-to-Install}Preparation} 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Before installation, make a few important
+Note:  this section is partly, but not entirely, Unix-centric.
+
+Before installation, you need to make a few important
 decisions about the basic layout of your pool.
-The decisions answer the questions:
+These decisions answer the following questions:
 
 \begin{enumerate}
 \item What machine will be the central manager?
@@ -135,6 +138,9 @@ and a pool with about 1000 machines will require approximately
 
 A faster CPU will speed up matchmaking. 
 
+Generally jobs should not be either submitted or run on the central
+manager machine.
+
 \item[2. Which machines should be allowed to submit jobs?]
 
 HTCondor can restrict the machines allowed to submit jobs.  Alternatively, 
@@ -149,15 +155,17 @@ that allows no machine to connect and submit jobs.
 \item[3. Will HTCondor run as root or not?]
 
 \index{installation!running as root}
-Start up the HTCondor daemons as the Unix user root.
+We strongly recommend that the HTCondor daemons be installed and run
+as the Unix user root.
 Without this,
 HTCondor can do very little to enforce security and policy
 decisions.
-You can install HTCondor as any user,
-however there are both serious security and performance consequences.
+You can install HTCondor as any user;
+however there are serious security and performance consequences
+do doing a non-root installation.
 Please see section~\ref{sec:Non-Root} on page~\pageref{sec:Non-Root}
 in the manual for the details and ramifications of
-running HTCondor as a Unix user other than root.
+installing and running HTCondor as a Unix user other than root.
 
 \item[4. Who will administer HTCondor?]
 
@@ -171,6 +179,7 @@ running HTCondor as a Unix user other than root.
 % 2. to customize policies
 % 3. to receive e-mail
 
+%TEMP -- I'd like to re-word this...
 Either root will be administering HTCondor directly, or someone else
 will be acting as the HTCondor administrator.  If root has delegated
 the responsibility to another person, keep in mind that as long as
@@ -191,7 +200,7 @@ configuration variable.
 directory be shared?]
 
 \index{Unix user!condor}
-To simplify installation of HTCondor,
+To simplify installation of HTCondor, you should
 create a Unix user named condor on all machines in the pool.
 The HTCondor daemons will create files
 (such as the log files) owned by this user,
@@ -229,10 +238,12 @@ HTCondor go?]
 
 HTCondor needs a few directories that are unique on every machine in
 your pool.  These are 
+\File{execute},
 \File{spool}, 
-\File{log}, and 
-\File{execute}.  Generally, all
-three are subdirectories of a single machine specific directory called
+\File{log},
+(and possibly \File{lock}). 
+Generally, all
+of them are subdirectories of a single machine specific directory called
 the local directory (specified by the \Macro{LOCAL\_DIR} macro
 in the configuration file).
 \index{owner!of directories}
@@ -262,7 +273,7 @@ The binary for the remote job is copied into this directory, so
 there
 must be enough space for it.  (HTCondor will not send a job to a
 machine that does not have enough disk space to hold the initial
-binary).  In addition, if the remote job dumps core for some reason,
+binary..)  In addition, if the remote job dumps core for some reason,
 it is first dumped to the execute directory before it is sent back to
 the submit machine.  So, put the execute directory on
 a partition with enough space to hold a possible core file from the
@@ -369,7 +380,7 @@ See section~\ref{sec:Multiple-Platforms} on about Configuring HTCondor for
 Multiple Platforms for details.
 
 \index{configuration files!location}
-The location of configuration files is specified in
+The location of configuration files is described in
 section~\ref{sec:Ordering-Config-File}.
 
 \item[Release Directory]
@@ -388,7 +399,7 @@ located on a shared file system, if possible.
 \begin{itemize}
      \item User Binaries:
 
-     All of the files in the \File{bin} directory are programs the end
+     All of the files in the \File{bin} directory are programs that
      HTCondor users should expect to have in their path.  You could
      either put them in a well known location (such as
      \File{/usr/local/condor/bin}) which you have HTCondor users add to
@@ -445,7 +456,7 @@ The documentation provided with HTCondor is currently available in
 \item[7. Am I using AFS?]
 
 If you are using AFS at your site, be sure to read the
-section~\ref{sec:HTCondor-AFS} on page~\pageref{sec:HTCondor-AFS} in the
+section~\ref{sec:HTCondor-AFS} in the
 manual.
 HTCondor does not currently have a way to authenticate itself to AFS.
 A solution is not ready for
@@ -462,9 +473,9 @@ section~\ref{sec:HTCondor-AFS} for all the details.
 \item[8. Do I have enough disk space for HTCondor?]
 
 \index{disk space requirement!all versions}
-The compressed downloads of HTCondor currently range from a low of about 12
-Mbytes for 32-bit Debian 6.0 GNU/Linux to about 94 Mbytes for Windows.  The
-compressed source code takes approximately 18 Mbytes.
+The compressed downloads of HTCondor currently range from a low of about 13
+Mbytes for 64-bit Ubuntu 12/Linux to about 115 Mbytes for Windows.  The
+compressed source code takes approximately 17 Mbytes.
 
 In addition, you will need a lot of disk space in the local directory
 of any machines that are submitting jobs to HTCondor.  See question 6
