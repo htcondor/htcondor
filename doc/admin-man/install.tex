@@ -42,9 +42,9 @@ Obtaining the HTCondor Software}
 \index{Unix installation!download}
 \index{download}
 The first step to installing HTCondor is to download it from the HTCondor
-web site, \URL{http://research.cs.wisc.edu/htcondor/}.
+web site, \URL{http://htcondor.org/}.
 The downloads are available from the downloads page,
-at \URL{http://research.cs.wisc.edu/htcondor/downloads/}.
+at \URL{http://htcondor.org/downloads/}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Unix-Install}
@@ -457,7 +457,7 @@ The documentation provided with HTCondor is currently available in
      HTML, Postscript and PDF (Adobe Acrobat).  It can be locally installed
      wherever is customary at your site.  You can also find the HTCondor
      documentation on the web at:
-     \URL{http://www.cs.wisc.edu/condor/manual}.
+     \URL{http://htcondor.org/manual}.
 
 \end{description}
 
@@ -506,7 +506,7 @@ As of HTCondor version 7.5.1,
 the HTCondor RPM installs into File Hierachy Standard locations.
 
 Yum repositories and instructions are at
- \URL{http://research.cs.wisc.edu/htcondor/yum/} .
+ \URL{http://htcondor.org/yum/} .
 The repositories are named to distinguish stable releases from
 development releases and by Red Hat version number. 
 The 6 repositories are:
@@ -536,7 +536,7 @@ This example is for the stable series, on RHEL 5.
 \footnotesize
 \begin{verbatim}
   cd /etc/yum.repos.d
-  wget http://research.cs.wisc.edu/htcondor/yum/repo.d/condor-stable-rhel5.repo
+  wget http://htcondor.org/yum/repo.d/condor-stable-rhel5.repo
 \end{verbatim}
 \normalsize
 Note that this step need be done only once;
@@ -545,7 +545,7 @@ do not get the same repository more than once.
 \item Import signing key
 The RPMs are signed in the Redhat 6 and RedHat 7 repositories. 
 \begin{verbatim}
-  wget http://research.cs.wisc.edu/htcondor/yum/RPM-GPG-KEY-HTCondor
+  wget http://htcondor.org/yum/RPM-GPG-KEY-HTCondor
   rpm --import RPM-GPG-KEY-HTCondor
 \end{verbatim}
 
@@ -593,7 +593,7 @@ As of HTCondor version 7.5.1,
 the HTCondor Debian package installs into File Hierachy Standard locations.
 
 The HTCondor APT repositories are specified at
- \URL{http://research.cs.wisc.edu/htcondor/debian/} .
+ \URL{http://htcondor.org/debian/} .
 See this web page for repository information.
 
 Here is an ordered set of steps that get HTCondor running.
@@ -612,10 +612,10 @@ operating system-specific lines is in
 the file \File{/etc/apt/sources.list} .
 \footnotesize
 \begin{verbatim}
-deb http://research.cs.wisc.edu/htcondor/debian/stable/ squeeze contrib
-deb http://research.cs.wisc.edu/htcondor/debian/development/ squeeze contrib
-deb http://research.cs.wisc.edu/htcondor/debian/stable/ wheezy contrib
-deb http://research.cs.wisc.edu/htcondor/debian/development/ wheezy contrib
+deb http://htcondor.org/debian/stable/ squeeze contrib
+deb http://htcondor.org/debian/development/ squeeze contrib
+deb http://htcondor.org/debian/stable/ wheezy contrib
+deb http://htcondor.org/debian/development/ wheezy contrib
 \end{verbatim}
 \normalsize
 Note that this step need be done only once;
