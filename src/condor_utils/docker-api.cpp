@@ -485,7 +485,7 @@ DockerAPI::stats(const std::string &container, uint64_t &memUsage, uint64_t &net
 
 	char request[256];
 
-	sprintf(request, "GET /containers/%s/stats?stream=0 HTTP/0.9\r\n\r\n", container.c_str());
+	sprintf(request, "GET /containers/%s/stats?stream=0 HTTP/1.0\r\n\r\n", container.c_str());
 	int ret = write(uds, request, strlen(request));
 	if (ret < 0) {
 		dprintf(D_ALWAYS, "Can't send request to docker server, no statistics will be available\n");
