@@ -343,9 +343,9 @@ sub DoChild
         }
         $alive = trim($alive);
         if($alive eq "false") {
-            print "\tCondor Not running - aborting $testname\n";
+            print "\tCondor Not running, Staring one Now\n";
             print " @whodata\n";
-            return 1;
+            StartTestPersonal($testname, $needs->{testconf});
         }
     }
 
@@ -421,6 +421,14 @@ sub DoChild
     copy($runout, $newrunout);
     copy($cmdout, $newcmdout);
 
+    if(exists($needs->{personal})) {
+        my $personalstatus = StopTestPersonal($testname);
+        if($personalstatus != 0 && $res == 0) {
+            print "\tTest succeeded, but condor failed to shut down or there were\n";
+            print "\tcore files or error messages in the logs. see CondorTest::EndTest\n";
+            $res = $personalstatus;
+        }
+    }
     return($res);
 }
 
@@ -437,20 +445,94 @@ sub load_test_requirements
     my $name = shift;
     my $requirements;
 
-    my $requirementslist = "Test_Requirements";
-    open( TR, "< ${requirementslist}" ) or return $requirements;
-    while( my $line = <TR> ) {
-        CondorUtils::fullchomp( $line );
-        if($line =~ /\s*$name\s*:\s*(.*)/) {
-            my @requirementList = split( /,/, $1 );
-            foreach my $requirement (@requirementList) {
-                $requirement =~ s/^\s+//;
-                $requirement =~ s/\s+$//;
-                $requirements->{ $requirement } = 1;
+    if (open(TF, "<${name}.run")) {
+        my $record = 0;
+        my $conf = "";
+        while (my $line = <TF>) {
+            CondorUtils::fullchomp($line);
+            if($line =~ /^#testreq:\s*(.*)/) {
+                my @requirementList = split(/ /, $1);
+                foreach my $requirement (@requirementList) {
+                    $requirement =~ s/^\s+//;
+                    $requirement =~ s/\s+$//;
+                    $requirements->{ $requirement } = 1;
+                }
+            }
+
+            if($line =~ /<<CONDOR_TESTREQ_CONFIG/) {
+                $record = 1;
+                next;
+            }
+
+            if($line =~ /^#endtestreq/) {
+                $record = 0;
+                last;
+            }
+
+            if($record && $line =~ /CONDOR_TESTREQ_CONFIG/) {
+                $requirements->{testconf} = $conf . "\n";
+                $record = 0;
+            }
+
+            if ($record) {
+                $conf .= $line . "\n";
+            }
+        }
+    }
+
+    # If the test file does not contain the requirements for it to
+    # run then try to read requirements from the "Test_Requirements"
+    # file. This file will be depraceted so new test file should
+    # mention the requirements in itself rather than adding an
+    # entry in "Test_Requirements"
+    if (!defined($requirements)) {
+        my $requirementslist = "Test_Requirements";
+        open(TR, "< ${requirementslist}") or return $requirements;
+        while (my $line = <TR>) {
+            CondorUtils::fullchomp( $line );
+            if ($line =~ /\s*$name\s*:\s*(.*)/) {
+                my @requirementList = split(/,/, $1);
+                foreach my $requirement (@requirementList) {
+                    $requirement =~ s/^\s+//;
+                    $requirement =~ s/\s+$//;
+                    $requirements->{$requirement} = 1;
+                }
             }
         }
     }
 
     return $requirements;
 }
+
+sub StartTestPersonal {
+    my $test = shift;
+    my $testconf = shift;
+    my $firstappend_condor_config;
+
+    if (not defined $testconf) {
+        $firstappend_condor_config = '
+            DAEMON_LIST = MASTER, SCHEDD, COLLECTOR, NEGOTIATOR, STARTD
+            NEGOTIATOR_INTERVAL = 5
+            JOB_MAX_VACATE_TIME = 15
+        ';
+    } else {
+        $firstappend_condor_config = $testconf;
+    }
+
+    my $configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"remotetask$test");
+
+    CondorTest::StartCondorWithParams(
+        condor_name => "remotetask$test",
+        fresh_local => "TRUE",
+        condorlocalsrc => "$configfile"
+        #test_glue => "TRUE",
+    );
+}
+
+sub StopTestPersonal {
+    my $exit_status = 0;
+    $exit_status = CondorTest::EndTest("no_exit");
+    return($exit_status);
+}
+
 1;
