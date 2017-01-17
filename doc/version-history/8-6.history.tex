@@ -41,6 +41,14 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a race condition when running multiple concurrent jobs on the same claim.
+When the starter exits, it notifies the shadow, which tells the startd to kill the starter.
+Immediately after the shadows tells the startd, it fetches the next job, and tries to start it.
+If the starter hasn't completely exited yet (perhaps it needs to clean up a large sandbox),
+it will notice the shadow has closed the command socket, and the starter will go into disconnected
+mode, and get confused.  This has been fixed.
+\Ticket{6049}
+
 \item Fixed an infelicity with \Condor{submit} -i and docker universe,
 where it would start an interactive shell without a container.  Added error
 message expressing that this combination is not currently supported.
