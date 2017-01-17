@@ -33,7 +33,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Added a new config knob, ALWAYS\_REUSEADDR, which defaults to false.
+When true, it tells condor to set the SO\_REUSEADDR socket option, so that
+the schedd can run large numbers of very short jobs without exhausting the
+number of local ports needed for shadows.
+\Ticket{6040}
 
 \end{itemize}
 
