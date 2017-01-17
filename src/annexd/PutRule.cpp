@@ -25,8 +25,7 @@ PutRule::operator() () {
 	// and get the same result (and we don't currently even use the rule ARN).
 	//
 
-	std::string ruleName;
-	scratchpad->LookupString( "BulkRequestID", ruleName );
+	std::string ruleName = annexID;
 
 
 	int tryCount = 0;
@@ -107,8 +106,7 @@ int
 PutRule::rollback() {
 	dprintf( D_FULLDEBUG, "PutRule::rollback()\n" );
 
-	std::string ruleName;
-	scratchpad->LookupString( "BulkRequestID", ruleName );
+	std::string ruleName = annexID;
 
 	int rc;
 	std::string errorCode;
@@ -128,4 +126,3 @@ PutRule::rollback() {
 	daemonCore->Reset_Timer( gahp->getNotificationTimerId(), 0, TIMER_NEVER );
 	return PASS_STREAM;
 }
-

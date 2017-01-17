@@ -25,11 +25,6 @@ PutTargets::operator() () {
 	// and get the same result (which we ignore anyway).
 	//
 
-	std::string spotFleetRequestID;
-	scratchpad->LookupString( "BulkRequestID", spotFleetRequestID );
-	ASSERT(! spotFleetRequestID.empty());
-	std::string targetID = spotFleetRequestID;
-
 	//
 	// Construct the input JSON string.
 	//
@@ -38,7 +33,7 @@ PutTargets::operator() () {
 	// client token begins with this parameter.
 	input.Assign( "SpotFleetRequestID", annexID );
 	input.Assign( "RuleID", ruleName );
-	input.Assign( "TargetID", targetID );
+	input.Assign( "TargetID", annexID );
 	input.Assign( "LeaseExpiration", this->leaseExpiration );
 
 	std::string inputString;
@@ -68,7 +63,7 @@ PutTargets::operator() () {
 	std::string errorCode;
 	rc = gahp->put_targets(
 				service_url, public_key_file, secret_key_file,
-				ruleName, targetID, target, inputString, errorCode );
+				ruleName, annexID, target, inputString, errorCode );
 	if( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED || rc == GAHPCLIENT_COMMAND_PENDING ) {
 		// We expect to exit here the first time.
 		return KEEP_STREAM;
@@ -118,16 +113,11 @@ PutTargets::rollback() {
 	scratchpad->LookupString( "ruleName", ruleName );
 	ASSERT(! ruleName.empty());
 
-	std::string spotFleetRequestID;
-	scratchpad->LookupString( "BulkRequestID", spotFleetRequestID );
-	ASSERT(! spotFleetRequestID.empty());
-	std::string targetID = spotFleetRequestID;
-
 	int rc;
 	std::string errorCode;
 	rc = gahp->remove_targets(
 				service_url, public_key_file, secret_key_file,
-				ruleName, targetID, errorCode );
+				ruleName, annexID, errorCode );
 	if( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED || rc == GAHPCLIENT_COMMAND_PENDING ) {
 		// We expect to exit here the first time.
 		return KEEP_STREAM;
@@ -135,7 +125,7 @@ PutTargets::rollback() {
 
 	if( rc != 0 ) {
 		// We're already rolling back, so the only thing we could do is retry.
-		dprintf( D_ALWAYS, "Failed to remove target '%s' from rule '%s' ('%s'); this will probably cause rule removal to fail.\n", targetID.c_str(), ruleName.c_str(), errorCode.c_str() );
+		dprintf( D_ALWAYS, "Failed to remove target '%s' from rule '%s' ('%s'); this will probably cause rule removal to fail.\n", annexID.c_str(), ruleName.c_str(), errorCode.c_str() );
 	}
 
 	daemonCore->Reset_Timer( gahp->getNotificationTimerId(), 0, TIMER_NEVER );

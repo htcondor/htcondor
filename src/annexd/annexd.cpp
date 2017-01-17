@@ -359,7 +359,7 @@ createOneAnnex( ClassAd * command, Stream * replyStream ) {
 	//
 	// The commandState, commandID, and scratchpad allow the functor sequence
 	// to restart a rollback, if that becomes necessary.
-	FunctorSequence * fs = new FunctorSequence( { gf, br, pr, pt }, last, commandState, commandID, scratchpad );
+	FunctorSequence * fs = new FunctorSequence( { gf, pr, pt, br }, last, commandState, commandID, scratchpad );
 
 	// Create a timer for the gahp to fire when it gets a result.  We must
 	// use TIMER_NEVER to ensure that the timer hasn't been reaped when the
@@ -434,6 +434,8 @@ handleClassAdCommand( Service *, int dcCommandInt, Stream * s ) {
 		case CA_BULK_REQUEST: {
 			// Do not allow users to provide their own command IDs.
 			commandAd.Assign( "CommandID", (const char *)NULL );
+			// Make sure we don't collide with another annex.
+			commandAd.Assign( "AnnexID", (const char *)NULL );
 			return createOneAnnex( & commandAd, s );
 		} break;
 
