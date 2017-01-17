@@ -41,6 +41,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Fixed an infelicity with \Condor{submit} -i and docker universe,
+where it would start an interactive shell without a container.  Added error
+message expressing that this combination is not currently supported.
+\Ticket{6083}
+
+	
 
 \end{itemize}
