@@ -12,10 +12,11 @@ class PutRule : public Functor {
 	public:
 		PutRule( ClassAd * r, EC2GahpClient * g, ClassAd * s,
 			const std::string & su, const std::string & pkf, const std::string & skf,
-			ClassAdCollection * c, const std::string & cid ) :
+			ClassAdCollection * c, const std::string & cid,
+			const std::string & aid ) :
 			reply( r ), gahp( g ), scratchpad( s ),
 			service_url( su ), public_key_file( pkf ), secret_key_file( skf ),
-			commandID( cid ), commandState( c )
+			commandID( cid ), commandState( c ), annexID( aid )
 		{ }
 		virtual ~PutRule() { }
 
@@ -31,6 +32,8 @@ class PutRule : public Functor {
 
 		std::string commandID;
 		ClassAdCollection * commandState;
+
+		std::string annexID;
 };
 
 #endif /* _CONDOR_CREATE_RULE_H */

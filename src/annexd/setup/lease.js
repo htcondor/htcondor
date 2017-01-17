@@ -44,6 +44,23 @@ exports.handler = function( event, context, callback ) {
 	var AWS = require( 'aws-sdk' );
 	var ec2 = new AWS.EC2();
 
+	// Assumes we have fewer than 1000 SFRs.
+	var p = { };
+	ec2.describeSpotFleetRequests( p, function( err, data ) {
+		if( err ) {
+			console.log( err, err.stack );
+			callback( err, err.stack );
+		} else {
+			for( var i = 0; i < data.SpotFleetRequestConfigs.length; ++i ) {
+				var config = data.SpotFleetRequestConfigs[i];
+				var sfrc = config.SpotFleetRequestConfig;
+				if( sfrc.ClientToken.startsWith( spotFleetRequestID ) ) {
+					spotFleetRequestID = config.SpotFleetRequestId;
+					break;
+				}
+			}
+
+
 	var params = {
 		SpotFleetRequestIds : [ spotFleetRequestID ],
 		TerminateInstances : true
@@ -90,6 +107,10 @@ exports.handler = function( event, context, callback ) {
 					});
 				}
 			});
+		}
+	});
+
+
 		}
 	});
 }

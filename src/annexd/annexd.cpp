@@ -20,17 +20,7 @@
 #include "PutTargets.h"
 #include "ReplyAndClean.h"
 #include "FunctorSequence.h"
-
-// Stolen from EC2Job::build_client_token in condor_gridmanager/ec2job.cpp.
-#include <uuid/uuid.h>
-void generateCommandID( std::string & commandID ) {
-	char uuid_str[37];
-	uuid_t uuid;
-	uuid_generate( uuid );
-	uuid_unparse( uuid, uuid_str );
-	uuid_str[36] = '\0';
-	commandID.assign( uuid_str );
-}
+#include "generate-id.h"
 
 // Although the annex daemon uses a GAHP, it doesn't have a schedd managing
 // its hard state in an existing job ad; it has to do that job on its own.
@@ -277,9 +267,23 @@ createOneAnnex( ClassAd * command, Stream * replyStream ) {
 	}
 	scratchpad->Assign( "CommandID", commandID );
 
+	// The annex ID will form part of each SFR's client token, which will
+	// allow us to cancel them all without having to continually add or update
+	// the target(s) in the lease.  Since we dont' need to know the SFR's
+	// ID -- or, for that matter, its whole client token -- we can create the
+	// lease /before/ we submit the Spot Fleet request.
+	std::string annexID;
+	command->LookupString( "AnnexID", annexID );
+	if( annexID.empty() ) {
+		generateAnnexID( annexID );
+		command->Assign( "AnnexID", annexID );
+	}
+	scratchpad->Assign( "AnnexID", annexID );
+
 	// Each step in the sequence handles its own de/serialization.
 	BulkRequest * br = new BulkRequest( reply, gahp, scratchpad,
-		serviceURL, publicKeyFile, secretKeyFile, commandState, commandID );
+		serviceURL, publicKeyFile, secretKeyFile, commandState,
+		commandID, annexID );
 
 	// Validate the lease time along with the bulk request, just to save
 	// some error-handling duplication.
@@ -338,11 +342,11 @@ createOneAnnex( ClassAd * command, Stream * replyStream ) {
 		commandState, commandID );
 	PutRule * pr = new PutRule( reply, eventsGahp, scratchpad,
 		eventsURL, publicKeyFile, secretKeyFile,
-		commandState, commandID );
+		commandState, commandID, annexID );
 	PutTargets * pt = new PutTargets( leaseFunctionARN,
 		reply, eventsGahp, scratchpad,
 		eventsURL, publicKeyFile, secretKeyFile, endOfLease,
-		commandState, commandID );
+		commandState, commandID, annexID );
 	// We now only call last->operator() on success; otherwise, we roll back
 	// and call last->rollback() after we've given up.  We can therefore
 	// remove the command ad from the commandState in this functor.

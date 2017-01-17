@@ -6,13 +6,14 @@ use warnings;
 use Getopt::Long;
 use JSON;
 
-my $VERSION = 3;
+my $VERSION = 4;
 
 my( $prettyPrint, $s3Bucket, $s3Key );
 GetOptions(
 	'pretty-print'	=> \$prettyPrint,
 	's3-bucket'		=> \$s3Bucket,
-	's3-key'		=> \$s3Key
+	's3-key'		=> \$s3Key,
+	'version=s'		=> \$VERSION,
 );
 if(! $s3Bucket) { $s3Bucket = { "Fn::Join" => [ "-", [ "condor-annex", { "Ref" => "AWS::Region" } ] ] }; }
 if(! $s3Key) { $s3Key = "lease-${VERSION}.zip"; }

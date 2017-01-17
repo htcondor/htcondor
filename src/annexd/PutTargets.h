@@ -12,10 +12,12 @@ class PutTargets : public Functor {
 	public:
 		PutTargets( const std::string & t, ClassAd * r, EC2GahpClient * g, ClassAd * s,
 			const std::string & su, const std::string & pkf, const std::string & skf,
-			time_t l, ClassAdCollection * c, const std::string & cid ) :
+			time_t l, ClassAdCollection * c, const std::string & cid,
+			const std::string & aid ) :
 			target( t ), reply( r ), gahp( g ), scratchpad( s ),
             service_url( su ), public_key_file( pkf ), secret_key_file( skf ),
-            leaseExpiration( l ), commandID( cid ), commandState( c )
+            leaseExpiration( l ), commandID( cid ), commandState( c ),
+            annexID( aid )
 		{ ASSERT(! target.empty()); }
 
 		virtual ~PutTargets() { }
@@ -36,6 +38,8 @@ class PutTargets : public Functor {
 
 		std::string commandID;
 		ClassAdCollection * commandState;
+
+		std::string annexID;
 };
 
 #endif /* _CONDOR_PUT_TARGETS_H */

@@ -5,23 +5,12 @@
 #include "gahp-client.h"
 #include "Functor.h"
 #include "BulkRequest.h"
-
-// Stolen from EC2Job::build_client_token in condor_gridmanager/ec2job.cpp
-// and duplicated here because I expect to need to fiddle with it.
-#include <uuid/uuid.h>
-void
-generateClientToken( std::string & ct ) {
-    char uuid_str[37];
-    uuid_t uuid;
-    uuid_generate( uuid );
-    uuid_unparse( uuid, uuid_str );
-    uuid_str[36] = '\0';
-    ct.assign( uuid_str );
-}
+#include "generate-id.h"
 
 BulkRequest::BulkRequest( ClassAd * r, EC2GahpClient * egc, ClassAd * s,
 	const std::string & su, const std::string & pkf, const std::string & skf,
-	ClassAdCollection * c, const std::string & cid ) :
+	ClassAdCollection * c, const std::string & cid,
+	const std::string & annexID ) :
   gahp( egc ), reply( r ), scratchpad( s ),
   service_url( su ), public_key_file( pkf ), secret_key_file( skf ),
   commandID( cid ), commandState( c ) {
@@ -33,7 +22,7 @@ BulkRequest::BulkRequest( ClassAd * r, EC2GahpClient * egc, ClassAd * s,
 
 	// Generate a client token if we didn't get one from the log.
 	if( client_token.empty() ) {
-		generateClientToken( client_token );
+		generateClientToken( annexID, client_token );
 		if( reply != NULL) { reply->Assign( "ClientToken", client_token ); }
 	}
 }

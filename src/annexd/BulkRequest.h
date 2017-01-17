@@ -13,7 +13,7 @@ class BulkRequest : public Functor {
 		BulkRequest( ClassAd * r, EC2GahpClient * egc, ClassAd * s,
 			const std::string & su, const std::string & pkf,
 			const std::string & skf, ClassAdCollection * c,
-			const std::string & commandID );
+			const std::string & commandID, const std::string & annexID );
 		virtual ~BulkRequest() { }
 
 		virtual int operator() ();

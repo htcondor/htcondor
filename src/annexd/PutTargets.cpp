@@ -34,7 +34,9 @@ PutTargets::operator() () {
 	// Construct the input JSON string.
 	//
 	ClassAd input;
-	input.Assign( "SpotFleetRequestID", spotFleetRequestID );
+	// Now misnamed, because the new (v4) lease code cancels SFRs whose
+	// client token begins with this parameter.
+	input.Assign( "SpotFleetRequestID", annexID );
 	input.Assign( "RuleID", ruleName );
 	input.Assign( "TargetID", targetID );
 	input.Assign( "LeaseExpiration", this->leaseExpiration );
