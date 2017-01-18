@@ -420,7 +420,8 @@ bool add_attrs_from_string_tokens(classad::References & attrs, const char * str,
 
 void add_attrs_from_StringList(const StringList & list, classad::References & attrs)
 {
-	for (const char * p = list.first(); p != NULL; p = list.next()) {
+	StringList &constList = const_cast<StringList &>(list);
+	for (const char * p = constList.first(); p != NULL; p = constList.next()) {
 		attrs.insert(p);
 	}
 }

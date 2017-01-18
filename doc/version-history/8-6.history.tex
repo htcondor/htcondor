@@ -33,7 +33,17 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Added two new job classad attributes, \Macro{CumulativeRemoteSysCpu} and 
+\Macro{CumulativeRemoteUserCpu}, which keep a running total of system and user
+cpu usage, respectively, across all job restarts.  Also, immediately clear attributes
+\Macro{RemoteSysCpu} and \Macro{RemoveUserCpu} on job start, instead of on first update.
+\Ticket{6022}
+
+\item Added a new config knob, ALWAYS\_REUSEADDR, which defaults to false.
+When true, it tells condor to set the SO\_REUSEADDR socket option, so that
+the schedd can run large numbers of very short jobs without exhausting the
+number of local ports needed for shadows.
+\Ticket{6040}
 
 \end{itemize}
 
@@ -41,6 +51,19 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Fixed a race condition when running multiple concurrent jobs on the same claim.
+When the starter exits, it notifies the shadow, which tells the startd to kill the starter.
+Immediately after the shadows tells the startd, it fetches the next job, and tries to start it.
+If the starter hasn't completely exited yet (perhaps it needs to clean up a large sandbox),
+it will notice the shadow has closed the command socket, and the starter will go into disconnected
+mode, and get confused.  This has been fixed.
+\Ticket{6049}
+
+\item Fixed an infelicity with \Condor{submit} -i and docker universe,
+where it would start an interactive shell without a container.  Added error
+message expressing that this combination is not currently supported.
+\Ticket{6083}
+
+	
 
 \end{itemize}
