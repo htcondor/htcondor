@@ -9636,9 +9636,22 @@ int SendJobCredential()
 		return 0;
 	}
 
-	// store credential with the credd
 	MyString producer;
-	if(param(producer, "SEC_CREDENTIAL_PRODUCER")) {
+	if(!param(producer, "SEC_CREDENTIAL_PRODUCER")) {
+		// nothing to do
+		return 0;
+	}
+
+	// If SEC_CREDENTIAL_PRODUCER is set to magic value CREDENTIAL_ALREADY_STORED,
+	// this means that condor_submit should NOT bother spending time to send the
+	// credential to the credd (because it is already there), but it SHOULD do
+	// all the other work as if it did send it (such as setting the SendCredential
+	// attribute so the starter will fetch the credential at job launch).
+	// If SEC_CREDENTIAL_PRODUCER is anything else, then consider it to be the
+	// name of a script we should spawn to create the credential.
+
+	if ( strcasecmp(producer.Value(),"CREDENTIAL_ALREADY_STORED") != MATCH ) {
+		// If we made it here, we need to spawn a credential producer process.
 		dprintf(D_ALWAYS, "CREDMON: invoking %s\n", producer.c_str());
 		ArgList args;
 		args.AppendArg(producer);
@@ -9699,9 +9712,14 @@ int SendJobCredential()
 				exit( 1 );
 			}
 		}
+	}  // end of block to run a credential producer
 
-		sent_credential_to_credd = true;
-	}
+	// If we made it here, we either successufully ran a credential producer, or
+	// we've been told a credential has already been stored.  Either way we want
+	// to set a flag that tells the rest of condor_submit that there is a stored
+	// credential associated with this job.
+
+	sent_credential_to_credd = true;
 
 	return 0;
 }
