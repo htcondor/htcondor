@@ -9736,6 +9736,21 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 		envobject.SetEnv("X509_USER_PROXY",x509_proxy);
 	}
 
+	// If the scheduler universe job ad has ATTR_JOB_SEND_CREDENTIAL=True, then
+	// we assume a credential for this user has been stored in the credd when the
+	// scheduler universe job was submitted.  So here we set config param
+	// SEC_CRENDENTIAL_PRODUCER to the magic value CRENDENTIAL_ALREADY_STORED.
+	// This will result in meta-scheduler like DAGMan not bother trying to restash
+	// a credential every time they run condor_submit.
+	{
+		int have_stored_credential = FALSE;
+		GetAttributeBool(job_id->cluster, job_id->proc,
+						   ATTR_JOB_SEND_CREDENTIAL, &have_stored_credential);
+		if (have_stored_credential) {
+			envobject.SetEnv("_condor_SEC_CREDENTIAL_PRODUCER","CREDENTIAL_ALREADY_STORED");
+		}
+	}
+
 	// Don't use a_out_name for argv[0], use
 	// "condor_scheduniv_exec.cluster.proc" instead. 
 	argbuf.formatstr("condor_scheduniv_exec.%d.%d",job_id->cluster,job_id->proc);
