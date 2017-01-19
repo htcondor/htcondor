@@ -80,6 +80,10 @@ bool VanillaToGrid::vanillaToGrid(classad::ClassAd * ad, int target_universe, co
 	ad->Delete(ATTR_TOTAL_SUBMIT_PROCS);
 	ad->Delete( ATTR_STAGE_IN_FINISH );
 	ad->Delete( ATTR_STAGE_IN_START );
+	ad->Delete( ATTR_ULOG_FILE );
+	ad->Delete( ATTR_ULOG_USE_XML );
+	ad->Delete( ATTR_DAGMAN_WORKFLOW_LOG );
+	ad->Delete( ATTR_DAGMAN_WORKFLOW_MASK );
 
 	// We aren't going to forward updates to this attribute,
 	// so strip it out.
