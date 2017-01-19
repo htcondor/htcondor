@@ -15,37 +15,53 @@ Installation and
 use of HTCondor is acknowledgment that you have read and agree to the
 terms.
 
+Before installing HTCondor, please consider joining the htcondor-world mailing
+list.
+Traffic on this list is kept to an absolute minimum;
+it is only used to announce new releases of HTCondor.
+To subscribe, go to
+\URL{https://lists.cs.wisc.edu/mailman/listinfo/htcondor-world},
+and fill out the online form.
+
+You might also want to consider joining the htcondor-users mailing list.
+This list is meant to be a forum for HTCondor users to learn from each
+other and discuss using HTCondor. It is an excellent place to ask
+the HTCondor community about using and configuring HTCondor.
+To subscribe, go to
+\URL{https://lists.cs.wisc.edu/mailman/listinfo/htcondor-users},
+and fill out the online form.
+
+\Bold{Note that forward and reverse DNS lookup must be enabled
+for HTCondor to work properly.}
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:pre-install-procedure}
-Obtaining HTCondor}
+Obtaining the HTCondor Software}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{installation!download}
 \index{Unix installation!download}
 \index{download}
 The first step to installing HTCondor is to download it from the HTCondor
-web site, \URL{http://research.cs.wisc.edu/htcondor/}.
+web site, \URL{http://htcondor.org/}.
 The downloads are available from the downloads page,
-at \URL{http://research.cs.wisc.edu/htcondor/downloads/}.
+at \URL{http://htcondor.org/downloads/}.
 
-The platform-dependent HTCondor files are currently available from two sites.
-The main site is at the University of Wisconsin--Madison,
-Madison, Wisconsin, USA.
-A second site is the Istituto Nazionale di Fisica Nucleare Sezione di
-Bologna, Bologna, Italy.
-Please choose the site nearest to you.
-
-Make note of the location of where you download the binary into.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Unix-Install}
+Installation on Unix}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 The HTCondor binary distribution is packaged in the following files
 and directories:
 
 \begin{description}
-\item[\File{LICENSE-2.0.TXT}] the licensing agreement.
+\item[\File{LICENSE-2.0.txt}] the licensing agreement.
                   By installing HTCondor, you agree to the contents of
 		  this file
 \item[\File{README}] general information
 \item[\File{bin}] directory which contains the distribution HTCondor
 		  user programs.
+\item[\File{bosco\_install}] the Perl script used to install Bosco.
 \item[\File{condor\_configure}] the Perl script used to install and
                   configure HTCondor.
 \item[\File{condor\_install}] the Perl script used to install HTCondor.
@@ -65,20 +81,12 @@ and directories:
 \item[\File{src}] directory containing source for some interfaces.
 \end{description}
 
-Before you install, please consider joining the htcondor-world mailing
-list.
-Traffic on this list is kept to an absolute minimum;
-it is only used to announce new releases of HTCondor.
-To subscribe, go to
-\URL{https://lists.cs.wisc.edu/mailman/listinfo/htcondor-world},
-and fill out the online form.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Preparing-to-Install}Preparation} 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:Preparing-to-Install}Preparation} 
 
-Before installation, make a few important
+Before installation, you need to make a few important
 decisions about the basic layout of your pool.
-The decisions answer the questions:
+These decisions answer the following questions:
 
 \begin{enumerate}
 \item What machine will be the central manager?
@@ -104,6 +112,9 @@ The decisions answer the questions:
 \item Do I have enough disk space for HTCondor?
 \end{enumerate}
 
+% Note: I guess this is a description rather than an enumerate because
+% enumerate isn't bold.  Need to make sure to keep numbers correct!
+% wenger 2017-01-12
 \begin{description}
 
 \item[1. What machine will be the central manager?]
@@ -135,6 +146,9 @@ and a pool with about 1000 machines will require approximately
 
 A faster CPU will speed up matchmaking. 
 
+Generally jobs should not be either submitted or run on the central
+manager machine.
+
 \item[2. Which machines should be allowed to submit jobs?]
 
 HTCondor can restrict the machines allowed to submit jobs.  Alternatively, 
@@ -149,15 +163,17 @@ that allows no machine to connect and submit jobs.
 \item[3. Will HTCondor run as root or not?]
 
 \index{installation!running as root}
-Start up the HTCondor daemons as the Unix user root.
+We strongly recommend that the HTCondor daemons be installed and run
+as the Unix user root.
 Without this,
 HTCondor can do very little to enforce security and policy
 decisions.
-You can install HTCondor as any user,
-however there are both serious security and performance consequences.
-Please see section~\ref{sec:Non-Root} on page~\pageref{sec:Non-Root}
+You can install HTCondor as any user;
+however there are serious security and performance consequences
+do doing a non-root installation.
+Please see section~\ref{sec:Non-Root}
 in the manual for the details and ramifications of
-running HTCondor as a Unix user other than root.
+installing and running HTCondor as a Unix user other than root.
 
 \item[4. Who will administer HTCondor?]
 
@@ -171,6 +187,7 @@ running HTCondor as a Unix user other than root.
 % 2. to customize policies
 % 3. to receive e-mail
 
+%TEMP -- I'd like to re-word this...
 Either root will be administering HTCondor directly, or someone else
 will be acting as the HTCondor administrator.  If root has delegated
 the responsibility to another person, keep in mind that as long as
@@ -191,7 +208,7 @@ configuration variable.
 directory be shared?]
 
 \index{Unix user!condor}
-To simplify installation of HTCondor,
+To simplify installation of HTCondor, you should
 create a Unix user named condor on all machines in the pool.
 The HTCondor daemons will create files
 (such as the log files) owned by this user,
@@ -221,18 +238,20 @@ then you must specify either via the
 \Env{CONDOR\_IDS} environment variable or the \Macro{CONDOR\_IDS}
 config file setting which uid.gid pair should be used for
 the ownership of various HTCondor files.  
-See section~\ref{sec:uids} on UIDs in HTCondor on
-page~\pageref{sec:uids} in the Administrator's Manual for details.
+See section~\ref{sec:uids} on UIDs in HTCondor
+in the Administrator's Manual for details.
 
 \item[6. Where should the machine-specific directories for
 HTCondor go?]
 
 HTCondor needs a few directories that are unique on every machine in
 your pool.  These are 
+\File{execute},
 \File{spool}, 
-\File{log}, and 
-\File{execute}.  Generally, all
-three are subdirectories of a single machine specific directory called
+\File{log},
+(and possibly \File{lock}). 
+Generally, all
+of them are subdirectories of a single machine specific directory called
 the local directory (specified by the \Macro{LOCAL\_DIR} macro
 in the configuration file).
 \index{owner!of directories}
@@ -262,7 +281,7 @@ The binary for the remote job is copied into this directory, so
 there
 must be enough space for it.  (HTCondor will not send a job to a
 machine that does not have enough disk space to hold the initial
-binary).  In addition, if the remote job dumps core for some reason,
+binary..)  In addition, if the remote job dumps core for some reason,
 it is first dumped to the execute directory before it is sent back to
 the submit machine.  So, put the execute directory on
 a partition with enough space to hold a possible core file from the
@@ -279,7 +298,7 @@ particularly if users are submitting jobs with very large
 executables or image sizes.
 By using a checkpoint server
 (see section~\ref{sec:Ckpt-Server} on Installing a Checkpoint Server on
-page~\pageref{sec:Ckpt-Server} for details),
+for details),
 you can ease the disk
 space requirements, since all checkpoint files are stored on the
 server instead of the spool directories for each machine.  However,
@@ -354,7 +373,7 @@ will be HTCondor's malfunction, not your whole machine.
 
 \label{sec:Config-File-Locations}
 \begin{description}
-\item[Configuration Files] There may be more than one configuration file.
+\item[Configuration Files] There can be more than one configuration file.
 They allow
 different levels of control over how HTCondor is configured on each
 machine in the pool.  
@@ -369,7 +388,7 @@ See section~\ref{sec:Multiple-Platforms} on about Configuring HTCondor for
 Multiple Platforms for details.
 
 \index{configuration files!location}
-The location of configuration files is specified in
+The location of configuration files is described in
 section~\ref{sec:Ordering-Config-File}.
 
 \item[Release Directory]
@@ -388,7 +407,7 @@ located on a shared file system, if possible.
 \begin{itemize}
      \item User Binaries:
 
-     All of the files in the \File{bin} directory are programs the end
+     All of the files in the \File{bin} directory are programs that
      HTCondor users should expect to have in their path.  You could
      either put them in a well known location (such as
      \File{/usr/local/condor/bin}) which you have HTCondor users add to
@@ -438,14 +457,14 @@ The documentation provided with HTCondor is currently available in
      HTML, Postscript and PDF (Adobe Acrobat).  It can be locally installed
      wherever is customary at your site.  You can also find the HTCondor
      documentation on the web at:
-     \URL{http://www.cs.wisc.edu/condor/manual}.
+     \URL{http://htcondor.org/manual}.
 
 \end{description}
 
-\item[7. Am I using AFS?]
+\item[8. Am I using AFS?]
 
 If you are using AFS at your site, be sure to read the
-section~\ref{sec:HTCondor-AFS} on page~\pageref{sec:HTCondor-AFS} in the
+section~\ref{sec:HTCondor-AFS} in the
 manual.
 HTCondor does not currently have a way to authenticate itself to AFS.
 A solution is not ready for
@@ -459,12 +478,12 @@ centralized location.  You will also have to do something special if
 you submit jobs to HTCondor from a directory on AFS.  Again, read manual
 section~\ref{sec:HTCondor-AFS} for all the details.
 
-\item[8. Do I have enough disk space for HTCondor?]
+\item[9. Do I have enough disk space for HTCondor?]
 
 \index{disk space requirement!all versions}
-The compressed downloads of HTCondor currently range from a low of about 12
-Mbytes for 32-bit Debian 6.0 GNU/Linux to about 94 Mbytes for Windows.  The
-compressed source code takes approximately 18 Mbytes.
+The compressed downloads of HTCondor currently range from a low of about 13
+Mbytes for 64-bit Ubuntu 12/Linux to about 115 Mbytes for Windows.  The
+compressed source code takes approximately 17 Mbytes.
 
 In addition, you will need a lot of disk space in the local directory
 of any machines that are submitting jobs to HTCondor.  See question 6
@@ -473,9 +492,173 @@ above for details on this.
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:new-install-procedure}
-Newer Unix Installation Procedure}
+\subsubsection{\label{sec:install-rpms}
+Unix Installation from an RPM}
+\index{installation!using Red Hat RPMs}
+\index{RPM installation on Red Hat}
+
+RPMs are available for HTCondor \VersionNotice.
+We provide a Yum repository, as well as 
+installation and configuration in one easy step.
+This RPM installation is currently available for Red Hat-compatible
+systems only.
+As of HTCondor version 7.5.1, 
+the HTCondor RPM installs into File Hierachy Standard locations.
+
+Yum repositories and instructions are at
+ \URL{http://htcondor.org/yum/} .
+The repositories are named to distinguish stable releases from
+development releases and by Red Hat version number. 
+The 4 repositories are:
+\begin{itemize}
+  \item \File{condor-stable-rhel6.repo}
+  \item \File{condor-stable-rhel7.repo}
+  \item \File{condor-development-rhel6.repo}
+  \item \File{condor-development-rhel7.repo}
+\end{itemize}
+
+Here is an ordered set of steps that get HTCondor running using the RPM.
+\begin{enumerate}
+\item The HTCondor package will automatically add a \Login{condor} user/group,
+if it does not exist already.
+Sites wishing to control the attributes of this user/group 
+should add the \Login{condor} user/group manually before installation.
+
+\item Download and install the meta-data that describes 
+the appropriate YUM repository. 
+This example is for the stable series, on RHEL 7.
+\footnotesize
+\begin{verbatim}
+  cd /etc/yum.repos.d
+  wget http://htcondor.org/yum/repo.d/condor-stable-rhel7.repo
+\end{verbatim}
+\normalsize
+Note that this step need be done only once;
+do not get the same repository more than once.
+
+\item Import signing key
+The RPMs are signed in the Redhat 6 and RedHat 7 repositories. 
+\begin{verbatim}
+  wget http://htcondor.org/yum/RPM-GPG-KEY-HTCondor
+  rpm --import RPM-GPG-KEY-HTCondor
+\end{verbatim}
+
+\item Install HTCondor.
+\begin{verbatim}
+  yum install condor-all
+\end{verbatim}
+
+\item As needed, edit the HTCondor configuration files to customize.
+The configuration files are in the directory \File{/etc/condor/} .
+Do \emph{not} use \Condor{configure} or \Condor{install} for configuration.
+The installation will be able to find configuration files without
+additional administrative intervention,
+as the configuration files are placed in \File{/etc},
+and HTCondor searches this directory.
+
+\item Start HTCondor daemons:
+\begin{verbatim}
+  /sbin/service condor start
+\end{verbatim}
+
+\end{enumerate}
+
+% Alain thinks that upgrades DO work.
+%RPM upgrade (\Opt{-u} option) does not currently
+%work for HTCondor \VersionNotice.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:install-debs}
+Unix Installation from a Debian Package}
+\index{installation!using Debian packages}
+\index{Debian installation with Debian packages}
+
+Debian packages are available in HTCondor \VersionNotice.
+We provide an APT repository, as well as 
+installation and configuration in one easy step.
+These Debian packages of HTCondor are currently available for 
+Debian 7 (wheezy) and Debian 8 (jessie).
+As of HTCondor version 7.5.1, 
+the HTCondor Debian package installs into File Hierachy Standard locations.
+
+The HTCondor APT repositories are specified at
+ \URL{http://htcondor.org/debian/} .
+See this web page for repository information.
+
+Here is an ordered set of steps that get HTCondor running.
+\begin{enumerate}
+\item The HTCondor package will automatically add a \Login{condor} user/group,
+if it does not exist already.
+Sites wishing to control the attributes of this user/group 
+should add the \Login{condor} user/group manually before installation.
+
+\item If not already present,
+set up access to the appropriate APT repository;
+they are distinguished as stable or development release,
+and by operating system. 
+Ensure that the correct one of the following release and 
+operating system-specific lines is in 
+the file \File{/etc/apt/sources.list} .
+\footnotesize
+\begin{verbatim}
+deb http://htcondor.org/debian/stable/ wheezy contrib
+deb http://htcondor.org/debian/development/ wheezy contrib
+deb http://htcondor.org/debian/stable/ jessie contrib
+deb http://htcondor.org/debian/development/ jessie contrib
+\end{verbatim}
+\normalsize
+Note that this step need be done only once;
+do not add the same repository more than once.
+
+\item Install and start HTCondor services:
+\begin{verbatim}
+  apt-get update
+  apt-get install condor
+\end{verbatim}
+
+\item As needed, edit the HTCondor configuration files to customize.
+The configuration files are in the directory \File{/etc/condor/} .
+Do \emph{not} use \Condor{configure} or \Condor{install} for configuration.
+The installation will be able to find configuration files without
+additional administrative intervention,
+as the configuration files are placed in \File{/etc},
+and HTCondor searches this directory.
+
+Then, if any configuration changes are made, restart HTCondor with
+\begin{verbatim}
+  /etc/init.d/condor restart
+\end{verbatim}
+
+\end{enumerate}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:unix-install-from-tarball}
+Unix Installation from a Tarball}
+
+\Bold{Note that installation from a tarball is no longer the preferred
+method for installing HTCondor on Unix systems.  Installation
+via RPM or Debian package is recommended if available for your
+Unix version.}
+
+An overview of the tarball-based installation process is as follows:
+\begin{enumerate}
+\item Untar the HTCondor software.
+\item Run \Condor{install} or \Condor{configure} to install the software.
+\end{enumerate}
+Details are given below.
+
+\medskip
+
+After download, all the files are in a compressed, tar format.
+They need to be untarred, as
+\begin{verbatim}
+  tar xzf <completename>.tar.gz
+\end{verbatim}
+After untarring, the directory will have the Perl scripts
+\Condor{configure} and \Condor{install} (and \Bosco{install}), as well as 
+\File{bin}, \File{etc}, \File{examples}, \File{include},
+\File{lib}, \File{libexec}, \File{man}, \File{sbin},
+\File{sql} and \File{src} subdirectories.
 
 \index{installation!with \Condor{configure}}
 \index{condor\_configure command}
@@ -484,17 +667,6 @@ Command-line arguments specify all needed information to this
 script.  The script can be executed multiple times, to modify or further
 set the configuration.  \Condor{configure} has been tested using Perl 5.003.
 Use this or a more recent version of Perl.
-
-After download, all the files are in a compressed, tar format.
-They need to be untarred, as
-\begin{verbatim}
-  tar xzf completename.tar.gz
-\end{verbatim}
-After untarring, the directory will have the Perl scripts
-\Condor{configure} and \Condor{install}, as well as 
-\File{bin}, \File{etc}, \File{examples}, \File{include},
-\File{lib}, \File{libexec}, \File{man}, \File{sbin},
-\File{sql} and \File{src} subdirectories.
 
 \Condor{configure} and \Condor{install} are the same program, but have
 different default behaviors.  \Condor{install} is identical to
@@ -536,7 +708,7 @@ The argument
 specifies the path to the local directory.
 
 The \verb@--@\Opt{type} option to \Condor{configure}
-specifies one or more of the roles that a machine may take on
+specifies one or more of the roles that a machine can take on
 within the HTCondor pool: central manager, submit or execute.
 These options are given in a comma separated list.
 So, if a machine is both a submit and execute
@@ -580,15 +752,15 @@ run
 	--local-dir=/scratch/condor --type=execute,submit
 \end{verbatim}
 
-See the \Condor{configure} manual page in
-section~\ref{man-condor-configure} on
-page~\pageref{man-condor-configure} for details.
+See the \Condor{configure} manual 
+page~\pageref{man-condor-configure}
+for details.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{installed-now-what}
+\subsubsection{\label{installed-now-what}
 Starting HTCondor Under Unix After Installation}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 \index{starting HTCondor!Unix platforms}
 
 Now that HTCondor has been installed on the machine(s), there are a few
@@ -599,8 +771,8 @@ things to check before starting up HTCondor.
     lot of possible settings and you should at least take a look at
     the first two main sections to make sure everything looks okay.
     In particular, you might want to set up security for
-    HTCondor.  See the section~\ref{sec:Config-Security} on
-    page~\pageref{sec:Config-Security} to learn how to do this.
+    HTCondor.  See the section~\ref{sec:Config-Security}
+    to learn how to do this.
 
 \item For Linux platforms, run the \Condor{kbdd} to monitor keyboard
     and mouse activity on all machines within the pool that will
@@ -636,11 +808,11 @@ things to check before starting up HTCondor.
 
 \end{enumerate}
 
-To start up the HTCondor daemons, execute
+To start up the HTCondor daemons, execute the command
 \Release{sbin/condor\_master}.  This is the HTCondor master, whose
 only job in life is to make sure the other HTCondor daemons are running.
 The master keeps track of the daemons, restarts them if they crash,
-and periodically checks to see if you have installed new binaries (and
+and periodically checks to see if you have installed new binaries (and,
 if so, restarts the affected daemons).
 
 If you are setting up your own pool, you should start HTCondor on your
@@ -721,178 +893,24 @@ can and should do:
     gcc, g++, g77, cc, acc, c89, CC, f77, fort77 and ld.  If you
     complete the full install, you will be able to use
     \condor{compile} with any command whatsoever, in particular, make.
-    See section~\ref{sec:full-condor-compile} on
-    page~\pageref{sec:full-condor-compile} in the manual for
-    directions.
+    See section~\ref{sec:full-condor-compile} in the manual for directions.
 
 \item Try building and submitting some test jobs.  See
     \File{examples/README} for details.
 
 \item If your site uses the AFS network file system, see
-section~\ref{sec:HTCondor-AFS} on page~\pageref{sec:HTCondor-AFS} in the
+section~\ref{sec:HTCondor-AFS} in the
 manual.
 
 \item We strongly recommend that you start up HTCondor (run the
 \Condor{master} daemon) as user root.  If you must start HTCondor as
-some user other than root, see section~\ref{sec:Non-Root} on
-page~\pageref{sec:Non-Root}.
+some user other than root, see section~\ref{sec:Non-Root}.
 
 \end{enumerate}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \input{admin-man/install-windows.tex}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:install-rpms} RPMs}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\index{installation!using Red Hat RPMs}
-\index{RPM installation on Red Hat}
-RPMs are available in HTCondor \VersionNotice.
-We provide a Yum repository, as well as 
-installation and configuration in one easy step.
-This RPM installation is currently available for Red Hat-compatible
-systems only.
-As of HTCondor version 7.5.1, 
-the HTCondor RPM installs into File Hierachy Standard locations.
-
-Yum repositories and instructions are at
- \URL{http://research.cs.wisc.edu/htcondor/yum/} .
-The repositories are named to distinguish stable releases from
-development releases and by Red Hat version number. 
-The 6 repositories are:
-\begin{itemize}
-  \item \File{condor-stable-rhel5.repo}
-  \item \File{condor-stable-rhel6.repo}
-  \item \File{condor-stable-rhel7.repo}
-  \item \File{condor-development-rhel5.repo}
-  \item \File{condor-development-rhel6.repo}
-  \item \File{condor-development-rhel7.repo}
-\end{itemize}
-
-For HTCondor to work properly under RHEL5, 
-the Red Hat Network channel called \AdStr{RHEL Virtualization} 
-must be explicitly enabled.
-
-Here is an ordered set of steps that get HTCondor running using the RPM.
-\begin{enumerate}
-\item The HTCondor package will automatically add a \Login{condor} user/group,
-if it does not exist already.
-Sites wishing to control the attributes of this user/group 
-should add the \Login{condor} user/group manually before installation.
-
-\item Download and install the meta-data that describes 
-the appropriate YUM repository. 
-This example is for the stable series, on RHEL 5. 
-\footnotesize
-\begin{verbatim}
-  cd /etc/yum.repos.d
-  wget http://research.cs.wisc.edu/htcondor/yum/repo.d/condor-stable-rhel5.repo
-\end{verbatim}
-\normalsize
-Note that this step need be done only once;
-do not get the same repository more than once.
-
-\item Import signing key
-The RPMs are signed in the Redhat 6 and RedHat 7 repositories. 
-\begin{verbatim}
-  wget http://research.cs.wisc.edu/htcondor/yum/RPM-GPG-KEY-HTCondor
-  rpm --import RPM-GPG-KEY-HTCondor
-\end{verbatim}
-
-\item Install HTCondor.
-For 32-bit machines:
-\begin{verbatim}
-  yum install condor-all
-\end{verbatim}
-For 64-bit machines:
-\begin{verbatim}
-  yum install condor-all.x86_64
-\end{verbatim}
-
-\item As needed, edit the HTCondor configuration files to customize.
-The configuration files are in the directory \File{/etc/condor/} .
-Do \emph{not} use \Condor{configure} or \Condor{install} for configuration.
-The installation will be able to find configuration files without
-additional administrative intervention,
-as the configuration files are placed in \File{/etc},
-and HTCondor searches this directory.
-
-\item Start HTCondor daemons:
-\begin{verbatim}
-  /sbin/service condor start
-\end{verbatim}
-
-\end{enumerate}
-
-% Alain thinks that upgrades DO work.
-%RPM upgrade (\Opt{-u} option) does not currently
-%work for HTCondor \VersionNotice.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:install-debs} Debian Packages}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{installation!using Debian packages}
-\index{Debian installation with Debian packages}
-
-Debian packages are available in HTCondor \VersionNotice.
-We provide an APT repository, as well as 
-installation and configuration in one easy step.
-These Debian packages of HTCondor are currently available for 
-Debian 6 (squeeze) and Debian 7 (wheezy).
-As of HTCondor version 7.5.1, 
-the HTCondor Debian package installs into File Hierachy Standard locations.
-
-The HTCondor APT repositories are specified at
- \URL{http://research.cs.wisc.edu/htcondor/debian/} .
-See this web page for repository information.
-
-Here is an ordered set of steps that get HTCondor running.
-\begin{enumerate}
-\item The HTCondor package will automatically add a \Login{condor} user/group,
-if it does not exist already.
-Sites wishing to control the attributes of this user/group 
-should add the \Login{condor} user/group manually before installation.
-
-\item If not already present,
-set up access to the appropriate APT repository;
-they are distinguished as stable or development release,
-and by operating system. 
-Ensure that the correct one of the following release and 
-operating system-specific lines is in 
-the file \File{/etc/apt/sources.list} .
-\footnotesize
-\begin{verbatim}
-deb http://research.cs.wisc.edu/htcondor/debian/stable/ squeeze contrib
-deb http://research.cs.wisc.edu/htcondor/debian/development/ squeeze contrib
-deb http://research.cs.wisc.edu/htcondor/debian/stable/ wheezy contrib
-deb http://research.cs.wisc.edu/htcondor/debian/development/ wheezy contrib
-\end{verbatim}
-\normalsize
-Note that this step need be done only once;
-do not add the same repository more than once.
-
-\item Install and start HTCondor services:
-\begin{verbatim}
-  apt-get update
-  apt-get install condor
-\end{verbatim}
-
-\item As needed, edit the HTCondor configuration files to customize.
-The configuration files are in the directory \File{/etc/condor/} .
-Do \emph{not} use \Condor{configure} or \Condor{install} for configuration.
-The installation will be able to find configuration files without
-additional administrative intervention,
-as the configuration files are placed in \File{/etc},
-and HTCondor searches this directory.
-
-Then, if any configuration changes are made, restart HTCondor with
-\begin{verbatim}
-  /etc/init.d/condor restart
-\end{verbatim}
-
-\end{enumerate}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Pool-Upgrade}
@@ -946,7 +964,7 @@ When upgrading from a version of HTCondor earlier than 6.8 to more recent versio
 note that the configuration settings must be modified for security reasons.
 Specifically, the \Macro{HOSTALLOW\_WRITE} configuration variable
 must be explicitly changed,
-or no jobs may be submitted,
+or no jobs can be submitted,
 and error messages will be issued by HTCondor tools.
 
 Another way to upgrade leaves HTCondor running. 
@@ -1022,8 +1040,7 @@ security policy chosen for the HTCondor pool.
 As such, the commands must be either run from a
 machine that has the proper authorization, 
 or run by a user that is authorized to issue the commands.
-Section~\ref{sec:Security} on
-page~\pageref{sec:Security} details the implementation of 
+Section~\ref{sec:Security} details the implementation of 
 security in HTCondor.
 
 \begin{description}
@@ -1154,8 +1171,7 @@ Issuing a \Condor{reconfig} command is inadequate for some
 configuration variables.
 For those, a restart of HTCondor is required.
 Those configuration variables that require a restart are listed in
-section~\ref{sec:Macros-Requiring-Restart}
-on page~\pageref{sec:Macros-Requiring-Restart}.
+section~\ref{sec:Macros-Requiring-Restart}.
 The manual page for \Condor{restart} is at
-~\ref{man-condor-restart}.
+~\pageref{man-condor-restart}.
 
