@@ -399,6 +399,7 @@ Requires(postun):/sbin/service
 
 %if 0%{?rhel} >= 7
 Requires(post): policycoreutils-python
+Requires(post): selinux-policy-targeted >= 3.13.1-102
 %endif
 
 #Provides: user(condor) = 43
