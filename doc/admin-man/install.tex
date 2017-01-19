@@ -509,19 +509,13 @@ Yum repositories and instructions are at
  \URL{http://htcondor.org/yum/} .
 The repositories are named to distinguish stable releases from
 development releases and by Red Hat version number. 
-The 6 repositories are:
+The 4 repositories are:
 \begin{itemize}
-  \item \File{condor-stable-rhel5.repo}
   \item \File{condor-stable-rhel6.repo}
   \item \File{condor-stable-rhel7.repo}
-  \item \File{condor-development-rhel5.repo}
   \item \File{condor-development-rhel6.repo}
   \item \File{condor-development-rhel7.repo}
 \end{itemize}
-
-For HTCondor to work properly under RHEL5, 
-the Red Hat Network channel called \AdStr{RHEL Virtualization} 
-must be explicitly enabled.
 
 Here is an ordered set of steps that get HTCondor running using the RPM.
 \begin{enumerate}
@@ -532,11 +526,11 @@ should add the \Login{condor} user/group manually before installation.
 
 \item Download and install the meta-data that describes 
 the appropriate YUM repository. 
-This example is for the stable series, on RHEL 5. 
+This example is for the stable series, on RHEL 7.
 \footnotesize
 \begin{verbatim}
   cd /etc/yum.repos.d
-  wget http://htcondor.org/yum/repo.d/condor-stable-rhel5.repo
+  wget http://htcondor.org/yum/repo.d/condor-stable-rhel7.repo
 \end{verbatim}
 \normalsize
 Note that this step need be done only once;
@@ -550,13 +544,8 @@ The RPMs are signed in the Redhat 6 and RedHat 7 repositories.
 \end{verbatim}
 
 \item Install HTCondor.
-For 32-bit machines:
 \begin{verbatim}
   yum install condor-all
-\end{verbatim}
-For 64-bit machines:
-\begin{verbatim}
-  yum install condor-all.x86_64
 \end{verbatim}
 
 \item As needed, edit the HTCondor configuration files to customize.
@@ -588,7 +577,7 @@ Debian packages are available in HTCondor \VersionNotice.
 We provide an APT repository, as well as 
 installation and configuration in one easy step.
 These Debian packages of HTCondor are currently available for 
-Debian 6 (squeeze) and Debian 7 (wheezy).
+Debian 7 (wheezy) and Debian 8 (jessie).
 As of HTCondor version 7.5.1, 
 the HTCondor Debian package installs into File Hierachy Standard locations.
 
@@ -612,10 +601,10 @@ operating system-specific lines is in
 the file \File{/etc/apt/sources.list} .
 \footnotesize
 \begin{verbatim}
-deb http://htcondor.org/debian/stable/ squeeze contrib
-deb http://htcondor.org/debian/development/ squeeze contrib
 deb http://htcondor.org/debian/stable/ wheezy contrib
 deb http://htcondor.org/debian/development/ wheezy contrib
+deb http://htcondor.org/debian/stable/ jessie contrib
+deb http://htcondor.org/debian/development/ jessie contrib
 \end{verbatim}
 \normalsize
 Note that this step need be done only once;
