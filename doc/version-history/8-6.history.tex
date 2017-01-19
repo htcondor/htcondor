@@ -64,7 +64,17 @@ where it would start an interactive shell without a container.  Added error
 message expressing that this combination is not currently supported.
 \Ticket{6083}
 
-	
+\item When a job claimed by the Job Router is held or removed, it is no
+longer considered a failure of the job route chosen for that job.
+\Ticket{5968}
+
+\item Fixed a bug in recovering a Google Compute Engine (GCE) job if the
+\Condor{gridmanager} restarts during submission of the instance request.
+\Ticket{6078}
+
+\item Fixed a bug that could cause re-installation of a remote cluster
+to fail in Bosco.
+\Ticket{6042}
 
 \end{itemize}
 
