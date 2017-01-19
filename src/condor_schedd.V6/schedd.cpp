@@ -1160,13 +1160,13 @@ void Scheduler::userlog_file_cache_erase(const int& cluster, const int& proc) {
 	ClassAd* ad = GetJobAd(cluster, proc);
     if (NULL == ad) return;
 
-    MyString userlog_name;
-    MyString dagman_log_name;
+    std::string userlog_name;
+    std::string dagman_log_name;
     std::vector<char const*> log_names;
 
     // possible userlog file names associated with this job
-    if (getPathToUserLog(ad, userlog_name)) log_names.push_back(userlog_name.Value());
-    if (getPathToUserLog(ad, dagman_log_name, ATTR_DAGMAN_WORKFLOW_LOG)) log_names.push_back(dagman_log_name.Value());
+    if (getPathToUserLog(ad, userlog_name)) log_names.push_back(userlog_name.c_str());
+    if (getPathToUserLog(ad, dagman_log_name, ATTR_DAGMAN_WORKFLOW_LOG)) log_names.push_back(dagman_log_name.c_str());
 
     for (std::vector<char const*>::iterator j(log_names.begin());  j != log_names.end();  ++j) {
 
@@ -4043,15 +4043,15 @@ namespace {
 WriteUserLog*
 Scheduler::InitializeUserLog( PROC_ID job_id ) 
 {
-	MyString logfilename;
-	MyString dagmanNodeLog;
+	std::string logfilename;
+	std::string dagmanNodeLog;
 	ClassAd *ad = GetJobAd(job_id.cluster,job_id.proc);
 	std::vector<const char*> logfiles;
 	if( getPathToUserLog(ad, logfilename) ) {
-		logfiles.push_back(logfilename.Value());	
+		logfiles.push_back(logfilename.c_str());
 	}
 	if( getPathToUserLog(ad, dagmanNodeLog, ATTR_DAGMAN_WORKFLOW_LOG) ) {			
-		logfiles.push_back(dagmanNodeLog.Value());
+		logfiles.push_back(dagmanNodeLog.c_str());
 	}
 	if( logfiles.empty() ) {
 			// if there is no userlog file defined, then our work is
@@ -4103,7 +4103,7 @@ Scheduler::InitializeUserLog( PROC_ID job_id )
 		std::string SpoolDir(tmp);
 		SpoolDir += DIR_DELIM_CHAR;
 		free( tmp );
-		if ( !strncmp( SpoolDir.c_str(), logfilename.Value(),
+		if ( !strncmp( SpoolDir.c_str(), logfilename.c_str(),
 					SpoolDir.length() ) && ULog->initialize( logfiles,
 					job_id.cluster, job_id.proc, 0, gjid.Value() ) ) {
 			if(logfiles.size() > 1) {
