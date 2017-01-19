@@ -808,7 +808,7 @@ double _dprintf_va_runtime::disabled_runtime = 0;
 long _dprintf_va_runtime::enabled_count = 0;
 long _dprintf_va_runtime::disabled_count = 0;
 
-#endif ENABLE_DPRINTF_PROFILING
+#endif // ENABLE_DPRINTF_PROFILING
 
 bool _condor_dprintf_runtime (
 	double & disabled_runtime,
@@ -827,6 +827,7 @@ bool _condor_dprintf_runtime (
 #else
 	enabled_runtime = disabled_runtime = 0;
 	enabled_count = disabled_count = 0;
+	if (clear) {}
 	return false;
 #endif
 }

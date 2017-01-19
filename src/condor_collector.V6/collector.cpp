@@ -414,10 +414,12 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 		// our persistent collector ad.
 		ClassAd * stats_ad = NULL;
 		if ((whichAds == COLLECTOR_AD) && collector.isSelfAd(curr_ad)) {
+			dprintf(D_ALWAYS,"Query includes collector's self ad\n");
 			// update stats in the collector ad before we return it.
 			MyString stats_config;
 			cad.LookupString("STATISTICS_TO_PUBLISH",stats_config);
 			if (stats_config != "stored") {
+				dprintf(D_ALWAYS,"Updating collector stats using a chained ad and config=%s\n", stats_config.Value());
 				stats_ad = new ClassAd();
 				daemonCore->dc_stats.Publish(*stats_ad, stats_config.Value());
 				daemonCore->monitor_data.ExportData(stats_ad, true);
@@ -749,10 +751,19 @@ int CollectorDaemon::receive_invalidation(Service* /*s*/,
 }
 
 
+collector_runtime_probe CollectorEngine_receive_update_runtime;
+collector_runtime_probe CollectorEngine_ru_pre_collect_runtime;
+collector_runtime_probe CollectorEngine_ru_collect_runtime;
+collector_runtime_probe CollectorEngine_ru_plugins_runtime;
+collector_runtime_probe CollectorEngine_ru_forward_runtime;
+collector_runtime_probe CollectorEngine_ru_stash_socket_runtime;
+
 int CollectorDaemon::receive_update(Service* /*s*/, int command, Stream* sock)
 {
     int	insert;
 	ClassAd *cad;
+	_condor_auto_accum_runtime<collector_runtime_probe> rt(CollectorEngine_receive_update_runtime);
+	double rt_last = rt.begin;
 
 	daemonCore->dc_stats.AddToAnyProbe("UpdatesReceived", 1);
 
@@ -762,6 +773,7 @@ int CollectorDaemon::receive_update(Service* /*s*/, int command, Stream* sock)
 	// get endpoint
 	condor_sockaddr from = ((Sock*)sock)->peer_addr();
 
+	CollectorEngine_ru_pre_collect_runtime += rt.tick(rt_last);
     // process the given command
 	if (!(cad = collector.collect (command,(Sock*)sock,from,insert)))
 	{
@@ -787,6 +799,7 @@ int CollectorDaemon::receive_update(Service* /*s*/, int command, Stream* sock)
 		return FALSE;
 
 	}
+	CollectorEngine_ru_collect_runtime += rt.tick(rt_last);
 
 	/* let the off-line plug-in have at it */
 	offline_plugin_.update ( command, *cad );
@@ -797,6 +810,8 @@ int CollectorDaemon::receive_update(Service* /*s*/, int command, Stream* sock)
 #endif
 #endif
 
+	CollectorEngine_ru_plugins_runtime += rt.tick(rt_last);
+
 	if (viewCollectorTypes) {
 		forward_classad_to_view_collector(command,
 										  ATTR_MY_TYPE,
@@ -805,9 +820,13 @@ int CollectorDaemon::receive_update(Service* /*s*/, int command, Stream* sock)
         send_classad_to_sock(command, cad);
 	}
 
+	CollectorEngine_ru_forward_runtime += rt.tick(rt_last);
+
 	if( sock->type() == Stream::reli_sock ) {
 			// stash this socket for future updates...
-		return stashSocket( (ReliSock *)sock );
+		int rv = stashSocket( (ReliSock *)sock );
+		CollectorEngine_ru_stash_socket_runtime += rt.tick(rt_last);
+		return rv;
 	}
 
 	// let daemon core clean up the socket

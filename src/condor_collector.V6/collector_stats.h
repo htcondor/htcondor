@@ -28,6 +28,10 @@
 
 #define DEFAULT_COLLECTOR_STATS_GARBAGE_INTERVAL (3600*4)
 
+// probes for doing timing analysis, enable one, the probe is more detailed.
+#define collector_runtime_probe stats_entry_probe<double>
+//#define collector_runtime_probe stats_recent_counter_timer
+
 // Base
 class CollectorBaseStats
 {

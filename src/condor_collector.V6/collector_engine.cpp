@@ -351,11 +351,29 @@ CollectorHashTable *CollectorEngine::findOrCreateTable(MyString &type)
 	return table;
 }
 
+collector_runtime_probe CollectorEngine_ruc_runtime;
+collector_runtime_probe CollectorEngine_ruc_getAd_runtime;
+collector_runtime_probe CollectorEngine_ruc_authid_runtime;
+collector_runtime_probe CollectorEngine_ruc_collect_runtime;
+collector_runtime_probe CollectorEngine_rucc_runtime;
+collector_runtime_probe CollectorEngine_rucc_validateAd_runtime;
+collector_runtime_probe CollectorEngine_rucc_makeHashKey_runtime;
+collector_runtime_probe CollectorEngine_rucc_insertAd_runtime;
+collector_runtime_probe CollectorEngine_rucc_updateAd_runtime;
+collector_runtime_probe CollectorEngine_rucc_getPvtAd_runtime;
+collector_runtime_probe CollectorEngine_rucc_insertPvtAd_runtime;
+collector_runtime_probe CollectorEngine_rucc_updatePvtAd_runtime;
+collector_runtime_probe CollectorEngine_rucc_repeatAd_runtime;
+collector_runtime_probe CollectorEngine_rucc_other_runtime;
+
 ClassAd *CollectorEngine::
 collect (int command, Sock *sock, const condor_sockaddr& from, int &insert)
 {
 	ClassAd	*clientAd;
 	ClassAd	*rval;
+
+	_condor_auto_accum_runtime<collector_runtime_probe> rt(CollectorEngine_ruc_runtime);
+	double rt_last = rt.begin;
 
 		// Avoid lengthy blocking on communication with our peer.
 		// This command-handler should not get called until data
@@ -375,6 +393,9 @@ collect (int command, Sock *sock, const condor_sockaddr& from, int &insert)
 		return 0;
 	}
 
+	double delta_time = rt.tick(rt_last);
+	CollectorEngine_ruc_getAd_runtime.Add(delta_time);
+
 	// insert the authenticated user into the ad itself
 	const char* authn_user = sock->getFullyQualifiedUser();
 	if (authn_user) {
@@ -384,7 +405,10 @@ collect (int command, Sock *sock, const condor_sockaddr& from, int &insert)
 		clientAd->Delete("AuthenticatedIdentity");
 	}
 
+	CollectorEngine_ruc_authid_runtime.Add(rt.tick(rt_last));
+
 	rval = collect(command, clientAd, from, insert, sock);
+	CollectorEngine_ruc_collect_runtime.Add(rt.tick(rt_last));
 
 	// Don't leak the ad on error!
 	if ( ! rval ) {
@@ -500,6 +524,8 @@ bool CollectorEngine::ValidateClassAd(int command,ClassAd *clientAd,Sock *sock)
 	return true;
 }
 
+bool   last_updateClassAd_was_insert;
+
 ClassAd *CollectorEngine::
 collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,Sock *sock)
 {
@@ -510,6 +536,8 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 	HashString	hashString;
 	static int repeatStartdAds = -1;		// for debugging
 	ClassAd		*clientAdToRepeat = NULL;
+	_condor_auto_accum_runtime<collector_runtime_probe> rt(CollectorEngine_rucc_runtime);
+	double rt_last = rt.begin;
 
 	if (repeatStartdAds == -1) {
 		repeatStartdAds = param_integer("COLLECTOR_REPEAT_STARTD_ADS",0);
@@ -518,6 +546,8 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 	if( !ValidateClassAd(command,clientAd,sock) ) {
 		return NULL;
 	}
+
+	CollectorEngine_rucc_validateAd_runtime.Add(rt.tick(rt_last));
 
 	// mux on command
 	switch (command)
@@ -538,8 +568,14 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 			break;
 		}
 		hashString.Build( hk );
+
+		CollectorEngine_rucc_makeHashKey_runtime.Add(rt.tick(rt_last));
+
 		retVal=updateClassAd (StartdAds, "StartdAd     ", "Start",
 							  clientAd, hk, hashString, insert, from );
+
+		if (last_updateClassAd_was_insert) { CollectorEngine_rucc_insertAd_runtime.Add(rt.tick(rt_last));
+		} else { CollectorEngine_rucc_updateAd_runtime.Add(rt.tick(rt_last)); }
 
 		// if we want to store private ads
 		if (!sock)
@@ -575,12 +611,15 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 				pvtAd->CopyAttribute( ATTR_NAME, retVal );
 			}
 
+			CollectorEngine_rucc_getPvtAd_runtime.Add(rt.tick(rt_last));
 
 			// insert the private ad into its hashtable --- use the same
 			// hash key as the public ad
 			(void) updateClassAd (StartdPrivateAds, "StartdPvtAd  ",
 								  "StartdPvt", pvtAd, hk, hashString, insPvt,
 								  from );
+			if (last_updateClassAd_was_insert) { CollectorEngine_rucc_insertPvtAd_runtime.Add(rt.tick(rt_last));
+			} else { CollectorEngine_rucc_updatePvtAd_runtime.Add(rt.tick(rt_last)); }
 		}
 
 		// create fake duplicates of this ad, each with a different name, if
@@ -608,6 +647,7 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 			}
 			delete clientAdToRepeat;
 			clientAdToRepeat = NULL;
+			CollectorEngine_rucc_repeatAd_runtime.Add(rt.tick(rt_last));
 		}
 		break;
 
@@ -895,6 +935,11 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 		retVal = 0;
 	}
 
+	if (command != UPDATE_STARTD_AD && command != UPDATE_STARTD_AD_WITH_ACK) {
+		CollectorEngine_rucc_other_runtime.Add(rt.tick(rt_last));
+	}
+
+
 	// return the updated ad
 	return retVal;
 }
@@ -1005,6 +1050,8 @@ identifySelfAd(ClassAd * ad)
 	__self_ad__ = (void*)ad;
 }
 
+extern bool   last_updateClassAd_was_insert;
+
 ClassAd * CollectorEngine::
 updateClassAd (CollectorHashTable &hashTable,
 			   const char *adType,
@@ -1034,11 +1081,13 @@ updateClassAd (CollectorHashTable &hashTable,
 
 	// this time stamped ad is the new ad
 	new_ad = ad;
+	last_updateClassAd_was_insert = false;
 
 	// check if it already exists in the hash table ...
 	if ( hashTable.lookup (hk, old_ad) == -1)
-    {	 	
+	{
 		// no ... new ad
+		last_updateClassAd_was_insert = true;
 		dprintf (D_ALWAYS, "%s: Inserting ** \"%s\"\n", adType, hashString.Value() );
 
 		// Update statistics, but not for private ads we can't see
