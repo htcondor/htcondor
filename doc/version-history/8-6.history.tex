@@ -64,6 +64,10 @@ where it would start an interactive shell without a container.  Added error
 message expressing that this combination is not currently supported.
 \Ticket{6083}
 
+\item When a job claimed by the Job Router is held or removed, it is no
+longer considered a failure of the job route chosen for that job.
+\Ticket{5968}
+
 \item Fixed a bug that could cause re-installation of a remote cluster
 to fail in Bosco.
 \Ticket{6042}
