@@ -373,14 +373,14 @@ ClassAd *CreateJobAd( const char *owner, int universe, const char *cmd )
 	return job_ad;
 }
 
-bool getPathToUserLog(ClassAd *job_ad, MyString &result,
+bool getPathToUserLog(const classad::ClassAd *job_ad, std::string &result,
 					   const char* ulog_path_attr = ATTR_ULOG_FILE)
 {
 	bool ret_val = true;
 	char *global_log = NULL;
 
 	if ( job_ad == NULL || 
-	     job_ad->LookupString(ulog_path_attr,result) == 0 ) 
+	     job_ad->EvaluateAttrString(ulog_path_attr,result) == false )
 	{
 		// failed to find attribute, check config file
 		global_log = param("EVENT_LOG");
@@ -394,9 +394,9 @@ bool getPathToUserLog(ClassAd *job_ad, MyString &result,
 
 	if ( global_log ) free(global_log);
 
-	if( ret_val && is_relative_to_cwd(result.Value()) ) {
-		MyString iwd;
-		if( job_ad && job_ad->LookupString(ATTR_JOB_IWD,iwd) ) {
+	if( ret_val && is_relative_to_cwd(result.c_str()) ) {
+		std::string iwd;
+		if( job_ad && job_ad->EvaluateAttrString(ATTR_JOB_IWD,iwd) ) {
 			iwd += "/";
 			iwd += result;
 			result = iwd;
@@ -420,7 +420,8 @@ bool add_attrs_from_string_tokens(classad::References & attrs, const char * str,
 
 void add_attrs_from_StringList(const StringList & list, classad::References & attrs)
 {
-	for (const char * p = list.first(); p != NULL; p = list.next()) {
+	StringList &constList = const_cast<StringList &>(list);
+	for (const char * p = constList.first(); p != NULL; p = constList.next()) {
 		attrs.insert(p);
 	}
 }

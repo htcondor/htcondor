@@ -1502,6 +1502,13 @@ of system CPU time (the time spent at system calls) the job used
 on remote machines.  This does not count time spent on run attempts that
 were evicted without a checkpoint.
 
+%%% ClassAd attribute: CumulativeRemoteSysCpu
+\index{ClassAd job attribute!CumulativeRemoteSysCpu}
+\index{CumulativeRemoteSysCpu!job ClassAd attribute}
+\item[\AdAttr{CumulativeRemoteSysCpu}:]  The total number of seconds
+of system CPU time the job used on remote machines, summed over all
+execution attempts.
+
 %%% ClassAd attribute: RemoteUserCpu
 \index{ClassAd job attribute!RemoteUserCpu}
 \index{RemoteUserCpu!job ClassAd attribute}
@@ -1510,6 +1517,13 @@ of user CPU time the job used on remote machines.  This does not
 count time spent on run attempts that were evicted without a checkpoint.
 A job in the virtual machine universe will only report this attribute if run
 on a KVM hypervisor.
+
+%%% ClassAd attribute: CumulativeRemoteUserCpu
+\index{ClassAd job attribute!CumulativeRemoteUserCpu}
+\index{CumulativeRemoteUserCpu!job ClassAd attribute}
+\item[\AdAttr{CumulativeRemoteUserCpu}:]  The total number of seconds
+of user CPU time the job used on remote machines, summed over all
+execution attempts.
 
 %%% ClassAd attribute: RemoteWallClockTime
 \index{ClassAd job attribute!RemoteWallClockTime}

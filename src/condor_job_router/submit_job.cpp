@@ -37,6 +37,7 @@
 #include "exit.h"
 #include "condor_holdcodes.h"
 #include "spooled_job_files.h"
+#include "classad_helpers.h"
 
 	// Simplify my error handling and reporting code
 class FailObj {
@@ -888,12 +889,10 @@ bool InitializeUserLog( classad::ClassAd const &job_ad, WriteUserLog *ulog, bool
 	userLogFile[0] = '\0';
 	dagmanLogFile[0] = '\0';
 	std::vector<const char*> logfiles;
-	job_ad.EvaluateAttrString( ATTR_ULOG_FILE, userLogFile );
-	if ( userLogFile[0] != '\0' ) {
+	if ( getPathToUserLog( &job_ad, userLogFile ) ) {
 		logfiles.push_back( userLogFile.c_str());
 	}
-	job_ad.EvaluateAttrString( ATTR_DAGMAN_WORKFLOW_LOG, dagmanLogFile );
-	if( dagmanLogFile[0] != '\0') {
+	if ( getPathToUserLog( &job_ad, dagmanLogFile, ATTR_DAGMAN_WORKFLOW_LOG ) ) {
 		logfiles.push_back( dagmanLogFile.c_str() );
 	}
 	*no_ulog = logfiles.empty();

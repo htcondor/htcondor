@@ -76,7 +76,7 @@ ClassAd *CreateJobAd( const char *owner, int universe, const char *cmd );
 	is updated). Return function is true if ATTR_ULOG_FILE is found or
 	if EVENT_LOG is defined, else false.
 */
-bool getPathToUserLog(ClassAd *job_ad, MyString &result,
+bool getPathToUserLog(const classad::ClassAd *job_ad, std::string &result,
 					   const char* ulog_path_attr = ATTR_ULOG_FILE);
 
 
