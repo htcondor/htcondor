@@ -53,8 +53,7 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item HTCondor version 8.4.11 not yet released.
-%\item HTCondor version 8.4.11 released on Month Date, 2016.
+\item HTCondor version 8.4.11 released on January 23, 2016.
 
 \end{itemize}
 
@@ -78,6 +77,26 @@ was generally only noticeable if you set \MacroNI{STARTD\_CRON\_AUTOPUBLISH}
 to a value other than \Expr{NEVER}, which could cause the startd to reject claims
 from the negotiator that had been made based on the cron-updated value(s).
 \Ticket{6057}
+
+\item Fixed a bug in pslot preemption where it could cause matching jobs to
+not start for a long time.
+\Ticket{6055}
+
+\item Fixed a bug that caused a job to not be cleaned up when the job
+lease expires, if glexec is in use.
+\Ticket{6058}
+
+\item Fixed a problem, found while testing on Ubuntu 16, where the negotiator
+would crash at the end of the negotiation cycle.
+\Ticket{6064}
+
+\item Updated the default configuration in the Debian and Ubuntu packages to
+look for the Ganglia shared libraries in the proper place.
+\Ticket{5939}
+
+\item Updated the Enterprise Linux 7 RPM to require the proper SELinux
+utilities for its post-install script.
+\Ticket{6081}
 
 \end{itemize}
 
