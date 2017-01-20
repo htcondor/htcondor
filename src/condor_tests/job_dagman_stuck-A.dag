@@ -1,0 +1,39 @@
+#TEMPTEMP -- change -- no final node...
+
+NODE_STATUS_FILE job_dagman_stuck-A.status
+
+# Config shortens the default "stuck" timeout.
+CONFIG job_dagman_stuck-A.config
+
+# This node has one proc, will not be held.
+JOB NodeA job_dagman_stuck-A-node.sub
+VARS NodeA name="$(JOB)"
+VARS NodeA num_procs="1"
+VARS NodeA hold="-1"
+SCRIPT POST NodeA job_dagman_stuck-A-script.pl $JOB Post
+
+# This node has one proc, will be held.
+JOB NodeB job_dagman_stuck-A-node.sub
+VARS NodeB name="$(JOB)"
+VARS NodeB num_procs="1"
+VARS NodeB hold="0"
+SCRIPT PRE NodeB job_dagman_stuck-A-script.pl $JOB Pre
+
+# This node has three procs, none will be held.
+JOB NodeC job_dagman_stuck-A-node.sub
+VARS NodeC name="$(JOB)"
+VARS NodeC num_procs="3"
+VARS NodeC hold="-1"
+SCRIPT POST NodeC job_dagman_stuck-A-script.pl $JOB Post
+
+# This node has three procs, one will be held.
+JOB NodeD job_dagman_stuck-A-node.sub
+VARS NodeD name="$(JOB)"
+VARS NodeD num_procs="3"
+VARS NodeD hold="1"
+SCRIPT PRE NodeD job_dagman_stuck-A-script.pl $JOB Pre
+
+# We need to have this to test all cases in Dag::IsStuck().
+PARENT NodeA CHILD NodeB NodeC NodeD
+
+#TEMPTEMP -- should final status be STUCK instead of ERROR?

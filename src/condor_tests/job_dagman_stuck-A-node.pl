@@ -13,7 +13,7 @@ if ($ARGV[2] eq $ARGV[3]) {
 sleep(120);
 
 if ($ARGV[4] ne 0) {
-	print "Node $ARGV[0] failing because DAG status is not DAG_STATUS_OK\n";
+	print "Node $ARGV[0] failing because DAG status ($ARGV[4]) is not DAG_STATUS_OK\n";
 	exit(1);
 }
 

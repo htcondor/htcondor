@@ -2782,6 +2782,7 @@ Dag::SetNodeStatusFileName( const char *statusFileName,
 void
 Dag::DumpNodeStatus( bool held, bool removed )
 {
+debug_printf( DEBUG_QUIET, "DIAG Dag::DumpNodeStatus()\n" );//TEMPTEMP
 		//
 		// Decide whether to update the file.
 		//
@@ -2789,11 +2790,14 @@ Dag::DumpNodeStatus( bool held, bool removed )
 		return;
 	}
 	
+#if 0 //TEMPTEMP
 	if ( !_alwaysUpdateStatus && !_statusFileOutdated && !held && !removed ) {
-		debug_printf( DEBUG_DEBUG_1, "Node status file not updated "
+		//TEMPTEMP debug_printf( DEBUG_DEBUG_1, "Node status file not updated "
+		debug_printf( DEBUG_QUIET, "Node status file not updated "//TEMPTEMP
 					"because it is not yet outdated\n" );
 		return;
 	}
+#endif //TEMPTEMP
 	
 	time_t startTime = time( NULL );
 	bool tooSoon = (_minStatusUpdateTime > 0) &&

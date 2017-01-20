@@ -20,28 +20,30 @@
 
 # This test checks that "stuck" DAGs are properly detected and aborted.
 
+#TEMPTEMP -- change this
+
 use CondorTest;
 use CondorUtils;
 
-$cmd = 'job_dagman_stuck.dag';
+$cmd = 'job_dagman_stuck-A.dag';
 $testdesc =  'Condor submit dag - basic condor_rm test - scheduler U';
-$testname = "job_dagman_stuck";
+$testname = "job_dagman_stuck-A";
 $dagman_args = "-verbose";
 
-@outfiles = ("job_dagman_stuck.dag.dagman.out",
-	"job_dagman_stuck-NodeA0.out",
-	"job_dagman_stuck-NodeAPost.out",
-	"job_dagman_stuck-NodeBPre.out",
-	"job_dagman_stuck-NodeB0.out",
-	"job_dagman_stuck-NodeC0.out",
-	"job_dagman_stuck-NodeC1.out",
-	"job_dagman_stuck-NodeC2.out",
-	"job_dagman_stuck-NodeCPost.out",
-	"job_dagman_stuck-NodeDPre.out",
-	"job_dagman_stuck-NodeD0.out",
-	"job_dagman_stuck-NodeD1.out",
-	"job_dagman_stuck-NodeD2.out",
-	"job_dagman_stuck-NodeZ0.out");
+@outfiles = ("job_dagman_stuck-A.dag.dagman.out",
+	"job_dagman_stuck-A-NodeA0.out",
+	"job_dagman_stuck-A-NodeAPost.out",
+	"job_dagman_stuck-A-NodeBPre.out",
+	"job_dagman_stuck-A-NodeB0.out",
+	"job_dagman_stuck-A-NodeC0.out",
+	"job_dagman_stuck-A-NodeC1.out",
+	"job_dagman_stuck-A-NodeC2.out",
+	"job_dagman_stuck-A-NodeCPost.out",
+	"job_dagman_stuck-A-NodeDPre.out",
+	"job_dagman_stuck-A-NodeD0.out",
+	"job_dagman_stuck-A-NodeD1.out",
+	"job_dagman_stuck-A-NodeD2.out",
+	"job_dagman_stuck-A-NodeZ0.out");
 
 @expected_contents = ("DAG has been \"stuck\" for 1 minutes -- exiting",
 	"Node NodeA is \\d+\\.0\nDAG status: 0\nNode NodeA finishing",
@@ -56,7 +58,7 @@ $dagman_args = "-verbose";
 	"Node NodeD is \\d+\\.0\nDAG status: 0\nNode NodeD finishing",
 	"Node NodeD is \\d+\\.1\nDAG status: 0\nDoing condor_hold on \\d+\\.1\nJob \\d+\\.1 held",
 	"Node NodeD is \\d+\\.2\nDAG status: 0\nNode NodeD finishing",
-	"Node NodeZ is \\d+\\.0\nDAG status: 7\nNode NodeZ failing because DAG status is not DAG_STATUS_OK");
+	"Node NodeZ is \\d+\\.0\nDAG status: 7\nNode NodeZ failing because DAG status (7) is not DAG_STATUS_OK");
 
 my $killedchosen = 0;
 
@@ -124,7 +126,7 @@ $failure = sub
 			$expected = shift @expected_contents;
 			$contents = do { local $/; <OUT>; };
 			chomp $contents;
-			CondorTest::debug("DIAG contents: <$contents>\n",1);
+			CondorTest::debug("DIAG contents: <$contents>\n",1);#TEMPTEMP
 			if ($contents =~ /$expected/) {
 				CondorTest::debug("Found <$contents> in $file\n",1);
 			} else {
