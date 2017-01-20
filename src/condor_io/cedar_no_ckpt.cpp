@@ -831,7 +831,7 @@ int relisock_gsi_get(void *arg, void **bufp, size_t *sizep)
 
 			//if successfully read size and malloced, read data
 		if ( stat ) {
-			sock->code_bytes( *bufp, *sizep );
+			stat = sock->code_bytes( *bufp, *sizep );
 		}
 	}
     
@@ -840,6 +840,9 @@ int relisock_gsi_get(void *arg, void **bufp, size_t *sizep)
     //check to ensure comms were successful
     if ( stat == FALSE ) {
         dprintf( D_ALWAYS, "relisock_gsi_get (read from socket) failure\n" );
+        *sizep = 0;
+        free( *bufp );
+        *bufp = NULL;
         return -1;
     }
     return 0;
@@ -854,7 +857,7 @@ int relisock_gsi_put(void *arg,  void *buf, size_t size)
     sock->encode();
     
     //send size of data to send
-    stat = sock->put( (int)size );
+    stat = sock->put( size );
     
     
     //if successful, send the data
