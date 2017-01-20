@@ -1203,6 +1203,14 @@ JobRouter::AdoptOrphans() {
 			dprintf(D_ALWAYS,"JobRouter (src=%s): failed to yield orphan job: %s\n",
 					src_key.c_str(),
 					error_details.Value());
+		} else {
+			// yield_job() sets the job's status to IDLE. If the job was
+			// previously running, we need an evict event.
+			int job_status = IDLE;
+			src_ad->EvaluateAttrInt( ATTR_JOB_STATUS, job_status );
+			if ( job_status == RUNNING || job_status == TRANSFERRING_OUTPUT ) {
+				WriteEvictEventToUserLog( *src_ad );
+			}
 		}
 	} while (query.Next(src_key));
 }
@@ -2030,9 +2038,16 @@ JobRouter::RerouteJob(RoutedJob *job) {
 
 void
 JobRouter::SetJobIdle(RoutedJob *job) {
-	job->src_ad.InsertAttr(ATTR_JOB_STATUS,IDLE);
-	if(false == PushUpdatedAttributes(job->src_ad)) {
-		dprintf(D_ALWAYS,"JobRouter failure (%s): failed to set src job status back to idle\n",job->JobDesc().c_str());
+	int old_status = IDLE;
+	job->src_ad.EvaluateAttrInt(ATTR_JOB_STATUS, old_status);
+	if ( old_status != IDLE ) {
+		if ( old_status == RUNNING || old_status == TRANSFERRING_OUTPUT ) {
+			WriteEvictEventToUserLog( job->src_ad );
+		}
+		job->src_ad.InsertAttr(ATTR_JOB_STATUS,IDLE);
+		if(false == PushUpdatedAttributes(job->src_ad)) {
+			dprintf(D_ALWAYS,"JobRouter failure (%s): failed to set src job status back to idle\n",job->JobDesc().c_str());
+		}
 	}
 }
 
@@ -2388,6 +2403,13 @@ JobRouter::FinishCleanupJob(RoutedJob *job) {
 	if(job->is_claimed) {
 		MyString error_details;
 		bool keep_trying = true;
+		int job_status = IDLE;
+		// yield_job() sets the job's status to IDLE. If the job was
+		// previously running, we need an evict event.
+		job->src_ad.EvaluateAttrInt( ATTR_JOB_STATUS, job_status );
+		if ( job_status == RUNNING || job_status == TRANSFERRING_OUTPUT ) {
+			WriteEvictEventToUserLog( job->src_ad );
+		}
 		if(!yield_job(job->src_ad,m_schedd1_name,m_schedd1_pool,job->is_done,job->src_proc_id.cluster,job->src_proc_id.proc,&error_details,JobRouterName().c_str(),job->is_sandboxed,m_release_on_hold,&keep_trying))
 		{
 			dprintf(D_ALWAYS,"JobRouter (%s): failed to yield job: %s\n",

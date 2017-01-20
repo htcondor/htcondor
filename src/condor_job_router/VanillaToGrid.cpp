@@ -29,6 +29,7 @@
 #include "string_list.h"
 #include "classad/classad_distribution.h"
 
+#include "submit_job.h"
 
 bool VanillaToGrid::vanillaToGrid(classad::ClassAd * ad, int target_universe, const char * gridresource, bool is_sandboxed)
 {
@@ -238,13 +239,19 @@ static bool set_job_status_simple(classad::ClassAd const &orig,classad::ClassAd 
 }
 
 static void set_job_status_idle(classad::ClassAd const &orig, classad::ClassAd &update) {
-	set_job_status_simple(orig,update,IDLE);
+	int old_update_status = IDLE;
+	update.EvaluateAttrInt( ATTR_JOB_STATUS, old_update_status );
+	if ( set_job_status_simple(orig,update,IDLE) && old_update_status == RUNNING ) {
+		WriteEvictEventToUserLog( orig );
+	}
 }
 
 static void set_job_status_running(classad::ClassAd const &orig, classad::ClassAd &update) {
-	set_job_status_simple(orig,update,RUNNING);
-	// TODO: For new_status=RUNNING and set_job_status_simple()
-	// returned true, should we be calling WriteExecuteEventToUserLog?
+	int old_update_status = IDLE;
+	update.EvaluateAttrInt( ATTR_JOB_STATUS, old_update_status );
+	if ( set_job_status_simple(orig,update,RUNNING) && old_update_status == IDLE ) {
+		WriteExecuteEventToUserLog( orig );
+	}
 }
 
 static void set_job_status_held(classad::ClassAd const &orig,classad::ClassAd &update,const char * hold_reason, int hold_code, int hold_subcode)
