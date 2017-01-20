@@ -34,7 +34,7 @@
 
 if [ $# -lt 2 ]
 then
-	echo "Usage: condor_ssh hostname command arg1 arg2"
+    echo "Usage: condor_ssh hostname command arg1 arg2"
 fi
 
 
@@ -47,23 +47,23 @@ doneParsing=true
 
 if [ "$1" = "-x" ]
 then
-	shift
-	hasx="-x"
-	doneParsing="false"
+    shift
+    hasx="-x"
+    doneParsing="false"
 fi
 
 if [ "$1" = "-l" ]
 then
-	shift
-	shift
-	doneParsing="false"
+    shift
+    shift
+    doneParsing="false"
 fi
 
 if [ "$1" = "-n" ]
 then
-	shift
-	hasn="-n"
-	doneParsing="false"
+    shift
+    hasn="-n"
+    doneParsing="false"
 fi
 done
 
@@ -80,23 +80,23 @@ doneParsing=true
 
 if [ "$1" = "-x" ]
 then
-	shift
-	hasx="-x"
-	doneParsing="false"
+    shift
+    hasx="-x"
+    doneParsing="false"
 fi
 
 if [ "$1" = "-l" ]
 then
-	shift
-	shift
-	doneParsing="false"
+    shift
+    shift
+    doneParsing="false"
 fi
 
 if [ "$1" = "-n" ]
 then
-	shift
-	hasn="-n"
-	doneParsing="false"
+    shift
+    hasn="-n"
+    doneParsing="false"
 fi
 done
 
@@ -104,14 +104,15 @@ done
 # but this script should always execute from the scratch dir
 if [ -z ${_CONDOR_SCRATCH_DIR+x} ]
 then
-	_CONDOR_SCRATCH_DIR=`/bin/pwd`
+    _CONDOR_SCRATCH_DIR=`/bin/pwd`
 fi
+
 contact=$_CONDOR_SCRATCH_DIR/contact
 
 if [ ! -f $contact ]
 then
-	echo "error: contact file $contact can't be found"
-	exit 1
+    echo "error: contact file $contact can't be found"
+    exit 1
 fi
 
 
@@ -120,8 +121,8 @@ line=`grep "^$proc " $contact`
 
 if [ $? -ne 0 ]
 then
-	echo Proc $proc is not in contact file $contact
-	exit 1
+    echo Proc $proc is not in contact file $contact
+    exit 1
 fi
 
 #proc=`echo $line | awk '{print $1}'`

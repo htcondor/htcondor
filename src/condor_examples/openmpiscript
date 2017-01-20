@@ -66,9 +66,9 @@ SSHD_SH=$SSHD_SH/sshd.sh
 # sshds run
 if [ $_CONDOR_PROCNO -ne 0 ]
 then
-		wait
-		sshd_cleanup
-		exit 0
+    wait
+    sshd_cleanup
+    exit 0
 fi
 
 EXECUTABLE=$1
@@ -94,10 +94,17 @@ do
     if `ompi_info -a | grep \"${mca_ssh_agent}\" 1>/dev/null 2>&1`
     then
         if `ompi_info -a | grep \"${mca_ssh_agent}\" | grep deprecated 1>/dev/null 2>&1`; then continue; fi
+	
 	_MCA_FAIL=false
+
+	# set up MCA values
+        export OMPI_MCA_plm_rsh_no_tree_spawn="true" # disable tree spawn; all proxies initiated by node 0
+
 	mpirun -v --prefix $MPDIR --mca $mca_ssh_agent $CONDOR_SSH -n $_CONDOR_NPROCS -hostfile machines $EXECUTABLE $@
+
     fi
 done
+
 if $_MCA_FAIL
 then
     echo could not find a suitable MCA ssh agent
