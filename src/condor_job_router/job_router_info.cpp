@@ -451,6 +451,7 @@ classad::ClassAdCollection *Scheduler::GetClassAds()
 void Scheduler::init() {  m_mirror->init(); }
 void Scheduler::config() { m_mirror->config(); }
 void Scheduler::stop()  { m_mirror->stop(); }
+void Scheduler::poll()  { }
 int  Scheduler::id() { return m_id; }
 
 

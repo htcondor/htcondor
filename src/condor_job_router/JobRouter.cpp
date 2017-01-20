@@ -128,11 +128,9 @@ JobRouter::~JobRouter() {
 #endif
 	if ( ! m_operate_as_tool) { InvalidatePublicAd(); }
 
-	m_scheduler->stop();
 	delete m_scheduler;
 	m_scheduler = NULL;
 	if( m_scheduler2 ) {
-		m_scheduler2->stop();
 		delete m_scheduler2;
 		m_scheduler2 = NULL;
 	}
@@ -205,8 +203,10 @@ JobRouter::config() {
 	}
 
 	m_scheduler->config();
+	m_scheduler->stop();
 	if( m_scheduler2 ) {
 		m_scheduler2->config();
+		m_scheduler2->stop();
 	}
 
 #if HAVE_JOB_HOOKS
@@ -986,6 +986,12 @@ JobRouter::NumManagedJobs() {
 void
 JobRouter::Poll() {
 	dprintf(D_FULLDEBUG,"JobRouter: polling state of (%d) managed jobs.\n",NumManagedJobs());
+
+	// Update our mirror(s) of the job queue(s).
+	m_scheduler->poll();
+	if ( m_scheduler2 ) {
+		m_scheduler2->poll();
+	}
 
 	m_poll_count++;
 	if((m_poll_count % 5) == 1) {
