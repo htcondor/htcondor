@@ -1098,6 +1098,40 @@ bool WriteHoldEventToUserLog( classad::ClassAd const &ad )
 	return WriteEventToUserLog( event, ad );
 }
 
+bool WriteExecuteEventToUserLog( classad::ClassAd const &ad )
+{
+	int cluster;
+	int proc;
+	ad.EvaluateAttrInt( ATTR_CLUSTER_ID, cluster );
+	ad.EvaluateAttrInt( ATTR_PROC_ID, proc );
+
+	dprintf( D_FULLDEBUG,
+			 "(%d.%d) Writing execute record to user logfile\n",
+			 cluster, proc );
+
+	ExecuteEvent event;
+
+	std::string routed_id;
+	ad.EvaluateAttrString( "RoutedToJobId", routed_id );
+	event.setExecuteHost( routed_id.c_str() );
+
+	return WriteEventToUserLog( event, ad );
+}
+
+bool WriteEvictEventToUserLog( classad::ClassAd const &ad )
+{
+	int cluster;
+	int proc;
+	ad.EvaluateAttrInt( ATTR_CLUSTER_ID, cluster );
+	ad.EvaluateAttrInt( ATTR_PROC_ID, proc );
+
+	dprintf( D_FULLDEBUG,
+			 "(%d.%d) Writing evict record to user logfile\n",
+			 cluster, proc );
+	JobEvictedEvent event;
+
+	return WriteEventToUserLog( event, ad );
+}
 
 
 // The following is copied from gridmanager/basejob.C

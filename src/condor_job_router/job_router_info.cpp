@@ -614,7 +614,15 @@ bool WriteHoldEventToUserLog( classad::ClassAd const &ad )
 	return true;
 }
 
+bool WriteExecuteEventToUserLog( classad::ClassAd const &ad )
+{
+	return true;
+}
 
+bool WriteEvictEventToUserLog( classad::ClassAd const &ad )
+{
+	return true;
+}
 
 // The following is copied from gridmanager/basejob.C
 // TODO: put the code into a shared file.

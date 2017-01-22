@@ -25,6 +25,7 @@
 #include "condor_uid.h"
 #include "basename.h"
 #include "exit.h"
+#include "condor_config.h"
 
 
 LocalUserLog::LocalUserLog( JobInfoCommunicator* my_jic )
@@ -156,6 +157,14 @@ LocalUserLog::initFromJobAd( ClassAd* ad, const char* path_attr,
 				dprintf( D_FULLDEBUG, "Adding \"%s\" to the mask\n",mask);
 				mask_vec.push_back(ULogEventNumber(atoi(mask)));
 			}
+		}
+	}
+
+	if ( logfiles.empty() ) {
+		char *global_log = param( "EVENT_LOG" );
+		if ( global_log ) {
+			logfiles.push_back( UNIX_NULL_FILE );
+			free( global_log );
 		}
 	}
 
