@@ -57,21 +57,6 @@ bool ClassAdGetExpressionCaching();
 extern bool _useOldClassAdSemantics;
 void SetOldClassAdSemantics(bool enable);
 
-template <class T>
-void val_str(std::string & szOut, const T & tValue)
-{
-  std::stringstream foo;
-  foo<<tValue;
-  szOut = foo.str();
-}
-template<bool>
-void val_str(std::string & szOut, const bool & tValue)
-{
-  std::stringstream foo;
-  foo <<(tValue?"true":"false");
-  szOut = foo.str();
-}
-
 /// The ClassAd object represents a parsed %ClassAd.
 class ClassAd : public ExprTree
 {
@@ -113,10 +98,19 @@ class ClassAd : public ExprTree
 			@return true if the operation succeeded, false otherwise.
 			@see ExprTree::setParentScope
 		*/
+#if 1
+		bool Insert( const std::string& attrName, ExprTree* expr);   // (ignores cache)
+		bool Insert( const std::string& attrName, ClassAd* expr) { return Insert(attrName, (ExprTree*)expr); }    // (ignores cache)
+		bool InsertLiteral(const std::string& attrName, Literal* lit); // (ignores cache)
+
+		// insert through cache if cache is enabled, otherwise just parse and insert
+		bool InsertViaCache( std::string& attrName, const std::string & rhs, bool lazy=false);
+#else
+		// 
 		bool Insert( const std::string& attrName, ExprTree *& pRef, bool cache=true);
 		bool Insert( const std::string& attrName, ClassAd *& expr, bool cache=true );
 		bool Insert( const std::string& serialized_nvp);
-
+#endif
 
 		/** Inserts an attribute into a nested classAd.  The scope expression is
 		 		evaluated to obtain a nested classad, and the attribute is 

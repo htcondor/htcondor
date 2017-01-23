@@ -59,9 +59,9 @@ public:
 	 * an indirect envelope
 	 */
 #ifndef WIN32
-	static ExprTree * cache ( std::string & pName, const std::string & szValue, ExprTree * pTree );
+	static ExprTree * cache ( std::string & pName, ExprTree * pTree, const std::string & szValue );
 #else
-	static ExprTree * cache (const std::string & pName, const std::string & szValue, ExprTree * pTree);
+	static ExprTree * cache (const std::string & pName, ExprTree * pTree, const std::string & szValue );
 #endif
 	
 	/**
@@ -74,6 +74,7 @@ public:
 	 */
 	static bool _debug_dump_keys(const std::string & szFile);
 	static void _debug_print_stats(FILE* fp);
+	static bool _debug_get_counts(unsigned long &hits, unsigned long &misses, unsigned long &querys, unsigned long &hitdels, unsigned long &removals, unsigned long &unparse);
 	
 	ExprTree * get();
 

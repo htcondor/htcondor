@@ -132,27 +132,6 @@ void ExprTree::debug_format_value(Value &value, double time) const {
 		debug_print(result.c_str());
 }
 
-ExprTree::
-ExprTree ()
-{
-	parentScope = NULL;
-}
-
-
-ExprTree::
-~ExprTree()
-{
-}
-
-void ExprTree::
-CopyFrom(const ExprTree &tree)
-{
-    if (this != &tree) {
-        parentScope = tree.parentScope;
-    }
-    return;
-}
-
 bool ExprTree::
 Evaluate (EvalState &state, Value &val) const
 {

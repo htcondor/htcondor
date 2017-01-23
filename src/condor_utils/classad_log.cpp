@@ -420,14 +420,14 @@ int ExamineLogTransaction(
 					free(val);
 					val = NULL;
 				}
-                ExprTree* expr = ((LogSetAttribute *)log)->get_expr();
-                if (expr) {
-		    expr = expr->Copy();
-                    ad->Insert(lname, expr, false);
-                } else {
-                    val = strdup(((LogSetAttribute *)log)->get_value());
-                    ad->AssignExpr(lname, val);
-                }
+				ExprTree* expr = ((LogSetAttribute *)log)->get_expr();
+				if (expr) {
+					expr = expr->Copy();
+					ad->Insert(lname, expr);
+				} else {
+					val = strdup(((LogSetAttribute *)log)->get_value());
+					ad->AssignExpr(lname, val);
+				}
 				attrsAdded++;
 			}
 			break;
@@ -783,18 +783,19 @@ LogSetAttribute::Play(void *data_structure)
 	ClassAd *ad = 0;
 	if ( ! table->lookup(key, ad))
 		return -1;
-    if (value_expr) {
+	if (value_expr) {
 		// Such a shame, do we really need to make a
 		// copy of value_expr here?  Seems like we could just
 		// assign it and then set value_expr to NULL and avoid
 		// copying a parse tree, since after we Play it I doubt
 		// this class does anything more with value_expr beyond
 		// deallocating it.  - Todd 11/13 <tannenba@cs.wisc.edu>
-        ExprTree * pTree = value_expr->Copy();
-        rval = ad->Insert(name, pTree, false);
-    } else {
-        rval = ad->AssignExpr(name, value);
-    }
+		PRAGMA_REMIND("tj: look into avoiding the copy here. is the cache in play?")
+		ExprTree * pTree = value_expr->Copy();
+		rval = ad->Insert(name, pTree);
+	} else {
+		rval = ad->AssignExpr(name, value);
+	}
 	ad->SetDirtyFlag(name, is_dirty);
 
 #if defined(HAVE_DLOPEN)

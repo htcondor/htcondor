@@ -89,29 +89,29 @@ bool getClassAd( Stream *sock, classad::ClassAd& ad )
 		// pack exprs into classad
 	for( int i = 0 ; i < numExprs ; i++ ) {
 		char const *strptr = NULL;
-		string buffer;
 		if( !sock->get_string_ptr( strptr ) || !strptr ) {
-			return( false );	 
-		}		
+			return( false );
+		}
 
+		bool inserted = false;
 		if(strcmp(strptr,SECRET_MARKER) ==0 ){
 			char *secret_line = NULL;
 			if( !sock->get_secret(secret_line) ) {
 				dprintf(D_FULLDEBUG, "Failed to read encrypted ClassAd expression.\n");
 				break;
 			}
-			compat_classad::ConvertEscapingOldToNew(secret_line,buffer);
+			inserted = InsertLongFormAttrValue(ad, secret_line, true);
 			free( secret_line );
 		}
 		else {
-			compat_classad::ConvertEscapingOldToNew(strptr,buffer);
+			inserted = InsertLongFormAttrValue(ad, strptr, true);
 		}
 
 		// inserts expression at a time
-		if ( !ad.Insert(buffer) )
+		if ( ! inserted)
 		{
-		  dprintf(D_FULLDEBUG, "FAILED to insert %s\n", buffer.c_str() );
-		  return false;
+			dprintf(D_FULLDEBUG, "FAILED to insert %s\n", strptr );
+			return false;
 		}
 		
 	}

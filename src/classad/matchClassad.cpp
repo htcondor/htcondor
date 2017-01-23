@@ -117,8 +117,8 @@ InitMatchClassAd( ClassAd *adl, ClassAd *adr )
 
 	// Insert the Ad resolver but also lookup before using b/c
 	// there are no gaurentees not to collide.
-	Insert( "lCtx", lCtx, false );
-	Insert( "rCtx", rCtx, false );
+	Insert( "lCtx", lCtx );
+	Insert( "rCtx", rCtx );
 
 	symmetric_match = Lookup("symmetricMatch");
 	right_matches_left = Lookup("rightMatchesLeft");
@@ -143,7 +143,7 @@ ReplaceLeftAd( ClassAd *ad )
 	lad = ad;
 	ladParent = ad ? ad->GetParentScope( ) : (ClassAd*)NULL;
 	if( ad ) {
-		if( !Insert( "LEFT", ad, false ) ) {
+		if( !Insert( "LEFT", ad ) ) {
 			lad = NULL;
 			ladParent = NULL;
 			Delete( "LEFT" );
@@ -175,7 +175,7 @@ ReplaceRightAd( ClassAd *ad )
 	rad = ad;
 	radParent = ad ? ad->GetParentScope( ) : (ClassAd*)NULL;
 	if( ad ) {
-		if( !Insert( "RIGHT", ad , false ) ) {
+		if( !Insert( "RIGHT", ad ) ) {
 			rad = NULL;
 			radParent = NULL;
 			Delete( "RIGHT" );

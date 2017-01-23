@@ -455,7 +455,7 @@ caInsert( ClassAd* target, ClassAd* source, const char* attr,
 		EXCEPT( "caInsert called with NULL classad" );
 	}
 
-	MyString new_attr;
+	std::string new_attr;
 	if( prefix ) {
 		new_attr = prefix;
 	}
@@ -463,11 +463,11 @@ caInsert( ClassAd* target, ClassAd* source, const char* attr,
 
 	tree = source->LookupExpr( attr );
 	if( !tree ) {
-		target->Delete(new_attr.Value());
+		target->Delete(new_attr);
 		return false;
 	}
 	tree = tree->Copy();
-	if ( !target->Insert(new_attr.Value(), tree, false) ) {
+	if ( !target->Insert(new_attr, tree) ) {
 		dprintf( D_ALWAYS, "caInsert: Can't insert %s into target classad.\n", attr );
 		delete tree;
 		return false;

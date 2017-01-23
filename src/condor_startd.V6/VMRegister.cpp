@@ -254,13 +254,13 @@ VMRegister::requestHostClassAds(void)
 
 	ad->ResetExpr();
 	while( ad->NextExpr(name, expr) ) {
-		MyString attr;
+		std::string attr;
 		attr += "HOST_";
 		attr += name;
 
 		// Insert or Update an attribute to host_classAd in a VMRegister object
 		ExprTree * pTree = expr->Copy();
-		host_classad->Insert(attr.Value(), pTree, true);
+		host_classad->Insert(attr, pTree);
 	}
 }
 

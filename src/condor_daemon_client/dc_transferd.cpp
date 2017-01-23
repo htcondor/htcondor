@@ -403,7 +403,7 @@ DCTransferD::download_job_files(ClassAd *work_ad, CondorError * errstack)
 						new_attr_name++;
 							// insert attribute
 						pTree = tree->Copy();
-						jad.Insert(new_attr_name, pTree, false);
+						jad.Insert(new_attr_name, pTree);
 					}
 				}	// while next expr
 		

@@ -2743,7 +2743,7 @@ SecMan::sec_copy_attribute( classad::ClassAd &dest, const ClassAd &source, const
 	ExprTree *e = source.LookupExpr(attr);
 	if (e) {
 		ExprTree *cp = e->Copy();
-		dest.Insert(attr,cp,false);
+		dest.Insert(attr,cp);
 		return true;
 	} else {
 		return false;
@@ -2758,7 +2758,7 @@ SecMan::sec_copy_attribute( ClassAd &dest, const char *to_attr, const ClassAd &s
 	}
 
 	e = e->Copy();
-	bool retval = dest.Insert(to_attr, e, false) != 0;
+	bool retval = dest.Insert(to_attr, e) != 0;
 	return retval;
 }
 

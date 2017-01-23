@@ -93,7 +93,7 @@ class ExprTree
 		};
 
 		/// Virtual destructor
-		virtual ~ExprTree ();
+		virtual ~ExprTree () {};
 
 		/** Sets the lexical parent scope of the expression, which is used to 
 				determine the lexical scoping structure for resolving attribute
@@ -172,12 +172,12 @@ class ExprTree
   	protected:
 		void debug_print(const char *message) const;
 		void debug_format_value(Value &value, double time=0) const;
-		ExprTree ();
+		ExprTree (const ClassAd* parent=NULL) : parentScope(parent) {};
 
-        /** Fill in this ExprTree with the contents of the other ExprTree.
-         *  @return true if the copy succeeded, false otherwise.
-         */
-        void CopyFrom(const ExprTree &literal);
+		/** Fill in this ExprTree with the contents of the other ExprTree.
+		*  @return true if the copy succeeded, false otherwise.
+		*/
+		void CopyFrom(const ExprTree &that) { parentScope = that.parentScope; }
 
 		bool Evaluate( Value& v, ExprTree*& t ) const;
 		bool Flatten( Value& val, ExprTree*& tree) const;

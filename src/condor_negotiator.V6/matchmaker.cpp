@@ -3237,7 +3237,7 @@ trimStartdAds_ShutdownLogic(ClassAdListDoesNotDeleteAds &startdAds)
 
 			// Put CurrentTime back to how we found it, ie = time()
 			if ( old_currtime ) {
-				ad->Insert(ATTR_CURRENT_TIME, old_currtime, false);
+				ad->Insert(ATTR_CURRENT_TIME, old_currtime);
 			}
 		}
 		// If the startd is shutting down threshold seconds in the future, remove it

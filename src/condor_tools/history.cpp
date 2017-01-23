@@ -1158,7 +1158,7 @@ static void readHistoryRemote(classad::ExprTree *constraintExpr)
 	}
 
 	compat_classad::ClassAd ad;
-	ad.Insert(ATTR_REQUIREMENTS, constraintExpr, false);
+	ad.Insert(ATTR_REQUIREMENTS, constraintExpr);
 	ad.InsertAttr(ATTR_NUM_MATCHES, specifiedMatch <= 0 ? -1 : specifiedMatch);
 	// in 8.5.6, we can request that the remote side stream the results back. othewise
 	// the 8.4 protocol will only send EOM after the last result, and thus we print nothing
@@ -1168,7 +1168,7 @@ static void readHistoryRemote(classad::ExprTree *constraintExpr)
 		ad.InsertAttr("StreamResults", want_streamresults);
 	}
 	// only 8.5.6 and later will honor this, older schedd's will just ignore it
-	if (sinceExpr) ad.Insert("Since", sinceExpr, false);
+	if (sinceExpr) ad.Insert("Since", sinceExpr);
 
 	DCSchedd schedd(g_name.size() ? g_name.c_str() : NULL, g_pool.size() ? g_pool.c_str() : NULL);
 	if (!schedd.locate(Daemon::LOCATE_FOR_LOOKUP)) {

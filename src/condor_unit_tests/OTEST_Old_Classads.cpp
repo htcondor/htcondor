@@ -7655,19 +7655,17 @@ static bool test_nested_ads()
 	classad::ClassAd ad, ad2;
 	classad::ExprTree *tree;
 
-	emit_test("Testing classad caching with nested ads");
+	emit_test("Testing with nested ads");
 	
-	bool do_caching = true;
-
 	ad.InsertAttr( "A", 4 );
 	if ( !parser.ParseExpression( "{ [ Y = 1; Z = A; ] }", tree ) ) {
 		FAIL;
 	}
-	ad.Insert( "B", tree, do_caching );
+	ad.Insert( "B", tree );
 	if ( !parser.ParseExpression( "B[0].Z", tree ) ) {
 		FAIL;
 	}
-	ad.Insert( "C", tree, do_caching );
+	ad.Insert( "C", tree );
 
 	std::string str;
 	unparser.Unparse( str, &ad );

@@ -316,7 +316,7 @@ HookPrepareJobClient::hookExited(int exit_status) {
 		ExprTree *et;
 		while (updateAd.NextExpr(name, et)) {
 			ExprTree *pCopy = et->Copy();
-			job_ad->Insert(name, pCopy, false);
+			job_ad->Insert(name, pCopy);
 		}
 		dprintf(D_FULLDEBUG, "After Prepare hook: merged job classad:\n");
 		dPrintAd(D_FULLDEBUG, *job_ad);

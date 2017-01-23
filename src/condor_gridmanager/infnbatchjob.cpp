@@ -1271,7 +1271,7 @@ void INFNBatchJob::ProcessRemoteAd( ClassAd *remote_ad )
 
 		if ( new_expr != NULL && ( old_expr == NULL || !(*old_expr == *new_expr) ) ) {
 			ExprTree * pTree =  new_expr->Copy();
-			jobAd->Insert( attrs_to_copy[index], pTree, false );
+			jobAd->Insert( attrs_to_copy[index], pTree );
 		}
 	}
 
@@ -1315,7 +1315,7 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 	while ( attrs_to_copy[++index] != NULL ) {
 		if ( ( next_expr = jobAd->LookupExpr( attrs_to_copy[index] ) ) != NULL ) {
 			ExprTree * pTree = next_expr->Copy();
-			submit_ad->Insert( attrs_to_copy[index], pTree, false );
+			submit_ad->Insert( attrs_to_copy[index], pTree );
 		}
 	}
 
@@ -1411,7 +1411,7 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 			}
 
 			ExprTree * pTree = next_expr->Copy();
-			submit_ad->Insert( attr_name, pTree, false );
+			submit_ad->Insert( attr_name, pTree );
 		}
 	}
 

@@ -329,7 +329,7 @@ VMUniverseMgr::publish( ClassAd* ad, amask_t  /*mask*/ )
 			ad->Assign(ATTR_VM_NETWORKING, m_vm_networking); 
 		}else {
 			ExprTree * pTree =  expr->Copy();
-			ad->Insert(attr_name, pTree, false);
+			ad->Insert(attr_name, pTree);
 		}
 	}
 

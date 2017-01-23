@@ -1117,11 +1117,11 @@ static int DoRenameAttr(ClassAd * ad, const std::string & attr, const char * att
 	} else {
 		ExprTree * tree = ad->Remove(attr);
 		if (tree) {
-			if (ad->Insert(attrNew, tree, false)) {
+			if (ad->Insert(attrNew, tree)) {
 				return 1;
 			} else {
 				if (flags&1) fprintf(stderr, "ERROR: could not rename %s to %s\n", attr.c_str(), attrNew);
-				if ( ! ad->Insert(attr, tree, false)) {
+				if ( ! ad->Insert(attr, tree)) {
 					delete tree;
 				}
 			}
@@ -1144,7 +1144,7 @@ static int DoCopyAttr(ClassAd * ad, const std::string & attr, const char * attrN
 		ExprTree * tree = ad->Lookup(attr);
 		if (tree) {
 			tree = tree->Copy();
-			if (ad->Insert(attrNew, tree, false)) {
+			if (ad->Insert(attrNew, tree)) {
 				return 1;
 			} else {
 				if (flags&1) fprintf(stderr, "ERROR: could not copy %s to %s\n", attr.c_str(), attrNew);
@@ -1499,8 +1499,7 @@ static int ParseRulesCallback(void* pv, MACRO_SOURCE& source, MACRO_SET& /*mset*
 			if ( ! parser.ParseExpression(ConvertEscapingOldToNew(rhs.ptr()), expr, true)) {
 				if (is_tool) fprintf(stderr, "ERROR: SET %s invalid expression : %s\n", attr.c_str(), rhs.ptr());
 			} else {
-				const bool cache_it = false;
-				if ( ! ad->Insert(attr, expr, cache_it)) {
+				if ( ! ad->Insert(attr, expr)) {
 					if (is_tool) fprintf(stderr, "ERROR: could not set %s to %s\n", attr.c_str(), rhs.ptr());
 					delete expr;
 				}
@@ -1518,8 +1517,7 @@ static int ParseRulesCallback(void* pv, MACRO_SOURCE& source, MACRO_SET& /*mset*
 				if (is_tool) fprintf(stderr, "ERROR: EVALSET %s could not evaluate : %s\n", attr.c_str(), rhs.ptr());
 			} else {
 				ExprTree * tree = XFormCopyValueToTree(val);
-				const bool cache_it = false;
-				if ( ! ad->Insert(attr, tree, cache_it)) {
+				if ( ! ad->Insert(attr, tree)) {
 					if (is_tool) fprintf(stderr, "ERROR: could not set %s to %s\n", attr.c_str(), XFormValueToString(val, tmp3));
 					delete tree;
 				} else if (verbose) {

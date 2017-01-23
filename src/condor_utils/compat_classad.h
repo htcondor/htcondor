@@ -42,6 +42,7 @@ class MapFile; // forward ref
 
 namespace compat_classad {
 
+
 typedef enum {
 	TargetMachineAttrs,
 	TargetJobAttrs,
@@ -116,9 +117,9 @@ class ClassAd : public classad::ClassAd
 		 * our own Insert() below, our parent's Insert() won't be found
 		 * by users of this class.
 		 */
-	bool Insert( const std::string &attrName, classad::ExprTree *& expr, bool bCache = true );
+	bool Insert( const std::string &attrName, classad::ExprTree *& expr );
 
-	int Insert(const char *name, classad::ExprTree *& expr, bool bCache = true );
+	int Insert(const char *name, classad::ExprTree *& expr );
 
 		/** Insert an attribute/value into the ClassAd 
 		 *  @param str A string of the form "Attribute = Value"
@@ -691,6 +692,19 @@ const char *ConvertEscapingOldToNew( const char *str );
 
 // appends converted representation of str to buffer
 void ConvertEscapingOldToNew( const char *str, std::string &buffer );
+
+	// split a single line of -long-form classad into attr and value part
+	// removes leading whitespace and whitespace around the =
+	// set rhs to point to the first non whitespace character after the =
+	// you can pass this to ConvertEscapingOldToNew
+	// returns true if there was an = and the attr was non-empty
+bool SplitLongFormAttrValue(const char * line, std::string &attr, const char* &rhs);
+
+	// split a single line of -long form classad into addr and value, then
+	// parse and insert into the given classad, using the classadCache or not as requested.
+	// returns true on successful insertion
+bool InsertLongFormAttrValue(classad::ClassAd & ad, const char * line, bool use_cache);
+
 
 typedef ClassAd AttrList;
 typedef classad::ExprTree ExprTree;

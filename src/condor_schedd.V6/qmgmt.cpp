@@ -4116,7 +4116,7 @@ GetDirtyAttributes(int cluster_id, int proc_id, ClassAd *updated_attrs)
 			if(!JobQueue->LookupInTransaction(key.c_str(), name, val) )
 			{
 				ExprTree * pTree = expr->Copy();
-				updated_attrs->Insert(name, pTree, false);
+				updated_attrs->Insert(name, pTree);
 			}
 			else
 			{

@@ -16,7 +16,9 @@
  * 
  ***************************************************************/
 
+#include "classad/common.h"
 #include "classad/classadCache.h"
+#include "classad/sink.h"
 #include <assert.h>
 #include <stdio.h>
 #include <list>
@@ -34,31 +36,51 @@ using namespace std;
 class ClassAdCache
 {
 protected:
-    
-        typedef classad_unordered<std::string, pCacheEntry> AttrValues;
-        typedef classad_unordered<std::string, pCacheEntry>::iterator value_iterator;
-        
+
+	typedef classad_unordered<std::string, pCacheEntry> AttrValues;
+	typedef classad_unordered<std::string, pCacheEntry>::iterator value_iterator;
+
 	typedef classad_unordered<std::string, AttrValues, ClassadAttrNameHash, CaseIgnEqStr> AttrCache;
 	typedef classad_unordered<std::string, AttrValues, ClassadAttrNameHash, CaseIgnEqStr>::iterator cache_iterator;
 
 	AttrCache m_Cache;		///< Data Store
 	unsigned long m_HitCount;	///< Hit Counter
 	unsigned long m_MissCount;	///< Miss Counter
-	unsigned long m_MissCheck;	///< Miss Counter
+	unsigned long m_QueryCount;	///< Checks that don't offer an expr-tree
+	unsigned long m_HitDelete;	///< Hits that freed the incoming expr tree
 	unsigned long m_RemovalCount;	///< Useful to see churn
+	unsigned long m_UnparseCount; ///< number of times we had to unparse a tree to populate the cache.
 	bool          m_destroyed;
 	
 public:
 	ClassAdCache()
 	: m_HitCount(0)
 	, m_MissCount(0)
-	, m_MissCheck(0)
+	, m_QueryCount(0)
+	, m_HitDelete(0)
 	, m_RemovalCount(0)
+	, m_UnparseCount(0)
 	, m_destroyed(false)
 	{ 
 	};
 	
 	virtual ~ClassAdCache(){ m_destroyed = true; };
+
+#ifndef WIN32
+	pCacheData cache( std::string & szName, ExprTree * pVal)
+#else
+	pCacheData cache(const std::string & szName, ExprTree * pVal)
+#endif
+	{
+		std::string szValue;
+		if (pVal) {
+			m_UnparseCount++;
+			ClassAdUnParser unparser;
+			//PRAGMA_REMIND("this should probably unparse in old classad form")
+			unparser.Unparse(szValue, pVal);
+		}
+		return cache(szName, szValue, pVal);
+	}
 
 	///< cache's a local attribute->ExpTree
 #ifndef WIN32
@@ -68,58 +90,48 @@ public:
 #endif
 	{
 		pCacheData pRet;
-		
+
 		cache_iterator itr = m_Cache.find(szName);
-                bool bValidName=false;
-		
-		if ( itr != m_Cache.end() ) 
-		{
-                  bValidName = true;
-                  value_iterator vtr = itr->second.find(szValue);
-                 #ifndef WIN32 // this just wastes time on windows
-                  szName = itr->first;
-                 #endif
+		bool bValidName=false;
 
-                  // check the value cache
-                  if (vtr != itr->second.end())
-                  {
-                    pRet = vtr->second.lock();
-                    
-                    m_HitCount++;
-                    if (pVal)
-                    {
-                        delete pVal;
-                    }
-                    
-                    // don't to any more checks just return.
-                    return pRet;
-                    
-                  }
-                  
-		} 
-		
+		if (itr != m_Cache.end()) {
+			bValidName = true;
+			value_iterator vtr = itr->second.find(szValue);
+#ifndef WIN32 // this just wastes time on windows
+			szName = itr->first;
+#endif
+
+			// check the value cache
+			if (vtr != itr->second.end()) {
+				pRet = vtr->second.lock();
+
+				m_HitCount++;
+				if (pVal) {
+					delete pVal;
+					m_HitDelete++;
+				} else {
+					m_QueryCount++;
+				}
+
+				// don't to any more checks just return.
+				return pRet;
+			}
+		}
+
 		// if we got here we missed 
-                if (pVal)
-                {
-                    pRet.reset( new CacheEntry(szName,szValue,pVal) );
+		if (pVal) {
+			pRet.reset( new CacheEntry(szName,szValue,pVal) );
 
-                    if (bValidName)
-                    {
-                        itr->second[szValue] = pRet;
-                    }
-                    else
-                    {
-                        AttrValues vCache;
-                        vCache[szValue] = pRet;
-                        m_Cache[szName] = vCache;
-                    }
+			if (bValidName) {
+				itr->second[szValue] = pRet;
+			} else {
+				(m_Cache[szName])[szValue] = pRet;
+			}
 
-                    m_MissCount++;
-                }
-                else
-                {
-                    m_MissCheck++;
-                }
+			m_MissCount++;
+		} else {
+			m_QueryCount++;
+		}
 
 		return pRet;
 	}
@@ -131,25 +143,21 @@ public:
 		// and possibly other places as well.
 		if (m_destroyed) return false;
 
-	  cache_iterator itr = m_Cache.find(szName);
+		cache_iterator itr = m_Cache.find(szName);
 
-      if (itr != m_Cache.end())
-	  {
-		  if (itr->second.size() == 1)
-			  {
+		if (itr != m_Cache.end()) {
+			if (itr->second.size() == 1) {
 				m_Cache.erase(itr);
-			  }
-			  else
-			  {
+			} else {
 				value_iterator vtr = itr->second.find(szValue);
 				itr->second.erase(vtr);
-		      }
+			}
 
-		  m_RemovalCount++;
-		  return (true);
-	  }
+			m_RemovalCount++;
+			return (true);
+		}
 
-	  return false;
+		return false;
 	} 
 	
 	///< dumps the contents of the cache to the file
@@ -204,7 +212,7 @@ public:
 	    getpid()
 #endif
 	    );
-	    fprintf( fp, "Hits [%lu - %f] Misses[%lu - %f] QueryMiss[%lu]\n", m_HitCount,dHitRatio,m_MissCount,dMissRatio,m_MissCheck ); 
+	    fprintf( fp, "Hits [%lu - %f] Misses[%lu - %f] Querys[%lu]\n", m_HitCount,dHitRatio,m_MissCount,dMissRatio,m_QueryCount ); 
 	    fprintf( fp, "Entries[%lu] UseCount[%lu] FlushedCount[%lu]\n", lEntries,lTotalUseCount,m_RemovalCount );
 	    fprintf( fp, "Pruned[%lu] - SHOULD BE 0\n",lTotalPruned);
 	    fprintf( fp, "------------------------------------------------\n");
@@ -266,9 +274,17 @@ public:
 
 		fprintf( fp, "Attribs: %lu SingleUseAttribs: %lu AttribsWithOnlySingletons: %lu\n",  cAttribs, cSingletonAttribs, cAttribsWithOnlySingletonValues);
 		fprintf( fp, "Values: %lu SingleUseValues: %lu UseCountTot:%lu UseCountMax: %lu\n", cTotalValues, cSingletonValues, cTotalUseCount, cMaxUseCount);
-		fprintf( fp, "Hits:%lu (%.2f%%) Misses: %lu (%.2f%%) QueryMiss: %lu\n", m_HitCount,dHitRatio,m_MissCount,dMissRatio,m_MissCheck ); 
+		fprintf( fp, "Hits:%lu (%.2f%%) Misses: %lu (%.2f%%) Querys: %lu\n", m_HitCount,dHitRatio,m_MissCount,dMissRatio,m_QueryCount ); 
 	};
 
+	void get_counts(unsigned long &hits, unsigned long &misses, unsigned long &querys, unsigned long & hitdels, unsigned long &removals, unsigned long &unparse) {
+		hits = m_HitCount;
+		misses = m_MissCount;
+		querys = m_QueryCount;
+		hitdels = m_HitDelete;
+		removals = m_RemovalCount;
+		unparse = m_UnparseCount;
+	}
 };
 
 
@@ -308,57 +324,51 @@ CachedExprEnvelope::~CachedExprEnvelope()
 }
 
 #ifndef WIN32
-ExprTree * CachedExprEnvelope::cache (std::string & pName, const std::string & szValue, ExprTree * pTree)
+ExprTree * CachedExprEnvelope::cache (std::string & pName, ExprTree * pTree, const std::string & szValue)
 #else
-ExprTree * CachedExprEnvelope::cache (const std::string & pName, const std::string & szValue, ExprTree * pTree)
+ExprTree * CachedExprEnvelope::cache (const std::string & pName, ExprTree * pTree, const std::string & szValue)
 #endif
 {
-	ExprTree * pRet=pTree;
-	const std::string * pszValue = &szValue;
-	NodeKind nk = pTree->GetKind();
+	ExprTree * pRet = pTree;
+	CachedExprEnvelope * pNewEnv = NULL;
 	
+	NodeKind nk = pTree->GetKind();
 	switch (nk)
 	{
-	  case EXPR_ENVELOPE:
-	     pRet = pTree;
-	  break;
-	  
-	  case EXPR_LIST_NODE:
-	  case CLASSAD_NODE:
-#ifndef WIN32 // this just wastes time on windows.
-	    // for classads the values are already cached but we still should string space the name
-	    check_hit (pName, szValue);
-#endif
-	  break;
-	    
-	  default:
-	  {
-	    CachedExprEnvelope * pNewEnv = new CachedExprEnvelope();
-	
-		// if no unparsed value was passed in, then unparse the passed-in ExprTree
-		std::string szUnparsedValue;
-		if (szValue.empty()) {
-			classad::val_str(szUnparsedValue, pTree);
-			pszValue = &szUnparsedValue;
-		}
-	
-	    if (!_cache)
-	    {
-	      _cache.reset( new ClassAdCache() );
-	    }
+	case EXPR_ENVELOPE:
+		pRet = pTree;
+		break;
 
-	    pNewEnv->m_pLetter = _cache->cache(pName, *pszValue, pTree);
-	    pRet = pNewEnv;
-	  }
+	case EXPR_LIST_NODE:
+	case CLASSAD_NODE:
+#ifndef WIN32 // this just wastes time on windows.
+		// for classads the values are already cached but we still should string space the name
+		check_hit (pName, szValue);
+#endif
+		break;
+
+	default:
+		if ( ! _cache) { _cache.reset( new ClassAdCache() ); }
+		pNewEnv = new CachedExprEnvelope();
+		pNewEnv->m_pLetter = _cache->cache(pName, szValue, pTree);
+		pRet = pNewEnv;
+		break;
 	}
 	
-	return ( pRet );
+	return pRet;
 }
 
 bool CachedExprEnvelope::_debug_dump_keys(const string & szFile)
 {
   if ( ! _cache) return false;
   return _cache->dump_keys(szFile);
+}
+
+bool CachedExprEnvelope::_debug_get_counts(unsigned long &hits, unsigned long &misses, unsigned long &querys, unsigned long & hitdels, unsigned long &removals, unsigned long &unparse)
+{
+	if ( ! _cache) return false;
+	_cache->get_counts(hits, misses, querys, hitdels, removals, unparse);
+	return true;
 }
 
 void CachedExprEnvelope::_debug_print_stats(FILE* fp)
