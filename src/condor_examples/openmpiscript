@@ -18,6 +18,14 @@
 ##
 ##**************************************************************
 
+# YOU MUST EXCLUDE *ALL* UNUSED NETWORK INTERFACES (comma delimited)
+EXCLUDE_NET=""
+
+# Examples:
+#EXCLUDE_NET="docker0" # disable docker interface
+#EXCLUDE_NET="virbr0" # disable virtual bridge interface
+#EXCLUDE_NET="docker0,virbr0" # disable both
+
 # YOU MUST CHANGE THIS TO THE PREFIX DIR OF OPENMPI
 MPDIR=/usr/lib/openmpi
 
@@ -97,9 +105,11 @@ do
 	
 	_MCA_FAIL=false
 
-	# set up MCA values
-        export OMPI_MCA_plm_rsh_no_tree_spawn="true" # disable tree spawn; all proxies initiated by node 0
+	# set up the magic MCA values that make HTCondor work
+        export OMPI_MCA_plm_rsh_no_tree_spawn="true" # disable tree spawn
+	export OMPI_MCA_btl_tcp_if_exclude="lo,$EXCLUDE_NET" # disable unused networks
 
+	# run the executable
 	mpirun -v --prefix $MPDIR --mca $mca_ssh_agent $CONDOR_SSH -n $_CONDOR_NPROCS -hostfile machines $EXECUTABLE $@
 
     fi
