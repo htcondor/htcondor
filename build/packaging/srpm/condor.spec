@@ -1909,7 +1909,7 @@ fi
 
 %changelog
 * Mon Jan 23 2017 Tim Theisen <tim@cs.wisc.edu> - 8.4.11-1
-- Fixed a bug where startd cron job results wouldn't be used by the startd
+- Fixed a bug which delayed startd access to stard cron job results
 - Fixed a bug in pslot preemption that could delay jobs starting
 - Fixed a bug in job cleanup at job lease expiration if using glexec
 - Fixed a bug in locating ganglia shared libraries on Debian and Ubuntu
