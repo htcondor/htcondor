@@ -107,6 +107,7 @@ usage(int retval = 1)
 	fprintf(stderr, "Usage: %s <help>\n\n", MyName);
 	fprintf(stderr, "       %s [<location>] <edit> \n\n", MyName);
 	fprintf(stderr, "       %s [<location>] [<view>] <vars>\n\n", MyName);
+	fprintf(stderr, "       %s [<location>] use <template>\n\n", MyName);
 	fprintf(stderr,
 		"    where <edit> is one set/unset operation with one or more arguments\n"
 		"\t-set \"<var> = <value>\"\tSet persistent <var> to <value>\n"
@@ -149,6 +150,10 @@ usage(int retval = 1)
 		"\t\t\texpanding. The default subsystem is TOOL\n"
 		//"\t-tilde\t\tReturn the path to the Condor home directory\n"
 		//"\t-owner\t\tReturn the owner of the condor_config_val process\n"
+		"\n    where <template> is <category>:<var> or <category>\n"
+		"        for <category>:<var>\tPrint the statements in that template\n"
+		"        for <category>\t\tList available <vars> in <category>\n"
+		"            categories are ROLE, POLICY, FEATURE, and SECURITY\n"
 		"\n    where <location> is one or more of\n"
 		"\t-address <ip:port>\tConnect to the given ip/port\n"
 		"\t-pool <hostname>\tUse the given central manager to find daemons\n"

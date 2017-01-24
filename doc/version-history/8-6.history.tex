@@ -51,6 +51,11 @@ number of local ports needed for shadows.
 
 \begin{itemize}
 
+\item Fixed a bug causing unnecessarily slow updates from the \Condor{startd}.
+If you depend on the old behavior, set \Macro{UPDATE\_SPREAD\_TIME} to 8.  A
+value of 0 enables the fix.
+\Ticket{6062}
+
 \item Fixed a race condition when running multiple concurrent jobs on the same claim.
 When the starter exits, it notifies the shadow, which tells the startd to kill the starter.
 Immediately after the shadows tells the startd, it fetches the next job, and tries to start it.
