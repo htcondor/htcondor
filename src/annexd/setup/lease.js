@@ -47,6 +47,8 @@ exports.handler = function( event, context, callback ) {
 	// Assumes we have fewer than 1000 SFRs.
 	var p = { };
 	ec2.describeSpotFleetRequests( p, function( err, data ) {
+		var spotFleetRequestIDs = [];
+
 		if( err ) {
 			console.log( err, err.stack );
 			callback( err, err.stack );
@@ -55,14 +57,16 @@ exports.handler = function( event, context, callback ) {
 				var config = data.SpotFleetRequestConfigs[i];
 				var sfrc = config.SpotFleetRequestConfig;
 				if( sfrc.ClientToken.startsWith( spotFleetRequestID ) ) {
-					spotFleetRequestID = config.SpotFleetRequestId;
+					// spotFleetRequestID = config.SpotFleetRequestId;
+					spotFleetRequestIDs.push( config.SpotFleetRequestId );
 					break;
 				}
 			}
 
 
 	var params = {
-		SpotFleetRequestIds : [ spotFleetRequestID ],
+		// SpotFleetRequestIds : [ spotFleetRequestID ],
+		SpotFleetRequestIds : spotFleetRequestIDs,
 		TerminateInstances : true
 	};
 	ec2.cancelSpotFleetRequests( params, function( err, data ) {

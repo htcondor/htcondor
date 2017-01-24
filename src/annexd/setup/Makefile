@@ -2,7 +2,7 @@
 # Upload the functions and templates to the appropriate place(s) on S3.
 #
 
-VERSION = 4
+VERSION = 5
 FUNCTIONS = lease-$(VERSION).zip
 TEMPLATES = template-$(VERSION).json
 S3TARGETS = $(FUNCTIONS:%=.upload/%) $(TEMPLATES:%=.upload/%)
