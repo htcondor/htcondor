@@ -583,6 +583,9 @@ void FilesystemRemap::RemapProc() {
 #define SHARED_STR "shared:"
 
 void FilesystemRemap::ParseMountinfo() {
+
+#if defined(LINUX)
+
 	MyString str, str2;
 	const char * token;
 	FILE *fd;
@@ -624,7 +627,7 @@ void FilesystemRemap::ParseMountinfo() {
 	}
 
 	fclose(fd);
-
+#endif  // of defined(LINUX)
 }
 
 pair_strings_vector
