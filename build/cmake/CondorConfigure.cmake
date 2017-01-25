@@ -37,11 +37,6 @@ elseif(${OS_NAME} MATCHES "WIN")
 	endif()
 	add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 	
-	# don't set -DWINDOWS if we are just going to set -DWINDOWS="WINDOWS_6.X" later... it just causes warnings...
-	if (NOT (${OS_NAME} STREQUAL \""WINDOWS\""))
-	   add_definitions(-DWINDOWS)
-	endif ()
-
 	if(NOT (MSVC_VERSION LESS 1700))
 		set(PREFER_CPP11 TRUE)
 	endif()
@@ -741,8 +736,8 @@ endif()
 # above the addition of the .../src/classads subdir:
 if (LINUX
     AND PROPER 
-    AND ("\"${CMAKE_CXX_COMPILER_ID}\"" STREQUAL "GNU")
-    AND NOT ("\"${CMAKE_CXX_COMPILER_VERSION}\"" VERSION_LESS 4.4.6))
+    AND (${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU")
+    AND NOT (${CMAKE_CXX_COMPILER_VERSION} VERSION_LESS 4.4.6))
 
     # I wrote a nice macro for testing linker flags, but it is useless
     # because at least some older versions of linker ignore all '-z'
