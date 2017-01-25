@@ -45,10 +45,11 @@ int EC2GahpClient::ec2_vm_start( const std::string & service_url,
 								 const std::string & block_device_mapping,
 								 const std::string & iam_profile_arn,
 								 const std::string & iam_profile_name,
+								 unsigned int maxCount,
 								 StringList & groupnames,
 								 StringList & groupids,
 								 StringList & parametersAndValues,
-								 std::string &instance_id,
+								 std::vector< std::string > &instance_ids,
 								 std::string &error_code)
 {
 	// command line looks like:
@@ -76,6 +77,11 @@ int EC2GahpClient::ec2_vm_start( const std::string & service_url,
 	arguments.push_back( block_device_mapping );
 	arguments.push_back( iam_profile_arn );
 	arguments.push_back( iam_profile_name );
+
+	std::string maxCountString;
+	formatstr( maxCountString, "%u", maxCount );
+	arguments.push_back( maxCountString );
+
 	pushStringListBack( arguments, groupnames );
 	pushStringListBack( arguments, groupids );
 	pushStringListBack( arguments, parametersAndValues );
@@ -83,29 +89,33 @@ int EC2GahpClient::ec2_vm_start( const std::string & service_url,
 	if( cgf != 0 ) { return cgf; }
 
 	// we expect the following return:
-	//		seq_id 0 instance_id
+	//		seq_id 0 instance_id+
 	//		seq_id 1 error_code error_string
 	//		seq_id 1
 
 	if ( result ) {
-		// command completed.
-		int rc = 0;
-		if ( result->argc == 2 ) {
-			rc = atoi(result->argv[1]);
-			if ( rc == 0 ) {
-				EXCEPT( "Bad %s result", command );
-				rc = 1;
-			} else {
-				error_string = "";
+		if( result->argc < 2 ) {
+			EXCEPT( "Bad %s result", command );
+		}
+
+		int rc = atoi( result->argv[1] );
+		if( rc == 1 ) {
+			switch( result->argc ) {
+				case 4:
+		 			error_code = result->argv[2];
+ 					error_string = result->argv[3];
+ 					break;
+				case 2:
+					error_code = "";
+					error_string = "";
+					break;
+				default:
+					EXCEPT( "Bad %s result", command );
 			}
-		} else if ( result->argc == 3 ) {
-			rc = atoi(result->argv[1]);
-			instance_id = result->argv[2];
-		} else if ( result->argc == 4 ) {
-			// get the error code
-			rc = atoi( result->argv[1] );
- 			error_code = result->argv[2];
- 			error_string = result->argv[3];
+		} else if( rc == 0 ) {
+			for( int i = 2; i < result->argc; ++i ) {
+				instance_ids.push_back( result->argv[i] );
+			}
 		} else {
 			EXCEPT( "Bad %s result", command );
 		}

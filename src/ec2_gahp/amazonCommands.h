@@ -155,6 +155,7 @@ class AmazonVMStart : public AmazonRequest {
 
     protected:
         std::string instanceID;
+        std::vector< std::string > instanceIDs;
 };
 
 class AmazonVMStartSpot : public AmazonVMStart {

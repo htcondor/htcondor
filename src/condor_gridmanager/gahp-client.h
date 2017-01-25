@@ -828,10 +828,11 @@ class EC2GahpClient : public GahpClient {
 						  const std::string & block_device_mapping,
 						  const std::string & iam_profile_arn,
 						  const std::string & iam_profile_name,
+						  unsigned int maxCount,
 						  StringList & groupnames,
 						  StringList & groupids,
 						  StringList & parametersAndValues,
-						  std::string & instance_id,
+						  std::vector< std::string > & instance_ids,
 						  std::string & error_code );
 
 		int ec2_vm_stop( const std::string & service_url,

@@ -1450,8 +1450,9 @@ AmazonVMStart::~AmazonVMStart() { }
 struct vmStartUD_t {
     bool inInstanceId;
     std::string & instanceID;
+    std::vector< std::string > * instanceIDs;
 
-    vmStartUD_t( std::string & iid ) : inInstanceId( false ), instanceID( iid ) { }
+    vmStartUD_t( std::string & iid, std::vector< std::string > * iids = NULL ) : inInstanceId( false ), instanceID( iid ), instanceIDs( iids ) { }
 };
 typedef struct vmStartUD_t vmStartUD;
 
@@ -1473,13 +1474,17 @@ void vmStartEEH( void * vUserData, const XML_Char * name ) {
     vmStartUD * vsud = (vmStartUD *)vUserData;
     if( strcasecmp( ignoringNameSpace( name ), "instanceId" ) == 0 ) {
         vsud->inInstanceId = false;
+        if( vsud->instanceIDs ) {
+        	vsud->instanceIDs->push_back( vsud->instanceID );
+        	vsud->instanceID.clear();
+        }
     }
 }
 
 bool AmazonVMStart::SendRequest() {
     bool result = AmazonRequest::SendRequest();
     if ( result ) {
-        vmStartUD vsud( this->instanceID );
+        vmStartUD vsud( this->instanceID, & this->instanceIDs );
         XML_Parser xp = XML_ParserCreate( NULL );
         XML_SetElementHandler( xp, & vmStartESH, & vmStartEEH );
         XML_SetCharacterDataHandler( xp, & vmStartCDH );
@@ -1508,10 +1513,10 @@ bool AmazonVMStart::workerFunction(char **argv, int argc, std::string &result_st
     dprintf( D_PERF_TRACE, "request #%d (%s): work begins\n",
         requestID, argv[0] );
 
-    if( ! verify_min_number_args( argc, 15 ) ) {
+    if( ! verify_min_number_args( argc, 21 ) ) {
         result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
         dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n",
-                 argc, 15, argv[0] );
+                 argc, 21, argv[0] );
         return false;
     }
 
@@ -1532,7 +1537,7 @@ bool AmazonVMStart::workerFunction(char **argv, int argc, std::string &result_st
 
     unsigned positionInList = 0;
     unsigned which = 0;
-    for( int i = 17; i < argc; ++i ) {
+    for( int i = 18; i < argc; ++i ) {
         if( strcasecmp( argv[i], NULLSTRING ) == 0 ) {
             ++which;
             positionInList = 0;
@@ -1571,6 +1576,10 @@ bool AmazonVMStart::workerFunction(char **argv, int argc, std::string &result_st
     vmStartRequest.query_parameters[ "MinCount" ] = "1";
     vmStartRequest.query_parameters[ "MaxCount" ] = "1";
     vmStartRequest.query_parameters[ "InstanceInitiatedShutdownBehavior" ] = "terminate";
+
+	if( strcasecmp( argv[17], NULLSTRING ) ) {
+		vmStartRequest.query_parameters[ "MaxCount" ] = argv[17];
+	}
 
     // Fill in optional parameters.
     if( strcasecmp( argv[6], NULLSTRING ) ) {
@@ -1673,7 +1682,7 @@ bool AmazonVMStart::workerFunction(char **argv, int argc, std::string &result_st
             vmStartRequest.errorMessage.c_str(),
             vmStartRequest.errorCode.c_str() );
     } else {
-        if( vmStartRequest.instanceID.empty() ) {
+        if( vmStartRequest.instanceIDs.size() == 0 ) {
             dprintf( D_ALWAYS, "Got result from endpoint that did not include an instance ID, failing.  Response follows.\n" );
             dprintf( D_ALWAYS, "-- RESPONSE BEGINS --\n" );
             dprintf( D_ALWAYS, "%s", vmStartRequest.resultString.c_str() );
@@ -1681,7 +1690,9 @@ bool AmazonVMStart::workerFunction(char **argv, int argc, std::string &result_st
             result_string = create_failure_result( requestID, "Could not find instance ID in response from server.  Check the EC2 GAHP log for details.", "E_NO_INSTANCE_ID" );
         } else {
             StringList resultList;
-            resultList.append( vmStartRequest.instanceID.c_str() );
+            for( size_t i = 0; i < vmStartRequest.instanceIDs.size(); ++i ) {
+	            resultList.append( vmStartRequest.instanceIDs[i].c_str() );
+            }
             result_string = create_success_result( requestID, & resultList );
         }
     }
