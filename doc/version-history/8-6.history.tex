@@ -39,11 +39,15 @@ cpu usage, respectively, across all job restarts.  Also, immediately clear attri
 \Macro{RemoteSysCpu} and \Macro{RemoveUserCpu} on job start, instead of on first update.
 \Ticket{6022}
 
-\item Added a new config knob, ALWAYS\_REUSEADDR, which defaults to false.
-When true, it tells condor to set the SO\_REUSEADDR socket option, so that
+\item Added a new config knob, \MacroNI{ALWAYS\_REUSEADDR}, which defaults
+to \Expr{True}.  When \Expr{True}, it tells HTCondor to set the
+\MacroNI{SO\_REUSEADDR} socket option, so that
 the schedd can run large numbers of very short jobs without exhausting the
 number of local ports needed for shadows.
 \Ticket{6040}
+
+\item Changed the default value of \MacroNI{IGNORE\_LEAF\_OOM} to \Expr{True}.
+\Ticket{5775}
 
 \end{itemize}
 
