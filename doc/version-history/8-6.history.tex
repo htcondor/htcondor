@@ -23,8 +23,7 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item HTCondor version 8.6.0 not yet released.
-%\item HTCondor version 8.6.0 released on Month Date, 2017.
+\item HTCondor version 8.6.0 released on January 26, 2017.
 
 \end{itemize}
 
@@ -93,5 +92,11 @@ when the proxy's filename is a relative path.
 X.509 proxy is refreshed and the \Prog{batch\_gahp} is configured to not
 create a limited copy of the proxy.
 \Ticket{6051}
+
+\item Fixed a bug in the virtual machine universe where \Attr{RequestMemory}
+and \Attr{RequestCPUs} were not changing the resources assigned to the VM
+created by HTCondor.  Now, \Attr{VM\_Memory} defaults to \Attr{RequestMemory},
+and the number of CPUs defaults to \Attr{RequestCPUs}.
+\Ticket{5998}
 
 \end{itemize}
