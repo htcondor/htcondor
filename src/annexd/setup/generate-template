@@ -8,23 +8,26 @@ use JSON;
 
 my $VERSION = 4;
 
-my( $prettyPrint, $s3Bucket, $s3Key );
+my( $prettyPrint, $s3Bucket );
 GetOptions(
 	'pretty-print'	=> \$prettyPrint,
 	's3-bucket'		=> \$s3Bucket,
-	's3-key'		=> \$s3Key,
 	'version=s'		=> \$VERSION,
 );
 if(! $s3Bucket) { $s3Bucket = { "Fn::Join" => [ "-", [ "condor-annex", { "Ref" => "AWS::Region" } ] ] }; }
-if(! $s3Key) { $s3Key = "lease-${VERSION}.zip"; }
+my $sfrKey = "sfr-lease-${VERSION}.zip";
+my $odiKey = "odi-lease-${VERSION}.zip";
 
 	my $template;
 	$template->{ AWSTemplateFormatVersion } = "2010-09-09";
 	$template->{ Description } = "HTCondor Annex Lease Implementation";
 
 	$template->{ Outputs } = {
-		LeaseFunctionARN => {
-			Value => { "Fn::GetAtt" => [ "LeaseFunction", "Arn" ] }
+		sfrLeaseFunctionARN => {
+			Value => { "Fn::GetAtt" => [ "sfrLeaseFunction", "Arn" ] }
+		},
+		odiLeaseFunctionARN => {
+			Value => { "Fn::GetAtt" => [ "odiLeaseFunction", "Arn" ] }
 		}
 	};
 
@@ -84,27 +87,53 @@ if(! $s3Key) { $s3Key = "lease-${VERSION}.zip"; }
 		}
 	};
 
-	$template->{ Resources }->{ LeaseFunction } = {
+	$template->{ Resources }->{ sfrLeaseFunction } = {
 		Type => "AWS::Lambda::Function",
 		DependsOn => "LeaseFunctionRole",
 		Properties => {
 			Role => { "Fn::GetAtt" => [ "LeaseFunctionRole", "Arn" ] },
 			Runtime => "nodejs4.3",
 			Timeout => 60,
-			Handler => "lease.handler",
+			Handler => "sfr-lease.handler",
 			Code => {
 				S3Bucket => $s3Bucket,
-				S3Key => $s3Key
+				S3Key => $sfrKey
 			}
 		}
 	};
 
-	$template->{ Resources }->{ LeaseFunctionPermissions } = {
+	$template->{ Resources }->{ odiLeaseFunction } = {
+		Type => "AWS::Lambda::Function",
+		DependsOn => "LeaseFunctionRole",
+		Properties => {
+			Role => { "Fn::GetAtt" => [ "LeaseFunctionRole", "Arn" ] },
+			Runtime => "nodejs4.3",
+			Timeout => 60,
+			Handler => "odi-lease.handler",
+			Code => {
+				S3Bucket => $s3Bucket,
+				S3Key => $odiKey
+			}
+		}
+	};
+
+	$template->{ Resources }->{ sfrLeaseFunctionPermissions } = {
 		Type => "AWS::Lambda::Permission",
-		DependsOn => "LeaseFunction",
+		DependsOn => "sfrLeaseFunction",
 		Properties => {
 			Action => "lambda:InvokeFunction",
-			FunctionName => { "Fn::GetAtt" => [ "LeaseFunction", "Arn" ] },
+			FunctionName => { "Fn::GetAtt" => [ "sfrLeaseFunction", "Arn" ] },
+			Principal => "events.amazonaws.com",
+			SourceArn => { "Fn::Join" => [ ":", [ "arn:aws:events", { "Ref" => "AWS::Region" }, { "Ref" => "AWS::AccountId" }, "*" ] ] }
+		}
+	};
+
+	$template->{ Resources }->{ odiLeaseFunctionPermissions } = {
+		Type => "AWS::Lambda::Permission",
+		DependsOn => "odiLeaseFunction",
+		Properties => {
+			Action => "lambda:InvokeFunction",
+			FunctionName => { "Fn::GetAtt" => [ "odiLeaseFunction", "Arn" ] },
 			Principal => "events.amazonaws.com",
 			SourceArn => { "Fn::Join" => [ ":", [ "arn:aws:events", { "Ref" => "AWS::Region" }, { "Ref" => "AWS::AccountId" }, "*" ] ] }
 		}

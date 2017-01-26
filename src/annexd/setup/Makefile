@@ -2,8 +2,8 @@
 # Upload the functions and templates to the appropriate place(s) on S3.
 #
 
-VERSION = 5
-FUNCTIONS = lease-$(VERSION).zip
+VERSION = 6
+FUNCTIONS = sfr-lease-$(VERSION).zip odi-lease-$(VERSION).zip
 TEMPLATES = template-$(VERSION).json
 S3TARGETS = $(FUNCTIONS:%=.upload/%) $(TEMPLATES:%=.upload/%)
 
@@ -28,7 +28,11 @@ $(S3TARGETS) : .upload/% : %
 #
 # Build the function upload from its source.
 #
-lease-$(VERSION).zip : lease.js
+sfr-lease-$(VERSION).zip : sfr-lease.js
+	@rm -f $@
+	@zip $@ $^
+
+odi-lease-$(VERSION).zip : odi-lease.js
 	@rm -f $@
 	@zip $@ $^
 

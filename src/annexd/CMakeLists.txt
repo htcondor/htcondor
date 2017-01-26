@@ -8,7 +8,7 @@ if( LINUX )
 		message( FATAL_ERROR "annexd required uuid header" )
 	endif( NOT HAVE_UUID_UUID_H )
 
-	SET( annexdSources "annexd.cpp;BulkRequest.cpp;FunctorSequence.cpp;ReplyAndClean.cpp;PutRule.cpp;PutTargets.cpp;GetFunction.cpp;generate-id.cpp" )
+	SET( annexdSources "annexd.cpp;BulkRequest.cpp;FunctorSequence.cpp;ReplyAndClean.cpp;PutRule.cpp;PutTargets.cpp;GetFunction.cpp;generate-id.cpp;OnDemandRequest.cpp" )
 	SET( gahpClientPrefix "${CMAKE_CURRENT_SOURCE_DIR}/../condor_gridmanager" )
 	SET( gahpClientSources "${gahpClientPrefix}/generic-gahp-client.cpp;${gahpClientPrefix}/gahp-client.cpp;${gahpClientPrefix}/ec2-gahp-client.cpp;${gahpClientPrefix}/proxymanager.cpp" )
 	include_directories( "${gahpClientPrefix}" )

@@ -21,6 +21,7 @@
 #include "ReplyAndClean.h"
 #include "FunctorSequence.h"
 #include "generate-id.h"
+#include "OnDemandRequest.h"
 
 // Although the annex daemon uses a GAHP, it doesn't have a schedd managing
 // its hard state in an existing job ad; it has to do that job on its own.
@@ -267,35 +268,170 @@ createOneAnnex( ClassAd * command, Stream * replyStream ) {
 	}
 	scratchpad->Assign( "CommandID", commandID );
 
-	// The annex ID will form part of each SFR's client token, which will
-	// allow us to cancel them all without having to continually add or update
-	// the target(s) in the lease.  Since we dont' need to know the SFR's
-	// ID -- or, for that matter, its whole client token -- we can create the
-	// lease /before/ we submit the Spot Fleet request.
+	// The annex ID will form part of the SFR (or ODI) client token, which
+	// allows the corresponding lease function to cnacel them all without
+	// having to continually add or update the target(s) in the lease.  Since
+	// we don't need to know the SFR (or instance) ID -- or even its entire
+	// client token -- we can create the lease /before/ we start instances.
+	//
+	// If the user specified an annex name, we'll use the first 36 characters,
+	// the same length as the UUID we'd otherwise generate.
 	std::string annexID;
 	command->LookupString( "AnnexID", annexID );
 	if( annexID.empty() ) {
-		generateAnnexID( annexID );
+		std::string annexName;
+		command->LookupString( "AnnexName", annexName );
+		if( annexName.empty() ) {
+			generateAnnexID( annexID );
+		} else {
+			annexID = annexName.substr( 0, 36 );
+		}
 		command->Assign( "AnnexID", annexID );
 	}
 	scratchpad->Assign( "AnnexID", annexID );
 
-	// Each step in the sequence handles its own de/serialization.
-	BulkRequest * br = new BulkRequest( reply, gahp, scratchpad,
-		serviceURL, publicKeyFile, secretKeyFile, commandState,
-		commandID, annexID );
 
-	// Validate the lease time along with the bulk request, just to save
-	// some error-handling duplication.
-	time_t endOfLease = 0;
-	command->LookupInteger( "EndOfLease", endOfLease );
+	std::string annexType;
+	command->LookupString( "AnnexType", annexType );
+	if( annexType.empty() || (annexType != "odi" && annexType != "sfr") ) {
+		std::string errorString = "AnnexType unspecified or unknown.";
+		dprintf( D_ALWAYS, "%s (%s)\n", errorString.c_str(), annexType.c_str() );
 
-	// Now that we've created the bulk request, it can fully validate the
-	// command ad, storing what it needs as it goes.  Really, each functor
-	// in sequence should have a validateAndStore() method, but the second
-	// two don't need one.
+		reply->Assign( ATTR_RESULT, getCAResultString( CA_INVALID_REQUEST ) );
+		reply->Assign( ATTR_ERROR_STRING, errorString );
+
+		if(! sendCAReply( replyStream, "CA_BULK_REQUEST", reply )) {
+			dprintf( D_ALWAYS, "Failed to reply to CA_BULK_REQUEST.\n" );
+		}
+
+		return FALSE;
+	}
+
+
 	std::string validationError;
-	if( (! br->validateAndStore( command, validationError )) || (! validateLease( endOfLease, validationError )) ) {
+	if( annexType == "sfr" ) {
+		// Each step in the sequence handles its own de/serialization.
+		BulkRequest * br = new BulkRequest( reply, gahp, scratchpad,
+			serviceURL, publicKeyFile, secretKeyFile, commandState,
+			commandID, annexID );
+
+		time_t endOfLease = 0;
+		command->LookupInteger( "EndOfLease", endOfLease );
+
+		// Now that we've created the bulk request, it can fully validate the
+		// command ad, storing what it needs as it goes.  Really, each functor
+		// in sequence should have a validateAndStore() method, but the second
+		// two don't need one.
+		if( (! br->validateAndStore( command, validationError )) || (! validateLease( endOfLease, validationError )) ) {
+			delete br;
+			goto cleanup;
+		}
+
+		//
+		// After this point, we no longer exit because of an invalid request, so
+		// this is the first point at which we want to log the command ad.  Since
+		// none of the functors have run yet, we haven't made any changes to the
+		// cloud's state yet.  We'll pass responsibility off to the functors for
+		// logging their own individual cloud-state changes, which means now is
+		// the right time to log the command ad.
+		//
+		// Note that moving the retry/fault-tolerance code into the functors means
+		// that some of policy (not accepting user client tokens and the default
+		// validity period) has to move into the functors as well.
+		//
+
+		commandState->BeginTransaction();
+		{
+			InsertOrUpdateAd( commandID, command, commandState );
+		}
+		commandState->CommitTransaction();
+
+		// Verify the existence of the specified function before starting any
+		// instances.  Otherwise, the lease may not fire.
+		GetFunction * gf = new GetFunction( leaseFunctionARN,
+			reply, lambdaGahp, scratchpad,
+	    	lambdaURL, publicKeyFile, secretKeyFile,
+			commandState, commandID );
+		PutRule * pr = new PutRule( reply, eventsGahp, scratchpad,
+			eventsURL, publicKeyFile, secretKeyFile,
+			commandState, commandID, annexID );
+		PutTargets * pt = new PutTargets( leaseFunctionARN,
+			reply, eventsGahp, scratchpad,
+			eventsURL, publicKeyFile, secretKeyFile, endOfLease,
+			commandState, commandID, annexID );
+		// We now only call last->operator() on success; otherwise, we roll back
+		// and call last->rollback() after we've given up.  We can therefore
+		// remove the command ad from the commandState in this functor.
+		ReplyAndClean * last = new ReplyAndClean( reply, replyStream, gahp, scratchpad, eventsGahp, commandState, commandID, lambdaGahp );
+
+		// Note that the functor sequence takes responsibility for deleting the
+		// functor objects; the functor objects would just delete themselves when
+		// they're done, but implementing rollback means the functors themselves
+		// can't know how long they should persist.
+		//
+		// The commandState, commandID, and scratchpad allow the functor sequence
+		// to restart a rollback, if that becomes necessary.
+		FunctorSequence * fs = new FunctorSequence( { gf, pr, pt, br }, last, commandState, commandID, scratchpad );
+
+		// Create a timer for the gahp to fire when it gets a result.  We must
+		// use TIMER_NEVER to ensure that the timer hasn't been reaped when the
+		// GAHP client needs to fire it.
+		int functorSequenceTimer = daemonCore->Register_Timer( 0, TIMER_NEVER,
+			(void (Service::*)()) & FunctorSequence::operator(),
+			"GetFunction, PutRule, PutTarget, BulkRequest", fs );
+		gahp->setNotificationTimerId( functorSequenceTimer );
+    	eventsGahp->setNotificationTimerId( functorSequenceTimer );
+    	lambdaGahp->setNotificationTimerId( functorSequenceTimer );
+
+		return KEEP_STREAM;
+	} else if( annexType == "odi" ) {
+		OnDemandRequest * odr = new OnDemandRequest( reply, gahp, scratchpad,
+			serviceURL, publicKeyFile, secretKeyFile, commandState,
+			commandID, annexID );
+
+		time_t endOfLease = 0;
+		command->LookupInteger( "EndOfLease", endOfLease );
+
+		if( (! odr->validateAndStore( command, validationError )) || (! validateLease( endOfLease, validationError )) ) {
+			delete odr;
+			goto cleanup;
+		}
+
+		// See corresponding comment above.
+		commandState->BeginTransaction();
+		{
+			InsertOrUpdateAd( commandID, command, commandState );
+		}
+		commandState->CommitTransaction();
+
+		GetFunction * gf = new GetFunction( leaseFunctionARN,
+			reply, lambdaGahp, scratchpad,
+	    	lambdaURL, publicKeyFile, secretKeyFile,
+			commandState, commandID );
+		PutRule * pr = new PutRule( reply, eventsGahp, scratchpad,
+			eventsURL, publicKeyFile, secretKeyFile,
+			commandState, commandID, annexID );
+		PutTargets * pt = new PutTargets( leaseFunctionARN,
+			reply, eventsGahp, scratchpad,
+			eventsURL, publicKeyFile, secretKeyFile, endOfLease,
+			commandState, commandID, annexID );
+		ReplyAndClean * last = new ReplyAndClean( reply, replyStream, gahp, scratchpad, eventsGahp, commandState, commandID, lambdaGahp );
+
+		FunctorSequence * fs = new FunctorSequence( { gf, pr, pt, odr }, last, commandState, commandID, scratchpad );
+
+		int functorSequenceTimer = daemonCore->Register_Timer( 0, TIMER_NEVER,
+			(void (Service::*)()) & FunctorSequence::operator(),
+			"GetFunction, PutRule, PutTarget, OnDemandRequest", fs );
+		gahp->setNotificationTimerId( functorSequenceTimer );
+    	eventsGahp->setNotificationTimerId( functorSequenceTimer );
+    	lambdaGahp->setNotificationTimerId( functorSequenceTimer );
+
+		return KEEP_STREAM;
+	} else {
+		ASSERT( 0 );
+	}
+
+	cleanup:
 		reply->Assign( ATTR_RESULT, getCAResultString( CA_INVALID_REQUEST ) );
 		reply->Assign( ATTR_ERROR_STRING, validationError );
 
@@ -310,68 +446,7 @@ createOneAnnex( ClassAd * command, Stream * replyStream ) {
 		delete reply;
 		delete scratchpad;
 
-		delete br;
-
 		return FALSE;
-	}
-
-	//
-	// After this point, we no longer exit because of an invalid request, so
-	// this is the first point at which we want to log the command ad.  Since
-	// none of the functors have run yet, we haven't made any changes to the
-	// cloud's state yet.  We'll pass responsibility off to the functors for
-	// logging their own individual cloud-state changes, which means now is
-	// the right time to log the command ad.
-	//
-	// Note that moving the retry/fault-tolerance code into the functors means
-	// that some of policy (not accepting user client tokens and the default
-	// validity period) has to move into the functors as well.
-	//
-
-	commandState->BeginTransaction();
-	{
-		InsertOrUpdateAd( commandID, command, commandState );
-	}
-	commandState->CommitTransaction();
-
-	// Verify the existence of the specified function before starting any
-	// instances.  Otherwise, the lease may not fire.
-	GetFunction * gf = new GetFunction( leaseFunctionARN,
-		reply, lambdaGahp, scratchpad,
-	    lambdaURL, publicKeyFile, secretKeyFile,
-		commandState, commandID );
-	PutRule * pr = new PutRule( reply, eventsGahp, scratchpad,
-		eventsURL, publicKeyFile, secretKeyFile,
-		commandState, commandID, annexID );
-	PutTargets * pt = new PutTargets( leaseFunctionARN,
-		reply, eventsGahp, scratchpad,
-		eventsURL, publicKeyFile, secretKeyFile, endOfLease,
-		commandState, commandID, annexID );
-	// We now only call last->operator() on success; otherwise, we roll back
-	// and call last->rollback() after we've given up.  We can therefore
-	// remove the command ad from the commandState in this functor.
-	ReplyAndClean * last = new ReplyAndClean( reply, replyStream, gahp, scratchpad, eventsGahp, commandState, commandID, lambdaGahp );
-
-	// Note that the functor sequence takes responsibility for deleting the
-	// functor objects; the functor objects would just delete themselves when
-	// they're done, but implementing rollback means the functors themselves
-	// can't know how long they should persist.
-	//
-	// The commandState, commandID, and scratchpad allow the functor sequence
-	// to restart a rollback, if that becomes necessary.
-	FunctorSequence * fs = new FunctorSequence( { gf, pr, pt, br }, last, commandState, commandID, scratchpad );
-
-	// Create a timer for the gahp to fire when it gets a result.  We must
-	// use TIMER_NEVER to ensure that the timer hasn't been reaped when the
-	// GAHP client needs to fire it.
-	int functorSequenceTimer = daemonCore->Register_Timer( 0, TIMER_NEVER,
-		(void (Service::*)()) & FunctorSequence::operator(),
-		"BulkRequest, PutRule, AddTarget", fs );
-	gahp->setNotificationTimerId( functorSequenceTimer );
-    eventsGahp->setNotificationTimerId( functorSequenceTimer );
-    lambdaGahp->setNotificationTimerId( functorSequenceTimer );
-
-	return KEEP_STREAM;
 }
 
 int updateTimerID;

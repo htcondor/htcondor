@@ -29,7 +29,7 @@ generateClientToken(	const std::string & annexID,
 	// Each client token must be unique, even across daemon restarts.  We
 	// therefore can't just use a counter, unless we want to add more hard
 	// state.  However, the following obvious approach truncates eight of
-	// the second UUID's eight bytes.  This seems unlikely to cause problems,
+	// the second UUID's sixteen bytes.  This seems unlikely to cause problems,
 	// but if it does, we could compact the annex ID where we make it and
 	// the client randomizer here by eliding the dashes in their ASCII.
 	generateUUID( clientToken );
