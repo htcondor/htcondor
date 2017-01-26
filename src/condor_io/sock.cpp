@@ -785,7 +785,7 @@ int Sock::bind(condor_protocol proto, bool outbound, int port, bool loopback)
 		return FALSE;
 	}
 
-	static bool reuse = param_boolean("ALWAYS_REUSEADDR", false);
+	static bool reuse = param_boolean("ALWAYS_REUSEADDR", true);
 	if (reuse) {	
 		int one = 1;
     	this->setsockopt(SOL_SOCKET, SO_REUSEADDR, (char *)&one, sizeof(one));

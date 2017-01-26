@@ -1100,7 +1100,7 @@ VanillaProc::outOfMemoryEvent(int /* fd */)
 
 		//
 #ifdef LINUX
-	if (param_boolean("IGNORE_LEAF_OOM", false)) {
+	if (param_boolean("IGNORE_LEAF_OOM", true)) {
 		// if memory.use_hierarchy is 1, then hitting the limit at
 		// the parent notifies all children, even if those children
 		// are below their usage.  If we are below our usage, ignore
