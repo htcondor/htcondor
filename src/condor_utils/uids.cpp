@@ -49,6 +49,14 @@ THREAD_LOCAL_STORAGE static priv_state CurrentPrivState = PRIV_UNKNOWN;
 static priv_state CurrentPrivState = PRIV_UNKNOWN;
 #endif
 
+#ifdef LINUX
+static int   CurrentSessionKeyring;
+static uid_t CurrentSessionKeyringUID;
+static int   PreviousSessionKeyring;
+static uid_t PreviousSessionKeyringUID;
+static pid_t SessionKeyringPID = 0;
+#endif
+
 priv_state
 get_priv_state(void)
 {
@@ -272,6 +280,7 @@ can_switch_ids( void )
 
 
 static int should_use_keyring_sessions() {
+#ifdef LINUX
 	static int UseKeyringSessions = FALSE;
 	static int DidParamForKeyringSessions = FALSE;
 
@@ -280,6 +289,9 @@ static int should_use_keyring_sessions() {
 		DidParamForKeyringSessions = true;
 	}
 	return UseKeyringSessions;
+#else
+	return false;
+#endif
 }
 
 
@@ -1426,9 +1438,12 @@ set_file_owner_ids( uid_t uid, gid_t gid )
   #define KEYCTL_JOIN_SESSION_KEYRING     1       /* join or start named session keyring */
   #define KEYCTL_DESCRIBE                 6       /* describe a key */
   #define KEYCTL_LINK                     8       /* link a key into a keyring */
+  #define KEYCTL_UNLINK                   9       /* unlink a key from a keyring */
   #define KEYCTL_SEARCH                   10      /* search for a key in a keyring */
   #define KEY_SPEC_SESSION_KEYRING        -3      /* - key ID for session-specific keyring */
   #define KEY_SPEC_USER_KEYRING           -4      /* - key ID for UID-specific keyring */
+  #define KEY_SPEC_INVALID_KEYRING        -99     /* - key ID for "invalid keyring" */
+  #define KEY_SPEC_INVALID_UID            -99     /* - user ID for "invalid user" */
 #endif  // of ifndef KEYCTL_JOIN_SESSION_KEYRING
 
 // helper functions to avoid importing libkeyutils
@@ -1442,6 +1457,10 @@ static key_serial_t condor_keyctl_search(key_serial_t k, const char* t, const ch
 
 static long condor_keyctl_link(key_serial_t k, key_serial_t r) {
   return syscall(__NR_keyctl, KEYCTL_LINK, k, r);
+}
+
+static long condor_keyctl_unlink(key_serial_t k, key_serial_t r) {
+  return syscall(__NR_keyctl, KEYCTL_UNLINK, k, r);
 }
 #endif
 
@@ -1489,6 +1508,39 @@ _set_priv(priv_state s, const char *file, int line, int dologging)
 		// up the whole process below.  so for now, we only do it when
 		// switching to user priv.
 
+		// We only get here if we are actually switching state. (Not if we
+		// requested to to switch to the current state, or if we requested
+		// to switch away from a _FINAL state).
+
+#ifdef LINUX
+		if(should_use_keyring_sessions()) {
+
+			// if we were in priv user and are switching out, we need to unlink
+			// the keyring holding the user's AFS token.  we can assume that these
+			// structures exist since they were initialized when going INTO user priv.
+
+			if(PrevPrivState == PRIV_USER) {
+				// find the user and session keyring
+				key_serial_t sess_keyring = KEY_SPEC_SESSION_KEYRING;
+				key_serial_t user_keyring = CurrentSessionKeyring;
+				if (dologging) dprintf(D_SECURITY, "KEYCTL: unlinking keyring %i from %i\n", user_keyring, sess_keyring);
+
+				// unlink current creds as root.
+				set_root_euid();
+				long unlink_success = condor_keyctl_unlink(user_keyring, sess_keyring);
+
+				if (unlink_success == 0) {
+					// update state
+					PreviousSessionKeyring = CurrentSessionKeyring;
+					PreviousSessionKeyringUID = CurrentSessionKeyringUID;
+				} else {
+					PreviousSessionKeyring = KEY_SPEC_INVALID_KEYRING;
+					PreviousSessionKeyringUID = KEY_SPEC_INVALID_UID;
+				}
+			}
+		}
+#endif
+
 		switch (s) {
 		case PRIV_ROOT:
 			set_root_euid();
@@ -1505,44 +1557,78 @@ _set_priv(priv_state s, const char *file, int line, int dologging)
 #ifdef LINUX
 			if(should_use_keyring_sessions()) {
 
-				// We need to place this process in a PAG with tokens for
-				// the requested user.  Steps to do this:
-				// 1) Create a brand new session
-				// 2) Find the users's credential on the HTCondor keyring.
-				// 3) Attach that key to our new session keyring
+				// if we're going to be using USER_PRIV states at all, we need to have
+				// our own session keyring per-process.  we accomplish this with static
+				// variables and by checking our pid to see if we fork()ed.  The initial
+				// value of SessionKeyringPID is zero, so the first time through we'll
+				// always create a new session.  Then, only of our pid changes.
 
-				// all of this should be done as root.
-				set_root_euid();
+				pid_t curpid = getpid();
+				if((SessionKeyringPID != curpid)) {
+					set_root_euid();
+					// create a new session
+					condor_keyctl_session(NULL);
+					key_serial_t sess_keyring = KEY_SPEC_SESSION_KEYRING;
+					if (dologging) dprintf(D_SECURITY,
+						"KEYCTL: oldpid: %i, newpid: %i.  New session keyring %i\n",
+						SessionKeyringPID, curpid, sess_keyring);
 
-				// step 1, create a new session
-				condor_keyctl_session(NULL);
-				key_serial_t anon_keyring = KEY_SPEC_SESSION_KEYRING;
-				if (dologging) dprintf(D_SECURITY, "KEYCTL: created new anonymous keyring\n");
-
-				// step 2a, locate the master keyring.
-				// -4 is the uid keyring for root.
-				key_serial_t htcondor_keyring = KEY_SPEC_USER_KEYRING;
-
-				// step 2b, create the keyring name for user keyring
-				MyString ring_name = "htcondor_uid";
-				ring_name = ring_name + UserUid;
-
-				// step 2c, locate the user keyring
-				key_serial_t user_keyring = condor_keyctl_search(htcondor_keyring, "keyring", ring_name.Value(), 0);
-				if(user_keyring == -1) {
-					if (dologging) dprintf(D_ALWAYS, "KEYCTL: unable to find keyring '%s', error: %s\n", ring_name.Value(), strerror(errno));
-				} else {
-					if (dologging) dprintf(D_SECURITY, "KEYCTL: found user keyring %s (%li)\n", ring_name.Value(), (long)user_keyring);
+					SessionKeyringPID = curpid;
 				}
 
-				// step 3, link the user keyring to our session keyring
-				long link_success = condor_keyctl_link(user_keyring, anon_keyring);
-				if(link_success == -1) {
-					if (dologging) dprintf(D_ALWAYS, "KEYCTL: link(%li,%li) error: %s\n",
-						(long)user_keyring, (long)anon_keyring, strerror(errno));
+
+				// First, see if we can simply attach the previously-used keyring
+				if(UserUid != PreviousSessionKeyringUID) {
+					set_root_euid();
+					// no. lookup the new one
+
+					// locate the master keyring.
+					// KEY_SPEC_USER_KEYRING is the uid keyring for root.
+					key_serial_t htcondor_keyring = KEY_SPEC_USER_KEYRING;
+
+					// create the keyring name for user keyring
+					MyString ring_name = "htcondor_uid";
+					ring_name = ring_name + UserUid;
+
+					// locate the user keyring
+					key_serial_t user_keyring = condor_keyctl_search(htcondor_keyring, "keyring", ring_name.Value(), 0);
+					if(user_keyring == -1) {
+						CurrentSessionKeyring = KEY_SPEC_INVALID_KEYRING;
+						CurrentSessionKeyringUID = KEY_SPEC_INVALID_UID;
+						if (dologging) dprintf(D_ALWAYS,
+							"KEYCTL: unable to find keyring '%s', error: %s\n",
+							ring_name.Value(), strerror(errno));
+					} else {
+						CurrentSessionKeyring = user_keyring;
+						CurrentSessionKeyringUID = UserUid;
+						if (dologging) dprintf(D_SECURITY,
+							 "KEYCTL: found user keyring %s (%li) for uid %i.\n",
+							 ring_name.Value(), (long)user_keyring, UserUid);
+					}
 				} else {
-					if (dologging) dprintf(D_SECURITY, "KEYCTL: linked key %li to %li\n",
-						(long)user_keyring, (long)anon_keyring);
+					CurrentSessionKeyring = PreviousSessionKeyring;
+					CurrentSessionKeyringUID = PreviousSessionKeyringUID;
+					if (dologging) dprintf(D_SECURITY, "KEYCTL: resuming stored keyring %i and uid %i.\n",
+						CurrentSessionKeyring, CurrentSessionKeyringUID);
+				}
+
+
+				// only link if there's something to link to
+				if(CurrentSessionKeyring != KEY_SPEC_INVALID_KEYRING) {
+					set_root_euid();
+					// locate the session keyring and uid 0 keyring.
+					key_serial_t user_keyring = CurrentSessionKeyring;
+					key_serial_t sess_keyring = KEY_SPEC_SESSION_KEYRING;
+
+					// link the user keyring to our session keyring
+					long link_success = condor_keyctl_link(user_keyring, sess_keyring);
+					if(link_success == -1) {
+						if (dologging) dprintf(D_ALWAYS, "KEYCTL: link(%li,%li) error: %s\n",
+							(long)user_keyring, (long)sess_keyring, strerror(errno));
+					} else {
+						if (dologging) dprintf(D_SECURITY, "KEYCTL: linked key %li to %li\n",
+							(long)user_keyring, (long)sess_keyring);
+					}
 				}
 			}
 #endif // LINUX

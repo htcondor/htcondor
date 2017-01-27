@@ -12,40 +12,6 @@ This is the development release series of HTCondor.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{\label{sec:New-8-5-9}Version 8.5.9}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\noindent Release Notes:
-
-\begin{itemize}
-
-\item HTCondor version 8.5.9 not yet released.
-%\item HTCondor version 8.5.9 released on Month Date, 2016.
-
-\end{itemize}
-
-
-\noindent New Features:
-
-\begin{itemize}
-
-\item None.
-
-\end{itemize}
-
-\noindent Bugs Fixed:
-
-\begin{itemize}
-
-\item Fixed a bug in the virtual machine universe where \Attr{RequestMemory}
-and \Attr{RequestCPUs} were not changing the resources assigned to the VM
-created by HTCondor.  Now, \Attr{VM\_Memory} defaults to \Attr{RequestMemory},
-and the number of CPUs defaults to \Attr{RequestCPUs}.
-\Ticket{5998}
-
-\end{itemize}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-8-5-8}Version 8.5.8}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -524,7 +490,7 @@ can be used to limit the number of DAGs that any single user can have running at
 a time.
 \Ticket{5568}
 
-\item Monitoring the status of PBS and SLURM jobs is now much more efficient.
+\item Monitoring the status of PBS and Slurm jobs is now much more efficient.
 Now, one query to the batch system is done for all jobs, instead of a
 separate query for each job.
 \Ticket{5722}
@@ -616,10 +582,10 @@ any resources.
 \Ticket{5743}
 
 \item No longer leak a file in the user's home directory each time a
-job is submitted to SLURM.
+job is submitted to Slurm.
 \Ticket{5742}
 
-\item Fix a bug that prevented HTCondor from removing jobs from SLURM.
+\item Fix a bug that prevented HTCondor from removing jobs from Slurm.
 \Ticket{5804}
 
 \item Fixed a bug when attempting to authenticate using multiple
@@ -879,7 +845,7 @@ the number of Idle and Running jobs for Scheduler universe and for Local
 universe.
 \Ticket{5519}
 
-\item Jobs can now be submitted to the SLURM batch scheduling system via
+\item Jobs can now be submitted to the Slurm batch scheduling system via
 the new \SubmitCmdNI{slurm} type in the grid universe.
 \Ticket{5515}
 

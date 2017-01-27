@@ -3720,6 +3720,12 @@ type=string
 default=$(LOCK)/shared_port_ad
 type=string
 
+[ALWAYS_REUSEADDR]
+default=true
+version=8.6.0
+type=bool
+description=Set SO_REUSEADDR on all sockets
+
 [USE_SHARED_PORT]
 default=true
 version=7.5.0
@@ -4343,6 +4349,13 @@ default=none
 version=7.9.0
 type=string
 description=Determines whether cgroup base memory enforcement should happen
+tags=starter
+
+[IGNORE_LEAF_OOM]
+default=true
+version=8.4.11
+type=bool
+description=Determines whether a job ignores an OOM event if it's using less than its limit
 tags=starter
 
 [BATCH_GAHP_CHECK_STATUS_ATTEMPTS]

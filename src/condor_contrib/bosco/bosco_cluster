@@ -790,9 +790,9 @@ else
     if [ "$cluster_type" == "htcondor" ]; then
         cluster_type="condor"
     fi
-    if [ ! "$cluster_type" == "pbs" -a ! "$cluster_type" == "lsf" -a ! "$cluster_type" == "sge" -a ! "$cluster_type" == "condor" ]; then
+    if [ ! "$cluster_type" == "pbs" -a ! "$cluster_type" == "lsf" -a ! "$cluster_type" == "sge" -a ! "$cluster_type" == "condor" -a ! "$cluster_type" == "slurm" ]; then
         echo "Unrecognized batch system: $1 (normalized: $cluster_type)"
-        echo "Please specify one of the following: pbs, lsf, sge, condor"
+        echo "Please specify one of the following: pbs, lsf, sge, condor, slurm"
         exit 1
     fi
 fi
