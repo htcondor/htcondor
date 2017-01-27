@@ -131,6 +131,8 @@ validateLease( time_t endOfLease, std::string & validationError ) {
 
 int
 createOneAnnex( ClassAd * command, Stream * replyStream ) {
+	// dPrintAd( D_FULLDEBUG, * command );
+
 	// Validate the request (basic).
 	int requestVersion = -1;
 	command->LookupInteger( "RequestVersion", requestVersion );
@@ -180,9 +182,11 @@ createOneAnnex( ClassAd * command, Stream * replyStream ) {
 	std::string publicKeyFile, secretKeyFile, leaseFunctionARN;
 
 	// FIXME: look up public key file from authorized user map.
+	param( publicKeyFile, "ANNEX_DEFAULT_ACCESS_KEY_FILE" );
 	command->LookupString( "PublicKeyFile", publicKeyFile );
 
 	// FIXME: look up secret key file from authorized user map.
+	param( secretKeyFile, "ANNEX_DEFAULT_SECRET_KEY_FILE" );
 	command->LookupString( "SecretKeyFile", secretKeyFile );
 
 	// FIXME: look up lease function ARN from authorized user map

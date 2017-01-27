@@ -88,12 +88,15 @@ help( const char * argv0 ) {
 		"\t[-[default-]user-data[-file] <data|file> ]\n"
 		"\t[-debug] [-help]\n"
 		"\t[-spot-fleet-config-file <spot-fleet-configuration-file>]\n"
+		"\t[-odi-instance-type <instance-type>]\n"
+		"\t[-odi-image-id <image-ID>\n"
+		"\t[-odi-instance-profile-arn <instance-profile-arn>]\n"
 		, argv0 );
 	fprintf( stdout, "%s defaults to On-Demand Instances (-odi).  "
 		"For Spot Fleet Requests, use -sfr.  Specifying "
 		"-spot-fleet-config-file implies -sfr, as does -slots.  "
 		"Specifying -count implies -odi.  You may not specify or imply "
-		"-odi and -sfr in the same command."
+		"-odi and -sfr in the same command.  Specifying -odi-* implies -odi."
 		"\n", argv0 );
 }
 
@@ -119,6 +122,9 @@ main( int argc, char ** argv ) {
 	const char * secretKeyFile = NULL;
 	const char * sfrLeaseFunctionARN = NULL;
 	const char * odiLeaseFunctionARN = NULL;
+	const char * odiInstanceType = NULL;
+	const char * odiImageID = NULL;
+	const char * odiInstanceProfileARN = NULL;
 	bool annexTypeIsSFR = false;
 	bool annexTypeIsODI = false;
 	long int leaseDuration = 0;
@@ -252,13 +258,40 @@ main( int argc, char ** argv ) {
 				sfrLeaseFunctionARN = argv[i];
 				continue;
 			} else {
-				fprintf( stderr, "%s: -lease-function-arn requires an argument.\n", argv[0] );
+				fprintf( stderr, "%s: -sfr-lease-function-arn requires an argument.\n", argv[0] );
 				return 1;
 			}
 		} else if( is_dash_arg_prefix( argv[i], "odi-lease-function-arn", 11 ) ) {
 			++i;
 			if( argv[i] != NULL ) {
 				odiLeaseFunctionARN = argv[i];
+				continue;
+			} else {
+				fprintf( stderr, "%s: -odi-lease-function-arn requires an argument.\n", argv[0] );
+				return 1;
+			}
+		} else if( is_dash_arg_prefix( argv[i], "odi-instance-type", 14 ) ) {
+			++i;
+			if( argv[i] != NULL ) {
+				odiInstanceType = argv[i];
+				continue;
+			} else {
+				fprintf( stderr, "%s: -odi-instance-type requires an argument.\n", argv[0] );
+				return 1;
+			}
+		} else if( is_dash_arg_prefix( argv[i], "odi-image-id", 11 ) ) {
+			++i;
+			if( argv[i] != NULL ) {
+				odiImageID = argv[i];
+				continue;
+			} else {
+				fprintf( stderr, "%s: -odi-image-id requires an argument.\n", argv[0] );
+				return 1;
+			}
+		} else if( is_dash_arg_prefix( argv[i], "odi-instance-profile-arn", 22 ) ) {
+			++i;
+			if( argv[i] != NULL ) {
+				odiInstanceProfileARN = argv[i];
 				continue;
 			} else {
 				fprintf( stderr, "%s: -lease-function-arn requires an argument.\n", argv[0] );
@@ -370,8 +403,11 @@ main( int argc, char ** argv ) {
 	}
 
 	if( annexTypeIsSFR && fileName == NULL ) {
-		fprintf( stderr, "Spot Fleet Requests require the -spot-fleet-config-file flag.\n" );
-		return 1;
+		fileName = param( "ANNEX_DEFAULT_SFR_CONFIG_FILE" );
+		if( fileName == NULL ) {
+			fprintf( stderr, "Spot Fleet Requests require the -spot-fleet-config-file flag.\n" );
+			return 1;
+		}
 	}
 	if( fileName != NULL && ! annexTypeIsSFR ) {
 		fprintf( stderr, "Unwilling to ignore -spot-fleet-config-file flag being set for an ODI annex.\n" );
@@ -409,14 +445,43 @@ main( int argc, char ** argv ) {
 			}
 		}
 	} else {
-		// FIXME: from command-line or config.
-		spotFleetRequest.Assign( "InstanceType", "m3.large" );
-		spotFleetRequest.Assign( "ImageID", "ami-aacfc2bd" );
-		spotFleetRequest.Assign( "InstanceProfileARN", "arn:aws:iam::203156892957:instance-profile/Test-03-InstanceConfigurationProfile-KE00QENH65E" );
+		if(! odiInstanceType) {
+			odiInstanceType = param( "ANNEX_DEFAULT_ODI_INSTANCE_TYPE" );
+		}
+		if( odiInstanceType ) {
+			spotFleetRequest.Assign( "InstanceType", odiInstanceType );
+		}
+
+		if(! odiImageID) {
+			odiImageID = param( "ANNEX_DEFAULT_ODI_IMAGE_ID" );
+		}
+		if( odiImageID ) {
+			spotFleetRequest.Assign( "ImageID", odiImageID );
+		}
+
+		if(! odiInstanceProfileARN) {
+			odiInstanceProfileARN = param( "ANNEX_DEFAULT_ODI_INSTANCE_PROFILE_ARN" );
+		}
+		if( odiInstanceProfileARN ) {
+			spotFleetRequest.Assign( "InstanceProfileARN", odiInstanceProfileARN );
+		}
 	}
 
-	if( annexTypeIsSFR ) { spotFleetRequest.Assign( "AnnexType", "sfr" ); }
-	if( annexTypeIsODI ) { spotFleetRequest.Assign( "AnnexType", "odi" ); }
+	if( annexTypeIsSFR ) {
+		spotFleetRequest.Assign( "AnnexType", "sfr" );
+		if(! sfrLeaseFunctionARN) {
+			sfrLeaseFunctionARN = param( "ANNEX_DEFAULT_SFR_LEASE_FUNCTION_ARN" );
+		}
+		spotFleetRequest.Assign( "LeaseFunctionARN", sfrLeaseFunctionARN );
+	}
+	if( annexTypeIsODI ) {
+		spotFleetRequest.Assign( "AnnexType", "odi" );
+		if(! odiLeaseFunctionARN) {
+			odiLeaseFunctionARN = param( "ANNEX_DEFAULT_ODI_LEASE_FUNCTION_ARN" );
+		}
+		spotFleetRequest.Assign( "LeaseFunctionARN", odiLeaseFunctionARN );
+	}
+
 	spotFleetRequest.Assign( "AnnexName", annexName );
 	spotFleetRequest.Assign( "TargetCapacity", count );
 	time_t now = time( NULL );
@@ -453,13 +518,6 @@ main( int argc, char ** argv ) {
 
 	if( secretKeyFile != NULL ) {
 		spotFleetRequest.Assign( "SecretKeyFile", secretKeyFile );
-	}
-
-	if( annexTypeIsSFR && sfrLeaseFunctionARN != NULL ) {
-		spotFleetRequest.Assign( "LeaseFunctionARN", sfrLeaseFunctionARN );
-	}
-	if( annexTypeIsODI && odiLeaseFunctionARN != NULL ) {
-		spotFleetRequest.Assign( "LeaseFunctionARN", odiLeaseFunctionARN );
 	}
 
 	// Handle user data.
