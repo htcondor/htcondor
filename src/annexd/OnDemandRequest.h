@@ -36,6 +36,8 @@ class OnDemandRequest : public Functor {
 		std::string imageID;
 		std::string instanceProfileARN;
 		std::vector< std::string > instanceIDs;
+		std::string keyName;
+		std::string securityGroupIDs;
 
 		std::string commandID;
 		std::string bulkRequestID;

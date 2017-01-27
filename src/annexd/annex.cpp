@@ -90,6 +90,8 @@ help( const char * argv0 ) {
 		"\t[-spot-fleet-config-file <spot-fleet-configuration-file>]\n"
 		"\t[-odi-instance-type <instance-type>]\n"
 		"\t[-odi-image-id <image-ID>\n"
+		"\t[-odi-security-group-ids <group-ID[,groupID]*>\n"
+		"\t[-odi-key-name <key-name>\n"
 		"\t[-odi-instance-profile-arn <instance-profile-arn>]\n"
 		, argv0 );
 	fprintf( stdout, "%s defaults to On-Demand Instances (-odi).  "
@@ -125,6 +127,8 @@ main( int argc, char ** argv ) {
 	const char * odiInstanceType = NULL;
 	const char * odiImageID = NULL;
 	const char * odiInstanceProfileARN = NULL;
+	const char * odiKeyName = NULL;
+	const char * odiSecurityGroupIDs = NULL;
 	bool annexTypeIsSFR = false;
 	bool annexTypeIsODI = false;
 	long int leaseDuration = 0;
@@ -277,6 +281,24 @@ main( int argc, char ** argv ) {
 				continue;
 			} else {
 				fprintf( stderr, "%s: -odi-instance-type requires an argument.\n", argv[0] );
+				return 1;
+			}
+		} else if( is_dash_arg_prefix( argv[i], "odi-key-name", 7 ) ) {
+			++i;
+			if( argv[i] != NULL ) {
+				odiKeyName = argv[i];
+				continue;
+			} else {
+				fprintf( stderr, "%s: -odi-key-name requires an argument.\n", argv[0] );
+				return 1;
+			}
+		} else if( is_dash_arg_prefix( argv[i], "odi-security-group-ids", 21 ) ) {
+			++i;
+			if( argv[i] != NULL ) {
+				odiSecurityGroupIDs = argv[i];
+				continue;
+			} else {
+				fprintf( stderr, "%s: -odi-security-group-ids requires an argument.\n", argv[0] );
 				return 1;
 			}
 		} else if( is_dash_arg_prefix( argv[i], "odi-image-id", 11 ) ) {
@@ -464,6 +486,20 @@ main( int argc, char ** argv ) {
 		}
 		if( odiInstanceProfileARN ) {
 			spotFleetRequest.Assign( "InstanceProfileARN", odiInstanceProfileARN );
+		}
+
+		if(! odiKeyName) {
+			odiKeyName = param( "ANNEX_DEFAULT_ODI_KEY_NAME" );
+		}
+		if( odiKeyName ) {
+			spotFleetRequest.Assign( "KeyName", odiKeyName );
+		}
+
+		if(! odiSecurityGroupIDs) {
+			odiSecurityGroupIDs = param( "ANNEX_DEFAULT_ODI_SECURITY_GROUP_IDS" );
+		}
+		if( odiSecurityGroupIDs ) {
+			spotFleetRequest.Assign( "SecurityGroupIDs", odiSecurityGroupIDs );
 		}
 	}
 

@@ -62,6 +62,9 @@ OnDemandRequest::validateAndStore( ClassAd const * command, std::string & valida
 		return false;
 	}
 
+	// It's OK for these two to be empty; they'll get the account's defaults.
+	command->LookupString( "KeyName", keyName );
+	command->LookupString( "SecurityGroupIDs", securityGroupIDs );
 
 	return true;
 }
@@ -162,13 +165,13 @@ OnDemandRequest::operator() () {
 		// probably do something clever here and only log once.
 		this->log();
 
-		std::string key_pair, user_data, user_data_file;
+		std::string user_data, user_data_file;
 		std::string availability_zone, vpc_subnet, vpc_id;
 		std::string block_device_mapping, iam_profile_name;
-		StringList group_names, group_ids, parameters_and_values;
+		StringList group_names, group_ids( securityGroupIDs.c_str() ), parameters_and_values;
 
 		rc = gahp->ec2_vm_start( service_url, public_key_file, secret_key_file,
-					imageID, key_pair, user_data, user_data_file,
+					imageID, keyName, user_data, user_data_file,
 					instanceType, availability_zone, vpc_subnet, vpc_id,
 					clientToken,
 					block_device_mapping, instanceProfileARN, iam_profile_name,
