@@ -186,7 +186,9 @@ createOneAnnex( ClassAd * command, Stream * replyStream ) {
 	command->LookupString( "SecretKeyFile", secretKeyFile );
 
 	// FIXME: look up lease function ARN from authorized user map
-	// (from the endpoint-specific sub-map).
+	// (from the endpoint-specific sub-map).  There will actually
+	// be two listings, one for SFR and one for ODI, so we need to
+	// know which type of annex we'll be making before doing this look-up.
 	command->LookupString( "LeaseFunctionARN", leaseFunctionARN );
 
 	// Validate parameters.  We could have the functors do this, but that
@@ -220,8 +222,10 @@ createOneAnnex( ClassAd * command, Stream * replyStream ) {
 		reply.Assign( ATTR_RESULT, getCAResultString( CA_INVALID_REQUEST ) );
 		reply.Assign( ATTR_ERROR_STRING, errorString );
 
-		if(! sendCAReply( replyStream, "CA_BULK_REQUEST", & reply )) {
-			dprintf( D_ALWAYS, "Failed to reply to CA_BULK_REQUEST.\n" );
+		if( replyStream ) {
+			if(! sendCAReply( replyStream, "CA_BULK_REQUEST", & reply )) {
+				dprintf( D_ALWAYS, "Failed to reply to CA_BULK_REQUEST.\n" );
+			}
 		}
 
 		return FALSE;
@@ -300,8 +304,10 @@ createOneAnnex( ClassAd * command, Stream * replyStream ) {
 		reply->Assign( ATTR_RESULT, getCAResultString( CA_INVALID_REQUEST ) );
 		reply->Assign( ATTR_ERROR_STRING, errorString );
 
-		if(! sendCAReply( replyStream, "CA_BULK_REQUEST", reply )) {
-			dprintf( D_ALWAYS, "Failed to reply to CA_BULK_REQUEST.\n" );
+		if( replyStream ) {
+			if(! sendCAReply( replyStream, "CA_BULK_REQUEST", reply )) {
+				dprintf( D_ALWAYS, "Failed to reply to CA_BULK_REQUEST.\n" );
+			}
 		}
 
 		return FALSE;
@@ -435,8 +441,10 @@ createOneAnnex( ClassAd * command, Stream * replyStream ) {
 		reply->Assign( ATTR_RESULT, getCAResultString( CA_INVALID_REQUEST ) );
 		reply->Assign( ATTR_ERROR_STRING, validationError );
 
-		if(! sendCAReply( replyStream, "CA_BULK_REQUEST", reply )) {
-			dprintf( D_ALWAYS, "Failed to reply to CA_BULK_REQUEST.\n" );
+		if( replyStream ) {
+			if(! sendCAReply( replyStream, "CA_BULK_REQUEST", reply )) {
+				dprintf( D_ALWAYS, "Failed to reply to CA_BULK_REQUEST.\n" );
+			}
 		}
 
 		delete gahp;

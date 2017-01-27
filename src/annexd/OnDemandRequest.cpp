@@ -18,6 +18,16 @@ OnDemandRequest::OnDemandRequest( ClassAd * r, EC2GahpClient * egc, ClassAd * s,
 	if( c->Lookup( HashKey( commandID.c_str() ), commandState ) ) {
 		commandState->LookupString( "State_ClientToken", clientToken );
 		commandState->LookupString( "State_BulkRequestID", bulkRequestID );
+
+		std::string iidString;
+		commandState->LookupString( "State_InstanceIDs", iidString );
+		if(! iidString.empty()) {
+			StringList sl( iidString.c_str(), "," );
+			sl.rewind(); char * current = sl.next();
+			for( ; current != NULL; current = sl.next() ) {
+				instanceIDs.push_back( current );
+			}
+		}
 	}
 
 	// Generate a client token if we didn't get one from the log.
@@ -87,6 +97,21 @@ OnDemandRequest::log() {
 			commandState->DeleteAttribute( commandID.c_str(),
 				"State_BulkRequestID" );
 		}
+
+		if( instanceIDs.size() != 0 ) {
+			StringList sl;
+			for( size_t i = 0; i < instanceIDs.size(); ++i ) {
+				sl.append( instanceIDs[i].c_str() );
+			}
+			char * slString = sl.print_to_delimed_string( "," );
+			std::string quoted; formatstr( quoted, "\"%s\"", slString );
+			free( slString );
+			commandState->SetAttribute( commandID.c_str(),
+				"State_InstanceIDs", quoted.c_str() );
+		} else {
+			commandState->DeleteAttribute( commandID.c_str(),
+				"State_InstanceIDs" );
+		}
 	}
 	commandState->CommitTransaction();
 }
@@ -132,7 +157,7 @@ OnDemandRequest::operator() () {
 			incrementTryCount = false;
 		}
 
-		// We have to call bulk_start() at least twice (once to issue the
+		// We have to call ec2_vm_start() at least twice (once to issue the
 		// command, and at least once to get the result), so we should
 		// probably do something clever here and only log once.
 		this->log();
@@ -142,7 +167,6 @@ OnDemandRequest::operator() () {
 		std::string block_device_mapping, iam_profile_name;
 		StringList group_names, group_ids, parameters_and_values;
 
-		std::vector< std::string > instanceIDs;
 		rc = gahp->ec2_vm_start( service_url, public_key_file, secret_key_file,
 					imageID, key_pair, user_data, user_data_file,
 					instanceType, availability_zone, vpc_subnet, vpc_id,
@@ -150,8 +174,8 @@ OnDemandRequest::operator() () {
 					block_device_mapping, instanceProfileARN, iam_profile_name,
 					targetCapacity,
 					group_names, group_ids, parameters_and_values,
-					instanceIDs, errorCode );
-		if( rc == 0 && instanceIDs.size() != 0 ) {
+					this->instanceIDs, errorCode );
+		if( rc == 0 && this->instanceIDs.size() != 0 ) {
 			bulkRequestID = clientToken;
 		}
 
@@ -164,7 +188,7 @@ OnDemandRequest::operator() () {
 	}
 
 	if( rc == 0 ) {
-		dprintf( D_ALWAYS, "Bulk start request ID: %s\n", bulkRequestID.c_str() );
+		dprintf( D_ALWAYS, "ODI ID: %s\n", bulkRequestID.c_str() );
 		reply->Assign( "BulkRequestID", bulkRequestID );
 
 		// We may decide to omit the bulk request ID from the reply, but
@@ -182,13 +206,14 @@ OnDemandRequest::operator() () {
 		rc = PASS_STREAM;
 	} else {
 		std::string message;
-		formatstr( message, "Bulk start request failed: '%s' (%d): '%s'.",
+		formatstr( message, "Bulk (ODI) start request failed: '%s' (%d): '%s'.",
 			errorCode.c_str(), rc, gahp->getErrorString() );
 		dprintf( D_ALWAYS, "%s\n", message.c_str() );
 
-		// We can't cancel the spot fleet request without its ID, so keep
-		// trying until we get one.
-		if( tryCount < 3 || errorCode == "NEED_CHECK_BULK_START" ) {
+		// The previous argument for retries doesn't make any sense anymore,
+		// what with the client tokens and all, but maybe it'll come in handy
+		// later?
+		if( tryCount < 3 ) {
 			dprintf( D_ALWAYS, "Retrying, after %d attempt(s).\n", tryCount );
 			rc = KEEP_STREAM;
 		} else {
@@ -206,13 +231,13 @@ int
 OnDemandRequest::rollback() {
 	dprintf( D_FULLDEBUG, "OnDemandRequest::rollback()\n" );
 
-#ifdef FIXME
-	if(! bulkRequestID.empty()) {
+	if( instanceIDs.size() != 0 ) {
 		int rc;
 		std::string errorCode;
-		rc = gahp->bulk_stop(
+		// Assumes we have fewer than 1000 instances.
+		rc = gahp->ec2_vm_stop(
 					service_url, public_key_file, secret_key_file,
-					bulkRequestID,
+					instanceIDs,
 					errorCode );
 		if( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED || rc == GAHPCLIENT_COMMAND_PENDING ) {
 			// We should exit here the first time.
@@ -220,10 +245,9 @@ OnDemandRequest::rollback() {
 		}
 
 		if( rc != 0 ) {
-			dprintf( D_ALWAYS, "Failed to cancel spot fleet request '%s' ('%s').\n", bulkRequestID.c_str(), errorCode.c_str() );
+			dprintf( D_ALWAYS, "Failed to cancel on-demand instances with client token '%s' ('%s').\n", bulkRequestID.c_str(), errorCode.c_str() );
 		}
 	}
-#endif /* FIXME */
 
 	daemonCore->Reset_Timer( gahp->getNotificationTimerId(), 0, TIMER_NEVER );
 	return PASS_STREAM;

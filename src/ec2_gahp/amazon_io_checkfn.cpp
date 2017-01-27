@@ -95,7 +95,7 @@ bool AmazonVMStartSpot::ioCheck(char **argv, int argc)
 // Expecting:EC2_VM_STOP <req_id> <serviceurl> <accesskeyfile> <secretkeyfile> <instance-id>
 bool AmazonVMStop::ioCheck(char **argv, int argc)
 {
-	return verify_number_args(argc, 6) &&
+	return verify_min_number_args(argc, 6) &&
 		verify_request_id(argv[1]) &&
 		verify_string_name(argv[2]) &&
 		verify_string_name(argv[3]) &&

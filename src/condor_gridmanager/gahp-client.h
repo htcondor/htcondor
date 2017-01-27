@@ -841,6 +841,12 @@ class EC2GahpClient : public GahpClient {
 						 const std::string & instance_id,
 						 std::string & error_code );
 
+		int ec2_vm_stop( const std::string & service_url,
+						 const std::string & publickeyfile,
+						 const std::string & privatekeyfile,
+						 const std::vector< std::string > & instance_ids,
+						 std::string & error_code );
+
 		int ec2_vm_status_all( const std::string & service_url,
 							   const std::string & publickeyfile,
 							   const std::string & privatekeyfile,

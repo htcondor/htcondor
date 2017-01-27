@@ -1927,6 +1927,13 @@ bool AmazonVMStop::workerFunction(char **argv, int argc, std::string &result_str
     terminationRequest.query_parameters[ "Action" ] = "TerminateInstances";
     terminationRequest.query_parameters[ "InstanceId.1" ] = argv[5];
 
+	int parameterNumber = 2;
+	std::string parameterName;
+	for( int i = 6; i < argc; ++i, ++parameterNumber ) {
+		formatstr( parameterName, "InstanceId.%d", parameterNumber );
+		terminationRequest.query_parameters[ parameterName.c_str() ] = argv[i];
+	}
+
     // Send the request.
     if( ! terminationRequest.SendRequest() ) {
         result_string = create_failure_result( requestID,

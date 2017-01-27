@@ -172,6 +172,56 @@ int EC2GahpClient::ec2_vm_stop(	const std::string & service_url,
 	}
 }
 
+// The previous polymorpheme could be implemented in terms of this function
+// pretty easily, but to avoid risking breakage, we won't bother yet.
+int EC2GahpClient::ec2_vm_stop(	const std::string & service_url,
+								const std::string & publickeyfile,
+								const std::string & privatekeyfile,
+								const std::vector< std::string > & instance_ids,
+								std::string & error_code )
+{
+	// command line looks like:
+	// EC2_COMMAND_VM_STOP <req_id> <publickeyfile> <privatekeyfile> <instance-id>+
+	static const char* command = "EC2_VM_STOP";
+
+	// callGahpFunction() checks if this command is supported.
+	CHECK_COMMON_ARGUMENTS;
+	if( instance_ids.size() == 0 ) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+
+	Gahp_Args * result = NULL;
+	std::vector< YourString > arguments;
+	PUSH_COMMON_ARGUMENTS;
+	// Assumes we have fewer than 1000 instances.
+	for( size_t i = 0; i < instance_ids.size(); ++i ) {
+		arguments.push_back( instance_ids[i] );
+	}
+	int cgf = callGahpFunction( command, arguments, result, medium_prio );
+	if( cgf != 0 ) { return cgf; }
+
+	if ( result ) {
+		// command completed.
+		int rc = 0;
+		if (result->argc == 2) {
+			rc = atoi(result->argv[1]);
+			if (rc == 1) error_string = "";
+		} else if ( result->argc == 4 ) {
+			// get the error code
+			rc = atoi( result->argv[1] );
+			error_code = result->argv[2];
+			error_string = result->argv[3];
+		} else {
+			EXCEPT( "Bad %s result", command );
+		}
+
+		delete result;
+		return rc;
+	} else {
+		EXCEPT( "callGahpFunction() succeeded but result was NULL." );
+	}
+}
+
 int EC2GahpClient::ec2_gahp_statistics( StringList & returnStatistics ) {
 	server->write_line( "STATISTICS" );
 	Gahp_Args result;

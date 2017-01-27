@@ -327,7 +327,7 @@ BulkRequest::operator() () {
 	}
 
 	if( rc == 0 ) {
-		dprintf( D_ALWAYS, "Bulk start request ID: %s\n", bulkRequestID.c_str() );
+		dprintf( D_ALWAYS, "SFR ID: %s\n", bulkRequestID.c_str() );
 		reply->Assign( "BulkRequestID", bulkRequestID );
 
 		// We may decide to omit the bulk request ID from the reply, but
@@ -345,12 +345,13 @@ BulkRequest::operator() () {
 		rc = PASS_STREAM;
 	} else {
 		std::string message;
-		formatstr( message, "Bulk start request failed: '%s' (%d): '%s'.",
+		formatstr( message, "Bulk (SFR) start request failed: '%s' (%d): '%s'.",
 			errorCode.c_str(), rc, gahp->getErrorString() );
 		dprintf( D_ALWAYS, "%s\n", message.c_str() );
 
-		// We can't cancel the spot fleet request without its ID, so keep
-		// trying until we get one.
+		// The previous argument for retries doesn't make any sense anymore,
+		// what with the client tokens and all, but maybe it'll come in handy
+		// later?
 		if( tryCount < 3 || errorCode == "NEED_CHECK_BULK_START" ) {
 			dprintf( D_ALWAYS, "Retrying, after %d attempt(s).\n", tryCount );
 			rc = KEEP_STREAM;
