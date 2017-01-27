@@ -10,6 +10,35 @@ found in the version history:~\ref{sec:History-8-5}):
 
 \begin{itemize}
 
+\item \Condor{q}-related changes:
+  \begin{itemize}
+
+  \item \Condor{q} now defaults to showing only the current user's jobs.
+  \Ticket{5271}
+  Similarly, \Condor{qedit} defaults to editing only jobs owned by the
+  current user.  
+  \Ticket{5889}
+  (The previous behavior of both commands can be restored by setting
+  \MacroNI{CONDOR\_Q\_ONLY\_MY\_JOBS} to \Expr{False} --
+  see ~\ref{param:CondorQOnlyMyJobs}.)
+
+  \item \Condor{q} now defaults to batch mode, which produces a single
+  line of output summarizing a batch of jobs (see~\pageref{batches-of-jobs}).
+  \Ticket{5708}
+  (The previous behavior can be restored by setting
+  \MacroNI{CONDOR\_Q\_DASH\_BATCH\_IS\_DEFAULT} to \Expr{False} --
+  see ~\ref{param:CondorQDashBatchIsDefault}.)
+
+  \item \Condor{q} (and \Condor{history} and \Condor{status}) can now
+  read and write JSON, XML, and new ClassAd formats
+  (see~\pageref{man-condor-q}, ~\pageref{man-condor-history},
+  and ~\pageref{man-condor-status}).
+  \Ticket{5688}
+  \Ticket{5844}
+  \Ticket{5820}
+
+  \end{itemize}
+
 \item Job submission-related changes:
   \begin{itemize}
 
@@ -23,29 +52,6 @@ found in the version history:~\ref{sec:History-8-5}):
 
    \item Added support in the submit language for retrying jobs
    if they fail (see~\pageref{condor-submit-max-retries}).
-
-  \end{itemize}
-
-\item \Condor{q}-related changes:
-  \begin{itemize}
-
-  \item \Condor{q} now defaults to showing only the current user's jobs.
-  \Ticket{5271}
-  Similarly, \Condor{qedit} defaults to editing only jobs owned by the
-  current user.  
-  \Ticket{5889}
-
-  \item \Condor{q} now defaults to batch mode, which produces a single
-  line of output summarizing a batch of jobs (see~\pageref{batches-of-jobs}).
-  \Ticket{5708}
-
-  \item \Condor{q} (and \Condor{history} and \Condor{status}) can now
-  read and write JSON, XML, and new ClassAd formats
-  (see~\pageref{man-condor-q}, ~\pageref{man-condor-history},
-  and ~\pageref{man-condor-status}).
-  \Ticket{5688}
-  \Ticket{5844}
-  \Ticket{5820}
 
   \end{itemize}
 
@@ -94,11 +100,11 @@ Computing-On-Demand support
 multiple query support
 \Ticket{5187}
 
-\item Jobs can now be submitted to the SLURM batch scheduling system via
+\item Jobs can now be submitted to the Slurm batch scheduling system via
 the new \SubmitCmdNI{slurm} type in the grid universe.
 \Ticket{5515}
 
-Numerous improvements to Docker support, including
+\item Numerous improvements to Docker support, including
 \Ticket{5680};
 \Ticket{5760};
 \Ticket{5761};
@@ -131,7 +137,8 @@ shared port without any other configuration change will not work.
 \item To mitigate performance problems, \MacroNI{LOWPORT} and
 \MacroNI{HIGHPORT} no longer restrict outbound port ranges on Windows.  To
 re-enable this functionality, set \MacroNI{OUT\_LOWPORT} and
-\MacroNI{OUT\_HIGHPORT}.
+\MacroNI{OUT\_HIGHPORT} (see ~\ref{param:OutLowPort} and
+~\ref{param:OutHighPort}).
 \Ticket{4711}
 
 \item Cgroups (see section~\ref{sec:CGroupTracking}) are now enabled
@@ -157,10 +164,11 @@ of spooled job files (they remain owned by the submitting user).
 
 \item When \MacroNI{SEC\_ENABLE\_MATCH\_PASSWORD\_AUTHENTICATION} is set
 to \Expr{True}, the related authorizations are now automatically enabled.
-\Ticket{5304}
+\Ticket{5304}  (See ~\ref{param:SecEnableMatchPasswordAuthentication}
+for details.)
 
 \item The master can now run an administrator-defined script at shutdown;
-see Section~\ref{param:DefaultMasterShutdownScript} for details.
+see section~\ref{param:DefaultMasterShutdownScript} for details.
 \Ticket{5590}
 
 \end{itemize}

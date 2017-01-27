@@ -2139,6 +2139,17 @@ For example:
 alt Alice math,hacking
 \end{verbatim}
 
+\label{param:IgnoreLeafOom}
+\item[\Macro{IGNORE\_LEAF\_OOM}]
+  A boolean value that, when \Expr{True},
+  tells HTCondor \emph{not} to kill and hold a job that is within its
+  memory allocation, even if other processes within the same cgroup
+  have exceeded theirs.
+  The default value is \Expr{True}.  (Note that this represents a change
+  in behavior compared to versions of HTCondor older than 8.6.0;
+  this configuration macro first appeared in version 8.4.11.
+  To restore the previous behavior, set this value to \Expr{False}.)
+
 \end{description}
 
 
@@ -3642,6 +3653,18 @@ to use a host name that is not the primary one.
 	\MacroUNI{UDP\_LOOPBACK\_FRAGMENT\_SIZE}.
 	If the destination of the message is not the loopback interface,
 	see \Macro{UDP\_NETWORK\_FRAGMENT\_SIZE} above.
+
+\label{param:AlwaysReuseAddr}
+\item[\Macro{ALWAYS\_REUSEADDR}]
+  A boolean value that, when \Expr{True},
+  tells HTCondor to set \MacroNI{SO\_REUSEADDR} socket option, so that
+  the schedd can run large numbers of very short jobs without exhausting the
+  number of local ports needed for shadows.
+  The default value is \Expr{True}.  (Note that this represents a change
+  in behavior compared to versions of HTCondor older than 8.6.0,
+  which did not include this configuration macro.
+  To restore the previous behavior, set this value to \Expr{False}.)
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

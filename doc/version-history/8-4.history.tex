@@ -62,7 +62,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Added a new config knob, \MacroNI{IGNORE\_LEAF\_OOM}, which defaults to
+\Expr{False}.  When \Expr{True}, it tells HTCondor \emph{not} to
+kill and hold a job that is within its memory allocation, even if
+other processes within the same cgroup have exceeded theirs.
+\Ticket{5775}
 
 \end{itemize}
 
