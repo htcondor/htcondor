@@ -289,3 +289,18 @@ bool AmazonGetFunction::ioCheck(char **argv, int argc) {
 		verify_string_name( argv[4] ) &&
 		verify_string_name( argv[5] );
 }
+
+// Expecting:	S3_UPLOAD <req_id>
+//				<serviceurl> <accesskeyfile> <secretkeyfile>
+//				<bucketName> <fileName> <path>
+bool AmazonS3Upload::ioCheck(char **argv, int argc)
+{
+	return verify_number_args(argc, 8) &&
+		verify_request_id(argv[1]) &&
+		verify_string_name(argv[2]) &&
+		verify_string_name(argv[3]) &&
+		verify_string_name(argv[4]) &&
+		verify_string_name(argv[5]) &&
+		verify_string_name(argv[6]) &&
+		verify_string_name(argv[7]);
+}

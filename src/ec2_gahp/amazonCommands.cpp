@@ -430,7 +430,7 @@ bool parseURL(	const std::string & url,
     protocol = groups[1];
     host = groups[3];
     path = groups[4];
-	return true;
+    return true;
 }
 
 void convertMessageDigestToLowercaseHex(
@@ -494,7 +494,8 @@ std::string pathEncode( const std::string & original ) {
 }
 
 bool AmazonRequest::createV4Signature(	const std::string & payload,
-										std::string & authorizationValue ) {
+										std::string & authorizationValue,
+										bool sendContentSHA ) {
 	Throttle::now( & signatureTime );
 	time_t now; time( & now );
 	struct tm brokenDownTime; gmtime_r( & now, & brokenDownTime );
@@ -527,12 +528,39 @@ bool AmazonRequest::createV4Signature(	const std::string & payload,
 	std::string canonicalQueryString;
 
 	// ... that is, unless we're using the GET method.
-	ASSERT( (! useGET) || query_parameters.size() == 0 );
+	ASSERT( (httpVerb != "GET") || query_parameters.size() == 0 );
 
 	// The canonical headers must include the Host header, so add that
 	// now if we don't have it.
 	if( headers.find( "Host" ) == headers.end() ) {
 		headers[ "Host" ] = host;
+	}
+
+	// S3 complains if x-amz-date isn't signed, so do this early.
+	char dt[] = "YYYYMMDDThhmmssZ";
+	strftime( dt, sizeof(dt), "%Y%m%dT%H%M%SZ", & brokenDownTime );
+	headers[ "X-Amz-Date" ] = dt;
+
+	char d[] = "YYYYMMDD";
+	strftime( d, sizeof(d), "%Y%m%d", & brokenDownTime );
+
+	// S3 complains if x-amx-content-sha256 isn't signed, which makes sense,
+	// so do this early.
+
+	// The canonical payload hash is the lowercase hexadecimal string of the
+	// (SHA256) hash value of the payload.
+	unsigned int mdLength = 0;
+	unsigned char messageDigest[EVP_MAX_MD_SIZE];
+	if(! doSha256( payload, messageDigest, & mdLength )) {
+		this->errorCode = "E_INTERNAL";
+		this->errorMessage = "Unable to hash payload.";
+		dprintf( D_ALWAYS, "Unable to hash payload, failing.\n" );
+		return false;
+	}
+	std::string payloadHash;
+	convertMessageDigestToLowercaseHex( messageDigest, mdLength, payloadHash );
+	if( sendContentSHA ) {
+		headers[ "x-amz-content-sha256" ] = payloadHash;
 	}
 
 	// The canonical list of headers is a sorted list of lowercase header
@@ -544,6 +572,11 @@ bool AmazonRequest::createV4Signature(	const std::string & payload,
 		std::transform( header.begin(), header.end(), header.begin(), & tolower );
 
 		std::string value = i->second;
+		// We need to leave empty headers alone so that they can be used
+		// to disable CURL stupidity later.
+		if( value.size() == 0 ) {
+			continue;
+		}
 
 		// Eliminate trailing spaces.
 		unsigned j = value.length() - 1;
@@ -593,21 +626,8 @@ bool AmazonRequest::createV4Signature(	const std::string & payload,
 	// dprintf( D_ALWAYS, "signedHeaders: '%s'\n", signedHeaders.c_str() );
 	// dprintf( D_ALWAYS, "canonicalHeaders: '%s'.\n", canonicalHeaders.c_str() );
 
-	// The canonical payload hash is the lowercase hexadecimal string of the
-	// (SHA256) hash value of the payload.
-	unsigned int mdLength = 0;
-	unsigned char messageDigest[EVP_MAX_MD_SIZE];
-	if(! doSha256( payload, messageDigest, & mdLength )) {
-		this->errorCode = "E_INTERNAL";
-		this->errorMessage = "Unable to hash payload.";
-		dprintf( D_ALWAYS, "Unable to hash payload, failing.\n" );
-		return false;
-	}
-	std::string payloadHash;
-	convertMessageDigestToLowercaseHex( messageDigest, mdLength, payloadHash );
-
 	// Task 1: create the canonical request.
-	std::string canonicalRequest = (useGET ? "GET\n" : "POST\n")
+	std::string canonicalRequest = httpVerb + "\n"
 								 + canonicalURI + "\n"
 								 + canonicalQueryString + "\n"
 								 + canonicalHeaders + "\n"
@@ -629,13 +649,6 @@ bool AmazonRequest::createV4Signature(	const std::string & payload,
 	}
 	std::string canonicalRequestHash;
 	convertMessageDigestToLowercaseHex( messageDigest, mdLength, canonicalRequestHash );
-
-	char dt[] = "YYYYMMDDThhmmssZ";
-	strftime( dt, sizeof(dt), "%Y%m%dT%H%M%SZ", & brokenDownTime );
-	headers[ "X-Amz-Date" ] = dt;
-
-	char d[] = "YYYYMMDD";
-	strftime( d, sizeof(d), "%Y%m%d", & brokenDownTime );
 
 	std::string s = this->service;
 	if( s.empty() ) {
@@ -729,7 +742,7 @@ bool AmazonRequest::createV4Signature(	const std::string & payload,
 	return true;
 }
 
-bool AmazonRequest::sendV4Request( const std::string & payload ) {
+bool AmazonRequest::sendV4Request( const std::string & payload, bool sendContentSHA ) {
     std::string protocol, host, path;
     if(! parseURL( serviceURL, protocol, host, path )) {
         this->errorCode = "E_INVALID_SERVICE_URL";
@@ -745,10 +758,12 @@ bool AmazonRequest::sendV4Request( const std::string & payload ) {
     }
 
     dprintf( D_FULLDEBUG, "Request URI is '%s'\n", serviceURL.c_str() );
-    dprintf( D_FULLDEBUG, "Post body is '%s'\n", payload.c_str() );
+    if(! sendContentSHA) {
+    	dprintf( D_FULLDEBUG, "Payload is '%s'\n", payload.c_str() );
+    }
 
     std::string authorizationValue;
-    if(! createV4Signature( payload, authorizationValue )) {
+    if(! createV4Signature( payload, authorizationValue, sendContentSHA )) {
         if( this->errorCode.empty() ) { this->errorCode = "E_INTERNAL"; }
         if( this->errorMessage.empty() ) { this->errorMessage = "Failed to create v4 signature."; }
         dprintf( D_ALWAYS, "Failed to create v4 signature.\n" );
@@ -928,7 +943,7 @@ bool AmazonRequest::sendV2Request() {
 }
 
 bool AmazonRequest::SendURIRequest() {
-    useGET = true;
+    httpVerb = "GET";
     std::string noPayloadAllowed;
     return sendV4Request( noPayloadAllowed );
 }
@@ -936,6 +951,86 @@ bool AmazonRequest::SendURIRequest() {
 bool AmazonRequest::SendJSONRequest( const std::string & payload ) {
     headers[ "Content-Type" ] = "application/x-amz-json-1.1";
     return sendV4Request( payload );
+}
+
+// It's stated in the API documentation that you can upload to any region
+// via us-east-1, which is moderately crazy.
+bool AmazonRequest::SendS3Request( const std::string & payload ) {
+	headers[ "Content-Type" ] = "binary/octet-stream";
+	std::string contentLength; formatstr( contentLength, "%lu", payload.size() );
+	headers[ "Content-Length" ] = contentLength;
+	// Another undocumented CURL feature: transfer-encoding is "chunked"
+	// by default for "PUT", which we really don't want.
+	headers[ "Transfer-Encoding" ] = "";
+	service = "s3";
+	region = "us-east-1";
+	return sendV4Request( payload, true );
+}
+
+int
+debug_callback( CURL *, curl_infotype ci, char * data, size_t size, void * ) {
+	switch( ci ) {
+		default:
+			dprintf( D_ALWAYS, "debug_callback( unknown )\n" );
+			break;
+
+		case CURLINFO_TEXT:
+			dprintf( D_ALWAYS, "debug_callback( TEXT ): '%*s'\n", (int)size, data );
+			break;
+
+		case CURLINFO_HEADER_IN:
+			dprintf( D_ALWAYS, "debug_callback( HEADER_IN ): '%*s'\n", (int)size, data );
+			break;
+
+		case CURLINFO_HEADER_OUT:
+			dprintf( D_ALWAYS, "debug_callback( HEADER_IN ): '%*s'\n", (int)size, data );
+			break;
+
+		case CURLINFO_DATA_IN:
+			dprintf( D_ALWAYS, "debug_callback( DATA_IN )\n" );
+			break;
+
+		case CURLINFO_DATA_OUT:
+			dprintf( D_ALWAYS, "debug_callback( DATA_OUT )\n" );
+			break;
+
+		case CURLINFO_SSL_DATA_IN:
+			dprintf( D_ALWAYS, "debug_callback( SSL_DATA_IN )\n" );
+			break;
+
+		case CURLINFO_SSL_DATA_OUT:
+			dprintf( D_ALWAYS, "debug_callback( SSL_DATA_OUT )\n" );
+			break;
+	}
+
+	return 0;
+}
+
+size_t
+read_callback( char * buffer, size_t size, size_t n, void * v ) {
+	// This can be static because only one curl_easy_perform() can be
+	// running at a time.
+	static size_t sentSoFar = 0;
+	std::string * payload = (std::string *)v;
+
+	if( sentSoFar == payload->size() ) {
+		// dprintf( D_ALWAYS, "read_callback(): resetting sentSoFar.\n" );
+		sentSoFar = 0;
+		return 0;
+	}
+
+	size_t request = size * n;
+	if( request > payload->size() ) { request = payload->size(); }
+
+	if( sentSoFar + request > payload->size() ) {
+		request = payload->size() - sentSoFar;
+	}
+
+	// dprintf( D_ALWAYS, "read_callback(): sending %lu (sent %lu already).\n", request, sentSoFar );
+	memcpy( buffer, payload->data() + sentSoFar, request );
+	sentSoFar += request;
+
+	return request;
 }
 
 bool AmazonRequest::sendPreparedRequest(
@@ -982,8 +1077,19 @@ bool AmazonRequest::sendPreparedRequest(
         return false;
     }
 
-/*  // Useful for debuggery.  Could be rewritten with CURLOPT_DEBUGFUNCTION
-    // and dumped via dprintf() to allow control via EC2_GAHP_DEBUG.
+
+/*
+    rv = curl_easy_setopt( curl, CURLOPT_DEBUGFUNCTION, debug_callback );
+    if( rv != CURLE_OK ) {
+        this->errorCode = "E_CURL_LIB";
+        this->errorMessage = "curl_easy_setopt( CURLOPT_DEBUGFUNCTION ) failed.";
+        dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_DEBUGFUNCTION ) failed (%d): '%s', failing.\n",
+            rv, curl_easy_strerror( rv ) );
+        curl_easy_cleanup( curl );
+        return false;
+    }
+
+    // CURLOPT_DEBUGFUNCTION does nothing without CURLOPT_DEBUG set.
     rv = curl_easy_setopt( curl, CURLOPT_VERBOSE, 1 );
     if( rv != CURLE_OK ) {
         this->errorCode = "E_CURL_LIB";
@@ -995,7 +1101,8 @@ bool AmazonRequest::sendPreparedRequest(
     }
 */
 
-	// dprintf( D_ALWAYS, "sendPreparedRequest(): CURLOPT_URL = '%s'\n", uri.c_str() );
+
+    // dprintf( D_ALWAYS, "sendPreparedRequest(): CURLOPT_URL = '%s'\n", uri.c_str() );
     rv = curl_easy_setopt( curl, CURLOPT_URL, uri.c_str() );
     if( rv != CURLE_OK ) {
         this->errorCode = "E_CURL_LIB";
@@ -1006,10 +1113,10 @@ bool AmazonRequest::sendPreparedRequest(
         return false;
     }
 
-	if(! useGET ) {
+	if( httpVerb == "POST" ) {
 		rv = curl_easy_setopt( curl, CURLOPT_POST, 1 );
 		if( rv != CURLE_OK ) {
-		this->errorCode = "E_CURL_LIB";
+			this->errorCode = "E_CURL_LIB";
 			this->errorMessage = "curl_easy_setopt( CURLOPT_POST ) failed.";
 			dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_POST ) failed (%d): '%s', failing.\n",
 				rv, curl_easy_strerror( rv ) );
@@ -1022,6 +1129,35 @@ bool AmazonRequest::sendPreparedRequest(
 			this->errorCode = "E_CURL_LIB";
 			this->errorMessage = "curl_easy_setopt( CURLOPT_POSTFIELDS ) failed.";
 			dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_POSTFIELDS ) failed (%d): '%s', failing.\n",
+				rv, curl_easy_strerror( rv ) );
+			return false;
+		}
+	}
+
+	if( httpVerb == "PUT" ) {
+		rv = curl_easy_setopt( curl, CURLOPT_UPLOAD, 1 );
+		if( rv != CURLE_OK ) {
+			this->errorCode = "E_CURL_LIB";
+			this->errorMessage = "curl_easy_setopt( CURLOPT_UPLOAD ) failed.";
+			dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_UPLOAD ) failed (%d): '%s', failing.\n",
+				rv, curl_easy_strerror( rv ) );
+			return false;
+		}
+
+		rv = curl_easy_setopt( curl, CURLOPT_READDATA, & payload );
+		if( rv != CURLE_OK ) {
+			this->errorCode = "E_CURL_LIB";
+			this->errorMessage = "curl_easy_setopt( CURLOPT_READDATA ) failed.";
+			dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_READDATE ) failed (%d): '%s', failing.\n",
+				rv, curl_easy_strerror( rv ) );
+			return false;
+		}
+
+		rv = curl_easy_setopt( curl, CURLOPT_READFUNCTION, read_callback );
+		if( rv != CURLE_OK ) {
+			this->errorCode = "E_CURL_LIB";
+			this->errorMessage = "curl_easy_setopt( CURLOPT_READFUNCTION ) failed.";
+			dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_READFUNCTION ) failed (%d): '%s', failing.\n",
 				rv, curl_easy_strerror( rv ) );
 			return false;
 		}
@@ -3887,6 +4023,78 @@ bool AmazonGetFunction::workerFunction( char ** argv, int argc, std::string & re
 	} else {
 		StringList sl; sl.append( request.functionHash.c_str() );
 		result_string = create_success_result( requestID, & sl );
+	}
+
+	return true;
+}
+
+// ---------------------------------------------------------------------------
+
+AmazonS3Upload::~AmazonS3Upload() { }
+
+bool AmazonS3Upload::SendRequest() {
+	httpVerb = "PUT";
+	std::string payload;
+	if( ! readShortFile( this->path, payload ) ) {
+		this->errorCode = "E_FILE_IO";
+		this->errorMessage = "Unable to read file to upload '" + this->path + "'.";
+		dprintf( D_ALWAYS, "Unable to read from file to upload '%s', failing.\n", this->path.c_str() );
+		return false;
+	}
+	return SendS3Request( payload );
+}
+
+// Expecting:	S3_UPLOAD <req_id>
+//				<serviceurl> <accesskeyfile> <secretkeyfile>
+//				<bucketName> <fileName> <path>
+bool AmazonS3Upload::workerFunction(char **argv, int argc, std::string &result_string) {
+	assert( strcasecmp( argv[0], "S3_UPLOAD" ) == 0 );
+
+	int requestID;
+	get_int( argv[1], & requestID );
+	dprintf( D_PERF_TRACE, "request #%d (%s): work begins\n",
+		requestID, argv[0] );
+
+	if( ! verify_number_args( argc, 8 ) ) {
+		result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
+		dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n",
+			argc, 8, argv[0] );
+		return false;
+	}
+
+	// Fill in required attributes & parameters.
+	AmazonS3Upload uploadRequest = AmazonS3Upload( requestID, argv[0] );
+
+	std::string serviceURL = argv[2];
+	std::string bucketName = argv[5];
+	std::string fileName = argv[6];
+
+	std::string protocol, host, canonicalURI;
+	if(! parseURL( serviceURL, protocol, host, canonicalURI )) {
+		uploadRequest.errorCode = "E_INVALID_SERVICE_URL";
+		uploadRequest.errorMessage = "Failed to parse service URL.";
+		dprintf( D_ALWAYS, "Failed to match regex against service URL '%s'.\n", serviceURL.c_str() );
+
+		result_string = create_failure_result( requestID,
+			uploadRequest.errorMessage.c_str(),
+			uploadRequest.errorCode.c_str() );
+		return false;
+	}
+	if( canonicalURI.empty() ) { canonicalURI = "/"; }
+
+	uploadRequest.serviceURL =	protocol + "://" + bucketName + "." +
+								host + canonicalURI + fileName;
+	uploadRequest.accessKeyFile = argv[3];
+	uploadRequest.secretKeyFile = argv[4];
+	uploadRequest.path = argv[7];
+
+	// Send the request.
+	if( ! uploadRequest.SendRequest() ) {
+		result_string = create_failure_result( requestID,
+		uploadRequest.errorMessage.c_str(),
+		uploadRequest.errorCode.c_str() );
+	} else {
+		result_string = create_success_result( requestID, NULL );
 	}
 
 	return true;

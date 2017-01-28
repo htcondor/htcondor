@@ -81,12 +81,13 @@ class AmazonRequest {
     public:
         AmazonRequest( int i, const char * c, int sv = 4 ) :
             includeResponseHeader(false), requestID(i), requestCommand(c),
-            signatureVersion(sv), useGET(false) { }
+            signatureVersion(sv), httpVerb( "POST" ) { }
         virtual ~AmazonRequest();
 
         virtual bool SendRequest();
         virtual bool SendURIRequest();
         virtual bool SendJSONRequest( const std::string & payload );
+        virtual bool SendS3Request( const std::string & payload );
 
     protected:
         typedef std::map< std::string, std::string > AttributeValueMap;
@@ -122,19 +123,21 @@ class AmazonRequest {
 
 		int signatureVersion;
 
-		// For signature v4, in case we guess wrong (based on the URL).
+		// For signature v4.  Use if the URL is not of the form
+		// '<service>.<region>.provider.tld'.  (Includes S3.)
 		std::string region;
 		std::string service;
 
 		// Some odd services (Lambda) require the use of GET.
-		bool useGET;
+		// Some odd services (S3) requires the use of PUT.
+		std::string httpVerb;
 
 	private:
 		bool sendV2Request();
-		bool sendV4Request( const std::string & payload );
+		bool sendV4Request( const std::string & payload, bool sendContentSHA = false );
 
 		std::string canonicalizeQueryString();
-		bool createV4Signature( const std::string & payload, std::string & authorizationHeader );
+		bool createV4Signature( const std::string & payload, std::string & authorizationHeader, bool sendContentSHA = false );
 
 		bool sendPreparedRequest(	const std::string & protocol,
 									const std::string & uri,
@@ -426,6 +429,20 @@ class AmazonGetFunction : public AmazonRequest {
 
     protected:
 		std::string functionHash;
+};
+
+class AmazonS3Upload : public AmazonRequest {
+	public:
+		AmazonS3Upload( int i, const char * c ) : AmazonRequest( i, c ) { }
+		virtual ~AmazonS3Upload();
+
+		virtual bool SendRequest();
+
+		static bool ioCheck(char **argv, int argc);
+		static bool workerFunction(char **argv, int argc, std::string &result_string);
+
+	protected:
+		std::string path;
 };
 
 #endif

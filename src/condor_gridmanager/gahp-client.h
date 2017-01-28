@@ -772,6 +772,16 @@ class EC2GahpClient : public GahpClient {
 			void convertToJSON( std::string & s ) const;
 		};
 
+		int s3_upload(	const std::string & service_url,
+						const std::string & publickeyfile,
+						const std::string & privatekeyfile,
+
+						const std::string & bucketName,
+						const std::string & fileName,
+						const std::string & path,
+
+						std::string & error_code );
+
 		int bulk_start(	const std::string & service_url,
 						const std::string & publickeyfile,
 						const std::string & privatekeyfile,
