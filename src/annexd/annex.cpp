@@ -7,6 +7,111 @@
 #include "stat_wrapper.h"
 #include "condor_base64.h"
 
+void
+// FIXME: The exit()s in here should probably be returns so that clean-up
+// can be done, and this function has its own clean-up to do as well.
+createConfigTarball(	const char * configDir,
+						const char * annexName,
+						std::string & tarballPath ) {
+	char * cwd = get_current_dir_name();
+
+	int rv = chdir( configDir );
+	if( rv != 0 ) {
+		fprintf( stderr, "Unable to change to config dir '%s' (%d): '%s'.\n",
+			configDir, errno, strerror( errno ) );
+		exit( 4 );
+	}
+
+	int fd = safe_open_wrapper_follow( "99ec2-dynamic.config",
+		O_WRONLY | O_CREAT | O_TRUNC, 0600 );
+	if( fd < 0 ) {
+		fprintf( stderr, "Failed to open config file '%s' for writing: '%s' (%d).\n",
+			"99ec2-dynamic.config", strerror( errno ), errno );
+		exit( 4 );
+	}
+
+
+	std::string passwordFile = "password_file.pl";
+
+	std::string collectorHost;
+	param( collectorHost, "COLLECTOR_HOST" );
+	if( collectorHost.empty() ) {
+		fprintf( stderr, "COLLECTOR_HOST empty or undefined, aborting.\n" );
+		exit( 5 );
+	} else {
+		fprintf( stdout, "Using COLLECTOR_HOST '%s'\n", collectorHost.c_str() );
+	}
+
+	std::string contents;
+	formatstr( contents,
+		"use security : host based\n"
+		"LOCAL_HOSTS = $(FULL_HOSTNAME) $(IP_ADDRESS) 127.0.0.1 $(TCP_FORWARDING_HOST)\n"
+		"CONDOR_HOST = condor_pool@*/* $(LOCAL_HOSTS)\n"
+		"COLLECTOR_HOST = %s\n"
+		"\n"
+		"SEC_DEFAULT_AUTHENTICATION = REQUIRED\n"
+		"SEC_DEFAULT_AUTHENTICATION_METHODS = FS, PASSWORD\n"
+		"\n"
+		"SEC_PASSWORD_FILE = /etc/condor/config.d/%s\n"
+		"ALLOW_WRITE = condor_pool@*/* $(LOCAL_HOSTS)\n"
+		"\n"
+		"AnnexName = \"%s\"\n"
+		"STARTD_ATTRS = $(STARTD_ATTRS) AnnexName\n"
+		"MASTER_ATTRS = $(MASTER_ATTRS) AnnexName\n"
+		"\n",
+		collectorHost.c_str(), passwordFile.c_str(), annexName );
+
+	rv = write( fd, contents.c_str(), contents.size() );
+	if( rv == -1 ) {
+		fprintf( stderr, "Error writing to '%s': '%s' (%d).\n",
+			"99ec2-dynamic.config", strerror( errno ), errno );
+	} else if( rv != (int)contents.size() ) {
+		fprintf( stderr, "Short write to '%s': '%s' (%d).\n",
+			"99ec2-dynamic.config", strerror( errno ), errno );
+		exit( 4 );
+	}
+	close( fd );
+
+
+	std::string localPasswordFile;
+	param( localPasswordFile, "SEC_PASSWORD_FILE" );
+	if( passwordFile.empty() ) {
+		fprintf( stderr, "SEC_PASSWORD_FILE empty or undefined, aborting.\n" );
+		exit( 5 );
+	} else {
+		fprintf( stdout, "Using SEC_PASSWORD_FILE '%s'\n", localPasswordFile.c_str() );
+	}
+
+	// FIXME: Rewrite without system().
+	std::string cpCommand;
+	formatstr( cpCommand, "cp '%s' '%s'", localPasswordFile.c_str(), passwordFile.c_str() );
+	int status = system( cpCommand.c_str() );
+	if(! (WIFEXITED( status ) && (WEXITSTATUS( status ) == 0))) {
+		fprintf( stderr, "Failed to copy '%s' to '%s', aborting.\n",
+			localPasswordFile.c_str(), passwordFile.c_str() );
+		exit( 5 );
+	}
+
+
+	// ...
+	status = system( "tar --exclude config.tar.gz -z -c -f config.tar.gz *" );
+	if(! (WIFEXITED( status ) && (WEXITSTATUS( status ) == 0))) {
+		fprintf( stderr, "Failed to create tarball, aborting.\n" );
+		exit( 5 );
+	}
+
+
+	rv = chdir( cwd );
+	if( rv != 0 ) {
+		fprintf( stderr, "Unable to change back to working dir '%s' (%d): '%s'.\n",
+			cwd, errno, strerror( errno ) );
+		exit( 4 );
+	}
+	free( cwd );
+
+	formatstr( tarballPath, "%s/%s", configDir, "config.tar.gz" );
+}
+
 // Modelled on BulkRequest::validateAndStore() from annexd/BulkRequest.cpp.
 bool
 assignUserData( ClassAd & command, const char * ud, bool replace, std::string & validationError ) {
@@ -79,15 +184,17 @@ help( const char * argv0 ) {
 		"\t[-odi | -sfr]\n"
 		"\t[-access-key-file <access-key-file>]\n"
 		"\t[-secret-key-file <secret-key-file>]\n"
+		"\t[-config-dir <path>]\n"
 /*		"\t[-pool <pool>] [-name <name>]\n"
 */		"\t[-service-url <service-url>]\n"
 		"\t[-events-url <events-url>]\n"
 		"\t[-lambda-url <lambda-url>]\n"
+		"\t[-s3-url <lambda-url>]\n"
 		"\t[-sfr-lease-function-arn <sfr-lease-function-arn>]\n"
 		"\t[-odi-lease-function-arn <odi-lease-function-arn>]\n"
 		"\t[-[default-]user-data[-file] <data|file> ]\n"
 		"\t[-debug] [-help]\n"
-		"\t[-spot-fleet-config-file <spot-fleet-configuration-file>]\n"
+		"\t[-sfr-config-file <spot-fleet-configuration-file>]\n"
 		"\t[-odi-instance-type <instance-type>]\n"
 		"\t[-odi-image-id <image-ID>\n"
 		"\t[-odi-security-group-ids <group-ID[,groupID]*>\n"
@@ -96,7 +203,7 @@ help( const char * argv0 ) {
 		, argv0 );
 	fprintf( stdout, "%s defaults to On-Demand Instances (-odi).  "
 		"For Spot Fleet Requests, use -sfr.  Specifying "
-		"-spot-fleet-config-file implies -sfr, as does -slots.  "
+		"-sfr-config-file implies -sfr, as does -slots.  "
 		"Specifying -count implies -odi.  You may not specify or imply "
 		"-odi and -sfr in the same command.  Specifying -odi-* implies -odi."
 		"\n", argv0 );
@@ -115,11 +222,13 @@ main( int argc, char ** argv ) {
 	int udSpecifications = 0;
 	const char * pool = NULL;
 	const char * name = NULL;
-	const char * fileName = NULL;
+	const char * sfrConfigFile = NULL;
 	const char * annexName = NULL;
+	const char * configDir = NULL;
 	const char * serviceURL = NULL;
 	const char * eventsURL = NULL;
 	const char * lambdaURL = NULL;
+	const char * s3URL = NULL;
 	const char * publicKeyFile = NULL;
 	const char * secretKeyFile = NULL;
 	const char * sfrLeaseFunctionARN = NULL;
@@ -179,6 +288,15 @@ main( int argc, char ** argv ) {
 				fprintf( stderr, "%s: -lambda-url requires an argument.\n", argv[0] );
 				return 1;
 			}
+		} else if( is_dash_arg_prefix( argv[i], "s3-url", 2 ) ) {
+			++i;
+			if( argv[i] != NULL ) {
+				s3URL = argv[i];
+				continue;
+			} else {
+				fprintf( stderr, "%s: -s3-url requires an argument.\n", argv[0] );
+				return 1;
+			}
 		} else if( is_dash_arg_prefix( argv[i], "user-data-file", 10 ) ) {
 			++i; ++udSpecifications;
 			if( argv[i] != NULL ) {
@@ -226,14 +344,23 @@ main( int argc, char ** argv ) {
 				fprintf( stderr, "%s: -annex-name requires an argument.\n", argv[0] );
 				return 1;
 			}
-		} else if( is_dash_arg_prefix( argv[i], "spot-fleet-config-file", 6 ) ) {
+		} else if( is_dash_arg_prefix( argv[i], "config-dir", 10 ) ) {
 			++i;
 			if( argv[i] != NULL ) {
-				fileName = argv[i];
+				configDir = argv[i];
+				continue;
+			} else {
+				fprintf( stderr, "%s: -config-dir requires an argument.\n", argv[0] );
+				return 1;
+			}
+		} else if( is_dash_arg_prefix( argv[i], "sfr-config-file", 12 ) ) {
+			++i;
+			if( argv[i] != NULL ) {
+				sfrConfigFile = argv[i];
 				annexTypeIsSFR = true;
 				continue;
 			} else {
-				fprintf( stderr, "%s: -spot-fleet-config-file requires an argument.\n", argv[0] );
+				fprintf( stderr, "%s: -sfr-config-file requires an argument.\n", argv[0] );
 				return 1;
 			}
 		} else if( is_dash_arg_prefix( argv[i], "public-key-file", 6 ) ||
@@ -417,37 +544,37 @@ main( int argc, char ** argv ) {
 	}
 
 	if( annexTypeIsSFR && annexTypeIsODI ) {
-		fprintf( stderr, "You must not specify more than one of -odi and -sfr.  If you specify -spot-fleet-config-file, you must not specify -odi.  Specifying -count implies -odi and specifying -slots implies -sfr.\n" );
+		fprintf( stderr, "You must not specify more than one of -odi and -sfr.  If you specify -sfr-config-file, you must not specify -odi.  Specifying -count implies -odi and specifying -slots implies -sfr.\n" );
 		return 1;
 	}
 	if(! (annexTypeIsSFR || annexTypeIsODI )) {
 		annexTypeIsODI = true;
 	}
 
-	if( annexTypeIsSFR && fileName == NULL ) {
-		fileName = param( "ANNEX_DEFAULT_SFR_CONFIG_FILE" );
-		if( fileName == NULL ) {
-			fprintf( stderr, "Spot Fleet Requests require the -spot-fleet-config-file flag.\n" );
+	if( annexTypeIsSFR && sfrConfigFile == NULL ) {
+		sfrConfigFile = param( "ANNEX_DEFAULT_SFR_CONFIG_FILE" );
+		if( sfrConfigFile == NULL ) {
+			fprintf( stderr, "Spot Fleet Requests require the -sfr-config-file flag.\n" );
 			return 1;
 		}
 	}
-	if( fileName != NULL && ! annexTypeIsSFR ) {
-		fprintf( stderr, "Unwilling to ignore -spot-fleet-config-file flag being set for an ODI annex.\n" );
+	if( sfrConfigFile != NULL && ! annexTypeIsSFR ) {
+		fprintf( stderr, "Unwilling to ignore -sfr-config-file flag being set for an ODI annex.\n" );
 		return 1;
 	}
 
 
 	ClassAd spotFleetRequest;
-	if( fileName != NULL ) {
+	if( sfrConfigFile != NULL ) {
 		FILE * file = NULL;
 		bool closeFile = true;
-		if( strcmp( fileName, "-" ) == 0 ) {
+		if( strcmp( sfrConfigFile, "-" ) == 0 ) {
 			file = stdin;
 			closeFile = false;
 		} else {
-			file = safe_fopen_wrapper_follow( fileName, "r" );
+			file = safe_fopen_wrapper_follow( sfrConfigFile, "r" );
 			if( file == NULL ) {
-				fprintf( stderr, "Unable to open annex specification file '%s'.\n", fileName );
+				fprintf( stderr, "Unable to open annex specification file '%s'.\n", sfrConfigFile );
 				return 1;
 			}
 		}
@@ -525,16 +652,20 @@ main( int argc, char ** argv ) {
 
 	// Create the config tarball locally, then specify it.  That will
 	// allow us to switch over to file transfer later if necessary.
-#if 0
-	char dirNameTemplate[] = ".condor_annex.XXXXXX";
-	const char * tempDir = mkdtemp( dirNameTemplate );
-	if( tempDir == NULL ) {
-		fprintf( stderr, "Failed to create temporary directory (%d): '%s'.\n", errno, sterror( errno ) );
-		return 2;
+	std::string tarballPath;
+	if( configDir == NULL ) {
+		char dirNameTemplate[] = ".condor_annex.XXXXXX";
+		const char * tempDir = mkdtemp( dirNameTemplate );
+		if( tempDir == NULL ) {
+			fprintf( stderr, "Failed to create temporary directory (%d): '%s'.\n", errno, strerror( errno ) );
+			return 2;
+		}
+		createConfigTarball( tempDir, annexName, tarballPath );
+		// FIXME: copy the config tarball somewhere sane.
+		rmdir( tempDir );
+	} else {
+		createConfigTarball( configDir, annexName, tarballPath );
 	}
-	createConfigTarball( tempDir, annexName, config
-	rmdir( tempDir );
-#endif /* 0 */
 
 	if( serviceURL != NULL ) {
 		spotFleetRequest.Assign( "ServiceURL", serviceURL );
@@ -546,6 +677,10 @@ main( int argc, char ** argv ) {
 
 	if( lambdaURL != NULL ) {
 		spotFleetRequest.Assign( "LambdaURL", lambdaURL );
+	}
+
+	if( s3URL != NULL ) {
+		spotFleetRequest.Assign( "S3URL", s3URL );
 	}
 
 	if( publicKeyFile != NULL ) {

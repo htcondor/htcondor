@@ -165,7 +165,7 @@ createOneAnnex( ClassAd * command, Stream * replyStream ) {
 	// implementation.
 	//
 
-	std::string serviceURL, eventsURL, lambdaURL;
+	std::string serviceURL, eventsURL, lambdaURL, s3URL;
 
 	param( serviceURL, "ANNEX_DEFAULT_EC2_URL" );
 	// FIXME: look up service URL from authorized user map.
@@ -178,6 +178,10 @@ createOneAnnex( ClassAd * command, Stream * replyStream ) {
 	param( lambdaURL, "ANNEX_DEFAULT_LAMBDA_URL" );
 	// FIXME: look up lambda URL from authorized user map.
 	command->LookupString( "LambdaURL", lambdaURL );
+
+	param( s3URL, "ANNEX_DEFAULT_S3_URL" );
+	// FIXME: look up lambda URL from authorized user map.
+	command->LookupString( "S3URL", s3URL );
 
 	std::string publicKeyFile, secretKeyFile, leaseFunctionARN;
 
@@ -199,7 +203,7 @@ createOneAnnex( ClassAd * command, Stream * replyStream ) {
 	// would mean adding invalid requests to the hard state, which is bad.
 	if( serviceURL.empty() || eventsURL.empty() || lambdaURL.empty() ||
 			publicKeyFile.empty() || secretKeyFile.empty() ||
-			leaseFunctionARN.empty() ) {
+			leaseFunctionARN.empty() || s3URL.empty() ) {
 		std::string errorString;
 		if( serviceURL.empty() ) {
 			formatstr( errorString, "Service URL missing or empty in command ad and ANNEX_DEFAULT_EC2_URL not set or empty in configuration." );
@@ -209,6 +213,9 @@ createOneAnnex( ClassAd * command, Stream * replyStream ) {
 		}
 		if( lambdaURL.empty() ) {
 			formatstr( errorString, "%s%sLambda URL missing or empty in command ad and ANNEX_DEFAULT_LAMBDA_URL not set or empty in configuration.", errorString.c_str(), errorString.empty() ? "" : "  " );
+		}
+		if( s3URL.empty() ) {
+			formatstr( errorString, "%s%sS3 URL missing or empty in command ad and ANNEX_DEFAULT_S3_URL not set or empty in configuration.", errorString.c_str(), errorString.empty() ? "" : "  " );
 		}
 		if( publicKeyFile.empty() ) {
 			formatstr( errorString, "%s%sPublic key file not specified in command or defaults.", errorString.c_str(), errorString.empty() ? "" : "  " );
@@ -249,6 +256,9 @@ createOneAnnex( ClassAd * command, Stream * replyStream ) {
 	// endpoint as well.  Maybe we should fiddle the GAHP to make it less
 	// traumatic to use different endpoints?
 	EC2GahpClient * lambdaGahp = startOneGahpClient( publicKeyFile, lambdaURL );
+
+	// For uploading to S3.
+	EC2GahpClient * s3Gahp = startOneGahpClient( publicKeyFile, s3URL );
 
 	//
 	// Construct the bulk request, create rule, and add target functors,

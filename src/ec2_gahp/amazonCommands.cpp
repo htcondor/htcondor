@@ -544,7 +544,7 @@ bool AmazonRequest::createV4Signature(	const std::string & payload,
 	char d[] = "YYYYMMDD";
 	strftime( d, sizeof(d), "%Y%m%d", & brokenDownTime );
 
-	// S3 complains if x-amx-content-sha256 isn't signed, which makes sense,
+	// S3 complains if x-amz-content-sha256 isn't signed, which makes sense,
 	// so do this early.
 
 	// The canonical payload hash is the lowercase hexadecimal string of the
@@ -1148,7 +1148,7 @@ bool AmazonRequest::sendPreparedRequest(
 		if( rv != CURLE_OK ) {
 			this->errorCode = "E_CURL_LIB";
 			this->errorMessage = "curl_easy_setopt( CURLOPT_READDATA ) failed.";
-			dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_READDATE ) failed (%d): '%s', failing.\n",
+			dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_READDATA ) failed (%d): '%s', failing.\n",
 				rv, curl_easy_strerror( rv ) );
 			return false;
 		}

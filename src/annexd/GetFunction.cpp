@@ -31,7 +31,6 @@ GetFunction::operator() () {
 	int rc;
 	std::string hash;
 	std::string errorCode;
-
 	rc = gahp->get_function(
 				service_url, public_key_file, secret_key_file,
 				functionARN, hash, errorCode );
