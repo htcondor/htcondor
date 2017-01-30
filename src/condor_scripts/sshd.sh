@@ -2,7 +2,7 @@
 
 ##**************************************************************
 ##
-## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## Copyright (C) 1990-2017, Condor Team, Computer Sciences Department,
 ## University of Wisconsin-Madison, WI.
 ## 
 ## Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -60,8 +60,8 @@ do
     _TEST=$?
     if [ $_TEST -ne 0 ]
     then
-	echo ssh keygenerator $KEYGEN returned error $_TEST exiting
-	exit 255
+        echo ssh keygenerator $KEYGEN returned error $_TEST exiting
+        exit 255
     fi
 done
 
@@ -101,11 +101,11 @@ do
     sleep 2
     if grep "Server listening" $_CONDOR_SCRATCH_DIR/tmp/sshd.out > /dev/null 2>&1
     then
-	done=1
+        done=1
     else
-		# it is probably dead now
-		#kill -9 $pid > /dev/null 2>&1
-		PORT=`expr $PORT + 1`
+        # it is probably dead now
+        #kill -9 $pid > /dev/null 2>&1
+        PORT=`expr $PORT + 1`
     fi
     
 done
@@ -121,7 +121,7 @@ user=`whoami`
 thisrun=`$CONDOR_CHIRP get_job_attr EnteredCurrentStatus`
 
 echo "$_CONDOR_PROCNO $hostname $PORT $user $currentDir $thisrun"  |
-	$CONDOR_CHIRP put -mode cwa - $_CONDOR_REMOTE_SPOOL_DIR/contact 
+        $CONDOR_CHIRP put -mode cwa - $_CONDOR_REMOTE_SPOOL_DIR/contact 
 
 _TEST=$?
 if [ $_TEST -ne 0 ]
@@ -139,42 +139,42 @@ then
     # Need to poll the contact file until all nodes have reported in
     while [ $done -eq 0 ]
     do
-	rm -f contact
-	$CONDOR_CHIRP fetch $_CONDOR_REMOTE_SPOOL_DIR/contact $_CONDOR_SCRATCH_DIR/contact
-	
-	lines=`grep -c $thisrun $_CONDOR_SCRATCH_DIR/contact`
-	if [ $lines -eq $_CONDOR_NPROCS ]
-	then
-	    done=1
-	    node=0
+        rm -f contact
+        $CONDOR_CHIRP fetch $_CONDOR_REMOTE_SPOOL_DIR/contact $_CONDOR_SCRATCH_DIR/contact
+        
+        lines=`grep -c $thisrun $_CONDOR_SCRATCH_DIR/contact`
+        if [ $lines -eq $_CONDOR_NPROCS ]
+        then
+            done=1
+            node=0
 
-	    while [ $node -ne $_CONDOR_NPROCS ]
-	    do
-		$CONDOR_CHIRP fetch $_CONDOR_REMOTE_SPOOL_DIR/$node.key $_CONDOR_SCRATCH_DIR/tmp/$node.key
-		
-		# Now that we've got it, the submit side doesn't need it anymore
-		$CONDOR_CHIRP remove $_CONDOR_REMOTE_SPOOL_DIR/$node.key 
-		node=`expr $node + 1`
-		
-	    done
-	    chmod 0700 $_CONDOR_SCRATCH_DIR/tmp/*.key
+            while [ $node -ne $_CONDOR_NPROCS ]
+            do
+                $CONDOR_CHIRP fetch $_CONDOR_REMOTE_SPOOL_DIR/$node.key $_CONDOR_SCRATCH_DIR/tmp/$node.key
+                
+                # Now that we've got it, the submit side doesn't need it anymore
+                $CONDOR_CHIRP remove $_CONDOR_REMOTE_SPOOL_DIR/$node.key 
+                node=`expr $node + 1`
+                
+            done
+            chmod 0700 $_CONDOR_SCRATCH_DIR/tmp/*.key
 
-	    # Erase the contact file from the spool directory, in case
-	    # this job is held and rescheduled	
-	    $CONDOR_CHIRP remove $_CONDOR_REMOTE_SPOOL_DIR/contact
+            # Erase the contact file from the spool directory, in case
+            # this job is held and rescheduled  
+            $CONDOR_CHIRP remove $_CONDOR_REMOTE_SPOOL_DIR/contact
 
-	else
-	    # Wait a second before polling again
-	    sleep 1
-	fi
+        else
+            # Wait a second before polling again
+            sleep 1
+        fi
 
-	# Timeout after polling 1200 times (about 20 minutes)
-	count=`expr $count + 1`
-	if [ $count -eq 1200 ]
-	then
-	    exit 1
-	fi
-	
+        # Timeout after polling 1200 times (about 20 minutes)
+        count=`expr $count + 1`
+        if [ $count -eq 1200 ]
+        then
+            exit 1
+        fi
+        
     done
     
 fi
