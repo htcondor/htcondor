@@ -984,6 +984,8 @@ LOG=\$ENV(HOME)/$remote_base_dir_host/glite/log
 FT_GAHP_LOG=\$(LOG)/FTGahpLog
 SEC_CLIENT_AUTHENTICATION_METHODS = FS, PASSWORD
 SEC_PASSWORD_FILE = \$ENV(HOME)/$remote_base_dir_host/glite/etc/passwdfile
+USE_SHARED_PORT = False
+ENABLE_URL_TRANSFERS = False
 EOF
 
 # A regular user cannot write on system files
