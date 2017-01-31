@@ -168,6 +168,7 @@ getClassAdNoTypes( Stream *sock, classad::ClassAd& ad )
 	classad::ClassAd		*upd=NULL;
 	MyString				inputLine;
 
+	parser.SetOldClassAd( true );
 
 	ad.Clear( );
 
