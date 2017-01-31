@@ -1,5 +1,4 @@
 #include "condor_common.h"
-#include "condor_config.h"
 #include "compat_classad.h"
 #include "classad_collection.h"
 #include "gahp-client.h"

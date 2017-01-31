@@ -22,6 +22,7 @@
 #include "FunctorSequence.h"
 #include "generate-id.h"
 #include "OnDemandRequest.h"
+#include "UploadFile.h"
 
 // Although the annex daemon uses a GAHP, it doesn't have a schedd managing
 // its hard state in an existing job ad; it has to do that job on its own.
@@ -372,12 +373,13 @@ createOneAnnex( ClassAd * command, Stream * replyStream ) {
 			reply, lambdaGahp, scratchpad,
 	    	lambdaURL, publicKeyFile, secretKeyFile,
 			commandState, commandID );
-		PutRule * pr = new PutRule( reply, eventsGahp, scratchpad,
+		PutRule * pr = new PutRule(
+			reply, eventsGahp, scratchpad,
 			eventsURL, publicKeyFile, secretKeyFile,
 			commandState, commandID, annexID );
-		PutTargets * pt = new PutTargets( leaseFunctionARN,
+		PutTargets * pt = new PutTargets( leaseFunctionARN, endOfLease,
 			reply, eventsGahp, scratchpad,
-			eventsURL, publicKeyFile, secretKeyFile, endOfLease,
+			eventsURL, publicKeyFile, secretKeyFile,
 			commandState, commandID, annexID );
 		// We now only call last->operator() on success; otherwise, we roll back
 		// and call last->rollback() after we've given up.  We can therefore
@@ -428,16 +430,35 @@ createOneAnnex( ClassAd * command, Stream * replyStream ) {
 			reply, lambdaGahp, scratchpad,
 	    	lambdaURL, publicKeyFile, secretKeyFile,
 			commandState, commandID );
-		PutRule * pr = new PutRule( reply, eventsGahp, scratchpad,
+
+		UploadFile * uf = NULL;
+		std::string uploadFrom;
+		command->LookupString( "UploadFrom", uploadFrom );
+		std::string uploadTo;
+		command->LookupString( "UploadTo", uploadTo );
+		if( (! uploadFrom.empty()) && (! uploadTo.empty()) ) {
+			uf = new UploadFile( uploadFrom, uploadTo,
+				reply, s3Gahp, scratchpad,
+				s3URL, publicKeyFile, secretKeyFile,
+				commandState, commandID, annexID );
+		}
+
+		PutRule * pr = new PutRule(
+			reply, eventsGahp, scratchpad,
 			eventsURL, publicKeyFile, secretKeyFile,
 			commandState, commandID, annexID );
-		PutTargets * pt = new PutTargets( leaseFunctionARN,
+		PutTargets * pt = new PutTargets( leaseFunctionARN, endOfLease,
 			reply, eventsGahp, scratchpad,
-			eventsURL, publicKeyFile, secretKeyFile, endOfLease,
+			eventsURL, publicKeyFile, secretKeyFile,
 			commandState, commandID, annexID );
 		ReplyAndClean * last = new ReplyAndClean( reply, replyStream, gahp, scratchpad, eventsGahp, commandState, commandID, lambdaGahp );
 
-		FunctorSequence * fs = new FunctorSequence( { gf, pr, pt, odr }, last, commandState, commandID, scratchpad );
+		FunctorSequence * fs;
+		if( uf ) {
+			fs = new FunctorSequence( { gf, uf, pr, pt, odr }, last, commandState, commandID, scratchpad );
+		} else {
+			fs = new FunctorSequence( { gf, pr, pt, odr }, last, commandState, commandID, scratchpad );
+		}
 
 		int functorSequenceTimer = daemonCore->Register_Timer( 0, TIMER_NEVER,
 			(void (Service::*)()) & FunctorSequence::operator(),
@@ -445,6 +466,7 @@ createOneAnnex( ClassAd * command, Stream * replyStream ) {
 		gahp->setNotificationTimerId( functorSequenceTimer );
     	eventsGahp->setNotificationTimerId( functorSequenceTimer );
     	lambdaGahp->setNotificationTimerId( functorSequenceTimer );
+    	s3Gahp->setNotificationTimerId( functorSequenceTimer );
 
 		return KEEP_STREAM;
 	} else {

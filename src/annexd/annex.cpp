@@ -44,7 +44,7 @@ createConfigTarball(	const char * configDir,
 
 	std::string contents;
 	formatstr( contents,
-		"use security : host based\n"
+		"use security : host_based\n"
 		"LOCAL_HOSTS = $(FULL_HOSTNAME) $(IP_ADDRESS) 127.0.0.1 $(TCP_FORWARDING_HOST)\n"
 		"CONDOR_HOST = condor_pool@*/* $(LOCAL_HOSTS)\n"
 		"COLLECTOR_HOST = %s\n"
@@ -236,6 +236,7 @@ main( int argc, char ** argv ) {
 	const char * odiInstanceType = NULL;
 	const char * odiImageID = NULL;
 	const char * odiInstanceProfileARN = NULL;
+	const char * odiS3ConfigPath = NULL;
 	const char * odiKeyName = NULL;
 	const char * odiSecurityGroupIDs = NULL;
 	bool annexTypeIsSFR = false;
@@ -446,6 +447,15 @@ main( int argc, char ** argv ) {
 				fprintf( stderr, "%s: -lease-function-arn requires an argument.\n", argv[0] );
 				return 1;
 			}
+		} else if( is_dash_arg_prefix( argv[i], "odi-s3-config-path", 18 ) ) {
+			++i;
+			if( argv[i] != NULL ) {
+				odiS3ConfigPath = argv[i];
+				continue;
+			} else {
+				fprintf( stderr, "%s: -odi-s3-config-path requires an argument.\n", argv[0] );
+				return 1;
+			}
 		} else if( is_dash_arg_prefix( argv[i], "duration", 8 ) ) {
 			++i;
 			if( argv[i] != NULL ) {
@@ -650,6 +660,17 @@ main( int argc, char ** argv ) {
 	time_t now = time( NULL );
 	spotFleetRequest.Assign( "EndOfLease", now + leaseDuration );
 
+	std::string tarballTarget;
+	param( tarballTarget, "ANNEX_DEFAULT_ODI_S3_CONFIG_PATH" );
+	if( odiS3ConfigPath != NULL ) {
+		tarballTarget = odiS3ConfigPath;
+	}
+	if( tarballTarget.empty() ) {
+		fprintf( stderr, "If you don't specify -odi-s3-config-path, ANNEX_DEFAULT_ODI_S3_CONFIG_PATH must be set in configuration.\n" );
+		return 1;
+	}
+	spotFleetRequest.Assign( "UploadTo", tarballTarget );
+
 	// Create the config tarball locally, then specify it.  That will
 	// allow us to switch over to file transfer later if necessary.
 	std::string tarballPath;
@@ -666,6 +687,7 @@ main( int argc, char ** argv ) {
 	} else {
 		createConfigTarball( configDir, annexName, tarballPath );
 	}
+	spotFleetRequest.Assign( "UploadFrom", tarballPath );
 
 	if( serviceURL != NULL ) {
 		spotFleetRequest.Assign( "ServiceURL", serviceURL );
