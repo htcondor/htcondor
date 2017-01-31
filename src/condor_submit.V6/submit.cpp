@@ -801,6 +801,7 @@ void setupAuthentication();
 const char * is_queue_statement(const char * line); // return ptr to queue args of this is a queue statement
 bool IsNoClusterAttr(const char * name);
 int  check_sub_file(void*pv, SubmitHash * sub, _submit_file_role role, const char * name, int flags);
+bool is_crlf_shebang(const char * path);
 int  SendLastExecutable();
 int  SendJobAd (ClassAd * job, ClassAd * ClusterAd);
 int  DoUnitTests(int options);
@@ -2377,6 +2378,28 @@ check_and_universalize_path( MyString &path )
 	return retval;
 }
 
+// check if path is a (broken) interpreter script with dos line endings
+bool is_crlf_shebang(const char *path)
+{
+	char buf[128];     // BINPRM_BUF_SIZE from <linux/binfmts.h>; also:
+	bool ret = false;  // execve(2) says the max #! line length is 127
+	FILE *fp = fopen(path, "r");
+
+	if (!fp) {
+		// can't open, don't worry about it
+		return false;
+	}
+
+	// check first line for CRLF ending if readable and starts with #!
+	if (fgets(buf, sizeof buf, fp) && buf[0] == '#' && buf[1] == '!') {
+		size_t len = strlen(buf);
+		ret = (buf[len-1] == '\n' && buf[len-2] == '\r');
+	}
+
+	fclose(fp);
+	return ret;
+}
+
 void
 SetExecutable()
 {
@@ -2573,6 +2596,14 @@ SetExecutable()
 			DoCleanup(0,0,NULL);
 			exit( 1 );
 		}
+
+#if !defined(WIN32)
+		if (is_crlf_shebang(ename)) {
+			fprintf( stderr, "\nERROR: Executable file %s is a script with CRLF (DOS/Win) line endings\n", ename );
+			DoCleanup(0,0,NULL);
+			exit ( 1 );
+		}
+#endif
 
 		// spool executable if necessary
 		if ( isTrue ( copySpool ) ) {
