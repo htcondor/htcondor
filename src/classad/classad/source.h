@@ -92,6 +92,9 @@ class ClassAdParser
 		bool ParseExpression( const std::string &buffer, ExprTree*& expr, 
 					bool full=false);
 
+		bool ParseExpression( const char *buffer, ExprTree*& expr,
+					bool full=false);
+
 		bool ParseExpression( LexerSource *lexer_source, ExprTree*& expr, 
 					bool full=false);
 
@@ -105,6 +108,8 @@ class ClassAdParser
 				otherwise
 		*/
 		ExprTree *ParseExpression( const std::string &buffer, bool full=false);
+
+		ExprTree *ParseExpression( const char *buffer, bool full=false);
 
 		ExprTree *ParseExpression( LexerSource *lexer_source, bool full=false);
 
