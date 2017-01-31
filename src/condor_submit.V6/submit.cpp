@@ -225,6 +225,7 @@ int set_vars(SubmitHash & hash, StringList & vars, char * item, int item_index, 
 void cleanup_vars(SubmitHash & hash, StringList & vars);
 bool IsNoClusterAttr(const char * name);
 int  check_sub_file(void*pv, SubmitHash * sub, _submit_file_role role, const char * name, int flags);
+bool is_crlf_shebang(const char * path);
 int  SendLastExecutable();
 static int MySendJobAttributes(const JOB_ID_KEY & key, const classad::ClassAd & ad, SetAttributeFlags_t saflags);
 int  DoUnitTests(int options);
@@ -1111,6 +1112,28 @@ main( int argc, const char *argv[] )
 	return 0;
 }
 
+// check if path is a (broken) interpreter script with dos line endings
+bool is_crlf_shebang(const char *path)
+{
+	char buf[128];     // BINPRM_BUF_SIZE from <linux/binfmts.h>; also:
+	bool ret = false;  // execve(2) says the max #! line length is 127
+	FILE *fp = fopen(path, "r");
+
+	if (!fp) {
+		// can't open, don't worry about it
+		return false;
+	}
+
+	// check first line for CRLF ending if readable and starts with #!
+	if (fgets(buf, sizeof buf, fp) && buf[0] == '#' && buf[1] == '!') {
+		size_t len = strlen(buf);
+		ret = (buf[len-1] == '\n' && buf[len-2] == '\r');
+	}
+
+	fclose(fp);
+	return ret;
+}
+
 // callback passed to make_job_ad on the submit_hash that gets passed each input or output file
 // so we can choose to do file checks. 
 int check_sub_file(void* /*pv*/, SubmitHash * sub, _submit_file_role role, const char * pathname, int flags)
@@ -1184,6 +1207,13 @@ int check_sub_file(void* /*pv*/, SubmitHash * sub, _submit_file_role role, const
 				fprintf( stderr, "\nERROR: Executable file %s has zero length\n", ename );
 				return 1; // abort
 			}
+
+#if !defined(WIN32)
+			if (is_crlf_shebang(ename)) {
+				fprintf( stderr, "\nERROR: Executable file %s is a script with CRLF (DOS/Win) line endings\n", ename );
+				return 1; // abort
+			}
+#endif
 
 			if (role == SFR_EXECUTABLE) {
 				bool param_exists;
