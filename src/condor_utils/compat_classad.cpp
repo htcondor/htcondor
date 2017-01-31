@@ -1951,11 +1951,12 @@ AssignExpr(char const *name,char const *value)
 {
 	classad::ClassAdParser par;
 	classad::ExprTree *expr = NULL;
+	par.SetOldClassAd( true );
 
 	if ( value == NULL ) {
 		value = "Undefined";
 	}
-	if ( !par.ParseExpression( ConvertEscapingOldToNew( value ), expr, true ) ) {
+	if ( !par.ParseExpression( value, expr, true ) ) {
 		return FALSE;
 	}
 	if ( !Insert( name, expr ) ) {
@@ -3246,8 +3247,9 @@ GetExprReferences(const char* expr,
 {
 	classad::ClassAdParser par;
 	classad::ExprTree *tree = NULL;
+	par.SetOldClassAd( true );
 
-    if ( !par.ParseExpression( ConvertEscapingOldToNew( expr ), tree, true ) ) {
+    if ( !par.ParseExpression( expr, tree, true ) ) {
         return false;
     }
 

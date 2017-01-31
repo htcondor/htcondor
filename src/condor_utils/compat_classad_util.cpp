@@ -70,8 +70,8 @@ int Parse(const char*str, MyString &name, classad::ExprTree*& tree, int*pos)
 int ParseClassAdRvalExpr(const char*s, classad::ExprTree*&tree, int*pos)
 {
 	classad::ClassAdParser parser;
-	std::string str = compat_classad::ConvertEscapingOldToNew( s );
-	if ( parser.ParseExpression( str, tree, true ) ) {
+	parser.SetOldClassAd( true );
+	if ( parser.ParseExpression( s, tree, true ) ) {
 		return 0;
 	} else {
 		tree = NULL;
