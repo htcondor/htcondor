@@ -36,6 +36,7 @@ namespace classad {
 
 ClassAdParser::
 ClassAdParser ()
+	: oldClassAd(false)
 {
 }
 
@@ -45,6 +46,19 @@ ClassAdParser::
 	lexer.FinishedParse ();
 }
 
+
+void ClassAdParser::
+SetOldClassAd( bool old_syntax )
+{
+	oldClassAd = old_syntax;
+	lexer.SetOldClassAdLex( old_syntax );
+}
+
+bool ClassAdParser::
+GetOldClassAd()
+{
+	return oldClassAd;
+}
 
 bool ClassAdParser::
 ParseExpression( const string &buffer, ExprTree *&tree, bool full )

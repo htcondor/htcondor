@@ -43,6 +43,9 @@ class ClassAdParser
 		/// Destructor
 		~ClassAdParser();
 
+		void SetOldClassAd( bool old_syntax );
+		bool GetOldClassAd();
+
 		/** Parse a ClassAd 
 			@param buffer Buffer containing the string representation of the
 				classad.
@@ -116,6 +119,8 @@ class ClassAdParser
 	private:
 		// lexical analyser for parser
 		Lexer	lexer;
+
+		bool oldClassAd;
 
 		// mutually recursive parsing functions
 		bool parseExpression( ExprTree*&, bool=false);
