@@ -70,7 +70,8 @@ bool peaceful_shutdown = false;
 bool force_shutdown = false;
 bool full = false;
 bool all = false;
-char* constraint = NULL;
+const char* constraint = NULL;
+std::string annexString;
 const char* subsys = NULL;
 const char* exec_program = NULL;
 int takes_subsys = 0;
@@ -413,7 +414,8 @@ main( int argc, char *argv[] )
 		fprintf( stderr, "ERROR: unknown command %s\n", MyName );
 		usage( "condor" );
 	}
-	
+
+
 		// First, deal with options (begin with '-')
 	tmp = argv;
 	for( tmp++; *tmp; tmp++ ) {
@@ -606,6 +608,20 @@ main( int argc, char *argv[] )
 						// We got a "-all", remember that
 					all = true;
 					break;
+				case 'n':
+					// We got -annex...
+					tmp++;
+					if( ! (tmp && *tmp) ) {
+						fprintf( stderr,
+								 "ERROR: -annex requires the annex name\n" );
+						usage( NULL );
+					}
+					formatstr( annexString, "AnnexName =?= \"%s\"", * tmp );
+					if( constraint ) {
+						formatstr( annexString, "(%s) && (%s)", constraint, annexString.c_str() );
+					}
+					constraint = annexString.c_str();
+					break;
 				default:
 					fprintf( stderr, 
 							 "ERROR: unknown parameter: \"%s\"\n",
@@ -792,7 +808,7 @@ main( int argc, char *argv[] )
 
 	if (constraint && got_name_or_addr) {
 		fprintf (stderr,
-			"ERROR: use of constraint conflicts with other arguments containing names or addresses.\n"
+			"ERROR: use of -constraint or -annex conflicts with other arguments containing names or addresses.\n"
 			"You can change the constraint to select daemons by name by adding\n"
 			"  (NAME == \"daemon-name\" || MACHINE == \"daemon-name\")\n"
 			"to your constraint.\n");
@@ -947,6 +963,12 @@ doCommands(int /*argc*/,char * argv[],char *MyName,StringList & unresolved_names
 				//  -cmd XXX     (but not "-collector")
 				//  -subsys XXX  (but not "-schedd" or "-startd")
 			switch( (*argv)[1] ) {
+			case 'a':
+				if( (*argv)[2] == 'n' ) {
+					// this is -annex, skip the next one.
+					++argv;
+				}
+				break;
 			case 'p':
 				if( (*argv)[2] == '\0' || (*argv)[2] == 'o' ) {
 						// this is -pool, skip the next one.
