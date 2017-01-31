@@ -1329,6 +1329,7 @@ usage ()
 
 	fprintf (stderr,"\n    and [query-opt] is one of\n"
 		"\t-absent\t\t\tPrint information about absent resources\n"
+		"\t-annex <name>\t\tPrint information about the named annex\n"
 		"\t-avail\t\t\tPrint information about available resources\n"
 		"\t-ckptsrvr\t\tDisplay checkpoint server attributes\n"
 		"\t-claimed\t\tPrint information about claimed resources\n"
@@ -1560,6 +1561,16 @@ firstPass (int argc, char *argv[])
 			i++;
 			if( ! argv[i] ) {
 				fprintf( stderr, "%s: -constraint requires another argument\n",
+						 myName );
+				fprintf( stderr, "Use \"%s -help\" for details\n", myName );
+				exit( 1 );
+			}
+		} else
+		if (is_dash_arg_prefix (argv[i], "annex", 5)) {
+			// can add constraints on second pass only
+			i++;
+			if( ! argv[i] ) {
+				fprintf( stderr, "%s: -annex requires the annex name\n",
 						 myName );
 				fprintf( stderr, "Use \"%s -help\" for details\n", myName );
 				exit( 1 );
@@ -2060,10 +2071,16 @@ secondPass (int argc, char *argv[])
 			}
 			delete [] daemonname;
 			daemonname = NULL;
-		} else
-		if (is_dash_arg_prefix (argv[i], "constraint", 3)) {
+		} else if (is_dash_arg_prefix (argv[i], "constraint", 3)) {
 			if (diagnose) { printf ("[%s]\n", argv[i+1]); }
 			query->addANDConstraint (argv[i+1]);
+			i++;
+		} else if (is_dash_arg_prefix (argv[i], "annex", 5)) {
+			++i;
+			std::string constraint;
+			formatstr( constraint, "AnnexName =?= \"%s\"", argv[i] );
+			if (diagnose) { printf ("[%s]\n", constraint.c_str()); }
+			query->addANDConstraint (constraint.c_str());
 			i++;
 		}
 	}
