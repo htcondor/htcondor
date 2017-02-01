@@ -1857,7 +1857,7 @@ secondPass (int argc, char *argv[])
 			continue;
 		}
 		if (is_dash_arg_prefix (argv[i], "format", 1)) {
-			pm.registerFormat (argv[i+1], argv[i+2]);
+			pm.registerFormatF (argv[i+1], argv[i+2], FormatOptionNoTruncate);
 
 			StringList attributes;
 			ClassAd ad;
