@@ -400,6 +400,7 @@ collect (int command, Sock *sock, const condor_sockaddr& from, int &insert)
 	const char* authn_user = sock->getFullyQualifiedUser();
 	if (authn_user) {
 		clientAd->Assign("AuthenticatedIdentity", authn_user);
+		clientAd->Assign("AuthenticationMethod", sock->getAuthenticationMethodUsed());
 	} else {
 		// remove it from the ad if it's not authenticated.
 		clientAd->Delete("AuthenticatedIdentity");
