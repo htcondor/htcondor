@@ -147,7 +147,7 @@ class AttrListPrintMask
 	// register a format and an attribute
 	void registerFormat (const char *print, int wid, int opts, const char *attr);
 	void registerFormat (const char *print, int wid, int opts, const CustomFormatFn & fmt, const char *attr);
-	void registerFormat (const char *print, const char *attr)          { registerFormat(print, 0, 0, attr); }
+	void registerFormatF (const char *print, const char *attr, int opts=FormatOptionNoTruncate) { registerFormat(print, 0, opts, attr); }
 	void registerformat (const CustomFormatFn & fmt, const char *attr) { registerFormat(NULL, 0, 0, fmt, attr); }
 
 	// clear all formats

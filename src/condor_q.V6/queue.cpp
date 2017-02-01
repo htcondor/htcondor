@@ -1613,7 +1613,7 @@ processCommandLineArguments (int argc, char *argv[])
 				exit( 1 );
 			}
 			qdo_mode = QDO_Format | QDO_Custom;
-			app.mask.registerFormat( argv[i+1], argv[i+2] );
+			app.mask.registerFormatF( argv[i+1], argv[i+2], FormatOptionNoTruncate );
 			if ( ! dash_autocluster) {
 				app.attrs.initializeFromString("ClusterId ProcId"); // this is needed to prevent some DAG code from faulting.
 			}
