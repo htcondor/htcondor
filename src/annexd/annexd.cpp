@@ -596,6 +596,9 @@ createConfigTarball(	const char * configDir,
 	std::string tbn;
 	formatstr( tbn, "%s/temporary.tar.gz.XXXXXX", cwd );
 	char * tarballName = strdup( tbn.c_str() );
+	// Some version of mkstemp() create files with 0666, instead of 0600,
+	// which would be bad.  I claim without checking that we don't compile
+	// on platforms whose version of mkstemp() is broken.
 	int tfd = mkstemp( tarballName );
 	if( tfd == -1 ) {
 		fprintf( stderr, "Failed to create temporary filename for tarball, aborting.\n" );
