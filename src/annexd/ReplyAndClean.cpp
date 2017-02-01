@@ -11,9 +11,22 @@ ReplyAndClean::operator() () {
 	dprintf( D_FULLDEBUG, "ReplyAndClean::operator()\n" );
 
 	// Send whatever reply we have, then clean it up.
-	if( reply && replyStream ) {
-		if(! sendCAReply( replyStream, "CA_BULK_REQUEST", reply )) {
-			dprintf( D_ALWAYS, "Failed to reply to CA_BULK_REQUEST.\n" );
+	if( reply ) {
+		if( replyStream ) {
+			if(! sendCAReply( replyStream, "CA_BULK_REQUEST", reply )) {
+				dprintf( D_ALWAYS, "Failed to reply to CA_BULK_REQUEST.\n" );
+			}
+		} else {
+			// hack for being part of the CLI
+			std::string bulkRequestID;
+			reply->LookupString( "BulkRequestID", bulkRequestID );
+			if( bulkRequestID.empty() ) {
+				fprintf( stderr, "Daemon's reply did not include bulk request ID.\n" );
+			} else {
+				fprintf( stdout, "%s\n", bulkRequestID.c_str() );
+			}
+			// this should be DC_Exit(), probably, but screw that noise.
+			exit( 0 );
 		}
 
 		delete reply;
