@@ -67,6 +67,10 @@ UploadFile::operator() () {
 		}
 		commandState->CommitTransaction();
 		rc = PASS_STREAM;
+
+		// While the tool and daemon are stapled together, delete the
+		// tarball we created, now that we've uploaded it.
+		unlink( uploadFrom.c_str() );
 	} else {
 		std::string message;
 		formatstr( message, "Upload failed: '%s' (%d): '%s'.",

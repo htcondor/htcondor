@@ -513,6 +513,7 @@ main_config() {
 void
 // FIXME: The exit()s in here should probably be returns so that clean-up
 // can be done, and this function has its own clean-up to do as well.
+
 createConfigTarball(	const char * configDir,
 						const char * annexName,
 						std::string & tarballPath ) {
@@ -541,8 +542,6 @@ createConfigTarball(	const char * configDir,
 	if( collectorHost.empty() ) {
 		fprintf( stderr, "COLLECTOR_HOST empty or undefined, aborting.\n" );
 		exit( 5 );
-	} else {
-		fprintf( stdout, "Using COLLECTOR_HOST '%s'\n", collectorHost.c_str() );
 	}
 
 	std::string contents;
@@ -581,8 +580,6 @@ createConfigTarball(	const char * configDir,
 	if( passwordFile.empty() ) {
 		fprintf( stderr, "SEC_PASSWORD_FILE empty or undefined, aborting.\n" );
 		exit( 5 );
-	} else {
-		fprintf( stdout, "Using SEC_PASSWORD_FILE '%s'\n", localPasswordFile.c_str() );
 	}
 
 	// FIXME: Rewrite without system().
@@ -596,13 +593,24 @@ createConfigTarball(	const char * configDir,
 	}
 
 
-	// ...
-	status = system( "tar --exclude config.tar.gz -z -c -f config.tar.gz *" );
+	std::string tbn;
+	formatstr( tbn, "%s/temporary.tar.gz.XXXXXX", cwd );
+	char * tarballName = strdup( tbn.c_str() );
+	int tfd = mkstemp( tarballName );
+	if( tfd == -1 ) {
+		fprintf( stderr, "Failed to create temporary filename for tarball, aborting.\n" );
+		exit( 5 );
+	}
+
+	std::string command;
+	formatstr( command, "tar -z -c -f '%s' *", tarballName );
+	status = system( command.c_str() );
 	if(! (WIFEXITED( status ) && (WEXITSTATUS( status ) == 0))) {
 		fprintf( stderr, "Failed to create tarball, aborting.\n" );
 		exit( 5 );
 	}
-
+	tarballPath = tarballName;
+	free( tarballName );
 
 	rv = chdir( cwd );
 	if( rv != 0 ) {
@@ -610,9 +618,8 @@ createConfigTarball(	const char * configDir,
 			cwd, errno, strerror( errno ) );
 		exit( 4 );
 	}
+	close( tfd );
 	free( cwd );
-
-	formatstr( tarballPath, "%s/%s", configDir, "config.tar.gz" );
 }
 
 // Why don't c-style timer callbacks have context pointers?
@@ -1192,22 +1199,46 @@ argv = _argv;
 	}
 	spotFleetRequest.Assign( "UploadTo", tarballTarget );
 
-	// Create the config tarball locally, then specify it.  That will
-	// allow us to switch over to file transfer later if necessary.
-	std::string tarballPath;
-	if( configDir == NULL ) {
-		char dirNameTemplate[] = ".condor_annex.XXXXXX";
-		const char * tempDir = mkdtemp( dirNameTemplate );
-		if( tempDir == NULL ) {
-			fprintf( stderr, "Failed to create temporary directory (%d): '%s'.\n", errno, strerror( errno ) );
+
+	// Create a temporary directory.  If a config directory was specified,
+	// copy its contents into the temporary directory.  Create (or copy)
+	// the dynamic configuration files into the temporary directory.  Create
+	// a tarball of the temporary directory's contents in the cwd.  Delete
+	// the temporary directory (and all of its contents).  While the tool
+	// and the daemon are joined at the hip, just delete the tarball after
+	// uploading it; otherwise, we'll probably do file transfer and have
+	// the tool and the daemon clean up after themselves.
+	char dirNameTemplate[] = ".condor_annex.XXXXXX";
+	const char * tempDir = mkdtemp( dirNameTemplate );
+	if( tempDir == NULL ) {
+		fprintf( stderr, "Failed to create temporary directory (%d): '%s'.\n", errno, strerror( errno ) );
+		return 2;
+	}
+
+	// FIXME: Rewrite without system().
+	if( configDir != NULL ) {
+		std::string command;
+		formatstr( command, "cp -a '%s'/* '%s'", configDir, tempDir );
+		int status = system( command.c_str() );
+		if(! (WIFEXITED( status ) && (WEXITSTATUS( status ) == 0))) {
+			fprintf( stderr, "Failed to copy '%s' to '%s', aborting.\n",
+				configDir, tempDir );
 			return 2;
 		}
-		createConfigTarball( tempDir, annexName, tarballPath );
-		// FIXME: copy the config tarball somewhere sane.
-		rmdir( tempDir );
-	} else {
-		createConfigTarball( configDir, annexName, tarballPath );
 	}
+
+	std::string tarballPath;
+	createConfigTarball( tempDir, annexName, tarballPath );
+
+	std::string cmd;
+	formatstr( cmd, "rm -fr '%s'", tempDir );
+	int status = system( cmd.c_str() );
+	if(! (WIFEXITED( status ) && (WEXITSTATUS( status ) == 0))) {
+		fprintf( stderr, "Failed to delete temporary directory '%s'.\n",
+			tempDir );
+		return 2;
+	}
+
 	spotFleetRequest.Assign( "UploadFrom", tarballPath );
 
 	if( serviceURL != NULL ) {
@@ -1308,6 +1339,15 @@ _argv = (char **)malloc( argc * sizeof( char * ) );
 for( int i = 0; i < argc; ++i ) {
 	_argv[i] = strdup( argv[i] );
 }
+
+// This is also dumb, but less dangerous than (a) reaching into daemon
+// core to set a flag and (b) hoping that my command-line arguments and
+// its command-line arguments don't conflict.
+char ** dcArgv = (char **)malloc( 2 * sizeof( char * ) );
+dcArgv[0] = argv[0];
+dcArgv[1] = strdup( "-f" );
+argc = 2;
+argv = dcArgv;
 
 	dc_main_init = & main_init;
 	dc_main_config = & main_config;
