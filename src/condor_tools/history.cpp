@@ -403,7 +403,7 @@ main(int argc, char* argv[])
 					"\t\te.g. condor_history -format '%%d' ClusterId\n");
 			exit(1);
 		}
-		mask.registerFormat(argv[i + 1], argv[i + 2]);
+		mask.registerFormatF(argv[i + 1], argv[i + 2], FormatOptionNoTruncate);
 		customFormat = true;
 		i += 2;
     }

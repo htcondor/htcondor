@@ -1608,7 +1608,11 @@ display (std::string & out, MyRowOfValues & rov)
 			// insert the pszVal aligned and/or truncated to the given column width
 			size_t wid = (size_t)((fmt->width < 0) ? -fmt->width : fmt->width);
 			if (col_width > wid) {
-				out.append(pszVal, wid);
+				if (fmt->options & FormatOptionNoTruncate) {
+					out.append(pszVal);
+				} else {
+					out.append(pszVal, wid);
+				}
 			} else {
 				if ((fmt->width < 0) || (fmt->options & FormatOptionLeftAlign)) {
 					if (col_width > 0) out.append(pszVal);
