@@ -921,8 +921,8 @@ GahpServer::Startup()
 	m_gahp_readfd = stdout_pipefds[0];
 	m_gahp_writefd = stdin_pipefds[1];
 #if !defined(WIN32)
-	daemonCore->Get_Pipe_FD( m_gahp_readfd, &m_gahp_real_readfd );
-	daemonCore->Get_Pipe_FD( m_gahp_errorfd, &m_gahp_real_errorfd );
+	ASSERT( daemonCore->Get_Pipe_FD( m_gahp_readfd, &m_gahp_real_readfd ) );
+	ASSERT( daemonCore->Get_Pipe_FD( m_gahp_errorfd, &m_gahp_real_errorfd ) );
 #endif
 
 		// Read in the initial greeting from the GAHP, which is the version.

@@ -1111,7 +1111,7 @@ VanillaProc::outOfMemoryEvent(int /* fd */)
 		if (usage < (0.9 * m_memory_limit)) {
 			long long oomData = 0xdeadbeef;
 			int efd = -1;
-			daemonCore->Get_Pipe_FD(m_oom_efd, &efd);
+			ASSERT( daemonCore->Get_Pipe_FD(m_oom_efd, &efd) );
 				// need to drain notification fd, or it will still
 				// be hot, and we'll come right back here again
 			int r = read(efd, &oomData, 8);
