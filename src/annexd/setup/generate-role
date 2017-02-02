@@ -8,17 +8,24 @@ use JSON;
 
 my $VERSION = 1;
 
-my( $prettyPrint, $s3Bucket, $s3Key );
+my( $prettyPrint );
 GetOptions(
 	'pretty-print'	=> \$prettyPrint
 );
 
-my $bucketName = $ARGV[0];
-my $fileName = $ARGV[1];
-
 	my $template;
 	$template->{ AWSTemplateFormatVersion } = "2010-09-09";
 	$template->{ Description } = "Instance Configuration Role";
+
+	$template->{ Parameters } = {
+		"S3BucketName" => {
+			Type => "String"
+		},
+		"S3FileName" => {
+			Type => "String",
+			Default => "config.tar.gz"
+		}
+	};
 
 	$template->{ Outputs } = {
 		ConfigurationProfile => {
@@ -27,7 +34,13 @@ my $fileName = $ARGV[1];
 	};
 
 
-	my $resource = "arn:aws:s3:::${bucketName}/${fileName}";
+	my $resource = { "Fn::Join" => [ "", [
+		"arn:aws:s3:::",
+		{ "Ref" => "S3BucketName" },
+		"/",
+		{ "Ref" => "S3FileName" }
+	] ] };
+
 	my $configurationPolicy = {
 		PolicyName => "Configuration",
 		PolicyDocument => {
