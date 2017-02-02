@@ -83,9 +83,16 @@ public:
 	 */
 	void getAttributeName(std::string & szFillMe);
 	
+#if defined(SCOPE_REFACTOR)
+	virtual const ClassAd *GetParentScope( ) const { return( parentScope ); }
+#endif
 protected:
 	
+#if defined(SCOPE_REFACTOR)
+	CachedExprEnvelope() : parentScope(NULL) {;};
+#else
 	CachedExprEnvelope(){;};
+#endif
 	
 	/**
 	 * SameAs() - determines if two elements are the same.
@@ -115,6 +122,9 @@ protected:
 	virtual bool _Evaluate( EvalState& st, Value& v , ExprTree*& t) const;
 	virtual bool _Flatten( EvalState& st, Value& v, ExprTree*& t, int* i )const;
 	
+#if defined(SCOPE_REFACTOR)
+	const ClassAd *parentScope;
+#endif
 	pCacheData  m_pLetter; ///< Pointer to the actual element refrenced
 	
 };

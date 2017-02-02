@@ -422,7 +422,10 @@ ExprTree * CachedExprEnvelope::Copy( ) const
 	
 	// duplicate as little data as possible.
 	pRet->m_pLetter = this->m_pLetter;
+#if defined(SCOPE_REFACTOR)
+#else
 	pRet->parentScope = this->parentScope;
+#endif
 	
 	return ( pRet );
 }
@@ -440,8 +443,15 @@ const ExprTree* CachedExprEnvelope::self()
 	return m_pLetter->pData;
 }
 
+#if defined(SCOPE_REFACTOR)
+void CachedExprEnvelope::_SetParentScope( const ClassAd* parent)
+#else
 void CachedExprEnvelope::_SetParentScope( const ClassAd* )
+#endif
 {
+#if defined(SCOPE_REFACTOR)
+	parentScope = parent;
+#endif
 	// nothing to do here already set @ base
 }
 

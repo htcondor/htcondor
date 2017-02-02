@@ -30,6 +30,9 @@ namespace classad {
 Operation::
 Operation ()
 {
+#if defined(SCOPE_REFACTOR)
+	parentScope = NULL;
+#endif
 	operation = __NO_OP__;
 	child1    = NULL;
 	child2    = NULL;
@@ -117,6 +120,9 @@ CopyFrom(const Operation &op)
 
     success = true;
 
+#if defined(SCOPE_REFACTOR)
+	parentScope = op.parentScope;
+#endif
 	if( op.child1 && (child1 = op.child1->Copy()) == NULL){
         success = false;
     } else if( op.child2 && (child2 = op.child2->Copy()) == NULL ){
@@ -175,6 +181,9 @@ Copy( ) const
 		CondorErrMsg = "";
 		if (e1) delete e1;
 	}
+#if defined(SCOPE_REFACTOR)
+	opnode->parentScope = parentScope;
+#endif
 	return opnode;
 }
 
@@ -199,6 +208,9 @@ Copy( ) const
 		CondorErrMsg = "";
 		if (e1) delete e1;
 	}
+#if defined(SCOPE_REFACTOR)
+	opnode->parentScope = parentScope;
+#endif
 	return opnode;
 }
 
@@ -232,6 +244,9 @@ Copy( ) const
 		if (e1) delete e1;
 		if (e2) delete e2;
 	}
+#if defined(SCOPE_REFACTOR)
+	opnode->parentScope = parentScope;
+#endif
 	return opnode;
 }
 
@@ -274,6 +289,9 @@ Copy( ) const
 		if (e2) delete e2;
 		if (e2) delete e3;
 	}
+#if defined(SCOPE_REFACTOR)
+	opnode->parentScope = parentScope;
+#endif
 	return opnode;
 }
 
@@ -364,6 +382,9 @@ SameChildren(const Operation* pop1, const Operation* pop2)
 void Operation::
 _SetParentScope( const ClassAd* parent ) 
 {
+#if defined(SCOPE_REFACTOR)
+	parentScope = parent;
+#endif
 #ifdef TJ_REFACTOR
 	if( child1 ) child1->SetParentScope( parent );
 	if( child2 ) child2->SetParentScope( parent );
