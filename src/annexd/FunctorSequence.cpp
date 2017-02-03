@@ -72,14 +72,14 @@ FunctorSequence::operator() () {
 	// If we've run past the end of the sequence, call the last functor.
 	if( current >= (int) sequence.size() ) {
 		int r = (* last)();
-		if( r != KEEP_STREAM ) { deleteFunctors(); delete this; }
+		if( r != KEEP_STREAM ) { deleteFunctors(); delete this; exit( 0 ); }
 		return;
 	}
 
 	// If we've run past the end of the rollback, call the last functor.
 	if( current < 0 ) {
 		int r = last->rollback();
-		if( r != KEEP_STREAM ) { deleteFunctors(); delete this; }
+		if( r != KEEP_STREAM ) { deleteFunctors(); delete this; exit( 0 ); }
 		return;
 	}
 

@@ -17,16 +17,28 @@ ReplyAndClean::operator() () {
 				dprintf( D_ALWAYS, "Failed to reply to CA_BULK_REQUEST.\n" );
 			}
 		} else {
-			// hack for being part of the CLI
-			std::string bulkRequestID;
-			reply->LookupString( "BulkRequestID", bulkRequestID );
-			if( bulkRequestID.empty() ) {
-				fprintf( stderr, "Daemon's reply did not include bulk request ID.\n" );
+			// Stolen from Daemon::sendCACmd().
+			std::string resultString;
+			reply->LookupString( ATTR_RESULT, resultString );
+			CAResult result = getCAResultNum( resultString.c_str() );
+
+			if( result == CA_SUCCESS ) {
+				std::string bulkRequestID;
+				reply->LookupString( "BulkRequestID", bulkRequestID );
+				if( bulkRequestID.empty() ) {
+					fprintf( stderr, "The success reply did not include the bulk request ID.\n" );
+				} else {
+					fprintf( stdout, "%s\n", bulkRequestID.c_str() );
+				}
 			} else {
-				fprintf( stdout, "%s\n", bulkRequestID.c_str() );
+				std::string errorString;
+				reply->LookupString( ATTR_ERROR_STRING, errorString );
+				if( errorString.empty() ) {
+					fprintf( stderr, "The error reply (%s) did not include an error string.\n", resultString.c_str() );
+				} else {
+					fprintf( stderr, "%s\n", errorString.c_str() );
+				}
 			}
-			// this should be DC_Exit(), probably, but screw that noise.
-			exit( 0 );
 		}
 
 		delete reply;
