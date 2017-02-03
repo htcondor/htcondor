@@ -28,8 +28,8 @@ GetOptions(
 	};
 
 	$template->{ Outputs } = {
-		ConfigurationProfile => {
-			Value => { "Ref" => "InstanceConfigurationProfile" }
+		"InstanceProfileARN" => {
+			Value => { "Fn::GetAtt" => [ "InstanceConfigurationProfile", "Arn" ] }
 		}
 	};
 
