@@ -248,7 +248,10 @@ JobRouter::config() {
 	std::string router_defaults;
 	if (param(router_defaults, PARAM_JOB_ROUTER_DEFAULTS) && ! router_defaults.empty()) {
 		// if the param doesn't start with [, then wrap it in [] before parsing, so that the parser knows to expect new classad syntax.
-		if (router_defaults[0] != '[') {
+		int i;
+		for ( i = 0; isspace(router_defaults[i]); i++ ) {
+		}
+		if (router_defaults[i] != '[') {
 			router_defaults.insert(0, "[ ");
 			router_defaults.append(" ]");
 			merge_defaults = false;
