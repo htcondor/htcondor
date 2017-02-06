@@ -1731,13 +1731,29 @@ restart=true
 default=
 type=string
 
-[OUT_LOWPORT]
+[LOWPORT]
 default=
-type=string
+type=int
 
 [IN_LOWPORT]
 default=
-type=string
+type=int
+
+[OUT_LOWPORT]
+default=
+type=int
+
+[LOWPORT]
+default=
+type=int
+
+[IN_HIGHPORT]
+default=
+type=int
+
+[OUT_HIGHPORT]
+default=
+type=int
 
 [CRED_MIN_TIME_LEFT]
 default=120
