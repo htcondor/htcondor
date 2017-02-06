@@ -510,28 +510,26 @@ main_config() {
 }
 
 // from annex.cpp
-void
-// FIXME: The exit()s in here should probably be returns so that clean-up
-// can be done, and this function has its own clean-up to do as well.
-
+bool
 createConfigTarball(	const char * configDir,
 						const char * annexName,
-						std::string & tarballPath ) {
+						std::string & tarballPath,
+						std::string & tarballError ) {
 	char * cwd = get_current_dir_name();
 
 	int rv = chdir( configDir );
 	if( rv != 0 ) {
-		fprintf( stderr, "Unable to change to config dir '%s' (%d): '%s'.\n",
+		formatstr( tarballError, "Unable to change to config dir '%s' (%d): '%s'.\n",
 			configDir, errno, strerror( errno ) );
-		exit( 4 );
+		return false;
 	}
 
 	int fd = safe_open_wrapper_follow( "99ec2-dynamic.config",
 		O_WRONLY | O_CREAT | O_TRUNC, 0600 );
 	if( fd < 0 ) {
-		fprintf( stderr, "Failed to open config file '%s' for writing: '%s' (%d).\n",
+		formatstr( tarballError, "Failed to open config file '%s' for writing: '%s' (%d).\n",
 			"99ec2-dynamic.config", strerror( errno ), errno );
-		exit( 4 );
+		return false;
 	}
 
 
@@ -540,8 +538,8 @@ createConfigTarball(	const char * configDir,
 	std::string collectorHost;
 	param( collectorHost, "COLLECTOR_HOST" );
 	if( collectorHost.empty() ) {
-		fprintf( stderr, "COLLECTOR_HOST empty or undefined, aborting.\n" );
-		exit( 5 );
+		formatstr( tarballError, "COLLECTOR_HOST empty or undefined, aborting.\n" );
+		return false;
 	}
 
 	std::string contents;
@@ -565,12 +563,13 @@ createConfigTarball(	const char * configDir,
 
 	rv = write( fd, contents.c_str(), contents.size() );
 	if( rv == -1 ) {
-		fprintf( stderr, "Error writing to '%s': '%s' (%d).\n",
+		formatstr( tarballError, "Error writing to '%s': '%s' (%d).\n",
 			"99ec2-dynamic.config", strerror( errno ), errno );
+		return false;
 	} else if( rv != (int)contents.size() ) {
-		fprintf( stderr, "Short write to '%s': '%s' (%d).\n",
+		formatstr( tarballError, "Short write to '%s': '%s' (%d).\n",
 			"99ec2-dynamic.config", strerror( errno ), errno );
-		exit( 4 );
+		return false;
 	}
 	close( fd );
 
@@ -578,8 +577,8 @@ createConfigTarball(	const char * configDir,
 	std::string localPasswordFile;
 	param( localPasswordFile, "SEC_PASSWORD_FILE" );
 	if( passwordFile.empty() ) {
-		fprintf( stderr, "SEC_PASSWORD_FILE empty or undefined, aborting.\n" );
-		exit( 5 );
+		formatstr( tarballError, "SEC_PASSWORD_FILE empty or undefined, aborting.\n" );
+		return false;
 	}
 
 	// FIXME: Rewrite without system().
@@ -587,9 +586,9 @@ createConfigTarball(	const char * configDir,
 	formatstr( cpCommand, "cp '%s' '%s'", localPasswordFile.c_str(), passwordFile.c_str() );
 	int status = system( cpCommand.c_str() );
 	if(! (WIFEXITED( status ) && (WEXITSTATUS( status ) == 0))) {
-		fprintf( stderr, "Failed to copy '%s' to '%s', aborting.\n",
+		formatstr( tarballError, "Failed to copy '%s' to '%s', aborting.\n",
 			localPasswordFile.c_str(), passwordFile.c_str() );
-		exit( 5 );
+		return false;
 	}
 
 
@@ -601,28 +600,30 @@ createConfigTarball(	const char * configDir,
 	// on platforms whose version of mkstemp() is broken.
 	int tfd = mkstemp( tarballName );
 	if( tfd == -1 ) {
-		fprintf( stderr, "Failed to create temporary filename for tarball, aborting.\n" );
-		exit( 5 );
+		formatstr( tarballError, "Failed to create temporary filename for tarball, aborting.\n" );
+		return false;
 	}
 
+	// FIXME: Rewrite without system().
 	std::string command;
 	formatstr( command, "tar -z -c -f '%s' *", tarballName );
 	status = system( command.c_str() );
 	if(! (WIFEXITED( status ) && (WEXITSTATUS( status ) == 0))) {
-		fprintf( stderr, "Failed to create tarball, aborting.\n" );
-		exit( 5 );
+		formatstr( tarballError, "Failed to create tarball, aborting.\n" );
+		return false;
 	}
 	tarballPath = tarballName;
 	free( tarballName );
 
 	rv = chdir( cwd );
 	if( rv != 0 ) {
-		fprintf( stderr, "Unable to change back to working dir '%s' (%d): '%s'.\n",
+		formatstr( tarballError, "Unable to change back to working dir '%s' (%d): '%s'.\n",
 			cwd, errno, strerror( errno ) );
-		exit( 4 );
+		return false;
 	}
 	close( tfd );
 	free( cwd );
+	return true;
 }
 
 // Why don't c-style timer callbacks have context pointers?
@@ -1230,9 +1231,10 @@ argv = _argv;
 		}
 	}
 
-	std::string tarballPath;
-	createConfigTarball( tempDir, annexName, tarballPath );
+	std::string tarballPath, tarballError;
+	bool createdTarball = createConfigTarball( tempDir, annexName, tarballPath, tarballError );
 
+	// FIXME: Rewrite without system().
 	std::string cmd;
 	formatstr( cmd, "rm -fr '%s'", tempDir );
 	int status = system( cmd.c_str() );
@@ -1240,6 +1242,11 @@ argv = _argv;
 		fprintf( stderr, "Failed to delete temporary directory '%s'.\n",
 			tempDir );
 		return 2;
+	}
+
+	if(! createdTarball) {
+		fprintf( stderr, "Failed to create config tarball (%s); aborting.\n", tarballError.c_str() );
+		return 3;
 	}
 
 	spotFleetRequest.Assign( "UploadFrom", tarballPath );
@@ -1271,7 +1278,7 @@ argv = _argv;
 	// Handle user data.
 	if( userDataFileName != NULL ) {
 		if(! readShortFile( userDataFileName, userData ) ) {
-			return 2;
+			return 4;
 		}
 	}
 
@@ -1281,7 +1288,7 @@ argv = _argv;
 		char * base64Encoded = condor_base64_encode( (const unsigned char *)userData.c_str(), userData.length() );
 		if(! assignUserData( spotFleetRequest, base64Encoded, clUserDataWins, validationError )) {
 			fprintf( stderr, "Failed to set user data in request ad (%s).\n", validationError.c_str() );
-			return 6;
+			return 5;
 		}
 		free( base64Encoded );
 	}
@@ -1359,6 +1366,5 @@ argv = dcArgv;
 	dc_main_pre_dc_init = & main_pre_dc_init;
 	dc_main_pre_command_sock_init = & main_pre_command_sock_init;
 
-	// FIXME: force the '-f' option to be on by default.
 	return dc_main( argc, argv );
 }
