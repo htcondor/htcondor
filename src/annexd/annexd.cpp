@@ -140,7 +140,7 @@ validateLease( time_t endOfLease, std::string & validationError ) {
 }
 
 int
-createOneAnnex( ClassAd * command, Stream * replyStream ) {
+createOneAnnex( ClassAd * command, Stream * replyStream, ClassAd * reply ) {
 	// dPrintAd( D_FULLDEBUG, * command );
 
 	// Validate the request (basic).
@@ -155,13 +155,12 @@ createOneAnnex( ClassAd * command, Stream * replyStream ) {
 		}
 		dprintf( D_ALWAYS, "%s\n", errorString.c_str() );
 
-		ClassAd reply;
-		reply.Assign( "RequestVersion", 1 );
-		reply.Assign( ATTR_RESULT, getCAResultString( CA_INVALID_REQUEST ) );
-		reply.Assign( ATTR_ERROR_STRING, errorString );
+		reply->Assign( "RequestVersion", 1 );
+		reply->Assign( ATTR_RESULT, getCAResultString( CA_INVALID_REQUEST ) );
+		reply->Assign( ATTR_ERROR_STRING, errorString );
 
 		if( replyStream ) {
-			if(! sendCAReply( replyStream, "CA_BULK_REQUEST", & reply )) {
+			if(! sendCAReply( replyStream, "CA_BULK_REQUEST", reply )) {
 				dprintf( D_ALWAYS, "Failed to reply to CA_BULK_REQUEST.\n" );
 			}
 		}
@@ -238,13 +237,12 @@ createOneAnnex( ClassAd * command, Stream * replyStream ) {
 		}
 		dprintf( D_ALWAYS, "%s\n", errorString.c_str() );
 
-		ClassAd reply;
-		reply.Assign( "RequestVersion", 1 );
-		reply.Assign( ATTR_RESULT, getCAResultString( CA_INVALID_REQUEST ) );
-		reply.Assign( ATTR_ERROR_STRING, errorString );
+		reply->Assign( "RequestVersion", 1 );
+		reply->Assign( ATTR_RESULT, getCAResultString( CA_INVALID_REQUEST ) );
+		reply->Assign( ATTR_ERROR_STRING, errorString );
 
 		if( replyStream ) {
-			if(! sendCAReply( replyStream, "CA_BULK_REQUEST", & reply )) {
+			if(! sendCAReply( replyStream, "CA_BULK_REQUEST", reply )) {
 				dprintf( D_ALWAYS, "Failed to reply to CA_BULK_REQUEST.\n" );
 			}
 		}
@@ -280,7 +278,6 @@ createOneAnnex( ClassAd * command, Stream * replyStream ) {
 
 	// Each step in the sequence may add to the reply, and may need to pass
 	// information to the next step, so create those two ads first.
-	ClassAd * reply = new ClassAd();
 	reply->Assign( "RequestVersion", 1 );
 
 	ClassAd * scratchpad = new ClassAd();
@@ -632,7 +629,21 @@ ClassAd * command = NULL;
 void
 callCreateOneAnnex() {
 	Stream * s = NULL;
-	createOneAnnex( command, s );
+	ClassAd * reply = new ClassAd();
+
+	// Otherwise, reply-and-clean will take care of user notification.
+	if( createOneAnnex( command, s, reply ) != KEEP_STREAM ) {
+		std::string resultString;
+		reply->LookupString( ATTR_RESULT, resultString );
+		CAResult result = getCAResultNum( resultString.c_str() );
+		ASSERT( result != CA_SUCCESS );
+
+		std::string errorString;
+		reply->LookupString( ATTR_ERROR_STRING, errorString );
+		ASSERT(! errorString.empty());
+		fprintf( stderr, "%s\n", errorString.c_str() );
+		DC_Exit( 6 );
+	}
 }
 
 // from annex.cpp
@@ -1292,8 +1303,6 @@ argv = _argv;
 		}
 		free( base64Encoded );
 	}
-
-
 
 
 	// -------------------------------------------------------------------------
