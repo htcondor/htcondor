@@ -57,9 +57,7 @@ exports.handler = function( event, context, callback ) {
 				var config = data.SpotFleetRequestConfigs[i];
 				var sfrc = config.SpotFleetRequestConfig;
 				if( sfrc.ClientToken.startsWith( spotFleetRequestID ) ) {
-					// spotFleetRequestID = config.SpotFleetRequestId;
 					spotFleetRequestIDs.push( config.SpotFleetRequestId );
-					break;
 				}
 			}
 
