@@ -1932,6 +1932,84 @@ Stream::get_string_ptr( char const *&s ) {
 	return TRUE;
 }
 
+int
+Stream::get_secret( const char *&s, int &len )
+{
+	int retval;
+
+	prepare_crypto_for_secret();
+
+	retval = get_string_ptr(s, len);
+
+	restore_crypto_after_secret();
+
+	return retval;
+}
+
+int
+Stream::get_string_ptr( char const *&s, int &length ) {
+	char	c;
+	void 	*tmp_ptr = 0;
+    int     len;
+
+	s = NULL;
+	switch(_code){
+		case internal:
+		case external:
+			// For 6.2 compatibility, we had to put this code back
+			if (!get_encryption()) {
+				if (!peek(c)) return FALSE;
+				if (c == '\255'){
+					if (get_bytes(&c, 1) != 1) return FALSE;
+					s = NULL;
+					length = 0;
+				}
+				else{
+					length = get_ptr(tmp_ptr, '\0');
+					if (length <= 0) return FALSE;
+					s = (char *)tmp_ptr;
+				}
+			}
+			else { // 6.3 with encryption support
+				// First, get length
+				if (get(len) == FALSE) {
+					return FALSE;
+				}
+
+				if( !decrypt_buf || decrypt_buf_len < len ) {
+					free( decrypt_buf );
+					decrypt_buf = (char *)malloc(len);
+					ASSERT( decrypt_buf );
+					decrypt_buf_len = len;
+				}
+
+				if( get_bytes(decrypt_buf, len) != len ) {
+					return FALSE;
+				}
+
+				if( *decrypt_buf == '\255' ) {
+					s = NULL;
+					length = 0;
+				}
+				else {
+					s = decrypt_buf;
+					length = len;
+				}
+			}
+			break;
+
+		case ascii:
+			return FALSE;
+	}
+	if( s ) {
+		NETWORK_TRACE("get string ptr " << s);
+	}
+	else {
+		NETWORK_TRACE("get string ptr NULL");
+	}
+	return TRUE;
+}
+
 /* Get the next string on the stream.  This function copies the
  * string into the passed in MyString object.
  * When a message has not been received, its behaviour is dependent on

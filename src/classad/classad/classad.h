@@ -138,7 +138,8 @@ class ClassAd : public ExprTree
 		bool InsertAttr( const std::string &attrName,long value, 
 				Value::NumberFactor f=Value::NO_FACTOR );
 		bool InsertAttr( const std::string &attrName,long long value, 
-				Value::NumberFactor f=Value::NO_FACTOR );
+				Value::NumberFactor f );
+		bool InsertAttr( const std::string &attrName,long long value );
 
 		/** Inserts an attribute into a nested classad.  The scope expression 
 		 		is evaluated to obtain a nested classad, and the attribute is
@@ -168,7 +169,8 @@ class ClassAd : public ExprTree
             @return true on success, false otherwise
 		*/
 		bool InsertAttr( const std::string &attrName,double value, 
-				Value::NumberFactor f=Value::NO_FACTOR);
+				Value::NumberFactor f);
+		bool InsertAttr( const std::string &attrName,double value);
 
 		/** Inserts an attribute into a nested classad.  The scope expression
 		 		is evaluated to obtain a nested classad, and the insertion is
@@ -213,6 +215,7 @@ class ClassAd : public ExprTree
 			@param value The string attribute
 		*/
 		bool InsertAttr( const std::string &attrName, const char *value );
+		bool InsertAttr( const std::string &attrName, const char * str, size_t len );
 
 		/** Inserts an attribute into a nested classad.  The scope expression
 		 		is evaluated to obtain a nested classad, and the insertion is

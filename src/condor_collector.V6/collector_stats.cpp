@@ -326,9 +326,9 @@ void stats_entry_lost_updates::Publish(ClassAd & ad, const char * pattr, int fla
 }
 
 
-#define ADD_EXTERN_RUNTIME(pool, name, ifpub, enable) extern collector_runtime_probe name##_runtime;\
+#define ADD_EXTERN_RUNTIME(pool, name, ifpub) extern collector_runtime_probe name##_runtime;\
 	name##_runtime.Clear();\
-	if (enable) (pool).AddProbe( #name, &name##_runtime, #name, ifpub | IF_RT_SUM)
+	(pool).AddProbe( #name, &name##_runtime, #name, ifpub | IF_RT_SUM)
 
 #define ADD_RECENT_PROBE(pool, probe, verb, suffix, recent_max) \
 	probe.Clear(); \
@@ -373,30 +373,36 @@ void UpdatesStats::Init()
 
 	// receive_update and task breakdown
 	bool enable = param_boolean("PUBLISH_COLLECTOR_ENGINE_PROFILING_STATS",false);
-	ADD_EXTERN_RUNTIME(Pool, CollectorEngine_receive_update, IF_BASICPUB, enable);
-	ADD_EXTERN_RUNTIME(Pool, CollectorEngine_ru_pre_collect, IF_BASICPUB, enable);
-	ADD_EXTERN_RUNTIME(Pool, CollectorEngine_ru_collect, IF_BASICPUB, enable);
-	ADD_EXTERN_RUNTIME(Pool, CollectorEngine_ru_plugins, IF_BASICPUB, enable);
-	ADD_EXTERN_RUNTIME(Pool, CollectorEngine_ru_forward, IF_BASICPUB, enable);
-	ADD_EXTERN_RUNTIME(Pool, CollectorEngine_ru_stash_socket, IF_BASICPUB, enable);
+	int prof_publevel = enable ? IF_BASICPUB : IF_VERBOSEPUB;
+	ADD_EXTERN_RUNTIME(Pool, CollectorEngine_receive_update, prof_publevel);
+	ADD_EXTERN_RUNTIME(Pool, CollectorEngine_ru_pre_collect, prof_publevel);
+	ADD_EXTERN_RUNTIME(Pool, CollectorEngine_ru_collect, prof_publevel);
+	ADD_EXTERN_RUNTIME(Pool, CollectorEngine_ru_plugins, prof_publevel);
+	ADD_EXTERN_RUNTIME(Pool, CollectorEngine_ru_forward, prof_publevel);
+	ADD_EXTERN_RUNTIME(Pool, CollectorEngine_ru_stash_socket, prof_publevel);
 
 	// ru_collect subtask breakdown
-	ADD_EXTERN_RUNTIME(Pool, CollectorEngine_ruc, IF_BASICPUB, enable);
-	ADD_EXTERN_RUNTIME(Pool, CollectorEngine_ruc_getAd, IF_BASICPUB, enable);
-	ADD_EXTERN_RUNTIME(Pool, CollectorEngine_ruc_authid, IF_BASICPUB, enable);
-	ADD_EXTERN_RUNTIME(Pool, CollectorEngine_ruc_collect, IF_BASICPUB, enable);
+	ADD_EXTERN_RUNTIME(Pool, CollectorEngine_ruc, prof_publevel);
+	ADD_EXTERN_RUNTIME(Pool, CollectorEngine_ruc_getAd, prof_publevel);
+	//ADD_EXTERN_RUNTIME(Pool, CollectorEngine_ruc_replaceAd5, prof_publevel);
+	ADD_EXTERN_RUNTIME(Pool, CollectorEngine_ruc_authid, prof_publevel);
+	ADD_EXTERN_RUNTIME(Pool, CollectorEngine_ruc_collect, prof_publevel);
 
 	// ruc_collect subtask breakdown
-	ADD_EXTERN_RUNTIME(Pool, CollectorEngine_rucc, IF_BASICPUB, enable);
-	ADD_EXTERN_RUNTIME(Pool, CollectorEngine_rucc_validateAd, IF_BASICPUB, enable);
-	ADD_EXTERN_RUNTIME(Pool, CollectorEngine_rucc_makeHashKey, IF_BASICPUB, enable);
-	ADD_EXTERN_RUNTIME(Pool, CollectorEngine_rucc_insertAd, IF_BASICPUB, enable);
-	ADD_EXTERN_RUNTIME(Pool, CollectorEngine_rucc_updateAd, IF_BASICPUB, enable);
-	ADD_EXTERN_RUNTIME(Pool, CollectorEngine_rucc_getPvtAd, IF_BASICPUB, enable);
-	ADD_EXTERN_RUNTIME(Pool, CollectorEngine_rucc_insertPvtAd, IF_BASICPUB, enable);
-	ADD_EXTERN_RUNTIME(Pool, CollectorEngine_rucc_updatePvtAd, IF_BASICPUB, enable);
-	ADD_EXTERN_RUNTIME(Pool, CollectorEngine_rucc_repeatAd, IF_BASICPUB, enable);
-	ADD_EXTERN_RUNTIME(Pool, CollectorEngine_rucc_other, IF_BASICPUB, enable);
+	ADD_EXTERN_RUNTIME(Pool, CollectorEngine_rucc, prof_publevel);
+	ADD_EXTERN_RUNTIME(Pool, CollectorEngine_rucc_validateAd, prof_publevel);
+	ADD_EXTERN_RUNTIME(Pool, CollectorEngine_rucc_makeHashKey, prof_publevel);
+	ADD_EXTERN_RUNTIME(Pool, CollectorEngine_rucc_insertAd, prof_publevel);
+	ADD_EXTERN_RUNTIME(Pool, CollectorEngine_rucc_updateAd, prof_publevel);
+	ADD_EXTERN_RUNTIME(Pool, CollectorEngine_rucc_getPvtAd, prof_publevel);
+	ADD_EXTERN_RUNTIME(Pool, CollectorEngine_rucc_insertPvtAd, prof_publevel);
+	ADD_EXTERN_RUNTIME(Pool, CollectorEngine_rucc_updatePvtAd, prof_publevel);
+	ADD_EXTERN_RUNTIME(Pool, CollectorEngine_rucc_repeatAd, prof_publevel);
+	ADD_EXTERN_RUNTIME(Pool, CollectorEngine_rucc_other, prof_publevel);
+
+	getClassAdEx_clearProfileStats();
+	getClassAdEx_addProfileStatsToPool(&Pool, prof_publevel);
+
 }
 
 void UpdatesStats::Clear()

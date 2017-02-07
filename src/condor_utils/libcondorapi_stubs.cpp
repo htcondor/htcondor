@@ -272,6 +272,7 @@ int Stream::get(char *&){ return not_impl(); }
 int Stream::get(char *,int ){ return not_impl(); }
 int Stream::get(MyString&){ return not_impl(); }
 int Stream::get_string_ptr(char const *&){ return not_impl(); }
+int Stream::get_string_ptr(const char *&, int &){ return not_impl(); }
 
 void Stream::prepare_crypto_for_secret(){not_impl();}
 void Stream::restore_crypto_after_secret(){not_impl();}
@@ -280,6 +281,7 @@ bool Stream::set_crypto_mode(bool /*enabled*/){not_impl();return false;}
 bool Stream::get_encryption() const{not_impl();return false;}
 int Stream::put_secret( char const * /*s*/ ){not_impl();return 0;}
 int Stream::get_secret( char *& /*s*/ ){not_impl();return 0;}
+int Stream::get_secret( const char *& /*s*/, int & /*len*/ ){not_impl();return 0;}
 void Stream::set_deadline_timeout(int){not_impl();}
 void Stream::set_deadline(time_t){not_impl();}
 time_t Stream::get_deadline(){not_impl();return 0;}

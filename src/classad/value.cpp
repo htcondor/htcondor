@@ -313,6 +313,19 @@ SetStringValue( const char *s )
 }
 
 void Value::
+SetStringValue( const char *s, size_t cch )
+{
+	// optimization, when copying string to string, we can skip the delete/new of the string buffer
+	if (valueType == STRING_VALUE) {
+		strValue->assign(s, cch);
+		return;
+	}
+	_Clear();
+	valueType = STRING_VALUE;
+	strValue = new string( s, cch );
+}
+
+void Value::
 SetListValue( ExprList *l)
 {
 	_Clear();

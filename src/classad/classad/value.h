@@ -169,6 +169,7 @@ class Value
 			@param str The string value.
 		*/
 		void SetStringValue( const char *str );
+		void SetStringValue( const char *str, size_t cch );
 
 		/** Sets an absolute time value in seconds since the UNIX epoch, & the 
             time zone it's measured in.

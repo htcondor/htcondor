@@ -366,6 +366,7 @@ collector_runtime_probe CollectorEngine_rucc_updatePvtAd_runtime;
 collector_runtime_probe CollectorEngine_rucc_repeatAd_runtime;
 collector_runtime_probe CollectorEngine_rucc_other_runtime;
 
+
 ClassAd *CollectorEngine::
 collect (int command, Sock *sock, const condor_sockaddr& from, int &insert)
 {
@@ -380,13 +381,16 @@ collect (int command, Sock *sock, const condor_sockaddr& from, int &insert)
 		// is ready to read.
 	sock->timeout(1);
 
+	// get the ad
 	clientAd = new ClassAd;
 	if (!clientAd) return 0;
 
-	// get the ad
-	if( !getClassAd(sock, *clientAd) )
+	int get_ad_opts = 0;
+	get_ad_opts |= GET_CLASSAD_LAZY_PARSE;
+	get_ad_opts |= GET_CLASSAD_FAST;
+	if( !getClassAdEx(sock, *clientAd, get_ad_opts) )
 	{
-		dprintf (D_ALWAYS,"Command %d on Sock not follwed by ClassAd (or timeout occured)\n",
+		dprintf (D_ALWAYS,"Command %d on Sock not followed by ClassAd (or timeout occured)\n",
 				command);
 		delete clientAd;
 		sock->end_of_message();
@@ -404,6 +408,7 @@ collect (int command, Sock *sock, const condor_sockaddr& from, int &insert)
 	} else {
 		// remove it from the ad if it's not authenticated.
 		clientAd->Delete("AuthenticatedIdentity");
+		clientAd->Delete("AuthenticationMethod");
 	}
 
 	CollectorEngine_ruc_authid_runtime.Add(rt.tick(rt_last));

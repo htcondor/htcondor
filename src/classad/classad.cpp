@@ -333,6 +333,23 @@ InsertAttr( const string &name, long long value, Value::NumberFactor f )
 	return( Insert( name, plit ) );
 }
 
+bool ClassAd::
+InsertAttr( const string &name, long long value)
+{
+	// Optimized insert of long long values that overwrite the destination value if the destination is a literal.
+	classad::ExprTree* & expr = attrList[name];
+	if (expr) {
+		if (expr->GetKind() == LITERAL_NODE) {
+			((Literal*)expr)->SetLong(value);
+			return true;
+		} else {
+			delete expr;
+		}
+	}
+	expr = Literal::MakeLong(value);
+	return expr != NULL;
+}
+
 
 bool ClassAd::
 DeepInsertAttr( ExprTree *scopeExpr, const string &name, int value, 
@@ -378,7 +395,25 @@ InsertAttr( const string &name, double value, Value::NumberFactor f )
 	
 	return( Insert( name, plit ) );
 }
-	
+
+
+bool ClassAd::
+InsertAttr( const string &name, double value)
+{
+	// Optimized insert of Real values that overwrite the destination value if the destination is a literal.
+	classad::ExprTree* & expr = attrList[name];
+	if (expr) {
+		if (expr->GetKind() == LITERAL_NODE) {
+			((Literal*)expr)->SetReal(value);
+			return true;
+		} else {
+			delete expr;
+		}
+	}
+	expr = Literal::MakeReal(value);
+	return expr != NULL;
+}
+
 
 bool ClassAd::
 DeepInsertAttr( ExprTree *scopeExpr, const string &name, double value, 
@@ -396,13 +431,18 @@ DeepInsertAttr( ExprTree *scopeExpr, const string &name, double value,
 bool ClassAd::
 InsertAttr( const string &name, bool value )
 {
-	ExprTree* plit ;
-	Value val;
-	
-	val.SetBooleanValue( value );
-	plit  = Literal::MakeLiteral( val );
-	
-	return( Insert( name, plit ) );
+	// Optimized insert of bool values that overwrite the destination value if the destination is a literal.
+	classad::ExprTree* & expr = attrList[name];
+	if (expr) {
+		if (expr->GetKind() == LITERAL_NODE) {
+			((Literal*)expr)->SetBool(value);
+			return true;
+		} else {
+			delete expr;
+		}
+	}
+	expr = Literal::MakeBool(value);
+	return expr != NULL;
 }
 
 
@@ -424,6 +464,24 @@ InsertAttr( const string &name, const char *value )
 	ExprTree* plit  = Literal::MakeString( value );
 	return( Insert( name, plit ) );
 }
+
+bool ClassAd::
+InsertAttr( const string &name, const char * str, size_t len)
+{
+	// Optimized insert of long long values that overwrite the destination value if the destination is a literal.
+	classad::ExprTree* & expr = attrList[name];
+	if (expr) {
+		if (expr->GetKind() == LITERAL_NODE) {
+			((Literal*)expr)->SetString(str, len);
+			return true;
+		} else {
+			delete expr;
+		}
+	}
+	expr = Literal::MakeString( str, len );
+	return expr != NULL;
+}
+
 
 bool ClassAd::
 DeepInsertAttr( ExprTree *scopeExpr, const string &name, const char *value )
@@ -476,10 +534,15 @@ bool ClassAd::InsertViaCache( std::string& name, const std::string & rhs, bool l
 			tree = penv;
 			return Insert(name, tree);
 		}
+		if (lazy) {
+			tree = CachedExprEnvelope::cache_lazy(name, rhs);
+			return Insert(name, tree);
+		}
 	}
 
 	// we did not use the cache, or get a hit in the cache... parse the expression
 	ClassAdParser parser;
+	parser.SetOldClassAd(true);
 	tree = parser.ParseExpression(rhs);
 	if ( ! tree) {
 		return false;
@@ -513,6 +576,7 @@ bool ClassAd::Insert( const std::string& attrName, ExprTree * tree )
 
 	// parent of the expression is this classad
 	tree->SetParentScope( this );
+
 
 	//pair<AttrList::iterator,bool> insert_result = attrList.insert( AttrList::value_type(attrName,tree) );
 	pair<AttrList::iterator,bool> insert_result = attrList.insert( std::make_pair(attrName, tree) );

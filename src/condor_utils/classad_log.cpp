@@ -783,6 +783,7 @@ LogSetAttribute::Play(void *data_structure)
 	ClassAd *ad = 0;
 	if ( ! table->lookup(key, ad))
 		return -1;
+	PRAGMA_REMIND("tj: FIX to re-enable the use of the classadCache here")
 	if (value_expr) {
 		// Such a shame, do we really need to make a
 		// copy of value_expr here?  Seems like we could just
@@ -790,7 +791,6 @@ LogSetAttribute::Play(void *data_structure)
 		// copying a parse tree, since after we Play it I doubt
 		// this class does anything more with value_expr beyond
 		// deallocating it.  - Todd 11/13 <tannenba@cs.wisc.edu>
-		PRAGMA_REMIND("tj: look into avoiding the copy here. is the cache in play?")
 		ExprTree * pTree = value_expr->Copy();
 		rval = ad->Insert(name, pTree);
 	} else {

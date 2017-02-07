@@ -135,6 +135,11 @@ class Literal : public ExprTree
 			if (lit) { lit->value.SetStringValue(str); }
 			return lit;
 		}
+		static Literal* MakeString(const char* str, size_t cch) {
+			Literal* lit = new Literal();
+			if (lit) { lit->value.SetStringValue(str, cch); }
+			return lit;
+		}
 		static Literal* MakeError() {
 			Literal* lit = new Literal();
 			if (lit) { lit->value.SetErrorValue(); }
@@ -145,6 +150,15 @@ class Literal : public ExprTree
 			if (lit) { lit->value.SetUndefinedValue(); }
 			return lit;
 		}
+
+		/// optimized value replacers
+		void SetBool(bool val) { value.SetBooleanValue(val); }
+		void SetReal(double val) { value.SetRealValue(val); }
+		void SetLong(long long val) { value.SetIntegerValue(val); }
+		void SetString(const char * str) { value.SetStringValue(str); }
+		void SetString(const char * str, size_t cch) { value.SetStringValue(str, cch); }
+		void SetString(const std::string & str) { value.SetStringValue(str); }
+		void SetUndefined() { value.SetUndefinedValue(); }
 
 		/// Make a deep copy
 		virtual ExprTree* Copy( ) const {
