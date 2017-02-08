@@ -1372,6 +1372,7 @@ static int ParseRulesCallback(void* pv, MACRO_SOURCE& source, MACRO_SET& /*mset*
 	MacroStreamXFormSource & xform = pargs->xfm;
 
 	classad::ClassAdParser parser;
+	parser.SetOldClassAd(true);
 	std::string tmp3;
 
 	// give the line to our tokener so we can parse it.
@@ -1496,7 +1497,7 @@ static int ParseRulesCallback(void* pv, MACRO_SOURCE& source, MACRO_SET& /*mset*
 			if (is_tool) fprintf(stderr, "ERROR: SET %s has no value", attr.c_str());
 		} else {
 			ExprTree * expr = NULL;
-			if ( ! parser.ParseExpression(ConvertEscapingOldToNew(rhs.ptr()), expr, true)) {
+			if ( ! parser.ParseExpression(rhs.ptr(), expr, true)) {
 				if (is_tool) fprintf(stderr, "ERROR: SET %s invalid expression : %s\n", attr.c_str(), rhs.ptr());
 			} else {
 				if ( ! ad->Insert(attr, expr)) {

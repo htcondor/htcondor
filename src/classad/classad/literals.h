@@ -201,6 +201,16 @@ class Literal : public ExprTree
 		#endif
 		}
 
+		const Value& getValue(Value::NumberFactor &f) const {
+		#ifdef REFACTOR_FACTOR
+			// TJ: This is wrong, but necessary to preserve the fiction that factor lives in Literal.
+			f = value.factor;
+		#else
+			f = factor;
+		#endif
+			return value;
+		}
+
 		/** Get the encapsulated value (with the factor applied)
 		 * 	@param v The value encapsulated by the literal
 		 */

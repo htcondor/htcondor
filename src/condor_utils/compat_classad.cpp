@@ -3575,16 +3575,13 @@ bool InsertLongFormAttrValue(classad::ClassAd & ad, const char * line, bool use_
 		return false;
 	}
 
-	//PRAGMA_REMIND("tj: change to put -long form into the cache")
-	std::string value;
-	ConvertEscapingOldToNew(rhs, value);
-
 	if (use_cache) {
-		return ad.InsertViaCache(attr, value);
+		return ad.InsertViaCache(attr, rhs);
 	}
 
 	classad::ClassAdParser parser;
-	ExprTree *tree = parser.ParseExpression(value);
+	parser.SetOldClassAd(true);
+	ExprTree *tree = parser.ParseExpression(rhs);
 	if ( ! tree) {
 		return false;
 

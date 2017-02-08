@@ -10036,27 +10036,17 @@ InsertJobExpr (MyString const &expr)
 void 
 InsertJobExpr (const char *expr, bool from_config_file /*=false*/)
 {
-	MyString attr_name;
+	std::string attr;
 	ExprTree *tree = NULL;
-	int pos = 0;
-	int retval = Parse (expr, attr_name, tree, &pos);
-
-	if (retval)
+	if ( ! ParseLongFormAttrValue(expr, attr, tree))
 	{
 		fprintf (stderr, "\nERROR: Parse error in expression: \n\t%s\n", expr);
-#if 0 // pos is currently always 0, so no point in this part...
-		fputs('\t', stderr);
-		while (pos--) {
-			fputc( ' ', stderr );
-		}
-		fprintf (stderr, "^^^\n");
-#endif
 		fprintf(stderr,"Error in %s. Aborting submit.\n", from_config_file ? "config file SUBMIT_ATTRS or SUBMIT_EXPRS value" : "submit file");
 		DoCleanup(0,0,NULL);
 		exit( 1 );
 	}
 
-	if (!job->Insert (attr_name.Value(), tree))
+	if (!job->Insert (attr, tree))
 	{	
 		fprintf(stderr,"\nERROR: Unable to insert expression: %s\n", expr);
 		DoCleanup(0,0,NULL);

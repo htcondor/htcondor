@@ -269,9 +269,14 @@ Unparse( string &buffer, const ExprTree *tree )
 
 	switch( tree->GetKind( ) ) {
 		case ExprTree::LITERAL_NODE: {
+#if 0
+			Value::NumberFactor factor;
+			const Value & val = ((const Literal*)tree)->getValue(factor);
+#else
 			Value				val;
 			Value::NumberFactor	factor;
 			((Literal*)tree)->GetComponents( val, factor );
+#endif
 			UnparseAux( buffer, val, factor );
 			return;
 		}
@@ -315,10 +320,17 @@ Unparse( string &buffer, const ExprTree *tree )
 			return;
 		}
 		
-		case ExprTree::EXPR_ENVELOPE:
-		{
-			// recurse b/c we indirect for this element.
-			Unparse( buffer, ((CachedExprEnvelope*)tree)->get());
+		case ExprTree::EXPR_ENVELOPE: {
+#if 0
+			if (this->oldClassAd) {
+				buffer += ((CachedExprEnvelope*)tree)->get_unparsed_str();
+			} else {
+#else
+			{
+#endif
+				// recurse b/c we indirect for this element.
+				Unparse( buffer, ((CachedExprEnvelope*)tree)->get());
+			}
 			return;
 		}
 

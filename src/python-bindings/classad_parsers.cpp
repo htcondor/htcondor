@@ -71,7 +71,6 @@ ClassAdWrapper *parseOld(boost::python::object input)
             continue;
         }
         std::string line_str = boost::python::extract<std::string>(line);
-		//PRAGMA_REMIND("TJ: this should be calling ConvertEscapingOldToNew or InsertLongFormAttrValue")
         size_t pos = line_str.find('=');
 
         // strip whitespace before the attribute and and around the =
@@ -311,8 +310,6 @@ OldClassAdIterator::next()
             adchar++;
         }
         if (invalid) {continue;}
-
-		//PRAGMA_REMIND("TJ: this should be calling ConvertEscapingOldToNew or InsertLongFormAttrValue")
 
         size_t pos = line_str.find('=');
 

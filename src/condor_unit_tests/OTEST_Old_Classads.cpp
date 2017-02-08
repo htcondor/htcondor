@@ -7033,9 +7033,9 @@ static bool test_equality() {
 		"and MyString.");
 	const char* classad_string = "\tFoo = 3";
 	ExprTree *e1, *e2;
-	MyString n1, n2;
-	Parse(classad_string, n1, e1);
-	Parse(classad_string, n2, e2);
+	std::string n1, n2;
+	ParseLongFormAttrValue(classad_string, n1, e1);
+	ParseLongFormAttrValue(classad_string, n2, e2);
 	emit_input_header();
 	emit_param("STRING", classad_string);
 	emit_output_expected_header();
@@ -7044,8 +7044,8 @@ static bool test_equality() {
 	emit_output_actual_header();
 	emit_param("ExprTree Equality", tfstr((*e1) == (*e2)));
 	emit_param("MyString Equality", tfstr(n1 == n2));
-	emit_param("n1", n1.Value());
-	emit_param("n2", n2.Value());
+	emit_param("n1", n1.c_str());
+	emit_param("n2", n2.c_str());
 	if(!((*e1) == (*e2)) || !(n1 == n2)) {
 		delete(e1); delete(e2);
 		FAIL;
@@ -7060,9 +7060,9 @@ static bool test_inequality() {
 	const char* classad_string1  = "Foo = 3";
 	const char* classad_string2  = "Bar = 5";
 	ExprTree *e1, *e2;
-	MyString n1, n2;
-	Parse(classad_string1, n1, e1);
-	Parse(classad_string2, n2, e2);
+	std::string n1, n2;
+	ParseLongFormAttrValue(classad_string1, n1, e1);
+	ParseLongFormAttrValue(classad_string2, n2, e2);
 	emit_input_header();
 	emit_param("STRING 1", classad_string1);
 	emit_param("STRING 2", classad_string2);

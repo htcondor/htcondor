@@ -783,6 +783,15 @@ LogSetAttribute::Play(void *data_structure)
 	ClassAd *ad = 0;
 	if ( ! table->lookup(key, ad))
 		return -1;
+
+#if 1
+	std::string attr(name);
+	if (ad->InsertViaCache(attr, value)) {
+		rval = TRUE;
+	} else {
+		rval = FALSE;
+	}
+#else
 	PRAGMA_REMIND("tj: FIX to re-enable the use of the classadCache here")
 	if (value_expr) {
 		// Such a shame, do we really need to make a
@@ -796,6 +805,7 @@ LogSetAttribute::Play(void *data_structure)
 	} else {
 		rval = ad->AssignExpr(name, value);
 	}
+#endif
 	ad->SetDirtyFlag(name, is_dirty);
 
 #if defined(HAVE_DLOPEN)
@@ -869,17 +879,17 @@ LogSetAttribute::ReadBody(FILE* fp)
 		return rval;
 	}
 
-    if (value_expr) delete value_expr;
-    value_expr = NULL;
-    if (ParseClassAdRvalExpr(value, value_expr)) {
-        if (value_expr) delete value_expr;
-        value_expr = NULL;
-        if (param_boolean("CLASSAD_LOG_STRICT_PARSING", true)) {
-            return -1;
-        } else {
-            dprintf(D_ALWAYS, "WARNING: strict classad parsing failed for expression: \"%s\"\n", value);
-        }
-    }
+	if (value_expr) delete value_expr;
+	value_expr = NULL;
+	if (ParseClassAdRvalExpr(value, value_expr)) {
+		if (value_expr) delete value_expr;
+		value_expr = NULL;
+		if (param_boolean("CLASSAD_LOG_STRICT_PARSING", true)) {
+			return -1;
+		} else {
+			dprintf(D_ALWAYS, "WARNING: strict classad parsing failed for expression: %s\n", value);
+		}
+	}
 	return rval + rval1;
 }
 

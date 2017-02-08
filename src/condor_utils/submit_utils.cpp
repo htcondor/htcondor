@@ -919,14 +919,9 @@ int SubmitHash::InsertJobExpr (MyString const &expr)
 
 int SubmitHash::InsertJobExpr (const char *expr, const char * source_label /*=NULL*/)
 {
-	MyString attr_name;
+	std::string attr;
 	ExprTree *tree = NULL;
-	//MyString hashkey(expr);
-	int pos = 0;
-	int retval = Parse (expr, attr_name, tree, &pos);
-
-	if (retval)
-	{
+	if ( ! ParseLongFormAttrValue(expr, attr, tree) || ! tree) {
 		push_error(stderr, "Parse error in expression: \n\t%s\n\t", expr);
 		if ( ! SubmitMacroSet.errors) {
 			fprintf(stderr,"Error in %s\n", source_label ? source_label : "submit file");
@@ -934,8 +929,7 @@ int SubmitHash::InsertJobExpr (const char *expr, const char * source_label /*=NU
 		ABORT_AND_RETURN( 1 );
 	}
 
-	if (!job->Insert (attr_name.Value(), tree))
-	{	
+	if (!job->Insert (attr, tree)) {
 		push_error(stderr, "Unable to insert expression: %s\n", expr);
 		ABORT_AND_RETURN( 1 );
 	}
