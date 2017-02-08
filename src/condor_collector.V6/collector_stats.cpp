@@ -371,6 +371,15 @@ void UpdatesStats::Init()
 	Pool.AddProbe("MachineAds",   &MachineAds,    NULL, IF_BASICPUB | MachineAds.PubDefault);
 	Pool.AddProbe("SubmitterAds", &SubmitterAds, NULL, IF_BASICPUB | SubmitterAds.PubDefault);
 
+	ADD_EXTERN_RUNTIME(Pool, HandleQuery, IF_VERBOSEPUB);
+	ADD_EXTERN_RUNTIME(Pool, HandleLocate, IF_VERBOSEPUB);
+#ifndef WIN32
+	ADD_EXTERN_RUNTIME(Pool, HandleQueryForked, IF_VERBOSEPUB);
+	ADD_EXTERN_RUNTIME(Pool, HandleQueryMissedFork, IF_VERBOSEPUB);
+	ADD_EXTERN_RUNTIME(Pool, HandleLocateForked, IF_VERBOSEPUB);
+	ADD_EXTERN_RUNTIME(Pool, HandleLocateMissedFork, IF_VERBOSEPUB);
+#endif
+
 	// receive_update and task breakdown
 	bool enable = param_boolean("PUBLISH_COLLECTOR_ENGINE_PROFILING_STATS",false);
 	int prof_publevel = enable ? IF_BASICPUB : IF_VERBOSEPUB;
