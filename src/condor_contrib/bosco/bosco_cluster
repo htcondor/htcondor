@@ -145,8 +145,9 @@ set_bosco_routing () {
         rm $dest_file 2>/dev/null
     else
         cat > $dest_file << EOF 
-grid_resource = $grid_res
-SUBMIT_EXPRS = grid_resource
+# Specifying a default grid_resource doesn't work in HTCondor 8.4.7+/8.5.5+
+#grid_resource = $grid_res
+#SUBMIT_EXPRS = grid_resource
 EOF
     fi
 }
