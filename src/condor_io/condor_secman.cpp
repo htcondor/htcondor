@@ -467,7 +467,15 @@ SecMan::FillInSecurityPolicyAd( DCpermission auth_level, ClassAd* ad,
 	// auth methods
 	paramer = SecMan::getSecSetting ("SEC_%s_AUTHENTICATION_METHODS", auth_level);
 	if (paramer == NULL) {
-		paramer = strdup(SecMan::getDefaultAuthenticationMethods().Value());
+		MyString methods = SecMan::getDefaultAuthenticationMethods();
+		if(auth_level == READ) {
+			methods += ",CLAIMTOBE";
+			dprintf(D_SECURITY, "SECMAN: default READ methods: %s\n", methods.Value());
+		} else if (auth_level == CLIENT_PERM) {
+			methods += ",CLAIMTOBE";
+			dprintf(D_SECURITY, "SECMAN:: default CLIENT methods: %s\n", methods.Value());
+		}
+		paramer = strdup(methods.Value());
 	}
 
 	if (paramer) {
