@@ -54,6 +54,7 @@
 #define GM_TRANSFER_INPUT		15
 #define GM_TRANSFER_OUTPUT		16
 #define GM_DELETE_SANDBOX		17
+#define GM_TRANSFER_PROXY		18
 
 static const char *GMStateNames[] = {
 	"GM_INIT",
@@ -74,6 +75,7 @@ static const char *GMStateNames[] = {
 	"GM_TRANSFER_INPUT",
 	"GM_TRANSFER_OUTPUT",
 	"GM_DELETE_SANDBOX",
+	"GM_TRANSFER_PROXY",
 };
 
 #define JOB_STATE_UNKNOWN				-1
@@ -671,10 +673,9 @@ void INFNBatchJob::doEvaluateState()
 				errorString = "Job removed from batch queue manually";
 				SetRemoteJobId( NULL );
 				gmState = GM_HOLD;
-			} else if ( !myResource->GahpIsRemote() && jobProxy &&
+			} else if ( jobProxy && myResource->GahpCanRefreshProxy() &&
 						remoteProxyExpireTime < jobProxy->expiration_time ) {
-				// The ft-gahp doesn't support forwarding a refreshed proxy
-					gmState = GM_REFRESH_PROXY;
+					gmState = GM_TRANSFER_PROXY;
 			} else {
 				if ( lastPollTime < enteredCurrentGmState ) {
 					lastPollTime = enteredCurrentGmState;
@@ -725,6 +726,68 @@ void INFNBatchJob::doEvaluateState()
 			lastPollTime = time(NULL);
 			gmState = GM_SUBMITTED;
 			} break;
+		case GM_TRANSFER_PROXY: {
+			if ( condorState == REMOVED || condorState == HELD ) {
+				gmState = GM_SUBMITTED;
+			} else if ( !myResource->GahpIsRemote() ) {
+				gmState = GM_REFRESH_PROXY;
+			} else {
+				// We should never end up here if we don't have a
+				// proxy already!
+				if( ! jobProxy ) {
+					EXCEPT( "(%d.%d) Requested to refresh proxy, but no proxy present. ", procID.cluster,procID.proc);
+				}
+
+				if ( gahpAd == NULL ) {
+					gahpAd = buildTransferAd();
+				}
+				if ( gahpAd == NULL ) {
+					gmState = GM_HOLD;
+					break;
+				}
+
+				m_xferId = remoteSandboxId;
+				gahpAd->Assign( ATTR_TRANSFER_KEY, m_xferId );
+				FetchProxyList[m_xferId] = this;
+
+				// If available, use SSH tunnel for file transfer connections.
+				// Take our sinful string and replace the IP:port with
+				// the one that should be used on the remote side for
+				// tunneling.
+				if ( m_xfer_gahp->getSshForwardPort() ) {
+					std::string new_addr;
+					// TODO We're ignoring IPv6 for now.
+					Sinful our_sinful(daemonCore->InfoCommandSinfulString());
+					condor_sockaddr local_addr;
+					our_sinful.setHost("127.0.0.1");
+					our_sinful.setPort(m_xfer_gahp->getSshForwardPort());
+					our_sinful.clearAddrs();
+					local_addr.set_ipv4();
+					local_addr.set_loopback();
+					local_addr.set_port(m_xfer_gahp->getSshForwardPort());
+					our_sinful.addAddrToAddrs(local_addr);
+					new_addr = our_sinful.getSinful();
+					gahpAd->Assign( ATTR_TRANSFER_SOCKET, new_addr );
+				}
+
+				rc = m_xfer_gahp->blah_download_proxy( remoteSandboxId, gahpAd,
+													   m_sandboxPath );
+				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
+					 rc == GAHPCLIENT_COMMAND_PENDING ) {
+					break;
+				}
+				if ( rc != GLOBUS_SUCCESS ) {
+					// unhandled error
+					dprintf( D_ALWAYS,
+							 "(%d.%d) blah_download_proxy() failed: %s\n",
+							 procID.cluster, procID.proc, m_xfer_gahp->getErrorString() );
+					errorString = m_xfer_gahp->getErrorString();
+					gmState = GM_CANCEL;
+					break;
+				}
+				gmState = GM_REFRESH_PROXY;
+			}
+		} break;
 		case GM_REFRESH_PROXY: {
 			if ( condorState == REMOVED || condorState == HELD ) {
 				gmState = GM_SUBMITTED;
@@ -735,8 +798,14 @@ void INFNBatchJob::doEvaluateState()
 					EXCEPT( "(%d.%d) Requested to refresh proxy, but no proxy present. ", procID.cluster,procID.proc);
 				}
 
+				std::string proxy_path = jobProxy->proxy_filename;
+				if ( myResource->GahpIsRemote() ) {
+					proxy_path = m_sandboxPath.c_str();
+					proxy_path += DIR_DELIM_CHAR;
+					proxy_path += condor_basename( jobProxy->proxy_filename );
+				}
 				rc = gahp->blah_job_refresh_proxy( remoteJobId,
-												   jobProxy->proxy_filename );
+												   proxy_path.c_str() );
 				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 					 rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
@@ -1146,6 +1215,10 @@ void INFNBatchJob::doEvaluateState()
 			if ( m_filetrans ) {
 				delete m_filetrans;
 				m_filetrans = NULL;
+			}
+			if ( !m_xferId.empty() ) {
+				FetchProxyList.erase( m_xferId );
+				m_xferId.clear();
 			}
 		}
 

@@ -284,6 +284,8 @@ class GenericGahpClient : public Service {
 		bool isStarted() { return server->m_gahp_pid != -1 && !server->m_gahp_startup_failed; }
 		bool isInitialized() { return server->is_initialized; }
 
+		StringList *getCommands() { return server->m_commands_supported; }
+
 	    void setErrorString( const std::string & newErrorString );
 		const char * getErrorString();
 
@@ -502,6 +504,10 @@ class GahpClient : public GenericGahpClient {
 
 		int
 		blah_upload_sandbox(const char *sandbox_id, const ClassAd *job_ad);
+
+		int
+		blah_download_proxy(const char *sandbox_id, const ClassAd *job_ad,
+							std::string &proxy_path);
 
 		int
 		blah_destroy_sandbox(const char *sandbox_id, const ClassAd *job_ad);
