@@ -14,11 +14,10 @@ my %opts;
 
 sub usage()
 {
-	print "Usage: condor_top.pl [-nhs num] classad-file1 clasad-file2
+    print "Usage: condor_top.pl [-nhs num] file1 file2
     Calculate runtime statistics from two classads and display the top
     results. The two input classads should be from the same daemon at
     different times.
-    -n: 	Displays only notable items
     -h:	Display this usage statement
     -c num:	Sort by column number 'num'\n";
 	exit;
@@ -56,13 +55,14 @@ sub parseKey
 	my $string = $_[0];
 	#Use reg ex to see if the key has "DC" at the beginning AND "Runtime" 
 	#at the end
-	if($string =~ /^DC/ && $string =~ /Runtime$/)
+	#if($string =~ /^DC/ && $string =~ /Runtime$/)
+	if($string =~ /Runtime$/)
 	{
 		#Remove "Runtime" from the end of the key
 		$string =~ s/Runtime//g;
 		return $string;
 	}
-	#If there isn't a match return an epty string
+	#If there isn't a match return an empty string
 	else
 	{
 		return "";
@@ -137,6 +137,7 @@ sub loadFiles()
 		for(my $j = 2; $j < (scalar @lines); $j++)
 		{
 			my @strings = split(" = ",$lines[$j]);
+            #print "$strings[0] = $strings[1]";
 			$fileHashes[$i]{$strings[0]} = $strings[1];
 		}
 		close($handle);
@@ -163,6 +164,7 @@ sub generateHash()
 	foreach $key (keys(%{$fileHashes[0]}))
 	{
 		$key = parseKey($key);
+        #print "key=$key\n";
 		
 		#If a key is not usable... or the key is not one of the 
 		#following...
@@ -188,13 +190,18 @@ sub generateHash()
 				$countB = $fileHashes[1]{$key};
 				chomp($countB);
 			}
-			
+
+            #print "key=$key count=$countB\n";
+
+
 			#Skip those which have 0 as a count as they don't
 			#have much useful info
 			if($countB == 0)
 			{
 				next;
 			}
+
+            #print "key=$key count=$countB\n";
 
 			if(defined($fileHashes[0]{$key}))
 			{
@@ -278,14 +285,26 @@ sub generateHash()
 #Print formatted health information
 sub generateHealthTable()
 {
-	my $dutyCycle = dutyCycle();
-	my $opsPerSec = $fileHashes[1]{"DCCommandsPerSecond_20m"};
-	if (exists $fileHashes[1]{"DCCommandsPerSecond_4h"}) { $opsPerSec = $fileHashes[1]{"DCCommandsPerSecond_4h"}; }
-	my $str = sprintf("Duty Cycle: %9.3f    Ops/second: %9.3f\n",
-		$dutyCycle,$opsPerSec);
+    if (exists $fileHashes[1]{"MonitorSelfSysCpuTime"}) {
+       my $str = sprintf("SysCpu:   %9d        UserCpu: %8d",
+                      $fileHashes[1]{"MonitorSelfSysCpuTime"},
+                      $fileHashes[1]{"MonitorSelfUserCpuTime"});
+       print("$str\n");
+    }
+    if (exists $fileHashes[1]{"MonitorSelfImageSize"}) {
+       my $str = sprintf("Memory:   %9d        RSS:     %8d",
+                      $fileHashes[1]{"MonitorSelfImageSize"},
+                      $fileHashes[1]{"MonitorSelfResidentSetSize"});
+       print("$str\n");
+    }
 
-	print("$str\n");
-	
+	my $dutyCycle = dutyCycle();
+	my $opsPerSec = "0";
+	if (exists $fileHashes[1]{"DCCommandsPerSecond_4m"}) { $opsPerSec = $fileHashes[1]{"DCCommandsPerSecond_4m"}; }
+	if (exists $fileHashes[1]{"DCCommandsPerSecond_20m"}) { $opsPerSec = $fileHashes[1]{"DCCommandsPerSecond_20m"}; }
+	if (exists $fileHashes[1]{"DCCommandsPerSecond_4h"}) { $opsPerSec = $fileHashes[1]{"DCCommandsPerSecond_4h"}; }
+	my $str = sprintf("Duty Cycle:    %7.2f %%   Ops/second: %9.3f", $dutyCycle*100.0,$opsPerSec);
+	print("$str\n\n");
 }
 
 #Print a formatted table listing statistics from 2 condor status data sets
@@ -294,7 +313,7 @@ sub generateTable()
 	my @keys;
 	my %notable_keys;
 	my $sort_col = 0;
-	my @cols = ("Runtime","Inst Avg","Avg","Delta Count","Count","Max","Item");
+	my @cols = ("Runtime","Inst Avg","Avg","Count/Min","Count","Max","Item");
 	my $size = @cols;
 
 	#Verify arguments and apply column to sort by
@@ -335,14 +354,14 @@ sub generateTable()
 	}
 
 	#Print column headers
-	my $str = sprintf("%7s%10s%7s%13s%9s%9s  %s\n\n",$cols[0],$cols[1],
+	my $str = sprintf("%9s%10s%7s%13s%11s%9s  %s\n\n",$cols[0],$cols[1],
 		$cols[2],$cols[3],$cols[4],$cols[5],$cols[6]);
 	print($str);
 
 	#Print all "interesting" items in the generated list
 	foreach my $key (@keys)
 	{
-		$str = sprintf("%7.1f%10.3f%7.3f%13.2f%9.0f%9.3f  %s\n", 
+		$str = sprintf("%9.1f%10.3f%7.3f%13.2f%11.0f%9.3f  %s\n",
 			$selectedItems{$key}[0],$selectedItems{$key}[1],
 			$selectedItems{$key}[2],$selectedItems{$key}[3],
 			$selectedItems{$key}[4],$selectedItems{$key}[5],
