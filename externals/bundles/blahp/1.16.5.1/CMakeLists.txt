@@ -49,7 +49,7 @@ if ( WITH_BLAHP )
 		endif()
 
 
-		condor_pre_external( BLAHP blahp-1.16.5.1-p22 "lib;include" "done")
+		condor_pre_external( BLAHP blahp-1.16.5.1-p23 "lib;include" "done")
 		
 		ExternalProject_Add(blahp
 						DEPENDS ${BLAHP_DEPENDS}
