@@ -763,6 +763,10 @@ VanillaProc::PublishUpdateAd( ClassAd* ad )
 
 
 int VanillaProc::pidNameSpaceReaper( int status ) {
+	if (requested_exit) {
+		return 0;
+	}
+
 	TemporaryPrivSentry sentry(PRIV_ROOT);
 	FILE *f = safe_fopen_wrapper_follow(m_pid_ns_status_filename.c_str(), "r");
 	if (f == NULL) {
