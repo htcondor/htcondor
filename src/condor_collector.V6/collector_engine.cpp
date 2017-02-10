@@ -385,10 +385,7 @@ collect (int command, Sock *sock, const condor_sockaddr& from, int &insert)
 	clientAd = new ClassAd;
 	if (!clientAd) return 0;
 
-	int get_ad_opts = 0;
-	get_ad_opts |= GET_CLASSAD_LAZY_PARSE;
-	get_ad_opts |= GET_CLASSAD_FAST;
-	if( !getClassAdEx(sock, *clientAd, get_ad_opts) )
+	if( !getClassAdEx(sock, *clientAd, m_get_ad_options) )
 	{
 		dprintf (D_ALWAYS,"Command %d on Sock not followed by ClassAd (or timeout occured)\n",
 				command);

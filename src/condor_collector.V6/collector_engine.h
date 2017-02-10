@@ -169,6 +169,7 @@ class CollectorEngine : public Service
 	int m_forwardInterval;
 public: // so that the config code can set it.
 	bool m_allowOnlyOneNegotiator; // prior to 8.5.8, this was hard-coded to be true.
+	int  m_get_ad_options; // new for 8.7.0, may be temporary
 };
 
 

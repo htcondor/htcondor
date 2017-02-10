@@ -1494,6 +1494,15 @@ void CollectorDaemon::Config()
 	}
 
 	collector.m_allowOnlyOneNegotiator = param_boolean("COLLECTOR_ALLOW_ONLY_ONE_NEGOTIATOR", false);
+	// This it temporary (for 8.7.0) just in case we need to turn off the new getClassAdEx options
+	collector.m_get_ad_options = param_integer("COLLECTOR_GETAD_OPTIONS", GET_CLASSAD_FAST | GET_CLASSAD_LAZY_PARSE);
+	collector.m_get_ad_options &= (GET_CLASSAD_LAZY_PARSE | GET_CLASSAD_FAST | GET_CLASSAD_NO_CACHE);
+	MyString opts;
+	if (collector.m_get_ad_options & GET_CLASSAD_FAST) { opts += "fast "; }
+	if (collector.m_get_ad_options & GET_CLASSAD_NO_CACHE) { opts += "no-cache "; }
+	else if (collector.m_get_ad_options & GET_CLASSAD_LAZY_PARSE) { opts += "lazy-parse "; }
+	if (opts.empty()) { opts = "none "; }
+	dprintf(D_ALWAYS, "COLLECTOR_GETAD_OPTIONS set to %s(0x%x)\n", opts.c_str(), collector.m_get_ad_options);
 
 	tmp = param(COLLECTOR_REQUIREMENTS);
 	MyString collector_req_err;
