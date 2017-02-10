@@ -1362,10 +1362,14 @@ for( int i = 0; i < argc; ++i ) {
 // This is also dumb, but less dangerous than (a) reaching into daemon
 // core to set a flag and (b) hoping that my command-line arguments and
 // its command-line arguments don't conflict.
-char ** dcArgv = (char **)malloc( 2 * sizeof( char * ) );
+char ** dcArgv = (char **)malloc( 4 * sizeof( char * ) );
 dcArgv[0] = argv[0];
+// Force daemon core to run in the foreground.
 dcArgv[1] = strdup( "-f" );
-argc = 2;
+// Disable the daemon core command socket.
+dcArgv[2] = strdup( "-p" );
+dcArgv[3] = strdup(  "0" );
+argc = 4;
 argv = dcArgv;
 
 	dc_main_init = & main_init;
