@@ -27,14 +27,18 @@ namespace classad {
 class CacheEntry
 {
 public: 
-    CacheEntry();
-    CacheEntry(const std::string & szNameIn, const std::string & szValueIn, ExprTree * pDataIn);
-    virtual ~CacheEntry();
+	CacheEntry() : pData(NULL) {}
+	CacheEntry(const std::string & szNameIn, const std::string & szValueIn, ExprTree * pDataIn)
+		: szName(szNameIn)
+		, szValue(szValueIn)
+		, pData(pDataIn)
+	{}
 
-    std::string szName;    // string space the names.
-    std::string szValue;   // reference back for cleanup
-    ExprTree * pData;
+	virtual ~CacheEntry();
 
+	std::string szName;    // string space the names.
+	std::string szValue;   // reference back for cleanup
+	ExprTree * pData;
 };
 
 typedef classad_weak_ptr< CacheEntry > pCacheEntry;
@@ -49,8 +53,8 @@ typedef classad_shared_ptr< CacheEntry > pCacheData;
 class CachedExprEnvelope : public ExprTree
 {
 public:
-	virtual ~CachedExprEnvelope();
-	
+	virtual ~CachedExprEnvelope() {} // nothing to do counted pointer and cache entry do all of the work.
+
 	/// node type
 	virtual NodeKind GetKind (void) const { return EXPR_ENVELOPE; }
 
@@ -59,66 +63,63 @@ public:
 	 * an indirect envelope
 	 */
 #ifndef WIN32
-	static ExprTree * cache ( std::string & pName, const std::string & szValue, ExprTree * pTree );
+	static ExprTree * cache ( std::string & pName, ExprTree * pTree, const std::string & szValue );
+	static ExprTree * cache_lazy ( std::string & pName, const std::string & szValue );
 #else
-	static ExprTree * cache (const std::string & pName, const std::string & szValue, ExprTree * pTree);
+	static ExprTree * cache (const std::string & pName, ExprTree * pTree, const std::string & szValue );
+	static ExprTree * cache_lazy (const std::string & pName, const std::string & szValue );
 #endif
-	
+
 	/**
 	 * will check to see if we hit or not and return the value.
 	 */ 
 	static CachedExprEnvelope * check_hit (std::string & szName, const std::string & szValue);
-	
+
 	/**
 	 * will dump the cache contents to a file.
 	 */
 	static bool _debug_dump_keys(const std::string & szFile);
 	static void _debug_print_stats(FILE* fp);
+	static bool _debug_get_counts(unsigned long &hits, unsigned long &misses, unsigned long &querys, unsigned long &hitdels, unsigned long &removals, unsigned long &unparse);
 	
-	ExprTree * get();
+	ExprTree * get() const;
+	const std::string & get_unparsed_str() const;
 
-	/**
-	 * Used to obtain the string 
-	 */
-	void getAttributeName(std::string & szFillMe);
-	
+#if defined(SCOPE_REFACTOR)
+	virtual const ClassAd *GetParentScope( ) const { return( parentScope ); }
+#endif
 protected:
 	
+#if defined(SCOPE_REFACTOR)
+	virtual void _SetParentScope( const ClassAd* parent) { parentScope = parent; }
+	CachedExprEnvelope() : parentScope(NULL) {;};
+#else
+	virtual void _SetParentScope( const ClassAd* ) { }
 	CachedExprEnvelope(){;};
+#endif
 	
 	/**
 	 * SameAs() - determines if two elements are the same.
 	 */
 	virtual bool SameAs(const ExprTree* tree) const;
 	
-	/**
-	 * To eliminate the mass of external checks to see if the ExprTree is 
-	 * a classad.
-	 */ 
-	virtual bool isClassad( ClassAd ** ptr =0 );
-	
 	/** Makes a deep copy of the expression tree
 	 * 	@return A deep copy of the expression, or NULL on failure.
 	 */
 	virtual ExprTree *Copy( ) const;
-	
-	virtual const ExprTree* self() const;
 
-	/* This version is for shared-library compatibility.
-	 * Remove it the next time we have to bump the ClassAds SO version.
-	 */
-	virtual const ExprTree* self();
-	
-	virtual void _SetParentScope( const ClassAd* );
 	virtual bool _Evaluate( EvalState& st, Value& v ) const;
 	virtual bool _Evaluate( EvalState& st, Value& v , ExprTree*& t) const;
 	virtual bool _Flatten( EvalState& st, Value& v, ExprTree*& t, int* i )const;
 	
+#if defined(SCOPE_REFACTOR)
+	const ClassAd *parentScope;
+#endif
 	pCacheData  m_pLetter; ///< Pointer to the actual element refrenced
 	
 };
-	
-}
+
+} // namespace classad
 
 #endif 
 

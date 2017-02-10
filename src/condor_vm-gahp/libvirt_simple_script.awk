@@ -143,7 +143,7 @@ END {
     }
 
     
-    n=split(attrs["VMPARAM_vm_Disk"], full_disk, ",");
+    n=split(attrs["VMPARAM_vm_Disk"], full_disk, " *, *");
     for ( i=1; i<=n; i++ )
     {
         # count is used to determine if format is passed.

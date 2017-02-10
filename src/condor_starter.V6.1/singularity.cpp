@@ -29,6 +29,7 @@ static bool find_singularity(std::string &exec)
 	exec = singularity;
 	return true;
 #else
+	(void) exec;
 	return false;
 #endif
 }

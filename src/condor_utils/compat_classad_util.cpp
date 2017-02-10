@@ -31,47 +31,11 @@
 
 /* TODO This function needs to be tested.
  */
-int Parse(const char*str, MyString &name, classad::ExprTree*& tree, int*pos)
-{
-	classad::ClassAdParser parser;
-	classad::ClassAd *newAd;
-
-		// We don't support the pos argument at the moment.
-	if ( pos ) {
-		*pos = 0;
-	}
-
-		// String escaping is different between new and old ClassAds.
-		// We need to convert the escaping from old to new style before
-		// handing the expression to the new ClassAds parser.
-	std::string newAdStr = "[";
-	newAdStr.append( compat_classad::ConvertEscapingOldToNew( str ) );
-	newAdStr += "]";
-	newAd = parser.ParseClassAd( newAdStr );
-	if ( newAd == NULL ) {
-		tree = NULL;
-		return 1;
-	}
-	if ( newAd->size() != 1 ) {
-		delete newAd;
-		tree = NULL;
-		return 1;
-	}
-	
-	classad::ClassAd::iterator itr = newAd->begin();
-	name = itr->first.c_str();
-	tree = itr->second->Copy();
-	delete newAd;
-	return 0;
-}
-
-/* TODO This function needs to be tested.
- */
 int ParseClassAdRvalExpr(const char*s, classad::ExprTree*&tree, int*pos)
 {
 	classad::ClassAdParser parser;
-	std::string str = compat_classad::ConvertEscapingOldToNew( s );
-	if ( parser.ParseExpression( str, tree, true ) ) {
+	parser.SetOldClassAd( true );
+	if ( parser.ParseExpression( s, tree, true ) ) {
 		return 0;
 	} else {
 		tree = NULL;
@@ -80,6 +44,16 @@ int ParseClassAdRvalExpr(const char*s, classad::ExprTree*&tree, int*pos)
 		}
 		return 1;
 	}
+}
+
+bool ParseLongFormAttrValue(const char * str, std::string & attr, classad::ExprTree*&tree, int*pos)
+{
+	const char * rhs = NULL;
+	if ( ! compat_classad::SplitLongFormAttrValue(str, attr, rhs)) {
+		if (pos) *pos = 0;
+		return 1;
+	}
+	return ParseClassAdRvalExpr(rhs, tree, pos) == 0;
 }
 
 /*

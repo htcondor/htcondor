@@ -297,6 +297,14 @@ public:
 	bool print_on_exit;
 };
 
+// get (and reset) dprintf runtime statistics (if they are enabled)
+bool _condor_dprintf_runtime (
+	double & disabled_runtime,
+	long & disabled_count,
+	double & enabled_runtime,
+	long & enabled_count,
+	bool clear);
+
 /* must call this upon entering child of fork() if child calls dprintf */
 void dprintf_init_fork_child( bool cloned = false );
 

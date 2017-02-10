@@ -684,7 +684,7 @@ void BaseJob::JobAdUpdateFromSchedd( const ClassAd *new_ad, bool full_ad )
 
 			if ( (expr = new_ad->LookupExpr( held_removed_update_attrs[i] )) != NULL ) {
 				ExprTree * pTree = expr->Copy();
-				jobAd->Insert( held_removed_update_attrs[i], pTree, false );
+				jobAd->Insert( held_removed_update_attrs[i], pTree );
 			} else {
 				jobAd->Delete( held_removed_update_attrs[i] );
 			}
@@ -996,16 +996,16 @@ WriteUserLog*
 InitializeUserLog( ClassAd *job_ad )
 {
 	int cluster, proc;
-	MyString userLogFile, dagmanNodeLog;
+	std::string userLogFile, dagmanNodeLog;
 	std::string gjid;
 	bool use_xml = false;
 	std::vector<const char*> logfiles;
 
 	if( getPathToUserLog(job_ad, userLogFile) ) {
-		logfiles.push_back(userLogFile.Value());
+		logfiles.push_back(userLogFile.c_str());
 	}
 	if( getPathToUserLog(job_ad, dagmanNodeLog, ATTR_DAGMAN_WORKFLOW_LOG) ) {                   
-		logfiles.push_back(dagmanNodeLog.Value());
+		logfiles.push_back(dagmanNodeLog.c_str());
 	}
 	if(logfiles.empty()) {
 		return NULL;

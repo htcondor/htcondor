@@ -1918,48 +1918,31 @@ ClassAdAttributeIsPrivate( char const *name )
 	return false;
 }
 
-bool ClassAd::Insert( const std::string &attrName, classad::ExprTree *& expr, bool bCache )
+bool ClassAd::Insert( const std::string &attrName, classad::ExprTree *& expr)
 {
-	return classad::ClassAd::Insert( attrName, expr, bCache );
+	return classad::ClassAd::Insert( attrName, expr );
 }
 
-int ClassAd::Insert( const char *name, classad::ExprTree *& expr, bool bCache )
+int ClassAd::Insert( const char *name, classad::ExprTree *& expr )
 {
-	string str = name;
-	return Insert( str, expr, bCache ) ? TRUE : FALSE;
+	string str(name);
+	return Insert( str, expr ) ? TRUE : FALSE;
 }
 
 int
 ClassAd::Insert(const std::string &str)
 {
-	
-	size_t backslash = str.find('\\');
-	if (backslash == std::string::npos) {
-		// No backslashes, no need to escape 'em (and mutate the string)
-		if (!classad::ClassAd::Insert(str)) {
-	  		return FALSE;
-		}
-		return TRUE;
-	}
-
-	// At least one backslash, take the slow path, allocate a new string
+	// this is not the optimial path, it would be better to
+	// use either the 2 argument insert, or the const char* form below
 	return this->Insert(str.c_str());
 }
 
 int
 ClassAd::Insert( const char *str )
 {
-		// String escaping is different between new and old ClassAds.
-		// We need to convert the escaping from old to new style before
-		// handing the expression to the new ClassAds parser.
-	string newAdStr;
-	ConvertEscapingOldToNew( str, newAdStr );
-	
-	if (!classad::ClassAd::Insert(newAdStr))
-	{
-	  return FALSE;
+	if ( ! InsertLongFormAttrValue(*this, str, true)) {
+		return FALSE;
 	}
-	
 	return TRUE;
 }
 
@@ -1968,14 +1951,15 @@ AssignExpr(char const *name,char const *value)
 {
 	classad::ClassAdParser par;
 	classad::ExprTree *expr = NULL;
+	par.SetOldClassAd( true );
 
 	if ( value == NULL ) {
 		value = "Undefined";
 	}
-	if ( !par.ParseExpression( ConvertEscapingOldToNew( value ), expr, true ) ) {
+	if ( !par.ParseExpression( value, expr, true ) ) {
 		return FALSE;
 	}
-	if ( !Insert( name, expr, false ) ) {
+	if ( !Insert( name, expr ) ) {
 		delete expr;
 		return FALSE;
 	}
@@ -3081,7 +3065,7 @@ CopyAttribute(const char *target_attr, classad::ClassAd &target_ad, const char *
 	classad::ExprTree *e = source_ad.Lookup( source_attr );
 	if ( e ) {
 		e = e->Copy();
-		target_ad.Insert( target_attr, e, false );
+		target_ad.Insert( target_attr, e );
 	} else {
 		target_ad.Delete( target_attr );
 	}
@@ -3127,7 +3111,7 @@ sPrintAdAsXML(std::string &output, const classad::ClassAd &ad, StringList *attr_
 		while( (attr = attr_white_list->next()) ) {
 			if ( (expr = ad.Lookup( attr )) ) {
 				classad::ExprTree *new_expr = expr->Copy();
-				tmp_ad.Insert( attr, new_expr, false );
+				tmp_ad.Insert( attr, new_expr );
 			}
 		}
 		unparser.Unparse( xml, &tmp_ad );
@@ -3175,7 +3159,7 @@ sPrintAdAsJson(std::string &output, const classad::ClassAd &ad, StringList *attr
 		while( (attr = attr_white_list->next()) ) {
 			if ( (expr = ad.Lookup( attr )) ) {
 				classad::ExprTree *new_expr = expr->Copy();
-				tmp_ad.Insert( attr, new_expr, false );
+				tmp_ad.Insert( attr, new_expr );
 			}
 		}
 		unparser.Unparse( output, &tmp_ad );
@@ -3237,7 +3221,7 @@ void ClassAd::ChainCollapse()
             ASSERT(tmpExprTree); 
 
             //K, it's clear. Insert it, but don't try to 
-            Insert((*itr).first, tmpExprTree, false);
+            Insert((*itr).first, tmpExprTree);
         }
     }
 }
@@ -3263,8 +3247,9 @@ GetExprReferences(const char* expr,
 {
 	classad::ClassAdParser par;
 	classad::ExprTree *tree = NULL;
+	par.SetOldClassAd( true );
 
-    if ( !par.ParseExpression( ConvertEscapingOldToNew( expr ), tree, true ) ) {
+    if ( !par.ParseExpression( expr, tree, true ) ) {
         return false;
     }
 
@@ -3552,6 +3537,58 @@ void ConvertEscapingOldToNew( const char *str, std::string &buffer )
 	}
 	buffer.resize(ix);
 }
+
+// split a single line of -long-form classad into attr and value part
+// removes leading whitespace and whitespace around the =
+// set rhs to point to the first non whitespace character after the =
+// you can pass this to ConvertEscapingOldToNew
+// returns true if there was an = and the attr was non-empty
+//
+bool SplitLongFormAttrValue(const char * line, std::string &attr, const char* &rhs)
+{
+	while (isspace(*line)) ++line;
+
+	const char * peq = strchr(line, '=');
+	if ( ! peq) return false;
+
+	const char * p = peq;
+	while (p > line && ' ' == p[-1]) --p;
+	attr.clear();
+	attr.append(line, p-line);
+
+	// set rhs to the first non-space character after the =
+	p = peq+1;
+	while (' ' == *p) ++p;
+	rhs = p;
+
+	return !attr.empty();
+}
+
+// split a single line of -long form classad into addr and value, then
+// parse and insert into the given classad, using the classadCache or not as requested.
+//
+bool InsertLongFormAttrValue(classad::ClassAd & ad, const char * line, bool use_cache)
+{
+	std::string attr;
+	const char * rhs;
+	if ( ! SplitLongFormAttrValue(line, attr, rhs)) {
+		return false;
+	}
+
+	if (use_cache) {
+		return ad.InsertViaCache(attr, rhs);
+	}
+
+	classad::ClassAdParser parser;
+	parser.SetOldClassAd(true);
+	ExprTree *tree = parser.ParseExpression(rhs);
+	if ( ! tree) {
+		return false;
+
+	}
+	return ad.Insert(attr, tree);
+}
+
 
 // end functions
 

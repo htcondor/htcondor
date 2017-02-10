@@ -127,7 +127,8 @@ TRANSFORM Arch,OS,OSAndVer,OSVer,OSName,OSMajor,OSShort,OSLegacy from (
   X86_64 LINUX   Ubuntu12    1204 Ubuntu      12 Ubuntu  LINUX
   X86_64 LINUX   Ubuntu14    1404 Ubuntu      14 Ubuntu  LINUX
   X86_64 LINUX   Fedora23    2300 Fedora      23 Fedora  LINUX
-  X86_64 LINUX   Fedora24    2200 Fedora      22 Fedora  LINUX
+  X86_64 LINUX   Fedora24    2400 Fedora      24 Fedora  LINUX
+  X86_64 LINUX   Fedora25    2500 Fedora      25 Fedora  LINUX
   X86_64 FREEBSD FreeBSD10   1003 FreeBSD     10 FreeBSD FREEBSD
 )";
 $rules_file = "$option.rules";
@@ -572,7 +573,8 @@ TRANSFORM Arch,OS,OSAndVer,OSVer,OSName,OSMajor,OSShort,OSLegacy,State from (
   X86_64 LINUX   Ubuntu12    1204 Ubuntu      12 Ubuntu  LINUX    Unclaimed
   X86_64 LINUX   Ubuntu14    1404 Ubuntu      14 Ubuntu  LINUX    Unclaimed
   X86_64 LINUX   Fedora23    2300 Fedora      23 Fedora  LINUX    Unclaimed
-  X86_64 LINUX   Fedora24    2200 Fedora      22 Fedora  LINUX    Unclaimed
+  X86_64 LINUX   Fedora24    2400 Fedora      24 Fedora  LINUX    Unclaimed
+  X86_64 LINUX   Fedora25    2500 Fedora      25 Fedora  LINUX    Unclaimed
   X86_64 FREEBSD FreeBSD10   1003 FreeBSD     10 FreeBSD FREEBSD  Unclaimed
 )";
 $rules_file = "$option.rules";
@@ -659,7 +661,8 @@ TRANSFORM Arch,OS,OSAndVer,OSVer,OSName,OSMajor,OSShort,OSLegacy,State from (
   X86_64 LINUX   Ubuntu12    1204 Ubuntu      12 Ubuntu  LINUX    Unclaimed
   X86_64 LINUX   Ubuntu14    1404 Ubuntu      14 Ubuntu  LINUX    Unclaimed
   X86_64 LINUX   Fedora23    2300 Fedora      23 Fedora  LINUX    Unclaimed
-  X86_64 LINUX   Fedora24    2200 Fedora      22 Fedora  LINUX    Unclaimed
+  X86_64 LINUX   Fedora24    2400 Fedora      24 Fedora  LINUX    Unclaimed
+  X86_64 LINUX   Fedora25    2500 Fedora      25 Fedora  LINUX    Unclaimed
   X86_64 FREEBSD FreeBSD10   1003 FreeBSD     10 FreeBSD FREEBSD  Unclaimed
 )";
 $rules_file = "$option.rules";

@@ -3259,7 +3259,7 @@ static const char * evaluate_macro_func (
 				ClassAd rhs;
 				std::string val;
 				std::string attr("CondorString");
-				if ( ! rhs.Insert(attr, tree, false)) {
+				if ( ! rhs.Insert(attr, tree)) {
 					delete tree; tree = NULL;
 				} else if(rhs.EvaluateAttrString(attr, val)) {
 					// value is valid. use it instead of mval

@@ -49,6 +49,14 @@ THREAD_LOCAL_STORAGE static priv_state CurrentPrivState = PRIV_UNKNOWN;
 static priv_state CurrentPrivState = PRIV_UNKNOWN;
 #endif
 
+#ifdef LINUX
+static int   CurrentSessionKeyring;
+static uid_t CurrentSessionKeyringUID;
+static int   PreviousSessionKeyring;
+static uid_t PreviousSessionKeyringUID;
+static pid_t SessionKeyringPID = 0;
+#endif
+
 priv_state
 get_priv_state(void)
 {
@@ -268,6 +276,22 @@ can_switch_ids( void )
 #endif
 
 	return SwitchIds;
+}
+
+
+static int should_use_keyring_sessions() {
+#ifdef LINUX
+	static int UseKeyringSessions = FALSE;
+	static int DidParamForKeyringSessions = FALSE;
+
+	if(!DidParamForKeyringSessions) {
+		UseKeyringSessions = param_boolean("USE_KEYRING_SESSIONS", false);
+		DidParamForKeyringSessions = true;
+	}
+	return UseKeyringSessions;
+#else
+	return false;
+#endif
 }
 
 
@@ -637,6 +661,7 @@ init_user_ids(const char username[], const char domain[])
 	}
 }
 
+// WINDOWS
 priv_state
 _set_priv(priv_state s, const char *file, int line, int dologging)
 {
@@ -1400,9 +1425,57 @@ set_file_owner_ids( uid_t uid, gid_t gid )
 }
 
 
+// since this makes syscalls directly into linux kernel, don't compile
+// this code on non-linux unix. (e.g. OS X)
+#ifdef LINUX
+
+// Define some syscall keyring constants.  Normally these are in
+// <keyutils.h>, but we only need a few values that are not changing,
+// and by placing them here we do not require keyutils development
+// package from being installed at compile time.
+#ifndef KEYCTL_JOIN_SESSION_KEYRING   // don't redefine if keyutils.h included
+  typedef int32_t key_serial_t;
+  #define KEYCTL_JOIN_SESSION_KEYRING     1       /* join or start named session keyring */
+  #define KEYCTL_DESCRIBE                 6       /* describe a key */
+  #define KEYCTL_LINK                     8       /* link a key into a keyring */
+  #define KEYCTL_UNLINK                   9       /* unlink a key from a keyring */
+  #define KEYCTL_SEARCH                   10      /* search for a key in a keyring */
+  #define KEY_SPEC_SESSION_KEYRING        -3      /* - key ID for session-specific keyring */
+  #define KEY_SPEC_USER_KEYRING           -4      /* - key ID for UID-specific keyring */
+  #define KEY_SPEC_INVALID_KEYRING        -99     /* - key ID for "invalid keyring" */
+  #define KEY_SPEC_INVALID_UID            -99     /* - user ID for "invalid user" */
+#endif  // of ifndef KEYCTL_JOIN_SESSION_KEYRING
+
+// helper functions to avoid importing libkeyutils
+static key_serial_t condor_keyctl_session(const char* n) {
+  return syscall(__NR_keyctl, KEYCTL_JOIN_SESSION_KEYRING, n);
+}
+
+static key_serial_t condor_keyctl_search(key_serial_t k, const char* t, const char* d, key_serial_t r) {
+  return syscall(__NR_keyctl, KEYCTL_SEARCH, k, t, d, r);
+}
+
+static long condor_keyctl_link(key_serial_t k, key_serial_t r) {
+  return syscall(__NR_keyctl, KEYCTL_LINK, k, r);
+}
+
+static long condor_keyctl_unlink(key_serial_t k, key_serial_t r) {
+  return syscall(__NR_keyctl, KEYCTL_UNLINK, k, r);
+}
+#endif
+
+
+// UNIX
 priv_state
 _set_priv(priv_state s, const char *file, int line, int dologging)
 {
+	/* NOTE  NOTE   NOTE  NOTE
+	 * This function is called from deep inside dprintf.  To
+	 * avoid potentially nasty recursive situations, ONLY call
+	 * dprintf() from inside of this function if the
+	 * dologging parameter is non-zero.
+	 */
+
 	priv_state PrevPrivState = CurrentPrivState;
 	if (s == CurrentPrivState) return s;
 	if (CurrentPrivState == PRIV_USER_FINAL) {
@@ -1427,6 +1500,47 @@ _set_priv(priv_state s, const char *file, int line, int dologging)
 			EXCEPT("Programmer Error: attempted switch to user privilege, "
 				   "but user ids are not initialized");
 		}
+
+		// ultimately, to be extra-paranoid all switches need a new
+		// session (to shed any old creds).  however, that means we can
+		// no longer dprintf in any of the below code since doing so
+		// switches to condor priv, creates a new session, and messes
+		// up the whole process below.  so for now, we only do it when
+		// switching to user priv.
+
+		// We only get here if we are actually switching state. (Not if we
+		// requested to to switch to the current state, or if we requested
+		// to switch away from a _FINAL state).
+
+#ifdef LINUX
+		if(should_use_keyring_sessions()) {
+
+			// if we were in priv user and are switching out, we need to unlink
+			// the keyring holding the user's AFS token.  we can assume that these
+			// structures exist since they were initialized when going INTO user priv.
+
+			if(PrevPrivState == PRIV_USER) {
+				// find the user and session keyring
+				key_serial_t sess_keyring = KEY_SPEC_SESSION_KEYRING;
+				key_serial_t user_keyring = CurrentSessionKeyring;
+				if (dologging) dprintf(D_SECURITY, "KEYCTL: unlinking keyring %i from %i\n", user_keyring, sess_keyring);
+
+				// unlink current creds as root.
+				set_root_euid();
+				long unlink_success = condor_keyctl_unlink(user_keyring, sess_keyring);
+
+				if (unlink_success == 0) {
+					// update state
+					PreviousSessionKeyring = CurrentSessionKeyring;
+					PreviousSessionKeyringUID = CurrentSessionKeyringUID;
+				} else {
+					PreviousSessionKeyring = KEY_SPEC_INVALID_KEYRING;
+					PreviousSessionKeyringUID = KEY_SPEC_INVALID_UID;
+				}
+			}
+		}
+#endif
+
 		switch (s) {
 		case PRIV_ROOT:
 			set_root_euid();
@@ -1438,19 +1552,102 @@ _set_priv(priv_state s, const char *file, int line, int dologging)
 			set_condor_euid();
 			break;
 		case PRIV_USER:
-			set_root_euid();	/* must be root to switch */
-			set_user_egid();
-			set_user_euid();
+		case PRIV_USER_FINAL:
+// we can only use linux-specific kernel keyrings
+#ifdef LINUX
+			if(should_use_keyring_sessions()) {
+
+				// if we're going to be using USER_PRIV states at all, we need to have
+				// our own session keyring per-process.  we accomplish this with static
+				// variables and by checking our pid to see if we fork()ed.  The initial
+				// value of SessionKeyringPID is zero, so the first time through we'll
+				// always create a new session.  Then, only of our pid changes.
+
+				pid_t curpid = getpid();
+				if((SessionKeyringPID != curpid)) {
+					set_root_euid();
+					// create a new session
+					condor_keyctl_session(NULL);
+					key_serial_t sess_keyring = KEY_SPEC_SESSION_KEYRING;
+					if (dologging) dprintf(D_SECURITY,
+						"KEYCTL: oldpid: %i, newpid: %i.  New session keyring %i\n",
+						SessionKeyringPID, curpid, sess_keyring);
+
+					SessionKeyringPID = curpid;
+				}
+
+
+				// First, see if we can simply attach the previously-used keyring
+				if(UserUid != PreviousSessionKeyringUID) {
+					set_root_euid();
+					// no. lookup the new one
+
+					// locate the master keyring.
+					// KEY_SPEC_USER_KEYRING is the uid keyring for root.
+					key_serial_t htcondor_keyring = KEY_SPEC_USER_KEYRING;
+
+					// create the keyring name for user keyring
+					MyString ring_name = "htcondor_uid";
+					ring_name = ring_name + UserUid;
+
+					// locate the user keyring
+					key_serial_t user_keyring = condor_keyctl_search(htcondor_keyring, "keyring", ring_name.Value(), 0);
+					if(user_keyring == -1) {
+						CurrentSessionKeyring = KEY_SPEC_INVALID_KEYRING;
+						CurrentSessionKeyringUID = KEY_SPEC_INVALID_UID;
+						if (dologging) dprintf(D_ALWAYS,
+							"KEYCTL: unable to find keyring '%s', error: %s\n",
+							ring_name.Value(), strerror(errno));
+					} else {
+						CurrentSessionKeyring = user_keyring;
+						CurrentSessionKeyringUID = UserUid;
+						if (dologging) dprintf(D_SECURITY,
+							 "KEYCTL: found user keyring %s (%li) for uid %i.\n",
+							 ring_name.Value(), (long)user_keyring, UserUid);
+					}
+				} else {
+					CurrentSessionKeyring = PreviousSessionKeyring;
+					CurrentSessionKeyringUID = PreviousSessionKeyringUID;
+					if (dologging) dprintf(D_SECURITY, "KEYCTL: resuming stored keyring %i and uid %i.\n",
+						CurrentSessionKeyring, CurrentSessionKeyringUID);
+				}
+
+
+				// only link if there's something to link to
+				if(CurrentSessionKeyring != KEY_SPEC_INVALID_KEYRING) {
+					set_root_euid();
+					// locate the session keyring and uid 0 keyring.
+					key_serial_t user_keyring = CurrentSessionKeyring;
+					key_serial_t sess_keyring = KEY_SPEC_SESSION_KEYRING;
+
+					// link the user keyring to our session keyring
+					long link_success = condor_keyctl_link(user_keyring, sess_keyring);
+					if(link_success == -1) {
+						if (dologging) dprintf(D_ALWAYS, "KEYCTL: link(%li,%li) error: %s\n",
+							(long)user_keyring, (long)sess_keyring, strerror(errno));
+					} else {
+						if (dologging) dprintf(D_SECURITY, "KEYCTL: linked key %li to %li\n",
+							(long)user_keyring, (long)sess_keyring);
+					}
+				}
+			}
+#endif // LINUX
+
+			set_root_euid();
+			if(s == PRIV_USER) {
+				// PRIV_USER: change effective
+				set_user_egid();
+				set_user_euid();
+			} else {
+				// PRIV_USER_FINAL: change real
+				set_user_rgid();
+				set_user_ruid();
+			}
 			break;
 		case PRIV_FILE_OWNER:
 			set_root_euid();	/* must be root to switch */
 			set_owner_egid();
 			set_owner_euid();
-			break;
-		case PRIV_USER_FINAL:
-			set_root_euid();	/* must be root to switch */
-			set_user_rgid();
-			set_user_ruid();
 			break;
 		case PRIV_CONDOR_FINAL:
 			set_root_euid();	/* must be root to switch */

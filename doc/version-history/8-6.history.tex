@@ -1,0 +1,163 @@
+%%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
+%%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
+%%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
+%%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
+%%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{\label{sec:History-8-6}Stable Release Series 8.6}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+This is a stable release series of HTCondor.
+As usual, only bug fixes (and potentially, ports to new platforms)
+will be provided in future 8.6.x releases.
+New features will be added in the 8.7.x development series.
+
+The details of each version are described below.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-8-6-1}Version 8.6.1}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item HTCondor version 8.6.1 not yet released.
+%\item HTCondor version 8.6.1 released on Month Date, 2017.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-8-6-0}Version 8.6.0}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item HTCondor version 8.6.0 released on January 26, 2017.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item Added two new job classad attributes, \Macro{CumulativeRemoteSysCpu} and 
+\Macro{CumulativeRemoteUserCpu}, which keep a running total of system and user
+cpu usage, respectively, across all job restarts.  Also, immediately clear attributes
+\Macro{RemoteSysCpu} and \Macro{RemoveUserCpu} on job start, instead of on first update.
+\Ticket{6022}
+
+\item Added a new config knob, \MacroNI{ALWAYS\_REUSEADDR}, which defaults
+to \Expr{True}.  When \Expr{True}, it tells HTCondor to set the
+\MacroNI{SO\_REUSEADDR} socket option, so that
+the schedd can run large numbers of very short jobs without exhausting the
+number of local ports needed for shadows.
+\Ticket{6040}
+
+\item Changed the default value of \MacroNI{IGNORE\_LEAF\_OOM} to \Expr{True}.
+\Ticket{5775}
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item Fixed a bug causing unnecessarily slow updates from the \Condor{startd}.
+If you depend on the old behavior, set \Macro{UPDATE\_SPREAD\_TIME} to 8.  A
+value of 0 enables the fix.
+\Ticket{6062}
+
+\item Fixed a race condition when running multiple concurrent jobs on the same claim.
+When the starter exits, it notifies the shadow, which tells the startd to kill the starter.
+Immediately after the shadows tells the startd, it fetches the next job, and tries to start it.
+If the starter hasn't completely exited yet (perhaps it needs to clean up a large sandbox),
+it will notice the shadow has closed the command socket, and the starter will go into disconnected
+mode, and get confused.  This has been fixed.
+\Ticket{6049}
+
+\item Fixed an infelicity with \Condor{submit} -i and docker universe,
+where it would start an interactive shell without a container.  Added error
+message expressing that this combination is not currently supported.
+\Ticket{6083}
+
+\item When a job claimed by the Job Router is held or removed, it is no
+longer considered a failure of the job route chosen for that job.
+\Ticket{5968}
+
+\item Fixed a bug in recovering a Google Compute Engine (GCE) job if the
+\Condor{gridmanager} restarts during submission of the instance request.
+\Ticket{6078}
+
+\item Fixed a bug that could cause re-installation of a remote cluster
+to fail in Bosco.
+\Ticket{6042}
+
+\item Fixed a bug with handling the proxy files of grid-type batch jobs
+when the proxy's filename is a relative path.
+\Ticket{6053}
+
+\item Fixed a bug that caused the \Prog{batch\_gahp} to crash when a job's
+X.509 proxy is refreshed and the \Prog{batch\_gahp} is configured to not
+create a limited copy of the proxy.
+\Ticket{6051}
+
+\item Fixed a bug in the virtual machine universe where \Attr{RequestMemory}
+and \Attr{RequestCPUs} were not changing the resources assigned to the VM
+created by HTCondor.  Now, \Attr{VM\_Memory} defaults to \Attr{RequestMemory},
+and the number of CPUs defaults to \Attr{RequestCPUs}.
+\Ticket{5998}
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-8-6-1}Version 8.6.1}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item HTCondor version 8.6.1 not yet released.
+%\item HTCondor version 8.6.1 released on Month Date, 2017.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+

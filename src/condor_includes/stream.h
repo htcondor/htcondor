@@ -432,11 +432,14 @@ public:
 		// ONLY valid until the next function call on this stream.
 		// Caller should NOT free the buffer or modify its contents.
 	int get_string_ptr( char const *&s );
+	int get_string_ptr( const char *&s, int &len );
 
 		// This is just like get(char const *&), but it calls
 		// prepare_crypto_for_secret() before and
 		// restore_crypto_after_secret() after.
 	int get_secret( char *&s );
+	int get_secret( const char *&s, int &len );
+
 		// This is just like put(char const *), but it calls
 		// prepare_crypto_for_secret() before and
 		// restore_crypto_after_secret() after.

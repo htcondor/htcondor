@@ -485,7 +485,7 @@ DockerAPI::stats(const std::string &container, uint64_t &memUsage, uint64_t &net
 
 	char request[256];
 
-	sprintf(request, "GET /containers/%s/stats?stream=0 HTTP/0.9\r\n\r\n", container.c_str());
+	sprintf(request, "GET /containers/%s/stats?stream=0 HTTP/1.0\r\n\r\n", container.c_str());
 	int ret = write(uds, request, strlen(request));
 	if (ret < 0) {
 		dprintf(D_ALWAYS, "Can't send request to docker server, no statistics will be available\n");
@@ -515,25 +515,25 @@ DockerAPI::stats(const std::string &container, uint64_t &memUsage, uint64_t &net
 		// Would really like a real JSON parser here...
 	pos = response.find("\"max_usage\"");
 	if (pos != std::string::npos) {
-		sscanf(response.c_str()+pos, "\"max_usage\":%ld", &memUsage);	
+		sscanf(response.c_str()+pos, "\"max_usage\":%" SCNu64, &memUsage);
 	}
 	pos = response.find("\"tx_bytes\"");
 	if (pos != std::string::npos) {
-		sscanf(response.c_str()+pos, "\"tx_bytes\":%ld", &netOut);	
+		sscanf(response.c_str()+pos, "\"tx_bytes\":%" SCNu64, &netOut);
 	}
 	pos = response.find("\"rx_bytes\"");
 	if (pos != std::string::npos) {
-		sscanf(response.c_str()+pos, "\"rx_bytes\":%ld", &netIn);	
+		sscanf(response.c_str()+pos, "\"rx_bytes\":%" SCNu64, &netIn);
 	}
 	pos = response.find("\"usage_in_usermode\"");
 	if (pos != std::string::npos) {
-		sscanf(response.c_str()+pos, "\"usage_in_usermode\":%ld", &userCpu);	
+		sscanf(response.c_str()+pos, "\"usage_in_usermode\":%" SCNu64, &userCpu);
 	}
 	pos = response.find("\"usage_in_kernelmode\"");
 	if (pos != std::string::npos) {
-		sscanf(response.c_str()+pos, "\"usage_in_kernelmode\":%ld", &sysCpu);	
+		sscanf(response.c_str()+pos, "\"usage_in_kernelmode\":%" SCNu64, &sysCpu);
 	}
-	dprintf(D_FULLDEBUG, "docker stats reports max_usage is %ld rx_bytes is %ld tx_bytes is %ld usage_in_usermode is %ld usage_in-sysmode is %ld\n", memUsage, netIn, netOut, userCpu, sysCpu);
+	dprintf(D_FULLDEBUG, "docker stats reports max_usage is %" PRIu64 " rx_bytes is %" PRIu64 " tx_bytes is %" PRIu64 " usage_in_usermode is %" PRIu64 " usage_in-sysmode is %" PRIu64 "\n", memUsage, netIn, netOut, userCpu, sysCpu);
 
 	return 0;
 #endif

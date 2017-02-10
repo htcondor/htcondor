@@ -36,85 +36,58 @@ const double Value::ScaleFactor[] = {
 	1024.0*1024.0*1024.0*1024.0	// Terra
 };
 
-
-Value::
-Value( )
+#ifdef REFACTOR_FACTOR
+void Value::ApplyFactor()
 {
-	valueType = UNDEFINED_VALUE;
-	booleanValue = false;
-	integerValue = 0;
-	realValue = 0.0;
-	listValue = NULL;
-	slistValue = NULL;
-	classadValue = NULL;
-	relTimeValueSecs = 0;
+	if (factor == NO_FACTOR) return;
+
+	double r = 0;
+	switch( valueType ) {
+	case INTEGER_VALUE:
+		r = integerValue;
+		break;
+	case REAL_VALUE:
+		r = realValue;
+		break;
+	default:
+		factor = NO_FACTOR;
+		return;
+	}
+
+	valueType = REAL_VALUE;
+	realValue = r * ScaleFactor[factor];
+	factor = NO_FACTOR;
 }
-
-
-Value::
-Value(const Value &value)
-{
-	valueType = UNDEFINED_VALUE;
-    CopyFrom(value);
-    return;
-}
-
-Value::
-~Value()
-{
-	_Clear();
-}
-
-Value& Value::
-operator=(const Value &value)
-{
-    if (this != &value) {
-        CopyFrom(value);
-    }
-    return *this;
-}
-
-
-void Value::
-Clear()
-{
-	_Clear();
-	valueType 	= UNDEFINED_VALUE;
-}
-
+#endif
 
 void Value::
 _Clear()
 {
 	switch( valueType ) {
-		case LIST_VALUE:
-			// list values live in the evaluation environment, so they must
-			// never be explicitly destroyed
-			listValue = NULL;
-			break;
 		case SLIST_VALUE:
 			delete slistValue;
-			slistValue = NULL;
-			break;
-		case CLASSAD_VALUE:
-			// classad values live in the evaluation environment, so they must 
-			// never be explicitly destroyed
-			classadValue = NULL;
 			break;
 
 		case STRING_VALUE:
 			delete strValue;
-			strValue = NULL;
 			break;
 
 		case ABSOLUTE_TIME_VALUE:
 			delete absTimeValueSecs;
-			absTimeValueSecs = NULL;
 			break;
 
 		default:
-			; // noop
+		case LIST_VALUE:
+		case CLASSAD_VALUE:
+			// list and classad values live in the evaluation environment, so they must
+			// never be explicitly destroyed
+			break;
 	}
+
+	classadValue = NULL; // this clears the entire union
+#ifdef REFACTOR_FACTOR
+	factor = NO_FACTOR;
+#endif
 }
 
 
@@ -215,8 +188,18 @@ IsBooleanValueEquiv(bool &b) const
 void Value::
 CopyFrom( const Value &val )
 {
+	// optimization, when copying string to string, we can skip the delete/new of the string buffer
+	if (valueType == STRING_VALUE && val.valueType == valueType) {
+		*strValue = *(val.strValue);
+		return;
+	}
+
 	_Clear();
 	valueType = val.valueType;
+#ifdef REFACTOR_FACTOR
+	factor = val.factor;
+#endif
+
 	switch (val.valueType) {
 		case STRING_VALUE:
 			strValue = new string( *val.strValue);
@@ -306,6 +289,11 @@ SetErrorValue (void)
 void Value::
 SetStringValue( const string &s )
 {
+	// optimization, when copying string to string, we can skip the delete/new of the string buffer
+	if (valueType == STRING_VALUE) {
+		*strValue = s;
+		return;
+	}
 	_Clear();
 	valueType = STRING_VALUE;
 	strValue = new string( s );
@@ -314,9 +302,27 @@ SetStringValue( const string &s )
 void Value::
 SetStringValue( const char *s )
 {
+	// optimization, when copying string to string, we can skip the delete/new of the string buffer
+	if (valueType == STRING_VALUE) {
+		*strValue = s;
+		return;
+	}
 	_Clear();
 	valueType = STRING_VALUE;
 	strValue = new string( s );
+}
+
+void Value::
+SetStringValue( const char *s, size_t cch )
+{
+	// optimization, when copying string to string, we can skip the delete/new of the string buffer
+	if (valueType == STRING_VALUE) {
+		strValue->assign(s, cch);
+		return;
+	}
+	_Clear();
+	valueType = STRING_VALUE;
+	strValue = new string( s, cch );
 }
 
 void Value::

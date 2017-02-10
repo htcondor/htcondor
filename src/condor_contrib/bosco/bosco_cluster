@@ -145,8 +145,9 @@ set_bosco_routing () {
         rm $dest_file 2>/dev/null
     else
         cat > $dest_file << EOF 
-grid_resource = $grid_res
-SUBMIT_EXPRS = grid_resource
+# Specifying a default grid_resource doesn't work in HTCondor 8.4.7+/8.5.5+
+#grid_resource = $grid_res
+#SUBMIT_EXPRS = grid_resource
 EOF
     fi
 }
@@ -790,9 +791,9 @@ else
     if [ "$cluster_type" == "htcondor" ]; then
         cluster_type="condor"
     fi
-    if [ ! "$cluster_type" == "pbs" -a ! "$cluster_type" == "lsf" -a ! "$cluster_type" == "sge" -a ! "$cluster_type" == "condor" ]; then
+    if [ ! "$cluster_type" == "pbs" -a ! "$cluster_type" == "lsf" -a ! "$cluster_type" == "sge" -a ! "$cluster_type" == "condor" -a ! "$cluster_type" == "slurm" ]; then
         echo "Unrecognized batch system: $1 (normalized: $cluster_type)"
-        echo "Please specify one of the following: pbs, lsf, sge, condor"
+        echo "Please specify one of the following: pbs, lsf, sge, condor, slurm"
         exit 1
     fi
 fi
@@ -984,6 +985,8 @@ LOG=\$ENV(HOME)/$remote_base_dir_host/glite/log
 FT_GAHP_LOG=\$(LOG)/FTGahpLog
 SEC_CLIENT_AUTHENTICATION_METHODS = FS, PASSWORD
 SEC_PASSWORD_FILE = \$ENV(HOME)/$remote_base_dir_host/glite/etc/passwdfile
+USE_SHARED_PORT = False
+ENABLE_URL_TRANSFERS = False
 EOF
 
 # A regular user cannot write on system files

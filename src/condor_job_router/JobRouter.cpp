@@ -128,11 +128,9 @@ JobRouter::~JobRouter() {
 #endif
 	if ( ! m_operate_as_tool) { InvalidatePublicAd(); }
 
-	m_scheduler->stop();
 	delete m_scheduler;
 	m_scheduler = NULL;
 	if( m_scheduler2 ) {
-		m_scheduler2->stop();
 		delete m_scheduler2;
 		m_scheduler2 = NULL;
 	}
@@ -205,8 +203,10 @@ JobRouter::config() {
 	}
 
 	m_scheduler->config();
+	m_scheduler->stop();
 	if( m_scheduler2 ) {
 		m_scheduler2->config();
+		m_scheduler2->stop();
 	}
 
 #if HAVE_JOB_HOOKS
@@ -248,7 +248,10 @@ JobRouter::config() {
 	std::string router_defaults;
 	if (param(router_defaults, PARAM_JOB_ROUTER_DEFAULTS) && ! router_defaults.empty()) {
 		// if the param doesn't start with [, then wrap it in [] before parsing, so that the parser knows to expect new classad syntax.
-		if (router_defaults[0] != '[') {
+		int i;
+		for ( i = 0; isspace(router_defaults[i]); i++ ) {
+		}
+		if (router_defaults[i] != '[') {
 			router_defaults.insert(0, "[ ");
 			router_defaults.append(" ]");
 			merge_defaults = false;
@@ -987,6 +990,12 @@ void
 JobRouter::Poll() {
 	dprintf(D_FULLDEBUG,"JobRouter: polling state of (%d) managed jobs.\n",NumManagedJobs());
 
+	// Update our mirror(s) of the job queue(s).
+	m_scheduler->poll();
+	if ( m_scheduler2 ) {
+		m_scheduler2->poll();
+	}
+
 	m_poll_count++;
 	if((m_poll_count % 5) == 1) {
 		//Every now and then (especially when we start up), make sure
@@ -1032,7 +1041,7 @@ CombineParentAndChildClassAd(classad::ClassAd *dest,classad::ClassAd *ad,classad
 		dprintf(D_FULLDEBUG,"failed to copy %s value\n",itr->first.c_str());
 			return false;
 		}
-		if(!dest->Insert(itr->first,tree, false)) {
+		if(!dest->Insert(itr->first,tree)) {
 		dprintf(D_FULLDEBUG,"failed to insert %s\n",itr->first.c_str());	
 		return false;
 		}
@@ -1203,6 +1212,14 @@ JobRouter::AdoptOrphans() {
 			dprintf(D_ALWAYS,"JobRouter (src=%s): failed to yield orphan job: %s\n",
 					src_key.c_str(),
 					error_details.Value());
+		} else {
+			// yield_job() sets the job's status to IDLE. If the job was
+			// previously running, we need an evict event.
+			int job_status = IDLE;
+			src_ad->EvaluateAttrInt( ATTR_JOB_STATUS, job_status );
+			if ( job_status == RUNNING || job_status == TRANSFERRING_OUTPUT ) {
+				WriteEvictEventToUserLog( *src_ad );
+			}
 		}
 	} while (query.Next(src_key));
 }
@@ -2030,9 +2047,16 @@ JobRouter::RerouteJob(RoutedJob *job) {
 
 void
 JobRouter::SetJobIdle(RoutedJob *job) {
-	job->src_ad.InsertAttr(ATTR_JOB_STATUS,IDLE);
-	if(false == PushUpdatedAttributes(job->src_ad)) {
-		dprintf(D_ALWAYS,"JobRouter failure (%s): failed to set src job status back to idle\n",job->JobDesc().c_str());
+	int old_status = IDLE;
+	job->src_ad.EvaluateAttrInt(ATTR_JOB_STATUS, old_status);
+	if ( old_status != IDLE ) {
+		if ( old_status == RUNNING || old_status == TRANSFERRING_OUTPUT ) {
+			WriteEvictEventToUserLog( job->src_ad );
+		}
+		job->src_ad.InsertAttr(ATTR_JOB_STATUS,IDLE);
+		if(false == PushUpdatedAttributes(job->src_ad)) {
+			dprintf(D_ALWAYS,"JobRouter failure (%s): failed to set src job status back to idle\n",job->JobDesc().c_str());
+		}
 	}
 }
 
@@ -2388,6 +2412,13 @@ JobRouter::FinishCleanupJob(RoutedJob *job) {
 	if(job->is_claimed) {
 		MyString error_details;
 		bool keep_trying = true;
+		int job_status = IDLE;
+		// yield_job() sets the job's status to IDLE. If the job was
+		// previously running, we need an evict event.
+		job->src_ad.EvaluateAttrInt( ATTR_JOB_STATUS, job_status );
+		if ( job_status == RUNNING || job_status == TRANSFERRING_OUTPUT ) {
+			WriteEvictEventToUserLog( job->src_ad );
+		}
 		if(!yield_job(job->src_ad,m_schedd1_name,m_schedd1_pool,job->is_done,job->src_proc_id.cluster,job->src_proc_id.proc,&error_details,JobRouterName().c_str(),job->is_sandboxed,m_release_on_hold,&keep_trying))
 		{
 			dprintf(D_ALWAYS,"JobRouter (%s): failed to yield job: %s\n",
@@ -2886,7 +2917,7 @@ JobRoute::ApplyRoutingJobEdits(classad::ClassAd *src_ad) {
 		else {
 			expr = expr->Copy();
 		}
-		if(!src_ad->Insert(new_attr,expr,false)) {
+		if(!src_ad->Insert(new_attr,expr)) {
 			return false;
 		}
 	}
@@ -2908,7 +2939,7 @@ JobRoute::ApplyRoutingJobEdits(classad::ClassAd *src_ad) {
 		if( !( tree = itr->second->Copy( ) ) ) {
 			return false;
 		}
-		if(!src_ad->Insert(attr,tree, false)) {
+		if(!src_ad->Insert(attr,tree)) {
 			return false;
 		}
 	}
@@ -2921,7 +2952,7 @@ JobRoute::ApplyRoutingJobEdits(classad::ClassAd *src_ad) {
 		if( !( tree = itr->second->Copy( ) ) ) {
 			return false;
 		}
-		if(!src_ad->Insert(attr,tree, false)) {
+		if(!src_ad->Insert(attr,tree)) {
 			return false;
 		}
 		classad::Value val;

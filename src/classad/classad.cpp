@@ -114,6 +114,9 @@ void SetOldClassAdSemantics(bool enable)
 ClassAd::
 ClassAd ()
 {
+#if defined(SCOPE_REFACTOR)
+	parentScope = NULL;
+#endif
 	EnableDirtyTracking();
 	chained_parent_ad = NULL;
 	alternateScope = NULL;
@@ -156,6 +159,9 @@ CopyFrom( const ClassAd &ad )
 		ExprTree::CopyFrom(ad);
 		chained_parent_ad = ad.chained_parent_ad;
 		alternateScope = ad.alternateScope;
+#if defined(SCOPE_REFACTOR)
+		parentScope = ad.parentScope;
+#endif
 		
 		this->do_dirty_tracking = false;
 		for( itr = ad.attrList.begin( ); itr != ad.attrList.end( ); itr++ ) {
@@ -167,7 +173,7 @@ CopyFrom( const ClassAd &ad )
                 break;
 			}
 			
-			Insert(itr->first, tree, false);
+			Insert(itr->first, tree);
 			if (ad.do_dirty_tracking && ad.IsAttributeDirty(itr->first)) {
 				dirtyAttrList.insert(itr->first);
 			}
@@ -300,7 +306,7 @@ InsertAttr( const string &name, int value, Value::NumberFactor f )
 	val.SetIntegerValue( value );
 	plit  = Literal::MakeLiteral( val, f );
 	
-	return( Insert( name, plit, false ) );
+	return( Insert( name, plit ) );
 }
 
 
@@ -312,7 +318,7 @@ InsertAttr( const string &name, long value, Value::NumberFactor f )
 
 	val.SetIntegerValue( value );
 	plit = Literal::MakeLiteral( val, f );
-	return( Insert( name, plit, false ) );
+	return( Insert( name, plit ) );
 }
 
 
@@ -324,7 +330,24 @@ InsertAttr( const string &name, long long value, Value::NumberFactor f )
 
 	val.SetIntegerValue( value );
 	plit = Literal::MakeLiteral( val, f );
-	return( Insert( name, plit, false) );
+	return( Insert( name, plit ) );
+}
+
+bool ClassAd::
+InsertAttr( const string &name, long long value)
+{
+	// Optimized insert of long long values that overwrite the destination value if the destination is a literal.
+	classad::ExprTree* & expr = attrList[name];
+	if (expr) {
+		if (expr->GetKind() == LITERAL_NODE) {
+			((Literal*)expr)->SetLong(value);
+			return true;
+		} else {
+			delete expr;
+		}
+	}
+	expr = Literal::MakeLong(value);
+	return expr != NULL;
 }
 
 
@@ -370,9 +393,27 @@ InsertAttr( const string &name, double value, Value::NumberFactor f )
 	val.SetRealValue( value );
 	plit  = Literal::MakeLiteral( val, f );
 	
-	return( Insert( name, plit, false ) );
+	return( Insert( name, plit ) );
 }
-	
+
+
+bool ClassAd::
+InsertAttr( const string &name, double value)
+{
+	// Optimized insert of Real values that overwrite the destination value if the destination is a literal.
+	classad::ExprTree* & expr = attrList[name];
+	if (expr) {
+		if (expr->GetKind() == LITERAL_NODE) {
+			((Literal*)expr)->SetReal(value);
+			return true;
+		} else {
+			delete expr;
+		}
+	}
+	expr = Literal::MakeReal(value);
+	return expr != NULL;
+}
+
 
 bool ClassAd::
 DeepInsertAttr( ExprTree *scopeExpr, const string &name, double value, 
@@ -390,13 +431,18 @@ DeepInsertAttr( ExprTree *scopeExpr, const string &name, double value,
 bool ClassAd::
 InsertAttr( const string &name, bool value )
 {
-	ExprTree* plit ;
-	Value val;
-	
-	val.SetBooleanValue( value );
-	plit  = Literal::MakeLiteral( val );
-	
-	return( Insert( name, plit, false ) );
+	// Optimized insert of bool values that overwrite the destination value if the destination is a literal.
+	classad::ExprTree* & expr = attrList[name];
+	if (expr) {
+		if (expr->GetKind() == LITERAL_NODE) {
+			((Literal*)expr)->SetBool(value);
+			return true;
+		} else {
+			delete expr;
+		}
+	}
+	expr = Literal::MakeBool(value);
+	return expr != NULL;
 }
 
 
@@ -415,14 +461,27 @@ DeepInsertAttr( ExprTree *scopeExpr, const string &name, bool value )
 bool ClassAd::
 InsertAttr( const string &name, const char *value )
 {
-	ExprTree* plit;
-	Value val;
-	
-	val.SetStringValue( value );
-	plit  = Literal::MakeLiteral( val );
-	
-	return( Insert( name, plit, false ) );
+	ExprTree* plit  = Literal::MakeString( value );
+	return( Insert( name, plit ) );
 }
+
+bool ClassAd::
+InsertAttr( const string &name, const char * str, size_t len)
+{
+	// Optimized insert of long long values that overwrite the destination value if the destination is a literal.
+	classad::ExprTree* & expr = attrList[name];
+	if (expr) {
+		if (expr->GetKind() == LITERAL_NODE) {
+			((Literal*)expr)->SetString(str, len);
+			return true;
+		} else {
+			delete expr;
+		}
+	}
+	expr = Literal::MakeString( str, len );
+	return expr != NULL;
+}
+
 
 bool ClassAd::
 DeepInsertAttr( ExprTree *scopeExpr, const string &name, const char *value )
@@ -435,13 +494,8 @@ DeepInsertAttr( ExprTree *scopeExpr, const string &name, const char *value )
 bool ClassAd::
 InsertAttr( const string &name, const string &value )
 {
-	ExprTree* plit ;
-	Value val;
-	
-	val.SetStringValue( value );
-	plit  = Literal::MakeLiteral( val );
-	
-	return( Insert( name, plit, false ) );
+	ExprTree* plit  = Literal::MakeString( value );
+	return( Insert( name, plit ) );
 }
 
 
@@ -454,157 +508,111 @@ DeepInsertAttr( ExprTree *scopeExpr, const string &name, const string &value )
 }
 // --- end string attribute insertion
 
-bool ClassAd::Insert( const std::string& serialized_nvp)
+#if 0
+// disabled, compat layer handles this. use the 3 argument form below to insert through the classad cache.
+bool ClassAd::Insert(const std::string& serialized_nvp);
+#endif
+
+// Parse and insert an attribute value via cache if the cache is enabled
+//
+bool ClassAd::InsertViaCache( std::string& name, const std::string & rhs, bool lazy /*=false*/)
 {
+	if (name.empty()) return false;
 
-  bool bRet = false;
-  string name, szValue;
-  size_t pos, npos, vpos;
-  size_t bpos = 0;
-  
-  // comes in as "name = value" "name= value" or "name =value"
-  npos=pos=serialized_nvp.find('=');
-  
-  // only try to process if the string is valid 
-  if ( pos != string::npos  )
-  {
-    while (npos > 0 && serialized_nvp[npos-1] == ' ')
-    {
-      npos--;
-    }
-    while (bpos < npos && serialized_nvp[bpos] == ' ')
-    {
-      bpos++;
-    }
-    name = serialized_nvp.substr(bpos, npos - bpos);
+	// use cache if it is enabled, and the attribute name is not 'special' (i.e. doesn't start with a quote)
+	bool use_cache = doExpressionCaching;
+	if (name[0] == '\'') {
+		use_cache = false;
+	}
 
-    vpos=pos+1;
-    while (serialized_nvp[vpos] == ' ')
-    {
-      vpos++;
-    }
-
-    szValue = serialized_nvp.substr(vpos);
-
-	if ( name[0] == '\'' ) {
-		// We don't handle quoted attribute names for caching here.
-		// Hand the name-value-pair off to the parser as a one-attribute
-		// ad and merge the results into this ad.
-		ClassAdParser parser;
-		ClassAd new_ad;
-		name = "[" + serialized_nvp + "]";
-		if ( parser.ParseClassAd( name, new_ad, true ) ) {
-			return Update( new_ad );
-		} else {
-			return false;
+	// check the cache to see if we already have an expr tree, if we do then we
+	// get back a new envelope node, which we can just insert into the ad.
+	ExprTree * tree = NULL;
+	if (use_cache) {
+		CachedExprEnvelope * penv = CachedExprEnvelope::check_hit(name, rhs);
+		if (penv) {
+			tree = penv;
+			return Insert(name, tree);
+		}
+		if (lazy) {
+			tree = CachedExprEnvelope::cache_lazy(name, rhs);
+			return Insert(name, tree);
 		}
 	}
 
-    // here is the special logic to check
-    CachedExprEnvelope * cache_check = NULL;
-	if ( doExpressionCaching ) {
-		cache_check = CachedExprEnvelope::check_hit( name, szValue );
+	// we did not use the cache, or get a hit in the cache... parse the expression
+	ClassAdParser parser;
+	parser.SetOldClassAd(true);
+	tree = parser.ParseExpression(rhs);
+	if ( ! tree) {
+		return false;
 	}
-    if ( cache_check ) 
-    {
-	ExprTree * in = cache_check;
-	bRet = Insert( name, in, false );
-    }
-    else
-    {
-      ClassAdParser parser;
-      ExprTree * newTree=0;
 
-      // we did not hit in the cache... parse the expression
-      newTree = parser.ParseExpression(szValue);
-
-      if ( newTree )
-      {
-		// if caching is enabled, and we got to here then we know that the 
-		// cache doesn't already have an entry for this name:value, so add
-		// it to the cache now. 
-		if (doExpressionCaching) {
-			newTree = CachedExprEnvelope::cache(name, szValue, newTree);
-		}
-		bRet = Insert(name, newTree, false);
-      }
-
-    }
-    
-  } // end if pos != string::npos
-
-  return bRet;
+	// if caching is enabled, and we got to here then we know that the
+	// cache doesn't already have an entry for this name:value, so add
+	// it to the cache now.
+	if (use_cache) {
+		tree = CachedExprEnvelope::cache(name, tree, rhs);
+	}
+	return Insert(name, tree);
 }
 
 
-bool ClassAd::Insert( const std::string& attrName, ClassAd *& expr, bool cache )
-{
-    ExprTree * tree = expr;
-    bool bRet =  Insert( attrName, tree, cache );
-    
-    expr = (ClassAd *)tree;
-    return (bRet);
-	
-}
-
-bool ClassAd::Insert( const std::string& attrName, ExprTree *& pRef, bool cache )
+bool ClassAd::Insert( const std::string& attrName, ExprTree * tree )
 {
 	bool bRet = false;
-	ExprTree * tree = pRef;
-	const std::string * pstrAttr = &attrName;
-#ifndef WIN32
-	std::string strName; // in case we want to insert attrName into the cache
-#endif
 	
 		// sanity checks
 	if( attrName.empty() ) {
 		CondorErrno = ERR_MISSING_ATTRNAME;
 		CondorErrMsg= "no attribute name when inserting expression in classad";
-		return( false );
+		return false;
 	}
-	if( !pRef ) {
+	if( !tree ) {
 		CondorErrno = ERR_BAD_EXPRESSION;
 		CondorErrMsg = "no expression when inserting attribute in classad";
-		return( false );
+		return false;
 	}
 
-	if (doExpressionCaching && cache)
-	{
-	  std::string empty; // an empty string to tell the cache to unparse the pRef
-#ifndef WIN32
-	  // when inserting an attrib into the cache, strName can get overwritten
-	  // by the string sharing code.  if it does we want to use strName from now on.
-	  strName = attrName; pstrAttr = &strName;
-	  tree = CachedExprEnvelope::cache(strName, empty, pRef);
+	// parent of the expression is this classad
+	tree->SetParentScope( this );
+
+
+	//pair<AttrList::iterator,bool> insert_result = attrList.insert( AttrList::value_type(attrName,tree) );
+	pair<AttrList::iterator,bool> insert_result = attrList.insert( std::make_pair(attrName, tree) );
+	if ( ! insert_result.second) {
+			// replace existing value
+		delete insert_result.first->second;
+		insert_result.first->second = tree;
+	}
+
+	MarkAttributeDirty(attrName);
+
+	return true;
+}
+
+// Optimized code for inserting literals, use when the caller has guaranteed the validity
+// of the name and literal and wants a fast code path for insertion.  This function ALWAYS
+// bypasses the classad cache, which is fine for numeral literals, but probably a bad idea
+// for large string literals.
+//
+bool ClassAd::InsertLiteral(const std::string & name, Literal* lit)
+{
+#if 0 // tj wonders, is this slower/faster?
+	classad::ExprTree* & ppv = attrList[name];
+	if (ppv) delete ppv;
+	ppv = lit;
 #else
-	  // std:string based string sharing is disabled on windows.
-	  tree = CachedExprEnvelope::cache(attrName, empty, pRef);
+	//pair<AttrList::iterator,bool> insert_result = attrList.insert( AttrList::value_type(name,lit) );
+	pair<AttrList::iterator,bool> insert_result = attrList.insert( std::make_pair(name, lit) );
+
+	if( !insert_result.second ) {
+			// replace existing value
+		delete insert_result.first->second;
+		insert_result.first->second = lit;
+	}
 #endif
-	  // what goes in may be destroyed in preference for cache.
-	  pRef = (ExprTree *)tree->self(); 
-	}
-	
-	if (tree)
-	{
-		
-		// parent of the expression is this classad
-		tree->SetParentScope( this );
-				
-		pair<AttrList::iterator,bool> insert_result =
-			attrList.insert( AttrList::value_type(*pstrAttr,tree) );
-
-		if( !insert_result.second ) {
-				// replace existing value
-			delete insert_result.first->second;
-			insert_result.first->second = tree;
-		}
-
-		MarkAttributeDirty(*pstrAttr);
-
-		bRet = true;
-	}
-	
-	return( bRet );
+	return true;
 }
 
 
@@ -836,10 +844,17 @@ DeepRemove( ExprTree *scopeExpr, const string &name )
 
 
 void ClassAd::
+#if defined(SCOPE_REFACTOR)
+_SetParentScope( const ClassAd *scope )
+#else
 _SetParentScope( const ClassAd* )
+#endif
 {
 	// already set by base class for this node; we shouldn't propagate 
 	// the call to sub-expressions because this is a new scope
+#if defined(SCOPE_REFACTOR)
+	parentScope = scope;
+#endif
 }
 
 
@@ -849,7 +864,7 @@ Update( const ClassAd& ad )
 	AttrList::const_iterator itr;
 	for( itr=ad.attrList.begin( ); itr!=ad.attrList.end( ); itr++ ) {
 		ExprTree * cpy = itr->second->Copy();
-		if(!Insert( itr->first, cpy, false)) {
+		if(!Insert( itr->first, cpy )) {
 			return false;
 		}
 	}
@@ -961,7 +976,7 @@ Copy( ) const
 			CondorErrMsg = "";
 			return( NULL );
 		}
-		newAd->Insert(itr->first,tree,false);
+		newAd->Insert(itr->first,tree);
 	}
 	newAd->EnableDirtyTracking();
 	return newAd;

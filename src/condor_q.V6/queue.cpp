@@ -389,7 +389,9 @@ static  ExtArray<PrioEntry> prioTable;
 
 static	int			analyze_detail_level = 0; // one or more of detail_xxx enum values above.
 
+#ifdef INCLUDE_ANALYSIS_SUGGESTIONS
 const int SHORT_BUFFER_SIZE = 8192;
+#endif
 const int LONG_BUFFER_SIZE = 16384;	
 char return_buff[LONG_BUFFER_SIZE * 100];
 
@@ -1611,7 +1613,7 @@ processCommandLineArguments (int argc, char *argv[])
 				exit( 1 );
 			}
 			qdo_mode = QDO_Format | QDO_Custom;
-			app.mask.registerFormat( argv[i+1], argv[i+2] );
+			app.mask.registerFormatF( argv[i+1], argv[i+2], FormatOptionNoTruncate );
 			if ( ! dash_autocluster) {
 				app.attrs.initializeFromString("ClusterId ProcId"); // this is needed to prevent some DAG code from faulting.
 			}

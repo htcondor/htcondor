@@ -132,27 +132,6 @@ void ExprTree::debug_format_value(Value &value, double time) const {
 		debug_print(result.c_str());
 }
 
-ExprTree::
-ExprTree ()
-{
-	parentScope = NULL;
-}
-
-
-ExprTree::
-~ExprTree()
-{
-}
-
-void ExprTree::
-CopyFrom(const ExprTree &tree)
-{
-    if (this != &tree) {
-        parentScope = tree.parentScope;
-    }
-    return;
-}
-
 bool ExprTree::
 Evaluate (EvalState &state, Value &val) const
 {
@@ -213,7 +192,10 @@ Evaluate( EvalState &state, Value &val, ExprTree *&sig ) const
 void ExprTree::
 SetParentScope( const ClassAd* scope ) 
 {
+#if defined(SCOPE_REFACTOR)
+#else
 	parentScope = scope;
+#endif
 	_SetParentScope( scope );
 }
 
@@ -223,6 +205,10 @@ Evaluate( Value& val ) const
 {
 	EvalState 	state;
 
+#if defined(SCOPE_REFACTOR)
+	state.SetScopes( GetParentScope() );
+	return( Evaluate( state, val ) );
+#else
 	if (parentScope == NULL) {
 		val.SetErrorValue();
 		return false;
@@ -230,6 +216,7 @@ Evaluate( Value& val ) const
 		state.SetScopes( parentScope );
 		return( Evaluate( state, val ) );
 	}
+#endif
 }
 
 
@@ -238,7 +225,11 @@ Evaluate( Value& val, ExprTree*& sig ) const
 {
 	EvalState 	state;
 
+#if defined(SCOPE_REFACTOR)
+	state.SetScopes( GetParentScope() );
+#else
 	state.SetScopes( parentScope );
+#endif
 	return( Evaluate( state, val, sig  ) );
 }
 
@@ -248,7 +239,11 @@ Flatten( Value& val, ExprTree *&tree ) const
 {
 	EvalState state;
 
+#if defined(SCOPE_REFACTOR)
+	state.SetScopes( GetParentScope() );
+#else
 	state.SetScopes( parentScope );
+#endif
 	return( Flatten( state, val, tree ) );
 }
 

@@ -456,9 +456,65 @@ CondorQ::fetchQueueFromHostAndProcessV2(const char *host,
 		request_ad.InsertAttr(ATTR_LIMIT_RESULTS, match_limit);
 	}
 
+	// determine if authentication can/will happen.  three reasons why it might not:
+	// 1) security negotiation is disabled (NEVER or OPTIONAL for outgoing connections)
+	// 2) Authentication is disabled (NEVER) by the client
+	// 3) Authentication is disabled (NEVER) by the server.  this is actually impossible to
+	//    get correct without actually querying the server but we make an educated guess by
+	//    paraming the READ auth level.
+	bool can_auth = true;
+	char *paramer = NULL;
+
+	paramer = SecMan::getSecSetting ("SEC_%s_NEGOTIATION", CLIENT_PERM);
+	if (paramer != NULL) {
+		char p = toupper(paramer[0]);
+		free(paramer);
+		if (p == 'N' || p == 'O') {
+			// authentication will not happen since no security negotiation will occur
+			can_auth = false;
+		}
+	}
+
+	paramer = SecMan::getSecSetting ("SEC_%s_AUTHENTICATION", CLIENT_PERM);
+	if (paramer != NULL) {
+		char p = toupper(paramer[0]);
+		free(paramer);
+		if (p == 'N') {
+			// authentication will not happen since client doesn't allow it.
+			can_auth = false;
+		}
+	}
+
+	// authentication will not happen since server probably doesn't allow it.
+	// on the off chance that someone's config manages to trick us, leave an
+	// undocumented knob as a last resort to disable our inference.
+	if (param_boolean("CONDOR_Q_INFER_SCHEDD_AUTHENTICATION", true)) {
+		paramer = SecMan::getSecSetting ("SEC_%s_AUTHENTICATION", READ);
+		if (paramer != NULL) {
+			char p = toupper(paramer[0]);
+			free(paramer);
+			if (p == 'N') {
+				can_auth = false;
+			}
+		}
+
+		paramer = SecMan::getSecSetting ("SCHEDD.SEC_%s_AUTHENTICATION", READ);
+		if (paramer != NULL) {
+			char p = toupper(paramer[0]);
+			free(paramer);
+			if (p == 'N') {
+				can_auth = false;
+			}
+		}
+	}
+
+	if (!can_auth) {
+		dprintf (D_ALWAYS, "detected that authentication will not happen.  falling back to QUERY_JOB_ADS without authentication.\n");
+	}
+
 	DCSchedd schedd(host);
 	int cmd = QUERY_JOB_ADS;
-	if (want_authentication && (useFastPath > 2)) {
+	if (want_authentication && can_auth && (useFastPath > 2)) {
 		cmd = QUERY_JOB_ADS_WITH_AUTH;
 	}
 	Sock* sock;

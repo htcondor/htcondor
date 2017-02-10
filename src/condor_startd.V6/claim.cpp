@@ -2486,7 +2486,7 @@ Claim::receiveJobClassAdUpdate( ClassAd &update_ad )
 			// replace expression in current ad with expression from update ad
 		ExprTree *new_expr = expr->Copy();
 		ASSERT( new_expr );
-		if( !c_ad->Insert( name, new_expr, false ) ) {
+		if( !c_ad->Insert( name, new_expr ) ) {
 			delete new_expr;
 		}
 	}

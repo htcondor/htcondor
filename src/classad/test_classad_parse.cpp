@@ -168,7 +168,7 @@ int parse_ads(bool with_cache, bool verbose=false)
 	srand(42);
 	adsource infile;
 
-	string szInput;
+	string szInput, name, szValue;
 	szInput.reserve(longest_kvp);
 	clock_t Start = clock();
 
@@ -182,8 +182,23 @@ int parse_ads(bool with_cache, bool verbose=false)
 		{
 			ads.push_back(pAd);
 			pAd.reset( new ClassAd );
+			continue;
 		}
-		else if ( !pAd->Insert(szInput) )
+
+		size_t pos = szInput.find('=');
+
+		// strip whitespace before the attribute and and around the =
+		size_t npos = pos;
+		while (npos > 0 && szInput[npos-1] == ' ') { npos--; }
+		size_t bpos = 0;
+		while (bpos < npos && szInput[bpos] == ' ') { bpos++; }
+		name = szInput.substr(bpos, npos - bpos);
+
+		size_t vpos = pos+1;
+		while (szInput[vpos] == ' ') { vpos++; }
+		szValue = szInput.substr(vpos);
+
+		if ( pAd->InsertViaCache(name, szValue) )
 		{
 			fprintf(stdout, "BARFED ON: %s\n", szInput.c_str());
 		}

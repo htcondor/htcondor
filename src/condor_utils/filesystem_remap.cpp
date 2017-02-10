@@ -82,6 +82,9 @@ bool FilesystemRemap::EcryptfsGetKeys(int & key1, int & key2)
 			retval = true;
 		}
 	}
+#else
+	(void) key1;
+	(void) key2;
 #endif
 
 	return retval;
@@ -370,6 +373,9 @@ int FilesystemRemap::AddEncryptedMapping(std::string mountpoint, std::string pas
 	// stash mount info for PerformMappings() to access.  we do this in advance as
 	// we don't want PerformMappings doing heap memory allocation/destructions.
 	m_ecryptfs_mappings.push_back( std::pair<std::string, std::string>(mountpoint, mountopts) );
+#else
+	(void) mountpoint;
+	(void) password;
 #endif  // of if defined(LINUX)
 
 	return 0;
@@ -577,6 +583,9 @@ void FilesystemRemap::RemapProc() {
 #define SHARED_STR "shared:"
 
 void FilesystemRemap::ParseMountinfo() {
+
+#if defined(LINUX)
+
 	MyString str, str2;
 	const char * token;
 	FILE *fd;
@@ -618,7 +627,7 @@ void FilesystemRemap::ParseMountinfo() {
 	}
 
 	fclose(fd);
-
+#endif  // of defined(LINUX)
 }
 
 pair_strings_vector

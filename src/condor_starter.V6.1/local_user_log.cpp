@@ -25,6 +25,7 @@
 #include "condor_uid.h"
 #include "basename.h"
 #include "exit.h"
+#include "condor_config.h"
 
 
 LocalUserLog::LocalUserLog( JobInfoCommunicator* my_jic )
@@ -73,7 +74,8 @@ LocalUserLog::init( const std::vector<const char*>& filename, bool is_xml,
 
 bool
 LocalUserLog::initFromJobAd( ClassAd* ad, const char* path_attr,
-							 const char* xml_attr )
+							 const char* xml_attr,
+							 bool write_event_log )
 {
 	MyString tmp, dagmanLogFilename, logfilename;
 	bool use_xml = false;
@@ -156,6 +158,14 @@ LocalUserLog::initFromJobAd( ClassAd* ad, const char* path_attr,
 				dprintf( D_FULLDEBUG, "Adding \"%s\" to the mask\n",mask);
 				mask_vec.push_back(ULogEventNumber(atoi(mask)));
 			}
+		}
+	}
+
+	if ( logfiles.empty() && write_event_log ) {
+		char *global_log = param( "EVENT_LOG" );
+		if ( global_log ) {
+			logfiles.push_back( UNIX_NULL_FILE );
+			free( global_log );
 		}
 	}
 

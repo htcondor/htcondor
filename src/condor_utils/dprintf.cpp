@@ -776,6 +776,62 @@ int dprintf_getCount(void)
 // prototype
 struct tm *localtime();
 
+//#define ENABLE_DPRINTF_PROFILING 1
+#ifdef ENABLE_DPRINTF_PROFILING
+
+class _dprintf_va_runtime : public _condor_runtime
+{
+public:
+	bool is_enabled;
+	_dprintf_va_runtime() : is_enabled(false) { };
+	~_dprintf_va_runtime() {
+		if (is_enabled) {
+			enabled_runtime += elapsed_runtime();
+			enabled_count += 1;
+		} else {
+			disabled_runtime += elapsed_runtime();
+			disabled_count += 1;
+		}
+	};
+	static double disabled_runtime;
+	static double enabled_runtime;
+	static long disabled_count;
+	static long enabled_count;
+	static void clear() {
+		enabled_runtime = disabled_runtime = 0;
+		enabled_count = disabled_count = 0;
+	}
+};
+
+double _dprintf_va_runtime::enabled_runtime = 0;
+double _dprintf_va_runtime::disabled_runtime = 0;
+long _dprintf_va_runtime::enabled_count = 0;
+long _dprintf_va_runtime::disabled_count = 0;
+
+#endif // ENABLE_DPRINTF_PROFILING
+
+bool _condor_dprintf_runtime (
+	double & disabled_runtime,
+	long & disabled_count,
+	double & enabled_runtime,
+	long & enabled_count,
+	bool clear)
+{
+#ifdef ENABLE_DPRINTF_PROFILING
+	disabled_runtime = _dprintf_va_runtime::disabled_runtime;
+	disabled_count = _dprintf_va_runtime::disabled_count;
+	enabled_runtime = _dprintf_va_runtime::enabled_runtime;
+	enabled_count = _dprintf_va_runtime::enabled_count;
+	if (clear) { _dprintf_va_runtime::clear(); }
+	return true;
+#else
+	enabled_runtime = disabled_runtime = 0;
+	enabled_count = disabled_count = 0;
+	if (clear) {}
+	return false;
+#endif
+}
+
 void
 _condor_dprintf_va( int cat_and_flags, DPF_IDENT ident, const char* fmt, va_list args )
 {
@@ -792,6 +848,10 @@ _condor_dprintf_va( int cat_and_flags, DPF_IDENT ident, const char* fmt, va_list
 	int saved_errno;
 	priv_state	priv;
 	std::vector<DebugFileInfo>::iterator it;
+
+#ifdef ENABLE_DPRINTF_PROFILING
+	_dprintf_va_runtime art;
+#endif
 
 		/* DebugFP should be static initialized to stderr,
 	 	   but stderr is not a constant on all systems. */
@@ -817,6 +877,10 @@ _condor_dprintf_va( int cat_and_flags, DPF_IDENT ident, const char* fmt, va_list
 	if ( ! IsDebugCatAndVerbosity(cat_and_flags) && ! (cat_and_flags & D_FAILURE))
 		return;
 
+	// if this dprintf is enabled, switch runtime accumulation into the enabled counters
+#ifdef ENABLE_DPRINTF_PROFILING
+	art.is_enabled = true;
+#endif
 
 #if !defined(WIN32) /* signals and umasks don't exist in WIN32 */
 

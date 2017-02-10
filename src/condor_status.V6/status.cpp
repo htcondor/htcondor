@@ -974,7 +974,6 @@ main (int argc, char *argv[])
 		fprintf(fout, "Sort: [ %s<ord> ]\n", style_text.c_str());
 
 		style_text = "";
-		const CustomFormatFnTable * getCondorStatusPrintFormats();
 		List<const char> * pheadings = NULL;
 		if ( ! pm.has_headings()) {
 			if (pm_head.Length() > 0) pheadings = &pm_head;
@@ -1205,8 +1204,6 @@ main (int argc, char *argv[])
 
 	return 0;
 }
-
-const CustomFormatFnTable * getCondorStatusPrintFormats();
 
 
 int set_status_print_mask_from_stream (
@@ -1871,7 +1868,7 @@ secondPass (int argc, char *argv[])
 			continue;
 		}
 		if (is_dash_arg_prefix (argv[i], "format", 1)) {
-			pm.registerFormat (argv[i+1], argv[i+2]);
+			pm.registerFormatF (argv[i+1], argv[i+2], FormatOptionNoTruncate);
 
 			StringList attributes;
 			ClassAd ad;

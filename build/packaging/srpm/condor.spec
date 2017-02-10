@@ -348,6 +348,7 @@ BuildRequires: qpid-qmf-devel
 %if %systemd
 BuildRequires: systemd-devel
 BuildRequires: systemd-units
+Requires: systemd
 %endif
 
 BuildRequires: transfig
@@ -389,6 +390,11 @@ Requires(post):/sbin/chkconfig
 Requires(preun):/sbin/chkconfig
 Requires(preun):/sbin/service
 Requires(postun):/sbin/service
+%endif
+
+%if 0%{?rhel} >= 7
+Requires(post): policycoreutils-python
+Requires(post): selinux-policy-targeted >= 3.13.1-102
 %endif
 
 #Provides: user(condor) = 43
@@ -1010,7 +1016,6 @@ install -m 0755 src/condor_scripts/Condor.pm %{buildroot}%{_datadir}/condor/
 install -m 0755 src/condor_scripts/CondorPersonal.pm %{buildroot}%{_datadir}/condor/
 install -m 0755 src/condor_scripts/CondorTest.pm %{buildroot}%{_datadir}/condor/
 install -m 0755 src/condor_scripts/CondorUtils.pm %{buildroot}%{_datadir}/condor/
-install -m 0755 src/condor_scripts/CheckOutputFormats.pm %{buildroot}%{_datadir}/condor/
 
 # Install python-binding libs
 mkdir -p %{buildroot}%{python_sitearch}
@@ -1185,7 +1190,6 @@ rm -rf %{buildroot}
 %_datadir/condor/CondorPersonal.pm
 %_datadir/condor/CondorTest.pm
 %_datadir/condor/CondorUtils.pm
-%_datadir/condor/CheckOutputFormats.pm
 %if 0%{?rhel} >= 7
 %_datadir/condor/htcondor.pp
 %endif
@@ -1369,6 +1373,7 @@ rm -rf %{buildroot}
 # sbin/condor is a link for master_off, off, on, reconfig,
 %_sbindir/condor_advertise
 %_sbindir/condor_annexd
+%_sbindir/condor_aklog
 %_sbindir/condor_c-gahp
 %_sbindir/condor_c-gahp_worker_thread
 %_sbindir/condor_collector
@@ -1893,6 +1898,27 @@ fi
 %endif
 
 %changelog
+* Thu Jan 26 2017 Tim Theisen <tim@cs.wisc.edu> - 8.6.0-1
+- condor_q shows shows only the current user's jobs by default
+- condor_q summarizes related jobs (batches) on a single line by default
+- Users can define their own job batch name at job submission time
+- Immutable/protected job attributes make SUBMIT_REQUIREMENTS more useful
+- The shared port daemon is enabled by default
+- Jobs run in cgroups by default
+- HTCondor can now use IPv6 addresses (Prefers IPv4 when both present)
+- DAGMan: Able to easily define SCRIPT, VARs, etc., for all nodes in a DAG
+- DAGMan: Revamped priority implementation
+- DAGMan: New splice connection feature
+- New slurm grid type in the grid universe for submitting to Slurm
+- Numerous improvements to Docker support
+- Several enhancements in the python bindings
+
+* Mon Jan 23 2017 Tim Theisen <tim@cs.wisc.edu> - 8.4.11-1
+- Fixed a bug which delayed startd access to stard cron job results
+- Fixed a bug in pslot preemption that could delay jobs starting
+- Fixed a bug in job cleanup at job lease expiration if using glexec
+- Fixed a bug in locating ganglia shared libraries on Debian and Ubuntu
+
 * Tue Dec 13 2016 Tim Theisen <tim@cs.wisc.edu> - 8.5.8-1
 - The starter puts all jobs in a cgroup by default
 - Added condor_submit commands that support job retries

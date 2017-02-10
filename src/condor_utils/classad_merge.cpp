@@ -63,7 +63,7 @@ void MergeClassAds(ClassAd *merge_into, ClassAd *merge_from,
 			}
 
 			ExprTree *copy_expression = expression->Copy();
-			merge_into->Insert(name, copy_expression,false);
+			merge_into->Insert(name, copy_expression);
 		}
 	}
 
@@ -98,7 +98,7 @@ int MergeClassAdsIgnoring(ClassAd *merge_into, ClassAd *merge_from, const AttrNa
 			continue;
 
 		ExprTree  *copy_expression = expression->Copy();
-		merge_into->Insert(name, copy_expression,false);
+		merge_into->Insert(name, copy_expression);
 		++cMerged;
 	}
 

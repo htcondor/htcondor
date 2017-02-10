@@ -58,11 +58,16 @@ MACRO(ADD_PRECOMPILED_HEADER)
 					set_source_files_properties(
 						${src_file}
 						PROPERTIES
-						COMPILE_FLAGS "/Yu\"condor_common.h\" /Fp\"${PrecompiledBinary}\""
+						COMPILE_FLAGS "/MP /Yu\"condor_common.h\" /Fp\"${PrecompiledBinary}\""
 						OBJECT_DEPENDS "${PrecompiledBinary}"
 						)
 				else()
 					dprint("file ${src_file} NOT using condor_common.h first")
+					set_source_files_properties(
+						${src_file}
+						PROPERTIES
+						COMPILE_FLAGS "/MP"
+						)
 				endif()
 		endif() 
     endforeach()
@@ -78,7 +83,6 @@ MACRO(ADD_PRECOMPILED_HEADER)
 			OBJECT_OUTPUTS "${PrecompiledBinary}"
 			)
 	endif(UseCondorCommon)
-
 
   endif()  # of if MSVC and project has enough targets to be worth our time
 

@@ -1450,6 +1450,8 @@ int ParseRulesCallback(void* pv, MACRO_SOURCE& source, MACRO_SET& macro_set, cha
 	classad::ClassAdParser parser;
 	std::string tmp3;
 
+	parser.SetOldClassAd(true);
+
 	// give the line to our tokener so we can parse it.
 	tokener toke(line);
 	if ( ! toke.next()) return 0; // keep scanning
@@ -1568,7 +1570,7 @@ int ParseRulesCallback(void* pv, MACRO_SOURCE& source, MACRO_SET& macro_set, cha
 			fprintf(stderr, "ERROR: SET %s has no value", attr.c_str());
 		} else {
 			ExprTree * expr = NULL;
-			if ( ! parser.ParseExpression(ConvertEscapingOldToNew(rhs.ptr()), expr, true)) {
+			if ( ! parser.ParseExpression(rhs.ptr(), expr, true)) {
 				fprintf(stderr, "ERROR: SET %s invalid expression : %s\n", attr.c_str(), rhs.ptr());
 			} else {
 				const bool cache_it = false;

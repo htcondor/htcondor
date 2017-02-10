@@ -57,21 +57,6 @@ bool ClassAdGetExpressionCaching();
 extern bool _useOldClassAdSemantics;
 void SetOldClassAdSemantics(bool enable);
 
-template <class T>
-void val_str(std::string & szOut, const T & tValue)
-{
-  std::stringstream foo;
-  foo<<tValue;
-  szOut = foo.str();
-}
-template<bool>
-void val_str(std::string & szOut, const bool & tValue)
-{
-  std::stringstream foo;
-  foo <<(tValue?"true":"false");
-  szOut = foo.str();
-}
-
 /// The ClassAd object represents a parsed %ClassAd.
 class ClassAd : public ExprTree
 {
@@ -113,10 +98,19 @@ class ClassAd : public ExprTree
 			@return true if the operation succeeded, false otherwise.
 			@see ExprTree::setParentScope
 		*/
+#if 1
+		bool Insert( const std::string& attrName, ExprTree* expr);   // (ignores cache)
+		bool Insert( const std::string& attrName, ClassAd* expr) { return Insert(attrName, (ExprTree*)expr); }    // (ignores cache)
+		bool InsertLiteral(const std::string& attrName, Literal* lit); // (ignores cache)
+
+		// insert through cache if cache is enabled, otherwise just parse and insert
+		bool InsertViaCache( std::string& attrName, const std::string & rhs, bool lazy=false);
+#else
+		// 
 		bool Insert( const std::string& attrName, ExprTree *& pRef, bool cache=true);
 		bool Insert( const std::string& attrName, ClassAd *& expr, bool cache=true );
 		bool Insert( const std::string& serialized_nvp);
-
+#endif
 
 		/** Inserts an attribute into a nested classAd.  The scope expression is
 		 		evaluated to obtain a nested classad, and the attribute is 
@@ -144,7 +138,8 @@ class ClassAd : public ExprTree
 		bool InsertAttr( const std::string &attrName,long value, 
 				Value::NumberFactor f=Value::NO_FACTOR );
 		bool InsertAttr( const std::string &attrName,long long value, 
-				Value::NumberFactor f=Value::NO_FACTOR );
+				Value::NumberFactor f );
+		bool InsertAttr( const std::string &attrName,long long value );
 
 		/** Inserts an attribute into a nested classad.  The scope expression 
 		 		is evaluated to obtain a nested classad, and the attribute is
@@ -174,7 +169,8 @@ class ClassAd : public ExprTree
             @return true on success, false otherwise
 		*/
 		bool InsertAttr( const std::string &attrName,double value, 
-				Value::NumberFactor f=Value::NO_FACTOR);
+				Value::NumberFactor f);
+		bool InsertAttr( const std::string &attrName,double value);
 
 		/** Inserts an attribute into a nested classad.  The scope expression
 		 		is evaluated to obtain a nested classad, and the insertion is
@@ -219,6 +215,7 @@ class ClassAd : public ExprTree
 			@param value The string attribute
 		*/
 		bool InsertAttr( const std::string &attrName, const char *value );
+		bool InsertAttr( const std::string &attrName, const char * str, size_t len );
 
 		/** Inserts an attribute into a nested classad.  The scope expression
 		 		is evaluated to obtain a nested classad, and the insertion is
@@ -748,6 +745,9 @@ class ClassAd : public ExprTree
 		 */
 		ClassAd *alternateScope;
 
+#if defined(SCOPE_REFACTOR)
+		virtual const ClassAd *GetParentScope( ) const { return( parentScope ); }
+#endif
   	private:
 		friend 	class AttributeReference;
 		friend 	class ExprTree;
@@ -780,6 +780,9 @@ class ClassAd : public ExprTree
 		DirtyAttrList dirtyAttrList;
 		bool          do_dirty_tracking;
 		ClassAd       *chained_parent_ad;
+#if defined(SCOPE_REFACTOR)
+		const ClassAd *parentScope;
+#endif
 };
 
 } // classad

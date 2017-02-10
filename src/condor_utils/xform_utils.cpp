@@ -157,12 +157,12 @@ MACRO_SET_CHECKPOINT_HDR* checkpoint_macro_set(MACRO_SET& set)
 	pchka += sizeof(void*) - (((size_t)pchka) & (sizeof(void*)-1));
 
 	// write the checkpoint into it.
-	MACRO_SET_CHECKPOINT_HDR * phdr = (MACRO_SET_CHECKPOINT_HDR *)pchka;
+	MACRO_SET_CHECKPOINT_HDR * phdr = reinterpret_cast<MACRO_SET_CHECKPOINT_HDR *>(pchka);
 	pchka = (char*)(phdr+1);
 	phdr->cTable = phdr->cMetaTable = 0;
 	phdr->cSources = (int)set.sources.size();
 	if (phdr->cSources) {
-		const char ** psrc = (const char**)pchka;
+		const char ** psrc = reinterpret_cast<const char**>(pchka);
 		for (int ii = 0; ii < phdr->cSources; ++ii) {
 			*psrc++ = set.sources[ii];
 		}
@@ -195,7 +195,7 @@ void rewind_macro_set(MACRO_SET& set, MACRO_SET_CHECKPOINT_HDR* phdr, bool and_d
 
 	set.sources.clear();
 	if (phdr->cSources > 0) {
-		const char ** psrc = (const char **)pchka;
+		const char ** psrc = reinterpret_cast<const char **>(pchka);
 		for (int ii = 0; ii < phdr->cSources; ++ii) {
 			set.sources.push_back(*psrc++);
 		}
@@ -231,9 +231,9 @@ void XFormHash::setup_macro_defaults()
 {
 	// make an instance of the defaults table that is private to this function.
 	// we do this because of the 'live' keys in the 
-	struct condor_params::key_value_pair* pdi = (struct condor_params::key_value_pair*) LocalMacroSet.apool.consume(sizeof(XFormMacroDefaults), sizeof(void*));
+	struct condor_params::key_value_pair* pdi = reinterpret_cast<struct condor_params::key_value_pair*> (LocalMacroSet.apool.consume(sizeof(XFormMacroDefaults), sizeof(void*)));
 	memcpy((void*)pdi, XFormMacroDefaults, sizeof(XFormMacroDefaults));
-	LocalMacroSet.defaults = (MACRO_DEFAULTS*)LocalMacroSet.apool.consume(sizeof(MACRO_DEFAULTS), sizeof(void*));
+	LocalMacroSet.defaults = reinterpret_cast<MACRO_DEFAULTS*>(LocalMacroSet.apool.consume(sizeof(MACRO_DEFAULTS), sizeof(void*)));
 	LocalMacroSet.defaults->size = COUNTOF(XFormMacroDefaults);
 	LocalMacroSet.defaults->table = pdi;
 	LocalMacroSet.defaults->metat = NULL;
@@ -1117,11 +1117,11 @@ static int DoRenameAttr(ClassAd * ad, const std::string & attr, const char * att
 	} else {
 		ExprTree * tree = ad->Remove(attr);
 		if (tree) {
-			if (ad->Insert(attrNew, tree, false)) {
+			if (ad->Insert(attrNew, tree)) {
 				return 1;
 			} else {
 				if (flags&1) fprintf(stderr, "ERROR: could not rename %s to %s\n", attr.c_str(), attrNew);
-				if ( ! ad->Insert(attr, tree, false)) {
+				if ( ! ad->Insert(attr, tree)) {
 					delete tree;
 				}
 			}
@@ -1144,7 +1144,7 @@ static int DoCopyAttr(ClassAd * ad, const std::string & attr, const char * attrN
 		ExprTree * tree = ad->Lookup(attr);
 		if (tree) {
 			tree = tree->Copy();
-			if (ad->Insert(attrNew, tree, false)) {
+			if (ad->Insert(attrNew, tree)) {
 				return 1;
 			} else {
 				if (flags&1) fprintf(stderr, "ERROR: could not copy %s to %s\n", attr.c_str(), attrNew);
@@ -1372,6 +1372,7 @@ static int ParseRulesCallback(void* pv, MACRO_SOURCE& source, MACRO_SET& /*mset*
 	MacroStreamXFormSource & xform = pargs->xfm;
 
 	classad::ClassAdParser parser;
+	parser.SetOldClassAd(true);
 	std::string tmp3;
 
 	// give the line to our tokener so we can parse it.
@@ -1496,11 +1497,10 @@ static int ParseRulesCallback(void* pv, MACRO_SOURCE& source, MACRO_SET& /*mset*
 			if (is_tool) fprintf(stderr, "ERROR: SET %s has no value", attr.c_str());
 		} else {
 			ExprTree * expr = NULL;
-			if ( ! parser.ParseExpression(ConvertEscapingOldToNew(rhs.ptr()), expr, true)) {
+			if ( ! parser.ParseExpression(rhs.ptr(), expr, true)) {
 				if (is_tool) fprintf(stderr, "ERROR: SET %s invalid expression : %s\n", attr.c_str(), rhs.ptr());
 			} else {
-				const bool cache_it = false;
-				if ( ! ad->Insert(attr, expr, cache_it)) {
+				if ( ! ad->Insert(attr, expr)) {
 					if (is_tool) fprintf(stderr, "ERROR: could not set %s to %s\n", attr.c_str(), rhs.ptr());
 					delete expr;
 				}
@@ -1518,8 +1518,7 @@ static int ParseRulesCallback(void* pv, MACRO_SOURCE& source, MACRO_SET& /*mset*
 				if (is_tool) fprintf(stderr, "ERROR: EVALSET %s could not evaluate : %s\n", attr.c_str(), rhs.ptr());
 			} else {
 				ExprTree * tree = XFormCopyValueToTree(val);
-				const bool cache_it = false;
-				if ( ! ad->Insert(attr, tree, cache_it)) {
+				if ( ! ad->Insert(attr, tree)) {
 					if (is_tool) fprintf(stderr, "ERROR: could not set %s to %s\n", attr.c_str(), XFormValueToString(val, tmp3));
 					delete tree;
 				} else if (verbose) {

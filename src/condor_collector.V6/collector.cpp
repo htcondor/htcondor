@@ -327,11 +327,33 @@ void CollectorDaemon::Init()
 	forkQuery.Initialize( );
 }
 
+collector_runtime_probe HandleQuery_runtime;
+collector_runtime_probe HandleLocate_runtime;
+#ifndef WIN32
+collector_runtime_probe HandleQueryForked_runtime;
+collector_runtime_probe HandleQueryMissedFork_runtime;
+collector_runtime_probe HandleLocateForked_runtime;
+collector_runtime_probe HandleLocateMissedFork_runtime;
+#endif
+
+template <typename T>
+class _condor_variable_auto_accum_runtime : public _condor_runtime
+{
+public:
+	_condor_variable_auto_accum_runtime(T * store) : runtime(store) { }; // remember where to save result
+	~_condor_variable_auto_accum_runtime() { (*runtime) += elapsed_runtime(); };
+	T * runtime;
+};
+
+
 int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 										 int command,
 										 Stream* sock)
 {
 	ClassAd cad;
+
+	_condor_variable_auto_accum_runtime<collector_runtime_probe> rt(&HandleQuery_runtime);
+	//double rt_last = rt.begin;
 
 	sock->decode();
 
@@ -361,8 +383,10 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 	List<ClassAd> results;
 	ForkStatus	fork_status = FORK_FAILED;
 	int	   		return_status = 0;
+	bool is_locate = cad.Lookup(ATTR_LOCATION_QUERY) != NULL;
+	if (is_locate) { rt.runtime = &HandleLocate_runtime; }
 
-    if (whichAds != (AdTypes) -1) {
+	if (whichAds != (AdTypes) -1) {
 
 			// only fork to handle the query for the "big" tables
 		if ((whichAds == GENERIC_AD) || 
@@ -373,8 +397,15 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 
 				fork_status = forkQuery.NewJob();
 				if ( FORK_PARENT == fork_status) {
+				#ifndef WIN32
+					if (is_locate) { rt.runtime = &HandleLocateForked_runtime; } else { rt.runtime = &HandleQueryForked_runtime; }
+				#endif
 					return 1;
-				} 
+				} else {
+				#ifndef WIN32
+					if (is_locate) { rt.runtime = &HandleLocateMissedFork_runtime; } else { rt.runtime = &HandleQueryMissedFork_runtime; }
+				#endif
+				}
 		}
 		// small table query / Child / Fork failed / busy
 		process_query_public (whichAds, &cad, &results);
@@ -414,14 +445,20 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 		// our persistent collector ad.
 		ClassAd * stats_ad = NULL;
 		if ((whichAds == COLLECTOR_AD) && collector.isSelfAd(curr_ad)) {
+			dprintf(D_ALWAYS,"Query includes collector's self ad\n");
 			// update stats in the collector ad before we return it.
 			MyString stats_config;
 			cad.LookupString("STATISTICS_TO_PUBLISH",stats_config);
 			if (stats_config != "stored") {
+				dprintf(D_ALWAYS,"Updating collector stats using a chained ad and config=%s\n", stats_config.Value());
 				stats_ad = new ClassAd();
 				daemonCore->dc_stats.Publish(*stats_ad, stats_config.Value());
 				daemonCore->monitor_data.ExportData(stats_ad, true);
 				collectorStats.publishGlobal(stats_ad, stats_config.Value());
+			#ifndef WIN32
+				stats_ad->InsertAttr("CurrentForkWorkers", forkQuery.getNumWorkers());
+				stats_ad->InsertAttr("PeakForkWorkers", forkQuery.getPeakWorkers());
+			#endif
 				stats_ad->ChainToAd(curr_ad);
 				curr_ad = stats_ad; // send the stats ad instead of the self ad.
 			}
@@ -468,18 +505,19 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 	end_write.getTime();
 
 	dprintf (D_ALWAYS,
-			 "Query info: matched=%d; skipped=%d; query_time=%f; send_time=%f; type=%s; requirements={%s}; peer=%s; projection={%s}\n",
+			 "Query info: matched=%d; skipped=%d; query_time=%f; send_time=%f; type=%s; requirements={%s}; locate=%d; peer=%s; projection={%s}\n",
 			 __numAds__,
 			 __failed__,
 			 end_query.difference(begin),
 			 end_write.difference(end_query),
 			 AdTypeToString(whichAds),
 			 ExprTreeToString(__filter__),
+			 is_locate,
 			 sock->peer_description(),
 			 projection.c_str());
 
     // all done; let daemon core will clean up connection
-  END:
+END:
 	if ( FORK_CHILD == fork_status ) {
 		forkQuery.WorkerDone( );		// Never returns
 	}
@@ -749,10 +787,19 @@ int CollectorDaemon::receive_invalidation(Service* /*s*/,
 }
 
 
+collector_runtime_probe CollectorEngine_receive_update_runtime;
+collector_runtime_probe CollectorEngine_ru_pre_collect_runtime;
+collector_runtime_probe CollectorEngine_ru_collect_runtime;
+collector_runtime_probe CollectorEngine_ru_plugins_runtime;
+collector_runtime_probe CollectorEngine_ru_forward_runtime;
+collector_runtime_probe CollectorEngine_ru_stash_socket_runtime;
+
 int CollectorDaemon::receive_update(Service* /*s*/, int command, Stream* sock)
 {
     int	insert;
 	ClassAd *cad;
+	_condor_auto_accum_runtime<collector_runtime_probe> rt(CollectorEngine_receive_update_runtime);
+	double rt_last = rt.begin;
 
 	daemonCore->dc_stats.AddToAnyProbe("UpdatesReceived", 1);
 
@@ -762,6 +809,7 @@ int CollectorDaemon::receive_update(Service* /*s*/, int command, Stream* sock)
 	// get endpoint
 	condor_sockaddr from = ((Sock*)sock)->peer_addr();
 
+	CollectorEngine_ru_pre_collect_runtime += rt.tick(rt_last);
     // process the given command
 	if (!(cad = collector.collect (command,(Sock*)sock,from,insert)))
 	{
@@ -787,6 +835,7 @@ int CollectorDaemon::receive_update(Service* /*s*/, int command, Stream* sock)
 		return FALSE;
 
 	}
+	CollectorEngine_ru_collect_runtime += rt.tick(rt_last);
 
 	/* let the off-line plug-in have at it */
 	offline_plugin_.update ( command, *cad );
@@ -797,6 +846,8 @@ int CollectorDaemon::receive_update(Service* /*s*/, int command, Stream* sock)
 #endif
 #endif
 
+	CollectorEngine_ru_plugins_runtime += rt.tick(rt_last);
+
 	if (viewCollectorTypes) {
 		forward_classad_to_view_collector(command,
 										  ATTR_MY_TYPE,
@@ -805,9 +856,13 @@ int CollectorDaemon::receive_update(Service* /*s*/, int command, Stream* sock)
         send_classad_to_sock(command, cad);
 	}
 
+	CollectorEngine_ru_forward_runtime += rt.tick(rt_last);
+
 	if( sock->type() == Stream::reli_sock ) {
 			// stash this socket for future updates...
-		return stashSocket( (ReliSock *)sock );
+		int rv = stashSocket( (ReliSock *)sock );
+		CollectorEngine_ru_stash_socket_runtime += rt.tick(rt_last);
+		return rv;
 	}
 
 	// let daemon core clean up the socket
@@ -1439,6 +1494,15 @@ void CollectorDaemon::Config()
 	}
 
 	collector.m_allowOnlyOneNegotiator = param_boolean("COLLECTOR_ALLOW_ONLY_ONE_NEGOTIATOR", false);
+	// This it temporary (for 8.7.0) just in case we need to turn off the new getClassAdEx options
+	collector.m_get_ad_options = param_integer("COLLECTOR_GETAD_OPTIONS", GET_CLASSAD_FAST | GET_CLASSAD_LAZY_PARSE);
+	collector.m_get_ad_options &= (GET_CLASSAD_LAZY_PARSE | GET_CLASSAD_FAST | GET_CLASSAD_NO_CACHE);
+	MyString opts;
+	if (collector.m_get_ad_options & GET_CLASSAD_FAST) { opts += "fast "; }
+	if (collector.m_get_ad_options & GET_CLASSAD_NO_CACHE) { opts += "no-cache "; }
+	else if (collector.m_get_ad_options & GET_CLASSAD_LAZY_PARSE) { opts += "lazy-parse "; }
+	if (opts.empty()) { opts = "none "; }
+	dprintf(D_ALWAYS, "COLLECTOR_GETAD_OPTIONS set to %s(0x%x)\n", opts.c_str(), collector.m_get_ad_options);
 
 	tmp = param(COLLECTOR_REQUIREMENTS);
 	MyString collector_req_err;
@@ -1634,6 +1698,10 @@ void CollectorDaemon::sendCollectorAd()
 
 	// Collector engine stats, too
 	collectorStats.publishGlobal( ad, NULL );
+#ifdef WIN32
+	ad->InsertAttr("CurrentForkWorkers", forkQuery.getNumWorkers());
+	ad->InsertAttr("PeakForkWorkers", forkQuery.getPeakWorkers());
+#endif
 
     daemonCore->dc_stats.Publish(*ad);
     daemonCore->monitor_data.ExportData(ad);

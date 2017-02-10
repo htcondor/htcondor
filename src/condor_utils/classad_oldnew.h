@@ -39,7 +39,18 @@ void AttrList_setPublishServerTimeMangled( bool publish);
 namespace compat_classad { class ClassAd; } //forward declaration
 compat_classad::ClassAd* getClassAd( Stream *sock );
 
-bool getClassAd( Stream *sock, classad::ClassAd& ad );
+bool getClassAd( Stream *sock, classad::ClassAd& ad);
+bool getClassAdEx( Stream *sock, classad::ClassAd& ad, int options);
+#define GET_CLASSAD_NO_CACHE            0x01 // don't use the classAdCache (default is to cache)
+#define GET_CLASSAD_NO_TYPES            0x02 // sock will not have MyType and TargetType following the ad
+//#define GET_CLASSAD_NON_BLOCKING        0x04 // use non-blocking sematics. returns 2 of this would have blocked.
+#define GET_CLASSAD_NO_CLEAR            0x08 // don't clear the ad, just merge new attributes into it.
+#define GET_CLASSAD_FAST                0x10 // use tricks to quickly parse the ad.
+#define GET_CLASSAD_LAZY_PARSE          0x20 // parse only when evaluating the first time. (ignored if GET_CLASSAD_NO_CACHE is set)
+
+class StatisticsPool;
+void getClassAdEx_addProfileStatsToPool(StatisticsPool * pool, int publevel);
+void getClassAdEx_clearProfileStats();
 
 /** Get the ClassAd from the CEDAR stream.  This will not block.
  *  Returns 2 if this would have blocked; the resulting ClassAd is not yet valid in this case

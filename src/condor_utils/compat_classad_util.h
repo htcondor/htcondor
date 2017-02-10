@@ -22,7 +22,8 @@
 
 #include "compat_classad.h"
 
-int Parse(const char*str, MyString &name, classad::ExprTree*& tree, int*pos = NULL);
+// parse str into attr=expression, returning the attr and the expression and true on success
+bool ParseLongFormAttrValue(const char*str, std::string &attr, classad::ExprTree*& tree, int*pos = NULL);
 
 int ParseClassAdRvalExpr(const char*s, classad::ExprTree*&tree, int*pos = NULL);
 

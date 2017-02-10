@@ -20,6 +20,7 @@
 #include "condor_common.h"
 #include "condor_classad.h"
 #include "condor_config.h"
+#include "directory.h"
 #include "docker_proc.h"
 #include "starter.h"
 #include "condor_holdcodes.h"
@@ -594,6 +595,28 @@ bool DockerProc::Version( std::string & version ) {
 // Generate a list of strings that are suitable arguments to
 // docker run --volume
 static void buildExtraVolumes(std::list<std::string> &extras, ClassAd &machAd, ClassAd &jobAd) {
+	// Bind mount items from MOUNT_UNDER_SCRATCH into working directory
+	std::string scratchNames;
+	if (param(scratchNames, "MOUNT_UNDER_SCRATCH")) {
+		std::string workingDir = Starter->GetWorkingDir();
+		StringList sl(scratchNames.c_str());
+		sl.rewind();
+		char *scratchName = 0;
+			// Foreach scratch name...
+		while ( (scratchName=sl.next()) ) {
+			char * hostDir = dirscat(workingDir.c_str(), scratchName);
+			std::string volumePath;
+			volumePath.append(hostDir).append(":").append(scratchName);
+			if (mkdir_and_parents_if_needed( hostDir, S_IRWXU, PRIV_USER )) {
+				extras.push_back(volumePath);
+				dprintf(D_ALWAYS, "Adding %s as a docker volume to mount under scratch\n", volumePath.c_str());
+			} else {
+				dprintf(D_ALWAYS, "Failed to create scratch directory %s\n", hostDir);
+			}
+			delete [] hostDir; hostDir = NULL;
+		}
+	}
+
 	// These are the ones the administrator wants unconditionally mounted
 	char *volumeNames = param("DOCKER_MOUNT_VOLUMES");
 	if (!volumeNames) {
