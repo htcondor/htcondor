@@ -4769,6 +4769,16 @@ tags=starter
 default=true
 type=bool
 
+[OPENMPI_INSTALL_PATH]
+default=/usr/lib64/openmpi
+type=string
+description=Location of OpenMPI install
+
+[OPENMPI_EXCLUDE_NETWORK_INTERFACES]
+default=docker0,virbr0
+type=string
+description=Comma-delimited list of network interfaces that OpenMPI should ignore
+
 [SUBMIT_REQUIREMENT_NAMES]
 default=
 type=string
