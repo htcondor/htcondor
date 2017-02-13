@@ -590,6 +590,7 @@ doContactSchedd()
 	char *job_id_str;
 	PROC_ID job_id;
 	CondorError errstack;
+	int tmp_int;
 
 	dprintf(D_FULLDEBUG,"in doContactSchedd()\n");
 
@@ -1051,7 +1052,10 @@ contact_schedd_next_add_job:
 					failure_line_num = __LINE__;
 					commit_transaction = false;
 					goto contact_schedd_disconnect;
-				} else {
+				} else if ( GetAttributeInt( curr_job->procID.cluster,
+											 curr_job->procID.proc,
+											 ATTR_CLUSTER_ID,
+											 &tmp_int ) < 0 ) {
 						// The job is not in the schedd's job queue. This
 						// probably means that the user did a condor_rm -f,
 						// so pretend that all updates for the job succeed.
@@ -1061,6 +1065,8 @@ contact_schedd_next_add_job:
 						//   to the job, so it can do what cleanup it can.
 					fake_job_in_queue = true;
 					break;
+				} else {
+					dprintf( D_FULLDEBUG, "     (Schedd rejected)\n" );
 				}
 			}
 		}
