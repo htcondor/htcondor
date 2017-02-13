@@ -1992,6 +1992,7 @@ NewCluster()
 
 	if( Q_SOCK && !OwnerCheck(NULL, Q_SOCK->getOwner()  ) ) {
 		dprintf( D_FULLDEBUG, "NewCluser(): OwnerCheck failed\n" );
+		errno = EACCES;
 		return -1;
 	}
 
@@ -2007,6 +2008,7 @@ NewCluster()
 			"NewCluster(): MAX_JOBS_SUBMITTED exceeded, submit failed. "
 			"Current total is %d. Limit is %d\n",
 			TotalJobsCount, maxJobsSubmitted );
+		errno = EINVAL;
 		return -2;
 	}
 
@@ -2026,6 +2028,7 @@ NewCluster()
     IdToKey(active_cluster_num,-1,test_cluster_key);
     if (JobQueue->LookupClassAd(test_cluster_key, test_cluster_ad)) {
         dprintf(D_ALWAYS, "NewCluster(): collision with existing cluster id %d\n", active_cluster_num);
+        errno = EINVAL;
         return -3;
     }
 
@@ -2049,6 +2052,7 @@ NewProc(int cluster_id)
 	JobQueueKeyBuf	key;
 
 	if( Q_SOCK && !OwnerCheck(NULL, Q_SOCK->getOwner() ) ) {
+		errno = EACCES;
 		return -1;
 	}
 
@@ -2062,6 +2066,7 @@ NewProc(int cluster_id)
 	if ( TotalJobsCount >= scheduler.getMaxJobsSubmitted() ) {
 		dprintf(D_ALWAYS,
 			"NewProc(): MAX_JOBS_SUBMITTED exceeded, submit failed\n");
+		errno = EINVAL;
 		return -2;
 	}
 
@@ -2097,6 +2102,7 @@ NewProc(int cluster_id)
 					"NewProc(): MAX_JOBS_PER_OWNER exceeded, submit failed.  "
 					"Current total is %d.  Limit is %d.\n",
 					ownerJobCount, maxJobsPerOwner );
+				errno = EINVAL;
 				return -3;
 			}
 		}
@@ -2108,6 +2114,7 @@ NewProc(int cluster_id)
 			"NewProc(): MAX_JOBS_PER_SUBMISSION exceeded, submit failed.  "
 			"Current total is %d.  Limit is %d.\n",
 			jobs_added_this_transaction, maxJobsPerSubmission );
+		errno = EINVAL;
 		return -4;
 	}
 
@@ -2155,11 +2162,13 @@ int DestroyProc(int cluster_id, int proc_id)
 
 	IdToKey(cluster_id,proc_id,key);
 	if (!JobQueue->LookupClassAd(key, ad)) {
+		errno = ENOENT;
 		return DESTROYPROC_ENOENT;
 	}
 
 	// Only the owner can delete a proc.
 	if ( Q_SOCK && !OwnerCheck(ad, Q_SOCK->getOwner() )) {
+		errno = EACCES;
 		return DESTROYPROC_EACCES;
 	}
 
@@ -2303,6 +2312,7 @@ int DestroyCluster(int cluster_id, const char* reason)
 
 	// cannot destroy the header cluster(s)
 	if ( cluster_id < 1 ) {
+		errno = EINVAL;
 		return -1;
 	}
 
@@ -2314,6 +2324,7 @@ int DestroyCluster(int cluster_id, const char* reason)
 		if (c == cluster_id && proc_id > -1) {
 				// Only the owner can delete a cluster
 				if ( Q_SOCK && !OwnerCheck(ad, Q_SOCK->getOwner() )) {
+					errno = EACCES;
 					return -1;
 				}
 
@@ -2411,9 +2422,11 @@ SetAttributeByConstraint(const char *constraint_str, const char *attr_name,
 	ClassAd	*ad;
 	int match_count = 0;
 	int had_error = 0;
+	int terrno = 0;
 	JobQueueKey key;
 
 	if ( Q_SOCK && !(Q_SOCK->isAuthenticated()) ) {
+		errno = EACCES;
 		return -1;
 	}
 
@@ -2432,6 +2445,7 @@ SetAttributeByConstraint(const char *constraint_str, const char *attr_name,
 		owner = Q_SOCK ? Q_SOCK->getOwner() : "unauthenticated";
 		if (owner == "unauthenticated") {
 			// no job will be owned by "unauthenticated" so just quit now.
+			errno = EACCES;
 			return -1;
 		}
 		bool is_super = isQueueSuperUser(owner.Value());
@@ -2456,6 +2470,7 @@ SetAttributeByConstraint(const char *constraint_str, const char *attr_name,
 		ExprTree * tree;
 		if (0 != ParseClassAdRvalExpr(constraint_str, tree)) {
 			dprintf( D_ALWAYS, "can't parse constraint: %s\n", constraint_str );
+			errno = EINVAL;
 			return -1;
 		}
 		constraint.set(tree); // so tree will get freed if RemoveExplicitTargetRefs copies it.
@@ -2474,6 +2489,7 @@ SetAttributeByConstraint(const char *constraint_str, const char *attr_name,
 			match_count += 1;
 			if (SetAttribute(key.cluster, key.proc, attr_name, attr_value, flags) < 0) {
 				had_error = 1;
+				terrno = errno;
 			}
 			FreeJobAd(ad);	// a no-op on the server side
 		}
@@ -2483,8 +2499,10 @@ SetAttributeByConstraint(const char *constraint_str, const char *attr_name,
 		// or we could set the attribute on any of the ones we did
 		// find, return error (-1).
 	// failure (-1)
-	if (had_error)
+	if (had_error) {
+		errno = terrno;
 		return -1;
+	}
 
 	// if this is a queryonly call, return the match count
 	if (flags & SetAttribute_QueryOnly) {
@@ -2492,7 +2510,11 @@ SetAttributeByConstraint(const char *constraint_str, const char *attr_name,
 	}
 
 	// for non-query calls treat 'no jobs matched' the same as failure.
-	return match_count ? 0 : -1;
+	if ( match_count == 0 ) {
+		match_count = -1;
+		errno = ENOENT;
+	}
+	return match_count;
 }
 
 // Set up an efficient lookup table for attributes that need special processing in SetAttribute
@@ -2643,6 +2665,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 
 	// Only an authenticated user or the schedd itself can set an attribute.
 	if ( Q_SOCK && !(Q_SOCK->isAuthenticated()) ) {
+		errno = EACCES;
 		return -1;
 	}
 
@@ -2651,6 +2674,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 	if (!IsValidAttrName(attr_name)) {
 		dprintf(D_ALWAYS, "SetAttribute got invalid attribute named %s for job %d.%d\n", 
 			attr_name ? attr_name : "(null)", cluster_id, proc_id);
+		errno = EINVAL;
 		return -1;
 	}
 
@@ -2661,6 +2685,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 				"SetAttribute received invalid attribute value '%s' for "
 				"job %d.%d, ignoring\n",
 				attr_value ? attr_value : "(null)", cluster_id, proc_id);
+		errno = EINVAL;
 		return -1;
 	}
 
@@ -2668,7 +2693,6 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 	// allowed to do that, via the internal API.
 	if (secure_attrs.find(attr_name) != secure_attrs.end())
 	{
-		errno = EACCES;
 		// should we fail or silently succeed?  (old submits set secure attrs)
 		const CondorVersionInfo *vers = NULL;
 		if ( ! Ignore_Secure_SetAttr_Attempts) {
@@ -2679,6 +2703,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			dprintf(D_ALWAYS,
 				"SetAttribute attempt to edit secure attribute %s in job %d.%d. Failing!\n",
 				attr_name, cluster_id, proc_id);
+			errno = EACCES;
 			return -1;
 		} else {
 			// old versions get a pass.  succeed (but do nothing).
@@ -2707,16 +2732,17 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			dprintf(D_ALWAYS,
 					"OwnerCheck(%s) failed in SetAttribute for job %d.%d\n",
 					owner, cluster_id, proc_id);
+			errno = EACCES;
 			return -1;
 		}
 
 		// Ensure user is not changing an immutable attribute to a committed job
 		if (immutable_attrs.find(attr_name) != immutable_attrs.end())
 		{
-			errno = EACCES;
 			dprintf(D_ALWAYS,
 					"SetAttribute attempt to edit immutable attribute %s in job %d.%d\n",
 					attr_name, cluster_id, proc_id);
+			errno = EACCES;
 			return -1;
 		}
 
@@ -2732,13 +2758,13 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			    !Q_SOCK->getAllowProtectedAttrChanges() ) &&
 			 protected_attrs.find(attr_name) != protected_attrs.end() )
 		{
-			errno = EACCES;
 			dprintf(D_ALWAYS,
 					"SetAttribute of protected attribute denied, RealOwner=%s EffectiveOwner=%s AllowPAttrchange=%s Attr=%s in job %d.%d\n",
 					Q_SOCK->getRealOwner() ? Q_SOCK->getRealOwner() : "(null)",
 					Q_SOCK->getOwner() ? Q_SOCK->getOwner() : "(null)",
 					Q_SOCK->getAllowProtectedAttrChanges() ? "true" : "false",
 					attr_name, cluster_id, proc_id);
+			errno = EACCES;
 			return -1;
 		}
 	} else {
@@ -2749,11 +2775,9 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		// and also restrict the user to procs that have been 
 		// returned by NewProc.
 		if ((cluster_id != active_cluster_num) || (proc_id >= next_proc_num)) {
-#if !defined(WIN32)
-			errno = EACCES;
-#endif
 			dprintf(D_ALWAYS,"Inserting new attribute %s into non-active cluster cid=%d acid=%d\n", 
 					attr_name, cluster_id,active_cluster_num);
+			errno = ENOENT;
 			return -1;
 		}
 	}
@@ -2790,11 +2814,9 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 				attr_value  = new_value.Value();
 			} else {
 				// socket not authenticated and Owner is UNDEFINED.
-#if !defined(WIN32)
-				errno = EACCES;
-#endif
 				dprintf(D_ALWAYS, "ERROR SetAttribute violation: "
 					"Owner is UNDEFINED, but client not authenticated\n");
+				errno = EACCES;
 				return -1;
 
 			}
@@ -2819,10 +2841,10 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			// For sanity's sake, do not allow setting Owner to something
 			// strange, such as an attribute reference that happens to have
 			// the same name as the authenticated user.
-			errno = EACCES;
 			dprintf(D_ALWAYS, "SetAttribute security violation: "
 					"setting owner to %s which is not a valid string\n",
 					attr_value);
+			errno = EACCES;
 			return -1;
 		}
 
@@ -2834,10 +2856,10 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			// Unless all users are trusted, nobody (not even queue super user)
 			// has the ability to change the owner attribute once it is set.
 			// See gittrack #1018.
-			errno = EACCES;
 			dprintf(D_ALWAYS, "SetAttribute security violation: "
 					"setting owner to %s when previously set to \"%s\"\n",
 					attr_value, orig_owner.Value());
+			errno = EACCES;
 			return -1;
 		}
 
@@ -2848,22 +2870,20 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			&& (strcmp(owner,sock_owner) != 0)
 #endif
 			&& (!isQueueSuperUser(sock_owner) || !SuperUserAllowedToSetOwnerTo(owner)) ) {
-#ifndef WIN32
-				errno = EACCES;
-#endif
 				dprintf(D_ALWAYS, "SetAttribute security violation: "
 					"setting owner to %s when active owner is \"%s\"\n",
 					attr_value, sock_owner);
+				errno = EACCES;
 				return -1;
 		}
 
 #if !defined(WIN32)
 		uid_t user_uid;
 		if ( can_switch_ids() && !pcache()->get_user_uid( owner, user_uid ) ) {
-			errno = EACCES;
 			dprintf( D_ALWAYS, "SetAttribute security violation: "
 					 "setting owner to %s, which is not a valid user account\n",
 					 attr_value );
+			errno = EACCES;
 			return -1;
 		}
 #endif
@@ -2916,19 +2936,15 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		char *endptr = NULL;
 		int id = (int)strtol(attr_value, &endptr, 10);
 		if (attr_id == idATTR_CLUSTER_ID && (*endptr != '\0' || id != cluster_id)) {
-		#if !defined(WIN32)
-			errno = EACCES;
-		#endif
 			dprintf(D_ALWAYS, "SetAttribute security violation: setting ClusterId to incorrect value (%s!=%d)\n",
 				attr_value, cluster_id);
+			errno = EACCES;
 			return -1;
 		}
 		if (attr_id == idATTR_PROC_ID && (*endptr != '\0' || id != proc_id)) {
-		#if !defined(WIN32)
-			errno = EACCES;
-		#endif
 			dprintf(D_ALWAYS, "SetAttribute security violation: setting ProcId to incorrect value (%s!=%d)\n",
 				attr_value, proc_id);
+			errno = EACCES;
 			return -1;
 		}
 	}
@@ -2978,6 +2994,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			   release_status == REMOVED ) ) {
 			dprintf( D_ALWAYS, "SetAttribute violation: Attempt to change %s of removed job %d.%d to %d\n",
 					 ATTR_JOB_STATUS, cluster_id, proc_id, new_status );
+			errno = EINVAL;
 			return -1;
 		}
 		if (query_can_change_only) {
@@ -3293,6 +3310,7 @@ SetTimerAttribute( int cluster, int proc, const char *attr_name, int dur )
 		dprintf(D_ALWAYS,
 				"SetTimerAttribute called for %d.%d outside of a transaction!\n",
 				cluster, proc);
+		errno = EINVAL;
 		return -1;
 	}
 
@@ -3536,13 +3554,15 @@ CheckTransaction( SetAttributeFlags_t, CondorError * errorStack )
 		rval = scheduler.jobTransforms.transformJob(&procAd,errorStack);
 		if  (rval < 0) {
 			errorStack->push( "QMGMT", 30, "Failed to apply a required job transform.\n");
+			errno = EINVAL;
 			return rval;
 		}
 
 		// Now check that submit_requirements still hold on our (possibly transformed)
 		// job ad.
 		rval = scheduler.checkSubmitRequirements( & procAd, errorStack );
-		if( rval != 0 ) { 
+		if( rval < 0 ) {
+			errno = EINVAL;
 			return rval;
 		}
 	}
@@ -3922,14 +3942,17 @@ GetAttributeFloat(int cluster_id, int proc_id, const char *attr_name, float *val
 		if( tmp_ad.LookupFloat(attr_name, *val) == 1) {
 			return 1;
 		}
+		errno = EINVAL;
 		return -1;
 	}
 
 	if (!JobQueue->LookupClassAd(key, ad)) {
+		errno = ENOENT;
 		return -1;
 	}
 
 	if (ad->LookupFloat(attr_name, *val) == 1) return 0;
+	errno = EINVAL;
 	return -1;
 }
 
@@ -3951,13 +3974,16 @@ GetAttributeInt(int cluster_id, int proc_id, const char *attr_name, int *val)
 			return 1;
 		}
 		return -1;
+		errno = EINVAL;
 	}
 
 	if (!JobQueue->LookupClassAd(key, ad)) {
+		errno = ENOENT;
 		return -1;
 	}
 
 	if (ad->LookupInteger(attr_name, *val) == 1) return 0;
+	errno = EINVAL;
 	return -1;
 }
 
@@ -3978,14 +4004,17 @@ GetAttributeBool(int cluster_id, int proc_id, const char *attr_name, int *val)
 		if( tmp_ad.LookupBool(attr_name, *val) == 1) {
 			return 1;
 		}
+		errno = EINVAL;
 		return -1;
 	}
 
 	if (!JobQueue->LookupClassAd(key, ad)) {
+		errno = ENOENT;
 		return -1;
 	}
 
 	if (ad->LookupBool(attr_name, *val) == 1) return 0;
+	errno = EINVAL;
 	return -1;
 }
 
@@ -4012,16 +4041,19 @@ GetAttributeStringNew( int cluster_id, int proc_id, const char *attr_name,
 		if( tmp_ad.LookupString(attr_name, val) == 1) {
 			return 1;
 		}
+		errno = EINVAL;
 		return -1;
 	}
 
 	if (!JobQueue->LookupClassAd(key, ad)) {
+		errno = ENOENT;
 		return -1;
 	}
 
 	if (ad->LookupString(attr_name, val) == 1) {
 		return 0;
 	}
+	errno = EINVAL;
 	return -1;
 }
 
@@ -4046,11 +4078,13 @@ GetAttributeString( int cluster_id, int proc_id, const char *attr_name,
 			return 1;
 		}
 		val = "";
+		errno = EINVAL;
 		return -1;
 	}
 
 	if (!JobQueue->LookupClassAd(key, ad)) {
 		val = "";
+		errno = ENOENT;
 		return -1;
 	}
 
@@ -4058,6 +4092,7 @@ GetAttributeString( int cluster_id, int proc_id, const char *attr_name,
 		return 0;
 	}
 	val = "";
+	errno = EINVAL;
 	return -1;
 }
 
@@ -4079,11 +4114,13 @@ GetAttributeExprNew(int cluster_id, int proc_id, const char *attr_name, char **v
 	}
 
 	if (!JobQueue->LookupClassAd(key, ad)) {
+		errno = ENOENT;
 		return -1;
 	}
 
 	tree = ad->LookupExpr(attr_name);
 	if (!tree) {
+		errno = EINVAL;
 		return -1;
 	}
 
@@ -4105,6 +4142,7 @@ GetDirtyAttributes(int cluster_id, int proc_id, ClassAd *updated_attrs)
 	IdToKey(cluster_id,proc_id,key);
 
 	if(!JobQueue->LookupClassAd(key, ad)) {
+		errno = ENOENT;
 		return -1;
 	}
 
@@ -4142,6 +4180,7 @@ DeleteAttribute(int cluster_id, int proc_id, const char *attr_name)
 	if (!JobQueue->LookupClassAd(key, ad)) {
 		if( ! JobQueue->LookupInTransaction(key.c_str(), attr_name, attr_val) ) {
 			return -1;
+			errno = ENOENT;
 		}
 	}
 
@@ -4155,6 +4194,7 @@ DeleteAttribute(int cluster_id, int proc_id, const char *attr_name)
 	
 	if (Q_SOCK && !OwnerCheck(ad, Q_SOCK->getOwner() )) {
 		return -1;
+		errno = EACCES;
 	}
 
 	JobQueue->DeleteAttribute(key.c_str(), attr_name);
@@ -5172,8 +5212,10 @@ SendSpoolFile(char const *)
 	}
 
 	if( !make_parents_if_needed( path, 0755, PRIV_CONDOR ) ) {
+		int terrno = errno;;
 		dprintf(D_ALWAYS, "Failed to create spool directory for %s.\n", path);
 		Q_SOCK->getReliSock()->put(-1);
+		Q_SOCK->getReliSock()->put(terrno);
 		Q_SOCK->getReliSock()->end_of_message();
 		free(path);
 		return -1;
