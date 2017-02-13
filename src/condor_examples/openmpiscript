@@ -1,7 +1,7 @@
 #!/bin/sh
 ##**************************************************************
 ##
-## Copyright (C) 1990-2010, Condor Team, Computer Sciences Department,
+## Copyright (C) 1990-2017, Condor Team, Computer Sciences Department,
 ## University of Wisconsin-Madison, WI.
 ## 
 ## Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -18,80 +18,132 @@
 ##
 ##**************************************************************
 
-# YOU MUST CHANGE THIS TO THE PREFIX DIR OF OPENMPI
-MPDIR=/usr/lib/openmpi
+# This is a script to run OpenMPI jobs under the HTCondor parallel universe.
+# OpenMPI assumes that a full install is available on all execute nodes.
 
-if `uname -m | grep "64" 1>/dev/null 2>&1` 
-then 
-    MPDIR=/usr/lib64/openmpi
-fi
-
-PATH=$MPDIR/bin:$MPDIR/1.4-gcc/bin:.:$PATH
-export PATH
-
-# This is a script to run openmpi jobs under the Condor parallel universe
-# openmpi assumes that a full openmpi is pre-installed on all execute 
-# machines
-# A sample submit file might look like...
-#
-
+## sample submit script
 #universe = parallel
 #executable = openmpiscript
-#getenv=true
 #arguments = actual_mpi_job arg1 arg2 arg3
+#getenv = true
 #
 #should_transfer_files = yes
+#transfer_input_files = actual_mpi_job
 #when_to_transfer_output = on_exit_or_evict
 #
-#output = o.$(NODE)
-#error  = e.$(NODE)
-#log    = l
+#output = out.$(NODE)
+#error  = err.$(NODE)
+#log    = log
 #
 #notification = never
 #machine_count = 8
 #queue
+##
 
-_CONDOR_PROCNO=$_CONDOR_PROCNO
-_CONDOR_NPROCS=$_CONDOR_NPROCS
+## configuration notes
+# $MPDIR points to the location of the OpenMPI install
+# You may set it manually (not recommended)
+#MPDIR=/usr/lib64/openmpi
+# The pool admin may set it via OPENMPI_INSTALL_PATH in the condor_config (recommended)
+MPDIR=`condor_config_val OPENMPI_INSTALL_PATH`
 
+# $EXINT is a comma-delimited list of excluded network interfaces.
+# If your mpi jobs are hanging, OpenMPI may be trying to use too many
+# network interfaces to communicate between nodes.
+# You may set it manually (not recommended)
+#EXINT="docker0,virbr0"
+# The pool admin may set it via OPENMPI_EXCLUDE_NETWORK_INTERFACES in the condor_config (recommended)
+EXINT=`condor_config_val OPENMPI_EXCLUDE_NETWORK_INTERFACES`
+
+# We recommend that your pool admin use MOUNT_UNDER_SCRATCH = /tmp
+# so that OpenMPI caches all data under the user's scratch directory.
+# Not having /tmp mounted under scratch can also lead to unlink errors,
+# which may hang mpi jobs.
+_USE_SCRATCH=`condor_config_val MOUNT_UNDER_SCRATCH`
+if [ -z $_USE_SCRATCH ]; then
+    echo "WARNING: MOUNT_UNDER_SCRATCH not set in condor_config"
+elif test "${_USE_SCRATCH#*/tmp}" == "$_USE_SCRATCH"; then
+    echo "WARNING: /tmp not included in MOUNT_UNDER_SCRATCH"
+fi
+
+# If MPDIR is not set, then use a default value
+if [ -z $MPDIR ]; then
+    echo "WARNING: Using default value for \$MPDIR in openmpiscript"
+    MPDIR=/usr/lib64/openmpi
+fi
+PATH=$MPDIR/bin:.:$PATH
+export PATH
+
+# If EXINT is not set, then use some default values
+if [ -z $EXINT ]; then
+    echo "WARNING: Using default values for \$EXINT in openmpiscript"
+    EXINT="docker0,virbr0"
+fi
+
+# The condor_ssh and sshd.sh helper scripts reside in $(LIBEXEC)
 CONDOR_SSH=`condor_config_val libexec`
 CONDOR_SSH=$CONDOR_SSH/condor_ssh
 
 SSHD_SH=`condor_config_val libexec`
 SSHD_SH=$SSHD_SH/sshd.sh
+##
 
+# Set up SSHD on the node
 . $SSHD_SH $_CONDOR_PROCNO $_CONDOR_NPROCS 
 
-# If not the head node, just sleep forever, to let the
-# sshds run
+# If not the head node, just sleep forever to let the SSHDs run
 if [ $_CONDOR_PROCNO -ne 0 ]
 then
-		wait
-		sshd_cleanup
-		exit 0
+    wait
+    sshd_cleanup
+    exit 0
 fi
 
 EXECUTABLE=$1
 shift
 
-# the binary is copied but the executable flag is cleared.
-# so the script have to take care of this
+# The binary is copied but the executable flag may be cleared.
 chmod +x $EXECUTABLE
 
+# Set the location of the contact file
 CONDOR_CONTACT_FILE=$_CONDOR_SCRATCH_DIR/contact
 export CONDOR_CONTACT_FILE
 
-# The second field in the contact file is the machine name
-# that condor_ssh knows how to use
-sort -n -k 1 < $CONDOR_CONTACT_FILE | awk '{print $2}' > machines
+# The second field in the contact file contains the node ranks.
+# mpirun will use a list a of these node ranks,
+# and condor_ssh will translate them into a hostname:port.
+sort -n -k 1 < $CONDOR_CONTACT_FILE | awk '{print $1}' > machines
 
-## run the actual mpijob
-if `ompi_info --param all all | grep orte_rsh_agent 1>/dev/null 2>&1`
+# Check for which ssh agent to use because one or the other
+# have each been deprecated at one OpenMPI version or another.
+_MCA_FAIL=true
+for mca_ssh_agent in orte_rsh_agent plm_rsh_agent
+do
+    if `ompi_info -a | grep \"${mca_ssh_agent}\" 1>/dev/null 2>&1`
+    then
+        if `ompi_info -a | grep \"${mca_ssh_agent}\" | grep deprecated 1>/dev/null 2>&1`; then continue; fi
+        
+        _MCA_FAIL=false
+
+        # set MCA values for running on HTCondor
+        export OMPI_MCA_plm_rsh_no_tree_spawn="true" # disable ssh tree spawn
+        export OMPI_MCA_btl_tcp_if_exclude="lo,$EXINT" # exclude network interfaces
+
+        # optionally set MCA values for increasing mpirun verbosity
+        #export OMPI_MCA_plm_base_verbose=30
+        #export OMPI_MCA_btl_base_verbose=30
+
+        # run the executable
+        mpirun -v --prefix $MPDIR --mca $mca_ssh_agent $CONDOR_SSH -n $_CONDOR_NPROCS -hostfile machines $EXECUTABLE $@
+        continue
+        
+    fi
+done
+
+if $_MCA_FAIL
 then
-    mpirun -v --prefix $MPDIR --mca orte_rsh_agent $CONDOR_SSH -n $_CONDOR_NPROCS -hostfile machines $EXECUTABLE $@ 
-else
-    ########## For mpi versions 1.1 & 1.2 use the line below
-    mpirun -v --mca plm_rsh_agent $CONDOR_SSH -n $_CONDOR_NPROCS -hostfile machines $EXECUTABLE $@ 
+    echo could not find a suitable MCA ssh agent
+    exit 255
 fi
 
 sshd_cleanup
