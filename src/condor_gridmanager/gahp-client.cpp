@@ -1730,9 +1730,14 @@ GahpServer::err_pipe_ready(int  /*pipe_end*/)
 			// Any text left at the end of the string is added to
 			// m_gahp_error_buffer to be printed when the next newline
 			// is read.
+			// Check for and remove any carriage return before each
+			// newline.
 		while ( (newline = strchr( newline + 1, '\n' ) ) != NULL ) {
 
 			*newline = '\0';
+			if ( newline >= buff && *(newline - 1) == '\r' ) {
+				*(newline - 1) = '\0';
+			}
 			dprintf( D_FULLDEBUG, "GAHP[%d] (stderr) -> %s%s\n", m_gahp_pid,
 					 m_gahp_error_buffer.c_str(), prev_line );
 
