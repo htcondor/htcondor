@@ -1052,10 +1052,7 @@ contact_schedd_next_add_job:
 					failure_line_num = __LINE__;
 					commit_transaction = false;
 					goto contact_schedd_disconnect;
-				} else if ( GetAttributeInt( curr_job->procID.cluster,
-											 curr_job->procID.proc,
-											 ATTR_CLUSTER_ID,
-											 &tmp_int ) < 0 ) {
+				} else if ( errno == ENOENT ) {
 						// The job is not in the schedd's job queue. This
 						// probably means that the user did a condor_rm -f,
 						// so pretend that all updates for the job succeed.
