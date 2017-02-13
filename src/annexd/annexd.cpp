@@ -730,7 +730,8 @@ help( const char * argv0 ) {
 		"\t[-sfr-lease-function-arn <sfr-lease-function-arn>]\n"
 		"\t[-odi-lease-function-arn <odi-lease-function-arn>]\n"
 		"\t[-[default-]user-data[-file] <data|file> ]\n"
-		"\t[-debug] [-help]\n"
+/*		"\t[-debug] [-help]\n"
+*/		"\t[-help]\n"
 		"\t[-sfr-config-file <spot-fleet-configuration-file>]\n"
 		"\t[-odi-instance-type <instance-type>]\n"
 		"\t[-odi-image-id <image-ID>\n"
@@ -760,8 +761,6 @@ argc = _argc;
 argv = _argv;
 
 	int udSpecifications = 0;
-	const char * pool = NULL;
-	const char * name = NULL;
 	const char * sfrConfigFile = NULL;
 	const char * annexName = NULL;
 	const char * configDir = NULL;
@@ -784,28 +783,7 @@ argv = _argv;
 	long int leaseDuration = 0;
 	long int count = 0;
 	for( int i = 1; i < argc; ++i ) {
-		if( is_dash_arg_prefix( argv[i], "f", 1 ) ) {
-			// Ignored for compatibility with daemon core.
-			continue;
-		} else if( is_dash_arg_prefix( argv[i], "pool", 1 ) ) {
-			++i;
-			if( argv[i] != NULL ) {
-				pool = argv[i];
-				continue;
-			} else {
-				fprintf( stderr, "%s: -pool requires an argument.\n", argv[0] );
-				return 1;
-			}
-		} else if( is_dash_arg_prefix( argv[i], "name", 1 ) ) {
-			++i;
-			if( argv[i] != NULL ) {
-				name = argv[i];
-				continue;
-			} else {
-				fprintf( stderr, "%s: -name requires an argument.\n", argv[0] );
-				return 1;
-			}
-		} else if( is_dash_arg_prefix( argv[i], "service-url", 7 ) ) {
+		if( is_dash_arg_prefix( argv[i], "service-url", 7 ) ) {
 			++i;
 			if( argv[i] != NULL ) {
 				serviceURL = argv[i];
@@ -1063,9 +1041,6 @@ argv = _argv;
 			continue;
 		} else if( is_dash_arg_prefix( argv[i], "odi", 3 ) ) {
 			annexTypeIsODI = true;
-			continue;
-		} else if( is_dash_arg_prefix( argv[i], "debug", 1 ) ) {
-			dprintf_set_tool_debug( "TOOL", 0 );
 			continue;
 		} else if( is_dash_arg_prefix( argv[i], "help", 1 ) ) {
 			help( argv[0] );
