@@ -5216,6 +5216,28 @@ availability statistics in the \Condor{startd}.
   local machine.
   The default value is 20.
 
+\label{param:OpenmpiInstallPath}
+\item[\Macro{OPENMPI\_INSTALL\_PATH}]
+  The location of the Open MPI installation on the local machine.
+  Referenced by \File{examples/openmpiscript}, 
+  which is used for running Open MPI jobs in the parallel universe.
+  The Open MPI bin and lib directories should exist under this path.
+  The default value is \File{/usr/lib64/openmpi}.
+
+\label{param:OpenmpiExcludeNetworkInterfaces}
+\item[\Macro{OPENMPI\_EXCLUDE\_NETWORK\_INTERFACES}]
+  A comma-delimited list of network interfaces that Open MPI
+  should not use for MPI communications.
+  Referenced by \File{examples/openmpiscript}, 
+  which is used for running Open MPI jobs in the parallel universe.
+
+  The list should contain any interfaces that your job could
+  potentially see from any execute machine.
+  The list may contain undefined interfaces without generating errors.
+  Open MPI should exclusively use low latency/high speed networks it finds
+  (e.g. InfiniBand) regardless of this setting.
+  The default value is \Attr{docker0},\Attr{virbr0}.
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
