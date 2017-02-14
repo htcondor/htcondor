@@ -590,7 +590,6 @@ doContactSchedd()
 	char *job_id_str;
 	PROC_ID job_id;
 	CondorError errstack;
-	int tmp_int;
 
 	dprintf(D_FULLDEBUG,"in doContactSchedd()\n");
 
