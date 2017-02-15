@@ -521,8 +521,10 @@ createConfigTarball(	const char * configDir,
 		return false;
 	}
 
+	// Must be readable by the 'condor' user on the instance, but it
+	// will be owned by root.
 	int fd = safe_open_wrapper_follow( "99ec2-dynamic.config",
-		O_WRONLY | O_CREAT | O_TRUNC, 0600 );
+		O_WRONLY | O_CREAT | O_TRUNC, 0644 );
 	if( fd < 0 ) {
 		formatstr( tarballError, "Failed to open config file '%s' for writing: '%s' (%d).\n",
 			"99ec2-dynamic.config", strerror( errno ), errno );
@@ -548,6 +550,8 @@ createConfigTarball(	const char * configDir,
 		"\n"
 		"SEC_DEFAULT_AUTHENTICATION = REQUIRED\n"
 		"SEC_DEFAULT_AUTHENTICATION_METHODS = FS, PASSWORD\n"
+		"SEC_DEFAULT_INTEGRITY = REQUIRED\n"
+		"SEC_DEFAULT_ENCRYPTION = REQUIRED\n"
 		"\n"
 		"SEC_PASSWORD_FILE = /etc/condor/config.d/%s\n"
 		"ALLOW_WRITE = condor_pool@*/* $(LOCAL_HOSTS)\n"
