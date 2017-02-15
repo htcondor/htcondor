@@ -439,7 +439,7 @@ RemoteCommitTransaction(SetAttributeFlags_t flags, CondorError *errstack)
 			neg_on_error( getClassAd( qmgmt_sock, reply ) );
 
 			std::string errmsg;
-			if( reply.LookupString( "ErrorReason", errmsg ) ) {
+			if( errstack && reply.LookupString( "ErrorReason", errmsg ) ) {
 				int errCode = terrno;
 				reply.LookupInteger( "ErrorCode", errCode );
 				errstack->push( "SCHEDD", errCode, errmsg.c_str() );
