@@ -991,9 +991,11 @@ argv = _argv;
 			if( argv[i] != NULL ) {
 				char * endptr = NULL;
 				const char * ld = argv[i];
-				leaseDuration = strtol( ld, & endptr, 0 );
+				// leaseDuration = strtol( ld, & endptr, 0 );
+				double fractionHours = strtod( ld, & endptr );
+				leaseDuration = fractionHours * 60 * 60;
 				if( * endptr != '\0' ) {
-					fprintf( stderr, "%s: -duration requires an integer argument.\n", argv[0] );
+					fprintf( stderr, "%s: -duration accepts a decimal number of hours.\n", argv[0] );
 					return 1;
 				}
 				if( leaseDuration <= 0 ) {
@@ -1002,7 +1004,7 @@ argv = _argv;
 				}
 				continue;
 			} else {
-				fprintf( stderr, "%s: -duration requires an argument.\n", argv[0] );
+				fprintf( stderr, "%s: -duration accepts a decimal number of hours.\n", argv[0] );
 				return 1;
 			}
 		} else if( is_dash_arg_prefix( argv[i], "unclaimed-timeout", 8 ) ) {
@@ -1010,9 +1012,11 @@ argv = _argv;
 			if( argv[i] != NULL ) {
 				char * endptr = NULL;
 				const char * ut = argv[i];
-				unclaimedTimeout = strtol( ut, & endptr, 0 );
+				// unclaimedTimeout = strtol( ut, & endptr, 0 );
+				double fractionalHours = strtod( ut, & endptr );
+				unclaimedTimeout = fractionalHours * 60 * 60;
 				if( * endptr != '\0' ) {
-					fprintf( stderr, "%s: -unclaimed-timeout requires an integer argument.\n", argv[0] );
+					fprintf( stderr, "%s: -unclaimed-timeout accepts a decimal number of hours.\n", argv[0] );
 					return 1;
 				}
 				if( unclaimedTimeout <= 0 ) {
@@ -1305,6 +1309,33 @@ argv = _argv;
 		}
 		free( base64Encoded );
 	}
+
+
+/*
+	if( annexTypeIsODI ) {
+		fprintf( stdout,
+			"Will request %ld %s on-demand instances for %.2f hours.  "
+			"Each instance will terminate after %.2f hours of inactivity.\n"
+			"To change to Spot instances, use the -spot flag.\n"
+			"To change the instance type, use the -odi-instance-type flag.\n"
+			"To change the lease duration, use the -duration flag.\n"
+			"To change the no-claim timeout, use the -unclaimed-timeout flag.\n",
+				count, odiInstanceType, leaseDuration / 3600.0,
+				unclaimedTimeout / 3600.0
+		);
+	} else {
+		fprintf( stdout,
+			"Will request %ld spot instances for %.2f hours.  "
+			"Each instance will terminate after %.2f hours of inactivity.\n"
+			"To change to on-demand instances, use the -odi flag.\n"
+			"To change the instance type, use the -instance-type flag.\n"
+			"To change the lease duration, use the -duration flag.\n"
+			"To change the no-claim timeout, use the -unclaimed-timeout flag.\n",
+				count, leaseDuration / 3600.0,
+				unclaimedTimeout / 3600.0
+		);
+	}
+*/
 
 
 	// -------------------------------------------------------------------------
