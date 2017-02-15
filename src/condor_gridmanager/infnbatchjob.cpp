@@ -637,7 +637,7 @@ void INFNBatchJob::doEvaluateState()
 						 gahp->getErrorString() );
 				errorString = gahp->getErrorString();
 				myResource->CancelSubmit( this );
-				gmState = GM_DELETE_SANDBOX;
+				gmState = GM_HOLD;
 				reevaluate_state = true;
 			}
 			if ( job_id_string != NULL ) {
