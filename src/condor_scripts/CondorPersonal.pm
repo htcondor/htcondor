@@ -341,7 +341,7 @@ sub StartCondorWithParams
 		$ENV{LOCAL_DIR} = undef;
 	}
 
-	Initialize(@_);
+	Initialize(%personal_condor_params);
 	# Make sure at the least we have an initial Config folder to seed future
 	# personal condors. Test via environment variable CONDOR_CONFIG.
 	#
