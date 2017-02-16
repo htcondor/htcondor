@@ -131,7 +131,7 @@ FILE* LoadClassAdLog(
 			if (!active_transaction) {
 				errmsg.formatstr_cat("Warning: Encountered unmatched end transaction, log may be bogus...\n");
 			} else {
-				active_transaction->Commit(NULL, &la); // commit in memory only
+				active_transaction->Commit(NULL, NULL, &la); // commit in memory only
 				delete active_transaction;
 				active_transaction = NULL;
 			}

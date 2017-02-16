@@ -688,7 +688,7 @@ ClassAdLog<K,AltK,AD>::CommitTransaction()
 		active_transaction->AppendLog(log);
 		bool nondurable = m_nondurable_level > 0;
 		ClassAdLogTable<K,AD> la(table);
-		active_transaction->Commit(log_fp, &la, nondurable );
+		active_transaction->Commit(log_fp, logFilename(), &la, nondurable );
 	}
 	delete active_transaction;
 	active_transaction = NULL;
