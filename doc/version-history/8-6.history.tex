@@ -41,7 +41,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Fixed a bug that could corrupt the job queue log file such that
+the \Condor{schedd} cannot restart.
+The bug is mostly likely to occur if the disk becomes full.
+\Ticket{6153}
 
 \end{itemize}
 
