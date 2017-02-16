@@ -510,6 +510,7 @@ main_config() {
 bool
 createConfigTarball(	const char * configDir,
 						const char * annexName,
+						long unclaimedTimeout,
 						std::string & tarballPath,
 						std::string & tarballError ) {
 	char * cwd = get_current_dir_name();
@@ -559,8 +560,10 @@ createConfigTarball(	const char * configDir,
 		"AnnexName = \"%s\"\n"
 		"STARTD_ATTRS = $(STARTD_ATTRS) AnnexName\n"
 		"MASTER_ATTRS = $(MASTER_ATTRS) AnnexName\n"
+		"\n"
+		"STARTD_NOCLAIM_SHUTDOWN = %ld\n"
 		"\n",
-		collectorHost.c_str(), passwordFile.c_str(), annexName );
+		collectorHost.c_str(), passwordFile.c_str(), annexName, unclaimedTimeout );
 
 	rv = write( fd, contents.c_str(), contents.size() );
 	if( rv == -1 ) {
@@ -726,6 +729,7 @@ help( const char * argv0 ) {
 		"\t[-access-key-file <access-key-file>]\n"
 		"\t[-secret-key-file <secret-key-file>]\n"
 		"\t[-config-dir <path>]\n"
+		"\t[-unclaimed-timeout]\n"
 /*		"\t[-pool <pool>] [-name <name>]\n"
 */		"\t[-service-url <service-url>]\n"
 		"\t[-events-url <events-url>]\n"
@@ -784,6 +788,7 @@ argv = _argv;
 	const char * odiSecurityGroupIDs = NULL;
 	bool annexTypeIsSFR = false;
 	bool annexTypeIsODI = false;
+	long int unclaimedTimeout = 0;
 	long int leaseDuration = 0;
 	long int count = 0;
 	for( int i = 1; i < argc; ++i ) {
@@ -986,9 +991,11 @@ argv = _argv;
 			if( argv[i] != NULL ) {
 				char * endptr = NULL;
 				const char * ld = argv[i];
-				leaseDuration = strtol( ld, & endptr, 0 );
+				// leaseDuration = strtol( ld, & endptr, 0 );
+				double fractionHours = strtod( ld, & endptr );
+				leaseDuration = fractionHours * 60 * 60;
 				if( * endptr != '\0' ) {
-					fprintf( stderr, "%s: -duration requires an integer argument.\n", argv[0] );
+					fprintf( stderr, "%s: -duration accepts a decimal number of hours.\n", argv[0] );
 					return 1;
 				}
 				if( leaseDuration <= 0 ) {
@@ -997,7 +1004,28 @@ argv = _argv;
 				}
 				continue;
 			} else {
-				fprintf( stderr, "%s: -duration requires an argument.\n", argv[0] );
+				fprintf( stderr, "%s: -duration accepts a decimal number of hours.\n", argv[0] );
+				return 1;
+			}
+		} else if( is_dash_arg_prefix( argv[i], "unclaimed-timeout", 8 ) ) {
+			++i;
+			if( argv[i] != NULL ) {
+				char * endptr = NULL;
+				const char * ut = argv[i];
+				// unclaimedTimeout = strtol( ut, & endptr, 0 );
+				double fractionalHours = strtod( ut, & endptr );
+				unclaimedTimeout = fractionalHours * 60 * 60;
+				if( * endptr != '\0' ) {
+					fprintf( stderr, "%s: -unclaimed-timeout accepts a decimal number of hours.\n", argv[0] );
+					return 1;
+				}
+				if( unclaimedTimeout <= 0 ) {
+					fprintf( stderr, "%s: the unclaimed timeout must be greater than zero.\n", argv[0] );
+					return 1;
+				}
+				continue;
+			} else {
+				fprintf( stderr, "%s: -unclaimed-timeout requires an argument.\n", argv[0] );
 				return 1;
 			}
 		} else if( is_dash_arg_prefix( argv[i], "slots", 5 ) ) {
@@ -1071,8 +1099,7 @@ argv = _argv;
 	}
 
 	if( leaseDuration == 0 ) {
-		fprintf( stderr, "%s: you must specify (a positive) -duration.\n", argv[0] );
-		return 1;
+		leaseDuration = param_integer( "ANNEX_DEFAULT_LEASE_DURATION", 3000 );
 	}
 
 	if( annexTypeIsSFR && annexTypeIsODI ) {
@@ -1222,7 +1249,7 @@ argv = _argv;
 	}
 
 	std::string tarballPath, tarballError;
-	bool createdTarball = createConfigTarball( tempDir, annexName, tarballPath, tarballError );
+	bool createdTarball = createConfigTarball( tempDir, annexName, unclaimedTimeout, tarballPath, tarballError );
 
 	// FIXME: Rewrite without system().
 	std::string cmd;
@@ -1282,6 +1309,33 @@ argv = _argv;
 		}
 		free( base64Encoded );
 	}
+
+
+/*
+	if( annexTypeIsODI ) {
+		fprintf( stdout,
+			"Will request %ld %s on-demand instances for %.2f hours.  "
+			"Each instance will terminate after %.2f hours of inactivity.\n"
+			"To change to Spot instances, use the -spot flag.\n"
+			"To change the instance type, use the -odi-instance-type flag.\n"
+			"To change the lease duration, use the -duration flag.\n"
+			"To change the no-claim timeout, use the -unclaimed-timeout flag.\n",
+				count, odiInstanceType, leaseDuration / 3600.0,
+				unclaimedTimeout / 3600.0
+		);
+	} else {
+		fprintf( stdout,
+			"Will request %ld spot instances for %.2f hours.  "
+			"Each instance will terminate after %.2f hours of inactivity.\n"
+			"To change to on-demand instances, use the -odi flag.\n"
+			"To change the instance type, use the -instance-type flag.\n"
+			"To change the lease duration, use the -duration flag.\n"
+			"To change the no-claim timeout, use the -unclaimed-timeout flag.\n",
+				count, leaseDuration / 3600.0,
+				unclaimedTimeout / 3600.0
+		);
+	}
+*/
 
 
 	// -------------------------------------------------------------------------

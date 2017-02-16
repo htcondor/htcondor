@@ -3550,6 +3550,31 @@ default=Annex Daemon@$(FULL_HOSTNAME)
 type=string
 tags=annex
 
+[ANNEX_DEFAULT_LEASE_DURATION]
+default=3000
+type=long
+tags=annex
+
+[ANNEX_DEFAULT_EC2_URL]
+default = https://ec2.us-east-1.amazonaws.com
+type=string
+tags=annex
+
+[ANNEX_DEFAULT_CWE_URL]
+default = https://events.us-east-1.amazonaws.com
+type=string
+tags=annex
+
+[ANNEX_DEFAULT_LAMBDA_URL]
+default = https://lambda.us-east-1.amazonaws.com
+type=string
+tags=annex
+
+[ANNEX_DEFAULT_S3_URL]
+default = https://s3.amazonaws.com
+type=string
+tags=annex
+
 [SCHEDD]
 default=$(SBIN)/condor_schedd
 win32_default=$(SBIN)\condor_schedd.exe
