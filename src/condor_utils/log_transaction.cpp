@@ -101,6 +101,9 @@ Transaction::Commit(FILE* fp, const char *filename, LoggableClassAdTable *data_s
 			dprintf( D_FULLDEBUG, "Transaction::Commit(): fdatasync() took %ld seconds to run\n", after - before );
 		}
 
+	} else if ( fps[0].why != WHY_OK ) {
+		// Non-durable transactions should also blow up on failure
+		EXCEPT("Failed to write real job queue log: write failed (errno %d)", fps[0].err);
 	}
 }
 

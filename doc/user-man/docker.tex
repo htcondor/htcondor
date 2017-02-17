@@ -36,7 +36,10 @@ system is completely independent of the file system on the host machine.
 The container does not share a file system with either the execute
 host or the submit host, with the exception of the scratch directory,
 which is volume mounted to the host, and is the initial working
-directory of the job.
+directory of the job.  Optionally, the administrator may configure other
+directories from the host machine to be volume mounted, and thus visible
+inside the container.  See the docker section of the administrator's manual
+for details.
 
 Therefore,
 the submit description file should contain the submit command

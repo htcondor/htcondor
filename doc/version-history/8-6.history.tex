@@ -41,7 +41,15 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Fixed a bug that could corrupt the job queue log file such that
+the \Condor{schedd} cannot restart.
+The bug is mostly likely to occur if the disk becomes full.
+\Ticket{6153}
+
+\item Fixed a bug that can cause the Job Router and \Condor{c-gahp} to
+crash if they fail to submit a job due to submit transforms or
+submit requirements.
+\Ticket{6152}
 
 \end{itemize}
 
