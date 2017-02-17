@@ -555,6 +555,9 @@ Transaction::Commit(FILE* fp, LoggableClassAdTable *data_structure, bool nondura
 	  
 	  cleanup_backup_info(&bi);
 	  
+	} else if ( fps[0].why != WHY_OK ) {
+		// Non-durable transactions should also blow up on failure
+		EXCEPT("Failed to write real job queue log: write failed (errno %d)", fps[0].err);
 	}
 }
 
