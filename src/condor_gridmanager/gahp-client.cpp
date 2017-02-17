@@ -4214,8 +4214,7 @@ GahpClient::blah_upload_sandbox(const char *sandbox_id, const ClassAd *job_ad)
 }
 
 int
-GahpClient::blah_download_proxy(const char *sandbox_id, const ClassAd *job_ad,
-								std::string &proxy_path)
+GahpClient::blah_download_proxy(const char *sandbox_id, const ClassAd *job_ad)
 {
 	static const char* command = "DOWNLOAD_PROXY";
 
@@ -4255,7 +4254,7 @@ GahpClient::blah_download_proxy(const char *sandbox_id, const ClassAd *job_ad,
 	Gahp_Args* result = get_pending_result(command,buf);
 	if ( result ) {
 		// command completed.
-		if ( result->argc != 3 ) {
+		if ( result->argc != 2 ) {
 			EXCEPT("Bad %s Result",command);
 		}
 		int rc;
@@ -4265,11 +4264,6 @@ GahpClient::blah_download_proxy(const char *sandbox_id, const ClassAd *job_ad,
 		} else {
 			rc = 0;
 			error_string = "";
-		}
-		if ( strcasecmp ( result->argv[2], NULLSTRING ) ) {
-			proxy_path = result->argv[2];
-		} else {
-			proxy_path = "";
 		}
 		delete result;
 		return rc;
@@ -4351,6 +4345,47 @@ GahpClient::blah_destroy_sandbox(const char *sandbox_id, const ClassAd *job_ad)
 
 		// If we made it here, command is still pending...
 	return GAHPCLIENT_COMMAND_PENDING;
+}
+
+bool
+GahpClient::blah_get_sandbox_path( const char *sandbox_id,
+								   std::string &sandbox_path )
+{
+	static const char *command = "GET_SANDBOX_PATH";
+
+		// Check if this command is supported
+	if  ( server->m_commands_supported->contains_anycase( command ) == FALSE ) {
+		return false;
+	}
+
+	if ( sandbox_id == NULL ) {
+		return false;
+	}
+
+	std::string buf;
+	int x = formatstr( buf, "%s %s", command, escapeGahpString( sandbox_id ) );
+	ASSERT( x > 0 );
+	server->write_line( buf.c_str() );
+
+	Gahp_Args result;
+	server->read_argv(result);
+	if ( result.argc == 0 || result.argv[0][0] != 'S' ) {
+		if ( result.argc > 1 ) {
+			error_string = result.argv[1];
+		} else {
+			error_string = "Unspecified error";
+		}
+		return false;
+	}
+	if ( result.argc != 2 ) {
+		EXCEPT( "Bad %s Result", command );
+	}
+	if ( strcasecmp ( result.argv[1], NULLSTRING ) ) {
+		sandbox_path = result.argv[1];
+	} else {
+		sandbox_path = "";
+	}
+	return true;
 }
 
 int

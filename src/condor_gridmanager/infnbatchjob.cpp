@@ -738,6 +738,18 @@ void INFNBatchJob::doEvaluateState()
 					EXCEPT( "(%d.%d) Requested to refresh proxy, but no proxy present. ", procID.cluster,procID.proc);
 				}
 
+				if ( m_sandboxPath.empty() ) {
+					m_xfer_gahp->blah_get_sandbox_path( remoteSandboxId,
+														m_sandboxPath );
+				}
+				if ( m_sandboxPath.empty() ) {
+					dprintf( D_ALWAYS,
+							 "(%d.%d) blah_get_sandbox_path() failed: %s\n",
+							 procID.cluster, procID.proc, m_xfer_gahp->getErrorString() );
+					errorString = m_xfer_gahp->getErrorString();
+					gmState = GM_HOLD;
+					break;
+				}
 				if ( gahpAd == NULL ) {
 					gahpAd = buildTransferAd();
 				}
@@ -770,8 +782,7 @@ void INFNBatchJob::doEvaluateState()
 					gahpAd->Assign( ATTR_TRANSFER_SOCKET, new_addr );
 				}
 
-				rc = m_xfer_gahp->blah_download_proxy( remoteSandboxId, gahpAd,
-													   m_sandboxPath );
+				rc = m_xfer_gahp->blah_download_proxy( remoteSandboxId, gahpAd );
 				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 					 rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;

@@ -506,11 +506,13 @@ class GahpClient : public GenericGahpClient {
 		blah_upload_sandbox(const char *sandbox_id, const ClassAd *job_ad);
 
 		int
-		blah_download_proxy(const char *sandbox_id, const ClassAd *job_ad,
-							std::string &proxy_path);
+		blah_download_proxy(const char *sandbox_id, const ClassAd *job_ad);
 
 		int
 		blah_destroy_sandbox(const char *sandbox_id, const ClassAd *job_ad);
+
+		bool
+		blah_get_sandbox_path(const char *sandbox_id, std::string &sandbox_path);
 
 		int
 		nordugrid_submit(const char *hostname, const char *rsl, char *&job_id);

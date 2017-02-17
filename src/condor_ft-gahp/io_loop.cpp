@@ -344,6 +344,7 @@ stdin_pipe_handler(Service*, int) {
 					GAHP_COMMAND_UPLOAD_SANDBOX,
 					GAHP_COMMAND_DOWNLOAD_PROXY,
 					GAHP_COMMAND_DESTROY_SANDBOX,
+					GAHP_COMMAND_GET_SANDBOX_PATH,
 					GAHP_COMMAND_CREATE_CONDOR_SECURITY_SESSION,
 					GAHP_COMMAND_CONDOR_VERSION,
 					GAHP_COMMAND_ASYNC_MODE_ON,
@@ -352,7 +353,12 @@ stdin_pipe_handler(Service*, int) {
 					GAHP_COMMAND_QUIT,
 					GAHP_COMMAND_VERSION,
 					GAHP_COMMAND_COMMANDS};
-				gahp_output_return (commands, 12);
+				gahp_output_return (commands, 14);
+			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_GET_SANDBOX_PATH) == 0) {
+				std::string path;
+				define_sandbox_path( args.argv[1], path );
+				const char *reply[] = { GAHP_RESULT_SUCCESS, path.c_str() };
+				gahp_output_return( reply, 2 );
 			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_CREATE_CONDOR_SECURITY_SESSION) == 0) {
 				ClaimIdParser claimid( args.argv[1] );
 				if ( !daemonCore->getSecMan()->CreateNonNegotiatedSecuritySession(
@@ -581,6 +587,7 @@ verify_gahp_command(char ** argv, int argc) {
 	    // These are no-arg commands
 	    return verify_number_args (argc, 1);
 	} else if (strcasecmp (argv[0], GAHP_COMMAND_CONDOR_VERSION) == 0 ||
+			   strcasecmp (argv[0], GAHP_COMMAND_GET_SANDBOX_PATH) == 0 ||
 			   strcasecmp (argv[0], GAHP_COMMAND_CREATE_CONDOR_SECURITY_SESSION) == 0 ) {
 		return verify_number_args (argc, 2);
 	}
@@ -1264,15 +1271,11 @@ int download_proxy_reaper(Service*, int pid, int status) {
 	SandboxEnt e = i->second;
 
 	if (status == 0) {
-		std::string path;
-		define_sandbox_path(e.sandbox_id, path);
-
-		const char * res[2] = {
-			"NULL",
-			path.c_str()
+		const char * res[1] = {
+			"NULL"
 		};
 
-		enqueue_result(e.request_id, res, 2);
+		enqueue_result(e.request_id, res, 1);
 	} else {
 		char *err_msg = NULL;
 		read_from_pipe( e.error_pipe, &err_msg );
@@ -1281,11 +1284,10 @@ int download_proxy_reaper(Service*, int pid, int status) {
 			err_msg = strdup( "Worker thread failed" );
 		}
 
-		const char * res[2] = {
-			err_msg,
-			"NULL"
+		const char * res[1] = {
+			err_msg
 		};
-		enqueue_result(e.request_id, res, 2);
+		enqueue_result(e.request_id, res, 1);
 
 		free( err_msg );
 	}
