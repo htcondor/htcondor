@@ -47,6 +47,7 @@ int flush_request_tid = -1;
 
 int download_sandbox_reaper_id = -1;
 int upload_sandbox_reaper_id = -1;
+int download_proxy_reaper_id = -1;
 int destroy_sandbox_reaper_id = -1;
 
 int ChildErrorPipe = -1;
@@ -252,6 +253,14 @@ main_init( int, char ** const)
 				);
 	dprintf(D_FULLDEBUG, "registered upload_sandbox_reaper() at %i\n", upload_sandbox_reaper_id);
 
+	download_proxy_reaper_id = daemonCore->Register_Reaper(
+				"download_proxy_reaper",
+				&download_proxy_reaper,
+				"download_proxy",
+				NULL
+				);
+	dprintf(D_FULLDEBUG, "registered download_proxy_reaper() at %i\n", download_proxy_reaper_id);
+
 	destroy_sandbox_reaper_id = daemonCore->Register_Reaper(
 				"destroy_sandbox_reaper",
 				&destroy_sandbox_reaper,
@@ -333,7 +342,9 @@ stdin_pipe_handler(Service*, int) {
 					GAHP_RESULT_SUCCESS,
 					GAHP_COMMAND_DOWNLOAD_SANDBOX,
 					GAHP_COMMAND_UPLOAD_SANDBOX,
+					GAHP_COMMAND_DOWNLOAD_PROXY,
 					GAHP_COMMAND_DESTROY_SANDBOX,
+					GAHP_COMMAND_GET_SANDBOX_PATH,
 					GAHP_COMMAND_CREATE_CONDOR_SECURITY_SESSION,
 					GAHP_COMMAND_CONDOR_VERSION,
 					GAHP_COMMAND_ASYNC_MODE_ON,
@@ -342,7 +353,12 @@ stdin_pipe_handler(Service*, int) {
 					GAHP_COMMAND_QUIT,
 					GAHP_COMMAND_VERSION,
 					GAHP_COMMAND_COMMANDS};
-				gahp_output_return (commands, 12);
+				gahp_output_return (commands, 14);
+			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_GET_SANDBOX_PATH) == 0) {
+				std::string path;
+				define_sandbox_path( args.argv[1], path );
+				const char *reply[] = { GAHP_RESULT_SUCCESS, path.c_str() };
+				gahp_output_return( reply, 2 );
 			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_CREATE_CONDOR_SECURITY_SESSION) == 0) {
 				ClaimIdParser claimid( args.argv[1] );
 				if ( !daemonCore->getSecMan()->CreateNonNegotiatedSecuritySession(
@@ -415,6 +431,42 @@ stdin_pipe_handler(Service*, int) {
 				close( fds[1] );
 				if( tid ) {
 					dprintf (D_ALWAYS, "BOSCO: created upload_sandbox thread, id: %i\n", tid);
+
+					// this is a "success" in the sense that the gahp command was
+					// well-formatted.  whether or not the file transfer works or
+					// not is not what we are reporting here.
+					gahp_output_return_success();
+
+					SandboxEnt e;
+					e.pid = tid;
+					e.request_id = args.argv[1];
+					e.sandbox_id = args.argv[2];
+					e.error_pipe = fds[0];
+					// transfer started, record the entry in the map
+					std::pair<int, struct SandboxEnt> p(tid, e);
+					sandbox_map.insert(p);
+				} else {
+					dprintf (D_ALWAYS, "BOSCO: Create_Thread FAILED!\n");
+					gahp_output_return_success();
+					const char * res[1] = {
+						"Worker thread failed"
+					};
+					enqueue_result(args.argv[1], res, 1);
+					close( fds[0] );
+				}
+
+			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_DOWNLOAD_PROXY) == 0) {
+
+				int fds[2] = {-1,-1};
+				if ( pipe( fds ) < 0 ) {
+					EXCEPT( "Failed to create pipe!" );
+				}
+				ChildErrorPipe = fds[1];
+				int tid = daemonCore->Create_Thread(do_command_download_proxy, (void*)strdup(command), NULL, download_proxy_reaper_id);
+
+				close( fds[1] );
+				if( tid ) {
+					dprintf (D_ALWAYS, "BOSCO: created download_proxy thread, id: %i\n", tid);
 
 					// this is a "success" in the sense that the gahp command was
 					// well-formatted.  whether or not the file transfer works or
@@ -521,6 +573,7 @@ verify_gahp_command(char ** argv, int argc) {
 
 	if (strcasecmp (argv[0], GAHP_COMMAND_DOWNLOAD_SANDBOX) ==0 ||
 		strcasecmp (argv[0], GAHP_COMMAND_UPLOAD_SANDBOX) ==0 ||
+		strcasecmp (argv[0], GAHP_COMMAND_DOWNLOAD_PROXY) ==0 ||
 		strcasecmp (argv[0], GAHP_COMMAND_DESTROY_SANDBOX) ==0) {
 		// Expecting:GAHP_COMMAND_*_SANDBOX <req_id> <sandbox_id> <job_ad>
 		return verify_number_args (argc, 4) &&
@@ -534,6 +587,7 @@ verify_gahp_command(char ** argv, int argc) {
 	    // These are no-arg commands
 	    return verify_number_args (argc, 1);
 	} else if (strcasecmp (argv[0], GAHP_COMMAND_CONDOR_VERSION) == 0 ||
+			   strcasecmp (argv[0], GAHP_COMMAND_GET_SANDBOX_PATH) == 0 ||
 			   strcasecmp (argv[0], GAHP_COMMAND_CREATE_CONDOR_SECURITY_SESSION) == 0 ) {
 		return verify_number_args (argc, 2);
 	}
@@ -732,6 +786,81 @@ create_sandbox_dir(std::string sid, std::string &iwd)
 	} else {
 		return false;
 	}
+}
+
+
+bool
+download_proxy( const std::string &sid, const ClassAd &ad,
+				std::string &err )
+{
+	dprintf(D_ALWAYS, "BOSCO: download proxy, sandbox id: %s\n", sid.c_str());
+
+	std::string tmp_str;
+	std::string proxy_path;
+	define_sandbox_path(sid, proxy_path);
+
+	ad.LookupString( ATTR_X509_USER_PROXY, tmp_str );
+	proxy_path += DIR_DELIM_CHAR;
+	proxy_path += condor_basename( tmp_str.c_str() );
+	// TODO check validity of filename?
+
+	dprintf(D_ALWAYS, "BOSCO: download proxy, proxy path: %s\n", proxy_path.c_str());
+
+	std::string xfer_id;
+	ad.LookupString( ATTR_TRANSFER_KEY, xfer_id );
+	dprintf( D_ALWAYS, "BOSCO: download proxy, job id: %s\n", xfer_id.c_str() );
+
+	PROC_ID jobid;
+	ad.LookupInteger( ATTR_CLUSTER_ID, jobid.cluster );
+	ad.LookupInteger( ATTR_PROC_ID, jobid.proc );
+
+	dprintf( D_ALWAYS, "BOSCO: download proxy, job id: %d.%d\n", jobid.cluster, jobid.proc );
+
+	std::string server_addr;
+	ad.LookupString( ATTR_TRANSFER_SOCKET, server_addr );
+	dprintf( D_ALWAYS, "BOSCO: download proxy, address: %s\n", server_addr.c_str() );
+
+	int reply;
+	ReliSock rsock;
+	CondorError errstack;
+	Daemon server( DT_ANY, server_addr.c_str() );
+
+	rsock.timeout(20);   // years of research... :)
+	if( ! rsock.connect( server_addr.c_str() ) ) {
+		err = "Failed to connect to server";
+		return false;
+	}
+	if( ! server.startCommand( FETCH_PROXY_DELEGATION, &rsock, 0, &errstack,
+							   NULL, false, sec_session_id.c_str() ) ) {
+		err = errstack.getFullText();
+		return false;
+	}
+
+		// Send the transfer id
+	rsock.encode();
+	if ( !rsock.code(xfer_id) || !rsock.end_of_message() ) {
+		err = "Can't send transfer id";
+		return false;
+	}
+
+	rsock.decode();
+	reply = NOT_OK;
+	rsock.code( reply );
+	rsock.end_of_message();
+	if ( reply != OK ) {
+		err = "Request refused by server";
+		return false;
+	}
+
+	rsock.decode();
+
+		// Receive the gsi proxy
+	if ( rsock.get_x509_delegation( proxy_path.c_str(), false, NULL ) != ReliSock::delegation_ok ) {
+		err = "Failed to receive proxy file";
+		return false;
+	}
+
+	return true;
 }
 
 
@@ -999,6 +1128,39 @@ int do_command_upload_sandbox(void *arg, Stream*) {
 
 }
 
+int do_command_download_proxy(void *arg, Stream*) {
+
+	dprintf(D_ALWAYS, "FTGAHP: download proxy\n");
+
+	Gahp_Args args;
+	parse_gahp_command ((char*)arg, &args);
+
+	// first two args: result id and sandbox id:
+	std::string rid = args.argv[1];
+	std::string sid = args.argv[2];
+
+	// third arg: job ad
+	ClassAd ad;
+	classad::ClassAdParser my_parser;
+
+	if (!(my_parser.ParseClassAd(args.argv[3], ad))) {
+		// FAIL
+		write_to_pipe( ChildErrorPipe, "Failed to parse job ad" );
+		return 1;
+	}
+
+	std::string err;
+	if(!download_proxy(sid, ad, err)) {
+		// FAIL
+		dprintf( D_ALWAYS, "BOSCO: download_proxy error: %s\n", err.c_str());
+		write_to_pipe( ChildErrorPipe, err.c_str() );
+		return 1;
+	}
+
+	// SUCCEED
+	return 0;
+}
+
 int do_command_destroy_sandbox(void *arg, Stream*) {
 
 	dprintf(D_ALWAYS, "FTGAHP: destroy sandbox\n");
@@ -1101,6 +1263,42 @@ int upload_sandbox_reaper(Service*, int pid, int status) {
 	return 0;
 }
 
+int download_proxy_reaper(Service*, int pid, int status) {
+
+	// map pid to the SandboxEnt stucture we have recorded
+	SandboxMap::iterator i;
+	i = sandbox_map.find(pid);
+	SandboxEnt e = i->second;
+
+	if (status == 0) {
+		const char * res[1] = {
+			"NULL"
+		};
+
+		enqueue_result(e.request_id, res, 1);
+	} else {
+		char *err_msg = NULL;
+		read_from_pipe( e.error_pipe, &err_msg );
+		if ( err_msg == NULL || err_msg[0] == '\0' ) {
+			free( err_msg );
+			err_msg = strdup( "Worker thread failed" );
+		}
+
+		const char * res[1] = {
+			err_msg
+		};
+		enqueue_result(e.request_id, res, 1);
+
+		free( err_msg );
+	}
+
+	close( e.error_pipe );
+
+	// remove from the map
+	sandbox_map.erase(pid);
+
+	return 0;
+}
 
 int destroy_sandbox_reaper(Service*, int pid, int status) {
 

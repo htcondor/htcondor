@@ -31,6 +31,8 @@
 #define GAHP_COMMAND_DOWNLOAD_SANDBOX "DOWNLOAD_SANDBOX"
 #define GAHP_COMMAND_UPLOAD_SANDBOX "UPLOAD_SANDBOX"
 #define GAHP_COMMAND_DESTROY_SANDBOX "DESTROY_SANDBOX"
+#define GAHP_COMMAND_DOWNLOAD_PROXY "DOWNLOAD_PROXY"
+#define GAHP_COMMAND_GET_SANDBOX_PATH "GET_SANDBOX_PATH"
 #define GAHP_COMMAND_CREATE_CONDOR_SECURITY_SESSION "CREATE_CONDOR_SECURITY_SESSION"
 #define GAHP_COMMAND_CONDOR_VERSION "CONDOR_VERSION"
 
@@ -91,14 +93,17 @@ void define_sandbox_path(std::string sid, std::string &path);
 
 void define_path(std::string sid, std::string &path);
 bool create_sandbox_dir (std::string sid, std::string &iwd);
+bool download_proxy(const std::string &sid, const ClassAd &ad, std::string &err);
 bool destroy_sandbox(std::string sid, std::string &err);
 
 int do_command_download_sandbox(void *arg, Stream*);
 int do_command_upload_sandbox(void *arg, Stream*);
+int do_command_download_proxy(void *arg, Stream*);
 int do_command_destroy_sandbox(void *arg, Stream*);
 
 int download_sandbox_reaper(Service*, int, int);
 int upload_sandbox_reaper(Service*, int, int);
+int download_proxy_reaper(Service*, int, int);
 int destroy_sandbox_reaper(Service*, int, int);
 
 #endif
