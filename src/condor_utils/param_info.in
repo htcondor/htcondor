@@ -3555,6 +3555,11 @@ default=3000
 type=long
 tags=annex
 
+[ANNEX_DEFAULT_UNCLAIMED_TIMEOUT]
+default=900
+type=long
+tags=annex
+
 [ANNEX_DEFAULT_EC2_URL]
 default = https://ec2.us-east-1.amazonaws.com
 type=string
