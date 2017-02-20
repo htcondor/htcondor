@@ -721,38 +721,51 @@ readShortFile( const char * fileName, std::string & contents ) {
 // from annex.cpp
 void
 help( const char * argv0 ) {
-	fprintf( stdout, "usage: %s\n"
-		"\t-annex-name <annex-name>\n"
-		"\t-duration <lease-duration>\n"
-		"\t-slots <desired-capacity> | -count <desired-instances>\n"
-		"\t[-odi | -sfr]\n"
-		"\t[-access-key-file <access-key-file>]\n"
-		"\t[-secret-key-file <secret-key-file>]\n"
-		"\t[-config-dir <path>]\n"
-		"\t[-unclaimed-timeout]\n"
-/*		"\t[-pool <pool>] [-name <name>]\n"
-*/		"\t[-service-url <service-url>]\n"
-		"\t[-events-url <events-url>]\n"
-		"\t[-lambda-url <lambda-url>]\n"
-		"\t[-s3-url <lambda-url>]\n"
-		"\t[-sfr-lease-function-arn <sfr-lease-function-arn>]\n"
-		"\t[-odi-lease-function-arn <odi-lease-function-arn>]\n"
-		"\t[-[default-]user-data[-file] <data|file> ]\n"
-/*		"\t[-debug] [-help]\n"
-*/		"\t[-help]\n"
-		"\t[-sfr-config-file <spot-fleet-configuration-file>]\n"
-		"\t[-odi-instance-type <instance-type>]\n"
-		"\t[-odi-image-id <image-ID>\n"
-		"\t[-odi-security-group-ids <group-ID[,groupID]*>\n"
-		"\t[-odi-key-name <key-name>\n"
-		"\t[-odi-instance-profile-arn <instance-profile-arn>]\n"
+	fprintf( stdout, "usage: %s -annex-name <annex-name> -count|-slots <number>\n"
+		"\n"
+		"For on-demand instances:\n"
+		"\t[-aws-on-demand]\n"
+		"\t-count <integer number of instances>\n"
+		"\n"
+		"For spot fleet instances:\n"
+		"\t[-aws-spot-fleet]\n"
+		"\t-slots <integer number of weighted capacity units>\n"
+		"\n"
+		"To set the lease or idle durations:\n"
+		"\t[-duration <lease duration in decimal hours>]\n"
+		"\t[-idle <idle duration in decimal hours>]\n"
+		"\n"
+		"To customize the annex's HTCondor configuration:\n"
+		"\t[-config-dir </full/path/to/config.d>]\n"
+		"\n"
+		"To set an instance's user data:\n"
+		"\t[-aws-[default-]user-data[-file] <data|path/to/file> ]\n"
+		"\n"
+		"To customize an AWS on-demand annex:\n"
+		"\t[-aws-on-demand-instance-type <instance-type>]\n"
+		"\t[-aws-on-demand-ami-id <AMI-ID>\n"
+		"\t[-aws-on-demand-security-group-ids <group-ID[,groupID]*>\n"
+		"\t[-aws-on-demand-key-name <key-name>]\n"
+		"\n"
+		"To use a customize an AWS Spot Fleet annex, specify a JSON config file:\n"
+		"\t[-aws-spot-fleet-config-file </full/path/to/config.json>]\n"
+		"\n"
+		"To reprint this help:\n"
+		"\t[-help]\n"
+		"\n"
+		"Expert mode (specify account and region):\n"
+		"\t[-aws-access-key-file <path/to/access-key-file>]\n"
+		"\t[-aws-secret-key-file <path/to/secret-key-file>]\n"
+		"\t[-aws-ec2-url https://ec2.<region>.amazonaws.com]\n"
+		"\t[-aws-events-url https://events.<region>.amazonaws.com]\n"
+		"\t[-aws-lambda-url https://lambda.<region>.amazonaws.com]\n"
+		"\t[-aws-s3-url https://s3.<region>.amazonaws.com]\n"
+		"\n"
+		"Expert mode (specify implementation details):\n"
+		"\t[-aws-spot-fleet-lease-function-arn <sfr-lease-function-arn>]\n"
+		"\t[-aws-on-demand-lease-function-arn <odi-lease-function-arn>]\n"
+		"\t[-aws-on-demand-instance-profile-arn <instance-profile-arn>]\n"
 		, argv0 );
-	fprintf( stdout, "%s defaults to On-Demand Instances (-odi).  "
-		"For Spot Fleet Requests, use -sfr.  Specifying "
-		"-sfr-config-file implies -sfr, as does -slots.  "
-		"Specifying -count implies -odi.  You may not specify or imply "
-		"-odi and -sfr in the same command.  Specifying -odi-* implies -odi."
-		"\n", argv0 );
 }
 
 int _argc;
@@ -792,78 +805,78 @@ argv = _argv;
 	long int leaseDuration = 0;
 	long int count = 0;
 	for( int i = 1; i < argc; ++i ) {
-		if( is_dash_arg_prefix( argv[i], "service-url", 7 ) ) {
+		if( is_dash_arg_prefix( argv[i], "aws-ec2-url", 11 ) ) {
 			++i;
 			if( argv[i] != NULL ) {
 				serviceURL = argv[i];
 				continue;
 			} else {
-				fprintf( stderr, "%s: -service-url requires an argument.\n", argv[0] );
+				fprintf( stderr, "%s: -aws-ec2-url requires an argument.\n", argv[0] );
 				return 1;
 			}
-		} else if( is_dash_arg_prefix( argv[i], "events-url", 6 ) ) {
+		} else if( is_dash_arg_prefix( argv[i], "aws-events-url", 14 ) ) {
 			++i;
 			if( argv[i] != NULL ) {
 				eventsURL = argv[i];
 				continue;
 			} else {
-				fprintf( stderr, "%s: -events-url requires an argument.\n", argv[0] );
+				fprintf( stderr, "%s: -aws-events-url requires an argument.\n", argv[0] );
 				return 1;
 			}
-		} else if( is_dash_arg_prefix( argv[i], "lambda-url", 6 ) ) {
+		} else if( is_dash_arg_prefix( argv[i], "aws-lambda-url", 14 ) ) {
 			++i;
 			if( argv[i] != NULL ) {
 				lambdaURL = argv[i];
 				continue;
 			} else {
-				fprintf( stderr, "%s: -lambda-url requires an argument.\n", argv[0] );
+				fprintf( stderr, "%s: -aws-lambda-url requires an argument.\n", argv[0] );
 				return 1;
 			}
-		} else if( is_dash_arg_prefix( argv[i], "s3-url", 2 ) ) {
+		} else if( is_dash_arg_prefix( argv[i], "aws-s3-url", 10 ) ) {
 			++i;
 			if( argv[i] != NULL ) {
 				s3URL = argv[i];
 				continue;
 			} else {
-				fprintf( stderr, "%s: -s3-url requires an argument.\n", argv[0] );
+				fprintf( stderr, "%s: -aws-s3-url requires an argument.\n", argv[0] );
 				return 1;
 			}
-		} else if( is_dash_arg_prefix( argv[i], "user-data-file", 10 ) ) {
+		} else if( is_dash_arg_prefix( argv[i], "aws-user-data-file", 14 ) ) {
 			++i; ++udSpecifications;
 			if( argv[i] != NULL ) {
 				userDataFileName = argv[i];
 				continue;
 			} else {
-				fprintf( stderr, "%s: -user-data-file requires an argument.\n", argv[0] );
+				fprintf( stderr, "%s: -aws-user-data-file requires an argument.\n", argv[0] );
 				return 1;
 			}
-		} else if( is_dash_arg_prefix( argv[i], "user-data", 9 ) ) {
+		} else if( is_dash_arg_prefix( argv[i], "aws-user-data", 13 ) ) {
 			++i; ++udSpecifications;
 			if( argv[i] != NULL ) {
 				userData = argv[i];
 				continue;
 			} else {
-				fprintf( stderr, "%s: -user-data requires an argument.\n", argv[0] );
+				fprintf( stderr, "%s: -aws-user-data requires an argument.\n", argv[0] );
 				return 1;
 			}
-		} else if( is_dash_arg_prefix( argv[i], "default-user-data-file", 18 ) ) {
+		} else if( is_dash_arg_prefix( argv[i], "aws-default-user-data-file", 22 ) ) {
 			++i; ++udSpecifications;
 			if( argv[i] != NULL ) {
 				clUserDataWins = false;
 				userDataFileName = argv[i];
 				continue;
 			} else {
-				fprintf( stderr, "%s: -user-data-file requires an argument.\n", argv[0] );
+				fprintf( stderr, "%s: -aws-user-data-file requires an argument.\n", argv[0] );
 				return 1;
 			}
-		} else if( is_dash_arg_prefix( argv[i], "default-user-data", 17 ) ) {
+		} else if( is_dash_arg_prefix( argv[i], "aws-default-user-data", 21 ) ) {
 			++i; ++udSpecifications;
 			if( argv[i] != NULL ) {
 				clUserDataWins = false;
 				userData = argv[i];
 				continue;
 			} else {
-				fprintf( stderr, "%s: -user-data requires an argument.\n", argv[0] );
+				fprintf( stderr, "%s: -aws-user-data requires an argument.\n", argv[0] );
 				return 1;
 			}
 		} else if( is_dash_arg_prefix( argv[i], "annex-name", 6 ) ) {
@@ -884,106 +897,106 @@ argv = _argv;
 				fprintf( stderr, "%s: -config-dir requires an argument.\n", argv[0] );
 				return 1;
 			}
-		} else if( is_dash_arg_prefix( argv[i], "sfr-config-file", 12 ) ) {
+		} else if( is_dash_arg_prefix( argv[i], "aws-spot-fleet-config-file", 22 ) ) {
 			++i;
 			if( argv[i] != NULL ) {
 				sfrConfigFile = argv[i];
 				annexTypeIsSFR = true;
 				continue;
 			} else {
-				fprintf( stderr, "%s: -sfr-config-file requires an argument.\n", argv[0] );
+				fprintf( stderr, "%s: -aws-spot-fleet-config-file requires an argument.\n", argv[0] );
 				return 1;
 			}
-		} else if( is_dash_arg_prefix( argv[i], "public-key-file", 6 ) ||
-					is_dash_arg_prefix( argv[1], "access-key-file", 6 ) ) {
+		} else if( is_dash_arg_prefix( argv[i], "aws-public-key-file", 19 ) ||
+				   is_dash_arg_prefix( argv[i], "aws-access-key-file", 19 ) ) {
 			++i;
 			if( argv[i] != NULL ) {
 				publicKeyFile = argv[i];
 				continue;
 			} else {
-				fprintf( stderr, "%s: -{public|access}-key-file requires an argument.\n", argv[0] );
+				fprintf( stderr, "%s: -aws-access-key-file requires an argument.\n", argv[0] );
 				return 1;
 			}
-		} else if( is_dash_arg_prefix( argv[i], "secret-key-file", 6 ) ||
-					is_dash_arg_prefix( argv[i], "private-key-file", 7 ) ) {
+		} else if( is_dash_arg_prefix( argv[i], "aws-secret-key-file", 19 ) ||
+				   is_dash_arg_prefix( argv[i], "aws-private-key-file", 20 ) ) {
 			++i;
 			if( argv[i] != NULL ) {
 				secretKeyFile = argv[i];
 				continue;
 			} else {
-				fprintf( stderr, "%s: -{secret|private}-key-file requires an argument.\n", argv[0] );
+				fprintf( stderr, "%s: -aws-secret-key-file requires an argument.\n", argv[0] );
 				return 1;
 			}
-		} else if( is_dash_arg_prefix( argv[i], "sfr-lease-function-arn", 11 ) ) {
+		} else if( is_dash_arg_prefix( argv[i], "aws-spot-fleet-lease-function-arn", 22 ) ) {
 			++i;
 			if( argv[i] != NULL ) {
 				sfrLeaseFunctionARN = argv[i];
 				continue;
 			} else {
-				fprintf( stderr, "%s: -sfr-lease-function-arn requires an argument.\n", argv[0] );
+				fprintf( stderr, "%s: -aws-spot-fleet-lease-function-arn requires an argument.\n", argv[0] );
 				return 1;
 			}
-		} else if( is_dash_arg_prefix( argv[i], "odi-lease-function-arn", 11 ) ) {
+		} else if( is_dash_arg_prefix( argv[i], "aws-on-demand-lease-function-arn", 21 ) ) {
 			++i;
 			if( argv[i] != NULL ) {
 				odiLeaseFunctionARN = argv[i];
 				continue;
 			} else {
-				fprintf( stderr, "%s: -odi-lease-function-arn requires an argument.\n", argv[0] );
+				fprintf( stderr, "%s: -aws-on-demand-lease-function-arn requires an argument.\n", argv[0] );
 				return 1;
 			}
-		} else if( is_dash_arg_prefix( argv[i], "odi-instance-type", 14 ) ) {
+		} else if( is_dash_arg_prefix( argv[i], "aws-on-demand-instance-type", 24 ) ) {
 			++i;
 			if( argv[i] != NULL ) {
 				odiInstanceType = argv[i];
 				continue;
 			} else {
-				fprintf( stderr, "%s: -odi-instance-type requires an argument.\n", argv[0] );
+				fprintf( stderr, "%s: -aws-on-demand-instance-type requires an argument.\n", argv[0] );
 				return 1;
 			}
-		} else if( is_dash_arg_prefix( argv[i], "odi-key-name", 7 ) ) {
+		} else if( is_dash_arg_prefix( argv[i], "aws-on-demand-key-name", 17 ) ) {
 			++i;
 			if( argv[i] != NULL ) {
 				odiKeyName = argv[i];
 				continue;
 			} else {
-				fprintf( stderr, "%s: -odi-key-name requires an argument.\n", argv[0] );
+				fprintf( stderr, "%s: -aws-on-demand-key-name requires an argument.\n", argv[0] );
 				return 1;
 			}
-		} else if( is_dash_arg_prefix( argv[i], "odi-security-group-ids", 21 ) ) {
+		} else if( is_dash_arg_prefix( argv[i], "aws-on-demand-security-group-ids", 31 ) ) {
 			++i;
 			if( argv[i] != NULL ) {
 				odiSecurityGroupIDs = argv[i];
 				continue;
 			} else {
-				fprintf( stderr, "%s: -odi-security-group-ids requires an argument.\n", argv[0] );
+				fprintf( stderr, "%s: -aws-on-demand-security-group-ids requires an argument.\n", argv[0] );
 				return 1;
 			}
-		} else if( is_dash_arg_prefix( argv[i], "odi-image-id", 11 ) ) {
+		} else if( is_dash_arg_prefix( argv[i], "aws-on-demand-ami-id", 20 ) ) {
 			++i;
 			if( argv[i] != NULL ) {
 				odiImageID = argv[i];
 				continue;
 			} else {
-				fprintf( stderr, "%s: -odi-image-id requires an argument.\n", argv[0] );
+				fprintf( stderr, "%s: -aws-on-demand-ami-id requires an argument.\n", argv[0] );
 				return 1;
 			}
-		} else if( is_dash_arg_prefix( argv[i], "odi-instance-profile-arn", 22 ) ) {
+		} else if( is_dash_arg_prefix( argv[i], "aws-on-demand-instance-profile-arn", 22 ) ) {
 			++i;
 			if( argv[i] != NULL ) {
 				odiInstanceProfileARN = argv[i];
 				continue;
 			} else {
-				fprintf( stderr, "%s: -lease-function-arn requires an argument.\n", argv[0] );
+				fprintf( stderr, "%s: -aws-on-demand-instance-profile-arn requires an argument.\n", argv[0] );
 				return 1;
 			}
-		} else if( is_dash_arg_prefix( argv[i], "odi-s3-config-path", 18 ) ) {
+		} else if( is_dash_arg_prefix( argv[i], "aws-s3-config-path", 18 ) ) {
 			++i;
 			if( argv[i] != NULL ) {
 				odiS3ConfigPath = argv[i];
 				continue;
 			} else {
-				fprintf( stderr, "%s: -odi-s3-config-path requires an argument.\n", argv[0] );
+				fprintf( stderr, "%s: -aws-s3-config-path requires an argument.\n", argv[0] );
 				return 1;
 			}
 		} else if( is_dash_arg_prefix( argv[i], "duration", 8 ) ) {
@@ -1004,10 +1017,10 @@ argv = _argv;
 				}
 				continue;
 			} else {
-				fprintf( stderr, "%s: -duration accepts a decimal number of hours.\n", argv[0] );
+				fprintf( stderr, "%s: -duration requires an argument.\n", argv[0] );
 				return 1;
 			}
-		} else if( is_dash_arg_prefix( argv[i], "unclaimed-timeout", 8 ) ) {
+		} else if( is_dash_arg_prefix( argv[i], "idle", 4 ) ) {
 			++i;
 			if( argv[i] != NULL ) {
 				char * endptr = NULL;
@@ -1016,16 +1029,16 @@ argv = _argv;
 				double fractionalHours = strtod( ut, & endptr );
 				unclaimedTimeout = fractionalHours * 60 * 60;
 				if( * endptr != '\0' ) {
-					fprintf( stderr, "%s: -unclaimed-timeout accepts a decimal number of hours.\n", argv[0] );
+					fprintf( stderr, "%s: -idle accepts a decimal number of hours.\n", argv[0] );
 					return 1;
 				}
 				if( unclaimedTimeout <= 0 ) {
-					fprintf( stderr, "%s: the unclaimed timeout must be greater than zero.\n", argv[0] );
+					fprintf( stderr, "%s: the idle time must be greater than zero.\n", argv[0] );
 					return 1;
 				}
 				continue;
 			} else {
-				fprintf( stderr, "%s: -unclaimed-timeout requires an argument.\n", argv[0] );
+				fprintf( stderr, "%s: -idle requires an argument.\n", argv[0] );
 				return 1;
 			}
 		} else if( is_dash_arg_prefix( argv[i], "slots", 5 ) ) {
@@ -1039,13 +1052,13 @@ argv = _argv;
 					return 1;
 				}
 				if( count <= 0 ) {
-					fprintf( stderr, "%s: the count must be greater than zero.\n", argv[0] );
+					fprintf( stderr, "%s: the number of requested slots must be greater than zero.\n", argv[0] );
 					return 1;
 				}
 				annexTypeIsSFR = true;
 				continue;
 			} else {
-				fprintf( stderr, "%s: -count requires an argument.\n", argv[0] );
+				fprintf( stderr, "%s: -slots requires an argument.\n", argv[0] );
 				return 1;
 			}
 		} else if( is_dash_arg_prefix( argv[i], "count", 5 ) ) {
@@ -1055,11 +1068,11 @@ argv = _argv;
 				const char * ld = argv[i];
 				count = strtol( ld, & endptr, 0 );
 				if( * endptr != '\0' ) {
-					fprintf( stderr, "%s: -slots requires an integer argument.\n", argv[0] );
+					fprintf( stderr, "%s: -count requires an integer argument.\n", argv[0] );
 					return 1;
 				}
 				if( count <= 0 ) {
-					fprintf( stderr, "%s: the count must be greater than zero.\n", argv[0] );
+					fprintf( stderr, "%s: the number of requested instances must be greater than zero.\n", argv[0] );
 					return 1;
 				}
 				annexTypeIsODI = true;
@@ -1068,10 +1081,10 @@ argv = _argv;
 				fprintf( stderr, "%s: -count requires an argument.\n", argv[0] );
 				return 1;
 			}
-		} else if( is_dash_arg_prefix( argv[i], "sfr", 3 ) ) {
+		} else if( is_dash_arg_prefix( argv[i], "aws-spot-fleet", 14 ) ) {
 			annexTypeIsSFR = true;
 			continue;
-		} else if( is_dash_arg_prefix( argv[i], "odi", 3 ) ) {
+		} else if( is_dash_arg_prefix( argv[i], "aws-on-demand", 13 ) ) {
 			annexTypeIsODI = true;
 			continue;
 		} else if( is_dash_arg_prefix( argv[i], "help", 1 ) ) {
@@ -1084,7 +1097,7 @@ argv = _argv;
 	}
 
 	if( udSpecifications > 1 ) {
-		fprintf( stderr, "%s: you may specify no more than one of -[default-]user-data[-file].\n", argv[0] );
+		fprintf( stderr, "%s: you may specify no more than one of -aws-[default-]user-data[-file].\n", argv[0] );
 		return 1;
 	}
 
@@ -1102,8 +1115,14 @@ argv = _argv;
 		leaseDuration = param_integer( "ANNEX_DEFAULT_LEASE_DURATION", 3000 );
 	}
 
+	if( unclaimedTimeout == 0 ) {
+		unclaimedTimeout = param_integer( "ANNEX_DEFAULT_UNCLAIMED_TIMEOUT", 900 );
+	}
+
 	if( annexTypeIsSFR && annexTypeIsODI ) {
-		fprintf( stderr, "You must not specify more than one of -odi and -sfr.  If you specify -sfr-config-file, you must not specify -odi.  Specifying -count implies -odi and specifying -slots implies -sfr.\n" );
+		fprintf( stderr, "An annex may not be both on-demand and spot fleet.  "
+			"Specifying -count implies -aws-on-demand; specifying -slots "
+			"implies -aws-spot-fleet.\n" );
 		return 1;
 	}
 	if(! (annexTypeIsSFR || annexTypeIsODI )) {
@@ -1113,12 +1132,12 @@ argv = _argv;
 	if( annexTypeIsSFR && sfrConfigFile == NULL ) {
 		sfrConfigFile = param( "ANNEX_DEFAULT_SFR_CONFIG_FILE" );
 		if( sfrConfigFile == NULL ) {
-			fprintf( stderr, "Spot Fleet Requests require the -sfr-config-file flag.\n" );
+			fprintf( stderr, "Spot Fleet Requests require the -aws-spot-fleet-config-file flag.\n" );
 			return 1;
 		}
 	}
 	if( sfrConfigFile != NULL && ! annexTypeIsSFR ) {
-		fprintf( stderr, "Unwilling to ignore -sfr-config-file flag being set for an ODI annex.\n" );
+		fprintf( stderr, "Unwilling to ignore -spot-fleet-request-config-file flag being set for an on-demand annex.\n" );
 		return 1;
 	}
 
@@ -1210,12 +1229,12 @@ argv = _argv;
 	spotFleetRequest.Assign( "EndOfLease", now + leaseDuration );
 
 	std::string tarballTarget;
-	param( tarballTarget, "ANNEX_DEFAULT_ODI_S3_CONFIG_PATH" );
+	param( tarballTarget, "ANNEX_DEFAULT_S3_CONFIG_PATH" );
 	if( odiS3ConfigPath != NULL ) {
 		tarballTarget = odiS3ConfigPath;
 	}
 	if( tarballTarget.empty() ) {
-		fprintf( stderr, "If you don't specify -odi-s3-config-path, ANNEX_DEFAULT_ODI_S3_CONFIG_PATH must be set in configuration.\n" );
+		fprintf( stderr, "If you don't specify -aws-s3-config-path, ANNEX_DEFAULT_S3_CONFIG_PATH must be set in configuration.\n" );
 		return 1;
 	}
 	spotFleetRequest.Assign( "UploadTo", tarballTarget );
@@ -1311,31 +1330,31 @@ argv = _argv;
 	}
 
 
-/*
 	if( annexTypeIsODI ) {
 		fprintf( stdout,
-			"Will request %ld %s on-demand instances for %.2f hours.  "
-			"Each instance will terminate after %.2f hours of inactivity.\n"
-			"To change to Spot instances, use the -spot flag.\n"
-			"To change the instance type, use the -odi-instance-type flag.\n"
+			"Will request %ld %s on-demand instance%s for %.2f hours.  "
+			"Each instance will terminate after being idle for %.2f hours.\n"
+			"To change the instance type, use the -aws-on-demand-instance-type flag.\n"
 			"To change the lease duration, use the -duration flag.\n"
-			"To change the no-claim timeout, use the -unclaimed-timeout flag.\n",
-				count, odiInstanceType, leaseDuration / 3600.0,
-				unclaimedTimeout / 3600.0
-		);
-	} else {
-		fprintf( stdout,
-			"Will request %ld spot instances for %.2f hours.  "
-			"Each instance will terminate after %.2f hours of inactivity.\n"
-			"To change to on-demand instances, use the -odi flag.\n"
-			"To change the instance type, use the -instance-type flag.\n"
-			"To change the lease duration, use the -duration flag.\n"
-			"To change the no-claim timeout, use the -unclaimed-timeout flag.\n",
-				count, leaseDuration / 3600.0,
+			"To change how long an idle instance will wait before terminating itself, use the -idle flag.\n",
+				count, odiInstanceType,
+				count == 1 ? "" : "s",
+				leaseDuration / 3600.0,
 				unclaimedTimeout / 3600.0
 		);
 	}
-*/
+	if( annexTypeIsSFR ) {
+		fprintf( stdout,
+			"Will request %ld spot instance%s for %.2f hours.  "
+			"Each instance will terminate after being idle for %.2f hours.\n"
+			"To change the lease duration, use the -duration flag.\n"
+			"To change the how long an idle instance will wait before terminating itself, use the -idle flag.\n",
+				count,
+				count == 1 ? "" : "s",
+				leaseDuration / 3600.0,
+				unclaimedTimeout / 3600.0
+		);
+	}
 
 
 	// -------------------------------------------------------------------------
