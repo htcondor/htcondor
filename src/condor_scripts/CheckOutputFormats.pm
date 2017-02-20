@@ -2136,7 +2136,7 @@ sub check_transform {
 	if ($option eq 'EVAL'){
 		for my $i (0..$index-1){
 			my $temp = $Attr{$i}{DiskUsage}*2;
-			if ($Attr{$i}{MemoryUsage} ne 5 || $Attr{$i}{RequestDisk} ne "($temp / 1024)"){
+			if ($Attr{$i}{MemoryUsage} ne 5 || !($Attr{$i}{RequestDisk} =~ /(\s*$temp\s*\/\s*1024\s*)/)){
 				print "MemoryUsage is $Attr{$i}{MemoryUsage}. should be 5\n";
 				print "RequestDisk is $Attr{$i}{RequestDisk}. should be ($temp / 1024)";
 				return 0;
