@@ -63,29 +63,6 @@
 static int cleanup_globals(int exit_code); // called on exit to do necessary cleanup
 #define exit(n) (exit)(cleanup_globals(n))
 
-#ifdef HAVE_EXT_POSTGRESQL
-#include "sqlquery.h"
-#endif /* HAVE_EXT_POSTGRESQL */
-
-/* Since this enum can have conditional compilation applied to it, I'm
-	specifying the values for it to keep their actual integral values
-	constant in case someone decides to write this information to disk to
-	pass it to another daemon or something. This enum is used to determine
-	who to talk to when using the -direct option. */
-enum {
-	/* don't know who I should be talking to */
-	DIRECT_UNKNOWN = 0,
-	/* start at the rdbms and fail over like normal */
-	DIRECT_ALL = 1,
-#ifdef HAVE_EXT_POSTGRESQL
-	/* talk directly to the rdbms system */
-	DIRECT_RDBMS = 2,
-	/* talk directly to the quill daemon */
-	DIRECT_QUILLD = 3,
-#endif
-	/* talk directly to the schedd */
-	DIRECT_SCHEDD = 4
-};
 
 struct 	PrioEntry { MyString name; float prio; };
 
@@ -139,9 +116,6 @@ static bool render_job_status_char(std::string & result, AttrList*ad, Formatter 
 //
 static bool show_file_queue(const char* jobads, const char* userlog);
 static bool show_schedd_queue(const char* scheddAddress, const char* scheddName, const char* scheddMachine, int useFastPath);
-#ifdef HAVE_EXT_POSTGRESQL
-static bool show_db_queue( const char* quill_name, const char* db_ipAddr, const char* db_name, const char* query_password);
-#endif
 static int dryFetchQueue(const char * file, StringList & proj, int fetch_opts, int limit, buffer_line_processor pfnProcess, void *pvProcess);
 
 static void initOutputMask(AttrListPrintMask & pqmask, int qdo_mode, bool wide_mode);
@@ -163,43 +137,9 @@ int max_batch_name = 0; // width of longest batch name
 
 static int read_userprio_file(const char *filename, ExtArray<PrioEntry> & prios);
 
-/* convert the -direct aqrgument prameter into an enum */
-unsigned int process_direct_argument(char *arg);
-
-#ifdef HAVE_EXT_POSTGRESQL
-static void quillCleanupOnExit(int n);
-static void freeConnectionStrings();
-
-// use std::strings to hold these strings so that we don't have to worry about freeing them on exit.
-static std::string squillName, squeryPassword, sdbIpAddr, sdbName, squillMachine, quillAddr;
-const char *quillName = NULL;
-const char *dbIpAddr = NULL;
-const char *dbName = NULL;
-const char *queryPassword = NULL;
-const char *quillMachine = NULL;
-
-/* execute a database query directly */ 
-static void exec_db_query(const char *quill_name, const char *db_ipAddr, const char *db_name,const char *query_password);
-
-/* build database connection string */
-static char * getDBConnStr(char const *&, char const *&, char const *&, char const *&);
-
-/* get the quill address for the quill_name specified */
-static QueryResult getQuillAddrFromCollector(const char *quill_name, std::string &quill_addr);
-
-/* avgqueuetime is used to indicate a request to query average wait time for uncompleted jobs in queue */
-static  bool avgqueuetime = false;
-
-/* directDBquery means we will just run a database query and return results directly to user */
-static  bool directDBquery = false;
-#endif
 
 /* Warn about schedd-wide limits that may confuse analysis code */
 bool warnScheddGlobalLimits(Daemon *schedd,MyString &result_buf);
-
-/* who is it that I should directly ask for the queue, defaults to the normal
-	failover semantics */
-static unsigned int direct = DIRECT_ALL;
 
 static 	int dash_long = 0, summarize = 1, global = 0, show_io = 0, dash_dag = 0, show_held = 0;
 static  int dash_batch = 0, dash_batch_specified = 0, dash_batch_is_default = 1;
@@ -556,42 +496,6 @@ profile_print(size_t & cbBefore, double & tmBefore, int cAds, bool fCacheStats=t
        }
 }
 
-#ifdef HAVE_EXT_POSTGRESQL
-/* this function for checking whether database can be used for querying in local machine */
-static bool checkDBconfig() {
-	char *tmp;
-
-	if (param_boolean("QUILL_ENABLED", false) == false) {
-		return false;
-	};
-
-	tmp = param("QUILL_NAME");
-	if (!tmp) {
-		return false;
-	}
-	free(tmp);
-
-	tmp = param("QUILL_DB_IP_ADDR");
-	if (!tmp) {
-		return false;
-	}
-	free(tmp);
-
-	tmp = param("QUILL_DB_NAME");
-	if (!tmp) {
-		return false;
-	}
-	free(tmp);
-
-	tmp = param("QUILL_DB_QUERY_PASSWORD");
-	if (!tmp) {
-		return false;
-	}
-	free(tmp);
-
-	return true;
-}
-#endif /* HAVE_EXT_POSTGRESQL */
 
 int main (int argc, char **argv)
 {
@@ -601,7 +505,6 @@ int main (int argc, char **argv)
 	char		scheddMachine[64];
 	int		useFastScheddQuery = 0;
 	char		*tmp;
-	bool        useDB; /* Is there a database to query for a schedd */
 	int         retval = 0;
 
 	Collectors = NULL;
@@ -613,13 +516,6 @@ int main (int argc, char **argv)
 	dprintf_OnExitDumpOnErrorBuffer(stderr);
 	//classad::ClassAdSetExpressionCaching( param_boolean( "ENABLE_CLASSAD_CACHING", false ) );
 
-#ifdef HAVE_EXT_POSTGRESQL
-		/* by default check the configuration for local database */
-	useDB = checkDBconfig();
-#else 
-	useDB = FALSE;
-	if (useDB) {} /* Done to suppress set-but-not-used warnings */
-#endif /* HAVE_EXT_POSTGRESQL */
 
 #if !defined(WIN32)
 	install_sig_handler(SIGPIPE, SIG_IGN );
@@ -635,13 +531,6 @@ int main (int argc, char **argv)
 
 	// process arguments
 	processCommandLineArguments (argc, argv);
-
-	// Since we are assuming that we want to talk to a DB in the normal
-	// case, this will ensure that we don't try to when loading the job queue
-	// classads from file.
-	if ((jobads_file != NULL) || (userlog_file != NULL)) {
-		useDB = FALSE;
-	}
 
 	if (Collectors == NULL) {
 		Collectors = CollectorList::create();
@@ -687,149 +576,10 @@ int main (int argc, char **argv)
 					useFastScheddQuery = v.built_since_version(6,9,3) ? 1 : 0;
 				}
 			}
-			
-#ifdef HAVE_EXT_POSTGRESQL
-			if ( directDBquery ) {
-				/* perform direct DB query if indicated and exit */
 
-					/* check if database is available */
-				if (!useDB) {
-					printf ("\n\n-- Schedd: %s : %s\n", scheddName, scheddAddr);
-					fprintf(stderr, "Database query not supported on schedd: %s\n", scheddName);
-				}
-
-				exec_db_query(NULL, NULL, NULL, NULL);
-				exit(EXIT_SUCCESS);
-			} 
-#endif /* HAVE_EXT_POSTGRESQL */
-
-			/* .. not a direct db query, so just happily continue ... */
-
-			/* When an installation has database parameters configured, 
-				it means there is quill daemon. If database
-				is not accessible, we fail over to
-				quill daemon, and if quill daemon
-				is not available, we fail over the
-				schedd daemon */
-			switch(direct)
-			{
-				case DIRECT_ALL:
-					/* always try the failover sequence */
-
-					/* FALL THROUGH */
-
-#ifdef HAVE_EXT_POSTGRESQL
-				case DIRECT_RDBMS:
-					if (useDB) {
-
-						/* ask the database for the queue */
-						retval = show_db_queue(NULL, NULL, NULL, NULL);
-						if (retval)
-						{
-							/* if the queue was retrieved, then I am done */
-							exit(retval?EXIT_SUCCESS:EXIT_FAILURE);
-						}
-						
-						fprintf( stderr, 
-							"-- Database not reachable or down.\n");
-
-						if (direct == DIRECT_RDBMS) {
-							fprintf(stderr,
-								"\t- Not failing over due to -direct\n");
-							exit(retval?EXIT_SUCCESS:EXIT_FAILURE);
-						} 
-
-						fprintf(stderr,
-							"\t- Failing over to the quill daemon --\n");
-
-						/* Hmm... couldn't find the database, so try the 
-							quilld */
-					} else {
-						if (direct == DIRECT_RDBMS) {
-							fprintf(stderr, 
-								"-- Direct query to rdbms on behalf of\n"
-								"\tschedd %s(%s) failed.\n"
-								"\t- Schedd doesn't appear to be using "
-								"quill.\n",
-								scheddName, scheddAddr);
-							fprintf(stderr,
-								"\t- Not failing over due to -direct\n");
-							exit(EXIT_FAILURE);
-						}
-					}
-
-					/* FALL THROUGH */
-
-				case DIRECT_QUILLD:
-					if (useDB) {
-
-						Daemon quill( DT_QUILL, 0, 0 );
-						char tmp_char[8];
-						strcpy(tmp_char, "Unknown");
-
-						/* query the quill daemon */
-						if (quill.locate() &&
-							(retval = show_schedd_queue(quill.addr(),
-								quill.name() ? quill.name() : "Unknown",
-								quill.fullHostname() ? quill.fullHostname() : "Unknown",
-								false))
-							)
-						{
-							/* if the queue was retrieved, then I am done */
-							exit(retval?EXIT_SUCCESS:EXIT_FAILURE);
-						}
-
-						fprintf( stderr,
-							"-- Quill daemon at %s(%s)\n"
-							"\tassociated with schedd %s(%s)\n"
-							"\tis not reachable or can't talk to rdbms.\n",
-							quill.name(), quill.addr(),
-							scheddName, scheddAddr );
-
-						if (direct == DIRECT_QUILLD) {
-							fprintf(stderr,
-								"\t- Not failing over due to -direct\n");
-							exit(retval?EXIT_SUCCESS:EXIT_FAILURE);
-						}
-
-						fprintf(stderr,
-							"\t- Failing over to the schedd %s(%s).\n", 
-							scheddName, scheddAddr);
-
-					} else {
-						if (direct == DIRECT_QUILLD) {
-							fprintf(stderr,
-								"-- Direct query to quilld associated with\n"
-								"\tschedd %s(%s) failed.\n"
-								"\t- Schedd doesn't appear to be using "
-								"quill.\n",
-								scheddName, scheddAddr);
-
-							fprintf(stderr,
-								"\t- Not failing over due to use of -direct\n");
-
-							exit(EXIT_FAILURE);
-						}
-					}
-
-#endif /* HAVE_EXT_POSTGRESQL */
-				case DIRECT_SCHEDD:
-					retval = show_schedd_queue(scheddAddr, scheddName, scheddMachine, useFastScheddQuery);
-			
-					/* Hopefully I got the queue from the schedd... */
-					exit(retval?EXIT_SUCCESS:EXIT_FAILURE);
-					break;
-
-				case DIRECT_UNKNOWN:
-				default:
-					fprintf( stderr,
-						"-- Cannot determine any location for queue "
-						"using option -direct!\n"
-						"\t- This is an internal error and should be "
-						"reported to condor-admin@cs.wisc.edu." );
-					exit(EXIT_FAILURE);
-					break;
-			}
+			retval = show_schedd_queue(scheddAddr, scheddName, scheddMachine, useFastScheddQuery);
+			/* Hopefully I got the queue from the schedd... */
+			exit(retval?EXIT_SUCCESS:EXIT_FAILURE);
 		} 
 		
 		/* I couldn't find a local schedd, so dump a message about what
@@ -920,11 +670,6 @@ int main (int argc, char **argv)
 	while ((ad = scheddList.Next()))
 	{
 		/* default to true for remotely queryable */
-#ifdef HAVE_EXT_POSTGRESQL
-		int flag=1;
-		freeConnectionStrings();
-#endif
-		useDB = FALSE;
 		if ( ! (ad->LookupString(ATTR_SCHEDD_IP_ADDR, &scheddAddr)  &&
 				ad->LookupString(ATTR_NAME, &scheddName) &&
 				ad->LookupString(ATTR_MACHINE, scheddMachine, sizeof(scheddMachine))
@@ -935,194 +680,18 @@ int main (int argc, char **argv)
 			continue;
 		}
 
-#ifdef HAVE_EXT_POSTGRESQL
-		std::string daemonAdName;
-			// get the address of the database
-		if (ad->LookupString(ATTR_QUILL_DB_IP_ADDR, sdbIpAddr) &&
-			ad->LookupString(ATTR_QUILL_NAME, squillName) &&
-			ad->LookupString(ATTR_QUILL_DB_NAME, sdbName) && 
-			ad->LookupString(ATTR_QUILL_DB_QUERY_PASSWORD, squeryPassword) &&
-			(!ad->LookupBool(ATTR_QUILL_IS_REMOTELY_QUERYABLE,flag) || flag)) {
-
-			dbIpAddr = sdbIpAddr.c_str();
-			quillName = squillName.c_str();
-			dbName = sdbName.c_str();
-			queryPassword = squeryPassword.c_str();
-
-			/* If the quill information is available, try to use it first */
-			useDB = TRUE;
-	    	if (ad->LookupString(ATTR_SCHEDD_NAME, daemonAdName)) {
-				Q.addSchedd(daemonAdName.c_str());
-			} else {
-				Q.addSchedd(scheddName);
-			}
-
-				/* get the quill info for fail-over processing */
-			ASSERT(ad->LookupString(ATTR_MACHINE, squillMachine));
-			quillMachine = squillMachine.c_str();
-		}
-#endif 
-
 		first = false;
 
-#ifdef HAVE_EXT_POSTGRESQL
-			/* check if direct DB query is indicated */
-		if ( directDBquery ) {				
-			if (!useDB) {
-				printf ("\n\n-- Schedd: %s : %s\n", scheddName, scheddAddr);
-				fprintf(stderr, "Database query not supported on schedd: %s\n",
-						scheddName);
-				continue;
-			}
-			
-			exec_db_query(quillName, dbIpAddr, dbName, queryPassword);
-
-			/* done processing the ad, so get the next one */
-			continue;
-
+		MyString scheddVersion;
+		ad->LookupString(ATTR_VERSION, scheddVersion);
+		CondorVersionInfo v(scheddVersion.Value());
+		if (v.built_since_version(8, 3, 3)) {
+			bool v3_query_with_auth = v.built_since_version(8,5,6) && (default_fetch_opts & CondorQ::fetch_MyJobs);
+			useFastScheddQuery = v3_query_with_auth ? 3 : 2;
+		} else {
+			useFastScheddQuery = v.built_since_version(6,9,3) ? 1 : 0;
 		}
-#endif /* HAVE_EXT_POSTGRESQL */
-
-		/* When an installation has database parameters configured, it means 
-		   there is quill daemon. If database is not accessible, we fail
-		   over to quill daemon, and if quill daemon is not available, 
-		   we fail over the schedd daemon */			
-		switch(direct)
-		{
-			case DIRECT_ALL:
-				/* FALL THROUGH */
-#ifdef HAVE_EXT_POSTGRESQL
-			case DIRECT_RDBMS:
-				if (useDB) {
-					retval = show_db_queue(quillName, dbIpAddr, dbName, queryPassword);
-					if (retval)
-					{
-						/* processed correctly, so do the next ad */
-						continue;
-					}
-
-					fprintf( stderr, "-- Database server %s\n"
-							"\tbeing used by the quill daemon %s\n"
-							"\tassociated with schedd %s(%s)\n"
-							"\tis not reachable or down.\n",
-							dbIpAddr, quillName, scheddName, scheddAddr);
-
-					if (direct == DIRECT_RDBMS) {
-						fprintf(stderr, 
-							"\t- Not failing over due to -direct\n");
-						continue;
-					} 
-
-					fprintf(stderr, 
-						"\t- Failing over to the quill daemon at %s--\n", 
-						quillName);
-
-				} else {
-					if (direct == DIRECT_RDBMS) {
-						fprintf(stderr, 
-							"-- Direct query to rdbms on behalf of\n"
-							"\tschedd %s(%s) failed.\n"
-							"\t- Schedd doesn't appear to be using quill.\n",
-							scheddName, scheddAddr);
-						fprintf(stderr,
-							"\t- Not failing over due to -direct\n");
-						continue;
-					}
-				}
-
-				/* FALL THROUGH */
-
-			case DIRECT_QUILLD:
-				if (useDB) {
-					QueryResult result2 = getQuillAddrFromCollector(quillName, quillAddr);
-
-					/* if quillAddr is NULL, then while the collector's 
-						schedd's ad had a quill name in it, the collector
-						didn't have a quill ad by that name. */
-
-					if((result2 == Q_OK) && !quillAddr.empty() &&
-					   (retval = show_schedd_queue(quillAddr.c_str(), quillName, quillMachine, 0))
-					   )
-					{
-						/* processed correctly, so do the next ad */
-						continue;
-					}
-
-					/* NOTE: it is not impossible that quillAddr could be
-						NULL if the quill name is specified in a schedd ad
-						but the collector has no record of such quill ad by
-						that name. So we deal with that mess here in the 
-						debugging output. */
-
-					fprintf( stderr,
-						"-- Quill daemon %s(%s)\n"
-						"\tassociated with schedd %s(%s)\n"
-						"\tis not reachable or can't talk to rdbms.\n",
-						quillName, quillAddr.empty()?"<\?\?\?>":quillAddr.c_str(),
-						scheddName, scheddAddr);
-
-					if (quillAddr.empty()) {
-						fprintf(stderr,
-							"\t- Possible misconfiguration of quill\n"
-							"\tassociated with this schedd since associated\n"
-							"\tquilld ad is missing and was expected to be\n"
-							"\tfound in the collector.\n");
-					}
-
-					if (direct == DIRECT_QUILLD) {
-						fprintf(stderr,
-							"\t- Not failing over due to use of -direct\n");
-						continue;
-					}
-
-					fprintf(stderr,
-						"\t- Failing over to the schedd at %s(%s) --\n",
-						scheddName, scheddAddr);
-
-				} else {
-					if (direct == DIRECT_QUILLD) {
-						fprintf(stderr,
-							"-- Direct query to quilld associated with\n"
-							"\tschedd %s(%s) failed.\n"
-							"\t- Schedd doesn't appear to be using quill.\n",
-							scheddName, scheddAddr);
-						printf("\t- Not failing over due to use of -direct\n");
-						continue;
-					}
-				}
-
-				/* FALL THROUGH */
-
-#endif /* HAVE_EXT_POSTGRESQL */
-
-			case DIRECT_SCHEDD:
-				/* database not configured or could not be reached,
-					query the schedd daemon directly */
-				{
-				MyString scheddVersion;
-				ad->LookupString(ATTR_VERSION, scheddVersion);
-				CondorVersionInfo v(scheddVersion.Value());
-				if (v.built_since_version(8, 3, 3)) {
-					bool v3_query_with_auth = v.built_since_version(8,5,6) && (default_fetch_opts & CondorQ::fetch_MyJobs);
-					useFastScheddQuery = v3_query_with_auth ? 3 : 2;
-				} else {
-					useFastScheddQuery = v.built_since_version(6,9,3) ? 1 : 0;
-				}
-				retval = show_schedd_queue(scheddAddr, scheddName, scheddMachine, useFastScheddQuery);
-				}
-
-				break;
-
-			case DIRECT_UNKNOWN:
-			default:
-				fprintf( stderr,
-					"-- Cannot determine any location for queue "
-					"using option -direct!\n"
-					"\t- This is an internal error and should be "
-					"reported to condor-admin@cs.wisc.edu." );
-				exit(EXIT_FAILURE);
-				break;
-		}
+		retval = show_schedd_queue(scheddAddr, scheddName, scheddMachine, useFastScheddQuery);
 	}
 
 	// close list
@@ -1149,10 +718,6 @@ static int cleanup_globals(int exit_code)
 	// pass the exit code through dprintf_SetExitCode so that it knows
 	// whether to print out the on-error buffer or not.
 	dprintf_SetExitCode(exit_code);
-
-#ifdef HAVE_EXT_POSTGRESQL
-	quillCleanupOnExit(exit_code);
-#endif
 
 	// do this to make Valgrind happy.
 	startdAds.Clear();
@@ -1424,11 +989,6 @@ processCommandLineArguments (int argc, char *argv[])
 			scheddQuery.setLocationLookup(daemonname);
 			Q.addSchedd(daemonname);
 
-#ifdef HAVE_EXT_POSTGRESQL
-			sprintf (constraint, "%s == \"%s\"", ATTR_QUILL_NAME, daemonname);
-			scheddQuery.addORConstraint (constraint);
-#endif
-
 			delete [] daemonname;
 			i++;
 			querySchedds = true;
@@ -1437,16 +997,16 @@ processCommandLineArguments (int argc, char *argv[])
 		if (is_dash_arg_prefix (dash_arg, "direct", 1)) {
 			/* check for one more argument */
 			if (argc <= i+1) {
-				fprintf( stderr, 
-					"Error: -direct requires ["
-					#ifdef HAVE_EXT_POSTGRESQL
-						"rdbms | quilld | "
-					#endif
-						"schedd]\n" );
+				fprintf( stderr, "Error: -direct requires [schedd]\n" );
 				exit(EXIT_FAILURE);
 			}
-			direct = process_direct_argument(argv[i+1]);
+			// the direct argument is vistigial, because only schedd is allowed, but we still parse and accept it.
 			i++;
+			if (MATCH != strcasecmp(argv[i], "schedd")) {
+				fprintf( stderr, "Error: Quill feature set is not available.\n"
+					"-direct may only take 'schedd' as an option.\n" );
+				exit(EXIT_FAILURE);
+			}
 		}
 		else
 		if (is_dash_arg_prefix (dash_arg, "submitter", 1)) {
@@ -2008,13 +1568,6 @@ processCommandLineArguments (int argc, char *argv[])
 		else if (is_dash_arg_colon_prefix(dash_arg, "nouserprios", &pcolon, 7)) {
 			analyze_with_userprio = false;
 		}
-#ifdef HAVE_EXT_POSTGRESQL
-		else if (is_dash_arg_prefix(dash_arg, "avgqueuetime", 4)) {
-				/* if user want average wait time, we will perform direct DB query */
-			avgqueuetime = true;
-			directDBquery =  true;
-		}
-#endif /* HAVE_EXT_POSTGRESQL */
 		else if (is_dash_arg_prefix(dash_arg, "version", 1)) {
 			printf( "%s\n%s\n", CondorVersion(), CondorPlatform() );
 			exit(0);
@@ -2159,38 +1712,6 @@ job_time(double cpu_time,ClassAd *ad)
 	}
 
 	return total_wall_time;
-}
-
-unsigned int process_direct_argument(char *arg)
-{
-#ifdef HAVE_EXT_POSTGRESQL
-	if (strcasecmp(arg, "rdbms") == MATCH) {
-		return DIRECT_RDBMS;
-	}
-
-	if (strcasecmp(arg, "quilld") == MATCH) {
-		return DIRECT_QUILLD;
-	}
-
-#endif
-
-	if (strcasecmp(arg, "schedd") == MATCH) {
-		return DIRECT_SCHEDD;
-	}
-
-#ifdef HAVE_EXT_POSTGRESQL
-	fprintf( stderr, 
-		"Error: -direct requires [rdbms | quilld | schedd]\n" );
-#else
-	fprintf( stderr, 
-		"Error: Quill feature set is not available.\n"
-		"-direct may only take 'schedd' as an option.\n" );
-#endif
-
-	exit(EXIT_FAILURE);
-
-	/* Here to make the compiler happy since there is an exit above */
-	return DIRECT_UNKNOWN;
 }
 
 
@@ -2907,13 +2428,6 @@ usage (const char *myName, int other)
 		"\t-submitter <submitter>\t Get queue of specific submitter\n"
 		"\t-name <name>\t\t Name of Scheduler\n"
 		"\t-pool <host>\t\t Use host as the central manager to query\n"
-#ifdef HAVE_EXT_POSTGRESQL
-		"\t-direct <rdbms | schedd>\n"
-		"\t\tPerform a direct query to the rdbms\n"
-		"\t\tor to the schedd without falling back to the queue\n"
-		"\t\tlocation discovery algortihm, even in case of error\n"
-		"\t-avgqueuetime\t\t Average queue time for uncompleted jobs\n"
-#endif
 		"\t-jobads[:<form>] <file>\t Read queue from a file of job ClassAds\n"
 		"\t           where <form> is one of:\n"
 		"\t       auto    default, guess the format from reading the input stream\n"
@@ -3551,136 +3065,6 @@ AddToClassAdList(void * pv, ClassAd* ad) {
 	return false; // return false to indicate we took ownership of the ad.
 }
 
-#ifdef HAVE_EXT_POSTGRESQL
-static bool
-show_db_queue( const char* quill_name, const char* db_ipAddr, const char* db_name, const char* query_password)
-{
-		// initialize counters
-	idle = running = held = malformed = suspended = completed = removed = 0;
-
-	ClassAdList jobs;
-	CondorError errstack;
-
-	std::string source_label;
-	formatstr(source_label, "Quill: %s : %s : %s : ", quill_name, db_ipAddr, db_name);
-
-	// for xml output, we want to get the header out first, and print it even if there are no jobs.
-	print_xml_header(source_label.c_str());
-
-	// choose a processing option for jobad's as the come off the wire.
-	// for -long -xml -json and -analyze, we need to save off the ad in a ClassAdList
-	// for -stream we print out the ad 
-	// and for everything else, we 
-	//
-	buffer_line_processor pfnProcess;
-	void *                pvProcess;
-	if (dash_long || better_analyze) {
-		pfnProcess = AddToClassAdList;
-		pvProcess = &jobs;
-	} else if (g_stream_results) {
-		pfnProcess = process_and_print_job;
-		pvProcess = NULL;
-
-		// we are about to print out the jobads, so print an output header now.
-		print_full_header(source_label.c_str());
-	} else {
-		// tj: 2013 refactor---
-		// so we can compare the output of old vs. new code. keep both around for now.
-		pfnProcess = /*use_old_code ? process_buffer_line_old : */ process_job_and_render_to_dag_map;
-		pvProcess = &dag_map;
-	}
-
-	// fetch queue directly from the database
-
-#ifdef HAVE_EXT_POSTGRESQL
-
-		char *lastUpdate=NULL;
-		char *dbconn=NULL;
-		dbconn = getDBConnStr(quill_name, db_ipAddr, db_name, query_password);
-
-		if( Q.fetchQueueFromDBAndProcess( dbconn,
-											lastUpdate,
-											pfnProcess, pvProcess,
-											&errstack) != Q_OK ) {
-			fprintf( stderr, 
-					"\n-- Failed to fetch ads from db [%s] at database "
-					"server %s\n%s\n",
-					db_name, db_ipAddr, errstack.getFullText(true).c_str() );
-
-			if(dbconn) {
-				free(dbconn);
-			}
-			if(lastUpdate) {
-				free(lastUpdate);
-			}
-			return false;
-		}
-		if(dbconn) {
-			free(dbconn);
-		}
-		if(lastUpdate) {
-			source_label += lastUpdate;
-			free(lastUpdate);
-		}
-#else
-		if (query_password) {} /* Done to suppress set-but-not-used warnings */
-#endif /* HAVE_EXT_POSTGRESQL */
-	if (pfnProcess || pvProcess) {}
-
-	// if we streamed, then the results have already been printed out.
-	// we just need to write the footer/summary
-	if (g_stream_results) {
-		print_full_footer();
-		print_xml_footer();
-		return true;
-	}
-
-	if (better_analyze) {
-		return print_jobs_analysis(jobs, source_label.c_str(), NULL);
-	}
-
-	// at this point we either have a populated jobs list, or a populated dag_map
-	// depending on which processing function we used in the query above.
-	// for -long -xml -json or -analyze, we should have jobs, but no dag_map
-
-	// if outputing dag format, we want to build the parent child links in the dag map
-	// and then edit the text for jobs that are dag nodes.
-	if (dash_dag && (dag_map.size() > 0)) {
-		linkup_dag_nodes_in_dag_map(/*dag_map, dag_cluster_map*/);
-		rewrite_output_for_dag_nodes_in_dag_map(/*dag_map*/);
-	}
-
-	// we want a header for this schedd if we are not showing the global queue OR if there is any data
-	if ( ! global || dag_map.size() > 0 || jobs.Length() > 0) {
-		print_full_header(source_label.c_str());
-	}
-
-	// print out jobs, either from the dag_map, or the jobs list, we expect only
-	// one of these to be populated depending on which processing function we passed to the query
-	if (dag_map.size() > 0) {
-		print_dag_map(/*dag_map*/);
-		// free the strings in the dag_map
-		clear_dag_map(/*dag_map, dag_cluster_map*/);
-	} else {
-		jobs.Open();
-		while(ClassAd *job = jobs.Next()) {
-			process_and_print_job(NULL, job);
-		}
-		jobs.Close();
-	}
-
-	// print out summary line (if enabled) and/or xml closure
-	// we want to print out a footer if we printed any data, OR if this is not 
-	// a global query, so that the user can see that we did something.
-	//
-	if ( ! global || dag_map.size() > 0 || jobs.Length() > 0) {
-		print_full_footer();
-	}
-	print_xml_footer();
-
-	return true;
-}
-#endif // HAVE_EXT_POSTGRESQL
 
 
 static void count_job(ClassAd *job)
@@ -4884,9 +4268,6 @@ show_file_queue(const char* jobads, const char* userlog)
 			formatstr(source_label, "Jobads: %s", jobads);
 		}
 		
-		/* The variable UseDB should be false in this branch since it was set 
-			in main() because jobads_file had a good value. */
-
 	} else if (userlog != NULL) {
 		CondorID * JobIds = NULL;
 		int cJobIds = constrID.size();
@@ -6127,151 +5508,6 @@ fixSubmittorName( const char *name, int niceUser )
 }
 
 
-#ifdef HAVE_EXT_POSTGRESQL
-
-/* get the quill address for the quillName specified */
-static QueryResult getQuillAddrFromCollector(const char *quill_name, std::string & quill_addr) {
-	QueryResult query_result = Q_OK;
-	char		query_constraint[1024];
-	CondorQuery	quillQuery(QUILL_AD);
-	ClassAdList quillList;
-	ClassAd		*ad;
-
-	sprintf (query_constraint, "%s == \"%s\"", ATTR_NAME, quill_name);
-	quillQuery.addORConstraint (query_constraint);
-
-	query_result = Collectors->query ( quillQuery, quillList );
-
-	quillList.Open();	
-	while ((ad = quillList.Next())) {
-		ad->LookupString(ATTR_MY_ADDRESS, quill_addr);
-	}
-	quillList.Close();
-	return query_result;
-}
-
-
-static char * getDBConnStr(char const *&quill_name,
-                           char const *&databaseIp,
-                           char const *&databaseName,
-                           char const *&query_password) {
-	char            *host, *port, *dbconn;
-	const char *ptr_colon;
-	char            *tmpquillname, *tmpdatabaseip, *tmpdatabasename, *tmpquerypassword;
-	int             len, tmp1, tmp2, tmp3;
-
-	if((!quill_name && !(tmpquillname = param("QUILL_NAME"))) ||
-	   (!databaseIp && !(tmpdatabaseip = param("QUILL_DB_IP_ADDR"))) ||
-	   (!databaseName && !(tmpdatabasename = param("QUILL_DB_NAME"))) ||
-	   (!query_password && !(tmpquerypassword = param("QUILL_DB_QUERY_PASSWORD")))) {
-		fprintf( stderr, "Error: Could not find database related parameter\n");
-		fprintf(stderr, "\n");
-		print_wrapped_text("Extra Info: "
-                       "The most likely cause for this error "
-                       "is that you have not defined "
-                       "QUILL_NAME/QUILL_DB_IP_ADDR/"
-                       "QUILL_DB_NAME/QUILL_DB_QUERY_PASSWORD "
-                       "in the condor_config file.  You must "
-						   "define this variable in the config file", stderr);
-
-		exit( 1 );
-	}
-
-	if(!quill_name) {
-		quill_name = tmpquillname;
-	}
-	if(!databaseIp) {
-		if(tmpdatabaseip[0] != '<') {
-				//2 for the two brackets and 1 for the null terminator
-			char *tstr = (char *) malloc(strlen(tmpdatabaseip)+3);
-			sprintf(tstr, "<%s>", tmpdatabaseip);
-			free(tmpdatabaseip);
-			databaseIp = tstr;
-		}
-		else {
-			databaseIp = tmpdatabaseip;
-		}
-	}
-
-	if(!databaseName) {
-		databaseName = tmpdatabasename;
-	}
-	if(!query_password) {
-		query_password = tmpquerypassword;
-	}
-
-	tmp1 = strlen(databaseName);
-	tmp2 = strlen(query_password);
-	len = strlen(databaseIp);
-
-		//the 6 is for the string "host= " or "port= "
-		//the rest is a subset of databaseIp so a size of
-		//databaseIp is more than enough
-	host = (char *) malloc((len+6) * sizeof(char));
-	port = (char *) malloc((len+6) * sizeof(char));
-
-		//here we break up the ipaddress:port string and assign the
-		//individual parts to separate string variables host and port
-	ptr_colon = strchr((char *)databaseIp, ':');
-	strcpy(host, "host=");
-	strncat(host,
-			databaseIp+1,
-			ptr_colon - databaseIp -1);
-	strcpy(port, "port=");
-	strcat(port, ptr_colon+1);
-	port[strlen(port)-1] = '\0';
-
-		//tmp3 is the size of dbconn - its size is estimated to be
-		//(2 * len) for the host/port part, tmp1 + tmp2 for the
-		//password and dbname part and 1024 as a cautiously
-		//overestimated sized buffer
-	tmp3 = (2 * len) + tmp1 + tmp2 + 1024;
-	dbconn = (char *) malloc(tmp3 * sizeof(char));
-	sprintf(dbconn, "%s %s user=quillreader password=%s dbname=%s",
-			host, port, query_password, databaseName);
-
-	free(host);
-	free(port);
-	return dbconn;
-}
-
-static void exec_db_query(const char *quill_name, const char *db_ipAddr, const char *db_name, const char *query_password) {
-	char *dbconn=NULL;
-	
-	dbconn = getDBConnStr(quill_name, db_ipAddr, db_name, query_password);
-
-	printf ("\n\n-- Quill: %s : %s : %s\n", quill_name, 
-			db_ipAddr, db_name);
-
-	if (avgqueuetime) {
-		Q.rawDBQuery(dbconn, AVG_TIME_IN_QUEUE);
-	}
-	if(dbconn) {
-		free(dbconn);
-	}
-
-}
-
-static void freeConnectionStrings() {
-	squillName.clear();
-	quillName = NULL;
-	squillMachine.clear();
-	quillMachine = NULL;
-	sdbIpAddr.clear();
-	dbIpAddr = NULL;
-	sdbName.clear();
-	dbName = NULL;
-	squeryPassword.clear();
-	queryPassword = NULL;
-	quillAddr.clear();
-}
-
-static void quillCleanupOnExit(int n)
-{
-	freeConnectionStrings();
-}
-
-#endif /* HAVE_EXT_POSTGRESQL */
 
 bool warnScheddGlobalLimits(Daemon *schedd,MyString &result_buf) {
 	if( !schedd ) {
