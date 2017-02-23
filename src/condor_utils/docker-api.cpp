@@ -838,7 +838,10 @@ int DockerAPI::inspect( const std::string & containerID, ClassAd * dockerAd, Con
 		int i=0;
 		while (line.readLine(*src,false)) {
 			line.chomp();
-			//dprintf( D_FULLDEBUG, "\t[%2d] %s\n", i, line.c_str() );
+			if (line.find("=") == -1) {
+				continue;
+			}
+			//dprintf( D_FULLDEBUG, "\t [%2d] %s\n", i, line.c_str() );
 			if (i >= expected_rows) {
 				if (line.empty()) continue;
 				correctOutput.push_back(line.c_str());
@@ -850,10 +853,12 @@ int DockerAPI::inspect( const std::string & containerID, ClassAd * dockerAd, Con
 					correctOutput[i].end(),
 					'\"');
 			if (first != correctOutput[i].end()) {
-				std::replace(++first,
-					--correctOutput[i].end(), '\"','\'');
+				first++;
+				if (first != correctOutput[i].end()) {
+					std::replace(first,
+						--correctOutput[i].end(), '\"','\'');
+				}
 			}
-			//dprintf( D_FULLDEBUG, "\tfix: %s\n", correctOutput[i].c_str() );
 			++i;
 		}
 	}
@@ -896,7 +901,7 @@ int DockerAPI::inspect( const std::string & containerID, ClassAd * dockerAd, Con
 	if( attrCount != formatElements.number() ) {
 		dprintf( D_ALWAYS | D_FAILURE, "Failed to create classad from Docker output (%d).  Printing up to the first %d (nonblank) lines.\n", attrCount, formatElements.number() );
 		for( int i = 0; i < formatElements.number() && ! correctOutput[i].empty(); ++i ) {
-			dprintf( D_ALWAYS | D_FAILURE, "%s", correctOutput[i].c_str() );
+			dprintf( D_ALWAYS | D_FAILURE, "%s\n", correctOutput[i].c_str() );
 		}
 		return -4;
 	}
