@@ -646,8 +646,10 @@
 #define ATTR_TOTAL_RUNNING_JOBS  "TotalRunningJobs"
 #define ATTR_TOTAL_LOCAL_RUNNING_JOBS  "TotalLocalJobsRunning"
 #define ATTR_TOTAL_LOCAL_IDLE_JOBS  "TotalLocalJobsIdle"
+#define ATTR_TOTAL_LOCAL_HELD_JOBS  "TotalLocalJobsHeld"
 #define ATTR_TOTAL_SCHEDULER_RUNNING_JOBS  "TotalSchedulerJobsRunning"
 #define ATTR_TOTAL_SCHEDULER_IDLE_JOBS  "TotalSchedulerJobsIdle"
+#define ATTR_TOTAL_SCHEDULER_HELD_JOBS  "TotalSchedulerJobsHeld"
 //extern const char ATTR_JOBS_SUBMITTED_CUMULATIVE [];
 //extern const char ATTR_JOBS_STARTED_CUMULATIVE [];
 //extern const char ATTR_JOBS_EXITED_CUMULATIVE [];

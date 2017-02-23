@@ -2042,12 +2042,45 @@ sendJobErrorAd(Stream *stream, int errorCode, std::string errorString)
 	return false;
 }
 
-static bool
-sendDone(Stream *stream)
+static const std::string & attrjoin(std::string & buf, const char * prefix, const char * attr) {
+	if (prefix) { buf = prefix; buf += attr; }
+	else { buf = attr; }
+	return buf;
+}
+
+void LiveJobCounters::publish(ClassAd & ad, const char * prefix)
 {
-	classad::ClassAd ad;
-	ad.InsertAttr(ATTR_OWNER, 0);
-	ad.InsertAttr(ATTR_ERROR_CODE, 0);
+	std::string buf;
+	ad.InsertAttr(attrjoin(buf,prefix,"Jobs"), (long long)(JobsIdle + JobsRunning + JobsHeld + JobsRemoved + JobsCompleted + JobsSuspended));
+	ad.InsertAttr(attrjoin(buf,prefix,"Idle"), (long long)JobsIdle);
+	ad.InsertAttr(attrjoin(buf,prefix,"Running"), (long long)JobsRunning);
+	ad.InsertAttr(attrjoin(buf,prefix,"Removed"), (long long)JobsRemoved);
+	ad.InsertAttr(attrjoin(buf,prefix,"Completed"), (long long)JobsCompleted);
+	ad.InsertAttr(attrjoin(buf,prefix,"Held"), (long long)JobsHeld);
+	ad.InsertAttr(attrjoin(buf,prefix,"Suspended"), (long long)JobsSuspended);
+	ad.InsertAttr(attrjoin(buf,prefix,"SchedulerJobs"), (long long)(SchedulerJobsIdle + SchedulerJobsRunning + SchedulerJobsHeld + SchedulerJobsRemoved + SchedulerJobsCompleted));
+	ad.InsertAttr(attrjoin(buf,prefix,"SchedulerIdle"), (long long)SchedulerJobsIdle);
+	ad.InsertAttr(attrjoin(buf,prefix,"SchedulerRunning"), (long long)SchedulerJobsRunning);
+	ad.InsertAttr(attrjoin(buf,prefix,"SchedulerRemoved"), (long long)SchedulerJobsRemoved);
+	ad.InsertAttr(attrjoin(buf,prefix,"SchedulerCompleted"), (long long)SchedulerJobsCompleted);
+	ad.InsertAttr(attrjoin(buf,prefix,"SchedulerHeld"), (long long)SchedulerJobsHeld);
+}
+
+static bool
+sendDone(Stream *stream, bool send_job_counts, LiveJobCounters* query_counts, const char * myname, LiveJobCounters* my_counts)
+{
+	ClassAd ad;
+	ad.Assign(ATTR_OWNER, 0);
+	ad.Assign(ATTR_ERROR_CODE, 0);
+
+	if (send_job_counts) {
+		ad.Assign(ATTR_MY_TYPE, "Summary");
+		scheduler.liveJobCounts.publish(ad, "Allusers");
+		if (query_counts) { query_counts->publish(ad, NULL); }
+		if (my_counts) { my_counts->publish(ad, "My"); }
+	}
+	if (myname) { ad.Assign("MyName", myname); }
+
 	stream->encode();
 	if (!putClassAd(stream, ad) || !stream->end_of_message())
 	{
@@ -2057,13 +2090,43 @@ sendDone(Stream *stream)
 	return true;
 }
 
+void IncrementLiveJobCounter(LiveJobCounters & num, int universe, int status, int increment)
+{
+	if (status == TRANSFERRING_OUTPUT) status = RUNNING;
+	switch (universe) {
+	case CONDOR_UNIVERSE_SCHEDULER:
+		if (status > 0 && status <= HELD) {
+			(&num.SchedulerJobsIdle)[status-1] += increment;
+		}
+		break;
+	/*
+	case CONDOR_UNIVERSE_LOCAL:
+		if (status > 0 && status <= HELD) {
+			(&num.LocalJobsIdle)[status-1] += increment;
+		}
+		break;
+	*/
+	default:
+		if (status > 0 && status <= HELD) {
+			(&num.JobsIdle)[status-1] += increment;
+		} else if (status == SUSPENDED) {
+			num.JobsSuspended += increment;
+		}
+		break;
+	}
+}
+
 struct QueryJobAdsContinuation : Service {
 
 	classad_shared_ptr<classad::ExprTree> requirements;
 	classad::References projection;
+	LiveJobCounters query_job_counts;
+	LiveJobCounters my_job_counts;
+	std::string my_name;
 	JobQueueLogType::filter_iterator it;
 	int match_limit;
 	int match_count;
+	bool summary_only;
 	bool unfinished_eom;
 	bool registered_socket;
 
@@ -2076,9 +2139,11 @@ QueryJobAdsContinuation::QueryJobAdsContinuation(classad_shared_ptr<classad::Exp
 	  it(GetJobQueueIterator(*requirements, timeslice_ms)),
 	  match_limit(limit),
 	  match_count(0),
+	  summary_only(false),
 	  unfinished_eom(false),
 	  registered_socket(false)
 {
+	my_job_counts.clear_counters();
 }
 
 int
@@ -2102,21 +2167,22 @@ QueryJobAdsContinuation::finish(Stream *stream) {
 		}
 	}
 	while ((it != end) && !has_backlog) {
-		ClassAd* tmp_ad = *it++;
-		if (!tmp_ad) {
+		JobQueueJob * job = *it++;
+		if (!job) {
 			// Return to DC in case if our time ran out.
 			has_backlog = true;
 			break;
 		}
+		IncrementLiveJobCounter(query_job_counts, job->Universe(), job->Status(), 1);
 		//if (IsFulldebug(D_FULLDEBUG)) {
-		//	int proc, cluster;
-		//	tmp_ad->EvaluateAttrInt(ATTR_CLUSTER_ID, cluster);
-		//	tmp_ad->EvaluateAttrInt(ATTR_PROC_ID, proc);
-		//	dprintf(D_FULLDEBUG, "Writing job %d.%d to wire\n", cluster,proc);
+		//	dprintf(D_FULLDEBUG, "Writing job %d.%d to wire\n", job.jid.cluster, job.jid.proc);
 		//}
-		int retval = putClassAd(sock, *tmp_ad,
+		int retval = 1;
+		if ( ! summary_only) {
+			retval = putClassAd(sock, *job,
 					PUT_CLASSAD_NON_BLOCKING | PUT_CLASSAD_NO_PRIVATE,
 					projection.empty() ? NULL : &projection);
+		}
 		match_count++;
 		if (retval == 2) {
 			//dprintf(D_FULLDEBUG, "Detecting backlog.\n");
@@ -2146,8 +2212,12 @@ QueryJobAdsContinuation::finish(Stream *stream) {
 		registered_socket = true;
 	} else if (!has_backlog) {
 		//dprintf(D_FULLDEBUG, "Finishing condor_q.\n");
+		const char * me = NULL;
+		LiveJobCounters * mine = NULL;
+		if ( ! my_name.empty()) { me = my_name.c_str(); mine = &my_job_counts; }
+		int rval = sendDone(sock, true, &query_job_counts, me, mine);
 		delete this;
-		return sendDone(sock);
+		return rval;
 	}
 	return KEEP_STREAM;
 }
@@ -2177,6 +2247,7 @@ int Scheduler::command_query_job_ads(int cmd, Stream* stream)
 	// If the query request that only the querier's jobs be returned
 	// we have to figure out who the quierier is and add a clause to the requirements expression
 	classad::ExprTree *my_jobs_expr = NULL;
+	std::string my_jobs_name; // set only once we have decided to do an only-my-jobs query
 	bool was_my_jobs = false;
 	if (param_boolean("CONDOR_Q_ONLY_MY_JOBS", true)) {
 		my_jobs_expr = queryAd.Lookup("MyJobs");
@@ -2240,6 +2311,7 @@ int Scheduler::command_query_job_ads(int cmd, Stream* stream)
 			sub_expr.formatstr("(owner == \"%s\")", owner.c_str());
 			classad::ClassAdParser parser;
 			my_jobs_expr = parser.ParseExpression(sub_expr.c_str());
+			my_jobs_name = owner;
 		}
 	}
 
@@ -2284,6 +2356,17 @@ int Scheduler::command_query_job_ads(int cmd, Stream* stream)
 			return sendJobErrorAd(stream, 2, "Unable to evaluate projection list");
 		}
 		return sendJobErrorAd(stream, 3, "Unable to convert projection list to string list");
+	}
+	if ( ! my_jobs_name.empty()) {
+		// if doing an only-my-jobs query, grab the job counters for this owner
+		// and also return the name we settled on
+		continuation->my_name = my_jobs_name;
+		OwnerInfo * ownerinfo = find_ownerinfo(my_jobs_name.c_str());
+		if (ownerinfo) { continuation->my_job_counts = ownerinfo->live; }
+	}
+	bool summary_only = false;
+	if (queryAd.EvaluateAttrBoolEquiv("SummaryOnly", summary_only) && summary_only) {
+		continuation->summary_only = true;
 	}
 
 	ForkStatus fork_status = schedd_forker.NewJob();
@@ -2448,7 +2531,7 @@ QueryAggregatesContinuation::finish(Stream *stream) {
 	} else if (!has_backlog) {
 		//dprintf(D_FULLDEBUG, "Finishing condor_q aggregation.\n");
 		delete this;
-		return sendDone(sock);
+		return sendDone(sock, false, NULL, NULL, NULL);
 	}
 	return KEEP_STREAM;
 }
@@ -3019,12 +3102,13 @@ service_this_universe(int universe, ClassAd* job)
 	}
 }
 
-void
+OwnerInfo *
 Scheduler::incrementRecentlyAdded(const char * owner)
 {
 	OwnerInfo * ownerInfo = insert_ownerinfo( owner );
 	ownerInfo->num.Hits += 1;
 	ownerInfo->num.JobsRecentlyAdded += 1;
+	return ownerInfo;
 }
 
 SubmitterData *
@@ -3095,7 +3179,7 @@ Scheduler::get_submitter_and_owner(JobQueueJob * job, SubmitterData * & submitte
 	if ( ! job) return NULL;
 
 	// if the cached submitterdata pointer is valid and non-null, we can just use it
-	if ( ! (job->dirty_flags & JQJ_CHACHE_DIRTY_SUBMITTERDATA)) {
+	if ( ! (job->dirty_flags & JQJ_CACHE_DIRTY_SUBMITTERDATA)) {
 		submitterdata = job->submitterdata;
 	}
 	if (submitterdata && job->ownerinfo) {
@@ -3137,7 +3221,7 @@ Scheduler::get_submitter_and_owner(JobQueueJob * job, SubmitterData * & submitte
 	// lookup/insert a submitterdata record for this submitter name and cache the resulting pointer in the job object.
 	job->submitterdata = scheduler.insert_submitter(submitter);
 	if (job->submitterdata) {
-		job->dirty_flags &= ~JQJ_CHACHE_DIRTY_SUBMITTERDATA;
+		job->dirty_flags &= ~JQJ_CACHE_DIRTY_SUBMITTERDATA;
 		job->submitterdata->isOwnerName = (owner == submitter);
 		submitterdata = job->submitterdata;
 	}

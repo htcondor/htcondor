@@ -121,8 +121,15 @@ public:
 	  @param new_keys List object to populate
    */
   void ListNewAdsInTransaction( std::list<std::string> &new_keys ) {
-	  return ClassAdLog<K,AltK,AD>::ListNewAdsInTransaction( new_keys );
+	return ClassAdLog<K,AltK,AD>::ListNewAdsInTransaction( new_keys );
   }
+
+  bool GetTransactionKeys( std::set<std::string> &keys ) {
+	return ClassAdLog<K,AltK,AD>::GetTransactionKeys( keys );
+  }
+
+  int SetTransactionTriggers(int mask) { return ClassAdLog<K,AltK,AD>::SetTransactionTriggers(mask); }
+  int GetTransactionTriggers() { return ClassAdLog<K,AltK,AD>::GetTransactionTriggers(); }
 
 	  // increase non-durable commit level
 	  // if > 0, begin non-durable commits

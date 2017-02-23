@@ -34,6 +34,7 @@
 
 #include <list>
 #include <string>
+#include <set>
 #include "log.h"
 #include "list.h"
 #include "HashTable.h"
@@ -53,10 +54,16 @@ public:
 	LogRecord *NextEntry();
 	bool EmptyTransaction() { return m_EmptyTransaction; }
 	void InTransactionListKeysWithOpType( int op_type, std::list<std::string> &new_keys );
+	bool KeysInTransaction(std::set<std::string> & keys, bool add_keys=false);
+	// transaction triggers are used by clients of this class to keep track of things that the client needs to do on commit
+	// they are stored here, but only the client knows what they mean.
+	int  SetTriggers(int mask) { m_triggers |= mask; return m_triggers; }
+	int  GetTriggers() { return m_triggers; }
 private:
 	HashTable<YourString,LogRecordList *> op_log;
 	LogRecordList ordered_op_log;
 	LogRecordList *op_log_iterating;
+	int  m_triggers; // for use by transaction users to record transaction triggers.
 	bool m_EmptyTransaction;
 };
 

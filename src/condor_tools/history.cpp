@@ -55,9 +55,9 @@
 #endif /* HAVE_EXT_POSTGRESQL */
 
 static int getConsoleWindowSize(int * pHeight = NULL);
-void Usage(char* name, int iExitCode=1);
+void Usage(const char* name, int iExitCode=1);
 
-void Usage(char* name, int iExitCode) 
+void Usage(const char* name, int iExitCode) 
 {
 	printf ("Usage: %s [source] [restriction-list] [options]\n"
 		"\n   where [source] is one of\n"
@@ -184,7 +184,7 @@ int getInheritedSocks(Stream* socks[], size_t cMaxSocks, pid_t & ppid)
 }
 
 int
-main(int argc, char* argv[])
+main(int argc, const char* argv[])
 {
   Collectors = NULL;
 
@@ -209,7 +209,7 @@ main(int argc, char* argv[])
   bool fileisuserlog = false;
   bool dash_local = false; // set if -local is passed
 
-  char* JobHistoryFileName=NULL;
+  const char* JobHistoryFileName=NULL;
   const char * pcolon=NULL;
 
 
@@ -417,7 +417,13 @@ main(int argc, char* argv[])
 			exit(1);
 		}
 		if (pcolon) ++pcolon; // if there are options, skip over the colon to the options.
-		int ixNext = parse_autoformat_args(argc, argv, i+1, pcolon, mask, diagnostic);
+		classad::References refs;
+		int ixNext = parse_autoformat_args(argc, argv, i+1, pcolon, mask, refs, diagnostic);
+		if (ixNext < 0) {
+			fprintf(stderr, "Error: invalid expression : %s\n", argv[-ixNext]);
+			exit(1);
+		}
+		initStringListFromAttrs(projection, true, refs, true);
 		if (ixNext > i)
 			i = ixNext-1;
 		customFormat = true;
@@ -1817,6 +1823,7 @@ static const CustomFormatFnTableItem LocalPrintFormats[] = {
 };
 static const CustomFormatFnTable LocalPrintFormatsTable = SORTED_TOKENER_TABLE(LocalPrintFormats);
 
+PRAGMA_REMIND("tj: TODO fix to handle summary print format")
 static int set_print_mask_from_stream(
 	AttrListPrintMask & print_mask,
 	std::string & constraint,
@@ -1850,6 +1857,7 @@ static int set_print_mask_from_stream(
 					print_mask,
 					propt,
 					group_by_keys,
+					NULL,
 					messages);
 	delete pstream; pstream = NULL;
 	if ( ! err) {

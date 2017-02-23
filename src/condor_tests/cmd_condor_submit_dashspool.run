@@ -156,7 +156,7 @@ my $numberinstate = 0;
 my $result = 0;
 
 # verify it even gets running
-$numberinstate = CondorTest::VerifyNoJobsInState("running",1,30);
+$numberinstate = CondorTest::VerifyNumJobsInState("running",1,30);
 
 print "\nBasic condor_submit -spool job starts to run:";
 if($numberinstate != 1) {
@@ -174,9 +174,9 @@ dashspoolreset();
 
 print "Basic condor_submit -spool job started\n";
 $plain = SubmitReturnCluster($sleepf1,"-spool");
-$numberinstate = CondorTest::VerifyNoJobsInState("running",1,30);
+$numberinstate = CondorTest::VerifyNumJobsInState("running",1,30);
 #system(" condor_q");
-$numberinstate = CondorTest::VerifyNoJobsInState("completed",1,30);
+$numberinstate = CondorTest::VerifyNumJobsInState("completed",1,30);
 
 print "\nBasic condor_submit -spool job starts to run and completes:";
 if($numberinstate != 1) {
@@ -200,8 +200,8 @@ close(SF2);
 print "Basic condor_submit -spool job started\n";
 $plain = SubmitReturnCluster($sleepf2,"-spool");
 
-$numberinstate = CondorTest::VerifyNoJobsInState("running",1,30);
-$numberinstate = CondorTest::VerifyNoJobsInState("completed",1,30);
+$numberinstate = CondorTest::VerifyNumJobsInState("running",1,30);
+$numberinstate = CondorTest::VerifyNumJobsInState("completed",1,30);
 my $missing = 0;
 $missing = MissingFiles("dashspool.file1,dashspool.file2");
 
@@ -240,9 +240,9 @@ print SF1 "$submitdashpool3";
 print "Basic condor_submit -spool job started with transfer input file\n";
 $plain = SubmitReturnCluster($sleepf3,"-spool");
 
-$numberinstate = CondorTest::VerifyNoJobsInState("running",1,30);
+$numberinstate = CondorTest::VerifyNumJobsInState("running",1,30);
 #system(" condor_q");
-$numberinstate = CondorTest::VerifyNoJobsInState("completed",1,30);
+$numberinstate = CondorTest::VerifyNumJobsInState("completed",1,30);
 
 print "\nBasic condor_submit -spool job starts to run and completes with an input file:";
 if($numberinstate != 1) {
@@ -265,9 +265,9 @@ print SF1 "$submitdashpool4";
 print "Basic condor_submit -spool job started with transfer input file\n";
 $plain = SubmitReturnCluster($sleepf4,"-spool");
 
-$numberinstate = CondorTest::VerifyNoJobsInState("running",1,30);
+$numberinstate = CondorTest::VerifyNumJobsInState("running",1,30);
 #system(" condor_q");
-$numberinstate = CondorTest::VerifyNoJobsInState("completed",1,30);
+$numberinstate = CondorTest::VerifyNumJobsInState("completed",1,30);
 # get output data
 runToolNTimes("condor_transfer_data $plain",1,1);
 $present = PresentFiles("dashspool.file1,dashspool.file2");
@@ -303,9 +303,9 @@ print "Basic condor_submit -spool job started with transfer input file\n";
 $plain = SubmitReturnCluster($sleepf4,"-spool");
 system("cp dummydata realdata");
 
-$numberinstate = CondorTest::VerifyNoJobsInState("running",1,30);
+$numberinstate = CondorTest::VerifyNumJobsInState("running",1,30);
 #system(" condor_q");
-$numberinstate = CondorTest::VerifyNoJobsInState("completed",1,30);
+$numberinstate = CondorTest::VerifyNumJobsInState("completed",1,30);
 # get output data
 runToolNTimes("condor_transfer_data $plain",1,1);
 $present = PresentFiles("dashspool.file1,dashspool.file2");

@@ -25,10 +25,12 @@
 
 #define TRANSACTION_HASH_LEN 10000
 
-Transaction::Transaction(): op_log(TRANSACTION_HASH_LEN,YourString::hashFunction,rejectDuplicateKeys)
+Transaction::Transaction()
+	: op_log(TRANSACTION_HASH_LEN,YourString::hashFunction,rejectDuplicateKeys)
+	, op_log_iterating(NULL)
+	, m_triggers(0)
+	, m_EmptyTransaction(true)
 {
-	m_EmptyTransaction = true;
-	op_log_iterating = NULL;
 }
 
 Transaction::~Transaction()
@@ -154,3 +156,21 @@ Transaction::InTransactionListKeysWithOpType( int op_type, std::list<std::string
 		}
 	}
 }
+
+bool Transaction::KeysInTransaction(std::set<std::string> & keys, bool add_keys /*=false*/)
+{
+	if ( ! add_keys) keys.clear();
+	if (m_EmptyTransaction) return false;
+	bool items_added = false;
+	const YourString * key;
+	LogRecordList ** dummy;
+	op_log.startIterations();
+	while(op_log.iterate_nocopy(&key, &dummy)) {
+		if ( ! key->empty()) {
+			items_added = true;
+			keys.insert(key->c_str());
+		}
+	}
+	return items_added;
+}
+

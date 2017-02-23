@@ -103,7 +103,7 @@ static int getDisplayWidth() {
 
 extern 	"C" int SetSyscalls(int val){return val;}
 extern  void short_print(int,int,const char*,int,int,int,int,int,const char *);
-static  void processCommandLineArguments(int, char *[]);
+static  void processCommandLineArguments(int, const char *[]);
 
 static  bool streaming_print_job(void*, ClassAd*);
 typedef bool (* buffer_line_processor)(void*, ClassAd *);
@@ -119,6 +119,8 @@ static bool show_schedd_queue(const char* scheddAddress, const char* scheddName,
 static int dryFetchQueue(const char * file, StringList & proj, int fetch_opts, int limit, buffer_line_processor pfnProcess, void *pvProcess);
 
 static void initOutputMask(AttrListPrintMask & pqmask, int qdo_mode, bool wide_mode);
+static void init_standard_summary_mask(ClassAd * summary_ad);
+bool use_legacy_standard_summary = true;
 //PRAGMA_REMIND("make width of the name column adjust to the display width")
 const int name_column_index = 2;
 int name_column_width = 14;
@@ -137,14 +139,45 @@ int max_batch_name = 0; // width of longest batch name
 
 static int read_userprio_file(const char *filename, ExtArray<PrioEntry> & prios);
 
+// returns 0, or the index of the argument that was not a valid classad expression.
+//
+static int parse_format_args(int argc, const char * argv[], AttrListPrintMask & prmask, classad::References & attrs, bool diagnostic)
+{
+	ClassAd ad;
+	const char * pcolon;
+	for (int i = 0; i < argc; ++i)
+	{
+		if (is_dash_arg_prefix (argv[i], "format", 1)) {
+			prmask.registerFormatF( argv[i+1], argv[i+2], FormatOptionNoTruncate );
+			if ( ! IsValidClassAdExpression(argv[i+2], &attrs, NULL)) {
+				return i+2;
+			}
+			i+=2;
+		}
+		else
+		if (is_dash_arg_colon_prefix(argv[i], "af", &pcolon, 2) ||
+			is_dash_arg_colon_prefix(argv[i], "autoformat", &pcolon, 5)) {
+			if (pcolon) ++pcolon; // of there are options, skip over the :
+			int ixNext = parse_autoformat_args(argc, argv, i+1, pcolon, prmask, attrs, diagnostic);
+			if (ixNext < 0) {
+				return -ixNext;
+			}
+			if (ixNext > i) {
+				i = ixNext-1;
+			}
+		}
+	}
+	return 0;
+}
 
 /* Warn about schedd-wide limits that may confuse analysis code */
 bool warnScheddGlobalLimits(Daemon *schedd,MyString &result_buf);
 
-static 	int dash_long = 0, summarize = 1, global = 0, show_io = 0, dash_dag = 0, show_held = 0;
+static 	int dash_long = 0, dash_tot = 0, global = 0, show_io = 0, dash_dag = 0, show_held = 0;
 static  int dash_batch = 0, dash_batch_specified = 0, dash_batch_is_default = 1;
 static ClassAdFileParseType::ParseType dash_long_format = ClassAdFileParseType::Parse_auto;
 static bool print_attrs_in_hash_order = false;
+static bool auto_standard_summary = false; // print standard summary
 static  int dash_autocluster = 0; // can be 0, or CondorQ::fetch_DefaultAutoCluster or CondorQ::fetch_GroupBy
 static  int default_fetch_opts = CondorQ::fetch_MyJobs;
 static  bool widescreen = false;
@@ -152,8 +185,6 @@ static  bool widescreen = false;
 static  bool expert = false;
 static  bool verbose = false; // note: this is !!NOT the same as -long !!!
 static  int g_match_limit = -1;
-
-static 	int malformed, running, idle, held, suspended, completed, removed;
 
 static char dash_progress_alt_char = 0;
 static  const char *jobads_file = NULL; // NULL, or points to jobads filename from argv
@@ -277,7 +308,7 @@ typedef struct {
 	void clear() { memset((void*)this, 0, sizeof(*this)); }
 } anaCounters;
 
-static int set_print_mask_from_stream(AttrListPrintMask & prmask, const char * streamid, bool is_filename, StringList & attrs);
+static int set_print_mask_from_stream(AttrListPrintMask & prmask, const char * streamid, bool is_filename, StringList & attrs, AttrListPrintMask & sumymask);
 static void dump_print_mask(std::string & tmp);
 
 
@@ -302,6 +333,8 @@ static  bool        single_machine = false;
 static	DCCollector* pool = NULL; 
 static	char		*scheddAddr;	// used by format_remote_host()
 static CollectorList * Collectors = NULL;
+
+static std::vector<const char *> autoformat_args;
 
 // for run failure analysis
 static  int			findSubmittor( const char * );
@@ -335,9 +368,75 @@ const int SHORT_BUFFER_SIZE = 8192;
 const int LONG_BUFFER_SIZE = 16384;	
 char return_buff[LONG_BUFFER_SIZE * 100];
 
+
+// The schedd will have one of these structures per owner, and one for the schedd as a whole
+// these counters are new for 8.7, and used with the code that keeps live counts of jobs
+// by tracking state transitions
+//
+struct LiveJobCounters {
+  int JobsSuspended;
+  int JobsIdle;             // does not count Local or Scheduler universe jobs, or Grid jobs that are externally managed.
+  int JobsRunning;
+  int JobsRemoved;
+  int JobsCompleted;
+  int JobsHeld;
+  int SchedulerJobsIdle;
+  int SchedulerJobsRunning;
+  int SchedulerJobsRemoved;
+  int SchedulerJobsCompleted;
+  int SchedulerJobsHeld;
+  void clear_counters() { memset(this, 0, sizeof(*this)); }
+  void publish(ClassAd & ad, const char * prefix);
+  LiveJobCounters()
+	: JobsSuspended(0)
+	, JobsIdle(0)
+	, JobsRunning(0)
+	, JobsRemoved(0)
+	, JobsCompleted(0)
+	, JobsHeld(0)
+	, SchedulerJobsIdle(0)
+	, SchedulerJobsRunning(0)
+	, SchedulerJobsRemoved(0)
+	, SchedulerJobsCompleted(0)
+	, SchedulerJobsHeld(0)
+  {}
+};
+
+static const std::string & attrjoin(std::string & buf, const char * prefix, const char * attr) {
+	if (prefix) { buf = prefix; buf += attr; }
+	else { buf = attr; }
+	return buf;
+}
+
+void LiveJobCounters::publish(ClassAd & ad, const char * prefix)
+{
+	std::string buf;
+	ad.InsertAttr(attrjoin(buf,prefix,"Jobs"), (long long)(JobsIdle + JobsRunning + JobsHeld + JobsRemoved + JobsCompleted + JobsSuspended));
+	ad.InsertAttr(attrjoin(buf,prefix,"Idle"), (long long)JobsIdle);
+	ad.InsertAttr(attrjoin(buf,prefix,"Running"), (long long)JobsRunning);
+	ad.InsertAttr(attrjoin(buf,prefix,"Held"), (long long)JobsHeld);
+	ad.InsertAttr(attrjoin(buf,prefix,"Removed"), (long long)JobsRemoved);
+	ad.InsertAttr(attrjoin(buf,prefix,"Completed"), (long long)JobsCompleted);
+	ad.InsertAttr(attrjoin(buf,prefix,"Suspended"), (long long)JobsSuspended);
+	ad.InsertAttr(attrjoin(buf,prefix,"SchedulerJobs"), (long long)(SchedulerJobsIdle + SchedulerJobsRunning + SchedulerJobsHeld + SchedulerJobsRemoved + SchedulerJobsCompleted));
+	ad.InsertAttr(attrjoin(buf,prefix,"SchedulerIdle"), (long long)SchedulerJobsIdle);
+	ad.InsertAttr(attrjoin(buf,prefix,"SchedulerRunning"), (long long)SchedulerJobsRunning);
+	ad.InsertAttr(attrjoin(buf,prefix,"SchedulerHeld"), (long long)SchedulerJobsHeld);
+	ad.InsertAttr(attrjoin(buf,prefix,"SchedulerRemoved"), (long long)SchedulerJobsRemoved);
+	ad.InsertAttr(attrjoin(buf,prefix,"SchedulerCompleted"), (long long)SchedulerJobsCompleted);
+}
+
 static struct {
 	StringList attrs;
-	AttrListPrintMask mask;
+	AttrListPrintMask prmask;
+	printmask_headerfooter_t HeadFoot;
+	StringList sumyattrs;         // attribute references in summary printmask
+	AttrListPrintMask sumymask;   // printmask for summary ad(s)
+	LiveJobCounters sumy;         // in case we have to do our own summary, or for -global?
+	void init() {
+		HeadFoot = STD_HEADFOOT;
+		sumy.clear_counters();
+	}
 } app;
 
 bool g_stream_results = false;
@@ -497,7 +596,7 @@ profile_print(size_t & cbBefore, double & tmBefore, int cAds, bool fCacheStats=t
 }
 
 
-int main (int argc, char **argv)
+int main (int argc, const char **argv)
 {
 	ClassAd		*ad;
 	bool		first;
@@ -508,6 +607,7 @@ int main (int argc, char **argv)
 	int         retval = 0;
 
 	Collectors = NULL;
+	app.init();
 
 	// load up configuration file
 	myDistro->Init( argc, argv );
@@ -528,6 +628,7 @@ int main (int argc, char **argv)
 	}
 
 	dash_batch_is_default = param_boolean("CONDOR_Q_DASH_BATCH_IS_DEFAULT", true);
+	use_legacy_standard_summary = param_boolean("CONDOR_Q_SHOW_OLD_SUMMARY", use_legacy_standard_summary);
 
 	// process arguments
 	processCommandLineArguments (argc, argv);
@@ -726,6 +827,7 @@ static int cleanup_globals(int exit_code)
 	return exit_code;
 }
 
+#if 0 // no longer used
 // append all variable references made by expression to references list
 static bool
 GetAllReferencesFromClassAdExpr(char const *expression,StringList &references)
@@ -733,6 +835,7 @@ GetAllReferencesFromClassAdExpr(char const *expression,StringList &references)
 	ClassAd ad;
 	return ad.GetExprReferences(expression,NULL,&references);
 }
+#endif
 
 static int
 parse_analyze_detail(const char * pch, int current_details)
@@ -790,10 +893,11 @@ enum {
 //void initProjection(StringList & proj, int qdo_mode);
 
 static void 
-processCommandLineArguments (int argc, char *argv[])
+processCommandLineArguments (int argc, const char *argv[])
 {
 	int i;
-	char *at, *daemonname;
+	char *daemonname;
+	const char * hat;
 	const char * pcolon;
 
 	int qdo_mode = QDO_NotSet;
@@ -836,8 +940,8 @@ processCommandLineArguments (int argc, char *argv[])
 		}
 		if (is_dash_arg_colon_prefix (dash_arg, "long", &pcolon, 1)) {
 			dash_long = 1;
-			summarize = 0;
-			customHeadFoot = HF_BARE;
+			//summarize = 0;
+			//customHeadFoot = HF_BARE;
 			if (pcolon) {
 				StringList opts(++pcolon);
 				for (const char * opt = opts.first(); opt; opt = opts.next()) {
@@ -858,8 +962,8 @@ processCommandLineArguments (int argc, char *argv[])
 				exit( 1 );
 			}
 			dash_long_format = ClassAdFileParseType::Parse_xml;
-			summarize = 0;
-			customHeadFoot = HF_BARE;
+			//summarize = 0;
+			//customHeadFoot = HF_BARE;
 		}
 		else
 		if (is_dash_arg_prefix (dash_arg, "json", 2)) {
@@ -870,8 +974,8 @@ processCommandLineArguments (int argc, char *argv[])
 				exit( 1 );
 			}
 			dash_long_format = ClassAdFileParseType::Parse_json;
-			summarize = 0;
-			customHeadFoot = HF_BARE;
+			//summarize = 0;
+			//customHeadFoot = HF_BARE;
 		}
 		else
 		if (is_dash_arg_prefix (dash_arg, "limit", 3)) {
@@ -1033,10 +1137,10 @@ processCommandLineArguments (int argc, char *argv[])
 			}
 				
 			i++;
-			if ((at = strchr(argv[i],'@'))) {
+			if ((hat = strchr(argv[i],'@'))) {
 				// is the name already qualified with a UID_DOMAIN?
 				sprintf (constraint, "%s == \"%s\"", ATTR_NAME, argv[i]);
-				*at = '\0';
+				//*hat = '\0';
 			} else {
 				// no ... add UID_DOMAIN
 				char *uid_domain = param( "UID_DOMAIN" );
@@ -1044,8 +1148,7 @@ processCommandLineArguments (int argc, char *argv[])
 				{
 					EXCEPT ("No 'UID_DOMAIN' found in config file");
 				}
-				sprintf (constraint, "%s == \"%s@%s\"", ATTR_NAME, argv[i], 
-							uid_domain);
+				sprintf (constraint, "%s == \"%s@%s\"", ATTR_NAME, argv[i], uid_domain);
 				free (uid_domain);
 			}
 			// dont default to 'my jobs'
@@ -1055,29 +1158,27 @@ processCommandLineArguments (int argc, char *argv[])
 			submittorQuery.addORConstraint (constraint);
 
 			{
-				char *ownerName = argv[i];
+				const char *ownerName = argv[i];
 				// ensure that the "nice-user" prefix isn't inserted as part
 				// of the job ad constraint
 				if( strstr( argv[i] , NiceUserName ) == argv[i] ) {
 					ownerName = argv[i]+strlen(NiceUserName)+1;
 				}
-				// ensure that the group prefix isn't inserted as part
-				// of the job ad constraint.
-				char *groups = param("GROUP_NAMES");
-				if ( groups && ownerName ) {
-					StringList groupList(groups);
-					char *dotptr = strchr(ownerName,'.');
-					if ( dotptr ) {
-						*dotptr = '\0';
-						if ( groupList.contains_anycase(ownerName) ) {
+				const char * dotptr = strchr(ownerName, '.');
+				if (dotptr) {
+					// ensure that the group prefix isn't inserted as part
+					// of the job ad constraint.
+					auto_free_ptr groups(param("GROUP_NAMES"));
+					if (groups) {
+						std::string owner(ownerName, dotptr - ownerName);
+						StringList groupList(groups.ptr());
+						if ( groupList.contains_anycase(owner.c_str()) ) {
 							// this name starts with a group prefix.
-							// strip it off.
+							// so use the part after the group name for the owner name.
 							ownerName = dotptr + 1;	// add one for the '.'
 						}
-						*dotptr = '.';
 					}
 				}
-				if ( groups ) free(groups);
 				if (Q.add (CQ_OWNER, ownerName) != Q_OK) {
 					fprintf (stderr, "Error:  Argument %d (%s)\n", i, argv[i]);
 					exit (1);
@@ -1138,7 +1239,8 @@ processCommandLineArguments (int argc, char *argv[])
 					 "Address must be of the form: \"<ip.address:port>\"\n" );
 				exit(1);
 			}
-			sprintf(constraint, "%s == \"%s\"", ATTR_SCHEDD_IP_ADDR, argv[i+1]);
+			//PRAGMA_REMIND("TJ: fix to use address to contact the schedd directly.")
+			sprintf(constraint, "%s == \"%s\"", ATTR_MY_ADDRESS, argv[i+1]);
 			scheddQuery.addORConstraint(constraint);
 			i++;
 			querySchedds = true;
@@ -1173,13 +1275,19 @@ processCommandLineArguments (int argc, char *argv[])
 				exit( 1 );
 			}
 			qdo_mode = QDO_Format | QDO_Custom;
-			app.mask.registerFormatF( argv[i+1], argv[i+2], FormatOptionNoTruncate );
+#if 1 // parse -format and -af late
+			autoformat_args.push_back(argv[i]);
+			autoformat_args.push_back(argv[i+1]);
+			autoformat_args.push_back(argv[i+2]);
+#else
+			app.prmask.registerFormatF( argv[i+1], argv[i+2], FormatOptionNoTruncate );
 			if ( ! dash_autocluster) {
 				app.attrs.initializeFromString("ClusterId ProcId"); // this is needed to prevent some DAG code from faulting.
 			}
 			GetAllReferencesFromClassAdExpr(argv[i+2], app.attrs);
-			summarize = 0;
+			//summarize = 0;
 			customHeadFoot = HF_BARE;
+#endif
 			i+=2;
 		}
 		else
@@ -1191,10 +1299,22 @@ processCommandLineArguments (int argc, char *argv[])
 				exit( 1 );
 			}
 			qdo_mode = QDO_AutoFormat | QDO_Custom;
+#if 1 // parse -format and -af late
+			autoformat_args.push_back(argv[i]);
+			// process all arguments that don't begin with "-" as part of autoformat.
+			while (i+1 < argc && *(argv[i+1]) != '-') {
+				++i;
+				autoformat_args.push_back(argv[i]);
+			}
+			// if autoformat list ends in a '-' without any characters after it, just eat the arg and keep going.
+			if (i+1 < argc && '-' == (argv[i+1])[0] && 0 == (argv[i+1])[1]) {
+				++i;
+			}
+#else
 			if ( ! dash_autocluster) {
 				app.attrs.initializeFromString("ClusterId ProcId"); // this is needed to prevent some DAG code from faulting.
 			}
-			AttrListPrintMask & prmask = app.mask;
+			AttrListPrintMask & prmask = app.prmask;
 			StringList & attrs = app.attrs;
 			bool flabel = false;
 			bool fCapV  = false;
@@ -1252,13 +1372,14 @@ processCommandLineArguments (int argc, char *argv[])
 				prmask.registerFormat(lbl.Value(), wid, opts, argv[i]);
 			}
 			prmask.SetAutoSep(prowpre, pcolpre, pcolsux, "\n");
-			summarize = 0;
+			//summarize = 0;
 			customHeadFoot = HF_BARE;
 			if (fheadings) { customHeadFoot = (printmask_headerfooter_t)(customHeadFoot & ~HF_NOHEADER); }
 			// if autoformat list ends in a '-' without any characters after it, just eat the arg and keep going.
 			if (i+1 < argc && '-' == (argv[i+1])[0] && 0 == (argv[i+1])[1]) {
 				++i;
 			}
+#endif
 		}
 		else
 		if (is_dash_arg_colon_prefix(argv[i], "print-format", &pcolon, 2)) {
@@ -1273,13 +1394,13 @@ processCommandLineArguments (int argc, char *argv[])
 				continue;
 			}
 			qdo_mode = QDO_PrintFormat | QDO_Custom;
-			if ( ! widescreen) app.mask.SetOverallWidth(getDisplayWidth()-1);
+			if ( ! widescreen) app.prmask.SetOverallWidth(getDisplayWidth()-1);
 			++i;
-			if (set_print_mask_from_stream(app.mask, argv[i], true, app.attrs) < 0) {
+			if (set_print_mask_from_stream(app.prmask, argv[i], true, app.attrs, app.sumymask) < 0) {
 				fprintf(stderr, "Error: invalid select file %s\n", argv[i]);
 				exit (1);
 			}
-			summarize = (customHeadFoot & HF_NOSUMMARY) ? 0 : 1;
+			//summarize = (customHeadFoot & HF_NOSUMMARY) ? 0 : 1;
 		}
 		else
 		if (is_dash_arg_prefix (dash_arg, "global", 1)) {
@@ -1370,14 +1491,7 @@ processCommandLineArguments (int argc, char *argv[])
 			qdo_mode = QDO_Analyze;
 		}
 		else
-		if (is_dash_arg_colon_prefix(dash_arg, "reverse", &pcolon, 3)) {
-			reverse_analyze = true; // modify analyze to be reverse analysis
-			if (pcolon) { 
-				analyze_detail_level |= parse_analyze_detail(++pcolon, analyze_detail_level);
-			}
-		}
-		else
-		if (is_dash_arg_colon_prefix(dash_arg, "reverse-analyze", &pcolon, 10)) {
+		if (is_dash_arg_colon_prefix(dash_arg, "reverse-analyze", &pcolon, 3)) {
 			reverse_analyze = true; // modify analyze to be reverse analysis
 			better_analyze = true;	// enable analysis
 			analyze_with_userprio = false;
@@ -1513,7 +1627,8 @@ processCommandLineArguments (int argc, char *argv[])
 		}
 		else if (is_dash_arg_prefix(dash_arg, "totals", 3)) {
 			qdo_mode = QDO_Totals;
-			if (set_print_mask_from_stream(app.mask, "SELECT NOHEADER\nSUMMARY STANDARD", false, app.attrs) < 0) {
+			dash_tot = true;
+			if (set_print_mask_from_stream(app.prmask, "SELECT NOHEADER\nSUMMARY STANDARD", false, app.attrs, app.sumymask) < 0) {
 				fprintf(stderr, "Error: unexpected error!\n");
 				exit (1);
 			}
@@ -1605,25 +1720,58 @@ processCommandLineArguments (int argc, char *argv[])
 	// when we get to here, the command line arguments have been processed
 	// now we can work out some of the implications
 
-	// default batch mode to on if appropriate
-	if ( ! dash_batch_specified && ! dash_long && ! dash_autocluster && ! show_held) {
-		int mode = qdo_mode & QDO_BaseMask;
-		if (mode == QDO_NotSet ||
-			mode == QDO_JobNormal ||
-			mode == QDO_JobRuntime || // TODO: need a custom format for -batch -run
-			mode == QDO_DAG) { // DAG and batch go naturally together
-			dash_batch = dash_batch_is_default;
+	// parse the autoformat args and use them to set prmask or sumymask and the projection
+	if ( ! autoformat_args.empty()) {
+		auto_standard_summary = false; // we will either have a custom summary, or none.
+
+		int nargs = autoformat_args.size();
+		autoformat_args.push_back(NULL); // have the last argument be NULL, like argv[cargs] is.
+		classad::References refs;
+		if (dash_tot) {
+			customHeadFoot = (printmask_headerfooter_t)(HF_NOHEADER | HF_NOTITLE | HF_CUSTOM);
+			parse_format_args(nargs, &autoformat_args[0], app.sumymask, refs, dash_dry_run);
+		} else {
+			customHeadFoot = (printmask_headerfooter_t)(HF_BARE | HF_CUSTOM);
+			parse_format_args(nargs, &autoformat_args[0], app.prmask, refs, dash_dry_run);
+
+			// if not querying only totals, or querying from the autocluser, we MUST have cluser and proc as part of the projection
+			if ( ! dash_autocluster) {
+				refs.insert(ATTR_CLUSTER_ID);
+				refs.insert(ATTR_PROC_ID);
+			}
+			initStringListFromAttrs(app.attrs, true, refs, true);
+		}
+		if (app.prmask.has_headings()) {
+			customHeadFoot = (printmask_headerfooter_t)(customHeadFoot & ~HF_NOHEADER);
 		}
 	}
 
-	// for now, can't use both -batch and one of the aggregation modes.
-	if (dash_autocluster && dash_batch) {
-		if (dash_batch_specified) {
-			fprintf( stderr, "Error: -batch conflicts with %s\n",
-				(dash_autocluster == CondorQ::fetch_GroupBy) ? "-group-by" : "-autocluster" );
-			exit( 1 );
+	if (dash_long) {
+		customHeadFoot = HF_BARE;
+		if (dash_tot) {
+			customHeadFoot = (printmask_headerfooter_t)(customHeadFoot & ~HF_NOSUMMARY);
 		}
-		dash_batch = false;
+	} else {
+		// default batch mode to on if appropriate
+		if ( ! dash_batch_specified && ! dash_autocluster && ! show_held) {
+			int mode = qdo_mode & QDO_BaseMask;
+			if (mode == QDO_NotSet ||
+				mode == QDO_JobNormal ||
+				mode == QDO_JobRuntime || // TODO: need a custom format for -batch -run
+				mode == QDO_DAG) { // DAG and batch go naturally together
+				dash_batch = dash_batch_is_default;
+			}
+		}
+
+		// for now, can't use both -batch and one of the aggregation modes.
+		if (dash_autocluster && dash_batch) {
+			if (dash_batch_specified) {
+				fprintf( stderr, "Error: -batch conflicts with %s\n",
+					(dash_autocluster == CondorQ::fetch_GroupBy) ? "-group-by" : "-autocluster" );
+				exit( 1 );
+			}
+			dash_batch = false;
+		}
 	}
 
 	if (dash_dry_run) {
@@ -1631,7 +1779,7 @@ processCommandLineArguments (int argc, char *argv[])
 		fprintf(stderr, "\ncondor_q %s %s\n", amo[qdo_mode & QDO_BaseMask], dash_long ? "-long" : "");
 	}
 	if ( ! dash_long && ! (qdo_mode & QDO_Format) && (qdo_mode & QDO_BaseMask) < QDO_Custom) {
-		initOutputMask(app.mask, qdo_mode, widescreen);
+		initOutputMask(app.prmask, qdo_mode, widescreen);
 	}
 
 	// convert cluster and cluster.proc into constraints
@@ -2539,18 +2687,84 @@ usage (const char *myName, int other)
 	}
 }
 
+
 static void
-print_full_footer()
+print_full_footer(ClassAd * summary_ad, CondorClassAdListWriter * writer)
 {
+#if 1
+	if (customHeadFoot & HF_NOSUMMARY) {
+		return;
+	}
+
+	std::string text;
+	text.reserve(4096);
+	if ( ! dash_tot || ( ! dash_long && use_legacy_standard_summary)) {
+		// legacy mode has a blank linke before to totals line with -tot mode
+		text = "\n";
+	}
+
+	if (dash_long) {
+		if (writer && summary_ad) {
+			writer->appendAd(*summary_ad, text, NULL, print_attrs_in_hash_order);
+		}
+	} else {
+		if (auto_standard_summary && summary_ad) {
+			init_standard_summary_mask(summary_ad);
+		}
+		if (app.sumymask.has_headings()) {
+			app.sumymask.display_Headings(stdout);
+		}
+		app.sumymask.display(text, summary_ad);
+		text += "\n";
+	}
+	fputs(text.c_str(), stdout);
+#else
 	// If we want to summarize, do that too.
-	if( summarize ) {
+	if( ! (customHeadFoot && HF_NOSUMMARY) ) {
 		printf( "\n%d jobs; "
 				"%d completed, %d removed, %d idle, %d running, %d held, %d suspended",
 				idle+running+held+malformed+suspended+completed+removed,
 				completed,removed,idle,running,held,suspended);
 		if (malformed>0) printf( ", %d malformed",malformed);
 		printf("\n");
+
+		if (summary_ad) {
+			AttrListPrintMask prtot;
+			StringList totattrs;
+			std::string text;
+
+			static const char * totfmt = "SELECT\n"
+				"JobsCompleted AS Completed PRINTF 'Total for query: %d Completed,'\n"
+				"JobsRemoved AS Removed PRINTF '%d Removed,'\n"
+				"JobsIdle AS Idle PRINTF '%d Idle,'\n"
+				"JobsRunning AS Running PRINTF '%d Running,'\n"
+				"JobsHeld AS Held PRINTF '%d Held,'\n"
+				"JobsSuspended AS Suspended PRINTF '%d Suspended'\n"
+				
+				"MyJobsCompleted AS Completed PRINTF '\\nTotal for user: %d Completed,'\n"
+				"MyJobsRemoved AS Removed PRINTF '%d Removed,'\n"
+				"MyJobsIdle AS Idle PRINTF '%d Idle,'\n"
+				"MyJobsRunning AS Running PRINTF '%d Running,'\n"
+				"MyJobsHeld AS Held PRINTF '%d Held,'\n"
+				"MyJobsSuspended AS Suspended PRINTF '%d Suspended'\n"
+
+				"AllusersJobsCompleted AS Idle PRINTF '\\nTotal for all users: %d Completed,'\n"
+				"AllusersJobsRemoved AS Idle PRINTF '%d Removed,'\n"
+				"AllusersJobsIdle AS Idle PRINTF '%d Idle,'\n"
+				"AllusersJobsRunning AS Running PRINTF '%d Running,'\n"
+				"AllusersJobsHeld AS Held PRINTF '%d Held,'\n"
+				"AllusersJobsSuspended AS Suspended PRINTF '%d Suspended'\n"
+				;
+			set_print_mask_from_stream(prtot, totfmt, false, totattrs);
+			prtot.display(text, summary_ad);
+
+			//CondorClassAdListWriter writer;
+			//writer.appendAd(*summary_ad, text);
+			printf("%s\n", text.c_str());
+
+		}
 	}
+#endif
 }
 
 static void
@@ -2568,10 +2782,10 @@ print_full_header(const char * source_label)
 			printf ("%s-- %s%s\n", (first_time ? "" : "\n\n"), source_label, time_str);
 			first_time = false;
 		}
-		if ( ! (customHeadFoot&HF_NOHEADER)) {
+		if ( ! (customHeadFoot & HF_NOHEADER)) {
 			// Print the output header
-			if (app.mask.has_headings()) {
-				app.mask.display_Headings(stdout);
+			if (app.prmask.has_headings()) {
+				app.prmask.display_Headings(stdout);
 			}
 		}
 	}
@@ -2759,10 +2973,14 @@ static void initOutputMask(AttrListPrintMask & prmask, int qdo_mode, bool wide_m
 	// just  in case we re-enter this function, only setup the mask once
 	static bool	setup_mask = false;
 	// TJ: before my 2012 refactoring setup_mask didn't protect summarize, so I'm preserving that.
+#if 1
+	//PRAGMA_REMIND("tj: do I need to do anything to adjust the summarize mask here?")
+#else
 	if ( dash_run || dash_goodput || dash_globus || dash_grid ) 
 		summarize = false;
 	else if ((customHeadFoot&HF_NOSUMMARY) && ! show_held)
 		summarize = false;
+#endif
 
 	if (setup_mask)
 		return;
@@ -2831,10 +3049,10 @@ static void initOutputMask(AttrListPrintMask & prmask, int qdo_mode, bool wide_m
 			struct stat stat_buff;
 			if (0 != stat(pf_file.ptr(), &stat_buff)) {
 				// do nothing, this is not an error.
-			} else if (set_print_mask_from_stream(prmask, pf_file.ptr(), true, app.attrs) < 0) {
+			} else if (set_print_mask_from_stream(prmask, pf_file.ptr(), true, app.attrs, app.sumymask) < 0) {
 				fprintf(stderr, "Warning: default %s print-format file '%s' is invalid\n", tag, pf_file.ptr());
 			} else {
-				if (customHeadFoot&HF_NOSUMMARY) summarize = false;
+				//if (customHeadFoot&HF_NOSUMMARY) summarize = false;
 				return;
 			}
 		}
@@ -2865,12 +3083,16 @@ static void initOutputMask(AttrListPrintMask & prmask, int qdo_mode, bool wide_m
 		}
 	}
 
-	if (set_print_mask_from_stream(prmask, fmt, false, app.attrs) < 0) {
+	if (set_print_mask_from_stream(prmask, fmt, false, app.attrs, app.sumymask) < 0) {
 		fprintf(stderr, "Internal error: default %s print-format is invalid !\n", tag);
 	}
 
+#if 1
+	//PRAGMA_REMIND("tj: do I need to do anything to adjust the app.headfoot?")
+#else
 	customHeadFoot = (printmask_headerfooter_t)(customHeadFoot & ~HF_CUSTOM);
 	if (customHeadFoot&HF_NOSUMMARY) summarize = false;
+#endif
 }
 
 
@@ -3056,31 +3278,43 @@ print_jobs_analysis(ClassAdList & jobs, const char * source_label, Daemon * psch
 	return true;
 }
 
+static void count_job(LiveJobCounters & num, ClassAd *job)
+{
+	int status = 0, universe = CONDOR_UNIVERSE_VANILLA;
+	job->LookupInteger(ATTR_JOB_STATUS, status);
+	job->LookupInteger(ATTR_JOB_UNIVERSE, universe);
+	if (status == TRANSFERRING_OUTPUT) status = RUNNING;
+	switch (universe) {
+	case CONDOR_UNIVERSE_SCHEDULER:
+		if (status > 0 && status <= HELD) {
+			(&num.SchedulerJobsIdle)[status-1] += 1;
+		}
+		break;
+	/*
+	case CONDOR_UNIVERSE_LOCAL:
+		if (status > 0 && status <= HELD) {
+			(&num.LocalJobsIdle)[status-1] += increment;
+		}
+		break;
+	*/
+	default:
+		if (status > 0 && status <= HELD) {
+			(&num.JobsIdle)[status-1] += 1;
+		} else if (status == SUSPENDED) {
+			num.JobsSuspended += 1;
+		}
+		break;
+	}
+}
+
 // callback function for processing a job from the Q query that just adds the 
 // job into a ClassAdList.
 static bool
 AddToClassAdList(void * pv, ClassAd* ad) {
 	ClassAdList * plist = (ClassAdList*)pv;
+	count_job(app.sumy, ad);
 	plist->Insert(ad);
 	return false; // return false to indicate we took ownership of the ad.
-}
-
-
-
-static void count_job(ClassAd *job)
-{
-	int status = 0;
-	job->LookupInteger(ATTR_JOB_STATUS, status);
-	switch (status)
-	{
-		case IDLE:                ++idle;      break;
-		case TRANSFERRING_OUTPUT:
-		case RUNNING:             ++running;   break;
-		case SUSPENDED:           ++suspended; break;
-		case COMPLETED:           ++completed; break;
-		case REMOVED:             ++removed;   break;
-		case HELD:                ++held;      break;
-	}
 }
 
 
@@ -3238,7 +3472,7 @@ void cleanup_cache_optimizer()
 static bool process_job_to_rod_per_ad_map(void * pv,  ClassAd* job)
 {
 	ROD_MAP_BY_ID * pmap = (ROD_MAP_BY_ID *)pv;
-	count_job(job);
+	count_job(app.sumy, job);
 
 	ASSERT( ! g_stream_results);
 
@@ -3257,7 +3491,7 @@ static bool process_job_to_rod_per_ad_map(void * pv,  ClassAd* job)
 		job->LookupInteger( ATTR_SERVER_TIME, queue_time );
 	}
 
-	int columns = app.mask.ColCount();
+	int columns = app.prmask.ColCount();
 	if (0 == columns)
 		return true;
 
@@ -3270,7 +3504,7 @@ static bool process_job_to_rod_per_ad_map(void * pv,  ClassAd* job)
 	} else {
 		pp.first->second.id = jobid.id;
 		pp.first->second.rov.SetMaxCols(columns);
-		app.mask.render(pp.first->second.rov, job);
+		app.prmask.render(pp.first->second.rov, job);
 
 		// if displaying jobs in dag order, also add this job to the set of clusters for this dagid
 		if ((dash_dag || dash_batch) && ! dash_autocluster) {
@@ -3297,7 +3531,7 @@ static bool process_job_to_rod_per_ad_map(void * pv,  ClassAd* job)
 static void print_a_result(std::string & buf, JobRowOfData & jrod)
 {
 	buf.clear();
-	app.mask.display(buf, jrod.rov);
+	app.prmask.display(buf, jrod.rov);
 	printf("%s", buf.c_str());
 	jrod.flags |= JROD_PRINTED; // for debugging, keep track of what we already printed.
 }
@@ -3364,12 +3598,14 @@ void clear_results(ROD_MAP_BY_ID & results, KeyToIdMap & order)
 static bool
 streaming_print_job(void * pv, ClassAd *job)
 {
-	count_job(job);
+	count_job(app.sumy, job);
+	if (dash_tot && ! verbose)
+		return true;
 
 	std::string result_text;
 
 	if ( ! dash_long) {
-		if (app.mask.ColCount() > 0) { app.mask.display(result_text, job); }
+		if (app.prmask.ColCount() > 0) { app.prmask.display(result_text, job); }
 	} else {
 		StringList * proj = (dash_autocluster || app.attrs.isEmpty()) ? NULL : &app.attrs;
 		CondorClassAdListWriter & writer = *(CondorClassAdListWriter*)pv;
@@ -3467,7 +3703,7 @@ static void fixup_std_column_widths(int max_cluster, int max_proc, int longest_n
 		vals.name_width = MIN(longest_name, max_name_column_width);
 	}
 
-	app.mask.adjust_formats(fnFixupWidthCallback, &vals);
+	app.prmask.adjust_formats(fnFixupWidthCallback, &vals);
 	name_column_width = vals.name_width; // propage the returned width
 }
 
@@ -3927,7 +4163,7 @@ reduce_results(ROD_MAP_BY_ID & results) {
 			wids.owner_width = MIN(wids.owner_width, nw+8);
 		}
 	}
-	app.mask.adjust_formats(fnFixupWidthsForProgressFormat, &wids);
+	app.prmask.adjust_formats(fnFixupWidthsForProgressFormat, &wids);
 }
 
 
@@ -3959,7 +4195,7 @@ static bool
 show_schedd_queue(const char* scheddAddress, const char* scheddName, const char* scheddMachine, int useFastPath)
 {
 	// initialize counters
-	malformed = idle = running = held = completed = suspended = 0;
+	app.sumy.clear_counters();
 
 	std::string addr_summary;
 	summarize_sinful_for_display(addr_summary, scheddAddress);
@@ -3980,6 +4216,7 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 	// fetch queue from schedd
 	ClassAdList jobs;  // this will get filled in for -long -json -xml and -analyze
 	CondorError errstack;
+	ClassAd * summary_ad = NULL; // points to a final summary ad when we query an actual schedd.
 
 	CondorClassAdListWriter writer(dash_long_format);
 
@@ -4016,12 +4253,15 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 	if ( ! fetch_opts && (useFastPath > 1)) {
 		fetch_opts = default_fetch_opts;
 	}
+	if (dash_tot && (useFastPath > 1) && (fetch_opts == CondorQ::fetch_Default || fetch_opts == CondorQ::fetch_MyJobs)) {
+		fetch_opts |= CondorQ::fetch_SummaryOnly;
+	}
 	StringList *pattrs = &app.attrs;
 	int fetchResult;
 	if (dash_dry_run) {
 		fetchResult = dryFetchQueue(dry_run_file, *pattrs, fetch_opts, g_match_limit, pfnProcess, pvProcess);
 	} else {
-		fetchResult = Q.fetchQueueFromHostAndProcess(scheddAddress, *pattrs, fetch_opts, g_match_limit, pfnProcess, pvProcess, useFastPath, &errstack);
+		fetchResult = Q.fetchQueueFromHostAndProcess(scheddAddress, *pattrs, fetch_opts, g_match_limit, pfnProcess, pvProcess, useFastPath, &errstack, &summary_ad);
 	}
 	cleanup_cache_optimizer();
 	if (fetchResult != Q_OK) {
@@ -4042,11 +4282,20 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 		return false;
 	}
 
+	// If the query did not return a summary ad, then manufacture one from the totals that we have been keeping as the ads were returned.
+	if ( ! summary_ad) {
+		summary_ad = new ClassAd();
+		summary_ad->Assign(ATTR_MY_TYPE, "Summary");
+		app.sumy.publish(*summary_ad, NULL);
+	}
+
 	// if we streamed, then the results have already been printed out.
 	// we just need to write the footer/summary
 	if (g_stream_results) {
-		print_full_footer();
-		if (dash_long) { writer.writeFooter(stdout, always_write_xml_footer); }
+		print_full_footer(summary_ad, &writer);
+		if (dash_long) { 
+			writer.writeFooter(stdout, always_write_xml_footer);
+		}
 		return true;
 	}
 
@@ -4077,6 +4326,7 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 	// then we want to linkup the nodes and (possibly) rewrite the name columns
 	if (jobs.Length() > 0) {
 		jobs.Open();
+		app.sumy.clear_counters(); // so we don't double count.
 		while(ClassAd *job = jobs.Next()) {
 			if (dash_long) {
 				streaming_print_job(&writer, job);
@@ -4110,7 +4360,7 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 	// a global query, so that the user can see that we did something.
 	//
 	if ( ! global || cResults > 0 || jobs.Length() > 0) {
-		print_full_footer();
+		print_full_footer(summary_ad, &writer);
 	}
 	if (dash_long) { writer.writeFooter(stdout, always_write_xml_footer); }
 
@@ -4232,7 +4482,7 @@ static bool
 show_file_queue(const char* jobads, const char* userlog)
 {
 	// initialize counters
-	malformed = idle = running = held = completed = suspended = 0;
+	app.sumy.clear_counters();
 
 	ConstraintHolder constr;
 	if (GetQueueConstraint(Q, constr) < 0) {
@@ -4308,14 +4558,19 @@ show_file_queue(const char* jobads, const char* userlog)
 	CondorClassAdListWriter writer(dash_long_format);
 
 	// TJ: copied this from the top of init_output_mask
+#if 1
+	
+#else
 	if ( dash_run || dash_goodput || dash_globus || dash_grid )
 		summarize = false;
 	else if ((customHeadFoot&HF_NOSUMMARY) && ! show_held)
 		summarize = false;
+#endif
 
 		// display the jobs from this submittor
 	if( jobs.MyLength() != 0 || !global ) {
 
+		app.sumy.clear_counters();
 		jobs.Open();
 		while(ClassAd *job = jobs.Next()) {
 			if (dash_long) {
@@ -4326,7 +4581,12 @@ show_file_queue(const char* jobads, const char* userlog)
 		}
 		jobs.Close();
 
+		ClassAd * summary_ad = new ClassAd();
+		summary_ad->Assign(ATTR_MY_TYPE, "Summary");
+		app.sumy.publish(*summary_ad, NULL);
+
 		if (dash_long) {
+			print_full_footer(summary_ad, &writer);
 			writer.writeFooter(stdout, always_write_xml_footer);
 			return true;
 		}
@@ -4345,7 +4605,7 @@ show_file_queue(const char* jobads, const char* userlog)
 		print_results(rod_result_map, rod_sort_key_map, dash_dag);
 		clear_results(rod_result_map, rod_sort_key_map);
 
-		print_full_footer();
+		print_full_footer(summary_ad, &writer);
 	}
 	if (dash_long) { writer.writeFooter(stdout, always_write_xml_footer); }
 
@@ -5673,14 +5933,15 @@ static const CustomFormatFnTable LocalPrintFormatsTable = SORTED_TOKENER_TABLE(L
 
 static void dump_print_mask(std::string & tmp)
 {
-	app.mask.dump(tmp, &LocalPrintFormatsTable);
+	app.prmask.dump(tmp, &LocalPrintFormatsTable);
 }
 
 static int set_print_mask_from_stream(
 	AttrListPrintMask & prmask,
 	const char * streamid,
 	bool is_filename,
-	StringList & attrs) // out
+	StringList & attrs,
+	AttrListPrintMask & sumymask)
 {
 	PrintMaskMakeSettings propt;
 	std::string messages;
@@ -5709,10 +5970,10 @@ static int set_print_mask_from_stream(
 					prmask,
 					propt,
 					group_by_keys,
+					&sumymask,
 					messages);
 	delete pstream; pstream = NULL;
 	if ( ! err) {
-		//usingPrintMask = true;
 		customHeadFoot = propt.headfoot;
 		if ( ! propt.where_expression.empty()) {
 			user_job_constraint = prmask.store(propt.where_expression.c_str());
@@ -5730,12 +5991,107 @@ static int set_print_mask_from_stream(
 			// make sure that the projection has ClusterId and ProcId.
 			propt.attrs.insert(ATTR_CLUSTER_ID);
 			propt.attrs.insert(ATTR_PROC_ID);
-			// if we are generating a summary line, make sure that we have JobStatus
-			if ( ! (propt.headfoot & HF_NOSUMMARY)) { propt.attrs.insert(ATTR_JOB_STATUS); }
-			// PRAGMA_REMIND("switch status to using References for projection")
+			if ( ! (propt.headfoot & HF_NOSUMMARY)) {
+				// in case we are generating the summary line, make sure that we have JobStatus and JobUniverse
+				propt.attrs.insert(ATTR_JOB_STATUS);
+				propt.attrs.insert(ATTR_JOB_UNIVERSE);
+			}
 			initStringListFromAttrs(attrs, true, propt.attrs, true);
+
+			// if using the standard summary, we need to set that up now.
+			if ((propt.headfoot & (HF_NOSUMMARY | HF_CUSTOM)) == 0) {
+				auto_standard_summary = true;
+			}
 		}
 	}
 	if ( ! messages.empty()) { fprintf(stderr, "%s", messages.c_str()); }
 	return err;
 }
+
+const char * const standard_summary1 = "SELECT\n"
+	"Name PRINTF 'Total for %s:'\n"
+	"Jobs PRINTF '%d jobs;'\n"
+	"Completed PRINTF '%d completed,'\n"
+	"Removed PRINTF '%d removed,'\n"
+	"Idle PRINTF '%d idle,'\n"
+	"Running PRINTF '%d running,'\n"
+	"Held PRINTF '%d held,'\n"
+	"Suspended PRINTF '%d suspended'\n"
+;
+
+const char * const standard_summary2 = "SELECT\n"
+	"Jobs PRINTF 'Total for query: %d jobs;'\n"
+	"Completed PRINTF '%d completed,'\n"
+	"Removed PRINTF '%d removed,'\n"
+	"Idle PRINTF '%d idle,'\n"
+	"Running PRINTF '%d running,'\n"
+	"Held PRINTF '%d held,'\n"
+	"Suspended PRINTF '%d suspended'\n"
+
+	"AllusersJobs AS Jobs PRINTF '\\nTotal for all users: %d jobs;'\n"
+	"AllusersCompleted AS Completed PRINTF '%d completed,'\n"
+	"AllusersRemoved AS Removed PRINTF '%d removed,'\n"
+	"AllusersIdle AS Idle PRINTF '%d idle,'\n"
+	"AllusersRunning AS Running PRINTF '%d running,'\n"
+	"AllusersHeld AS Held PRINTF '%d held,'\n"
+	"AllusersSuspended AS Suspended PRINTF '%d suspended'\n"
+;
+
+const char * const standard_summary3 = "SELECT\n"
+	"Jobs PRINTF 'Total for query: %d jobs;'\n"
+	"Completed PRINTF '%d completed,'\n"
+	"Removed PRINTF '%d removed,'\n"
+	"Idle PRINTF '%d idle,'\n"
+	"Running PRINTF '%d running,'\n"
+	"Held PRINTF '%d held,'\n"
+	"Suspended PRINTF '%d suspended'\n"
+
+	"MyJobs AS Jobs PRINTF '\\nTotal for $(ME): %d jobs;'\n"
+	"MyCompleted AS Completed PRINTF '%d completed,'\n"
+	"MyRemoved AS Removed PRINTF '%d removed,'\n"
+	"MyIdle AS Idle PRINTF '%d idle,'\n"
+	"MyRunning AS Running PRINTF '%d running,'\n"
+	"MyHeld AS Held PRINTF '%d held,'\n"
+	"MySuspended AS Suspended PRINTF '%d suspended'\n"
+
+	"AllusersJobs AS Jobs PRINTF '\\nTotal for all users: %d jobs;'\n"
+	"AllusersCompleted AS Completed PRINTF '%d completed,'\n"
+	"AllusersRemoved AS Removed PRINTF '%d removed,'\n"
+	"AllusersIdle AS Idle PRINTF '%d idle,'\n"
+	"AllusersRunning AS Running PRINTF '%d running,'\n"
+	"AllusersHeld AS Held PRINTF '%d held,'\n"
+	"AllusersSuspended AS Suspended PRINTF '%d suspended'\n"
+;
+
+const char * const standard_summary_legacy = "SELECT\n"
+	"Jobs + SchedulerJobs AS Jobs PRINTF '%d jobs;'\n"
+	"Completed + SchedulerCompleted AS Completed PRINTF '%d completed,'\n"
+	"Removed + SchedulerRemoved AS Removed PRINTF '%d removed,'\n"
+	"Idle + SchedulerIdle AS Idle PRINTF '%d idle,'\n"
+	"Running + SchedulerRunning AS Running PRINTF '%d running,'\n"
+	"Held + SchedulerHeld AS Held PRINTF '%d held,'\n"
+	"Suspended PRINTF '%d suspended'\n"
+;
+
+static void init_standard_summary_mask(ClassAd * summary_ad)
+{
+	std::string messages;
+	PrintMaskMakeSettings dummySettings;
+	std::vector<GroupByKeyInfo> dummyGrpBy;
+	MyString sumyformat(standard_summary2);
+	MyString myname;
+	if (summary_ad->LookupString("MyName", myname)) { 
+		sumyformat = standard_summary3;
+		sumyformat.replaceString("$(ME)", myname.c_str());
+	}
+	if (use_legacy_standard_summary) {
+		sumyformat = standard_summary_legacy;
+	}
+	StringLiteralInputStream stream(sumyformat.c_str());
+	dummySettings.reset();
+	SetAttrListPrintMaskFromStream(stream, LocalPrintFormatsTable, app.sumymask, dummySettings, dummyGrpBy, NULL, messages);
+
+	// dont' actually want to display headings for the summary lines when using standard_summary2 or standard_summary3
+	app.sumymask.clear_headings();
+}
+

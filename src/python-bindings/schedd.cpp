@@ -761,7 +761,7 @@ struct Schedd {
         {
             condor::ModuleLock ml;
             helper.ml = &ml;
-            fetchResult = q.fetchQueueFromHostAndProcess(m_addr.c_str(), attrs_list, fetch_opts, match_limit, query_process_callback, helper_ptr, true, NULL);
+            fetchResult = q.fetchQueueFromHostAndProcess(m_addr.c_str(), attrs_list, fetch_opts, match_limit, query_process_callback, helper_ptr, true, NULL, NULL);
         }
         }
 

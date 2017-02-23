@@ -125,9 +125,10 @@ static void expected_token(std::string & message, const char * reason, const cha
 int SetAttrListPrintMaskFromStream (
 	SimpleInputStream & stream, // in: fetch lines from this stream until nextline() returns NULL
 	const CustomFormatFnTable & FnTable, // in: table of custom output functions for SELECT
-	AttrListPrintMask & mask, // out: columns and headers set in SELECT
+	AttrListPrintMask & prmask, // out: columns and headers set in SELECT
 	PrintMaskMakeSettings & pmms,
 	std::vector<GroupByKeyInfo> & group_by, // out: ordered set of attributes/expressions in GROUP BY
+	AttrListPrintMask * summask, // out: columns and headers set in SUMMMARY
 	std::string & error_message) // out, if return is non-zero, this will be an error message
 {
 	//ClassAd ad; // so we can GetExprReferences
@@ -140,7 +141,10 @@ int SetAttrListPrintMaskFromStream (
 	const char * pcolpre = " ";
 	const char * pcolsux = NULL;
 	const char * prowsux = "\n";
-	mask.SetAutoSep(prowpre, pcolpre, pcolsux, prowsux);
+	prmask.SetAutoSep(prowpre, pcolpre, pcolsux, prowsux);
+	AttrListPrintMask * mask = NULL;
+	classad::References * attrs = NULL;
+	classad::References * scopes = NULL;
 
 	error_message.clear();
 
@@ -149,7 +153,7 @@ int SetAttrListPrintMaskFromStream (
 	//pmms.reset();
 	pmms.aggregate = PR_NO_AGGREGATION;
 
-	printmask_headerfooter_t usingHeadFoot = (printmask_headerfooter_t)(HF_CUSTOM | HF_NOSUMMARY);
+	printmask_headerfooter_t usingHeadFoot = HF_NOSUMMARY; // default to no-summary
 	section_t sect = SELECT;
 	tokener toke("");
 	while (toke.set(stream.nextline())) {
@@ -185,22 +189,25 @@ int SetAttrListPrintMaskFromStream (
 				} else if (toke.matches("LABEL")) {
 					label_fields = true;
 				} else if (label_fields && toke.matches("SEPARATOR")) {
-					if (toke.next()) { std::string tmp; toke.copy_token(tmp); collapse_escapes(tmp); labelsep = mask.store(tmp.c_str()); }
+					if (toke.next()) { std::string tmp; toke.copy_token(tmp); collapse_escapes(tmp); labelsep = mask->store(tmp.c_str()); }
 				} else if (toke.matches("RECORDPREFIX")) {
-					if (toke.next()) { std::string tmp; toke.copy_token(tmp); collapse_escapes(tmp); prowpre = mask.store(tmp.c_str()); }
+					if (toke.next()) { std::string tmp; toke.copy_token(tmp); collapse_escapes(tmp); prowpre = mask->store(tmp.c_str()); }
 				} else if (toke.matches("RECORDSUFFIX")) {
-					if (toke.next()) { std::string tmp; toke.copy_token(tmp); collapse_escapes(tmp); prowsux = mask.store(tmp.c_str()); }
+					if (toke.next()) { std::string tmp; toke.copy_token(tmp); collapse_escapes(tmp); prowsux = mask->store(tmp.c_str()); }
 				} else if (toke.matches("FIELDPREFIX")) {
-					if (toke.next()) { std::string tmp; toke.copy_token(tmp); collapse_escapes(tmp); pcolpre = mask.store(tmp.c_str()); }
+					if (toke.next()) { std::string tmp; toke.copy_token(tmp); collapse_escapes(tmp); pcolpre = mask->store(tmp.c_str()); }
 				} else if (toke.matches("FIELDSUFFIX")) {
-					if (toke.next()) { std::string tmp; toke.copy_token(tmp); collapse_escapes(tmp); pcolsux = mask.store(tmp.c_str()); }
+					if (toke.next()) { std::string tmp; toke.copy_token(tmp); collapse_escapes(tmp); pcolsux = mask->store(tmp.c_str()); }
 				} else {
 					std::string aa; toke.copy_token(aa);
 					formatstr_cat(error_message, "Warning: Unknown header argument %s for SELECT\n", aa.c_str());
 				}
 			}
-			mask.SetAutoSep(prowpre, pcolpre, pcolsux, prowsux);
+			prmask.SetAutoSep(prowpre, pcolpre, pcolsux, prowsux);
 			sect = SELECT;
+			mask = &prmask;
+			attrs = &pmms.attrs;
+			scopes = &pmms.scopes;
 			continue;
 		} else if (toke.matches("JOIN")) {
 			sect = JOIN;
@@ -215,22 +222,32 @@ int SetAttrListPrintMaskFromStream (
 			sect = GROUP;
 			if ( ! toke.next() || (toke.matches("BY") && ! toke.next())) continue;
 		} else if (toke.matches("SUMMARY")) {
-			usingHeadFoot = (printmask_headerfooter_t)(usingHeadFoot & ~HF_NOSUMMARY);
+			usingHeadFoot = (printmask_headerfooter_t)((usingHeadFoot | HF_CUSTOM) & ~HF_NOSUMMARY);
 			while (toke.next()) {
 				if (toke.matches("STANDARD")) {
-					// attrs.insert(ATTR_JOB_STATUS);
+					usingHeadFoot = (printmask_headerfooter_t)(usingHeadFoot & ~HF_CUSTOM);
 				} else if (toke.matches("NONE")) {
-					usingHeadFoot = (printmask_headerfooter_t)(usingHeadFoot | HF_NOSUMMARY);
+					usingHeadFoot = (printmask_headerfooter_t)((usingHeadFoot | HF_NOSUMMARY) & ~HF_CUSTOM);
 				} else {
 					std::string aa; toke.copy_token(aa);
 					formatstr_cat(error_message, "Unknown argument %s for SELECT\n", aa.c_str());
+					//PRAGMA_REMIND("parse LABEL & SEPARATOR keywords for summary line here.")
 				}
 			}
 			sect = SUMMARY;
+			mask = summask;
+			attrs = &pmms.sumattrs;
+			scopes = &pmms.sumattrs;
 			continue;
 		}
 
 		switch (sect) {
+		case SUMMARY:
+			// if there is a summary mask, parse it just the way we parse the print mask
+			if ( ! mask) {
+				break;
+			}
+		// fall through
 		case SELECT: {
 			toke.mark();
 			std::string attr;
@@ -270,7 +287,7 @@ int SetAttrListPrintMaskFromStream (
 				case kw_PRINTF: {
 					if (toke.next()) {
 						std::string val; toke.copy_token(val);
-						fmt = mask.store(val.c_str());
+						fmt = mask->store(val.c_str());
 					} else {
 						expected_token(error_message, "format after PRINTF", "SELECT", stream, toke);
 					}
@@ -281,14 +298,13 @@ int SetAttrListPrintMaskFromStream (
 						if (pcffi) {
 							cust = pcffi->cust;
 							fmt = pcffi->printfFmt;
-							if (fmt) fmt = mask.store(fmt);
+							if (fmt) fmt = mask->store(fmt);
 							//cust_type = pcffi->cust;
 							const char * pszz = pcffi->extra_attribs;
 							if (pszz) {
 								size_t cch = strlen(pszz);
 								while (cch > 0) {
-									//if ( ! attrs.contains_anycase(pszz)) attrs.insert(pszz);
-									pmms.attrs.insert(pszz);
+									attrs->insert(pszz);
 									pszz += cch+1; cch = strlen(pszz);
 								}
 							}
@@ -384,12 +400,12 @@ int SetAttrListPrintMaskFromStream (
 					}
 					label += cust ? "s" : "v";
 				}
-				lbl = mask.store(label.c_str());
+				lbl = mask->store(label.c_str());
 				fmt = lbl;
 				wid = 0;
 			} else {
 				if (width_from_label) { wid = 0 - (int)strlen(lbl); }
-				mask.set_heading(lbl);
+				mask->set_heading(lbl);
 				lbl = NULL;
 				if (cust) {
 					lbl = fmt;
@@ -404,17 +420,17 @@ int SetAttrListPrintMaskFromStream (
 						p += sprintf(p, "%d", wid);
 						if ( ! (opts & FormatOptionNoTruncate)) p += sprintf(p, ".%d", wid);
 						*p++ = 'v'; *p = 0;
-						fmt = mask.store(tmp);
+						fmt = mask->store(tmp);
 					}
 				}
 			}
 			if (cust) {
-				mask.registerFormat (lbl, wid, opts, cust, attr.c_str());
+				mask->registerFormat (lbl, wid, opts, cust, attr.c_str());
 			} else {
-				mask.registerFormat(fmt, wid, opts, attr.c_str());
+				mask->registerFormat(fmt, wid, opts, attr.c_str());
 			}
 
-			if ( ! IsValidClassAdExpression(attr.c_str(), &pmms.attrs, &pmms.scopes)) {
+			if ( ! IsValidClassAdExpression(attr.c_str(), attrs, scopes)) {
 				formatstr_cat(error_message, "attribute or expression is not valid: %s\n", attr.c_str());
 			}
 		}
@@ -450,10 +466,6 @@ int SetAttrListPrintMaskFromStream (
 			toke.copy_to_end(pmms.and_expression);
 			trim(pmms.and_expression);
 			*/
-		}
-		break;
-
-		case SUMMARY: {
 		}
 		break;
 
@@ -648,7 +660,8 @@ int PrintPrintMask(std::string & fout,
 	const AttrListPrintMask & mask,       // in: columns and headers set in SELECT
 	const List<const char> * pheadings,   // in: headings override
 	const PrintMaskMakeSettings & mms, // in: modifed by parsing the stream. BUT NOT CLEARED FIRST! (so the caller can set defaults)
-	const std::vector<GroupByKeyInfo> & /*group_by*/) // in: ordered set of attributes/expressions in GROUP BY
+	const std::vector<GroupByKeyInfo> & /*group_by*/, // in: ordered set of attributes/expressions in GROUP BY
+	AttrListPrintMask * sumymask) // out: columns and headers set in SUMMMARY
 {
 	fout += "SELECT";
 	if ( ! mms.select_from.empty()) { fout += " FROM "; fout += mms.select_from; }
@@ -674,7 +687,12 @@ int PrintPrintMask(std::string & fout,
 	//PRAGMA_REMIND("print GROUP BY")
 
 	if (mms.headfoot != HF_BARE) {
-		fout += "SUMMARY "; fout += (mms.headfoot&HF_NOSUMMARY) ? "NONE" : "STANDARD";
+		fout += "SUMMARY ";
+		if ((mms.headfoot & (HF_CUSTOM | HF_NOSUMMARY)) == HF_CUSTOM) {
+			if (sumymask) { sumymask->walk(PrintPrintMaskWalkFunc, &args, NULL); }
+		} else {
+			fout += (mms.headfoot&HF_NOSUMMARY) ? "NONE" : "STANDARD";
+		}
 		fout += "\n";
 	}
 

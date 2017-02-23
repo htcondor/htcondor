@@ -98,10 +98,10 @@ class CondorQ
 	// from the local schedd
 	int fetchQueue (ClassAdList &, StringList &attrs, ClassAd * = 0, CondorError* errstack = 0);
 	int fetchQueueFromHost (ClassAdList &, StringList &attrs, const char * = 0, char const *schedd_version = 0,CondorError* errstack = 0);
-	int fetchQueueFromHostAndProcess ( const char *, StringList &attrs, int fetch_opts, int match_limit, condor_q_process_func process_func, void * process_func_data, int useFastPath, CondorError* errstack = 0);
+	int fetchQueueFromHostAndProcess ( const char *, StringList &attrs, int fetch_opts, int match_limit, condor_q_process_func process_func, void * process_func_data, int useFastPath, CondorError* errstack = 0, ClassAd ** psummary_ad=NULL);
 
 	// option flags for fetchQueueFromHost* functions, these can modify the meaning of attrs
-	typedef enum { fetch_Default=0, fetch_DefaultAutoCluster=1, fetch_GroupBy=2, fetch_MyJobs=4 } QueryFetchOpts;
+	typedef enum { fetch_Default=0, fetch_DefaultAutoCluster=1, fetch_GroupBy=2, fetch_MyJobs=4, fetch_SummaryOnly=8 } QueryFetchOpts;
 	
 		// fetch the job ads from database 	
 	int fetchQueueFromDB (ClassAdList &, char *&lastUpdate, const char * = 0, CondorError* errstack = 0);
@@ -130,7 +130,7 @@ class CondorQ
 	time_t scheddBirthdate;
 	
 	// helper functions
-	int fetchQueueFromHostAndProcessV2 ( const char * host, const char * constraint, StringList &attrs, int fetch_opts, int match_limit, condor_q_process_func process_func, void * process_func_data, int connect_timeout, int useFastPath, CondorError* errstack = 0);
+	int fetchQueueFromHostAndProcessV2 ( const char * host, const char * constraint, StringList &attrs, int fetch_opts, int match_limit, condor_q_process_func process_func, void * process_func_data, int connect_timeout, int useFastPath, CondorError* errstack = 0, ClassAd ** psummary_ad=NULL);
 	int getAndFilterAds( const char *, StringList &attrs, int match_limit, ClassAdList &, int useAll );
 	int getFilterAndProcessAds( const char *, StringList &attrs, int match_limit, condor_q_process_func pfn, void * process_func_data, bool useAll );
 };

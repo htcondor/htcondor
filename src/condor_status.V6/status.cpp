@@ -952,7 +952,7 @@ main (int argc, char *argv[])
 
 			temp.clear();
 			temp.reserve(4096);
-			PrintPrintMask(temp, *pFnTable, pm, pheadings, pmms, group_by_keys);
+			PrintPrintMask(temp, *pFnTable, pm, pheadings, pmms, group_by_keys, NULL);
 			fprintf(fout, "%s\n", temp.c_str());
 			//exit (1);
 		}
@@ -1234,12 +1234,14 @@ int set_status_print_mask_from_stream (
 	}
 	ASSERT(pstream);
 
+	//PRAGMA_REMIND("tj: fix to handle summary formatting.")
 	int err = SetAttrListPrintMaskFromStream(
 					*pstream,
 					*getCondorStatusPrintFormats(),
 					pm,
 					pmopt,
 					group_by_keys,
+					NULL,
 					messages);
 	delete pstream; pstream = NULL;
 	if ( ! err) {

@@ -2205,10 +2205,11 @@ static char *new_strdup (const char *str)
 
 int parse_autoformat_args (
 	int /*argc*/,
-	char* argv[],
+	const char* argv[],
 	int ixArg,
 	const char *popts,
 	AttrListPrintMask & print_mask,
+	classad::References & attr_refs,
 	bool diagnostic)
 {
 	bool flabel = false;
@@ -2254,52 +2255,13 @@ int parse_autoformat_args (
 
 		const char * parg = argv[ixArg];
 		const char * pattr = parg;
-		CustomFormatFn cust_fmt;
 
-		// If the attribute/expression begins with # treat it as a magic
-		// identifier for one of the derived fields that we normally display.
-		if (*parg == '#') {
-			/* -- need to re-write this to be more generic...
-			++parg;
-			if (MATCH == strcasecmp(parg, "SLOT") || MATCH == strcasecmp(parg, "SlotID")) {
-				cust_fmt = format_slot_id;
-				pattr = ATTR_SLOT_ID;
-				App.projection.AppendArg(pattr);
-				App.projection.AppendArg(ATTR_SLOT_DYNAMIC);
-				App.projection.AppendArg(ATTR_NAME);
-			} else if (MATCH == strcasecmp(parg, "PID")) {
-				cust_fmt = format_jobid_pid;
-				pattr = ATTR_JOB_ID;
-				App.projection.AppendArg(pattr);
-			} else if (MATCH == strcasecmp(parg, "PROGRAM")) {
-				cust_fmt = format_jobid_program;
-				pattr = ATTR_JOB_ID;
-				App.projection.AppendArg(pattr);
-			} else if (MATCH == strcasecmp(parg, "RUNTIME")) {
-				cust_fmt = format_int_runtime;
-				pattr = ATTR_TOTAL_JOB_RUN_TIME;
-				App.projection.AppendArg(pattr);
-			} else {
-				parg = argv[ixArg];
+		if ( ! IsValidClassAdExpression(pattr, &attr_refs, NULL)) {
+			if (diagnostic) {
+				printf ("Arg %d --- quitting on invalid expression: [%s]\n", ixArg, pattr);
 			}
-			*/
+			return -ixArg;
 		}
-
-		/*
-		if ( ! cust_fmt) {
-			ClassAd ad;
-			StringList attributes;
-			if(!ad.GetExprReferences(parg, NULL, &attributes)) {
-				fprintf( stderr, "Error:  Parse error of: %s\n", parg);
-				exit(1);
-			}
-
-			attributes.rewind();
-			while (const char *str = attributes.next()) {
-				App.projection.AppendArg(str);
-			}
-		}
-		*/
 
 		MyString lbl = "";
 		int wid = 0;
@@ -2314,14 +2276,10 @@ int parse_autoformat_args (
 
 		lbl += fRaw ? "%r" : (fCapV ? "%V" : "%v");
 		if (diagnostic) {
-			printf ("Arg %d --- register format [%s] width=%d, opt=0x%x for %llx[%s]\n",
-				ixArg, lbl.Value(), wid, opts, (long long)(StringCustomFormat)cust_fmt, pattr);
+			printf ("Arg %d --- register format [%s] width=%d, opt=0x%x [%s]\n",
+				ixArg, lbl.Value(), wid, opts, pattr);
 		}
-		if (cust_fmt) {
-			print_mask.registerFormat(NULL, wid, opts, cust_fmt, pattr);
-		} else {
-			print_mask.registerFormat(lbl.Value(), wid, opts, pattr);
-		}
+		print_mask.registerFormat(lbl.Value(), wid, opts, pattr);
 		++ixArg;
 	}
 	return ixArg;

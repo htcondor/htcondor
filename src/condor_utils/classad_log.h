@@ -142,11 +142,18 @@ public:
 	void CommitTransaction();
 	void CommitNondurableTransaction();
 	bool InTransaction() { return active_transaction != NULL; }
+	int SetTransactionTriggers(int mask);
+	int GetTransactionTriggers();
 
 	/** Get a list of all new keys created in this transaction
 		@param new_keys List object to populate
 	*/
 	void ListNewAdsInTransaction( std::list<std::string> &new_keys );
+
+	/** Get the set of all keys mentioned in this transaction
+	   returns false if there is not currently a transaction, true if there is.
+	*/
+	bool GetTransactionKeys( std::set<std::string> &keys );
 
 		// increase non-durable commit level
 		// if > 0, begin non-durable commits
@@ -792,6 +799,21 @@ ClassAdLog<K,AltK,AD>::setActiveTransaction(Transaction* & transaction)
 }
 
 template <typename K, typename AltK, typename AD>
+int ClassAdLog<K,AltK,AD>::SetTransactionTriggers(int mask)
+{
+	if (!active_transaction) return 0;
+	return active_transaction->SetTriggers(mask);
+}
+
+template <typename K, typename AltK, typename AD>
+int ClassAdLog<K,AltK,AD>::GetTransactionTriggers()
+{
+	if (!active_transaction) return 0;
+	return active_transaction->GetTriggers();
+}
+
+
+template <typename K, typename AltK, typename AD>
 bool
 ClassAdLog<K,AltK,AD>::AddAttrsFromTransaction(AltK key, ClassAd &ad)
 {
@@ -810,6 +832,14 @@ void ClassAdLog<K,AltK,AD>::ListNewAdsInTransaction( std::list<std::string> &new
 	}
 
 	active_transaction->InTransactionListKeysWithOpType( CondorLogOp_NewClassAd, new_keys );
+}
+
+template <typename K, typename AltK, typename AD>
+bool ClassAdLog<K,AltK,AD>::GetTransactionKeys( std::set<std::string> &keys )
+{
+	if ( ! active_transaction) { return false; }
+	active_transaction->KeysInTransaction( keys );
+	return true;
 }
 
 

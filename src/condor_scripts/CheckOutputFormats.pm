@@ -1704,6 +1704,7 @@ sub check_summary {
 		TLOG("Checking summary statement.\n");
 		if ($summary[0]!= $num_of_jobs{0} || $summary[2]!=$num_of_jobs{4} || $summary[4]!=$num_of_jobs{3} || $summary[6]!=$num_of_jobs{1} || $summary[8]!=$num_of_jobs{2} || $summary[10]!= $num_of_jobs{5} || $summary[12]!=$num_of_jobs{6}){
 			print "        ERROR: Some states don't add up correctly\n";
+			print "        $summary[0],$num_of_jobs{0} $summary[2],$num_of_jobs{4} $summary[4],$num_of_jobs{3} $summary[6],$num_of_jobs{1} || $summary[8],$num_of_jobs{2} || $summary[10],$num_of_jobs{5} || $summary[12],$num_of_jobs{6}\n";
 			return 0;
 		} else{
 			print "        PASSED: Summary statement correct\n";

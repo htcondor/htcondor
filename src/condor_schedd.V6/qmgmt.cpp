@@ -160,6 +160,7 @@ static HashTable<MyString,int> owner_history(MyStringHash);
 
 int		do_Q_request(ReliSock *,bool &may_fork);
 void	FindPrioJob(PROC_ID &);
+void	DoSetAttributeCallbacks(const std::set<std::string> &jobids, int triggers);
 
 static bool qmgmt_was_initialized = false;
 static JobQueueType *JobQueue = 0;
@@ -239,6 +240,8 @@ static const char *default_super_user =
 	"root";
 #endif
 
+// in schedd.cpp
+void IncrementLiveJobCounter(LiveJobCounters & num, int universe, int status, int increment);
 
 //static int allow_remote_submit = FALSE;
 JobQueueLogType::filter_iterator
@@ -304,9 +307,14 @@ ConstructClassAdLogTableEntry<JobQueueJob*>::Delete(ClassAd* &ad) const
 		} else {
 			// this is a job
 			//PRAGMA_REMIND("tj: decrement autocluster use count here??")
+
+			// we do this here because DestroyProc could happen while we are in the middle of a transaction
+			// in which case the actual destruction would be delayed until the transaction commit. i.e. here...
+			IncrementLiveJobCounter(scheduler.liveJobCounts, job->Universe(), job->Status(), -1);
+			if (job->ownerinfo) { IncrementLiveJobCounter(job->ownerinfo->live, job->Universe(), job->Status(), -1); }
 		}
 	}
-	delete ad;
+	delete job;
 }
 
 static
@@ -1007,6 +1015,7 @@ bool JobQueueJob::IsNoopJob()
 	return has_noop_attr && noop;
 }
 
+
 // After the job queue is loaded from disk, or a new job is submitted
 // the fields in the job object have to be initialized to match the ad
 //
@@ -1028,12 +1037,6 @@ void JobQueueJob::PopulateFromAd()
 		}
 	}
 
-	if ( ! future_status && this->IsJob()) {
-		int job_status;
-		if (this->LookupInteger(ATTR_JOB_STATUS, job_status)) {
-			this->future_status = job_status;
-		}
-	}
 
 #if 0	// we don't do this anymore, since we update both the ad and the job object
 		// when we calculate the autocluster - the on-disk value is never useful.
@@ -1141,6 +1144,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 
 				// initialize our list of job owners
 			AddOwnerHistory( owner );
+			ad->ownerinfo = const_cast<OwnerInfo*>(scheduler.insert_owner_const(owner.c_str()));
 
 			if (!ad->LookupInteger(ATTR_CLUSTER_ID, cluster)) {
 				dprintf(D_ALWAYS,
@@ -1193,6 +1197,13 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 				clusterad->IncrementNumProcs();
 			}
 			ad->PopulateFromAd();
+
+			int job_status = 0;
+			if (ad->LookupInteger(ATTR_JOB_STATUS, job_status)) {
+				ad->SetStatus(job_status);
+				IncrementLiveJobCounter(scheduler.liveJobCounts, ad->Universe(), ad->Status(), 1);
+				if (ad->ownerinfo) { IncrementLiveJobCounter(ad->ownerinfo->live, ad->Universe(), ad->Status(), 1); }
+			}
 
 				// Figure out what ATTR_USER *should* be for this job
 			int nice_user = 0;
@@ -1274,9 +1285,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 				// If the schedd crashes between committing a new job
 				// submission and rewriting the job ad for spooling,
 				// we need to redo the rewriting here.
-			int job_status = -1;
 			int hold_code = -1;
-			ad->LookupInteger(ATTR_JOB_STATUS, job_status);
 			ad->LookupInteger(ATTR_HOLD_REASON_CODE, hold_code);
 			if ( job_status == HELD && hold_code == CONDOR_HOLD_CODE_SpoolingInput ) {
 				if ( rewriteSpooledJobAd( ad, cluster, proc, true ) ) {
@@ -2158,10 +2167,10 @@ int 	DestroyMyProxyPassword (int cluster_id, int proc_id);
 int DestroyProc(int cluster_id, int proc_id)
 {
 	JobQueueKeyBuf		key;
-	ClassAd				*ad = NULL;
+	JobQueueJob			*ad = NULL;
 
 	IdToKey(cluster_id,proc_id,key);
-	if (!JobQueue->LookupClassAd(key, ad)) {
+	if (!JobQueue->Lookup(key, ad)) {
 		errno = ENOENT;
 		return DESTROYPROC_ENOENT;
 	}
@@ -2174,7 +2183,7 @@ int DestroyProc(int cluster_id, int proc_id)
 
 	// Take care of ATTR_COMPLETION_DATE
 	int job_status = -1;
-	ad->LookupInteger(ATTR_JOB_STATUS, job_status);	
+	ad->LookupInteger(ATTR_JOB_STATUS, job_status);
 	if ( job_status == COMPLETED ) {
 			// if job completed, insert completion time if not already there
 		int completion_time = 0;
@@ -2261,7 +2270,7 @@ int DestroyProc(int cluster_id, int proc_id)
 			// user doesn't delete only some of the procs in the parallel
 			// job cluster, since that's going to really confuse the
 			// shadow.
-		ClassAd *otherAd = NULL;
+		JobQueueJob *otherAd = NULL;
 		JobQueueKeyBuf otherKey;
 		int otherProc = -1;
 
@@ -2271,7 +2280,7 @@ int DestroyProc(int cluster_id, int proc_id)
 			if (otherProc == proc_id) continue; // skip this proc
 
 			IdToKey(cluster_id,otherProc,otherKey);
-			if (!JobQueue->LookupClassAd(otherKey, otherAd)) {
+			if (!JobQueue->Lookup(otherKey, otherAd)) {
 				stillLooking = false;
 			} else {
 				JobQueue->DestroyClassAd(otherKey);
@@ -2544,10 +2553,12 @@ enum {
 	catJobObj       = 0x0001, // attributes that are cached in the job object
 	catJobId        = 0x0002, // cluster & proc id
 	catCron         = 0x0004, // attributes that tell us this is a crondor job
-	//catStatus       = 0x0008, //
+	catStatus       = 0x0008, // job status changed, need to adjust the counts of running/idle/held/etc jobs.
 	catDirtyPrioRec = 0x0010,
 	catTargetScope  = 0x0020,
 	catSubmitterIdent = 0x0040,
+	catCallbackTrigger = 0x1000, // indicates that a callback should happen on commit of this attribute
+	catCallbackNow = 0x20000,    // indicates that a callback should happen when setAttribute is called
 };
 
 typedef struct attr_ident_pair {
@@ -2573,7 +2584,7 @@ static const ATTR_IDENT_PAIR aSpecialSetAttrs[] = {
 	FILL(ATTR_CRON_MINUTES,       catCron),
 	FILL(ATTR_CRON_MONTHS,        catCron),
 	FILL(ATTR_JOB_PRIO,           catDirtyPrioRec),
-	FILL(ATTR_JOB_STATUS,         catJobObj),
+	FILL(ATTR_JOB_STATUS,         catStatus | catCallbackTrigger),
 	FILL(ATTR_JOB_UNIVERSE,       catJobObj),
 	FILL(ATTR_NICE_USER,          catSubmitterIdent),
 	FILL(ATTR_NUM_JOB_RECONNECTS, 0),
@@ -2911,7 +2922,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		if (job) {
 			// if editing (rather than creating) a job, update ownerinfo pointer, and mark submitterdata as dirty
 			job->ownerinfo = const_cast<OwnerInfo*>(scheduler.insert_owner_const(owner));
-			job->dirty_flags |= JQJ_CHACHE_DIRTY_SUBMITTERDATA;
+			job->dirty_flags |= JQJ_CACHE_DIRTY_SUBMITTERDATA;
 		}
 	}
 	else if (attr_id == idATTR_NICE_USER) {
@@ -3162,7 +3173,15 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		}
 	}
 	if (attr_category & catSubmitterIdent) {
-		if (job) { job->dirty_flags |= JQJ_CHACHE_DIRTY_SUBMITTERDATA; }
+		if (job) { job->dirty_flags |= JQJ_CACHE_DIRTY_SUBMITTERDATA; }
+	}
+
+	if (attr_category & catCallbackTrigger) {
+		// remember what callbacks to call when the transaction is committed.
+		int triggers = JobQueue->SetTransactionTriggers(attr_category & 0xFFF);
+		if (0 == triggers) { // not inside a transaction, triggers will not be recorded... so promote it to trigger NOW
+			attr_category |= catCallbackNow;
+		}
 	}
 
 	int old_nondurable_level = 0;
@@ -3188,7 +3207,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 	}
 
 	// future
-	//if (attr_category & catJobObj) { if (job) { job->dirty_flags |= JQJ_CHACHE_DIRTY_JOBOBJ; } }
+	if (attr_category & catJobObj) { if (job) { job->dirty_flags |= JQJ_CACHE_DIRTY_JOBOBJ; } }
 
 	// Get the job's status and only mark dirty if it is running
 	// Note: Dirty attribute notification could work for local and
@@ -3222,8 +3241,52 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 
 	JobQueueDirty = true;
 
+	if (attr_category & catCallbackNow) {
+		std::set<std::string> keys;
+		keys.insert(key.c_str());
+		// TODO: convert the keys to PROC_IDs before calling DoSetAttributeCallbacks?
+		DoSetAttributeCallbacks(keys, attr_category);
+	}
+
 	return 0;
 }
+
+
+// For now this just updates counters for idle/running/held jobs
+// but in the future it could dispatch various callbacks based on the flags in triggers.
+//
+// TODO: add general callback registration/dispatch?
+//
+void DoSetAttributeCallbacks(const std::set<std::string> &jobids, int triggers)
+{
+	JobQueueKey job_id;
+	if (triggers & catStatus) {
+		for (auto it = jobids.begin(); it != jobids.end(); ++it) {
+			if ( ! job_id.set(it->c_str()) || job_id.cluster <= 0 || job_id.proc < 0) continue; // ignore the cluster ad and '0.0' ad
+
+			JobQueueJob * job;
+			if ( ! JobQueue->Lookup(job_id, job)) continue; // Ignore if no job ad (yet). this happens on submit commits.
+
+			int job_status = 0;
+			job->LookupInteger(ATTR_JOB_STATUS, job_status);
+			if (job_status != job->Status()) {
+				if (job->ownerinfo) {
+					IncrementLiveJobCounter(job->ownerinfo->live, job->Universe(), job->Status(), -1);
+					IncrementLiveJobCounter(job->ownerinfo->live, job->Universe(), job_status, 1);
+				}
+				//if (job->submitterdata) {
+				//	IncrementLiveJobCounter(job->submitterdata->live, job->Universe(), job->Status(), -1);
+				//	IncrementLiveJobCounter(job->submitterdata->live, job->Universe(), job_status, 1);
+				//}
+
+				IncrementLiveJobCounter(scheduler.liveJobCounts, job->Universe(), job->Status(), -1);
+				IncrementLiveJobCounter(scheduler.liveJobCounts, job->Universe(), job_status, 1);
+				job->SetStatus(job_status);
+			}
+		}
+	}
+}
+
 
 bool
 SendDirtyJobAdNotification(const PROC_ID & job_id)
@@ -3742,6 +3805,14 @@ CommitTransaction(SetAttributeFlags_t flags /* = 0 */)
 
 	AddSessionAttributes(new_ad_keys);
 
+	// remember some things about the transaction that we will need to do post-transaction processing.
+	// TODO: think about - can we skip this if new_ad_keys is not empty?
+	std::set<std::string> ad_keys;
+	int triggers = JobQueue->GetTransactionTriggers();
+	if (triggers) {
+		JobQueue->GetTransactionKeys(ad_keys);
+	}
+
 	if( flags & NONDURABLE ) {
 		JobQueue->CommitNondurableTransaction();
 		ScheduleJobQueueLogFlush();
@@ -3751,6 +3822,11 @@ CommitTransaction(SetAttributeFlags_t flags /* = 0 */)
 	}
 
 	// If the commit failed, we should never get here.
+
+	if (triggers) {
+		// TODO: convert the keys to PROC_IDs before calling DoSetAttributeCallbacks?
+		DoSetAttributeCallbacks(ad_keys, triggers);
+	}
 
 	// Now that the transaction has been commited, we need to chain proc
 	// ads to cluster ads if any new clusters have been submitted.
@@ -3793,8 +3869,9 @@ CommitTransaction(SetAttributeFlags_t flags /* = 0 */)
 				dprintf(D_FULLDEBUG,"New job: %s\n",job_id.c_str());
 
 					// increment the 'recently added' job count for this owner
+				OwnerInfo * ownerinfo = NULL;
 				if( Q_SOCK->getOwner() ) {
-					scheduler.incrementRecentlyAdded( Q_SOCK->getOwner() );
+					ownerinfo = scheduler.incrementRecentlyAdded( Q_SOCK->getOwner() );
 				}
 
 					// chain proc ads to cluster ad
@@ -3814,6 +3891,7 @@ CommitTransaction(SetAttributeFlags_t flags /* = 0 */)
 				clusterad->IncrementNumProcs();
 				clusterad->PopulateFromAd();
 				procad->PopulateFromAd();
+				procad->ownerinfo = ownerinfo;
 
 					// If input files are going to be spooled, rewrite
 					// the paths in the job ad to point at our spool
@@ -3829,6 +3907,10 @@ CommitTransaction(SetAttributeFlags_t flags /* = 0 */)
 					ScheduleJobQueueLogFlush();
 					SpooledJobFiles::createJobSpoolDirectory(procad,PRIV_UNKNOWN);
 				}
+
+				//don't need to do this... the trigger code above seems to handle it.
+				//IncrementLiveJobCounter(scheduler.liveJobCounts, procad->Universe(), job_status, 1);
+				//if (ownerinfo) { IncrementLiveJobCounter(ownerinfo->live, procad->Universe(), job_status, 1); }
 
 				std::string version;
 				if ( procad->LookupString( ATTR_VERSION, version ) ) {

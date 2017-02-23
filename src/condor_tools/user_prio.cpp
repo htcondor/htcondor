@@ -107,7 +107,7 @@ struct LineRec {
 //-----------------------------------------------------------------
 
 static int CalcTime(int,int,int);
-static void usage(char* name);
+static void usage(const char* name);
 static void ProcessInfo(AttrList* ad,std::vector<AttrList> &accountingAds, bool GroupRollup,bool HierFlag);
 static int CountElem(AttrList* ad);
 static void CollectInfo(int numElem, AttrList* ad, std::vector<AttrList> & accountingAds, LineRec* LR, bool GroupRollup);
@@ -348,7 +348,7 @@ static void PrintModularAds(
 #define IsArgColon is_dash_arg_colon_prefix
 
 int
-main(int argc, char* argv[])
+main(int argc, const char* argv[])
 {
   bool LongFlag=false;
   int LegacyAdFormat = 1; // bit 1 = default to legacy, bit 2 = insist on legacy
@@ -439,11 +439,18 @@ main(int argc, char* argv[])
         // make sure we have at least one argument to autoformat
         if (argc <= i+1 || *(argv[i+1]) == '-') {
             fprintf (stderr, "Error: Argument %s requires at last one attribute parameter\n", argv[i]);
-            fprintf(stderr, "\t\te.g. condor_history %s ClusterId\n", argv[i]);
+            fprintf(stderr, "\t\te.g. condor_prio %s Name\n", argv[i]);
             usage(argv[0]);
         }
         if (pcolon) ++pcolon; // if there are options, skip over the colon to the options.
-        int ixNext = parse_autoformat_args(argc, argv, i+1, pcolon, print_mask, false);
+        classad::References refs;
+        int ixNext = parse_autoformat_args(argc, argv, i+1, pcolon, print_mask, refs, false);
+        if (ixNext < 0) {
+            fprintf (stderr, "Error: Invalid expression: %s\n", argv[-ixNext]);
+            exit(1);
+        }
+        //TODO: add support for projected queries?
+        //initStringListFromAttrs(projection, true, refs, true);
         if (ixNext > i)
             i = ixNext-1;
         customFormat = true;
@@ -574,7 +581,7 @@ main(int argc, char* argv[])
 
   if (SetPrio) { // set priority
 
-    char* tmp;
+	const char* tmp;
 	if( ! (tmp = strchr(argv[SetPrio+1], '@')) ) {
 		fprintf( stderr, 
 				 "%s: You must specify the full name of the submittor you wish\n",
@@ -605,7 +612,7 @@ main(int argc, char* argv[])
 
   else if (SetFactor) { // set priority
 
-    char* tmp;
+	const char* tmp;
 	if( ! (tmp = strchr(argv[SetFactor+1], '@')) ) {
 		fprintf( stderr, 
 				 "%s: You must specify the full name of the submittor you wish\n",
@@ -641,7 +648,7 @@ main(int argc, char* argv[])
 
   else if (SetAccum) { // set accumulated usage
 
-    char* tmp;
+	const char* tmp;
 	if( ! (tmp = strchr(argv[SetAccum+1], '@')) ) {
 		fprintf( stderr, 
 				 "%s: You must specify the full name of the submittor you wish\n",
@@ -675,7 +682,7 @@ main(int argc, char* argv[])
   }
   else if (SetBegin) { // set begin usage time
 
-    char* tmp;
+	const char* tmp;
 	if( ! (tmp = strchr(argv[SetBegin+1], '@')) ) {
 		fprintf( stderr, 
 				 "%s: You must specify the full name of the submittor you wish\n",
@@ -710,7 +717,7 @@ main(int argc, char* argv[])
   }
   else if (SetLast) { // set last usage time
 
-    char* tmp;
+	const char* tmp;
 	if( ! (tmp = strchr(argv[SetLast+1], '@')) ) {
 		fprintf( stderr, 
 				 "%s: You must specify the full name of the submittor you wish\n",
@@ -745,7 +752,7 @@ main(int argc, char* argv[])
   }
   else if (ResetUsage) { // set priority
 
-    char* tmp;
+	const char* tmp;
 	if( ! (tmp = strchr(argv[ResetUsage+1], '@')) ) {
 		fprintf( stderr, 
 				 "%s: You must specify the full name of the submittor you wish\n",
@@ -774,7 +781,7 @@ main(int argc, char* argv[])
 
   else if (DeleteUser) { // remove a user record from the accountant
 
-    char* tmp;
+	const char* tmp;
 	if( ! (tmp = strchr(argv[DeleteUser+1], '@')) ) {
 		fprintf( stderr, 
 				 "%s: You must specify the full name of the record you wish\n",
@@ -816,7 +823,7 @@ main(int argc, char* argv[])
 
   else if (GetResList) { // get resource list
 
-    char* tmp;
+	const char* tmp;
 	if( ! (tmp = strchr(argv[GetResList+1], '@')) ) {
 		fprintf( stderr, 
 				 "%s: You must specify the full name of the submittor you wish\n",
@@ -1713,7 +1720,7 @@ static void PrintInfo(int tmLast, LineRec* LR, int NumElem, bool HierFlag)
 
 //-----------------------------------------------------------------
 
-static void usage(char* name) {
+static void usage(const char* name) {
   fprintf( stderr, "usage: %s [options] [edit-option | display-options]\n"
      "    where [options] are\n"
      "\t-pool <host>\t\tUse host as the central manager to query\n"
