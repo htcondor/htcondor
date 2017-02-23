@@ -2144,6 +2144,12 @@ class DaemonCore : public Service
 
 	char* m_private_network_name;
 
+	// This is the argument passed to InitDCCommandSocket(), taken from
+	// the -port command line argument (default -1). We need this to
+	// correctly handle configuration of the shared port endpoint for
+	// the command socket (if there is one).
+	int m_command_port_arg;
+
 	class CCBListeners *m_ccb_listeners;
 	class SharedPortEndpoint *m_shared_port_endpoint;
 	MyString m_daemon_sock_name;
