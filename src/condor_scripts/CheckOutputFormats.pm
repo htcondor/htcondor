@@ -483,10 +483,19 @@ sub read_array_content_to_table {
 		$data{$cnt} = $table[$head_pos+$cnt];
 		$cnt++;
 	}
-
+	
+	my $num = 0;
+	if (defined $table[$head_pos + $cnt]) {
+		$num = $head_pos + $cnt;
+	}
 	# read another line of summary
-	my $arg = $table[(scalar @table)-1];
-	my @summary = split / /, $arg;
+	for (; $num < (scalar @table); $num++) {
+		if (($table[$num] =~/[0-9]+\s+jobs;\s+[0-9]+\s+completed,\s+[0-9]+\s+removed,\s+[0-9]+\s+idle,\s+[0-9]+\s+running,\s+[0-9]+\s+held,\s+[0-9]+\s+suspended/)) {
+			last;
+		}
+	}
+	my $arg = $table[$num];
+	my @summary = defined $arg? (split / /, $arg) : " ";
 	return (\%other,\%data,\@summary);
 }
 
@@ -515,6 +524,7 @@ sub create_table {
 	} else {
 		@table = `condor_q -job $fname $command_arg`;
 	}
+	print @table;
 	my ($other_ref, $data_ref, $summary_ref) = read_array_content_to_table(\@table);	
 	my %other = %{$other_ref};
 	my %data = %{$data_ref};
@@ -1703,8 +1713,8 @@ sub check_summary {
 	if ($have_summary_line{$real_heading} ){
 		TLOG("Checking summary statement.\n");
 		if ($summary[0]!= $num_of_jobs{0} || $summary[2]!=$num_of_jobs{4} || $summary[4]!=$num_of_jobs{3} || $summary[6]!=$num_of_jobs{1} || $summary[8]!=$num_of_jobs{2} || $summary[10]!= $num_of_jobs{5} || $summary[12]!=$num_of_jobs{6}){
-			print "        ERROR: Some states don't add up correctly\n";
-			print "        $summary[0],$num_of_jobs{0} $summary[2],$num_of_jobs{4} $summary[4],$num_of_jobs{3} $summary[6],$num_of_jobs{1} || $summary[8],$num_of_jobs{2} || $summary[10],$num_of_jobs{5} || $summary[12],$num_of_jobs{6}\n";
+			print "		ERROR: Some states don't add up correctly\n";
+			print "		Output is @summary";
 			return 0;
 		} else{
 			print "        PASSED: Summary statement correct\n";
