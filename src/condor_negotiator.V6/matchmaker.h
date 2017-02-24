@@ -197,7 +197,7 @@ class Matchmaker : public Service
 
 		/** Negotiate w/ one schedd for one user, for one 'pie spin'.
             @param groupName name of group negotiating under (or NULL)
-			@param scheddName Name attribute from the submitter ad.
+			@param submitterName Name attribute from the submitter ad.
 			@param scheddAddr Sinful string of schedd for this submitter.
 			@param priority Priority of this user from the accountant.
 			@param share Priority w/o up-down (just relative prio factor).
@@ -214,7 +214,7 @@ class Matchmaker : public Service
 					MM_DONE if schedd got all the resources it wanted,
 					MM_ERROR if problem negotiating w/ this schedd.
 		**/
-		int negotiate(char const* groupName, char const *scheddName, const ClassAd *scheddAd, 
+		int negotiate(char const* groupName, char const *submitterName, const ClassAd *scheddAd,
 		   double priority,
            double submitterLimit, double submitterLimitUnclaimed,
 		   ClassAdListDoesNotDeleteAds &startdAds, ClaimIdHash &claimIds, 
@@ -229,14 +229,14 @@ class Matchmaker : public Service
 			float groupQuota=INT_MAX, const char* groupName=NULL);
 
 		
-		ClassAd *matchmakingAlgorithm(const char* scheddName, const char* scheddAddr, ClassAd& request, ClassAdListDoesNotDeleteAds& startdAds,
+		ClassAd *matchmakingAlgorithm(const char* submitterName, const char* scheddAddr, ClassAd& request, ClassAdListDoesNotDeleteAds& startdAds,
 									  double preemptPrio, 
                                       double limitUsed, double limitUsedUnclaimed,
                                       double submitterLimit, double submitterLimitUnclaimed, 
                                       double pieLeft, bool only_for_startdrank);
 		int matchmakingProtocol(ClassAd &request, ClassAd *offer, 
 						ClaimIdHash &claimIds, Sock *sock,
-						const char* scheddName, const char* scheddAddr);
+						const char* submitterName, const char* scheddAddr);
 		void calculateNormalizationFactor (ClassAdListDoesNotDeleteAds &, double &, double &,
 										   double &, double &);
 
@@ -247,7 +247,7 @@ class Matchmaker : public Service
 
 		/** Calculate a submitter's share of the pie.
 			@param quiet Do not emitt debug information about the calculation
-			@param scheddName Name attribute from the submitter ad.
+			@param submitterName Name attribute from the submitter ad.
 			@param groupAccountingName Group name from the submitter ad.
 			@param groupQuota Usage limit for this group.
 			@param maxPrioValue Largest prio value of any submitter.
@@ -263,7 +263,7 @@ class Matchmaker : public Service
 			@param submitterPrio User priority
 			@param submitterPrioFactor Result is this submitter's prio factor
 		**/
-		void calculateSubmitterLimit(char const *scheddName,
+		void calculateSubmitterLimit(char const *submitterName,
 		                          char const *groupAccountingName,
 		                          float groupQuota,
 					  float groupusage,

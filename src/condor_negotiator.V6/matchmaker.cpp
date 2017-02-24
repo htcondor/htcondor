@@ -2768,7 +2768,7 @@ negotiateWithGroup ( int untrimmed_num_startds,
 					 float groupQuota, const char* groupName)
 {
 	ClassAd		*schedd;
-	MyString    scheddName;
+	MyString    submitterName;
 	MyString    scheddAddr;
 	int			result;
 	int			numStartdAds;
@@ -2897,7 +2897,7 @@ negotiateWithGroup ( int untrimmed_num_startds,
                 break;
             }
 			// get the name of the submitter and address of the schedd-daemon it came from
-			if( !schedd->LookupString( ATTR_NAME, scheddName ) ||
+			if( !schedd->LookupString( ATTR_NAME, submitterName ) ||
 				!schedd->LookupString( ATTR_SCHEDD_IP_ADDR, scheddAddr ) )
 			{
 				dprintf (D_ALWAYS,"  Error!  Could not get %s and %s from ad\n",
@@ -2924,7 +2924,7 @@ negotiateWithGroup ( int untrimmed_num_startds,
 			if (( num_idle_jobs > 0 ) && (totalTime < MaxTimePerSubmitter) &&
 				(totalTimeSchedd < MaxTimePerSchedd)) {
 				dprintf(D_ALWAYS,"  Negotiating with %s at %s\n",
-					scheddName.Value(), scheddAddr.Value());
+					submitterName.Value(), scheddAddr.Value());
 				dprintf(D_ALWAYS, "%d seconds so far for this submitter\n", totalTime);
 				dprintf(D_ALWAYS, "%d seconds so far for this schedd\n", totalTimeSchedd);
 			}
@@ -2934,7 +2934,7 @@ negotiateWithGroup ( int untrimmed_num_startds,
 			double submitterUsage = 0.0;
 
 			calculateSubmitterLimit(
-				scheddName.Value(),
+				submitterName.Value(),
 				groupName,
 				groupQuota,
 				groupusage,
@@ -3012,21 +3012,21 @@ negotiateWithGroup ( int untrimmed_num_startds,
 			if ( num_idle_jobs == 0 ) {
 				dprintf(D_FULLDEBUG,
 					"  Negotiating with %s skipped because no idle jobs\n",
-					scheddName.Value());
+					submitterName.Value());
 				result = MM_DONE;
 			} else if (remainingTimeForThisSubmitter <= 0) {
 				dprintf(D_ALWAYS,
 					"  Negotiation with %s skipped because of time limits:\n",
-					scheddName.Value());
+					submitterName.Value());
 				dprintf(D_ALWAYS,
 					"  %d seconds spent on this user, MAX_TIME_PER_USER is %d secs\n ",
 					totalTime, MaxTimePerSubmitter);
-				negotiation_cycle_stats[0]->submitters_out_of_time.insert(scheddName.Value());
+				negotiation_cycle_stats[0]->submitters_out_of_time.insert(submitterName.Value());
 				result = MM_DONE;
 			} else if (remainingTimeForThisSchedd <= 0) {
 				dprintf(D_ALWAYS,
 					"  Negotiation with %s skipped because of time limits:\n",
-					scheddName.Value());
+					submitterName.Value());
 				dprintf(D_ALWAYS,
 					"  %d seconds spent on this schedd, MAX_TIME_PER_SCHEDD is %d secs\n ",
 					totalTimeSchedd, MaxTimePerSchedd);
@@ -3034,23 +3034,23 @@ negotiateWithGroup ( int untrimmed_num_startds,
 			} else if (remainingTimeForThisCycle <= 0) {
 				dprintf(D_ALWAYS,
 					"  Negotiation with %s skipped because MAX_TIME_PER_CYCLE of %d secs exceeded\n",
-					scheddName.Value(),MaxTimePerCycle);
+					submitterName.Value(),MaxTimePerCycle);
 				result = MM_DONE;
 			} else if ((submitterLimit < minSlotWeight || pieLeft < minSlotWeight) && (spin_pie > 1)) {
 				dprintf(D_ALWAYS,
 					"  Negotiation with %s skipped as pieLeft < minSlotWeight\n",
-					scheddName.Value());
+					submitterName.Value());
 				result = MM_RESUME;
 			} else {
 				int numMatched = 0;
 				time_t deadline = startTime + 
 					MIN(MaxTimePerSpin, MIN(remainingTimeForThisCycle, MIN(remainingTimeForThisSubmitter, remainingTimeForThisSchedd)));
-                if (negotiation_cycle_stats[0]->active_submitters.count(scheddName.Value()) <= 0) {
+                if (negotiation_cycle_stats[0]->active_submitters.count(submitterName.Value()) <= 0) {
                     negotiation_cycle_stats[0]->num_idle_jobs += num_idle_jobs;
                 }
-				negotiation_cycle_stats[0]->active_submitters.insert(scheddName.Value());
+				negotiation_cycle_stats[0]->active_submitters.insert(submitterName.Value());
 				negotiation_cycle_stats[0]->active_schedds.insert(scheddAddr.Value());
-				result=negotiate(groupName, scheddName.Value(), schedd, submitterPrio,
+				result=negotiate(groupName, submitterName.Value(), schedd, submitterPrio,
                               submitterLimit, submitterLimitUnclaimed,
 							  startdAds, claimIds, 
 							  ignore_submitter_limit,
@@ -3063,8 +3063,8 @@ negotiateWithGroup ( int untrimmed_num_startds,
 				case MM_RESUME:
 					// the schedd hit its resource limit.  must resume 
 					// negotiations in next spin
-					scheddUsed += accountant.GetWeightedResourcesUsed(scheddName.Value());
-                    negotiation_cycle_stats[0]->submitters_share_limit.insert(scheddName.Value());
+					scheddUsed += accountant.GetWeightedResourcesUsed(submitterName.Value());
+                    negotiation_cycle_stats[0]->submitters_share_limit.insert(submitterName.Value());
 					dprintf(D_FULLDEBUG, "  This submitter hit its submitterLimit.\n");
 					break;
 				case MM_DONE: 
@@ -3077,10 +3077,10 @@ negotiateWithGroup ( int untrimmed_num_startds,
 					} else {
 							// the schedd got all the resources it
 							// wanted. delete this schedd ad.
-						dprintf(D_FULLDEBUG,"  Submitter %s got all it wants; removing it.\n", scheddName.Value());
-                        scheddUsed += accountant.GetWeightedResourcesUsed(scheddName.Value());
-                        dprintf( D_FULLDEBUG, " resources used by %s are %f\n",scheddName.Value(),	
-                                 accountant.GetWeightedResourcesUsed(scheddName.Value()));
+						dprintf(D_FULLDEBUG,"  Submitter %s got all it wants; removing it.\n", submitterName.Value());
+                        scheddUsed += accountant.GetWeightedResourcesUsed(submitterName.Value());
+                        dprintf( D_FULLDEBUG, " resources used by %s are %f\n",submitterName.Value(),
+                                 accountant.GetWeightedResourcesUsed(submitterName.Value()));
 						scheddAds.Remove( schedd);
 					}
 					break;
@@ -3089,11 +3089,11 @@ negotiateWithGroup ( int untrimmed_num_startds,
 					dprintf(D_ALWAYS,"  Error: Ignoring submitter for this cycle\n" );
 					sockCache->invalidateSock( scheddAddr.Value() );
 	
-					scheddUsed += accountant.GetWeightedResourcesUsed(scheddName.Value());
-					dprintf( D_FULLDEBUG, " resources used by %s are %f\n",scheddName.Value(),	
-						    accountant.GetWeightedResourcesUsed(scheddName.Value()));
+					scheddUsed += accountant.GetWeightedResourcesUsed(submitterName.Value());
+					dprintf( D_FULLDEBUG, " resources used by %s are %f\n",submitterName.Value(),
+						    accountant.GetWeightedResourcesUsed(submitterName.Value()));
 					scheddAds.Remove( schedd );
-					negotiation_cycle_stats[0]->submitters_failed.insert(scheddName.Value());
+					negotiation_cycle_stats[0]->submitters_failed.insert(submitterName.Value());
 			}
 		}
 		scheddAds.Close();
@@ -4256,7 +4256,7 @@ Matchmaker::startNegotiateProtocol(const std::string &submitter, const ClassAd &
 			// old protocol prior to 7.5.4
 		if (!sock->put(submitter))
 		{
-			dprintf(D_ALWAYS, "    Failed to send scheddName to %s\n",
+			dprintf(D_ALWAYS, "    Failed to send submitterName to %s\n",
 					 schedd_id.c_str());
 			sockCache->invalidateSock(scheddAddr);
 			return false;
@@ -4277,7 +4277,7 @@ Matchmaker::startNegotiateProtocol(const std::string &submitter, const ClassAd &
 
 	if (!sock->end_of_message())
 	{
-		dprintf(D_ALWAYS, "    Failed to send scheddName/eom to %s\n",
+		dprintf(D_ALWAYS, "    Failed to send submitterName/eom to %s\n",
 			schedd_id.c_str());
 		sockCache->invalidateSock(scheddAddr);
 		return false;
@@ -4292,7 +4292,7 @@ Matchmaker::startNegotiateProtocol(const std::string &submitter, const ClassAd &
 }
 
 int Matchmaker::
-negotiate(char const* groupName, char const *scheddName, const ClassAd *scheddAd, double priority,
+negotiate(char const* groupName, char const *submitterName, const ClassAd *scheddAd, double priority,
 		   double submitterLimit, double submitterLimitUnclaimed,
 		   ClassAdListDoesNotDeleteAds &startdAds, ClaimIdHash &claimIds, 
 		   bool ignore_schedd_limit, time_t deadline,
@@ -4314,19 +4314,19 @@ negotiate(char const* groupName, char const *scheddName, const ClassAd *scheddAd
 
 	numMatched = 0;
 
-	classad_shared_ptr<ResourceRequestList> request_list = startNegotiate(scheddName, *scheddAd, sock);
+	classad_shared_ptr<ResourceRequestList> request_list = startNegotiate(submitterName, *scheddAd, sock);
 	if (!request_list.get()) {return MM_ERROR;}
 
 	std::string scheddAddr;
 	if (!getScheddAddr(*scheddAd, scheddAddr))
 	{
-		dprintf (D_ALWAYS, "Matchmaker::negotiate: Internal error: Missing IP address for schedd %s.  Please contact the Condor developers.\n", scheddName);
+		dprintf (D_ALWAYS, "Matchmaker::negotiate: Internal error: Missing IP address for schedd %s.  Please contact the Condor developers.\n", submitterName);
 		return MM_ERROR;
 	}
 	// Used for log messages to identify the schedd.
 	// Not for other uses, as it may change!
 	std::string schedd_id;
-	formatstr(schedd_id, "%s (%s)", scheddName, scheddAddr.c_str());
+	formatstr(schedd_id, "%s (%s)", submitterName, scheddAddr.c_str());
 	
 	int schedd_will_match = 1; // number of extra jobs schedd will put into a partitionable slot
 
@@ -4425,10 +4425,10 @@ negotiate(char const* groupName, char const *scheddName, const ClassAd *scheddAd
 		request.Assign(ATTR_SUBMITTER_USER_PRIO , (float)priority );  
 		// next insert the submitter user usage attributes into the request
 		request.Assign(ATTR_SUBMITTER_USER_RESOURCES_IN_USE, 
-					   accountant.GetWeightedResourcesUsed ( scheddName ));
+					   accountant.GetWeightedResourcesUsed ( submitterName ));
         string temp_groupName;
 		float temp_groupQuota, temp_groupUsage;
-		if (getGroupInfoFromUserId(scheddName, temp_groupName, temp_groupQuota, temp_groupUsage)) {
+		if (getGroupInfoFromUserId(submitterName, temp_groupName, temp_groupQuota, temp_groupUsage)) {
 			// this is a group, so enter group usage info
             request.Assign(ATTR_SUBMITTER_GROUP,temp_groupName);
 			request.Assign(ATTR_SUBMITTER_GROUP_RESOURCES_IN_USE,temp_groupUsage);
@@ -4457,7 +4457,7 @@ negotiate(char const* groupName, char const *scheddName, const ClassAd *scheddAd
 		{
             remoteUser = "";
 			// 2e(i).  find a compatible offer
-			offer=matchmakingAlgorithm(scheddName, scheddAddr.c_str(), request,
+			offer=matchmakingAlgorithm(submitterName, scheddAddr.c_str(), request,
                                              startdAds, priority,
                                              limitUsed, limitUsedUnclaimed, 
                                              submitterLimit, submitterLimitUnclaimed,
@@ -4475,12 +4475,12 @@ negotiate(char const* groupName, char const *scheddName, const ClassAd *scheddAd
 				string diagnostic_message;
 				// no match found
 				dprintf(D_ALWAYS|D_MATCH, "      Rejected %d.%d %s %s: ",
-						cluster, proc, scheddName, scheddAddr.c_str());
+						cluster, proc, submitterName, scheddAddr.c_str());
 
 				negotiation_cycle_stats[0]->rejections++;
 
 				if( rejForSubmitterLimit ) {
-                    negotiation_cycle_stats[0]->submitters_share_limit.insert(scheddName);
+                    negotiation_cycle_stats[0]->submitters_share_limit.insert(submitterName);
 					limited_by_submitterLimit = true;
 				}
 				if (rejForNetwork) {
@@ -4558,7 +4558,7 @@ negotiate(char const* groupName, char const *scheddName, const ClassAd *scheddAd
 				// got a candidate preemption --- print a helpful message
 				dprintf( D_ALWAYS, "      Preempting %s (user prio=%.2f, startd rank=%.2f) on %s "
 						 "for %s (user prio=%.2f, startd rank=%.2f)\n", remoteUser.c_str(),
-						 remotePriority, oldStartdRank, remoteHost, scheddName,
+						 remotePriority, oldStartdRank, remoteHost, submitterName,
 						 priority, newStartdRank );
                 free(remoteHost);
                 remoteHost = NULL;
@@ -4566,7 +4566,7 @@ negotiate(char const* groupName, char const *scheddName, const ClassAd *scheddAd
 
 			// 2e(ii).  perform the matchmaking protocol
 			result = matchmakingProtocol (request, offer, claimIds, sock, 
-					scheddName, scheddAddr.c_str());
+					submitterName, scheddAddr.c_str());
 
 			// 2e(iii). if the matchmaking protocol failed, do not consider the
 			//			startd again for this negotiation cycle.
@@ -4785,7 +4785,7 @@ schedd, thanks to CCB.  It _is_ suitable for use as a unique identifier, for
 display to the user, or for calls to sockCache->invalidateSock.
 */
 ClassAd *Matchmaker::
-matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &request,
+matchmakingAlgorithm(const char *submitterName, const char *scheddAddr, ClassAd &request,
 					 ClassAdListDoesNotDeleteAds &startdAds,
 					 double preemptPrio,
 					 double limitUsed, double limitUsedUnclaimed,
@@ -4848,7 +4848,7 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 		 cachedAutoCluster == requestAutoCluster &&
 		 cachedPrio == preemptPrio &&
 		 cachedOnlyForStartdRank == only_for_startdrank &&
-		 strcmp(cachedName,scheddName)==0 &&
+		 strcmp(cachedName,submitterName)==0 &&
 		 strcmp(cachedAddr,scheddAddr)==0 &&
 		 MatchList->cache_still_valid(request,PreemptionReq,PreemptionRank,
 					preemption_req_unstable,preemption_rank_unstable) )
@@ -4874,11 +4874,11 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 			}
 			MatchList->increment_rejForSubmitterLimit();
 		}
-		dprintf(D_FULLDEBUG,"Attempting to use cached MatchList: %s (MatchList length: %d, Autocluster: %d, Schedd Name: %s, Schedd Address: %s)\n",
+		dprintf(D_FULLDEBUG,"Attempting to use cached MatchList: %s (MatchList length: %d, Autocluster: %d, Submitter Name: %s, Schedd Address: %s)\n",
 			cached_bestSoFar?"Succeeded.":"Failed",
 			MatchList->length(),
 			requestAutoCluster,
-			scheddName,
+			submitterName,
 			scheddAddr
 			);
 		if ( ! cached_bestSoFar ) {
@@ -4917,7 +4917,7 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 		cachedAutoCluster = requestAutoCluster;
 		cachedPrio = preemptPrio;
 		cachedOnlyForStartdRank = only_for_startdrank;
-		cachedName = strdup(scheddName);
+		cachedName = strdup(submitterName);
 		cachedAddr = strdup(scheddAddr);
 	}
 
@@ -5118,7 +5118,7 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 			} else {
 					// don't have better priority *and* offer doesn't prefer
 					// request --- find another machine
-				if (remoteUser != scheddName) {
+				if (remoteUser != submitterName) {
 						// only set rejPreemptForPrio if we aren't trying to
 						// preempt one of our own jobs!
 					rejPreemptForPrio++;
@@ -5244,7 +5244,7 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 	if(!bestSoFar)
 	{
 	/* Insert an entry into the rejects table only if no matches were found at all */
-		insert_into_rejects(scheddName,request);
+		insert_into_rejects(submitterName,request);
 	}
 	if ( bestSoFar && !bestDslotClaims.empty() ) {
 		bestSoFar->Assign( "PreemptDslotClaims", bestDslotClaims );
@@ -5463,7 +5463,7 @@ MSC_DISABLE_WARNING(6262) // warning: Function uses 60K of stack
 int Matchmaker::
 matchmakingProtocol (ClassAd &request, ClassAd *offer, 
 						ClaimIdHash &claimIds, Sock *sock,
-					    const char* scheddName, const char* scheddAddr)
+					    const char* submitterName, const char* scheddAddr)
 {
 	int  cluster = 0;
 	int proc = 0;
@@ -5654,7 +5654,7 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 		startdAddr = "<0.0.0.0:0>";
 	}
 	dprintf(D_ALWAYS|D_MATCH, "      Matched %d.%d %s %s preempting %s %s %s%s\n",
-			cluster, proc, scheddName, scheddAddr, remoteUser.c_str(),
+			cluster, proc, submitterName, scheddAddr, remoteUser.c_str(),
 			startdAddr.Value(), startdName.Value(),
 			offline ? " (offline)" : "");
 
@@ -5666,7 +5666,7 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
     }
 
 	/* CONDORDB Insert into matches table */
-	insert_into_matches(scheddName, request, *offer);
+	insert_into_matches(submitterName, request, *offer);
 
     if (cp_supports_policy(*offer)) {
         // Stash match cost here for the accountant.
@@ -5690,7 +5690,7 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 
     // 4. notifiy the accountant
 	dprintf(D_FULLDEBUG,"      Notifying the accountant\n");
-	accountant.AddMatch(scheddName, offer);
+	accountant.AddMatch(submitterName, offer);
 
 	// done
 	dprintf (D_ALWAYS, "      Successfully matched with %s%s\n",
@@ -5702,7 +5702,7 @@ MSC_RESTORE_WARNING(6262) // warning: Function uses 60K of stack
 
 void
 Matchmaker::calculateSubmitterLimit(
-	char const *scheddName,
+	char const *submitterName,
 	char const *groupAccountingName,
 	float groupQuota,
 	float groupusage,
@@ -5721,8 +5721,8 @@ Matchmaker::calculateSubmitterLimit(
 	double &submitterPrioFactor)
 {
 		// calculate the percentage of machines that this schedd can use
-	submitterPrio = accountant.GetPriority ( scheddName );
-	submitterUsage = accountant.GetWeightedResourcesUsed( scheddName );
+	submitterPrio = accountant.GetPriority ( submitterName );
+	submitterUsage = accountant.GetWeightedResourcesUsed( submitterName );
 	submitterShare = maxPrioValue/(submitterPrio*normalFactor);
 
 	if ( param_boolean("NEGOTIATOR_IGNORE_USER_PRIORITIES",false) ) {
@@ -5747,7 +5747,7 @@ Matchmaker::calculateSubmitterLimit(
 
 		// calculate this schedd's absolute fair-share for allocating
 		// resources other than CPUs (like network capacity and licenses)
-	submitterPrioFactor = accountant.GetPriorityFactor ( scheddName );
+	submitterPrioFactor = accountant.GetPriorityFactor ( submitterName );
 	submitterAbsShare =
 		maxAbsPrioValue/(submitterPrioFactor*normalAbsFactor);
 }
@@ -5778,15 +5778,15 @@ Matchmaker::calculatePieLeft(
 		double submitterAbsShare = 0.0;
 		double submitterPrio = 0.0;
 		double submitterPrioFactor = 0.0;
-		MyString scheddName;
+		MyString submitterName;
 		double submitterLimit = 0.0;
         double submitterLimitUnclaimed = 0.0;
 		double submitterUsage = 0.0;
 
-		schedd->LookupString( ATTR_NAME, scheddName );
+		schedd->LookupString( ATTR_NAME, submitterName );
 
 		calculateSubmitterLimit(
-			scheddName.Value(),
+			submitterName.Value(),
 			groupAccountingName,
 			groupQuota,
 			groupusage,
