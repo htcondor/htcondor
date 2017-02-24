@@ -241,7 +241,8 @@ RegisterResult(check_pr(\%data,$option),check_name => $option, test_name => $tes
 $option = "ifthenelse";
 $format_file = "$option.cpf";
 $format_content = 
-"IfThenElse(Progress=!=undefined,Progress,0.0)  AS V1 PRINTF %5.1f
+"SELECT
+IfThenElse(Progress=!=undefined,Progress,0.0)  AS V1 PRINTF %5.1f
 IfThenElse(Owner isnt undefined,Owner,\"admin\") AS V2 WIDTH 20";
 open(FH,">$format_file") || print "FAILED opening file $format_file\n";
 print FH $format_content;
