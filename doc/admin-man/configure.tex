@@ -10769,6 +10769,16 @@ not changed by doing a \Condor{reconfig}.
   files to that of HTCondor versions prior to 8.0.6. 
   \Bold{Note: users should never change this setting.}
 
+\label{param:DAGmanUseSharedPort}
+\item[\Macro{DAGMAN\_USE\_SHARED\_PORT}]
+  A boolean value that controls whether \Condor{dagman} will attempt to
+  connect to the shared port daemon.
+  If not defined, \MacroNI{DAGMAN\_USE\_SHARED\_PORT} defaults to
+  \Expr{False}.  There is no reason to ever change this value; it
+  was introduced to prevent spurious shared port-related error messages
+  from appearing in \File{dagman.out} files.
+  (Introduced in version 8.6.1.)
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

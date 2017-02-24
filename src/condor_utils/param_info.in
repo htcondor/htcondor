@@ -3793,6 +3793,11 @@ type=bool
 default=$(HAD_USE_SHARED_PORT)
 type=bool
 
+# Fixes gittrac #6156.
+[DAGMAN_USE_SHARED_PORT]
+default=false
+type=bool
+
 [SHARED_PORT_PORT]
 default=$(COLLECTOR_PORT)
 type=int

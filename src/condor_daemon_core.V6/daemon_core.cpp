@@ -245,6 +245,7 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 	sigTable(10),
 	reapTable(4),
 	t(TimerManager::GetTimerManager()),
+	m_command_port_arg(-1),
 	m_dirty_command_sock_sinfuls(true),
 	m_advertise_ipv4_first(false)
 {
@@ -3177,10 +3178,10 @@ DaemonCore::reconfig(void) {
 void
 DaemonCore::InitSharedPort(bool in_init_dc_command_socket)
 {
-	MyString why_not;
+	MyString why_not = "no command port requested";
 	bool already_open = m_shared_port_endpoint != NULL;
 
-	if( SharedPortEndpoint::UseSharedPort(&why_not,already_open) ) {
+	if( m_command_port_arg != 0 && SharedPortEndpoint::UseSharedPort(&why_not,already_open) ) {
 		if( !m_shared_port_endpoint ) {
 			char const *sock_name = m_daemon_sock_name.Value();
 			if( !*sock_name ) sock_name = NULL;
@@ -3200,7 +3201,7 @@ DaemonCore::InitSharedPort(bool in_init_dc_command_socket)
 			// if we have no non-shared port open, we better open one now
 			// or we will have cut ourselves off from the world
 		if( !in_init_dc_command_socket ) {
-			InitDCCommandSocket(1);
+			InitDCCommandSocket(m_command_port_arg);
 		}
 	}
 	else if( IsFulldebug(D_FULLDEBUG) ) {
@@ -8972,6 +8973,8 @@ DaemonCore::SetDaemonSockName( char const *sock_name )
 void
 DaemonCore::InitDCCommandSocket( int command_port )
 {
+	m_command_port_arg = command_port;
+
 	if( command_port == 0 ) {
 			// No command port wanted, just bail.
 		dprintf( D_ALWAYS, "DaemonCore: No command port requested.\n" );
