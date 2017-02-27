@@ -67,15 +67,8 @@ int IOProxy::connect_callback( Stream * /*stream*/ )
 
 	success = server->accept(*client);
 	if(success) {
-		// I'm not sure why we believe the socket could be bound to anything
-		// other than the address we want to hear from, but...
-		condor_sockaddr remote = client->peer_addr();
-		if( remote.is_loopback() ) {
-			dprintf(D_FULLDEBUG,"IOProxy: accepting connection from %s\n",client->peer_ip_str());
-			accept_client = true;
-		} else {
-			dprintf(D_ALWAYS,"IOProxy: rejecting connection from %s: invalid ip addr\n",client->peer_ip_str());
-		}
+		dprintf(D_FULLDEBUG,"IOProxy: accepting connection from %s\n",client->peer_ip_str());
+		accept_client = true;
 	} else {
 		dprintf(D_ALWAYS,"IOProxy: Couldn't accept connection: %s\n",strerror(errno));
 	}
@@ -101,7 +94,7 @@ Initialize this proxy and dump the contact information into the given file.
 Returns true on success, false otherwise.
 */
 
-bool IOProxy::init( JICShadow *shadow, const char *config_file, bool want_io, bool want_updates, bool want_delayed )
+bool IOProxy::init( JICShadow *shadow, const char *config_file, bool want_io, bool want_updates, bool want_delayed, condor_sockaddr *bindTo )
 {
 	m_shadow = shadow;
 	m_want_io = want_io;
@@ -132,7 +125,7 @@ bool IOProxy::init( JICShadow *shadow, const char *config_file, bool want_io, bo
 
 	condor_protocol proto = CP_IPV4;
 	if( param_false( "ENABLE_IPV4" ) ) { proto = CP_IPV6; }
-	if(!server->bind( proto, false, 0, true )) {
+	if(!server->bind( proto, false, 0, true, bindTo )) {
 		dprintf(D_ALWAYS,"IOProxy: couldn't bind: %s\n",strerror(errno));
 		return false;
 	}

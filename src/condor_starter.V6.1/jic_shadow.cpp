@@ -2521,11 +2521,22 @@ JICShadow::initIOProxy( void )
 		want_delayed ? "true" : "false");
 	if( want_io_proxy || want_updates || want_delayed || job_universe==CONDOR_UNIVERSE_JAVA ) {
 		m_wrote_chirp_config = true;
+		condor_sockaddr *bindTo = NULL;
+		struct in_addr addr;
+		addr.s_addr = htonl(0xac110001);
+		condor_sockaddr dockerInterface(addr);
+
+		bool wantDocker = false;
+		job_ad->LookupBool(ATTR_WANT_DOCKER, wantDocker);
+		if (wantDocker) {
+			bindTo = &dockerInterface;
+		}
+
 		io_proxy_config_file.formatstr( "%s%c%s" ,
 				 Starter->GetWorkingDir(), DIR_DELIM_CHAR, CHIRP_CONFIG_FILENAME );
 		m_chirp_config_filename = io_proxy_config_file;
 		dprintf(D_FULLDEBUG, "Initializing IO proxy with config file at %s.\n", io_proxy_config_file.Value());
-		if( !io_proxy.init(this, io_proxy_config_file.Value(), want_io_proxy, want_updates, want_delayed) ) {
+		if( !io_proxy.init(this, io_proxy_config_file.Value(), want_io_proxy, want_updates, want_delayed, bindTo) ) {
 			dprintf( D_FAILURE|D_ALWAYS, 
 					 "Couldn't initialize IO Proxy.\n" );
 			return false;

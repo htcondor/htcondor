@@ -170,7 +170,7 @@ public:
 	int assign(LPWSAPROTOCOL_INFO);		// to inherit sockets from other processes
 #endif
 
-	int bind(condor_protocol proto, bool outbound, int port, bool loopback);
+	int bind(condor_protocol proto, bool outbound, int port, bool loopback, condor_sockaddr *bindTo = NULL);
 
     int setsockopt(int, int, const void*, int);
 
