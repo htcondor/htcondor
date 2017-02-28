@@ -5419,6 +5419,12 @@ WANT_HOLD_REASON = \
   must either be a string or an expression that evaluates to a
   string.
 
+  For Docker Universe jobs, any directories that are mounted under scratch are
+  also volume mounted on the same paths inside the container.  That is, any
+  reads or writes to files in those directories goes to the host filesytem
+  under the scratch directory.  This is useful if a container has limited space
+  to grow a filesytem.
+
 \end{description}
 
 The following macros control if the \Condor{startd} daemon should perform
