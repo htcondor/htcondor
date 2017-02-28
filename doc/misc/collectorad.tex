@@ -9,6 +9,10 @@
 \item[\AdAttr{CondorVersion}:] A string containing the HTCondor version
 number, the release date, and the build identification number.
 
+\index{ClassAd Collector attribute!CurrentForkWorkers}
+\item[\AdAttr{CondorVersion}:] The current number of active forks of the Collector.
+The Windows version of the Collector does not fork and will not have this statistic.
+
 \index{ClassAd Collector attribute!CurrentJobsRunningAll}
 \item[\AdAttr{CurrentJobsRunningAll}:] An integer value representing the sum of
   all jobs running under all universes.
@@ -32,6 +36,80 @@ number, the release date, and the build identification number.
 \item[\AdAttr{DaemonStartTime}:] The time that this daemon was
   started, represented as the number of second elapsed since
   the Unix epoch (00:00:00 UTC, Jan 1, 1970).
+
+\index{ClassAd Collector attribute!HandleLocate}
+\item[\AdAttr{HandleLocate}:] Number of locate queries the Collector has handled without forking since it started.
+
+\index{ClassAd Collector attribute!HandleLocateRuntimeAvg}
+\index{ClassAd Collector attribute!HandleLocateRuntimeMax}
+\index{ClassAd Collector attribute!HandleLocateRuntimeMin}
+\index{ClassAd Collector attribute!HandleLocateRuntimeStd}
+\index{ClassAd Collector attribute!HandleLocateRuntime}
+\item[\AdAttr{HandleLocateRuntime}:] Total time spent handling locate queries without forking since the Collector started.
+This attribute also has minimum, maximum, average and standard deviation statistics with Min, Max, Avg and Std suffixes respectively.
+
+\index{ClassAd Collector attribute!HandleLocateForked}
+\item[\AdAttr{HandleLocateForked}:] Number of locate queries the Collector has handled by forking since it started.
+The Windows operating system does not fork and will not have this statistic.
+
+\index{ClassAd Collector attribute!HandleLocateForkedRuntimeAvg}
+\index{ClassAd Collector attribute!HandleLocateForkedRuntimeMax}
+\index{ClassAd Collector attribute!HandleLocateForkedRuntimeMin}
+\index{ClassAd Collector attribute!HandleLocateForkedRuntimeStd}
+\index{ClassAd Collector attribute!HandleLocateForkedRuntime}
+\item[\AdAttr{HandleLocateForkedRuntime}:] Total time spent forking to handle locate queries since the Collector started.
+This attribute also has minimum, maximum, average and standard deviation statistics with Min, Max, Avg and Std suffixes respectively.
+The Windows operating system does not fork and will not have this statistic.
+
+\index{ClassAd Collector attribute!HandleLocateMissedFork}
+\item[\AdAttr{HandleLocateMissedFork}:] Number of locate queries the Collector has handled inline that should have been handled by forking since the Collector started.
+The Windows operating system does not fork and will not have this statistic.
+
+\index{ClassAd Collector attribute!HandleLocateMissedForkRuntimeAvg}
+\index{ClassAd Collector attribute!HandleLocateMissedForkRuntimeMax}
+\index{ClassAd Collector attribute!HandleLocateMissedForkRuntimeMin}
+\index{ClassAd Collector attribute!HandleLocateMissedForkRuntimeStd}
+\index{ClassAd Collector attribute!HandleLocateMissedForkRuntime}
+\item[\AdAttr{HandleLocateMissedForkRuntime}:] Total time spent handling locate queries inline that should have been handled by forking since the Collector started.
+This attribute also has minimum, maximum, average and standard deviation statistics with Min, Max, Avg and Std suffixes respectively.
+The Windows operating system does not fork and will not have this statistic.
+
+\index{ClassAd Collector attribute!HandleQuery}
+\item[\AdAttr{HandleQuery}:] Number of queries that are not locate queries the Collector has handled without forking since it started.
+
+\index{ClassAd Collector attribute!HandleQueryRuntimeAvg}
+\index{ClassAd Collector attribute!HandleQueryRuntimeMax}
+\index{ClassAd Collector attribute!HandleQueryRuntimeMin}
+\index{ClassAd Collector attribute!HandleQueryRuntimeStd}
+\index{ClassAd Collector attribute!HandleQueryRuntime}
+\item[\AdAttr{HandleQueryRuntime}:] Total time spent handling queries that are not locate queries without forking since the Collector started.
+This attribute also has minimum, maximum, average and standard deviation statistics with Min, Max, Avg and Std suffixes respectively.
+
+\index{ClassAd Collector attribute!HandleQueryForked}
+\item[\AdAttr{HandleQueryForked}:] Number of queries that are not locate queries the Collector has handled by forking since it started.
+The Windows operating system does not fork and will not have this statistic.
+
+\index{ClassAd Collector attribute!HandleQueryForkedRuntimeAvg}
+\index{ClassAd Collector attribute!HandleQueryForkedRuntimeMax}
+\index{ClassAd Collector attribute!HandleQueryForkedRuntimeMin}
+\index{ClassAd Collector attribute!HandleQueryForkedRuntimeStd}
+\index{ClassAd Collector attribute!HandleQueryForkedRuntime}
+\item[\AdAttr{HandleQueryForkedRuntime}:] Total time spent forking to handle queries that are not locate queries since the Collector started.
+This attribute also has minimum, maximum, average and standard deviation statistics with Min, Max, Avg and Std suffixes respectively.
+The Windows operating system does not fork and will not have this statistic.
+
+\index{ClassAd Collector attribute!HandleQueryMissedFork}
+\item[\AdAttr{HandleQueryMissedFork}:] Number of queries that are not locate queries the Collector has handled inline that should have been handled by forking since the Collector started.
+The Windows operating system does not fork and will not have this statistic.
+
+\index{ClassAd Collector attribute!HandleQueryMissedForkRuntimeAvg}
+\index{ClassAd Collector attribute!HandleQueryMissedForkRuntimeMax}
+\index{ClassAd Collector attribute!HandleQueryMissedForkRuntimeMin}
+\index{ClassAd Collector attribute!HandleQueryMissedForkRuntimeStd}
+\index{ClassAd Collector attribute!HandleQueryMissedForkRuntime}
+\item[\AdAttr{HandleQueryMissedForkRuntime}:] Total time spent handling queries that are not locate queries inline that should have been handled by forking since the Collector started.
+This attribute also has minimum, maximum, average and standard deviation statistics with Min, Max, Avg and Std suffixes respectively.
+The Windows operating system does not fork and will not have this statistic.
 
 \index{ClassAd Collector attribute!HostsClaimed}
 \item[\AdAttr{HostsClaimed}:] Description is not yet written.
@@ -93,6 +171,10 @@ number, the release date, and the build identification number.
   These names will be of the form ``slot\#@full.hostname'', for example,
   ``slot1@vulture.cs.wisc.edu'', which signifies slot number 1 from
   vulture.cs.wisc.edu.
+
+\index{ClassAd Collector attribute!PeakForkWorkers}
+\item[\AdAttr{CondorVersion}:] The maximum number of active forks of the Collector at any time since the Collector started.
+The Windows version of the Collector does not fork and will not have this statistic.
 
 \index{ClassAd Collector attribute!RunningJobs}
 \item[\AdAttr{RunningJobs}:] Definition not yet written.
