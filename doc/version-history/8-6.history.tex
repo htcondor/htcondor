@@ -60,6 +60,11 @@ messages to appear in the \File{dagman.out} file (by adding the
 new \MacroNI{DAGMAN\_USE\_SHARED\_PORT} configuration macro).
 \Ticket{6156}
 
+\item Fixed a bug that caused the Job Router to not route any jobs if
+the \MacroNI{JOB\_ROUTER\_DEFAULTS} configuration parameter value
+started with whitespace.
+\Ticket{6128}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
