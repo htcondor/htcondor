@@ -16,6 +16,36 @@ New features will be added in the 8.7.x development series.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-8-6-2}Version 8.6.2}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item HTCondor version 8.6.2 not yet released.
+%\item HTCondor version 8.6.2 released on Month Date, 2017.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-8-6-1}Version 8.6.1}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -59,6 +89,16 @@ submit requirements.
 messages to appear in the \File{dagman.out} file (by adding the
 new \MacroNI{DAGMAN\_USE\_SHARED\_PORT} configuration macro).
 \Ticket{6156}
+
+\item Fixed a bug that caused the Job Router to not route any jobs if
+the \MacroNI{JOB\_ROUTER\_DEFAULTS} configuration parameter value
+started with whitespace.
+\Ticket{6128}
+
+\item Fixed a bug in \Condor{status} \Opt{-format} and \Condor{q} \Opt{-format} that caused the
+tools to truncate output to the width specified in the format specifier. The most likely manifestation of
+this bug was that puncation after the format would not be printed when the format had an explict width.
+\Ticket{6120} 
 
 \end{itemize}
 
