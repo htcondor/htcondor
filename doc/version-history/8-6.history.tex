@@ -92,6 +92,10 @@ hold due to the desired hold reason containing invalid characters.
 \SubmitCmdNI{vm\_disk} submit command contained spaces after a comma.
 \Ticket{6132}
 
+\item Fixed a bug that could cause a grid batch job submitted to PBS or
+SLURM to go on hold when the job's X.509 proxy is refreshed.
+\Ticket{6136}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
