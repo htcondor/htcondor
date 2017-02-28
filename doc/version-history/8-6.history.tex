@@ -41,6 +41,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Docker version 1.13 broke the ability for Condor to retrieve 
+usage information from running containers, and the ability to remove
+containers when certain errors happened.  These have now been fixed.
+\Ticket{6088}
+
 \item In Docker universe, all writes to files in /tmp and /var/tmp by default
 write inside the container.  There is a limit on the file size within the container, and jobs that write a lot to /tmp may hit that.  If a docker universe job now runs on a system with \Macro{MOUNT\_UNDER\_SCRATCH} defined, HTCondor now adds those mounts as volume mounts, so file writes do not go to the container, but to the host filesystem.
 \Ticket{6080}
