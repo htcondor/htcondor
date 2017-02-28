@@ -83,6 +83,9 @@ LinuxNetworkAdapter::findAdapter( const condor_sockaddr& ip_addr )
 {
 	bool			found = false;
 # if (HAVE_STRUCT_IFCONF) && (HAVE_STRUCT_IFREQ) && (HAVE_DECL_SIOCGIFCONF)
+
+// See sysapi_get_network_device_info_raw() ... the loop should be commmon
+
 	struct ifconf	ifc;
 	int				sock;
 	int				num_req = 3;	// Should be enough for a machine
@@ -90,7 +93,7 @@ LinuxNetworkAdapter::findAdapter( const condor_sockaddr& ip_addr )
 
 	// Get a 'control socket' for the operations
 	sock = socket(AF_INET, SOCK_DGRAM, 0);
-	if (sock < 0) {
+	if (sock == -1 ) {
 		derror( "Cannot get control socket for WOL detection" );
 		return false;
 	}
@@ -119,7 +122,10 @@ LinuxNetworkAdapter::findAdapter( const condor_sockaddr& ip_addr )
 		int				 num = ifc.ifc_len / sizeof(struct ifreq);
 		struct ifreq	*ifr = ifc.ifc_req;
 		for ( int i = 0;  i < num;  i++, ifr++ ) {
-			//struct sockaddr_in *in = (struct sockaddr_in*)&(ifr->ifr_addr);
+			// condor_sockaddr reacts badly if you ask it to create a socket of a type
+			// it doesn't like (or know), so don't do that.
+			struct sockaddr_in * raw = (struct sockaddr_in*)&(ifr->ifr_addr);
+			if( raw->sin_family == AF_UNSPEC ) { continue; }
 			condor_sockaddr in(&ifr->ifr_addr);
 			//MemCopy( &in_addr, in, sizeof(struct sockaddr_in) );
 			addr = in;

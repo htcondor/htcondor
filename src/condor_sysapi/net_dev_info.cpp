@@ -101,61 +101,6 @@ bool sysapi_get_network_device_info_raw(std::vector<NetworkDeviceInfo> &devices,
 	return true;
 }
 
-#elif HAVE_GETIFADDRS
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <ifaddrs.h>
-#include <net/if.h>
-
-bool sysapi_get_network_device_info_raw(std::vector<NetworkDeviceInfo> &devices, bool want_ipv4, bool want_ipv6)
-{
-	struct ifaddrs *ifap_list=NULL;
-	if( getifaddrs(&ifap_list) == -1 ) {
-		dprintf(D_ALWAYS,"getifaddrs failed: errno=%d: %s\n",errno,strerror(errno));
-		return false;
-	}
-	struct ifaddrs *ifap=ifap_list;
-	char ip_buf[INET6_ADDRSTRLEN];
-	for(ifap=ifap_list;
-		ifap;
-		ifap=ifap->ifa_next)
-	{
-		const char* ip = NULL;
-		char const *name = ifap->ifa_name;
-
-		if( ! ifap->ifa_addr ) { continue; }
-		// if(ifap->ifa_addr->sa_family == AF_INET && !want_ipv4) { continue; }
-		// if(ifap->ifa_addr->sa_family == AF_INET6 && !want_ipv6) { continue; }
-		//
-		// Is there really any reason to check interfaces which aren't
-		// AF_INET or AF_INET6?
-		//
-		switch( ifap->ifa_addr->sa_family ) {
-			case AF_INET:
-				if( ! want_ipv4 ) { continue; }
-				break;
-			case AF_INET6:
-				if( ! want_ipv6 ) { continue; }
-				break;
-			default:
-				continue;
-		}
-
-		condor_sockaddr addr(ifap->ifa_addr);
-
-		ip = addr.to_ip_string(ip_buf, INET6_ADDRSTRLEN);
-		if(!ip) { continue; }
-
-		bool is_up = ifap->ifa_flags & IFF_UP;
-		dprintf(D_FULLDEBUG, "Enumerating interfaces: %s %s %s\n", name, ip, is_up?"up":"down");
-		NetworkDeviceInfo inf(name,ip,is_up);
-		devices.push_back(inf);
-	}
-	freeifaddrs(ifap_list);
-
-	return true;
-}
-
 #elif defined(SIOCGIFCONF)
 
 #include <sys/types.h>
@@ -172,53 +117,49 @@ bool sysapi_get_network_device_info_raw(std::vector<NetworkDeviceInfo> &devices,
 		return false;
 	}
 
-	struct ifconf ifc,prev;
-	memset(&ifc, 0, sizeof(ifc));
 
-	const int max_interfaces = 10000;
-	int num_interfaces;
-	for(num_interfaces=100;num_interfaces<max_interfaces;num_interfaces+=100) {
-		prev.ifc_len = ifc.ifc_len;
-		ifc.ifc_len = num_interfaces*sizeof(struct ifreq);
-
-		ifc.ifc_req = (struct ifreq *)malloc(ifc.ifc_len);
+	const int maxSize = 10000;
+	int previousSize = 0;
+	struct ifconf ifc;
+	for( int size = 100; size <= maxSize; size += 100 ) {
+		// If we don't zero the list, we'll get random garbage and
+		// not be able to tell.
+		ifc.ifc_len = size * sizeof(struct ifreq);
+		ifc.ifc_req = (struct ifreq *)calloc( size, sizeof(struct ifreq) );
 
 		if( ifc.ifc_req == NULL ) {
-			dprintf(D_ALWAYS,"sysapi_get_network_device_info_raw: out of memory\n");
+			dprintf( D_ALWAYS, "sysapi_get_network_device_info_raw: failed to allocate memory for network interface list, trying to read %u of them.\n", size );
 			return false;
 		}
 
-			// EINVAL (on some platforms) indicates that the buffer
-			// is not large enough
-		if( ioctl(sock, SIOCGIFCONF, &ifc) < 0 && errno != EINVAL ) {
-			dprintf(D_ALWAYS,"sysapi_get_network_device_info_raw: ioctlsocket() failed after allocating buffer: (errno %d) %s\n",
-					errno,strerror(errno));
+		// On some platforms, EINVAL means buffer-too-small.
+		if( ioctl( sock, SIOCGIFCONF, & ifc ) < 0 && errno != EINVAL ) {
+			dprintf( D_ALWAYS, "sysapi_get_network_device_info_raw: ioctlsocket() failed after allocating buffer: (errno %d) %s\n", errno, strerror(errno));
 			free( ifc.ifc_req );
 			return false;
 		}
 
-		if( ifc.ifc_len == prev.ifc_len ) {
-				// Getting the same length in successive calls to
-				// SIOCGIFCONF is the only reliable way to know that
-				// the buffer was big enough, because some
-				// implementations silently return truncated results
-				// if the buffer isn't big enough.
-			break;
+		// Only start looking at the interfaces once we're certain
+		// we have all of them (because we increased the size of
+		// returnable array, but didn't get anything more returned).
+		if( previousSize != ifc.ifc_len ) {
+			previousSize = ifc.ifc_len;
+			free( ifc.ifc_req );
+			ifc.ifc_req = NULL;
+			continue;
 		}
-		free( ifc.ifc_req );
-		ifc.ifc_req = NULL;
 	}
-	if( num_interfaces > max_interfaces ) {
-			// something must be going wrong
-		dprintf(D_ALWAYS,"sysapi_get_network_device_info_raw: unexpectedly large SIOCGIFCONF buffer: %d (errno=%d)\n",num_interfaces,errno);
+
+	if( ifc.ifc_req == NULL ) {
+		dprintf( D_ALWAYS, "Found too many network interfaces (more than %u), failing.\n", maxSize );
 		return false;
 	}
 
-	num_interfaces = ifc.ifc_len/sizeof(struct ifreq);
+
+	int num_interfaces = ifc.ifc_len/sizeof(struct ifreq);
 
 	char ip_buf[INET6_ADDRSTRLEN];
-	int i;
-	for(i=0; i<num_interfaces; i++) {
+	for(int i=0; i<num_interfaces; i++) {
 		struct ifreq *ifr = &ifc.ifc_req[i];
 		char const *name = ifr->ifr_name;
 		const char* ip = NULL;
@@ -226,6 +167,8 @@ bool sysapi_get_network_device_info_raw(std::vector<NetworkDeviceInfo> &devices,
 		if(ifr->ifr_addr.sa_family == AF_INET && !want_ipv4) { continue; }
 		if(ifr->ifr_addr.sa_family == AF_INET6 && !want_ipv6) { continue; }
 
+		// condor_sockaddr() gets really cranky otherwise.
+		if( ifr->ifr_addr.sa_family == AF_UNSPEC ) { continue; }
 		condor_sockaddr addr(&ifr->ifr_addr);
 		ip = addr.to_ip_string(ip_buf, INET6_ADDRSTRLEN);
 		if(!ip) { continue; }
