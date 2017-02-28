@@ -65,6 +65,11 @@ the \MacroNI{JOB\_ROUTER\_DEFAULTS} configuration parameter value
 started with whitespace.
 \Ticket{6128}
 
+\item Fixed a bug in \Condor{status} \Opt{-format} and \Condor{q} \Opt{-format} that caused the
+tools to truncate output to the width specified in the format specifier. The most likely manifestation of
+this bug was that puncation after the format would not be printed when the format had an explict width.
+\Ticket{6120} 
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
