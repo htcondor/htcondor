@@ -41,17 +41,17 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Docker version 1.13 broke the ability for Condor to retrieve 
+\item Docker version 1.13 broke the ability for HTCondor to retrieve
 usage information from running containers, and the ability to remove
-containers when certain errors happened.  These have now been fixed.
+containers when certain errors happened.  These problems are fixed.
 \Ticket{6088}
 
 \item In Docker universe, all writes to files in /tmp and /var/tmp by default
-write inside the container.  There is a limit on the file size within the container, and jobs that write a lot to /tmp may hit that.  If a docker universe job now runs on a system with \Macro{MOUNT\_UNDER\_SCRATCH} defined, HTCondor now adds those mounts as volume mounts, so file writes do not go to the container, but to the host filesystem.
+write inside the container.  There is a limit on the file size within the container, and jobs that write a lot to /tmp may hit that.  If a docker universe job now runs on a system with \MacroNI{MOUNT\_UNDER\_SCRATCH} defined, HTCondor now adds those mounts as volume mounts, so file writes do not go to the container, but to the host file system.
 \Ticket{6080}
 
 \item Fixed a bug on execute machines that enable PID namespaces that
-would generate a spurous error message in the daemon log when condor\_off -fast was issued.
+would generate a spurious error message in the daemon log when condor\_off -fast was issued.
 \Ticket{6137}
 
 \item Fixed a bug that could corrupt the job queue log file such that
@@ -71,13 +71,13 @@ new \MacroNI{DAGMAN\_USE\_SHARED\_PORT} configuration macro).
 
 \item Fixed a bug that caused the Job Router to not route any jobs if
 the \MacroNI{JOB\_ROUTER\_DEFAULTS} configuration parameter value
-started with whitespace.
+started with white space.
 \Ticket{6128}
 
 \item Fixed a bug in \Condor{status} \Opt{-format} and \Condor{q} \Opt{-format} that caused the
 tools to truncate output to the width specified in the format specifier. The most likely manifestation of
-this bug was that puncation after the format would not be printed when the format had an explict width.
-\Ticket{6120} 
+this bug was that punctuation after the format would not be printed when the format had an explicit width.
+\Ticket{6120}
 
 \item Improved the hold reason when submission of a grid-type batch
 job fails.
@@ -86,19 +86,19 @@ job fails.
 \item Removed Bosco's attempt to configure a default value for
 \SubmitCmdNI{grid\_resource} in the submit description file, as
 \Condor{submit} no longer supports this ability.
-Also, Bosco now works with SLURM clusters.
+Also, Bosco now works with Slurm clusters.
 \Ticket{6106}
 
 \item Fixed a bug where the \Condor{gridmanager} fails to put a job on
 hold due to the desired hold reason containing invalid characters.
 \Ticket{6142}
 
-\item Fixed a bug that caused vm universe jobs to fail if the
+\item Fixed a bug that caused VM universe jobs to fail if the
 \SubmitCmdNI{vm\_disk} submit command contained spaces after a comma.
 \Ticket{6132}
 
 \item Fixed a bug that could cause a grid batch job submitted to PBS or
-SLURM to go on hold when the job's X.509 proxy is refreshed.
+Slurm to go on hold when the job's X.509 proxy is refreshed.
 \Ticket{6136}
 
 \item Fixed several bugs in how the Job Router writes to job event logs.
@@ -107,6 +107,11 @@ SLURM to go on hold when the job's X.509 proxy is refreshed.
 \item Fixes a bug that could cause events for local universe jobs to not
 be written to the global event log.
 \Ticket{6100}
+
+\item Incremented the ClassAd library version number, since the deprecated
+iostream interface has been removed.
+\Ticket{6050}
+\Ticket{6115}
 
 \end{itemize}
 
@@ -127,13 +132,13 @@ be written to the global event log.
 
 \begin{itemize}
 
-\item Added two new job classad attributes, \Macro{CumulativeRemoteSysCpu} and 
-\Macro{CumulativeRemoteUserCpu}, which keep a running total of system and user
-cpu usage, respectively, across all job restarts.  Also, immediately clear attributes
-\Macro{RemoteSysCpu} and \Macro{RemoveUserCpu} on job start, instead of on first update.
+\item Added two new job ClassAd attributes, \MacroNI{CumulativeRemoteSysCpu} and
+\MacroNI{CumulativeRemoteUserCpu}, which keep a running total of system and user
+CPU usage, respectively, across all job restarts.  Also, immediately clear attributes
+\MacroNI{RemoteSysCpu} and \MacroNI{RemoveUserCpu} on job start, instead of on first update.
 \Ticket{6022}
 
-\item Added a new config knob, \MacroNI{ALWAYS\_REUSEADDR}, which defaults
+\item Added a new configuration knob, \MacroNI{ALWAYS\_REUSEADDR}, which defaults
 to \Expr{True}.  When \Expr{True}, it tells HTCondor to set the
 \MacroNI{SO\_REUSEADDR} socket option, so that
 the schedd can run large numbers of very short jobs without exhausting the
@@ -150,7 +155,7 @@ number of local ports needed for shadows.
 \begin{itemize}
 
 \item Fixed a bug causing unnecessarily slow updates from the \Condor{startd}.
-If you depend on the old behavior, set \Macro{UPDATE\_SPREAD\_TIME} to 8.  A
+If you depend on the old behavior, set \MacroNI{UPDATE\_SPREAD\_TIME} to 8.  A
 value of 0 enables the fix.
 \Ticket{6062}
 
@@ -180,7 +185,7 @@ to fail in Bosco.
 \Ticket{6042}
 
 \item Fixed a bug with handling the proxy files of grid-type batch jobs
-when the proxy's filename is a relative path.
+when the proxy's file name is a relative path.
 \Ticket{6053}
 
 \item Fixed a bug that caused the \Prog{batch\_gahp} to crash when a job's
@@ -194,40 +199,4 @@ created by HTCondor.  Now, \Attr{VM\_Memory} defaults to \Attr{RequestMemory},
 and the number of CPUs defaults to \Attr{RequestCPUs}.
 \Ticket{5998}
 
-\item Incremented the ClassAd library version number, since the deprecated
-iostream interface has been removed.
-\Ticket{6050}
-\Ticket{6115}
-
 \end{itemize}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{\label{sec:New-8-6-1}Version 8.6.1}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\noindent Release Notes:
-
-\begin{itemize}
-
-\item HTCondor version 8.6.1 not yet released.
-%\item HTCondor version 8.6.1 released on Month Date, 2017.
-
-\end{itemize}
-
-
-\noindent New Features:
-
-\begin{itemize}
-
-\item None.
-
-\end{itemize}
-
-\noindent Bugs Fixed:
-
-\begin{itemize}
-
-\item None.
-
-\end{itemize}
-
