@@ -441,7 +441,7 @@ using the configuration variable \Macro{OPENMPI\_INSTALL\_PATH}.
 When using Open MPI on a multi-machine HTCondor cluster,
 the administrator may also want to consider tweaking the
 \Macro{OPENMPI\_EXCLUDE\_NETWORK\_INTERFACES} configuration variable
-as well as set \MacroNI{MOUNT\_UNDER\_SCRATCH} = \Attr{/tmp}.
+as well as set \MacroNI{MOUNT\_UNDER\_SCRATCH} = \File{/tmp}.
 %Open MPI also uses \Env{MPdir}.
 %For OpenMPI, there is a similar path setting, but it is called \Env{LAMDIR}
 %in the \Prog{openmpiscript} script.  
@@ -494,7 +494,6 @@ arguments = -np 2 my_mpi_linked_executable arg1 arg2 arg3
 should_transfer_files = yes
 when_to_transfer_output = on_exit
 transfer_input_files = my_mpi_linked_executable
-
 queue
 \end{verbatim}
 \normalsize
