@@ -19,8 +19,7 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item HTCondor version 8.7.0 not yet released.
-%\item HTCondor version 8.7.0 released on Month Date, 2017.
+\item HTCondor version 8.7.0 released on March 2, 2017.
 
 \end{itemize}
 
@@ -29,8 +28,16 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Changed the formatting of the printing of classad expresssions with 
-parentheses. Now there is no space character after every open parenthesis, or 
+\item Optimized the code that reads reads ClassAds off the wire making the maximum possible update rate
+for the Collector about 1.7 times higher than it was before.
+\Ticket{6105}
+\Ticket{6130}
+
+\item New statistics have been added to the Collector ad to show time spent handling queries.
+\Ticket{6123}
+
+\item Changed the formatting of the printing of ClassAd expressions with
+parentheses. Now there is no space character after every open parenthesis, or
 before every close parenthesis
 This looks more natural, is somewhat faster for the condor to parse, and
 saves space.  That is, an expression that used to print like
@@ -44,19 +51,16 @@ now will print like this
 \end{verbatim}
 \Ticket{6082}
 
+\item Technology preview of the HTCondor Annex. The HTCondor Annex allows one
+to extend their HTCondor pool into the cloud.
+\URL{https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=HowToUseCondorAnnexWithOnDemandInstances}
+\Ticket{6121}
+
 \item Added \Opt{-annex} option to \Condor{status} and \Condor{off}.  Requires
 an argument; the request is constrained to match machines whose
 \Expr{AnnexName} ClassAd attribute matches the argument.
 \Ticket{6116}
 \Ticket{6117}
-
-\item Optimized the code that reads reads ClassAds off the wire making the maximum possible update rate
-for the Collector about 1.7 times higher than it was before.
-\Ticket{6105}
-\Ticket{6130}
-
-\item New statistics have been added to the Collector ad to show time spent handling queries.
-\Ticket{6123}
 
 \end{itemize}
 
