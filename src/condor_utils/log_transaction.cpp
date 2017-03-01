@@ -550,14 +550,14 @@ Transaction::Commit(FILE* fp, LoggableClassAdTable *data_structure, bool nondura
 	    
 	    cleanup_backup_info(&bi);
 	    
-	    EXCEPT("Failed to write real job queue log: %s failed (errno %d); %s%s", why, fps[0].err, made_backup, backup_loc.Value());
+	    EXCEPT("Failed to write job queue log: %s failed (errno %d: %s); %s%s", why, fps[0].err, strerror(fps[0].err), made_backup, backup_loc.Value());
 	  }
 	  
 	  cleanup_backup_info(&bi);
 	  
 	} else if ( fps[0].why != WHY_OK ) {
 		// Non-durable transactions should also blow up on failure
-		EXCEPT("Failed to write real job queue log: write failed (errno %d)", fps[0].err);
+		EXCEPT("Failed to write real job queue log: write failed (errno %d: %s)", fps[0].err, strerror(fps[0].err));
 	}
 }
 
