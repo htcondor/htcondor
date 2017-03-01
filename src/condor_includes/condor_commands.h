@@ -407,6 +407,7 @@ NAMETABLE_DIRECTIVE:END_SECTION:collector
 #define DC_OFF_FORCE       (DC_BASE+42)
 #define DC_SET_READY       (DC_BASE+43)  // sent to parent to indicate a demon is ready for use
 #define DC_QUERY_READY     (DC_BASE+44)  // daemon command handler should reply only once it and children are ready
+#define DC_QUERY_INSTANCE  (DC_BASE+45)  // ask if a daemon is alive - returns a random 64 bit int that will not change as long as this instance is alive.
 
 
 /*
