@@ -383,6 +383,7 @@ collect (int command, Sock *sock, const condor_sockaddr& from, int &insert)
 	} else {
 		// remove it from the ad if it's not authenticated.
 		clientAd->Delete("AuthenticatedIdentity");
+		clientAd->Delete("AuthenticationMethod");
 	}
 
 	rval = collect(command, clientAd, from, insert, sock);
