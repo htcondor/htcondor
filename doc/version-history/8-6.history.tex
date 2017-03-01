@@ -36,6 +36,17 @@ The details of each version are described below.
 \item The collector now records the authentication method used to determine the authenticated identity.
 \Ticket{6122}
 
+\item \Condor{q} now checks to see if authentication and security negotiation are enabled before attempting to
+request only the current users jobs from the \Condor{schedd}.  Prior to this change, configurations that disabled
+security or authentication would also need to set \Macro{CONDOR\_Q\_ONLY\_MY\_JOBS} to false.
+\Ticket{6125}
+
+\item The CLAIMTOBE authentication method is now in the list of methods for READ access if no list of
+authentication methods for READ or DEFAULT is specified in the configuration.  This change allows sites that
+use the default host based security model to use \Condor{q} \Opt{-global} with the only-my-jobs feature
+without making changes to their security configuration.
+\Ticket{6125}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
