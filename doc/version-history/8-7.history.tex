@@ -29,6 +29,12 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Added \Opt{-annex} option to \Condor{status} and \Condor{off}.  Requires
+an argument; the request is constrained to match machines whose
+\Expr{AnnexName} ClassAd attribute matches the argument.
+\Ticket{6116}
+\Ticket{6117}
+
 \item Optimized the code that reads reads ClassAds off the wire making the maximum possible update rate
 for the Collector about 1.7 times higher than it was before.
 \Ticket{6105}
