@@ -1461,19 +1461,9 @@ It serves as a quick reference.
 
 \item[\Macro{CLAIM\_WORKLIFE}]
   This expression specifies the number of seconds after which a claim
-  will stop accepting additional jobs.  The default is 3600.  Once the
-  \Condor{negotiator} gives a \Condor{schedd} a claim to a slot, 
-  the \Condor{schedd} will keep
-  running jobs on that slot as long as it has more jobs with matching
-  requirements, and \MacroNI{CLAIM\_WORKLIFE} has not expired, and it is
-  not preempted.  Once \MacroNI{CLAIM\_WORKLIFE} expires, any existing
-  job may continue to run as usual, but once it finishes or is
-  preempted, the claim is closed.  When \MacroNI{CLAIM\_WORKLIFE} is -1,
-  this is treated as an infinite claim worklife, so claims may be held
-  indefinitely (as long as they are not preempted and the user does
-  not run out of jobs, of course).  A value of 0 has the effect of not
-  allowing more than one job to run per claim, since it immediately
-  expires after the first job starts running.
+  will stop accepting additional jobs.
+  This configuration macro is fully documented here:
+  ~\ref{param:ClaimWorklife}.
 
 \item[\Macro{MachineMaxVacateTime}] When the machine enters the
 Preempting/Vacating state, this expression specifies the maximum

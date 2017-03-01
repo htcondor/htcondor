@@ -137,6 +137,10 @@ on page~\pageref{sec:DaemonCore-Statistics-Attributes}.
 \item[\AdAttr{AuthenticatedIdentity}:] The authenticated name assigned
   by the \Condor{collector} to the daemon that published the ClassAd.
 
+\index{ClassAd attribute added by the condor\_collector!AuthenticationMethod}
+\item[\AdAttr{AuthenticationMethod}:] The authentication method used
+    by the \Condor{collector} to determine the \AdAttr{AuthenticatedIdentity}.
+
 \index{ClassAd attribute added by the condor\_collector!LastHeardFrom}
 \item[\AdAttr{LastHeardFrom}:] The time inserted into a daemon's
   ClassAd representing the time that this \Condor{collector}
