@@ -95,6 +95,15 @@ public:
     int duration_phase3;
     int duration_phase4;
 
+    double cpu_time;
+    double phase1_cpu_time;
+    double phase2_cpu_time;
+    double phase3_cpu_time;
+    double phase4_cpu_time;
+
+    int prefetch_duration;
+    double prefetch_cpu_time;
+
     int total_slots;
     int trimmed_slots;
     int candidate_slots;
@@ -107,6 +116,9 @@ public:
 	int matches;
 	int rejections;
 
+    int pies;
+    int pie_spins;
+
     // set of unique active schedd, id by sinful strings:
     std::set<std::string> active_schedds;
 
@@ -116,6 +128,7 @@ public:
     std::set<std::string> submitters_share_limit;
 	std::set<std::string> submitters_out_of_time;
 	std::set<std::string> submitters_failed;
+	std::set<std::string> schedds_out_of_time;
 };
 
 NegotiationCycleStats::NegotiationCycleStats():
@@ -126,6 +139,13 @@ NegotiationCycleStats::NegotiationCycleStats():
     duration_phase2(0),
     duration_phase3(0),
     duration_phase4(0),
+    cpu_time(0.0),
+    phase1_cpu_time(0.0),
+    phase2_cpu_time(0.0),
+    phase3_cpu_time(0.0),
+    phase4_cpu_time(0.0),
+    prefetch_duration(0),
+    prefetch_cpu_time(0.0),
     total_slots(0),
     trimmed_slots(0),
     candidate_slots(0),
@@ -134,11 +154,14 @@ NegotiationCycleStats::NegotiationCycleStats():
     num_jobs_considered(0),
 	matches(0),
 	rejections(0),
+    pies(0),
+    pie_spins(0),
     active_schedds(),
     active_submitters(),
     submitters_share_limit(),
     submitters_out_of_time(),
-    submitters_failed()
+    submitters_failed(),
+    schedds_out_of_time()
 {
 }
 
@@ -317,6 +340,14 @@ static int rankSorter(ClassAd *left, ClassAd *right, void * that) {
 	} 
 
 	return left < right;
+}
+
+static double
+get_rusage_utime()
+{
+	struct rusage usage;
+	ASSERT( getrusage( RUSAGE_SELF, &usage ) == 0 );
+	return usage.ru_utime.tv_sec + ( usage.ru_utime.tv_usec / 1000000.0 );
 }
 
 Matchmaker::
@@ -1366,6 +1397,7 @@ negotiationTime ()
 
 	// ----- Get all required ads from the collector
     time_t start_time_phase1 = time(NULL);
+	double start_usage_phase1 = get_rusage_utime();
 	dprintf( D_ALWAYS, "Phase 1:  Obtaining ads from collector ...\n" );
 	if( !obtainAdsFromCollector( allAds, startdAds, scheddAds, accountingNames,
 		claimIds ) )
@@ -1401,7 +1433,9 @@ negotiationTime ()
 
     // Transition Phase 1 --> Phase 2
     time_t start_time_phase2 = time(NULL);
+	double start_usage_phase2 = get_rusage_utime();
     negotiation_cycle_stats[0]->duration_phase1 += start_time_phase2 - start_time_phase1;
+	negotiation_cycle_stats[0]->phase1_cpu_time += start_usage_phase2 - start_usage_phase1;
 
 	if ( job_attr_references ) {
 		free(job_attr_references);
@@ -1845,6 +1879,12 @@ negotiationTime ()
     negotiation_cycle_stats[0]->duration_phase2 -= negotiation_cycle_stats[0]->duration_phase4;
 
     negotiation_cycle_stats[0]->duration = completedLastCycleTime - negotiation_cycle_stats[0]->start_time;
+
+	double end_cycle_usage = get_rusage_utime();
+	negotiation_cycle_stats[0]->phase2_cpu_time = end_cycle_usage - start_usage_phase2;
+	negotiation_cycle_stats[0]->phase2_cpu_time -= negotiation_cycle_stats[0]->phase3_cpu_time;
+	negotiation_cycle_stats[0]->phase2_cpu_time -= negotiation_cycle_stats[0]->phase4_cpu_time;
+	negotiation_cycle_stats[0]->cpu_time = end_cycle_usage - start_usage_phase1;
 
     // if we got any reconfig requests during the cycle it is safe to service them now:
     if (daemonCore->GetNeedReconfig()) {
@@ -2769,6 +2809,7 @@ negotiateWithGroup ( int untrimmed_num_startds,
 {
 	ClassAd		*schedd;
 	MyString    submitterName;
+	MyString    scheddName;
 	MyString    scheddAddr;
 	int			result;
 	int			numStartdAds;
@@ -2790,11 +2831,18 @@ negotiateWithGroup ( int untrimmed_num_startds,
 
     int duration_phase3 = 0;
     time_t start_time_phase4 = time(NULL);
+	double phase3_cpu_time = 0.0;
+	double start_usage_phase4 = get_rusage_utime();
+	time_t start_time_prefetch = 0;
+	double start_usage_prefetch = 0.0;
+
+	negotiation_cycle_stats[0]->pies++;
 
 	double scheddUsed=0;
 	int spin_pie=0;
 	do {
 		spin_pie++;
+		negotiation_cycle_stats[0]->pie_spins++;
 
         // On the first spin of the pie we tell the negotiate function to ignore the
         // submitterLimit w/ respect to jobs which are strictly preferred by resource 
@@ -2859,6 +2907,7 @@ negotiateWithGroup ( int untrimmed_num_startds,
 			// The sort order function also makes use of job priority information
 			// if want_globaljobprio is true.
             time_t start_time_phase3 = time(NULL);
+			double start_usage_phase3 = get_rusage_utime();
             dprintf(D_ALWAYS, "Phase 3:  Sorting submitter ads by priority ...\n");
             scheddAds.Sort((lessThanFunc)comparisonFunction, this);
 
@@ -2869,9 +2918,16 @@ negotiateWithGroup ( int untrimmed_num_startds,
 			want_globaljobprio = consolidate_globaljobprio_submitter_ads(scheddAds);
 
             duration_phase3 += time(NULL) - start_time_phase3;
+			phase3_cpu_time += get_rusage_utime() - start_usage_phase3;
         }
 
+		start_time_prefetch = time(NULL);
+		start_usage_prefetch = get_rusage_utime();
+
 	prefetchResourceRequestLists(scheddAds);
+
+		negotiation_cycle_stats[0]->prefetch_duration = time(NULL) - start_time_prefetch;
+		negotiation_cycle_stats[0]->prefetch_cpu_time += get_rusage_utime() - start_usage_prefetch;
 
 		pieLeftOrig = pieLeft;
 		scheddAdsCountOrig = scheddAds.MyLength();
@@ -2898,10 +2954,11 @@ negotiateWithGroup ( int untrimmed_num_startds,
             }
 			// get the name of the submitter and address of the schedd-daemon it came from
 			if( !schedd->LookupString( ATTR_NAME, submitterName ) ||
+				!schedd->LookupString( ATTR_SCHEDD_NAME, scheddName ) ||
 				!schedd->LookupString( ATTR_SCHEDD_IP_ADDR, scheddAddr ) )
 			{
-				dprintf (D_ALWAYS,"  Error!  Could not get %s and %s from ad\n",
-							ATTR_NAME, ATTR_SCHEDD_IP_ADDR);
+				dprintf (D_ALWAYS,"  Error!  Could not get %s, %s and %s from ad\n",
+						 ATTR_NAME, ATTR_SCHEDD_NAME, ATTR_SCHEDD_IP_ADDR);
 				dprintf( D_ALWAYS, "  Ignoring this schedd and continuing\n" );
 				scheddAds.Remove( schedd );
 				continue;
@@ -3030,6 +3087,7 @@ negotiateWithGroup ( int untrimmed_num_startds,
 				dprintf(D_ALWAYS,
 					"  %d seconds spent on this schedd, MAX_TIME_PER_SCHEDD is %d secs\n ",
 					totalTimeSchedd, MaxTimePerSchedd);
+				negotiation_cycle_stats[0]->schedds_out_of_time.insert(scheddName.Value());
 				result = MM_DONE;
 			} else if (remainingTimeForThisCycle <= 0) {
 				dprintf(D_ALWAYS,
@@ -3107,6 +3165,9 @@ negotiateWithGroup ( int untrimmed_num_startds,
 
     negotiation_cycle_stats[0]->duration_phase3 += duration_phase3;
     negotiation_cycle_stats[0]->duration_phase4 += (time(NULL) - start_time_phase4) - duration_phase3;
+
+    negotiation_cycle_stats[0]->phase3_cpu_time += phase3_cpu_time;
+    negotiation_cycle_stats[0]->phase4_cpu_time += (get_rusage_utime() - start_usage_phase4) - phase3_cpu_time;
 
 	return TRUE;
 }
@@ -6726,6 +6787,16 @@ Matchmaker::publishNegotiationCycleStats( ClassAd *ad )
         ATTR_LAST_NEGOTIATION_CYCLE_NUM_JOBS_CONSIDERED,
         ATTR_LAST_NEGOTIATION_CYCLE_MATCHES,
         ATTR_LAST_NEGOTIATION_CYCLE_REJECTIONS,
+        ATTR_LAST_NEGOTIATION_CYCLE_PIES,
+        ATTR_LAST_NEGOTIATION_CYCLE_PIE_SPINS,
+        ATTR_LAST_NEGOTIATION_CYCLE_PREFETCH_DURATION,
+        ATTR_LAST_NEGOTIATION_CYCLE_PREFETCH_CPU_TIME,
+        ATTR_LAST_NEGOTIATION_CYCLE_CPU_TIME,
+        ATTR_LAST_NEGOTIATION_CYCLE_PHASE1_CPU_TIME,
+        ATTR_LAST_NEGOTIATION_CYCLE_PHASE2_CPU_TIME,
+        ATTR_LAST_NEGOTIATION_CYCLE_PHASE3_CPU_TIME,
+        ATTR_LAST_NEGOTIATION_CYCLE_PHASE4_CPU_TIME,
+        ATTR_LAST_NEGOTIATION_CYCLE_SCHEDDS_OUT_OF_TIME,
         ATTR_LAST_NEGOTIATION_CYCLE_SUBMITTERS_FAILED,
         ATTR_LAST_NEGOTIATION_CYCLE_SUBMITTERS_OUT_OF_TIME,
         ATTR_LAST_NEGOTIATION_CYCLE_SUBMITTERS_SHARE_LIMIT,
@@ -6770,6 +6841,17 @@ Matchmaker::publishNegotiationCycleStats( ClassAd *ad )
 		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_MATCH_RATE, i, (s->duration > 0) ? (double)(s->matches)/double(s->duration) : double(0.0));
 		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_MATCH_RATE_SUSTAINED, i, (period > 0) ? (double)(s->matches)/double(period) : double(0.0));
 		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_ACTIVE_SUBMITTER_COUNT, i, (int)s->active_submitters.size());
+		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_PIES, i, s->pies );
+		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_PIE_SPINS, i, s->pie_spins );
+		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_PREFETCH_DURATION, i, s->prefetch_duration );
+		// TODO Should we truncate these to integer values?
+		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_PREFETCH_CPU_TIME, i, s->prefetch_cpu_time );
+		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_CPU_TIME, i, s->phase1_cpu_time );
+		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_PHASE1_CPU_TIME, i, s->phase1_cpu_time );
+		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_PHASE2_CPU_TIME, i, s->phase2_cpu_time );
+		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_PHASE3_CPU_TIME, i, s->phase3_cpu_time );
+		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_PHASE4_CPU_TIME, i, s->phase4_cpu_time );
+		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_SCHEDDS_OUT_OF_TIME, i, s->schedds_out_of_time);
 		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_SUBMITTERS_FAILED, i, s->submitters_failed);
 		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_SUBMITTERS_OUT_OF_TIME, i, s->submitters_out_of_time);
         SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_SUBMITTERS_SHARE_LIMIT, i, s->submitters_share_limit);
