@@ -345,9 +345,14 @@ static int rankSorter(ClassAd *left, ClassAd *right, void * that) {
 static double
 get_rusage_utime()
 {
+#if defined(WIN32)
+	// TODO Find an equivalent to getrusage() for windows.
+	return 0.0;
+#else
 	struct rusage usage;
 	ASSERT( getrusage( RUSAGE_SELF, &usage ) == 0 );
 	return usage.ru_utime.tv_sec + ( usage.ru_utime.tv_usec / 1000000.0 );
+#endif
 }
 
 Matchmaker::
