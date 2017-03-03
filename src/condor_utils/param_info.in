@@ -2717,6 +2717,11 @@ default=30
 type=int
 tags=negotiator,matchmaker
 
+[NEGOTIATOR_SOCKET_CACHE_SIZE]
+default=500
+range=1,
+type=int
+
 [NEGOTIATOR_MAX_TIME_PER_SUBMITTER]
 default=31536000
 type=int
