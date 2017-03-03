@@ -757,7 +757,7 @@ int store_cred_handler(void *, int /*i*/, Stream *s)
 		if (answer == SUCCESS) {
 			StoreCredState* retry_state = (StoreCredState*)malloc(sizeof(StoreCredState));
 			retry_state->user = strdup(user);
-			retry_state->retries = 20;
+			retry_state->retries = param_integer("CREDD_POLLING_TIMEOUT", 20);
 			retry_state->s = new ReliSock(*((ReliSock*)s));
 
 			dprintf( D_FULLDEBUG, "NBSTORECRED: retry_state: %lx, dptr->user: %s, dptr->retries: %i, dptr->s %lx\n",
