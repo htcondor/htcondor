@@ -258,12 +258,9 @@ is not being used.  If it \emph{is} being used, then all daemons
 can share a single incoming port.
 
 The central manager of the pool needs
-\Expr{5 + \MacroNI{NEGOTIATOR\_SOCKET\_CACHE\_SIZE}}
-ports for daemon communication,
-where 
-\Macro{NEGOTIATOR\_SOCKET\_CACHE\_SIZE}
-is specified in the
-configuration or defaults to the value 16.
+\Expr{5 + number of \Condor{schedd} daemons}
+ports for outgoing connections and 2 ports for incoming connections for
+daemon communication.
 
 Each execute machine (those machines running a \Condor{startd} daemon)
 requires

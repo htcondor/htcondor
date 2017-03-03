@@ -9113,7 +9113,7 @@ These macros affect the \Condor{negotiator}.
   Caching open sockets makes the negotiation
   protocol more efficient by eliminating the need for socket
   connection establishment for each negotiation cycle.  The default is
-  currently 16.  To be effective, this parameter should be set to a
+  currently 500.  To be effective, this parameter should be set to a
   value greater than the number of \Condor{schedd}s submitting jobs to the
   negotiator at any time.  If you lower this number, you must run
   \Condor{restart} and not just \Condor{reconfig} for the change to
