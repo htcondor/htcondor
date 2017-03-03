@@ -672,5 +672,63 @@ if($expected ne $reply) {
 	RegisterResult(1,"test_name",$testname);
 }
 
+###### Added by shuyang 03/02/2017 ######
+$firstappend_condor_config = '
+	DAEMON_LIST = MASTER
+	USE ROLE : execute, Submit
+';
+
+print "****************** about to test -USE ROLE : execute, submit - \n\n\n";
+
+
+$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"metaknobconfigs14");
+
+CondorTest::StartCondorWithParams(
+	condor_name => "metaknobconfigs14",
+	fresh_local => "TRUE",
+	condorlocalsrc => "$configfile",
+	do_not_start => "TRUE",
+);
+
+$expected = "$lookups{DAEMON_LIST} STARTD SCHEDD";
+$reply = ccv_getval(DAEMON_LIST);
+
+if($expected ne $reply) {
+	print "Case TEST:USE ROLE : execute, submit: failed\n";
+	print "MISMATCH:$expected NE $reply\n";
+	RegisterResult(0,"test_name",$testname);
+} else {
+	print "Case TEST:USE ROLE : execute, submit: worked\n";
+	RegisterResult(1,"test_name",$testname);
+}
+
+$firstappend_condor_config = '
+	DAEMON_LIST = MASTER
+	USE ROLE : execute, Submit, centralmanager, personal
+';
+
+print "****************** about to test -USE ROLE : execute, submit, centralmanager, personal - \n\n\n";
+
+
+$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"metaknobconfigs15");
+
+CondorTest::StartCondorWithParams(
+	condor_name => "metaknobconfigs15",
+	fresh_local => "TRUE",
+	condorlocalsrc => "$configfile",
+	do_not_start => "TRUE",
+);
+
+$expected = "$lookups{DAEMON_LIST} COLLECTOR NEGOTIATOR STARTD SCHEDD";
+$reply = ccv_getval(DAEMON_LIST);
+
+if($expected ne $reply) {
+	print "Case TEST:USE ROLE : execute, submit, centralmanager, personal: failed\n";
+	print "MISMATCH:$expected NE $reply\n";
+	RegisterResult(0,"test_name",$testname);
+} else {
+	print "Case TEST:USE ROLE : execute, submit, centralmanager, personal: worked\n";
+	RegisterResult(1,"test_name",$testname);
+}
 EndTest();
 
