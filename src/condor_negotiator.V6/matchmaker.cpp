@@ -342,12 +342,18 @@ static int rankSorter(ClassAd *left, ClassAd *right, void * that) {
 	return left < right;
 }
 
+// Return the cpu user time for the current process in seconds.
+// TODO Should we include the system time as well?
 static double
 get_rusage_utime()
 {
 #if defined(WIN32)
-	// TODO Find an equivalent to getrusage() for windows.
-	return 0.0;
+	UINT64 ntCreate=0, ntExit=0, ntSys=0, ntUser=0; // nanotime. tick rate of 100 nanosec.
+	ASSERT( GetProcessTimes( GetCurrentProcess(),
+							 (FILETIME*)&ntCreate, (FILETIME*)&ntExit,
+							 (FILETIME*)&ntSys, (FILETIME*)&ntUser ) );
+
+	return (double)ntUser / (double)(1000*1000*10); // convert to seconds
 #else
 	struct rusage usage;
 	ASSERT( getrusage( RUSAGE_SELF, &usage ) == 0 );
