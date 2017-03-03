@@ -1584,6 +1584,14 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::SendResponse
 		return_addr = NULL;
 	} else {
 		dprintf( D_DAEMONCORE, "DAEMONCORE: SendResponse() : NOT m_new_session\n");
+
+		// at this point, we can finally bail if we are not planning on
+		// continuing (i.e. a succesful authorization).
+		if (!m_reqFound || !(m_perm == USER_AUTH_SUCCESS)) {
+			dprintf (D_ALWAYS, "DC_AUTHENTICATE: Command not authorized, done!\n");
+			m_result = FALSE;
+			return CommandProtocolFinished;
+		}
 	}
 
 	// what about DC_QUERY?  we want to stay in encode()
