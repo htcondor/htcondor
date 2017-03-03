@@ -2270,6 +2270,11 @@ default=false
 type=bool
 tags=uids
 
+[CREDD_POLLING_TIMEOUT]
+default=20
+type=int
+tags=credd
+
 [Q_QUERY_TIMEOUT]
 default=20
 type=int
