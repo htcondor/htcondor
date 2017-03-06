@@ -4008,7 +4008,7 @@ Matchmaker::prefetchResourceRequestLists(ClassAdListDoesNotDeleteAds &submitterA
 		if (!workCount) {continue;}
 		dprintf(D_FULLDEBUG, "Waiting on the results of %u negotiation sessions.\n", workCount);
 		selector.execute();
-		if (selector.timed_out() && selector.failed())
+		if (selector.timed_out() || selector.failed())
 		{
 			for (FDToRRLMap::const_iterator it = fdToRRL.begin(); it != fdToRRL.end(); it++)
 			{
@@ -4018,6 +4018,8 @@ Matchmaker::prefetchResourceRequestLists(ClassAdListDoesNotDeleteAds &submitterA
 				if (!sock) {continue;}
 				CurrentWorkMap::iterator iter = currentWork.find(scheddAddr);
 				if (iter != currentWork.end()) {currentWork.erase(iter);}
+				endNegotiate(scheddAddr);
+				sockCache->invalidateSock(scheddAddr.c_str());
 				if (selector.timed_out()) {dprintf(D_ALWAYS, "Timeout when prefetching from %s; will skip this schedd for the remainder of prefetch cycle.\n", scheddAddr.c_str());}
 				else {dprintf(D_ALWAYS, "Failure when waiting on results of negotiations sessions (%s, errno=%d).\n", strerror(selector.select_errno()), selector.select_errno());}
 			}
@@ -4070,8 +4072,8 @@ Matchmaker::prefetchResourceRequestLists(ClassAdListDoesNotDeleteAds &submitterA
 	{
 		timedOutPrefetches++;
 		dprintf(D_ALWAYS, "At end of the prefetch cycle, still waiting on response from %s; giving up and invalidating socket.\n", it->first.c_str());
-		sockCache->invalidateSock(it->first);
 		endNegotiate(it->first);
+		sockCache->invalidateSock(it->first);
 	}
 	dprintf(D_ALWAYS, "Prefetch summary: %u attempted, %u successful.\n", attemptedPrefetches, successfulPrefetches);
 	if (timedOutPrefetches)
