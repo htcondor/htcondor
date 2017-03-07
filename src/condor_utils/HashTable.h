@@ -595,6 +595,9 @@ int HashTable<Index,Value>::remove(const Index &index)
 		{
       		if (bucket == ht[idx]) 
 			{
+				// The item we're deleting is the first one for
+				// this index.
+
 				ht[idx] = bucket->next;
 
 				// if the item being deleted is being iterated, ensure that
@@ -602,11 +605,15 @@ int HashTable<Index,Value>::remove(const Index &index)
 				if (bucket == currentItem)
 				{
 					currentItem = 0;
-					if (--currentBucket < 0) currentBucket = 0;
+					if (--currentBucket < -1) currentBucket = -1;
 				}
 			}
       		else
 			{
+				//TEMPTEMP -- should this code get tested?
+				// The item we're deleting is NOT the first one for
+				// this index.
+
 				prevBuc->next = bucket->next;
 
 				// Again, take care of the iterator
