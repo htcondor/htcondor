@@ -1451,15 +1451,10 @@ static long condor_keyctl_link(key_serial_t k, key_serial_t r) {
   return syscall(__NR_keyctl, KEYCTL_LINK, k, r);
 }
 
-static long condor_keyctl_unlink(key_serial_t k, key_serial_t r) {
-  return syscall(__NR_keyctl, KEYCTL_UNLINK, k, r);
-}
-
 static int   CurrentSessionKeyring = KEY_SPEC_INVALID_KEYRING;
 static uid_t CurrentSessionKeyringUID = KEY_SPEC_INVALID_UID;
 static int   PreviousSessionKeyring = KEY_SPEC_INVALID_KEYRING;
 static uid_t PreviousSessionKeyringUID = KEY_SPEC_INVALID_UID;
-static pid_t SessionKeyringPID = 0;
 
 #endif
 
@@ -1549,10 +1544,12 @@ _set_priv(priv_state s, const char *file, int line, int dologging)
 				PreviousSessionKeyringUID = CurrentSessionKeyringUID;
 			}
 
-			// restore us to the same euid and egid as when we were called
+			// restore us to the same euid and egid as when we were called.
+			// the if statements are there just to avoid a compiler warning
+			// about not checking the return value.
 			set_root_euid();
-			setegid(saveegid);
-			seteuid(saveeuid);
+			if(setegid(saveegid)) {}
+			if(seteuid(saveeuid)) {}
 		}
 #endif
 
@@ -1609,7 +1606,7 @@ _set_priv(priv_state s, const char *file, int line, int dologging)
 
 
 				// only link if there's something to link to
-				if(CurrentSessionKeyringUID != KEY_SPEC_INVALID_UID) {
+				if(CurrentSessionKeyringUID != (uid_t)KEY_SPEC_INVALID_UID) {
 					set_root_euid();
 					// locate the session keyring and uid 0 keyring.
 					key_serial_t user_keyring = CurrentSessionKeyring;
