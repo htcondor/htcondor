@@ -38,6 +38,8 @@ class HashBucket {
 
 template <class Index, class Value> class HashTable;
 
+// Note that the HashIterator only works if both Index and Value are
+// pointer types or can be assigned the value NULL.  wenger 2017-03-08
 template< class Index, class Value >
 class HashIterator : std::iterator<std::input_iterator_tag, std::pair<Index, Value> >
 {
@@ -610,7 +612,6 @@ int HashTable<Index,Value>::remove(const Index &index)
 			}
       		else
 			{
-				//TEMPTEMP -- should this code get tested?
 				// The item we're deleting is NOT the first one for
 				// this index.
 
