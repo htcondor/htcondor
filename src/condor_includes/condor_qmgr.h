@@ -52,6 +52,7 @@ const SetAttributeFlags_t SETDIRTY = (1<<2);
 const SetAttributeFlags_t SHOULDLOG = (1<<3);
 const SetAttributeFlags_t SetAttribute_OnlyMyJobs = (1<<4);
 const SetAttributeFlags_t SetAttribute_QueryOnly = (1<<5); // check if change is allowed, but don't actually change.
+const SetAttributeFlags_t SetAttribute_LateMaterialization = (1<<6); // check if change is allowed, but don't actually change.
 
 #define SHADOW_QMGMT_TIMEOUT 300
 

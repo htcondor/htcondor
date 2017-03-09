@@ -411,7 +411,7 @@ int ExamineLogTransaction(
 			}
 			if (!name) {
 				if ( !ad ) {
-					ad = maker.New();
+					ad = maker.New(((LogSetAttribute *)log)->get_key(), NULL);
 					//PRAGMA_REMIND("tj: don't turn on dirty tracking here!")
 					ad->EnableDirtyTracking();
 					ASSERT(ad);
@@ -635,7 +635,7 @@ LogNewClassAd::Play(void *data_structure)
 {
 	int result;
 	LoggableClassAdTable *table = (LoggableClassAdTable *)data_structure;
-	ClassAd *ad = ctor.New();
+	ClassAd *ad = ctor.New(key, mytype);
 	SetMyTypeName(*ad, mytype);
 	SetTargetTypeName(*ad, targettype);
 	ad->EnableDirtyTracking();
