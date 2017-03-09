@@ -272,11 +272,13 @@ const char* MetaKnobAndArgs::init_from_string(const char * p)
 		while (*p && isspace(*p)) ++p;
 	}
 
+	e = p;
+#if 0 // we dont' want to do this beause it breaks USE ROLE : Execute Submit
 	// if there is non-whitespace after the knob/args and before the next ,
 	// capture it.
-	e = p;
-	while (*e && *e != ',') ++e;
+	while (*e && !isspace(*p) && *e != ',') ++e;
 	if (e > p+1) { extra.assign(p, (e-p)-1); }
+#endif
 	return e;
 }
 
