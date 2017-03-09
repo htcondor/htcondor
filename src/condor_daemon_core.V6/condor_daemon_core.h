@@ -62,6 +62,7 @@
 #include "generic_stats.h"
 #include "filesystem_remap.h"
 #include "counted_ptr.h"
+#include "daemon_keep_alive.h"
 #include <vector>
 
 #include "../condor_procd/proc_family_io.h"
@@ -285,6 +286,7 @@ class DaemonCore : public Service
 #endif
   friend int dc_main(int, char**);
   friend class DaemonCommandProtocol;
+  friend class DaemonKeepAlive;
     
   public:
     
@@ -1513,7 +1515,7 @@ class DaemonCore : public Service
 		   is to send CHILDALIVEs.
 		*/
 	void WantSendChildAlive( bool send_alive )
-		{ m_want_send_child_alive = send_alive; }
+		{ m_DaemonKeepAlive.WantSendChildAlive(send_alive); }
 	
 		/**
 			Returns true if a wake signal was sent to the master's select.
@@ -2049,15 +2051,9 @@ class DaemonCore : public Service
 
     Stream *inheritedSocks[MAX_SOCKS_INHERITED+1];
 
-    // methods to detect and kill hung processes
-    int HandleChildAliveCommand(int command, Stream* stream);
-    int HungChildTimeout();
-    int SendAliveToParent();
-    int max_hang_time;
-	int max_hang_time_raw;
-	int m_child_alive_period;
-    int send_child_alive_timer;
-	bool m_want_send_child_alive;
+	// Methods to detect and kill hung processes are consolidated
+	// in the DaemonKeepAlive helper friend class.
+	DaemonKeepAlive m_DaemonKeepAlive;
 
 	// Method to check on and possibly recover from a bad connection
 	// to the procd. Suitable to be registered as a one-shot timer.
