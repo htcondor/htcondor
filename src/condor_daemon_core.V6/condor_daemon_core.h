@@ -1576,7 +1576,9 @@ class DaemonCore : public Service
       #ifdef WIN32
 	   stats_entry_recent<int> AsyncPipe;      //  number of times async_pipe was signalled
       #endif
+	   stats_entry_abs<int> UdpQueueDepth;  // Unread bytes for the UDP command port 
 
+		
        stats_entry_recent<Probe> PumpCycle;   // count of pump cycles plus sum of cycle time with min/max/avg/std 
        stats_entry_sum_ema_rate<int> Commands;
 
@@ -1631,6 +1633,7 @@ class DaemonCore : public Service
 	// one of our command ports.
 	bool is_command_port_do_not_use(const condor_sockaddr & addr);
 
+	bool wants_dc_udp_self() const { return m_wants_dc_udp_self;}
   private:      
 
 		// do and our parents/children want/have a udp comment socket?
