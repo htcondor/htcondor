@@ -233,6 +233,8 @@
 #define SUBMIT_KEY_EC2SecurityIDs "ec2_security_ids"
 #define SUBMIT_KEY_EC2KeyPair "ec2_keypair"
 #define SUBMIT_KEY_EC2KeyPairFile "ec2_keypair_file"
+#define SUBMIT_KEY_EC2KeyPairAlt "ec2_keyp_air"
+#define SUBMIT_KEY_EC2KeyPairFileAlt "ec2_key_pair_file"
 #define SUBMIT_KEY_EC2InstanceType "ec2_instance_type"
 #define SUBMIT_KEY_EC2ElasticIP "ec2_elastic_ip"
 #define SUBMIT_KEY_EC2EBSVolumes "ec2_ebs_volumes"
@@ -258,6 +260,7 @@
 #define SUBMIT_KEY_GceMetadata "gce_metadata"
 #define SUBMIT_KEY_GceMetadataFile "gce_metadata_file"
 #define SUBMIT_KEY_GcePreemptible "gce_preemptible"
+#define SUBMIT_KEY_GceJsonFile "gce_json_file"
 
 #define SUBMIT_KEY_NextJobStartDelay "next_job_start_delay"
 #define SUBMIT_KEY_WantGracefulRemoval "want_graceful_removal"
@@ -366,6 +369,8 @@ enum _submit_file_role {
 
 typedef int (*FNSUBMITPARSE)(void* pv, MACRO_SOURCE& source, MACRO_SET& set, char * line, std::string & errmsg);
 
+class DeltaClassAd;
+
 class SubmitHash {
 public:
 	SubmitHash();
@@ -392,6 +397,9 @@ public:
 	void set_submit_param_used( const char* name);
 	void set_arg_variable(const char* name, const char * value);
 	void insert_source(const char * filename, MACRO_SOURCE & source);
+	// like insert_source above but also sets the value that $(SUBMIT_FILE)
+	// will expand to. (set into the defaults table, not the submit hash table)
+	void insert_submit_filename(const char * filename, MACRO_SOURCE & source);
 
 	// parse a submit file from fp until a queue statement is reached, then stop parsing
 	// if a valid queue line is reached, return value will be 0, and qline will point to
@@ -429,6 +437,9 @@ public:
 	// call once before parsing the submit file and/or calling make_job_ad.
 	int init_cluster_ad(time_t _submit_time, const char * owner); // returns 0 on success
 
+	// establish default attributes using a foreign ad rather than by calling init_cluster_ad above
+	int set_cluster_ad(ClassAd * ad);
+
 	// fills out a job ad for the input job_id.
 	// while the job ad is created, the check_file callback will be called one for each file
 	// that might need to be transferred or checked for access.
@@ -447,8 +458,15 @@ public:
 	int InsertJobExpr (const MyString &expr);
 	int InsertJobExprInt(const char * name, int val);
 	int InsertJobExprString(const char * name, const char * val);
+	bool AssignJobVal(const char * attr, bool val);
+	bool AssignJobVal(const char * attr, double val);
+	bool AssignJobVal(const char * attr, long long val);
+	bool AssignJobVal(const char * attr, int val) { return AssignJobVal(attr, (long long)val); }
+	bool AssignJobVal(const char * attr, long val) { return AssignJobVal(attr, (long long)val); }
+	//bool AssignJobVal(const char * attr, time_t val)  { return AssignJobVal(attr, (long long)val); }
+
 	MACRO_ITEM* lookup_exact(const char * name) { return find_macro_item(name, NULL, SubmitMacroSet); }
-	CondorError* error_stack() const {return SubmitMacroSet.errors;}
+	CondorError* error_stack() const { return SubmitMacroSet.errors; }
 
 	void optimize() { if (SubmitMacroSet.sorted < SubmitMacroSet.size) optimize_macros(SubmitMacroSet); }
 	void dump(FILE* out, int flags);
@@ -467,7 +485,9 @@ protected:
 	MACRO_SET SubmitMacroSet;
 	MACRO_EVAL_CONTEXT mctx;
 	ClassAd baseJob; // defaults for job attributes, set by init_cluster_ad
-	ClassAd * job;
+	ClassAd * clusterAd; // use instead of baseJob if non-null. THIS POINTER IS NOT OWNED BY THE submit_utils class. It points back to the JobQueueJob that 
+	ClassAd * procAd;
+	DeltaClassAd * job; // this wraps the procAd or baseJob and tracks changes to the underlying ad.
 	JOB_ID_KEY jid; // id of the current job being built
 	time_t     submit_time;
 	MyString   submit_owner; // owner specified to init_cluster_ad

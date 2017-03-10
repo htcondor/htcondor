@@ -39,6 +39,7 @@ class CondorError {
 		const char* message(int level = 0);
 
 		bool  pop();
+		bool  empty();
 		void  clear();
 
 	private:
