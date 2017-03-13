@@ -30,6 +30,7 @@
 #include "CondorError.h"
 
 static bool enable_convert_default_IP_to_socket_IP = false;
+static bool shared_port_address_rewriting = false;
 static std::set< std::string > configured_network_interface_ips;
 static bool network_interface_matches_all;
 
@@ -290,6 +291,7 @@ static bool is_sender_ip_attr(char const *attr_name)
     return false;
 }
 
+
 void ConfigConvertDefaultIPToSocketIP()
 {
 		// do not need to call init_ipaddr() since init_ipaddr() has no effect
@@ -322,6 +324,7 @@ void ConfigConvertDefaultIPToSocketIP()
 		enable_convert_default_IP_to_socket_IP = false;
 		dprintf(D_FULLDEBUG,"Disabling ConvertDefaultIPToSocketIP() because ENABLE_ADDRESS_REWRITING is false.\n");
 	}
+	shared_port_address_rewriting = param_boolean("SHARED_PORT_ADDRESS_REWRITING", false);
 }
 
 // Only needed for these next two functions;
@@ -415,7 +418,7 @@ void ConvertDefaultIPToSocketIP(char const * attr_name, std::string & expr_strin
 		dprintf( D_NETWORK | D_VERBOSE, "Address rewriting: refused for attribute %s (%s): clients now choose addresses.\n", attr_name, expr_string.c_str() );
 		return;
 	}
-	else if (param_boolean("SHARED_PORT_ADDRESS_REWRITING", false))
+	else if (shared_port_address_rewriting)
 	{
 		//
 		// Wait a minute -- isn't this only supposed to happen in the collector?
