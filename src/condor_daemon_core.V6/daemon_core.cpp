@@ -8062,9 +8062,6 @@ int DaemonCore::Create_Process(
 	pidtmp->is_local = TRUE;
 	pidtmp->parent_is_local = TRUE;
 	pidtmp->reaper_id = reaper_id;
-	pidtmp->hung_tid = -1;
-	pidtmp->was_not_responding = FALSE;
-	pidtmp->got_alive_msg = 0;
 	if(!session_id.empty())
 	{
 		pidtmp->child_session_id = strdup(session_id.c_str());
@@ -8469,9 +8466,6 @@ DaemonCore::Create_Thread(ThreadStartFunc start_func, void *arg, Stream *sock,
 	pidtmp->is_local = TRUE;
 	pidtmp->parent_is_local = TRUE;
 	pidtmp->reaper_id = reaper_id;
-	pidtmp->hung_tid = -1;
-	pidtmp->was_not_responding = FALSE;
-	pidtmp->got_alive_msg = 0;
 #ifdef WIN32
 	// we lie here and set pidtmp->pid to equal the tid.  this allows
 	// the DaemonCore WinNT pidwatcher code to remain mostly ignorant
@@ -8721,9 +8715,6 @@ DaemonCore::Inherit( void )
 		pidtmp->is_local = TRUE;
 		pidtmp->parent_is_local = TRUE;
 		pidtmp->reaper_id = 0;
-		pidtmp->hung_tid = -1;
-		pidtmp->was_not_responding = FALSE;
-		pidtmp->got_alive_msg = 0;
 #ifdef WIN32
 		pidtmp->deallocate = 0L;
 
@@ -9562,7 +9553,6 @@ int DaemonCore::HandleProcessExit(pid_t pid, int exit_status)
 			ASSERT(pidentry);
 			pidentry->parent_is_local = TRUE;
 			pidentry->reaper_id = defaultReaper;
-			pidentry->hung_tid = -1;
 			pidentry->new_process_group = FALSE;
 		} else {
 
@@ -9663,10 +9653,6 @@ int DaemonCore::HandleProcessExit(pid_t pid, int exit_status)
 		::CloseHandle(pidentry->hProcess);
 	}
 #endif
-	// cancel the hung timer if we have one
-	if ( pidentry->hung_tid != -1 ) {
-		Cancel_Timer(pidentry->hung_tid);
-	}
 	// and delete the pidentry
 	delete pidentry;
 
@@ -10814,10 +10800,10 @@ DaemonCore::PidEntry::PidEntry() : pid(0),
 	is_local(0),
 	parent_is_local(0),
 	reaper_id(0),
-	hung_tid(0),
+	stdin_offset(0),
+	hung_past_this_time(0),
 	was_not_responding(0),
 	got_alive_msg(0),
-	stdin_offset(0),
 	child_session_id(NULL)
 {
 	for (int i=0;i<3;++i) {

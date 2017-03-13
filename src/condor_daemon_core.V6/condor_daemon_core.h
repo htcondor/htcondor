@@ -1946,12 +1946,14 @@ class DaemonCore : public Service
         int is_local;
         int parent_is_local;
         int reaper_id;
-        int hung_tid;   // Timer to detect hung processes
-        int was_not_responding;
-        int got_alive_msg; // number of child alive messages received
         int std_pipes[3];  // Pipe handles for automagic DC std pipes.
         MyString* pipe_buf[3];  // Buffers for data written to DC std pipes.
         int stdin_offset;
+
+		// these three data members are set/used by the DaemonKeepAlive class
+        unsigned int hung_past_this_time;   // if >0, child is hung if time() > this value
+        int was_not_responding;
+        int got_alive_msg; // number of child alive messages received
 
 		/* the environment variables which allow me the track the pidfamily
 			of this pid (where applicable) */

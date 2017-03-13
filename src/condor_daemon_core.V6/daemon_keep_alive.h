@@ -53,11 +53,14 @@ protected:
 
 private:
     int SendAliveToParent();
-    int HungChildTimeout();
+    int KillHungChild(void* pidentry);
+	int ScanForHungChildren();
+
     int max_hang_time;
 	int max_hang_time_raw;
 	int m_child_alive_period;
     int send_child_alive_timer;
+	int scan_for_hung_children_timer;
 	bool m_want_send_child_alive;
 
 };

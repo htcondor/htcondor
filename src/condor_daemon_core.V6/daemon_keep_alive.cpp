@@ -27,9 +27,12 @@
 
 DaemonKeepAlive::DaemonKeepAlive()
 {
-	m_want_send_child_alive = true;
-	send_child_alive_timer = -1;
+	max_hang_time = -1;
 	max_hang_time_raw = 3600;
+	m_child_alive_period = -1;
+    send_child_alive_timer = -1;
+	scan_for_hung_children_timer = -1;
+	m_want_send_child_alive = true;
 }
 
 DaemonKeepAlive::~DaemonKeepAlive()
@@ -40,6 +43,9 @@ DaemonKeepAlive::~DaemonKeepAlive()
 void
 DaemonKeepAlive::reconfig(void) 
 {
+	// NOTE: this function is always called on initial startup, as well
+	// as at reconfig time.
+
 	// Setup a timer to send child keepalives to our parent, if we have
 	// a daemon core parent.
 	if ( daemonCore->ppid && m_want_send_child_alive ) {
@@ -88,6 +94,20 @@ DaemonKeepAlive::reconfig(void)
 		}
 	}
 
+	// Setup a timer to scan for hung child processes.
+	// We will default to scanning every 60 seconds, but if this
+	// takes more than 1% of our time we degrade to every 10 minutes.
+	if ( scan_for_hung_children_timer == -1 ) {
+		Timeslice interval;
+		interval.setDefaultInterval(60);
+		interval.setMinInterval(1);
+		interval.setMaxInterval(600);
+		interval.setTimeslice(0.01);
+		scan_for_hung_children_timer = daemonCore->Register_Timer(interval,
+				(TimerHandlercpp)&DaemonKeepAlive::ScanForHungChildren,
+				"DaemonKeepAlive::ScanForHungChildren", this );
+	}
+
 }
 
 bool
@@ -95,6 +115,26 @@ DaemonKeepAlive::get_stats()
 {
 	return true;
 }
+
+int
+DaemonKeepAlive::ScanForHungChildren()
+{
+	unsigned int now = (unsigned int)time(NULL);
+
+	DaemonCore::PidEntry *pid_entry;
+	daemonCore->pidTable->startIterations();
+	while( daemonCore->pidTable->iterate(pid_entry) ) {
+		if( pid_entry &&
+			pid_entry->hung_past_this_time &&
+			now > pid_entry->hung_past_this_time )
+		{
+			KillHungChild(pid_entry);
+		}
+	}
+
+	return TRUE;
+}
+
 
 int 
 DaemonKeepAlive::SendAliveToParent()
@@ -223,7 +263,6 @@ DaemonKeepAlive::HandleChildAliveCommand(int, Stream* stream)
 	pid_t child_pid = 0;
 	unsigned int timeout_secs = 0;
 	DaemonCore::PidEntry *pidentry;
-	int ret_value;
 	double dprintf_lock_delay = 0.0;
 
 	if (!stream->code(child_pid) ||
@@ -256,19 +295,7 @@ DaemonKeepAlive::HandleChildAliveCommand(int, Stream* stream)
 		return FALSE;
 	}
 
-	if ( pidentry->hung_tid != -1 ) {
-		ret_value = daemonCore->Reset_Timer( pidentry->hung_tid, timeout_secs );
-		ASSERT( ret_value != -1 );
-	} else {
-		pidentry->hung_tid =
-			daemonCore->Register_Timer(timeout_secs,
-							(TimerHandlercpp) &DaemonKeepAlive::HungChildTimeout,
-							"DaemonKeepAlive::HungChildTimeout", this);
-		ASSERT( pidentry->hung_tid != -1 );
-
-		daemonCore->Register_DataPtr( &pidentry->pid);
-	}
-
+	pidentry->hung_past_this_time = (unsigned int) time(NULL) + timeout_secs;
 	pidentry->was_not_responding = FALSE;
 	pidentry->got_alive_msg += 1;
 
@@ -322,29 +349,15 @@ DaemonKeepAlive::HandleChildAliveCommand(int, Stream* stream)
 	}
 
 	return TRUE;
-
 }
 
 int 
-DaemonKeepAlive::HungChildTimeout()
+DaemonKeepAlive::KillHungChild(void *child)
 {
-	pid_t hung_child_pid;
-	pid_t *hung_child_pid_ptr;
-	DaemonCore::PidEntry *pidentry;
-	bool first_time = true;
-
-	/* get the pid out of the allocated memory it was placed into */
-	hung_child_pid_ptr = (pid_t*) daemonCore->GetDataPtr();
-	hung_child_pid = *hung_child_pid_ptr;
-
-	if ((daemonCore->pidTable->lookup(hung_child_pid, pidentry) < 0)) {
-		// we have no information on this pid, it must have exited
-		return FALSE;
-	}
-
-	// reset our tid to -1 so HandleChildAliveCommand() knows that there
-	// is currently no timer set.
-	pidentry->hung_tid = -1;
+	if (!child) return FALSE;
+	DaemonCore::PidEntry *pidentry = (DaemonCore::PidEntry *) child;
+	pid_t hung_child_pid = pidentry->pid;
+	ASSERT( hung_child_pid > 1 );
 
 	if( daemonCore->ProcessExitedButNotReaped( hung_child_pid ) ) {
 			// This process has exited, but we have not gotten around to
@@ -355,25 +368,11 @@ DaemonKeepAlive::HungChildTimeout()
 
 	// set a flag in the PidEntry so a reaper can discover it was killed
 	// because it was hung.
+	bool first_time = true;
 	if( pidentry->was_not_responding ) {
 		first_time = false;
-	}
-	else {
-	pidentry->was_not_responding = TRUE;
-	}
-
-	// Now make certain that this pid did not exit by verifying we still
-	// exist in the pid table.  We must do this because ServiceCommandSocket
-	// could result in a process reaper being invoked.
-	if ((daemonCore->pidTable->lookup(hung_child_pid, pidentry) < 0)) {
-		// we have no information anymore on this pid, it must have exited
-		return FALSE;
-	}
-
-	// Now see if was_not_responding flipped back to FALSE
-	if ( pidentry->was_not_responding == FALSE ) {
-		// the child saved itself!
-		return FALSE;
+	} else {
+		pidentry->was_not_responding = TRUE;
 	}
 
 	dprintf(D_ALWAYS,"ERROR: Child pid %d appears hung! Killing it hard.\n",
@@ -381,13 +380,15 @@ DaemonKeepAlive::HungChildTimeout()
 
 	// and hardkill the bastard!
 	bool want_core = param_boolean( "NOT_RESPONDING_WANT_CORE", false );
+
 #ifndef WIN32
 	if( want_core ) {
 		// On multiple occassions, I have observed the child process
 		// get hung while writing its core file.  If we never follow
 		// up with a hard-kill, this can result in the service going
-		// down for days, which is terrible.  Therefore, set a timer
-		// to call us again and follow up with a hard-kill.
+		// down for days, which is terrible.  Therefore, set things up
+		// so we will get invoked again later to follow up with a hard-kill if
+		// the child gets hung dumping core.
 		if( !first_time ) {
 			dprintf(D_ALWAYS,
 					"Child pid %d is still hung!  Perhaps it hung while generating a core file.  Killing it harder.\n",hung_child_pid);
@@ -395,18 +396,12 @@ DaemonKeepAlive::HungChildTimeout()
 		}
 		else {
 			dprintf(D_ALWAYS, "Sending SIGABRT to child to generate a core file.\n");
-			const int want_core_timeout = 600;
-			pidentry->hung_tid =
-				daemonCore->Register_Timer(want_core_timeout,
-							   (TimerHandlercpp) &DaemonKeepAlive::HungChildTimeout,
-							   "DaemonKeepAlive::HungChildTimeout", this);
-			ASSERT( pidentry->hung_tid != -1 );
-			daemonCore->Register_DataPtr( &pidentry->pid );
+			const unsigned int want_core_timeout = 600;
+			pidentry->hung_past_this_time = (unsigned int) time(NULL) + want_core_timeout;
 		}
 	}
 #endif
-	daemonCore->Shutdown_Fast(hung_child_pid, want_core );
 
-	return TRUE;
+	return daemonCore->Shutdown_Fast(hung_child_pid, want_core );
 }
 
