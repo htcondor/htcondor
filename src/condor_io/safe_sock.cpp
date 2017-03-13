@@ -1011,3 +1011,50 @@ bool
 SafeSock::msgReady() {
 	return _msgReady;
 }
+
+/* static */ int
+SafeSock::recvQueueDepth(int port) {
+	int depth = 0;
+#ifdef LINUX
+	FILE *f = NULL;
+
+	f = fopen("/proc/net/udp", "r");
+	if (!f) {
+		dprintf(D_ALWAYS, "Cannot open /proc/net/udp, no UDP statistics will be available\n");
+		return 0;
+	}
+	// /proc/net/udp entries look like
+	//   sl  local_address rem_address   st tx_queue rx_queue tr tm->when retrnsmt   uid  timeout inode ref pointer drops             
+	// 1: 00000000:9C7E 00000000:0000 07 00000000:00000000 00:00000000 00000000 28297        0 570473 2 ffff8803b781fc00 0     
+
+	// skip first line, it is a header
+	char skipLine[256];
+	if (fgets(skipLine, sizeof(skipLine), f) == NULL) {
+		fclose(f);
+		return 0;
+	};
+
+	int sl = 0;
+	int localAddr = 0;
+	int localPort = 0;
+	int remoteAddr = 0;
+	int remotePort = 0;
+	int status = 0;
+	int tx_queue = 0;
+	int queueDepth = 0;
+	while (fscanf(f, "%d: %x:%x %x:%x %x %x:%x\n", &sl, &localAddr, &localPort, &remoteAddr, &remotePort, &status, &tx_queue, &queueDepth) > 1) {
+
+		if (localPort == port) {
+			depth = queueDepth;
+		}
+		// skip to beginning of next line
+		if (fgets(skipLine, sizeof(skipLine), f) == NULL) {
+			dprintf(D_ALWAYS, "Error skipping to end of in /proc/net/udp\n");
+			fclose(f);
+			return -1;
+		}
+	}
+	fclose(f);
+#endif
+	return depth;
+}

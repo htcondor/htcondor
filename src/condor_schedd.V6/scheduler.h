@@ -691,7 +691,7 @@ class Scheduler : public Service
 	LiveJobCounters liveJobCounts; // job counts that are always up-to-date with the committed job state
 
 	const OwnerInfo * insert_owner_const(const char*);
-	OwnerInfo * incrementRecentlyAdded(const char *);
+	OwnerInfo * incrementRecentlyAdded(OwnerInfo * ownerinfo, const char * owner);
 
 private:
 

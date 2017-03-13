@@ -115,6 +115,7 @@ public:
 	// interface no longer supported
 	int attach_to_file_desc(int);
 #endif
+	static int recvQueueDepth(int port);
 	
 
 	//	byte operations

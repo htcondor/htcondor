@@ -77,7 +77,7 @@
 #include "NegotiationUtils.h"
 #include <submit_utils.h>
 //uncomment this to have condor_submit use the new for 8.5 submit_utils classes
-//#define USE_SUBMIT_UTILS 1
+#define USE_SUBMIT_UTILS 1
 #include "submit_internal.h"
 
 #include "list.h"
@@ -810,6 +810,7 @@ char *myproxy_password = NULL;
 #endif
 
 int  SendJobCredential();
+void SetSendCredentialInAd( ClassAd *job_ad );
 
 extern DLL_IMPORT_MAGIC char **environ;
 
@@ -1097,6 +1098,22 @@ void TestFilePermissions( char *scheddAddr = NULL )
 }
 
 #ifdef USE_SUBMIT_UTILS
+void print_errstack(FILE* out, CondorError *errstack)
+{
+	if ( ! errstack)
+		return;
+
+	for (/*nothing*/ ; ! errstack->empty(); errstack->pop()) {
+		int code = errstack->code();
+		std::string msg(errstack->message());
+		if (msg.size() && msg[msg.size()-1] != '\n') { msg += '\n'; }
+		if (code) {
+			fprintf(out, "ERROR: %s", msg.c_str());
+		} else {
+			fprintf(out, "WARNING: %s", msg.c_str());
+		}
+	}
+}
 #else
 void
 init_job_ad()
@@ -1701,8 +1718,8 @@ main( int argc, const char *argv[] )
 			exit(1);
 		}
 #ifdef USE_SUBMIT_UTILS
-		submit_hash.insert_source(cmd_file, FileMacroSource);
-		SubmitFileMacroDef.psz = const_cast<char*>(submit_hash.apool.insert(full_path(cmd_file, false)));
+		// this does both insert_source, and also gives a values to the default $(SUBMIT_FILE) expansion
+		submit_hash.insert_submit_filename(cmd_file, FileMacroSource);
 #else
 		insert_source(cmd_file, SubmitMacroSet, FileMacroSource);
 		SubmitFileMacroDef.psz = const_cast<char*>(SubmitMacroSet.apool.insert(full_path(cmd_file, false)));
@@ -1931,6 +1948,9 @@ main( int argc, const char *argv[] )
 		if (verbose) { fprintf(stdout, "\n"); }
 #ifdef USE_SUBMIT_UTILS
 		submit_hash.warn_unused(stderr);
+		// if there was an errorstack, then the above populates the errorstack rather than printing to stdout
+		// so we now flush the errstack to stdout.
+		print_errstack(stderr, submit_hash.error_stack());
 #else
 
 		// Force non-zero ref count for DAG_STATUS and FAILED_COUNT
@@ -7067,16 +7087,6 @@ SetSendCredential()
 	InsertJobExpr(buffer);
 }
 
-void
-SetSendCredentialInAd( ClassAd *job_ad )
-{
-	if (!sent_credential_to_credd) {
-		return;
-	}
-
-	// add it to the job ad (starter needs to know this value)
-	job_ad->Assign( ATTR_JOB_SEND_CREDENTIAL, true );
-}
 
 #if !defined(WIN32)
 // this allocates memory, free() it when you're done.
@@ -8056,10 +8066,20 @@ int read_submit_file(FILE * fp)
 
 	if( rval < 0 ) {
 		fprintf (stderr, "\nERROR: on Line %d of submit file: %s\n", FileMacroSource.line, errmsg.c_str());
+#ifdef USE_SUBMIT_UTILS
+		if (submit_hash.error_stack()) {
+			std::string errstk(submit_hash.error_stack()->getFullText());
+			if ( ! errstk.empty()) {
+				fprintf(stderr, "%s", errstk.c_str());
+			}
+			submit_hash.error_stack()->clear();
+		}
+#else
 		if (SubmitMacroSet.errors) {
 			fprintf(stderr, "%s", SubmitMacroSet.errors->getFullText().c_str());
 			SubmitMacroSet.errors->clear();
 		}
+#endif
 	} else {
 		ErrContext.phase = PHASE_QUEUE_ARG;
 
@@ -9722,6 +9742,16 @@ int SendJobCredential()
 	sent_credential_to_credd = true;
 
 	return 0;
+}
+
+void SetSendCredentialInAd( ClassAd *job_ad )
+{
+	if (!sent_credential_to_credd) {
+		return;
+	}
+
+	// add it to the job ad (starter needs to know this value)
+	job_ad->Assign( ATTR_JOB_SEND_CREDENTIAL, true );
 }
 
 #ifdef USE_SUBMIT_UTILS

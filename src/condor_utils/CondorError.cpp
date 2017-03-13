@@ -67,6 +67,10 @@ void CondorError::clear() {
 	}
 }
 
+bool CondorError::empty() {
+	return !_message && !_subsys && !_next;
+}
+
 bool CondorError::pop() {
 	if (_next) {
 		CondorError* tmp = _next->_next;

@@ -28,13 +28,12 @@
 #undef max
 #include <limits>
 
-
 int configured_statistics_window_quantum() {
     int quantum = param_integer("STATISTICS_WINDOW_QUANTUM_DAEMONCORE", INT_MAX, 1, INT_MAX);
     if (quantum >= INT_MAX)
         quantum = param_integer("STATISTICS_WINDOW_QUANTUM_DC", INT_MAX, 1, INT_MAX);
     if (quantum >= INT_MAX)
-        quantum = param_integer("STATISTICS_WINDOW_QUANTUM", 4*60, 1, INT_MAX);
+        quantum = param_integer("STATISTICS_WINDOW_QUANTUM", 1*60, 1, INT_MAX);
 
     return quantum;
 }
@@ -118,6 +117,15 @@ void SelfMonitorData::CollectData(void)
 	registered_socket_count = daemonCore->RegisteredSocketCount();
 
 	cached_security_sessions = daemonCore->getSecMan()->session_cache->count();
+
+	// collect data on the udp port depth
+	if (daemonCore->wants_dc_udp_self()) {
+		int commandPort = daemonCore->InfoCommandPort();
+		if (commandPort > 0) {
+			int udpQueueDepth = SafeSock::recvQueueDepth(daemonCore->InfoCommandPort());
+    		daemonCore->dc_stats.UdpQueueDepth = udpQueueDepth;
+		}
+	}
 
     // Collecting more info is yet to be done
     return;
@@ -227,6 +235,8 @@ void DaemonCore::Stats::Init(bool enable)
    //DC_STATS_ADD_RECENT(Pool, PipeBytes,     IF_BASICPUB);
    DC_STATS_ADD_RECENT(Pool, DebugOuts,     IF_VERBOSEPUB);
    DC_STATS_ADD_RECENT(Pool, PumpCycle,     IF_VERBOSEPUB);
+   STATS_POOL_ADD_VAL(Pool, "DC", UdpQueueDepth,  IF_BASICPUB);
+   STATS_POOL_PUB_PEAK(Pool, "DC", UdpQueueDepth,  IF_BASICPUB);
    DC_STATS_ADD_DEF(Pool, Commands, IF_BASICPUB);
 
    // insert entries that are stored in helper modules

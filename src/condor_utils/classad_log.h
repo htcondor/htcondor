@@ -57,7 +57,7 @@ template <typename AD>
 class ConstructClassAdLogTableEntry : public ConstructLogEntry
 {
 public:
-	virtual ClassAd* New() const { return new AD(); }
+	virtual ClassAd* New(const char * /*key*/, const char * /*mytype*/) const { return new AD(); }
 	virtual void Delete(ClassAd*& val) const { delete val; }
 };
 
@@ -66,7 +66,7 @@ class ConstructClassAdLogTableEntry<ClassAd*> : public ConstructLogEntry
 {
 public:
 	ConstructClassAdLogTableEntry() {}
-	virtual ClassAd* New() const { return new ClassAd(); }
+	virtual ClassAd* New(const char * /*key*/, const char * /*mytype*/) const { return new ClassAd(); }
 	virtual void Delete(ClassAd*& val) const { delete val; }
 };
 

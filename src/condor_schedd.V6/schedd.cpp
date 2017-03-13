@@ -3103,9 +3103,9 @@ service_this_universe(int universe, ClassAd* job)
 }
 
 OwnerInfo *
-Scheduler::incrementRecentlyAdded(const char * owner)
+Scheduler::incrementRecentlyAdded(OwnerInfo * ownerInfo, const char * owner)
 {
-	OwnerInfo * ownerInfo = insert_ownerinfo( owner );
+	if ( ! ownerInfo) { ownerInfo = insert_ownerinfo( owner ); }
 	ownerInfo->num.Hits += 1;
 	ownerInfo->num.JobsRecentlyAdded += 1;
 	return ownerInfo;
