@@ -326,7 +326,13 @@ section~\ref{sec:HA-Config-File-Entries},
 for definitions of these configuration variables.
 
 The \Condor{had} and \Condor{replication} daemons use the
-\Condor{shared\_port} daemon by default.
+\Condor{shared\_port} daemon by default.  If you want to use more than one
+\Condor{had} or \Condor{replication} daemon with the \Condor{shared\_port}
+daemon under the same master, you must configure those additional daemons
+to use nondefault socket names.  (Set the \texttt{-sock} option in
+\MacroNI{<NAME>\_ARGS}.)  Because the \Condor{had} daemon must know the
+\Condor{replication} daemon's address a priori, you will also need to set
+\MacroNI{<NAME>.REPLICATION\_SOCKET\_NAME} appropriately.
 
 The stabilization period is the time it takes for the
 \Condor{had} daemons
