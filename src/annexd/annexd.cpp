@@ -34,6 +34,8 @@
 #include "stat_wrapper.h"
 #include "condor_base64.h"
 
+#include "my_username.h"
+
 // Although the annex daemon uses a GAHP, it doesn't have a schedd managing
 // its hard state in an existing job ad; it has to do that job on its own.
 ClassAdCollection * commandState;
@@ -524,11 +526,11 @@ createConfigTarball(	const char * configDir,
 
 	// Must be readable by the 'condor' user on the instance, but it
 	// will be owned by root.
-	int fd = safe_open_wrapper_follow( "99ec2-dynamic.config",
+	int fd = safe_open_wrapper_follow( "00ec2-dynamic.config",
 		O_WRONLY | O_CREAT | O_TRUNC, 0644 );
 	if( fd < 0 ) {
 		formatstr( tarballError, "Failed to open config file '%s' for writing: '%s' (%d).\n",
-			"99ec2-dynamic.config", strerror( errno ), errno );
+			"00ec2-dynamic.config", strerror( errno ), errno );
 		return false;
 	}
 
@@ -541,6 +543,20 @@ createConfigTarball(	const char * configDir,
 		formatstr( tarballError, "COLLECTOR_HOST empty or undefined, aborting.\n" );
 		return false;
 	}
+
+	//
+	// A job's Owner attribute is almost aways set by condor_submit to be
+	// the return of my_username(), and this value is checked by the schedd.
+	//
+	// However, if the user submitted their jobs with +Owner = undefined,
+	// then what the mapfile says goes.  Rather than have this variable
+	// be configurable (because we may end up where condor_annex doesn't
+	// have per-user configuration), just require users in this rare
+	// situation to run condor_ping -type schedd WRITE and use the
+	// answer in a config directory (or command-line argument, if that
+	// becomes a thing) for setting the START expression.
+	//
+	std::string owner = my_username();
 
 	std::string contents;
 	formatstr( contents,
@@ -562,17 +578,20 @@ createConfigTarball(	const char * configDir,
 		"MASTER_ATTRS = $(MASTER_ATTRS) AnnexName\n"
 		"\n"
 		"STARTD_NOCLAIM_SHUTDOWN = %ld\n"
+		"\n"
+		"START = Owner =?= %s\n"
 		"\n",
-		collectorHost.c_str(), passwordFile.c_str(), annexName, unclaimedTimeout );
+		collectorHost.c_str(), passwordFile.c_str(),
+			annexName, unclaimedTimeout, owner.c_str() );
 
 	rv = write( fd, contents.c_str(), contents.size() );
 	if( rv == -1 ) {
 		formatstr( tarballError, "Error writing to '%s': '%s' (%d).\n",
-			"99ec2-dynamic.config", strerror( errno ), errno );
+			"00ec2-dynamic.config", strerror( errno ), errno );
 		return false;
 	} else if( rv != (int)contents.size() ) {
 		formatstr( tarballError, "Short write to '%s': '%s' (%d).\n",
-			"99ec2-dynamic.config", strerror( errno ), errno );
+			"00ec2-dynamic.config", strerror( errno ), errno );
 		return false;
 	}
 	close( fd );
@@ -738,7 +757,7 @@ help( const char * argv0 ) {
 		"To customize the annex's HTCondor configuration:\n"
 		"\t[-config-dir </full/path/to/config.d>]\n"
 		"\n"
-		"To set an instance's user data:\n"
+		"To set the instances' user data:\n"
 		"\t[-aws-[default-]user-data[-file] <data|path/to/file> ]\n"
 		"\n"
 		"To customize an AWS on-demand annex:\n"
@@ -794,6 +813,7 @@ argv = _argv;
 	const char * sfrLeaseFunctionARN = NULL;
 	const char * odiLeaseFunctionARN = NULL;
 	const char * odiInstanceType = NULL;
+	bool odiInstanceTypeSpecified = false;
 	const char * odiImageID = NULL;
 	const char * odiInstanceProfileARN = NULL;
 	const char * odiS3ConfigPath = NULL;
@@ -802,7 +822,9 @@ argv = _argv;
 	bool annexTypeIsSFR = false;
 	bool annexTypeIsODI = false;
 	long int unclaimedTimeout = 0;
+	bool unclaimedTimeoutSpecified = false;
 	long int leaseDuration = 0;
+	bool leaseDurationSpecified = false;
 	long int count = 0;
 	for( int i = 1; i < argc; ++i ) {
 		if( is_dash_arg_prefix( argv[i], "aws-ec2-url", 11 ) ) {
@@ -949,6 +971,7 @@ argv = _argv;
 			++i;
 			if( argv[i] != NULL ) {
 				odiInstanceType = argv[i];
+				odiInstanceTypeSpecified = true;
 				continue;
 			} else {
 				fprintf( stderr, "%s: -aws-on-demand-instance-type requires an argument.\n", argv[0] );
@@ -1004,9 +1027,9 @@ argv = _argv;
 			if( argv[i] != NULL ) {
 				char * endptr = NULL;
 				const char * ld = argv[i];
-				// leaseDuration = strtol( ld, & endptr, 0 );
 				double fractionHours = strtod( ld, & endptr );
 				leaseDuration = fractionHours * 60 * 60;
+				leaseDurationSpecified = true;
 				if( * endptr != '\0' ) {
 					fprintf( stderr, "%s: -duration accepts a decimal number of hours.\n", argv[0] );
 					return 1;
@@ -1025,9 +1048,9 @@ argv = _argv;
 			if( argv[i] != NULL ) {
 				char * endptr = NULL;
 				const char * ut = argv[i];
-				// unclaimedTimeout = strtol( ut, & endptr, 0 );
 				double fractionalHours = strtod( ut, & endptr );
 				unclaimedTimeout = fractionalHours * 60 * 60;
+				unclaimedTimeoutSpecified = true;
 				if( * endptr != '\0' ) {
 					fprintf( stderr, "%s: -idle accepts a decimal number of hours.\n", argv[0] );
 					return 1;
@@ -1333,27 +1356,35 @@ argv = _argv;
 	if( annexTypeIsODI ) {
 		fprintf( stdout,
 			"Will request %ld %s on-demand instance%s for %.2f hours.  "
-			"Each instance will terminate after being idle for %.2f hours.\n"
-			"To change the instance type, use the -aws-on-demand-instance-type flag.\n"
-			"To change the lease duration, use the -duration flag.\n"
-			"To change how long an idle instance will wait before terminating itself, use the -idle flag.\n",
-				count, odiInstanceType,
-				count == 1 ? "" : "s",
-				leaseDuration / 3600.0,
-				unclaimedTimeout / 3600.0
+			"Each instance will terminate after being idle for %.2f hours.\n",
+			count, odiInstanceType, count == 1 ? "" : "s",
+			leaseDuration / 3600.0, unclaimedTimeout / 3600.0
 		);
+		if(! odiInstanceTypeSpecified) {
+			fprintf( stdout, "To change the instance type, use the -aws-on-demand-instance-type flag.\n" );
+		}
+		if(! leaseDurationSpecified) {
+			fprintf( stdout, "To change the lease duration, use the -duration flag.\n" );
+		}
+		if(! unclaimedTimeoutSpecified) {
+			fprintf( stdout, "To change how long an idle instance will wait before terminating itself, use the -idle flag.\n" );
+		}
 	}
 	if( annexTypeIsSFR ) {
 		fprintf( stdout,
 			"Will request %ld spot instance%s for %.2f hours.  "
-			"Each instance will terminate after being idle for %.2f hours.\n"
-			"To change the lease duration, use the -duration flag.\n"
-			"To change the how long an idle instance will wait before terminating itself, use the -idle flag.\n",
-				count,
-				count == 1 ? "" : "s",
-				leaseDuration / 3600.0,
-				unclaimedTimeout / 3600.0
+			"Each instance will terminate after being idle for %.2f hours.\n",
+			count,
+			count == 1 ? "" : "s",
+			leaseDuration / 3600.0,
+			unclaimedTimeout / 3600.0
 		);
+		if(! leaseDurationSpecified) {
+			fprintf( stdout, "To change the lease duration, use the -duration flag.\n" );
+		}
+		if(! unclaimedTimeoutSpecified) {
+			fprintf( stdout, "To change how long an idle instance will wait before terminating itself, use the -idle flag.\n" );
+		}
 	}
 
 
