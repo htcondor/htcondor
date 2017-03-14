@@ -103,6 +103,7 @@ CondorQuery::
 CondorQuery (AdTypes qType)
 {
 	genericQueryType = NULL;
+	resultLimit = 0;
 	queryType = qType;
 	switch (qType)
 	{
@@ -402,7 +403,7 @@ addORConstraint (const char *value)
 // for daemons like the schedd that may have thousands of
 // superflous statistics in the ad.
 bool
-CondorQuery::setLocationLookup(const std::string &location)
+CondorQuery::setLocationLookup(const std::string &location, bool want_one_result /*=true*/)
 {
 	extraAttrs.InsertAttr(ATTR_LOCATION_QUERY, location);
 
@@ -419,6 +420,7 @@ CondorQuery::setLocationLookup(const std::string &location)
 	}
 
 	setDesiredAttrs(attrs);
+	if (want_one_result) { setResultLimit(1); }
 	return true;
 }
 
@@ -522,6 +524,7 @@ getQueryAd (ClassAd &queryAd)
 	ExprTree *tree;
 
 	queryAd = extraAttrs;
+	if (resultLimit > 0) { queryAd.Assign(ATTR_LIMIT_RESULTS, resultLimit); }
 
 	result = (QueryResult) query.makeQuery (tree);
 	if (result != Q_OK) return result;

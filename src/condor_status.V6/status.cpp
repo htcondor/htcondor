@@ -183,6 +183,7 @@ bool        expert = false;
 bool		wide_display = false; // when true, don't truncate field data
 bool		invalid_fields_empty = false; // when true, print "" instead of "[?]" for missing data
 const char * mode_constraint = NULL; // constraint set by mode
+int			result_limit = 0; // max number of results we want back.
 int			diagnose = 0;
 const char* diagnostics_ads_file = NULL; // filename to write diagnostics query ads to, from -diagnose:<filename>
 char*		direct = NULL;
@@ -218,7 +219,7 @@ void secondPass (int, char *[]);
 // and CondorQ::fetchQueueFromHostAndProcess callbacks.
 // callback should return false to take ownership of the ad
 typedef bool (*FNPROCESS_ADS_CALLBACK)(void* pv, ClassAd * ad);
-static bool read_classad_file(const char *filename, ClassAdFileParseType::ParseType ads_file_format, FNPROCESS_ADS_CALLBACK callback, void* pv, const char * constr);
+static bool read_classad_file(const char *filename, ClassAdFileParseType::ParseType ads_file_format, FNPROCESS_ADS_CALLBACK callback, void* pv, const char * constr, int limit);
 //void prettyPrint(ROD_MAP_BY_KEY &, TrackTotals *);
 ppOption prettyPrintHeadings (bool any_ads);
 void prettyPrintAd(ppOption pps, ClassAd *ad, int output_index, StringList * whitelist, bool fHashOrder);
@@ -708,6 +709,10 @@ main (int argc, char *argv[])
 		query->addANDConstraint(mode_constraint);
 	}
 
+	// set result limit if any is desired.
+	if (result_limit > 0) {
+		query->setResultLimit(result_limit);
+	}
 
 		// if there was a generic type specified
 	if (genericType) {
@@ -1081,7 +1086,7 @@ main (int argc, char *argv[])
 		MyString req; // query requirements
 		q = query->getRequirements(req);
 		const char * constraint = req.empty() ? NULL : req.c_str();
-		if (read_classad_file(ads_file, ads_file_format, process_ads_callback, &ai, constraint)) {
+		if (read_classad_file(ads_file, ads_file_format, process_ads_callback, &ai, constraint, result_limit)) {
 			q = Q_OK;
 		}
 	} else if (NULL != addr) {
@@ -1262,7 +1267,7 @@ int set_status_print_mask_from_stream (
 	return err;
 }
 
-static bool read_classad_file(const char *filename, ClassAdFileParseType::ParseType ads_file_format, FNPROCESS_ADS_CALLBACK callback, void* pv, const char * constr)
+static bool read_classad_file(const char *filename, ClassAdFileParseType::ParseType ads_file_format, FNPROCESS_ADS_CALLBACK callback, void* pv, const char * constr, int limit)
 {
 	bool success = false;
 	if (ads_file_format < ClassAdFileParseType::Parse_long || ads_file_format > ClassAdFileParseType::Parse_auto) {
@@ -1301,12 +1306,15 @@ static bool read_classad_file(const char *filename, ClassAdFileParseType::ParseT
 			if (close_file) { fclose(file); file = NULL; }
 			return false;
 		} else {
+			int index = 0;
+			if (limit <= 0) limit = INT_MAX;
 			success = true;
 			ClassAd * classad;
 			while ((classad = adIter.next(constraint.Expr()))) {
 				if (callback(pv, classad)) {
 					delete classad; // delete unless the callback took ownership.
 				}
+				if (++index >= limit) break;
 			}
 		}
 		file = NULL;
@@ -1377,6 +1385,7 @@ usage ()
 		"\t-target <file>\t\tUse target classad with -format or -af evaluation\n"
 		"\n    and [display-opts] are one or more of\n"
 		"\t-long[:<form>]\t\tDisplay entire classads in format <form>. See -ads\n"
+		"\t-limit <n>\t\tDisplay no more than <n> classads.\n"
 		"\t-sort <expr>\t\tSort ClassAds by expressions. 'no' disables sorting\n"
 		"\t-natural[:off]\t\tUse natural sort order in default output (default=on)\n"
 		"\t-total\t\t\tDisplay totals only\n"
@@ -1603,6 +1612,15 @@ firstPass (int argc, char *argv[])
 		if (is_dash_arg_prefix (argv[i], "help", 1)) {
 			usage ();
 			exit (0);
+		} else
+		if (is_dash_arg_prefix(argv[i], "limit", 2)) {
+			if( !argv[i+1] ) {
+				fprintf( stderr, "%s: -limit requires one additional argument\n", myName );
+				fprintf( stderr, "Use \"%s -help\" for details\n", myName );
+				exit( 1 );
+			}
+			++i;
+			result_limit = atoi(argv[i]);
 		} else
 		if (is_dash_arg_colon_prefix (argv[i], "long", &pcolon, 1)) {
 			ClassAdFileParseType::ParseType parse_type = ClassAdFileParseType::Parse_long;
@@ -1867,6 +1885,10 @@ secondPass (int argc, char *argv[])
 		}
 		if( is_dash_arg_prefix(argv[i],"subsystem", 4) ) {
 			i++;
+			continue;
+		}
+		if (is_dash_arg_prefix(argv[i], "limit", 2)) {
+			++i;
 			continue;
 		}
 		if (is_dash_arg_prefix (argv[i], "format", 1)) {
