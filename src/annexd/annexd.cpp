@@ -512,6 +512,7 @@ main_config() {
 bool
 createConfigTarball(	const char * configDir,
 						const char * annexName,
+						const char * owner,
 						long unclaimedTimeout,
 						std::string & tarballPath,
 						std::string & tarballError ) {
@@ -544,20 +545,6 @@ createConfigTarball(	const char * configDir,
 		return false;
 	}
 
-	//
-	// A job's Owner attribute is almost aways set by condor_submit to be
-	// the return of my_username(), and this value is checked by the schedd.
-	//
-	// However, if the user submitted their jobs with +Owner = undefined,
-	// then what the mapfile says goes.  Rather than have this variable
-	// be configurable (because we may end up where condor_annex doesn't
-	// have per-user configuration), just require users in this rare
-	// situation to run condor_ping -type schedd WRITE and use the
-	// answer in a config directory (or command-line argument, if that
-	// becomes a thing) for setting the START expression.
-	//
-	std::string owner = my_username();
-
 	std::string contents;
 	formatstr( contents,
 		"use security : host_based\n"
@@ -579,10 +566,10 @@ createConfigTarball(	const char * configDir,
 		"\n"
 		"STARTD_NOCLAIM_SHUTDOWN = %ld\n"
 		"\n"
-		"START = Owner =?= %s\n"
+		"START = stringListMember( Owner, \"%s\" )\n"
 		"\n",
 		collectorHost.c_str(), passwordFile.c_str(),
-			annexName, unclaimedTimeout, owner.c_str() );
+			annexName, unclaimedTimeout, owner );
 
 	rv = write( fd, contents.c_str(), contents.size() );
 	if( rv == -1 ) {
@@ -769,6 +756,9 @@ help( const char * argv0 ) {
 		"To use a customize an AWS Spot Fleet annex, specify a JSON config file:\n"
 		"\t[-aws-spot-fleet-config-file </full/path/to/config.json>]\n"
 		"\n"
+		"To specify who may use your annex:\n"
+		"\t[-owner <username[, username]*>\n"
+		"\n"
 		"To reprint this help:\n"
 		"\t[-help]\n"
 		"\n"
@@ -826,6 +816,8 @@ argv = _argv;
 	long int leaseDuration = 0;
 	bool leaseDurationSpecified = false;
 	long int count = 0;
+	char * owner = NULL;
+	bool ownerSpecified = false;
 	for( int i = 1; i < argc; ++i ) {
 		if( is_dash_arg_prefix( argv[i], "aws-ec2-url", 11 ) ) {
 			++i;
@@ -917,6 +909,16 @@ argv = _argv;
 				continue;
 			} else {
 				fprintf( stderr, "%s: -config-dir requires an argument.\n", argv[0] );
+				return 1;
+			}
+		} else if( is_dash_arg_prefix( argv[i], "owner", 5 ) ) {
+			++i;
+			if( argv[i] != NULL ) {
+				owner = argv[i];
+				ownerSpecified = true;
+				continue;
+			} else {
+				fprintf( stderr, "%s: -owner requires an argument.\n", argv[0] );
 				return 1;
 			}
 		} else if( is_dash_arg_prefix( argv[i], "aws-spot-fleet-config-file", 22 ) ) {
@@ -1290,8 +1292,24 @@ argv = _argv;
 		}
 	}
 
+
+	//
+	// A job's Owner attribute is almost aways set by condor_submit to be
+	// the return of my_username(), and this value is checked by the schedd.
+	//
+	// However, if the user submitted their jobs with +Owner = undefined,
+	// then what the mapfile says goes.  Rather than have this variable
+	// be configurable (because we may end up where condor_annex doesn't
+	// have per-user configuration), just require users in this rare
+	// situation to run condor_ping -type schedd WRITE and use the
+	// answer in a config directory (or command-line argument, if that
+	// becomes a thing) for setting the START expression.
+	//
+
 	std::string tarballPath, tarballError;
-	bool createdTarball = createConfigTarball( tempDir, annexName, unclaimedTimeout, tarballPath, tarballError );
+	if(! ownerSpecified) { owner = my_username(); }
+	bool createdTarball = createConfigTarball( tempDir, annexName, owner, unclaimedTimeout, tarballPath, tarballError );
+	if(! ownerSpecified) { free( owner ); }
 
 	// FIXME: Rewrite without system().
 	std::string cmd;
