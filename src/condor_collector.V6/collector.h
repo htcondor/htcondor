@@ -138,12 +138,20 @@ public:
 
     static OfflineCollectorPlugin offline_plugin_;
 
+	static const int HandleQueryInProcNever = 0x0000;
+	static const int HandleQueryInProcSmallTable = 0x0001;
+	static const int HandleQueryInProcSmallQuery = 0x0002;
+	static const int HandleQueryInProcSmallTableAndQuery = 0x0003;
+	static const int HandleQueryInProcSmallTableOrQuery = 0x0004;
+	static const int HandleQueryInProcAlways = 0xFFFF;
+
 protected:
 	static CollectorStats collectorStats;
 	static CollectorEngine collector;
 	static Timeslice view_sock_timeslice;
     static std::vector<vc_entry> vc_list;
 
+	static int HandleQueryInProcPolicy;	// one of above HandleQueryInProc* constants
 	static int ClientTimeout;
 	static int QueryTimeout;
 	static char* CollectorName;
@@ -154,6 +162,7 @@ protected:
 	static ClassAd* __query__;
 	static List<ClassAd>* __ClassAdResultList__;
 	static int __numAds__;
+	static int __resultLimit__;
 	static int __failed__;
 	static std::string __adType__;
 	static ExprTree *__filter__;

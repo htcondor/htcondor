@@ -64,6 +64,7 @@ extern "C" char* CondorPlatform( void );
 
 CollectorStats CollectorDaemon::collectorStats( false, 0 );
 CollectorEngine CollectorDaemon::collector( &collectorStats );
+int CollectorDaemon::HandleQueryInProcPolicy = HandleQueryInProcSmallTableAndQuery;
 int CollectorDaemon::ClientTimeout;
 int CollectorDaemon::QueryTimeout;
 char* CollectorDaemon::CollectorName;
@@ -72,6 +73,7 @@ vector<CollectorDaemon::vc_entry> CollectorDaemon::vc_list;
 
 ClassAd* CollectorDaemon::__query__;
 int CollectorDaemon::__numAds__;
+int CollectorDaemon::__resultLimit__;
 int CollectorDaemon::__failed__;
 List<ClassAd>* CollectorDaemon::__ClassAdResultList__;
 std::string CollectorDaemon::__adType__;
@@ -110,6 +112,8 @@ CCBServer *CollectorDaemon::m_ccb_server;
 bool CollectorDaemon::filterAbsentAds;
 
 //---------------------------------------------------------
+
+
 
 // prototypes of library functions
 typedef void (*SIGNAL_HANDLER)();
@@ -386,26 +390,46 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 	bool is_locate = cad.Lookup(ATTR_LOCATION_QUERY) != NULL;
 	if (is_locate) { rt.runtime = &HandleLocate_runtime; }
 
+	// Figure out whether to handle the query inline or to fork.
+	bool handle_in_proc = false;
+	if (HandleQueryInProcPolicy == HandleQueryInProcAlways) {
+		handle_in_proc = true;
+	} else if (HandleQueryInProcPolicy == HandleQueryInProcNever) {
+		handle_in_proc = false;
+	} else {
+		bool is_bigtable = ((whichAds == GENERIC_AD) || (whichAds == ANY_AD) || (whichAds == STARTD_PVT_AD) || (whichAds == STARTD_AD) || (whichAds == MASTER_AD));
+		if (HandleQueryInProcPolicy == HandleQueryInProcSmallTable) {
+			handle_in_proc = !is_bigtable;
+		} else {
+			bool small_query = is_locate;
+			if ( ! is_locate) {
+				long long result_limit = 0;
+				bool has_limit = cad.EvaluateAttrInt(ATTR_LIMIT_RESULTS, result_limit);
+				bool has_projection = cad.Lookup(ATTR_PROJECTION);
+				small_query = has_projection && has_limit && (result_limit < 10);
+			}
+			switch (HandleQueryInProcPolicy) {
+				case HandleQueryInProcSmallQuery: handle_in_proc = small_query; break;
+				case HandleQueryInProcSmallTableAndQuery: handle_in_proc = !is_bigtable && small_query; break;
+				case HandleQueryInProcSmallTableOrQuery: handle_in_proc = !is_bigtable || small_query; break;
+			}
+		}
+	}
+
 	if (whichAds != (AdTypes) -1) {
 
-			// only fork to handle the query for the "big" tables
-		if ((whichAds == GENERIC_AD) || 
-			(whichAds == ANY_AD) || 
-			(whichAds == STARTD_PVT_AD) || 
-			(whichAds == STARTD_AD) || 
-			(whichAds == MASTER_AD)) {
-
-				fork_status = forkQuery.NewJob();
-				if ( FORK_PARENT == fork_status) {
-				#ifndef WIN32
-					if (is_locate) { rt.runtime = &HandleLocateForked_runtime; } else { rt.runtime = &HandleQueryForked_runtime; }
-				#endif
-					return 1;
-				} else {
-				#ifndef WIN32
-					if (is_locate) { rt.runtime = &HandleLocateMissedFork_runtime; } else { rt.runtime = &HandleQueryMissedFork_runtime; }
-				#endif
-				}
+		if ( ! handle_in_proc) { // only fork to handle the query for the "big" tables
+			fork_status = forkQuery.NewJob();
+			if ( FORK_PARENT == fork_status) {
+			#ifndef WIN32
+				if (is_locate) { rt.runtime = &HandleLocateForked_runtime; } else { rt.runtime = &HandleQueryForked_runtime; }
+			#endif
+				return 1;
+			} else {
+			#ifndef WIN32
+				if (is_locate) { rt.runtime = &HandleLocateMissedFork_runtime; } else { rt.runtime = &HandleQueryMissedFork_runtime; }
+			#endif
+			}
 		}
 		// small table query / Child / Fork failed / busy
 		process_query_public (whichAds, &cad, &results);
@@ -505,7 +529,7 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 	end_write.getTime();
 
 	dprintf (D_ALWAYS,
-			 "Query info: matched=%d; skipped=%d; query_time=%f; send_time=%f; type=%s; requirements={%s}; locate=%d; peer=%s; projection={%s}\n",
+			 "Query info: matched=%d; skipped=%d; query_time=%f; send_time=%f; type=%s; requirements={%s}; locate=%d; limit=%d; peer=%s; projection={%s}\n",
 			 __numAds__,
 			 __failed__,
 			 end_query.difference(begin),
@@ -513,6 +537,7 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 			 AdTypeToString(whichAds),
 			 ExprTreeToString(__filter__),
 			 is_locate,
+			 (__resultLimit__ == INT_MAX) ? 0 : __resultLimit__,
 			 sock->peer_description(),
 			 projection.c_str());
 
@@ -1049,6 +1074,9 @@ int CollectorDaemon::query_scanFunc (ClassAd *cad)
 		// Found a match 
         __numAds__++;
 		__ClassAdResultList__->Append(cad);
+		if (__numAds__ >= __resultLimit__) {
+			return 0; // tell it to stop iterating, we have all the results we want
+		}
     } else {
 		__failed__++;
 	}
@@ -1083,6 +1111,11 @@ void CollectorDaemon::process_query_public (AdTypes whichAds,
 	if ( __filter__ == NULL ) {
 		dprintf (D_ALWAYS, "Query missing %s\n", ATTR_REQUIREMENTS );
 		return;
+	}
+
+	__resultLimit__ = INT_MAX; // no limit
+	if ( ! query->LookupInteger(ATTR_LIMIT_RESULTS, __resultLimit__) || __resultLimit__ <= 0) {
+		__resultLimit__ = INT_MAX; // no limit
 	}
 
 	// See if we should exclude Collector Ads from generic queries.  Still
@@ -1394,6 +1427,29 @@ void CollectorDaemon::Config()
 
     if (CollectorName) free (CollectorName);
     CollectorName = param("COLLECTOR_NAME");
+
+	HandleQueryInProcPolicy = HandleQueryInProcSmallTableOrQuery;
+	auto_free_ptr policy(param("HANDLE_QUERY_IN_PROC_POLICY"));
+	if (policy) {
+		bool boolval;
+		if (string_is_boolean_param(policy, boolval)) {
+			HandleQueryInProcPolicy = boolval ? HandleQueryInProcAlways : HandleQueryInProcNever;
+		} else if (YourStringNoCase("always") == policy) {
+			HandleQueryInProcPolicy = HandleQueryInProcAlways;
+		} else if (YourStringNoCase("never") == policy) {
+			HandleQueryInProcPolicy = HandleQueryInProcNever;
+		} else if (YourStringNoCase("small_table") == policy) {
+			HandleQueryInProcPolicy = HandleQueryInProcSmallTable;
+		} else if (YourStringNoCase("small_query") == policy) {
+			HandleQueryInProcPolicy = HandleQueryInProcSmallQuery;
+		} else if (YourStringNoCase("small_table_or_query") == policy) {
+			HandleQueryInProcPolicy = HandleQueryInProcSmallTableOrQuery;
+		} else if (YourStringNoCase("small_table_and_query") == policy) {
+			HandleQueryInProcPolicy = HandleQueryInProcSmallTableAndQuery;
+		} else {
+			dprintf(D_ALWAYS, "Unknown value for HANDLE_QUERY_IN_PROC_POLICY, using default of SMALL_TABLE_OR_QUERY");
+		}
+	}
 
 	// handle params for Collector updates
 	if ( UpdateTimerId >= 0 ) {
