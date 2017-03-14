@@ -1433,7 +1433,11 @@ void CollectorDaemon::Config()
 	if (policy) {
 		bool boolval;
 		if (string_is_boolean_param(policy, boolval)) {
-			HandleQueryInProcPolicy = boolval ? HandleQueryInProcAlways : HandleQueryInProcNever;
+			if( boolval ) {
+				HandleQueryInProcPolicy = HandleQueryInProcAlways;
+			} else {
+				HandleQueryInProcPolicy = HandleQueryInProcNever;
+			}
 		} else if (YourStringNoCase("always") == policy) {
 			HandleQueryInProcPolicy = HandleQueryInProcAlways;
 		} else if (YourStringNoCase("never") == policy) {
