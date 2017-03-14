@@ -49,14 +49,6 @@ THREAD_LOCAL_STORAGE static priv_state CurrentPrivState = PRIV_UNKNOWN;
 static priv_state CurrentPrivState = PRIV_UNKNOWN;
 #endif
 
-#ifdef LINUX
-static int   CurrentSessionKeyring;
-static uid_t CurrentSessionKeyringUID;
-static int   PreviousSessionKeyring;
-static uid_t PreviousSessionKeyringUID;
-static pid_t SessionKeyringPID = 0;
-#endif
-
 priv_state
 get_priv_state(void)
 {
@@ -1443,7 +1435,7 @@ set_file_owner_ids( uid_t uid, gid_t gid )
   #define KEY_SPEC_SESSION_KEYRING        -3      /* - key ID for session-specific keyring */
   #define KEY_SPEC_USER_KEYRING           -4      /* - key ID for UID-specific keyring */
   #define KEY_SPEC_INVALID_KEYRING        -99     /* - key ID for "invalid keyring" */
-  #define KEY_SPEC_INVALID_UID            -99     /* - user ID for "invalid user" */
+  #define KEY_SPEC_INVALID_UID            -1      /* - user ID for "invalid user" */
 #endif  // of ifndef KEYCTL_JOIN_SESSION_KEYRING
 
 // helper functions to avoid importing libkeyutils
@@ -1459,9 +1451,11 @@ static long condor_keyctl_link(key_serial_t k, key_serial_t r) {
   return syscall(__NR_keyctl, KEYCTL_LINK, k, r);
 }
 
-static long condor_keyctl_unlink(key_serial_t k, key_serial_t r) {
-  return syscall(__NR_keyctl, KEYCTL_UNLINK, k, r);
-}
+static int   CurrentSessionKeyring = KEY_SPEC_INVALID_KEYRING;
+static uid_t CurrentSessionKeyringUID = KEY_SPEC_INVALID_UID;
+static int   PreviousSessionKeyring = KEY_SPEC_INVALID_KEYRING;
+static uid_t PreviousSessionKeyringUID = KEY_SPEC_INVALID_UID;
+
 #endif
 
 
@@ -1515,29 +1509,47 @@ _set_priv(priv_state s, const char *file, int line, int dologging)
 #ifdef LINUX
 		if(should_use_keyring_sessions()) {
 
-			// if we were in priv user and are switching out, we need to unlink
-			// the keyring holding the user's AFS token.  we can assume that these
-			// structures exist since they were initialized when going INTO user priv.
+			// capture current priv state.  we will need to become root to link/unlink keys,
+			// create new sessions, etc.  but if we need to switch back to PRIV_UNKNOWN, or
+			// hit the 'default' case in the switch statement below, the result should be
+			// that we didn't change euid or egid.
+			uid_t saveeuid = geteuid();
+			uid_t saveegid = getegid();
+
+
+			// no matter what state we're switching to, we always create a new
+			// session.  that way we drop the user's creds if switching to condor
+			// or root priv.  we'll have our own keyring if we just recently forked
+			// as well.  and if we're switching to user priv we'll attach the AFS
+			// keyring to this new session.
+			//
+			// creating sessions is cheap and they are garbage
+			// collected very agressively so this is not a problem.
+
+
+			// create a new session
+			set_root_euid();
+			condor_keyctl_session(NULL);
+			key_serial_t sess_keyring = KEY_SPEC_SESSION_KEYRING;
+			if (dologging) dprintf(D_SECURITY, "KEYCTL: New session keyring %i\n", sess_keyring);
+
+
+			// if we were in priv user and are switching out, we record the keyring
+			// id holding the user's AFS token, since it's likely we'll switch back
+			// to it and can avoid looking it up again.
 
 			if(PrevPrivState == PRIV_USER) {
-				// find the user and session keyring
-				key_serial_t sess_keyring = KEY_SPEC_SESSION_KEYRING;
-				key_serial_t user_keyring = CurrentSessionKeyring;
-				if (dologging) dprintf(D_SECURITY, "KEYCTL: unlinking keyring %i from %i\n", user_keyring, sess_keyring);
-
-				// unlink current creds as root.
-				set_root_euid();
-				long unlink_success = condor_keyctl_unlink(user_keyring, sess_keyring);
-
-				if (unlink_success == 0) {
-					// update state
-					PreviousSessionKeyring = CurrentSessionKeyring;
-					PreviousSessionKeyringUID = CurrentSessionKeyringUID;
-				} else {
-					PreviousSessionKeyring = KEY_SPEC_INVALID_KEYRING;
-					PreviousSessionKeyringUID = KEY_SPEC_INVALID_UID;
-				}
+				// update state
+				PreviousSessionKeyring = CurrentSessionKeyring;
+				PreviousSessionKeyringUID = CurrentSessionKeyringUID;
 			}
+
+			// restore us to the same euid and egid as when we were called.
+			// the if statements are there just to avoid a compiler warning
+			// about not checking the return value.
+			set_root_euid();
+			if(setegid(saveegid)) {}
+			if(seteuid(saveeuid)) {}
 		}
 #endif
 
@@ -1556,26 +1568,6 @@ _set_priv(priv_state s, const char *file, int line, int dologging)
 // we can only use linux-specific kernel keyrings
 #ifdef LINUX
 			if(should_use_keyring_sessions()) {
-
-				// if we're going to be using USER_PRIV states at all, we need to have
-				// our own session keyring per-process.  we accomplish this with static
-				// variables and by checking our pid to see if we fork()ed.  The initial
-				// value of SessionKeyringPID is zero, so the first time through we'll
-				// always create a new session.  Then, only of our pid changes.
-
-				pid_t curpid = getpid();
-				if((SessionKeyringPID != curpid)) {
-					set_root_euid();
-					// create a new session
-					condor_keyctl_session(NULL);
-					key_serial_t sess_keyring = KEY_SPEC_SESSION_KEYRING;
-					if (dologging) dprintf(D_SECURITY,
-						"KEYCTL: oldpid: %i, newpid: %i.  New session keyring %i\n",
-						SessionKeyringPID, curpid, sess_keyring);
-
-					SessionKeyringPID = curpid;
-				}
-
 
 				// First, see if we can simply attach the previously-used keyring
 				if(UserUid != PreviousSessionKeyringUID) {
@@ -1614,7 +1606,7 @@ _set_priv(priv_state s, const char *file, int line, int dologging)
 
 
 				// only link if there's something to link to
-				if(CurrentSessionKeyring != KEY_SPEC_INVALID_KEYRING) {
+				if(CurrentSessionKeyringUID != (uid_t)KEY_SPEC_INVALID_UID) {
 					set_root_euid();
 					// locate the session keyring and uid 0 keyring.
 					key_serial_t user_keyring = CurrentSessionKeyring;
