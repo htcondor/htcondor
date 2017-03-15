@@ -302,3 +302,9 @@ lib_procapi_pidtracking-snapshot: personal
 lib_unit_tests: personal
 lib_userlog: personal
 config_validate_policy_templates: personal
+job_ckpt_f-areauc_std: personal, IPv4
+job_ckpt_f-floats_std: personal, IPv4
+job_ckpt_f-integers_std: personal, IPv4
+job_ckpt_f-printer_std: personal, IPv4
+job_ckpt_f-reader_std: personal, IPv4
+job_rsc_f-direct-write_std: personal, IPv4
