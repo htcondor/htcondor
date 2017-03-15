@@ -295,6 +295,8 @@ createOneAnnex( ClassAd * command, Stream * replyStream, ClassAd * reply ) {
 	}
 	scratchpad->Assign( "CommandID", commandID );
 
+	// FIXME: considering the code in generateClientToken(), does any of
+	// this make sense anymore?
 	// The annex ID will form part of the SFR (or ODI) client token, which
 	// allows the corresponding lease function to cnacel them all without
 	// having to continually add or update the target(s) in the lease.  Since
@@ -1268,12 +1270,15 @@ argv = _argv;
 	spotFleetRequest.Assign( "EndOfLease", now + leaseDuration );
 
 	std::string tarballTarget;
-	param( tarballTarget, "ANNEX_DEFAULT_S3_CONFIG_PATH" );
+	param( tarballTarget, "ANNEX_DEFAULT_S3_BUCKET" );
 	if( odiS3ConfigPath != NULL ) {
 		tarballTarget = odiS3ConfigPath;
+	} else {
+		formatstr( tarballTarget, "%s/config-%s.tar.gz",
+			tarballTarget.c_str(), annexName );
 	}
 	if( tarballTarget.empty() ) {
-		fprintf( stderr, "If you don't specify -aws-s3-config-path, ANNEX_DEFAULT_S3_CONFIG_PATH must be set in configuration.\n" );
+		fprintf( stderr, "If you don't specify -aws-s3-config-path, ANNEX_DEFAULT_S3_BUCKET must be set in configuration.\n" );
 		return 1;
 	}
 	spotFleetRequest.Assign( "UploadTo", tarballTarget );

@@ -1,6 +1,7 @@
 #include <string>
 #include "generate-id.h"
 #include <uuid/uuid.h>
+#include "stl_string_utils.h"
 
 // Stolen from EC2Job::build_client_token in condor_gridmanager/ec2job.cpp.
 void
@@ -27,36 +28,30 @@ void
 generateClientToken(	const std::string & annexID,
 						std::string & clientToken ) {
 	//
-	// Each client token must be unique, even across daemon restarts.  We
-	// therefore can't just use a counter, unless we want to add more hard
-	// state.  However, the following obvious approach truncates eight of
-	// the second UUID's sixteen bytes.  This seems unlikely to cause problems,
-	// but if it does, we could compact the annex ID where we make it and
-	// the client randomizer here by eliding the dashes in their ASCII.
+	// Client tokens must be no more than 64 (ASCII) characters long, and
+	// they must be unique across daemon restarts.  Rather than use a
+	// counter (or whatever) and add more hard state, we just use a UUID.
 	//
-	// The preceding text is obsolete now that we've made the annex ID the
-	// (user-supplied) annex name.  This simplifies identifying which of the
-	// bits on EC2 belong to which annex, and potentially makes room for
-	// more of the uniquifier we're adding.  (We could actually enforce
-	// that annex names are only 25 characters long.)
+	// FIXME: enforce the 27-character limit at the command-line.  Otherwise,
+	// we can't rely on the annex IDs being unique (on a per-user basis).
 	//
-	// However, because of the cap on the number of rules, we'd like to
-	// be able to use one rule per annex; the easiest way to do that is
-	// to have the rule and target be identified by the annex in question.
-	// This should mostly already just work, with the last annex command
-	// to that name winning.  That would get us up to a number of annexes
-	// equal to the number of permitted Rules (50, by default); additional
-	// cleverness may allow us to use multiple Targets per rule (max 5?).
+	// Our current set-up uses one rule per annex, so with the default
+	// limits, each user account can support fifty annexes.  Additional
+	// cleverness may allow us to add up to four more targets per rule
+	// (but it's unclear how we'd consistently map a target annex name
+	// to the same rule).
 	//
-	// We could even put a list in each target (with some rewriting) of
-	// prefix/lease-expiration pairs, but race conditions there might be
-	// a serious problem.  More investigation required.
+	// It shouldn't be too hard to convert the lease function to accept
+	// a list of annex-ID / expiration-date pairs, but updating the
+	// argument list in the target seems like an even better way than
+	// the preceding to have race conditions.
 	//
-	// The more serious multi-annex usability issue relates to the config
-	// tarball, but that's for another comment...
+	// We insert the '_' in the middle so that we can reliably identify the
+	// beginning of the UUID (the last place an underscore appears), which
+	// is necessarily the end of the annex ID, which we want to use in
+	// the instance to select a config tarball to download.
 	//
 	generateUUID( clientToken );
-	clientToken = annexID + clientToken;
-	clientToken.resize( 64 );
+	formatstr( clientToken, "%.27s_%.36s", annexID.c_str(), clientToken.c_str() );
 }
 

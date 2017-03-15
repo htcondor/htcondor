@@ -23,7 +23,7 @@ GetOptions(
 		},
 		"S3FileName" => {
 			Type => "String",
-			Default => "config.tar.gz"
+			Default => "config-*.tar.gz"
 		}
 	};
 
@@ -83,7 +83,8 @@ GetOptions(
 									"iam:GetPolicy",
 									"iam:GetPolicyVersion",
 									"iam:ListAttachedRolePolicies",
-									"iam:ListRolePolicies"
+									"iam:ListRolePolicies",
+									"ec2:DescribeInstances"
 								],
 								Resource => "*"
 							}

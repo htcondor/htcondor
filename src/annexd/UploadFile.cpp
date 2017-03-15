@@ -16,7 +16,7 @@ UploadFile::operator() () {
 	fileName = uploadTo.substr( separator + 1 );
 	if( bucketName.empty() || fileName.empty() ) {
 		std::string message;
-		formatstr( message, "Invalid upload-from specifier '%s'; "
+		formatstr( message, "Invalid upload-to specifier '%s'; "
 			"must have the form <bucketName>/<fileName>.\n",
 			uploadFrom.c_str() );
 		dprintf( D_ALWAYS, "%s\n", message.c_str() );
