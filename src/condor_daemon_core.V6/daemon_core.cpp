@@ -9125,8 +9125,10 @@ DaemonCore::HandleDC_SIGCHLD(int sig)
 			}
 
 			if( errno == ECHILD || errno == EAGAIN || errno == 0 ) {
+				/* 
 				dprintf( D_FULLDEBUG,
 						 "DaemonCore: No more children processes to reap.\n" );
+				*/
 			} else {
 					// If it's not what we expect, we want D_ALWAYS
 				dprintf( D_ALWAYS, "waitpid() returned %d, errno = %d\n",
