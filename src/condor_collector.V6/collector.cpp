@@ -93,9 +93,6 @@ int CollectorDaemon::machinesClaimed;
 int CollectorDaemon::machinesOwner;
 int CollectorDaemon::startdNumAds;
 
-
-ForkWork CollectorDaemon::forkQuery;
-
 ClassAd* CollectorDaemon::ad;
 CollectorList* CollectorDaemon::collectorsToUpdate;
 DCCollector* CollectorDaemon::worldCollector;
@@ -110,6 +107,17 @@ StringList *viewCollectorTypes;
 
 CCBServer *CollectorDaemon::m_ccb_server;
 bool CollectorDaemon::filterAbsentAds;
+
+Queue<CollectorDaemon::pending_query_entry_t *> CollectorDaemon::query_queue_high_prio;
+Queue<CollectorDaemon::pending_query_entry_t *> CollectorDaemon::query_queue_low_prio;
+int CollectorDaemon::ReaperId = -1;
+int CollectorDaemon::max_query_workers = 2;
+int CollectorDaemon::max_pending_query_workers = 50;
+int CollectorDaemon::total_dropped_queries = 0;
+int CollectorDaemon::active_query_workers = 0;
+int CollectorDaemon::peak_active_query_workers = 0;
+int CollectorDaemon::pending_query_workers = 0;
+int CollectorDaemon::peak_pending_query_workers = 0;
 
 //---------------------------------------------------------
 
@@ -328,17 +336,21 @@ void CollectorDaemon::Init()
 	// add an exponential moving average counter of updates received.
 	daemonCore->dc_stats.NewProbe("Collector", "UpdatesReceived", AS_COUNT | IS_CLS_SUM_EMA_RATE | IF_BASICPUB);
 
-	forkQuery.Initialize( );
+	// add a reaper for our query threads spawned off via Create_Thread
+	if ( ReaperId == -1 ) {
+		ReaperId = daemonCore->Register_Reaper("CollectorDaemon::QueryReaper",
+						(ReaperHandler)&CollectorDaemon::QueryReaper,
+						"CollectorDaemon::QueryReaper()",NULL);
+	}	
 }
 
 collector_runtime_probe HandleQuery_runtime;
 collector_runtime_probe HandleLocate_runtime;
-#ifndef WIN32
 collector_runtime_probe HandleQueryForked_runtime;
 collector_runtime_probe HandleQueryMissedFork_runtime;
 collector_runtime_probe HandleLocateForked_runtime;
 collector_runtime_probe HandleLocateMissedFork_runtime;
-#endif
+
 
 template <typename T>
 class _condor_variable_auto_accum_runtime : public _condor_runtime
@@ -354,7 +366,13 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 										 int command,
 										 Stream* sock)
 {
-	ClassAd cad;
+	int return_status = TRUE;
+	pending_query_entry_t *query_entry = NULL;
+	bool handle_in_proc;
+	bool is_locate;
+	AdTypes whichAds;
+	ClassAd *cad = new ClassAd();
+	ASSERT(cad);
 
 	_condor_variable_auto_accum_runtime<collector_runtime_probe> rt(&HandleQuery_runtime);
 	//double rt_last = rt.begin;
@@ -367,31 +385,23 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 	sock->timeout(1);
 
 	bool ep = CondorThreads::enable_parallel(true);
-	bool res = !getClassAd(sock, cad) || !sock->end_of_message();
+	bool res = !getClassAd(sock, *cad) || !sock->end_of_message();
 	CondorThreads::enable_parallel(ep);
     if( res )
     {
         dprintf(D_ALWAYS,"Failed to receive query on TCP: aborting\n");
-        return FALSE;
+		return_status = FALSE;
+		goto END;
     }
 
-		// here we set up a network timeout of a longer duration
-	sock->timeout(QueryTimeout);
-
 	// Initial query handler
-	AdTypes whichAds = receive_query_public( command );
+	whichAds = receive_query_public( command );
 
-	UtcTime begin(true);
-
-	// Perform the query
-	List<ClassAd> results;
-	ForkStatus	fork_status = FORK_FAILED;
-	int	   		return_status = 0;
-	bool is_locate = cad.Lookup(ATTR_LOCATION_QUERY) != NULL;
+	is_locate = cad->Lookup(ATTR_LOCATION_QUERY) != NULL;
 	if (is_locate) { rt.runtime = &HandleLocate_runtime; }
 
 	// Figure out whether to handle the query inline or to fork.
-	bool handle_in_proc = false;
+	handle_in_proc = false;
 	if (HandleQueryInProcPolicy == HandleQueryInProcAlways) {
 		handle_in_proc = true;
 	} else if (HandleQueryInProcPolicy == HandleQueryInProcNever) {
@@ -404,8 +414,8 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 			bool small_query = is_locate;
 			if ( ! is_locate) {
 				long long result_limit = 0;
-				bool has_limit = cad.EvaluateAttrInt(ATTR_LIMIT_RESULTS, result_limit);
-				bool has_projection = cad.Lookup(ATTR_PROJECTION);
+				bool has_limit = cad->EvaluateAttrInt(ATTR_LIMIT_RESULTS, result_limit);
+				bool has_projection = cad->Lookup(ATTR_PROJECTION);
 				small_query = has_projection && has_limit && (result_limit < 10);
 			}
 			switch (HandleQueryInProcPolicy) {
@@ -415,45 +425,192 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 			}
 		}
 	}
+	// If we are not allowed any forked query workers, i guess we are going in-proc
+	if ( max_query_workers < 1 ) {
+		handle_in_proc = true;
+	}
 
-	if (whichAds != (AdTypes) -1) {
+	// malloc a query_entry struct.  we must use malloc here, not new, since
+	// DaemonCore::Create_Thread requires a buffer created with malloc(), as it 
+	// will insist on calling free().  Sigh.
+	query_entry = (pending_query_entry_t *) malloc( sizeof(pending_query_entry_t) );
+	ASSERT(query_entry);
+	query_entry->cad = cad;
+	query_entry->is_locate = is_locate;
+	query_entry->sock = sock;
+	query_entry->whichAds = whichAds;
 
-		if ( ! handle_in_proc) { // only fork to handle the query for the "big" tables
-			fork_status = forkQuery.NewJob();
-			if ( FORK_PARENT == fork_status) {
-			#ifndef WIN32
+	// Now we are ready to either invoke a worker thread directly to handle the query,
+	// or enqueue a request to run the worker thread later.
+	if ( handle_in_proc ) {
+		// We want to immediately handle the query inline in this process.
+		// So in this case, we simply directly invoke our worker thread function.
+		dprintf(D_FULLDEBUG,"QueryWorker: about to handle query in-process\n");
+		return_status = receive_query_cedar_worker_thread((void *)query_entry,sock);
+	} else {
+		// Enqueue the query to ultimately run in a forked process created created with
+		// DaemonCore::Create_Thread().  
+		// We add the pending query entry to a queue, and then directly invoke the worker 
+		// thread reaper, as the reaper handles popping entries off the queue and invoking
+		// Create_Thread once where are enough worker slots.
+		// Note in this case, we must return KEEP_STEAM so the socket to our client is not
+		// closed before we handle the request; it will be closed by the reaper ( in parent process)
+		// and/or by daemoncore (in child process).  Either way, don't close it upon exit from this
+		// command handler.
+		int did_we_fork = FALSE;
+		if (active_query_workers + pending_query_workers <  max_query_workers + max_pending_query_workers) {
+			query_queue_low_prio.enqueue( query_entry );
+			did_we_fork = QueryReaper(NULL, -1, -1);
+			cad = NULL; // set this to NULL so we won't delete it below; our reaper will remove it
+			query_entry = NULL; // set this to NULL so we won't free it below; daemoncore will remove it
+			return_status = KEEP_STREAM; // tell daemoncore to not mess with socket when we return
+		} else {
+			dprintf( D_ALWAYS, 
+			"QueryWorker: dropping query request as due to max pending workers of %d ( workers max %d active %d pending %d )\n", 
+			max_pending_query_workers, max_query_workers, active_query_workers, pending_query_workers );
+			total_dropped_queries++;
+		}
+		if ( !daemonCore->DoFakeCreateThread() ) {  // if we are configured to really fork()...
+			if (did_we_fork == TRUE) {
+				// A new worker was forked off
 				if (is_locate) { rt.runtime = &HandleLocateForked_runtime; } else { rt.runtime = &HandleQueryForked_runtime; }
-			#endif
-				return 1;
 			} else {
-			#ifndef WIN32
+				// Did not yet fork off a new worker cuz we are at a limit
 				if (is_locate) { rt.runtime = &HandleLocateMissedFork_runtime; } else { rt.runtime = &HandleQueryMissedFork_runtime; }
-			#endif
 			}
 		}
-		// small table query / Child / Fork failed / busy
-		process_query_public (whichAds, &cad, &results);
+	}
+
+END:
+    // all done
+	delete cad;
+	free(query_entry);
+	return return_status;
+}
+
+
+// Return 1 if forked a worker, 0 if not, and -1 upon an error.
+int CollectorDaemon::QueryReaper(Service *, int pid, int /* exit_status */ )
+{
+	if ( pid >= 0 ) {
+		dprintf(D_FULLDEBUG,
+			"QueryWorker: Child %d done\n", pid);
+		if (active_query_workers > 0 ) {
+			active_query_workers--;
+		}
+	}
+
+	if ( active_query_workers >= max_query_workers ) {
+		// Not currently allowed to fork any more workers, so we're done for now
+		pending_query_workers = query_queue_high_prio.Length() + query_queue_low_prio.Length();
+		peak_pending_query_workers = MAX(peak_pending_query_workers, pending_query_workers);
+		dprintf( D_ALWAYS, 
+			"QueryWorker: delay forking because too many workers ( workers max %d active %d pending %d ) \n", 
+			max_query_workers, active_query_workers, pending_query_workers );
+		return 0;
+	}
+
+	// Pull of an entry from our high_prio queue; if nothing there, grab
+	// one from our low prio queue. 
+	pending_query_entry_t * query_entry = NULL;
+	query_queue_high_prio.dequeue(query_entry);
+	if (query_entry == NULL ) {
+		query_queue_low_prio.dequeue(query_entry);
+	}
+
+	// Now that we pulled off some work, update our pending stats counters
+	pending_query_workers = query_queue_high_prio.Length() + query_queue_low_prio.Length();
+	peak_pending_query_workers = MAX(peak_pending_query_workers, pending_query_workers);
+
+	if ( query_entry == NULL ) {
+		// No pending work to do, so we're done for now
+		return 0;
+	}
+
+	// If we have made it here, we are allowed to fork another worker
+	// to handle the query represented by query_entry. Fork one!
+	// First stash a copy of query_entry->sock and query_entry->cad so 
+	// we can deallocate the memory associated with these after a succesfull 
+	// call to Create_Thread - we need to stash them away because DaemonCore will
+	// free the query_entry struct itself.
+	Stream *sock = query_entry->sock;
+	query_entry->sock = NULL;
+	ClassAd *query_classad = query_entry->cad;
+	int tid = daemonCore->
+		Create_Thread((ThreadStartFunc)&CollectorDaemon::receive_query_cedar_worker_thread,
+		    (void *)query_entry, sock, ReaperId);
+	if (tid == FALSE) {
+		dprintf(D_ALWAYS,
+				"ERROR: Create_Thread failed trying to fork a QueryWorker!\n");
+		free(query_entry); // daemoncore won't free this if Create_Thread fails
+		delete sock;
+		delete query_classad;
+		return -1;
+	}
+
+	// If we made it here, we forked off another worker. 
+
+	// Increment our count of active workers
+	active_query_workers++;
+	peak_active_query_workers = MAX(peak_active_query_workers, active_query_workers);
+
+	// Also close query_entry->sock since DaemonCore
+	// will have cloned this socket for the child, and we have no need to write anything
+	// out here in the parent once the child finishes.
+	delete sock;
+	sock = NULL;
+
+	// Also deallocate the memory associated with the stashed in query_classad.
+	// It is safe to do this now, because if Create_Thread already forked the child
+	// now has a copy, or the Create_Thread ran in-proc it has already completed.
+	delete query_classad;
+	query_classad = NULL;
+
+	dprintf(D_ALWAYS,
+			"QueryWorker: forked new worker with id %d ( workers active %d pending %d )\n",
+			tid, active_query_workers, pending_query_workers);
+
+	return 1;
+}
+
+
+int CollectorDaemon::receive_query_cedar_worker_thread(void *in_query_entry, Stream* sock)
+{
+	int return_status = TRUE;
+	UtcTime begin(true);
+	List<ClassAd> results;
+
+	// Pull out relavent state from query_entry
+	pending_query_entry_t *query_entry = (pending_query_entry_t *) in_query_entry;
+	ClassAd *cad = query_entry->cad;
+	bool is_locate = query_entry->is_locate;
+	AdTypes whichAds = query_entry->whichAds;
+
+	// Perform the query
+
+	if (whichAds != (AdTypes) -1) {
+		process_query_public (whichAds, cad, &results);
 	}
 
 	UtcTime end_write, end_query(true);
 
-	// send the results via cedar
+	// send the results via cedar			
+	sock->timeout(QueryTimeout); // set up a network timeout of a longer duration
 	sock->encode();
 	results.Rewind();
 	ClassAd *curr_ad = NULL;
 	int more = 1;
 	
-
 		// See if query ad asks for server-side projection
 	string projection = "";
 		// turn projection string into a set of attributes
 	classad::References proj;
 	bool evaluate_projection = false;
-	if (cad.LookupString(ATTR_PROJECTION, projection) && ! projection.empty()) {
+	if (cad->LookupString(ATTR_PROJECTION, projection) && ! projection.empty()) {
 		StringTokenIterator list(projection);
 		const std::string * attr;
 		while ((attr = list.next_string())) { proj.insert(*attr); }
-	} else if (cad.Lookup(ATTR_PROJECTION)) {
+	} else if (cad->Lookup(ATTR_PROJECTION)) {
 		// if projection is not a simple string, then assume that evaluating it as a string in the context of the ad will work better
 		// (the negotiator sends this sort of projection)
 		evaluate_projection = true;
@@ -472,17 +629,17 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 			dprintf(D_ALWAYS,"Query includes collector's self ad\n");
 			// update stats in the collector ad before we return it.
 			MyString stats_config;
-			cad.LookupString("STATISTICS_TO_PUBLISH",stats_config);
+			cad->LookupString("STATISTICS_TO_PUBLISH",stats_config);
 			if (stats_config != "stored") {
 				dprintf(D_ALWAYS,"Updating collector stats using a chained ad and config=%s\n", stats_config.Value());
 				stats_ad = new ClassAd();
 				daemonCore->dc_stats.Publish(*stats_ad, stats_config.Value());
 				daemonCore->monitor_data.ExportData(stats_ad, true);
 				collectorStats.publishGlobal(stats_ad, stats_config.Value());
-			#ifndef WIN32
-				stats_ad->InsertAttr("CurrentForkWorkers", forkQuery.getNumWorkers());
-				stats_ad->InsertAttr("PeakForkWorkers", forkQuery.getPeakWorkers());
-			#endif
+				stats_ad->InsertAttr("CurrentForkWorkers", active_query_workers);
+				stats_ad->InsertAttr("PeakForkWorkers", peak_active_query_workers);
+				stats_ad->InsertAttr("PendingForkWorkers", pending_query_workers);
+				stats_ad->InsertAttr("PeakPendingForkWorkers", peak_pending_query_workers);
 				stats_ad->ChainToAd(curr_ad);
 				curr_ad = stats_ad; // send the stats ad instead of the self ad.
 			}
@@ -491,14 +648,21 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 		if (evaluate_projection) {
 			proj.clear();
 			projection.clear();
-			if (cad.EvalString(ATTR_PROJECTION, curr_ad, projection) && ! projection.empty()) {
+			if (cad->EvalString(ATTR_PROJECTION, curr_ad, projection) && ! projection.empty()) {
 				StringTokenIterator list(projection);
 				const std::string * attr;
 				while ((attr = list.next_string())) { proj.insert(*attr); }
 			}
 		}
 
-        if (!sock->code(more) || !putClassAd(sock, *curr_ad, 0, proj.empty() ? NULL : &proj))
+		bool send_failed = (!sock->code(more) || !putClassAd(sock, *curr_ad, 0, proj.empty() ? NULL : &proj));
+        
+		if (stats_ad) {
+			stats_ad->Unchain();
+			delete stats_ad;
+		}
+
+		if (send_failed)
         {
             dprintf (D_ALWAYS,
                     "Error sending query result to client -- aborting\n");
@@ -506,11 +670,7 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 			goto END;
         }
 
-		if (stats_ad) {
-			stats_ad->Unchain();
-			delete stats_ad;
-		}
-    }
+	} // end of while loop for next result ad to send
 
 	// end of query response ...
 	more = 0;
@@ -524,7 +684,6 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 	{
 		dprintf (D_ALWAYS, "Error flushing CEDAR socket\n");
 	}
-	return_status = 1;
 
 	end_write.getTime();
 
@@ -540,12 +699,11 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 			 (__resultLimit__ == INT_MAX) ? 0 : __resultLimit__,
 			 sock->peer_description(),
 			 projection.c_str());
-
-    // all done; let daemon core will clean up connection
 END:
-	if ( FORK_CHILD == fork_status ) {
-		forkQuery.WorkerDone( );		// Never returns
-	}
+	
+	// All done.  Deallocate memory allocated in this method.  Note that DaemonCore 
+	// will supposedly free() the query_entry struct itself and also delete sock.
+
 	return return_status;
 }
 
@@ -1648,6 +1806,10 @@ void CollectorDaemon::Config()
 
 	bool collector_daemon_stats = param_boolean ("COLLECTOR_DAEMON_STATS",true);
 	collectorStats.setDaemonStats( collector_daemon_stats );
+	if (param_boolean("RESET_DC_STATS_ON_RECONFIG",false)) {
+		daemonCore->dc_stats.Clear();
+		collectorStats.global.Clear();
+	}
 
 	history_size = param_integer ("COLLECTOR_DAEMON_HISTORY_SIZE",128);
 	collectorStats.setDaemonHistorySize( history_size );
@@ -1655,8 +1817,8 @@ void CollectorDaemon::Config()
 	time_t garbage_interval = param_integer( "COLLECTOR_STATS_SWEEP", DEFAULT_COLLECTOR_STATS_GARBAGE_INTERVAL );
 	collectorStats.setGarbageCollectionInterval( garbage_interval );
 
-    int size = param_integer ("COLLECTOR_QUERY_WORKERS", 2);
-    forkQuery.setMaxWorkers( size );
+    max_query_workers = param_integer ("COLLECTOR_QUERY_WORKERS", 2, 0);
+	max_pending_query_workers = param_integer ("COLLECTOR_QUERY_WORKERS_PENDING", 50, 0);
 
 	bool ccb_server_enabled = param_boolean("ENABLE_CCB_SERVER",true);
 	if( ccb_server_enabled ) {
@@ -1692,7 +1854,7 @@ void CollectorDaemon::Exit()
 	// Allowing the stack to clean up worker processes is problematic
 	// because the collector will be shutdown and the daemonCore
 	// object deleted by the time the worker cleanup is attempted.
-	forkQuery.DeleteAll( );
+	// forkQuery.DeleteAll( );
 	if ( UpdateTimerId >= 0 ) {
 		daemonCore->Cancel_Timer(UpdateTimerId);
 		UpdateTimerId = -1;
@@ -1710,7 +1872,7 @@ void CollectorDaemon::Shutdown()
 	// Allowing the stack to clean up worker processes is problematic
 	// because the collector will be shutdown and the daemonCore
 	// object deleted by the time the worker cleanup is attempted.
-	forkQuery.DeleteAll( );
+	// forkQuery.DeleteAll( );
 	if ( UpdateTimerId >= 0 ) {
 		daemonCore->Cancel_Timer(UpdateTimerId);
 		UpdateTimerId = -1;
@@ -1758,11 +1920,11 @@ void CollectorDaemon::sendCollectorAd()
 
 	// Collector engine stats, too
 	collectorStats.publishGlobal( ad, NULL );
-#ifdef WIN32
-	ad->InsertAttr("CurrentForkWorkers", forkQuery.getNumWorkers());
-	ad->InsertAttr("PeakForkWorkers", forkQuery.getPeakWorkers());
-#endif
-
+	ad->InsertAttr("CurrentForkWorkers", active_query_workers);
+	ad->InsertAttr("PeakForkWorkers", peak_active_query_workers);
+	ad->InsertAttr("PendingForkWorkers", pending_query_workers);
+	ad->InsertAttr("PeakPendingForkWorkers", peak_pending_query_workers);
+	
     daemonCore->dc_stats.Publish(*ad);
     daemonCore->monitor_data.ExportData(ad);
 

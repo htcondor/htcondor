@@ -8298,7 +8298,9 @@ DaemonCore::Create_Thread(ThreadStartFunc start_func, void *arg, Stream *sock,
 		priv_state saved_priv = get_priv();
 		int exit_status = start_func(arg,s);
 
-		if (s) delete s;
+		if (s) { delete s; s=NULL; }
+		if (arg) { free(arg);	arg=NULL; }		// arg should point to malloc()'ed data
+
 #ifndef WIN32
 			// In unix, we need to make exit_status like wait waitpid() returns
 		exit_status = exit_status<<8;
@@ -9123,8 +9125,10 @@ DaemonCore::HandleDC_SIGCHLD(int sig)
 			}
 
 			if( errno == ECHILD || errno == EAGAIN || errno == 0 ) {
+				/* 
 				dprintf( D_FULLDEBUG,
 						 "DaemonCore: No more children processes to reap.\n" );
+				*/
 			} else {
 					// If it's not what we expect, we want D_ALWAYS
 				dprintf( D_ALWAYS, "waitpid() returned %d, errno = %d\n",
