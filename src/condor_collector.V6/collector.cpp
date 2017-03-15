@@ -1806,6 +1806,10 @@ void CollectorDaemon::Config()
 
 	bool collector_daemon_stats = param_boolean ("COLLECTOR_DAEMON_STATS",true);
 	collectorStats.setDaemonStats( collector_daemon_stats );
+	if (param_boolean("RESET_DC_STATS_ON_RECONFIG",false)) {
+		daemonCore->dc_stats.Clear();
+		collectorStats.global.Clear();
+	}
 
 	history_size = param_integer ("COLLECTOR_DAEMON_HISTORY_SIZE",128);
 	collectorStats.setDaemonHistorySize( history_size );
