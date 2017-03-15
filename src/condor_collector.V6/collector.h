@@ -31,6 +31,7 @@
 #include "collector_stats.h"
 #include "dc_collector.h"
 #include "offline_plugin.h"
+#include "Queue.h"
 
 //----------------------------------------------------------------
 // Simple job universe stats
@@ -97,6 +98,7 @@ public:
 	virtual void Shutdown();         // main_shutdown_graceful
 	// command handlers
 	static int receive_query_cedar(Service*, int, Stream*);
+	static int receive_query_cedar_worker_thread(void *, Stream*);
 	static AdTypes receive_query_public( int );
 	static int receive_invalidation(Service*, int, Stream*);
 	static int receive_update(Service*, int, Stream*);
@@ -145,6 +147,26 @@ public:
 	static const int HandleQueryInProcSmallTableOrQuery = 0x0004;
 	static const int HandleQueryInProcAlways = 0xFFFF;
 
+	typedef struct pending_query_entry {
+		ClassAd *cad;
+		bool is_locate;
+		Stream *sock;
+		AdTypes whichAds;
+	} pending_query_entry_t;
+
+	static Queue<pending_query_entry_t *> query_queue_high_prio;
+	static Queue<pending_query_entry_t *> query_queue_low_prio;
+	static int ReaperId;
+	static int QueryReaper(Service *, int pid, int exit_status);
+	static int max_query_workers;  // from config file
+	static int max_pending_query_workers;  // from config file
+	static int total_dropped_queries;
+	static int active_query_workers;
+	static int peak_active_query_workers;
+	static int pending_query_workers;
+	static int peak_pending_query_workers;
+
+
 protected:
 	static CollectorStats collectorStats;
 	static CollectorEngine collector;
@@ -182,8 +204,6 @@ protected:
 	static CollectorList* collectorsToUpdate;
 	static DCCollector* worldCollector;
 	static int UpdateTimerId;
-
-	static ForkWork forkQuery;
 
 	static int stashSocket( ReliSock* sock );
 
