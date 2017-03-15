@@ -4926,7 +4926,7 @@ description=Path to the High-Availability daemon binary
 type=path
 
 [HAD_SOCKET_NAME]
-default=$(LOCALNAME:had)
+default=had
 type=string
 
 [HAD_ARGS]
@@ -4940,7 +4940,7 @@ description=Path to the Replication daemon binary
 type=path
 
 [REPLICATION_SOCKET_NAME]
-default=$(LOCALNAME:replication)
+default=replication
 type=string
 
 [REPLICATION_ARGS]
