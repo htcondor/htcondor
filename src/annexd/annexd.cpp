@@ -548,10 +548,10 @@ createConfigTarball(	const char * configDir,
 		return false;
 	}
 
-	std::string startExpression;
+	std::string startExpression = "START = MayUseAWS == TRUE\n";
 	if( owner != NULL ) {
 		formatstr( startExpression,
-			"START = stringListMember( Owner, \"%s\" )\n"
+			"START = (MayUseAWS == TRUE) && stringListMember( Owner, \"%s\" )\n"
 			"\n",
 			owner );
 	}
