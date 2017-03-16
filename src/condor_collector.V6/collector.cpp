@@ -113,11 +113,8 @@ Queue<CollectorDaemon::pending_query_entry_t *> CollectorDaemon::query_queue_low
 int CollectorDaemon::ReaperId = -1;
 int CollectorDaemon::max_query_workers = 2;
 int CollectorDaemon::max_pending_query_workers = 50;
-int CollectorDaemon::total_dropped_queries = 0;
 int CollectorDaemon::active_query_workers = 0;
-int CollectorDaemon::peak_active_query_workers = 0;
 int CollectorDaemon::pending_query_workers = 0;
-int CollectorDaemon::peak_pending_query_workers = 0;
 
 //---------------------------------------------------------
 
@@ -468,7 +465,7 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 			dprintf( D_ALWAYS, 
 			"QueryWorker: dropping query request as due to max pending workers of %d ( workers max %d active %d pending %d )\n", 
 			max_pending_query_workers, max_query_workers, active_query_workers, pending_query_workers );
-			total_dropped_queries++;
+			collectorStats.global.DroppedQueries += 1;
 		}
 		if ( !daemonCore->DoFakeCreateThread() ) {  // if we are configured to really fork()...
 			if (did_we_fork == TRUE) {
@@ -498,12 +495,13 @@ int CollectorDaemon::QueryReaper(Service *, int pid, int /* exit_status */ )
 		if (active_query_workers > 0 ) {
 			active_query_workers--;
 		}
+		collectorStats.global.ActiveQueryWorkers = active_query_workers;
 	}
 
 	if ( active_query_workers >= max_query_workers ) {
 		// Not currently allowed to fork any more workers, so we're done for now
 		pending_query_workers = query_queue_high_prio.Length() + query_queue_low_prio.Length();
-		peak_pending_query_workers = MAX(peak_pending_query_workers, pending_query_workers);
+		collectorStats.global.PendingQueries = pending_query_workers;
 		dprintf( D_ALWAYS, 
 			"QueryWorker: delay forking because too many workers ( workers max %d active %d pending %d ) \n", 
 			max_query_workers, active_query_workers, pending_query_workers );
@@ -520,7 +518,7 @@ int CollectorDaemon::QueryReaper(Service *, int pid, int /* exit_status */ )
 
 	// Now that we pulled off some work, update our pending stats counters
 	pending_query_workers = query_queue_high_prio.Length() + query_queue_low_prio.Length();
-	peak_pending_query_workers = MAX(peak_pending_query_workers, pending_query_workers);
+	collectorStats.global.PendingQueries = pending_query_workers;
 
 	if ( query_entry == NULL ) {
 		// No pending work to do, so we're done for now
@@ -552,7 +550,7 @@ int CollectorDaemon::QueryReaper(Service *, int pid, int /* exit_status */ )
 
 	// Increment our count of active workers
 	active_query_workers++;
-	peak_active_query_workers = MAX(peak_active_query_workers, active_query_workers);
+	collectorStats.global.ActiveQueryWorkers = active_query_workers;
 
 	// Also close query_entry->sock since DaemonCore
 	// will have cloned this socket for the child, and we have no need to write anything
@@ -636,10 +634,6 @@ int CollectorDaemon::receive_query_cedar_worker_thread(void *in_query_entry, Str
 				daemonCore->dc_stats.Publish(*stats_ad, stats_config.Value());
 				daemonCore->monitor_data.ExportData(stats_ad, true);
 				collectorStats.publishGlobal(stats_ad, stats_config.Value());
-				stats_ad->InsertAttr("CurrentForkWorkers", active_query_workers);
-				stats_ad->InsertAttr("PeakForkWorkers", peak_active_query_workers);
-				stats_ad->InsertAttr("PendingForkWorkers", pending_query_workers);
-				stats_ad->InsertAttr("PeakPendingForkWorkers", peak_pending_query_workers);
 				stats_ad->ChainToAd(curr_ad);
 				curr_ad = stats_ad; // send the stats ad instead of the self ad.
 			}
@@ -1920,11 +1914,6 @@ void CollectorDaemon::sendCollectorAd()
 
 	// Collector engine stats, too
 	collectorStats.publishGlobal( ad, NULL );
-	ad->InsertAttr("CurrentForkWorkers", active_query_workers);
-	ad->InsertAttr("PeakForkWorkers", peak_active_query_workers);
-	ad->InsertAttr("PendingForkWorkers", pending_query_workers);
-	ad->InsertAttr("PeakPendingForkWorkers", peak_pending_query_workers);
-	
     daemonCore->dc_stats.Publish(*ad);
     daemonCore->monitor_data.ExportData(ad);
 

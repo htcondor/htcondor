@@ -368,8 +368,14 @@ void UpdatesStats::Init()
 	this->RecentWindowMax = this->RecentWindowQuantum;
 
 	Any.RegisterCounters(Pool, NULL, 1);
-	Pool.AddProbe("MachineAds",   &MachineAds,    NULL, IF_BASICPUB | MachineAds.PubDefault);
-	Pool.AddProbe("SubmitterAds", &SubmitterAds, NULL, IF_BASICPUB | SubmitterAds.PubDefault);
+
+	STATS_POOL_ADD(Pool, "", MachineAds, IF_BASICPUB);
+	STATS_POOL_ADD(Pool, "", SubmitterAds, IF_BASICPUB);
+
+	// stats for fork workers.
+	STATS_POOL_ADD(Pool, "", ActiveQueryWorkers, IF_BASICPUB);
+	STATS_POOL_ADD(Pool, "", PendingQueries, IF_BASICPUB);
+	STATS_POOL_ADD_VAL_PUB_RECENT(Pool, "", DroppedQueries, IF_BASICPUB);
 
 	ADD_EXTERN_RUNTIME(Pool, HandleQuery, IF_VERBOSEPUB);
 	ADD_EXTERN_RUNTIME(Pool, HandleLocate, IF_VERBOSEPUB);

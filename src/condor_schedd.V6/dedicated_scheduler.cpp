@@ -1009,7 +1009,7 @@ DedicatedScheduler::reaper( int pid, int status )
 			// just goes back into the queue as idle, but if it happens
 			// to many times we relinquish the match.
 		dprintf( D_ALWAYS, 
-				 "Shadow pid %d successfully killed because it was hung.\n", 
+				 "Shadow pid %d successfully killed because the shadow was hung.\n",
 				 pid );
 		status = JOB_EXCEPTION;
 	}
@@ -1081,7 +1081,7 @@ DedicatedScheduler::reaper( int pid, int status )
 		case JOB_EXCEPTION:
 			if ( WEXITSTATUS(status) == JOB_EXCEPTION ){
 				dprintf( D_ALWAYS,
-						 "ERROR: Shadow exited with job exception code!\n");
+						 "ERROR: Shadow exited with exception code!\n");
 			}
 				// We don't want to break, we want to fall through 
 				// and treat this like a shadow exception for now.
