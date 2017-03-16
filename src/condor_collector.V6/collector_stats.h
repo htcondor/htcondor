@@ -150,8 +150,8 @@ public:
 
 // update counters that are tracked globally, and per Ad type.
 struct UpdatesCounters {
-	stats_entry_recent<int>   UpdatesTotal;
-	stats_entry_recent<int>   UpdatesInitial;
+	stats_entry_recent<long>   UpdatesTotal;
+	stats_entry_recent<long>   UpdatesInitial;
 	//stats_entry_recent<Probe> UpdatesLost;
 	stats_entry_lost_updates  UpdatesLost;
 
@@ -165,6 +165,10 @@ struct UpdatesStats {
 	UpdatesCounters Any;
 	stats_entry_abs<int> MachineAds;
 	stats_entry_abs<int> SubmitterAds;
+
+	stats_entry_abs<int> ActiveQueryWorkers;
+	stats_entry_abs<int> PendingQueries;
+	stats_entry_recent<long> DroppedQueries;
 
 	// per-ad-type counters 
 	std::map<std::string, UpdatesCounters> PerClass;
