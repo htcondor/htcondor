@@ -456,14 +456,26 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 		// command handler.
 		int did_we_fork = FALSE;
 		if (active_query_workers + pending_query_workers <  max_query_workers + max_pending_query_workers) {
-			query_queue_low_prio.enqueue( query_entry );
+			// We want to add a query request into the queue.
+			// Decide if it should go into the high priority or low priorirty queue
+			// based upon the Subsystem attribute in the session for this connection;
+			// if the request is from the NEGOTIATOR, it is high priority.
+			std::string subsys;
+			const std::string &sess_id = static_cast<Sock *>(sock)->getSessionID();
+			daemonCore->getSecMan()->getSessionStringAttribute(sess_id.c_str(),ATTR_SEC_SUBSYSTEM,subsys);
+			if ( subsys=="NEGOTIATOR" )
+			{
+				query_queue_high_prio.enqueue( query_entry );
+			} else {
+				query_queue_low_prio.enqueue( query_entry );
+			}
 			did_we_fork = QueryReaper(NULL, -1, -1);
 			cad = NULL; // set this to NULL so we won't delete it below; our reaper will remove it
 			query_entry = NULL; // set this to NULL so we won't free it below; daemoncore will remove it
 			return_status = KEEP_STREAM; // tell daemoncore to not mess with socket when we return
 		} else {
 			dprintf( D_ALWAYS, 
-			"QueryWorker: dropping query request as due to max pending workers of %d ( workers max %d active %d pending %d )\n", 
+			"QueryWorker: dropping query request as due to max pending workers of %d ( max %d active %d pending %d )\n", 
 			max_pending_query_workers, max_query_workers, active_query_workers, pending_query_workers );
 			collectorStats.global.DroppedQueries += 1;
 		}
@@ -503,7 +515,7 @@ int CollectorDaemon::QueryReaper(Service *, int pid, int /* exit_status */ )
 		pending_query_workers = query_queue_high_prio.Length() + query_queue_low_prio.Length();
 		collectorStats.global.PendingQueries = pending_query_workers;
 		dprintf( D_ALWAYS, 
-			"QueryWorker: delay forking because too many workers ( workers max %d active %d pending %d ) \n", 
+			"QueryWorker: delay forking because too many workers ( max %d active %d pending %d ) \n",
 			max_query_workers, active_query_workers, pending_query_workers );
 		return 0;
 	}
@@ -511,8 +523,10 @@ int CollectorDaemon::QueryReaper(Service *, int pid, int /* exit_status */ )
 	// Pull of an entry from our high_prio queue; if nothing there, grab
 	// one from our low prio queue. 
 	pending_query_entry_t * query_entry = NULL;
+	bool high_prio_query = true;
 	query_queue_high_prio.dequeue(query_entry);
 	if (query_entry == NULL ) {
+		high_prio_query = false;
 		query_queue_low_prio.dequeue(query_entry);
 	}
 
@@ -565,8 +579,9 @@ int CollectorDaemon::QueryReaper(Service *, int pid, int /* exit_status */ )
 	query_classad = NULL;
 
 	dprintf(D_ALWAYS,
-			"QueryWorker: forked new worker with id %d ( workers active %d pending %d )\n",
-			tid, active_query_workers, pending_query_workers);
+			"QueryWorker: forked new %sworker with id %d ( max %d active %d pending %d )\n",
+			high_prio_query ? "high priority " : "", tid,
+			max_query_workers, active_query_workers, pending_query_workers);
 
 	return 1;
 }

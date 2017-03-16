@@ -125,6 +125,8 @@ public:
 
 	bool getSessionPolicy(const char *sess_id, classad::ClassAd &policy);
 
+	bool getSessionStringAttribute(const char *sess_id, const char *attr_name, std::string &attr_value);
+
     //------------------------------------------
     // invalidate cache
     //------------------------------------------
