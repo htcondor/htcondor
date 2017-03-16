@@ -35,6 +35,7 @@
 #include "condor_base64.h"
 
 #include "my_username.h"
+#include <iostream>
 
 // Although the annex daemon uses a GAHP, it doesn't have a schedd managing
 // its hard state in an existing job ad; it has to do that job on its own.
@@ -1183,6 +1184,11 @@ argv = _argv;
 	}
 
 
+	//
+	// Construct enough of the command ad that we can ask the user if what
+	// we're doing is OK.
+	//
+
 	ClassAd spotFleetRequest;
 	if( sfrConfigFile != NULL ) {
 		FILE * file = NULL;
@@ -1269,6 +1275,58 @@ argv = _argv;
 	time_t now = time( NULL );
 	spotFleetRequest.Assign( "EndOfLease", now + leaseDuration );
 
+
+	//
+	// Ask the user if what we're doing is OK.  If it isn't, tell the
+	// user how to change it.
+	//
+
+	if( annexTypeIsODI ) {
+		fprintf( stdout,
+			"Will request %ld %s on-demand instance%s for %.2f hours.  "
+			"Each instance will terminate after being idle for %.2f hours.\n",
+			count, odiInstanceType, count == 1 ? "" : "s",
+			leaseDuration / 3600.0, unclaimedTimeout / 3600.0
+		);
+	}
+
+	if( annexTypeIsSFR ) {
+		fprintf( stdout,
+			"Will request %ld spot instance%s for %.2f hours.  "
+			"Each instance will terminate after being idle for %.2f hours.\n",
+			count,
+			count == 1 ? "" : "s",
+			leaseDuration / 3600.0,
+			unclaimedTimeout / 3600.0
+		);
+	}
+
+	std::string response;
+	fprintf( stdout, "Is that OK?  (Type 'yes' or 'no'): " );
+	std::getline( std::cin, response );
+
+	if( strcasecmp( response.c_str(), "yes" ) != 0 ) {
+		if( annexTypeIsODI ) {
+			if(! odiInstanceTypeSpecified) {
+				fprintf( stdout, "To change the instance type, use the -aws-on-demand-instance-type flag.\n" );
+			}
+		}
+
+		if(! leaseDurationSpecified) {
+			fprintf( stdout, "To change the lease duration, use the -duration flag.\n" );
+		}
+		if(! unclaimedTimeoutSpecified) {
+			fprintf( stdout, "To change how long an idle instance will wait before terminating itself, use the -idle flag.\n" );
+		}
+
+		return 1;
+	}
+
+
+	//
+	// Build the (dynamic) configuration tarball.
+	//
+
 	std::string tarballTarget;
 	param( tarballTarget, "ANNEX_DEFAULT_S3_BUCKET" );
 	if( odiS3ConfigPath != NULL ) {
@@ -1282,7 +1340,6 @@ argv = _argv;
 		return 1;
 	}
 	spotFleetRequest.Assign( "UploadTo", tarballTarget );
-
 
 	// Create a temporary directory.  If a config directory was specified,
 	// copy its contents into the temporary directory.  Create (or copy)
@@ -1310,7 +1367,6 @@ argv = _argv;
 			return 2;
 		}
 	}
-
 
 	//
 	// A job's Owner attribute is almost aways set by condor_submit to be
@@ -1347,6 +1403,10 @@ argv = _argv;
 	}
 
 	spotFleetRequest.Assign( "UploadFrom", tarballPath );
+
+	//
+	// Finish constructing the spot fleet request.
+	//
 
 	if( serviceURL != NULL ) {
 		spotFleetRequest.Assign( "ServiceURL", serviceURL );
@@ -1388,41 +1448,6 @@ argv = _argv;
 			return 5;
 		}
 		free( base64Encoded );
-	}
-
-
-	if( annexTypeIsODI ) {
-		fprintf( stdout,
-			"Will request %ld %s on-demand instance%s for %.2f hours.  "
-			"Each instance will terminate after being idle for %.2f hours.\n",
-			count, odiInstanceType, count == 1 ? "" : "s",
-			leaseDuration / 3600.0, unclaimedTimeout / 3600.0
-		);
-		if(! odiInstanceTypeSpecified) {
-			fprintf( stdout, "To change the instance type, use the -aws-on-demand-instance-type flag.\n" );
-		}
-		if(! leaseDurationSpecified) {
-			fprintf( stdout, "To change the lease duration, use the -duration flag.\n" );
-		}
-		if(! unclaimedTimeoutSpecified) {
-			fprintf( stdout, "To change how long an idle instance will wait before terminating itself, use the -idle flag.\n" );
-		}
-	}
-	if( annexTypeIsSFR ) {
-		fprintf( stdout,
-			"Will request %ld spot instance%s for %.2f hours.  "
-			"Each instance will terminate after being idle for %.2f hours.\n",
-			count,
-			count == 1 ? "" : "s",
-			leaseDuration / 3600.0,
-			unclaimedTimeout / 3600.0
-		);
-		if(! leaseDurationSpecified) {
-			fprintf( stdout, "To change the lease duration, use the -duration flag.\n" );
-		}
-		if(! unclaimedTimeoutSpecified) {
-			fprintf( stdout, "To change how long an idle instance will wait before terminating itself, use the -idle flag.\n" );
-		}
 	}
 
 
