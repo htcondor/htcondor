@@ -16399,7 +16399,9 @@ Scheduler::checkSubmitRequirements( ClassAd * procAd, CondorError * errorStack )
 		if( rval ) {
 			bool bVal;
 			if( ! result.IsBooleanValueEquiv( bVal ) ) {
-				errorStack->pushf( "QMGMT", 1, "Submit requirement %s evaluated to non-boolean.\n", it->name );
+				if ( errorStack ) {
+					errorStack->pushf( "QMGMT", 1, "Submit requirement %s evaluated to non-boolean.\n", it->name );
+				}
 				return -3;
 			}
 
@@ -16422,12 +16424,16 @@ Scheduler::checkSubmitRequirements( ClassAd * procAd, CondorError * errorStack )
 					}
 				}
 
-				errorStack->pushf( "QMGMT", 2, "%s", reasonString.c_str() );
+				if ( errorStack ) {
+					errorStack->pushf( "QMGMT", 2, "%s", reasonString.c_str() );
+				}
 				return -1;
 			}
 		} else {
+			if ( errorStack ) {
 				errorStack->pushf( "QMGMT", 3, "Submit requirement %s failed to evaluate.\n", it->name );
-				return -2;
+			}
+			return -2;
 		}
 	}
 
