@@ -11361,8 +11361,8 @@ Scheduler::child_exit(int pid, int status)
 			// just goes back into the queue as idle, but if it happens
 			// to many times we relinquish the match.
 			dprintf( D_ALWAYS,
-					 "%s pid %d successfully killed because it was hung.\n",
-					 name, pid );
+					 "%s pid %d successfully killed because the %s was hung.\n",
+					 name, pid, name );
 			status = JOB_EXCEPTION << 8;
 		}
 
@@ -11766,7 +11766,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 		case JOB_EXCEPTION:
 			if ( exit_code == JOB_EXCEPTION ){
 				dprintf( D_ALWAYS,
-						 "ERROR: %s exited with job exception code!\n",
+						 "ERROR: %s exited with exception code!\n",
 						 daemon_name.Value() );
 			}
 			// We don't want to break, we want to fall through 
