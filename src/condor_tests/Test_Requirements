@@ -302,3 +302,4 @@ lib_procapi_pidtracking-snapshot: personal
 lib_unit_tests: personal
 lib_userlog: personal
 config_validate_policy_templates: personal
+docker_simulator_test: personal
