@@ -62,12 +62,10 @@ public:
 		//
 	
 	    //! get the file handles
-	int     getFileDescriptor();
 	FILE *  getFilePointer();
 
 		//! set the file handles
 	void    setFilePointer(FILE *fp);
-    void setFileDescriptor(int fd);
 
 		//! return the current ClassAd log entry
 	ClassAdLogEntry* 	getLastCALogEntry();
@@ -134,6 +132,7 @@ private:
 	ClassAdLogEntry		lastCALogEntry; //!< last ClassAd log entry 
 
 	FILE 	*log_fp;
+	bool	m_close_fp;	// are we responsible for closing log_fp?
 };
 
 #endif /* _CLASSADLOGPARSER_H_ */

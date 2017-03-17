@@ -228,8 +228,10 @@ int RemoteCommitTransaction(SetAttributeFlags_t flags=0, CondorError *errstack=N
 /** The difference between this and RemoteCommitTransaction is that
 	this function never returns if there is a failure.  This function
 	should only be called from the schedd.
+    Exception: This function can return failure if a SUBMIT_REQUIREMEMT
+      expression evaluates to False.
 */
-void CommitTransaction(SetAttributeFlags_t flags=0);
+int CommitTransaction(SetAttributeFlags_t flags=0, CondorError *errstack=NULL);
 
 int AbortTransaction();
 void AbortTransactionAndRecomputeClusters();
