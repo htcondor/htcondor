@@ -578,7 +578,7 @@ int CollectorDaemon::QueryReaper(Service *, int pid, int /* exit_status */ )
 				dprintf( D_ALWAYS, 
 				"QueryWorker: dropping stale query request because %s ( max %d active %d pending %d )\n", 
 				query_entry->sock->deadline_expired() ? "max worktime expired" : "client gone",
-				max_pending_query_workers, max_query_workers, active_query_workers, pending_query_workers );
+				max_query_workers, active_query_workers, pending_query_workers );
 				collectorStats.global.DroppedQueries += 1;				
 				// now deallocate everything with this query_entry
 				delete query_entry->sock;
