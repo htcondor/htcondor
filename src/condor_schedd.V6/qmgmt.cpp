@@ -3886,7 +3886,8 @@ BeginTransaction()
 }
 
 int
-CheckTransaction( SetAttributeFlags_t, CondorError * errorStack )
+CheckTransaction( const std::list<std::string> &newAdKeys,
+                  CondorError * errorStack )
 {
 	int rval;
 
@@ -3898,9 +3899,6 @@ CheckTransaction( SetAttributeFlags_t, CondorError * errorStack )
 	{
 		return 0;
 	}
-
-	std::list< std::string > newAdKeys;
-	JobQueue->ListNewAdsInTransaction( newAdKeys );
 
 	for( std::list<std::string>::const_iterator it = newAdKeys.begin(); it != newAdKeys.end(); ++it ) {
 		JobQueueKey job( it->c_str() );
@@ -3916,8 +3914,10 @@ CheckTransaction( SetAttributeFlags_t, CondorError * errorStack )
 		// If the transforms fail, bail on the transaction.
 		rval = scheduler.jobTransforms.transformJob(&procAd,errorStack);
 		if  (rval < 0) {
-			errorStack->push( "QMGMT", 30, "Failed to apply a required job transform.\n");
-			errno = EINVAL;
+			if ( errorStack ) {
+				errorStack->push( "QMGMT", 30, "Failed to apply a required job transform.\n");
+				errno = EINVAL;
+			}
 			return rval;
 		}
 
@@ -4027,7 +4027,7 @@ ReadProxyFileIntoAd( const char *file, const char *owner, ClassAd &x509_attrs )
 }
 
 static void
-AddSessionAttributes(const std::list<std::string> new_ad_keys)
+AddSessionAttributes(const std::list<std::string> &new_ad_keys)
 {
 	if (!Q_SOCK || !Q_SOCK->getReliSock()) {return;}
 	if (new_ad_keys.empty()) {return;}
@@ -4095,15 +4095,24 @@ AddSessionAttributes(const std::list<std::string> new_ad_keys)
 	}
 }
 
-void
-CommitTransaction(SetAttributeFlags_t flags /* = 0 */)
+int
+CommitTransaction(SetAttributeFlags_t flags /* = 0 */,
+                  CondorError * errorStack /* = NULL */)
 {
+	int rval = 0;
 	std::list<std::string> new_ad_keys;
 		// get a list of all new ads being created in this transaction
 	JobQueue->ListNewAdsInTransaction( new_ad_keys );
 	if ( ! new_ad_keys.empty()) { SetSubmitTotalProcs(new_ad_keys); }
 
-	AddSessionAttributes(new_ad_keys);
+	if ( !new_ad_keys.empty() ) {
+		AddSessionAttributes(new_ad_keys);
+
+		rval = CheckTransaction(new_ad_keys, errorStack);
+		if ( rval < 0 ) {
+			return rval;
+		}
+	}
 
 	// remember some things about the transaction that we will need to do post-transaction processing.
 	// TODO: think about - can we skip this if new_ad_keys is not empty?
@@ -4289,6 +4298,7 @@ CommitTransaction(SetAttributeFlags_t flags /* = 0 */)
 	}	// end of if a new cluster(s) submitted
 
 	xact_start_time = 0;
+	return 0;
 }
 
 int

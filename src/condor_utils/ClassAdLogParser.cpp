@@ -58,28 +58,16 @@ ptr = NULL;
 ClassAdLogParser::ClassAdLogParser()
 {
 	log_fp = NULL;
+	m_close_fp = true;
 	nextOffset = 0;
 	job_queue_name[0] = '\0';
 }
 
 ClassAdLogParser::~ClassAdLogParser()
 {
-	log_fp = NULL;
-	nextOffset = 0;
+	closeFile();
 }
 
-
-int
-ClassAdLogParser::getFileDescriptor()
-{
-	return fileno(log_fp);
-}
-
-void
-ClassAdLogParser::setFileDescriptor(int fd)
-{
-    log_fp = fdopen(fd,"r");
-}
 
 FILE *
 ClassAdLogParser::getFilePointer() 
@@ -90,7 +78,9 @@ ClassAdLogParser::getFilePointer()
 void
 ClassAdLogParser::setFilePointer(FILE *fp)
 {
+	closeFile();
 	log_fp = fp;
+	m_close_fp = false;
 }
 
 ClassAdLogEntry*
@@ -121,6 +111,7 @@ ClassAdLogParser::setNextOffset(long offset)
 FileOpErrCode 
 ClassAdLogParser::openFile() {
     // open a job_queue.log file
+	closeFile();
 #ifdef _NO_CONDOR_
     log_fp = fopen(job_queue_name, "r");
 #else
@@ -130,15 +121,16 @@ ClassAdLogParser::openFile() {
     if (log_fp == NULL) {
         return FILE_OPEN_ERROR;
     }
+	m_close_fp = true;
 	return FILE_OP_SUCCESS;
 }
 
 FileOpErrCode 
 ClassAdLogParser::closeFile() {
-	if (log_fp != NULL) {
+	if (log_fp != NULL && m_close_fp) {
 		fclose(log_fp);
-		log_fp = NULL;
 	}
+	log_fp = NULL;
 	return FILE_OP_SUCCESS;
 }
 

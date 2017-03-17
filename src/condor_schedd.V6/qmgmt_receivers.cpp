@@ -45,8 +45,6 @@ extern char *CondorCertDir;
 
 extern int active_cluster_num;
 
-extern int CheckTransaction( SetAttributeFlags_t, CondorError * errorStack );
-
 static bool QmgmtMayAccessAttribute( char const *attr_name ) {
 	return !ClassAdAttributeIsPrivate( attr_name );
 }
@@ -531,18 +529,9 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 
 		CondorError errstack;
 		errno = 0;
-		rval = CheckTransaction( flags, & errstack );
+		rval = CommitTransaction( flags, & errstack );
 		terrno = errno;
 		dprintf( D_SYSCALLS, "\tflags = %d, rval = %d, errno = %d\n", flags, rval, terrno );
-
-		if( rval >= 0 ) {
-			errno = 0;
-			CommitTransaction( flags );
-				// CommitTransaction() never returns on failure
-			rval = 0;
-			terrno = errno;
-			dprintf( D_SYSCALLS, "\tflags = %d, rval = %d, errno = %d\n", flags, rval, terrno );
-		}
 
 		syscall_sock->encode();
 		assert( syscall_sock->code(rval) );
