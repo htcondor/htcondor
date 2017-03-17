@@ -160,6 +160,7 @@ public:
 	static int QueryReaper(Service *, int pid, int exit_status);
 	static int max_query_workers;  // from config file
 	static int max_pending_query_workers;  // from config file
+	static int max_query_worktime;  // from config file
 	static int active_query_workers;
 	static int pending_query_workers;
 

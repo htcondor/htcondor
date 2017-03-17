@@ -113,6 +113,7 @@ Queue<CollectorDaemon::pending_query_entry_t *> CollectorDaemon::query_queue_low
 int CollectorDaemon::ReaperId = -1;
 int CollectorDaemon::max_query_workers = 2;
 int CollectorDaemon::max_pending_query_workers = 50;
+int CollectorDaemon::max_query_worktime = 0;
 int CollectorDaemon::active_query_workers = 0;
 int CollectorDaemon::pending_query_workers = 0;
 
@@ -427,6 +428,18 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 		handle_in_proc = true;
 	}
 
+	// Set a deadline on the query socket if the admin specified one in the config,
+	// but if the socket came to us with a previous (shorter) deadline, honor it.
+	if ( max_query_worktime > 0 ) {   // max_query_worktime came from config file
+		time_t new_deadline = time(NULL) + max_query_worktime;
+		time_t sock_deadline = sock->get_deadline();
+		if ( sock_deadline > 0 ) {
+			new_deadline = MIN(new_deadline,sock_deadline);
+		}
+		sock->set_deadline(new_deadline);
+		// dprintf(D_ALWAYS,"TODDT : QueryWorker sock_deadline = %d, new_deadline = %d\n",sock_deadline,new_deadline);
+	}
+
 	// malloc a query_entry struct.  we must use malloc here, not new, since
 	// DaemonCore::Create_Thread requires a buffer created with malloc(), as it 
 	// will insist on calling free().  Sigh.
@@ -436,6 +449,7 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 	query_entry->is_locate = is_locate;
 	query_entry->sock = sock;
 	query_entry->whichAds = whichAds;
+
 
 	// Now we are ready to either invoke a worker thread directly to handle the query,
 	// or enqueue a request to run the worker thread later.
@@ -476,7 +490,7 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 			return_status = KEEP_STREAM; // tell daemoncore to not mess with socket when we return
 		} else {
 			dprintf( D_ALWAYS, 
-			"QueryWorker: dropping query request as due to max pending workers of %d ( max %d active %d pending %d )\n", 
+			"QueryWorker: dropping query request due to max pending workers of %d ( max %d active %d pending %d )\n", 
 			max_pending_query_workers, max_query_workers, active_query_workers, pending_query_workers );
 			collectorStats.global.DroppedQueries += 1;
 		}
@@ -521,24 +535,59 @@ int CollectorDaemon::QueryReaper(Service *, int pid, int /* exit_status */ )
 		return 0;
 	}
 
-	// Pull of an entry from our high_prio queue; if nothing there, grab
-	// one from our low prio queue. 
-	pending_query_entry_t * query_entry = NULL;
-	bool high_prio_query = true;
-	query_queue_high_prio.dequeue(query_entry);
-	if (query_entry == NULL ) {
-		high_prio_query = false;
-		query_queue_low_prio.dequeue(query_entry);
-	}
+	// Grab a queue_entry to service, ignoring "stale" (old) entries.
+	bool high_prio_query;
+	pending_query_entry_t * query_entry = NULL;	
+	while ( query_entry == NULL ) {
+		// Pull of an entry from our high_prio queue; if nothing there, grab
+		// one from our low prio queue.  Ignore "stale" (old) requests.
+		high_prio_query = true;
+		query_queue_high_prio.dequeue(query_entry);
+		if (query_entry == NULL ) {
+			high_prio_query = false;
+			query_queue_low_prio.dequeue(query_entry);
+		}
 
-	// Now that we pulled off some work, update our pending stats counters
-	pending_query_workers = query_queue_high_prio.Length() + query_queue_low_prio.Length();
-	collectorStats.global.PendingQueries = pending_query_workers;
+		// Now that we pulled off some work, update our pending stats counters
+		pending_query_workers = query_queue_high_prio.Length() + query_queue_low_prio.Length();
+		collectorStats.global.PendingQueries = pending_query_workers;
 
-	if ( query_entry == NULL ) {
-		// No pending work to do, so we're done for now
-		return 0;
-	}
+		if ( query_entry == NULL ) {
+			// No pending work to do, so we're done for now
+			return 0;
+		}
+
+		// If we are here because a fork worker just exited (pid >= 0), or
+		// if there are still more pending queries in the queue, then it is possible
+		// that the query_entry we are about to service has been sitting around
+		// in the queue for some time.  So we need to check if it is "stale"
+		// before we spend time forking.
+		if ( pid >= 0 || pending_query_workers > 0 ) {
+			// Consider a query_request to be stale if
+			//   a) our deadline on the socket has expired, or
+			//   b) the client has closed the TCP socket.
+			// Note that we can figure out (b) by asking CEDAR if
+			// the socket is "readReady()", which will return true if
+			// either the socket is closed or the socket has data waiting to be read.
+			// Since we know there should be nothing more to read on this socket (the
+			// client should now be awaiting our reponse), if readReady() return true
+			// we can safely assume that TCP thinks the socket has been closed.
+			if ( query_entry->sock->deadline_expired() ||
+				static_cast<Sock *>(query_entry->sock)->readReady() )
+			{
+				dprintf( D_ALWAYS, 
+				"QueryWorker: dropping stale query request because %s ( max %d active %d pending %d )\n", 
+				query_entry->sock->deadline_expired() ? "max worktime expired" : "client gone",
+				max_pending_query_workers, max_query_workers, active_query_workers, pending_query_workers );
+				collectorStats.global.DroppedQueries += 1;				
+				// now deallocate everything with this query_entry
+				delete query_entry->sock;
+				delete query_entry->cad;
+				free(query_entry); 
+				query_entry = NULL;  // so we will loop and dequeue another entry
+			}
+		}
+	}  // end of while queue_entry == NULL
 
 	// If we have made it here, we are allowed to fork another worker
 	// to handle the query represented by query_entry. Fork one!
@@ -1829,6 +1878,7 @@ void CollectorDaemon::Config()
 
     max_query_workers = param_integer ("COLLECTOR_QUERY_WORKERS", 2, 0);
 	max_pending_query_workers = param_integer ("COLLECTOR_QUERY_WORKERS_PENDING", 50, 0);
+	max_query_worktime = param_integer("COLLECTOR_QUERY_MAX_WORKTIME",0,0);
 
 	bool ccb_server_enabled = param_boolean("ENABLE_CCB_SERVER",true);
 	if( ccb_server_enabled ) {
