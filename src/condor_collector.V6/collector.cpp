@@ -460,10 +460,11 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 			// Decide if it should go into the high priority or low priorirty queue
 			// based upon the Subsystem attribute in the session for this connection;
 			// if the request is from the NEGOTIATOR, it is high priority.
+			// Also high priority if command is from the superuser (i.e. via condor_sos).
 			std::string subsys;
 			const std::string &sess_id = static_cast<Sock *>(sock)->getSessionID();
 			daemonCore->getSecMan()->getSessionStringAttribute(sess_id.c_str(),ATTR_SEC_SUBSYSTEM,subsys);
-			if ( subsys=="NEGOTIATOR" )
+			if ( subsys=="NEGOTIATOR" || daemonCore->Is_Command_From_SuperUser(sock) )
 			{
 				query_queue_high_prio.enqueue( query_entry );
 			} else {

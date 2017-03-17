@@ -477,6 +477,12 @@ class DaemonCore : public Service
 		*/
 	const char* superUserNetworkIpAddr(void);
 
+		/** Determine if a Stream passed to a command handler
+			originated via the condor_sos command (i.e. via super user socket)
+			@return true if super user command, else false
+		*/
+	bool Is_Command_From_SuperUser( Stream *s );
+
 		/**
 		   @return The daemon's private network name, or NULL if there
 		   is none (i.e., it's on the public internet).
@@ -1338,6 +1344,7 @@ class DaemonCore : public Service
 	int Kill_Thread(int tid);
 	//@}
 
+
 	/** Public method to allow things that fork() themselves without
 		using Create_Thread() to set the magic DC variable so that our
 		version of exit() uses _exit() instead of exit() and we don't
@@ -1690,6 +1697,7 @@ class DaemonCore : public Service
 	SockPairVec dc_socks;
 	ReliSock* super_dc_rsock;	// super user tcp command socket
 	SafeSock* super_dc_ssock;	// super user udp command socket
+	int m_super_dc_port;		// super user listen port
     int m_iMaxAcceptsPerCycle; ///< maximum number of inbound connections to accept per loop
 	int m_iMaxReapsPerCycle; // maximum number reapers to invoke per event loop
 	int m_MaxTimeSkip;

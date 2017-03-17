@@ -398,6 +398,7 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 	m_invalidate_sessions_via_tcp = true;
 	super_dc_rsock = NULL;
 	super_dc_ssock = NULL;
+	m_super_dc_port = -1;
 	m_iMaxReapsPerCycle = 1;
     m_iMaxAcceptsPerCycle = 1;
 
@@ -533,6 +534,7 @@ DaemonCore::~DaemonCore()
 	// Since we created these, we need to clean them up.
 	delete super_dc_rsock;
 	delete super_dc_ssock;
+	m_super_dc_port = -1;
 
 	for (i=0;i<nReap;i++) {
 		free( reapTable[i].reap_descrip );
@@ -1441,6 +1443,23 @@ DaemonCore::superUserNetworkIpAddr(void) {
 	}
 
 	return super_dc_rsock->get_sinful();
+}
+
+bool
+DaemonCore::Is_Command_From_SuperUser( Stream *s )
+{
+	if (m_super_dc_port < 0) {
+		// This daemon does not have a super user command port
+		return false;
+	}
+
+	Sock *sock = dynamic_cast<Sock *>(s);
+	if (!sock) {
+		// Pointer passed to us is not a Sock ?!
+		return false;
+	}
+
+	return sock->get_port() == m_super_dc_port;
 }
 
 
@@ -9066,6 +9085,7 @@ DaemonCore::InitDCCommandSocket( int command_port )
 		daemonCore->Register_Command_Socket( (Stream*)super_dc_ssock );
 		super_dc_rsock->set_inheritable(FALSE);
 		super_dc_ssock->set_inheritable(FALSE);
+		m_super_dc_port = super_dc_rsock->get_port();
 
 		free(superAddrFN);
 	}
