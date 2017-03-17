@@ -3916,8 +3916,8 @@ CheckTransaction( const std::list<std::string> &newAdKeys,
 		if  (rval < 0) {
 			if ( errorStack ) {
 				errorStack->push( "QMGMT", 30, "Failed to apply a required job transform.\n");
-				errno = EINVAL;
 			}
+			errno = EINVAL;
 			return rval;
 		}
 
