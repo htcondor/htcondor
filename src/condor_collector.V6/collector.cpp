@@ -437,7 +437,7 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 			new_deadline = MIN(new_deadline,sock_deadline);
 		}
 		sock->set_deadline(new_deadline);
-		// dprintf(D_ALWAYS,"TODDT : QueryWorker sock_deadline = %d, new_deadline = %d\n",sock_deadline,new_deadline);
+		// dprintf(D_FULLDEBUG,"QueryWorker old sock_deadline = %d, now new_deadline = %d\n",sock_deadline,new_deadline);
 	}
 
 	// malloc a query_entry struct.  we must use malloc here, not new, since
@@ -728,6 +728,13 @@ int CollectorDaemon::receive_query_cedar_worker_thread(void *in_query_entry, Str
             return_status = 0;
 			goto END;
         }
+
+		if (sock->deadline_expired()) {
+			dprintf( D_ALWAYS,
+				"QueryWorker: max_worktime expired while sending query result to client -- aborting\n");
+			return_status = 0;
+			goto END;
+		}
 
 	} // end of while loop for next result ad to send
 
