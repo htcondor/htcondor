@@ -276,8 +276,8 @@ void HashTable<Index,Value>::initialize( unsigned int (*hashF)( const Index &ind
   for(i = 0; i < tableSize; i++) {
     ht[i] = NULL;
   }
-  currentBucket = -1;
-  currentItem = 0;
+  currentBucket = -1; // no current bucket
+  currentItem = 0; // no current item
   numElems = 0;
   duplicateKeyBehavior = behavior;
 }
@@ -607,7 +607,9 @@ int HashTable<Index,Value>::remove(const Index &index)
 				if (bucket == currentItem)
 				{
 					currentItem = 0;
-					if (--currentBucket < -1) currentBucket = -1;
+						// -1 means no current bucket.  (Change here
+						// fixes gittrac #6177.  wenger 2017-03-16)
+					if (--currentBucket < 0) currentBucket = -1;
 				}
 			}
       		else
@@ -687,7 +689,9 @@ template <class Index, class Value>
 void HashTable<Index,Value>::
 startIterations (void)
 {
+		// No current bucket.
     currentBucket = -1;
+		// No current item.
 	currentItem = 0;
 }
 
