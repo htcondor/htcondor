@@ -315,3 +315,4 @@ job_hgq_autoregroup_basic_van
 job_starter_script-A
 soap_job_tests
 config_validate_policy_templates
+docker_simulator_test

@@ -171,7 +171,12 @@ BEGIN_C_DECLS
 
 const char* get_mySubSystemName(void);
 SubsystemType get_mySubSystemType(void);
-	
+
+// convert enum form of a known subsystem name to string. caller does not free the return value.
+const char * getKnownSubsysString(int id);
+// convert string form of a known subsystem name to enum
+SubsystemType getKnownSubsysNum(const char * subsys);
+
 END_C_DECLS
 
 

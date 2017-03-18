@@ -54,6 +54,11 @@
 
 #include "ccb_server.h"
 
+#define TRACK_QUERIES_BY_SUBSYS 1
+#ifdef TRACK_QUERIES_BY_SUBSYS
+#include "subsystem_info.h" // so we can track query by client subsys
+#endif
+
 using std::vector;
 using std::string;
 
@@ -368,6 +373,7 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 	pending_query_entry_t *query_entry = NULL;
 	bool handle_in_proc;
 	bool is_locate;
+	SubsystemType clientSubsys = SUBSYSTEM_TYPE_INVALID;
 	AdTypes whichAds;
 	ClassAd *cad = new ClassAd();
 	ASSERT(cad);
@@ -478,7 +484,8 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 			std::string subsys;
 			const std::string &sess_id = static_cast<Sock *>(sock)->getSessionID();
 			daemonCore->getSecMan()->getSessionStringAttribute(sess_id.c_str(),ATTR_SEC_SUBSYSTEM,subsys);
-			if ( subsys=="NEGOTIATOR" || daemonCore->Is_Command_From_SuperUser(sock) )
+			clientSubsys = getKnownSubsysNum(subsys.c_str());
+			if ( clientSubsys == SUBSYSTEM_TYPE_NEGOTIATOR || daemonCore->Is_Command_From_SuperUser(sock) )
 			{
 				query_queue_high_prio.enqueue( query_entry );
 			} else {
@@ -504,6 +511,24 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 			}
 		}
 	}
+
+#ifdef TRACK_QUERIES_BY_SUBSYS
+	// if we didn't already try and determing the client subsystem, do that now.
+	if (clientSubsys == SUBSYSTEM_TYPE_INVALID && (KEEP_STREAM != return_status)) {
+		std::string subsys;
+		const std::string &sess_id = static_cast<Sock *>(sock)->getSessionID();
+		daemonCore->getSecMan()->getSessionStringAttribute(sess_id.c_str(),ATTR_SEC_SUBSYSTEM,subsys);
+		clientSubsys = getKnownSubsysNum(subsys.c_str());
+	}
+	// count the number of queries for each client subsystem.
+	if (clientSubsys >= 0 && clientSubsys < SUBSYSTEM_TYPE_AUTO) {
+		if (handle_in_proc) {
+			collectorStats.global.InProcQueriesFrom[clientSubsys] += 1;
+		} else {
+			collectorStats.global.ForkQueriesFrom[clientSubsys] += 1;
+		}
+	}
+#endif
 
 END:
     // all done
@@ -1307,6 +1332,7 @@ int CollectorDaemon::query_scanFunc (ClassAd *cad)
 
     return 1;
 }
+
 
 void CollectorDaemon::process_query_public (AdTypes whichAds,
 											ClassAd *query,
