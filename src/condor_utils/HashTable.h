@@ -38,6 +38,8 @@ class HashBucket {
 
 template <class Index, class Value> class HashTable;
 
+// Note that the HashIterator only works if both Index and Value are
+// pointer types or can be assigned the value NULL.  wenger 2017-03-08
 template< class Index, class Value >
 class HashIterator : std::iterator<std::input_iterator_tag, std::pair<Index, Value> >
 {
@@ -274,8 +276,8 @@ void HashTable<Index,Value>::initialize( unsigned int (*hashF)( const Index &ind
   for(i = 0; i < tableSize; i++) {
     ht[i] = NULL;
   }
-  currentBucket = -1;
-  currentItem = 0;
+  currentBucket = -1; // no current bucket
+  currentItem = 0; // no current item
   numElems = 0;
   duplicateKeyBehavior = behavior;
 }
@@ -595,6 +597,9 @@ int HashTable<Index,Value>::remove(const Index &index)
 		{
       		if (bucket == ht[idx]) 
 			{
+				// The item we're deleting is the first one for
+				// this index.
+
 				ht[idx] = bucket->next;
 
 				// if the item being deleted is being iterated, ensure that
@@ -602,11 +607,16 @@ int HashTable<Index,Value>::remove(const Index &index)
 				if (bucket == currentItem)
 				{
 					currentItem = 0;
-					if (--currentBucket < 0) currentBucket = 0;
+						// -1 means no current bucket.  (Change here
+						// fixes gittrac #6177.  wenger 2017-03-16)
+					if (--currentBucket < 0) currentBucket = -1;
 				}
 			}
       		else
 			{
+				// The item we're deleting is NOT the first one for
+				// this index.
+
 				prevBuc->next = bucket->next;
 
 				// Again, take care of the iterator
@@ -679,7 +689,9 @@ template <class Index, class Value>
 void HashTable<Index,Value>::
 startIterations (void)
 {
+		// No current bucket.
     currentBucket = -1;
+		// No current item.
 	currentItem = 0;
 }
 
