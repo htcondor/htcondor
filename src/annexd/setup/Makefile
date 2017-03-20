@@ -2,7 +2,7 @@
 # Upload the functions and templates to the appropriate place(s) on S3.
 #
 
-VERSION = 6
+VERSION = 7
 FUNCTIONS = sfr-lease-$(VERSION).zip odi-lease-$(VERSION).zip
 TEMPLATES = template-$(VERSION).json role-$(VERSION).json
 S3TARGETS = $(FUNCTIONS:%=.upload/%) $(TEMPLATES:%=.upload/%)

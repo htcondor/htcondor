@@ -22,6 +22,7 @@ generateCommandID( std::string & commandID ) {
 void
 generateAnnexID( std::string & annexID ) {
 	generateUUID( annexID );
+	annexID.resize( 27 );
 }
 
 void
@@ -54,4 +55,3 @@ generateClientToken(	const std::string & annexID,
 	generateUUID( clientToken );
 	formatstr( clientToken, "%.27s_%.36s", annexID.c_str(), clientToken.c_str() );
 }
-

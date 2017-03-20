@@ -180,35 +180,25 @@ createOneAnnex( ClassAd * command, Stream * replyStream, ClassAd * reply ) {
 	std::string serviceURL, eventsURL, lambdaURL, s3URL;
 
 	param( serviceURL, "ANNEX_DEFAULT_EC2_URL" );
-	// FIXME: look up service URL from authorized user map.
 	command->LookupString( "ServiceURL", serviceURL );
 
 	param( eventsURL, "ANNEX_DEFAULT_CWE_URL" );
-	// FIXME: look up events URL from authorized user map.
 	command->LookupString( "EventsURL", eventsURL );
 
 	param( lambdaURL, "ANNEX_DEFAULT_LAMBDA_URL" );
-	// FIXME: look up lambda URL from authorized user map.
 	command->LookupString( "LambdaURL", lambdaURL );
 
 	param( s3URL, "ANNEX_DEFAULT_S3_URL" );
-	// FIXME: look up lambda URL from authorized user map.
 	command->LookupString( "S3URL", s3URL );
 
 	std::string publicKeyFile, secretKeyFile, leaseFunctionARN;
 
-	// FIXME: look up public key file from authorized user map.
 	param( publicKeyFile, "ANNEX_DEFAULT_ACCESS_KEY_FILE" );
 	command->LookupString( "PublicKeyFile", publicKeyFile );
 
-	// FIXME: look up secret key file from authorized user map.
 	param( secretKeyFile, "ANNEX_DEFAULT_SECRET_KEY_FILE" );
 	command->LookupString( "SecretKeyFile", secretKeyFile );
 
-	// FIXME: look up lease function ARN from authorized user map
-	// (from the endpoint-specific sub-map).  There will actually
-	// be two listings, one for SFR and one for ODI, so we need to
-	// know which type of annex we'll be making before doing this look-up.
 	command->LookupString( "LeaseFunctionARN", leaseFunctionARN );
 
 	// Validate parameters.  We could have the functors do this, but that
@@ -296,16 +286,6 @@ createOneAnnex( ClassAd * command, Stream * replyStream, ClassAd * reply ) {
 	}
 	scratchpad->Assign( "CommandID", commandID );
 
-	// FIXME: considering the code in generateClientToken(), does any of
-	// this make sense anymore?
-	// The annex ID will form part of the SFR (or ODI) client token, which
-	// allows the corresponding lease function to cnacel them all without
-	// having to continually add or update the target(s) in the lease.  Since
-	// we don't need to know the SFR (or instance) ID -- or even its entire
-	// client token -- we can create the lease /before/ we start instances.
-	//
-	// If the user specified an annex name, we'll use the first 36 characters,
-	// the same length as the UUID we'd otherwise generate.
 	std::string annexID;
 	command->LookupString( "AnnexID", annexID );
 	if( annexID.empty() ) {
@@ -314,7 +294,7 @@ createOneAnnex( ClassAd * command, Stream * replyStream, ClassAd * reply ) {
 		if( annexName.empty() ) {
 			generateAnnexID( annexID );
 		} else {
-			annexID = annexName.substr( 0, 36 );
+			annexID = annexName.substr( 0, 27 );
 		}
 		command->Assign( "AnnexID", annexID );
 	}
@@ -384,6 +364,19 @@ createOneAnnex( ClassAd * command, Stream * replyStream, ClassAd * reply ) {
 			reply, lambdaGahp, scratchpad,
 	    	lambdaURL, publicKeyFile, secretKeyFile,
 			commandState, commandID );
+
+		UploadFile * uf = NULL;
+		std::string uploadFrom;
+		command->LookupString( "UploadFrom", uploadFrom );
+		std::string uploadTo;
+		command->LookupString( "UploadTo", uploadTo );
+		if( (! uploadFrom.empty()) && (! uploadTo.empty()) ) {
+			uf = new UploadFile( uploadFrom, uploadTo,
+				reply, s3Gahp, scratchpad,
+				s3URL, publicKeyFile, secretKeyFile,
+				commandState, commandID, annexID );
+		}
+
 		PutRule * pr = new PutRule(
 			reply, eventsGahp, scratchpad,
 			eventsURL, publicKeyFile, secretKeyFile,
@@ -404,7 +397,7 @@ createOneAnnex( ClassAd * command, Stream * replyStream, ClassAd * reply ) {
 		//
 		// The commandState, commandID, and scratchpad allow the functor sequence
 		// to restart a rollback, if that becomes necessary.
-		FunctorSequence * fs = new FunctorSequence( { gf, pr, pt, br }, last, commandState, commandID, scratchpad );
+		FunctorSequence * fs = new FunctorSequence( { gf, uf, pr, pt, br }, last, commandState, commandID, scratchpad );
 
 		// Create a timer for the gahp to fire when it gets a result.  We must
 		// use TIMER_NEVER to ensure that the timer hasn't been reaped when the
@@ -415,6 +408,7 @@ createOneAnnex( ClassAd * command, Stream * replyStream, ClassAd * reply ) {
 		gahp->setNotificationTimerId( functorSequenceTimer );
     	eventsGahp->setNotificationTimerId( functorSequenceTimer );
     	lambdaGahp->setNotificationTimerId( functorSequenceTimer );
+    	s3Gahp->setNotificationTimerId( functorSequenceTimer );
 
 		return KEEP_STREAM;
 	} else if( annexType == "odi" ) {

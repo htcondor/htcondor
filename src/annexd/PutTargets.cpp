@@ -28,11 +28,16 @@ PutTargets::operator() () {
 	// Construct the input JSON string.
 	//
 	ClassAd input;
-	// Now misnamed, because the new (v4) lease code cancels SFRs whose
-	// client token begins with this parameter.
-	input.Assign( "SpotFleetRequestID", annexID );
-	input.Assign( "RuleID", ruleName );
-	input.Assign( "TargetID", annexID );
+	input.Assign( "AnnexID", annexID );
+
+	ClassAd * commandAd;
+	commandState->Lookup( HashKey( commandID.c_str() ), commandAd );
+	std::string uploadTo;
+	commandAd->LookupString( "UploadTo", uploadTo );
+	size_t separator = uploadTo.find( '/' );
+	std::string bucketName = uploadTo.substr( 0, separator );
+	input.Assign( "S3BucketName", bucketName );
+
 	input.Assign( "LeaseExpiration", this->leaseExpiration );
 
 	std::string inputString;
@@ -41,8 +46,6 @@ PutTargets::operator() () {
 
 
 	int tryCount = 0;
-	ClassAd * commandAd;
-	commandState->Lookup( HashKey( commandID.c_str() ), commandAd );
 	commandAd->LookupInteger( "State_TryCount", tryCount );
 	if( incrementTryCount ) {
 		++tryCount;

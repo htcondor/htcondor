@@ -6,8 +6,6 @@ use warnings;
 use Getopt::Long;
 use JSON;
 
-my $VERSION = 1;
-
 my( $prettyPrint );
 GetOptions(
 	'pretty-print'	=> \$prettyPrint
