@@ -1,4 +1,5 @@
 #! /usr/bin/env perl
+#testreq: personal IPv4
 ##**************************************************************
 ##
 ## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,

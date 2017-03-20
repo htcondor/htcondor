@@ -24,7 +24,6 @@
 ## as we are checking the same sorts of things. bt
 ##
 ##**************************************************************
-
 use CondorTest;
 use CondorUtils;
 use Check::SimpleJob;
@@ -32,6 +31,17 @@ use Check::CondorLog;
 #use Time::ParseDate;
 use Time::Local;
 use Cwd;
+
+#testreq: personal
+my $config = <<CONDOR_TESTREQ_CONFIG;
+    DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+    WANT_SUSPEND = FALSE
+    NEGOTIATION_INTERVAL = 5
+    SCHEDD_INTERVAL = 5
+    NUM_CPUS = 24
+    MAX_SCHEDD_LOG = 20 Kb
+CONDOR_TESTREQ_CONFIG
+#endtestreq
 
 my $donejob = 1;
 my $test_name = "job_test_scheddrotation";
@@ -46,22 +56,22 @@ my $top = getcwd();
 my $ClusterId = 0;
 my $expect_return = 0;
 
-my $firstappend_condor_config = '
-	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
-	WANT_SUSPEND = FALSE
-	NEGOTIATION_INTERVAL = 5
-	SCHEDD_INTERVAL = 5
-	NUM_CPUS = 24
-	MAX_SCHEDD_LOG = 20 Kb
-';
-
-$configfile1 = CondorTest::CreateLocalConfig($firstappend_condor_config,"scheddlogrotation1");
-
-CondorTest::StartCondorWithParams(
-	condor_name => "scheddlogrotation1",
-	fresh_local => "TRUE",
-	condorlocalsrc => "$configfile1",
-);
+#my $firstappend_condor_config = '
+#	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+#	WANT_SUSPEND = FALSE
+#	NEGOTIATION_INTERVAL = 5
+#	SCHEDD_INTERVAL = 5
+#	NUM_CPUS = 24
+#	MAX_SCHEDD_LOG = 20 Kb
+#';
+#
+#$configfile1 = CondorTest::CreateLocalConfig($firstappend_condor_config,"scheddlogrotation1");
+#
+#CondorTest::StartCondorWithParams(
+#	condor_name => "scheddlogrotation1",
+#	fresh_local => "TRUE",
+#	condorlocalsrc => "$configfile1",
+#);
 
 Condor::SetAllowedEvents("RegisterEvictedWithoutCheckpoint,RegisterSubmit,RegisterExecute,RegisterImageupdated");
 

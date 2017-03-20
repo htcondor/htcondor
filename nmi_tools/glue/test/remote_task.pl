@@ -182,7 +182,7 @@ if( exists( $requirements->{ IPv4 } ) ) {
 
 if( exists( $requirements->{ personal } ) ) {
 	out("'$testname' requires a personal HTCondor, starting one now.");
-	StartTestPersonal($testname);
+	StartTestPersonal($testname, $requirements->{testconf});
 }
 
 # Now that we stash all debug messages, we'll only dump them all
@@ -311,23 +311,66 @@ exit $teststatus;
 sub ProcessTestRequirements
 {
 	my $requirements;
+    my $record = 0;
+    my $conf = "";
 
-	my $requirementslist = "Test_Requirements";
-	open( TR, "< ${requirementslist}" ) or c_die( "Failed to open '${requirementslist}': $!\n" );
-	while( my $line = <TR> ) {
-		TestGlue::fullchomp( $line );
-		if( $line =~ /\s*$testname\s*:\s*(.*)/ ) {
-			my @requirementList = split( /,/, $1 );
-			foreach my $requirement (@requirementList) {
-				$requirement =~ s/^\s+//;
-				$requirement =~ s/\s+$//;
-				out( "${testname} needs '${requirement}'" );
-				$requirements->{ $requirement } = 1;
-			}
-		}
-	}
+    if (open(TF, "<${testname}.run")) {
+        while (my $line = <TF>) {
+            CondorUtils::fullchomp($line);
+            if($line =~ /^#testreq:\s*(.*)/) {
+                my @requirementList = split(/ /, $1);
+                foreach my $requirement (@requirementList) {
+                    $requirement =~ s/^\s+//;
+                    $requirement =~ s/\s+$//;
+                    out("${testname} needs '${requirement}'");
+                    $requirements->{ $requirement } = 1;
+                }
+            }
 
-	return $requirements;
+            if($line =~ /<<CONDOR_TESTREQ_CONFIG/) {
+                $record = 1;
+                next;
+            }
+
+            if($line =~ /^#endtestreq/) {
+                $record = 0;
+                last;
+            }
+
+            if($record && $line =~ /CONDOR_TESTREQ_CONFIG/) {
+                $requirements->{testconf} = $conf . "\n";
+                $record = 0;
+            }
+
+            if ($record) {
+                $conf .= $line . "\n";
+            }
+        }
+    }
+
+    # If the test file does not contain the requirements for it to
+    # run then try to read requirements from the "Test_Requirements"
+    # file. This file will be depraceted so new test file should
+    # mention the requirements in itself rather than adding an
+    # entry in "Test_Requirements"
+    if (!defined($requirements)) {
+        my $requirementslist = "Test_Requirements";
+        open(TR, "< ${requirementslist}") or c_die("Failed to open '${requirementslist}': $!\n");
+        while (my $line = <TR>) {
+            TestGlue::fullchomp($line);
+            if ($line =~ /\s*$testname\s*:\s*(.*)/) {
+                my @requirementList = split(/,/, $1);
+                foreach my $requirement (@requirementList) {
+                    $requirement =~ s/^\s+//;
+                    $requirement =~ s/\s+$//;
+                    out("${testname} needs '${requirement}'");
+                    $requirements->{$requirement} = 1;
+                }
+            }
+        }
+    }
+
+    return $requirements;
 }
 
 sub c_die {
@@ -337,22 +380,28 @@ sub c_die {
 }
 
 sub StartTestPersonal {
-	my $test = shift;
+    my $test = shift;
+    my $testconf = shift;
+    my $firstappend_condor_config;
 
-	my $firstappend_condor_config = '
-		DAEMON_LIST = MASTER, SCHEDD, COLLECTOR, NEGOTIATOR, STARTD
-		NEGOTIATOR_INTERVAL = 5
-		JOB_MAX_VACATE_TIME = 15
-	';
+    if (not defined $testconf) {
+        $firstappend_condor_config = '
+            DAEMON_LIST = MASTER, SCHEDD, COLLECTOR, NEGOTIATOR, STARTD
+            NEGOTIATOR_INTERVAL = 5
+            JOB_MAX_VACATE_TIME = 15
+        ';
+    } else {
+        $firstappend_condor_config = $testconf;
+    }
 
-	my $configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"remotetask$test");
+    my $configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"remotetask$test");
 
-	CondorTest::StartCondorWithParams(
-    	condor_name => "remotetask$test",
-    	fresh_local => "TRUE",
-    	condorlocalsrc => "$configfile",
-		test_glue => "TRUE",
-	);
+    CondorTest::StartCondorWithParams(
+        condor_name => "remotetask$test",
+        fresh_local => "TRUE",
+        condorlocalsrc => "$configfile",
+        test_glue => "TRUE",
+    );
 }
 
 sub showEnv {

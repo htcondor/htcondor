@@ -509,6 +509,95 @@ SubsystemInfo::getString( void ) const
 	return buf;
 }
 
+static const char * SubsysNameById[] = {
+	"UNKNOWN",
+	NULL,
+	// Daemon types
+	"MASTER",
+	"COLLECTOR",
+	"NEGOTIATOR",
+	"SCHEDD",
+	"SHADOW",
+	"STARTD",
+	"STARTER",
+	"GAHP",
+	"DAGMAN",
+	"SHARED_PORT",
+	"DAEMON",		// Other daemon
+
+	// Clients
+	"TOOL",
+	"SUBMIT",
+
+	// Jobs
+	"JOB",
+
+	// Auto type
+	"AUTO",		// Try to determine type from name
+};
+
+#define  FILL(a) { #a, SUBSYSTEM_TYPE_ ## a }
+static const struct BSubsys {
+	const char * key;
+	SubsystemType id;
+} SubsysIdByName[] = {
+	FILL(COLLECTOR),
+	FILL(DAEMON),
+	FILL(DAGMAN),
+	FILL(GAHP),
+	FILL(MASTER),
+	FILL(NEGOTIATOR),
+	FILL(SCHEDD),
+	FILL(SHADOW),
+	FILL(SHARED_PORT),
+	FILL(STARTD),
+	FILL(STARTER),
+	FILL(SUBMIT),
+	FILL(TOOL),
+	FILL(JOB),
+};
+#undef FILL
+
+template <typename T>
+const T * BinaryLookup (const T aTable[], int cElms, const char * key, int (*fncmp)(const char *, const char *))
+{
+	if (cElms <= 0)
+		return NULL;
+
+	int ixLower = 0;
+	int ixUpper = cElms-1;
+	for (;;) {
+		if (ixLower > ixUpper)
+			return NULL; // return null for "not found"
+
+		int ix = (ixLower + ixUpper) / 2;
+		int iMatch = fncmp(aTable[ix].key, key);
+		if (iMatch < 0)
+			ixLower = ix+1;
+		else if (iMatch > 0)
+			ixUpper = ix-1;
+		else
+			return &aTable[ix];
+	}
+}
+
+
+// convert enum form of a known subsystem name to string. caller does not free the return value.
+extern "C" const char * getKnownSubsysString(int id)
+{
+	if (id >= 0 && id < SUBSYSTEM_TYPE_COUNT) return SubsysNameById[id];
+	return NULL;
+}
+
+// convert string form of a known subsystem name to enum
+extern "C" SubsystemType getKnownSubsysNum(const char * subsys)
+{
+	const struct BSubsys * found = BinaryLookup<struct BSubsys>(SubsysIdByName, COUNTOF(SubsysIdByName), subsys, strcasecmp);
+	if (found) return found->id;
+	return SUBSYSTEM_TYPE_INVALID;
+}
+
+
 /* Helper function to retrieve the value of get_mySubSystem() global variable
  * from C functions.  This is helpful because get_mySubSystem() is decorated w/ C++
  * linkage.
