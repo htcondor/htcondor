@@ -6908,7 +6908,7 @@ SetGSICredentials()
 // so as not to churn the old code.  -zmiller
 
 		bool submit_sends_x509 = true;
-		CondorVersionInfo cvi(MySchedd->version());
+		CondorVersionInfo cvi(MySchedd ? MySchedd->version() : NULL);
 		if (cvi.built_since_version(8, 5, 8)) {
 			submit_sends_x509 = false;
 		}
