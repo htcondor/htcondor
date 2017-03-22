@@ -143,8 +143,7 @@ registerAllAmazonCommands(void)
 			AmazonRemoveTargets::ioCheck, AmazonRemoveTargets::workerFunction );
 	registerAmazonGahpCommand( AMAZON_COMMAND_GET_FUNCTION,
 			AmazonGetFunction::ioCheck, AmazonGetFunction::workerFunction );
-
-	registerAmazonGahpCommand( "S3_UPLOAD",
+	registerAmazonGahpCommand( AMAZON_COMMAND_S3_UPLOAD,
 			AmazonS3Upload::ioCheck, AmazonS3Upload::workerFunction );
 
 	return true;
