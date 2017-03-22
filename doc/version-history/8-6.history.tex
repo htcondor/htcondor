@@ -51,6 +51,14 @@ configuration for using these services with shared port to work.
 repeatably) crash when parsing DAGs containing splices.
 \Ticket{6170}
 
+\item The configuration parameters that control when job policy expressions
+are evaluated now work as documented.
+Previously, the default value for \MacroNI{PERIODIC\_EXPR\_INTERVAL} was
+300, not 60 as intended.
+Also, the parameters \MacroNI{MAX\_PERIODIC\_EXPR\_INTERVAL} and
+\MacroNI{PERIODIC\_EXPR\_TIMESLICE} were ignored for grid universe jobs.
+\Ticket{6199}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
