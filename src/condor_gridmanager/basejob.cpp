@@ -50,8 +50,6 @@ HashTable<HashKey, BaseJob *> BaseJob::JobsByRemoteId( HASH_TABLE_SIZE,
 
 void BaseJob::BaseJobReconfig()
 {
-	int tmp_int;
-
 	if ( periodicPolicyEvalTid != TIMER_UNSET ) {
 		daemonCore->Cancel_Timer( periodicPolicyEvalTid );
 		periodicPolicyEvalTid = TIMER_UNSET;
