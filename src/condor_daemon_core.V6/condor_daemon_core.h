@@ -1005,6 +1005,16 @@ class DaemonCore : public Service
         @param timeslice       Timeslice object specifying interval parameters
         @param event           Function to call when timer fires.
         @param event_descrip   String describing the function.
+        @return                Timer id or -1 on error
+    */
+    int Register_Timer (const Timeslice &timeslice,
+                        TimerHandler handler,
+                        const char * event_descrip);
+
+	/** 
+        @param timeslice       Timeslice object specifying interval parameters
+        @param event           Function to call when timer fires.
+        @param event_descrip   String describing the function.
         @param s               Service object of which function is a member.
         @return                Timer id or -1 on error
     */
