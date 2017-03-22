@@ -59,6 +59,11 @@ Also, the parameters \MacroNI{MAX\_PERIODIC\_EXPR\_INTERVAL} and
 \MacroNI{PERIODIC\_EXPR\_TIMESLICE} were ignored for grid universe jobs.
 \Ticket{6199}
 
+\item Fixed a bug that prevented \MacroNI{SUBMIT\_REQUIREMENT} and
+\MacroNI{JOB\_TRANSFORM} expressions from referencing job attributes
+describing the job's X.509 proxy credential.
+\Ticket{6188}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
