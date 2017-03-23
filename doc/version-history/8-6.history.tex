@@ -64,6 +64,10 @@ Also, the parameters \MacroNI{MAX\_PERIODIC\_EXPR\_INTERVAL} and
 describing the job's X.509 proxy credential.
 \Ticket{6188}
 
+\item Fixed a bug that could cause \Condor{store\_cred} to fail on
+Windows due to a case-sensitive check of the user's account name.
+\Ticket{6200}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
