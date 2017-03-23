@@ -946,6 +946,11 @@ int	DaemonCore::Register_Timer(unsigned deltawhen, unsigned period,
 	return( t.NewTimer(s, deltawhen, handler, event_descrip, period) );
 }
 
+int DaemonCore::Register_Timer (const Timeslice &timeslice,TimerHandler handler,const char * event_descrip)
+{
+	return t.NewTimer(timeslice, handler, event_descrip );
+}
+
 int DaemonCore::Register_Timer (const Timeslice &timeslice,TimerHandlercpp handler,const char * event_descrip,Service* s)
 {
 	return t.NewTimer(s, timeslice, handler, event_descrip );
