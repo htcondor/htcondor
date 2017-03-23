@@ -694,11 +694,10 @@ sub check_status {
 	}
 },
 'CpuLoad' => sub {
-	my $num = sprintf("%.2f",($Attr_new{$_[0]-1}{TotalLoadAvg} / $Attr_new{$_[0]-1}{TotalCpus}));
-	if ($_[1] eq $num) {
+	if ($_[1] =~ /[0-9]+\.[0-9+]/) {
 		return 1;
 	} else {
-		print "output is $_[1], should be $num\n";
+		print "output is $_[1], should be a number\n";
 		return 0;
 	}
 },
