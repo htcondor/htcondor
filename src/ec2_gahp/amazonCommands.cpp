@@ -4099,3 +4099,196 @@ bool AmazonS3Upload::workerFunction(char **argv, int argc, std::string &result_s
 
 	return true;
 }
+
+// ---------------------------------------------------------------------------
+
+AmazonCreateStack::~AmazonCreateStack() { }
+
+bool AmazonCreateStack::SendRequest() {
+	bool result = AmazonRequest::SendRequest();
+	if( result ) {
+		Regex r; int errCode = 0; const char * errString = 0;
+		bool patternOK = r.compile( "<StackId>(.*)</StackId>", & errString, & errCode );
+		ASSERT( patternOK );
+		ExtArray<MyString> groups(2);
+		if( r.match( resultString, & groups ) ) {
+			this->stackID = groups[1];
+		}
+	}
+	return result;
+}
+
+// Expecting:	CF_CREATE_STACK <req_id>
+//				<serviceurl> <accesskeyfile> <secretkeyfile>
+//				<stackName> <templateURL> <capability>
+//				(<parameters-name> <parameter-value>)* <NULLSTRING>
+
+bool AmazonCreateStack::workerFunction(char **argv, int argc, std::string &result_string) {
+	assert( strcasecmp( argv[0], "CF_CREATE_STACK" ) == 0 );
+
+	int requestID;
+	get_int( argv[1], & requestID );
+	dprintf( D_PERF_TRACE, "request #%d (%s): work begins\n",
+		requestID, argv[0] );
+
+	if( ! verify_min_number_args( argc, 9 ) ) {
+		result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
+		dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n",
+			argc, 9, argv[0] );
+		return false;
+	}
+
+	// Fill in required attributes & parameters.
+	AmazonCreateStack csRequest = AmazonCreateStack( requestID, argv[0] );
+	csRequest.serviceURL = argv[2];
+	csRequest.accessKeyFile = argv[3];
+	csRequest.secretKeyFile = argv[4];
+
+	csRequest.query_parameters[ "Action" ] = "CreateStack";
+	csRequest.query_parameters[ "Version" ] = "2010-05-15";
+	csRequest.query_parameters[ "OnFailure" ] = "DELETE";
+	csRequest.query_parameters[ "StackName" ] = argv[5];
+	csRequest.query_parameters[ "TemplateURL" ] = argv[6];
+	if( strcasecmp( argv[7], NULLSTRING ) ) {
+		csRequest.query_parameters[ "Capabilities.member.1" ] = argv[7];
+	}
+
+	std::string pn;
+	for( int i = 8; i + 1 < argc && strcmp( argv[i], NULLSTRING ); i += 2 ) {
+		formatstr( pn, "Parameters.member.%d", (i - 6)/2 );
+		csRequest.query_parameters[ pn + ".ParameterKey" ] = argv[i];
+		csRequest.query_parameters[ pn + ".ParameterValue" ] = argv[i+1];
+	}
+
+	if(! csRequest.SendRequest()) {
+		result_string = create_failure_result( requestID,
+				csRequest.errorMessage.c_str(),
+				csRequest.errorCode.c_str() );
+	} else {
+		if( csRequest.stackID.empty() ) {
+			result_string = create_failure_result( requestID,
+				"Could not find stack ID in response from server.",
+				"E_NO_STACK_ID" );
+		} else {
+			StringList sl; sl.append( csRequest.stackID.c_str() );
+			result_string = create_success_result( requestID, & sl );
+		}
+	}
+
+	return true;
+}
+
+// ---------------------------------------------------------------------------
+
+AmazonDescribeStacks::~AmazonDescribeStacks() { }
+
+bool AmazonDescribeStacks::SendRequest() {
+	bool result = AmazonRequest::SendRequest();
+	if( result ) {
+		int errCode = 0; const char * errString = 0;
+
+		Regex r;
+		bool patternOK = r.compile( "<StackStatus>(.*)</StackStatus>", & errString, & errCode );
+		ASSERT( patternOK );
+		ExtArray<MyString> statusGroups( 2 );
+		if( r.match( resultString, & statusGroups ) ) {
+			this->stackStatus = statusGroups[1];
+		}
+
+		Regex s;
+		patternOK = s.compile( "<Outputs>(.*)</Outputs>", & errString, & errCode, Regex::multiline | Regex::dotall );
+		ASSERT( patternOK );
+		ExtArray<MyString> outputGroups( 2 );
+		if( s.match( resultString, & outputGroups ) ) {
+			dprintf( D_ALWAYS, "Found output string '%s'.\n", outputGroups[1].c_str() );
+			MyString membersRemaining = outputGroups[1];
+
+			Regex t;
+			patternOK = t.compile( "\\s*<member>\\s*(.*?)\\s*</member>\\s*", & errString, & errCode, Regex::multiline | Regex::dotall );
+			ASSERT( patternOK );
+
+			ExtArray<MyString> memberGroups( 2 );
+			while( t.match( membersRemaining, & memberGroups ) ) {
+				std::string member = memberGroups[1].c_str();
+				dprintf( D_ALWAYS, "Found member '%s'.\n", member.c_str() );
+
+				Regex u;
+				patternOK = u.compile( "<OutputKey>(.*)</OutputKey>", & errString, & errCode );
+				ASSERT( patternOK );
+
+				std::string outputKey;
+				ExtArray<MyString> keyGroups( 2 );
+				if( u.match( member, & keyGroups ) ) {
+					outputKey = keyGroups[1];
+				}
+
+				Regex v;
+				patternOK = v.compile( "<OutputValue>(.*)</OutputValue>", & errString, & errCode );
+				ASSERT( patternOK );
+
+				std::string outputValue;
+				ExtArray<MyString> valueGroups( 2 );
+				if( v.match( member, & valueGroups ) ) {
+					outputValue = valueGroups[1];
+				}
+
+				if(! outputKey.empty()) {
+					outputs.push_back( outputKey );
+					outputs.push_back( outputValue );
+				}
+
+				membersRemaining.replaceString( memberGroups[0].c_str(), "" );
+			}
+		}
+	}
+	return result;
+}
+
+// Expecting:	CF_DESCRIBE_STACKS <req_id>
+//				<serviceurl> <accesskeyfile> <secretkeyfile>
+//				<stackName>
+bool AmazonDescribeStacks::workerFunction(char **argv, int argc, std::string &result_string) {
+	assert( strcasecmp( argv[0], "CF_DESCRIBE_STACKS" ) == 0 );
+
+	int requestID;
+	get_int( argv[1], & requestID );
+	dprintf( D_PERF_TRACE, "request #%d (%s): work begins\n",
+		requestID, argv[0] );
+
+	if( ! verify_number_args( argc, 6 ) ) {
+		result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
+		dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n",
+			argc, 6, argv[0] );
+		return false;
+	}
+
+	// Fill in required attributes & parameters.
+	AmazonDescribeStacks dsRequest = AmazonDescribeStacks( requestID, argv[0] );
+	dsRequest.serviceURL = argv[2];
+	dsRequest.accessKeyFile = argv[3];
+	dsRequest.secretKeyFile = argv[4];
+
+	dsRequest.query_parameters[ "Action" ] = "DescribeStacks";
+	dsRequest.query_parameters[ "Version" ] = "2010-05-15";
+	dsRequest.query_parameters[ "StackName" ] = argv[5];
+
+	if(! dsRequest.SendRequest()) {
+		result_string = create_failure_result( requestID,
+				dsRequest.errorMessage.c_str(),
+				dsRequest.errorCode.c_str() );
+	} else {
+		if( dsRequest.stackStatus.empty() ) {
+		result_string = create_failure_result( requestID,
+			"Could not find stack status in response from server.",
+			"E_NO_STACK_STATUS" );
+		} else {
+			StringList sl; sl.append( dsRequest.stackStatus.c_str() );
+			for( unsigned i = 0; i < dsRequest.outputs.size(); ++i ) {
+				sl.append( nullStringIfEmpty( dsRequest.outputs[i] ) );
+			}
+			result_string = create_success_result( requestID, & sl );
+		}
+	}
+
+	return true;
+}

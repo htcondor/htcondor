@@ -64,6 +64,9 @@
 #define AMAZON_COMMAND_REMOVE_TARGETS       "CWE_REMOVE_TARGETS"
 #define AMAZON_COMMAND_GET_FUNCTION         "AWS_GET_FUNCTION"
 #define AMAZON_COMMAND_S3_UPLOAD            "S3_UPLOAD"
+#define AMAZON_COMMAND_CF_CREATE_STACK      "CF_CREATE_STACK"
+#define AMAZON_COMMAND_CF_DESCRIBE_STACKS   "CF_DESCRIBE_STACKS"
+
 
 #define GENERAL_GAHP_ERROR_CODE             "GAHPERROR"
 #define GENERAL_GAHP_ERROR_MSG              "GAHP_ERROR"
@@ -434,6 +437,35 @@ class AmazonS3Upload : public AmazonRequest {
 
 	protected:
 		std::string path;
+};
+
+class AmazonCreateStack : public AmazonRequest {
+	public:
+		AmazonCreateStack( int i, const char * c ) : AmazonRequest( i, c ) { }
+		virtual ~AmazonCreateStack();
+
+		virtual bool SendRequest();
+
+		static bool ioCheck(char **argv, int argc);
+		static bool workerFunction(char **argv, int argc, std::string &result_string);
+
+	protected:
+		std::string stackID;
+};
+
+class AmazonDescribeStacks : public AmazonRequest {
+	public:
+		AmazonDescribeStacks( int i, const char * c ) : AmazonRequest( i, c ) { }
+		virtual ~AmazonDescribeStacks();
+
+		virtual bool SendRequest();
+
+		static bool ioCheck(char **argv, int argc);
+		static bool workerFunction(char **argv, int argc, std::string &result_string);
+
+	protected:
+		std::string stackStatus;
+		std::vector< std::string > outputs;
 };
 
 #endif

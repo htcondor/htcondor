@@ -697,6 +697,28 @@ class EC2GahpClient : public GahpClient {
 		EC2GahpClient(	const char * id, const char * path, const ArgList * args );
 		~EC2GahpClient();
 
+		int describe_stacks(	const std::string & service_url,
+								const std::string & publickeyfile,
+								const std::string & privatekeyfile,
+
+								const std::string & stackName,
+
+								std::string & stackStatus,
+								std::map< std::string, std::string > & outputs,
+								std::string & errorCode );
+
+		int create_stack(	const std::string & service_url,
+							const std::string & publickeyfile,
+							const std::string & privatekeyfile,
+
+							const std::string & stackName,
+							const std::string & templateURL,
+							const std::string & capability,
+							const std::map< std::string, std::string > & parameters,
+
+							std::string & stackID,
+							std::string & errorCode );
+
 		int get_function(	const std::string & service_url,
 							const std::string & publickeyfile,
 							const std::string & privatekeyfile,

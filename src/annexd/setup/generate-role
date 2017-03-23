@@ -13,7 +13,7 @@ GetOptions(
 
 	my $template;
 	$template->{ AWSTemplateFormatVersion } = "2010-09-09";
-	$template->{ Description } = "Instance Configuration Role";
+	$template->{ Description } = "HTCondor Annex: Instance Profile";
 
 	$template->{ Parameters } = {
 		"S3BucketName" => {

@@ -304,3 +304,33 @@ bool AmazonS3Upload::ioCheck(char **argv, int argc)
 		verify_string_name(argv[6]) &&
 		verify_string_name(argv[7]);
 }
+
+// Expecting:	CF_CREATE_STACK <req_id>
+//				<serviceurl> <accesskeyfile> <secretkeyfile>
+//				<stackName> <templateURL> <capability>
+//				(<parameters-name> <parameter-value>)* <NULLSTRING>
+bool AmazonCreateStack::ioCheck(char **argv, int argc)
+{
+	return verify_min_number_args(argc, 9) &&
+		verify_request_id(argv[1]) &&
+		verify_string_name(argv[2]) &&
+		verify_string_name(argv[3]) &&
+		verify_string_name(argv[4]) &&
+		verify_string_name(argv[5]) &&
+		verify_string_name(argv[6]) &&
+		verify_string_name(argv[7]) &&
+		verify_string_name(argv[8]);
+}
+
+// Expecting:	CF_DESCRIBE_STACKS <req_id>
+//				<serviceurl> <accesskeyfile> <secretkeyfile>
+//				<stackName>
+bool AmazonDescribeStacks::ioCheck(char **argv, int argc)
+{
+	return verify_number_args(argc, 6) &&
+		verify_request_id(argv[1]) &&
+		verify_string_name(argv[2]) &&
+		verify_string_name(argv[3]) &&
+		verify_string_name(argv[4]) &&
+		verify_string_name(argv[5]);
+}

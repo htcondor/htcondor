@@ -24,6 +24,10 @@
 #include "OnDemandRequest.h"
 #include "UploadFile.h"
 
+#include "CreateStack.h"
+#include "WaitForStack.h"
+#include "SetupReply.h"
+
 // from annex.cpp
 #include "condor_common.h"
 #include "condor_config.h"
@@ -729,11 +733,110 @@ readShortFile( const char * fileName, std::string & contents ) {
     return true;
 }
 
+
+int
+setup( const char * publicKeyFile, const char * privateKeyFile, const char * cloudFormationURL ) {
+	std::string cfURL = cloudFormationURL ? cloudFormationURL : "";
+	if( cfURL.empty() ) {
+		// FIXME: At some point, the argument to 'setup' should be the region,
+		// not the CloudFormation URL.
+		param( cfURL, "ANNEX_DEFAULT_CF_URL" );
+	}
+	if( cfURL.empty() ) {
+		fprintf( stderr, "No CloudFormation URL specified on command-line and ANNEX_DEFAULT_CF_URL is not set or empty in configuration.\n" );
+		return 1;
+	}
+
+	ClassAd * reply = new ClassAd();
+	ClassAd * scratchpad = new ClassAd();
+
+	std::string commandID;
+	generateCommandID( commandID );
+
+	Stream * replyStream = NULL;
+
+	EC2GahpClient * cfGahp = startOneGahpClient( publicKeyFile, cfURL );
+
+	// FIXME: Do something cleverer for versioning.
+	std::string bucketStackURL = "https://s3.amazonaws.com/condor-annex/bucket-7.json";
+	std::string bucketStackName = "HTCondorAnnex-ConfigurationBucket";
+	std::string bucketStackDescription = "configuration bucket (this takes less than a minute)";
+	std::map< std::string, std::string > bucketParameters;
+	CreateStack * bucketCS = new CreateStack( reply, cfGahp, scratchpad,
+		cfURL, publicKeyFile, privateKeyFile,
+		bucketStackName, bucketStackURL, bucketParameters,
+		commandState, commandID );
+	WaitForStack * bucketWFS = new WaitForStack( reply, cfGahp, scratchpad,
+		cfURL, publicKeyFile, privateKeyFile,
+		bucketStackName, bucketStackDescription,
+		commandState, commandID );
+
+	// FIXME: Do something cleverer for versioning.
+	std::string lfStackURL = "https://s3.amazonaws.com/condor-annex/template-7.json";
+	std::string lfStackName = "HTCondorAnnex-LambdaFunctions";
+	std::string lfStackDescription = "Lambda functions (this takes about a minute)";
+	std::map< std::string, std::string > lfParameters;
+	lfParameters[ "S3BucketName" ] = "<scratchpad>";
+	CreateStack * lfCS = new CreateStack( reply, cfGahp, scratchpad,
+		cfURL, publicKeyFile, privateKeyFile,
+		lfStackName, lfStackURL, lfParameters,
+		commandState, commandID );
+	WaitForStack * lfWFS = new WaitForStack( reply, cfGahp, scratchpad,
+		cfURL, publicKeyFile, privateKeyFile,
+		lfStackName, lfStackDescription,
+		commandState, commandID );
+
+	// FIXME: Do something cleverer for versioning.
+	std::string rStackURL = "https://s3.amazonaws.com/condor-annex/role-7.json";
+	std::string rStackName = "HTCondorAnnex-InstanceProfile";
+	std::string rStackDescription = "instance profile (this takes about two minutes)";
+	std::map< std::string, std::string > rParameters;
+	rParameters[ "S3BucketName" ] = "<scratchpad>";
+	CreateStack * rCS = new CreateStack( reply, cfGahp, scratchpad,
+		cfURL, publicKeyFile, privateKeyFile,
+		rStackName, rStackURL, rParameters,
+		commandState, commandID );
+	WaitForStack * rWFS = new WaitForStack( reply, cfGahp, scratchpad,
+		cfURL, publicKeyFile, privateKeyFile,
+		rStackName, rStackDescription,
+		commandState, commandID );
+
+	// FIXME: Do something cleverer for versioning.
+	std::string sgStackURL = "https://s3.amazonaws.com/condor-annex/security-group-7.json";
+	std::string sgStackName = "HTCondorAnnex-SecurityGroup";
+	std::string sgStackDescription = "security group (this takes less than a minute)";
+	std::map< std::string, std::string > sgParameters;
+	CreateStack * sgCS = new CreateStack( reply, cfGahp, scratchpad,
+		cfURL, publicKeyFile, privateKeyFile,
+		sgStackName, sgStackURL, sgParameters,
+		commandState, commandID );
+	WaitForStack * sgWFS = new WaitForStack( reply, cfGahp, scratchpad,
+		cfURL, publicKeyFile, privateKeyFile,
+		sgStackName, sgStackDescription,
+		commandState, commandID );
+
+	SetupReply * sr = new SetupReply( reply, cfGahp, scratchpad,
+		replyStream, commandState, commandID );
+
+	FunctorSequence * fs = new FunctorSequence(
+		{ bucketCS, bucketWFS, lfCS, lfWFS, rCS, rWFS, sgCS, sgWFS }, sr,
+		commandState, commandID, scratchpad );
+
+
+	int setupTimer = daemonCore->Register_Timer( 0, TIMER_NEVER,
+		 (void (Service::*)()) & FunctorSequence::operator(),
+		 "CreateStack, DescribeStacks, WriteConfigFile", fs );
+	cfGahp->setNotificationTimerId( setupTimer );
+
+
+	return 0;
+}
+
+
 // from annex.cpp
 void
 help( const char * argv0 ) {
 	fprintf( stdout, "usage: %s -annex-name <annex-name> -count|-slots <number>\n"
-		"\n"
 		"For on-demand instances:\n"
 		"\t[-aws-on-demand]\n"
 		"\t-count <integer number of instances>\n"
@@ -781,7 +884,11 @@ help( const char * argv0 ) {
 		"\t[-aws-spot-fleet-lease-function-arn <sfr-lease-function-arn>]\n"
 		"\t[-aws-on-demand-lease-function-arn <odi-lease-function-arn>]\n"
 		"\t[-aws-on-demand-instance-profile-arn <instance-profile-arn>]\n"
-		, argv0 );
+		"\n"
+		"OR, to do the one-time setup for an account:\n"
+		"%s -setup <path/to/access-key-file> <path/to/secret-key-file> [<CloudFormation URL>]\n"
+		"\n"
+		, argv0, argv0 );
 }
 
 int _argc;
@@ -1126,6 +1233,12 @@ argv = _argv;
 		} else if( is_dash_arg_prefix( argv[i], "help", 1 ) ) {
 			help( argv[0] );
 			return 1;
+		} else if( is_dash_arg_prefix( argv[i], "setup", 1 ) ) {
+			if( argc < 4 ) {
+				help( argv[0] );
+				return 1;
+			}
+			return setup( argv[2], argv[3], argc >= 4 ? argv[4] : NULL );
 		} else if( argv[i][0] == '-' && argv[i][1] != '\0' ) {
 			fprintf( stderr, "%s: unrecognized option (%s).\n", argv[0], argv[i] );
 			return 1;

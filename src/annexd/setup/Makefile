@@ -4,7 +4,7 @@
 
 VERSION = 7
 FUNCTIONS = sfr-lease-$(VERSION).zip odi-lease-$(VERSION).zip
-TEMPLATES = template-$(VERSION).json role-$(VERSION).json
+TEMPLATES = template-$(VERSION).json role-$(VERSION).json bucket-$(VERSION).json security-group-$(VERSION).json
 S3TARGETS = $(FUNCTIONS:%=.upload/%) $(TEMPLATES:%=.upload/%)
 
 all : s3upload
@@ -45,9 +45,17 @@ template-$(VERSION).json : generate-template
 role-$(VERSION).json : generate-role
 	@./generate-role --pretty-print > $@
 
+bucket-$(VERSION).json : generate-bucket
+	@./generate-bucket --pretty-print > $@
+
+security-group-$(VERSION).json : generate-security-group
+	@./generate-security-group --pretty-print > $@
+
 #
 # Run the template generator (for distribution).
 #
-templates : template role
+templates : template role bucket
 template : template-$(VERSION).json
 role : role-$(VERSION).json
+bucket : bucket-$(VERSION).json
+security-group : security-group-$(VERSION).json
