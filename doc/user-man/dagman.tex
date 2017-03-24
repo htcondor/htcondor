@@ -1066,6 +1066,16 @@ a check is made for a halt file.
 If one exists, it is removed.
 \end{itemize}
 
+\Bold{Note that neither \Condor{hold} nor a DAG halt is propagated to
+sub-DAGs.}
+In other words, if you \Condor{hold} or create a halt file for a DAG that
+has sub-DAGs, any sub-DAGs that are already in the queue will continue
+to submit node jobs.
+
+A \Condor{hold} or DAG halt \emph{does}, however, apply to splices,
+because they are merged into the parent DAG and controlled by a single
+\Condor{dagman} instance.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:AdvDAGMan}Advanced Features of DAGMan}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
