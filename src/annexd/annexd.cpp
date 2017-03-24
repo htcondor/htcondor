@@ -27,6 +27,7 @@
 #include "CreateStack.h"
 #include "WaitForStack.h"
 #include "SetupReply.h"
+#include "GenerateConfigFile.h"
 
 // from annex.cpp
 #include "condor_common.h"
@@ -750,6 +751,11 @@ setup( const char * publicKeyFile, const char * privateKeyFile, const char * clo
 	ClassAd * reply = new ClassAd();
 	ClassAd * scratchpad = new ClassAd();
 
+	// This 100% redundant, but it moves all our config-file generation
+	// code to the same place, so it's worth it.
+	scratchpad->Assign( "AccessKeyFile", publicKeyFile );
+	scratchpad->Assign( "SecretKeyFile", privateKeyFile );
+
 	std::string commandID;
 	generateCommandID( commandID );
 
@@ -815,11 +821,13 @@ setup( const char * publicKeyFile, const char * privateKeyFile, const char * clo
 		sgStackName, sgStackDescription,
 		commandState, commandID );
 
+	GenerateConfigFile * gcf = new GenerateConfigFile( cfGahp, scratchpad );
+
 	SetupReply * sr = new SetupReply( reply, cfGahp, scratchpad,
 		replyStream, commandState, commandID );
 
 	FunctorSequence * fs = new FunctorSequence(
-		{ bucketCS, bucketWFS, lfCS, lfWFS, rCS, rWFS, sgCS, sgWFS }, sr,
+		{ bucketCS, bucketWFS, lfCS, lfWFS, rCS, rWFS, sgCS, sgWFS, gcf }, sr,
 		commandState, commandID, scratchpad );
 
 

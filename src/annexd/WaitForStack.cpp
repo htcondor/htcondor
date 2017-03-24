@@ -35,8 +35,6 @@ WaitForStack::operator() () {
 			fprintf( stdout, " complete.\n" ); fflush( stdout );
 
 			for( auto i = outputs.begin(); i != outputs.end(); ++i ) {
-				// FIXME: write another functor to dump this to disk.
-				fprintf( stdout, "%s = %s\n", i->first.c_str(), i->second.c_str() );
 				scratchpad->Assign( i->first.c_str(), i->second );
 			}
 
