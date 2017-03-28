@@ -3047,6 +3047,10 @@ default=$(LOCK)/$(JOB_ROUTER_NAME)Lock
 type=string
 tags=JobRouter
 
+[JOB_ROUTER_ROUND_ROBIN_SELECTION]
+default=true
+type=bool
+
 [POLLING_PERIOD]
 default=
 type=string
