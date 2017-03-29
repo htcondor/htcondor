@@ -45,7 +45,7 @@ CreateKeyPair::operator() () {
 	} else {
 		// The SSH key pair is optional, so if they've already got one
 		// (left over from a previous set-up attempt), don't complain.
-		if( errorCode == "E_HTTP_RESPONSE_NOT_200 (400)" ) {
+		if( strcasestr( gahp->getErrorString(), "<Code>InvalidKeyPair.Duplicate</Code>" ) != NULL ) {
 			scratchpad->Assign( "KeyName", keyName );
 			reply->Assign( ATTR_RESULT, getCAResultString( CA_SUCCESS ) );
 			rc = PASS_STREAM;

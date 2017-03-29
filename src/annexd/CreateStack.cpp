@@ -36,14 +36,19 @@ CreateStack::operator() () {
 		reply->Assign( ATTR_RESULT, getCAResultString( CA_SUCCESS ) );
 		rc = PASS_STREAM;
 	} else {
-		std::string message;
-		formatstr( message, "Stack creation failed: '%s' (%d): '%s'.",
-			errorCode.c_str(), rc, cfGahp->getErrorString() );
-		dprintf( D_ALWAYS, "%s\n", message.c_str() );
+		if( strcasestr( cfGahp->getErrorString(), "<Code>AlreadyExistsException</Code>" ) != NULL ) {
+			reply->Assign( ATTR_RESULT, getCAResultString( CA_SUCCESS ) );
+			rc = PASS_STREAM;
+		} else {
+			std::string message;
+			formatstr( message, "Stack creation failed: '%s' (%d): '%s'.",
+				errorCode.c_str(), rc, cfGahp->getErrorString() );
+			dprintf( D_ALWAYS, "%s\n", message.c_str() );
 
-		reply->Assign( ATTR_RESULT, getCAResultString( CA_FAILURE ) );
-		reply->Assign( ATTR_ERROR_STRING, message );
-		rc = FALSE;
+			reply->Assign( ATTR_RESULT, getCAResultString( CA_FAILURE ) );
+			reply->Assign( ATTR_ERROR_STRING, message );
+			rc = FALSE;
+		}
 	}
 
 	daemonCore->Reset_Timer( cfGahp->getNotificationTimerId(), 0, TIMER_NEVER );

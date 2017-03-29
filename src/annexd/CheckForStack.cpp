@@ -7,7 +7,7 @@
 
 int
 CheckForStack::operator() () {
-	dprintf( D_FULLDEBUG, "WaitForStack::operator()\n" );
+	dprintf( D_FULLDEBUG, "CheckForStack::operator()\n" );
 
 	if(! introduced) {
 		fprintf( stdout, "Checking for %s...", stackDescription.c_str() );
@@ -42,17 +42,17 @@ CheckForStack::operator() () {
 			fprintf( stdout, " not OK ('%s').\n", stackStatus.c_str() ); fflush( stdout );
 
 			std::string message;
-			formatstr( message, "Missing %s.  Please log into your AWS account and delete each CloudFormation stack whose name starts with 'HTCondorAnnex-', the re-run 'condor_annex -setup'.", stackDescription.c_str() );
+			formatstr( message, "Missing %s.  Please log into your AWS account and delete each CloudFormation stack whose name starts with 'HTCondorAnnex-', then re-run 'condor_annex -setup'.", stackDescription.c_str() );
 			reply->Assign( ATTR_RESULT, getCAResultString( CA_FAILURE ) );
 			reply->Assign( ATTR_ERROR_STRING, message );
 			rc = FALSE;
 		}
 	} else {
-		if( errorCode == "E_HTTP_RESPONSE_NOT_200 (400)" ) {
+		if( strcasestr( cfGahp->getErrorString(), "<Code>ValidationError</Code>" ) != NULL ) {
 			fprintf( stdout, " missing.\n" );  fflush( stdout );
 
 			std::string message;
-			formatstr( message, "Missing %s.  Please log into your AWS account and delete each CloudFormation stack whose name starts with 'HTCondorAnnex-', the re-run 'condor_annex -setup'.", stackDescription.c_str() );
+			formatstr( message, "Missing %s.  Please log into your AWS account and delete each CloudFormation stack whose name starts with 'HTCondorAnnex-', then re-run 'condor_annex -setup'.", stackDescription.c_str() );
 			reply->Assign( ATTR_RESULT, getCAResultString( CA_FAILURE ) );
 			reply->Assign( ATTR_ERROR_STRING, message );
 			rc = FALSE;
@@ -75,7 +75,7 @@ CheckForStack::operator() () {
 
 int
 CheckForStack::rollback() {
-	dprintf( D_FULLDEBUG, "WaitForStack::rollback()\n" );
+	dprintf( D_FULLDEBUG, "CheckForStack::rollback()\n" );
 
 	// We didn't do anything, so we don't have anything to undo.
 
