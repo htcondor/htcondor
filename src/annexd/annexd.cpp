@@ -28,6 +28,7 @@
 #include "WaitForStack.h"
 #include "SetupReply.h"
 #include "GenerateConfigFile.h"
+#include "CreateKeyPair.h"
 
 // from annex.cpp
 #include "condor_common.h"
@@ -736,7 +737,7 @@ readShortFile( const char * fileName, std::string & contents ) {
 
 
 int
-setup( const char * publicKeyFile, const char * privateKeyFile, const char * cloudFormationURL ) {
+setup( const char * publicKeyFile, const char * privateKeyFile, const char * cloudFormationURL, const char * serviceURL ) {
 	std::string cfURL = cloudFormationURL ? cloudFormationURL : "";
 	if( cfURL.empty() ) {
 		// FIXME: At some point, the argument to 'setup' should be the region,
@@ -745,6 +746,15 @@ setup( const char * publicKeyFile, const char * privateKeyFile, const char * clo
 	}
 	if( cfURL.empty() ) {
 		fprintf( stderr, "No CloudFormation URL specified on command-line and ANNEX_DEFAULT_CF_URL is not set or empty in configuration.\n" );
+		return 1;
+	}
+
+	std::string ec2URL = serviceURL ? serviceURL : "";
+	if( ec2URL.empty() ) {
+		param( ec2URL, "ANNEX_DEFAULT_EC2_URL" );
+	}
+	if( ec2URL.empty() ) {
+		fprintf( stderr, "No EC2 URL specified on command-line and ANNEX_DEFAULT_EC2_URL is not set or empty in configuration.\n" );
 		return 1;
 	}
 
@@ -762,6 +772,7 @@ setup( const char * publicKeyFile, const char * privateKeyFile, const char * clo
 	Stream * replyStream = NULL;
 
 	EC2GahpClient * cfGahp = startOneGahpClient( publicKeyFile, cfURL );
+	EC2GahpClient * ec2Gahp = startOneGahpClient( publicKeyFile, ec2URL );
 
 	// FIXME: Do something cleverer for versioning.
 	std::string bucketStackURL = "https://s3.amazonaws.com/condor-annex/bucket-7.json";
@@ -821,13 +832,17 @@ setup( const char * publicKeyFile, const char * privateKeyFile, const char * clo
 		sgStackName, sgStackDescription,
 		commandState, commandID );
 
+	CreateKeyPair * ckp = new CreateKeyPair( reply, ec2Gahp, scratchpad,
+		ec2URL, publicKeyFile, privateKeyFile,
+		commandState, commandID );
+
 	GenerateConfigFile * gcf = new GenerateConfigFile( cfGahp, scratchpad );
 
 	SetupReply * sr = new SetupReply( reply, cfGahp, scratchpad,
 		replyStream, commandState, commandID );
 
 	FunctorSequence * fs = new FunctorSequence(
-		{ bucketCS, bucketWFS, lfCS, lfWFS, rCS, rWFS, sgCS, sgWFS, gcf }, sr,
+		{ bucketCS, bucketWFS, lfCS, lfWFS, rCS, rWFS, sgCS, sgWFS, ckp, gcf }, sr,
 		commandState, commandID, scratchpad );
 
 
@@ -835,7 +850,7 @@ setup( const char * publicKeyFile, const char * privateKeyFile, const char * clo
 		 (void (Service::*)()) & FunctorSequence::operator(),
 		 "CreateStack, DescribeStacks, WriteConfigFile", fs );
 	cfGahp->setNotificationTimerId( setupTimer );
-
+	ec2Gahp->setNotificationTimerId( setupTimer );
 
 	return 0;
 }
@@ -1246,7 +1261,10 @@ argv = _argv;
 				help( argv[0] );
 				return 1;
 			}
-			return setup( argv[2], argv[3], argc >= 4 ? argv[4] : NULL );
+			// FIXME: At some point, there should be only three arguments,
+			// and the optional third (defaulting to us-east-1) should be
+			// the region in which to set up.
+			return setup( argv[2], argv[3], argc >= 4 ? argv[4] : NULL, serviceURL );
 		} else if( argv[i][0] == '-' && argv[i][1] != '\0' ) {
 			fprintf( stderr, "%s: unrecognized option (%s).\n", argv[0], argv[i] );
 			return 1;

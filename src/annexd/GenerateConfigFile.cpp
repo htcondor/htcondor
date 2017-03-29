@@ -33,6 +33,7 @@ GenerateConfigFile::operator() () {
 	// Append the annex configuration to the user config file.
 	FILE * configFile = NULL;
 
+	// Consider using createUserConfigDir() from CreateKeyPair.cpp.
 	std::string userConfigName;
 	MyString userConfigSource;
 	param( userConfigName, "USER_CONFIG_FILE" );
@@ -74,6 +75,13 @@ GenerateConfigFile::operator() () {
 		if(! value.empty()) {
 			fprintf( configFile, "%s = %s\n", i->second.c_str(), value.c_str() );
 		}
+	}
+
+	std::string keyPath;
+	scratchpad->LookupString( "KeyPath", keyPath );
+	if(! keyPath.empty()) {
+		fprintf( configFile, "# For debugging:\n" );
+		fprintf( configFile, "# ssh -i %s +ec2-user@<address>\n", keyPath.c_str() );
 	}
 
 	fprintf( configFile, "\n" );
