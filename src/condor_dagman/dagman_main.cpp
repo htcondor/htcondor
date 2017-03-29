@@ -105,6 +105,7 @@ Dagman::Dagman() :
 	dag (NULL),
 	maxIdle (MAX_IDLE_DEFAULT),
 	maxJobs (0),
+	maxProcs (0),
 	maxPreScripts (20),
 	maxPostScripts (20),
 	paused (false),
@@ -315,6 +316,11 @@ Dagman::Config()
 		param_integer( "DAGMAN_MAX_JOBS_SUBMITTED", maxJobs, 0, INT_MAX );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_MAX_JOBS_SUBMITTED setting: %d\n",
 				maxJobs );
+
+	maxProcs =
+		param_integer( "DAGMAN_MAX_PROCS_SUBMITTED", maxProcs, 0, INT_MAX );
+	debug_printf( DEBUG_NORMAL, "DAGMAN_MAX_PROCS_SUBMITTED setting: %d\n",
+				maxProcs );
 
 	maxPreScripts = param_integer( "DAGMAN_MAX_PRE_SCRIPTS", maxPreScripts,
 				0, INT_MAX );
@@ -721,6 +727,15 @@ void main_init (int argc, char ** const argv) {
                 Usage();
             }
             dagman.maxJobs = atoi( argv[i] );
+		//TEMPTEMP -- change name later
+        } else if( !strcasecmp( "-MaxCores", argv[i] ) ) {
+            i++;
+            if( argc <= i || strcmp( argv[i], "" ) == 0 ) {
+                debug_printf( DEBUG_SILENT,
+							  "Integer missing after -MaxCores\n" );
+                Usage();
+            }
+            dagman.maxProcs = atoi( argv[i] );
         } else if( !strcasecmp( "-MaxScripts", argv[i] ) ) {
 			debug_printf( DEBUG_SILENT, "-MaxScripts has been replaced with "
 						   "-MaxPre and -MaxPost arguments\n" );
@@ -966,6 +981,11 @@ void main_init (int argc, char ** const argv) {
         debug_printf( DEBUG_SILENT, "-MaxJobs must be non-negative\n");
         Usage();
     }
+    if( dagman.maxProcs < 0 ) {
+		//TEMPTEMP -- change name
+        debug_printf( DEBUG_SILENT, "-MaxCores must be non-negative\n");
+        Usage();
+    }
     if( dagman.maxPreScripts < 0 ) {
         debug_printf( DEBUG_SILENT, "-MaxPre must be non-negative\n" );
         Usage();
@@ -1120,6 +1140,7 @@ void main_init (int argc, char ** const argv) {
 	// bother to construct a new SubmitDagOtions object for splices.
 	// wenger 2010-03-25
     dagman.dag = new Dag( dagman.dagFiles, dagman.maxJobs,
+						  dagman.maxProcs,
 						  dagman.maxPreScripts, dagman.maxPostScripts,
 						  dagman.useDagDir,
 						  dagman.maxIdle, dagman.retrySubmitFirst,

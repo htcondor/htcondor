@@ -85,7 +85,7 @@ static const int NODE_HASH_SIZE = 10007; // prime, allow for big DAG...
 
 //---------------------------------------------------------------------------
 Dag::Dag( /* const */ StringList &dagFiles,
-		  const int maxJobsSubmitted,
+		  const int maxJobsSubmitted, const int maxProcsSubmitted,
 		  const int maxPreScripts, const int maxPostScripts,
 		  bool useDagDir, int maxIdleJobProcs, bool retrySubmitFirst,
 		  bool retryNodeFirst, const char *condorRmExe,
@@ -108,7 +108,9 @@ Dag::Dag( /* const */ StringList &dagFiles,
     _numNodesDone         (0),
     _numNodesFailed       (0),
     _numJobsSubmitted     (0),
+    _numProcsSubmitted     (0),
     _maxJobsSubmitted     (maxJobsSubmitted),
+    _maxProcsSubmitted     (maxProcsSubmitted),
 	_numIdleJobProcs		  (0),
 	_maxIdleJobProcs		  (maxIdleJobProcs),
 	_numHeldJobProcs	  (0),
@@ -1048,6 +1050,7 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Job *job,
 void
 Dag::ProcessSubmitEvent(Job *job, bool recovery, bool &submitEventIsSane) {
 
+	//debug_printf( DEBUG_QUIET, "DIAG 1110\n" );//TEMPTEMP
 	if ( !job ) {
 		return;
 	}
@@ -1077,6 +1080,7 @@ Dag::ProcessSubmitEvent(Job *job, bool recovery, bool &submitEventIsSane) {
 			// would probably be invalid.
 		DC_Exit( EXIT_ERROR );
 	}
+	//debug_printf( DEBUG_QUIET, "DIAG 1120\n" );//TEMPTEMP
 
 		//
 		// If we got an "insane" submit event for a node that currently
@@ -1091,6 +1095,11 @@ Dag::ProcessSubmitEvent(Job *job, bool recovery, bool &submitEventIsSane) {
 
 		// Note:  in non-recovery mode, we increment _numJobsSubmitted
 		// in ProcessSuccessfulSubmit().
+		//TEMPTEMP -- hmm -- should we *always* update _numProcsSubmitted here?
+#if 1 //TEMPTEMP
+			++_numProcsSubmitted;//TEMPTEMP?
+			debug_printf( DEBUG_QUIET, "DIAG 1010 _numProcsSubmitted: %d\n", _numProcsSubmitted );//TEMPTEMP
+#endif //TEMPTEMP
 	if ( recovery ) {
 		if ( submitEventIsSane || job->GetStatus() != Job::STATUS_SUBMITTED ) {
 				// Only increment the submitted job count on
@@ -1098,9 +1107,14 @@ Dag::ProcessSubmitEvent(Job *job, bool recovery, bool &submitEventIsSane) {
 			if( job->_queuedNodeJobProcs == 1 ) {
 				UpdateJobCounts( job, 1 );
 			}
+#if 0 //TEMPTEMP
+			++_numProcsSubmitted;//TEMPTEMP?
+			debug_printf( DEBUG_QUIET, "DIAG 1010 _numProcsSubmitted: %d\n", _numProcsSubmitted );//TEMPTEMP
+#endif //TEMPTEMP
 		}
 
 		job->SetStatus( Job::STATUS_SUBMITTED );
+		//TEMPTEMP -- hmm -- why do we return here?  document...
 		return;
 	}
 
@@ -1550,16 +1564,29 @@ Dag::SubmitReadyJobs(const Dagman &dm)
     		// max jobs already submitted
     	if( _maxJobsSubmitted && (_numJobsSubmitted >= _maxJobsSubmitted) ) {
         	debug_printf( DEBUG_DEBUG_1,
-                      	"Max jobs (%d) already running; "
+                      	"Max jobs (%d) already queued; "
 					  	"deferring submission of %d ready job%s.\n",
                       	_maxJobsSubmitted, _readyQ->Number(),
 					  	_readyQ->Number() == 1 ? "" : "s" );
 			_maxJobsDeferredCount += _readyQ->Number();
 			break; // break out of while loop
     	}
+
+    		// max procs already submitted
+    	if( _maxProcsSubmitted && (_numProcsSubmitted >= _maxProcsSubmitted) ) {
+        	debug_printf( DEBUG_DEBUG_1,
+                      	"Max procs (%d) already queued; "
+					  	"deferring submission of %d ready job%s.\n",
+                      	_maxProcsSubmitted, _readyQ->Number(),
+					  	_readyQ->Number() == 1 ? "" : "s" );
+			_maxJobsDeferredCount += _readyQ->Number();
+			break; // break out of while loop
+    	}
+
+			// max idle procs already queued
 		if ( _maxIdleJobProcs && (_numIdleJobProcs >= _maxIdleJobProcs) ) {
         	debug_printf( DEBUG_DEBUG_1,
-					  	"Hit max number of idle DAG nodes (%d); "
+					  	"Hit max number of idle DAG node procs (%d); "
 					  	"deferring submission of %d ready job%s.\n",
 					  	_maxIdleJobProcs, _readyQ->Number(),
 					  	_readyQ->Number() == 1 ? "" : "s" );
@@ -4040,6 +4067,7 @@ Dag::ProcessSuccessfulSubmit( Job *node, const CondorID &condorID )
 		// maxjobs (now really maxnodes) if it takes a while to see
 		// the submit events.  wenger 2006-02-10.
 	UpdateJobCounts( node, 1 );
+	//TEMPTEMP -- hmm -- we should probably update _numProcsSubmitted here...  (so we don't submit too many jobs in one submit cycle)
     
         // stash the job ID reported by the submit command, to compare
         // with what we see in the userlog later as a sanity-check
@@ -4130,7 +4158,10 @@ Dag::DecrementProcCount( Job *node )
 	node->_queuedNodeJobProcs--;
 	ASSERT( node->_queuedNodeJobProcs >= 0 );
 
-	if( node->_queuedNodeJobProcs == 0 ) {
+	--_numProcsSubmitted; //TEMPTEMP?
+	debug_printf( DEBUG_QUIET, "DIAG 1210 _numProcsSubmitted: %d\n", _numProcsSubmitted );//TEMPTEMP
+	ASSERT( _numProcsSubmitted >= 0 );
+	if ( node->_queuedNodeJobProcs == 0 ) {
 		UpdateJobCounts( node, -1 );
 		node->Cleanup();
 	}
@@ -4148,7 +4179,6 @@ Dag::UpdateJobCounts( Job *node, int change )
 		ASSERT( node->GetThrottleInfo()->_currentJobs >= 0 );
 	}
 }
-
 
 //---------------------------------------------------------------------------
 void

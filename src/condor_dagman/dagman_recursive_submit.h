@@ -42,6 +42,7 @@ struct SubmitDagShallowOptions
 	MyString strScheddAddressFile;
 	int iMaxIdle;
 	int iMaxJobs;
+	int iMaxProcs;
 	int iMaxPre;
 	int iMaxPost;
 	MyString appendFile; // append to .condor.sub file before queue

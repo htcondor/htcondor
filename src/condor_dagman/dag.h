@@ -94,6 +94,7 @@ class Dag {
 		@param dagFile the DAG file name
         @param maxJobsSubmitted the maximum number of jobs to submit to HTCondor
                at one time
+		TEMPTEMP -- add maxProcs
         @param maxPreScripts the maximum number of PRE scripts to spawn at
 		       one time
         @param maxPostScripts the maximum number of POST scripts to spawn at
@@ -126,7 +127,7 @@ class Dag {
     */
 
     Dag( /* const */ StringList &dagFiles,
-		 const int maxJobsSubmitted,
+		 const int maxJobsSubmitted, const int maxProcsSubmitted,
 		 const int maxPreScripts, const int maxPostScripts, 
 		 bool useDagDir, int maxIdleJobProcs, bool retrySubmitFirst,
 		 bool retryNodeFirst, const char *condorRmExe,
@@ -633,6 +634,7 @@ class Dag {
 	void CheckThrottleCats();
 
 	int MaxJobsSubmitted(void) { return _maxJobsSubmitted; }
+	int MaxProcsSubmitted(void) { return _maxProcsSubmitted; }
 
 	bool UseDagDir(void) { return _useDagDir; }
 
@@ -1038,13 +1040,19 @@ private:
     // Number of nodes that failed (job or PRE or POST script failed)
     int _numNodesFailed;
 
-    // Number of batch system jobs currently submitted
+    // Number of batch system jobs (clusters) currently submitted
     int _numJobsSubmitted;
+
+    // Number of batch system procs currently submitted
+    int _numProcsSubmitted;
 
     /*  Maximum number of jobs to submit at once.  Non-negative.  Zero means
         unlimited
     */
     const int _maxJobsSubmitted;
+
+	//TEMPTEMP -- document
+    const int _maxProcsSubmitted;
 
 		// Number of DAG job procs currently idle.
 	int _numIdleJobProcs;

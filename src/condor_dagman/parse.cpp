@@ -1760,6 +1760,7 @@ parse_splice(
 	// object will never actually do a submit.  wenger 2010-03-25
 	splice_dag = new Dag(	dag->DagFiles(),
 							dag->MaxJobsSubmitted(),
+							dag->MaxProcsSubmitted(),
 							dag->MaxPreScripts(),
 							dag->MaxPostScripts(),
 							dag->UseDagDir(),

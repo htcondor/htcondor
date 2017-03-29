@@ -1272,6 +1272,16 @@ parsePreservedArgs(const MyString &strArg, int &argNum, int argc,
 		shallowOpts.iMaxJobs = atoi(argv[++argNum]);
 		result = true;
 	}
+	//TEMPTEMP -- change name later
+	else if (strArg.find("-maxcores") != -1) // -maxcores
+	{
+		if (argNum + 1 >= argc) {
+			fprintf(stderr, "-maxcores argument needs a value\n");
+			printUsage();
+		}
+		shallowOpts.iMaxProcs = atoi(argv[++argNum]);
+		result = true;
+	}
 	else if (strArg.find("-maxpr") != -1) // -maxpre
 	{
 		if (argNum + 1 >= argc) {
@@ -1311,6 +1321,8 @@ int printUsage(int iExitCode)
     printf("    -schedd-address-file <path>  (Submit to the schedd who dropped the address file)\n");
 	printf("    -maxidle <number>   (Maximum number of idle nodes to allow)\n");
     printf("    -maxjobs <number>   (Maximum number of jobs ever submitted at once)\n");
+	//TEMPTEMP -- change maxcores name later
+    printf("    -maxcores <number>   (Maximum number of procs ever submitted at once)\n");
     printf("    -MaxPre <number>    (Maximum number of PRE scripts to run at once)\n");
     printf("    -MaxPost <number>   (Maximum number of POST scripts to run at once)\n");
     printf("    -notification <value> (Determines how much email you get from HTCondor.\n");
