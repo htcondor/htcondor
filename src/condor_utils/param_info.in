@@ -1604,9 +1604,17 @@ type=int
 tags=gridmanager,globusjob
 
 [PERIODIC_EXPR_INTERVAL]
-default=300
+default=60
 type=int
-tags=gridmanager,basejob
+
+[MAX_PERIODIC_EXPR_INTERVAL]
+default=1200
+type=int
+
+[PERIODIC_EXPR_TIMESLICE]
+default=0.01
+type=double
+range=0.0,1.0
 
 [ENABLE_GRID_MONITOR]
 default=true
@@ -3038,6 +3046,10 @@ tags=schedd,JobRouter
 default=$(LOCK)/$(JOB_ROUTER_NAME)Lock
 type=string
 tags=JobRouter
+
+[JOB_ROUTER_ROUND_ROBIN_SELECTION]
+default=true
+type=bool
 
 [POLLING_PERIOD]
 default=

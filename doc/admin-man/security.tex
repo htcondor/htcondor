@@ -24,8 +24,8 @@ HTCondor assumes that users are trustworthy.
 HTCondor can prevent unauthorized access to the HTCondor pool,
 to help ensure that only trusted users have access to the pool.
 In addition, HTCondor provides encryption and
-integrity checking, to ensure that data (both HTCondor's data and user
-jobs' data) has not been examined or tampered with while in transit.
+integrity checking, to ensure that network transmissions
+are not examined or tampered with while in transit.
 
 Broadly speaking, the aspects of security in
 HTCondor may be categorized and described: 
@@ -66,7 +66,9 @@ decryption is possible.
 HTCondor can encrypt the data sent for internal communication, 
 as well as user data, such as files and executables.
 Encryption operates on network
-transmissions: unencrypted data is stored on disk.
+transmissions: unencrypted data is stored on disk by default.
+However, see the \Macro{ENCRYPT\_EXECUTE\_DIRECTORY} setting for how to
+encrypt job data on the disk of an execute node.
 
 \item[Integrity] 
 The  \Term{man-in-the-middle} attack tampers with data
@@ -77,6 +79,10 @@ tampered with.
 Note that the integrity information is only for network
 transmissions: data stored on disk does not have this integrity
 information. 
+Also note that integrity checks are not performed upon job data
+files that are transferred by HTCondor via the File Transfer
+Mechanism described in section~\ref{sec:file-transfer}.
+
 
 \end{description}
 
@@ -135,11 +141,8 @@ Commands in HTCondor are executed over TCP/IP network connections.
 While network communication enables HTCondor to manage
 resources that are distributed across an organization (or beyond),
 it also brings in security challenges.
-HTCondor must have ways of ensuring that commands are being sent
-by trustworthy users.
-Jobs that are operating on sensitive data must be allowed to use
-encryption such that the data is not seen by outsiders.
-Jobs may need assurance that data has not been tampered with.
+HTCondor must have ways of ensuring that communications are being sent
+by trustworthy users and not tampered with in transit.
 These issues
 can be addressed with HTCondor's authentication,
 encryption, and integrity features.
@@ -1708,6 +1711,10 @@ Any change, such as addition, modification, or deletion can
 be detected.
 Through configuration macros, both the client and the daemon
 can specify whether an integrity check is required of further communication.
+
+Note at this time, integrity checks are not performed upon job data
+files that are transferred by HTCondor via the File Transfer
+Mechanism described in section~\ref{sec:file-transfer}.
 
 The client uses one of two macros to enable or disable an integrity check:
 \index{SEC\_DEFAULT\_INTEGRITY macro@\texttt{SEC\_DEFAULT\_INTEGRITY} macro}

@@ -1157,7 +1157,31 @@ TransferQueueManager::publish(ClassAd *ad)
 void
 TransferQueueManager::publish(ClassAd *ad,int pubflags)
 {
-	dprintf(D_ALWAYS,"TransferQueueManager stats: active up=%d/%d down=%d/%d; waiting up=%d down=%d; wait time up=%ds down=%ds\n",
+	int d_level = D_FULLDEBUG;
+	bool is_active = m_uploading > 0 || m_downloading > 0 || m_waiting_to_upload > 0 || m_waiting_to_download > 0;
+
+	char const *ema_horizon = m_iostats.bytes_sent.ShortestHorizonEMAName();
+	double up_bytes_sent=0.0, up_file_read=0.0, up_net_write=0.0;
+	double down_bytes_received=0.0, down_file_write=0.0, down_net_read=0.0;
+	if( ema_horizon ) {
+		up_bytes_sent = m_iostats.bytes_sent.EMAValue(ema_horizon);
+		up_file_read = m_iostats.file_read.EMAValue(ema_horizon);
+		up_net_write = m_iostats.net_write.EMAValue(ema_horizon);
+		if (up_bytes_sent > 0.0 || up_file_read > 0.0 || up_net_write > 0.0) { is_active = true; }
+
+		down_bytes_received = m_iostats.bytes_received.EMAValue(ema_horizon);
+		down_file_write = m_iostats.file_write.EMAValue(ema_horizon);
+		down_net_read = m_iostats.net_read.EMAValue(ema_horizon);
+		if (down_bytes_received > 0.0 || down_file_write > 0.0 || down_net_read > 0.0) { is_active = true; }
+	}
+
+	// report transfer queue idle only once until it transitions to non-idle again.
+	static bool already_reported_idleness = false;
+	if (is_active || !already_reported_idleness) {
+		d_level = D_ALWAYS;
+	}
+
+	dprintf(d_level,"TransferQueueManager stats: active up=%d/%d down=%d/%d; waiting up=%d down=%d; wait time up=%ds down=%ds\n",
 			m_uploading,
 			m_max_uploads,
 			m_downloading,
@@ -1167,19 +1191,18 @@ TransferQueueManager::publish(ClassAd *ad,int pubflags)
 			m_upload_wait_time,
 			m_download_wait_time);
 
-	char const *ema_horizon = m_iostats.bytes_sent.ShortestHorizonEMAName();
 	if( ema_horizon ) {
-		dprintf(D_ALWAYS,"TransferQueueManager upload %s I/O load: %.0f bytes/s  %.3f disk load  %.3f net load\n",
-				ema_horizon,
-				m_iostats.bytes_sent.EMAValue(ema_horizon),
-				m_iostats.file_read.EMAValue(ema_horizon),
-				m_iostats.net_write.EMAValue(ema_horizon));
+		dprintf(d_level,"TransferQueueManager upload %s I/O load: %.0f bytes/s  %.3f disk load  %.3f net load\n",
+				ema_horizon, up_bytes_sent, up_file_read, up_net_write);
 
-		dprintf(D_ALWAYS,"TransferQueueManager download %s I/O load: %.0f bytes/s  %.3f disk load  %.3f net load\n",
-				ema_horizon,
-				m_iostats.bytes_received.EMAValue(ema_horizon),
-				m_iostats.file_write.EMAValue(ema_horizon),
-				m_iostats.net_read.EMAValue(ema_horizon));
+		dprintf(d_level,"TransferQueueManager download %s I/O load: %.0f bytes/s  %.3f disk load  %.3f net load\n",
+				ema_horizon, down_bytes_received, down_file_write, down_net_read);
+	}
+
+	if (is_active) {
+		already_reported_idleness = false;
+	} else {
+		already_reported_idleness = true;
 	}
 
 	m_stat_pool.Publish(*ad,pubflags);

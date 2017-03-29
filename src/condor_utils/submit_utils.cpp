@@ -7197,8 +7197,14 @@ int SubmitHash::init_cluster_ad(time_t submit_time_in, const char * owner)
 
 			auto_free_ptr expr(param(it->c_str()));
 			if ( ! expr) continue;
-			buffer.formatstr("%s = %s", it->c_str(), expr.ptr());
-			InsertJobExpr(buffer.c_str(), "SUBMIT_ATTRS or SUBMIT_EXPRS value");
+			ExprTree *tree = NULL;
+			bool valid_expr = (0 == ParseClassAdRvalExpr(expr.ptr(), tree)) && tree != NULL;
+			if ( ! valid_expr) {
+				dprintf(D_ALWAYS, "could not insert SUBMIT_ATTR %s. did you forget to quote a string value?\n", it->c_str());
+				//push_warning(stderr, "could not insert SUBMIT_ATTR %s. did you forget to quote a string value?\n", it->c_str());
+			} else {
+				baseJob.Insert(it->c_str(), tree);
+			}
 		}
 	}
 	

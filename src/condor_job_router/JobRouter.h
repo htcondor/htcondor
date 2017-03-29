@@ -137,6 +137,7 @@ class JobRouter: public Service {
 
 	bool m_enable_job_routing;
 	bool m_release_on_hold;
+	bool m_round_robin_selection;
 
 	int m_job_router_entries_refresh;
 	int m_job_router_refresh_timer;
