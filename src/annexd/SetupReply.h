@@ -9,8 +9,8 @@
 
 class SetupReply : public Functor {
 	public:
-		SetupReply( ClassAd * r, GahpClient * g, ClassAd * s, Stream * rs, ClassAdCollection * cac, const std::string & cid ) :
-			reply(r), replyStream(rs), cfGahp(g), scratchpad(s), commandState(cac), commandID(cid) { }
+		SetupReply( ClassAd * r, GahpClient * g, GahpClient * h, const std::string & ss, ClassAd * s, Stream * rs, ClassAdCollection * cac, const std::string & cid ) :
+			reply(r), replyStream(rs), cfGahp(g), ec2Gahp(h), successString(ss), scratchpad(s), commandState(cac), commandID(cid) { }
 		virtual ~SetupReply() { }
 
 		virtual int operator() ();
@@ -20,6 +20,8 @@ class SetupReply : public Functor {
 		ClassAd * reply;
 		Stream * replyStream;
 		GahpClient * cfGahp;
+		GahpClient * ec2Gahp;
+		std::string successString;
 		ClassAd * scratchpad;
 		GahpClient * eventsGahp;
 		ClassAdCollection * commandState;

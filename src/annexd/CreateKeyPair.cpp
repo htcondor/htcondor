@@ -5,38 +5,7 @@
 #include "Functor.h"
 #include "CreateKeyPair.h"
 
-#include "condor_config.h"
-#include "filename_tools.h"
-#include "directory.h"
-
-bool
-createUserConfigDir( std::string & directory ) {
-	std::string userConfigName;
-	MyString userConfigSource;
-	param( userConfigName, "USER_CONFIG_FILE" );
-	if(! userConfigName.empty()) {
-		find_user_file( userConfigSource, userConfigName.c_str(), false );
-		if(! userConfigSource.empty()) {
-			// Create the containing directory if necessary, and only the
-			// containing directory -- don't do anything stupid if the
-			// user configuration directory is misconfigured.
-			std::string dir, file;
-			filename_split( userConfigSource.c_str(), dir, file );
-			if(! IsDirectory( dir.c_str() )) {
-				mkdir( dir.c_str(), 0755 );
-			}
-
-			directory = dir;
-			return true;
-		} else {
-			fprintf( stderr, "Unable to locate your user configuration file.  " );
-			return false;
-		}
-	} else {
-		fprintf( stderr, "Your HTCondor installation is configured to ignore user configuration files.  Contact your system administrator.  " );
-		return false;
-	}
-}
+#include "user-config-dir.h"
 
 int
 CreateKeyPair::operator() () {
@@ -74,14 +43,22 @@ CreateKeyPair::operator() () {
 		reply->Assign( ATTR_RESULT, getCAResultString( CA_SUCCESS ) );
 		rc = PASS_STREAM;
 	} else {
-		std::string message;
-		formatstr( message, "Failed to create SSH key pair: '%s' (%d): '%s'.",
-			errorCode.c_str(), rc, gahp->getErrorString() );
-		dprintf( D_ALWAYS, "%s\n", message.c_str() );
+		// The SSH key pair is optional, so if they've already got one
+		// (left over from a previous set-up attempt), don't complain.
+		if( errorCode == "E_HTTP_RESPONSE_NOT_200 (400)" ) {
+			scratchpad->Assign( "KeyName", keyName );
+			reply->Assign( ATTR_RESULT, getCAResultString( CA_SUCCESS ) );
+			rc = PASS_STREAM;
+		} else {
+			std::string message;
+			formatstr( message, "Failed to create SSH key pair: '%s' (%d): '%s'.",
+				errorCode.c_str(), rc, gahp->getErrorString() );
+			dprintf( D_ALWAYS, "%s\n", message.c_str() );
 
-		reply->Assign( ATTR_RESULT, getCAResultString( CA_FAILURE ) );
-		reply->Assign( ATTR_ERROR_STRING, message );
-		rc = FALSE;
+			reply->Assign( ATTR_RESULT, getCAResultString( CA_FAILURE ) );
+			reply->Assign( ATTR_ERROR_STRING, message );
+			rc = FALSE;
+		}
 	}
 
 	daemonCore->Reset_Timer( gahp->getNotificationTimerId(), 0, TIMER_NEVER );

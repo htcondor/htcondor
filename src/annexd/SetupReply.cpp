@@ -23,7 +23,7 @@ SetupReply::operator() () {
 			CAResult result = getCAResultNum( resultString.c_str() );
 
 			if( result == CA_SUCCESS ) {
-				fprintf( stdout, "Setup successful.\n" );
+				fprintf( stdout, "%s", successString.c_str() );
 			} else {
 				std::string errorString;
 				reply->LookupString( ATTR_ERROR_STRING, errorString );
@@ -49,6 +49,10 @@ SetupReply::operator() () {
 	// shut itself (and the GAHP) down cleanly roughly ten seconds after
 	// the last corresponding gahp client is deleted.
 	delete cfGahp;
+
+	// See commentary in ReplyAndClean.
+	daemonCore->Cancel_Timer( ec2Gahp->getNotificationTimerId() );
+	delete ec2Gahp;
 
 	// We're done with the scratchpad, too.
 	delete scratchpad;

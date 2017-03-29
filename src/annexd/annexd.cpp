@@ -26,9 +26,12 @@
 
 #include "CreateStack.h"
 #include "WaitForStack.h"
+#include "CheckForStack.h"
 #include "SetupReply.h"
 #include "GenerateConfigFile.h"
 #include "CreateKeyPair.h"
+
+#include "user-config-dir.h"
 
 // from annex.cpp
 #include "condor_common.h"
@@ -735,9 +738,159 @@ readShortFile( const char * fileName, std::string & contents ) {
     return true;
 }
 
+void checkOneParameter( const char * pName, int & rv, std::string & pValue ) {
+	param( pValue, pName );
+	if( pValue.empty() ) {
+		if( rv == 0 ) { fprintf( stderr, "Your setup is incomplete:\n" ); }
+		fprintf( stderr, "\t%s is unset.\n", pName );
+		rv = 1;
+	}
+}
+
+void
+checkOneParameter( const char * pName, int & rv ) {
+	std::string pValue;
+	checkOneParameter( pName, rv, pValue );
+}
 
 int
-setup( const char * publicKeyFile, const char * privateKeyFile, const char * cloudFormationURL, const char * serviceURL ) {
+check_account_setup( const std::string & publicKeyFile, const std::string & privateKeyFile, const std::string & cfURL, const std::string & ec2URL ) {
+	ClassAd * reply = new ClassAd();
+	ClassAd * scratchpad = new ClassAd();
+
+	std::string commandID;
+	generateCommandID( commandID );
+
+	Stream * replyStream = NULL;
+
+	EC2GahpClient * cfGahp = startOneGahpClient( publicKeyFile, cfURL );
+	EC2GahpClient * ec2Gahp = startOneGahpClient( publicKeyFile, ec2URL );
+
+	std::string bucketStackName = "HTCondorAnnex-ConfigurationBucket";
+	std::string bucketStackDescription = "configuration bucket";
+	CheckForStack * bucketCFS = new CheckForStack( reply, cfGahp, scratchpad,
+		cfURL, publicKeyFile, privateKeyFile,
+		bucketStackName, bucketStackDescription,
+		commandState, commandID );
+
+	std::string lfStackName = "HTCondorAnnex-LambdaFunctions";
+	std::string lfStackDescription = "Lambda functions";
+	CheckForStack * lfCFS = new CheckForStack( reply, cfGahp, scratchpad,
+		cfURL, publicKeyFile, privateKeyFile,
+		lfStackName, lfStackDescription,
+		commandState, commandID );
+
+	std::string rStackName = "HTCondorAnnex-InstanceProfile";
+	std::string rStackDescription = "instance profile";
+	CheckForStack * rCFS = new CheckForStack( reply, cfGahp, scratchpad,
+		cfURL, publicKeyFile, privateKeyFile,
+		rStackName, rStackDescription,
+		commandState, commandID );
+
+	std::string sgStackName = "HTCondorAnnex-SecurityGroup";
+	std::string sgStackDescription = "security group";
+	CheckForStack * sgCFS = new CheckForStack( reply, cfGahp, scratchpad,
+		cfURL, publicKeyFile, privateKeyFile,
+		sgStackName, sgStackDescription,
+		commandState, commandID );
+
+	SetupReply * sr = new SetupReply( reply, cfGahp, ec2Gahp, "Your setup looks OK.\n", scratchpad,
+		replyStream, commandState, commandID );
+
+	FunctorSequence * fs = new FunctorSequence(
+		{ bucketCFS, lfCFS, rCFS, sgCFS }, sr,
+		commandState, commandID, scratchpad );
+
+	int setupTimer = daemonCore->Register_Timer( 0, TIMER_NEVER,
+		 (void (Service::*)()) & FunctorSequence::operator(),
+		 "CheckForStacks", fs );
+	cfGahp->setNotificationTimerId( setupTimer );
+	ec2Gahp->setNotificationTimerId( setupTimer );
+
+	return 0;
+}
+
+int
+check_setup() {
+	int rv = 0;
+
+	std::string accessKeyFile, secretKeyFile, cfURL, ec2URL;
+	checkOneParameter( "ANNEX_DEFAULT_ACCESS_KEY_FILE", rv, accessKeyFile );
+	checkOneParameter( "ANNEX_DEFAULT_SECRET_KEY_FILE", rv, secretKeyFile );
+	checkOneParameter( "ANNEX_DEFAULT_CF_URL", rv, cfURL );
+	checkOneParameter( "ANNEX_DEFAULT_EC2_URL", rv, ec2URL );
+
+	checkOneParameter( "ANNEX_DEFAULT_S3_BUCKET", rv );
+	checkOneParameter( "ANNEX_DEFAULT_ODI_SECURITY_GROUP_IDS", rv );
+	checkOneParameter( "ANNEX_DEFAULT_ODI_LEASE_FUNCTION_ARN", rv );
+	checkOneParameter( "ANNEX_DEFAULT_SFR_LEASE_FUNCTION_ARN", rv );
+	checkOneParameter( "ANNEX_DEFAULT_ODI_INSTANCE_PROFILE_ARN", rv );
+
+	if( rv != 0 ) {
+		return rv;
+	} else {
+		return check_account_setup( accessKeyFile, secretKeyFile, cfURL, ec2URL );
+	}
+}
+
+void
+setup_usage() {
+	fprintf( stdout,
+		"\n"
+		"To do the one-time setup for an AWS account:\n"
+		"\tcondor_annex -setup\n"
+		"\n"
+		"To specify the files for the access (public) key and secret (private) keys:\n"
+		"\tcondor_annex -setup\n"
+		"\t\t<path/to/access-key-file>\n"
+		"\t\t<path/to/private-key-file>\n"
+		"\n"
+		"Expert mode (to specify the region, you must specify the key paths):\n"
+		"\tcondor_annex -aws-ec2-url https://ec2.<region>.amazonaws.com\n"
+		"\t\t-setup <path/to/access-key-file>\n"
+		"\t\t<path/to/private-key-file>\n"
+		"\t\t<https://cloudformation.<region>.amazonaws.com/>\n"
+		"\n"
+	);
+}
+
+int
+setup( const char * pukf, const char * prkf, const char * cloudFormationURL, const char * serviceURL ) {
+	std::string publicKeyFile, privateKeyFile;
+	if( pukf != NULL && prkf != NULL ) {
+		publicKeyFile = pukf;
+		privateKeyFile = prkf;
+	} else {
+		std::string userDirectory;
+		if(! createUserConfigDir( userDirectory )) {
+			fprintf( stderr, "You must therefore specify the public and private key files on the command-line.\n" );
+			setup_usage();
+			return 1;
+		} else {
+			publicKeyFile = userDirectory + "/publicKeyFile";
+			privateKeyFile = userDirectory + "/privateKeyFile";
+		}
+	}
+
+	int fd = safe_open_no_create_follow( publicKeyFile.c_str(), O_RDONLY );
+	if( fd == -1 ) {
+		fprintf( stderr, "Unable to open public key file '%s': '%s' (%d).\n",
+			publicKeyFile.c_str(), strerror( errno ), errno );
+		setup_usage();
+		return 1;
+	}
+	close( fd );
+
+	fd = safe_open_no_create_follow( privateKeyFile.c_str(), O_RDONLY );
+	if( fd == -1 ) {
+		fprintf( stderr, "Unable to open private key file '%s': '%s' (%d).\n",
+			privateKeyFile.c_str(), strerror( errno ), errno );
+		setup_usage();
+		return 1;
+	}
+	close( fd );
+
+
 	std::string cfURL = cloudFormationURL ? cloudFormationURL : "";
 	if( cfURL.empty() ) {
 		// FIXME: At some point, the argument to 'setup' should be the region,
@@ -838,7 +991,7 @@ setup( const char * publicKeyFile, const char * privateKeyFile, const char * clo
 
 	GenerateConfigFile * gcf = new GenerateConfigFile( cfGahp, scratchpad );
 
-	SetupReply * sr = new SetupReply( reply, cfGahp, scratchpad,
+	SetupReply * sr = new SetupReply( reply, cfGahp, ec2Gahp, "Setup successful.\n", scratchpad,
 		replyStream, commandState, commandID );
 
 	FunctorSequence * fs = new FunctorSequence(
@@ -908,8 +1061,8 @@ help( const char * argv0 ) {
 		"\t[-aws-on-demand-lease-function-arn <odi-lease-function-arn>]\n"
 		"\t[-aws-on-demand-instance-profile-arn <instance-profile-arn>]\n"
 		"\n"
-		"OR, to do the one-time setup for an account:\n"
-		"%s -setup <path/to/access-key-file> <path/to/secret-key-file> [<CloudFormation URL>]\n"
+		"OR, to do the one-time setup for an AWS account:\n"
+		"%s -setup [<path/to/access-key-file> <path/to/secret-key-file> [<CloudFormation URL>]]\n"
 		"\n"
 		, argv0, argv0 );
 }
@@ -1256,15 +1409,15 @@ argv = _argv;
 		} else if( is_dash_arg_prefix( argv[i], "help", 1 ) ) {
 			help( argv[0] );
 			return 1;
-		} else if( is_dash_arg_prefix( argv[i], "setup", 1 ) ) {
-			if( argc < 4 ) {
-				help( argv[0] );
-				return 1;
-			}
-			// FIXME: At some point, there should be only three arguments,
-			// and the optional third (defaulting to us-east-1) should be
-			// the region in which to set up.
-			return setup( argv[2], argv[3], argc >= 4 ? argv[4] : NULL, serviceURL );
+		} else if( is_dash_arg_prefix( argv[i], "check-setup", 11 ) ) {
+			return check_setup();
+		} else if( is_dash_arg_prefix( argv[i], "setup", 5 ) ) {
+			// FIXME: At some point, we should accept a region flag instead
+			// of requiring the user to specify two different URLs.
+			return setup(	argc >= 2 ? argv[2] : NULL,
+							argc >= 3 ? argv[3] : NULL,
+							argc >= 4 ? argv[4] : NULL,
+							serviceURL );
 		} else if( argv[i][0] == '-' && argv[i][1] != '\0' ) {
 			fprintf( stderr, "%s: unrecognized option (%s).\n", argv[0], argv[i] );
 			return 1;
