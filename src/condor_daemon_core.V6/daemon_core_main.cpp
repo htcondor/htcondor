@@ -1237,7 +1237,7 @@ handle_dc_query_instance( Service*, int, Stream* stream)
 
 	// the first caller causes us to make a random instance id
 	// all subsequent queries will get the same instance id.
-	const char * instance_id = NULL;
+	static char * instance_id = NULL;
 	const int instance_length = 16;
 	if ( ! instance_id) {
 		unsigned char * bytes = Condor_Crypt_Base::randomKey(instance_length/2);
