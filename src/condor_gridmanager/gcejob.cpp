@@ -1046,7 +1046,7 @@ void GCEJob::StatusUpdate( const char * instanceID,
 	// SetRemoteJobStatus() sets the last-update timestamp, but
 	// only returns true if the status has changed.
 	if( SetRemoteJobStatus( status ) ) {
-		remoteJobState = status;
+		remoteJobState = status ? status : "";
 		probeNow = true;
 		SetEvaluateState();
 	}
