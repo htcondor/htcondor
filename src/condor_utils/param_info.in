@@ -206,6 +206,30 @@ range=0,65535
 type=int
 description=Default collector port
 
+[COLLECTOR_QUERY_WORKERS]
+default=4
+range=0,
+type=int
+description=Max number of Collector child processes
+
+[COLLECTOR_QUERY_WORKERS_RESERVE_FOR_HIGH_PRIO]
+default=1
+range=0,
+type=int
+description=Max number of Collector child processes reserved for high prioirty queries
+
+[COLLECTOR_QUERY_WORKERS_PENDING]
+default=50
+range=0,
+type=int
+description=Max number of Collector queries to queue
+
+[COLLECTOR_QUERY_MAX_WORKTIME]
+default=0
+range=0,
+type=int
+description=Max number of seconds to serve a Collector query, 0=no limit
+
 [SOCKET_LISTEN_BACKLOG]
 default=500
 range=1,
