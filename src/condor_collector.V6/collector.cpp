@@ -54,7 +54,6 @@
 
 #include "ccb_server.h"
 
-#define TRACK_QUERIES_BY_SUBSYS 1
 #ifdef TRACK_QUERIES_BY_SUBSYS
 #include "subsystem_info.h" // so we can track query by client subsys
 #endif
@@ -116,11 +115,16 @@ bool CollectorDaemon::filterAbsentAds;
 Queue<CollectorDaemon::pending_query_entry_t *> CollectorDaemon::query_queue_high_prio;
 Queue<CollectorDaemon::pending_query_entry_t *> CollectorDaemon::query_queue_low_prio;
 int CollectorDaemon::ReaperId = -1;
-int CollectorDaemon::max_query_workers = 2;
+int CollectorDaemon::max_query_workers = 4;
+int CollectorDaemon::reserved_for_highprio_query_workers = 1;
 int CollectorDaemon::max_pending_query_workers = 50;
 int CollectorDaemon::max_query_worktime = 0;
 int CollectorDaemon::active_query_workers = 0;
 int CollectorDaemon::pending_query_workers = 0;
+
+#ifdef TRACK_QUERIES_BY_SUBSYS
+bool CollectorDaemon::want_track_queries_by_subsys = false;
+#endif
 
 //---------------------------------------------------------
 
@@ -475,18 +479,32 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 		// and/or by daemoncore (in child process).  Either way, don't close it upon exit from this
 		// command handler.
 		int did_we_fork = FALSE;
-		if (active_query_workers + pending_query_workers <  max_query_workers + max_pending_query_workers) {
-			// We want to add a query request into the queue.
-			// Decide if it should go into the high priority or low priorirty queue
-			// based upon the Subsystem attribute in the session for this connection;
-			// if the request is from the NEGOTIATOR, it is high priority.
-			// Also high priority if command is from the superuser (i.e. via condor_sos).
-			std::string subsys;
-			const std::string &sess_id = static_cast<Sock *>(sock)->getSessionID();
-			daemonCore->getSecMan()->getSessionStringAttribute(sess_id.c_str(),ATTR_SEC_SUBSYSTEM,subsys);
-			clientSubsys = getKnownSubsysNum(subsys.c_str());
-			if ( clientSubsys == SUBSYSTEM_TYPE_NEGOTIATOR || daemonCore->Is_Command_From_SuperUser(sock) )
-			{
+
+		// We want to add a query request into the queue.
+		// Decide if it should go into the high priority or low priorirty queue
+		// based upon the Subsystem attribute in the session for this connection;
+		// if the request is from the NEGOTIATOR, it is high priority.
+		// Also high priority if command is from the superuser (i.e. via condor_sos).
+		bool high_prio_query = false;
+		std::string subsys;
+		const std::string &sess_id = static_cast<Sock *>(sock)->getSessionID();
+		daemonCore->getSecMan()->getSessionStringAttribute(sess_id.c_str(),ATTR_SEC_SUBSYSTEM,subsys);
+		clientSubsys = getKnownSubsysNum(subsys.c_str());
+		if ( clientSubsys == SUBSYSTEM_TYPE_NEGOTIATOR || daemonCore->Is_Command_From_SuperUser(sock) )
+		{
+			high_prio_query = true;
+		}
+
+		// Now that we know if the incoming query is high priority or not,
+		// place it into the proper queue if we don't already have too many pending.
+		if ( ((high_prio_query==false) &&
+			  (active_query_workers + pending_query_workers <  max_query_workers + max_pending_query_workers - reserved_for_highprio_query_workers))
+			 ||
+			 ((high_prio_query==true) &&
+			  (active_query_workers - reserved_for_highprio_query_workers + query_queue_high_prio.Length() <  max_query_workers + max_pending_query_workers))
+		   )
+		{
+			if ( high_prio_query ) {
 				query_queue_high_prio.enqueue( query_entry );
 			} else {
 				query_queue_low_prio.enqueue( query_entry );
@@ -497,10 +515,13 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 			return_status = KEEP_STREAM; // tell daemoncore to not mess with socket when we return
 		} else {
 			dprintf( D_ALWAYS, 
-			"QueryWorker: dropping query request due to max pending workers of %d ( max %d active %d pending %d )\n", 
-			max_pending_query_workers, max_query_workers, active_query_workers, pending_query_workers );
+				"QueryWorker: dropping %s priority query request due to max pending workers of %d ( max %d reserved %d active %d pending %d )\n", 
+				high_prio_query ? "high" : "low",
+				max_pending_query_workers, max_query_workers, reserved_for_highprio_query_workers, active_query_workers, pending_query_workers );
 			collectorStats.global.DroppedQueries += 1;
 		}
+
+		// Update a few statistics
 		if ( !daemonCore->DoFakeCreateThread() ) {  // if we are configured to really fork()...
 			if (did_we_fork == TRUE) {
 				// A new worker was forked off
@@ -513,19 +534,21 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 	}
 
 #ifdef TRACK_QUERIES_BY_SUBSYS
-	// if we didn't already try and determing the client subsystem, do that now.
-	if (clientSubsys == SUBSYSTEM_TYPE_INVALID && (KEEP_STREAM != return_status)) {
-		std::string subsys;
-		const std::string &sess_id = static_cast<Sock *>(sock)->getSessionID();
-		daemonCore->getSecMan()->getSessionStringAttribute(sess_id.c_str(),ATTR_SEC_SUBSYSTEM,subsys);
-		clientSubsys = getKnownSubsysNum(subsys.c_str());
-	}
-	// count the number of queries for each client subsystem.
-	if (clientSubsys >= 0 && clientSubsys < SUBSYSTEM_TYPE_AUTO) {
-		if (handle_in_proc) {
-			collectorStats.global.InProcQueriesFrom[clientSubsys] += 1;
-		} else {
-			collectorStats.global.ForkQueriesFrom[clientSubsys] += 1;
+	if ( want_track_queries_by_subsys ) {
+		// if we didn't already try and determing the client subsystem, do that now.
+		if (clientSubsys == SUBSYSTEM_TYPE_INVALID && (KEEP_STREAM != return_status)) {
+			std::string subsys;
+			const std::string &sess_id = static_cast<Sock *>(sock)->getSessionID();
+			daemonCore->getSecMan()->getSessionStringAttribute(sess_id.c_str(),ATTR_SEC_SUBSYSTEM,subsys);
+			clientSubsys = getKnownSubsysNum(subsys.c_str());
+		}
+		// count the number of queries for each client subsystem.
+		if (clientSubsys >= 0 && clientSubsys < SUBSYSTEM_TYPE_AUTO) {
+			if (handle_in_proc) {
+				collectorStats.global.InProcQueriesFrom[clientSubsys] += 1;
+			} else {
+				collectorStats.global.ForkQueriesFrom[clientSubsys] += 1;
+			}
 		}
 	}
 #endif
@@ -550,35 +573,42 @@ int CollectorDaemon::QueryReaper(Service *, int pid, int /* exit_status */ )
 		collectorStats.global.ActiveQueryWorkers = active_query_workers;
 	}
 
-	if ( active_query_workers >= max_query_workers ) {
-		// Not currently allowed to fork any more workers, so we're done for now
-		pending_query_workers = query_queue_high_prio.Length() + query_queue_low_prio.Length();
-		collectorStats.global.PendingQueries = pending_query_workers;
-		dprintf( D_ALWAYS, 
-			"QueryWorker: delay forking because too many workers ( max %d active %d pending %d ) \n",
-			max_query_workers, active_query_workers, pending_query_workers );
-		return 0;
-	}
-
 	// Grab a queue_entry to service, ignoring "stale" (old) entries.
 	bool high_prio_query;
 	pending_query_entry_t * query_entry = NULL;	
 	while ( query_entry == NULL ) {
 		// Pull of an entry from our high_prio queue; if nothing there, grab
 		// one from our low prio queue.  Ignore "stale" (old) requests.
-		high_prio_query = true;
-		query_queue_high_prio.dequeue(query_entry);
-		if (query_entry == NULL ) {
-			high_prio_query = false;
-			query_queue_low_prio.dequeue(query_entry);
+
+		high_prio_query = query_queue_high_prio.Length() > 0;
+
+		// Dequeue a high priority entry if worker slots available.
+		if ( active_query_workers < max_query_workers ) {
+			query_queue_high_prio.dequeue(query_entry);
+			// If high priority queue is empty, dequeue a low priority entry
+			// if a worker slot (minus those reserved only for high prioirty) is available.
+			if ((query_entry == NULL) &&
+			    (active_query_workers < (max_query_workers - reserved_for_highprio_query_workers)))
+			{
+				query_queue_low_prio.dequeue(query_entry);
+			}
 		}
 
-		// Now that we pulled off some work, update our pending stats counters
+		// Update our pending stats counters.  Note we need to do this regardless
+		// of if query_entry==NULL, since we may be here because something was either
+		// recently added into the queue, or recently removed from the queue.
 		pending_query_workers = query_queue_high_prio.Length() + query_queue_low_prio.Length();
 		collectorStats.global.PendingQueries = pending_query_workers;
 
+		// If query_entry==NULL, we are not forking anything now, so we're done for now
 		if ( query_entry == NULL ) {
-			// No pending work to do, so we're done for now
+			// If we are not forking because we hit fork limits, dprintf
+			if ( pending_query_workers > 0  ) {
+				dprintf( D_ALWAYS,
+					"QueryWorker: delay forking %s priority query because too many workers ( max %d reserved %d active %d pending %d ) \n",
+					high_prio_query ? "high" : "low",
+					max_query_workers, reserved_for_highprio_query_workers, active_query_workers, pending_query_workers );
+			}
 			return 0;
 		}
 
@@ -601,9 +631,9 @@ int CollectorDaemon::QueryReaper(Service *, int pid, int /* exit_status */ )
 				static_cast<Sock *>(query_entry->sock)->readReady() )
 			{
 				dprintf( D_ALWAYS, 
-				"QueryWorker: dropping stale query request because %s ( max %d active %d pending %d )\n", 
-				query_entry->sock->deadline_expired() ? "max worktime expired" : "client gone",
-				max_query_workers, active_query_workers, pending_query_workers );
+					"QueryWorker: dropping stale query request because %s ( max %d active %d pending %d )\n", 
+					query_entry->sock->deadline_expired() ? "max worktime expired" : "client gone",
+					max_query_workers, active_query_workers, pending_query_workers );
 				collectorStats.global.DroppedQueries += 1;				
 				// now deallocate everything with this query_entry
 				delete query_entry->sock;
@@ -1909,9 +1939,25 @@ void CollectorDaemon::Config()
 	time_t garbage_interval = param_integer( "COLLECTOR_STATS_SWEEP", DEFAULT_COLLECTOR_STATS_GARBAGE_INTERVAL );
 	collectorStats.setGarbageCollectionInterval( garbage_interval );
 
-    max_query_workers = param_integer ("COLLECTOR_QUERY_WORKERS", 2, 0);
+    max_query_workers = param_integer ("COLLECTOR_QUERY_WORKERS", 4, 0);
 	max_pending_query_workers = param_integer ("COLLECTOR_QUERY_WORKERS_PENDING", 50, 0);
 	max_query_worktime = param_integer("COLLECTOR_QUERY_MAX_WORKTIME",0,0);
+	reserved_for_highprio_query_workers = param_integer("COLLECTOR_QUERY_WORKERS_RESERVE_FOR_HIGH_PRIO",1,0);
+
+	// max_query_workers had better be at least one greater than reserved_for_highprio_query_workers,
+	// or condor_status queries will never be answered.
+	// note we do allow max_query_workers to be zero, which means do all queries in-proc - this
+	// is useful for developers profiling the code, since profiling forked workers is a pain.
+	if ( max_query_workers - reserved_for_highprio_query_workers < 1) {
+		reserved_for_highprio_query_workers = MAX(0, (max_query_workers - 1) );
+		dprintf(D_ALWAYS,
+				"Warning: Resetting COLLECTOR_QUERY_WORKERS_RESERVE_FOR_HIGH_PRIO to %d\n",
+				reserved_for_highprio_query_workers);
+	}
+
+#ifdef TRACK_QUERIES_BY_SUBSYS
+	want_track_queries_by_subsys = param_boolean("COLLECTOR_TRACK_QUERY_BY_SUBSYS",true);
+#endif
 
 	bool ccb_server_enabled = param_boolean("ENABLE_CCB_SERVER",true);
 	if( ccb_server_enabled ) {
