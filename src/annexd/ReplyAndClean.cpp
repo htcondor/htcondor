@@ -75,28 +75,36 @@ ReplyAndClean::operator() () {
 	// We're done with the stream, now, so clean it up.
 	if( replyStream ) { delete replyStream; }
 
-	// The gahp needs to know about the timer anyway, so it's a
-	// convenient place to keep track of it.
-	daemonCore->Cancel_Timer( gahp->getNotificationTimerId() );
+	if( gahp ) {
+		// The gahp needs to know about the timer anyway, so it's a
+		// convenient place to keep track of it.
+		daemonCore->Cancel_Timer( gahp->getNotificationTimerId() );
 
-	// We're done with this gahp, so clean it up.  The gahp server will
-	// shut itself (and the GAHP) down cleanly roughly ten seconds after
-	// the last corresponding gahp client is deleted.
-	delete gahp;
+		// We're done with this gahp, so clean it up.  The gahp server will
+		// shut itself (and the GAHP) down cleanly roughly ten seconds after
+		// the last corresponding gahp client is deleted.
+		delete gahp;
+	}
 
-	// Note that the annex daemon code happened to use the same timer
-	// for both GAHPs.  Since it's safe to cancel a timer twice, we should
-	// probaly just cancel this gahp's timer as well.  This produces an
-	// ugly warning in the log, but that's not worth changing right now.
-	daemonCore->Cancel_Timer( eventsGahp->getNotificationTimerId() );
-	delete eventsGahp;
+	if( eventsGahp ) {
+		// Note that the annex daemon code happened to use the same timer
+		// for both GAHPs.  Since it's safe to cancel a timer twice, we should
+		// probaly just cancel this gahp's timer as well.  This produces an
+		// ugly warning in the log, but that's not worth changing right now.
+		daemonCore->Cancel_Timer( eventsGahp->getNotificationTimerId() );
+		delete eventsGahp;
+	}
 
-	// See above.
-	daemonCore->Cancel_Timer( lambdaGahp->getNotificationTimerId() );
-	delete lambdaGahp;
+	if( lambdaGahp ) {
+		// See above.
+		daemonCore->Cancel_Timer( lambdaGahp->getNotificationTimerId() );
+		delete lambdaGahp;
+	}
 
-	// We're done with the scratchpad, too.
-	delete scratchpad;
+	if( scratchpad ) {
+		// We're done with the scratchpad, too.
+		delete scratchpad;
+	}
 
 	// Anything other than KEEP_STREAM deletes the sequence, which is good,
 	// because we just cancelled the timer.

@@ -18,6 +18,7 @@ if(! $VERSION) {
 }
 my $sfrKey = "sfr-lease-${VERSION}.zip";
 my $odiKey = "odi-lease-${VERSION}.zip";
+my $ccKey = "check-connectivity-${VERSION}.zip";
 
 	my $template;
 	$template->{ AWSTemplateFormatVersion } = "2010-09-09";
@@ -39,6 +40,9 @@ my $odiKey = "odi-lease-${VERSION}.zip";
 		},
 		odiLeaseFunctionARN => {
 			Value => { "Fn::GetAtt" => [ "odiLeaseFunction", "Arn" ] }
+		},
+		ccFunctionARN => {
+			Value => { "Fn::GetAtt" => [ "ccFunction", "Arn" ] }
 		}
 	};
 
@@ -65,6 +69,16 @@ my $odiKey = "odi-lease-${VERSION}.zip";
 			Action => [ "sts:AssumeRole" ],
 			Principal => { Service => [ "lambda.amazonaws.com" ] }
 		} ]
+	};
+
+	$template->{ Resources }->{ ccFunctionRole } = {
+		Type => "AWS::IAM::Role",
+		Properties => {
+			AssumeRolePolicyDocument => $assumeRoleFromLambda,
+			Policies => [
+				$lambdaBasicExecutionPolicy
+			]
+		}
 	};
 
 	my $resource = { "Fn::Join" => [ "", [
@@ -138,6 +152,22 @@ my $odiKey = "odi-lease-${VERSION}.zip";
 			Code => {
 				S3Bucket => $sourceBucket,
 				S3Key => $odiKey
+			}
+		}
+	};
+
+	$template->{ Resources }->{ ccFunction } = {
+		Type => "AWS::Lambda::Function",
+		DependsOn => "ccFunctionRole",
+		Properties => {
+			FunctionName => "HTCondorAnnex-CheckConnectivity",
+			Role => { "Fn::GetAtt" => [ "LeaseFunctionRole", "Arn" ] },
+			Runtime => "python2.7",
+			Timeout => 5,
+			Handler => "check-connectivity.condor_ping_handler",
+			Code => {
+				S3Bucket => $sourceBucket,
+				S3Key => $ccKey
 			}
 		}
 	};

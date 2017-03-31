@@ -3607,6 +3607,11 @@ default = https://cloudformation.us-east-1.amazonaws.com/
 type=string
 tags=annex
 
+[ANNEX_DEFAULT_CONNECTIVITY_FUNCTION_ARN]
+default = HTCondorAnnex-CheckConnectivity
+type=string
+tags=annex
+
 [SCHEDD]
 default=$(SBIN)/condor_schedd
 win32_default=$(SBIN)\condor_schedd.exe

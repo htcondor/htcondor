@@ -4292,3 +4292,56 @@ bool AmazonDescribeStacks::workerFunction(char **argv, int argc, std::string &re
 
 	return true;
 }
+
+// ---------------------------------------------------------------------------
+
+AmazonCallFunction::~AmazonCallFunction() { }
+
+bool AmazonCallFunction::SendJSONRequest( const std::string & payload ) {
+	bool result = AmazonRequest::SendJSONRequest( payload );
+	return result;
+}
+
+// Expecting:   AWS_CALL_FUNCTION <req_id>
+//				<service_url> <accesskeyfile> <secretkeyfile>
+//				<function-name-or-arn> <function-argument-blob>
+bool AmazonCallFunction::workerFunction( char ** argv, int argc, std::string & result_string ) {
+	assert( strcasecmp( argv[0], AMAZON_COMMAND_CALL_FUNCTION ) == 0 );
+	int requestID;
+	get_int( argv[1], & requestID );
+	dprintf( D_PERF_TRACE, "request #%d (%s): work begins\n",
+		requestID, argv[0] );
+
+	if( ! verify_min_number_args( argc, 7 ) ) {
+		result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
+		dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n",
+			argc, 7, argv[0] );
+		return false;
+	}
+
+	// Fill in required attributes.
+	AmazonCallFunction request = AmazonCallFunction( requestID, argv[0] );
+	request.accessKeyFile = argv[3];
+	request.secretKeyFile = argv[4];
+
+	const char * separator = "/";
+	if( argv[2][strlen( argv[2] ) - 1] == '/' ) {
+		separator = "";
+	}
+	formatstr( request.serviceURL, "%s%s2015-03-31/functions/%s/invocations", argv[2],
+		separator, amazonURLEncode( argv[5] ).c_str() );
+	request.headers[ "X-Amz-Invocation-Type" ] = "RequestResponse";
+
+	if( ! request.SendJSONRequest( argv[6] ) ) {
+		result_string = create_failure_result( requestID,
+			request.errorMessage.c_str(),
+			request.errorCode.c_str() );
+	} else {
+		StringList sl;
+		sl.append( request.resultString.c_str() );
+		result_string = create_success_result( requestID, & sl );
+	}
+
+	return true;
+}
+

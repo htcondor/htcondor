@@ -150,6 +150,8 @@ registerAllAmazonCommands(void)
 			AmazonCreateStack::ioCheck, AmazonCreateStack::workerFunction );
 	registerAmazonGahpCommand( AMAZON_COMMAND_CF_DESCRIBE_STACKS,
 			AmazonDescribeStacks::ioCheck, AmazonDescribeStacks::workerFunction );
+	registerAmazonGahpCommand( AMAZON_COMMAND_CALL_FUNCTION,
+			AmazonCallFunction::ioCheck, AmazonCallFunction::workerFunction );
 
 	return true;
 }

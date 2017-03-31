@@ -1,30 +1,33 @@
-#ifndef _CONDOR_GET_FUNCTION_H
-#define _CONDOR_GET_FUNCTION_H
+#ifndef _CONDOR_CHECK_CONNECTIVITY_H
+#define _CONDOR_CHECK_CONNECTIVITY_H
 
 // #include "condor_common.h"
 // #include "compat_classad.h"
 // #include "classad_collection.h"
 // #include "gahp-client.h"
 // #include "Functor.h"
-// #include "GetFunction.h"
+// #include "CheckConnectivity.h"
 
-class GetFunction : public Functor {
+class CheckConnectivity : public Functor {
 	public:
-		GetFunction( const std::string & f, ClassAd * r, EC2GahpClient * g, ClassAd * s,
+		CheckConnectivity( const std::string & f, const std::string & i,
+			ClassAd * r, EC2GahpClient * g, ClassAd * s,
 			const std::string & su, const std::string & pkf, const std::string & skf,
 			ClassAdCollection * c, const std::string & cid ) :
-			functionARN( f ), reply( r ), gahp( g ), scratchpad( s ),
+			functionARN( f ), instanceID( i ),
+			reply( r ), gahp( g ), scratchpad( s ),
 			service_url( su ), public_key_file( pkf ), secret_key_file( skf ),
 			commandID( cid ), commandState( c )
 		{ ASSERT(! functionARN.empty()); }
 
-		virtual ~GetFunction() { }
+		virtual ~CheckConnectivity() { }
 
 		virtual int operator() ();
 		virtual int rollback();
 
 	private:
 		std::string functionARN;
+		std::string instanceID;
 
 		ClassAd * reply;
 		EC2GahpClient * gahp;
@@ -36,4 +39,4 @@ class GetFunction : public Functor {
 		ClassAdCollection * commandState;
 };
 
-#endif /* _CONDOR_GET_FUNCTION_H */
+#endif /* _CONDOR_CHECK_CONNECTIVITY_H */

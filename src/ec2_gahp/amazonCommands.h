@@ -66,6 +66,7 @@
 #define AMAZON_COMMAND_S3_UPLOAD            "S3_UPLOAD"
 #define AMAZON_COMMAND_CF_CREATE_STACK      "CF_CREATE_STACK"
 #define AMAZON_COMMAND_CF_DESCRIBE_STACKS   "CF_DESCRIBE_STACKS"
+#define AMAZON_COMMAND_CALL_FUNCTION        "AWS_CALL_FUNCTION"
 
 
 #define GENERAL_GAHP_ERROR_CODE             "GAHPERROR"
@@ -468,4 +469,20 @@ class AmazonDescribeStacks : public AmazonRequest {
 		std::vector< std::string > outputs;
 };
 
+class AmazonCallFunction : public AmazonRequest {
+	public:
+		AmazonCallFunction( int i, const char * c ) : AmazonRequest( i, c ) { }
+		virtual ~AmazonCallFunction();
+
+		virtual bool SendJSONRequest( const std::string & payload );
+
+		static bool ioCheck(char **argv, int argc);
+		static bool workerFunction(char **argv, int argc, std::string &result_string);
+
+    protected:
+    	std::string success;
+		std::string instanceID;
+};
+
 #endif
+

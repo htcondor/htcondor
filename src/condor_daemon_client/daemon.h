@@ -563,6 +563,12 @@ public:
 		 **/
 	void rewindCmList();
 
+		/*
+		 * Contact another daemon and get its instance ID, which is a
+		 * random number generated once in the first response to this query.
+		 */
+	bool getInstanceID( std::string & instanceID );
+
 protected:
 	// Data members
 

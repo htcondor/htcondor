@@ -3,7 +3,7 @@
 #
 
 VERSION = 7
-FUNCTIONS = sfr-lease-$(VERSION).zip odi-lease-$(VERSION).zip
+FUNCTIONS = sfr-lease-$(VERSION).zip odi-lease-$(VERSION).zip check-connectivity-$(VERSION).zip
 TEMPLATES = template-$(VERSION).json role-$(VERSION).json bucket-$(VERSION).json security-group-$(VERSION).json
 S3TARGETS = $(FUNCTIONS:%=.upload/%) $(TEMPLATES:%=.upload/%)
 
@@ -33,6 +33,10 @@ sfr-lease-$(VERSION).zip : sfr-lease.js
 	@zip $@ $^
 
 odi-lease-$(VERSION).zip : odi-lease.js
+	@rm -f $@
+	@zip $@ $^
+
+check-connectivity-$(VERSION).zip : check-connectivity.py
 	@rm -f $@
 	@zip $@ $^
 

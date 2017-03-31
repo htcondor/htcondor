@@ -1442,3 +1442,48 @@ int EC2GahpClient::create_stack(
 		EXCEPT( "callGahpFunction() succeeded but result was NULL." );
 	}
 }
+
+int EC2GahpClient::call_function(	const std::string & service_url,
+									const std::string & publickeyfile,
+									const std::string & privatekeyfile,
+									const std::string & functionARN,
+									const std::string & argumentBlob,
+									std::string & returnBlob,
+									std::string & error_code ) {
+	static const char * command = "AWS_CALL_FUNCTION";
+
+	// callGahpFunction() checks if this command is supported.
+	CHECK_COMMON_ARGUMENTS;
+
+	Gahp_Args * result = NULL;
+	std::vector< YourString > arguments;
+	PUSH_COMMON_ARGUMENTS;
+	arguments.push_back( functionARN );
+	arguments.push_back( argumentBlob );
+
+	int cgf = callGahpFunction( command, arguments, result, high_prio );
+	if( cgf != 0 ) { return cgf; }
+
+	if( result ) {
+		int rc = 0;
+		if ( result->argc == 2 ) {
+			rc = atoi(result->argv[1]);
+			if( rc == 1 ) { error_string = ""; }
+		} else if ( result->argc == 3 ) {
+			rc = atoi(result->argv[1]);
+			returnBlob = result->argv[2];
+		} else if ( result->argc == 4 ) {
+			// get the error code
+			rc = atoi( result->argv[1] );
+			error_code = result->argv[2];
+			error_string = result->argv[3];
+		} else {
+			EXCEPT( "Bad %s result", command );
+		}
+
+		delete result;
+		return rc;
+	} else {
+		EXCEPT( "callGahpFunction() succeeded but result was NULL." );
+	}
+}

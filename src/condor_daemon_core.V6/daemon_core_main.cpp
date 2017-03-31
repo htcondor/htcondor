@@ -2713,7 +2713,7 @@ int dc_main( int argc, char** argv )
 	daemonCore->Register_Command( DC_INVALIDATE_KEY, "DC_INVALIDATE_KEY",
 								  (CommandHandler)handle_invalidate_key,
 								  "handle_invalidate_key()", 0, ALLOW );
-								  
+
 		// DC_QUERY_INSTANCE is for determining if you are talking to the correct instance of a daemon.
 		// There is no need for security here, the use case is a lambda function in AWS which won't have
 		// authorization to do anything else.

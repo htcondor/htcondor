@@ -45,7 +45,14 @@ WaitForStack::operator() () {
 			daemonCore->Reset_Timer( cfGahp->getNotificationTimerId(), 10, TIMER_NEVER );
 			return KEEP_STREAM;
 		} else {
-			dprintf( D_ALWAYS, "Stack creation failed with status '%s'.\n", stackStatus.c_str() );
+			fprintf( stdout, "\n" );
+
+			std::string message;
+			formatstr( message, "Stack creation failed with status '%s'.", stackStatus.c_str() );
+			dprintf( D_ALWAYS, "%s\n", message.c_str() );
+
+			reply->Assign( ATTR_RESULT, getCAResultString( CA_FAILURE ) );
+			reply->Assign( ATTR_ERROR_STRING, message );
 			rc = FALSE;
 		}
 	} else {

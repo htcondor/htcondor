@@ -30,6 +30,7 @@
 #include "SetupReply.h"
 #include "GenerateConfigFile.h"
 #include "CreateKeyPair.h"
+#include "CheckConnectivity.h"
 
 #include "user-config-dir.h"
 
@@ -45,6 +46,8 @@
 
 #include "my_username.h"
 #include <iostream>
+
+#include "daemon.h"
 
 // Although the annex daemon uses a GAHP, it doesn't have a schedd managing
 // its hard state in an existing job ad; it has to do that job on its own.
@@ -150,6 +153,101 @@ validateLease( time_t endOfLease, std::string & validationError ) {
 	}
 	return true;
 }
+
+int
+updateOneAnnex( ClassAd * command, Stream * replyStream, ClassAd * reply ) {
+	std::string publicKeyFile, secretKeyFile, eventsURL;
+
+	param( publicKeyFile, "ANNEX_DEFAULT_ACCESS_KEY_FILE" );
+	command->LookupString( "PublicKeyFile", publicKeyFile );
+
+	param( secretKeyFile, "ANNEX_DEFAULT_SECRET_KEY_FILE" );
+	command->LookupString( "SecretKeyFile", secretKeyFile );
+
+	param( eventsURL, "ANNEX_DEFAULT_CWE_URL" );
+	command->LookupString( "EventsURL", eventsURL );
+
+	std::string annexID, leaseFunctionARN;
+
+	command->LookupString( "AnnexID", annexID );
+	command->LookupString( "LeaseFunctionARN", leaseFunctionARN );
+
+	time_t endOfLease = 0;
+	command->LookupInteger( "EndOfLease", endOfLease );
+
+	std::string errorString;
+	if( publicKeyFile.empty() ) {
+		formatstr( errorString, "%s%sPublic key file not specified in command or by defaults.", errorString.c_str(), errorString.empty() ? "" : "  " );
+	}
+	if( secretKeyFile.empty() ) {
+		formatstr( errorString, "%s%sSecret key file not specified in command or defaults.", errorString.c_str(), errorString.empty() ? "" : "  " );
+	}
+	if( eventsURL.empty() ) {
+		formatstr( errorString, "%s%sEvents URL missing or empty in command ad and ANNEX_DEFAULT_CWE_URL not set or empty in configuration.", errorString.c_str(), errorString.empty() ? "" : "  " );
+	}
+	if( annexID.empty() ) {
+		formatstr( errorString, "%s%sAnnex ID missing or empty in command ad.", errorString.c_str(), errorString.empty() ? "" : "  " );
+	}
+	if( leaseFunctionARN.empty() ) {
+		formatstr( errorString, "%s%sLease function ARN missing or empty in command ad.", errorString.c_str(), errorString.empty() ? "" : "  " );
+	}
+	validateLease( endOfLease, errorString );
+
+	if(! errorString.empty()) {
+		reply->Assign( ATTR_RESULT, getCAResultString( CA_INVALID_REQUEST ) );
+		reply->Assign( ATTR_ERROR_STRING, errorString );
+
+		if( replyStream ) {
+			if(! sendCAReply( replyStream, "CA_BULK_REQUEST", reply )) {
+				dprintf( D_ALWAYS, "Failed to reply to CA_BULK_REQUEST.\n" );
+			}
+		}
+
+		return FALSE;
+	}
+
+	ClassAd * scratchpad = new ClassAd();
+	EC2GahpClient * eventsGahp = startOneGahpClient( publicKeyFile, eventsURL );
+
+	std::string commandID;
+	command->LookupString( "CommandID", commandID );
+	if( commandID.empty() ) {
+		generateCommandID( commandID );
+		command->Assign( "CommandID", commandID );
+	}
+	scratchpad->Assign( "CommandID", commandID );
+
+	// FIXME: For user-friendliness, if no other reason, we should check
+	// if the annex exists before we "update" its lease.  Unfortunately,
+	// that's an ODI/SFR -specific operation.  We could check to see if
+	// the corresponding rule and target exist, instead, and refuse to
+	// do anything if they don't.
+
+	PutRule * pr = new PutRule(
+		reply, eventsGahp, scratchpad,
+		eventsURL, publicKeyFile, secretKeyFile,
+		commandState, commandID, annexID );
+	PutTargets * pt = new PutTargets( leaseFunctionARN, endOfLease,
+		reply, eventsGahp, scratchpad,
+		eventsURL, publicKeyFile, secretKeyFile,
+		commandState, commandID, annexID );
+
+	// I should feel bad.
+	scratchpad->Assign( "BulkRequestID", "Lease updated." );
+	ReplyAndClean * last = new ReplyAndClean( reply, replyStream,
+		NULL, scratchpad, eventsGahp, commandState, commandID, NULL );
+
+	FunctorSequence * fs = new FunctorSequence( { pr, pt }, last,
+		commandState, commandID, scratchpad );
+
+	int functorSequenceTimer = daemonCore->Register_Timer( 0, TIMER_NEVER,
+		(void (Service::*)()) & FunctorSequence::operator(),
+		"updateOneAnnex() sequence", fs );
+   	eventsGahp->setNotificationTimerId( functorSequenceTimer );
+
+	return KEEP_STREAM;
+}
+
 
 int
 createOneAnnex( ClassAd * command, Stream * replyStream, ClassAd * reply ) {
@@ -386,6 +484,17 @@ createOneAnnex( ClassAd * command, Stream * replyStream, ClassAd * reply ) {
 				commandState, commandID, annexID );
 		}
 
+		// Verify that we're talking to the right collector before we do
+		// anything else.
+		std::string instanceID, connectivityFunctionARN;
+		command->LookupString( "CollectorInstanceID", instanceID );
+		param( connectivityFunctionARN, "ANNEX_DEFAULT_CONNECTIVITY_FUNCTION_ARN" );
+		CheckConnectivity * cc = new CheckConnectivity(
+			connectivityFunctionARN, instanceID,
+			reply, lambdaGahp, scratchpad,
+			lambdaURL, publicKeyFile, secretKeyFile,
+			commandState, commandID );
+
 		PutRule * pr = new PutRule(
 			reply, eventsGahp, scratchpad,
 			eventsURL, publicKeyFile, secretKeyFile,
@@ -406,7 +515,7 @@ createOneAnnex( ClassAd * command, Stream * replyStream, ClassAd * reply ) {
 		//
 		// The commandState, commandID, and scratchpad allow the functor sequence
 		// to restart a rollback, if that becomes necessary.
-		FunctorSequence * fs = new FunctorSequence( { gf, uf, pr, pt, br }, last, commandState, commandID, scratchpad );
+		FunctorSequence * fs = new FunctorSequence( { cc, gf, uf, pr, pt, br }, last, commandState, commandID, scratchpad );
 
 		// Create a timer for the gahp to fire when it gets a result.  We must
 		// use TIMER_NEVER to ensure that the timer hasn't been reaped when the
@@ -421,6 +530,17 @@ createOneAnnex( ClassAd * command, Stream * replyStream, ClassAd * reply ) {
 
 		return KEEP_STREAM;
 	} else if( annexType == "odi" ) {
+		// Verify that we're talking to the right collector before we do
+		// anything else.
+		std::string instanceID, connectivityFunctionARN;
+		command->LookupString( "CollectorInstanceID", instanceID );
+		param( connectivityFunctionARN, "ANNEX_DEFAULT_CONNECTIVITY_FUNCTION_ARN" );
+		CheckConnectivity * cc = new CheckConnectivity(
+			connectivityFunctionARN, instanceID,
+			reply, lambdaGahp, scratchpad,
+			lambdaURL, publicKeyFile, secretKeyFile,
+			commandState, commandID );
+
 		OnDemandRequest * odr = new OnDemandRequest( reply, gahp, scratchpad,
 			serviceURL, publicKeyFile, secretKeyFile, commandState,
 			commandID, annexID );
@@ -469,9 +589,9 @@ createOneAnnex( ClassAd * command, Stream * replyStream, ClassAd * reply ) {
 
 		FunctorSequence * fs;
 		if( uf ) {
-			fs = new FunctorSequence( { gf, uf, pr, pt, odr }, last, commandState, commandID, scratchpad );
+			fs = new FunctorSequence( { cc, gf, uf, pr, pt, odr }, last, commandState, commandID, scratchpad );
 		} else {
-			fs = new FunctorSequence( { gf, pr, pt, odr }, last, commandState, commandID, scratchpad );
+			fs = new FunctorSequence( { cc, gf, pr, pt, odr }, last, commandState, commandID, scratchpad );
 		}
 
 		int functorSequenceTimer = daemonCore->Register_Timer( 0, TIMER_NEVER,
@@ -521,12 +641,13 @@ createConfigTarball(	const char * configDir,
 						const char * owner,
 						long unclaimedTimeout,
 						std::string & tarballPath,
-						std::string & tarballError ) {
+						std::string & tarballError,
+						std::string & instanceID ) {
 	char * cwd = get_current_dir_name();
 
 	int rv = chdir( configDir );
 	if( rv != 0 ) {
-		formatstr( tarballError, "Unable to change to config dir '%s' (%d): '%s'.\n",
+		formatstr( tarballError, "unable to change to config dir '%s' (%d): '%s'",
 			configDir, errno, strerror( errno ) );
 		return false;
 	}
@@ -536,7 +657,7 @@ createConfigTarball(	const char * configDir,
 	int fd = safe_open_wrapper_follow( "00ec2-dynamic.config",
 		O_WRONLY | O_CREAT | O_TRUNC, 0644 );
 	if( fd < 0 ) {
-		formatstr( tarballError, "Failed to open config file '%s' for writing: '%s' (%d).\n",
+		formatstr( tarballError, "failed to open config file '%s' for writing: '%s' (%d)",
 			"00ec2-dynamic.config", strerror( errno ), errno );
 		return false;
 	}
@@ -547,7 +668,17 @@ createConfigTarball(	const char * configDir,
 	std::string collectorHost;
 	param( collectorHost, "COLLECTOR_HOST" );
 	if( collectorHost.empty() ) {
-		formatstr( tarballError, "COLLECTOR_HOST empty or undefined, aborting.\n" );
+		formatstr( tarballError, "COLLECTOR_HOST empty or undefined" );
+		return false;
+	}
+
+	Daemon collector( DT_COLLECTOR, collectorHost.c_str() );
+	if(! collector.locate()) {
+		formatstr( tarballError, "unable to find collector defined by COLLECTOR_HOST (%s)", collectorHost.c_str() );
+		return false;
+	}
+	if(! collector.getInstanceID( instanceID )) {
+		formatstr( tarballError, "unable to get collector's instance ID" );
 		return false;
 	}
 
@@ -587,11 +718,11 @@ createConfigTarball(	const char * configDir,
 
 	rv = write( fd, contents.c_str(), contents.size() );
 	if( rv == -1 ) {
-		formatstr( tarballError, "Error writing to '%s': '%s' (%d).\n",
+		formatstr( tarballError, "error writing to '%s': '%s' (%d)",
 			"00ec2-dynamic.config", strerror( errno ), errno );
 		return false;
 	} else if( rv != (int)contents.size() ) {
-		formatstr( tarballError, "Short write to '%s': '%s' (%d).\n",
+		formatstr( tarballError, "short write to '%s': '%s' (%d)",
 			"00ec2-dynamic.config", strerror( errno ), errno );
 		return false;
 	}
@@ -601,7 +732,7 @@ createConfigTarball(	const char * configDir,
 	std::string localPasswordFile;
 	param( localPasswordFile, "SEC_PASSWORD_FILE" );
 	if( passwordFile.empty() ) {
-		formatstr( tarballError, "SEC_PASSWORD_FILE empty or undefined, aborting.\n" );
+		formatstr( tarballError, "SEC_PASSWORD_FILE empty or undefined" );
 		return false;
 	}
 
@@ -610,7 +741,7 @@ createConfigTarball(	const char * configDir,
 	formatstr( cpCommand, "cp '%s' '%s'", localPasswordFile.c_str(), passwordFile.c_str() );
 	int status = system( cpCommand.c_str() );
 	if(! (WIFEXITED( status ) && (WEXITSTATUS( status ) == 0))) {
-		formatstr( tarballError, "Failed to copy '%s' to '%s', aborting.\n",
+		formatstr( tarballError, "failed to copy '%s' to '%s'",
 			localPasswordFile.c_str(), passwordFile.c_str() );
 		return false;
 	}
@@ -624,7 +755,7 @@ createConfigTarball(	const char * configDir,
 	// on platforms whose version of mkstemp() is broken.
 	int tfd = mkstemp( tarballName );
 	if( tfd == -1 ) {
-		formatstr( tarballError, "Failed to create temporary filename for tarball, aborting.\n" );
+		formatstr( tarballError, "failed to create temporary filename for tarball" );
 		return false;
 	}
 
@@ -633,7 +764,7 @@ createConfigTarball(	const char * configDir,
 	formatstr( command, "tar -z -c -f '%s' *", tarballName );
 	status = system( command.c_str() );
 	if(! (WIFEXITED( status ) && (WEXITSTATUS( status ) == 0))) {
-		formatstr( tarballError, "Failed to create tarball, aborting.\n" );
+		formatstr( tarballError, "failed to create tarball" );
 		return false;
 	}
 	tarballPath = tarballName;
@@ -641,7 +772,7 @@ createConfigTarball(	const char * configDir,
 
 	rv = chdir( cwd );
 	if( rv != 0 ) {
-		formatstr( tarballError, "Unable to change back to working dir '%s' (%d): '%s'.\n",
+		formatstr( tarballError, "unable to change back to working dir '%s' (%d): '%s'",
 			cwd, errno, strerror( errno ) );
 		return false;
 	}
@@ -660,6 +791,26 @@ callCreateOneAnnex() {
 
 	// Otherwise, reply-and-clean will take care of user notification.
 	if( createOneAnnex( command, s, reply ) != KEEP_STREAM ) {
+		std::string resultString;
+		reply->LookupString( ATTR_RESULT, resultString );
+		CAResult result = getCAResultNum( resultString.c_str() );
+		ASSERT( result != CA_SUCCESS );
+
+		std::string errorString;
+		reply->LookupString( ATTR_ERROR_STRING, errorString );
+		ASSERT(! errorString.empty());
+		fprintf( stderr, "%s\n", errorString.c_str() );
+		DC_Exit( 6 );
+	}
+}
+
+void
+callUpdateOneAnnex() {
+	Stream * s = NULL;
+	ClassAd * reply = new ClassAd();
+
+	// Otherwise, reply-and-clean will take care of user notification.
+	if( updateOneAnnex( command, s, reply ) != KEEP_STREAM ) {
 		std::string resultString;
 		reply->LookupString( ATTR_RESULT, resultString );
 		CAResult result = getCAResultNum( resultString.c_str() );
@@ -1667,11 +1818,13 @@ argv = _argv;
 	// becomes a thing) for setting the START expression.
 	//
 
-	std::string tarballPath, tarballError;
+	std::string tarballPath, tarballError, instanceID;
 	if(! ownerSpecified) { owner = my_username(); }
 	bool createdTarball = createConfigTarball( tempDir, annexName,
-		noOwner ? NULL : owner, unclaimedTimeout, tarballPath, tarballError );
+		noOwner ? NULL : owner, unclaimedTimeout, tarballPath, tarballError,
+		instanceID );
 	if(! ownerSpecified) { free( owner ); }
+	spotFleetRequest.Assign( "CollectorInstanceID", instanceID );
 
 	// FIXME: Rewrite without system().
 	std::string cmd;

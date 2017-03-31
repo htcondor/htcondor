@@ -5,4 +5,5 @@ security-group-*.json
 lease-*.zip
 odi-lease-*.zip
 sfr-lease-*.zip
+check-connectivity-*.zip
 .upload
