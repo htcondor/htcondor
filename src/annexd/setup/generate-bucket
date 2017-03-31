@@ -1,0 +1,39 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+
+use Getopt::Long;
+use JSON;
+
+my( $prettyPrint );
+GetOptions(
+	'pretty-print'	=> \$prettyPrint
+);
+
+	my $template;
+	$template->{ AWSTemplateFormatVersion } = "2010-09-09";
+	$template->{ Description } = "HTCondorAnnex: Configuration Bucket";
+
+	# This bucket will be deleted with the stack unless it's not empty.
+	$template->{ Resources }->{ ConfigurationBucket } = {
+		Type => "AWS::S3::Bucket",
+		Properties => {
+			AccessControl => "Private"
+		}
+	};
+
+	# Tell them what they've won, Alex.
+	$template->{ Outputs } = {
+		"S3BucketName" => {
+			Value => { Ref => "ConfigurationBucket" }
+		}
+	};
+
+if( defined( $prettyPrint ) ) {
+	print( to_json( $template, { utf8 => 1, pretty => 1 } ) . "\n" );
+} else {
+	print( encode_json( $template ) . "\n" );
+}
+
+exit( 0 );

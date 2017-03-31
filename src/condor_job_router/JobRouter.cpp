@@ -67,6 +67,7 @@ JobRouter::JobRouter(bool as_tool)
 	, m_schedd2_pool(NULL)
 	, m_schedd1_name(NULL)
 	, m_schedd1_pool(NULL)
+	, m_round_robin_selection(true)
 	, m_operate_as_tool(as_tool)
 {
 	m_scheduler = NULL;
@@ -388,6 +389,8 @@ JobRouter::config() {
 		// Whether to release the source job if the routed job
 		// goes on hold
 	m_release_on_hold = param_boolean("JOB_ROUTER_RELEASE_ON_HOLD", true);
+
+	m_round_robin_selection = param_boolean("JOB_ROUTER_ROUND_ROBIN_SELECTION", false);
 
 		// default is no maximum (-1)
 	m_max_jobs = param_integer("JOB_ROUTER_MAX_JOBS",-1);
@@ -1454,6 +1457,10 @@ JobRouter::ChooseRoute(classad::ClassAd *job_ad,bool *all_routes_full) {
 		mad.RemoveLeftAd();
 		mad.RemoveRightAd();
 #endif
+
+		if (!m_round_robin_selection && !matches.empty()) {
+			break;
+		}
 	}
 
 	if(!matches.size()) return NULL;

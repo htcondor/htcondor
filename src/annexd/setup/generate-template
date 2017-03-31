@@ -21,7 +21,7 @@ my $odiKey = "odi-lease-${VERSION}.zip";
 
 	my $template;
 	$template->{ AWSTemplateFormatVersion } = "2010-09-09";
-	$template->{ Description } = "HTCondor Annex Lease Implementation";
+	$template->{ Description } = "HTCondor Annex: Lambda Functions";
 
 	$template->{ Parameters } = {
 		"S3BucketName" => {

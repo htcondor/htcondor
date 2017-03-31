@@ -27,6 +27,14 @@ pushStringListBack( std::vector< YourString > & v, StringList & sl ) {
 	v.push_back( NULLSTRING );
 }
 
+void
+pushVectorBack( std::vector< YourString > & arguments, const std::vector< std::string > & v ) {
+	for( unsigned i = 0; i < v.size(); ++i ) {
+		arguments.push_back( v[i] );
+	}
+	arguments.push_back( NULLSTRING );
+}
+
 #define CHECK_COMMON_ARGUMENTS if( service_url.empty() || publickeyfile.empty() || privatekeyfile.empty() ) { return GAHPCLIENT_COMMAND_NOT_SUPPORTED; }
 #define PUSH_COMMON_ARGUMENTS arguments.push_back( service_url ); arguments.push_back( publickeyfile ); arguments.push_back( privatekeyfile );
 
@@ -967,11 +975,7 @@ int EC2GahpClient::bulk_start(	const std::string & service_url,
 	arguments.push_back( iam_fleet_role );
 	arguments.push_back( allocation_strategy );
 	arguments.push_back( valid_until );
-
-	for( unsigned i = 0; i < launch_configurations.size(); ++i ) {
-		arguments.push_back( launch_configurations[i] );
-	}
-	arguments.push_back( NULLSTRING );
+	pushVectorBack( arguments, launch_configurations );
 
 	int cgf = callGahpFunction( command, arguments, result, low_prio );
 	if( cgf != 0 ) { return cgf; }
@@ -1299,6 +1303,130 @@ int EC2GahpClient::s3_upload(	const std::string & service_url,
 		if (result->argc == 2) {
 			rc = atoi(result->argv[1]);
 			if (rc == 1) error_string = "";
+		} else if ( result->argc == 4 ) {
+			// get the error code
+			rc = atoi( result->argv[1] );
+			error_code = result->argv[2];
+			error_string = result->argv[3];
+		} else {
+			EXCEPT( "Bad %s result", command );
+		}
+
+		delete result;
+		return rc;
+	} else {
+		EXCEPT( "callGahpFunction() succeeded but result was NULL." );
+	}
+}
+
+int EC2GahpClient::describe_stacks(  const std::string & service_url,
+	const std::string & publickeyfile,
+	const std::string & privatekeyfile,
+
+	const std::string & stackName,
+
+	std::string & stackStatus,
+	std::map< std::string, std::string > & outputs,
+
+	std::string & error_code ) {
+	// command line looks like:
+	// CF_DESCRIBE_STACKS <req_id> <serviceurl> <accesskeyfile> <secretkeyfile> <stackName>
+	static const char* command = "CF_DESCRIBE_STACKS";
+
+	// callGahpFunction() checks if this command is supported.
+	CHECK_COMMON_ARGUMENTS;
+	if( stackName.empty() ) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+
+	Gahp_Args * result = NULL;
+	std::vector< YourString > arguments;
+	PUSH_COMMON_ARGUMENTS;
+	arguments.push_back( stackName );
+	int cgf = callGahpFunction( command, arguments, result, medium_prio );
+	if( cgf != 0 ) { return cgf; }
+
+	if ( result ) {
+		// command completed.
+		int rc = 0;
+		if (result->argc == 2) {
+			rc = atoi(result->argv[1]);
+			if (rc == 1) error_string = "";
+		} else if ( result->argc == 3 ) {
+			// If we saw no outputs from this stack.
+			rc = atoi(result->argv[1]);
+			stackStatus = result->argv[2];
+		} else if ( result->argc == 4 ) {
+			// get the error code
+			rc = atoi( result->argv[1] );
+			error_code = result->argv[2];
+			error_string = result->argv[3];
+		} else if ( result->argc >= 5 ) {
+			rc = atoi(result->argv[1]);
+			stackStatus = result->argv[2];
+
+			for( int i = 3; i + 1 < result->argc; i +=2 ) {
+				outputs[ result->argv[i] ] = result->argv[i + 1];
+			}
+		} else {
+			EXCEPT( "Bad %s result", command );
+		}
+
+		delete result;
+		return rc;
+	} else {
+		EXCEPT( "callGahpFunction() succeeded but result was NULL." );
+	}
+}
+
+int EC2GahpClient::create_stack(
+	const std::string & service_url,
+	const std::string & publickeyfile,
+	const std::string & privatekeyfile,
+
+	const std::string & stackName,
+	const std::string & templateURL,
+	const std::string & capability,
+	const std::map< std::string, std::string > & parameters,
+
+	std::string & stackID,
+	std::string & error_code )
+{
+	// command line looks like:
+	// CF_CREATE_STACK <req_id> <serviceurl> <accesskeyfile> <secretkeyfile> <stackName> <templateURL> <capability> (<parameters-name> <parameter-value>)* <NULLSTRING>
+	static const char* command = "CF_CREATE_STACK";
+
+	// callGahpFunction() checks if this command is supported.
+	CHECK_COMMON_ARGUMENTS;
+	if( stackName.empty() || templateURL.empty() ) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+
+	Gahp_Args * result = NULL;
+	std::vector< YourString > arguments;
+	PUSH_COMMON_ARGUMENTS;
+	arguments.push_back( stackName );
+	arguments.push_back( templateURL );
+	arguments.push_back( capability );
+	std::vector< std::string > plist;
+	for( auto i = parameters.begin(); i != parameters.end(); ++i ) {
+		plist.push_back( i->first );
+		plist.push_back( i->second );
+	}
+	pushVectorBack( arguments, plist );
+
+	int cgf = callGahpFunction( command, arguments, result, medium_prio );
+	if( cgf != 0 ) { return cgf; }
+
+	if ( result ) {
+		// command completed.
+		int rc = 0;
+		if (result->argc == 2) {
+			rc = atoi(result->argv[1]);
+			if (rc == 1) error_string = "";
+		} else if ( result->argc == 3 ) {
+			rc = atoi(result->argv[1]);
+			stackID = result->argv[2];
 		} else if ( result->argc == 4 ) {
 			// get the error code
 			rc = atoi( result->argv[1] );

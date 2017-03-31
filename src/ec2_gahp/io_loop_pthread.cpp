@@ -87,14 +87,15 @@ registerAllAmazonCommands(void)
 	}
 
 	// EC2 Commands
-
 	registerAmazonGahpCommand(AMAZON_COMMAND_VM_START,
 			AmazonVMStart::ioCheck, AmazonVMStart::workerFunction);
+
     registerAmazonGahpCommand(AMAZON_COMMAND_VM_START_SPOT,
             AmazonVMStartSpot::ioCheck, AmazonVMStartSpot::workerFunction);
 
 	registerAmazonGahpCommand(AMAZON_COMMAND_VM_STOP,
 			AmazonVMStop::ioCheck, AmazonVMStop::workerFunction);
+
 	registerAmazonGahpCommand(AMAZON_COMMAND_VM_STOP_SPOT,
 			AmazonVMStopSpot::ioCheck, AmazonVMStopSpot::workerFunction);
 
@@ -143,9 +144,12 @@ registerAllAmazonCommands(void)
 			AmazonRemoveTargets::ioCheck, AmazonRemoveTargets::workerFunction );
 	registerAmazonGahpCommand( AMAZON_COMMAND_GET_FUNCTION,
 			AmazonGetFunction::ioCheck, AmazonGetFunction::workerFunction );
-
-	registerAmazonGahpCommand( "S3_UPLOAD",
+	registerAmazonGahpCommand( AMAZON_COMMAND_S3_UPLOAD,
 			AmazonS3Upload::ioCheck, AmazonS3Upload::workerFunction );
+	registerAmazonGahpCommand( AMAZON_COMMAND_CF_CREATE_STACK,
+			AmazonCreateStack::ioCheck, AmazonCreateStack::workerFunction );
+	registerAmazonGahpCommand( AMAZON_COMMAND_CF_DESCRIBE_STACKS,
+			AmazonDescribeStacks::ioCheck, AmazonDescribeStacks::workerFunction );
 
 	return true;
 }

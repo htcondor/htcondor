@@ -544,18 +544,6 @@ void GCEJob::doEvaluateState()
 
 					lastSubmitAttempt = time(NULL);
 
-					if ( rc != 0 &&
-						 gahp_error_code == "NEED_CHECK_VM_START" ) {
-						// get an error code from gahp server said that we should check if
-						// the VM has been started successfully in EC2
-
-						// Maxmium retry times is 3, if exceeds this limitation, we fall through
-						if ( m_retry_times++ < maxRetryTimes ) {
-							gmState = GM_START_VM;
-						}
-						break;
-					}
-
 					if ( rc == 0 ) {
 
 						ASSERT( instance_id != "" );
@@ -564,12 +552,6 @@ void GCEJob::doEvaluateState()
 
 						gmState = GM_SAVE_INSTANCE_ID;
 
-					} else if ( gahp_error_code == "InstanceLimitExceeded" ) {
-						// meet the resource limitation (maximum 20 instances)
-						// should retry this command later
-						myResource->CancelSubmit( this );
-						daemonCore->Reset_Timer( evaluateStateTid,
-												 submitInterval );
 					 } else {
 						errorString = gahp->getErrorString();
 						dprintf(D_ALWAYS,"(%d.%d) job submit failed: %s: %s\n",
@@ -1064,7 +1046,7 @@ void GCEJob::StatusUpdate( const char * instanceID,
 	// SetRemoteJobStatus() sets the last-update timestamp, but
 	// only returns true if the status has changed.
 	if( SetRemoteJobStatus( status ) ) {
-		remoteJobState = status;
+		remoteJobState = status ? status : "";
 		probeNow = true;
 		SetEvaluateState();
 	}
