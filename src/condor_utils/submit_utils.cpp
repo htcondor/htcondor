@@ -384,7 +384,7 @@ SubmitHash::~SubmitHash()
 	delete procAd; procAd = NULL;
 
 	// detach but do not delete the cluster ad
-	PRAGMA_REMIND("tj: should we copy/delete the cluster ad?")
+	//PRAGMA_REMIND("tj: should we copy/delete the cluster ad?")
 	clusterAd = NULL;
 }
 
@@ -708,6 +708,11 @@ const char * SubmitHash::full_path(const char *name, bool use_iwd /*=true*/)
 	if ( use_iwd ) {
 		ASSERT(JobIwd.Length());
 		p_iwd = JobIwd.Value();
+	} else if (clusterAd) {
+		// if there is a cluster ad, we NEVER want to use the current working directory
+		// instead we want to treat the saved working directory of submit as the cwd.
+		realcwd = submit_param_mystring("FACTORY.Iwd", "FACTORY.Iwd");
+		p_iwd = realcwd.Value();
 	} else {
 		condor_getcwd(realcwd);
 		p_iwd = realcwd.Value();
@@ -7972,6 +7977,7 @@ void SubmitHash::warn_unused(FILE* out, const char *app)
 	// wenger 2012-03-26 (refactored by TJ 2015-March)
 	increment_macro_use_count("DAG_STATUS", SubmitMacroSet);
 	increment_macro_use_count("FAILED_COUNT", SubmitMacroSet);
+	increment_macro_use_count("FACTORY.Iwd", SubmitMacroSet);
 
 	HASHITER it = hash_iter_begin(SubmitMacroSet);
 	for ( ; !hash_iter_done(it); hash_iter_next(it) ) {
@@ -8003,5 +8009,22 @@ void SubmitHash::dump(FILE* out, int flags)
 	hash_iter_delete(&it);
 }
 
+const char* SubmitHash::to_string(std::string & out, int flags)
+{
+	out.reserve(SubmitMacroSet.size * 80); // make a guess at how much space we need.
+
+	HASHITER it = hash_iter_begin(SubmitMacroSet, flags);
+	for ( ; ! hash_iter_done(it); hash_iter_next(it)) {
+		const char * key = hash_iter_key(it);
+		if (key && key[0] == '$') continue; // dont dump meta params.
+		const char * val = hash_iter_value(it);
+		out += key;
+		out += "=";
+		if (val) { out += val; }
+		out += "\n";
+	}
+	hash_iter_delete(&it);
+	return out.c_str();
+}
 
 

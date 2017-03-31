@@ -179,6 +179,7 @@ bool jobExternallyManaged(ClassAd * ad);
 bool jobManagedDone(ClassAd * ad);
 int  count_a_job( JobQueueJob *job, const JOB_ID_KEY& jid, void* user);
 void mark_jobs_idle();
+void load_job_factories();
 static void WriteCompletionVisa(ClassAd* ad);
 
 schedd_runtime_probe WalkJobQ_check_for_spool_zombies_runtime;
@@ -603,6 +604,8 @@ Scheduler::Scheduler() :
 	RequestClaimTimeout = 0;
 	MaxRunningSchedulerJobsPerOwner = INT_MAX;
 	MaxJobsRunning = 0;
+	AllowLateMaterialize = false;
+	MaxMaterializedJobsPerCluster = INT_MAX;
 	MaxJobsSubmitted = INT_MAX;
 	MaxJobsPerOwner = INT_MAX;
 	MaxJobsPerSubmission = INT_MAX;
@@ -5490,6 +5493,7 @@ Scheduler::actOnJobs(int, Stream* s)
 	JobAction action = JA_ERROR;
 	int reply, i;
 	int num_matches = 0;
+	int num_cluster_matches = 0;
 	int new_status = -1;
 	char buf[256];
 	char *reason = NULL;
@@ -5501,10 +5505,12 @@ Scheduler::actOnJobs(int, Stream* s)
 
 		// Setup array to hold ids of the jobs we're acting on.
 	ExtArray<PROC_ID> jobs;
+	ExtArray<PROC_ID> clusters; // holds cluster ids we are acting upon (for late materialization)
 	PROC_ID tmp_id;
 	tmp_id.cluster = -1;
 	tmp_id.proc = -1;
 	jobs.setFiller( tmp_id );
+	clusters.setFiller( tmp_id );
 
 		// make sure this connection is authenticated, and we know who
 		// the user is.  also, set a timeout, since we don't want to
@@ -5675,8 +5681,8 @@ Scheduler::actOnJobs(int, Stream* s)
 			break;
 		case JA_RELEASE_JOBS:
 				// Only release held jobs which aren't waiting for
-				// input files to be spooled
-			snprintf( buf, 256, "(%s==%d && %s=!=%d) && (", ATTR_JOB_STATUS,
+				// input files to be spooled, (or cluster ads - so late materialization works)
+			snprintf( buf, 256, "(ProcId is undefined || (%s==%d && %s=!=%d)) && (", ATTR_JOB_STATUS,
 					  HELD, ATTR_HOLD_REASON_CODE,
 					  CONDOR_HOLD_CODE_SpoolingInput );
 			break;
@@ -5786,13 +5792,18 @@ Scheduler::actOnJobs(int, Stream* s)
 		}
 		else
 		{
-			GetNextJobFunc = &GetNextJobByConstraint;
+			//GetNextJobFunc = &GetNextJobByConstraint;
+			GetNextJobFunc = &GetNextJobOrClusterByConstraint;
 		}
 		for( job_ad = (*GetNextJobFunc)( constraint, 1 );
 		     job_ad;
 		     job_ad = (*GetNextJobFunc)( constraint, 0 ))
 		{
-			jobs[num_matches++] = job_ad->jid;
+			if (job_ad->jid.proc < 0) {
+				clusters[num_cluster_matches++] = job_ad->jid;
+			} else {
+				jobs[num_matches++] = job_ad->jid;
+			}
 		}
 		free( constraint );
 		constraint = NULL;
@@ -5807,10 +5818,14 @@ Scheduler::actOnJobs(int, Stream* s)
 		expanded_ids.rewind();
 		while( (tmp=expanded_ids.next()) ) {
 			tmp_id = getProcByString( tmp );
-			if( tmp_id.cluster < 0 || tmp_id.proc < 0 ) {
+			if( tmp_id.cluster < 0 ) {
 				continue;
 			}
-			jobs[num_matches++] = tmp_id;
+			if (tmp_id.proc < 0) {
+				clusters[num_cluster_matches++] = tmp_id;
+			} else {
+				jobs[num_matches++] = tmp_id;
+			}
 		}
 	}
 
@@ -5973,6 +5988,64 @@ Scheduler::actOnJobs(int, Stream* s)
 	}
 
 	if( reason ) { free( reason ); }
+
+	// With late materialization, we may need to operate on clusters (actually the cluster factory) also
+	//
+	for( i=0; i<num_cluster_matches; i++ ) {
+		tmp_id = clusters[i];
+		JobQueueJob * clusterad = GetJobAd(tmp_id);
+		// for now, we only care about clusters that have job factories
+		if ( ! clusterad || ! clusterad->factory)
+			continue;
+
+		switch( action ) { 
+		case JA_CONTINUE_JOBS:
+		case JA_SUSPEND_JOBS:
+		case JA_VACATE_JOBS:
+		case JA_VACATE_FAST_JOBS:
+		case JA_CLEAR_DIRTY_JOB_ATTRS:
+		case JA_ERROR:
+			// nothing to do for these
+			break;
+
+		case JA_HOLD_JOBS:
+			if (clusterad->factory) {
+				//PRAGMA_REMIND("TODO: make a proper hold (with reasons) for the job factory")
+				if (SetAttributeInt(tmp_id.cluster, tmp_id.proc, ATTR_JOB_MATERIALIZE_PAUSED, 1)) {
+					results.record( tmp_id, AR_SUCCESS );
+					num_success++;
+				} else {
+					results.record( tmp_id, AR_PERMISSION_DENIED );
+				}
+			}
+			break;
+
+		case JA_RELEASE_JOBS:
+			if (clusterad->factory) {
+				//PRAGMA_REMIND("TODO: make a proper hold (with reasons) for the job factory")
+				if (SetAttributeInt(tmp_id.cluster, tmp_id.proc, ATTR_JOB_MATERIALIZE_PAUSED, 0)) {
+					results.record( tmp_id, AR_SUCCESS );
+					num_success++;
+				} else {
+					results.record( tmp_id, AR_PERMISSION_DENIED );
+				}
+			}
+			break;
+
+		case JA_REMOVE_JOBS:
+		case JA_REMOVE_X_JOBS:
+			if (clusterad->factory) {
+				PauseJobFactory(clusterad->factory, 3);
+				//PRAGMA_REMIND("TODO: can we remove the cluster now rather than just pausing the factory and scheduling the removal?")
+				ScheduleClusterForDeferredCleanup(tmp_id.cluster);
+				// we succeeded because we found the cluster, and a Pause 3 will cannot fail.
+				results.record( tmp_id, AR_SUCCESS );
+				num_success++;
+			}
+			break;
+		}
+	}
+
 
 	ClassAd* response_ad;
 
@@ -7747,6 +7820,7 @@ void
 PostInitJobQueue()
 {
 	mark_jobs_idle();
+	load_job_factories();
 
 	daemonCore->Register_Timer( 0,
 						(TimerHandlercpp)&Scheduler::WriteRestartReport,
@@ -11070,7 +11144,7 @@ Scheduler::shadow_prio_recs_consistent()
 	struct shadow_rec	*srp;
 	int		status, universe;
 
-	dprintf( D_ALWAYS, "Checking consistency running and runnable jobs\n" );
+	dprintf( D_FULLDEBUG, "Checking consistency of running and runnable jobs\n" );
 	BadCluster = -1;
 	BadProc = -1;
 
@@ -11084,13 +11158,13 @@ Scheduler::shadow_prio_recs_consistent()
 				universe!=CONDOR_UNIVERSE_MPI &&
 				universe!=CONDOR_UNIVERSE_PARALLEL) {
 				// display_shadow_recs();
-				// dprintf(D_ALWAYS,"shadow_prio_recs_consistent(): PrioRec %d - id = %d.%d, owner = %s\n",i,PrioRec[i].id.cluster,PrioRec[i].id.proc,PrioRec[i].owner);
-				dprintf( D_ALWAYS, "ERROR: Found a consistency problem!!!\n" );
+				// dprintf(D_FULLDEBUG,"shadow_prio_recs_consistent(): PrioRec %d - id = %d.%d, owner = %s\n",i,PrioRec[i].id.cluster,PrioRec[i].id.proc,PrioRec[i].owner);
+				dprintf( D_ALWAYS, "ERROR: Found a consistency problem in the PrioRec array for job %d.%d !!!\n", PrioRec[i].id.cluster,PrioRec[i].id.proc );
 				return FALSE;
 			}
 		}
 	}
-	dprintf( D_ALWAYS, "Tables are consistent\n" );
+	dprintf( D_FULLDEBUG, "Shadow and PrioRec Tables are consistent\n" );
 	return TRUE;
 }
 
@@ -12422,6 +12496,9 @@ Scheduler::Init()
 #endif
 
 	MaxJobsRunning = param_integer("MAX_JOBS_RUNNING",default_max_jobs_running);
+
+	AllowLateMaterialize = param_boolean("SCHEDD_ALLOW_LATE_MATERIALIZE", false);
+	MaxMaterializedJobsPerCluster = param_integer("MAX_MATERIALIZED_JOBS_PER_CLUSTER", MaxMaterializedJobsPerCluster);
 
 		// Limit number of simultaenous connection attempts to startds.
 		// This avoids the schedd getting so busy authenticating with

@@ -3421,6 +3421,16 @@ static long long resolve_job_batch_uid(JobRowOfData & jrod, ClassAd* job)
 	return true;
 }
 
+std::map<int, int> materialized_next_proc_by_cluster_map;
+static void track_job_materialize_info(int cluster_id, ClassAd* job) {
+
+	int proc_id = -1;
+	if ( ! job->LookupInteger(ATTR_JOB_MATERIALIZE_NEXT_PROC_ID, proc_id) || proc_id < 0) {
+		return;
+	}
+	materialized_next_proc_by_cluster_map[cluster_id] = proc_id;
+}
+
 // returns an interator that points to the first use of a batch uid with first
 // being defined as the first to call this function with a unique batch_uid value.
 long long resolve_first_use_of_batch_uid(int batch_uid, long long id)
@@ -3517,6 +3527,7 @@ static bool process_job_to_rod_per_ad_map(void * pv,  ClassAd* job)
 				//dag_to_cluster_map[dagid].insert(jobid.cluster);
 			} else if (dash_batch) {
 				resolve_job_batch_uid(pp.first->second, job);
+				track_job_materialize_info(jobid.cluster, job);
 			}
 			int universe = CONDOR_UNIVERSE_MIN;
 			if (job->LookupInteger(ATTR_JOB_UNIVERSE, universe) && universe == CONDOR_UNIVERSE_SCHEDULER) {
@@ -3849,7 +3860,7 @@ const char * const jobProgress_PrintFormat = "SELECT\n"
 	ATTR_DAG_NODES_QUEUED    " AS '  IDLE' WIDTH 6 PRINTF %6d OR _\n"  // Idle   // 5
 	ATTR_DAG_NODES_DONE      " AS '  HOLD' WIDTH 6 PRINTF %6d OR _\n"  // Held   // 6
 	ATTR_DAG_NODES_TOTAL "?:" ATTR_TOTAL_SUBMIT_PROCS " AS ' TOTAL' WIDTH 6 PRINTF %6d OR _\n"  // Total  // 7
-	ATTR_JOB_STATUS          " AS JOB_IDS WIDTH 0 PRINTAS JOB_STATUS\n"     // 8
+	ATTR_JOB_STATUS "?:" ATTR_JOB_MATERIALIZE_NEXT_PROC_ID " AS JOB_IDS WIDTH 0 PRINTAS JOB_STATUS\n"     // 8
 //	ATTR_JOB_REMOTE_USER_CPU " AS '    RUN_TIME'  WIDTH 12   PRINTAS CPU_TIME\n"
 //	ATTR_IMAGE_SIZE          " AS SIZE        WIDTH 4    PRINTAS MEMORY_USAGE\n"
 //	ATTR_HOLD_REASON         " AS HOLD_REASON\n"
@@ -3951,6 +3962,10 @@ static void reduce_procs(cluster_progress & prog, JobRowOfData & jr)
 		}
 		if (total) {
 			int done = total - prog.jobs;
+			if (materialized_next_proc_by_cluster_map.find(prog.cluster) != materialized_next_proc_by_cluster_map.end()) { 
+				int materialized_jobs = materialized_next_proc_by_cluster_map[prog.cluster];
+				done = materialized_jobs - prog.jobs;
+			}
 			prog.nodes_total += total;
 			prog.nodes_done += done;
 		} else {

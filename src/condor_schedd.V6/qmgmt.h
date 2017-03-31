@@ -172,9 +172,11 @@ void DestroyJobFactory(JobFactory * factory);
 int MaterializeNextFactoryJob(JobFactory * factory, JobQueueJob * cluster);
 int PostCommitJobFactoryProc(JobQueueJob * cluster, JobQueueJob * job);
 bool JobFactoryAllowsClusterRemoval(JobQueueJob * cluster);
-// if pause_code < 0, pause is permanent, if > 0, cluster was removed
+// if pause_code < 0, pause is permanent, if >= 3, cluster was removed
 int PauseJobFactory(JobFactory * factory, int pause_code);
 int ResumeJobFactory(JobFactory * factory, int pause_code);
+bool CheckJobFactoryPause(JobFactory * factory, int pause_code); // 0 for resume, 1 for pause, returns true if state changed
+void ScheduleClusterForDeferredCleanup(int cluster_id);
 
 void SetMaxHistoricalLogs(int max_historical_logs);
 time_t GetOriginalJobQueueBirthdate();
@@ -214,6 +216,7 @@ ClassAd *GetNextJobByConstraint_as_ClassAd(const char *constraint, int initScan)
 JobQueueJob* GetNextJob(int initScan);
 JobQueueJob* GetNextJobByCluster( int, int );
 JobQueueJob* GetNextJobByConstraint(const char *constraint, int initScan);
+JobQueueJob* GetNextJobOrClusterByConstraint(const char *constraint, int initScan);
 JobQueueJob* GetNextDirtyJobByConstraint(const char *constraint, int initScan);
 
 // does the parts of NewProc that are common between external submit and schedd late materialization

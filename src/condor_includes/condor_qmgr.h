@@ -117,6 +117,16 @@ int DestroyProc(int cluster_id, int proc_id);
 /** Remove a cluster of jobs from the queue.
 */
 int DestroyCluster(int cluster_id, const char *reason = NULL);
+
+// add schedd capabilities into the given ad, based on the mask. (mask is for future use)
+bool GetScheddCapabilites(int mask, ClassAd & ad);
+
+// either factory filename or factory text may be null, but not both.
+int SetJobFactory(int cluster_id, int qnum, const char * factory_filename, const char * factory_text);
+
+// either factory filename or factory text may be null, but not both.
+int SetMaterializeData(int cluster_id, int itemnum, const char * foreach_filename, const char * foreach_text);
+
 /** For all jobs in the queue for which constraint evaluates to true, set
 	attr = value.  The value should be a valid ClassAd value (strings
 	should be surrounded by quotes).

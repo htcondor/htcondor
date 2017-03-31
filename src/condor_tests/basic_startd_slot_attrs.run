@@ -68,7 +68,7 @@ my %memoryhash = (
 );
 
 
-my $testname = "basic_startd_slot_atttrs";
+my $testname = "basic_startd_slot_attrs";
 
 $configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"startdslotattrs");
 
