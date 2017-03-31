@@ -211,7 +211,7 @@
     GAHP server.  At this point, the GAHP server would typically dispatch
     a new thread to actually service the request.  Once the request has
     completed, the dispatched thread should create a Result Line and
-    enqueue it until the client issues a RESULT command.
+    enqueue it until the client issues a RESULTS command.
 
 3.3   TRANSPARENCY
 
@@ -527,20 +527,12 @@
 
 3.5.2 GAHP COMMANDS SPECIFIC TO AZURE
 
-    The following commands are specific to the Azure GAHP. All commands
-    will include the following arguments.
-
-    * request-ID    = a non-zero Request ID
-    * cred-file     = the full path to a file containing a valid set of
-                      OAuth credentials in the JSON format used
-                      by Azure's az command-line client program
-    * subscription  = the Azure subscription to be used
-
-    We do not directly specify keys to minimize the chance of interception.
-
-    Required values must not be the literal string "NULL" (without the
-    quotes), as this denotes that the corresponding attribute was not set.
-    If an optional value is not set, it _must_ be represented in this way.
+    The following commands are specific to the Azure GAHP.
+    Most commands will involve interaction with the Azure service.
+    The exception is AZURE_ACCOUNT_INFO, which provides account
+    information to be used when communicating with Azure. It must
+    complete successfully before any other Azure commands may be
+    issued.
 
     The following is the Return Line for all Azure GAHP commands unless
     otherwise specified.
@@ -549,13 +541,14 @@
 
         <result> <CRLF>
 
-        * result             = the character "S" (without the quotes) for
-                               the successful submission of the request
-                               (meaning the request is now pending), or an
-                               "E" (without the quotes) for an error
-                               parsing the request or its arguments (e.g.
-                               an unrecognized or unsupported command, or
-                               missing or malformed arguments)
+        * result     = the character "S" (without the quotes) for the
+                       successful submission of the request (meaning the
+                       request is now pending), or an "E" (without the
+                       quotes) for an error parsing the request or its
+                       arguments (e.g. an unrecognized or unsupported
+                       command, or missing or malformed arguments) or
+                       AZURE_ACCOUNT_INFO is required and hasn't been
+                       issued yet.
 
     The following is the Result Line for all Azure GAHP commands unless
     otherwise specified.
@@ -570,6 +563,40 @@
 
     -----------------------------------------------
 
+    AZURE_ACCOUNT_INFO
+
+    Set account information to be used in subsequent communications with
+    the Azure service. This is a synchronous command that returns an
+    immediate reply and has no subsequent result line.
+    The GAHP can read the given credential file, but should not perform
+    any blocking operations, such as communicating with the Azure service.
+    This command must be issued before any other Azure-specific commands.
+
+    + Request Line:
+
+        AZURE_ACCOUNT_INFO <SP> authFile=<cred-file>
+            <SP> subscription=<subscription> <CRLF>
+
+    + Return Line:
+
+        One of the following:
+
+        S <CRLF>
+        E <CRLF>
+        F <error-string> <CRLF>
+
+        An "S" reply indicates the command completed successfully.
+        An "E" reply indicates a syntax error.
+        An "F" reply indicates some other problem, such as failure to
+        read the indicated file.
+        <error-string> should be a description of the failure.
+
+    + Result Line:
+
+        None.
+
+    -----------------------------------------------
+
     AZURE_PING
 
     Send a simple request to the Azure service in order to determine if
@@ -578,8 +605,9 @@
 
     + Request Line:
 
-        AZURE_PING <SP> <request-ID> <SP> <cred-file>
-            <SP> <subscription> <CRLF>
+        AZURE_PING <SP> <request-ID> <CRLF>
+
+        * request-ID = a non-zero Request ID
 
     -----------------------------------------------
 
@@ -590,12 +618,13 @@
 
     + Request Line:
 
-        AZURE_VM_CREATE <SP> <request-ID> <SP> <cred-file>
-            <SP> <subscription> [<SP> <key>=<value>]* <CRLF>
+        AZURE_VM_CREATE <SP> <request-ID> [<SP> <key>=<value>]* <CRLF>
+
+        * request-ID = a non-zero Request ID
 
         The following key/value pairs are required.
 
-        * name: a unique name for this VM
+        * rgName: the name of the resource group to be created for this VM
         * location: the Azure location where this VM should reside
         * size: the hardware configuration, represented as the vmSize
             element of the VM's description
@@ -622,6 +651,35 @@
         failed. The second should be used if the command succeeded.
 
         <request-ID> <SP> <error-string> <CRLF>
+
+        <request-ID> <SP> NULL <SP> <vm-id> <SP> <ip-address> <CRLF>
+
+        * error-string = string describing the nature of the failure
+        * vm-id = the vmId attribute of the VM
+        * ip-address = the public IP address of the VM, or NULL if none.
+
+    -----------------------------------------------
+
+    AZURE_VM_INFO
+
+    Query attributes of the given VM. These are the same attributes
+    given the result line of the AZURE_VM_CREATE command.
+
+    + Request Line:
+
+        AZURE_VM_INFO <SP> <request-ID> <SP> rgName=<name> <CRLF>
+
+        * request-ID = a non-zero Request ID
+        * name = the name of the resource group for VM as given in
+            AZURE_VM_CREATE
+
+    + Result Line:
+
+        One of the following. The first should be used if the command
+        failed. The second should be used if the command succeeded.
+
+        <request-ID> <SP> <error-string> <CRLF>
+
         <request-ID> <SP> NULL <SP> <vm-id> <SP> <ip-address> <CRLF>
 
         * error-string = string describing the nature of the failure
@@ -636,12 +694,11 @@
 
     + Request Line:
 
-        AZURE_VM_DELETE <SP> <request-ID> <SP> <cred-file>
-            <SP> <subscription> <SP> <name> <CRLF>
+        AZURE_VM_DELETE <SP> <request-ID> <SP> rgName=<name> <CRLF>
 
-        The following attribute is required.
-
-        * name = the name for the VM as given in AZURE_VM_CREATE
+        * request-ID = a non-zero Request ID
+        * name = the name of the resource group for VM as given in
+            AZURE_VM_CREATE
 
     -----------------------------------------------
 
@@ -653,8 +710,7 @@
 
     + Request Line:
 
-        AZURE_VM_LIST <SP> <request-ID> <SP> <cred-file>
-            <SP> <subscription> <CRLF>
+        AZURE_VM_LIST <SP> <request-ID> <CRLF>
 
     + Result Line:
 
@@ -662,12 +718,14 @@
         failed. The second should be used if the command succeeded.
 
         <request-ID> <SP> <error-string> <CRLF>
+
         <request-ID> <SP> NULL <SP> <count>
             [<SP> <name> <SP> <status> ]* <CRLF>
 
         * error-string = string describing the nature of the failure
         * count = the number of VMs whose information will follow
-        * name = the name of the VM as given in AZURE_VM_CREATE
+        * name = the resource groupname of the VM as given in
+            AZURE_VM_CREATE
         * status = the 'powerState' property of the VM
 
         On success, <count> is an integer indicating the number of
