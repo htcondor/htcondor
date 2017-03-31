@@ -161,8 +161,13 @@ public:
 	static int max_query_workers;  // from config file
 	static int max_pending_query_workers;  // from config file
 	static int max_query_worktime;  // from config file
+	static int reserved_for_highprio_query_workers; // from config file
 	static int active_query_workers;
 	static int pending_query_workers;
+
+#ifdef TRACK_QUERIES_BY_SUBSYS
+	static bool want_track_queries_by_subsys;
+#endif
 
 
 protected:

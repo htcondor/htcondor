@@ -390,7 +390,7 @@ JobRouter::config() {
 		// goes on hold
 	m_release_on_hold = param_boolean("JOB_ROUTER_RELEASE_ON_HOLD", true);
 
-	m_round_robin_selection = param_boolean("JOB_ROUTER_ROUND_ROBIN_SELECTION", true);
+	m_round_robin_selection = param_boolean("JOB_ROUTER_ROUND_ROBIN_SELECTION", false);
 
 		// default is no maximum (-1)
 	m_max_jobs = param_integer("JOB_ROUTER_MAX_JOBS",-1);

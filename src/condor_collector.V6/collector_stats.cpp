@@ -380,6 +380,11 @@ void UpdatesStats::Init()
 	ADD_EXTERN_RUNTIME(Pool, HandleQuery, IF_VERBOSEPUB);
 	ADD_EXTERN_RUNTIME(Pool, HandleLocate, IF_VERBOSEPUB);
 
+	ADD_EXTERN_RUNTIME(Pool, HandleQueryForked, IF_VERBOSEPUB);
+	ADD_EXTERN_RUNTIME(Pool, HandleQueryMissedFork, IF_VERBOSEPUB);
+	ADD_EXTERN_RUNTIME(Pool, HandleLocateForked, IF_VERBOSEPUB);
+	ADD_EXTERN_RUNTIME(Pool, HandleLocateMissedFork, IF_VERBOSEPUB);
+
 #ifdef TRACK_QUERIES_BY_SUBSYS
     #define ADD_SUBSYS_PROBES(pool,subsys,as) \
 	   pool.AddProbe("InProcQueriesFrom" #subsys, &InProcQueriesFrom[SUBSYSTEM_TYPE_##subsys], "InProcQueriesFrom" #subsys, as | InProcQueriesFrom[SUBSYSTEM_TYPE_ ## subsys].PubDefault); \
