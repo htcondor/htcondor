@@ -545,6 +545,7 @@ static const struct BSubsys {
 	FILL(DAEMON),
 	FILL(DAGMAN),
 	FILL(GAHP),
+	FILL(JOB),
 	FILL(MASTER),
 	FILL(NEGOTIATOR),
 	FILL(SCHEDD),
@@ -554,7 +555,6 @@ static const struct BSubsys {
 	FILL(STARTER),
 	FILL(SUBMIT),
 	FILL(TOOL),
-	FILL(JOB),
 };
 #undef FILL
 
