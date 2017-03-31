@@ -663,6 +663,12 @@ const char* GceMetadataFile = "gce_metadata_file";
 const char* GcePreemptible = "gce_preemptible";
 const char* GceJsonFile = "gce_json_file";
 
+// Azure Parameters
+const char *AzureAuthFile = "azure_auth_file";
+const char *AzureLocation = "azure_location";
+const char *AzureSize = "azure_size";
+const char *AzureImage = "azure_image";
+
 char const *next_job_start_delay = "next_job_start_delay";
 char const *next_job_start_delay2 = "NextJobStartDelay";
 char const *want_graceful_removal = "want_graceful_removal";
@@ -2395,6 +2401,7 @@ SetExecutable()
 		   JobGridType != NULL &&
 		   ( strcasecmp( JobGridType, "ec2" ) == MATCH ||
 			 strcasecmp( JobGridType, "gce" ) == MATCH ||
+			 strcasecmp( JobGridType, "azure" ) == MATCH ||
 			 strcasecmp( JobGridType, "boinc" ) == MATCH ) ) ) {
 		ignore_it = true;
 	}
@@ -2761,6 +2768,7 @@ SetUniverse()
 				(strcasecmp (JobGridType, "nordugrid") == MATCH) ||
 				(strcasecmp (JobGridType, "ec2") == MATCH) ||
 				(strcasecmp (JobGridType, "gce") == MATCH) ||
+				(strcasecmp (JobGridType, "azure") == MATCH) ||
 				(strcasecmp (JobGridType, "unicore") == MATCH) ||
 				(strcasecmp (JobGridType, "boinc") == MATCH) ||
 				(strcasecmp (JobGridType, "cream") == MATCH)){
@@ -2774,7 +2782,7 @@ SetUniverse()
 
 				fprintf( stderr, "\nERROR: Invalid value '%s' for grid type\n", JobGridType );
 				fprintf( stderr, "Must be one of: gt2, gt5, pbs, lsf, "
-						 "sge, nqs, condor, nordugrid, unicore, ec2, gce, cream, or boinc\n" );
+						 "sge, nqs, condor, nordugrid, unicore, ec2, gce, azure, cream, or boinc\n" );
 				exit( 1 );
 			}
 		}			
@@ -6808,6 +6816,64 @@ SetGridParams()
 		}
 		InsertJobExprString( ATTR_GCE_JSON_FILE, full_path( tmp ) );
 		free( tmp );
+	}
+
+	//
+	// Azure grid-type submit attributes
+	//
+	if ( (tmp = condor_param( AzureAuthFile, ATTR_AZURE_AUTH_FILE )) ) {
+		// check auth file can be opened
+		if ( !DisableFileChecks ) {
+			if( ( fp=safe_fopen_wrapper_follow(full_path(tmp),"r") ) == NULL ) {
+				fprintf( stderr, "\nERROR: Failed to open auth file %s (%s)\n", 
+						 full_path(tmp), strerror(errno));
+				exit(1);
+			}
+			fclose(fp);
+
+			StatInfo si(full_path(tmp));
+			if (si.IsDirectory()) {
+				fprintf(stderr, "\nERROR: %s is a directory\n", full_path(tmp));
+				exit(1);
+			}
+		}
+		buffer.formatstr( "%s = \"%s\"", ATTR_AZURE_AUTH_FILE, full_path(tmp) );
+		InsertJobExpr( buffer.Value() );
+		free( tmp );
+	} else if ( JobGridType && strcasecmp( JobGridType, "azure" ) == 0 ) {
+		fprintf(stderr, "\nERROR: Azure jobs require an \"%s\" parameter\n", AzureAuthFile );
+		DoCleanup( 0, 0, NULL );
+		exit( 1 );
+	}
+
+	if ( (tmp = condor_param( AzureImage, ATTR_AZURE_IMAGE )) ) {
+		buffer.formatstr( "%s = \"%s\"", ATTR_AZURE_IMAGE, tmp );
+		InsertJobExpr( buffer.Value() );
+		free( tmp );
+	} else if ( JobGridType && strcasecmp( JobGridType, "azure" ) == 0 ) {
+		fprintf(stderr, "\nERROR: Azure jobs require an \"%s\" parameter\n", AzureImage );
+		DoCleanup( 0, 0, NULL );
+		exit( 1 );
+	}
+
+	if ( (tmp = condor_param( AzureLocation, ATTR_AZURE_LOCATION )) ) {
+		buffer.formatstr( "%s = \"%s\"", ATTR_AZURE_LOCATION, tmp );
+		InsertJobExpr( buffer.Value() );
+		free( tmp );
+	} else if ( JobGridType && strcasecmp( JobGridType, "azure" ) == 0 ) {
+		fprintf(stderr, "\nERROR: Azure jobs require an \"%s\" parameter\n", AzureLocation );
+		DoCleanup( 0, 0, NULL );
+		exit( 1 );
+	}
+
+	if ( (tmp = condor_param( AzureSize, ATTR_AZURE_SIZE )) ) {
+		buffer.formatstr( "%s = \"%s\"", ATTR_AZURE_SIZE, tmp );
+		InsertJobExpr( buffer.Value() );
+		free( tmp );
+	} else if ( JobGridType && strcasecmp( JobGridType, "azure" ) == 0 ) {
+		fprintf(stderr, "\nERROR: Azure jobs require an \"%s\" parameter\n", AzureSize );
+		DoCleanup( 0, 0, NULL );
+		exit( 1 );
 	}
 
 	// CREAM clients support an alternate representation for resources:

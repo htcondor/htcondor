@@ -3560,6 +3560,63 @@ int SubmitHash::SetGridParams()
 		InsertJobExpr( buffer.Value() );
 	}
 
+	//
+	// Azure grid-type submit attributes
+	//
+	if ( (tmp = condor_param( AzureAuthFile, ATTR_AZURE_AUTH_FILE )) ) {
+		// check auth file can be opened
+		if ( !DisableFileChecks ) {
+			if( ( fp=safe_fopen_wrapper_follow(full_path(tmp),"r") ) == NULL ) {
+				fprintf( stderr, "\nERROR: Failed to open auth file %s (%s)\n", 
+						 full_path(tmp), strerror(errno));
+				exit(1);
+			}
+			fclose(fp);
+
+			StatInfo si(full_path(tmp));
+			if (si.IsDirectory()) {
+				fprintf(stderr, "\nERROR: %s is a directory\n", full_path(tmp));
+				exit(1);
+			}
+		}
+		buffer.formatstr( "%s = \"%s\"", ATTR_AZURE_AUTH_FILE, full_path(tmp) );
+		InsertJobExpr( buffer.Value() );
+		free( tmp );
+	} else if ( JobGridType && strcasecmp( JobGridType, "azure" ) == 0 ) {
+		fprintf(stderr, "\nERROR: Azure jobs require an \"%s\" parameter\n", AzureAuthFile );
+		DoCleanup( 0, 0, NULL );
+		exit( 1 );
+	}
+
+	if ( (tmp = condor_param( AzureImage, ATTR_AZURE_IMAGE )) ) {
+		buffer.formatstr( "%s = \"%s\"", ATTR_AZURE_IMAGE, tmp );
+		InsertJobExpr( buffer.Value() );
+		free( tmp );
+	} else if ( JobGridType && strcasecmp( JobGridType, "azure" ) == 0 ) {
+		fprintf(stderr, "\nERROR: Azure jobs require an \"%s\" parameter\n", AzureImage );
+		DoCleanup( 0, 0, NULL );
+		exit( 1 );
+	}
+
+	if ( (tmp = condor_param( AzureLocation, ATTR_AZURE_LOCATION )) ) {
+		buffer.formatstr( "%s = \"%s\"", ATTR_AZURE_LOCATION, tmp );
+		InsertJobExpr( buffer.Value() );
+		free( tmp );
+	} else if ( JobGridType && strcasecmp( JobGridType, "azure" ) == 0 ) {
+		fprintf(stderr, "\nERROR: Azure jobs require an \"%s\" parameter\n", AzureLocation );
+		DoCleanup( 0, 0, NULL );
+		exit( 1 );
+	}
+
+	if ( (tmp = condor_param( AzureSize, ATTR_AZURE_SIZE )) ) {
+		buffer.formatstr( "%s = \"%s\"", ATTR_AZURE_SIZE, tmp );
+		InsertJobExpr( buffer.Value() );
+		free( tmp );
+	} else if ( JobGridType && strcasecmp( JobGridType, "azure" ) == 0 ) {
+		fprintf(stderr, "\nERROR: Azure jobs require an \"%s\" parameter\n", AzureSize );
+		DoCleanup( 0, 0, NULL );
+		exit( 1 );
+	}
 
 	// CREAM clients support an alternate representation for resources:
 	//   host.edu:8443/cream-batchname-queuename
@@ -4398,6 +4455,7 @@ int SubmitHash::SetExecutable()
 		 ( JobUniverse == CONDOR_UNIVERSE_GRID &&
 		   ( gridType == "ec2" ||
 			 gridType == "gce"  ||
+			 gridType == "azure"  ||
 			 gridType == "boinc" ) ) ) {
 		ignore_it = true;
 		role = SFR_PSEUDO_EXECUTABLE;
@@ -4794,6 +4852,7 @@ int SubmitHash::SetUniverse()
 				gridType == "nordugrid" ||
 				gridType == "ec2" ||
 				gridType == "gce" ||
+				gridType == "azure" ||
 				gridType == "unicore" ||
 				gridType == "boinc" ||
 				gridType == "cream"){
@@ -4805,7 +4864,7 @@ int SubmitHash::SetUniverse()
 			} else {
 
 				push_error(stderr, "Invalid value '%s' for grid type\n"
-					"Must be one of: gt2, gt5, pbs, lsf, sge, nqs, condor, nordugrid, unicore, ec2, gce, cream, or boinc\n",
+					"Must be one of: gt2, gt5, pbs, lsf, sge, nqs, condor, nordugrid, unicore, ec2, gce, azure, cream, or boinc\n",
 					JobGridType.Value() );
 				ABORT_AND_RETURN( 1 );
 			}

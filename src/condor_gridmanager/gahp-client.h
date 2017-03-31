@@ -644,6 +644,23 @@ class GahpClient : public GenericGahpClient {
 							   StringList &statuses,
 							   StringList &status_msgs );
 
+		int azure_ping( const std::string &auth_file,
+		                const std::string &subscription );
+
+		int azure_vm_create( const std::string &auth_file,
+		                     const std::string &subscription,
+		                     StringList &vm_params, std::string &vm_id,
+		                     std::string &ip_address );
+
+		int azure_vm_delete( const std::string &auth_file,
+		                     const std::string &subscription,
+		                     const std::string &vm_name );
+
+		int azure_vm_list( const std::string &auth_file,
+		                   const std::string &subscription,
+		                   StringList &vm_names,
+		                   StringList &vm_statuses );
+
 		int boinc_ping();
 
 		int boinc_submit( const char *batch_name,
