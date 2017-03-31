@@ -3048,7 +3048,7 @@ type=string
 tags=JobRouter
 
 [JOB_ROUTER_ROUND_ROBIN_SELECTION]
-default=true
+default=false
 type=bool
 
 [POLLING_PERIOD]
