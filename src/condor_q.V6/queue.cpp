@@ -1810,14 +1810,7 @@ processCommandLineArguments (int argc, char *argv[])
 			qdo_mode = QDO_Analyze;
 		}
 		else
-		if (is_dash_arg_colon_prefix(dash_arg, "reverse", &pcolon, 3)) {
-			reverse_analyze = true; // modify analyze to be reverse analysis
-			if (pcolon) { 
-				analyze_detail_level |= parse_analyze_detail(++pcolon, analyze_detail_level);
-			}
-		}
-		else
-		if (is_dash_arg_colon_prefix(dash_arg, "reverse-analyze", &pcolon, 10)) {
+		if (is_dash_arg_colon_prefix(dash_arg, "reverse-analyze", &pcolon, 3)) {
 			reverse_analyze = true; // modify analyze to be reverse analysis
 			better_analyze = true;	// enable analysis
 			analyze_with_userprio = false;
@@ -2993,7 +2986,7 @@ usage (const char *myName, int other)
 		"\t-userprios <file>\t Read user priorities for analysis from <file>\n"
 		"\t\t\t\t <file> can be the output of condor_userprio -l\n"
 		"\t-nouserprios\t\t Don't consider user priority during analysis (default)\n"
-		"\t-reverse\t\t Analyze Machine requirements against jobs\n"
+		"\t-reverse-analyze\t Analyze Machine requirements against jobs\n"
 		"\t-verbose\t\t Show progress and machine names in results\n"
 		"\n"
 		);
