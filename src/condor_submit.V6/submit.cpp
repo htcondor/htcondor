@@ -10924,7 +10924,7 @@ SetVMParams()
 #endif
 
 #ifdef USE_SUBMIT_UTILS
-PRAGMA_REMIND("make a proper queue args unit test.")
+//PRAGMA_REMIND("make a proper queue args unit test.")
 int DoUnitTests(int options)
 {
 	return (options > 1) ? 1 : 0;

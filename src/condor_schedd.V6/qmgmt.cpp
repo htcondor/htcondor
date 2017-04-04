@@ -349,6 +349,16 @@ ClusterCleanup(int cluster_id)
 	}
 }
 
+int GetSchedulerCapabilities(int /*mask*/, ClassAd & reply)
+{
+	//reply.Assign("CondorVersion", );
+	reply.Assign( "LateMaterialize", scheduler.getAllowLateMaterialize() );
+	dprintf(D_ALWAYS, "GetSchedulerCapabilities called, returning\n");
+	dPrintAd(D_ALWAYS, reply, false);
+	return 0;
+}
+
+
 // This timer is called when we scheduled deferred cluster cleanup, which we do when for clusters that
 // have job factories
 // sees num_procs for a cluster go to 0, but there is a job factory on that cluster refusing to let it die.
@@ -401,7 +411,7 @@ DeferredClusterCleanupTimerCallback()
 					total_new_jobs += num_materialized;
 					do_cleanup = false;
 				}
-				dprintf(D_MATERIALIZE, "\tcluster %d job factory invoked, %d jobs materialized, do_cleanup=%d\n", cluster_id, num_materialized, do_cleanup);
+				dprintf(D_MATERIALIZE, "cluster %d job factory invoked, %d jobs materialized%s\n", cluster_id, num_materialized, do_cleanup ? ", doing cleanup" : "");
 			}
 		}
 
@@ -4291,6 +4301,8 @@ CommitTransaction(SetAttributeFlags_t flags /* = 0 */,
 								} else {
 									ScheduleClusterForDeferredCleanup(job_id.cluster);
 								}
+							} else {
+								ScheduleClusterForDeferredCleanup(job_id.cluster);
 							}
 						}
 					}
@@ -6344,7 +6356,7 @@ void mark_jobs_idle()
 void load_job_factories()
 {
 	if ( ! scheduler.getAllowLateMaterialize()) {
-		dprintf(D_ALWAYS, "SCHEDD_ALLOW_LATE_MATERIALIZE == false, skipping job factory initialization");
+		dprintf(D_ALWAYS, "SCHEDD_ALLOW_LATE_MATERIALIZE is false, skipping job factory initialization\n");
 		return;
 	}
 

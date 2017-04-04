@@ -28,6 +28,7 @@
 #include "condor_qmgr.h"
 #include "MyString.h"
 
+extern Scheduler scheduler;
 
 int
 SetAttributeInt(int cl, int pr, const char *name, int val, SetAttributeFlags_t flags )

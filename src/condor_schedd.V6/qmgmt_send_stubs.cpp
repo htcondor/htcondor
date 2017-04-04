@@ -244,7 +244,9 @@ bool GetScheddCapabilites(int mask, ClassAd & ad)
 	CurrentSysCall = CONDOR_GetCapabilities;
 
 	qmgmt_sock->encode();
-	if ( ! qmgmt_sock->code(CurrentSysCall) || ! qmgmt_sock->code(mask) ) {
+	if ( ! qmgmt_sock->code(CurrentSysCall) ||
+		 ! qmgmt_sock->code(mask) ||
+		 ! qmgmt_sock->end_of_message()) {
 		return false;
 	}
 	qmgmt_sock->decode();

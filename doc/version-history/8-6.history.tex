@@ -36,6 +36,11 @@ The details of each version are described below.
 \item When the \Condor{credd} is polling for credentials, the timeout is now
 configurable using \Macro{CREDD\_POLLING\_TIMEOUT}.
 
+\item The \Opt{reverse} option for \Condor{q} was changed to \Opt{reverse-analyze},
+and it now implies \Opt{better-analyze}.  Formerly, the \Opt{reverse} option was ignored
+unless \Opt{-better-analyze} was also specified.
+\Ticket{6167}
+
 \end{itemize}
 
 \noindent Bugs Fixed:

@@ -215,6 +215,12 @@ int SetTimerAttribute(int cluster, int proc, const char *attr_name, int dur);
 int SetMyProxyPassword (int cluster, int proc, const char * pwd);
 
 
+/** populate the scheduler capabilities ad
+	mask - reserved for future use, must be 0
+	@return -1 on failure; 0 on success
+*/
+int GetSchedulerCapabilities(int mask, ClassAd & reply);
+
 /** Tell the schedd that we're about to close the network socket. This
 	call will not commit an active transaction. Callers of DisconnectQ()
 	should not use this call.

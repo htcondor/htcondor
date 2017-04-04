@@ -478,7 +478,7 @@ public:
 	int getClusterId() { return jid.cluster; }
 	int getProcId()    { return jid.proc; }
 	const char * getScheddVersion() { return ScheddVersion.Value(); }
-	const char * getIWD() { return JobIwd.c_str(); }
+	const char * getIWD();
 	const char * full_path(const char *name, bool use_iwd=true);
 	int check_and_universalize_path(MyString &path);
 
@@ -518,6 +518,7 @@ protected:
 	// these variables are used to pass values between the various SetXXX functions below
 	ShouldTransferFiles_t should_transfer;
 	int  JobUniverse;
+	bool JobIwdInitialized;
 	bool IsNiceUser;
 	bool IsDockerJob;
 	bool JobDisableFileChecks;	 // file checks disabled by submit file.
@@ -587,8 +588,8 @@ protected:
 	int SetJobRetries();
 	int SetEnvironment();
 	#if !defined(WIN32)
-	int ComputeRootDir();
-	int SetRootDir();
+	int ComputeRootDir(bool check_access=true);
+	int SetRootDir(bool check_access=true);
 	#endif
 	int SetRequirements();
 	bool check_requirements( char const *orig, MyString &answer );
@@ -600,8 +601,8 @@ protected:
 	int SetRunAsOwner();
 	int SetLoadProfile();
 	int SetRank();
-	int ComputeIWD();
-	int SetIWD();
+	int ComputeIWD(bool check_access=true);
+	int SetIWD(bool check_access=true);
 	int SetUserLog();
 	int SetUserLogXML();
 	int SetCoreSize();
