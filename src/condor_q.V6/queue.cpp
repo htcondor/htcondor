@@ -2655,7 +2655,7 @@ usage (const char *myName, int other)
 		"\t-userprios <file>\t Read user priorities for analysis from <file>\n"
 		"\t\t\t\t <file> can be the output of condor_userprio -l\n"
 		"\t-nouserprios\t\t Don't consider user priority during analysis (default)\n"
-		"\t-reverse\t\t Analyze Machine requirements against jobs\n"
+		"\t-reverse-analyze\t Analyze Machine requirements against jobs\n"
 		"\t-verbose\t\t Show progress and machine names in results\n"
 		"\n"
 		);
