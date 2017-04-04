@@ -454,7 +454,11 @@ void BoincJob::doEvaluateState()
 			// Setting an initial state means that on restart, we know
 			// the batch has been submitted, and don't have to check
 			// for that on recovery.
-			NewBoincState( BOINC_JOB_STATUS_IN_PROGRESS );
+			//
+			// Might be submitted but not sent. Always check for the true
+			// state through the BatchStatus querying mechanism.
+			//
+			//NewBoincState( BOINC_JOB_STATUS_IN_PROGRESS );
 			// TODO record submit attempts, submit time, or RequestSubmit()?
 			gmState = GM_SUBMITTED;
 			} break;
@@ -839,8 +843,11 @@ void BoincJob::NewBoincState( const char *new_state )
 				 procID.cluster, procID.proc, remoteState.c_str(),
 				 new_state_str.c_str() );
 
-		/* We get no indication of whether the job is actually running.
-		 * Jobs are IN_PROGRESS until they are either DONE or ERROR.
+		//  Since the only way to get BOINC_JOB_STATUS_IN_PROGRESS
+		//  passed is through the FinishBatchStatus() function
+		//  we are certain that we report the real state of the job
+		//  on the remote server
+		//
 		if ( new_state_str == BOINC_JOB_STATUS_IN_PROGRESS &&
 			 condorState == IDLE ) {
 			JobRunning();
@@ -850,7 +857,6 @@ void BoincJob::NewBoincState( const char *new_state )
 			 condorState == RUNNING ) {
 			JobIdle();
 		}
-		*/
 
 		// TODO When do we consider the submission successful or not:
 		//   when myResource->Submit() returns success, or when the job
