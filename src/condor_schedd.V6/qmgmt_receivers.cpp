@@ -491,12 +491,12 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 	case CONDOR_GetCapabilities: {
 		int mask;
 		assert( syscall_sock->code(mask) );
-		assert( syscall_sock->end_of_message() );;
+		assert( syscall_sock->end_of_message() );
 
 		errno = 0;
 		ClassAd reply;
-		//reply.Assign("CondorVersion", );
-		reply.Assign( "LateMaterialization", 1 );
+		GetSchedulerCapabilities(mask, reply);
+		syscall_sock->encode();
 		assert( putClassAd( syscall_sock, reply ) );
 		assert( syscall_sock->end_of_message() );;
 		return 0;

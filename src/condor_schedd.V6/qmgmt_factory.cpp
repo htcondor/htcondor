@@ -212,6 +212,8 @@ JobFactory * MakeJobFactory(JobQueueJob* job, const char * submit_digest_file)
 
 	if (rval) {
 		dprintf(D_ALWAYS, "failed to load job factory %d submit digest %s : %s\n", job->jid.cluster, submit_digest_file, errmsg.c_str());
+		delete factory;
+		factory = NULL;
 	} else {
 		factory->set_cluster_ad(job);
 	}
@@ -287,10 +289,10 @@ int  MaterializeNextFactoryJob(JobFactory * factory, JobQueueJob * ClusterAd)
 
 	dprintf(D_MATERIALIZE | D_VERBOSE, "in MaterializeNextFactoryJob for cluster=%d, Factory is running\n", ClusterAd->jid.cluster);
 
-#if 1
 	int step_size = factory->StepSize();
 	if (step_size <= 0) {
-		return 0;
+		dprintf(D_ALWAYS, "ERROR - step size is %d for job materialization of cluster %d, using 1 instead\n", step_size, ClusterAd->jid.cluster);
+		step_size = 1;
 	}
 
 // ATTR_JOB_MATERIALIZE_ITEM_COUNT   "JobMaterializeItemCount"
@@ -358,69 +360,22 @@ int  MaterializeNextFactoryJob(JobFactory * factory, JobQueueJob * ClusterAd)
 		SetAttributeInt(ClusterAd->jid.cluster, ClusterAd->jid.proc, ATTR_TOTAL_SUBMIT_PROCS, total_procs);
 	}
 
-#else
-	int proc_limit = 0;
-	if ( ! ClusterAd->LookupInteger("JobFactoryMaxMaterialize", proc_limit) ||
-		ClusterAd->NumProcs() >= proc_limit) {
-		return 0; // nothing to instantiate.
-	}
-
-	int max_proc_id = 0;
-	int rval = GetAttributeInt(ClusterAd->jid.cluster, ClusterAd->jid.proc, "JobFactoryMaxProcId", &max_proc_id);
-	if (rval < 0 || max_proc_id < 0) {
-		dprintf(D_ALWAYS, "Error: JobFactoryMaxProcId is not set, aborting materalize for cluster %d\n", ClusterAd->jid.cluster);
-		return rval;
-	}
-
-	int next_proc_id = 0;
-	rval = GetAttributeInt(ClusterAd->jid.cluster, ClusterAd->jid.proc, "JobFactoryNextProcId", &next_proc_id);
-	if (rval < 0 || next_proc_id < 0) {
-		dprintf(D_ALWAYS, "Error: JobFactoryNextProcId is not set, aborting materalize for cluster %d\n", ClusterAd->jid.cluster);
-		return rval;
-	}
-
-	if (next_proc_id >= max_proc_id) {
-		return 0; // nothing to instantiate.
-	}
-
-	int step_size = 1;
-	if ( ! ClusterAd->LookupInteger("JobFactoryStepSize", step_size)) {
-		step_size = 1;
-	}
-
-	int step = jid.proc % step_size;
-	int row = jid.proc / step_size;
-
-	JOB_ID_KEY jid(ClusterAd->jid.cluster, next_proc_id);
-	dprintf(D_ALWAYS, "Materializing new job %d.%d\n", jid.cluster, jid.proc);
-
-	PRAGMA_REMIND("here we would stuff the hashtable with live submit variable values for the next job.")
-
-	bool already_in_transaction = InTransaction();
-	if( !already_in_transaction ) {
-			// For performance, wrap the myproxy attribute change and
-			// job deletion into one transaction.
-		BeginTransaction();
-	}
-
-	SetAttributeInt(ClusterAd->jid.cluster, ClusterAd->jid.proc, "JobFactoryNextProcId", next_proc_id+1);
-#endif
-
 	// have the factory make a job and give us a pointer to it.
 	// note that this ia not a transfer of ownership, the factory still owns the job and will delete it
 	// the only reason this is not a const ClassAd* is that you can't iterate a const (sigh)
 	const classad::ClassAd * job = factory->make_job_ad(jid, row, step, false, false, factory_check_sub_file, NULL);
 	if ( ! job) {
-		return -1; // failed to instantiate.
+		std::string errmsg(factory->error_stack()->getFullText());
+		dprintf(D_ALWAYS, "ERROR: factory->make_job_ad() for %d.%d failed : %s\n", jid.cluster, jid.proc, errmsg.c_str());
+		rval = -1; // failed to instantiate.
+	} else {
+		rval = NewProcFromAd(job, jid.proc, ClusterAd, 0);
+		factory->delete_job_ad();
 	}
-
-	rval = NewProcFromAd(job, jid.proc, ClusterAd, 0);
-	factory->delete_job_ad();
 	if (rval < 0) {
 		if ( ! already_in_transaction) {
 			AbortTransaction();
 		}
-
 		return rval; // failed instantiation
 	}
 

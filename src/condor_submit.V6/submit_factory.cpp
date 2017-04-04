@@ -102,6 +102,7 @@ extern SubmitHash submit_hash;
 extern int ExtraLineNo;
 extern int GotQueueCommand;
 extern int GotNonEmptyQueueCommand;
+extern int WarnOnUnusedMacros;
 
 extern ClassAd *gClusterAd;
 extern int ClustersCreated;
@@ -401,7 +402,7 @@ int submit_factory_job (
 			if (rval)
 				break;
 
-			PRAGMA_REMIND("add code to check for empty fields and fail/warn ?")
+			//PRAGMA_REMIND("add code to check for empty fields and fail/warn ?")
 		}
 
 		// if submit foreach data is not already a disk file, turn it into one.
@@ -465,6 +466,17 @@ int submit_factory_job (
 				int rval = queue_connect();
 				if (rval < 0)
 					break;
+
+				if ( ! MyQ->allows_late_materialize()) {
+					if (MyQ->has_late_materialize()) {
+						fprintf(stderr, "\nERROR: Late materialization is not allowed by this SCHEDD\n");
+					} else {
+						fprintf(stderr, "\nERROR: The SCHEDD is too old to support late materialization\n");
+					}
+					WarnOnUnusedMacros = false; // no point on checking for unused macros.
+					rval = -1;
+					break;
+				}
 			}
 
 			if ((ClusterId = MyQ->get_NewCluster()) < 0) {
@@ -479,8 +491,8 @@ int submit_factory_job (
 			++ClustersCreated;
 			delete gClusterAd; gClusterAd = NULL;
 
-			PRAGMA_REMIND("add code to check for unused hash entries and fail/warn.")
-			PRAGMA_REMIND("add code to do partial expansion of the hash values.")
+			//PRAGMA_REMIND("add code to check for unused hash entries and fail/warn.")
+			//PRAGMA_REMIND("add code to do partial expansion of the hash values.")
 
 			std::string submit_digest;
 			submit_hash.to_string(submit_digest, HASHITER_NO_DEFAULTS);
@@ -537,7 +549,7 @@ int submit_factory_job (
 			SetSendCredentialInAd( job );
 
 			gClusterAd = new ClassAd(*job);
-			PRAGMA_REMIND("are there any attributes we should strip from the cluster ad before sending it?")
+			//PRAGMA_REMIND("are there any attributes we should strip from the cluster ad before sending it?")
 			rval = SendClusterAd(gClusterAd);
 			if (rval == 0 || rval == 1) {
 				rval = 0; 
@@ -546,34 +558,7 @@ int submit_factory_job (
 				break;
 			}
 
-#if 1
 			set_factory_submit_info(ClusterId, (o.queue_num?o.queue_num:1) * selected_item_count);
-#else
-			++JobsCreated;
-	
-			if (verbose && ! DumpFileIsStdout) {
-				fprintf(stdout, "\n** Proc %d.%d:\n", ClusterId, ProcId);
-				fPrintAd (stdout, *job);
-			} else if ( ! terse && ! DumpFileIsStdout && ! DumpSubmitHash) {
-				fprintf(stdout, ".");
-			}
-
-			if (CurrentSubmitInfo == -1 || SubmitInfo[CurrentSubmitInfo].cluster != ClusterId) {
-				CurrentSubmitInfo++;
-				SubmitInfo[CurrentSubmitInfo].cluster = ClusterId;
-				SubmitInfo[CurrentSubmitInfo].firstjob = ProcId;
-			}
-			SubmitInfo[CurrentSubmitInfo].lastjob = ProcId;
-
-			// SubmitInfo[x].lastjob controls how many submit events we
-			// see in the user log.  For parallel jobs, we only want
-			// one "job" submit event per cluster, no matter how many 
-			// Procs are in that it.  Setting lastjob to zero makes this so.
-
-			if (JobUniverse == CONDOR_UNIVERSE_PARALLEL) {
-				SubmitInfo[CurrentSubmitInfo].lastjob = 0;
-			}
-#endif
 			submit_hash.delete_job_ad();
 			job = NULL;
 		}

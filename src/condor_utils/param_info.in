@@ -3185,6 +3185,11 @@ default=$(LOG)/ScheddRestartReport
 type=string
 tags=schedd,dedicated_scheduler
 
+[SCHEDD_ALLOW_LATE_MATERIALIZE]
+default=false
+type=bool
+tags=schedd
+
 [DEDICATED_SCHEDULER_USE_FIFO]
 default=true
 type=bool

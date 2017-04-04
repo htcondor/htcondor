@@ -339,6 +339,7 @@ SubmitHash::SubmitHash()
 	, LiveStepString(NULL)
 	, should_transfer((ShouldTransferFiles_t)-1)
 	, JobUniverse(CONDOR_UNIVERSE_MIN)
+	, JobIwdInitialized(false)
 	, IsNiceUser(false)
 	, IsDockerJob(false)
 	, JobDisableFileChecks(false)
@@ -2539,7 +2540,7 @@ int SubmitHash::SetWantRemoteIO()
 
 #if !defined(WIN32)
 
-int SubmitHash::ComputeRootDir()
+int SubmitHash::ComputeRootDir(bool check_access /*=true*/)
 {
 	RETURN_IF_ABORT();
 
@@ -2551,10 +2552,12 @@ int SubmitHash::ComputeRootDir()
 	} 
 	else 
 	{
-		if( access(rootdir, F_OK|X_OK) < 0 ) {
-			push_error(stderr, "No such directory: %s\n",
-					 rootdir );
-			ABORT_AND_RETURN( 1 );
+		if (check_access) {
+			if( access(rootdir, F_OK|X_OK) < 0 ) {
+				push_error(stderr, "No such directory: %s\n",
+						 rootdir );
+				ABORT_AND_RETURN( 1 );
+			}
 		}
 
 		MyString rootdir_str = rootdir;
@@ -2566,20 +2569,25 @@ int SubmitHash::ComputeRootDir()
 	return 0;
 }
 
-int SubmitHash::SetRootDir()
+int SubmitHash::SetRootDir(bool check_access /*=true*/)
 {
 	RETURN_IF_ABORT();
 
 	MyString buffer;
-	ComputeRootDir();
+	ComputeRootDir(check_access);
 	buffer.formatstr( "%s = \"%s\"", ATTR_JOB_ROOT_DIR, JobRootdir.Value());
 	InsertJobExpr (buffer);
 	return 0;
 }
 #endif
 
+const char * SubmitHash::getIWD()
+{
+	ASSERT(JobIwdInitialized);
+	return JobIwd.c_str();
+}
 
-int SubmitHash::ComputeIWD()
+int SubmitHash::ComputeIWD(bool check_access /*=true*/)
 {
 	char	*shortname;
 	MyString	iwd;
@@ -2599,7 +2607,7 @@ int SubmitHash::ComputeIWD()
 	}
 
 #if !defined(WIN32)
-	ComputeRootDir();
+	ComputeRootDir(check_access);
 	if( JobRootdir != "/" )	{	/* Rootdir specified */
 		if( shortname ) {
 			iwd = shortname;
@@ -2634,22 +2642,28 @@ int SubmitHash::ComputeIWD()
 	compress_path( iwd );
 	check_and_universalize_path(iwd);
 
-#if defined(WIN32)
-	if (access(iwd.Value(), F_OK|X_OK) < 0) {
-		push_error(stderr, "No such directory: %s\n", iwd.Value());
-		ABORT_AND_RETURN(1);
-	}
-#else
-	MyString pathname;
-	pathname.formatstr( "%s/%s", JobRootdir.Value(), iwd.Value() );
-	compress_path( pathname );
+	// when doing late materialization, we only want to do an access check
+	// for the first Iwd, otherwise we can skip the check if the iwd has not changed.
+	if ( ! JobIwdInitialized || ( ! clusterAd && iwd != JobIwd)) {
 
-	if( access(pathname.Value(), F_OK|X_OK) < 0 ) {
-		push_error(stderr, "No such directory: %s\n", pathname.Value() );
-		ABORT_AND_RETURN(1);
+	#if defined(WIN32)
+		if (access(iwd.Value(), F_OK|X_OK) < 0) {
+			push_error(stderr, "No such directory: %s\n", iwd.Value());
+			ABORT_AND_RETURN(1);
+		}
+	#else
+		MyString pathname;
+		pathname.formatstr( "%s/%s", JobRootdir.Value(), iwd.Value() );
+		compress_path( pathname );
+
+		if( access(pathname.Value(), F_OK|X_OK) < 0 ) {
+			push_error(stderr, "No such directory: %s\n", pathname.Value() );
+			ABORT_AND_RETURN(1);
+		}
+	#endif
 	}
-#endif
 	JobIwd = iwd;
+	JobIwdInitialized = true;
 	if ( ! JobIwd.empty()) { mctx.cwd = JobIwd.Value(); }
 
 	if ( shortname )
@@ -2658,10 +2672,10 @@ int SubmitHash::ComputeIWD()
 	return 0;
 }
 
-int SubmitHash::SetIWD()
+int SubmitHash::SetIWD(bool check_access /*=true*/)
 {
 	RETURN_IF_ABORT();
-	if (ComputeIWD()) { ABORT_AND_RETURN(1); }
+	if (ComputeIWD(check_access)) { ABORT_AND_RETURN(1); }
 	MyString buffer;
 	buffer.formatstr( "%s = \"%s\"", ATTR_JOB_IWD, JobIwd.Value());
 	InsertJobExpr (buffer);
@@ -7114,10 +7128,13 @@ int SubmitHash::set_cluster_ad(ClassAd * ad)
 	ad->LookupInteger(ATTR_PROC_ID, jid.proc);
 	ad->LookupInteger(ATTR_Q_DATE, submit_time);
 	if (ad->LookupString(ATTR_JOB_IWD, JobIwd) && ! JobIwd.empty()) {
+		JobIwdInitialized = true;
 		insert_macro("FACTORY.Iwd", JobIwd.c_str(), SubmitMacroSet, DetectedMacro, ctx);
 	}
 
 	this->clusterAd = ad;
+	// Force the cluster IWD to be computed, so we can safely call getIWD and full_path
+	ComputeIWD(false);
 	return 0;
 }
 
@@ -7306,9 +7323,9 @@ ClassAd* SubmitHash::make_job_ad (
 #endif
 
 #if !defined(WIN32)
-	SetRootDir();	// must be called very early
+	SetRootDir(!clusterAd);	// must be called very early
 #endif
-	SetIWD();		// must be called very early
+	SetIWD(!clusterAd);		// must be called very early
 
 	SetExecutable();
 
