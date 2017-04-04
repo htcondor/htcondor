@@ -180,7 +180,7 @@ def install(platform, multiuser=False, options=None):
   import commands
   # make tmp dir
   if not platform in SUPPORTED_PLATFORMS:
-      print "You system is not supported. Aborting the installation."
+      print "Your system is not supported. Aborting the installation."
       sys.exit(1)
   try:
     tmp_dir = tempfile.mkdtemp() # create dir
