@@ -24,10 +24,9 @@ GenerateConfigFile::operator() () {
 	mapping[ "SecretKeyFile" ] = "ANNEX_DEFAULT_SECRET_KEY_FILE";
 
 	// FIXME: Do something clever for versioning.
-	// (Should these be in the param table?)
 	scratchpad->Assign( "odiDefaultInstanceType", "m4.large" );
 	mapping[ "odiDefaultInstanceType" ] = "ANNEX_DEFAULT_ODI_INSTANCE_TYPE";
-	scratchpad->Assign( "odiDefaultImageID", "ami-83269195" );
+	scratchpad->Assign( "odiDefaultImageID", "ami-35b13223" );
 	mapping[ "odiDefaultImageID" ] = "ANNEX_DEFAULT_ODI_IMAGE_ID";
 
 	// Append the annex configuration to the user config file.
