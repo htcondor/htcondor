@@ -8584,6 +8584,7 @@ int queue_item(int num, StringList & vars, char * item, int item_index, int opti
 			dash_interactive, dash_remote,
 			check_sub_file, NULL);
 		if ( ! job) {
+			print_errstack(stderr, submit_hash.error_stack());
 			DoCleanup(0,0,NULL);
 			exit(1);
 		}

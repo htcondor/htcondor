@@ -149,9 +149,10 @@ public:
 
 	typedef struct pending_query_entry {
 		ClassAd *cad;
-		bool is_locate;
 		Stream *sock;
 		AdTypes whichAds;
+		bool is_locate;
+		char subsys[15];
 	} pending_query_entry_t;
 
 	static Queue<pending_query_entry_t *> query_queue_high_prio;

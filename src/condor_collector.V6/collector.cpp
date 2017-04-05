@@ -377,7 +377,7 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 	pending_query_entry_t *query_entry = NULL;
 	bool handle_in_proc;
 	bool is_locate;
-	SubsystemType clientSubsys = SUBSYSTEM_TYPE_INVALID;
+	KnownSubsystemId clientSubsys = SUBSYSTEM_ID_UNKNOWN;
 	AdTypes whichAds;
 	ClassAd *cad = new ClassAd();
 	ASSERT(cad);
@@ -457,9 +457,22 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 	ASSERT(query_entry);
 	query_entry->cad = cad;
 	query_entry->is_locate = is_locate;
+	query_entry->subsys[0] = 0;
 	query_entry->sock = sock;
 	query_entry->whichAds = whichAds;
 
+#ifdef TRACK_QUERIES_BY_SUBSYS
+	if ( want_track_queries_by_subsys ) {
+		std::string subsys;
+		const std::string &sess_id = static_cast<Sock *>(sock)->getSessionID();
+		daemonCore->getSecMan()->getSessionStringAttribute(sess_id.c_str(),ATTR_SEC_SUBSYSTEM,subsys);
+		if ( ! subsys.empty()) {
+			clientSubsys = getKnownSubsysNum(subsys.c_str());
+			strncpy(query_entry->subsys, subsys.c_str(), COUNTOF(query_entry->subsys));
+			query_entry->subsys[COUNTOF(query_entry->subsys)-1] = 0;
+		}
+	}
+#endif
 
 	// Now we are ready to either invoke a worker thread directly to handle the query,
 	// or enqueue a request to run the worker thread later.
@@ -486,11 +499,18 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 		// if the request is from the NEGOTIATOR, it is high priority.
 		// Also high priority if command is from the superuser (i.e. via condor_sos).
 		bool high_prio_query = false;
-		std::string subsys;
-		const std::string &sess_id = static_cast<Sock *>(sock)->getSessionID();
-		daemonCore->getSecMan()->getSessionStringAttribute(sess_id.c_str(),ATTR_SEC_SUBSYSTEM,subsys);
-		clientSubsys = getKnownSubsysNum(subsys.c_str());
-		if ( clientSubsys == SUBSYSTEM_TYPE_NEGOTIATOR || daemonCore->Is_Command_From_SuperUser(sock) )
+		if ( clientSubsys == SUBSYSTEM_ID_UNKNOWN ) {
+			// If we have not yet determined the subsystem, we must do that now.
+			std::string subsys;
+			const std::string &sess_id = static_cast<Sock *>(sock)->getSessionID();
+			daemonCore->getSecMan()->getSessionStringAttribute(sess_id.c_str(),ATTR_SEC_SUBSYSTEM,subsys);
+			if ( ! subsys.empty()) {
+				clientSubsys = getKnownSubsysNum(subsys.c_str());
+				strncpy(query_entry->subsys, subsys.c_str(), COUNTOF(query_entry->subsys));
+				query_entry->subsys[COUNTOF(query_entry->subsys)-1] = 0;
+			}
+		}
+		if ( clientSubsys == SUBSYSTEM_ID_NEGOTIATOR || daemonCore->Is_Command_From_SuperUser(sock) )
 		{
 			high_prio_query = true;
 		}
@@ -535,15 +555,8 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 
 #ifdef TRACK_QUERIES_BY_SUBSYS
 	if ( want_track_queries_by_subsys ) {
-		// if we didn't already try and determing the client subsystem, do that now.
-		if (clientSubsys == SUBSYSTEM_TYPE_INVALID && (KEEP_STREAM != return_status)) {
-			std::string subsys;
-			const std::string &sess_id = static_cast<Sock *>(sock)->getSessionID();
-			daemonCore->getSecMan()->getSessionStringAttribute(sess_id.c_str(),ATTR_SEC_SUBSYSTEM,subsys);
-			clientSubsys = getKnownSubsysNum(subsys.c_str());
-		}
 		// count the number of queries for each client subsystem.
-		if (clientSubsys >= 0 && clientSubsys < SUBSYSTEM_TYPE_AUTO) {
+		if (clientSubsys >= 0 && clientSubsys < SUBSYSTEM_ID_COUNT) {
 			if (handle_in_proc) {
 				collectorStats.global.InProcQueriesFrom[clientSubsys] += 1;
 			} else {
@@ -809,7 +822,7 @@ int CollectorDaemon::receive_query_cedar_worker_thread(void *in_query_entry, Str
 	end_write.getTime();
 
 	dprintf (D_ALWAYS,
-			 "Query info: matched=%d; skipped=%d; query_time=%f; send_time=%f; type=%s; requirements={%s}; locate=%d; limit=%d; peer=%s; projection={%s}\n",
+			 "Query info: matched=%d; skipped=%d; query_time=%f; send_time=%f; type=%s; requirements={%s}; locate=%d; limit=%d; from=%s; peer=%s; projection={%s}\n",
 			 __numAds__,
 			 __failed__,
 			 end_query.difference(begin),
@@ -818,6 +831,7 @@ int CollectorDaemon::receive_query_cedar_worker_thread(void *in_query_entry, Str
 			 ExprTreeToString(__filter__),
 			 is_locate,
 			 (__resultLimit__ == INT_MAX) ? 0 : __resultLimit__,
+			 query_entry->subsys,
 			 sock->peer_description(),
 			 projection.c_str());
 END:
