@@ -28,46 +28,61 @@ echo "EC2InstanceID = \"${EC2InstanceID}\""
 # The AWS command-line tool needs this.
 region=$(/usr/bin/curl -s http://169.254.169.254/latest/dynamic/instance-identity/document | grep \"region\" | sed -e's/"[^"]*$//' | sed -e's/.*"//')
 
-# If I was started by a Spot Fleet Request, that request's ID will be in the
-# 'aws:ec2spot:fleet-request-id' tag. 
-tags=$(aws --region ${region} ec2 describe-instances \
-	--instance-id ${EC2InstanceID} | egrep '("Value"|"Key")')
-oldIFS=${IFS}
-IFS='
+function getSpotFleetRequestID() {
+	# If I was started by a Spot Fleet Request, that request's ID will be in the
+	# 'aws:ec2spot:fleet-request-id' tag. 
+	tags=$(aws --region ${region} ec2 describe-instances \
+		--instance-id ${EC2InstanceID} | egrep '("Value"|"Key")')
+	oldIFS=${IFS}
+	IFS='
 '
-for line in $tags; do
-	v=$(echo ${line} | grep '"Value":')
-	if [ -n "${v}" ]; then
-		value=$(echo ${line} | sed -e's/\",* *$//' | sed -e's/.*"//')
-	fi
-	v=$(echo ${line} | grep '"Key":')
-	if [ -n "${v}" ]; then
-		key=$(echo ${line} | sed -e's/\",* *$//' | sed -e's/.*"//')
-	fi
-
-	if [ -n "${key}" -a -n "${value}" ]; then
-		if [ ${key} = "aws:ec2spot:fleet-request-id" ]; then
-			sfrID=${value};
-			break;
+	for line in $tags; do
+		v=$(echo ${line} | grep '"Value":')
+		if [ -n "${v}" ]; then
+			value=$(echo ${line} | sed -e's/\",* *$//' | sed -e's/.*"//')
 		fi
-		key=""
-		value=""
-	fi
-done
-IFS=${oldIFS}
+		v=$(echo ${line} | grep '"Key":')
+		if [ -n "${v}" ]; then
+			key=$(echo ${line} | sed -e's/\",* *$//' | sed -e's/.*"//')
+		fi
 
-# If I found a Spot Fleet Request ID, extract the annex ID from the SFR's
-# client token instead of my own.
-if [ -n "${sfrID}" ]; then
+		if [ -n "${key}" -a -n "${value}" ]; then
+			if [ ${key} = "aws:ec2spot:fleet-request-id" ]; then
+				sfrID=${value};
+				break;
+			fi
+			key=""
+			value=""
+		fi
+	done
+	IFS=${oldIFS}
+}
+
+#
+# If I was started by condor_annex (directly, as an on-deman instance) then
+# my client token will contain an '_'.
+#
+clientToken=$(aws ec2 describe-instances --region ${region} --instance-id ${EC2InstanceID} | grep \"ClientToken\" | sed -e's/\", *$//' | sed -e's/.*"//')
+annexID=$(echo ${clientToken} | sed -r -e's/_[^_]*//')
+
+# Otherwise, wait until the Spot Fleet Request has tagged me with its ID.
+if [ "${annexID}" == "${clientToken}" ]; then
+	sfrID=""
+	getSpotFleetRequestID
+	count=0
+	while [ -z "${sfrID}" ]; do
+		count=$((count + 1))
+		if [ ${count} -gt 150 ]; then
+			# Give up, I'm out of here.
+			/sbin/shutdown -h now
+		fi
+		sleep 20
+		getSpotFleetRequestID
+	done
+
 	clientToken=$(aws ec2 --region ${region} describe-spot-fleet-requests \
 		--spot-fleet-request-id ${sfrID} \
 		| grep \"ClientToken\" | sed -e's/\", *$//' | sed -e's/.*"//')
-	annexID=$(echo ${clientToken} | sed -r -e's/_[^_]*//')
-fi
-
-# If I don't already have an annex ID, assume I'm an on-demand instance.
-if [ -z "${annexID}" ]; then
-	clientToken=$(aws ec2 describe-instances --region ${region} --instance-id ${EC2InstanceID} | grep \"ClientToken\" | sed -e's/\", *$//' | sed -e's/.*"//')
 	annexID=$(echo ${clientToken} | sed -r -e's/_[^_]*//')
 fi
 
