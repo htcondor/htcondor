@@ -652,6 +652,7 @@ main( int argc, const char** argv)
 	int opt_basic = 0; // publish basic GPU properties
 	int opt_extra = 0; // publish extra GPU properties.
 	int opt_dynamic = 0; // publish dynamic GPU properties
+	int opt_cron = 0;  // publish in a form usable by STARTD_CRON
 	int opt_hetero = 0;  // don't assume properties are homogeneous
 	int opt_simulate = 0; // pretend to detect GPUs
 	int opt_config = 0;
@@ -682,6 +683,9 @@ main( int argc, const char** argv)
 		}
 		else if (is_dash_arg_prefix(argv[i], "dynamic", 3)) {
 			opt_dynamic = 1;
+		}
+		else if (is_dash_arg_prefix(argv[i], "cron", 4)) {
+			opt_cron = 1;
 		}
 		else if (is_dash_arg_prefix(argv[i], "mixed", 3) || is_dash_arg_prefix(argv[i], "hetero", 3)) {
 			opt_hetero = 1;
@@ -824,7 +828,7 @@ main( int argc, const char** argv)
 				// if no cuda, fall back to OpenCL detection
 			} else {
 				print_error(MODE_DIAGNOSTIC_ERR, "Error %d: Cant open library: %s\r\n", GetLastError(), cudart_library);
-				fprintf(stdout, "Detected%s=0\n", opt_tag);
+				if ( ! opt_cron) fprintf(stdout, "Detected%s=0\n", opt_tag);
 				if (opt_config) fprintf(stdout, "NUM_DETECTED_%s=0\n", opt_tag);
 				return 0;
 			}
@@ -859,7 +863,7 @@ main( int argc, const char** argv)
 				// if no cuda, fall back to OpenCL detection
 			} else {
 				print_error(MODE_DIAGNOSTIC_ERR, "Error %s: Cant open library: %s\n", dlerror(), cudart_library);
-				fprintf(stdout, "Detected%s=0\n", opt_tag);
+				if ( ! opt_cron) fprintf(stdout, "Detected%s=0\n", opt_tag);
 				if (opt_config) fprintf(stdout, "NUM_DETECTED_%s=0\n", opt_tag);
 				return 0;
 			}
@@ -894,7 +898,7 @@ main( int argc, const char** argv)
 			#else
 			print_error(MODE_ERROR, "Error %s: Cant find %s in library: %s\n", dlerror(), "cudaGetDeviceCount", cudart_library);
 			#endif
-			fprintf(stdout, "Detected%s=0\n", opt_tag);
+			if ( ! opt_cron) fprintf(stdout, "Detected%s=0\n", opt_tag);
 			if (opt_config) fprintf(stdout, "NUM_DETECTED_%s=0\n", opt_tag);
 			return 0;
 		}
@@ -923,7 +927,7 @@ main( int argc, const char** argv)
 	// If there are no devices, there is nothing more to do
     if (deviceCount == 0) {
         // There is no device supporting CUDA
-		fprintf(stdout, "Detected%s=0\n", opt_tag);
+		if ( ! opt_cron) fprintf(stdout, "Detected%s=0\n", opt_tag);
 		if (opt_config) fprintf(stdout, "NUM_DETECTED_%s=0\n", opt_tag);
 		return 0;
 	}
@@ -995,7 +999,9 @@ main( int argc, const char** argv)
 		if ( ! detected_gpus.empty()) { detected_gpus += ", "; }
 		detected_gpus += prefix;
 	}
-	fprintf(stdout, opt_config ? "Detected%s=%s\n" : "Detected%s=\"%s\"\n", opt_tag, detected_gpus.c_str());
+	if ( ! opt_cron) {
+		fprintf(stdout, opt_config ? "Detected%s=%s\n" : "Detected%s=\"%s\"\n", opt_tag, detected_gpus.c_str());
+	}
 	if (opt_config) {
 		fprintf(stdout, "NUM_DETECTED_%s=%d\n", opt_tag, deviceCount);
 	}
@@ -1243,6 +1249,7 @@ void usage(FILE* out, const char * argv0)
 		"           where D is 0 - GeForce GT 330, default N=1\n"
 		"                      1 - GeForce GTX 480, default N=2\n"
 		"    -config           Output in HTCondor config syntax\n"
+		"    -cron             Output for use as a STARTD_CRON job, use with -dynamic\n"
 		"    -help             Show this screen and exit\n"
 		"    -verbose          Show detection progress\n"
 		//"    -diagnostic       Show detection diagnostic information\n"

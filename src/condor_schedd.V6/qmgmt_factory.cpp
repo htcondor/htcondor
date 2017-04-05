@@ -60,6 +60,7 @@
 #include <param_info.h>
 #include "condor_version.h"
 #include "submit_utils.h"
+#include "set_user_priv_from_ad.h"
 
 #if defined(HAVE_DLOPEN) || defined(WIN32)
 #include "ScheddPlugin.h"
@@ -74,43 +75,101 @@
 class JobFactory : public SubmitHash {
 
 public:
-	JobFactory(const char * subfile);
+	JobFactory(const char * digest_filename, int id);
 	~JobFactory();
 
-	enum PauseCode { InvalidSubmit=-1, Running=0, NoMoreItems=1, ClusterRemoved=2, };
+	enum PauseCode { InvalidSubmit=-1, Running=0, Hold=1, NoMoreItems=2, ClusterRemoved=3, };
 
-	int LoadSubmit(std::string & errmsg);
-	int Pause(PauseCode pause_code) { if (pause_code && ! paused) paused = pause_code; return paused; }
-	int Resume(PauseCode pause_code) { if (paused && pause_code == paused) paused = Running; return paused; }
+	// load the submit file/digest that was passed in our constructor
+	int LoadDigest(std::string & errmsg);
+	// load the item data for the given row, and setup the live submit variables for that item.
+	int LoadRowData(int row, std::string * empty_var_names=NULL);
+
+	int Pause(PauseCode pause_code) { 
+		if (paused >= Running && paused < ClusterRemoved) {
+			if (pause_code && (pause_code > paused)) paused = pause_code;
+		}
+		return paused;
+	}
+	int Resume(PauseCode pause_code) {
+		if (paused >= Running && paused < ClusterRemoved) {
+			if (paused && pause_code == paused) paused = Running;
+		}
+		return paused;
+	}
 	bool IsPaused() { return paused != Running; }
-	bool IsComplete() { return paused > Running; }
-	const char * Name() { return submit_file ? submit_file : "<empty>"; }
+	bool IsComplete() { return paused > Hold; }
+	const char * Name() { return digest_file ? digest_file : "<empty>"; }
+	int ID() { return ident; }
+	int PauseMode() { return paused; }
+
+	bool NoItems() { return fea.foreach_mode == foreach_not; }
+	int StepSize() { return fea.queue_num; }
+	// advance from the input row until the next selected row. return  < 0 if no more selected rows.
+	int NextSelectedRow(int row) {
+		if (fea.foreach_mode == foreach_not) return -1;
+		int num_rows = fea.items.number();
+		while (++row < num_rows) {
+			if (fea.slice.selected(row, num_rows)) {
+				return row;
+			}
+		}
+		return -1;
+	}
+
+	// calculate the number of rows selected by the slice
+	int TotalProcs(bool & changed_value) {
+		changed_value = false;
+		if (cached_total_procs == -42) {
+			int selected_rows = 1;
+			if (fea.foreach_mode != foreach_not) {
+				int num_rows = fea.items.number();
+				selected_rows = 0;
+				for (int row = 0; row < num_rows; ++row) {
+					if (fea.slice.selected(row, num_rows)) {
+						++selected_rows;
+					}
+				}
+			}
+			changed_value = true;
+			cached_total_procs = StepSize() * selected_rows;
+		}
+		return cached_total_procs;
+	}
 
 protected:
-	const char * submit_file;
-	FILE * fp_submit;
+	const char * digest_file;
+	FILE * fp_digest;
+	int          ident;
 	PauseCode    paused; // 0 is not paused, non-zero is pause code.
 	MACRO_SOURCE source;
 	SubmitForeachArgs fea;
+	char emptyItemString[4];
+	int cached_total_procs;
 };
 
-JobFactory::JobFactory(const char * subfile)
-	: submit_file(NULL)
-	, fp_submit(NULL)
+JobFactory::JobFactory(const char * subfile, int id)
+	: digest_file(NULL)
+	, fp_digest(NULL)
+	, ident(id)
 	, paused(InvalidSubmit)
+	, cached_total_procs(-42)
 {
 	memset(&source, 0, sizeof(source));
 	this->init();
 	setScheddVersion(CondorVersion());
+	// add digestfile into string pool, and store that pointer in the class
 	insert_source(subfile, source);
-	submit_file = macro_source_filename(source, SubmitMacroSet);
+	digest_file = macro_source_filename(source, SubmitMacroSet);
+	// make sure that the string buffer for empty items is really empty.
+	memset(emptyItemString, 0, sizeof(emptyItemString));
 }
 
 JobFactory::~JobFactory()
 {
-	if (fp_submit) {
-		fclose(fp_submit);
-		fp_submit = NULL;
+	if (fp_digest) {
+		fclose(fp_digest);
+		fp_digest = NULL;
 	}
 }
 
@@ -120,7 +179,7 @@ int PostCommitJobFactoryProc(JobQueueJob * cluster, JobQueueJob * /*job*/)
 {
 	if ( ! cluster || ! cluster->factory)
 		return -1;
-	PRAGMA_REMIND("verify jid.cluster matches the factory cluster.  do we need to do anything here?")
+	//PRAGMA_REMIND("verify jid.cluster matches the factory cluster.  do we need to do anything here?")
 	return 0;
 }
 
@@ -139,13 +198,22 @@ bool JobFactoryAllowsClusterRemoval(JobQueueJob * cluster)
 	return false;
 }
 
-JobFactory * MakeJobFactory(JobQueueJob* job, const char * submit_file)
+JobFactory * MakeJobFactory(JobQueueJob* job, const char * submit_digest_file)
 {
-	JobFactory * factory = new JobFactory(submit_file);
+	// for now, we impersonate the user while reading the submit file.
+	priv_state priv = set_user_priv_from_ad(*job);
+
+	JobFactory * factory = new JobFactory(submit_digest_file, job->jid.cluster);
 	std::string errmsg = "";
-	int rval = factory->LoadSubmit(errmsg);
+	int rval = factory->LoadDigest(errmsg);
+
+	set_priv(priv);
+	uninit_user_ids();
+
 	if (rval) {
-		dprintf(D_ALWAYS, "failed to load JobFactory submit file %s : %s\n", submit_file, errmsg.c_str());
+		dprintf(D_ALWAYS, "failed to load job factory %d submit digest %s : %s\n", job->jid.cluster, submit_digest_file, errmsg.c_str());
+		delete factory;
+		factory = NULL;
 	} else {
 		factory->set_cluster_ad(job);
 	}
@@ -168,85 +236,146 @@ int  PauseJobFactory(JobFactory * factory, int pause_code)
 {
 	if ( ! factory)
 		return -1;
-	dprintf(D_ALWAYS, "Pausing job factory %s code=%d\n", factory->Name(), pause_code);
-	return factory->Pause(pause_code < 0 ? JobFactory::InvalidSubmit : JobFactory::ClusterRemoved);
+	dprintf(D_ALWAYS, "Pausing job factory %d %s code=%d\n", factory->ID(), factory->Name(), pause_code);
+	JobFactory::PauseCode code = pause_code < 0 ? JobFactory::InvalidSubmit : JobFactory::Hold;
+	if (pause_code >= 3) code = JobFactory::ClusterRemoved;
+	return factory->Pause(code);
 }
 
 int  ResumeJobFactory(JobFactory * factory, int pause_code)
 {
 	if ( ! factory)
 		return -1;
-	int rval = factory->Resume(pause_code < 0 ? JobFactory::InvalidSubmit : JobFactory::ClusterRemoved);
-	dprintf(D_ALWAYS, "Attempted to Resume job factory %s code=%d resumed=%d\n", factory->Name(), pause_code, rval==0);
+	JobFactory::PauseCode code = pause_code < 0 ? JobFactory::InvalidSubmit : JobFactory::Hold;
+	if (pause_code >= 3) code = JobFactory::ClusterRemoved;
+	int rval = factory->Resume(code);
+	dprintf(D_ALWAYS, "Attempted to Resume job factory %d %s code=%d resumed=%d\n", factory->ID(), factory->Name(), pause_code, rval==0);
 	return rval;
+}
+
+// returns true if the factory changed state, false otherwise.
+bool CheckJobFactoryPause(JobFactory * factory, int want_pause)
+{
+	if ( ! factory)
+		return false;
+
+	int paused = factory->IsPaused() ? 1 : 0;
+
+	dprintf(D_MATERIALIZE, "in CheckJobFactoryPause for job factory %d %s want_pause=%d is_paused=%d (%d)\n",
+			factory->ID(), factory->Name(), want_pause, factory->IsPaused(), factory->PauseMode());
+
+	if (paused == want_pause) {
+		return true;
+	}
+
+	dprintf(D_MATERIALIZE, "CheckJobFactoryPause %s job factory %d %s code=%d\n",
+			want_pause ? "Pausing" : "Resuming", factory->ID(), factory->Name(), want_pause);
+
+	if (want_pause) {
+		// we should only get here if the factory is in running state.
+		return factory->Pause(JobFactory::Hold) != JobFactory::Running;
+	} else {
+		// this will only resume a natural hold, not a failure or end condition pause
+		return factory->Resume(JobFactory::Hold) == JobFactory::Running;
+	}
 }
 
 int  MaterializeNextFactoryJob(JobFactory * factory, JobQueueJob * ClusterAd)
 {
 	if (factory->IsPaused()) {
+		dprintf(D_MATERIALIZE, "in MaterializeNextFactoryJob for cluster=%d, Factory is paused (%d)\n", ClusterAd->jid.cluster, factory->PauseMode());
 		return 0;
 	}
 
-	int proc_limit = 0;
-	if ( ! ClusterAd->LookupInteger("JobFactoryMaxMaterialize", proc_limit) ||
-		ClusterAd->NumProcs() >= proc_limit) {
-		return 0; // nothing to instantiate.
-	}
+	dprintf(D_MATERIALIZE | D_VERBOSE, "in MaterializeNextFactoryJob for cluster=%d, Factory is running\n", ClusterAd->jid.cluster);
 
-	int max_proc_id = 0;
-	int rval = GetAttributeInt(ClusterAd->jid.cluster, ClusterAd->jid.proc, "JobFactoryMaxProcId", &max_proc_id);
-	if (rval < 0 || max_proc_id < 0) {
-		dprintf(D_ALWAYS, "Error: JobFactoryMaxProcId is not set, aborting materalize for cluster %d\n", ClusterAd->jid.cluster);
-		return rval;
-	}
-
-	int next_proc_id = 0;
-	rval = GetAttributeInt(ClusterAd->jid.cluster, ClusterAd->jid.proc, "JobFactoryNextProcId", &next_proc_id);
-	if (rval < 0 || next_proc_id < 0) {
-		dprintf(D_ALWAYS, "Error: JobFactoryNextProcId is not set, aborting materalize for cluster %d\n", ClusterAd->jid.cluster);
-		return rval;
-	}
-
-	if (next_proc_id >= max_proc_id) {
-		return 0; // nothing to instantiate.
-	}
-
-	JOB_ID_KEY jid(ClusterAd->jid.cluster, next_proc_id);
-	dprintf(D_ALWAYS, "Materializing new job %d.%d\n", jid.cluster, jid.proc);
-
-	int step_size = 1;
-	if ( ! ClusterAd->LookupInteger("JobFactoryStepSize", step_size)) {
+	int step_size = factory->StepSize();
+	if (step_size <= 0) {
+		dprintf(D_ALWAYS, "ERROR - step size is %d for job materialization of cluster %d, using 1 instead\n", step_size, ClusterAd->jid.cluster);
 		step_size = 1;
 	}
-	PRAGMA_REMIND("here we would stuff the hashtable with live submit variable values for the next job.")
 
-	int step = jid.proc % step_size;
-	int row = jid.proc / step_size;
+// ATTR_JOB_MATERIALIZE_ITEM_COUNT   "JobMaterializeItemCount"
+// ATTR_JOB_MATERIALIZE_STEP_SIZE    "JobMaterializeStepSize"
+// ATTR_JOB_MATERIALIZE_NEXT_PROC_ID "JobMaterializeNextProcId"
+
+	int next_proc_id = 0;
+	int rval = GetAttributeInt(ClusterAd->jid.cluster, ClusterAd->jid.proc, ATTR_JOB_MATERIALIZE_NEXT_PROC_ID, &next_proc_id);
+	if (rval < 0 || next_proc_id < 0) {
+		dprintf(D_ALWAYS, "ERROR - " ATTR_JOB_MATERIALIZE_NEXT_PROC_ID " is not set, aborting materalize for cluster %d\n", ClusterAd->jid.cluster);
+		return rval;
+	}
+
+	int step = next_proc_id % step_size;
+	bool no_items = factory->NoItems();
+	if (no_items && (next_proc_id >= step_size)) {
+		// we are done
+		return 0;
+	}
+
+	// item index is optional, if missing, the value is 0 and the item is the empty string.
+	int item_index = 0;
+	if (no_items || ClusterAd->LookupInteger(ATTR_JOB_MATERIALIZE_NEXT_ROW, item_index)) {
+		item_index = next_proc_id / step_size;
+	}
+	int row  = item_index;
+	
+	JOB_ID_KEY jid(ClusterAd->jid.cluster, next_proc_id);
+	dprintf(D_ALWAYS, "Materializing new job %d.%d step=%d row=%d\n", jid.cluster, jid.proc, step, row);
+
+	bool check_empty = true;
+	bool fail_empty = false;
+	std::string empty_var_names;
+	int row_num = factory->LoadRowData(row, check_empty ? &empty_var_names : NULL);
+	if (row_num < row) {
+		// we are done
+		return 0; 
+	}
+	// report empty vars.. do we still want to do this??
+	if ( ! empty_var_names.empty()) {
+		if (fail_empty) {
+			dprintf(D_ALWAYS, "Failing Materialize of job %d.%d row=%d because %s have empty values\n", jid.cluster, jid.proc, step, empty_var_names.c_str());
+			return -1;
+		}
+	}
 
 	bool already_in_transaction = InTransaction();
-	if( !already_in_transaction ) {
-			// For performance, wrap the myproxy attribute change and
-			// job deletion into one transaction.
+	if ( ! already_in_transaction) {
 		BeginTransaction();
 	}
 
-	SetAttributeInt(ClusterAd->jid.cluster, ClusterAd->jid.proc, "JobFactoryNextProcId", next_proc_id+1);
+	SetAttributeInt(ClusterAd->jid.cluster, ClusterAd->jid.proc, ATTR_JOB_MATERIALIZE_NEXT_PROC_ID, next_proc_id+1);
+	if ( ! no_items && (step+1 == step_size)) {
+		int next_row = factory->NextSelectedRow(row);
+		if (next_row != item_index) {
+			SetAttributeInt(ClusterAd->jid.cluster, ClusterAd->jid.proc, ATTR_JOB_MATERIALIZE_NEXT_ROW, row);
+		}
+	}
+
+	// Calculate total submit procs taking the slice into acount. the refresh_in_ad bool will be set to
+	// true only once in the lifetime of this instance of the factory
+	bool refresh_in_ad = false;
+	int total_procs = factory->TotalProcs(refresh_in_ad);
+	if (refresh_in_ad) {
+		SetAttributeInt(ClusterAd->jid.cluster, ClusterAd->jid.proc, ATTR_TOTAL_SUBMIT_PROCS, total_procs);
+	}
 
 	// have the factory make a job and give us a pointer to it.
 	// note that this ia not a transfer of ownership, the factory still owns the job and will delete it
 	// the only reason this is not a const ClassAd* is that you can't iterate a const (sigh)
 	const classad::ClassAd * job = factory->make_job_ad(jid, row, step, false, false, factory_check_sub_file, NULL);
 	if ( ! job) {
-		return -1; // failed to instantiate.
+		std::string errmsg(factory->error_stack()->getFullText());
+		dprintf(D_ALWAYS, "ERROR: factory->make_job_ad() for %d.%d failed : %s\n", jid.cluster, jid.proc, errmsg.c_str());
+		rval = -1; // failed to instantiate.
+	} else {
+		rval = NewProcFromAd(job, jid.proc, ClusterAd, 0);
+		factory->delete_job_ad();
 	}
-
-	rval = NewProcFromAd(job, jid.proc, ClusterAd, 0);
-	factory->delete_job_ad();
 	if (rval < 0) {
 		if ( ! already_in_transaction) {
 			AbortTransaction();
 		}
-
 		return rval; // failed instantiation
 	}
 
@@ -270,28 +399,105 @@ static const char * is_queue_statement(const char * line)
 	return NULL;
 }
 
-int JobFactory::LoadSubmit(std::string & errmsg)
+int JobFactory::LoadDigest(std::string & errmsg)
 {
-	if (fp_submit) {
-		fclose(fp_submit);
-		fp_submit = NULL;
+	if (fp_digest) {
+		fclose(fp_digest);
+		fp_digest = NULL;
 	}
 
-	FILE* fp_submit = safe_fopen_wrapper_follow(submit_file,"r");
-	if ( ! fp_submit ) {
-		formatstr(errmsg, "Failed to open factory submit file (%s)", strerror(errno));
+	FILE* fp_digest = safe_fopen_wrapper_follow(digest_file,"r");
+	if ( ! fp_digest ) {
+		formatstr(errmsg, "Failed to open factory submit digest : %s", strerror(errno));
 		paused = InvalidSubmit;
 		return errno;
 	}
 
 	char * qline = NULL;
-	int rval = parse_file_up_to_q_line(fp_submit, source, errmsg, &qline);
+	int rval = parse_file_up_to_q_line(fp_digest, source, errmsg, &qline);
 	if (rval == 0 && qline) {
 		const char * pqargs = is_queue_statement(qline);
 		rval = parse_q_args(pqargs, fea, errmsg);
+		if (rval == 0) {
+			// establish live buffers for $(Cluster) and $(Process), and other loop variables
+			// Because the user might already be using these variables, we can only set the explicit ones
+			// unconditionally, the others we must set only when not already set by the user.
+			set_live_submit_variable(SUBMIT_KEY_Cluster, LiveClusterString);
+			set_live_submit_variable(SUBMIT_KEY_Process, LiveProcessString);
+	
+			if (fea.vars.isEmpty()) {
+				set_live_submit_variable("item", emptyItemString);
+			} else {
+				for (const char * var = fea.vars.first(); var != NULL; var = fea.vars.next()) {
+					set_live_submit_variable(var, emptyItemString, false);
+				}
+			}
+
+			// optimize the submit hash for lookups if we inserted anything.  we expect this to happen only once.
+			this->optimize();
+		}
 	}
 
 	paused = rval ? InvalidSubmit : Running;
 
 	return rval;
 }
+
+// set live submit variables for the row data for the given row. If empty_var_names is not null
+// it is set to the names of the item varibles that have empty values. (so warnings or errors can be given)
+int JobFactory::LoadRowData(int row, std::string * empty_var_names /*=NULL*/)
+{
+	ASSERT(fea.foreach_mode != foreach_not || row == 0);
+
+	const char* token_seps = ", \t";
+	const char* token_ws = " \t";
+
+	char * item = emptyItemString;
+	//PRAGMA_REMIND("TODO: read item from the foreach file")
+
+	if (fea.vars.isEmpty()) {
+		set_live_submit_variable("item", item, true);
+		return 0;
+	}
+
+	// If there are loop variables, destructively tokenize item and stuff the tokens into the submit hashtable.
+	if ( ! item) { item = emptyItemString; }
+
+	// set the first loop variable unconditionally, we set it initially to the whole item
+	// we may later truncate that item when we assign fields to other loop variables.
+	fea.vars.rewind();
+	char * var = fea.vars.next();
+	char * data = item;
+	set_live_submit_variable(var, data, false);
+
+	// if there is more than a single loop variable, then assign them as well
+	// we do this by destructively null terminating the item for each var
+	// the last var gets all of the remaining item text (if any)
+	while ((var = fea.vars.next())) {
+		// scan for next token separator
+		while (*data && ! strchr(token_seps, *data)) ++data;
+		// null terminate the previous token and advance to the start of the next token.
+		if (*data) {
+			*data++ = 0;
+			// skip leading separators and whitespace
+			while (*data && strchr(token_ws, *data)) ++data;
+			set_live_submit_variable(var, data, false);
+		}
+	}
+
+	if (empty_var_names) {
+		fea.vars.rewind();
+		empty_var_names->clear();
+		while ((var = fea.vars.next())) {
+			MACRO_ITEM* pitem = lookup_exact(var);
+			if ( ! pitem || (pitem->raw_value != emptyItemString && 0 == strlen(pitem->raw_value))) {
+				if ( ! empty_var_names->empty()) (*empty_var_names) += ",";
+				(*empty_var_names) += var;
+			}
+		}
+	}
+
+	return row;
+}
+
+

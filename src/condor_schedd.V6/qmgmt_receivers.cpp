@@ -430,6 +430,78 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		return 0;
 	}
 
+	case CONDOR_SetJobFactory:
+	case CONDOR_SetMaterializeData:
+	{
+		const char * tag = (request_num == CONDOR_SetMaterializeData) ? "materialize" : "factory";
+
+		int cluster_id, num;
+		assert( syscall_sock->code(cluster_id) );
+		dprintf( D_SYSCALLS, "	cluster_id = %d\n", cluster_id );
+		assert( syscall_sock->code(num) );
+		dprintf( D_SYSCALLS, "	num = %d\n", num );
+		char * filename = NULL;
+		assert( syscall_sock->code(filename) );
+		dprintf( D_SYSCALLS, "	%s_filename = %s\n", tag, filename ? filename : "NULL" );
+		char * text = NULL;
+		assert( syscall_sock->code(text) );
+		if (text) { dprintf( D_SYSCALLS, "	%s_text = %s\n", tag, text ); }
+		assert( syscall_sock->end_of_message() );
+
+			// this is only valid during submission of a cluster
+		int terrno = 0;
+		if (cluster_id != active_cluster_num) {
+			rval = -1;
+		} else {
+			errno = 0;
+			SetAttributeFlags_t flags = 0;
+
+			const char * attr = (request_num == CONDOR_SetJobFactory) ? ATTR_JOB_MATERIALIZE_LIMIT : ATTR_JOB_MATERIALIZE_NEXT_ROW;
+			rval = SetAttributeInt( cluster_id, -1, attr, num, flags );
+			if (rval >= 0) {
+				attr = (request_num == CONDOR_SetJobFactory) ? ATTR_JOB_MATERIALIZE_DIGEST_FILE : ATTR_JOB_MATERIALIZE_ITEMS_FILE;
+				if (filename && filename[0]) {
+					rval = SetAttributeString( cluster_id, -1, attr, filename, flags );
+				} else {
+					// if no filename, text must be non-empty
+					//PRAGMA_REMIND("TODO: handle factory/foreach data passed in socket.")
+				}
+				if (request_num == CONDOR_SetJobFactory) {
+					const int first_proc_id = 0;
+					rval = SetAttributeInt(cluster_id, -1, ATTR_JOB_MATERIALIZE_NEXT_PROC_ID, first_proc_id, flags);
+				}
+			}
+			terrno = errno;
+		}
+
+		if (filename) { free(filename); filename = NULL; } 
+		if (text)     { free(text); text = NULL; }
+
+		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
+		// send a status reply
+		syscall_sock->encode();
+		assert( syscall_sock->code(rval) );
+		if( rval < 0 ) {
+			assert( syscall_sock->code(terrno) );
+		}
+		assert( syscall_sock->end_of_message() );
+		return 0;
+	} break;
+
+	case CONDOR_GetCapabilities: {
+		int mask;
+		assert( syscall_sock->code(mask) );
+		assert( syscall_sock->end_of_message() );
+
+		errno = 0;
+		ClassAd reply;
+		GetSchedulerCapabilities(mask, reply);
+		syscall_sock->encode();
+		assert( putClassAd( syscall_sock, reply ) );
+		assert( syscall_sock->end_of_message() );;
+		return 0;
+	} break;
+
 	case CONDOR_SetTimerAttribute:
 	  {
 		int cluster_id = -1;

@@ -511,7 +511,6 @@ SubsystemInfo::getString( void ) const
 
 static const char * SubsysNameById[] = {
 	"UNKNOWN",
-	NULL,
 	// Daemon types
 	"MASTER",
 	"COLLECTOR",
@@ -520,34 +519,50 @@ static const char * SubsysNameById[] = {
 	"SHADOW",
 	"STARTD",
 	"STARTER",
-	"GAHP",
-	"DAGMAN",
+	"CREDD",
+	"KBDD",
+	"GRIDMANAGER",
+	"HAD",
+	"REPLICATION",
+	"TRANSFERER",
+	"TRANSFERD",
+	"ROOSTER",
 	"SHARED_PORT",
-	"DAEMON",		// Other daemon
+	"JOB_ROUTER",
+	"DEFRAG",
+	"GANGLIAD",
+	"PANDAD",
 
-	// Clients
+	"DAGMAN",
 	"TOOL",
 	"SUBMIT",
+	"ANNEXD",
 
-	// Jobs
-	"JOB",
-
-	// Auto type
-	"AUTO",		// Try to determine type from name
+	"GAHP",
 };
 
-#define  FILL(a) { #a, SUBSYSTEM_TYPE_ ## a }
+#define  FILL(a) { #a, SUBSYSTEM_ID_ ## a }
 static const struct BSubsys {
 	const char * key;
-	SubsystemType id;
+	KnownSubsystemId id;
 } SubsysIdByName[] = {
+	// this table must be sorted (case insenstitively)
+	FILL(ANNEXD),
 	FILL(COLLECTOR),
-	FILL(DAEMON),
+	FILL(CREDD),
 	FILL(DAGMAN),
+	FILL(DEFRAG),
 	FILL(GAHP),
-	FILL(JOB),
+	FILL(GANGLIAD),
+	FILL(GRIDMANAGER),
+	FILL(HAD),
+	FILL(JOB_ROUTER),
+	FILL(KBDD),
 	FILL(MASTER),
 	FILL(NEGOTIATOR),
+	FILL(PANDAD),
+	FILL(REPLICATION),
+	FILL(ROOSTER),
 	FILL(SCHEDD),
 	FILL(SHADOW),
 	FILL(SHARED_PORT),
@@ -555,6 +570,9 @@ static const struct BSubsys {
 	FILL(STARTER),
 	FILL(SUBMIT),
 	FILL(TOOL),
+	FILL(TRANSFERD),
+	FILL(TRANSFERER),
+	FILL(UNKNOWN),
 };
 #undef FILL
 
@@ -590,11 +608,14 @@ extern "C" const char * getKnownSubsysString(int id)
 }
 
 // convert string form of a known subsystem name to enum
-extern "C" SubsystemType getKnownSubsysNum(const char * subsys)
+extern "C" KnownSubsystemId getKnownSubsysNum(const char * subsys)
 {
 	const struct BSubsys * found = BinaryLookup<struct BSubsys>(SubsysIdByName, COUNTOF(SubsysIdByName), subsys, strcasecmp);
 	if (found) return found->id;
-	return SUBSYSTEM_TYPE_INVALID;
+	// special case for the GAHP's. 
+	const char * under = strchr(subsys,'_');
+	if (under && MATCH == strncasecmp(under, "_GAHP", 5)) return SUBSYSTEM_ID_GAHP;
+	return SUBSYSTEM_ID_UNKNOWN;
 }
 
 

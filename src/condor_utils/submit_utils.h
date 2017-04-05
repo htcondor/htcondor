@@ -391,7 +391,7 @@ public:
 	int submit_param_bool(const char* name, const char * alt_name, bool def_value, bool * pexists=NULL);
 	MyString submit_param_mystring( const char * name, const char * alt_name );
 	char * expand_macro(const char* value) { return ::expand_macro(value, SubmitMacroSet, mctx); }
-        const char * lookup(const char* name) { return lookup_macro(name, SubmitMacroSet, mctx); }
+	const char * lookup(const char* name) { return lookup_macro(name, SubmitMacroSet, mctx); }
 
 	void set_submit_param( const char* name, const char* value);
 	void set_submit_param_used( const char* name);
@@ -470,6 +470,7 @@ public:
 
 	void optimize() { if (SubmitMacroSet.sorted < SubmitMacroSet.size) optimize_macros(SubmitMacroSet); }
 	void dump(FILE* out, int flags);
+	const char* to_string(std::string & buf, int flags);
 	void setup_macro_defaults(); // setup live defaults table
 
 	MACRO_SET& macros() { return SubmitMacroSet; }
@@ -477,7 +478,7 @@ public:
 	int getClusterId() { return jid.cluster; }
 	int getProcId()    { return jid.proc; }
 	const char * getScheddVersion() { return ScheddVersion.Value(); }
-	const char * getIWD() { return JobIwd.c_str(); }
+	const char * getIWD();
 	const char * full_path(const char *name, bool use_iwd=true);
 	int check_and_universalize_path(MyString &path);
 
@@ -517,6 +518,7 @@ protected:
 	// these variables are used to pass values between the various SetXXX functions below
 	ShouldTransferFiles_t should_transfer;
 	int  JobUniverse;
+	bool JobIwdInitialized;
 	bool IsNiceUser;
 	bool IsDockerJob;
 	bool JobDisableFileChecks;	 // file checks disabled by submit file.
@@ -586,8 +588,8 @@ protected:
 	int SetJobRetries();
 	int SetEnvironment();
 	#if !defined(WIN32)
-	int ComputeRootDir();
-	int SetRootDir();
+	int ComputeRootDir(bool check_access=true);
+	int SetRootDir(bool check_access=true);
 	#endif
 	int SetRequirements();
 	bool check_requirements( char const *orig, MyString &answer );
@@ -599,8 +601,8 @@ protected:
 	int SetRunAsOwner();
 	int SetLoadProfile();
 	int SetRank();
-	int ComputeIWD();
-	int SetIWD();
+	int ComputeIWD(bool check_access=true);
+	int SetIWD(bool check_access=true);
 	int SetUserLog();
 	int SetUserLogXML();
 	int SetCoreSize();

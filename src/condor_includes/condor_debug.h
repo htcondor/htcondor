@@ -75,7 +75,7 @@ enum {
    D_AUDIT, // messages for the audit log
    D_TEST,  // messages with this category are parsed by various tests.
    D_STATS,
-   D_UNUSED30,
+   D_MATERIALIZE,
    D_BUG,   // messages that indicate the daemon is going down.
 
    // NOTE: can't go beyond 31 categories so long as DebugOutputChoice is just an unsigned int.

@@ -597,6 +597,9 @@ class Scheduler : public Service
 	char*			shadowSockSinful( void ) { return MyShadowSockName; };
 	int				aliveInterval( void ) { return alive_interval; };
 	char*			uidDomain( void ) { return UidDomain; };
+	int				getMaxMaterializedJobsPerCluster() { return MaxMaterializedJobsPerCluster; }
+	bool			getAllowLateMaterialize() { return AllowLateMaterialize; }
+	int				getMaxJobsRunning() { return MaxJobsRunning; }
 	int				getJobsTotalAds() { return JobsTotalAds; };
 	int				getMaxJobsSubmitted() { return MaxJobsSubmitted; };
 	int				getMaxJobsPerOwner() { return MaxJobsPerOwner; }
@@ -734,6 +737,8 @@ private:
 	int             MaxNextJobDelay;
 	int				JobsThisBurst;
 	int				MaxJobsRunning;
+	bool			AllowLateMaterialize;
+	int				MaxMaterializedJobsPerCluster;
 	char*			StartLocalUniverse; // expression for local jobs
 	char*			StartSchedulerUniverse; // expression for scheduler jobs
 	int				MaxRunningSchedulerJobsPerOwner;

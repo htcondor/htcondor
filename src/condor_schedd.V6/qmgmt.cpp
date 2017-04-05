@@ -349,6 +349,16 @@ ClusterCleanup(int cluster_id)
 	}
 }
 
+int GetSchedulerCapabilities(int /*mask*/, ClassAd & reply)
+{
+	//reply.Assign("CondorVersion", );
+	reply.Assign( "LateMaterialize", scheduler.getAllowLateMaterialize() );
+	dprintf(D_ALWAYS, "GetSchedulerCapabilities called, returning\n");
+	dPrintAd(D_ALWAYS, reply, false);
+	return 0;
+}
+
+
 // This timer is called when we scheduled deferred cluster cleanup, which we do when for clusters that
 // have job factories
 // sees num_procs for a cluster go to 0, but there is a job factory on that cluster refusing to let it die.
@@ -357,12 +367,18 @@ ClusterCleanup(int cluster_id)
 void
 DeferredClusterCleanupTimerCallback()
 {
+	dprintf(D_MATERIALIZE | D_VERBOSE, "in DeferredClusterCleanupTimerCallback\n");
+
+	int total_new_jobs = 0;
+
 	// iterate the list of clusters needing work, removing them from the work list before we
 	// service them. 
 	for (auto it = ClustersNeedingCleanup.begin(); it != ClustersNeedingCleanup.end(); /*next handled in loop*/) {
 		int cluster_id = *it;
 		auto prev = it++;
 		ClustersNeedingCleanup.erase(prev);
+
+		dprintf(D_MATERIALIZE | D_VERBOSE, "\tcluster %d needs cleanup\n", cluster_id);
 
 		// If no JobQueue, then we must be exiting. so skip all of the cleanup
 		if ( ! JobQueue) continue;
@@ -372,28 +388,41 @@ DeferredClusterCleanupTimerCallback()
 		int *numOfProcs = NULL;
 		if ( ClusterSizeHashTable->lookup(cluster_id,numOfProcs) != -1 ) {
 			do_cleanup = *numOfProcs <= 0;
+			dprintf(D_MATERIALIZE | D_VERBOSE, "\tcluster %d has %d procs, setting do_cleanup=%d\n", cluster_id, *numOfProcs, do_cleanup);
+		} else {
+			dprintf(D_MATERIALIZE | D_VERBOSE, "\tcluster %d has no entry in ClusterSizeHashTable, setting do_cleanup=%d\n", cluster_id, do_cleanup);
 		}
 
 		// get the clusterad, and have it materialize factory jobs if any are desired
 		// if we materalized any jobs, then cleanup is cancelled.
-
-		JobQueueKey cluster_key;
-		IdToKey(cluster_id,-1,cluster_key);
-		JobQueueJob * clusterad = NULL;
-		if ( ! JobQueue->Lookup(cluster_key, clusterad) || ! clusterad) {
-			// if no clusterad in the job queue, there is nothing to cleanup or materialize, so just skip it.
-			continue;
-		}
-		if (clusterad->factory) {
-			if (MaterializeJobs(clusterad) > 0) {
-				do_cleanup = false;
+		if (scheduler.getAllowLateMaterialize()) {
+			JobQueueKey cluster_key;
+			IdToKey(cluster_id,-1,cluster_key);
+			JobQueueJob * clusterad = NULL;
+			if ( ! JobQueue->Lookup(cluster_key, clusterad) || ! clusterad) {
+				// if no clusterad in the job queue, there is nothing to cleanup or materialize, so just skip it.
+				dprintf(D_ALWAYS, "\tWARNING: DeferredClusterCleanupTimerCallback could not find cluster ad for cluster %d\n", cluster_id);
+				continue;
+			}
+			if (clusterad->factory) {
+				dprintf(D_MATERIALIZE | D_VERBOSE, "\tcluster %d has job factory, invoking it.\n", cluster_id);
+				int num_materialized = MaterializeJobs(clusterad);
+				if (num_materialized > 0) {
+					total_new_jobs += num_materialized;
+					do_cleanup = false;
+				}
+				dprintf(D_MATERIALIZE, "cluster %d job factory invoked, %d jobs materialized%s\n", cluster_id, num_materialized, do_cleanup ? ", doing cleanup" : "");
 			}
 		}
 
 		// if cleanup is still desired, do it now.
 		if (do_cleanup) {
+			dprintf(D_MATERIALIZE, "DeferredClusterCleanupTimerCallback: Removing cluster %d\n", cluster_id);
 			ClusterCleanup(cluster_id);
 		}
+	}
+	if (total_new_jobs > 0) {
+		scheduler.needReschedule();
 	}
 
 	if( ClustersNeedingCleanup.empty() && defer_cleanup_timer_id > 0 ) {
@@ -455,12 +484,14 @@ DecrementClusterSize(int cluster_id, JobQueueJob * clusterAd)
 		bool cleanup_now = (*numOfProcs <= 0);
 		if (clusterAd) {
 			clusterAd->SetNumProcs(*numOfProcs);
-			// if there is a job factory, and it doesn't want us to do cleanup
-			// then schedule deferred cleanup even if the cluster is not yet empty
-			// we do this because deferred cleanup is where we do late materialization
-			if ( ! JobFactoryAllowsClusterRemoval(clusterAd)) {
-				ScheduleClusterForDeferredCleanup(cluster_id);
-				cleanup_now = false;
+			if (scheduler.getAllowLateMaterialize()) {
+				// if there is a job factory, and it doesn't want us to do cleanup
+				// then schedule deferred cleanup even if the cluster is not yet empty
+				// we do this because deferred cleanup is where we do late materialization
+				if ( ! JobFactoryAllowsClusterRemoval(clusterAd)) {
+					ScheduleClusterForDeferredCleanup(cluster_id);
+					cleanup_now = false;
+				}
 			}
 		}
 
@@ -1205,7 +1236,15 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 	while (JobQueue->Iterate(key,ad)) {
 		ad->jid = key; // make sure that job object has correct jobid.
 		if (key.cluster <= 0 || key.proc < 0 ) {
-			ad->PopulateFromAd();
+			if (key.cluster >= 0) {
+				if ( ! ad->ownerinfo) {
+					if (ad->LookupString(ATTR_OWNER, owner)) {
+						AddOwnerHistory( owner );
+						ad->ownerinfo = const_cast<OwnerInfo*>(scheduler.insert_owner_const(owner.c_str()));
+					}
+				}
+				ad->PopulateFromAd();
+			}
 			continue;  // done with cluster & header ads
 		}
 
@@ -1560,11 +1599,28 @@ int MaterializeJobs(JobQueueJob * clusterad)
 	if ( ! clusterad->factory)
 		return 0;
 
-	//PRAGMA_REMIND("tj: make this smarter or merge it with MaterializeNextFactoryJob")
+	int proc_limit = INT_MAX;
+	if ( ! clusterad->LookupInteger(ATTR_JOB_MATERIALIZE_LIMIT, proc_limit)) {
+		proc_limit = INT_MAX;
+	}
+	int system_limit = MIN(scheduler.getMaxMaterializedJobsPerCluster(), scheduler.getMaxJobsPerSubmission());
+	system_limit = MIN(system_limit, scheduler.getMaxJobsPerOwner());
+	//system_limit = MIN(system_limit, scheduler.getMaxJobsRunning());
+
+	int effective_limit = MIN(proc_limit, system_limit);
+
+	dprintf(D_MATERIALIZE | D_VERBOSE, "in MaterializeJobs, proc_limit=%d, sys_limit=%d MIN(%d,%d,%d)  NumProcs=%d\n",
+		proc_limit, system_limit,
+		scheduler.getMaxMaterializedJobsPerCluster(), scheduler.getMaxJobsPerSubmission(), scheduler.getMaxJobsPerOwner(),
+		clusterad->NumProcs());
 
 	int num_materialized = 0;
-	while (MaterializeNextFactoryJob(clusterad->factory, clusterad) == 1) {
-		num_materialized += 1;
+	while (clusterad->NumProcs() < effective_limit) {
+		if (MaterializeNextFactoryJob(clusterad->factory, clusterad) == 1) {
+			num_materialized += 1;
+		} else {
+			break;
+		}
 	}
 
 	return num_materialized;
@@ -2325,6 +2381,8 @@ static int IsForcedProcAttribute(const char *attr)
 
 #if 1 // this version works with a const classad::ClassAd, like what we get off the wire.
 
+//PRAGMA_REMIND("TODO: fix submit_utils to use the classad cache and/or fast parsing?")
+
 // Call NewProcInternal, then SetAttribute for each of the attributes in job that are not the
 // same as the attributre in the given ClusterAd
 int NewProcFromAd (const classad::ClassAd * ad, int ProcId, JobQueueJob * ClusterAd, SetAttributeFlags_t flags)
@@ -2363,7 +2421,7 @@ int NewProcFromAd (const classad::ClassAd * ad, int ProcId, JobQueueJob * Cluste
 			// matches the value in the cluster ad.
 			// If the values match, don't add the attribute to this proc ad
 			ExprTree *cluster_tree = ClusterAd->Lookup(attr);
-			send_it = ! cluster_tree || ! (*tree == *cluster_tree);
+			send_it = ! cluster_tree || ! (*tree == *cluster_tree || *tree == *SkipExprEnvelope(cluster_tree));
 		}
 		if ( ! send_it)
 			continue;
@@ -2622,7 +2680,7 @@ int DestroyCluster(int cluster_id, const char* reason)
 	JobQueueJob * clusterad = NULL;
 	JobQueue->Lookup(key, clusterad);
 	if (clusterad && clusterad->factory) {
-		PauseJobFactory(clusterad->factory, 1);
+		PauseJobFactory(clusterad->factory, 3);
 	}
 
 	JobQueue->StartIterateAllClassAds();
@@ -2846,6 +2904,10 @@ enum {
 	idATTR_RANK,
 	idATTR_REQUIREMENTS,
 	idATTR_NUM_JOB_RECONNECTS,
+	idATTR_JOB_MATERIALIZE_ITEMS_FILE,
+	idATTR_JOB_MATERIALIZE_DIGEST_FILE,
+	idATTR_JOB_MATERIALIZE_LIMIT,
+	idATTR_JOB_MATERIALIZE_PAUSED,
 };
 
 enum {
@@ -2857,6 +2919,8 @@ enum {
 	catDirtyPrioRec = 0x0010,
 	catTargetScope  = 0x0020,
 	catSubmitterIdent = 0x0040,
+	catNewMaterialize = 0x0080,  // attributes that control the job factory
+	catMaterializeState = 0x0100, // change in state of job factory
 	catCallbackTrigger = 0x1000, // indicates that a callback should happen on commit of this attribute
 	catCallbackNow = 0x20000,    // indicates that a callback should happen when setAttribute is called
 };
@@ -2883,6 +2947,10 @@ static const ATTR_IDENT_PAIR aSpecialSetAttrs[] = {
 	FILL(ATTR_CRON_HOURS,         catCron),
 	FILL(ATTR_CRON_MINUTES,       catCron),
 	FILL(ATTR_CRON_MONTHS,        catCron),
+	FILL(ATTR_JOB_MATERIALIZE_DIGEST_FILE, catNewMaterialize | catCallbackTrigger),
+	FILL(ATTR_JOB_MATERIALIZE_ITEMS_FILE, catNewMaterialize | catCallbackTrigger),
+	FILL(ATTR_JOB_MATERIALIZE_LIMIT, catMaterializeState | catCallbackTrigger),
+	FILL(ATTR_JOB_MATERIALIZE_PAUSED, catMaterializeState | catCallbackTrigger),
 	FILL(ATTR_JOB_PRIO,           catDirtyPrioRec),
 	FILL(ATTR_JOB_STATUS,         catStatus | catCallbackTrigger),
 	FILL(ATTR_JOB_UNIVERSE,       catJobObj),
@@ -2892,6 +2960,8 @@ static const ATTR_IDENT_PAIR aSpecialSetAttrs[] = {
 	FILL(ATTR_PROC_ID,            catJobId),
 	FILL(ATTR_RANK,               catTargetScope),
 	FILL(ATTR_REQUIREMENTS,       catTargetScope),
+
+
 };
 #undef FILL
 
@@ -3048,8 +3118,16 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		}
 
 		// Ensure user is not changing an immutable attribute to a committed job
-		if (immutable_attrs.find(attr_name) != immutable_attrs.end())
+		bool is_immutable_attr = immutable_attrs.find(attr_name) != immutable_attrs.end();
+		if (is_immutable_attr) {
+			// late materialization is allowed to change some 'immutable' attributes in the cluster ad.
+			if ((key.proc == -1) && job->factory && YourStringNoCase(ATTR_TOTAL_SUBMIT_PROCS) == attr_name) {
+				is_immutable_attr = false;
+			}
+		}
+		if (is_immutable_attr)
 		{
+
 			dprintf(D_ALWAYS,
 					"SetAttribute attempt to edit immutable attribute %s in job %d.%d\n",
 					attr_name, cluster_id, proc_id);
@@ -3585,6 +3663,34 @@ void DoSetAttributeCallbacks(const std::set<std::string> &jobids, int triggers)
 			}
 		}
 	}
+
+	// note, catNewMaterialize trigger handling for new cluster
+	// is done elsewhere because it needs to happen later than where this function is called.
+	if (scheduler.getAllowLateMaterialize()) {
+		if (triggers & catMaterializeState) {
+			for (auto it = jobids.begin(); it != jobids.end(); ++it) {
+				if ( ! job_id.set(it->c_str()) || job_id.cluster <= 0 || job_id.proc >= 0) continue; // cluster ads only
+
+				JobQueueJob * job = NULL;
+				if ( ! JobQueue->Lookup(job_id, job)) continue; // Ignore if no cluster ad (yet). this happens on submit commits.
+
+				// ignore non-factory jobs.
+				if ( ! job->factory) continue;
+
+				// sync up the factory pause state with the commited value of the ATTR_JOB_MATERIALIZE_PAUSED attribute
+				int paused = 0;
+				if ( ! job->LookupInteger(ATTR_JOB_MATERIALIZE_PAUSED, paused)) {
+					paused = 0;
+				}
+				if (CheckJobFactoryPause(job->factory, paused)) {
+					if ( ! paused) {
+						// changed state to running, we need to trigger materialization
+						ScheduleClusterForDeferredCleanup(job->jid.cluster);
+					}
+				}
+			}
+		}
+	}
 }
 
 
@@ -3945,6 +4051,17 @@ void SetSubmitTotalProcs(std::list<std::string> & new_ad_keys)
 	for(std::list<std::string>::iterator it = new_ad_keys.begin(); it != new_ad_keys.end(); it++ ) {
 		job_id.set(it->c_str());
 		if (job_id.proc < 0) continue; // ignore the cluster ad.
+
+		// ignore jobs produced by an existing factory.
+		// ATTR_TOTAL_SUBMIT_PROCS is determined by the factory for them.
+		JobQueueJob *clusterad = NULL;
+		JobQueueKeyBuf cluster_key;
+		IdToKey(job_id.cluster,-1,cluster_key);
+		JobQueue->Lookup(cluster_key, clusterad);
+		if (clusterad && clusterad->factory) {
+			continue;
+		}
+
 		std::map<int, int>::iterator mit = num_procs.find(job_id.cluster);
 		if (mit == num_procs.end()) {
 			num_procs[job_id.cluster] = 1;
@@ -4118,6 +4235,9 @@ CommitTransaction(SetAttributeFlags_t flags /* = 0 */,
 	// TODO: think about - can we skip this if new_ad_keys is not empty?
 	std::set<std::string> ad_keys;
 	int triggers = JobQueue->GetTransactionTriggers();
+	// we have to do late materialization in a different place than the normal triggers
+	bool has_late_materialize = (triggers & catNewMaterialize) != 0;
+	triggers &= ~catNewMaterialize;
 	if (triggers) {
 		JobQueue->GetTransactionKeys(ad_keys);
 	}
@@ -4169,17 +4289,20 @@ CommitTransaction(SetAttributeFlags_t flags /* = 0 */,
 					}
 
 					// make the cluster job factory if one is desired and does not already exist.
-					if ( ! clusterad->factory) {
-						int num_factory_procs = 0;
-						if (clusterad->LookupInteger("JobFactoryNumProcs", num_factory_procs)) {
-							std::string submit_file;
-							if ( ! clusterad->LookupString("JobFactorySubmitFile", submit_file)) {
-								dprintf(D_ALWAYS, "Warning: No submit file for a cluster %d with JobFactoryNumProcs=%d. No factory will be created",
-									job_id.cluster, num_factory_procs);
+					if (scheduler.getAllowLateMaterialize() && has_late_materialize) {
+						std::string submit_digest;
+						if (clusterad->LookupString(ATTR_JOB_MATERIALIZE_DIGEST_FILE, submit_digest)) {
+							ASSERT( ! clusterad->factory);
+							clusterad->factory = MakeJobFactory(clusterad, submit_digest.c_str());
+							if (clusterad->factory) {
+								int paused = 0;
+								if (clusterad->LookupInteger(ATTR_JOB_MATERIALIZE_PAUSED, paused) && paused) {
+									PauseJobFactory(clusterad->factory, 1);
+								} else {
+									ScheduleClusterForDeferredCleanup(job_id.cluster);
+								}
 							} else {
-								dprintf(D_ALWAYS, "Job cluster %d specifies job factory %s with num=%d, creating factory\n",
-									job_id.cluster, submit_file.c_str(), num_factory_procs);
-								clusterad->factory = MakeJobFactory(clusterad, submit_file.c_str());
+								ScheduleClusterForDeferredCleanup(job_id.cluster);
 							}
 						}
 					}
@@ -5545,6 +5668,25 @@ GetNextJobByConstraint(const char *constraint, int initScan)
 	return NULL;
 }
 
+JobQueueJob *
+GetNextJobOrClusterByConstraint(const char *constraint, int initScan)
+{
+	JobQueueJob *ad;
+	JobQueueKey key;
+
+	if (initScan) {
+		JobQueue->StartIterateAllClassAds();
+	}
+
+	while(JobQueue->Iterate(key,ad)) {
+		if ( key.cluster > 0 && // skip the header ad
+			(!constraint || !constraint[0] || EvalBool(ad, constraint))) {
+			return ad;
+		}
+	}
+	return NULL;
+}
+
 // declare this so that we don't try and pull in the one in send_stubs
 ClassAd * GetNextJobByConstraint_as_ClassAd(const char *constraint, int initScan) {
 	return GetNextJobByConstraint(constraint, initScan);
@@ -6207,6 +6349,57 @@ void mark_jobs_idle()
 	// we crash again, we do not have to redo all recovery work just performed.
 	JobQueue->ForceLog();
 }
+
+/*
+** Called on startup to reload the job factories
+*/
+void load_job_factories()
+{
+	if ( ! scheduler.getAllowLateMaterialize()) {
+		dprintf(D_ALWAYS, "SCHEDD_ALLOW_LATE_MATERIALIZE is false, skipping job factory initialization\n");
+		return;
+	}
+
+	JobQueue->StartIterateAllClassAds();
+
+	std::string submit_digest;
+
+	dprintf(D_ALWAYS, "Reloading job factories\n");
+	int num_loaded = 0;
+	int num_failed = 0;
+	int num_paused = 0;
+
+	JobQueueJob *ad = NULL;
+	JobQueueKey key;
+	while(JobQueue->Iterate(key,ad)) {
+		if ( key.cluster <= 0 || key.proc > 0 ) { continue; } // ingnore header and job ads
+
+		JobQueueJob * clusterad = ad;
+		if (ad->factory) { continue; } // ignore if factory already loaded
+
+		submit_digest.clear();
+		if (clusterad->LookupString(ATTR_JOB_MATERIALIZE_DIGEST_FILE, submit_digest)) {
+			clusterad->factory = MakeJobFactory(clusterad, submit_digest.c_str());
+			if (clusterad->factory) {
+				++num_loaded;
+			} else {
+				++num_failed;
+			}
+		}
+		if (clusterad->factory) {
+			int paused = 0;
+			if (clusterad->LookupInteger(ATTR_JOB_MATERIALIZE_PAUSED, paused) && paused) {
+				PauseJobFactory(clusterad->factory, 1);
+				++num_paused;
+			} else {
+				// schedule materialize.
+				ScheduleClusterForDeferredCleanup(key.cluster);
+			}
+		}
+	}
+	dprintf(D_ALWAYS, "Loaded %d job factories, %d were paused, %d failed to load\n", num_loaded, num_paused, num_failed);
+}
+
 
 void DirtyPrioRecArray() {
 		// Mark the PrioRecArray as stale. This will trigger a rebuild,

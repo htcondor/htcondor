@@ -208,6 +208,9 @@ bool    nice_user_setting = false;
 bool	NewExecutable = false;
 #ifdef USE_SUBMIT_UTILS
 int		dash_remote=0;
+int		dash_factory=0;
+int		default_to_factory=0;
+unsigned int submit_unique_id=1; // hack to make default_to_factory work in test suite for milestone 1 (8.7.1)
 #else
 bool	IsFirstExecutable;
 bool	UserLogSpecified = false;
@@ -819,24 +822,7 @@ int SetSyscalls( int foo );
 int DoCleanup(int,int,const char*);
 }
 
-
-// global struct that we use to keep track of where we are so we
-// can give useful error messages.
-enum {
-	PHASE_INIT=0,       // before we begin reading from the submit file
-	PHASE_READ_SUBMIT,  // while reading the submit file, and not on a Queue line
-	PHASE_DASH_APPEND,  // while processing -a arguments (happens when we see the Queue line)
-	PHASE_QUEUE,        // while processing the Queue line from a submit file
-	PHASE_QUEUE_ARG,    // while processing the -queue argument
-	PHASE_COMMIT,       // after processing the submit file/arguments
-};
-struct SubmitErrContext {
-	int phase;          // one of PHASE_xxx enum
-	int step;           // set to Step loop variable during queue iteration
-	int item_index;     // set to itemIndex/Row loop variable during queue iteration
-	const char * macro_name; // set to macro name during submit hashtable lookup/expansion
-	const char * raw_macro_val; // set to raw macro value during submit hashtable expansion
-} ErrContext = { PHASE_INIT, -1, -1, NULL, NULL };
+struct SubmitErrContext ErrContext = { PHASE_INIT, -1, -1, NULL, NULL };
 
 // this will get called when the condor EXCEPT() macro is invoked.
 // for the most part, we want to report the message, but to use submit file and
@@ -877,6 +863,17 @@ ExtArray <ClassAd*> JobAdsArray(100);
 int JobAdsArrayLen = 0;
 #ifdef USE_SUBMIT_UTILS
 int JobAdsArrayLastClusterIndex = 0;
+
+// called by the factory submit to fill out the data structures that
+// we use to print out the standard messages on complection.
+void set_factory_submit_info(int cluster, int num_procs)
+{
+	CurrentSubmitInfo++;
+	SubmitInfo[CurrentSubmitInfo].cluster = cluster;
+	SubmitInfo[CurrentSubmitInfo].firstjob = 0;
+	SubmitInfo[CurrentSubmitInfo].lastjob = num_procs-1;
+}
+
 #else
 
 // explicit template instantiations
@@ -1296,6 +1293,8 @@ main( int argc, const char *argv[] )
 	init_params();
 #ifdef USE_SUBMIT_UTILS
 	submit_hash.init();
+
+	default_to_factory = param_boolean("SUBMIT_FACTORY_JOBS_BY_DEFAULT", default_to_factory);
 #endif
 
 		// If our effective and real gids are different (b/c the
@@ -1353,6 +1352,9 @@ main( int argc, const char *argv[] )
 
 			} else if (is_dash_arg_prefix(ptr[0], "spool", 1)) {
 				dash_remote++;
+				DisableFileChecks = 1;
+			} else if (is_dash_arg_prefix(ptr[0], "factory", 1)) {
+				dash_factory++;
 				DisableFileChecks = 1;
 			} else if (is_dash_arg_prefix(ptr[0], "address", 2)) {
 				if( !(--argc) || !(*(++ptr)) ) {
@@ -1702,6 +1704,20 @@ main( int argc, const char *argv[] )
 		exit(1);
 	}
 
+	bool has_late_materialize = false;
+	CondorVersionInfo cvi(MySchedd ? MySchedd->version() : CondorVersion());
+	if (cvi.built_since_version(8,7,1)) {
+		has_late_materialize = true;
+		if ( ! DumpClassAdToFile && ! DashDryRun && ! dash_interactive && default_to_factory) { dash_factory = true; }
+	}
+	if (dash_factory && ! has_late_materialize) {
+		fprintf(stderr, "\nERROR: Schedd does not support late materialization\n");
+		exit(1);
+	} else if (dash_factory && dash_interactive) {
+		fprintf(stderr, "\nERROR: Interactive jobs cannot be materialized late\n");
+		exit(1);
+	}
+
 	// open submit file
 	if ( ! cmd_file || SubmitFromStdin) {
 		// no file specified, read from stdin
@@ -1720,6 +1736,7 @@ main( int argc, const char *argv[] )
 #ifdef USE_SUBMIT_UTILS
 		// this does both insert_source, and also gives a values to the default $(SUBMIT_FILE) expansion
 		submit_hash.insert_submit_filename(cmd_file, FileMacroSource);
+		submit_unique_id = hashFuncChars(cmd_file);
 #else
 		insert_source(cmd_file, SubmitMacroSet, FileMacroSource);
 		SubmitFileMacroDef.psz = const_cast<char*>(SubmitMacroSet.apool.insert(full_path(cmd_file, false)));
@@ -1755,8 +1772,14 @@ main( int argc, const char *argv[] )
 		}
 	}
 
+	int rval = 0;
 	//  Parse the file and queue the jobs
-	if( read_submit_file(fp) < 0 ) {
+	if (dash_factory && has_late_materialize) {
+		rval = submit_factory_job(fp, FileMacroSource, extraLines, queueCommandLine);
+	} else {
+		rval = read_submit_file(fp);
+	}
+	if( rval < 0 ) {
 		if( ExtraLineNo == 0 ) {
 			fprintf( stderr,
 					 "\nERROR: Failed to parse command file (line %d).\n",
@@ -1799,7 +1822,6 @@ main( int argc, const char *argv[] )
 
 	ErrContext.phase = PHASE_COMMIT;
 
-	// in verbose mode we will have already printed out cluster and proc
 	if ( ! verbose && ! DumpFileIsStdout) {
 		if (terse) {
 			int ixFirst = 0;
@@ -8004,7 +8026,6 @@ int SpecialSubmitParse(void* pv, MACRO_SOURCE& source, MACRO_SET& macro_set, cha
 	return -1;
 }
 
-
 int read_submit_file(FILE * fp)
 {
 	ErrContext.phase = PHASE_READ_SUBMIT;
@@ -8563,6 +8584,7 @@ int queue_item(int num, StringList & vars, char * item, int item_index, int opti
 			dash_interactive, dash_remote,
 			check_sub_file, NULL);
 		if ( ! job) {
+			print_errstack(stderr, submit_hash.error_stack());
 			DoCleanup(0,0,NULL);
 			exit(1);
 		}
@@ -10903,7 +10925,7 @@ SetVMParams()
 #endif
 
 #ifdef USE_SUBMIT_UTILS
-PRAGMA_REMIND("make a proper queue args unit test.")
+//PRAGMA_REMIND("make a proper queue args unit test.")
 int DoUnitTests(int options)
 {
 	return (options > 1) ? 1 : 0;
