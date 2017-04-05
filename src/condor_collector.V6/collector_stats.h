@@ -176,8 +176,8 @@ struct UpdatesStats {
 	stats_entry_recent<long> DroppedQueries;
 
 #ifdef TRACK_QUERIES_BY_SUBSYS
-	stats_entry_recent<long> InProcQueriesFrom[SUBSYSTEM_TYPE_AUTO]; // Track subsystems < the AUTO subsys.
-	stats_entry_recent<long> ForkQueriesFrom[SUBSYSTEM_TYPE_AUTO]; // Track subsystems < the AUTO subsys.
+	stats_entry_recent<long> InProcQueriesFrom[SUBSYSTEM_ID_COUNT]; // Track subsystems < the AUTO subsys.
+	stats_entry_recent<long> ForkQueriesFrom[SUBSYSTEM_ID_COUNT]; // Track subsystems < the AUTO subsys.
 #endif
 
 	// per-ad-type counters 
