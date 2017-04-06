@@ -3642,11 +3642,26 @@ type=string
 tags=annex
 
 [ANNEX_DEFAULT_ODI_INSTANCE_TYPE]
+default = $(ANNEX_DEFAULT_ODI_INSTANCE_TYPE_V8_7_0)
+type=string
+tags=annex
+
+[ANNEX_DEFAULT_ODI_INSTANCE_TYPE_V8_7_0]
 default = m4.large
 type=string
 tags=annex
 
 [ANNEX_DEFAULT_ODI_IMAGE_ID]
+default = $(ANNEX_DEFAULT_ODI_IMAGE_ID_V8_7_1)
+type=string
+tags=annex
+
+[ANNEX_DEFAULT_ODI_IMAGE_ID_V8_7_0]
+default = ami-206ab336
+type=string
+tags=annex
+
+[ANNEX_DEFAULT_ODI_IMAGE_ID_V8_7_1]
 default = ami-35b13223
 type=string
 tags=annex
