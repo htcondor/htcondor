@@ -3641,6 +3641,16 @@ default = HTCondorAnnex-CheckConnectivity
 type=string
 tags=annex
 
+[ANNEX_DEFAULT_ODI_INSTANCE_TYPE]
+default = m4.large
+type=string
+tags=annex
+
+[ANNEX_DEFAULT_ODI_IMAGE_ID]
+default = ami-35b13223
+type=string
+tags=annex
+
 [SCHEDD]
 default=$(SBIN)/condor_schedd
 win32_default=$(SBIN)\condor_schedd.exe
