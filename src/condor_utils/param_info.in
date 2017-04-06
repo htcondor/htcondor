@@ -1604,9 +1604,17 @@ type=int
 tags=gridmanager,globusjob
 
 [PERIODIC_EXPR_INTERVAL]
-default=300
+default=60
 type=int
-tags=gridmanager,basejob
+
+[MAX_PERIODIC_EXPR_INTERVAL]
+default=1200
+type=int
+
+[PERIODIC_EXPR_TIMESLICE]
+default=0.01
+type=double
+range=0.0,1.0
 
 [ENABLE_GRID_MONITOR]
 default=true
@@ -4169,6 +4177,12 @@ type=string
 customization=expert
 description=MemoryUsage metric for VM Universe jobs
 tags=starter
+
+[DEFAULT_JOB_MAX_RETRIES]
+default=10
+type=int
+description=Default maximum number of retries when a submit file enables retries.
+tags=submit
 
 [JOB_DEFAULT_REQUESTMEMORY]
 default=ifthenelse(MemoryUsage =!= UNDEFINED,MemoryUsage,(ImageSize+1023)/1024)

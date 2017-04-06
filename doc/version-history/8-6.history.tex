@@ -36,6 +36,11 @@ The details of each version are described below.
 \item When the \Condor{credd} is polling for credentials, the timeout is now
 configurable using \Macro{CREDD\_POLLING\_TIMEOUT}.
 
+\item The \Opt{reverse} option for \Condor{q} was changed to \Opt{reverse-analyze},
+and it now implies \Opt{better-analyze}.  Formerly, the \Opt{reverse} option was ignored
+unless \Opt{-better-analyze} was also specified.
+\Ticket{6167}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -46,6 +51,27 @@ configurable using \Macro{CREDD\_POLLING\_TIMEOUT}.
 \MacroNI{REPLICATION\_SOCKET\_NAME} have changed to enable the documented
 configuration for using these services with shared port to work.
 \Ticket{6186}
+
+\item Fixed a bug that caused \Condor{dagman} to sometimes (rarely, but
+repeatably) crash when parsing DAGs containing splices.
+\Ticket{6170}
+
+\item The configuration parameters that control when job policy expressions
+are evaluated now work as documented.
+Previously, the default value for \MacroNI{PERIODIC\_EXPR\_INTERVAL} was
+300, not 60 as intended.
+Also, the parameters \MacroNI{MAX\_PERIODIC\_EXPR\_INTERVAL} and
+\MacroNI{PERIODIC\_EXPR\_TIMESLICE} were ignored for grid universe jobs.
+\Ticket{6199}
+
+\item Fixed a bug that prevented \MacroNI{SUBMIT\_REQUIREMENT} and
+\MacroNI{JOB\_TRANSFORM} expressions from referencing job attributes
+describing the job's X.509 proxy credential.
+\Ticket{6188}
+
+\item Fixed a bug that could cause \Condor{store\_cred} to fail on
+Windows due to a case-sensitive check of the user's account name.
+\Ticket{6200}
 
 \end{itemize}
 
