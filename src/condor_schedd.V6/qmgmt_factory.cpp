@@ -380,7 +380,11 @@ int  MaterializeNextFactoryJob(JobFactory * factory, JobQueueJob * ClusterAd)
 	}
 
 	if( !already_in_transaction ) {
-		CommitTransaction();
+		rval = CommitTransaction();
+		if (rval < 0) {
+			dprintf(D_ALWAYS, "CommitTransaction() Failed for job %d.%d rval=%d\n", jid.cluster, jid.proc, rval);
+			return rval;
+		}
 	}
 
 	return 1; // successful instantiation.

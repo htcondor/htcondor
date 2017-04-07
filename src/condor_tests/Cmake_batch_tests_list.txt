@@ -316,3 +316,4 @@ job_starter_script-A
 soap_job_tests
 config_validate_policy_templates
 docker_simulator_test
+map_user_to_groups_metaknob_test
