@@ -303,3 +303,4 @@ lib_unit_tests: personal
 lib_userlog: personal
 config_validate_policy_templates: personal
 docker_simulator_test: personal
+map_user_to_groups_metaknob_test: personal
