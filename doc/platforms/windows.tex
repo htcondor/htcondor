@@ -287,6 +287,24 @@ Any rows in the output with the \Expr{UNDEF} string indicate machines where
 secure communication is not working properly. Verify that the pool password
 is stored correctly on these machines.
 
+Regardless of how Condor's authentication is configured, the pool password can 
+always be set locally by running the 
+\begin{verbatim}
+  condor_store_cred add -c
+\end{verbatim}
+command as the local SYSTEM account. Third party tools such as PsExec can be 
+used to accomplish this. When condor_store_cred is run as the local SYSTEM 
+account, it bypasses the network authentication and writes the pool password 
+to the registry itself. This allows the other condor daemons (also running
+under the SYSTEM account) to access the pool password when authenticating
+against the pool's collector. 
+In case the pool is remote and no initial communication can be established 
+due to strong security, the pool password may have to be set using the
+above method and following command:
+\begin{verbatim}
+  condor_store_cred -u condor_pool@poolhost add
+\end{verbatim}
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:windows-load-profile}Executing Jobs with the User's Profile Loaded}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
