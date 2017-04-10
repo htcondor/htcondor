@@ -144,33 +144,27 @@ if (BUILD_TESTING)
 		condor_std_exe_test(job_ckpt_open-N-parallel_std "${CMAKE_C_COMPILER}" "job_ckpt_open-N-parallel_std.c" "${STDU_LDD_FLAGS}")
 		condor_std_exe_test(job_ckpt_socket-support_std "${CMAKE_C_COMPILER}" "job_ckpt_socket-support_std.c" "${STDU_LDD_FLAGS}")
 
+
 		# Fortran tests.
-		if(  "${RPM_SYSTEM_NAME}" MATCHES "rhel7"
-		  OR "${RPM_SYSTEM_NAME}" MATCHES "sl7"
-		  OR "${RPM_SYSTEM_NAME}" MATCHES "centos7" )
-		  dprint( "RHEL7 Fortran tests disabled because they fail for no known reason." )
-		  dprint( "CentOS 7 and SL 7 Fortran tests disabled because the build machines need static libs for gfortran and quadmath." )
-		else()
-			enable_language( Fortran )
+		enable_language( Fortran )
 
-			condor_std_exe_test( job_ckpt_f-areauc_std "${CMAKE_Fortran_COMPILER}" "job_ckpt_f-areauc_std.f" "${STDU_LDD_FLAGS}" )
-			condor_pl_test( job_ckpt_f-areauc_std "area under the curve?" "stduniv;framework;quick;full;ckpt" )
+		condor_std_exe_test( job_ckpt_f-areauc_std "${CMAKE_Fortran_COMPILER}" "job_ckpt_f-areauc_std.f" "${STDU_LDD_FLAGS}" )
+		condor_pl_test( job_ckpt_f-areauc_std "area under the curve?" "stduniv;framework;quick;full;ckpt" )
 
-			condor_std_exe_test( job_ckpt_f-floats_std "${CMAKE_Fortran_COMPILER}" "job_ckpt_f-floats_std.f" "${STDU_LDD_FLAGS}" )
-			condor_pl_test( job_ckpt_f-floats_std "ckpt/restore floating point registers" "stduniv;framework;quick;full;ckpt" )
+		condor_std_exe_test( job_ckpt_f-floats_std "${CMAKE_Fortran_COMPILER}" "job_ckpt_f-floats_std.f" "${STDU_LDD_FLAGS}" )
+		condor_pl_test( job_ckpt_f-floats_std "ckpt/restore floating point registers" "stduniv;framework;quick;full;ckpt" )
 
-			condor_std_exe_test( job_ckpt_f-integers_std "${CMAKE_Fortran_COMPILER}" "job_ckpt_f-integers_std.f" "${STDU_LDD_FLAGS}" )
-			condor_pl_test( job_ckpt_f-integers_std "ckpt/restore integer registers" "stduniv;framework;quick;full;ckpt" )
+		condor_std_exe_test( job_ckpt_f-integers_std "${CMAKE_Fortran_COMPILER}" "job_ckpt_f-integers_std.f" "${STDU_LDD_FLAGS}" )
+		condor_pl_test( job_ckpt_f-integers_std "ckpt/restore integer registers" "stduniv;framework;quick;full;ckpt" )
 
-			condor_std_exe_test( job_ckpt_f-printer_std "${CMAKE_Fortran_COMPILER}" "job_ckpt_f-printer_std.f" "${STDU_LDD_FLAGS}" )
-			condor_pl_test( job_ckpt_f-printer_std "FIXME" "stduniv;framework;quick;full;ckpt" )
+		condor_std_exe_test( job_ckpt_f-printer_std "${CMAKE_Fortran_COMPILER}" "job_ckpt_f-printer_std.f" "${STDU_LDD_FLAGS}" )
+		condor_pl_test( job_ckpt_f-printer_std "FIXME" "stduniv;framework;quick;full;ckpt" )
 
-			condor_std_exe_test( job_ckpt_f-reader_std "${CMAKE_Fortran_COMPILER}" "job_ckpt_f-reader_std.f" "${STDU_LDD_FLAGS}" )
-			condor_pl_test( job_ckpt_f-reader_std "FIXME" "stduniv;framework;quick;full;ckpt" )
+		condor_std_exe_test( job_ckpt_f-reader_std "${CMAKE_Fortran_COMPILER}" "job_ckpt_f-reader_std.f" "${STDU_LDD_FLAGS}" )
+		condor_pl_test( job_ckpt_f-reader_std "FIXME" "stduniv;framework;quick;full;ckpt" )
 
-			condor_std_exe_test( job_rsc_f-direct-write_std "${CMAKE_Fortran_COMPILER}" "job_rsc_f-direct-write_std.f" "${STDU_LDD_FLAGS}" )
-			condor_pl_test( job_rsc_f-direct-write_std "FIXME" "stduniv;framework;quick;full;ckpt" )
-		endif()
+		condor_std_exe_test( job_rsc_f-direct-write_std "${CMAKE_Fortran_COMPILER}" "job_rsc_f-direct-write_std.f" "${STDU_LDD_FLAGS}" )
+		condor_pl_test( job_rsc_f-direct-write_std "FIXME" "stduniv;framework;quick;full;ckpt" )
 
 
 		if( ${SYS_ARCH} MATCHES "X86_64" )
