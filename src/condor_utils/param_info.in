@@ -2168,7 +2168,7 @@ customization=devel
 tags=tt,jobqueuedbmanager
 
 [SUBMIT_SKIP_FILECHECKS]
-default=
+default=true
 type=string
 tags=submit
 
