@@ -527,7 +527,7 @@ one submit description file.
 \index{submit commands!universe}
 \label{man-condor-submit-universe}
 \item[universe = $<$vanilla \Bar\ standard \Bar\ scheduler
-\Bar\ local \Bar\ grid \Bar\ java \Bar\ vm \Bar\ docker$>$]
+\Bar\ local \Bar\ grid \Bar\ java \Bar\ vm \Bar\ parallel \Bar\ docker$>$]
 %%\Bar\ local \Bar\ grid \Bar\ java \Bar\ vm$>$]
 Specifies which HTCondor universe to use when running this job.  The HTCondor
 universe specifies an HTCondor execution environment.
@@ -561,6 +561,9 @@ The \SubmitCmdNI{java} universe is for programs written to the Java Virtual Mach
 
 The \SubmitCmdNI{vm} universe facilitates the execution of a virtual
 machine.
+
+The \SubmitCmdNI{parallel} universe is for parallel jobs (e.g. MPI) that
+require multiple machines in order to run.
 
 The \SubmitCmdNI{docker} universe runs a docker container as an HTCondor job.
 
