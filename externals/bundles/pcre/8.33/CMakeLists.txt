@@ -18,9 +18,9 @@
 
 if ( NOT PROPER AND NOT LINUX )
 
-  set (PCRE_DOWNLOAD ${PCRE_VER}.tar.gz)
   if (WINDOWS)
     condor_pre_external( PCRE pcre-8.33 "lib;include" "include/pcre.h")
+    set (PCRE_DOWNLOAD ${PCRE_VER}.tar.gz)
 		set (PCRE_INSTALL cp pcre.lib ${PCRE_INSTALL_LOC}/lib \r\n
 						  cp pcre.dll ${PCRE_INSTALL_LOC}/lib \r\n
 						  cp pcre.h ${PCRE_INSTALL_LOC}/include )
@@ -36,6 +36,7 @@ if ( NOT PROPER AND NOT LINUX )
     set (PCRE_CONFIGURE echo "No configuration necessary")
     set (PCRE_MAKE echo "No make necessary")
   else()
+    set (PCRE_DOWNLOAD ${PCRE_VER}.tar.gz)
     # Currently not attempting to deal with newer version of PCRE on other platforms
   endif()
 
