@@ -621,6 +621,17 @@ int main (int argc, const char **argv)
 	install_sig_handler(SIGPIPE, SIG_IGN );
 #endif
 
+	// Setup a default projection for attributes we examine in the schedd/submittor ads.
+	// We do this very early to be a default, as we may override it with more specific
+	// options depending upon command line arguments, e.g. -name.
+	std::vector<std::string> attrs; attrs.reserve(4);
+	attrs.push_back(ATTR_SCHEDD_IP_ADDR);
+	attrs.push_back(ATTR_VERSION);
+	attrs.push_back(ATTR_NAME);
+	attrs.push_back(ATTR_MACHINE);
+	submittorQuery.setDesiredAttrs(attrs);
+	scheddQuery.setDesiredAttrs(attrs);
+
 	if (param_boolean("CONDOR_Q_ONLY_MY_JOBS", true)) {
 		default_fetch_opts |= CondorQ::fetch_MyJobs;
 	} else {
@@ -771,13 +782,18 @@ int main (int argc, const char **argv)
 	while ((ad = scheddList.Next()))
 	{
 		/* default to true for remotely queryable */
+
+		/* Warning!! Any attributes you lookup from the ad had better be
+		   included in the list of attributes given to scheddQuery.setDesiredAttrs()
+		   and to submittorQuery.setDesiredAttrs() !!! This is done early in main().
+		*/
 		if ( ! (ad->LookupString(ATTR_SCHEDD_IP_ADDR, &scheddAddr)  &&
 				ad->LookupString(ATTR_NAME, &scheddName) &&
 				ad->LookupString(ATTR_MACHINE, scheddMachine, sizeof(scheddMachine))
 				)
 			)
 		{
-			/* something is wrong with this schedd/quill ad, try the next one */
+			/* something is wrong with this schedd/submittor ad, try the next one */
 			continue;
 		}
 
