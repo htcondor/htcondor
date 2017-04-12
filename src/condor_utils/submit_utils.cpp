@@ -4839,6 +4839,8 @@ int SubmitHash::SetUniverse()
 				 univ.ptr(), CondorVersion(), CondorPlatform() );
 		ABORT_AND_RETURN( 1 );
 #else
+		// Standard universe needs file checks disabled to create stdout and stderr
+		DisableFileChecks = 0;
 		return 0;
 #endif
 	};

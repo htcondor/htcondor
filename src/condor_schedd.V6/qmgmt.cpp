@@ -3156,12 +3156,19 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			errno = EACCES;
 			return -1;
 		}
-	} else if ( ! (flags & SetAttribute_LateMaterialization)) {
-		// If we made it here, the user is adding attributes to an ad
-		// that has not been committed yet (and thus cannot be found
-		// in the JobQueue above).  Restrict the user to only adding
-		// attributes to the current cluster returned by NewCluster,
-		// and also restrict the user to procs that have been 
+	/*
+	}
+	else if ( ! JobQueue->InTransaction()) {
+		dprintf(D_ALWAYS,"Inserting new attribute %s into non-existent job %d.%d outside of a transaction\n", attr_name, cluster_id, proc_id);
+		errno = ENOENT;
+		return -1;
+	*/
+	} else if (Q_SOCK != NULL || (flags&NONDURABLE)) {
+		// If we made it here, the user (i.e. not the schedd itself)
+		// is adding attributes to an ad that has not been committed yet
+		// (we know this because it cannot be found in the JobQueue above).
+		// Restrict the user to only adding attributes to the current cluster
+		// returned by NewCluster, and also restrict the user to procs that have been
 		// returned by NewProc.
 		if ((cluster_id != active_cluster_num) || (proc_id >= next_proc_num)) {
 			dprintf(D_ALWAYS,"Inserting new attribute %s into non-active cluster cid=%d acid=%d\n", 
@@ -4014,6 +4021,13 @@ CheckTransaction( const std::list<std::string> &newAdKeys,
 		ClassAd procAd;
 		JobQueue->AddAttrsFromTransaction( cluster.c_str(), procAd );
 		JobQueue->AddAttrsFromTransaction( it->c_str(), procAd );
+
+		JobQueueJob *clusterAd = NULL;
+		if (JobQueue->Lookup(cluster, clusterAd)) {
+			// If there is a cluster ad in the job queue, chain to that before we evaluate anything.
+			// we don't need to unchain - it's a stack object and won't live longer than this function.
+			procAd.ChainToAd(clusterAd);
+		}
 
 		// Now that we created a procAd out of the transaction queue,
 		// apply job transforms to the procAd.

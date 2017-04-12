@@ -1598,7 +1598,7 @@ main( int argc, const char *argv[] )
 	}
 
 	if (!DisableFileChecks) {
-		DisableFileChecks = param_boolean_crufty("SUBMIT_SKIP_FILECHECKS", false) ? 1 : 0;
+		DisableFileChecks = param_boolean_crufty("SUBMIT_SKIP_FILECHECKS", true) ? 1 : 0;
 	}
 
 	MaxProcsPerCluster = param_integer("SUBMIT_MAX_PROCS_IN_CLUSTER", 0, 0);
@@ -1856,7 +1856,14 @@ main( int argc, const char *argv[] )
 
 	ActiveQueueConnection = FALSE; 
 
-	if ( !DisableFileChecks ) {
+    bool isStandardUni = false;
+#ifdef USE_SUBMIT_UTILS
+	isStandardUni = submit_hash.getUniverse() == CONDOR_UNIVERSE_STANDARD;
+#else
+	isStandardUni = JobUniverse == CONDOR_UNIVERSE_STANDARD;
+#endif
+
+	if ( !DisableFileChecks || isStandardUni) {
 		TestFilePermissions( MySchedd->addr() );
 	}
 

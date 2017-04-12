@@ -144,15 +144,35 @@ if (BUILD_TESTING)
 		condor_std_exe_test(job_ckpt_open-N-parallel_std "${CMAKE_C_COMPILER}" "job_ckpt_open-N-parallel_std.c" "${STDU_LDD_FLAGS}")
 		condor_std_exe_test(job_ckpt_socket-support_std "${CMAKE_C_COMPILER}" "job_ckpt_socket-support_std.c" "${STDU_LDD_FLAGS}")
 
-		# someone else can add the fortran tests.
-		dprint("UW - add fortran .exe tests if desired")
+
+		# Fortran tests.
+		enable_language( Fortran )
+
+		condor_std_exe_test( job_ckpt_f-areauc_std "${CMAKE_Fortran_COMPILER}" "job_ckpt_f-areauc_std.f" "${STDU_LDD_FLAGS}" )
+		condor_pl_test( job_ckpt_f-areauc_std "area under the curve?" "stduniv;framework;quick;full;ckpt" )
+
+		condor_std_exe_test( job_ckpt_f-floats_std "${CMAKE_Fortran_COMPILER}" "job_ckpt_f-floats_std.f" "${STDU_LDD_FLAGS}" )
+		condor_pl_test( job_ckpt_f-floats_std "ckpt/restore floating point registers" "stduniv;framework;quick;full;ckpt" )
+
+		condor_std_exe_test( job_ckpt_f-integers_std "${CMAKE_Fortran_COMPILER}" "job_ckpt_f-integers_std.f" "${STDU_LDD_FLAGS}" )
+		condor_pl_test( job_ckpt_f-integers_std "ckpt/restore integer registers" "stduniv;framework;quick;full;ckpt" )
+
+		condor_std_exe_test( job_ckpt_f-printer_std "${CMAKE_Fortran_COMPILER}" "job_ckpt_f-printer_std.f" "${STDU_LDD_FLAGS}" )
+		condor_pl_test( job_ckpt_f-printer_std "FIXME" "stduniv;framework;quick;full;ckpt" )
+
+		condor_std_exe_test( job_ckpt_f-reader_std "${CMAKE_Fortran_COMPILER}" "job_ckpt_f-reader_std.f" "${STDU_LDD_FLAGS}" )
+		condor_pl_test( job_ckpt_f-reader_std "FIXME" "stduniv;framework;quick;full;ckpt" )
+
+		condor_std_exe_test( job_rsc_f-direct-write_std "${CMAKE_Fortran_COMPILER}" "job_rsc_f-direct-write_std.f" "${STDU_LDD_FLAGS}" )
+		condor_pl_test( job_rsc_f-direct-write_std "FIXME" "stduniv;framework;quick;full;ckpt" )
+
 
 		if( ${SYS_ARCH} MATCHES "X86_64" )
 			if(  "${RPM_SYSTEM_NAME}" MATCHES "rhel5"
 			  OR "${RPM_SYSTEM_NAME}" MATCHES "rhel6"
 			  OR "${RPM_SYSTEM_NAME}" MATCHES "rhel7"
 			  OR "${RPM_SYSTEM_NAME}" MATCHES "sl6"
-			  OR "${RPM_SYSTEM_NAME}" MATCHES "sl6"
+			  OR "${RPM_SYSTEM_NAME}" MATCHES "sl7"
 			  OR "${SYSTEM_NAME}" MATCHES "Debian-6"
 			  OR "${SYSTEM_NAME}" MATCHES "Debian-7"
 			  OR "${SYSTEM_NAME}" MATCHES "Debian-8"
@@ -413,6 +433,7 @@ if (BUILD_TESTING)
 	condor_pl_test(file_transfer_submit "condor_submit file transfer" "core;quick;full;quicknolink")
 	condor_pl_test(config_validate_policy_templates "config_validate_policy_templates" "core;quick;full;quicknolink")
 	condor_pl_test(docker_simulator_test "docker_simulator_test" "core;quick;full;quicknolink")
+	condor_pl_test(map_user_to_groups_metaknob_test "map_user_to_groups_metaknob_test" "core;quick;full;quicknolink")
 
 	if (LINUX)
           condor_pl_test(cmd_ssh_to_job_van "condor_ssh_to_job" "core;quick;full;quicknolink")
