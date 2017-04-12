@@ -1856,7 +1856,14 @@ main( int argc, const char *argv[] )
 
 	ActiveQueueConnection = FALSE; 
 
-	if ( !DisableFileChecks ) {
+    bool isStandardUni = false;
+#ifdef USE_SUBMIT_UTILS
+	isStandardUni = submit_hash.getUniverse() == CONDOR_UNIVERSE_STANDARD;
+#else
+	isStandardUni = JobUniverse == CONDOR_UNIVERSE_STANDARD;
+#endif
+
+	if ( !DisableFileChecks || isStandardUni) {
 		TestFilePermissions( MySchedd->addr() );
 	}
 
