@@ -45,6 +45,7 @@
 
 static const char   COMMENT    = '#';
 static const char * DELIMITERS = " \t";
+static const char * ILLEGAL_CHARS = "+.";
 
 static ExtArray<char*> _spliceScope;
 static bool _useDagDir = false;
@@ -119,6 +120,16 @@ isReservedWord( const char *token )
 						"ERROR: token (%s) is a reserved word\n", token );
 			return true;
 		}
+    }
+    return false;
+}
+
+bool
+containsIllegalChars( const char *token ) {
+    for (unsigned int i = 0; i < strlen(token); i++) {
+        if(strchr(ILLEGAL_CHARS, token[i])) {
+            return true;
+        }
     }
     return false;
 }
@@ -582,6 +593,15 @@ parse_node( Dag *dag,
 		exampleSyntax( example.Value() );
 		return false;
 	}
+
+    if ( containsIllegalChars( nodeName ) ) {
+        debug_printf( DEBUG_QUIET,
+					  "ERROR: %s (line %d): JobName %s contains illegal characters\n",
+					  dagFile, lineNum, nodeName );
+        debug_printf( DEBUG_QUIET,
+                      "\tJob names cannot contain the following characters: '+', '.'\n" );
+		return false;
+    }
 
 	MyString tmpNodeName = munge_job_name(nodeName);
 	nodeName = tmpNodeName.Value();
