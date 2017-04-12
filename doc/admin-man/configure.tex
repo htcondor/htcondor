@@ -7124,8 +7124,8 @@ MAX_JOBS_RUNNING	= \
 \label{param:SystemPeriodicHold}
 \item[\Macro{SYSTEM\_PERIODIC\_HOLD}]
   This expression behaves identically
-  to the job expression \AdAttr{periodic\_hold}, but it is evaluated by
-  the \Condor{schedd} daemon individually for each job in the queue.
+  to the job expression \AdAttr{periodic\_hold}, but it is evaluated
+  for every job in the queue.
   It defaults to \Expr{False}.
   When \Expr{True}, it causes the job to stop running and go on hold.
   Here is an
@@ -7164,8 +7164,8 @@ SYSTEM_PERIODIC_HOLD = \
   This expression behaves identically
   to a job's definition of a \SubmitCmd{periodic\_release} expression
   in a submit description file,
-  but it is evaluated by
-  the \Condor{schedd} daemon individually for each job in the queue.
+  but it is evaluated
+  for every job in the queue.
   It defaults to \Expr{False}.
   When \Expr{True}, it causes a Held job to return to the Idle state.
   Here is an example
