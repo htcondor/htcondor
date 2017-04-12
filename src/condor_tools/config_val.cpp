@@ -1061,10 +1061,10 @@ main( int argc, const char* argv[] )
 		}
 	}
 
-	Daemon* target = NULL;
+	DaemonAllowLocateFull* target = NULL;
 	if( ask_a_daemon ) {
 		if( addr ) {
-			target = new Daemon( dt, addr, NULL );
+			target = new DaemonAllowLocateFull( dt, addr, NULL );
 		} else {
 			char* collector_addr = NULL;
 			if( pool ) {
@@ -1097,7 +1097,7 @@ main( int argc, const char* argv[] )
 				collector_addr = strdup(collector->addr());
 				delete collectors;
 			}
-			target = new Daemon( dt, name, collector_addr );
+			target = new DaemonAllowLocateFull( dt, name, collector_addr );
 			free( collector_addr );
 		}
 		if( ! target->locate(evaluate_daemon_vars ? Daemon::LOCATE_FULL : Daemon::LOCATE_FOR_LOOKUP) ) {
