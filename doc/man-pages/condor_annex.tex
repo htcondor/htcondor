@@ -1,0 +1,105 @@
+\begin{ManPage}{\label{man-condor-annex}\Condor{annex}}{1}
+{Add cloud resources to the pool.}
+\index{HTCondor commands!condor\_annex}
+\index{condor\_annex command}
+
+\Synopsis
+
+\SynProg{\Condor{annex}} \Opt{-help}
+
+\SynProg{\Condor{annex}} \Opt{-setup}
+
+\SynProg{\Condor{annex}} \oOpt{-aws-on-demand}
+  \OptArg{-annex-name}{name of the annex}
+  \OptArg{-count}{integer number of instances}
+  \oOpt{-aws-on-demand-*}
+  \oOpt{common options}
+
+\SynProg{\Condor{annex}} \oOpt{-aws-spot-fleet}
+  \OptArg{-annex-name}{name of the annex}
+  \OptArg{-slots}{integer number of weight capacity units}
+  \oOpt{-aws-spot-fleet-*}
+  \oOpt{common options}
+
+\Description
+
+\condor{annex} adds clouds resources to the pool.  (``The pool'' is determined
+in the usual manner for HTCondor daemons and tools.)  Version 8.7.1 supports
+only Amazon Web Services (`AWS').  To use ``on-demand'' instances, use
+the third form above; to use ``spot'' instances, use the fourth.  For an
+explanation of terms, consult either the HTCondor manual
+(chapter \ref{cloud-computing}) or the AWS documentation.
+
+Common options are listed first, followed by options specific to AWS,
+followed by options specific to AWS' on-demand instances, followed by
+options specific to AWS' spot instances, followed by options intended
+for use by experts.
+
+Using \Condor{annex} with AWS requires a one-time setup procedure
+performed by invoking \Condor{annex} with the \Opt{-setup} flag.
+
+\begin{Options}
+%% COMMON OPTIONS
+	\OptItem {\Opt{-help}}
+		{Print a usage reminder.}
+
+	\OptItem {\OptArg{-duration}{hours}}
+		{Set the maximum lease duration in decimal hours.  After this amount of time, all instances will terminated, regardless of their idleness.}
+	\OptItem {\OptArg{-idle}{hours}}
+		{Set the maximum idle duration in decimal hours.  An instance idle for longer than this duration will terminate itself. }
+	\OptItem {\OptArg{-config-dir}{/full/path/to/directory}}
+		{Copy the contents of \Arg{/full/path/to/directory} to each instance's config directory.}
+	\OptItem {\OptArg{-owner}{owner[, owner]*}}
+		{Specify who may use your annex.}
+	\OptItem {\Opt{-no-owner}}
+		{Anyone in your pool may use your annex.}
+
+%% AWS-SPECIFIC OPTIONS
+	\OptItem {\OptArg{-aws-user-data}{user-data}}
+		{Set the instance user data to \Arg{user-data}.}
+	\OptItem {\OptArg{-aws-user-data-file}{path/to/file}}
+		{Set the instance user data to the contents of the file \Arg{path/to/file}.}
+	\OptItem {\OptArg{-aws-default-user-data}{user-data}}
+		{Set the instance user data to \Arg{user-data}, if it's not already set.  Only applies to spot fleet requests.}
+	\OptItem {\OptArg{-aws-default-user-data-file}{path/to/file}}
+		{Set the instance user data to the contents of the file \Arg{path/to/file}, if it's not already set.  Only applies to spot fleet requests.}
+
+%% AWS ON-DEMAND OPTIONS
+	\OptItem {\OptArg{-aws-on-demand-instance-type}{instance-type}}
+		{This annex will requests instances of type \Arg{instance-type}.}
+	\OptItem {\OptArg{-aws-on-demand-ami-id}{ami-id}}
+		{This annex will start instances of the AMI \Arg{ami-id}.}
+	\OptItem {\OptArg{-aws-on-demand-security-group-ids}{group-id[,group-id]}}
+		{This annex will start instances with the listed security group IDs.}
+	\OptItem {\OptArg{-aws-on-demand-key-name}{key-name}}
+		{This annex will start instances with the key pair named \Arg{key-name}.}
+
+%% AWS SPOT FLEET OPTIONS
+	\OptItem {\OptArg{-aws-spot-fleet-config-file}{/full/path/to/file}}
+		{Use the JSON blob in \Arg{/full/path/to/file} for the spot fleet request.}
+
+%% AWS EXPERTS' OPTIONS
+	\OptItem {\OptArg{-aws-access-key-file}{path/to/access-key-file}} {Experts only.}
+	\OptItem {\OptArg{-aws-secret-key-file}{path/to/secret-key-file}} {Experts only.}
+	\OptItem {\OptArg{-aws-ec2-url}{https://ec2.<region>.amazonaws.com}} {Experts only.}
+	\OptItem {\OptArg{-aws-events-url}{https://events.<region>.amazonaws.com}} {Experts only.}
+	\OptItem {\OptArg{-aws-lambda-url}{https://lambda.<region>.amazonaws.com}} {Experts only.}
+	\OptItem {\OptArg{-aws-s3-url}{https://s3.<region>.amazonaws.com}} {Experts only.}
+	\OptItem {\OptArg{-aws-spot-fleet-lease-function-arn}{sfr-lease-function-arn}} {Experts only.}
+	\OptItem {\OptArg{-aws-on-demand-lease-function-arn}{odi-lease-function-arn}} {Experts only.}
+	\OptItem {\OptArg{-aws-on-demand-instance-profile-arn}{instance-profile-arn}} {Experts only.}
+\end{Options}
+
+\GenRem
+
+...
+
+\Examples
+
+...
+
+\ExitStatus
+
+\Condor{annex} will exit with a status value of 0 (zero) on success.
+
+\end{ManPage}
