@@ -20,6 +20,7 @@
 #ifndef _DEFRAG_H
 #define _DEFRAG_H
 
+#include <iterator>
 #include <set>
 #include "condor_common.h"
 #include "condor_daemon_core.h"
