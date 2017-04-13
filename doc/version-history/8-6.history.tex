@@ -47,6 +47,14 @@ unless \Opt{-better-analyze} was also specified.
 
 \begin{itemize}
 
+\item Worked around a problem with Fortran programs built with \Condor{compile}
+and recent versions of gfortran (4.7.2 was OK, 4.8.5 was not), where those
+executables would not write to standard out if started in the standard universe.
+Also, updated the checkpointing library to permit \Condor{compile} to
+successfully link Fortran (and other) programs calling certain math
+functions and built against up-to-date versions of glibc.
+\Ticket{6026}
+
 \item The default values for \MacroNI{HAD\_SOCKET\_NAME} and
 \MacroNI{REPLICATION\_SOCKET\_NAME} have changed to enable the documented
 configuration for using these services with shared port to work.

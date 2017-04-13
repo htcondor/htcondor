@@ -397,7 +397,7 @@ int submit_factory_job (
 
 		bool spill_foreach_data = false; // set to true when we need to convert foreach into foreach from
 		if (o.foreach_mode != foreach_not) {
-			spill_foreach_data = (o.items_filename.empty() || (o.items_filename != "<" && o.items_filename != "-"));
+			spill_foreach_data = (o.items_filename.empty() || (o.items_filename == "<" || o.items_filename == "-"));
 			rval = submit_hash.load_q_foreach_items(fp, source, o, errmsg);
 			if (rval)
 				break;
@@ -406,42 +406,19 @@ int submit_factory_job (
 		}
 
 		// if submit foreach data is not already a disk file, turn it into one.
+		bool make_foreach_file = false;
 		if (spill_foreach_data) {
 			if (o.items.isEmpty()) {
 				o.foreach_mode = foreach_not;
 			} else {
-				MyString foreach_fn;
-				if (default_to_factory) { // hack to make the test suite work. 
-					foreach_fn.formatstr("condor_submit.%d.%u.items", ClusterId, submit_unique_id);
-				} else {
-					foreach_fn.formatstr("condor_submit.%d.items", ClusterId);
-				}
-				o.items_filename = submit_hash.full_path(foreach_fn.c_str(), false);
-
-				int fd = safe_open_wrapper_follow(o.items_filename.c_str(), O_WRONLY|_O_BINARY|O_CREAT|O_TRUNC|O_APPEND, 0644);
-				if (fd == -1) {
-					dprintf(D_ALWAYS, "ERROR: write_items_file(%s): open() failed: %s (%d)\n", o.items_filename.c_str(), strerror(errno), errno);
-					return -1;
-				}
-
-				std::string line;
-				for (const char * item = o.items.first(); item != NULL; item = o.items.next()) {
-					line = item; line += "\n";
-					size_t cbwrote = write(fd, line.data(), line.size());
-					if (cbwrote != line.size()) {
-						dprintf(D_ALWAYS, "ERROR: write_items_file(%s): write() failed: %s (%d)\n", o.items_filename.c_str(), strerror(errno), errno);
-						break;
-					}
-				}
-
-				close(fd);
-				o.foreach_mode = foreach_from;
+				make_foreach_file = true;
 			}
 		} else if (o.foreach_mode == foreach_from) {
 			// if it is a file, make sure the path is fully qualified.
 			MyString foreach_fn = o.items_filename;
 			o.items_filename = submit_hash.full_path(foreach_fn.c_str(), false);
 		}
+
 
 		// figure out how many items we will be making jobs from.
 		int selected_item_count = 1;
@@ -491,6 +468,41 @@ int submit_factory_job (
 			++ClustersCreated;
 			delete gClusterAd; gClusterAd = NULL;
 
+			// if we are makeing the foreach file, we had to wait until we got the cluster id to do that
+			// so make it now.
+			if (make_foreach_file) {
+				MyString foreach_fn;
+				if (default_to_factory) { // hack to make the test suite work. 
+					foreach_fn.formatstr("condor_submit.%d.%u.items", ClusterId, submit_unique_id);
+				} else {
+					foreach_fn.formatstr("condor_submit.%d.items", ClusterId);
+				}
+				o.items_filename = submit_hash.full_path(foreach_fn.c_str(), false);
+
+				int fd = safe_open_wrapper_follow(o.items_filename.c_str(), O_WRONLY|_O_BINARY|O_CREAT|O_TRUNC|O_APPEND, 0644);
+				if (fd == -1) {
+					dprintf(D_ALWAYS, "ERROR: write_items_file(%s): open() failed: %s (%d)\n", o.items_filename.c_str(), strerror(errno), errno);
+					rval = -1;
+					break;
+				}
+
+				std::string line;
+				for (const char * item = o.items.first(); item != NULL; item = o.items.next()) {
+					line = item; line += "\n";
+					size_t cbwrote = write(fd, line.data(), line.size());
+					if (cbwrote != line.size()) {
+						dprintf(D_ALWAYS, "ERROR: write_items_file(%s): write() failed: %s (%d)\n", o.items_filename.c_str(), strerror(errno), errno);
+						rval = -1;
+						break; // break out of this loop, but don't return because we still need to close the file.
+					}
+				}
+
+				close(fd);
+				if (rval < 0)
+					break;
+
+				o.foreach_mode = foreach_from;
+			}
 			//PRAGMA_REMIND("add code to check for unused hash entries and fail/warn.")
 			//PRAGMA_REMIND("add code to do partial expansion of the hash values.")
 
@@ -558,6 +570,7 @@ int submit_factory_job (
 				break;
 			}
 
+			// tell condor_q what cluster was submitted and how many jobs.
 			set_factory_submit_info(ClusterId, (o.queue_num?o.queue_num:1) * selected_item_count);
 			submit_hash.delete_job_ad();
 			job = NULL;

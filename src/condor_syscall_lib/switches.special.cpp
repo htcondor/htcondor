@@ -1320,8 +1320,8 @@ _condor_fxstat(int version, int fd, struct stat *buf)
 			// whole lifetime of the process, that really screw things up.
 			//
 			// For now, don't allow fstat() on standard in, out, or error
-			// fail with EBADF.
-			if( fd == 0 || fd == 1 || fd == 2 ) {
+			// to fail with EBADF.
+			if( rval < 0 && (fd == 0 || fd == 1 || fd == 2) ) {
 				if( errno == EBADF ) { errno = ENOENT; }
 			}
 		} else {
