@@ -126,8 +126,8 @@ isReservedWord( const char *token )
 
 bool
 containsIllegalChars( const char *token ) {
-    for (unsigned int i = 0; i < strlen(token); i++) {
-        if(strchr(ILLEGAL_CHARS, token[i])) {
+    for( unsigned int i = 0; i < strlen(token); i++ ) {
+        if( strchr( ILLEGAL_CHARS, token[i] ) ) {
             return true;
         }
     }
@@ -594,13 +594,21 @@ parse_node( Dag *dag,
 		return false;
 	}
 
-    if ( containsIllegalChars( nodeName ) ) {
-        debug_printf( DEBUG_QUIET,
-					  "ERROR: %s (line %d): JobName %s contains illegal characters\n",
-					  dagFile, lineNum, nodeName );
-        debug_printf( DEBUG_QUIET,
-                      "\tJob names cannot contain the following characters: '+', '.'\n" );
-		return false;
+    if( containsIllegalChars( nodeName ) ) {
+        MyString errorMessage;
+    	errorMessage.formatstr( "ERROR: %s (line %d): JobName %s contains one "
+                  "or more illegal characters (", dagFile, lineNum, nodeName );
+        for( unsigned int i = 0; i < strlen( ILLEGAL_CHARS ); i++ ) {
+            errorMessage += "'";
+            errorMessage += ILLEGAL_CHARS[i];
+            errorMessage += "'";         
+            if( i < strlen( ILLEGAL_CHARS ) - 1 ) {
+                errorMessage += ", ";
+            }
+        }
+        errorMessage += ")\n";
+        debug_printf( DEBUG_QUIET, errorMessage.Value() );
+        return false;
     }
 
 	MyString tmpNodeName = munge_job_name(nodeName);
