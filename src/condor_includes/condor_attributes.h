@@ -56,6 +56,8 @@
 #define ATTR_AVAIL_SINCE  "AvailSince"
 #define ATTR_AVAIL_TIME  "AvailTime"
 #define ATTR_AVAIL_TIME_ESTIMATE  "AvailTimeEstimate"
+#define ATTR_AZURE_ADMIN_USERNAME  "AzureAdminUsername"
+#define ATTR_AZURE_ADMIN_KEY  "AzureAdminKey"
 #define ATTR_AZURE_AUTH_FILE  "AzureAuthFile"
 #define ATTR_AZURE_IMAGE  "AzureImage"
 #define ATTR_AZURE_LOCATION  "AzureLocation"

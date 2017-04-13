@@ -35,7 +35,7 @@ const char *AzureResource::HashName( const char *resource_name,
                                      const char *auth_file )
 {
 	static std::string hash_name;
-	formatstr( hash_name, "azure %s %s %s#%s", resource_name, subscription, auth_file );
+	formatstr( hash_name, "azure %s %s#%s", resource_name, subscription, auth_file );
 	return hash_name.c_str();
 }
 
@@ -127,7 +127,7 @@ void AzureResource::PublishResourceAd( ClassAd *resource_ad )
 	BaseResource::PublishResourceAd( resource_ad );
 
 	resource_ad->Assign( ATTR_AZURE_AUTH_FILE, m_auth_file );
-	resource_ad->Assign( ATTR_AZURE_SUBSCRIPTION, m_project );
+	resource_ad->Assign( ATTR_AZURE_SUBSCRIPTION, m_subscription );
 
 	gahp->PublishStats( resource_ad );
 }
@@ -143,7 +143,7 @@ void AzureResource::DoPing( unsigned& ping_delay, bool& ping_complete, bool& pin
 	ping_delay = 0;
 
 	std::string error_code;
-	int rc = gahp->azure_ping( resourceName, m_auth_file, m_subscription );
+	int rc = gahp->azure_ping( m_auth_file, m_subscription );
 
 	if ( rc == GAHPCLIENT_COMMAND_PENDING ) {
 		ping_complete = false;
@@ -177,12 +177,10 @@ AzureResource::BatchStatusResult AzureResource::StartBatchStatus() {
 
 	StringList vm_name_list;
 	StringList vm_status_list;
-	StringList vm_ip_addr_list;
-	int rc = status_gahp->azure_vm_list( resourceName, m_auth_file,
+	int rc = status_gahp->azure_vm_list( m_auth_file,
 	                                     m_subscription,
 	                                     vm_name_list,
-	                                     vm_status_list,
-	                                     vm_ip_addr_list );
+	                                     vm_status_list );
 
 	if( rc == GAHPCLIENT_COMMAND_PENDING ) { return BSR_PENDING; }
 
@@ -202,7 +200,7 @@ AzureResource::BatchStatusResult AzureResource::StartBatchStatus() {
 	while ( (nextBaseJob = registeredJobs.Next()) ) {
 		nextJob = dynamic_cast< AzureJob * >( nextBaseJob );
 		ASSERT( nextJob );
-		if ( !nextJob->m_instanceName.empty() ) {
+		if ( !nextJob->m_vmName.empty() ) {
 			myJobs.Append( nextJob );
 		}
 	}
@@ -210,17 +208,18 @@ AzureResource::BatchStatusResult AzureResource::StartBatchStatus() {
 	int job_cnt = vm_name_list.number();
 	vm_name_list.rewind();
 	vm_status_list.rewind();
-	vm_ip_addr_list.rewind();
 	ASSERT( vm_status_list.number() == job_cnt );
-	ASSERT( vm_ip_addr_list.number() == job_cnt );
 	for( int i = 0; i < job_cnt; i++ ) {
 		std::string vm_name = vm_name_list.next();
 		std::string vm_status = vm_status_list.next();
-		std::string vm_ip_addr = vm_ip_addr_list.next();
+
+		// Resource names are case-insenstive. We generate lower-case
+		// names, but the gahp returns upper-case names.
+		lower_case( vm_name );
 
 		// First, lookup the job using vm_name
 		std::string remote_job_id;
-		formatstr( remote_job_id, "azure %s %s", resourceName, vm_name.c_str() );
+		formatstr( remote_job_id, "azure %s", vm_name.c_str() );
 
 		BaseJob * tmp = NULL;
 		rc = BaseJob::JobsByRemoteId.lookup( HashKey( remote_job_id.c_str() ), tmp );
@@ -235,8 +234,7 @@ AzureResource::BatchStatusResult AzureResource::StartBatchStatus() {
 
 			dprintf( D_FULLDEBUG, "Found job object via vm name for '%s', updating status ('%s').\n", vm_name.c_str(), vm_status.c_str() );
 			// TODO Can we get public DNS name?
-			job->StatusUpdate( vm_name.c_str(), instance_status.c_str(),
-							   vm_ip_addr.c_str(), NULL );
+			job->StatusUpdate( vm_status.c_str() );
 			myJobs.Delete( job );
 		} else {
 			dprintf( D_FULLDEBUG, "Found unknown vm name='%s'; skipping.\n",
@@ -247,7 +245,7 @@ AzureResource::BatchStatusResult AzureResource::StartBatchStatus() {
 	myJobs.Rewind();
 	while( ( nextJob = myJobs.Next() ) ) {
 		dprintf( D_FULLDEBUG, "Informing job %p it got no status.\n", nextJob );
-		nextJob->StatusUpdate( NULL, NULL, NULL, NULL );
+		nextJob->StatusUpdate( NULL );
 	}
 
 	return BSR_DONE;

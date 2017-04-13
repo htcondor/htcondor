@@ -6624,10 +6624,10 @@ int GahpClient::azure_ping( const std::string &auth_file,
 	return GAHPCLIENT_COMMAND_PENDING;
 }
 
-int GahpClientazure_vm_create( const std::string &auth_file,
-		                       const std::string &subscription,
-		                       StringList &vm_params, std::string &vm_id,
-                               std::string &ip_address )
+int GahpClient::azure_vm_create( const std::string &auth_file,
+                                 const std::string &subscription,
+                                 StringList &vm_params, std::string &vm_id,
+                                 std::string &ip_address )
 {
 	static const char* command = "AZURE_VM_CREATE";
 
@@ -6753,7 +6753,7 @@ int GahpClient::azure_vm_list( const std::string &auth_file,
 		                       StringList &vm_names,
 		                       StringList &vm_statuses )
 {
-	static const char* command = "GCE_INSTANCE_LIST";
+	static const char* command = "AZURE_VM_LIST";
 
 	// Generate request line
 	std::string reqline;

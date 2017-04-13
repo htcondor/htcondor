@@ -40,7 +40,7 @@ using namespace std;
 
 #define GM_INIT							0
 #define GM_START_VM						1
-#define GM_VM_INFO						2
+#define GM_SAVE_VM_INFO					2
 #define GM_SUBMITTED					3
 #define GM_DONE_SAVE					4
 #define GM_CANCEL						5
@@ -48,7 +48,7 @@ using namespace std;
 #define GM_CLEAR_REQUEST				7
 #define GM_HOLD							8
 #define GM_PROBE_JOB					9
-#define GM_SAVE_INSTANCE_NAME			10
+#define GM_SAVE_VM_NAME					10
 #define GM_CHECK_SUBMISSION				11
 
 static const char *GMStateNames[] = {
@@ -62,14 +62,14 @@ static const char *GMStateNames[] = {
 	"GM_CLEAR_REQUEST",
 	"GM_HOLD",
 	"GM_PROBE_JOB",
-	"GM_SAVE_INSTANCE_NAME",
+	"GM_SAVE_VM_NAME",
 	"GM_CHECK_SUBMISSION",
 };
 
-#define AZURE_VM_STARTING		"VM starting"
-#define AZURE_VM_RUNNING		"VM running"
-#define AZURE_VM_DEALLOCATING	"VM deallocating"
-#define AZURE_VM_DEALLOCATED	"VM deallocated"
+#define AZURE_VM_STARTING		"starting"
+#define AZURE_VM_RUNNING		"running"
+#define AZURE_VM_DEALLOCATING	"deallocating"
+#define AZURE_VM_DEALLOCATED	"deallocated"
 
 // TODO: Let the maximum submit attempts be set in the job ad or, better yet,
 // evalute PeriodicHold expression in job ad.
@@ -134,9 +134,6 @@ AzureJob::AzureJob( ClassAd *classad ) :
 {
 	string error_string = "";
 	char *gahp_path = NULL;
-	char *gahp_log = NULL;
-	int gahp_worker_cnt = 0;
-	char *gahp_debug = NULL;
 	string value;
 
 	remoteJobState = "";
@@ -267,9 +264,6 @@ AzureJob::~AzureJob()
 {
 	if ( myResource ) {
 		myResource->UnregisterJob( this );
-		if( ! m_instanceId.empty() ) {
-			myResource->jobsByInstanceID.remove( HashKey( m_instanceId.c_str() ) );
-		}
 	}
 	delete gahp;
 }
@@ -291,6 +285,7 @@ void AzureJob::doEvaluateState()
 	bool attr_dirty;
 	int rc;
 	std::string gahp_error_code;
+	std::string tmp_str;
 
 	daemonCore->Reset_Timer( evaluateStateTid, TIMER_NEVER );
 
@@ -354,7 +349,7 @@ void AzureJob::doEvaluateState()
 				//
 				if( ! myResource->didFirstPing() ) { break; }
 				if( myResource->hadAuthFailure() ) {
-					if( condorState == REMOVED && m_instanceName.empty() && m_instanceId.empty() ) {
+					if( condorState == REMOVED && m_vmName.empty() ) {
 						gmState = GM_DELETE;
 						break;
 					} else {
@@ -367,11 +362,10 @@ void AzureJob::doEvaluateState()
 					}
 				}
 
-				std::string vm_id;
-				if ( m_instanceName.empty() ) {
+				if ( m_vmName.empty() ) {
 					// This is a fresh job submission.
 					gmState = GM_CLEAR_REQUEST;
-				} else if ( !jobAd->LookupString( ATTR_AZURE_VM_ID, vm_id ) ) {
+				} else if ( !jobAd->LookupString( ATTR_AZURE_VM_ID, tmp_str ) ) {
 					// We died during submission. There may be a running
 					// vm whose ID we don't know.
 					// Wait for a bulk query of vms and see if a vm
@@ -388,12 +382,7 @@ void AzureJob::doEvaluateState()
 				}
 				break;
 
-
-			case GM_SAVE_INSTANCE_NAME: {
-				// If we don't know yet what type of server we're talking
-				// to (e.g. all pings have failed because the server's
-				// down), we have to wait here, as that affects how we'll
-				// submit the job.
+			case GM_SAVE_VM_NAME: {
 				if ( condorState == REMOVED || condorState == HELD ) {
 					gmState = GM_CLEAR_REQUEST;
 					break;
@@ -491,16 +480,8 @@ void AzureJob::doEvaluateState()
 					}
 
 				} else {
-					if ( (condorState == REMOVED) || (condorState == HELD) ) {
-						gmState = GM_CANCEL;
-						break;
-					}
-
-					unsigned int delay = 0;
-					if ( (lastSubmitAttempt + submitInterval) > now ) {
-						delay = (lastSubmitAttempt + submitInterval) - now;
-					}
-					daemonCore->Reset_Timer( evaluateStateTid, delay );
+					gmState = GM_CANCEL;
+					break;
 				}
 
 				break;
@@ -585,7 +566,6 @@ void AzureJob::doEvaluateState()
 
 
 			case GM_CLEAR_REQUEST: {
-				std::string tmp_str;
 				m_retry_times = 0;
 
 				// Remove all knowledge of any previous or present job
@@ -602,7 +582,7 @@ void AzureJob::doEvaluateState()
 				// forgetting about current submission and trying again.
 				// TODO: Let our action here be dictated by the user preference
 				// expressed in the job ad.
-				if ( !m_instanceId.empty() && condorState != REMOVED
+				if ( !m_vmName.empty() && condorState != REMOVED
 					 && wantResubmit == 0 && doResubmit == 0 ) {
 					gmState = GM_HOLD;
 					break;
@@ -627,8 +607,12 @@ void AzureJob::doEvaluateState()
 
 				errorString = "";
 				myResource->CancelSubmit( this );
-				SetInstanceId( NULL );
-				SetInstanceName( NULL );
+				// TODO Can we make SetRemoteJobId() more intelligent
+				//   about not dirtying the job if the value won't
+				//   change?
+				if ( !m_vmName.empty() ) {
+					SetRemoteJobId( NULL );
+				}
 				if ( jobAd->LookupString( ATTR_AZURE_VM_ID, tmp_str ) ) {
 					jobAd->AssignExpr( ATTR_AZURE_VM_ID, "Undefined" );
 				}
@@ -695,7 +679,7 @@ void AzureJob::doEvaluateState()
 				if ( (condorState == REMOVED) || (condorState == HELD) ) {
 					gmState = GM_DELETE;
 				} else {
-					gmState = GM_SAVE_INSTANCE_NAME;
+					gmState = GM_SAVE_VM_NAME;
 				}
 			} break;
 
@@ -738,7 +722,7 @@ void AzureJob::doEvaluateState()
 					break;
 				}
 
-				if( rc != 0 && !strstr( gahp->getErrorString(), "was not found" ) ) {
+				if( rc != 0 && !strstr( gahp->getErrorString(), "could not be found" ) ) {
 					errorString = gahp->getErrorString();
 					dprintf( D_ALWAYS, "(%d.%d) job cancel failed: %s: %s\n",
 							 procID.cluster, procID.proc,
@@ -754,8 +738,7 @@ void AzureJob::doEvaluateState()
 				} else {
 					// Clear the contact string here because it may not get
 					// cleared in GM_CLEAR_REQUEST (it might go to GM_HOLD first).
-					SetInstanceId( NULL );
-					SetInstanceName( NULL );
+					SetRemoteJobId( NULL );
 					gmState = GM_CLEAR_REQUEST;
 				}
 				break;
@@ -865,6 +848,16 @@ void AzureJob::SetRemoteJobId( const char *vm_name )
 // Instance name is max 64 characters, alphanumberic, underscore, and hyphen
 string AzureJob::build_vm_name()
 {
+	// TODO Currently, a storage account name is derived from our
+	//   unique name, and those have max length 24 and must be
+	//   alphanumeric.
+	//   Once the gahp can support using managed disks in Azure,
+	//   this naming restriction will go away.
+#if 1
+	string final_str;
+	formatstr( final_str, "condorc%dp%d", procID.cluster, procID.proc );
+	return final_str;
+#else
 #ifdef WIN32
 	GUID guid;
 	if (S_OK != CoCreateGuid(&guid))
@@ -891,6 +884,7 @@ string AzureJob::build_vm_name()
 	final_str += uuid_str;
 	return final_str;
 #endif
+#endif
 }
 
 bool AzureJob::BuildVmParams()
@@ -900,7 +894,7 @@ bool AzureJob::BuildVmParams()
 
 	m_vmParams.clearAll();
 
-	name_value = "rgName=";
+	name_value = "name=";
 	name_value += m_vmName;
 	m_vmParams.append( name_value.c_str() );
 
@@ -928,11 +922,40 @@ bool AzureJob::BuildVmParams()
 	name_value += value;
 	m_vmParams.append( name_value.c_str() );
 
+	if ( !jobAd->LookupString( ATTR_AZURE_ADMIN_USERNAME, value ) ) {
+		errorString = "Missing attribute " ATTR_AZURE_ADMIN_USERNAME;
+		return false;
+	}
+	name_value = "adminUsername=";
+	name_value += value;
+	m_vmParams.append( name_value.c_str() );
+
+	if ( !jobAd->LookupString( ATTR_AZURE_ADMIN_KEY, value ) ) {
+		errorString = "Missing attribute " ATTR_AZURE_ADMIN_KEY;
+		return false;
+	}
+	name_value = "key=";
+	name_value += value;
+	m_vmParams.append( name_value.c_str() );
+
 	return true;
 }
 
 void AzureJob::StatusUpdate( const char * status )
 {
+	// Currently, the AZURE_VM_LIST command returns a series of State
+	// attributes for the vm, as illustrated below.
+	// We only care about hte PowerState, which we assume will be
+	// last.
+	// Example:
+	//   ProvisioningState/succeeded,OSState/generalized,PowerState/deallocated
+	if ( status ) {
+		const char *ptr = strrchr( status, '/' );
+		if ( ptr ) {
+			status = ptr + 1;
+		}
+	}
+
 	// If the bulk status update didn't find this job, assume it's gone.
 	// We use submitLogged as an indicator that we know that the vm
 	// was successfully created.

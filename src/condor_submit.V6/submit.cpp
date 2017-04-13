@@ -668,6 +668,8 @@ const char *AzureAuthFile = "azure_auth_file";
 const char *AzureLocation = "azure_location";
 const char *AzureSize = "azure_size";
 const char *AzureImage = "azure_image";
+const char *AzureAdminUsername = "azure_admin_username";
+const char *AzureAdminKey = "azure_admin_key";
 
 char const *next_job_start_delay = "next_job_start_delay";
 char const *next_job_start_delay2 = "NextJobStartDelay";
@@ -6872,6 +6874,26 @@ SetGridParams()
 		free( tmp );
 	} else if ( JobGridType && strcasecmp( JobGridType, "azure" ) == 0 ) {
 		fprintf(stderr, "\nERROR: Azure jobs require an \"%s\" parameter\n", AzureSize );
+		DoCleanup( 0, 0, NULL );
+		exit( 1 );
+	}
+
+	if ( (tmp = condor_param( AzureAdminUsername, ATTR_AZURE_ADMIN_USERNAME )) ) {
+		buffer.formatstr( "%s = \"%s\"", ATTR_AZURE_ADMIN_USERNAME, tmp );
+		InsertJobExpr( buffer.Value() );
+		free( tmp );
+	} else if ( JobGridType && strcasecmp( JobGridType, "azure" ) == 0 ) {
+		fprintf(stderr, "\nERROR: Azure jobs require an \"%s\" parameter\n", AzureAdminUsername );
+		DoCleanup( 0, 0, NULL );
+		exit( 1 );
+	}
+
+	if ( (tmp = condor_param( AzureAdminKey, ATTR_AZURE_ADMIN_KEY )) ) {
+		buffer.formatstr( "%s = \"%s\"", ATTR_AZURE_ADMIN_KEY, tmp );
+		InsertJobExpr( buffer.Value() );
+		free( tmp );
+	} else if ( JobGridType && strcasecmp( JobGridType, "azure" ) == 0 ) {
+		fprintf(stderr, "\nERROR: Azure jobs require an \"%s\" parameter\n", AzureAdminKey );
 		DoCleanup( 0, 0, NULL );
 		exit( 1 );
 	}

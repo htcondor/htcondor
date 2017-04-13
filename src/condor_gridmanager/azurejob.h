@@ -89,8 +89,6 @@ private:
 
 	int m_retry_times;
 	
-	std::string m_vmName;
-
 	StringList m_vmParams;
 
 	// This is actually a global.

@@ -3563,59 +3563,73 @@ int SubmitHash::SetGridParams()
 	//
 	// Azure grid-type submit attributes
 	//
-	if ( (tmp = condor_param( AzureAuthFile, ATTR_AZURE_AUTH_FILE )) ) {
+	if ( (tmp = submit_param( SUBMIT_KEY_AzureAuthFile, ATTR_AZURE_AUTH_FILE )) ) {
 		// check auth file can be opened
 		if ( !DisableFileChecks ) {
 			if( ( fp=safe_fopen_wrapper_follow(full_path(tmp),"r") ) == NULL ) {
-				fprintf( stderr, "\nERROR: Failed to open auth file %s (%s)\n", 
-						 full_path(tmp), strerror(errno));
-				exit(1);
+				push_error(stderr, "\nERROR: Failed to open auth file %s (%s)\n", 
+				           full_path(tmp), strerror(errno));
+				ABORT_AND_RETURN(1);
 			}
 			fclose(fp);
 
 			StatInfo si(full_path(tmp));
 			if (si.IsDirectory()) {
-				fprintf(stderr, "\nERROR: %s is a directory\n", full_path(tmp));
-				exit(1);
+				push_error(stderr, "\nERROR: %s is a directory\n", full_path(tmp));
+				ABORT_AND_RETURN( 1 );
 			}
 		}
 		buffer.formatstr( "%s = \"%s\"", ATTR_AZURE_AUTH_FILE, full_path(tmp) );
 		InsertJobExpr( buffer.Value() );
 		free( tmp );
-	} else if ( JobGridType && strcasecmp( JobGridType, "azure" ) == 0 ) {
-		fprintf(stderr, "\nERROR: Azure jobs require an \"%s\" parameter\n", AzureAuthFile );
-		DoCleanup( 0, 0, NULL );
-		exit( 1 );
+	} else if ( gridType == "azure" ) {
+		push_error(stderr, "\nERROR: Azure jobs require an \"%s\" parameter\n", SUBMIT_KEY_AzureAuthFile );
+		ABORT_AND_RETURN( 1 );
 	}
 
-	if ( (tmp = condor_param( AzureImage, ATTR_AZURE_IMAGE )) ) {
+	if ( (tmp = submit_param( SUBMIT_KEY_AzureImage, ATTR_AZURE_IMAGE )) ) {
 		buffer.formatstr( "%s = \"%s\"", ATTR_AZURE_IMAGE, tmp );
 		InsertJobExpr( buffer.Value() );
 		free( tmp );
-	} else if ( JobGridType && strcasecmp( JobGridType, "azure" ) == 0 ) {
-		fprintf(stderr, "\nERROR: Azure jobs require an \"%s\" parameter\n", AzureImage );
-		DoCleanup( 0, 0, NULL );
-		exit( 1 );
+	} else if ( gridType == "azure" ) {
+		push_error(stderr, "\nERROR: Azure jobs require an \"%s\" parameter\n", SUBMIT_KEY_AzureImage );
+		ABORT_AND_RETURN( 1 );
 	}
 
-	if ( (tmp = condor_param( AzureLocation, ATTR_AZURE_LOCATION )) ) {
+	if ( (tmp = submit_param( SUBMIT_KEY_AzureLocation, ATTR_AZURE_LOCATION )) ) {
 		buffer.formatstr( "%s = \"%s\"", ATTR_AZURE_LOCATION, tmp );
 		InsertJobExpr( buffer.Value() );
 		free( tmp );
-	} else if ( JobGridType && strcasecmp( JobGridType, "azure" ) == 0 ) {
-		fprintf(stderr, "\nERROR: Azure jobs require an \"%s\" parameter\n", AzureLocation );
-		DoCleanup( 0, 0, NULL );
-		exit( 1 );
+	} else if ( gridType == "azure" ) {
+		push_error(stderr, "\nERROR: Azure jobs require an \"%s\" parameter\n", SUBMIT_KEY_AzureLocation );
+		ABORT_AND_RETURN( 1 );
 	}
 
-	if ( (tmp = condor_param( AzureSize, ATTR_AZURE_SIZE )) ) {
+	if ( (tmp = submit_param( SUBMIT_KEY_AzureSize, ATTR_AZURE_SIZE )) ) {
 		buffer.formatstr( "%s = \"%s\"", ATTR_AZURE_SIZE, tmp );
 		InsertJobExpr( buffer.Value() );
 		free( tmp );
-	} else if ( JobGridType && strcasecmp( JobGridType, "azure" ) == 0 ) {
-		fprintf(stderr, "\nERROR: Azure jobs require an \"%s\" parameter\n", AzureSize );
-		DoCleanup( 0, 0, NULL );
-		exit( 1 );
+	} else if ( gridType == "azure" ) {
+		push_error(stderr, "\nERROR: Azure jobs require an \"%s\" parameter\n", SUBMIT_KEY_AzureSize );
+		ABORT_AND_RETURN( 1 );
+	}
+
+	if ( (tmp = submit_param( SUBMIT_KEY_AzureAdminUsername, ATTR_AZURE_ADMIN_USERNAME )) ) {
+		buffer.formatstr( "%s = \"%s\"", ATTR_AZURE_ADMIN_USERNAME, tmp );
+		InsertJobExpr( buffer.Value() );
+		free( tmp );
+	} else if ( gridType == "azure" ) {
+		push_error(stderr, "\nERROR: Azure jobs require an \"%s\" parameter\n", SUBMIT_KEY_AzureAdminUsername );
+		ABORT_AND_RETURN( 1 );
+	}
+
+	if ( (tmp = submit_param( SUBMIT_KEY_AzureAdminKey, ATTR_AZURE_ADMIN_KEY )) ) {
+		buffer.formatstr( "%s = \"%s\"", ATTR_AZURE_ADMIN_KEY, tmp );
+		InsertJobExpr( buffer.Value() );
+		free( tmp );
+	} else if ( gridType == "azure" ) {
+		push_error(stderr, "\nERROR: Azure jobs require an \"%s\" parameter\n", SUBMIT_KEY_AzureAdminKey );
+		ABORT_AND_RETURN( 1 );
 	}
 
 	// CREAM clients support an alternate representation for resources:

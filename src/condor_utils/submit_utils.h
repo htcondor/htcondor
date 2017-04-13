@@ -259,6 +259,14 @@
 #define SUBMIT_KEY_GceMetadataFile "gce_metadata_file"
 #define SUBMIT_KEY_GcePreemptible "gce_preemptible"
 
+// Azure Parameters
+#define SUBMIT_KEY_AzureAuthFile "azure_auth_file"
+#define SUBMIT_KEY_AzureLocation "azure_location"
+#define SUBMIT_KEY_AzureSize "azure_size"
+#define SUBMIT_KEY_AzureImage "azure_image"
+#define SUBMIT_KEY_AzureAdminUsername "azure_admin_username"
+#define SUBMIT_KEY_AzureAdminKey "azure_admin_key"
+
 #define SUBMIT_KEY_NextJobStartDelay "next_job_start_delay"
 #define SUBMIT_KEY_WantGracefulRemoval "want_graceful_removal"
 #define SUBMIT_KEY_JobMaxVacateTime "job_max_vacate_time"
