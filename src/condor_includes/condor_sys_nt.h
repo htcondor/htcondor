@@ -69,6 +69,9 @@
 // the ordering of the two following header files 
 // is important! Starting with the new SDK, we want 
 // winsock2.h not winsock.h, so we include it first. 
+#ifndef _WINSOCK_DEPRECATED_NO_WARNINGS // Shut up Visual Studio 2013+
+#define _WINSOCK_DEPRECATED_NO_WARNINGS
+#endif
 #include <winsock2.h>
 #include <windows.h>
 

@@ -22,6 +22,9 @@
 #define SAFE_SOCK_H
 
 #if defined(WIN32)
+#ifndef _WINSOCK_DEPRECATED_NO_WARNINGS // Shut up Visual Studio 2013+
+#define _WINSOCK_DEPRECATED_NO_WARNINGS
+#endif
 #include <winsock2.h>
 #else
 #include <netinet/in.h>
