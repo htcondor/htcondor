@@ -315,8 +315,13 @@ int  MaterializeNextFactoryJob(JobFactory * factory, JobQueueJob * ClusterAd)
 
 	// item index is optional, if missing, the value is 0 and the item is the empty string.
 	int item_index = 0;
-	if (no_items || ClusterAd->LookupInteger(ATTR_JOB_MATERIALIZE_NEXT_ROW, item_index)) {
+	if (no_items || ! ClusterAd->LookupInteger(ATTR_JOB_MATERIALIZE_NEXT_ROW, item_index)) {
 		item_index = next_proc_id / step_size;
+	}
+	if (item_index < 0) {
+		// we are done
+		dprintf(D_MATERIALIZE | D_VERBOSE, "Materialize for cluster %d is done. JobMaterializeNextRow is %d\n", ClusterAd->jid.cluster, item_index);
+		return 0; 
 	}
 	int row  = item_index;
 	
@@ -329,6 +334,7 @@ int  MaterializeNextFactoryJob(JobFactory * factory, JobQueueJob * ClusterAd)
 	int row_num = factory->LoadRowData(row, check_empty ? &empty_var_names : NULL);
 	if (row_num < row) {
 		// we are done
+		dprintf(D_MATERIALIZE | D_VERBOSE, "Materialize for cluster %d is done. LoadRowData returned %d for row %d\n", ClusterAd->jid.cluster, row_num, row);
 		return 0; 
 	}
 	// report empty vars.. do we still want to do this??
@@ -348,7 +354,7 @@ int  MaterializeNextFactoryJob(JobFactory * factory, JobQueueJob * ClusterAd)
 	if ( ! no_items && (step+1 == step_size)) {
 		int next_row = factory->NextSelectedRow(row);
 		if (next_row != item_index) {
-			SetAttributeInt(ClusterAd->jid.cluster, ClusterAd->jid.proc, ATTR_JOB_MATERIALIZE_NEXT_ROW, row);
+			SetAttributeInt(ClusterAd->jid.cluster, ClusterAd->jid.proc, ATTR_JOB_MATERIALIZE_NEXT_ROW, next_row);
 		}
 	}
 
@@ -439,6 +445,9 @@ int JobFactory::LoadDigest(std::string & errmsg)
 
 			// optimize the submit hash for lookups if we inserted anything.  we expect this to happen only once.
 			this->optimize();
+
+			// load the foreach data
+			rval = load_q_foreach_items(fp_digest, source, fea, errmsg);
 		}
 	}
 
@@ -456,16 +465,29 @@ int JobFactory::LoadRowData(int row, std::string * empty_var_names /*=NULL*/)
 	const char* token_seps = ", \t";
 	const char* token_ws = " \t";
 
+	int loaded_row = row;
 	char * item = emptyItemString;
-	//PRAGMA_REMIND("TODO: read item from the foreach file")
+	if (fea.foreach_mode != foreach_not) {
+		loaded_row = 0;
+		item = fea.items.first();
+		for (int ix = 1; ix <= row; ++ix) {
+			item = fea.items.next();
+			if (item) {
+				loaded_row = ix;
+			} else {
+				break;
+			}
+		}
+	}
+
+	// If there are loop variables, destructively tokenize item and stuff the tokens into the submit hashtable.
+	if ( ! item) { item = emptyItemString; }
 
 	if (fea.vars.isEmpty()) {
 		set_live_submit_variable("item", item, true);
 		return 0;
 	}
 
-	// If there are loop variables, destructively tokenize item and stuff the tokens into the submit hashtable.
-	if ( ! item) { item = emptyItemString; }
 
 	// set the first loop variable unconditionally, we set it initially to the whole item
 	// we may later truncate that item when we assign fields to other loop variables.
@@ -501,7 +523,7 @@ int JobFactory::LoadRowData(int row, std::string * empty_var_names /*=NULL*/)
 		}
 	}
 
-	return row;
+	return loaded_row;
 }
 
 
