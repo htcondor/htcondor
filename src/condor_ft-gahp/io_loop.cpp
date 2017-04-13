@@ -28,7 +28,9 @@
 #include "globus_utils.h"
 #include "subsystem_info.h"
 #include "file_transfer.h"
-#include "openssl/md5.h"
+#ifdef HAVE_EXT_OPENSSL
+#include <openssl/md5.h>
+#endif
 #include "directory.h"
 #include "_unordered_map.h"
 #include "basename.h"
@@ -950,6 +952,7 @@ define_sandbox_path(std::string sid, std::string &path)
 	free(t_path);
 
 
+#ifdef HAVE_EXT_OPENSSL
 	// hash the id into ascii.  MD5 is fine here, because we use the actual
 	// sandbox id as part of the path, thus making it immune to MD5 collisions.
 	// we're only using it to keep filesystems free of directories that contain
@@ -981,6 +984,7 @@ define_sandbox_path(std::string sid, std::string &path)
 	path += c_hex_md5[5];
 	path += c_hex_md5[6];
 	path += c_hex_md5[7];
+#endif // ifdef HAVE_EXT_OPENSSL
 	path += DIR_DELIM_CHAR;
 	path += sid;
 
