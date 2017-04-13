@@ -3,15 +3,21 @@
 #define CURL_STATICLIB // this has to match the way the curl library was built.
 #define strcasecmp _stricmp
 #define strncasecmp _strnicmp
+#else
+#include <unistd.h>
 #endif
 
 #include <curl/curl.h>
 #include <string.h>
 
+#define MAX_RETRY_ATTEMPTS 20
+
+int send_curl_request(char** argv, int diagnostic, CURL* handle);
+
 int main(int argc, char **argv) {
 	CURL *handle = NULL;
+	int retry_count = 0;
 	int rval = -1;
-	FILE *file = NULL;
 	int   diagnostic = 0;
 
 	if(argc == 2 && strcmp(argv[1], "-classad") == 0) {
@@ -37,6 +43,43 @@ int main(int argc, char **argv) {
 		return -1;
 	}
 
+	// Enter the loop that will attempt the curl request + retry under certain conditions
+	for(;;) {
+    
+        // The sleep function is defined differently in Windows and Linux
+        #ifdef WIN32
+    		Sleep((retry_count++) * 1000);
+        #else
+            sleep(retry_count++);
+        #endif
+        
+		rval = send_curl_request(argv, diagnostic, handle);
+
+		// If curl request is successful, break out of the loop
+		if(rval == CURLE_OK) {	
+            break;
+		}
+		// If we have not exceeded the maximum number of retries, and we encounter
+		// a non-fatal error, stay in the loop and try again
+		else if(retry_count <= MAX_RETRY_ATTEMPTS && (rval == CURLE_COULDNT_CONNECT ||rval == CURLE_OPERATION_TIMEDOUT)) {
+			continue;
+		}
+		// On fatal errors, break out of the loop
+		else {
+			break;
+		}
+	}
+    curl_easy_cleanup(handle);
+    curl_global_cleanup();
+    return rval;	// 0 on success
+}
+
+
+int send_curl_request(char** argv, int diagnostic, CURL *handle) {
+    char error_buffer[CURL_ERROR_SIZE];
+	FILE *file = NULL;
+	int rval = -1;	
+
 	if ( !strncasecmp( argv[1], "http://", 7 ) ||
 		 !strncasecmp( argv[1], "ftp://", 6 ) ||
 		 !strncasecmp( argv[1], "file://", 7 ) ) {
@@ -53,33 +96,43 @@ int main(int argc, char **argv) {
 			if (diagnostic) { fprintf(stderr, "fetching %s to %s\n", argv[1], argv[2]); }
 		}
 		if(file) {
-			curl_easy_setopt(handle, CURLOPT_URL, argv[1]);
+ 			
+            curl_easy_setopt(handle, CURLOPT_URL, argv[1]);
 			curl_easy_setopt(handle, CURLOPT_WRITEDATA, file);
 			curl_easy_setopt(handle, CURLOPT_FOLLOWLOCATION, -1);
-			// Does curl protect against redirect loops otherwise?  It's
+            
+            // Setup a buffer to store error messages. For debug use.
+            error_buffer[0] = 0;
+            curl_easy_setopt(handle, CURLOPT_ERRORBUFFER, error_buffer); 
+
+            // Does curl protect against redirect loops otherwise?  It's
 			// unclear how to tune this constant.
 			// curl_easy_setopt(handle, CURLOPT_MAXREDIRS, 1000);
 			rval = curl_easy_perform(handle);
-
-			if (diagnostic && rval) {
+            if (diagnostic && rval) {
 				fprintf(stderr, "curl_easy_perform returned CURLcode %d: %s\n", 
 						rval, curl_easy_strerror((CURLcode)rval)); 
 			}
 			if (close_output) {
-				fclose(file); file = NULL; 
+				fclose(file); 
+                file = NULL; 
 			}
 
-			if( rval == 0 ) {
+            // Check the HTTP response code. If the code indicates an error, then set rval accordingly.
+            if( rval == 0 ) {
 				char * finalURL = NULL;
 				rval = curl_easy_getinfo( handle, CURLINFO_EFFECTIVE_URL, & finalURL );
-
-				if( rval == 0 ) {
+                if( rval == 0 ) {
 					if( strstr( finalURL, "http" ) == finalURL ) {
 						long httpCode = 0;
 						rval = curl_easy_getinfo( handle, CURLINFO_RESPONSE_CODE, & httpCode );
-
-						if( rval == 0 ) {
-							if( httpCode != 200 ) { rval = 1; }
+                        if( rval == 0 ) {
+							if( httpCode != 200 ) { 
+                                rval = 1; 
+                            }
+                            if(httpCode >= 400) {
+                                rval = CURLE_HTTP_RETURNED_ERROR;
+                            }
 						}
 					}
 				}
@@ -133,10 +186,5 @@ int main(int argc, char **argv) {
 		}
 
 	}
-
-	curl_easy_cleanup(handle);
-
-	curl_global_cleanup();
-
-	return rval;	// 0 on success
+    return rval;    // 0 on success
 }
