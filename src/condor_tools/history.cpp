@@ -681,7 +681,7 @@ main(int argc, const char* argv[])
 			// to use quill, so get the schedd ad for the local machine if
 			// we can, figure out the name of the schedd and the 
 			// jobqueuebirthdate
-		Daemon schedd( DT_SCHEDD, 0, 0 );
+		DaemonAllowLocateFull schedd( DT_SCHEDD, 0, 0 );
 
         if ( schedd.locate(Daemon::LOCATE_FULL) ) {
 			char *scheddname = quillName;	

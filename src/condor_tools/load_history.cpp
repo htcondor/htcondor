@@ -133,9 +133,9 @@ main(int argc, char* argv[])
         fprintf(stdout, "You specified Schedd name without a Job Queue"
                         "Birthdate. Ignoring value %s\n", ScheddName);
         
-    Daemon schedd( DT_SCHEDD, 0, 0 );
+    DaemonAllowLocateFull schedd( DT_SCHEDD, 0, 0 );
 
-    if ( schedd.locate() ) {
+    if ( schedd.locate(DAEMON::LOCATE_FULL) ) {
         char *scheddname; 
         if( (scheddname = schedd.name()) ) {
             ScheddName = strdup(scheddname);

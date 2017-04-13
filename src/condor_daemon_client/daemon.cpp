@@ -72,6 +72,11 @@ Daemon::common_init() {
 	m_has_udp_command_port = true;
 }
 
+DaemonAllowLocateFull::DaemonAllowLocateFull( daemon_t tType, const char* tName, const char* tPool ) 
+	: Daemon(  tType, tName,  tPool ) 
+{
+
+}
 
 Daemon::Daemon( daemon_t tType, const char* tName, const char* tPool ) 
 {
@@ -104,6 +109,11 @@ Daemon::Daemon( daemon_t tType, const char* tName, const char* tPool )
 			 _addr ? _addr : "NULL" );
 }
 
+DaemonAllowLocateFull::DaemonAllowLocateFull( const ClassAd* tAd, daemon_t tType, const char* tPool ) 
+	: Daemon(  tAd,  tType,  tPool ) 
+{
+
+}
 
 Daemon::Daemon( const ClassAd* tAd, daemon_t tType, const char* tPool ) 
 {
@@ -171,6 +181,11 @@ Daemon::Daemon( const ClassAd* tAd, daemon_t tType, const char* tPool )
 
 }
 
+DaemonAllowLocateFull::DaemonAllowLocateFull( const DaemonAllowLocateFull &copy )
+	: Daemon( copy )
+{
+
+}
 
 Daemon::Daemon( const Daemon &copy ): ClassyCountedPtr()
 {
@@ -180,7 +195,6 @@ Daemon::Daemon( const Daemon &copy ): ClassyCountedPtr()
 	deepCopy( copy );
 }
 
- 
 Daemon&
 Daemon::operator=(const Daemon &copy)
 {
@@ -946,6 +960,12 @@ Daemon::sendCACmd( ClassAd* req, ClassAd* reply, ReliSock* cmd_sock,
 //////////////////////////////////////////////////////////////////////
 // Locate-related methods
 //////////////////////////////////////////////////////////////////////
+
+bool
+DaemonAllowLocateFull::locate( Daemon::LocateType method )
+{
+	return Daemon::locate( method );
+}
 
 bool
 Daemon::locate( Daemon::LocateType method )

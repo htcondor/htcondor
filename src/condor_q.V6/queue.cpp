@@ -171,7 +171,7 @@ static int parse_format_args(int argc, const char * argv[], AttrListPrintMask & 
 }
 
 /* Warn about schedd-wide limits that may confuse analysis code */
-bool warnScheddGlobalLimits(Daemon *schedd,MyString &result_buf);
+bool warnScheddGlobalLimits(DaemonAllowLocateFull *schedd,MyString &result_buf);
 
 static 	int dash_long = 0, dash_tot = 0, global = 0, show_io = 0, dash_dag = 0, show_held = 0;
 static  int dash_batch = 0, dash_batch_specified = 0, dash_batch_is_default = 1;
@@ -340,8 +340,8 @@ static std::vector<const char *> autoformat_args;
 static  int			findSubmittor( const char * );
 static	void 		setupAnalysis();
 static 	int			fetchSubmittorPriosFromNegotiator(ExtArray<PrioEntry> & prios);
-static	void		doJobRunAnalysis(ClassAd*, Daemon*, int details);
-static const char	*doJobRunAnalysisToBuffer(ClassAd *request, Daemon* schedd, anaCounters & ac, bool countMatches, bool noPrio, bool showMachines);
+static	void		doJobRunAnalysis(ClassAd*, DaemonAllowLocateFull*, int details);
+static const char	*doJobRunAnalysisToBuffer(ClassAd *request, DaemonAllowLocateFull* schedd, anaCounters & ac, bool countMatches, bool noPrio, bool showMachines);
 static const char	*doJobMatchAnalysisToBuffer(std::string & return_buf, ClassAd *request, int details);
 
 static	void		doSlotRunAnalysis( ClassAd*, JobClusterMap & clusters, Daemon*, int console_width);
@@ -621,6 +621,17 @@ int main (int argc, const char **argv)
 	install_sig_handler(SIGPIPE, SIG_IGN );
 #endif
 
+	// Setup a default projection for attributes we examine in the schedd/submittor ads.
+	// We do this very early to be a default, as we may override it with more specific
+	// options depending upon command line arguments, e.g. -name.
+	std::vector<std::string> attrs; attrs.reserve(4);
+	attrs.push_back(ATTR_SCHEDD_IP_ADDR);
+	attrs.push_back(ATTR_VERSION);
+	attrs.push_back(ATTR_NAME);
+	attrs.push_back(ATTR_MACHINE);
+	submittorQuery.setDesiredAttrs(attrs);
+	scheddQuery.setDesiredAttrs(attrs);
+
 	if (param_boolean("CONDOR_Q_ONLY_MY_JOBS", true)) {
 		default_fetch_opts |= CondorQ::fetch_MyJobs;
 	} else {
@@ -735,7 +746,7 @@ int main (int argc, const char **argv)
 		}
 	}
 
-	// get the list of ads from the collector
+	// Get the list of ads from the collector.  
 	if( querySchedds ) { 
 		result = Collectors->query ( scheddQuery, scheddList );
 	} else {
@@ -771,13 +782,18 @@ int main (int argc, const char **argv)
 	while ((ad = scheddList.Next()))
 	{
 		/* default to true for remotely queryable */
+
+		/* Warning!! Any attributes you lookup from the ad had better be
+		   included in the list of attributes given to scheddQuery.setDesiredAttrs()
+		   and to submittorQuery.setDesiredAttrs() !!! This is done early in main().
+		*/
 		if ( ! (ad->LookupString(ATTR_SCHEDD_IP_ADDR, &scheddAddr)  &&
 				ad->LookupString(ATTR_NAME, &scheddName) &&
 				ad->LookupString(ATTR_MACHINE, scheddMachine, sizeof(scheddMachine))
 				)
 			)
 		{
-			/* something is wrong with this schedd/quill ad, try the next one */
+			/* something is wrong with this schedd/submittor ad, try the next one */
 			continue;
 		}
 
@@ -3100,7 +3116,7 @@ static void initOutputMask(AttrListPrintMask & prmask, int qdo_mode, bool wide_m
 // Given a list of jobs, do analysis for each job and print out the results.
 //
 static bool
-print_jobs_analysis(ClassAdList & jobs, const char * source_label, Daemon * pschedd_daemon)
+print_jobs_analysis(ClassAdList & jobs, const char * source_label, DaemonAllowLocateFull * pschedd_daemon)
 {
 	// note: pschedd_daemon may be NULL.
 
@@ -4329,7 +4345,7 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 		}
 		
 		//PRAGMA_REMIND("TJ: shouldn't this be using scheddAddress instead of scheddName?")
-		Daemon schedd(DT_SCHEDD, scheddName, pool ? pool->addr() : NULL );
+		DaemonAllowLocateFull schedd(DT_SCHEDD, scheddName, pool ? pool->addr() : NULL );
 
 		return print_jobs_analysis(jobs, source_label.c_str(), &schedd);
 	}
@@ -4911,7 +4927,7 @@ static int read_userprio_file(const char *filename, ExtArray<PrioEntry> & prios)
 }
 
 static void
-doJobRunAnalysis(ClassAd *job, Daemon *schedd, int details)
+doJobRunAnalysis(ClassAd *job, DaemonAllowLocateFull *schedd, int details)
 {
 	bool count_matches = (details & detail_always_analyze_req) != 0;
 
@@ -4958,7 +4974,7 @@ static bool is_exhausted_partionable_slot(ClassAd* slotAd, ClassAd* jobAd)
 // this funciton can count matching/non-matching machines, but
 // does NOT do matchmaking (requirements) analysis.
 static const char *
-doJobRunAnalysisToBuffer(ClassAd *request, Daemon* schedd, anaCounters & ac, bool count_matches, bool noPrio, bool showMachines)
+doJobRunAnalysisToBuffer(ClassAd *request, DaemonAllowLocateFull* schedd, anaCounters & ac, bool count_matches, bool noPrio, bool showMachines)
 {
 	char	owner[128];
 	std::string  user;
@@ -5784,7 +5800,7 @@ fixSubmittorName( const char *name, int niceUser )
 
 
 
-bool warnScheddGlobalLimits(Daemon *schedd,MyString &result_buf) {
+bool warnScheddGlobalLimits(DaemonAllowLocateFull *schedd,MyString &result_buf) {
 	if( !schedd ) {
 		return false;
 	}
