@@ -85,6 +85,11 @@ Windows due to a case-sensitive check of the user's account name.
 \File{job\_queue.log} contained invalid or incomplete records.
 \Ticket{6195}
 
+\item Fixed a bug that caused updates of the job attribute
+\Attr{x509UserProxyExpiration} to be ignored for job policy evaluation
+when the job was managed by the Job Router.
+\Ticket{6209}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
