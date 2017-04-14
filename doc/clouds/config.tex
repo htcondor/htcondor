@@ -1,0 +1,105 @@
+\section{\label{sec:clouds-config}HTCondor Annex Configuration}
+
+While the configuration macros in this section may be set by the HTCondor
+administrator, they are intended for the user-specific HTCondor configuration
+file (usually {\tt \textasciitilde/.condor/user\_config}).
+
+\begin{description}
+
+\label{param:AnnexDefaultLeaseDuration}
+\item[\Macro{ANNEX\_DEFAULT\_LEASE\_DURATION}]
+  The duration of an annex if not specified on the command-line; specified
+  in seconds.  Defaults to 50 minutes.
+
+\label{param:AnnexDefaultUnclaimedTimeout}
+\item[\Macro{ANNEX\_DEFAULT\_UNCLAIMED\_TIMEOUT}]
+  How long an annex instances should stay idle before shutting down;
+  specified in seconds.  Defaults to 15 minutes.
+
+\label{param:AnnexDefaultEC2URL}
+\item[\Macro{ANNEX\_DEFAULT\_EC2\_URL}]
+  The AWS EC2 endpoint that \Condor{annex} should use.  Defaults to
+  `https://ec2.us-east-1.amazonaws.com'.
+
+\label{param:AnnexDefaultCWEURL}
+\item[\Macro{ANNEX\_DEFAULT\_CWE\_URL}]
+  The AWS CloudWatch Events endpoint that \Condor{annex} should use.
+  Defaults to `https://events.us-east-1.amazonaws.com'.
+
+\label{param:AnnexDefaultLambdaURL}
+\item[\Macro{ANNEX\_DEFAULT\_LAMBDA\_URL}]
+  The AWS Lambda endpoint that \Condor{annex} should use.  Defaults to
+  `https://lambda.us-east-1.amazonaws.com'.
+
+\label{param:AnnexDefaultS3URL}
+\item[\Macro{ANNEX\_DEFAULT\_S3\_URL}]
+  The AWS S3 endpoint that \Condor{annex} should use.  Defaults to
+  `https://s3.amazonaws.com'.
+
+\label{param:AnnexDefaultCFURL}
+\item[\Macro{ANNEX\_DEFAULT\_CF\_URL}]
+  The AWS CloudFormation endpoint that \Condor{annex} should use.  Defaults to
+  `https://cloudformation.us-east-1.amazonaws.com'.
+
+\label{param:AnnexDefaultConnectivityFunctionARN}
+\item[\Macro{ANNEX\_DEFAULT\_CONNECTIVITY\_FUNCTION\_ARN}]
+  Never change this.  The name (or ARN) of the Lambda function on AWS which
+  \Condor{annex} should use to check if the configured collector can be
+  contacted from AWS.
+
+\label{param:AnnexDefaultAccessKeyFile}
+\item[\Macro{ANNEX\_DEFAULT\_ACCESS\_KEY\_FILE}]
+  The full path to the AWS access key file \Condor{annex} should use.
+   No default.
+
+\label{param:AnnexDefaultSecretKeyFile}
+\item[\Macro{ANNEX\_DEFAULT\_SECRET\_KEY\_FILE}]
+  The full path ot the AWS secret key file \Condor{annex} should use.
+  No default.
+
+\label{param:AnnexDefaultODIInstanceProfileARN}
+\item[\Macro{ANNEX\_DEFAULT\_ODI\_INSTANCE\_PROFILE\_ARN}]
+  Never change this.  The ARN of the instance profile \Condor{annex} should use.
+  No default.
+
+\label{param:AnnexDefaultODIKeyName}
+\item[\Macro{ANNEX\_DEFAULT\_ODI\_KEY\_NAME}]
+  The name of the SSH key pair \Condor{annex} should use by default.
+  No default.
+
+\label{param:AnnexDefaultS3Bucket}
+\item[\Macro{ANNEX\_DEFAULT\_S3\_BUCKET}]
+  A private S3 bucket that the \MacroNI{ANNEX\_DEFAULT\_ACCESS\_KEY\_FILE}
+  and \MacroNI{ANNEX\_DEFAULT\_SECRET\_KEY\_FILE} may write to.  No default.
+
+\label{param:AnnexDefaultODISecurityGroupIDs}
+\item[\Macro{ANNEX\_DEFAULT\_ODI\_SECURITY\_GROUP\_IDS}]
+  The default security group for on-demand annexes.  Must permit inbound
+  HTCondor (port 9618).
+
+\label{param:AnnexDefaultODILeaseFunctionARN}
+\item[\Macro{ANNEX\_DEFAULT\_ODI\_LEASE\_FUNCTION\_ARN}]
+  Never change this.  The Lambda function which implements the lease
+  (duration) for on-demand instances.  No default.
+
+\label{param:AnnexDefaultSFRLeaseFunctionARN}
+\item[\Macro{ANNEX\_DEFAULT\_SFR\_LEASE\_FUNCTION\_ARN}]
+  Never change this.  The Lambda function which implements the lease
+  (duration) for Spot instances.  No default.
+
+\label{param:AnnexDefaultODIInstanceTypes}
+\item[\Macro{ANNEX\_DEFAULT\_ODI\_INSTANCE\_TYPE}]
+  The AWS instance type to use for on-demand instances if not specified.
+  No default, but the \Condor{annex} setup tool sets this to `m4.large'.
+
+\label{param:AnnexDefaultODIImageID}
+\item[\Macro{ANNEX\_DEFAULT\_ODI\_IMAGE\_ID}]
+  The AWS AMI to use for on-demand instance if not specified.
+  No default, but the \Condor{annex} setup tool sets this to `ami-35b13223'.
+
+\label{param:AnnexDefaultSFRConfigFile}
+\item[\Macro{ANNEX\_DEFAULT\_SFR\_CONFIG\_FILE}]
+  The JSON config file use by \Condor{annex} when creating a Spot-based
+  annex.  No default.
+
+\end{description}

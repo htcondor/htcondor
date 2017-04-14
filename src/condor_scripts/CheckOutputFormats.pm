@@ -606,7 +606,7 @@ sub check_status {
 'State' => sub{return $_[1] eq 'Unclaimed';},
 'Activity' => sub{return $_[1] eq 'Idle';},
 'LoadAv' => sub{
-	my $loadavg = sprintf "%.3f",$Attr_new{$_[0]-1}{LoadAvg};
+	my $loadavg = sprintf "%.3f",$Attr_new{$_[0]-1}{CondorLoadAvg};
 	if ($_[1] eq $loadavg){
 		return 1;
 	} else {
@@ -841,7 +841,7 @@ sub check_status {
 'OpSys' => sub {return $_[1] eq 'LINUX';},
 'Arch' => sub {return $_[1] eq 'X86_64';},
 'LoadAv' => sub {
-	my $loadavg = sprintf "%.3f",$Attr_old{$_[0]-1}{LoadAvg};
+	my $loadavg = sprintf "%.3f",$Attr_old{$_[0]-1}{CondorLoadAvg};
 	return $_[1] eq $loadavg;},
 'RemoteUser' => sub {return $_[1] eq "foo\@cs.wisc.edu";},
 'ClientMachine' => sub {

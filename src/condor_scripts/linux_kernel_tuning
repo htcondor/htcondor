@@ -57,7 +57,7 @@ TCP_LISTEN_QUEUE=1024
 MAX_RECEIVE_BUFFER=10485760
 
 # Maximum amount of dirty filesystem bytes to buffer in the kernel
-# before processes writing to the filesystem are blocked, and made 
+# before processes writing to the filesystem are blocked, and made
 # to do their own i/o synchronously.  Set to 0 to undo.
 # If we are running with cgroups on, there's a Linux kernel bug
 # that causes spurious OOM events sent to a cgroup with a hard memory limit
@@ -136,8 +136,19 @@ setKernelParameter() {
 }
 
 increaseKernelParameter "GLOBAL_MAX_FDS" "/proc/sys/fs/file-max" ${GLOBAL_MAX_FDS}
-increaseKernelParameter "GLOBAL_MAX_PROCESSES" "/proc/sys/kernel/pid_max" ${GLOBAL_MAX_PROCESSES}
-setKernelParameter "LOCAL_PORT_RANGE" "/proc/sys/net/ipv4/ip_local_port_range" "${LOCAL_PORT_RANGE}"
+
+# Set GLOBAL_MAX_PROCESSES and LOCAL_PORT_TRANGE only for schedd machines.
+daemonList=`condor_config_val DAEMON_LIST`
+for daemon in $daemonList; do
+	daemon=`echo $daemon | sed -e's/,//'`
+	daemonFile=`condor_config_val ${daemon}`
+	baseName=`basename ${daemonFile}`
+	if [ ${baseName} = "condor_schedd" ]; then
+		increaseKernelParameter "GLOBAL_MAX_PROCESSES" "/proc/sys/kernel/pid_max" ${GLOBAL_MAX_PROCESSES}
+		setKernelParameter "LOCAL_PORT_RANGE" "/proc/sys/net/ipv4/ip_local_port_range" "${LOCAL_PORT_RANGE}"
+	fi
+done
+
 increaseKernelParameter "TCP_LISTEN_QUEUE" "/proc/sys/net/core/somaxconn" ${TCP_LISTEN_QUEUE}
 increaseKernelParameter "ROOT_MAXKEYS" "/proc/sys/kernel/keys/root_maxkeys" ${ROOT_MAXKEYS}
 increaseKernelParameter "ROOT_MAXKEYS_BYTES" "/proc/sys/kernel/keys/root_maxbytes" ${ROOT_MAXKEYS_BYTES}

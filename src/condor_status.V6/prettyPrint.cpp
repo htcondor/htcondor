@@ -727,7 +727,7 @@ void ppSetStartdNormalCols (int width)
 	//pm_head.Append(ATTR_LOAD_AVG);
 	//pm_head.Append(wide_display ? ATTR_LOAD_AVG : "LoadAv");
 	//pm.registerFormat("%.3f ", wide_display ? 7 : 6, FormatOptionAutoWidth, ATTR_LOAD_AVG, invalid_fields_empty ? "" : "[???] ");
-	ppSetColumn(ATTR_LOAD_AVG, Lbl("LoadAv"), formatLoadAvg, NULL, 6, true);
+	ppSetColumn(ATTR_CONDOR_LOAD_AVG, Lbl("LoadAv"), formatLoadAvg, NULL, 6, true);
 
 	if (vmMode) {
 		ppSetColumn(ATTR_VM_MEMORY, Lbl("VMMem"), "%4d", false);
@@ -779,7 +779,7 @@ void ppSetServerCols (int width, const char * & constr)
 	ppSetColumn(ATTR_NAME,    name_width, ! wide_display);
 	ppSetColumn(ATTR_OPSYS,  -11, true);
 	ppSetColumn(ATTR_ARCH,    -6, true);
-	ppSetColumn(ATTR_LOAD_AVG, Lbl("LoadAv"), formatLoadAvg, NULL, 6, true);
+	ppSetColumn(ATTR_CONDOR_LOAD_AVG, Lbl("LoadAv"), formatLoadAvg, NULL, 6, true);
 	ppSetColumn(ATTR_MEMORY, "%8d",  true);
 	ppSetColumn(ATTR_DISK, "%9d",  true);
 	ppSetColumn(ATTR_MIPS, "%7d", true);
@@ -829,7 +829,7 @@ void ppSetStateCols (int width)
 	ppSetColumn(ATTR_CPUS, Lbl("Cpu"), 3, true);
 	ppSetColumn(ATTR_MEMORY, Lbl(" Mem"), 5, true);
 	//ppSetColumn(ATTR_LOAD_AVG, Lbl("Load "), "%.3f", true);
-	ppSetColumn(ATTR_LOAD_AVG, Lbl("LoadAv"), formatLoadAvg, NULL, 6, true);
+	ppSetColumn(ATTR_CONDOR_LOAD_AVG, Lbl("LoadAv"), formatLoadAvg, NULL, 6, true);
 	ppSetColumn(ATTR_KEYBOARD_IDLE, Lbl("  KbdIdle"), formatRealTime, timewid, true);
 	ppSetColumn(ATTR_STATE, -7,  true);
 	ppSetColumn(ATTR_ENTERED_CURRENT_STATE, Lbl("  StateTime"), renderElapsedTime, "%T", timewid, true);
@@ -879,7 +879,7 @@ void ppSetRunCols (int width)
 		ppSetColumn(ATTR_OPSYS,  -11, true);
 		ppSetColumn(ATTR_ARCH,    -6, true);
 	}
-	ppSetColumn(ATTR_LOAD_AVG, Lbl("LoadAv"), formatLoadAvg, NULL, 6, true);
+	ppSetColumn(ATTR_CONDOR_LOAD_AVG, Lbl("LoadAv"), formatLoadAvg, NULL, 6, true);
 	ppSetColumn(ATTR_REMOTE_USER,    -20, ! wide_display);
 	ppSetColumn(ATTR_CLIENT_MACHINE, -16, ! wide_display);
 }
@@ -1812,7 +1812,7 @@ SELECT
    Arch       AS Arch     WIDTH -6
    State      AS State    WIDTH -9
    Activity   AS Activity WIDTH -8
-   LoadAvg    AS LoadAv             PRINTAS LOAD_AVG
+   LoadAvg    AS LoadAv             PRINTAS CONDOR_LOAD_AVG
    Memory     AS Mem                PRINTF "%4d"
    EnteredCurrentActivity AS "  ActvtyTime" NOPREFIX PRINTAS ACTIVITY_TIME
 SUMMARY STANDARD
@@ -1827,7 +1827,7 @@ static const CustomFormatFnTableItem LocalPrintFormats[] = {
 	{ "DATE",         NULL, 0, formatRealDate, NULL },
 	{ "DUE_DATE",     ATTR_CLASSAD_LIFETIME, "%Y", renderDueDate, ATTR_LAST_HEARD_FROM "\0" },
 	{ "ELAPSED_TIME", ATTR_LAST_HEARD_FROM, "%T", renderElapsedTime, ATTR_LAST_HEARD_FROM "\0" },
-	{ "LOAD_AVG",     ATTR_LOAD_AVG, 0, formatLoadAvg, NULL },
+	{ "LOAD_AVG",     ATTR_CONDOR_LOAD_AVG, 0, formatLoadAvg, NULL },
 	{ "PLATFORM",     ATTR_OPSYS, 0, renderPlatform, ATTR_ARCH "\0" ATTR_OPSYS_AND_VER "\0" ATTR_OPSYS_SHORT_NAME "\0" },
 	{ "READABLE_KB",  ATTR_DISK, 0, format_readable_kb, NULL },
 	{ "READABLE_MB",  ATTR_MEMORY, 0, format_readable_mb, NULL },
