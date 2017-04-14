@@ -580,11 +580,17 @@ JobRouter::EvalAllSrcJobPeriodicExprs()
 		// This brute-force update assumes that if  TimerRemove initially
 		// evaluates to an integer, it will continue to do so throughout
 		// the job's life.
+		// Do the same for x509UserProxyExpiration, which is used in some
+		// users' job policy expressions.
 		int timer_remove = -1;
 		MSC_SUPPRESS_WARNING(6011) // code analysis thinks orig_ad may be null, code analysis is wrong
 		if (orig_ad->EvaluateAttrInt(ATTR_TIMER_REMOVE_CHECK, timer_remove)) {
 			job->src_ad.InsertAttr(ATTR_TIMER_REMOVE_CHECK, timer_remove);
 			job->src_ad.MarkAttributeClean(ATTR_TIMER_REMOVE_CHECK);
+		}
+		if (orig_ad->EvaluateAttrInt(ATTR_X509_USER_PROXY_EXPIRATION, timer_remove)) {
+			job->src_ad.InsertAttr(ATTR_X509_USER_PROXY_EXPIRATION, timer_remove);
+			job->src_ad.MarkAttributeClean(ATTR_X509_USER_PROXY_EXPIRATION);
 		}
 		if (false == EvalSrcJobPeriodicExpr(job))
 		{
