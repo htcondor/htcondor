@@ -1262,6 +1262,7 @@ rm -rf %{buildroot}
 %_libexecdir/condor/panda-plugin.so
 %_libexecdir/condor/pandad
 %_mandir/man1/condor_advertise.1.gz
+%_mandir/man1/condor_annex.1.gz
 %_mandir/man1/condor_check_userlogs.1.gz
 %_mandir/man1/condor_chirp.1.gz
 %_mandir/man1/condor_cod.1.gz
