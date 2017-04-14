@@ -841,7 +841,7 @@ sub check_status {
 'OpSys' => sub {return $_[1] eq 'LINUX';},
 'Arch' => sub {return $_[1] eq 'X86_64';},
 'LoadAv' => sub {
-	my $loadavg = sprintf "%.3f",$Attr_old{$_[0]-1}{LoadAvg};
+	my $loadavg = sprintf "%.3f",$Attr_old{$_[0]-1}{CondorLoadAvg};
 	return $_[1] eq $loadavg;},
 'RemoteUser' => sub {return $_[1] eq "foo\@cs.wisc.edu";},
 'ClientMachine' => sub {
