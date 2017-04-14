@@ -47,6 +47,10 @@ unless \Opt{-better-analyze} was also specified.
 
 \begin{itemize}
 
+\item Docker Universe jobs now update the RemoteSysCpu attributes for job
+and in the job log.  Previously, this field was always 0.
+\Ticket{6173}.
+
 \item Worked around a problem with Fortran programs built with \Condor{compile}
 and recent versions of gfortran (4.7.2 was OK, 4.8.5 was not), where those
 executables would not write to standard out if started in the standard universe.
