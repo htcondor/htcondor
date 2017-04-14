@@ -47,6 +47,10 @@ unless \Opt{-better-analyze} was also specified.
 
 \begin{itemize}
 
+\item Docker Universe jobs now update the RemoteSysCpu attributes for job
+and in the job log.  Previously, this field was always 0.
+\Ticket{6173}.
+
 \item Worked around a problem with Fortran programs built with \Condor{compile}
 and recent versions of gfortran (4.7.2 was OK, 4.8.5 was not), where those
 executables would not write to standard out if started in the standard universe.
@@ -84,6 +88,11 @@ Windows due to a case-sensitive check of the user's account name.
 \item Fixed a bug that could cause the Job Router to crash if the
 \File{job\_queue.log} contained invalid or incomplete records.
 \Ticket{6195}
+
+\item Fixed a bug that caused updates of the job attribute
+\Attr{x509UserProxyExpiration} to be ignored for job policy evaluation
+when the job was managed by the Job Router.
+\Ticket{6209}
 
 \end{itemize}
 
