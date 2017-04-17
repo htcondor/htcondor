@@ -97,6 +97,9 @@ exit(0);
 sub startFlakyWebServer {
 	if ($^O eq 'MSWin32') # Windows
     {
+        TLOG "[cmd_curl_plugin] Windows PATH=" . `echo %PATH%`;
+        TLOG "[cmd_curl_plugin] where python*.exe=" . `where python*.exe`;
+        
         require Win32::Process;
         
         # Figure out location of the python binary
