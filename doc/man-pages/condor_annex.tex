@@ -95,11 +95,31 @@ performed by invoking \Condor{annex} with the \Opt{-setup} flag.
 
 \GenRem
 
-...
+As of v8.7.1, only AWS is supported.  The AMI configured by setup runs
+HTCondor v8.6.0 on Amazon Linux 2016.09, and the default instance type
+is ``m4.large''.  The default AMI has the appropriate software for AWS'
+``p2'' family of GPU instance types.
 
 \Examples
 
-...
+To start an on-demand annex named `MyFirstAnnex' with one core,
+using the default AMI and instance type, run
+
+\begin{verbatim}
+  condor_annex -count 1 -annex-name MyFirstAnnex
+\end{verbatim}
+
+You will be asked to confirm that the defaults are what you want.
+
+As of 2017-04-17, the following example will cost a minimum of \$90.
+
+To start an on-demand annex with 100 GPUs that job owners `big' and `little'
+may use (be sure to include yourself!), run
+
+\begin{verbatim}
+  condor_annex -count 100 -annex-name MySecondAnnex \
+    -aws-on-demand-instance-type p2.xlarge -owner "big, little"
+\end{verbatim}
 
 \ExitStatus
 
