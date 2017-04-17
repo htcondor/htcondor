@@ -13,6 +13,7 @@
 #define MAX_RETRY_ATTEMPTS 20
 
 int send_curl_request(char** argv, int diagnostic, CURL* handle);
+int closesocket_callback(void *clientp, curl_socket_t item);
 
 int main(int argc, char **argv) {
 	CURL *handle = NULL;
@@ -43,7 +44,7 @@ int main(int argc, char **argv) {
 		return -1;
 	}
 
-	// Enter the loop that will attempt the curl request + retry under certain conditions
+	// Enter the loop that will attempt/retry the curl request
 	for(;;) {
     
         // The sleep function is defined differently in Windows and Linux
@@ -100,7 +101,8 @@ int send_curl_request(char** argv, int diagnostic, CURL *handle) {
             curl_easy_setopt(handle, CURLOPT_URL, argv[1]);
 			curl_easy_setopt(handle, CURLOPT_WRITEDATA, file);
 			curl_easy_setopt(handle, CURLOPT_FOLLOWLOCATION, -1);
-            
+            curl_easy_setopt(handle, CURLOPT_FAILONERROR, 1);
+
             // Setup a buffer to store error messages. For debug use.
             error_buffer[0] = 0;
             curl_easy_setopt(handle, CURLOPT_ERRORBUFFER, error_buffer); 
@@ -108,7 +110,11 @@ int send_curl_request(char** argv, int diagnostic, CURL *handle) {
             // Does curl protect against redirect loops otherwise?  It's
 			// unclear how to tune this constant.
 			// curl_easy_setopt(handle, CURLOPT_MAXREDIRS, 1000);
-			rval = curl_easy_perform(handle);
+			
+            // Perform the curl request
+            rval = curl_easy_perform(handle);
+
+            // Error handling and cleanup
             if (diagnostic && rval) {
 				fprintf(stderr, "curl_easy_perform returned CURLcode %d: %s\n", 
 						rval, curl_easy_strerror((CURLcode)rval)); 
@@ -116,26 +122,6 @@ int send_curl_request(char** argv, int diagnostic, CURL *handle) {
 			if (close_output) {
 				fclose(file); 
                 file = NULL; 
-			}
-
-            // Check the HTTP response code. If the code indicates an error, then set rval accordingly.
-            if( rval == 0 ) {
-				char * finalURL = NULL;
-				rval = curl_easy_getinfo( handle, CURLINFO_EFFECTIVE_URL, & finalURL );
-                if( rval == 0 ) {
-					if( strstr( finalURL, "http" ) == finalURL ) {
-						long httpCode = 0;
-						rval = curl_easy_getinfo( handle, CURLINFO_RESPONSE_CODE, & httpCode );
-                        if( rval == 0 ) {
-							if( httpCode != 200 ) { 
-                                rval = 1; 
-                            }
-                            if(httpCode >= 400) {
-                                rval = CURLE_HTTP_RETURNED_ERROR;
-                            }
-						}
-					}
-				}
 			}
 		}
 	} else {
@@ -155,6 +141,7 @@ int send_curl_request(char** argv, int diagnostic, CURL *handle) {
 			curl_easy_setopt(handle, CURLOPT_UPLOAD, 1);
 			curl_easy_setopt(handle, CURLOPT_READDATA, file);
 			curl_easy_setopt(handle, CURLOPT_FOLLOWLOCATION, -1);
+        
 			// Does curl protect against redirect loops otherwise?  It's
 			// unclear how to tune this constant.
 			// curl_easy_setopt(handle, CURLOPT_MAXREDIRS, 1000);
@@ -187,4 +174,9 @@ int send_curl_request(char** argv, int diagnostic, CURL *handle) {
 
 	}
     return rval;    // 0 on success
+}
+
+int closesocket_callback(void *clientp, curl_socket_t item) {
+    printf("[closesocket_callback] called\n");    
+    return 0;
 }

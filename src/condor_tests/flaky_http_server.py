@@ -12,16 +12,6 @@ class FlakyHTTPServer(SimpleHTTPRequestHandler):
         if self.path == "/servererror":
             self.protocol_version = "HTTP/1.1"
             self.send_response(500)
-            #self.send_header('Content-type', 'text/html')
-            #self.end_headers()
-            #self.wfile.write(bytes("<h1>500 Internal Server Error</h1>"))
-        # Requesting /partialfile returns shorter content than indicated
-        #if self.path == "/partialfile":
-        #    self.protocol_version = "HTTP/1.1"
-        #    self.send_response(200, 'OK')
-        #    self.send_header("Content-Length", "61")
-        #    self.end_headers()
-        #    self.wfile.write(bytes("<html><head><title>Partial</title><body>Partial</body></html>"))
         # All other HTTP requests return success codes        
         else:
             self.protocol_version = "HTTP/1.1"
