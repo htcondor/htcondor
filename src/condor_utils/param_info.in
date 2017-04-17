@@ -1560,6 +1560,10 @@ default=50
 type=int
 tags=gridmanager,gahp-client
 
+[CREAM_GAHP_WORKER_THREADS]
+default=$(GRIDMANAGER_MAX_PENDING_REQUESTS)
+type=int
+
 [GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE_EC2]
 default=20
 type=int
