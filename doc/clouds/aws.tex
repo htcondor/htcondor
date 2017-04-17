@@ -37,9 +37,9 @@ with that name should be downloaded.
 and because we want to leave the user data available for its normal
 usage, we can't just encode the tarball or its location in the user data.)
 
-The instance determines the S3 bucket to download from by asking the
+The instance determines from which S3 bucket to download by asking the
 metadata server which role the instance is playing.  (An instance without
-a role is unable to make use of AWS services without acquiring valid
+a role is unable to make use of any AWS services without acquiring valid
 AWS tokens through some other method.)  The instance role created by
 the setup procedure includes permission to read files matching the pattern
 {\tt config-*.tar.gz} from a particular private S3 bucket.  If the instance

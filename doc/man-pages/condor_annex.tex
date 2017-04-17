@@ -7,7 +7,7 @@
 
 \SynProg{\Condor{annex}} \Opt{-help}
 
-\SynProg{\Condor{annex}} \Opt{-setup}
+\SynProg{\Condor{annex}} \OptArg{-setup}{[path/to/access/key/file [path/to/secret/key/file]]}
 
 \SynProg{\Condor{annex}} \oOpt{-aws-on-demand}
   \OptArg{-annex-name}{name of the annex}
@@ -17,7 +17,7 @@
 
 \SynProg{\Condor{annex}} \oOpt{-aws-spot-fleet}
   \OptArg{-annex-name}{name of the annex}
-  \OptArg{-slots}{integer number of weight capacity units}
+  \OptArg{-slots}{integer weight}
   \oOpt{-aws-spot-fleet-*}
   \oOpt{common options}
 
@@ -43,16 +43,19 @@ performed by invoking \Condor{annex} with the \Opt{-setup} flag.
 	\OptItem {\Opt{-help}}
 		{Print a usage reminder.}
 
+	\OptItem {\OptArg{-setup}{[path/to/access/key/file [path/to/secret/key/file]]}}
+		{Do the first-time setup.}
+
 	\OptItem {\OptArg{-duration}{hours}}
-		{Set the maximum lease duration in decimal hours.  After this amount of time, all instances will terminated, regardless of their idleness.}
+		{Set the maximum lease duration in decimal \Arg{hours}.  After this amount of time, all instances will terminated, regardless of their idleness.}
 	\OptItem {\OptArg{-idle}{hours}}
-		{Set the maximum idle duration in decimal hours.  An instance idle for longer than this duration will terminate itself. }
+		{Set the maximum idle duration in decimal \Arg{hours}.  An instance idle for longer than this duration will terminate itself. }
 	\OptItem {\OptArg{-config-dir}{/full/path/to/directory}}
 		{Copy the contents of \Arg{/full/path/to/directory} to each instance's config directory.}
 	\OptItem {\OptArg{-owner}{owner[, owner]*}}
-		{Specify who may use your annex.}
+		{Configure the annex so that only \Arg{owner} may start jobs there.}
 	\OptItem {\Opt{-no-owner}}
-		{Anyone in your pool may use your annex.}
+		{Configure the annex sot that anyone in the pool may use the annex.}
 
 %% AWS-SPECIFIC OPTIONS
 	\OptItem {\OptArg{-aws-user-data}{user-data}}
@@ -85,9 +88,9 @@ performed by invoking \Condor{annex} with the \Opt{-setup} flag.
 	\OptItem {\OptArg{-aws-events-url}{https://events.<region>.amazonaws.com}} {Experts only.}
 	\OptItem {\OptArg{-aws-lambda-url}{https://lambda.<region>.amazonaws.com}} {Experts only.}
 	\OptItem {\OptArg{-aws-s3-url}{https://s3.<region>.amazonaws.com}} {Experts only.}
-	\OptItem {\OptArg{-aws-spot-fleet-lease-function-arn}{sfr-lease-function-arn}} {Experts only.}
-	\OptItem {\OptArg{-aws-on-demand-lease-function-arn}{odi-lease-function-arn}} {Experts only.}
-	\OptItem {\OptArg{-aws-on-demand-instance-profile-arn}{instance-profile-arn}} {Experts only.}
+	\OptItem {\OptArg{-aws-spot-fleet-lease-function-arn}{sfr-lease-function-arn}} {Developers only.}
+	\OptItem {\OptArg{-aws-on-demand-lease-function-arn}{odi-lease-function-arn}} {Developers only.}
+	\OptItem {\OptArg{-aws-on-demand-instance-profile-arn}{instance-profile-arn}} {Developers only.}
 \end{Options}
 
 \GenRem
