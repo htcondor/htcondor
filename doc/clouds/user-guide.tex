@@ -34,7 +34,13 @@ account, and then setting up that account for use with \Condor{annex}, see
 \URL{https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=UsingCondorAnnexForTheFirstTimeEightSevenOne}.
 
 As of v8.7.1, \Condor{annex} does not support joining pools which do not
-allow inbound access to port 9618 from AWS.
+allow inbound access to port 9618.  \Condor{annex} will therefore check
+for this connectivity before starting an annex.  When checking connectivity
+from AWS, the IP(s) used by the AWS Lambda function implementing this check
+may not be in the same range(s) as those used by AWS instance; please
+consult AWS's list of all their IP
+ranges\footnote{\URL{https://ip-ranges.amazonaws.com/ip-ranges.json}}
+when configuring your firewall.
 
 \subsection{Basic Usage}
 
@@ -90,8 +96,10 @@ instance -- you can make a Spot Fleet request which says something like
 ``give me a thousand cores as cheaply as possible'', and specify that
 an `m4.large' instance has two cores, while `m4.xlarge' has four, and so
 on.  (The interface actually allows you to assign arbitrary values --
-exactly like HTCondor slot weights -- to each instance type, but the default
-value is core count.)  AWS will then divide the current price for each
+like HTCondor slot weights -- to each instance
+type\footnote{Strictly speaking, to each ``launch specification''; see
+the explanation below, in \emph{AWS Instance User Data}.},
+but the default value is core count.)  AWS will then divide the current price for each
 instance type by its core count and request spot instances at the cheapest
 per-core rate until the number of cores (not the number of instances!) has
 reached a thousand, or that instance type is exhausted, at which point it will
@@ -174,10 +182,10 @@ but this is not required.
 
 \subsubsection{Expert Mode}
 
-Also see the man page (section \ref{man-condor-annex})'s ``expert mode''
-sections.
+The man page (in section \ref{man-condor-annex}) lists the ``expert
+mode'' options.
 
-Four of the ``expert mode'' flags set the URLs used to access AWS services,
+Four of the ``expert mode'' options set the URLs used to access AWS services,
 not including the CloudFormation URL needed by the \Opt{-setup} flag.  (To
 change the region for the \Opt{-setup} flag, you must change the HTCondor
 configuration macro \Macro{ANNEX\_DEFAULT\_CF\_URL}, which you may of
@@ -187,16 +195,17 @@ one in your configuration, which defaults to {\tt us-east-1}.  Be sure to
 change all of the URLs -- Lambda functions and CloudWatch events in one
 region don't work with instances in another region.
 
-%% At some point, we may should add a \Opt{-aws-region} flag to make this
-%% easy enough for submitters, as well.
+%% At some point, we may should add a \Opt{-aws-region} option to make this
+%% easy enough for submitters, as well.  Or at least an option to set the
+%% CF URL?
 
 You may also temporarily specify a different AWS account by using the
 access (\Opt{-aws-access-key-file}) and
 secret key (\Opt{-aws-secret-key-file}) options.  Regular users may have
 an accounting reason to do this.
 
-The section labelled ``implementation details'' is probably best left
+The options labelled ``implementation details'' are probably best left
 unused unless you're a developer.
 
-%% And even then it's missing an option to set the connectivity-checking
+%% Developers should but don't have an option to set the connectivity-checking
 %% Lambda function's name (or ARN).
