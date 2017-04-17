@@ -13,7 +13,6 @@
 #define MAX_RETRY_ATTEMPTS 20
 
 int send_curl_request(char** argv, int diagnostic, CURL* handle);
-int closesocket_callback(void *clientp, curl_socket_t item);
 
 int main(int argc, char **argv) {
 	CURL *handle = NULL;
@@ -174,9 +173,4 @@ int send_curl_request(char** argv, int diagnostic, CURL *handle) {
 
 	}
     return rval;    // 0 on success
-}
-
-int closesocket_callback(void *clientp, curl_socket_t item) {
-    printf("[closesocket_callback] called\n");    
-    return 0;
 }
