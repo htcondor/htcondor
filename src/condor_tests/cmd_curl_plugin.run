@@ -97,9 +97,6 @@ sub startFlakyWebServer {
         my @myPython = `where python*.exe`;
 		my $pythonBinary = $myPython[0];
 		fullchomp($pythonBinary);
-		$_ = $pythonBinary;
-		s/\\/\\\\/g;
-		$pythonBinary = $_;
 		
         # Launch the web server process
 		Win32::Process::Create($childProcess, $pythonBinary, "$pythonBinary flaky_http_server.py", 0, 0, ".") || confess "Could not spawn child: $!";
