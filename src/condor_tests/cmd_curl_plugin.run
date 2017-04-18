@@ -43,14 +43,13 @@ my $returnCode;
 
 # Set the full path to the curl_plugin binary
 if ($^O eq 'MSWin32') {
-	$curlBinary = "curl_plugin.exe"; # In Windows, assume curl_plugin is on the path.
+	$curlBinary = "curl_plugin.exe"; # Assume curl_plugin is on the path.
 }
 else {
 	$curlBinary = $localDir . "/../condor_filetransfer_plugins/curl_plugin";
 }
 
 # Start the http server then wait a second
-TLOG "[cmd_curl_plugin] Starting python http server for testing...\n";
 startFlakyWebServer();
 sleep(1);
 
@@ -61,7 +60,6 @@ my $url = <FILE>;
 close FILE;
 
 # Test a successful curl request to the http server
-TLOG "[cmd_curl_plugin] Test a successful curl_plugin request, should give returnCode 0\n";
 $returnCode = system("$curlBinary http://$url curl_output.txt");    
 # To get the actual exit code, take the returned value and shift right by 8
 $returnCode = $returnCode >> 8;
@@ -71,10 +69,8 @@ if ($returnCode == 0) {
 else {
     RegisterResult(0, "test_name", "curl-success");
 }
-TLOG "[cmd_curl_plugin] Success test returned code $returnCode\n";
 
 # Test a 500 server error
-TLOG "[cmd_curl_plugin] Test a failed curl_plugin request, should give returnCode 22\n";
 $returnCode = system("$curlBinary http://$url/servererror curl_output.txt");
 $returnCode = $returnCode >> 8;
 if ($returnCode == 22) {
@@ -83,39 +79,33 @@ if ($returnCode == 22) {
 else {
     RegisterResult(0, "test_name", "curl-http-error-500");
 }
-TLOG "[cmd_curl_plugin] Fail test returned code $returnCode\n";
 
 # Clean up before exit
 unlink "$localDir/flaky-http-address";
 
 stopFlakyWebServer();
 
-TLOG "[cmd_curl_plugin] Exiting\n";
 exit(0);
 
 # This sub is based off http://www.perlmonks.org/?node_id=663081
 sub startFlakyWebServer {
     # Windows
 	if ($^O eq 'MSWin32') { 
-        TLOG "[cmd_curl_plugin] Windows PATH=" . `echo %PATH%`;
-        TLOG "[cmd_curl_plugin] where python*.exe=" . `where python*.exe`;
         
         require Win32::Process;
         
         # Figure out location of the python binary
         my @myPython = `where python*.exe`;
         if(not(@myPython)) {
-            TLOG "Python binary not available on this system. Aborting test\n";
-            # CORE::exit(0);
+            TLOG "Python is required but not available. Expect test failure.\n";
         }
 		my $pythonBinary = $myPython[0];
 		fullchomp($pythonBinary);
 
-        TLOG "[cmd_curl_plugin] Windows python binary path: $pythonBinary\n";
-        TLOG "[cmd_curl_plugin] Launching python web server...\n";		
-
         # Launch the web server process
-		Win32::Process::Create($childProcess, $pythonBinary, "$pythonBinary flaky_http_server.py", 0, 0, ".") || confess "Could not spawn child: $!";
+		Win32::Process::Create($childProcess, $pythonBinary, 
+                        "$pythonBinary flaky_http_server.py", 0, 0, ".") 
+                        || confess "Could not spawn child: $!";
         $childPid = $childProcess->GetProcessID();
     }
     # Unix
