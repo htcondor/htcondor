@@ -95,8 +95,8 @@ exit(0);
 
 # This sub is based off http://www.perlmonks.org/?node_id=663081
 sub startFlakyWebServer {
-	if ($^O eq 'MSWin32') # Windows
-    {
+    # Windows
+	if ($^O eq 'MSWin32') { 
         TLOG "[cmd_curl_plugin] Windows PATH=" . `echo %PATH%`;
         TLOG "[cmd_curl_plugin] where python*.exe=" . `where python*.exe`;
         
@@ -104,6 +104,10 @@ sub startFlakyWebServer {
         
         # Figure out location of the python binary
         my @myPython = `where python*.exe`;
+        if(not(@myPython)) {
+            TLOG "Python binary not available on this system. Aborting test\n";
+            CORE::exit(0);
+        }
 		my $pythonBinary = $myPython[0];
 		fullchomp($pythonBinary);
 
@@ -114,20 +118,17 @@ sub startFlakyWebServer {
 		Win32::Process::Create($childProcess, $pythonBinary, "$pythonBinary flaky_http_server.py", 0, 0, ".") || confess "Could not spawn child: $!";
         $childPid = $childProcess->GetProcessID();
     }
-    else # Unix
-    {
+    # Unix
+    else {
         $SIG{CHLD} = 'IGNORE';
         $childPid = fork();
-        unless (defined $childPid)
-        {
+        unless (defined $childPid) {
             confess "Could not spawn child (Unix): $!";
         }
-        if ($childPid == 0 ) # child
-        {
+        if ($childPid == 0 ) { # child
             setsid or warn "setsid cannot start a new session: $!";
             local $| = 1;
-            unless (exec("python flaky_http_server.py"))
-            {
+            unless (exec("python flaky_http_server.py")) {
                 confess "Could not start child: python: $!";
                 CORE::exit(0);
             }
@@ -138,25 +139,22 @@ sub startFlakyWebServer {
     # Catch early child exit, e.g. if program path is incorrect
     sleep(1.0);
     POSIX::waitpid(-1, POSIX::WNOHANG()); # clean up any defunct child process
-    if (kill(0, $childPid))
-    {
+    if (kill(0, $childPid)) {
         print "Started child process id $childPid\n";
     }
-    else
-    {
+    else {
         warn "Child process exited quickly: python: process $childPid";
     }
 }
 
 # This sub is based off http://www.perlmonks.org/?node_id=663081
-sub stopFlakyWebServer
-{
-    if ($^O eq 'MSWin32') # Windows
-    {
+sub stopFlakyWebServer {
+    # Windows
+    if ($^O eq 'MSWin32') {
         Win32::Process::KillProcess($childPid,0);
     }
-    else # Unix
-    {
+    # Unix
+    else {
         kill 9, $childPid || warn "could not kill process $childPid: $!";
     }
     print "Stopped child process id $childPid\n";
