@@ -94,6 +94,13 @@ Windows due to a case-sensitive check of the user's account name.
 when the job was managed by the Job Router.
 \Ticket{6209}
 
+\item Changed the default value of configuration parameters
+\MacroNI{CREAM\_GAHP\_WORKER\_THREADS} to the value of
+\MacroNI{GRIDMANAGER\_MAX\_PENDING\_REQUESTS}.
+This should prevent a back-log of commands in the CREAM GAHP observed
+by some users.
+\Ticket{6071}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
