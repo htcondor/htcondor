@@ -471,6 +471,7 @@ public:
 	void optimize() { if (SubmitMacroSet.sorted < SubmitMacroSet.size) optimize_macros(SubmitMacroSet); }
 	void dump(FILE* out, int flags);
 	const char* to_string(std::string & buf, int flags);
+	const char* make_digest(std::string & buf, int cluster_id, SubmitForeachArgs fea, int options);
 	void setup_macro_defaults(); // setup live defaults table
 
 	MACRO_SET& macros() { return SubmitMacroSet; }

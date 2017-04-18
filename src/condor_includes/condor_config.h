@@ -277,6 +277,19 @@ typedef struct macro_eval_context_ex : macro_eval_context {
 	// then $(subsys.self) and/or $(localname.self) is also expanded.
 	char * expand_self_macro(const char *value, const char *self, MACRO_SET& macro_set, MACRO_EVAL_CONTEXT & ctx);
 
+	// do $() macro expansion in-place in a std:string. This function is more efficient than the the above
+	// it takes option flags that influence the expansion
+	#define EXPAND_MACRO_OPT_KEEP_DOLLARDOLLAR 0x0001 // don't expand $(DOLLAR)
+	#define EXPAND_MACRO_OPT_IS_PATH           0x0002 // fixup path separators (remove extras, fix for windows)
+	// Returns: a bit mask of macros that expanded to non-empty values
+	//          where bit 0 is the first macro in the input, etc.
+	unsigned int expand_macro(std::string &value, unsigned int options, MACRO_SET& macro_set, MACRO_EVAL_CONTEXT & ctx);
+
+	// do macro expansion in-place in a std::string, expanding only macros not in the skip list
+	// returns the number of macros that were skipped.
+	unsigned int selective_expand_macro (std::string &value, classad::References & skip_knobs, MACRO_SET& macro_set, MACRO_EVAL_CONTEXT & ctx);
+
+
 	// this is the lowest level primative to doing a lookup in the macro set.
 	// it looks ONLY for an exact match of "name" in the given macro set and does
 	// not look in the defaults (param) table.
