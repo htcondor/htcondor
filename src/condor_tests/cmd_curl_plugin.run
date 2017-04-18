@@ -106,7 +106,7 @@ sub startFlakyWebServer {
         my @myPython = `where python*.exe`;
         if(not(@myPython)) {
             TLOG "Python binary not available on this system. Aborting test\n";
-            CORE::exit(0);
+            # CORE::exit(0);
         }
 		my $pythonBinary = $myPython[0];
 		fullchomp($pythonBinary);
