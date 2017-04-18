@@ -113,6 +113,18 @@ $success = sub
 	die "Error: DAG should fail!\n";
 };
 
+$evicted = sub
+{
+    my %args = @_;
+	my $cluster = $args{"cluster"};
+	CondorTest::debug("Good a requeue.....after eviction....\n",1);
+
+    my @argarray = @_;
+    for($i = 0; $i <= $#argarray; ++$i){
+		TLOG "[evicted] argarray[$i]=$argarray[$i]\n";
+	}
+};
+
 CondorTest::RegisterExitedSuccess( $testname, $success);
 CondorTest::RegisterExecute($testname, $executed);
 CondorTest::RegisterExitedAbnormal( $testname, $abnormal );
@@ -120,6 +132,7 @@ CondorTest::RegisterExitedFailure( $testname, $failure );
 CondorTest::RegisterAbort( $testname, $aborted );
 CondorTest::RegisterHold( $testname, $held );
 CondorTest::RegisterSubmit( $testname, $submitted );
+CondorTest::RegisterEvictedWithRequeue( $testname, $evicted );
 
 if( CondorTest::RunDagTest($testname, $cmd, 0, $dagman_args) ) {
 	CondorTest::debug("$testname: SUCCESS\n",1);

@@ -1,4 +1,4 @@
-executable   = /bin/echo
+executable   = echo
 arguments    = OK
 universe     = scheduler
 output       = $(job).out
