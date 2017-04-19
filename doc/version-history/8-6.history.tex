@@ -101,6 +101,12 @@ This should prevent a back-log of commands in the CREAM GAHP observed
 by some users.
 \Ticket{6071}
 
+\item Fixed modification of \Env{PYTHONPATH} environment variable that
+could fail in bash if \Prog{set -u} is enabled.
+\Prog{bosco\_quickstart} no longer assumes that submitting to a SLURM
+cluster requires the PBS emulation module.
+\Ticket{6211}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
