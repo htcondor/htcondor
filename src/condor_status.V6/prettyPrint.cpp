@@ -1812,7 +1812,7 @@ SELECT
    Arch       AS Arch     WIDTH -6
    State      AS State    WIDTH -9
    Activity   AS Activity WIDTH -8
-   LoadAvg    AS LoadAv             PRINTAS CONDOR_LOAD_AVG
+   CondorLoadAvg    AS LoadAv       PRINTAS LOAD_AVG
    Memory     AS Mem                PRINTF "%4d"
    EnteredCurrentActivity AS "  ActvtyTime" NOPREFIX PRINTAS ACTIVITY_TIME
 SUMMARY STANDARD
@@ -1827,7 +1827,7 @@ static const CustomFormatFnTableItem LocalPrintFormats[] = {
 	{ "DATE",         NULL, 0, formatRealDate, NULL },
 	{ "DUE_DATE",     ATTR_CLASSAD_LIFETIME, "%Y", renderDueDate, ATTR_LAST_HEARD_FROM "\0" },
 	{ "ELAPSED_TIME", ATTR_LAST_HEARD_FROM, "%T", renderElapsedTime, ATTR_LAST_HEARD_FROM "\0" },
-	{ "LOAD_AVG",     ATTR_CONDOR_LOAD_AVG, 0, formatLoadAvg, NULL },
+	{ "LOAD_AVG",     NULL, 0, formatLoadAvg, NULL },
 	{ "PLATFORM",     ATTR_OPSYS, 0, renderPlatform, ATTR_ARCH "\0" ATTR_OPSYS_AND_VER "\0" ATTR_OPSYS_SHORT_NAME "\0" },
 	{ "READABLE_KB",  ATTR_DISK, 0, format_readable_kb, NULL },
 	{ "READABLE_MB",  ATTR_MEMORY, 0, format_readable_mb, NULL },
