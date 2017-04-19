@@ -1,6 +1,5 @@
 executable   = x_sleep.pl
-arguments    = OK
-universe     = scheduler
+universe     = vanilla
 output       = $(job).out
 error        = $(job).err
 queue
