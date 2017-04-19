@@ -1,4 +1,4 @@
-executable   = echo
+executable   = x_sleep.pl
 arguments    = OK
 universe     = scheduler
 output       = $(job).out
