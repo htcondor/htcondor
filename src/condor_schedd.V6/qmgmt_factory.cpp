@@ -116,6 +116,15 @@ public:
 		}
 		return -1;
 	}
+	// returns the first row selected by the slice (if any)
+	int FirstSelectedRow() {
+		if (fea.foreach_mode == foreach_not) return 0;
+		int num_rows = fea.items.number();
+		if (num_rows <= 0) return -1;
+		if (fea.slice.selected(0, num_rows))
+			return 0;
+		return NextSelectedRow(0);
+	}
 
 	// calculate the number of rows selected by the slice
 	int TotalProcs(bool & changed_value) {
@@ -291,7 +300,7 @@ int  MaterializeNextFactoryJob(JobFactory * factory, JobQueueJob * ClusterAd)
 
 	int step_size = factory->StepSize();
 	if (step_size <= 0) {
-		dprintf(D_ALWAYS, "ERROR - step size is %d for job materialization of cluster %d, using 1 instead\n", step_size, ClusterAd->jid.cluster);
+		dprintf(D_ALWAYS, "WARNING - step size is %d for job materialization of cluster %d, using 1 instead\n", step_size, ClusterAd->jid.cluster);
 		step_size = 1;
 	}
 
@@ -307,16 +316,27 @@ int  MaterializeNextFactoryJob(JobFactory * factory, JobQueueJob * ClusterAd)
 	}
 
 	int step = next_proc_id % step_size;
-	bool no_items = factory->NoItems();
-	if (no_items && (next_proc_id >= step_size)) {
-		// we are done
-		return 0;
-	}
-
-	// item index is optional, if missing, the value is 0 and the item is the empty string.
 	int item_index = 0;
-	if (no_items || ! ClusterAd->LookupInteger(ATTR_JOB_MATERIALIZE_NEXT_ROW, item_index)) {
-		item_index = next_proc_id / step_size;
+	bool no_items = factory->NoItems();
+	if (no_items) {
+		if (next_proc_id >= step_size) {
+			dprintf(D_MATERIALIZE | D_VERBOSE, "Materialize for cluster %d is done. has_items=%d, next_proc_id=%d, step=%d\n", ClusterAd->jid.cluster, !no_items, next_proc_id, step_size);
+			// we are done
+			return 0;
+		}
+	} else {
+		// item index is optional, if missing, the value is 0 and the item is the empty string.
+		rval = GetAttributeInt(ClusterAd->jid.cluster, ClusterAd->jid.proc, ATTR_JOB_MATERIALIZE_NEXT_ROW, &item_index);
+		if (rval < 0) {
+			item_index = next_proc_id / step_size;
+			if (item_index > 0 && next_proc_id != step_size) {
+				// ATTR_JOB_MATERIALIZE_NEXT_ROW must exist in the cluster ad once we are done with proc 0
+				dprintf(D_ALWAYS, "ERROR - " ATTR_JOB_MATERIALIZE_NEXT_ROW " is not set, aborting materialize for job %d.%d step=%d, row=%d\n", ClusterAd->jid.cluster, next_proc_id, step_size, item_index);
+				// we are done
+				return 0;
+			}
+			item_index = factory->FirstSelectedRow();
+		}
 	}
 	if (item_index < 0) {
 		// we are done
@@ -326,7 +346,7 @@ int  MaterializeNextFactoryJob(JobFactory * factory, JobQueueJob * ClusterAd)
 	int row  = item_index;
 	
 	JOB_ID_KEY jid(ClusterAd->jid.cluster, next_proc_id);
-	dprintf(D_ALWAYS, "Materializing new job %d.%d step=%d row=%d\n", jid.cluster, jid.proc, step, row);
+	dprintf(D_ALWAYS, "Trying to Materializing new job %d.%d step=%d row=%d\n", jid.cluster, jid.proc, step, row);
 
 	bool check_empty = true;
 	bool fail_empty = false;
@@ -470,6 +490,7 @@ int JobFactory::LoadRowData(int row, std::string * empty_var_names /*=NULL*/)
 	if (fea.foreach_mode != foreach_not) {
 		loaded_row = 0;
 		item = fea.items.first();
+		//PRAGMA_REMIND("tj: need a stable iterator that keeps track of current pos, but can also seek.")
 		for (int ix = 1; ix <= row; ++ix) {
 			item = fea.items.next();
 			if (item) {
@@ -485,7 +506,7 @@ int JobFactory::LoadRowData(int row, std::string * empty_var_names /*=NULL*/)
 
 	if (fea.vars.isEmpty()) {
 		set_live_submit_variable("item", item, true);
-		return 0;
+		return loaded_row;
 	}
 
 
