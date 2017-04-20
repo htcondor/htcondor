@@ -3455,6 +3455,11 @@ default=true
 type=bool
 tags=master
 
+[ALLOW_ADMINISTRATOR]
+default=$(CONDOR_HOST)
+type=string
+tags=security
+
 [PREEN]
 default=$(SBIN)/condor_preen
 win32_default=$(SBIN)\condor_preen.exe
