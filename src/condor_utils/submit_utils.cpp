@@ -8046,4 +8046,48 @@ const char* SubmitHash::to_string(std::string & out, int flags)
 	return out.c_str();
 }
 
+const char* SubmitHash::make_digest(std::string & out, int cluster_id, SubmitForeachArgs fea, int /*options*/)
+{
+	int flags = HASHITER_NO_DEFAULTS;
+	out.reserve(SubmitMacroSet.size * 80); // make a guess at how much space we need.
+
+	std::string rhs;
+	classad::References skip_knobs;
+	skip_knobs.insert("Process");
+	skip_knobs.insert("ProcId");
+	skip_knobs.insert("Step");
+	skip_knobs.insert("Row");
+	skip_knobs.insert("Node");
+	skip_knobs.insert("Item");
+	if ( ! fea.vars.isEmpty()) {
+		for (const char * var = fea.vars.first(); var != NULL; var = fea.vars.next()) {
+			skip_knobs.insert(var);
+		}
+	}
+
+	if (cluster_id > 0) {
+		(void)sprintf(LiveClusterString, "%d", cluster_id);
+	} else {
+		skip_knobs.insert("Cluster");
+		skip_knobs.insert("ClusterId");
+	}
+
+	HASHITER it = hash_iter_begin(SubmitMacroSet, flags);
+	for ( ; ! hash_iter_done(it); hash_iter_next(it)) {
+		const char * key = hash_iter_key(it);
+		if (key && key[0] == '$') continue; // dont dump meta params.
+		const char * val = hash_iter_value(it);
+		out += key;
+		out += "=";
+		if (val) {
+			rhs = val;
+			selective_expand_macro(rhs, skip_knobs, SubmitMacroSet, mctx);
+			out += rhs;
+		}
+		out += "\n";
+	}
+	hash_iter_delete(&it);
+	return out.c_str();
+}
+
 
