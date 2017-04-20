@@ -6653,6 +6653,12 @@ MAX_JOBS_RUNNING	= \
   The default value is \Expr{True}. A value of \Expr{False} in either \Condor{q} or
   the \Condor{schedd} will result in the old behavior of querying all jobs.
 
+\label{param:CondorQShowOldSummary}
+\item[\Macro{CONDOR\_Q\_SHOW\_OLD\_SUMMARY}]
+  A boolean value that, when \Expr{True},
+  causes \Condor{q} to show the old single line summary totals. When \Expr{False}
+  \Condor{q} will show the new multi-line summary totals.
+
 \label{param:ScheddInterval}
 \item[\Macro{SCHEDD\_INTERVAL}]
   This macro determines the maximum interval for both how often the
