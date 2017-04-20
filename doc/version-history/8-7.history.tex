@@ -63,7 +63,7 @@ is controlled by a new configuration parameter \Macro{HANDLE\_QUERY\_IN\_PROC\_P
 \item The \Condor{schedd} now keeps a count of jobs by state for each owner and submitter
 and will report them to \Condor{q}. Condor{q} will display these totals unless the new
 configuration parameter \Macro{CONDOR\_Q\_SHOW\_OLD\_SUMMARY} is set to true. In 8.7.1
-this parameter defaults to false.
+this parameter defaults to true.
 \Ticket{6160}
 
 \item \Condor{submit} was changed to use the same utility library that the submit python bindings use.
