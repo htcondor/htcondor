@@ -57,6 +57,16 @@ configuration parameter \Macro{CONDOR\_Q\_SHOW\_OLD\_SUMMARY} is set to true. In
 this parameter defaults to false.
 \Ticket{6160}
 
+\item \Condor{submit} was changed to use the same utility library that the submit python bindings use.
+This should help insure that submit via python bindings will give the same results as using \Condor{submit}.
+\Ticket{6181}.
+
+\item Milestone 1 for late materialization in the \Condor{schedd} was completed. This milestone adds the
+unducumented option \Opt{-factory} to \Condor{q} that can be used to submit a late materializing job cluster
+to the \Condor{schedd}.  The \Condor{schedd} will refuse the submission unless the configuration parameter 
+Macro{SCHEDD\_ALLOW\_LATE\_MATERIALIZATION} is set to true.
+\Ticket{6212}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
