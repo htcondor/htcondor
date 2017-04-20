@@ -8915,6 +8915,22 @@ These macros affect the \Condor{collector}.
   This variable is ignored on Windows, and its default value is zero.
   The default configuration, however, has a value of 2.
 
+\label{param:HandleQueryInProcPolicy}
+\item[\Macro{HANDLE\_QUERY\_IN\_PROC\_POLICY}]
+  This variable sets the policy for which queries the \Condor{collector} should handle
+  in process rather than by forking a worker. It should be set to one of the following values
+  \begin{itemize}
+  \item \MacroNI{always} Handle all queries in process
+  \item \MacroNI{never}  Handle all queries using fork workers
+  \item \MacroNI{small\_table} Handle only queries of small tables in process
+  \item \MacroNI{small\_query} Handle only small queries in process
+  \item \MacroNI{small\_table\_and\_query} Handle only small queries on small tables in process
+  \item \MacroNI{small\_table\_or_\query} Handle small queries or small tables in process
+  \end{itemize}
+  A small table is any table of ClassAds in the collector other than Master,Startd,Generic and Any ads.
+  A small query is a locate query, or any query with both a projection and a result limit that is smaller than 10.
+  The default value is \MacroNI{small\_table\_or_\query}.
+
 \label{param:CollectorDebug}
 \item[\Macro{COLLECTOR\_DEBUG}]
   This macro (and other macros related to debug logging in the 

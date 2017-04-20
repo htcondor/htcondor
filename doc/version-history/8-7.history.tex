@@ -51,6 +51,12 @@ number of bytes in the UDP receive queue for daemons with a UDP command port.
 config knob SHARED\_PORT\_ADDRESS\_REWRITING
 \Ticket{6187}
 
+\item The \Condor{collector} on Linux now handles some queries in process and some
+by forking a child process. This allows it to avoid the overhead of forking to handle
+queries that will take little time. The policy for deciding which queries to handle in process
+is controlled by a new configuration parameter \Macro{HANDLE\_QUERY\_IN\_PROC\_POLICY}.
+\Ticket{6191}
+
 \item The \Condor{schedd} now keeps a count of jobs by state for each owner and submitter
 and will report them to \Condor{q}. Condor{q} will display these totals unless the new
 configuration parameter \Macro{CONDOR\_Q\_SHOW\_OLD\_SUMMARY} is set to true. In 8.7.1
