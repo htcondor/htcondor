@@ -41,6 +41,11 @@ and it now implies \Opt{better-analyze}.  Formerly, the \Opt{reverse} option was
 unless \Opt{-better-analyze} was also specified.
 \Ticket{6167}
 
+\item Added metaknobs for defining map files for use with the  ClassAd usermap function
+in the \Condor{schedd}, and a metaknob for automatically assigning an accounting group to
+a job based on a mapping of the owner name of the job.
+\Ticket{6179}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -120,6 +125,10 @@ cluster requires the PBS emulation module.
 \item Updated Open MPI helper script to catch and handle SIGTERM and 
 to use bash explicitly.
 \Ticket{6194}
+
+\item Fixed a bug that caused \Condor{submit} \Opt{-dump} to crash when
+the submit file had an attribute to enable the use of an x509 user proxy.
+\Ticket{6197}
 
 \end{itemize}
 
