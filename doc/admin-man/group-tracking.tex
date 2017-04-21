@@ -158,7 +158,7 @@ mounted on \File{/cgroup} should have several subdirectories under it,
 and there should an \File{htcondor} subdirectory under the directory 
 \File{/cgroup/cpu}.
 
-The \Condor{starter} daemon can uses cgroups by default on Linux systems
+The \Condor{starter} daemon uses cgroups by default on Linux systems
 to accurately track all the processes started by a job, 
 even when quickly-exiting parent processes spawn many child processes.
 As with the GID-based tracking, this is only implemented when a 
