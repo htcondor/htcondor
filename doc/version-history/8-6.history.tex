@@ -58,7 +58,13 @@ unless a \Condor{schedd} will be started by the master.
 
 \item Docker Universe jobs now update the RemoteSysCpu attributes for job
 and in the job log.  Previously, this field was always 0.
-\Ticket{6173}.
+\Ticket{6173}
+
+\item Docker universe detection is now more robust in the
+face of extraneous output to standard error on docker startup.
+This was preventing Condor from detecting that docker was properly
+working on hosts.
+\Ticket{6185}
 
 \item Fixed a bug that caused all but the first in a list of metaknobs to be ignored
 unless there were commas separating the list items. So \Macro{use ROLE : Execute CentralManager}
