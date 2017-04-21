@@ -137,6 +137,13 @@ an argument; the request is constrained to match machines whose
 \Ticket{6116}
 \Ticket{6117}
 
+\item In the Job Router, when a candidate job matches multiple routes,
+the first route is now always selected.
+The old behavior of spreading jobs across all matching routes round-robin
+style can be enabled by setting the new configuration parameter
+\MacroNI{JOB\_ROUTER\_ROUND\_ROBIN\_SELECTION} to \Expr{True}.
+\Ticket{6190}
+
 \item A refreshed X.509 proxy is now forwarded to the remote cluster
 in Bosco.
 \Ticket{5841}

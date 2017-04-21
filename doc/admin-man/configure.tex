@@ -10496,6 +10496,15 @@ condor_qedit -constraint 'RoutedBy == "insert_old_name"' \
   to which the routed copy of the jobs are submitted.
   If not specified, defaults to the local pool.
 
+\label{param:JobRouterRoundRobinSelection}
+\item[\Macro{JOB\_ROUTER\_ROUND\_ROBIN\_SELECTION}]
+  A boolean value that controls which route is chosen for a candidate
+  job that matches multiple routes.
+  When set to \Expr{False}, the default, the first matching route is
+  awlays selected.
+  When set to \Expr{True}, the Job Router attempts to distribute jobs
+  across all matching routes, round robin style.
+
 \end{description}
 
 
