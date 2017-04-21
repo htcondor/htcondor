@@ -135,6 +135,15 @@ include Ubuntu 16 and Mac OSX 10.12. Also, dropped Ubuntu 12 and Mac OSX
 10.6 - 10.9.
 \Ticket{6178}
 
+\item Fixed a bug which in some obscure but possible configurations a spurious
+PERMISSION DENIED error was printed in the StartLog when activating a claim.
+\Ticket{6172}.
+
+\item Fixed a bug which forced the administrator to restart (rather than
+reconfigure) running daemons after adding an entry to a \MacroNI{DENY\_*}
+authorization list.
+\Ticket{6172}.
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
