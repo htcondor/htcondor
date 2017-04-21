@@ -9848,8 +9848,9 @@ Configuration File Macros}
 \item[\Macro{BASE\_CGROUP}]
   The path to the directory used as the virtual file system for the
   implementation of Linux kernel cgroups.
-  This variable has no default value,
-  and if not defined, cgroup tracking will not be used.
+  This variable defaults to the string \Expr{htcondor}, and is only used on
+  Linux systems.  To disable cgroup tracking, define this to an empty
+  string.
   See section~\ref{sec:CGroupTracking} on page~\pageref{sec:CGroupTracking} for 
   a description of cgroup-based process tracking.
 

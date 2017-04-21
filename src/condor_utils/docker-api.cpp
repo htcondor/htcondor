@@ -694,7 +694,7 @@ int DockerAPI::version( std::string & version, CondorError & /* err */ ) {
 
 #if 1
 	MyPopenTimer pgm;
-	if (pgm.start_program(versionArgs, true, NULL, false) < 0) {
+	if (pgm.start_program(versionArgs, false, NULL, false) < 0) {
 		// treat 'file not found' as not really error
 		int d_level = (pgm.error_code() == ENOENT) ? D_FULLDEBUG : (D_ALWAYS | D_FAILURE);
 		dprintf(d_level, "Failed to run '%s' errno=%d %s.\n", displayString.c_str(), pgm.error_code(), pgm.error_str() );
