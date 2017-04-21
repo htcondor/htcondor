@@ -71,15 +71,30 @@ and it now implies \Opt{better-analyze}.  Formerly, the \Opt{reverse} option was
 unless \Opt{-better-analyze} was also specified.
 \Ticket{6167}
 
+\item Added metaknobs for defining map files for use with the  ClassAd usermap function
+in the \Condor{schedd}, and a metaknob for automatically assigning an accounting group to
+a job based on a mapping of the owner name of the job.
+\Ticket{6179}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
 
+\item The Linux kernel tuning script no longer adjusts some kernel parameters
+unless a \Condor{schedd} will be started by the master.
+\Ticket{6208}
+
 \item Docker Universe jobs now update the RemoteSysCpu attributes for job
 and in the job log.  Previously, this field was always 0.
-\Ticket{6173}.
+\Ticket{6173}
+
+\item Docker universe detection is now more robust in the
+face of extraneous output to standard error on docker startup.
+This was preventing Condor from detecting that docker was properly
+working on hosts.
+\Ticket{6185}
 
 \item Fixed a bug that caused all but the first in a list of metaknobs to be ignored
 unless there were commas separating the list items. So \Macro{use ROLE : Execute CentralManager}
@@ -146,6 +161,24 @@ cluster requires the PBS emulation module.
 \item Updated Open MPI helper script to catch and handle SIGTERM and 
 to use bash explicitly.
 \Ticket{6194}
+
+\item Fixed a bug that caused \Condor{submit} \Opt{-dump} to crash when
+the submit file had an attribute to enable the use of an x509 user proxy.
+\Ticket{6197}
+
+\item Updated the supported platform list in the bosco installer script to
+include Ubuntu 16 and Mac OSX 10.12. Also, dropped Ubuntu 12 and Mac OSX
+10.6 - 10.9.
+\Ticket{6178}
+
+\item Fixed a bug which in some obscure but possible configurations a spurious
+PERMISSION DENIED error was printed in the StartLog when activating a claim.
+\Ticket{6172}.
+
+\item Fixed a bug which forced the administrator to restart (rather than
+reconfigure) running daemons after adding an entry to a \MacroNI{DENY\_*}
+authorization list.
+\Ticket{6172}.
 
 \end{itemize}
 
