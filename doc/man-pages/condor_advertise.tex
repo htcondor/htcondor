@@ -10,6 +10,7 @@
 \oOptArg{-pool}{centralmanagerhostname[:portname]}
 \oOpt{-debug}
 \oOpt{-tcp}
+\oOpt{-udp}
 \oOpt{-multiple}
 \Arg{update-command}
 \oArg{classad-filename}
@@ -100,8 +101,10 @@ A full example is given below.
             giving the central manager's host name and an optional port
 	    number.  The default is the
 	    \MacroNI{COLLECTOR\_HOST} specified in the configuration file.}
-    \OptItem{\Opt{-tcp}}{Use TCP for communication. Without this
-        option, UDP is used.}
+    \OptItem{\Opt{-tcp}}
+            {Use TCP for communication. Used by default if
+	    \MacroNI{UPDATE\_COLLECTOR\_WITH\_TCP} is true.}
+    \OptItem{\Opt{-udp}}{Use UDP for communication.}
 \end{Options}
 
 \GenRem
