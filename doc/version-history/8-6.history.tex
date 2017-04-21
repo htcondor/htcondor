@@ -47,6 +47,10 @@ unless \Opt{-better-analyze} was also specified.
 
 \begin{itemize}
 
+\item The Linux kernel tuning script no longer adjusts some kernel parameters
+unless a \Condor{schedd} will be started by the master.
+\Ticket{6208}
+
 \item Docker Universe jobs now update the RemoteSysCpu attributes for job
 and in the job log.  Previously, this field was always 0.
 \Ticket{6173}.
