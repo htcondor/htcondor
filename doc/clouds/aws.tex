@@ -14,7 +14,7 @@ a newly-generated GUID.  This construction allows us to terminate on-demand
 instances belonging to a particular annex (by its name), as well as discover
 the annex name from inside an instance.
 
-A on-demand instance may obtain its instance ID directly from the AWS
+An on-demand instance may obtain its instance ID directly from the AWS
 metadata server, and then ask another AWS API for that instance ID's
 client token.  Since GUIDs do not contain underscores, we can be certain
 that anything to the left of the last underscore is the annex's name.
