@@ -29,7 +29,16 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Improved the performance of the condor\_schedd by setting the
+default for the knob SUBMIT\_SKIP\_FILECHECKS to false.  This prevents
+the schedd from checking the readability of all input files, and skips
+the creation of the output files on the submit side at submit time.
+Output files are now created either at transfer time, when file transfer
+is on, or by the job itself, if a shared filesystem is used.  As a result
+of this change, it is possible that a job runs to completion, and only
+then is put on hold because the output file on the submit machine cannot
+by written to.
+\Ticket{6220}
 
 \end{itemize}
 
