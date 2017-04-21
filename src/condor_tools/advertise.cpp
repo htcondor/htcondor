@@ -40,8 +40,7 @@ usage( const char *cmd , const char * opt)
 	fprintf(stderr,"    -version          Display Condor version\n");
 	fprintf(stderr,"    -pool <hostname>  Use this central manager\n");
 	fprintf(stderr,"    -debug            Show extra debugging info\n");
-	fprintf(stderr,"    -tcp              Ship classad via TCP\n");
-	fprintf(stderr,"                      (default if UPDATE_COLLECTOR_WITH_TCP is true)\n");
+	fprintf(stderr,"    -tcp              Ship classad via TCP (default)\n");
 	fprintf(stderr,"    -udp              Ship classad via UDP\n");
 	fprintf(stderr,"    -multiple         Publish multiple ads, separated by blank lines\n");
 
