@@ -81,6 +81,12 @@ unless \Opt{-better-analyze} was also specified.
 and in the job log.  Previously, this field was always 0.
 \Ticket{6173}.
 
+\item Fixed a bug that caused all but the first in a list of metaknobs to be ignored
+unless there were commas separating the list items. So \Macro{use ROLE : Execute CentralManager}
+would incorrectly add only the Execute role.
+While \Macro{use ROLE : Execute, CentralManager} would correctly add both roles.
+\Ticket{6171}
+
 \item Worked around a problem with Fortran programs built with \Condor{compile}
 and recent versions of gfortran (4.7.2 was OK, 4.8.5 was not), where those
 executables would not write to standard out if started in the standard universe.
@@ -136,6 +142,10 @@ could fail in bash if \Prog{set -u} is enabled.
 \Prog{bosco\_quickstart} no longer assumes that submitting to a SLURM
 cluster requires the PBS emulation module.
 \Ticket{6211}
+
+\item Updated Open MPI helper script to catch and handle SIGTERM and 
+to use bash explicitly.
+\Ticket{6194}
 
 \end{itemize}
 
