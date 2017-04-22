@@ -8899,15 +8899,53 @@ These macros affect the \Condor{collector}.
 
 \label{param:CollectorQueryWorkers}
 \item[\Macro{COLLECTOR\_QUERY\_WORKERS}]
-  This variable sets the maximum
-  number of worker processes that the \Condor{collector} can have.  
-  When receiving a query request, 
-  the Unix \Condor{collector} will \Procedure{fork} a new
+  This macro sets the maximum
+  number of child worker processes that the \Condor{collector} can have, and
+  defaults to a value of 4 on Linux and MacOS platforms. 
+  When receiving a large query request, 
+  the  \Condor{collector} may \Procedure{fork} a new
   process to handle the query, freeing the main process to handle
-  other requests.  When the number of outstanding worker processes
-  reaches this maximum, the request is handled by the main process.
-  This variable is ignored on Windows, and its default value is zero.
-  The default configuration, however, has a value of 2.
+  other requests.  Each forked child process will consume memory, potentially
+  up to 50\% or more of the memory consumed by the parent collector process.
+  To limit the amount of memory consumed on the central manager to 
+  handle incoming queries, the default value for this macro is 4.
+  When the number of outstanding worker processes
+  reaches the maximum specified by this macro, 
+  any additional incoming query requests will be queued and serviced
+  after an existing child worker completes. 
+  Note that on Windows platforms, this macro has a value of zero and cannot
+  be changed.
+
+\label{param:CollectorQueryWorkersReserveForHighPrio}
+\item[\Macro{COLLECTOR\_QUERY\_WORKERS\_RESERVE\_FOR\_HIGH\_PRIO}]
+  This macro defines the number of \Macro{COLLECTOR\_QUERY\_WORKERS} slots will
+  be held in reserve to only service high priority query requests.  Currently,
+  high priority queries are defined as those coming from the
+  \Condor{negotiator} during the course of matchmaking, or via a ``condor\_sos
+  condor\_status'' command.  The idea here is the critical operation of
+  matchmaking machines to jobs will take precedence over user condor\_status
+  invocations.  Defaults to a value of 1.  The maximum allowable value for this
+  macro is equal to \Macro{COLLECTOR\_QUERY\_WORKERS} minus 1.
+
+\label{param:CollectorQueryWorkersPending}
+\item[\Macro{COLLECTOR\_QUERY\_WORKERS\_PENDING}]
+  This macro sets the maximum of collector pending query requests that can
+  be queued waiting for child workers to exit.  Queries that would exceed
+  this maximum are immediately aborted.  When a forked child worker exits,
+  a pending query will be pulled from the queue for service.
+  Note the collector will confirm that the client has not closed the TCP socket
+  (because it was tired of waiting) before going through all the work of
+  actually forking a child and starting to service the query.  Defaults to a
+  value of 50.
+
+\label{param:CollectorQueryMaxWorktime}
+\item[\Macro{COLLECTOR\_QUERY\_MAX\_WORKTIME}]
+  This macro defines the maximum amount of time in seconds that a query has to
+  complete before it is aborted.  Queries that wait in the pending queue longer
+  than this period of time will be aborted before forking. Queries that have
+  already forked will also abort after the worktime has expired - this protects
+  against clients on a very slow network connection. If set to 0, then there is
+  no timeout. The default is 0.
 
 \label{param:CollectorDebug}
 \item[\Macro{COLLECTOR\_DEBUG}]
