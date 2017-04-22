@@ -29,6 +29,39 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Previously, when the number of forked children processing Collector
+  queries surpassed the maximum set by config knob \Macro{COLLECTOR\_QUERY\_WORKERS}, the
+  Collector handled all new incoming queries in-processes (i.e. without
+  forking). As processing a query and sending out the result to the network
+  could take a long time, the result of servicing such queries in-process in
+  the Collector is likely to drop a lot of updates. So now in v8.7.1, instead of
+  servicing such queries in-process, they are queued up for servicing as soon as
+  query worker child processes become available.  Config knob 
+  \Macro{COLLECTOR\_QUERY\_WORKERS\_PENDING} was introduced; see
+  section\~ref{param:CollectorQueryWorkersPending}.
+\Ticket{6192}
+
+\item Default value for \Macro{COLLECTOR\_QUERY\_WORKERS} changed from 2 to 4.
+\Ticket{6192}
+
+\item Introduced configuration macro
+	\MacroNI{COLLECTOR\_QUERY\_WORKERS\_RESERVE\_FOR\_HIGH\_PRIO} so that the
+	collector prioritizes queries that are important for the operation of the
+	pool (such as queries from the negotiator) ahead of servicing user
+	invocations of \Condor{status}.  
+\Ticket{6192}
+
+\item Introduced configuration macro \Macro{COLLECTOR\_QUERY\_MAX\_WORKTIME} to
+	define the maximum amount of time the collector may service a query from a
+	client like condor\_status.  See section\~ref{param:CollectorQueryMaxWorktime}.
+\Ticket{6192}
+
+\item Added several new statistics on collector query performance into the Collector
+	classad, including \AdAttr{ActiveQueryWorkers}, \AdAttr{ActiveQueryWokersPeak},
+	\AdAttr{PendingQueries}, \AdAttr{PendingQueriesPeak}, \AdAttr{DroppedQueries},
+	and \AdAttr{RecentDroppedQueries}.  See section\~ref{sec:Collector-ClassAd-Attributes}.
+\Ticket{6192}
+
 \item Docker universe jobs can now use condor\_chirp command
 (if it is in the image).
 \Ticket{6162}
