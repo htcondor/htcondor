@@ -82,7 +82,8 @@ GetOptions(
 									"iam:GetPolicyVersion",
 									"iam:ListAttachedRolePolicies",
 									"iam:ListRolePolicies",
-									"ec2:DescribeInstances"
+									"ec2:DescribeInstances",
+									"ec2:DescribeSpotFleetRequests"
 								],
 								Resource => "*"
 							}

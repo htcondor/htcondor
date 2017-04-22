@@ -1302,15 +1302,27 @@ _condor_fxstat(int version, int fd, struct stat *buf)
 
 	if( MappingFileDescriptors() ) {
 		_condor_file_table_init();
-		rval = FileTab->fstat( fd, &sbuf );	
+		rval = FileTab->fstat( fd, &sbuf );
 		if (rval == 0 ) {
 			_condor_s_stat_convert( version, &sbuf, buf );
-		}		
+		}
 	} else {
 		if( LocalSysCalls() ) {
 			rval = syscall( CONDOR_SYS_fstat, OPT_STAT_VERSION fd, &kbuf );
 			if (rval >= 0) {
 				_condor_k_stat_convert( version, &kbuf, buf );
+			}
+			// FIXME: It's possible for file table code to be called before
+			// we've done the initialization in remote_startup.c.  That
+			// wouldn't normally matter, but if the calling code is
+			// library initialization code, it won't see the remapped FDs;
+			// if, like gfortran does, it remembers what it sees for the
+			// whole lifetime of the process, that really screw things up.
+			//
+			// For now, don't allow fstat() on standard in, out, or error
+			// to fail with EBADF.
+			if( rval < 0 && (fd == 0 || fd == 1 || fd == 2) ) {
+				if( errno == EBADF ) { errno = ENOENT; }
 			}
 		} else {
 			rval = REMOTE_CONDOR_fstat( fd, &sbuf );
@@ -1337,10 +1349,10 @@ _condor_fxstat64(int version, int fd, struct stat64 *buf)
 
 	if( MappingFileDescriptors() ) {
 		_condor_file_table_init();
-		rval = FileTab->fstat( fd, &sbuf );	
+		rval = FileTab->fstat( fd, &sbuf );
 		if (rval == 0 ) {
 			_condor_s_stat_convert64( version, &sbuf, buf );
-		}		
+		}
 	} else {
 		if( LocalSysCalls() ) {
 			rval = syscall( CONDOR_SYS_fstat, fd, &kbuf );

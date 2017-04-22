@@ -16,6 +16,36 @@ New features will be added in the 8.7.x development series.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-8-6-3}Version 8.6.3}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item HTCondor version 8.6.3 not yet released.
+%\item HTCondor version 8.6.3 released on Month Date, 2017.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-8-6-2}Version 8.6.2}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -47,6 +77,24 @@ unless \Opt{-better-analyze} was also specified.
 
 \begin{itemize}
 
+\item Docker Universe jobs now update the RemoteSysCpu attributes for job
+and in the job log.  Previously, this field was always 0.
+\Ticket{6173}.
+
+\item Fixed a bug that caused all but the first in a list of metaknobs to be ignored
+unless there were commas separating the list items. So \Macro{use ROLE : Execute CentralManager}
+would incorrectly add only the Execute role.
+While \Macro{use ROLE : Execute, CentralManager} would correctly add both roles.
+\Ticket{6171}
+
+\item Worked around a problem with Fortran programs built with \Condor{compile}
+and recent versions of gfortran (4.7.2 was OK, 4.8.5 was not), where those
+executables would not write to standard out if started in the standard universe.
+Also, updated the checkpointing library to permit \Condor{compile} to
+successfully link Fortran (and other) programs calling certain math
+functions and built against up-to-date versions of glibc.
+\Ticket{6026}
+
 \item The default values for \MacroNI{HAD\_SOCKET\_NAME} and
 \MacroNI{REPLICATION\_SOCKET\_NAME} have changed to enable the documented
 configuration for using these services with shared port to work.
@@ -72,6 +120,32 @@ describing the job's X.509 proxy credential.
 \item Fixed a bug that could cause \Condor{store\_cred} to fail on
 Windows due to a case-sensitive check of the user's account name.
 \Ticket{6200}
+
+\item Fixed a bug that could cause the Job Router to crash if the
+\File{job\_queue.log} contained invalid or incomplete records.
+\Ticket{6195}
+
+\item Fixed a bug that caused updates of the job attribute
+\Attr{x509UserProxyExpiration} to be ignored for job policy evaluation
+when the job was managed by the Job Router.
+\Ticket{6209}
+
+\item Changed the default value of configuration parameters
+\MacroNI{CREAM\_GAHP\_WORKER\_THREADS} to the value of
+\MacroNI{GRIDMANAGER\_MAX\_PENDING\_REQUESTS}.
+This should prevent a back-log of commands in the CREAM GAHP observed
+by some users.
+\Ticket{6071}
+
+\item Fixed modification of \Env{PYTHONPATH} environment variable that
+could fail in bash if \Prog{set -u} is enabled.
+\Prog{bosco\_quickstart} no longer assumes that submitting to a SLURM
+cluster requires the PBS emulation module.
+\Ticket{6211}
+
+\item Updated Open MPI helper script to catch and handle SIGTERM and 
+to use bash explicitly.
+\Ticket{6194}
 
 \end{itemize}
 

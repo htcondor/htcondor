@@ -29,6 +29,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Docker universe jobs can now use condor\_chirp command
+(if it is in the image).
+\Ticket{6162}
+
 \item Increased the default value for configuration parameter
 \MacroNI{NEGOTIATOR\_SOCKET\_CACHE\_SIZE} to 500.
 \Ticket{6165}
@@ -40,6 +44,32 @@ number of bytes in the UDP receive queue for daemons with a UDP command port.
 \item Improved speed of handling queries to the collector by caching the 
 config knob SHARED\_PORT\_ADDRESS\_REWRITING
 \Ticket{6187}
+
+\item The \Condor{collector} on Linux now handles some queries in process and some
+by forking a child process. This allows it to avoid the overhead of forking to handle
+queries that will take little time. The policy for deciding which queries to handle in process
+is controlled by a new configuration parameter \Macro{HANDLE\_QUERY\_IN\_PROC\_POLICY}.
+\Ticket{6191}
+
+\item Added \Opt{-limit} option to \Condor{status} and changed the \Condor{collector} to honor it.
+\Ticket{6198}
+
+\item The \Condor{schedd} now keeps a count of jobs by state for each owner and submitter
+and will report them to \Condor{q}. Condor{q} will display these totals unless the new
+configuration parameter \Macro{CONDOR\_Q\_SHOW\_OLD\_SUMMARY} is set to true. In 8.7.1
+this parameter defaults to true.
+\Ticket{6160}
+
+\item \Condor{submit} was changed to use the same utility library that the submit python bindings use.
+This should help insure that submit via python bindings will give the same results as using \Condor{submit}.
+\Ticket{6181}.
+
+\item Milestone 1 for late materialization in the \Condor{schedd} was completed. This milestone adds the
+unducumented option \Opt{-factory} to \Condor{q} that can be used to submit a late materializing job cluster
+to the \Condor{schedd}.  The \Condor{schedd} will refuse the submission unless the configuration parameter 
+Macro{SCHEDD\_ALLOW\_LATE\_MATERIALIZATION} is set to true.
+\Ticket{6212}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -100,6 +130,21 @@ an argument; the request is constrained to match machines whose
 \Expr{AnnexName} ClassAd attribute matches the argument.
 \Ticket{6116}
 \Ticket{6117}
+
+\item In the Job Router, when a candidate job matches multiple routes,
+the first route is now always selected.
+The old behavior of spreading jobs across all matching routes round-robin
+style can be enabled by setting the new configuration parameter
+\MacroNI{JOB\_ROUTER\_ROUND\_ROBIN\_SELECTION} to \Expr{True}.
+\Ticket{6190}
+
+\item A refreshed X.509 proxy is now forwarded to the remote cluster
+in Bosco.
+\Ticket{5841}
+
+\item Added several new statistics to the Negotiator ad, mainly
+detailing how time is spent in the negotiation cycle.
+\Ticket{6060}
 
 \end{itemize}
 
