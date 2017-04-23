@@ -9873,6 +9873,11 @@ These macros affect the \Condor{credd}.
 \item[\Macro{CREDD\_HOST}]
   The host name of the machine running the \Condor{credd} daemon.
 
+\label{param:CreddPollingTimeout}
+\item[\Macro{CREDD\_POLLING\_TIMEOUT}]
+  An integer value that determines how long the \Condor{credd} daemon will
+  poll for credentials in seconds. The default value is 20.
+
 \label{param:CreddCacheLocally}
 \item[\Macro{CREDD\_CACHE\_LOCALLY}]
   A boolean value that defaults to \Expr{False}.
