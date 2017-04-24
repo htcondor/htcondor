@@ -1896,6 +1896,14 @@ fi
 %endif
 
 %changelog
+* Mon Apr 24 2017 Tim Theisen <tim@cs.wisc.edu> - 8.6.1-1
+- New metaknobs for mapping users to groups
+- Now case-insensitive with Windows user names when storing credentials
+- Signal handling in the OpenMPI script
+- Report RemoteSysCpu for Docker jobs
+- Allow SUBMIT_REQUIREMENT to refer to X509 secure attributes
+- Linux kernel tuning script takes into account the machine's role
+
 * Thu Mar 02 2017 Tim Theisen <tim@cs.wisc.edu> - 8.6.1-1
 - condor_q works in situations where user authentication is not configured
 - Updates to work with Docker version 1.13
