@@ -1896,7 +1896,7 @@ fi
 %endif
 
 %changelog
-* Mon Apr 24 2017 Tim Theisen <tim@cs.wisc.edu> - 8.6.1-1
+* Mon Apr 24 2017 Tim Theisen <tim@cs.wisc.edu> - 8.6.2-1
 - New metaknobs for mapping users to groups
 - Now case-insensitive with Windows user names when storing credentials
 - Signal handling in the OpenMPI script
