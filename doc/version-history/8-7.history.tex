@@ -58,8 +58,7 @@ by written to.
 
 \begin{itemize}
 
-\item HTCondor version 8.7.1 not yet released.
-%\item HTCondor version 8.7.1 released on Month Date, 2017.
+\item HTCondor version 8.7.1 released on April 24, 2017.
 
 \end{itemize}
 
@@ -68,15 +67,72 @@ by written to.
 
 \begin{itemize}
 
-\item Docker universe detection is now more robust in the
-face of extraneous output to standard error on docker startup.
-This was preventing Condor from detecting that docker was properly
-working on hosts.
-\Ticket{6185}
+\item Previously, when the number of forked children processing Collector
+  queries surpassed the maximum set by the configuration knob \Macro{COLLECTOR\_QUERY\_WORKERS}, the
+  Collector handled all new incoming queries in-processes (i.e. without
+  forking). As processing a query and sending out the result to the network
+  could take a long time, the result of servicing such queries in-process in
+  the Collector is likely to drop a lot of updates. So now in v8.7.1, instead of
+  servicing such queries in-process, they are queued up for servicing as soon as
+  query worker child processes become available.  The configuration knob 
+  \Macro{COLLECTOR\_QUERY\_WORKERS\_PENDING} was introduced; see
+  section\~ref{param:CollectorQueryWorkersPending}.
+\Ticket{6192}
+
+\item Default value for \Macro{COLLECTOR\_QUERY\_WORKERS} changed from 2 to 4.
+\Ticket{6192}
+
+\item Introduced configuration macro
+	\MacroNI{COLLECTOR\_QUERY\_WORKERS\_RESERVE\_FOR\_HIGH\_PRIO} so that the
+	collector prioritizes queries that are important for the operation of the
+	pool (such as queries from the negotiator) ahead of servicing user
+	invocations of \Condor{status}.  
+\Ticket{6192}
+
+\item Introduced configuration macro \Macro{COLLECTOR\_QUERY\_MAX\_WORKTIME} to
+	define the maximum amount of time the collector may service a query from a
+	client like condor\_status.  See section\~ref{param:CollectorQueryMaxWorktime}.
+\Ticket{6192}
+
+\item Added several new statistics on collector query performance into the Collector
+	ClassAd, including \AdAttr{ActiveQueryWorkers}, \AdAttr{ActiveQueryWokersPeak},
+	\AdAttr{PendingQueries}, \AdAttr{PendingQueriesPeak}, \AdAttr{DroppedQueries},
+	and \AdAttr{RecentDroppedQueries}.  See section\~ref{sec:Collector-ClassAd-Attributes}.
+\Ticket{6192}
+
+\item Further refinement and initial documentation of the HTCondor Annex.
+\Ticket{6147}
+\Ticket{6149}
+\Ticket{6150}
+\Ticket{6155}
+\Ticket{6157}
+\Ticket{6184}
+\Ticket{6196}
+\Ticket{6216}
+\Ticket{6218}
 
 \item Docker universe jobs can now use condor\_chirp command
 (if it is in the image).
 \Ticket{6162}
+
+\item In the Job Router, when a candidate job matches multiple routes,
+the first route is now always selected.
+The old behavior of spreading jobs across all matching routes round-robin
+style can be enabled by setting the new configuration parameter
+\MacroNI{JOB\_ROUTER\_ROUND\_ROBIN\_SELECTION} to \Expr{True}.
+\Ticket{6190}
+
+\item The \Condor{schedd} now keeps a count of jobs by state for each owner and submitter
+and will report them to \Condor{q}. Condor{q} will display these totals unless the new
+configuration parameter \Macro{CONDOR\_Q\_SHOW\_OLD\_SUMMARY} is set to true. In 8.7.1
+this parameter defaults to true.
+\Ticket{6160}
+
+\item Milestone 1 for late materialization in the \Condor{schedd} was completed. This milestone adds the
+undocumented option \Opt{-factory} to \Condor{q} that can be used to submit a late materializing job cluster
+to the \Condor{schedd}.  The \Condor{schedd} will refuse the submission unless the configuration parameter 
+Macro{SCHEDD\_ALLOW\_LATE\_MATERIALIZATION} is set to true.
+\Ticket{6212}
 
 \item Increased the default value for configuration parameter
 \MacroNI{NEGOTIATOR\_SOCKET\_CACHE\_SIZE} to 500.
@@ -87,7 +143,7 @@ number of bytes in the UDP receive queue for daemons with a UDP command port.
 \Ticket{6183}
 
 \item Improved speed of handling queries to the collector by caching the 
-config knob SHARED\_PORT\_ADDRESS\_REWRITING
+the configuration knob SHARED\_PORT\_ADDRESS\_REWRITING.
 \Ticket{6187}
 
 \item The \Condor{collector} on Linux now handles some queries in process and some
@@ -99,21 +155,9 @@ is controlled by a new configuration parameter \Macro{HANDLE\_QUERY\_IN\_PROC\_P
 \item Added \Opt{-limit} option to \Condor{status} and changed the \Condor{collector} to honor it.
 \Ticket{6198}
 
-\item The \Condor{schedd} now keeps a count of jobs by state for each owner and submitter
-and will report them to \Condor{q}. Condor{q} will display these totals unless the new
-configuration parameter \Macro{CONDOR\_Q\_SHOW\_OLD\_SUMMARY} is set to true. In 8.7.1
-this parameter defaults to true.
-\Ticket{6160}
-
 \item \Condor{submit} was changed to use the same utility library that the submit python bindings use.
 This should help insure that submit via python bindings will give the same results as using \Condor{submit}.
 \Ticket{6181}.
-
-\item Milestone 1 for late materialization in the \Condor{schedd} was completed. This milestone adds the
-unducumented option \Opt{-factory} to \Condor{q} that can be used to submit a late materializing job cluster
-to the \Condor{schedd}.  The \Condor{schedd} will refuse the submission unless the configuration parameter 
-Macro{SCHEDD\_ALLOW\_LATE\_MATERIALIZATION} is set to true.
-\Ticket{6212}
 
 \end{itemize}
 
@@ -175,6 +219,14 @@ an argument; the request is constrained to match machines whose
 \Expr{AnnexName} ClassAd attribute matches the argument.
 \Ticket{6116}
 \Ticket{6117}
+
+\item A refreshed X.509 proxy is now forwarded to the remote cluster
+in Bosco.
+\Ticket{5841}
+
+\item Added several new statistics to the Negotiator ad, mainly
+detailing how time is spent in the negotiation cycle.
+\Ticket{6060}
 
 \end{itemize}
 
