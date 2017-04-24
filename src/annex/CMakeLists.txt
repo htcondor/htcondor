@@ -14,7 +14,7 @@ if( LINUX )
 	include_directories( "${gahpClientPrefix}" )
 	include_directories( "${HAVE_UUID_UUID_H}" )
 	condor_exe( condor_annex
-		"annexd.cpp;${annexSources};${gahpClientSources}"
+		"annex.cpp;${annexSources};${gahpClientSources}"
 		"${C_BIN}"
 		"${CONDOR_LIBS};${LIBUUID_FOUND}"
 		ON )
