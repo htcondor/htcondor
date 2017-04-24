@@ -9908,8 +9908,9 @@ Configuration File Macros}
 \item[\Macro{BASE\_CGROUP}]
   The path to the directory used as the virtual file system for the
   implementation of Linux kernel cgroups.
-  This variable has no default value,
-  and if not defined, cgroup tracking will not be used.
+  This variable defaults to the string \Expr{htcondor}, and is only used on
+  Linux systems.  To disable cgroup tracking, define this to an empty
+  string.
   See section~\ref{sec:CGroupTracking} on page~\pageref{sec:CGroupTracking} for 
   a description of cgroup-based process tracking.
 
@@ -9931,6 +9932,11 @@ These macros affect the \Condor{credd}.
 \label{param:CreddHost}
 \item[\Macro{CREDD\_HOST}]
   The host name of the machine running the \Condor{credd} daemon.
+
+\label{param:CreddPollingTimeout}
+\item[\Macro{CREDD\_POLLING\_TIMEOUT}]
+  An integer value that determines how long the \Condor{credd} daemon will
+  poll for credentials in seconds. The default value is 20.
 
 \label{param:CreddCacheLocally}
 \item[\Macro{CREDD\_CACHE\_LOCALLY}]

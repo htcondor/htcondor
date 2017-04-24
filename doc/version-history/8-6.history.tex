@@ -53,8 +53,7 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item HTCondor version 8.6.2 not yet released.
-%\item HTCondor version 8.6.2 released on Month Date, 2017.
+\item HTCondor version 8.6.2 released on April 24, 2017.
 
 \end{itemize}
 
@@ -63,11 +62,16 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Added metaknobs for defining map files for use with the ClassAd usermap function
+in the \Condor{schedd}, and a metaknob for automatically assigning an accounting group to
+a job based on a mapping of the owner name of the job.
+\Ticket{6179}
+
 \item When the \Condor{credd} is polling for credentials, the timeout is now
 configurable using \Macro{CREDD\_POLLING\_TIMEOUT}.
 
 \item The \Opt{reverse} option for \Condor{q} was changed to \Opt{reverse-analyze},
-and it now implies \Opt{better-analyze}.  Formerly, the \Opt{reverse} option was ignored
+and it now implies \Opt{better-analyze}. Formerly, the \Opt{reverse} option was ignored
 unless \Opt{-better-analyze} was also specified.
 \Ticket{6167}
 
@@ -77,21 +81,44 @@ unless \Opt{-better-analyze} was also specified.
 
 \begin{itemize}
 
+\item Fixed a bug that could cause \Condor{store\_cred} to fail on
+Windows due to a case-sensitive check of the user's account name.
+\Ticket{6200}
+
+\item Updated Open MPI helper script to catch and handle SIGTERM and
+to use bash explicitly.
+\Ticket{6194}
+
 \item Docker Universe jobs now update the RemoteSysCpu attributes for job
-and in the job log.  Previously, this field was always 0.
-\Ticket{6173}.
+and in the job log. Previously, this field was always 0.
+\Ticket{6173}
+
+\item Docker universe detection is now more robust in the
+face of extraneous output to standard error on docker startup.
+This was preventing Condor from detecting that docker was properly
+working on hosts.
+\Ticket{6185}
+
+\item Fixed a bug that prevented \MacroNI{SUBMIT\_REQUIREMENT} and
+\MacroNI{JOB\_TRANSFORM} expressions from referencing job attributes
+describing the job's X.509 proxy credential.
+\Ticket{6188}
+
+\item The Linux kernel tuning script no longer adjusts some kernel parameters
+unless a \Condor{schedd} will be started by the master.
+\Ticket{6208}
 
 \item Fixed a bug that caused all but the first in a list of metaknobs to be ignored
 unless there were commas separating the list items. So \Macro{use ROLE : Execute CentralManager}
 would incorrectly add only the Execute role.
-While \Macro{use ROLE : Execute, CentralManager} would correctly add both roles.
+Previously, \Macro{use ROLE : Execute, CentralManager} would correctly add both roles.
 \Ticket{6171}
 
-\item Worked around a problem with Fortran programs built with \Condor{compile}
+\item Worked around a problem with FORTRAN programs built with \Condor{compile}
 and recent versions of gfortran (4.7.2 was OK, 4.8.5 was not), where those
 executables would not write to standard out if started in the standard universe.
 Also, updated the checkpointing library to permit \Condor{compile} to
-successfully link Fortran (and other) programs calling certain math
+successfully link FORTRAN (and other) programs calling certain math
 functions and built against up-to-date versions of glibc.
 \Ticket{6026}
 
@@ -112,15 +139,6 @@ Also, the parameters \MacroNI{MAX\_PERIODIC\_EXPR\_INTERVAL} and
 \MacroNI{PERIODIC\_EXPR\_TIMESLICE} were ignored for grid universe jobs.
 \Ticket{6199}
 
-\item Fixed a bug that prevented \MacroNI{SUBMIT\_REQUIREMENT} and
-\MacroNI{JOB\_TRANSFORM} expressions from referencing job attributes
-describing the job's X.509 proxy credential.
-\Ticket{6188}
-
-\item Fixed a bug that could cause \Condor{store\_cred} to fail on
-Windows due to a case-sensitive check of the user's account name.
-\Ticket{6200}
-
 \item Fixed a bug that could cause the Job Router to crash if the
 \File{job\_queue.log} contained invalid or incomplete records.
 \Ticket{6195}
@@ -139,13 +157,29 @@ by some users.
 
 \item Fixed modification of \Env{PYTHONPATH} environment variable that
 could fail in bash if \Prog{set -u} is enabled.
-\Prog{bosco\_quickstart} no longer assumes that submitting to a SLURM
+\Ticket{6211}
+
+\item \Prog{bosco\_quickstart} no longer assumes that submitting to a Slurm
 cluster requires the PBS emulation module.
 \Ticket{6211}
 
-\item Updated Open MPI helper script to catch and handle SIGTERM and 
-to use bash explicitly.
-\Ticket{6194}
+\item Fixed a bug that caused \Condor{submit} \Opt{-dump} to crash when
+the submit file had an attribute to enable the use of an x509 user proxy.
+\Ticket{6197}
+
+\item Updated the supported platform list in the Bosco installer script to
+include Ubuntu 16 and Mac OSX 10.12. Also, dropped Ubuntu 12 and Mac OSX
+10.6 through 10.9.
+\Ticket{6178}
+
+\item Fixed a bug which in some obscure configurations caused a spurious
+PERMISSION DENIED error was printed in the StartLog when activating a claim.
+\Ticket{6172}.
+
+\item Fixed a bug which forced the administrator to restart (rather than
+reconfigure) running daemons after adding an entry to a \MacroNI{DENY\_*}
+authorization list.
+\Ticket{6172}.
 
 \end{itemize}
 
