@@ -11,43 +11,25 @@
 #include "classad_command_util.h"
 #include "classad_collection.h"
 
-#include <queue>
-
-#include "Functor.h"
-#include "BulkRequest.h"
-#include "GetFunction.h"
-#include "PutRule.h"
-#include "PutTargets.h"
-#include "ReplyAndClean.h"
-#include "FunctorSequence.h"
-#include "generate-id.h"
-#include "OnDemandRequest.h"
-#include "UploadFile.h"
-
-#include "CreateStack.h"
-#include "WaitForStack.h"
-#include "CheckForStack.h"
-#include "SetupReply.h"
-#include "GenerateConfigFile.h"
-#include "CreateKeyPair.h"
-#include "CheckConnectivity.h"
-
-#include "user-config-dir.h"
-
-// from annex.cpp
-#include "condor_common.h"
-#include "condor_config.h"
-#include "subsystem_info.h"
 #include "match_prefix.h"
 #include "daemon.h"
 #include "dc_annexd.h"
 #include "stat_wrapper.h"
 #include "condor_base64.h"
-
 #include "my_username.h"
+#include "daemon.h"
+
+#include <queue>
 #include <iostream>
 
-#include "daemon.h"
+#include "annex.h"
+#include "annex-setup.h"
+#include "annex-update.h"
+#include "annex-create.h"
+#include "user-config-dir.h"
+
+// Why don't c-style timer callbacks have context pointers?
+ClassAd * command = NULL;
 
 // Although the annex daemon uses a GAHP, it doesn't have a schedd managing
 // its hard state in an existing job ad; it has to do that job on its own.
@@ -63,8 +45,7 @@ char * GridmanagerScratchDir = NULL;
 // clients shared a 'name' parameter, they will share a GAHP server process;
 // to make the RequestLimitExceeded stuff work right, we start a GAHP server
 // for each {public key file, service URL} tuple.
-EC2GahpClient *
-startOneGahpClient( const std::string & publicKeyFile, const std::string & /* serviceURL */ ) {
+EC2GahpClient * startOneGahpClient( const std::string & publicKeyFile, const std::string & /* serviceURL */ ) {
 	std::string gahpName;
 
 	// This makes me sad, now that the annexd needs to use three endpoints, so
@@ -154,479 +135,6 @@ validateLease( time_t endOfLease, std::string & validationError ) {
 	return true;
 }
 
-int
-updateOneAnnex( ClassAd * command, Stream * replyStream, ClassAd * reply ) {
-	std::string publicKeyFile, secretKeyFile, eventsURL;
-
-	param( publicKeyFile, "ANNEX_DEFAULT_ACCESS_KEY_FILE" );
-	command->LookupString( "PublicKeyFile", publicKeyFile );
-
-	param( secretKeyFile, "ANNEX_DEFAULT_SECRET_KEY_FILE" );
-	command->LookupString( "SecretKeyFile", secretKeyFile );
-
-	param( eventsURL, "ANNEX_DEFAULT_CWE_URL" );
-	command->LookupString( "EventsURL", eventsURL );
-
-	std::string annexID, leaseFunctionARN;
-
-	command->LookupString( "AnnexID", annexID );
-	command->LookupString( "LeaseFunctionARN", leaseFunctionARN );
-
-	time_t endOfLease = 0;
-	command->LookupInteger( "EndOfLease", endOfLease );
-
-	std::string errorString;
-	if( publicKeyFile.empty() ) {
-		formatstr( errorString, "%s%sPublic key file not specified in command or by defaults.", errorString.c_str(), errorString.empty() ? "" : "  " );
-	}
-	if( secretKeyFile.empty() ) {
-		formatstr( errorString, "%s%sSecret key file not specified in command or defaults.", errorString.c_str(), errorString.empty() ? "" : "  " );
-	}
-	if( eventsURL.empty() ) {
-		formatstr( errorString, "%s%sEvents URL missing or empty in command ad and ANNEX_DEFAULT_CWE_URL not set or empty in configuration.", errorString.c_str(), errorString.empty() ? "" : "  " );
-	}
-	if( annexID.empty() ) {
-		formatstr( errorString, "%s%sAnnex ID missing or empty in command ad.", errorString.c_str(), errorString.empty() ? "" : "  " );
-	}
-	if( leaseFunctionARN.empty() ) {
-		formatstr( errorString, "%s%sLease function ARN missing or empty in command ad.", errorString.c_str(), errorString.empty() ? "" : "  " );
-	}
-	validateLease( endOfLease, errorString );
-
-	if(! errorString.empty()) {
-		reply->Assign( ATTR_RESULT, getCAResultString( CA_INVALID_REQUEST ) );
-		reply->Assign( ATTR_ERROR_STRING, errorString );
-
-		if( replyStream ) {
-			if(! sendCAReply( replyStream, "CA_BULK_REQUEST", reply )) {
-				dprintf( D_ALWAYS, "Failed to reply to CA_BULK_REQUEST.\n" );
-			}
-		}
-
-		return FALSE;
-	}
-
-	ClassAd * scratchpad = new ClassAd();
-	EC2GahpClient * eventsGahp = startOneGahpClient( publicKeyFile, eventsURL );
-
-	std::string commandID;
-	command->LookupString( "CommandID", commandID );
-	if( commandID.empty() ) {
-		generateCommandID( commandID );
-		command->Assign( "CommandID", commandID );
-	}
-	scratchpad->Assign( "CommandID", commandID );
-
-	// FIXME: For user-friendliness, if no other reason, we should check
-	// if the annex exists before we "update" its lease.  Unfortunately,
-	// that's an ODI/SFR -specific operation.  We could check to see if
-	// the corresponding rule and target exist, instead, and refuse to
-	// do anything if they don't.
-
-	PutRule * pr = new PutRule(
-		reply, eventsGahp, scratchpad,
-		eventsURL, publicKeyFile, secretKeyFile,
-		commandState, commandID, annexID );
-	PutTargets * pt = new PutTargets( leaseFunctionARN, endOfLease,
-		reply, eventsGahp, scratchpad,
-		eventsURL, publicKeyFile, secretKeyFile,
-		commandState, commandID, annexID );
-
-	// I should feel bad.
-	scratchpad->Assign( "BulkRequestID", "Lease updated." );
-	ReplyAndClean * last = new ReplyAndClean( reply, replyStream,
-		NULL, scratchpad, eventsGahp, commandState, commandID, NULL );
-
-	FunctorSequence * fs = new FunctorSequence( { pr, pt }, last,
-		commandState, commandID, scratchpad );
-
-	int functorSequenceTimer = daemonCore->Register_Timer( 0, TIMER_NEVER,
-		(void (Service::*)()) & FunctorSequence::operator(),
-		"updateOneAnnex() sequence", fs );
-   	eventsGahp->setNotificationTimerId( functorSequenceTimer );
-
-	return KEEP_STREAM;
-}
-
-
-int
-createOneAnnex( ClassAd * command, Stream * replyStream, ClassAd * reply ) {
-	// dPrintAd( D_FULLDEBUG, * command );
-
-	// Validate the request (basic).
-	int requestVersion = -1;
-	command->LookupInteger( "RequestVersion", requestVersion );
-	if( requestVersion != 1 ) {
-		std::string errorString;
-		if( requestVersion == -1 ) {
-			errorString = "Missing (or non-integer) RequestVersion.";
-		} else {
-			formatstr( errorString, "Unknown RequestVersion (%d).", requestVersion );
-		}
-		dprintf( D_ALWAYS, "%s\n", errorString.c_str() );
-
-		reply->Assign( "RequestVersion", 1 );
-		reply->Assign( ATTR_RESULT, getCAResultString( CA_INVALID_REQUEST ) );
-		reply->Assign( ATTR_ERROR_STRING, errorString );
-
-		if( replyStream ) {
-			if(! sendCAReply( replyStream, "CA_BULK_REQUEST", reply )) {
-				dprintf( D_ALWAYS, "Failed to reply to CA_BULK_REQUEST.\n" );
-			}
-		}
-
-		return FALSE;
-	}
-
-	//
-	// Construct the GAHPs.  We do this before anything else because we
-	// need pointers the GAHPs to hand off to the nonblocking sequence
-	// implementation.
-	//
-
-	std::string serviceURL, eventsURL, lambdaURL, s3URL;
-
-	param( serviceURL, "ANNEX_DEFAULT_EC2_URL" );
-	command->LookupString( "ServiceURL", serviceURL );
-
-	param( eventsURL, "ANNEX_DEFAULT_CWE_URL" );
-	command->LookupString( "EventsURL", eventsURL );
-
-	param( lambdaURL, "ANNEX_DEFAULT_LAMBDA_URL" );
-	command->LookupString( "LambdaURL", lambdaURL );
-
-	param( s3URL, "ANNEX_DEFAULT_S3_URL" );
-	command->LookupString( "S3URL", s3URL );
-
-	std::string publicKeyFile, secretKeyFile, leaseFunctionARN;
-
-	param( publicKeyFile, "ANNEX_DEFAULT_ACCESS_KEY_FILE" );
-	command->LookupString( "PublicKeyFile", publicKeyFile );
-
-	param( secretKeyFile, "ANNEX_DEFAULT_SECRET_KEY_FILE" );
-	command->LookupString( "SecretKeyFile", secretKeyFile );
-
-	command->LookupString( "LeaseFunctionARN", leaseFunctionARN );
-
-	// Validate parameters.  We could have the functors do this, but that
-	// would mean adding invalid requests to the hard state, which is bad.
-	if( serviceURL.empty() || eventsURL.empty() || lambdaURL.empty() ||
-			publicKeyFile.empty() || secretKeyFile.empty() ||
-			leaseFunctionARN.empty() || s3URL.empty() ) {
-		std::string errorString;
-		if( serviceURL.empty() ) {
-			formatstr( errorString, "Service URL missing or empty in command ad and ANNEX_DEFAULT_EC2_URL not set or empty in configuration." );
-		}
-		if( eventsURL.empty() ) {
-			formatstr( errorString, "%s%sEvents URL missing or empty in command ad and ANNEX_DEFAULT_CWE_URL not set or empty in configuration.", errorString.c_str(), errorString.empty() ? "" : "  " );
-		}
-		if( lambdaURL.empty() ) {
-			formatstr( errorString, "%s%sLambda URL missing or empty in command ad and ANNEX_DEFAULT_LAMBDA_URL not set or empty in configuration.", errorString.c_str(), errorString.empty() ? "" : "  " );
-		}
-		if( s3URL.empty() ) {
-			formatstr( errorString, "%s%sS3 URL missing or empty in command ad and ANNEX_DEFAULT_S3_URL not set or empty in configuration.", errorString.c_str(), errorString.empty() ? "" : "  " );
-		}
-		if( publicKeyFile.empty() ) {
-			formatstr( errorString, "%s%sPublic key file not specified in command or defaults.", errorString.c_str(), errorString.empty() ? "" : "  " );
-		}
-		if( secretKeyFile.empty() ) {
-			formatstr( errorString, "%s%sSecret key file not specified in command or defaults.", errorString.c_str(), errorString.empty() ? "" : "  " );
-		}
-		if( leaseFunctionARN.empty() ) {
-			formatstr( errorString, "%s%sLease function ARN not specified in command or defaults.", errorString.c_str(), errorString.empty() ? "" : "  " );
-		}
-		dprintf( D_ALWAYS, "%s\n", errorString.c_str() );
-
-		reply->Assign( "RequestVersion", 1 );
-		reply->Assign( ATTR_RESULT, getCAResultString( CA_INVALID_REQUEST ) );
-		reply->Assign( ATTR_ERROR_STRING, errorString );
-
-		if( replyStream ) {
-			if(! sendCAReply( replyStream, "CA_BULK_REQUEST", reply )) {
-				dprintf( D_ALWAYS, "Failed to reply to CA_BULK_REQUEST.\n" );
-			}
-		}
-
-		return FALSE;
-	}
-
-	// Create the GAHP client.  The first time we call a GAHP client function,
-	// it will send that command to the GAHP server, but the GAHP server may
-	// take some time to get the result.  The GAHP client will fire the
-	// notification timer when the result is ready, and we can get it by
-	// calling the GAHP client function a second time with the same arguments.
-	EC2GahpClient * gahp = startOneGahpClient( publicKeyFile, serviceURL );
-
-	// The lease requires a different endpoint to implement.
-	EC2GahpClient * eventsGahp = startOneGahpClient( publicKeyFile, eventsURL );
-
-	// Checking for the existence of the lease function requires a different
-	// endpoint as well.  Maybe we should fiddle the GAHP to make it less
-	// traumatic to use different endpoints?
-	EC2GahpClient * lambdaGahp = startOneGahpClient( publicKeyFile, lambdaURL );
-
-	// For uploading to S3.
-	EC2GahpClient * s3Gahp = startOneGahpClient( publicKeyFile, s3URL );
-
-	//
-	// Construct the bulk request, create rule, and add target functors,
-	// then register them as a sequence in a timer.  This lets us get back
-	// to DaemonCore more quickly and makes the code in operator() more
-	// familiar (in terms of the idiomatic usage of the gahp client
-	// interface established by the grid manager).
-	//
-
-	// Each step in the sequence may add to the reply, and may need to pass
-	// information to the next step, so create those two ads first.
-	reply->Assign( "RequestVersion", 1 );
-
-	ClassAd * scratchpad = new ClassAd();
-
-	// Each step in the sequence will handle its own logging for fault
-	// recovery.  The command ad is indexed by the command ID, so
-	// look up or generate it now, so we can tell it to the steps.
-	std::string commandID;
-	command->LookupString( "CommandID", commandID );
-	if( commandID.empty() ) {
-		generateCommandID( commandID );
-		command->Assign( "CommandID", commandID );
-	}
-	scratchpad->Assign( "CommandID", commandID );
-
-	std::string annexID;
-	command->LookupString( "AnnexID", annexID );
-	if( annexID.empty() ) {
-		std::string annexName;
-		command->LookupString( "AnnexName", annexName );
-		if( annexName.empty() ) {
-			generateAnnexID( annexID );
-		} else {
-			annexID = annexName.substr( 0, 27 );
-		}
-		command->Assign( "AnnexID", annexID );
-	}
-	scratchpad->Assign( "AnnexID", annexID );
-
-
-	std::string annexType;
-	command->LookupString( "AnnexType", annexType );
-	if( annexType.empty() || (annexType != "odi" && annexType != "sfr") ) {
-		std::string errorString = "AnnexType unspecified or unknown.";
-		dprintf( D_ALWAYS, "%s (%s)\n", errorString.c_str(), annexType.c_str() );
-
-		reply->Assign( ATTR_RESULT, getCAResultString( CA_INVALID_REQUEST ) );
-		reply->Assign( ATTR_ERROR_STRING, errorString );
-
-		if( replyStream ) {
-			if(! sendCAReply( replyStream, "CA_BULK_REQUEST", reply )) {
-				dprintf( D_ALWAYS, "Failed to reply to CA_BULK_REQUEST.\n" );
-			}
-		}
-
-		return FALSE;
-	}
-
-
-	std::string validationError;
-	if( annexType == "sfr" ) {
-		// Each step in the sequence handles its own de/serialization.
-		BulkRequest * br = new BulkRequest( reply, gahp, scratchpad,
-			serviceURL, publicKeyFile, secretKeyFile, commandState,
-			commandID, annexID );
-
-		time_t endOfLease = 0;
-		command->LookupInteger( "EndOfLease", endOfLease );
-
-		// Now that we've created the bulk request, it can fully validate the
-		// command ad, storing what it needs as it goes.  Really, each functor
-		// in sequence should have a validateAndStore() method, but the second
-		// two don't need one.
-		if( (! br->validateAndStore( command, validationError )) || (! validateLease( endOfLease, validationError )) ) {
-			delete br;
-			goto cleanup;
-		}
-
-		//
-		// After this point, we no longer exit because of an invalid request, so
-		// this is the first point at which we want to log the command ad.  Since
-		// none of the functors have run yet, we haven't made any changes to the
-		// cloud's state yet.  We'll pass responsibility off to the functors for
-		// logging their own individual cloud-state changes, which means now is
-		// the right time to log the command ad.
-		//
-		// Note that moving the retry/fault-tolerance code into the functors means
-		// that some of policy (not accepting user client tokens and the default
-		// validity period) has to move into the functors as well.
-		//
-
-		commandState->BeginTransaction();
-		{
-			InsertOrUpdateAd( commandID, command, commandState );
-		}
-		commandState->CommitTransaction();
-
-		// Verify the existence of the specified function before starting any
-		// instances.  Otherwise, the lease may not fire.
-		GetFunction * gf = new GetFunction( leaseFunctionARN,
-			reply, lambdaGahp, scratchpad,
-	    	lambdaURL, publicKeyFile, secretKeyFile,
-			commandState, commandID );
-
-		UploadFile * uf = NULL;
-		std::string uploadFrom;
-		command->LookupString( "UploadFrom", uploadFrom );
-		std::string uploadTo;
-		command->LookupString( "UploadTo", uploadTo );
-		if( (! uploadFrom.empty()) && (! uploadTo.empty()) ) {
-			uf = new UploadFile( uploadFrom, uploadTo,
-				reply, s3Gahp, scratchpad,
-				s3URL, publicKeyFile, secretKeyFile,
-				commandState, commandID, annexID );
-		}
-
-		// Verify that we're talking to the right collector before we do
-		// anything else.
-		std::string instanceID, connectivityFunctionARN;
-		command->LookupString( "CollectorInstanceID", instanceID );
-		param( connectivityFunctionARN, "ANNEX_DEFAULT_CONNECTIVITY_FUNCTION_ARN" );
-		CheckConnectivity * cc = new CheckConnectivity(
-			connectivityFunctionARN, instanceID,
-			reply, lambdaGahp, scratchpad,
-			lambdaURL, publicKeyFile, secretKeyFile,
-			commandState, commandID );
-
-		PutRule * pr = new PutRule(
-			reply, eventsGahp, scratchpad,
-			eventsURL, publicKeyFile, secretKeyFile,
-			commandState, commandID, annexID );
-		PutTargets * pt = new PutTargets( leaseFunctionARN, endOfLease,
-			reply, eventsGahp, scratchpad,
-			eventsURL, publicKeyFile, secretKeyFile,
-			commandState, commandID, annexID );
-		// We now only call last->operator() on success; otherwise, we roll back
-		// and call last->rollback() after we've given up.  We can therefore
-		// remove the command ad from the commandState in this functor.
-		ReplyAndClean * last = new ReplyAndClean( reply, replyStream, gahp, scratchpad, eventsGahp, commandState, commandID, lambdaGahp );
-
-		// Note that the functor sequence takes responsibility for deleting the
-		// functor objects; the functor objects would just delete themselves when
-		// they're done, but implementing rollback means the functors themselves
-		// can't know how long they should persist.
-		//
-		// The commandState, commandID, and scratchpad allow the functor sequence
-		// to restart a rollback, if that becomes necessary.
-		FunctorSequence * fs = new FunctorSequence( { cc, gf, uf, pr, pt, br }, last, commandState, commandID, scratchpad );
-
-		// Create a timer for the gahp to fire when it gets a result.  We must
-		// use TIMER_NEVER to ensure that the timer hasn't been reaped when the
-		// GAHP client needs to fire it.
-		int functorSequenceTimer = daemonCore->Register_Timer( 0, TIMER_NEVER,
-			(void (Service::*)()) & FunctorSequence::operator(),
-			"GetFunction, PutRule, PutTarget, BulkRequest", fs );
-		gahp->setNotificationTimerId( functorSequenceTimer );
-    	eventsGahp->setNotificationTimerId( functorSequenceTimer );
-    	lambdaGahp->setNotificationTimerId( functorSequenceTimer );
-    	s3Gahp->setNotificationTimerId( functorSequenceTimer );
-
-		return KEEP_STREAM;
-	} else if( annexType == "odi" ) {
-		// Verify that we're talking to the right collector before we do
-		// anything else.
-		std::string instanceID, connectivityFunctionARN;
-		command->LookupString( "CollectorInstanceID", instanceID );
-		param( connectivityFunctionARN, "ANNEX_DEFAULT_CONNECTIVITY_FUNCTION_ARN" );
-		CheckConnectivity * cc = new CheckConnectivity(
-			connectivityFunctionARN, instanceID,
-			reply, lambdaGahp, scratchpad,
-			lambdaURL, publicKeyFile, secretKeyFile,
-			commandState, commandID );
-
-		OnDemandRequest * odr = new OnDemandRequest( reply, gahp, scratchpad,
-			serviceURL, publicKeyFile, secretKeyFile, commandState,
-			commandID, annexID );
-
-		time_t endOfLease = 0;
-		command->LookupInteger( "EndOfLease", endOfLease );
-
-		if( (! odr->validateAndStore( command, validationError )) || (! validateLease( endOfLease, validationError )) ) {
-			delete odr;
-			goto cleanup;
-		}
-
-		// See corresponding comment above.
-		commandState->BeginTransaction();
-		{
-			InsertOrUpdateAd( commandID, command, commandState );
-		}
-		commandState->CommitTransaction();
-
-		GetFunction * gf = new GetFunction( leaseFunctionARN,
-			reply, lambdaGahp, scratchpad,
-	    	lambdaURL, publicKeyFile, secretKeyFile,
-			commandState, commandID );
-
-		UploadFile * uf = NULL;
-		std::string uploadFrom;
-		command->LookupString( "UploadFrom", uploadFrom );
-		std::string uploadTo;
-		command->LookupString( "UploadTo", uploadTo );
-		if( (! uploadFrom.empty()) && (! uploadTo.empty()) ) {
-			uf = new UploadFile( uploadFrom, uploadTo,
-				reply, s3Gahp, scratchpad,
-				s3URL, publicKeyFile, secretKeyFile,
-				commandState, commandID, annexID );
-		}
-
-		PutRule * pr = new PutRule(
-			reply, eventsGahp, scratchpad,
-			eventsURL, publicKeyFile, secretKeyFile,
-			commandState, commandID, annexID );
-		PutTargets * pt = new PutTargets( leaseFunctionARN, endOfLease,
-			reply, eventsGahp, scratchpad,
-			eventsURL, publicKeyFile, secretKeyFile,
-			commandState, commandID, annexID );
-		ReplyAndClean * last = new ReplyAndClean( reply, replyStream, gahp, scratchpad, eventsGahp, commandState, commandID, lambdaGahp );
-
-		FunctorSequence * fs;
-		if( uf ) {
-			fs = new FunctorSequence( { cc, gf, uf, pr, pt, odr }, last, commandState, commandID, scratchpad );
-		} else {
-			fs = new FunctorSequence( { cc, gf, pr, pt, odr }, last, commandState, commandID, scratchpad );
-		}
-
-		int functorSequenceTimer = daemonCore->Register_Timer( 0, TIMER_NEVER,
-			(void (Service::*)()) & FunctorSequence::operator(),
-			"GetFunction, PutRule, PutTarget, OnDemandRequest", fs );
-		gahp->setNotificationTimerId( functorSequenceTimer );
-    	eventsGahp->setNotificationTimerId( functorSequenceTimer );
-    	lambdaGahp->setNotificationTimerId( functorSequenceTimer );
-    	s3Gahp->setNotificationTimerId( functorSequenceTimer );
-
-		return KEEP_STREAM;
-	} else {
-		ASSERT( 0 );
-	}
-
-	cleanup:
-		reply->Assign( ATTR_RESULT, getCAResultString( CA_INVALID_REQUEST ) );
-		reply->Assign( ATTR_ERROR_STRING, validationError );
-
-		if( replyStream ) {
-			if(! sendCAReply( replyStream, "CA_BULK_REQUEST", reply )) {
-				dprintf( D_ALWAYS, "Failed to reply to CA_BULK_REQUEST.\n" );
-			}
-		}
-
-		delete gahp;
-		delete eventsGahp;
-		delete lambdaGahp;
-
-		delete reply;
-		delete scratchpad;
-
-		return FALSE;
-}
-
 std::string commandStateFile;
 
 void
@@ -634,7 +142,6 @@ main_config() {
 	commandStateFile = param( "ANNEXD_COMMAND_STATE" );
 }
 
-// from annex.cpp
 bool
 createConfigTarball(	const char * configDir,
 						const char * annexName,
@@ -781,50 +288,6 @@ createConfigTarball(	const char * configDir,
 	return true;
 }
 
-// Why don't c-style timer callbacks have context pointers?
-ClassAd * command = NULL;
-
-void
-callCreateOneAnnex() {
-	Stream * s = NULL;
-	ClassAd * reply = new ClassAd();
-
-	// Otherwise, reply-and-clean will take care of user notification.
-	if( createOneAnnex( command, s, reply ) != KEEP_STREAM ) {
-		std::string resultString;
-		reply->LookupString( ATTR_RESULT, resultString );
-		CAResult result = getCAResultNum( resultString.c_str() );
-		ASSERT( result != CA_SUCCESS );
-
-		std::string errorString;
-		reply->LookupString( ATTR_ERROR_STRING, errorString );
-		ASSERT(! errorString.empty());
-		fprintf( stderr, "%s\n", errorString.c_str() );
-		DC_Exit( 6 );
-	}
-}
-
-void
-callUpdateOneAnnex() {
-	Stream * s = NULL;
-	ClassAd * reply = new ClassAd();
-
-	// Otherwise, reply-and-clean will take care of user notification.
-	if( updateOneAnnex( command, s, reply ) != KEEP_STREAM ) {
-		std::string resultString;
-		reply->LookupString( ATTR_RESULT, resultString );
-		CAResult result = getCAResultNum( resultString.c_str() );
-		ASSERT( result != CA_SUCCESS );
-
-		std::string errorString;
-		reply->LookupString( ATTR_ERROR_STRING, errorString );
-		ASSERT(! errorString.empty());
-		fprintf( stderr, "%s\n", errorString.c_str() );
-		DC_Exit( 6 );
-	}
-}
-
-// from annex.cpp
 // Modelled on BulkRequest::validateAndStore() from annexd/BulkRequest.cpp.
 bool
 assignUserData( ClassAd & command, const char * ud, bool replace, std::string & validationError ) {
@@ -858,7 +321,6 @@ assignUserData( ClassAd & command, const char * ud, bool replace, std::string & 
 	return true;
 }
 
-// from annex.cpp
 // Modelled on readShortFile() from ec2_gahp/amazonCommands.cpp.
 bool
 readShortFile( const char * fileName, std::string & contents ) {
@@ -889,278 +351,7 @@ readShortFile( const char * fileName, std::string & contents ) {
     return true;
 }
 
-void checkOneParameter( const char * pName, int & rv, std::string & pValue ) {
-	param( pValue, pName );
-	if( pValue.empty() ) {
-		if( rv == 0 ) { fprintf( stderr, "Your setup is incomplete:\n" ); }
-		fprintf( stderr, "\t%s is unset.\n", pName );
-		rv = 1;
-	}
-}
 
-void
-checkOneParameter( const char * pName, int & rv ) {
-	std::string pValue;
-	checkOneParameter( pName, rv, pValue );
-}
-
-int
-check_account_setup( const std::string & publicKeyFile, const std::string & privateKeyFile, const std::string & cfURL, const std::string & ec2URL ) {
-	ClassAd * reply = new ClassAd();
-	ClassAd * scratchpad = new ClassAd();
-
-	std::string commandID;
-	generateCommandID( commandID );
-
-	Stream * replyStream = NULL;
-
-	EC2GahpClient * cfGahp = startOneGahpClient( publicKeyFile, cfURL );
-	EC2GahpClient * ec2Gahp = startOneGahpClient( publicKeyFile, ec2URL );
-
-	std::string bucketStackName = "HTCondorAnnex-ConfigurationBucket";
-	std::string bucketStackDescription = "configuration bucket";
-	CheckForStack * bucketCFS = new CheckForStack( reply, cfGahp, scratchpad,
-		cfURL, publicKeyFile, privateKeyFile,
-		bucketStackName, bucketStackDescription,
-		commandState, commandID );
-
-	std::string lfStackName = "HTCondorAnnex-LambdaFunctions";
-	std::string lfStackDescription = "Lambda functions";
-	CheckForStack * lfCFS = new CheckForStack( reply, cfGahp, scratchpad,
-		cfURL, publicKeyFile, privateKeyFile,
-		lfStackName, lfStackDescription,
-		commandState, commandID );
-
-	std::string rStackName = "HTCondorAnnex-InstanceProfile";
-	std::string rStackDescription = "instance profile";
-	CheckForStack * rCFS = new CheckForStack( reply, cfGahp, scratchpad,
-		cfURL, publicKeyFile, privateKeyFile,
-		rStackName, rStackDescription,
-		commandState, commandID );
-
-	std::string sgStackName = "HTCondorAnnex-SecurityGroup";
-	std::string sgStackDescription = "security group";
-	CheckForStack * sgCFS = new CheckForStack( reply, cfGahp, scratchpad,
-		cfURL, publicKeyFile, privateKeyFile,
-		sgStackName, sgStackDescription,
-		commandState, commandID );
-
-	SetupReply * sr = new SetupReply( reply, cfGahp, ec2Gahp, "Your setup looks OK.\n", scratchpad,
-		replyStream, commandState, commandID );
-
-	FunctorSequence * fs = new FunctorSequence(
-		{ bucketCFS, lfCFS, rCFS, sgCFS }, sr,
-		commandState, commandID, scratchpad );
-
-	int setupTimer = daemonCore->Register_Timer( 0, TIMER_NEVER,
-		 (void (Service::*)()) & FunctorSequence::operator(),
-		 "CheckForStacks", fs );
-	cfGahp->setNotificationTimerId( setupTimer );
-	ec2Gahp->setNotificationTimerId( setupTimer );
-
-	return 0;
-}
-
-int
-check_setup() {
-	int rv = 0;
-
-	std::string accessKeyFile, secretKeyFile, cfURL, ec2URL;
-	checkOneParameter( "ANNEX_DEFAULT_ACCESS_KEY_FILE", rv, accessKeyFile );
-	checkOneParameter( "ANNEX_DEFAULT_SECRET_KEY_FILE", rv, secretKeyFile );
-	checkOneParameter( "ANNEX_DEFAULT_CF_URL", rv, cfURL );
-	checkOneParameter( "ANNEX_DEFAULT_EC2_URL", rv, ec2URL );
-
-	checkOneParameter( "ANNEX_DEFAULT_S3_BUCKET", rv );
-	checkOneParameter( "ANNEX_DEFAULT_ODI_SECURITY_GROUP_IDS", rv );
-	checkOneParameter( "ANNEX_DEFAULT_ODI_LEASE_FUNCTION_ARN", rv );
-	checkOneParameter( "ANNEX_DEFAULT_SFR_LEASE_FUNCTION_ARN", rv );
-	checkOneParameter( "ANNEX_DEFAULT_ODI_INSTANCE_PROFILE_ARN", rv );
-
-	if( rv != 0 ) {
-		return rv;
-	} else {
-		return check_account_setup( accessKeyFile, secretKeyFile, cfURL, ec2URL );
-	}
-}
-
-void
-setup_usage() {
-	fprintf( stdout,
-		"\n"
-		"To do the one-time setup for an AWS account:\n"
-		"\tcondor_annex -setup\n"
-		"\n"
-		"To specify the files for the access (public) key and secret (private) keys:\n"
-		"\tcondor_annex -setup\n"
-		"\t\t<path/to/access-key-file>\n"
-		"\t\t<path/to/private-key-file>\n"
-		"\n"
-		"Expert mode (to specify the region, you must specify the key paths):\n"
-		"\tcondor_annex -aws-ec2-url https://ec2.<region>.amazonaws.com\n"
-		"\t\t-setup <path/to/access-key-file>\n"
-		"\t\t<path/to/private-key-file>\n"
-		"\t\t<https://cloudformation.<region>.amazonaws.com/>\n"
-		"\n"
-	);
-}
-
-int
-setup( const char * pukf, const char * prkf, const char * cloudFormationURL, const char * serviceURL ) {
-	std::string publicKeyFile, privateKeyFile;
-	if( pukf != NULL && prkf != NULL ) {
-		publicKeyFile = pukf;
-		privateKeyFile = prkf;
-	} else {
-		std::string userDirectory;
-		if(! createUserConfigDir( userDirectory )) {
-			fprintf( stderr, "You must therefore specify the public and private key files on the command-line.\n" );
-			setup_usage();
-			return 1;
-		} else {
-			publicKeyFile = userDirectory + "/publicKeyFile";
-			privateKeyFile = userDirectory + "/privateKeyFile";
-		}
-	}
-
-	int fd = safe_open_no_create_follow( publicKeyFile.c_str(), O_RDONLY );
-	if( fd == -1 ) {
-		fprintf( stderr, "Unable to open public key file '%s': '%s' (%d).\n",
-			publicKeyFile.c_str(), strerror( errno ), errno );
-		setup_usage();
-		return 1;
-	}
-	close( fd );
-
-	fd = safe_open_no_create_follow( privateKeyFile.c_str(), O_RDONLY );
-	if( fd == -1 ) {
-		fprintf( stderr, "Unable to open private key file '%s': '%s' (%d).\n",
-			privateKeyFile.c_str(), strerror( errno ), errno );
-		setup_usage();
-		return 1;
-	}
-	close( fd );
-
-
-	std::string cfURL = cloudFormationURL ? cloudFormationURL : "";
-	if( cfURL.empty() ) {
-		// FIXME: At some point, the argument to 'setup' should be the region,
-		// not the CloudFormation URL.
-		param( cfURL, "ANNEX_DEFAULT_CF_URL" );
-	}
-	if( cfURL.empty() ) {
-		fprintf( stderr, "No CloudFormation URL specified on command-line and ANNEX_DEFAULT_CF_URL is not set or empty in configuration.\n" );
-		return 1;
-	}
-
-	std::string ec2URL = serviceURL ? serviceURL : "";
-	if( ec2URL.empty() ) {
-		param( ec2URL, "ANNEX_DEFAULT_EC2_URL" );
-	}
-	if( ec2URL.empty() ) {
-		fprintf( stderr, "No EC2 URL specified on command-line and ANNEX_DEFAULT_EC2_URL is not set or empty in configuration.\n" );
-		return 1;
-	}
-
-	ClassAd * reply = new ClassAd();
-	ClassAd * scratchpad = new ClassAd();
-
-	// This 100% redundant, but it moves all our config-file generation
-	// code to the same place, so it's worth it.
-	scratchpad->Assign( "AccessKeyFile", publicKeyFile );
-	scratchpad->Assign( "SecretKeyFile", privateKeyFile );
-
-	std::string commandID;
-	generateCommandID( commandID );
-
-	Stream * replyStream = NULL;
-
-	EC2GahpClient * cfGahp = startOneGahpClient( publicKeyFile, cfURL );
-	EC2GahpClient * ec2Gahp = startOneGahpClient( publicKeyFile, ec2URL );
-
-	// FIXME: Do something cleverer for versioning.
-	std::string bucketStackURL = "https://s3.amazonaws.com/condor-annex/bucket-7.json";
-	std::string bucketStackName = "HTCondorAnnex-ConfigurationBucket";
-	std::string bucketStackDescription = "configuration bucket (this takes less than a minute)";
-	std::map< std::string, std::string > bucketParameters;
-	CreateStack * bucketCS = new CreateStack( reply, cfGahp, scratchpad,
-		cfURL, publicKeyFile, privateKeyFile,
-		bucketStackName, bucketStackURL, bucketParameters,
-		commandState, commandID );
-	WaitForStack * bucketWFS = new WaitForStack( reply, cfGahp, scratchpad,
-		cfURL, publicKeyFile, privateKeyFile,
-		bucketStackName, bucketStackDescription,
-		commandState, commandID );
-
-	// FIXME: Do something cleverer for versioning.
-	std::string lfStackURL = "https://s3.amazonaws.com/condor-annex/template-7.json";
-	std::string lfStackName = "HTCondorAnnex-LambdaFunctions";
-	std::string lfStackDescription = "Lambda functions (this takes about a minute)";
-	std::map< std::string, std::string > lfParameters;
-	lfParameters[ "S3BucketName" ] = "<scratchpad>";
-	CreateStack * lfCS = new CreateStack( reply, cfGahp, scratchpad,
-		cfURL, publicKeyFile, privateKeyFile,
-		lfStackName, lfStackURL, lfParameters,
-		commandState, commandID );
-	WaitForStack * lfWFS = new WaitForStack( reply, cfGahp, scratchpad,
-		cfURL, publicKeyFile, privateKeyFile,
-		lfStackName, lfStackDescription,
-		commandState, commandID );
-
-	// FIXME: Do something cleverer for versioning.
-	std::string rStackURL = "https://s3.amazonaws.com/condor-annex/role-7.json";
-	std::string rStackName = "HTCondorAnnex-InstanceProfile";
-	std::string rStackDescription = "instance profile (this takes about two minutes)";
-	std::map< std::string, std::string > rParameters;
-	rParameters[ "S3BucketName" ] = "<scratchpad>";
-	CreateStack * rCS = new CreateStack( reply, cfGahp, scratchpad,
-		cfURL, publicKeyFile, privateKeyFile,
-		rStackName, rStackURL, rParameters,
-		commandState, commandID );
-	WaitForStack * rWFS = new WaitForStack( reply, cfGahp, scratchpad,
-		cfURL, publicKeyFile, privateKeyFile,
-		rStackName, rStackDescription,
-		commandState, commandID );
-
-	// FIXME: Do something cleverer for versioning.
-	std::string sgStackURL = "https://s3.amazonaws.com/condor-annex/security-group-7.json";
-	std::string sgStackName = "HTCondorAnnex-SecurityGroup";
-	std::string sgStackDescription = "security group (this takes less than a minute)";
-	std::map< std::string, std::string > sgParameters;
-	CreateStack * sgCS = new CreateStack( reply, cfGahp, scratchpad,
-		cfURL, publicKeyFile, privateKeyFile,
-		sgStackName, sgStackURL, sgParameters,
-		commandState, commandID );
-	WaitForStack * sgWFS = new WaitForStack( reply, cfGahp, scratchpad,
-		cfURL, publicKeyFile, privateKeyFile,
-		sgStackName, sgStackDescription,
-		commandState, commandID );
-
-	CreateKeyPair * ckp = new CreateKeyPair( reply, ec2Gahp, scratchpad,
-		ec2URL, publicKeyFile, privateKeyFile,
-		commandState, commandID );
-
-	GenerateConfigFile * gcf = new GenerateConfigFile( cfGahp, scratchpad );
-
-	SetupReply * sr = new SetupReply( reply, cfGahp, ec2Gahp, "Setup successful.\n", scratchpad,
-		replyStream, commandState, commandID );
-
-	FunctorSequence * fs = new FunctorSequence(
-		{ bucketCS, bucketWFS, lfCS, lfWFS, rCS, rWFS, sgCS, sgWFS, ckp, gcf }, sr,
-		commandState, commandID, scratchpad );
-
-
-	int setupTimer = daemonCore->Register_Timer( 0, TIMER_NEVER,
-		 (void (Service::*)()) & FunctorSequence::operator(),
-		 "CreateStack, DescribeStacks, WriteConfigFile", fs );
-	cfGahp->setNotificationTimerId( setupTimer );
-	ec2Gahp->setNotificationTimerId( setupTimer );
-
-	return 0;
-}
-
-
-// from annex.cpp
 void
 help( const char * argv0 ) {
 	fprintf( stdout, "usage: %s -annex-name <annex-name> -count|-slots <number>\n"
@@ -1218,18 +409,237 @@ help( const char * argv0 ) {
 		, argv0, argv0 );
 }
 
+
+// Part of emulating the original client-server architecture.
+void prepareCommandAd( const ClassAd & commandArguments, int commandInt ) {
+	command = new ClassAd( commandArguments );
+	command->Assign( ATTR_COMMAND, getCommandString( commandInt ) );
+	command->Assign( "RequestVersion", 1 );
+
+	// We don't trust the client the supply the command ID or annex ID.
+	command->Assign( "CommandID", (const char *)NULL );
+	command->Assign( "AnnexID", (const char *)NULL );
+}
+
+int create_annex( ClassAd & commandArguments ) {
+	prepareCommandAd( commandArguments, CA_BULK_REQUEST );
+	daemonCore->Register_Timer( 0, TIMER_NEVER,
+		& callCreateOneAnnex, "callCreateOneAnnex()" );
+	return 0;
+}
+
+int update_annex( ClassAd & commandArguments ) {
+	// In the original client-server architecture, this would have been
+	// CA_BULK_UPDATE, but since we're doing our own dispatch, don't bother.
+	prepareCommandAd( commandArguments, CA_BULK_REQUEST );
+	daemonCore->Register_Timer( 0, TIMER_NEVER,
+		& callUpdateOneAnnex, "callUpdateOneAnnex()" );
+	return 0;
+}
+
+void prepareTarballForUpload(	ClassAd & commandArguments,
+								const char * configDir,
+								char * owner, bool ownerSpecified,
+								bool noOwner,
+								long int unclaimedTimeout ) {
+	std::string annexName;
+	commandArguments.LookupString( "AnnexName", annexName );
+	ASSERT(! annexName.empty());
+
+	// Create a temporary directory.  If a config directory was specified,
+	// copy its contents into the temporary directory.  Create (or copy)
+	// the dynamic configuration files into the temporary directory.  Create
+	// a tarball of the temporary directory's contents in the cwd.  Delete
+	// the temporary directory (and all of its contents).  While the tool
+	// and the daemon are joined at the hip, just delete the tarball after
+	// uploading it; otherwise, we'll probably do file transfer and have
+	// the tool and the daemon clean up after themselves.
+	char dirNameTemplate[] = ".condor_annex.XXXXXX";
+	const char * tempDir = mkdtemp( dirNameTemplate );
+	if( tempDir == NULL ) {
+		fprintf( stderr, "Failed to create temporary directory (%d): '%s'.\n", errno, strerror( errno ) );
+		exit( 2 );
+	}
+
+	// FIXME: Rewrite without system().
+	if( configDir != NULL ) {
+		std::string command;
+		formatstr( command, "cp -a '%s'/* '%s'", configDir, tempDir );
+		int status = system( command.c_str() );
+		if(! (WIFEXITED( status ) && (WEXITSTATUS( status ) == 0))) {
+			fprintf( stderr, "Failed to copy '%s' to '%s', aborting.\n",
+				configDir, tempDir );
+			exit( 2 );
+		}
+	}
+
+	//
+	// A job's Owner attribute is almost aways set by condor_submit to be
+	// the return of my_username(), and this value is checked by the schedd.
+	//
+	// However, if the user submitted their jobs with +Owner = undefined,
+	// then what the mapfile says goes.  Rather than have this variable
+	// be configurable (because we may end up where condor_annex doesn't
+	// have per-user configuration), just require users in this rare
+	// situation to run condor_ping -type schedd WRITE and use the
+	// answer in a config directory (or command-line argument, if that
+	// becomes a thing) for setting the START expression.
+	//
+
+	std::string tarballPath, tarballError, instanceID;
+	if(! ownerSpecified) { owner = my_username(); }
+	bool createdTarball = createConfigTarball( tempDir, annexName.c_str(),
+		noOwner ? NULL : owner, unclaimedTimeout, tarballPath, tarballError,
+		instanceID );
+	if(! ownerSpecified) { free( owner ); }
+	commandArguments.Assign( "CollectorInstanceID", instanceID );
+
+	// FIXME: Rewrite without system().
+	std::string cmd;
+	formatstr( cmd, "rm -fr '%s'", tempDir );
+	int status = system( cmd.c_str() );
+	if(! (WIFEXITED( status ) && (WEXITSTATUS( status ) == 0))) {
+		fprintf( stderr, "Failed to delete temporary directory '%s'.\n",
+			tempDir );
+		exit( 2 );
+	}
+
+	if(! createdTarball) {
+		fprintf( stderr, "Failed to create config tarball (%s); aborting.\n", tarballError.c_str() );
+		exit( 3 );
+	}
+
+	commandArguments.Assign( "UploadFrom", tarballPath );
+}
+
+void handleUserData(	ClassAd & commandArguments,
+						bool clUserDataWins, std::string & userData,
+						const char * userDataFileName ) {
+	if( userDataFileName != NULL ) {
+		if(! readShortFile( userDataFileName, userData ) ) {
+			exit( 4 );
+		}
+	}
+
+	if(! userData.empty()) {
+		std::string validationError;
+		char * base64Encoded = condor_base64_encode( (const unsigned char *)userData.c_str(), userData.length() );
+		if(! assignUserData( commandArguments, base64Encoded, clUserDataWins, validationError )) {
+			fprintf( stderr, "Failed to set user data in request ad (%s).\n", validationError.c_str() );
+			exit( 5 );
+		}
+		free( base64Encoded );
+	}
+}
+
+void getSFRApproval(	ClassAd & commandArguments, const char * sfrConfigFile,
+						bool leaseDurationSpecified, bool unclaimedTimeoutSpecified,
+						long int count, long int leaseDuration, long int unclaimedTimeout ) {
+	FILE * file = NULL;
+	bool closeFile = true;
+	if( strcmp( sfrConfigFile, "-" ) == 0 ) {
+		file = stdin;
+		closeFile = false;
+	} else {
+		file = safe_fopen_wrapper_follow( sfrConfigFile, "r" );
+		if( file == NULL ) {
+			fprintf( stderr, "Unable to open annex specification file '%s'.\n", sfrConfigFile );
+			exit( 1 );
+		}
+	}
+
+	CondorClassAdFileIterator ccafi;
+	if(! ccafi.begin( file, closeFile, CondorClassAdFileParseHelper::Parse_json )) {
+		fprintf( stderr, "Failed to start parsing spot fleet request.\n" );
+		exit( 2 );
+	} else {
+		int numAttrs = ccafi.next( commandArguments );
+		if( numAttrs <= 0 ) {
+			fprintf( stderr, "Failed to parse spot fleet request, found no attributes.\n" );
+			exit( 2 );
+		} else if( numAttrs > 11 ) {
+			fprintf( stderr, "Failed to parse spot fleet reqeust, found too many attributes.\n" );
+			exit( 2 );
+		}
+	}
+
+	fprintf( stdout,
+		"Will request %ld spot instance%s for %.2f hours.  "
+		"Each instance will terminate after being idle for %.2f hours.\n",
+		count,
+		count == 1 ? "" : "s",
+		leaseDuration / 3600.0,
+		unclaimedTimeout / 3600.0
+	);
+
+	std::string response;
+	fprintf( stdout, "Is that OK?  (Type 'yes' or 'no'): " );
+	std::getline( std::cin, response );
+
+	if( strcasecmp( response.c_str(), "yes" ) != 0 ) {
+		if(! leaseDurationSpecified) {
+			fprintf( stdout, "To change the lease duration, use the -duration flag.\n" );
+		}
+		if(! unclaimedTimeoutSpecified) {
+			fprintf( stdout, "To change how long an idle instance will wait before terminating itself, use the -idle flag.\n" );
+		}
+
+		exit( 1 );
+	}
+}
+
+void getODIApproval(	ClassAd &,
+						const char * odiInstanceType, bool odiInstanceTypeSpecified,
+						bool leaseDurationSpecified, bool unclaimedTimeoutSpecified,
+						long int count, long int leaseDuration, long int unclaimedTimeout ) {
+	fprintf( stdout,
+		"Will request %ld %s on-demand instance%s for %.2f hours.  "
+		"Each instance will terminate after being idle for %.2f hours.\n",
+		count, odiInstanceType, count == 1 ? "" : "s",
+		leaseDuration / 3600.0, unclaimedTimeout / 3600.0
+	);
+
+	std::string response;
+	fprintf( stdout, "Is that OK?  (Type 'yes' or 'no'): " );
+	std::getline( std::cin, response );
+
+	if( strcasecmp( response.c_str(), "yes" ) != 0 ) {
+		if(! odiInstanceTypeSpecified) {
+			fprintf( stdout, "To change the instance type, use the -aws-on-demand-instance-type flag.\n" );
+		}
+
+		if(! leaseDurationSpecified) {
+			fprintf( stdout, "To change the lease duration, use the -duration flag.\n" );
+		}
+		if(! unclaimedTimeoutSpecified) {
+			fprintf( stdout, "To change how long an idle instance will wait before terminating itself, use the -idle flag.\n" );
+		}
+
+		exit( 1 );
+	}
+}
+
+void assignWithDefault(	ClassAd & commandArguments, const char * value,
+						const char * paramName, const char * argName ) {
+	if(! value) {
+		value = param( paramName );
+	}
+	if( value ) {
+		commandArguments.Assign( argName, value );
+	}
+}
+
 int _argc;
 char ** _argv;
 
-// from annex.cpp
 int
 annex_main( int argc, char ** argv ) {
-	bool clUserDataWins = true;
-	std::string userData;
-	const char * userDataFileName = NULL;
+	//
+	// Parsing.
+	//
 
-argc = _argc;
-argv = _argv;
+	argc = _argc;
+	argv = _argv;
 
 	int udSpecifications = 0;
 	const char * sfrConfigFile = NULL;
@@ -1247,11 +657,20 @@ argv = _argv;
 	bool odiInstanceTypeSpecified = false;
 	const char * odiImageID = NULL;
 	const char * odiInstanceProfileARN = NULL;
-	const char * odiS3ConfigPath = NULL;
+	const char * s3ConfigPath = NULL;
 	const char * odiKeyName = NULL;
 	const char * odiSecurityGroupIDs = NULL;
-	bool annexTypeIsSFR = false;
-	bool annexTypeIsODI = false;
+	bool clUserDataWins = true;
+	std::string userData;
+	const char * userDataFileName = NULL;
+
+	enum annex_t {
+		at_none = 0,
+		at_sfr = 1,
+		at_odi = 2
+	};
+	annex_t annexType = at_none;
+
 	long int unclaimedTimeout = 0;
 	bool unclaimedTimeoutSpecified = false;
 	long int leaseDuration = 0;
@@ -1260,6 +679,14 @@ argv = _argv;
 	char * owner = NULL;
 	bool ownerSpecified = false;
 	bool noOwner = false;
+	enum command_t {
+		ct_setup = 2,
+		ct_default = 0,
+		ct_check_setup = 3,
+		ct_create_annex = 1,
+		ct_update_annex = 4
+	};
+	command_t theCommand = ct_default;
 	for( int i = 1; i < argc; ++i ) {
 		if( is_dash_arg_prefix( argv[i], "aws-ec2-url", 11 ) ) {
 			++i;
@@ -1370,7 +797,13 @@ argv = _argv;
 			++i;
 			if( argv[i] != NULL ) {
 				sfrConfigFile = argv[i];
-				annexTypeIsSFR = true;
+				if( annexType == at_none ) {
+					annexType = at_sfr;
+				}
+				if( annexType == at_odi ) {
+					fprintf( stderr, "%s: unwilling to ignore -aws-spot-fleet-config-file being set for an on-demand annex.\n", argv[0] );
+					return 1;
+				}
 				continue;
 			} else {
 				fprintf( stderr, "%s: -aws-spot-fleet-config-file requires an argument.\n", argv[0] );
@@ -1463,7 +896,7 @@ argv = _argv;
 		} else if( is_dash_arg_prefix( argv[i], "aws-s3-config-path", 18 ) ) {
 			++i;
 			if( argv[i] != NULL ) {
-				odiS3ConfigPath = argv[i];
+				s3ConfigPath = argv[i];
 				continue;
 			} else {
 				fprintf( stderr, "%s: -aws-s3-config-path requires an argument.\n", argv[0] );
@@ -1525,7 +958,13 @@ argv = _argv;
 					fprintf( stderr, "%s: the number of requested slots must be greater than zero.\n", argv[0] );
 					return 1;
 				}
-				annexTypeIsSFR = true;
+				if( annexType == at_none ) {
+					annexType = at_sfr;
+				}
+				if( annexType == at_odi ) {
+					fprintf( stderr, "%s: you must specify -count for on-demand annexes.\n", argv[0] );
+					return 1;
+				}
 				continue;
 			} else {
 				fprintf( stderr, "%s: -slots requires an argument.\n", argv[0] );
@@ -1545,35 +984,52 @@ argv = _argv;
 					fprintf( stderr, "%s: the number of requested instances must be greater than zero.\n", argv[0] );
 					return 1;
 				}
-				annexTypeIsODI = true;
+				if( annexType == at_none ) {
+					annexType = at_odi;
+				}
+				if( annexType == at_sfr ) {
+					fprintf( stderr, "%s: you must specify -slots for a Spot Fleet annex.\n", argv[0] );
+					return 1;
+				}
 				continue;
 			} else {
 				fprintf( stderr, "%s: -count requires an argument.\n", argv[0] );
 				return 1;
 			}
 		} else if( is_dash_arg_prefix( argv[i], "aws-spot-fleet", 14 ) ) {
-			annexTypeIsSFR = true;
+			if( annexType == at_none ) {
+				annexType = at_sfr;
+			}
+			if( annexType == at_odi ) {
+				fprintf( stderr, "%s: -aws-spot-fleet conflicts with another command-line option, aborting.\n", argv[0] );
+				return 1;
+			}
 			continue;
 		} else if( is_dash_arg_prefix( argv[i], "aws-on-demand", 13 ) ) {
-			annexTypeIsODI = true;
+			if( annexType == at_none ) {
+				annexType = at_odi;
+			}
+			if( annexType == at_sfr ) {
+				fprintf( stderr, "%s: -aws-on-demand conflicts with another command-line option, aborting.\n", argv[0] );
+				return 1;
+			}
 			continue;
 		} else if( is_dash_arg_prefix( argv[i], "help", 1 ) ) {
 			help( argv[0] );
 			return 1;
 		} else if( is_dash_arg_prefix( argv[i], "check-setup", 11 ) ) {
-			return check_setup();
+			theCommand = ct_check_setup;
 		} else if( is_dash_arg_prefix( argv[i], "setup", 5 ) ) {
-			// FIXME: At some point, we should accept a region flag instead
-			// of requiring the user to specify two different URLs.
-			return setup(	argc >= 2 ? argv[2] : NULL,
-							argc >= 3 ? argv[3] : NULL,
-							argc >= 4 ? argv[4] : NULL,
-							serviceURL );
+			theCommand = ct_setup;
 		} else if( argv[i][0] == '-' && argv[i][1] != '\0' ) {
 			fprintf( stderr, "%s: unrecognized option (%s).\n", argv[0], argv[i] );
 			return 1;
 		}
 	}
+
+	//
+	// Validation.
+	//
 
 	if( udSpecifications > 1 ) {
 		fprintf( stderr, "%s: you may specify no more than one of -aws-[default-]user-data[-file].\n", argv[0] );
@@ -1585,324 +1041,178 @@ argv = _argv;
 		return 1;
 	}
 
-	if( count == 0 ) {
-		fprintf( stderr, "%s: you must specify (a positive) -count.\n", argv[0] );
-		return 1;
+	//
+	// Set attributes common to all commands.
+	//
+	ClassAd commandArguments;
+
+	if( publicKeyFile != NULL ) {
+		commandArguments.Assign( "PublicKeyFile", publicKeyFile );
 	}
 
-	if( leaseDuration == 0 ) {
-		leaseDuration = param_integer( "ANNEX_DEFAULT_LEASE_DURATION", 3000 );
+	if( secretKeyFile != NULL ) {
+		commandArguments.Assign( "SecretKeyFile", secretKeyFile );
 	}
+
+	if( serviceURL != NULL ) {
+		commandArguments.Assign( "ServiceURL", serviceURL );
+	}
+
+	if( eventsURL != NULL ) {
+		commandArguments.Assign( "EventsURL", eventsURL );
+	}
+
+	if( lambdaURL != NULL ) {
+		commandArguments.Assign( "LambdaURL", lambdaURL );
+	}
+
+	if( s3URL != NULL ) {
+		commandArguments.Assign( "S3URL", s3URL );
+	}
+
+	commandArguments.Assign( "AnnexName", annexName );
+
+	commandArguments.Assign( "TargetCapacity", count );
+
+	time_t now = time( NULL );
+	commandArguments.Assign( "EndOfLease", now + leaseDuration );
 
 	if( unclaimedTimeout == 0 ) {
 		unclaimedTimeout = param_integer( "ANNEX_DEFAULT_UNCLAIMED_TIMEOUT", 900 );
 	}
 
-	if( annexTypeIsSFR && annexTypeIsODI ) {
-		fprintf( stderr, "An annex may not be both on-demand and spot fleet.  "
-			"Specifying -count implies -aws-on-demand; specifying -slots "
-			"implies -aws-spot-fleet.\n" );
-		return 1;
-	}
-	if(! (annexTypeIsSFR || annexTypeIsODI )) {
-		annexTypeIsODI = true;
-	}
-
-	if( annexTypeIsSFR && sfrConfigFile == NULL ) {
-		sfrConfigFile = param( "ANNEX_DEFAULT_SFR_CONFIG_FILE" );
-		if( sfrConfigFile == NULL ) {
-			fprintf( stderr, "Spot Fleet Requests require the -aws-spot-fleet-config-file flag.\n" );
-			return 1;
-		}
-	}
-	if( sfrConfigFile != NULL && ! annexTypeIsSFR ) {
-		fprintf( stderr, "Unwilling to ignore -spot-fleet-request-config-file flag being set for an on-demand annex.\n" );
-		return 1;
-	}
-
-
 	//
-	// Construct enough of the command ad that we can ask the user if what
-	// we're doing is OK.
+	// Determine the command, then do command-specific things.
 	//
+	if( annexType == at_none ) {
+		annexType = at_odi;
+	}
 
-	ClassAd spotFleetRequest;
-	if( sfrConfigFile != NULL ) {
-		FILE * file = NULL;
-		bool closeFile = true;
-		if( strcmp( sfrConfigFile, "-" ) == 0 ) {
-			file = stdin;
-			closeFile = false;
-		} else {
-			file = safe_fopen_wrapper_follow( sfrConfigFile, "r" );
-			if( file == NULL ) {
-				fprintf( stderr, "Unable to open annex specification file '%s'.\n", sfrConfigFile );
+	if( theCommand == ct_default ) {
+		theCommand = ct_create_annex;
+
+		if( count == 0 ) {
+			if( leaseDurationSpecified ) {
+				if(! unclaimedTimeoutSpecified) {
+					theCommand = ct_update_annex;
+				} else {
+					fprintf( stderr, "You may not change the idle duration of existing instances.  If you'd like to add new instances with a particular idle duration, you must specify %s.\n",
+						annexType == at_odi ? "-count" : "-slots" );
+					return 1;
+				}
+			} else {
+				fprintf( stderr, "To change the lease duration of an existing annex, use -duration.  To start a new annex, use %s.\n",
+					annexType == at_odi ? "-count" : "-slots" );
 				return 1;
 			}
 		}
+	}
 
-		CondorClassAdFileIterator ccafi;
-		if(! ccafi.begin( file, closeFile, CondorClassAdFileParseHelper::Parse_json )) {
-			fprintf( stderr, "Failed to start parsing spot fleet request.\n" );
-			return 2;
-		} else {
-			int numAttrs = ccafi.next( spotFleetRequest );
-			if( numAttrs <= 0 ) {
-				fprintf( stderr, "Failed to parse spot fleet request, found no attributes.\n" );
-				return 2;
-			} else if( numAttrs > 11 ) {
-				fprintf( stderr, "Failed to parse spot fleet reqeust, found too many attributes.\n" );
-				return 2;
+	switch( theCommand ) {
+		case ct_create_annex:
+			// Validate the spot fleet request config file.
+			if( annexType == at_odi && sfrConfigFile == NULL ) {
+				sfrConfigFile = param( "ANNEX_DEFAULT_SFR_CONFIG_FILE" );
+				if( sfrConfigFile == NULL ) {
+					fprintf( stderr, "Spot Fleet Requests require the -aws-spot-fleet-config-file flag.\n" );
+					return 1;
+				}
 			}
-		}
-	} else {
-		if(! odiInstanceType) {
-			odiInstanceType = param( "ANNEX_DEFAULT_ODI_INSTANCE_TYPE" );
-		}
-		if( odiInstanceType ) {
-			spotFleetRequest.Assign( "InstanceType", odiInstanceType );
-		}
 
-		if(! odiImageID) {
-			odiImageID = param( "ANNEX_DEFAULT_ODI_IMAGE_ID" );
-		}
-		if( odiImageID ) {
-			spotFleetRequest.Assign( "ImageID", odiImageID );
-		}
-
-		if(! odiInstanceProfileARN) {
-			odiInstanceProfileARN = param( "ANNEX_DEFAULT_ODI_INSTANCE_PROFILE_ARN" );
-		}
-		if( odiInstanceProfileARN ) {
-			spotFleetRequest.Assign( "InstanceProfileARN", odiInstanceProfileARN );
-		}
-
-		if(! odiKeyName) {
-			odiKeyName = param( "ANNEX_DEFAULT_ODI_KEY_NAME" );
-		}
-		if( odiKeyName ) {
-			spotFleetRequest.Assign( "KeyName", odiKeyName );
-		}
-
-		if(! odiSecurityGroupIDs) {
-			odiSecurityGroupIDs = param( "ANNEX_DEFAULT_ODI_SECURITY_GROUP_IDS" );
-		}
-		if( odiSecurityGroupIDs ) {
-			spotFleetRequest.Assign( "SecurityGroupIDs", odiSecurityGroupIDs );
-		}
-	}
-
-	if( annexTypeIsSFR ) {
-		spotFleetRequest.Assign( "AnnexType", "sfr" );
-		if(! sfrLeaseFunctionARN) {
-			sfrLeaseFunctionARN = param( "ANNEX_DEFAULT_SFR_LEASE_FUNCTION_ARN" );
-		}
-		spotFleetRequest.Assign( "LeaseFunctionARN", sfrLeaseFunctionARN );
-	}
-	if( annexTypeIsODI ) {
-		spotFleetRequest.Assign( "AnnexType", "odi" );
-		if(! odiLeaseFunctionARN) {
-			odiLeaseFunctionARN = param( "ANNEX_DEFAULT_ODI_LEASE_FUNCTION_ARN" );
-		}
-		spotFleetRequest.Assign( "LeaseFunctionARN", odiLeaseFunctionARN );
-	}
-
-	spotFleetRequest.Assign( "AnnexName", annexName );
-	spotFleetRequest.Assign( "TargetCapacity", count );
-	time_t now = time( NULL );
-	spotFleetRequest.Assign( "EndOfLease", now + leaseDuration );
-
-
-	//
-	// Ask the user if what we're doing is OK.  If it isn't, tell the
-	// user how to change it.
-	//
-
-	if( annexTypeIsODI ) {
-		fprintf( stdout,
-			"Will request %ld %s on-demand instance%s for %.2f hours.  "
-			"Each instance will terminate after being idle for %.2f hours.\n",
-			count, odiInstanceType, count == 1 ? "" : "s",
-			leaseDuration / 3600.0, unclaimedTimeout / 3600.0
-		);
-	}
-
-	if( annexTypeIsSFR ) {
-		fprintf( stdout,
-			"Will request %ld spot instance%s for %.2f hours.  "
-			"Each instance will terminate after being idle for %.2f hours.\n",
-			count,
-			count == 1 ? "" : "s",
-			leaseDuration / 3600.0,
-			unclaimedTimeout / 3600.0
-		);
-	}
-
-	std::string response;
-	fprintf( stdout, "Is that OK?  (Type 'yes' or 'no'): " );
-	std::getline( std::cin, response );
-
-	if( strcasecmp( response.c_str(), "yes" ) != 0 ) {
-		if( annexTypeIsODI ) {
-			if(! odiInstanceTypeSpecified) {
-				fprintf( stdout, "To change the instance type, use the -aws-on-demand-instance-type flag.\n" );
+			// Determine where to upload the config tarball.
+			{ std::string tarballTarget;
+			param( tarballTarget, "ANNEX_DEFAULT_S3_BUCKET" );
+			if( s3ConfigPath != NULL ) {
+				tarballTarget = s3ConfigPath;
+			} else {
+				formatstr( tarballTarget, "%s/config-%s.tar.gz",
+				tarballTarget.c_str(), annexName );
 			}
-		}
+			if( tarballTarget.empty() ) {
+				fprintf( stderr, "If you don't specify -aws-s3-config-path, ANNEX_DEFAULT_S3_BUCKET must be set in configuration.\n" );
+				return 1;
+			}
+			commandArguments.Assign( "UploadTo", tarballTarget ); }
 
-		if(! leaseDurationSpecified) {
-			fprintf( stdout, "To change the lease duration, use the -duration flag.\n" );
-		}
-		if(! unclaimedTimeoutSpecified) {
-			fprintf( stdout, "To change how long an idle instance will wait before terminating itself, use the -idle flag.\n" );
-		}
+			// Deliberate fall-through to common code.
 
-		return 1;
+		case ct_update_annex:
+			// Set AnnexType and LeaseFunctionARN.
+			if( annexType == at_sfr ) {
+				commandArguments.Assign( "AnnexType", "sfr" );
+				if(! sfrLeaseFunctionARN) {
+					sfrLeaseFunctionARN = param( "ANNEX_DEFAULT_SFR_LEASE_FUNCTION_ARN" );
+				}
+			commandArguments.Assign( "LeaseFunctionARN", sfrLeaseFunctionARN );
+			}
+			if( annexType == at_odi ) {
+				commandArguments.Assign( "AnnexType", "odi" );
+				if(! odiLeaseFunctionARN) {
+					odiLeaseFunctionARN = param( "ANNEX_DEFAULT_ODI_LEASE_FUNCTION_ARN" );
+				}
+			commandArguments.Assign( "LeaseFunctionARN", odiLeaseFunctionARN );
+			}
+
+		default:
+			break;
 	}
 
+	switch( theCommand ) {
+		case ct_setup:
+			return setup(	argc >= 2 ? argv[2] : NULL,
+							argc >= 3 ? argv[3] : NULL,
+							argc >= 4 ? argv[4] : NULL,
+							serviceURL );
 
-	//
-	// Build the (dynamic) configuration tarball.
-	//
+		case ct_check_setup:
+			return check_setup();
 
-	std::string tarballTarget;
-	param( tarballTarget, "ANNEX_DEFAULT_S3_BUCKET" );
-	if( odiS3ConfigPath != NULL ) {
-		tarballTarget = odiS3ConfigPath;
-	} else {
-		formatstr( tarballTarget, "%s/config-%s.tar.gz",
-			tarballTarget.c_str(), annexName );
-	}
-	if( tarballTarget.empty() ) {
-		fprintf( stderr, "If you don't specify -aws-s3-config-path, ANNEX_DEFAULT_S3_BUCKET must be set in configuration.\n" );
-		return 1;
-	}
-	spotFleetRequest.Assign( "UploadTo", tarballTarget );
+		case ct_create_annex:
+			switch( annexType ) {
+				case at_sfr:
+					getSFRApproval(	commandArguments, sfrConfigFile,
+									leaseDurationSpecified, unclaimedTimeoutSpecified,
+									count, leaseDuration, unclaimedTimeout );
+					break;
 
-	// Create a temporary directory.  If a config directory was specified,
-	// copy its contents into the temporary directory.  Create (or copy)
-	// the dynamic configuration files into the temporary directory.  Create
-	// a tarball of the temporary directory's contents in the cwd.  Delete
-	// the temporary directory (and all of its contents).  While the tool
-	// and the daemon are joined at the hip, just delete the tarball after
-	// uploading it; otherwise, we'll probably do file transfer and have
-	// the tool and the daemon clean up after themselves.
-	char dirNameTemplate[] = ".condor_annex.XXXXXX";
-	const char * tempDir = mkdtemp( dirNameTemplate );
-	if( tempDir == NULL ) {
-		fprintf( stderr, "Failed to create temporary directory (%d): '%s'.\n", errno, strerror( errno ) );
-		return 2;
-	}
+				case at_odi:
+					assignWithDefault( commandArguments, odiInstanceType,
+						"ANNEX_DEFAULT_ODI_INSTANCE_TYPE", "InstanceType" );
+					assignWithDefault( commandArguments, odiImageID,
+						"ANNEX_DEFAULT_ODI_IMAGE_ID", "ImageID" );
+					assignWithDefault( commandArguments, odiInstanceProfileARN,
+						"ANNEX_DEFAULT_ODI_INSTANCE_PROFILE_ARN",
+						"InstanceProfileARN" );
+					assignWithDefault( commandArguments, odiKeyName,
+						"ANNEX_DEFAULT_ODI_KEY_NAME", "KeyName" );
+					assignWithDefault( commandArguments, odiSecurityGroupIDs,
+						"ANNEX_DEFAULT_ODI_SECURITY_GROUP_IDS", "SecurityGroupIDs" );
 
-	// FIXME: Rewrite without system().
-	if( configDir != NULL ) {
-		std::string command;
-		formatstr( command, "cp -a '%s'/* '%s'", configDir, tempDir );
-		int status = system( command.c_str() );
-		if(! (WIFEXITED( status ) && (WEXITSTATUS( status ) == 0))) {
-			fprintf( stderr, "Failed to copy '%s' to '%s', aborting.\n",
-				configDir, tempDir );
-			return 2;
-		}
-	}
+					getODIApproval( commandArguments,
+									odiInstanceType, odiInstanceTypeSpecified,
+									leaseDurationSpecified, unclaimedTimeoutSpecified,
+									count, leaseDuration, unclaimedTimeout );
+					break;
 
-	//
-	// A job's Owner attribute is almost aways set by condor_submit to be
-	// the return of my_username(), and this value is checked by the schedd.
-	//
-	// However, if the user submitted their jobs with +Owner = undefined,
-	// then what the mapfile says goes.  Rather than have this variable
-	// be configurable (because we may end up where condor_annex doesn't
-	// have per-user configuration), just require users in this rare
-	// situation to run condor_ping -type schedd WRITE and use the
-	// answer in a config directory (or command-line argument, if that
-	// becomes a thing) for setting the START expression.
-	//
+				default:
+					ASSERT( false );
+			}
 
-	std::string tarballPath, tarballError, instanceID;
-	if(! ownerSpecified) { owner = my_username(); }
-	bool createdTarball = createConfigTarball( tempDir, annexName,
-		noOwner ? NULL : owner, unclaimedTimeout, tarballPath, tarballError,
-		instanceID );
-	if(! ownerSpecified) { free( owner ); }
-	spotFleetRequest.Assign( "CollectorInstanceID", instanceID );
+			prepareTarballForUpload( commandArguments, configDir, owner, ownerSpecified, noOwner, unclaimedTimeout );
+			handleUserData( commandArguments, clUserDataWins, userData, userDataFileName );
+			return create_annex( commandArguments );
 
-	// FIXME: Rewrite without system().
-	std::string cmd;
-	formatstr( cmd, "rm -fr '%s'", tempDir );
-	int status = system( cmd.c_str() );
-	if(! (WIFEXITED( status ) && (WEXITSTATUS( status ) == 0))) {
-		fprintf( stderr, "Failed to delete temporary directory '%s'.\n",
-			tempDir );
-		return 2;
+		case ct_update_annex:
+			return update_annex( commandArguments );
+
+		default:
+			ASSERT( false );
+			return 1;
 	}
 
-	if(! createdTarball) {
-		fprintf( stderr, "Failed to create config tarball (%s); aborting.\n", tarballError.c_str() );
-		return 3;
-	}
-
-	spotFleetRequest.Assign( "UploadFrom", tarballPath );
-
-	//
-	// Finish constructing the spot fleet request.
-	//
-
-	if( serviceURL != NULL ) {
-		spotFleetRequest.Assign( "ServiceURL", serviceURL );
-	}
-
-	if( eventsURL != NULL ) {
-		spotFleetRequest.Assign( "EventsURL", eventsURL );
-	}
-
-	if( lambdaURL != NULL ) {
-		spotFleetRequest.Assign( "LambdaURL", lambdaURL );
-	}
-
-	if( s3URL != NULL ) {
-		spotFleetRequest.Assign( "S3URL", s3URL );
-	}
-
-	if( publicKeyFile != NULL ) {
-		spotFleetRequest.Assign( "PublicKeyFile", publicKeyFile );
-	}
-
-	if( secretKeyFile != NULL ) {
-		spotFleetRequest.Assign( "SecretKeyFile", secretKeyFile );
-	}
-
-	// Handle user data.
-	if( userDataFileName != NULL ) {
-		if(! readShortFile( userDataFileName, userData ) ) {
-			return 4;
-		}
-	}
-
-	// condor_base64_encode() segfaults on the empty string.
-	if(! userData.empty()) {
-		std::string validationError;
-		char * base64Encoded = condor_base64_encode( (const unsigned char *)userData.c_str(), userData.length() );
-		if(! assignUserData( spotFleetRequest, base64Encoded, clUserDataWins, validationError )) {
-			fprintf( stderr, "Failed to set user data in request ad (%s).\n", validationError.c_str() );
-			return 5;
-		}
-		free( base64Encoded );
-	}
-
-
-	// -------------------------------------------------------------------------
-	command = new ClassAd( spotFleetRequest );
-	command->Assign( ATTR_COMMAND, getCommandString( CA_BULK_REQUEST ) );
-	command->Assign( "RequestVersion", 1 );
-
-	command->Assign( "CommandID", (const char *)NULL );
-    command->Assign( "AnnexID", (const char *)NULL );
-
-	daemonCore->Register_Timer( 0, TIMER_NEVER,
-		& callCreateOneAnnex, "callCreateOneAnnex()" );
-
-	return 0;
+	return -1;
 }
+
 
 void
 main_init( int argc, char ** argv ) {
@@ -1937,25 +1247,27 @@ int
 main( int argc, char ** argv ) {
 	set_mySubSystem( "ANNEXD", SUBSYSTEM_TYPE_DAEMON );
 
-// This is dumb, but easier than fighting daemon core about parsing.
-_argc = argc;
-_argv = (char **)malloc( argc * sizeof( char * ) );
-for( int i = 0; i < argc; ++i ) {
-	_argv[i] = strdup( argv[i] );
-}
 
-// This is also dumb, but less dangerous than (a) reaching into daemon
-// core to set a flag and (b) hoping that my command-line arguments and
-// its command-line arguments don't conflict.
-char ** dcArgv = (char **)malloc( 4 * sizeof( char * ) );
-dcArgv[0] = argv[0];
-// Force daemon core to run in the foreground.
-dcArgv[1] = strdup( "-f" );
-// Disable the daemon core command socket.
-dcArgv[2] = strdup( "-p" );
-dcArgv[3] = strdup(  "0" );
-argc = 4;
-argv = dcArgv;
+	// This is dumb, but easier than fighting daemon core about parsing.
+	_argc = argc;
+	_argv = (char **)malloc( argc * sizeof( char * ) );
+	for( int i = 0; i < argc; ++i ) {
+		_argv[i] = strdup( argv[i] );
+	}
+
+	// This is also dumb, but less dangerous than (a) reaching into daemon
+	// core to set a flag and (b) hoping that my command-line arguments and
+	// its command-line arguments don't conflict.
+	char ** dcArgv = (char **)malloc( 4 * sizeof( char * ) );
+	dcArgv[0] = argv[0];
+	// Force daemon core to run in the foreground.
+	dcArgv[1] = strdup( "-f" );
+	// Disable the daemon core command socket.
+	dcArgv[2] = strdup( "-p" );
+	dcArgv[3] = strdup(  "0" );
+	argc = 4;
+	argv = dcArgv;
+
 
 	dc_main_init = & main_init;
 	dc_main_config = & main_config;
