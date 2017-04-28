@@ -94,7 +94,15 @@ queue 12";
 open(FH, ">$submitfile") || print "ERROR opening file $submitfile";
 print FH $submit_content;
 close(FH);
-`condor_submit $submitfile -factory`;
+my @submit_message = `condor_submit $submitfile -factory`;
+my $submit_total = count_jobs(\@submit_message);
+if ($submit_total != 12) {
+	print "ERROR: $submit_total jobs submitted, should submit 12 jobs";
+	RegisterResult(0, check_name => "check total jobs submitted", test_name => $testname);
+} else {
+	RegisterResult(1, check_name => "check total jobs submitted", test_name => $testname);
+}
+
 @content = `condor_q`;
 $res = count_jobs(\@content);
 
@@ -110,10 +118,10 @@ sub count_jobs {
 	my @content = @{$_[0]};
 	my $index = 0;
 	my $res;
-	while (! ($content[$index] =~ /([0-9]+)\s*jobs;/)) {
+	while (! ($content[$index] =~ /([0-9]+)\s*job\(?s\)?/)) {
 		$index++;
 	}
-	$content[$index] =~ /([0-9]+)\s*jobs;/;
+	$content[$index] =~ /([0-9]+)\s*job\(?s\)?/;
 	$res = $1;
 	return $res;
 }
