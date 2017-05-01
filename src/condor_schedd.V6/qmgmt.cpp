@@ -3589,11 +3589,15 @@ ReadProxyFileIntoAd( const char *file, const char *owner, ClassAd &x509_attrs )
 	(void)x509_attrs;
 	return false;
 #else
-	if ( !init_user_ids( owner, NULL ) ) {
-		dprintf( D_FAILURE, "ReadProxyFileIntoAd(%s): Failed to switch to user priv\n", owner );
-		return false;
+	// owner==NULL means don't try to switch our priv state.
+	TemporaryPrivSentry tps( owner != NULL );
+	if ( owner != NULL ) {
+		if ( !init_user_ids( owner, NULL ) ) {
+			dprintf( D_FAILURE, "ReadProxyFileIntoAd(%s): Failed to switch to user priv\n", owner );
+			return false;
+		}
+		set_user_priv();
 	}
-	TemporaryPrivSentry tps( PRIV_USER, true );
 
 	StatInfo si( file );
 	if ( si.Error() == SINoFile ) {
