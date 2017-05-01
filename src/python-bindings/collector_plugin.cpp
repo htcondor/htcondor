@@ -133,10 +133,12 @@ PythonCollectorPlugin::initialize()
 void
 PythonCollectorPlugin::shutdown()
 {
+   if (m_shutdown_funcs.empty()) {return;}
+
     boost::python::list pyArgs;
     boost::python::dict pyKw;
 
-    std::vector<boost::python::object>::const_iterator iter = m_update_funcs.begin();
+    std::vector<boost::python::object>::const_iterator iter = m_shutdown_funcs.begin();
     for (; iter != m_shutdown_funcs.end(); iter++) {
         try
         {
@@ -205,6 +207,8 @@ PythonCollectorPlugin::update(int command, const ClassAd &ad)
 void
 PythonCollectorPlugin::invalidate(int command, const ClassAd &ad)
 {
+   if (m_invalidate_funcs.empty()) {return;}
+
     boost::python::list pyArgs;
     boost::python::dict pyKw;
 
@@ -222,14 +226,14 @@ PythonCollectorPlugin::invalidate(int command, const ClassAd &ad)
     {
         if (PyErr_Occurred())
         {
-            dprintf(D_ALWAYS, "Python exception occurred when building arguments for update function: %s\n", handle_pyerror().c_str());
+            dprintf(D_ALWAYS, "Python exception occurred when building arguments for invalidate function: %s\n", handle_pyerror().c_str());
             PyErr_Clear();
         }
         return;
     }
 
     std::vector<boost::python::object>::const_iterator iter = m_invalidate_funcs.begin();
-    for (; iter != m_update_funcs.end(); iter++)
+    for (; iter != m_invalidate_funcs.end(); iter++)
     {
         try
         {
@@ -239,7 +243,7 @@ PythonCollectorPlugin::invalidate(int command, const ClassAd &ad)
         {
             if (PyErr_Occurred())
             {
-                dprintf(D_ALWAYS, "Python exception occurred when invoking shutdown function: %s\n", handle_pyerror().c_str());
+                dprintf(D_ALWAYS, "Python exception occurred when invoking invalidate function: %s\n", handle_pyerror().c_str());
                 PyErr_Clear();
             }
         }
