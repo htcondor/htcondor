@@ -371,7 +371,7 @@ help( const char * argv0 ) {
 		"\t[-config-dir </full/path/to/config.d>]\n"
 		"\n"
 		"To set the instances' user data:\n"
-		"\t[-aws-[default-]user-data[-file] <data|path/to/file> ]\n"
+		"\t[-aws-[default-]user-data[-file] <data|/full/path/to/file> ]\n"
 		"\n"
 		"To customize an AWS on-demand annex:\n"
 		"\t[-aws-on-demand-instance-type <instance-type>]\n"
@@ -391,8 +391,8 @@ help( const char * argv0 ) {
 		"\t[-help]\n"
 		"\n"
 		"Expert mode (specify account and region):\n"
-		"\t[-aws-access-key-file <path/to/access-key-file>]\n"
-		"\t[-aws-secret-key-file <path/to/secret-key-file>]\n"
+		"\t[-aws-access-key-file </full/path/to/access-key-file>]\n"
+		"\t[-aws-secret-key-file </full/path/to/secret-key-file>]\n"
 		"\t[-aws-ec2-url https://ec2.<region>.amazonaws.com]\n"
 		"\t[-aws-events-url https://events.<region>.amazonaws.com]\n"
 		"\t[-aws-lambda-url https://lambda.<region>.amazonaws.com]\n"
@@ -404,7 +404,7 @@ help( const char * argv0 ) {
 		"\t[-aws-on-demand-instance-profile-arn <instance-profile-arn>]\n"
 		"\n"
 		"OR, to do the one-time setup for an AWS account:\n"
-		"%s -setup [<path/to/access-key-file> <path/to/secret-key-file> [<CloudFormation URL>]]\n"
+		"%s -setup [</full/path/to/access-key-file> </full/path/to/secret-key-file> [<CloudFormation URL>]]\n"
 		"\n"
 		, argv0, argv0 );
 }
@@ -1070,16 +1070,20 @@ annex_main( int argc, char ** argv ) {
 		commandArguments.Assign( "S3URL", s3URL );
 	}
 
+	if( leaseDuration == 0 ) {
+		leaseDuration = param_integer( "ANNEX_DEFAULT_LEASE_DURATION", 3000 );
+	}
+
+	if( unclaimedTimeout == 0 ) {
+		unclaimedTimeout = param_integer( "ANNEX_DEFAULT_UNCLAIMED_TIMEOUT", 900 );
+	}
+
 	commandArguments.Assign( "AnnexName", annexName );
 
 	commandArguments.Assign( "TargetCapacity", count );
 
 	time_t now = time( NULL );
 	commandArguments.Assign( "EndOfLease", now + leaseDuration );
-
-	if( unclaimedTimeout == 0 ) {
-		unclaimedTimeout = param_integer( "ANNEX_DEFAULT_UNCLAIMED_TIMEOUT", 900 );
-	}
 
 	//
 	// Determine the command, then do command-specific things.
