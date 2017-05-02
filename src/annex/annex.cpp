@@ -532,6 +532,12 @@ void handleUserData(	ClassAd & commandArguments,
 	}
 }
 
+bool saidYes( const std::string & response ) {
+	if( strcasecmp( response.c_str(), "yes" ) == 0 ) { return true; }
+	if( strcasecmp( response.c_str(), "y" ) == 0 ) { return true; }
+	return false;
+}
+
 void getSFRApproval(	ClassAd & commandArguments, const char * sfrConfigFile,
 						bool leaseDurationSpecified, bool unclaimedTimeoutSpecified,
 						long int count, long int leaseDuration, long int unclaimedTimeout ) {
@@ -553,7 +559,10 @@ void getSFRApproval(	ClassAd & commandArguments, const char * sfrConfigFile,
 		fprintf( stderr, "Failed to start parsing spot fleet request.\n" );
 		exit( 2 );
 	} else {
-		int numAttrs = ccafi.next( commandArguments );
+		// This is bugged, and doesn't actually do a merge.
+		// int numAttrs = ccafi.next( commandArguments, true );
+		ClassAd spotFleetRequest;
+		int numAttrs = ccafi.next( spotFleetRequest );
 		if( numAttrs <= 0 ) {
 			fprintf( stderr, "Failed to parse spot fleet request, found no attributes.\n" );
 			exit( 2 );
@@ -561,6 +570,7 @@ void getSFRApproval(	ClassAd & commandArguments, const char * sfrConfigFile,
 			fprintf( stderr, "Failed to parse spot fleet reqeust, found too many attributes.\n" );
 			exit( 2 );
 		}
+		commandArguments.Update( spotFleetRequest );
 	}
 
 	fprintf( stdout,
@@ -576,7 +586,9 @@ void getSFRApproval(	ClassAd & commandArguments, const char * sfrConfigFile,
 	fprintf( stdout, "Is that OK?  (Type 'yes' or 'no'): " );
 	std::getline( std::cin, response );
 
-	if( strcasecmp( response.c_str(), "yes" ) != 0 ) {
+	if(! saidYes( response )) {
+		fprintf( stdout, "Not starting an annex; user did not confirm.\n\n" );
+
 		if(! leaseDurationSpecified) {
 			fprintf( stdout, "To change the lease duration, use the -duration flag.\n" );
 		}
@@ -585,6 +597,8 @@ void getSFRApproval(	ClassAd & commandArguments, const char * sfrConfigFile,
 		}
 
 		exit( 1 );
+	} else {
+		fprintf( stdout, "Starting annex.  Once started, it will take about three minutes for the new machines to join the pool.  (Please wait.)\n" );
 	}
 }
 
@@ -603,7 +617,9 @@ void getODIApproval(	ClassAd &,
 	fprintf( stdout, "Is that OK?  (Type 'yes' or 'no'): " );
 	std::getline( std::cin, response );
 
-	if( strcasecmp( response.c_str(), "yes" ) != 0 ) {
+	if(! saidYes( response )) {
+		fprintf( stdout, "Not starting an annex; user did not confirm.\n\n" );
+
 		if(! odiInstanceTypeSpecified) {
 			fprintf( stdout, "To change the instance type, use the -aws-on-demand-instance-type flag.\n" );
 		}
@@ -616,10 +632,12 @@ void getODIApproval(	ClassAd &,
 		}
 
 		exit( 1 );
+	} else {
+		fprintf( stdout, "Starting annex.  Once started, it will take about three minutes for the new machines to join the pool.  (Please wait.)\n" );
 	}
 }
 
-void assignWithDefault(	ClassAd & commandArguments, const char * value,
+void assignWithDefault(	ClassAd & commandArguments, const char * & value,
 						const char * paramName, const char * argName ) {
 	if(! value) {
 		value = param( paramName );
@@ -690,7 +708,7 @@ annex_main( int argc, char ** argv ) {
 	for( int i = 1; i < argc; ++i ) {
 		if( is_dash_arg_prefix( argv[i], "aws-ec2-url", 11 ) ) {
 			++i;
-			if( argv[i] != NULL ) {
+			if( i < argc && argv[i] != NULL ) {
 				serviceURL = argv[i];
 				continue;
 			} else {
@@ -699,7 +717,7 @@ annex_main( int argc, char ** argv ) {
 			}
 		} else if( is_dash_arg_prefix( argv[i], "aws-events-url", 14 ) ) {
 			++i;
-			if( argv[i] != NULL ) {
+			if( i < argc && argv[i] != NULL ) {
 				eventsURL = argv[i];
 				continue;
 			} else {
@@ -708,7 +726,7 @@ annex_main( int argc, char ** argv ) {
 			}
 		} else if( is_dash_arg_prefix( argv[i], "aws-lambda-url", 14 ) ) {
 			++i;
-			if( argv[i] != NULL ) {
+			if( i < argc && argv[i] != NULL ) {
 				lambdaURL = argv[i];
 				continue;
 			} else {
@@ -717,7 +735,7 @@ annex_main( int argc, char ** argv ) {
 			}
 		} else if( is_dash_arg_prefix( argv[i], "aws-s3-url", 10 ) ) {
 			++i;
-			if( argv[i] != NULL ) {
+			if( i < argc && argv[i] != NULL ) {
 				s3URL = argv[i];
 				continue;
 			} else {
@@ -726,7 +744,7 @@ annex_main( int argc, char ** argv ) {
 			}
 		} else if( is_dash_arg_prefix( argv[i], "aws-user-data-file", 14 ) ) {
 			++i; ++udSpecifications;
-			if( argv[i] != NULL ) {
+			if( i < argc && argv[i] != NULL ) {
 				userDataFileName = argv[i];
 				continue;
 			} else {
@@ -735,7 +753,7 @@ annex_main( int argc, char ** argv ) {
 			}
 		} else if( is_dash_arg_prefix( argv[i], "aws-user-data", 13 ) ) {
 			++i; ++udSpecifications;
-			if( argv[i] != NULL ) {
+			if( i < argc && argv[i] != NULL ) {
 				userData = argv[i];
 				continue;
 			} else {
@@ -744,7 +762,7 @@ annex_main( int argc, char ** argv ) {
 			}
 		} else if( is_dash_arg_prefix( argv[i], "aws-default-user-data-file", 22 ) ) {
 			++i; ++udSpecifications;
-			if( argv[i] != NULL ) {
+			if( i < argc && argv[i] != NULL ) {
 				clUserDataWins = false;
 				userDataFileName = argv[i];
 				continue;
@@ -754,7 +772,7 @@ annex_main( int argc, char ** argv ) {
 			}
 		} else if( is_dash_arg_prefix( argv[i], "aws-default-user-data", 21 ) ) {
 			++i; ++udSpecifications;
-			if( argv[i] != NULL ) {
+			if( i < argc && argv[i] != NULL ) {
 				clUserDataWins = false;
 				userData = argv[i];
 				continue;
@@ -764,7 +782,7 @@ annex_main( int argc, char ** argv ) {
 			}
 		} else if( is_dash_arg_prefix( argv[i], "annex-name", 6 ) ) {
 			++i;
-			if( argv[i] != NULL ) {
+			if( i < argc && argv[i] != NULL ) {
 				annexName = argv[i];
 				continue;
 			} else {
@@ -773,7 +791,7 @@ annex_main( int argc, char ** argv ) {
 			}
 		} else if( is_dash_arg_prefix( argv[i], "config-dir", 10 ) ) {
 			++i;
-			if( argv[i] != NULL ) {
+			if( i < argc && argv[i] != NULL ) {
 				configDir = argv[i];
 				continue;
 			} else {
@@ -782,7 +800,7 @@ annex_main( int argc, char ** argv ) {
 			}
 		} else if( is_dash_arg_prefix( argv[i], "owner", 5 ) ) {
 			++i;
-			if( argv[i] != NULL ) {
+			if( i < argc && argv[i] != NULL ) {
 				owner = argv[i];
 				ownerSpecified = true;
 				continue;
@@ -795,7 +813,7 @@ annex_main( int argc, char ** argv ) {
 			noOwner = true;
 		} else if( is_dash_arg_prefix( argv[i], "aws-spot-fleet-config-file", 22 ) ) {
 			++i;
-			if( argv[i] != NULL ) {
+			if( i < argc && argv[i] != NULL ) {
 				sfrConfigFile = argv[i];
 				if( annexType == at_none ) {
 					annexType = at_sfr;
@@ -812,7 +830,7 @@ annex_main( int argc, char ** argv ) {
 		} else if( is_dash_arg_prefix( argv[i], "aws-public-key-file", 19 ) ||
 				   is_dash_arg_prefix( argv[i], "aws-access-key-file", 19 ) ) {
 			++i;
-			if( argv[i] != NULL ) {
+			if( i < argc && argv[i] != NULL ) {
 				publicKeyFile = argv[i];
 				continue;
 			} else {
@@ -822,7 +840,7 @@ annex_main( int argc, char ** argv ) {
 		} else if( is_dash_arg_prefix( argv[i], "aws-secret-key-file", 19 ) ||
 				   is_dash_arg_prefix( argv[i], "aws-private-key-file", 20 ) ) {
 			++i;
-			if( argv[i] != NULL ) {
+			if( i < argc && argv[i] != NULL ) {
 				secretKeyFile = argv[i];
 				continue;
 			} else {
@@ -831,7 +849,7 @@ annex_main( int argc, char ** argv ) {
 			}
 		} else if( is_dash_arg_prefix( argv[i], "aws-spot-fleet-lease-function-arn", 22 ) ) {
 			++i;
-			if( argv[i] != NULL ) {
+			if( i < argc && argv[i] != NULL ) {
 				sfrLeaseFunctionARN = argv[i];
 				continue;
 			} else {
@@ -840,7 +858,7 @@ annex_main( int argc, char ** argv ) {
 			}
 		} else if( is_dash_arg_prefix( argv[i], "aws-on-demand-lease-function-arn", 21 ) ) {
 			++i;
-			if( argv[i] != NULL ) {
+			if( i < argc && argv[i] != NULL ) {
 				odiLeaseFunctionARN = argv[i];
 				continue;
 			} else {
@@ -849,7 +867,7 @@ annex_main( int argc, char ** argv ) {
 			}
 		} else if( is_dash_arg_prefix( argv[i], "aws-on-demand-instance-type", 24 ) ) {
 			++i;
-			if( argv[i] != NULL ) {
+			if( i < argc && argv[i] != NULL ) {
 				odiInstanceType = argv[i];
 				odiInstanceTypeSpecified = true;
 				continue;
@@ -859,7 +877,7 @@ annex_main( int argc, char ** argv ) {
 			}
 		} else if( is_dash_arg_prefix( argv[i], "aws-on-demand-key-name", 17 ) ) {
 			++i;
-			if( argv[i] != NULL ) {
+			if( i < argc && argv[i] != NULL ) {
 				odiKeyName = argv[i];
 				continue;
 			} else {
@@ -868,7 +886,7 @@ annex_main( int argc, char ** argv ) {
 			}
 		} else if( is_dash_arg_prefix( argv[i], "aws-on-demand-security-group-ids", 31 ) ) {
 			++i;
-			if( argv[i] != NULL ) {
+			if( i < argc && argv[i] != NULL ) {
 				odiSecurityGroupIDs = argv[i];
 				continue;
 			} else {
@@ -877,7 +895,7 @@ annex_main( int argc, char ** argv ) {
 			}
 		} else if( is_dash_arg_prefix( argv[i], "aws-on-demand-ami-id", 20 ) ) {
 			++i;
-			if( argv[i] != NULL ) {
+			if( i < argc && argv[i] != NULL ) {
 				odiImageID = argv[i];
 				continue;
 			} else {
@@ -886,7 +904,7 @@ annex_main( int argc, char ** argv ) {
 			}
 		} else if( is_dash_arg_prefix( argv[i], "aws-on-demand-instance-profile-arn", 22 ) ) {
 			++i;
-			if( argv[i] != NULL ) {
+			if( i < argc && argv[i] != NULL ) {
 				odiInstanceProfileARN = argv[i];
 				continue;
 			} else {
@@ -895,7 +913,7 @@ annex_main( int argc, char ** argv ) {
 			}
 		} else if( is_dash_arg_prefix( argv[i], "aws-s3-config-path", 18 ) ) {
 			++i;
-			if( argv[i] != NULL ) {
+			if( i < argc && argv[i] != NULL ) {
 				s3ConfigPath = argv[i];
 				continue;
 			} else {
@@ -904,7 +922,7 @@ annex_main( int argc, char ** argv ) {
 			}
 		} else if( is_dash_arg_prefix( argv[i], "duration", 8 ) ) {
 			++i;
-			if( argv[i] != NULL ) {
+			if( i < argc && argv[i] != NULL ) {
 				char * endptr = NULL;
 				const char * ld = argv[i];
 				double fractionHours = strtod( ld, & endptr );
@@ -925,7 +943,7 @@ annex_main( int argc, char ** argv ) {
 			}
 		} else if( is_dash_arg_prefix( argv[i], "idle", 4 ) ) {
 			++i;
-			if( argv[i] != NULL ) {
+			if( i < argc && argv[i] != NULL ) {
 				char * endptr = NULL;
 				const char * ut = argv[i];
 				double fractionalHours = strtod( ut, & endptr );
@@ -946,7 +964,7 @@ annex_main( int argc, char ** argv ) {
 			}
 		} else if( is_dash_arg_prefix( argv[i], "slots", 5 ) ) {
 			++i;
-			if( argv[i] != NULL ) {
+			if( i < argc && argv[i] != NULL ) {
 				char * endptr = NULL;
 				const char * ld = argv[i];
 				count = strtol( ld, & endptr, 0 );
@@ -972,7 +990,7 @@ annex_main( int argc, char ** argv ) {
 			}
 		} else if( is_dash_arg_prefix( argv[i], "count", 5 ) ) {
 			++i;
-			if( argv[i] != NULL ) {
+			if( i < argc && argv[i] != NULL ) {
 				char * endptr = NULL;
 				const char * ld = argv[i];
 				count = strtol( ld, & endptr, 0 );
@@ -1115,7 +1133,7 @@ annex_main( int argc, char ** argv ) {
 	switch( theCommand ) {
 		case ct_create_annex:
 			// Validate the spot fleet request config file.
-			if( annexType == at_odi && sfrConfigFile == NULL ) {
+			if( annexType == at_sfr && sfrConfigFile == NULL ) {
 				sfrConfigFile = param( "ANNEX_DEFAULT_SFR_CONFIG_FILE" );
 				if( sfrConfigFile == NULL ) {
 					fprintf( stderr, "Spot Fleet Requests require the -aws-spot-fleet-config-file flag.\n" );
@@ -1149,6 +1167,7 @@ annex_main( int argc, char ** argv ) {
 				}
 			commandArguments.Assign( "LeaseFunctionARN", sfrLeaseFunctionARN );
 			}
+
 			if( annexType == at_odi ) {
 				commandArguments.Assign( "AnnexType", "odi" );
 				if(! odiLeaseFunctionARN) {
@@ -1156,6 +1175,7 @@ annex_main( int argc, char ** argv ) {
 				}
 			commandArguments.Assign( "LeaseFunctionARN", odiLeaseFunctionARN );
 			}
+			break;
 
 		default:
 			break;

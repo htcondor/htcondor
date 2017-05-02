@@ -28,7 +28,7 @@ ReplyAndClean::operator() () {
 				if( bulkRequestID.empty() ) {
 					fprintf( stderr, "The success reply did not include the bulk request ID.\n" );
 				} else {
-					fprintf( stdout, "%s\n", bulkRequestID.c_str() );
+					fprintf( stdout, "Annex started.  Its identity with the cloud provider is '%s'.\n", bulkRequestID.c_str() );
 				}
 			} else {
 				std::string errorString;
