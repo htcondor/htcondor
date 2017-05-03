@@ -107,8 +107,7 @@ updateOneAnnex( ClassAd * command, Stream * replyStream, ClassAd * reply ) {
 		eventsURL, publicKeyFile, secretKeyFile,
 		commandState, commandID, annexID );
 
-	// I should feel bad.
-	reply->Assign( "BulkRequestID", "Lease updated." );
+	reply->Assign( "AlternateReply", "Lease updated." );
 	ReplyAndClean * last = new ReplyAndClean( reply, replyStream,
 		NULL, scratchpad, eventsGahp, commandState, commandID, NULL );
 

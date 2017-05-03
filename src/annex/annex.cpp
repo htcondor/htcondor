@@ -598,7 +598,7 @@ void getSFRApproval(	ClassAd & commandArguments, const char * sfrConfigFile,
 
 		exit( 1 );
 	} else {
-		fprintf( stdout, "Starting annex.  Once started, it will take about three minutes for the new machines to join the pool.  (Please wait.)\n" );
+		fprintf( stdout, "Starting annex.  Once started, it will take about six minutes for the new machines to join the pool.  (Please wait.)\n" );
 	}
 }
 
