@@ -240,6 +240,10 @@ createOneAnnex( ClassAd * command, Stream * replyStream, ClassAd * reply ) {
 		}
 		commandState->CommitTransaction();
 
+		// These two lines are deliberate BS; see comment in 'ReplyAndClean.cpp'.
+		ClassAd * dummy = NULL;
+		commandState->Lookup( HashKey( "dummy" ), dummy );
+
 		// Verify the existence of the specified function before starting any
 		// instances.  Otherwise, the lease may not fire.
 		GetFunction * gf = new GetFunction( leaseFunctionARN,

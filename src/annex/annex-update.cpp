@@ -92,6 +92,10 @@ updateOneAnnex( ClassAd * command, Stream * replyStream, ClassAd * reply ) {
 	}
 	commandState->CommitTransaction();
 
+	// These two lines are deliberate BS; see comment in 'ReplyAndClean.cpp'.
+	ClassAd * dummy = NULL;
+	commandState->Lookup( HashKey( "dummy" ), dummy );
+
 	// FIXME: For user-friendliness, if no other reason, we should check
 	// if the annex exists before we "update" its lease.  Unfortunately,
 	// that's an ODI/SFR -specific operation.  We could check to see if
