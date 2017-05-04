@@ -7,7 +7,7 @@
 
 \SynProg{\Condor{annex}} \Opt{-help}
 
-\SynProg{\Condor{annex}} \OptArg{-setup}{[path/to/access/key/file [path/to/secret/key/file]]}
+\SynProg{\Condor{annex}} \OptArg{-setup}{[/full/path/to/access/key/file [/full/path/to/secret/key/file]]}
 
 \SynProg{\Condor{annex}} \oOpt{-aws-on-demand}
   \OptArg{-annex-name}{name of the annex}
@@ -43,47 +43,47 @@ performed by invoking \Condor{annex} with the \Opt{-setup} flag.
 	\OptItem {\Opt{-help}}
 		{Print a usage reminder.}
 
-	\OptItem {\OptArg{-setup}{[path/to/access/key/file [path/to/secret/key/file]]}}
+	\OptItem {\OptArg{-setup}{[/full/path/to/access/key/file /full/path/to/secret/key/file]}}
 		{Do the first-time setup.}
 
 	\OptItem {\OptArg{-duration}{hours}}
-		{Set the maximum lease duration in decimal \Arg{hours}.  After this amount of time, all instances will terminated, regardless of their idleness.}
+		{Set the maximum lease duration in decimal \Arg{hours}.  After this amount of time, all instances will terminated, regardless of their idleness.  Defaults to 50 minutes.}
 	\OptItem {\OptArg{-idle}{hours}}
-		{Set the maximum idle duration in decimal \Arg{hours}.  An instance idle for longer than this duration will terminate itself. }
+		{Set the maximum idle duration in decimal \Arg{hours}.  An instance idle for longer than this duration will terminate itself.  Defaults to 15 minutes.}
 	\OptItem {\OptArg{-config-dir}{/full/path/to/directory}}
 		{Copy the contents of \Arg{/full/path/to/directory} to each instance's configuration directory.}
 	\OptItem {\OptArg{-owner}{owner[, owner]*}}
-		{Configure the annex so that only \Arg{owner} may start jobs there.}
+		{Configure the annex so that only \Arg{owner} may start jobs there.  By default, configure the annex so that only the user running \Condor{annex} may start jobs there.}
 	\OptItem {\Opt{-no-owner}}
-		{Configure the annex sot that anyone in the pool may use the annex.}
+		{Configure the annex so that anyone in the pool may use the annex.}
 
 %% AWS-SPECIFIC OPTIONS
 	\OptItem {\OptArg{-aws-user-data}{user-data}}
 		{Set the instance user data to \Arg{user-data}.}
-	\OptItem {\OptArg{-aws-user-data-file}{path/to/file}}
-		{Set the instance user data to the contents of the file \Arg{path/to/file}.}
+	\OptItem {\OptArg{-aws-user-data-file}{/full/path/to/file}}
+		{Set the instance user data to the contents of the file \Arg{/full/path/to/file}.}
 	\OptItem {\OptArg{-aws-default-user-data}{user-data}}
 		{Set the instance user data to \Arg{user-data}, if it's not already set.  Only applies to spot fleet requests.}
-	\OptItem {\OptArg{-aws-default-user-data-file}{path/to/file}}
-		{Set the instance user data to the contents of the file \Arg{path/to/file}, if it's not already set.  Only applies to spot fleet requests.}
+	\OptItem {\OptArg{-aws-default-user-data-file}{/full/path/to/file}}
+		{Set the instance user data to the contents of the file \Arg{/full/path/to/file}, if it's not already set.  Only applies to spot fleet requests.}
 
 %% AWS ON-DEMAND OPTIONS
 	\OptItem {\OptArg{-aws-on-demand-instance-type}{instance-type}}
-		{This annex will requests instances of type \Arg{instance-type}.}
+		{This annex will requests instances of type \Arg{instance-type}.  The default for v8.7.1 is `m4.large'.}
 	\OptItem {\OptArg{-aws-on-demand-ami-id}{ami-id}}
-		{This annex will start instances of the AMI \Arg{ami-id}.}
+		{This annex will start instances of the AMI \Arg{ami-id}.  The default for v8.7.1 is `ami-35b13223', a GPU-compatible Amazon Linux image with HTCondor pre-installed.}
 	\OptItem {\OptArg{-aws-on-demand-security-group-ids}{group-id[,group-id]}}
-		{This annex will start instances with the listed security group IDs.}
+		{This annex will start instances with the listed security group IDs.  The default is the security group created by \Opt{-setup}.}
 	\OptItem {\OptArg{-aws-on-demand-key-name}{key-name}}
-		{This annex will start instances with the key pair named \Arg{key-name}.}
+		{This annex will start instances with the key pair named \Arg{key-name}.  The default is the key pair created by \Opt{-setup}.}
 
 %% AWS SPOT FLEET OPTIONS
 	\OptItem {\OptArg{-aws-spot-fleet-config-file}{/full/path/to/file}}
 		{Use the JSON blob in \Arg{/full/path/to/file} for the spot fleet request.}
 
 %% AWS EXPERTS' OPTIONS
-	\OptItem {\OptArg{-aws-access-key-file}{path/to/access-key-file}} {Experts only.}
-	\OptItem {\OptArg{-aws-secret-key-file}{path/to/secret-key-file}} {Experts only.}
+	\OptItem {\OptArg{-aws-access-key-file}{/full/path/to/access-key-file}} {Experts only.}
+	\OptItem {\OptArg{-aws-secret-key-file}{/full/path/to/secret-key-file}} {Experts only.}
 	\OptItem {\OptArg{-aws-ec2-url}{https://ec2.<region>.amazonaws.com}} {Experts only.}
 	\OptItem {\OptArg{-aws-events-url}{https://events.<region>.amazonaws.com}} {Experts only.}
 	\OptItem {\OptArg{-aws-lambda-url}{https://lambda.<region>.amazonaws.com}} {Experts only.}

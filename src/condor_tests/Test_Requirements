@@ -310,3 +310,4 @@ job_ckpt_f-printer_std: personal, IPv4
 job_ckpt_f-reader_std: personal, IPv4
 job_rsc_f-direct-write_std: personal, IPv4
 map_user_to_groups_metaknob_test: personal
+cmd_submit-factory: personal

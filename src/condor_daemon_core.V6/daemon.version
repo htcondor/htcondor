@@ -11,4 +11,7 @@
 		# assumes you've configured the qmgmt client.  This exports the
 		# wrapper function ScheddGetJobAd(), which avoids the naming conflict.
 		_Z14ScheddGetJobAdiibb;
+        # global visibility for the CollectorPlugin
+        _ZN15CollectorPlugin*;
+        _ZTI15CollectorPlugin;
 };
