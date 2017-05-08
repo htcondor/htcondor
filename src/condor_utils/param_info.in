@@ -1560,6 +1560,10 @@ default=50
 type=int
 tags=gridmanager,gahp-client
 
+[CREAM_GAHP_WORKER_THREADS]
+default=$(GRIDMANAGER_MAX_PENDING_REQUESTS)
+type=int
+
 [GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE_EC2]
 default=20
 type=int
@@ -2415,6 +2419,11 @@ type=string
 tags=LoadPlugins
 
 [PLUGIN_DIR]
+default=
+type=string
+tags=LoadPlugins
+
+[COLLECTOR_PLUGIN_PYTHON_MODULES]
 default=
 type=string
 tags=LoadPlugins
@@ -3450,6 +3459,11 @@ tags=master
 default=true
 type=bool
 tags=master
+
+[ALLOW_ADMINISTRATOR]
+default=$(CONDOR_HOST)
+type=string
+tags=security
 
 [PREEN]
 default=$(SBIN)/condor_preen

@@ -434,6 +434,7 @@ if (BUILD_TESTING)
 	condor_pl_test(config_validate_policy_templates "config_validate_policy_templates" "core;quick;full;quicknolink")
 	condor_pl_test(docker_simulator_test "docker_simulator_test" "core;quick;full;quicknolink")
 	condor_pl_test(map_user_to_groups_metaknob_test "map_user_to_groups_metaknob_test" "core;quick;full;quicknolink")
+	condor_pl_test(cmd_submit-factory "condor_submit -factory" "core;quick;full;quicknolink")
     condor_pl_test(cmd_curl_plugin "Success and failure scenarios for curl_plugin" "core;quick;full;quicknolink")
 
 	if (LINUX)

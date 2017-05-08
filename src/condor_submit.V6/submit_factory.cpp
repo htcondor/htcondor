@@ -507,8 +507,12 @@ int submit_factory_job (
 			//PRAGMA_REMIND("add code to do partial expansion of the hash values.")
 
 			std::string submit_digest;
-			submit_hash.to_string(submit_digest, HASHITER_NO_DEFAULTS);
+			submit_hash.make_digest(submit_digest, ClusterId, o, 0);
 
+			//PRAGMA_REMIND("add code to check for unused hash entries and fail/warn.")
+
+			// append the digest of the queue statement to the submit digest.
+			//
 			submit_digest += "\n";
 			submit_digest += "Queue ";
 			if (o.queue_num) { formatstr_cat(submit_digest, "%d ", o.queue_num); }
