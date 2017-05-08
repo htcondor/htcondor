@@ -28,15 +28,6 @@ The details of each version are described below.
 
 \end{itemize}
 
-
-\noindent New Features:
-
-\begin{itemize}
-
-\item None.
-
-\end{itemize}
-
 \noindent Bugs Fixed:
 
 \begin{itemize}
@@ -46,8 +37,18 @@ log file when the input sandbox of a job with an X.509 proxy file is
 spooled.
 \Ticket{6240}
 
-\item Fixed a memory leak in the python bindings related to logging.
+\item Fixed a memory leak in the Python bindings related to logging.
 \Ticket{6227}
+
+\end{itemize}
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item Allow Python modules to be used as \Condor{collector} plugin.
+This undocumented feature is to be used by expert developers only.
+\Ticket{6213}
 
 \end{itemize}
 
