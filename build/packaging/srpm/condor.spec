@@ -1899,6 +1899,10 @@ fi
 %endif
 
 %changelog
+* Tue May 09 2017 Tim Theisen <tim@cs.wisc.edu> - 8.6.3-1
+- Fixed a bug where using an X.509 proxy might corrupt the job queue log
+- Fixed a memory leak in the Python bindings
+
 * Mon Apr 24 2017 Tim Theisen <tim@cs.wisc.edu> - 8.6.2-1
 - New metaknobs for mapping users to groups
 - Now case-insensitive with Windows user names when storing credentials
