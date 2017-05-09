@@ -2541,6 +2541,7 @@ Matchmaker::forwardAccountingData(std::set<std::string> &names) {
 
 
 				updateAd.Assign(ATTR_NAME, name.c_str()); // the hash key
+				updateAd.Assign(ATTR_NEGOTIATOR_NAME, NegotiatorName);
 				updateAd.Assign("Priority", accountant.GetPriority(MyString(name)));
 
 				bool isGroup;

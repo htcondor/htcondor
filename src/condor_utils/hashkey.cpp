@@ -324,7 +324,18 @@ bool
 makeAccountingAdHashKey (AdNameHashKey &hk, ClassAd *ad)
 {
 	hk.ip_addr = "";
-	return adLookup( "Accounting", ad, ATTR_NAME, NULL, hk.name );
+	if ( !adLookup( "Accounting", ad, ATTR_NAME, NULL, hk.name ) ) {
+		return false;
+	}
+
+	// Get the name of the negotiator this accounting ad is from.
+	// Older negotiators didn't set ATTR_NEGOTIATOR_NAME, so this is
+	// optional.
+	MyString tmp;
+	if ( adLookup( "Accounting", ad, ATTR_NEGOTIATOR_NAME, NULL, tmp ) ) {
+		hk.name += tmp;
+	}
+	return true;
 }
 
 
