@@ -53,6 +53,13 @@ createOneAnnex( ClassAd * command, Stream * replyStream, ClassAd * reply ) {
 		return FALSE;
 	}
 
+	// Is this less of a hack than handing the command ad to ReplyAndClean?
+	std::string expectedDelay;
+	command->LookupString( "ExpectedDelay", expectedDelay );
+	if(! expectedDelay.empty()) {
+		reply->Assign( "ExpectedDelay", expectedDelay );
+	}
+
 	//
 	// Construct the GAHPs.  We do this before anything else because we
 	// need pointers the GAHPs to hand off to the nonblocking sequence

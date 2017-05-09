@@ -34,7 +34,13 @@ ReplyAndClean::operator() () {
 						fprintf( stdout, "%s\n", alternateReply.c_str() );
 					}
 				} else {
-					fprintf( stdout, "Annex started.  Its identity with the cloud provider is '%s'.\n", bulkRequestID.c_str() );
+					fprintf( stdout, "Annex started.  Its identity with the cloud provider is '%s'.", bulkRequestID.c_str() );
+					std::string expectedDelay;
+					reply->LookupString( "ExpectedDelay", expectedDelay );
+					if(! expectedDelay.empty()) {
+						fprintf( stdout, "%s", expectedDelay.c_str() );
+					}
+					fprintf( stdout, "\n" );
 				}
 			} else {
 				std::string errorString;

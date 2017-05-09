@@ -74,7 +74,7 @@ GenerateConfigFile::operator() () {
 	scratchpad->LookupString( "KeyPath", keyPath );
 	if(! keyPath.empty()) {
 		fprintf( configFile, "# For debugging:\n" );
-		fprintf( configFile, "# ssh -i %s +ec2-user@<address>\n", keyPath.c_str() );
+		fprintf( configFile, "# ssh -i %s ec2-user@<address>\n", keyPath.c_str() );
 	}
 
 	fprintf( configFile, "\n" );

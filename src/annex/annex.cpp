@@ -598,11 +598,12 @@ void getSFRApproval(	ClassAd & commandArguments, const char * sfrConfigFile,
 
 		exit( 1 );
 	} else {
-		fprintf( stdout, "Starting annex.  Once started, it will take about six minutes for the new machines to join the pool.  (Please wait.)\n" );
+		fprintf( stdout, "Starting annex...\n" );
+		commandArguments.Assign( "ExpectedDelay", "  It will take about six minutes for the new machines to join the pool." );
 	}
 }
 
-void getODIApproval(	ClassAd &,
+void getODIApproval(	ClassAd & commandArguments,
 						const char * odiInstanceType, bool odiInstanceTypeSpecified,
 						bool leaseDurationSpecified, bool unclaimedTimeoutSpecified,
 						long int count, long int leaseDuration, long int unclaimedTimeout ) {
@@ -633,7 +634,8 @@ void getODIApproval(	ClassAd &,
 
 		exit( 1 );
 	} else {
-		fprintf( stdout, "Starting annex.  Once started, it will take about three minutes for the new machines to join the pool.  (Please wait.)\n" );
+		fprintf( stdout, "Starting annex...\n" );
+		commandArguments.Assign( "ExpectedDelay", "  It will take about three minutes for the new machines to join the pool." );
 	}
 }
 
