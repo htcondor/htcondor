@@ -41,7 +41,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Fixed a bug where per-instance job attributes like \AdAttr{RemoteHost}
+would show up in the history file for completed jobs.  This bug occurred if
+a job happened to complete while the schedd was in the process of a
+graceful shutdown.  
+\Ticket{6251}
 
 \end{itemize}
 
