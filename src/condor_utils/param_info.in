@@ -4799,13 +4799,19 @@ usage=Set to false to disable V3 query protocol for condor_q.
 default=true
 type=bool
 description=Whether condor_q will query all jobs, or only the current owners jobs by default
-usage=Set to true to have condor_q query only the owners jobs by default
+usage=Set to true to have condor_q query only the owner's jobs by default
 
 [CONDOR_Q_DASH_BATCH_IS_DEFAULT]
 default=true
 type=bool
 description=Whether condor_q will default to -batch display
-usage=Set to true to have condor_q defaulit to -batch display
+usage=Set to true to have condor_q default to -batch display
+
+[CONDOR_Q_SHOW_OLD_SUMMARY]
+default=false
+type=bool
+description=Whether condor_q will show the old single line summary totals, or the new multi line one.
+usage=Set to true to have condor_q show the old single line summary totals
 
 [ENABLE_IPV6]
 default=auto
