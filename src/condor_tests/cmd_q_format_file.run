@@ -292,8 +292,12 @@ $result = $result && check_heading("-nobatch",\%data);
 my $ads_file = write_ads(\%Attr,$testname);
 my @summary1 = `condor_q -job $ads_file -nobatch`;
 my @summary2 = `condor_q -job $ads_file -hold`; 
-@summary1 = split / /, $summary1[1];
-$result = $result && check_summary('have_sum',\@summary1,\%cnt_num) && ($summary2[1] eq "4 jobs; 0 completed, 0 removed, 0 idle, 0 running, 4 held, 0 suspended\n");
+my $totline = $summary1[1];
+print "totline is: $totline";
+$totline =~ s/^[^:]+:\s+//;
+print "totline is now: $totline";
+@summary1 = split / /, $totline;
+$result = $result && check_summary('have_sum',\@summary1,\%cnt_num) && ($summary2[1] =~ /4 jobs; 0 completed, 0 removed, 0 idle, 0 running, 4 held, 0 suspended/);
 
 RegisterResult($result,check_name=>$option, test_name=>$testname);
 
@@ -326,8 +330,12 @@ $result = $result && check_heading("-nobatch",\%data);
 $ads_file = write_ads(\%Attr,$testname);
 @summary1 = `condor_q -job $ads_file`;
 @summary2 = `condor_q -job $ads_file -hold`; 
-@summary1 = split / /, $summary1[1];
-$result = $result && check_summary('have_sum',\@summary1,\%cnt_num) && ($summary2[1] eq "4 jobs; 0 completed, 0 removed, 0 idle, 0 running, 4 held, 0 suspended\n");
+$totline = $summary1[1];
+print "totline is: $totline";
+$totline =~ s/^[^:]+:\s+//;
+print "totline is now: $totline";
+@summary1 = split / /, $totline;
+$result = $result && check_summary('have_sum',\@summary1,\%cnt_num) && ($summary2[1] =~ /4 jobs; 0 completed, 0 removed, 0 idle, 0 running, 4 held, 0 suspended/);
 
 RegisterResult($result,check_name=>$option, test_name=>$testname);
 

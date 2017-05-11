@@ -476,10 +476,10 @@ sub read_array_content_to_table {
 	}
 	my $head_pos = $cnt+1;
 
-	# read everything before the blank line and store them to $data
+	# read everything before the blank line or totals line and store them to $data
 	$cnt = 0;
 	my %data;
-	while(defined $table[$head_pos+$cnt] && $table[$head_pos+$cnt]=~ /\S/){
+	while(defined $table[$head_pos+$cnt] && $table[$head_pos+$cnt]=~ /\S/ && $table[$head_pos+$cnt] !~ /[0-9]+\s+jobs;/){
 		$data{$cnt} = $table[$head_pos+$cnt];
 		$cnt++;
 	}
@@ -495,6 +495,8 @@ sub read_array_content_to_table {
 		}
 	}
 	my $arg = $table[$num];
+	# for 8.7.2 new totals line, strip off the leading words "Total for <ident>:" so it looks (mostly) like the pre 8.7.2 summary line
+	if (defined $arg && $arg =~ /^Total for/) { $arg =~ s/^Total for [^:]*:\s*//; }
 	my @summary = defined $arg? (split / /, $arg) : " ";
 	return (\%other,\%data,\@summary);
 }
@@ -1053,10 +1055,15 @@ sub how_many_entries {
 	my $index = 0;
 	for my $i (0..(scalar @content)-1){
 		if ($content[$i] =~ /\S/){
-			$index++;
+			if ($content[$i] =~ /[0-9]+ jobs;/) {
+				# don't count totals lines as entries.
+			} else {
+				$index++;
+			}
 		}
 	}
-	return ($index - 3);
+	# -2 to account for title and headings
+	return ($index - 2);
 }
 
 
