@@ -2399,6 +2399,11 @@ default=
 type=string
 tags=LoadPlugins
 
+[COLLECTOR_PLUGIN_PYTHON_MODULES]
+default=
+type=string
+tags=LoadPlugins
+
 [JAVA]
 default=/usr/bin/java
 win32_default=java

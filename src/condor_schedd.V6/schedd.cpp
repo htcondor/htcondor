@@ -158,10 +158,13 @@ extern int grow_prio_recs(int);
 // We don't have a good schedd-internal header file, so we declare them
 // here for use in this file.
 int
-SetSecureAttributeInt(int cluster_id, int proc_id, const char *attr_name, int attr_value, SetAttributeFlags_t flags);
+SetSecureAttribute(int cluster_id, int proc_id, const char *attr_name, const char *attr_value, SetAttributeFlags_t flags = 0);
 int
-SetSecureAttributeString(int cluster_id, int proc_id, const char *attr_name, const char *attr_value, SetAttributeFlags_t flags);
+SetSecureAttributeInt(int cluster_id, int proc_id, const char *attr_name, int attr_value, SetAttributeFlags_t flags = 0);
+int
+SetSecureAttributeString(int cluster_id, int proc_id, const char *attr_name, const char *attr_value, SetAttributeFlags_t flags = 0);
 
+bool ReadProxyFileIntoAd( const char *file, const char *owner, ClassAd &x509_attrs );
 
 void cleanup_ckpt_files(int , int , char*);
 void send_vacate(match_rec*, int);
@@ -195,6 +198,19 @@ int STARTD_CONTACT_TIMEOUT = 45;  // how long to potentially block
 #ifdef CARMI_OPS
 struct shadow_rec *find_shadow_by_cluster( PROC_ID * );
 #endif
+
+void UpdateJobProxyAttrs( PROC_ID job_id, const ClassAd &proxy_attrs )
+{
+	classad::ClassAdUnParser unparse;
+	unparse.SetOldClassAd(true, true);
+
+	for (AttrList::const_iterator attr_it = proxy_attrs.begin(); attr_it != proxy_attrs.end(); ++attr_it)
+	{
+		std::string attr_value_buf;
+		unparse.Unparse(attr_value_buf, attr_it->second);
+		SetSecureAttribute(job_id.cluster, job_id.proc, attr_it->first.c_str(), attr_value_buf.c_str());
+	}
+}
 
 void AuditLogNewConnection( int cmd, Sock &sock, bool failure )
 {
@@ -282,25 +298,19 @@ void AuditLogJobProxy( Sock &sock, PROC_ID job_id, const char *proxy_file )
 	x509_proxy_free( proxy_handle );
 
 	dprintf( D_AUDIT, sock, "proxy expiration: %d\n", (int)expire_time );
-	SetSecureAttributeInt(job_id.cluster, job_id.proc, ATTR_X509_USER_PROXY_EXPIRATION, expire_time, 0);
 	dprintf( D_AUDIT, sock, "proxy identity: %s\n", proxy_identity );
 	dprintf( D_AUDIT, sock, "proxy subject: %s\n", proxy_subject );
-	SetSecureAttributeString(job_id.cluster, job_id.proc, ATTR_X509_USER_PROXY_SUBJECT, proxy_identity?proxy_identity:"", 0);
 	if ( proxy_email ) {
 		dprintf( D_AUDIT, sock, "proxy email: %s\n", proxy_email );
-		SetSecureAttributeString(job_id.cluster, job_id.proc, ATTR_X509_USER_PROXY_EMAIL, proxy_email?proxy_email:"", 0);
 	}
 	if ( voname ) {
 		dprintf( D_AUDIT, sock, "proxy vo name: %s\n", voname );
-		SetSecureAttributeString(job_id.cluster, job_id.proc, ATTR_X509_USER_PROXY_VONAME, voname?voname:"", 0);
 	}
 	if ( firstfqan ) {
 		dprintf( D_AUDIT, sock, "proxy first fqan: %s\n", firstfqan );
-		SetSecureAttributeString(job_id.cluster, job_id.proc, ATTR_X509_USER_PROXY_FIRST_FQAN, firstfqan?firstfqan:"", 0);
 	}
 	if ( fullfqan ) {
 		dprintf( D_AUDIT, sock, "proxy full fqan: %s\n", fullfqan );
-		SetSecureAttributeString(job_id.cluster, job_id.proc, ATTR_X509_USER_PROXY_FQAN, fullfqan?fullfqan:"", 0);
 	}
 
 	free( proxy_subject );
@@ -4526,6 +4536,7 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 
 	int jobIndex,cluster,proc;
 	int len = (*jobs).getlast() + 1;
+	MyString proxy_file;
 
 		// For each job, modify its ClassAd
 	for (jobIndex = 0; jobIndex < len; jobIndex++) {
@@ -4544,6 +4555,20 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 			// we note the transfer finish time _here_.  So we've got 
 			// to back off 1 second.
 			SetAttributeInt(cluster,proc,ATTR_STAGE_IN_FINISH,now - 1);
+		}
+
+		if (GetAttributeString(cluster, proc, ATTR_X509_USER_PROXY, proxy_file) == 0) {
+			MyString owner;
+			MyString iwd;
+			MyString full_file;
+			ClassAd proxy_attrs;
+			GetAttributeString(cluster, proc, ATTR_OWNER, owner);
+			GetAttributeString(cluster, proc, ATTR_JOB_IWD, iwd);
+			formatstr(full_file, "%s%c%s", iwd.Value(), DIR_DELIM_CHAR, proxy_file.Value());
+
+			if ( ReadProxyFileIntoAd(full_file.Value(), owner.Value(), proxy_attrs) ) {
+				UpdateJobProxyAttrs((*jobs)[jobIndex], proxy_attrs);
+			}
 		}
 
 			// And now release the job.
@@ -5370,6 +5395,10 @@ UpdateGSICredContinuation::finish_update(ReliSock *rsock, ReliSock::x509_delegat
 		} else {
 			reply = 1;	// reply of 1 means success
 
+			ClassAd proxy_attrs;
+			if ( ReadProxyFileIntoAd(m_final_path.c_str(), NULL, proxy_attrs) ) {
+				UpdateJobProxyAttrs(m_jobid, proxy_attrs);
+			}
 			AuditLogJobProxy( *rsock, m_jobid, m_final_path.c_str() );
 		}
 	}
@@ -10504,11 +10533,12 @@ Scheduler::delete_shadow_rec( shadow_rec *rec )
 	}
 
 		//
-		// Do not remove the ClaimId or RemoteHost if the keepClaimAttributes
+		// If the job is not in a terminal state (i.e. COMPLETED or REMOVED), then
+		// do not remove the ClaimId or RemoteHost if the keepClaimAttributes
 		// flag is set. This means that we want this job to reconnect
 		// when the schedd comes back online.
 		//
-	if ( ! rec->keepClaimAttributes ) {
+	if ( (!rec->keepClaimAttributes) || job_status == COMPLETED || job_status == REMOVED ) {
 		DeleteAttribute( cluster, proc, ATTR_PAIRED_CLAIM_ID );
 		DeleteAttribute( cluster, proc, ATTR_CLAIM_ID );
 		DeleteAttribute( cluster, proc, ATTR_PUBLIC_CLAIM_ID );

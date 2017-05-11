@@ -760,6 +760,8 @@ cmake \
 %endif
 %if %bundle_uw_externals || %bundle_std_univ_externals
        -DEXTERNALS_SOURCE_URL:STRING="$RPM_SOURCE_DIR" \
+%else
+       -DEXTERNALS_SOURCE_URL:STRING="http://mirror.batlab.org/pub/export/externals" \
 %endif
        -D_VERBOSE:BOOL=TRUE \
        -DBUILD_TESTING:BOOL=FALSE \
@@ -1261,6 +1263,7 @@ rm -rf %{buildroot}
 %_libexecdir/condor/condor_gangliad
 %_libexecdir/condor/panda-plugin.so
 %_libexecdir/condor/pandad
+%_libexecdir/condor/libcollector_python_plugin.so
 %_mandir/man1/condor_advertise.1.gz
 %_mandir/man1/condor_check_userlogs.1.gz
 %_mandir/man1/condor_chirp.1.gz
@@ -1896,6 +1899,10 @@ fi
 %endif
 
 %changelog
+* Tue May 09 2017 Tim Theisen <tim@cs.wisc.edu> - 8.6.3-1
+- Fixed a bug where using an X.509 proxy might corrupt the job queue log
+- Fixed a memory leak in the Python bindings
+
 * Mon Apr 24 2017 Tim Theisen <tim@cs.wisc.edu> - 8.6.2-1
 - New metaknobs for mapping users to groups
 - Now case-insensitive with Windows user names when storing credentials
