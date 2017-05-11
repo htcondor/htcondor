@@ -760,6 +760,8 @@ cmake \
 %endif
 %if %bundle_uw_externals || %bundle_std_univ_externals
        -DEXTERNALS_SOURCE_URL:STRING="$RPM_SOURCE_DIR" \
+%else
+       -DEXTERNALS_SOURCE_URL:STRING="http://mirror.batlab.org/pub/export/externals" \
 %endif
        -D_VERBOSE:BOOL=TRUE \
        -DBUILD_TESTING:BOOL=FALSE \
@@ -1899,6 +1901,10 @@ fi
 %endif
 
 %changelog
+* Tue May 09 2017 Tim Theisen <tim@cs.wisc.edu> - 8.6.3-1
+- Fixed a bug where using an X.509 proxy might corrupt the job queue log
+- Fixed a memory leak in the Python bindings
+
 * Mon Apr 24 2017 Tim Theisen <tim@cs.wisc.edu> - 8.7.1-1
 - Several performance enhancements in the collector
 - Further refinement and initial documentation of the HTCondor Annex
