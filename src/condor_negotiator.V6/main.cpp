@@ -30,10 +30,27 @@
 // the matchmaker object
 Matchmaker matchMaker;
 
-void main_init (int, char *[])
+void usage(char* name)
 {
+	dprintf( D_ALWAYS, "Usage: %s [-f] [-t] [-n negotiator_name]", name);
+	exit( 1 );
+}
+
+void main_init (int argc, char *argv[])
+{
+	const char *neg_name = NULL;
+
+	for ( int i = 1; i < argc; i++ ) {
+		if ( argv[i][0] == '-' && argv[i][1] == 'n' && (i + 1) < argc ) {
+			neg_name = argv[i + 1];
+			i++;
+		} else {
+			usage(argv[0]);
+		}
+	}
+
 	// read in params
-	matchMaker.initialize ();
+	matchMaker.initialize (neg_name);
 }
 
 void main_shutdown_graceful()
