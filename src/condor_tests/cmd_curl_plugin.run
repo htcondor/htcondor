@@ -39,6 +39,8 @@ my $childPid;
 my $childProcess;
 my $curlBinary;
 my $localDir = cwd();
+my $partialNoRangeSize;
+my $partialSize;
 my $returnCode;
 
 # Set the full path to the curl_plugin binary
@@ -71,6 +73,10 @@ else {
 }
 
 # Test a 500 server error
+# This test sometimes causes the Python server to throw an exception and output
+# a traceback. This happens because curl_plugin closes its socket as soon as it
+# sees the 500 error and Python doesn't always have time to finish sending its
+# response. 
 $returnCode = system("$curlBinary http://$url/servererror curl_output.txt");
 $returnCode = $returnCode >> 8;
 if ($returnCode == 22) {
@@ -78,6 +84,29 @@ if ($returnCode == 22) {
 }
 else {
     RegisterResult(0, "test_name", "curl-http-error-500");
+}
+
+# Test an HTTP resume request for partial content downloads. The flaky web
+# server should eventually return exactly 50 bytes on a request to /partial.
+system("$curlBinary http://$url/partial curl_partial.txt");
+$partialSize = (stat "curl_partial.txt")[7];
+if ($partialSize == 50) {
+    RegisterResult(1, "test_name", "curl-partial-download-resume");
+}
+else {
+    RegisterResult(0, "test_name", "curl-partial-download-resume");
+}
+
+# Test an HTTP resume request for partial content on a server that doesn't
+# support resume requests. The flaky web server should eventually return exactly 
+# 58 bytes on a request to /partial-norange
+system("$curlBinary http://$url/partial-norange curl_partial_norange.txt");
+$partialNoRangeSize = (stat "curl_partial_norange.txt")[7];
+if ($partialNoRangeSize == 58) {
+    RegisterResult(1, "test_name", "curl-partial-resume-not-supported");
+}
+else {
+    RegisterResult(0, "test_name", "curl-partial-resume-not-supported");
 }
 
 # Clean up before exit
