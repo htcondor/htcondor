@@ -47,6 +47,11 @@ a job happened to complete while the schedd was in the process of a
 graceful shutdown.  
 \Ticket{6251}
 
+\item Fixed a bug that could cause \Condor{submit} to fail to submit a
+job with a proxy file to a \Condor{schedd} older than 8.5.8, due to the
+absence of an X.509 CA certificates directory.
+\Ticket{6258}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
